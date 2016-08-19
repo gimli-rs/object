@@ -1,0 +1,12 @@
+[package]
+authors = ["Nick Fitzgerald <fitzgen@gmail.com>"]
+name = "object"
+version = "0.0.1"
+description = "A unified loader interface for the target platform's object file format."
+keywords = ["object", "loader"]
+
+[target.'cfg(target_os="linux")'.dependencies]
+elf = "0.0.9"
+
+[target.'cfg(target_os="macos")'.dependencies]
+mach_o = "0.1.2"
