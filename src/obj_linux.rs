@@ -1,31 +1,30 @@
 extern crate elf;
 use std::path::Path;
 
-/// The parsed object file type.
-pub type File = elf::File;
+use object_trait::Object;
 
-/// Open and parse the object file at the given path.
-pub fn open<P>(path: P) -> File
-    where P: AsRef<Path>
-{
-    let path = path.as_ref();
-    elf::File::open_path(path).expect("Could not open file")
-}
+pub struct Elf(elf::File);
 
-/// Get the contents of the section named `section_name`, if such
-/// a section exists.
-pub fn get_section<'a>(file: &'a File, section_name: &str) -> Option<&'a [u8]> {
-    file.sections
-        .iter()
-        .find(|s| s.shdr.name == section_name)
-        .map(|s| &s.data[..])
-}
+impl Object for Elf {
+    fn open<P>(path: P) -> Self
+        where P: AsRef<Path>
+    {
+        let path = path.as_ref();
+        Elf(elf::File::open_path(path).expect("Could not open file"))
+    }
 
-/// Return true if the file is little endian, false if it is big endian.
-pub fn is_little_endian(file: &File) -> bool {
-    match file.ehdr.data {
-        elf::types::ELFDATA2LSB => true,
-        elf::types::ELFDATA2MSB => false,
-        otherwise => panic!("Unknown endianity: {}", otherwise),
+    fn get_section(&self, section_name: &str) -> Option<&[u8]> {
+        self.0.sections
+            .iter()
+            .find(|s| s.shdr.name == section_name)
+            .map(|s| &s.data[..])
+    }
+
+    fn is_little_endian(&self) -> bool {
+        match self.0.ehdr.data {
+            elf::types::ELFDATA2LSB => true,
+            elf::types::ELFDATA2MSB => false,
+            otherwise => panic!("Unknown endianity: {}", otherwise),
+        }
     }
 }
