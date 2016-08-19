@@ -4,6 +4,8 @@ name = "object"
 version = "0.0.1"
 description = "A unified loader interface for the target platform's object file format."
 keywords = ["object", "loader"]
+license = "Apache-2.0/MIT"
+repository = "https://github.com/gimli-rs/object"
 
 [target.'cfg(target_os="linux")'.dependencies]
 elf = "0.0.9"
