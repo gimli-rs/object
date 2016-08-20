@@ -8,7 +8,7 @@ license = "Apache-2.0/MIT"
 repository = "https://github.com/gimli-rs/object"
 
 [dependencies]
-elf = "0.0.9"
+xmas-elf = "0.3.0"
 
 [target.'cfg(target_os="macos")'.dependencies]
 mach_o = "0.1.2"

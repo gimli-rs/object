@@ -1,30 +1,24 @@
-extern crate elf;
-use std::path::Path;
+extern crate xmas_elf;
 
 use object_trait::Object;
 
-pub struct Elf(elf::File);
+pub struct Elf<'a>(xmas_elf::ElfFile<'a>);
 
-impl Object for Elf {
-    fn open<P>(path: P) -> Self
-        where P: AsRef<Path>
-    {
-        let path = path.as_ref();
-        Elf(elf::File::open_path(path).expect("Could not open file"))
+impl<'a> Object<'a> for Elf<'a> {
+    fn parse(input: &'a [u8]) -> Elf<'a> {
+        Elf(xmas_elf::ElfFile::new(input))
     }
 
     fn get_section(&self, section_name: &str) -> Option<&[u8]> {
-        self.0.sections
-            .iter()
-            .find(|s| s.shdr.name == section_name)
-            .map(|s| &s.data[..])
+        self.0.find_section_by_name(section_name)
+            .map(|s| s.raw_data(&self.0))
     }
 
     fn is_little_endian(&self) -> bool {
-        match self.0.ehdr.data {
-            elf::types::ELFDATA2LSB => true,
-            elf::types::ELFDATA2MSB => false,
-            otherwise => panic!("Unknown endianity: {}", otherwise),
+        match self.0.header.pt1.data {
+            xmas_elf::header::Data::LittleEndian => true,
+            xmas_elf::header::Data::BigEndian => false,
+            ref otherwise => panic!("Unknown endianity: {:?}", otherwise),
         }
     }
 }

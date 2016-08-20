@@ -1,8 +1,6 @@
-use std::path::Path;
-
-pub trait Object {
-    /// Open and parse the object file at the given path.
-    fn open<P>(path: P) -> Self where P: AsRef<Path>;
+pub trait Object<'a> {
+    /// Parse the raw object file data.
+    fn parse(input: &'a [u8]) -> Self;
 
     /// Get the contents of the section named `section_name`, if such
     /// a section exists.

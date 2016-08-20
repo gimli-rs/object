@@ -14,6 +14,6 @@ mod obj_macos;
 pub use obj_macos::*;
 
 #[cfg(target_os="linux")]
-pub type File = Elf;
+pub type File<'a> = Elf<'a>;
 #[cfg(target_os="macos")]
-pub type File = MachO;
+pub type File<'a> = MachO<'a>;
