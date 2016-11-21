@@ -5,8 +5,10 @@ use object_trait::Object;
 pub struct Elf<'a>(xmas_elf::ElfFile<'a>);
 
 impl<'a> Object<'a> for Elf<'a> {
-    fn parse(input: &'a [u8]) -> Elf<'a> {
-        Elf(xmas_elf::ElfFile::new(input))
+    type Error = ();
+
+    fn parse(input: &'a [u8]) -> Result<Elf<'a>, Self::Error> {
+        Ok(Elf(xmas_elf::ElfFile::new(input)))
     }
 
     fn get_section(&self, section_name: &str) -> Option<&[u8]> {
