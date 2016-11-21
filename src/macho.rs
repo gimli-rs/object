@@ -5,8 +5,10 @@ use object_trait::Object;
 use std::ffi::CString;
 use std::mem;
 
+/// An error parsing a mach-o object file.
 pub use mach_o::Error;
 
+/// A mach-o object file.
 pub struct MachO<'a>(mach_o::Header<'a>);
 
 // Translate the "." prefix to the "__" prefix used by OSX/Mach-O, eg

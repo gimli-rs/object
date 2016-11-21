@@ -1,3 +1,12 @@
+//! # `object`
+//!
+//! The `object` crate provides a unified interface to working with object files
+//! across platforms.
+//!
+//! See the [`Object` trait](./trait.Object.html) for details.
+
+#![deny(missing_docs)]
+
 mod object_trait;
 pub use object_trait::Object;
 
@@ -13,6 +22,7 @@ mod macho;
 #[cfg(target_os="macos")]
 pub use macho::*;
 
+/// A type alias for the current target platform's object file format type.
 #[cfg(target_os="linux")]
 pub type File<'a> = Elf<'a>;
 #[cfg(target_os="macos")]

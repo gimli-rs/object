@@ -2,6 +2,7 @@ extern crate xmas_elf;
 
 use object_trait::Object;
 
+/// An ELF object file.
 pub struct Elf<'a>(xmas_elf::ElfFile<'a>);
 
 impl<'a> Object<'a> for Elf<'a> {
