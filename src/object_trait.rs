@@ -1,6 +1,10 @@
-pub trait Object<'a> {
+/// An object file.
+pub trait Object<'a>: Sized {
+    /// An associated error type for when parsing or some other operation fails.
+    type Error;
+
     /// Parse the raw object file data.
-    fn parse(input: &'a [u8]) -> Self;
+    fn parse(input: &'a [u8]) -> Result<Self, Self::Error>;
 
     /// Get the contents of the section named `section_name`, if such
     /// a section exists.

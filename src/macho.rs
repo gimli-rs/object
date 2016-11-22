@@ -5,6 +5,10 @@ use object_trait::Object;
 use std::ffi::CString;
 use std::mem;
 
+/// An error parsing a mach-o object file.
+pub use mach_o::Error;
+
+/// A mach-o object file.
 pub struct MachO<'a>(mach_o::Header<'a>);
 
 // Translate the "." prefix to the "__" prefix used by OSX/Mach-O, eg
@@ -20,8 +24,10 @@ fn translate_section_name(section_name: &str) -> CString {
 }
 
 impl<'a> Object<'a> for MachO<'a> {
-    fn parse(input: &'a [u8]) -> MachO<'a> {
-        MachO(mach_o::Header::new(input).expect("Could not parse mach-o file"))
+    type Error = Error;
+
+    fn parse(input: &'a [u8]) -> Result<MachO<'a>, Self::Error> {
+        mach_o::Header::new(input).map(MachO)
     }
 
     fn get_section(&self, section_name: &str) -> Option<&[u8]> {
