@@ -12,3 +12,6 @@ xmas-elf = "0.4.0"
 
 [target.'cfg(target_os="macos")'.dependencies]
 mach_o = "0.1.2"
+
+[features]
+nightly = []
