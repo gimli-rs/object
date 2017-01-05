@@ -18,7 +18,7 @@ impl<'a> Object<'a> for Elf<'a> {
     }
 
     fn is_little_endian(&self) -> bool {
-        match self.0.header.pt1.data {
+        match self.0.header.pt1.data() {
             xmas_elf::header::Data::LittleEndian => true,
             xmas_elf::header::Data::BigEndian => false,
             ref otherwise => panic!("Unknown endianity: {:?}", otherwise),
