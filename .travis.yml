@@ -35,10 +35,10 @@ script:
   travis-cargo build &&
   travis-cargo test &&
   travis-cargo bench &&
-  travis-cargo --only stable doc
+  travis-cargo --only nightly doc
 
 after_success:
-- if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then travis-cargo --only stable doc-upload; fi
+- if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then travis-cargo --only nightly doc-upload; fi
 - if [[ "$TRAVIS_OS_NAME" == "linux" && "$TRAVIS_RUST_VERSION" == "nightly" ]]; then travis-cargo coveralls --no-sudo --verify; fi
 - if [[ "$TRAVIS_OS_NAME" == "linux" && "$TRAVIS_RUST_VERSION" == "nightly" ]]; then KCOV=./kcov/build/src/kcov ./coverage; fi
 
