@@ -1,9 +1,9 @@
 [package]
 authors = ["Nick Fitzgerald <fitzgen@gmail.com>"]
 name = "object"
-version = "0.3.0"
-description = "A unified loader interface for the target platform's object file format."
-keywords = ["object", "loader"]
+version = "0.4.0"
+description = "A unified interface for the target platform's object file format."
+keywords = ["object", "loader", "elf", "mach-o"]
 license = "Apache-2.0/MIT"
 repository = "https://github.com/gimli-rs/object"
 
