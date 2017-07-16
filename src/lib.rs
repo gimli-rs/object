@@ -46,7 +46,7 @@ impl<'a> File<'a> {
 
     /// Get the contents of the section named `section_name`, if such
     /// a section exists.
-    pub fn get_section(&self, section_name: &str) -> Option<&[u8]> {
+    pub fn get_section(&self, section_name: &str) -> Option<&'a [u8]> {
         match self.kind {
             ObjectKind::Elf(ref elf) => elf_get_section(elf, section_name, self.data),
             ObjectKind::MachO(ref macho) => macho_get_section(macho, section_name),
