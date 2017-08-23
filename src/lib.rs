@@ -74,7 +74,11 @@ fn elf_get_section<'a>(elf: &elf::Elf<'a>, section_name: &str, data: &'a [u8]) -
 }
 
 fn macho_get_section<'a>(macho: &mach::MachO<'a>, section_name: &str) -> Option<&'a [u8]> {
-    let segment_name = "__DWARF";
+    let segment_name = if section_name == ".eh_frame" {
+        "__TEXT"
+    } else {
+        "__DWARF"
+    };
     let section_name = macho_translate_section_name(section_name);
 
     for segment in &*macho.segments {
