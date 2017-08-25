@@ -64,7 +64,7 @@ impl<'a> File<'a> {
 
 fn elf_get_section<'a>(elf: &elf::Elf<'a>, section_name: &str, data: &'a [u8]) -> Option<&'a [u8]> {
     for header in &elf.section_headers {
-        if let Ok(name) = elf.shdr_strtab.get(header.sh_name) {
+        if let Some(Ok(name)) = elf.shdr_strtab.get(header.sh_name) {
             if name == section_name {
                 return Some(&data[header.sh_offset as usize..][..header.sh_size as usize]);
             }
@@ -77,14 +77,14 @@ fn macho_get_section<'a>(macho: &mach::MachO<'a>, section_name: &str) -> Option<
     let segment_name = "__DWARF";
     let section_name = macho_translate_section_name(section_name);
 
-    for segment in &*macho.segments {
+    for segment in &macho.segments {
         if let Ok(name) = segment.name() {
             if name == segment_name {
-                if let Ok(sections) = segment.sections() {
-                    for section in sections {
+                for section in segment {
+                    if let Ok((section, data)) = section {
                         if let Ok(name) = section.name() {
                             if name.as_bytes() == &*section_name {
-                                return Some(section.data);
+                                return Some(data);
                             }
                         }
                     }
