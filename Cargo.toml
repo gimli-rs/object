@@ -10,5 +10,8 @@ repository = "https://github.com/gimli-rs/object"
 [dependencies]
 goblin = "0.0.11"
 
+[dev-dependencies]
+memmap = "0.5.2"
+
 [features]
 nightly = []
