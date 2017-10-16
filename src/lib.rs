@@ -27,16 +27,14 @@ impl<'a> File<'a> {
     /// Parse the raw object file data.
     pub fn parse(data: &'a [u8]) -> Result<Self, &'static str> {
         let mut cursor = Cursor::new(data);
-        let kind = match goblin::peek(&mut cursor)
-                  .map_err(|_| "Could not parse file magic")? {
+        let kind = match goblin::peek(&mut cursor).map_err(|_| "Could not parse file magic")? {
             goblin::Hint::Elf(_) => {
-                let elf = elf::Elf::parse(data)
-                    .map_err(|_| "Could not parse ELF header")?;
+                let elf = elf::Elf::parse(data).map_err(|_| "Could not parse ELF header")?;
                 ObjectKind::Elf(elf)
             }
             goblin::Hint::Mach(_) => {
-                let macho = mach::MachO::parse(data, 0)
-                    .map_err(|_| "Could not parse Mach-O header")?;
+                let macho =
+                    mach::MachO::parse(data, 0).map_err(|_| "Could not parse Mach-O header")?;
                 ObjectKind::MachO(macho)
             }
             _ => return Err("Unknown file magic"),
