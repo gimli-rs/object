@@ -24,38 +24,51 @@ enum ObjectKind<'a> {
     MachO(mach::MachO<'a>),
 }
 
+/// The kind of a sections.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SectionKind {
+    /// The section kind is unknown.
+    Unknown,
+    /// An executable code section.
+    Text,
+    /// A data section.
+    Data,
+    /// A read only data section.
+    ReadOnlyData,
+    /// An uninitialized data section.
+    UninitializedData,
+    /// Some other type of text or data section.
+    Other,
+}
+
 /// A symbol table entry.
 pub struct Symbol<'a> {
     kind: SymbolKind,
+    section: usize,
+    section_kind: Option<SectionKind>,
     global: bool,
     name: &'a [u8],
     address: u64,
     size: u64,
-    section: usize,
-    // Symbol represents end of section. Internal use only.
-    section_end: bool,
 }
 
 /// The kind of a symbol.
-/// This is determined based on symbol flags, and the containing section.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SymbolKind {
     /// The symbol kind is unknown.
     Unknown,
-    /// The symbol is in a text section.
+    /// The symbol is for executable code.
     Text,
-    /// The symbol is in a data section.
+    /// The symbol is for a data object.
     Data,
-    /// The symbol is in a read only data section.
-    ReadOnlyData,
-    /// The symbol is in an uninitialized data section.
-    UninitializedData,
-    /// The symbol is in some other type of text or data section.
-    Other,
-    /// The symbol contains debugging information.
-    Debug,
-    /// The symbol is undefined.
-    Undefined,
+    /// The symbol is for a section.
+    Section,
+    /// The symbol is the name of a file. It precedes symbols within that file.
+    File,
+    /// The symbol is for an uninitialized common block.
+    Common,
+    /// The symbol is for a thread local storage entity.
+    Tls,
 }
 
 impl<'a> File<'a> {
@@ -87,7 +100,7 @@ impl<'a> File<'a> {
     }
 
     /// Get a `Vec` of the symbols defined in the file.
-    pub fn get_symbols(&self) -> Vec<Symbol> {
+    pub fn get_symbols(&self) -> Vec<Symbol<'a>> {
         match self.kind {
             ObjectKind::Elf(ref elf) => elf_get_symbols(elf),
             ObjectKind::MachO(ref macho) => macho_get_symbols(macho),
@@ -107,6 +120,16 @@ impl<'a> Symbol<'a> {
     /// Return the kind of this symbol.
     pub fn kind(&self) -> SymbolKind {
         self.kind
+    }
+
+    /// Returns the section kind for the symbol, or `None` if the symbol is undefnined.
+    pub fn section_kind(&self) -> Option<SectionKind> {
+        self.section_kind
+    }
+
+    /// Return true if the symbol is undefined.
+    pub fn is_undefined(&self) -> bool {
+        self.section_kind.is_none()
     }
 
     /// Return true if the symbol is global.
@@ -154,15 +177,15 @@ fn elf_get_symbols<'a>(elf: &elf::Elf<'a>) -> Vec<Symbol<'a>> {
         let kind = match sh.sh_type {
             elf::section_header::SHT_PROGBITS => {
                 if sh.sh_flags & elf::section_header::SHF_EXECINSTR as u64 != 0 {
-                    SymbolKind::Text
+                    SectionKind::Text
                 } else if sh.sh_flags & elf::section_header::SHF_WRITE as u64 != 0 {
-                    SymbolKind::Data
+                    SectionKind::Data
                 } else {
-                    SymbolKind::ReadOnlyData
+                    SectionKind::ReadOnlyData
                 }
             }
-            elf::section_header::SHT_NOBITS => SymbolKind::UninitializedData,
-            _ => SymbolKind::Unknown,
+            elf::section_header::SHT_NOBITS => SectionKind::UninitializedData,
+            _ => SectionKind::Unknown,
         };
         section_kinds.push(kind);
     }
@@ -171,28 +194,34 @@ fn elf_get_symbols<'a>(elf: &elf::Elf<'a>) -> Vec<Symbol<'a>> {
     // Skip undefined symbol index.
     for sym in elf.syms.iter().skip(1) {
         let kind = match elf::sym::st_type(sym.st_info) {
-            elf::sym::STT_SECTION | elf::sym::STT_FILE => SymbolKind::Debug,
-            _ => if sym.st_shndx == elf::section_header::SHN_UNDEF as usize {
-                SymbolKind::Undefined
-            } else if sym.st_shndx < section_kinds.len() {
-                section_kinds[sym.st_shndx]
-            } else {
-                SymbolKind::Unknown
-            },
+            elf::sym::STT_OBJECT => SymbolKind::Data,
+            elf::sym::STT_FUNC => SymbolKind::Text,
+            elf::sym::STT_SECTION => SymbolKind::Section,
+            elf::sym::STT_FILE => SymbolKind::File,
+            elf::sym::STT_COMMON => SymbolKind::Common,
+            elf::sym::STT_TLS => SymbolKind::Tls,
+            _ => SymbolKind::Unknown,
         };
         let global = elf::sym::st_bind(sym.st_info) != elf::sym::STB_LOCAL;
+        let section_kind = if sym.st_shndx == elf::section_header::SHN_UNDEF as usize
+            || sym.st_shndx >= section_kinds.len()
+        {
+            None
+        } else {
+            Some(section_kinds[sym.st_shndx])
+        };
         let name = match elf.strtab.get(sym.st_name) {
             Some(Ok(name)) => name.as_bytes(),
             _ => continue,
         };
         symbols.push(Symbol {
             kind,
+            section: sym.st_shndx,
+            section_kind,
             global,
             name,
             address: sym.st_value,
             size: sym.st_size,
-            section: sym.st_shndx,
-            section_end: false,
         });
     }
     symbols
@@ -253,29 +282,29 @@ fn macho_get_symbols<'a>(macho: &mach::MachO<'a>) -> Vec<Symbol<'a>> {
                     .segname()
                     .map(str::as_bytes)
                     .unwrap_or(&section.segname[..]);
-                let kind = if segname == b"__TEXT" && sectname == b"__text" {
-                    SymbolKind::Text
+                let (section_kind, symbol_kind) = if segname == b"__TEXT" && sectname == b"__text" {
+                    (SectionKind::Text, SymbolKind::Text)
                 } else if segname == b"__DATA" && sectname == b"__data" {
-                    SymbolKind::Data
+                    (SectionKind::Data, SymbolKind::Data)
                 } else if segname == b"__DATA" && sectname == b"__bss" {
-                    SymbolKind::UninitializedData
+                    (SectionKind::UninitializedData, SymbolKind::Data)
                 } else {
-                    SymbolKind::Other
+                    (SectionKind::Other, SymbolKind::Unknown)
                 };
                 let section_index = section_kinds.len();
-                section_kinds.push(kind);
+                section_kinds.push((section_kind, symbol_kind));
                 section_ends.push(Symbol {
-                    kind: SymbolKind::Unknown,
+                    kind: SymbolKind::Section,
+                    section: section_index + 1,
+                    section_kind: Some(section_kind),
                     global: false,
                     name: &[],
                     address: section.addr + section.size,
                     size: 0,
-                    section: section_index + 1,
-                    section_end: true,
                 });
             } else {
                 // Add placeholder so that indexing works.
-                section_kinds.push(SymbolKind::Unknown);
+                section_kinds.push((SectionKind::Unknown, SymbolKind::Unknown));
             }
         }
     }
@@ -288,25 +317,24 @@ fn macho_get_symbols<'a>(macho: &mach::MachO<'a>) -> Vec<Symbol<'a>> {
                 continue;
             }
             let n_type = nlist.n_type & mach::symbols::NLIST_TYPE_MASK;
-            let kind = if n_type == mach::symbols::N_UNDF {
-                SymbolKind::Undefined
-            } else if n_type == mach::symbols::N_SECT {
+            let (section_kind, kind) = if n_type == mach::symbols::N_SECT {
                 if nlist.n_sect == 0 || nlist.n_sect - 1 >= section_kinds.len() {
-                    SymbolKind::Unknown
+                    (None, SymbolKind::Unknown)
                 } else {
-                    section_kinds[nlist.n_sect - 1]
+                    let (section_kind, kind) = section_kinds[nlist.n_sect - 1];
+                    (Some(section_kind), kind)
                 }
             } else {
-                SymbolKind::Unknown
+                (None, SymbolKind::Unknown)
             };
             symbols.push(Symbol {
                 kind,
+                section: nlist.n_sect,
+                section_kind,
                 global: nlist.is_global(),
                 name: name.as_bytes(),
                 address: nlist.n_value,
                 size: 0,
-                section: nlist.n_sect,
-                section_end: false,
             });
         }
     }
@@ -314,7 +342,7 @@ fn macho_get_symbols<'a>(macho: &mach::MachO<'a>) -> Vec<Symbol<'a>> {
     {
         // Calculate symbol sizes by sorting and finding the next symbol.
         let mut symbol_refs = Vec::with_capacity(symbols.len() + section_ends.len());
-        symbol_refs.extend(symbols.iter_mut());
+        symbol_refs.extend(symbols.iter_mut().filter(|s| !s.is_undefined()));
         symbol_refs.extend(section_ends.iter_mut());
         symbol_refs.sort_by(|a, b| {
             let ord = a.section.cmp(&b.section);
@@ -325,16 +353,19 @@ fn macho_get_symbols<'a>(macho: &mach::MachO<'a>) -> Vec<Symbol<'a>> {
             if ord != Ordering::Equal {
                 return ord;
             }
-            a.section_end.cmp(&b.section_end)
+            // Place the dummy end of section symbols last.
+            (a.kind == SymbolKind::Section).cmp(&(b.kind == SymbolKind::Section))
         });
 
         for i in 0..symbol_refs.len() {
             let (before, after) = symbol_refs.split_at_mut(i + 1);
             let sym = &mut before[i];
-            if !sym.section_end {
+            if sym.kind != SymbolKind::Section {
                 if let Some(next) = after
                     .iter()
-                    .skip_while(|x| !x.section_end && x.address == sym.address)
+                    .skip_while(|x| {
+                        x.kind != SymbolKind::Section && x.address == sym.address
+                    })
                     .next()
                 {
                     sym.size = next.address - sym.address;

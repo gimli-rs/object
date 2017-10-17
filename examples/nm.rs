@@ -3,7 +3,7 @@ extern crate object;
 
 use std::{env, fs, process};
 
-use object::SymbolKind;
+use object::{SectionKind, SymbolKind};
 
 fn main() {
     let arg_len = env::args().len();
@@ -41,37 +41,40 @@ fn main() {
         };
 
         for symbol in &*file.get_symbols() {
-            let kind = match symbol.kind() {
-                SymbolKind::Unknown => '?',
-                SymbolKind::Text => if symbol.is_global() {
+            match symbol.kind() {
+                SymbolKind::Section | SymbolKind::File => continue,
+                _ => {}
+            }
+            let kind = match symbol.section_kind() {
+                Some(SectionKind::Unknown) => '?',
+                Some(SectionKind::Text) => if symbol.is_global() {
                     'T'
                 } else {
                     't'
                 },
-                SymbolKind::Data => if symbol.is_global() {
+                Some(SectionKind::Data) => if symbol.is_global() {
                     'D'
                 } else {
                     'd'
                 },
-                SymbolKind::ReadOnlyData => if symbol.is_global() {
+                Some(SectionKind::ReadOnlyData) => if symbol.is_global() {
                     'R'
                 } else {
                     'r'
                 },
-                SymbolKind::UninitializedData => if symbol.is_global() {
+                Some(SectionKind::UninitializedData) => if symbol.is_global() {
                     'B'
                 } else {
                     'b'
                 },
-                SymbolKind::Other => if symbol.is_global() {
+                Some(SectionKind::Other) => if symbol.is_global() {
                     'S'
                 } else {
                     's'
                 },
-                SymbolKind::Debug => continue,
-                SymbolKind::Undefined => 'U',
+                None => 'U',
             };
-            if symbol.kind() == SymbolKind::Undefined {
+            if symbol.is_undefined() {
                 print!("{:16} ", "");
             } else {
                 print!("{:016x} ", symbol.address());
