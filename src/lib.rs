@@ -118,41 +118,49 @@ impl<'a> File<'a> {
 
 impl<'a> Symbol<'a> {
     /// Return the kind of this symbol.
+    #[inline]
     pub fn kind(&self) -> SymbolKind {
         self.kind
     }
 
     /// Returns the section kind for the symbol, or `None` if the symbol is undefnined.
+    #[inline]
     pub fn section_kind(&self) -> Option<SectionKind> {
         self.section_kind
     }
 
     /// Return true if the symbol is undefined.
+    #[inline]
     pub fn is_undefined(&self) -> bool {
         self.section_kind.is_none()
     }
 
     /// Return true if the symbol is global.
+    #[inline]
     pub fn is_global(&self) -> bool {
         self.global
     }
 
     /// Return true if the symbol is local.
+    #[inline]
     pub fn is_local(&self) -> bool {
         !self.global
     }
 
     /// The name of the symbol.
+    #[inline]
     pub fn name(&self) -> &'a [u8] {
         self.name
     }
 
     /// The address of the symbol. May be zero if the address is unknown.
+    #[inline]
     pub fn address(&self) -> u64 {
         self.address
     }
 
     /// The size of the symbol. May be zero if the size is unknown.
+    #[inline]
     pub fn size(&self) -> u64 {
         self.size
     }
