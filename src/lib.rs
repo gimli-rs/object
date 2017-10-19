@@ -321,6 +321,7 @@ fn macho_get_symbols<'a>(macho: &mach::MachO<'a>) -> Vec<Symbol<'a>> {
     for sym in macho.symbols() {
         if let Ok((name, nlist)) = sym {
             // Skip STAB debugging symbols.
+            // FIXME: use N_STAB constant
             if nlist.n_type & 0xe0 != 0 {
                 continue;
             }
