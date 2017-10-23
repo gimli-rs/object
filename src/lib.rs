@@ -12,7 +12,9 @@ extern crate goblin;
 
 use goblin::{elf, mach};
 use std::cmp::Ordering;
+use std::fmt;
 use std::io::Cursor;
+use std::slice;
 
 /// An object file.
 #[derive(Debug)]
@@ -75,6 +77,94 @@ pub enum SymbolKind {
     Tls,
 }
 
+/// An iterator of the sections of an File
+pub struct SectionIterator<'a, 'b> {
+    inner: SectionIteratorInternal<'a, 'b>,
+}
+
+impl<'a, 'b> fmt::Debug for SectionIterator<'a, 'b> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        // It's painful to do much better than this
+        f.debug_struct("SectionIterator").finish()
+    }
+}
+
+// we wrap our enums in a struct so that they are kept private.
+enum SectionIteratorInternal<'a, 'b> {
+    MachO(Box<Iterator<Item = (mach::segment::Section, mach::segment::SectionData<'a>)> + 'b>),
+    Elf(slice::Iter<'a, elf::SectionHeader>, &'a elf::Elf<'a>, &'a [u8]),
+}
+
+enum SectionInternal<'a> {
+    MachO((mach::segment::Section, mach::segment::SectionData<'a>)),
+    Elf(<slice::Iter<'a, elf::SectionHeader> as Iterator>::Item, &'a elf::Elf<'a>, &'a [u8])
+}
+
+/// A Section of a File
+pub struct Section<'a> {
+    inner: SectionInternal<'a>,
+}
+
+impl<'a> fmt::Debug for Section<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        // It's painful to do much better than this
+        f.debug_struct("Section")
+            .field("name", &self.name().unwrap_or("<invalid name>"))
+            .field("address", &self.address())
+            .field("size", &self.data().len())
+            .finish()
+    }
+}
+
+impl<'a> Section<'a> {
+    /// returns the address of the section
+    pub fn address(&self) -> u64 {
+        match &self.inner {
+            &SectionInternal::MachO(ref macho) => macho.0.addr,
+            &SectionInternal::Elf(ref elf, _, _) => elf.sh_addr,
+        }
+    }
+
+    /// returns a reference to contents of the section
+    pub fn data(&self) -> &'a [u8] {
+        match &self.inner {
+            &SectionInternal::MachO(ref macho) => macho.1,
+            &SectionInternal::Elf(ref header, _, ref data) => {
+                &data[header.sh_offset as usize..][..header.sh_size as usize]
+            }
+        }
+    }
+
+    /// returns the name of the section
+    pub fn name(&self) -> Option<&str> {
+        match &self.inner {
+            &SectionInternal::MachO(ref macho) => macho.0.name().ok(),
+            &SectionInternal::Elf(ref header, ref elf, ref _data) => {
+                elf.shdr_strtab.get(header.sh_name).and_then(|x| x.ok())
+            }
+        }
+    }
+}
+
+impl<'a, 'b> Iterator for SectionIterator<'a, 'b> {
+    type Item = Section<'a>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        match &mut self.inner {
+            &mut SectionIteratorInternal::MachO(ref mut macho) => {
+                macho.next().map(
+                    |x| Section { inner: SectionInternal::MachO(x) },
+                )
+            }
+            &mut SectionIteratorInternal::Elf(ref mut iter, ref elf, ref data) => {
+                iter.next().map(|x| {
+                    Section { inner: SectionInternal::Elf(x, elf, data) }
+                })
+            }
+        }
+    }
+}
+
 impl<'a> File<'a> {
     /// Parse the raw object file data.
     pub fn parse(data: &'a [u8]) -> Result<Self, &'static str> {
@@ -100,6 +190,20 @@ impl<'a> File<'a> {
         match self.kind {
             ObjectKind::Elf(ref elf) => elf_get_section(elf, section_name, self.data),
             ObjectKind::MachO(ref macho) => macho_get_section(macho, section_name),
+        }
+    }
+
+    /// Get an Iterator over the sections in the file.
+    pub fn get_sections(&self) -> SectionIterator {
+        match self.kind {
+            ObjectKind::Elf(ref elf) => SectionIterator {
+                inner: SectionIteratorInternal::Elf(elf.section_headers.iter(), &elf, self.data),
+            },
+            ObjectKind::MachO(ref macho) => SectionIterator {
+                inner: SectionIteratorInternal::MachO(Box::new(macho.segments.iter()
+                .flat_map(|x| x) // iterate over the sections
+                .flat_map(|x| x))),
+            },
         }
     }
 
