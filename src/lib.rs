@@ -42,6 +42,7 @@ pub enum SectionKind {
 }
 
 /// A symbol table entry.
+#[derive(Debug)]
 pub struct Symbol<'a> {
     kind: SymbolKind,
     section: usize,
