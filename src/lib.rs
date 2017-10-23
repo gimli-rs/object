@@ -72,6 +72,16 @@ pub enum SymbolKind {
     Tls,
 }
 
+/// a Section of the object file
+pub struct Section<'a> {
+    /// the contents
+    pub data: &'a [u8],
+    /// the location
+    pub address: u64,
+    /// the size of the contents
+    pub size: u64
+}
+
 impl<'a> File<'a> {
     /// Parse the raw object file data.
     pub fn parse(data: &'a [u8]) -> Result<Self, &'static str> {
@@ -97,6 +107,15 @@ impl<'a> File<'a> {
         match self.kind {
             ObjectKind::Elf(ref elf) => elf_get_section(elf, section_name, self.data),
             ObjectKind::MachO(ref macho) => macho_get_section(macho, section_name),
+        }
+    }
+
+    /// Get the contents of the indxth section, if such
+    /// a section exists.
+    pub fn get_section_by_indx(&self, indx: usize) -> Option<Section> {
+        match self.kind {
+            ObjectKind::Elf(ref elf) => elf_get_section_by_indx(elf, indx, self.data),
+            ObjectKind::MachO(ref macho) => macho_get_section_by_indx(macho, indx)
         }
     }
 
@@ -154,6 +173,11 @@ impl<'a> Symbol<'a> {
         self.name
     }
 
+    /// The section index of the symbol.
+    pub fn section(&self) -> usize {
+        self.section
+    }
+
     /// The address of the symbol. May be zero if the address is unknown.
     #[inline]
     pub fn address(&self) -> u64 {
@@ -176,6 +200,16 @@ fn elf_get_section<'a>(elf: &elf::Elf<'a>, section_name: &str, data: &'a [u8]) -
         }
     }
     None
+}
+
+fn elf_get_section_by_indx<'a>(elf: &elf::Elf<'a>, indx: usize, data: &'a [u8]) -> Option<Section<'a>> {
+    elf.section_headers.iter().nth(indx).map(|header|
+        Section{
+            data: &data[header.sh_offset as usize..][..header.sh_size as usize],
+            size: header.sh_size,
+            address: header.sh_addr,
+        })
+
 }
 
 fn elf_get_symbols<'a>(elf: &elf::Elf<'a>) -> Vec<Symbol<'a>> {
@@ -260,6 +294,12 @@ fn macho_get_section<'a>(macho: &mach::MachO<'a>, section_name: &str) -> Option<
         }
     }
     None
+}
+
+fn macho_get_section_by_indx<'a>(macho: &mach::MachO<'a>, indx: usize) -> Option<Section<'a>> {
+    macho.segments.iter().flat_map(|x| x).flat_map(|x| x)
+        .nth(indx)
+        .map(|x| {println!("{:?}", x.0); Section{data: x.1, size: x.0.size, address: x.0.addr}})
 }
 
 // Translate the "." prefix to the "__" prefix used by OSX/Mach-O, eg
