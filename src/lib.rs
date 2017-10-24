@@ -6,6 +6,7 @@
 //! See the [`File` struct](./struct.File.html) for details.
 
 #![deny(missing_docs)]
+#![deny(missing_debug_implementations)]
 
 extern crate goblin;
 
@@ -14,11 +15,13 @@ use std::cmp::Ordering;
 use std::io::Cursor;
 
 /// An object file.
+#[derive(Debug)]
 pub struct File<'a> {
     kind: ObjectKind<'a>,
     data: &'a [u8],
 }
 
+#[derive(Debug)]
 enum ObjectKind<'a> {
     Elf(elf::Elf<'a>),
     MachO(mach::MachO<'a>),
