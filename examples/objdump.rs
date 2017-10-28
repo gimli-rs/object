@@ -23,14 +23,14 @@ fn main() {
                 return;
             }
         };
-        let file = match memmap::Mmap::open(&file, memmap::Protection::Read) {
+        let file = match unsafe { memmap::Mmap::map(&file) } {
             Ok(mmap) => mmap,
             Err(err) => {
                 println!("Failed to map file '{}': {}", file_path, err,);
                 return;
             }
         };
-        let file = match object::File::parse(unsafe { file.as_slice() }) {
+        let file = match object::File::parse(&*file) {
             Ok(file) => file,
             Err(err) => {
                 println!("Failed to parse file '{}': {}", file_path, err);
