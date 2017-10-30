@@ -54,7 +54,7 @@ enum SectionInternal<'a> {
     MachO(MachOSection<'a>),
 }
 
-/// The kind of a sections.
+/// The kind of a section.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SectionKind {
     /// The section kind is unknown.
