@@ -17,6 +17,7 @@ mod elf;
 pub use elf::*;
 
 mod macho;
+pub use macho::*;
 
 /// An object file.
 #[derive(Debug)]
@@ -27,7 +28,7 @@ pub struct File<'a> {
 #[derive(Debug)]
 enum ObjectKind<'a> {
     Elf(ElfFile<'a>),
-    MachO(goblin::mach::MachO<'a>),
+    MachO(MachOFile<'a>),
 }
 
 /// The kind of a sections.
@@ -79,40 +80,20 @@ pub enum SymbolKind {
 }
 
 /// An iterator of the sections of a `File`.
+#[derive(Debug)]
 pub struct SectionIterator<'a, 'b> {
     inner: SectionIteratorInternal<'a, 'b>,
 }
 
-impl<'a, 'b> fmt::Debug for SectionIterator<'a, 'b> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        // It's painful to do much better than this
-        f.debug_struct("SectionIterator").finish()
-    }
-}
-
 // we wrap our enums in a struct so that they are kept private.
+#[derive(Debug)]
 enum SectionIteratorInternal<'a, 'b> {
-    MachO(
-        Box<
-            Iterator<
-                Item = (
-                    goblin::mach::segment::Section,
-                    goblin::mach::segment::SectionData<'a>,
-                ),
-            >
-                + 'b,
-        >,
-    ),
+    MachO(MachOSectionIterator<'a, 'b>),
     Elf(ElfSectionIterator<'a>),
 }
 
 enum SectionInternal<'a> {
-    MachO(
-        (
-            goblin::mach::segment::Section,
-            goblin::mach::segment::SectionData<'a>,
-        ),
-    ),
+    MachO(MachOSection<'a>),
     Elf(ElfSection<'a>),
 }
 
@@ -136,7 +117,7 @@ impl<'a> Section<'a> {
     /// returns the address of the section
     pub fn address(&self) -> u64 {
         match &self.inner {
-            &SectionInternal::MachO(ref macho) => macho.0.addr,
+            &SectionInternal::MachO(ref macho) => macho.address(),
             &SectionInternal::Elf(ref elf) => elf.address(),
         }
     }
@@ -144,7 +125,7 @@ impl<'a> Section<'a> {
     /// returns a reference to contents of the section
     pub fn data(&self) -> &'a [u8] {
         match &self.inner {
-            &SectionInternal::MachO(ref macho) => macho.1,
+            &SectionInternal::MachO(ref macho) => macho.data(),
             &SectionInternal::Elf(ref elf) => elf.data(),
         }
     }
@@ -152,7 +133,7 @@ impl<'a> Section<'a> {
     /// returns the name of the section
     pub fn name(&self) -> Option<&str> {
         match &self.inner {
-            &SectionInternal::MachO(ref macho) => macho.0.name().ok(),
+            &SectionInternal::MachO(ref macho) => macho.name(),
             &SectionInternal::Elf(ref elf) => elf.name(),
         }
     }
@@ -183,11 +164,7 @@ impl<'a> File<'a> {
         let mut cursor = Cursor::new(data);
         let kind = match goblin::peek(&mut cursor).map_err(|_| "Could not parse file magic")? {
             goblin::Hint::Elf(_) => ObjectKind::Elf(ElfFile::parse(data)?),
-            goblin::Hint::Mach(_) => {
-                let macho = goblin::mach::MachO::parse(data, 0)
-                    .map_err(|_| "Could not parse Mach-O header")?;
-                ObjectKind::MachO(macho)
-            }
+            goblin::Hint::Mach(_) => ObjectKind::MachO(MachOFile::parse(data)?),
             _ => return Err("Unknown file magic"),
         };
         Ok(File { kind })
@@ -198,7 +175,7 @@ impl<'a> File<'a> {
     pub fn get_section(&self, section_name: &str) -> Option<&'a [u8]> {
         match self.kind {
             ObjectKind::Elf(ref elf) => elf.get_section(section_name),
-            ObjectKind::MachO(ref macho) => macho::get_section(macho, section_name),
+            ObjectKind::MachO(ref macho) => macho.get_section(section_name),
         }
     }
 
@@ -209,9 +186,7 @@ impl<'a> File<'a> {
                 inner: SectionIteratorInternal::Elf(elf.get_sections()),
             },
             ObjectKind::MachO(ref macho) => SectionIterator {
-                inner: SectionIteratorInternal::MachO(Box::new(macho.segments.iter()
-                .flat_map(|x| x) // iterate over the sections
-                .flat_map(|x| x))),
+                inner: SectionIteratorInternal::MachO(macho.get_sections()),
             },
         }
     }
@@ -220,7 +195,7 @@ impl<'a> File<'a> {
     pub fn get_symbols(&self) -> Vec<Symbol<'a>> {
         match self.kind {
             ObjectKind::Elf(ref elf) => elf.get_symbols(),
-            ObjectKind::MachO(ref macho) => macho::get_symbols(macho),
+            ObjectKind::MachO(ref macho) => macho.get_symbols(),
         }
     }
 
@@ -228,7 +203,7 @@ impl<'a> File<'a> {
     pub fn is_little_endian(&self) -> bool {
         match self.kind {
             ObjectKind::Elf(ref elf) => elf.is_little_endian(),
-            ObjectKind::MachO(ref macho) => macho.header.is_little_endian(),
+            ObjectKind::MachO(ref macho) => macho.is_little_endian(),
         }
     }
 }

@@ -1,33 +1,230 @@
 use std::cmp::Ordering;
+use std::fmt;
 
 use goblin::mach;
 
 use {SectionKind, Symbol, SymbolKind};
 
-pub(crate) fn get_section<'a>(macho: &mach::MachO<'a>, section_name: &str) -> Option<&'a [u8]> {
-    let segment_name = if section_name == ".eh_frame" {
-        "__TEXT"
-    } else {
-        "__DWARF"
-    };
-    let section_name = translate_section_name(section_name);
+/// A Mach-O object file.
+#[derive(Debug)]
+pub struct MachOFile<'a> {
+    macho: mach::MachO<'a>,
+}
 
-    for segment in &macho.segments {
-        if let Ok(name) = segment.name() {
-            if name == segment_name {
-                for section in segment {
-                    if let Ok((section, data)) = section {
-                        if let Ok(name) = section.name() {
-                            if name.as_bytes() == &*section_name {
-                                return Some(data);
+/// An iterator of the sections of a `MachOFile`.
+pub struct MachOSectionIterator<'a, 'b> {
+    iter: Box<Iterator<Item = (mach::segment::Section, mach::segment::SectionData<'a>)> + 'b>,
+}
+
+/// A section of a `MachOFile`.
+#[derive(Debug)]
+pub struct MachOSection<'a> {
+    section: mach::segment::Section,
+    data: mach::segment::SectionData<'a>,
+}
+
+impl<'a> MachOFile<'a> {
+    /// Parse the raw Mach-O file data.
+    pub fn parse(data: &'a [u8]) -> Result<Self, &'static str> {
+        let macho = mach::MachO::parse(data, 0).map_err(|_| "Could not parse Mach-O header")?;
+        Ok(MachOFile { macho })
+    }
+
+    /// Get the contents of the section named `section_name`, if such
+    /// a section exists.
+    pub fn get_section(&self, section_name: &str) -> Option<&'a [u8]> {
+        let segment_name = if section_name == ".eh_frame" {
+            "__TEXT"
+        } else {
+            "__DWARF"
+        };
+        let section_name = translate_section_name(section_name);
+
+        for segment in &self.macho.segments {
+            if let Ok(name) = segment.name() {
+                if name == segment_name {
+                    for section in segment {
+                        if let Ok((section, data)) = section {
+                            if let Ok(name) = section.name() {
+                                if name.as_bytes() == &*section_name {
+                                    return Some(data);
+                                }
                             }
                         }
                     }
                 }
             }
         }
+        None
     }
-    None
+
+    /// Get an Iterator over the sections in the file.
+    pub fn get_sections(&self) -> MachOSectionIterator {
+        MachOSectionIterator {
+            iter: Box::new(self.macho.segments.iter()
+                           .flat_map(|x| x) // iterate over the sections
+                           .flat_map(|x| x)),
+        }
+    }
+
+    /// Get a `Vec` of the symbols defined in the file.
+    pub fn get_symbols(&self) -> Vec<Symbol<'a>> {
+        // Determine section kinds and end addresses.
+        // The section kinds are inherited by symbols in those sections.
+        // The section end addresses are needed for calculating symbol sizes.
+        let mut section_kinds = Vec::new();
+        let mut section_ends = Vec::new();
+        for segment in &self.macho.segments {
+            for section in segment {
+                if let Ok((section, _)) = section {
+                    let sectname = section
+                        .name()
+                        .map(str::as_bytes)
+                        .unwrap_or(&section.sectname[..]);
+                    let segname = section
+                        .segname()
+                        .map(str::as_bytes)
+                        .unwrap_or(&section.segname[..]);
+                    let (section_kind, symbol_kind) =
+                        if segname == b"__TEXT" && sectname == b"__text" {
+                            (SectionKind::Text, SymbolKind::Text)
+                        } else if segname == b"__DATA" && sectname == b"__data" {
+                            (SectionKind::Data, SymbolKind::Data)
+                        } else if segname == b"__DATA" && sectname == b"__bss" {
+                            (SectionKind::UninitializedData, SymbolKind::Data)
+                        } else {
+                            (SectionKind::Other, SymbolKind::Unknown)
+                        };
+                    let section_index = section_kinds.len();
+                    section_kinds.push((section_kind, symbol_kind));
+                    section_ends.push(Symbol {
+                        kind: SymbolKind::Section,
+                        section: section_index + 1,
+                        section_kind: Some(section_kind),
+                        global: false,
+                        name: &[],
+                        address: section.addr + section.size,
+                        size: 0,
+                    });
+                } else {
+                    // Add placeholder so that indexing works.
+                    section_kinds.push((SectionKind::Unknown, SymbolKind::Unknown));
+                }
+            }
+        }
+
+        let mut symbols = Vec::new();
+        for sym in self.macho.symbols() {
+            if let Ok((name, nlist)) = sym {
+                // Skip STAB debugging symbols.
+                // FIXME: use N_STAB constant
+                if nlist.n_type & 0xe0 != 0 {
+                    continue;
+                }
+                let n_type = nlist.n_type & mach::symbols::NLIST_TYPE_MASK;
+                let (section_kind, kind) = if n_type == mach::symbols::N_SECT {
+                    if nlist.n_sect == 0 || nlist.n_sect - 1 >= section_kinds.len() {
+                        (None, SymbolKind::Unknown)
+                    } else {
+                        let (section_kind, kind) = section_kinds[nlist.n_sect - 1];
+                        (Some(section_kind), kind)
+                    }
+                } else {
+                    (None, SymbolKind::Unknown)
+                };
+                symbols.push(Symbol {
+                    kind,
+                    section: nlist.n_sect,
+                    section_kind,
+                    global: nlist.is_global(),
+                    name: name.as_bytes(),
+                    address: nlist.n_value,
+                    size: 0,
+                });
+            }
+        }
+
+        {
+            // Calculate symbol sizes by sorting and finding the next symbol.
+            let mut symbol_refs = Vec::with_capacity(symbols.len() + section_ends.len());
+            symbol_refs.extend(symbols.iter_mut().filter(|s| !s.is_undefined()));
+            symbol_refs.extend(section_ends.iter_mut());
+            symbol_refs.sort_by(|a, b| {
+                let ord = a.section.cmp(&b.section);
+                if ord != Ordering::Equal {
+                    return ord;
+                }
+                let ord = a.address.cmp(&b.address);
+                if ord != Ordering::Equal {
+                    return ord;
+                }
+                // Place the dummy end of section symbols last.
+                (a.kind == SymbolKind::Section).cmp(&(b.kind == SymbolKind::Section))
+            });
+
+            for i in 0..symbol_refs.len() {
+                let (before, after) = symbol_refs.split_at_mut(i + 1);
+                let sym = &mut before[i];
+                if sym.kind != SymbolKind::Section {
+                    if let Some(next) = after
+                        .iter()
+                        .skip_while(|x| {
+                            x.kind != SymbolKind::Section && x.address == sym.address
+                        })
+                        .next()
+                    {
+                        sym.size = next.address - sym.address;
+                    }
+                }
+            }
+        }
+
+        symbols
+    }
+
+    /// Return true if the file is little endian, false if it is big endian.
+    #[inline]
+    pub fn is_little_endian(&self) -> bool {
+        self.macho.header.is_little_endian()
+    }
+}
+
+impl<'a, 'b> fmt::Debug for MachOSectionIterator<'a, 'b> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        // It's painful to do much better than this
+        f.debug_struct("MachOSectionIterator").finish()
+    }
+}
+
+impl<'a, 'b> Iterator for MachOSectionIterator<'a, 'b> {
+    type Item = MachOSection<'a>;
+
+    #[inline]
+    fn next(&mut self) -> Option<Self::Item> {
+        self.iter
+            .next()
+            .map(|(section, data)| MachOSection { section, data })
+    }
+}
+
+impl<'a> MachOSection<'a> {
+    /// Returns the address of the section.
+    #[inline]
+    pub fn address(&self) -> u64 {
+        self.section.addr
+    }
+
+    /// Returns a reference to contents of the section.
+    #[inline]
+    pub fn data(&self) -> &'a [u8] {
+        self.data
+    }
+
+    /// Returns the name of the section.
+    #[inline]
+    pub fn name(&self) -> Option<&str> {
+        self.section.name().ok()
+    }
 }
 
 // Translate the "." prefix to the "__" prefix used by OSX/Mach-O, eg
@@ -40,117 +237,4 @@ fn translate_section_name(section_name: &str) -> Vec<u8> {
         name.push(*ch);
     }
     name
-}
-
-pub(crate) fn get_symbols<'a>(macho: &mach::MachO<'a>) -> Vec<Symbol<'a>> {
-    // Determine section kinds and end addresses.
-    // The section kinds are inherited by symbols in those sections.
-    // The section end addresses are needed for calculating symbol sizes.
-    let mut section_kinds = Vec::new();
-    let mut section_ends = Vec::new();
-    for segment in &macho.segments {
-        for section in segment {
-            if let Ok((section, _)) = section {
-                let sectname = section
-                    .name()
-                    .map(str::as_bytes)
-                    .unwrap_or(&section.sectname[..]);
-                let segname = section
-                    .segname()
-                    .map(str::as_bytes)
-                    .unwrap_or(&section.segname[..]);
-                let (section_kind, symbol_kind) = if segname == b"__TEXT" && sectname == b"__text" {
-                    (SectionKind::Text, SymbolKind::Text)
-                } else if segname == b"__DATA" && sectname == b"__data" {
-                    (SectionKind::Data, SymbolKind::Data)
-                } else if segname == b"__DATA" && sectname == b"__bss" {
-                    (SectionKind::UninitializedData, SymbolKind::Data)
-                } else {
-                    (SectionKind::Other, SymbolKind::Unknown)
-                };
-                let section_index = section_kinds.len();
-                section_kinds.push((section_kind, symbol_kind));
-                section_ends.push(Symbol {
-                    kind: SymbolKind::Section,
-                    section: section_index + 1,
-                    section_kind: Some(section_kind),
-                    global: false,
-                    name: &[],
-                    address: section.addr + section.size,
-                    size: 0,
-                });
-            } else {
-                // Add placeholder so that indexing works.
-                section_kinds.push((SectionKind::Unknown, SymbolKind::Unknown));
-            }
-        }
-    }
-
-    let mut symbols = Vec::new();
-    for sym in macho.symbols() {
-        if let Ok((name, nlist)) = sym {
-            // Skip STAB debugging symbols.
-            // FIXME: use N_STAB constant
-            if nlist.n_type & 0xe0 != 0 {
-                continue;
-            }
-            let n_type = nlist.n_type & mach::symbols::NLIST_TYPE_MASK;
-            let (section_kind, kind) = if n_type == mach::symbols::N_SECT {
-                if nlist.n_sect == 0 || nlist.n_sect - 1 >= section_kinds.len() {
-                    (None, SymbolKind::Unknown)
-                } else {
-                    let (section_kind, kind) = section_kinds[nlist.n_sect - 1];
-                    (Some(section_kind), kind)
-                }
-            } else {
-                (None, SymbolKind::Unknown)
-            };
-            symbols.push(Symbol {
-                kind,
-                section: nlist.n_sect,
-                section_kind,
-                global: nlist.is_global(),
-                name: name.as_bytes(),
-                address: nlist.n_value,
-                size: 0,
-            });
-        }
-    }
-
-    {
-        // Calculate symbol sizes by sorting and finding the next symbol.
-        let mut symbol_refs = Vec::with_capacity(symbols.len() + section_ends.len());
-        symbol_refs.extend(symbols.iter_mut().filter(|s| !s.is_undefined()));
-        symbol_refs.extend(section_ends.iter_mut());
-        symbol_refs.sort_by(|a, b| {
-            let ord = a.section.cmp(&b.section);
-            if ord != Ordering::Equal {
-                return ord;
-            }
-            let ord = a.address.cmp(&b.address);
-            if ord != Ordering::Equal {
-                return ord;
-            }
-            // Place the dummy end of section symbols last.
-            (a.kind == SymbolKind::Section).cmp(&(b.kind == SymbolKind::Section))
-        });
-
-        for i in 0..symbol_refs.len() {
-            let (before, after) = symbol_refs.split_at_mut(i + 1);
-            let sym = &mut before[i];
-            if sym.kind != SymbolKind::Section {
-                if let Some(next) = after
-                    .iter()
-                    .skip_while(|x| {
-                        x.kind != SymbolKind::Section && x.address == sym.address
-                    })
-                    .next()
-                {
-                    sym.size = next.address - sym.address;
-                }
-            }
-        }
-    }
-
-    symbols
 }
