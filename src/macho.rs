@@ -1,5 +1,6 @@
 use std::cmp::Ordering;
 use std::fmt;
+use std::slice;
 
 use goblin::mach;
 
@@ -12,8 +13,9 @@ pub struct MachOFile<'a> {
 }
 
 /// An iterator of the sections of a `MachOFile`.
-pub struct MachOSectionIterator<'a, 'b> {
-    iter: Box<Iterator<Item = (mach::segment::Section, mach::segment::SectionData<'a>)> + 'b>,
+pub struct MachOSectionIterator<'a> {
+    segments: slice::Iter<'a, mach::segment::Segment<'a>>,
+    sections: Option<mach::segment::SectionIterator<'a>>,
 }
 
 /// A section of a `MachOFile`.
@@ -61,9 +63,8 @@ impl<'a> MachOFile<'a> {
     /// Get an Iterator over the sections in the file.
     pub fn get_sections(&self) -> MachOSectionIterator {
         MachOSectionIterator {
-            iter: Box::new(self.macho.segments.iter()
-                           .flat_map(|x| x) // iterate over the sections
-                           .flat_map(|x| x)),
+            segments: self.macho.segments.iter(),
+            sections: None,
         }
     }
 
@@ -189,21 +190,32 @@ impl<'a> MachOFile<'a> {
     }
 }
 
-impl<'a, 'b> fmt::Debug for MachOSectionIterator<'a, 'b> {
+impl<'a> fmt::Debug for MachOSectionIterator<'a> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         // It's painful to do much better than this
         f.debug_struct("MachOSectionIterator").finish()
     }
 }
 
-impl<'a, 'b> Iterator for MachOSectionIterator<'a, 'b> {
+impl<'a> Iterator for MachOSectionIterator<'a> {
     type Item = MachOSection<'a>;
 
-    #[inline]
     fn next(&mut self) -> Option<Self::Item> {
-        self.iter
-            .next()
-            .map(|(section, data)| MachOSection { section, data })
+        loop {
+            if let Some(ref mut sections) = self.sections {
+                while let Some(section) = sections.next() {
+                    if let Ok((section, data)) = section {
+                        return Some(MachOSection { section, data });
+                    }
+                }
+            }
+            match self.segments.next() {
+                None => return None,
+                Some(segment) => {
+                    self.sections = Some(segment.into_iter());
+                }
+            }
+        }
     }
 }
 

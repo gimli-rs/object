@@ -33,15 +33,15 @@ enum FileInternal<'a> {
 
 /// An iterator of the sections of a `File`.
 #[derive(Debug)]
-pub struct SectionIterator<'a, 'b> {
-    inner: SectionIteratorInternal<'a, 'b>,
+pub struct SectionIterator<'a> {
+    inner: SectionIteratorInternal<'a>,
 }
 
 // we wrap our enums in a struct so that they are kept private.
 #[derive(Debug)]
-enum SectionIteratorInternal<'a, 'b> {
+enum SectionIteratorInternal<'a> {
     Elf(ElfSectionIterator<'a>),
-    MachO(MachOSectionIterator<'a, 'b>),
+    MachO(MachOSectionIterator<'a>),
 }
 
 /// A Section of a File
@@ -152,7 +152,7 @@ impl<'a> File<'a> {
     }
 }
 
-impl<'a, 'b> Iterator for SectionIterator<'a, 'b> {
+impl<'a> Iterator for SectionIterator<'a> {
     type Item = Section<'a>;
 
     fn next(&mut self) -> Option<Self::Item> {
