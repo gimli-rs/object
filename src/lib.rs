@@ -31,6 +31,29 @@ enum ObjectKind<'a> {
     MachO(MachOFile<'a>),
 }
 
+/// An iterator of the sections of a `File`.
+#[derive(Debug)]
+pub struct SectionIterator<'a, 'b> {
+    inner: SectionIteratorInternal<'a, 'b>,
+}
+
+// we wrap our enums in a struct so that they are kept private.
+#[derive(Debug)]
+enum SectionIteratorInternal<'a, 'b> {
+    Elf(ElfSectionIterator<'a>),
+    MachO(MachOSectionIterator<'a, 'b>),
+}
+
+/// A Section of a File
+pub struct Section<'a> {
+    inner: SectionInternal<'a>,
+}
+
+enum SectionInternal<'a> {
+    Elf(ElfSection<'a>),
+    MachO(MachOSection<'a>),
+}
+
 /// The kind of a sections.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SectionKind {
@@ -79,85 +102,6 @@ pub enum SymbolKind {
     Tls,
 }
 
-/// An iterator of the sections of a `File`.
-#[derive(Debug)]
-pub struct SectionIterator<'a, 'b> {
-    inner: SectionIteratorInternal<'a, 'b>,
-}
-
-// we wrap our enums in a struct so that they are kept private.
-#[derive(Debug)]
-enum SectionIteratorInternal<'a, 'b> {
-    MachO(MachOSectionIterator<'a, 'b>),
-    Elf(ElfSectionIterator<'a>),
-}
-
-enum SectionInternal<'a> {
-    MachO(MachOSection<'a>),
-    Elf(ElfSection<'a>),
-}
-
-/// A Section of a File
-pub struct Section<'a> {
-    inner: SectionInternal<'a>,
-}
-
-impl<'a> fmt::Debug for Section<'a> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        // It's painful to do much better than this
-        f.debug_struct("Section")
-            .field("name", &self.name().unwrap_or("<invalid name>"))
-            .field("address", &self.address())
-            .field("size", &self.data().len())
-            .finish()
-    }
-}
-
-impl<'a> Section<'a> {
-    /// returns the address of the section
-    pub fn address(&self) -> u64 {
-        match &self.inner {
-            &SectionInternal::MachO(ref macho) => macho.address(),
-            &SectionInternal::Elf(ref elf) => elf.address(),
-        }
-    }
-
-    /// returns a reference to contents of the section
-    pub fn data(&self) -> &'a [u8] {
-        match &self.inner {
-            &SectionInternal::MachO(ref macho) => macho.data(),
-            &SectionInternal::Elf(ref elf) => elf.data(),
-        }
-    }
-
-    /// returns the name of the section
-    pub fn name(&self) -> Option<&str> {
-        match &self.inner {
-            &SectionInternal::MachO(ref macho) => macho.name(),
-            &SectionInternal::Elf(ref elf) => elf.name(),
-        }
-    }
-}
-
-impl<'a, 'b> Iterator for SectionIterator<'a, 'b> {
-    type Item = Section<'a>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        match &mut self.inner {
-            &mut SectionIteratorInternal::MachO(ref mut macho) => macho.next().map(|x| {
-                Section {
-                    inner: SectionInternal::MachO(x),
-                }
-            }),
-            &mut SectionIteratorInternal::Elf(ref mut elf) => elf.next().map(|x| {
-                Section {
-                    inner: SectionInternal::Elf(x),
-                }
-            }),
-        }
-    }
-}
-
 impl<'a> File<'a> {
     /// Parse the raw object file data.
     pub fn parse(data: &'a [u8]) -> Result<Self, &'static str> {
@@ -204,6 +148,62 @@ impl<'a> File<'a> {
         match self.kind {
             ObjectKind::Elf(ref elf) => elf.is_little_endian(),
             ObjectKind::MachO(ref macho) => macho.is_little_endian(),
+        }
+    }
+}
+
+impl<'a, 'b> Iterator for SectionIterator<'a, 'b> {
+    type Item = Section<'a>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        match &mut self.inner {
+            &mut SectionIteratorInternal::Elf(ref mut elf) => elf.next().map(|x| {
+                Section {
+                    inner: SectionInternal::Elf(x),
+                }
+            }),
+            &mut SectionIteratorInternal::MachO(ref mut macho) => macho.next().map(|x| {
+                Section {
+                    inner: SectionInternal::MachO(x),
+                }
+            }),
+        }
+    }
+}
+
+impl<'a> fmt::Debug for Section<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        // It's painful to do much better than this
+        f.debug_struct("Section")
+            .field("name", &self.name().unwrap_or("<invalid name>"))
+            .field("address", &self.address())
+            .field("size", &self.data().len())
+            .finish()
+    }
+}
+
+impl<'a> Section<'a> {
+    /// returns the address of the section
+    pub fn address(&self) -> u64 {
+        match &self.inner {
+            &SectionInternal::Elf(ref elf) => elf.address(),
+            &SectionInternal::MachO(ref macho) => macho.address(),
+        }
+    }
+
+    /// returns a reference to contents of the section
+    pub fn data(&self) -> &'a [u8] {
+        match &self.inner {
+            &SectionInternal::Elf(ref elf) => elf.data(),
+            &SectionInternal::MachO(ref macho) => macho.data(),
+        }
+    }
+
+    /// returns the name of the section
+    pub fn name(&self) -> Option<&str> {
+        match &self.inner {
+            &SectionInternal::Elf(ref elf) => elf.name(),
+            &SectionInternal::MachO(ref macho) => macho.name(),
         }
     }
 }
