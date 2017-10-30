@@ -156,13 +156,13 @@ impl<'a> Iterator for SectionIterator<'a> {
     type Item = Section<'a>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        match &mut self.inner {
-            &mut SectionIteratorInternal::Elf(ref mut elf) => elf.next().map(|x| {
+        match self.inner {
+            SectionIteratorInternal::Elf(ref mut elf) => elf.next().map(|x| {
                 Section {
                     inner: SectionInternal::Elf(x),
                 }
             }),
-            &mut SectionIteratorInternal::MachO(ref mut macho) => macho.next().map(|x| {
+            SectionIteratorInternal::MachO(ref mut macho) => macho.next().map(|x| {
                 Section {
                     inner: SectionInternal::MachO(x),
                 }
@@ -185,25 +185,25 @@ impl<'a> fmt::Debug for Section<'a> {
 impl<'a> Section<'a> {
     /// returns the address of the section
     pub fn address(&self) -> u64 {
-        match &self.inner {
-            &SectionInternal::Elf(ref elf) => elf.address(),
-            &SectionInternal::MachO(ref macho) => macho.address(),
+        match self.inner {
+            SectionInternal::Elf(ref elf) => elf.address(),
+            SectionInternal::MachO(ref macho) => macho.address(),
         }
     }
 
     /// returns a reference to contents of the section
     pub fn data(&self) -> &'a [u8] {
-        match &self.inner {
-            &SectionInternal::Elf(ref elf) => elf.data(),
-            &SectionInternal::MachO(ref macho) => macho.data(),
+        match self.inner {
+            SectionInternal::Elf(ref elf) => elf.data(),
+            SectionInternal::MachO(ref macho) => macho.data(),
         }
     }
 
     /// returns the name of the section
     pub fn name(&self) -> Option<&str> {
-        match &self.inner {
-            &SectionInternal::Elf(ref elf) => elf.name(),
-            &SectionInternal::MachO(ref macho) => macho.name(),
+        match self.inner {
+            SectionInternal::Elf(ref elf) => elf.name(),
+            SectionInternal::MachO(ref macho) => macho.name(),
         }
     }
 }

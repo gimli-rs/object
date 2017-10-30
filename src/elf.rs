@@ -61,9 +61,9 @@ impl<'a> ElfFile<'a> {
         for sh in &self.elf.section_headers {
             let kind = match sh.sh_type {
                 elf::section_header::SHT_PROGBITS => {
-                    if sh.sh_flags & elf::section_header::SHF_EXECINSTR as u64 != 0 {
+                    if sh.sh_flags & u64::from(elf::section_header::SHF_EXECINSTR) != 0 {
                         SectionKind::Text
-                    } else if sh.sh_flags & elf::section_header::SHF_WRITE as u64 != 0 {
+                    } else if sh.sh_flags & u64::from(elf::section_header::SHF_WRITE) != 0 {
                         SectionKind::Data
                     } else {
                         SectionKind::ReadOnlyData

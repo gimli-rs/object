@@ -12,7 +12,7 @@ fn main() {
 
     for file_path in env::args().skip(1) {
         if arg_len > 2 {
-            println!("");
+            println!();
             println!("{}:", file_path);
         }
 
