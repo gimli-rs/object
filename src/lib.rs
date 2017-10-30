@@ -92,12 +92,20 @@ impl<'a, 'b> fmt::Debug for SectionIterator<'a, 'b> {
 // we wrap our enums in a struct so that they are kept private.
 enum SectionIteratorInternal<'a, 'b> {
     MachO(Box<Iterator<Item = (mach::segment::Section, mach::segment::SectionData<'a>)> + 'b>),
-    Elf(slice::Iter<'a, elf::SectionHeader>, &'a elf::Elf<'a>, &'a [u8]),
+    Elf(
+        slice::Iter<'a, elf::SectionHeader>,
+        &'a elf::Elf<'a>,
+        &'a [u8],
+    ),
 }
 
 enum SectionInternal<'a> {
     MachO((mach::segment::Section, mach::segment::SectionData<'a>)),
-    Elf(<slice::Iter<'a, elf::SectionHeader> as Iterator>::Item, &'a elf::Elf<'a>, &'a [u8])
+    Elf(
+        <slice::Iter<'a, elf::SectionHeader> as Iterator>::Item,
+        &'a elf::Elf<'a>,
+        &'a [u8],
+    ),
 }
 
 /// A Section of a File
@@ -151,14 +159,16 @@ impl<'a, 'b> Iterator for SectionIterator<'a, 'b> {
 
     fn next(&mut self) -> Option<Self::Item> {
         match &mut self.inner {
-            &mut SectionIteratorInternal::MachO(ref mut macho) => {
-                macho.next().map(
-                    |x| Section { inner: SectionInternal::MachO(x) },
-                )
-            }
+            &mut SectionIteratorInternal::MachO(ref mut macho) => macho.next().map(|x| {
+                Section {
+                    inner: SectionInternal::MachO(x),
+                }
+            }),
             &mut SectionIteratorInternal::Elf(ref mut iter, ref elf, ref data) => {
                 iter.next().map(|x| {
-                    Section { inner: SectionInternal::Elf(x, elf, data) }
+                    Section {
+                        inner: SectionInternal::Elf(x, elf, data),
+                    }
                 })
             }
         }
