@@ -4,7 +4,7 @@ use std::slice;
 
 use goblin::mach;
 
-use {SectionKind, Symbol, SymbolKind};
+use {Object, ObjectSection, SectionKind, Symbol, SymbolKind};
 
 /// A Mach-O object file.
 #[derive(Debug)]
@@ -25,16 +25,16 @@ pub struct MachOSection<'a> {
     data: mach::segment::SectionData<'a>,
 }
 
-impl<'a> MachOFile<'a> {
-    /// Parse the raw Mach-O file data.
-    pub fn parse(data: &'a [u8]) -> Result<Self, &'static str> {
+impl<'a> Object<'a> for MachOFile<'a> {
+    type Section = MachOSection<'a>;
+    type SectionIterator = MachOSectionIterator<'a>;
+
+    fn parse(data: &'a [u8]) -> Result<Self, &'static str> {
         let macho = mach::MachO::parse(data, 0).map_err(|_| "Could not parse Mach-O header")?;
         Ok(MachOFile { macho })
     }
 
-    /// Get the contents of the section named `section_name`, if such
-    /// a section exists.
-    pub fn get_section(&self, section_name: &str) -> Option<&'a [u8]> {
+    fn get_section(&self, section_name: &str) -> Option<&'a [u8]> {
         let segment_name = if section_name == ".eh_frame" {
             "__TEXT"
         } else {
@@ -60,16 +60,14 @@ impl<'a> MachOFile<'a> {
         None
     }
 
-    /// Get an Iterator over the sections in the file.
-    pub fn get_sections(&self) -> MachOSectionIterator {
+    fn get_sections(&'a self) -> MachOSectionIterator<'a> {
         MachOSectionIterator {
             segments: self.macho.segments.iter(),
             sections: None,
         }
     }
 
-    /// Get a `Vec` of the symbols defined in the file.
-    pub fn get_symbols(&self) -> Vec<Symbol<'a>> {
+    fn get_symbols(&self) -> Vec<Symbol<'a>> {
         // Determine section kinds and end addresses.
         // The section kinds are inherited by symbols in those sections.
         // The section end addresses are needed for calculating symbol sizes.
@@ -183,9 +181,8 @@ impl<'a> MachOFile<'a> {
         symbols
     }
 
-    /// Return true if the file is little endian, false if it is big endian.
     #[inline]
-    pub fn is_little_endian(&self) -> bool {
+    fn is_little_endian(&self) -> bool {
         self.macho.header.is_little_endian()
     }
 }
@@ -219,22 +216,19 @@ impl<'a> Iterator for MachOSectionIterator<'a> {
     }
 }
 
-impl<'a> MachOSection<'a> {
-    /// Returns the address of the section.
+impl<'a> ObjectSection<'a> for MachOSection<'a> {
     #[inline]
-    pub fn address(&self) -> u64 {
+    fn address(&self) -> u64 {
         self.section.addr
     }
 
-    /// Returns a reference to contents of the section.
     #[inline]
-    pub fn data(&self) -> &'a [u8] {
+    fn data(&self) -> &'a [u8] {
         self.data
     }
 
-    /// Returns the name of the section.
     #[inline]
-    pub fn name(&self) -> Option<&str> {
+    fn name(&self) -> Option<&str> {
         self.section.name().ok()
     }
 }

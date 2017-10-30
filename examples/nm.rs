@@ -3,7 +3,7 @@ extern crate object;
 
 use std::{env, fs, process};
 
-use object::{SectionKind, SymbolKind};
+use object::{Object, SectionKind, SymbolKind};
 
 fn main() {
     let arg_len = env::args().len();

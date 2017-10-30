@@ -19,6 +19,9 @@ pub use elf::*;
 mod macho;
 pub use macho::*;
 
+mod traits;
+pub use traits::*;
+
 /// An object file.
 #[derive(Debug)]
 pub struct File<'a> {
@@ -102,9 +105,11 @@ pub enum SymbolKind {
     Tls,
 }
 
-impl<'a> File<'a> {
-    /// Parse the raw object file data.
-    pub fn parse(data: &'a [u8]) -> Result<Self, &'static str> {
+impl<'a> Object<'a> for File<'a> {
+    type Section = Section<'a>;
+    type SectionIterator = SectionIterator<'a>;
+
+    fn parse(data: &'a [u8]) -> Result<Self, &'static str> {
         let mut cursor = Cursor::new(data);
         let inner = match goblin::peek(&mut cursor).map_err(|_| "Could not parse file magic")? {
             goblin::Hint::Elf(_) => FileInternal::Elf(ElfFile::parse(data)?),
@@ -114,17 +119,14 @@ impl<'a> File<'a> {
         Ok(File { inner })
     }
 
-    /// Get the contents of the section named `section_name`, if such
-    /// a section exists.
-    pub fn get_section(&self, section_name: &str) -> Option<&'a [u8]> {
+    fn get_section(&self, section_name: &str) -> Option<&'a [u8]> {
         match self.inner {
             FileInternal::Elf(ref elf) => elf.get_section(section_name),
             FileInternal::MachO(ref macho) => macho.get_section(section_name),
         }
     }
 
-    /// Get an Iterator over the sections in the file.
-    pub fn get_sections(&self) -> SectionIterator {
+    fn get_sections(&'a self) -> SectionIterator<'a> {
         match self.inner {
             FileInternal::Elf(ref elf) => SectionIterator {
                 inner: SectionIteratorInternal::Elf(elf.get_sections()),
@@ -135,16 +137,14 @@ impl<'a> File<'a> {
         }
     }
 
-    /// Get a `Vec` of the symbols defined in the file.
-    pub fn get_symbols(&self) -> Vec<Symbol<'a>> {
+    fn get_symbols(&self) -> Vec<Symbol<'a>> {
         match self.inner {
             FileInternal::Elf(ref elf) => elf.get_symbols(),
             FileInternal::MachO(ref macho) => macho.get_symbols(),
         }
     }
 
-    /// Return true if the file is little endian, false if it is big endian.
-    pub fn is_little_endian(&self) -> bool {
+    fn is_little_endian(&self) -> bool {
         match self.inner {
             FileInternal::Elf(ref elf) => elf.is_little_endian(),
             FileInternal::MachO(ref macho) => macho.is_little_endian(),
@@ -182,25 +182,22 @@ impl<'a> fmt::Debug for Section<'a> {
     }
 }
 
-impl<'a> Section<'a> {
-    /// returns the address of the section
-    pub fn address(&self) -> u64 {
+impl<'a> ObjectSection<'a> for Section<'a> {
+    fn address(&self) -> u64 {
         match self.inner {
             SectionInternal::Elf(ref elf) => elf.address(),
             SectionInternal::MachO(ref macho) => macho.address(),
         }
     }
 
-    /// returns a reference to contents of the section
-    pub fn data(&self) -> &'a [u8] {
+    fn data(&self) -> &'a [u8] {
         match self.inner {
             SectionInternal::Elf(ref elf) => elf.data(),
             SectionInternal::MachO(ref macho) => macho.data(),
         }
     }
 
-    /// returns the name of the section
-    pub fn name(&self) -> Option<&str> {
+    fn name(&self) -> Option<&str> {
         match self.inner {
             SectionInternal::Elf(ref elf) => elf.name(),
             SectionInternal::MachO(ref macho) => macho.name(),
@@ -257,7 +254,3 @@ impl<'a> Symbol<'a> {
         self.size
     }
 }
-
-#[doc(hidden)]
-#[deprecated]
-pub trait Object {}

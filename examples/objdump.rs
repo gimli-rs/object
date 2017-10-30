@@ -3,6 +3,8 @@ extern crate object;
 
 use std::{env, fs, process};
 
+use object::Object;
+
 fn main() {
     let arg_len = env::args().len();
     if arg_len <= 1 {
