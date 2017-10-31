@@ -210,6 +210,13 @@ impl<'a> ObjectSection<'a> for Section<'a> {
             SectionInternal::MachO(ref macho) => macho.name(),
         }
     }
+
+    fn segment_name(&self) -> Option<&str> {
+        match self.inner {
+            SectionInternal::Elf(ref elf) => elf.segment_name(),
+            SectionInternal::MachO(ref macho) => macho.segment_name(),
+        }
+    }
 }
 
 impl<'a> Symbol<'a> {

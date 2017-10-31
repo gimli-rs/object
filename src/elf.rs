@@ -151,4 +151,9 @@ impl<'a> ObjectSection<'a> for ElfSection<'a> {
             .get(self.section.sh_name)
             .and_then(|x| x.ok())
     }
+
+    #[inline]
+    fn segment_name(&self) -> Option<&str> {
+        None
+    }
 }

@@ -39,4 +39,7 @@ pub trait ObjectSection<'a> {
 
     /// Returns the name of the section.
     fn name(&self) -> Option<&str>;
+
+    /// Returns the name of the segment for this section.
+    fn segment_name(&self) -> Option<&str>;
 }

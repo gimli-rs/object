@@ -236,6 +236,11 @@ impl<'a> ObjectSection<'a> for MachOSection<'a> {
     fn name(&self) -> Option<&str> {
         self.section.name().ok()
     }
+
+    #[inline]
+    fn segment_name(&self) -> Option<&str> {
+        self.section.segname().ok()
+    }
 }
 
 // Translate the "." prefix to the "__" prefix used by OSX/Mach-O, eg
