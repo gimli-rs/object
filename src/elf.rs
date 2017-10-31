@@ -95,7 +95,7 @@ impl<'a> Object<'a> for ElfFile<'a> {
             };
             let name = match self.elf.strtab.get(sym.st_name) {
                 Some(Ok(name)) => name.as_bytes(),
-                _ => continue,
+                _ => &[],
             };
             symbols.push(Symbol {
                 kind,
