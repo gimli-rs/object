@@ -25,6 +25,15 @@ pub struct ElfSection<'a> {
     section: <slice::Iter<'a, elf::SectionHeader> as Iterator>::Item,
 }
 
+impl<'a> ElfFile<'a> {
+    /// Get the ELF headers of the file.
+    // TODO: this is temporary to allow access to features this crate doesn't provide yet
+    #[inline]
+    pub fn elf(&self) -> &elf::Elf<'a> {
+        &self.elf
+    }
+}
+
 impl<'a> Object<'a> for ElfFile<'a> {
     type Section = ElfSection<'a>;
     type SectionIterator = ElfSectionIterator<'a>;

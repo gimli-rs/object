@@ -25,6 +25,15 @@ pub struct MachOSection<'a> {
     data: mach::segment::SectionData<'a>,
 }
 
+impl<'a> MachOFile<'a> {
+    /// Get the Mach-O headers of the file.
+    // TODO: this is temporary to allow access to features this crate doesn't provide yet
+    #[inline]
+    pub fn macho(&self) -> &mach::MachO<'a> {
+        &self.macho
+    }
+}
+
 impl<'a> Object<'a> for MachOFile<'a> {
     type Section = MachOSection<'a>;
     type SectionIterator = MachOSectionIterator<'a>;
