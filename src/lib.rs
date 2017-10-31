@@ -190,6 +190,13 @@ impl<'a> ObjectSection<'a> for Section<'a> {
         }
     }
 
+    fn size(&self) -> u64 {
+        match self.inner {
+            SectionInternal::Elf(ref elf) => elf.size(),
+            SectionInternal::MachO(ref macho) => macho.size(),
+        }
+    }
+
     fn data(&self) -> &'a [u8] {
         match self.inner {
             SectionInternal::Elf(ref elf) => elf.data(),

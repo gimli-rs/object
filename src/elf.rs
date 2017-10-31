@@ -135,6 +135,11 @@ impl<'a> ObjectSection<'a> for ElfSection<'a> {
         self.section.sh_addr
     }
 
+    #[inline]
+    fn size(&self) -> u64 {
+        self.section.sh_size
+    }
+
     fn data(&self) -> &'a [u8] {
         &self.file.data[self.section.sh_offset as usize..][..self.section.sh_size as usize]
     }

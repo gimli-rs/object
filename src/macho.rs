@@ -223,6 +223,11 @@ impl<'a> ObjectSection<'a> for MachOSection<'a> {
     }
 
     #[inline]
+    fn size(&self) -> u64 {
+        self.section.size
+    }
+
+    #[inline]
     fn data(&self) -> &'a [u8] {
         self.data
     }
