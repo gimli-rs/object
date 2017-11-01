@@ -43,24 +43,26 @@ impl<'a> Object<'a> for MachOFile<'a> {
         Ok(MachOFile { macho })
     }
 
-    fn get_section(&self, section_name: &str) -> Option<&'a [u8]> {
-        let segment_name = if section_name == ".eh_frame" {
-            "__TEXT"
+    fn section_data_by_name(&self, section_name: &str) -> Option<&'a [u8]> {
+        // Translate the "." prefix to the "__" prefix used by OSX/Mach-O, eg
+        // ".debug_info" to "__debug_info".
+        let (system_section, section_name) = if section_name.starts_with(".") {
+            (true, &section_name[1..])
         } else {
-            "__DWARF"
+            (false, section_name)
         };
-        let section_name = translate_section_name(section_name);
+        let cmp_section_name = |name: &str| if system_section {
+            name.starts_with("__") && section_name == &name[2..]
+        } else {
+            section_name == name
+        };
 
         for segment in &self.macho.segments {
-            if let Ok(name) = segment.name() {
-                if name == segment_name {
-                    for section in segment {
-                        if let Ok((section, data)) = section {
-                            if let Ok(name) = section.name() {
-                                if name.as_bytes() == &*section_name {
-                                    return Some(data);
-                                }
-                            }
+            for section in segment {
+                if let Ok((section, data)) = section {
+                    if let Ok(name) = section.name() {
+                        if cmp_section_name(name) {
+                            return Some(data);
                         }
                     }
                 }
@@ -69,14 +71,14 @@ impl<'a> Object<'a> for MachOFile<'a> {
         None
     }
 
-    fn get_sections(&'a self) -> MachOSectionIterator<'a> {
+    fn sections(&'a self) -> MachOSectionIterator<'a> {
         MachOSectionIterator {
             segments: self.macho.segments.iter(),
             sections: None,
         }
     }
 
-    fn get_symbols(&self) -> Vec<Symbol<'a>> {
+    fn symbols(&self) -> Vec<Symbol<'a>> {
         // Determine section kinds and end addresses.
         // The section kinds are inherited by symbols in those sections.
         // The section end addresses are needed for calculating symbol sizes.
@@ -85,24 +87,16 @@ impl<'a> Object<'a> for MachOFile<'a> {
         for segment in &self.macho.segments {
             for section in segment {
                 if let Ok((section, _)) = section {
-                    let sectname = section
-                        .name()
-                        .map(str::as_bytes)
-                        .unwrap_or(&section.sectname[..]);
-                    let segname = section
-                        .segname()
-                        .map(str::as_bytes)
-                        .unwrap_or(&section.segname[..]);
-                    let (section_kind, symbol_kind) =
-                        if segname == b"__TEXT" && sectname == b"__text" {
-                            (SectionKind::Text, SymbolKind::Text)
-                        } else if segname == b"__DATA" && sectname == b"__data" {
-                            (SectionKind::Data, SymbolKind::Data)
-                        } else if segname == b"__DATA" && sectname == b"__bss" {
+                    let sectname = section.name().ok();
+                    let segname = section.segname().ok();
+                    let (section_kind, symbol_kind) = match (segname, sectname) {
+                        (Some("__TEXT"), Some("__text")) => (SectionKind::Text, SymbolKind::Text),
+                        (Some("__DATA"), Some("__data")) => (SectionKind::Data, SymbolKind::Data),
+                        (Some("__DATA"), Some("__bss")) => {
                             (SectionKind::UninitializedData, SymbolKind::Data)
-                        } else {
-                            (SectionKind::Other, SymbolKind::Unknown)
-                        };
+                        }
+                        _ => (SectionKind::Other, SymbolKind::Unknown),
+                    };
                     let section_index = section_kinds.len();
                     section_kinds.push((section_kind, symbol_kind));
                     section_ends.push(Symbol {
@@ -110,7 +104,7 @@ impl<'a> Object<'a> for MachOFile<'a> {
                         section: section_index + 1,
                         section_kind: Some(section_kind),
                         global: false,
-                        name: &[],
+                        name: None,
                         address: section.addr + section.size,
                         size: 0,
                     });
@@ -145,7 +139,7 @@ impl<'a> Object<'a> for MachOFile<'a> {
                     section: nlist.n_sect,
                     section_kind,
                     global: nlist.is_global(),
-                    name: name.as_bytes(),
+                    name: Some(name),
                     address: nlist.n_value,
                     size: 0,
                 });
@@ -250,16 +244,4 @@ impl<'a> ObjectSection<'a> for MachOSection<'a> {
     fn segment_name(&self) -> Option<&str> {
         self.section.segname().ok()
     }
-}
-
-// Translate the "." prefix to the "__" prefix used by OSX/Mach-O, eg
-// ".debug_info" to "__debug_info".
-fn translate_section_name(section_name: &str) -> Vec<u8> {
-    let mut name = Vec::with_capacity(section_name.len() + 1);
-    name.push(b'_');
-    name.push(b'_');
-    for ch in &section_name.as_bytes()[1..] {
-        name.push(*ch);
-    }
-    name
 }

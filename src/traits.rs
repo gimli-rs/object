@@ -13,15 +13,23 @@ pub trait Object<'a>: Sized {
 
     /// Get the contents of the section named `section_name`, if such
     /// a section exists.
-    fn get_section(&self, section_name: &str) -> Option<&'a [u8]>;
+    ///
+    /// If `section_name` starts with a '.' then it is treated as a system section name,
+    /// and is compared using the conventions specific to the object file format.
+    /// For example, if ".text" is requested for a Mach-O object file, then the actual
+    /// section name that is searched for is "__text".
+    ///
+    /// For some object files, multiple segments may contain sections with the same
+    /// name. In this case, the first matching section will be used.
+    fn section_data_by_name(&self, section_name: &str) -> Option<&'a [u8]>;
 
     /// Get an iterator over the sections in the file.
     // TODO: avoid 'a on self using Associated Type Constructor
-    fn get_sections(&'a self) -> Self::SectionIterator;
+    fn sections(&'a self) -> Self::SectionIterator;
 
     /// Get a `Vec` of the symbols defined in the file.
     /// The symbols are unsorted and have the same order as the symbols in the file.
-    fn get_symbols(&self) -> Vec<Symbol<'a>>;
+    fn symbols(&self) -> Vec<Symbol<'a>>;
 
     /// Return true if the file is little endian, false if it is big endian.
     fn is_little_endian(&self) -> bool;

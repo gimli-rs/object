@@ -40,7 +40,7 @@ fn main() {
             }
         };
 
-        for symbol in &*file.get_symbols() {
+        for symbol in &*file.symbols() {
             match symbol.kind() {
                 SymbolKind::Section | SymbolKind::File => continue,
                 _ => {}
@@ -83,7 +83,7 @@ fn main() {
                 "{:016x} {} {}",
                 symbol.size(),
                 kind,
-                String::from_utf8_lossy(symbol.name())
+                symbol.name().unwrap_or("<unknown>"),
             );
         }
     }

@@ -81,7 +81,7 @@ pub struct Symbol<'a> {
     section: usize,
     section_kind: Option<SectionKind>,
     global: bool,
-    name: &'a [u8],
+    name: Option<&'a str>,
     address: u64,
     size: u64,
 }
@@ -119,28 +119,28 @@ impl<'a> Object<'a> for File<'a> {
         Ok(File { inner })
     }
 
-    fn get_section(&self, section_name: &str) -> Option<&'a [u8]> {
+    fn section_data_by_name(&self, section_name: &str) -> Option<&'a [u8]> {
         match self.inner {
-            FileInternal::Elf(ref elf) => elf.get_section(section_name),
-            FileInternal::MachO(ref macho) => macho.get_section(section_name),
+            FileInternal::Elf(ref elf) => elf.section_data_by_name(section_name),
+            FileInternal::MachO(ref macho) => macho.section_data_by_name(section_name),
         }
     }
 
-    fn get_sections(&'a self) -> SectionIterator<'a> {
+    fn sections(&'a self) -> SectionIterator<'a> {
         match self.inner {
             FileInternal::Elf(ref elf) => SectionIterator {
-                inner: SectionIteratorInternal::Elf(elf.get_sections()),
+                inner: SectionIteratorInternal::Elf(elf.sections()),
             },
             FileInternal::MachO(ref macho) => SectionIterator {
-                inner: SectionIteratorInternal::MachO(macho.get_sections()),
+                inner: SectionIteratorInternal::MachO(macho.sections()),
             },
         }
     }
 
-    fn get_symbols(&self) -> Vec<Symbol<'a>> {
+    fn symbols(&self) -> Vec<Symbol<'a>> {
         match self.inner {
-            FileInternal::Elf(ref elf) => elf.get_symbols(),
-            FileInternal::MachO(ref macho) => macho.get_symbols(),
+            FileInternal::Elf(ref elf) => elf.symbols(),
+            FileInternal::MachO(ref macho) => macho.symbols(),
         }
     }
 
@@ -252,7 +252,7 @@ impl<'a> Symbol<'a> {
 
     /// The name of the symbol.
     #[inline]
-    pub fn name(&self) -> &'a [u8] {
+    pub fn name(&self) -> Option<&'a str> {
         self.name
     }
 
