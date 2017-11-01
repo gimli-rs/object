@@ -49,7 +49,19 @@ impl<'a> Object<'a> for MachOFile<'a> {
         } else {
             "__DWARF"
         };
-        let section_name = translate_section_name(section_name);
+
+        // Translate the "." prefix to the "__" prefix used by OSX/Mach-O, eg
+        // ".debug_info" to "__debug_info".
+        let (system_section, section_name) = if section_name.starts_with(".") {
+            (true, &section_name[1..])
+        } else {
+            (false, section_name)
+        };
+        let cmp_section_name = |name: &str| if system_section {
+            name.starts_with("__") && section_name == &name[2..]
+        } else {
+            section_name == name
+        };
 
         for segment in &self.macho.segments {
             if let Ok(name) = segment.name() {
@@ -57,7 +69,7 @@ impl<'a> Object<'a> for MachOFile<'a> {
                     for section in segment {
                         if let Ok((section, data)) = section {
                             if let Ok(name) = section.name() {
-                                if name.as_bytes() == &*section_name {
+                                if cmp_section_name(name) {
                                     return Some(data);
                                 }
                             }
@@ -242,16 +254,4 @@ impl<'a> ObjectSection<'a> for MachOSection<'a> {
     fn segment_name(&self) -> Option<&str> {
         self.section.segname().ok()
     }
-}
-
-// Translate the "." prefix to the "__" prefix used by OSX/Mach-O, eg
-// ".debug_info" to "__debug_info".
-fn translate_section_name(section_name: &str) -> Vec<u8> {
-    let mut name = Vec::with_capacity(section_name.len() + 1);
-    name.push(b'_');
-    name.push(b'_');
-    for ch in &section_name.as_bytes()[1..] {
-        name.push(*ch);
-    }
-    name
 }

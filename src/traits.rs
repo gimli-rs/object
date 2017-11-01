@@ -13,6 +13,11 @@ pub trait Object<'a>: Sized {
 
     /// Get the contents of the section named `section_name`, if such
     /// a section exists.
+    ///
+    /// If `section_name` starts with a '.' then it is treated as a system section name,
+    /// and is compared using the conventions specific to the object file format.
+    /// For example, if ".text" is requested for a Mach-O object file, then the actual
+    /// section name that is searched for is "__text".
     fn section_data_by_name(&self, section_name: &str) -> Option<&'a [u8]>;
 
     /// Get an iterator over the sections in the file.
