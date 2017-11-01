@@ -44,12 +44,6 @@ impl<'a> Object<'a> for MachOFile<'a> {
     }
 
     fn section_data_by_name(&self, section_name: &str) -> Option<&'a [u8]> {
-        let segment_name = if section_name == ".eh_frame" {
-            "__TEXT"
-        } else {
-            "__DWARF"
-        };
-
         // Translate the "." prefix to the "__" prefix used by OSX/Mach-O, eg
         // ".debug_info" to "__debug_info".
         let (system_section, section_name) = if section_name.starts_with(".") {
@@ -64,15 +58,11 @@ impl<'a> Object<'a> for MachOFile<'a> {
         };
 
         for segment in &self.macho.segments {
-            if let Ok(name) = segment.name() {
-                if name == segment_name {
-                    for section in segment {
-                        if let Ok((section, data)) = section {
-                            if let Ok(name) = section.name() {
-                                if cmp_section_name(name) {
-                                    return Some(data);
-                                }
-                            }
+            for section in segment {
+                if let Ok((section, data)) = section {
+                    if let Ok(name) = section.name() {
+                        if cmp_section_name(name) {
+                            return Some(data);
                         }
                     }
                 }

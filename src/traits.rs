@@ -18,6 +18,9 @@ pub trait Object<'a>: Sized {
     /// and is compared using the conventions specific to the object file format.
     /// For example, if ".text" is requested for a Mach-O object file, then the actual
     /// section name that is searched for is "__text".
+    ///
+    /// For some object files, multiple segments may contain sections with the same
+    /// name. In this case, the first matching section will be used.
     fn section_data_by_name(&self, section_name: &str) -> Option<&'a [u8]>;
 
     /// Get an iterator over the sections in the file.
