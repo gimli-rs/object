@@ -3,6 +3,8 @@ extern crate object;
 
 use std::{env, fs, process};
 
+use object::Object;
+
 fn main() {
     let arg_len = env::args().len();
     if arg_len <= 1 {
@@ -12,7 +14,7 @@ fn main() {
 
     for file_path in env::args().skip(1) {
         if arg_len > 2 {
-            println!("");
+            println!();
             println!("{}:", file_path);
         }
 
@@ -41,6 +43,5 @@ fn main() {
         for section in file.get_sections() {
             println!("{:?}", section);
         }
-
     }
 }

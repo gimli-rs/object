@@ -3,7 +3,7 @@ extern crate object;
 
 use std::{env, fs, process};
 
-use object::{SectionKind, SymbolKind};
+use object::{Object, SectionKind, SymbolKind};
 
 fn main() {
     let arg_len = env::args().len();
@@ -14,7 +14,7 @@ fn main() {
 
     for file_path in env::args().skip(1) {
         if arg_len > 2 {
-            println!("");
+            println!();
             println!("{}:", file_path);
         }
 

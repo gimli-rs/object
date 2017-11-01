@@ -10,26 +10,54 @@
 
 extern crate goblin;
 
-use goblin::{elf, mach};
-use std::cmp::Ordering;
 use std::fmt;
 use std::io::Cursor;
-use std::slice;
+
+mod elf;
+pub use elf::*;
+
+mod macho;
+pub use macho::*;
+
+mod traits;
+pub use traits::*;
 
 /// An object file.
 #[derive(Debug)]
 pub struct File<'a> {
-    kind: ObjectKind<'a>,
-    data: &'a [u8],
+    inner: FileInternal<'a>,
 }
 
 #[derive(Debug)]
-enum ObjectKind<'a> {
-    Elf(elf::Elf<'a>),
-    MachO(mach::MachO<'a>),
+enum FileInternal<'a> {
+    Elf(ElfFile<'a>),
+    MachO(MachOFile<'a>),
 }
 
-/// The kind of a sections.
+/// An iterator of the sections of a `File`.
+#[derive(Debug)]
+pub struct SectionIterator<'a> {
+    inner: SectionIteratorInternal<'a>,
+}
+
+// we wrap our enums in a struct so that they are kept private.
+#[derive(Debug)]
+enum SectionIteratorInternal<'a> {
+    Elf(ElfSectionIterator<'a>),
+    MachO(MachOSectionIterator<'a>),
+}
+
+/// A Section of a File
+pub struct Section<'a> {
+    inner: SectionInternal<'a>,
+}
+
+enum SectionInternal<'a> {
+    Elf(ElfSection<'a>),
+    MachO(MachOSection<'a>),
+}
+
+/// The kind of a section.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SectionKind {
     /// The section kind is unknown.
@@ -77,32 +105,70 @@ pub enum SymbolKind {
     Tls,
 }
 
-/// An iterator of the sections of an File
-pub struct SectionIterator<'a, 'b> {
-    inner: SectionIteratorInternal<'a, 'b>,
-}
+impl<'a> Object<'a> for File<'a> {
+    type Section = Section<'a>;
+    type SectionIterator = SectionIterator<'a>;
 
-impl<'a, 'b> fmt::Debug for SectionIterator<'a, 'b> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        // It's painful to do much better than this
-        f.debug_struct("SectionIterator").finish()
+    fn parse(data: &'a [u8]) -> Result<Self, &'static str> {
+        let mut cursor = Cursor::new(data);
+        let inner = match goblin::peek(&mut cursor).map_err(|_| "Could not parse file magic")? {
+            goblin::Hint::Elf(_) => FileInternal::Elf(ElfFile::parse(data)?),
+            goblin::Hint::Mach(_) => FileInternal::MachO(MachOFile::parse(data)?),
+            _ => return Err("Unknown file magic"),
+        };
+        Ok(File { inner })
+    }
+
+    fn get_section(&self, section_name: &str) -> Option<&'a [u8]> {
+        match self.inner {
+            FileInternal::Elf(ref elf) => elf.get_section(section_name),
+            FileInternal::MachO(ref macho) => macho.get_section(section_name),
+        }
+    }
+
+    fn get_sections(&'a self) -> SectionIterator<'a> {
+        match self.inner {
+            FileInternal::Elf(ref elf) => SectionIterator {
+                inner: SectionIteratorInternal::Elf(elf.get_sections()),
+            },
+            FileInternal::MachO(ref macho) => SectionIterator {
+                inner: SectionIteratorInternal::MachO(macho.get_sections()),
+            },
+        }
+    }
+
+    fn get_symbols(&self) -> Vec<Symbol<'a>> {
+        match self.inner {
+            FileInternal::Elf(ref elf) => elf.get_symbols(),
+            FileInternal::MachO(ref macho) => macho.get_symbols(),
+        }
+    }
+
+    fn is_little_endian(&self) -> bool {
+        match self.inner {
+            FileInternal::Elf(ref elf) => elf.is_little_endian(),
+            FileInternal::MachO(ref macho) => macho.is_little_endian(),
+        }
     }
 }
 
-// we wrap our enums in a struct so that they are kept private.
-enum SectionIteratorInternal<'a, 'b> {
-    MachO(Box<Iterator<Item = (mach::segment::Section, mach::segment::SectionData<'a>)> + 'b>),
-    Elf(slice::Iter<'a, elf::SectionHeader>, &'a elf::Elf<'a>, &'a [u8]),
-}
+impl<'a> Iterator for SectionIterator<'a> {
+    type Item = Section<'a>;
 
-enum SectionInternal<'a> {
-    MachO((mach::segment::Section, mach::segment::SectionData<'a>)),
-    Elf(<slice::Iter<'a, elf::SectionHeader> as Iterator>::Item, &'a elf::Elf<'a>, &'a [u8])
-}
-
-/// A Section of a File
-pub struct Section<'a> {
-    inner: SectionInternal<'a>,
+    fn next(&mut self) -> Option<Self::Item> {
+        match self.inner {
+            SectionIteratorInternal::Elf(ref mut elf) => elf.next().map(|x| {
+                Section {
+                    inner: SectionInternal::Elf(x),
+                }
+            }),
+            SectionIteratorInternal::MachO(ref mut macho) => macho.next().map(|x| {
+                Section {
+                    inner: SectionInternal::MachO(x),
+                }
+            }),
+        }
+    }
 }
 
 impl<'a> fmt::Debug for Section<'a> {
@@ -116,110 +182,39 @@ impl<'a> fmt::Debug for Section<'a> {
     }
 }
 
-impl<'a> Section<'a> {
-    /// returns the address of the section
-    pub fn address(&self) -> u64 {
-        match &self.inner {
-            &SectionInternal::MachO(ref macho) => macho.0.addr,
-            &SectionInternal::Elf(ref elf, _, _) => elf.sh_addr,
+impl<'a> ObjectSection<'a> for Section<'a> {
+    fn address(&self) -> u64 {
+        match self.inner {
+            SectionInternal::Elf(ref elf) => elf.address(),
+            SectionInternal::MachO(ref macho) => macho.address(),
         }
     }
 
-    /// returns a reference to contents of the section
-    pub fn data(&self) -> &'a [u8] {
-        match &self.inner {
-            &SectionInternal::MachO(ref macho) => macho.1,
-            &SectionInternal::Elf(ref header, _, ref data) => {
-                &data[header.sh_offset as usize..][..header.sh_size as usize]
-            }
+    fn size(&self) -> u64 {
+        match self.inner {
+            SectionInternal::Elf(ref elf) => elf.size(),
+            SectionInternal::MachO(ref macho) => macho.size(),
         }
     }
 
-    /// returns the name of the section
-    pub fn name(&self) -> Option<&str> {
-        match &self.inner {
-            &SectionInternal::MachO(ref macho) => macho.0.name().ok(),
-            &SectionInternal::Elf(ref header, ref elf, ref _data) => {
-                elf.shdr_strtab.get(header.sh_name).and_then(|x| x.ok())
-            }
-        }
-    }
-}
-
-impl<'a, 'b> Iterator for SectionIterator<'a, 'b> {
-    type Item = Section<'a>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        match &mut self.inner {
-            &mut SectionIteratorInternal::MachO(ref mut macho) => {
-                macho.next().map(
-                    |x| Section { inner: SectionInternal::MachO(x) },
-                )
-            }
-            &mut SectionIteratorInternal::Elf(ref mut iter, ref elf, ref data) => {
-                iter.next().map(|x| {
-                    Section { inner: SectionInternal::Elf(x, elf, data) }
-                })
-            }
-        }
-    }
-}
-
-impl<'a> File<'a> {
-    /// Parse the raw object file data.
-    pub fn parse(data: &'a [u8]) -> Result<Self, &'static str> {
-        let mut cursor = Cursor::new(data);
-        let kind = match goblin::peek(&mut cursor).map_err(|_| "Could not parse file magic")? {
-            goblin::Hint::Elf(_) => {
-                let elf = elf::Elf::parse(data).map_err(|_| "Could not parse ELF header")?;
-                ObjectKind::Elf(elf)
-            }
-            goblin::Hint::Mach(_) => {
-                let macho =
-                    mach::MachO::parse(data, 0).map_err(|_| "Could not parse Mach-O header")?;
-                ObjectKind::MachO(macho)
-            }
-            _ => return Err("Unknown file magic"),
-        };
-        Ok(File { kind, data })
-    }
-
-    /// Get the contents of the section named `section_name`, if such
-    /// a section exists.
-    pub fn get_section(&self, section_name: &str) -> Option<&'a [u8]> {
-        match self.kind {
-            ObjectKind::Elf(ref elf) => elf_get_section(elf, section_name, self.data),
-            ObjectKind::MachO(ref macho) => macho_get_section(macho, section_name),
+    fn data(&self) -> &'a [u8] {
+        match self.inner {
+            SectionInternal::Elf(ref elf) => elf.data(),
+            SectionInternal::MachO(ref macho) => macho.data(),
         }
     }
 
-    /// Get an Iterator over the sections in the file.
-    pub fn get_sections(&self) -> SectionIterator {
-        match self.kind {
-            ObjectKind::Elf(ref elf) => SectionIterator {
-                inner: SectionIteratorInternal::Elf(elf.section_headers.iter(), &elf, self.data),
-            },
-            ObjectKind::MachO(ref macho) => SectionIterator {
-                inner: SectionIteratorInternal::MachO(Box::new(macho.segments.iter()
-                .flat_map(|x| x) // iterate over the sections
-                .flat_map(|x| x))),
-            },
+    fn name(&self) -> Option<&str> {
+        match self.inner {
+            SectionInternal::Elf(ref elf) => elf.name(),
+            SectionInternal::MachO(ref macho) => macho.name(),
         }
     }
 
-    /// Get a `Vec` of the symbols defined in the file.
-    pub fn get_symbols(&self) -> Vec<Symbol<'a>> {
-        match self.kind {
-            ObjectKind::Elf(ref elf) => elf_get_symbols(elf),
-            ObjectKind::MachO(ref macho) => macho_get_symbols(macho),
-        }
-    }
-
-    /// Return true if the file is little endian, false if it is big endian.
-    pub fn is_little_endian(&self) -> bool {
-        match self.kind {
-            ObjectKind::Elf(ref elf) => elf.little_endian,
-            ObjectKind::MachO(ref macho) => macho.header.is_little_endian(),
+    fn segment_name(&self) -> Option<&str> {
+        match self.inner {
+            SectionInternal::Elf(ref elf) => elf.segment_name(),
+            SectionInternal::MachO(ref macho) => macho.segment_name(),
         }
     }
 }
@@ -273,227 +268,3 @@ impl<'a> Symbol<'a> {
         self.size
     }
 }
-
-fn elf_get_section<'a>(elf: &elf::Elf<'a>, section_name: &str, data: &'a [u8]) -> Option<&'a [u8]> {
-    for header in &elf.section_headers {
-        if let Some(Ok(name)) = elf.shdr_strtab.get(header.sh_name) {
-            if name == section_name {
-                return Some(&data[header.sh_offset as usize..][..header.sh_size as usize]);
-            }
-        }
-    }
-    None
-}
-
-fn elf_get_symbols<'a>(elf: &elf::Elf<'a>) -> Vec<Symbol<'a>> {
-    // Determine section kinds.
-    // The section kinds are inherited by symbols in those sections.
-    let mut section_kinds = Vec::new();
-    for sh in &elf.section_headers {
-        let kind = match sh.sh_type {
-            elf::section_header::SHT_PROGBITS => {
-                if sh.sh_flags & elf::section_header::SHF_EXECINSTR as u64 != 0 {
-                    SectionKind::Text
-                } else if sh.sh_flags & elf::section_header::SHF_WRITE as u64 != 0 {
-                    SectionKind::Data
-                } else {
-                    SectionKind::ReadOnlyData
-                }
-            }
-            elf::section_header::SHT_NOBITS => SectionKind::UninitializedData,
-            _ => SectionKind::Unknown,
-        };
-        section_kinds.push(kind);
-    }
-
-    let mut symbols = Vec::new();
-    // Skip undefined symbol index.
-    for sym in elf.syms.iter().skip(1) {
-        let kind = match elf::sym::st_type(sym.st_info) {
-            elf::sym::STT_OBJECT => SymbolKind::Data,
-            elf::sym::STT_FUNC => SymbolKind::Text,
-            elf::sym::STT_SECTION => SymbolKind::Section,
-            elf::sym::STT_FILE => SymbolKind::File,
-            elf::sym::STT_COMMON => SymbolKind::Common,
-            elf::sym::STT_TLS => SymbolKind::Tls,
-            _ => SymbolKind::Unknown,
-        };
-        let global = elf::sym::st_bind(sym.st_info) != elf::sym::STB_LOCAL;
-        let section_kind = if sym.st_shndx == elf::section_header::SHN_UNDEF as usize
-            || sym.st_shndx >= section_kinds.len()
-        {
-            None
-        } else {
-            Some(section_kinds[sym.st_shndx])
-        };
-        let name = match elf.strtab.get(sym.st_name) {
-            Some(Ok(name)) => name.as_bytes(),
-            _ => continue,
-        };
-        symbols.push(Symbol {
-            kind,
-            section: sym.st_shndx,
-            section_kind,
-            global,
-            name,
-            address: sym.st_value,
-            size: sym.st_size,
-        });
-    }
-    symbols
-}
-
-fn macho_get_section<'a>(macho: &mach::MachO<'a>, section_name: &str) -> Option<&'a [u8]> {
-    let segment_name = if section_name == ".eh_frame" {
-        "__TEXT"
-    } else {
-        "__DWARF"
-    };
-    let section_name = macho_translate_section_name(section_name);
-
-    for segment in &macho.segments {
-        if let Ok(name) = segment.name() {
-            if name == segment_name {
-                for section in segment {
-                    if let Ok((section, data)) = section {
-                        if let Ok(name) = section.name() {
-                            if name.as_bytes() == &*section_name {
-                                return Some(data);
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-    None
-}
-
-// Translate the "." prefix to the "__" prefix used by OSX/Mach-O, eg
-// ".debug_info" to "__debug_info".
-fn macho_translate_section_name(section_name: &str) -> Vec<u8> {
-    let mut name = Vec::with_capacity(section_name.len() + 1);
-    name.push(b'_');
-    name.push(b'_');
-    for ch in &section_name.as_bytes()[1..] {
-        name.push(*ch);
-    }
-    name
-}
-
-fn macho_get_symbols<'a>(macho: &mach::MachO<'a>) -> Vec<Symbol<'a>> {
-    // Determine section kinds and end addresses.
-    // The section kinds are inherited by symbols in those sections.
-    // The section end addresses are needed for calculating symbol sizes.
-    let mut section_kinds = Vec::new();
-    let mut section_ends = Vec::new();
-    for segment in &macho.segments {
-        for section in segment {
-            if let Ok((section, _)) = section {
-                let sectname = section
-                    .name()
-                    .map(str::as_bytes)
-                    .unwrap_or(&section.sectname[..]);
-                let segname = section
-                    .segname()
-                    .map(str::as_bytes)
-                    .unwrap_or(&section.segname[..]);
-                let (section_kind, symbol_kind) = if segname == b"__TEXT" && sectname == b"__text" {
-                    (SectionKind::Text, SymbolKind::Text)
-                } else if segname == b"__DATA" && sectname == b"__data" {
-                    (SectionKind::Data, SymbolKind::Data)
-                } else if segname == b"__DATA" && sectname == b"__bss" {
-                    (SectionKind::UninitializedData, SymbolKind::Data)
-                } else {
-                    (SectionKind::Other, SymbolKind::Unknown)
-                };
-                let section_index = section_kinds.len();
-                section_kinds.push((section_kind, symbol_kind));
-                section_ends.push(Symbol {
-                    kind: SymbolKind::Section,
-                    section: section_index + 1,
-                    section_kind: Some(section_kind),
-                    global: false,
-                    name: &[],
-                    address: section.addr + section.size,
-                    size: 0,
-                });
-            } else {
-                // Add placeholder so that indexing works.
-                section_kinds.push((SectionKind::Unknown, SymbolKind::Unknown));
-            }
-        }
-    }
-
-    let mut symbols = Vec::new();
-    for sym in macho.symbols() {
-        if let Ok((name, nlist)) = sym {
-            // Skip STAB debugging symbols.
-            // FIXME: use N_STAB constant
-            if nlist.n_type & 0xe0 != 0 {
-                continue;
-            }
-            let n_type = nlist.n_type & mach::symbols::NLIST_TYPE_MASK;
-            let (section_kind, kind) = if n_type == mach::symbols::N_SECT {
-                if nlist.n_sect == 0 || nlist.n_sect - 1 >= section_kinds.len() {
-                    (None, SymbolKind::Unknown)
-                } else {
-                    let (section_kind, kind) = section_kinds[nlist.n_sect - 1];
-                    (Some(section_kind), kind)
-                }
-            } else {
-                (None, SymbolKind::Unknown)
-            };
-            symbols.push(Symbol {
-                kind,
-                section: nlist.n_sect,
-                section_kind,
-                global: nlist.is_global(),
-                name: name.as_bytes(),
-                address: nlist.n_value,
-                size: 0,
-            });
-        }
-    }
-
-    {
-        // Calculate symbol sizes by sorting and finding the next symbol.
-        let mut symbol_refs = Vec::with_capacity(symbols.len() + section_ends.len());
-        symbol_refs.extend(symbols.iter_mut().filter(|s| !s.is_undefined()));
-        symbol_refs.extend(section_ends.iter_mut());
-        symbol_refs.sort_by(|a, b| {
-            let ord = a.section.cmp(&b.section);
-            if ord != Ordering::Equal {
-                return ord;
-            }
-            let ord = a.address.cmp(&b.address);
-            if ord != Ordering::Equal {
-                return ord;
-            }
-            // Place the dummy end of section symbols last.
-            (a.kind == SymbolKind::Section).cmp(&(b.kind == SymbolKind::Section))
-        });
-
-        for i in 0..symbol_refs.len() {
-            let (before, after) = symbol_refs.split_at_mut(i + 1);
-            let sym = &mut before[i];
-            if sym.kind != SymbolKind::Section {
-                if let Some(next) = after
-                    .iter()
-                    .skip_while(|x| {
-                        x.kind != SymbolKind::Section && x.address == sym.address
-                    })
-                    .next()
-                {
-                    sym.size = next.address - sym.address;
-                }
-            }
-        }
-    }
-
-    symbols
-}
-
-#[doc(hidden)]
-#[deprecated]
-pub trait Object {}
