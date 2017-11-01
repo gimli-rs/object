@@ -40,7 +40,7 @@ fn main() {
             }
         };
 
-        for section in file.get_sections() {
+        for section in file.sections() {
             println!("{:?}", section);
         }
     }

@@ -43,7 +43,7 @@ impl<'a> Object<'a> for MachOFile<'a> {
         Ok(MachOFile { macho })
     }
 
-    fn get_section(&self, section_name: &str) -> Option<&'a [u8]> {
+    fn section_data_by_name(&self, section_name: &str) -> Option<&'a [u8]> {
         let segment_name = if section_name == ".eh_frame" {
             "__TEXT"
         } else {
@@ -69,14 +69,14 @@ impl<'a> Object<'a> for MachOFile<'a> {
         None
     }
 
-    fn get_sections(&'a self) -> MachOSectionIterator<'a> {
+    fn sections(&'a self) -> MachOSectionIterator<'a> {
         MachOSectionIterator {
             segments: self.macho.segments.iter(),
             sections: None,
         }
     }
 
-    fn get_symbols(&self) -> Vec<Symbol<'a>> {
+    fn symbols(&self) -> Vec<Symbol<'a>> {
         // Determine section kinds and end addresses.
         // The section kinds are inherited by symbols in those sections.
         // The section end addresses are needed for calculating symbol sizes.

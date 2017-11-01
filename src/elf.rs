@@ -43,7 +43,7 @@ impl<'a> Object<'a> for ElfFile<'a> {
         Ok(ElfFile { elf, data })
     }
 
-    fn get_section(&self, section_name: &str) -> Option<&'a [u8]> {
+    fn section_data_by_name(&self, section_name: &str) -> Option<&'a [u8]> {
         for header in &self.elf.section_headers {
             if let Some(Ok(name)) = self.elf.shdr_strtab.get(header.sh_name) {
                 if name == section_name {
@@ -54,14 +54,14 @@ impl<'a> Object<'a> for ElfFile<'a> {
         None
     }
 
-    fn get_sections(&'a self) -> ElfSectionIterator<'a> {
+    fn sections(&'a self) -> ElfSectionIterator<'a> {
         ElfSectionIterator {
             file: self,
             iter: self.elf.section_headers.iter(),
         }
     }
 
-    fn get_symbols(&self) -> Vec<Symbol<'a>> {
+    fn symbols(&self) -> Vec<Symbol<'a>> {
         // Determine section kinds.
         // The section kinds are inherited by symbols in those sections.
         let mut section_kinds = Vec::new();
