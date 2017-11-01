@@ -20,6 +20,7 @@ pub trait Object<'a>: Sized {
     fn get_sections(&'a self) -> Self::SectionIterator;
 
     /// Get a `Vec` of the symbols defined in the file.
+    /// The symbols are unsorted and have the same order as the symbols in the file.
     fn get_symbols(&self) -> Vec<Symbol<'a>>;
 
     /// Return true if the file is little endian, false if it is big endian.
