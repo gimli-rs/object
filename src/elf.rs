@@ -102,10 +102,7 @@ impl<'a> Object<'a> for ElfFile<'a> {
             } else {
                 Some(section_kinds[sym.st_shndx])
             };
-            let name = match self.elf.strtab.get(sym.st_name) {
-                Some(Ok(name)) => name.as_bytes(),
-                _ => &[],
-            };
+            let name = self.elf.strtab.get(sym.st_name).and_then(Result::ok);
             symbols.push(Symbol {
                 kind,
                 section: sym.st_shndx,
@@ -158,7 +155,7 @@ impl<'a> ObjectSection<'a> for ElfSection<'a> {
             .elf
             .shdr_strtab
             .get(self.section.sh_name)
-            .and_then(|x| x.ok())
+            .and_then(Result::ok)
     }
 
     #[inline]

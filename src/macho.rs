@@ -85,24 +85,16 @@ impl<'a> Object<'a> for MachOFile<'a> {
         for segment in &self.macho.segments {
             for section in segment {
                 if let Ok((section, _)) = section {
-                    let sectname = section
-                        .name()
-                        .map(str::as_bytes)
-                        .unwrap_or(&section.sectname[..]);
-                    let segname = section
-                        .segname()
-                        .map(str::as_bytes)
-                        .unwrap_or(&section.segname[..]);
-                    let (section_kind, symbol_kind) =
-                        if segname == b"__TEXT" && sectname == b"__text" {
-                            (SectionKind::Text, SymbolKind::Text)
-                        } else if segname == b"__DATA" && sectname == b"__data" {
-                            (SectionKind::Data, SymbolKind::Data)
-                        } else if segname == b"__DATA" && sectname == b"__bss" {
+                    let sectname = section.name().ok();
+                    let segname = section.segname().ok();
+                    let (section_kind, symbol_kind) = match (segname, sectname) {
+                        (Some("__TEXT"), Some("__text")) => (SectionKind::Text, SymbolKind::Text),
+                        (Some("__DATA"), Some("__data")) => (SectionKind::Data, SymbolKind::Data),
+                        (Some("__DATA"), Some("__bss")) => {
                             (SectionKind::UninitializedData, SymbolKind::Data)
-                        } else {
-                            (SectionKind::Other, SymbolKind::Unknown)
-                        };
+                        }
+                        _ => (SectionKind::Other, SymbolKind::Unknown),
+                    };
                     let section_index = section_kinds.len();
                     section_kinds.push((section_kind, symbol_kind));
                     section_ends.push(Symbol {
@@ -110,7 +102,7 @@ impl<'a> Object<'a> for MachOFile<'a> {
                         section: section_index + 1,
                         section_kind: Some(section_kind),
                         global: false,
-                        name: &[],
+                        name: None,
                         address: section.addr + section.size,
                         size: 0,
                     });
@@ -145,7 +137,7 @@ impl<'a> Object<'a> for MachOFile<'a> {
                     section: nlist.n_sect,
                     section_kind,
                     global: nlist.is_global(),
-                    name: name.as_bytes(),
+                    name: Some(name),
                     address: nlist.n_value,
                     size: 0,
                 });

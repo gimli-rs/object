@@ -81,7 +81,7 @@ pub struct Symbol<'a> {
     section: usize,
     section_kind: Option<SectionKind>,
     global: bool,
-    name: &'a [u8],
+    name: Option<&'a str>,
     address: u64,
     size: u64,
 }
@@ -252,7 +252,7 @@ impl<'a> Symbol<'a> {
 
     /// The name of the symbol.
     #[inline]
-    pub fn name(&self) -> &'a [u8] {
+    pub fn name(&self) -> Option<&'a str> {
         self.name
     }
 

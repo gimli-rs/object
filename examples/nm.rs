@@ -83,7 +83,7 @@ fn main() {
                 "{:016x} {} {}",
                 symbol.size(),
                 kind,
-                String::from_utf8_lossy(symbol.name())
+                symbol.name().unwrap_or("<unknown>"),
             );
         }
     }
