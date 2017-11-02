@@ -2,7 +2,7 @@ use std::slice;
 
 use goblin::elf;
 
-use {Object, ObjectSection, ObjectSegment, SectionKind, Symbol, SymbolKind};
+use {Machine, Object, ObjectSection, ObjectSegment, SectionKind, Symbol, SymbolKind};
 
 /// An ELF object file.
 #[derive(Debug)]
@@ -57,6 +57,16 @@ impl<'a> Object<'a> for ElfFile<'a> {
     fn parse(data: &'a [u8]) -> Result<Self, &'static str> {
         let elf = elf::Elf::parse(data).map_err(|_| "Could not parse ELF header")?;
         Ok(ElfFile { elf, data })
+    }
+
+    fn machine(&self) -> Machine {
+        match self.elf.header.e_machine {
+            elf::header::EM_ARM => Machine::Arm,
+            elf::header::EM_AARCH64 => Machine::Arm64,
+            elf::header::EM_386 => Machine::X86,
+            elf::header::EM_X86_64 => Machine::X86_64,
+            _ => Machine::Other,
+        }
     }
 
     fn segments(&'a self) -> ElfSegmentIterator<'a> {

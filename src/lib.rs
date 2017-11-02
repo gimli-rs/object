@@ -34,6 +34,22 @@ enum FileInternal<'a> {
     MachO(MachOFile<'a>),
 }
 
+/// The machine type of an object file.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Machine {
+    /// An unrecognized machine type.
+    Other,
+    /// ARM
+    Arm,
+    /// ARM64
+    Arm64,
+    /// x86
+    X86,
+    /// x86-64
+    #[allow(non_camel_case_types)]
+    X86_64,
+}
+
 /// An iterator over the segments of a `File`.
 #[derive(Debug)]
 pub struct SegmentIterator<'a> {
@@ -142,6 +158,13 @@ impl<'a> Object<'a> for File<'a> {
             _ => return Err("Unknown file magic"),
         };
         Ok(File { inner })
+    }
+
+    fn machine(&self) -> Machine {
+        match self.inner {
+            FileInternal::Elf(ref elf) => elf.machine(),
+            FileInternal::MachO(ref macho) => macho.machine(),
+        }
     }
 
     fn segments(&'a self) -> SegmentIterator<'a> {

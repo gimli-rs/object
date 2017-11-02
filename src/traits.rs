@@ -1,4 +1,4 @@
-use Symbol;
+use {Machine, Symbol};
 
 /// An object file.
 pub trait Object<'a>: Sized {
@@ -16,6 +16,9 @@ pub trait Object<'a>: Sized {
 
     /// Parse the raw object file data.
     fn parse(data: &'a [u8]) -> Result<Self, &'static str>;
+
+    /// Get the machine type of the file.
+    fn machine(&self) -> Machine;
 
     /// Get an iterator over the segments in the file.
     // TODO: avoid 'a on self using Associated Type Constructor

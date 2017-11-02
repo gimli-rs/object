@@ -4,7 +4,7 @@ use std::slice;
 
 use goblin::mach;
 
-use {Object, ObjectSection, ObjectSegment, SectionKind, Symbol, SymbolKind};
+use {Machine, Object, ObjectSection, ObjectSegment, SectionKind, Symbol, SymbolKind};
 
 /// A Mach-O object file.
 #[derive(Debug)]
@@ -55,6 +55,16 @@ impl<'a> Object<'a> for MachOFile<'a> {
     fn parse(data: &'a [u8]) -> Result<Self, &'static str> {
         let macho = mach::MachO::parse(data, 0).map_err(|_| "Could not parse Mach-O header")?;
         Ok(MachOFile { macho })
+    }
+
+    fn machine(&self) -> Machine {
+        match self.macho.header.cputype {
+            mach::cputype::CPU_TYPE_ARM => Machine::Arm,
+            mach::cputype::CPU_TYPE_ARM64 => Machine::Arm64,
+            mach::cputype::CPU_TYPE_X86 => Machine::X86,
+            mach::cputype::CPU_TYPE_X86_64 => Machine::X86_64,
+            _ => Machine::Other,
+        }
     }
 
     fn segments(&'a self) -> MachOSegmentIterator<'a> {
