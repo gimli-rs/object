@@ -4,7 +4,7 @@ use std::slice;
 
 use goblin::mach;
 
-use {Object, ObjectSection, SectionKind, Symbol, SymbolKind};
+use {Object, ObjectSection, ObjectSegment, SectionKind, Symbol, SymbolKind};
 
 /// A Mach-O object file.
 #[derive(Debug)]
@@ -12,7 +12,19 @@ pub struct MachOFile<'a> {
     macho: mach::MachO<'a>,
 }
 
-/// An iterator of the sections of a `MachOFile`.
+/// An iterator over the segments of a `MachOFile`.
+#[derive(Debug)]
+pub struct MachOSegmentIterator<'a> {
+    segments: slice::Iter<'a, mach::segment::Segment<'a>>,
+}
+
+/// A segment of a `MachOFile`.
+#[derive(Debug)]
+pub struct MachOSegment<'a> {
+    segment: &'a mach::segment::Segment<'a>,
+}
+
+/// An iterator over the sections of a `MachOFile`.
 pub struct MachOSectionIterator<'a> {
     segments: slice::Iter<'a, mach::segment::Segment<'a>>,
     sections: Option<mach::segment::SectionIterator<'a>>,
@@ -35,12 +47,20 @@ impl<'a> MachOFile<'a> {
 }
 
 impl<'a> Object<'a> for MachOFile<'a> {
+    type Segment = MachOSegment<'a>;
+    type SegmentIterator = MachOSegmentIterator<'a>;
     type Section = MachOSection<'a>;
     type SectionIterator = MachOSectionIterator<'a>;
 
     fn parse(data: &'a [u8]) -> Result<Self, &'static str> {
         let macho = mach::MachO::parse(data, 0).map_err(|_| "Could not parse Mach-O header")?;
         Ok(MachOFile { macho })
+    }
+
+    fn segments(&'a self) -> MachOSegmentIterator<'a> {
+        MachOSegmentIterator {
+            segments: self.macho.segments.iter(),
+        }
     }
 
     fn section_data_by_name(&self, section_name: &str) -> Option<&'a [u8]> {
@@ -187,6 +207,36 @@ impl<'a> Object<'a> for MachOFile<'a> {
     #[inline]
     fn is_little_endian(&self) -> bool {
         self.macho.header.is_little_endian()
+    }
+}
+
+impl<'a> Iterator for MachOSegmentIterator<'a> {
+    type Item = MachOSegment<'a>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.segments.next().map(|segment| MachOSegment { segment })
+    }
+}
+
+impl<'a> ObjectSegment<'a> for MachOSegment<'a> {
+    #[inline]
+    fn address(&self) -> u64 {
+        self.segment.vmaddr
+    }
+
+    #[inline]
+    fn size(&self) -> u64 {
+        self.segment.vmsize
+    }
+
+    #[inline]
+    fn data(&self) -> &'a [u8] {
+        self.segment.data
+    }
+
+    #[inline]
+    fn name(&self) -> Option<&str> {
+        self.segment.name().ok()
     }
 }
 
