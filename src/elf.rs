@@ -2,7 +2,7 @@ use std::slice;
 
 use goblin::elf;
 
-use {Object, ObjectSection, SectionKind, Symbol, SymbolKind};
+use {Machine, Object, ObjectSection, ObjectSegment, SectionKind, Symbol, SymbolKind};
 
 /// An ELF object file.
 #[derive(Debug)]
@@ -11,7 +11,21 @@ pub struct ElfFile<'a> {
     data: &'a [u8],
 }
 
-/// An iterator of the sections of an `ElfFile`.
+/// An iterator over the segments of an `ElfFile`.
+#[derive(Debug)]
+pub struct ElfSegmentIterator<'a> {
+    file: &'a ElfFile<'a>,
+    iter: slice::Iter<'a, elf::ProgramHeader>,
+}
+
+/// A segment of an `ElfFile`.
+#[derive(Debug)]
+pub struct ElfSegment<'a> {
+    file: &'a ElfFile<'a>,
+    segment: &'a elf::ProgramHeader,
+}
+
+/// An iterator over the sections of an `ElfFile`.
 #[derive(Debug)]
 pub struct ElfSectionIterator<'a> {
     file: &'a ElfFile<'a>,
@@ -22,7 +36,7 @@ pub struct ElfSectionIterator<'a> {
 #[derive(Debug)]
 pub struct ElfSection<'a> {
     file: &'a ElfFile<'a>,
-    section: <slice::Iter<'a, elf::SectionHeader> as Iterator>::Item,
+    section: &'a elf::SectionHeader,
 }
 
 impl<'a> ElfFile<'a> {
@@ -35,12 +49,31 @@ impl<'a> ElfFile<'a> {
 }
 
 impl<'a> Object<'a> for ElfFile<'a> {
+    type Segment = ElfSegment<'a>;
+    type SegmentIterator = ElfSegmentIterator<'a>;
     type Section = ElfSection<'a>;
     type SectionIterator = ElfSectionIterator<'a>;
 
     fn parse(data: &'a [u8]) -> Result<Self, &'static str> {
         let elf = elf::Elf::parse(data).map_err(|_| "Could not parse ELF header")?;
         Ok(ElfFile { elf, data })
+    }
+
+    fn machine(&self) -> Machine {
+        match self.elf.header.e_machine {
+            elf::header::EM_ARM => Machine::Arm,
+            elf::header::EM_AARCH64 => Machine::Arm64,
+            elf::header::EM_386 => Machine::X86,
+            elf::header::EM_X86_64 => Machine::X86_64,
+            _ => Machine::Other,
+        }
+    }
+
+    fn segments(&'a self) -> ElfSegmentIterator<'a> {
+        ElfSegmentIterator {
+            file: self,
+            iter: self.elf.program_headers.iter(),
+        }
     }
 
     fn section_data_by_name(&self, section_name: &str) -> Option<&'a [u8]> {
@@ -119,6 +152,43 @@ impl<'a> Object<'a> for ElfFile<'a> {
     #[inline]
     fn is_little_endian(&self) -> bool {
         self.elf.little_endian
+    }
+}
+
+impl<'a> Iterator for ElfSegmentIterator<'a> {
+    type Item = ElfSegment<'a>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        while let Some(segment) = self.iter.next() {
+            if segment.p_type == elf::program_header::PT_LOAD {
+                return Some(ElfSegment {
+                    file: self.file,
+                    segment,
+                });
+            }
+        }
+        None
+    }
+}
+
+impl<'a> ObjectSegment<'a> for ElfSegment<'a> {
+    #[inline]
+    fn address(&self) -> u64 {
+        self.segment.p_vaddr
+    }
+
+    #[inline]
+    fn size(&self) -> u64 {
+        self.segment.p_memsz
+    }
+
+    fn data(&self) -> &'a [u8] {
+        &self.file.data[self.segment.p_offset as usize..][..self.segment.p_filesz as usize]
+    }
+
+    #[inline]
+    fn name(&self) -> Option<&str> {
+        None
     }
 }
 

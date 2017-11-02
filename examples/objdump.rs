@@ -40,6 +40,10 @@ fn main() {
             }
         };
 
+        for segment in file.segments() {
+            println!("{:?}", segment);
+        }
+
         for section in file.sections() {
             println!("{:?}", section);
         }

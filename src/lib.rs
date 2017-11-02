@@ -34,6 +34,45 @@ enum FileInternal<'a> {
     MachO(MachOFile<'a>),
 }
 
+/// The machine type of an object file.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Machine {
+    /// An unrecognized machine type.
+    Other,
+    /// ARM
+    Arm,
+    /// ARM64
+    Arm64,
+    /// x86
+    X86,
+    /// x86-64
+    #[allow(non_camel_case_types)]
+    X86_64,
+}
+
+/// An iterator over the segments of a `File`.
+#[derive(Debug)]
+pub struct SegmentIterator<'a> {
+    inner: SegmentIteratorInternal<'a>,
+}
+
+#[derive(Debug)]
+enum SegmentIteratorInternal<'a> {
+    Elf(ElfSegmentIterator<'a>),
+    MachO(MachOSegmentIterator<'a>),
+}
+
+/// A segment of a `File`.
+pub struct Segment<'a> {
+    inner: SegmentInternal<'a>,
+}
+
+#[derive(Debug)]
+enum SegmentInternal<'a> {
+    Elf(ElfSegment<'a>),
+    MachO(MachOSegment<'a>),
+}
+
 /// An iterator of the sections of a `File`.
 #[derive(Debug)]
 pub struct SectionIterator<'a> {
@@ -106,6 +145,8 @@ pub enum SymbolKind {
 }
 
 impl<'a> Object<'a> for File<'a> {
+    type Segment = Segment<'a>;
+    type SegmentIterator = SegmentIterator<'a>;
     type Section = Section<'a>;
     type SectionIterator = SectionIterator<'a>;
 
@@ -117,6 +158,24 @@ impl<'a> Object<'a> for File<'a> {
             _ => return Err("Unknown file magic"),
         };
         Ok(File { inner })
+    }
+
+    fn machine(&self) -> Machine {
+        match self.inner {
+            FileInternal::Elf(ref elf) => elf.machine(),
+            FileInternal::MachO(ref macho) => macho.machine(),
+        }
+    }
+
+    fn segments(&'a self) -> SegmentIterator<'a> {
+        match self.inner {
+            FileInternal::Elf(ref elf) => SegmentIterator {
+                inner: SegmentIteratorInternal::Elf(elf.segments()),
+            },
+            FileInternal::MachO(ref macho) => SegmentIterator {
+                inner: SegmentIteratorInternal::MachO(macho.segments()),
+            },
+        }
     }
 
     fn section_data_by_name(&self, section_name: &str) -> Option<&'a [u8]> {
@@ -148,6 +207,66 @@ impl<'a> Object<'a> for File<'a> {
         match self.inner {
             FileInternal::Elf(ref elf) => elf.is_little_endian(),
             FileInternal::MachO(ref macho) => macho.is_little_endian(),
+        }
+    }
+}
+
+impl<'a> Iterator for SegmentIterator<'a> {
+    type Item = Segment<'a>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        match self.inner {
+            SegmentIteratorInternal::Elf(ref mut elf) => elf.next().map(|x| {
+                Segment {
+                    inner: SegmentInternal::Elf(x),
+                }
+            }),
+            SegmentIteratorInternal::MachO(ref mut macho) => macho.next().map(|x| {
+                Segment {
+                    inner: SegmentInternal::MachO(x),
+                }
+            }),
+        }
+    }
+}
+
+impl<'a> fmt::Debug for Segment<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        // It's painful to do much better than this
+        f.debug_struct("Segment")
+            .field("name", &self.name().unwrap_or("<unnamed>"))
+            .field("address", &self.address())
+            .field("size", &self.data().len())
+            .finish()
+    }
+}
+
+impl<'a> ObjectSegment<'a> for Segment<'a> {
+    fn address(&self) -> u64 {
+        match self.inner {
+            SegmentInternal::Elf(ref elf) => elf.address(),
+            SegmentInternal::MachO(ref macho) => macho.address(),
+        }
+    }
+
+    fn size(&self) -> u64 {
+        match self.inner {
+            SegmentInternal::Elf(ref elf) => elf.size(),
+            SegmentInternal::MachO(ref macho) => macho.size(),
+        }
+    }
+
+    fn data(&self) -> &'a [u8] {
+        match self.inner {
+            SegmentInternal::Elf(ref elf) => elf.data(),
+            SegmentInternal::MachO(ref macho) => macho.data(),
+        }
+    }
+
+    fn name(&self) -> Option<&str> {
+        match self.inner {
+            SegmentInternal::Elf(ref elf) => elf.name(),
+            SegmentInternal::MachO(ref macho) => macho.name(),
         }
     }
 }
