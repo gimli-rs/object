@@ -217,7 +217,11 @@ impl<'a> ObjectSection<'a> for ElfSection<'a> {
     }
 
     fn data(&self) -> &'a [u8] {
-        &self.file.data[self.section.sh_offset as usize..][..self.section.sh_size as usize]
+        if self.section.sh_type == elf::section_header::SHT_NOBITS {
+            &[]
+        } else {
+            &self.file.data[self.section.sh_offset as usize..][..self.section.sh_size as usize]
+        }
     }
 
     fn name(&self) -> Option<&str> {
