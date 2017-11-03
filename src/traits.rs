@@ -73,10 +73,12 @@ pub trait ObjectSection<'a> {
     /// Returns the address of the section.
     fn address(&self) -> u64;
 
-    /// Returns the size of the section.
+    /// Returns the size of the section in memory.
     fn size(&self) -> u64;
 
     /// Returns a reference to the contents of the section.
+    /// The length of this data may be different from the size of the
+    /// section in memory.
     fn data(&self) -> &'a [u8];
 
     /// Returns the name of the section.

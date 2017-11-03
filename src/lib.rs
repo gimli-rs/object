@@ -19,6 +19,9 @@ pub use elf::*;
 mod macho;
 pub use macho::*;
 
+mod pe;
+pub use pe::*;
+
 mod traits;
 pub use traits::*;
 
@@ -32,6 +35,7 @@ pub struct File<'a> {
 enum FileInternal<'a> {
     Elf(ElfFile<'a>),
     MachO(MachOFile<'a>),
+    Pe(PeFile<'a>),
 }
 
 /// The machine type of an object file.
@@ -60,6 +64,7 @@ pub struct SegmentIterator<'a> {
 enum SegmentIteratorInternal<'a> {
     Elf(ElfSegmentIterator<'a>),
     MachO(MachOSegmentIterator<'a>),
+    Pe(PeSegmentIterator<'a>),
 }
 
 /// A segment of a `File`.
@@ -71,6 +76,7 @@ pub struct Segment<'a> {
 enum SegmentInternal<'a> {
     Elf(ElfSegment<'a>),
     MachO(MachOSegment<'a>),
+    Pe(PeSegment<'a>),
 }
 
 /// An iterator of the sections of a `File`.
@@ -84,6 +90,7 @@ pub struct SectionIterator<'a> {
 enum SectionIteratorInternal<'a> {
     Elf(ElfSectionIterator<'a>),
     MachO(MachOSectionIterator<'a>),
+    Pe(PeSectionIterator<'a>),
 }
 
 /// A Section of a File
@@ -94,6 +101,7 @@ pub struct Section<'a> {
 enum SectionInternal<'a> {
     Elf(ElfSection<'a>),
     MachO(MachOSection<'a>),
+    Pe(PeSection<'a>),
 }
 
 /// The kind of a section.
@@ -155,6 +163,7 @@ impl<'a> Object<'a> for File<'a> {
         let inner = match goblin::peek(&mut cursor).map_err(|_| "Could not parse file magic")? {
             goblin::Hint::Elf(_) => FileInternal::Elf(ElfFile::parse(data)?),
             goblin::Hint::Mach(_) => FileInternal::MachO(MachOFile::parse(data)?),
+            goblin::Hint::PE => FileInternal::Pe(PeFile::parse(data)?),
             _ => return Err("Unknown file magic"),
         };
         Ok(File { inner })
@@ -164,6 +173,7 @@ impl<'a> Object<'a> for File<'a> {
         match self.inner {
             FileInternal::Elf(ref elf) => elf.machine(),
             FileInternal::MachO(ref macho) => macho.machine(),
+            FileInternal::Pe(ref pe) => pe.machine(),
         }
     }
 
@@ -175,6 +185,9 @@ impl<'a> Object<'a> for File<'a> {
             FileInternal::MachO(ref macho) => SegmentIterator {
                 inner: SegmentIteratorInternal::MachO(macho.segments()),
             },
+            FileInternal::Pe(ref pe) => SegmentIterator {
+                inner: SegmentIteratorInternal::Pe(pe.segments()),
+            },
         }
     }
 
@@ -182,6 +195,7 @@ impl<'a> Object<'a> for File<'a> {
         match self.inner {
             FileInternal::Elf(ref elf) => elf.section_data_by_name(section_name),
             FileInternal::MachO(ref macho) => macho.section_data_by_name(section_name),
+            FileInternal::Pe(ref pe) => pe.section_data_by_name(section_name),
         }
     }
 
@@ -193,6 +207,9 @@ impl<'a> Object<'a> for File<'a> {
             FileInternal::MachO(ref macho) => SectionIterator {
                 inner: SectionIteratorInternal::MachO(macho.sections()),
             },
+            FileInternal::Pe(ref pe) => SectionIterator {
+                inner: SectionIteratorInternal::Pe(pe.sections()),
+            },
         }
     }
 
@@ -200,6 +217,7 @@ impl<'a> Object<'a> for File<'a> {
         match self.inner {
             FileInternal::Elf(ref elf) => elf.symbols(),
             FileInternal::MachO(ref macho) => macho.symbols(),
+            FileInternal::Pe(ref pe) => pe.symbols(),
         }
     }
 
@@ -207,6 +225,7 @@ impl<'a> Object<'a> for File<'a> {
         match self.inner {
             FileInternal::Elf(ref elf) => elf.is_little_endian(),
             FileInternal::MachO(ref macho) => macho.is_little_endian(),
+            FileInternal::Pe(ref pe) => pe.is_little_endian(),
         }
     }
 }
@@ -224,6 +243,11 @@ impl<'a> Iterator for SegmentIterator<'a> {
             SegmentIteratorInternal::MachO(ref mut macho) => macho.next().map(|x| {
                 Segment {
                     inner: SegmentInternal::MachO(x),
+                }
+            }),
+            SegmentIteratorInternal::Pe(ref mut pe) => pe.next().map(|x| {
+                Segment {
+                    inner: SegmentInternal::Pe(x),
                 }
             }),
         }
@@ -246,6 +270,7 @@ impl<'a> Segment<'a> {
         match self.inner {
             SegmentInternal::Elf(ref elf) => elf,
             SegmentInternal::MachO(ref macho) => macho,
+            SegmentInternal::Pe(ref pe) => pe,
         }
     }
 }
@@ -283,6 +308,11 @@ impl<'a> Iterator for SectionIterator<'a> {
                     inner: SectionInternal::MachO(x),
                 }
             }),
+            SectionIteratorInternal::Pe(ref mut pe) => pe.next().map(|x| {
+                Section {
+                    inner: SectionInternal::Pe(x),
+                }
+            }),
         }
     }
 }
@@ -303,6 +333,7 @@ impl<'a> Section<'a> {
         match self.inner {
             SectionInternal::Elf(ref elf) => elf,
             SectionInternal::MachO(ref macho) => macho,
+            SectionInternal::Pe(ref pe) => pe,
         }
     }
 }
