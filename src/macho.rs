@@ -76,7 +76,7 @@ impl<'a> Object<'a> for MachOFile<'a> {
     fn section_data_by_name(&self, section_name: &str) -> Option<&'a [u8]> {
         // Translate the "." prefix to the "__" prefix used by OSX/Mach-O, eg
         // ".debug_info" to "__debug_info".
-        let (system_section, section_name) = if section_name.starts_with(".") {
+        let (system_section, section_name) = if section_name.starts_with('.') {
             (true, &section_name[1..])
         } else {
             (false, section_name)
