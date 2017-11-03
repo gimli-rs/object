@@ -241,33 +241,30 @@ impl<'a> fmt::Debug for Segment<'a> {
     }
 }
 
+impl<'a> Segment<'a> {
+    fn inner(&self) -> &ObjectSegment<'a> {
+        match self.inner {
+            SegmentInternal::Elf(ref elf) => elf,
+            SegmentInternal::MachO(ref macho) => macho,
+        }
+    }
+}
+
 impl<'a> ObjectSegment<'a> for Segment<'a> {
     fn address(&self) -> u64 {
-        match self.inner {
-            SegmentInternal::Elf(ref elf) => elf.address(),
-            SegmentInternal::MachO(ref macho) => macho.address(),
-        }
+        self.inner().address()
     }
 
     fn size(&self) -> u64 {
-        match self.inner {
-            SegmentInternal::Elf(ref elf) => elf.size(),
-            SegmentInternal::MachO(ref macho) => macho.size(),
-        }
+        self.inner().size()
     }
 
     fn data(&self) -> &'a [u8] {
-        match self.inner {
-            SegmentInternal::Elf(ref elf) => elf.data(),
-            SegmentInternal::MachO(ref macho) => macho.data(),
-        }
+        self.inner().data()
     }
 
     fn name(&self) -> Option<&str> {
-        match self.inner {
-            SegmentInternal::Elf(ref elf) => elf.name(),
-            SegmentInternal::MachO(ref macho) => macho.name(),
-        }
+        self.inner().name()
     }
 }
 
@@ -301,40 +298,34 @@ impl<'a> fmt::Debug for Section<'a> {
     }
 }
 
+impl<'a> Section<'a> {
+    fn inner(&self) -> &ObjectSection<'a> {
+        match self.inner {
+            SectionInternal::Elf(ref elf) => elf,
+            SectionInternal::MachO(ref macho) => macho,
+        }
+    }
+}
+
 impl<'a> ObjectSection<'a> for Section<'a> {
     fn address(&self) -> u64 {
-        match self.inner {
-            SectionInternal::Elf(ref elf) => elf.address(),
-            SectionInternal::MachO(ref macho) => macho.address(),
-        }
+        self.inner().address()
     }
 
     fn size(&self) -> u64 {
-        match self.inner {
-            SectionInternal::Elf(ref elf) => elf.size(),
-            SectionInternal::MachO(ref macho) => macho.size(),
-        }
+        self.inner().size()
     }
 
     fn data(&self) -> &'a [u8] {
-        match self.inner {
-            SectionInternal::Elf(ref elf) => elf.data(),
-            SectionInternal::MachO(ref macho) => macho.data(),
-        }
+        self.inner().data()
     }
 
     fn name(&self) -> Option<&str> {
-        match self.inner {
-            SectionInternal::Elf(ref elf) => elf.name(),
-            SectionInternal::MachO(ref macho) => macho.name(),
-        }
+        self.inner().name()
     }
 
     fn segment_name(&self) -> Option<&str> {
-        match self.inner {
-            SectionInternal::Elf(ref elf) => elf.segment_name(),
-            SectionInternal::MachO(ref macho) => macho.segment_name(),
-        }
+        self.inner().segment_name()
     }
 }
 
