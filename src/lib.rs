@@ -152,6 +152,41 @@ pub enum SymbolKind {
     Tls,
 }
 
+/// Evaluate an expression on the contents of a file format enum.
+///
+/// This is a hack to avoid virtual calls.
+macro_rules! with_inner {
+    ($inner:expr, $enum:ident, |$var:ident| $body:expr) => {
+        match $inner {
+            &$enum::Elf(ref $var) => { $body }
+            &$enum::MachO(ref $var) => { $body }
+            &$enum::Pe(ref $var) => { $body }
+        }
+    }
+}
+
+/// Like `with_inner!`, but wraps the result in another enum.
+macro_rules! map_inner {
+    ($inner:expr, $from:ident, $to:ident, |$var:ident| $body:expr) => {
+        match $inner {
+            &$from::Elf(ref $var) => $to::Elf($body),
+            &$from::MachO(ref $var) => $to::MachO($body),
+            &$from::Pe(ref $var) => $to::Pe($body),
+        }
+    }
+}
+
+/// Call `next` for a file format iterator.
+macro_rules! next_inner {
+    ($inner:expr, $from:ident, $to:ident) => {
+        match $inner {
+            &mut $from::Elf(ref mut iter) => iter.next().map(|x| $to::Elf(x)),
+            &mut $from::MachO(ref mut iter) => iter.next().map(|x| $to::MachO(x)),
+            &mut $from::Pe(ref mut iter) => iter.next().map(|x| $to::Pe(x)),
+        }
+    }
+}
+
 impl<'a> Object<'a> for File<'a> {
     type Segment = Segment<'a>;
     type SegmentIterator = SegmentIterator<'a>;
@@ -170,63 +205,45 @@ impl<'a> Object<'a> for File<'a> {
     }
 
     fn machine(&self) -> Machine {
-        match self.inner {
-            FileInternal::Elf(ref elf) => elf.machine(),
-            FileInternal::MachO(ref macho) => macho.machine(),
-            FileInternal::Pe(ref pe) => pe.machine(),
-        }
+        with_inner!(&self.inner, FileInternal, |x| x.machine())
     }
 
     fn segments(&'a self) -> SegmentIterator<'a> {
-        match self.inner {
-            FileInternal::Elf(ref elf) => SegmentIterator {
-                inner: SegmentIteratorInternal::Elf(elf.segments()),
-            },
-            FileInternal::MachO(ref macho) => SegmentIterator {
-                inner: SegmentIteratorInternal::MachO(macho.segments()),
-            },
-            FileInternal::Pe(ref pe) => SegmentIterator {
-                inner: SegmentIteratorInternal::Pe(pe.segments()),
-            },
+        SegmentIterator {
+            inner: map_inner!(
+                &self.inner,
+                FileInternal,
+                SegmentIteratorInternal,
+                |x| x.segments()
+            ),
         }
     }
 
     fn section_data_by_name(&self, section_name: &str) -> Option<&'a [u8]> {
-        match self.inner {
-            FileInternal::Elf(ref elf) => elf.section_data_by_name(section_name),
-            FileInternal::MachO(ref macho) => macho.section_data_by_name(section_name),
-            FileInternal::Pe(ref pe) => pe.section_data_by_name(section_name),
-        }
+        with_inner!(
+            &self.inner,
+            FileInternal,
+            |x| x.section_data_by_name(section_name)
+        )
     }
 
     fn sections(&'a self) -> SectionIterator<'a> {
-        match self.inner {
-            FileInternal::Elf(ref elf) => SectionIterator {
-                inner: SectionIteratorInternal::Elf(elf.sections()),
-            },
-            FileInternal::MachO(ref macho) => SectionIterator {
-                inner: SectionIteratorInternal::MachO(macho.sections()),
-            },
-            FileInternal::Pe(ref pe) => SectionIterator {
-                inner: SectionIteratorInternal::Pe(pe.sections()),
-            },
+        SectionIterator {
+            inner: map_inner!(
+                &self.inner,
+                FileInternal,
+                SectionIteratorInternal,
+                |x| x.sections()
+            ),
         }
     }
 
     fn symbols(&self) -> Vec<Symbol<'a>> {
-        match self.inner {
-            FileInternal::Elf(ref elf) => elf.symbols(),
-            FileInternal::MachO(ref macho) => macho.symbols(),
-            FileInternal::Pe(ref pe) => pe.symbols(),
-        }
+        with_inner!(&self.inner, FileInternal, |x| x.symbols())
     }
 
     fn is_little_endian(&self) -> bool {
-        match self.inner {
-            FileInternal::Elf(ref elf) => elf.is_little_endian(),
-            FileInternal::MachO(ref macho) => macho.is_little_endian(),
-            FileInternal::Pe(ref pe) => pe.is_little_endian(),
-        }
+        with_inner!(&self.inner, FileInternal, |x| x.is_little_endian())
     }
 }
 
@@ -234,23 +251,8 @@ impl<'a> Iterator for SegmentIterator<'a> {
     type Item = Segment<'a>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        match self.inner {
-            SegmentIteratorInternal::Elf(ref mut elf) => elf.next().map(|x| {
-                Segment {
-                    inner: SegmentInternal::Elf(x),
-                }
-            }),
-            SegmentIteratorInternal::MachO(ref mut macho) => macho.next().map(|x| {
-                Segment {
-                    inner: SegmentInternal::MachO(x),
-                }
-            }),
-            SegmentIteratorInternal::Pe(ref mut pe) => pe.next().map(|x| {
-                Segment {
-                    inner: SegmentInternal::Pe(x),
-                }
-            }),
-        }
+        next_inner!(&mut self.inner, SegmentIteratorInternal, SegmentInternal)
+            .map(|inner| Segment { inner })
     }
 }
 
@@ -265,31 +267,21 @@ impl<'a> fmt::Debug for Segment<'a> {
     }
 }
 
-impl<'a> Segment<'a> {
-    fn inner(&self) -> &ObjectSegment<'a> {
-        match self.inner {
-            SegmentInternal::Elf(ref elf) => elf,
-            SegmentInternal::MachO(ref macho) => macho,
-            SegmentInternal::Pe(ref pe) => pe,
-        }
-    }
-}
-
 impl<'a> ObjectSegment<'a> for Segment<'a> {
     fn address(&self) -> u64 {
-        self.inner().address()
+        with_inner!(&self.inner, SegmentInternal, |x| x.address())
     }
 
     fn size(&self) -> u64 {
-        self.inner().size()
+        with_inner!(&self.inner, SegmentInternal, |x| x.size())
     }
 
     fn data(&self) -> &'a [u8] {
-        self.inner().data()
+        with_inner!(&self.inner, SegmentInternal, |x| x.data())
     }
 
     fn name(&self) -> Option<&str> {
-        self.inner().name()
+        with_inner!(&self.inner, SegmentInternal, |x| x.name())
     }
 }
 
@@ -297,23 +289,8 @@ impl<'a> Iterator for SectionIterator<'a> {
     type Item = Section<'a>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        match self.inner {
-            SectionIteratorInternal::Elf(ref mut elf) => elf.next().map(|x| {
-                Section {
-                    inner: SectionInternal::Elf(x),
-                }
-            }),
-            SectionIteratorInternal::MachO(ref mut macho) => macho.next().map(|x| {
-                Section {
-                    inner: SectionInternal::MachO(x),
-                }
-            }),
-            SectionIteratorInternal::Pe(ref mut pe) => pe.next().map(|x| {
-                Section {
-                    inner: SectionInternal::Pe(x),
-                }
-            }),
-        }
+        next_inner!(&mut self.inner, SectionIteratorInternal, SectionInternal)
+            .map(|inner| Section { inner })
     }
 }
 
@@ -328,35 +305,25 @@ impl<'a> fmt::Debug for Section<'a> {
     }
 }
 
-impl<'a> Section<'a> {
-    fn inner(&self) -> &ObjectSection<'a> {
-        match self.inner {
-            SectionInternal::Elf(ref elf) => elf,
-            SectionInternal::MachO(ref macho) => macho,
-            SectionInternal::Pe(ref pe) => pe,
-        }
-    }
-}
-
 impl<'a> ObjectSection<'a> for Section<'a> {
     fn address(&self) -> u64 {
-        self.inner().address()
+        with_inner!(&self.inner, SectionInternal, |x| x.address())
     }
 
     fn size(&self) -> u64 {
-        self.inner().size()
+        with_inner!(&self.inner, SectionInternal, |x| x.size())
     }
 
     fn data(&self) -> &'a [u8] {
-        self.inner().data()
+        with_inner!(&self.inner, SectionInternal, |x| x.data())
     }
 
     fn name(&self) -> Option<&str> {
-        self.inner().name()
+        with_inner!(&self.inner, SectionInternal, |x| x.name())
     }
 
     fn segment_name(&self) -> Option<&str> {
-        self.inner().segment_name()
+        with_inner!(&self.inner, SectionInternal, |x| x.segment_name())
     }
 }
 
