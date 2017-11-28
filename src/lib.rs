@@ -27,15 +27,15 @@ pub use traits::*;
 
 /// An object file.
 #[derive(Debug)]
-pub struct File<'a> {
-    inner: FileInternal<'a>,
+pub struct File<'data> {
+    inner: FileInternal<'data>,
 }
 
 #[derive(Debug)]
-enum FileInternal<'a> {
-    Elf(ElfFile<'a>),
-    MachO(MachOFile<'a>),
-    Pe(PeFile<'a>),
+enum FileInternal<'data> {
+    Elf(ElfFile<'data>),
+    MachO(MachOFile<'data>),
+    Pe(PeFile<'data>),
 }
 
 /// The machine type of an object file.
@@ -56,52 +56,52 @@ pub enum Machine {
 
 /// An iterator over the segments of a `File`.
 #[derive(Debug)]
-pub struct SegmentIterator<'a> {
-    inner: SegmentIteratorInternal<'a>,
+pub struct SegmentIterator<'data> {
+    inner: SegmentIteratorInternal<'data>,
 }
 
 #[derive(Debug)]
-enum SegmentIteratorInternal<'a> {
-    Elf(ElfSegmentIterator<'a>),
-    MachO(MachOSegmentIterator<'a>),
-    Pe(PeSegmentIterator<'a>),
+enum SegmentIteratorInternal<'data> {
+    Elf(ElfSegmentIterator<'data>),
+    MachO(MachOSegmentIterator<'data>),
+    Pe(PeSegmentIterator<'data>),
 }
 
 /// A segment of a `File`.
-pub struct Segment<'a> {
-    inner: SegmentInternal<'a>,
+pub struct Segment<'data> {
+    inner: SegmentInternal<'data>,
 }
 
 #[derive(Debug)]
-enum SegmentInternal<'a> {
-    Elf(ElfSegment<'a>),
-    MachO(MachOSegment<'a>),
-    Pe(PeSegment<'a>),
+enum SegmentInternal<'data> {
+    Elf(ElfSegment<'data>),
+    MachO(MachOSegment<'data>),
+    Pe(PeSegment<'data>),
 }
 
 /// An iterator of the sections of a `File`.
 #[derive(Debug)]
-pub struct SectionIterator<'a> {
-    inner: SectionIteratorInternal<'a>,
+pub struct SectionIterator<'data> {
+    inner: SectionIteratorInternal<'data>,
 }
 
 // we wrap our enums in a struct so that they are kept private.
 #[derive(Debug)]
-enum SectionIteratorInternal<'a> {
-    Elf(ElfSectionIterator<'a>),
-    MachO(MachOSectionIterator<'a>),
-    Pe(PeSectionIterator<'a>),
+enum SectionIteratorInternal<'data> {
+    Elf(ElfSectionIterator<'data>),
+    MachO(MachOSectionIterator<'data>),
+    Pe(PeSectionIterator<'data>),
 }
 
 /// A Section of a File
-pub struct Section<'a> {
-    inner: SectionInternal<'a>,
+pub struct Section<'data> {
+    inner: SectionInternal<'data>,
 }
 
-enum SectionInternal<'a> {
-    Elf(ElfSection<'a>),
-    MachO(MachOSection<'a>),
-    Pe(PeSection<'a>),
+enum SectionInternal<'data> {
+    Elf(ElfSection<'data>),
+    MachO(MachOSection<'data>),
+    Pe(PeSection<'data>),
 }
 
 /// The kind of a section.
@@ -123,12 +123,12 @@ pub enum SectionKind {
 
 /// A symbol table entry.
 #[derive(Debug)]
-pub struct Symbol<'a> {
+pub struct Symbol<'data> {
     kind: SymbolKind,
     section: usize,
     section_kind: Option<SectionKind>,
     global: bool,
-    name: Option<&'a str>,
+    name: Option<&'data str>,
     address: u64,
     size: u64,
 }
@@ -187,13 +187,13 @@ macro_rules! next_inner {
     }
 }
 
-impl<'a> Object<'a> for File<'a> {
-    type Segment = Segment<'a>;
-    type SegmentIterator = SegmentIterator<'a>;
-    type Section = Section<'a>;
-    type SectionIterator = SectionIterator<'a>;
+impl<'data> Object<'data> for File<'data> {
+    type Segment = Segment<'data>;
+    type SegmentIterator = SegmentIterator<'data>;
+    type Section = Section<'data>;
+    type SectionIterator = SectionIterator<'data>;
 
-    fn parse(data: &'a [u8]) -> Result<Self, &'static str> {
+    fn parse(data: &'data [u8]) -> Result<Self, &'static str> {
         let mut cursor = Cursor::new(data);
         let inner = match goblin::peek(&mut cursor).map_err(|_| "Could not parse file magic")? {
             goblin::Hint::Elf(_) => FileInternal::Elf(ElfFile::parse(data)?),
@@ -208,7 +208,7 @@ impl<'a> Object<'a> for File<'a> {
         with_inner!(&self.inner, FileInternal, |x| x.machine())
     }
 
-    fn segments(&'a self) -> SegmentIterator<'a> {
+    fn segments(&'data self) -> SegmentIterator<'data> {
         SegmentIterator {
             inner: map_inner!(
                 &self.inner,
@@ -219,7 +219,7 @@ impl<'a> Object<'a> for File<'a> {
         }
     }
 
-    fn section_data_by_name(&self, section_name: &str) -> Option<&'a [u8]> {
+    fn section_data_by_name(&self, section_name: &str) -> Option<&'data [u8]> {
         with_inner!(
             &self.inner,
             FileInternal,
@@ -227,7 +227,7 @@ impl<'a> Object<'a> for File<'a> {
         )
     }
 
-    fn sections(&'a self) -> SectionIterator<'a> {
+    fn sections(&'data self) -> SectionIterator<'data> {
         SectionIterator {
             inner: map_inner!(
                 &self.inner,
@@ -238,7 +238,7 @@ impl<'a> Object<'a> for File<'a> {
         }
     }
 
-    fn symbols(&self) -> Vec<Symbol<'a>> {
+    fn symbols(&self) -> Vec<Symbol<'data>> {
         with_inner!(&self.inner, FileInternal, |x| x.symbols())
     }
 
@@ -247,8 +247,8 @@ impl<'a> Object<'a> for File<'a> {
     }
 }
 
-impl<'a> Iterator for SegmentIterator<'a> {
-    type Item = Segment<'a>;
+impl<'data> Iterator for SegmentIterator<'data> {
+    type Item = Segment<'data>;
 
     fn next(&mut self) -> Option<Self::Item> {
         next_inner!(&mut self.inner, SegmentIteratorInternal, SegmentInternal)
@@ -256,7 +256,7 @@ impl<'a> Iterator for SegmentIterator<'a> {
     }
 }
 
-impl<'a> fmt::Debug for Segment<'a> {
+impl<'data> fmt::Debug for Segment<'data> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         // It's painful to do much better than this
         f.debug_struct("Segment")
@@ -267,7 +267,7 @@ impl<'a> fmt::Debug for Segment<'a> {
     }
 }
 
-impl<'a> ObjectSegment<'a> for Segment<'a> {
+impl<'data> ObjectSegment<'data> for Segment<'data> {
     fn address(&self) -> u64 {
         with_inner!(&self.inner, SegmentInternal, |x| x.address())
     }
@@ -276,7 +276,7 @@ impl<'a> ObjectSegment<'a> for Segment<'a> {
         with_inner!(&self.inner, SegmentInternal, |x| x.size())
     }
 
-    fn data(&self) -> &'a [u8] {
+    fn data(&self) -> &'data [u8] {
         with_inner!(&self.inner, SegmentInternal, |x| x.data())
     }
 
@@ -285,8 +285,8 @@ impl<'a> ObjectSegment<'a> for Segment<'a> {
     }
 }
 
-impl<'a> Iterator for SectionIterator<'a> {
-    type Item = Section<'a>;
+impl<'data> Iterator for SectionIterator<'data> {
+    type Item = Section<'data>;
 
     fn next(&mut self) -> Option<Self::Item> {
         next_inner!(&mut self.inner, SectionIteratorInternal, SectionInternal)
@@ -294,7 +294,7 @@ impl<'a> Iterator for SectionIterator<'a> {
     }
 }
 
-impl<'a> fmt::Debug for Section<'a> {
+impl<'data> fmt::Debug for Section<'data> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         // It's painful to do much better than this
         f.debug_struct("Section")
@@ -305,7 +305,7 @@ impl<'a> fmt::Debug for Section<'a> {
     }
 }
 
-impl<'a> ObjectSection<'a> for Section<'a> {
+impl<'data> ObjectSection<'data> for Section<'data> {
     fn address(&self) -> u64 {
         with_inner!(&self.inner, SectionInternal, |x| x.address())
     }
@@ -314,7 +314,7 @@ impl<'a> ObjectSection<'a> for Section<'a> {
         with_inner!(&self.inner, SectionInternal, |x| x.size())
     }
 
-    fn data(&self) -> &'a [u8] {
+    fn data(&self) -> &'data [u8] {
         with_inner!(&self.inner, SectionInternal, |x| x.data())
     }
 
@@ -327,7 +327,7 @@ impl<'a> ObjectSection<'a> for Section<'a> {
     }
 }
 
-impl<'a> Symbol<'a> {
+impl<'data> Symbol<'data> {
     /// Return the kind of this symbol.
     #[inline]
     pub fn kind(&self) -> SymbolKind {
@@ -360,7 +360,7 @@ impl<'a> Symbol<'a> {
 
     /// The name of the symbol.
     #[inline]
-    pub fn name(&self) -> Option<&'a str> {
+    pub fn name(&self) -> Option<&'data str> {
         self.name
     }
 

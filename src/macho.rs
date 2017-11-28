@@ -8,51 +8,51 @@ use {Machine, Object, ObjectSection, ObjectSegment, SectionKind, Symbol, SymbolK
 
 /// A Mach-O object file.
 #[derive(Debug)]
-pub struct MachOFile<'a> {
-    macho: mach::MachO<'a>,
+pub struct MachOFile<'data> {
+    macho: mach::MachO<'data>,
 }
 
 /// An iterator over the segments of a `MachOFile`.
 #[derive(Debug)]
-pub struct MachOSegmentIterator<'a> {
-    segments: slice::Iter<'a, mach::segment::Segment<'a>>,
+pub struct MachOSegmentIterator<'data> {
+    segments: slice::Iter<'data, mach::segment::Segment<'data>>,
 }
 
 /// A segment of a `MachOFile`.
 #[derive(Debug)]
-pub struct MachOSegment<'a> {
-    segment: &'a mach::segment::Segment<'a>,
+pub struct MachOSegment<'data> {
+    segment: &'data mach::segment::Segment<'data>,
 }
 
 /// An iterator over the sections of a `MachOFile`.
-pub struct MachOSectionIterator<'a> {
-    segments: slice::Iter<'a, mach::segment::Segment<'a>>,
-    sections: Option<mach::segment::SectionIterator<'a>>,
+pub struct MachOSectionIterator<'data> {
+    segments: slice::Iter<'data, mach::segment::Segment<'data>>,
+    sections: Option<mach::segment::SectionIterator<'data>>,
 }
 
 /// A section of a `MachOFile`.
 #[derive(Debug)]
-pub struct MachOSection<'a> {
+pub struct MachOSection<'data> {
     section: mach::segment::Section,
-    data: mach::segment::SectionData<'a>,
+    data: mach::segment::SectionData<'data>,
 }
 
-impl<'a> MachOFile<'a> {
+impl<'data> MachOFile<'data> {
     /// Get the Mach-O headers of the file.
     // TODO: this is temporary to allow access to features this crate doesn't provide yet
     #[inline]
-    pub fn macho(&self) -> &mach::MachO<'a> {
+    pub fn macho(&self) -> &mach::MachO<'data> {
         &self.macho
     }
 }
 
-impl<'a> Object<'a> for MachOFile<'a> {
-    type Segment = MachOSegment<'a>;
-    type SegmentIterator = MachOSegmentIterator<'a>;
-    type Section = MachOSection<'a>;
-    type SectionIterator = MachOSectionIterator<'a>;
+impl<'data> Object<'data> for MachOFile<'data> {
+    type Segment = MachOSegment<'data>;
+    type SegmentIterator = MachOSegmentIterator<'data>;
+    type Section = MachOSection<'data>;
+    type SectionIterator = MachOSectionIterator<'data>;
 
-    fn parse(data: &'a [u8]) -> Result<Self, &'static str> {
+    fn parse(data: &'data [u8]) -> Result<Self, &'static str> {
         let macho = mach::MachO::parse(data, 0).map_err(|_| "Could not parse Mach-O header")?;
         Ok(MachOFile { macho })
     }
@@ -67,13 +67,13 @@ impl<'a> Object<'a> for MachOFile<'a> {
         }
     }
 
-    fn segments(&'a self) -> MachOSegmentIterator<'a> {
+    fn segments(&'data self) -> MachOSegmentIterator<'data> {
         MachOSegmentIterator {
             segments: self.macho.segments.iter(),
         }
     }
 
-    fn section_data_by_name(&self, section_name: &str) -> Option<&'a [u8]> {
+    fn section_data_by_name(&self, section_name: &str) -> Option<&'data [u8]> {
         // Translate the "." prefix to the "__" prefix used by OSX/Mach-O, eg
         // ".debug_info" to "__debug_info".
         let (system_section, section_name) = if section_name.starts_with('.') {
@@ -101,14 +101,14 @@ impl<'a> Object<'a> for MachOFile<'a> {
         None
     }
 
-    fn sections(&'a self) -> MachOSectionIterator<'a> {
+    fn sections(&'data self) -> MachOSectionIterator<'data> {
         MachOSectionIterator {
             segments: self.macho.segments.iter(),
             sections: None,
         }
     }
 
-    fn symbols(&self) -> Vec<Symbol<'a>> {
+    fn symbols(&self) -> Vec<Symbol<'data>> {
         // Determine section kinds and end addresses.
         // The section kinds are inherited by symbols in those sections.
         // The section end addresses are needed for calculating symbol sizes.
@@ -220,15 +220,15 @@ impl<'a> Object<'a> for MachOFile<'a> {
     }
 }
 
-impl<'a> Iterator for MachOSegmentIterator<'a> {
-    type Item = MachOSegment<'a>;
+impl<'data> Iterator for MachOSegmentIterator<'data> {
+    type Item = MachOSegment<'data>;
 
     fn next(&mut self) -> Option<Self::Item> {
         self.segments.next().map(|segment| MachOSegment { segment })
     }
 }
 
-impl<'a> ObjectSegment<'a> for MachOSegment<'a> {
+impl<'data> ObjectSegment<'data> for MachOSegment<'data> {
     #[inline]
     fn address(&self) -> u64 {
         self.segment.vmaddr
@@ -240,7 +240,7 @@ impl<'a> ObjectSegment<'a> for MachOSegment<'a> {
     }
 
     #[inline]
-    fn data(&self) -> &'a [u8] {
+    fn data(&self) -> &'data [u8] {
         self.segment.data
     }
 
@@ -250,15 +250,15 @@ impl<'a> ObjectSegment<'a> for MachOSegment<'a> {
     }
 }
 
-impl<'a> fmt::Debug for MachOSectionIterator<'a> {
+impl<'data> fmt::Debug for MachOSectionIterator<'data> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         // It's painful to do much better than this
         f.debug_struct("MachOSectionIterator").finish()
     }
 }
 
-impl<'a> Iterator for MachOSectionIterator<'a> {
-    type Item = MachOSection<'a>;
+impl<'data> Iterator for MachOSectionIterator<'data> {
+    type Item = MachOSection<'data>;
 
     fn next(&mut self) -> Option<Self::Item> {
         loop {
@@ -279,7 +279,7 @@ impl<'a> Iterator for MachOSectionIterator<'a> {
     }
 }
 
-impl<'a> ObjectSection<'a> for MachOSection<'a> {
+impl<'data> ObjectSection<'data> for MachOSection<'data> {
     #[inline]
     fn address(&self) -> u64 {
         self.section.addr
@@ -291,7 +291,7 @@ impl<'a> ObjectSection<'a> for MachOSection<'a> {
     }
 
     #[inline]
-    fn data(&self) -> &'a [u8] {
+    fn data(&self) -> &'data [u8] {
         self.data
     }
 

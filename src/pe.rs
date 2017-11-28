@@ -6,55 +6,55 @@ use {Machine, Object, ObjectSection, ObjectSegment, Symbol};
 
 /// A PE object file.
 #[derive(Debug)]
-pub struct PeFile<'a> {
-    pe: pe::PE<'a>,
-    data: &'a [u8],
+pub struct PeFile<'data> {
+    pe: pe::PE<'data>,
+    data: &'data [u8],
 }
 
 /// An iterator over the loadable sections of a `PeFile`.
 #[derive(Debug)]
-pub struct PeSegmentIterator<'a> {
-    file: &'a PeFile<'a>,
-    iter: slice::Iter<'a, pe::section_table::SectionTable>,
+pub struct PeSegmentIterator<'data> {
+    file: &'data PeFile<'data>,
+    iter: slice::Iter<'data, pe::section_table::SectionTable>,
 }
 
 /// A loadable section of a `PeFile`.
 #[derive(Debug)]
-pub struct PeSegment<'a> {
-    file: &'a PeFile<'a>,
-    section: &'a pe::section_table::SectionTable,
+pub struct PeSegment<'data> {
+    file: &'data PeFile<'data>,
+    section: &'data pe::section_table::SectionTable,
 }
 
 /// An iterator over the sections of a `PeFile`.
 #[derive(Debug)]
-pub struct PeSectionIterator<'a> {
-    file: &'a PeFile<'a>,
-    iter: slice::Iter<'a, pe::section_table::SectionTable>,
+pub struct PeSectionIterator<'data> {
+    file: &'data PeFile<'data>,
+    iter: slice::Iter<'data, pe::section_table::SectionTable>,
 }
 
 /// A section of a `PeFile`.
 #[derive(Debug)]
-pub struct PeSection<'a> {
-    file: &'a PeFile<'a>,
-    section: &'a pe::section_table::SectionTable,
+pub struct PeSection<'data> {
+    file: &'data PeFile<'data>,
+    section: &'data pe::section_table::SectionTable,
 }
 
-impl<'a> PeFile<'a> {
+impl<'data> PeFile<'data> {
     /// Get the PE headers of the file.
     // TODO: this is temporary to allow access to features this crate doesn't provide yet
     #[inline]
-    pub fn pe(&self) -> &pe::PE<'a> {
+    pub fn pe(&self) -> &pe::PE<'data> {
         &self.pe
     }
 }
 
-impl<'a> Object<'a> for PeFile<'a> {
-    type Segment = PeSegment<'a>;
-    type SegmentIterator = PeSegmentIterator<'a>;
-    type Section = PeSection<'a>;
-    type SectionIterator = PeSectionIterator<'a>;
+impl<'data> Object<'data> for PeFile<'data> {
+    type Segment = PeSegment<'data>;
+    type SegmentIterator = PeSegmentIterator<'data>;
+    type Section = PeSection<'data>;
+    type SectionIterator = PeSectionIterator<'data>;
 
-    fn parse(data: &'a [u8]) -> Result<Self, &'static str> {
+    fn parse(data: &'data [u8]) -> Result<Self, &'static str> {
         let pe = pe::PE::parse(data).map_err(|_| "Could not parse PE header")?;
         Ok(PeFile { pe, data })
     }
@@ -68,14 +68,14 @@ impl<'a> Object<'a> for PeFile<'a> {
         }
     }
 
-    fn segments(&'a self) -> PeSegmentIterator<'a> {
+    fn segments(&'data self) -> PeSegmentIterator<'data> {
         PeSegmentIterator {
             file: self,
             iter: self.pe.sections.iter(),
         }
     }
 
-    fn section_data_by_name(&self, section_name: &str) -> Option<&'a [u8]> {
+    fn section_data_by_name(&self, section_name: &str) -> Option<&'data [u8]> {
         for section in &self.pe.sections {
             if let Ok(name) = section.name() {
                 if name == section_name {
@@ -89,14 +89,14 @@ impl<'a> Object<'a> for PeFile<'a> {
         None
     }
 
-    fn sections(&'a self) -> PeSectionIterator<'a> {
+    fn sections(&'data self) -> PeSectionIterator<'data> {
         PeSectionIterator {
             file: self,
             iter: self.pe.sections.iter(),
         }
     }
 
-    fn symbols(&self) -> Vec<Symbol<'a>> {
+    fn symbols(&self) -> Vec<Symbol<'data>> {
         // TODO
         Vec::new()
     }
@@ -109,8 +109,8 @@ impl<'a> Object<'a> for PeFile<'a> {
     }
 }
 
-impl<'a> Iterator for PeSegmentIterator<'a> {
-    type Item = PeSegment<'a>;
+impl<'data> Iterator for PeSegmentIterator<'data> {
+    type Item = PeSegment<'data>;
 
     fn next(&mut self) -> Option<Self::Item> {
         self.iter.next().map(|section| {
@@ -122,7 +122,7 @@ impl<'a> Iterator for PeSegmentIterator<'a> {
     }
 }
 
-impl<'a> ObjectSegment<'a> for PeSegment<'a> {
+impl<'data> ObjectSegment<'data> for PeSegment<'data> {
     #[inline]
     fn address(&self) -> u64 {
         u64::from(self.section.virtual_address)
@@ -133,7 +133,7 @@ impl<'a> ObjectSegment<'a> for PeSegment<'a> {
         u64::from(self.section.virtual_size)
     }
 
-    fn data(&self) -> &'a [u8] {
+    fn data(&self) -> &'data [u8] {
         &self.file.data[self.section.pointer_to_raw_data as usize..]
             [..self.section.size_of_raw_data as usize]
     }
@@ -144,8 +144,8 @@ impl<'a> ObjectSegment<'a> for PeSegment<'a> {
     }
 }
 
-impl<'a> Iterator for PeSectionIterator<'a> {
-    type Item = PeSection<'a>;
+impl<'data> Iterator for PeSectionIterator<'data> {
+    type Item = PeSection<'data>;
 
     fn next(&mut self) -> Option<Self::Item> {
         self.iter.next().map(|section| {
@@ -157,7 +157,7 @@ impl<'a> Iterator for PeSectionIterator<'a> {
     }
 }
 
-impl<'a> ObjectSection<'a> for PeSection<'a> {
+impl<'data> ObjectSection<'data> for PeSection<'data> {
     #[inline]
     fn address(&self) -> u64 {
         u64::from(self.section.virtual_address)
@@ -168,7 +168,7 @@ impl<'a> ObjectSection<'a> for PeSection<'a> {
         u64::from(self.section.virtual_size)
     }
 
-    fn data(&self) -> &'a [u8] {
+    fn data(&self) -> &'data [u8] {
         &self.file.data[self.section.pointer_to_raw_data as usize..]
             [..self.section.size_of_raw_data as usize]
     }
