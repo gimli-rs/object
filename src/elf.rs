@@ -13,30 +13,42 @@ pub struct ElfFile<'data> {
 
 /// An iterator over the segments of an `ElfFile`.
 #[derive(Debug)]
-pub struct ElfSegmentIterator<'data> {
-    file: &'data ElfFile<'data>,
-    iter: slice::Iter<'data, elf::ProgramHeader>,
+pub struct ElfSegmentIterator<'data, 'file>
+where
+    'data: 'file,
+{
+    file: &'file ElfFile<'data>,
+    iter: slice::Iter<'file, elf::ProgramHeader>,
 }
 
 /// A segment of an `ElfFile`.
 #[derive(Debug)]
-pub struct ElfSegment<'data> {
-    file: &'data ElfFile<'data>,
-    segment: &'data elf::ProgramHeader,
+pub struct ElfSegment<'data, 'file>
+where
+    'data: 'file,
+{
+    file: &'file ElfFile<'data>,
+    segment: &'file elf::ProgramHeader,
 }
 
 /// An iterator over the sections of an `ElfFile`.
 #[derive(Debug)]
-pub struct ElfSectionIterator<'data> {
-    file: &'data ElfFile<'data>,
-    iter: slice::Iter<'data, elf::SectionHeader>,
+pub struct ElfSectionIterator<'data, 'file>
+where
+    'data: 'file,
+{
+    file: &'file ElfFile<'data>,
+    iter: slice::Iter<'file, elf::SectionHeader>,
 }
 
 /// A section of an `ElfFile`.
 #[derive(Debug)]
-pub struct ElfSection<'data> {
-    file: &'data ElfFile<'data>,
-    section: &'data elf::SectionHeader,
+pub struct ElfSection<'data, 'file>
+where
+    'data: 'file,
+{
+    file: &'file ElfFile<'data>,
+    section: &'file elf::SectionHeader,
 }
 
 impl<'data> ElfFile<'data> {
@@ -46,18 +58,22 @@ impl<'data> ElfFile<'data> {
     pub fn elf(&self) -> &elf::Elf<'data> {
         &self.elf
     }
-}
 
-impl<'data> Object<'data> for ElfFile<'data> {
-    type Segment = ElfSegment<'data>;
-    type SegmentIterator = ElfSegmentIterator<'data>;
-    type Section = ElfSection<'data>;
-    type SectionIterator = ElfSectionIterator<'data>;
-
-    fn parse(data: &'data [u8]) -> Result<Self, &'static str> {
+    /// Parse the raw ELF file data.
+    pub fn parse(data: &'data [u8]) -> Result<Self, &'static str> {
         let elf = elf::Elf::parse(data).map_err(|_| "Could not parse ELF header")?;
         Ok(ElfFile { elf, data })
     }
+}
+
+impl<'data, 'file> Object<'data, 'file> for ElfFile<'data>
+where
+    'data: 'file,
+{
+    type Segment = ElfSegment<'data, 'file>;
+    type SegmentIterator = ElfSegmentIterator<'data, 'file>;
+    type Section = ElfSection<'data, 'file>;
+    type SectionIterator = ElfSectionIterator<'data, 'file>;
 
     fn machine(&self) -> Machine {
         match self.elf.header.e_machine {
@@ -69,7 +85,7 @@ impl<'data> Object<'data> for ElfFile<'data> {
         }
     }
 
-    fn segments(&'data self) -> ElfSegmentIterator<'data> {
+    fn segments(&'file self) -> ElfSegmentIterator<'data, 'file> {
         ElfSegmentIterator {
             file: self,
             iter: self.elf.program_headers.iter(),
@@ -87,7 +103,7 @@ impl<'data> Object<'data> for ElfFile<'data> {
         None
     }
 
-    fn sections(&'data self) -> ElfSectionIterator<'data> {
+    fn sections(&'file self) -> ElfSectionIterator<'data, 'file> {
         ElfSectionIterator {
             file: self,
             iter: self.elf.section_headers.iter(),
@@ -155,8 +171,8 @@ impl<'data> Object<'data> for ElfFile<'data> {
     }
 }
 
-impl<'data> Iterator for ElfSegmentIterator<'data> {
-    type Item = ElfSegment<'data>;
+impl<'data, 'file> Iterator for ElfSegmentIterator<'data, 'file> {
+    type Item = ElfSegment<'data, 'file>;
 
     fn next(&mut self) -> Option<Self::Item> {
         while let Some(segment) = self.iter.next() {
@@ -171,7 +187,7 @@ impl<'data> Iterator for ElfSegmentIterator<'data> {
     }
 }
 
-impl<'data> ObjectSegment<'data> for ElfSegment<'data> {
+impl<'data, 'file> ObjectSegment<'data> for ElfSegment<'data, 'file> {
     #[inline]
     fn address(&self) -> u64 {
         self.segment.p_vaddr
@@ -192,8 +208,8 @@ impl<'data> ObjectSegment<'data> for ElfSegment<'data> {
     }
 }
 
-impl<'data> Iterator for ElfSectionIterator<'data> {
-    type Item = ElfSection<'data>;
+impl<'data, 'file> Iterator for ElfSectionIterator<'data, 'file> {
+    type Item = ElfSection<'data, 'file>;
 
     fn next(&mut self) -> Option<Self::Item> {
         self.iter.next().map(|section| {
@@ -205,7 +221,7 @@ impl<'data> Iterator for ElfSectionIterator<'data> {
     }
 }
 
-impl<'data> ObjectSection<'data> for ElfSection<'data> {
+impl<'data, 'file> ObjectSection<'data> for ElfSection<'data, 'file> {
     #[inline]
     fn address(&self) -> u64 {
         self.section.sh_addr

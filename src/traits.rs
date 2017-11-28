@@ -1,7 +1,7 @@
 use {Machine, Symbol};
 
 /// An object file.
-pub trait Object<'data>: Sized {
+pub trait Object<'data, 'file> {
     /// A segment in the object file.
     type Segment: ObjectSegment<'data>;
 
@@ -14,15 +14,11 @@ pub trait Object<'data>: Sized {
     /// An iterator over the sections in the object file.
     type SectionIterator: Iterator<Item = Self::Section>;
 
-    /// Parse the raw object file data.
-    fn parse(data: &'data [u8]) -> Result<Self, &'static str>;
-
     /// Get the machine type of the file.
     fn machine(&self) -> Machine;
 
     /// Get an iterator over the segments in the file.
-    // TODO: avoid 'data on self using Associated Type Constructor
-    fn segments(&'data self) -> Self::SegmentIterator;
+    fn segments(&'file self) -> Self::SegmentIterator;
 
     /// Get the contents of the section named `section_name`, if such
     /// a section exists.
@@ -37,8 +33,7 @@ pub trait Object<'data>: Sized {
     fn section_data_by_name(&self, section_name: &str) -> Option<&'data [u8]>;
 
     /// Get an iterator over the sections in the file.
-    // TODO: avoid 'data on self using Associated Type Constructor
-    fn sections(&'data self) -> Self::SectionIterator;
+    fn sections(&'file self) -> Self::SectionIterator;
 
     /// Get a `Vec` of the symbols defined in the file.
     /// The symbols are unsorted and have the same order as the symbols in the file.

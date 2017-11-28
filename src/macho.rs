@@ -14,19 +14,28 @@ pub struct MachOFile<'data> {
 
 /// An iterator over the segments of a `MachOFile`.
 #[derive(Debug)]
-pub struct MachOSegmentIterator<'data> {
-    segments: slice::Iter<'data, mach::segment::Segment<'data>>,
+pub struct MachOSegmentIterator<'data, 'file>
+where
+    'data: 'file,
+{
+    segments: slice::Iter<'file, mach::segment::Segment<'data>>,
 }
 
 /// A segment of a `MachOFile`.
 #[derive(Debug)]
-pub struct MachOSegment<'data> {
-    segment: &'data mach::segment::Segment<'data>,
+pub struct MachOSegment<'data, 'file>
+where
+    'data: 'file,
+{
+    segment: &'file mach::segment::Segment<'data>,
 }
 
 /// An iterator over the sections of a `MachOFile`.
-pub struct MachOSectionIterator<'data> {
-    segments: slice::Iter<'data, mach::segment::Segment<'data>>,
+pub struct MachOSectionIterator<'data, 'file>
+where
+    'data: 'file,
+{
+    segments: slice::Iter<'file, mach::segment::Segment<'data>>,
     sections: Option<mach::segment::SectionIterator<'data>>,
 }
 
@@ -44,18 +53,22 @@ impl<'data> MachOFile<'data> {
     pub fn macho(&self) -> &mach::MachO<'data> {
         &self.macho
     }
-}
 
-impl<'data> Object<'data> for MachOFile<'data> {
-    type Segment = MachOSegment<'data>;
-    type SegmentIterator = MachOSegmentIterator<'data>;
-    type Section = MachOSection<'data>;
-    type SectionIterator = MachOSectionIterator<'data>;
-
-    fn parse(data: &'data [u8]) -> Result<Self, &'static str> {
+    /// Parse the raw Mach-O file data.
+    pub fn parse(data: &'data [u8]) -> Result<Self, &'static str> {
         let macho = mach::MachO::parse(data, 0).map_err(|_| "Could not parse Mach-O header")?;
         Ok(MachOFile { macho })
     }
+}
+
+impl<'data, 'file> Object<'data, 'file> for MachOFile<'data>
+where
+    'data: 'file,
+{
+    type Segment = MachOSegment<'data, 'file>;
+    type SegmentIterator = MachOSegmentIterator<'data, 'file>;
+    type Section = MachOSection<'data>;
+    type SectionIterator = MachOSectionIterator<'data, 'file>;
 
     fn machine(&self) -> Machine {
         match self.macho.header.cputype {
@@ -67,7 +80,7 @@ impl<'data> Object<'data> for MachOFile<'data> {
         }
     }
 
-    fn segments(&'data self) -> MachOSegmentIterator<'data> {
+    fn segments(&'file self) -> MachOSegmentIterator<'data, 'file> {
         MachOSegmentIterator {
             segments: self.macho.segments.iter(),
         }
@@ -101,7 +114,7 @@ impl<'data> Object<'data> for MachOFile<'data> {
         None
     }
 
-    fn sections(&'data self) -> MachOSectionIterator<'data> {
+    fn sections(&'file self) -> MachOSectionIterator<'data, 'file> {
         MachOSectionIterator {
             segments: self.macho.segments.iter(),
             sections: None,
@@ -220,15 +233,15 @@ impl<'data> Object<'data> for MachOFile<'data> {
     }
 }
 
-impl<'data> Iterator for MachOSegmentIterator<'data> {
-    type Item = MachOSegment<'data>;
+impl<'data, 'file> Iterator for MachOSegmentIterator<'data, 'file> {
+    type Item = MachOSegment<'data, 'file>;
 
     fn next(&mut self) -> Option<Self::Item> {
         self.segments.next().map(|segment| MachOSegment { segment })
     }
 }
 
-impl<'data> ObjectSegment<'data> for MachOSegment<'data> {
+impl<'data, 'file> ObjectSegment<'data> for MachOSegment<'data, 'file> {
     #[inline]
     fn address(&self) -> u64 {
         self.segment.vmaddr
@@ -250,14 +263,14 @@ impl<'data> ObjectSegment<'data> for MachOSegment<'data> {
     }
 }
 
-impl<'data> fmt::Debug for MachOSectionIterator<'data> {
+impl<'data, 'file> fmt::Debug for MachOSectionIterator<'data, 'file> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         // It's painful to do much better than this
         f.debug_struct("MachOSectionIterator").finish()
     }
 }
 
-impl<'data> Iterator for MachOSectionIterator<'data> {
+impl<'data, 'file> Iterator for MachOSectionIterator<'data, 'file> {
     type Item = MachOSection<'data>;
 
     fn next(&mut self) -> Option<Self::Item> {

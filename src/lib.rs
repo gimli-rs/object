@@ -56,52 +56,76 @@ pub enum Machine {
 
 /// An iterator over the segments of a `File`.
 #[derive(Debug)]
-pub struct SegmentIterator<'data> {
-    inner: SegmentIteratorInternal<'data>,
+pub struct SegmentIterator<'data, 'file>
+where
+    'data: 'file,
+{
+    inner: SegmentIteratorInternal<'data, 'file>,
 }
 
 #[derive(Debug)]
-enum SegmentIteratorInternal<'data> {
-    Elf(ElfSegmentIterator<'data>),
-    MachO(MachOSegmentIterator<'data>),
-    Pe(PeSegmentIterator<'data>),
+enum SegmentIteratorInternal<'data, 'file>
+where
+    'data: 'file,
+{
+    Elf(ElfSegmentIterator<'data, 'file>),
+    MachO(MachOSegmentIterator<'data, 'file>),
+    Pe(PeSegmentIterator<'data, 'file>),
 }
 
 /// A segment of a `File`.
-pub struct Segment<'data> {
-    inner: SegmentInternal<'data>,
+pub struct Segment<'data, 'file>
+where
+    'data: 'file,
+{
+    inner: SegmentInternal<'data, 'file>,
 }
 
 #[derive(Debug)]
-enum SegmentInternal<'data> {
-    Elf(ElfSegment<'data>),
-    MachO(MachOSegment<'data>),
-    Pe(PeSegment<'data>),
+enum SegmentInternal<'data, 'file>
+where
+    'data: 'file,
+{
+    Elf(ElfSegment<'data, 'file>),
+    MachO(MachOSegment<'data, 'file>),
+    Pe(PeSegment<'data, 'file>),
 }
 
 /// An iterator of the sections of a `File`.
 #[derive(Debug)]
-pub struct SectionIterator<'data> {
-    inner: SectionIteratorInternal<'data>,
+pub struct SectionIterator<'data, 'file>
+where
+    'data: 'file,
+{
+    inner: SectionIteratorInternal<'data, 'file>,
 }
 
 // we wrap our enums in a struct so that they are kept private.
 #[derive(Debug)]
-enum SectionIteratorInternal<'data> {
-    Elf(ElfSectionIterator<'data>),
-    MachO(MachOSectionIterator<'data>),
-    Pe(PeSectionIterator<'data>),
+enum SectionIteratorInternal<'data, 'file>
+where
+    'data: 'file,
+{
+    Elf(ElfSectionIterator<'data, 'file>),
+    MachO(MachOSectionIterator<'data, 'file>),
+    Pe(PeSectionIterator<'data, 'file>),
 }
 
 /// A Section of a File
-pub struct Section<'data> {
-    inner: SectionInternal<'data>,
+pub struct Section<'data, 'file>
+where
+    'data: 'file,
+{
+    inner: SectionInternal<'data, 'file>,
 }
 
-enum SectionInternal<'data> {
-    Elf(ElfSection<'data>),
+enum SectionInternal<'data, 'file>
+where
+    'data: 'file,
+{
+    Elf(ElfSection<'data, 'file>),
     MachO(MachOSection<'data>),
-    Pe(PeSection<'data>),
+    Pe(PeSection<'data, 'file>),
 }
 
 /// The kind of a section.
@@ -187,13 +211,9 @@ macro_rules! next_inner {
     }
 }
 
-impl<'data> Object<'data> for File<'data> {
-    type Segment = Segment<'data>;
-    type SegmentIterator = SegmentIterator<'data>;
-    type Section = Section<'data>;
-    type SectionIterator = SectionIterator<'data>;
-
-    fn parse(data: &'data [u8]) -> Result<Self, &'static str> {
+impl<'data> File<'data> {
+    /// Parse the raw ELF file data.
+    pub fn parse(data: &'data [u8]) -> Result<Self, &'static str> {
         let mut cursor = Cursor::new(data);
         let inner = match goblin::peek(&mut cursor).map_err(|_| "Could not parse file magic")? {
             goblin::Hint::Elf(_) => FileInternal::Elf(ElfFile::parse(data)?),
@@ -203,38 +223,40 @@ impl<'data> Object<'data> for File<'data> {
         };
         Ok(File { inner })
     }
+}
+
+impl<'data, 'file> Object<'data, 'file> for File<'data>
+where
+    'data: 'file,
+{
+    type Segment = Segment<'data, 'file>;
+    type SegmentIterator = SegmentIterator<'data, 'file>;
+    type Section = Section<'data, 'file>;
+    type SectionIterator = SectionIterator<'data, 'file>;
 
     fn machine(&self) -> Machine {
         with_inner!(&self.inner, FileInternal, |x| x.machine())
     }
 
-    fn segments(&'data self) -> SegmentIterator<'data> {
+    fn segments(&'file self) -> SegmentIterator<'data, 'file> {
         SegmentIterator {
-            inner: map_inner!(
-                &self.inner,
-                FileInternal,
-                SegmentIteratorInternal,
-                |x| x.segments()
-            ),
+            inner: map_inner!(&self.inner, FileInternal, SegmentIteratorInternal, |x| {
+                x.segments()
+            }),
         }
     }
 
     fn section_data_by_name(&self, section_name: &str) -> Option<&'data [u8]> {
-        with_inner!(
-            &self.inner,
-            FileInternal,
-            |x| x.section_data_by_name(section_name)
-        )
+        with_inner!(&self.inner, FileInternal, |x| {
+            x.section_data_by_name(section_name)
+        })
     }
 
-    fn sections(&'data self) -> SectionIterator<'data> {
+    fn sections(&'file self) -> SectionIterator<'data, 'file> {
         SectionIterator {
-            inner: map_inner!(
-                &self.inner,
-                FileInternal,
-                SectionIteratorInternal,
-                |x| x.sections()
-            ),
+            inner: map_inner!(&self.inner, FileInternal, SectionIteratorInternal, |x| {
+                x.sections()
+            }),
         }
     }
 
@@ -247,8 +269,8 @@ impl<'data> Object<'data> for File<'data> {
     }
 }
 
-impl<'data> Iterator for SegmentIterator<'data> {
-    type Item = Segment<'data>;
+impl<'data, 'file> Iterator for SegmentIterator<'data, 'file> {
+    type Item = Segment<'data, 'file>;
 
     fn next(&mut self) -> Option<Self::Item> {
         next_inner!(&mut self.inner, SegmentIteratorInternal, SegmentInternal)
@@ -256,7 +278,7 @@ impl<'data> Iterator for SegmentIterator<'data> {
     }
 }
 
-impl<'data> fmt::Debug for Segment<'data> {
+impl<'data, 'file> fmt::Debug for Segment<'data, 'file> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         // It's painful to do much better than this
         f.debug_struct("Segment")
@@ -267,7 +289,7 @@ impl<'data> fmt::Debug for Segment<'data> {
     }
 }
 
-impl<'data> ObjectSegment<'data> for Segment<'data> {
+impl<'data, 'file> ObjectSegment<'data> for Segment<'data, 'file> {
     fn address(&self) -> u64 {
         with_inner!(&self.inner, SegmentInternal, |x| x.address())
     }
@@ -285,8 +307,8 @@ impl<'data> ObjectSegment<'data> for Segment<'data> {
     }
 }
 
-impl<'data> Iterator for SectionIterator<'data> {
-    type Item = Section<'data>;
+impl<'data, 'file> Iterator for SectionIterator<'data, 'file> {
+    type Item = Section<'data, 'file>;
 
     fn next(&mut self) -> Option<Self::Item> {
         next_inner!(&mut self.inner, SectionIteratorInternal, SectionInternal)
@@ -294,7 +316,7 @@ impl<'data> Iterator for SectionIterator<'data> {
     }
 }
 
-impl<'data> fmt::Debug for Section<'data> {
+impl<'data, 'file> fmt::Debug for Section<'data, 'file> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         // It's painful to do much better than this
         f.debug_struct("Section")
@@ -305,7 +327,7 @@ impl<'data> fmt::Debug for Section<'data> {
     }
 }
 
-impl<'data> ObjectSection<'data> for Section<'data> {
+impl<'data, 'file> ObjectSection<'data> for Section<'data, 'file> {
     fn address(&self) -> u64 {
         with_inner!(&self.inner, SectionInternal, |x| x.address())
     }
