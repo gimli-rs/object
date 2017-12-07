@@ -41,6 +41,9 @@ pub trait Object<'data, 'file> {
     /// Get an iterator over the debugging symbols in the file.
     fn symbols(&'file self) -> Self::SymbolIterator;
 
+    /// Get an iterator over the dynamic linking symbols in the file.
+    fn dynamic_symbols(&'file self) -> Self::SymbolIterator;
+
     /// Construct a map from addresses to symbols.
     fn symbol_map(&self) -> SymbolMap<'data>;
 

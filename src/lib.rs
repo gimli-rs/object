@@ -168,7 +168,6 @@ where
 #[derive(Debug)]
 pub struct Symbol<'data> {
     kind: SymbolKind,
-    section_index: Option<usize>,
     section_kind: Option<SectionKind>,
     global: bool,
     name: Option<&'data str>,
@@ -304,6 +303,14 @@ where
         }
     }
 
+    fn dynamic_symbols(&'file self) -> SymbolIterator<'data, 'file> {
+        SymbolIterator {
+            inner: map_inner!(&self.inner, FileInternal, SymbolIteratorInternal, |x| {
+                x.dynamic_symbols()
+            }),
+        }
+    }
+
     fn symbol_map(&self) -> SymbolMap<'data> {
         with_inner!(&self.inner, FileInternal, |x| x.symbol_map())
     }
@@ -411,12 +418,6 @@ impl<'data> Symbol<'data> {
     #[inline]
     pub fn kind(&self) -> SymbolKind {
         self.kind
-    }
-
-    /// Returns the section index for the symbol, or `None` if the symbol is undefined.
-    #[inline]
-    pub fn section_index(&self) -> Option<usize> {
-        self.section_index
     }
 
     /// Returns the section kind for the symbol, or `None` if the symbol is undefined.

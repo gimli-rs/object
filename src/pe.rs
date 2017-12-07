@@ -1,8 +1,9 @@
 use std::slice;
+use std::borrow;
 
 use goblin::pe;
 
-use {Machine, Object, ObjectSection, ObjectSegment, SectionKind, Symbol, SymbolMap};
+use {Machine, Object, ObjectSection, ObjectSegment, SectionKind, Symbol, SymbolKind, SymbolMap};
 
 /// A PE object file.
 #[derive(Debug)]
@@ -52,13 +53,13 @@ where
 }
 
 /// An iterator over the symbols of a `PeFile`.
-// TODO
 #[derive(Debug)]
 pub struct PeSymbolIterator<'data, 'file>
 where
     'data: 'file,
 {
-    file: &'file PeFile<'data>,
+    exports: slice::Iter<'file, pe::export::Export<'data>>,
+    imports: slice::Iter<'file, pe::import::Import<'data>>,
 }
 
 impl<'data> PeFile<'data> {
@@ -124,10 +125,22 @@ where
     }
 
     fn symbols(&'file self) -> PeSymbolIterator<'data, 'file> {
-        PeSymbolIterator { file: self }
+        // TODO: return COFF symbols for object files
+        PeSymbolIterator {
+            exports: [].iter(),
+            imports: [].iter(),
+        }
+    }
+
+    fn dynamic_symbols(&'file self) -> PeSymbolIterator<'data, 'file> {
+        PeSymbolIterator {
+            exports: self.pe.exports.iter(),
+            imports: self.pe.imports.iter(),
+        }
     }
 
     fn symbol_map(&self) -> SymbolMap<'data> {
+        // TODO: untested
         let mut symbols: Vec<_> = self.symbols().filter(SymbolMap::filter).collect();
         symbols.sort_by_key(|x| x.address);
         SymbolMap { symbols }
@@ -235,11 +248,34 @@ impl<'data, 'file> ObjectSection<'data> for PeSection<'data, 'file> {
     }
 }
 
-// TODO
 impl<'data, 'file> Iterator for PeSymbolIterator<'data, 'file> {
     type Item = Symbol<'data>;
 
     fn next(&mut self) -> Option<Self::Item> {
+        if let Some(export) = self.exports.next() {
+            return Some(Symbol {
+                kind: SymbolKind::Unknown,
+                section_kind: Some(SectionKind::Unknown),
+                global: true,
+                name: Some(export.name),
+                address: export.rva as u64,
+                size: 0,
+            });
+        }
+        if let Some(import) = self.imports.next() {
+            let name = match import.name {
+                borrow::Cow::Borrowed(name) => Some(name),
+                _ => None,
+            };
+            return Some(Symbol {
+                kind: SymbolKind::Unknown,
+                section_kind: None,
+                global: true,
+                name: name,
+                address: 0,
+                size: 0,
+            });
+        }
         None
     }
 }

@@ -154,6 +154,12 @@ where
         }
     }
 
+    fn dynamic_symbols(&'file self) -> MachOSymbolIterator<'data> {
+        // The LC_DYSYMTAB command contains indices into the same symbol
+        // table as the LC_SYMTAB command, so return all of them.
+        self.symbols()
+    }
+
     fn symbol_map(&self) -> SymbolMap<'data> {
         let mut symbols: Vec<_> = self.symbols().collect();
 
@@ -164,7 +170,6 @@ where
                 address: section.address() + section.size(),
                 size: 0,
                 kind: SymbolKind::Section,
-                section_index: None,
                 section_kind: None,
                 global: false,
             });
@@ -315,18 +320,15 @@ impl<'data> Iterator for MachOSymbolIterator<'data> {
                     continue;
                 }
                 let n_type = nlist.n_type & mach::symbols::NLIST_TYPE_MASK;
-                let (section_index, section_kind) = if n_type == mach::symbols::N_SECT {
+                let section_kind = if n_type == mach::symbols::N_SECT {
                     if nlist.n_sect == 0 {
-                        (None, None)
+                        None
                     } else {
-                        (
-                            Some(nlist.n_sect),
-                            self.section_kinds.get(nlist.n_sect - 1).cloned(),
-                        )
+                        self.section_kinds.get(nlist.n_sect - 1).cloned()
                     }
                 } else {
                     // TODO: better handling for other n_type values
-                    (None, None)
+                    None
                 };
                 let kind = match section_kind {
                     Some(SectionKind::Text) => SymbolKind::Text,
@@ -341,7 +343,6 @@ impl<'data> Iterator for MachOSymbolIterator<'data> {
                     // Only calculated for symbol maps
                     size: 0,
                     kind,
-                    section_index,
                     section_kind,
                     global: nlist.is_global(),
                 });

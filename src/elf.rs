@@ -1,7 +1,7 @@
 use std::fmt;
 use std::slice;
 
-use goblin::elf;
+use goblin::{elf, strtab};
 
 use {Machine, Object, ObjectSection, ObjectSegment, SectionKind, Symbol, SymbolKind, SymbolMap};
 
@@ -57,7 +57,7 @@ pub struct ElfSymbolIterator<'data, 'file>
 where
     'data: 'file,
 {
-    file: &'file ElfFile<'data>,
+    strtab: &'file strtab::Strtab<'data>,
     symbols: elf::sym::SymIterator<'data>,
     section_kinds: Vec<SectionKind>,
 }
@@ -124,8 +124,16 @@ where
 
     fn symbols(&'file self) -> ElfSymbolIterator<'data, 'file> {
         ElfSymbolIterator {
-            file: self,
+            strtab: &self.elf.strtab,
             symbols: self.elf.syms.iter(),
+            section_kinds: self.sections().map(|x| x.kind()).collect(),
+        }
+    }
+
+    fn dynamic_symbols(&'file self) -> ElfSymbolIterator<'data, 'file> {
+        ElfSymbolIterator {
+            strtab: &self.elf.dynstrtab,
+            symbols: self.elf.dynsyms.iter(),
             section_kinds: self.sections().map(|x| x.kind()).collect(),
         }
     }
@@ -229,7 +237,8 @@ impl<'data, 'file> ObjectSection<'data> for ElfSection<'data, 'file> {
             elf::section_header::SHT_PROGBITS => {
                 if self.section.sh_flags & u64::from(elf::section_header::SHF_ALLOC) == 0 {
                     SectionKind::Unknown
-                } else if self.section.sh_flags & u64::from(elf::section_header::SHF_EXECINSTR) != 0 {
+                } else if self.section.sh_flags & u64::from(elf::section_header::SHF_EXECINSTR) != 0
+                {
                     SectionKind::Text
                 } else if self.section.sh_flags & u64::from(elf::section_header::SHF_WRITE) != 0 {
                     SectionKind::Data
@@ -254,11 +263,7 @@ impl<'data, 'file> Iterator for ElfSymbolIterator<'data, 'file> {
 
     fn next(&mut self) -> Option<Self::Item> {
         self.symbols.next().map(|symbol| {
-            let name = self.file
-                .elf
-                .strtab
-                .get(symbol.st_name)
-                .and_then(Result::ok);
+            let name = self.strtab.get(symbol.st_name).and_then(Result::ok);
             let kind = match elf::sym::st_type(symbol.st_info) {
                 elf::sym::STT_OBJECT => SymbolKind::Data,
                 elf::sym::STT_FUNC => SymbolKind::Text,
@@ -268,21 +273,16 @@ impl<'data, 'file> Iterator for ElfSymbolIterator<'data, 'file> {
                 elf::sym::STT_TLS => SymbolKind::Tls,
                 _ => SymbolKind::Unknown,
             };
-            let (section_index, section_kind) =
-                if symbol.st_shndx == elf::section_header::SHN_UNDEF as usize {
-                    (None, None)
-                } else {
-                    (
-                        Some(symbol.st_shndx),
-                        self.section_kinds.get(symbol.st_shndx).cloned(),
-                    )
-                };
+            let section_kind = if symbol.st_shndx == elf::section_header::SHN_UNDEF as usize {
+                None
+            } else {
+                self.section_kinds.get(symbol.st_shndx).cloned()
+            };
             Symbol {
                 name,
                 address: symbol.st_value,
                 size: symbol.st_size,
                 kind,
-                section_index,
                 section_kind,
                 global: elf::sym::st_bind(symbol.st_info) != elf::sym::STB_LOCAL,
             }
