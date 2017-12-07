@@ -323,6 +323,7 @@ impl<'data, 'file> fmt::Debug for Section<'data, 'file> {
             .field("name", &self.name().unwrap_or("<invalid name>"))
             .field("address", &self.address())
             .field("size", &self.data().len())
+            .field("kind", &self.kind())
             .finish()
     }
 }
@@ -346,6 +347,10 @@ impl<'data, 'file> ObjectSection<'data> for Section<'data, 'file> {
 
     fn segment_name(&self) -> Option<&str> {
         with_inner!(&self.inner, SectionInternal, |x| x.segment_name())
+    }
+
+    fn kind(&self) -> SectionKind {
+        with_inner!(&self.inner, SectionInternal, |x| x.kind())
     }
 }
 

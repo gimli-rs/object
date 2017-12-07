@@ -1,4 +1,4 @@
-use {Machine, Symbol};
+use {Machine, SectionKind, Symbol};
 
 /// An object file.
 pub trait Object<'data, 'file> {
@@ -81,4 +81,7 @@ pub trait ObjectSection<'data> {
 
     /// Returns the name of the segment for this section.
     fn segment_name(&self) -> Option<&str>;
+
+    /// Return the kind of this section.
+    fn kind(&self) -> SectionKind;
 }

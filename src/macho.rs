@@ -317,4 +317,13 @@ impl<'data> ObjectSection<'data> for MachOSection<'data> {
     fn segment_name(&self) -> Option<&str> {
         self.section.segname().ok()
     }
+
+    fn kind(&self) -> SectionKind {
+        match (self.segment_name(), self.name()) {
+            (Some("__TEXT"), Some("__text")) => SectionKind::Text,
+            (Some("__DATA"), Some("__data")) => SectionKind::Data,
+            (Some("__DATA"), Some("__bss")) => SectionKind::UninitializedData,
+            _ => SectionKind::Other,
+        }
+    }
 }

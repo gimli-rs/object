@@ -2,7 +2,7 @@ use std::slice;
 
 use goblin::pe;
 
-use {Machine, Object, ObjectSection, ObjectSegment, Symbol};
+use {Machine, Object, ObjectSection, ObjectSegment, SectionKind, Symbol};
 
 /// A PE object file.
 #[derive(Debug)]
@@ -196,5 +196,25 @@ impl<'data, 'file> ObjectSection<'data> for PeSection<'data, 'file> {
     #[inline]
     fn segment_name(&self) -> Option<&str> {
         None
+    }
+
+    #[inline]
+    fn kind(&self) -> SectionKind {
+        if self.section.characteristics
+            & (pe::section_table::IMAGE_SCN_CNT_CODE | pe::section_table::IMAGE_SCN_MEM_EXECUTE)
+            != 0
+        {
+            SectionKind::Text
+        } else if self.section.characteristics & pe::section_table::IMAGE_SCN_CNT_INITIALIZED_DATA
+            != 0
+        {
+            SectionKind::Data
+        } else if self.section.characteristics & pe::section_table::IMAGE_SCN_CNT_UNINITIALIZED_DATA
+            != 0
+        {
+            SectionKind::UninitializedData
+        } else {
+            SectionKind::Unknown
+        }
     }
 }

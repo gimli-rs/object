@@ -252,4 +252,22 @@ impl<'data, 'file> ObjectSection<'data> for ElfSection<'data, 'file> {
     fn segment_name(&self) -> Option<&str> {
         None
     }
+
+    fn kind(&self) -> SectionKind {
+        match self.section.sh_type {
+            elf::section_header::SHT_PROGBITS => {
+                if self.section.sh_flags & u64::from(elf::section_header::SHF_ALLOC) == 0 {
+                    SectionKind::Unknown
+                } else if self.section.sh_flags & u64::from(elf::section_header::SHF_EXECINSTR) != 0 {
+                    SectionKind::Text
+                } else if self.section.sh_flags & u64::from(elf::section_header::SHF_WRITE) != 0 {
+                    SectionKind::Data
+                } else {
+                    SectionKind::ReadOnlyData
+                }
+            }
+            elf::section_header::SHT_NOBITS => SectionKind::UninitializedData,
+            _ => SectionKind::Unknown,
+        }
+    }
 }

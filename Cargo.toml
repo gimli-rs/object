@@ -8,7 +8,7 @@ license = "Apache-2.0/MIT"
 repository = "https://github.com/gimli-rs/object"
 
 [dependencies]
-goblin = "0.0.12"
+goblin = { git = "https://github.com/m4b/goblin.git", rev = "76e8e0df5c6401bec274b1e6c561386106a8b6e2" }
 
 [dev-dependencies]
 memmap = "0.6"
