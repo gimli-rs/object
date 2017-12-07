@@ -2,7 +2,7 @@ use std::slice;
 
 use goblin::pe;
 
-use {Machine, Object, ObjectSection, ObjectSegment, SectionKind, Symbol};
+use {Machine, Object, ObjectSection, ObjectSegment, SectionKind, Symbol, SymbolMap};
 
 /// A PE object file.
 #[derive(Debug)]
@@ -51,6 +51,16 @@ where
     section: &'file pe::section_table::SectionTable,
 }
 
+/// An iterator over the symbols of a `PeFile`.
+// TODO
+#[derive(Debug)]
+pub struct PeSymbolIterator<'data, 'file>
+where
+    'data: 'file,
+{
+    file: &'file PeFile<'data>,
+}
+
 impl<'data> PeFile<'data> {
     /// Get the PE headers of the file.
     // TODO: this is temporary to allow access to features this crate doesn't provide yet
@@ -74,6 +84,7 @@ where
     type SegmentIterator = PeSegmentIterator<'data, 'file>;
     type Section = PeSection<'data, 'file>;
     type SectionIterator = PeSectionIterator<'data, 'file>;
+    type SymbolIterator = PeSymbolIterator<'data, 'file>;
 
     fn machine(&self) -> Machine {
         match self.pe.header.coff_header.machine {
@@ -112,9 +123,14 @@ where
         }
     }
 
-    fn symbols(&self) -> Vec<Symbol<'data>> {
-        // TODO
-        Vec::new()
+    fn symbols(&'file self) -> PeSymbolIterator<'data, 'file> {
+        PeSymbolIterator { file: self }
+    }
+
+    fn symbol_map(&self) -> SymbolMap<'data> {
+        let mut symbols: Vec<_> = self.symbols().filter(SymbolMap::filter).collect();
+        symbols.sort_by_key(|x| x.address);
+        SymbolMap { symbols }
     }
 
     #[inline]
@@ -216,5 +232,14 @@ impl<'data, 'file> ObjectSection<'data> for PeSection<'data, 'file> {
         } else {
             SectionKind::Unknown
         }
+    }
+}
+
+// TODO
+impl<'data, 'file> Iterator for PeSymbolIterator<'data, 'file> {
+    type Item = Symbol<'data>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        None
     }
 }

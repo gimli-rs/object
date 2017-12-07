@@ -1,8 +1,9 @@
+use std::fmt;
 use std::slice;
 
 use goblin::elf;
 
-use {Machine, Object, ObjectSection, ObjectSegment, SectionKind, Symbol, SymbolKind};
+use {Machine, Object, ObjectSection, ObjectSegment, SectionKind, Symbol, SymbolKind, SymbolMap};
 
 /// An ELF object file.
 #[derive(Debug)]
@@ -51,6 +52,16 @@ where
     section: &'file elf::SectionHeader,
 }
 
+/// An iterator over the symbols of an `ElfFile`.
+pub struct ElfSymbolIterator<'data, 'file>
+where
+    'data: 'file,
+{
+    file: &'file ElfFile<'data>,
+    symbols: elf::sym::SymIterator<'data>,
+    section_kinds: Vec<SectionKind>,
+}
+
 impl<'data> ElfFile<'data> {
     /// Get the ELF headers of the file.
     // TODO: this is temporary to allow access to features this crate doesn't provide yet
@@ -74,6 +85,7 @@ where
     type SegmentIterator = ElfSegmentIterator<'data, 'file>;
     type Section = ElfSection<'data, 'file>;
     type SectionIterator = ElfSectionIterator<'data, 'file>;
+    type SymbolIterator = ElfSymbolIterator<'data, 'file>;
 
     fn machine(&self) -> Machine {
         match self.elf.header.e_machine {
@@ -110,59 +122,18 @@ where
         }
     }
 
-    fn symbols(&self) -> Vec<Symbol<'data>> {
-        // Determine section kinds.
-        // The section kinds are inherited by symbols in those sections.
-        let mut section_kinds = Vec::new();
-        for sh in &self.elf.section_headers {
-            let kind = match sh.sh_type {
-                elf::section_header::SHT_PROGBITS => {
-                    if sh.sh_flags & u64::from(elf::section_header::SHF_EXECINSTR) != 0 {
-                        SectionKind::Text
-                    } else if sh.sh_flags & u64::from(elf::section_header::SHF_WRITE) != 0 {
-                        SectionKind::Data
-                    } else {
-                        SectionKind::ReadOnlyData
-                    }
-                }
-                elf::section_header::SHT_NOBITS => SectionKind::UninitializedData,
-                _ => SectionKind::Unknown,
-            };
-            section_kinds.push(kind);
+    fn symbols(&'file self) -> ElfSymbolIterator<'data, 'file> {
+        ElfSymbolIterator {
+            file: self,
+            symbols: self.elf.syms.iter(),
+            section_kinds: self.sections().map(|x| x.kind()).collect(),
         }
+    }
 
-        let mut symbols = Vec::new();
-        // Skip undefined symbol index.
-        for sym in self.elf.syms.iter().skip(1) {
-            let kind = match elf::sym::st_type(sym.st_info) {
-                elf::sym::STT_OBJECT => SymbolKind::Data,
-                elf::sym::STT_FUNC => SymbolKind::Text,
-                elf::sym::STT_SECTION => SymbolKind::Section,
-                elf::sym::STT_FILE => SymbolKind::File,
-                elf::sym::STT_COMMON => SymbolKind::Common,
-                elf::sym::STT_TLS => SymbolKind::Tls,
-                _ => SymbolKind::Unknown,
-            };
-            let global = elf::sym::st_bind(sym.st_info) != elf::sym::STB_LOCAL;
-            let section_kind = if sym.st_shndx == elf::section_header::SHN_UNDEF as usize
-                || sym.st_shndx >= section_kinds.len()
-            {
-                None
-            } else {
-                Some(section_kinds[sym.st_shndx])
-            };
-            let name = self.elf.strtab.get(sym.st_name).and_then(Result::ok);
-            symbols.push(Symbol {
-                kind,
-                section: sym.st_shndx,
-                section_kind,
-                global,
-                name,
-                address: sym.st_value,
-                size: sym.st_size,
-            });
-        }
-        symbols
+    fn symbol_map(&self) -> SymbolMap<'data> {
+        let mut symbols: Vec<_> = self.symbols().filter(SymbolMap::filter).collect();
+        symbols.sort_by_key(|x| x.address);
+        SymbolMap { symbols }
     }
 
     #[inline]
@@ -269,5 +240,52 @@ impl<'data, 'file> ObjectSection<'data> for ElfSection<'data, 'file> {
             elf::section_header::SHT_NOBITS => SectionKind::UninitializedData,
             _ => SectionKind::Unknown,
         }
+    }
+}
+
+impl<'data, 'file> fmt::Debug for ElfSymbolIterator<'data, 'file> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.debug_struct("ElfSymbolIterator").finish()
+    }
+}
+
+impl<'data, 'file> Iterator for ElfSymbolIterator<'data, 'file> {
+    type Item = Symbol<'data>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.symbols.next().map(|symbol| {
+            let name = self.file
+                .elf
+                .strtab
+                .get(symbol.st_name)
+                .and_then(Result::ok);
+            let kind = match elf::sym::st_type(symbol.st_info) {
+                elf::sym::STT_OBJECT => SymbolKind::Data,
+                elf::sym::STT_FUNC => SymbolKind::Text,
+                elf::sym::STT_SECTION => SymbolKind::Section,
+                elf::sym::STT_FILE => SymbolKind::File,
+                elf::sym::STT_COMMON => SymbolKind::Common,
+                elf::sym::STT_TLS => SymbolKind::Tls,
+                _ => SymbolKind::Unknown,
+            };
+            let (section_index, section_kind) =
+                if symbol.st_shndx == elf::section_header::SHN_UNDEF as usize {
+                    (None, None)
+                } else {
+                    (
+                        Some(symbol.st_shndx),
+                        self.section_kinds.get(symbol.st_shndx).cloned(),
+                    )
+                };
+            Symbol {
+                name,
+                address: symbol.st_value,
+                size: symbol.st_size,
+                kind,
+                section_index,
+                section_kind,
+                global: elf::sym::st_bind(symbol.st_info) != elf::sym::STB_LOCAL,
+            }
+        })
     }
 }

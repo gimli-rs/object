@@ -145,11 +145,30 @@ pub enum SectionKind {
     Other,
 }
 
+/// An iterator over symbol table entries.
+#[derive(Debug)]
+pub struct SymbolIterator<'data, 'file>
+where
+    'data: 'file,
+{
+    inner: SymbolIteratorInternal<'data, 'file>,
+}
+
+#[derive(Debug)]
+enum SymbolIteratorInternal<'data, 'file>
+where
+    'data: 'file,
+{
+    Elf(ElfSymbolIterator<'data, 'file>),
+    MachO(MachOSymbolIterator<'data>),
+    Pe(PeSymbolIterator<'data, 'file>),
+}
+
 /// A symbol table entry.
 #[derive(Debug)]
 pub struct Symbol<'data> {
     kind: SymbolKind,
-    section: usize,
+    section_index: Option<usize>,
     section_kind: Option<SectionKind>,
     global: bool,
     name: Option<&'data str>,
@@ -176,6 +195,12 @@ pub enum SymbolKind {
     Tls,
 }
 
+/// A map from addresses to symbols.
+#[derive(Debug)]
+pub struct SymbolMap<'data> {
+    symbols: Vec<Symbol<'data>>,
+}
+
 /// Evaluate an expression on the contents of a file format enum.
 ///
 /// This is a hack to avoid virtual calls.
@@ -185,6 +210,16 @@ macro_rules! with_inner {
             &$enum::Elf(ref $var) => { $body }
             &$enum::MachO(ref $var) => { $body }
             &$enum::Pe(ref $var) => { $body }
+        }
+    }
+}
+
+macro_rules! with_inner_mut {
+    ($inner:expr, $enum:ident, |$var:ident| $body:expr) => {
+        match $inner {
+            &mut $enum::Elf(ref mut $var) => { $body }
+            &mut $enum::MachO(ref mut $var) => { $body }
+            &mut $enum::Pe(ref mut $var) => { $body }
         }
     }
 }
@@ -233,6 +268,7 @@ where
     type SegmentIterator = SegmentIterator<'data, 'file>;
     type Section = Section<'data, 'file>;
     type SectionIterator = SectionIterator<'data, 'file>;
+    type SymbolIterator = SymbolIterator<'data, 'file>;
 
     fn machine(&self) -> Machine {
         with_inner!(&self.inner, FileInternal, |x| x.machine())
@@ -260,8 +296,16 @@ where
         }
     }
 
-    fn symbols(&self) -> Vec<Symbol<'data>> {
-        with_inner!(&self.inner, FileInternal, |x| x.symbols())
+    fn symbols(&'file self) -> SymbolIterator<'data, 'file> {
+        SymbolIterator {
+            inner: map_inner!(&self.inner, FileInternal, SymbolIteratorInternal, |x| {
+                x.symbols()
+            }),
+        }
+    }
+
+    fn symbol_map(&self) -> SymbolMap<'data> {
+        with_inner!(&self.inner, FileInternal, |x| x.symbol_map())
     }
 
     fn is_little_endian(&self) -> bool {
@@ -354,6 +398,14 @@ impl<'data, 'file> ObjectSection<'data> for Section<'data, 'file> {
     }
 }
 
+impl<'data, 'file> Iterator for SymbolIterator<'data, 'file> {
+    type Item = Symbol<'data>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        with_inner_mut!(&mut self.inner, SymbolIteratorInternal, |x| x.next())
+    }
+}
+
 impl<'data> Symbol<'data> {
     /// Return the kind of this symbol.
     #[inline]
@@ -361,7 +413,13 @@ impl<'data> Symbol<'data> {
         self.kind
     }
 
-    /// Returns the section kind for the symbol, or `None` if the symbol is undefnined.
+    /// Returns the section index for the symbol, or `None` if the symbol is undefined.
+    #[inline]
+    pub fn section_index(&self) -> Option<usize> {
+        self.section_index
+    }
+
+    /// Returns the section kind for the symbol, or `None` if the symbol is undefined.
     #[inline]
     pub fn section_kind(&self) -> Option<SectionKind> {
         self.section_kind
@@ -382,7 +440,7 @@ impl<'data> Symbol<'data> {
     /// Return true if the symbol is local.
     #[inline]
     pub fn is_local(&self) -> bool {
-        !self.global
+        !self.is_global()
     }
 
     /// The name of the symbol.
@@ -401,5 +459,39 @@ impl<'data> Symbol<'data> {
     #[inline]
     pub fn size(&self) -> u64 {
         self.size
+    }
+}
+
+impl<'data> SymbolMap<'data> {
+    /// Get the symbol containing the given address.
+    pub fn get(&self, address: u64) -> Option<&Symbol<'data>> {
+        self.symbols
+            .binary_search_by(|symbol| {
+                if address < symbol.address {
+                    std::cmp::Ordering::Greater
+                } else if address < symbol.address + symbol.size {
+                    std::cmp::Ordering::Equal
+                } else {
+                    std::cmp::Ordering::Less
+                }
+            })
+            .ok()
+            .and_then(|index| self.symbols.get(index))
+    }
+
+    /// Get all symbols in the map.
+    pub fn symbols(&self) -> &[Symbol<'data>] {
+        &self.symbols
+    }
+
+    /// Return true for symbols that should be included in the map.
+    fn filter(symbol: &Symbol) -> bool {
+        match symbol.kind() {
+            SymbolKind::Unknown | SymbolKind::Text | SymbolKind::Data => {}
+            SymbolKind::Section | SymbolKind::File | SymbolKind::Common | SymbolKind::Tls => {
+                return false
+            }
+        }
+        !symbol.is_undefined() && symbol.size() > 0
     }
 }

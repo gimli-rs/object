@@ -40,7 +40,7 @@ fn main() {
             }
         };
 
-        for symbol in &*file.symbols() {
+        for symbol in file.symbols() {
             match symbol.kind() {
                 SymbolKind::Section | SymbolKind::File => continue,
                 _ => {}

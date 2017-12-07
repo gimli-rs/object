@@ -1,4 +1,4 @@
-use {Machine, SectionKind, Symbol};
+use {Machine, SectionKind, Symbol, SymbolMap};
 
 /// An object file.
 pub trait Object<'data, 'file> {
@@ -13,6 +13,9 @@ pub trait Object<'data, 'file> {
 
     /// An iterator over the sections in the object file.
     type SectionIterator: Iterator<Item = Self::Section>;
+
+    /// An iterator over the symbols in the object file.
+    type SymbolIterator: Iterator<Item = Symbol<'data>>;
 
     /// Get the machine type of the file.
     fn machine(&self) -> Machine;
@@ -35,9 +38,11 @@ pub trait Object<'data, 'file> {
     /// Get an iterator over the sections in the file.
     fn sections(&'file self) -> Self::SectionIterator;
 
-    /// Get a `Vec` of the symbols defined in the file.
-    /// The symbols are unsorted and have the same order as the symbols in the file.
-    fn symbols(&self) -> Vec<Symbol<'data>>;
+    /// Get an iterator over the debugging symbols in the file.
+    fn symbols(&'file self) -> Self::SymbolIterator;
+
+    /// Construct a map from addresses to symbols.
+    fn symbol_map(&self) -> SymbolMap<'data>;
 
     /// Return true if the file is little endian, false if it is big endian.
     fn is_little_endian(&self) -> bool;
