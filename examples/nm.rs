@@ -3,7 +3,7 @@ extern crate object;
 
 use std::{env, fs, process};
 
-use object::{Object, SectionKind, SymbolKind};
+use object::{Object, SectionKind, Symbol, SymbolKind};
 
 fn main() {
     let arg_len = env::args().len();
@@ -40,51 +40,62 @@ fn main() {
             }
         };
 
-        for symbol in &*file.symbols() {
-            match symbol.kind() {
-                SymbolKind::Section | SymbolKind::File => continue,
-                _ => {}
-            }
-            let kind = match symbol.section_kind() {
-                Some(SectionKind::Unknown) => '?',
-                Some(SectionKind::Text) => if symbol.is_global() {
-                    'T'
-                } else {
-                    't'
-                },
-                Some(SectionKind::Data) => if symbol.is_global() {
-                    'D'
-                } else {
-                    'd'
-                },
-                Some(SectionKind::ReadOnlyData) => if symbol.is_global() {
-                    'R'
-                } else {
-                    'r'
-                },
-                Some(SectionKind::UninitializedData) => if symbol.is_global() {
-                    'B'
-                } else {
-                    'b'
-                },
-                Some(SectionKind::Other) => if symbol.is_global() {
-                    'S'
-                } else {
-                    's'
-                },
-                None => 'U',
-            };
-            if symbol.is_undefined() {
-                print!("{:16} ", "");
-            } else {
-                print!("{:016x} ", symbol.address());
-            }
-            println!(
-                "{:016x} {} {}",
-                symbol.size(),
-                kind,
-                symbol.name().unwrap_or("<unknown>"),
-            );
+        println!("Debugging symbols:");
+        for symbol in file.symbols() {
+            print_symbol(&symbol);
+        }
+        println!();
+
+        println!("Dynamic symbols:");
+        for symbol in file.dynamic_symbols() {
+            print_symbol(&symbol);
         }
     }
+}
+
+fn print_symbol(symbol: &Symbol) {
+    match symbol.kind() {
+        SymbolKind::Section | SymbolKind::File => return,
+        _ => {}
+    }
+    let kind = match symbol.section_kind() {
+        Some(SectionKind::Unknown) => '?',
+        Some(SectionKind::Text) => if symbol.is_global() {
+            'T'
+        } else {
+            't'
+        },
+        Some(SectionKind::Data) => if symbol.is_global() {
+            'D'
+        } else {
+            'd'
+        },
+        Some(SectionKind::ReadOnlyData) => if symbol.is_global() {
+            'R'
+        } else {
+            'r'
+        },
+        Some(SectionKind::UninitializedData) => if symbol.is_global() {
+            'B'
+        } else {
+            'b'
+        },
+        Some(SectionKind::Other) => if symbol.is_global() {
+            'S'
+        } else {
+            's'
+        },
+        None => 'U',
+    };
+    if symbol.is_undefined() {
+        print!("{:16} ", "");
+    } else {
+        print!("{:016x} ", symbol.address());
+    }
+    println!(
+        "{:016x} {} {}",
+        symbol.size(),
+        kind,
+        symbol.name().unwrap_or("<unknown>"),
+    );
 }
