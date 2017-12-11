@@ -1,14 +1,14 @@
 [package]
 authors = ["Nick Fitzgerald <fitzgen@gmail.com>", "Philip Craig <philipjcraig@gmail.com>"]
 name = "object"
-version = "0.6.0"
+version = "0.7.0"
 description = "A unified interface for the target platform's object file format."
 keywords = ["object", "loader", "elf", "mach-o"]
 license = "Apache-2.0/MIT"
 repository = "https://github.com/gimli-rs/object"
 
 [dependencies]
-goblin = { git = "https://github.com/m4b/goblin.git", rev = "76e8e0df5c6401bec274b1e6c561386106a8b6e2" }
+goblin = "0.0.13"
 
 [dev-dependencies]
 memmap = "0.6"
