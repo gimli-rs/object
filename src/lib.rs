@@ -206,9 +206,9 @@ pub struct SymbolMap<'data> {
 macro_rules! with_inner {
     ($inner:expr, $enum:ident, |$var:ident| $body:expr) => {
         match $inner {
-            &$enum::Elf(ref $var) => { $body }
-            &$enum::MachO(ref $var) => { $body }
-            &$enum::Pe(ref $var) => { $body }
+            $enum::Elf(ref $var) => { $body }
+            $enum::MachO(ref $var) => { $body }
+            $enum::Pe(ref $var) => { $body }
         }
     }
 }
@@ -216,9 +216,9 @@ macro_rules! with_inner {
 macro_rules! with_inner_mut {
     ($inner:expr, $enum:ident, |$var:ident| $body:expr) => {
         match $inner {
-            &mut $enum::Elf(ref mut $var) => { $body }
-            &mut $enum::MachO(ref mut $var) => { $body }
-            &mut $enum::Pe(ref mut $var) => { $body }
+            $enum::Elf(ref mut $var) => { $body }
+            $enum::MachO(ref mut $var) => { $body }
+            $enum::Pe(ref mut $var) => { $body }
         }
     }
 }
@@ -227,9 +227,9 @@ macro_rules! with_inner_mut {
 macro_rules! map_inner {
     ($inner:expr, $from:ident, $to:ident, |$var:ident| $body:expr) => {
         match $inner {
-            &$from::Elf(ref $var) => $to::Elf($body),
-            &$from::MachO(ref $var) => $to::MachO($body),
-            &$from::Pe(ref $var) => $to::Pe($body),
+            $from::Elf(ref $var) => $to::Elf($body),
+            $from::MachO(ref $var) => $to::MachO($body),
+            $from::Pe(ref $var) => $to::Pe($body),
         }
     }
 }
@@ -238,9 +238,9 @@ macro_rules! map_inner {
 macro_rules! next_inner {
     ($inner:expr, $from:ident, $to:ident) => {
         match $inner {
-            &mut $from::Elf(ref mut iter) => iter.next().map(|x| $to::Elf(x)),
-            &mut $from::MachO(ref mut iter) => iter.next().map(|x| $to::MachO(x)),
-            &mut $from::Pe(ref mut iter) => iter.next().map(|x| $to::Pe(x)),
+            $from::Elf(ref mut iter) => iter.next().map($to::Elf),
+            $from::MachO(ref mut iter) => iter.next().map($to::MachO),
+            $from::Pe(ref mut iter) => iter.next().map($to::Pe),
         }
     }
 }
@@ -270,26 +270,26 @@ where
     type SymbolIterator = SymbolIterator<'data, 'file>;
 
     fn machine(&self) -> Machine {
-        with_inner!(&self.inner, FileInternal, |x| x.machine())
+        with_inner!(self.inner, FileInternal, |x| x.machine())
     }
 
     fn segments(&'file self) -> SegmentIterator<'data, 'file> {
         SegmentIterator {
-            inner: map_inner!(&self.inner, FileInternal, SegmentIteratorInternal, |x| {
+            inner: map_inner!(self.inner, FileInternal, SegmentIteratorInternal, |x| {
                 x.segments()
             }),
         }
     }
 
     fn section_data_by_name(&self, section_name: &str) -> Option<&'data [u8]> {
-        with_inner!(&self.inner, FileInternal, |x| {
+        with_inner!(self.inner, FileInternal, |x| {
             x.section_data_by_name(section_name)
         })
     }
 
     fn sections(&'file self) -> SectionIterator<'data, 'file> {
         SectionIterator {
-            inner: map_inner!(&self.inner, FileInternal, SectionIteratorInternal, |x| {
+            inner: map_inner!(self.inner, FileInternal, SectionIteratorInternal, |x| {
                 x.sections()
             }),
         }
@@ -297,7 +297,7 @@ where
 
     fn symbols(&'file self) -> SymbolIterator<'data, 'file> {
         SymbolIterator {
-            inner: map_inner!(&self.inner, FileInternal, SymbolIteratorInternal, |x| {
+            inner: map_inner!(self.inner, FileInternal, SymbolIteratorInternal, |x| {
                 x.symbols()
             }),
         }
@@ -305,18 +305,18 @@ where
 
     fn dynamic_symbols(&'file self) -> SymbolIterator<'data, 'file> {
         SymbolIterator {
-            inner: map_inner!(&self.inner, FileInternal, SymbolIteratorInternal, |x| {
+            inner: map_inner!(self.inner, FileInternal, SymbolIteratorInternal, |x| {
                 x.dynamic_symbols()
             }),
         }
     }
 
     fn symbol_map(&self) -> SymbolMap<'data> {
-        with_inner!(&self.inner, FileInternal, |x| x.symbol_map())
+        with_inner!(self.inner, FileInternal, |x| x.symbol_map())
     }
 
     fn is_little_endian(&self) -> bool {
-        with_inner!(&self.inner, FileInternal, |x| x.is_little_endian())
+        with_inner!(self.inner, FileInternal, |x| x.is_little_endian())
     }
 }
 
@@ -324,7 +324,7 @@ impl<'data, 'file> Iterator for SegmentIterator<'data, 'file> {
     type Item = Segment<'data, 'file>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        next_inner!(&mut self.inner, SegmentIteratorInternal, SegmentInternal)
+        next_inner!(self.inner, SegmentIteratorInternal, SegmentInternal)
             .map(|inner| Segment { inner })
     }
 }
@@ -342,19 +342,19 @@ impl<'data, 'file> fmt::Debug for Segment<'data, 'file> {
 
 impl<'data, 'file> ObjectSegment<'data> for Segment<'data, 'file> {
     fn address(&self) -> u64 {
-        with_inner!(&self.inner, SegmentInternal, |x| x.address())
+        with_inner!(self.inner, SegmentInternal, |x| x.address())
     }
 
     fn size(&self) -> u64 {
-        with_inner!(&self.inner, SegmentInternal, |x| x.size())
+        with_inner!(self.inner, SegmentInternal, |x| x.size())
     }
 
     fn data(&self) -> &'data [u8] {
-        with_inner!(&self.inner, SegmentInternal, |x| x.data())
+        with_inner!(self.inner, SegmentInternal, |x| x.data())
     }
 
     fn name(&self) -> Option<&str> {
-        with_inner!(&self.inner, SegmentInternal, |x| x.name())
+        with_inner!(self.inner, SegmentInternal, |x| x.name())
     }
 }
 
@@ -362,7 +362,7 @@ impl<'data, 'file> Iterator for SectionIterator<'data, 'file> {
     type Item = Section<'data, 'file>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        next_inner!(&mut self.inner, SectionIteratorInternal, SectionInternal)
+        next_inner!(self.inner, SectionIteratorInternal, SectionInternal)
             .map(|inner| Section { inner })
     }
 }
@@ -381,27 +381,27 @@ impl<'data, 'file> fmt::Debug for Section<'data, 'file> {
 
 impl<'data, 'file> ObjectSection<'data> for Section<'data, 'file> {
     fn address(&self) -> u64 {
-        with_inner!(&self.inner, SectionInternal, |x| x.address())
+        with_inner!(self.inner, SectionInternal, |x| x.address())
     }
 
     fn size(&self) -> u64 {
-        with_inner!(&self.inner, SectionInternal, |x| x.size())
+        with_inner!(self.inner, SectionInternal, |x| x.size())
     }
 
     fn data(&self) -> &'data [u8] {
-        with_inner!(&self.inner, SectionInternal, |x| x.data())
+        with_inner!(self.inner, SectionInternal, |x| x.data())
     }
 
     fn name(&self) -> Option<&str> {
-        with_inner!(&self.inner, SectionInternal, |x| x.name())
+        with_inner!(self.inner, SectionInternal, |x| x.name())
     }
 
     fn segment_name(&self) -> Option<&str> {
-        with_inner!(&self.inner, SectionInternal, |x| x.segment_name())
+        with_inner!(self.inner, SectionInternal, |x| x.segment_name())
     }
 
     fn kind(&self) -> SectionKind {
-        with_inner!(&self.inner, SectionInternal, |x| x.kind())
+        with_inner!(self.inner, SectionInternal, |x| x.kind())
     }
 }
 
@@ -409,7 +409,7 @@ impl<'data, 'file> Iterator for SymbolIterator<'data, 'file> {
     type Item = Symbol<'data>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        with_inner_mut!(&mut self.inner, SymbolIteratorInternal, |x| {
+        with_inner_mut!(self.inner, SymbolIteratorInternal, |x| {
             x.next()
         })
     }
