@@ -409,7 +409,9 @@ impl<'data, 'file> Iterator for SymbolIterator<'data, 'file> {
     type Item = Symbol<'data>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        with_inner_mut!(&mut self.inner, SymbolIteratorInternal, |x| x.next())
+        with_inner_mut!(&mut self.inner, SymbolIteratorInternal, |x| {
+            x.next()
+        })
     }
 }
 
