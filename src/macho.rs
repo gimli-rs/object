@@ -189,9 +189,7 @@ where
             if symbol.kind != SymbolKind::Section {
                 if let Some(next) = after
                     .iter()
-                    .skip_while(|x| {
-                        x.kind != SymbolKind::Section && x.address == symbol.address
-                    })
+                    .skip_while(|x| x.kind != SymbolKind::Section && x.address == symbol.address)
                     .next()
                 {
                     symbol.size = next.address - symbol.address;
