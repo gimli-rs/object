@@ -49,6 +49,9 @@ pub trait Object<'data, 'file> {
 
     /// Return true if the file is little endian, false if it is big endian.
     fn is_little_endian(&self) -> bool;
+
+    /// Return true if the file contains debug information sections, false if not.
+    fn has_debug_symbols(&self) -> bool;
 }
 
 /// A loadable segment defined in an object file.

@@ -152,6 +152,13 @@ where
         // characteristics flags, but these are obsolete.
         true
     }
+
+    #[inline]
+    fn has_debug_symbols(&self) -> bool {
+        // TODO: look at what the mingw toolchain does with DWARF-in-PE, and also
+        // whether CodeView-in-PE still works?
+        false
+    }
 }
 
 impl<'data, 'file> Iterator for PeSegmentIterator<'data, 'file> {

@@ -318,6 +318,10 @@ where
     fn is_little_endian(&self) -> bool {
         with_inner!(self.inner, FileInternal, |x| x.is_little_endian())
     }
+
+    fn has_debug_symbols(&self) -> bool {
+        with_inner!(self.inner, FileInternal, |x| x.has_debug_symbols())
+    }
 }
 
 impl<'data, 'file> Iterator for SegmentIterator<'data, 'file> {

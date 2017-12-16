@@ -205,6 +205,10 @@ where
     fn is_little_endian(&self) -> bool {
         self.macho.header.is_little_endian()
     }
+
+    fn has_debug_symbols(&self) -> bool {
+        self.section_data_by_name(".debug_info").is_some()
+    }
 }
 
 impl<'data, 'file> Iterator for MachOSegmentIterator<'data, 'file> {
