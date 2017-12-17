@@ -3,7 +3,8 @@ use std::slice;
 
 use goblin::{elf, strtab};
 
-use {Machine, Object, ObjectSection, ObjectSegment, SectionKind, Symbol, SymbolKind, SymbolMap};
+use {DebugFileInfo, Machine, Object, ObjectSection, ObjectSegment, SectionKind, Symbol, SymbolKind,
+     SymbolMap};
 
 /// An ELF object file.
 #[derive(Debug)]
@@ -152,6 +153,8 @@ where
     fn has_debug_symbols(&self) -> bool {
         self.section_data_by_name(".debug_info").is_some()
     }
+
+    fn debug_file_info(&self) -> Option<DebugFileInfo> { None }
 }
 
 impl<'data, 'file> Iterator for ElfSegmentIterator<'data, 'file> {

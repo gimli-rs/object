@@ -9,6 +9,7 @@ repository = "https://github.com/gimli-rs/object"
 
 [dependencies]
 goblin = "0.0.13"
+uuid = "0.5.1"
 
 [dev-dependencies]
 memmap = "0.6"

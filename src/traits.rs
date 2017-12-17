@@ -1,4 +1,4 @@
-use {Machine, SectionKind, Symbol, SymbolMap};
+use {DebugFileInfo, Machine, SectionKind, Symbol, SymbolMap};
 
 /// An object file.
 pub trait Object<'data, 'file> {
@@ -52,6 +52,10 @@ pub trait Object<'data, 'file> {
 
     /// Return true if the file contains debug information sections, false if not.
     fn has_debug_symbols(&self) -> bool;
+
+    /// Get `DebugFileInfo` that can be used to locate external debug symbols for the file
+    /// if present.
+    fn debug_file_info(&self) -> Option<DebugFileInfo>;
 }
 
 /// A loadable segment defined in an object file.

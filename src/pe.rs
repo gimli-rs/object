@@ -3,7 +3,8 @@ use std::borrow;
 
 use goblin::pe;
 
-use {Machine, Object, ObjectSection, ObjectSegment, SectionKind, Symbol, SymbolKind, SymbolMap};
+use {DebugFileInfo, Machine, Object, ObjectSection, ObjectSegment, SectionKind, Symbol, SymbolKind,
+     SymbolMap};
 
 /// A PE object file.
 #[derive(Debug)]
@@ -159,6 +160,8 @@ where
         // whether CodeView-in-PE still works?
         false
     }
+
+    fn debug_file_info(&self) -> Option<DebugFileInfo> { None }
 }
 
 impl<'data, 'file> Iterator for PeSegmentIterator<'data, 'file> {
