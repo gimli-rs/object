@@ -23,6 +23,9 @@ pub trait Object<'data, 'file> {
     /// Get an iterator over the segments in the file.
     fn segments(&'file self) -> Self::SegmentIterator;
 
+    /// Get the entry point address of the binary
+    fn entry(&'file self) -> u64;
+
     /// Get the contents of the section named `section_name`, if such
     /// a section exists.
     ///

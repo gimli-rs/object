@@ -155,6 +155,10 @@ where
     }
 
     fn debug_file_info(&self) -> Option<DebugFileInfo> { None }
+
+    fn entry(&self) -> u64 {
+        self.elf.entry
+    }
 }
 
 impl<'data, 'file> Iterator for ElfSegmentIterator<'data, 'file> {

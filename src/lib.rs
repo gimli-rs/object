@@ -336,6 +336,10 @@ where
     fn debug_file_info(&self) -> Option<DebugFileInfo> {
         with_inner!(self.inner, FileInternal, |x| x.debug_file_info())
     }
+
+    fn entry(&self) -> u64 {
+        with_inner!(self.inner, FileInternal, |x| x.entry())
+    }
 }
 
 impl<'data, 'file> Iterator for SegmentIterator<'data, 'file> {
