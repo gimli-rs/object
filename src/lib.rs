@@ -9,6 +9,7 @@
 #![deny(missing_debug_implementations)]
 
 extern crate goblin;
+extern crate uuid;
 
 use std::fmt;
 use std::io::Cursor;
@@ -24,6 +25,8 @@ pub use pe::*;
 
 mod traits;
 pub use traits::*;
+
+pub use uuid::Uuid;
 
 /// An object file.
 #[derive(Debug)]
@@ -52,6 +55,13 @@ pub enum Machine {
     /// x86-64
     #[allow(non_camel_case_types)]
     X86_64,
+}
+
+/// Information from an object file that can be used to locate separate debug info.
+#[derive(Debug, Clone, Copy)]
+pub enum DebugFileInfo {
+    /// The UUID from a Mach-O `LC_UUID` load command.
+    MachOUuid(Uuid),
 }
 
 /// An iterator over the segments of a `File`.
@@ -317,6 +327,14 @@ where
 
     fn is_little_endian(&self) -> bool {
         with_inner!(self.inner, FileInternal, |x| x.is_little_endian())
+    }
+
+    fn has_debug_symbols(&self) -> bool {
+        with_inner!(self.inner, FileInternal, |x| x.has_debug_symbols())
+    }
+
+    fn debug_file_info(&self) -> Option<DebugFileInfo> {
+        with_inner!(self.inner, FileInternal, |x| x.debug_file_info())
     }
 }
 

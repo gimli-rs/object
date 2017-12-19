@@ -2,8 +2,11 @@ use std::fmt;
 use std::slice;
 
 use goblin::mach;
+use goblin::mach::load_command::CommandVariant;
+use uuid::Uuid;
 
-use {Machine, Object, ObjectSection, ObjectSegment, SectionKind, Symbol, SymbolKind, SymbolMap};
+use {DebugFileInfo, Machine, Object, ObjectSection, ObjectSegment, SectionKind, Symbol, SymbolKind,
+     SymbolMap};
 
 /// A Mach-O object file.
 #[derive(Debug)]
@@ -204,6 +207,24 @@ where
     #[inline]
     fn is_little_endian(&self) -> bool {
         self.macho.header.is_little_endian()
+    }
+
+    fn has_debug_symbols(&self) -> bool {
+        self.section_data_by_name(".debug_info").is_some()
+    }
+
+    fn debug_file_info(&self) -> Option<DebugFileInfo> {
+        // Return the UUID from the `LC_UUID` load command, if one is present.
+        self.macho.load_commands.iter().filter_map(|lc| {
+            match lc.command {
+                CommandVariant::Uuid(ref cmd) => {
+                    //TODO: Uuid should have a `from_array` method that can't fail.
+                    Uuid::from_bytes(&cmd.uuid).ok()
+                        .map(|uuid| DebugFileInfo::MachOUuid(uuid))
+                }
+                _ => None,
+            }
+        }).nth(0)
     }
 }
 
