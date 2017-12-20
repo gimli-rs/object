@@ -226,6 +226,10 @@ where
             }
         }).nth(0)
     }
+
+    fn entry(&self) -> u64 {
+        self.macho.entry
+    }
 }
 
 impl<'data, 'file> Iterator for MachOSegmentIterator<'data, 'file> {

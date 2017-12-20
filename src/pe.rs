@@ -162,6 +162,10 @@ where
     }
 
     fn debug_file_info(&self) -> Option<DebugFileInfo> { None }
+
+    fn entry(&self) -> u64 {
+        self.pe.entry as u64
+    }
 }
 
 impl<'data, 'file> Iterator for PeSegmentIterator<'data, 'file> {
