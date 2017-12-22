@@ -2,8 +2,8 @@
 authors = ["Nick Fitzgerald <fitzgen@gmail.com>", "Philip Craig <philipjcraig@gmail.com>"]
 name = "object"
 version = "0.7.0"
-description = "A unified interface for the target platform's object file format."
-keywords = ["object", "loader", "elf", "mach-o"]
+description = "A unified interface for parsing object file formats."
+keywords = ["object", "loader", "elf", "mach-o", "pe"]
 license = "Apache-2.0/MIT"
 repository = "https://github.com/gimli-rs/object"
 
