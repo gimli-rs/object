@@ -206,7 +206,7 @@ where
 
     #[inline]
     fn is_little_endian(&self) -> bool {
-        self.macho.header.is_little_endian()
+        self.macho.little_endian
     }
 
     fn has_debug_symbols(&self) -> bool {
