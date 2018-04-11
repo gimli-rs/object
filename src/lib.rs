@@ -29,6 +29,7 @@ mod alloc {
 }
 
 use std::fmt;
+use alloc::borrow;
 use alloc::vec::Vec;
 
 mod elf;
@@ -312,7 +313,7 @@ where
         }
     }
 
-    fn section_data_by_name(&self, section_name: &str) -> Option<&'data [u8]> {
+    fn section_data_by_name(&self, section_name: &str) -> Option<borrow::Cow<'data, [u8]>> {
         with_inner!(self.inner, FileInternal, |x| {
             x.section_data_by_name(section_name)
         })

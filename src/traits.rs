@@ -1,3 +1,5 @@
+use alloc::borrow::Cow;
+
 use {DebugFileInfo, Machine, SectionKind, Symbol, SymbolMap};
 
 /// An object file.
@@ -36,7 +38,9 @@ pub trait Object<'data, 'file> {
     ///
     /// For some object files, multiple segments may contain sections with the same
     /// name. In this case, the first matching section will be used.
-    fn section_data_by_name(&self, section_name: &str) -> Option<&'data [u8]>;
+    ///
+    /// This may decompress section data.
+    fn section_data_by_name(&self, section_name: &str) -> Option<Cow<'data, [u8]>>;
 
     /// Get an iterator over the sections in the file.
     fn sections(&'file self) -> Self::SectionIterator;
@@ -89,9 +93,10 @@ pub trait ObjectSection<'data> {
     /// Returns the size of the section in memory.
     fn size(&self) -> u64;
 
-    /// Returns a reference to the contents of the section.
+    /// Returns a reference to the raw contents of the section.
     /// The length of this data may be different from the size of the
     /// section in memory.
+    /// This does not do any decompression.
     fn data(&self) -> &'data [u8];
 
     /// Returns the name of the section.

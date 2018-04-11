@@ -1,5 +1,6 @@
 use std::fmt;
 use std::slice;
+use alloc::borrow;
 use alloc::vec::Vec;
 
 use goblin::{elf, strtab};
@@ -106,11 +107,13 @@ where
         }
     }
 
-    fn section_data_by_name(&self, section_name: &str) -> Option<&'data [u8]> {
+    fn section_data_by_name(&self, section_name: &str) -> Option<borrow::Cow<'data, [u8]>> {
         for header in &self.elf.section_headers {
             if let Some(Ok(name)) = self.elf.shdr_strtab.get(header.sh_name) {
                 if name == section_name {
-                    return Some(&self.data[header.sh_offset as usize..][..header.sh_size as usize]);
+                    return Some(borrow::Cow::Borrowed(
+                        &self.data[header.sh_offset as usize..][..header.sh_size as usize]
+                    ));
                 }
             }
         }

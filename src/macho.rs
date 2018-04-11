@@ -1,5 +1,6 @@
 use std::fmt;
 use std::slice;
+use alloc::borrow;
 use alloc::vec::Vec;
 
 use goblin::mach;
@@ -96,7 +97,7 @@ where
         }
     }
 
-    fn section_data_by_name(&self, section_name: &str) -> Option<&'data [u8]> {
+    fn section_data_by_name(&self, section_name: &str) -> Option<borrow::Cow<'data, [u8]>> {
         // Translate the "." prefix to the "__" prefix used by OSX/Mach-O, eg
         // ".debug_info" to "__debug_info".
         let (system_section, section_name) = if section_name.starts_with('.') {
@@ -115,7 +116,7 @@ where
                 if let Ok((section, data)) = section {
                     if let Ok(name) = section.name() {
                         if cmp_section_name(name) {
-                            return Some(data);
+                            return Some(borrow::Cow::Borrowed(data));
                         }
                     }
                 }

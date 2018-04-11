@@ -105,14 +105,14 @@ where
         }
     }
 
-    fn section_data_by_name(&self, section_name: &str) -> Option<&'data [u8]> {
+    fn section_data_by_name(&self, section_name: &str) -> Option<borrow::Cow<'data, [u8]>> {
         for section in &self.pe.sections {
             if let Ok(name) = section.name() {
                 if name == section_name {
-                    return Some(
+                    return Some(borrow::Cow::Borrowed(
                         &self.data[section.pointer_to_raw_data as usize..]
                             [..section.size_of_raw_data as usize],
-                    );
+                    ));
                 }
             }
         }
