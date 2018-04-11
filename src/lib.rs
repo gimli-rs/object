@@ -19,7 +19,11 @@ extern crate core as std;
 #[cfg(not(feature = "std"))]
 extern crate alloc;
 
+#[cfg(feature = "compression")]
+extern crate flate2;
+
 extern crate goblin;
+extern crate scroll;
 extern crate uuid;
 
 #[cfg(feature = "std")]

@@ -8,7 +8,9 @@ license = "Apache-2.0/MIT"
 repository = "https://github.com/gimli-rs/object"
 
 [dependencies]
+scroll = "0.9"
 uuid = "0.5.1"
+flate2 = { version = "1", optional = true }
 
 [dependencies.goblin]
 version = "0.0.15"
@@ -20,4 +22,5 @@ memmap = "0.6"
 
 [features]
 std = ["goblin/std"]
-default = ["std"]
+compression = ["flate2"]
+default = ["std", "compression"]
