@@ -1,6 +1,6 @@
-use std::fmt;
 use std::slice;
 use alloc::borrow;
+use alloc::fmt;
 use alloc::vec::Vec;
 
 #[cfg(feature = "compression")]
@@ -9,6 +9,8 @@ use flate2::{Decompress, FlushDecompress};
 use goblin::{elf, strtab};
 #[cfg(feature = "compression")]
 use goblin::container;
+#[cfg(feature = "compression")]
+use scroll::{self, Pread};
 #[cfg(feature = "compression")]
 use scroll::ctx::TryFromCtx;
 
@@ -125,6 +127,41 @@ impl<'data> ElfFile<'data> {
         let data = &self.data[header.sh_offset as usize..][..header.sh_size as usize];
         borrow::Cow::Borrowed(data)
     }
+
+    #[cfg(feature = "compression")]
+    /// Try GNU-style "ZLIB" header decompression.
+    fn maybe_decompress_data_gnu(&self, data: borrow::Cow<'data, [u8]>) -> borrow::Cow<'data, [u8]> {
+        // Assume ZLIB-style uncompressed data is no more than 4GB to avoid accidentally
+        // huge allocations. This also reduces the chance of accidentally matching on a
+        // .debug_str that happens to start with "ZLIB".
+        if data.len() < 12 || &data[..8] != b"ZLIB\0\0\0\0" {
+            return data;
+        }
+        let uncompressed_size: u32 = data.pread_with(8, scroll::BE).unwrap();
+        let mut decompressed = Vec::with_capacity(uncompressed_size as usize);
+        let mut decompress = Decompress::new(true);
+        if let Err(_) = decompress.decompress_vec(
+            &data[12..], &mut decompressed, FlushDecompress::Finish) {
+            return data;
+        }
+        borrow::Cow::Owned(decompressed)
+    }
+
+    #[cfg(feature = "compression")]
+    /// Try GNU-style "ZLIB" header decompression.
+    fn try_zdebug_section_data(&self, section_name: &str) -> Option<borrow::Cow<'data, [u8]>> {
+        if !section_name.starts_with(".debug_") {
+            return None;
+        }
+        let z_name = format!(".zdebug_{}", &section_name[7..]);
+        // Note that we accept data in .zdebug_ that isn't actually compressed.
+        self.section_data_by_name(&z_name).map(|data| self.maybe_decompress_data_gnu(data))
+    }
+
+    #[cfg(not(feature = "compression"))]
+    fn try_zdebug_section_data(&self, _section_name: &str) -> Option<borrow::Cow<'data, [u8]>> {
+        None
+    }
 }
 
 impl<'data, 'file> Object<'data, 'file> for ElfFile<'data>
@@ -162,7 +199,7 @@ where
                 }
             }
         }
-        None
+        self.try_zdebug_section_data(section_name)
     }
 
     fn sections(&'file self) -> ElfSectionIterator<'data, 'file> {
