@@ -8,11 +8,16 @@ license = "Apache-2.0/MIT"
 repository = "https://github.com/gimli-rs/object"
 
 [dependencies]
-goblin = "0.0.15"
 uuid = "0.5.1"
+
+[dependencies.goblin]
+version = "0.0.15"
+default-features = false
+features = ["endian_fd", "elf32", "elf64", "mach32", "mach64", "pe32", "pe64", "archive"]
 
 [dev-dependencies]
 memmap = "0.6"
 
 [features]
-nightly = []
+std = ["goblin/std"]
+default = ["std"]
