@@ -1,5 +1,6 @@
 use std::fmt;
 use std::slice;
+use alloc::vec::Vec;
 
 use goblin::{elf, strtab};
 

@@ -1,5 +1,6 @@
 use std::slice;
-use std::borrow;
+use alloc::borrow;
+use alloc::vec::Vec;
 
 use goblin::pe;
 

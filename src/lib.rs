@@ -8,11 +8,28 @@
 #![deny(missing_docs)]
 #![deny(missing_debug_implementations)]
 
+#![no_std]
+#![cfg_attr(not(feature = "std"), feature(alloc))]
+
+#[cfg(feature = "std")]
+extern crate std;
+
+#[cfg(not(feature = "std"))]
+extern crate core as std;
+#[cfg(not(feature = "std"))]
+extern crate alloc;
+
 extern crate goblin;
 extern crate uuid;
 
+#[cfg(feature = "std")]
+mod alloc {
+    pub use std::borrow;
+    pub use std::vec;
+}
+
 use std::fmt;
-use std::io::Cursor;
+use alloc::vec::Vec;
 
 mod elf;
 pub use elf::*;
@@ -256,10 +273,14 @@ macro_rules! next_inner {
 }
 
 impl<'data> File<'data> {
-    /// Parse the raw ELF file data.
+    /// Parse the raw file data.
     pub fn parse(data: &'data [u8]) -> Result<Self, &'static str> {
-        let mut cursor = Cursor::new(data);
-        let inner = match goblin::peek(&mut cursor).map_err(|_| "Could not parse file magic")? {
+        if data.len() < 16 {
+            return Err("File too short");
+        }
+        let mut bytes = [0u8; 16];
+        bytes.clone_from_slice(&data[..16]);
+        let inner = match goblin::peek_bytes(&bytes).map_err(|_| "Could not parse file magic")? {
             goblin::Hint::Elf(_) => FileInternal::Elf(ElfFile::parse(data)?),
             goblin::Hint::Mach(_) => FileInternal::MachO(MachOFile::parse(data)?),
             goblin::Hint::PE => FileInternal::Pe(PeFile::parse(data)?),

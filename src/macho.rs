@@ -1,5 +1,6 @@
 use std::fmt;
 use std::slice;
+use alloc::vec::Vec;
 
 use goblin::mach;
 use goblin::mach::load_command::CommandVariant;
