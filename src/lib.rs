@@ -12,23 +12,33 @@
 #![cfg_attr(not(feature = "std"), feature(alloc))]
 
 #[cfg(feature = "std")]
+#[macro_use]
 extern crate std;
 
 #[cfg(not(feature = "std"))]
 extern crate core as std;
-#[cfg(not(feature = "std"))]
+#[cfg(all(not(feature = "std"), feature="compression"))]
+#[macro_use]
+extern crate alloc;
+#[cfg(all(not(feature = "std"), not(feature="compression")))]
 extern crate alloc;
 
+#[cfg(feature = "compression")]
+extern crate flate2;
+
 extern crate goblin;
+extern crate scroll;
 extern crate uuid;
 
 #[cfg(feature = "std")]
 mod alloc {
     pub use std::borrow;
+    pub use std::fmt;
     pub use std::vec;
 }
 
-use std::fmt;
+use alloc::fmt;
+use alloc::borrow;
 use alloc::vec::Vec;
 
 mod elf;
@@ -312,7 +322,7 @@ where
         }
     }
 
-    fn section_data_by_name(&self, section_name: &str) -> Option<&'data [u8]> {
+    fn section_data_by_name(&self, section_name: &str) -> Option<borrow::Cow<'data, [u8]>> {
         with_inner!(self.inner, FileInternal, |x| {
             x.section_data_by_name(section_name)
         })
