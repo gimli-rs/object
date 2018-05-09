@@ -1,5 +1,5 @@
 use std::slice;
-use alloc::borrow;
+use alloc::borrow::Cow;
 use alloc::fmt;
 use alloc::vec::Vec;
 
@@ -89,48 +89,48 @@ impl<'data> ElfFile<'data> {
     }
 
     #[cfg(feature = "compression")]
-    fn maybe_decompress_data(&self, header: &elf::SectionHeader) -> borrow::Cow<'data, [u8]> {
+    fn maybe_decompress_data(&self, header: &elf::SectionHeader) -> Cow<'data, [u8]> {
         let data = &self.data[header.sh_offset as usize..][..header.sh_size as usize];
         if (header.sh_flags & elf::section_header::SHF_COMPRESSED as u64) == 0 {
-            borrow::Cow::Borrowed(data)
+            Cow::Borrowed(data)
         } else {
             let container = match self.elf.header.container() {
                 Ok(c) => c,
-                Err(_) => return borrow::Cow::Borrowed(data),
+                Err(_) => return Cow::Borrowed(data),
             };
             let endianness = match self.elf.header.endianness() {
                 Ok(e) => e,
-                Err(_) => return borrow::Cow::Borrowed(data),
+                Err(_) => return Cow::Borrowed(data),
             };
             let ctx = container::Ctx::new(container, endianness);
             let (compression_type, uncompressed_size, compressed_data) =
                 match elf::compression_header::CompressionHeader::try_from_ctx(data, ctx) {
                     Ok((chdr, size)) => (chdr.ch_type, chdr.ch_size, &data[size..]),
-                    Err(_) => return borrow::Cow::Borrowed(data),
+                    Err(_) => return Cow::Borrowed(data),
                 };
             if compression_type != elf::compression_header::ELFCOMPRESS_ZLIB {
-                return borrow::Cow::Borrowed(data);
+                return Cow::Borrowed(data);
             }
 
             let mut decompressed = Vec::with_capacity(uncompressed_size as usize);
             let mut decompress = Decompress::new(true);
             if let Err(_) = decompress.decompress_vec(
                 compressed_data, &mut decompressed, FlushDecompress::Finish) {
-                return borrow::Cow::Borrowed(data);
+                return Cow::Borrowed(data);
             }
-            borrow::Cow::Owned(decompressed)
+            Cow::Owned(decompressed)
         }
     }
 
     #[cfg(not(feature = "compression"))]
-    fn maybe_decompress_data(&self, header: &elf::SectionHeader) -> borrow::Cow<'data, [u8]> {
+    fn maybe_decompress_data(&self, header: &elf::SectionHeader) -> Cow<'data, [u8]> {
         let data = &self.data[header.sh_offset as usize..][..header.sh_size as usize];
-        borrow::Cow::Borrowed(data)
+        Cow::Borrowed(data)
     }
 
     #[cfg(feature = "compression")]
     /// Try GNU-style "ZLIB" header decompression.
-    fn maybe_decompress_data_gnu(&self, data: borrow::Cow<'data, [u8]>) -> borrow::Cow<'data, [u8]> {
+    fn maybe_decompress_data_gnu(&self, data: Cow<'data, [u8]>) -> Cow<'data, [u8]> {
         // Assume ZLIB-style uncompressed data is no more than 4GB to avoid accidentally
         // huge allocations. This also reduces the chance of accidentally matching on a
         // .debug_str that happens to start with "ZLIB".
@@ -144,12 +144,12 @@ impl<'data> ElfFile<'data> {
             &data[12..], &mut decompressed, FlushDecompress::Finish) {
             return data;
         }
-        borrow::Cow::Owned(decompressed)
+        Cow::Owned(decompressed)
     }
 
     #[cfg(feature = "compression")]
     /// Try GNU-style "ZLIB" header decompression.
-    fn try_zdebug_section_data(&self, section_name: &str) -> Option<borrow::Cow<'data, [u8]>> {
+    fn try_zdebug_section_data(&self, section_name: &str) -> Option<Cow<'data, [u8]>> {
         if !section_name.starts_with(".debug_") {
             return None;
         }
@@ -159,7 +159,7 @@ impl<'data> ElfFile<'data> {
     }
 
     #[cfg(not(feature = "compression"))]
-    fn try_zdebug_section_data(&self, _section_name: &str) -> Option<borrow::Cow<'data, [u8]>> {
+    fn try_zdebug_section_data(&self, _section_name: &str) -> Option<Cow<'data, [u8]>> {
         None
     }
 }
@@ -191,7 +191,7 @@ where
         }
     }
 
-    fn section_data_by_name(&self, section_name: &str) -> Option<borrow::Cow<'data, [u8]>> {
+    fn section_data_by_name(&self, section_name: &str) -> Option<Cow<'data, [u8]>> {
         for header in &self.elf.section_headers {
             if let Some(Ok(name)) = self.elf.shdr_strtab.get(header.sh_name) {
                 if name == section_name {
@@ -308,12 +308,12 @@ impl<'data, 'file> ObjectSection<'data> for ElfSection<'data, 'file> {
         self.section.sh_size
     }
 
-    fn data(&self) -> &'data [u8] {
-        if self.section.sh_type == elf::section_header::SHT_NOBITS {
+    fn data(&self) -> Cow<'data, [u8]> {
+        Cow::from(if self.section.sh_type == elf::section_header::SHT_NOBITS {
             &[]
         } else {
             &self.file.data[self.section.sh_offset as usize..][..self.section.sh_size as usize]
-        }
+        })
     }
 
     fn name(&self) -> Option<&str> {

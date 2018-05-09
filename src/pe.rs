@@ -1,11 +1,13 @@
-use std::slice;
-use alloc::borrow;
+use alloc::borrow::Cow;
 use alloc::vec::Vec;
+use std::slice;
 
 use goblin::pe;
 
-use {DebugFileInfo, Machine, Object, ObjectSection, ObjectSegment, SectionKind, Symbol, SymbolKind,
-     SymbolMap};
+use {
+    DebugFileInfo, Machine, Object, ObjectSection, ObjectSegment, SectionKind, Symbol, SymbolKind,
+    SymbolMap,
+};
 
 /// A PE object file.
 #[derive(Debug)]
@@ -105,11 +107,11 @@ where
         }
     }
 
-    fn section_data_by_name(&self, section_name: &str) -> Option<borrow::Cow<'data, [u8]>> {
+    fn section_data_by_name(&self, section_name: &str) -> Option<Cow<'data, [u8]>> {
         for section in &self.pe.sections {
             if let Ok(name) = section.name() {
                 if name == section_name {
-                    return Some(borrow::Cow::Borrowed(
+                    return Some(Cow::from(
                         &self.data[section.pointer_to_raw_data as usize..]
                             [..section.size_of_raw_data as usize],
                     ));
@@ -162,7 +164,9 @@ where
         false
     }
 
-    fn debug_file_info(&self) -> Option<DebugFileInfo> { None }
+    fn debug_file_info(&self) -> Option<DebugFileInfo> {
+        None
+    }
 
     fn entry(&self) -> u64 {
         self.pe.entry as u64
@@ -173,11 +177,9 @@ impl<'data, 'file> Iterator for PeSegmentIterator<'data, 'file> {
     type Item = PeSegment<'data, 'file>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.iter.next().map(|section| {
-            PeSegment {
-                file: self.file,
-                section,
-            }
+        self.iter.next().map(|section| PeSegment {
+            file: self.file,
+            section,
         })
     }
 }
@@ -208,11 +210,9 @@ impl<'data, 'file> Iterator for PeSectionIterator<'data, 'file> {
     type Item = PeSection<'data, 'file>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.iter.next().map(|section| {
-            PeSection {
-                file: self.file,
-                section,
-            }
+        self.iter.next().map(|section| PeSection {
+            file: self.file,
+            section,
         })
     }
 }
@@ -228,9 +228,11 @@ impl<'data, 'file> ObjectSection<'data> for PeSection<'data, 'file> {
         u64::from(self.section.virtual_size)
     }
 
-    fn data(&self) -> &'data [u8] {
-        &self.file.data[self.section.pointer_to_raw_data as usize..]
-            [..self.section.size_of_raw_data as usize]
+    fn data(&self) -> Cow<'data, [u8]> {
+        Cow::from(
+            &self.file.data[self.section.pointer_to_raw_data as usize..]
+                [..self.section.size_of_raw_data as usize],
+        )
     }
 
     fn name(&self) -> Option<&str> {
@@ -279,7 +281,7 @@ impl<'data, 'file> Iterator for PeSymbolIterator<'data, 'file> {
         }
         if let Some(import) = self.imports.next() {
             let name = match import.name {
-                borrow::Cow::Borrowed(name) => Some(name),
+                Cow::Borrowed(name) => Some(name),
                 _ => None,
             };
             return Some(Symbol {

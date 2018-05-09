@@ -1,5 +1,4 @@
 use alloc::borrow::Cow;
-
 use {DebugFileInfo, Machine, SectionKind, Symbol, SymbolMap};
 
 /// An object file.
@@ -96,8 +95,9 @@ pub trait ObjectSection<'data> {
     /// Returns a reference to the raw contents of the section.
     /// The length of this data may be different from the size of the
     /// section in memory.
+    ///
     /// This does not do any decompression.
-    fn data(&self) -> &'data [u8];
+    fn data(&self) -> Cow<'data, [u8]>;
 
     /// Returns the name of the section.
     fn name(&self) -> Option<&str>;

@@ -7,7 +7,6 @@
 
 #![deny(missing_docs)]
 #![deny(missing_debug_implementations)]
-
 #![no_std]
 #![cfg_attr(not(feature = "std"), feature(alloc))]
 
@@ -15,13 +14,13 @@
 #[macro_use]
 extern crate std;
 
-#[cfg(not(feature = "std"))]
-extern crate core as std;
 #[cfg(all(not(feature = "std"), feature="compression"))]
 #[macro_use]
 extern crate alloc;
 #[cfg(all(not(feature = "std"), not(feature="compression")))]
 extern crate alloc;
+#[cfg(not(feature = "std"))]
+extern crate core as std;
 
 #[cfg(feature = "compression")]
 extern crate flate2;
@@ -30,6 +29,9 @@ extern crate goblin;
 extern crate scroll;
 extern crate uuid;
 
+#[cfg(feature = "wasm")]
+extern crate parity_wasm;
+
 #[cfg(feature = "std")]
 mod alloc {
     pub use std::borrow;
@@ -37,8 +39,8 @@ mod alloc {
     pub use std::vec;
 }
 
+use alloc::borrow::Cow;
 use alloc::fmt;
-use alloc::borrow;
 use alloc::vec::Vec;
 
 mod elf;
@@ -53,6 +55,11 @@ pub use pe::*;
 mod traits;
 pub use traits::*;
 
+#[cfg(feature = "wasm")]
+mod wasm;
+#[cfg(feature = "wasm")]
+pub use wasm::*;
+
 pub use uuid::Uuid;
 
 /// An object file.
@@ -66,6 +73,8 @@ enum FileInternal<'data> {
     Elf(ElfFile<'data>),
     MachO(MachOFile<'data>),
     Pe(PeFile<'data>),
+    #[cfg(feature = "wasm")]
+    Wasm(WasmFile),
 }
 
 /// The machine type of an object file.
@@ -108,6 +117,8 @@ where
     Elf(ElfSegmentIterator<'data, 'file>),
     MachO(MachOSegmentIterator<'data, 'file>),
     Pe(PeSegmentIterator<'data, 'file>),
+    #[cfg(feature = "wasm")]
+    Wasm(WasmSegmentIterator<'file>),
 }
 
 /// A segment of a `File`.
@@ -126,6 +137,8 @@ where
     Elf(ElfSegment<'data, 'file>),
     MachO(MachOSegment<'data, 'file>),
     Pe(PeSegment<'data, 'file>),
+    #[cfg(feature = "wasm")]
+    Wasm(WasmSegment<'file>),
 }
 
 /// An iterator of the sections of a `File`.
@@ -146,6 +159,8 @@ where
     Elf(ElfSectionIterator<'data, 'file>),
     MachO(MachOSectionIterator<'data, 'file>),
     Pe(PeSectionIterator<'data, 'file>),
+    #[cfg(feature = "wasm")]
+    Wasm(WasmSectionIterator<'file>),
 }
 
 /// A Section of a File
@@ -163,6 +178,8 @@ where
     Elf(ElfSection<'data, 'file>),
     MachO(MachOSection<'data>),
     Pe(PeSection<'data, 'file>),
+    #[cfg(feature = "wasm")]
+    Wasm(WasmSection<'file>),
 }
 
 /// The kind of a section.
@@ -199,6 +216,8 @@ where
     Elf(ElfSymbolIterator<'data, 'file>),
     MachO(MachOSymbolIterator<'data>),
     Pe(PeSymbolIterator<'data, 'file>),
+    #[cfg(feature = "wasm")]
+    Wasm(WasmSymbolIterator<'file>),
 }
 
 /// A symbol table entry.
@@ -241,34 +260,40 @@ pub struct SymbolMap<'data> {
 ///
 /// This is a hack to avoid virtual calls.
 macro_rules! with_inner {
-    ($inner:expr, $enum:ident, |$var:ident| $body:expr) => {
+    ($inner:expr, $enum:ident, | $var:ident | $body:expr) => {
         match $inner {
-            $enum::Elf(ref $var) => { $body }
-            $enum::MachO(ref $var) => { $body }
-            $enum::Pe(ref $var) => { $body }
+            $enum::Elf(ref $var) => $body,
+            $enum::MachO(ref $var) => $body,
+            $enum::Pe(ref $var) => $body,
+            #[cfg(feature = "wasm")]
+            $enum::Wasm(ref $var) => $body,
         }
-    }
+    };
 }
 
 macro_rules! with_inner_mut {
-    ($inner:expr, $enum:ident, |$var:ident| $body:expr) => {
+    ($inner:expr, $enum:ident, | $var:ident | $body:expr) => {
         match $inner {
-            $enum::Elf(ref mut $var) => { $body }
-            $enum::MachO(ref mut $var) => { $body }
-            $enum::Pe(ref mut $var) => { $body }
+            $enum::Elf(ref mut $var) => $body,
+            $enum::MachO(ref mut $var) => $body,
+            $enum::Pe(ref mut $var) => $body,
+            #[cfg(feature = "wasm")]
+            $enum::Wasm(ref mut $var) => $body,
         }
-    }
+    };
 }
 
 /// Like `with_inner!`, but wraps the result in another enum.
 macro_rules! map_inner {
-    ($inner:expr, $from:ident, $to:ident, |$var:ident| $body:expr) => {
+    ($inner:expr, $from:ident, $to:ident, | $var:ident | $body:expr) => {
         match $inner {
             $from::Elf(ref $var) => $to::Elf($body),
             $from::MachO(ref $var) => $to::MachO($body),
             $from::Pe(ref $var) => $to::Pe($body),
+            #[cfg(feature = "wasm")]
+            $from::Wasm(ref $var) => $to::Wasm($body),
         }
-    }
+    };
 }
 
 /// Call `next` for a file format iterator.
@@ -278,8 +303,27 @@ macro_rules! next_inner {
             $from::Elf(ref mut iter) => iter.next().map($to::Elf),
             $from::MachO(ref mut iter) => iter.next().map($to::MachO),
             $from::Pe(ref mut iter) => iter.next().map($to::Pe),
+            #[cfg(feature = "wasm")]
+            $from::Wasm(ref mut iter) => iter.next().map($to::Wasm),
         }
+    };
+}
+
+#[cfg(feature = "wasm")]
+fn parse_wasm(data: &[u8]) -> Result<Option<File>, &'static str> {
+    const WASM_MAGIC: &[u8] = &[0x00, 0x61, 0x73, 0x6D];
+
+    if &data[..4] == WASM_MAGIC {
+        let inner = FileInternal::Wasm(WasmFile::parse(data)?);
+        return Ok(Some(File { inner }));
     }
+
+    Ok(None)
+}
+
+#[cfg(not(feature = "wasm"))]
+fn parse_wasm(_data: &[u8]) -> Result<Option<File>, &'static str> {
+    Ok(None)
 }
 
 impl<'data> File<'data> {
@@ -288,6 +332,11 @@ impl<'data> File<'data> {
         if data.len() < 16 {
             return Err("File too short");
         }
+
+        if let Some(wasm) = parse_wasm(data)? {
+            return Ok(wasm);
+        }
+
         let mut bytes = [0u8; 16];
         bytes.clone_from_slice(&data[..16]);
         let inner = match goblin::peek_bytes(&bytes).map_err(|_| "Could not parse file magic")? {
@@ -322,10 +371,10 @@ where
         }
     }
 
-    fn section_data_by_name(&self, section_name: &str) -> Option<borrow::Cow<'data, [u8]>> {
-        with_inner!(self.inner, FileInternal, |x| {
-            x.section_data_by_name(section_name)
-        })
+    fn section_data_by_name(&self, section_name: &str) -> Option<Cow<'data, [u8]>> {
+        with_inner!(self.inner, FileInternal, |x| x.section_data_by_name(
+            section_name
+        ))
     }
 
     fn sections(&'file self) -> SectionIterator<'data, 'file> {
@@ -441,7 +490,7 @@ impl<'data, 'file> ObjectSection<'data> for Section<'data, 'file> {
         with_inner!(self.inner, SectionInternal, |x| x.size())
     }
 
-    fn data(&self) -> &'data [u8] {
+    fn data(&self) -> Cow<'data, [u8]> {
         with_inner!(self.inner, SectionInternal, |x| x.data())
     }
 
@@ -462,9 +511,7 @@ impl<'data, 'file> Iterator for SymbolIterator<'data, 'file> {
     type Item = Symbol<'data>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        with_inner_mut!(self.inner, SymbolIteratorInternal, |x| {
-            x.next()
-        })
+        with_inner_mut!(self.inner, SymbolIteratorInternal, |x| x.next())
     }
 }
 
