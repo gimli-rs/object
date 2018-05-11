@@ -62,6 +62,22 @@ pub use wasm::*;
 
 pub use uuid::Uuid;
 
+/// The native object file for the target platform.
+#[cfg(target_os = "linux")]
+pub type NativeFile<'data> = ElfFile<'data>;
+
+/// The native object file for the target platform.
+#[cfg(target_os = "macos")]
+pub type NativeFile<'data> = MachOFile<'data>;
+
+/// The native object file for the target platform.
+#[cfg(target_os = "windows")]
+pub type NativeFile<'data> = PeFile<'data>;
+
+/// The native object file for the target platform.
+#[cfg(all(feature = "wasm", target_arch = "wasm32"))]
+pub type NativeFile<'data> = WasmFile<'data>;
+
 /// An object file.
 #[derive(Debug)]
 pub struct File<'data> {
