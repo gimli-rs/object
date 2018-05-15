@@ -5,8 +5,7 @@ use std::slice;
 use goblin::pe;
 
 use {
-    DebugFileInfo, Machine, Object, ObjectSection, ObjectSegment, SectionKind, Symbol, SymbolKind,
-    SymbolMap,
+    Machine, Object, ObjectSection, ObjectSegment, SectionKind, Symbol, SymbolKind, SymbolMap,
 };
 
 /// A PE object file.
@@ -162,10 +161,6 @@ where
         // TODO: look at what the mingw toolchain does with DWARF-in-PE, and also
         // whether CodeView-in-PE still works?
         false
-    }
-
-    fn debug_file_info(&self) -> Option<DebugFileInfo> {
-        None
     }
 
     fn entry(&self) -> u64 {

@@ -5,7 +5,7 @@ use std::slice;
 use std::u64;
 
 use {
-    DebugFileInfo, Machine, Object, ObjectSection, ObjectSegment, SectionKind, Symbol, SymbolMap,
+    Machine, Object, ObjectSection, ObjectSegment, SectionKind, Symbol, SymbolMap,
 };
 
 /// A WebAssembly object file.
@@ -169,10 +169,6 @@ impl<'file> Object<'static, 'file> for WasmFile {
             elements::Section::Custom(ref c) => c.name().starts_with(".debug_"),
             _ => false,
         })
-    }
-
-    fn debug_file_info(&self) -> Option<DebugFileInfo> {
-        None
     }
 }
 

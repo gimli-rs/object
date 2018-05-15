@@ -1,5 +1,5 @@
 use alloc::borrow::Cow;
-use {DebugFileInfo, Machine, SectionKind, Symbol, SymbolMap};
+use {Uuid, Machine, SectionKind, Symbol, SymbolMap};
 
 /// An object file.
 pub trait Object<'data, 'file> {
@@ -59,9 +59,23 @@ pub trait Object<'data, 'file> {
     /// Return true if the file contains debug information sections, false if not.
     fn has_debug_symbols(&self) -> bool;
 
-    /// Get `DebugFileInfo` that can be used to locate external debug symbols for the file
-    /// if present.
-    fn debug_file_info(&self) -> Option<DebugFileInfo>;
+    /// The UUID from a Mach-O `LC_UUID` load command.
+    #[inline]
+    fn mach_uuid(&self) -> Option<Uuid> {
+        None
+    }
+
+    /// The build ID from an ELF `NT_GNU_BUILD_ID` note.
+    #[inline]
+    fn build_id(&self) -> Option<&'data [u8]> {
+        None
+    }
+
+    /// The filename and CRC from a `.gnu_debuglink` section.
+    #[inline]
+    fn gnu_debuglink(&self) -> Option<(&'data [u8], u32)> {
+        None
+    }
 }
 
 /// A loadable segment defined in an object file.

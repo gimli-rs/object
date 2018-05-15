@@ -9,13 +9,11 @@ use flate2::{Decompress, FlushDecompress};
 use goblin::{elf, strtab};
 #[cfg(feature = "compression")]
 use goblin::container;
-#[cfg(feature = "compression")]
 use scroll::{self, Pread};
 #[cfg(feature = "compression")]
 use scroll::ctx::TryFromCtx;
 
-use {DebugFileInfo, Machine, Object, ObjectSection, ObjectSegment, SectionKind, Symbol, SymbolKind,
-     SymbolMap};
+use {Machine, Object, ObjectSection, ObjectSegment, SectionKind, Symbol, SymbolKind, SymbolMap};
 
 /// An ELF object file.
 #[derive(Debug)]
@@ -240,7 +238,49 @@ where
         self.section_data_by_name(".debug_info").is_some()
     }
 
-    fn debug_file_info(&self) -> Option<DebugFileInfo> { None }
+    fn build_id(&self) -> Option<&'data [u8]> {
+        if let Some(notes) = self.elf.iter_note_headers(self.data) {
+            for note in notes {
+                if let Ok(note) = note {
+                    if note.n_type == elf::note::NT_GNU_BUILD_ID {
+                        return Some(note.desc);
+                    }
+                }
+            }
+        }
+        if let Some(notes) = self.elf
+            .iter_note_sections(self.data, Some(".note.gnu.build-id"))
+        {
+            for note in notes {
+                if let Ok(note) = note {
+                    if note.n_type == elf::note::NT_GNU_BUILD_ID {
+                        return Some(note.desc);
+                    }
+                }
+            }
+        }
+        None
+    }
+
+    fn gnu_debuglink(&self) -> Option<(&'data [u8], u32)> {
+        if let Some(Cow::Borrowed(data)) = self.section_data_by_name(".gnu_debuglink") {
+            if let Some(filename_len) = data.iter().position(|x| *x == 0) {
+                let filename = &data[..filename_len];
+                // Round to 4 byte alignment after null terminator.
+                let offset = (filename_len + 1 + 3) & !3;
+                if offset + 4 <= data.len() {
+                    let endian = if self.is_little_endian() {
+                        scroll::LE
+                    } else {
+                        scroll::BE
+                    };
+                    let crc: u32 = data.pread_with(offset, endian).unwrap();
+                    return Some((filename, crc));
+                }
+            }
+        }
+        None
+    }
 
     fn entry(&self) -> u64 {
         self.elf.entry
