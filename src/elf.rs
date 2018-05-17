@@ -237,7 +237,14 @@ where
     }
 
     fn has_debug_symbols(&self) -> bool {
-        self.section_data_by_name(".debug_info").is_some()
+        for header in &self.elf.section_headers {
+            if let Some(Ok(name)) = self.elf.shdr_strtab.get(header.sh_name) {
+                if name == ".debug_info" || name == ".zdebug_info" {
+                    return true;
+                }
+            }
+        }
+        false
     }
 
     fn debug_file_info(&self) -> Option<DebugFileInfo> { None }
