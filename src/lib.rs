@@ -109,13 +109,6 @@ pub enum Machine {
     X86_64,
 }
 
-/// Information from an object file that can be used to locate separate debug info.
-#[derive(Debug, Clone, Copy)]
-pub enum DebugFileInfo {
-    /// The UUID from a Mach-O `LC_UUID` load command.
-    MachOUuid(Uuid),
-}
-
 /// An iterator over the segments of a `File`.
 #[derive(Debug)]
 pub struct SegmentIterator<'data, 'file>
@@ -429,8 +422,19 @@ where
         with_inner!(self.inner, FileInternal, |x| x.has_debug_symbols())
     }
 
-    fn debug_file_info(&self) -> Option<DebugFileInfo> {
-        with_inner!(self.inner, FileInternal, |x| x.debug_file_info())
+    #[inline]
+    fn mach_uuid(&self) -> Option<Uuid> {
+        with_inner!(self.inner, FileInternal, |x| x.mach_uuid())
+    }
+
+    #[inline]
+    fn build_id(&self) -> Option<&'data [u8]> {
+        with_inner!(self.inner, FileInternal, |x| x.build_id())
+    }
+
+    #[inline]
+    fn gnu_debuglink(&self) -> Option<(&'data [u8], u32)> {
+        with_inner!(self.inner, FileInternal, |x| x.gnu_debuglink())
     }
 
     fn entry(&self) -> u64 {

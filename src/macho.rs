@@ -7,8 +7,7 @@ use goblin::mach;
 use goblin::mach::load_command::CommandVariant;
 use uuid::Uuid;
 
-use {DebugFileInfo, Machine, Object, ObjectSection, ObjectSegment, SectionKind, Symbol, SymbolKind,
-     SymbolMap};
+use {Machine, Object, ObjectSection, ObjectSegment, SectionKind, Symbol, SymbolKind, SymbolMap};
 
 /// A Mach-O object file.
 #[derive(Debug)]
@@ -215,14 +214,13 @@ where
         self.section_data_by_name(".debug_info").is_some()
     }
 
-    fn debug_file_info(&self) -> Option<DebugFileInfo> {
+    fn mach_uuid(&self) -> Option<Uuid> {
         // Return the UUID from the `LC_UUID` load command, if one is present.
         self.macho.load_commands.iter().filter_map(|lc| {
             match lc.command {
                 CommandVariant::Uuid(ref cmd) => {
                     //TODO: Uuid should have a `from_array` method that can't fail.
                     Uuid::from_bytes(&cmd.uuid).ok()
-                        .map(|uuid| DebugFileInfo::MachOUuid(uuid))
                 }
                 _ => None,
             }

@@ -40,6 +40,16 @@ fn main() {
             }
         };
 
+        if let Some(uuid) = file.mach_uuid() {
+            println!("Mach UUID: {}", uuid);
+        }
+        if let Some(build_id) = file.build_id() {
+            println!("Build ID: {:x?}", build_id);
+        }
+        if let Some((filename, crc)) = file.gnu_debuglink() {
+            println!("GNU debug link: {} CRC: {:08x}", String::from_utf8_lossy(filename), crc);
+        }
+
         for segment in file.segments() {
             println!("{:?}", segment);
         }
