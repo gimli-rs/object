@@ -8,7 +8,7 @@ license = "Apache-2.0/MIT"
 repository = "https://github.com/gimli-rs/object"
 
 [dependencies]
-scroll = "0.9"
+scroll = { version = "0.9", default-features = false }
 uuid = "0.5.1"
 flate2 = { version = "1", optional = true }
 
