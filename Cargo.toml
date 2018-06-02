@@ -9,7 +9,7 @@ repository = "https://github.com/gimli-rs/object"
 
 [dependencies]
 scroll = { version = "0.9", default-features = false }
-uuid = "0.5.1"
+uuid = { version = "0.6", default-features = false }
 flate2 = { version = "1", optional = true }
 
 [dependencies.goblin]
