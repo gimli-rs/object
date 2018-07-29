@@ -269,7 +269,7 @@ impl<'data, 'file> Iterator for PeSymbolIterator<'data, 'file> {
                 kind: SymbolKind::Unknown,
                 section_kind: Some(SectionKind::Unknown),
                 global: true,
-                name: Some(export.name),
+                name: export.name,
                 address: export.rva as u64,
                 size: 0,
             });
