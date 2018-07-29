@@ -6,6 +6,7 @@ description = "A unified interface for parsing object file formats."
 keywords = ["object", "loader", "elf", "mach-o", "pe"]
 license = "Apache-2.0/MIT"
 repository = "https://github.com/gimli-rs/object"
+exclude = ["/.coveralls.yml", "/.travis.yml", "/coverage"]
 
 [dependencies]
 scroll = { version = "0.9", default-features = false }
