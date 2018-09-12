@@ -3,6 +3,7 @@ use alloc::vec::Vec;
 use std::slice;
 
 use goblin::pe;
+use scroll::Pread;
 
 use {
     Machine, Object, ObjectSection, ObjectSegment, SectionKind, Symbol, SymbolKind, SymbolMap,
@@ -12,6 +13,7 @@ use {
 #[derive(Debug)]
 pub struct PeFile<'data> {
     pe: pe::PE<'data>,
+    symbol_table_offset: usize,
     data: &'data [u8],
 }
 
@@ -76,7 +78,27 @@ impl<'data> PeFile<'data> {
     /// Parse the raw PE file data.
     pub fn parse(data: &'data [u8]) -> Result<Self, &'static str> {
         let pe = pe::PE::parse(data).map_err(|_| "Could not parse PE header")?;
-        Ok(PeFile { pe, data })
+        // get offset to secret symbol table that follows the COFF symbol table
+        let symbol_table_offset = (
+            pe.header.coff_header.pointer_to_symbol_table +
+                pe.header.coff_header.number_of_symbol_table * 18
+        ) as usize;
+        Ok(PeFile { pe, symbol_table_offset, data })
+    }
+
+    /// Get section name from special PE symbol table
+    fn get_section_name(
+        &self,
+        section: &'data pe::section_table::SectionTable,
+    ) -> Option<&'data str> {
+        let mut name = section.name().ok()?;
+        // if name start with "/" then it's an index into the secret symbol table
+        let mut name_chars = name.chars();
+        if name_chars.next() == Some('/') {
+            let index = name_chars.as_str().parse::<usize>().ok()?;
+            name = self.data.pread(self.symbol_table_offset + index).ok()?;
+        };
+        Some(name)
     }
 }
 
@@ -108,11 +130,11 @@ where
 
     fn section_data_by_name(&self, section_name: &str) -> Option<Cow<'data, [u8]>> {
         for section in &self.pe.sections {
-            if let Ok(name) = section.name() {
+            if let Some(name) = self.get_section_name(&section) {
                 if name == section_name {
                     return Some(Cow::from(
                         &self.data[section.pointer_to_raw_data as usize..]
-                            [..section.size_of_raw_data as usize],
+                            [..section.virtual_size as usize],
                     ));
                 }
             }
@@ -156,10 +178,15 @@ where
         true
     }
 
-    #[inline]
     fn has_debug_symbols(&self) -> bool {
-        // TODO: look at what the mingw toolchain does with DWARF-in-PE, and also
-        // whether CodeView-in-PE still works?
+        // TODO: check if CodeView-in-PE still works
+        for section in &self.pe.sections {
+            if let Some(name) = self.get_section_name(&section) {
+                if name == ".debug_info" {
+                    return true;
+                }
+            }
+        }
         false
     }
 
