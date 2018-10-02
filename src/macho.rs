@@ -220,7 +220,7 @@ where
             match lc.command {
                 CommandVariant::Uuid(ref cmd) => {
                     //TODO: Uuid should have a `from_array` method that can't fail.
-                    Uuid::from_bytes(&cmd.uuid).ok()
+                    Uuid::from_slice(&cmd.uuid).ok()
                 }
                 _ => None,
             }
