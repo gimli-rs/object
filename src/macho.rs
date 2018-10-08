@@ -118,6 +118,8 @@ where
                             return Some(Cow::from(data));
                         }
                     }
+                } else {
+                    break;
                 }
             }
         }
@@ -140,14 +142,14 @@ where
         let mut section_kinds = Vec::new();
         // Don't use MachOSectionIterator because it skips sections it fails to parse,
         // and the section index is important.
-        for segment in &self.macho.segments {
+        'segment: for segment in &self.macho.segments {
             for section in segment {
                 if let Ok((section, data)) = section {
                     let section = MachOSection { section, data };
                     section_kinds.push(section.kind());
                 } else {
-                    // Add placeholder so that indexing works.
-                    section_kinds.push(SectionKind::Unknown);
+                    // We can't process more segments because the section index will be wrong.
+                    break 'segment;
                 }
             }
         }
@@ -275,10 +277,8 @@ impl<'data, 'file> Iterator for MachOSectionIterator<'data, 'file> {
     fn next(&mut self) -> Option<Self::Item> {
         loop {
             if let Some(ref mut sections) = self.sections {
-                while let Some(section) = sections.next() {
-                    if let Ok((section, data)) = section {
-                        return Some(MachOSection { section, data });
-                    }
+                while let Some(Ok((section, data))) = sections.next() {
+                    return Some(MachOSection { section, data });
                 }
             }
             match self.segments.next() {
@@ -337,39 +337,37 @@ impl<'data> Iterator for MachOSymbolIterator<'data> {
     type Item = Symbol<'data>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        while let Some(symbol) = self.symbols.next() {
-            if let Ok((name, nlist)) = symbol {
-                if nlist.n_type & mach::symbols::N_STAB != 0 {
-                    continue;
-                }
-                let n_type = nlist.n_type & mach::symbols::NLIST_TYPE_MASK;
-                let section_kind = if n_type == mach::symbols::N_SECT {
-                    if nlist.n_sect == 0 {
-                        None
-                    } else {
-                        self.section_kinds.get(nlist.n_sect - 1).cloned()
-                    }
-                } else {
-                    // TODO: better handling for other n_type values
-                    None
-                };
-                let kind = match section_kind {
-                    Some(SectionKind::Text) => SymbolKind::Text,
-                    Some(SectionKind::Data)
-                    | Some(SectionKind::ReadOnlyData)
-                    | Some(SectionKind::UninitializedData) => SymbolKind::Data,
-                    _ => SymbolKind::Unknown,
-                };
-                return Some(Symbol {
-                    name: Some(name),
-                    address: nlist.n_value,
-                    // Only calculated for symbol maps
-                    size: 0,
-                    kind,
-                    section_kind,
-                    global: nlist.is_global(),
-                });
+        while let Some(Ok((name, nlist))) = self.symbols.next() {
+            if nlist.n_type & mach::symbols::N_STAB != 0 {
+                continue;
             }
+            let n_type = nlist.n_type & mach::symbols::NLIST_TYPE_MASK;
+            let section_kind = if n_type == mach::symbols::N_SECT {
+                if nlist.n_sect == 0 {
+                    None
+                } else {
+                    self.section_kinds.get(nlist.n_sect - 1).cloned()
+                }
+            } else {
+                // TODO: better handling for other n_type values
+                None
+            };
+            let kind = match section_kind {
+                Some(SectionKind::Text) => SymbolKind::Text,
+                Some(SectionKind::Data)
+                | Some(SectionKind::ReadOnlyData)
+                | Some(SectionKind::UninitializedData) => SymbolKind::Data,
+                _ => SymbolKind::Unknown,
+            };
+            return Some(Symbol {
+                name: Some(name),
+                address: nlist.n_value,
+                // Only calculated for symbol maps
+                size: 0,
+                kind,
+                section_kind,
+                global: nlist.is_global(),
+            });
         }
         None
     }
