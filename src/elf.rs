@@ -246,23 +246,19 @@ where
     }
 
     fn build_id(&self) -> Option<&'data [u8]> {
-        if let Some(notes) = self.elf.iter_note_headers(self.data) {
-            for note in notes {
-                if let Ok(note) = note {
-                    if note.n_type == elf::note::NT_GNU_BUILD_ID {
-                        return Some(note.desc);
-                    }
+        if let Some(mut notes) = self.elf.iter_note_headers(self.data) {
+            while let Some(Ok(note)) = notes.next() {
+                if note.n_type == elf::note::NT_GNU_BUILD_ID {
+                    return Some(note.desc);
                 }
             }
         }
-        if let Some(notes) = self.elf
+        if let Some(mut notes) = self.elf
             .iter_note_sections(self.data, Some(".note.gnu.build-id"))
         {
-            for note in notes {
-                if let Ok(note) = note {
-                    if note.n_type == elf::note::NT_GNU_BUILD_ID {
-                        return Some(note.desc);
-                    }
+            while let Some(Ok(note)) = notes.next() {
+                if note.n_type == elf::note::NT_GNU_BUILD_ID {
+                    return Some(note.desc);
                 }
             }
         }
