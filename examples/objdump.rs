@@ -47,7 +47,11 @@ fn main() {
             println!("Build ID: {:x?}", build_id);
         }
         if let Some((filename, crc)) = file.gnu_debuglink() {
-            println!("GNU debug link: {} CRC: {:08x}", String::from_utf8_lossy(filename), crc);
+            println!(
+                "GNU debug link: {} CRC: {:08x}",
+                String::from_utf8_lossy(filename),
+                crc
+            );
         }
 
         for segment in file.segments() {

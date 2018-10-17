@@ -1,5 +1,5 @@
 use alloc::borrow::Cow;
-use {Uuid, Machine, SectionKind, Symbol, SymbolMap};
+use {Machine, SectionKind, Symbol, SymbolMap, Uuid};
 
 /// An object file.
 pub trait Object<'data, 'file> {

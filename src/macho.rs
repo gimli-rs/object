@@ -1,7 +1,7 @@
 use alloc::borrow::Cow;
+use alloc::vec::Vec;
 use std::fmt;
 use std::slice;
-use alloc::vec::Vec;
 
 use goblin::mach;
 use goblin::mach::load_command::CommandVariant;
@@ -104,10 +104,12 @@ where
         } else {
             (false, section_name)
         };
-        let cmp_section_name = |name: &str| if system_section {
-            name.starts_with("__") && section_name == &name[2..]
-        } else {
-            section_name == name
+        let cmp_section_name = |name: &str| {
+            if system_section {
+                name.starts_with("__") && section_name == &name[2..]
+            } else {
+                section_name == name
+            }
         };
 
         for segment in &self.macho.segments {
@@ -218,15 +220,18 @@ where
 
     fn mach_uuid(&self) -> Option<Uuid> {
         // Return the UUID from the `LC_UUID` load command, if one is present.
-        self.macho.load_commands.iter().filter_map(|lc| {
-            match lc.command {
-                CommandVariant::Uuid(ref cmd) => {
-                    //TODO: Uuid should have a `from_array` method that can't fail.
-                    Uuid::from_slice(&cmd.uuid).ok()
+        self.macho
+            .load_commands
+            .iter()
+            .filter_map(|lc| {
+                match lc.command {
+                    CommandVariant::Uuid(ref cmd) => {
+                        //TODO: Uuid should have a `from_array` method that can't fail.
+                        Uuid::from_slice(&cmd.uuid).ok()
+                    }
+                    _ => None,
                 }
-                _ => None,
-            }
-        }).nth(0)
+            }).nth(0)
     }
 
     fn entry(&self) -> u64 {

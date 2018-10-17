@@ -1,17 +1,17 @@
-use std::slice;
 use alloc::borrow::Cow;
 use alloc::fmt;
 use alloc::vec::Vec;
+use std::slice;
 
 #[cfg(feature = "compression")]
 use flate2::{Decompress, FlushDecompress};
 
-use goblin::{elf, strtab};
 #[cfg(feature = "compression")]
 use goblin::container;
-use scroll::{self, Pread};
+use goblin::{elf, strtab};
 #[cfg(feature = "compression")]
 use scroll::ctx::TryFromCtx;
+use scroll::{self, Pread};
 
 use {Machine, Object, ObjectSection, ObjectSegment, SectionKind, Symbol, SymbolKind, SymbolMap};
 
@@ -113,7 +113,10 @@ impl<'data> ElfFile<'data> {
             let mut decompressed = Vec::with_capacity(uncompressed_size as usize);
             let mut decompress = Decompress::new(true);
             if let Err(_) = decompress.decompress_vec(
-                compressed_data, &mut decompressed, FlushDecompress::Finish) {
+                compressed_data,
+                &mut decompressed,
+                FlushDecompress::Finish,
+            ) {
                 return Cow::Borrowed(data);
             }
             Cow::Owned(decompressed)
@@ -138,8 +141,9 @@ impl<'data> ElfFile<'data> {
         let uncompressed_size: u32 = data.pread_with(8, scroll::BE).unwrap();
         let mut decompressed = Vec::with_capacity(uncompressed_size as usize);
         let mut decompress = Decompress::new(true);
-        if let Err(_) = decompress.decompress_vec(
-            &data[12..], &mut decompressed, FlushDecompress::Finish) {
+        if let Err(_) =
+            decompress.decompress_vec(&data[12..], &mut decompressed, FlushDecompress::Finish)
+        {
             return data;
         }
         Cow::Owned(decompressed)
@@ -153,7 +157,8 @@ impl<'data> ElfFile<'data> {
         }
         let z_name = format!(".zdebug_{}", &section_name[7..]);
         // Note that we accept data in .zdebug_ that isn't actually compressed.
-        self.section_data_by_name(&z_name).map(|data| self.maybe_decompress_data_gnu(data))
+        self.section_data_by_name(&z_name)
+            .map(|data| self.maybe_decompress_data_gnu(data))
     }
 
     #[cfg(not(feature = "compression"))]
@@ -253,7 +258,8 @@ where
                 }
             }
         }
-        if let Some(mut notes) = self.elf
+        if let Some(mut notes) = self
+            .elf
             .iter_note_sections(self.data, Some(".note.gnu.build-id"))
         {
             while let Some(Ok(note)) = notes.next() {
@@ -331,11 +337,9 @@ impl<'data, 'file> Iterator for ElfSectionIterator<'data, 'file> {
     type Item = ElfSection<'data, 'file>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.iter.next().map(|section| {
-            ElfSection {
-                file: self.file,
-                section,
-            }
+        self.iter.next().map(|section| ElfSection {
+            file: self.file,
+            section,
         })
     }
 }

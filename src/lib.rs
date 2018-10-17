@@ -14,10 +14,10 @@
 #[macro_use]
 extern crate std;
 
-#[cfg(all(not(feature = "std"), feature="compression"))]
+#[cfg(all(not(feature = "std"), feature = "compression"))]
 #[macro_use]
 extern crate alloc;
-#[cfg(all(not(feature = "std"), not(feature="compression")))]
+#[cfg(all(not(feature = "std"), not(feature = "compression")))]
 extern crate alloc;
 #[cfg(not(feature = "std"))]
 extern crate core as std;
@@ -374,39 +374,34 @@ where
 
     fn segments(&'file self) -> SegmentIterator<'data, 'file> {
         SegmentIterator {
-            inner: map_inner!(self.inner, FileInternal, SegmentIteratorInternal, |x| {
-                x.segments()
-            }),
+            inner: map_inner!(self.inner, FileInternal, SegmentIteratorInternal, |x| x
+                .segments()),
         }
     }
 
     fn section_data_by_name(&self, section_name: &str) -> Option<Cow<'data, [u8]>> {
-        with_inner!(self.inner, FileInternal, |x| x.section_data_by_name(
-            section_name
-        ))
+        with_inner!(self.inner, FileInternal, |x| x
+            .section_data_by_name(section_name))
     }
 
     fn sections(&'file self) -> SectionIterator<'data, 'file> {
         SectionIterator {
-            inner: map_inner!(self.inner, FileInternal, SectionIteratorInternal, |x| {
-                x.sections()
-            }),
+            inner: map_inner!(self.inner, FileInternal, SectionIteratorInternal, |x| x
+                .sections()),
         }
     }
 
     fn symbols(&'file self) -> SymbolIterator<'data, 'file> {
         SymbolIterator {
-            inner: map_inner!(self.inner, FileInternal, SymbolIteratorInternal, |x| {
-                x.symbols()
-            }),
+            inner: map_inner!(self.inner, FileInternal, SymbolIteratorInternal, |x| x
+                .symbols()),
         }
     }
 
     fn dynamic_symbols(&'file self) -> SymbolIterator<'data, 'file> {
         SymbolIterator {
-            inner: map_inner!(self.inner, FileInternal, SymbolIteratorInternal, |x| {
-                x.dynamic_symbols()
-            }),
+            inner: map_inner!(self.inner, FileInternal, SymbolIteratorInternal, |x| x
+                .dynamic_symbols()),
         }
     }
 
@@ -597,8 +592,7 @@ impl<'data> SymbolMap<'data> {
                 } else {
                     std::cmp::Ordering::Less
                 }
-            })
-            .ok()
+            }).ok()
             .and_then(|index| self.symbols.get(index))
     }
 

@@ -5,9 +5,7 @@ use std::slice;
 
 use goblin::pe;
 
-use {
-    Machine, Object, ObjectSection, ObjectSegment, SectionKind, Symbol, SymbolKind, SymbolMap,
-};
+use {Machine, Object, ObjectSection, ObjectSegment, SectionKind, Symbol, SymbolKind, SymbolMap};
 
 /// A PE object file.
 #[derive(Debug)]

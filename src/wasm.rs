@@ -4,9 +4,7 @@ use std::borrow::{Cow, ToOwned};
 use std::slice;
 use std::u64;
 
-use {
-    Machine, Object, ObjectSection, ObjectSegment, SectionKind, Symbol, SymbolMap,
-};
+use {Machine, Object, ObjectSection, ObjectSegment, SectionKind, Symbol, SymbolMap};
 
 /// A WebAssembly object file.
 #[derive(Debug)]
@@ -17,10 +15,9 @@ pub struct WasmFile {
 impl<'data> WasmFile {
     /// Parse the raw wasm data.
     pub fn parse(mut data: &'data [u8]) -> Result<Self, &'static str> {
-        let module = elements::Module::deserialize(&mut data).map_err(|_| "failed to parse wasm")?;
-        Ok(WasmFile {
-            module,
-        })
+        let module =
+            elements::Module::deserialize(&mut data).map_err(|_| "failed to parse wasm")?;
+        Ok(WasmFile { module })
     }
 }
 
@@ -75,9 +72,7 @@ impl<'file> Object<'static, 'file> for WasmFile {
     }
 
     fn segments(&'file self) -> Self::SegmentIterator {
-        WasmSegmentIterator {
-            file: self,
-        }
+        WasmSegmentIterator { file: self }
     }
 
     fn entry(&'file self) -> u64 {
@@ -87,37 +82,48 @@ impl<'file> Object<'static, 'file> for WasmFile {
     fn section_data_by_name(&self, section_name: &str) -> Option<Cow<'static, [u8]>> {
         match section_name {
             // Known wasm section names.
-            "Type" => self.module
+            "Type" => self
+                .module
                 .type_section()
                 .and_then(|s| serialize_to_cow(s.clone())),
-            "Import" => self.module
+            "Import" => self
+                .module
                 .import_section()
                 .and_then(|s| serialize_to_cow(s.clone())),
-            "Function" => self.module
+            "Function" => self
+                .module
                 .function_section()
                 .and_then(|s| serialize_to_cow(s.clone())),
-            "Table" => self.module
+            "Table" => self
+                .module
                 .table_section()
                 .and_then(|s| serialize_to_cow(s.clone())),
-            "Memory" => self.module
+            "Memory" => self
+                .module
                 .memory_section()
                 .and_then(|s| serialize_to_cow(s.clone())),
-            "Global" => self.module
+            "Global" => self
+                .module
                 .global_section()
                 .and_then(|s| serialize_to_cow(s.clone())),
-            "Export" => self.module
+            "Export" => self
+                .module
                 .export_section()
                 .and_then(|s| serialize_to_cow(s.clone())),
-            "Start" => self.module
+            "Start" => self
+                .module
                 .start_section()
                 .and_then(|s| serialize_to_cow(elements::VarUint32::from(s))),
-            "Element" => self.module
+            "Element" => self
+                .module
                 .elements_section()
                 .and_then(|s| serialize_to_cow(s.clone())),
-            "Code" => self.module
+            "Code" => self
+                .module
                 .code_section()
                 .and_then(|s| serialize_to_cow(s.clone())),
-            "Data" => self.module
+            "Data" => self
+                .module
                 .data_section()
                 .and_then(|s| serialize_to_cow(s.clone())),
             // Custom sections.
@@ -141,15 +147,11 @@ impl<'file> Object<'static, 'file> for WasmFile {
     }
 
     fn symbols(&'file self) -> Self::SymbolIterator {
-        WasmSymbolIterator {
-            file: self,
-        }
+        WasmSymbolIterator { file: self }
     }
 
     fn dynamic_symbols(&'file self) -> Self::SymbolIterator {
-        WasmSymbolIterator {
-            file: self,
-        }
+        WasmSymbolIterator { file: self }
     }
 
     fn symbol_map(&self) -> SymbolMap<'static> {
@@ -205,9 +207,7 @@ impl<'file> Iterator for WasmSectionIterator<'file> {
     type Item = WasmSection<'file>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.sections.next().map(|s| WasmSection {
-            section: s,
-        })
+        self.sections.next().map(|s| WasmSection { section: s })
     }
 }
 
