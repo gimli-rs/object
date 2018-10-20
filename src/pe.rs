@@ -5,7 +5,10 @@ use std::slice;
 
 use goblin::pe;
 
-use {Machine, Object, ObjectSection, ObjectSegment, SectionKind, Symbol, SymbolKind, SymbolMap};
+use {
+    Machine, Object, ObjectSection, ObjectSegment, Relocation, SectionKind, Symbol, SymbolKind,
+    SymbolMap,
+};
 
 /// A PE object file.
 #[derive(Debug)]
@@ -63,6 +66,10 @@ where
     exports: slice::Iter<'file, pe::export::Export<'data>>,
     imports: slice::Iter<'file, pe::import::Import<'data>>,
 }
+
+/// An iterator over the relocations in an `PeSection`.
+#[derive(Debug)]
+pub struct PeRelocationIterator;
 
 impl<'data> PeFile<'data> {
     /// Get the PE headers of the file.
@@ -217,6 +224,8 @@ impl<'data, 'file> Iterator for PeSectionIterator<'data, 'file> {
 }
 
 impl<'data, 'file> ObjectSection<'data> for PeSection<'data, 'file> {
+    type RelocationIterator = PeRelocationIterator;
+
     #[inline]
     fn address(&self) -> u64 {
         u64::from(self.section.virtual_address)
@@ -268,6 +277,10 @@ impl<'data, 'file> ObjectSection<'data> for PeSection<'data, 'file> {
             SectionKind::Unknown
         }
     }
+
+    fn relocations(&self) -> PeRelocationIterator {
+        PeRelocationIterator
+    }
 }
 
 impl<'data, 'file> Iterator for PeSymbolIterator<'data, 'file> {
@@ -298,6 +311,14 @@ impl<'data, 'file> Iterator for PeSymbolIterator<'data, 'file> {
                 size: 0,
             });
         }
+        None
+    }
+}
+
+impl Iterator for PeRelocationIterator {
+    type Item = (u64, Relocation);
+
+    fn next(&mut self) -> Option<Self::Item> {
         None
     }
 }

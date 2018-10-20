@@ -1,5 +1,5 @@
 use alloc::borrow::Cow;
-use {Machine, SectionKind, Symbol, SymbolMap, Uuid};
+use {Machine, Relocation, SectionKind, Symbol, SymbolMap, Uuid};
 
 /// An object file.
 pub trait Object<'data, 'file> {
@@ -111,6 +111,12 @@ pub trait ObjectSegment<'data> {
 
 /// A section defined in an object file.
 pub trait ObjectSection<'data> {
+    /// An iterator over the relocations for a section.
+    ///
+    /// The first field in the item tuple is the section offset
+    /// that the relocation applies to.
+    type RelocationIterator: Iterator<Item = (u64, Relocation)>;
+
     /// Returns the address of the section.
     fn address(&self) -> u64;
 
@@ -137,4 +143,7 @@ pub trait ObjectSection<'data> {
 
     /// Return the kind of this section.
     fn kind(&self) -> SectionKind;
+
+    /// Get the relocations for this section.
+    fn relocations(&self) -> Self::RelocationIterator;
 }

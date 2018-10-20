@@ -3,16 +3,22 @@ use alloc::vec::Vec;
 use std::fmt;
 use std::slice;
 
+use goblin::container;
 use goblin::mach;
 use goblin::mach::load_command::CommandVariant;
 use uuid::Uuid;
 
-use {Machine, Object, ObjectSection, ObjectSegment, SectionKind, Symbol, SymbolKind, SymbolMap};
+use {
+    Machine, Object, ObjectSection, ObjectSegment, Relocation, RelocationKind, SectionKind, Symbol,
+    SymbolKind, SymbolMap,
+};
 
 /// A Mach-O object file.
 #[derive(Debug)]
 pub struct MachOFile<'data> {
     macho: mach::MachO<'data>,
+    data: &'data [u8],
+    ctx: container::Ctx,
 }
 
 /// An iterator over the segments of a `MachOFile`.
@@ -38,13 +44,18 @@ pub struct MachOSectionIterator<'data, 'file>
 where
     'data: 'file,
 {
+    file: &'file MachOFile<'data>,
     segments: slice::Iter<'file, mach::segment::Segment<'data>>,
     sections: Option<mach::segment::SectionIterator<'data>>,
 }
 
 /// A section of a `MachOFile`.
 #[derive(Debug)]
-pub struct MachOSection<'data> {
+pub struct MachOSection<'data, 'file>
+where
+    'data: 'file,
+{
+    file: &'file MachOFile<'data>,
     section: mach::segment::Section,
     data: mach::segment::SectionData<'data>,
 }
@@ -53,6 +64,15 @@ pub struct MachOSection<'data> {
 pub struct MachOSymbolIterator<'data> {
     symbols: mach::symbols::SymbolIterator<'data>,
     section_kinds: Vec<SectionKind>,
+}
+
+/// An iterator over the relocations in an `MachOSection`.
+pub struct MachORelocationIterator<'data, 'file>
+where
+    'data: 'file,
+{
+    file: &'file MachOFile<'data>,
+    relocations: mach::segment::RelocationIterator<'data>,
 }
 
 impl<'data> MachOFile<'data> {
@@ -65,8 +85,11 @@ impl<'data> MachOFile<'data> {
 
     /// Parse the raw Mach-O file data.
     pub fn parse(data: &'data [u8]) -> Result<Self, &'static str> {
+        let (_magic, ctx) =
+            mach::parse_magic_and_ctx(data, 0).map_err(|_| "Could not parse Mach-O magic")?;
+        let ctx = ctx.ok_or("Invalid Mach-O magic")?;
         let macho = mach::MachO::parse(data, 0).map_err(|_| "Could not parse Mach-O header")?;
-        Ok(MachOFile { macho })
+        Ok(MachOFile { macho, data, ctx })
     }
 }
 
@@ -76,7 +99,7 @@ where
 {
     type Segment = MachOSegment<'data, 'file>;
     type SegmentIterator = MachOSegmentIterator<'data, 'file>;
-    type Section = MachOSection<'data>;
+    type Section = MachOSection<'data, 'file>;
     type SectionIterator = MachOSectionIterator<'data, 'file>;
     type SymbolIterator = MachOSymbolIterator<'data>;
 
@@ -96,7 +119,7 @@ where
         }
     }
 
-    fn section_by_name(&'file self, section_name: &str) -> Option<MachOSection<'data>> {
+    fn section_by_name(&'file self, section_name: &str) -> Option<MachOSection<'data, 'file>> {
         // Translate the "." prefix to the "__" prefix used by OSX/Mach-O, eg
         // ".debug_info" to "__debug_info".
         let (system_section, section_name) = if section_name.starts_with('.') {
@@ -118,7 +141,11 @@ where
             for section in segment {
                 if let Ok((section, data)) = section {
                     if cmp_section_name(section.name().ok()) {
-                        return Some(MachOSection { section, data });
+                        return Some(MachOSection {
+                            file: self,
+                            section,
+                            data,
+                        });
                     }
                 } else {
                     break;
@@ -130,6 +157,7 @@ where
 
     fn sections(&'file self) -> MachOSectionIterator<'data, 'file> {
         MachOSectionIterator {
+            file: self,
             segments: self.macho.segments.iter(),
             sections: None,
         }
@@ -147,7 +175,11 @@ where
         'segment: for segment in &self.macho.segments {
             for section in segment {
                 if let Ok((section, data)) = section {
-                    let section = MachOSection { section, data };
+                    let section = MachOSection {
+                        file: self,
+                        section,
+                        data,
+                    };
                     section_kinds.push(section.kind());
                 } else {
                     // We can't process more segments because the section index will be wrong.
@@ -277,13 +309,17 @@ impl<'data, 'file> fmt::Debug for MachOSectionIterator<'data, 'file> {
 }
 
 impl<'data, 'file> Iterator for MachOSectionIterator<'data, 'file> {
-    type Item = MachOSection<'data>;
+    type Item = MachOSection<'data, 'file>;
 
     fn next(&mut self) -> Option<Self::Item> {
         loop {
             if let Some(ref mut sections) = self.sections {
                 while let Some(Ok((section, data))) = sections.next() {
-                    return Some(MachOSection { section, data });
+                    return Some(MachOSection {
+                        file: self.file,
+                        section,
+                        data,
+                    });
                 }
             }
             match self.segments.next() {
@@ -296,7 +332,9 @@ impl<'data, 'file> Iterator for MachOSectionIterator<'data, 'file> {
     }
 }
 
-impl<'data> ObjectSection<'data> for MachOSection<'data> {
+impl<'data, 'file> ObjectSection<'data> for MachOSection<'data, 'file> {
+    type RelocationIterator = MachORelocationIterator<'data, 'file>;
+
     #[inline]
     fn address(&self) -> u64 {
         self.section.addr
@@ -334,6 +372,13 @@ impl<'data> ObjectSection<'data> for MachOSection<'data> {
             (Some("__DATA"), Some("__data")) => SectionKind::Data,
             (Some("__DATA"), Some("__bss")) => SectionKind::UninitializedData,
             _ => SectionKind::Other,
+        }
+    }
+
+    fn relocations(&self) -> MachORelocationIterator<'data, 'file> {
+        MachORelocationIterator {
+            file: self.file,
+            relocations: self.section.iter_relocations(self.file.data, self.file.ctx),
         }
     }
 }
@@ -381,5 +426,52 @@ impl<'data> Iterator for MachOSymbolIterator<'data> {
             });
         }
         None
+    }
+}
+
+impl<'data, 'file> Iterator for MachORelocationIterator<'data, 'file> {
+    type Item = (u64, Relocation);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.relocations.next()?.ok().map(|reloc| {
+            let kind = match self.file.macho.header.cputype {
+                mach::cputype::CPU_TYPE_ARM => match (reloc.r_type(), reloc.r_length()) {
+                    (mach::relocation::ARM_RELOC_VANILLA, 2) => RelocationKind::Direct32,
+                    (mach::relocation::ARM_RELOC_VANILLA, 3) => RelocationKind::Direct64,
+                    _ => RelocationKind::Other(reloc.r_info),
+                },
+                mach::cputype::CPU_TYPE_ARM64 => match (reloc.r_type(), reloc.r_length()) {
+                    (mach::relocation::ARM64_RELOC_UNSIGNED, 2) => RelocationKind::Direct32,
+                    (mach::relocation::ARM64_RELOC_UNSIGNED, 3) => RelocationKind::Direct64,
+                    _ => RelocationKind::Other(reloc.r_info),
+                },
+                mach::cputype::CPU_TYPE_X86 => match (reloc.r_type(), reloc.r_length()) {
+                    (mach::relocation::GENERIC_RELOC_VANILLA, 2) => RelocationKind::Direct32,
+                    (mach::relocation::GENERIC_RELOC_VANILLA, 3) => RelocationKind::Direct64,
+                    _ => RelocationKind::Other(reloc.r_info),
+                },
+                mach::cputype::CPU_TYPE_X86_64 => match (reloc.r_type(), reloc.r_length()) {
+                    (mach::relocation::X86_64_RELOC_UNSIGNED, 2) => RelocationKind::Direct32,
+                    (mach::relocation::X86_64_RELOC_UNSIGNED, 3) => RelocationKind::Direct64,
+                    _ => RelocationKind::Other(reloc.r_info),
+                },
+                _ => RelocationKind::Other(reloc.r_info),
+            };
+            (
+                reloc.r_address as u64,
+                Relocation {
+                    kind,
+                    symbol: reloc.r_symbolnum() as u64,
+                    addend: 0,
+                    implicit_addend: true,
+                },
+            )
+        })
+    }
+}
+
+impl<'data, 'file> fmt::Debug for MachORelocationIterator<'data, 'file> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.debug_struct("MachORelocationIterator").finish()
     }
 }

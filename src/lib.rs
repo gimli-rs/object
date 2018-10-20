@@ -185,7 +185,7 @@ where
     'data: 'file,
 {
     Elf(ElfSection<'data, 'file>),
-    MachO(MachOSection<'data>),
+    MachO(MachOSection<'data, 'file>),
     Pe(PeSection<'data, 'file>),
     #[cfg(feature = "wasm")]
     Wasm(WasmSection<'file>),
@@ -263,6 +263,49 @@ pub enum SymbolKind {
 #[derive(Debug)]
 pub struct SymbolMap<'data> {
     symbols: Vec<Symbol<'data>>,
+}
+
+/// A relocation entry.
+#[derive(Debug)]
+pub struct Relocation {
+    kind: RelocationKind,
+    symbol: u64,
+    addend: i64,
+    implicit_addend: bool,
+}
+
+/// The kind of a relocation.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RelocationKind {
+    /// u32, symbol + addend
+    Direct32,
+    /// i32, symbol + addend
+    DirectSigned32,
+    /// u64, symbol + addend
+    Direct64,
+    /// Some other kind of relocation. The value is dependent on file format and machine.
+    Other(u32),
+}
+
+/// An iterator over relocation entries
+#[derive(Debug)]
+pub struct RelocationIterator<'data, 'file>
+where
+    'data: 'file,
+{
+    inner: RelocationIteratorInternal<'data, 'file>,
+}
+
+#[derive(Debug)]
+enum RelocationIteratorInternal<'data, 'file>
+where
+    'data: 'file,
+{
+    Elf(ElfRelocationIterator<'data, 'file>),
+    MachO(MachORelocationIterator<'data, 'file>),
+    Pe(PeRelocationIterator),
+    #[cfg(feature = "wasm")]
+    Wasm(WasmRelocationIterator),
 }
 
 /// Evaluate an expression on the contents of a file format enum.
@@ -515,6 +558,8 @@ impl<'data, 'file> fmt::Debug for Section<'data, 'file> {
 }
 
 impl<'data, 'file> ObjectSection<'data> for Section<'data, 'file> {
+    type RelocationIterator = RelocationIterator<'data, 'file>;
+
     fn address(&self) -> u64 {
         with_inner!(self.inner, SectionInternal, |x| x.address())
     }
@@ -541,6 +586,17 @@ impl<'data, 'file> ObjectSection<'data> for Section<'data, 'file> {
 
     fn kind(&self) -> SectionKind {
         with_inner!(self.inner, SectionInternal, |x| x.kind())
+    }
+
+    fn relocations(&self) -> RelocationIterator<'data, 'file> {
+        RelocationIterator {
+            inner: map_inner!(
+                self.inner,
+                SectionInternal,
+                RelocationIteratorInternal,
+                |x| x.relocations()
+            ),
+        }
     }
 }
 
@@ -632,5 +688,38 @@ impl<'data> SymbolMap<'data> {
             }
         }
         !symbol.is_undefined() && symbol.size() > 0
+    }
+}
+
+impl<'data, 'file> Iterator for RelocationIterator<'data, 'file> {
+    type Item = (u64, Relocation);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        with_inner_mut!(self.inner, RelocationIteratorInternal, |x| x.next())
+    }
+}
+
+impl Relocation {
+    /// The kind of relocation.
+    #[inline]
+    pub fn kind(&self) -> RelocationKind {
+        self.kind
+    }
+
+    /// The index of the symbol within the symbol table, if applicable.
+    #[inline]
+    pub fn symbol(&self) -> u64 {
+        self.symbol
+    }
+
+    /// The addend to use in the relocation calculation.
+    pub fn addend(&self) -> i64 {
+        self.addend
+    }
+
+    /// Returns true if there is an implicit addend stored in the data at the offset
+    /// to be relocated.
+    pub fn has_implicit_addend(&self) -> bool {
+        self.implicit_addend
     }
 }

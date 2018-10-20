@@ -3,7 +3,7 @@ extern crate object;
 
 use std::{env, fs, process};
 
-use object::Object;
+use object::{Object, ObjectSection};
 
 fn main() {
     let arg_len = env::args().len();
@@ -60,6 +60,18 @@ fn main() {
 
         for section in file.sections() {
             println!("{:?}", section);
+        }
+
+        for section in file.sections() {
+            if section.relocations().next().is_some() {
+                println!(
+                    "\n{} relocations",
+                    section.name().unwrap_or("<invalid name>")
+                );
+                for relocation in section.relocations() {
+                    println!("{:?}", relocation);
+                }
+            }
         }
     }
 }

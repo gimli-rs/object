@@ -4,7 +4,7 @@ use std::borrow::Cow;
 use std::slice;
 use std::u64;
 
-use {Machine, Object, ObjectSection, ObjectSegment, SectionKind, Symbol, SymbolMap};
+use {Machine, Object, ObjectSection, ObjectSegment, Relocation, SectionKind, Symbol, SymbolMap};
 
 /// A WebAssembly object file.
 #[derive(Debug)]
@@ -50,6 +50,10 @@ pub struct WasmSection<'file> {
 pub struct WasmSymbolIterator<'file> {
     file: &'file WasmFile,
 }
+
+/// An iterator over the relocations in an `WasmSection`.
+#[derive(Debug)]
+pub struct WasmRelocationIterator;
 
 fn serialize_to_cow<'a, S>(s: S) -> Option<Cow<'a, [u8]>>
 where
@@ -161,6 +165,8 @@ impl<'file> Iterator for WasmSectionIterator<'file> {
 }
 
 impl<'file> ObjectSection<'static> for WasmSection<'file> {
+    type RelocationIterator = WasmRelocationIterator;
+
     #[inline]
     fn address(&self) -> u64 {
         1
@@ -230,6 +236,10 @@ impl<'file> ObjectSection<'static> for WasmSection<'file> {
             elements::Section::Reloc(_) => SectionKind::Other,
         }
     }
+
+    fn relocations(&self) -> WasmRelocationIterator {
+        WasmRelocationIterator
+    }
 }
 
 impl<'file> Iterator for WasmSymbolIterator<'file> {
@@ -237,5 +247,13 @@ impl<'file> Iterator for WasmSymbolIterator<'file> {
 
     fn next(&mut self) -> Option<Self::Item> {
         unimplemented!()
+    }
+}
+
+impl Iterator for WasmRelocationIterator {
+    type Item = (u64, Relocation);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        None
     }
 }

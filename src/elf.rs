@@ -1,6 +1,7 @@
 use alloc::borrow::Cow;
 use alloc::fmt;
 use alloc::vec::Vec;
+use std::iter;
 use std::slice;
 
 #[cfg(feature = "compression")]
@@ -13,7 +14,10 @@ use goblin::{elf, strtab};
 use scroll::ctx::TryFromCtx;
 use scroll::{self, Pread};
 
-use {Machine, Object, ObjectSection, ObjectSegment, SectionKind, Symbol, SymbolKind, SymbolMap};
+use {
+    Machine, Object, ObjectSection, ObjectSegment, Relocation, RelocationKind, SectionKind, Symbol,
+    SymbolKind, SymbolMap,
+};
 
 /// An ELF object file.
 #[derive(Debug)]
@@ -49,7 +53,7 @@ where
     'data: 'file,
 {
     file: &'file ElfFile<'data>,
-    iter: slice::Iter<'file, elf::SectionHeader>,
+    iter: iter::Enumerate<slice::Iter<'file, elf::SectionHeader>>,
 }
 
 /// A section of an `ElfFile`.
@@ -59,6 +63,7 @@ where
     'data: 'file,
 {
     file: &'file ElfFile<'data>,
+    index: usize,
     section: &'file elf::SectionHeader,
 }
 
@@ -70,6 +75,18 @@ where
     strtab: &'file strtab::Strtab<'data>,
     symbols: elf::sym::SymIterator<'data>,
     section_kinds: Vec<SectionKind>,
+}
+
+/// An iterator over the relocations in an `ElfSection`.
+pub struct ElfRelocationIterator<'data, 'file>
+where
+    'data: 'file,
+{
+    /// The index of the section that the relocations apply to.
+    section_index: u32,
+    file: &'file ElfFile<'data>,
+    sections: slice::Iter<'file, (elf::ShdrIdx, elf::RelocSection<'data>)>,
+    relocations: Option<elf::reloc::RelocIterator<'data>>,
 }
 
 impl<'data> ElfFile<'data> {
@@ -90,11 +107,12 @@ impl<'data> ElfFile<'data> {
         &'file self,
         section_name: &str,
     ) -> Option<ElfSection<'data, 'file>> {
-        for section in self.elf.section_headers.iter() {
+        for (index, section) in self.elf.section_headers.iter().enumerate() {
             if let Some(Ok(name)) = self.elf.shdr_strtab.get(section.sh_name) {
                 if name == section_name {
                     return Some(ElfSection {
                         file: self,
+                        index,
                         section,
                     });
                 }
@@ -158,7 +176,7 @@ where
     fn sections(&'file self) -> ElfSectionIterator<'data, 'file> {
         ElfSectionIterator {
             file: self,
-            iter: self.elf.section_headers.iter(),
+            iter: self.elf.section_headers.iter().enumerate(),
         }
     }
 
@@ -287,7 +305,8 @@ impl<'data, 'file> Iterator for ElfSectionIterator<'data, 'file> {
     type Item = ElfSection<'data, 'file>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.iter.next().map(|section| ElfSection {
+        self.iter.next().map(|(index, section)| ElfSection {
+            index,
             file: self.file,
             section,
         })
@@ -368,6 +387,8 @@ impl<'data, 'file> ElfSection<'data, 'file> {
 }
 
 impl<'data, 'file> ObjectSection<'data> for ElfSection<'data, 'file> {
+    type RelocationIterator = ElfRelocationIterator<'data, 'file>;
+
     #[inline]
     fn address(&self) -> u64 {
         self.section.sh_addr
@@ -427,6 +448,15 @@ impl<'data, 'file> ObjectSection<'data> for ElfSection<'data, 'file> {
             _ => SectionKind::Unknown,
         }
     }
+
+    fn relocations(&self) -> ElfRelocationIterator<'data, 'file> {
+        ElfRelocationIterator {
+            section_index: self.index as u32,
+            file: self.file,
+            sections: self.file.elf.shdr_relocs.iter(),
+            relocations: None,
+        }
+    }
 }
 
 impl<'data, 'file> fmt::Debug for ElfSymbolIterator<'data, 'file> {
@@ -464,5 +494,65 @@ impl<'data, 'file> Iterator for ElfSymbolIterator<'data, 'file> {
                 global: elf::sym::st_bind(symbol.st_info) != elf::sym::STB_LOCAL,
             }
         })
+    }
+}
+
+impl<'data, 'file> Iterator for ElfRelocationIterator<'data, 'file> {
+    type Item = (u64, Relocation);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        loop {
+            if let Some(ref mut relocations) = self.relocations {
+                while let Some(reloc) = relocations.next() {
+                    let kind = match self.file.elf.header.e_machine {
+                        elf::header::EM_ARM => match reloc.r_type {
+                            elf::reloc::R_ARM_ABS32 => RelocationKind::Direct32,
+                            _ => RelocationKind::Other(reloc.r_type),
+                        },
+                        elf::header::EM_AARCH64 => match reloc.r_type {
+                            elf::reloc::R_AARCH64_ABS64 => RelocationKind::Direct64,
+                            elf::reloc::R_AARCH64_ABS32 => RelocationKind::Direct32,
+                            _ => RelocationKind::Other(reloc.r_type),
+                        },
+                        elf::header::EM_386 => match reloc.r_type {
+                            elf::reloc::R_386_32 => RelocationKind::Direct32,
+                            _ => RelocationKind::Other(reloc.r_type),
+                        },
+                        elf::header::EM_X86_64 => match reloc.r_type {
+                            elf::reloc::R_X86_64_64 => RelocationKind::Direct64,
+                            elf::reloc::R_X86_64_32 => RelocationKind::Direct32,
+                            elf::reloc::R_X86_64_32S => RelocationKind::DirectSigned32,
+                            _ => RelocationKind::Other(reloc.r_type),
+                        },
+                        _ => RelocationKind::Other(reloc.r_type),
+                    };
+                    return Some((
+                        reloc.r_offset,
+                        Relocation {
+                            kind,
+                            symbol: reloc.r_sym as u64,
+                            addend: reloc.r_addend.unwrap_or(0),
+                            implicit_addend: reloc.r_addend.is_none(),
+                        },
+                    ));
+                }
+            }
+            match self.sections.next() {
+                None => return None,
+                Some((index, relocs)) => {
+                    let section = &self.file.elf.section_headers[*index];
+                    if section.sh_info == self.section_index {
+                        self.relocations = Some(relocs.into_iter());
+                    }
+                    // TODO: do we need to return section.sh_link?
+                }
+            }
+        }
+    }
+}
+
+impl<'data, 'file> fmt::Debug for ElfRelocationIterator<'data, 'file> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.debug_struct("ElfRelocationIterator").finish()
     }
 }
