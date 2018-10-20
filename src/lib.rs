@@ -305,6 +305,19 @@ macro_rules! map_inner {
     };
 }
 
+/// Like `map_inner!`, but the result is a Result or Option.
+macro_rules! map_inner_option {
+    ($inner:expr, $from:ident, $to:ident, | $var:ident | $body:expr) => {
+        match $inner {
+            $from::Elf(ref $var) => $body.map($to::Elf),
+            $from::MachO(ref $var) => $body.map($to::MachO),
+            $from::Pe(ref $var) => $body.map($to::Pe),
+            #[cfg(feature = "wasm")]
+            $from::Wasm(ref $var) => $body.map($to::Wasm),
+        }
+    };
+}
+
 /// Call `next` for a file format iterator.
 macro_rules! next_inner {
     ($inner:expr, $from:ident, $to:ident) => {
@@ -377,6 +390,11 @@ where
             inner: map_inner!(self.inner, FileInternal, SegmentIteratorInternal, |x| x
                 .segments()),
         }
+    }
+
+    fn section_by_name(&'file self, section_name: &str) -> Option<Section<'data, 'file>> {
+        map_inner_option!(self.inner, FileInternal, SectionInternal, |x| x
+            .section_by_name(section_name)).map(|inner| Section { inner })
     }
 
     fn section_data_by_name(&self, section_name: &str) -> Option<Cow<'data, [u8]>> {
@@ -507,6 +525,10 @@ impl<'data, 'file> ObjectSection<'data> for Section<'data, 'file> {
 
     fn data(&self) -> Cow<'data, [u8]> {
         with_inner!(self.inner, SectionInternal, |x| x.data())
+    }
+
+    fn uncompressed_data(&self) -> Cow<'data, [u8]> {
+        with_inner!(self.inner, SectionInternal, |x| x.uncompressed_data())
     }
 
     fn name(&self) -> Option<&str> {

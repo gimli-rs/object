@@ -1,6 +1,6 @@
 use alloc::vec::Vec;
 use parity_wasm::elements::{self, Deserialize};
-use std::borrow::{Cow, ToOwned};
+use std::borrow::Cow;
 use std::slice;
 use std::u64;
 
@@ -79,65 +79,14 @@ impl<'file> Object<'static, 'file> for WasmFile {
         self.module.start_section().map_or(u64::MAX, |s| s as u64)
     }
 
-    fn section_data_by_name(&self, section_name: &str) -> Option<Cow<'static, [u8]>> {
-        match section_name {
-            // Known wasm section names.
-            "Type" => self
-                .module
-                .type_section()
-                .and_then(|s| serialize_to_cow(s.clone())),
-            "Import" => self
-                .module
-                .import_section()
-                .and_then(|s| serialize_to_cow(s.clone())),
-            "Function" => self
-                .module
-                .function_section()
-                .and_then(|s| serialize_to_cow(s.clone())),
-            "Table" => self
-                .module
-                .table_section()
-                .and_then(|s| serialize_to_cow(s.clone())),
-            "Memory" => self
-                .module
-                .memory_section()
-                .and_then(|s| serialize_to_cow(s.clone())),
-            "Global" => self
-                .module
-                .global_section()
-                .and_then(|s| serialize_to_cow(s.clone())),
-            "Export" => self
-                .module
-                .export_section()
-                .and_then(|s| serialize_to_cow(s.clone())),
-            "Start" => self
-                .module
-                .start_section()
-                .and_then(|s| serialize_to_cow(elements::VarUint32::from(s))),
-            "Element" => self
-                .module
-                .elements_section()
-                .and_then(|s| serialize_to_cow(s.clone())),
-            "Code" => self
-                .module
-                .code_section()
-                .and_then(|s| serialize_to_cow(s.clone())),
-            "Data" => self
-                .module
-                .data_section()
-                .and_then(|s| serialize_to_cow(s.clone())),
-            // Custom sections.
-            _ => {
-                for s in self.module.sections() {
-                    if let elements::Section::Custom(ref c) = *s {
-                        if c.name() == section_name {
-                            return Some(Cow::from(c.payload().to_owned()));
-                        }
-                    }
-                }
-                None
+    fn section_by_name(&'file self, section_name: &str) -> Option<WasmSection<'file>> {
+        for s in self.module.sections() {
+            let section = WasmSection { section: s };
+            if section.name() == Some(section_name) {
+                return Some(section);
             }
         }
+        None
     }
 
     fn sections(&'file self) -> Self::SectionIterator {
@@ -223,7 +172,18 @@ impl<'file> ObjectSection<'static> for WasmSection<'file> {
     }
 
     fn data(&self) -> Cow<'static, [u8]> {
-        serialize_to_cow(self.section.clone()).unwrap_or(Cow::from(&[][..]))
+        match *self.section {
+            elements::Section::Start(section) => {
+                serialize_to_cow(elements::VarUint32::from(section))
+            }
+            _ => serialize_to_cow(self.section.clone()),
+        }.unwrap_or(Cow::from(&[][..]))
+    }
+
+    #[inline]
+    fn uncompressed_data(&self) -> Cow<'static, [u8]> {
+        // TODO: does wasm support compression?
+        self.data()
     }
 
     fn name(&self) -> Option<&str> {

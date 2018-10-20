@@ -105,14 +105,14 @@ where
         }
     }
 
-    fn section_data_by_name(&self, section_name: &str) -> Option<Cow<'data, [u8]>> {
+    fn section_by_name(&'file self, section_name: &str) -> Option<PeSection<'data, 'file>> {
         for section in &self.pe.sections {
             if let Ok(name) = section.name() {
                 if name == section_name {
-                    return Some(Cow::from(
-                        &self.data[section.pointer_to_raw_data as usize..]
-                            [..cmp::min(section.virtual_size, section.size_of_raw_data) as usize]
-                    ));
+                    return Some(PeSection {
+                        file: self,
+                        section,
+                    });
                 }
             }
         }
@@ -230,8 +230,14 @@ impl<'data, 'file> ObjectSection<'data> for PeSection<'data, 'file> {
     fn data(&self) -> Cow<'data, [u8]> {
         Cow::from(
             &self.file.data[self.section.pointer_to_raw_data as usize..]
-                [..self.section.size_of_raw_data as usize],
+                [..cmp::min(self.section.virtual_size, self.section.size_of_raw_data) as usize],
         )
+    }
+
+    #[inline]
+    fn uncompressed_data(&self) -> Cow<'data, [u8]> {
+        // TODO: does PE support compression?
+        self.data()
     }
 
     fn name(&self) -> Option<&str> {

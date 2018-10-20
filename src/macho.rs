@@ -96,7 +96,7 @@ where
         }
     }
 
-    fn section_data_by_name(&self, section_name: &str) -> Option<Cow<'data, [u8]>> {
+    fn section_by_name(&'file self, section_name: &str) -> Option<MachOSection<'data>> {
         // Translate the "." prefix to the "__" prefix used by OSX/Mach-O, eg
         // ".debug_info" to "__debug_info".
         let (system_section, section_name) = if section_name.starts_with('.') {
@@ -104,21 +104,21 @@ where
         } else {
             (false, section_name)
         };
-        let cmp_section_name = |name: &str| {
-            if system_section {
-                name.starts_with("__") && section_name == &name[2..]
-            } else {
-                section_name == name
-            }
+        let cmp_section_name = |name: Option<&str>| {
+            name.map(|name| {
+                if system_section {
+                    name.starts_with("__") && section_name == &name[2..]
+                } else {
+                    section_name == name
+                }
+            }).unwrap_or(false)
         };
 
         for segment in &self.macho.segments {
             for section in segment {
                 if let Ok((section, data)) = section {
-                    if let Ok(name) = section.name() {
-                        if cmp_section_name(name) {
-                            return Some(Cow::from(data));
-                        }
+                    if cmp_section_name(section.name().ok()) {
+                        return Some(MachOSection { section, data });
                     }
                 } else {
                     break;
@@ -310,6 +310,12 @@ impl<'data> ObjectSection<'data> for MachOSection<'data> {
     #[inline]
     fn data(&self) -> Cow<'data, [u8]> {
         Cow::from(self.data)
+    }
+
+    #[inline]
+    fn uncompressed_data(&self) -> Cow<'data, [u8]> {
+        // TODO: does MachO support compression?
+        self.data()
     }
 
     #[inline]
