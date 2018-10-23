@@ -1,5 +1,6 @@
 use alloc::borrow::Cow;
 use alloc::vec::Vec;
+use std::cmp;
 use std::slice;
 
 use goblin::pe;
@@ -112,7 +113,7 @@ where
                 if name == section_name {
                     return Some(Cow::from(
                         &self.data[section.pointer_to_raw_data as usize..]
-                            [..section.virtual_size as usize],
+                            [..cmp::min(section.virtual_size, section.size_of_raw_data) as usize]
                     ));
                 }
             }
