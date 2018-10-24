@@ -33,5 +33,5 @@ script:
 
 after_success:
 - if [[ "$TRAVIS_OS_NAME" == "linux" && "$TRAVIS_RUST_VERSION" == "nightly" ]]; then
-    cargo tarpaulin --no-count --ciserver travis-ci --coveralls $TRAVIS_JOB_ID;
+    cargo tarpaulin --ciserver travis-ci --coveralls $TRAVIS_JOB_ID;
   fi
