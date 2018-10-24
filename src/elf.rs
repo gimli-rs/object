@@ -180,6 +180,14 @@ where
         }
     }
 
+    fn symbol_by_index(&self, index: u64) -> Option<Symbol<'data>> {
+        // TODO: determine section_kind too
+        self.elf
+            .syms
+            .get(index as usize)
+            .map(|symbol| parse_symbol(&symbol, &self.elf.strtab, &[]))
+    }
+
     fn symbols(&'file self) -> ElfSymbolIterator<'data, 'file> {
         ElfSymbolIterator {
             strtab: &self.elf.strtab,
@@ -469,31 +477,39 @@ impl<'data, 'file> Iterator for ElfSymbolIterator<'data, 'file> {
     type Item = Symbol<'data>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.symbols.next().map(|symbol| {
-            let name = self.strtab.get(symbol.st_name).and_then(Result::ok);
-            let kind = match elf::sym::st_type(symbol.st_info) {
-                elf::sym::STT_OBJECT => SymbolKind::Data,
-                elf::sym::STT_FUNC => SymbolKind::Text,
-                elf::sym::STT_SECTION => SymbolKind::Section,
-                elf::sym::STT_FILE => SymbolKind::File,
-                elf::sym::STT_COMMON => SymbolKind::Common,
-                elf::sym::STT_TLS => SymbolKind::Tls,
-                _ => SymbolKind::Unknown,
-            };
-            let section_kind = if symbol.st_shndx == elf::section_header::SHN_UNDEF as usize {
-                None
-            } else {
-                self.section_kinds.get(symbol.st_shndx).cloned()
-            };
-            Symbol {
-                name,
-                address: symbol.st_value,
-                size: symbol.st_size,
-                kind,
-                section_kind,
-                global: elf::sym::st_bind(symbol.st_info) != elf::sym::STB_LOCAL,
-            }
-        })
+        self.symbols
+            .next()
+            .map(|symbol| parse_symbol(&symbol, self.strtab, &self.section_kinds))
+    }
+}
+
+fn parse_symbol<'data>(
+    symbol: &elf::sym::Sym,
+    strtab: &strtab::Strtab<'data>,
+    section_kinds: &[SectionKind],
+) -> Symbol<'data> {
+    let name = strtab.get(symbol.st_name).and_then(Result::ok);
+    let kind = match elf::sym::st_type(symbol.st_info) {
+        elf::sym::STT_OBJECT => SymbolKind::Data,
+        elf::sym::STT_FUNC => SymbolKind::Text,
+        elf::sym::STT_SECTION => SymbolKind::Section,
+        elf::sym::STT_FILE => SymbolKind::File,
+        elf::sym::STT_COMMON => SymbolKind::Common,
+        elf::sym::STT_TLS => SymbolKind::Tls,
+        _ => SymbolKind::Unknown,
+    };
+    let section_kind = if symbol.st_shndx == elf::section_header::SHN_UNDEF as usize {
+        None
+    } else {
+        Some(section_kinds.get(symbol.st_shndx).cloned().unwrap_or(SectionKind::Unknown))
+    };
+    Symbol {
+        name,
+        address: symbol.st_value,
+        size: symbol.st_size,
+        kind,
+        section_kind,
+        global: elf::sym::st_bind(symbol.st_info) != elf::sym::STB_LOCAL,
     }
 }
 

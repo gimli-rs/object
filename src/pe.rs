@@ -133,6 +133,11 @@ where
         }
     }
 
+    fn symbol_by_index(&self, _index: u64) -> Option<Symbol<'data>> {
+        // TODO: return COFF symbols for object files
+        None
+    }
+
     fn symbols(&'file self) -> PeSymbolIterator<'data, 'file> {
         // TODO: return COFF symbols for object files
         PeSymbolIterator {

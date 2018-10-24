@@ -99,6 +99,10 @@ impl<'file> Object<'static, 'file> for WasmFile {
         }
     }
 
+    fn symbol_by_index(&self, _index: u64) -> Option<Symbol<'static>> {
+        unimplemented!()
+    }
+
     fn symbols(&'file self) -> Self::SymbolIterator {
         WasmSymbolIterator { file: self }
     }

@@ -55,10 +55,20 @@ pub trait Object<'data, 'file> {
     /// Get an iterator over the sections in the file.
     fn sections(&'file self) -> Self::SectionIterator;
 
+    /// Get the debugging symbol at the given index.
+    ///
+    /// This is similar to `self.symbols().nth(index)`, except that
+    /// the index will take into account malformed or unsupported symbols.
+    fn symbol_by_index(&self, index: u64) -> Option<Symbol<'data>>;
+
     /// Get an iterator over the debugging symbols in the file.
+    ///
+    /// This may skip over symbols that are malformed or unsupported.
     fn symbols(&'file self) -> Self::SymbolIterator;
 
     /// Get an iterator over the dynamic linking symbols in the file.
+    ///
+    /// This may skip over symbols that are malformed or unsupported.
     fn dynamic_symbols(&'file self) -> Self::SymbolIterator;
 
     /// Construct a map from addresses to symbols.
