@@ -14,10 +14,10 @@
 #[macro_use]
 extern crate std;
 
-#[cfg(all(not(feature = "std"), feature="compression"))]
+#[cfg(all(not(feature = "std"), feature = "compression"))]
 #[macro_use]
 extern crate alloc;
-#[cfg(all(not(feature = "std"), not(feature="compression")))]
+#[cfg(all(not(feature = "std"), not(feature = "compression")))]
 extern crate alloc;
 #[cfg(not(feature = "std"))]
 extern crate core as std;
@@ -185,7 +185,7 @@ where
     'data: 'file,
 {
     Elf(ElfSection<'data, 'file>),
-    MachO(MachOSection<'data>),
+    MachO(MachOSection<'data, 'file>),
     Pe(PeSection<'data, 'file>),
     #[cfg(feature = "wasm")]
     Wasm(WasmSection<'file>),
@@ -265,6 +265,49 @@ pub struct SymbolMap<'data> {
     symbols: Vec<Symbol<'data>>,
 }
 
+/// A relocation entry.
+#[derive(Debug)]
+pub struct Relocation {
+    kind: RelocationKind,
+    symbol: u64,
+    addend: i64,
+    implicit_addend: bool,
+}
+
+/// The kind of a relocation.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RelocationKind {
+    /// u32, symbol + addend
+    Direct32,
+    /// i32, symbol + addend
+    DirectSigned32,
+    /// u64, symbol + addend
+    Direct64,
+    /// Some other kind of relocation. The value is dependent on file format and machine.
+    Other(u32),
+}
+
+/// An iterator over relocation entries
+#[derive(Debug)]
+pub struct RelocationIterator<'data, 'file>
+where
+    'data: 'file,
+{
+    inner: RelocationIteratorInternal<'data, 'file>,
+}
+
+#[derive(Debug)]
+enum RelocationIteratorInternal<'data, 'file>
+where
+    'data: 'file,
+{
+    Elf(ElfRelocationIterator<'data, 'file>),
+    MachO(MachORelocationIterator<'data, 'file>),
+    Pe(PeRelocationIterator),
+    #[cfg(feature = "wasm")]
+    Wasm(WasmRelocationIterator),
+}
+
 /// Evaluate an expression on the contents of a file format enum.
 ///
 /// This is a hack to avoid virtual calls.
@@ -301,6 +344,19 @@ macro_rules! map_inner {
             $from::Pe(ref $var) => $to::Pe($body),
             #[cfg(feature = "wasm")]
             $from::Wasm(ref $var) => $to::Wasm($body),
+        }
+    };
+}
+
+/// Like `map_inner!`, but the result is a Result or Option.
+macro_rules! map_inner_option {
+    ($inner:expr, $from:ident, $to:ident, | $var:ident | $body:expr) => {
+        match $inner {
+            $from::Elf(ref $var) => $body.map($to::Elf),
+            $from::MachO(ref $var) => $body.map($to::MachO),
+            $from::Pe(ref $var) => $body.map($to::Pe),
+            #[cfg(feature = "wasm")]
+            $from::Wasm(ref $var) => $body.map($to::Wasm),
         }
     };
 }
@@ -374,39 +430,39 @@ where
 
     fn segments(&'file self) -> SegmentIterator<'data, 'file> {
         SegmentIterator {
-            inner: map_inner!(self.inner, FileInternal, SegmentIteratorInternal, |x| {
-                x.segments()
-            }),
+            inner: map_inner!(self.inner, FileInternal, SegmentIteratorInternal, |x| x
+                .segments()),
         }
     }
 
+    fn section_by_name(&'file self, section_name: &str) -> Option<Section<'data, 'file>> {
+        map_inner_option!(self.inner, FileInternal, SectionInternal, |x| x
+            .section_by_name(section_name)).map(|inner| Section { inner })
+    }
+
     fn section_data_by_name(&self, section_name: &str) -> Option<Cow<'data, [u8]>> {
-        with_inner!(self.inner, FileInternal, |x| x.section_data_by_name(
-            section_name
-        ))
+        with_inner!(self.inner, FileInternal, |x| x
+            .section_data_by_name(section_name))
     }
 
     fn sections(&'file self) -> SectionIterator<'data, 'file> {
         SectionIterator {
-            inner: map_inner!(self.inner, FileInternal, SectionIteratorInternal, |x| {
-                x.sections()
-            }),
+            inner: map_inner!(self.inner, FileInternal, SectionIteratorInternal, |x| x
+                .sections()),
         }
     }
 
     fn symbols(&'file self) -> SymbolIterator<'data, 'file> {
         SymbolIterator {
-            inner: map_inner!(self.inner, FileInternal, SymbolIteratorInternal, |x| {
-                x.symbols()
-            }),
+            inner: map_inner!(self.inner, FileInternal, SymbolIteratorInternal, |x| x
+                .symbols()),
         }
     }
 
     fn dynamic_symbols(&'file self) -> SymbolIterator<'data, 'file> {
         SymbolIterator {
-            inner: map_inner!(self.inner, FileInternal, SymbolIteratorInternal, |x| {
-                x.dynamic_symbols()
-            }),
+            inner: map_inner!(self.inner, FileInternal, SymbolIteratorInternal, |x| x
+                .dynamic_symbols()),
         }
     }
 
@@ -502,6 +558,8 @@ impl<'data, 'file> fmt::Debug for Section<'data, 'file> {
 }
 
 impl<'data, 'file> ObjectSection<'data> for Section<'data, 'file> {
+    type RelocationIterator = RelocationIterator<'data, 'file>;
+
     fn address(&self) -> u64 {
         with_inner!(self.inner, SectionInternal, |x| x.address())
     }
@@ -514,6 +572,10 @@ impl<'data, 'file> ObjectSection<'data> for Section<'data, 'file> {
         with_inner!(self.inner, SectionInternal, |x| x.data())
     }
 
+    fn uncompressed_data(&self) -> Cow<'data, [u8]> {
+        with_inner!(self.inner, SectionInternal, |x| x.uncompressed_data())
+    }
+
     fn name(&self) -> Option<&str> {
         with_inner!(self.inner, SectionInternal, |x| x.name())
     }
@@ -524,6 +586,17 @@ impl<'data, 'file> ObjectSection<'data> for Section<'data, 'file> {
 
     fn kind(&self) -> SectionKind {
         with_inner!(self.inner, SectionInternal, |x| x.kind())
+    }
+
+    fn relocations(&self) -> RelocationIterator<'data, 'file> {
+        RelocationIterator {
+            inner: map_inner!(
+                self.inner,
+                SectionInternal,
+                RelocationIteratorInternal,
+                |x| x.relocations()
+            ),
+        }
     }
 }
 
@@ -597,8 +670,7 @@ impl<'data> SymbolMap<'data> {
                 } else {
                     std::cmp::Ordering::Less
                 }
-            })
-            .ok()
+            }).ok()
             .and_then(|index| self.symbols.get(index))
     }
 
@@ -616,5 +688,38 @@ impl<'data> SymbolMap<'data> {
             }
         }
         !symbol.is_undefined() && symbol.size() > 0
+    }
+}
+
+impl<'data, 'file> Iterator for RelocationIterator<'data, 'file> {
+    type Item = (u64, Relocation);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        with_inner_mut!(self.inner, RelocationIteratorInternal, |x| x.next())
+    }
+}
+
+impl Relocation {
+    /// The kind of relocation.
+    #[inline]
+    pub fn kind(&self) -> RelocationKind {
+        self.kind
+    }
+
+    /// The index of the symbol within the symbol table, if applicable.
+    #[inline]
+    pub fn symbol(&self) -> u64 {
+        self.symbol
+    }
+
+    /// The addend to use in the relocation calculation.
+    pub fn addend(&self) -> i64 {
+        self.addend
+    }
+
+    /// Returns true if there is an implicit addend stored in the data at the offset
+    /// to be relocated.
+    pub fn has_implicit_addend(&self) -> bool {
+        self.implicit_addend
     }
 }

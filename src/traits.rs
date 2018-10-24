@@ -1,5 +1,5 @@
 use alloc::borrow::Cow;
-use {Uuid, Machine, SectionKind, Symbol, SymbolMap};
+use {Machine, Relocation, SectionKind, Symbol, SymbolMap, Uuid};
 
 /// An object file.
 pub trait Object<'data, 'file> {
@@ -27,19 +27,30 @@ pub trait Object<'data, 'file> {
     /// Get the entry point address of the binary
     fn entry(&'file self) -> u64;
 
-    /// Get the contents of the section named `section_name`, if such
-    /// a section exists.
+    /// Get the section named `section_name`, if such a section exists.
     ///
     /// If `section_name` starts with a '.' then it is treated as a system section name,
-    /// and is compared using the conventions specific to the object file format.
-    /// For example, if ".text" is requested for a Mach-O object file, then the actual
+    /// and is compared using the conventions specific to the object file format. This
+    /// includes:
+    /// - if ".text" is requested for a Mach-O object file, then the actual
     /// section name that is searched for is "__text".
+    /// - if ".debug_info" is requested for an ELF object file, then
+    /// ".zdebug_info" may be returned (and similarly for other debug sections).
     ///
     /// For some object files, multiple segments may contain sections with the same
     /// name. In this case, the first matching section will be used.
+    fn section_by_name(&'file self, section_name: &str) -> Option<Self::Section>;
+
+    /// Get the contents of the section named `section_name`, if such
+    /// a section exists.
+    ///
+    /// The `section_name` is interpreted according to `Self::section_by_name`.
     ///
     /// This may decompress section data.
-    fn section_data_by_name(&self, section_name: &str) -> Option<Cow<'data, [u8]>>;
+    fn section_data_by_name(&'file self, section_name: &str) -> Option<Cow<'data, [u8]>> {
+        self.section_by_name(section_name)
+            .map(|section| section.uncompressed_data())
+    }
 
     /// Get an iterator over the sections in the file.
     fn sections(&'file self) -> Self::SectionIterator;
@@ -100,18 +111,29 @@ pub trait ObjectSegment<'data> {
 
 /// A section defined in an object file.
 pub trait ObjectSection<'data> {
+    /// An iterator over the relocations for a section.
+    ///
+    /// The first field in the item tuple is the section offset
+    /// that the relocation applies to.
+    type RelocationIterator: Iterator<Item = (u64, Relocation)>;
+
     /// Returns the address of the section.
     fn address(&self) -> u64;
 
     /// Returns the size of the section in memory.
     fn size(&self) -> u64;
 
-    /// Returns a reference to the raw contents of the section.
+    /// Returns the raw contents of the section.
     /// The length of this data may be different from the size of the
     /// section in memory.
     ///
     /// This does not do any decompression.
     fn data(&self) -> Cow<'data, [u8]>;
+
+    /// Returns the uncompressed contents of the section.
+    /// The length of this data may be different from the size of the
+    /// section in memory.
+    fn uncompressed_data(&self) -> Cow<'data, [u8]>;
 
     /// Returns the name of the section.
     fn name(&self) -> Option<&str>;
@@ -121,4 +143,7 @@ pub trait ObjectSection<'data> {
 
     /// Return the kind of this section.
     fn kind(&self) -> SectionKind;
+
+    /// Get the relocations for this section.
+    fn relocations(&self) -> Self::RelocationIterator;
 }

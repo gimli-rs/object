@@ -6,7 +6,8 @@ use std::slice;
 use goblin::pe;
 
 use {
-    Machine, Object, ObjectSection, ObjectSegment, SectionKind, Symbol, SymbolKind, SymbolMap,
+    Machine, Object, ObjectSection, ObjectSegment, Relocation, SectionKind, Symbol, SymbolKind,
+    SymbolMap,
 };
 
 /// A PE object file.
@@ -66,6 +67,10 @@ where
     imports: slice::Iter<'file, pe::import::Import<'data>>,
 }
 
+/// An iterator over the relocations in an `PeSection`.
+#[derive(Debug)]
+pub struct PeRelocationIterator;
+
 impl<'data> PeFile<'data> {
     /// Get the PE headers of the file.
     // TODO: this is temporary to allow access to features this crate doesn't provide yet
@@ -107,14 +112,14 @@ where
         }
     }
 
-    fn section_data_by_name(&self, section_name: &str) -> Option<Cow<'data, [u8]>> {
+    fn section_by_name(&'file self, section_name: &str) -> Option<PeSection<'data, 'file>> {
         for section in &self.pe.sections {
             if let Ok(name) = section.name() {
                 if name == section_name {
-                    return Some(Cow::from(
-                        &self.data[section.pointer_to_raw_data as usize..]
-                            [..cmp::min(section.virtual_size, section.size_of_raw_data) as usize]
-                    ));
+                    return Some(PeSection {
+                        file: self,
+                        section,
+                    });
                 }
             }
         }
@@ -219,6 +224,8 @@ impl<'data, 'file> Iterator for PeSectionIterator<'data, 'file> {
 }
 
 impl<'data, 'file> ObjectSection<'data> for PeSection<'data, 'file> {
+    type RelocationIterator = PeRelocationIterator;
+
     #[inline]
     fn address(&self) -> u64 {
         u64::from(self.section.virtual_address)
@@ -232,8 +239,14 @@ impl<'data, 'file> ObjectSection<'data> for PeSection<'data, 'file> {
     fn data(&self) -> Cow<'data, [u8]> {
         Cow::from(
             &self.file.data[self.section.pointer_to_raw_data as usize..]
-                [..self.section.size_of_raw_data as usize],
+                [..cmp::min(self.section.virtual_size, self.section.size_of_raw_data) as usize],
         )
+    }
+
+    #[inline]
+    fn uncompressed_data(&self) -> Cow<'data, [u8]> {
+        // TODO: does PE support compression?
+        self.data()
     }
 
     fn name(&self) -> Option<&str> {
@@ -263,6 +276,10 @@ impl<'data, 'file> ObjectSection<'data> for PeSection<'data, 'file> {
         } else {
             SectionKind::Unknown
         }
+    }
+
+    fn relocations(&self) -> PeRelocationIterator {
+        PeRelocationIterator
     }
 }
 
@@ -294,6 +311,14 @@ impl<'data, 'file> Iterator for PeSymbolIterator<'data, 'file> {
                 size: 0,
             });
         }
+        None
+    }
+}
+
+impl Iterator for PeRelocationIterator {
+    type Item = (u64, Relocation);
+
+    fn next(&mut self) -> Option<Self::Item> {
         None
     }
 }

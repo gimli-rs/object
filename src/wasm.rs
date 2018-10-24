@@ -1,12 +1,10 @@
 use alloc::vec::Vec;
 use parity_wasm::elements::{self, Deserialize};
-use std::borrow::{Cow, ToOwned};
+use std::borrow::Cow;
 use std::slice;
 use std::u64;
 
-use {
-    Machine, Object, ObjectSection, ObjectSegment, SectionKind, Symbol, SymbolMap,
-};
+use {Machine, Object, ObjectSection, ObjectSegment, Relocation, SectionKind, Symbol, SymbolMap};
 
 /// A WebAssembly object file.
 #[derive(Debug)]
@@ -17,10 +15,9 @@ pub struct WasmFile {
 impl<'data> WasmFile {
     /// Parse the raw wasm data.
     pub fn parse(mut data: &'data [u8]) -> Result<Self, &'static str> {
-        let module = elements::Module::deserialize(&mut data).map_err(|_| "failed to parse wasm")?;
-        Ok(WasmFile {
-            module,
-        })
+        let module =
+            elements::Module::deserialize(&mut data).map_err(|_| "failed to parse wasm")?;
+        Ok(WasmFile { module })
     }
 }
 
@@ -54,6 +51,10 @@ pub struct WasmSymbolIterator<'file> {
     file: &'file WasmFile,
 }
 
+/// An iterator over the relocations in an `WasmSection`.
+#[derive(Debug)]
+pub struct WasmRelocationIterator;
+
 fn serialize_to_cow<'a, S>(s: S) -> Option<Cow<'a, [u8]>>
 where
     S: elements::Serialize,
@@ -75,63 +76,21 @@ impl<'file> Object<'static, 'file> for WasmFile {
     }
 
     fn segments(&'file self) -> Self::SegmentIterator {
-        WasmSegmentIterator {
-            file: self,
-        }
+        WasmSegmentIterator { file: self }
     }
 
     fn entry(&'file self) -> u64 {
         self.module.start_section().map_or(u64::MAX, |s| s as u64)
     }
 
-    fn section_data_by_name(&self, section_name: &str) -> Option<Cow<'static, [u8]>> {
-        match section_name {
-            // Known wasm section names.
-            "Type" => self.module
-                .type_section()
-                .and_then(|s| serialize_to_cow(s.clone())),
-            "Import" => self.module
-                .import_section()
-                .and_then(|s| serialize_to_cow(s.clone())),
-            "Function" => self.module
-                .function_section()
-                .and_then(|s| serialize_to_cow(s.clone())),
-            "Table" => self.module
-                .table_section()
-                .and_then(|s| serialize_to_cow(s.clone())),
-            "Memory" => self.module
-                .memory_section()
-                .and_then(|s| serialize_to_cow(s.clone())),
-            "Global" => self.module
-                .global_section()
-                .and_then(|s| serialize_to_cow(s.clone())),
-            "Export" => self.module
-                .export_section()
-                .and_then(|s| serialize_to_cow(s.clone())),
-            "Start" => self.module
-                .start_section()
-                .and_then(|s| serialize_to_cow(elements::VarUint32::from(s))),
-            "Element" => self.module
-                .elements_section()
-                .and_then(|s| serialize_to_cow(s.clone())),
-            "Code" => self.module
-                .code_section()
-                .and_then(|s| serialize_to_cow(s.clone())),
-            "Data" => self.module
-                .data_section()
-                .and_then(|s| serialize_to_cow(s.clone())),
-            // Custom sections.
-            _ => {
-                for s in self.module.sections() {
-                    if let elements::Section::Custom(ref c) = *s {
-                        if c.name() == section_name {
-                            return Some(Cow::from(c.payload().to_owned()));
-                        }
-                    }
-                }
-                None
+    fn section_by_name(&'file self, section_name: &str) -> Option<WasmSection<'file>> {
+        for s in self.module.sections() {
+            let section = WasmSection { section: s };
+            if section.name() == Some(section_name) {
+                return Some(section);
             }
         }
+        None
     }
 
     fn sections(&'file self) -> Self::SectionIterator {
@@ -141,15 +100,11 @@ impl<'file> Object<'static, 'file> for WasmFile {
     }
 
     fn symbols(&'file self) -> Self::SymbolIterator {
-        WasmSymbolIterator {
-            file: self,
-        }
+        WasmSymbolIterator { file: self }
     }
 
     fn dynamic_symbols(&'file self) -> Self::SymbolIterator {
-        WasmSymbolIterator {
-            file: self,
-        }
+        WasmSymbolIterator { file: self }
     }
 
     fn symbol_map(&self) -> SymbolMap<'static> {
@@ -205,13 +160,13 @@ impl<'file> Iterator for WasmSectionIterator<'file> {
     type Item = WasmSection<'file>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.sections.next().map(|s| WasmSection {
-            section: s,
-        })
+        self.sections.next().map(|s| WasmSection { section: s })
     }
 }
 
 impl<'file> ObjectSection<'static> for WasmSection<'file> {
+    type RelocationIterator = WasmRelocationIterator;
+
     #[inline]
     fn address(&self) -> u64 {
         1
@@ -223,7 +178,18 @@ impl<'file> ObjectSection<'static> for WasmSection<'file> {
     }
 
     fn data(&self) -> Cow<'static, [u8]> {
-        serialize_to_cow(self.section.clone()).unwrap_or(Cow::from(&[][..]))
+        match *self.section {
+            elements::Section::Start(section) => {
+                serialize_to_cow(elements::VarUint32::from(section))
+            }
+            _ => serialize_to_cow(self.section.clone()),
+        }.unwrap_or(Cow::from(&[][..]))
+    }
+
+    #[inline]
+    fn uncompressed_data(&self) -> Cow<'static, [u8]> {
+        // TODO: does wasm support compression?
+        self.data()
     }
 
     fn name(&self) -> Option<&str> {
@@ -270,6 +236,10 @@ impl<'file> ObjectSection<'static> for WasmSection<'file> {
             elements::Section::Reloc(_) => SectionKind::Other,
         }
     }
+
+    fn relocations(&self) -> WasmRelocationIterator {
+        WasmRelocationIterator
+    }
 }
 
 impl<'file> Iterator for WasmSymbolIterator<'file> {
@@ -277,5 +247,13 @@ impl<'file> Iterator for WasmSymbolIterator<'file> {
 
     fn next(&mut self) -> Option<Self::Item> {
         unimplemented!()
+    }
+}
+
+impl Iterator for WasmRelocationIterator {
+    type Item = (u64, Relocation);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        None
     }
 }
