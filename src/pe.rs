@@ -1,5 +1,6 @@
 use alloc::borrow::Cow;
 use alloc::vec::Vec;
+use std::cmp;
 use std::slice;
 
 use goblin::pe;
@@ -112,7 +113,7 @@ where
                 if name == section_name {
                     return Some(Cow::from(
                         &self.data[section.pointer_to_raw_data as usize..]
-                            [..section.size_of_raw_data as usize],
+                            [..cmp::min(section.virtual_size, section.size_of_raw_data) as usize]
                     ));
                 }
             }
@@ -156,10 +157,15 @@ where
         true
     }
 
-    #[inline]
     fn has_debug_symbols(&self) -> bool {
-        // TODO: look at what the mingw toolchain does with DWARF-in-PE, and also
-        // whether CodeView-in-PE still works?
+        // TODO: check if CodeView-in-PE still works
+        for section in &self.pe.sections {
+            if let Ok(name) = section.name() {
+                if name == ".debug_info" {
+                    return true;
+                }
+            }
+        }
         false
     }
 
