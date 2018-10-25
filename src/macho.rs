@@ -163,6 +163,15 @@ where
         }
     }
 
+    fn symbol_by_index(&self, index: u64) -> Option<Symbol<'data>> {
+        // TODO: determine section_kind too
+        self.macho
+            .symbols
+            .as_ref()
+            .and_then(|symbols| symbols.get(index as usize).ok())
+            .and_then(|(name, nlist)| parse_symbol(name, &nlist, &[]))
+    }
+
     fn symbols(&'file self) -> MachOSymbolIterator<'data> {
         let symbols = match self.macho.symbols {
             Some(ref symbols) => symbols.into_iter(),
@@ -394,39 +403,50 @@ impl<'data> Iterator for MachOSymbolIterator<'data> {
 
     fn next(&mut self) -> Option<Self::Item> {
         while let Some(Ok((name, nlist))) = self.symbols.next() {
-            if nlist.n_type & mach::symbols::N_STAB != 0 {
-                continue;
+            let symbol = parse_symbol(name, &nlist, &self.section_kinds);
+            if symbol.is_some() {
+                return symbol;
             }
-            let n_type = nlist.n_type & mach::symbols::NLIST_TYPE_MASK;
-            let section_kind = if n_type == mach::symbols::N_SECT {
-                if nlist.n_sect == 0 {
-                    None
-                } else {
-                    self.section_kinds.get(nlist.n_sect - 1).cloned()
-                }
-            } else {
-                // TODO: better handling for other n_type values
-                None
-            };
-            let kind = match section_kind {
-                Some(SectionKind::Text) => SymbolKind::Text,
-                Some(SectionKind::Data)
-                | Some(SectionKind::ReadOnlyData)
-                | Some(SectionKind::UninitializedData) => SymbolKind::Data,
-                _ => SymbolKind::Unknown,
-            };
-            return Some(Symbol {
-                name: Some(name),
-                address: nlist.n_value,
-                // Only calculated for symbol maps
-                size: 0,
-                kind,
-                section_kind,
-                global: nlist.is_global(),
-            });
         }
         None
     }
+}
+
+fn parse_symbol<'data>(
+    name: &'data str,
+    nlist: &mach::symbols::Nlist,
+    section_kinds: &[SectionKind],
+) -> Option<Symbol<'data>> {
+    if nlist.n_type & mach::symbols::N_STAB != 0 {
+        return None;
+    }
+    let n_type = nlist.n_type & mach::symbols::NLIST_TYPE_MASK;
+    let section_kind = if n_type == mach::symbols::N_SECT {
+        if nlist.n_sect == 0 {
+            None
+        } else {
+            Some(section_kinds.get(nlist.n_sect - 1).cloned().unwrap_or(SectionKind::Unknown))
+        }
+    } else {
+        // TODO: better handling for other n_type values
+        None
+    };
+    let kind = match section_kind {
+        Some(SectionKind::Text) => SymbolKind::Text,
+        Some(SectionKind::Data)
+        | Some(SectionKind::ReadOnlyData)
+        | Some(SectionKind::UninitializedData) => SymbolKind::Data,
+        _ => SymbolKind::Unknown,
+    };
+    Some(Symbol {
+        name: Some(name),
+        address: nlist.n_value,
+        // Only calculated for symbol maps
+        size: 0,
+        kind,
+        section_kind,
+        global: nlist.is_global(),
+    })
 }
 
 impl<'data, 'file> Iterator for MachORelocationIterator<'data, 'file> {

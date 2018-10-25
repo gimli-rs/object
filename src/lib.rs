@@ -452,6 +452,10 @@ where
         }
     }
 
+    fn symbol_by_index(&self, index: u64) -> Option<Symbol<'data>> {
+        with_inner!(self.inner, FileInternal, |x| x.symbol_by_index(index))
+    }
+
     fn symbols(&'file self) -> SymbolIterator<'data, 'file> {
         SymbolIterator {
             inner: map_inner!(self.inner, FileInternal, SymbolIteratorInternal, |x| x
@@ -715,6 +719,11 @@ impl Relocation {
     /// The addend to use in the relocation calculation.
     pub fn addend(&self) -> i64 {
         self.addend
+    }
+
+    /// Set the addend to use in the relocation calculation.
+    pub fn set_addend(&mut self, addend: i64) {
+        self.addend = addend
     }
 
     /// Returns true if there is an implicit addend stored in the data at the offset
