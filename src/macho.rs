@@ -134,7 +134,8 @@ where
                 } else {
                     section_name == name
                 }
-            }).unwrap_or(false)
+            })
+            .unwrap_or(false)
         };
 
         for segment in &self.macho.segments {
@@ -272,7 +273,8 @@ where
                     }
                     _ => None,
                 }
-            }).nth(0)
+            })
+            .nth(0)
     }
 
     fn entry(&self) -> u64 {
@@ -425,7 +427,12 @@ fn parse_symbol<'data>(
         if nlist.n_sect == 0 {
             None
         } else {
-            Some(section_kinds.get(nlist.n_sect - 1).cloned().unwrap_or(SectionKind::Unknown))
+            Some(
+                section_kinds
+                    .get(nlist.n_sect - 1)
+                    .cloned()
+                    .unwrap_or(SectionKind::Unknown),
+            )
         }
     } else {
         // TODO: better handling for other n_type values

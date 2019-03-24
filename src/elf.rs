@@ -501,7 +501,12 @@ fn parse_symbol<'data>(
     let section_kind = if symbol.st_shndx == elf::section_header::SHN_UNDEF as usize {
         None
     } else {
-        Some(section_kinds.get(symbol.st_shndx).cloned().unwrap_or(SectionKind::Unknown))
+        Some(
+            section_kinds
+                .get(symbol.st_shndx)
+                .cloned()
+                .unwrap_or(SectionKind::Unknown),
+        )
     };
     Symbol {
         name,

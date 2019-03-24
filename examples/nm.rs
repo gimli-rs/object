@@ -60,31 +60,41 @@ fn print_symbol(symbol: &Symbol) {
     }
     let kind = match symbol.section_kind() {
         Some(SectionKind::Unknown) => '?',
-        Some(SectionKind::Text) => if symbol.is_global() {
-            'T'
-        } else {
-            't'
-        },
-        Some(SectionKind::Data) => if symbol.is_global() {
-            'D'
-        } else {
-            'd'
-        },
-        Some(SectionKind::ReadOnlyData) => if symbol.is_global() {
-            'R'
-        } else {
-            'r'
-        },
-        Some(SectionKind::UninitializedData) => if symbol.is_global() {
-            'B'
-        } else {
-            'b'
-        },
-        Some(SectionKind::Other) => if symbol.is_global() {
-            'S'
-        } else {
-            's'
-        },
+        Some(SectionKind::Text) => {
+            if symbol.is_global() {
+                'T'
+            } else {
+                't'
+            }
+        }
+        Some(SectionKind::Data) => {
+            if symbol.is_global() {
+                'D'
+            } else {
+                'd'
+            }
+        }
+        Some(SectionKind::ReadOnlyData) => {
+            if symbol.is_global() {
+                'R'
+            } else {
+                'r'
+            }
+        }
+        Some(SectionKind::UninitializedData) => {
+            if symbol.is_global() {
+                'B'
+            } else {
+                'b'
+            }
+        }
+        Some(SectionKind::Other) => {
+            if symbol.is_global() {
+                'S'
+            } else {
+                's'
+            }
+        }
         None => 'U',
     };
     if symbol.is_undefined() {

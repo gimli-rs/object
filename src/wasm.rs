@@ -187,7 +187,8 @@ impl<'file> ObjectSection<'static> for WasmSection<'file> {
                 serialize_to_cow(elements::VarUint32::from(section))
             }
             _ => serialize_to_cow(self.section.clone()),
-        }.unwrap_or(Cow::from(&[][..]))
+        }
+        .unwrap_or(Cow::from(&[][..]))
     }
 
     #[inline]
