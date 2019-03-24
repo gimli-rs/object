@@ -325,7 +325,7 @@ impl<'data, 'file> Iterator for MachOSectionIterator<'data, 'file> {
     fn next(&mut self) -> Option<Self::Item> {
         loop {
             if let Some(ref mut sections) = self.sections {
-                while let Some(Ok((section, data))) = sections.next() {
+                if let Some(Ok((section, data))) = sections.next() {
                     return Some(MachOSection {
                         file: self.file,
                         section,

@@ -84,6 +84,7 @@ pub struct File<'data> {
     inner: FileInternal<'data>,
 }
 
+#[allow(clippy::large_enum_variant)]
 #[derive(Debug)]
 enum FileInternal<'data> {
     Elf(ElfFile<'data>),

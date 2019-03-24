@@ -311,7 +311,7 @@ impl<'data, 'file> Iterator for PeSymbolIterator<'data, 'file> {
                 kind: SymbolKind::Unknown,
                 section_kind: None,
                 global: true,
-                name: name,
+                name,
                 address: 0,
                 size: 0,
             });
