@@ -54,49 +54,24 @@ fn main() {
 }
 
 fn print_symbol(symbol: &Symbol) {
-    match symbol.kind() {
-        SymbolKind::Section | SymbolKind::File => return,
-        _ => {}
+    if let SymbolKind::Section | SymbolKind::File = symbol.kind() {
+        return;
     }
-    let kind = match symbol.section_kind() {
+
+    let mut kind = match symbol.section_kind() {
         Some(SectionKind::Unknown) => '?',
-        Some(SectionKind::Text) => {
-            if symbol.is_global() {
-                'T'
-            } else {
-                't'
-            }
-        }
-        Some(SectionKind::Data) => {
-            if symbol.is_global() {
-                'D'
-            } else {
-                'd'
-            }
-        }
-        Some(SectionKind::ReadOnlyData) => {
-            if symbol.is_global() {
-                'R'
-            } else {
-                'r'
-            }
-        }
-        Some(SectionKind::UninitializedData) => {
-            if symbol.is_global() {
-                'B'
-            } else {
-                'b'
-            }
-        }
-        Some(SectionKind::Other) => {
-            if symbol.is_global() {
-                'S'
-            } else {
-                's'
-            }
-        }
+        Some(SectionKind::Text) => 't',
+        Some(SectionKind::Data) => 'd',
+        Some(SectionKind::ReadOnlyData) => 'r',
+        Some(SectionKind::UninitializedData) => 'b',
+        Some(SectionKind::Other) => 's',
         None => 'U',
     };
+
+    if symbol.is_global() {
+        kind = kind.to_ascii_uppercase();
+    }
+
     if symbol.is_undefined() {
         print!("{:16} ", "");
     } else {
