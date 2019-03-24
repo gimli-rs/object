@@ -20,10 +20,18 @@ use {
 };
 
 /// An ELF object file.
-#[derive(Debug)]
 pub struct ElfFile<'data> {
     elf: elf::Elf<'data>,
     data: &'data [u8],
+}
+
+impl<'data> fmt::Debug for ElfFile<'data> {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        fmt.debug_struct("ElfFile")
+            .field("elf", &self.elf)
+            .field("data", &"<... redacted ...>")
+            .finish()
+    }
 }
 
 /// An iterator over the segments of an `ElfFile`.
@@ -576,6 +584,11 @@ impl<'data, 'file> Iterator for ElfRelocationIterator<'data, 'file> {
 
 impl<'data, 'file> fmt::Debug for ElfRelocationIterator<'data, 'file> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        f.debug_struct("ElfRelocationIterator").finish()
+        f.debug_struct("ElfRelocationIterator")
+            .field("section_index", &self.section_index)
+            .field("file", &self.file)
+            .field("sections", &self.sections)
+            .field("relocations", &self.relocations)
+            .finish()
     }
 }
