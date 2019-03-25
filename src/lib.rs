@@ -84,6 +84,7 @@ pub struct File<'data> {
     inner: FileInternal<'data>,
 }
 
+#[allow(clippy::large_enum_variant)]
 #[derive(Debug)]
 enum FileInternal<'data> {
     Elf(ElfFile<'data>),
@@ -437,7 +438,8 @@ where
 
     fn section_by_name(&'file self, section_name: &str) -> Option<Section<'data, 'file>> {
         map_inner_option!(self.inner, FileInternal, SectionInternal, |x| x
-            .section_by_name(section_name)).map(|inner| Section { inner })
+            .section_by_name(section_name))
+        .map(|inner| Section { inner })
     }
 
     fn section_data_by_name(&self, section_name: &str) -> Option<Cow<'data, [u8]>> {
@@ -674,7 +676,8 @@ impl<'data> SymbolMap<'data> {
                 } else {
                     std::cmp::Ordering::Less
                 }
-            }).ok()
+            })
+            .ok()
             .and_then(|index| self.symbols.get(index))
     }
 
@@ -688,7 +691,7 @@ impl<'data> SymbolMap<'data> {
         match symbol.kind() {
             SymbolKind::Unknown | SymbolKind::Text | SymbolKind::Data => {}
             SymbolKind::Section | SymbolKind::File | SymbolKind::Common | SymbolKind::Tls => {
-                return false
+                return false;
             }
         }
         !symbol.is_undefined() && symbol.size() > 0

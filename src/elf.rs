@@ -332,7 +332,7 @@ impl<'data, 'file> ElfSection<'data, 'file> {
 
     #[cfg(feature = "compression")]
     fn maybe_decompress_data(&self) -> Option<Cow<'data, [u8]>> {
-        if (self.section.sh_flags & elf::section_header::SHF_COMPRESSED as u64) == 0 {
+        if (self.section.sh_flags & u64::from(elf::section_header::SHF_COMPRESSED)) == 0 {
             return None;
         }
 
@@ -357,8 +357,9 @@ impl<'data, 'file> ElfSection<'data, 'file> {
 
         let mut decompressed = Vec::with_capacity(uncompressed_size as usize);
         let mut decompress = Decompress::new(true);
-        if let Err(_) =
-            decompress.decompress_vec(compressed_data, &mut decompressed, FlushDecompress::Finish)
+        if decompress
+            .decompress_vec(compressed_data, &mut decompressed, FlushDecompress::Finish)
+            .is_err()
         {
             return None;
         }
@@ -385,8 +386,9 @@ impl<'data, 'file> ElfSection<'data, 'file> {
         let uncompressed_size: u32 = data.pread_with(8, scroll::BE).unwrap();
         let mut decompressed = Vec::with_capacity(uncompressed_size as usize);
         let mut decompress = Decompress::new(true);
-        if let Err(_) =
-            decompress.decompress_vec(&data[12..], &mut decompressed, FlushDecompress::Finish)
+        if decompress
+            .decompress_vec(&data[12..], &mut decompressed, FlushDecompress::Finish)
+            .is_err()
         {
             return None;
         }
@@ -501,7 +503,12 @@ fn parse_symbol<'data>(
     let section_kind = if symbol.st_shndx == elf::section_header::SHN_UNDEF as usize {
         None
     } else {
-        Some(section_kinds.get(symbol.st_shndx).cloned().unwrap_or(SectionKind::Unknown))
+        Some(
+            section_kinds
+                .get(symbol.st_shndx)
+                .cloned()
+                .unwrap_or(SectionKind::Unknown),
+        )
     };
     Symbol {
         name,
@@ -519,7 +526,7 @@ impl<'data, 'file> Iterator for ElfRelocationIterator<'data, 'file> {
     fn next(&mut self) -> Option<Self::Item> {
         loop {
             if let Some(ref mut relocations) = self.relocations {
-                while let Some(reloc) = relocations.next() {
+                if let Some(reloc) = relocations.next() {
                     let kind = match self.file.elf.header.e_machine {
                         elf::header::EM_ARM => match reloc.r_type {
                             elf::reloc::R_ARM_ABS32 => RelocationKind::Direct32,

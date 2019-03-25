@@ -80,7 +80,7 @@ impl<'file> Object<'static, 'file> for WasmFile {
     }
 
     fn entry(&'file self) -> u64 {
-        self.module.start_section().map_or(u64::MAX, |s| s as u64)
+        self.module.start_section().map_or(u64::MAX, u64::from)
     }
 
     fn section_by_name(&'file self, section_name: &str) -> Option<WasmSection<'file>> {
@@ -187,7 +187,8 @@ impl<'file> ObjectSection<'static> for WasmSection<'file> {
                 serialize_to_cow(elements::VarUint32::from(section))
             }
             _ => serialize_to_cow(self.section.clone()),
-        }.unwrap_or(Cow::from(&[][..]))
+        }
+        .unwrap_or_else(|| Cow::from(&[][..]))
     }
 
     #[inline]
