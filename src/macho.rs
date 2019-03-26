@@ -1,5 +1,5 @@
-use alloc::borrow::Cow;
-use alloc::vec::Vec;
+use crate::alloc::borrow::Cow;
+use crate::alloc::vec::Vec;
 use std::fmt;
 use std::slice;
 
@@ -8,7 +8,7 @@ use goblin::mach;
 use goblin::mach::load_command::CommandVariant;
 use uuid::Uuid;
 
-use {
+use crate::{
     Machine, Object, ObjectSection, ObjectSegment, Relocation, RelocationKind, SectionKind, Symbol,
     SymbolKind, SymbolMap,
 };

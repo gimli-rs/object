@@ -39,26 +39,26 @@ mod alloc {
     pub use std::vec;
 }
 
-use alloc::borrow::Cow;
-use alloc::fmt;
-use alloc::vec::Vec;
+use crate::alloc::borrow::Cow;
+use crate::alloc::fmt;
+use crate::alloc::vec::Vec;
 
 mod elf;
-pub use elf::*;
+pub use crate::elf::*;
 
 mod macho;
-pub use macho::*;
+pub use crate::macho::*;
 
 mod pe;
-pub use pe::*;
+pub use crate::pe::*;
 
 mod traits;
-pub use traits::*;
+pub use crate::traits::*;
 
 #[cfg(feature = "wasm")]
 mod wasm;
 #[cfg(feature = "wasm")]
-pub use wasm::*;
+pub use crate::wasm::*;
 
 pub use uuid::Uuid;
 

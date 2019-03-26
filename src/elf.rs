@@ -1,6 +1,6 @@
-use alloc::borrow::Cow;
-use alloc::fmt;
-use alloc::vec::Vec;
+use crate::alloc::borrow::Cow;
+use crate::alloc::fmt;
+use crate::alloc::vec::Vec;
 use std::iter;
 use std::slice;
 
@@ -14,7 +14,7 @@ use goblin::{elf, strtab};
 use scroll::ctx::TryFromCtx;
 use scroll::{self, Pread};
 
-use {
+use crate::{
     Machine, Object, ObjectSection, ObjectSegment, Relocation, RelocationKind, SectionKind, Symbol,
     SymbolKind, SymbolMap,
 };

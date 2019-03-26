@@ -1,5 +1,5 @@
-use alloc::borrow::Cow;
-use {Machine, Relocation, SectionKind, Symbol, SymbolMap, Uuid};
+use crate::alloc::borrow::Cow;
+use crate::{Machine, Relocation, SectionKind, Symbol, SymbolMap, Uuid};
 
 /// An object file.
 pub trait Object<'data, 'file> {
