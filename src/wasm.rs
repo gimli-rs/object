@@ -4,7 +4,9 @@ use std::borrow::Cow;
 use std::slice;
 use std::u64;
 
-use crate::{Machine, Object, ObjectSection, ObjectSegment, Relocation, SectionKind, Symbol, SymbolMap};
+use crate::{
+    Machine, Object, ObjectSection, ObjectSegment, Relocation, SectionKind, Symbol, SymbolMap,
+};
 
 /// A WebAssembly object file.
 #[derive(Debug)]
