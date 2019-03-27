@@ -22,8 +22,6 @@ extern crate alloc;
 #[cfg(not(feature = "std"))]
 extern crate core as std;
 
-use goblin;
-
 #[cfg(feature = "std")]
 mod alloc {
     pub use std::borrow;

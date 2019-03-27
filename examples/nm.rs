@@ -1,6 +1,4 @@
 use std::{env, fs, process};
-
-use memmap;
 use object::{Object, SectionKind, Symbol, SymbolKind};
 
 fn main() {
