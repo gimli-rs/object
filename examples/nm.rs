@@ -1,5 +1,5 @@
-use std::{env, fs, process};
 use object::{Object, SectionKind, Symbol, SymbolKind};
+use std::{env, fs, process};
 
 fn main() {
     let arg_len = env::args().len();
