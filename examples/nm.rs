@@ -1,8 +1,6 @@
-extern crate memmap;
-extern crate object;
-
 use std::{env, fs, process};
 
+use memmap;
 use object::{Object, SectionKind, Symbol, SymbolKind};
 
 fn main() {

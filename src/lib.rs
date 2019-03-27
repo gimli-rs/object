@@ -22,15 +22,7 @@ extern crate alloc;
 #[cfg(not(feature = "std"))]
 extern crate core as std;
 
-#[cfg(feature = "compression")]
-extern crate flate2;
-
-extern crate goblin;
-extern crate scroll;
-extern crate uuid;
-
-#[cfg(feature = "wasm")]
-extern crate parity_wasm;
+use goblin;
 
 #[cfg(feature = "std")]
 mod alloc {

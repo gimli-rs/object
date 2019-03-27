@@ -1,4 +1,5 @@
 use crate::alloc::vec::Vec;
+#[cfg(feature = "wasm")]
 use parity_wasm::elements::{self, Deserialize};
 use std::borrow::Cow;
 use std::slice;
