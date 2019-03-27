@@ -470,7 +470,7 @@ impl<'data, 'file> ObjectSection<'data> for ElfSection<'data, 'file> {
 }
 
 impl<'data, 'file> fmt::Debug for ElfSymbolIterator<'data, 'file> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("ElfSymbolIterator").finish()
     }
 }
@@ -575,7 +575,7 @@ impl<'data, 'file> Iterator for ElfRelocationIterator<'data, 'file> {
 }
 
 impl<'data, 'file> fmt::Debug for ElfRelocationIterator<'data, 'file> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("ElfRelocationIterator").finish()
     }
 }

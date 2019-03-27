@@ -366,7 +366,7 @@ macro_rules! next_inner {
 }
 
 #[cfg(feature = "wasm")]
-fn parse_wasm(data: &[u8]) -> Result<Option<File>, &'static str> {
+fn parse_wasm(data: &[u8]) -> Result<Option<File<'_>>, &'static str> {
     const WASM_MAGIC: &[u8] = &[0x00, 0x61, 0x73, 0x6D];
 
     if &data[..4] == WASM_MAGIC {
@@ -504,7 +504,7 @@ impl<'data, 'file> Iterator for SegmentIterator<'data, 'file> {
 }
 
 impl<'data, 'file> fmt::Debug for Segment<'data, 'file> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         // It's painful to do much better than this
         f.debug_struct("Segment")
             .field("name", &self.name().unwrap_or("<unnamed>"))
@@ -542,7 +542,7 @@ impl<'data, 'file> Iterator for SectionIterator<'data, 'file> {
 }
 
 impl<'data, 'file> fmt::Debug for Section<'data, 'file> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         // It's painful to do much better than this
         f.debug_struct("Section")
             .field("name", &self.name().unwrap_or("<invalid name>"))
@@ -677,7 +677,7 @@ impl<'data> SymbolMap<'data> {
     }
 
     /// Return true for symbols that should be included in the map.
-    fn filter(symbol: &Symbol) -> bool {
+    fn filter(symbol: &Symbol<'_>) -> bool {
         match symbol.kind() {
             SymbolKind::Unknown | SymbolKind::Text | SymbolKind::Data => {}
             SymbolKind::Section | SymbolKind::File | SymbolKind::Common | SymbolKind::Tls => {

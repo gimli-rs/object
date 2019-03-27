@@ -49,7 +49,7 @@ fn main() {
     }
 }
 
-fn print_symbol(symbol: &Symbol) {
+fn print_symbol(symbol: &Symbol<'_>) {
     if let SymbolKind::Section | SymbolKind::File = symbol.kind() {
         return;
     }

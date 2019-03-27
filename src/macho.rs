@@ -313,7 +313,7 @@ impl<'data, 'file> ObjectSegment<'data> for MachOSegment<'data, 'file> {
 }
 
 impl<'data, 'file> fmt::Debug for MachOSectionIterator<'data, 'file> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         // It's painful to do much better than this
         f.debug_struct("MachOSectionIterator").finish()
     }
@@ -395,7 +395,7 @@ impl<'data, 'file> ObjectSection<'data> for MachOSection<'data, 'file> {
 }
 
 impl<'data> fmt::Debug for MachOSymbolIterator<'data> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("MachOSymbolIterator").finish()
     }
 }
@@ -498,7 +498,7 @@ impl<'data, 'file> Iterator for MachORelocationIterator<'data, 'file> {
 }
 
 impl<'data, 'file> fmt::Debug for MachORelocationIterator<'data, 'file> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("MachORelocationIterator").finish()
     }
 }
