@@ -1,10 +1,12 @@
-use alloc::vec::Vec;
+use crate::alloc::vec::Vec;
 use parity_wasm::elements::{self, Deserialize};
 use std::borrow::Cow;
 use std::slice;
 use std::u64;
 
-use {Machine, Object, ObjectSection, ObjectSegment, Relocation, SectionKind, Symbol, SymbolMap};
+use crate::{
+    Machine, Object, ObjectSection, ObjectSegment, Relocation, SectionKind, Symbol, SymbolMap,
+};
 
 /// A WebAssembly object file.
 #[derive(Debug)]

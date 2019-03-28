@@ -1,6 +1,6 @@
-use alloc::borrow::Cow;
-use alloc::fmt;
-use alloc::vec::Vec;
+use crate::alloc::borrow::Cow;
+use crate::alloc::fmt;
+use crate::alloc::vec::Vec;
 use std::iter;
 use std::slice;
 
@@ -14,7 +14,7 @@ use goblin::{elf, strtab};
 use scroll::ctx::TryFromCtx;
 use scroll::{self, Pread};
 
-use {
+use crate::{
     Machine, Object, ObjectSection, ObjectSegment, Relocation, RelocationKind, SectionKind, Symbol,
     SymbolKind, SymbolMap,
 };
@@ -470,7 +470,7 @@ impl<'data, 'file> ObjectSection<'data> for ElfSection<'data, 'file> {
 }
 
 impl<'data, 'file> fmt::Debug for ElfSymbolIterator<'data, 'file> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("ElfSymbolIterator").finish()
     }
 }
@@ -575,7 +575,7 @@ impl<'data, 'file> Iterator for ElfRelocationIterator<'data, 'file> {
 }
 
 impl<'data, 'file> fmt::Debug for ElfRelocationIterator<'data, 'file> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("ElfRelocationIterator").finish()
     }
 }

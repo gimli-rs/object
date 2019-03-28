@@ -1,11 +1,11 @@
-use alloc::borrow::Cow;
-use alloc::vec::Vec;
+use crate::alloc::borrow::Cow;
+use crate::alloc::vec::Vec;
 use std::cmp;
 use std::slice;
 
 use goblin::pe;
 
-use {
+use crate::{
     Machine, Object, ObjectSection, ObjectSegment, Relocation, SectionKind, Symbol, SymbolKind,
     SymbolMap,
 };

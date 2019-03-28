@@ -1,9 +1,5 @@
-extern crate memmap;
-extern crate object;
-
-use std::{env, fs, process};
-
 use object::{Object, SectionKind, Symbol, SymbolKind};
+use std::{env, fs, process};
 
 fn main() {
     let arg_len = env::args().len();
@@ -53,7 +49,7 @@ fn main() {
     }
 }
 
-fn print_symbol(symbol: &Symbol) {
+fn print_symbol(symbol: &Symbol<'_>) {
     if let SymbolKind::Section | SymbolKind::File = symbol.kind() {
         return;
     }

@@ -1,9 +1,5 @@
-extern crate memmap;
-extern crate object;
-
-use std::{env, fs, process};
-
 use object::{Object, ObjectSection};
+use std::{env, fs, process};
 
 fn main() {
     let arg_len = env::args().len();
