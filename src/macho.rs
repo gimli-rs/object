@@ -109,6 +109,7 @@ where
             mach::cputype::CPU_TYPE_ARM64 => Machine::Arm64,
             mach::cputype::CPU_TYPE_X86 => Machine::X86,
             mach::cputype::CPU_TYPE_X86_64 => Machine::X86_64,
+            mach::cputype::CPU_TYPE_MIPS => Machine::Mips,
             _ => Machine::Other,
         }
     }
