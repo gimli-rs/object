@@ -19,6 +19,10 @@ addons:
     packages:
     - libssl-dev
 
+before_install:
+  - rustup component add rustfmt
+  - cargo fmt -- --check
+
 before_cache:
   - if [ "$TRAVIS_OS_NAME" = linux ] && [ "$TRAVIS_RUST_VERSION" = nightly ]; then
       RUSTFLAGS="--cfg procmacro2_semver_exempt" cargo install cargo-tarpaulin;
