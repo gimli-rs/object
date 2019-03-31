@@ -1,5 +1,10 @@
 language: rust
-cache: cargo
+# Cache settings based on https://levans.fr/rust_travis_cache.html
+cache:
+  directories:
+    - /home/travis/.cargo
+before_cache:
+  - rm -rf /home/travis/.cargo/registry
 
 git:
   depth: 1
@@ -19,9 +24,9 @@ addons:
     packages:
     - libssl-dev
 
-before_cache:
+before_install:
   - if [ "$TRAVIS_OS_NAME" = linux ] && [ "$TRAVIS_RUST_VERSION" = nightly ]; then
-      RUSTFLAGS="--cfg procmacro2_semver_exempt" cargo install cargo-tarpaulin;
+      RUSTFLAGS='--cfg procmacro2_semver_exempt' cargo install cargo-tarpaulin;
     fi
 
 script:
