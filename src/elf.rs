@@ -135,7 +135,7 @@ impl<'data> ElfFile<'data> {
     #[cfg(not(feature = "compression"))]
     fn zdebug_section_by_name<'file>(
         &'file self,
-        section_name: &str,
+        _: &str,
     ) -> Option<ElfSection<'data, 'file>> {
         None
     }
