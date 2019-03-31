@@ -158,7 +158,7 @@ where
             elf::header::EM_386 => Machine::X86,
             elf::header::EM_X86_64 => Machine::X86_64,
             elf::header::EM_MIPS | elf::header::EM_MIPS_RS3_LE | elf::header::EM_MIPS_X => {
-                Machine::X86_64
+                Machine::Mips
             }
             _ => Machine::Other,
         }
