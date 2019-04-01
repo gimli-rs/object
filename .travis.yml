@@ -20,8 +20,10 @@ addons:
     - libssl-dev
 
 before_install:
-  - rustup component add rustfmt
-  - cargo fmt -- --check
+  - if [ "$TRAVIS_OS_NAME" = linux ] && [ "$TRAVIS_RUST_VERSION" = nightly ]; then
+      rustup component add rustfmt;
+      cargo fmt -- --check;
+    fi
 
 before_cache:
   - if [ "$TRAVIS_OS_NAME" = linux ] && [ "$TRAVIS_RUST_VERSION" = nightly ]; then
