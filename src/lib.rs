@@ -98,6 +98,8 @@ pub enum Machine {
     /// x86-64
     #[allow(non_camel_case_types)]
     X86_64,
+    /// MIPS
+    Mips,
 }
 
 /// An iterator over the segments of a `File`.
