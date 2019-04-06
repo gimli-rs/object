@@ -24,11 +24,6 @@ addons:
     packages:
     - libssl-dev
 
-before_install:
-  - if [ "$TRAVIS_OS_NAME" = linux ] && [ "$TRAVIS_RUST_VERSION" = nightly ]; then
-      RUSTFLAGS='--cfg procmacro2_semver_exempt' cargo install cargo-tarpaulin;
-    fi
-
 script:
   - cargo build && cargo test && cargo doc
   - if [ "$TRAVIS_RUST_VERSION" = "nightly" ]; then
@@ -41,5 +36,6 @@ script:
 
 after_success:
   - if [ "$TRAVIS_OS_NAME" = "linux" ] && [ "$TRAVIS_RUST_VERSION" = "nightly" ]; then
+      RUSTFLAGS='--cfg procmacro2_semver_exempt' cargo install -f cargo-tarpaulin;
       cargo tarpaulin --ciserver travis-ci --coveralls $TRAVIS_JOB_ID;
     fi
