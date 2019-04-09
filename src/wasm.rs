@@ -185,6 +185,7 @@ impl<'file> ObjectSection<'static> for WasmSection<'file> {
 
     fn data(&self) -> Cow<'static, [u8]> {
         match *self.section {
+            elements::Section::Custom(ref section) => Some(section.payload().to_vec().into()),
             elements::Section::Start(section) => {
                 serialize_to_cow(elements::VarUint32::from(section))
             }
