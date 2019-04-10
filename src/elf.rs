@@ -74,7 +74,6 @@ where
 {
     strtab: &'file strtab::Strtab<'data>,
     symbols: elf::sym::SymIterator<'data>,
-    section_kinds: Vec<SectionKind>,
 }
 
 /// An iterator over the relocations in an `ElfSection`.
@@ -193,18 +192,16 @@ where
     }
 
     fn symbol_by_index(&self, index: u64) -> Option<Symbol<'data>> {
-        // TODO: determine section_kind too
         self.elf
             .syms
             .get(index as usize)
-            .map(|symbol| parse_symbol(&symbol, &self.elf.strtab, &[]))
+            .map(|symbol| parse_symbol(&symbol, &self.elf.strtab))
     }
 
     fn symbols(&'file self) -> ElfSymbolIterator<'data, 'file> {
         ElfSymbolIterator {
             strtab: &self.elf.strtab,
             symbols: self.elf.syms.iter(),
-            section_kinds: self.sections().map(|x| x.kind()).collect(),
         }
     }
 
@@ -212,7 +209,6 @@ where
         ElfSymbolIterator {
             strtab: &self.elf.dynstrtab,
             symbols: self.elf.dynsyms.iter(),
-            section_kinds: self.sections().map(|x| x.kind()).collect(),
         }
     }
 
@@ -498,15 +494,11 @@ impl<'data, 'file> Iterator for ElfSymbolIterator<'data, 'file> {
     fn next(&mut self) -> Option<Self::Item> {
         self.symbols
             .next()
-            .map(|symbol| parse_symbol(&symbol, self.strtab, &self.section_kinds))
+            .map(|symbol| parse_symbol(&symbol, self.strtab))
     }
 }
 
-fn parse_symbol<'data>(
-    symbol: &elf::sym::Sym,
-    strtab: &strtab::Strtab<'data>,
-    section_kinds: &[SectionKind],
-) -> Symbol<'data> {
+fn parse_symbol<'data>(symbol: &elf::sym::Sym, strtab: &strtab::Strtab<'data>) -> Symbol<'data> {
     let name = strtab.get(symbol.st_name).and_then(Result::ok);
     let kind = match elf::sym::st_type(symbol.st_info) {
         elf::sym::STT_OBJECT => SymbolKind::Data,
@@ -517,26 +509,20 @@ fn parse_symbol<'data>(
         elf::sym::STT_TLS => SymbolKind::Tls,
         _ => SymbolKind::Unknown,
     };
-    let section_index = if symbol.st_shndx == elf::section_header::SHN_UNDEF as usize
-        || symbol.st_shndx >= elf::section_header::SHN_LORESERVE as usize
-    {
-        None
-    } else {
-        Some(SectionIndex(symbol.st_shndx))
-    };
-    let section_kind = section_index.map(|index| {
-        section_kinds
-            .get(index.0)
-            .cloned()
-            .unwrap_or(SectionKind::Unknown)
-    });
+    let undefined = symbol.st_shndx == elf::section_header::SHN_UNDEF as usize;
+    let section_index =
+        if undefined || symbol.st_shndx >= elf::section_header::SHN_LORESERVE as usize {
+            None
+        } else {
+            Some(SectionIndex(symbol.st_shndx))
+        };
     Symbol {
         name,
         address: symbol.st_value,
         size: symbol.st_size,
         kind,
         section_index,
-        section_kind,
+        undefined,
         global: elf::sym::st_bind(symbol.st_info) != elf::sym::STB_LOCAL,
     }
 }

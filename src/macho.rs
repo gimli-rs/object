@@ -66,7 +66,6 @@ where
 /// An iterator over the symbols of a `MachOFile`.
 pub struct MachOSymbolIterator<'data> {
     symbols: mach::symbols::SymbolIterator<'data>,
-    section_kinds: Vec<SectionKind>,
 }
 
 /// An iterator over the relocations in an `MachOSection`.
@@ -161,12 +160,11 @@ where
     }
 
     fn symbol_by_index(&self, index: u64) -> Option<Symbol<'data>> {
-        // TODO: determine section_kind too
         self.macho
             .symbols
             .as_ref()
             .and_then(|symbols| symbols.get(index as usize).ok())
-            .and_then(|(name, nlist)| parse_symbol(name, &nlist, &[]))
+            .and_then(|(name, nlist)| parse_symbol(name, &nlist))
     }
 
     fn symbols(&'file self) -> MachOSymbolIterator<'data> {
@@ -175,12 +173,7 @@ where
             None => mach::symbols::SymbolIterator::default(),
         };
 
-        let section_kinds = self.sections().map(|section| section.kind()).collect();
-
-        MachOSymbolIterator {
-            symbols,
-            section_kinds,
-        }
+        MachOSymbolIterator { symbols }
     }
 
     fn dynamic_symbols(&'file self) -> MachOSymbolIterator<'data> {
@@ -200,7 +193,7 @@ where
                 size: 0,
                 kind: SymbolKind::Section,
                 section_index: None,
-                section_kind: None,
+                undefined: false,
                 global: false,
             });
         }
@@ -401,7 +394,7 @@ impl<'data> Iterator for MachOSymbolIterator<'data> {
 
     fn next(&mut self) -> Option<Self::Item> {
         while let Some(Ok((name, nlist))) = self.symbols.next() {
-            let symbol = parse_symbol(name, &nlist, &self.section_kinds);
+            let symbol = parse_symbol(name, &nlist);
             if symbol.is_some() {
                 return symbol;
             }
@@ -410,11 +403,7 @@ impl<'data> Iterator for MachOSymbolIterator<'data> {
     }
 }
 
-fn parse_symbol<'data>(
-    name: &'data str,
-    nlist: &mach::symbols::Nlist,
-    section_kinds: &[SectionKind],
-) -> Option<Symbol<'data>> {
+fn parse_symbol<'data>(name: &'data str, nlist: &mach::symbols::Nlist) -> Option<Symbol<'data>> {
     if nlist.n_type & mach::symbols::N_STAB != 0 {
         return None;
     }
@@ -429,27 +418,14 @@ fn parse_symbol<'data>(
         // TODO: better handling for other n_type values
         None
     };
-    let section_kind = section_index.map(|index| {
-        section_kinds
-            .get(index.0 - 1)
-            .cloned()
-            .unwrap_or(SectionKind::Unknown)
-    });
-    let kind = match section_kind {
-        Some(SectionKind::Text) => SymbolKind::Text,
-        Some(SectionKind::Data)
-        | Some(SectionKind::ReadOnlyData)
-        | Some(SectionKind::UninitializedData) => SymbolKind::Data,
-        _ => SymbolKind::Unknown,
-    };
     Some(Symbol {
         name: Some(name),
         address: nlist.n_value,
         // Only calculated for symbol maps
         size: 0,
-        kind,
+        kind: SymbolKind::Unknown,
         section_index,
-        section_kind,
+        undefined: nlist.is_undefined(),
         global: nlist.is_global(),
     })
 }

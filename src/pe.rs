@@ -298,7 +298,7 @@ impl<'data, 'file> Iterator for PeSymbolIterator<'data, 'file> {
                 kind: SymbolKind::Unknown,
                 // TODO: can we find a section?
                 section_index: None,
-                section_kind: Some(SectionKind::Unknown),
+                undefined: false,
                 global: true,
                 name: export.name,
                 address: export.rva as u64,
@@ -313,7 +313,7 @@ impl<'data, 'file> Iterator for PeSymbolIterator<'data, 'file> {
             return Some(Symbol {
                 kind: SymbolKind::Unknown,
                 section_index: None,
-                section_kind: None,
+                undefined: true,
                 global: true,
                 name,
                 address: 0,

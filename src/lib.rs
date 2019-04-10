@@ -231,7 +231,7 @@ where
 pub struct Symbol<'data> {
     kind: SymbolKind,
     section_index: Option<SectionIndex>,
-    section_kind: Option<SectionKind>,
+    undefined: bool,
     global: bool,
     name: Option<&'data str>,
     address: u64,
@@ -636,16 +636,10 @@ impl<'data> Symbol<'data> {
         self.section_index
     }
 
-    /// Returns the section kind for the symbol, or `None` if the symbol is undefined.
-    #[inline]
-    pub fn section_kind(&self) -> Option<SectionKind> {
-        self.section_kind
-    }
-
     /// Return true if the symbol is undefined.
     #[inline]
     pub fn is_undefined(&self) -> bool {
-        self.section_kind.is_none()
+        self.undefined
     }
 
     /// Return true if the symbol is global.
