@@ -15,8 +15,8 @@ use scroll::ctx::TryFromCtx;
 use scroll::{self, Pread};
 
 use crate::{
-    Machine, Object, ObjectSection, ObjectSegment, Relocation, RelocationKind, SectionKind, Symbol,
-    SymbolKind, SymbolMap,
+    Machine, Object, ObjectSection, ObjectSegment, Relocation, RelocationKind, SectionIndex,
+    SectionKind, Symbol, SymbolKind, SymbolMap,
 };
 
 /// An ELF object file.
@@ -63,7 +63,7 @@ where
     'data: 'file,
 {
     file: &'file ElfFile<'data>,
-    index: usize,
+    index: SectionIndex,
     section: &'file elf::SectionHeader,
 }
 
@@ -83,7 +83,7 @@ where
     'data: 'file,
 {
     /// The index of the section that the relocations apply to.
-    section_index: u32,
+    section_index: SectionIndex,
     file: &'file ElfFile<'data>,
     sections: slice::Iter<'file, (elf::ShdrIdx, elf::RelocSection<'data>)>,
     relocations: Option<elf::reloc::RelocIterator<'data>>,
@@ -112,7 +112,7 @@ impl<'data> ElfFile<'data> {
                 if name == section_name {
                     return Some(ElfSection {
                         file: self,
-                        index,
+                        index: SectionIndex(index),
                         section,
                     });
                 }
@@ -315,7 +315,7 @@ impl<'data, 'file> Iterator for ElfSectionIterator<'data, 'file> {
 
     fn next(&mut self) -> Option<Self::Item> {
         self.iter.next().map(|(index, section)| ElfSection {
-            index,
+            index: SectionIndex(index),
             file: self.file,
             section,
         })
@@ -401,6 +401,11 @@ impl<'data, 'file> ObjectSection<'data> for ElfSection<'data, 'file> {
     type RelocationIterator = ElfRelocationIterator<'data, 'file>;
 
     #[inline]
+    fn index(&self) -> SectionIndex {
+        self.index
+    }
+
+    #[inline]
     fn address(&self) -> u64 {
         self.section.sh_addr
     }
@@ -462,7 +467,7 @@ impl<'data, 'file> ObjectSection<'data> for ElfSection<'data, 'file> {
 
     fn relocations(&self) -> ElfRelocationIterator<'data, 'file> {
         ElfRelocationIterator {
-            section_index: self.index as u32,
+            section_index: self.index,
             file: self.file,
             sections: self.file.elf.shdr_relocs.iter(),
             relocations: None,
@@ -565,7 +570,7 @@ impl<'data, 'file> Iterator for ElfRelocationIterator<'data, 'file> {
                 None => return None,
                 Some((index, relocs)) => {
                     let section = &self.file.elf.section_headers[*index];
-                    if section.sh_info == self.section_index {
+                    if section.sh_info as usize == self.section_index.0 {
                         self.relocations = Some(relocs.into_iter());
                     }
                     // TODO: do we need to return section.sh_link?

@@ -1,5 +1,5 @@
 use crate::alloc::borrow::Cow;
-use crate::{Machine, Relocation, SectionKind, Symbol, SymbolMap, Uuid};
+use crate::{Machine, Relocation, SectionIndex, SectionKind, Symbol, SymbolMap, Uuid};
 
 /// An object file.
 pub trait Object<'data, 'file> {
@@ -126,6 +126,9 @@ pub trait ObjectSection<'data> {
     /// The first field in the item tuple is the section offset
     /// that the relocation applies to.
     type RelocationIterator: Iterator<Item = (u64, Relocation)>;
+
+    /// Returns the section index.
+    fn index(&self) -> SectionIndex;
 
     /// Returns the address of the section.
     fn address(&self) -> u64;

@@ -165,6 +165,10 @@ where
     Wasm(WasmSectionIterator<'file>),
 }
 
+/// The index used to identify a section of a file.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct SectionIndex(pub usize);
+
 /// A Section of a File
 pub struct Section<'data, 'file>
 where
@@ -557,6 +561,10 @@ impl<'data, 'file> fmt::Debug for Section<'data, 'file> {
 
 impl<'data, 'file> ObjectSection<'data> for Section<'data, 'file> {
     type RelocationIterator = RelocationIterator<'data, 'file>;
+
+    fn index(&self) -> SectionIndex {
+        with_inner!(self.inner, SectionInternal, |x| x.index())
+    }
 
     fn address(&self) -> u64 {
         with_inner!(self.inner, SectionInternal, |x| x.address())

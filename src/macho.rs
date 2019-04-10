@@ -9,8 +9,8 @@ use goblin::mach::load_command::CommandVariant;
 use uuid::Uuid;
 
 use crate::{
-    Machine, Object, ObjectSection, ObjectSegment, Relocation, RelocationKind, SectionKind, Symbol,
-    SymbolKind, SymbolMap,
+    Machine, Object, ObjectSection, ObjectSegment, Relocation, RelocationKind, SectionIndex,
+    SectionKind, Symbol, SymbolKind, SymbolMap,
 };
 
 /// A Mach-O object file.
@@ -45,6 +45,7 @@ where
     'data: 'file,
 {
     file: &'file MachOFile<'data>,
+    index: usize,
     segments: slice::Iter<'file, mach::segment::Segment<'data>>,
     sections: Option<mach::segment::SectionIterator<'data>>,
 }
@@ -56,6 +57,8 @@ where
     'data: 'file,
 {
     file: &'file MachOFile<'data>,
+    // index is 1-based (equivalent to n_sect field in symbols)
+    index: SectionIndex,
     section: mach::segment::Section,
     data: mach::segment::SectionData<'data>,
 }
@@ -128,38 +131,26 @@ where
         } else {
             (false, section_name)
         };
-        let cmp_section_name = |name: Option<&str>| {
-            name.map(|name| {
-                if system_section {
-                    name.starts_with("__") && section_name == &name[2..]
-                } else {
-                    section_name == name
-                }
-            })
-            .unwrap_or(false)
+        let cmp_section_name = |section: &MachOSection| {
+            section
+                .name()
+                .map(|name| {
+                    if system_section {
+                        name.starts_with("__") && section_name == &name[2..]
+                    } else {
+                        section_name == name
+                    }
+                })
+                .unwrap_or(false)
         };
 
-        for segment in &self.macho.segments {
-            for section in segment {
-                if let Ok((section, data)) = section {
-                    if cmp_section_name(section.name().ok()) {
-                        return Some(MachOSection {
-                            file: self,
-                            section,
-                            data,
-                        });
-                    }
-                } else {
-                    break;
-                }
-            }
-        }
-        None
+        self.sections().find(cmp_section_name)
     }
 
     fn sections(&'file self) -> MachOSectionIterator<'data, 'file> {
         MachOSectionIterator {
             file: self,
+            index: 1,
             segments: self.macho.segments.iter(),
             sections: None,
         }
@@ -180,24 +171,7 @@ where
             None => mach::symbols::SymbolIterator::default(),
         };
 
-        let mut section_kinds = Vec::new();
-        // Don't use MachOSectionIterator because it skips sections it fails to parse,
-        // and the section index is important.
-        'segment: for segment in &self.macho.segments {
-            for section in segment {
-                if let Ok((section, data)) = section {
-                    let section = MachOSection {
-                        file: self,
-                        section,
-                        data,
-                    };
-                    section_kinds.push(section.kind());
-                } else {
-                    // We can't process more segments because the section index will be wrong.
-                    break 'segment;
-                }
-            }
-        }
+        let section_kinds = self.sections().map(|section| section.kind()).collect();
 
         MachOSymbolIterator {
             symbols,
@@ -326,12 +300,23 @@ impl<'data, 'file> Iterator for MachOSectionIterator<'data, 'file> {
     fn next(&mut self) -> Option<Self::Item> {
         loop {
             if let Some(ref mut sections) = self.sections {
-                if let Some(Ok((section, data))) = sections.next() {
-                    return Some(MachOSection {
-                        file: self.file,
-                        section,
-                        data,
-                    });
+                if let Some(section_result) = sections.next() {
+                    if let Ok((section, data)) = section_result {
+                        let index = SectionIndex(self.index);
+                        self.index += 1;
+                        return Some(MachOSection {
+                            file: self.file,
+                            index,
+                            section,
+                            data,
+                        });
+                    } else {
+                        // We have to stop iterating, otherwise section indices
+                        // will be wrong.
+                        self.sections = None;
+                        self.segments = [].iter();
+                        return None;
+                    }
                 }
             }
             match self.segments.next() {
@@ -346,6 +331,11 @@ impl<'data, 'file> Iterator for MachOSectionIterator<'data, 'file> {
 
 impl<'data, 'file> ObjectSection<'data> for MachOSection<'data, 'file> {
     type RelocationIterator = MachORelocationIterator<'data, 'file>;
+
+    #[inline]
+    fn index(&self) -> SectionIndex {
+        self.index
+    }
 
     #[inline]
     fn address(&self) -> u64 {

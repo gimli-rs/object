@@ -1,13 +1,12 @@
 use crate::alloc::borrow::Cow;
 use crate::alloc::vec::Vec;
-use std::cmp;
-use std::slice;
+use std::{cmp, iter, slice};
 
 use goblin::pe;
 
 use crate::{
-    Machine, Object, ObjectSection, ObjectSegment, Relocation, SectionKind, Symbol, SymbolKind,
-    SymbolMap,
+    Machine, Object, ObjectSection, ObjectSegment, Relocation, SectionIndex, SectionKind, Symbol,
+    SymbolKind, SymbolMap,
 };
 
 /// A PE object file.
@@ -44,7 +43,7 @@ where
     'data: 'file,
 {
     file: &'file PeFile<'data>,
-    iter: slice::Iter<'file, pe::section_table::SectionTable>,
+    iter: iter::Enumerate<slice::Iter<'file, pe::section_table::SectionTable>>,
 }
 
 /// A section of a `PeFile`.
@@ -54,6 +53,7 @@ where
     'data: 'file,
 {
     file: &'file PeFile<'data>,
+    index: SectionIndex,
     section: &'file pe::section_table::SectionTable,
 }
 
@@ -113,23 +113,14 @@ where
     }
 
     fn section_by_name(&'file self, section_name: &str) -> Option<PeSection<'data, 'file>> {
-        for section in &self.pe.sections {
-            if let Ok(name) = section.name() {
-                if name == section_name {
-                    return Some(PeSection {
-                        file: self,
-                        section,
-                    });
-                }
-            }
-        }
-        None
+        self.sections()
+            .find(|section| section.name() == Some(section_name))
     }
 
     fn sections(&'file self) -> PeSectionIterator<'data, 'file> {
         PeSectionIterator {
             file: self,
-            iter: self.pe.sections.iter(),
+            iter: self.pe.sections.iter().enumerate(),
         }
     }
 
@@ -221,8 +212,9 @@ impl<'data, 'file> Iterator for PeSectionIterator<'data, 'file> {
     type Item = PeSection<'data, 'file>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.iter.next().map(|section| PeSection {
+        self.iter.next().map(|(index, section)| PeSection {
             file: self.file,
+            index: SectionIndex(index),
             section,
         })
     }
@@ -230,6 +222,11 @@ impl<'data, 'file> Iterator for PeSectionIterator<'data, 'file> {
 
 impl<'data, 'file> ObjectSection<'data> for PeSection<'data, 'file> {
     type RelocationIterator = PeRelocationIterator;
+
+    #[inline]
+    fn index(&self) -> SectionIndex {
+        self.index
+    }
 
     #[inline]
     fn address(&self) -> u64 {
