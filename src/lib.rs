@@ -230,6 +230,7 @@ where
 #[derive(Debug)]
 pub struct Symbol<'data> {
     kind: SymbolKind,
+    section_index: Option<SectionIndex>,
     section_kind: Option<SectionKind>,
     global: bool,
     name: Option<&'data str>,
@@ -619,6 +620,14 @@ impl<'data> Symbol<'data> {
     #[inline]
     pub fn kind(&self) -> SymbolKind {
         self.kind
+    }
+
+    /// Returns the section index for the section containing this symbol.
+    ///
+    /// May return `None` if the section is unknown or the symbol is undefined.
+    #[inline]
+    pub fn section_index(&self) -> Option<SectionIndex> {
+        self.section_index
     }
 
     /// Returns the section kind for the symbol, or `None` if the symbol is undefined.

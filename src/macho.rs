@@ -195,6 +195,7 @@ where
                 address: section.address() + section.size(),
                 size: 0,
                 kind: SymbolKind::Section,
+                section_index: None,
                 section_kind: None,
                 global: false,
             });
@@ -414,21 +415,22 @@ fn parse_symbol<'data>(
         return None;
     }
     let n_type = nlist.n_type & mach::symbols::NLIST_TYPE_MASK;
-    let section_kind = if n_type == mach::symbols::N_SECT {
+    let section_index = if n_type == mach::symbols::N_SECT {
         if nlist.n_sect == 0 {
             None
         } else {
-            Some(
-                section_kinds
-                    .get(nlist.n_sect - 1)
-                    .cloned()
-                    .unwrap_or(SectionKind::Unknown),
-            )
+            Some(SectionIndex(nlist.n_sect))
         }
     } else {
         // TODO: better handling for other n_type values
         None
     };
+    let section_kind = section_index.map(|index| {
+        section_kinds
+            .get(index.0 - 1)
+            .cloned()
+            .unwrap_or(SectionKind::Unknown)
+    });
     let kind = match section_kind {
         Some(SectionKind::Text) => SymbolKind::Text,
         Some(SectionKind::Data)
@@ -442,6 +444,7 @@ fn parse_symbol<'data>(
         // Only calculated for symbol maps
         size: 0,
         kind,
+        section_index,
         section_kind,
         global: nlist.is_global(),
     })

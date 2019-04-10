@@ -292,6 +292,8 @@ impl<'data, 'file> Iterator for PeSymbolIterator<'data, 'file> {
         if let Some(export) = self.exports.next() {
             return Some(Symbol {
                 kind: SymbolKind::Unknown,
+                // TODO: can we find a section?
+                section_index: None,
                 section_kind: Some(SectionKind::Unknown),
                 global: true,
                 name: export.name,
@@ -306,6 +308,7 @@ impl<'data, 'file> Iterator for PeSymbolIterator<'data, 'file> {
             };
             return Some(Symbol {
                 kind: SymbolKind::Unknown,
+                section_index: None,
                 section_kind: None,
                 global: true,
                 name,

@@ -506,21 +506,25 @@ fn parse_symbol<'data>(
         elf::sym::STT_TLS => SymbolKind::Tls,
         _ => SymbolKind::Unknown,
     };
-    let section_kind = if symbol.st_shndx == elf::section_header::SHN_UNDEF as usize {
+    let section_index = if symbol.st_shndx == elf::section_header::SHN_UNDEF as usize
+        || symbol.st_shndx >= elf::section_header::SHN_LORESERVE as usize
+    {
         None
     } else {
-        Some(
-            section_kinds
-                .get(symbol.st_shndx)
-                .cloned()
-                .unwrap_or(SectionKind::Unknown),
-        )
+        Some(SectionIndex(symbol.st_shndx))
     };
+    let section_kind = section_index.map(|index| {
+        section_kinds
+            .get(index.0)
+            .cloned()
+            .unwrap_or(SectionKind::Unknown)
+    });
     Symbol {
         name,
         address: symbol.st_value,
         size: symbol.st_size,
         kind,
+        section_index,
         section_kind,
         global: elf::sym::st_bind(symbol.st_info) != elf::sym::STB_LOCAL,
     }
