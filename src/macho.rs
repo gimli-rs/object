@@ -147,6 +147,10 @@ where
         self.sections().find(cmp_section_name)
     }
 
+    fn section_by_index(&'file self, index: SectionIndex) -> Option<MachOSection<'data, 'file>> {
+        self.sections().find(|section| section.index() == index)
+    }
+
     fn sections(&'file self) -> MachOSectionIterator<'data, 'file> {
         MachOSectionIterator {
             file: self,

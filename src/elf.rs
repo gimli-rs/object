@@ -174,6 +174,17 @@ where
             .or_else(|| self.zdebug_section_by_name(section_name))
     }
 
+    fn section_by_index(&'file self, index: SectionIndex) -> Option<ElfSection<'data, 'file>> {
+        self.elf
+            .section_headers
+            .get(index.0)
+            .map(|section| ElfSection {
+                file: self,
+                index,
+                section,
+            })
+    }
+
     fn sections(&'file self) -> ElfSectionIterator<'data, 'file> {
         ElfSectionIterator {
             file: self,

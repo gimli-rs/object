@@ -117,6 +117,10 @@ where
             .find(|section| section.name() == Some(section_name))
     }
 
+    fn section_by_index(&'file self, index: SectionIndex) -> Option<PeSection<'data, 'file>> {
+        self.sections().find(|section| section.index() == index)
+    }
+
     fn sections(&'file self) -> PeSectionIterator<'data, 'file> {
         PeSectionIterator {
             file: self,

@@ -93,6 +93,10 @@ impl<'file> Object<'static, 'file> for WasmFile {
             .find(|section| section.name() == Some(section_name))
     }
 
+    fn section_by_index(&'file self, index: SectionIndex) -> Option<WasmSection<'file>> {
+        self.sections().find(|section| section.index() == index)
+    }
+
     fn sections(&'file self) -> Self::SectionIterator {
         WasmSectionIterator {
             sections: self.module.sections().iter().enumerate(),

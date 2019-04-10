@@ -439,6 +439,12 @@ where
         .map(|inner| Section { inner })
     }
 
+    fn section_by_index(&'file self, index: SectionIndex) -> Option<Section<'data, 'file>> {
+        map_inner_option!(self.inner, FileInternal, SectionInternal, |x| x
+            .section_by_index(index))
+        .map(|inner| Section { inner })
+    }
+
     fn section_data_by_name(&self, section_name: &str) -> Option<Cow<'data, [u8]>> {
         with_inner!(self.inner, FileInternal, |x| x
             .section_data_by_name(section_name))

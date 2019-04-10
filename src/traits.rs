@@ -41,6 +41,13 @@ pub trait Object<'data, 'file> {
     /// name. In this case, the first matching section will be used.
     fn section_by_name(&'file self, section_name: &str) -> Option<Self::Section>;
 
+    /// Get the section at the given index.
+    ///
+    /// The meaning of the index depends on the object file.
+    ///
+    /// For some object files, this requires iterating through all sections.
+    fn section_by_index(&'file self, index: SectionIndex) -> Option<Self::Section>;
+
     /// Get the contents of the section named `section_name`, if such
     /// a section exists.
     ///
