@@ -73,6 +73,22 @@ pub trait Object<'data, 'file> {
     /// This may skip over symbols that are malformed or unsupported.
     fn symbols(&'file self) -> Self::SymbolIterator;
 
+    /// Get the data for the given symbol.
+    fn symbol_data(&'file self, symbol: &Symbol<'data>) -> Option<&'data [u8]> {
+        if symbol.is_undefined() {
+            return None;
+        }
+        let address = symbol.address();
+        let size = symbol.size();
+        if let Some(index) = symbol.section_index() {
+            self.section_by_index(index)
+                .and_then(|section| section.data_range(address, size))
+        } else {
+            self.segments()
+                .find_map(|segment| segment.data_range(address, size))
+        }
+    }
+
     /// Get an iterator over the dynamic linking symbols in the file.
     ///
     /// This may skip over symbols that are malformed or unsupported.
