@@ -158,6 +158,10 @@ impl<'file> ObjectSegment<'static> for WasmSegment<'file> {
         unreachable!()
     }
 
+    fn data_range(&self, _address: u64, _size: u64) -> Option<&'static [u8]> {
+        unreachable!()
+    }
+
     #[inline]
     fn name(&self) -> Option<&str> {
         unreachable!()
@@ -202,6 +206,10 @@ impl<'file> ObjectSection<'static> for WasmSection<'file> {
             _ => serialize_to_cow(self.section.clone()),
         }
         .unwrap_or_else(|| Cow::from(&[][..]))
+    }
+
+    fn data_range(&self, _address: u64, _size: u64) -> Option<&'static [u8]> {
+        unimplemented!()
     }
 
     #[inline]

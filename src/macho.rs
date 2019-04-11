@@ -279,6 +279,10 @@ impl<'data, 'file> ObjectSegment<'data> for MachOSegment<'data, 'file> {
         self.segment.data
     }
 
+    fn data_range(&self, address: u64, size: u64) -> Option<&'data [u8]> {
+        crate::data_range(self.data(), self.address(), address, size)
+    }
+
     #[inline]
     fn name(&self) -> Option<&str> {
         self.segment.name().ok()
@@ -348,6 +352,10 @@ impl<'data, 'file> ObjectSection<'data> for MachOSection<'data, 'file> {
     #[inline]
     fn data(&self) -> Cow<'data, [u8]> {
         Cow::from(self.data)
+    }
+
+    fn data_range(&self, address: u64, size: u64) -> Option<&'data [u8]> {
+        crate::data_range(self.data, self.address(), address, size)
     }
 
     #[inline]

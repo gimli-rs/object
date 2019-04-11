@@ -311,6 +311,10 @@ impl<'data, 'file> ObjectSegment<'data> for ElfSegment<'data, 'file> {
         &self.file.data[self.segment.p_offset as usize..][..self.segment.p_filesz as usize]
     }
 
+    fn data_range(&self, address: u64, size: u64) -> Option<&'data [u8]> {
+        crate::data_range(self.data(), self.address(), address, size)
+    }
+
     #[inline]
     fn name(&self) -> Option<&str> {
         None
@@ -425,6 +429,10 @@ impl<'data, 'file> ObjectSection<'data> for ElfSection<'data, 'file> {
     #[inline]
     fn data(&self) -> Cow<'data, [u8]> {
         Cow::from(self.raw_data())
+    }
+
+    fn data_range(&self, address: u64, size: u64) -> Option<&'data [u8]> {
+        crate::data_range(self.raw_data(), self.address(), address, size)
     }
 
     #[cfg(feature = "compression")]

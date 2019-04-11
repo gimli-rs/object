@@ -122,6 +122,9 @@ pub trait ObjectSegment<'data> {
     /// segment in memory.
     fn data(&self) -> &'data [u8];
 
+    /// Return the segment data in the given range.
+    fn data_range(&self, address: u64, size: u64) -> Option<&'data [u8]>;
+
     /// Returns the name of the segment.
     fn name(&self) -> Option<&str>;
 }
@@ -149,6 +152,11 @@ pub trait ObjectSection<'data> {
     ///
     /// This does not do any decompression.
     fn data(&self) -> Cow<'data, [u8]>;
+
+    /// Return the raw contents of the section data in the given range.
+    ///
+    /// This does not do any decompression.
+    fn data_range(&self, address: u64, size: u64) -> Option<&'data [u8]>;
 
     /// Returns the uncompressed contents of the section.
     /// The length of this data may be different from the size of the

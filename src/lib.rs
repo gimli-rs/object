@@ -540,6 +540,10 @@ impl<'data, 'file> ObjectSegment<'data> for Segment<'data, 'file> {
         with_inner!(self.inner, SegmentInternal, |x| x.data())
     }
 
+    fn data_range(&self, address: u64, size: u64) -> Option<&'data [u8]> {
+        with_inner!(self.inner, SegmentInternal, |x| x.data_range(address, size))
+    }
+
     fn name(&self) -> Option<&str> {
         with_inner!(self.inner, SegmentInternal, |x| x.name())
     }
@@ -583,6 +587,10 @@ impl<'data, 'file> ObjectSection<'data> for Section<'data, 'file> {
 
     fn data(&self) -> Cow<'data, [u8]> {
         with_inner!(self.inner, SectionInternal, |x| x.data())
+    }
+
+    fn data_range(&self, address: u64, size: u64) -> Option<&'data [u8]> {
+        with_inner!(self.inner, SectionInternal, |x| x.data_range(address, size))
     }
 
     fn uncompressed_data(&self) -> Cow<'data, [u8]> {
@@ -743,4 +751,15 @@ impl Relocation {
     pub fn has_implicit_addend(&self) -> bool {
         self.implicit_addend
     }
+}
+
+fn data_range(data: &[u8], data_address: u64, range_address: u64, size: u64) -> Option<&[u8]> {
+    if range_address >= data_address {
+        let start_offset = (range_address - data_address) as usize;
+        let end_offset = start_offset + size as usize;
+        if end_offset <= data.len() {
+            return Some(&data[start_offset..end_offset]);
+        }
+    }
+    None
 }

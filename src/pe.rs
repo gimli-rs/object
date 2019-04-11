@@ -206,6 +206,10 @@ impl<'data, 'file> ObjectSegment<'data> for PeSegment<'data, 'file> {
             [..self.section.size_of_raw_data as usize]
     }
 
+    fn data_range(&self, address: u64, size: u64) -> Option<&'data [u8]> {
+        crate::data_range(self.data(), self.address(), address, size)
+    }
+
     #[inline]
     fn name(&self) -> Option<&str> {
         self.section.name().ok()
@@ -221,6 +225,13 @@ impl<'data, 'file> Iterator for PeSectionIterator<'data, 'file> {
             index: SectionIndex(index),
             section,
         })
+    }
+}
+
+impl<'data, 'file> PeSection<'data, 'file> {
+    fn raw_data(&self) -> &'data [u8] {
+        &self.file.data[self.section.pointer_to_raw_data as usize..]
+            [..cmp::min(self.section.virtual_size, self.section.size_of_raw_data) as usize]
     }
 }
 
@@ -243,10 +254,11 @@ impl<'data, 'file> ObjectSection<'data> for PeSection<'data, 'file> {
     }
 
     fn data(&self) -> Cow<'data, [u8]> {
-        Cow::from(
-            &self.file.data[self.section.pointer_to_raw_data as usize..]
-                [..cmp::min(self.section.virtual_size, self.section.size_of_raw_data) as usize],
-        )
+        Cow::from(self.raw_data())
+    }
+
+    fn data_range(&self, address: u64, size: u64) -> Option<&'data [u8]> {
+        crate::data_range(self.raw_data(), self.address(), address, size)
     }
 
     #[inline]
