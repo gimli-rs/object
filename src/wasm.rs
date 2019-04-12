@@ -1,11 +1,11 @@
 use crate::alloc::vec::Vec;
 use parity_wasm::elements::{self, Deserialize};
 use std::borrow::Cow;
-use std::slice;
-use std::u64;
+use std::{iter, slice};
 
 use crate::{
-    Machine, Object, ObjectSection, ObjectSegment, Relocation, SectionKind, Symbol, SymbolMap,
+    Machine, Object, ObjectSection, ObjectSegment, Relocation, SectionIndex, SectionKind, Symbol,
+    SymbolMap,
 };
 
 /// A WebAssembly object file.
@@ -38,12 +38,13 @@ pub struct WasmSegment<'file> {
 /// An iterator over the sections of an `WasmFile`.
 #[derive(Debug)]
 pub struct WasmSectionIterator<'file> {
-    sections: slice::Iter<'file, elements::Section>,
+    sections: iter::Enumerate<slice::Iter<'file, elements::Section>>,
 }
 
 /// A section of an `WasmFile`.
 #[derive(Debug)]
 pub struct WasmSection<'file> {
+    index: SectionIndex,
     section: &'file elements::Section,
 }
 
@@ -82,22 +83,23 @@ impl<'file> Object<'static, 'file> for WasmFile {
     }
 
     fn entry(&'file self) -> u64 {
-        self.module.start_section().map_or(u64::MAX, u64::from)
+        self.module
+            .start_section()
+            .map_or(u64::max_value(), u64::from)
     }
 
     fn section_by_name(&'file self, section_name: &str) -> Option<WasmSection<'file>> {
-        for s in self.module.sections() {
-            let section = WasmSection { section: s };
-            if section.name() == Some(section_name) {
-                return Some(section);
-            }
-        }
-        None
+        self.sections()
+            .find(|section| section.name() == Some(section_name))
+    }
+
+    fn section_by_index(&'file self, index: SectionIndex) -> Option<WasmSection<'file>> {
+        self.sections().find(|section| section.index() == index)
     }
 
     fn sections(&'file self) -> Self::SectionIterator {
         WasmSectionIterator {
-            sections: self.module.sections().iter(),
+            sections: self.module.sections().iter().enumerate(),
         }
     }
 
@@ -156,6 +158,10 @@ impl<'file> ObjectSegment<'static> for WasmSegment<'file> {
         unreachable!()
     }
 
+    fn data_range(&self, _address: u64, _size: u64) -> Option<&'static [u8]> {
+        unreachable!()
+    }
+
     #[inline]
     fn name(&self) -> Option<&str> {
         unreachable!()
@@ -166,12 +172,20 @@ impl<'file> Iterator for WasmSectionIterator<'file> {
     type Item = WasmSection<'file>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.sections.next().map(|s| WasmSection { section: s })
+        self.sections.next().map(|(index, section)| WasmSection {
+            index: SectionIndex(index),
+            section,
+        })
     }
 }
 
 impl<'file> ObjectSection<'static> for WasmSection<'file> {
     type RelocationIterator = WasmRelocationIterator;
+
+    #[inline]
+    fn index(&self) -> SectionIndex {
+        self.index
+    }
 
     #[inline]
     fn address(&self) -> u64 {
@@ -192,6 +206,10 @@ impl<'file> ObjectSection<'static> for WasmSection<'file> {
             _ => serialize_to_cow(self.section.clone()),
         }
         .unwrap_or_else(|| Cow::from(&[][..]))
+    }
+
+    fn data_range(&self, _address: u64, _size: u64) -> Option<&'static [u8]> {
+        unimplemented!()
     }
 
     #[inline]

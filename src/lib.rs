@@ -165,6 +165,10 @@ where
     Wasm(WasmSectionIterator<'file>),
 }
 
+/// The index used to identify a section of a file.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct SectionIndex(pub usize);
+
 /// A Section of a File
 pub struct Section<'data, 'file>
 where
@@ -226,7 +230,8 @@ where
 #[derive(Debug)]
 pub struct Symbol<'data> {
     kind: SymbolKind,
-    section_kind: Option<SectionKind>,
+    section_index: Option<SectionIndex>,
+    undefined: bool,
     global: bool,
     name: Option<&'data str>,
     address: u64,
@@ -434,6 +439,12 @@ where
         .map(|inner| Section { inner })
     }
 
+    fn section_by_index(&'file self, index: SectionIndex) -> Option<Section<'data, 'file>> {
+        map_inner_option!(self.inner, FileInternal, SectionInternal, |x| x
+            .section_by_index(index))
+        .map(|inner| Section { inner })
+    }
+
     fn section_data_by_name(&self, section_name: &str) -> Option<Cow<'data, [u8]>> {
         with_inner!(self.inner, FileInternal, |x| x
             .section_data_by_name(section_name))
@@ -529,6 +540,10 @@ impl<'data, 'file> ObjectSegment<'data> for Segment<'data, 'file> {
         with_inner!(self.inner, SegmentInternal, |x| x.data())
     }
 
+    fn data_range(&self, address: u64, size: u64) -> Option<&'data [u8]> {
+        with_inner!(self.inner, SegmentInternal, |x| x.data_range(address, size))
+    }
+
     fn name(&self) -> Option<&str> {
         with_inner!(self.inner, SegmentInternal, |x| x.name())
     }
@@ -558,6 +573,10 @@ impl<'data, 'file> fmt::Debug for Section<'data, 'file> {
 impl<'data, 'file> ObjectSection<'data> for Section<'data, 'file> {
     type RelocationIterator = RelocationIterator<'data, 'file>;
 
+    fn index(&self) -> SectionIndex {
+        with_inner!(self.inner, SectionInternal, |x| x.index())
+    }
+
     fn address(&self) -> u64 {
         with_inner!(self.inner, SectionInternal, |x| x.address())
     }
@@ -568,6 +587,10 @@ impl<'data, 'file> ObjectSection<'data> for Section<'data, 'file> {
 
     fn data(&self) -> Cow<'data, [u8]> {
         with_inner!(self.inner, SectionInternal, |x| x.data())
+    }
+
+    fn data_range(&self, address: u64, size: u64) -> Option<&'data [u8]> {
+        with_inner!(self.inner, SectionInternal, |x| x.data_range(address, size))
     }
 
     fn uncompressed_data(&self) -> Cow<'data, [u8]> {
@@ -613,16 +636,18 @@ impl<'data> Symbol<'data> {
         self.kind
     }
 
-    /// Returns the section kind for the symbol, or `None` if the symbol is undefined.
+    /// Returns the section index for the section containing this symbol.
+    ///
+    /// May return `None` if the section is unknown or the symbol is undefined.
     #[inline]
-    pub fn section_kind(&self) -> Option<SectionKind> {
-        self.section_kind
+    pub fn section_index(&self) -> Option<SectionIndex> {
+        self.section_index
     }
 
     /// Return true if the symbol is undefined.
     #[inline]
     pub fn is_undefined(&self) -> bool {
-        self.section_kind.is_none()
+        self.undefined
     }
 
     /// Return true if the symbol is global.
@@ -726,4 +751,15 @@ impl Relocation {
     pub fn has_implicit_addend(&self) -> bool {
         self.implicit_addend
     }
+}
+
+fn data_range(data: &[u8], data_address: u64, range_address: u64, size: u64) -> Option<&[u8]> {
+    if range_address >= data_address {
+        let start_offset = (range_address - data_address) as usize;
+        let end_offset = start_offset + size as usize;
+        if end_offset <= data.len() {
+            return Some(&data[start_offset..end_offset]);
+        }
+    }
+    None
 }

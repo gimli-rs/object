@@ -1,5 +1,5 @@
 use crate::alloc::borrow::Cow;
-use crate::{Machine, Relocation, SectionKind, Symbol, SymbolMap, Uuid};
+use crate::{Machine, Relocation, SectionIndex, SectionKind, Symbol, SymbolMap, Uuid};
 
 /// An object file.
 pub trait Object<'data, 'file> {
@@ -41,6 +41,13 @@ pub trait Object<'data, 'file> {
     /// name. In this case, the first matching section will be used.
     fn section_by_name(&'file self, section_name: &str) -> Option<Self::Section>;
 
+    /// Get the section at the given index.
+    ///
+    /// The meaning of the index depends on the object file.
+    ///
+    /// For some object files, this requires iterating through all sections.
+    fn section_by_index(&'file self, index: SectionIndex) -> Option<Self::Section>;
+
     /// Get the contents of the section named `section_name`, if such
     /// a section exists.
     ///
@@ -65,6 +72,22 @@ pub trait Object<'data, 'file> {
     ///
     /// This may skip over symbols that are malformed or unsupported.
     fn symbols(&'file self) -> Self::SymbolIterator;
+
+    /// Get the data for the given symbol.
+    fn symbol_data(&'file self, symbol: &Symbol<'data>) -> Option<&'data [u8]> {
+        if symbol.is_undefined() {
+            return None;
+        }
+        let address = symbol.address();
+        let size = symbol.size();
+        if let Some(index) = symbol.section_index() {
+            self.section_by_index(index)
+                .and_then(|section| section.data_range(address, size))
+        } else {
+            self.segments()
+                .find_map(|segment| segment.data_range(address, size))
+        }
+    }
 
     /// Get an iterator over the dynamic linking symbols in the file.
     ///
@@ -115,6 +138,9 @@ pub trait ObjectSegment<'data> {
     /// segment in memory.
     fn data(&self) -> &'data [u8];
 
+    /// Return the segment data in the given range.
+    fn data_range(&self, address: u64, size: u64) -> Option<&'data [u8]>;
+
     /// Returns the name of the segment.
     fn name(&self) -> Option<&str>;
 }
@@ -126,6 +152,9 @@ pub trait ObjectSection<'data> {
     /// The first field in the item tuple is the section offset
     /// that the relocation applies to.
     type RelocationIterator: Iterator<Item = (u64, Relocation)>;
+
+    /// Returns the section index.
+    fn index(&self) -> SectionIndex;
 
     /// Returns the address of the section.
     fn address(&self) -> u64;
@@ -139,6 +168,11 @@ pub trait ObjectSection<'data> {
     ///
     /// This does not do any decompression.
     fn data(&self) -> Cow<'data, [u8]>;
+
+    /// Return the raw contents of the section data in the given range.
+    ///
+    /// This does not do any decompression.
+    fn data_range(&self, address: u64, size: u64) -> Option<&'data [u8]>;
 
     /// Returns the uncompressed contents of the section.
     /// The length of this data may be different from the size of the

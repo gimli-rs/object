@@ -1,13 +1,12 @@
 use crate::alloc::borrow::Cow;
 use crate::alloc::vec::Vec;
-use std::cmp;
-use std::slice;
+use std::{cmp, iter, slice};
 
 use goblin::pe;
 
 use crate::{
-    Machine, Object, ObjectSection, ObjectSegment, Relocation, SectionKind, Symbol, SymbolKind,
-    SymbolMap,
+    Machine, Object, ObjectSection, ObjectSegment, Relocation, SectionIndex, SectionKind, Symbol,
+    SymbolKind, SymbolMap,
 };
 
 /// A PE object file.
@@ -44,7 +43,7 @@ where
     'data: 'file,
 {
     file: &'file PeFile<'data>,
-    iter: slice::Iter<'file, pe::section_table::SectionTable>,
+    iter: iter::Enumerate<slice::Iter<'file, pe::section_table::SectionTable>>,
 }
 
 /// A section of a `PeFile`.
@@ -54,6 +53,7 @@ where
     'data: 'file,
 {
     file: &'file PeFile<'data>,
+    index: SectionIndex,
     section: &'file pe::section_table::SectionTable,
 }
 
@@ -113,23 +113,18 @@ where
     }
 
     fn section_by_name(&'file self, section_name: &str) -> Option<PeSection<'data, 'file>> {
-        for section in &self.pe.sections {
-            if let Ok(name) = section.name() {
-                if name == section_name {
-                    return Some(PeSection {
-                        file: self,
-                        section,
-                    });
-                }
-            }
-        }
-        None
+        self.sections()
+            .find(|section| section.name() == Some(section_name))
+    }
+
+    fn section_by_index(&'file self, index: SectionIndex) -> Option<PeSection<'data, 'file>> {
+        self.sections().find(|section| section.index() == index)
     }
 
     fn sections(&'file self) -> PeSectionIterator<'data, 'file> {
         PeSectionIterator {
             file: self,
-            iter: self.pe.sections.iter(),
+            iter: self.pe.sections.iter().enumerate(),
         }
     }
 
@@ -207,8 +202,13 @@ impl<'data, 'file> ObjectSegment<'data> for PeSegment<'data, 'file> {
     }
 
     fn data(&self) -> &'data [u8] {
-        &self.file.data[self.section.pointer_to_raw_data as usize..]
-            [..self.section.size_of_raw_data as usize]
+        let offset = self.section.pointer_to_raw_data as usize;
+        let size = cmp::min(self.section.virtual_size, self.section.size_of_raw_data) as usize;
+        &self.file.data[offset..][..size]
+    }
+
+    fn data_range(&self, address: u64, size: u64) -> Option<&'data [u8]> {
+        crate::data_range(self.data(), self.address(), address, size)
     }
 
     #[inline]
@@ -221,15 +221,29 @@ impl<'data, 'file> Iterator for PeSectionIterator<'data, 'file> {
     type Item = PeSection<'data, 'file>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.iter.next().map(|section| PeSection {
+        self.iter.next().map(|(index, section)| PeSection {
             file: self.file,
+            index: SectionIndex(index),
             section,
         })
     }
 }
 
+impl<'data, 'file> PeSection<'data, 'file> {
+    fn raw_data(&self) -> &'data [u8] {
+        let offset = self.section.pointer_to_raw_data as usize;
+        let size = cmp::min(self.section.virtual_size, self.section.size_of_raw_data) as usize;
+        &self.file.data[offset..][..size]
+    }
+}
+
 impl<'data, 'file> ObjectSection<'data> for PeSection<'data, 'file> {
     type RelocationIterator = PeRelocationIterator;
+
+    #[inline]
+    fn index(&self) -> SectionIndex {
+        self.index
+    }
 
     #[inline]
     fn address(&self) -> u64 {
@@ -242,10 +256,11 @@ impl<'data, 'file> ObjectSection<'data> for PeSection<'data, 'file> {
     }
 
     fn data(&self) -> Cow<'data, [u8]> {
-        Cow::from(
-            &self.file.data[self.section.pointer_to_raw_data as usize..]
-                [..cmp::min(self.section.virtual_size, self.section.size_of_raw_data) as usize],
-        )
+        Cow::from(self.raw_data())
+    }
+
+    fn data_range(&self, address: u64, size: u64) -> Option<&'data [u8]> {
+        crate::data_range(self.raw_data(), self.address(), address, size)
     }
 
     #[inline]
@@ -295,7 +310,9 @@ impl<'data, 'file> Iterator for PeSymbolIterator<'data, 'file> {
         if let Some(export) = self.exports.next() {
             return Some(Symbol {
                 kind: SymbolKind::Unknown,
-                section_kind: Some(SectionKind::Unknown),
+                // TODO: can we find a section?
+                section_index: None,
+                undefined: false,
                 global: true,
                 name: export.name,
                 address: export.rva as u64,
@@ -309,7 +326,8 @@ impl<'data, 'file> Iterator for PeSymbolIterator<'data, 'file> {
             };
             return Some(Symbol {
                 kind: SymbolKind::Unknown,
-                section_kind: None,
+                section_index: None,
+                undefined: true,
                 global: true,
                 name,
                 address: 0,

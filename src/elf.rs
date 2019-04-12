@@ -15,8 +15,8 @@ use scroll::ctx::TryFromCtx;
 use scroll::{self, Pread};
 
 use crate::{
-    Machine, Object, ObjectSection, ObjectSegment, Relocation, RelocationKind, SectionKind, Symbol,
-    SymbolKind, SymbolMap,
+    Machine, Object, ObjectSection, ObjectSegment, Relocation, RelocationKind, SectionIndex,
+    SectionKind, Symbol, SymbolKind, SymbolMap,
 };
 
 /// An ELF object file.
@@ -63,7 +63,7 @@ where
     'data: 'file,
 {
     file: &'file ElfFile<'data>,
-    index: usize,
+    index: SectionIndex,
     section: &'file elf::SectionHeader,
 }
 
@@ -74,7 +74,6 @@ where
 {
     strtab: &'file strtab::Strtab<'data>,
     symbols: elf::sym::SymIterator<'data>,
-    section_kinds: Vec<SectionKind>,
 }
 
 /// An iterator over the relocations in an `ElfSection`.
@@ -83,7 +82,7 @@ where
     'data: 'file,
 {
     /// The index of the section that the relocations apply to.
-    section_index: u32,
+    section_index: SectionIndex,
     file: &'file ElfFile<'data>,
     sections: slice::Iter<'file, (elf::ShdrIdx, elf::RelocSection<'data>)>,
     relocations: Option<elf::reloc::RelocIterator<'data>>,
@@ -112,7 +111,7 @@ impl<'data> ElfFile<'data> {
                 if name == section_name {
                     return Some(ElfSection {
                         file: self,
-                        index,
+                        index: SectionIndex(index),
                         section,
                     });
                 }
@@ -174,6 +173,17 @@ where
             .or_else(|| self.zdebug_section_by_name(section_name))
     }
 
+    fn section_by_index(&'file self, index: SectionIndex) -> Option<ElfSection<'data, 'file>> {
+        self.elf
+            .section_headers
+            .get(index.0)
+            .map(|section| ElfSection {
+                file: self,
+                index,
+                section,
+            })
+    }
+
     fn sections(&'file self) -> ElfSectionIterator<'data, 'file> {
         ElfSectionIterator {
             file: self,
@@ -182,18 +192,16 @@ where
     }
 
     fn symbol_by_index(&self, index: u64) -> Option<Symbol<'data>> {
-        // TODO: determine section_kind too
         self.elf
             .syms
             .get(index as usize)
-            .map(|symbol| parse_symbol(&symbol, &self.elf.strtab, &[]))
+            .map(|symbol| parse_symbol(&symbol, &self.elf.strtab))
     }
 
     fn symbols(&'file self) -> ElfSymbolIterator<'data, 'file> {
         ElfSymbolIterator {
             strtab: &self.elf.strtab,
             symbols: self.elf.syms.iter(),
-            section_kinds: self.sections().map(|x| x.kind()).collect(),
         }
     }
 
@@ -201,7 +209,6 @@ where
         ElfSymbolIterator {
             strtab: &self.elf.dynstrtab,
             symbols: self.elf.dynsyms.iter(),
-            section_kinds: self.sections().map(|x| x.kind()).collect(),
         }
     }
 
@@ -304,6 +311,10 @@ impl<'data, 'file> ObjectSegment<'data> for ElfSegment<'data, 'file> {
         &self.file.data[self.segment.p_offset as usize..][..self.segment.p_filesz as usize]
     }
 
+    fn data_range(&self, address: u64, size: u64) -> Option<&'data [u8]> {
+        crate::data_range(self.data(), self.address(), address, size)
+    }
+
     #[inline]
     fn name(&self) -> Option<&str> {
         None
@@ -315,7 +326,7 @@ impl<'data, 'file> Iterator for ElfSectionIterator<'data, 'file> {
 
     fn next(&mut self) -> Option<Self::Item> {
         self.iter.next().map(|(index, section)| ElfSection {
-            index,
+            index: SectionIndex(index),
             file: self.file,
             section,
         })
@@ -401,6 +412,11 @@ impl<'data, 'file> ObjectSection<'data> for ElfSection<'data, 'file> {
     type RelocationIterator = ElfRelocationIterator<'data, 'file>;
 
     #[inline]
+    fn index(&self) -> SectionIndex {
+        self.index
+    }
+
+    #[inline]
     fn address(&self) -> u64 {
         self.section.sh_addr
     }
@@ -413,6 +429,10 @@ impl<'data, 'file> ObjectSection<'data> for ElfSection<'data, 'file> {
     #[inline]
     fn data(&self) -> Cow<'data, [u8]> {
         Cow::from(self.raw_data())
+    }
+
+    fn data_range(&self, address: u64, size: u64) -> Option<&'data [u8]> {
+        crate::data_range(self.raw_data(), self.address(), address, size)
     }
 
     #[cfg(feature = "compression")]
@@ -462,7 +482,7 @@ impl<'data, 'file> ObjectSection<'data> for ElfSection<'data, 'file> {
 
     fn relocations(&self) -> ElfRelocationIterator<'data, 'file> {
         ElfRelocationIterator {
-            section_index: self.index as u32,
+            section_index: self.index,
             file: self.file,
             sections: self.file.elf.shdr_relocs.iter(),
             relocations: None,
@@ -482,15 +502,11 @@ impl<'data, 'file> Iterator for ElfSymbolIterator<'data, 'file> {
     fn next(&mut self) -> Option<Self::Item> {
         self.symbols
             .next()
-            .map(|symbol| parse_symbol(&symbol, self.strtab, &self.section_kinds))
+            .map(|symbol| parse_symbol(&symbol, self.strtab))
     }
 }
 
-fn parse_symbol<'data>(
-    symbol: &elf::sym::Sym,
-    strtab: &strtab::Strtab<'data>,
-    section_kinds: &[SectionKind],
-) -> Symbol<'data> {
+fn parse_symbol<'data>(symbol: &elf::sym::Sym, strtab: &strtab::Strtab<'data>) -> Symbol<'data> {
     let name = strtab.get(symbol.st_name).and_then(Result::ok);
     let kind = match elf::sym::st_type(symbol.st_info) {
         elf::sym::STT_OBJECT => SymbolKind::Data,
@@ -501,22 +517,20 @@ fn parse_symbol<'data>(
         elf::sym::STT_TLS => SymbolKind::Tls,
         _ => SymbolKind::Unknown,
     };
-    let section_kind = if symbol.st_shndx == elf::section_header::SHN_UNDEF as usize {
-        None
-    } else {
-        Some(
-            section_kinds
-                .get(symbol.st_shndx)
-                .cloned()
-                .unwrap_or(SectionKind::Unknown),
-        )
-    };
+    let undefined = symbol.st_shndx == elf::section_header::SHN_UNDEF as usize;
+    let section_index =
+        if undefined || symbol.st_shndx >= elf::section_header::SHN_LORESERVE as usize {
+            None
+        } else {
+            Some(SectionIndex(symbol.st_shndx))
+        };
     Symbol {
         name,
         address: symbol.st_value,
         size: symbol.st_size,
         kind,
-        section_kind,
+        section_index,
+        undefined,
         global: elf::sym::st_bind(symbol.st_info) != elf::sym::STB_LOCAL,
     }
 }
@@ -565,7 +579,7 @@ impl<'data, 'file> Iterator for ElfRelocationIterator<'data, 'file> {
                 None => return None,
                 Some((index, relocs)) => {
                     let section = &self.file.elf.section_headers[*index];
-                    if section.sh_info == self.section_index {
+                    if section.sh_info as usize == self.section_index.0 {
                         self.relocations = Some(relocs.into_iter());
                     }
                     // TODO: do we need to return section.sh_link?
