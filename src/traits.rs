@@ -133,6 +133,9 @@ pub trait ObjectSegment<'data> {
     /// Returns the size of the segment in memory.
     fn size(&self) -> u64;
 
+    /// Returns the alignment of the segment in memory.
+    fn align(&self) -> u64;
+
     /// Returns a reference to the file contents of the segment.
     /// The length of this data may be different from the size of the
     /// segment in memory.
@@ -161,6 +164,9 @@ pub trait ObjectSection<'data> {
 
     /// Returns the size of the section in memory.
     fn size(&self) -> u64;
+
+    /// Returns the alignment of the section in memory.
+    fn align(&self) -> u64;
 
     /// Returns the raw contents of the section.
     /// The length of this data may be different from the size of the

@@ -154,6 +154,11 @@ impl<'file> ObjectSegment<'static> for WasmSegment<'file> {
         unreachable!()
     }
 
+    #[inline]
+    fn align(&self) -> u64 {
+        unreachable!()
+    }
+
     fn data(&self) -> &'static [u8] {
         unreachable!()
     }
@@ -195,6 +200,11 @@ impl<'file> ObjectSection<'static> for WasmSection<'file> {
     #[inline]
     fn size(&self) -> u64 {
         serialize_to_cow(self.section.clone()).map_or(0, |b| b.len() as u64)
+    }
+
+    #[inline]
+    fn align(&self) -> u64 {
+        1
     }
 
     fn data(&self) -> Cow<'static, [u8]> {

@@ -307,6 +307,11 @@ impl<'data, 'file> ObjectSegment<'data> for ElfSegment<'data, 'file> {
         self.segment.p_memsz
     }
 
+    #[inline]
+    fn align(&self) -> u64 {
+        self.segment.p_align
+    }
+
     fn data(&self) -> &'data [u8] {
         &self.file.data[self.segment.p_offset as usize..][..self.segment.p_filesz as usize]
     }
@@ -424,6 +429,11 @@ impl<'data, 'file> ObjectSection<'data> for ElfSection<'data, 'file> {
     #[inline]
     fn size(&self) -> u64 {
         self.section.sh_size
+    }
+
+    #[inline]
+    fn align(&self) -> u64 {
+        self.section.sh_addralign
     }
 
     #[inline]

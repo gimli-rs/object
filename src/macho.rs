@@ -275,6 +275,12 @@ impl<'data, 'file> ObjectSegment<'data> for MachOSegment<'data, 'file> {
     }
 
     #[inline]
+    fn align(&self) -> u64 {
+        // Page size.
+        0x1000
+    }
+
+    #[inline]
     fn data(&self) -> &'data [u8] {
         self.segment.data
     }
@@ -347,6 +353,11 @@ impl<'data, 'file> ObjectSection<'data> for MachOSection<'data, 'file> {
     #[inline]
     fn size(&self) -> u64 {
         self.section.size
+    }
+
+    #[inline]
+    fn align(&self) -> u64 {
+        1 << self.section.align
     }
 
     #[inline]

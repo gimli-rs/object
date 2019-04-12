@@ -84,6 +84,16 @@ impl<'data> PeFile<'data> {
         let pe = pe::PE::parse(data).map_err(|_| "Could not parse PE header")?;
         Ok(PeFile { pe, data })
     }
+
+    fn section_alignment(&self) -> u64 {
+        u64::from(
+            self.pe
+                .header
+                .optional_header
+                .map(|h| h.windows_fields.section_alignment)
+                .unwrap_or(0x1000),
+        )
+    }
 }
 
 impl<'data, 'file> Object<'data, 'file> for PeFile<'data>
@@ -201,6 +211,11 @@ impl<'data, 'file> ObjectSegment<'data> for PeSegment<'data, 'file> {
         u64::from(self.section.virtual_size)
     }
 
+    #[inline]
+    fn align(&self) -> u64 {
+        self.file.section_alignment()
+    }
+
     fn data(&self) -> &'data [u8] {
         let offset = self.section.pointer_to_raw_data as usize;
         let size = cmp::min(self.section.virtual_size, self.section.size_of_raw_data) as usize;
@@ -253,6 +268,11 @@ impl<'data, 'file> ObjectSection<'data> for PeSection<'data, 'file> {
     #[inline]
     fn size(&self) -> u64 {
         u64::from(self.section.virtual_size)
+    }
+
+    #[inline]
+    fn align(&self) -> u64 {
+        self.file.section_alignment()
     }
 
     fn data(&self) -> Cow<'data, [u8]> {
