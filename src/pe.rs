@@ -202,8 +202,9 @@ impl<'data, 'file> ObjectSegment<'data> for PeSegment<'data, 'file> {
     }
 
     fn data(&self) -> &'data [u8] {
-        &self.file.data[self.section.pointer_to_raw_data as usize..]
-            [..self.section.size_of_raw_data as usize]
+        let offset = self.section.pointer_to_raw_data as usize;
+        let size = cmp::min(self.section.virtual_size, self.section.size_of_raw_data) as usize;
+        &self.file.data[offset..][..size]
     }
 
     fn data_range(&self, address: u64, size: u64) -> Option<&'data [u8]> {
@@ -230,8 +231,9 @@ impl<'data, 'file> Iterator for PeSectionIterator<'data, 'file> {
 
 impl<'data, 'file> PeSection<'data, 'file> {
     fn raw_data(&self) -> &'data [u8] {
-        &self.file.data[self.section.pointer_to_raw_data as usize..]
-            [..cmp::min(self.section.virtual_size, self.section.size_of_raw_data) as usize]
+        let offset = self.section.pointer_to_raw_data as usize;
+        let size = cmp::min(self.section.virtual_size, self.section.size_of_raw_data) as usize;
+        &self.file.data[offset..][..size]
     }
 }
 
