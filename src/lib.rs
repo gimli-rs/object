@@ -194,15 +194,45 @@ pub enum SectionKind {
     /// The section kind is unknown.
     Unknown,
     /// An executable code section.
+    ///
+    /// Example ELF sections: `.text`
     Text,
     /// A data section.
+    ///
+    /// Example ELF sections: `.data`
     Data,
     /// A read only data section.
+    ///
+    /// Example ELF sections: `.rodata`
     ReadOnlyData,
+    /// A loadable string section.
+    ///
+    /// Example ELF sections: `.rodata.str`
+    ReadOnlyString,
     /// An uninitialized data section.
+    ///
+    /// Example ELF sections: `.bss`
     UninitializedData,
-    /// Some other type of text or data section.
+    /// A TLS data section.
+    ///
+    /// Example ELF sections: `.tdata`
+    Tls,
+    /// An uninitialized TLS data section.
+    ///
+    /// Example ELF sections: `.tbss`
+    UninitializedTls,
+    /// A non-loadable string section.
+    ///
+    /// Example ELF sections: `.comment`, `.debug_str`
+    OtherString,
+    /// Some other non-loadable section.
+    ///
+    /// Example ELF sections: `.debug_info`
     Other,
+    /// Metadata such as symbols or relocations.
+    ///
+    /// Example ELF sections: `.symtab`, `.strtab`
+    Metadata,
 }
 
 /// An iterator over symbol table entries.

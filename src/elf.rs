@@ -474,19 +474,46 @@ impl<'data, 'file> ObjectSection<'data> for ElfSection<'data, 'file> {
     fn kind(&self) -> SectionKind {
         match self.section.sh_type {
             elf::section_header::SHT_PROGBITS => {
-                if self.section.sh_flags & u64::from(elf::section_header::SHF_ALLOC) == 0 {
-                    SectionKind::Unknown
-                } else if self.section.sh_flags & u64::from(elf::section_header::SHF_EXECINSTR) != 0
-                {
-                    SectionKind::Text
-                } else if self.section.sh_flags & u64::from(elf::section_header::SHF_WRITE) != 0 {
-                    SectionKind::Data
+                if self.section.sh_flags & u64::from(elf::section_header::SHF_ALLOC) != 0 {
+                    if self.section.sh_flags & u64::from(elf::section_header::SHF_EXECINSTR) != 0 {
+                        SectionKind::Text
+                    } else if self.section.sh_flags & u64::from(elf::section_header::SHF_TLS) != 0 {
+                        SectionKind::Tls
+                    } else if self.section.sh_flags & u64::from(elf::section_header::SHF_WRITE) != 0
+                    {
+                        SectionKind::Data
+                    } else if self.section.sh_flags & u64::from(elf::section_header::SHF_STRINGS)
+                        != 0
+                    {
+                        SectionKind::ReadOnlyString
+                    } else {
+                        SectionKind::ReadOnlyData
+                    }
+                } else if self.section.sh_flags & u64::from(elf::section_header::SHF_STRINGS) != 0 {
+                    SectionKind::OtherString
                 } else {
-                    SectionKind::ReadOnlyData
+                    SectionKind::Other
                 }
             }
-            elf::section_header::SHT_NOBITS => SectionKind::UninitializedData,
-            _ => SectionKind::Unknown,
+            elf::section_header::SHT_NOBITS => {
+                if self.section.sh_flags & u64::from(elf::section_header::SHF_TLS) != 0 {
+                    SectionKind::UninitializedTls
+                } else {
+                    SectionKind::UninitializedData
+                }
+            }
+            elf::section_header::SHT_NULL
+            | elf::section_header::SHT_SYMTAB
+            | elf::section_header::SHT_STRTAB
+            | elf::section_header::SHT_RELA
+            | elf::section_header::SHT_HASH
+            | elf::section_header::SHT_DYNAMIC
+            | elf::section_header::SHT_REL
+            | elf::section_header::SHT_DYNSYM => SectionKind::Metadata,
+            _ => {
+                // TODO: maybe add more specialised kinds based on sh_type (e.g. Unwind)
+                SectionKind::Unknown
+            }
         }
     }
 
