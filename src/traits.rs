@@ -1,5 +1,5 @@
 use crate::alloc::borrow::Cow;
-use crate::{Machine, Relocation, SectionIndex, SectionKind, Symbol, SymbolMap, Uuid};
+use crate::{Machine, Relocation, SectionIndex, SectionKind, Symbol, SymbolIndex, SymbolMap, Uuid};
 
 /// An object file.
 pub trait Object<'data, 'file> {
@@ -16,7 +16,7 @@ pub trait Object<'data, 'file> {
     type SectionIterator: Iterator<Item = Self::Section>;
 
     /// An iterator over the symbols in the object file.
-    type SymbolIterator: Iterator<Item = Symbol<'data>>;
+    type SymbolIterator: Iterator<Item = (SymbolIndex, Symbol<'data>)>;
 
     /// Get the machine type of the file.
     fn machine(&self) -> Machine;
@@ -66,7 +66,7 @@ pub trait Object<'data, 'file> {
     ///
     /// This is similar to `self.symbols().nth(index)`, except that
     /// the index will take into account malformed or unsupported symbols.
-    fn symbol_by_index(&self, index: u64) -> Option<Symbol<'data>>;
+    fn symbol_by_index(&self, index: SymbolIndex) -> Option<Symbol<'data>>;
 
     /// Get an iterator over the debugging symbols in the file.
     ///

@@ -256,6 +256,10 @@ where
     Wasm(WasmSymbolIterator<'file>),
 }
 
+/// The index used to identify a symbol of a file.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct SymbolIndex(pub usize);
+
 /// A symbol table entry.
 #[derive(Debug)]
 pub struct Symbol<'data> {
@@ -297,7 +301,7 @@ pub struct SymbolMap<'data> {
 #[derive(Debug)]
 pub struct Relocation {
     kind: RelocationKind,
-    symbol: u64,
+    symbol: SymbolIndex,
     addend: i64,
     implicit_addend: bool,
 }
@@ -487,7 +491,7 @@ where
         }
     }
 
-    fn symbol_by_index(&self, index: u64) -> Option<Symbol<'data>> {
+    fn symbol_by_index(&self, index: SymbolIndex) -> Option<Symbol<'data>> {
         with_inner!(self.inner, FileInternal, |x| x.symbol_by_index(index))
     }
 
@@ -660,7 +664,7 @@ impl<'data, 'file> ObjectSection<'data> for Section<'data, 'file> {
 }
 
 impl<'data, 'file> Iterator for SymbolIterator<'data, 'file> {
-    type Item = Symbol<'data>;
+    type Item = (SymbolIndex, Symbol<'data>);
 
     fn next(&mut self) -> Option<Self::Item> {
         with_inner_mut!(self.inner, SymbolIteratorInternal, |x| x.next())
@@ -770,7 +774,7 @@ impl Relocation {
 
     /// The index of the symbol within the symbol table, if applicable.
     #[inline]
-    pub fn symbol(&self) -> u64 {
+    pub fn symbol(&self) -> SymbolIndex {
         self.symbol
     }
 

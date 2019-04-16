@@ -1,7 +1,6 @@
 use crate::alloc::borrow::Cow;
 use crate::alloc::vec::Vec;
-use std::fmt;
-use std::slice;
+use std::{fmt, iter, slice};
 
 use goblin::container;
 use goblin::mach;
@@ -10,7 +9,7 @@ use uuid::Uuid;
 
 use crate::{
     Machine, Object, ObjectSection, ObjectSegment, Relocation, RelocationKind, SectionIndex,
-    SectionKind, Symbol, SymbolKind, SymbolMap,
+    SectionKind, Symbol, SymbolIndex, SymbolKind, SymbolMap,
 };
 
 /// A Mach-O object file.
@@ -65,7 +64,7 @@ where
 
 /// An iterator over the symbols of a `MachOFile`.
 pub struct MachOSymbolIterator<'data> {
-    symbols: mach::symbols::SymbolIterator<'data>,
+    symbols: iter::Enumerate<mach::symbols::SymbolIterator<'data>>,
 }
 
 /// An iterator over the relocations in an `MachOSection`.
@@ -159,11 +158,11 @@ where
         }
     }
 
-    fn symbol_by_index(&self, index: u64) -> Option<Symbol<'data>> {
+    fn symbol_by_index(&self, index: SymbolIndex) -> Option<Symbol<'data>> {
         self.macho
             .symbols
             .as_ref()
-            .and_then(|symbols| symbols.get(index as usize).ok())
+            .and_then(|symbols| symbols.get(index.0).ok())
             .and_then(|(name, nlist)| parse_symbol(name, &nlist))
     }
 
@@ -171,7 +170,8 @@ where
         let symbols = match self.macho.symbols {
             Some(ref symbols) => symbols.into_iter(),
             None => mach::symbols::SymbolIterator::default(),
-        };
+        }
+        .enumerate();
 
         MachOSymbolIterator { symbols }
     }
@@ -183,7 +183,7 @@ where
     }
 
     fn symbol_map(&self) -> SymbolMap<'data> {
-        let mut symbols: Vec<_> = self.symbols().collect();
+        let mut symbols: Vec<_> = self.symbols().map(|(_, s)| s).collect();
 
         // Add symbols for the end of each section.
         for section in self.sections() {
@@ -409,13 +409,12 @@ impl<'data> fmt::Debug for MachOSymbolIterator<'data> {
 }
 
 impl<'data> Iterator for MachOSymbolIterator<'data> {
-    type Item = Symbol<'data>;
+    type Item = (SymbolIndex, Symbol<'data>);
 
     fn next(&mut self) -> Option<Self::Item> {
-        while let Some(Ok((name, nlist))) = self.symbols.next() {
-            let symbol = parse_symbol(name, &nlist);
-            if symbol.is_some() {
-                return symbol;
+        while let Some((index, Ok((name, nlist)))) = self.symbols.next() {
+            if let Some(symbol) = parse_symbol(name, &nlist) {
+                return Some((SymbolIndex(index), symbol));
             }
         }
         None
@@ -481,7 +480,7 @@ impl<'data, 'file> Iterator for MachORelocationIterator<'data, 'file> {
                 reloc.r_address as u64,
                 Relocation {
                     kind,
-                    symbol: reloc.r_symbolnum() as u64,
+                    symbol: SymbolIndex(reloc.r_symbolnum()),
                     addend: 0,
                     implicit_addend: true,
                 },

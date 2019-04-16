@@ -16,7 +16,7 @@ use scroll::{self, Pread};
 
 use crate::{
     Machine, Object, ObjectSection, ObjectSegment, Relocation, RelocationKind, SectionIndex,
-    SectionKind, Symbol, SymbolKind, SymbolMap,
+    SectionKind, Symbol, SymbolIndex, SymbolKind, SymbolMap,
 };
 
 /// An ELF object file.
@@ -73,7 +73,7 @@ where
     'data: 'file,
 {
     strtab: &'file strtab::Strtab<'data>,
-    symbols: elf::sym::SymIterator<'data>,
+    symbols: iter::Enumerate<elf::sym::SymIterator<'data>>,
 }
 
 /// An iterator over the relocations in an `ElfSection`.
@@ -191,29 +191,33 @@ where
         }
     }
 
-    fn symbol_by_index(&self, index: u64) -> Option<Symbol<'data>> {
+    fn symbol_by_index(&self, index: SymbolIndex) -> Option<Symbol<'data>> {
         self.elf
             .syms
-            .get(index as usize)
+            .get(index.0)
             .map(|symbol| parse_symbol(&symbol, &self.elf.strtab))
     }
 
     fn symbols(&'file self) -> ElfSymbolIterator<'data, 'file> {
         ElfSymbolIterator {
             strtab: &self.elf.strtab,
-            symbols: self.elf.syms.iter(),
+            symbols: self.elf.syms.iter().enumerate(),
         }
     }
 
     fn dynamic_symbols(&'file self) -> ElfSymbolIterator<'data, 'file> {
         ElfSymbolIterator {
             strtab: &self.elf.dynstrtab,
-            symbols: self.elf.dynsyms.iter(),
+            symbols: self.elf.dynsyms.iter().enumerate(),
         }
     }
 
     fn symbol_map(&self) -> SymbolMap<'data> {
-        let mut symbols: Vec<_> = self.symbols().filter(SymbolMap::filter).collect();
+        let mut symbols: Vec<_> = self
+            .symbols()
+            .map(|(_, s)| s)
+            .filter(SymbolMap::filter)
+            .collect();
         symbols.sort_by_key(|x| x.address);
         SymbolMap { symbols }
     }
@@ -534,12 +538,12 @@ impl<'data, 'file> fmt::Debug for ElfSymbolIterator<'data, 'file> {
 }
 
 impl<'data, 'file> Iterator for ElfSymbolIterator<'data, 'file> {
-    type Item = Symbol<'data>;
+    type Item = (SymbolIndex, Symbol<'data>);
 
     fn next(&mut self) -> Option<Self::Item> {
         self.symbols
             .next()
-            .map(|symbol| parse_symbol(&symbol, self.strtab))
+            .map(|(index, symbol)| (SymbolIndex(index), parse_symbol(&symbol, self.strtab)))
     }
 }
 
@@ -605,7 +609,7 @@ impl<'data, 'file> Iterator for ElfRelocationIterator<'data, 'file> {
                         reloc.r_offset,
                         Relocation {
                             kind,
-                            symbol: reloc.r_sym as u64,
+                            symbol: SymbolIndex(reloc.r_sym as usize),
                             addend: reloc.r_addend.unwrap_or(0),
                             implicit_addend: reloc.r_addend.is_none(),
                         },

@@ -40,13 +40,13 @@ fn main() {
         let section_kinds = file.sections().map(|s| (s.index(), s.kind())).collect();
 
         println!("Debugging symbols:");
-        for symbol in file.symbols() {
+        for (_, symbol) in file.symbols() {
             print_symbol(&symbol, &section_kinds);
         }
         println!();
 
         println!("Dynamic symbols:");
-        for symbol in file.dynamic_symbols() {
+        for (_, symbol) in file.dynamic_symbols() {
             print_symbol(&symbol, &section_kinds);
         }
     }
