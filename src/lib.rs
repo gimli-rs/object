@@ -277,6 +277,8 @@ pub struct Symbol<'data> {
 pub enum SymbolKind {
     /// The symbol kind is unknown.
     Unknown,
+    /// The symbol is a null placeholder.
+    Null,
     /// The symbol is for executable code.
     Text,
     /// The symbol is for a data object.
@@ -749,7 +751,11 @@ impl<'data> SymbolMap<'data> {
     fn filter(symbol: &Symbol<'_>) -> bool {
         match symbol.kind() {
             SymbolKind::Unknown | SymbolKind::Text | SymbolKind::Data => {}
-            SymbolKind::Section | SymbolKind::File | SymbolKind::Common | SymbolKind::Tls => {
+            SymbolKind::Null
+            | SymbolKind::Section
+            | SymbolKind::File
+            | SymbolKind::Common
+            | SymbolKind::Tls => {
                 return false;
             }
         }

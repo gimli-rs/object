@@ -195,7 +195,7 @@ where
         self.elf
             .syms
             .get(index.0)
-            .map(|symbol| parse_symbol(&symbol, &self.elf.strtab))
+            .map(|symbol| parse_symbol(index.0, &symbol, &self.elf.strtab))
     }
 
     fn symbols(&'file self) -> ElfSymbolIterator<'data, 'file> {
@@ -541,15 +541,23 @@ impl<'data, 'file> Iterator for ElfSymbolIterator<'data, 'file> {
     type Item = (SymbolIndex, Symbol<'data>);
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.symbols
-            .next()
-            .map(|(index, symbol)| (SymbolIndex(index), parse_symbol(&symbol, self.strtab)))
+        self.symbols.next().map(|(index, symbol)| {
+            (
+                SymbolIndex(index),
+                parse_symbol(index, &symbol, self.strtab),
+            )
+        })
     }
 }
 
-fn parse_symbol<'data>(symbol: &elf::sym::Sym, strtab: &strtab::Strtab<'data>) -> Symbol<'data> {
+fn parse_symbol<'data>(
+    index: usize,
+    symbol: &elf::sym::Sym,
+    strtab: &strtab::Strtab<'data>,
+) -> Symbol<'data> {
     let name = strtab.get(symbol.st_name).and_then(Result::ok);
     let kind = match elf::sym::st_type(symbol.st_info) {
+        elf::sym::STT_NOTYPE if index == 0 => SymbolKind::Null,
         elf::sym::STT_OBJECT => SymbolKind::Data,
         elf::sym::STT_FUNC => SymbolKind::Text,
         elf::sym::STT_SECTION => SymbolKind::Section,
