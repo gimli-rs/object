@@ -54,8 +54,12 @@ fn main() {
             println!("{:?}", segment);
         }
 
-        for section in file.sections() {
-            println!("{:?}", section);
+        for (index, section) in file.sections().enumerate() {
+            println!("{}: {:?}", index, section);
+        }
+
+        for (index, symbol) in file.symbols() {
+            println!("{}: {:?}", index.0, symbol);
         }
 
         for section in file.sections() {
