@@ -591,32 +591,48 @@ impl<'data, 'file> Iterator for ElfRelocationIterator<'data, 'file> {
         loop {
             if let Some(ref mut relocations) = self.relocations {
                 if let Some(reloc) = relocations.next() {
-                    let kind = match self.file.elf.header.e_machine {
+                    let (kind, size) = match self.file.elf.header.e_machine {
                         elf::header::EM_ARM => match reloc.r_type {
-                            elf::reloc::R_ARM_ABS32 => RelocationKind::Direct32,
-                            _ => RelocationKind::Other(reloc.r_type),
+                            elf::reloc::R_ARM_ABS32 => (RelocationKind::Absolute, 32),
+                            _ => (RelocationKind::Other(reloc.r_type), 0),
                         },
                         elf::header::EM_AARCH64 => match reloc.r_type {
-                            elf::reloc::R_AARCH64_ABS64 => RelocationKind::Direct64,
-                            elf::reloc::R_AARCH64_ABS32 => RelocationKind::Direct32,
-                            _ => RelocationKind::Other(reloc.r_type),
+                            elf::reloc::R_AARCH64_ABS64 => (RelocationKind::Absolute, 64),
+                            elf::reloc::R_AARCH64_ABS32 => (RelocationKind::Absolute, 32),
+                            elf::reloc::R_AARCH64_ABS16 => (RelocationKind::Absolute, 16),
+                            elf::reloc::R_AARCH64_PREL64 => (RelocationKind::Relative, 64),
+                            elf::reloc::R_AARCH64_PREL32 => (RelocationKind::Relative, 32),
+                            elf::reloc::R_AARCH64_PREL16 => (RelocationKind::Relative, 16),
+                            _ => (RelocationKind::Other(reloc.r_type), 0),
                         },
                         elf::header::EM_386 => match reloc.r_type {
-                            elf::reloc::R_386_32 => RelocationKind::Direct32,
-                            _ => RelocationKind::Other(reloc.r_type),
+                            elf::reloc::R_386_32 => (RelocationKind::Absolute, 32),
+                            elf::reloc::R_386_PC32 => (RelocationKind::Relative, 32),
+                            elf::reloc::R_386_GOT32 => (RelocationKind::GotRelative, 32),
+                            elf::reloc::R_386_PLT32 => (RelocationKind::PltRelative, 32),
+                            _ => (RelocationKind::Other(reloc.r_type), 0),
                         },
                         elf::header::EM_X86_64 => match reloc.r_type {
-                            elf::reloc::R_X86_64_64 => RelocationKind::Direct64,
-                            elf::reloc::R_X86_64_32 => RelocationKind::Direct32,
-                            elf::reloc::R_X86_64_32S => RelocationKind::DirectSigned32,
-                            _ => RelocationKind::Other(reloc.r_type),
+                            elf::reloc::R_X86_64_64 => (RelocationKind::Absolute, 64),
+                            elf::reloc::R_X86_64_PC32 => (RelocationKind::Relative, 32),
+                            elf::reloc::R_X86_64_GOT32 => (RelocationKind::GotOffset, 32),
+                            elf::reloc::R_X86_64_PLT32 => (RelocationKind::PltRelative, 32),
+                            elf::reloc::R_X86_64_GOTPCREL => (RelocationKind::GotRelative, 32),
+                            elf::reloc::R_X86_64_32 => (RelocationKind::Absolute, 32),
+                            elf::reloc::R_X86_64_32S => (RelocationKind::AbsoluteSigned, 32),
+                            elf::reloc::R_X86_64_16 => (RelocationKind::Absolute, 16),
+                            elf::reloc::R_X86_64_PC16 => (RelocationKind::Relative, 16),
+                            elf::reloc::R_X86_64_8 => (RelocationKind::Absolute, 8),
+                            elf::reloc::R_X86_64_PC8 => (RelocationKind::Relative, 8),
+                            _ => (RelocationKind::Other(reloc.r_type), 0),
                         },
-                        _ => RelocationKind::Other(reloc.r_type),
+                        _ => (RelocationKind::Other(reloc.r_type), 0),
                     };
                     return Some((
                         reloc.r_offset,
                         Relocation {
                             kind,
+                            size,
                             symbol: SymbolIndex(reloc.r_sym as usize),
                             addend: reloc.r_addend.unwrap_or(0),
                             implicit_addend: reloc.r_addend.is_none(),

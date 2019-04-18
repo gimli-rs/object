@@ -303,20 +303,37 @@ pub struct SymbolMap<'data> {
 #[derive(Debug)]
 pub struct Relocation {
     kind: RelocationKind,
+    size: u8,
     symbol: SymbolIndex,
     addend: i64,
     implicit_addend: bool,
 }
 
 /// The kind of a relocation.
+///
+/// The relocation descriptions use the following definitions. Note that
+/// these definitions probably don't match any ELF ABI.
+///
+/// * A - The value of the addend.
+/// * G - The address of the symbol's entry within the global offset table.
+/// * GOT - The address of the global offset table.
+/// * L - The address of the symbol's entry within the procedure linkage table.
+/// * P - The address of the place of the relocation.
+/// * S - The address of the symbol.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RelocationKind {
-    /// u32, symbol + addend
-    Direct32,
-    /// i32, symbol + addend
-    DirectSigned32,
-    /// u64, symbol + addend
-    Direct64,
+    /// S + A
+    Absolute,
+    /// S + A
+    AbsoluteSigned,
+    /// S + A - P
+    Relative,
+    /// G + A - GOT
+    GotOffset,
+    /// G + A - P
+    GotRelative,
+    /// L + A - P
+    PltRelative,
     /// Some other kind of relocation. The value is dependent on file format and machine.
     Other(u32),
 }
@@ -776,6 +793,14 @@ impl Relocation {
     #[inline]
     pub fn kind(&self) -> RelocationKind {
         self.kind
+    }
+
+    /// The size in bits of the place of the relocation.
+    ///
+    /// If 0, then the size is determined by the relocation kind.
+    #[inline]
+    pub fn size(&self) -> u8 {
+        self.size
     }
 
     /// The index of the symbol within the symbol table, if applicable.

@@ -454,32 +454,32 @@ impl<'data, 'file> Iterator for MachORelocationIterator<'data, 'file> {
     fn next(&mut self) -> Option<Self::Item> {
         self.relocations.next()?.ok().map(|reloc| {
             let kind = match self.file.macho.header.cputype {
-                mach::cputype::CPU_TYPE_ARM => match (reloc.r_type(), reloc.r_length()) {
-                    (mach::relocation::ARM_RELOC_VANILLA, 2) => RelocationKind::Direct32,
-                    (mach::relocation::ARM_RELOC_VANILLA, 3) => RelocationKind::Direct64,
+                mach::cputype::CPU_TYPE_ARM => match reloc.r_type() {
+                    mach::relocation::ARM_RELOC_VANILLA => RelocationKind::Absolute,
                     _ => RelocationKind::Other(reloc.r_info),
                 },
-                mach::cputype::CPU_TYPE_ARM64 => match (reloc.r_type(), reloc.r_length()) {
-                    (mach::relocation::ARM64_RELOC_UNSIGNED, 2) => RelocationKind::Direct32,
-                    (mach::relocation::ARM64_RELOC_UNSIGNED, 3) => RelocationKind::Direct64,
+                mach::cputype::CPU_TYPE_ARM64 => match reloc.r_type() {
+                    mach::relocation::ARM64_RELOC_UNSIGNED => RelocationKind::Absolute,
                     _ => RelocationKind::Other(reloc.r_info),
                 },
-                mach::cputype::CPU_TYPE_X86 => match (reloc.r_type(), reloc.r_length()) {
-                    (mach::relocation::GENERIC_RELOC_VANILLA, 2) => RelocationKind::Direct32,
-                    (mach::relocation::GENERIC_RELOC_VANILLA, 3) => RelocationKind::Direct64,
+                mach::cputype::CPU_TYPE_X86 => match reloc.r_type() {
+                    mach::relocation::GENERIC_RELOC_VANILLA => RelocationKind::Absolute,
                     _ => RelocationKind::Other(reloc.r_info),
                 },
-                mach::cputype::CPU_TYPE_X86_64 => match (reloc.r_type(), reloc.r_length()) {
-                    (mach::relocation::X86_64_RELOC_UNSIGNED, 2) => RelocationKind::Direct32,
-                    (mach::relocation::X86_64_RELOC_UNSIGNED, 3) => RelocationKind::Direct64,
+                mach::cputype::CPU_TYPE_X86_64 => match reloc.r_type() {
+                    mach::relocation::X86_64_RELOC_UNSIGNED => RelocationKind::Absolute,
                     _ => RelocationKind::Other(reloc.r_info),
                 },
                 _ => RelocationKind::Other(reloc.r_info),
             };
+            let size = reloc.r_length() * 8;
+            // FIXME: reloc.r_pcrel()
             (
                 reloc.r_address as u64,
                 Relocation {
                     kind,
+                    size,
+                    // FIXME: handle reloc.is_extern()
                     symbol: SymbolIndex(reloc.r_symbolnum()),
                     addend: 0,
                     implicit_addend: true,
