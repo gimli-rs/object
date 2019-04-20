@@ -15,7 +15,7 @@ uuid = { version = "0.7", default-features = false }
 flate2 = { version = "1", optional = true }
 
 [dependencies.goblin]
-version = "0.0.21"
+version = "0.0.22"
 default-features = false
 features = ["endian_fd", "elf32", "elf64", "mach32", "mach64", "pe32", "pe64", "archive"]
 
