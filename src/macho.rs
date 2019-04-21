@@ -92,6 +92,12 @@ impl<'data> MachOFile<'data> {
         let macho = mach::MachO::parse(data, 0).map_err(|_| "Could not parse Mach-O header")?;
         Ok(MachOFile { macho, data, ctx })
     }
+
+    /// True for 64-bit files.
+    #[inline]
+    pub fn is_64(&self) -> bool {
+        self.macho.is_64
+    }
 }
 
 impl<'data, 'file> Object<'data, 'file> for MachOFile<'data>

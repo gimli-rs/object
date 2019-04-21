@@ -102,6 +102,12 @@ impl<'data> ElfFile<'data> {
         Ok(ElfFile { elf, data })
     }
 
+    /// True for 64-bit files.
+    #[inline]
+    pub fn is_64(&self) -> bool {
+        self.elf.is_64
+    }
+
     fn raw_section_by_name<'file>(
         &'file self,
         section_name: &str,

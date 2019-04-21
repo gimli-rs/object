@@ -68,6 +68,26 @@ pub type NativeFile<'data> = PeFile<'data>;
 #[cfg(all(feature = "wasm", target_arch = "wasm32"))]
 pub type NativeFile<'data> = WasmFile<'data>;
 
+/// The object file format.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Format {
+    /// 32-bit ELF
+    Elf32,
+    /// 64-bit ELF
+    Elf64,
+    /// 32-bit Mach-O
+    MachO32,
+    /// 64-bit Mach-O
+    MachO64,
+    /// 32-bit PE
+    Pe32,
+    /// 64-bit PE
+    Pe64,
+    /// WebAssembly
+    #[cfg(feature = "wasm")]
+    Wasm,
+}
+
 /// An object file.
 #[derive(Debug)]
 pub struct File<'data> {
@@ -462,6 +482,35 @@ impl<'data> File<'data> {
             _ => return Err("Unknown file magic"),
         };
         Ok(File { inner })
+    }
+
+    /// Return the file format.
+    pub fn format(&self) -> Format {
+        match self.inner {
+            FileInternal::Elf(ref inner) => {
+                if inner.is_64() {
+                    Format::Elf64
+                } else {
+                    Format::Elf32
+                }
+            }
+            FileInternal::MachO(ref inner) => {
+                if inner.is_64() {
+                    Format::MachO64
+                } else {
+                    Format::MachO32
+                }
+            }
+            FileInternal::Pe(ref inner) => {
+                if inner.is_64() {
+                    Format::Pe64
+                } else {
+                    Format::Pe32
+                }
+            }
+            #[cfg(feature = "wasm")]
+            FileInternal::Wasm(_) => Format::Wasm,
+        }
     }
 }
 

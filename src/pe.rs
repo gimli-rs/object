@@ -86,6 +86,12 @@ impl<'data> PeFile<'data> {
         Ok(PeFile { pe, data })
     }
 
+    /// True for 64-bit files.
+    #[inline]
+    pub fn is_64(&self) -> bool {
+        self.pe.is_64
+    }
+
     fn section_alignment(&self) -> u64 {
         u64::from(
             self.pe
