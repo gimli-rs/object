@@ -40,13 +40,13 @@ fn main() {
         let section_kinds = file.sections().map(|s| (s.index(), s.kind())).collect();
 
         println!("Debugging symbols:");
-        for symbol in file.symbols() {
+        for (_, symbol) in file.symbols() {
             print_symbol(&symbol, &section_kinds);
         }
         println!();
 
         println!("Dynamic symbols:");
-        for symbol in file.dynamic_symbols() {
+        for (_, symbol) in file.dynamic_symbols() {
             print_symbol(&symbol, &section_kinds);
         }
     }
@@ -61,12 +61,14 @@ fn print_symbol(symbol: &Symbol<'_>, section_kinds: &HashMap<SectionIndex, Secti
         .section_index()
         .and_then(|index| section_kinds.get(&index))
     {
-        Some(SectionKind::Unknown) => '?',
+        Some(SectionKind::Unknown)
+        | Some(SectionKind::Other)
+        | Some(SectionKind::OtherString)
+        | Some(SectionKind::Metadata) => '?',
         Some(SectionKind::Text) => 't',
-        Some(SectionKind::Data) => 'd',
-        Some(SectionKind::ReadOnlyData) => 'r',
-        Some(SectionKind::UninitializedData) => 'b',
-        Some(SectionKind::Other) => 's',
+        Some(SectionKind::Data) | Some(SectionKind::Tls) => 'd',
+        Some(SectionKind::ReadOnlyData) | Some(SectionKind::ReadOnlyString) => 'r',
+        Some(SectionKind::UninitializedData) | Some(SectionKind::UninitializedTls) => 'b',
         None => 'U',
     };
 

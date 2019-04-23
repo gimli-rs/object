@@ -68,6 +68,26 @@ pub type NativeFile<'data> = PeFile<'data>;
 #[cfg(all(feature = "wasm", target_arch = "wasm32"))]
 pub type NativeFile<'data> = WasmFile<'data>;
 
+/// The object file format.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Format {
+    /// 32-bit ELF
+    Elf32,
+    /// 64-bit ELF
+    Elf64,
+    /// 32-bit Mach-O
+    MachO32,
+    /// 64-bit Mach-O
+    MachO64,
+    /// 32-bit PE
+    Pe32,
+    /// 64-bit PE
+    Pe64,
+    /// WebAssembly
+    #[cfg(feature = "wasm")]
+    Wasm,
+}
+
 /// An object file.
 #[derive(Debug)]
 pub struct File<'data> {
@@ -194,15 +214,45 @@ pub enum SectionKind {
     /// The section kind is unknown.
     Unknown,
     /// An executable code section.
+    ///
+    /// Example ELF sections: `.text`
     Text,
     /// A data section.
+    ///
+    /// Example ELF sections: `.data`
     Data,
     /// A read only data section.
+    ///
+    /// Example ELF sections: `.rodata`
     ReadOnlyData,
+    /// A loadable string section.
+    ///
+    /// Example ELF sections: `.rodata.str`
+    ReadOnlyString,
     /// An uninitialized data section.
+    ///
+    /// Example ELF sections: `.bss`
     UninitializedData,
-    /// Some other type of text or data section.
+    /// A TLS data section.
+    ///
+    /// Example ELF sections: `.tdata`
+    Tls,
+    /// An uninitialized TLS data section.
+    ///
+    /// Example ELF sections: `.tbss`
+    UninitializedTls,
+    /// A non-loadable string section.
+    ///
+    /// Example ELF sections: `.comment`, `.debug_str`
+    OtherString,
+    /// Some other non-loadable section.
+    ///
+    /// Example ELF sections: `.debug_info`
     Other,
+    /// Metadata such as symbols or relocations.
+    ///
+    /// Example ELF sections: `.symtab`, `.strtab`
+    Metadata,
 }
 
 /// An iterator over symbol table entries.
@@ -226,6 +276,10 @@ where
     Wasm(WasmSymbolIterator<'file>),
 }
 
+/// The index used to identify a symbol of a file.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct SymbolIndex(pub usize);
+
 /// A symbol table entry.
 #[derive(Debug)]
 pub struct Symbol<'data> {
@@ -243,6 +297,8 @@ pub struct Symbol<'data> {
 pub enum SymbolKind {
     /// The symbol kind is unknown.
     Unknown,
+    /// The symbol is a null placeholder.
+    Null,
     /// The symbol is for executable code.
     Text,
     /// The symbol is for a data object.
@@ -267,20 +323,37 @@ pub struct SymbolMap<'data> {
 #[derive(Debug)]
 pub struct Relocation {
     kind: RelocationKind,
-    symbol: u64,
+    size: u8,
+    symbol: SymbolIndex,
     addend: i64,
     implicit_addend: bool,
 }
 
 /// The kind of a relocation.
+///
+/// The relocation descriptions use the following definitions. Note that
+/// these definitions probably don't match any ELF ABI.
+///
+/// * A - The value of the addend.
+/// * G - The address of the symbol's entry within the global offset table.
+/// * GOT - The address of the global offset table.
+/// * L - The address of the symbol's entry within the procedure linkage table.
+/// * P - The address of the place of the relocation.
+/// * S - The address of the symbol.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RelocationKind {
-    /// u32, symbol + addend
-    Direct32,
-    /// i32, symbol + addend
-    DirectSigned32,
-    /// u64, symbol + addend
-    Direct64,
+    /// S + A
+    Absolute,
+    /// S + A
+    AbsoluteSigned,
+    /// S + A - P
+    Relative,
+    /// G + A - GOT
+    GotOffset,
+    /// G + A - P
+    GotRelative,
+    /// L + A - P
+    PltRelative,
     /// Some other kind of relocation. The value is dependent on file format and machine.
     Other(u32),
 }
@@ -410,6 +483,35 @@ impl<'data> File<'data> {
         };
         Ok(File { inner })
     }
+
+    /// Return the file format.
+    pub fn format(&self) -> Format {
+        match self.inner {
+            FileInternal::Elf(ref inner) => {
+                if inner.is_64() {
+                    Format::Elf64
+                } else {
+                    Format::Elf32
+                }
+            }
+            FileInternal::MachO(ref inner) => {
+                if inner.is_64() {
+                    Format::MachO64
+                } else {
+                    Format::MachO32
+                }
+            }
+            FileInternal::Pe(ref inner) => {
+                if inner.is_64() {
+                    Format::Pe64
+                } else {
+                    Format::Pe32
+                }
+            }
+            #[cfg(feature = "wasm")]
+            FileInternal::Wasm(_) => Format::Wasm,
+        }
+    }
 }
 
 impl<'data, 'file> Object<'data, 'file> for File<'data>
@@ -457,7 +559,7 @@ where
         }
     }
 
-    fn symbol_by_index(&self, index: u64) -> Option<Symbol<'data>> {
+    fn symbol_by_index(&self, index: SymbolIndex) -> Option<Symbol<'data>> {
         with_inner!(self.inner, FileInternal, |x| x.symbol_by_index(index))
     }
 
@@ -536,6 +638,10 @@ impl<'data, 'file> ObjectSegment<'data> for Segment<'data, 'file> {
         with_inner!(self.inner, SegmentInternal, |x| x.size())
     }
 
+    fn align(&self) -> u64 {
+        with_inner!(self.inner, SegmentInternal, |x| x.align())
+    }
+
     fn data(&self) -> &'data [u8] {
         with_inner!(self.inner, SegmentInternal, |x| x.data())
     }
@@ -585,6 +691,10 @@ impl<'data, 'file> ObjectSection<'data> for Section<'data, 'file> {
         with_inner!(self.inner, SectionInternal, |x| x.size())
     }
 
+    fn align(&self) -> u64 {
+        with_inner!(self.inner, SectionInternal, |x| x.align())
+    }
+
     fn data(&self) -> Cow<'data, [u8]> {
         with_inner!(self.inner, SectionInternal, |x| x.data())
     }
@@ -622,7 +732,7 @@ impl<'data, 'file> ObjectSection<'data> for Section<'data, 'file> {
 }
 
 impl<'data, 'file> Iterator for SymbolIterator<'data, 'file> {
-    type Item = Symbol<'data>;
+    type Item = (SymbolIndex, Symbol<'data>);
 
     fn next(&mut self) -> Option<Self::Item> {
         with_inner_mut!(self.inner, SymbolIteratorInternal, |x| x.next())
@@ -707,7 +817,11 @@ impl<'data> SymbolMap<'data> {
     fn filter(symbol: &Symbol<'_>) -> bool {
         match symbol.kind() {
             SymbolKind::Unknown | SymbolKind::Text | SymbolKind::Data => {}
-            SymbolKind::Section | SymbolKind::File | SymbolKind::Common | SymbolKind::Tls => {
+            SymbolKind::Null
+            | SymbolKind::Section
+            | SymbolKind::File
+            | SymbolKind::Common
+            | SymbolKind::Tls => {
                 return false;
             }
         }
@@ -730,9 +844,17 @@ impl Relocation {
         self.kind
     }
 
+    /// The size in bits of the place of the relocation.
+    ///
+    /// If 0, then the size is determined by the relocation kind.
+    #[inline]
+    pub fn size(&self) -> u8 {
+        self.size
+    }
+
     /// The index of the symbol within the symbol table, if applicable.
     #[inline]
-    pub fn symbol(&self) -> u64 {
+    pub fn symbol(&self) -> SymbolIndex {
         self.symbol
     }
 

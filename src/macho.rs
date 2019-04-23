@@ -1,7 +1,6 @@
 use crate::alloc::borrow::Cow;
 use crate::alloc::vec::Vec;
-use std::fmt;
-use std::slice;
+use std::{fmt, iter, slice};
 
 use goblin::container;
 use goblin::mach;
@@ -10,7 +9,7 @@ use uuid::Uuid;
 
 use crate::{
     Machine, Object, ObjectSection, ObjectSegment, Relocation, RelocationKind, SectionIndex,
-    SectionKind, Symbol, SymbolKind, SymbolMap,
+    SectionKind, Symbol, SymbolIndex, SymbolKind, SymbolMap,
 };
 
 /// A Mach-O object file.
@@ -65,7 +64,7 @@ where
 
 /// An iterator over the symbols of a `MachOFile`.
 pub struct MachOSymbolIterator<'data> {
-    symbols: mach::symbols::SymbolIterator<'data>,
+    symbols: iter::Enumerate<mach::symbols::SymbolIterator<'data>>,
 }
 
 /// An iterator over the relocations in an `MachOSection`.
@@ -92,6 +91,12 @@ impl<'data> MachOFile<'data> {
         let ctx = ctx.ok_or("Invalid Mach-O magic")?;
         let macho = mach::MachO::parse(data, 0).map_err(|_| "Could not parse Mach-O header")?;
         Ok(MachOFile { macho, data, ctx })
+    }
+
+    /// True for 64-bit files.
+    #[inline]
+    pub fn is_64(&self) -> bool {
+        self.macho.is_64
     }
 }
 
@@ -159,11 +164,11 @@ where
         }
     }
 
-    fn symbol_by_index(&self, index: u64) -> Option<Symbol<'data>> {
+    fn symbol_by_index(&self, index: SymbolIndex) -> Option<Symbol<'data>> {
         self.macho
             .symbols
             .as_ref()
-            .and_then(|symbols| symbols.get(index as usize).ok())
+            .and_then(|symbols| symbols.get(index.0).ok())
             .and_then(|(name, nlist)| parse_symbol(name, &nlist))
     }
 
@@ -171,7 +176,8 @@ where
         let symbols = match self.macho.symbols {
             Some(ref symbols) => symbols.into_iter(),
             None => mach::symbols::SymbolIterator::default(),
-        };
+        }
+        .enumerate();
 
         MachOSymbolIterator { symbols }
     }
@@ -183,7 +189,7 @@ where
     }
 
     fn symbol_map(&self) -> SymbolMap<'data> {
-        let mut symbols: Vec<_> = self.symbols().collect();
+        let mut symbols: Vec<_> = self.symbols().map(|(_, s)| s).collect();
 
         // Add symbols for the end of each section.
         for section in self.sections() {
@@ -275,6 +281,12 @@ impl<'data, 'file> ObjectSegment<'data> for MachOSegment<'data, 'file> {
     }
 
     #[inline]
+    fn align(&self) -> u64 {
+        // Page size.
+        0x1000
+    }
+
+    #[inline]
     fn data(&self) -> &'data [u8] {
         self.segment.data
     }
@@ -350,6 +362,11 @@ impl<'data, 'file> ObjectSection<'data> for MachOSection<'data, 'file> {
     }
 
     #[inline]
+    fn align(&self) -> u64 {
+        1 << self.section.align
+    }
+
+    #[inline]
     fn data(&self) -> Cow<'data, [u8]> {
         Cow::from(self.data)
     }
@@ -398,13 +415,12 @@ impl<'data> fmt::Debug for MachOSymbolIterator<'data> {
 }
 
 impl<'data> Iterator for MachOSymbolIterator<'data> {
-    type Item = Symbol<'data>;
+    type Item = (SymbolIndex, Symbol<'data>);
 
     fn next(&mut self) -> Option<Self::Item> {
-        while let Some(Ok((name, nlist))) = self.symbols.next() {
-            let symbol = parse_symbol(name, &nlist);
-            if symbol.is_some() {
-                return symbol;
+        while let Some((index, Ok((name, nlist)))) = self.symbols.next() {
+            if let Some(symbol) = parse_symbol(name, &nlist) {
+                return Some((SymbolIndex(index), symbol));
             }
         }
         None
@@ -444,33 +460,33 @@ impl<'data, 'file> Iterator for MachORelocationIterator<'data, 'file> {
     fn next(&mut self) -> Option<Self::Item> {
         self.relocations.next()?.ok().map(|reloc| {
             let kind = match self.file.macho.header.cputype {
-                mach::cputype::CPU_TYPE_ARM => match (reloc.r_type(), reloc.r_length()) {
-                    (mach::relocation::ARM_RELOC_VANILLA, 2) => RelocationKind::Direct32,
-                    (mach::relocation::ARM_RELOC_VANILLA, 3) => RelocationKind::Direct64,
+                mach::cputype::CPU_TYPE_ARM => match reloc.r_type() {
+                    mach::relocation::ARM_RELOC_VANILLA => RelocationKind::Absolute,
                     _ => RelocationKind::Other(reloc.r_info),
                 },
-                mach::cputype::CPU_TYPE_ARM64 => match (reloc.r_type(), reloc.r_length()) {
-                    (mach::relocation::ARM64_RELOC_UNSIGNED, 2) => RelocationKind::Direct32,
-                    (mach::relocation::ARM64_RELOC_UNSIGNED, 3) => RelocationKind::Direct64,
+                mach::cputype::CPU_TYPE_ARM64 => match reloc.r_type() {
+                    mach::relocation::ARM64_RELOC_UNSIGNED => RelocationKind::Absolute,
                     _ => RelocationKind::Other(reloc.r_info),
                 },
-                mach::cputype::CPU_TYPE_X86 => match (reloc.r_type(), reloc.r_length()) {
-                    (mach::relocation::GENERIC_RELOC_VANILLA, 2) => RelocationKind::Direct32,
-                    (mach::relocation::GENERIC_RELOC_VANILLA, 3) => RelocationKind::Direct64,
+                mach::cputype::CPU_TYPE_X86 => match reloc.r_type() {
+                    mach::relocation::GENERIC_RELOC_VANILLA => RelocationKind::Absolute,
                     _ => RelocationKind::Other(reloc.r_info),
                 },
-                mach::cputype::CPU_TYPE_X86_64 => match (reloc.r_type(), reloc.r_length()) {
-                    (mach::relocation::X86_64_RELOC_UNSIGNED, 2) => RelocationKind::Direct32,
-                    (mach::relocation::X86_64_RELOC_UNSIGNED, 3) => RelocationKind::Direct64,
+                mach::cputype::CPU_TYPE_X86_64 => match reloc.r_type() {
+                    mach::relocation::X86_64_RELOC_UNSIGNED => RelocationKind::Absolute,
                     _ => RelocationKind::Other(reloc.r_info),
                 },
                 _ => RelocationKind::Other(reloc.r_info),
             };
+            let size = reloc.r_length() * 8;
+            // FIXME: reloc.r_pcrel()
             (
                 reloc.r_address as u64,
                 Relocation {
                     kind,
-                    symbol: reloc.r_symbolnum() as u64,
+                    size,
+                    // FIXME: handle reloc.is_extern()
+                    symbol: SymbolIndex(reloc.r_symbolnum()),
                     addend: 0,
                     implicit_addend: true,
                 },

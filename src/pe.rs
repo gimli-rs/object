@@ -6,7 +6,7 @@ use goblin::pe;
 
 use crate::{
     Machine, Object, ObjectSection, ObjectSegment, Relocation, SectionIndex, SectionKind, Symbol,
-    SymbolKind, SymbolMap,
+    SymbolIndex, SymbolKind, SymbolMap,
 };
 
 /// A PE object file.
@@ -63,6 +63,7 @@ pub struct PeSymbolIterator<'data, 'file>
 where
     'data: 'file,
 {
+    index: usize,
     exports: slice::Iter<'file, pe::export::Export<'data>>,
     imports: slice::Iter<'file, pe::import::Import<'data>>,
 }
@@ -83,6 +84,22 @@ impl<'data> PeFile<'data> {
     pub fn parse(data: &'data [u8]) -> Result<Self, &'static str> {
         let pe = pe::PE::parse(data).map_err(|_| "Could not parse PE header")?;
         Ok(PeFile { pe, data })
+    }
+
+    /// True for 64-bit files.
+    #[inline]
+    pub fn is_64(&self) -> bool {
+        self.pe.is_64
+    }
+
+    fn section_alignment(&self) -> u64 {
+        u64::from(
+            self.pe
+                .header
+                .optional_header
+                .map(|h| h.windows_fields.section_alignment)
+                .unwrap_or(0x1000),
+        )
     }
 }
 
@@ -128,7 +145,7 @@ where
         }
     }
 
-    fn symbol_by_index(&self, _index: u64) -> Option<Symbol<'data>> {
+    fn symbol_by_index(&self, _index: SymbolIndex) -> Option<Symbol<'data>> {
         // TODO: return COFF symbols for object files
         None
     }
@@ -136,6 +153,7 @@ where
     fn symbols(&'file self) -> PeSymbolIterator<'data, 'file> {
         // TODO: return COFF symbols for object files
         PeSymbolIterator {
+            index: 0,
             exports: [].iter(),
             imports: [].iter(),
         }
@@ -143,6 +161,7 @@ where
 
     fn dynamic_symbols(&'file self) -> PeSymbolIterator<'data, 'file> {
         PeSymbolIterator {
+            index: 0,
             exports: self.pe.exports.iter(),
             imports: self.pe.imports.iter(),
         }
@@ -150,7 +169,11 @@ where
 
     fn symbol_map(&self) -> SymbolMap<'data> {
         // TODO: untested
-        let mut symbols: Vec<_> = self.symbols().filter(SymbolMap::filter).collect();
+        let mut symbols: Vec<_> = self
+            .symbols()
+            .map(|(_, s)| s)
+            .filter(SymbolMap::filter)
+            .collect();
         symbols.sort_by_key(|x| x.address);
         SymbolMap { symbols }
     }
@@ -199,6 +222,11 @@ impl<'data, 'file> ObjectSegment<'data> for PeSegment<'data, 'file> {
     #[inline]
     fn size(&self) -> u64 {
         u64::from(self.section.virtual_size)
+    }
+
+    #[inline]
+    fn align(&self) -> u64 {
+        self.file.section_alignment()
     }
 
     fn data(&self) -> &'data [u8] {
@@ -255,6 +283,11 @@ impl<'data, 'file> ObjectSection<'data> for PeSection<'data, 'file> {
         u64::from(self.section.virtual_size)
     }
 
+    #[inline]
+    fn align(&self) -> u64 {
+        self.file.section_alignment()
+    }
+
     fn data(&self) -> Cow<'data, [u8]> {
         Cow::from(self.raw_data())
     }
@@ -304,35 +337,45 @@ impl<'data, 'file> ObjectSection<'data> for PeSection<'data, 'file> {
 }
 
 impl<'data, 'file> Iterator for PeSymbolIterator<'data, 'file> {
-    type Item = Symbol<'data>;
+    type Item = (SymbolIndex, Symbol<'data>);
 
     fn next(&mut self) -> Option<Self::Item> {
         if let Some(export) = self.exports.next() {
-            return Some(Symbol {
-                kind: SymbolKind::Unknown,
-                // TODO: can we find a section?
-                section_index: None,
-                undefined: false,
-                global: true,
-                name: export.name,
-                address: export.rva as u64,
-                size: 0,
-            });
+            let index = SymbolIndex(self.index);
+            self.index += 1;
+            return Some((
+                index,
+                Symbol {
+                    kind: SymbolKind::Unknown,
+                    // TODO: can we find a section?
+                    section_index: None,
+                    undefined: false,
+                    global: true,
+                    name: export.name,
+                    address: export.rva as u64,
+                    size: 0,
+                },
+            ));
         }
         if let Some(import) = self.imports.next() {
+            let index = SymbolIndex(self.index);
+            self.index += 1;
             let name = match import.name {
                 Cow::Borrowed(name) => Some(name),
                 _ => None,
             };
-            return Some(Symbol {
-                kind: SymbolKind::Unknown,
-                section_index: None,
-                undefined: true,
-                global: true,
-                name,
-                address: 0,
-                size: 0,
-            });
+            return Some((
+                index,
+                Symbol {
+                    kind: SymbolKind::Unknown,
+                    section_index: None,
+                    undefined: true,
+                    global: true,
+                    name,
+                    address: 0,
+                    size: 0,
+                },
+            ));
         }
         None
     }

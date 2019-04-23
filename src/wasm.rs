@@ -5,7 +5,7 @@ use std::{iter, slice};
 
 use crate::{
     Machine, Object, ObjectSection, ObjectSegment, Relocation, SectionIndex, SectionKind, Symbol,
-    SymbolMap,
+    SymbolIndex, SymbolMap,
 };
 
 /// A WebAssembly object file.
@@ -103,7 +103,7 @@ impl<'file> Object<'static, 'file> for WasmFile {
         }
     }
 
-    fn symbol_by_index(&self, _index: u64) -> Option<Symbol<'static>> {
+    fn symbol_by_index(&self, _index: SymbolIndex) -> Option<Symbol<'static>> {
         unimplemented!()
     }
 
@@ -154,6 +154,11 @@ impl<'file> ObjectSegment<'static> for WasmSegment<'file> {
         unreachable!()
     }
 
+    #[inline]
+    fn align(&self) -> u64 {
+        unreachable!()
+    }
+
     fn data(&self) -> &'static [u8] {
         unreachable!()
     }
@@ -195,6 +200,11 @@ impl<'file> ObjectSection<'static> for WasmSection<'file> {
     #[inline]
     fn size(&self) -> u64 {
         serialize_to_cow(self.section.clone()).map_or(0, |b| b.len() as u64)
+    }
+
+    #[inline]
+    fn align(&self) -> u64 {
+        1
     }
 
     fn data(&self) -> Cow<'static, [u8]> {
@@ -271,7 +281,7 @@ impl<'file> ObjectSection<'static> for WasmSection<'file> {
 }
 
 impl<'file> Iterator for WasmSymbolIterator<'file> {
-    type Item = Symbol<'static>;
+    type Item = (SymbolIndex, Symbol<'static>);
 
     fn next(&mut self) -> Option<Self::Item> {
         unimplemented!()

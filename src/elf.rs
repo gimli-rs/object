@@ -16,7 +16,7 @@ use scroll::{self, Pread};
 
 use crate::{
     Machine, Object, ObjectSection, ObjectSegment, Relocation, RelocationKind, SectionIndex,
-    SectionKind, Symbol, SymbolKind, SymbolMap,
+    SectionKind, Symbol, SymbolIndex, SymbolKind, SymbolMap,
 };
 
 /// An ELF object file.
@@ -73,7 +73,7 @@ where
     'data: 'file,
 {
     strtab: &'file strtab::Strtab<'data>,
-    symbols: elf::sym::SymIterator<'data>,
+    symbols: iter::Enumerate<elf::sym::SymIterator<'data>>,
 }
 
 /// An iterator over the relocations in an `ElfSection`.
@@ -100,6 +100,12 @@ impl<'data> ElfFile<'data> {
     pub fn parse(data: &'data [u8]) -> Result<Self, &'static str> {
         let elf = elf::Elf::parse(data).map_err(|_| "Could not parse ELF header")?;
         Ok(ElfFile { elf, data })
+    }
+
+    /// True for 64-bit files.
+    #[inline]
+    pub fn is_64(&self) -> bool {
+        self.elf.is_64
     }
 
     fn raw_section_by_name<'file>(
@@ -191,29 +197,33 @@ where
         }
     }
 
-    fn symbol_by_index(&self, index: u64) -> Option<Symbol<'data>> {
+    fn symbol_by_index(&self, index: SymbolIndex) -> Option<Symbol<'data>> {
         self.elf
             .syms
-            .get(index as usize)
-            .map(|symbol| parse_symbol(&symbol, &self.elf.strtab))
+            .get(index.0)
+            .map(|symbol| parse_symbol(index.0, &symbol, &self.elf.strtab))
     }
 
     fn symbols(&'file self) -> ElfSymbolIterator<'data, 'file> {
         ElfSymbolIterator {
             strtab: &self.elf.strtab,
-            symbols: self.elf.syms.iter(),
+            symbols: self.elf.syms.iter().enumerate(),
         }
     }
 
     fn dynamic_symbols(&'file self) -> ElfSymbolIterator<'data, 'file> {
         ElfSymbolIterator {
             strtab: &self.elf.dynstrtab,
-            symbols: self.elf.dynsyms.iter(),
+            symbols: self.elf.dynsyms.iter().enumerate(),
         }
     }
 
     fn symbol_map(&self) -> SymbolMap<'data> {
-        let mut symbols: Vec<_> = self.symbols().filter(SymbolMap::filter).collect();
+        let mut symbols: Vec<_> = self
+            .symbols()
+            .map(|(_, s)| s)
+            .filter(SymbolMap::filter)
+            .collect();
         symbols.sort_by_key(|x| x.address);
         SymbolMap { symbols }
     }
@@ -305,6 +315,11 @@ impl<'data, 'file> ObjectSegment<'data> for ElfSegment<'data, 'file> {
     #[inline]
     fn size(&self) -> u64 {
         self.segment.p_memsz
+    }
+
+    #[inline]
+    fn align(&self) -> u64 {
+        self.segment.p_align
     }
 
     fn data(&self) -> &'data [u8] {
@@ -427,6 +442,11 @@ impl<'data, 'file> ObjectSection<'data> for ElfSection<'data, 'file> {
     }
 
     #[inline]
+    fn align(&self) -> u64 {
+        self.section.sh_addralign
+    }
+
+    #[inline]
     fn data(&self) -> Cow<'data, [u8]> {
         Cow::from(self.raw_data())
     }
@@ -464,19 +484,46 @@ impl<'data, 'file> ObjectSection<'data> for ElfSection<'data, 'file> {
     fn kind(&self) -> SectionKind {
         match self.section.sh_type {
             elf::section_header::SHT_PROGBITS => {
-                if self.section.sh_flags & u64::from(elf::section_header::SHF_ALLOC) == 0 {
-                    SectionKind::Unknown
-                } else if self.section.sh_flags & u64::from(elf::section_header::SHF_EXECINSTR) != 0
-                {
-                    SectionKind::Text
-                } else if self.section.sh_flags & u64::from(elf::section_header::SHF_WRITE) != 0 {
-                    SectionKind::Data
+                if self.section.sh_flags & u64::from(elf::section_header::SHF_ALLOC) != 0 {
+                    if self.section.sh_flags & u64::from(elf::section_header::SHF_EXECINSTR) != 0 {
+                        SectionKind::Text
+                    } else if self.section.sh_flags & u64::from(elf::section_header::SHF_TLS) != 0 {
+                        SectionKind::Tls
+                    } else if self.section.sh_flags & u64::from(elf::section_header::SHF_WRITE) != 0
+                    {
+                        SectionKind::Data
+                    } else if self.section.sh_flags & u64::from(elf::section_header::SHF_STRINGS)
+                        != 0
+                    {
+                        SectionKind::ReadOnlyString
+                    } else {
+                        SectionKind::ReadOnlyData
+                    }
+                } else if self.section.sh_flags & u64::from(elf::section_header::SHF_STRINGS) != 0 {
+                    SectionKind::OtherString
                 } else {
-                    SectionKind::ReadOnlyData
+                    SectionKind::Other
                 }
             }
-            elf::section_header::SHT_NOBITS => SectionKind::UninitializedData,
-            _ => SectionKind::Unknown,
+            elf::section_header::SHT_NOBITS => {
+                if self.section.sh_flags & u64::from(elf::section_header::SHF_TLS) != 0 {
+                    SectionKind::UninitializedTls
+                } else {
+                    SectionKind::UninitializedData
+                }
+            }
+            elf::section_header::SHT_NULL
+            | elf::section_header::SHT_SYMTAB
+            | elf::section_header::SHT_STRTAB
+            | elf::section_header::SHT_RELA
+            | elf::section_header::SHT_HASH
+            | elf::section_header::SHT_DYNAMIC
+            | elf::section_header::SHT_REL
+            | elf::section_header::SHT_DYNSYM => SectionKind::Metadata,
+            _ => {
+                // TODO: maybe add more specialised kinds based on sh_type (e.g. Unwind)
+                SectionKind::Unknown
+            }
         }
     }
 
@@ -497,18 +544,26 @@ impl<'data, 'file> fmt::Debug for ElfSymbolIterator<'data, 'file> {
 }
 
 impl<'data, 'file> Iterator for ElfSymbolIterator<'data, 'file> {
-    type Item = Symbol<'data>;
+    type Item = (SymbolIndex, Symbol<'data>);
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.symbols
-            .next()
-            .map(|symbol| parse_symbol(&symbol, self.strtab))
+        self.symbols.next().map(|(index, symbol)| {
+            (
+                SymbolIndex(index),
+                parse_symbol(index, &symbol, self.strtab),
+            )
+        })
     }
 }
 
-fn parse_symbol<'data>(symbol: &elf::sym::Sym, strtab: &strtab::Strtab<'data>) -> Symbol<'data> {
+fn parse_symbol<'data>(
+    index: usize,
+    symbol: &elf::sym::Sym,
+    strtab: &strtab::Strtab<'data>,
+) -> Symbol<'data> {
     let name = strtab.get(symbol.st_name).and_then(Result::ok);
     let kind = match elf::sym::st_type(symbol.st_info) {
+        elf::sym::STT_NOTYPE if index == 0 => SymbolKind::Null,
         elf::sym::STT_OBJECT => SymbolKind::Data,
         elf::sym::STT_FUNC => SymbolKind::Text,
         elf::sym::STT_SECTION => SymbolKind::Section,
@@ -542,33 +597,49 @@ impl<'data, 'file> Iterator for ElfRelocationIterator<'data, 'file> {
         loop {
             if let Some(ref mut relocations) = self.relocations {
                 if let Some(reloc) = relocations.next() {
-                    let kind = match self.file.elf.header.e_machine {
+                    let (kind, size) = match self.file.elf.header.e_machine {
                         elf::header::EM_ARM => match reloc.r_type {
-                            elf::reloc::R_ARM_ABS32 => RelocationKind::Direct32,
-                            _ => RelocationKind::Other(reloc.r_type),
+                            elf::reloc::R_ARM_ABS32 => (RelocationKind::Absolute, 32),
+                            _ => (RelocationKind::Other(reloc.r_type), 0),
                         },
                         elf::header::EM_AARCH64 => match reloc.r_type {
-                            elf::reloc::R_AARCH64_ABS64 => RelocationKind::Direct64,
-                            elf::reloc::R_AARCH64_ABS32 => RelocationKind::Direct32,
-                            _ => RelocationKind::Other(reloc.r_type),
+                            elf::reloc::R_AARCH64_ABS64 => (RelocationKind::Absolute, 64),
+                            elf::reloc::R_AARCH64_ABS32 => (RelocationKind::Absolute, 32),
+                            elf::reloc::R_AARCH64_ABS16 => (RelocationKind::Absolute, 16),
+                            elf::reloc::R_AARCH64_PREL64 => (RelocationKind::Relative, 64),
+                            elf::reloc::R_AARCH64_PREL32 => (RelocationKind::Relative, 32),
+                            elf::reloc::R_AARCH64_PREL16 => (RelocationKind::Relative, 16),
+                            _ => (RelocationKind::Other(reloc.r_type), 0),
                         },
                         elf::header::EM_386 => match reloc.r_type {
-                            elf::reloc::R_386_32 => RelocationKind::Direct32,
-                            _ => RelocationKind::Other(reloc.r_type),
+                            elf::reloc::R_386_32 => (RelocationKind::Absolute, 32),
+                            elf::reloc::R_386_PC32 => (RelocationKind::Relative, 32),
+                            elf::reloc::R_386_GOT32 => (RelocationKind::GotRelative, 32),
+                            elf::reloc::R_386_PLT32 => (RelocationKind::PltRelative, 32),
+                            _ => (RelocationKind::Other(reloc.r_type), 0),
                         },
                         elf::header::EM_X86_64 => match reloc.r_type {
-                            elf::reloc::R_X86_64_64 => RelocationKind::Direct64,
-                            elf::reloc::R_X86_64_32 => RelocationKind::Direct32,
-                            elf::reloc::R_X86_64_32S => RelocationKind::DirectSigned32,
-                            _ => RelocationKind::Other(reloc.r_type),
+                            elf::reloc::R_X86_64_64 => (RelocationKind::Absolute, 64),
+                            elf::reloc::R_X86_64_PC32 => (RelocationKind::Relative, 32),
+                            elf::reloc::R_X86_64_GOT32 => (RelocationKind::GotOffset, 32),
+                            elf::reloc::R_X86_64_PLT32 => (RelocationKind::PltRelative, 32),
+                            elf::reloc::R_X86_64_GOTPCREL => (RelocationKind::GotRelative, 32),
+                            elf::reloc::R_X86_64_32 => (RelocationKind::Absolute, 32),
+                            elf::reloc::R_X86_64_32S => (RelocationKind::AbsoluteSigned, 32),
+                            elf::reloc::R_X86_64_16 => (RelocationKind::Absolute, 16),
+                            elf::reloc::R_X86_64_PC16 => (RelocationKind::Relative, 16),
+                            elf::reloc::R_X86_64_8 => (RelocationKind::Absolute, 8),
+                            elf::reloc::R_X86_64_PC8 => (RelocationKind::Relative, 8),
+                            _ => (RelocationKind::Other(reloc.r_type), 0),
                         },
-                        _ => RelocationKind::Other(reloc.r_type),
+                        _ => (RelocationKind::Other(reloc.r_type), 0),
                     };
                     return Some((
                         reloc.r_offset,
                         Relocation {
                             kind,
-                            symbol: reloc.r_sym as u64,
+                            size,
+                            symbol: SymbolIndex(reloc.r_sym as usize),
                             addend: reloc.r_addend.unwrap_or(0),
                             implicit_addend: reloc.r_addend.is_none(),
                         },
