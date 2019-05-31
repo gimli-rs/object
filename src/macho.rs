@@ -130,20 +130,15 @@ where
     fn section_by_name(&'file self, section_name: &str) -> Option<MachOSection<'data, 'file>> {
         // Translate the "." prefix to the "__" prefix used by OSX/Mach-O, eg
         // ".debug_info" to "__debug_info".
-        let (system_section, section_name) = if section_name.starts_with('.') {
-            (true, &section_name[1..])
-        } else {
-            (false, section_name)
-        };
+        let system_section = section_name.starts_with('.');
         let cmp_section_name = |section: &MachOSection| {
             section
                 .name()
                 .map(|name| {
-                    if system_section {
-                        name.starts_with("__") && section_name == &name[2..]
-                    } else {
-                        section_name == name
-                    }
+                    section_name == name
+                        || (system_section
+                            && name.starts_with("__")
+                            && &section_name[1..] == &name[2..])
                 })
                 .unwrap_or(false)
         };
