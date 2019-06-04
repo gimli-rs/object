@@ -4,9 +4,9 @@ use std::{cmp, iter, slice};
 
 use goblin::pe;
 
-use crate::{
-    Machine, Object, ObjectSection, ObjectSegment, Relocation, SectionIndex, SectionKind, Symbol,
-    SymbolIndex, SymbolKind, SymbolMap,
+use crate::read::{
+    self, Machine, Object, ObjectSection, ObjectSegment, Relocation, SectionIndex, SectionKind,
+    Symbol, SymbolIndex, SymbolKind, SymbolMap,
 };
 
 /// A PE object file.
@@ -236,7 +236,7 @@ impl<'data, 'file> ObjectSegment<'data> for PeSegment<'data, 'file> {
     }
 
     fn data_range(&self, address: u64, size: u64) -> Option<&'data [u8]> {
-        crate::data_range(self.data(), self.address(), address, size)
+        read::data_range(self.data(), self.address(), address, size)
     }
 
     #[inline]
@@ -293,7 +293,7 @@ impl<'data, 'file> ObjectSection<'data> for PeSection<'data, 'file> {
     }
 
     fn data_range(&self, address: u64, size: u64) -> Option<&'data [u8]> {
-        crate::data_range(self.raw_data(), self.address(), address, size)
+        read::data_range(self.raw_data(), self.address(), address, size)
     }
 
     #[inline]

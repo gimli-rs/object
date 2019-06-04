@@ -14,8 +14,8 @@ use goblin::{elf, strtab};
 use scroll::ctx::TryFromCtx;
 use scroll::{self, Pread};
 
-use crate::{
-    Machine, Object, ObjectSection, ObjectSegment, Relocation, RelocationKind, SectionIndex,
+use crate::read::{
+    self, Machine, Object, ObjectSection, ObjectSegment, Relocation, RelocationKind, SectionIndex,
     SectionKind, Symbol, SymbolIndex, SymbolKind, SymbolMap,
 };
 
@@ -327,7 +327,7 @@ impl<'data, 'file> ObjectSegment<'data> for ElfSegment<'data, 'file> {
     }
 
     fn data_range(&self, address: u64, size: u64) -> Option<&'data [u8]> {
-        crate::data_range(self.data(), self.address(), address, size)
+        read::data_range(self.data(), self.address(), address, size)
     }
 
     #[inline]
@@ -452,7 +452,7 @@ impl<'data, 'file> ObjectSection<'data> for ElfSection<'data, 'file> {
     }
 
     fn data_range(&self, address: u64, size: u64) -> Option<&'data [u8]> {
-        crate::data_range(self.raw_data(), self.address(), address, size)
+        read::data_range(self.raw_data(), self.address(), address, size)
     }
 
     #[cfg(feature = "compression")]

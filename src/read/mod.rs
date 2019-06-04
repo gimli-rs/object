@@ -22,8 +22,6 @@ mod wasm;
 #[cfg(feature = "wasm")]
 pub use wasm::*;
 
-pub use uuid::Uuid;
-
 /// The native object file for the target platform.
 #[cfg(target_os = "linux")]
 pub type NativeFile<'data> = ElfFile<'data>;
@@ -319,12 +317,7 @@ impl Relocation {
     }
 }
 
-pub(crate) fn data_range(
-    data: &[u8],
-    data_address: u64,
-    range_address: u64,
-    size: u64,
-) -> Option<&[u8]> {
+fn data_range(data: &[u8], data_address: u64, range_address: u64, size: u64) -> Option<&[u8]> {
     if range_address >= data_address {
         let start_offset = (range_address - data_address) as usize;
         let end_offset = start_offset + size as usize;

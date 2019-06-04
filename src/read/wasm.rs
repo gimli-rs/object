@@ -3,7 +3,7 @@ use parity_wasm::elements::{self, Deserialize};
 use std::borrow::Cow;
 use std::{iter, slice};
 
-use crate::{
+use crate::read::{
     Machine, Object, ObjectSection, ObjectSegment, Relocation, SectionIndex, SectionKind, Symbol,
     SymbolIndex, SymbolMap,
 };

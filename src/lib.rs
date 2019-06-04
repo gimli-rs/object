@@ -29,7 +29,8 @@ mod alloc {
     pub use std::vec;
 }
 
+// Re-export since this is used in public signatures.
+pub use uuid::Uuid;
+
 pub mod read;
 pub use read::*;
-
-use read::data_range;
