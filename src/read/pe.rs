@@ -16,62 +16,6 @@ pub struct PeFile<'data> {
     data: &'data [u8],
 }
 
-/// An iterator over the loadable sections of a `PeFile`.
-#[derive(Debug)]
-pub struct PeSegmentIterator<'data, 'file>
-where
-    'data: 'file,
-{
-    file: &'file PeFile<'data>,
-    iter: slice::Iter<'file, pe::section_table::SectionTable>,
-}
-
-/// A loadable section of a `PeFile`.
-#[derive(Debug)]
-pub struct PeSegment<'data, 'file>
-where
-    'data: 'file,
-{
-    file: &'file PeFile<'data>,
-    section: &'file pe::section_table::SectionTable,
-}
-
-/// An iterator over the sections of a `PeFile`.
-#[derive(Debug)]
-pub struct PeSectionIterator<'data, 'file>
-where
-    'data: 'file,
-{
-    file: &'file PeFile<'data>,
-    iter: iter::Enumerate<slice::Iter<'file, pe::section_table::SectionTable>>,
-}
-
-/// A section of a `PeFile`.
-#[derive(Debug)]
-pub struct PeSection<'data, 'file>
-where
-    'data: 'file,
-{
-    file: &'file PeFile<'data>,
-    index: SectionIndex,
-    section: &'file pe::section_table::SectionTable,
-}
-
-/// An iterator over the symbols of a `PeFile`.
-#[derive(Debug)]
-pub struct PeSymbolIterator<'data, 'file>
-where
-    'data: 'file,
-{
-    index: usize,
-    exports: slice::Iter<'file, pe::export::Export<'data>>,
-    imports: slice::Iter<'file, pe::import::Import<'data>>,
-}
-
-/// An iterator over the relocations in an `PeSection`.
-#[derive(Debug)]
-pub struct PeRelocationIterator;
-
 impl<'data> PeFile<'data> {
     /// Get the PE headers of the file.
     // TODO: this is temporary to allow access to features this crate doesn't provide yet
@@ -202,6 +146,16 @@ where
     }
 }
 
+/// An iterator over the loadable sections of a `PeFile`.
+#[derive(Debug)]
+pub struct PeSegmentIterator<'data, 'file>
+where
+    'data: 'file,
+{
+    file: &'file PeFile<'data>,
+    iter: slice::Iter<'file, pe::section_table::SectionTable>,
+}
+
 impl<'data, 'file> Iterator for PeSegmentIterator<'data, 'file> {
     type Item = PeSegment<'data, 'file>;
 
@@ -211,6 +165,16 @@ impl<'data, 'file> Iterator for PeSegmentIterator<'data, 'file> {
             section,
         })
     }
+}
+
+/// A loadable section of a `PeFile`.
+#[derive(Debug)]
+pub struct PeSegment<'data, 'file>
+where
+    'data: 'file,
+{
+    file: &'file PeFile<'data>,
+    section: &'file pe::section_table::SectionTable,
 }
 
 impl<'data, 'file> ObjectSegment<'data> for PeSegment<'data, 'file> {
@@ -245,6 +209,16 @@ impl<'data, 'file> ObjectSegment<'data> for PeSegment<'data, 'file> {
     }
 }
 
+/// An iterator over the sections of a `PeFile`.
+#[derive(Debug)]
+pub struct PeSectionIterator<'data, 'file>
+where
+    'data: 'file,
+{
+    file: &'file PeFile<'data>,
+    iter: iter::Enumerate<slice::Iter<'file, pe::section_table::SectionTable>>,
+}
+
 impl<'data, 'file> Iterator for PeSectionIterator<'data, 'file> {
     type Item = PeSection<'data, 'file>;
 
@@ -255,6 +229,17 @@ impl<'data, 'file> Iterator for PeSectionIterator<'data, 'file> {
             section,
         })
     }
+}
+
+/// A section of a `PeFile`.
+#[derive(Debug)]
+pub struct PeSection<'data, 'file>
+where
+    'data: 'file,
+{
+    file: &'file PeFile<'data>,
+    index: SectionIndex,
+    section: &'file pe::section_table::SectionTable,
 }
 
 impl<'data, 'file> PeSection<'data, 'file> {
@@ -336,6 +321,17 @@ impl<'data, 'file> ObjectSection<'data> for PeSection<'data, 'file> {
     }
 }
 
+/// An iterator over the symbols of a `PeFile`.
+#[derive(Debug)]
+pub struct PeSymbolIterator<'data, 'file>
+where
+    'data: 'file,
+{
+    index: usize,
+    exports: slice::Iter<'file, pe::export::Export<'data>>,
+    imports: slice::Iter<'file, pe::import::Import<'data>>,
+}
+
 impl<'data, 'file> Iterator for PeSymbolIterator<'data, 'file> {
     type Item = (SymbolIndex, Symbol<'data>);
 
@@ -380,6 +376,10 @@ impl<'data, 'file> Iterator for PeSymbolIterator<'data, 'file> {
         None
     }
 }
+
+/// An iterator over the relocations in an `PeSection`.
+#[derive(Debug)]
+pub struct PeRelocationIterator;
 
 impl Iterator for PeRelocationIterator {
     type Item = (u64, Relocation);

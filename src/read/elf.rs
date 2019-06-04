@@ -26,68 +26,6 @@ pub struct ElfFile<'data> {
     data: &'data [u8],
 }
 
-/// An iterator over the segments of an `ElfFile`.
-#[derive(Debug)]
-pub struct ElfSegmentIterator<'data, 'file>
-where
-    'data: 'file,
-{
-    file: &'file ElfFile<'data>,
-    iter: slice::Iter<'file, elf::ProgramHeader>,
-}
-
-/// A segment of an `ElfFile`.
-#[derive(Debug)]
-pub struct ElfSegment<'data, 'file>
-where
-    'data: 'file,
-{
-    file: &'file ElfFile<'data>,
-    segment: &'file elf::ProgramHeader,
-}
-
-/// An iterator over the sections of an `ElfFile`.
-#[derive(Debug)]
-pub struct ElfSectionIterator<'data, 'file>
-where
-    'data: 'file,
-{
-    file: &'file ElfFile<'data>,
-    iter: iter::Enumerate<slice::Iter<'file, elf::SectionHeader>>,
-}
-
-/// A section of an `ElfFile`.
-#[derive(Debug)]
-pub struct ElfSection<'data, 'file>
-where
-    'data: 'file,
-{
-    file: &'file ElfFile<'data>,
-    index: SectionIndex,
-    section: &'file elf::SectionHeader,
-}
-
-/// An iterator over the symbols of an `ElfFile`.
-pub struct ElfSymbolIterator<'data, 'file>
-where
-    'data: 'file,
-{
-    strtab: &'file strtab::Strtab<'data>,
-    symbols: iter::Enumerate<elf::sym::SymIterator<'data>>,
-}
-
-/// An iterator over the relocations in an `ElfSection`.
-pub struct ElfRelocationIterator<'data, 'file>
-where
-    'data: 'file,
-{
-    /// The index of the section that the relocations apply to.
-    section_index: SectionIndex,
-    file: &'file ElfFile<'data>,
-    sections: slice::Iter<'file, (elf::ShdrIdx, elf::RelocSection<'data>)>,
-    relocations: Option<elf::reloc::RelocIterator<'data>>,
-}
-
 impl<'data> ElfFile<'data> {
     /// Get the ELF headers of the file.
     // TODO: this is temporary to allow access to features this crate doesn't provide yet
@@ -290,6 +228,16 @@ where
     }
 }
 
+/// An iterator over the segments of an `ElfFile`.
+#[derive(Debug)]
+pub struct ElfSegmentIterator<'data, 'file>
+where
+    'data: 'file,
+{
+    file: &'file ElfFile<'data>,
+    iter: slice::Iter<'file, elf::ProgramHeader>,
+}
+
 impl<'data, 'file> Iterator for ElfSegmentIterator<'data, 'file> {
     type Item = ElfSegment<'data, 'file>;
 
@@ -304,6 +252,16 @@ impl<'data, 'file> Iterator for ElfSegmentIterator<'data, 'file> {
         }
         None
     }
+}
+
+/// A segment of an `ElfFile`.
+#[derive(Debug)]
+pub struct ElfSegment<'data, 'file>
+where
+    'data: 'file,
+{
+    file: &'file ElfFile<'data>,
+    segment: &'file elf::ProgramHeader,
 }
 
 impl<'data, 'file> ObjectSegment<'data> for ElfSegment<'data, 'file> {
@@ -336,6 +294,16 @@ impl<'data, 'file> ObjectSegment<'data> for ElfSegment<'data, 'file> {
     }
 }
 
+/// An iterator over the sections of an `ElfFile`.
+#[derive(Debug)]
+pub struct ElfSectionIterator<'data, 'file>
+where
+    'data: 'file,
+{
+    file: &'file ElfFile<'data>,
+    iter: iter::Enumerate<slice::Iter<'file, elf::SectionHeader>>,
+}
+
 impl<'data, 'file> Iterator for ElfSectionIterator<'data, 'file> {
     type Item = ElfSection<'data, 'file>;
 
@@ -346,6 +314,17 @@ impl<'data, 'file> Iterator for ElfSectionIterator<'data, 'file> {
             section,
         })
     }
+}
+
+/// A section of an `ElfFile`.
+#[derive(Debug)]
+pub struct ElfSection<'data, 'file>
+where
+    'data: 'file,
+{
+    file: &'file ElfFile<'data>,
+    index: SectionIndex,
+    section: &'file elf::SectionHeader,
 }
 
 impl<'data, 'file> ElfSection<'data, 'file> {
@@ -537,6 +516,15 @@ impl<'data, 'file> ObjectSection<'data> for ElfSection<'data, 'file> {
     }
 }
 
+/// An iterator over the symbols of an `ElfFile`.
+pub struct ElfSymbolIterator<'data, 'file>
+where
+    'data: 'file,
+{
+    strtab: &'file strtab::Strtab<'data>,
+    symbols: iter::Enumerate<elf::sym::SymIterator<'data>>,
+}
+
 impl<'data, 'file> fmt::Debug for ElfSymbolIterator<'data, 'file> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("ElfSymbolIterator").finish()
@@ -588,6 +576,18 @@ fn parse_symbol<'data>(
         undefined,
         global: elf::sym::st_bind(symbol.st_info) != elf::sym::STB_LOCAL,
     }
+}
+
+/// An iterator over the relocations in an `ElfSection`.
+pub struct ElfRelocationIterator<'data, 'file>
+where
+    'data: 'file,
+{
+    /// The index of the section that the relocations apply to.
+    section_index: SectionIndex,
+    file: &'file ElfFile<'data>,
+    sections: slice::Iter<'file, (elf::ShdrIdx, elf::RelocSection<'data>)>,
+    relocations: Option<elf::reloc::RelocIterator<'data>>,
 }
 
 impl<'data, 'file> Iterator for ElfRelocationIterator<'data, 'file> {

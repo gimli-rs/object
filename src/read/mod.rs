@@ -111,18 +111,6 @@ pub struct SectionIndex(pub usize);
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct SymbolIndex(pub usize);
 
-/// A symbol table entry.
-#[derive(Debug)]
-pub struct Symbol<'data> {
-    kind: SymbolKind,
-    section_index: Option<SectionIndex>,
-    undefined: bool,
-    global: bool,
-    name: Option<&'data str>,
-    address: u64,
-    size: u64,
-}
-
 /// The kind of a symbol.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SymbolKind {
@@ -142,22 +130,6 @@ pub enum SymbolKind {
     Common,
     /// The symbol is for a thread local storage entity.
     Tls,
-}
-
-/// A map from addresses to symbols.
-#[derive(Debug)]
-pub struct SymbolMap<'data> {
-    symbols: Vec<Symbol<'data>>,
-}
-
-/// A relocation entry.
-#[derive(Debug)]
-pub struct Relocation {
-    kind: RelocationKind,
-    size: u8,
-    symbol: SymbolIndex,
-    addend: i64,
-    implicit_addend: bool,
 }
 
 /// The kind of a relocation.
@@ -187,6 +159,18 @@ pub enum RelocationKind {
     PltRelative,
     /// Some other kind of relocation. The value is dependent on file format and machine.
     Other(u32),
+}
+
+/// A symbol table entry.
+#[derive(Debug)]
+pub struct Symbol<'data> {
+    kind: SymbolKind,
+    section_index: Option<SectionIndex>,
+    undefined: bool,
+    global: bool,
+    name: Option<&'data str>,
+    address: u64,
+    size: u64,
 }
 
 impl<'data> Symbol<'data> {
@@ -241,6 +225,12 @@ impl<'data> Symbol<'data> {
     }
 }
 
+/// A map from addresses to symbols.
+#[derive(Debug)]
+pub struct SymbolMap<'data> {
+    symbols: Vec<Symbol<'data>>,
+}
+
 impl<'data> SymbolMap<'data> {
     /// Get the symbol containing the given address.
     pub fn get(&self, address: u64) -> Option<&Symbol<'data>> {
@@ -277,6 +267,16 @@ impl<'data> SymbolMap<'data> {
         }
         !symbol.is_undefined() && symbol.size() > 0
     }
+}
+
+/// A relocation entry.
+#[derive(Debug)]
+pub struct Relocation {
+    kind: RelocationKind,
+    size: u8,
+    symbol: SymbolIndex,
+    addend: i64,
+    implicit_addend: bool,
 }
 
 impl Relocation {

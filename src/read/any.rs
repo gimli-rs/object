@@ -30,146 +30,6 @@ pub enum Format {
     Wasm,
 }
 
-/// An object file.
-#[derive(Debug)]
-pub struct File<'data> {
-    inner: FileInternal<'data>,
-}
-
-#[allow(clippy::large_enum_variant)]
-#[derive(Debug)]
-enum FileInternal<'data> {
-    Elf(elf::ElfFile<'data>),
-    MachO(macho::MachOFile<'data>),
-    Pe(pe::PeFile<'data>),
-    #[cfg(feature = "wasm")]
-    Wasm(wasm::WasmFile),
-}
-
-/// An iterator over the segments of a `File`.
-#[derive(Debug)]
-pub struct SegmentIterator<'data, 'file>
-where
-    'data: 'file,
-{
-    inner: SegmentIteratorInternal<'data, 'file>,
-}
-
-#[derive(Debug)]
-enum SegmentIteratorInternal<'data, 'file>
-where
-    'data: 'file,
-{
-    Elf(elf::ElfSegmentIterator<'data, 'file>),
-    MachO(macho::MachOSegmentIterator<'data, 'file>),
-    Pe(pe::PeSegmentIterator<'data, 'file>),
-    #[cfg(feature = "wasm")]
-    Wasm(wasm::WasmSegmentIterator<'file>),
-}
-
-/// A segment of a `File`.
-pub struct Segment<'data, 'file>
-where
-    'data: 'file,
-{
-    inner: SegmentInternal<'data, 'file>,
-}
-
-#[derive(Debug)]
-enum SegmentInternal<'data, 'file>
-where
-    'data: 'file,
-{
-    Elf(elf::ElfSegment<'data, 'file>),
-    MachO(macho::MachOSegment<'data, 'file>),
-    Pe(pe::PeSegment<'data, 'file>),
-    #[cfg(feature = "wasm")]
-    Wasm(wasm::WasmSegment<'file>),
-}
-
-/// An iterator of the sections of a `File`.
-#[derive(Debug)]
-pub struct SectionIterator<'data, 'file>
-where
-    'data: 'file,
-{
-    inner: SectionIteratorInternal<'data, 'file>,
-}
-
-// we wrap our enums in a struct so that they are kept private.
-#[derive(Debug)]
-enum SectionIteratorInternal<'data, 'file>
-where
-    'data: 'file,
-{
-    Elf(elf::ElfSectionIterator<'data, 'file>),
-    MachO(macho::MachOSectionIterator<'data, 'file>),
-    Pe(pe::PeSectionIterator<'data, 'file>),
-    #[cfg(feature = "wasm")]
-    Wasm(wasm::WasmSectionIterator<'file>),
-}
-
-/// A Section of a File
-pub struct Section<'data, 'file>
-where
-    'data: 'file,
-{
-    inner: SectionInternal<'data, 'file>,
-}
-
-enum SectionInternal<'data, 'file>
-where
-    'data: 'file,
-{
-    Elf(elf::ElfSection<'data, 'file>),
-    MachO(macho::MachOSection<'data, 'file>),
-    Pe(pe::PeSection<'data, 'file>),
-    #[cfg(feature = "wasm")]
-    Wasm(wasm::WasmSection<'file>),
-}
-
-/// An iterator over symbol table entries.
-#[derive(Debug)]
-pub struct SymbolIterator<'data, 'file>
-where
-    'data: 'file,
-{
-    inner: SymbolIteratorInternal<'data, 'file>,
-}
-
-#[derive(Debug)]
-enum SymbolIteratorInternal<'data, 'file>
-where
-    'data: 'file,
-{
-    Elf(elf::ElfSymbolIterator<'data, 'file>),
-    MachO(macho::MachOSymbolIterator<'data>),
-    Pe(pe::PeSymbolIterator<'data, 'file>),
-    #[cfg(feature = "wasm")]
-    Wasm(wasm::WasmSymbolIterator<'file>),
-}
-
-/// An iterator over relocation entries
-#[derive(Debug)]
-pub struct RelocationIterator<'data, 'file>
-where
-    'data: 'file,
-{
-    inner: RelocationIteratorInternal<'data, 'file>,
-}
-
-#[derive(Debug)]
-enum RelocationIteratorInternal<'data, 'file>
-where
-    'data: 'file,
-{
-    Elf(elf::ElfRelocationIterator<'data, 'file>),
-    MachO(macho::MachORelocationIterator<'data, 'file>),
-    Pe(pe::PeRelocationIterator),
-    #[cfg(feature = "wasm")]
-    Wasm(wasm::WasmRelocationIterator),
-}
-
 /// Evaluate an expression on the contents of a file format enum.
 ///
 /// This is a hack to avoid virtual calls.
@@ -234,6 +94,22 @@ macro_rules! next_inner {
             $from::Wasm(ref mut iter) => iter.next().map($to::Wasm),
         }
     };
+}
+
+/// An object file.
+#[derive(Debug)]
+pub struct File<'data> {
+    inner: FileInternal<'data>,
+}
+
+#[allow(clippy::large_enum_variant)]
+#[derive(Debug)]
+enum FileInternal<'data> {
+    Elf(elf::ElfFile<'data>),
+    MachO(macho::MachOFile<'data>),
+    Pe(pe::PeFile<'data>),
+    #[cfg(feature = "wasm")]
+    Wasm(wasm::WasmFile),
 }
 
 #[cfg(feature = "wasm")]
@@ -400,6 +276,27 @@ where
     }
 }
 
+/// An iterator over the segments of a `File`.
+#[derive(Debug)]
+pub struct SegmentIterator<'data, 'file>
+where
+    'data: 'file,
+{
+    inner: SegmentIteratorInternal<'data, 'file>,
+}
+
+#[derive(Debug)]
+enum SegmentIteratorInternal<'data, 'file>
+where
+    'data: 'file,
+{
+    Elf(elf::ElfSegmentIterator<'data, 'file>),
+    MachO(macho::MachOSegmentIterator<'data, 'file>),
+    Pe(pe::PeSegmentIterator<'data, 'file>),
+    #[cfg(feature = "wasm")]
+    Wasm(wasm::WasmSegmentIterator<'file>),
+}
+
 impl<'data, 'file> Iterator for SegmentIterator<'data, 'file> {
     type Item = Segment<'data, 'file>;
 
@@ -407,6 +304,26 @@ impl<'data, 'file> Iterator for SegmentIterator<'data, 'file> {
         next_inner!(self.inner, SegmentIteratorInternal, SegmentInternal)
             .map(|inner| Segment { inner })
     }
+}
+
+/// A segment of a `File`.
+pub struct Segment<'data, 'file>
+where
+    'data: 'file,
+{
+    inner: SegmentInternal<'data, 'file>,
+}
+
+#[derive(Debug)]
+enum SegmentInternal<'data, 'file>
+where
+    'data: 'file,
+{
+    Elf(elf::ElfSegment<'data, 'file>),
+    MachO(macho::MachOSegment<'data, 'file>),
+    Pe(pe::PeSegment<'data, 'file>),
+    #[cfg(feature = "wasm")]
+    Wasm(wasm::WasmSegment<'file>),
 }
 
 impl<'data, 'file> fmt::Debug for Segment<'data, 'file> {
@@ -446,6 +363,28 @@ impl<'data, 'file> ObjectSegment<'data> for Segment<'data, 'file> {
     }
 }
 
+/// An iterator of the sections of a `File`.
+#[derive(Debug)]
+pub struct SectionIterator<'data, 'file>
+where
+    'data: 'file,
+{
+    inner: SectionIteratorInternal<'data, 'file>,
+}
+
+// we wrap our enums in a struct so that they are kept private.
+#[derive(Debug)]
+enum SectionIteratorInternal<'data, 'file>
+where
+    'data: 'file,
+{
+    Elf(elf::ElfSectionIterator<'data, 'file>),
+    MachO(macho::MachOSectionIterator<'data, 'file>),
+    Pe(pe::PeSectionIterator<'data, 'file>),
+    #[cfg(feature = "wasm")]
+    Wasm(wasm::WasmSectionIterator<'file>),
+}
+
 impl<'data, 'file> Iterator for SectionIterator<'data, 'file> {
     type Item = Section<'data, 'file>;
 
@@ -453,6 +392,25 @@ impl<'data, 'file> Iterator for SectionIterator<'data, 'file> {
         next_inner!(self.inner, SectionIteratorInternal, SectionInternal)
             .map(|inner| Section { inner })
     }
+}
+
+/// A Section of a File
+pub struct Section<'data, 'file>
+where
+    'data: 'file,
+{
+    inner: SectionInternal<'data, 'file>,
+}
+
+enum SectionInternal<'data, 'file>
+where
+    'data: 'file,
+{
+    Elf(elf::ElfSection<'data, 'file>),
+    MachO(macho::MachOSection<'data, 'file>),
+    Pe(pe::PeSection<'data, 'file>),
+    #[cfg(feature = "wasm")]
+    Wasm(wasm::WasmSection<'file>),
 }
 
 impl<'data, 'file> fmt::Debug for Section<'data, 'file> {
@@ -522,12 +480,54 @@ impl<'data, 'file> ObjectSection<'data> for Section<'data, 'file> {
     }
 }
 
+/// An iterator over symbol table entries.
+#[derive(Debug)]
+pub struct SymbolIterator<'data, 'file>
+where
+    'data: 'file,
+{
+    inner: SymbolIteratorInternal<'data, 'file>,
+}
+
+#[derive(Debug)]
+enum SymbolIteratorInternal<'data, 'file>
+where
+    'data: 'file,
+{
+    Elf(elf::ElfSymbolIterator<'data, 'file>),
+    MachO(macho::MachOSymbolIterator<'data>),
+    Pe(pe::PeSymbolIterator<'data, 'file>),
+    #[cfg(feature = "wasm")]
+    Wasm(wasm::WasmSymbolIterator<'file>),
+}
+
 impl<'data, 'file> Iterator for SymbolIterator<'data, 'file> {
     type Item = (SymbolIndex, Symbol<'data>);
 
     fn next(&mut self) -> Option<Self::Item> {
         with_inner_mut!(self.inner, SymbolIteratorInternal, |x| x.next())
     }
+}
+
+/// An iterator over relocation entries
+#[derive(Debug)]
+pub struct RelocationIterator<'data, 'file>
+where
+    'data: 'file,
+{
+    inner: RelocationIteratorInternal<'data, 'file>,
+}
+
+#[derive(Debug)]
+enum RelocationIteratorInternal<'data, 'file>
+where
+    'data: 'file,
+{
+    Elf(elf::ElfRelocationIterator<'data, 'file>),
+    MachO(macho::MachORelocationIterator<'data, 'file>),
+    Pe(pe::PeRelocationIterator),
+    #[cfg(feature = "wasm")]
+    Wasm(wasm::WasmRelocationIterator),
 }
 
 impl<'data, 'file> Iterator for RelocationIterator<'data, 'file> {

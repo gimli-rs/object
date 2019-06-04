@@ -20,62 +20,6 @@ pub struct MachOFile<'data> {
     ctx: container::Ctx,
 }
 
-/// An iterator over the segments of a `MachOFile`.
-#[derive(Debug)]
-pub struct MachOSegmentIterator<'data, 'file>
-where
-    'data: 'file,
-{
-    segments: slice::Iter<'file, mach::segment::Segment<'data>>,
-}
-
-/// A segment of a `MachOFile`.
-#[derive(Debug)]
-pub struct MachOSegment<'data, 'file>
-where
-    'data: 'file,
-{
-    segment: &'file mach::segment::Segment<'data>,
-}
-
-/// An iterator over the sections of a `MachOFile`.
-pub struct MachOSectionIterator<'data, 'file>
-where
-    'data: 'file,
-{
-    file: &'file MachOFile<'data>,
-    index: usize,
-    segments: slice::Iter<'file, mach::segment::Segment<'data>>,
-    sections: Option<mach::segment::SectionIterator<'data>>,
-}
-
-/// A section of a `MachOFile`.
-#[derive(Debug)]
-pub struct MachOSection<'data, 'file>
-where
-    'data: 'file,
-{
-    file: &'file MachOFile<'data>,
-    // index is 1-based (equivalent to n_sect field in symbols)
-    index: SectionIndex,
-    section: mach::segment::Section,
-    data: mach::segment::SectionData<'data>,
-}
-
-/// An iterator over the symbols of a `MachOFile`.
-pub struct MachOSymbolIterator<'data> {
-    symbols: iter::Enumerate<mach::symbols::SymbolIterator<'data>>,
-}
-
-/// An iterator over the relocations in an `MachOSection`.
-pub struct MachORelocationIterator<'data, 'file>
-where
-    'data: 'file,
-{
-    file: &'file MachOFile<'data>,
-    relocations: mach::segment::RelocationIterator<'data>,
-}
-
 impl<'data> MachOFile<'data> {
     /// Get the Mach-O headers of the file.
     // TODO: this is temporary to allow access to features this crate doesn't provide yet
@@ -256,12 +200,30 @@ where
     }
 }
 
+/// An iterator over the segments of a `MachOFile`.
+#[derive(Debug)]
+pub struct MachOSegmentIterator<'data, 'file>
+where
+    'data: 'file,
+{
+    segments: slice::Iter<'file, mach::segment::Segment<'data>>,
+}
+
 impl<'data, 'file> Iterator for MachOSegmentIterator<'data, 'file> {
     type Item = MachOSegment<'data, 'file>;
 
     fn next(&mut self) -> Option<Self::Item> {
         self.segments.next().map(|segment| MachOSegment { segment })
     }
+}
+
+/// A segment of a `MachOFile`.
+#[derive(Debug)]
+pub struct MachOSegment<'data, 'file>
+where
+    'data: 'file,
+{
+    segment: &'file mach::segment::Segment<'data>,
 }
 
 impl<'data, 'file> ObjectSegment<'data> for MachOSegment<'data, 'file> {
@@ -294,6 +256,17 @@ impl<'data, 'file> ObjectSegment<'data> for MachOSegment<'data, 'file> {
     fn name(&self) -> Option<&str> {
         self.segment.name().ok()
     }
+}
+
+/// An iterator over the sections of a `MachOFile`.
+pub struct MachOSectionIterator<'data, 'file>
+where
+    'data: 'file,
+{
+    file: &'file MachOFile<'data>,
+    index: usize,
+    segments: slice::Iter<'file, mach::segment::Segment<'data>>,
+    sections: Option<mach::segment::SectionIterator<'data>>,
 }
 
 impl<'data, 'file> fmt::Debug for MachOSectionIterator<'data, 'file> {
@@ -336,6 +309,19 @@ impl<'data, 'file> Iterator for MachOSectionIterator<'data, 'file> {
             }
         }
     }
+}
+
+/// A section of a `MachOFile`.
+#[derive(Debug)]
+pub struct MachOSection<'data, 'file>
+where
+    'data: 'file,
+{
+    file: &'file MachOFile<'data>,
+    // index is 1-based (equivalent to n_sect field in symbols)
+    index: SectionIndex,
+    section: mach::segment::Section,
+    data: mach::segment::SectionData<'data>,
 }
 
 impl<'data, 'file> ObjectSection<'data> for MachOSection<'data, 'file> {
@@ -403,6 +389,11 @@ impl<'data, 'file> ObjectSection<'data> for MachOSection<'data, 'file> {
     }
 }
 
+/// An iterator over the symbols of a `MachOFile`.
+pub struct MachOSymbolIterator<'data> {
+    symbols: iter::Enumerate<mach::symbols::SymbolIterator<'data>>,
+}
+
 impl<'data> fmt::Debug for MachOSymbolIterator<'data> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("MachOSymbolIterator").finish()
@@ -447,6 +438,15 @@ fn parse_symbol<'data>(name: &'data str, nlist: &mach::symbols::Nlist) -> Option
         undefined: nlist.is_undefined(),
         global: nlist.is_global(),
     })
+}
+
+/// An iterator over the relocations in an `MachOSection`.
+pub struct MachORelocationIterator<'data, 'file>
+where
+    'data: 'file,
+{
+    file: &'file MachOFile<'data>,
+    relocations: mach::segment::RelocationIterator<'data>,
 }
 
 impl<'data, 'file> Iterator for MachORelocationIterator<'data, 'file> {
