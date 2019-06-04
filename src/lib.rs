@@ -3,7 +3,7 @@
 //! The `object` crate provides a unified interface to working with object files
 //! across platforms.
 //!
-//! See the [`File` struct](./struct.File.html) for details.
+//! See the [`File` struct](./read/struct.File.html) for details.
 
 #![deny(missing_docs)]
 #![deny(missing_debug_implementations)]

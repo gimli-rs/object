@@ -97,6 +97,8 @@ macro_rules! next_inner {
 }
 
 /// An object file.
+///
+/// Most functionality is provided by the `Object` trait implementation.
 #[derive(Debug)]
 pub struct File<'data> {
     inner: FileInternal<'data>,
