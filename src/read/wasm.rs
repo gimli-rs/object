@@ -2,9 +2,10 @@ use crate::alloc::vec::Vec;
 use parity_wasm::elements::{self, Deserialize};
 use std::borrow::Cow;
 use std::{iter, slice};
+use target_lexicon::Architecture;
 
 use crate::read::{
-    Machine, Object, ObjectSection, ObjectSegment, Relocation, SectionIndex, SectionKind, Symbol,
+    Object, ObjectSection, ObjectSegment, Relocation, SectionIndex, SectionKind, Symbol,
     SymbolIndex, SymbolMap,
 };
 
@@ -39,8 +40,19 @@ impl<'file> Object<'static, 'file> for WasmFile {
     type SectionIterator = WasmSectionIterator<'file>;
     type SymbolIterator = WasmSymbolIterator<'file>;
 
-    fn machine(&self) -> Machine {
-        Machine::Other
+    #[inline]
+    fn architecture(&self) -> Architecture {
+        Architecture::Wasm32
+    }
+
+    #[inline]
+    fn is_little_endian(&self) -> bool {
+        true
+    }
+
+    #[inline]
+    fn is_64(&self) -> bool {
+        false
     }
 
     fn segments(&'file self) -> Self::SegmentIterator {
@@ -84,10 +96,6 @@ impl<'file> Object<'static, 'file> for WasmFile {
         SymbolMap {
             symbols: Vec::new(),
         }
-    }
-
-    fn is_little_endian(&self) -> bool {
-        true
     }
 
     fn has_debug_symbols(&self) -> bool {

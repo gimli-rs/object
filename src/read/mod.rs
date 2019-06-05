@@ -38,24 +38,6 @@ pub type NativeFile<'data> = PeFile<'data>;
 #[cfg(all(feature = "wasm", target_arch = "wasm32"))]
 pub type NativeFile<'data> = WasmFile<'data>;
 
-/// The machine type of an object file.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Machine {
-    /// An unrecognized machine type.
-    Other,
-    /// ARM
-    Arm,
-    /// ARM64
-    Arm64,
-    /// x86
-    X86,
-    /// x86-64
-    #[allow(non_camel_case_types)]
-    X86_64,
-    /// MIPS
-    Mips,
-}
-
 /// The kind of a section.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SectionKind {

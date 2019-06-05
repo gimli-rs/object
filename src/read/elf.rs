@@ -1,21 +1,19 @@
 use crate::alloc::borrow::Cow;
 use crate::alloc::fmt;
 use crate::alloc::vec::Vec;
-use std::iter;
-use std::slice;
-
 #[cfg(feature = "compression")]
 use flate2::{Decompress, FlushDecompress};
-
 #[cfg(feature = "compression")]
 use goblin::container;
 use goblin::{elf, strtab};
 #[cfg(feature = "compression")]
 use scroll::ctx::TryFromCtx;
 use scroll::{self, Pread};
+use std::{iter, slice};
+use target_lexicon::Architecture;
 
 use crate::read::{
-    self, Machine, Object, ObjectSection, ObjectSegment, Relocation, RelocationKind, SectionIndex,
+    self, Object, ObjectSection, ObjectSegment, Relocation, RelocationKind, SectionIndex,
     SectionKind, Symbol, SymbolIndex, SymbolKind, SymbolMap,
 };
 
@@ -38,12 +36,6 @@ impl<'data> ElfFile<'data> {
     pub fn parse(data: &'data [u8]) -> Result<Self, &'static str> {
         let elf = elf::Elf::parse(data).map_err(|_| "Could not parse ELF header")?;
         Ok(ElfFile { elf, data })
-    }
-
-    /// True for 64-bit files.
-    #[inline]
-    pub fn is_64(&self) -> bool {
-        self.elf.is_64
     }
 
     fn raw_section_by_name<'file>(
@@ -94,15 +86,25 @@ where
     type SectionIterator = ElfSectionIterator<'data, 'file>;
     type SymbolIterator = ElfSymbolIterator<'data, 'file>;
 
-    fn machine(&self) -> Machine {
+    fn architecture(&self) -> Architecture {
         match self.elf.header.e_machine {
-            elf::header::EM_ARM => Machine::Arm,
-            elf::header::EM_AARCH64 => Machine::Arm64,
-            elf::header::EM_386 => Machine::X86,
-            elf::header::EM_X86_64 => Machine::X86_64,
-            elf::header::EM_MIPS => Machine::Mips,
-            _ => Machine::Other,
+            elf::header::EM_ARM => Architecture::Arm,
+            elf::header::EM_AARCH64 => Architecture::Aarch64,
+            elf::header::EM_386 => Architecture::I386,
+            elf::header::EM_X86_64 => Architecture::X86_64,
+            elf::header::EM_MIPS => Architecture::Mips,
+            _ => Architecture::Unknown,
         }
+    }
+
+    #[inline]
+    fn is_little_endian(&self) -> bool {
+        self.elf.little_endian
+    }
+
+    #[inline]
+    fn is_64(&self) -> bool {
+        self.elf.is_64
     }
 
     fn segments(&'file self) -> ElfSegmentIterator<'data, 'file> {
@@ -164,11 +166,6 @@ where
             .collect();
         symbols.sort_by_key(|x| x.address);
         SymbolMap { symbols }
-    }
-
-    #[inline]
-    fn is_little_endian(&self) -> bool {
-        self.elf.little_endian
     }
 
     fn has_debug_symbols(&self) -> bool {

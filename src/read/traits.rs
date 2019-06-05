@@ -1,5 +1,7 @@
 use crate::alloc::borrow::Cow;
-use crate::{Machine, Relocation, SectionIndex, SectionKind, Symbol, SymbolIndex, SymbolMap, Uuid};
+use crate::{Relocation, SectionIndex, SectionKind, Symbol, SymbolIndex, SymbolMap};
+use target_lexicon::{Architecture, Endianness};
+use uuid::Uuid;
 
 /// An object file.
 pub trait Object<'data, 'file> {
@@ -18,8 +20,24 @@ pub trait Object<'data, 'file> {
     /// An iterator over the symbols in the object file.
     type SymbolIterator: Iterator<Item = (SymbolIndex, Symbol<'data>)>;
 
-    /// Get the machine type of the file.
-    fn machine(&self) -> Machine;
+    /// Get the architecture type of the file.
+    fn architecture(&self) -> Architecture;
+
+    /// Get the endianness of the file.
+    #[inline]
+    fn endianness(&self) -> Endianness {
+        if self.is_little_endian() {
+            Endianness::Little
+        } else {
+            Endianness::Big
+        }
+    }
+
+    /// Return true if the file is little endian, false if it is big endian.
+    fn is_little_endian(&self) -> bool;
+
+    /// Return true if the file can contain 64-bit addresses.
+    fn is_64(&self) -> bool;
 
     /// Get an iterator over the segments in the file.
     fn segments(&'file self) -> Self::SegmentIterator;
@@ -96,9 +114,6 @@ pub trait Object<'data, 'file> {
 
     /// Construct a map from addresses to symbols.
     fn symbol_map(&self) -> SymbolMap<'data>;
-
-    /// Return true if the file is little endian, false if it is big endian.
-    fn is_little_endian(&self) -> bool;
 
     /// Return true if the file contains debug information sections, false if not.
     fn has_debug_symbols(&self) -> bool;
