@@ -3,7 +3,7 @@ use parity_wasm::elements::{self, Deserialize};
 use std::borrow::Cow;
 use std::{iter, slice};
 
-use crate::{
+use crate::read::{
     Machine, Object, ObjectSection, ObjectSegment, Relocation, SectionIndex, SectionKind, Symbol,
     SymbolIndex, SymbolMap,
 };
@@ -22,41 +22,6 @@ impl<'data> WasmFile {
         Ok(WasmFile { module })
     }
 }
-
-/// An iterator over the segments of an `WasmFile`.
-#[derive(Debug)]
-pub struct WasmSegmentIterator<'file> {
-    file: &'file WasmFile,
-}
-
-/// A segment of an `WasmFile`.
-#[derive(Debug)]
-pub struct WasmSegment<'file> {
-    file: &'file WasmFile,
-}
-
-/// An iterator over the sections of an `WasmFile`.
-#[derive(Debug)]
-pub struct WasmSectionIterator<'file> {
-    sections: iter::Enumerate<slice::Iter<'file, elements::Section>>,
-}
-
-/// A section of an `WasmFile`.
-#[derive(Debug)]
-pub struct WasmSection<'file> {
-    index: SectionIndex,
-    section: &'file elements::Section,
-}
-
-/// An iterator over the symbols of an `WasmFile`.
-#[derive(Debug)]
-pub struct WasmSymbolIterator<'file> {
-    file: &'file WasmFile,
-}
-
-/// An iterator over the relocations in an `WasmSection`.
-#[derive(Debug)]
-pub struct WasmRelocationIterator;
 
 fn serialize_to_cow<'a, S>(s: S) -> Option<Cow<'a, [u8]>>
 where
@@ -135,12 +100,24 @@ impl<'file> Object<'static, 'file> for WasmFile {
     }
 }
 
+/// An iterator over the segments of an `WasmFile`.
+#[derive(Debug)]
+pub struct WasmSegmentIterator<'file> {
+    file: &'file WasmFile,
+}
+
 impl<'file> Iterator for WasmSegmentIterator<'file> {
     type Item = WasmSegment<'file>;
 
     fn next(&mut self) -> Option<Self::Item> {
         None
     }
+}
+
+/// A segment of an `WasmFile`.
+#[derive(Debug)]
+pub struct WasmSegment<'file> {
+    file: &'file WasmFile,
 }
 
 impl<'file> ObjectSegment<'static> for WasmSegment<'file> {
@@ -173,6 +150,12 @@ impl<'file> ObjectSegment<'static> for WasmSegment<'file> {
     }
 }
 
+/// An iterator over the sections of an `WasmFile`.
+#[derive(Debug)]
+pub struct WasmSectionIterator<'file> {
+    sections: iter::Enumerate<slice::Iter<'file, elements::Section>>,
+}
+
 impl<'file> Iterator for WasmSectionIterator<'file> {
     type Item = WasmSection<'file>;
 
@@ -182,6 +165,13 @@ impl<'file> Iterator for WasmSectionIterator<'file> {
             section,
         })
     }
+}
+
+/// A section of an `WasmFile`.
+#[derive(Debug)]
+pub struct WasmSection<'file> {
+    index: SectionIndex,
+    section: &'file elements::Section,
 }
 
 impl<'file> ObjectSection<'static> for WasmSection<'file> {
@@ -280,6 +270,12 @@ impl<'file> ObjectSection<'static> for WasmSection<'file> {
     }
 }
 
+/// An iterator over the symbols of an `WasmFile`.
+#[derive(Debug)]
+pub struct WasmSymbolIterator<'file> {
+    file: &'file WasmFile,
+}
+
 impl<'file> Iterator for WasmSymbolIterator<'file> {
     type Item = (SymbolIndex, Symbol<'static>);
 
@@ -287,6 +283,10 @@ impl<'file> Iterator for WasmSymbolIterator<'file> {
         unimplemented!()
     }
 }
+
+/// An iterator over the relocations in an `WasmSection`.
+#[derive(Debug)]
+pub struct WasmRelocationIterator;
 
 impl Iterator for WasmRelocationIterator {
     type Item = (u64, Relocation);
