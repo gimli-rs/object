@@ -1,34 +1,15 @@
 use crate::alloc::borrow::Cow;
 use crate::alloc::fmt;
+use target_lexicon::{Architecture, BinaryFormat};
+use uuid::Uuid;
 
 #[cfg(feature = "wasm")]
 use crate::read::wasm;
 use crate::read::{elf, macho, pe};
 use crate::read::{
-    Machine, Object, ObjectSection, ObjectSegment, Relocation, SectionIndex, SectionKind, Symbol,
+    Object, ObjectSection, ObjectSegment, Relocation, SectionIndex, SectionKind, Symbol,
     SymbolIndex, SymbolMap,
 };
-use crate::Uuid;
-
-/// The object file format.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Format {
-    /// 32-bit ELF
-    Elf32,
-    /// 64-bit ELF
-    Elf64,
-    /// 32-bit Mach-O
-    MachO32,
-    /// 64-bit Mach-O
-    MachO64,
-    /// 32-bit PE
-    Pe32,
-    /// 64-bit PE
-    Pe64,
-    /// WebAssembly
-    #[cfg(feature = "wasm")]
-    Wasm,
-}
 
 /// Evaluate an expression on the contents of a file format enum.
 ///
@@ -154,31 +135,13 @@ impl<'data> File<'data> {
     }
 
     /// Return the file format.
-    pub fn format(&self) -> Format {
+    pub fn format(&self) -> BinaryFormat {
         match self.inner {
-            FileInternal::Elf(ref inner) => {
-                if inner.is_64() {
-                    Format::Elf64
-                } else {
-                    Format::Elf32
-                }
-            }
-            FileInternal::MachO(ref inner) => {
-                if inner.is_64() {
-                    Format::MachO64
-                } else {
-                    Format::MachO32
-                }
-            }
-            FileInternal::Pe(ref inner) => {
-                if inner.is_64() {
-                    Format::Pe64
-                } else {
-                    Format::Pe32
-                }
-            }
+            FileInternal::Elf(_) => BinaryFormat::Elf,
+            FileInternal::MachO(_) => BinaryFormat::Macho,
+            FileInternal::Pe(_) => BinaryFormat::Coff,
             #[cfg(feature = "wasm")]
-            FileInternal::Wasm(_) => Format::Wasm,
+            FileInternal::Wasm(_) => BinaryFormat::Wasm,
         }
     }
 }
@@ -193,8 +156,16 @@ where
     type SectionIterator = SectionIterator<'data, 'file>;
     type SymbolIterator = SymbolIterator<'data, 'file>;
 
-    fn machine(&self) -> Machine {
-        with_inner!(self.inner, FileInternal, |x| x.machine())
+    fn architecture(&self) -> Architecture {
+        with_inner!(self.inner, FileInternal, |x| x.architecture())
+    }
+
+    fn is_little_endian(&self) -> bool {
+        with_inner!(self.inner, FileInternal, |x| x.is_little_endian())
+    }
+
+    fn is_64(&self) -> bool {
+        with_inner!(self.inner, FileInternal, |x| x.is_64())
     }
 
     fn segments(&'file self) -> SegmentIterator<'data, 'file> {
@@ -248,10 +219,6 @@ where
 
     fn symbol_map(&self) -> SymbolMap<'data> {
         with_inner!(self.inner, FileInternal, |x| x.symbol_map())
-    }
-
-    fn is_little_endian(&self) -> bool {
-        with_inner!(self.inner, FileInternal, |x| x.is_little_endian())
     }
 
     fn has_debug_symbols(&self) -> bool {

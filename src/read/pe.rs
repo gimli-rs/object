@@ -1,12 +1,12 @@
 use crate::alloc::borrow::Cow;
 use crate::alloc::vec::Vec;
-use std::{cmp, iter, slice};
-
 use goblin::pe;
+use std::{cmp, iter, slice};
+use target_lexicon::Architecture;
 
 use crate::read::{
-    self, Machine, Object, ObjectSection, ObjectSegment, Relocation, SectionIndex, SectionKind,
-    Symbol, SymbolIndex, SymbolKind, SymbolMap,
+    self, Object, ObjectSection, ObjectSegment, Relocation, SectionIndex, SectionKind, Symbol,
+    SymbolIndex, SymbolKind, SymbolMap,
 };
 
 /// A PE object file.
@@ -30,12 +30,6 @@ impl<'data> PeFile<'data> {
         Ok(PeFile { pe, data })
     }
 
-    /// True for 64-bit files.
-    #[inline]
-    pub fn is_64(&self) -> bool {
-        self.pe.is_64
-    }
-
     fn section_alignment(&self) -> u64 {
         u64::from(
             self.pe
@@ -57,13 +51,25 @@ where
     type SectionIterator = PeSectionIterator<'data, 'file>;
     type SymbolIterator = PeSymbolIterator<'data, 'file>;
 
-    fn machine(&self) -> Machine {
+    fn architecture(&self) -> Architecture {
         match self.pe.header.coff_header.machine {
             // TODO: Arm/Arm64
-            pe::header::COFF_MACHINE_X86 => Machine::X86,
-            pe::header::COFF_MACHINE_X86_64 => Machine::X86_64,
-            _ => Machine::Other,
+            pe::header::COFF_MACHINE_X86 => Architecture::I386,
+            pe::header::COFF_MACHINE_X86_64 => Architecture::X86_64,
+            _ => Architecture::Unknown,
         }
+    }
+
+    #[inline]
+    fn is_little_endian(&self) -> bool {
+        // TODO: always little endian?  The COFF header has some bits in the
+        // characteristics flags, but these are obsolete.
+        true
+    }
+
+    #[inline]
+    fn is_64(&self) -> bool {
+        self.pe.is_64
     }
 
     fn segments(&'file self) -> PeSegmentIterator<'data, 'file> {
@@ -120,13 +126,6 @@ where
             .collect();
         symbols.sort_by_key(|x| x.address);
         SymbolMap { symbols }
-    }
-
-    #[inline]
-    fn is_little_endian(&self) -> bool {
-        // TODO: always little endian?  The COFF header has some bits in the
-        // characteristics flags, but these are obsolete.
-        true
     }
 
     fn has_debug_symbols(&self) -> bool {

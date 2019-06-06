@@ -1,14 +1,14 @@
 use crate::alloc::borrow::Cow;
 use crate::alloc::vec::Vec;
-use std::{fmt, iter, slice};
-
 use goblin::container;
 use goblin::mach;
 use goblin::mach::load_command::CommandVariant;
+use std::{fmt, iter, slice};
+use target_lexicon::Architecture;
 use uuid::Uuid;
 
 use crate::read::{
-    self, Machine, Object, ObjectSection, ObjectSegment, Relocation, RelocationKind, SectionIndex,
+    self, Object, ObjectSection, ObjectSegment, Relocation, RelocationKind, SectionIndex,
     SectionKind, Symbol, SymbolIndex, SymbolKind, SymbolMap,
 };
 
@@ -36,12 +36,6 @@ impl<'data> MachOFile<'data> {
         let macho = mach::MachO::parse(data, 0).map_err(|_| "Could not parse Mach-O header")?;
         Ok(MachOFile { macho, data, ctx })
     }
-
-    /// True for 64-bit files.
-    #[inline]
-    pub fn is_64(&self) -> bool {
-        self.macho.is_64
-    }
 }
 
 impl<'data, 'file> Object<'data, 'file> for MachOFile<'data>
@@ -54,15 +48,25 @@ where
     type SectionIterator = MachOSectionIterator<'data, 'file>;
     type SymbolIterator = MachOSymbolIterator<'data>;
 
-    fn machine(&self) -> Machine {
+    fn architecture(&self) -> Architecture {
         match self.macho.header.cputype {
-            mach::cputype::CPU_TYPE_ARM => Machine::Arm,
-            mach::cputype::CPU_TYPE_ARM64 => Machine::Arm64,
-            mach::cputype::CPU_TYPE_X86 => Machine::X86,
-            mach::cputype::CPU_TYPE_X86_64 => Machine::X86_64,
-            mach::cputype::CPU_TYPE_MIPS => Machine::Mips,
-            _ => Machine::Other,
+            mach::cputype::CPU_TYPE_ARM => Architecture::Arm,
+            mach::cputype::CPU_TYPE_ARM64 => Architecture::Aarch64,
+            mach::cputype::CPU_TYPE_X86 => Architecture::I386,
+            mach::cputype::CPU_TYPE_X86_64 => Architecture::X86_64,
+            mach::cputype::CPU_TYPE_MIPS => Architecture::Mips,
+            _ => Architecture::Unknown,
         }
+    }
+
+    #[inline]
+    fn is_little_endian(&self) -> bool {
+        self.macho.little_endian
+    }
+
+    #[inline]
+    fn is_64(&self) -> bool {
+        self.macho.is_64
     }
 
     fn segments(&'file self) -> MachOSegmentIterator<'data, 'file> {
@@ -167,11 +171,6 @@ where
 
         symbols.retain(SymbolMap::filter);
         SymbolMap { symbols }
-    }
-
-    #[inline]
-    fn is_little_endian(&self) -> bool {
-        self.macho.little_endian
     }
 
     fn has_debug_symbols(&self) -> bool {

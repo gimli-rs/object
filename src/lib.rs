@@ -29,8 +29,9 @@ mod alloc {
     pub use std::vec;
 }
 
-// Re-export since this is used in public signatures.
-pub use uuid::Uuid;
+// Re-export since these are used in public signatures.
+pub use target_lexicon;
+pub use uuid;
 
 pub mod read;
 pub use read::*;
