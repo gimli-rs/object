@@ -5,6 +5,9 @@ use crate::alloc::vec::Vec;
 mod any;
 pub use any::*;
 
+mod coff;
+pub use coff::*;
+
 mod elf;
 pub use elf::*;
 
@@ -79,6 +82,10 @@ pub enum SectionKind {
     ///
     /// Example ELF sections: `.debug_info`
     Other,
+    /// Information for the linker.
+    ///
+    /// Example COFF sections: `.drectve`
+    Linker,
     /// Metadata such as symbols or relocations.
     ///
     /// Example ELF sections: `.symtab`, `.strtab`
@@ -108,6 +115,8 @@ pub enum SymbolKind {
     Section,
     /// The symbol is the name of a file. It precedes symbols within that file.
     File,
+    /// The symbol is for a code label.
+    Label,
     /// The symbol is for an uninitialized common block.
     Common,
     /// The symbol is for a thread local storage entity.
@@ -242,6 +251,7 @@ impl<'data> SymbolMap<'data> {
             SymbolKind::Null
             | SymbolKind::Section
             | SymbolKind::File
+            | SymbolKind::Label
             | SymbolKind::Common
             | SymbolKind::Tls => {
                 return false;

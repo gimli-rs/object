@@ -5,7 +5,7 @@ use uuid::Uuid;
 
 #[cfg(feature = "wasm")]
 use crate::read::wasm;
-use crate::read::{elf, macho, pe};
+use crate::read::{coff, elf, macho, pe};
 use crate::read::{
     Object, ObjectSection, ObjectSegment, Relocation, SectionIndex, SectionKind, Symbol,
     SymbolIndex, SymbolMap,
@@ -17,6 +17,7 @@ use crate::read::{
 macro_rules! with_inner {
     ($inner:expr, $enum:ident, | $var:ident | $body:expr) => {
         match $inner {
+            $enum::Coff(ref $var) => $body,
             $enum::Elf(ref $var) => $body,
             $enum::MachO(ref $var) => $body,
             $enum::Pe(ref $var) => $body,
@@ -29,6 +30,7 @@ macro_rules! with_inner {
 macro_rules! with_inner_mut {
     ($inner:expr, $enum:ident, | $var:ident | $body:expr) => {
         match $inner {
+            $enum::Coff(ref mut $var) => $body,
             $enum::Elf(ref mut $var) => $body,
             $enum::MachO(ref mut $var) => $body,
             $enum::Pe(ref mut $var) => $body,
@@ -42,6 +44,7 @@ macro_rules! with_inner_mut {
 macro_rules! map_inner {
     ($inner:expr, $from:ident, $to:ident, | $var:ident | $body:expr) => {
         match $inner {
+            $from::Coff(ref $var) => $to::Coff($body),
             $from::Elf(ref $var) => $to::Elf($body),
             $from::MachO(ref $var) => $to::MachO($body),
             $from::Pe(ref $var) => $to::Pe($body),
@@ -55,6 +58,7 @@ macro_rules! map_inner {
 macro_rules! map_inner_option {
     ($inner:expr, $from:ident, $to:ident, | $var:ident | $body:expr) => {
         match $inner {
+            $from::Coff(ref $var) => $body.map($to::Coff),
             $from::Elf(ref $var) => $body.map($to::Elf),
             $from::MachO(ref $var) => $body.map($to::MachO),
             $from::Pe(ref $var) => $body.map($to::Pe),
@@ -68,6 +72,7 @@ macro_rules! map_inner_option {
 macro_rules! next_inner {
     ($inner:expr, $from:ident, $to:ident) => {
         match $inner {
+            $from::Coff(ref mut iter) => iter.next().map($to::Coff),
             $from::Elf(ref mut iter) => iter.next().map($to::Elf),
             $from::MachO(ref mut iter) => iter.next().map($to::MachO),
             $from::Pe(ref mut iter) => iter.next().map($to::Pe),
@@ -88,6 +93,7 @@ pub struct File<'data> {
 #[allow(clippy::large_enum_variant)]
 #[derive(Debug)]
 enum FileInternal<'data> {
+    Coff(coff::CoffFile<'data>),
     Elf(elf::ElfFile<'data>),
     MachO(macho::MachOFile<'data>),
     Pe(pe::PeFile<'data>),
@@ -116,6 +122,11 @@ impl<'data> File<'data> {
             [0x00, b'a', b's', b'm'] => FileInternal::Wasm(wasm::WasmFile::parse(data)?),
             // MS-DOS, assume stub for Windows PE
             [b'M', b'Z', _, _] => FileInternal::Pe(pe::PeFile::parse(data)?),
+            // TODO: more COFF machines
+            // COFF x86
+            [0x4c, 0x01, _, _]
+            // COFF x86-64
+            | [0x64, 0x86, _, _] => FileInternal::Coff(coff::CoffFile::parse(data)?),
             _ => return Err("Unknown file magic"),
         };
         Ok(File { inner })
@@ -126,7 +137,7 @@ impl<'data> File<'data> {
         match self.inner {
             FileInternal::Elf(_) => BinaryFormat::Elf,
             FileInternal::MachO(_) => BinaryFormat::Macho,
-            FileInternal::Pe(_) => BinaryFormat::Coff,
+            FileInternal::Coff(_) | FileInternal::Pe(_) => BinaryFormat::Coff,
             #[cfg(feature = "wasm")]
             FileInternal::Wasm(_) => BinaryFormat::Wasm,
         }
@@ -246,6 +257,7 @@ enum SegmentIteratorInternal<'data, 'file>
 where
     'data: 'file,
 {
+    Coff(coff::CoffSegmentIterator<'data, 'file>),
     Elf(elf::ElfSegmentIterator<'data, 'file>),
     MachO(macho::MachOSegmentIterator<'data, 'file>),
     Pe(pe::PeSegmentIterator<'data, 'file>),
@@ -275,6 +287,7 @@ enum SegmentInternal<'data, 'file>
 where
     'data: 'file,
 {
+    Coff(coff::CoffSegment<'data, 'file>),
     Elf(elf::ElfSegment<'data, 'file>),
     MachO(macho::MachOSegment<'data, 'file>),
     Pe(pe::PeSegment<'data, 'file>),
@@ -334,6 +347,7 @@ enum SectionIteratorInternal<'data, 'file>
 where
     'data: 'file,
 {
+    Coff(coff::CoffSectionIterator<'data, 'file>),
     Elf(elf::ElfSectionIterator<'data, 'file>),
     MachO(macho::MachOSectionIterator<'data, 'file>),
     Pe(pe::PeSectionIterator<'data, 'file>),
@@ -362,6 +376,7 @@ enum SectionInternal<'data, 'file>
 where
     'data: 'file,
 {
+    Coff(coff::CoffSection<'data, 'file>),
     Elf(elf::ElfSection<'data, 'file>),
     MachO(macho::MachOSection<'data, 'file>),
     Pe(pe::PeSection<'data, 'file>),
@@ -450,6 +465,7 @@ enum SymbolIteratorInternal<'data, 'file>
 where
     'data: 'file,
 {
+    Coff(coff::CoffSymbolIterator<'data, 'file>),
     Elf(elf::ElfSymbolIterator<'data, 'file>),
     MachO(macho::MachOSymbolIterator<'data>),
     Pe(pe::PeSymbolIterator<'data, 'file>),
@@ -479,6 +495,7 @@ enum RelocationIteratorInternal<'data, 'file>
 where
     'data: 'file,
 {
+    Coff(coff::CoffRelocationIterator<'data, 'file>),
     Elf(elf::ElfRelocationIterator<'data, 'file>),
     MachO(macho::MachORelocationIterator<'data, 'file>),
     Pe(pe::PeRelocationIterator),
