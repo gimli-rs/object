@@ -10,6 +10,7 @@ use uuid::Uuid;
 use crate::read::{
     self, Object, ObjectSection, ObjectSegment, Relocation, RelocationEncoding, RelocationKind,
     RelocationTarget, SectionIndex, SectionKind, Symbol, SymbolIndex, SymbolKind, SymbolMap,
+    SymbolScope,
 };
 
 /// A Mach-O object file.
@@ -171,7 +172,8 @@ where
                 kind: SymbolKind::Section,
                 section_index: None,
                 undefined: false,
-                global: false,
+                weak: false,
+                scope: SymbolScope::Compilation,
             });
         }
 
@@ -485,6 +487,17 @@ fn parse_symbol<'data>(
             _ => SymbolKind::Unknown,
         })
         .unwrap_or(SymbolKind::Unknown);
+    let undefined = nlist.is_undefined();
+    let weak = nlist.is_weak();
+    let scope = if undefined {
+        SymbolScope::Unknown
+    } else if nlist.n_type & mach::symbols::N_EXT == 0 {
+        SymbolScope::Compilation
+    } else if nlist.n_type & mach::symbols::N_PEXT != 0 {
+        SymbolScope::Linkage
+    } else {
+        SymbolScope::Dynamic
+    };
     Some(Symbol {
         name: Some(name),
         address: nlist.n_value,
@@ -492,8 +505,9 @@ fn parse_symbol<'data>(
         size: 0,
         kind,
         section_index,
-        undefined: nlist.is_undefined(),
-        global: nlist.is_global(),
+        undefined,
+        weak,
+        scope,
     })
 }
 
