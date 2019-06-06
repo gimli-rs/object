@@ -147,35 +147,6 @@ pub enum SymbolKind {
     Tls,
 }
 
-/// The kind of a relocation.
-///
-/// The relocation descriptions use the following definitions. Note that
-/// these definitions probably don't match any ELF ABI.
-///
-/// * A - The value of the addend.
-/// * G - The address of the symbol's entry within the global offset table.
-/// * GOT - The address of the global offset table.
-/// * L - The address of the symbol's entry within the procedure linkage table.
-/// * P - The address of the place of the relocation.
-/// * S - The address of the symbol.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum RelocationKind {
-    /// S + A
-    Absolute,
-    /// S + A
-    AbsoluteSigned,
-    /// S + A - P
-    Relative,
-    /// G + A - GOT
-    GotOffset,
-    /// G + A - P
-    GotRelative,
-    /// L + A - P
-    PltRelative,
-    /// Some other kind of relocation. The value is dependent on file format and machine.
-    Other(u32),
-}
-
 /// A symbol table entry.
 #[derive(Debug)]
 pub struct Symbol<'data> {
@@ -283,6 +254,35 @@ impl<'data> SymbolMap<'data> {
         }
         !symbol.is_undefined() && symbol.size() > 0
     }
+}
+
+/// The kind of a relocation.
+///
+/// The relocation descriptions use the following definitions. Note that
+/// these definitions probably don't match any ELF ABI.
+///
+/// * A - The value of the addend.
+/// * G - The address of the symbol's entry within the global offset table.
+/// * GOT - The address of the global offset table.
+/// * L - The address of the symbol's entry within the procedure linkage table.
+/// * P - The address of the place of the relocation.
+/// * S - The address of the symbol.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RelocationKind {
+    /// S + A
+    Absolute,
+    /// S + A
+    AbsoluteSigned,
+    /// S + A - P
+    Relative,
+    /// G + A - GOT
+    GotOffset,
+    /// G + A - P
+    GotRelative,
+    /// L + A - P
+    PltRelative,
+    /// Some other kind of relocation. The value is dependent on file format and machine.
+    Other(u32),
 }
 
 /// A relocation entry.
