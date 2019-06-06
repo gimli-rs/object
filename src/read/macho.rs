@@ -8,8 +8,8 @@ use target_lexicon::Architecture;
 use uuid::Uuid;
 
 use crate::read::{
-    self, Object, ObjectSection, ObjectSegment, Relocation, RelocationKind, SectionIndex,
-    SectionKind, Symbol, SymbolIndex, SymbolKind, SymbolMap,
+    self, Object, ObjectSection, ObjectSegment, Relocation, RelocationKind, RelocationSubkind,
+    RelocationTarget, SectionIndex, SectionKind, Symbol, SymbolIndex, SymbolKind, SymbolMap,
 };
 
 /// A Mach-O object file.
@@ -511,6 +511,7 @@ impl<'data, 'file> Iterator for MachORelocationIterator<'data, 'file> {
 
     fn next(&mut self) -> Option<Self::Item> {
         self.relocations.next()?.ok().map(|reloc| {
+            let mut subkind = RelocationSubkind::Default;
             let kind = match self.file.macho.header.cputype {
                 mach::cputype::CPU_TYPE_ARM => match reloc.r_type() {
                     mach::relocation::ARM_RELOC_VANILLA => RelocationKind::Absolute,
@@ -526,20 +527,38 @@ impl<'data, 'file> Iterator for MachORelocationIterator<'data, 'file> {
                 },
                 mach::cputype::CPU_TYPE_X86_64 => match reloc.r_type() {
                     mach::relocation::X86_64_RELOC_UNSIGNED => RelocationKind::Absolute,
+                    mach::relocation::X86_64_RELOC_SIGNED => {
+                        subkind = RelocationSubkind::X86RipRelative;
+                        RelocationKind::Relative
+                    }
+                    mach::relocation::X86_64_RELOC_BRANCH => {
+                        subkind = RelocationSubkind::X86Branch;
+                        RelocationKind::Relative
+                    }
+                    mach::relocation::X86_64_RELOC_GOT => RelocationKind::GotRelative,
+                    mach::relocation::X86_64_RELOC_GOT_LOAD => {
+                        subkind = RelocationSubkind::X86RipRelativeMovq;
+                        RelocationKind::GotRelative
+                    }
                     _ => RelocationKind::Other(reloc.r_info),
                 },
                 _ => RelocationKind::Other(reloc.r_info),
             };
-            let size = reloc.r_length() * 8;
-            // FIXME: reloc.r_pcrel()
+            let size = 8 << reloc.r_length();
+            let target = if reloc.is_extern() {
+                RelocationTarget::Symbol(SymbolIndex(reloc.r_symbolnum()))
+            } else {
+                RelocationTarget::Section(SectionIndex(reloc.r_symbolnum()))
+            };
+            let addend = if reloc.r_pcrel() != 0 { -4 } else { 0 };
             (
                 reloc.r_address as u64,
                 Relocation {
                     kind,
+                    subkind,
                     size,
-                    // FIXME: handle reloc.is_extern()
-                    symbol: SymbolIndex(reloc.r_symbolnum()),
-                    addend: 0,
+                    target,
+                    addend,
                     implicit_addend: true,
                 },
             )

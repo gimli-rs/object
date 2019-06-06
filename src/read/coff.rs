@@ -6,8 +6,8 @@ use std::{iter, slice};
 use target_lexicon::Architecture;
 
 use crate::read::{
-    self, Object, ObjectSection, ObjectSegment, Relocation, SectionIndex, SectionKind, Symbol,
-    SymbolIndex, SymbolKind, SymbolMap,
+    self, Object, ObjectSection, ObjectSegment, Relocation, RelocationKind, RelocationSubkind,
+    RelocationTarget, SectionIndex, SectionKind, Symbol, SymbolIndex, SymbolKind, SymbolMap,
 };
 
 /// A COFF object file.
@@ -69,8 +69,8 @@ where
 
 /// An iterator over the relocations in an `CoffSection`.
 pub struct CoffRelocationIterator<'data, 'file> {
-    _file: &'file CoffFile<'data>,
-    _relocations: pe::relocation::Relocations<'data>,
+    file: &'file CoffFile<'data>,
+    relocations: pe::relocation::Relocations<'data>,
 }
 
 impl<'data> CoffFile<'data> {
@@ -344,8 +344,8 @@ impl<'data, 'file> ObjectSection<'data> for CoffSection<'data, 'file> {
 
     fn relocations(&self) -> CoffRelocationIterator<'data, 'file> {
         CoffRelocationIterator {
-            _file: self.file,
-            _relocations: self.section.relocations(self.file.data).unwrap_or_default(),
+            file: self.file,
+            relocations: self.section.relocations(self.file.data).unwrap_or_default(),
         }
     }
 }
@@ -438,7 +438,58 @@ impl<'data, 'file> Iterator for CoffRelocationIterator<'data, 'file> {
     type Item = (u64, Relocation);
 
     fn next(&mut self) -> Option<Self::Item> {
-        None
+        self.relocations.next().map(|relocation| {
+            let (kind, size, addend) = match self.file.coff.header.machine {
+                pe::header::COFF_MACHINE_X86 => match relocation.typ {
+                    pe::relocation::IMAGE_REL_I386_DIR16 => (RelocationKind::Absolute, 16, 0),
+                    pe::relocation::IMAGE_REL_I386_REL16 => (RelocationKind::Relative, 16, 0),
+                    pe::relocation::IMAGE_REL_I386_DIR32 => (RelocationKind::Absolute, 32, 0),
+                    pe::relocation::IMAGE_REL_I386_DIR32NB => (RelocationKind::ImageOffset, 32, 0),
+                    pe::relocation::IMAGE_REL_I386_SECTION => (RelocationKind::SectionIndex, 16, 0),
+                    pe::relocation::IMAGE_REL_I386_SECREL => (RelocationKind::SectionOffset, 32, 0),
+                    pe::relocation::IMAGE_REL_I386_SECREL7 => (RelocationKind::SectionOffset, 7, 0),
+                    pe::relocation::IMAGE_REL_I386_REL32 => (RelocationKind::Relative, 32, -4),
+                    _ => (RelocationKind::Other(u32::from(relocation.typ)), 0, 0),
+                },
+                pe::header::COFF_MACHINE_X86_64 => match relocation.typ {
+                    pe::relocation::IMAGE_REL_AMD64_ADDR64 => (RelocationKind::Absolute, 64, 0),
+                    pe::relocation::IMAGE_REL_AMD64_ADDR32 => (RelocationKind::Absolute, 32, 0),
+                    pe::relocation::IMAGE_REL_AMD64_ADDR32NB => {
+                        (RelocationKind::ImageOffset, 32, 0)
+                    }
+                    pe::relocation::IMAGE_REL_AMD64_REL32 => (RelocationKind::Relative, 32, -4),
+                    pe::relocation::IMAGE_REL_AMD64_REL32_1 => (RelocationKind::Relative, 32, -5),
+                    pe::relocation::IMAGE_REL_AMD64_REL32_2 => (RelocationKind::Relative, 32, -6),
+                    pe::relocation::IMAGE_REL_AMD64_REL32_3 => (RelocationKind::Relative, 32, -7),
+                    pe::relocation::IMAGE_REL_AMD64_REL32_4 => (RelocationKind::Relative, 32, -8),
+                    pe::relocation::IMAGE_REL_AMD64_REL32_5 => (RelocationKind::Relative, 32, -9),
+                    pe::relocation::IMAGE_REL_AMD64_SECTION => {
+                        (RelocationKind::SectionIndex, 16, 0)
+                    }
+                    pe::relocation::IMAGE_REL_AMD64_SECREL => {
+                        (RelocationKind::SectionOffset, 32, 0)
+                    }
+                    pe::relocation::IMAGE_REL_AMD64_SECREL7 => {
+                        (RelocationKind::SectionOffset, 7, 0)
+                    }
+                    _ => (RelocationKind::Other(u32::from(relocation.typ)), 0, 0),
+                },
+                _ => (RelocationKind::Other(u32::from(relocation.typ)), 0, 0),
+            };
+            let target =
+                RelocationTarget::Symbol(SymbolIndex(relocation.symbol_table_index as usize));
+            (
+                u64::from(relocation.virtual_address),
+                Relocation {
+                    kind,
+                    subkind: RelocationSubkind::Default,
+                    size,
+                    target,
+                    addend,
+                    implicit_addend: true,
+                },
+            )
+        })
     }
 }
 

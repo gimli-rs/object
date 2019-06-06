@@ -263,34 +263,73 @@ impl<'data> SymbolMap<'data> {
 ///
 /// * A - The value of the addend.
 /// * G - The address of the symbol's entry within the global offset table.
-/// * GOT - The address of the global offset table.
 /// * L - The address of the symbol's entry within the procedure linkage table.
 /// * P - The address of the place of the relocation.
 /// * S - The address of the symbol.
+/// * GotBase - The address of the global offset table.
+/// * Image - The base address of the image.
+/// * Section - The address of the section containing the symbol.
+///
+/// 'XxxRelative' means 'Xxx + A - P'.  'XxxOffset' means 'S + A - Xxx'.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RelocationKind {
     /// S + A
     Absolute,
-    /// S + A
-    AbsoluteSigned,
     /// S + A - P
     Relative,
-    /// G + A - GOT
-    GotOffset,
+    /// G + A - GotBase
+    Got,
     /// G + A - P
     GotRelative,
+    /// GotBase + A - P
+    GotBaseRelative,
+    /// S + A - GotBase
+    GotBaseOffset,
     /// L + A - P
     PltRelative,
+    /// S + A - Image
+    ImageOffset,
+    /// S + A - Section
+    SectionOffset,
+    /// The index of the section containing the symbol.
+    SectionIndex,
     /// Some other kind of relocation. The value is dependent on file format and machine.
     Other(u32),
+}
+
+/// Extra information about how the relocation should be applied. This is often architecture
+/// specific.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RelocationSubkind {
+    /// Default subkind for the given relocation kind.
+    Default,
+
+    /// x86 rip-relative addressing.
+    X86RipRelative,
+    /// x86 rip-relative addressing in movq instruction.
+    X86RipRelativeMovq,
+    /// `RelocationKind::Absolute` with sign extension at runtime.
+    X86Signed,
+    /// x86 branch instruction.
+    X86Branch,
+}
+
+/// The target referenced by a relocation.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum RelocationTarget {
+    /// The target is a symbol.
+    Symbol(SymbolIndex),
+    /// The target is a section.
+    Section(SectionIndex),
 }
 
 /// A relocation entry.
 #[derive(Debug)]
 pub struct Relocation {
     kind: RelocationKind,
+    subkind: RelocationSubkind,
     size: u8,
-    symbol: SymbolIndex,
+    target: RelocationTarget,
     addend: i64,
     implicit_addend: bool,
 }
@@ -302,6 +341,12 @@ impl Relocation {
         self.kind
     }
 
+    /// Extra information about how the relocation should be applied.
+    #[inline]
+    pub fn subkind(&self) -> RelocationSubkind {
+        self.subkind
+    }
+
     /// The size in bits of the place of the relocation.
     ///
     /// If 0, then the size is determined by the relocation kind.
@@ -310,10 +355,10 @@ impl Relocation {
         self.size
     }
 
-    /// The index of the symbol within the symbol table, if applicable.
+    /// The target of the relocation.
     #[inline]
-    pub fn symbol(&self) -> SymbolIndex {
-        self.symbol
+    pub fn target(&self) -> RelocationTarget {
+        self.target
     }
 
     /// The addend to use in the relocation calculation.
