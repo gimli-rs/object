@@ -95,23 +95,6 @@ enum FileInternal<'data> {
     Wasm(wasm::WasmFile),
 }
 
-#[cfg(feature = "wasm")]
-fn parse_wasm(data: &[u8]) -> Result<Option<File<'_>>, &'static str> {
-    const WASM_MAGIC: &[u8] = &[0x00, 0x61, 0x73, 0x6D];
-
-    if &data[..4] == WASM_MAGIC {
-        let inner = FileInternal::Wasm(wasm::WasmFile::parse(data)?);
-        return Ok(Some(File { inner }));
-    }
-
-    Ok(None)
-}
-
-#[cfg(not(feature = "wasm"))]
-fn parse_wasm(_data: &[u8]) -> Result<Option<File>, &'static str> {
-    Ok(None)
-}
-
 impl<'data> File<'data> {
     /// Parse the raw file data.
     pub fn parse(data: &'data [u8]) -> Result<Self, &'static str> {
@@ -119,16 +102,20 @@ impl<'data> File<'data> {
             return Err("File too short");
         }
 
-        if let Some(wasm) = parse_wasm(data)? {
-            return Ok(wasm);
-        }
-
-        let mut bytes = [0u8; 16];
-        bytes.clone_from_slice(&data[..16]);
-        let inner = match goblin::peek_bytes(&bytes).map_err(|_| "Could not parse file magic")? {
-            goblin::Hint::Elf(_) => FileInternal::Elf(elf::ElfFile::parse(data)?),
-            goblin::Hint::Mach(_) => FileInternal::MachO(macho::MachOFile::parse(data)?),
-            goblin::Hint::PE => FileInternal::Pe(pe::PeFile::parse(data)?),
+        let inner = match [data[0], data[1], data[2], data[3]] {
+            // ELF
+            [0x7f, b'E', b'L', b'F'] => FileInternal::Elf(elf::ElfFile::parse(data)?),
+            // 32-bit Mach-O
+            [0xfe, 0xed, 0xfa, 0xce]
+            | [0xce, 0xfa, 0xed, 0xfe]
+            // 64-bit Mach-O
+            | [0xfe, 0xed, 0xfa, 0xcf]
+            | [0xcf, 0xfa, 0xed, 0xfe] => FileInternal::MachO(macho::MachOFile::parse(data)?),
+            // WASM
+            #[cfg(feature = "wasm")]
+            [0x00, b'a', b's', b'm'] => FileInternal::Wasm(wasm::WasmFile::parse(data)?),
+            // MS-DOS, assume stub for Windows PE
+            [b'M', b'Z', _, _] => FileInternal::Pe(pe::PeFile::parse(data)?),
             _ => return Err("Unknown file magic"),
         };
         Ok(File { inner })
