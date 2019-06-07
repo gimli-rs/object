@@ -64,6 +64,7 @@ fn print_symbol(symbol: &Symbol<'_>, section_kinds: &HashMap<SectionIndex, Secti
         Some(SectionKind::Unknown)
         | Some(SectionKind::Other)
         | Some(SectionKind::OtherString)
+        | Some(SectionKind::Linker)
         | Some(SectionKind::Metadata) => '?',
         Some(SectionKind::Text) => 't',
         Some(SectionKind::Data) | Some(SectionKind::Tls) => 'd',
