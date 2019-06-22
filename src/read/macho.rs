@@ -402,11 +402,22 @@ struct MachOSectionInternal<'data> {
 
 impl<'data> MachOSectionInternal<'data> {
     fn parse(section: mach::segment::Section, data: mach::segment::SectionData<'data>) -> Self {
-        let kind = match (section.segname(), section.name()) {
-            (Ok("__TEXT"), Ok("__text")) => SectionKind::Text,
-            (Ok("__DATA"), Ok("__data")) => SectionKind::Data,
-            (Ok("__DATA"), Ok("__bss")) => SectionKind::UninitializedData,
-            _ => SectionKind::Other,
+        let kind = if let (Ok(segname), Ok(name)) = (section.segname(), section.name()) {
+            match (segname, name) {
+                ("__TEXT", "__text") => SectionKind::Text,
+                ("__TEXT", "__const") => SectionKind::ReadOnlyData,
+                ("__TEXT", "__cstring") => SectionKind::ReadOnlyString,
+                ("__DATA", "__data") => SectionKind::Data,
+                ("__DATA", "__const") => SectionKind::ReadOnlyData,
+                ("__DATA", "__bss") => SectionKind::UninitializedData,
+                ("__DATA", "__thread_data") => SectionKind::Tls,
+                ("__DATA", "__thread_bss") => SectionKind::UninitializedTls,
+                ("__DATA", "__thread_vars") => SectionKind::TlsVariables,
+                ("__DWARF", _) => SectionKind::Debug,
+                _ => SectionKind::Unknown,
+            }
+        } else {
+            SectionKind::Unknown
         };
         MachOSectionInternal {
             section,
@@ -464,8 +475,12 @@ fn parse_symbol<'data>(
         .and_then(|index| file.section_internal(index))
         .map(|section| match section.kind {
             SectionKind::Text => SymbolKind::Text,
-            SectionKind::Data | SectionKind::ReadOnlyData | SectionKind::UninitializedData => {
-                SymbolKind::Data
+            SectionKind::Data
+            | SectionKind::ReadOnlyData
+            | SectionKind::ReadOnlyString
+            | SectionKind::UninitializedData => SymbolKind::Data,
+            SectionKind::Tls | SectionKind::UninitializedTls | SectionKind::TlsVariables => {
+                SymbolKind::Tls
             }
             _ => SymbolKind::Unknown,
         })

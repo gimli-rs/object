@@ -387,8 +387,11 @@ where
 impl<'data, 'file> fmt::Debug for Section<'data, 'file> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         // It's painful to do much better than this
-        f.debug_struct("Section")
-            .field("name", &self.name().unwrap_or("<invalid name>"))
+        let mut s = f.debug_struct("Section");
+        if let Some(segment) = self.segment_name() {
+            s.field("segment", &segment);
+        }
+        s.field("name", &self.name().unwrap_or("<invalid name>"))
             .field("address", &self.address())
             .field("size", &self.data().len())
             .field("kind", &self.kind())
