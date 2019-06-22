@@ -467,7 +467,7 @@ where
 {
     Coff(coff::CoffSymbolIterator<'data, 'file>),
     Elf(elf::ElfSymbolIterator<'data, 'file>),
-    MachO(macho::MachOSymbolIterator<'data>),
+    MachO(macho::MachOSymbolIterator<'data, 'file>),
     Pe(pe::PeSymbolIterator<'data, 'file>),
     #[cfg(feature = "wasm")]
     Wasm(wasm::WasmSymbolIterator<'file>),
