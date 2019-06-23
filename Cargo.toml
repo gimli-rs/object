@@ -20,7 +20,7 @@ version = "0.0.22"
 default-features = false
 features = ["endian_fd", "elf32", "elf64", "mach32", "mach64", "pe32", "pe64", "archive"]
 git = "https://github.com/m4b/goblin"
-rev = "f34cf128fb4d1f3c93e5cf129cf673c9d787217b"
+rev = "e57f2d4e3a089dca89c63bcfc0dbde3e6d647f83"
 
 [dependencies.parity-wasm]
 version = "0.38.0"
