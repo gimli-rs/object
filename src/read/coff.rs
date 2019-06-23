@@ -6,7 +6,7 @@ use std::{iter, slice};
 use target_lexicon::Architecture;
 
 use crate::read::{
-    self, Object, ObjectSection, ObjectSegment, Relocation, RelocationKind, RelocationSubkind,
+    self, Object, ObjectSection, ObjectSegment, Relocation, RelocationEncoding, RelocationKind,
     RelocationTarget, SectionIndex, SectionKind, Symbol, SymbolIndex, SymbolKind, SymbolMap,
 };
 
@@ -482,7 +482,7 @@ impl<'data, 'file> Iterator for CoffRelocationIterator<'data, 'file> {
                 u64::from(relocation.virtual_address),
                 Relocation {
                     kind,
-                    subkind: RelocationSubkind::Default,
+                    encoding: RelocationEncoding::Generic,
                     size,
                     target,
                     addend,

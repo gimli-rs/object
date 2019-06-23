@@ -8,7 +8,7 @@ use target_lexicon::Architecture;
 use uuid::Uuid;
 
 use crate::read::{
-    self, Object, ObjectSection, ObjectSegment, Relocation, RelocationKind, RelocationSubkind,
+    self, Object, ObjectSection, ObjectSegment, Relocation, RelocationEncoding, RelocationKind,
     RelocationTarget, SectionIndex, SectionKind, Symbol, SymbolIndex, SymbolKind, SymbolMap,
 };
 
@@ -511,7 +511,7 @@ impl<'data, 'file> Iterator for MachORelocationIterator<'data, 'file> {
 
     fn next(&mut self) -> Option<Self::Item> {
         self.relocations.next()?.ok().map(|reloc| {
-            let mut subkind = RelocationSubkind::Default;
+            let mut encoding = RelocationEncoding::Generic;
             let kind = match self.file.macho.header.cputype {
                 mach::cputype::CPU_TYPE_ARM => match reloc.r_type() {
                     mach::relocation::ARM_RELOC_VANILLA => RelocationKind::Absolute,
@@ -528,16 +528,16 @@ impl<'data, 'file> Iterator for MachORelocationIterator<'data, 'file> {
                 mach::cputype::CPU_TYPE_X86_64 => match reloc.r_type() {
                     mach::relocation::X86_64_RELOC_UNSIGNED => RelocationKind::Absolute,
                     mach::relocation::X86_64_RELOC_SIGNED => {
-                        subkind = RelocationSubkind::X86RipRelative;
+                        encoding = RelocationEncoding::X86RipRelative;
                         RelocationKind::Relative
                     }
                     mach::relocation::X86_64_RELOC_BRANCH => {
-                        subkind = RelocationSubkind::X86Branch;
+                        encoding = RelocationEncoding::X86Branch;
                         RelocationKind::Relative
                     }
                     mach::relocation::X86_64_RELOC_GOT => RelocationKind::GotRelative,
                     mach::relocation::X86_64_RELOC_GOT_LOAD => {
-                        subkind = RelocationSubkind::X86RipRelativeMovq;
+                        encoding = RelocationEncoding::X86RipRelativeMovq;
                         RelocationKind::GotRelative
                     }
                     _ => RelocationKind::Other(reloc.r_info),
@@ -555,7 +555,7 @@ impl<'data, 'file> Iterator for MachORelocationIterator<'data, 'file> {
                 reloc.r_address as u64,
                 Relocation {
                     kind,
-                    subkind,
+                    encoding,
                     size,
                     target,
                     addend,

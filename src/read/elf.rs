@@ -13,7 +13,7 @@ use std::{iter, slice};
 use target_lexicon::Architecture;
 
 use crate::read::{
-    self, Object, ObjectSection, ObjectSegment, Relocation, RelocationKind, RelocationSubkind,
+    self, Object, ObjectSection, ObjectSegment, Relocation, RelocationEncoding, RelocationKind,
     RelocationTarget, SectionIndex, SectionKind, Symbol, SymbolIndex, SymbolKind, SymbolMap,
 };
 
@@ -594,7 +594,7 @@ impl<'data, 'file> Iterator for ElfRelocationIterator<'data, 'file> {
         loop {
             if let Some(ref mut relocations) = self.relocations {
                 if let Some(reloc) = relocations.next() {
-                    let mut subkind = RelocationSubkind::Default;
+                    let mut encoding = RelocationEncoding::Generic;
                     let (kind, size) = match self.file.elf.header.e_machine {
                         elf::header::EM_ARM => match reloc.r_type {
                             elf::reloc::R_ARM_ABS32 => (RelocationKind::Absolute, 32),
@@ -630,7 +630,7 @@ impl<'data, 'file> Iterator for ElfRelocationIterator<'data, 'file> {
                             elf::reloc::R_X86_64_GOTPCREL => (RelocationKind::GotRelative, 32),
                             elf::reloc::R_X86_64_32 => (RelocationKind::Absolute, 32),
                             elf::reloc::R_X86_64_32S => {
-                                subkind = RelocationSubkind::X86Signed;
+                                encoding = RelocationEncoding::X86Signed;
                                 (RelocationKind::Absolute, 32)
                             }
                             elf::reloc::R_X86_64_16 => (RelocationKind::Absolute, 16),
@@ -646,7 +646,7 @@ impl<'data, 'file> Iterator for ElfRelocationIterator<'data, 'file> {
                         reloc.r_offset,
                         Relocation {
                             kind,
-                            subkind,
+                            encoding,
                             size,
                             target,
                             addend: reloc.r_addend.unwrap_or(0),

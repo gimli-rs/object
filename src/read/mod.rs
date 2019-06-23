@@ -256,7 +256,7 @@ impl<'data> SymbolMap<'data> {
     }
 }
 
-/// The kind of a relocation.
+/// The operation used to calculate the result of the relocation.
 ///
 /// The relocation descriptions use the following definitions. Note that
 /// these definitions probably don't match any ELF ABI.
@@ -293,24 +293,34 @@ pub enum RelocationKind {
     SectionOffset,
     /// The index of the section containing the symbol.
     SectionIndex,
-    /// Some other kind of relocation. The value is dependent on file format and machine.
+    /// Some other operation and encoding. The value is dependent on file format and machine.
     Other(u32),
 }
 
-/// Extra information about how the relocation should be applied. This is often architecture
-/// specific.
+/// Information about how the result of the relocation operation is encoded in the place.
+///
+/// This is usually architecture specific, such as specifying an addressing mode or
+/// a specific instruction.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum RelocationSubkind {
-    /// Default subkind for the given relocation kind.
-    Default,
+pub enum RelocationEncoding {
+    /// Generic encoding.
+    Generic,
 
+    /// x86 sign extension at runtime.
+    ///
+    /// Used with `RelocationKind::Absolute`.
+    X86Signed,
     /// x86 rip-relative addressing.
+    ///
+    /// The `RelocationKind` must be PC relative.
     X86RipRelative,
     /// x86 rip-relative addressing in movq instruction.
+    ///
+    /// The `RelocationKind` must be PC relative.
     X86RipRelativeMovq,
-    /// `RelocationKind::Absolute` with sign extension at runtime.
-    X86Signed,
     /// x86 branch instruction.
+    ///
+    /// The `RelocationKind` must be PC relative.
     X86Branch,
 }
 
@@ -327,7 +337,7 @@ pub enum RelocationTarget {
 #[derive(Debug)]
 pub struct Relocation {
     kind: RelocationKind,
-    subkind: RelocationSubkind,
+    encoding: RelocationEncoding,
     size: u8,
     target: RelocationTarget,
     addend: i64,
@@ -335,16 +345,16 @@ pub struct Relocation {
 }
 
 impl Relocation {
-    /// The kind of relocation.
+    /// The operation used to calculate the result of the relocation.
     #[inline]
     pub fn kind(&self) -> RelocationKind {
         self.kind
     }
 
-    /// Extra information about how the relocation should be applied.
+    /// Information about how the result of the relocation operation is encoded in the place.
     #[inline]
-    pub fn subkind(&self) -> RelocationSubkind {
-        self.subkind
+    pub fn encoding(&self) -> RelocationEncoding {
+        self.encoding
     }
 
     /// The size in bits of the place of the relocation.
