@@ -3,7 +3,7 @@ use crate::alloc::vec::Vec;
 use goblin::container;
 use goblin::mach;
 use goblin::mach::load_command::CommandVariant;
-use std::{fmt, iter, slice};
+use std::{fmt, iter, ops, slice};
 use target_lexicon::Architecture;
 use uuid::Uuid;
 
@@ -18,6 +18,7 @@ pub struct MachOFile<'data> {
     macho: mach::MachO<'data>,
     data: &'data [u8],
     ctx: container::Ctx,
+    sections: Vec<MachOSectionInternal<'data>>,
 }
 
 impl<'data> MachOFile<'data> {
@@ -34,7 +35,32 @@ impl<'data> MachOFile<'data> {
             mach::parse_magic_and_ctx(data, 0).map_err(|_| "Could not parse Mach-O magic")?;
         let ctx = ctx.ok_or("Invalid Mach-O magic")?;
         let macho = mach::MachO::parse(data, 0).map_err(|_| "Could not parse Mach-O header")?;
-        Ok(MachOFile { macho, data, ctx })
+        // Build a list of sections to make some operations more efficient.
+        let mut sections = Vec::new();
+        'segments: for segment in &macho.segments {
+            for section_result in segment {
+                if let Ok((section, data)) = section_result {
+                    sections.push(MachOSectionInternal::parse(section, data));
+                } else {
+                    break 'segments;
+                }
+            }
+        }
+        Ok(MachOFile {
+            macho,
+            data,
+            ctx,
+            sections,
+        })
+    }
+
+    /// Return the section at the given index.
+    #[inline]
+    fn section_internal(&self, index: SectionIndex) -> Option<&MachOSectionInternal<'data>> {
+        index
+            .0
+            .checked_sub(1)
+            .and_then(|index| self.sections.get(index))
     }
 }
 
@@ -46,7 +72,7 @@ where
     type SegmentIterator = MachOSegmentIterator<'data, 'file>;
     type Section = MachOSection<'data, 'file>;
     type SectionIterator = MachOSectionIterator<'data, 'file>;
-    type SymbolIterator = MachOSymbolIterator<'data>;
+    type SymbolIterator = MachOSymbolIterator<'data, 'file>;
 
     fn architecture(&self) -> Architecture {
         match self.macho.header.cputype {
@@ -95,15 +121,14 @@ where
     }
 
     fn section_by_index(&'file self, index: SectionIndex) -> Option<MachOSection<'data, 'file>> {
-        self.sections().find(|section| section.index() == index)
+        self.section_internal(index)
+            .map(|_| MachOSection { file: self, index })
     }
 
     fn sections(&'file self) -> MachOSectionIterator<'data, 'file> {
         MachOSectionIterator {
             file: self,
-            index: 1,
-            segments: self.macho.segments.iter(),
-            sections: None,
+            iter: 0..self.sections.len(),
         }
     }
 
@@ -112,20 +137,23 @@ where
             .symbols
             .as_ref()
             .and_then(|symbols| symbols.get(index.0).ok())
-            .and_then(|(name, nlist)| parse_symbol(name, &nlist))
+            .and_then(|(name, nlist)| parse_symbol(self, name, &nlist))
     }
 
-    fn symbols(&'file self) -> MachOSymbolIterator<'data> {
+    fn symbols(&'file self) -> MachOSymbolIterator<'data, 'file> {
         let symbols = match self.macho.symbols {
             Some(ref symbols) => symbols.into_iter(),
             None => mach::symbols::SymbolIterator::default(),
         }
         .enumerate();
 
-        MachOSymbolIterator { symbols }
+        MachOSymbolIterator {
+            file: self,
+            symbols,
+        }
     }
 
-    fn dynamic_symbols(&'file self) -> MachOSymbolIterator<'data> {
+    fn dynamic_symbols(&'file self) -> MachOSymbolIterator<'data, 'file> {
         // The LC_DYSYMTAB command contains indices into the same symbol
         // table as the LC_SYMTAB command, so return all of them.
         self.symbols()
@@ -263,9 +291,7 @@ where
     'data: 'file,
 {
     file: &'file MachOFile<'data>,
-    index: usize,
-    segments: slice::Iter<'file, mach::segment::Segment<'data>>,
-    sections: Option<mach::segment::SectionIterator<'data>>,
+    iter: ops::Range<usize>,
 }
 
 impl<'data, 'file> fmt::Debug for MachOSectionIterator<'data, 'file> {
@@ -279,34 +305,10 @@ impl<'data, 'file> Iterator for MachOSectionIterator<'data, 'file> {
     type Item = MachOSection<'data, 'file>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        loop {
-            if let Some(ref mut sections) = self.sections {
-                if let Some(section_result) = sections.next() {
-                    if let Ok((section, data)) = section_result {
-                        let index = SectionIndex(self.index);
-                        self.index += 1;
-                        return Some(MachOSection {
-                            file: self.file,
-                            index,
-                            section,
-                            data,
-                        });
-                    } else {
-                        // We have to stop iterating, otherwise section indices
-                        // will be wrong.
-                        self.sections = None;
-                        self.segments = [].iter();
-                        return None;
-                    }
-                }
-            }
-            match self.segments.next() {
-                None => return None,
-                Some(segment) => {
-                    self.sections = Some(segment.into_iter());
-                }
-            }
-        }
+        self.iter.next().map(|index| MachOSection {
+            file: self.file,
+            index: SectionIndex(index + 1),
+        })
     }
 }
 
@@ -317,10 +319,15 @@ where
     'data: 'file,
 {
     file: &'file MachOFile<'data>,
-    // index is 1-based (equivalent to n_sect field in symbols)
     index: SectionIndex,
-    section: mach::segment::Section,
-    data: mach::segment::SectionData<'data>,
+}
+
+impl<'data, 'file> MachOSection<'data, 'file> {
+    #[inline]
+    fn internal(&self) -> &'file MachOSectionInternal<'data> {
+        // We ensure the index is always valid.
+        &self.file.section_internal(self.index).unwrap()
+    }
 }
 
 impl<'data, 'file> ObjectSection<'data> for MachOSection<'data, 'file> {
@@ -333,26 +340,26 @@ impl<'data, 'file> ObjectSection<'data> for MachOSection<'data, 'file> {
 
     #[inline]
     fn address(&self) -> u64 {
-        self.section.addr
+        self.internal().section.addr
     }
 
     #[inline]
     fn size(&self) -> u64 {
-        self.section.size
+        self.internal().section.size
     }
 
     #[inline]
     fn align(&self) -> u64 {
-        1 << self.section.align
+        1 << self.internal().section.align
     }
 
     #[inline]
     fn data(&self) -> Cow<'data, [u8]> {
-        Cow::from(self.data)
+        Cow::from(self.internal().data)
     }
 
     fn data_range(&self, address: u64, size: u64) -> Option<&'data [u8]> {
-        read::data_range(self.data, self.address(), address, size)
+        read::data_range(self.internal().data, self.address(), address, size)
     }
 
     #[inline]
@@ -363,48 +370,81 @@ impl<'data, 'file> ObjectSection<'data> for MachOSection<'data, 'file> {
 
     #[inline]
     fn name(&self) -> Option<&str> {
-        self.section.name().ok()
+        self.internal().section.name().ok()
     }
 
     #[inline]
     fn segment_name(&self) -> Option<&str> {
-        self.section.segname().ok()
+        self.internal().section.segname().ok()
     }
 
     fn kind(&self) -> SectionKind {
-        match (self.segment_name(), self.name()) {
-            (Some("__TEXT"), Some("__text")) => SectionKind::Text,
-            (Some("__DATA"), Some("__data")) => SectionKind::Data,
-            (Some("__DATA"), Some("__bss")) => SectionKind::UninitializedData,
-            _ => SectionKind::Other,
-        }
+        self.internal().kind
     }
 
     fn relocations(&self) -> MachORelocationIterator<'data, 'file> {
         MachORelocationIterator {
             file: self.file,
-            relocations: self.section.iter_relocations(self.file.data, self.file.ctx),
+            relocations: self
+                .internal()
+                .section
+                .iter_relocations(self.file.data, self.file.ctx),
+        }
+    }
+}
+
+#[derive(Debug)]
+struct MachOSectionInternal<'data> {
+    section: mach::segment::Section,
+    data: mach::segment::SectionData<'data>,
+    kind: SectionKind,
+}
+
+impl<'data> MachOSectionInternal<'data> {
+    fn parse(section: mach::segment::Section, data: mach::segment::SectionData<'data>) -> Self {
+        let kind = if let (Ok(segname), Ok(name)) = (section.segname(), section.name()) {
+            match (segname, name) {
+                ("__TEXT", "__text") => SectionKind::Text,
+                ("__TEXT", "__const") => SectionKind::ReadOnlyData,
+                ("__TEXT", "__cstring") => SectionKind::ReadOnlyString,
+                ("__DATA", "__data") => SectionKind::Data,
+                ("__DATA", "__const") => SectionKind::ReadOnlyData,
+                ("__DATA", "__bss") => SectionKind::UninitializedData,
+                ("__DATA", "__thread_data") => SectionKind::Tls,
+                ("__DATA", "__thread_bss") => SectionKind::UninitializedTls,
+                ("__DATA", "__thread_vars") => SectionKind::TlsVariables,
+                ("__DWARF", _) => SectionKind::Debug,
+                _ => SectionKind::Unknown,
+            }
+        } else {
+            SectionKind::Unknown
+        };
+        MachOSectionInternal {
+            section,
+            data,
+            kind,
         }
     }
 }
 
 /// An iterator over the symbols of a `MachOFile`.
-pub struct MachOSymbolIterator<'data> {
+pub struct MachOSymbolIterator<'data, 'file> {
+    file: &'file MachOFile<'data>,
     symbols: iter::Enumerate<mach::symbols::SymbolIterator<'data>>,
 }
 
-impl<'data> fmt::Debug for MachOSymbolIterator<'data> {
+impl<'data, 'file> fmt::Debug for MachOSymbolIterator<'data, 'file> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("MachOSymbolIterator").finish()
     }
 }
 
-impl<'data> Iterator for MachOSymbolIterator<'data> {
+impl<'data, 'file> Iterator for MachOSymbolIterator<'data, 'file> {
     type Item = (SymbolIndex, Symbol<'data>);
 
     fn next(&mut self) -> Option<Self::Item> {
         while let Some((index, Ok((name, nlist)))) = self.symbols.next() {
-            if let Some(symbol) = parse_symbol(name, &nlist) {
+            if let Some(symbol) = parse_symbol(self.file, name, &nlist) {
                 return Some((SymbolIndex(index), symbol));
             }
         }
@@ -412,7 +452,11 @@ impl<'data> Iterator for MachOSymbolIterator<'data> {
     }
 }
 
-fn parse_symbol<'data>(name: &'data str, nlist: &mach::symbols::Nlist) -> Option<Symbol<'data>> {
+fn parse_symbol<'data>(
+    file: &MachOFile<'data>,
+    name: &'data str,
+    nlist: &mach::symbols::Nlist,
+) -> Option<Symbol<'data>> {
     if nlist.n_type & mach::symbols::N_STAB != 0 {
         return None;
     }
@@ -427,12 +471,26 @@ fn parse_symbol<'data>(name: &'data str, nlist: &mach::symbols::Nlist) -> Option
         // TODO: better handling for other n_type values
         None
     };
+    let kind = section_index
+        .and_then(|index| file.section_internal(index))
+        .map(|section| match section.kind {
+            SectionKind::Text => SymbolKind::Text,
+            SectionKind::Data
+            | SectionKind::ReadOnlyData
+            | SectionKind::ReadOnlyString
+            | SectionKind::UninitializedData => SymbolKind::Data,
+            SectionKind::Tls | SectionKind::UninitializedTls | SectionKind::TlsVariables => {
+                SymbolKind::Tls
+            }
+            _ => SymbolKind::Unknown,
+        })
+        .unwrap_or(SymbolKind::Unknown);
     Some(Symbol {
         name: Some(name),
         address: nlist.n_value,
         // Only calculated for symbol maps
         size: 0,
-        kind: SymbolKind::Unknown,
+        kind,
         section_index,
         undefined: nlist.is_undefined(),
         global: nlist.is_global(),

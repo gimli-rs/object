@@ -49,31 +49,51 @@ pub enum SectionKind {
     /// An executable code section.
     ///
     /// Example ELF sections: `.text`
+    ///
+    /// Example Mach-O sections: `__TEXT/__text`
     Text,
     /// A data section.
     ///
     /// Example ELF sections: `.data`
+    ///
+    /// Example Mach-O sections: `__DATA/__data`
     Data,
     /// A read only data section.
     ///
     /// Example ELF sections: `.rodata`
+    ///
+    /// Example Mach-O sections: `__TEXT/__const`, `__DATA/__const`
     ReadOnlyData,
     /// A loadable string section.
     ///
     /// Example ELF sections: `.rodata.str`
+    ///
+    /// Example Mach-O sections: `__TEXT/__cstring`
     ReadOnlyString,
     /// An uninitialized data section.
     ///
     /// Example ELF sections: `.bss`
+    ///
+    /// Example Mach-O sections: `__DATA/__bss`
     UninitializedData,
     /// A TLS data section.
     ///
     /// Example ELF sections: `.tdata`
+    ///
+    /// Example Mach-O sections: `__DATA/__thread_data`
     Tls,
     /// An uninitialized TLS data section.
     ///
     /// Example ELF sections: `.tbss`
+    ///
+    /// Example Mach-O sections: `__DATA/__thread_bss`
     UninitializedTls,
+    /// A TLS variables section.
+    ///
+    /// This contains TLS variable structures, rather than the variable initializers.
+    ///
+    /// Example Mach-O sections: `__DATA/__thread_vars`
+    TlsVariables,
     /// A non-loadable string section.
     ///
     /// Example ELF sections: `.comment`, `.debug_str`
@@ -82,6 +102,10 @@ pub enum SectionKind {
     ///
     /// Example ELF sections: `.debug_info`
     Other,
+    /// Debug information.
+    ///
+    /// Example Mach-O sections: `__DWARF/__debug_info`
+    Debug,
     /// Information for the linker.
     ///
     /// Example COFF sections: `.drectve`
