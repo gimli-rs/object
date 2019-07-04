@@ -147,16 +147,30 @@ pub enum SymbolKind {
     Tls,
 }
 
+/// A symbol scope.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SymbolScope {
+    /// Unknown scope.
+    Unknown,
+    /// Symbol is visible to the compilation unit.
+    Compilation,
+    /// Symbol is visible to the static linkage unit.
+    Linkage,
+    /// Symbol is visible to dynamically linked objects.
+    Dynamic,
+}
+
 /// A symbol table entry.
 #[derive(Debug)]
 pub struct Symbol<'data> {
-    kind: SymbolKind,
-    section_index: Option<SectionIndex>,
-    undefined: bool,
-    global: bool,
     name: Option<&'data str>,
     address: u64,
     size: u64,
+    kind: SymbolKind,
+    section_index: Option<SectionIndex>,
+    undefined: bool,
+    weak: bool,
+    scope: SymbolScope,
 }
 
 impl<'data> Symbol<'data> {
@@ -180,16 +194,30 @@ impl<'data> Symbol<'data> {
         self.undefined
     }
 
-    /// Return true if the symbol is global.
+    /// Return true if the symbol is weak.
     #[inline]
-    pub fn is_global(&self) -> bool {
-        self.global
+    pub fn is_weak(&self) -> bool {
+        self.weak
     }
 
-    /// Return true if the symbol is local.
+    /// Return true if the symbol visible outside of the compilation unit.
+    ///
+    /// This treats `SymbolScope::Unknown` as global.
+    #[inline]
+    pub fn is_global(&self) -> bool {
+        !self.is_local()
+    }
+
+    /// Return true if the symbol is only visible within the compilation unit.
     #[inline]
     pub fn is_local(&self) -> bool {
-        !self.is_global()
+        self.scope == SymbolScope::Compilation
+    }
+
+    /// Returns the symbol scope.
+    #[inline]
+    pub fn scope(&self) -> SymbolScope {
+        self.scope
     }
 
     /// The name of the symbol.

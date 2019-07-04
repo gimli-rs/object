@@ -15,6 +15,7 @@ use target_lexicon::Architecture;
 use crate::read::{
     self, Object, ObjectSection, ObjectSegment, Relocation, RelocationEncoding, RelocationKind,
     RelocationTarget, SectionIndex, SectionKind, Symbol, SymbolIndex, SymbolKind, SymbolMap,
+    SymbolScope,
 };
 
 /// An ELF object file.
@@ -564,6 +565,19 @@ fn parse_symbol<'data>(
         } else {
             Some(SectionIndex(symbol.st_shndx))
         };
+    let weak = symbol.st_bind() == elf::sym::STB_WEAK;
+    let scope = match symbol.st_bind() {
+        _ if undefined => SymbolScope::Unknown,
+        elf::sym::STB_LOCAL => SymbolScope::Compilation,
+        elf::sym::STB_GLOBAL | elf::sym::STB_WEAK => {
+            if symbol.st_visibility() == elf::sym::STV_HIDDEN {
+                SymbolScope::Linkage
+            } else {
+                SymbolScope::Dynamic
+            }
+        }
+        _ => SymbolScope::Unknown,
+    };
     Symbol {
         name,
         address: symbol.st_value,
@@ -571,7 +585,8 @@ fn parse_symbol<'data>(
         kind,
         section_index,
         undefined,
-        global: elf::sym::st_bind(symbol.st_info) != elf::sym::STB_LOCAL,
+        weak,
+        scope,
     }
 }
 

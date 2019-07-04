@@ -8,6 +8,7 @@ use target_lexicon::Architecture;
 use crate::read::{
     self, Object, ObjectSection, ObjectSegment, Relocation, RelocationEncoding, RelocationKind,
     RelocationTarget, SectionIndex, SectionKind, Symbol, SymbolIndex, SymbolKind, SymbolMap,
+    SymbolScope,
 };
 
 /// A COFF object file.
@@ -421,8 +422,17 @@ fn parse_symbol<'data>(
         Some(SectionIndex(symbol.section_number as usize - 1))
     };
     let undefined = symbol.section_number == pe::symbol::IMAGE_SYM_UNDEFINED;
-    let global = symbol.storage_class == pe::symbol::IMAGE_SYM_CLASS_EXTERNAL
-        || symbol.storage_class == pe::symbol::IMAGE_SYM_CLASS_EXTERNAL_DEF;
+    let weak = symbol.storage_class == pe::symbol::IMAGE_SYM_CLASS_WEAK_EXTERNAL;
+    let scope = match symbol.storage_class {
+        _ if undefined => SymbolScope::Unknown,
+        pe::symbol::IMAGE_SYM_CLASS_EXTERNAL
+        | pe::symbol::IMAGE_SYM_CLASS_EXTERNAL_DEF
+        | pe::symbol::IMAGE_SYM_CLASS_WEAK_EXTERNAL => {
+            // TODO: determine if symbol is exported
+            SymbolScope::Linkage
+        }
+        _ => SymbolScope::Compilation,
+    };
     Symbol {
         name,
         address: u64::from(symbol.value),
@@ -430,7 +440,8 @@ fn parse_symbol<'data>(
         kind,
         section_index,
         undefined,
-        global,
+        weak,
+        scope,
     }
 }
 
