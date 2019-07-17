@@ -409,6 +409,8 @@ impl<'data> MachOSectionInternal<'data> {
                 ("__TEXT", "__text") => SectionKind::Text,
                 ("__TEXT", "__const") => SectionKind::ReadOnlyData,
                 ("__TEXT", "__cstring") => SectionKind::ReadOnlyString,
+                ("__TEXT", "__eh_frame") => SectionKind::ReadOnlyData,
+                ("__TEXT", "__gcc_except_tab") => SectionKind::ReadOnlyData,
                 ("__DATA", "__data") => SectionKind::Data,
                 ("__DATA", "__const") => SectionKind::ReadOnlyData,
                 ("__DATA", "__bss") => SectionKind::UninitializedData,
