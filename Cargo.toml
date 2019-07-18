@@ -23,7 +23,7 @@ git = "https://github.com/m4b/goblin"
 rev = "e57f2d4e3a089dca89c63bcfc0dbde3e6d647f83"
 
 [dependencies.parity-wasm]
-version = "0.38.0"
+version = "0.39.0"
 optional = true
 
 [dev-dependencies]
