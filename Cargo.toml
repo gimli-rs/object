@@ -14,6 +14,8 @@ scroll = { version = "0.9", default-features = false }
 target-lexicon = { version = "0.4" }
 uuid = { version = "0.7", default-features = false }
 flate2 = { version = "1", optional = true }
+crc32fast = { version = "1", optional = true }
+indexmap = { version = "1", optional = true }
 
 [dependencies.goblin]
 version = "0.0.22"
@@ -30,7 +32,13 @@ optional = true
 memmap = "0.7"
 
 [features]
+read = []
+write = ["crc32fast", "indexmap", "std"]
 std = ["goblin/std"]
 compression = ["flate2"]
 wasm = ["std", "parity-wasm"]
-default = ["std", "compression", "wasm"]
+default = ["read", "std", "compression", "wasm"]
+
+[[example]]
+name = "objcopy"
+required-features = ["read", "write"]
