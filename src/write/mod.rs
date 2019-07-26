@@ -81,12 +81,12 @@ impl Object {
         &mut self.sections[section.0]
     }
 
-    /// Append data to an existing section. Returns of the section offset of the data.
+    /// Append data to an existing section. Returns the section offset of the data.
     pub fn append_section_data(&mut self, section: SectionId, data: &[u8], align: u64) -> u64 {
         self.sections[section.0].append_data(data, align)
     }
 
-    /// Append zero-initialized data to an existing section. Returns of the section offset of the data.
+    /// Append zero-initialized data to an existing section. Returns the section offset of the data.
     pub fn append_section_bss(&mut self, section: SectionId, size: u64, align: u64) -> u64 {
         self.sections[section.0].append_bss(size, align)
     }
@@ -260,6 +260,24 @@ impl Object {
         });
         section.symbol = Some(symbol_id);
         symbol_id
+    }
+
+    /// Append data to an existing section, and update a symbol to refer to it.
+    ///
+    /// Returns the section offset of the data.
+    pub fn add_symbol_data(
+        &mut self,
+        symbol: SymbolId,
+        section: SectionId,
+        data: &[u8],
+        align: u64,
+    ) -> u64 {
+        let offset = self.append_section_data(section, data, align);
+        let symbol = self.symbol_mut(symbol);
+        symbol.value = offset;
+        symbol.size = data.len() as u64;
+        symbol.section = Some(section);
+        offset
     }
 
     /// Add a relocation to a section.
