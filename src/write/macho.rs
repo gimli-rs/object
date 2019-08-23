@@ -50,6 +50,9 @@ impl Object {
             StandardSection::ReadOnlyData => {
                 (&b"__TEXT"[..], &b"__const"[..], SectionKind::ReadOnlyData)
             }
+            StandardSection::ReadOnlyDataWithRel => {
+                (&b"__DATA"[..], &b"__const"[..], SectionKind::ReadOnlyData)
+            }
             StandardSection::ReadOnlyString => (
                 &b"__TEXT"[..],
                 &b"__cstring"[..],

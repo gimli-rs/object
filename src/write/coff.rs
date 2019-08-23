@@ -39,9 +39,9 @@ impl Object {
         match section {
             StandardSection::Text => (&[], &b".text"[..], SectionKind::Text),
             StandardSection::Data => (&[], &b".data"[..], SectionKind::Data),
-            StandardSection::ReadOnlyData | StandardSection::ReadOnlyString => {
-                (&[], &b".rdata"[..], SectionKind::ReadOnlyData)
-            }
+            StandardSection::ReadOnlyData
+            | StandardSection::ReadOnlyDataWithRel
+            | StandardSection::ReadOnlyString => (&[], &b".rdata"[..], SectionKind::ReadOnlyData),
             StandardSection::UninitializedData => {
                 (&[], &b".bss"[..], SectionKind::UninitializedData)
             }

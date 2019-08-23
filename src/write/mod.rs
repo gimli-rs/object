@@ -363,6 +363,7 @@ pub enum StandardSection {
     Text,
     Data,
     ReadOnlyData,
+    ReadOnlyDataWithRel,
     ReadOnlyString,
     UninitializedData,
 }
@@ -373,7 +374,9 @@ impl StandardSection {
         match self {
             StandardSection::Text => SectionKind::Text,
             StandardSection::Data => SectionKind::Data,
-            StandardSection::ReadOnlyData => SectionKind::ReadOnlyData,
+            StandardSection::ReadOnlyData | StandardSection::ReadOnlyDataWithRel => {
+                SectionKind::ReadOnlyData
+            }
             StandardSection::ReadOnlyString => SectionKind::ReadOnlyString,
             StandardSection::UninitializedData => SectionKind::UninitializedData,
         }
@@ -384,6 +387,7 @@ impl StandardSection {
             StandardSection::Text,
             StandardSection::Data,
             StandardSection::ReadOnlyData,
+            StandardSection::ReadOnlyDataWithRel,
             StandardSection::ReadOnlyString,
             StandardSection::UninitializedData,
         ]
