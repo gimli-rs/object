@@ -33,5 +33,13 @@ mod alloc {
 pub use target_lexicon;
 pub use uuid;
 
+mod common;
+pub use common::*;
+
+#[cfg(feature = "read")]
 pub mod read;
+#[cfg(feature = "read")]
 pub use read::*;
+
+#[cfg(feature = "write")]
+pub mod write;
