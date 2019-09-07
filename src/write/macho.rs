@@ -182,8 +182,8 @@ impl Object {
 
         // Write file header.
         let (cputype, cpusubtype) = match self.architecture {
-            Architecture::Arm => (mach::CPU_TYPE_ARM, mach::CPU_SUBTYPE_ARM_ALL),
-            Architecture::Aarch64 => (mach::CPU_TYPE_ARM64, mach::CPU_SUBTYPE_ARM64_ALL),
+            Architecture::Arm(_) => (mach::CPU_TYPE_ARM, mach::CPU_SUBTYPE_ARM_ALL),
+            Architecture::Aarch64(_) => (mach::CPU_TYPE_ARM64, mach::CPU_SUBTYPE_ARM64_ALL),
             Architecture::I386 => (mach::CPU_TYPE_I386, mach::CPU_SUBTYPE_I386_ALL),
             Architecture::X86_64 => (mach::CPU_TYPE_X86_64, mach::CPU_SUBTYPE_X86_64_ALL),
             _ => {
