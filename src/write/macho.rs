@@ -400,6 +400,9 @@ impl Object {
                             (RelocationKind::Absolute, RelocationEncoding::Generic, 0) => {
                                 (0, mach::X86_64_RELOC_UNSIGNED)
                             }
+                            (RelocationKind::Relative, RelocationEncoding::Generic, -4) => {
+                                (1, mach::X86_64_RELOC_SIGNED)
+                            }
                             (RelocationKind::Relative, RelocationEncoding::X86RipRelative, -4) => {
                                 (1, mach::X86_64_RELOC_SIGNED)
                             }
@@ -409,14 +412,14 @@ impl Object {
                             (RelocationKind::PltRelative, RelocationEncoding::X86Branch, -4) => {
                                 (1, mach::X86_64_RELOC_BRANCH)
                             }
+                            (RelocationKind::GotRelative, RelocationEncoding::Generic, -4) => {
+                                (1, mach::X86_64_RELOC_GOT)
+                            }
                             (
                                 RelocationKind::GotRelative,
                                 RelocationEncoding::X86RipRelativeMovq,
                                 -4,
                             ) => (1, mach::X86_64_RELOC_GOT_LOAD),
-                            (RelocationKind::GotRelative, RelocationEncoding::Generic, -4) => {
-                                (1, mach::X86_64_RELOC_GOT)
-                            }
                             _ => return Err(format!("unimplemented relocation {:?}", reloc)),
                         },
                         _ => {
