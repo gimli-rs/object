@@ -4,7 +4,7 @@ use goblin::container;
 use goblin::mach;
 use goblin::mach::load_command::CommandVariant;
 use std::{fmt, iter, ops, slice};
-use target_lexicon::Architecture;
+use target_lexicon::{Aarch64Architecture, Architecture, ArmArchitecture};
 use uuid::Uuid;
 
 use crate::read::{
@@ -77,8 +77,8 @@ where
 
     fn architecture(&self) -> Architecture {
         match self.macho.header.cputype {
-            mach::cputype::CPU_TYPE_ARM => Architecture::Arm,
-            mach::cputype::CPU_TYPE_ARM64 => Architecture::Aarch64,
+            mach::cputype::CPU_TYPE_ARM => Architecture::Arm(ArmArchitecture::Arm),
+            mach::cputype::CPU_TYPE_ARM64 => Architecture::Aarch64(Aarch64Architecture::Aarch64),
             mach::cputype::CPU_TYPE_X86 => Architecture::I386,
             mach::cputype::CPU_TYPE_X86_64 => Architecture::X86_64,
             mach::cputype::CPU_TYPE_MIPS => Architecture::Mips,
