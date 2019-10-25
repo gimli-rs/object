@@ -300,6 +300,23 @@ impl Object {
         offset
     }
 
+    /// Convert a symbol to a section symbol and offset.
+    ///
+    /// Returns an error if the symbol is not defined.
+    pub fn symbol_section_and_offset(
+        &mut self,
+        symbol_id: SymbolId,
+    ) -> Result<(SymbolId, u64), ()> {
+        let symbol = self.symbol(symbol_id);
+        if symbol.kind == SymbolKind::Section {
+            return Ok((symbol_id, 0));
+        }
+        let symbol_offset = symbol.value;
+        let section = symbol.section.ok_or(())?;
+        let section_symbol = self.section_symbol(section);
+        Ok((section_symbol, symbol_offset))
+    }
+
     /// Add a relocation to a section.
     ///
     /// Relocations must only be added after the referenced symbols have been added
