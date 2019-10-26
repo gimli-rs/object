@@ -116,7 +116,7 @@ impl Object {
 
         let mut name = b".refptr.".to_vec();
         name.extend(&self.symbol(symbol_id).name);
-        let stub_id = self.add_symbol(Symbol {
+        let stub_id = self.add_raw_symbol(Symbol {
             name,
             value: 0,
             size: u64::from(stub_size),

@@ -231,22 +231,30 @@ impl Object {
         if symbol.kind == SymbolKind::Section {
             return self.section_symbol(symbol.section.unwrap());
         }
-        let symbol_id = SymbolId(self.symbols.len());
         if !symbol.name.is_empty()
             && (symbol.kind == SymbolKind::Text || symbol.kind == SymbolKind::Data)
         {
-            self.symbol_map.insert(symbol.name.clone(), symbol_id);
+            let unmangled_name = symbol.name.clone();
             if let Some(prefix) = self.mangling.global_prefix() {
                 symbol.name.insert(0, prefix);
             }
+            let symbol_id = self.add_raw_symbol(symbol);
+            self.symbol_map.insert(unmangled_name, symbol_id);
+            symbol_id
+        } else {
+            self.add_raw_symbol(symbol)
         }
+    }
+
+    fn add_raw_symbol(&mut self, symbol: Symbol) -> SymbolId {
+        let symbol_id = SymbolId(self.symbols.len());
         self.symbols.push(symbol);
         symbol_id
     }
 
     /// Add a new file symbol and return its `SymbolId`.
     pub fn add_file_symbol(&mut self, name: Vec<u8>) -> SymbolId {
-        self.add_symbol(Symbol {
+        self.add_raw_symbol(Symbol {
             name,
             value: 0,
             size: 0,
