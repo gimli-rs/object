@@ -575,6 +575,8 @@ pub enum Mangling {
     None,
     /// Windows COFF symbol mangling.
     Coff,
+    /// Windows COFF i386 symbol mangling.
+    CoffI386,
     /// ELF symbol mangling.
     Elf,
     /// Mach-O symbol mangling.
@@ -583,11 +585,12 @@ pub enum Mangling {
 
 impl Mangling {
     /// Return the default symboling mangling for the given format and architecture.
-    pub fn default(format: BinaryFormat, _architecture: Architecture) -> Self {
-        match format {
-            BinaryFormat::Coff => Mangling::Coff,
-            BinaryFormat::Elf => Mangling::Elf,
-            BinaryFormat::Macho => Mangling::Macho,
+    pub fn default(format: BinaryFormat, architecture: Architecture) -> Self {
+        match (format, architecture) {
+            (BinaryFormat::Coff, Architecture::I386) => Mangling::CoffI386,
+            (BinaryFormat::Coff, _) => Mangling::Coff,
+            (BinaryFormat::Elf, _) => Mangling::Elf,
+            (BinaryFormat::Macho, _) => Mangling::Macho,
             _ => Mangling::None,
         }
     }
@@ -595,8 +598,8 @@ impl Mangling {
     /// Return the prefix to use for global symbols.
     pub fn global_prefix(self) -> Option<u8> {
         match self {
-            Mangling::None | Mangling::Elf => None,
-            Mangling::Coff | Mangling::Macho => Some(b'_'),
+            Mangling::None | Mangling::Elf | Mangling::Coff => None,
+            Mangling::CoffI386 | Mangling::Macho => Some(b'_'),
         }
     }
 }
