@@ -17,8 +17,8 @@ scroll = { version = "0.9", default-features = false }
 target-lexicon = { version = "0.8" }
 uuid = { version = "0.7", default-features = false }
 flate2 = { version = "1", optional = true }
-crc32fast = { version = "1", optional = true }
-indexmap = { version = "1", optional = true }
+crc32fast = { version = "1.2", optional = true }
+indexmap = { version = "1.1", optional = true }
 
 [dependencies.goblin]
 version = "0.0.24"
