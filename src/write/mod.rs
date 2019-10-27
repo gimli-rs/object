@@ -231,22 +231,30 @@ impl Object {
         if symbol.kind == SymbolKind::Section {
             return self.section_symbol(symbol.section.unwrap());
         }
-        let symbol_id = SymbolId(self.symbols.len());
         if !symbol.name.is_empty()
             && (symbol.kind == SymbolKind::Text || symbol.kind == SymbolKind::Data)
         {
-            self.symbol_map.insert(symbol.name.clone(), symbol_id);
+            let unmangled_name = symbol.name.clone();
             if let Some(prefix) = self.mangling.global_prefix() {
                 symbol.name.insert(0, prefix);
             }
+            let symbol_id = self.add_raw_symbol(symbol);
+            self.symbol_map.insert(unmangled_name, symbol_id);
+            symbol_id
+        } else {
+            self.add_raw_symbol(symbol)
         }
+    }
+
+    fn add_raw_symbol(&mut self, symbol: Symbol) -> SymbolId {
+        let symbol_id = SymbolId(self.symbols.len());
         self.symbols.push(symbol);
         symbol_id
     }
 
     /// Add a new file symbol and return its `SymbolId`.
     pub fn add_file_symbol(&mut self, name: Vec<u8>) -> SymbolId {
-        self.add_symbol(Symbol {
+        self.add_raw_symbol(Symbol {
             name,
             value: 0,
             size: 0,
@@ -575,6 +583,8 @@ pub enum Mangling {
     None,
     /// Windows COFF symbol mangling.
     Coff,
+    /// Windows COFF i386 symbol mangling.
+    CoffI386,
     /// ELF symbol mangling.
     Elf,
     /// Mach-O symbol mangling.
@@ -583,11 +593,12 @@ pub enum Mangling {
 
 impl Mangling {
     /// Return the default symboling mangling for the given format and architecture.
-    pub fn default(format: BinaryFormat, _architecture: Architecture) -> Self {
-        match format {
-            BinaryFormat::Coff => Mangling::Coff,
-            BinaryFormat::Elf => Mangling::Elf,
-            BinaryFormat::Macho => Mangling::Macho,
+    pub fn default(format: BinaryFormat, architecture: Architecture) -> Self {
+        match (format, architecture) {
+            (BinaryFormat::Coff, Architecture::I386) => Mangling::CoffI386,
+            (BinaryFormat::Coff, _) => Mangling::Coff,
+            (BinaryFormat::Elf, _) => Mangling::Elf,
+            (BinaryFormat::Macho, _) => Mangling::Macho,
             _ => Mangling::None,
         }
     }
@@ -595,8 +606,8 @@ impl Mangling {
     /// Return the prefix to use for global symbols.
     pub fn global_prefix(self) -> Option<u8> {
         match self {
-            Mangling::None | Mangling::Elf => None,
-            Mangling::Coff | Mangling::Macho => Some(b'_'),
+            Mangling::None | Mangling::Elf | Mangling::Coff => None,
+            Mangling::CoffI386 | Mangling::Macho => Some(b'_'),
         }
     }
 }
