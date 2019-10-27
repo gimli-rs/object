@@ -9,6 +9,9 @@ license = "Apache-2.0/MIT"
 repository = "https://github.com/gimli-rs/object"
 exclude = ["/.coveralls.yml", "/.travis.yml"]
 
+[package.metadata.docs.rs]
+all-features = true
+
 [dependencies]
 scroll = { version = "0.9", default-features = false }
 target-lexicon = { version = "0.8" }
