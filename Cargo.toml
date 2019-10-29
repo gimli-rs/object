@@ -1,7 +1,7 @@
 [package]
 authors = ["Nick Fitzgerald <fitzgen@gmail.com>", "Philip Craig <philipjcraig@gmail.com>"]
 name = "object"
-version = "0.14.0"
+version = "0.14.1"
 edition = "2018"
 description = "A unified interface for parsing object file formats."
 keywords = ["object", "loader", "elf", "mach-o", "pe"]
@@ -9,13 +9,16 @@ license = "Apache-2.0/MIT"
 repository = "https://github.com/gimli-rs/object"
 exclude = ["/.coveralls.yml", "/.travis.yml"]
 
+[package.metadata.docs.rs]
+all-features = true
+
 [dependencies]
 scroll = { version = "0.9", default-features = false }
 target-lexicon = { version = "0.8" }
 uuid = { version = "0.7", default-features = false }
 flate2 = { version = "1", optional = true }
-crc32fast = { version = "1", optional = true }
-indexmap = { version = "1", optional = true }
+crc32fast = { version = "1.2", optional = true }
+indexmap = { version = "1.1", optional = true }
 
 [dependencies.goblin]
 version = "0.0.24"
