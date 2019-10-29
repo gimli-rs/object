@@ -13,7 +13,7 @@ exclude = ["/.coveralls.yml", "/.travis.yml"]
 all-features = true
 
 [dependencies]
-scroll = { version = "0.9", default-features = false }
+scroll = { version = "0.10", default-features = false }
 target-lexicon = { version = "0.8" }
 uuid = { version = "0.7", default-features = false }
 flate2 = { version = "1", optional = true }
