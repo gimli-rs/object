@@ -45,6 +45,15 @@ impl Object {
             StandardSection::UninitializedData => {
                 (&[], &b".bss"[..], SectionKind::UninitializedData)
             }
+            StandardSection::Tls => (&[], &b".tls$"[..], SectionKind::Tls),
+            StandardSection::UninitializedTls => {
+                // Unsupported section.
+                (&[], &[], SectionKind::UninitializedTls)
+            }
+            StandardSection::TlsVariables => {
+                // Unsupported section.
+                (&[], &[], SectionKind::TlsVariables)
+            }
         }
     }
 

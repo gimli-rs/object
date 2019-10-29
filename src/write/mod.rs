@@ -31,6 +31,8 @@ pub struct Object {
     subsection_via_symbols: bool,
     /// The symbol name mangling scheme.
     pub mangling: Mangling,
+    /// Mach-O "_tlv_bootstrap" symbol.
+    tlv_bootstrap: Option<SymbolId>,
 }
 
 impl Object {
@@ -46,6 +48,7 @@ impl Object {
             stub_symbols: HashMap::new(),
             subsection_via_symbols: false,
             mangling: Mangling::default(format, architecture),
+            tlv_bootstrap: None,
         }
     }
 
@@ -232,7 +235,9 @@ impl Object {
             return self.section_symbol(symbol.section.unwrap());
         }
         if !symbol.name.is_empty()
-            && (symbol.kind == SymbolKind::Text || symbol.kind == SymbolKind::Data)
+            && (symbol.kind == SymbolKind::Text
+                || symbol.kind == SymbolKind::Data
+                || symbol.kind == SymbolKind::Tls)
         {
             let unmangled_name = symbol.name.clone();
             if let Some(prefix) = self.mangling.global_prefix() {
@@ -250,6 +255,11 @@ impl Object {
         let symbol_id = SymbolId(self.symbols.len());
         self.symbols.push(symbol);
         symbol_id
+    }
+
+    /// Return true if the file format supports `StandardSection::UninitializedTls`.
+    pub fn has_uninitialized_tls(&self) -> bool {
+        self.format != BinaryFormat::Coff
     }
 
     /// Add a new file symbol and return its `SymbolId`.
@@ -292,18 +302,47 @@ impl Object {
 
     /// Append data to an existing section, and update a symbol to refer to it.
     ///
+    /// For Mach-O, this also creates a `__thread_vars` entry for TLS symbols, and the
+    /// symbol will indirectly point to the added data via the `__thread_vars` entry.
+    ///
     /// Returns the section offset of the data.
     pub fn add_symbol_data(
         &mut self,
-        symbol: SymbolId,
+        mut symbol_id: SymbolId,
         section: SectionId,
         data: &[u8],
         align: u64,
     ) -> u64 {
+        if self.format == BinaryFormat::Macho {
+            symbol_id = self.macho_add_thread_var(symbol_id);
+        }
         let offset = self.append_section_data(section, data, align);
-        let symbol = self.symbol_mut(symbol);
+        let symbol = self.symbol_mut(symbol_id);
         symbol.value = offset;
         symbol.size = data.len() as u64;
+        symbol.section = Some(section);
+        offset
+    }
+
+    /// Append zero-initialized data to an existing section, and update a symbol to refer to it.
+    ///
+    /// For Mach-O, this also creates a thread_var entry for TLS symbols.
+    ///
+    /// Returns the section offset of the data.
+    pub fn add_symbol_bss(
+        &mut self,
+        mut symbol_id: SymbolId,
+        section: SectionId,
+        size: u64,
+        align: u64,
+    ) -> u64 {
+        if self.format == BinaryFormat::Macho {
+            symbol_id = self.macho_add_thread_var(symbol_id);
+        }
+        let offset = self.append_section_bss(section, size, align);
+        let symbol = self.symbol_mut(symbol_id);
+        symbol.value = offset;
+        symbol.size = size;
         symbol.section = Some(section);
         offset
     }
@@ -411,6 +450,11 @@ pub enum StandardSection {
     ReadOnlyDataWithRel,
     ReadOnlyString,
     UninitializedData,
+    Tls,
+    /// Zero-fill TLS initializers. Unsupported for COFF.
+    UninitializedTls,
+    /// TLS variable structures. Only supported for Mach-O.
+    TlsVariables,
 }
 
 impl StandardSection {
@@ -424,6 +468,9 @@ impl StandardSection {
             }
             StandardSection::ReadOnlyString => SectionKind::ReadOnlyString,
             StandardSection::UninitializedData => SectionKind::UninitializedData,
+            StandardSection::Tls => SectionKind::Tls,
+            StandardSection::UninitializedTls => SectionKind::UninitializedTls,
+            StandardSection::TlsVariables => SectionKind::TlsVariables,
         }
     }
 
@@ -435,6 +482,9 @@ impl StandardSection {
             StandardSection::ReadOnlyDataWithRel,
             StandardSection::ReadOnlyString,
             StandardSection::UninitializedData,
+            StandardSection::Tls,
+            StandardSection::UninitializedTls,
+            StandardSection::TlsVariables,
         ]
     }
 }
