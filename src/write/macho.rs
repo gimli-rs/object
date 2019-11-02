@@ -1,5 +1,6 @@
 use scroll::ctx::SizeWith;
 use scroll::{IOwrite, Pwrite};
+use std::convert::TryFrom;
 use std::string::String;
 
 use crate::alloc::vec::Vec;
@@ -16,6 +17,8 @@ mod mach {
     pub use goblin::mach::segment::*;
     pub use goblin::mach::symbols::*;
 }
+
+const RELOC_TLV: u32 = mach::X86_64_RELOC_TLV as u32;
 
 #[derive(Default, Clone, Copy)]
 struct SectionOffsets {
@@ -173,7 +176,8 @@ impl Object {
         let constant = match relocation.kind {
             RelocationKind::Relative
             | RelocationKind::GotRelative
-            | RelocationKind::PltRelative => relocation.addend + 4,
+            | RelocationKind::PltRelative
+            | RelocationKind::Other(RELOC_TLV) => relocation.addend + 4,
             _ => relocation.addend,
         };
         relocation.addend -= constant;
@@ -523,6 +527,9 @@ impl Object {
                                 RelocationEncoding::X86RipRelativeMovq,
                                 -4,
                             ) => (1, mach::X86_64_RELOC_GOT_LOAD),
+                            (RelocationKind::Other(RELOC_TLV), RelocationEncoding::Generic, -4) => {
+                                (1, mach::X86_64_RELOC_TLV)
+                            }
                             _ => return Err(format!("unimplemented relocation {:?}", reloc)),
                         },
                         _ => {
