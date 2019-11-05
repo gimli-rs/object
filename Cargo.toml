@@ -14,7 +14,7 @@ all-features = true
 
 [dependencies]
 scroll = { version = "0.9", default-features = false }
-target-lexicon = { version = "0.8" }
+target-lexicon = { version = "0.9" }
 uuid = { version = "0.7", default-features = false }
 flate2 = { version = "1", optional = true }
 crc32fast = { version = "1.2", optional = true }
