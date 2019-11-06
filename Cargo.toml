@@ -13,15 +13,15 @@ exclude = ["/.coveralls.yml", "/.travis.yml"]
 all-features = true
 
 [dependencies]
-scroll = { version = "0.9", default-features = false }
-target-lexicon = { version = "0.8" }
+scroll = { version = "0.10", default-features = false }
+target-lexicon = { version = "0.9" }
 uuid = { version = "0.7", default-features = false }
 flate2 = { version = "1", optional = true }
 crc32fast = { version = "1.2", optional = true }
 indexmap = { version = "1.1", optional = true }
 
 [dependencies.goblin]
-version = "0.0.24"
+version = "0.1"
 default-features = false
 features = ["endian_fd", "elf32", "elf64", "mach32", "mach64", "pe32", "pe64", "archive"]
 
