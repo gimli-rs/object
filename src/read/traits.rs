@@ -151,6 +151,9 @@ pub trait ObjectSegment<'data> {
     /// Returns the alignment of the segment in memory.
     fn align(&self) -> u64;
 
+    /// Returns the offset and size of the segment in the file.
+    fn file_range(&self) -> (u64, u64);
+
     /// Returns a reference to the file contents of the segment.
     /// The length of this data may be different from the size of the
     /// segment in memory.

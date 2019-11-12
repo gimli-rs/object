@@ -273,6 +273,11 @@ impl<'data, 'file> ObjectSegment<'data> for MachOSegment<'data, 'file> {
     }
 
     #[inline]
+    fn file_range(&self) -> (u64, u64) {
+        (self.segment.fileoff, self.segment.filesize)
+    }
+
+    #[inline]
     fn data(&self) -> &'data [u8] {
         self.segment.data
     }

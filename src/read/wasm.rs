@@ -144,6 +144,11 @@ impl<'file> ObjectSegment<'static> for WasmSegment<'file> {
         unreachable!()
     }
 
+    #[inline]
+    fn file_range(&self) -> (u64, u64) {
+        unreachable!()
+    }
+
     fn data(&self) -> &'static [u8] {
         unreachable!()
     }

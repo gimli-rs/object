@@ -278,6 +278,11 @@ impl<'data, 'file> ObjectSegment<'data> for ElfSegment<'data, 'file> {
         self.segment.p_align
     }
 
+    #[inline]
+    fn file_range(&self) -> (u64, u64) {
+        (self.segment.p_offset, self.segment.p_filesz)
+    }
+
     fn data(&self) -> &'data [u8] {
         &self.file.data[self.segment.p_offset as usize..][..self.segment.p_filesz as usize]
     }
