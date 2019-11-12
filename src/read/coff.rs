@@ -301,6 +301,14 @@ impl<'data, 'file> ObjectSection<'data> for CoffSection<'data, 'file> {
         section_alignment(self.section.characteristics)
     }
 
+    #[inline]
+    fn file_range(&self) -> Option<(u64, u64)> {
+        Some((
+            self.section.pointer_to_raw_data as u64,
+            self.section.size_of_raw_data as u64,
+        ))
+    }
+
     fn data(&self) -> Cow<'data, [u8]> {
         Cow::from(self.raw_data())
     }

@@ -331,11 +331,19 @@ where
 }
 
 impl<'data, 'file> ElfSection<'data, 'file> {
-    fn raw_data(&self) -> &'data [u8] {
+    fn raw_offset(&self) -> Option<(u64, u64)> {
         if self.section.sh_type == elf::section_header::SHT_NOBITS {
-            &[]
+            None
         } else {
-            &self.file.data[self.section.sh_offset as usize..][..self.section.sh_size as usize]
+            Some((self.section.sh_offset, self.section.sh_size))
+        }
+    }
+
+    fn raw_data(&self) -> &'data [u8] {
+        if let Some((offset, size)) = self.raw_offset() {
+            &self.file.data[offset as usize..][..size as usize]
+        } else {
+            &[]
         }
     }
 
@@ -426,6 +434,11 @@ impl<'data, 'file> ObjectSection<'data> for ElfSection<'data, 'file> {
     #[inline]
     fn align(&self) -> u64 {
         self.section.sh_addralign
+    }
+
+    #[inline]
+    fn file_range(&self) -> Option<(u64, u64)> {
+        self.raw_offset()
     }
 
     #[inline]

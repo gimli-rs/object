@@ -210,6 +210,11 @@ impl<'file> ObjectSection<'static> for WasmSection<'file> {
         1
     }
 
+    #[inline]
+    fn file_range(&self) -> Option<(u64, u64)> {
+        None
+    }
+
     fn data(&self) -> Cow<'static, [u8]> {
         match *self.section {
             elements::Section::Custom(ref section) => Some(section.payload().to_vec().into()),

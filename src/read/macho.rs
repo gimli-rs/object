@@ -361,6 +361,12 @@ impl<'data, 'file> ObjectSection<'data> for MachOSection<'data, 'file> {
     }
 
     #[inline]
+    fn file_range(&self) -> Option<(u64, u64)> {
+        let internal = &self.internal().section;
+        Some((internal.offset as u64, internal.size))
+    }
+
+    #[inline]
     fn data(&self) -> Cow<'data, [u8]> {
         Cow::from(self.internal().data)
     }

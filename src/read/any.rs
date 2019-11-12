@@ -422,6 +422,10 @@ impl<'data, 'file> ObjectSection<'data> for Section<'data, 'file> {
         with_inner!(self.inner, SectionInternal, |x| x.align())
     }
 
+    fn file_range(&self) -> Option<(u64, u64)> {
+        with_inner!(self.inner, SectionInternal, |x| x.file_range())
+    }
+
     fn data(&self) -> Cow<'data, [u8]> {
         with_inner!(self.inner, SectionInternal, |x| x.data())
     }
