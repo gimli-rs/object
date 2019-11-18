@@ -273,6 +273,11 @@ impl<'data, 'file> ObjectSegment<'data> for MachOSegment<'data, 'file> {
     }
 
     #[inline]
+    fn file_range(&self) -> (u64, u64) {
+        (self.segment.fileoff, self.segment.filesize)
+    }
+
+    #[inline]
     fn data(&self) -> &'data [u8] {
         self.segment.data
     }
@@ -353,6 +358,12 @@ impl<'data, 'file> ObjectSection<'data> for MachOSection<'data, 'file> {
     #[inline]
     fn align(&self) -> u64 {
         1 << self.internal().section.align
+    }
+
+    #[inline]
+    fn file_range(&self) -> Option<(u64, u64)> {
+        let internal = &self.internal().section;
+        Some((internal.offset as u64, internal.size))
     }
 
     #[inline]

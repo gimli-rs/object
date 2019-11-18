@@ -234,6 +234,14 @@ impl<'data, 'file> ObjectSegment<'data> for CoffSegment<'data, 'file> {
         section_alignment(self.section.characteristics)
     }
 
+    #[inline]
+    fn file_range(&self) -> (u64, u64) {
+        (
+            self.section.pointer_to_raw_data as u64,
+            self.section.size_of_raw_data as u64,
+        )
+    }
+
     fn data(&self) -> &'data [u8] {
         let offset = self.section.pointer_to_raw_data as usize;
         let size = self.section.size_of_raw_data as usize;
@@ -291,6 +299,14 @@ impl<'data, 'file> ObjectSection<'data> for CoffSection<'data, 'file> {
     #[inline]
     fn align(&self) -> u64 {
         section_alignment(self.section.characteristics)
+    }
+
+    #[inline]
+    fn file_range(&self) -> Option<(u64, u64)> {
+        Some((
+            self.section.pointer_to_raw_data as u64,
+            self.section.size_of_raw_data as u64,
+        ))
     }
 
     fn data(&self) -> Cow<'data, [u8]> {
