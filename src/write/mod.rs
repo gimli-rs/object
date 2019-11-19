@@ -308,43 +308,54 @@ impl Object {
     /// Returns the section offset of the data.
     pub fn add_symbol_data(
         &mut self,
-        mut symbol_id: SymbolId,
+        symbol_id: SymbolId,
         section: SectionId,
         data: &[u8],
         align: u64,
     ) -> u64 {
-        if self.format == BinaryFormat::Macho {
-            symbol_id = self.macho_add_thread_var(symbol_id);
-        }
         let offset = self.append_section_data(section, data, align);
-        let symbol = self.symbol_mut(symbol_id);
-        symbol.value = offset;
-        symbol.size = data.len() as u64;
-        symbol.section = Some(section);
+        self.set_symbol_data(symbol_id, section, offset, data.len() as u64);
         offset
     }
 
     /// Append zero-initialized data to an existing section, and update a symbol to refer to it.
     ///
-    /// For Mach-O, this also creates a thread_var entry for TLS symbols.
+    /// For Mach-O, this also creates a `__thread_vars` entry for TLS symbols, and the
+    /// symbol will indirectly point to the added data via the `__thread_vars` entry.
     ///
     /// Returns the section offset of the data.
     pub fn add_symbol_bss(
         &mut self,
-        mut symbol_id: SymbolId,
+        symbol_id: SymbolId,
         section: SectionId,
         size: u64,
         align: u64,
     ) -> u64 {
+        let offset = self.append_section_bss(section, size, align);
+        self.set_symbol_data(symbol_id, section, offset, size);
+        offset
+    }
+
+    /// Update a symbol to refer to the given data within a section.
+    ///
+    /// For Mach-O, this also creates a `__thread_vars` entry for TLS symbols, and the
+    /// symbol will indirectly point to the data via the `__thread_vars` entry.
+    pub fn set_symbol_data(
+        &mut self,
+        mut symbol_id: SymbolId,
+        section: SectionId,
+        offset: u64,
+        size: u64,
+    ) {
+        // Defined symbols must have a scope.
+        debug_assert!(self.symbol(symbol_id).scope != SymbolScope::Unknown);
         if self.format == BinaryFormat::Macho {
             symbol_id = self.macho_add_thread_var(symbol_id);
         }
-        let offset = self.append_section_bss(section, size, align);
         let symbol = self.symbol_mut(symbol_id);
         symbol.value = offset;
         symbol.size = size;
         symbol.section = Some(section);
-        offset
     }
 
     /// Convert a symbol to a section symbol and offset.
