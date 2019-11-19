@@ -186,7 +186,7 @@ pub trait ObjectSection<'data> {
     /// Returns the alignment of the section in memory.
     fn align(&self) -> u64;
 
-    /// Returns offset and size of on-disk segment (if any)
+    /// Returns offset and size of on-disk segment (if any).
     fn file_range(&self) -> Option<(u64, u64)>;
 
     /// Returns the raw contents of the section.
