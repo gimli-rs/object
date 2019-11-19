@@ -542,15 +542,24 @@ impl<'data, 'file> Iterator for MachORelocationIterator<'data, 'file> {
             let kind = match self.file.macho.header.cputype {
                 mach::cputype::CPU_TYPE_ARM => match (reloc.r_type(), reloc.r_pcrel()) {
                     (mach::relocation::ARM_RELOC_VANILLA, 0) => RelocationKind::Absolute,
-                    _ => RelocationKind::Other(reloc.r_info),
+                    _ => RelocationKind::MachO {
+                        value: reloc.r_type(),
+                        relative: reloc.is_pic(),
+                    },
                 },
                 mach::cputype::CPU_TYPE_ARM64 => match (reloc.r_type(), reloc.r_pcrel()) {
                     (mach::relocation::ARM64_RELOC_UNSIGNED, 0) => RelocationKind::Absolute,
-                    _ => RelocationKind::Other(reloc.r_info),
+                    _ => RelocationKind::MachO {
+                        value: reloc.r_type(),
+                        relative: reloc.is_pic(),
+                    },
                 },
                 mach::cputype::CPU_TYPE_X86 => match (reloc.r_type(), reloc.r_pcrel()) {
                     (mach::relocation::GENERIC_RELOC_VANILLA, 0) => RelocationKind::Absolute,
-                    _ => RelocationKind::Other(reloc.r_info),
+                    _ => RelocationKind::MachO {
+                        value: reloc.r_type(),
+                        relative: reloc.is_pic(),
+                    },
                 },
                 mach::cputype::CPU_TYPE_X86_64 => match (reloc.r_type(), reloc.r_pcrel()) {
                     (mach::relocation::X86_64_RELOC_UNSIGNED, 0) => RelocationKind::Absolute,
@@ -567,9 +576,15 @@ impl<'data, 'file> Iterator for MachORelocationIterator<'data, 'file> {
                         encoding = RelocationEncoding::X86RipRelativeMovq;
                         RelocationKind::GotRelative
                     }
-                    _ => RelocationKind::Other(reloc.r_info),
+                    _ => RelocationKind::MachO {
+                        value: reloc.r_type(),
+                        relative: reloc.is_pic(),
+                    },
                 },
-                _ => RelocationKind::Other(reloc.r_info),
+                _ => RelocationKind::MachO {
+                    value: reloc.r_type(),
+                    relative: reloc.is_pic(),
+                },
             };
             let size = 8 << reloc.r_length();
             let target = if reloc.is_extern() {

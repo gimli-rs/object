@@ -523,6 +523,9 @@ impl Object {
                                 RelocationEncoding::X86RipRelativeMovq,
                                 -4,
                             ) => (1, mach::X86_64_RELOC_GOT_LOAD),
+                            (RelocationKind::MachO { value, relative }, _, _) => {
+                                (u32::from(relative), value)
+                            }
                             _ => return Err(format!("unimplemented relocation {:?}", reloc)),
                         },
                         _ => {
