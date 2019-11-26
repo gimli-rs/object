@@ -359,6 +359,7 @@ impl Object {
                             (RelocationKind::Relative, 32, -7) => coff::IMAGE_REL_AMD64_REL32_3,
                             (RelocationKind::Relative, 32, -8) => coff::IMAGE_REL_AMD64_REL32_4,
                             (RelocationKind::Relative, 32, -9) => coff::IMAGE_REL_AMD64_REL32_5,
+                            (RelocationKind::SectionIndex, 16, 0) => coff::IMAGE_REL_AMD64_SECTION,
                             (RelocationKind::SectionOffset, 32, 0) => coff::IMAGE_REL_AMD64_SECREL,
                             (RelocationKind::SectionOffset, 7, 0) => coff::IMAGE_REL_AMD64_SECREL7,
                             (RelocationKind::Coff(x), _, _) => x,
