@@ -252,10 +252,11 @@ impl Object {
         let mut nsyms = 0;
         for (index, symbol) in self.symbols.iter().enumerate() {
             match symbol.kind {
-                SymbolKind::Unknown if symbol.is_undefined() => {}
-                SymbolKind::Text | SymbolKind::Data | SymbolKind::Tls => {}
+                SymbolKind::Unknown | SymbolKind::Text | SymbolKind::Data | SymbolKind::Tls => {}
                 SymbolKind::File | SymbolKind::Section => continue,
-                _ => return Err(format!("unimplemented symbol {:?}", symbol)),
+                SymbolKind::Null | SymbolKind::Label => {
+                    return Err(format!("unimplemented symbol {:?}", symbol))
+                }
             }
             symbol_offsets[index].index = nsyms;
             nsyms += 1;
@@ -420,10 +421,11 @@ impl Object {
         debug_assert_eq!(symtab_offset, buffer.len());
         for (index, symbol) in self.symbols.iter().enumerate() {
             match symbol.kind {
-                SymbolKind::Unknown if symbol.is_undefined() => {}
-                SymbolKind::Text | SymbolKind::Data | SymbolKind::Tls => {}
+                SymbolKind::Unknown | SymbolKind::Text | SymbolKind::Data | SymbolKind::Tls => {}
                 SymbolKind::File | SymbolKind::Section => continue,
-                _ => return Err(format!("unimplemented symbol {:?}", symbol)),
+                SymbolKind::Null | SymbolKind::Label => {
+                    return Err(format!("unimplemented symbol {:?}", symbol))
+                }
             }
             // TODO: N_STAB
             let (mut n_type, n_sect) = match symbol.section {
