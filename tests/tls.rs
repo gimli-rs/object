@@ -17,7 +17,7 @@ fn macho_x86_64_tls() {
         kind: SymbolKind::Tls,
         scope: SymbolScope::Linkage,
         weak: false,
-        section: None,
+        section: write::SymbolSection::Undefined,
     });
     object.add_symbol_data(symbol, section, &[1; 30], 4);
 
@@ -29,7 +29,7 @@ fn macho_x86_64_tls() {
         kind: SymbolKind::Tls,
         scope: SymbolScope::Linkage,
         weak: false,
-        section: None,
+        section: write::SymbolSection::Undefined,
     });
     object.add_symbol_bss(symbol, section, 31, 4);
 

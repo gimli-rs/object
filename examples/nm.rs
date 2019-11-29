@@ -1,4 +1,4 @@
-use object::{Object, ObjectSection, SectionIndex, SectionKind, Symbol, SymbolKind};
+use object::{Object, ObjectSection, SectionIndex, SectionKind, Symbol, SymbolKind, SymbolSection};
 use std::collections::HashMap;
 use std::{env, fs, process};
 
@@ -57,21 +57,27 @@ fn print_symbol(symbol: &Symbol<'_>, section_kinds: &HashMap<SectionIndex, Secti
         return;
     }
 
-    let mut kind = match symbol
-        .section_index()
-        .and_then(|index| section_kinds.get(&index))
-    {
-        Some(SectionKind::Unknown)
-        | Some(SectionKind::Other)
-        | Some(SectionKind::OtherString)
-        | Some(SectionKind::Debug)
-        | Some(SectionKind::Linker)
-        | Some(SectionKind::Metadata) => '?',
-        Some(SectionKind::Text) => 't',
-        Some(SectionKind::Data) | Some(SectionKind::Tls) | Some(SectionKind::TlsVariables) => 'd',
-        Some(SectionKind::ReadOnlyData) | Some(SectionKind::ReadOnlyString) => 'r',
-        Some(SectionKind::UninitializedData) | Some(SectionKind::UninitializedTls) => 'b',
-        None => 'U',
+    let mut kind = match symbol.section() {
+        SymbolSection::Unknown => '?',
+        SymbolSection::Undefined => 'U',
+        SymbolSection::Absolute => 'A',
+        SymbolSection::Common => 'C',
+        SymbolSection::Section(index) => match section_kinds.get(&index) {
+            None
+            | Some(SectionKind::Unknown)
+            | Some(SectionKind::Other)
+            | Some(SectionKind::OtherString)
+            | Some(SectionKind::Debug)
+            | Some(SectionKind::Linker)
+            | Some(SectionKind::Metadata) => '?',
+            Some(SectionKind::Text) => 't',
+            Some(SectionKind::Data) | Some(SectionKind::Tls) | Some(SectionKind::TlsVariables) => {
+                'd'
+            }
+            Some(SectionKind::ReadOnlyData) | Some(SectionKind::ReadOnlyString) => 'r',
+            Some(SectionKind::UninitializedData) | Some(SectionKind::UninitializedTls) => 'b',
+            Some(SectionKind::Common) => 'C',
+        },
     };
 
     if symbol.is_global() {

@@ -21,7 +21,7 @@ fn coff_x86_64() {
         kind: SymbolKind::Text,
         scope: SymbolScope::Linkage,
         weak: false,
-        section: Some(text),
+        section: write::SymbolSection::Section(text),
     });
     object
         .add_relocation(
@@ -97,7 +97,7 @@ fn elf_x86_64() {
         kind: SymbolKind::Text,
         scope: SymbolScope::Linkage,
         weak: false,
-        section: Some(text),
+        section: write::SymbolSection::Section(text),
     });
     object
         .add_relocation(
@@ -190,7 +190,7 @@ fn macho_x86_64() {
         kind: SymbolKind::Text,
         scope: SymbolScope::Linkage,
         weak: false,
-        section: Some(text),
+        section: write::SymbolSection::Section(text),
     });
     object
         .add_relocation(

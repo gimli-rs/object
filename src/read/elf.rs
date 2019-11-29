@@ -15,7 +15,7 @@ use target_lexicon::{Aarch64Architecture, Architecture, ArmArchitecture};
 use crate::read::{
     self, Object, ObjectSection, ObjectSegment, Relocation, RelocationEncoding, RelocationKind,
     RelocationTarget, SectionIndex, SectionKind, Symbol, SymbolIndex, SymbolKind, SymbolMap,
-    SymbolScope,
+    SymbolScope, SymbolSection,
 };
 
 /// An ELF object file.
@@ -568,24 +568,25 @@ fn parse_symbol<'data>(
     let name = strtab.get(symbol.st_name).and_then(Result::ok);
     let kind = match elf::sym::st_type(symbol.st_info) {
         elf::sym::STT_NOTYPE if index == 0 => SymbolKind::Null,
-        elf::sym::STT_OBJECT => SymbolKind::Data,
+        elf::sym::STT_OBJECT | elf::sym::STT_COMMON => SymbolKind::Data,
         elf::sym::STT_FUNC => SymbolKind::Text,
         elf::sym::STT_SECTION => SymbolKind::Section,
         elf::sym::STT_FILE => SymbolKind::File,
-        elf::sym::STT_COMMON => SymbolKind::Common,
         elf::sym::STT_TLS => SymbolKind::Tls,
         _ => SymbolKind::Unknown,
     };
-    let undefined = symbol.st_shndx == elf::section_header::SHN_UNDEF as usize;
-    let section_index =
-        if undefined || symbol.st_shndx >= elf::section_header::SHN_LORESERVE as usize {
-            None
-        } else {
-            Some(SectionIndex(symbol.st_shndx))
-        };
+    let section = match symbol.st_shndx as u32 {
+        elf::section_header::SHN_UNDEF => SymbolSection::Undefined,
+        elf::section_header::SHN_ABS => SymbolSection::Absolute,
+        elf::section_header::SHN_COMMON => SymbolSection::Common,
+        index if index < elf::section_header::SHN_LORESERVE => {
+            SymbolSection::Section(SectionIndex(index as usize))
+        }
+        _ => SymbolSection::Unknown,
+    };
     let weak = symbol.st_bind() == elf::sym::STB_WEAK;
     let scope = match symbol.st_bind() {
-        _ if undefined => SymbolScope::Unknown,
+        _ if section == SymbolSection::Undefined => SymbolScope::Unknown,
         elf::sym::STB_LOCAL => SymbolScope::Compilation,
         elf::sym::STB_GLOBAL | elf::sym::STB_WEAK => {
             if symbol.st_visibility() == elf::sym::STV_HIDDEN {
@@ -601,8 +602,7 @@ fn parse_symbol<'data>(
         address: symbol.st_value,
         size: symbol.st_size,
         kind,
-        section_index,
-        undefined,
+        section,
         weak,
         scope,
     }

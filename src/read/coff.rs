@@ -8,7 +8,7 @@ use target_lexicon::Architecture;
 use crate::read::{
     self, Object, ObjectSection, ObjectSegment, Relocation, RelocationEncoding, RelocationKind,
     RelocationTarget, SectionIndex, SectionKind, Symbol, SymbolIndex, SymbolKind, SymbolMap,
-    SymbolScope,
+    SymbolScope, SymbolSection,
 };
 
 /// A COFF object file.
@@ -432,15 +432,15 @@ fn parse_symbol<'data>(
             _ => SymbolKind::Unknown,
         }
     };
-    let section_index = if symbol.section_number <= 0 {
-        None
-    } else {
-        Some(SectionIndex(symbol.section_number as usize - 1))
+    let section = match symbol.section_number {
+        pe::symbol::IMAGE_SYM_UNDEFINED => SymbolSection::Undefined,
+        pe::symbol::IMAGE_SYM_ABSOLUTE => SymbolSection::Absolute,
+        index if index > 0 => SymbolSection::Section(SectionIndex(index as usize - 1)),
+        _ => SymbolSection::Unknown,
     };
-    let undefined = symbol.section_number == pe::symbol::IMAGE_SYM_UNDEFINED;
     let weak = symbol.storage_class == pe::symbol::IMAGE_SYM_CLASS_WEAK_EXTERNAL;
     let scope = match symbol.storage_class {
-        _ if undefined => SymbolScope::Unknown,
+        _ if section == SymbolSection::Undefined => SymbolScope::Unknown,
         pe::symbol::IMAGE_SYM_CLASS_EXTERNAL
         | pe::symbol::IMAGE_SYM_CLASS_EXTERNAL_DEF
         | pe::symbol::IMAGE_SYM_CLASS_WEAK_EXTERNAL => {
@@ -454,8 +454,7 @@ fn parse_symbol<'data>(
         address: u64::from(symbol.value),
         size,
         kind,
-        section_index,
-        undefined,
+        section,
         weak,
         scope,
     }

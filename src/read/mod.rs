@@ -50,6 +50,37 @@ pub struct SectionIndex(pub usize);
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct SymbolIndex(pub usize);
 
+/// The section where a symbol is defined.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum SymbolSection {
+    /// The section is unknown.
+    Unknown,
+    /// The symbol is undefined.
+    ///
+    /// May also include symbols for which a section is not applicable (such as file symbols).
+    Undefined,
+    /// The symbol has an absolute value.
+    Absolute,
+    /// The symbol is a zero-initialized symbol that will be combined with duplicate definitions.
+    Common,
+    /// The symbol is defined in the given section.
+    Section(SectionIndex),
+}
+
+impl SymbolSection {
+    /// Returns the section index for the section where the symbol is defined.
+    ///
+    /// May return `None` if the symbol is not defined in a section.
+    #[inline]
+    pub fn index(self) -> Option<SectionIndex> {
+        if let SymbolSection::Section(index) = self {
+            Some(index)
+        } else {
+            None
+        }
+    }
+}
+
 /// A symbol table entry.
 #[derive(Debug)]
 pub struct Symbol<'data> {
@@ -57,8 +88,7 @@ pub struct Symbol<'data> {
     address: u64,
     size: u64,
     kind: SymbolKind,
-    section_index: Option<SectionIndex>,
-    undefined: bool,
+    section: SymbolSection,
     weak: bool,
     scope: SymbolScope,
 }
@@ -70,18 +100,32 @@ impl<'data> Symbol<'data> {
         self.kind
     }
 
+    /// Returns the section where the symbol is defined.
+    #[inline]
+    pub fn section(&self) -> SymbolSection {
+        self.section
+    }
+
     /// Returns the section index for the section containing this symbol.
     ///
-    /// May return `None` if the section is unknown or the symbol is undefined.
+    /// May return `None` if the symbol is not defined in a section.
     #[inline]
     pub fn section_index(&self) -> Option<SectionIndex> {
-        self.section_index
+        self.section.index()
     }
 
     /// Return true if the symbol is undefined.
     #[inline]
     pub fn is_undefined(&self) -> bool {
-        self.undefined
+        self.section == SymbolSection::Undefined
+    }
+
+    /// Return true if the symbol is common data.
+    ///
+    /// Note: does not check for `SymbolSection::Section` with `SectionKind::Common`.
+    #[inline]
+    fn is_common(&self) -> bool {
+        self.section == SymbolSection::Common
     }
 
     /// Return true if the symbol is weak.
@@ -165,12 +209,11 @@ impl<'data> SymbolMap<'data> {
             | SymbolKind::Section
             | SymbolKind::File
             | SymbolKind::Label
-            | SymbolKind::Common
             | SymbolKind::Tls => {
                 return false;
             }
         }
-        !symbol.is_undefined() && symbol.size() > 0
+        !symbol.is_undefined() && !symbol.is_common() && symbol.size() > 0
     }
 }
 

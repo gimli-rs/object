@@ -132,7 +132,7 @@ impl Object {
             kind: SymbolKind::Data,
             scope: SymbolScope::Compilation,
             weak: false,
-            section: Some(section_id),
+            section: SymbolSection::Section(section_id),
         });
         self.stub_symbols.insert(symbol_id, stub_id);
 
@@ -268,7 +268,8 @@ impl Object {
                         | coff::IMAGE_SCN_MEM_DISCARDABLE
                 }
                 SectionKind::Linker => coff::IMAGE_SCN_LNK_INFO | coff::IMAGE_SCN_LNK_REMOVE,
-                SectionKind::Tls
+                SectionKind::Common
+                | SectionKind::Tls
                 | SectionKind::UninitializedTls
                 | SectionKind::TlsVariables
                 | SectionKind::Unknown
@@ -390,7 +391,7 @@ impl Object {
         debug_assert_eq!(symtab_offset, buffer.len());
         for (index, symbol) in self.symbols.iter().enumerate() {
             let mut name = &symbol.name[..];
-            let mut section_number = symbol.section.map(|x| x.0 + 1).unwrap_or(0) as i16;
+            let mut section_number = symbol.section.id().map(|x| x.0 + 1).unwrap_or(0) as i16;
             let typ = if symbol.kind == SymbolKind::Text {
                 coff::IMAGE_SYM_DTYPE_FUNCTION << coff::IMAGE_SYM_DTYPE_SHIFT
             } else {
@@ -447,7 +448,7 @@ impl Object {
                 }
                 SymbolKind::Section => {
                     debug_assert_eq!(number_of_aux_symbols, 1);
-                    let section = &self.sections[symbol.section.unwrap().0];
+                    let section = &self.sections[symbol.section.id().unwrap().0];
                     buffer
                         .iowrite_with(
                             coff::AuxSectionDefinition {
