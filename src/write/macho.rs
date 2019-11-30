@@ -74,6 +74,7 @@ impl Object {
                 &b"__thread_vars"[..],
                 SectionKind::TlsVariables,
             ),
+            StandardSection::Common => (&b"__DATA"[..], &b"__common"[..], SectionKind::Common),
         }
     }
 

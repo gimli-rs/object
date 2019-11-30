@@ -258,8 +258,31 @@ impl Object {
     }
 
     /// Return true if the file format supports `StandardSection::UninitializedTls`.
+    #[inline]
     pub fn has_uninitialized_tls(&self) -> bool {
         self.format != BinaryFormat::Coff
+    }
+
+    /// Return true if the file format supports `StandardSection::Common`.
+    #[inline]
+    pub fn has_common(&self) -> bool {
+        self.format == BinaryFormat::Macho
+    }
+
+    /// Add a new common symbol and return its `SymbolId`.
+    ///
+    /// For Mach-O, this appends the symbol to the `__common` section.
+    pub fn add_common_symbol(&mut self, mut symbol: Symbol, size: u64, align: u64) -> SymbolId {
+        if self.has_common() {
+            let symbol_id = self.add_symbol(symbol);
+            let section = self.section_id(StandardSection::Common);
+            self.add_symbol_bss(symbol_id, section, size, align);
+            symbol_id
+        } else {
+            symbol.section = SymbolSection::Common;
+            symbol.size = size;
+            self.add_symbol(symbol)
+        }
     }
 
     /// Add a new file symbol and return its `SymbolId`.
@@ -466,6 +489,8 @@ pub enum StandardSection {
     UninitializedTls,
     /// TLS variable structures. Only supported for Mach-O.
     TlsVariables,
+    /// Common data. Only supported for Mach-O.
+    Common,
 }
 
 impl StandardSection {
@@ -482,9 +507,11 @@ impl StandardSection {
             StandardSection::Tls => SectionKind::Tls,
             StandardSection::UninitializedTls => SectionKind::UninitializedTls,
             StandardSection::TlsVariables => SectionKind::TlsVariables,
+            StandardSection::Common => SectionKind::Common,
         }
     }
 
+    // TODO: remembering to update this is error-prone, can we do better?
     fn all() -> &'static [StandardSection] {
         &[
             StandardSection::Text,
@@ -496,6 +523,7 @@ impl StandardSection {
             StandardSection::Tls,
             StandardSection::UninitializedTls,
             StandardSection::TlsVariables,
+            StandardSection::Common,
         ]
     }
 }

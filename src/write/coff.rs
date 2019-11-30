@@ -54,6 +54,10 @@ impl Object {
                 // Unsupported section.
                 (&[], &[], SectionKind::TlsVariables)
             }
+            StandardSection::Common => {
+                // Unsupported section.
+                (&[], &[], SectionKind::Common)
+            }
         }
     }
 

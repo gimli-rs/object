@@ -35,7 +35,7 @@ fn macho_x86_64_tls() {
 
     let bytes = object.write().unwrap();
 
-    std::fs::write(&"tls.o", &bytes).unwrap();
+    //std::fs::write(&"tls.o", &bytes).unwrap();
 
     let object = read::File::parse(&bytes).unwrap();
     assert_eq!(object.format(), BinaryFormat::Macho);
@@ -44,7 +44,7 @@ fn macho_x86_64_tls() {
     let mut sections = object.sections();
 
     let thread_data = sections.next().unwrap();
-    println!("{:?}", section);
+    println!("{:?}", thread_data);
     let thread_data_index = thread_data.index();
     assert_eq!(thread_data.name(), Some("__thread_data"));
     assert_eq!(thread_data.segment_name(), Some("__DATA"));
@@ -53,7 +53,7 @@ fn macho_x86_64_tls() {
     assert_eq!(&thread_data.data()[..], &[1; 30]);
 
     let thread_vars = sections.next().unwrap();
-    println!("{:?}", section);
+    println!("{:?}", thread_vars);
     let thread_vars_index = thread_vars.index();
     assert_eq!(thread_vars.name(), Some("__thread_vars"));
     assert_eq!(thread_vars.segment_name(), Some("__DATA"));
@@ -61,7 +61,7 @@ fn macho_x86_64_tls() {
     assert_eq!(thread_vars.size(), 2 * 3 * 8);
 
     let thread_bss = sections.next().unwrap();
-    println!("{:?}", section);
+    println!("{:?}", thread_bss);
     let thread_bss_index = thread_bss.index();
     assert_eq!(thread_bss.name(), Some("__thread_bss"));
     assert_eq!(thread_bss.segment_name(), Some("__DATA"));
