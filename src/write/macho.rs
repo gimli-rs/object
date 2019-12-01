@@ -174,6 +174,7 @@ impl Object {
             RelocationKind::Relative
             | RelocationKind::GotRelative
             | RelocationKind::PltRelative => relocation.addend + 4,
+            RelocationKind::MachO { value: _, relative: true } => relocation.addend + i64::from(relocation.size/8),
             _ => relocation.addend,
         };
         relocation.addend -= constant;
