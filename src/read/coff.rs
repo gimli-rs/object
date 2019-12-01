@@ -293,6 +293,7 @@ impl<'data, 'file> ObjectSection<'data> for CoffSection<'data, 'file> {
 
     #[inline]
     fn size(&self) -> u64 {
+        // TODO: This may need to be the length from the auxiliary symbol for this section.
         u64::from(self.section.size_of_raw_data)
     }
 
@@ -405,36 +406,59 @@ fn parse_symbol<'data>(
             })
         })
     };
-    let size = if symbol.is_function_definition() && symbol.number_of_aux_symbols > 0 {
-        coff.symbols
-            .aux_function_definition(index + 1)
-            .map(|aux| u64::from(aux.total_size))
-            .unwrap_or(0)
+    let derived_kind = if symbol.derived_type() == pe::symbol::IMAGE_SYM_DTYPE_FUNCTION {
+        SymbolKind::Text
     } else {
-        0
+        SymbolKind::Data
     };
-    let kind = if symbol.is_section_definition() {
-        SymbolKind::Section
-    } else {
-        match symbol.storage_class {
-            pe::symbol::IMAGE_SYM_CLASS_SECTION => SymbolKind::Section,
-            pe::symbol::IMAGE_SYM_CLASS_FILE => SymbolKind::File,
-            pe::symbol::IMAGE_SYM_CLASS_LABEL => SymbolKind::Label,
-            pe::symbol::IMAGE_SYM_CLASS_EXTERNAL
-            | pe::symbol::IMAGE_SYM_CLASS_WEAK_EXTERNAL
-            | pe::symbol::IMAGE_SYM_CLASS_STATIC => {
-                if symbol.derived_type() == pe::symbol::IMAGE_SYM_DTYPE_FUNCTION {
-                    SymbolKind::Text
-                } else {
-                    SymbolKind::Data
-                }
+    // FIXME: symbol.value is a section offset for non-absolute symbols, not an address
+    let (kind, address, size) = match symbol.storage_class {
+        pe::symbol::IMAGE_SYM_CLASS_STATIC => {
+            if symbol.value == 0 && symbol.number_of_aux_symbols > 0 {
+                let size = coff
+                    .symbols
+                    .aux_section_definition(index + 1)
+                    .map(|aux| u64::from(aux.length))
+                    .unwrap_or(0);
+                (SymbolKind::Section, 0, size)
+            } else {
+                (derived_kind, u64::from(symbol.value), 0)
             }
-            _ => SymbolKind::Unknown,
+        }
+        pe::symbol::IMAGE_SYM_CLASS_EXTERNAL => {
+            if symbol.section_number == pe::symbol::IMAGE_SYM_UNDEFINED {
+                // Common data: symbol.value is the size.
+                (derived_kind, 0, u64::from(symbol.value))
+            } else if symbol.is_function_definition() && symbol.number_of_aux_symbols > 0 {
+                let size = coff
+                    .symbols
+                    .aux_function_definition(index + 1)
+                    .map(|aux| u64::from(aux.total_size))
+                    .unwrap_or(0);
+                (derived_kind, u64::from(symbol.value), size)
+            } else {
+                (derived_kind, u64::from(symbol.value), 0)
+            }
+        }
+        pe::symbol::IMAGE_SYM_CLASS_WEAK_EXTERNAL => (derived_kind, u64::from(symbol.value), 0),
+        pe::symbol::IMAGE_SYM_CLASS_SECTION => (SymbolKind::Section, 0, 0),
+        pe::symbol::IMAGE_SYM_CLASS_FILE => (SymbolKind::File, 0, 0),
+        pe::symbol::IMAGE_SYM_CLASS_LABEL => (SymbolKind::Label, u64::from(symbol.value), 0),
+        _ => {
+            // No address because symbol.value could mean anything.
+            (SymbolKind::Unknown, 0, 0)
         }
     };
     let section = match symbol.section_number {
-        pe::symbol::IMAGE_SYM_UNDEFINED => SymbolSection::Undefined,
+        pe::symbol::IMAGE_SYM_UNDEFINED => {
+            if symbol.storage_class == pe::symbol::IMAGE_SYM_CLASS_EXTERNAL {
+                SymbolSection::Common
+            } else {
+                SymbolSection::Undefined
+            }
+        }
         pe::symbol::IMAGE_SYM_ABSOLUTE => SymbolSection::Absolute,
+        pe::symbol::IMAGE_SYM_DEBUG => SymbolSection::Undefined,
         index if index > 0 => SymbolSection::Section(SectionIndex(index as usize - 1)),
         _ => SymbolSection::Unknown,
     };
@@ -451,7 +475,7 @@ fn parse_symbol<'data>(
     };
     Symbol {
         name,
-        address: u64::from(symbol.value),
+        address,
         size,
         kind,
         section,
