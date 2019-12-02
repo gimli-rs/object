@@ -21,7 +21,7 @@ fn coff_x86_64() {
         kind: SymbolKind::Text,
         scope: SymbolScope::Linkage,
         weak: false,
-        section: Some(text),
+        section: write::SymbolSection::Section(text),
     });
     object
         .add_relocation(
@@ -97,7 +97,7 @@ fn elf_x86_64() {
         kind: SymbolKind::Text,
         scope: SymbolScope::Linkage,
         weak: false,
-        section: Some(text),
+        section: write::SymbolSection::Section(text),
     });
     object
         .add_relocation(
@@ -121,7 +121,7 @@ fn elf_x86_64() {
     let mut sections = object.sections();
 
     let section = sections.next().unwrap();
-    println!("{:?}", text);
+    println!("{:?}", section);
     assert_eq!(section.name(), Some(""));
     assert_eq!(section.kind(), SectionKind::Metadata);
     assert_eq!(section.address(), 0);
@@ -190,7 +190,7 @@ fn macho_x86_64() {
         kind: SymbolKind::Text,
         scope: SymbolScope::Linkage,
         weak: false,
-        section: Some(text),
+        section: write::SymbolSection::Section(text),
     });
     object
         .add_relocation(

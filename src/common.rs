@@ -33,6 +33,10 @@ pub enum SectionKind {
     ///
     /// Example Mach-O sections: `__DATA/__bss`
     UninitializedData,
+    /// An uninitialized common data section.
+    ///
+    /// Example Mach-O sections: `__DATA/__common`
+    Common,
     /// A TLS data section.
     ///
     /// Example ELF sections: `.tdata`
@@ -73,6 +77,15 @@ pub enum SectionKind {
     Metadata,
 }
 
+impl SectionKind {
+    /// Return true if this section contains zerofill data.
+    pub fn is_bss(self) -> bool {
+        self == SectionKind::UninitializedData
+            || self == SectionKind::UninitializedTls
+            || self == SectionKind::Common
+    }
+}
+
 /// The kind of a symbol.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SymbolKind {
@@ -90,8 +103,6 @@ pub enum SymbolKind {
     File,
     /// The symbol is for a code label.
     Label,
-    /// The symbol is for an uninitialized common block.
-    Common,
     /// The symbol is for a thread local storage entity.
     Tls,
 }

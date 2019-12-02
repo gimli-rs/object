@@ -54,6 +54,10 @@ impl Object {
                 // Unsupported section.
                 (&[], &[], SectionKind::TlsVariables)
             }
+            StandardSection::Common => {
+                // Unsupported section.
+                (&[], &[], SectionKind::Common)
+            }
         }
     }
 
@@ -121,7 +125,7 @@ impl Object {
         //     making a shared object; recompile with -fPIC
         let symbol = &self.symbols[relocation.symbol.0];
         if want_section_symbol(relocation, symbol) {
-            if let Some(section) = symbol.section {
+            if let Some(section) = symbol.section.id() {
                 relocation.addend += symbol.value as i64;
                 relocation.symbol = self.section_symbol(section);
             }
@@ -240,6 +244,7 @@ impl Object {
         for symbol in &self.symbols {
             let index = symbol
                 .section
+                .id()
                 .map(|s| section_offsets[s.0].index)
                 .unwrap_or(0);
             if index >= elf::SHN_LORESERVE as usize {
@@ -396,13 +401,14 @@ impl Object {
                 SymbolKind::Data => {
                     if symbol.is_undefined() {
                         elf::STT_NOTYPE
+                    } else if symbol.is_common() {
+                        elf::STT_COMMON
                     } else {
                         elf::STT_OBJECT
                     }
                 }
                 SymbolKind::Section => elf::STT_SECTION,
                 SymbolKind::File => elf::STT_FILE,
-                SymbolKind::Common => elf::STT_COMMON,
                 SymbolKind::Tls => elf::STT_TLS,
                 SymbolKind::Label => elf::STT_NOTYPE,
             };
@@ -420,26 +426,25 @@ impl Object {
             } else {
                 elf::STV_DEFAULT
             };
-            let st_shndx = match symbol.kind {
-                SymbolKind::File => {
-                    if need_symtab_shndx {
-                        symtab_shndx.iowrite_with(0, ctx.le).unwrap();
-                    }
-                    elf::SHN_ABS as usize
-                }
-                _ => {
-                    let index = symbol
-                        .section
-                        .map(|s| section_offsets[s.0].index)
-                        .unwrap_or(elf::SHN_UNDEF as usize);
-                    if need_symtab_shndx {
-                        symtab_shndx.iowrite_with(index as u32, ctx.le).unwrap();
-                    }
-                    if index >= elf::SHN_LORESERVE as usize {
-                        elf::SHN_XINDEX as usize
-                    } else {
-                        index
-                    }
+            let section = if symbol.kind == SymbolKind::File {
+                SymbolSection::Absolute
+            } else {
+                symbol.section
+            };
+            let (st_shndx, xindex) = match section {
+                SymbolSection::Undefined => (elf::SHN_UNDEF, 0),
+                SymbolSection::Absolute => (elf::SHN_ABS, 0),
+                SymbolSection::Common => (elf::SHN_COMMON, 0),
+                SymbolSection::Section(id) => {
+                    let index = section_offsets[id.0].index;
+                    (
+                        index as u32,
+                        if index >= elf::SHN_LORESERVE as usize {
+                            elf::SHN_XINDEX as usize
+                        } else {
+                            index
+                        },
+                    )
                 }
             };
             let st_name = symbol_offsets[index]
@@ -452,13 +457,16 @@ impl Object {
                         st_name,
                         st_info: (st_bind << 4) + st_type,
                         st_other,
-                        st_shndx,
+                        st_shndx: st_shndx as usize,
                         st_value: symbol.value,
                         st_size: symbol.size,
                     },
                     ctx,
                 )
                 .unwrap();
+            if need_symtab_shndx {
+                symtab_shndx.iowrite_with(xindex, ctx.le).unwrap();
+            }
         };
         for (index, symbol) in self.symbols.iter().enumerate() {
             if symbol.is_local() {
@@ -597,7 +605,7 @@ impl Object {
                 | SectionKind::Unknown
                 | SectionKind::Metadata
                 | SectionKind::Linker => 0,
-                SectionKind::TlsVariables => {
+                SectionKind::Common | SectionKind::TlsVariables => {
                     return Err(format!("unimplemented section {:?}", section.kind))
                 }
             };

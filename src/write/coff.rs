@@ -54,6 +54,10 @@ impl Object {
                 // Unsupported section.
                 (&[], &[], SectionKind::TlsVariables)
             }
+            StandardSection::Common => {
+                // Unsupported section.
+                (&[], &[], SectionKind::Common)
+            }
         }
     }
 
@@ -132,7 +136,7 @@ impl Object {
             kind: SymbolKind::Data,
             scope: SymbolScope::Compilation,
             weak: false,
-            section: Some(section_id),
+            section: SymbolSection::Section(section_id),
         });
         self.stub_symbols.insert(symbol_id, stub_id);
 
@@ -268,7 +272,8 @@ impl Object {
                         | coff::IMAGE_SCN_MEM_DISCARDABLE
                 }
                 SectionKind::Linker => coff::IMAGE_SCN_LNK_INFO | coff::IMAGE_SCN_LNK_REMOVE,
-                SectionKind::Tls
+                SectionKind::Common
+                | SectionKind::Tls
                 | SectionKind::UninitializedTls
                 | SectionKind::TlsVariables
                 | SectionKind::Unknown
@@ -390,7 +395,18 @@ impl Object {
         debug_assert_eq!(symtab_offset, buffer.len());
         for (index, symbol) in self.symbols.iter().enumerate() {
             let mut name = &symbol.name[..];
-            let mut section_number = symbol.section.map(|x| x.0 + 1).unwrap_or(0) as i16;
+            let section_number = match symbol.section {
+                SymbolSection::Undefined => {
+                    if symbol.kind == SymbolKind::File {
+                        coff::IMAGE_SYM_DEBUG
+                    } else {
+                        coff::IMAGE_SYM_UNDEFINED
+                    }
+                }
+                SymbolSection::Absolute => coff::IMAGE_SYM_ABSOLUTE,
+                SymbolSection::Common => coff::IMAGE_SYM_UNDEFINED,
+                SymbolSection::Section(id) => (id.0 + 1) as i16,
+            };
             let typ = if symbol.kind == SymbolKind::Text {
                 coff::IMAGE_SYM_DTYPE_FUNCTION << coff::IMAGE_SYM_DTYPE_SHIFT
             } else {
@@ -400,31 +416,40 @@ impl Object {
                 SymbolKind::File => {
                     // Name goes in auxilary symbol records.
                     name = b".file";
-                    section_number = coff::IMAGE_SYM_DEBUG;
                     coff::IMAGE_SYM_CLASS_FILE
                 }
                 SymbolKind::Section => coff::IMAGE_SYM_CLASS_STATIC,
                 SymbolKind::Label => coff::IMAGE_SYM_CLASS_LABEL,
                 SymbolKind::Text | SymbolKind::Data => {
-                    match symbol.scope {
-                        _ if symbol.is_undefined() => coff::IMAGE_SYM_CLASS_EXTERNAL,
-                        // TODO: does this need aux symbol records too?
-                        _ if symbol.weak => coff::IMAGE_SYM_CLASS_WEAK_EXTERNAL,
-                        SymbolScope::Unknown => {
-                            return Err(format!("unimplemented symbol scope {:?}", symbol))
-                        }
-                        SymbolScope::Compilation => coff::IMAGE_SYM_CLASS_STATIC,
-                        SymbolScope::Linkage | SymbolScope::Dynamic => {
-                            coff::IMAGE_SYM_CLASS_EXTERNAL
+                    match symbol.section {
+                        SymbolSection::Undefined => coff::IMAGE_SYM_CLASS_EXTERNAL_DEF,
+                        SymbolSection::Common => coff::IMAGE_SYM_CLASS_EXTERNAL,
+                        SymbolSection::Absolute | SymbolSection::Section(_) => {
+                            match symbol.scope {
+                                // TODO: does this need aux symbol records too?
+                                _ if symbol.weak => coff::IMAGE_SYM_CLASS_WEAK_EXTERNAL,
+                                SymbolScope::Unknown => {
+                                    return Err(format!("unimplemented symbol scope {:?}", symbol));
+                                }
+                                SymbolScope::Compilation => coff::IMAGE_SYM_CLASS_STATIC,
+                                SymbolScope::Linkage | SymbolScope::Dynamic => {
+                                    coff::IMAGE_SYM_CLASS_EXTERNAL
+                                }
+                            }
                         }
                     }
                 }
-                _ => return Err(format!("unimplemented symbol {:?}", symbol.kind)),
+                _ => return Err(format!("unimplemented symbol kind {:?}", symbol)),
             };
             let number_of_aux_symbols = symbol_offsets[index].aux_count;
+            let value = if symbol.section == SymbolSection::Common {
+                symbol.size as u32
+            } else {
+                symbol.value as u32
+            };
             let mut coff_symbol = coff::Symbol {
                 name: [0; 8],
-                value: symbol.value as u32,
+                value,
                 section_number,
                 typ,
                 storage_class,
@@ -447,7 +472,7 @@ impl Object {
                 }
                 SymbolKind::Section => {
                     debug_assert_eq!(number_of_aux_symbols, 1);
-                    let section = &self.sections[symbol.section.unwrap().0];
+                    let section = &self.sections[symbol.section.id().unwrap().0];
                     buffer
                         .iowrite_with(
                             coff::AuxSectionDefinition {
@@ -455,6 +480,7 @@ impl Object {
                                 number_of_relocations: section.relocations.len() as u16,
                                 number_of_line_numbers: 0,
                                 checksum: checksum(&section.data),
+                                // TODO: only for COMDAT
                                 number: section_number as u16,
                                 // TODO: COMDAT
                                 selection: 0,

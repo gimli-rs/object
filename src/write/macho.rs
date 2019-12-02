@@ -74,6 +74,7 @@ impl Object {
                 &b"__thread_vars"[..],
                 SectionKind::TlsVariables,
             ),
+            StandardSection::Common => (&b"__DATA"[..], &b"__common"[..], SectionKind::Common),
         }
     }
 
@@ -88,7 +89,7 @@ impl Object {
                     kind: SymbolKind::Text,
                     scope: SymbolScope::Dynamic,
                     weak: false,
-                    section: None,
+                    section: SymbolSection::Undefined,
                 });
                 self.tlv_bootstrap = Some(id);
                 id
@@ -120,7 +121,7 @@ impl Object {
             kind: SymbolKind::Tls,
             scope: SymbolScope::Compilation,
             weak: false,
-            section: None,
+            section: SymbolSection::Undefined,
         });
 
         // Add the tlv entry.
@@ -164,7 +165,7 @@ impl Object {
         let symbol = self.symbol_mut(symbol_id);
         symbol.value = offset;
         symbol.size = size;
-        symbol.section = Some(section);
+        symbol.section = SymbolSection::Section(section);
 
         init_symbol_id
     }
@@ -222,17 +223,27 @@ impl Object {
         let mut address = 0;
         for (index, section) in self.sections.iter().enumerate() {
             section_offsets[index].index = 1 + index;
-            let len = section.data.len();
-            if len != 0 {
-                offset = align(offset, section.align as usize);
-                section_offsets[index].offset = offset;
-                offset += len;
-            } else {
-                section_offsets[index].offset = offset;
+            if !section.is_bss() {
+                let len = section.data.len();
+                if len != 0 {
+                    offset = align(offset, section.align as usize);
+                    section_offsets[index].offset = offset;
+                    offset += len;
+                } else {
+                    section_offsets[index].offset = offset;
+                }
+                address = align_u64(address, section.align);
+                section_offsets[index].address = address;
+                address += section.size;
             }
-            address = align_u64(address, section.align);
-            section_offsets[index].address = address;
-            address += section.size;
+        }
+        for (index, section) in self.sections.iter().enumerate() {
+            if section.kind.is_bss() {
+                assert!(section.data.is_empty());
+                address = align_u64(address, section.align);
+                section_offsets[index].address = address;
+                address += section.size;
+            }
         }
         let segment_data_size = offset - segment_data_offset;
 
@@ -241,11 +252,11 @@ impl Object {
         let mut symbol_offsets = vec![SymbolOffsets::default(); self.symbols.len()];
         let mut nsyms = 0;
         for (index, symbol) in self.symbols.iter().enumerate() {
-            if !symbol.is_undefined() {
-                match symbol.kind {
-                    SymbolKind::Text | SymbolKind::Data | SymbolKind::Tls => {}
-                    SymbolKind::File | SymbolKind::Section => continue,
-                    _ => return Err(format!("unimplemented symbol {:?}", symbol)),
+            match symbol.kind {
+                SymbolKind::Unknown | SymbolKind::Text | SymbolKind::Data | SymbolKind::Tls => {}
+                SymbolKind::File | SymbolKind::Section => continue,
+                SymbolKind::Null | SymbolKind::Label => {
+                    return Err(format!("unimplemented symbol {:?}", symbol))
                 }
             }
             symbol_offsets[index].index = nsyms;
@@ -350,7 +361,7 @@ impl Object {
                 SectionKind::Data => 0,
                 SectionKind::ReadOnlyData => 0,
                 SectionKind::ReadOnlyString => mach::S_CSTRING_LITERALS,
-                SectionKind::UninitializedData => mach::S_ZEROFILL,
+                SectionKind::UninitializedData | SectionKind::Common => mach::S_ZEROFILL,
                 SectionKind::Tls => mach::S_THREAD_LOCAL_REGULAR,
                 SectionKind::UninitializedTls => mach::S_THREAD_LOCAL_ZEROFILL,
                 SectionKind::TlsVariables => mach::S_THREAD_LOCAL_VARIABLES,
@@ -410,19 +421,21 @@ impl Object {
         write_align(&mut buffer, pointer_align);
         debug_assert_eq!(symtab_offset, buffer.len());
         for (index, symbol) in self.symbols.iter().enumerate() {
-            if !symbol.is_undefined() {
-                match symbol.kind {
-                    SymbolKind::Text | SymbolKind::Data | SymbolKind::Tls => {}
-                    SymbolKind::File | SymbolKind::Section => continue,
-                    _ => return Err(format!("unimplemented symbol {:?}", symbol)),
+            match symbol.kind {
+                SymbolKind::Unknown | SymbolKind::Text | SymbolKind::Data | SymbolKind::Tls => {}
+                SymbolKind::File | SymbolKind::Section => continue,
+                SymbolKind::Null | SymbolKind::Label => {
+                    return Err(format!("unimplemented symbol {:?}", symbol))
                 }
             }
             // TODO: N_STAB
-            // TODO: N_ABS
-            let mut n_type = if symbol.is_undefined() {
-                mach::N_UNDF | mach::N_EXT
-            } else {
-                mach::N_SECT
+            let (mut n_type, n_sect) = match symbol.section {
+                SymbolSection::Undefined => (mach::N_UNDF | mach::N_EXT, 0),
+                SymbolSection::Absolute => (mach::N_ABS, 0),
+                SymbolSection::Common => {
+                    return Err(format!("unimplemented symbol.section {:?}", symbol.section))
+                }
+                SymbolSection::Section(id) => (mach::N_SECT, id.0 + 1),
             };
             match symbol.scope {
                 SymbolScope::Unknown | SymbolScope::Compilation => {}
@@ -443,7 +456,7 @@ impl Object {
                 }
             }
 
-            let n_value = match symbol.section {
+            let n_value = match symbol.section.id() {
                 Some(section) => section_offsets[section.0].address + symbol.value,
                 None => symbol.value,
             };
@@ -458,7 +471,7 @@ impl Object {
                     mach::Nlist {
                         n_strx,
                         n_type,
-                        n_sect: symbol.section.map(|x| x.0 + 1).unwrap_or(0),
+                        n_sect,
                         n_desc,
                         n_value,
                     },
@@ -481,7 +494,7 @@ impl Object {
                     let r_symbolnum;
                     let symbol = &self.symbols[reloc.symbol.0];
                     if symbol.kind == SymbolKind::Section {
-                        r_symbolnum = section_offsets[symbol.section.unwrap().0].index as u32;
+                        r_symbolnum = section_offsets[symbol.section.id().unwrap().0].index as u32;
                         r_extern = 0;
                     } else {
                         r_symbolnum = symbol_offsets[reloc.symbol.0].index as u32;

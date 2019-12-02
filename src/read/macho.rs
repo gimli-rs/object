@@ -10,7 +10,7 @@ use uuid::Uuid;
 use crate::read::{
     self, Object, ObjectSection, ObjectSegment, Relocation, RelocationEncoding, RelocationKind,
     RelocationTarget, SectionIndex, SectionKind, Symbol, SymbolIndex, SymbolKind, SymbolMap,
-    SymbolScope,
+    SymbolScope, SymbolSection,
 };
 
 /// A Mach-O object file.
@@ -170,8 +170,7 @@ where
                 address: section.address() + section.size(),
                 size: 0,
                 kind: SymbolKind::Section,
-                section_index: None,
-                undefined: false,
+                section: SymbolSection::Undefined,
                 weak: false,
                 scope: SymbolScope::Compilation,
             });
@@ -425,6 +424,7 @@ impl<'data> MachOSectionInternal<'data> {
                 ("__DATA", "__data") => SectionKind::Data,
                 ("__DATA", "__const") => SectionKind::ReadOnlyData,
                 ("__DATA", "__bss") => SectionKind::UninitializedData,
+                ("__DATA", "__common") => SectionKind::Common,
                 ("__DATA", "__thread_data") => SectionKind::Tls,
                 ("__DATA", "__thread_bss") => SectionKind::UninitializedTls,
                 ("__DATA", "__thread_vars") => SectionKind::TlsVariables,
@@ -475,34 +475,32 @@ fn parse_symbol<'data>(
     if nlist.n_type & mach::symbols::N_STAB != 0 {
         return None;
     }
-    let n_type = nlist.n_type & mach::symbols::NLIST_TYPE_MASK;
-    let section_index = if n_type == mach::symbols::N_SECT {
-        if nlist.n_sect == 0 {
-            None
-        } else {
-            Some(SectionIndex(nlist.n_sect))
+    let section = match nlist.n_type & mach::symbols::NLIST_TYPE_MASK {
+        mach::symbols::N_UNDF => SymbolSection::Undefined,
+        mach::symbols::N_ABS => SymbolSection::Absolute,
+        mach::symbols::N_SECT if nlist.n_sect != 0 => {
+            SymbolSection::Section(SectionIndex(nlist.n_sect))
         }
-    } else {
-        // TODO: better handling for other n_type values
-        None
+        _ => SymbolSection::Unknown,
     };
-    let kind = section_index
+    let kind = section
+        .index()
         .and_then(|index| file.section_internal(index))
         .map(|section| match section.kind {
             SectionKind::Text => SymbolKind::Text,
             SectionKind::Data
             | SectionKind::ReadOnlyData
             | SectionKind::ReadOnlyString
-            | SectionKind::UninitializedData => SymbolKind::Data,
+            | SectionKind::UninitializedData
+            | SectionKind::Common => SymbolKind::Data,
             SectionKind::Tls | SectionKind::UninitializedTls | SectionKind::TlsVariables => {
                 SymbolKind::Tls
             }
             _ => SymbolKind::Unknown,
         })
         .unwrap_or(SymbolKind::Unknown);
-    let undefined = nlist.is_undefined();
     let weak = nlist.is_weak();
-    let scope = if undefined {
+    let scope = if section == SymbolSection::Undefined {
         SymbolScope::Unknown
     } else if nlist.n_type & mach::symbols::N_EXT == 0 {
         SymbolScope::Compilation
@@ -517,8 +515,7 @@ fn parse_symbol<'data>(
         // Only calculated for symbol maps
         size: 0,
         kind,
-        section_index,
-        undefined,
+        section,
         weak,
         scope,
     })

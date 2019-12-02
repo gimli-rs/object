@@ -1,7 +1,9 @@
 use std::collections::HashMap;
 use std::{env, fs, process};
 
-use object::{write, Object, ObjectSection, RelocationTarget, SectionKind, SymbolKind};
+use object::{
+    write, Object, ObjectSection, RelocationTarget, SectionKind, SymbolKind, SymbolSection,
+};
 
 fn main() {
     let mut args = env::args();
@@ -38,6 +40,7 @@ fn main() {
 
     let mut out_object = write::Object::new(in_object.format(), in_object.architecture());
     out_object.mangling = write::Mangling::None;
+    // TODO: copy MH_SUBSECTIONS_VIA_SYMBOLS
 
     let mut out_sections = HashMap::new();
     for in_section in in_object.sections() {
@@ -63,12 +66,15 @@ fn main() {
         if in_symbol.kind() == SymbolKind::Null {
             continue;
         }
-        let (section, value) = match in_symbol.section_index() {
-            Some(index) => (
-                Some(*out_sections.get(&index).unwrap()),
+        let (section, value) = match in_symbol.section() {
+            SymbolSection::Unknown => panic!("unknown symbol section for {:?}", in_symbol),
+            SymbolSection::Undefined => (write::SymbolSection::Undefined, in_symbol.address()),
+            SymbolSection::Absolute => (write::SymbolSection::Absolute, in_symbol.address()),
+            SymbolSection::Common => (write::SymbolSection::Common, in_symbol.address()),
+            SymbolSection::Section(index) => (
+                write::SymbolSection::Section(*out_sections.get(&index).unwrap()),
                 in_symbol.address() - in_object.section_by_index(index).unwrap().address(),
             ),
-            None => (None, in_symbol.address()),
         };
         let out_symbol = write::Symbol {
             name: in_symbol.name().unwrap_or("").as_bytes().to_vec(),

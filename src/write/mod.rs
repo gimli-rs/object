@@ -232,7 +232,7 @@ impl Object {
         // Defined symbols must have a scope.
         debug_assert!(symbol.is_undefined() || symbol.scope != SymbolScope::Unknown);
         if symbol.kind == SymbolKind::Section {
-            return self.section_symbol(symbol.section.unwrap());
+            return self.section_symbol(symbol.section.id().unwrap());
         }
         if !symbol.name.is_empty()
             && (symbol.kind == SymbolKind::Text
@@ -258,8 +258,31 @@ impl Object {
     }
 
     /// Return true if the file format supports `StandardSection::UninitializedTls`.
+    #[inline]
     pub fn has_uninitialized_tls(&self) -> bool {
         self.format != BinaryFormat::Coff
+    }
+
+    /// Return true if the file format supports `StandardSection::Common`.
+    #[inline]
+    pub fn has_common(&self) -> bool {
+        self.format == BinaryFormat::Macho
+    }
+
+    /// Add a new common symbol and return its `SymbolId`.
+    ///
+    /// For Mach-O, this appends the symbol to the `__common` section.
+    pub fn add_common_symbol(&mut self, mut symbol: Symbol, size: u64, align: u64) -> SymbolId {
+        if self.has_common() {
+            let symbol_id = self.add_symbol(symbol);
+            let section = self.section_id(StandardSection::Common);
+            self.add_symbol_bss(symbol_id, section, size, align);
+            symbol_id
+        } else {
+            symbol.section = SymbolSection::Common;
+            symbol.size = size;
+            self.add_symbol(symbol)
+        }
     }
 
     /// Add a new file symbol and return its `SymbolId`.
@@ -271,7 +294,7 @@ impl Object {
             kind: SymbolKind::File,
             scope: SymbolScope::Compilation,
             weak: false,
-            section: None,
+            section: SymbolSection::Undefined,
         })
     }
 
@@ -294,7 +317,7 @@ impl Object {
             kind: SymbolKind::Section,
             scope: SymbolScope::Compilation,
             weak: false,
-            section: Some(section_id),
+            section: SymbolSection::Section(section_id),
         });
         section.symbol = Some(symbol_id);
         symbol_id
@@ -355,7 +378,7 @@ impl Object {
         let symbol = self.symbol_mut(symbol_id);
         symbol.value = offset;
         symbol.size = size;
-        symbol.section = Some(section);
+        symbol.section = SymbolSection::Section(section);
     }
 
     /// Convert a symbol to a section symbol and offset.
@@ -370,7 +393,7 @@ impl Object {
             return Ok((symbol_id, 0));
         }
         let symbol_offset = symbol.value;
-        let section = symbol.section.ok_or(())?;
+        let section = symbol.section.id().ok_or(())?;
         let section_symbol = self.section_symbol(section);
         Ok((section_symbol, symbol_offset))
     }
@@ -466,6 +489,8 @@ pub enum StandardSection {
     UninitializedTls,
     /// TLS variable structures. Only supported for Mach-O.
     TlsVariables,
+    /// Common data. Only supported for Mach-O.
+    Common,
 }
 
 impl StandardSection {
@@ -482,9 +507,11 @@ impl StandardSection {
             StandardSection::Tls => SectionKind::Tls,
             StandardSection::UninitializedTls => SectionKind::UninitializedTls,
             StandardSection::TlsVariables => SectionKind::TlsVariables,
+            StandardSection::Common => SectionKind::Common,
         }
     }
 
+    // TODO: remembering to update this is error-prone, can we do better?
     fn all() -> &'static [StandardSection] {
         &[
             StandardSection::Text,
@@ -496,6 +523,7 @@ impl StandardSection {
             StandardSection::Tls,
             StandardSection::UninitializedTls,
             StandardSection::TlsVariables,
+            StandardSection::Common,
         ]
     }
 }
@@ -518,10 +546,10 @@ pub struct Section {
 }
 
 impl Section {
-    /// Return true if this section contains uninitialized data.
+    /// Return true if this section contains zerofill data.
     #[inline]
     pub fn is_bss(&self) -> bool {
-        self.kind == SectionKind::UninitializedData || self.kind == SectionKind::UninitializedTls
+        self.kind.is_bss()
     }
 
     /// Set the data for a section.
@@ -575,6 +603,33 @@ impl Section {
     }
 }
 
+/// The section where a symbol is defined.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum SymbolSection {
+    /// The symbol is undefined.
+    Undefined,
+    /// The symbol has an absolute value.
+    Absolute,
+    /// The symbol is a zero-initialized symbol that will be combined with duplicate definitions.
+    Common,
+    /// The symbol is defined in the given section.
+    Section(SectionId),
+}
+
+impl SymbolSection {
+    /// Returns the section id for the section where the symbol is defined.
+    ///
+    /// May return `None` if the symbol is not defined in a section.
+    #[inline]
+    pub fn id(self) -> Option<SectionId> {
+        if let SymbolSection::Section(id) = self {
+            Some(id)
+        } else {
+            None
+        }
+    }
+}
+
 /// An identifier used to reference a symbol.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct SymbolId(usize);
@@ -597,16 +652,22 @@ pub struct Symbol {
     /// Whether the symbol has weak binding.
     pub weak: bool,
     /// The section containing the symbol.
-    ///
-    /// Set to `None` for undefined symbols.
-    pub section: Option<SectionId>,
+    pub section: SymbolSection,
 }
 
 impl Symbol {
     /// Return true if the symbol is undefined.
     #[inline]
     pub fn is_undefined(&self) -> bool {
-        self.section.is_none()
+        self.section == SymbolSection::Undefined
+    }
+
+    /// Return true if the symbol is common data.
+    ///
+    /// Note: does not check for `SymbolSection::Section` with `SectionKind::Common`.
+    #[inline]
+    pub fn is_common(&self) -> bool {
+        self.section == SymbolSection::Common
     }
 
     /// Return true if the symbol scope is local.

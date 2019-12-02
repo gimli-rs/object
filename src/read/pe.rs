@@ -6,7 +6,7 @@ use target_lexicon::Architecture;
 
 use crate::read::{
     self, Object, ObjectSection, ObjectSegment, Relocation, SectionIndex, SectionKind, Symbol,
-    SymbolIndex, SymbolKind, SymbolMap, SymbolScope,
+    SymbolIndex, SymbolKind, SymbolMap, SymbolScope, SymbolSection,
 };
 
 /// A PE object file.
@@ -362,8 +362,7 @@ impl<'data, 'file> Iterator for PeSymbolIterator<'data, 'file> {
                     size: 0,
                     kind: SymbolKind::Unknown,
                     // TODO: can we find a section?
-                    section_index: None,
-                    undefined: false,
+                    section: SymbolSection::Unknown,
                     weak: false,
                     scope: SymbolScope::Dynamic,
                 },
@@ -383,8 +382,7 @@ impl<'data, 'file> Iterator for PeSymbolIterator<'data, 'file> {
                     address: 0,
                     size: 0,
                     kind: SymbolKind::Unknown,
-                    section_index: None,
-                    undefined: true,
+                    section: SymbolSection::Undefined,
                     weak: false,
                     scope: SymbolScope::Dynamic,
                 },
