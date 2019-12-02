@@ -2,7 +2,8 @@ use std::collections::HashMap;
 use std::{env, fs, process};
 
 use object::{
-    write, Object, ObjectSection, RelocationTarget, SectionKind, SymbolKind, SymbolSection,
+    write, Object, ObjectSection, RelocationTarget, SectionKind, SymbolFlags, SymbolKind,
+    SymbolSection,
 };
 
 fn main() {
@@ -40,7 +41,7 @@ fn main() {
 
     let mut out_object = write::Object::new(in_object.format(), in_object.architecture());
     out_object.mangling = write::Mangling::None;
-    // TODO: copy MH_SUBSECTIONS_VIA_SYMBOLS
+    out_object.flags = in_object.flags();
 
     let mut out_sections = HashMap::new();
     for in_section in in_object.sections() {
@@ -58,6 +59,7 @@ fn main() {
         } else {
             out_section.set_data(in_section.uncompressed_data().into(), in_section.align());
         }
+        out_section.flags = in_section.flags();
         out_sections.insert(in_section.index(), section_id);
     }
 
@@ -76,6 +78,21 @@ fn main() {
                 in_symbol.address() - in_object.section_by_index(index).unwrap().address(),
             ),
         };
+        let flags = match in_symbol.flags() {
+            SymbolFlags::None => SymbolFlags::None,
+            SymbolFlags::Elf { st_info, st_other } => SymbolFlags::Elf { st_info, st_other },
+            SymbolFlags::MachO { n_desc } => SymbolFlags::MachO { n_desc },
+            SymbolFlags::CoffSection {
+                selection,
+                associative_section,
+            } => {
+                let associative_section = *out_sections.get(&associative_section).unwrap();
+                SymbolFlags::CoffSection {
+                    selection,
+                    associative_section,
+                }
+            }
+        };
         let out_symbol = write::Symbol {
             name: in_symbol.name().unwrap_or("").as_bytes().to_vec(),
             value,
@@ -84,6 +101,7 @@ fn main() {
             scope: in_symbol.scope(),
             weak: in_symbol.is_weak(),
             section,
+            flags,
         };
         let symbol_id = out_object.add_symbol(out_symbol);
         out_symbols.insert(symbol_index, symbol_id);

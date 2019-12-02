@@ -1,7 +1,10 @@
 //! Interface for reading object files.
 
 use crate::alloc::vec::Vec;
-use crate::common::{RelocationEncoding, RelocationKind, SectionKind, SymbolKind, SymbolScope};
+use crate::common::{
+    FileFlags, RelocationEncoding, RelocationKind, SectionFlags, SectionKind, SymbolFlags,
+    SymbolKind, SymbolScope,
+};
 
 mod any;
 pub use any::*;
@@ -91,6 +94,7 @@ pub struct Symbol<'data> {
     section: SymbolSection,
     weak: bool,
     scope: SymbolScope,
+    flags: SymbolFlags<SectionIndex>,
 }
 
 impl<'data> Symbol<'data> {
@@ -152,6 +156,12 @@ impl<'data> Symbol<'data> {
     #[inline]
     pub fn scope(&self) -> SymbolScope {
         self.scope
+    }
+
+    /// Symbol flags that are specific to each file format.
+    #[inline]
+    pub fn flags(&self) -> SymbolFlags<SectionIndex> {
+        self.flags
     }
 
     /// The name of the symbol.

@@ -5,8 +5,9 @@ use std::{cmp, iter, slice};
 use target_lexicon::Architecture;
 
 use crate::read::{
-    self, Object, ObjectSection, ObjectSegment, Relocation, SectionIndex, SectionKind, Symbol,
-    SymbolIndex, SymbolKind, SymbolMap, SymbolScope, SymbolSection,
+    self, FileFlags, Object, ObjectSection, ObjectSegment, Relocation, SectionFlags, SectionIndex,
+    SectionKind, Symbol, SymbolFlags, SymbolIndex, SymbolKind, SymbolMap, SymbolScope,
+    SymbolSection,
 };
 
 /// A PE object file.
@@ -142,6 +143,12 @@ where
 
     fn entry(&self) -> u64 {
         self.pe.entry as u64
+    }
+
+    fn flags(&self) -> FileFlags {
+        FileFlags::Coff {
+            characteristics: self.pe.header.coff_header.characteristics,
+        }
     }
 }
 
@@ -334,6 +341,12 @@ impl<'data, 'file> ObjectSection<'data> for PeSection<'data, 'file> {
     fn relocations(&self) -> PeRelocationIterator {
         PeRelocationIterator
     }
+
+    fn flags(&self) -> SectionFlags {
+        SectionFlags::Coff {
+            characteristics: self.section.characteristics,
+        }
+    }
 }
 
 /// An iterator over the symbols of a `PeFile`.
@@ -365,6 +378,7 @@ impl<'data, 'file> Iterator for PeSymbolIterator<'data, 'file> {
                     section: SymbolSection::Unknown,
                     weak: false,
                     scope: SymbolScope::Dynamic,
+                    flags: SymbolFlags::None,
                 },
             ));
         }
@@ -385,6 +399,7 @@ impl<'data, 'file> Iterator for PeSymbolIterator<'data, 'file> {
                     section: SymbolSection::Undefined,
                     weak: false,
                     scope: SymbolScope::Dynamic,
+                    flags: SymbolFlags::None,
                 },
             ));
         }

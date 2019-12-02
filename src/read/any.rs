@@ -7,8 +7,8 @@ use uuid::Uuid;
 use crate::read::wasm;
 use crate::read::{coff, elf, macho, pe};
 use crate::read::{
-    Object, ObjectSection, ObjectSegment, Relocation, SectionIndex, SectionKind, Symbol,
-    SymbolIndex, SymbolMap,
+    FileFlags, Object, ObjectSection, ObjectSegment, Relocation, SectionFlags, SectionIndex,
+    SectionKind, Symbol, SymbolIndex, SymbolMap,
 };
 
 /// Evaluate an expression on the contents of a file format enum.
@@ -241,6 +241,10 @@ where
     fn entry(&self) -> u64 {
         with_inner!(self.inner, FileInternal, |x| x.entry())
     }
+
+    fn flags(&self) -> FileFlags {
+        with_inner!(self.inner, FileInternal, |x| x.flags())
+    }
 }
 
 /// An iterator over the segments of a `File`.
@@ -459,6 +463,10 @@ impl<'data, 'file> ObjectSection<'data> for Section<'data, 'file> {
                 |x| x.relocations()
             ),
         }
+    }
+
+    fn flags(&self) -> SectionFlags {
+        with_inner!(self.inner, SectionInternal, |x| x.flags())
     }
 }
 

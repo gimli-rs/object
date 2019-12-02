@@ -32,6 +32,16 @@ struct SymbolOffsets {
 }
 
 impl Object {
+    pub(crate) fn macho_set_subsections_via_symbols(&mut self) {
+        let flags = match self.flags {
+            FileFlags::MachO { flags } => flags,
+            _ => 0,
+        };
+        self.flags = FileFlags::MachO {
+            flags: flags | mach::MH_SUBSECTIONS_VIA_SYMBOLS,
+        };
+    }
+
     pub(crate) fn macho_segment_name(&self, segment: StandardSegment) -> &'static [u8] {
         match segment {
             StandardSegment::Text => &b"__TEXT"[..],
@@ -90,6 +100,7 @@ impl Object {
                     scope: SymbolScope::Dynamic,
                     weak: false,
                     section: SymbolSection::Undefined,
+                    flags: SymbolFlags::None,
                 });
                 self.tlv_bootstrap = Some(id);
                 id
@@ -122,6 +133,7 @@ impl Object {
             scope: SymbolScope::Compilation,
             weak: false,
             section: SymbolSection::Undefined,
+            flags: SymbolFlags::None,
         });
 
         // Add the tlv entry.
@@ -308,6 +320,10 @@ impl Object {
             }
         };
 
+        let flags = match self.flags {
+            FileFlags::MachO { flags } => flags,
+            _ => 0,
+        };
         let header = mach::Header {
             magic: if ctx.is_big() {
                 mach::MH_MAGIC_64
@@ -319,11 +335,7 @@ impl Object {
             filetype: mach::MH_OBJECT,
             ncmds,
             sizeofcmds: sizeofcmds as u32,
-            flags: if self.subsection_via_symbols {
-                mach::MH_SUBSECTIONS_VIA_SYMBOLS
-            } else {
-                0
-            },
+            flags,
             reserved: 0,
         };
         buffer.iowrite_with(header, ctx).unwrap();
@@ -354,23 +366,27 @@ impl Object {
             sectname.pwrite(&*section.name, 0).unwrap();
             let mut segname = [0; 16];
             segname.pwrite(&*section.segment, 0).unwrap();
-            let flags = match section.kind {
-                SectionKind::Text => {
-                    mach::S_ATTR_PURE_INSTRUCTIONS | mach::S_ATTR_SOME_INSTRUCTIONS
+            let flags = if let SectionFlags::MachO { flags } = section.flags {
+                flags
+            } else {
+                match section.kind {
+                    SectionKind::Text => {
+                        mach::S_ATTR_PURE_INSTRUCTIONS | mach::S_ATTR_SOME_INSTRUCTIONS
+                    }
+                    SectionKind::Data => 0,
+                    SectionKind::ReadOnlyData => 0,
+                    SectionKind::ReadOnlyString => mach::S_CSTRING_LITERALS,
+                    SectionKind::UninitializedData | SectionKind::Common => mach::S_ZEROFILL,
+                    SectionKind::Tls => mach::S_THREAD_LOCAL_REGULAR,
+                    SectionKind::UninitializedTls => mach::S_THREAD_LOCAL_ZEROFILL,
+                    SectionKind::TlsVariables => mach::S_THREAD_LOCAL_VARIABLES,
+                    SectionKind::Debug => mach::S_ATTR_DEBUG,
+                    SectionKind::OtherString => mach::S_CSTRING_LITERALS,
+                    SectionKind::Other
+                    | SectionKind::Unknown
+                    | SectionKind::Linker
+                    | SectionKind::Metadata => 0,
                 }
-                SectionKind::Data => 0,
-                SectionKind::ReadOnlyData => 0,
-                SectionKind::ReadOnlyString => mach::S_CSTRING_LITERALS,
-                SectionKind::UninitializedData | SectionKind::Common => mach::S_ZEROFILL,
-                SectionKind::Tls => mach::S_THREAD_LOCAL_REGULAR,
-                SectionKind::UninitializedTls => mach::S_THREAD_LOCAL_ZEROFILL,
-                SectionKind::TlsVariables => mach::S_THREAD_LOCAL_VARIABLES,
-                SectionKind::Debug => mach::S_ATTR_DEBUG,
-                SectionKind::OtherString => mach::S_CSTRING_LITERALS,
-                SectionKind::Other
-                | SectionKind::Unknown
-                | SectionKind::Linker
-                | SectionKind::Metadata => 0,
             };
             buffer
                 .iowrite_with(
@@ -447,14 +463,19 @@ impl Object {
                 }
             }
 
-            let mut n_desc = 0;
-            if symbol.weak {
-                if symbol.is_undefined() {
-                    n_desc |= mach::N_WEAK_REF;
-                } else {
-                    n_desc |= mach::N_WEAK_DEF;
+            let n_desc = if let SymbolFlags::MachO { n_desc } = symbol.flags {
+                n_desc
+            } else {
+                let mut n_desc = 0;
+                if symbol.weak {
+                    if symbol.is_undefined() {
+                        n_desc |= mach::N_WEAK_REF;
+                    } else {
+                        n_desc |= mach::N_WEAK_DEF;
+                    }
                 }
-            }
+                n_desc
+            };
 
             let n_value = match symbol.section.id() {
                 Some(section) => section_offsets[section.0].address + symbol.value,

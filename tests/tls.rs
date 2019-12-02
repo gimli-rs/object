@@ -2,7 +2,9 @@
 
 use object::read::{Object, ObjectSection};
 use object::{read, write};
-use object::{RelocationEncoding, RelocationKind, SectionKind, SymbolKind, SymbolScope};
+use object::{
+    RelocationEncoding, RelocationKind, SectionKind, SymbolFlags, SymbolKind, SymbolScope,
+};
 use target_lexicon::{Architecture, BinaryFormat};
 
 #[test]
@@ -18,6 +20,7 @@ fn macho_x86_64_tls() {
         scope: SymbolScope::Linkage,
         weak: false,
         section: write::SymbolSection::Undefined,
+        flags: SymbolFlags::None,
     });
     object.add_symbol_data(symbol, section, &[1; 30], 4);
 
@@ -30,6 +33,7 @@ fn macho_x86_64_tls() {
         scope: SymbolScope::Linkage,
         weak: false,
         section: write::SymbolSection::Undefined,
+        flags: SymbolFlags::None,
     });
     object.add_symbol_bss(symbol, section, 31, 4);
 

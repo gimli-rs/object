@@ -10,7 +10,10 @@ use std::string::String;
 
 use crate::alloc::vec::Vec;
 use crate::target_lexicon::{Architecture, BinaryFormat, Endianness, PointerWidth};
-use crate::{RelocationEncoding, RelocationKind, SectionKind, SymbolKind, SymbolScope};
+use crate::{
+    FileFlags, RelocationEncoding, RelocationKind, SectionFlags, SectionKind, SymbolFlags,
+    SymbolKind, SymbolScope,
+};
 
 mod coff;
 mod elf;
@@ -28,7 +31,8 @@ pub struct Object {
     symbols: Vec<Symbol>,
     symbol_map: HashMap<Vec<u8>, SymbolId>,
     stub_symbols: HashMap<SymbolId, SymbolId>,
-    subsection_via_symbols: bool,
+    /// File flags that are specific to each file format.
+    pub flags: FileFlags,
     /// The symbol name mangling scheme.
     pub mangling: Mangling,
     /// Mach-O "_tlv_bootstrap" symbol.
@@ -46,7 +50,7 @@ impl Object {
             symbols: Vec::new(),
             symbol_map: HashMap::new(),
             stub_symbols: HashMap::new(),
-            subsection_via_symbols: false,
+            flags: FileFlags::None,
             mangling: Mangling::default(format, architecture),
             tlv_bootstrap: None,
         }
@@ -136,6 +140,7 @@ impl Object {
             data: Vec::new(),
             relocations: Vec::new(),
             symbol: None,
+            flags: SectionFlags::None,
         });
 
         // Add to self.standard_sections if required. This may match multiple standard sections.
@@ -172,8 +177,8 @@ impl Object {
         data: &[u8],
         align: u64,
     ) -> (SectionId, u64) {
-        let section_id = if self.has_subsection_via_symbols() {
-            self.subsection_via_symbols = true;
+        let section_id = if self.has_subsections_via_symbols() {
+            self.set_subsections_via_symbols();
             self.section_id(section)
         } else {
             let (segment, name, kind) = self.subsection_info(section, name);
@@ -183,10 +188,17 @@ impl Object {
         (section_id, offset)
     }
 
-    fn has_subsection_via_symbols(&self) -> bool {
+    fn has_subsections_via_symbols(&self) -> bool {
         match self.format {
             BinaryFormat::Elf | BinaryFormat::Coff => false,
             BinaryFormat::Macho => true,
+            _ => unimplemented!(),
+        }
+    }
+
+    fn set_subsections_via_symbols(&mut self) {
+        match self.format {
+            BinaryFormat::Macho => self.macho_set_subsections_via_symbols(),
             _ => unimplemented!(),
         }
     }
@@ -202,7 +214,7 @@ impl Object {
     }
 
     fn subsection_name(&self, section: &[u8], value: &[u8]) -> Vec<u8> {
-        debug_assert!(!self.has_subsection_via_symbols());
+        debug_assert!(!self.has_subsections_via_symbols());
         match self.format {
             BinaryFormat::Elf => self.elf_subsection_name(section, value),
             BinaryFormat::Coff => self.coff_subsection_name(section, value),
@@ -232,7 +244,13 @@ impl Object {
         // Defined symbols must have a scope.
         debug_assert!(symbol.is_undefined() || symbol.scope != SymbolScope::Unknown);
         if symbol.kind == SymbolKind::Section {
-            return self.section_symbol(symbol.section.id().unwrap());
+            // There can only be one section symbol, but update its flags, since
+            // the automatically generated section symbol will have none.
+            let symbol_id = self.section_symbol(symbol.section.id().unwrap());
+            if symbol.flags != SymbolFlags::None {
+                self.symbol_mut(symbol_id).flags = symbol.flags;
+            }
+            return symbol_id;
         }
         if !symbol.name.is_empty()
             && (symbol.kind == SymbolKind::Text
@@ -295,6 +313,7 @@ impl Object {
             scope: SymbolScope::Compilation,
             weak: false,
             section: SymbolSection::Undefined,
+            flags: SymbolFlags::None,
         })
     }
 
@@ -318,6 +337,7 @@ impl Object {
             scope: SymbolScope::Compilation,
             weak: false,
             section: SymbolSection::Section(section_id),
+            flags: SymbolFlags::None,
         });
         section.symbol = Some(symbol_id);
         symbol_id
@@ -543,6 +563,8 @@ pub struct Section {
     data: Vec<u8>,
     relocations: Vec<Relocation>,
     symbol: Option<SymbolId>,
+    /// Section flags that are specific to each file format.
+    pub flags: SectionFlags,
 }
 
 impl Section {
@@ -653,6 +675,8 @@ pub struct Symbol {
     pub weak: bool,
     /// The section containing the symbol.
     pub section: SymbolSection,
+    /// Symbol flags that are specific to each file format.
+    pub flags: SymbolFlags<SectionId>,
 }
 
 impl Symbol {

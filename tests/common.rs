@@ -2,7 +2,7 @@
 
 use object::read::{Object, ObjectSection};
 use object::{read, write};
-use object::{SectionKind, SymbolKind, SymbolScope};
+use object::{SectionKind, SymbolFlags, SymbolKind, SymbolScope};
 use target_lexicon::{Architecture, BinaryFormat};
 
 #[test]
@@ -17,6 +17,7 @@ fn coff_x86_64_common() {
         scope: SymbolScope::Linkage,
         weak: false,
         section: write::SymbolSection::Undefined,
+        flags: SymbolFlags::None,
     };
     object.add_common_symbol(symbol, 4, 4);
 
@@ -28,6 +29,7 @@ fn coff_x86_64_common() {
         scope: SymbolScope::Linkage,
         weak: false,
         section: write::SymbolSection::Undefined,
+        flags: SymbolFlags::None,
     };
     object.add_common_symbol(symbol, 8, 8);
 
@@ -79,6 +81,7 @@ fn elf_x86_64_common() {
         scope: SymbolScope::Linkage,
         weak: false,
         section: write::SymbolSection::Undefined,
+        flags: SymbolFlags::None,
     };
     object.add_common_symbol(symbol, 4, 4);
 
@@ -90,6 +93,7 @@ fn elf_x86_64_common() {
         scope: SymbolScope::Linkage,
         weak: false,
         section: write::SymbolSection::Undefined,
+        flags: SymbolFlags::None,
     };
     object.add_common_symbol(symbol, 8, 8);
 
@@ -145,6 +149,7 @@ fn macho_x86_64_common() {
         scope: SymbolScope::Linkage,
         weak: false,
         section: write::SymbolSection::Undefined,
+        flags: SymbolFlags::None,
     };
     object.add_common_symbol(symbol, 4, 4);
 
@@ -156,6 +161,7 @@ fn macho_x86_64_common() {
         scope: SymbolScope::Linkage,
         weak: false,
         section: write::SymbolSection::Undefined,
+        flags: SymbolFlags::None,
     };
     object.add_common_symbol(symbol, 8, 8);
 

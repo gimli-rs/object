@@ -6,9 +6,9 @@ use std::{iter, slice};
 use target_lexicon::Architecture;
 
 use crate::read::{
-    self, Object, ObjectSection, ObjectSegment, Relocation, RelocationEncoding, RelocationKind,
-    RelocationTarget, SectionIndex, SectionKind, Symbol, SymbolIndex, SymbolKind, SymbolMap,
-    SymbolScope, SymbolSection,
+    self, FileFlags, Object, ObjectSection, ObjectSegment, Relocation, RelocationEncoding,
+    RelocationKind, RelocationTarget, SectionFlags, SectionIndex, SectionKind, Symbol, SymbolFlags,
+    SymbolIndex, SymbolKind, SymbolMap, SymbolScope, SymbolSection,
 };
 
 /// A COFF object file.
@@ -185,6 +185,12 @@ where
 
     fn entry(&self) -> u64 {
         0
+    }
+
+    fn flags(&self) -> FileFlags {
+        FileFlags::Coff {
+            characteristics: self.coff.header.characteristics,
+        }
     }
 }
 
@@ -366,6 +372,12 @@ impl<'data, 'file> ObjectSection<'data> for CoffSection<'data, 'file> {
             relocations: self.section.relocations(self.file.data).unwrap_or_default(),
         }
     }
+
+    fn flags(&self) -> SectionFlags {
+        SectionFlags::Coff {
+            characteristics: self.section.characteristics,
+        }
+    }
 }
 
 impl<'data, 'file> fmt::Debug for CoffSymbolIterator<'data, 'file> {
@@ -411,15 +423,19 @@ fn parse_symbol<'data>(
     } else {
         SymbolKind::Data
     };
+    let mut flags = SymbolFlags::None;
     // FIXME: symbol.value is a section offset for non-absolute symbols, not an address
     let (kind, address, size) = match symbol.storage_class {
         pe::symbol::IMAGE_SYM_CLASS_STATIC => {
             if symbol.value == 0 && symbol.number_of_aux_symbols > 0 {
-                let size = coff
-                    .symbols
-                    .aux_section_definition(index + 1)
-                    .map(|aux| u64::from(aux.length))
-                    .unwrap_or(0);
+                let mut size = 0;
+                if let Some(aux) = coff.symbols.aux_section_definition(index + 1) {
+                    size = u64::from(aux.length);
+                    flags = SymbolFlags::CoffSection {
+                        selection: aux.selection,
+                        associative_section: SectionIndex(aux.number as usize),
+                    };
+                }
                 (SymbolKind::Section, 0, size)
             } else {
                 (derived_kind, u64::from(symbol.value), 0)
@@ -481,6 +497,7 @@ fn parse_symbol<'data>(
         section,
         weak,
         scope,
+        flags,
     }
 }
 
