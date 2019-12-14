@@ -309,13 +309,9 @@ impl Object {
             let mut coff_section = coff::SectionTable {
                 name: [0; 8],
                 real_name: None,
-                virtual_size: if section.data.is_empty() {
-                    section.size as u32
-                } else {
-                    0
-                },
+                virtual_size: 0,
                 virtual_address: 0,
-                size_of_raw_data: section.data.len() as u32,
+                size_of_raw_data: section.size as u32,
                 pointer_to_raw_data: if section.data.is_empty() {
                     0
                 } else {
@@ -492,7 +488,7 @@ impl Object {
                     buffer
                         .iowrite_with(
                             coff::AuxSectionDefinition {
-                                length: section.data.len() as u32,
+                                length: section.size as u32,
                                 number_of_relocations: section.relocations.len() as u16,
                                 number_of_line_numbers: 0,
                                 checksum: checksum(&section.data),
