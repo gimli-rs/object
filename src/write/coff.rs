@@ -93,7 +93,7 @@ impl Object {
             Architecture::X86_64 => match relocation.kind {
                 RelocationKind::Relative => {
                     // IMAGE_REL_AMD64_REL32 through to IMAGE_REL_AMD64_REL32_5
-                    if relocation.addend >= -4 && relocation.addend <= -9 {
+                    if relocation.addend <= -4 && relocation.addend >= -9 {
                         0
                     } else {
                         relocation.addend + 4
