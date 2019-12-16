@@ -278,9 +278,13 @@ impl<'data, 'file> Iterator for CoffSectionIterator<'data, 'file> {
 
 impl<'data, 'file> CoffSection<'data, 'file> {
     fn raw_data(&self) -> &'data [u8] {
-        let offset = self.section.pointer_to_raw_data as usize;
-        let size = self.section.size_of_raw_data as usize;
-        &self.file.data[offset..][..size]
+        if self.section.characteristics & pe::section_table::IMAGE_SCN_CNT_UNINITIALIZED_DATA != 0 {
+            &[]
+        } else {
+            let offset = self.section.pointer_to_raw_data as usize;
+            let size = self.section.size_of_raw_data as usize;
+            &self.file.data[offset..][..size]
+        }
     }
 }
 
@@ -310,10 +314,14 @@ impl<'data, 'file> ObjectSection<'data> for CoffSection<'data, 'file> {
 
     #[inline]
     fn file_range(&self) -> Option<(u64, u64)> {
-        Some((
-            self.section.pointer_to_raw_data as u64,
-            self.section.size_of_raw_data as u64,
-        ))
+        if self.section.characteristics & pe::section_table::IMAGE_SCN_CNT_UNINITIALIZED_DATA != 0 {
+            None
+        } else {
+            Some((
+                self.section.pointer_to_raw_data as u64,
+                self.section.size_of_raw_data as u64,
+            ))
+        }
     }
 
     fn data(&self) -> Cow<'data, [u8]> {
