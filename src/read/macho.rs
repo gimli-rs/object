@@ -8,9 +8,9 @@ use target_lexicon::{Aarch64Architecture, Architecture, ArmArchitecture};
 use uuid::Uuid;
 
 use crate::read::{
-    self, Object, ObjectSection, ObjectSegment, Relocation, RelocationEncoding, RelocationKind,
-    RelocationTarget, SectionIndex, SectionKind, Symbol, SymbolIndex, SymbolKind, SymbolMap,
-    SymbolScope, SymbolSection,
+    self, FileFlags, Object, ObjectSection, ObjectSegment, Relocation, RelocationEncoding,
+    RelocationKind, RelocationTarget, SectionFlags, SectionIndex, SectionKind, Symbol, SymbolFlags,
+    SymbolIndex, SymbolKind, SymbolMap, SymbolScope, SymbolSection,
 };
 
 /// A Mach-O object file.
@@ -173,6 +173,7 @@ where
                 section: SymbolSection::Undefined,
                 weak: false,
                 scope: SymbolScope::Compilation,
+                flags: SymbolFlags::None,
             });
         }
 
@@ -225,6 +226,12 @@ where
 
     fn entry(&self) -> u64 {
         self.macho.entry
+    }
+
+    fn flags(&self) -> FileFlags {
+        FileFlags::MachO {
+            flags: self.macho.header.flags,
+        }
     }
 }
 
@@ -403,6 +410,12 @@ impl<'data, 'file> ObjectSection<'data> for MachOSection<'data, 'file> {
                 .iter_relocations(self.file.data, self.file.ctx),
         }
     }
+
+    fn flags(&self) -> SectionFlags {
+        SectionFlags::MachO {
+            flags: self.internal().section.flags,
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -509,6 +522,9 @@ fn parse_symbol<'data>(
     } else {
         SymbolScope::Dynamic
     };
+    let flags = SymbolFlags::MachO {
+        n_desc: nlist.n_desc,
+    };
     Some(Symbol {
         name: Some(name),
         address: nlist.n_value,
@@ -518,6 +534,7 @@ fn parse_symbol<'data>(
         section,
         weak,
         scope,
+        flags,
     })
 }
 

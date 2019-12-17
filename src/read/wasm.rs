@@ -5,8 +5,8 @@ use std::{iter, slice};
 use target_lexicon::Architecture;
 
 use crate::read::{
-    Object, ObjectSection, ObjectSegment, Relocation, SectionIndex, SectionKind, Symbol,
-    SymbolIndex, SymbolMap,
+    FileFlags, Object, ObjectSection, ObjectSegment, Relocation, SectionFlags, SectionIndex,
+    SectionKind, Symbol, SymbolIndex, SymbolMap,
 };
 
 /// A WebAssembly object file.
@@ -105,6 +105,10 @@ impl<'file> Object<'static, 'file> for WasmFile {
             elements::Section::Custom(ref c) => c.name().starts_with(".debug_"),
             _ => false,
         })
+    }
+
+    fn flags(&self) -> FileFlags {
+        FileFlags::None
     }
 }
 
@@ -285,6 +289,10 @@ impl<'file> ObjectSection<'static> for WasmSection<'file> {
 
     fn relocations(&self) -> WasmRelocationIterator {
         WasmRelocationIterator
+    }
+
+    fn flags(&self) -> SectionFlags {
+        SectionFlags::None
     }
 }
 

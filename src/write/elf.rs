@@ -318,6 +318,11 @@ impl Object {
                 ))
             }
         };
+        let e_flags = if let FileFlags::Elf { e_flags } = self.flags {
+            e_flags
+        } else {
+            0
+        };
         let mut header = elf::Header {
             e_ident: [0; 16],
             e_type: elf::ET_REL,
@@ -326,7 +331,7 @@ impl Object {
             e_entry: 0,
             e_phoff: 0,
             e_shoff: e_shoff as u64,
-            e_flags: 0,
+            e_flags,
             e_ehsize: e_ehsize as u16,
             e_phentsize: 0,
             e_phnum: 0,
@@ -389,39 +394,46 @@ impl Object {
             symtab_shndx.iowrite_with(0, ctx.le).unwrap();
         }
         let mut write_symbol = |index: usize, symbol: &Symbol| {
-            let st_type = match symbol.kind {
-                SymbolKind::Unknown | SymbolKind::Null => elf::STT_NOTYPE,
-                SymbolKind::Text => {
-                    if symbol.is_undefined() {
-                        elf::STT_NOTYPE
-                    } else {
-                        elf::STT_FUNC
-                    }
-                }
-                SymbolKind::Data => {
-                    if symbol.is_undefined() {
-                        elf::STT_NOTYPE
-                    } else if symbol.is_common() {
-                        elf::STT_COMMON
-                    } else {
-                        elf::STT_OBJECT
-                    }
-                }
-                SymbolKind::Section => elf::STT_SECTION,
-                SymbolKind::File => elf::STT_FILE,
-                SymbolKind::Tls => elf::STT_TLS,
-                SymbolKind::Label => elf::STT_NOTYPE,
-            };
-            let st_bind = if symbol.is_undefined() {
-                elf::STB_GLOBAL
-            } else if symbol.is_local() {
-                elf::STB_LOCAL
-            } else if symbol.weak {
-                elf::STB_WEAK
+            let st_info = if let SymbolFlags::Elf { st_info, .. } = symbol.flags {
+                st_info
             } else {
-                elf::STB_GLOBAL
+                let st_type = match symbol.kind {
+                    SymbolKind::Unknown | SymbolKind::Null => elf::STT_NOTYPE,
+                    SymbolKind::Text => {
+                        if symbol.is_undefined() {
+                            elf::STT_NOTYPE
+                        } else {
+                            elf::STT_FUNC
+                        }
+                    }
+                    SymbolKind::Data => {
+                        if symbol.is_undefined() {
+                            elf::STT_NOTYPE
+                        } else if symbol.is_common() {
+                            elf::STT_COMMON
+                        } else {
+                            elf::STT_OBJECT
+                        }
+                    }
+                    SymbolKind::Section => elf::STT_SECTION,
+                    SymbolKind::File => elf::STT_FILE,
+                    SymbolKind::Tls => elf::STT_TLS,
+                    SymbolKind::Label => elf::STT_NOTYPE,
+                };
+                let st_bind = if symbol.is_undefined() {
+                    elf::STB_GLOBAL
+                } else if symbol.is_local() {
+                    elf::STB_LOCAL
+                } else if symbol.weak {
+                    elf::STB_WEAK
+                } else {
+                    elf::STB_GLOBAL
+                };
+                (st_bind << 4) + st_type
             };
-            let st_other = if symbol.scope == SymbolScope::Linkage {
+            let st_other = if let SymbolFlags::Elf { st_other, .. } = symbol.flags {
+                st_other
+            } else if symbol.scope == SymbolScope::Linkage {
                 elf::STV_HIDDEN
             } else {
                 elf::STV_DEFAULT
@@ -455,7 +467,7 @@ impl Object {
                 .iowrite_with(
                     elf::Sym {
                         st_name,
-                        st_info: (st_bind << 4) + st_type,
+                        st_info,
                         st_other,
                         st_shndx: st_shndx as usize,
                         st_value: symbol.value,
@@ -591,23 +603,30 @@ impl Object {
                 SectionKind::UninitializedData | SectionKind::UninitializedTls => elf::SHT_NOBITS,
                 _ => elf::SHT_PROGBITS,
             };
-            let sh_flags = match section.kind {
-                SectionKind::Text => elf::SHF_ALLOC | elf::SHF_EXECINSTR,
-                SectionKind::Data => elf::SHF_ALLOC | elf::SHF_WRITE,
-                SectionKind::Tls => elf::SHF_ALLOC | elf::SHF_WRITE | elf::SHF_TLS,
-                SectionKind::UninitializedData => elf::SHF_ALLOC | elf::SHF_WRITE,
-                SectionKind::UninitializedTls => elf::SHF_ALLOC | elf::SHF_WRITE | elf::SHF_TLS,
-                SectionKind::ReadOnlyData => elf::SHF_ALLOC,
-                SectionKind::ReadOnlyString => elf::SHF_ALLOC | elf::SHF_STRINGS | elf::SHF_MERGE,
-                SectionKind::OtherString => elf::SHF_STRINGS | elf::SHF_MERGE,
-                SectionKind::Other
-                | SectionKind::Debug
-                | SectionKind::Unknown
-                | SectionKind::Metadata
-                | SectionKind::Linker => 0,
-                SectionKind::Common | SectionKind::TlsVariables => {
-                    return Err(format!("unimplemented section {:?}", section.kind))
+            let sh_flags = if let SectionFlags::Elf { sh_flags } = section.flags {
+                sh_flags
+            } else {
+                match section.kind {
+                    SectionKind::Text => elf::SHF_ALLOC | elf::SHF_EXECINSTR,
+                    SectionKind::Data => elf::SHF_ALLOC | elf::SHF_WRITE,
+                    SectionKind::Tls => elf::SHF_ALLOC | elf::SHF_WRITE | elf::SHF_TLS,
+                    SectionKind::UninitializedData => elf::SHF_ALLOC | elf::SHF_WRITE,
+                    SectionKind::UninitializedTls => elf::SHF_ALLOC | elf::SHF_WRITE | elf::SHF_TLS,
+                    SectionKind::ReadOnlyData => elf::SHF_ALLOC,
+                    SectionKind::ReadOnlyString => {
+                        elf::SHF_ALLOC | elf::SHF_STRINGS | elf::SHF_MERGE
+                    }
+                    SectionKind::OtherString => elf::SHF_STRINGS | elf::SHF_MERGE,
+                    SectionKind::Other
+                    | SectionKind::Debug
+                    | SectionKind::Unknown
+                    | SectionKind::Metadata
+                    | SectionKind::Linker => 0,
+                    SectionKind::Common | SectionKind::TlsVariables => {
+                        return Err(format!("unimplemented section {:?}", section.kind))
+                    }
                 }
+                .into()
             };
             // TODO: not sure if this is correct, maybe user should determine this
             let sh_entsize = match section.kind {
@@ -623,7 +642,7 @@ impl Object {
                     elf::SectionHeader {
                         sh_name,
                         sh_type,
-                        sh_flags: sh_flags.into(),
+                        sh_flags,
                         sh_addr: 0,
                         sh_offset: section_offsets[index].offset as u64,
                         sh_size: section.size,

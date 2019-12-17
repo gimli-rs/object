@@ -2,7 +2,9 @@
 
 use object::read::{Object, ObjectSection};
 use object::{read, write};
-use object::{RelocationEncoding, RelocationKind, SectionKind, SymbolKind, SymbolScope};
+use object::{
+    RelocationEncoding, RelocationKind, SectionKind, SymbolFlags, SymbolKind, SymbolScope,
+};
 use target_lexicon::{Architecture, BinaryFormat};
 
 #[test]
@@ -22,6 +24,7 @@ fn coff_x86_64() {
         scope: SymbolScope::Linkage,
         weak: false,
         section: write::SymbolSection::Section(text),
+        flags: SymbolFlags::None,
     });
     object
         .add_relocation(
@@ -98,6 +101,7 @@ fn elf_x86_64() {
         scope: SymbolScope::Linkage,
         weak: false,
         section: write::SymbolSection::Section(text),
+        flags: SymbolFlags::None,
     });
     object
         .add_relocation(
@@ -191,6 +195,7 @@ fn macho_x86_64() {
         scope: SymbolScope::Linkage,
         weak: false,
         section: write::SymbolSection::Section(text),
+        flags: SymbolFlags::None,
     });
     object
         .add_relocation(

@@ -1,5 +1,7 @@
 use crate::alloc::borrow::Cow;
-use crate::{Relocation, SectionIndex, SectionKind, Symbol, SymbolIndex, SymbolMap};
+use crate::{
+    FileFlags, Relocation, SectionFlags, SectionIndex, SectionKind, Symbol, SymbolIndex, SymbolMap,
+};
 use target_lexicon::{Architecture, Endianness};
 use uuid::Uuid;
 
@@ -135,6 +137,9 @@ pub trait Object<'data, 'file> {
     fn gnu_debuglink(&self) -> Option<(&'data [u8], u32)> {
         None
     }
+
+    /// File flags that are specific to each file format.
+    fn flags(&self) -> FileFlags;
 }
 
 /// A loadable segment defined in an object file.
@@ -217,4 +222,7 @@ pub trait ObjectSection<'data> {
 
     /// Get the relocations for this section.
     fn relocations(&self) -> Self::RelocationIterator;
+
+    /// Section flags that are specific to each file format.
+    fn flags(&self) -> SectionFlags;
 }

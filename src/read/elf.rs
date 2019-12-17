@@ -13,9 +13,9 @@ use std::{iter, slice};
 use target_lexicon::{Aarch64Architecture, Architecture, ArmArchitecture};
 
 use crate::read::{
-    self, Object, ObjectSection, ObjectSegment, Relocation, RelocationEncoding, RelocationKind,
-    RelocationTarget, SectionIndex, SectionKind, Symbol, SymbolIndex, SymbolKind, SymbolMap,
-    SymbolScope, SymbolSection,
+    self, FileFlags, Object, ObjectSection, ObjectSegment, Relocation, RelocationEncoding,
+    RelocationKind, RelocationTarget, SectionFlags, SectionIndex, SectionKind, Symbol, SymbolFlags,
+    SymbolIndex, SymbolKind, SymbolMap, SymbolScope, SymbolSection,
 };
 
 /// An ELF object file.
@@ -223,6 +223,12 @@ where
 
     fn entry(&self) -> u64 {
         self.elf.entry
+    }
+
+    fn flags(&self) -> FileFlags {
+        FileFlags::Elf {
+            e_flags: self.elf.header.e_flags,
+        }
     }
 }
 
@@ -530,6 +536,12 @@ impl<'data, 'file> ObjectSection<'data> for ElfSection<'data, 'file> {
             relocations: None,
         }
     }
+
+    fn flags(&self) -> SectionFlags {
+        SectionFlags::Elf {
+            sh_flags: self.section.sh_flags,
+        }
+    }
 }
 
 /// An iterator over the symbols of an `ElfFile`.
@@ -597,6 +609,10 @@ fn parse_symbol<'data>(
         }
         _ => SymbolScope::Unknown,
     };
+    let flags = SymbolFlags::Elf {
+        st_info: symbol.st_info,
+        st_other: symbol.st_other,
+    };
     Symbol {
         name,
         address: symbol.st_value,
@@ -605,6 +621,7 @@ fn parse_symbol<'data>(
         section,
         weak,
         scope,
+        flags,
     }
 }
 

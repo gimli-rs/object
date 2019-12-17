@@ -93,7 +93,7 @@ impl Object {
             Architecture::X86_64 => match relocation.kind {
                 RelocationKind::Relative => {
                     // IMAGE_REL_AMD64_REL32 through to IMAGE_REL_AMD64_REL32_5
-                    if relocation.addend >= -4 && relocation.addend <= -9 {
+                    if relocation.addend <= -4 && relocation.addend >= -9 {
                         0
                     } else {
                         relocation.addend + 4
@@ -137,6 +137,7 @@ impl Object {
             scope: SymbolScope::Compilation,
             weak: false,
             section: SymbolSection::Section(section_id),
+            flags: SymbolFlags::None,
         });
         self.stub_symbols.insert(symbol_id, stub_id);
 
@@ -240,14 +241,22 @@ impl Object {
             pointer_to_symbol_table: symtab_offset as u32,
             number_of_symbol_table: symtab_count as u32,
             size_of_optional_header: 0,
-            characteristics: 0,
+            characteristics: match self.flags {
+                FileFlags::Coff { characteristics } => characteristics,
+                _ => 0,
+            },
         };
         buffer.iowrite_with(header, ctx).unwrap();
 
         // Write section headers.
         for (index, section) in self.sections.iter().enumerate() {
             // TODO: IMAGE_SCN_LNK_COMDAT
-            let characteristics = match section.kind {
+            let characteristics = match section.flags {
+                SectionFlags::Coff {
+                    characteristics, ..
+                } => characteristics,
+                _ => 0,
+            } | match section.kind {
                 SectionKind::Text => {
                     coff::IMAGE_SCN_CNT_CODE
                         | coff::IMAGE_SCN_MEM_EXECUTE
@@ -280,8 +289,7 @@ impl Object {
                 | SectionKind::Metadata => {
                     return Err(format!("unimplemented section {:?}", section.kind))
                 }
-            };
-            let align = match section.align {
+            } | match section.align {
                 1 => coff::IMAGE_SCN_ALIGN_1BYTES,
                 2 => coff::IMAGE_SCN_ALIGN_2BYTES,
                 4 => coff::IMAGE_SCN_ALIGN_4BYTES,
@@ -301,13 +309,9 @@ impl Object {
             let mut coff_section = coff::SectionTable {
                 name: [0; 8],
                 real_name: None,
-                virtual_size: if section.data.is_empty() {
-                    section.size as u32
-                } else {
-                    0
-                },
+                virtual_size: 0,
                 virtual_address: 0,
-                size_of_raw_data: section.data.len() as u32,
+                size_of_raw_data: section.size as u32,
                 pointer_to_raw_data: if section.data.is_empty() {
                     0
                 } else {
@@ -317,7 +321,7 @@ impl Object {
                 pointer_to_linenumbers: 0,
                 number_of_relocations: section.relocations.len() as u16,
                 number_of_linenumbers: 0,
-                characteristics: characteristics | align,
+                characteristics,
             };
             if section.name.len() <= 8 {
                 coff_section.name[..section.name.len()].copy_from_slice(&section.name);
@@ -463,6 +467,7 @@ impl Object {
             }
             buffer.iowrite_with(coff_symbol, ctx).unwrap();
 
+            // Write auxiliary symbols.
             match symbol.kind {
                 SymbolKind::File => {
                     let aux_len = number_of_aux_symbols as usize * coff::COFF_SYMBOL_SIZE;
@@ -473,17 +478,22 @@ impl Object {
                 SymbolKind::Section => {
                     debug_assert_eq!(number_of_aux_symbols, 1);
                     let section = &self.sections[symbol.section.id().unwrap().0];
+                    let (selection, number) = match symbol.flags {
+                        SymbolFlags::CoffSection {
+                            selection,
+                            associative_section,
+                        } => (selection, associative_section.0 as u16),
+                        _ => (0, 0),
+                    };
                     buffer
                         .iowrite_with(
                             coff::AuxSectionDefinition {
-                                length: section.data.len() as u32,
+                                length: section.size as u32,
                                 number_of_relocations: section.relocations.len() as u16,
                                 number_of_line_numbers: 0,
                                 checksum: checksum(&section.data),
-                                // TODO: only for COMDAT
-                                number: section_number as u16,
-                                // TODO: COMDAT
-                                selection: 0,
+                                number,
+                                selection,
                                 unused: [0; 3],
                             },
                             ctx,
