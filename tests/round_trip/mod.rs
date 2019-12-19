@@ -7,6 +7,10 @@ use object::{
 };
 use target_lexicon::{Architecture, BinaryFormat};
 
+mod bss;
+mod common;
+mod tls;
+
 #[test]
 fn coff_x86_64() {
     let mut object = write::Object::new(BinaryFormat::Coff, Architecture::X86_64);
