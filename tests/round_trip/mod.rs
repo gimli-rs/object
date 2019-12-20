@@ -9,6 +9,7 @@ use target_lexicon::{Architecture, BinaryFormat};
 
 mod bss;
 mod common;
+mod elf;
 mod tls;
 
 #[test]
