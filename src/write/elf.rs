@@ -391,7 +391,7 @@ impl Object {
             .unwrap();
         let mut symtab_shndx = Vec::new();
         if need_symtab_shndx {
-            symtab_shndx.iowrite_with(0, ctx.le).unwrap();
+            symtab_shndx.iowrite_with(0u32, ctx.le).unwrap();
         }
         let mut write_symbol = |index: usize, symbol: &Symbol| {
             let st_info = if let SymbolFlags::Elf { st_info, .. } = symbol.flags {
@@ -448,14 +448,14 @@ impl Object {
                 SymbolSection::Absolute => (elf::SHN_ABS, 0),
                 SymbolSection::Common => (elf::SHN_COMMON, 0),
                 SymbolSection::Section(id) => {
-                    let index = section_offsets[id.0].index;
+                    let index = section_offsets[id.0].index as u32;
                     (
-                        index as u32,
-                        if index >= elf::SHN_LORESERVE as usize {
-                            elf::SHN_XINDEX as usize
+                        if index >= elf::SHN_LORESERVE {
+                            elf::SHN_XINDEX
                         } else {
                             index
                         },
+                        index,
                     )
                 }
             };
@@ -710,10 +710,10 @@ impl Object {
                         sh_addr: 0,
                         sh_offset: symtab_shndx_offset as u64,
                         sh_size: symtab_shndx_len as u64,
-                        sh_link: strtab_index as u32,
+                        sh_link: symtab_index as u32,
                         sh_info: symtab_count_local as u32,
-                        sh_addralign: pointer_align as u64,
-                        sh_entsize: elf::Sym::size_with(&ctx) as u64,
+                        sh_addralign: 4,
+                        sh_entsize: 4,
                     },
                     ctx,
                 )
