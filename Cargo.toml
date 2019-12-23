@@ -1,10 +1,10 @@
 [package]
 authors = ["Nick Fitzgerald <fitzgen@gmail.com>", "Philip Craig <philipjcraig@gmail.com>"]
 name = "object"
-version = "0.16.0"
+version = "0.17.0"
 edition = "2018"
-description = "A unified interface for parsing object file formats."
-keywords = ["object", "loader", "elf", "mach-o", "pe"]
+description = "A unified interface for reading and writing object file formats."
+keywords = ["object", "loader", "elf", "mach-o", "pe", "coff"]
 license = "Apache-2.0/MIT"
 repository = "https://github.com/gimli-rs/object"
 exclude = ["/.coveralls.yml", "/.travis.yml"]

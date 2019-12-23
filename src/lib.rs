@@ -1,7 +1,8 @@
 //! # `object`
 //!
 //! The `object` crate provides a unified interface to working with object files
-//! across platforms.
+//! across platforms. It supports reading object files and executable files,
+//! and writing object files.
 //!
 //! See the [`File` struct](./read/struct.File.html) for details.
 
@@ -11,6 +12,7 @@
 #![cfg_attr(not(feature = "std"), feature(alloc))]
 
 #[cfg(feature = "std")]
+#[allow(unused_imports)]
 #[macro_use]
 extern crate std;
 
