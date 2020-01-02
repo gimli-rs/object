@@ -6,14 +6,15 @@ use crate::common::{
     SymbolKind, SymbolScope,
 };
 
+mod util;
+
 mod any;
 pub use any::*;
 
 mod coff;
 pub use coff::*;
 
-mod elf;
-pub use elf::*;
+pub mod elf;
 
 mod macho;
 pub use macho::*;
@@ -30,8 +31,12 @@ mod wasm;
 pub use wasm::*;
 
 /// The native object file for the target platform.
-#[cfg(target_os = "linux")]
-pub type NativeFile<'data> = ElfFile<'data>;
+#[cfg(all(target_os = "linux", target_pointer_width = "32"))]
+pub type NativeFile<'data> = elf::ElfFile32<'data>;
+
+/// The native object file for the target platform.
+#[cfg(all(target_os = "linux", target_pointer_width = "64"))]
+pub type NativeFile<'data> = elf::ElfFile64<'data>;
 
 /// The native object file for the target platform.
 #[cfg(target_os = "macos")]

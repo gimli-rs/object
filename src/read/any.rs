@@ -18,7 +18,8 @@ macro_rules! with_inner {
     ($inner:expr, $enum:ident, | $var:ident | $body:expr) => {
         match $inner {
             $enum::Coff(ref $var) => $body,
-            $enum::Elf(ref $var) => $body,
+            $enum::Elf32(ref $var) => $body,
+            $enum::Elf64(ref $var) => $body,
             $enum::MachO(ref $var) => $body,
             $enum::Pe(ref $var) => $body,
             #[cfg(feature = "wasm")]
@@ -31,7 +32,8 @@ macro_rules! with_inner_mut {
     ($inner:expr, $enum:ident, | $var:ident | $body:expr) => {
         match $inner {
             $enum::Coff(ref mut $var) => $body,
-            $enum::Elf(ref mut $var) => $body,
+            $enum::Elf32(ref mut $var) => $body,
+            $enum::Elf64(ref mut $var) => $body,
             $enum::MachO(ref mut $var) => $body,
             $enum::Pe(ref mut $var) => $body,
             #[cfg(feature = "wasm")]
@@ -45,7 +47,8 @@ macro_rules! map_inner {
     ($inner:expr, $from:ident, $to:ident, | $var:ident | $body:expr) => {
         match $inner {
             $from::Coff(ref $var) => $to::Coff($body),
-            $from::Elf(ref $var) => $to::Elf($body),
+            $from::Elf32(ref $var) => $to::Elf32($body),
+            $from::Elf64(ref $var) => $to::Elf64($body),
             $from::MachO(ref $var) => $to::MachO($body),
             $from::Pe(ref $var) => $to::Pe($body),
             #[cfg(feature = "wasm")]
@@ -59,7 +62,8 @@ macro_rules! map_inner_option {
     ($inner:expr, $from:ident, $to:ident, | $var:ident | $body:expr) => {
         match $inner {
             $from::Coff(ref $var) => $body.map($to::Coff),
-            $from::Elf(ref $var) => $body.map($to::Elf),
+            $from::Elf32(ref $var) => $body.map($to::Elf32),
+            $from::Elf64(ref $var) => $body.map($to::Elf64),
             $from::MachO(ref $var) => $body.map($to::MachO),
             $from::Pe(ref $var) => $body.map($to::Pe),
             #[cfg(feature = "wasm")]
@@ -73,7 +77,8 @@ macro_rules! next_inner {
     ($inner:expr, $from:ident, $to:ident) => {
         match $inner {
             $from::Coff(ref mut iter) => iter.next().map($to::Coff),
-            $from::Elf(ref mut iter) => iter.next().map($to::Elf),
+            $from::Elf32(ref mut iter) => iter.next().map($to::Elf32),
+            $from::Elf64(ref mut iter) => iter.next().map($to::Elf64),
             $from::MachO(ref mut iter) => iter.next().map($to::MachO),
             $from::Pe(ref mut iter) => iter.next().map($to::Pe),
             #[cfg(feature = "wasm")]
@@ -94,7 +99,8 @@ pub struct File<'data> {
 #[derive(Debug)]
 enum FileInternal<'data> {
     Coff(coff::CoffFile<'data>),
-    Elf(elf::ElfFile<'data>),
+    Elf32(elf::ElfFile32<'data>),
+    Elf64(elf::ElfFile64<'data>),
     MachO(macho::MachOFile<'data>),
     Pe(pe::PeFile<'data>),
     #[cfg(feature = "wasm")]
@@ -108,25 +114,27 @@ impl<'data> File<'data> {
             return Err("File too short");
         }
 
-        let inner = match [data[0], data[1], data[2], data[3]] {
-            // ELF
-            [0x7f, b'E', b'L', b'F'] => FileInternal::Elf(elf::ElfFile::parse(data)?),
+        let inner = match [data[0], data[1], data[2], data[3], data[4]] {
+            // 32-bit ELF
+            [0x7f, b'E', b'L', b'F', 1] => FileInternal::Elf32(elf::ElfFile32::parse(data)?),
+            // 64-bit ELF
+            [0x7f, b'E', b'L', b'F', 2] => FileInternal::Elf64(elf::ElfFile64::parse(data)?),
             // 32-bit Mach-O
-            [0xfe, 0xed, 0xfa, 0xce]
-            | [0xce, 0xfa, 0xed, 0xfe]
+            [0xfe, 0xed, 0xfa, 0xce, _]
+            | [0xce, 0xfa, 0xed, 0xfe, _]
             // 64-bit Mach-O
-            | [0xfe, 0xed, 0xfa, 0xcf]
-            | [0xcf, 0xfa, 0xed, 0xfe] => FileInternal::MachO(macho::MachOFile::parse(data)?),
+            | [0xfe, 0xed, 0xfa, 0xcf, _]
+            | [0xcf, 0xfa, 0xed, 0xfe, _] => FileInternal::MachO(macho::MachOFile::parse(data)?),
             // WASM
             #[cfg(feature = "wasm")]
-            [0x00, b'a', b's', b'm'] => FileInternal::Wasm(wasm::WasmFile::parse(data)?),
+            [0x00, b'a', b's', b'm', _] => FileInternal::Wasm(wasm::WasmFile::parse(data)?),
             // MS-DOS, assume stub for Windows PE
-            [b'M', b'Z', _, _] => FileInternal::Pe(pe::PeFile::parse(data)?),
+            [b'M', b'Z', _, _, _] => FileInternal::Pe(pe::PeFile::parse(data)?),
             // TODO: more COFF machines
             // COFF x86
-            [0x4c, 0x01, _, _]
+            [0x4c, 0x01, _, _, _]
             // COFF x86-64
-            | [0x64, 0x86, _, _] => FileInternal::Coff(coff::CoffFile::parse(data)?),
+            | [0x64, 0x86, _, _, _] => FileInternal::Coff(coff::CoffFile::parse(data)?),
             _ => return Err("Unknown file magic"),
         };
         Ok(File { inner })
@@ -135,7 +143,7 @@ impl<'data> File<'data> {
     /// Return the file format.
     pub fn format(&self) -> BinaryFormat {
         match self.inner {
-            FileInternal::Elf(_) => BinaryFormat::Elf,
+            FileInternal::Elf32(_) | FileInternal::Elf64(_) => BinaryFormat::Elf,
             FileInternal::MachO(_) => BinaryFormat::Macho,
             FileInternal::Coff(_) | FileInternal::Pe(_) => BinaryFormat::Coff,
             #[cfg(feature = "wasm")]
@@ -262,7 +270,8 @@ where
     'data: 'file,
 {
     Coff(coff::CoffSegmentIterator<'data, 'file>),
-    Elf(elf::ElfSegmentIterator<'data, 'file>),
+    Elf32(elf::ElfSegmentIterator32<'data, 'file>),
+    Elf64(elf::ElfSegmentIterator64<'data, 'file>),
     MachO(macho::MachOSegmentIterator<'data, 'file>),
     Pe(pe::PeSegmentIterator<'data, 'file>),
     #[cfg(feature = "wasm")]
@@ -292,7 +301,8 @@ where
     'data: 'file,
 {
     Coff(coff::CoffSegment<'data, 'file>),
-    Elf(elf::ElfSegment<'data, 'file>),
+    Elf32(elf::ElfSegment32<'data, 'file>),
+    Elf64(elf::ElfSegment64<'data, 'file>),
     MachO(macho::MachOSegment<'data, 'file>),
     Pe(pe::PeSegment<'data, 'file>),
     #[cfg(feature = "wasm")]
@@ -356,7 +366,8 @@ where
     'data: 'file,
 {
     Coff(coff::CoffSectionIterator<'data, 'file>),
-    Elf(elf::ElfSectionIterator<'data, 'file>),
+    Elf32(elf::ElfSectionIterator32<'data, 'file>),
+    Elf64(elf::ElfSectionIterator64<'data, 'file>),
     MachO(macho::MachOSectionIterator<'data, 'file>),
     Pe(pe::PeSectionIterator<'data, 'file>),
     #[cfg(feature = "wasm")]
@@ -385,7 +396,8 @@ where
     'data: 'file,
 {
     Coff(coff::CoffSection<'data, 'file>),
-    Elf(elf::ElfSection<'data, 'file>),
+    Elf32(elf::ElfSection32<'data, 'file>),
+    Elf64(elf::ElfSection64<'data, 'file>),
     MachO(macho::MachOSection<'data, 'file>),
     Pe(pe::PeSection<'data, 'file>),
     #[cfg(feature = "wasm")]
@@ -485,7 +497,8 @@ where
     'data: 'file,
 {
     Coff(coff::CoffSymbolIterator<'data, 'file>),
-    Elf(elf::ElfSymbolIterator<'data, 'file>),
+    Elf32(elf::ElfSymbolIterator32<'data, 'file>),
+    Elf64(elf::ElfSymbolIterator64<'data, 'file>),
     MachO(macho::MachOSymbolIterator<'data, 'file>),
     Pe(pe::PeSymbolIterator<'data, 'file>),
     #[cfg(feature = "wasm")]
@@ -515,7 +528,8 @@ where
     'data: 'file,
 {
     Coff(coff::CoffRelocationIterator<'data, 'file>),
-    Elf(elf::ElfRelocationIterator<'data, 'file>),
+    Elf32(elf::ElfRelocationIterator32<'data, 'file>),
+    Elf64(elf::ElfRelocationIterator64<'data, 'file>),
     MachO(macho::MachORelocationIterator<'data, 'file>),
     Pe(pe::PeRelocationIterator),
     #[cfg(feature = "wasm")]
