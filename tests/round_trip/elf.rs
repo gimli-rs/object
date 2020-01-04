@@ -1,6 +1,6 @@
 use object::read::Object;
 use object::{read, write};
-use object::{SymbolFlags, SymbolKind, SymbolScope};
+use object::{SectionIndex, SymbolFlags, SymbolKind, SymbolScope, SymbolSection};
 use target_lexicon::{Architecture, BinaryFormat};
 
 #[test]
@@ -29,5 +29,11 @@ fn symtab_shndx() {
     let object = read::File::parse(&bytes).unwrap();
     assert_eq!(object.format(), BinaryFormat::Elf);
     assert_eq!(object.architecture(), Architecture::X86_64);
-    // TODO: fix read
+
+    for (index, symbol) in object.symbols().skip(1) {
+        assert_eq!(
+            symbol.section(),
+            SymbolSection::Section(SectionIndex(index.0))
+        );
+    }
 }

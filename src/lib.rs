@@ -38,6 +38,9 @@ pub use uuid;
 mod common;
 pub use common::*;
 
+#[macro_use]
+pub mod endian;
+
 #[cfg(feature = "read")]
 pub mod read;
 #[cfg(feature = "read")]
@@ -45,3 +48,5 @@ pub use read::*;
 
 #[cfg(feature = "write")]
 pub mod write;
+
+pub mod elf;
