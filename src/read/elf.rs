@@ -273,7 +273,7 @@ where
     fn symbols(&'file self) -> ElfSymbolIterator<'data, 'file, Elf> {
         ElfSymbolIterator {
             file: self,
-            symbols: self.symbols.clone(),
+            symbols: self.symbols,
             index: 0,
         }
     }
@@ -281,7 +281,7 @@ where
     fn dynamic_symbols(&'file self) -> ElfSymbolIterator<'data, 'file, Elf> {
         ElfSymbolIterator {
             file: self,
-            symbols: self.dynamic_symbols.clone(),
+            symbols: self.dynamic_symbols,
             index: 0,
         }
     }
@@ -1053,22 +1053,11 @@ impl<'data> Strtab<'data> {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 struct SymbolTable<'data, Elf: FileHeader> {
     symbols: &'data [Elf::Sym],
     strtab: Strtab<'data>,
     shndx: &'data [u32],
-}
-
-// #[derive(Clone)] fails...
-impl<'data, Elf: FileHeader> Clone for SymbolTable<'data, Elf> {
-    fn clone(&self) -> Self {
-        SymbolTable {
-            symbols: self.symbols,
-            strtab: self.strtab,
-            shndx: self.shndx,
-        }
-    }
 }
 
 /// A trait for generic access to `FileHeader32` and `FileHeader64`.
