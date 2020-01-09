@@ -10,7 +10,7 @@ use crate::alloc::vec::Vec;
 use crate::elf;
 use crate::endian::{self, Endian, RunTimeEndian};
 use crate::read::util;
-use bytemuck::{try_cast_slice, try_from_bytes, Pod};
+use bytemuck::{self, Pod};
 #[cfg(feature = "compression")]
 use core::convert::TryInto;
 #[cfg(feature = "compression")]
@@ -48,8 +48,8 @@ pub struct ElfFile<'data, Elf: FileHeader> {
 impl<'data, Elf: FileHeader> ElfFile<'data, Elf> {
     /// Parse the raw ELF file data.
     pub fn parse(data: &'data [u8]) -> Result<Self, &'static str> {
-        let (header, _) =
-            try_from_bytes_prefix::<Elf>(data).ok_or("Invalid ELF header size or alignment")?;
+        let (header, _) = util::try_from_bytes_prefix::<Elf>(data)
+            .ok_or("Invalid ELF header size or alignment")?;
         if !header.is_supported() {
             return Err("Unsupported ELF header");
         }
@@ -344,11 +344,9 @@ where
         let filename_len = data.iter().position(|x| *x == 0)?;
         let filename = data.get(..filename_len)?;
         let crc_offset = util::align(filename_len + 1, 4);
-        let crc_data = data.get(crc_offset..)?.get(..4)?;
-        let crc = try_from_bytes::<endian::U32<_>>(crc_data)
-            .ok()?
-            .get(self.endian);
-        Some((filename, crc))
+        let crc_data = data.get(crc_offset..)?;
+        let (crc, _) = util::try_from_bytes_prefix::<endian::U32<_>>(crc_data)?;
+        Some((filename, crc.get(self.endian)))
     }
 
     fn entry(&self) -> u64 {
@@ -515,7 +513,8 @@ impl<'data, 'file, Elf: FileHeader> ElfSection<'data, 'file, Elf> {
         }
 
         let data = self.section.data(endian, self.file.data)?;
-        let (header, compressed_data) = try_from_bytes_prefix::<Elf::CompressionHeader>(data)?;
+        let (header, compressed_data) =
+            util::try_from_bytes_prefix::<Elf::CompressionHeader>(data)?;
         if header.ch_type(endian) != elf::ELFCOMPRESS_ZLIB {
             return None;
         }
@@ -972,7 +971,7 @@ where
     type Item = ElfNote<'data, Elf>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let (header, data) = try_from_bytes_prefix::<Elf::NoteHeader>(self.data)?;
+        let (header, data) = util::try_from_bytes_prefix::<Elf::NoteHeader>(self.data)?;
 
         // Name doesn't require alignment.
         let namesz = header.n_namesz(self.endian) as usize;
@@ -1150,10 +1149,9 @@ pub trait FileHeader: Debug + Pod {
             // Section header size must match.
             return None;
         }
-        let start = shoff as usize;
-        let end = start.checked_add(shentsize)?;
-        let data = data.get(start..end)?;
-        try_from_bytes(data).ok()
+        let data = data.get(shoff as usize..)?.get(..shentsize)?;
+        let (header, _) = util::try_from_bytes_prefix(data)?;
+        Some(header)
     }
 
     /// Return the `e_phnum` field of the header. Handles extended values.
@@ -1224,10 +1222,7 @@ pub trait FileHeader: Debug + Pod {
             // Program header size must match.
             return None;
         }
-        let start = phoff as usize;
-        let end = start.checked_add(phnum * phentsize)?;
-        let data = data.get(start..end)?;
-        try_cast_slice(data).ok()
+        util::try_cast_slice_count(data, phoff as usize, phnum)
     }
 
     /// Return the slice of section headers.
@@ -1253,10 +1248,7 @@ pub trait FileHeader: Debug + Pod {
             // Section header size must match.
             return None;
         }
-        let start = shoff as usize;
-        let end = start.checked_add(shnum * shentsize)?;
-        let data = data.get(start..end)?;
-        try_cast_slice(data).ok()
+        util::try_cast_slice_count(data, shoff as usize, shnum)
     }
 }
 
@@ -1286,9 +1278,7 @@ pub trait ProgramHeader: Debug + Pod {
     /// Returns `None` for invalid values.
     fn data<'data>(&self, endian: Self::Endian, data: &'data [u8]) -> Option<&'data [u8]> {
         let (offset, size) = self.file_range(endian);
-        let start = offset as usize;
-        let end = start.checked_add(size as usize)?;
-        data.get(start..end)
+        data.get(offset as usize..)?.get(..size as usize)
     }
 
     /// Return a note iterator for the segment data.
@@ -1344,9 +1334,7 @@ pub trait SectionHeader: Debug + Pod {
     /// Returns `None` for invalid values.
     fn data<'data>(&self, endian: Self::Endian, data: &'data [u8]) -> Option<&'data [u8]> {
         if let Some((offset, size)) = self.file_range(endian) {
-            let start = offset as usize;
-            let end = start.checked_add(size as usize)?;
-            data.get(start..end)
+            data.get(offset as usize..)?.get(..size as usize)
         } else {
             Some(&[])
         }
@@ -1357,7 +1345,7 @@ pub trait SectionHeader: Debug + Pod {
         endian: Self::Endian,
         data: &'data [u8],
     ) -> Option<&'data [T]> {
-        try_cast_slice(self.data(endian, data)?).ok()
+        bytemuck::try_cast_slice(self.data(endian, data)?).ok()
     }
 
     /// Return a note iterator for the section data.
@@ -2038,11 +2026,4 @@ impl<Endian: endian::Endian> Rela for elf::Rela64<Endian> {
     fn r_type(&self, endian: Self::Endian) -> u32 {
         self.r_type(endian)
     }
-}
-
-fn try_from_bytes_prefix<T: Pod>(data: &[u8]) -> Option<(&T, &[u8])> {
-    let size = mem::size_of::<T>();
-    let prefix = try_from_bytes(data.get(..size)?).ok()?;
-    let rest = data.get(size..)?;
-    Some((prefix, rest))
 }
