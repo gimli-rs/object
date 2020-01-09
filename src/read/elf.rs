@@ -1075,6 +1075,11 @@ pub trait FileHeader: Debug + Pod {
     type Rel: Clone + Pod;
     type Rela: Rela<Endian = Self::Endian> + From<Self::Rel>;
 
+    /// Return true if this type is a 64-bit header.
+    ///
+    /// This is a property of the type, not a value in the header data.
+    fn is_type_64(&self) -> bool;
+
     fn e_ident(&self) -> &elf::Ident;
     fn e_type(&self, endian: Self::Endian) -> u16;
     fn e_machine(&self, endian: Self::Endian) -> u16;
@@ -1096,8 +1101,9 @@ pub trait FileHeader: Debug + Pod {
         let ident = self.e_ident();
         // TODO: Check self.e_version too? Requires endian though.
         ident.magic == elf::ELFMAG
-            && (ident.class == elf::ELFCLASS32 || ident.class == elf::ELFCLASS64)
-            && (ident.data == elf::ELFDATA2LSB || ident.data == elf::ELFDATA2MSB)
+            && (self.is_type_64() || self.is_class_32())
+            && (!self.is_type_64() || self.is_class_64())
+            && (self.is_little_endian() || self.is_big_endian())
             && ident.version == elf::EV_CURRENT
     }
 
@@ -1420,6 +1426,11 @@ impl<Endian: endian::Endian> FileHeader for elf::FileHeader32<Endian> {
     type Rela = elf::Rela32<Endian>;
 
     #[inline]
+    fn is_type_64(&self) -> bool {
+        false
+    }
+
+    #[inline]
     fn e_ident(&self) -> &elf::Ident {
         &self.e_ident
     }
@@ -1723,6 +1734,11 @@ impl<Endian: endian::Endian> FileHeader for elf::FileHeader64<Endian> {
     type Sym = elf::Sym64<Endian>;
     type Rel = elf::Rel64<Endian>;
     type Rela = elf::Rela64<Endian>;
+
+    #[inline]
+    fn is_type_64(&self) -> bool {
+        true
+    }
 
     #[inline]
     fn e_ident(&self) -> &elf::Ident {
