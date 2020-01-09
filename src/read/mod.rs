@@ -16,8 +16,7 @@ pub use coff::*;
 
 pub mod elf;
 
-mod macho;
-pub use macho::*;
+pub mod macho;
 
 mod pe;
 pub use pe::*;
@@ -30,23 +29,27 @@ mod wasm;
 #[cfg(feature = "wasm")]
 pub use wasm::*;
 
-/// The native object file for the target platform.
+/// The native executable file for the target platform.
 #[cfg(all(target_os = "linux", target_pointer_width = "32"))]
 pub type NativeFile<'data> = elf::ElfFile32<'data>;
 
-/// The native object file for the target platform.
+/// The native executable file for the target platform.
 #[cfg(all(target_os = "linux", target_pointer_width = "64"))]
 pub type NativeFile<'data> = elf::ElfFile64<'data>;
 
-/// The native object file for the target platform.
-#[cfg(target_os = "macos")]
-pub type NativeFile<'data> = MachOFile<'data>;
+/// The native executable file for the target platform.
+#[cfg(all(target_os = "macos", target_pointer_width = "32"))]
+pub type NativeFile<'data> = macho::MachOFile32<'data>;
 
-/// The native object file for the target platform.
+/// The native executable file for the target platform.
+#[cfg(all(target_os = "macos", target_pointer_width = "64"))]
+pub type NativeFile<'data> = macho::MachOFile64<'data>;
+
+/// The native executable file for the target platform.
 #[cfg(target_os = "windows")]
 pub type NativeFile<'data> = PeFile<'data>;
 
-/// The native object file for the target platform.
+/// The native executable file for the target platform.
 #[cfg(all(feature = "wasm", target_arch = "wasm32"))]
 pub type NativeFile<'data> = WasmFile<'data>;
 

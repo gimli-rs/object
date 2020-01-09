@@ -2,6 +2,8 @@
 //!
 //! Defines traits to abstract over the difference between ELF32/ELF64,
 //! and implements read functionality in terms of these traits.
+//!
+//! Also provides `ElfFile` and related types which implement the `Object` trait.
 
 use crate::alloc::borrow::Cow;
 use crate::alloc::fmt;
@@ -31,7 +33,9 @@ pub type ElfFile32<'data, Endian = RunTimeEndian> = ElfFile<'data, elf::FileHead
 /// A 64-bit ELF object file.
 pub type ElfFile64<'data, Endian = RunTimeEndian> = ElfFile<'data, elf::FileHeader64<Endian>>;
 
-/// An ELF object file.
+/// A partially parsed ELF file.
+///
+/// Most of the functionality of this type is provided by the `Object` trait implementation.
 #[derive(Debug)]
 pub struct ElfFile<'data, Elf: FileHeader> {
     endian: Elf::Endian,
