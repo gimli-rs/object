@@ -1,21 +1,13 @@
-use scroll::ctx::SizeWith;
-use scroll::{IOwrite, Pwrite};
+use bytemuck::bytes_of;
+use std::mem;
 use std::string::String;
 
 use crate::alloc::vec::Vec;
+use crate::endian::*;
+use crate::macho;
 use crate::write::string::*;
 use crate::write::util::*;
 use crate::write::*;
-
-mod mach {
-    pub use goblin::mach::constants::cputype::*;
-    pub use goblin::mach::constants::*;
-    pub use goblin::mach::header::*;
-    pub use goblin::mach::load_command::*;
-    pub use goblin::mach::relocation::*;
-    pub use goblin::mach::segment::*;
-    pub use goblin::mach::symbols::*;
-}
 
 #[derive(Default, Clone, Copy)]
 struct SectionOffsets {
@@ -38,7 +30,7 @@ impl Object {
             _ => 0,
         };
         self.flags = FileFlags::MachO {
-            flags: flags | mach::MH_SUBSECTIONS_VIA_SYMBOLS,
+            flags: flags | macho::MH_SUBSECTIONS_VIA_SYMBOLS,
         };
     }
 
@@ -194,21 +186,23 @@ impl Object {
     }
 
     pub(crate) fn macho_write(&self) -> Result<Vec<u8>, String> {
+        let (is_32, pointer_align) = match self.architecture.pointer_width().unwrap() {
+            PointerWidth::U16 | PointerWidth::U32 => (true, 4),
+            PointerWidth::U64 => (false, 8),
+        };
         let endian = match self.architecture.endianness().unwrap() {
-            Endianness::Little => goblin::container::Endian::Little,
-            Endianness::Big => goblin::container::Endian::Big,
+            Endianness::Little => RunTimeEndian::Little,
+            Endianness::Big => RunTimeEndian::Big,
         };
-        let (container, pointer_align) = match self.architecture.pointer_width().unwrap() {
-            PointerWidth::U16 | PointerWidth::U32 => (goblin::container::Container::Little, 4),
-            PointerWidth::U64 => (goblin::container::Container::Big, 8),
-        };
-        let ctx = goblin::container::Ctx::new(container, endian);
+        let macho32 = MachO32 { endian };
+        let macho64 = MachO64 { endian };
+        let macho: &dyn MachO = if is_32 { &macho32 } else { &macho64 };
 
         // Calculate offsets of everything, and build strtab.
         let mut offset = 0;
 
         // Calculate size of Mach-O header.
-        offset += mach::Header::size_with(&ctx);
+        offset += macho.mach_header_size();
 
         // Calculate size of commands.
         let mut ncmds = 0;
@@ -217,13 +211,13 @@ impl Object {
         // Calculate size of segment command and section headers.
         let segment_command_offset = offset;
         let segment_command_len =
-            mach::Segment::size_with(&ctx) + self.sections.len() * mach::Section::size_with(&ctx);
+            macho.segment_command_size() + self.sections.len() * macho.section_header_size();
         offset += segment_command_len;
         ncmds += 1;
 
         // Calculate size of symtab command.
         let symtab_command_offset = offset;
-        let symtab_command_len = mach::SymtabCommand::size_with(&ctx.le);
+        let symtab_command_len = mem::size_of::<macho::SymtabCommand<RunTimeEndian>>();
         offset += symtab_command_len;
         ncmds += 1;
 
@@ -281,7 +275,7 @@ impl Object {
         // Calculate size of symtab.
         offset = align(offset, pointer_align);
         let symtab_offset = offset;
-        let symtab_len = nsyms * mach::Nlist::size_with(&ctx);
+        let symtab_len = nsyms * macho.nlist_size();
         offset += symtab_len;
 
         // Calculate size of strtab.
@@ -298,7 +292,7 @@ impl Object {
             if count != 0 {
                 offset = align(offset, 4);
                 section_offsets[index].reloc_offset = offset;
-                let len = count * mach::RelocationInfo::size_with(&ctx.le);
+                let len = count * mem::size_of::<macho::Relocation<RunTimeEndian>>();
                 offset += len;
             }
         }
@@ -308,10 +302,10 @@ impl Object {
 
         // Write file header.
         let (cputype, cpusubtype) = match self.architecture {
-            Architecture::Arm(_) => (mach::CPU_TYPE_ARM, mach::CPU_SUBTYPE_ARM_ALL),
-            Architecture::Aarch64(_) => (mach::CPU_TYPE_ARM64, mach::CPU_SUBTYPE_ARM64_ALL),
-            Architecture::I386 => (mach::CPU_TYPE_I386, mach::CPU_SUBTYPE_I386_ALL),
-            Architecture::X86_64 => (mach::CPU_TYPE_X86_64, mach::CPU_SUBTYPE_X86_64_ALL),
+            Architecture::Arm(_) => (macho::CPU_TYPE_ARM, macho::CPU_SUBTYPE_ARM_ALL),
+            Architecture::Aarch64(_) => (macho::CPU_TYPE_ARM64, macho::CPU_SUBTYPE_ARM64_ALL),
+            Architecture::I386 => (macho::CPU_TYPE_X86, macho::CPU_SUBTYPE_I386_ALL),
+            Architecture::X86_64 => (macho::CPU_TYPE_X86_64, macho::CPU_SUBTYPE_X86_64_ALL),
             _ => {
                 return Err(format!(
                     "unimplemented architecture {:?}",
@@ -324,41 +318,35 @@ impl Object {
             FileFlags::MachO { flags } => flags,
             _ => 0,
         };
-        let header = mach::Header {
-            magic: if ctx.is_big() {
-                mach::MH_MAGIC_64
-            } else {
-                mach::MH_MAGIC
+        macho.write_mach_header(
+            &mut buffer,
+            MachHeader {
+                cputype,
+                cpusubtype,
+                filetype: macho::MH_OBJECT,
+                ncmds,
+                sizeofcmds: sizeofcmds as u32,
+                flags,
             },
-            cputype,
-            cpusubtype,
-            filetype: mach::MH_OBJECT,
-            ncmds,
-            sizeofcmds: sizeofcmds as u32,
-            flags,
-            reserved: 0,
-        };
-        buffer.iowrite_with(header, ctx).unwrap();
+        );
 
         // Write segment command.
         debug_assert_eq!(segment_command_offset, buffer.len());
-        let mut segment_command = mach::Segment::new(ctx, &[]);
-        segment_command.cmd = if ctx.is_big() {
-            mach::LC_SEGMENT_64
-        } else {
-            mach::LC_SEGMENT
-        };
-        segment_command.cmdsize = segment_command_len as u32;
-        segment_command.segname = [0; 16];
-        segment_command.vmaddr = 0;
-        segment_command.vmsize = address;
-        segment_command.fileoff = segment_data_offset as u64;
-        segment_command.filesize = segment_data_size as u64;
-        segment_command.maxprot = mach::VM_PROT_READ | mach::VM_PROT_WRITE | mach::VM_PROT_EXECUTE;
-        segment_command.initprot = mach::VM_PROT_READ | mach::VM_PROT_WRITE | mach::VM_PROT_EXECUTE;
-        segment_command.nsects = self.sections.len() as u32;
-        segment_command.flags = 0;
-        buffer.iowrite_with(segment_command, ctx).unwrap();
+        macho.write_segment_command(
+            &mut buffer,
+            SegmentCommand {
+                cmdsize: segment_command_len as u32,
+                segname: [0; 16],
+                vmaddr: 0,
+                vmsize: address,
+                fileoff: segment_data_offset as u64,
+                filesize: segment_data_size as u64,
+                maxprot: macho::VM_PROT_READ | macho::VM_PROT_WRITE | macho::VM_PROT_EXECUTE,
+                initprot: macho::VM_PROT_READ | macho::VM_PROT_WRITE | macho::VM_PROT_EXECUTE,
+                nsects: self.sections.len() as u32,
+                flags: 0,
+            },
+        );
 
         // Write section headers.
         for (index, section) in self.sections.iter().enumerate() {
@@ -371,56 +359,50 @@ impl Object {
             } else {
                 match section.kind {
                     SectionKind::Text => {
-                        mach::S_ATTR_PURE_INSTRUCTIONS | mach::S_ATTR_SOME_INSTRUCTIONS
+                        macho::S_ATTR_PURE_INSTRUCTIONS | macho::S_ATTR_SOME_INSTRUCTIONS
                     }
                     SectionKind::Data => 0,
                     SectionKind::ReadOnlyData => 0,
-                    SectionKind::ReadOnlyString => mach::S_CSTRING_LITERALS,
-                    SectionKind::UninitializedData | SectionKind::Common => mach::S_ZEROFILL,
-                    SectionKind::Tls => mach::S_THREAD_LOCAL_REGULAR,
-                    SectionKind::UninitializedTls => mach::S_THREAD_LOCAL_ZEROFILL,
-                    SectionKind::TlsVariables => mach::S_THREAD_LOCAL_VARIABLES,
-                    SectionKind::Debug => mach::S_ATTR_DEBUG,
-                    SectionKind::OtherString => mach::S_CSTRING_LITERALS,
+                    SectionKind::ReadOnlyString => macho::S_CSTRING_LITERALS,
+                    SectionKind::UninitializedData | SectionKind::Common => macho::S_ZEROFILL,
+                    SectionKind::Tls => macho::S_THREAD_LOCAL_REGULAR,
+                    SectionKind::UninitializedTls => macho::S_THREAD_LOCAL_ZEROFILL,
+                    SectionKind::TlsVariables => macho::S_THREAD_LOCAL_VARIABLES,
+                    SectionKind::Debug => macho::S_ATTR_DEBUG,
+                    SectionKind::OtherString => macho::S_CSTRING_LITERALS,
                     SectionKind::Other
                     | SectionKind::Unknown
                     | SectionKind::Linker
                     | SectionKind::Metadata => 0,
                 }
             };
-            buffer
-                .iowrite_with(
-                    mach::Section {
-                        sectname,
-                        segname,
-                        addr: section_offsets[index].address,
-                        size: section.size,
-                        offset: section_offsets[index].offset as u32,
-                        align: section.align.trailing_zeros(),
-                        reloff: section_offsets[index].reloc_offset as u32,
-                        nreloc: section.relocations.len() as u32,
-                        flags,
-                    },
-                    ctx,
-                )
-                .unwrap();
+            macho.write_section(
+                &mut buffer,
+                SectionHeader {
+                    sectname,
+                    segname,
+                    addr: section_offsets[index].address,
+                    size: section.size,
+                    offset: section_offsets[index].offset as u32,
+                    align: section.align.trailing_zeros(),
+                    reloff: section_offsets[index].reloc_offset as u32,
+                    nreloc: section.relocations.len() as u32,
+                    flags,
+                },
+            );
         }
 
         // Write symtab command.
         debug_assert_eq!(symtab_command_offset, buffer.len());
-        buffer
-            .iowrite_with(
-                mach::SymtabCommand {
-                    cmd: mach::LC_SYMTAB,
-                    cmdsize: symtab_command_len as u32,
-                    symoff: symtab_offset as u32,
-                    nsyms: nsyms as u32,
-                    stroff: strtab_offset as u32,
-                    strsize: strtab_data.len() as u32,
-                },
-                ctx.le,
-            )
-            .unwrap();
+        let symtab_command = macho::SymtabCommand {
+            cmd: U32::new(endian, macho::LC_SYMTAB),
+            cmdsize: U32::new(endian, symtab_command_len as u32),
+            symoff: U32::new(endian, symtab_offset as u32),
+            nsyms: U32::new(endian, nsyms as u32),
+            stroff: U32::new(endian, strtab_offset as u32),
+            strsize: U32::new(endian, strtab_data.len() as u32),
+        };
+        buffer.extend_from_slice(bytes_of(&symtab_command));
 
         // Write section data.
         debug_assert_eq!(segment_data_offset, buffer.len());
@@ -446,20 +428,20 @@ impl Object {
             }
             // TODO: N_STAB
             let (mut n_type, n_sect) = match symbol.section {
-                SymbolSection::Undefined => (mach::N_UNDF | mach::N_EXT, 0),
-                SymbolSection::Absolute => (mach::N_ABS, 0),
+                SymbolSection::Undefined => (macho::N_UNDF | macho::N_EXT, 0),
+                SymbolSection::Absolute => (macho::N_ABS, 0),
                 SymbolSection::Common => {
                     return Err(format!("unimplemented symbol.section {:?}", symbol.section))
                 }
-                SymbolSection::Section(id) => (mach::N_SECT, id.0 + 1),
+                SymbolSection::Section(id) => (macho::N_SECT, id.0 + 1),
             };
             match symbol.scope {
                 SymbolScope::Unknown | SymbolScope::Compilation => {}
                 SymbolScope::Linkage => {
-                    n_type |= mach::N_EXT | mach::N_PEXT;
+                    n_type |= macho::N_EXT | macho::N_PEXT;
                 }
                 SymbolScope::Dynamic => {
-                    n_type |= mach::N_EXT;
+                    n_type |= macho::N_EXT;
                 }
             }
 
@@ -469,9 +451,9 @@ impl Object {
                 let mut n_desc = 0;
                 if symbol.weak {
                     if symbol.is_undefined() {
-                        n_desc |= mach::N_WEAK_REF;
+                        n_desc |= macho::N_WEAK_REF;
                     } else {
-                        n_desc |= mach::N_WEAK_DEF;
+                        n_desc |= macho::N_WEAK_DEF;
                     }
                 }
                 n_desc
@@ -487,18 +469,16 @@ impl Object {
                 .map(|id| strtab.get_offset(id))
                 .unwrap_or(0);
 
-            buffer
-                .iowrite_with(
-                    mach::Nlist {
-                        n_strx,
-                        n_type,
-                        n_sect,
-                        n_desc,
-                        n_value,
-                    },
-                    ctx,
-                )
-                .unwrap();
+            macho.write_nlist(
+                &mut buffer,
+                Nlist {
+                    n_strx: n_strx as u32,
+                    n_type,
+                    n_sect: n_sect as u8,
+                    n_desc,
+                    n_value,
+                },
+            );
         }
 
         // Write strtab.
@@ -516,10 +496,10 @@ impl Object {
                     let symbol = &self.symbols[reloc.symbol.0];
                     if symbol.kind == SymbolKind::Section {
                         r_symbolnum = section_offsets[symbol.section.id().unwrap().0].index as u32;
-                        r_extern = 0;
+                        r_extern = false;
                     } else {
                         r_symbolnum = symbol_offsets[reloc.symbol.0].index as u32;
-                        r_extern = 1;
+                        r_extern = true;
                     }
                     let r_length = match reloc.size {
                         8 => 0,
@@ -530,36 +510,34 @@ impl Object {
                     };
                     let (r_pcrel, r_type) = match self.architecture {
                         Architecture::I386 => match reloc.kind {
-                            RelocationKind::Absolute => (0, mach::GENERIC_RELOC_VANILLA),
+                            RelocationKind::Absolute => (false, macho::GENERIC_RELOC_VANILLA),
                             _ => return Err(format!("unimplemented relocation {:?}", reloc)),
                         },
                         Architecture::X86_64 => match (reloc.kind, reloc.encoding, reloc.addend) {
                             (RelocationKind::Absolute, RelocationEncoding::Generic, 0) => {
-                                (0, mach::X86_64_RELOC_UNSIGNED)
+                                (false, macho::X86_64_RELOC_UNSIGNED)
                             }
                             (RelocationKind::Relative, RelocationEncoding::Generic, -4) => {
-                                (1, mach::X86_64_RELOC_SIGNED)
+                                (true, macho::X86_64_RELOC_SIGNED)
                             }
                             (RelocationKind::Relative, RelocationEncoding::X86RipRelative, -4) => {
-                                (1, mach::X86_64_RELOC_SIGNED)
+                                (true, macho::X86_64_RELOC_SIGNED)
                             }
                             (RelocationKind::Relative, RelocationEncoding::X86Branch, -4) => {
-                                (1, mach::X86_64_RELOC_BRANCH)
+                                (true, macho::X86_64_RELOC_BRANCH)
                             }
                             (RelocationKind::PltRelative, RelocationEncoding::X86Branch, -4) => {
-                                (1, mach::X86_64_RELOC_BRANCH)
+                                (true, macho::X86_64_RELOC_BRANCH)
                             }
                             (RelocationKind::GotRelative, RelocationEncoding::Generic, -4) => {
-                                (1, mach::X86_64_RELOC_GOT)
+                                (true, macho::X86_64_RELOC_GOT)
                             }
                             (
                                 RelocationKind::GotRelative,
                                 RelocationEncoding::X86RipRelativeMovq,
                                 -4,
-                            ) => (1, mach::X86_64_RELOC_GOT_LOAD),
-                            (RelocationKind::MachO { value, relative }, _, _) => {
-                                (u32::from(relative), value)
-                            }
+                            ) => (true, macho::X86_64_RELOC_GOT_LOAD),
+                            (RelocationKind::MachO { value, relative }, _, _) => (relative, value),
                             _ => return Err(format!("unimplemented relocation {:?}", reloc)),
                         },
                         _ => {
@@ -569,24 +547,252 @@ impl Object {
                             ))
                         }
                     };
-                    let r_info = r_symbolnum
-                        | r_pcrel << 24
-                        | r_length << 25
-                        | r_extern << 27
-                        | u32::from(r_type) << 28;
-                    buffer
-                        .iowrite_with(
-                            mach::RelocationInfo {
-                                r_address: reloc.offset as i32,
-                                r_info,
-                            },
-                            ctx.le,
-                        )
-                        .unwrap();
+                    let reloc_info = macho::RelocationInfo {
+                        r_address: reloc.offset as u32,
+                        r_symbolnum,
+                        r_pcrel,
+                        r_length,
+                        r_extern,
+                        r_type,
+                    };
+                    buffer.extend_from_slice(bytes_of(&reloc_info.relocation(endian)));
                 }
             }
         }
 
         Ok(buffer)
+    }
+}
+
+struct MachHeader {
+    cputype: u32,
+    cpusubtype: u32,
+    filetype: u32,
+    ncmds: u32,
+    sizeofcmds: u32,
+    flags: u32,
+}
+
+struct SegmentCommand {
+    cmdsize: u32,
+    segname: [u8; 16],
+    vmaddr: u64,
+    vmsize: u64,
+    fileoff: u64,
+    filesize: u64,
+    maxprot: u32,
+    initprot: u32,
+    nsects: u32,
+    flags: u32,
+}
+
+pub struct SectionHeader {
+    sectname: [u8; 16],
+    segname: [u8; 16],
+    addr: u64,
+    size: u64,
+    offset: u32,
+    align: u32,
+    reloff: u32,
+    nreloc: u32,
+    flags: u32,
+}
+
+struct Nlist {
+    n_strx: u32,
+    n_type: u8,
+    n_sect: u8,
+    n_desc: u16,
+    n_value: u64,
+}
+
+trait MachO {
+    fn mach_header_size(&self) -> usize;
+    fn segment_command_size(&self) -> usize;
+    fn section_header_size(&self) -> usize;
+    fn nlist_size(&self) -> usize;
+    fn write_mach_header(&self, buffer: &mut Vec<u8>, section: MachHeader);
+    fn write_segment_command(&self, buffer: &mut Vec<u8>, segment: SegmentCommand);
+    fn write_section(&self, buffer: &mut Vec<u8>, section: SectionHeader);
+    fn write_nlist(&self, buffer: &mut Vec<u8>, nlist: Nlist);
+}
+
+struct MachO32<E> {
+    endian: E,
+}
+
+impl<E: Endian> MachO for MachO32<E> {
+    fn mach_header_size(&self) -> usize {
+        mem::size_of::<macho::MachHeader32<E>>()
+    }
+
+    fn segment_command_size(&self) -> usize {
+        mem::size_of::<macho::SegmentCommand32<E>>()
+    }
+
+    fn section_header_size(&self) -> usize {
+        mem::size_of::<macho::Section32<E>>()
+    }
+
+    fn nlist_size(&self) -> usize {
+        mem::size_of::<macho::Nlist32<E>>()
+    }
+
+    fn write_mach_header(&self, buffer: &mut Vec<u8>, header: MachHeader) {
+        let endian = self.endian;
+        let magic = if endian.is_big_endian() {
+            macho::MH_MAGIC
+        } else {
+            macho::MH_CIGAM
+        };
+        let header = macho::MachHeader32 {
+            magic: U32::new(BigEndian, magic),
+            cputype: U32::new(endian, header.cputype),
+            cpusubtype: U32::new(endian, header.cpusubtype),
+            filetype: U32::new(endian, header.filetype),
+            ncmds: U32::new(endian, header.ncmds),
+            sizeofcmds: U32::new(endian, header.sizeofcmds),
+            flags: U32::new(endian, header.flags),
+        };
+        buffer.extend_from_slice(bytes_of(&header));
+    }
+
+    fn write_segment_command(&self, buffer: &mut Vec<u8>, segment: SegmentCommand) {
+        let endian = self.endian;
+        let segment = macho::SegmentCommand32 {
+            cmd: U32::new(endian, macho::LC_SEGMENT),
+            cmdsize: U32::new(endian, segment.cmdsize),
+            segname: segment.segname,
+            vmaddr: U32::new(endian, segment.vmaddr as u32),
+            vmsize: U32::new(endian, segment.vmsize as u32),
+            fileoff: U32::new(endian, segment.fileoff as u32),
+            filesize: U32::new(endian, segment.filesize as u32),
+            maxprot: U32::new(endian, segment.maxprot),
+            initprot: U32::new(endian, segment.initprot),
+            nsects: U32::new(endian, segment.nsects),
+            flags: U32::new(endian, segment.flags),
+        };
+        buffer.extend_from_slice(bytes_of(&segment));
+    }
+
+    fn write_section(&self, buffer: &mut Vec<u8>, section: SectionHeader) {
+        let endian = self.endian;
+        let section = macho::Section32 {
+            sectname: section.sectname,
+            segname: section.segname,
+            addr: U32::new(endian, section.addr as u32),
+            size: U32::new(endian, section.size as u32),
+            offset: U32::new(endian, section.offset),
+            align: U32::new(endian, section.align),
+            reloff: U32::new(endian, section.reloff),
+            nreloc: U32::new(endian, section.nreloc),
+            flags: U32::new(endian, section.flags),
+            reserved1: U32::default(),
+            reserved2: U32::default(),
+        };
+        buffer.extend_from_slice(bytes_of(&section));
+    }
+
+    fn write_nlist(&self, buffer: &mut Vec<u8>, nlist: Nlist) {
+        let endian = self.endian;
+        let nlist = macho::Nlist32 {
+            n_strx: U32::new(endian, nlist.n_strx),
+            n_type: nlist.n_type,
+            n_sect: nlist.n_sect,
+            n_desc: U16::new(endian, nlist.n_desc),
+            n_value: U32::new(endian, nlist.n_value as u32),
+        };
+        buffer.extend_from_slice(bytes_of(&nlist));
+    }
+}
+
+struct MachO64<E> {
+    endian: E,
+}
+
+impl<E: Endian> MachO for MachO64<E> {
+    fn mach_header_size(&self) -> usize {
+        mem::size_of::<macho::MachHeader64<E>>()
+    }
+
+    fn segment_command_size(&self) -> usize {
+        mem::size_of::<macho::SegmentCommand64<E>>()
+    }
+
+    fn section_header_size(&self) -> usize {
+        mem::size_of::<macho::Section64<E>>()
+    }
+
+    fn nlist_size(&self) -> usize {
+        mem::size_of::<macho::Nlist64<E>>()
+    }
+
+    fn write_mach_header(&self, buffer: &mut Vec<u8>, header: MachHeader) {
+        let endian = self.endian;
+        let magic = if endian.is_big_endian() {
+            macho::MH_MAGIC_64
+        } else {
+            macho::MH_CIGAM_64
+        };
+        let header = macho::MachHeader64 {
+            magic: U32::new(BigEndian, magic),
+            cputype: U32::new(endian, header.cputype),
+            cpusubtype: U32::new(endian, header.cpusubtype),
+            filetype: U32::new(endian, header.filetype),
+            ncmds: U32::new(endian, header.ncmds),
+            sizeofcmds: U32::new(endian, header.sizeofcmds),
+            flags: U32::new(endian, header.flags),
+            reserved: U32::default(),
+        };
+        buffer.extend_from_slice(bytes_of(&header));
+    }
+
+    fn write_segment_command(&self, buffer: &mut Vec<u8>, segment: SegmentCommand) {
+        let endian = self.endian;
+        let segment = macho::SegmentCommand64 {
+            cmd: U32::new(endian, macho::LC_SEGMENT_64),
+            cmdsize: U32::new(endian, segment.cmdsize),
+            segname: segment.segname,
+            vmaddr: U64::new(endian, segment.vmaddr),
+            vmsize: U64::new(endian, segment.vmsize),
+            fileoff: U64::new(endian, segment.fileoff),
+            filesize: U64::new(endian, segment.filesize),
+            maxprot: U32::new(endian, segment.maxprot),
+            initprot: U32::new(endian, segment.initprot),
+            nsects: U32::new(endian, segment.nsects),
+            flags: U32::new(endian, segment.flags),
+        };
+        buffer.extend_from_slice(bytes_of(&segment));
+    }
+
+    fn write_section(&self, buffer: &mut Vec<u8>, section: SectionHeader) {
+        let endian = self.endian;
+        let section = macho::Section64 {
+            sectname: section.sectname,
+            segname: section.segname,
+            addr: U64::new(endian, section.addr),
+            size: U64::new(endian, section.size),
+            offset: U32::new(endian, section.offset),
+            align: U32::new(endian, section.align),
+            reloff: U32::new(endian, section.reloff),
+            nreloc: U32::new(endian, section.nreloc),
+            flags: U32::new(endian, section.flags),
+            reserved1: U32::default(),
+            reserved2: U32::default(),
+            reserved3: U32::default(),
+        };
+        buffer.extend_from_slice(bytes_of(&section));
+    }
+
+    fn write_nlist(&self, buffer: &mut Vec<u8>, nlist: Nlist) {
+        let endian = self.endian;
+        let nlist = macho::Nlist64 {
+            n_strx: U32::new(endian, nlist.n_strx),
+            n_type: nlist.n_type,
+            n_sect: nlist.n_sect,
+            n_desc: U16::new(endian, nlist.n_desc),
+            n_value: U64::new(endian, nlist.n_value),
+        };
+        buffer.extend_from_slice(bytes_of(&nlist));
     }
 }

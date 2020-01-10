@@ -63,6 +63,7 @@ fn macho_x86_64_tls() {
     assert_eq!(thread_vars.segment_name(), Some("__DATA"));
     assert_eq!(thread_vars.kind(), SectionKind::TlsVariables);
     assert_eq!(thread_vars.size(), 2 * 3 * 8);
+    assert_eq!(&thread_vars.data()[..], &[0; 48][..]);
 
     let thread_bss = sections.next().unwrap();
     println!("{:?}", thread_bss);
@@ -71,6 +72,7 @@ fn macho_x86_64_tls() {
     assert_eq!(thread_bss.segment_name(), Some("__DATA"));
     assert_eq!(thread_bss.kind(), SectionKind::UninitializedTls);
     assert_eq!(thread_bss.size(), 31);
+    assert_eq!(&thread_bss.data()[..], &[]);
 
     let mut symbols = object.symbols();
 

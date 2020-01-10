@@ -50,3 +50,4 @@ pub use read::*;
 pub mod write;
 
 pub mod elf;
+pub mod macho;
