@@ -747,7 +747,13 @@ fn parse_symbol<'data, Elf: FileHeader>(
     };
     let section = match symbol.st_shndx(endian) {
         elf::SHN_UNDEF => SymbolSection::Undefined,
-        elf::SHN_ABS => SymbolSection::Absolute,
+        elf::SHN_ABS => {
+            if kind == SymbolKind::File {
+                SymbolSection::None
+            } else {
+                SymbolSection::Absolute
+            }
+        }
         elf::SHN_COMMON => SymbolSection::Common,
         elf::SHN_XINDEX => match shndx {
             Some(index) => SymbolSection::Section(SectionIndex(index as usize)),

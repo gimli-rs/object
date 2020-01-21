@@ -482,7 +482,13 @@ fn parse_symbol<'data>(
             }
         }
         pe::symbol::IMAGE_SYM_ABSOLUTE => SymbolSection::Absolute,
-        pe::symbol::IMAGE_SYM_DEBUG => SymbolSection::Undefined,
+        pe::symbol::IMAGE_SYM_DEBUG => {
+            if symbol.storage_class == pe::symbol::IMAGE_SYM_CLASS_FILE {
+                SymbolSection::None
+            } else {
+                SymbolSection::Unknown
+            }
+        }
         index if index > 0 => SymbolSection::Section(SectionIndex(index as usize - 1)),
         _ => SymbolSection::Unknown,
     };

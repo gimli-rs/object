@@ -66,9 +66,9 @@ pub struct SymbolIndex(pub usize);
 pub enum SymbolSection {
     /// The section is unknown.
     Unknown,
+    /// The section is not applicable for this symbol (such as file symbols).
+    None,
     /// The symbol is undefined.
-    ///
-    /// May also include symbols for which a section is not applicable (such as file symbols).
     Undefined,
     /// The symbol has an absolute value.
     Absolute,

@@ -430,10 +430,10 @@ impl Object {
             let (mut n_type, n_sect) = match symbol.section {
                 SymbolSection::Undefined => (macho::N_UNDF | macho::N_EXT, 0),
                 SymbolSection::Absolute => (macho::N_ABS, 0),
-                SymbolSection::Common => {
+                SymbolSection::Section(id) => (macho::N_SECT, id.0 + 1),
+                SymbolSection::None | SymbolSection::Common => {
                     return Err(format!("unimplemented symbol.section {:?}", symbol.section))
                 }
-                SymbolSection::Section(id) => (macho::N_SECT, id.0 + 1),
             };
             match symbol.scope {
                 SymbolScope::Unknown | SymbolScope::Compilation => {}

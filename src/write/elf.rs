@@ -440,12 +440,11 @@ impl Object {
             } else {
                 elf::STV_DEFAULT
             };
-            let section = if symbol.kind == SymbolKind::File {
-                SymbolSection::Absolute
-            } else {
-                symbol.section
-            };
-            let (st_shndx, xindex) = match section {
+            let (st_shndx, xindex) = match symbol.section {
+                SymbolSection::None => {
+                    debug_assert_eq!(symbol.kind, SymbolKind::File);
+                    (elf::SHN_ABS, 0)
+                }
                 SymbolSection::Undefined => (elf::SHN_UNDEF, 0),
                 SymbolSection::Absolute => (elf::SHN_ABS, 0),
                 SymbolSection::Common => (elf::SHN_COMMON, 0),
