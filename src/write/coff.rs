@@ -400,13 +400,11 @@ impl Object {
         for (index, symbol) in self.symbols.iter().enumerate() {
             let mut name = &symbol.name[..];
             let section_number = match symbol.section {
-                SymbolSection::Undefined => {
-                    if symbol.kind == SymbolKind::File {
-                        coff::IMAGE_SYM_DEBUG
-                    } else {
-                        coff::IMAGE_SYM_UNDEFINED
-                    }
+                SymbolSection::None => {
+                    debug_assert_eq!(symbol.kind, SymbolKind::File);
+                    coff::IMAGE_SYM_DEBUG
                 }
+                SymbolSection::Undefined => coff::IMAGE_SYM_UNDEFINED,
                 SymbolSection::Absolute => coff::IMAGE_SYM_ABSOLUTE,
                 SymbolSection::Common => coff::IMAGE_SYM_UNDEFINED,
                 SymbolSection::Section(id) => (id.0 + 1) as i16,
@@ -426,6 +424,9 @@ impl Object {
                 SymbolKind::Label => coff::IMAGE_SYM_CLASS_LABEL,
                 SymbolKind::Text | SymbolKind::Data => {
                     match symbol.section {
+                        SymbolSection::None => {
+                            return Err(format!("missing symbol section {:?}", symbol));
+                        }
                         SymbolSection::Undefined => coff::IMAGE_SYM_CLASS_EXTERNAL_DEF,
                         SymbolSection::Common => coff::IMAGE_SYM_CLASS_EXTERNAL,
                         SymbolSection::Absolute | SymbolSection::Section(_) => {

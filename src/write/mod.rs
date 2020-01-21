@@ -312,7 +312,7 @@ impl Object {
             kind: SymbolKind::File,
             scope: SymbolScope::Compilation,
             weak: false,
-            section: SymbolSection::Undefined,
+            section: SymbolSection::None,
             flags: SymbolFlags::None,
         })
     }
@@ -628,6 +628,8 @@ impl Section {
 /// The section where a symbol is defined.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum SymbolSection {
+    /// The section is not applicable for this symbol (such as file symbols).
+    None,
     /// The symbol is undefined.
     Undefined,
     /// The symbol has an absolute value.

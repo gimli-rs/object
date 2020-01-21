@@ -70,6 +70,7 @@ fn main() {
         }
         let (section, value) = match in_symbol.section() {
             SymbolSection::Unknown => panic!("unknown symbol section for {:?}", in_symbol),
+            SymbolSection::None => (write::SymbolSection::None, in_symbol.address()),
             SymbolSection::Undefined => (write::SymbolSection::Undefined, in_symbol.address()),
             SymbolSection::Absolute => (write::SymbolSection::Absolute, in_symbol.address()),
             SymbolSection::Common => (write::SymbolSection::Common, in_symbol.address()),

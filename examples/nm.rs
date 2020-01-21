@@ -58,7 +58,7 @@ fn print_symbol(symbol: &Symbol<'_>, section_kinds: &HashMap<SectionIndex, Secti
     }
 
     let mut kind = match symbol.section() {
-        SymbolSection::Unknown => '?',
+        SymbolSection::Unknown | SymbolSection::None => '?',
         SymbolSection::Undefined => 'U',
         SymbolSection::Absolute => 'A',
         SymbolSection::Common => 'C',

@@ -4,6 +4,7 @@ use object::read::{Object, ObjectSection};
 use object::{read, write};
 use object::{
     RelocationEncoding, RelocationKind, SectionKind, SymbolFlags, SymbolKind, SymbolScope,
+    SymbolSection,
 };
 use target_lexicon::{Architecture, BinaryFormat};
 
@@ -15,6 +16,8 @@ mod tls;
 #[test]
 fn coff_x86_64() {
     let mut object = write::Object::new(BinaryFormat::Coff, Architecture::X86_64);
+
+    object.add_file_symbol(b"file.c".to_vec());
 
     let text = object.section_id(write::StandardSection::Text);
     object.append_section_data(text, &[1; 30], 4);
@@ -64,6 +67,15 @@ fn coff_x86_64() {
 
     let mut symbols = object.symbols();
 
+    let (_, symbol) = symbols.next().unwrap();
+    println!("{:?}", symbol);
+    assert_eq!(symbol.name(), Some("file.c"));
+    assert_eq!(symbol.address(), 0);
+    assert_eq!(symbol.kind(), SymbolKind::File);
+    assert_eq!(symbol.section(), SymbolSection::None);
+    assert_eq!(symbol.scope(), SymbolScope::Compilation);
+    assert_eq!(symbol.is_weak(), false);
+
     let (func1_symbol, symbol) = symbols.next().unwrap();
     println!("{:?}", symbol);
     assert_eq!(symbol.name(), Some("func1"));
@@ -92,6 +104,8 @@ fn coff_x86_64() {
 #[test]
 fn elf_x86_64() {
     let mut object = write::Object::new(BinaryFormat::Elf, Architecture::X86_64);
+
+    object.add_file_symbol(b"file.c".to_vec());
 
     let text = object.section_id(write::StandardSection::Text);
     object.append_section_data(text, &[1; 30], 4);
@@ -158,6 +172,15 @@ fn elf_x86_64() {
     assert_eq!(symbol.is_weak(), false);
     assert_eq!(symbol.is_undefined(), true);
 
+    let (_, symbol) = symbols.next().unwrap();
+    println!("{:?}", symbol);
+    assert_eq!(symbol.name(), Some("file.c"));
+    assert_eq!(symbol.address(), 0);
+    assert_eq!(symbol.kind(), SymbolKind::File);
+    assert_eq!(symbol.section(), SymbolSection::None);
+    assert_eq!(symbol.scope(), SymbolScope::Compilation);
+    assert_eq!(symbol.is_weak(), false);
+
     let (func1_symbol, symbol) = symbols.next().unwrap();
     println!("{:?}", symbol);
     assert_eq!(symbol.name(), Some("func1"));
@@ -186,6 +209,8 @@ fn elf_x86_64() {
 #[test]
 fn macho_x86_64() {
     let mut object = write::Object::new(BinaryFormat::Macho, Architecture::X86_64);
+
+    object.add_file_symbol(b"file.c".to_vec());
 
     let text = object.section_id(write::StandardSection::Text);
     object.append_section_data(text, &[1; 30], 4);
