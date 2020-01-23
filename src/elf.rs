@@ -8,7 +8,7 @@
 #![allow(clippy::identity_op)]
 
 use crate::endian::{Endian, I32, I64, U16, U32, U64};
-use bytemuck::{Pod, Zeroable};
+use crate::pod::Pod;
 
 /// The header at the start of every 32-bit ELF file.
 #[derive(Debug, Clone, Copy)]

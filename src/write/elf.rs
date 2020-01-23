@@ -1,10 +1,10 @@
-use bytemuck::bytes_of;
 use std::mem;
 use std::string::String;
 
 use crate::alloc::vec::Vec;
 use crate::elf;
 use crate::endian::*;
+use crate::pod::bytes_of;
 use crate::write::string::*;
 use crate::write::util::*;
 use crate::write::*;
