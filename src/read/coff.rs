@@ -1,10 +1,18 @@
+//! Support for reading Windows COFF files.
+//!
+//! Provides `CoffFile` and related types which implement the `Object` trait.
+
 use crate::alloc::borrow::Cow;
 use crate::alloc::fmt;
 use crate::alloc::vec::Vec;
-use goblin::pe;
-use std::{iter, slice};
+use crate::endian::LittleEndian as LE;
+use crate::pe;
+use crate::pod::{self, Pod};
+use core::convert::TryInto;
+use std::{iter, slice, str};
 use target_lexicon::Architecture;
 
+use crate::read::util::StringTable;
 use crate::read::{
     self, FileFlags, Object, ObjectSection, ObjectSegment, Relocation, RelocationEncoding,
     RelocationKind, RelocationTarget, SectionFlags, SectionIndex, SectionKind, Symbol, SymbolFlags,
@@ -14,78 +22,36 @@ use crate::read::{
 /// A COFF object file.
 #[derive(Debug)]
 pub struct CoffFile<'data> {
-    coff: pe::Coff<'data>,
+    header: &'data pe::ImageFileHeader,
+    sections: &'data [pe::ImageSectionHeader],
+    // TODO: ImageSymbolExBytes
+    symbols: SymbolTable<'data>,
     data: &'data [u8],
 }
 
-/// An iterator over the loadable sections of a `CoffFile`.
-#[derive(Debug)]
-pub struct CoffSegmentIterator<'data, 'file>
-where
-    'data: 'file,
-{
-    file: &'file CoffFile<'data>,
-    iter: slice::Iter<'file, pe::section_table::SectionTable>,
-}
-
-/// A loadable section of a `CoffFile`.
-#[derive(Debug)]
-pub struct CoffSegment<'data, 'file>
-where
-    'data: 'file,
-{
-    file: &'file CoffFile<'data>,
-    section: &'file pe::section_table::SectionTable,
-}
-
-/// An iterator over the sections of a `CoffFile`.
-#[derive(Debug)]
-pub struct CoffSectionIterator<'data, 'file>
-where
-    'data: 'file,
-{
-    file: &'file CoffFile<'data>,
-    iter: iter::Enumerate<slice::Iter<'file, pe::section_table::SectionTable>>,
-}
-
-/// A section of a `CoffFile`.
-#[derive(Debug)]
-pub struct CoffSection<'data, 'file>
-where
-    'data: 'file,
-{
-    file: &'file CoffFile<'data>,
-    index: SectionIndex,
-    section: &'file pe::section_table::SectionTable,
-}
-
-/// An iterator over the symbols of a `CoffFile`.
-pub struct CoffSymbolIterator<'data, 'file>
-where
-    'data: 'file,
-{
-    file: &'file CoffFile<'data>,
-    symbols: pe::symbol::SymbolIterator<'data>,
-}
-
-/// An iterator over the relocations in an `CoffSection`.
-pub struct CoffRelocationIterator<'data, 'file> {
-    file: &'file CoffFile<'data>,
-    relocations: pe::relocation::Relocations<'data>,
-}
-
 impl<'data> CoffFile<'data> {
-    /// Get the COFF headers of the file.
-    // TODO: this is temporary to allow access to features this crate doesn't provide yet
-    #[inline]
-    pub fn coff(&self) -> &pe::Coff<'data> {
-        &self.coff
-    }
-
     /// Parse the raw COFF file data.
     pub fn parse(data: &'data [u8]) -> Result<Self, &'static str> {
-        let coff = pe::Coff::parse(data).map_err(|_| "Could not parse COFF header")?;
-        Ok(CoffFile { coff, data })
+        let (header, tail) = pod::from_bytes::<pe::ImageFileHeader>(data)
+            .ok_or("Invalid COFF header size or alignment")?;
+
+        // Skip over the optional header and get the section headers.
+        let (sections, _) = pod::slice_from_bytes(
+            tail,
+            header.size_of_optional_header.get(LE) as usize,
+            header.number_of_sections.get(LE) as usize,
+        )
+        .ok_or("Invalid section headers")?;
+
+        let symbols = SymbolTable::parse(header, data)?;
+
+        // TODO: maybe validate that the machine is known?
+        Ok(CoffFile {
+            header,
+            sections,
+            symbols,
+            data,
+        })
     }
 }
 
@@ -100,9 +66,9 @@ where
     type SymbolIterator = CoffSymbolIterator<'data, 'file>;
 
     fn architecture(&self) -> Architecture {
-        match self.coff.header.machine {
-            pe::header::COFF_MACHINE_X86 => Architecture::I386,
-            pe::header::COFF_MACHINE_X86_64 => Architecture::X86_64,
+        match self.header.machine.get(LE) {
+            pe::IMAGE_FILE_MACHINE_I386 => Architecture::I386,
+            pe::IMAGE_FILE_MACHINE_AMD64 => Architecture::X86_64,
             _ => Architecture::Unknown,
         }
     }
@@ -120,7 +86,7 @@ where
     fn segments(&'file self) -> CoffSegmentIterator<'data, 'file> {
         CoffSegmentIterator {
             file: self,
-            iter: self.coff.sections.iter(),
+            iter: self.sections.iter(),
         }
     }
 
@@ -136,28 +102,30 @@ where
     fn sections(&'file self) -> CoffSectionIterator<'data, 'file> {
         CoffSectionIterator {
             file: self,
-            iter: self.coff.sections.iter().enumerate(),
+            iter: self.sections.iter().enumerate(),
         }
     }
 
     fn symbol_by_index(&self, index: SymbolIndex) -> Option<Symbol<'data>> {
-        self.coff
-            .symbols
-            .get(index.0)
-            .map(|(name, symbol)| parse_symbol(index.0, name, &symbol, &self.coff))
+        Some(parse_symbol(
+            &self.symbols,
+            index.0,
+            self.symbols.get(index.0)?,
+        ))
     }
 
     fn symbols(&'file self) -> CoffSymbolIterator<'data, 'file> {
         CoffSymbolIterator {
-            file: self,
-            symbols: self.coff.symbols.iter(),
+            symbols: &self.symbols,
+            index: 0,
         }
     }
 
     fn dynamic_symbols(&'file self) -> CoffSymbolIterator<'data, 'file> {
         CoffSymbolIterator {
-            file: self,
-            symbols: goblin::pe::symbol::SymbolIterator::default(),
+            symbols: &self.symbols,
+            // Hack: don't return any.
+            index: self.symbols.symbols.len(),
         }
     }
 
@@ -173,11 +141,9 @@ where
     }
 
     fn has_debug_symbols(&self) -> bool {
-        for section in &self.coff.sections {
-            if let Ok(name) = section.name() {
-                if name == ".debug_info" {
-                    return true;
-                }
+        for section in self.sections {
+            if section.name[..12] == b".debug_info\0"[..] {
+                return true;
             }
         }
         false
@@ -189,9 +155,19 @@ where
 
     fn flags(&self) -> FileFlags {
         FileFlags::Coff {
-            characteristics: self.coff.header.characteristics,
+            characteristics: self.header.characteristics.get(LE),
         }
     }
+}
+
+/// An iterator over the loadable sections of a `CoffFile`.
+#[derive(Debug)]
+pub struct CoffSegmentIterator<'data, 'file>
+where
+    'data: 'file,
+{
+    file: &'file CoffFile<'data>,
+    iter: slice::Iter<'data, pe::ImageSectionHeader>,
 }
 
 impl<'data, 'file> Iterator for CoffSegmentIterator<'data, 'file> {
@@ -206,52 +182,71 @@ impl<'data, 'file> Iterator for CoffSegmentIterator<'data, 'file> {
 }
 
 fn section_alignment(characteristics: u32) -> u64 {
-    match characteristics & pe::section_table::IMAGE_SCN_ALIGN_MASK {
-        pe::section_table::IMAGE_SCN_ALIGN_2BYTES => 2,
-        pe::section_table::IMAGE_SCN_ALIGN_4BYTES => 4,
-        pe::section_table::IMAGE_SCN_ALIGN_8BYTES => 8,
-        pe::section_table::IMAGE_SCN_ALIGN_16BYTES => 16,
-        pe::section_table::IMAGE_SCN_ALIGN_32BYTES => 32,
-        pe::section_table::IMAGE_SCN_ALIGN_64BYTES => 64,
-        pe::section_table::IMAGE_SCN_ALIGN_128BYTES => 128,
-        pe::section_table::IMAGE_SCN_ALIGN_256BYTES => 256,
-        pe::section_table::IMAGE_SCN_ALIGN_512BYTES => 512,
-        pe::section_table::IMAGE_SCN_ALIGN_1024BYTES => 1024,
-        pe::section_table::IMAGE_SCN_ALIGN_2048BYTES => 2048,
-        pe::section_table::IMAGE_SCN_ALIGN_4096BYTES => 4096,
-        pe::section_table::IMAGE_SCN_ALIGN_8192BYTES => 8192,
-        _ => 1,
+    match characteristics & pe::IMAGE_SCN_ALIGN_MASK {
+        pe::IMAGE_SCN_ALIGN_1BYTES => 1,
+        pe::IMAGE_SCN_ALIGN_2BYTES => 2,
+        pe::IMAGE_SCN_ALIGN_4BYTES => 4,
+        pe::IMAGE_SCN_ALIGN_8BYTES => 8,
+        pe::IMAGE_SCN_ALIGN_16BYTES => 16,
+        pe::IMAGE_SCN_ALIGN_32BYTES => 32,
+        pe::IMAGE_SCN_ALIGN_64BYTES => 64,
+        pe::IMAGE_SCN_ALIGN_128BYTES => 128,
+        pe::IMAGE_SCN_ALIGN_256BYTES => 256,
+        pe::IMAGE_SCN_ALIGN_512BYTES => 512,
+        pe::IMAGE_SCN_ALIGN_1024BYTES => 1024,
+        pe::IMAGE_SCN_ALIGN_2048BYTES => 2048,
+        pe::IMAGE_SCN_ALIGN_4096BYTES => 4096,
+        pe::IMAGE_SCN_ALIGN_8192BYTES => 8192,
+        _ => 16,
     }
+}
+
+/// A loadable section of a `CoffFile`.
+#[derive(Debug)]
+pub struct CoffSegment<'data, 'file>
+where
+    'data: 'file,
+{
+    file: &'file CoffFile<'data>,
+    section: &'data pe::ImageSectionHeader,
 }
 
 impl<'data, 'file> ObjectSegment<'data> for CoffSegment<'data, 'file> {
     #[inline]
     fn address(&self) -> u64 {
-        u64::from(self.section.virtual_address)
+        u64::from(self.section.virtual_address.get(LE))
     }
 
     #[inline]
     fn size(&self) -> u64 {
-        u64::from(self.section.virtual_size)
+        u64::from(self.section.virtual_size.get(LE))
     }
 
     #[inline]
     fn align(&self) -> u64 {
-        section_alignment(self.section.characteristics)
+        section_alignment(self.section.characteristics.get(LE))
     }
 
     #[inline]
     fn file_range(&self) -> (u64, u64) {
-        (
-            self.section.pointer_to_raw_data as u64,
-            self.section.size_of_raw_data as u64,
-        )
+        if self.section.characteristics.get(LE) & pe::IMAGE_SCN_CNT_UNINITIALIZED_DATA != 0 {
+            (0, 0)
+        } else {
+            (
+                u64::from(self.section.pointer_to_raw_data.get(LE)),
+                u64::from(self.section.size_of_raw_data.get(LE)),
+            )
+        }
     }
 
     fn data(&self) -> &'data [u8] {
-        let offset = self.section.pointer_to_raw_data as usize;
-        let size = self.section.size_of_raw_data as usize;
-        &self.file.data[offset..][..size]
+        if self.section.characteristics.get(LE) & pe::IMAGE_SCN_CNT_UNINITIALIZED_DATA != 0 {
+            &[]
+        } else {
+            let offset = self.section.pointer_to_raw_data.get(LE) as usize;
+            let size = self.section.size_of_raw_data.get(LE) as usize;
+            &self.file.data[offset..][..size]
+        }
     }
 
     fn data_range(&self, address: u64, size: u64) -> Option<&'data [u8]> {
@@ -260,8 +255,18 @@ impl<'data, 'file> ObjectSegment<'data> for CoffSegment<'data, 'file> {
 
     #[inline]
     fn name(&self) -> Option<&str> {
-        self.section.name().ok()
+        section_name(&self.section.name, self.file.symbols.strings)
     }
+}
+
+/// An iterator over the sections of a `CoffFile`.
+#[derive(Debug)]
+pub struct CoffSectionIterator<'data, 'file>
+where
+    'data: 'file,
+{
+    file: &'file CoffFile<'data>,
+    iter: iter::Enumerate<slice::Iter<'data, pe::ImageSectionHeader>>,
 }
 
 impl<'data, 'file> Iterator for CoffSectionIterator<'data, 'file> {
@@ -276,13 +281,24 @@ impl<'data, 'file> Iterator for CoffSectionIterator<'data, 'file> {
     }
 }
 
+/// A section of a `CoffFile`.
+#[derive(Debug)]
+pub struct CoffSection<'data, 'file>
+where
+    'data: 'file,
+{
+    file: &'file CoffFile<'data>,
+    index: SectionIndex,
+    section: &'data pe::ImageSectionHeader,
+}
+
 impl<'data, 'file> CoffSection<'data, 'file> {
     fn raw_data(&self) -> &'data [u8] {
-        if self.section.characteristics & pe::section_table::IMAGE_SCN_CNT_UNINITIALIZED_DATA != 0 {
+        if self.section.characteristics.get(LE) & pe::IMAGE_SCN_CNT_UNINITIALIZED_DATA != 0 {
             &[]
         } else {
-            let offset = self.section.pointer_to_raw_data as usize;
-            let size = self.section.size_of_raw_data as usize;
+            let offset = self.section.pointer_to_raw_data.get(LE) as usize;
+            let size = self.section.size_of_raw_data.get(LE) as usize;
             &self.file.data[offset..][..size]
         }
     }
@@ -298,28 +314,28 @@ impl<'data, 'file> ObjectSection<'data> for CoffSection<'data, 'file> {
 
     #[inline]
     fn address(&self) -> u64 {
-        u64::from(self.section.virtual_address)
+        u64::from(self.section.virtual_address.get(LE))
     }
 
     #[inline]
     fn size(&self) -> u64 {
         // TODO: This may need to be the length from the auxiliary symbol for this section.
-        u64::from(self.section.size_of_raw_data)
+        u64::from(self.section.size_of_raw_data.get(LE))
     }
 
     #[inline]
     fn align(&self) -> u64 {
-        section_alignment(self.section.characteristics)
+        section_alignment(self.section.characteristics.get(LE))
     }
 
     #[inline]
     fn file_range(&self) -> Option<(u64, u64)> {
-        if self.section.characteristics & pe::section_table::IMAGE_SCN_CNT_UNINITIALIZED_DATA != 0 {
+        if self.section.characteristics.get(LE) & pe::IMAGE_SCN_CNT_UNINITIALIZED_DATA != 0 {
             None
         } else {
             Some((
-                self.section.pointer_to_raw_data as u64,
-                self.section.size_of_raw_data as u64,
+                self.section.pointer_to_raw_data.get(LE) as u64,
+                self.section.size_of_raw_data.get(LE) as u64,
             ))
         }
     }
@@ -337,8 +353,9 @@ impl<'data, 'file> ObjectSection<'data> for CoffSection<'data, 'file> {
         self.data()
     }
 
+    #[inline]
     fn name(&self) -> Option<&str> {
-        self.section.name().ok()
+        section_name(&self.section.name, self.file.symbols.strings)
     }
 
     #[inline]
@@ -348,44 +365,34 @@ impl<'data, 'file> ObjectSection<'data> for CoffSection<'data, 'file> {
 
     #[inline]
     fn kind(&self) -> SectionKind {
-        if self.section.characteristics
-            & (pe::section_table::IMAGE_SCN_CNT_CODE | pe::section_table::IMAGE_SCN_MEM_EXECUTE)
-            != 0
-        {
-            SectionKind::Text
-        } else if self.section.characteristics & pe::section_table::IMAGE_SCN_CNT_INITIALIZED_DATA
-            != 0
-        {
-            if self.section.characteristics & pe::section_table::IMAGE_SCN_MEM_DISCARDABLE != 0 {
-                SectionKind::Other
-            } else if self.section.characteristics & pe::section_table::IMAGE_SCN_MEM_WRITE != 0 {
-                SectionKind::Data
-            } else {
-                SectionKind::ReadOnlyData
-            }
-        } else if self.section.characteristics & pe::section_table::IMAGE_SCN_CNT_UNINITIALIZED_DATA
-            != 0
-        {
-            SectionKind::UninitializedData
-        } else if self.section.characteristics & pe::section_table::IMAGE_SCN_LNK_INFO != 0 {
-            SectionKind::Linker
-        } else {
-            SectionKind::Unknown
-        }
+        section_kind(self.section.characteristics.get(LE))
     }
 
     fn relocations(&self) -> CoffRelocationIterator<'data, 'file> {
+        let pointer = self.section.pointer_to_relocations.get(LE) as usize;
+        let number = self.section.number_of_relocations.get(LE) as usize;
+        let (relocations, _) =
+            pod::slice_from_bytes(self.file.data, pointer, number).unwrap_or((&[], &[]));
         CoffRelocationIterator {
             file: self.file,
-            relocations: self.section.relocations(self.file.data).unwrap_or_default(),
+            iter: relocations.iter(),
         }
     }
 
     fn flags(&self) -> SectionFlags {
         SectionFlags::Coff {
-            characteristics: self.section.characteristics,
+            characteristics: self.section.characteristics.get(LE),
         }
     }
+}
+
+/// An iterator over the symbols of a `CoffFile`.
+pub struct CoffSymbolIterator<'data, 'file>
+where
+    'data: 'file,
+{
+    pub(crate) symbols: &'file SymbolTable<'data>,
+    pub(crate) index: usize,
 }
 
 impl<'data, 'file> fmt::Debug for CoffSymbolIterator<'data, 'file> {
@@ -398,35 +405,51 @@ impl<'data, 'file> Iterator for CoffSymbolIterator<'data, 'file> {
     type Item = (SymbolIndex, Symbol<'data>);
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.symbols.next().map(|(index, name, symbol)| {
-            (
-                SymbolIndex(index),
-                parse_symbol(index, name, &symbol, &self.file.coff),
-            )
-        })
+        let index = self.index;
+        let symbol = self.symbols.get::<pe::ImageSymbol>(index)?;
+        self.index += 1 + symbol.number_of_aux_symbols as usize;
+        Some((
+            SymbolIndex(index),
+            parse_symbol(self.symbols, index, symbol),
+        ))
     }
 }
 
-fn parse_symbol<'data>(
+pub(crate) fn parse_symbol<'data>(
+    symbols: &SymbolTable<'data>,
     index: usize,
-    name: Option<&'data str>,
-    symbol: &pe::symbol::Symbol,
-    coff: &pe::Coff<'data>,
+    symbol: &'data pe::ImageSymbol,
 ) -> Symbol<'data> {
-    let name = if symbol.is_file() {
-        coff.symbols
-            .aux_file(index + 1, symbol.number_of_aux_symbols as usize)
-    } else {
-        name.or_else(|| {
-            symbol.name_offset().and_then(|offset| {
-                coff.strings
-                    .get(offset as usize)
-                    .map(Result::ok)
-                    .unwrap_or_default()
+    let value = symbol.value.get(LE);
+    let section_number = symbol.section_number.get(LE);
+
+    let name = if symbol.storage_class == pe::IMAGE_SYM_CLASS_FILE {
+        // The file name is in the following auxiliary symbol.
+        if symbol.number_of_aux_symbols > 0 {
+            symbols.symbols.get(index + 1).map(|s| {
+                // The name is padded with nulls.
+                match s.0.iter().position(|&x| x == 0) {
+                    Some(end) => &s.0[..end],
+                    None => &s.0[..],
+                }
             })
+        } else {
+            None
+        }
+    } else if symbol.name[0] == 0 {
+        // If the name starts with 0 then the last 4 bytes are a string table offset.
+        let offset = u32::from_le_bytes(symbol.name[4..8].try_into().unwrap());
+        symbols.strings.get(offset)
+    } else {
+        // The name is inline and padded with nulls.
+        Some(match symbol.name.iter().position(|&x| x == 0) {
+            Some(end) => &symbol.name[..end],
+            None => &symbol.name[..],
         })
     };
-    let derived_kind = if symbol.derived_type() == pe::symbol::IMAGE_SYM_DTYPE_FUNCTION {
+    let name = name.and_then(|s| str::from_utf8(s).ok());
+
+    let derived_kind = if symbol.derived_type() == pe::IMAGE_SYM_DTYPE_FUNCTION {
         SymbolKind::Text
     } else {
         SymbolKind::Data
@@ -434,56 +457,59 @@ fn parse_symbol<'data>(
     let mut flags = SymbolFlags::None;
     // FIXME: symbol.value is a section offset for non-absolute symbols, not an address
     let (kind, address, size) = match symbol.storage_class {
-        pe::symbol::IMAGE_SYM_CLASS_STATIC => {
-            if symbol.value == 0 && symbol.number_of_aux_symbols > 0 {
+        pe::IMAGE_SYM_CLASS_STATIC => {
+            if value == 0 && symbol.number_of_aux_symbols > 0 {
                 let mut size = 0;
-                if let Some(aux) = coff.symbols.aux_section_definition(index + 1) {
-                    size = u64::from(aux.length);
+                if let Some(aux) = symbols.get::<pe::ImageAuxSymbolSection>(index + 1) {
+                    size = u64::from(aux.length.get(LE));
+                    // TODO: use high_number for bigobj
+                    let number = aux.number.get(LE) as usize;
                     flags = SymbolFlags::CoffSection {
                         selection: aux.selection,
-                        associative_section: SectionIndex(aux.number as usize),
+                        associative_section: SectionIndex(number),
                     };
                 }
                 (SymbolKind::Section, 0, size)
             } else {
-                (derived_kind, u64::from(symbol.value), 0)
+                (derived_kind, u64::from(value), 0)
             }
         }
-        pe::symbol::IMAGE_SYM_CLASS_EXTERNAL => {
-            if symbol.section_number == pe::symbol::IMAGE_SYM_UNDEFINED {
+        pe::IMAGE_SYM_CLASS_EXTERNAL => {
+            if section_number == pe::IMAGE_SYM_UNDEFINED {
                 // Common data: symbol.value is the size.
-                (derived_kind, 0, u64::from(symbol.value))
-            } else if symbol.is_function_definition() && symbol.number_of_aux_symbols > 0 {
-                let size = coff
-                    .symbols
-                    .aux_function_definition(index + 1)
-                    .map(|aux| u64::from(aux.total_size))
-                    .unwrap_or(0);
-                (derived_kind, u64::from(symbol.value), size)
+                (derived_kind, 0, u64::from(value))
+            } else if symbol.derived_type() == pe::IMAGE_SYM_DTYPE_FUNCTION
+                && symbol.number_of_aux_symbols > 0
+            {
+                let mut size = 0;
+                if let Some(aux) = symbols.get::<pe::ImageAuxSymbolFunction>(index + 1) {
+                    size = u64::from(aux.total_size.get(LE));
+                }
+                (derived_kind, u64::from(value), size)
             } else {
-                (derived_kind, u64::from(symbol.value), 0)
+                (derived_kind, u64::from(value), 0)
             }
         }
-        pe::symbol::IMAGE_SYM_CLASS_WEAK_EXTERNAL => (derived_kind, u64::from(symbol.value), 0),
-        pe::symbol::IMAGE_SYM_CLASS_SECTION => (SymbolKind::Section, 0, 0),
-        pe::symbol::IMAGE_SYM_CLASS_FILE => (SymbolKind::File, 0, 0),
-        pe::symbol::IMAGE_SYM_CLASS_LABEL => (SymbolKind::Label, u64::from(symbol.value), 0),
+        pe::IMAGE_SYM_CLASS_WEAK_EXTERNAL => (derived_kind, u64::from(value), 0),
+        pe::IMAGE_SYM_CLASS_SECTION => (SymbolKind::Section, 0, 0),
+        pe::IMAGE_SYM_CLASS_FILE => (SymbolKind::File, 0, 0),
+        pe::IMAGE_SYM_CLASS_LABEL => (SymbolKind::Label, u64::from(value), 0),
         _ => {
             // No address because symbol.value could mean anything.
             (SymbolKind::Unknown, 0, 0)
         }
     };
-    let section = match symbol.section_number {
-        pe::symbol::IMAGE_SYM_UNDEFINED => {
-            if symbol.storage_class == pe::symbol::IMAGE_SYM_CLASS_EXTERNAL {
+    let section = match section_number {
+        pe::IMAGE_SYM_UNDEFINED => {
+            if symbol.storage_class == pe::IMAGE_SYM_CLASS_EXTERNAL {
                 SymbolSection::Common
             } else {
                 SymbolSection::Undefined
             }
         }
-        pe::symbol::IMAGE_SYM_ABSOLUTE => SymbolSection::Absolute,
-        pe::symbol::IMAGE_SYM_DEBUG => {
-            if symbol.storage_class == pe::symbol::IMAGE_SYM_CLASS_FILE {
+        pe::IMAGE_SYM_ABSOLUTE => SymbolSection::Absolute,
+        pe::IMAGE_SYM_DEBUG => {
+            if symbol.storage_class == pe::IMAGE_SYM_CLASS_FILE {
                 SymbolSection::None
             } else {
                 SymbolSection::Unknown
@@ -492,12 +518,12 @@ fn parse_symbol<'data>(
         index if index > 0 => SymbolSection::Section(SectionIndex(index as usize - 1)),
         _ => SymbolSection::Unknown,
     };
-    let weak = symbol.storage_class == pe::symbol::IMAGE_SYM_CLASS_WEAK_EXTERNAL;
+    let weak = symbol.storage_class == pe::IMAGE_SYM_CLASS_WEAK_EXTERNAL;
     let scope = match symbol.storage_class {
         _ if section == SymbolSection::Undefined => SymbolScope::Unknown,
-        pe::symbol::IMAGE_SYM_CLASS_EXTERNAL
-        | pe::symbol::IMAGE_SYM_CLASS_EXTERNAL_DEF
-        | pe::symbol::IMAGE_SYM_CLASS_WEAK_EXTERNAL => {
+        pe::IMAGE_SYM_CLASS_EXTERNAL
+        | pe::IMAGE_SYM_CLASS_EXTERNAL_DEF
+        | pe::IMAGE_SYM_CLASS_WEAK_EXTERNAL => {
             // TODO: determine if symbol is exported
             SymbolScope::Linkage
         }
@@ -515,52 +541,51 @@ fn parse_symbol<'data>(
     }
 }
 
+/// An iterator over the relocations in a `CoffSection`.
+pub struct CoffRelocationIterator<'data, 'file> {
+    file: &'file CoffFile<'data>,
+    iter: slice::Iter<'data, pe::ImageRelocation>,
+}
+
 impl<'data, 'file> Iterator for CoffRelocationIterator<'data, 'file> {
     type Item = (u64, Relocation);
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.relocations.next().map(|relocation| {
-            let (kind, size, addend) = match self.file.coff.header.machine {
-                pe::header::COFF_MACHINE_X86 => match relocation.typ {
-                    pe::relocation::IMAGE_REL_I386_DIR16 => (RelocationKind::Absolute, 16, 0),
-                    pe::relocation::IMAGE_REL_I386_REL16 => (RelocationKind::Relative, 16, 0),
-                    pe::relocation::IMAGE_REL_I386_DIR32 => (RelocationKind::Absolute, 32, 0),
-                    pe::relocation::IMAGE_REL_I386_DIR32NB => (RelocationKind::ImageOffset, 32, 0),
-                    pe::relocation::IMAGE_REL_I386_SECTION => (RelocationKind::SectionIndex, 16, 0),
-                    pe::relocation::IMAGE_REL_I386_SECREL => (RelocationKind::SectionOffset, 32, 0),
-                    pe::relocation::IMAGE_REL_I386_SECREL7 => (RelocationKind::SectionOffset, 7, 0),
-                    pe::relocation::IMAGE_REL_I386_REL32 => (RelocationKind::Relative, 32, -4),
-                    _ => (RelocationKind::Coff(relocation.typ), 0, 0),
+        self.iter.next().map(|relocation| {
+            let (kind, size, addend) = match self.file.header.machine.get(LE) {
+                pe::IMAGE_FILE_MACHINE_I386 => match relocation.typ.get(LE) {
+                    pe::IMAGE_REL_I386_DIR16 => (RelocationKind::Absolute, 16, 0),
+                    pe::IMAGE_REL_I386_REL16 => (RelocationKind::Relative, 16, 0),
+                    pe::IMAGE_REL_I386_DIR32 => (RelocationKind::Absolute, 32, 0),
+                    pe::IMAGE_REL_I386_DIR32NB => (RelocationKind::ImageOffset, 32, 0),
+                    pe::IMAGE_REL_I386_SECTION => (RelocationKind::SectionIndex, 16, 0),
+                    pe::IMAGE_REL_I386_SECREL => (RelocationKind::SectionOffset, 32, 0),
+                    pe::IMAGE_REL_I386_SECREL7 => (RelocationKind::SectionOffset, 7, 0),
+                    pe::IMAGE_REL_I386_REL32 => (RelocationKind::Relative, 32, -4),
+                    typ => (RelocationKind::Coff(typ), 0, 0),
                 },
-                pe::header::COFF_MACHINE_X86_64 => match relocation.typ {
-                    pe::relocation::IMAGE_REL_AMD64_ADDR64 => (RelocationKind::Absolute, 64, 0),
-                    pe::relocation::IMAGE_REL_AMD64_ADDR32 => (RelocationKind::Absolute, 32, 0),
-                    pe::relocation::IMAGE_REL_AMD64_ADDR32NB => {
-                        (RelocationKind::ImageOffset, 32, 0)
-                    }
-                    pe::relocation::IMAGE_REL_AMD64_REL32 => (RelocationKind::Relative, 32, -4),
-                    pe::relocation::IMAGE_REL_AMD64_REL32_1 => (RelocationKind::Relative, 32, -5),
-                    pe::relocation::IMAGE_REL_AMD64_REL32_2 => (RelocationKind::Relative, 32, -6),
-                    pe::relocation::IMAGE_REL_AMD64_REL32_3 => (RelocationKind::Relative, 32, -7),
-                    pe::relocation::IMAGE_REL_AMD64_REL32_4 => (RelocationKind::Relative, 32, -8),
-                    pe::relocation::IMAGE_REL_AMD64_REL32_5 => (RelocationKind::Relative, 32, -9),
-                    pe::relocation::IMAGE_REL_AMD64_SECTION => {
-                        (RelocationKind::SectionIndex, 16, 0)
-                    }
-                    pe::relocation::IMAGE_REL_AMD64_SECREL => {
-                        (RelocationKind::SectionOffset, 32, 0)
-                    }
-                    pe::relocation::IMAGE_REL_AMD64_SECREL7 => {
-                        (RelocationKind::SectionOffset, 7, 0)
-                    }
-                    _ => (RelocationKind::Coff(relocation.typ), 0, 0),
+                pe::IMAGE_FILE_MACHINE_AMD64 => match relocation.typ.get(LE) {
+                    pe::IMAGE_REL_AMD64_ADDR64 => (RelocationKind::Absolute, 64, 0),
+                    pe::IMAGE_REL_AMD64_ADDR32 => (RelocationKind::Absolute, 32, 0),
+                    pe::IMAGE_REL_AMD64_ADDR32NB => (RelocationKind::ImageOffset, 32, 0),
+                    pe::IMAGE_REL_AMD64_REL32 => (RelocationKind::Relative, 32, -4),
+                    pe::IMAGE_REL_AMD64_REL32_1 => (RelocationKind::Relative, 32, -5),
+                    pe::IMAGE_REL_AMD64_REL32_2 => (RelocationKind::Relative, 32, -6),
+                    pe::IMAGE_REL_AMD64_REL32_3 => (RelocationKind::Relative, 32, -7),
+                    pe::IMAGE_REL_AMD64_REL32_4 => (RelocationKind::Relative, 32, -8),
+                    pe::IMAGE_REL_AMD64_REL32_5 => (RelocationKind::Relative, 32, -9),
+                    pe::IMAGE_REL_AMD64_SECTION => (RelocationKind::SectionIndex, 16, 0),
+                    pe::IMAGE_REL_AMD64_SECREL => (RelocationKind::SectionOffset, 32, 0),
+                    pe::IMAGE_REL_AMD64_SECREL7 => (RelocationKind::SectionOffset, 7, 0),
+                    typ => (RelocationKind::Coff(typ), 0, 0),
                 },
-                _ => (RelocationKind::Coff(relocation.typ), 0, 0),
+                _ => (RelocationKind::Coff(relocation.typ.get(LE)), 0, 0),
             };
-            let target =
-                RelocationTarget::Symbol(SymbolIndex(relocation.symbol_table_index as usize));
+            let target = RelocationTarget::Symbol(SymbolIndex(
+                relocation.symbol_table_index.get(LE) as usize,
+            ));
             (
-                u64::from(relocation.virtual_address),
+                u64::from(relocation.virtual_address.get(LE)),
                 Relocation {
                     kind,
                     encoding: RelocationEncoding::Generic,
@@ -577,5 +602,107 @@ impl<'data, 'file> Iterator for CoffRelocationIterator<'data, 'file> {
 impl<'data, 'file> fmt::Debug for CoffRelocationIterator<'data, 'file> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("CoffRelocationIterator").finish()
+    }
+}
+
+pub(crate) fn section_name<'data>(
+    bytes: &'data [u8; pe::IMAGE_SIZEOF_SHORT_NAME],
+    strings: StringTable<'data>,
+) -> Option<&'data str> {
+    let name = if bytes[0] == b'/' {
+        let mut offset = 0;
+        if bytes[1] == b'/' {
+            for byte in bytes[2..].iter() {
+                let digit = match byte {
+                    b'A'..=b'Z' => byte - b'A',
+                    b'a'..=b'z' => byte - b'a' + 26,
+                    b'0'..=b'9' => byte - b'0' + 52,
+                    b'+' => 62,
+                    b'/' => 63,
+                    _ => return None,
+                };
+                offset = offset * 64 + digit as u32;
+            }
+        } else {
+            for byte in bytes[1..].iter() {
+                let digit = match byte {
+                    b'0'..=b'9' => byte - b'0',
+                    0 => break,
+                    _ => return None,
+                };
+                offset = offset * 10 + digit as u32;
+            }
+        };
+        strings.get(offset)?
+    } else {
+        match bytes.iter().position(|&x| x == 0) {
+            Some(end) => &bytes[..end],
+            None => &bytes[..],
+        }
+    };
+    str::from_utf8(name).ok()
+}
+
+pub(crate) fn section_kind(characteristics: u32) -> SectionKind {
+    if characteristics & (pe::IMAGE_SCN_CNT_CODE | pe::IMAGE_SCN_MEM_EXECUTE) != 0 {
+        SectionKind::Text
+    } else if characteristics & pe::IMAGE_SCN_CNT_INITIALIZED_DATA != 0 {
+        if characteristics & pe::IMAGE_SCN_MEM_DISCARDABLE != 0 {
+            SectionKind::Other
+        } else if characteristics & pe::IMAGE_SCN_MEM_WRITE != 0 {
+            SectionKind::Data
+        } else {
+            SectionKind::ReadOnlyData
+        }
+    } else if characteristics & pe::IMAGE_SCN_CNT_UNINITIALIZED_DATA != 0 {
+        SectionKind::UninitializedData
+    } else if characteristics & pe::IMAGE_SCN_LNK_INFO != 0 {
+        SectionKind::Linker
+    } else {
+        SectionKind::Unknown
+    }
+}
+
+#[derive(Debug)]
+pub(crate) struct SymbolTable<'data> {
+    pub symbols: &'data [pe::ImageSymbolBytes],
+    pub strings: StringTable<'data>,
+}
+
+impl<'data> SymbolTable<'data> {
+    pub fn parse(header: &pe::ImageFileHeader, data: &'data [u8]) -> Result<Self, &'static str> {
+        // The symbol table may not be present.
+        let symbol_offset = header.pointer_to_symbol_table.get(LE) as usize;
+        let (symbols, strings) = if symbol_offset != 0 {
+            let (symbols, tail) = pod::slice_from_bytes(
+                data,
+                symbol_offset,
+                header.number_of_symbols.get(LE) as usize,
+            )
+            .ok_or("Invalid symbol table")?;
+
+            // Note: don't update tail, the length includes itself.
+            let bytes = tail.get(..4).ok_or("Missing string table")?;
+            let strtab_length = u32::from_le_bytes(bytes.try_into().unwrap());
+
+            let strings = tail
+                .get(..strtab_length as usize)
+                .ok_or("Invalid string table")?;
+            (symbols, strings)
+        } else {
+            (&[][..], &[][..])
+        };
+
+        Ok(SymbolTable {
+            symbols,
+            strings: StringTable { data: strings },
+        })
+    }
+
+    pub fn get<T: Pod>(&self, index: usize) -> Option<&'data T> {
+        self.symbols
+            .get(index)
+            .and_then(|bytes| pod::from_bytes(&bytes.0))
+            .map(|x| x.0)
     }
 }
