@@ -872,11 +872,6 @@ pub trait MachHeader: Debug + Pod {
     type Section: Section<Endian = Self::Endian>;
     type Nlist: Nlist<Endian = Self::Endian>;
 
-    /// Return the size of the header.
-    ///
-    /// This is a property of the type, not a value in the header data.
-    fn header_size(&self) -> usize;
-
     /// Return true if this type is a 64-bit header.
     ///
     /// This is a property of the type, not a value in the header data.
@@ -912,7 +907,7 @@ pub trait MachHeader: Debug + Pod {
         data: &'data [u8],
     ) -> Option<MachOLoadCommandIterator<'data, Self::Endian>> {
         let data = data
-            .get(self.header_size()..)?
+            .get(mem::size_of::<Self>()..)?
             .get(..self.sizeofcmds(endian) as usize)?;
         Some(MachOLoadCommandIterator::new(
             endian,
@@ -1070,10 +1065,6 @@ impl<Endian: endian::Endian> MachHeader for macho::MachHeader32<Endian> {
     type Section = macho::Section32<Endian>;
     type Nlist = macho::Nlist32<Endian>;
 
-    fn header_size(&self) -> usize {
-        mem::size_of::<Self>()
-    }
-
     fn is_type_64(&self) -> bool {
         false
     }
@@ -1121,10 +1112,6 @@ impl<Endian: endian::Endian> MachHeader for macho::MachHeader64<Endian> {
     type Segment = macho::SegmentCommand64<Endian>;
     type Section = macho::Section64<Endian>;
     type Nlist = macho::Nlist64<Endian>;
-
-    fn header_size(&self) -> usize {
-        mem::size_of::<Self>()
-    }
 
     fn is_type_64(&self) -> bool {
         true
