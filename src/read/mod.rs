@@ -23,9 +23,7 @@ mod traits;
 pub use traits::*;
 
 #[cfg(feature = "wasm")]
-mod wasm;
-#[cfg(feature = "wasm")]
-pub use wasm::*;
+pub mod wasm;
 
 /// The native executable file for the target platform.
 #[cfg(all(target_os = "linux", target_pointer_width = "32"))]
@@ -53,7 +51,7 @@ pub type NativeFile<'data> = pe::PeFile64<'data>;
 
 /// The native executable file for the target platform.
 #[cfg(all(feature = "wasm", target_arch = "wasm32"))]
-pub type NativeFile<'data> = WasmFile<'data>;
+pub type NativeFile<'data> = wasm::WasmFile<'data>;
 
 /// The index used to identify a section of a file.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
