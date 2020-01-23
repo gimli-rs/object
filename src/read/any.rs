@@ -22,7 +22,8 @@ macro_rules! with_inner {
             $enum::Elf64(ref $var) => $body,
             $enum::MachO32(ref $var) => $body,
             $enum::MachO64(ref $var) => $body,
-            $enum::Pe(ref $var) => $body,
+            $enum::Pe32(ref $var) => $body,
+            $enum::Pe64(ref $var) => $body,
             #[cfg(feature = "wasm")]
             $enum::Wasm(ref $var) => $body,
         }
@@ -37,7 +38,8 @@ macro_rules! with_inner_mut {
             $enum::Elf64(ref mut $var) => $body,
             $enum::MachO32(ref mut $var) => $body,
             $enum::MachO64(ref mut $var) => $body,
-            $enum::Pe(ref mut $var) => $body,
+            $enum::Pe32(ref mut $var) => $body,
+            $enum::Pe64(ref mut $var) => $body,
             #[cfg(feature = "wasm")]
             $enum::Wasm(ref mut $var) => $body,
         }
@@ -53,7 +55,8 @@ macro_rules! map_inner {
             $from::Elf64(ref $var) => $to::Elf64($body),
             $from::MachO32(ref $var) => $to::MachO32($body),
             $from::MachO64(ref $var) => $to::MachO64($body),
-            $from::Pe(ref $var) => $to::Pe($body),
+            $from::Pe32(ref $var) => $to::Pe32($body),
+            $from::Pe64(ref $var) => $to::Pe64($body),
             #[cfg(feature = "wasm")]
             $from::Wasm(ref $var) => $to::Wasm($body),
         }
@@ -69,7 +72,8 @@ macro_rules! map_inner_option {
             $from::Elf64(ref $var) => $body.map($to::Elf64),
             $from::MachO32(ref $var) => $body.map($to::MachO32),
             $from::MachO64(ref $var) => $body.map($to::MachO64),
-            $from::Pe(ref $var) => $body.map($to::Pe),
+            $from::Pe32(ref $var) => $body.map($to::Pe32),
+            $from::Pe64(ref $var) => $body.map($to::Pe64),
             #[cfg(feature = "wasm")]
             $from::Wasm(ref $var) => $body.map($to::Wasm),
         }
@@ -85,7 +89,8 @@ macro_rules! next_inner {
             $from::Elf64(ref mut iter) => iter.next().map($to::Elf64),
             $from::MachO32(ref mut iter) => iter.next().map($to::MachO32),
             $from::MachO64(ref mut iter) => iter.next().map($to::MachO64),
-            $from::Pe(ref mut iter) => iter.next().map($to::Pe),
+            $from::Pe32(ref mut iter) => iter.next().map($to::Pe32),
+            $from::Pe64(ref mut iter) => iter.next().map($to::Pe64),
             #[cfg(feature = "wasm")]
             $from::Wasm(ref mut iter) => iter.next().map($to::Wasm),
         }
@@ -108,7 +113,8 @@ enum FileInternal<'data> {
     Elf64(elf::ElfFile64<'data>),
     MachO32(macho::MachOFile32<'data>),
     MachO64(macho::MachOFile64<'data>),
-    Pe(pe::PeFile<'data>),
+    Pe32(pe::PeFile32<'data>),
+    Pe64(pe::PeFile64<'data>),
     #[cfg(feature = "wasm")]
     Wasm(wasm::WasmFile),
 }
@@ -134,8 +140,19 @@ impl<'data> File<'data> {
             // WASM
             #[cfg(feature = "wasm")]
             [0x00, b'a', b's', b'm', _] => FileInternal::Wasm(wasm::WasmFile::parse(data)?),
-            // MS-DOS, assume stub for Windows PE
-            [b'M', b'Z', _, _, _] => FileInternal::Pe(pe::PeFile::parse(data)?),
+            // MS-DOS, assume stub for Windows PE32 or PE32+
+            [b'M', b'Z', _, _, _] => {
+                // `optional_header_magic` doesn't care if it's `PeFile32` and `PeFile64`.
+                match pe::PeFile64::optional_header_magic(data) {
+                    Some(crate::pe::IMAGE_NT_OPTIONAL_HDR32_MAGIC) => {
+                        FileInternal::Pe32(pe::PeFile32::parse(data)?)
+                    }
+                    Some(crate::pe::IMAGE_NT_OPTIONAL_HDR64_MAGIC) => {
+                        FileInternal::Pe64(pe::PeFile64::parse(data)?)
+                    }
+                    _ => return Err("Unknown MS-DOS file"),
+                }
+            }
             // TODO: more COFF machines
             // COFF x86
             [0x4c, 0x01, _, _, _]
@@ -151,7 +168,9 @@ impl<'data> File<'data> {
         match self.inner {
             FileInternal::Elf32(_) | FileInternal::Elf64(_) => BinaryFormat::Elf,
             FileInternal::MachO32(_) | FileInternal::MachO64(_) => BinaryFormat::Macho,
-            FileInternal::Coff(_) | FileInternal::Pe(_) => BinaryFormat::Coff,
+            FileInternal::Coff(_) | FileInternal::Pe32(_) | FileInternal::Pe64(_) => {
+                BinaryFormat::Coff
+            }
             #[cfg(feature = "wasm")]
             FileInternal::Wasm(_) => BinaryFormat::Wasm,
         }
@@ -280,7 +299,8 @@ where
     Elf64(elf::ElfSegmentIterator64<'data, 'file>),
     MachO32(macho::MachOSegmentIterator32<'data, 'file>),
     MachO64(macho::MachOSegmentIterator64<'data, 'file>),
-    Pe(pe::PeSegmentIterator<'data, 'file>),
+    Pe32(pe::PeSegmentIterator32<'data, 'file>),
+    Pe64(pe::PeSegmentIterator64<'data, 'file>),
     #[cfg(feature = "wasm")]
     Wasm(wasm::WasmSegmentIterator<'file>),
 }
@@ -312,7 +332,8 @@ where
     Elf64(elf::ElfSegment64<'data, 'file>),
     MachO32(macho::MachOSegment32<'data, 'file>),
     MachO64(macho::MachOSegment64<'data, 'file>),
-    Pe(pe::PeSegment<'data, 'file>),
+    Pe32(pe::PeSegment32<'data, 'file>),
+    Pe64(pe::PeSegment64<'data, 'file>),
     #[cfg(feature = "wasm")]
     Wasm(wasm::WasmSegment<'file>),
 }
@@ -378,7 +399,8 @@ where
     Elf64(elf::ElfSectionIterator64<'data, 'file>),
     MachO32(macho::MachOSectionIterator32<'data, 'file>),
     MachO64(macho::MachOSectionIterator64<'data, 'file>),
-    Pe(pe::PeSectionIterator<'data, 'file>),
+    Pe32(pe::PeSectionIterator32<'data, 'file>),
+    Pe64(pe::PeSectionIterator64<'data, 'file>),
     #[cfg(feature = "wasm")]
     Wasm(wasm::WasmSectionIterator<'file>),
 }
@@ -409,7 +431,8 @@ where
     Elf64(elf::ElfSection64<'data, 'file>),
     MachO32(macho::MachOSection32<'data, 'file>),
     MachO64(macho::MachOSection64<'data, 'file>),
-    Pe(pe::PeSection<'data, 'file>),
+    Pe32(pe::PeSection32<'data, 'file>),
+    Pe64(pe::PeSection64<'data, 'file>),
     #[cfg(feature = "wasm")]
     Wasm(wasm::WasmSection<'file>),
 }
@@ -511,7 +534,8 @@ where
     Elf64(elf::ElfSymbolIterator64<'data, 'file>),
     MachO32(macho::MachOSymbolIterator32<'data, 'file>),
     MachO64(macho::MachOSymbolIterator64<'data, 'file>),
-    Pe(pe::PeSymbolIterator<'data, 'file>),
+    Pe32(coff::CoffSymbolIterator<'data, 'file>),
+    Pe64(coff::CoffSymbolIterator<'data, 'file>),
     #[cfg(feature = "wasm")]
     Wasm(wasm::WasmSymbolIterator<'file>),
 }
@@ -543,7 +567,8 @@ where
     Elf64(elf::ElfRelocationIterator64<'data, 'file>),
     MachO32(macho::MachORelocationIterator32<'data, 'file>),
     MachO64(macho::MachORelocationIterator64<'data, 'file>),
-    Pe(pe::PeRelocationIterator),
+    Pe32(pe::PeRelocationIterator),
+    Pe64(pe::PeRelocationIterator),
     #[cfg(feature = "wasm")]
     Wasm(wasm::WasmRelocationIterator),
 }

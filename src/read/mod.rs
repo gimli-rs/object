@@ -11,15 +11,13 @@ mod util;
 mod any;
 pub use any::*;
 
-mod coff;
-pub use coff::*;
+pub mod coff;
 
 pub mod elf;
 
 pub mod macho;
 
-mod pe;
-pub use pe::*;
+pub mod pe;
 
 mod traits;
 pub use traits::*;
@@ -46,8 +44,12 @@ pub type NativeFile<'data> = macho::MachOFile32<'data>;
 pub type NativeFile<'data> = macho::MachOFile64<'data>;
 
 /// The native executable file for the target platform.
-#[cfg(target_os = "windows")]
-pub type NativeFile<'data> = PeFile<'data>;
+#[cfg(all(target_os = "windows", target_pointer_width = "32"))]
+pub type NativeFile<'data> = pe::PeFile32<'data>;
+
+/// The native executable file for the target platform.
+#[cfg(all(target_os = "windows", target_pointer_width = "64"))]
+pub type NativeFile<'data> = pe::PeFile64<'data>;
 
 /// The native executable file for the target platform.
 #[cfg(all(feature = "wasm", target_arch = "wasm32"))]
