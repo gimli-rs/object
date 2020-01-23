@@ -8,7 +8,7 @@
 #![allow(missing_docs)]
 
 use crate::endian::{BigEndian, Endian, U16, U32, U64};
-use bytemuck::{Pod, Zeroable};
+use crate::pod::Pod;
 
 // Definitions from "/usr/include/mach-o/machine.h".
 
@@ -3111,12 +3111,7 @@ pub const X86_64_RELOC_SIGNED_4: u8 = 8;
 /// for thread local variables
 pub const X86_64_RELOC_TLV: u8 = 9;
 
-unsafe impl Zeroable for FatHeader {}
-unsafe impl Pod for FatHeader {}
-unsafe impl Zeroable for FatArch32 {}
-unsafe impl Pod for FatArch32 {}
-unsafe impl Zeroable for FatArch64 {}
-unsafe impl Pod for FatArch64 {}
+unsafe_impl_pod!(FatHeader, FatArch32, FatArch64,);
 unsafe_impl_endian_pod!(
     MachHeader32,
     MachHeader64,

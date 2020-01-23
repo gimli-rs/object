@@ -11,8 +11,7 @@ use crate::alloc::vec;
 use crate::alloc::vec::Vec;
 use crate::elf;
 use crate::endian::{self, Endian, RunTimeEndian};
-use crate::read::util;
-use bytemuck::{self, Pod};
+use crate::pod::{self, Pod};
 #[cfg(feature = "compression")]
 use core::convert::TryInto;
 #[cfg(feature = "compression")]
@@ -22,6 +21,7 @@ use std::mem;
 use std::{iter, slice, str};
 use target_lexicon::{Aarch64Architecture, Architecture, ArmArchitecture};
 
+use crate::read::util;
 use crate::read::{
     self, FileFlags, Object, ObjectSection, ObjectSegment, Relocation, RelocationEncoding,
     RelocationKind, RelocationTarget, SectionFlags, SectionIndex, SectionKind, Symbol, SymbolFlags,
@@ -52,8 +52,8 @@ pub struct ElfFile<'data, Elf: FileHeader> {
 impl<'data, Elf: FileHeader> ElfFile<'data, Elf> {
     /// Parse the raw ELF file data.
     pub fn parse(data: &'data [u8]) -> Result<Self, &'static str> {
-        let (header, _) = util::try_from_bytes_prefix::<Elf>(data)
-            .ok_or("Invalid ELF header size or alignment")?;
+        let (header, _) =
+            pod::from_bytes::<Elf>(data).ok_or("Invalid ELF header size or alignment")?;
         if !header.is_supported() {
             return Err("Unsupported ELF header");
         }
@@ -349,7 +349,7 @@ where
         let filename = data.get(..filename_len)?;
         let crc_offset = util::align(filename_len + 1, 4);
         let crc_data = data.get(crc_offset..)?;
-        let (crc, _) = util::try_from_bytes_prefix::<endian::U32<_>>(crc_data)?;
+        let (crc, _) = pod::from_bytes::<endian::U32<_>>(crc_data)?;
         Some((filename, crc.get(self.endian)))
     }
 
@@ -517,8 +517,7 @@ impl<'data, 'file, Elf: FileHeader> ElfSection<'data, 'file, Elf> {
         }
 
         let data = self.section.data(endian, self.file.data)?;
-        let (header, compressed_data) =
-            util::try_from_bytes_prefix::<Elf::CompressionHeader>(data)?;
+        let (header, compressed_data) = pod::from_bytes::<Elf::CompressionHeader>(data)?;
         if header.ch_type(endian) != elf::ELFCOMPRESS_ZLIB {
             return None;
         }
@@ -981,7 +980,7 @@ where
     type Item = ElfNote<'data, Elf>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let (header, data) = util::try_from_bytes_prefix::<Elf::NoteHeader>(self.data)?;
+        let (header, data) = pod::from_bytes::<Elf::NoteHeader>(self.data)?;
 
         // Name doesn't require alignment.
         let namesz = header.n_namesz(self.endian) as usize;
@@ -1155,7 +1154,7 @@ pub trait FileHeader: Debug + Pod {
             return None;
         }
         let data = data.get(shoff as usize..)?.get(..shentsize)?;
-        let (header, _) = util::try_from_bytes_prefix(data)?;
+        let (header, _) = pod::from_bytes(data)?;
         Some(header)
     }
 
@@ -1227,7 +1226,7 @@ pub trait FileHeader: Debug + Pod {
             // Program header size must match.
             return None;
         }
-        util::try_cast_slice_count(data, phoff as usize, phnum)
+        pod::slice_from_bytes(data, phoff as usize, phnum).map(|x| x.0)
     }
 
     /// Return the slice of section headers.
@@ -1253,7 +1252,7 @@ pub trait FileHeader: Debug + Pod {
             // Section header size must match.
             return None;
         }
-        util::try_cast_slice_count(data, shoff as usize, shnum)
+        pod::slice_from_bytes(data, shoff as usize, shnum).map(|x| x.0)
     }
 }
 
@@ -1345,12 +1344,19 @@ pub trait SectionHeader: Debug + Pod {
         }
     }
 
+    /// Return the section data as a slice of the given type.
+    ///
+    /// Allows padding at the end of the data.
+    /// Returns `Some(&[])` if the section has no data.
+    /// Returns `None` for invalid values, including bad alignment.
     fn data_as_array<'data, T: Pod>(
         &self,
         endian: Self::Endian,
         data: &'data [u8],
     ) -> Option<&'data [T]> {
-        bytemuck::try_cast_slice(self.data(endian, data)?).ok()
+        let data = self.data(endian, data)?;
+        let count = data.len() / mem::size_of::<T>();
+        pod::slice_from_bytes(data, 0, count).map(|x| x.0)
     }
 
     /// Return a note iterator for the section data.

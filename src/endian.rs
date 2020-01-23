@@ -1,6 +1,6 @@
 //! Types for compile-time and run-time endianness.
 
-use bytemuck::{Pod, Zeroable};
+use crate::pod::Pod;
 use core::fmt::{self, Debug};
 use std::marker::PhantomData;
 
@@ -425,7 +425,6 @@ impl<E: Endian> fmt::Debug for I64<E> {
 macro_rules! unsafe_impl_endian_pod {
     ($($struct_name:ident),+ $(,)?) => {
         $(
-            unsafe impl<E: Endian> Zeroable for $struct_name<E> { }
             unsafe impl<E: Endian> Pod for $struct_name<E> { }
         )+
     }

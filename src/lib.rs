@@ -41,6 +41,12 @@ pub use common::*;
 #[macro_use]
 pub mod endian;
 
+#[macro_use]
+mod pod;
+// This isn't really intended for users yet, but other traits required it.
+#[doc(hidden)]
+pub use pod::Pod;
+
 #[cfg(feature = "read")]
 pub mod read;
 #[cfg(feature = "read")]
