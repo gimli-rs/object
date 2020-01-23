@@ -30,8 +30,7 @@ pub const CPU_ARCH_ABI64_32: u32 = 0x0200_0000;
 pub const CPU_TYPE_ANY: u32 = !0;
 
 pub const CPU_TYPE_VAX: u32 = 1;
-#[allow(non_upper_case_globals)]
-pub const CPU_TYPE_MC680x0: u32 = 6;
+pub const CPU_TYPE_MC680X0: u32 = 6;
 pub const CPU_TYPE_X86: u32 = 7;
 pub const CPU_TYPE_X86_64: u32 = CPU_TYPE_X86 | CPU_ARCH_ABI64;
 pub const CPU_TYPE_MIPS: u32 = 8;
@@ -106,8 +105,7 @@ pub const CPU_SUBTYPE_UVAXIII: u32 = 12;
  *	files to be tagged as containing 68030-specific instructions.
  */
 
-#[allow(non_upper_case_globals)]
-pub const CPU_SUBTYPE_MC680x0_ALL: u32 = 1;
+pub const CPU_SUBTYPE_MC680X0_ALL: u32 = 1;
 // compat
 pub const CPU_SUBTYPE_MC68030: u32 = 1;
 pub const CPU_SUBTYPE_MC68040: u32 = 2;
@@ -172,12 +170,10 @@ pub const CPU_SUBTYPE_MIPS_R2300: u32 = 1;
 pub const CPU_SUBTYPE_MIPS_R2600: u32 = 2;
 pub const CPU_SUBTYPE_MIPS_R2800: u32 = 3;
 /// pmax
-#[allow(non_upper_case_globals)]
-pub const CPU_SUBTYPE_MIPS_R2000a: u32 = 4;
+pub const CPU_SUBTYPE_MIPS_R2000A: u32 = 4;
 pub const CPU_SUBTYPE_MIPS_R2000: u32 = 5;
 /// 3max
-#[allow(non_upper_case_globals)]
-pub const CPU_SUBTYPE_MIPS_R3000a: u32 = 6;
+pub const CPU_SUBTYPE_MIPS_R3000A: u32 = 6;
 pub const CPU_SUBTYPE_MIPS_R3000: u32 = 7;
 
 /*
@@ -219,13 +215,10 @@ pub const CPU_SUBTYPE_POWERPC_ALL: u32 = 0;
 pub const CPU_SUBTYPE_POWERPC_601: u32 = 1;
 pub const CPU_SUBTYPE_POWERPC_602: u32 = 2;
 pub const CPU_SUBTYPE_POWERPC_603: u32 = 3;
-#[allow(non_upper_case_globals)]
-pub const CPU_SUBTYPE_POWERPC_603e: u32 = 4;
-#[allow(non_upper_case_globals)]
-pub const CPU_SUBTYPE_POWERPC_603ev: u32 = 5;
+pub const CPU_SUBTYPE_POWERPC_603E: u32 = 4;
+pub const CPU_SUBTYPE_POWERPC_603EV: u32 = 5;
 pub const CPU_SUBTYPE_POWERPC_604: u32 = 6;
-#[allow(non_upper_case_globals)]
-pub const CPU_SUBTYPE_POWERPC_604e: u32 = 7;
+pub const CPU_SUBTYPE_POWERPC_604E: u32 = 7;
 pub const CPU_SUBTYPE_POWERPC_620: u32 = 8;
 pub const CPU_SUBTYPE_POWERPC_750: u32 = 9;
 pub const CPU_SUBTYPE_POWERPC_7400: u32 = 10;
