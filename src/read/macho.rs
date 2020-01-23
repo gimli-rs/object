@@ -16,6 +16,7 @@ use std::{fmt, mem, ops, slice, str};
 use target_lexicon::{Aarch64Architecture, Architecture, ArmArchitecture};
 use uuid::Uuid;
 
+use crate::read::util::StringTable;
 use crate::read::{
     self, FileFlags, Object, ObjectSection, ObjectSegment, Relocation, RelocationEncoding,
     RelocationKind, RelocationTarget, SectionFlags, SectionIndex, SectionKind, Symbol, SymbolFlags,
@@ -79,8 +80,8 @@ impl<'data, Mach: MachHeader> MachOFile<'data, Mach> {
             }
         }
 
-        let strtab = Strtab { data: strings };
-        let symbols = SymbolTable { symbols, strtab };
+        let strings = StringTable { data: strings };
+        let symbols = SymbolTable { symbols, strings };
 
         Ok(MachOFile {
             endian,
@@ -182,7 +183,7 @@ where
 
     fn symbol_by_index(&self, index: SymbolIndex) -> Option<Symbol<'data>> {
         let nlist = self.symbols.symbols.get(index.0)?;
-        parse_symbol(self, nlist, self.symbols.strtab)
+        parse_symbol(self, nlist, self.symbols.strings)
     }
 
     fn symbols(&'file self) -> MachOSymbolIterator<'data, 'file, Mach> {
@@ -565,7 +566,7 @@ impl<'data, 'file, Mach: MachHeader> Iterator for MachOSymbolIterator<'data, 'fi
             let index = self.index;
             let nlist = self.symbols.symbols.get(index)?;
             self.index += 1;
-            if let Some(symbol) = parse_symbol(self.file, nlist, self.symbols.strtab) {
+            if let Some(symbol) = parse_symbol(self.file, nlist, self.symbols.strings) {
                 return Some((SymbolIndex(index), symbol));
             }
         }
@@ -575,10 +576,10 @@ impl<'data, 'file, Mach: MachHeader> Iterator for MachOSymbolIterator<'data, 'fi
 fn parse_symbol<'data, Mach: MachHeader>(
     file: &MachOFile<'data, Mach>,
     nlist: &Mach::Nlist,
-    strtab: Strtab<'data>,
+    strings: StringTable<'data>,
 ) -> Option<Symbol<'data>> {
     let endian = file.endian;
-    let name = strtab
+    let name = strings
         .get(nlist.n_strx(endian))
         .and_then(|s| str::from_utf8(s).ok());
     let n_type = nlist.n_type();
@@ -845,22 +846,9 @@ impl<'data, E: Endian> MachOLoadCommand<'data, E> {
 }
 
 #[derive(Debug, Default, Clone, Copy)]
-struct Strtab<'data> {
-    data: &'data [u8],
-}
-
-impl<'data> Strtab<'data> {
-    fn get(&self, offset: u32) -> Option<&'data [u8]> {
-        self.data
-            .get(offset as usize..)
-            .and_then(|data| data.iter().position(|&x| x == 0).map(|end| &data[..end]))
-    }
-}
-
-#[derive(Debug, Default, Clone, Copy)]
 struct SymbolTable<'data, Mach: MachHeader> {
     symbols: &'data [Mach::Nlist],
-    strtab: Strtab<'data>,
+    strings: StringTable<'data>,
 }
 
 /// A trait for generic access to `MachHeader32` and `MachHeader64`.
