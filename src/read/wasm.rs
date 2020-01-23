@@ -1,3 +1,8 @@
+//! Support for reading WASM files.
+//!
+//! Provides `WasmFile` and related types which implement the `Object` trait.
+//!
+//! Currently implements the minimum required to access DWARF debugging information.
 use crate::alloc::vec::Vec;
 use parity_wasm::elements::{self, Deserialize};
 use std::borrow::Cow;
