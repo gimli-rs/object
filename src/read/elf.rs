@@ -21,7 +21,7 @@ use std::mem;
 use std::{iter, slice, str};
 use target_lexicon::{Aarch64Architecture, Architecture, ArmArchitecture};
 
-use crate::read::util;
+use crate::read::util::{self, StringTable};
 use crate::read::{
     self, FileFlags, Object, ObjectSection, ObjectSegment, Relocation, RelocationEncoding,
     RelocationKind, RelocationTarget, SectionFlags, SectionIndex, SectionKind, Symbol, SymbolFlags,
@@ -42,7 +42,7 @@ pub struct ElfFile<'data, Elf: FileHeader> {
     header: &'data Elf,
     segments: &'data [Elf::ProgramHeader],
     sections: &'data [Elf::SectionHeader],
-    section_strtab: Strtab<'data>,
+    section_strings: StringTable<'data>,
     relocations: Vec<usize>,
     symbols: SymbolTable<'data, Elf>,
     dynamic_symbols: SymbolTable<'data, Elf>,
@@ -84,7 +84,7 @@ impl<'data, Elf: FileHeader> ElfFile<'data, Elf> {
             }
         }
 
-        let section_strtab_data = if let Some(index) = header.shstrndx(endian, data) {
+        let section_string_data = if let Some(index) = header.shstrndx(endian, data) {
             let shstrtab_section = sections
                 .get(index as usize)
                 .ok_or("Invalid section header strtab index")?;
@@ -94,15 +94,15 @@ impl<'data, Elf: FileHeader> ElfFile<'data, Elf> {
         } else {
             &[]
         };
-        let section_strtab = Strtab {
-            data: section_strtab_data,
+        let section_strings = StringTable {
+            data: section_string_data,
         };
 
         let mut symbols = &[][..];
-        let mut symbol_strtab_data = &[][..];
+        let mut symbol_string_data = &[][..];
         let mut symbol_shndx = &[][..];
         let mut dynamic_symbols = &[][..];
-        let mut dynamic_symbol_strtab_data = &[][..];
+        let mut dynamic_symbol_string_data = &[][..];
         // TODO: only do this if the user requires it.
         for section in sections {
             match section.sh_type(endian) {
@@ -114,7 +114,7 @@ impl<'data, Elf: FileHeader> ElfFile<'data, Elf> {
                         let strtab_section = sections
                             .get(section.sh_link(endian) as usize)
                             .ok_or("Invalid strtab section index")?;
-                        dynamic_symbol_strtab_data =
+                        dynamic_symbol_string_data =
                             strtab_section.data(endian, data).ok_or("Invalid strtab")?;
                     }
                 }
@@ -126,7 +126,7 @@ impl<'data, Elf: FileHeader> ElfFile<'data, Elf> {
                         let strtab_section = sections
                             .get(section.sh_link(endian) as usize)
                             .ok_or("Invalid strtab section index")?;
-                        symbol_strtab_data =
+                        symbol_string_data =
                             strtab_section.data(endian, data).ok_or("Invalid strtab")?;
                     }
                 }
@@ -140,20 +140,20 @@ impl<'data, Elf: FileHeader> ElfFile<'data, Elf> {
                 _ => {}
             }
         }
-        let symbol_strtab = Strtab {
-            data: symbol_strtab_data,
+        let symbol_strings = StringTable {
+            data: symbol_string_data,
         };
         let symbols = SymbolTable {
             symbols,
-            strtab: symbol_strtab,
+            strings: symbol_strings,
             shndx: symbol_shndx,
         };
-        let dynamic_symbol_strtab = Strtab {
-            data: dynamic_symbol_strtab_data,
+        let dynamic_symbol_strings = StringTable {
+            data: dynamic_symbol_string_data,
         };
         let dynamic_symbols = SymbolTable {
             symbols: dynamic_symbols,
-            strtab: dynamic_symbol_strtab,
+            strings: dynamic_symbol_strings,
             shndx: &[],
         };
 
@@ -162,7 +162,7 @@ impl<'data, Elf: FileHeader> ElfFile<'data, Elf> {
             header,
             segments,
             sections,
-            section_strtab,
+            section_strings,
             relocations,
             symbols,
             dynamic_symbols,
@@ -175,7 +175,7 @@ impl<'data, Elf: FileHeader> ElfFile<'data, Elf> {
         section_name: &str,
     ) -> Option<ElfSection<'data, 'file, Elf>> {
         for (index, section) in self.sections.iter().enumerate() {
-            if let Some(name) = self.section_strtab.get(section.sh_name(self.endian)) {
+            if let Some(name) = self.section_strings.get(section.sh_name(self.endian)) {
                 if name == section_name.as_bytes() {
                     return Some(ElfSection {
                         file: self,
@@ -270,7 +270,7 @@ where
     fn symbol_by_index(&self, index: SymbolIndex) -> Option<Symbol<'data>> {
         let shndx = self.symbols.shndx.get(index.0).cloned();
         self.symbols.symbols.get(index.0).map(|symbol| {
-            parse_symbol::<Elf>(self.endian, index.0, symbol, self.symbols.strtab, shndx)
+            parse_symbol::<Elf>(self.endian, index.0, symbol, self.symbols.strings, shndx)
         })
     }
 
@@ -302,7 +302,7 @@ where
 
     fn has_debug_symbols(&self) -> bool {
         for section in self.sections {
-            if let Some(name) = self.section_strtab.get(section.sh_name(self.endian)) {
+            if let Some(name) = self.section_strings.get(section.sh_name(self.endian)) {
                 if name == b".debug_info" || name == b".zdebug_info" {
                     return true;
                 }
@@ -616,7 +616,7 @@ impl<'data, 'file, Elf: FileHeader> ObjectSection<'data> for ElfSection<'data, '
 
     fn name(&self) -> Option<&str> {
         self.file
-            .section_strtab
+            .section_strings
             .get(self.section.sh_name(self.file.endian))
             .and_then(|s| str::from_utf8(s).ok())
     }
@@ -719,7 +719,7 @@ impl<'data, 'file, Elf: FileHeader> Iterator for ElfSymbolIterator<'data, 'file,
             self.index += 1;
             (
                 SymbolIndex(index),
-                parse_symbol::<Elf>(self.file.endian, index, symbol, self.symbols.strtab, shndx),
+                parse_symbol::<Elf>(self.file.endian, index, symbol, self.symbols.strings, shndx),
             )
         })
     }
@@ -729,10 +729,10 @@ fn parse_symbol<'data, Elf: FileHeader>(
     endian: Elf::Endian,
     index: usize,
     symbol: &Elf::Sym,
-    strtab: Strtab<'data>,
+    strings: StringTable<'data>,
     shndx: Option<u32>,
 ) -> Symbol<'data> {
-    let name = strtab
+    let name = strings
         .get(symbol.st_name(endian))
         .and_then(|s| str::from_utf8(s).ok());
     let kind = match symbol.st_type() {
@@ -1050,22 +1050,9 @@ impl<'data, Elf: FileHeader> ElfNote<'data, Elf> {
 }
 
 #[derive(Debug, Clone, Copy)]
-struct Strtab<'data> {
-    data: &'data [u8],
-}
-
-impl<'data> Strtab<'data> {
-    fn get(&self, offset: u32) -> Option<&'data [u8]> {
-        self.data
-            .get(offset as usize..)
-            .and_then(|data| data.iter().position(|&x| x == 0).map(|end| &data[..end]))
-    }
-}
-
-#[derive(Debug, Clone, Copy)]
 struct SymbolTable<'data, Elf: FileHeader> {
     symbols: &'data [Elf::Sym],
-    strtab: Strtab<'data>,
+    strings: StringTable<'data>,
     shndx: &'data [u32],
 }
 
