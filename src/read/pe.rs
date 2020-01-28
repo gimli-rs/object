@@ -402,8 +402,8 @@ impl<'data, 'file, Pe: ImageNtHeaders> ObjectSection<'data> for PeSection<'data,
         ))
     }
 
-    fn data(&self) -> Cow<'data, [u8]> {
-        Cow::from(self.raw_data())
+    fn data(&self) -> &'data [u8] {
+        self.raw_data()
     }
 
     fn data_range(&self, address: u64, size: u64) -> Option<&'data [u8]> {
@@ -412,8 +412,7 @@ impl<'data, 'file, Pe: ImageNtHeaders> ObjectSection<'data> for PeSection<'data,
 
     #[inline]
     fn uncompressed_data(&self) -> Cow<'data, [u8]> {
-        // TODO: does PE support compression?
-        self.data()
+        Cow::from(self.data())
     }
 
     #[inline]

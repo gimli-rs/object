@@ -116,7 +116,7 @@ enum FileInternal<'data> {
     Pe32(pe::PeFile32<'data>),
     Pe64(pe::PeFile64<'data>),
     #[cfg(feature = "wasm")]
-    Wasm(wasm::WasmFile),
+    Wasm(wasm::WasmFile<'data>),
 }
 
 impl<'data> File<'data> {
@@ -302,7 +302,7 @@ where
     Pe32(pe::PeSegmentIterator32<'data, 'file>),
     Pe64(pe::PeSegmentIterator64<'data, 'file>),
     #[cfg(feature = "wasm")]
-    Wasm(wasm::WasmSegmentIterator<'file>),
+    Wasm(wasm::WasmSegmentIterator<'data, 'file>),
 }
 
 impl<'data, 'file> Iterator for SegmentIterator<'data, 'file> {
@@ -335,7 +335,7 @@ where
     Pe32(pe::PeSegment32<'data, 'file>),
     Pe64(pe::PeSegment64<'data, 'file>),
     #[cfg(feature = "wasm")]
-    Wasm(wasm::WasmSegment<'file>),
+    Wasm(wasm::WasmSegment<'data, 'file>),
 }
 
 impl<'data, 'file> fmt::Debug for Segment<'data, 'file> {
@@ -402,7 +402,7 @@ where
     Pe32(pe::PeSectionIterator32<'data, 'file>),
     Pe64(pe::PeSectionIterator64<'data, 'file>),
     #[cfg(feature = "wasm")]
-    Wasm(wasm::WasmSectionIterator<'file>),
+    Wasm(wasm::WasmSectionIterator<'data, 'file>),
 }
 
 impl<'data, 'file> Iterator for SectionIterator<'data, 'file> {
@@ -434,7 +434,7 @@ where
     Pe32(pe::PeSection32<'data, 'file>),
     Pe64(pe::PeSection64<'data, 'file>),
     #[cfg(feature = "wasm")]
-    Wasm(wasm::WasmSection<'file>),
+    Wasm(wasm::WasmSection<'data, 'file>),
 }
 
 impl<'data, 'file> fmt::Debug for Section<'data, 'file> {
@@ -475,7 +475,7 @@ impl<'data, 'file> ObjectSection<'data> for Section<'data, 'file> {
         with_inner!(self.inner, SectionInternal, |x| x.file_range())
     }
 
-    fn data(&self) -> Cow<'data, [u8]> {
+    fn data(&self) -> &'data [u8] {
         with_inner!(self.inner, SectionInternal, |x| x.data())
     }
 
@@ -537,7 +537,7 @@ where
     Pe32(coff::CoffSymbolIterator<'data, 'file>),
     Pe64(coff::CoffSymbolIterator<'data, 'file>),
     #[cfg(feature = "wasm")]
-    Wasm(wasm::WasmSymbolIterator<'file>),
+    Wasm(wasm::WasmSymbolIterator<'data, 'file>),
 }
 
 impl<'data, 'file> Iterator for SymbolIterator<'data, 'file> {

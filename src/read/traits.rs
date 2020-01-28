@@ -199,7 +199,7 @@ pub trait ObjectSection<'data> {
     /// section in memory.
     ///
     /// This does not do any decompression.
-    fn data(&self) -> Cow<'data, [u8]>;
+    fn data(&self) -> &'data [u8];
 
     /// Return the raw contents of the section data in the given range.
     ///

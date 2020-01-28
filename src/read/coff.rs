@@ -340,8 +340,8 @@ impl<'data, 'file> ObjectSection<'data> for CoffSection<'data, 'file> {
         }
     }
 
-    fn data(&self) -> Cow<'data, [u8]> {
-        Cow::from(self.raw_data())
+    fn data(&self) -> &'data [u8] {
+        self.raw_data()
     }
 
     fn data_range(&self, address: u64, size: u64) -> Option<&'data [u8]> {
@@ -350,7 +350,7 @@ impl<'data, 'file> ObjectSection<'data> for CoffSection<'data, 'file> {
 
     #[inline]
     fn uncompressed_data(&self) -> Cow<'data, [u8]> {
-        self.data()
+        Cow::from(self.data())
     }
 
     #[inline]
