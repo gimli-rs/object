@@ -593,8 +593,8 @@ impl<'data, 'file, Elf: FileHeader> ObjectSection<'data> for ElfSection<'data, '
     }
 
     #[inline]
-    fn data(&self) -> Cow<'data, [u8]> {
-        Cow::from(self.raw_data())
+    fn data(&self) -> &'data [u8] {
+        self.raw_data()
     }
 
     fn data_range(&self, address: u64, size: u64) -> Option<&'data [u8]> {
@@ -603,15 +603,17 @@ impl<'data, 'file, Elf: FileHeader> ObjectSection<'data> for ElfSection<'data, '
 
     #[cfg(feature = "compression")]
     fn uncompressed_data(&self) -> Cow<'data, [u8]> {
+        // TODO: return an error if decompression fails
         self.maybe_decompress_data()
             .or_else(|| self.maybe_decompress_data_gnu())
-            .unwrap_or_else(|| self.data())
+            .unwrap_or_else(|| Cow::from(self.data()))
     }
 
+    // TODO: remove this method completely if compression is not configured
     #[cfg(not(feature = "compression"))]
     #[inline]
     fn uncompressed_data(&self) -> Cow<'data, [u8]> {
-        self.data()
+        Cow::from(self.data())
     }
 
     fn name(&self) -> Option<&str> {

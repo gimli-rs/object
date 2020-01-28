@@ -464,8 +464,8 @@ impl<'data, 'file, Mach: MachHeader> ObjectSection<'data> for MachOSection<'data
     }
 
     #[inline]
-    fn data(&self) -> Cow<'data, [u8]> {
-        Cow::from(self.raw_data())
+    fn data(&self) -> &'data [u8] {
+        self.raw_data()
     }
 
     fn data_range(&self, address: u64, size: u64) -> Option<&'data [u8]> {
@@ -474,7 +474,7 @@ impl<'data, 'file, Mach: MachHeader> ObjectSection<'data> for MachOSection<'data
 
     #[inline]
     fn uncompressed_data(&self) -> Cow<'data, [u8]> {
-        self.data()
+        Cow::from(self.data())
     }
 
     #[inline]

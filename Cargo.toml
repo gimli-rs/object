@@ -20,10 +20,6 @@ flate2 = { version = "1", optional = true }
 crc32fast = { version = "1.2", optional = true }
 indexmap = { version = "1.1", optional = true }
 
-[dependencies.parity-wasm]
-version = "0.41.0"
-optional = true
-
 [dev-dependencies]
 memmap = "0.7"
 
@@ -32,7 +28,7 @@ read = []
 write = ["crc32fast", "indexmap", "std"]
 std = []
 compression = ["flate2"]
-wasm = ["std", "parity-wasm"]
+wasm = []
 default = ["read", "std", "compression", "wasm"]
 
 [[example]]
