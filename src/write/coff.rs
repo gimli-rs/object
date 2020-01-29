@@ -2,8 +2,8 @@ use crc32fast;
 use std::iter;
 use std::mem;
 use std::string::String;
+use std::vec::Vec;
 
-use crate::alloc::vec::Vec;
 use crate::endian::{LittleEndian as LE, U16Bytes, U32Bytes, U16, U32};
 use crate::pe as coff;
 use crate::pod::bytes_of;

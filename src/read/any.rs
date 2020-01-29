@@ -1,5 +1,5 @@
-use crate::alloc::borrow::Cow;
-use crate::alloc::fmt;
+use alloc::borrow::Cow;
+use alloc::fmt;
 use target_lexicon::{Architecture, BinaryFormat};
 use uuid::Uuid;
 

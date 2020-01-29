@@ -1,9 +1,10 @@
-use crate::alloc::borrow::Cow;
+use alloc::borrow::Cow;
+use target_lexicon::{Architecture, Endianness};
+use uuid::Uuid;
+
 use crate::{
     FileFlags, Relocation, SectionFlags, SectionIndex, SectionKind, Symbol, SymbolIndex, SymbolMap,
 };
-use target_lexicon::{Architecture, Endianness};
-use uuid::Uuid;
 
 /// An object file.
 pub trait Object<'data, 'file> {

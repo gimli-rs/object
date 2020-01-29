@@ -5,17 +5,17 @@
 //!
 //! Also provides `MachOFile` and related types which implement the `Object` trait.
 
-use crate::alloc::borrow::Cow;
-use crate::alloc::vec::Vec;
-use crate::endian::{self, BigEndian, Endian, RunTimeEndian};
-use crate::macho;
-use crate::pod::{self, Pod};
+use alloc::borrow::Cow;
+use alloc::vec::Vec;
 use core::fmt::Debug;
 use core::marker::PhantomData;
 use core::{fmt, mem, ops, slice, str};
 use target_lexicon::{Aarch64Architecture, Architecture, ArmArchitecture};
 use uuid::Uuid;
 
+use crate::endian::{self, BigEndian, Endian, RunTimeEndian};
+use crate::macho;
+use crate::pod::{self, Pod};
 use crate::read::util::StringTable;
 use crate::read::{
     self, FileFlags, Object, ObjectSection, ObjectSegment, Relocation, RelocationEncoding,

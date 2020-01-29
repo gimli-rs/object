@@ -1,6 +1,5 @@
 use indexmap::IndexSet;
-
-use crate::alloc::vec::Vec;
+use std::vec::Vec;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) struct StringId(usize);

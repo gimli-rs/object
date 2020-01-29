@@ -6,8 +6,8 @@
 
 use std::collections::HashMap;
 use std::string::String;
+use std::vec::Vec;
 
-use crate::alloc::vec::Vec;
 use crate::endian::{RunTimeEndian, U32Bytes, U64Bytes};
 use crate::pod::bytes_of;
 use crate::target_lexicon::{Architecture, BinaryFormat, Endianness, PointerWidth};
