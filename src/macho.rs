@@ -115,6 +115,7 @@ pub const CPU_SUBTYPE_MC68030_ONLY: u32 = 3;
  *	I386 subtypes
  */
 
+#[inline]
 pub const fn cpu_subtype_intel(f: u32, m: u32) -> u32 {
     f + (m << 4)
 }
@@ -141,11 +142,13 @@ pub const CPU_SUBTYPE_ITANIUM_2: u32 = cpu_subtype_intel(11, 1);
 pub const CPU_SUBTYPE_XEON: u32 = cpu_subtype_intel(12, 0);
 pub const CPU_SUBTYPE_XEON_MP: u32 = cpu_subtype_intel(12, 1);
 
+#[inline]
 pub const fn cpu_subtype_intel_family(x: u32) -> u32 {
     x & 15
 }
 pub const CPU_SUBTYPE_INTEL_FAMILY_MAX: u32 = 15;
 
+#[inline]
 pub const fn cpu_subtype_intel_model(x: u32) -> u32 {
     x >> 4
 }

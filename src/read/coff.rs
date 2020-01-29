@@ -149,6 +149,7 @@ where
         false
     }
 
+    #[inline]
     fn entry(&self) -> u64 {
         0
     }

@@ -125,6 +125,7 @@ where
         WasmSegmentIterator { file: self }
     }
 
+    #[inline]
     fn entry(&'file self) -> u64 {
         // TODO: Convert start section to an address.
         0
@@ -147,6 +148,7 @@ where
         }
     }
 
+    #[inline]
     fn symbol_by_index(&self, _index: SymbolIndex) -> Option<Symbol<'data>> {
         // WASM doesn't need or support looking up symbols by index.
         None
@@ -184,6 +186,7 @@ where
         self.sections.iter().any(|s| s.name.starts_with(".debug_"))
     }
 
+    #[inline]
     fn flags(&self) -> FileFlags {
         FileFlags::None
     }
@@ -198,6 +201,7 @@ pub struct WasmSegmentIterator<'data, 'file> {
 impl<'data, 'file> Iterator for WasmSegmentIterator<'data, 'file> {
     type Item = WasmSegment<'data, 'file>;
 
+    #[inline]
     fn next(&mut self) -> Option<Self::Item> {
         None
     }
@@ -305,6 +309,7 @@ impl<'data, 'file> ObjectSection<'data> for WasmSection<'data, 'file> {
         None
     }
 
+    #[inline]
     fn data(&self) -> &'data [u8] {
         self.section.data
     }
@@ -318,6 +323,7 @@ impl<'data, 'file> ObjectSection<'data> for WasmSection<'data, 'file> {
         Cow::from(self.data())
     }
 
+    #[inline]
     fn name(&self) -> Option<&str> {
         Some(self.section.name)
     }
@@ -327,14 +333,17 @@ impl<'data, 'file> ObjectSection<'data> for WasmSection<'data, 'file> {
         None
     }
 
+    #[inline]
     fn kind(&self) -> SectionKind {
         SectionKind::Unknown
     }
 
+    #[inline]
     fn relocations(&self) -> WasmRelocationIterator {
         WasmRelocationIterator
     }
 
+    #[inline]
     fn flags(&self) -> SectionFlags {
         SectionFlags::None
     }
@@ -384,6 +393,7 @@ pub struct WasmRelocationIterator;
 impl Iterator for WasmRelocationIterator {
     type Item = (u64, Relocation);
 
+    #[inline]
     fn next(&mut self) -> Option<Self::Item> {
         None
     }
