@@ -14,11 +14,10 @@ use crate::endian::{self, Endian, RunTimeEndian};
 use crate::pod::{self, Pod};
 #[cfg(feature = "compression")]
 use core::convert::TryInto;
+use core::fmt::Debug;
+use core::{iter, mem, slice, str};
 #[cfg(feature = "compression")]
 use flate2::{Decompress, FlushDecompress};
-use std::fmt::Debug;
-use std::mem;
-use std::{iter, slice, str};
 use target_lexicon::{Aarch64Architecture, Architecture, ArmArchitecture};
 
 use crate::read::util::{self, StringTable};

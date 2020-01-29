@@ -9,27 +9,15 @@
 #![deny(missing_docs)]
 #![deny(missing_debug_implementations)]
 #![no_std]
-#![cfg_attr(not(feature = "std"), feature(alloc))]
+
+#[allow(unused_imports)]
+#[macro_use]
+extern crate alloc;
 
 #[cfg(feature = "std")]
 #[allow(unused_imports)]
 #[macro_use]
 extern crate std;
-
-#[cfg(all(not(feature = "std"), feature = "compression"))]
-#[macro_use]
-extern crate alloc;
-#[cfg(all(not(feature = "std"), not(feature = "compression")))]
-extern crate alloc;
-#[cfg(not(feature = "std"))]
-extern crate core as std;
-
-#[cfg(feature = "std")]
-mod alloc {
-    pub use std::borrow;
-    pub use std::fmt;
-    pub use std::vec;
-}
 
 // Re-export since these are used in public signatures.
 pub use target_lexicon;

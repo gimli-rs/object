@@ -10,9 +10,9 @@ use crate::alloc::vec::Vec;
 use crate::endian::{self, BigEndian, Endian, RunTimeEndian};
 use crate::macho;
 use crate::pod::{self, Pod};
-use std::fmt::Debug;
-use std::marker::PhantomData;
-use std::{fmt, mem, ops, slice, str};
+use core::fmt::Debug;
+use core::marker::PhantomData;
+use core::{fmt, mem, ops, slice, str};
 use target_lexicon::{Aarch64Architecture, Architecture, ArmArchitecture};
 use uuid::Uuid;
 

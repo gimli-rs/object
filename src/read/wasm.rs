@@ -5,7 +5,7 @@
 //! Currently implements the minimum required to access DWARF debugging information.
 use crate::alloc::borrow::Cow;
 use crate::alloc::vec::Vec;
-use std::{slice, str};
+use core::{slice, str};
 use target_lexicon::Architecture;
 
 use crate::read::{

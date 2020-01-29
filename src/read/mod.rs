@@ -5,6 +5,7 @@ use crate::common::{
     FileFlags, RelocationEncoding, RelocationKind, SectionFlags, SectionKind, SymbolFlags,
     SymbolKind, SymbolScope,
 };
+use core::cmp;
 
 mod util;
 
@@ -203,11 +204,11 @@ impl<'data> SymbolMap<'data> {
         self.symbols
             .binary_search_by(|symbol| {
                 if address < symbol.address {
-                    std::cmp::Ordering::Greater
+                    cmp::Ordering::Greater
                 } else if address < symbol.address + symbol.size {
-                    std::cmp::Ordering::Equal
+                    cmp::Ordering::Equal
                 } else {
-                    std::cmp::Ordering::Less
+                    cmp::Ordering::Less
                 }
             })
             .ok()

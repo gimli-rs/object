@@ -2,6 +2,9 @@
 //!
 //! This module should be replaced once rust provides safe transmutes.
 
+// This module provides functions for both read and write features.
+#![cfg_attr(not(all(feature = "read", feature = "write")), allow(dead_code))]
+
 use core::{mem, slice};
 
 /// A trait for types that can safely be converted from and to byte slices.
@@ -47,7 +50,6 @@ pub(crate) fn slice_from_bytes<T: Pod>(
     Some((slice, tail))
 }
 
-#[allow(dead_code)]
 #[inline]
 pub(crate) fn bytes_of<T: Pod>(val: &T) -> &[u8] {
     let size = mem::size_of::<T>();

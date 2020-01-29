@@ -26,9 +26,8 @@ addons:
 
 script:
   - cargo build --all-features && cargo test --all-features && cargo doc --all-features
-  - if [ "$TRAVIS_RUST_VERSION" = "nightly" ]; then
-      cargo build --no-default-features --features read;
-    fi
+  - cargo build --no-default-features --features read
+  - cargo build --no-default-features --features write
   - if [ "$TRAVIS_OS_NAME" = linux ] && [ "$TRAVIS_RUST_VERSION" = stable ]; then
       rustup component add rustfmt;
       cargo fmt -- --check;
