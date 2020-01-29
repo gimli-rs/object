@@ -4,11 +4,12 @@
 #![allow(clippy::cognitive_complexity)]
 #![allow(clippy::module_inception)]
 
-use scroll::Pwrite;
 use std::collections::HashMap;
 use std::string::String;
 
 use crate::alloc::vec::Vec;
+use crate::endian::{RunTimeEndian, U32Bytes, U64Bytes};
+use crate::pod::bytes_of;
 use crate::target_lexicon::{Architecture, BinaryFormat, Endianness, PointerWidth};
 use crate::{
     FileFlags, RelocationEncoding, RelocationKind, SectionFlags, SectionKind, SymbolFlags,
@@ -447,27 +448,33 @@ impl Object {
         addend: i64,
     ) -> Result<(), String> {
         let endian = match self.architecture.endianness().unwrap() {
-            Endianness::Little => scroll::LE,
-            Endianness::Big => scroll::BE,
+            Endianness::Little => RunTimeEndian::Little,
+            Endianness::Big => RunTimeEndian::Big,
         };
 
         let data = &mut self.sections[section.0].data;
-        if relocation.offset + (u64::from(relocation.size) + 7) / 8 > data.len() as u64 {
-            return Err(format!(
-                "invalid relocation offset {}+{} (max {})",
-                relocation.offset,
-                relocation.size,
-                data.len()
-            ));
-        }
+        let dest = match data
+            .get_mut(relocation.offset as usize..)
+            .and_then(|data| data.get_mut(..relocation.size as usize / 8))
+        {
+            Some(dest) => dest,
+            None => {
+                return Err(format!(
+                    "invalid relocation offset {}+{} (max {})",
+                    relocation.offset,
+                    relocation.size,
+                    data.len()
+                ));
+            }
+        };
         match relocation.size {
             32 => {
-                data.pwrite_with(addend as i32, relocation.offset as usize, endian)
-                    .unwrap();
+                let src = U32Bytes::new(endian, addend as u32);
+                dest.copy_from_slice(bytes_of(&src));
             }
             64 => {
-                data.pwrite_with(addend, relocation.offset as usize, endian)
-                    .unwrap();
+                let src = U64Bytes::new(endian, addend as u64);
+                dest.copy_from_slice(bytes_of(&src));
             }
             _ => return Err(format!("unimplemented relocation addend {:?}", relocation)),
         }
