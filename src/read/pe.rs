@@ -5,15 +5,15 @@
 //!
 //! Also provides `PeFile` and related types which implement the `Object` trait.
 
-use crate::alloc::borrow::Cow;
-use crate::alloc::vec::Vec;
-use crate::endian::LittleEndian as LE;
-use crate::pe;
-use crate::pod::{self, Pod};
+use alloc::borrow::Cow;
+use alloc::vec::Vec;
 use core::fmt::Debug;
 use core::{cmp, iter, mem, slice, str};
 use target_lexicon::Architecture;
 
+use crate::endian::LittleEndian as LE;
+use crate::pe;
+use crate::pod::{self, Pod};
 use crate::read::coff::{
     parse_symbol, section_kind, section_name, CoffSymbolIterator, SymbolTable,
 };

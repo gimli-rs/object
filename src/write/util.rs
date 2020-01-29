@@ -1,4 +1,4 @@
-use crate::alloc::vec::Vec;
+use std::vec::Vec;
 
 pub(crate) fn align(offset: usize, size: usize) -> usize {
     (offset + (size - 1)) & !(size - 1)

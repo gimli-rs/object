@@ -5,13 +5,10 @@
 //!
 //! Also provides `ElfFile` and related types which implement the `Object` trait.
 
-use crate::alloc::borrow::Cow;
-use crate::alloc::fmt;
-use crate::alloc::vec;
-use crate::alloc::vec::Vec;
-use crate::elf;
-use crate::endian::{self, Endian, RunTimeEndian};
-use crate::pod::{self, Pod};
+use alloc::borrow::Cow;
+use alloc::fmt;
+use alloc::vec;
+use alloc::vec::Vec;
 #[cfg(feature = "compression")]
 use core::convert::TryInto;
 use core::fmt::Debug;
@@ -20,6 +17,9 @@ use core::{iter, mem, slice, str};
 use flate2::{Decompress, FlushDecompress};
 use target_lexicon::{Aarch64Architecture, Architecture, ArmArchitecture};
 
+use crate::elf;
+use crate::endian::{self, Endian, RunTimeEndian};
+use crate::pod::{self, Pod};
 use crate::read::util::{self, StringTable};
 use crate::read::{
     self, FileFlags, Object, ObjectSection, ObjectSegment, Relocation, RelocationEncoding,

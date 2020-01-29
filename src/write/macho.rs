@@ -1,7 +1,7 @@
 use std::mem;
 use std::string::String;
+use std::vec::Vec;
 
-use crate::alloc::vec::Vec;
 use crate::endian::*;
 use crate::macho;
 use crate::pod::bytes_of;

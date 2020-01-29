@@ -1,11 +1,12 @@
 //! Interface for reading object files.
 
-use crate::alloc::vec::Vec;
+use alloc::vec::Vec;
+use core::cmp;
+
 use crate::common::{
     FileFlags, RelocationEncoding, RelocationKind, SectionFlags, SectionKind, SymbolFlags,
     SymbolKind, SymbolScope,
 };
-use core::cmp;
 
 mod util;
 

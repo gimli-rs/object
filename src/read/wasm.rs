@@ -3,8 +3,8 @@
 //! Provides `WasmFile` and related types which implement the `Object` trait.
 //!
 //! Currently implements the minimum required to access DWARF debugging information.
-use crate::alloc::borrow::Cow;
-use crate::alloc::vec::Vec;
+use alloc::borrow::Cow;
+use alloc::vec::Vec;
 use core::{slice, str};
 use target_lexicon::Architecture;
 

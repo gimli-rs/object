@@ -2,16 +2,16 @@
 //!
 //! Provides `CoffFile` and related types which implement the `Object` trait.
 
-use crate::alloc::borrow::Cow;
-use crate::alloc::fmt;
-use crate::alloc::vec::Vec;
-use crate::endian::LittleEndian as LE;
-use crate::pe;
-use crate::pod::{self, Pod};
+use alloc::borrow::Cow;
+use alloc::fmt;
+use alloc::vec::Vec;
 use core::convert::TryInto;
 use core::{iter, slice, str};
 use target_lexicon::Architecture;
 
+use crate::endian::LittleEndian as LE;
+use crate::pe;
+use crate::pod::{self, Pod};
 use crate::read::util::StringTable;
 use crate::read::{
     self, FileFlags, Object, ObjectSection, ObjectSegment, Relocation, RelocationEncoding,
