@@ -27,9 +27,9 @@ memmap = "0.7"
 read = []
 write = ["crc32fast", "indexmap", "std"]
 std = []
-compression = ["flate2"]
+compression = ["flate2", "std"]
 wasm = []
-default = ["read", "std", "compression", "wasm"]
+default = ["read", "compression", "wasm"]
 
 [[example]]
 name = "objcopy"

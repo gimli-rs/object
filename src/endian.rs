@@ -2,7 +2,7 @@
 
 use crate::pod::Pod;
 use core::fmt::{self, Debug};
-use std::marker::PhantomData;
+use core::marker::PhantomData;
 
 /// A trait for using an endianness specification.
 ///

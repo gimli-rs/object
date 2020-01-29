@@ -9,7 +9,7 @@ use crate::endian::LittleEndian as LE;
 use crate::pe;
 use crate::pod::{self, Pod};
 use core::convert::TryInto;
-use std::{iter, slice, str};
+use core::{iter, slice, str};
 use target_lexicon::Architecture;
 
 use crate::read::util::StringTable;

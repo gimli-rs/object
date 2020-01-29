@@ -10,8 +10,8 @@ use crate::alloc::vec::Vec;
 use crate::endian::LittleEndian as LE;
 use crate::pe;
 use crate::pod::{self, Pod};
-use std::fmt::Debug;
-use std::{cmp, iter, mem, slice, str};
+use core::fmt::Debug;
+use core::{cmp, iter, mem, slice, str};
 use target_lexicon::Architecture;
 
 use crate::read::coff::{
