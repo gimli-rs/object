@@ -216,6 +216,7 @@ impl<'data> SymbolMap<'data> {
     }
 
     /// Get all symbols in the map.
+    #[inline]
     pub fn symbols(&self) -> &[Symbol<'data>] {
         &self.symbols
     }
@@ -284,17 +285,20 @@ impl Relocation {
     }
 
     /// The addend to use in the relocation calculation.
+    #[inline]
     pub fn addend(&self) -> i64 {
         self.addend
     }
 
     /// Set the addend to use in the relocation calculation.
+    #[inline]
     pub fn set_addend(&mut self, addend: i64) {
         self.addend = addend
     }
 
     /// Returns true if there is an implicit addend stored in the data at the offset
     /// to be relocated.
+    #[inline]
     pub fn has_implicit_addend(&self) -> bool {
         self.implicit_addend
     }
