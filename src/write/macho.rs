@@ -351,9 +351,9 @@ impl Object {
         // Write section headers.
         for (index, section) in self.sections.iter().enumerate() {
             let mut sectname = [0; 16];
-            sectname.pwrite(&*section.name, 0).unwrap();
+            sectname[..section.name.len()].copy_from_slice(&section.name);
             let mut segname = [0; 16];
-            segname.pwrite(&*section.segment, 0).unwrap();
+            segname[..section.segment.len()].copy_from_slice(&section.segment);
             let flags = if let SectionFlags::MachO { flags } = section.flags {
                 flags
             } else {
