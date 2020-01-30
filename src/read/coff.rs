@@ -9,9 +9,9 @@ use core::convert::TryInto;
 use core::{iter, slice, str};
 use target_lexicon::Architecture;
 
-use crate::endian::LittleEndian as LE;
+use crate::endian::{LittleEndian as LE, U32Bytes};
 use crate::pe;
-use crate::pod::{self, Pod};
+use crate::pod::{Bytes, Pod};
 use crate::read::util::StringTable;
 use crate::read::{
     self, FileFlags, Object, ObjectSection, ObjectSegment, Relocation, RelocationEncoding,
@@ -26,22 +26,24 @@ pub struct CoffFile<'data> {
     sections: &'data [pe::ImageSectionHeader],
     // TODO: ImageSymbolExBytes
     symbols: SymbolTable<'data>,
-    data: &'data [u8],
+    data: Bytes<'data>,
 }
 
 impl<'data> CoffFile<'data> {
     /// Parse the raw COFF file data.
     pub fn parse(data: &'data [u8]) -> Result<Self, &'static str> {
-        let (header, tail) = pod::from_bytes::<pe::ImageFileHeader>(data)
-            .ok_or("Invalid COFF header size or alignment")?;
+        let data = Bytes(data);
+        let mut tail = data;
+        let header = tail
+            .read::<pe::ImageFileHeader>()
+            .ok_or("Invalid COFF file header size or alignment")?;
 
         // Skip over the optional header and get the section headers.
-        let (sections, _) = pod::slice_from_bytes(
-            tail,
-            header.size_of_optional_header.get(LE) as usize,
-            header.number_of_sections.get(LE) as usize,
-        )
-        .ok_or("Invalid section headers")?;
+        tail.skip(header.size_of_optional_header.get(LE) as usize)
+            .ok_or("Invalid COFF optional header size")?;
+        let sections = tail
+            .read_slice(header.number_of_sections.get(LE) as usize)
+            .ok_or("Invalid section headers")?;
 
         let symbols = SymbolTable::parse(header, data)?;
 
@@ -182,26 +184,6 @@ impl<'data, 'file> Iterator for CoffSegmentIterator<'data, 'file> {
     }
 }
 
-fn section_alignment(characteristics: u32) -> u64 {
-    match characteristics & pe::IMAGE_SCN_ALIGN_MASK {
-        pe::IMAGE_SCN_ALIGN_1BYTES => 1,
-        pe::IMAGE_SCN_ALIGN_2BYTES => 2,
-        pe::IMAGE_SCN_ALIGN_4BYTES => 4,
-        pe::IMAGE_SCN_ALIGN_8BYTES => 8,
-        pe::IMAGE_SCN_ALIGN_16BYTES => 16,
-        pe::IMAGE_SCN_ALIGN_32BYTES => 32,
-        pe::IMAGE_SCN_ALIGN_64BYTES => 64,
-        pe::IMAGE_SCN_ALIGN_128BYTES => 128,
-        pe::IMAGE_SCN_ALIGN_256BYTES => 256,
-        pe::IMAGE_SCN_ALIGN_512BYTES => 512,
-        pe::IMAGE_SCN_ALIGN_1024BYTES => 1024,
-        pe::IMAGE_SCN_ALIGN_2048BYTES => 2048,
-        pe::IMAGE_SCN_ALIGN_4096BYTES => 4096,
-        pe::IMAGE_SCN_ALIGN_8192BYTES => 8192,
-        _ => 16,
-    }
-}
-
 /// A loadable section of a `CoffFile`.
 #[derive(Debug)]
 pub struct CoffSegment<'data, 'file>
@@ -210,6 +192,14 @@ where
 {
     file: &'file CoffFile<'data>,
     section: &'data pe::ImageSectionHeader,
+}
+
+impl<'data, 'file> CoffSegment<'data, 'file> {
+    fn bytes(&self) -> Bytes<'data> {
+        self.section
+            .coff_bytes(self.file.data)
+            .unwrap_or(Bytes(&[]))
+    }
 }
 
 impl<'data, 'file> ObjectSegment<'data> for CoffSegment<'data, 'file> {
@@ -225,38 +215,26 @@ impl<'data, 'file> ObjectSegment<'data> for CoffSegment<'data, 'file> {
 
     #[inline]
     fn align(&self) -> u64 {
-        section_alignment(self.section.characteristics.get(LE))
+        self.section.coff_alignment()
     }
 
     #[inline]
     fn file_range(&self) -> (u64, u64) {
-        if self.section.characteristics.get(LE) & pe::IMAGE_SCN_CNT_UNINITIALIZED_DATA != 0 {
-            (0, 0)
-        } else {
-            (
-                u64::from(self.section.pointer_to_raw_data.get(LE)),
-                u64::from(self.section.size_of_raw_data.get(LE)),
-            )
-        }
+        let (offset, size) = self.section.coff_file_range().unwrap_or((0, 0));
+        (u64::from(offset), u64::from(size))
     }
 
     fn data(&self) -> &'data [u8] {
-        if self.section.characteristics.get(LE) & pe::IMAGE_SCN_CNT_UNINITIALIZED_DATA != 0 {
-            &[]
-        } else {
-            let offset = self.section.pointer_to_raw_data.get(LE) as usize;
-            let size = self.section.size_of_raw_data.get(LE) as usize;
-            &self.file.data[offset..][..size]
-        }
+        self.bytes().0
     }
 
     fn data_range(&self, address: u64, size: u64) -> Option<&'data [u8]> {
-        read::data_range(self.data(), self.address(), address, size)
+        read::data_range(self.bytes(), self.address(), address, size)
     }
 
     #[inline]
     fn name(&self) -> Option<&str> {
-        section_name(&self.section.name, self.file.symbols.strings)
+        self.section.name(self.file.symbols.strings)
     }
 }
 
@@ -294,14 +272,10 @@ where
 }
 
 impl<'data, 'file> CoffSection<'data, 'file> {
-    fn raw_data(&self) -> &'data [u8] {
-        if self.section.characteristics.get(LE) & pe::IMAGE_SCN_CNT_UNINITIALIZED_DATA != 0 {
-            &[]
-        } else {
-            let offset = self.section.pointer_to_raw_data.get(LE) as usize;
-            let size = self.section.size_of_raw_data.get(LE) as usize;
-            &self.file.data[offset..][..size]
-        }
+    fn bytes(&self) -> Bytes<'data> {
+        self.section
+            .coff_bytes(self.file.data)
+            .unwrap_or(Bytes(&[]))
     }
 }
 
@@ -326,27 +300,21 @@ impl<'data, 'file> ObjectSection<'data> for CoffSection<'data, 'file> {
 
     #[inline]
     fn align(&self) -> u64 {
-        section_alignment(self.section.characteristics.get(LE))
+        self.section.coff_alignment()
     }
 
     #[inline]
     fn file_range(&self) -> Option<(u64, u64)> {
-        if self.section.characteristics.get(LE) & pe::IMAGE_SCN_CNT_UNINITIALIZED_DATA != 0 {
-            None
-        } else {
-            Some((
-                self.section.pointer_to_raw_data.get(LE) as u64,
-                self.section.size_of_raw_data.get(LE) as u64,
-            ))
-        }
+        let (offset, size) = self.section.coff_file_range()?;
+        Some((u64::from(offset), u64::from(size)))
     }
 
     fn data(&self) -> &'data [u8] {
-        self.raw_data()
+        self.bytes().0
     }
 
     fn data_range(&self, address: u64, size: u64) -> Option<&'data [u8]> {
-        read::data_range(self.raw_data(), self.address(), address, size)
+        read::data_range(self.bytes(), self.address(), address, size)
     }
 
     #[inline]
@@ -356,7 +324,7 @@ impl<'data, 'file> ObjectSection<'data> for CoffSection<'data, 'file> {
 
     #[inline]
     fn name(&self) -> Option<&str> {
-        section_name(&self.section.name, self.file.symbols.strings)
+        self.section.name(self.file.symbols.strings)
     }
 
     #[inline]
@@ -366,14 +334,13 @@ impl<'data, 'file> ObjectSection<'data> for CoffSection<'data, 'file> {
 
     #[inline]
     fn kind(&self) -> SectionKind {
-        section_kind(self.section.characteristics.get(LE))
+        self.section.kind()
     }
 
     fn relocations(&self) -> CoffRelocationIterator<'data, 'file> {
         let pointer = self.section.pointer_to_relocations.get(LE) as usize;
         let number = self.section.number_of_relocations.get(LE) as usize;
-        let (relocations, _) =
-            pod::slice_from_bytes(self.file.data, pointer, number).unwrap_or((&[], &[]));
+        let relocations = self.file.data.read_slice_at(pointer, number).unwrap_or(&[]);
         CoffRelocationIterator {
             file: self.file,
             iter: relocations.iter(),
@@ -606,61 +573,98 @@ impl<'data, 'file> fmt::Debug for CoffRelocationIterator<'data, 'file> {
     }
 }
 
-pub(crate) fn section_name<'data>(
-    bytes: &'data [u8; pe::IMAGE_SIZEOF_SHORT_NAME],
-    strings: StringTable<'data>,
-) -> Option<&'data str> {
-    let name = if bytes[0] == b'/' {
-        let mut offset = 0;
-        if bytes[1] == b'/' {
-            for byte in bytes[2..].iter() {
-                let digit = match byte {
-                    b'A'..=b'Z' => byte - b'A',
-                    b'a'..=b'z' => byte - b'a' + 26,
-                    b'0'..=b'9' => byte - b'0' + 52,
-                    b'+' => 62,
-                    b'/' => 63,
-                    _ => return None,
-                };
-                offset = offset * 64 + digit as u32;
-            }
+impl pe::ImageSectionHeader {
+    fn coff_file_range(&self) -> Option<(u32, u32)> {
+        if self.characteristics.get(LE) & pe::IMAGE_SCN_CNT_UNINITIALIZED_DATA != 0 {
+            None
         } else {
-            for byte in bytes[1..].iter() {
-                let digit = match byte {
-                    b'0'..=b'9' => byte - b'0',
-                    0 => break,
-                    _ => return None,
-                };
-                offset = offset * 10 + digit as u32;
+            let offset = self.pointer_to_raw_data.get(LE);
+            // Note: virtual size is not used for COFF.
+            let size = self.size_of_raw_data.get(LE);
+            Some((offset, size))
+        }
+    }
+
+    fn coff_bytes<'data>(&self, data: Bytes<'data>) -> Option<Bytes<'data>> {
+        let (offset, size) = self.coff_file_range()?;
+        data.read_bytes_at(offset as usize, size as usize)
+    }
+
+    pub(crate) fn name<'data>(&'data self, strings: StringTable<'data>) -> Option<&'data str> {
+        let bytes = &self.name;
+        let name = if bytes[0] == b'/' {
+            let mut offset = 0;
+            if bytes[1] == b'/' {
+                for byte in bytes[2..].iter() {
+                    let digit = match byte {
+                        b'A'..=b'Z' => byte - b'A',
+                        b'a'..=b'z' => byte - b'a' + 26,
+                        b'0'..=b'9' => byte - b'0' + 52,
+                        b'+' => 62,
+                        b'/' => 63,
+                        _ => return None,
+                    };
+                    offset = offset * 64 + digit as u32;
+                }
+            } else {
+                for byte in bytes[1..].iter() {
+                    let digit = match byte {
+                        b'0'..=b'9' => byte - b'0',
+                        0 => break,
+                        _ => return None,
+                    };
+                    offset = offset * 10 + digit as u32;
+                }
+            };
+            strings.get(offset)?
+        } else {
+            match bytes.iter().position(|&x| x == 0) {
+                Some(end) => &bytes[..end],
+                None => &bytes[..],
             }
         };
-        strings.get(offset)?
-    } else {
-        match bytes.iter().position(|&x| x == 0) {
-            Some(end) => &bytes[..end],
-            None => &bytes[..],
-        }
-    };
-    str::from_utf8(name).ok()
-}
+        str::from_utf8(name).ok()
+    }
 
-pub(crate) fn section_kind(characteristics: u32) -> SectionKind {
-    if characteristics & (pe::IMAGE_SCN_CNT_CODE | pe::IMAGE_SCN_MEM_EXECUTE) != 0 {
-        SectionKind::Text
-    } else if characteristics & pe::IMAGE_SCN_CNT_INITIALIZED_DATA != 0 {
-        if characteristics & pe::IMAGE_SCN_MEM_DISCARDABLE != 0 {
-            SectionKind::Other
-        } else if characteristics & pe::IMAGE_SCN_MEM_WRITE != 0 {
-            SectionKind::Data
+    pub(crate) fn kind(&self) -> SectionKind {
+        let characteristics = self.characteristics.get(LE);
+        if characteristics & (pe::IMAGE_SCN_CNT_CODE | pe::IMAGE_SCN_MEM_EXECUTE) != 0 {
+            SectionKind::Text
+        } else if characteristics & pe::IMAGE_SCN_CNT_INITIALIZED_DATA != 0 {
+            if characteristics & pe::IMAGE_SCN_MEM_DISCARDABLE != 0 {
+                SectionKind::Other
+            } else if characteristics & pe::IMAGE_SCN_MEM_WRITE != 0 {
+                SectionKind::Data
+            } else {
+                SectionKind::ReadOnlyData
+            }
+        } else if characteristics & pe::IMAGE_SCN_CNT_UNINITIALIZED_DATA != 0 {
+            SectionKind::UninitializedData
+        } else if characteristics & pe::IMAGE_SCN_LNK_INFO != 0 {
+            SectionKind::Linker
         } else {
-            SectionKind::ReadOnlyData
+            SectionKind::Unknown
         }
-    } else if characteristics & pe::IMAGE_SCN_CNT_UNINITIALIZED_DATA != 0 {
-        SectionKind::UninitializedData
-    } else if characteristics & pe::IMAGE_SCN_LNK_INFO != 0 {
-        SectionKind::Linker
-    } else {
-        SectionKind::Unknown
+    }
+
+    fn coff_alignment(&self) -> u64 {
+        match self.characteristics.get(LE) & pe::IMAGE_SCN_ALIGN_MASK {
+            pe::IMAGE_SCN_ALIGN_1BYTES => 1,
+            pe::IMAGE_SCN_ALIGN_2BYTES => 2,
+            pe::IMAGE_SCN_ALIGN_4BYTES => 4,
+            pe::IMAGE_SCN_ALIGN_8BYTES => 8,
+            pe::IMAGE_SCN_ALIGN_16BYTES => 16,
+            pe::IMAGE_SCN_ALIGN_32BYTES => 32,
+            pe::IMAGE_SCN_ALIGN_64BYTES => 64,
+            pe::IMAGE_SCN_ALIGN_128BYTES => 128,
+            pe::IMAGE_SCN_ALIGN_256BYTES => 256,
+            pe::IMAGE_SCN_ALIGN_512BYTES => 512,
+            pe::IMAGE_SCN_ALIGN_1024BYTES => 1024,
+            pe::IMAGE_SCN_ALIGN_2048BYTES => 2048,
+            pe::IMAGE_SCN_ALIGN_4096BYTES => 4096,
+            pe::IMAGE_SCN_ALIGN_8192BYTES => 8192,
+            _ => 16,
+        }
     }
 }
 
@@ -671,27 +675,31 @@ pub(crate) struct SymbolTable<'data> {
 }
 
 impl<'data> SymbolTable<'data> {
-    pub fn parse(header: &pe::ImageFileHeader, data: &'data [u8]) -> Result<Self, &'static str> {
+    pub fn parse(
+        header: &pe::ImageFileHeader,
+        mut data: Bytes<'data>,
+    ) -> Result<Self, &'static str> {
         // The symbol table may not be present.
         let symbol_offset = header.pointer_to_symbol_table.get(LE) as usize;
         let (symbols, strings) = if symbol_offset != 0 {
-            let (symbols, tail) = pod::slice_from_bytes(
-                data,
-                symbol_offset,
-                header.number_of_symbols.get(LE) as usize,
-            )
-            .ok_or("Invalid symbol table")?;
+            data.skip(symbol_offset)
+                .ok_or("Invalid symbol table offset")?;
+            let symbols = data
+                .read_slice(header.number_of_symbols.get(LE) as usize)
+                .ok_or("Invalid symbol table size")?;
 
-            // Note: don't update tail, the length includes itself.
-            let bytes = tail.get(..4).ok_or("Missing string table")?;
-            let strtab_length = u32::from_le_bytes(bytes.try_into().unwrap());
+            // Note: don't update data when reading length; the length includes itself.
+            let length = data
+                .read_at::<U32Bytes<_>>(0)
+                .ok_or("Missing string table")?
+                .get(LE);
+            let strings = data
+                .read_bytes(length as usize)
+                .ok_or("Invalid string table length")?;
 
-            let strings = tail
-                .get(..strtab_length as usize)
-                .ok_or("Invalid string table")?;
             (symbols, strings)
         } else {
-            (&[][..], &[][..])
+            (&[][..], Bytes(&[]))
         };
 
         Ok(SymbolTable {
@@ -701,9 +709,7 @@ impl<'data> SymbolTable<'data> {
     }
 
     pub fn get<T: Pod>(&self, index: usize) -> Option<&'data T> {
-        self.symbols
-            .get(index)
-            .and_then(|bytes| pod::from_bytes(&bytes.0))
-            .map(|x| x.0)
+        let bytes = self.symbols.get(index)?;
+        Bytes(&bytes.0[..]).read()
     }
 }

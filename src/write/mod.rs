@@ -8,8 +8,8 @@ use std::collections::HashMap;
 use std::string::String;
 use std::vec::Vec;
 
-use crate::endian::{RunTimeEndian, U32Bytes, U64Bytes};
-use crate::pod::bytes_of;
+use crate::endian::{RunTimeEndian, U32, U64};
+use crate::pod::BytesMut;
 use crate::target_lexicon::{Architecture, BinaryFormat, Endianness, PointerWidth};
 use crate::{
     FileFlags, RelocationEncoding, RelocationKind, SectionFlags, SectionKind, SymbolFlags,
@@ -138,7 +138,7 @@ impl Object {
             kind,
             size: 0,
             align: 1,
-            data: Vec::new(),
+            data: BytesMut::new(),
             relocations: Vec::new(),
             symbol: None,
             flags: SectionFlags::None,
@@ -453,32 +453,20 @@ impl Object {
         };
 
         let data = &mut self.sections[section.0].data;
-        let dest = match data
-            .get_mut(relocation.offset as usize..)
-            .and_then(|data| data.get_mut(..relocation.size as usize / 8))
-        {
-            Some(dest) => dest,
-            None => {
-                return Err(format!(
-                    "invalid relocation offset {}+{} (max {})",
-                    relocation.offset,
-                    relocation.size,
-                    data.len()
-                ));
-            }
-        };
+        let offset = relocation.offset as usize;
         match relocation.size {
-            32 => {
-                let src = U32Bytes::new(endian, addend as u32);
-                dest.copy_from_slice(bytes_of(&src));
-            }
-            64 => {
-                let src = U64Bytes::new(endian, addend as u64);
-                dest.copy_from_slice(bytes_of(&src));
-            }
+            32 => data.write_at(offset, &U32::new(endian, addend as u32)),
+            64 => data.write_at(offset, &U64::new(endian, addend as u64)),
             _ => return Err(format!("unimplemented relocation addend {:?}", relocation)),
         }
-        Ok(())
+        .map_err(|_| {
+            format!(
+                "invalid relocation offset {}+{} (max {})",
+                relocation.offset,
+                relocation.size,
+                data.len()
+            )
+        })
     }
 
     /// Write the object to a `Vec`.
@@ -567,7 +555,7 @@ pub struct Section {
     kind: SectionKind,
     size: u64,
     align: u64,
-    data: Vec<u8>,
+    data: BytesMut,
     relocations: Vec<Relocation>,
     symbol: Option<SymbolId>,
     /// Section flags that are specific to each file format.
@@ -589,7 +577,7 @@ impl Section {
         debug_assert_eq!(align & (align - 1), 0);
         debug_assert!(self.data.is_empty());
         self.size = data.len() as u64;
-        self.data = data;
+        self.data = BytesMut(data);
         self.align = align;
     }
 
