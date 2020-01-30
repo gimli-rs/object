@@ -1,3 +1,5 @@
+use crate::pod::Bytes;
+
 #[inline]
 pub(crate) fn align(offset: usize, size: usize) -> usize {
     (offset + (size - 1)) & !(size - 1)
@@ -5,13 +7,11 @@ pub(crate) fn align(offset: usize, size: usize) -> usize {
 
 #[derive(Debug, Default, Clone, Copy)]
 pub(crate) struct StringTable<'data> {
-    pub data: &'data [u8],
+    pub data: Bytes<'data>,
 }
 
 impl<'data> StringTable<'data> {
     pub fn get(&self, offset: u32) -> Option<&'data [u8]> {
-        self.data
-            .get(offset as usize..)
-            .and_then(|data| data.iter().position(|&x| x == 0).map(|end| &data[..end]))
+        self.data.read_string_at(offset as usize)
     }
 }

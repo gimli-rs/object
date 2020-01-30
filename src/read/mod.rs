@@ -7,6 +7,7 @@ use crate::common::{
     FileFlags, RelocationEncoding, RelocationKind, SectionFlags, SectionKind, SymbolFlags,
     SymbolKind, SymbolScope,
 };
+use crate::pod::Bytes;
 
 mod util;
 
@@ -305,13 +306,8 @@ impl Relocation {
     }
 }
 
-fn data_range(data: &[u8], data_address: u64, range_address: u64, size: u64) -> Option<&[u8]> {
-    if range_address >= data_address {
-        let start_offset = (range_address - data_address) as usize;
-        let end_offset = start_offset + size as usize;
-        if end_offset <= data.len() {
-            return Some(&data[start_offset..end_offset]);
-        }
-    }
-    None
+fn data_range(data: Bytes, data_address: u64, range_address: u64, size: u64) -> Option<&[u8]> {
+    let offset = range_address.checked_sub(data_address)?;
+    let data = data.read_bytes_at(offset as usize, size as usize)?;
+    Some(data.0)
 }

@@ -8,6 +8,7 @@ use alloc::vec::Vec;
 use core::{slice, str};
 use target_lexicon::Architecture;
 
+use crate::pod::Bytes;
 use crate::read::{
     FileFlags, Object, ObjectSection, ObjectSegment, Relocation, SectionFlags, SectionIndex,
     SectionKind, Symbol, SymbolFlags, SymbolIndex, SymbolKind, SymbolMap, SymbolScope,
@@ -34,20 +35,21 @@ pub struct WasmFile<'data> {
     // Indices into `sections` of sections with a non-zero id.
     id_sections: Vec<Option<usize>>,
     // Index into `sections` of custom section called "name".
-    name: &'data [u8],
+    name: Bytes<'data>,
 }
 
 impl<'data> WasmFile<'data> {
     /// Parse the raw wasm data.
-    pub fn parse(mut data: &'data [u8]) -> Result<Self, &'static str> {
+    pub fn parse(data: &'data [u8]) -> Result<Self, &'static str> {
+        let mut data = Bytes(data);
         let header = read_bytes(&mut data, 8).ok_or("Invalid WASM header size")?;
-        if header != [0x00, b'a', b's', b'm', 0x01, 0x00, 0x00, 0x00] {
+        if header.0 != [0x00, b'a', b's', b'm', 0x01, 0x00, 0x00, 0x00] {
             return Err("Unsupported WASM header");
         }
 
         let mut sections = Vec::new();
         let mut id_sections = Vec::with_capacity(16);
-        let mut name = &[][..];
+        let mut name = Bytes(&[]);
 
         while let Some(id) = read_byte(&mut data) {
             // TODO: validate section order
@@ -57,7 +59,7 @@ impl<'data> WasmFile<'data> {
                 let section_name_bytes =
                     read_u32_bytes(&mut section_data).ok_or("Invalid section name size")?;
                 section_name =
-                    str::from_utf8(section_name_bytes).map_err(|_| "Invalid section name")?;
+                    str::from_utf8(section_name_bytes.0).map_err(|_| "Invalid section name")?;
                 if section_name == "name" {
                     name = section_data;
                 }
@@ -155,7 +157,7 @@ where
     }
 
     fn symbols(&'file self) -> Self::SymbolIterator {
-        let mut data = find_subsection(self.name, 1).unwrap_or(&[]);
+        let mut data = find_subsection(self.name, 1).unwrap_or(Bytes(&[]));
         let length = read_u32(&mut data).unwrap_or(0) as usize;
         WasmSymbolIterator {
             file: self,
@@ -170,7 +172,7 @@ where
             file: self,
             index: 0,
             length: 0,
-            data: &[],
+            data: Bytes(&[]),
         }
     }
 
@@ -269,7 +271,7 @@ struct SectionHeader<'data> {
     index: SectionIndex,
     // Name is only valid for custom sections.
     name: &'data str,
-    data: &'data [u8],
+    data: Bytes<'data>,
 }
 
 /// A section of a `WasmFile`.
@@ -296,7 +298,7 @@ impl<'data, 'file> ObjectSection<'data> for WasmSection<'data, 'file> {
 
     #[inline]
     fn size(&self) -> u64 {
-        self.section.data.len() as u64
+        self.section.data.0.len() as u64
     }
 
     #[inline]
@@ -311,7 +313,7 @@ impl<'data, 'file> ObjectSection<'data> for WasmSection<'data, 'file> {
 
     #[inline]
     fn data(&self) -> &'data [u8] {
-        self.section.data
+        self.section.data.0
     }
 
     fn data_range(&self, _address: u64, _size: u64) -> Option<&'data [u8]> {
@@ -355,7 +357,7 @@ pub struct WasmSymbolIterator<'data, 'file> {
     file: &'file WasmFile<'data>,
     index: usize,
     length: usize,
-    data: &'data [u8],
+    data: Bytes<'data>,
 }
 
 impl<'data, 'file> Iterator for WasmSymbolIterator<'data, 'file> {
@@ -372,7 +374,7 @@ impl<'data, 'file> Iterator for WasmSymbolIterator<'data, 'file> {
         Some((
             index,
             Symbol {
-                name: str::from_utf8(name).ok(),
+                name: str::from_utf8(name.0).ok(),
                 address: func as u64,
                 size: 0,
                 kind: SymbolKind::Text,
@@ -399,7 +401,7 @@ impl Iterator for WasmRelocationIterator {
     }
 }
 
-fn find_subsection(mut bytes: &[u8], match_id: u8) -> Option<&[u8]> {
+fn find_subsection(mut bytes: Bytes, match_id: u8) -> Option<Bytes> {
     while let Some(id) = read_byte(&mut bytes) {
         let subsection = read_u32_bytes(&mut bytes)?;
         if id == match_id {
@@ -409,22 +411,17 @@ fn find_subsection(mut bytes: &[u8], match_id: u8) -> Option<&[u8]> {
     None
 }
 
-fn read_u32_bytes<'data>(bytes: &mut &'data [u8]) -> Option<&'data [u8]> {
+fn read_u32_bytes<'data>(bytes: &mut Bytes<'data>) -> Option<Bytes<'data>> {
     let size = read_u32(bytes)? as usize;
-    read_bytes(bytes, size)
+    bytes.read_bytes(size)
 }
 
-fn read_bytes<'data>(bytes: &mut &'data [u8], size: usize) -> Option<&'data [u8]> {
-    let head = bytes.get(..size)?;
-    let tail = bytes.get(size..)?;
-    *bytes = tail;
-    Some(head)
+fn read_bytes<'data>(bytes: &mut Bytes<'data>, size: usize) -> Option<Bytes<'data>> {
+    bytes.read_bytes(size)
 }
 
-fn read_byte(bytes: &mut &[u8]) -> Option<u8> {
-    let head = *bytes.get(0)?;
-    *bytes = bytes.get(1..)?;
-    Some(head)
+fn read_byte(bytes: &mut Bytes) -> Option<u8> {
+    bytes.read().copied()
 }
 
 // Read an intermediate leb128 byte.
@@ -456,7 +453,7 @@ macro_rules! read_u7_final {
 }
 
 // leb128
-fn read_u32(bytes: &mut &[u8]) -> Option<u32> {
+fn read_u32(bytes: &mut Bytes) -> Option<u32> {
     let mut value = 0;
     read_u7!(bytes, value, 0);
     read_u7!(bytes, value, 7);

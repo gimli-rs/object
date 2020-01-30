@@ -4,7 +4,7 @@ use std::vec::Vec;
 
 use crate::endian::*;
 use crate::macho;
-use crate::pod::bytes_of;
+use crate::pod::BytesMut;
 use crate::write::string::*;
 use crate::write::util::*;
 use crate::write::*;
@@ -298,7 +298,7 @@ impl Object {
         }
 
         // Start writing.
-        let mut buffer = Vec::with_capacity(offset);
+        let mut buffer = BytesMut(Vec::with_capacity(offset));
 
         // Write file header.
         let (cputype, cpusubtype) = match self.architecture {
@@ -402,7 +402,7 @@ impl Object {
             stroff: U32::new(endian, strtab_offset as u32),
             strsize: U32::new(endian, strtab_data.len() as u32),
         };
-        buffer.extend_from_slice(bytes_of(&symtab_command));
+        buffer.write(&symtab_command);
 
         // Write section data.
         debug_assert_eq!(segment_data_offset, buffer.len());
@@ -411,7 +411,7 @@ impl Object {
             if len != 0 {
                 write_align(&mut buffer, section.align as usize);
                 debug_assert_eq!(section_offsets[index].offset, buffer.len());
-                buffer.extend(&section.data);
+                buffer.write_bytes(&section.data);
             }
         }
 
@@ -555,12 +555,12 @@ impl Object {
                         r_extern,
                         r_type,
                     };
-                    buffer.extend_from_slice(bytes_of(&reloc_info.relocation(endian)));
+                    buffer.write(&reloc_info.relocation(endian));
                 }
             }
         }
 
-        Ok(buffer)
+        Ok(buffer.0)
     }
 }
 
@@ -611,10 +611,10 @@ trait MachO {
     fn segment_command_size(&self) -> usize;
     fn section_header_size(&self) -> usize;
     fn nlist_size(&self) -> usize;
-    fn write_mach_header(&self, buffer: &mut Vec<u8>, section: MachHeader);
-    fn write_segment_command(&self, buffer: &mut Vec<u8>, segment: SegmentCommand);
-    fn write_section(&self, buffer: &mut Vec<u8>, section: SectionHeader);
-    fn write_nlist(&self, buffer: &mut Vec<u8>, nlist: Nlist);
+    fn write_mach_header(&self, buffer: &mut BytesMut, section: MachHeader);
+    fn write_segment_command(&self, buffer: &mut BytesMut, segment: SegmentCommand);
+    fn write_section(&self, buffer: &mut BytesMut, section: SectionHeader);
+    fn write_nlist(&self, buffer: &mut BytesMut, nlist: Nlist);
 }
 
 struct MachO32<E> {
@@ -638,7 +638,7 @@ impl<E: Endian> MachO for MachO32<E> {
         mem::size_of::<macho::Nlist32<E>>()
     }
 
-    fn write_mach_header(&self, buffer: &mut Vec<u8>, header: MachHeader) {
+    fn write_mach_header(&self, buffer: &mut BytesMut, header: MachHeader) {
         let endian = self.endian;
         let magic = if endian.is_big_endian() {
             macho::MH_MAGIC
@@ -654,10 +654,10 @@ impl<E: Endian> MachO for MachO32<E> {
             sizeofcmds: U32::new(endian, header.sizeofcmds),
             flags: U32::new(endian, header.flags),
         };
-        buffer.extend_from_slice(bytes_of(&header));
+        buffer.write(&header);
     }
 
-    fn write_segment_command(&self, buffer: &mut Vec<u8>, segment: SegmentCommand) {
+    fn write_segment_command(&self, buffer: &mut BytesMut, segment: SegmentCommand) {
         let endian = self.endian;
         let segment = macho::SegmentCommand32 {
             cmd: U32::new(endian, macho::LC_SEGMENT),
@@ -672,10 +672,10 @@ impl<E: Endian> MachO for MachO32<E> {
             nsects: U32::new(endian, segment.nsects),
             flags: U32::new(endian, segment.flags),
         };
-        buffer.extend_from_slice(bytes_of(&segment));
+        buffer.write(&segment);
     }
 
-    fn write_section(&self, buffer: &mut Vec<u8>, section: SectionHeader) {
+    fn write_section(&self, buffer: &mut BytesMut, section: SectionHeader) {
         let endian = self.endian;
         let section = macho::Section32 {
             sectname: section.sectname,
@@ -690,10 +690,10 @@ impl<E: Endian> MachO for MachO32<E> {
             reserved1: U32::default(),
             reserved2: U32::default(),
         };
-        buffer.extend_from_slice(bytes_of(&section));
+        buffer.write(&section);
     }
 
-    fn write_nlist(&self, buffer: &mut Vec<u8>, nlist: Nlist) {
+    fn write_nlist(&self, buffer: &mut BytesMut, nlist: Nlist) {
         let endian = self.endian;
         let nlist = macho::Nlist32 {
             n_strx: U32::new(endian, nlist.n_strx),
@@ -702,7 +702,7 @@ impl<E: Endian> MachO for MachO32<E> {
             n_desc: U16::new(endian, nlist.n_desc),
             n_value: U32::new(endian, nlist.n_value as u32),
         };
-        buffer.extend_from_slice(bytes_of(&nlist));
+        buffer.write(&nlist);
     }
 }
 
@@ -727,7 +727,7 @@ impl<E: Endian> MachO for MachO64<E> {
         mem::size_of::<macho::Nlist64<E>>()
     }
 
-    fn write_mach_header(&self, buffer: &mut Vec<u8>, header: MachHeader) {
+    fn write_mach_header(&self, buffer: &mut BytesMut, header: MachHeader) {
         let endian = self.endian;
         let magic = if endian.is_big_endian() {
             macho::MH_MAGIC_64
@@ -744,10 +744,10 @@ impl<E: Endian> MachO for MachO64<E> {
             flags: U32::new(endian, header.flags),
             reserved: U32::default(),
         };
-        buffer.extend_from_slice(bytes_of(&header));
+        buffer.write(&header);
     }
 
-    fn write_segment_command(&self, buffer: &mut Vec<u8>, segment: SegmentCommand) {
+    fn write_segment_command(&self, buffer: &mut BytesMut, segment: SegmentCommand) {
         let endian = self.endian;
         let segment = macho::SegmentCommand64 {
             cmd: U32::new(endian, macho::LC_SEGMENT_64),
@@ -762,10 +762,10 @@ impl<E: Endian> MachO for MachO64<E> {
             nsects: U32::new(endian, segment.nsects),
             flags: U32::new(endian, segment.flags),
         };
-        buffer.extend_from_slice(bytes_of(&segment));
+        buffer.write(&segment);
     }
 
-    fn write_section(&self, buffer: &mut Vec<u8>, section: SectionHeader) {
+    fn write_section(&self, buffer: &mut BytesMut, section: SectionHeader) {
         let endian = self.endian;
         let section = macho::Section64 {
             sectname: section.sectname,
@@ -781,10 +781,10 @@ impl<E: Endian> MachO for MachO64<E> {
             reserved2: U32::default(),
             reserved3: U32::default(),
         };
-        buffer.extend_from_slice(bytes_of(&section));
+        buffer.write(&section);
     }
 
-    fn write_nlist(&self, buffer: &mut Vec<u8>, nlist: Nlist) {
+    fn write_nlist(&self, buffer: &mut BytesMut, nlist: Nlist) {
         let endian = self.endian;
         let nlist = macho::Nlist64 {
             n_strx: U32::new(endian, nlist.n_strx),
@@ -793,6 +793,6 @@ impl<E: Endian> MachO for MachO64<E> {
             n_desc: U16::new(endian, nlist.n_desc),
             n_value: U64::new(endian, nlist.n_value),
         };
-        buffer.extend_from_slice(bytes_of(&nlist));
+        buffer.write(&nlist);
     }
 }

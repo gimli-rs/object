@@ -4,7 +4,7 @@ use std::vec::Vec;
 
 use crate::elf;
 use crate::endian::*;
-use crate::pod::bytes_of;
+use crate::pod::BytesMut;
 use crate::write::string::*;
 use crate::write::util::*;
 use crate::write::*;
@@ -301,7 +301,7 @@ impl Object {
         offset += section_num * e_shentsize;
 
         // Start writing.
-        let mut buffer = Vec::with_capacity(offset);
+        let mut buffer = BytesMut(Vec::with_capacity(offset));
 
         // Write file header.
         let e_ident = elf::Ident {
@@ -376,7 +376,7 @@ impl Object {
             if len != 0 {
                 write_align(&mut buffer, section.align as usize);
                 debug_assert_eq!(section_offsets[index].offset, buffer.len());
-                buffer.extend(&section.data);
+                buffer.write_bytes(&section.data);
             }
         }
 
@@ -394,9 +394,9 @@ impl Object {
                 st_size: 0,
             },
         );
-        let mut symtab_shndx = Vec::new();
+        let mut symtab_shndx = BytesMut::new();
         if need_symtab_shndx {
-            symtab_shndx.extend_from_slice(bytes_of(&U32::new(endian, 0)));
+            symtab_shndx.write(&U32::new(endian, 0));
         }
         let mut write_symbol = |index: usize, symbol: &Symbol| {
             let st_info = if let SymbolFlags::Elf { st_info, .. } = symbol.flags {
@@ -479,7 +479,7 @@ impl Object {
                 },
             );
             if need_symtab_shndx {
-                symtab_shndx.extend_from_slice(bytes_of(&U32::new(endian, xindex)));
+                symtab_shndx.write(&U32::new(endian, xindex));
             }
         };
         for (index, symbol) in self.symbols.iter().enumerate() {
@@ -495,7 +495,7 @@ impl Object {
         if need_symtab_shndx {
             debug_assert_eq!(symtab_shndx_offset, buffer.len());
             debug_assert_eq!(symtab_shndx_len, symtab_shndx.len());
-            buffer.extend(&symtab_shndx);
+            buffer.write_bytes(&symtab_shndx);
         }
 
         // Write strtab section.
@@ -745,7 +745,7 @@ impl Object {
             },
         );
 
-        Ok(buffer)
+        Ok(buffer.0)
     }
 }
 
@@ -804,10 +804,10 @@ trait Elf {
     fn section_header_size(&self) -> usize;
     fn symbol_size(&self) -> usize;
     fn rel_size(&self, is_rela: bool) -> usize;
-    fn write_file_header(&self, buffer: &mut Vec<u8>, section: FileHeader);
-    fn write_section_header(&self, buffer: &mut Vec<u8>, section: SectionHeader);
-    fn write_symbol(&self, buffer: &mut Vec<u8>, symbol: Sym);
-    fn write_rel(&self, buffer: &mut Vec<u8>, is_rela: bool, rel: Rel);
+    fn write_file_header(&self, buffer: &mut BytesMut, section: FileHeader);
+    fn write_section_header(&self, buffer: &mut BytesMut, section: SectionHeader);
+    fn write_symbol(&self, buffer: &mut BytesMut, symbol: Sym);
+    fn write_rel(&self, buffer: &mut BytesMut, is_rela: bool, rel: Rel);
 }
 
 struct Elf32<E> {
@@ -835,7 +835,7 @@ impl<E: Endian> Elf for Elf32<E> {
         }
     }
 
-    fn write_file_header(&self, buffer: &mut Vec<u8>, file: FileHeader) {
+    fn write_file_header(&self, buffer: &mut BytesMut, file: FileHeader) {
         let endian = self.endian;
         let file = elf::FileHeader32 {
             e_ident: file.e_ident,
@@ -853,10 +853,10 @@ impl<E: Endian> Elf for Elf32<E> {
             e_shnum: U16::new(endian, file.e_shnum),
             e_shstrndx: U16::new(endian, file.e_shstrndx),
         };
-        buffer.extend_from_slice(bytes_of(&file));
+        buffer.write(&file);
     }
 
-    fn write_section_header(&self, buffer: &mut Vec<u8>, section: SectionHeader) {
+    fn write_section_header(&self, buffer: &mut BytesMut, section: SectionHeader) {
         let endian = self.endian;
         let section = elf::SectionHeader32 {
             sh_name: U32::new(endian, section.sh_name),
@@ -870,10 +870,10 @@ impl<E: Endian> Elf for Elf32<E> {
             sh_addralign: U32::new(endian, section.sh_addralign as u32),
             sh_entsize: U32::new(endian, section.sh_entsize as u32),
         };
-        buffer.extend_from_slice(bytes_of(&section));
+        buffer.write(&section);
     }
 
-    fn write_symbol(&self, buffer: &mut Vec<u8>, symbol: Sym) {
+    fn write_symbol(&self, buffer: &mut BytesMut, symbol: Sym) {
         let endian = self.endian;
         let symbol = elf::Sym32 {
             st_name: U32::new(endian, symbol.st_name),
@@ -883,10 +883,10 @@ impl<E: Endian> Elf for Elf32<E> {
             st_value: U32::new(endian, symbol.st_value as u32),
             st_size: U32::new(endian, symbol.st_size as u32),
         };
-        buffer.extend_from_slice(bytes_of(&symbol));
+        buffer.write(&symbol);
     }
 
-    fn write_rel(&self, buffer: &mut Vec<u8>, is_rela: bool, rel: Rel) {
+    fn write_rel(&self, buffer: &mut BytesMut, is_rela: bool, rel: Rel) {
         let endian = self.endian;
         if is_rela {
             let rel = elf::Rela32 {
@@ -894,13 +894,13 @@ impl<E: Endian> Elf for Elf32<E> {
                 r_info: elf::Rel32::r_info(endian, rel.r_sym, rel.r_type as u8),
                 r_addend: I32::new(endian, rel.r_addend as i32),
             };
-            buffer.extend_from_slice(bytes_of(&rel));
+            buffer.write(&rel);
         } else {
             let rel = elf::Rel32 {
                 r_offset: U32::new(endian, rel.r_offset as u32),
                 r_info: elf::Rel32::r_info(endian, rel.r_sym, rel.r_type as u8),
             };
-            buffer.extend_from_slice(bytes_of(&rel));
+            buffer.write(&rel);
         }
     }
 }
@@ -930,7 +930,7 @@ impl<E: Endian> Elf for Elf64<E> {
         }
     }
 
-    fn write_file_header(&self, buffer: &mut Vec<u8>, file: FileHeader) {
+    fn write_file_header(&self, buffer: &mut BytesMut, file: FileHeader) {
         let endian = self.endian;
         let file = elf::FileHeader64 {
             e_ident: file.e_ident,
@@ -948,10 +948,10 @@ impl<E: Endian> Elf for Elf64<E> {
             e_shnum: U16::new(endian, file.e_shnum),
             e_shstrndx: U16::new(endian, file.e_shstrndx),
         };
-        buffer.extend_from_slice(bytes_of(&file));
+        buffer.write(&file)
     }
 
-    fn write_section_header(&self, buffer: &mut Vec<u8>, section: SectionHeader) {
+    fn write_section_header(&self, buffer: &mut BytesMut, section: SectionHeader) {
         let endian = self.endian;
         let section = elf::SectionHeader64 {
             sh_name: U32::new(endian, section.sh_name),
@@ -965,10 +965,10 @@ impl<E: Endian> Elf for Elf64<E> {
             sh_addralign: U64::new(endian, section.sh_addralign),
             sh_entsize: U64::new(endian, section.sh_entsize),
         };
-        buffer.extend_from_slice(bytes_of(&section));
+        buffer.write(&section);
     }
 
-    fn write_symbol(&self, buffer: &mut Vec<u8>, symbol: Sym) {
+    fn write_symbol(&self, buffer: &mut BytesMut, symbol: Sym) {
         let endian = self.endian;
         let symbol = elf::Sym64 {
             st_name: U32::new(endian, symbol.st_name),
@@ -978,10 +978,10 @@ impl<E: Endian> Elf for Elf64<E> {
             st_value: U64::new(endian, symbol.st_value),
             st_size: U64::new(endian, symbol.st_size),
         };
-        buffer.extend_from_slice(bytes_of(&symbol));
+        buffer.write(&symbol);
     }
 
-    fn write_rel(&self, buffer: &mut Vec<u8>, is_rela: bool, rel: Rel) {
+    fn write_rel(&self, buffer: &mut BytesMut, is_rela: bool, rel: Rel) {
         let endian = self.endian;
         if is_rela {
             let rel = elf::Rela64 {
@@ -989,13 +989,13 @@ impl<E: Endian> Elf for Elf64<E> {
                 r_info: elf::Rela64::r_info(endian, rel.r_sym, rel.r_type),
                 r_addend: I64::new(endian, rel.r_addend),
             };
-            buffer.extend_from_slice(bytes_of(&rel));
+            buffer.write(&rel);
         } else {
             let rel = elf::Rel64 {
                 r_offset: U64::new(endian, rel.r_offset),
                 r_info: elf::Rel64::r_info(endian, rel.r_sym, rel.r_type),
             };
-            buffer.extend_from_slice(bytes_of(&rel));
+            buffer.write(&rel);
         }
     }
 }
