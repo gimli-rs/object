@@ -95,7 +95,7 @@ impl SymbolSection {
 }
 
 /// A symbol table entry.
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Symbol<'data> {
     name: Option<&'data str>,
     address: u64,
