@@ -9,7 +9,7 @@ use alloc::borrow::Cow;
 use alloc::vec::Vec;
 use core::fmt::Debug;
 use core::marker::PhantomData;
-use core::{fmt, mem, ops, slice, str};
+use core::{fmt, mem, slice, str};
 use target_lexicon::{Aarch64Architecture, Architecture, ArmArchitecture};
 use uuid::Uuid;
 
@@ -61,7 +61,8 @@ impl<'data, Mach: MachHeader> MachOFile<'data, Mach> {
             for command in commands {
                 if let Some((segment, section_data)) = Mach::Segment::from_command(command) {
                     for section in segment.sections(endian, section_data).unwrap_or(&[]) {
-                        sections.push(MachOSectionInternal::parse(section));
+                        let index = SectionIndex(sections.len() + 1);
+                        sections.push(MachOSectionInternal::parse(index, section));
                     }
                 } else if let Some(symtab) = command.symtab() {
                     symbols = data
@@ -170,14 +171,16 @@ where
         &'file self,
         index: SectionIndex,
     ) -> Option<MachOSection<'data, 'file, Mach>> {
-        self.section_internal(index)
-            .map(|_| MachOSection { file: self, index })
+        self.section_internal(index).map(|&internal| MachOSection {
+            file: self,
+            internal,
+        })
     }
 
     fn sections(&'file self) -> MachOSectionIterator<'data, 'file, Mach> {
         MachOSectionIterator {
             file: self,
-            iter: 0..self.sections.len(),
+            iter: self.sections.iter(),
         }
     }
 
@@ -387,7 +390,7 @@ where
     Mach: MachHeader,
 {
     file: &'file MachOFile<'data, Mach>,
-    iter: ops::Range<usize>,
+    iter: slice::Iter<'file, MachOSectionInternal<'data, Mach>>,
 }
 
 impl<'data, 'file, Mach: MachHeader> fmt::Debug for MachOSectionIterator<'data, 'file, Mach> {
@@ -401,9 +404,9 @@ impl<'data, 'file, Mach: MachHeader> Iterator for MachOSectionIterator<'data, 'f
     type Item = MachOSection<'data, 'file, Mach>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.iter.next().map(|index| MachOSection {
+        self.iter.next().map(|&internal| MachOSection {
             file: self.file,
-            index: SectionIndex(index + 1),
+            internal,
         })
     }
 }
@@ -423,18 +426,12 @@ where
     Mach: MachHeader,
 {
     file: &'file MachOFile<'data, Mach>,
-    index: SectionIndex,
+    internal: MachOSectionInternal<'data, Mach>,
 }
 
 impl<'data, 'file, Mach: MachHeader> MachOSection<'data, 'file, Mach> {
-    #[inline]
-    fn internal(&self) -> &'file MachOSectionInternal<'data, Mach> {
-        // We ensure the index is always valid.
-        &self.file.section_internal(self.index).unwrap()
-    }
-
     fn bytes(&self) -> Bytes<'data> {
-        self.internal()
+        self.internal
             .section
             .data(self.file.endian, self.file.data)
             .unwrap_or(Bytes(&[]))
@@ -446,27 +443,27 @@ impl<'data, 'file, Mach: MachHeader> ObjectSection<'data> for MachOSection<'data
 
     #[inline]
     fn index(&self) -> SectionIndex {
-        self.index
+        self.internal.index
     }
 
     #[inline]
     fn address(&self) -> u64 {
-        self.internal().section.addr(self.file.endian).into()
+        self.internal.section.addr(self.file.endian).into()
     }
 
     #[inline]
     fn size(&self) -> u64 {
-        self.internal().section.size(self.file.endian).into()
+        self.internal.section.size(self.file.endian).into()
     }
 
     #[inline]
     fn align(&self) -> u64 {
-        1 << self.internal().section.align(self.file.endian)
+        1 << self.internal.section.align(self.file.endian)
     }
 
     #[inline]
     fn file_range(&self) -> Option<(u64, u64)> {
-        self.internal().section.file_range(self.file.endian)
+        self.internal.section.file_range(self.file.endian)
     }
 
     #[inline]
@@ -485,23 +482,23 @@ impl<'data, 'file, Mach: MachHeader> ObjectSection<'data> for MachOSection<'data
 
     #[inline]
     fn name(&self) -> Option<&str> {
-        str::from_utf8(self.internal().section.name()).ok()
+        str::from_utf8(self.internal.section.name()).ok()
     }
 
     #[inline]
     fn segment_name(&self) -> Option<&str> {
-        str::from_utf8(self.internal().section.segment_name()).ok()
+        str::from_utf8(self.internal.section.segment_name()).ok()
     }
 
     fn kind(&self) -> SectionKind {
-        self.internal().kind
+        self.internal.kind
     }
 
     fn relocations(&self) -> MachORelocationIterator<'data, 'file, Mach> {
         MachORelocationIterator {
             file: self.file,
             relocations: self
-                .internal()
+                .internal
                 .section
                 .relocations(self.file.endian, self.file.data)
                 .unwrap_or(&[])
@@ -511,19 +508,20 @@ impl<'data, 'file, Mach: MachHeader> ObjectSection<'data> for MachOSection<'data
 
     fn flags(&self) -> SectionFlags {
         SectionFlags::MachO {
-            flags: self.internal().section.flags(self.file.endian),
+            flags: self.internal.section.flags(self.file.endian),
         }
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 struct MachOSectionInternal<'data, Mach: MachHeader> {
-    section: &'data Mach::Section,
+    index: SectionIndex,
     kind: SectionKind,
+    section: &'data Mach::Section,
 }
 
 impl<'data, Mach: MachHeader> MachOSectionInternal<'data, Mach> {
-    fn parse(section: &'data Mach::Section) -> Self {
+    fn parse(index: SectionIndex, section: &'data Mach::Section) -> Self {
         let kind = match (section.segment_name(), section.name()) {
             (b"__TEXT", b"__text") => SectionKind::Text,
             (b"__TEXT", b"__const") => SectionKind::ReadOnlyData,
@@ -540,7 +538,11 @@ impl<'data, Mach: MachHeader> MachOSectionInternal<'data, Mach> {
             (b"__DWARF", _) => SectionKind::Debug,
             _ => SectionKind::Unknown,
         };
-        MachOSectionInternal { section, kind }
+        MachOSectionInternal {
+            index,
+            kind,
+            section,
+        }
     }
 }
 
