@@ -5,6 +5,7 @@
 //!
 //! Also provides `ElfFile` and related types which implement the `Object` trait.
 
+#[cfg(feature = "compression")]
 use alloc::borrow::Cow;
 use alloc::fmt;
 use alloc::vec;
@@ -206,6 +207,8 @@ impl<'data, Elf: FileHeader> ElfFile<'data, Elf> {
         None
     }
 }
+
+impl<'data, Elf: FileHeader> read::private::Sealed for ElfFile<'data, Elf> {}
 
 impl<'data, 'file, Elf> Object<'data, 'file> for ElfFile<'data, Elf>
 where
@@ -421,6 +424,8 @@ impl<'data, 'file, Elf: FileHeader> ElfSegment<'data, 'file, Elf> {
     }
 }
 
+impl<'data, 'file, Elf: FileHeader> read::private::Sealed for ElfSegment<'data, 'file, Elf> {}
+
 impl<'data, 'file, Elf: FileHeader> ObjectSegment<'data> for ElfSegment<'data, 'file, Elf> {
     #[inline]
     fn address(&self) -> u64 {
@@ -514,10 +519,11 @@ impl<'data, 'file, Elf: FileHeader> ElfSection<'data, 'file, Elf> {
     }
 
     #[cfg(feature = "compression")]
-    fn maybe_decompress_data(&self) -> Option<Cow<'data, [u8]>> {
+    // TODO: return a `Result` once `Byte` methods do
+    fn maybe_decompress_data(&self) -> Option<Option<Cow<'data, [u8]>>> {
         let endian = self.file.endian;
         if (self.section.sh_flags(endian).into() & u64::from(elf::SHF_COMPRESSED)) == 0 {
-            return None;
+            return Some(None);
         }
 
         let mut data = self.section.data(endian, self.file.data)?;
@@ -535,18 +541,19 @@ impl<'data, 'file, Elf: FileHeader> ElfSection<'data, 'file, Elf> {
         {
             return None;
         }
-        Some(Cow::Owned(decompressed))
+        Some(Some(Cow::Owned(decompressed)))
     }
 
     /// Try GNU-style "ZLIB" header decompression.
+    // TODO: return a `Result` once `Byte` methods do
     #[cfg(feature = "compression")]
-    fn maybe_decompress_data_gnu(&self) -> Option<Cow<'data, [u8]>> {
+    fn maybe_decompress_data_gnu(&self) -> Option<Option<Cow<'data, [u8]>>> {
         let name = match self.name() {
             Some(name) => name,
-            None => return None,
+            None => return Some(None),
         };
         if !name.starts_with(".zdebug_") {
-            return None;
+            return Some(None);
         }
         let mut data = self.bytes();
         // Assume ZLIB-style uncompressed data is no more than 4GB to avoid accidentally
@@ -564,9 +571,11 @@ impl<'data, 'file, Elf: FileHeader> ElfSection<'data, 'file, Elf> {
         {
             return None;
         }
-        Some(Cow::Owned(decompressed))
+        Some(Some(Cow::Owned(decompressed)))
     }
 }
+
+impl<'data, 'file, Elf: FileHeader> read::private::Sealed for ElfSection<'data, 'file, Elf> {}
 
 impl<'data, 'file, Elf: FileHeader> ObjectSection<'data> for ElfSection<'data, 'file, Elf> {
     type RelocationIterator = ElfRelocationIterator<'data, 'file, Elf>;
@@ -606,18 +615,14 @@ impl<'data, 'file, Elf: FileHeader> ObjectSection<'data> for ElfSection<'data, '
     }
 
     #[cfg(feature = "compression")]
-    fn uncompressed_data(&self) -> Cow<'data, [u8]> {
-        // TODO: return an error if decompression fails
-        self.maybe_decompress_data()
-            .or_else(|| self.maybe_decompress_data_gnu())
-            .unwrap_or_else(|| Cow::from(self.data()))
-    }
-
-    // TODO: remove this method completely if compression is not configured
-    #[cfg(not(feature = "compression"))]
-    #[inline]
-    fn uncompressed_data(&self) -> Cow<'data, [u8]> {
-        Cow::from(self.data())
+    fn uncompressed_data(&self) -> Option<Cow<'data, [u8]>> {
+        Some(if let Some(data) = self.maybe_decompress_data()? {
+            data
+        } else if let Some(data) = self.maybe_decompress_data_gnu()? {
+            data
+        } else {
+            Cow::from(self.data())
+        })
     }
 
     fn name(&self) -> Option<&str> {

@@ -5,6 +5,7 @@
 //!
 //! Also provides `PeFile` and related types which implement the `Object` trait.
 
+#[cfg(feature = "compression")]
 use alloc::borrow::Cow;
 use alloc::vec::Vec;
 use core::fmt::Debug;
@@ -114,6 +115,8 @@ impl<'data, Pe: ImageNtHeaders> PeFile<'data, Pe> {
         u64::from(self.nt_headers.optional_header().section_alignment())
     }
 }
+
+impl<'data, Pe: ImageNtHeaders> read::private::Sealed for PeFile<'data, Pe> {}
 
 impl<'data, 'file, Pe> Object<'data, 'file> for PeFile<'data, Pe>
 where
@@ -273,6 +276,8 @@ impl<'data, 'file, Pe: ImageNtHeaders> PeSegment<'data, 'file, Pe> {
     }
 }
 
+impl<'data, 'file, Pe: ImageNtHeaders> read::private::Sealed for PeSegment<'data, 'file, Pe> {}
+
 impl<'data, 'file, Pe: ImageNtHeaders> ObjectSegment<'data> for PeSegment<'data, 'file, Pe> {
     #[inline]
     fn address(&self) -> u64 {
@@ -360,6 +365,8 @@ impl<'data, 'file, Pe: ImageNtHeaders> PeSection<'data, 'file, Pe> {
     }
 }
 
+impl<'data, 'file, Pe: ImageNtHeaders> read::private::Sealed for PeSection<'data, 'file, Pe> {}
+
 impl<'data, 'file, Pe: ImageNtHeaders> ObjectSection<'data> for PeSection<'data, 'file, Pe> {
     type RelocationIterator = PeRelocationIterator<'data, 'file>;
 
@@ -401,9 +408,10 @@ impl<'data, 'file, Pe: ImageNtHeaders> ObjectSection<'data> for PeSection<'data,
         read::data_range(self.bytes(), self.address(), address, size)
     }
 
+    #[cfg(feature = "compression")]
     #[inline]
-    fn uncompressed_data(&self) -> Cow<'data, [u8]> {
-        Cow::from(self.data())
+    fn uncompressed_data(&self) -> Option<Cow<'data, [u8]>> {
+        Some(Cow::from(self.data()))
     }
 
     #[inline]

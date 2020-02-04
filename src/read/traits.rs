@@ -1,13 +1,15 @@
+#[cfg(feature = "compression")]
 use alloc::borrow::Cow;
 use target_lexicon::{Architecture, Endianness};
 use uuid::Uuid;
 
 use crate::{
-    FileFlags, Relocation, SectionFlags, SectionIndex, SectionKind, Symbol, SymbolIndex, SymbolMap,
+    read, FileFlags, Relocation, SectionFlags, SectionIndex, SectionKind, Symbol, SymbolIndex,
+    SymbolMap,
 };
 
 /// An object file.
-pub trait Object<'data, 'file> {
+pub trait Object<'data, 'file>: read::private::Sealed {
     /// A segment in the object file.
     type Segment: ObjectSegment<'data>;
 
@@ -68,17 +70,6 @@ pub trait Object<'data, 'file> {
     ///
     /// For some object files, this requires iterating through all sections.
     fn section_by_index(&'file self, index: SectionIndex) -> Option<Self::Section>;
-
-    /// Get the contents of the section named `section_name`, if such
-    /// a section exists.
-    ///
-    /// The `section_name` is interpreted according to `Self::section_by_name`.
-    ///
-    /// This may decompress section data.
-    fn section_data_by_name(&'file self, section_name: &str) -> Option<Cow<'data, [u8]>> {
-        self.section_by_name(section_name)
-            .map(|section| section.uncompressed_data())
-    }
 
     /// Get an iterator over the sections in the file.
     fn sections(&'file self) -> Self::SectionIterator;
@@ -147,7 +138,7 @@ pub trait Object<'data, 'file> {
 ///
 /// For ELF, this is a program header with type `PT_LOAD`.
 /// For Mach-O, this is a load command with type `LC_SEGMENT` or `LC_SEGMENT_64`.
-pub trait ObjectSegment<'data> {
+pub trait ObjectSegment<'data>: read::private::Sealed {
     /// Returns the virtual address of the segment.
     fn address(&self) -> u64;
 
@@ -161,6 +152,7 @@ pub trait ObjectSegment<'data> {
     fn file_range(&self) -> (u64, u64);
 
     /// Returns a reference to the file contents of the segment.
+    ///
     /// The length of this data may be different from the size of the
     /// segment in memory.
     fn data(&self) -> &'data [u8];
@@ -173,7 +165,7 @@ pub trait ObjectSegment<'data> {
 }
 
 /// A section defined in an object file.
-pub trait ObjectSection<'data> {
+pub trait ObjectSection<'data>: read::private::Sealed {
     /// An iterator over the relocations for a section.
     ///
     /// The first field in the item tuple is the section offset
@@ -196,6 +188,7 @@ pub trait ObjectSection<'data> {
     fn file_range(&self) -> Option<(u64, u64)>;
 
     /// Returns the raw contents of the section.
+    ///
     /// The length of this data may be different from the size of the
     /// section in memory.
     ///
@@ -208,9 +201,14 @@ pub trait ObjectSection<'data> {
     fn data_range(&self, address: u64, size: u64) -> Option<&'data [u8]>;
 
     /// Returns the uncompressed contents of the section.
+    ///
     /// The length of this data may be different from the size of the
     /// section in memory.
-    fn uncompressed_data(&self) -> Cow<'data, [u8]>;
+    ///
+    /// If no compression is detected, then returns the data unchanged.
+    /// Returns `None` if decompression fails.
+    #[cfg(feature = "compression")]
+    fn uncompressed_data(&self) -> Option<Cow<'data, [u8]>>;
 
     /// Returns the name of the section.
     fn name(&self) -> Option<&str>;
