@@ -2,6 +2,7 @@
 //!
 //! Provides `CoffFile` and related types which implement the `Object` trait.
 
+#[cfg(feature = "compression")]
 use alloc::borrow::Cow;
 use alloc::fmt;
 use alloc::vec::Vec;
@@ -56,6 +57,8 @@ impl<'data> CoffFile<'data> {
         })
     }
 }
+
+impl<'data> read::private::Sealed for CoffFile<'data> {}
 
 impl<'data, 'file> Object<'data, 'file> for CoffFile<'data>
 where
@@ -202,6 +205,8 @@ impl<'data, 'file> CoffSegment<'data, 'file> {
     }
 }
 
+impl<'data, 'file> read::private::Sealed for CoffSegment<'data, 'file> {}
+
 impl<'data, 'file> ObjectSegment<'data> for CoffSegment<'data, 'file> {
     #[inline]
     fn address(&self) -> u64 {
@@ -279,6 +284,8 @@ impl<'data, 'file> CoffSection<'data, 'file> {
     }
 }
 
+impl<'data, 'file> read::private::Sealed for CoffSection<'data, 'file> {}
+
 impl<'data, 'file> ObjectSection<'data> for CoffSection<'data, 'file> {
     type RelocationIterator = CoffRelocationIterator<'data, 'file>;
 
@@ -317,9 +324,10 @@ impl<'data, 'file> ObjectSection<'data> for CoffSection<'data, 'file> {
         read::data_range(self.bytes(), self.address(), address, size)
     }
 
+    #[cfg(feature = "compression")]
     #[inline]
-    fn uncompressed_data(&self) -> Cow<'data, [u8]> {
-        Cow::from(self.data())
+    fn uncompressed_data(&self) -> Option<Cow<'data, [u8]>> {
+        Some(Cow::from(self.data()))
     }
 
     #[inline]

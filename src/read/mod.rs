@@ -32,6 +32,10 @@ pub use traits::*;
 #[cfg(feature = "wasm")]
 pub mod wasm;
 
+mod private {
+    pub trait Sealed {}
+}
+
 /// The native executable file for the target platform.
 #[cfg(all(target_os = "linux", target_pointer_width = "32", feature = "elf"))]
 pub type NativeFile<'data> = elf::ElfFile32<'data>;

@@ -57,7 +57,7 @@ fn main() {
         if out_section.is_bss() {
             out_section.append_bss(in_section.size(), in_section.align());
         } else {
-            out_section.set_data(in_section.uncompressed_data().into(), in_section.align());
+            out_section.set_data(in_section.data().into(), in_section.align());
         }
         out_section.flags = in_section.flags();
         out_sections.insert(in_section.index(), section_id);

@@ -1,3 +1,4 @@
+#[cfg(feature = "compression")]
 use alloc::borrow::Cow;
 use alloc::fmt;
 use target_lexicon::{Architecture, BinaryFormat};
@@ -14,7 +15,7 @@ use crate::read::pe;
 #[cfg(feature = "wasm")]
 use crate::read::wasm;
 use crate::read::{
-    FileFlags, Object, ObjectSection, ObjectSegment, Relocation, SectionFlags, SectionIndex,
+    self, FileFlags, Object, ObjectSection, ObjectSegment, Relocation, SectionFlags, SectionIndex,
     SectionKind, Symbol, SymbolIndex, SymbolMap,
 };
 
@@ -235,6 +236,8 @@ impl<'data> File<'data> {
     }
 }
 
+impl<'data> read::private::Sealed for File<'data> {}
+
 impl<'data, 'file> Object<'data, 'file> for File<'data>
 where
     'data: 'file,
@@ -274,11 +277,6 @@ where
         map_inner_option!(self.inner, FileInternal, SectionInternal, |x| x
             .section_by_index(index))
         .map(|inner| Section { inner })
-    }
-
-    fn section_data_by_name(&self, section_name: &str) -> Option<Cow<'data, [u8]>> {
-        with_inner!(self.inner, FileInternal, |x| x
-            .section_data_by_name(section_name))
     }
 
     fn sections(&'file self) -> SectionIterator<'data, 'file> {
@@ -421,6 +419,8 @@ impl<'data, 'file> fmt::Debug for Segment<'data, 'file> {
     }
 }
 
+impl<'data, 'file> read::private::Sealed for Segment<'data, 'file> {}
+
 impl<'data, 'file> ObjectSegment<'data> for Segment<'data, 'file> {
     fn address(&self) -> u64 {
         with_inner!(self.inner, SegmentInternal, |x| x.address())
@@ -538,6 +538,8 @@ impl<'data, 'file> fmt::Debug for Section<'data, 'file> {
     }
 }
 
+impl<'data, 'file> read::private::Sealed for Section<'data, 'file> {}
+
 impl<'data, 'file> ObjectSection<'data> for Section<'data, 'file> {
     type RelocationIterator = RelocationIterator<'data, 'file>;
 
@@ -569,7 +571,8 @@ impl<'data, 'file> ObjectSection<'data> for Section<'data, 'file> {
         with_inner!(self.inner, SectionInternal, |x| x.data_range(address, size))
     }
 
-    fn uncompressed_data(&self) -> Cow<'data, [u8]> {
+    #[cfg(feature = "compression")]
+    fn uncompressed_data(&self) -> Option<Cow<'data, [u8]>> {
         with_inner!(self.inner, SectionInternal, |x| x.uncompressed_data())
     }
 

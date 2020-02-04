@@ -5,6 +5,7 @@
 //!
 //! Also provides `MachOFile` and related types which implement the `Object` trait.
 
+#[cfg(feature = "compression")]
 use alloc::borrow::Cow;
 use alloc::vec::Vec;
 use core::fmt::Debug;
@@ -102,6 +103,8 @@ impl<'data, Mach: MachHeader> MachOFile<'data, Mach> {
             .and_then(|index| self.sections.get(index))
     }
 }
+
+impl<'data, Mach: MachHeader> read::private::Sealed for MachOFile<'data, Mach> {}
 
 impl<'data, 'file, Mach> Object<'data, 'file> for MachOFile<'data, Mach>
 where
@@ -247,7 +250,7 @@ where
     }
 
     fn has_debug_symbols(&self) -> bool {
-        self.section_data_by_name(".debug_info").is_some()
+        self.section_by_name(".debug_info").is_some()
     }
 
     fn mach_uuid(&self) -> Option<Uuid> {
@@ -339,6 +342,8 @@ impl<'data, 'file, Mach: MachHeader> MachOSegment<'data, 'file, Mach> {
             .unwrap_or(Bytes(&[]))
     }
 }
+
+impl<'data, 'file, Mach: MachHeader> read::private::Sealed for MachOSegment<'data, 'file, Mach> {}
 
 impl<'data, 'file, Mach: MachHeader> ObjectSegment<'data> for MachOSegment<'data, 'file, Mach> {
     #[inline]
@@ -438,6 +443,8 @@ impl<'data, 'file, Mach: MachHeader> MachOSection<'data, 'file, Mach> {
     }
 }
 
+impl<'data, 'file, Mach: MachHeader> read::private::Sealed for MachOSection<'data, 'file, Mach> {}
+
 impl<'data, 'file, Mach: MachHeader> ObjectSection<'data> for MachOSection<'data, 'file, Mach> {
     type RelocationIterator = MachORelocationIterator<'data, 'file, Mach>;
 
@@ -475,9 +482,10 @@ impl<'data, 'file, Mach: MachHeader> ObjectSection<'data> for MachOSection<'data
         read::data_range(self.bytes(), self.address(), address, size)
     }
 
+    #[cfg(feature = "compression")]
     #[inline]
-    fn uncompressed_data(&self) -> Cow<'data, [u8]> {
-        Cow::from(self.data())
+    fn uncompressed_data(&self) -> Option<Cow<'data, [u8]>> {
+        Some(Cow::from(self.data()))
     }
 
     #[inline]

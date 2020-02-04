@@ -3,6 +3,7 @@
 //! Provides `WasmFile` and related types which implement the `Object` trait.
 //!
 //! Currently implements the minimum required to access DWARF debugging information.
+#[cfg(feature = "compression")]
 use alloc::borrow::Cow;
 use alloc::vec::Vec;
 use core::marker::PhantomData;
@@ -11,7 +12,7 @@ use target_lexicon::Architecture;
 
 use crate::pod::Bytes;
 use crate::read::{
-    FileFlags, Object, ObjectSection, ObjectSegment, Relocation, SectionFlags, SectionIndex,
+    self, FileFlags, Object, ObjectSection, ObjectSegment, Relocation, SectionFlags, SectionIndex,
     SectionKind, Symbol, SymbolFlags, SymbolIndex, SymbolKind, SymbolMap, SymbolScope,
     SymbolSection,
 };
@@ -98,6 +99,8 @@ impl<'data> WasmFile<'data> {
         })
     }
 }
+
+impl<'data> read::private::Sealed for WasmFile<'data> {}
 
 impl<'data, 'file> Object<'data, 'file> for WasmFile<'data>
 where
@@ -216,6 +219,8 @@ pub struct WasmSegment<'data, 'file> {
     file: &'file WasmFile<'data>,
 }
 
+impl<'data, 'file> read::private::Sealed for WasmSegment<'data, 'file> {}
+
 impl<'data, 'file> ObjectSegment<'data> for WasmSegment<'data, 'file> {
     #[inline]
     fn address(&self) -> u64 {
@@ -281,6 +286,8 @@ pub struct WasmSection<'data, 'file> {
     section: &'file SectionHeader<'data>,
 }
 
+impl<'data, 'file> read::private::Sealed for WasmSection<'data, 'file> {}
+
 impl<'data, 'file> ObjectSection<'data> for WasmSection<'data, 'file> {
     type RelocationIterator = WasmRelocationIterator<'data, 'file>;
 
@@ -321,9 +328,10 @@ impl<'data, 'file> ObjectSection<'data> for WasmSection<'data, 'file> {
         unimplemented!()
     }
 
+    #[cfg(feature = "compression")]
     #[inline]
-    fn uncompressed_data(&self) -> Cow<'data, [u8]> {
-        Cow::from(self.data())
+    fn uncompressed_data(&self) -> Option<Cow<'data, [u8]>> {
+        Some(Cow::from(self.data()))
     }
 
     #[inline]
