@@ -8,6 +8,7 @@
 use alloc::borrow::Cow;
 use alloc::vec::Vec;
 use core::fmt::Debug;
+use core::marker::PhantomData;
 use core::{cmp, iter, mem, slice, str};
 use target_lexicon::Architecture;
 
@@ -360,7 +361,7 @@ impl<'data, 'file, Pe: ImageNtHeaders> PeSection<'data, 'file, Pe> {
 }
 
 impl<'data, 'file, Pe: ImageNtHeaders> ObjectSection<'data> for PeSection<'data, 'file, Pe> {
-    type RelocationIterator = PeRelocationIterator;
+    type RelocationIterator = PeRelocationIterator<'data, 'file>;
 
     #[inline]
     fn index(&self) -> SectionIndex {
@@ -420,8 +421,8 @@ impl<'data, 'file, Pe: ImageNtHeaders> ObjectSection<'data> for PeSection<'data,
         self.section.kind()
     }
 
-    fn relocations(&self) -> PeRelocationIterator {
-        PeRelocationIterator
+    fn relocations(&self) -> PeRelocationIterator<'data, 'file> {
+        PeRelocationIterator::default()
     }
 
     fn flags(&self) -> SectionFlags {
@@ -432,10 +433,10 @@ impl<'data, 'file, Pe: ImageNtHeaders> ObjectSection<'data> for PeSection<'data,
 }
 
 /// An iterator over the relocations in an `PeSection`.
-#[derive(Debug)]
-pub struct PeRelocationIterator;
+#[derive(Debug, Default)]
+pub struct PeRelocationIterator<'data, 'file>(PhantomData<(&'data (), &'file ())>);
 
-impl Iterator for PeRelocationIterator {
+impl<'data, 'file> Iterator for PeRelocationIterator<'data, 'file> {
     type Item = (u64, Relocation);
 
     fn next(&mut self) -> Option<Self::Item> {

@@ -3,9 +3,16 @@ use alloc::fmt;
 use target_lexicon::{Architecture, BinaryFormat};
 use uuid::Uuid;
 
+#[cfg(feature = "coff")]
+use crate::read::coff;
+#[cfg(feature = "elf")]
+use crate::read::elf;
+#[cfg(feature = "macho")]
+use crate::read::macho;
+#[cfg(feature = "pe")]
+use crate::read::pe;
 #[cfg(feature = "wasm")]
 use crate::read::wasm;
-use crate::read::{coff, elf, macho, pe};
 use crate::read::{
     FileFlags, Object, ObjectSection, ObjectSegment, Relocation, SectionFlags, SectionIndex,
     SectionKind, Symbol, SymbolIndex, SymbolMap,
@@ -17,12 +24,19 @@ use crate::read::{
 macro_rules! with_inner {
     ($inner:expr, $enum:ident, | $var:ident | $body:expr) => {
         match $inner {
+            #[cfg(feature = "coff")]
             $enum::Coff(ref $var) => $body,
+            #[cfg(feature = "elf")]
             $enum::Elf32(ref $var) => $body,
+            #[cfg(feature = "elf")]
             $enum::Elf64(ref $var) => $body,
+            #[cfg(feature = "macho")]
             $enum::MachO32(ref $var) => $body,
+            #[cfg(feature = "macho")]
             $enum::MachO64(ref $var) => $body,
+            #[cfg(feature = "pe")]
             $enum::Pe32(ref $var) => $body,
+            #[cfg(feature = "pe")]
             $enum::Pe64(ref $var) => $body,
             #[cfg(feature = "wasm")]
             $enum::Wasm(ref $var) => $body,
@@ -33,12 +47,19 @@ macro_rules! with_inner {
 macro_rules! with_inner_mut {
     ($inner:expr, $enum:ident, | $var:ident | $body:expr) => {
         match $inner {
+            #[cfg(feature = "coff")]
             $enum::Coff(ref mut $var) => $body,
+            #[cfg(feature = "elf")]
             $enum::Elf32(ref mut $var) => $body,
+            #[cfg(feature = "elf")]
             $enum::Elf64(ref mut $var) => $body,
+            #[cfg(feature = "macho")]
             $enum::MachO32(ref mut $var) => $body,
+            #[cfg(feature = "macho")]
             $enum::MachO64(ref mut $var) => $body,
+            #[cfg(feature = "pe")]
             $enum::Pe32(ref mut $var) => $body,
+            #[cfg(feature = "pe")]
             $enum::Pe64(ref mut $var) => $body,
             #[cfg(feature = "wasm")]
             $enum::Wasm(ref mut $var) => $body,
@@ -50,12 +71,19 @@ macro_rules! with_inner_mut {
 macro_rules! map_inner {
     ($inner:expr, $from:ident, $to:ident, | $var:ident | $body:expr) => {
         match $inner {
+            #[cfg(feature = "coff")]
             $from::Coff(ref $var) => $to::Coff($body),
+            #[cfg(feature = "elf")]
             $from::Elf32(ref $var) => $to::Elf32($body),
+            #[cfg(feature = "elf")]
             $from::Elf64(ref $var) => $to::Elf64($body),
+            #[cfg(feature = "macho")]
             $from::MachO32(ref $var) => $to::MachO32($body),
+            #[cfg(feature = "macho")]
             $from::MachO64(ref $var) => $to::MachO64($body),
+            #[cfg(feature = "pe")]
             $from::Pe32(ref $var) => $to::Pe32($body),
+            #[cfg(feature = "pe")]
             $from::Pe64(ref $var) => $to::Pe64($body),
             #[cfg(feature = "wasm")]
             $from::Wasm(ref $var) => $to::Wasm($body),
@@ -67,12 +95,19 @@ macro_rules! map_inner {
 macro_rules! map_inner_option {
     ($inner:expr, $from:ident, $to:ident, | $var:ident | $body:expr) => {
         match $inner {
+            #[cfg(feature = "coff")]
             $from::Coff(ref $var) => $body.map($to::Coff),
+            #[cfg(feature = "elf")]
             $from::Elf32(ref $var) => $body.map($to::Elf32),
+            #[cfg(feature = "elf")]
             $from::Elf64(ref $var) => $body.map($to::Elf64),
+            #[cfg(feature = "macho")]
             $from::MachO32(ref $var) => $body.map($to::MachO32),
+            #[cfg(feature = "macho")]
             $from::MachO64(ref $var) => $body.map($to::MachO64),
+            #[cfg(feature = "pe")]
             $from::Pe32(ref $var) => $body.map($to::Pe32),
+            #[cfg(feature = "pe")]
             $from::Pe64(ref $var) => $body.map($to::Pe64),
             #[cfg(feature = "wasm")]
             $from::Wasm(ref $var) => $body.map($to::Wasm),
@@ -84,12 +119,19 @@ macro_rules! map_inner_option {
 macro_rules! next_inner {
     ($inner:expr, $from:ident, $to:ident) => {
         match $inner {
+            #[cfg(feature = "coff")]
             $from::Coff(ref mut iter) => iter.next().map($to::Coff),
+            #[cfg(feature = "elf")]
             $from::Elf32(ref mut iter) => iter.next().map($to::Elf32),
+            #[cfg(feature = "elf")]
             $from::Elf64(ref mut iter) => iter.next().map($to::Elf64),
+            #[cfg(feature = "macho")]
             $from::MachO32(ref mut iter) => iter.next().map($to::MachO32),
+            #[cfg(feature = "macho")]
             $from::MachO64(ref mut iter) => iter.next().map($to::MachO64),
+            #[cfg(feature = "pe")]
             $from::Pe32(ref mut iter) => iter.next().map($to::Pe32),
+            #[cfg(feature = "pe")]
             $from::Pe64(ref mut iter) => iter.next().map($to::Pe64),
             #[cfg(feature = "wasm")]
             $from::Wasm(ref mut iter) => iter.next().map($to::Wasm),
@@ -108,12 +150,19 @@ pub struct File<'data> {
 #[allow(clippy::large_enum_variant)]
 #[derive(Debug)]
 enum FileInternal<'data> {
+    #[cfg(feature = "coff")]
     Coff(coff::CoffFile<'data>),
+    #[cfg(feature = "elf")]
     Elf32(elf::ElfFile32<'data>),
+    #[cfg(feature = "elf")]
     Elf64(elf::ElfFile64<'data>),
+    #[cfg(feature = "macho")]
     MachO32(macho::MachOFile32<'data>),
+    #[cfg(feature = "macho")]
     MachO64(macho::MachOFile64<'data>),
+    #[cfg(feature = "pe")]
     Pe32(pe::PeFile32<'data>),
+    #[cfg(feature = "pe")]
     Pe64(pe::PeFile64<'data>),
     #[cfg(feature = "wasm")]
     Wasm(wasm::WasmFile<'data>),
@@ -128,19 +177,24 @@ impl<'data> File<'data> {
 
         let inner = match [data[0], data[1], data[2], data[3], data[4]] {
             // 32-bit ELF
+            #[cfg(feature = "elf")]
             [0x7f, b'E', b'L', b'F', 1] => FileInternal::Elf32(elf::ElfFile32::parse(data)?),
             // 64-bit ELF
+            #[cfg(feature = "elf")]
             [0x7f, b'E', b'L', b'F', 2] => FileInternal::Elf64(elf::ElfFile64::parse(data)?),
             // 32-bit Mach-O
+            #[cfg(feature = "macho")]
             [0xfe, 0xed, 0xfa, 0xce, _]
             | [0xce, 0xfa, 0xed, 0xfe, _] => FileInternal::MachO32(macho::MachOFile32::parse(data)?),
             // 64-bit Mach-O
+            #[cfg(feature = "macho")]
             | [0xfe, 0xed, 0xfa, 0xcf, _]
             | [0xcf, 0xfa, 0xed, 0xfe, _] => FileInternal::MachO64(macho::MachOFile64::parse(data)?),
             // WASM
             #[cfg(feature = "wasm")]
             [0x00, b'a', b's', b'm', _] => FileInternal::Wasm(wasm::WasmFile::parse(data)?),
             // MS-DOS, assume stub for Windows PE32 or PE32+
+            #[cfg(feature = "pe")]
             [b'M', b'Z', _, _, _] => {
                 // `optional_header_magic` doesn't care if it's `PeFile32` and `PeFile64`.
                 match pe::PeFile64::optional_header_magic(data) {
@@ -154,6 +208,7 @@ impl<'data> File<'data> {
                 }
             }
             // TODO: more COFF machines
+            #[cfg(feature = "coff")]
             // COFF x86
             [0x4c, 0x01, _, _, _]
             // COFF x86-64
@@ -166,11 +221,14 @@ impl<'data> File<'data> {
     /// Return the file format.
     pub fn format(&self) -> BinaryFormat {
         match self.inner {
+            #[cfg(feature = "coff")]
+            FileInternal::Coff(_) => BinaryFormat::Coff,
+            #[cfg(feature = "elf")]
             FileInternal::Elf32(_) | FileInternal::Elf64(_) => BinaryFormat::Elf,
+            #[cfg(feature = "macho")]
             FileInternal::MachO32(_) | FileInternal::MachO64(_) => BinaryFormat::Macho,
-            FileInternal::Coff(_) | FileInternal::Pe32(_) | FileInternal::Pe64(_) => {
-                BinaryFormat::Coff
-            }
+            #[cfg(feature = "pe")]
+            FileInternal::Pe32(_) | FileInternal::Pe64(_) => BinaryFormat::Coff,
             #[cfg(feature = "wasm")]
             FileInternal::Wasm(_) => BinaryFormat::Wasm,
         }
@@ -294,12 +352,19 @@ enum SegmentIteratorInternal<'data, 'file>
 where
     'data: 'file,
 {
+    #[cfg(feature = "coff")]
     Coff(coff::CoffSegmentIterator<'data, 'file>),
+    #[cfg(feature = "elf")]
     Elf32(elf::ElfSegmentIterator32<'data, 'file>),
+    #[cfg(feature = "elf")]
     Elf64(elf::ElfSegmentIterator64<'data, 'file>),
+    #[cfg(feature = "macho")]
     MachO32(macho::MachOSegmentIterator32<'data, 'file>),
+    #[cfg(feature = "macho")]
     MachO64(macho::MachOSegmentIterator64<'data, 'file>),
+    #[cfg(feature = "pe")]
     Pe32(pe::PeSegmentIterator32<'data, 'file>),
+    #[cfg(feature = "pe")]
     Pe64(pe::PeSegmentIterator64<'data, 'file>),
     #[cfg(feature = "wasm")]
     Wasm(wasm::WasmSegmentIterator<'data, 'file>),
@@ -327,12 +392,19 @@ enum SegmentInternal<'data, 'file>
 where
     'data: 'file,
 {
+    #[cfg(feature = "coff")]
     Coff(coff::CoffSegment<'data, 'file>),
+    #[cfg(feature = "elf")]
     Elf32(elf::ElfSegment32<'data, 'file>),
+    #[cfg(feature = "elf")]
     Elf64(elf::ElfSegment64<'data, 'file>),
+    #[cfg(feature = "macho")]
     MachO32(macho::MachOSegment32<'data, 'file>),
+    #[cfg(feature = "macho")]
     MachO64(macho::MachOSegment64<'data, 'file>),
+    #[cfg(feature = "pe")]
     Pe32(pe::PeSegment32<'data, 'file>),
+    #[cfg(feature = "pe")]
     Pe64(pe::PeSegment64<'data, 'file>),
     #[cfg(feature = "wasm")]
     Wasm(wasm::WasmSegment<'data, 'file>),
@@ -394,12 +466,19 @@ enum SectionIteratorInternal<'data, 'file>
 where
     'data: 'file,
 {
+    #[cfg(feature = "coff")]
     Coff(coff::CoffSectionIterator<'data, 'file>),
+    #[cfg(feature = "elf")]
     Elf32(elf::ElfSectionIterator32<'data, 'file>),
+    #[cfg(feature = "elf")]
     Elf64(elf::ElfSectionIterator64<'data, 'file>),
+    #[cfg(feature = "macho")]
     MachO32(macho::MachOSectionIterator32<'data, 'file>),
+    #[cfg(feature = "macho")]
     MachO64(macho::MachOSectionIterator64<'data, 'file>),
+    #[cfg(feature = "pe")]
     Pe32(pe::PeSectionIterator32<'data, 'file>),
+    #[cfg(feature = "pe")]
     Pe64(pe::PeSectionIterator64<'data, 'file>),
     #[cfg(feature = "wasm")]
     Wasm(wasm::WasmSectionIterator<'data, 'file>),
@@ -426,12 +505,19 @@ enum SectionInternal<'data, 'file>
 where
     'data: 'file,
 {
+    #[cfg(feature = "coff")]
     Coff(coff::CoffSection<'data, 'file>),
+    #[cfg(feature = "elf")]
     Elf32(elf::ElfSection32<'data, 'file>),
+    #[cfg(feature = "elf")]
     Elf64(elf::ElfSection64<'data, 'file>),
+    #[cfg(feature = "macho")]
     MachO32(macho::MachOSection32<'data, 'file>),
+    #[cfg(feature = "macho")]
     MachO64(macho::MachOSection64<'data, 'file>),
+    #[cfg(feature = "pe")]
     Pe32(pe::PeSection32<'data, 'file>),
+    #[cfg(feature = "pe")]
     Pe64(pe::PeSection64<'data, 'file>),
     #[cfg(feature = "wasm")]
     Wasm(wasm::WasmSection<'data, 'file>),
@@ -529,12 +615,19 @@ enum SymbolIteratorInternal<'data, 'file>
 where
     'data: 'file,
 {
+    #[cfg(feature = "coff")]
     Coff(coff::CoffSymbolIterator<'data, 'file>),
+    #[cfg(feature = "elf")]
     Elf32(elf::ElfSymbolIterator32<'data, 'file>),
+    #[cfg(feature = "elf")]
     Elf64(elf::ElfSymbolIterator64<'data, 'file>),
+    #[cfg(feature = "macho")]
     MachO32(macho::MachOSymbolIterator32<'data, 'file>),
+    #[cfg(feature = "macho")]
     MachO64(macho::MachOSymbolIterator64<'data, 'file>),
+    #[cfg(feature = "pe")]
     Pe32(coff::CoffSymbolIterator<'data, 'file>),
+    #[cfg(feature = "pe")]
     Pe64(coff::CoffSymbolIterator<'data, 'file>),
     #[cfg(feature = "wasm")]
     Wasm(wasm::WasmSymbolIterator<'data, 'file>),
@@ -562,15 +655,22 @@ enum RelocationIteratorInternal<'data, 'file>
 where
     'data: 'file,
 {
+    #[cfg(feature = "coff")]
     Coff(coff::CoffRelocationIterator<'data, 'file>),
+    #[cfg(feature = "elf")]
     Elf32(elf::ElfRelocationIterator32<'data, 'file>),
+    #[cfg(feature = "elf")]
     Elf64(elf::ElfRelocationIterator64<'data, 'file>),
+    #[cfg(feature = "macho")]
     MachO32(macho::MachORelocationIterator32<'data, 'file>),
+    #[cfg(feature = "macho")]
     MachO64(macho::MachORelocationIterator64<'data, 'file>),
-    Pe32(pe::PeRelocationIterator),
-    Pe64(pe::PeRelocationIterator),
+    #[cfg(feature = "pe")]
+    Pe32(pe::PeRelocationIterator<'data, 'file>),
+    #[cfg(feature = "pe")]
+    Pe64(pe::PeRelocationIterator<'data, 'file>),
     #[cfg(feature = "wasm")]
-    Wasm(wasm::WasmRelocationIterator),
+    Wasm(wasm::WasmRelocationIterator<'data, 'file>),
 }
 
 impl<'data, 'file> Iterator for RelocationIterator<'data, 'file> {

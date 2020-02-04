@@ -28,6 +28,11 @@ script:
   - cargo build --all-features && cargo test --all-features && cargo doc --all-features
   - cargo build --no-default-features --features read
   - cargo build --no-default-features --features write
+  - cargo build --no-default-features --features read_core,write_core,coff
+  - cargo build --no-default-features --features read_core,write_core,elf
+  - cargo build --no-default-features --features read_core,write_core,macho
+  - cargo build --no-default-features --features read_core,pe
+  - cargo build --no-default-features --features read_core,wasm
   - if [ "$TRAVIS_OS_NAME" = linux ] && [ "$TRAVIS_RUST_VERSION" = stable ]; then
       rustup component add rustfmt;
       cargo fmt -- --check;

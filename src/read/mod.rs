@@ -14,12 +14,16 @@ mod util;
 mod any;
 pub use any::*;
 
+#[cfg(feature = "coff")]
 pub mod coff;
 
+#[cfg(feature = "elf")]
 pub mod elf;
 
+#[cfg(feature = "macho")]
 pub mod macho;
 
+#[cfg(feature = "pe")]
 pub mod pe;
 
 mod traits;
@@ -29,31 +33,31 @@ pub use traits::*;
 pub mod wasm;
 
 /// The native executable file for the target platform.
-#[cfg(all(target_os = "linux", target_pointer_width = "32"))]
+#[cfg(all(target_os = "linux", target_pointer_width = "32", feature = "elf"))]
 pub type NativeFile<'data> = elf::ElfFile32<'data>;
 
 /// The native executable file for the target platform.
-#[cfg(all(target_os = "linux", target_pointer_width = "64"))]
+#[cfg(all(target_os = "linux", target_pointer_width = "64", feature = "elf"))]
 pub type NativeFile<'data> = elf::ElfFile64<'data>;
 
 /// The native executable file for the target platform.
-#[cfg(all(target_os = "macos", target_pointer_width = "32"))]
+#[cfg(all(target_os = "macos", target_pointer_width = "32", feature = "macho"))]
 pub type NativeFile<'data> = macho::MachOFile32<'data>;
 
 /// The native executable file for the target platform.
-#[cfg(all(target_os = "macos", target_pointer_width = "64"))]
+#[cfg(all(target_os = "macos", target_pointer_width = "64", feature = "macho"))]
 pub type NativeFile<'data> = macho::MachOFile64<'data>;
 
 /// The native executable file for the target platform.
-#[cfg(all(target_os = "windows", target_pointer_width = "32"))]
+#[cfg(all(target_os = "windows", target_pointer_width = "32", feature = "pe"))]
 pub type NativeFile<'data> = pe::PeFile32<'data>;
 
 /// The native executable file for the target platform.
-#[cfg(all(target_os = "windows", target_pointer_width = "64"))]
+#[cfg(all(target_os = "windows", target_pointer_width = "64", feature = "pe"))]
 pub type NativeFile<'data> = pe::PeFile64<'data>;
 
 /// The native executable file for the target platform.
-#[cfg(all(feature = "wasm", target_arch = "wasm32"))]
+#[cfg(all(feature = "wasm", target_arch = "wasm32", feature = "wasm"))]
 pub type NativeFile<'data> = wasm::WasmFile<'data>;
 
 /// The index used to identify a section of a file.

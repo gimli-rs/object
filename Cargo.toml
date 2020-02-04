@@ -23,12 +23,29 @@ indexmap = { version = "1.1", optional = true }
 memmap = "0.7"
 
 [features]
-read = []
-write = ["crc32fast", "indexmap", "std"]
+read_core = []
+read = ["read_core", "coff", "elf", "macho", "pe", "wasm"]
+write_core = ["crc32fast", "indexmap", "std"]
+write = ["write_core", "coff", "elf", "macho"]
+
 std = []
 compression = ["flate2", "std"]
+
+coff = []
+elf = []
+macho = []
+pe = ["coff"]
 wasm = []
-default = ["read", "compression", "wasm"]
+
+default = ["read", "compression"]
+
+[[example]]
+name = "objdump"
+required-features = ["read"]
+
+[[example]]
+name = "nm"
+required-features = ["read"]
 
 [[example]]
 name = "objcopy"
