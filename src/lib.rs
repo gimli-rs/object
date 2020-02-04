@@ -35,14 +35,17 @@ mod pod;
 #[doc(hidden)]
 pub use pod::Pod;
 
-#[cfg(feature = "read")]
+#[cfg(feature = "read_core")]
 pub mod read;
-#[cfg(feature = "read")]
+#[cfg(feature = "read_core")]
 pub use read::*;
 
-#[cfg(feature = "write")]
+#[cfg(feature = "write_core")]
 pub mod write;
 
+#[cfg(feature = "elf")]
 pub mod elf;
+#[cfg(feature = "macho")]
 pub mod macho;
+#[cfg(any(feature = "coff", feature = "pe"))]
 pub mod pe;

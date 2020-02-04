@@ -5,6 +5,7 @@
 //! Currently implements the minimum required to access DWARF debugging information.
 use alloc::borrow::Cow;
 use alloc::vec::Vec;
+use core::marker::PhantomData;
 use core::{slice, str};
 use target_lexicon::Architecture;
 
@@ -281,7 +282,7 @@ pub struct WasmSection<'data, 'file> {
 }
 
 impl<'data, 'file> ObjectSection<'data> for WasmSection<'data, 'file> {
-    type RelocationIterator = WasmRelocationIterator;
+    type RelocationIterator = WasmRelocationIterator<'data, 'file>;
 
     #[inline]
     fn index(&self) -> SectionIndex {
@@ -341,8 +342,8 @@ impl<'data, 'file> ObjectSection<'data> for WasmSection<'data, 'file> {
     }
 
     #[inline]
-    fn relocations(&self) -> WasmRelocationIterator {
-        WasmRelocationIterator
+    fn relocations(&self) -> WasmRelocationIterator<'data, 'file> {
+        WasmRelocationIterator::default()
     }
 
     #[inline]
@@ -389,10 +390,10 @@ impl<'data, 'file> Iterator for WasmSymbolIterator<'data, 'file> {
 }
 
 /// An iterator over the relocations in a `WasmSection`.
-#[derive(Debug)]
-pub struct WasmRelocationIterator;
+#[derive(Debug, Default)]
+pub struct WasmRelocationIterator<'data, 'file>(PhantomData<(&'data (), &'file ())>);
 
-impl Iterator for WasmRelocationIterator {
+impl<'data, 'file> Iterator for WasmRelocationIterator<'data, 'file> {
     type Item = (u64, Relocation);
 
     #[inline]

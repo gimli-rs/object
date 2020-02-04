@@ -16,8 +16,11 @@ use crate::{
     SymbolKind, SymbolScope,
 };
 
+#[cfg(feature = "coff")]
 mod coff;
+#[cfg(feature = "elf")]
 mod elf;
+#[cfg(feature = "macho")]
 mod macho;
 mod string;
 mod util;
@@ -86,7 +89,11 @@ impl Object {
     /// This will vary based on the file format.
     pub fn segment_name(&self, segment: StandardSegment) -> &'static [u8] {
         match self.format {
-            BinaryFormat::Elf | BinaryFormat::Coff => &[],
+            #[cfg(feature = "coff")]
+            BinaryFormat::Coff => &[],
+            #[cfg(feature = "elf")]
+            BinaryFormat::Elf => &[],
+            #[cfg(feature = "macho")]
             BinaryFormat::Macho => self.macho_segment_name(segment),
             _ => unimplemented!(),
         }
@@ -163,8 +170,11 @@ impl Object {
         section: StandardSection,
     ) -> (&'static [u8], &'static [u8], SectionKind) {
         match self.format {
-            BinaryFormat::Elf => self.elf_section_info(section),
+            #[cfg(feature = "coff")]
             BinaryFormat::Coff => self.coff_section_info(section),
+            #[cfg(feature = "elf")]
+            BinaryFormat::Elf => self.elf_section_info(section),
+            #[cfg(feature = "macho")]
             BinaryFormat::Macho => self.macho_section_info(section),
             _ => unimplemented!(),
         }
@@ -191,7 +201,7 @@ impl Object {
 
     fn has_subsections_via_symbols(&self) -> bool {
         match self.format {
-            BinaryFormat::Elf | BinaryFormat::Coff => false,
+            BinaryFormat::Coff | BinaryFormat::Elf => false,
             BinaryFormat::Macho => true,
             _ => unimplemented!(),
         }
@@ -199,6 +209,7 @@ impl Object {
 
     fn set_subsections_via_symbols(&mut self) {
         match self.format {
+            #[cfg(feature = "macho")]
             BinaryFormat::Macho => self.macho_set_subsections_via_symbols(),
             _ => unimplemented!(),
         }
@@ -217,8 +228,10 @@ impl Object {
     fn subsection_name(&self, section: &[u8], value: &[u8]) -> Vec<u8> {
         debug_assert!(!self.has_subsections_via_symbols());
         match self.format {
-            BinaryFormat::Elf => self.elf_subsection_name(section, value),
+            #[cfg(feature = "coff")]
             BinaryFormat::Coff => self.coff_subsection_name(section, value),
+            #[cfg(feature = "elf")]
+            BinaryFormat::Elf => self.elf_subsection_name(section, value),
             _ => unimplemented!(),
         }
     }
@@ -393,8 +406,10 @@ impl Object {
     ) {
         // Defined symbols must have a scope.
         debug_assert!(self.symbol(symbol_id).scope != SymbolScope::Unknown);
-        if self.format == BinaryFormat::Macho {
-            symbol_id = self.macho_add_thread_var(symbol_id);
+        match self.format {
+            #[cfg(feature = "macho")]
+            BinaryFormat::Macho => symbol_id = self.macho_add_thread_var(symbol_id),
+            _ => {}
         }
         let symbol = self.symbol_mut(symbol_id);
         symbol.value = offset;
@@ -429,8 +444,11 @@ impl Object {
         mut relocation: Relocation,
     ) -> Result<(), String> {
         let addend = match self.format {
-            BinaryFormat::Elf => self.elf_fixup_relocation(&mut relocation)?,
+            #[cfg(feature = "coff")]
             BinaryFormat::Coff => self.coff_fixup_relocation(&mut relocation),
+            #[cfg(feature = "elf")]
+            BinaryFormat::Elf => self.elf_fixup_relocation(&mut relocation)?,
+            #[cfg(feature = "macho")]
             BinaryFormat::Macho => self.macho_fixup_relocation(&mut relocation),
             _ => unimplemented!(),
         };
@@ -472,8 +490,11 @@ impl Object {
     /// Write the object to a `Vec`.
     pub fn write(&self) -> Result<Vec<u8>, String> {
         match self.format {
-            BinaryFormat::Elf => self.elf_write(),
+            #[cfg(feature = "coff")]
             BinaryFormat::Coff => self.coff_write(),
+            #[cfg(feature = "elf")]
+            BinaryFormat::Elf => self.elf_write(),
+            #[cfg(feature = "macho")]
             BinaryFormat::Macho => self.macho_write(),
             _ => unimplemented!(),
         }
