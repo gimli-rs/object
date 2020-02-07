@@ -681,78 +681,78 @@ pub const IMAGE_SIZEOF_SECTION_HEADER: usize = 40;
 //      IMAGE_SCN_TYPE_NOLOAD                0x00000002  // Reserved.
 //      IMAGE_SCN_TYPE_GROUP                 0x00000004  // Reserved.
 /// Reserved.
-pub const IMAGE_SCN_TYPE_NO_PAD: u32 = 0x00000008;
+pub const IMAGE_SCN_TYPE_NO_PAD: u32 = 0x0000_0008;
 //      IMAGE_SCN_TYPE_COPY                  0x00000010  // Reserved.
 
 /// Section contains code.
-pub const IMAGE_SCN_CNT_CODE: u32 = 0x00000020;
+pub const IMAGE_SCN_CNT_CODE: u32 = 0x0000_0020;
 /// Section contains initialized data.
-pub const IMAGE_SCN_CNT_INITIALIZED_DATA: u32 = 0x00000040;
+pub const IMAGE_SCN_CNT_INITIALIZED_DATA: u32 = 0x0000_0040;
 /// Section contains uninitialized data.
-pub const IMAGE_SCN_CNT_UNINITIALIZED_DATA: u32 = 0x00000080;
+pub const IMAGE_SCN_CNT_UNINITIALIZED_DATA: u32 = 0x0000_0080;
 
 /// Reserved.
-pub const IMAGE_SCN_LNK_OTHER: u32 = 0x00000100;
+pub const IMAGE_SCN_LNK_OTHER: u32 = 0x0000_0100;
 /// Section contains comments or some other type of information.
-pub const IMAGE_SCN_LNK_INFO: u32 = 0x00000200;
+pub const IMAGE_SCN_LNK_INFO: u32 = 0x0000_0200;
 //      IMAGE_SCN_TYPE_OVER                  0x00000400  // Reserved.
 /// Section contents will not become part of image.
-pub const IMAGE_SCN_LNK_REMOVE: u32 = 0x00000800;
+pub const IMAGE_SCN_LNK_REMOVE: u32 = 0x0000_0800;
 /// Section contents comdat.
-pub const IMAGE_SCN_LNK_COMDAT: u32 = 0x00001000;
+pub const IMAGE_SCN_LNK_COMDAT: u32 = 0x0000_1000;
 //                                           0x00002000  // Reserved.
 //      IMAGE_SCN_MEM_PROTECTED - Obsolete   0x00004000
 /// Reset speculative exceptions handling bits in the TLB entries for this section.
-pub const IMAGE_SCN_NO_DEFER_SPEC_EXC: u32 = 0x00004000;
+pub const IMAGE_SCN_NO_DEFER_SPEC_EXC: u32 = 0x0000_4000;
 /// Section content can be accessed relative to GP
-pub const IMAGE_SCN_GPREL: u32 = 0x00008000;
-pub const IMAGE_SCN_MEM_FARDATA: u32 = 0x00008000;
+pub const IMAGE_SCN_GPREL: u32 = 0x0000_8000;
+pub const IMAGE_SCN_MEM_FARDATA: u32 = 0x0000_8000;
 //      IMAGE_SCN_MEM_SYSHEAP  - Obsolete    0x00010000
-pub const IMAGE_SCN_MEM_PURGEABLE: u32 = 0x00020000;
-pub const IMAGE_SCN_MEM_16BIT: u32 = 0x00020000;
-pub const IMAGE_SCN_MEM_LOCKED: u32 = 0x00040000;
-pub const IMAGE_SCN_MEM_PRELOAD: u32 = 0x00080000;
+pub const IMAGE_SCN_MEM_PURGEABLE: u32 = 0x0002_0000;
+pub const IMAGE_SCN_MEM_16BIT: u32 = 0x0002_0000;
+pub const IMAGE_SCN_MEM_LOCKED: u32 = 0x0004_0000;
+pub const IMAGE_SCN_MEM_PRELOAD: u32 = 0x0008_0000;
 
-pub const IMAGE_SCN_ALIGN_1BYTES: u32 = 0x00100000;
-pub const IMAGE_SCN_ALIGN_2BYTES: u32 = 0x00200000;
-pub const IMAGE_SCN_ALIGN_4BYTES: u32 = 0x00300000;
-pub const IMAGE_SCN_ALIGN_8BYTES: u32 = 0x00400000;
+pub const IMAGE_SCN_ALIGN_1BYTES: u32 = 0x0010_0000;
+pub const IMAGE_SCN_ALIGN_2BYTES: u32 = 0x0020_0000;
+pub const IMAGE_SCN_ALIGN_4BYTES: u32 = 0x0030_0000;
+pub const IMAGE_SCN_ALIGN_8BYTES: u32 = 0x0040_0000;
 /// Default alignment if no others are specified.
-pub const IMAGE_SCN_ALIGN_16BYTES: u32 = 0x00500000;
-pub const IMAGE_SCN_ALIGN_32BYTES: u32 = 0x00600000;
-pub const IMAGE_SCN_ALIGN_64BYTES: u32 = 0x00700000;
-pub const IMAGE_SCN_ALIGN_128BYTES: u32 = 0x00800000;
-pub const IMAGE_SCN_ALIGN_256BYTES: u32 = 0x00900000;
-pub const IMAGE_SCN_ALIGN_512BYTES: u32 = 0x00A00000;
-pub const IMAGE_SCN_ALIGN_1024BYTES: u32 = 0x00B00000;
-pub const IMAGE_SCN_ALIGN_2048BYTES: u32 = 0x00C00000;
-pub const IMAGE_SCN_ALIGN_4096BYTES: u32 = 0x00D00000;
-pub const IMAGE_SCN_ALIGN_8192BYTES: u32 = 0x00E00000;
-// Unused                                    0x00F00000
-pub const IMAGE_SCN_ALIGN_MASK: u32 = 0x00F00000;
+pub const IMAGE_SCN_ALIGN_16BYTES: u32 = 0x0050_0000;
+pub const IMAGE_SCN_ALIGN_32BYTES: u32 = 0x0060_0000;
+pub const IMAGE_SCN_ALIGN_64BYTES: u32 = 0x0070_0000;
+pub const IMAGE_SCN_ALIGN_128BYTES: u32 = 0x0080_0000;
+pub const IMAGE_SCN_ALIGN_256BYTES: u32 = 0x0090_0000;
+pub const IMAGE_SCN_ALIGN_512BYTES: u32 = 0x00A0_0000;
+pub const IMAGE_SCN_ALIGN_1024BYTES: u32 = 0x00B0_0000;
+pub const IMAGE_SCN_ALIGN_2048BYTES: u32 = 0x00C0_0000;
+pub const IMAGE_SCN_ALIGN_4096BYTES: u32 = 0x00D0_0000;
+pub const IMAGE_SCN_ALIGN_8192BYTES: u32 = 0x00E0_0000;
+// Unused                                    0x00F0_0000
+pub const IMAGE_SCN_ALIGN_MASK: u32 = 0x00F0_0000;
 
 /// Section contains extended relocations.
-pub const IMAGE_SCN_LNK_NRELOC_OVFL: u32 = 0x01000000;
+pub const IMAGE_SCN_LNK_NRELOC_OVFL: u32 = 0x0100_0000;
 /// Section can be discarded.
-pub const IMAGE_SCN_MEM_DISCARDABLE: u32 = 0x02000000;
+pub const IMAGE_SCN_MEM_DISCARDABLE: u32 = 0x0200_0000;
 /// Section is not cachable.
-pub const IMAGE_SCN_MEM_NOT_CACHED: u32 = 0x04000000;
+pub const IMAGE_SCN_MEM_NOT_CACHED: u32 = 0x0400_0000;
 /// Section is not pageable.
-pub const IMAGE_SCN_MEM_NOT_PAGED: u32 = 0x08000000;
+pub const IMAGE_SCN_MEM_NOT_PAGED: u32 = 0x0800_0000;
 /// Section is shareable.
-pub const IMAGE_SCN_MEM_SHARED: u32 = 0x10000000;
+pub const IMAGE_SCN_MEM_SHARED: u32 = 0x1000_0000;
 /// Section is executable.
-pub const IMAGE_SCN_MEM_EXECUTE: u32 = 0x20000000;
+pub const IMAGE_SCN_MEM_EXECUTE: u32 = 0x2000_0000;
 /// Section is readable.
-pub const IMAGE_SCN_MEM_READ: u32 = 0x40000000;
+pub const IMAGE_SCN_MEM_READ: u32 = 0x4000_0000;
 /// Section is writeable.
-pub const IMAGE_SCN_MEM_WRITE: u32 = 0x80000000;
+pub const IMAGE_SCN_MEM_WRITE: u32 = 0x8000_0000;
 
 //
 // TLS Characteristic Flags
 //
 /// Tls index is scaled
-pub const IMAGE_SCN_SCALE_INDEX: u32 = 0x00000001;
+pub const IMAGE_SCN_SCALE_INDEX: u32 = 0x0000_0001;
 
 //
 // Symbol format.
@@ -1969,8 +1969,8 @@ pub struct ImageResourceDirectory {
     // DirectoryEntries[ImageResourceDirectoryEntry];
 }
 
-pub const IMAGE_RESOURCE_NAME_IS_STRING: u32 = 0x80000000;
-pub const IMAGE_RESOURCE_DATA_IS_DIRECTORY: u32 = 0x80000000;
+pub const IMAGE_RESOURCE_NAME_IS_STRING: u32 = 0x8000_0000;
+pub const IMAGE_RESOURCE_DATA_IS_DIRECTORY: u32 = 0x8000_0000;
 //
 // Each directory contains the 32-bit Name of the entry and an offset,
 // relative to the beginning of the resource directory of the data associated
@@ -2110,11 +2110,11 @@ pub struct ImageDynamicRelocation64V2 {
 // Defined symbolic dynamic relocation entries.
 //
 
-pub const IMAGE_DYNAMIC_RELOCATION_GUARD_RF_PROLOGUE: u32 = 0x00000001;
-pub const IMAGE_DYNAMIC_RELOCATION_GUARD_RF_EPILOGUE: u32 = 0x00000002;
-pub const IMAGE_DYNAMIC_RELOCATION_GUARD_IMPORT_CONTROL_TRANSFER: u32 = 0x00000003;
-pub const IMAGE_DYNAMIC_RELOCATION_GUARD_INDIR_CONTROL_TRANSFER: u32 = 0x00000004;
-pub const IMAGE_DYNAMIC_RELOCATION_GUARD_SWITCHTABLE_BRANCH: u32 = 0x00000005;
+pub const IMAGE_DYNAMIC_RELOCATION_GUARD_RF_PROLOGUE: u32 = 0x0000_0001;
+pub const IMAGE_DYNAMIC_RELOCATION_GUARD_RF_EPILOGUE: u32 = 0x0000_0002;
+pub const IMAGE_DYNAMIC_RELOCATION_GUARD_IMPORT_CONTROL_TRANSFER: u32 = 0x0000_0003;
+pub const IMAGE_DYNAMIC_RELOCATION_GUARD_INDIR_CONTROL_TRANSFER: u32 = 0x0000_0004;
+pub const IMAGE_DYNAMIC_RELOCATION_GUARD_SWITCHTABLE_BRANCH: u32 = 0x0000_0005;
 
 // This struct has alignment 1.
 #[derive(Debug, Clone, Copy)]
@@ -2331,57 +2331,57 @@ pub struct ImageHotPatchHashes {
     pub sha1: [u8; 20],
 }
 
-pub const IMAGE_HOT_PATCH_BASE_OBLIGATORY: u32 = 0x00000001;
-pub const IMAGE_HOT_PATCH_BASE_CAN_ROLL_BACK: u32 = 0x00000002;
+pub const IMAGE_HOT_PATCH_BASE_OBLIGATORY: u32 = 0x0000_0001;
+pub const IMAGE_HOT_PATCH_BASE_CAN_ROLL_BACK: u32 = 0x0000_0002;
 
-pub const IMAGE_HOT_PATCH_CHUNK_INVERSE: u32 = 0x80000000;
-pub const IMAGE_HOT_PATCH_CHUNK_OBLIGATORY: u32 = 0x40000000;
-pub const IMAGE_HOT_PATCH_CHUNK_RESERVED: u32 = 0x3FF03000;
-pub const IMAGE_HOT_PATCH_CHUNK_TYPE: u32 = 0x000FC000;
-pub const IMAGE_HOT_PATCH_CHUNK_SOURCE_RVA: u32 = 0x00008000;
-pub const IMAGE_HOT_PATCH_CHUNK_TARGET_RVA: u32 = 0x00004000;
-pub const IMAGE_HOT_PATCH_CHUNK_SIZE: u32 = 0x00000FFF;
+pub const IMAGE_HOT_PATCH_CHUNK_INVERSE: u32 = 0x8000_0000;
+pub const IMAGE_HOT_PATCH_CHUNK_OBLIGATORY: u32 = 0x4000_0000;
+pub const IMAGE_HOT_PATCH_CHUNK_RESERVED: u32 = 0x3FF0_3000;
+pub const IMAGE_HOT_PATCH_CHUNK_TYPE: u32 = 0x000F_C000;
+pub const IMAGE_HOT_PATCH_CHUNK_SOURCE_RVA: u32 = 0x0000_8000;
+pub const IMAGE_HOT_PATCH_CHUNK_TARGET_RVA: u32 = 0x0000_4000;
+pub const IMAGE_HOT_PATCH_CHUNK_SIZE: u32 = 0x0000_0FFF;
 
-pub const IMAGE_HOT_PATCH_NONE: u32 = 0x00000000;
-pub const IMAGE_HOT_PATCH_FUNCTION: u32 = 0x0001C000;
-pub const IMAGE_HOT_PATCH_ABSOLUTE: u32 = 0x0002C000;
-pub const IMAGE_HOT_PATCH_REL32: u32 = 0x0003C000;
-pub const IMAGE_HOT_PATCH_CALL_TARGET: u32 = 0x00044000;
-pub const IMAGE_HOT_PATCH_INDIRECT: u32 = 0x0005C000;
-pub const IMAGE_HOT_PATCH_NO_CALL_TARGET: u32 = 0x00064000;
-pub const IMAGE_HOT_PATCH_DYNAMIC_VALUE: u32 = 0x00078000;
+pub const IMAGE_HOT_PATCH_NONE: u32 = 0x0000_0000;
+pub const IMAGE_HOT_PATCH_FUNCTION: u32 = 0x0001_C000;
+pub const IMAGE_HOT_PATCH_ABSOLUTE: u32 = 0x0002_C000;
+pub const IMAGE_HOT_PATCH_REL32: u32 = 0x0003_C000;
+pub const IMAGE_HOT_PATCH_CALL_TARGET: u32 = 0x0004_4000;
+pub const IMAGE_HOT_PATCH_INDIRECT: u32 = 0x0005_C000;
+pub const IMAGE_HOT_PATCH_NO_CALL_TARGET: u32 = 0x0006_4000;
+pub const IMAGE_HOT_PATCH_DYNAMIC_VALUE: u32 = 0x0007_8000;
 
 /// Module performs control flow integrity checks using system-supplied support
-pub const IMAGE_GUARD_CF_INSTRUMENTED: u32 = 0x00000100;
+pub const IMAGE_GUARD_CF_INSTRUMENTED: u32 = 0x0000_0100;
 /// Module performs control flow and write integrity checks
-pub const IMAGE_GUARD_CFW_INSTRUMENTED: u32 = 0x00000200;
+pub const IMAGE_GUARD_CFW_INSTRUMENTED: u32 = 0x0000_0200;
 /// Module contains valid control flow target metadata
-pub const IMAGE_GUARD_CF_FUNCTION_TABLE_PRESENT: u32 = 0x00000400;
+pub const IMAGE_GUARD_CF_FUNCTION_TABLE_PRESENT: u32 = 0x0000_0400;
 /// Module does not make use of the /GS security cookie
-pub const IMAGE_GUARD_SECURITY_COOKIE_UNUSED: u32 = 0x00000800;
+pub const IMAGE_GUARD_SECURITY_COOKIE_UNUSED: u32 = 0x0000_0800;
 /// Module supports read only delay load IAT
-pub const IMAGE_GUARD_PROTECT_DELAYLOAD_IAT: u32 = 0x00001000;
+pub const IMAGE_GUARD_PROTECT_DELAYLOAD_IAT: u32 = 0x0000_1000;
 /// Delayload import table in its own .didat section (with nothing else in it) that can be freely reprotected
-pub const IMAGE_GUARD_DELAYLOAD_IAT_IN_ITS_OWN_SECTION: u32 = 0x00002000;
+pub const IMAGE_GUARD_DELAYLOAD_IAT_IN_ITS_OWN_SECTION: u32 = 0x0000_2000;
 /// Module contains suppressed export information.
 ///
 /// This also infers that the address taken taken IAT table is also present in the load config.
-pub const IMAGE_GUARD_CF_EXPORT_SUPPRESSION_INFO_PRESENT: u32 = 0x00004000;
+pub const IMAGE_GUARD_CF_EXPORT_SUPPRESSION_INFO_PRESENT: u32 = 0x0000_4000;
 /// Module enables suppression of exports
-pub const IMAGE_GUARD_CF_ENABLE_EXPORT_SUPPRESSION: u32 = 0x00008000;
+pub const IMAGE_GUARD_CF_ENABLE_EXPORT_SUPPRESSION: u32 = 0x0000_8000;
 /// Module contains longjmp target information
-pub const IMAGE_GUARD_CF_LONGJUMP_TABLE_PRESENT: u32 = 0x00010000;
+pub const IMAGE_GUARD_CF_LONGJUMP_TABLE_PRESENT: u32 = 0x0001_0000;
 /// Module contains return flow instrumentation and metadata
-pub const IMAGE_GUARD_RF_INSTRUMENTED: u32 = 0x00020000;
+pub const IMAGE_GUARD_RF_INSTRUMENTED: u32 = 0x0002_0000;
 /// Module requests that the OS enable return flow protection
-pub const IMAGE_GUARD_RF_ENABLE: u32 = 0x00040000;
+pub const IMAGE_GUARD_RF_ENABLE: u32 = 0x0004_0000;
 /// Module requests that the OS enable return flow protection in strict mode
-pub const IMAGE_GUARD_RF_STRICT: u32 = 0x00080000;
+pub const IMAGE_GUARD_RF_STRICT: u32 = 0x0008_0000;
 /// Module was built with retpoline support
-pub const IMAGE_GUARD_RETPOLINE_PRESENT: u32 = 0x00100000;
+pub const IMAGE_GUARD_RETPOLINE_PRESENT: u32 = 0x0010_0000;
 
 /// Stride of Guard CF function table encoded in these bits (additional count of bytes per element)
-pub const IMAGE_GUARD_CF_FUNCTION_TABLE_SIZE_MASK: u32 = 0xF0000000;
+pub const IMAGE_GUARD_CF_FUNCTION_TABLE_SIZE_MASK: u32 = 0xF000_0000;
 /// Shift to right-justify Guard CF function table stride
 pub const IMAGE_GUARD_CF_FUNCTION_TABLE_SIZE_SHIFT: u32 = 28;
 
@@ -2519,11 +2519,11 @@ pub struct ImageEnclaveImport {
     pub reserved: U32<LE>,
 }
 
-pub const IMAGE_ENCLAVE_IMPORT_MATCH_NONE: u32 = 0x00000000;
-pub const IMAGE_ENCLAVE_IMPORT_MATCH_UNIQUE_ID: u32 = 0x00000001;
-pub const IMAGE_ENCLAVE_IMPORT_MATCH_AUTHOR_ID: u32 = 0x00000002;
-pub const IMAGE_ENCLAVE_IMPORT_MATCH_FAMILY_ID: u32 = 0x00000003;
-pub const IMAGE_ENCLAVE_IMPORT_MATCH_IMAGE_ID: u32 = 0x00000004;
+pub const IMAGE_ENCLAVE_IMPORT_MATCH_NONE: u32 = 0x0000_0000;
+pub const IMAGE_ENCLAVE_IMPORT_MATCH_UNIQUE_ID: u32 = 0x0000_0001;
+pub const IMAGE_ENCLAVE_IMPORT_MATCH_AUTHOR_ID: u32 = 0x0000_0002;
+pub const IMAGE_ENCLAVE_IMPORT_MATCH_FAMILY_ID: u32 = 0x0000_0003;
+pub const IMAGE_ENCLAVE_IMPORT_MATCH_IMAGE_ID: u32 = 0x0000_0004;
 
 //
 // Debug Format
@@ -2788,13 +2788,13 @@ pub const IMPORT_OBJECT_NAME_UNDECORATE: u16 = 3;
 pub const IMPORT_OBJECT_NAME_EXPORTAS: u16 = 4;
 
 // COM+ Header entry point flags.
-pub const COMIMAGE_FLAGS_ILONLY: u32 = 0x00000001;
-pub const COMIMAGE_FLAGS_32BITREQUIRED: u32 = 0x00000002;
-pub const COMIMAGE_FLAGS_IL_LIBRARY: u32 = 0x00000004;
-pub const COMIMAGE_FLAGS_STRONGNAMESIGNED: u32 = 0x00000008;
-pub const COMIMAGE_FLAGS_NATIVE_ENTRYPOINT: u32 = 0x00000010;
-pub const COMIMAGE_FLAGS_TRACKDEBUGDATA: u32 = 0x00010000;
-pub const COMIMAGE_FLAGS_32BITPREFERRED: u32 = 0x00020000;
+pub const COMIMAGE_FLAGS_ILONLY: u32 = 0x0000_0001;
+pub const COMIMAGE_FLAGS_32BITREQUIRED: u32 = 0x0000_0002;
+pub const COMIMAGE_FLAGS_IL_LIBRARY: u32 = 0x0000_0004;
+pub const COMIMAGE_FLAGS_STRONGNAMESIGNED: u32 = 0x0000_0008;
+pub const COMIMAGE_FLAGS_NATIVE_ENTRYPOINT: u32 = 0x0000_0010;
+pub const COMIMAGE_FLAGS_TRACKDEBUGDATA: u32 = 0x0001_0000;
+pub const COMIMAGE_FLAGS_32BITPREFERRED: u32 = 0x0002_0000;
 
 // Version flags for image.
 pub const COR_VERSION_MAJOR_V2: u16 = 2;

@@ -52,7 +52,7 @@ impl<'data, Pe: ImageNtHeaders> PeFile<'data, Pe> {
         if nt_headers.signature() != pe::IMAGE_NT_SIGNATURE {
             return None;
         }
-        return Some(nt_headers.optional_header().magic());
+        Some(nt_headers.optional_header().magic())
     }
 
     /// Parse the raw PE file data.
