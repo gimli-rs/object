@@ -283,7 +283,11 @@ impl Object {
                 | SectionKind::TlsVariables
                 | SectionKind::Unknown
                 | SectionKind::Metadata => {
-                    return Err(format!("unimplemented section {:?}", section.kind))
+                    return Err(format!(
+                        "unimplemented section `{}` kind {:?}",
+                        section.name().unwrap_or(""),
+                        section.kind
+                    ))
                 }
             } | match section.align {
                 1 => coff::IMAGE_SCN_ALIGN_1BYTES,
@@ -300,7 +304,13 @@ impl Object {
                 2048 => coff::IMAGE_SCN_ALIGN_2048BYTES,
                 4096 => coff::IMAGE_SCN_ALIGN_4096BYTES,
                 8192 => coff::IMAGE_SCN_ALIGN_8192BYTES,
-                _ => return Err(format!("unimplemented section align {}", section.align)),
+                _ => {
+                    return Err(format!(
+                        "unimplemented section `{}` align {}",
+                        section.name().unwrap_or(""),
+                        section.align
+                    ))
+                }
             };
             let mut coff_section = coff::ImageSectionHeader {
                 name: [0; 8],
@@ -450,7 +460,10 @@ impl Object {
                 SymbolKind::Text | SymbolKind::Data | SymbolKind::Tls => {
                     match symbol.section {
                         SymbolSection::None => {
-                            return Err(format!("missing symbol section {:?}", symbol));
+                            return Err(format!(
+                                "missing section for symbol `{}`",
+                                symbol.name().unwrap_or("")
+                            ));
                         }
                         SymbolSection::Undefined => coff::IMAGE_SYM_CLASS_EXTERNAL_DEF,
                         SymbolSection::Common => coff::IMAGE_SYM_CLASS_EXTERNAL,
@@ -459,7 +472,11 @@ impl Object {
                                 // TODO: does this need aux symbol records too?
                                 _ if symbol.weak => coff::IMAGE_SYM_CLASS_WEAK_EXTERNAL,
                                 SymbolScope::Unknown => {
-                                    return Err(format!("unimplemented symbol scope {:?}", symbol));
+                                    return Err(format!(
+                                        "unimplemented symbol `{}` scope {:?}",
+                                        symbol.name().unwrap_or(""),
+                                        symbol.scope
+                                    ));
                                 }
                                 SymbolScope::Compilation => coff::IMAGE_SYM_CLASS_STATIC,
                                 SymbolScope::Linkage | SymbolScope::Dynamic => {
@@ -469,7 +486,13 @@ impl Object {
                         }
                     }
                 }
-                _ => return Err(format!("unimplemented symbol kind {:?}", symbol)),
+                SymbolKind::Unknown | SymbolKind::Null => {
+                    return Err(format!(
+                        "unimplemented symbol `{}` kind {:?}",
+                        symbol.name().unwrap_or(""),
+                        symbol.kind
+                    ))
+                }
             };
             let number_of_aux_symbols = symbol_offsets[index].aux_count;
             let value = if symbol.section == SymbolSection::Common {

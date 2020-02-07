@@ -5,6 +5,7 @@
 #![allow(clippy::module_inception)]
 
 use std::collections::HashMap;
+use std::str;
 use std::string::String;
 use std::vec::Vec;
 
@@ -584,6 +585,12 @@ pub struct Section {
 }
 
 impl Section {
+    /// Try to convert the name to a utf8 string.
+    #[inline]
+    pub fn name(&self) -> Option<&str> {
+        str::from_utf8(&self.name).ok()
+    }
+
     /// Return true if this section contains zerofill data.
     #[inline]
     pub fn is_bss(&self) -> bool {
@@ -698,6 +705,12 @@ pub struct Symbol {
 }
 
 impl Symbol {
+    /// Try to convert the name to a utf8 string.
+    #[inline]
+    pub fn name(&self) -> Option<&str> {
+        str::from_utf8(&self.name).ok()
+    }
+
     /// Return true if the symbol is undefined.
     #[inline]
     pub fn is_undefined(&self) -> bool {

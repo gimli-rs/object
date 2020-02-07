@@ -259,10 +259,14 @@ impl Object {
         let mut nsyms = 0;
         for (index, symbol) in self.symbols.iter().enumerate() {
             match symbol.kind {
-                SymbolKind::Unknown | SymbolKind::Text | SymbolKind::Data | SymbolKind::Tls => {}
+                SymbolKind::Text | SymbolKind::Data | SymbolKind::Tls => {}
                 SymbolKind::File | SymbolKind::Section => continue,
-                SymbolKind::Null | SymbolKind::Label => {
-                    return Err(format!("unimplemented symbol {:?}", symbol))
+                SymbolKind::Unknown | SymbolKind::Null | SymbolKind::Label => {
+                    return Err(format!(
+                        "unimplemented symbol `{}` kind {:?}",
+                        symbol.name().unwrap_or(""),
+                        symbol.kind
+                    ));
                 }
             }
             symbol_offsets[index].index = nsyms;
@@ -370,10 +374,14 @@ impl Object {
                     SectionKind::TlsVariables => macho::S_THREAD_LOCAL_VARIABLES,
                     SectionKind::Debug => macho::S_ATTR_DEBUG,
                     SectionKind::OtherString => macho::S_CSTRING_LITERALS,
-                    SectionKind::Other
-                    | SectionKind::Unknown
-                    | SectionKind::Linker
-                    | SectionKind::Metadata => 0,
+                    SectionKind::Other | SectionKind::Linker | SectionKind::Metadata => 0,
+                    SectionKind::Unknown => {
+                        return Err(format!(
+                            "unimplemented section `{}` kind {:?}",
+                            section.name().unwrap_or(""),
+                            section.kind
+                        ));
+                    }
                 }
             };
             macho.write_section(
@@ -420,10 +428,14 @@ impl Object {
         debug_assert_eq!(symtab_offset, buffer.len());
         for (index, symbol) in self.symbols.iter().enumerate() {
             match symbol.kind {
-                SymbolKind::Unknown | SymbolKind::Text | SymbolKind::Data | SymbolKind::Tls => {}
+                SymbolKind::Text | SymbolKind::Data | SymbolKind::Tls => {}
                 SymbolKind::File | SymbolKind::Section => continue,
-                SymbolKind::Null | SymbolKind::Label => {
-                    return Err(format!("unimplemented symbol {:?}", symbol))
+                SymbolKind::Unknown | SymbolKind::Null | SymbolKind::Label => {
+                    return Err(format!(
+                        "unimplemented symbol `{}` kind {:?}",
+                        symbol.name().unwrap_or(""),
+                        symbol.kind
+                    ))
                 }
             }
             // TODO: N_STAB
@@ -432,7 +444,11 @@ impl Object {
                 SymbolSection::Absolute => (macho::N_ABS, 0),
                 SymbolSection::Section(id) => (macho::N_SECT, id.0 + 1),
                 SymbolSection::None | SymbolSection::Common => {
-                    return Err(format!("unimplemented symbol.section {:?}", symbol.section))
+                    return Err(format!(
+                        "unimplemented symbol `{}` section {:?}",
+                        symbol.name().unwrap_or(""),
+                        symbol.section
+                    ))
                 }
             };
             match symbol.scope {
