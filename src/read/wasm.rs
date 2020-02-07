@@ -18,21 +18,21 @@ use crate::read::{
     SymbolSection,
 };
 
-const SECTION_CUSTOM: u8 = 0;
-const SECTION_TYPE: u8 = 1;
-const SECTION_IMPORT: u8 = 2;
-const SECTION_FUNCTION: u8 = 3;
-const SECTION_TABLE: u8 = 4;
-const SECTION_MEMORY: u8 = 5;
-const SECTION_GLOBAL: u8 = 6;
-const SECTION_EXPORT: u8 = 7;
-const SECTION_START: u8 = 8;
-const SECTION_ELEMENT: u8 = 9;
-const SECTION_CODE: u8 = 10;
-const SECTION_DATA: u8 = 11;
-const SECTION_DATA_COUNT: u8 = 12;
+const SECTION_CUSTOM: usize = 0;
+const SECTION_TYPE: usize = 1;
+const SECTION_IMPORT: usize = 2;
+const SECTION_FUNCTION: usize = 3;
+const SECTION_TABLE: usize = 4;
+const SECTION_MEMORY: usize = 5;
+const SECTION_GLOBAL: usize = 6;
+const SECTION_EXPORT: usize = 7;
+const SECTION_START: usize = 8;
+const SECTION_ELEMENT: usize = 9;
+const SECTION_CODE: usize = 10;
+const SECTION_DATA: usize = 11;
+const SECTION_DATA_COUNT: usize = 12;
 // Update this constant when adding new section id:
-const MAX_SECTION_ID: u8 = SECTION_DATA_COUNT;
+const MAX_SECTION_ID: usize = SECTION_DATA_COUNT;
 
 /// A WebAssembly object file.
 #[derive(Debug, Default)]
@@ -40,7 +40,7 @@ pub struct WasmFile<'data> {
     // All sections, including custom sections.
     sections: Vec<wp::Section<'data>>,
     // Indices into `sections` of sections with a non-zero id.
-    id_sections: Box<[Option<usize>; (MAX_SECTION_ID + 1) as usize]>,
+    id_sections: Box<[Option<usize>; MAX_SECTION_ID + 1]>,
     // Payload of custom section called "name".
     names_data: Option<&'data [u8]>,
     // Whether the file has DWARF information.
@@ -67,7 +67,7 @@ impl<'data> WasmFile<'data> {
                 }
                 code => {
                     let id = section_code_to_id(code);
-                    file.id_sections[id as usize] = Some(file.sections.len());
+                    file.id_sections[id] = Some(file.sections.len());
                 }
             }
 
@@ -269,7 +269,7 @@ impl<'data, 'file> ObjectSection<'data> for WasmSection<'data, 'file> {
     fn index(&self) -> SectionIndex {
         // Note that we treat all custom sections as index 0.
         // This is ok because they are never looked up by index.
-        SectionIndex(section_code_to_id(self.section.code) as usize)
+        SectionIndex(section_code_to_id(self.section.code))
     }
 
     #[inline]
@@ -416,7 +416,7 @@ impl<'data, 'file> Iterator for WasmRelocationIterator<'data, 'file> {
     }
 }
 
-fn section_code_to_id(code: wp::SectionCode) -> u8 {
+fn section_code_to_id(code: wp::SectionCode) -> usize {
     match code {
         wp::SectionCode::Custom { .. } => SECTION_CUSTOM,
         wp::SectionCode::Type => SECTION_TYPE,
