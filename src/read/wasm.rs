@@ -5,18 +5,20 @@
 //! Currently implements the minimum required to access DWARF debugging information.
 #[cfg(feature = "compression")]
 use alloc::borrow::Cow;
+use alloc::boxed::Box;
 use alloc::vec::Vec;
 use core::marker::PhantomData;
-use core::{slice, str};
+use core::{fmt, slice, str};
 use target_lexicon::Architecture;
+use wasmparser as wp;
 
-use crate::pod::Bytes;
 use crate::read::{
     self, FileFlags, Object, ObjectSection, ObjectSegment, Relocation, SectionFlags, SectionIndex,
     SectionKind, Symbol, SymbolFlags, SymbolIndex, SymbolKind, SymbolMap, SymbolScope,
     SymbolSection,
 };
 
+const SECTION_CUSTOM: u8 = 0;
 const SECTION_TYPE: u8 = 1;
 const SECTION_IMPORT: u8 = 2;
 const SECTION_FUNCTION: u8 = 3;
@@ -28,75 +30,51 @@ const SECTION_START: u8 = 8;
 const SECTION_ELEMENT: u8 = 9;
 const SECTION_CODE: u8 = 10;
 const SECTION_DATA: u8 = 11;
+const SECTION_DATA_COUNT: u8 = 12;
+// Update this constant when adding new section id:
+const MAX_SECTION_ID: u8 = SECTION_DATA_COUNT;
 
 /// A WebAssembly object file.
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct WasmFile<'data> {
     // All sections, including custom sections.
-    sections: Vec<SectionHeader<'data>>,
+    sections: Vec<wp::Section<'data>>,
     // Indices into `sections` of sections with a non-zero id.
-    id_sections: Vec<Option<usize>>,
-    // Index into `sections` of custom section called "name".
-    name: Bytes<'data>,
+    id_sections: Box<[Option<usize>; (MAX_SECTION_ID + 1) as usize]>,
+    // Payload of custom section called "name".
+    names_data: Option<&'data [u8]>,
+    // Whether the file has DWARF information.
+    has_debug_symbols: bool,
 }
 
 impl<'data> WasmFile<'data> {
     /// Parse the raw wasm data.
     pub fn parse(data: &'data [u8]) -> Result<Self, &'static str> {
-        let mut data = Bytes(data);
-        let header = read_bytes(&mut data, 8).ok_or("Invalid WASM header size")?;
-        if header.0 != [0x00, b'a', b's', b'm', 0x01, 0x00, 0x00, 0x00] {
-            return Err("Unsupported WASM header");
-        }
+        let module = wp::ModuleReader::new(data).map_err(|_| "Invalid WASM header")?;
 
-        let mut sections = Vec::new();
-        let mut id_sections = Vec::with_capacity(16);
-        let mut name = Bytes(&[]);
+        let mut file = WasmFile::default();
 
-        while let Some(id) = read_byte(&mut data) {
-            // TODO: validate section order
-            let mut section_data = read_u32_bytes(&mut data).ok_or("Invalid section size")?;
-            let section_name;
-            if id == 0 {
-                let section_name_bytes =
-                    read_u32_bytes(&mut section_data).ok_or("Invalid section name size")?;
-                section_name =
-                    str::from_utf8(section_name_bytes.0).map_err(|_| "Invalid section name")?;
-                if section_name == "name" {
-                    name = section_data;
+        for section in module {
+            let section = section.map_err(|_| "Invalid section header")?;
+
+            match section.code {
+                wp::SectionCode::Custom { kind, name } => {
+                    if kind == wp::CustomSectionKind::Name {
+                        file.names_data = Some(section.range().slice(data));
+                    } else if name.starts_with(".debug_") {
+                        file.has_debug_symbols = true;
+                    }
                 }
-            } else {
-                section_name = match id {
-                    SECTION_TYPE => "<type>",
-                    SECTION_IMPORT => "<import>",
-                    SECTION_FUNCTION => "<function>",
-                    SECTION_TABLE => "<table>",
-                    SECTION_MEMORY => "<memory>",
-                    SECTION_GLOBAL => "<global>",
-                    SECTION_EXPORT => "<export>",
-                    SECTION_START => "<start>",
-                    SECTION_ELEMENT => "<element>",
-                    SECTION_CODE => "<code>",
-                    SECTION_DATA => "<data>",
-                    _ => "<unknown>",
-                };
-                if id_sections.len() <= id as usize {
-                    id_sections.resize(id as usize + 1, None);
+                code => {
+                    let id = section_code_to_id(code);
+                    file.id_sections[id as usize] = Some(file.sections.len());
                 }
-                id_sections[id as usize] = Some(sections.len());
             }
-            sections.push(SectionHeader {
-                index: SectionIndex(id as usize),
-                name: section_name,
-                data: section_data,
-            });
+
+            file.sections.push(section);
         }
 
-        Ok(WasmFile {
-            sections,
-            id_sections,
-            name,
-        })
+        Ok(file)
     }
 }
 
@@ -161,22 +139,29 @@ where
     }
 
     fn symbols(&'file self) -> Self::SymbolIterator {
-        let mut data = find_subsection(self.name, 1).unwrap_or(Bytes(&[]));
-        let length = read_u32(&mut data).unwrap_or(0) as usize;
         WasmSymbolIterator {
             file: self,
-            index: 0,
-            length,
-            data,
+            names: self.names_data.and_then(|names| {
+                let func = wp::NameSectionReader::new(names, 0)
+                    .ok()?
+                    .into_iter()
+                    .filter_map(|name| name.ok())
+                    .find_map(|name| match name {
+                        wp::Name::Function(func) => Some(func),
+                        _ => None,
+                    })?;
+
+                let reader = func.get_map().ok()?;
+
+                Some(NamingIterator { reader }.enumerate())
+            }),
         }
     }
 
     fn dynamic_symbols(&'file self) -> Self::SymbolIterator {
         WasmSymbolIterator {
             file: self,
-            index: 0,
-            length: 0,
-            data: Bytes(&[]),
+            names: None,
         }
     }
 
@@ -187,9 +172,7 @@ where
     }
 
     fn has_debug_symbols(&self) -> bool {
-        // We ignore the "name" section, and use this to mean whether the wasm
-        // has DWARF.
-        self.sections.iter().any(|s| s.name.starts_with(".debug_"))
+        self.has_debug_symbols
     }
 
     #[inline]
@@ -259,7 +242,7 @@ impl<'data, 'file> ObjectSegment<'data> for WasmSegment<'data, 'file> {
 /// An iterator over the sections of a `WasmFile`.
 #[derive(Debug)]
 pub struct WasmSectionIterator<'data, 'file> {
-    sections: slice::Iter<'file, SectionHeader<'data>>,
+    sections: slice::Iter<'file, wp::Section<'data>>,
 }
 
 impl<'data, 'file> Iterator for WasmSectionIterator<'data, 'file> {
@@ -273,17 +256,8 @@ impl<'data, 'file> Iterator for WasmSectionIterator<'data, 'file> {
 
 /// A section of a `WasmFile`.
 #[derive(Debug)]
-struct SectionHeader<'data> {
-    index: SectionIndex,
-    // Name is only valid for custom sections.
-    name: &'data str,
-    data: Bytes<'data>,
-}
-
-/// A section of a `WasmFile`.
-#[derive(Debug)]
 pub struct WasmSection<'data, 'file> {
-    section: &'file SectionHeader<'data>,
+    section: &'file wp::Section<'data>,
 }
 
 impl<'data, 'file> read::private::Sealed for WasmSection<'data, 'file> {}
@@ -295,7 +269,7 @@ impl<'data, 'file> ObjectSection<'data> for WasmSection<'data, 'file> {
     fn index(&self) -> SectionIndex {
         // Note that we treat all custom sections as index 0.
         // This is ok because they are never looked up by index.
-        self.section.index
+        SectionIndex(section_code_to_id(self.section.code) as usize)
     }
 
     #[inline]
@@ -306,7 +280,8 @@ impl<'data, 'file> ObjectSection<'data> for WasmSection<'data, 'file> {
 
     #[inline]
     fn size(&self) -> u64 {
-        self.section.data.0.len() as u64
+        let range = self.section.range();
+        (range.end - range.start) as u64
     }
 
     #[inline]
@@ -321,7 +296,10 @@ impl<'data, 'file> ObjectSection<'data> for WasmSection<'data, 'file> {
 
     #[inline]
     fn data(&self) -> &'data [u8] {
-        self.section.data.0
+        let mut reader = self.section.get_binary_reader();
+        // TODO: raise a feature request upstream to be able
+        // to get remaining slice from a BinaryReader directly.
+        reader.read_bytes(reader.bytes_remaining()).unwrap()
     }
 
     fn data_range(&self, _address: u64, _size: u64) -> Option<&'data [u8]> {
@@ -336,7 +314,21 @@ impl<'data, 'file> ObjectSection<'data> for WasmSection<'data, 'file> {
 
     #[inline]
     fn name(&self) -> Option<&str> {
-        Some(self.section.name)
+        Some(match self.section.code {
+            wp::SectionCode::Custom { name, .. } => name,
+            wp::SectionCode::Type => "<type>",
+            wp::SectionCode::Import => "<import>",
+            wp::SectionCode::Function => "<function>",
+            wp::SectionCode::Table => "<table>",
+            wp::SectionCode::Memory => "<memory>",
+            wp::SectionCode::Global => "<global>",
+            wp::SectionCode::Export => "<export>",
+            wp::SectionCode::Start => "<start>",
+            wp::SectionCode::Element => "<element>",
+            wp::SectionCode::Code => "<code>",
+            wp::SectionCode::Data => "<data>",
+            wp::SectionCode::DataCount => "<data_count>",
+        })
     }
 
     #[inline]
@@ -360,31 +352,45 @@ impl<'data, 'file> ObjectSection<'data> for WasmSection<'data, 'file> {
     }
 }
 
+// Upstream NamingReader doesn't have Debug derived,
+// so we provide own wrapper that also serves as an Iterator.
+struct NamingIterator<'data> {
+    reader: wp::NamingReader<'data>,
+}
+
+impl fmt::Debug for NamingIterator<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("NamingIterator")
+            .field("count", &self.reader.get_count())
+            .finish()
+    }
+}
+
+impl<'data> Iterator for NamingIterator<'data> {
+    type Item = wp::Naming<'data>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.reader.read().ok()
+    }
+}
+
 /// An iterator over the symbols of a `WasmFile`.
 #[derive(Debug)]
 pub struct WasmSymbolIterator<'data, 'file> {
     file: &'file WasmFile<'data>,
-    index: usize,
-    length: usize,
-    data: Bytes<'data>,
+    names: Option<core::iter::Enumerate<NamingIterator<'data>>>,
 }
 
 impl<'data, 'file> Iterator for WasmSymbolIterator<'data, 'file> {
     type Item = (SymbolIndex, Symbol<'data>);
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.index >= self.length {
-            return None;
-        }
-        let func = read_u32(&mut self.data)?;
-        let name = read_u32_bytes(&mut self.data)?;
-        let index = SymbolIndex(self.index);
-        self.index += 1;
+        let (index, naming) = self.names.as_mut()?.next()?;
         Some((
-            index,
+            SymbolIndex(index),
             Symbol {
-                name: str::from_utf8(name.0).ok(),
-                address: func as u64,
+                name: Some(naming.name),
+                address: naming.index as u64,
                 size: 0,
                 kind: SymbolKind::Text,
                 // TODO: maybe treat each function as a section?
@@ -410,63 +416,20 @@ impl<'data, 'file> Iterator for WasmRelocationIterator<'data, 'file> {
     }
 }
 
-fn find_subsection(mut bytes: Bytes, match_id: u8) -> Option<Bytes> {
-    while let Some(id) = read_byte(&mut bytes) {
-        let subsection = read_u32_bytes(&mut bytes)?;
-        if id == match_id {
-            return Some(subsection);
-        }
+fn section_code_to_id(code: wp::SectionCode) -> u8 {
+    match code {
+        wp::SectionCode::Custom { .. } => SECTION_CUSTOM,
+        wp::SectionCode::Type => SECTION_TYPE,
+        wp::SectionCode::Import => SECTION_IMPORT,
+        wp::SectionCode::Function => SECTION_FUNCTION,
+        wp::SectionCode::Table => SECTION_TABLE,
+        wp::SectionCode::Memory => SECTION_MEMORY,
+        wp::SectionCode::Global => SECTION_GLOBAL,
+        wp::SectionCode::Export => SECTION_EXPORT,
+        wp::SectionCode::Start => SECTION_START,
+        wp::SectionCode::Element => SECTION_ELEMENT,
+        wp::SectionCode::Code => SECTION_CODE,
+        wp::SectionCode::Data => SECTION_DATA,
+        wp::SectionCode::DataCount => SECTION_DATA_COUNT,
     }
-    None
-}
-
-fn read_u32_bytes<'data>(bytes: &mut Bytes<'data>) -> Option<Bytes<'data>> {
-    let size = read_u32(bytes)? as usize;
-    bytes.read_bytes(size)
-}
-
-fn read_bytes<'data>(bytes: &mut Bytes<'data>, size: usize) -> Option<Bytes<'data>> {
-    bytes.read_bytes(size)
-}
-
-fn read_byte(bytes: &mut Bytes) -> Option<u8> {
-    bytes.read().copied()
-}
-
-// Read an intermediate leb128 byte.
-// Updates the value.
-// Returns the value if the continuation bit is not set.
-// Returns None if input is empty.
-macro_rules! read_u7 {
-    ($input:expr, $value:expr, $shift:expr) => {
-        let byte = read_byte($input)?;
-        $value |= u32::from(byte & 0x7f) << $shift;
-        if byte & 0x80 == 0 {
-            return Some($value);
-        }
-    };
-}
-
-// Read a final leb128 byte.
-// Returns the value.
-// Returns None if input is empty or more than `$bits` bits are set.
-macro_rules! read_u7_final {
-    ($input:expr, $value:expr, $shift:expr, $bits:expr) => {{
-        let byte = read_byte($input)?;
-        if byte >> $bits == 0 {
-            Some($value | u32::from(byte) << $shift)
-        } else {
-            None
-        }
-    }};
-}
-
-// leb128
-fn read_u32(bytes: &mut Bytes) -> Option<u32> {
-    let mut value = 0;
-    read_u7!(bytes, value, 0);
-    read_u7!(bytes, value, 7);
-    read_u7!(bytes, value, 14);
-    read_u7!(bytes, value, 21);
-    read_u7_final!(bytes, value, 28, 4)
 }
