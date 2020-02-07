@@ -147,7 +147,7 @@ where
 
     fn has_debug_symbols(&self) -> bool {
         for section in self.sections {
-            if section.name[..12] == b".debug_info\0"[..] {
+            if section.name(self.symbols.strings) == Some(".debug_info") {
                 return true;
             }
         }
