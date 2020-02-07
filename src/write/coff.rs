@@ -38,7 +38,8 @@ impl Object {
             StandardSection::UninitializedData => {
                 (&[], &b".bss"[..], SectionKind::UninitializedData)
             }
-            StandardSection::Tls => (&[], &b".tls$"[..], SectionKind::Tls),
+            // TLS sections are data sections with a special name.
+            StandardSection::Tls => (&[], &b".tls$"[..], SectionKind::Data),
             StandardSection::UninitializedTls => {
                 // Unsupported section.
                 (&[], &[], SectionKind::UninitializedTls)
@@ -446,7 +447,7 @@ impl Object {
                 }
                 SymbolKind::Section => coff::IMAGE_SYM_CLASS_STATIC,
                 SymbolKind::Label => coff::IMAGE_SYM_CLASS_LABEL,
-                SymbolKind::Text | SymbolKind::Data => {
+                SymbolKind::Text | SymbolKind::Data | SymbolKind::Tls => {
                     match symbol.section {
                         SymbolSection::None => {
                             return Err(format!("missing symbol section {:?}", symbol));
