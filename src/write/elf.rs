@@ -398,12 +398,12 @@ impl Object {
         if need_symtab_shndx {
             symtab_shndx.write(&U32::new(endian, 0));
         }
-        let mut write_symbol = |index: usize, symbol: &Symbol| {
+        let mut write_symbol = |index: usize, symbol: &Symbol| -> Result<(), String> {
             let st_info = if let SymbolFlags::Elf { st_info, .. } = symbol.flags {
                 st_info
             } else {
                 let st_type = match symbol.kind {
-                    SymbolKind::Unknown | SymbolKind::Null => elf::STT_NOTYPE,
+                    SymbolKind::Null => elf::STT_NOTYPE,
                     SymbolKind::Text => {
                         if symbol.is_undefined() {
                             elf::STT_NOTYPE
@@ -424,6 +424,13 @@ impl Object {
                     SymbolKind::File => elf::STT_FILE,
                     SymbolKind::Tls => elf::STT_TLS,
                     SymbolKind::Label => elf::STT_NOTYPE,
+                    SymbolKind::Unknown => {
+                        return Err(format!(
+                            "unimplemented symbol `{}` kind {:?}",
+                            symbol.name().unwrap_or(""),
+                            symbol.kind
+                        ))
+                    }
                 };
                 let st_bind = if symbol.is_undefined() {
                     elf::STB_GLOBAL
@@ -481,15 +488,16 @@ impl Object {
             if need_symtab_shndx {
                 symtab_shndx.write(&U32::new(endian, xindex));
             }
+            Ok(())
         };
         for (index, symbol) in self.symbols.iter().enumerate() {
             if symbol.is_local() {
-                write_symbol(index, symbol);
+                write_symbol(index, symbol)?;
             }
         }
         for (index, symbol) in self.symbols.iter().enumerate() {
             if !symbol.is_local() {
-                write_symbol(index, symbol);
+                write_symbol(index, symbol)?;
             }
         }
         if need_symtab_shndx {
@@ -618,11 +626,14 @@ impl Object {
                     SectionKind::OtherString => elf::SHF_STRINGS | elf::SHF_MERGE,
                     SectionKind::Other
                     | SectionKind::Debug
-                    | SectionKind::Unknown
                     | SectionKind::Metadata
                     | SectionKind::Linker => 0,
-                    SectionKind::Common | SectionKind::TlsVariables => {
-                        return Err(format!("unimplemented section {:?}", section.kind))
+                    SectionKind::Unknown | SectionKind::Common | SectionKind::TlsVariables => {
+                        return Err(format!(
+                            "unimplemented section `{}` kind {:?}",
+                            section.name().unwrap_or(""),
+                            section.kind
+                        ))
                     }
                 }
                 .into()
