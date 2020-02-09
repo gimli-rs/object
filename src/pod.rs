@@ -6,7 +6,9 @@
 #![cfg_attr(not(all(feature = "read_core", feature = "write_core")), allow(dead_code))]
 
 use alloc::vec::Vec;
-use core::{fmt, mem, slice};
+use core::{fmt, mem, result, slice};
+
+type Result<T> = result::Result<T, ()>;
 
 /// A trait for types that can safely be converted from and to byte slices.
 ///
@@ -17,33 +19,33 @@ use core::{fmt, mem, slice};
 pub unsafe trait Pod: Copy + 'static {}
 
 #[inline]
-pub(crate) fn from_bytes<T: Pod>(data: &[u8]) -> Option<(&T, &[u8])> {
+pub(crate) fn from_bytes<T: Pod>(data: &[u8]) -> Result<(&T, &[u8])> {
     let ptr = data.as_ptr();
     if (ptr as usize) % mem::align_of::<T>() != 0 {
-        return None;
+        return Err(());
     }
     let size = mem::size_of::<T>();
-    let tail = data.get(size..)?;
+    let tail = data.get(size..).ok_or(())?;
     // Safety:
     // The alignment and size are checked by this function.
     // The Pod trait ensures the type is valid to cast from bytes.
     let val = unsafe { &*ptr.cast() };
-    Some((val, tail))
+    Ok((val, tail))
 }
 
 #[inline]
-pub(crate) fn slice_from_bytes<T: Pod>(data: &[u8], count: usize) -> Option<(&[T], &[u8])> {
+pub(crate) fn slice_from_bytes<T: Pod>(data: &[u8], count: usize) -> Result<(&[T], &[u8])> {
     let ptr = data.as_ptr();
     if (ptr as usize) % mem::align_of::<T>() != 0 {
-        return None;
+        return Err(());
     }
-    let size = count.checked_mul(mem::size_of::<T>())?;
-    let tail = data.get(size..)?;
+    let size = count.checked_mul(mem::size_of::<T>()).ok_or(())?;
+    let tail = data.get(size..).ok_or(())?;
     // Safety:
     // The alignment and size are checked by this function.
     // The Pod trait ensures the type is valid to cast from bytes.
     let slice = unsafe { slice::from_raw_parts(ptr.cast(), count) };
-    Some((slice, tail))
+    Ok((slice, tail))
 }
 
 #[inline]
@@ -78,75 +80,80 @@ impl<'data> Bytes<'data> {
     }
 
     #[inline]
-    pub fn skip(&mut self, offset: usize) -> Option<()> {
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
+
+    #[inline]
+    pub fn skip(&mut self, offset: usize) -> Result<()> {
         match self.0.get(offset..) {
             Some(tail) => {
                 self.0 = tail;
-                Some(())
+                Ok(())
             }
             None => {
                 self.0 = &[];
-                None
+                Err(())
             }
         }
     }
 
     #[inline]
-    pub fn read_bytes(&mut self, count: usize) -> Option<Bytes<'data>> {
+    pub fn read_bytes(&mut self, count: usize) -> Result<Bytes<'data>> {
         match (self.0.get(..count), self.0.get(count..)) {
             (Some(head), Some(tail)) => {
                 self.0 = tail;
-                Some(Bytes(head))
+                Ok(Bytes(head))
             }
             _ => {
                 self.0 = &[];
-                None
+                Err(())
             }
         }
     }
 
     #[inline]
-    pub fn read_bytes_at(mut self, offset: usize, count: usize) -> Option<Bytes<'data>> {
+    pub fn read_bytes_at(mut self, offset: usize, count: usize) -> Result<Bytes<'data>> {
         self.skip(offset)?;
         self.read_bytes(count)
     }
 
     #[inline]
-    pub fn read<T: Pod>(&mut self) -> Option<&'data T> {
+    pub fn read<T: Pod>(&mut self) -> Result<&'data T> {
         match from_bytes(self.0) {
-            Some((value, tail)) => {
+            Ok((value, tail)) => {
                 self.0 = tail;
-                Some(value)
+                Ok(value)
             }
-            None => {
+            Err(()) => {
                 self.0 = &[];
-                None
+                Err(())
             }
         }
     }
 
     #[inline]
-    pub fn read_at<T: Pod>(mut self, offset: usize) -> Option<&'data T> {
+    pub fn read_at<T: Pod>(mut self, offset: usize) -> Result<&'data T> {
         self.skip(offset)?;
         self.read()
     }
 
     #[inline]
-    pub fn read_slice<T: Pod>(&mut self, count: usize) -> Option<&'data [T]> {
+    pub fn read_slice<T: Pod>(&mut self, count: usize) -> Result<&'data [T]> {
         match slice_from_bytes(self.0, count) {
-            Some((value, tail)) => {
+            Ok((value, tail)) => {
                 self.0 = tail;
-                Some(value)
+                Ok(value)
             }
-            None => {
+            Err(()) => {
                 self.0 = &[];
-                None
+                Err(())
             }
         }
     }
 
     #[inline]
-    pub fn read_slice_at<T: Pod>(mut self, offset: usize, count: usize) -> Option<&'data [T]> {
+    pub fn read_slice_at<T: Pod>(mut self, offset: usize, count: usize) -> Result<&'data [T]> {
         self.skip(offset)?;
         self.read_slice(count)
     }
@@ -156,17 +163,17 @@ impl<'data> Bytes<'data> {
     /// Does not assume any encoding.
     /// Reads past the null byte, but doesn't return it.
     #[inline]
-    pub fn read_string(&mut self) -> Option<&'data [u8]> {
+    pub fn read_string(&mut self) -> Result<&'data [u8]> {
         match self.0.iter().position(|&x| x == 0) {
             Some(null) => {
                 // These will never fail.
                 let bytes = self.read_bytes(null)?;
                 self.skip(1)?;
-                Some(bytes.0)
+                Ok(bytes.0)
             }
             None => {
                 self.0 = &[];
-                None
+                Err(())
             }
         }
     }
@@ -175,7 +182,7 @@ impl<'data> Bytes<'data> {
     ///
     /// Does not assume any encoding. Does not return the null byte.
     #[inline]
-    pub fn read_string_at(mut self, offset: usize) -> Option<&'data [u8]> {
+    pub fn read_string_at(mut self, offset: usize) -> Result<&'data [u8]> {
         self.skip(offset)?;
         self.read_string()
     }
@@ -221,7 +228,7 @@ impl BytesMut {
     }
 
     #[inline]
-    pub fn write_at<T: Pod>(&mut self, offset: usize, val: &T) -> Result<(), ()> {
+    pub fn write_at<T: Pod>(&mut self, offset: usize, val: &T) -> Result<()> {
         let src = bytes_of(val);
         let dest = self.0.get_mut(offset..).ok_or(())?;
         let dest = dest.get_mut(..src.len()).ok_or(())?;
@@ -300,9 +307,9 @@ mod tests {
         assert_eq!(*y, x16[1]);
         assert_eq!(tail, &[]);
 
-        assert_eq!(from_bytes::<u16>(&bytes[1..]), None);
-        assert_eq!(from_bytes::<u16>(&bytes[3..]), None);
-        assert_eq!(from_bytes::<u16>(&bytes[4..]), None);
+        assert_eq!(from_bytes::<u16>(&bytes[1..]), Err(()));
+        assert_eq!(from_bytes::<u16>(&bytes[3..]), Err(()));
+        assert_eq!(from_bytes::<u16>(&bytes[4..]), Err(()));
     }
 
     #[test]
@@ -326,9 +333,9 @@ mod tests {
         assert_eq!(y, &x16[1..3]);
         assert_eq!(tail, &bytes[6..]);
 
-        assert_eq!(slice_from_bytes::<u16>(&bytes, 5), None);
-        assert_eq!(slice_from_bytes::<u16>(&bytes[2..], 4), None);
-        assert_eq!(slice_from_bytes::<u16>(&bytes[1..], 2), None);
+        assert_eq!(slice_from_bytes::<u16>(&bytes, 5), Err(()));
+        assert_eq!(slice_from_bytes::<u16>(&bytes[2..], 4), Err(()));
+        assert_eq!(slice_from_bytes::<u16>(&bytes[1..], 2), Err(()));
     }
 
     #[test]
@@ -337,81 +344,81 @@ mod tests {
         let data = Bytes(bytes_of(&x));
 
         let mut bytes = data;
-        assert_eq!(bytes.skip(0), Some(()));
+        assert_eq!(bytes.skip(0), Ok(()));
         assert_eq!(bytes, data);
 
         let mut bytes = data;
-        assert_eq!(bytes.skip(4), Some(()));
+        assert_eq!(bytes.skip(4), Ok(()));
         assert_eq!(bytes, Bytes(&[]));
 
         let mut bytes = data;
-        assert_eq!(bytes.skip(5), None);
+        assert_eq!(bytes.skip(5), Err(()));
         assert_eq!(bytes, Bytes(&[]));
 
         let mut bytes = data;
-        assert_eq!(bytes.read_bytes(0), Some(Bytes(&[])));
+        assert_eq!(bytes.read_bytes(0), Ok(Bytes(&[])));
         assert_eq!(bytes, data);
 
         let mut bytes = data;
-        assert_eq!(bytes.read_bytes(4), Some(data));
+        assert_eq!(bytes.read_bytes(4), Ok(data));
         assert_eq!(bytes, Bytes(&[]));
 
         let mut bytes = data;
-        assert_eq!(bytes.read_bytes(5), None);
+        assert_eq!(bytes.read_bytes(5), Err(()));
         assert_eq!(bytes, Bytes(&[]));
 
-        assert_eq!(data.read_bytes_at(0, 0), Some(Bytes(&[])));
-        assert_eq!(data.read_bytes_at(4, 0), Some(Bytes(&[])));
-        assert_eq!(data.read_bytes_at(0, 4), Some(data));
-        assert_eq!(data.read_bytes_at(1, 4), None);
+        assert_eq!(data.read_bytes_at(0, 0), Ok(Bytes(&[])));
+        assert_eq!(data.read_bytes_at(4, 0), Ok(Bytes(&[])));
+        assert_eq!(data.read_bytes_at(0, 4), Ok(data));
+        assert_eq!(data.read_bytes_at(1, 4), Err(()));
 
         let mut bytes = data;
-        assert_eq!(bytes.read::<u16>(), Some(&u16::to_be(0x0123)));
+        assert_eq!(bytes.read::<u16>(), Ok(&u16::to_be(0x0123)));
         assert_eq!(bytes, Bytes(&[0x45, 0x67]));
-        assert_eq!(data.read_at::<u16>(2), Some(&u16::to_be(0x4567)));
-        assert_eq!(data.read_at::<u16>(3), None);
-        assert_eq!(data.read_at::<u16>(4), None);
+        assert_eq!(data.read_at::<u16>(2), Ok(&u16::to_be(0x4567)));
+        assert_eq!(data.read_at::<u16>(3), Err(()));
+        assert_eq!(data.read_at::<u16>(4), Err(()));
 
         let mut bytes = data;
-        assert_eq!(bytes.read::<u32>(), Some(&x));
+        assert_eq!(bytes.read::<u32>(), Ok(&x));
         assert_eq!(bytes, Bytes(&[]));
 
         let mut bytes = data;
-        assert_eq!(bytes.read::<u64>(), None);
+        assert_eq!(bytes.read::<u64>(), Err(()));
         assert_eq!(bytes, Bytes(&[]));
 
         let mut bytes = data;
-        assert_eq!(bytes.read_slice::<u8>(0), Some(&[][..]));
+        assert_eq!(bytes.read_slice::<u8>(0), Ok(&[][..]));
         assert_eq!(bytes, data);
 
         let mut bytes = data;
-        assert_eq!(bytes.read_slice::<u8>(4), Some(data.0));
+        assert_eq!(bytes.read_slice::<u8>(4), Ok(data.0));
         assert_eq!(bytes, Bytes(&[]));
 
         let mut bytes = data;
-        assert_eq!(bytes.read_slice::<u8>(5), None);
+        assert_eq!(bytes.read_slice::<u8>(5), Err(()));
         assert_eq!(bytes, Bytes(&[]));
 
-        assert_eq!(data.read_slice_at::<u8>(0, 0), Some(&[][..]));
-        assert_eq!(data.read_slice_at::<u8>(4, 0), Some(&[][..]));
-        assert_eq!(data.read_slice_at::<u8>(0, 4), Some(data.0));
-        assert_eq!(data.read_slice_at::<u8>(1, 4), None);
+        assert_eq!(data.read_slice_at::<u8>(0, 0), Ok(&[][..]));
+        assert_eq!(data.read_slice_at::<u8>(4, 0), Ok(&[][..]));
+        assert_eq!(data.read_slice_at::<u8>(0, 4), Ok(data.0));
+        assert_eq!(data.read_slice_at::<u8>(1, 4), Err(()));
 
         let data = Bytes(&[0x01, 0x02, 0x00, 0x04]);
 
         let mut bytes = data;
-        assert_eq!(bytes.read_string(), Some(&data.0[..2]));
+        assert_eq!(bytes.read_string(), Ok(&data.0[..2]));
         assert_eq!(bytes.0, &data.0[3..]);
 
         let mut bytes = data;
-        bytes.skip(3);
-        assert_eq!(bytes.read_string(), None);
+        bytes.skip(3).unwrap();
+        assert_eq!(bytes.read_string(), Err(()));
         assert_eq!(bytes.0, &[]);
 
-        assert_eq!(data.read_string_at(0), Some(&data.0[..2]));
-        assert_eq!(data.read_string_at(1), Some(&data.0[1..2]));
-        assert_eq!(data.read_string_at(2), Some(&[][..]));
-        assert_eq!(data.read_string_at(3), None);
+        assert_eq!(data.read_string_at(0), Ok(&data.0[..2]));
+        assert_eq!(data.read_string_at(1), Ok(&data.0[1..2]));
+        assert_eq!(data.read_string_at(2), Ok(&[][..]));
+        assert_eq!(data.read_string_at(3), Err(()));
     }
 
     #[test]

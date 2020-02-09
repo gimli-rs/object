@@ -11,7 +11,7 @@ pub(crate) struct StringTable<'data> {
 }
 
 impl<'data> StringTable<'data> {
-    pub fn get(&self, offset: u32) -> Option<&'data [u8]> {
+    pub fn get(&self, offset: u32) -> Result<&'data [u8], ()> {
         self.data.read_string_at(offset as usize)
     }
 }

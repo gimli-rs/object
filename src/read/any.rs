@@ -199,10 +199,10 @@ impl<'data> File<'data> {
             [b'M', b'Z', _, _, _] => {
                 // `optional_header_magic` doesn't care if it's `PeFile32` and `PeFile64`.
                 match pe::PeFile64::optional_header_magic(data) {
-                    Some(crate::pe::IMAGE_NT_OPTIONAL_HDR32_MAGIC) => {
+                    Ok(crate::pe::IMAGE_NT_OPTIONAL_HDR32_MAGIC) => {
                         FileInternal::Pe32(pe::PeFile32::parse(data)?)
                     }
-                    Some(crate::pe::IMAGE_NT_OPTIONAL_HDR64_MAGIC) => {
+                    Ok(crate::pe::IMAGE_NT_OPTIONAL_HDR64_MAGIC) => {
                         FileInternal::Pe64(pe::PeFile64::parse(data)?)
                     }
                     _ => return Err("Unknown MS-DOS file"),

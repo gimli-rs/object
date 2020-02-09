@@ -40,19 +40,23 @@ pub struct PeFile<'data, Pe: ImageNtHeaders> {
 
 impl<'data, Pe: ImageNtHeaders> PeFile<'data, Pe> {
     /// Find the optional header and read the `optional_header.magic`.
-    pub fn optional_header_magic(data: &'data [u8]) -> Option<u16> {
+    pub fn optional_header_magic(data: &'data [u8]) -> Result<u16, &'static str> {
         let data = Bytes(data);
         // DOS header comes first.
-        let dos_header = data.read_at::<pe::ImageDosHeader>(0)?;
+        let dos_header = data
+            .read_at::<pe::ImageDosHeader>(0)
+            .map_err(|()| "Invalid DOS header size or alignment")?;
         if dos_header.e_magic.get(LE) != pe::IMAGE_DOS_SIGNATURE {
-            return None;
+            return Err("Invalid DOS magic");
         }
         // NT headers are at an offset specified in the DOS header.
-        let nt_headers = data.read_at::<Pe>(dos_header.e_lfanew.get(LE) as usize)?;
+        let nt_headers = data
+            .read_at::<Pe>(dos_header.e_lfanew.get(LE) as usize)
+            .map_err(|()| "Invalid NT headers offset, size, or alignment")?;
         if nt_headers.signature() != pe::IMAGE_NT_SIGNATURE {
-            return None;
+            return Err("Invalid PE magic");
         }
-        Some(nt_headers.optional_header().magic())
+        Ok(nt_headers.optional_header().magic())
     }
 
     /// Parse the raw PE file data.
@@ -61,7 +65,7 @@ impl<'data, Pe: ImageNtHeaders> PeFile<'data, Pe> {
         // DOS header comes first.
         let dos_header = data
             .read_at::<pe::ImageDosHeader>(0)
-            .ok_or("Invalid DOS header size or alignment")?;
+            .map_err(|()| "Invalid DOS header size or alignment")?;
         if dos_header.e_magic.get(LE) != pe::IMAGE_DOS_SIGNATURE {
             return Err("Invalid DOS magic");
         }
@@ -70,11 +74,11 @@ impl<'data, Pe: ImageNtHeaders> PeFile<'data, Pe> {
         let mut nt_tail = data;
         nt_tail
             .skip(dos_header.e_lfanew.get(LE) as usize)
-            .ok_or("Invalid NT headers offset")?;
+            .map_err(|()| "Invalid NT headers offset")?;
         // Note that this does not include the data directories in the optional header.
         let nt_headers = nt_tail
             .read::<Pe>()
-            .ok_or("Invalid NT headers size or alignment")?;
+            .map_err(|()| "Invalid NT headers size or alignment")?;
         if nt_headers.signature() != pe::IMAGE_NT_SIGNATURE {
             return Err("Invalid PE magic");
         }
@@ -89,15 +93,15 @@ impl<'data, Pe: ImageNtHeaders> PeFile<'data, Pe> {
             .ok_or("Size of optional header is too small")?;
         let mut optional_data = nt_tail
             .read_bytes(optional_data_size)
-            .ok_or("Invalid size of optional header")?;
+            .map_err(|()| "Invalid size of optional header")?;
         let data_directories = optional_data
             .read_slice(nt_headers.optional_header().number_of_rva_and_sizes() as usize)
-            .ok_or("Invalid number of RVA and sizes")?;
+            .map_err(|()| "Invalid number of RVA and sizes")?;
 
         // Section headers are after the optional header.
         let sections = nt_tail
             .read_slice(nt_headers.file_header().number_of_sections.get(LE) as usize)
-            .ok_or("Invalid section headers")?;
+            .map_err(|()| "Invalid section headers")?;
 
         let symbols = SymbolTable::parse(&nt_headers.file_header(), data)?;
 
@@ -208,12 +212,7 @@ where
     }
 
     fn has_debug_symbols(&self) -> bool {
-        for section in self.sections {
-            if section.name(self.symbols.strings) == Some(".debug_info") {
-                return true;
-            }
-        }
-        false
+        self.section_by_name(".debug_info").is_some()
     }
 
     fn entry(&self) -> u64 {
@@ -305,12 +304,12 @@ impl<'data, 'file, Pe: ImageNtHeaders> ObjectSegment<'data> for PeSegment<'data,
     }
 
     fn data_range(&self, address: u64, size: u64) -> Option<&'data [u8]> {
-        read::data_range(self.bytes(), self.address(), address, size)
+        read::data_range(self.bytes(), self.address(), address, size).ok()
     }
 
     #[inline]
     fn name(&self) -> Option<&str> {
-        self.section.name(self.file.symbols.strings)
+        self.section.name(self.file.symbols.strings).ok()
     }
 }
 
@@ -405,7 +404,7 @@ impl<'data, 'file, Pe: ImageNtHeaders> ObjectSection<'data> for PeSection<'data,
     }
 
     fn data_range(&self, address: u64, size: u64) -> Option<&'data [u8]> {
-        read::data_range(self.bytes(), self.address(), address, size)
+        read::data_range(self.bytes(), self.address(), address, size).ok()
     }
 
     #[cfg(feature = "compression")]
@@ -416,7 +415,7 @@ impl<'data, 'file, Pe: ImageNtHeaders> ObjectSection<'data> for PeSection<'data,
 
     #[inline]
     fn name(&self) -> Option<&str> {
-        self.section.name(self.file.symbols.strings)
+        self.section.name(self.file.symbols.strings).ok()
     }
 
     #[inline]
@@ -595,7 +594,7 @@ impl pe::ImageSectionHeader {
         (offset, size)
     }
 
-    fn pe_bytes<'data>(&self, data: Bytes<'data>) -> Option<Bytes<'data>> {
+    fn pe_bytes<'data>(&self, data: Bytes<'data>) -> Result<Bytes<'data>, ()> {
         let (offset, size) = self.pe_file_range();
         data.read_bytes_at(offset as usize, size as usize)
     }
