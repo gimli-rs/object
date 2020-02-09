@@ -37,14 +37,14 @@ impl<'data> CoffFile<'data> {
         let mut tail = data;
         let header = tail
             .read::<pe::ImageFileHeader>()
-            .ok_or("Invalid COFF file header size or alignment")?;
+            .map_err(|()| "Invalid COFF file header size or alignment")?;
 
         // Skip over the optional header and get the section headers.
         tail.skip(header.size_of_optional_header.get(LE) as usize)
-            .ok_or("Invalid COFF optional header size")?;
+            .map_err(|()| "Invalid COFF optional header size")?;
         let sections = tail
             .read_slice(header.number_of_sections.get(LE) as usize)
-            .ok_or("Invalid section headers")?;
+            .map_err(|()| "Invalid section headers")?;
 
         let symbols = SymbolTable::parse(header, data)?;
 
@@ -146,12 +146,7 @@ where
     }
 
     fn has_debug_symbols(&self) -> bool {
-        for section in self.sections {
-            if section.name(self.symbols.strings) == Some(".debug_info") {
-                return true;
-            }
-        }
-        false
+        self.section_by_name(".debug_info").is_some()
     }
 
     #[inline]
@@ -234,12 +229,12 @@ impl<'data, 'file> ObjectSegment<'data> for CoffSegment<'data, 'file> {
     }
 
     fn data_range(&self, address: u64, size: u64) -> Option<&'data [u8]> {
-        read::data_range(self.bytes(), self.address(), address, size)
+        read::data_range(self.bytes(), self.address(), address, size).ok()
     }
 
     #[inline]
     fn name(&self) -> Option<&str> {
-        self.section.name(self.file.symbols.strings)
+        self.section.name(self.file.symbols.strings).ok()
     }
 }
 
@@ -321,7 +316,7 @@ impl<'data, 'file> ObjectSection<'data> for CoffSection<'data, 'file> {
     }
 
     fn data_range(&self, address: u64, size: u64) -> Option<&'data [u8]> {
-        read::data_range(self.bytes(), self.address(), address, size)
+        read::data_range(self.bytes(), self.address(), address, size).ok()
     }
 
     #[cfg(feature = "compression")]
@@ -332,7 +327,7 @@ impl<'data, 'file> ObjectSection<'data> for CoffSection<'data, 'file> {
 
     #[inline]
     fn name(&self) -> Option<&str> {
-        self.section.name(self.file.symbols.strings)
+        self.section.name(self.file.symbols.strings).ok()
     }
 
     #[inline]
@@ -415,7 +410,7 @@ pub(crate) fn parse_symbol<'data>(
     } else if symbol.name[0] == 0 {
         // If the name starts with 0 then the last 4 bytes are a string table offset.
         let offset = u32::from_le_bytes(symbol.name[4..8].try_into().unwrap());
-        symbols.strings.get(offset)
+        symbols.strings.get(offset).ok()
     } else {
         // The name is inline and padded with nulls.
         Some(match symbol.name.iter().position(|&x| x == 0) {
@@ -582,6 +577,9 @@ impl<'data, 'file> fmt::Debug for CoffRelocationIterator<'data, 'file> {
 }
 
 impl pe::ImageSectionHeader {
+    /// Return the offset and size of the section in the file.
+    ///
+    /// Returns `None` for sections that have no data in the file.
     fn coff_file_range(&self) -> Option<(u32, u32)> {
         if self.characteristics.get(LE) & pe::IMAGE_SCN_CNT_UNINITIALIZED_DATA != 0 {
             None
@@ -593,12 +591,19 @@ impl pe::ImageSectionHeader {
         }
     }
 
-    fn coff_bytes<'data>(&self, data: Bytes<'data>) -> Option<Bytes<'data>> {
-        let (offset, size) = self.coff_file_range()?;
-        data.read_bytes_at(offset as usize, size as usize)
+    /// Return the section data.
+    ///
+    /// Returns `Ok(&[])` if the section has no data.
+    /// Returns `Err` for invalid values.
+    fn coff_bytes<'data>(&self, data: Bytes<'data>) -> Result<Bytes<'data>, ()> {
+        if let Some((offset, size)) = self.coff_file_range() {
+            data.read_bytes_at(offset as usize, size as usize)
+        } else {
+            Ok(Bytes(&[]))
+        }
     }
 
-    pub(crate) fn name<'data>(&'data self, strings: StringTable<'data>) -> Option<&'data str> {
+    pub(crate) fn name<'data>(&'data self, strings: StringTable<'data>) -> Result<&'data str, ()> {
         let bytes = &self.name;
         let name = if bytes[0] == b'/' {
             let mut offset = 0;
@@ -610,7 +615,7 @@ impl pe::ImageSectionHeader {
                         b'0'..=b'9' => byte - b'0' + 52,
                         b'+' => 62,
                         b'/' => 63,
-                        _ => return None,
+                        _ => return Err(()),
                     };
                     offset = offset * 64 + digit as u32;
                 }
@@ -619,7 +624,7 @@ impl pe::ImageSectionHeader {
                     let digit = match byte {
                         b'0'..=b'9' => byte - b'0',
                         0 => break,
-                        _ => return None,
+                        _ => return Err(()),
                     };
                     offset = offset * 10 + digit as u32;
                 }
@@ -631,7 +636,7 @@ impl pe::ImageSectionHeader {
                 None => &bytes[..],
             }
         };
-        str::from_utf8(name).ok()
+        str::from_utf8(name).map_err(|_| ())
     }
 
     pub(crate) fn kind(&self) -> SectionKind {
@@ -691,19 +696,19 @@ impl<'data> SymbolTable<'data> {
         let symbol_offset = header.pointer_to_symbol_table.get(LE) as usize;
         let (symbols, strings) = if symbol_offset != 0 {
             data.skip(symbol_offset)
-                .ok_or("Invalid symbol table offset")?;
+                .map_err(|()| "Invalid symbol table offset")?;
             let symbols = data
                 .read_slice(header.number_of_symbols.get(LE) as usize)
-                .ok_or("Invalid symbol table size")?;
+                .map_err(|()| "Invalid symbol table size")?;
 
             // Note: don't update data when reading length; the length includes itself.
             let length = data
                 .read_at::<U32Bytes<_>>(0)
-                .ok_or("Missing string table")?
+                .map_err(|()| "Missing string table")?
                 .get(LE);
             let strings = data
                 .read_bytes(length as usize)
-                .ok_or("Invalid string table length")?;
+                .map_err(|()| "Invalid string table length")?;
 
             (symbols, strings)
         } else {
@@ -718,6 +723,6 @@ impl<'data> SymbolTable<'data> {
 
     pub fn get<T: Pod>(&self, index: usize) -> Option<&'data T> {
         let bytes = self.symbols.get(index)?;
-        Bytes(&bytes.0[..]).read()
+        Bytes(&bytes.0[..]).read().ok()
     }
 }

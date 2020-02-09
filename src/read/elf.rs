@@ -53,7 +53,7 @@ impl<'data, Elf: FileHeader> ElfFile<'data, Elf> {
         let data = Bytes(data);
         let header = data
             .read_at::<Elf>(0)
-            .ok_or("Invalid ELF header size or alignment")?;
+            .map_err(|()| "Invalid ELF header size or alignment")?;
         if !header.is_supported() {
             return Err("Unsupported ELF header");
         }
@@ -63,10 +63,10 @@ impl<'data, Elf: FileHeader> ElfFile<'data, Elf> {
         let endian = header.endian().ok_or("Unsupported endian")?;
         let segments = header
             .program_headers(endian, data)
-            .ok_or("Invalid program headers")?;
+            .map_err(|()| "Invalid program headers")?;
         let sections = header
             .section_headers(endian, data)
-            .ok_or("Invalid section headers")?;
+            .map_err(|()| "Invalid section headers")?;
 
         // The API we provide requires a mapping from section to relocations, so build it now.
         // TODO: only do this if the user requires it.
@@ -84,13 +84,16 @@ impl<'data, Elf: FileHeader> ElfFile<'data, Elf> {
             }
         }
 
-        let section_string_data = if let Some(index) = header.shstrndx(endian, data) {
+        let section_string_data = if !sections.is_empty() {
+            let index = header
+                .shstrndx(endian, data)
+                .map_err(|()| "Missing section header strtab index")?;
             let shstrtab_section = sections
                 .get(index as usize)
                 .ok_or("Invalid section header strtab index")?;
             shstrtab_section
                 .data(endian, data)
-                .ok_or("Invalid section header strtab data")?
+                .map_err(|()| "Invalid section header strtab data")?
         } else {
             Bytes(&[])
         };
@@ -110,31 +113,33 @@ impl<'data, Elf: FileHeader> ElfFile<'data, Elf> {
                     if dynamic_symbols.is_empty() {
                         dynamic_symbols = section
                             .data_as_array(endian, data)
-                            .ok_or("Invalid symtab data")?;
+                            .map_err(|()| "Invalid symtab data")?;
                         let strtab_section = sections
                             .get(section.sh_link(endian) as usize)
                             .ok_or("Invalid strtab section index")?;
-                        dynamic_symbol_string_data =
-                            strtab_section.data(endian, data).ok_or("Invalid strtab")?;
+                        dynamic_symbol_string_data = strtab_section
+                            .data(endian, data)
+                            .map_err(|()| "Invalid strtab")?;
                     }
                 }
                 elf::SHT_SYMTAB => {
                     if symbols.is_empty() {
                         symbols = section
                             .data_as_array(endian, data)
-                            .ok_or("Invalid symtab data")?;
+                            .map_err(|()| "Invalid symtab data")?;
                         let strtab_section = sections
                             .get(section.sh_link(endian) as usize)
                             .ok_or("Invalid strtab section index")?;
-                        symbol_string_data =
-                            strtab_section.data(endian, data).ok_or("Invalid strtab")?;
+                        symbol_string_data = strtab_section
+                            .data(endian, data)
+                            .map_err(|()| "Invalid strtab")?;
                     }
                 }
                 elf::SHT_SYMTAB_SHNDX => {
                     if symbol_shndx.is_empty() {
                         symbol_shndx = section
                             .data_as_array(endian, data)
-                            .ok_or("Invalid symtab_shndx data")?;
+                            .map_err(|()| "Invalid symtab_shndx data")?;
                     }
                 }
                 _ => {}
@@ -175,7 +180,7 @@ impl<'data, Elf: FileHeader> ElfFile<'data, Elf> {
         section_name: &str,
     ) -> Option<ElfSection<'data, 'file, Elf>> {
         for (index, section) in self.sections.iter().enumerate() {
-            if let Some(name) = self.section_strings.get(section.sh_name(self.endian)) {
+            if let Ok(name) = self.section_strings.get(section.sh_name(self.endian)) {
                 if name == section_name.as_bytes() {
                     return Some(ElfSection {
                         file: self,
@@ -304,7 +309,7 @@ where
 
     fn has_debug_symbols(&self) -> bool {
         for section in self.sections {
-            if let Some(name) = self.section_strings.get(section.sh_name(self.endian)) {
+            if let Ok(name) = self.section_strings.get(section.sh_name(self.endian)) {
                 if name == b".debug_info" || name == b".zdebug_info" {
                     return true;
                 }
@@ -318,8 +323,8 @@ where
         // Use section headers if present, otherwise use program headers.
         if !self.sections.is_empty() {
             for section in self.sections {
-                if let Some(notes) = section.notes(endian, self.data) {
-                    for note in notes {
+                if let Ok(mut notes) = section.notes(endian, self.data) {
+                    while let Ok(Some(note)) = notes.next() {
                         if note.name() == elf::ELF_NOTE_GNU
                             && note.n_type(endian) == elf::NT_GNU_BUILD_ID
                         {
@@ -330,8 +335,8 @@ where
             }
         } else {
             for segment in self.segments {
-                if let Some(notes) = segment.notes(endian, self.data) {
-                    for note in notes {
+                if let Ok(mut notes) = segment.notes(endian, self.data) {
+                    while let Ok(Some(note)) = notes.next() {
                         if note.name() == elf::ELF_NOTE_GNU
                             && note.n_type(endian) == elf::NT_GNU_BUILD_ID
                         {
@@ -346,10 +351,10 @@ where
 
     fn gnu_debuglink(&self) -> Option<(&'data [u8], u32)> {
         let section = self.raw_section_by_name(".gnu_debuglink")?;
-        let data = section.section.data(self.endian, self.data)?;
-        let filename = data.read_string_at(0)?;
+        let data = section.section.data(self.endian, self.data).ok()?;
+        let filename = data.read_string_at(0).ok()?;
         let crc_offset = util::align(filename.len() + 1, 4);
-        let crc = data.read_at::<U32<_>>(crc_offset)?.get(self.endian);
+        let crc = data.read_at::<U32<_>>(crc_offset).ok()?.get(self.endian);
         Some((filename, crc))
     }
 
@@ -453,7 +458,7 @@ impl<'data, 'file, Elf: FileHeader> ObjectSegment<'data> for ElfSegment<'data, '
     }
 
     fn data_range(&self, address: u64, size: u64) -> Option<&'data [u8]> {
-        read::data_range(self.bytes(), self.address(), address, size)
+        read::data_range(self.bytes(), self.address(), address, size).ok()
     }
 
     #[inline]
@@ -519,17 +524,16 @@ impl<'data, 'file, Elf: FileHeader> ElfSection<'data, 'file, Elf> {
     }
 
     #[cfg(feature = "compression")]
-    // TODO: return a `Result` once `Byte` methods do
-    fn maybe_decompress_data(&self) -> Option<Option<Cow<'data, [u8]>>> {
+    fn maybe_decompress_data(&self) -> Result<Option<Cow<'data, [u8]>>, ()> {
         let endian = self.file.endian;
         if (self.section.sh_flags(endian).into() & u64::from(elf::SHF_COMPRESSED)) == 0 {
-            return Some(None);
+            return Ok(None);
         }
 
         let mut data = self.section.data(endian, self.file.data)?;
         let header = data.read::<Elf::CompressionHeader>()?;
         if header.ch_type(endian) != elf::ELFCOMPRESS_ZLIB {
-            return None;
+            return Err(());
         }
 
         let uncompressed_size: u64 = header.ch_size(endian).into();
@@ -539,28 +543,27 @@ impl<'data, 'file, Elf: FileHeader> ElfSection<'data, 'file, Elf> {
             .decompress_vec(data.0, &mut decompressed, FlushDecompress::Finish)
             .is_err()
         {
-            return None;
+            return Err(());
         }
-        Some(Some(Cow::Owned(decompressed)))
+        Ok(Some(Cow::Owned(decompressed)))
     }
 
     /// Try GNU-style "ZLIB" header decompression.
-    // TODO: return a `Result` once `Byte` methods do
     #[cfg(feature = "compression")]
-    fn maybe_decompress_data_gnu(&self) -> Option<Option<Cow<'data, [u8]>>> {
+    fn maybe_decompress_data_gnu(&self) -> Result<Option<Cow<'data, [u8]>>, ()> {
         let name = match self.name() {
             Some(name) => name,
-            None => return Some(None),
+            None => return Ok(None),
         };
         if !name.starts_with(".zdebug_") {
-            return Some(None);
+            return Ok(None);
         }
         let mut data = self.bytes();
         // Assume ZLIB-style uncompressed data is no more than 4GB to avoid accidentally
         // huge allocations. This also reduces the chance of accidentally matching on a
         // .debug_str that happens to start with "ZLIB".
         if data.read_bytes(8)?.0 != b"ZLIB\0\0\0\0" {
-            return None;
+            return Err(());
         }
         let uncompressed_size = data.read::<U32<_>>()?.get(endian::BigEndian);
         let mut decompressed = Vec::with_capacity(uncompressed_size as usize);
@@ -569,9 +572,9 @@ impl<'data, 'file, Elf: FileHeader> ElfSection<'data, 'file, Elf> {
             .decompress_vec(data.0, &mut decompressed, FlushDecompress::Finish)
             .is_err()
         {
-            return None;
+            return Err(());
         }
-        Some(Some(Cow::Owned(decompressed)))
+        Ok(Some(Cow::Owned(decompressed)))
     }
 }
 
@@ -611,14 +614,14 @@ impl<'data, 'file, Elf: FileHeader> ObjectSection<'data> for ElfSection<'data, '
     }
 
     fn data_range(&self, address: u64, size: u64) -> Option<&'data [u8]> {
-        read::data_range(self.bytes(), self.address(), address, size)
+        read::data_range(self.bytes(), self.address(), address, size).ok()
     }
 
     #[cfg(feature = "compression")]
     fn uncompressed_data(&self) -> Option<Cow<'data, [u8]>> {
-        Some(if let Some(data) = self.maybe_decompress_data()? {
+        Some(if let Some(data) = self.maybe_decompress_data().ok()? {
             data
-        } else if let Some(data) = self.maybe_decompress_data_gnu()? {
+        } else if let Some(data) = self.maybe_decompress_data_gnu().ok()? {
             data
         } else {
             Cow::from(self.data())
@@ -629,6 +632,7 @@ impl<'data, 'file, Elf: FileHeader> ObjectSection<'data> for ElfSection<'data, '
         self.file
             .section_strings
             .get(self.section.sh_name(self.file.endian))
+            .ok()
             .and_then(|s| str::from_utf8(s).ok())
     }
 
@@ -745,6 +749,7 @@ fn parse_symbol<'data, Elf: FileHeader>(
 ) -> Symbol<'data> {
     let name = strings
         .get(symbol.st_name(endian))
+        .ok()
         .and_then(|s| str::from_utf8(s).ok());
     let kind = match symbol.st_type() {
         elf::STT_NOTYPE if index == 0 => SymbolKind::Null,
@@ -923,12 +928,12 @@ impl<'data, 'file, Elf: FileHeader> Iterator for ElfRelocationIterator<'data, 'f
             // TODO: check section.sh_link matches the symbol table index?
             match section.sh_type(endian) {
                 elf::SHT_REL => {
-                    if let Some(relocations) = section.data_as_array(endian, self.file.data) {
+                    if let Ok(relocations) = section.data_as_array(endian, self.file.data) {
                         self.relocations = Some(ElfRelaIterator::Rel(relocations.iter()));
                     }
                 }
                 elf::SHT_RELA => {
-                    if let Some(relocations) = section.data_as_array(endian, self.file.data) {
+                    if let Ok(relocations) = section.data_as_array(endian, self.file.data) {
                         self.relocations = Some(ElfRelaIterator::Rela(relocations.iter()));
                     }
                 }
@@ -946,13 +951,6 @@ impl<'data, 'file, Elf: FileHeader> fmt::Debug for ElfRelocationIterator<'data, 
     }
 }
 
-/// An iterator over the notes in an `ElfSegment32` or `ElfSection32`.
-pub type ElfNoteIterator32<'data, Endian = RunTimeEndian> =
-    ElfNoteIterator<'data, elf::FileHeader32<Endian>>;
-/// An iterator over the notes in an `ElfSegment64` or `ElfSection64`.
-pub type ElfNoteIterator64<'data, Endian = RunTimeEndian> =
-    ElfNoteIterator<'data, elf::FileHeader64<Endian>>;
-
 /// An iterator over the notes in an `ElfSegment` or `ElfSection`.
 #[derive(Debug)]
 pub struct ElfNoteIterator<'data, Elf>
@@ -968,30 +966,27 @@ impl<'data, Elf> ElfNoteIterator<'data, Elf>
 where
     Elf: FileHeader,
 {
-    /// Returns `None` if `align` is invalid.
-    fn new(endian: Elf::Endian, align: Elf::Word, data: Bytes<'data>) -> Option<Self> {
+    /// Returns `Err` if `align` is invalid.
+    fn new(endian: Elf::Endian, align: Elf::Word, data: Bytes<'data>) -> Result<Self, ()> {
         let align = match align.into() {
             0u64..=4 => 4,
             8 => 8,
-            _ => return None,
+            _ => return Err(()),
         };
         // TODO: check data alignment?
-        Some(ElfNoteIterator {
+        Ok(ElfNoteIterator {
             endian,
             align,
             data,
         })
     }
-}
 
-impl<'data, Elf> Iterator for ElfNoteIterator<'data, Elf>
-where
-    Elf: FileHeader + 'data,
-{
-    type Item = ElfNote<'data, Elf>;
-
-    fn next(&mut self) -> Option<Self::Item> {
+    fn next(&mut self) -> Result<Option<ElfNote<'data, Elf>>, ()> {
         let mut data = self.data;
+        if data.is_empty() {
+            return Ok(None);
+        }
+
         let header = data.read::<Elf::NoteHeader>()?;
 
         let namesz = header.n_namesz(self.endian) as usize;
@@ -1004,12 +999,12 @@ where
         let desc = data.read_bytes_at(0, descsz)?.0;
 
         // Skip both the descriptor and the alignment padding (if any).
-        if data.skip(util::align(descsz, self.align)).is_none() {
+        if data.skip(util::align(descsz, self.align)).is_err() {
             data = Bytes(&[]);
         }
         self.data = data;
 
-        Some(ElfNote { header, name, desc })
+        Ok(Some(ElfNote { header, name, desc }))
     }
 }
 
@@ -1138,119 +1133,129 @@ pub trait FileHeader: Debug + Pod {
         Self::Endian::from_big_endian(self.is_big_endian())
     }
 
+    /// Return the first section header, if present.
+    ///
     /// Section 0 is a special case because getting the section headers normally
     /// requires `shnum`, but `shnum` may be in the first section header.
     fn section_0<'data>(
         &self,
         endian: Self::Endian,
         data: Bytes<'data>,
-    ) -> Option<&'data Self::SectionHeader> {
+    ) -> Result<Option<&'data Self::SectionHeader>, ()> {
         let shoff: u64 = self.e_shoff(endian).into();
         if shoff == 0 {
-            // Section headers must exist.
-            return None;
+            // No section headers is ok.
+            return Ok(None);
         }
         let shentsize = self.e_shentsize(endian) as usize;
         if shentsize != mem::size_of::<Self::SectionHeader>() {
             // Section header size must match.
-            return None;
+            return Err(());
         }
-        data.read_at(shoff as usize)
+        data.read_at(shoff as usize).map(Some)
     }
 
     /// Return the `e_phnum` field of the header. Handles extended values.
     ///
-    /// Returns `None` for invalid values.
-    fn phnum<'data>(&self, endian: Self::Endian, data: Bytes<'data>) -> Option<usize> {
+    /// Returns `Err` for invalid values.
+    fn phnum<'data>(&self, endian: Self::Endian, data: Bytes<'data>) -> Result<usize, ()> {
         let e_phnum = self.e_phnum(endian);
         if e_phnum < elf::PN_XNUM {
-            Some(e_phnum as usize)
+            Ok(e_phnum as usize)
+        } else if let Some(section_0) = self.section_0(endian, data)? {
+            Ok(section_0.sh_info(endian) as usize)
         } else {
-            self.section_0(endian, data)
-                .map(|x| x.sh_info(endian) as usize)
+            // Section 0 must exist if e_phnum overflows.
+            Err(())
         }
     }
 
     /// Return the `e_shnum` field of the header. Handles extended values.
     ///
-    /// Returns `None` for invalid values.
-    fn shnum<'data>(&self, endian: Self::Endian, data: Bytes<'data>) -> Option<usize> {
+    /// Returns `Err` for invalid values.
+    fn shnum<'data>(&self, endian: Self::Endian, data: Bytes<'data>) -> Result<usize, ()> {
         let e_shnum = self.e_shnum(endian);
         if e_shnum > 0 {
-            Some(e_shnum as usize)
+            Ok(e_shnum as usize)
+        } else if let Some(section_0) = self.section_0(endian, data)? {
+            let size: u64 = section_0.sh_size(endian).into();
+            Ok(size as usize)
         } else {
-            self.section_0(endian, data).map(|x| {
-                let size: u64 = x.sh_size(endian).into();
-                size as usize
-            })
+            // No section headers is ok.
+            Ok(0)
         }
     }
 
     /// Return the `e_shstrndx` field of the header. Handles extended values.
     ///
-    /// Returns `None` for invalid values (including if the index is 0).
-    fn shstrndx<'data>(&self, endian: Self::Endian, data: Bytes<'data>) -> Option<u32> {
+    /// Returns `Err` for invalid values (including if the index is 0).
+    fn shstrndx<'data>(&self, endian: Self::Endian, data: Bytes<'data>) -> Result<u32, ()> {
         let e_shstrndx = self.e_shstrndx(endian);
-        let index = if e_shstrndx == elf::SHN_XINDEX {
-            self.section_0(endian, data)?.sh_link(endian)
-        } else {
+        let index = if e_shstrndx != elf::SHN_XINDEX {
             e_shstrndx.into()
+        } else if let Some(section_0) = self.section_0(endian, data)? {
+            section_0.sh_link(endian)
+        } else {
+            // Section 0 must exist if we're trying to read e_shstrndx.
+            return Err(());
         };
         if index != 0 {
-            Some(index)
+            Ok(index)
         } else {
-            None
+            Err(())
         }
     }
 
     /// Return the slice of program headers.
     ///
-    /// Returns `None` for invalid values.
+    /// Returns `Ok(&[])` if there are no program headers.
+    /// Returns `Err` for invalid values.
     fn program_headers<'data>(
         &self,
         endian: Self::Endian,
         data: Bytes<'data>,
-    ) -> Option<&'data [Self::ProgramHeader]> {
+    ) -> Result<&'data [Self::ProgramHeader], ()> {
         let phoff: u64 = self.e_phoff(endian).into();
         if phoff == 0 {
             // No program headers is ok.
-            return Some(&[]);
+            return Ok(&[]);
         }
         let phnum = self.phnum(endian, data)?;
         if phnum == 0 {
             // No program headers is ok.
-            return Some(&[]);
+            return Ok(&[]);
         }
         let phentsize = self.e_phentsize(endian) as usize;
         if phentsize != mem::size_of::<Self::ProgramHeader>() {
             // Program header size must match.
-            return None;
+            return Err(());
         }
         data.read_slice_at(phoff as usize, phnum)
     }
 
     /// Return the slice of section headers.
     ///
-    /// Returns `None` for invalid values.
+    /// Returns `Ok(&[])` if there are no section headers.
+    /// Returns `Err` for invalid values.
     fn section_headers<'data>(
         &self,
         endian: Self::Endian,
         data: Bytes<'data>,
-    ) -> Option<&'data [Self::SectionHeader]> {
+    ) -> Result<&'data [Self::SectionHeader], ()> {
         let shoff: u64 = self.e_shoff(endian).into();
         if shoff == 0 {
             // No section headers is ok.
-            return Some(&[]);
+            return Ok(&[]);
         }
         let shnum = self.shnum(endian, data)?;
         if shnum == 0 {
             // No section headers is ok.
-            return Some(&[]);
+            return Ok(&[]);
         }
         let shentsize = self.e_shentsize(endian) as usize;
         if shentsize != mem::size_of::<Self::SectionHeader>() {
             // Section header size must match.
-            return None;
+            return Err(());
         }
         data.read_slice_at(shoff as usize, shnum)
     }
@@ -1279,8 +1284,8 @@ pub trait ProgramHeader: Debug + Pod {
 
     /// Return the segment data.
     ///
-    /// Returns `None` for invalid values.
-    fn data<'data>(&self, endian: Self::Endian, data: Bytes<'data>) -> Option<Bytes<'data>> {
+    /// Returns `Err` for invalid values.
+    fn data<'data>(&self, endian: Self::Endian, data: Bytes<'data>) -> Result<Bytes<'data>, ()> {
         let (offset, size) = self.file_range(endian);
         data.read_bytes_at(offset as usize, size as usize)
     }
@@ -1288,12 +1293,12 @@ pub trait ProgramHeader: Debug + Pod {
     /// Return a note iterator for the segment data.
     ///
     /// Returns an empty iterator if the segment does not contain notes.
-    /// Returns `None` for invalid values.
+    /// Returns `Err` for invalid values.
     fn notes<'data>(
         &self,
         endian: Self::Endian,
         data: Bytes<'data>,
-    ) -> Option<ElfNoteIterator<'data, Self::Elf>> {
+    ) -> Result<ElfNoteIterator<'data, Self::Elf>, ()> {
         let data = if self.p_type(endian) == elf::PT_NOTE {
             self.data(endian, data)?
         } else {
@@ -1334,26 +1339,26 @@ pub trait SectionHeader: Debug + Pod {
 
     /// Return the section data.
     ///
-    /// Returns `Some(&[])` if the section has no data.
-    /// Returns `None` for invalid values.
-    fn data<'data>(&self, endian: Self::Endian, data: Bytes<'data>) -> Option<Bytes<'data>> {
+    /// Returns `Ok(&[])` if the section has no data.
+    /// Returns `Err` for invalid values.
+    fn data<'data>(&self, endian: Self::Endian, data: Bytes<'data>) -> Result<Bytes<'data>, ()> {
         if let Some((offset, size)) = self.file_range(endian) {
             data.read_bytes_at(offset as usize, size as usize)
         } else {
-            Some(Bytes(&[]))
+            Ok(Bytes(&[]))
         }
     }
 
     /// Return the section data as a slice of the given type.
     ///
     /// Allows padding at the end of the data.
-    /// Returns `Some(&[])` if the section has no data.
-    /// Returns `None` for invalid values, including bad alignment.
+    /// Returns `Ok(&[])` if the section has no data.
+    /// Returns `Err` for invalid values, including bad alignment.
     fn data_as_array<'data, T: Pod>(
         &self,
         endian: Self::Endian,
         data: Bytes<'data>,
-    ) -> Option<&'data [T]> {
+    ) -> Result<&'data [T], ()> {
         let mut data = self.data(endian, data)?;
         data.read_slice(data.len() / mem::size_of::<T>())
     }
@@ -1361,12 +1366,12 @@ pub trait SectionHeader: Debug + Pod {
     /// Return a note iterator for the section data.
     ///
     /// Returns an empty iterator if the section does not contain notes.
-    /// Returns `None` for invalid values.
+    /// Returns `Err` for invalid values.
     fn notes<'data>(
         &self,
         endian: Self::Endian,
         data: Bytes<'data>,
-    ) -> Option<ElfNoteIterator<'data, Self::Elf>> {
+    ) -> Result<ElfNoteIterator<'data, Self::Elf>, ()> {
         let data = if self.sh_type(endian) == elf::SHT_NOTE {
             self.data(endian, data)?
         } else {

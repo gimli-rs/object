@@ -314,8 +314,8 @@ impl Relocation {
     }
 }
 
-fn data_range(data: Bytes, data_address: u64, range_address: u64, size: u64) -> Option<&[u8]> {
-    let offset = range_address.checked_sub(data_address)?;
+fn data_range(data: Bytes, data_address: u64, range_address: u64, size: u64) -> Result<&[u8], ()> {
+    let offset = range_address.checked_sub(data_address).ok_or(())?;
     let data = data.read_bytes_at(offset as usize, size as usize)?;
-    Some(data.0)
+    Ok(data.0)
 }
