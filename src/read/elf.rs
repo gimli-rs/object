@@ -68,22 +68,6 @@ impl<'data, Elf: FileHeader> ElfFile<'data, Elf> {
             .section_headers(endian, data)
             .map_err(|()| "Invalid section headers")?;
 
-        // The API we provide requires a mapping from section to relocations, so build it now.
-        // TODO: only do this if the user requires it.
-        let mut relocations = vec![0; sections.len()];
-        for (index, section) in sections.iter().enumerate().rev() {
-            let sh_type = section.sh_type(endian);
-            if sh_type == elf::SHT_REL || sh_type == elf::SHT_RELA {
-                let sh_info = section.sh_info(endian) as usize;
-                if sh_info < relocations.len() {
-                    // Handle multiple relocation sections by chaining them.
-                    let next = relocations[sh_info];
-                    relocations[sh_info] = index;
-                    relocations[index] = next;
-                }
-            }
-        }
-
         let section_string_data = if !sections.is_empty() {
             let index = header
                 .shstrndx(endian, data)
@@ -101,13 +85,14 @@ impl<'data, Elf: FileHeader> ElfFile<'data, Elf> {
             data: section_string_data,
         };
 
+        let mut symbol_section = None;
         let mut symbols = &[][..];
         let mut symbol_string_data = Bytes(&[]);
         let mut symbol_shndx = &[][..];
         let mut dynamic_symbols = &[][..];
         let mut dynamic_symbol_string_data = Bytes(&[]);
         // TODO: only do this if the user requires it.
-        for section in sections {
+        for (index, section) in sections.iter().enumerate() {
             match section.sh_type(endian) {
                 elf::SHT_DYNSYM => {
                     if dynamic_symbols.is_empty() {
@@ -124,6 +109,7 @@ impl<'data, Elf: FileHeader> ElfFile<'data, Elf> {
                 }
                 elf::SHT_SYMTAB => {
                     if symbols.is_empty() {
+                        symbol_section = Some(index);
                         symbols = section
                             .data_as_array(endian, data)
                             .map_err(|()| "Invalid symtab data")?;
@@ -161,6 +147,26 @@ impl<'data, Elf: FileHeader> ElfFile<'data, Elf> {
             strings: dynamic_symbol_strings,
             shndx: &[],
         };
+
+        // The API we provide requires a mapping from section to relocations, so build it now.
+        // TODO: only do this if the user requires it (and then we can return an error
+        // for invalid sh_link values).
+        let mut relocations = vec![0; sections.len()];
+        for (index, section) in sections.iter().enumerate().rev() {
+            let sh_type = section.sh_type(endian);
+            if sh_type == elf::SHT_REL || sh_type == elf::SHT_RELA {
+                let sh_info = section.sh_info(endian) as usize;
+                let sh_link = section.sh_link(endian) as usize;
+                // Skip dynamic relocations (sh_info = 0), invalid sh_info, and section
+                // relocations with the wrong symbol table (sh_link).
+                if sh_info != 0 && sh_info < relocations.len() && Some(sh_link) == symbol_section {
+                    // Handle multiple relocation sections by chaining them.
+                    let next = relocations[sh_info];
+                    relocations[sh_info] = index;
+                    relocations[index] = next;
+                }
+            }
+        }
 
         Ok(ElfFile {
             endian,
@@ -925,7 +931,6 @@ impl<'data, 'file, Elf: FileHeader> Iterator for ElfRelocationIterator<'data, 'f
                 return None;
             }
             let section = self.file.sections.get(self.section_index)?;
-            // TODO: check section.sh_link matches the symbol table index?
             match section.sh_type(endian) {
                 elf::SHT_REL => {
                     if let Ok(relocations) = section.data_as_array(endian, self.file.data) {
