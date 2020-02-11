@@ -425,11 +425,15 @@ impl Object {
                     SymbolKind::Tls => elf::STT_TLS,
                     SymbolKind::Label => elf::STT_NOTYPE,
                     SymbolKind::Unknown => {
-                        return Err(format!(
-                            "unimplemented symbol `{}` kind {:?}",
-                            symbol.name().unwrap_or(""),
-                            symbol.kind
-                        ))
+                        if symbol.is_undefined() {
+                            elf::STT_NOTYPE
+                        } else {
+                            return Err(format!(
+                                "unimplemented symbol `{}` kind {:?}",
+                                symbol.name().unwrap_or(""),
+                                symbol.kind
+                            ));
+                        }
                     }
                 };
                 let st_bind = if symbol.is_undefined() {
