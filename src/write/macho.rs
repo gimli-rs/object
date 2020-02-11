@@ -807,7 +807,7 @@ impl<E: Endian> MachO for MachO64<E> {
             n_type: nlist.n_type,
             n_sect: nlist.n_sect,
             n_desc: U16::new(endian, nlist.n_desc),
-            n_value: U64::new(endian, nlist.n_value),
+            n_value: U64Bytes::new(endian, nlist.n_value),
         };
         buffer.write(&nlist);
     }
