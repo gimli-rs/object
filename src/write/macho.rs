@@ -19,6 +19,7 @@ struct SectionOffsets {
 
 #[derive(Default, Clone, Copy)]
 struct SymbolOffsets {
+    emit: bool,
     index: usize,
     str_id: Option<StringId>,
 }
@@ -258,10 +259,22 @@ impl Object {
         let mut symbol_offsets = vec![SymbolOffsets::default(); self.symbols.len()];
         let mut nsyms = 0;
         for (index, symbol) in self.symbols.iter().enumerate() {
+            // The unified API allows creating symbols that we don't emit, so filter
+            // them out here.
+            //
+            // Since we don't actually emit the symbol kind, we validate it here too.
             match symbol.kind {
                 SymbolKind::Text | SymbolKind::Data | SymbolKind::Tls => {}
                 SymbolKind::File | SymbolKind::Section => continue,
-                SymbolKind::Unknown | SymbolKind::Null | SymbolKind::Label => {
+                SymbolKind::Unknown => {
+                    if symbol.section != SymbolSection::Undefined {
+                        return Err(format!(
+                            "defined symbol `{}` with unknown kind",
+                            symbol.name().unwrap_or(""),
+                        ));
+                    }
+                }
+                SymbolKind::Null | SymbolKind::Label => {
                     return Err(format!(
                         "unimplemented symbol `{}` kind {:?}",
                         symbol.name().unwrap_or(""),
@@ -269,6 +282,7 @@ impl Object {
                     ));
                 }
             }
+            symbol_offsets[index].emit = true;
             symbol_offsets[index].index = nsyms;
             nsyms += 1;
             if !symbol.name.is_empty() {
@@ -427,16 +441,8 @@ impl Object {
         write_align(&mut buffer, pointer_align);
         debug_assert_eq!(symtab_offset, buffer.len());
         for (index, symbol) in self.symbols.iter().enumerate() {
-            match symbol.kind {
-                SymbolKind::Text | SymbolKind::Data | SymbolKind::Tls => {}
-                SymbolKind::File | SymbolKind::Section => continue,
-                SymbolKind::Unknown | SymbolKind::Null | SymbolKind::Label => {
-                    return Err(format!(
-                        "unimplemented symbol `{}` kind {:?}",
-                        symbol.name().unwrap_or(""),
-                        symbol.kind
-                    ))
-                }
+            if !symbol_offsets[index].emit {
+                continue;
             }
             // TODO: N_STAB
             let (mut n_type, n_sect) = match symbol.section {
