@@ -539,10 +539,14 @@ struct MachOSectionInternal<'data, Mach: MachHeader> {
 
 impl<'data, Mach: MachHeader> MachOSectionInternal<'data, Mach> {
     fn parse(index: SectionIndex, section: &'data Mach::Section) -> Self {
+        // TODO: we don't validate flags, should we?
         let kind = match (section.segment_name(), section.name()) {
             (b"__TEXT", b"__text") => SectionKind::Text,
             (b"__TEXT", b"__const") => SectionKind::ReadOnlyData,
             (b"__TEXT", b"__cstring") => SectionKind::ReadOnlyString,
+            (b"__TEXT", b"__literal4") => SectionKind::ReadOnlyData,
+            (b"__TEXT", b"__literal8") => SectionKind::ReadOnlyData,
+            (b"__TEXT", b"__literal16") => SectionKind::ReadOnlyData,
             (b"__TEXT", b"__eh_frame") => SectionKind::ReadOnlyData,
             (b"__TEXT", b"__gcc_except_tab") => SectionKind::ReadOnlyData,
             (b"__DATA", b"__data") => SectionKind::Data,
