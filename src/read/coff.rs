@@ -15,9 +15,10 @@ use crate::pe;
 use crate::pod::{Bytes, Pod};
 use crate::read::util::StringTable;
 use crate::read::{
-    self, FileFlags, Object, ObjectSection, ObjectSegment, Relocation, RelocationEncoding,
-    RelocationKind, RelocationTarget, SectionFlags, SectionIndex, SectionKind, Symbol, SymbolFlags,
-    SymbolIndex, SymbolKind, SymbolMap, SymbolScope, SymbolSection,
+    self, Error, FileFlags, Object, ObjectSection, ObjectSegment, ReadError, Relocation,
+    RelocationEncoding, RelocationKind, RelocationTarget, Result, SectionFlags, SectionIndex,
+    SectionKind, Symbol, SymbolFlags, SymbolIndex, SymbolKind, SymbolMap, SymbolScope,
+    SymbolSection,
 };
 
 /// A COFF object file.
@@ -32,19 +33,19 @@ pub struct CoffFile<'data> {
 
 impl<'data> CoffFile<'data> {
     /// Parse the raw COFF file data.
-    pub fn parse(data: &'data [u8]) -> Result<Self, &'static str> {
+    pub fn parse(data: &'data [u8]) -> Result<Self> {
         let data = Bytes(data);
         let mut tail = data;
         let header = tail
             .read::<pe::ImageFileHeader>()
-            .map_err(|()| "Invalid COFF file header size or alignment")?;
+            .read_error("Invalid COFF file header size or alignment")?;
 
         // Skip over the optional header and get the section headers.
         tail.skip(header.size_of_optional_header.get(LE) as usize)
-            .map_err(|()| "Invalid COFF optional header size")?;
+            .read_error("Invalid COFF optional header size")?;
         let sections = tail
             .read_slice(header.number_of_sections.get(LE) as usize)
-            .map_err(|()| "Invalid section headers")?;
+            .read_error("Invalid COFF section headers")?;
 
         let symbols = SymbolTable::parse(header, data)?;
 
@@ -595,15 +596,16 @@ impl pe::ImageSectionHeader {
     ///
     /// Returns `Ok(&[])` if the section has no data.
     /// Returns `Err` for invalid values.
-    fn coff_bytes<'data>(&self, data: Bytes<'data>) -> Result<Bytes<'data>, ()> {
+    fn coff_bytes<'data>(&self, data: Bytes<'data>) -> Result<Bytes<'data>> {
         if let Some((offset, size)) = self.coff_file_range() {
             data.read_bytes_at(offset as usize, size as usize)
+                .read_error("Invalid COFF section offset or size")
         } else {
             Ok(Bytes(&[]))
         }
     }
 
-    pub(crate) fn name<'data>(&'data self, strings: StringTable<'data>) -> Result<&'data str, ()> {
+    pub(crate) fn name<'data>(&'data self, strings: StringTable<'data>) -> Result<&'data str> {
         let bytes = &self.name;
         let name = if bytes[0] == b'/' {
             let mut offset = 0;
@@ -615,7 +617,7 @@ impl pe::ImageSectionHeader {
                         b'0'..=b'9' => byte - b'0' + 52,
                         b'+' => 62,
                         b'/' => 63,
-                        _ => return Err(()),
+                        _ => return Err(Error("Invalid COFF section name base-64 offset")),
                     };
                     offset = offset * 64 + digit as u32;
                 }
@@ -624,19 +626,21 @@ impl pe::ImageSectionHeader {
                     let digit = match byte {
                         b'0'..=b'9' => byte - b'0',
                         0 => break,
-                        _ => return Err(()),
+                        _ => return Err(Error("Invalid COFF section name base-10 offset")),
                     };
                     offset = offset * 10 + digit as u32;
                 }
             };
-            strings.get(offset)?
+            strings
+                .get(offset)
+                .read_error("Invalid COFF section name offset")?
         } else {
             match bytes.iter().position(|&x| x == 0) {
                 Some(end) => &bytes[..end],
                 None => &bytes[..],
             }
         };
-        str::from_utf8(name).map_err(|_| ())
+        str::from_utf8(name).map_err(|_| Error("Non UTF-8 COFF section name"))
     }
 
     pub(crate) fn kind(&self) -> SectionKind {
@@ -688,27 +692,24 @@ pub(crate) struct SymbolTable<'data> {
 }
 
 impl<'data> SymbolTable<'data> {
-    pub fn parse(
-        header: &pe::ImageFileHeader,
-        mut data: Bytes<'data>,
-    ) -> Result<Self, &'static str> {
+    pub fn parse(header: &pe::ImageFileHeader, mut data: Bytes<'data>) -> Result<Self> {
         // The symbol table may not be present.
         let symbol_offset = header.pointer_to_symbol_table.get(LE) as usize;
         let (symbols, strings) = if symbol_offset != 0 {
             data.skip(symbol_offset)
-                .map_err(|()| "Invalid symbol table offset")?;
+                .read_error("Invalid COFF symbol table offset")?;
             let symbols = data
                 .read_slice(header.number_of_symbols.get(LE) as usize)
-                .map_err(|()| "Invalid symbol table size")?;
+                .read_error("Invalid COFF symbol table size")?;
 
             // Note: don't update data when reading length; the length includes itself.
             let length = data
                 .read_at::<U32Bytes<_>>(0)
-                .map_err(|()| "Missing string table")?
+                .read_error("Missing COFF string table")?
                 .get(LE);
             let strings = data
                 .read_bytes(length as usize)
-                .map_err(|()| "Invalid string table length")?;
+                .read_error("Invalid COFF string table length")?;
 
             (symbols, strings)
         } else {

@@ -21,9 +21,9 @@ use crate::endian::{self, Endian, RunTimeEndian, U32};
 use crate::pod::{Bytes, Pod};
 use crate::read::util::{self, StringTable};
 use crate::read::{
-    self, FileFlags, Object, ObjectSection, ObjectSegment, Relocation, RelocationEncoding,
-    RelocationKind, RelocationTarget, SectionFlags, SectionIndex, SectionKind, Symbol, SymbolFlags,
-    SymbolIndex, SymbolKind, SymbolMap, SymbolScope, SymbolSection,
+    self, Error, FileFlags, Object, ObjectSection, ObjectSegment, ReadError, Relocation,
+    RelocationEncoding, RelocationKind, RelocationTarget, SectionFlags, SectionIndex, SectionKind,
+    Symbol, SymbolFlags, SymbolIndex, SymbolKind, SymbolMap, SymbolScope, SymbolSection,
 };
 
 /// A 32-bit ELF object file.
@@ -49,35 +49,29 @@ pub struct ElfFile<'data, Elf: FileHeader> {
 
 impl<'data, Elf: FileHeader> ElfFile<'data, Elf> {
     /// Parse the raw ELF file data.
-    pub fn parse(data: &'data [u8]) -> Result<Self, &'static str> {
+    pub fn parse(data: &'data [u8]) -> read::Result<Self> {
         let data = Bytes(data);
         let header = data
             .read_at::<Elf>(0)
-            .map_err(|()| "Invalid ELF header size or alignment")?;
+            .read_error("Invalid ELF header size or alignment")?;
         if !header.is_supported() {
-            return Err("Unsupported ELF header");
+            return Err(Error("Unsupported ELF header"));
         }
 
         // TODO: Check self.e_ehsize?
 
-        let endian = header.endian().ok_or("Unsupported endian")?;
-        let segments = header
-            .program_headers(endian, data)
-            .map_err(|()| "Invalid program headers")?;
-        let sections = header
-            .section_headers(endian, data)
-            .map_err(|()| "Invalid section headers")?;
+        let endian = header.endian()?;
+        let segments = header.program_headers(endian, data)?;
+        let sections = header.section_headers(endian, data)?;
 
         let section_string_data = if !sections.is_empty() {
-            let index = header
-                .shstrndx(endian, data)
-                .map_err(|()| "Missing section header strtab index")?;
+            let index = header.shstrndx(endian, data)?;
             let shstrtab_section = sections
                 .get(index as usize)
-                .ok_or("Invalid section header strtab index")?;
+                .read_error("Invalid ELF section header strtab index")?;
             shstrtab_section
                 .data(endian, data)
-                .map_err(|()| "Invalid section header strtab data")?
+                .read_error("Invalid ELF section header strtab data")?
         } else {
             Bytes(&[])
         };
@@ -98,13 +92,13 @@ impl<'data, Elf: FileHeader> ElfFile<'data, Elf> {
                     if dynamic_symbols.is_empty() {
                         dynamic_symbols = section
                             .data_as_array(endian, data)
-                            .map_err(|()| "Invalid symtab data")?;
+                            .read_error("Invalid ELF dynsym data")?;
                         let strtab_section = sections
                             .get(section.sh_link(endian) as usize)
-                            .ok_or("Invalid strtab section index")?;
+                            .read_error("Invalid ELF dynstr section index")?;
                         dynamic_symbol_string_data = strtab_section
                             .data(endian, data)
-                            .map_err(|()| "Invalid strtab")?;
+                            .read_error("Invalid ELF dynstr data")?;
                     }
                 }
                 elf::SHT_SYMTAB => {
@@ -112,20 +106,20 @@ impl<'data, Elf: FileHeader> ElfFile<'data, Elf> {
                         symbol_section = Some(index);
                         symbols = section
                             .data_as_array(endian, data)
-                            .map_err(|()| "Invalid symtab data")?;
+                            .read_error("Invalid ELF symtab data")?;
                         let strtab_section = sections
                             .get(section.sh_link(endian) as usize)
-                            .ok_or("Invalid strtab section index")?;
+                            .read_error("Invalid ELF strtab section index")?;
                         symbol_string_data = strtab_section
                             .data(endian, data)
-                            .map_err(|()| "Invalid strtab")?;
+                            .read_error("Invalid ELF strtab data")?;
                     }
                 }
                 elf::SHT_SYMTAB_SHNDX => {
                     if symbol_shndx.is_empty() {
                         symbol_shndx = section
                             .data_as_array(endian, data)
-                            .map_err(|()| "Invalid symtab_shndx data")?;
+                            .read_error("Invalid ELF symtab_shndx data")?;
                     }
                 }
                 _ => {}
@@ -530,16 +524,21 @@ impl<'data, 'file, Elf: FileHeader> ElfSection<'data, 'file, Elf> {
     }
 
     #[cfg(feature = "compression")]
-    fn maybe_decompress_data(&self) -> Result<Option<Cow<'data, [u8]>>, ()> {
+    fn maybe_decompress_data(&self) -> read::Result<Option<Cow<'data, [u8]>>> {
         let endian = self.file.endian;
         if (self.section.sh_flags(endian).into() & u64::from(elf::SHF_COMPRESSED)) == 0 {
             return Ok(None);
         }
 
-        let mut data = self.section.data(endian, self.file.data)?;
-        let header = data.read::<Elf::CompressionHeader>()?;
+        let mut data = self
+            .section
+            .data(endian, self.file.data)
+            .read_error("Invalid ELF compressed section offset or size")?;
+        let header = data
+            .read::<Elf::CompressionHeader>()
+            .read_error("Invalid ELF compression header size or alignment")?;
         if header.ch_type(endian) != elf::ELFCOMPRESS_ZLIB {
-            return Err(());
+            return Err(Error("Unsupported ELF compression type"));
         }
 
         let uncompressed_size: u64 = header.ch_size(endian).into();
@@ -549,14 +548,14 @@ impl<'data, 'file, Elf: FileHeader> ElfSection<'data, 'file, Elf> {
             .decompress_vec(data.0, &mut decompressed, FlushDecompress::Finish)
             .is_err()
         {
-            return Err(());
+            return Err(Error("Invalid ELF compressed data"));
         }
         Ok(Some(Cow::Owned(decompressed)))
     }
 
     /// Try GNU-style "ZLIB" header decompression.
     #[cfg(feature = "compression")]
-    fn maybe_decompress_data_gnu(&self) -> Result<Option<Cow<'data, [u8]>>, ()> {
+    fn maybe_decompress_data_gnu(&self) -> read::Result<Option<Cow<'data, [u8]>>> {
         let name = match self.name() {
             Some(name) => name,
             None => return Ok(None),
@@ -568,17 +567,25 @@ impl<'data, 'file, Elf: FileHeader> ElfSection<'data, 'file, Elf> {
         // Assume ZLIB-style uncompressed data is no more than 4GB to avoid accidentally
         // huge allocations. This also reduces the chance of accidentally matching on a
         // .debug_str that happens to start with "ZLIB".
-        if data.read_bytes(8)?.0 != b"ZLIB\0\0\0\0" {
-            return Err(());
+        if data
+            .read_bytes(8)
+            .read_error("ELF GNU compressed section is too short")?
+            .0
+            != b"ZLIB\0\0\0\0"
+        {
+            return Err(Error("Invalid ELF GNU compressed section header"));
         }
-        let uncompressed_size = data.read::<U32<_>>()?.get(endian::BigEndian);
+        let uncompressed_size = data
+            .read::<U32<_>>()
+            .read_error("ELF GNU compressed section is too short")?
+            .get(endian::BigEndian);
         let mut decompressed = Vec::with_capacity(uncompressed_size as usize);
         let mut decompress = Decompress::new(true);
         if decompress
             .decompress_vec(data.0, &mut decompressed, FlushDecompress::Finish)
             .is_err()
         {
-            return Err(());
+            return Err(Error("Invalid ELF GNU compressed data"));
         }
         Ok(Some(Cow::Owned(decompressed)))
     }
@@ -972,11 +979,11 @@ where
     Elf: FileHeader,
 {
     /// Returns `Err` if `align` is invalid.
-    fn new(endian: Elf::Endian, align: Elf::Word, data: Bytes<'data>) -> Result<Self, ()> {
+    fn new(endian: Elf::Endian, align: Elf::Word, data: Bytes<'data>) -> read::Result<Self> {
         let align = match align.into() {
             0u64..=4 => 4,
             8 => 8,
-            _ => return Err(()),
+            _ => return Err(Error("Invalid ELF note alignment")),
         };
         // TODO: check data alignment?
         Ok(ElfNoteIterator {
@@ -986,22 +993,31 @@ where
         })
     }
 
-    fn next(&mut self) -> Result<Option<ElfNote<'data, Elf>>, ()> {
+    fn next(&mut self) -> read::Result<Option<ElfNote<'data, Elf>>> {
         let mut data = self.data;
         if data.is_empty() {
             return Ok(None);
         }
 
-        let header = data.read::<Elf::NoteHeader>()?;
+        let header = data
+            .read::<Elf::NoteHeader>()
+            .read_error("ELF note is too short")?;
 
         let namesz = header.n_namesz(self.endian) as usize;
-        let name = data.read_bytes_at(0, namesz)?.0;
+        let name = data
+            .read_bytes_at(0, namesz)
+            .read_error("Invalid ELF note namesz")?
+            .0;
 
         // Skip both the name and the alignment padding.
-        data.skip(util::align(namesz, self.align))?;
+        data.skip(util::align(namesz, self.align))
+            .read_error("ELF note is too short")?;
 
         let descsz = header.n_descsz(self.endian) as usize;
-        let desc = data.read_bytes_at(0, descsz)?.0;
+        let desc = data
+            .read_bytes_at(0, descsz)
+            .read_error("Invalid ELF note descsz")?
+            .0;
 
         // Skip both the descriptor and the alignment padding (if any).
         if data.skip(util::align(descsz, self.align)).is_err() {
@@ -1134,8 +1150,8 @@ pub trait FileHeader: Debug + Pod {
         self.e_ident().data == elf::ELFDATA2MSB
     }
 
-    fn endian(&self) -> Option<Self::Endian> {
-        Self::Endian::from_big_endian(self.is_big_endian())
+    fn endian(&self) -> read::Result<Self::Endian> {
+        Self::Endian::from_big_endian(self.is_big_endian()).read_error("Unsupported ELF endian")
     }
 
     /// Return the first section header, if present.
@@ -1146,7 +1162,7 @@ pub trait FileHeader: Debug + Pod {
         &self,
         endian: Self::Endian,
         data: Bytes<'data>,
-    ) -> Result<Option<&'data Self::SectionHeader>, ()> {
+    ) -> read::Result<Option<&'data Self::SectionHeader>> {
         let shoff: u64 = self.e_shoff(endian).into();
         if shoff == 0 {
             // No section headers is ok.
@@ -1155,15 +1171,17 @@ pub trait FileHeader: Debug + Pod {
         let shentsize = self.e_shentsize(endian) as usize;
         if shentsize != mem::size_of::<Self::SectionHeader>() {
             // Section header size must match.
-            return Err(());
+            return Err(Error("Invalid ELF section header entry size"));
         }
-        data.read_at(shoff as usize).map(Some)
+        data.read_at(shoff as usize)
+            .map(Some)
+            .read_error("Invalid ELF section header offset or size")
     }
 
     /// Return the `e_phnum` field of the header. Handles extended values.
     ///
     /// Returns `Err` for invalid values.
-    fn phnum<'data>(&self, endian: Self::Endian, data: Bytes<'data>) -> Result<usize, ()> {
+    fn phnum<'data>(&self, endian: Self::Endian, data: Bytes<'data>) -> read::Result<usize> {
         let e_phnum = self.e_phnum(endian);
         if e_phnum < elf::PN_XNUM {
             Ok(e_phnum as usize)
@@ -1171,14 +1189,14 @@ pub trait FileHeader: Debug + Pod {
             Ok(section_0.sh_info(endian) as usize)
         } else {
             // Section 0 must exist if e_phnum overflows.
-            Err(())
+            Err(Error("Missing ELF section headers for e_phnum overflow"))
         }
     }
 
     /// Return the `e_shnum` field of the header. Handles extended values.
     ///
     /// Returns `Err` for invalid values.
-    fn shnum<'data>(&self, endian: Self::Endian, data: Bytes<'data>) -> Result<usize, ()> {
+    fn shnum<'data>(&self, endian: Self::Endian, data: Bytes<'data>) -> read::Result<usize> {
         let e_shnum = self.e_shnum(endian);
         if e_shnum > 0 {
             Ok(e_shnum as usize)
@@ -1194,7 +1212,7 @@ pub trait FileHeader: Debug + Pod {
     /// Return the `e_shstrndx` field of the header. Handles extended values.
     ///
     /// Returns `Err` for invalid values (including if the index is 0).
-    fn shstrndx<'data>(&self, endian: Self::Endian, data: Bytes<'data>) -> Result<u32, ()> {
+    fn shstrndx<'data>(&self, endian: Self::Endian, data: Bytes<'data>) -> read::Result<u32> {
         let e_shstrndx = self.e_shstrndx(endian);
         let index = if e_shstrndx != elf::SHN_XINDEX {
             e_shstrndx.into()
@@ -1202,13 +1220,12 @@ pub trait FileHeader: Debug + Pod {
             section_0.sh_link(endian)
         } else {
             // Section 0 must exist if we're trying to read e_shstrndx.
-            return Err(());
+            return Err(Error("Missing ELF section headers for e_shstrndx overflow"));
         };
-        if index != 0 {
-            Ok(index)
-        } else {
-            Err(())
+        if index == 0 {
+            return Err(Error("Missing ELF e_shstrndx"));
         }
+        Ok(index)
     }
 
     /// Return the slice of program headers.
@@ -1219,7 +1236,7 @@ pub trait FileHeader: Debug + Pod {
         &self,
         endian: Self::Endian,
         data: Bytes<'data>,
-    ) -> Result<&'data [Self::ProgramHeader], ()> {
+    ) -> read::Result<&'data [Self::ProgramHeader]> {
         let phoff: u64 = self.e_phoff(endian).into();
         if phoff == 0 {
             // No program headers is ok.
@@ -1233,9 +1250,10 @@ pub trait FileHeader: Debug + Pod {
         let phentsize = self.e_phentsize(endian) as usize;
         if phentsize != mem::size_of::<Self::ProgramHeader>() {
             // Program header size must match.
-            return Err(());
+            return Err(Error("Invalid ELF program header entry size"));
         }
         data.read_slice_at(phoff as usize, phnum)
+            .read_error("Invalid ELF program header size or alignment")
     }
 
     /// Return the slice of section headers.
@@ -1246,7 +1264,7 @@ pub trait FileHeader: Debug + Pod {
         &self,
         endian: Self::Endian,
         data: Bytes<'data>,
-    ) -> Result<&'data [Self::SectionHeader], ()> {
+    ) -> read::Result<&'data [Self::SectionHeader]> {
         let shoff: u64 = self.e_shoff(endian).into();
         if shoff == 0 {
             // No section headers is ok.
@@ -1260,9 +1278,10 @@ pub trait FileHeader: Debug + Pod {
         let shentsize = self.e_shentsize(endian) as usize;
         if shentsize != mem::size_of::<Self::SectionHeader>() {
             // Section header size must match.
-            return Err(());
+            return Err(Error("Invalid ELF section header entry size"));
         }
         data.read_slice_at(shoff as usize, shnum)
+            .read_error("Invalid ELF section header offset/size/alignment")
     }
 }
 
@@ -1303,9 +1322,10 @@ pub trait ProgramHeader: Debug + Pod {
         &self,
         endian: Self::Endian,
         data: Bytes<'data>,
-    ) -> Result<ElfNoteIterator<'data, Self::Elf>, ()> {
+    ) -> read::Result<ElfNoteIterator<'data, Self::Elf>> {
         let data = if self.p_type(endian) == elf::PT_NOTE {
-            self.data(endian, data)?
+            self.data(endian, data)
+                .read_error("Invalid ELF note segment offset or size")?
         } else {
             Bytes(&[])
         };
@@ -1376,9 +1396,10 @@ pub trait SectionHeader: Debug + Pod {
         &self,
         endian: Self::Endian,
         data: Bytes<'data>,
-    ) -> Result<ElfNoteIterator<'data, Self::Elf>, ()> {
+    ) -> read::Result<ElfNoteIterator<'data, Self::Elf>> {
         let data = if self.sh_type(endian) == elf::SHT_NOTE {
-            self.data(endian, data)?
+            self.data(endian, data)
+                .read_error("Invalid ELF note section offset or size")?
         } else {
             Bytes(&[])
         };

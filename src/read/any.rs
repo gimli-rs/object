@@ -15,8 +15,8 @@ use crate::read::pe;
 #[cfg(feature = "wasm")]
 use crate::read::wasm;
 use crate::read::{
-    self, FileFlags, Object, ObjectSection, ObjectSegment, Relocation, SectionFlags, SectionIndex,
-    SectionKind, Symbol, SymbolIndex, SymbolMap,
+    self, Error, FileFlags, Object, ObjectSection, ObjectSegment, Relocation, Result, SectionFlags,
+    SectionIndex, SectionKind, Symbol, SymbolIndex, SymbolMap,
 };
 
 /// Evaluate an expression on the contents of a file format enum.
@@ -171,9 +171,9 @@ enum FileInternal<'data> {
 
 impl<'data> File<'data> {
     /// Parse the raw file data.
-    pub fn parse(data: &'data [u8]) -> Result<Self, &'static str> {
+    pub fn parse(data: &'data [u8]) -> Result<Self> {
         if data.len() < 16 {
-            return Err("File too short");
+            return Err(Error("File too short"));
         }
 
         let inner = match [data[0], data[1], data[2], data[3], data[4]] {
@@ -205,7 +205,7 @@ impl<'data> File<'data> {
                     Ok(crate::pe::IMAGE_NT_OPTIONAL_HDR64_MAGIC) => {
                         FileInternal::Pe64(pe::PeFile64::parse(data)?)
                     }
-                    _ => return Err("Unknown MS-DOS file"),
+                    _ => return Err(Error("Unknown MS-DOS file")),
                 }
             }
             // TODO: more COFF machines
@@ -214,7 +214,7 @@ impl<'data> File<'data> {
             [0x4c, 0x01, _, _, _]
             // COFF x86-64
             | [0x64, 0x86, _, _, _] => FileInternal::Coff(coff::CoffFile::parse(data)?),
-            _ => return Err("Unknown file magic"),
+            _ => return Err(Error("Unknown file magic")),
         };
         Ok(File { inner })
     }

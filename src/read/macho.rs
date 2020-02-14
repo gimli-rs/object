@@ -19,9 +19,10 @@ use crate::macho;
 use crate::pod::{Bytes, Pod};
 use crate::read::util::StringTable;
 use crate::read::{
-    self, FileFlags, Object, ObjectSection, ObjectSegment, Relocation, RelocationEncoding,
-    RelocationKind, RelocationTarget, SectionFlags, SectionIndex, SectionKind, Symbol, SymbolFlags,
-    SymbolIndex, SymbolKind, SymbolMap, SymbolScope, SymbolSection,
+    self, Error, FileFlags, Object, ObjectSection, ObjectSegment, ReadError, Relocation,
+    RelocationEncoding, RelocationKind, RelocationTarget, Result, SectionFlags, SectionIndex,
+    SectionKind, Symbol, SymbolFlags, SymbolIndex, SymbolKind, SymbolMap, SymbolScope,
+    SymbolSection,
 };
 
 /// A 32-bit Mach-O object file.
@@ -43,16 +44,16 @@ pub struct MachOFile<'data, Mach: MachHeader> {
 
 impl<'data, Mach: MachHeader> MachOFile<'data, Mach> {
     /// Parse the raw Mach-O file data.
-    pub fn parse(data: &'data [u8]) -> Result<Self, &'static str> {
+    pub fn parse(data: &'data [u8]) -> Result<Self> {
         let data = Bytes(data);
         let header = data
             .read_at::<Mach>(0)
-            .map_err(|()| "Invalid Mach-O header size or alignment")?;
+            .read_error("Invalid Mach-O header size or alignment")?;
         if !header.is_supported() {
-            return Err("Unsupported Mach-O header");
+            return Err(Error("Unsupported Mach-O header"));
         }
 
-        let endian = header.endian().ok_or("Unsupported endian")?;
+        let endian = header.endian().read_error("Unsupported Mach-O endian")?;
 
         let mut symbols = &[][..];
         let mut strings = Bytes(&[]);
@@ -60,32 +61,24 @@ impl<'data, Mach: MachHeader> MachOFile<'data, Mach> {
         let mut sections = Vec::new();
         if let Ok(mut commands) = header.load_commands(endian, data) {
             while let Ok(Some(command)) = commands.next() {
-                if let Some((segment, section_data)) = Mach::Segment::from_command(command)
-                    .map_err(|()| "Invalid segment load command")?
-                {
-                    for section in segment
-                        .sections(endian, section_data)
-                        .map_err(|()| "Invalid number of sections")?
-                    {
+                if let Some((segment, section_data)) = Mach::Segment::from_command(command)? {
+                    for section in segment.sections(endian, section_data)? {
                         let index = SectionIndex(sections.len() + 1);
                         sections.push(MachOSectionInternal::parse(index, section));
                     }
-                } else if let Some(symtab) = command
-                    .symtab()
-                    .map_err(|()| "Invalid symtab load command")?
-                {
+                } else if let Some(symtab) = command.symtab()? {
                     symbols = data
                         .read_slice_at(
                             symtab.symoff.get(endian) as usize,
                             symtab.nsyms.get(endian) as usize,
                         )
-                        .map_err(|()| "Invalid symbol table offset or size")?;
+                        .read_error("Invalid Mach-O symbol table offset or size")?;
                     strings = data
                         .read_bytes_at(
                             symtab.stroff.get(endian) as usize,
                             symtab.strsize.get(endian) as usize,
                         )
-                        .map_err(|()| "Invalid string table offset or size")?;
+                        .read_error("Invalid Mach-O string table offset or size")?;
                 }
             }
         }
@@ -794,14 +787,20 @@ impl<'data, E: Endian> MachOLoadCommandIterator<'data, E> {
         }
     }
 
-    fn next(&mut self) -> Result<Option<MachOLoadCommand<'data, E>>, ()> {
+    fn next(&mut self) -> Result<Option<MachOLoadCommand<'data, E>>> {
         if self.ncmds == 0 {
             return Ok(None);
         }
-        let header = self.data.read_at::<macho::LoadCommand<E>>(0)?;
+        let header = self
+            .data
+            .read_at::<macho::LoadCommand<E>>(0)
+            .read_error("Invalid Mach-O load command header")?;
         let cmd = header.cmd.get(self.endian);
         let cmdsize = header.cmdsize.get(self.endian) as usize;
-        let data = self.data.read_bytes(cmdsize)?;
+        let data = self
+            .data
+            .read_bytes(cmdsize)
+            .read_error("Invalid Mach-O load command size")?;
         self.ncmds -= 1;
         Ok(Some(MachOLoadCommand {
             cmd,
@@ -822,12 +821,12 @@ pub struct MachOLoadCommand<'data, E: Endian> {
 
 impl<'data, E: Endian> MachOLoadCommand<'data, E> {
     /// Try to parse this command as a `SegmentCommand32`.
-    pub fn segment_32(
-        self,
-    ) -> Result<Option<(&'data macho::SegmentCommand32<E>, Bytes<'data>)>, ()> {
+    pub fn segment_32(self) -> Result<Option<(&'data macho::SegmentCommand32<E>, Bytes<'data>)>> {
         if self.cmd == macho::LC_SEGMENT {
             let mut data = self.data;
-            let command = data.read()?;
+            let command = data
+                .read()
+                .read_error("Invalid Mach-O LC_SEGMENT command size")?;
             Ok(Some((command, data)))
         } else {
             Ok(None)
@@ -835,30 +834,42 @@ impl<'data, E: Endian> MachOLoadCommand<'data, E> {
     }
 
     /// Try to parse this command as a `SymtabCommand`.
-    pub fn symtab(self) -> Result<Option<&'data macho::SymtabCommand<E>>, ()> {
+    pub fn symtab(self) -> Result<Option<&'data macho::SymtabCommand<E>>> {
         if self.cmd == macho::LC_SYMTAB {
-            Some(self.data.clone().read()).transpose()
+            Some(
+                self.data
+                    .clone()
+                    .read()
+                    .read_error("Invalid Mach-O LC_SYMTAB command size"),
+            )
+            .transpose()
         } else {
             Ok(None)
         }
     }
 
     /// Try to parse this command as a `UuidCommand`.
-    pub fn uuid(self) -> Result<Option<&'data macho::UuidCommand<E>>, ()> {
+    pub fn uuid(self) -> Result<Option<&'data macho::UuidCommand<E>>> {
         if self.cmd == macho::LC_UUID {
-            Some(self.data.clone().read()).transpose()
+            Some(
+                self.data
+                    .clone()
+                    .read()
+                    .read_error("Invalid Mach-O LC_UUID command size"),
+            )
+            .transpose()
         } else {
             Ok(None)
         }
     }
 
     /// Try to parse this command as a `SegmentCommand64`.
-    pub fn segment_64(
-        self,
-    ) -> Result<Option<(&'data macho::SegmentCommand64<E>, Bytes<'data>)>, ()> {
+    pub fn segment_64(self) -> Result<Option<(&'data macho::SegmentCommand64<E>, Bytes<'data>)>> {
         if self.cmd == macho::LC_SEGMENT_64 {
             let mut data = self.data;
-            let command = data.read()?;
+            let command = data
+                .read()
+                .read_error("Invalid Mach-O LC_SEGMENT_64 command size")?;
             Ok(Some((command, data)))
         } else {
             Ok(None)
@@ -866,9 +877,15 @@ impl<'data, E: Endian> MachOLoadCommand<'data, E> {
     }
 
     /// Try to parse this command as an `EntryPointCommand`.
-    pub fn entry_point(self) -> Result<Option<&'data macho::EntryPointCommand<E>>, ()> {
+    pub fn entry_point(self) -> Result<Option<&'data macho::EntryPointCommand<E>>> {
         if self.cmd == macho::LC_MAIN {
-            Some(self.data.clone().read()).transpose()
+            Some(
+                self.data
+                    .clone()
+                    .read()
+                    .read_error("Invalid Mach-O LC_MAIN command size"),
+            )
+            .transpose()
         } else {
             Ok(None)
         }
@@ -923,8 +940,10 @@ pub trait MachHeader: Debug + Pod {
         &self,
         endian: Self::Endian,
         data: Bytes<'data>,
-    ) -> Result<MachOLoadCommandIterator<'data, Self::Endian>, ()> {
-        let data = data.read_bytes_at(mem::size_of::<Self>(), self.sizeofcmds(endian) as usize)?;
+    ) -> Result<MachOLoadCommandIterator<'data, Self::Endian>> {
+        let data = data
+            .read_bytes_at(mem::size_of::<Self>(), self.sizeofcmds(endian) as usize)
+            .read_error("Invalid Mach-O load command table size")?;
         Ok(MachOLoadCommandIterator::new(
             endian,
             data,
@@ -940,7 +959,7 @@ pub trait Segment: Debug + Pod {
     type Endian: endian::Endian;
     type Section: Section<Endian = Self::Endian>;
 
-    fn from_command(command: MachOLoadCommand<Self::Endian>) -> Result<Option<(&Self, Bytes)>, ()>;
+    fn from_command(command: MachOLoadCommand<Self::Endian>) -> Result<Option<(&Self, Bytes)>>;
 
     fn cmd(&self, endian: Self::Endian) -> u32;
     fn cmdsize(&self, endian: Self::Endian) -> u32;
@@ -983,8 +1002,9 @@ pub trait Segment: Debug + Pod {
         &self,
         endian: Self::Endian,
         data: Bytes<'data>,
-    ) -> Result<&'data [Self::Section], ()> {
+    ) -> Result<&'data [Self::Section]> {
         data.read_slice_at(0, self.nsects(endian) as usize)
+            .read_error("Invalid Mach-O number of sections")
     }
 }
 
@@ -1051,8 +1071,9 @@ pub trait Section: Debug + Pod {
         &self,
         endian: Self::Endian,
         data: Bytes<'data>,
-    ) -> Result<&'data [macho::Relocation<Self::Endian>], ()> {
+    ) -> Result<&'data [macho::Relocation<Self::Endian>]> {
         data.read_slice_at(self.reloff(endian) as usize, self.nreloc(endian) as usize)
+            .read_error("Invalid Mach-O relocations offset or number")
     }
 }
 
@@ -1170,7 +1191,7 @@ impl<Endian: endian::Endian> Segment for macho::SegmentCommand32<Endian> {
     type Endian = Endian;
     type Section = macho::Section32<Self::Endian>;
 
-    fn from_command(command: MachOLoadCommand<Self::Endian>) -> Result<Option<(&Self, Bytes)>, ()> {
+    fn from_command(command: MachOLoadCommand<Self::Endian>) -> Result<Option<(&Self, Bytes)>> {
         command.segment_32()
     }
 
@@ -1214,7 +1235,7 @@ impl<Endian: endian::Endian> Segment for macho::SegmentCommand64<Endian> {
     type Endian = Endian;
     type Section = macho::Section64<Self::Endian>;
 
-    fn from_command(command: MachOLoadCommand<Self::Endian>) -> Result<Option<(&Self, Bytes)>, ()> {
+    fn from_command(command: MachOLoadCommand<Self::Endian>) -> Result<Option<(&Self, Bytes)>> {
         command.segment_64()
     }
 

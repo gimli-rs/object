@@ -13,9 +13,9 @@ use target_lexicon::Architecture;
 use wasmparser as wp;
 
 use crate::read::{
-    self, FileFlags, Object, ObjectSection, ObjectSegment, Relocation, SectionFlags, SectionIndex,
-    SectionKind, Symbol, SymbolFlags, SymbolIndex, SymbolKind, SymbolMap, SymbolScope,
-    SymbolSection,
+    self, Error, FileFlags, Object, ObjectSection, ObjectSegment, Relocation, Result, SectionFlags,
+    SectionIndex, SectionKind, Symbol, SymbolFlags, SymbolIndex, SymbolKind, SymbolMap,
+    SymbolScope, SymbolSection,
 };
 
 const SECTION_CUSTOM: usize = 0;
@@ -49,13 +49,13 @@ pub struct WasmFile<'data> {
 
 impl<'data> WasmFile<'data> {
     /// Parse the raw wasm data.
-    pub fn parse(data: &'data [u8]) -> Result<Self, &'static str> {
-        let module = wp::ModuleReader::new(data).map_err(|_| "Invalid WASM header")?;
+    pub fn parse(data: &'data [u8]) -> Result<Self> {
+        let module = wp::ModuleReader::new(data).map_err(|_| Error("Invalid WASM header"))?;
 
         let mut file = WasmFile::default();
 
         for section in module {
-            let section = section.map_err(|_| "Invalid section header")?;
+            let section = section.map_err(|_| Error("Invalid WASM section header"))?;
 
             match section.code {
                 wp::SectionCode::Custom { kind, name } => {
