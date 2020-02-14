@@ -1,4 +1,4 @@
-//! Support for reading WASM files.
+//! Support for reading Wasm files.
 //!
 //! Provides `WasmFile` and related types which implement the `Object` trait.
 //!
@@ -13,9 +13,9 @@ use target_lexicon::Architecture;
 use wasmparser as wp;
 
 use crate::read::{
-    self, Error, FileFlags, Object, ObjectSection, ObjectSegment, Relocation, Result, SectionFlags,
-    SectionIndex, SectionKind, Symbol, SymbolFlags, SymbolIndex, SymbolKind, SymbolMap,
-    SymbolScope, SymbolSection,
+    self, FileFlags, Object, ObjectSection, ObjectSegment, ReadError, Relocation, Result,
+    SectionFlags, SectionIndex, SectionKind, Symbol, SymbolFlags, SymbolIndex, SymbolKind,
+    SymbolMap, SymbolScope, SymbolSection,
 };
 
 const SECTION_CUSTOM: usize = 0;
@@ -50,12 +50,14 @@ pub struct WasmFile<'data> {
 impl<'data> WasmFile<'data> {
     /// Parse the raw wasm data.
     pub fn parse(data: &'data [u8]) -> Result<Self> {
-        let module = wp::ModuleReader::new(data).map_err(|_| Error("Invalid WASM header"))?;
+        let module = wp::ModuleReader::new(data)
+            .ok()
+            .read_error("Invalid Wasm header")?;
 
         let mut file = WasmFile::default();
 
         for section in module {
-            let section = section.map_err(|_| Error("Invalid WASM section header"))?;
+            let section = section.ok().read_error("Invalid Wasm section header")?;
 
             match section.code {
                 wp::SectionCode::Custom { kind, name } => {
@@ -120,10 +122,15 @@ where
             .find(|section| section.name() == Some(section_name))
     }
 
-    fn section_by_index(&'file self, index: SectionIndex) -> Option<WasmSection<'data, 'file>> {
-        let id_section = self.id_sections.get(index.0)?;
-        let section = self.sections.get((*id_section)?)?;
-        Some(WasmSection { section })
+    fn section_by_index(&'file self, index: SectionIndex) -> Result<WasmSection<'data, 'file>> {
+        // TODO: Missing sections should return an empty section.
+        let id_section = self
+            .id_sections
+            .get(index.0)
+            .and_then(|x| *x)
+            .read_error("Invalid Wasm section index")?;
+        let section = self.sections.get(id_section).unwrap();
+        Ok(WasmSection { section })
     }
 
     fn sections(&'file self) -> Self::SectionIterator {
@@ -134,7 +141,7 @@ where
 
     #[inline]
     fn symbol_by_index(&self, _index: SymbolIndex) -> Option<Symbol<'data>> {
-        // WASM doesn't need or support looking up symbols by index.
+        // Wasm doesn't need or support looking up symbols by index.
         None
     }
 

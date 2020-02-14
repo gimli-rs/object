@@ -165,8 +165,16 @@ where
             .find(|section| section.name() == Some(section_name))
     }
 
-    fn section_by_index(&'file self, index: SectionIndex) -> Option<PeSection<'data, 'file, Pe>> {
-        self.sections().find(|section| section.index() == index)
+    fn section_by_index(&'file self, index: SectionIndex) -> Result<PeSection<'data, 'file, Pe>> {
+        let section = self
+            .sections
+            .get(index.0)
+            .read_error("Invalid PE section index")?;
+        Ok(PeSection {
+            file: self,
+            index,
+            section,
+        })
     }
 
     fn sections(&'file self) -> PeSectionIterator<'data, 'file, Pe> {

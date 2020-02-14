@@ -259,8 +259,15 @@ where
             .or_else(|| self.zdebug_section_by_name(section_name))
     }
 
-    fn section_by_index(&'file self, index: SectionIndex) -> Option<ElfSection<'data, 'file, Elf>> {
-        self.sections.get(index.0).map(|section| ElfSection {
+    fn section_by_index(
+        &'file self,
+        index: SectionIndex,
+    ) -> read::Result<ElfSection<'data, 'file, Elf>> {
+        let section = self
+            .sections
+            .get(index.0)
+            .read_error("Invalid ELF section index")?;
+        Ok(ElfSection {
             file: self,
             index,
             section,

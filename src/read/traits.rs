@@ -3,9 +3,9 @@ use alloc::borrow::Cow;
 use target_lexicon::{Architecture, Endianness};
 use uuid::Uuid;
 
+use crate::read::{self, Result};
 use crate::{
-    read, FileFlags, Relocation, SectionFlags, SectionIndex, SectionKind, Symbol, SymbolIndex,
-    SymbolMap,
+    FileFlags, Relocation, SectionFlags, SectionIndex, SectionKind, Symbol, SymbolIndex, SymbolMap,
 };
 
 /// An object file.
@@ -62,6 +62,8 @@ pub trait Object<'data, 'file>: read::private::Sealed {
     ///
     /// For some object files, multiple segments may contain sections with the same
     /// name. In this case, the first matching section will be used.
+    ///
+    /// This method skips over sections with invalid names.
     fn section_by_name(&'file self, section_name: &str) -> Option<Self::Section>;
 
     /// Get the section at the given index.
@@ -69,7 +71,9 @@ pub trait Object<'data, 'file>: read::private::Sealed {
     /// The meaning of the index depends on the object file.
     ///
     /// For some object files, this requires iterating through all sections.
-    fn section_by_index(&'file self, index: SectionIndex) -> Option<Self::Section>;
+    ///
+    /// Returns an error if the index is invalid.
+    fn section_by_index(&'file self, index: SectionIndex) -> Result<Self::Section>;
 
     /// Get an iterator over the sections in the file.
     fn sections(&'file self) -> Self::SectionIterator;
@@ -86,6 +90,10 @@ pub trait Object<'data, 'file>: read::private::Sealed {
     fn symbols(&'file self) -> Self::SymbolIterator;
 
     /// Get the data for the given symbol.
+    ///
+    /// This may iterate over segments.
+    ///
+    /// Returns `None` for undefined or invalid symbols.
     fn symbol_data(&'file self, symbol: &Symbol<'data>) -> Option<&'data [u8]> {
         if symbol.is_undefined() {
             return None;
@@ -93,8 +101,8 @@ pub trait Object<'data, 'file>: read::private::Sealed {
         let address = symbol.address();
         let size = symbol.size();
         if let Some(index) = symbol.section_index() {
-            self.section_by_index(index)
-                .and_then(|section| section.data_range(address, size))
+            let section = self.section_by_index(index).ok()?;
+            section.data_range(address, size)
         } else {
             self.segments()
                 .find_map(|segment| segment.data_range(address, size))

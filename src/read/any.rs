@@ -273,7 +273,7 @@ where
         .map(|inner| Section { inner })
     }
 
-    fn section_by_index(&'file self, index: SectionIndex) -> Option<Section<'data, 'file>> {
+    fn section_by_index(&'file self, index: SectionIndex) -> Result<Section<'data, 'file>> {
         map_inner_option!(self.inner, FileInternal, SectionInternal, |x| x
             .section_by_index(index))
         .map(|inner| Section { inner })

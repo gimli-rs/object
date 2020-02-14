@@ -97,11 +97,12 @@ impl<'data, Mach: MachHeader> MachOFile<'data, Mach> {
 
     /// Return the section at the given index.
     #[inline]
-    fn section_internal(&self, index: SectionIndex) -> Option<&MachOSectionInternal<'data, Mach>> {
+    fn section_internal(&self, index: SectionIndex) -> Result<&MachOSectionInternal<'data, Mach>> {
         index
             .0
             .checked_sub(1)
             .and_then(|index| self.sections.get(index))
+            .read_error("Invalid Mach-O section index")
     }
 }
 
@@ -175,8 +176,9 @@ where
     fn section_by_index(
         &'file self,
         index: SectionIndex,
-    ) -> Option<MachOSection<'data, 'file, Mach>> {
-        self.section_internal(index).map(|&internal| MachOSection {
+    ) -> Result<MachOSection<'data, 'file, Mach>> {
+        let internal = *self.section_internal(index)?;
+        Ok(MachOSection {
             file: self,
             internal,
         })
@@ -625,7 +627,7 @@ fn parse_symbol<'data, Mach: MachHeader>(
     };
     let kind = section
         .index()
-        .and_then(|index| file.section_internal(index))
+        .and_then(|index| file.section_internal(index).ok())
         .map(|section| match section.kind {
             SectionKind::Text => SymbolKind::Text,
             SectionKind::Data
