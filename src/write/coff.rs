@@ -1,6 +1,5 @@
 use crc32fast;
 use std::mem;
-use std::string::String;
 use std::vec::Vec;
 
 use crate::endian::{LittleEndian as LE, U16Bytes, U32Bytes, U16, U32};
@@ -138,7 +137,7 @@ impl Object {
         stub_id
     }
 
-    pub(crate) fn coff_write(&self) -> Result<Vec<u8>, String> {
+    pub(crate) fn coff_write(&self) -> Result<Vec<u8>> {
         // Calculate offsets of everything, and build strtab.
         let mut offset = 0;
         let mut strtab = StringTable::default();
@@ -225,10 +224,10 @@ impl Object {
                     Architecture::I386 => coff::IMAGE_FILE_MACHINE_I386,
                     Architecture::X86_64 => coff::IMAGE_FILE_MACHINE_AMD64,
                     _ => {
-                        return Err(format!(
+                        return Err(Error(format!(
                             "unimplemented architecture {:?}",
                             self.architecture
-                        ))
+                        )));
                     }
                 },
             ),
@@ -283,11 +282,11 @@ impl Object {
                 | SectionKind::TlsVariables
                 | SectionKind::Unknown
                 | SectionKind::Metadata => {
-                    return Err(format!(
+                    return Err(Error(format!(
                         "unimplemented section `{}` kind {:?}",
                         section.name().unwrap_or(""),
                         section.kind
-                    ))
+                    )));
                 }
             } | match section.align {
                 1 => coff::IMAGE_SCN_ALIGN_1BYTES,
@@ -305,11 +304,11 @@ impl Object {
                 4096 => coff::IMAGE_SCN_ALIGN_4096BYTES,
                 8192 => coff::IMAGE_SCN_ALIGN_8192BYTES,
                 _ => {
-                    return Err(format!(
+                    return Err(Error(format!(
                         "unimplemented section `{}` align {}",
                         section.name().unwrap_or(""),
                         section.align
-                    ))
+                    )));
                 }
             };
             let mut coff_section = coff::ImageSectionHeader {
@@ -362,7 +361,7 @@ impl Object {
                         coff_section.name[7 - i] = c;
                     }
                 } else {
-                    return Err(format!("invalid section name offset {}", str_offset));
+                    return Err(Error(format!("invalid section name offset {}", str_offset)));
                 }
             }
             buffer.write(&coff_section);
@@ -392,7 +391,9 @@ impl Object {
                             (RelocationKind::SectionOffset, 7, 0) => coff::IMAGE_REL_I386_SECREL7,
                             (RelocationKind::Relative, 32, -4) => coff::IMAGE_REL_I386_REL32,
                             (RelocationKind::Coff(x), _, _) => x,
-                            _ => return Err(format!("unimplemented relocation {:?}", reloc)),
+                            _ => {
+                                return Err(Error(format!("unimplemented relocation {:?}", reloc)));
+                            }
                         },
                         Architecture::X86_64 => match (reloc.kind, reloc.size, reloc.addend) {
                             (RelocationKind::Absolute, 64, 0) => coff::IMAGE_REL_AMD64_ADDR64,
@@ -408,13 +409,15 @@ impl Object {
                             (RelocationKind::SectionOffset, 32, 0) => coff::IMAGE_REL_AMD64_SECREL,
                             (RelocationKind::SectionOffset, 7, 0) => coff::IMAGE_REL_AMD64_SECREL7,
                             (RelocationKind::Coff(x), _, _) => x,
-                            _ => return Err(format!("unimplemented relocation {:?}", reloc)),
+                            _ => {
+                                return Err(Error(format!("unimplemented relocation {:?}", reloc)));
+                            }
                         },
                         _ => {
-                            return Err(format!(
+                            return Err(Error(format!(
                                 "unimplemented architecture {:?}",
                                 self.architecture
-                            ))
+                            )));
                         }
                     };
                     let coff_relocation = coff::ImageRelocation {
@@ -460,10 +463,10 @@ impl Object {
                 SymbolKind::Text | SymbolKind::Data | SymbolKind::Tls => {
                     match symbol.section {
                         SymbolSection::None => {
-                            return Err(format!(
+                            return Err(Error(format!(
                                 "missing section for symbol `{}`",
                                 symbol.name().unwrap_or("")
-                            ));
+                            )));
                         }
                         SymbolSection::Undefined => coff::IMAGE_SYM_CLASS_EXTERNAL_DEF,
                         SymbolSection::Common => coff::IMAGE_SYM_CLASS_EXTERNAL,
@@ -472,11 +475,11 @@ impl Object {
                                 // TODO: does this need aux symbol records too?
                                 _ if symbol.weak => coff::IMAGE_SYM_CLASS_WEAK_EXTERNAL,
                                 SymbolScope::Unknown => {
-                                    return Err(format!(
+                                    return Err(Error(format!(
                                         "unimplemented symbol `{}` scope {:?}",
                                         symbol.name().unwrap_or(""),
                                         symbol.scope
-                                    ));
+                                    )));
                                 }
                                 SymbolScope::Compilation => coff::IMAGE_SYM_CLASS_STATIC,
                                 SymbolScope::Linkage | SymbolScope::Dynamic => {
@@ -487,11 +490,11 @@ impl Object {
                     }
                 }
                 SymbolKind::Unknown | SymbolKind::Null => {
-                    return Err(format!(
+                    return Err(Error(format!(
                         "unimplemented symbol `{}` kind {:?}",
                         symbol.name().unwrap_or(""),
                         symbol.kind
-                    ))
+                    )));
                 }
             };
             let number_of_aux_symbols = symbol_offsets[index].aux_count;

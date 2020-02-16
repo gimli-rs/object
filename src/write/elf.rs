@@ -1,5 +1,4 @@
 use std::mem;
-use std::string::String;
 use std::vec::Vec;
 
 use crate::elf;
@@ -65,25 +64,22 @@ impl Object {
         name
     }
 
-    fn elf_has_relocation_addend(&self) -> Result<bool, String> {
+    fn elf_has_relocation_addend(&self) -> Result<bool> {
         Ok(match self.architecture {
             Architecture::Arm(_) => false,
             Architecture::Aarch64(_) => false,
             Architecture::I386 => false,
             Architecture::X86_64 => true,
             _ => {
-                return Err(format!(
+                return Err(Error(format!(
                     "unimplemented architecture {:?}",
                     self.architecture
-                ))
+                )));
             }
         })
     }
 
-    pub(crate) fn elf_fixup_relocation(
-        &mut self,
-        mut relocation: &mut Relocation,
-    ) -> Result<i64, String> {
+    pub(crate) fn elf_fixup_relocation(&mut self, mut relocation: &mut Relocation) -> Result<i64> {
         // Return true if we should use a section symbol to avoid preemption.
         fn want_section_symbol(relocation: &Relocation, symbol: &Symbol) -> bool {
             if symbol.scope != SymbolScope::Dynamic {
@@ -138,7 +134,7 @@ impl Object {
         }
     }
 
-    pub(crate) fn elf_write(&self) -> Result<Vec<u8>, String> {
+    pub(crate) fn elf_write(&self) -> Result<Vec<u8>> {
         let (is_32, pointer_align) = match self.architecture.pointer_width().unwrap() {
             PointerWidth::U16 | PointerWidth::U32 => (true, 4),
             PointerWidth::U64 => (false, 8),
@@ -328,10 +324,10 @@ impl Object {
             Architecture::I386 => elf::EM_386,
             Architecture::X86_64 => elf::EM_X86_64,
             _ => {
-                return Err(format!(
+                return Err(Error(format!(
                     "unimplemented architecture {:?}",
                     self.architecture
-                ))
+                )));
             }
         };
         let e_flags = if let FileFlags::Elf { e_flags } = self.flags {
@@ -398,7 +394,7 @@ impl Object {
         if need_symtab_shndx {
             symtab_shndx.write(&U32::new(endian, 0));
         }
-        let mut write_symbol = |index: usize, symbol: &Symbol| -> Result<(), String> {
+        let mut write_symbol = |index: usize, symbol: &Symbol| -> Result<()> {
             let st_info = if let SymbolFlags::Elf { st_info, .. } = symbol.flags {
                 st_info
             } else {
@@ -428,11 +424,11 @@ impl Object {
                         if symbol.is_undefined() {
                             elf::STT_NOTYPE
                         } else {
-                            return Err(format!(
+                            return Err(Error(format!(
                                 "unimplemented symbol `{}` kind {:?}",
                                 symbol.name().unwrap_or(""),
                                 symbol.kind
-                            ));
+                            )));
                         }
                     }
                 };
@@ -533,7 +529,9 @@ impl Object {
                             (RelocationKind::Absolute, 8) => elf::R_386_8,
                             (RelocationKind::Relative, 8) => elf::R_386_PC8,
                             (RelocationKind::Elf(x), _) => x,
-                            _ => return Err(format!("unimplemented relocation {:?}", reloc)),
+                            _ => {
+                                return Err(Error(format!("unimplemented relocation {:?}", reloc)));
+                            }
                         },
                         Architecture::X86_64 => match (reloc.kind, reloc.encoding, reloc.size) {
                             (RelocationKind::Absolute, RelocationEncoding::Generic, 64) => {
@@ -554,13 +552,15 @@ impl Object {
                             (RelocationKind::Absolute, _, 8) => elf::R_X86_64_8,
                             (RelocationKind::Relative, _, 8) => elf::R_X86_64_PC8,
                             (RelocationKind::Elf(x), _, _) => x,
-                            _ => return Err(format!("unimplemented relocation {:?}", reloc)),
+                            _ => {
+                                return Err(Error(format!("unimplemented relocation {:?}", reloc)));
+                            }
                         },
                         _ => {
-                            return Err(format!(
+                            return Err(Error(format!(
                                 "unimplemented architecture {:?}",
                                 self.architecture
-                            ))
+                            )));
                         }
                     };
                     let r_sym = symbol_offsets[reloc.symbol.0].index as u32;
@@ -633,11 +633,11 @@ impl Object {
                     | SectionKind::Metadata
                     | SectionKind::Linker => 0,
                     SectionKind::Unknown | SectionKind::Common | SectionKind::TlsVariables => {
-                        return Err(format!(
+                        return Err(Error(format!(
                             "unimplemented section `{}` kind {:?}",
                             section.name().unwrap_or(""),
                             section.kind
-                        ))
+                        )));
                     }
                 }
                 .into()
