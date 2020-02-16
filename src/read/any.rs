@@ -2,7 +2,6 @@
 use alloc::borrow::Cow;
 use alloc::fmt;
 use target_lexicon::{Architecture, BinaryFormat};
-use uuid::Uuid;
 
 #[cfg(feature = "coff")]
 use crate::read::coff;
@@ -313,7 +312,7 @@ where
     }
 
     #[inline]
-    fn mach_uuid(&self) -> Option<Uuid> {
+    fn mach_uuid(&self) -> Result<Option<[u8; 16]>> {
         with_inner!(self.inner, FileInternal, |x| x.mach_uuid())
     }
 

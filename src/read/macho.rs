@@ -12,7 +12,6 @@ use core::fmt::Debug;
 use core::marker::PhantomData;
 use core::{fmt, mem, slice, str};
 use target_lexicon::{Aarch64Architecture, Architecture, ArmArchitecture};
-use uuid::Uuid;
 
 use crate::endian::{self, BigEndian, Endian, RunTimeEndian};
 use crate::macho;
@@ -262,16 +261,15 @@ where
         self.section_by_name(".debug_info").is_some()
     }
 
-    fn mach_uuid(&self) -> Option<Uuid> {
+    fn mach_uuid(&self) -> Result<Option<[u8; 16]>> {
         // Return the UUID from the `LC_UUID` load command, if one is present.
-        if let Ok(mut commands) = self.header.load_commands(self.endian, self.data) {
-            while let Ok(Some(command)) = commands.next() {
-                if let Ok(Some(command)) = command.uuid() {
-                    return Some(Uuid::from_bytes(command.uuid));
-                }
+        let mut commands = self.header.load_commands(self.endian, self.data)?;
+        while let Some(command) = commands.next()? {
+            if let Some(uuid) = command.uuid()? {
+                return Ok(Some(uuid.uuid));
             }
         }
-        None
+        Ok(None)
     }
 
     fn entry(&self) -> u64 {

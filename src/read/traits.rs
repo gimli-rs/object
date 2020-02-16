@@ -1,7 +1,6 @@
 #[cfg(feature = "compression")]
 use alloc::borrow::Cow;
 use target_lexicon::{Architecture, Endianness};
-use uuid::Uuid;
 
 use crate::read::{self, Result};
 use crate::{
@@ -123,8 +122,8 @@ pub trait Object<'data, 'file>: read::private::Sealed {
 
     /// The UUID from a Mach-O `LC_UUID` load command.
     #[inline]
-    fn mach_uuid(&self) -> Option<Uuid> {
-        None
+    fn mach_uuid(&self) -> Result<Option<[u8; 16]>> {
+        Ok(None)
     }
 
     /// The build ID from an ELF `NT_GNU_BUILD_ID` note.

@@ -36,8 +36,10 @@ fn main() {
             }
         };
 
-        if let Some(uuid) = file.mach_uuid() {
-            println!("Mach UUID: {}", uuid);
+        match file.mach_uuid() {
+            Ok(Some(uuid)) => println!("Mach UUID: {:x?}", uuid),
+            Ok(None) => {}
+            Err(e) => println!("Failed to parse Mach UUID: {}", e),
         }
         if let Some(build_id) = file.build_id() {
             println!("Build ID: {:x?}", build_id);
