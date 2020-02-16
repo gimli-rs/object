@@ -317,7 +317,7 @@ where
     }
 
     #[inline]
-    fn build_id(&self) -> Option<&'data [u8]> {
+    fn build_id(&self) -> Result<Option<&'data [u8]>> {
         with_inner!(self.inner, FileInternal, |x| x.build_id())
     }
 

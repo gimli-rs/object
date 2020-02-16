@@ -128,8 +128,8 @@ pub trait Object<'data, 'file>: read::private::Sealed {
 
     /// The build ID from an ELF `NT_GNU_BUILD_ID` note.
     #[inline]
-    fn build_id(&self) -> Option<&'data [u8]> {
-        None
+    fn build_id(&self) -> Result<Option<&'data [u8]>> {
+        Ok(None)
     }
 
     /// The filename and CRC from a `.gnu_debuglink` section.

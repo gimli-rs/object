@@ -334,35 +334,35 @@ where
         false
     }
 
-    fn build_id(&self) -> Option<&'data [u8]> {
+    fn build_id(&self) -> read::Result<Option<&'data [u8]>> {
         let endian = self.endian;
         // Use section headers if present, otherwise use program headers.
         if !self.sections.is_empty() {
             for section in self.sections {
-                if let Ok(mut notes) = section.notes(endian, self.data) {
-                    while let Ok(Some(note)) = notes.next() {
+                if let Some(mut notes) = section.notes(endian, self.data)? {
+                    while let Some(note) = notes.next()? {
                         if note.name() == elf::ELF_NOTE_GNU
                             && note.n_type(endian) == elf::NT_GNU_BUILD_ID
                         {
-                            return Some(note.desc);
+                            return Ok(Some(note.desc));
                         }
                     }
                 }
             }
         } else {
             for segment in self.segments {
-                if let Ok(mut notes) = segment.notes(endian, self.data) {
-                    while let Ok(Some(note)) = notes.next() {
+                if let Some(mut notes) = segment.notes(endian, self.data)? {
+                    while let Some(note) = notes.next()? {
                         if note.name() == elf::ELF_NOTE_GNU
                             && note.n_type(endian) == elf::NT_GNU_BUILD_ID
                         {
-                            return Some(note.desc);
+                            return Ok(Some(note.desc));
                         }
                     }
                 }
             }
         }
-        None
+        Ok(None)
     }
 
     fn gnu_debuglink(&self) -> Option<(&'data [u8], u32)> {
@@ -1332,20 +1332,21 @@ pub trait ProgramHeader: Debug + Pod {
 
     /// Return a note iterator for the segment data.
     ///
-    /// Returns an empty iterator if the segment does not contain notes.
+    /// Returns `Ok(None)` if the segment does not contain notes.
     /// Returns `Err` for invalid values.
     fn notes<'data>(
         &self,
         endian: Self::Endian,
         data: Bytes<'data>,
-    ) -> read::Result<ElfNoteIterator<'data, Self::Elf>> {
-        let data = if self.p_type(endian) == elf::PT_NOTE {
-            self.data(endian, data)
-                .read_error("Invalid ELF note segment offset or size")?
-        } else {
-            Bytes(&[])
-        };
-        ElfNoteIterator::new(endian, self.p_align(endian), data)
+    ) -> read::Result<Option<ElfNoteIterator<'data, Self::Elf>>> {
+        if self.p_type(endian) == elf::PT_NOTE {
+            return Ok(None);
+        }
+        let data = self
+            .data(endian, data)
+            .read_error("Invalid ELF note segment offset or size")?;
+        let notes = ElfNoteIterator::new(endian, self.p_align(endian), data)?;
+        Ok(Some(notes))
     }
 }
 
@@ -1406,20 +1407,21 @@ pub trait SectionHeader: Debug + Pod {
 
     /// Return a note iterator for the section data.
     ///
-    /// Returns an empty iterator if the section does not contain notes.
+    /// Returns `Ok(None)` if the section does not contain notes.
     /// Returns `Err` for invalid values.
     fn notes<'data>(
         &self,
         endian: Self::Endian,
         data: Bytes<'data>,
-    ) -> read::Result<ElfNoteIterator<'data, Self::Elf>> {
-        let data = if self.sh_type(endian) == elf::SHT_NOTE {
-            self.data(endian, data)
-                .read_error("Invalid ELF note section offset or size")?
-        } else {
-            Bytes(&[])
-        };
-        ElfNoteIterator::new(endian, self.sh_addralign(endian), data)
+    ) -> read::Result<Option<ElfNoteIterator<'data, Self::Elf>>> {
+        if self.sh_type(endian) != elf::SHT_NOTE {
+            return Ok(None);
+        }
+        let data = self
+            .data(endian, data)
+            .read_error("Invalid ELF note section offset or size")?;
+        let notes = ElfNoteIterator::new(endian, self.sh_addralign(endian), data)?;
+        Ok(Some(notes))
     }
 }
 
