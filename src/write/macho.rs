@@ -143,7 +143,7 @@ impl Object {
         self.add_relocation(
             section,
             Relocation {
-                offset: offset,
+                offset,
                 size: pointer_width * 8,
                 kind: RelocationKind::Absolute,
                 encoding: RelocationEncoding::Generic,
