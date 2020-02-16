@@ -93,19 +93,23 @@ pub trait Object<'data, 'file>: read::private::Sealed {
     ///
     /// This may iterate over segments.
     ///
-    /// Returns `None` for undefined or invalid symbols.
-    fn symbol_data(&'file self, symbol: &Symbol<'data>) -> Option<&'data [u8]> {
+    /// Returns `Ok(None)` for undefined symbols or if the data could not be found.
+    fn symbol_data(&'file self, symbol: &Symbol<'data>) -> Result<Option<&'data [u8]>> {
         if symbol.is_undefined() {
-            return None;
+            return Ok(None);
         }
         let address = symbol.address();
         let size = symbol.size();
         if let Some(index) = symbol.section_index() {
-            let section = self.section_by_index(index).ok()?;
+            let section = self.section_by_index(index)?;
             section.data_range(address, size)
         } else {
-            self.segments()
-                .find_map(|segment| segment.data_range(address, size))
+            for segment in self.segments() {
+                if let Some(data) = segment.data_range(address, size)? {
+                    return Ok(Some(data));
+                }
+            }
+            Ok(None)
         }
     }
 
@@ -163,10 +167,12 @@ pub trait ObjectSegment<'data>: read::private::Sealed {
     ///
     /// The length of this data may be different from the size of the
     /// segment in memory.
-    fn data(&self) -> &'data [u8];
+    fn data(&self) -> Result<&'data [u8]>;
 
     /// Return the segment data in the given range.
-    fn data_range(&self, address: u64, size: u64) -> Option<&'data [u8]>;
+    ///
+    /// Returns `Ok(None)` if the segment does not contain the given range.
+    fn data_range(&self, address: u64, size: u64) -> Result<Option<&'data [u8]>>;
 
     /// Returns the name of the segment.
     fn name(&self) -> Option<&str>;
@@ -201,12 +207,14 @@ pub trait ObjectSection<'data>: read::private::Sealed {
     /// section in memory.
     ///
     /// This does not do any decompression.
-    fn data(&self) -> &'data [u8];
+    fn data(&self) -> Result<&'data [u8]>;
 
     /// Return the raw contents of the section data in the given range.
     ///
     /// This does not do any decompression.
-    fn data_range(&self, address: u64, size: u64) -> Option<&'data [u8]>;
+    ///
+    /// Returns `Ok(None)` if the section does not contain the given range.
+    fn data_range(&self, address: u64, size: u64) -> Result<Option<&'data [u8]>>;
 
     /// Returns the uncompressed contents of the section.
     ///
@@ -214,9 +222,9 @@ pub trait ObjectSection<'data>: read::private::Sealed {
     /// section in memory.
     ///
     /// If no compression is detected, then returns the data unchanged.
-    /// Returns `None` if decompression fails.
+    /// Returns `Err` if decompression fails.
     #[cfg(feature = "compression")]
-    fn uncompressed_data(&self) -> Option<Cow<'data, [u8]>>;
+    fn uncompressed_data(&self) -> Result<Cow<'data, [u8]>>;
 
     /// Returns the name of the section.
     fn name(&self) -> Option<&str>;

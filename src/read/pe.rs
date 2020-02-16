@@ -10,7 +10,7 @@ use alloc::borrow::Cow;
 use alloc::vec::Vec;
 use core::fmt::Debug;
 use core::marker::PhantomData;
-use core::{cmp, iter, mem, slice, str};
+use core::{cmp, iter, mem, result, slice, str};
 use target_lexicon::Architecture;
 
 use crate::endian::LittleEndian as LE;
@@ -278,8 +278,10 @@ where
 }
 
 impl<'data, 'file, Pe: ImageNtHeaders> PeSegment<'data, 'file, Pe> {
-    fn bytes(&self) -> Bytes<'data> {
-        self.section.pe_bytes(self.file.data).unwrap_or(Bytes(&[]))
+    fn bytes(&self) -> Result<Bytes<'data>> {
+        self.section
+            .pe_bytes(self.file.data)
+            .read_error("Invalid PE section offset or size")
     }
 }
 
@@ -307,12 +309,17 @@ impl<'data, 'file, Pe: ImageNtHeaders> ObjectSegment<'data> for PeSegment<'data,
         (u64::from(offset), u64::from(size))
     }
 
-    fn data(&self) -> &'data [u8] {
-        self.bytes().0
+    fn data(&self) -> Result<&'data [u8]> {
+        Ok(self.bytes()?.0)
     }
 
-    fn data_range(&self, address: u64, size: u64) -> Option<&'data [u8]> {
-        read::data_range(self.bytes(), self.address(), address, size).ok()
+    fn data_range(&self, address: u64, size: u64) -> Result<Option<&'data [u8]>> {
+        Ok(read::data_range(
+            self.bytes()?,
+            self.address(),
+            address,
+            size,
+        ))
     }
 
     #[inline]
@@ -367,8 +374,10 @@ where
 }
 
 impl<'data, 'file, Pe: ImageNtHeaders> PeSection<'data, 'file, Pe> {
-    fn bytes(&self) -> Bytes<'data> {
-        self.section.pe_bytes(self.file.data).unwrap_or(Bytes(&[]))
+    fn bytes(&self) -> Result<Bytes<'data>> {
+        self.section
+            .pe_bytes(self.file.data)
+            .read_error("Invalid PE section offset or size")
     }
 }
 
@@ -407,18 +416,23 @@ impl<'data, 'file, Pe: ImageNtHeaders> ObjectSection<'data> for PeSection<'data,
         }
     }
 
-    fn data(&self) -> &'data [u8] {
-        self.bytes().0
+    fn data(&self) -> Result<&'data [u8]> {
+        Ok(self.bytes()?.0)
     }
 
-    fn data_range(&self, address: u64, size: u64) -> Option<&'data [u8]> {
-        read::data_range(self.bytes(), self.address(), address, size).ok()
+    fn data_range(&self, address: u64, size: u64) -> Result<Option<&'data [u8]>> {
+        Ok(read::data_range(
+            self.bytes()?,
+            self.address(),
+            address,
+            size,
+        ))
     }
 
     #[cfg(feature = "compression")]
     #[inline]
-    fn uncompressed_data(&self) -> Option<Cow<'data, [u8]>> {
-        Some(Cow::from(self.data()))
+    fn uncompressed_data(&self) -> Result<Cow<'data, [u8]>> {
+        Ok(Cow::from(self.data()?))
     }
 
     #[inline]
@@ -602,9 +616,8 @@ impl pe::ImageSectionHeader {
         (offset, size)
     }
 
-    fn pe_bytes<'data>(&self, data: Bytes<'data>) -> Result<Bytes<'data>> {
+    fn pe_bytes<'data>(&self, data: Bytes<'data>) -> result::Result<Bytes<'data>, ()> {
         let (offset, size) = self.pe_file_range();
         data.read_bytes_at(offset as usize, size as usize)
-            .read_error("Invalid PE section offset or size")
     }
 }

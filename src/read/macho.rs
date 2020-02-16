@@ -10,7 +10,7 @@ use alloc::borrow::Cow;
 use alloc::vec::Vec;
 use core::fmt::Debug;
 use core::marker::PhantomData;
-use core::{fmt, mem, slice, str};
+use core::{fmt, mem, result, slice, str};
 use target_lexicon::{Aarch64Architecture, Architecture, ArmArchitecture};
 
 use crate::endian::{self, BigEndian, Endian, RunTimeEndian};
@@ -343,10 +343,10 @@ where
 }
 
 impl<'data, 'file, Mach: MachHeader> MachOSegment<'data, 'file, Mach> {
-    fn bytes(&self) -> Bytes<'data> {
+    fn bytes(&self) -> Result<Bytes<'data>> {
         self.segment
             .data(self.file.endian, self.file.data)
-            .unwrap_or(Bytes(&[]))
+            .read_error("Invalid Mach-O segment size or offset")
     }
 }
 
@@ -374,12 +374,17 @@ impl<'data, 'file, Mach: MachHeader> ObjectSegment<'data> for MachOSegment<'data
         self.segment.file_range(self.file.endian)
     }
 
-    fn data(&self) -> &'data [u8] {
-        self.bytes().0
+    fn data(&self) -> Result<&'data [u8]> {
+        Ok(self.bytes()?.0)
     }
 
-    fn data_range(&self, address: u64, size: u64) -> Option<&'data [u8]> {
-        read::data_range(self.bytes(), self.address(), address, size).ok()
+    fn data_range(&self, address: u64, size: u64) -> Result<Option<&'data [u8]>> {
+        Ok(read::data_range(
+            self.bytes()?,
+            self.address(),
+            address,
+            size,
+        ))
     }
 
     #[inline]
@@ -442,11 +447,11 @@ where
 }
 
 impl<'data, 'file, Mach: MachHeader> MachOSection<'data, 'file, Mach> {
-    fn bytes(&self) -> Bytes<'data> {
+    fn bytes(&self) -> Result<Bytes<'data>> {
         self.internal
             .section
             .data(self.file.endian, self.file.data)
-            .unwrap_or(Bytes(&[]))
+            .read_error("Invalid Mach-O section size or offset")
     }
 }
 
@@ -481,18 +486,23 @@ impl<'data, 'file, Mach: MachHeader> ObjectSection<'data> for MachOSection<'data
     }
 
     #[inline]
-    fn data(&self) -> &'data [u8] {
-        self.bytes().0
+    fn data(&self) -> Result<&'data [u8]> {
+        Ok(self.bytes()?.0)
     }
 
-    fn data_range(&self, address: u64, size: u64) -> Option<&'data [u8]> {
-        read::data_range(self.bytes(), self.address(), address, size).ok()
+    fn data_range(&self, address: u64, size: u64) -> Result<Option<&'data [u8]>> {
+        Ok(read::data_range(
+            self.bytes()?,
+            self.address(),
+            address,
+            size,
+        ))
     }
 
     #[cfg(feature = "compression")]
     #[inline]
-    fn uncompressed_data(&self) -> Option<Cow<'data, [u8]>> {
-        Some(Cow::from(self.data()))
+    fn uncompressed_data(&self) -> Result<Cow<'data, [u8]>> {
+        Ok(Cow::from(self.data()?))
     }
 
     #[inline]
@@ -994,10 +1004,14 @@ pub trait Segment: Debug + Pod {
 
     /// Get the segment data from the file data.
     ///
-    /// Returns `None` for invalid values.
-    fn data<'data>(&self, endian: Self::Endian, data: Bytes<'data>) -> Option<Bytes<'data>> {
+    /// Returns `Err` for invalid values.
+    fn data<'data>(
+        &self,
+        endian: Self::Endian,
+        data: Bytes<'data>,
+    ) -> result::Result<Bytes<'data>, ()> {
         let (offset, size) = self.file_range(endian);
-        data.read_bytes_at(offset as usize, size as usize).ok()
+        data.read_bytes_at(offset as usize, size as usize)
     }
 
     /// Get the array of sections from the data following the segment command.
@@ -1059,13 +1073,17 @@ pub trait Section: Debug + Pod {
 
     /// Return the section data.
     ///
-    /// Returns `Some(&[])` if the section has no data.
-    /// Returns `None` for invalid values.
-    fn data<'data>(&self, endian: Self::Endian, data: Bytes<'data>) -> Option<Bytes<'data>> {
+    /// Returns `Ok(&[])` if the section has no data.
+    /// Returns `Err` for invalid values.
+    fn data<'data>(
+        &self,
+        endian: Self::Endian,
+        data: Bytes<'data>,
+    ) -> result::Result<Bytes<'data>, ()> {
         if let Some((offset, size)) = self.file_range(endian) {
-            data.read_bytes_at(offset as usize, size as usize).ok()
+            data.read_bytes_at(offset as usize, size as usize)
         } else {
-            Some(Bytes(&[]))
+            Ok(Bytes(&[]))
         }
     }
 

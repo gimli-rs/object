@@ -40,7 +40,7 @@ fn coff_x86_64_tls() {
     assert_eq!(section.name(), Some(".tls$"));
     assert_eq!(section.kind(), SectionKind::Data);
     assert_eq!(section.size(), 30);
-    assert_eq!(&section.data()[..], &[1; 30]);
+    assert_eq!(&section.data().unwrap()[..], &[1; 30]);
 
     let mut symbols = object.symbols();
 
@@ -104,7 +104,7 @@ fn elf_x86_64_tls() {
     assert_eq!(section.name(), Some(".tdata"));
     assert_eq!(section.kind(), SectionKind::Tls);
     assert_eq!(section.size(), 30);
-    assert_eq!(&section.data()[..], &[1; 30]);
+    assert_eq!(&section.data().unwrap()[..], &[1; 30]);
 
     let section = sections.next().unwrap();
     println!("{:?}", section);
@@ -112,7 +112,7 @@ fn elf_x86_64_tls() {
     assert_eq!(section.name(), Some(".tbss"));
     assert_eq!(section.kind(), SectionKind::UninitializedTls);
     assert_eq!(section.size(), 31);
-    assert_eq!(&section.data()[..], &[]);
+    assert_eq!(&section.data().unwrap()[..], &[]);
 
     let mut symbols = object.symbols();
 
@@ -188,7 +188,7 @@ fn macho_x86_64_tls() {
     assert_eq!(thread_data.segment_name(), Some("__DATA"));
     assert_eq!(thread_data.kind(), SectionKind::Tls);
     assert_eq!(thread_data.size(), 30);
-    assert_eq!(&thread_data.data()[..], &[1; 30]);
+    assert_eq!(&thread_data.data().unwrap()[..], &[1; 30]);
 
     let thread_vars = sections.next().unwrap();
     println!("{:?}", thread_vars);
@@ -197,7 +197,7 @@ fn macho_x86_64_tls() {
     assert_eq!(thread_vars.segment_name(), Some("__DATA"));
     assert_eq!(thread_vars.kind(), SectionKind::TlsVariables);
     assert_eq!(thread_vars.size(), 2 * 3 * 8);
-    assert_eq!(&thread_vars.data()[..], &[0; 48][..]);
+    assert_eq!(&thread_vars.data().unwrap()[..], &[0; 48][..]);
 
     let thread_bss = sections.next().unwrap();
     println!("{:?}", thread_bss);
@@ -206,7 +206,7 @@ fn macho_x86_64_tls() {
     assert_eq!(thread_bss.segment_name(), Some("__DATA"));
     assert_eq!(thread_bss.kind(), SectionKind::UninitializedTls);
     assert_eq!(thread_bss.size(), 31);
-    assert_eq!(&thread_bss.data()[..], &[]);
+    assert_eq!(thread_bss.data(), Ok(&[][..]));
 
     let mut symbols = object.symbols();
 

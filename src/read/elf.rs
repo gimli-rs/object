@@ -449,10 +449,10 @@ where
 }
 
 impl<'data, 'file, Elf: FileHeader> ElfSegment<'data, 'file, Elf> {
-    fn bytes(&self) -> Bytes<'data> {
+    fn bytes(&self) -> read::Result<Bytes<'data>> {
         self.segment
             .data(self.file.endian, self.file.data)
-            .unwrap_or(Bytes(&[]))
+            .read_error("Invalid ELF segment size or offset")
     }
 }
 
@@ -480,12 +480,17 @@ impl<'data, 'file, Elf: FileHeader> ObjectSegment<'data> for ElfSegment<'data, '
     }
 
     #[inline]
-    fn data(&self) -> &'data [u8] {
-        self.bytes().0
+    fn data(&self) -> read::Result<&'data [u8]> {
+        Ok(self.bytes()?.0)
     }
 
-    fn data_range(&self, address: u64, size: u64) -> Option<&'data [u8]> {
-        read::data_range(self.bytes(), self.address(), address, size).ok()
+    fn data_range(&self, address: u64, size: u64) -> read::Result<Option<&'data [u8]>> {
+        Ok(read::data_range(
+            self.bytes()?,
+            self.address(),
+            address,
+            size,
+        ))
     }
 
     #[inline]
@@ -544,10 +549,10 @@ where
 }
 
 impl<'data, 'file, Elf: FileHeader> ElfSection<'data, 'file, Elf> {
-    fn bytes(&self) -> Bytes<'data> {
+    fn bytes(&self) -> read::Result<Bytes<'data>> {
         self.section
             .data(self.file.endian, self.file.data)
-            .unwrap_or(Bytes(&[]))
+            .read_error("Invalid ELF section size or offset")
     }
 
     #[cfg(feature = "compression")]
@@ -590,7 +595,7 @@ impl<'data, 'file, Elf: FileHeader> ElfSection<'data, 'file, Elf> {
         if !name.starts_with(".zdebug_") {
             return Ok(None);
         }
-        let mut data = self.bytes();
+        let mut data = self.bytes()?;
         // Assume ZLIB-style uncompressed data is no more than 4GB to avoid accidentally
         // huge allocations. This also reduces the chance of accidentally matching on a
         // .debug_str that happens to start with "ZLIB".
@@ -649,22 +654,27 @@ impl<'data, 'file, Elf: FileHeader> ObjectSection<'data> for ElfSection<'data, '
     }
 
     #[inline]
-    fn data(&self) -> &'data [u8] {
-        self.bytes().0
+    fn data(&self) -> read::Result<&'data [u8]> {
+        Ok(self.bytes()?.0)
     }
 
-    fn data_range(&self, address: u64, size: u64) -> Option<&'data [u8]> {
-        read::data_range(self.bytes(), self.address(), address, size).ok()
+    fn data_range(&self, address: u64, size: u64) -> read::Result<Option<&'data [u8]>> {
+        Ok(read::data_range(
+            self.bytes()?,
+            self.address(),
+            address,
+            size,
+        ))
     }
 
     #[cfg(feature = "compression")]
-    fn uncompressed_data(&self) -> Option<Cow<'data, [u8]>> {
-        Some(if let Some(data) = self.maybe_decompress_data().ok()? {
+    fn uncompressed_data(&self) -> read::Result<Cow<'data, [u8]>> {
+        Ok(if let Some(data) = self.maybe_decompress_data()? {
             data
-        } else if let Some(data) = self.maybe_decompress_data_gnu().ok()? {
+        } else if let Some(data) = self.maybe_decompress_data_gnu()? {
             data
         } else {
-            Cow::from(self.data())
+            Cow::from(self.data()?)
         })
     }
 

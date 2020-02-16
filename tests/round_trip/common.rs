@@ -182,7 +182,7 @@ fn macho_x86_64_common() {
     assert_eq!(common.segment_name(), Some("__DATA"));
     assert_eq!(common.kind(), SectionKind::Common);
     assert_eq!(common.size(), 16);
-    assert_eq!(&*common.data(), &[]);
+    assert_eq!(common.data(), Ok(&[][..]));
 
     let section = sections.next();
     assert!(

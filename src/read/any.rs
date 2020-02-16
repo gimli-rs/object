@@ -413,7 +413,7 @@ impl<'data, 'file> fmt::Debug for Segment<'data, 'file> {
         f.debug_struct("Segment")
             .field("name", &self.name().unwrap_or("<unnamed>"))
             .field("address", &self.address())
-            .field("size", &self.data().len())
+            .field("size", &self.size())
             .finish()
     }
 }
@@ -437,11 +437,11 @@ impl<'data, 'file> ObjectSegment<'data> for Segment<'data, 'file> {
         with_inner!(self.inner, SegmentInternal, |x| x.file_range())
     }
 
-    fn data(&self) -> &'data [u8] {
+    fn data(&self) -> Result<&'data [u8]> {
         with_inner!(self.inner, SegmentInternal, |x| x.data())
     }
 
-    fn data_range(&self, address: u64, size: u64) -> Option<&'data [u8]> {
+    fn data_range(&self, address: u64, size: u64) -> Result<Option<&'data [u8]>> {
         with_inner!(self.inner, SegmentInternal, |x| x.data_range(address, size))
     }
 
@@ -562,16 +562,16 @@ impl<'data, 'file> ObjectSection<'data> for Section<'data, 'file> {
         with_inner!(self.inner, SectionInternal, |x| x.file_range())
     }
 
-    fn data(&self) -> &'data [u8] {
+    fn data(&self) -> Result<&'data [u8]> {
         with_inner!(self.inner, SectionInternal, |x| x.data())
     }
 
-    fn data_range(&self, address: u64, size: u64) -> Option<&'data [u8]> {
+    fn data_range(&self, address: u64, size: u64) -> Result<Option<&'data [u8]>> {
         with_inner!(self.inner, SectionInternal, |x| x.data_range(address, size))
     }
 
     #[cfg(feature = "compression")]
-    fn uncompressed_data(&self) -> Option<Cow<'data, [u8]>> {
+    fn uncompressed_data(&self) -> Result<Cow<'data, [u8]>> {
         with_inner!(self.inner, SectionInternal, |x| x.uncompressed_data())
     }
 

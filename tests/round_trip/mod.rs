@@ -62,8 +62,8 @@ fn coff_x86_64() {
     assert_eq!(text.kind(), SectionKind::Text);
     assert_eq!(text.address(), 0);
     assert_eq!(text.size(), 62);
-    assert_eq!(&text.data()[..30], &[1; 30]);
-    assert_eq!(&text.data()[32..62], &[1; 30]);
+    assert_eq!(&text.data().unwrap()[..30], &[1; 30]);
+    assert_eq!(&text.data().unwrap()[32..62], &[1; 30]);
 
     let mut symbols = object.symbols();
 
@@ -157,8 +157,8 @@ fn elf_x86_64() {
     assert_eq!(text.kind(), SectionKind::Text);
     assert_eq!(text.address(), 0);
     assert_eq!(text.size(), 62);
-    assert_eq!(&text.data()[..30], &[1; 30]);
-    assert_eq!(&text.data()[32..62], &[1; 30]);
+    assert_eq!(&text.data().unwrap()[..30], &[1; 30]);
+    assert_eq!(&text.data().unwrap()[32..62], &[1; 30]);
 
     let mut symbols = object.symbols();
 
@@ -269,8 +269,8 @@ fn macho_x86_64() {
     assert_eq!(text.kind(), SectionKind::Text);
     assert_eq!(text.address(), 0);
     assert_eq!(text.size(), 62);
-    assert_eq!(&text.data()[..30], &[1; 30]);
-    assert_eq!(&text.data()[32..62], &[1; 30]);
+    assert_eq!(&text.data().unwrap()[..30], &[1; 30]);
+    assert_eq!(&text.data().unwrap()[32..62], &[1; 30]);
 
     let mut symbols = object.symbols();
 

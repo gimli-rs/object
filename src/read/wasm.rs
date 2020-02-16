@@ -232,11 +232,11 @@ impl<'data, 'file> ObjectSegment<'data> for WasmSegment<'data, 'file> {
         unreachable!()
     }
 
-    fn data(&self) -> &'data [u8] {
+    fn data(&self) -> Result<&'data [u8]> {
         unreachable!()
     }
 
-    fn data_range(&self, _address: u64, _size: u64) -> Option<&'data [u8]> {
+    fn data_range(&self, _address: u64, _size: u64) -> Result<Option<&'data [u8]>> {
         unreachable!()
     }
 
@@ -302,21 +302,21 @@ impl<'data, 'file> ObjectSection<'data> for WasmSection<'data, 'file> {
     }
 
     #[inline]
-    fn data(&self) -> &'data [u8] {
+    fn data(&self) -> Result<&'data [u8]> {
         let mut reader = self.section.get_binary_reader();
         // TODO: raise a feature request upstream to be able
         // to get remaining slice from a BinaryReader directly.
-        reader.read_bytes(reader.bytes_remaining()).unwrap()
+        Ok(reader.read_bytes(reader.bytes_remaining()).unwrap())
     }
 
-    fn data_range(&self, _address: u64, _size: u64) -> Option<&'data [u8]> {
+    fn data_range(&self, _address: u64, _size: u64) -> Result<Option<&'data [u8]>> {
         unimplemented!()
     }
 
     #[cfg(feature = "compression")]
     #[inline]
-    fn uncompressed_data(&self) -> Option<Cow<'data, [u8]>> {
-        Some(Cow::from(self.data()))
+    fn uncompressed_data(&self) -> Result<Cow<'data, [u8]>> {
+        Ok(Cow::from(self.data()?))
     }
 
     #[inline]

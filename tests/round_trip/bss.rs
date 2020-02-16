@@ -51,7 +51,7 @@ fn coff_x86_64_bss() {
     assert_eq!(bss.name(), Some(".bss"));
     assert_eq!(bss.kind(), SectionKind::UninitializedData);
     assert_eq!(bss.size(), 58);
-    assert_eq!(&*bss.data(), &[]);
+    assert_eq!(bss.data(), Ok(&[][..]));
 
     let section = sections.next();
     assert!(
@@ -138,7 +138,7 @@ fn elf_x86_64_bss() {
     assert_eq!(bss.name(), Some(".bss"));
     assert_eq!(bss.kind(), SectionKind::UninitializedData);
     assert_eq!(bss.size(), 58);
-    assert_eq!(&*bss.data(), &[]);
+    assert_eq!(bss.data(), Ok(&[][..]));
 
     let mut symbols = object.symbols();
 
@@ -219,7 +219,7 @@ fn macho_x86_64_bss() {
     assert_eq!(bss.segment_name(), Some("__DATA"));
     assert_eq!(bss.kind(), SectionKind::UninitializedData);
     assert_eq!(bss.size(), 58);
-    assert_eq!(&*bss.data(), &[]);
+    assert_eq!(bss.data(), Ok(&[][..]));
 
     let section = sections.next();
     assert!(

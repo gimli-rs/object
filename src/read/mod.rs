@@ -37,7 +37,7 @@ mod private {
 }
 
 /// The error type used within the read module.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Error(&'static str);
 
 impl fmt::Display for Error {
@@ -347,13 +347,8 @@ impl Relocation {
     }
 }
 
-fn data_range(
-    data: Bytes,
-    data_address: u64,
-    range_address: u64,
-    size: u64,
-) -> result::Result<&[u8], ()> {
-    let offset = range_address.checked_sub(data_address).ok_or(())?;
-    let data = data.read_bytes_at(offset as usize, size as usize)?;
-    Ok(data.0)
+fn data_range(data: Bytes, data_address: u64, range_address: u64, size: u64) -> Option<&[u8]> {
+    let offset = range_address.checked_sub(data_address)?;
+    let data = data.read_bytes_at(offset as usize, size as usize).ok()?;
+    Some(data.0)
 }
