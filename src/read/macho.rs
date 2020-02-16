@@ -1026,7 +1026,7 @@ pub trait Segment: Debug + Pod {
 
     /// Get the array of sections from the data following the segment command.
     ///
-    /// Returns `None` for invalid values.
+    /// Returns `Err` for invalid values.
     fn sections<'data>(
         &self,
         endian: Self::Endian,
@@ -1099,7 +1099,7 @@ pub trait Section: Debug + Pod {
 
     /// Return the relocation array.
     ///
-    /// Returns `None` for invalid values.
+    /// Returns `Err` for invalid values.
     fn relocations<'data>(
         &self,
         endian: Self::Endian,
