@@ -281,11 +281,20 @@ where
         }
     }
 
-    fn symbol_by_index(&self, index: SymbolIndex) -> Option<Symbol<'data>> {
+    fn symbol_by_index(&self, index: SymbolIndex) -> read::Result<Symbol<'data>> {
+        let symbol = self
+            .symbols
+            .symbols
+            .get(index.0)
+            .read_error("Invalid ELF symbol index")?;
         let shndx = self.symbols.shndx.get(index.0).cloned();
-        self.symbols.symbols.get(index.0).map(|symbol| {
-            parse_symbol::<Elf>(self.endian, index.0, symbol, self.symbols.strings, shndx)
-        })
+        Ok(parse_symbol::<Elf>(
+            self.endian,
+            index.0,
+            symbol,
+            self.symbols.strings,
+            shndx,
+        ))
     }
 
     fn symbols(&'file self) -> ElfSymbolIterator<'data, 'file, Elf> {

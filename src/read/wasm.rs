@@ -13,7 +13,7 @@ use target_lexicon::Architecture;
 use wasmparser as wp;
 
 use crate::read::{
-    self, FileFlags, Object, ObjectSection, ObjectSegment, ReadError, Relocation, Result,
+    self, Error, FileFlags, Object, ObjectSection, ObjectSegment, ReadError, Relocation, Result,
     SectionFlags, SectionIndex, SectionKind, Symbol, SymbolFlags, SymbolIndex, SymbolKind,
     SymbolMap, SymbolScope, SymbolSection,
 };
@@ -140,9 +140,9 @@ where
     }
 
     #[inline]
-    fn symbol_by_index(&self, _index: SymbolIndex) -> Option<Symbol<'data>> {
+    fn symbol_by_index(&self, _index: SymbolIndex) -> Result<Symbol<'data>> {
         // Wasm doesn't need or support looking up symbols by index.
-        None
+        Err(Error("Unsupported Wasm symbol index"))
     }
 
     fn symbols(&'file self) -> Self::SymbolIterator {

@@ -286,7 +286,7 @@ where
         }
     }
 
-    fn symbol_by_index(&self, index: SymbolIndex) -> Option<Symbol<'data>> {
+    fn symbol_by_index(&self, index: SymbolIndex) -> Result<Symbol<'data>> {
         with_inner!(self.inner, FileInternal, |x| x.symbol_by_index(index))
     }
 

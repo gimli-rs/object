@@ -80,9 +80,10 @@ pub trait Object<'data, 'file>: read::private::Sealed {
 
     /// Get the debugging symbol at the given index.
     ///
-    /// This is similar to `self.symbols().nth(index)`, except that
-    /// the index will take into account malformed or unsupported symbols.
-    fn symbol_by_index(&self, index: SymbolIndex) -> Option<Symbol<'data>>;
+    /// The meaning of the index depends on the object file.
+    ///
+    /// Returns an error if the index is invalid.
+    fn symbol_by_index(&self, index: SymbolIndex) -> Result<Symbol<'data>>;
 
     /// Get an iterator over the debugging symbols in the file.
     ///

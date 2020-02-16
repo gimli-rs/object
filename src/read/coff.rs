@@ -120,12 +120,12 @@ where
         }
     }
 
-    fn symbol_by_index(&self, index: SymbolIndex) -> Option<Symbol<'data>> {
-        Some(parse_symbol(
-            &self.symbols,
-            index.0,
-            self.symbols.get(index.0)?,
-        ))
+    fn symbol_by_index(&self, index: SymbolIndex) -> Result<Symbol<'data>> {
+        let symbol = self
+            .symbols
+            .get(index.0)
+            .read_error("Invalid COFF symbol index")?;
+        Ok(parse_symbol(&self.symbols, index.0, symbol))
     }
 
     fn symbols(&'file self) -> CoffSymbolIterator<'data, 'file> {

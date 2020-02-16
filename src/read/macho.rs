@@ -191,9 +191,14 @@ where
         }
     }
 
-    fn symbol_by_index(&self, index: SymbolIndex) -> Option<Symbol<'data>> {
-        let nlist = self.symbols.symbols.get(index.0)?;
+    fn symbol_by_index(&self, index: SymbolIndex) -> Result<Symbol<'data>> {
+        let nlist = self
+            .symbols
+            .symbols
+            .get(index.0)
+            .read_error("Invalid Mach-O symbol index")?;
         parse_symbol(self, nlist, self.symbols.strings)
+            .read_error("Unsupported Mach-O symbol index")
     }
 
     fn symbols(&'file self) -> MachOSymbolIterator<'data, 'file, Mach> {
