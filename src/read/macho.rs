@@ -388,8 +388,12 @@ impl<'data, 'file, Mach: MachHeader> ObjectSegment<'data> for MachOSegment<'data
     }
 
     #[inline]
-    fn name(&self) -> Option<&str> {
-        str::from_utf8(self.segment.name()).ok()
+    fn name(&self) -> Result<Option<&str>> {
+        Ok(Some(
+            str::from_utf8(self.segment.name())
+                .ok()
+                .read_error("Non UTF-8 Mach-O segment name")?,
+        ))
     }
 }
 
@@ -506,13 +510,19 @@ impl<'data, 'file, Mach: MachHeader> ObjectSection<'data> for MachOSection<'data
     }
 
     #[inline]
-    fn name(&self) -> Option<&str> {
-        str::from_utf8(self.internal.section.name()).ok()
+    fn name(&self) -> Result<&str> {
+        str::from_utf8(self.internal.section.name())
+            .ok()
+            .read_error("Non UTF-8 Mach-O section name")
     }
 
     #[inline]
-    fn segment_name(&self) -> Option<&str> {
-        str::from_utf8(self.internal.section.segment_name()).ok()
+    fn segment_name(&self) -> Result<Option<&str>> {
+        Ok(Some(
+            str::from_utf8(self.internal.section.segment_name())
+                .ok()
+                .read_error("Non UTF-8 Mach-O segment name")?,
+        ))
     }
 
     fn kind(&self) -> SectionKind {

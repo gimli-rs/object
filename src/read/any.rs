@@ -410,9 +410,17 @@ where
 impl<'data, 'file> fmt::Debug for Segment<'data, 'file> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         // It's painful to do much better than this
-        f.debug_struct("Segment")
-            .field("name", &self.name().unwrap_or("<unnamed>"))
-            .field("address", &self.address())
+        let mut s = f.debug_struct("Segment");
+        match self.name() {
+            Ok(Some(ref name)) => {
+                s.field("name", name);
+            }
+            Ok(None) => {}
+            Err(_) => {
+                s.field("name", &"<invalid>");
+            }
+        }
+        s.field("address", &self.address())
             .field("size", &self.size())
             .finish()
     }
@@ -445,7 +453,7 @@ impl<'data, 'file> ObjectSegment<'data> for Segment<'data, 'file> {
         with_inner!(self.inner, SegmentInternal, |x| x.data_range(address, size))
     }
 
-    fn name(&self) -> Option<&str> {
+    fn name(&self) -> Result<Option<&str>> {
         with_inner!(self.inner, SegmentInternal, |x| x.name())
     }
 }
@@ -526,10 +534,16 @@ impl<'data, 'file> fmt::Debug for Section<'data, 'file> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         // It's painful to do much better than this
         let mut s = f.debug_struct("Section");
-        if let Some(segment) = self.segment_name() {
-            s.field("segment", &segment);
+        match self.segment_name() {
+            Ok(Some(ref name)) => {
+                s.field("segment", name);
+            }
+            Ok(None) => {}
+            Err(_) => {
+                s.field("segment", &"<invalid>");
+            }
         }
-        s.field("name", &self.name().unwrap_or("<invalid name>"))
+        s.field("name", &self.name().unwrap_or("<invalid>"))
             .field("address", &self.address())
             .field("size", &self.size())
             .field("kind", &self.kind())
@@ -575,11 +589,11 @@ impl<'data, 'file> ObjectSection<'data> for Section<'data, 'file> {
         with_inner!(self.inner, SectionInternal, |x| x.uncompressed_data())
     }
 
-    fn name(&self) -> Option<&str> {
+    fn name(&self) -> Result<&str> {
         with_inner!(self.inner, SectionInternal, |x| x.name())
     }
 
-    fn segment_name(&self) -> Option<&str> {
+    fn segment_name(&self) -> Result<Option<&str>> {
         with_inner!(self.inner, SectionInternal, |x| x.segment_name())
     }
 

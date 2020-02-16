@@ -162,7 +162,7 @@ where
 
     fn section_by_name(&'file self, section_name: &str) -> Option<PeSection<'data, 'file, Pe>> {
         self.sections()
-            .find(|section| section.name() == Some(section_name))
+            .find(|section| section.name() == Ok(section_name))
     }
 
     fn section_by_index(&'file self, index: SectionIndex) -> Result<PeSection<'data, 'file, Pe>> {
@@ -323,8 +323,13 @@ impl<'data, 'file, Pe: ImageNtHeaders> ObjectSegment<'data> for PeSegment<'data,
     }
 
     #[inline]
-    fn name(&self) -> Option<&str> {
-        self.section.name(self.file.symbols.strings).ok()
+    fn name(&self) -> Result<Option<&str>> {
+        let name = self.section.name(self.file.symbols.strings)?;
+        Ok(Some(
+            str::from_utf8(name)
+                .ok()
+                .read_error("Non UTF-8 PE section name")?,
+        ))
     }
 }
 
@@ -436,13 +441,16 @@ impl<'data, 'file, Pe: ImageNtHeaders> ObjectSection<'data> for PeSection<'data,
     }
 
     #[inline]
-    fn name(&self) -> Option<&str> {
-        self.section.name(self.file.symbols.strings).ok()
+    fn name(&self) -> Result<&str> {
+        let name = self.section.name(self.file.symbols.strings)?;
+        str::from_utf8(name)
+            .ok()
+            .read_error("Non UTF-8 PE section name")
     }
 
     #[inline]
-    fn segment_name(&self) -> Option<&str> {
-        None
+    fn segment_name(&self) -> Result<Option<&str>> {
+        Ok(None)
     }
 
     #[inline]

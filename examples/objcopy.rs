@@ -49,8 +49,13 @@ fn main() {
             continue;
         }
         let section_id = out_object.add_section(
-            in_section.segment_name().unwrap_or("").as_bytes().to_vec(),
-            in_section.name().unwrap_or("").as_bytes().to_vec(),
+            in_section
+                .segment_name()
+                .unwrap()
+                .unwrap_or("")
+                .as_bytes()
+                .to_vec(),
+            in_section.name().unwrap().as_bytes().to_vec(),
             in_section.kind(),
         );
         let out_section = out_object.section_mut(section_id);

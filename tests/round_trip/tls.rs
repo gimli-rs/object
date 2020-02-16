@@ -37,7 +37,7 @@ fn coff_x86_64_tls() {
     let section = sections.next().unwrap();
     println!("{:?}", section);
     let tls_index = section.index();
-    assert_eq!(section.name(), Some(".tls$"));
+    assert_eq!(section.name(), Ok(".tls$"));
     assert_eq!(section.kind(), SectionKind::Data);
     assert_eq!(section.size(), 30);
     assert_eq!(&section.data().unwrap()[..], &[1; 30]);
@@ -96,12 +96,12 @@ fn elf_x86_64_tls() {
 
     let section = sections.next().unwrap();
     println!("{:?}", section);
-    assert_eq!(section.name(), Some(""));
+    assert_eq!(section.name(), Ok(""));
 
     let section = sections.next().unwrap();
     println!("{:?}", section);
     let tdata_index = section.index();
-    assert_eq!(section.name(), Some(".tdata"));
+    assert_eq!(section.name(), Ok(".tdata"));
     assert_eq!(section.kind(), SectionKind::Tls);
     assert_eq!(section.size(), 30);
     assert_eq!(&section.data().unwrap()[..], &[1; 30]);
@@ -109,7 +109,7 @@ fn elf_x86_64_tls() {
     let section = sections.next().unwrap();
     println!("{:?}", section);
     let tbss_index = section.index();
-    assert_eq!(section.name(), Some(".tbss"));
+    assert_eq!(section.name(), Ok(".tbss"));
     assert_eq!(section.kind(), SectionKind::UninitializedTls);
     assert_eq!(section.size(), 31);
     assert_eq!(&section.data().unwrap()[..], &[]);
@@ -184,8 +184,8 @@ fn macho_x86_64_tls() {
     let thread_data = sections.next().unwrap();
     println!("{:?}", thread_data);
     let thread_data_index = thread_data.index();
-    assert_eq!(thread_data.name(), Some("__thread_data"));
-    assert_eq!(thread_data.segment_name(), Some("__DATA"));
+    assert_eq!(thread_data.name(), Ok("__thread_data"));
+    assert_eq!(thread_data.segment_name(), Ok(Some("__DATA")));
     assert_eq!(thread_data.kind(), SectionKind::Tls);
     assert_eq!(thread_data.size(), 30);
     assert_eq!(&thread_data.data().unwrap()[..], &[1; 30]);
@@ -193,8 +193,8 @@ fn macho_x86_64_tls() {
     let thread_vars = sections.next().unwrap();
     println!("{:?}", thread_vars);
     let thread_vars_index = thread_vars.index();
-    assert_eq!(thread_vars.name(), Some("__thread_vars"));
-    assert_eq!(thread_vars.segment_name(), Some("__DATA"));
+    assert_eq!(thread_vars.name(), Ok("__thread_vars"));
+    assert_eq!(thread_vars.segment_name(), Ok(Some("__DATA")));
     assert_eq!(thread_vars.kind(), SectionKind::TlsVariables);
     assert_eq!(thread_vars.size(), 2 * 3 * 8);
     assert_eq!(&thread_vars.data().unwrap()[..], &[0; 48][..]);
@@ -202,8 +202,8 @@ fn macho_x86_64_tls() {
     let thread_bss = sections.next().unwrap();
     println!("{:?}", thread_bss);
     let thread_bss_index = thread_bss.index();
-    assert_eq!(thread_bss.name(), Some("__thread_bss"));
-    assert_eq!(thread_bss.segment_name(), Some("__DATA"));
+    assert_eq!(thread_bss.name(), Ok("__thread_bss"));
+    assert_eq!(thread_bss.segment_name(), Ok(Some("__DATA")));
     assert_eq!(thread_bss.kind(), SectionKind::UninitializedTls);
     assert_eq!(thread_bss.size(), 31);
     assert_eq!(thread_bss.data(), Ok(&[][..]));

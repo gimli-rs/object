@@ -119,7 +119,7 @@ where
 
     fn section_by_name(&'file self, section_name: &str) -> Option<WasmSection<'data, 'file>> {
         self.sections()
-            .find(|section| section.name() == Some(section_name))
+            .find(|section| section.name() == Ok(section_name))
     }
 
     fn section_by_index(&'file self, index: SectionIndex) -> Result<WasmSection<'data, 'file>> {
@@ -241,7 +241,7 @@ impl<'data, 'file> ObjectSegment<'data> for WasmSegment<'data, 'file> {
     }
 
     #[inline]
-    fn name(&self) -> Option<&str> {
+    fn name(&self) -> Result<Option<&str>> {
         unreachable!()
     }
 }
@@ -320,8 +320,8 @@ impl<'data, 'file> ObjectSection<'data> for WasmSection<'data, 'file> {
     }
 
     #[inline]
-    fn name(&self) -> Option<&str> {
-        Some(match self.section.code {
+    fn name(&self) -> Result<&str> {
+        Ok(match self.section.code {
             wp::SectionCode::Custom { name, .. } => name,
             wp::SectionCode::Type => "<type>",
             wp::SectionCode::Import => "<import>",
@@ -339,8 +339,8 @@ impl<'data, 'file> ObjectSection<'data> for WasmSection<'data, 'file> {
     }
 
     #[inline]
-    fn segment_name(&self) -> Option<&str> {
-        None
+    fn segment_name(&self) -> Result<Option<&str>> {
+        Ok(None)
     }
 
     #[inline]

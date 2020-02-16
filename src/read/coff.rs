@@ -98,7 +98,7 @@ where
 
     fn section_by_name(&'file self, section_name: &str) -> Option<CoffSection<'data, 'file>> {
         self.sections()
-            .find(|section| section.name() == Some(section_name))
+            .find(|section| section.name() == Ok(section_name))
     }
 
     fn section_by_index(&'file self, index: SectionIndex) -> Result<CoffSection<'data, 'file>> {
@@ -247,8 +247,13 @@ impl<'data, 'file> ObjectSegment<'data> for CoffSegment<'data, 'file> {
     }
 
     #[inline]
-    fn name(&self) -> Option<&str> {
-        self.section.name(self.file.symbols.strings).ok()
+    fn name(&self) -> Result<Option<&str>> {
+        let name = self.section.name(self.file.symbols.strings)?;
+        Ok(Some(
+            str::from_utf8(name)
+                .ok()
+                .read_error("Non UTF-8 COFF section name")?,
+        ))
     }
 }
 
@@ -345,13 +350,16 @@ impl<'data, 'file> ObjectSection<'data> for CoffSection<'data, 'file> {
     }
 
     #[inline]
-    fn name(&self) -> Option<&str> {
-        self.section.name(self.file.symbols.strings).ok()
+    fn name(&self) -> Result<&str> {
+        let name = self.section.name(self.file.symbols.strings)?;
+        str::from_utf8(name)
+            .ok()
+            .read_error("Non UTF-8 COFF section name")
     }
 
     #[inline]
-    fn segment_name(&self) -> Option<&str> {
-        None
+    fn segment_name(&self) -> Result<Option<&str>> {
+        Ok(None)
     }
 
     #[inline]
@@ -622,9 +630,9 @@ impl pe::ImageSectionHeader {
         }
     }
 
-    pub(crate) fn name<'data>(&'data self, strings: StringTable<'data>) -> Result<&'data str> {
+    pub(crate) fn name<'data>(&'data self, strings: StringTable<'data>) -> Result<&'data [u8]> {
         let bytes = &self.name;
-        let name = if bytes[0] == b'/' {
+        Ok(if bytes[0] == b'/' {
             let mut offset = 0;
             if bytes[1] == b'/' {
                 for byte in bytes[2..].iter() {
@@ -656,8 +664,7 @@ impl pe::ImageSectionHeader {
                 Some(end) => &bytes[..end],
                 None => &bytes[..],
             }
-        };
-        str::from_utf8(name).map_err(|_| Error("Non UTF-8 COFF section name"))
+        })
     }
 
     pub(crate) fn kind(&self) -> SectionKind {

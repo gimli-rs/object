@@ -494,8 +494,8 @@ impl<'data, 'file, Elf: FileHeader> ObjectSegment<'data> for ElfSegment<'data, '
     }
 
     #[inline]
-    fn name(&self) -> Option<&str> {
-        None
+    fn name(&self) -> read::Result<Option<&str>> {
+        Ok(None)
     }
 }
 
@@ -589,8 +589,9 @@ impl<'data, 'file, Elf: FileHeader> ElfSection<'data, 'file, Elf> {
     #[cfg(feature = "compression")]
     fn maybe_decompress_data_gnu(&self) -> read::Result<Option<Cow<'data, [u8]>>> {
         let name = match self.name() {
-            Some(name) => name,
-            None => return Ok(None),
+            Ok(name) => name,
+            // I think it's ok to ignore this error?
+            Err(_) => return Ok(None),
         };
         if !name.starts_with(".zdebug_") {
             return Ok(None);
@@ -678,17 +679,20 @@ impl<'data, 'file, Elf: FileHeader> ObjectSection<'data> for ElfSection<'data, '
         })
     }
 
-    fn name(&self) -> Option<&str> {
-        self.file
+    fn name(&self) -> read::Result<&str> {
+        let name = self
+            .file
             .section_strings
             .get(self.section.sh_name(self.file.endian))
+            .read_error("Invalid ELF section name offset")?;
+        str::from_utf8(name)
             .ok()
-            .and_then(|s| str::from_utf8(s).ok())
+            .read_error("Non UTF-8 ELF section name")
     }
 
     #[inline]
-    fn segment_name(&self) -> Option<&str> {
-        None
+    fn segment_name(&self) -> read::Result<Option<&str>> {
+        Ok(None)
     }
 
     fn kind(&self) -> SectionKind {

@@ -175,7 +175,7 @@ pub trait ObjectSegment<'data>: read::private::Sealed {
     fn data_range(&self, address: u64, size: u64) -> Result<Option<&'data [u8]>>;
 
     /// Returns the name of the segment.
-    fn name(&self) -> Option<&str>;
+    fn name(&self) -> Result<Option<&str>>;
 }
 
 /// A section defined in an object file.
@@ -227,10 +227,10 @@ pub trait ObjectSection<'data>: read::private::Sealed {
     fn uncompressed_data(&self) -> Result<Cow<'data, [u8]>>;
 
     /// Returns the name of the section.
-    fn name(&self) -> Option<&str>;
+    fn name(&self) -> Result<&str>;
 
     /// Returns the name of the segment for this section.
-    fn segment_name(&self) -> Option<&str>;
+    fn segment_name(&self) -> Result<Option<&str>>;
 
     /// Return the kind of this section.
     fn kind(&self) -> SectionKind;

@@ -58,7 +58,7 @@ fn coff_x86_64() {
     let text = sections.next().unwrap();
     println!("{:?}", text);
     let text_index = text.index();
-    assert_eq!(text.name(), Some(".text"));
+    assert_eq!(text.name(), Ok(".text"));
     assert_eq!(text.kind(), SectionKind::Text);
     assert_eq!(text.address(), 0);
     assert_eq!(text.size(), 62);
@@ -145,7 +145,7 @@ fn elf_x86_64() {
 
     let section = sections.next().unwrap();
     println!("{:?}", section);
-    assert_eq!(section.name(), Some(""));
+    assert_eq!(section.name(), Ok(""));
     assert_eq!(section.kind(), SectionKind::Metadata);
     assert_eq!(section.address(), 0);
     assert_eq!(section.size(), 0);
@@ -153,7 +153,7 @@ fn elf_x86_64() {
     let text = sections.next().unwrap();
     println!("{:?}", text);
     let text_index = text.index();
-    assert_eq!(text.name(), Some(".text"));
+    assert_eq!(text.name(), Ok(".text"));
     assert_eq!(text.kind(), SectionKind::Text);
     assert_eq!(text.address(), 0);
     assert_eq!(text.size(), 62);
@@ -264,8 +264,8 @@ fn macho_x86_64() {
     let text = sections.next().unwrap();
     println!("{:?}", text);
     let text_index = text.index();
-    assert_eq!(text.name(), Some("__text"));
-    assert_eq!(text.segment_name(), Some("__TEXT"));
+    assert_eq!(text.name(), Ok("__text"));
+    assert_eq!(text.segment_name(), Ok(Some("__TEXT")));
     assert_eq!(text.kind(), SectionKind::Text);
     assert_eq!(text.address(), 0);
     assert_eq!(text.size(), 62);
