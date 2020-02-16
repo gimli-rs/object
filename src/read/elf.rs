@@ -365,13 +365,24 @@ where
         Ok(None)
     }
 
-    fn gnu_debuglink(&self) -> Option<(&'data [u8], u32)> {
-        let section = self.raw_section_by_name(".gnu_debuglink")?;
-        let data = section.section.data(self.endian, self.data).ok()?;
-        let filename = data.read_string_at(0).ok()?;
+    fn gnu_debuglink(&self) -> read::Result<Option<(&'data [u8], u32)>> {
+        let section = match self.raw_section_by_name(".gnu_debuglink") {
+            Some(section) => section,
+            None => return Ok(None),
+        };
+        let data = section
+            .section
+            .data(self.endian, self.data)
+            .read_error("Invalid ELF .gnu_debuglink section offset or size")?;
+        let filename = data
+            .read_string_at(0)
+            .read_error("Missing ELF .gnu_debuglink filename")?;
         let crc_offset = util::align(filename.len() + 1, 4);
-        let crc = data.read_at::<U32<_>>(crc_offset).ok()?.get(self.endian);
-        Some((filename, crc))
+        let crc = data
+            .read_at::<U32<_>>(crc_offset)
+            .read_error("Missing ELF .gnu_debuglink crc")?
+            .get(self.endian);
+        Ok(Some((filename, crc)))
     }
 
     fn entry(&self) -> u64 {

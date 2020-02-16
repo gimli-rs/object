@@ -322,7 +322,7 @@ where
     }
 
     #[inline]
-    fn gnu_debuglink(&self) -> Option<(&'data [u8], u32)> {
+    fn gnu_debuglink(&self) -> Result<Option<(&'data [u8], u32)>> {
         with_inner!(self.inner, FileInternal, |x| x.gnu_debuglink())
     }
 

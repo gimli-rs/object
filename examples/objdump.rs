@@ -46,12 +46,14 @@ fn main() {
             Ok(None) => {}
             Err(e) => println!("Failed to parse build ID: {}", e),
         }
-        if let Some((filename, crc)) = file.gnu_debuglink() {
-            println!(
+        match file.gnu_debuglink() {
+            Ok(Some((filename, crc))) => println!(
                 "GNU debug link: {} CRC: {:08x}",
                 String::from_utf8_lossy(filename),
-                crc
-            );
+                crc,
+            ),
+            Ok(None) => {}
+            Err(e) => println!("Failed to parse GNU debug link: {}", e),
         }
 
         for segment in file.segments() {

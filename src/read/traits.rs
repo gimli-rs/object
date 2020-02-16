@@ -134,8 +134,8 @@ pub trait Object<'data, 'file>: read::private::Sealed {
 
     /// The filename and CRC from a `.gnu_debuglink` section.
     #[inline]
-    fn gnu_debuglink(&self) -> Option<(&'data [u8], u32)> {
-        None
+    fn gnu_debuglink(&self) -> Result<Option<(&'data [u8], u32)>> {
+        Ok(None)
     }
 
     /// File flags that are specific to each file format.
