@@ -2,7 +2,6 @@
 use alloc::borrow::Cow;
 use alloc::fmt;
 use target_lexicon::{Architecture, BinaryFormat};
-use uuid::Uuid;
 
 #[cfg(feature = "coff")]
 use crate::read::coff;
@@ -15,8 +14,8 @@ use crate::read::pe;
 #[cfg(feature = "wasm")]
 use crate::read::wasm;
 use crate::read::{
-    self, FileFlags, Object, ObjectSection, ObjectSegment, Relocation, SectionFlags, SectionIndex,
-    SectionKind, Symbol, SymbolIndex, SymbolMap,
+    self, Error, FileFlags, Object, ObjectSection, ObjectSegment, Relocation, Result, SectionFlags,
+    SectionIndex, SectionKind, Symbol, SymbolIndex, SymbolMap,
 };
 
 /// Evaluate an expression on the contents of a file format enum.
@@ -171,9 +170,9 @@ enum FileInternal<'data> {
 
 impl<'data> File<'data> {
     /// Parse the raw file data.
-    pub fn parse(data: &'data [u8]) -> Result<Self, &'static str> {
+    pub fn parse(data: &'data [u8]) -> Result<Self> {
         if data.len() < 16 {
-            return Err("File too short");
+            return Err(Error("File too short"));
         }
 
         let inner = match [data[0], data[1], data[2], data[3], data[4]] {
@@ -205,7 +204,7 @@ impl<'data> File<'data> {
                     Ok(crate::pe::IMAGE_NT_OPTIONAL_HDR64_MAGIC) => {
                         FileInternal::Pe64(pe::PeFile64::parse(data)?)
                     }
-                    _ => return Err("Unknown MS-DOS file"),
+                    _ => return Err(Error("Unknown MS-DOS file")),
                 }
             }
             // TODO: more COFF machines
@@ -214,7 +213,7 @@ impl<'data> File<'data> {
             [0x4c, 0x01, _, _, _]
             // COFF x86-64
             | [0x64, 0x86, _, _, _] => FileInternal::Coff(coff::CoffFile::parse(data)?),
-            _ => return Err("Unknown file magic"),
+            _ => return Err(Error("Unknown file magic")),
         };
         Ok(File { inner })
     }
@@ -273,7 +272,7 @@ where
         .map(|inner| Section { inner })
     }
 
-    fn section_by_index(&'file self, index: SectionIndex) -> Option<Section<'data, 'file>> {
+    fn section_by_index(&'file self, index: SectionIndex) -> Result<Section<'data, 'file>> {
         map_inner_option!(self.inner, FileInternal, SectionInternal, |x| x
             .section_by_index(index))
         .map(|inner| Section { inner })
@@ -286,7 +285,7 @@ where
         }
     }
 
-    fn symbol_by_index(&self, index: SymbolIndex) -> Option<Symbol<'data>> {
+    fn symbol_by_index(&self, index: SymbolIndex) -> Result<Symbol<'data>> {
         with_inner!(self.inner, FileInternal, |x| x.symbol_by_index(index))
     }
 
@@ -313,17 +312,17 @@ where
     }
 
     #[inline]
-    fn mach_uuid(&self) -> Option<Uuid> {
+    fn mach_uuid(&self) -> Result<Option<[u8; 16]>> {
         with_inner!(self.inner, FileInternal, |x| x.mach_uuid())
     }
 
     #[inline]
-    fn build_id(&self) -> Option<&'data [u8]> {
+    fn build_id(&self) -> Result<Option<&'data [u8]>> {
         with_inner!(self.inner, FileInternal, |x| x.build_id())
     }
 
     #[inline]
-    fn gnu_debuglink(&self) -> Option<(&'data [u8], u32)> {
+    fn gnu_debuglink(&self) -> Result<Option<(&'data [u8], u32)>> {
         with_inner!(self.inner, FileInternal, |x| x.gnu_debuglink())
     }
 
@@ -411,10 +410,18 @@ where
 impl<'data, 'file> fmt::Debug for Segment<'data, 'file> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         // It's painful to do much better than this
-        f.debug_struct("Segment")
-            .field("name", &self.name().unwrap_or("<unnamed>"))
-            .field("address", &self.address())
-            .field("size", &self.data().len())
+        let mut s = f.debug_struct("Segment");
+        match self.name() {
+            Ok(Some(ref name)) => {
+                s.field("name", name);
+            }
+            Ok(None) => {}
+            Err(_) => {
+                s.field("name", &"<invalid>");
+            }
+        }
+        s.field("address", &self.address())
+            .field("size", &self.size())
             .finish()
     }
 }
@@ -438,15 +445,15 @@ impl<'data, 'file> ObjectSegment<'data> for Segment<'data, 'file> {
         with_inner!(self.inner, SegmentInternal, |x| x.file_range())
     }
 
-    fn data(&self) -> &'data [u8] {
+    fn data(&self) -> Result<&'data [u8]> {
         with_inner!(self.inner, SegmentInternal, |x| x.data())
     }
 
-    fn data_range(&self, address: u64, size: u64) -> Option<&'data [u8]> {
+    fn data_range(&self, address: u64, size: u64) -> Result<Option<&'data [u8]>> {
         with_inner!(self.inner, SegmentInternal, |x| x.data_range(address, size))
     }
 
-    fn name(&self) -> Option<&str> {
+    fn name(&self) -> Result<Option<&str>> {
         with_inner!(self.inner, SegmentInternal, |x| x.name())
     }
 }
@@ -527,10 +534,16 @@ impl<'data, 'file> fmt::Debug for Section<'data, 'file> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         // It's painful to do much better than this
         let mut s = f.debug_struct("Section");
-        if let Some(segment) = self.segment_name() {
-            s.field("segment", &segment);
+        match self.segment_name() {
+            Ok(Some(ref name)) => {
+                s.field("segment", name);
+            }
+            Ok(None) => {}
+            Err(_) => {
+                s.field("segment", &"<invalid>");
+            }
         }
-        s.field("name", &self.name().unwrap_or("<invalid name>"))
+        s.field("name", &self.name().unwrap_or("<invalid>"))
             .field("address", &self.address())
             .field("size", &self.size())
             .field("kind", &self.kind())
@@ -563,24 +576,24 @@ impl<'data, 'file> ObjectSection<'data> for Section<'data, 'file> {
         with_inner!(self.inner, SectionInternal, |x| x.file_range())
     }
 
-    fn data(&self) -> &'data [u8] {
+    fn data(&self) -> Result<&'data [u8]> {
         with_inner!(self.inner, SectionInternal, |x| x.data())
     }
 
-    fn data_range(&self, address: u64, size: u64) -> Option<&'data [u8]> {
+    fn data_range(&self, address: u64, size: u64) -> Result<Option<&'data [u8]>> {
         with_inner!(self.inner, SectionInternal, |x| x.data_range(address, size))
     }
 
     #[cfg(feature = "compression")]
-    fn uncompressed_data(&self) -> Option<Cow<'data, [u8]>> {
+    fn uncompressed_data(&self) -> Result<Cow<'data, [u8]>> {
         with_inner!(self.inner, SectionInternal, |x| x.uncompressed_data())
     }
 
-    fn name(&self) -> Option<&str> {
+    fn name(&self) -> Result<&str> {
         with_inner!(self.inner, SectionInternal, |x| x.name())
     }
 
-    fn segment_name(&self) -> Option<&str> {
+    fn segment_name(&self) -> Result<Option<&str>> {
         with_inner!(self.inner, SectionInternal, |x| x.segment_name())
     }
 

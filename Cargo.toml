@@ -14,7 +14,6 @@ all-features = true
 
 [dependencies]
 target-lexicon = { version = "0.10" }
-uuid = { version = "0.8", default-features = false }
 flate2 = { version = "1", optional = true }
 crc32fast = { version = "1.2", optional = true }
 indexmap = { version = "1.1", optional = true }

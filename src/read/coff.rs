@@ -7,7 +7,7 @@ use alloc::borrow::Cow;
 use alloc::fmt;
 use alloc::vec::Vec;
 use core::convert::TryInto;
-use core::{iter, slice, str};
+use core::{iter, result, slice, str};
 use target_lexicon::Architecture;
 
 use crate::endian::{LittleEndian as LE, U32Bytes};
@@ -15,9 +15,10 @@ use crate::pe;
 use crate::pod::{Bytes, Pod};
 use crate::read::util::StringTable;
 use crate::read::{
-    self, FileFlags, Object, ObjectSection, ObjectSegment, Relocation, RelocationEncoding,
-    RelocationKind, RelocationTarget, SectionFlags, SectionIndex, SectionKind, Symbol, SymbolFlags,
-    SymbolIndex, SymbolKind, SymbolMap, SymbolScope, SymbolSection,
+    self, Error, FileFlags, Object, ObjectSection, ObjectSegment, ReadError, Relocation,
+    RelocationEncoding, RelocationKind, RelocationTarget, Result, SectionFlags, SectionIndex,
+    SectionKind, Symbol, SymbolFlags, SymbolIndex, SymbolKind, SymbolMap, SymbolScope,
+    SymbolSection,
 };
 
 /// A COFF object file.
@@ -32,19 +33,19 @@ pub struct CoffFile<'data> {
 
 impl<'data> CoffFile<'data> {
     /// Parse the raw COFF file data.
-    pub fn parse(data: &'data [u8]) -> Result<Self, &'static str> {
+    pub fn parse(data: &'data [u8]) -> Result<Self> {
         let data = Bytes(data);
         let mut tail = data;
         let header = tail
             .read::<pe::ImageFileHeader>()
-            .map_err(|()| "Invalid COFF file header size or alignment")?;
+            .read_error("Invalid COFF file header size or alignment")?;
 
         // Skip over the optional header and get the section headers.
         tail.skip(header.size_of_optional_header.get(LE) as usize)
-            .map_err(|()| "Invalid COFF optional header size")?;
+            .read_error("Invalid COFF optional header size")?;
         let sections = tail
             .read_slice(header.number_of_sections.get(LE) as usize)
-            .map_err(|()| "Invalid section headers")?;
+            .read_error("Invalid COFF section headers")?;
 
         let symbols = SymbolTable::parse(header, data)?;
 
@@ -97,11 +98,19 @@ where
 
     fn section_by_name(&'file self, section_name: &str) -> Option<CoffSection<'data, 'file>> {
         self.sections()
-            .find(|section| section.name() == Some(section_name))
+            .find(|section| section.name() == Ok(section_name))
     }
 
-    fn section_by_index(&'file self, index: SectionIndex) -> Option<CoffSection<'data, 'file>> {
-        self.sections().find(|section| section.index() == index)
+    fn section_by_index(&'file self, index: SectionIndex) -> Result<CoffSection<'data, 'file>> {
+        let section = self
+            .sections
+            .get(index.0)
+            .read_error("Invalid COFF section index")?;
+        Ok(CoffSection {
+            file: self,
+            index,
+            section,
+        })
     }
 
     fn sections(&'file self) -> CoffSectionIterator<'data, 'file> {
@@ -111,12 +120,12 @@ where
         }
     }
 
-    fn symbol_by_index(&self, index: SymbolIndex) -> Option<Symbol<'data>> {
-        Some(parse_symbol(
-            &self.symbols,
-            index.0,
-            self.symbols.get(index.0)?,
-        ))
+    fn symbol_by_index(&self, index: SymbolIndex) -> Result<Symbol<'data>> {
+        let symbol = self
+            .symbols
+            .get(index.0)
+            .read_error("Invalid COFF symbol index")?;
+        Ok(parse_symbol(&self.symbols, index.0, symbol))
     }
 
     fn symbols(&'file self) -> CoffSymbolIterator<'data, 'file> {
@@ -193,10 +202,10 @@ where
 }
 
 impl<'data, 'file> CoffSegment<'data, 'file> {
-    fn bytes(&self) -> Bytes<'data> {
+    fn bytes(&self) -> Result<Bytes<'data>> {
         self.section
             .coff_bytes(self.file.data)
-            .unwrap_or(Bytes(&[]))
+            .read_error("Invalid COFF section offset or size")
     }
 }
 
@@ -224,17 +233,27 @@ impl<'data, 'file> ObjectSegment<'data> for CoffSegment<'data, 'file> {
         (u64::from(offset), u64::from(size))
     }
 
-    fn data(&self) -> &'data [u8] {
-        self.bytes().0
+    fn data(&self) -> Result<&'data [u8]> {
+        Ok(self.bytes()?.0)
     }
 
-    fn data_range(&self, address: u64, size: u64) -> Option<&'data [u8]> {
-        read::data_range(self.bytes(), self.address(), address, size).ok()
+    fn data_range(&self, address: u64, size: u64) -> Result<Option<&'data [u8]>> {
+        Ok(read::data_range(
+            self.bytes()?,
+            self.address(),
+            address,
+            size,
+        ))
     }
 
     #[inline]
-    fn name(&self) -> Option<&str> {
-        self.section.name(self.file.symbols.strings).ok()
+    fn name(&self) -> Result<Option<&str>> {
+        let name = self.section.name(self.file.symbols.strings)?;
+        Ok(Some(
+            str::from_utf8(name)
+                .ok()
+                .read_error("Non UTF-8 COFF section name")?,
+        ))
     }
 }
 
@@ -272,10 +291,10 @@ where
 }
 
 impl<'data, 'file> CoffSection<'data, 'file> {
-    fn bytes(&self) -> Bytes<'data> {
+    fn bytes(&self) -> Result<Bytes<'data>> {
         self.section
             .coff_bytes(self.file.data)
-            .unwrap_or(Bytes(&[]))
+            .read_error("Invalid COFF section offset or size")
     }
 }
 
@@ -311,28 +330,36 @@ impl<'data, 'file> ObjectSection<'data> for CoffSection<'data, 'file> {
         Some((u64::from(offset), u64::from(size)))
     }
 
-    fn data(&self) -> &'data [u8] {
-        self.bytes().0
+    fn data(&self) -> Result<&'data [u8]> {
+        Ok(self.bytes()?.0)
     }
 
-    fn data_range(&self, address: u64, size: u64) -> Option<&'data [u8]> {
-        read::data_range(self.bytes(), self.address(), address, size).ok()
+    fn data_range(&self, address: u64, size: u64) -> Result<Option<&'data [u8]>> {
+        Ok(read::data_range(
+            self.bytes()?,
+            self.address(),
+            address,
+            size,
+        ))
     }
 
     #[cfg(feature = "compression")]
     #[inline]
-    fn uncompressed_data(&self) -> Option<Cow<'data, [u8]>> {
-        Some(Cow::from(self.data()))
+    fn uncompressed_data(&self) -> Result<Cow<'data, [u8]>> {
+        Ok(Cow::from(self.data()?))
     }
 
     #[inline]
-    fn name(&self) -> Option<&str> {
-        self.section.name(self.file.symbols.strings).ok()
+    fn name(&self) -> Result<&str> {
+        let name = self.section.name(self.file.symbols.strings)?;
+        str::from_utf8(name)
+            .ok()
+            .read_error("Non UTF-8 COFF section name")
     }
 
     #[inline]
-    fn segment_name(&self) -> Option<&str> {
-        None
+    fn segment_name(&self) -> Result<Option<&str>> {
+        Ok(None)
     }
 
     #[inline]
@@ -595,7 +622,7 @@ impl pe::ImageSectionHeader {
     ///
     /// Returns `Ok(&[])` if the section has no data.
     /// Returns `Err` for invalid values.
-    fn coff_bytes<'data>(&self, data: Bytes<'data>) -> Result<Bytes<'data>, ()> {
+    fn coff_bytes<'data>(&self, data: Bytes<'data>) -> result::Result<Bytes<'data>, ()> {
         if let Some((offset, size)) = self.coff_file_range() {
             data.read_bytes_at(offset as usize, size as usize)
         } else {
@@ -603,9 +630,9 @@ impl pe::ImageSectionHeader {
         }
     }
 
-    pub(crate) fn name<'data>(&'data self, strings: StringTable<'data>) -> Result<&'data str, ()> {
+    pub(crate) fn name<'data>(&'data self, strings: StringTable<'data>) -> Result<&'data [u8]> {
         let bytes = &self.name;
-        let name = if bytes[0] == b'/' {
+        Ok(if bytes[0] == b'/' {
             let mut offset = 0;
             if bytes[1] == b'/' {
                 for byte in bytes[2..].iter() {
@@ -615,7 +642,7 @@ impl pe::ImageSectionHeader {
                         b'0'..=b'9' => byte - b'0' + 52,
                         b'+' => 62,
                         b'/' => 63,
-                        _ => return Err(()),
+                        _ => return Err(Error("Invalid COFF section name base-64 offset")),
                     };
                     offset = offset * 64 + digit as u32;
                 }
@@ -624,19 +651,20 @@ impl pe::ImageSectionHeader {
                     let digit = match byte {
                         b'0'..=b'9' => byte - b'0',
                         0 => break,
-                        _ => return Err(()),
+                        _ => return Err(Error("Invalid COFF section name base-10 offset")),
                     };
                     offset = offset * 10 + digit as u32;
                 }
             };
-            strings.get(offset)?
+            strings
+                .get(offset)
+                .read_error("Invalid COFF section name offset")?
         } else {
             match bytes.iter().position(|&x| x == 0) {
                 Some(end) => &bytes[..end],
                 None => &bytes[..],
             }
-        };
-        str::from_utf8(name).map_err(|_| ())
+        })
     }
 
     pub(crate) fn kind(&self) -> SectionKind {
@@ -688,27 +716,24 @@ pub(crate) struct SymbolTable<'data> {
 }
 
 impl<'data> SymbolTable<'data> {
-    pub fn parse(
-        header: &pe::ImageFileHeader,
-        mut data: Bytes<'data>,
-    ) -> Result<Self, &'static str> {
+    pub fn parse(header: &pe::ImageFileHeader, mut data: Bytes<'data>) -> Result<Self> {
         // The symbol table may not be present.
         let symbol_offset = header.pointer_to_symbol_table.get(LE) as usize;
         let (symbols, strings) = if symbol_offset != 0 {
             data.skip(symbol_offset)
-                .map_err(|()| "Invalid symbol table offset")?;
+                .read_error("Invalid COFF symbol table offset")?;
             let symbols = data
                 .read_slice(header.number_of_symbols.get(LE) as usize)
-                .map_err(|()| "Invalid symbol table size")?;
+                .read_error("Invalid COFF symbol table size")?;
 
             // Note: don't update data when reading length; the length includes itself.
             let length = data
                 .read_at::<U32Bytes<_>>(0)
-                .map_err(|()| "Missing string table")?
+                .read_error("Missing COFF string table")?
                 .get(LE);
             let strings = data
                 .read_bytes(length as usize)
-                .map_err(|()| "Invalid string table length")?;
+                .read_error("Invalid COFF string table length")?;
 
             (symbols, strings)
         } else {

@@ -36,18 +36,24 @@ fn main() {
             }
         };
 
-        if let Some(uuid) = file.mach_uuid() {
-            println!("Mach UUID: {}", uuid);
+        match file.mach_uuid() {
+            Ok(Some(uuid)) => println!("Mach UUID: {:x?}", uuid),
+            Ok(None) => {}
+            Err(e) => println!("Failed to parse Mach UUID: {}", e),
         }
-        if let Some(build_id) = file.build_id() {
-            println!("Build ID: {:x?}", build_id);
+        match file.build_id() {
+            Ok(Some(build_id)) => println!("Build ID: {:x?}", build_id),
+            Ok(None) => {}
+            Err(e) => println!("Failed to parse build ID: {}", e),
         }
-        if let Some((filename, crc)) = file.gnu_debuglink() {
-            println!(
+        match file.gnu_debuglink() {
+            Ok(Some((filename, crc))) => println!(
                 "GNU debug link: {} CRC: {:08x}",
                 String::from_utf8_lossy(filename),
-                crc
-            );
+                crc,
+            ),
+            Ok(None) => {}
+            Err(e) => println!("Failed to parse GNU debug link: {}", e),
         }
 
         for segment in file.segments() {

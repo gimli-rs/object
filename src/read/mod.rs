@@ -1,7 +1,7 @@
 //! Interface for reading object files.
 
 use alloc::vec::Vec;
-use core::cmp;
+use core::{cmp, fmt, result};
 
 use crate::common::{
     FileFlags, RelocationEncoding, RelocationKind, SectionFlags, SectionKind, SymbolFlags,
@@ -34,6 +34,39 @@ pub mod wasm;
 
 mod private {
     pub trait Sealed {}
+}
+
+/// The error type used within the read module.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Error(&'static str);
+
+impl fmt::Display for Error {
+    #[inline]
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.write_str(self.0)
+    }
+}
+
+#[cfg(feature = "std")]
+impl std::error::Error for Error {}
+
+/// The result type used within the read module.
+pub type Result<T> = result::Result<T, Error>;
+
+trait ReadError<T> {
+    fn read_error(self, error: &'static str) -> Result<T>;
+}
+
+impl<T> ReadError<T> for result::Result<T, ()> {
+    fn read_error(self, error: &'static str) -> Result<T> {
+        self.map_err(|()| Error(error))
+    }
+}
+
+impl<T> ReadError<T> for Option<T> {
+    fn read_error(self, error: &'static str) -> Result<T> {
+        self.ok_or(Error(error))
+    }
 }
 
 /// The native executable file for the target platform.
@@ -314,8 +347,8 @@ impl Relocation {
     }
 }
 
-fn data_range(data: Bytes, data_address: u64, range_address: u64, size: u64) -> Result<&[u8], ()> {
-    let offset = range_address.checked_sub(data_address).ok_or(())?;
-    let data = data.read_bytes_at(offset as usize, size as usize)?;
-    Ok(data.0)
+fn data_range(data: Bytes, data_address: u64, range_address: u64, size: u64) -> Option<&[u8]> {
+    let offset = range_address.checked_sub(data_address)?;
+    let data = data.read_bytes_at(offset as usize, size as usize).ok()?;
+    Some(data.0)
 }

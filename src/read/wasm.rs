@@ -1,4 +1,4 @@
-//! Support for reading WASM files.
+//! Support for reading Wasm files.
 //!
 //! Provides `WasmFile` and related types which implement the `Object` trait.
 //!
@@ -13,9 +13,9 @@ use target_lexicon::Architecture;
 use wasmparser as wp;
 
 use crate::read::{
-    self, FileFlags, Object, ObjectSection, ObjectSegment, Relocation, SectionFlags, SectionIndex,
-    SectionKind, Symbol, SymbolFlags, SymbolIndex, SymbolKind, SymbolMap, SymbolScope,
-    SymbolSection,
+    self, Error, FileFlags, Object, ObjectSection, ObjectSegment, ReadError, Relocation, Result,
+    SectionFlags, SectionIndex, SectionKind, Symbol, SymbolFlags, SymbolIndex, SymbolKind,
+    SymbolMap, SymbolScope, SymbolSection,
 };
 
 const SECTION_CUSTOM: usize = 0;
@@ -49,13 +49,15 @@ pub struct WasmFile<'data> {
 
 impl<'data> WasmFile<'data> {
     /// Parse the raw wasm data.
-    pub fn parse(data: &'data [u8]) -> Result<Self, &'static str> {
-        let module = wp::ModuleReader::new(data).map_err(|_| "Invalid WASM header")?;
+    pub fn parse(data: &'data [u8]) -> Result<Self> {
+        let module = wp::ModuleReader::new(data)
+            .ok()
+            .read_error("Invalid Wasm header")?;
 
         let mut file = WasmFile::default();
 
         for section in module {
-            let section = section.map_err(|_| "Invalid section header")?;
+            let section = section.ok().read_error("Invalid Wasm section header")?;
 
             match section.code {
                 wp::SectionCode::Custom { kind, name } => {
@@ -117,13 +119,18 @@ where
 
     fn section_by_name(&'file self, section_name: &str) -> Option<WasmSection<'data, 'file>> {
         self.sections()
-            .find(|section| section.name() == Some(section_name))
+            .find(|section| section.name() == Ok(section_name))
     }
 
-    fn section_by_index(&'file self, index: SectionIndex) -> Option<WasmSection<'data, 'file>> {
-        let id_section = self.id_sections.get(index.0)?;
-        let section = self.sections.get((*id_section)?)?;
-        Some(WasmSection { section })
+    fn section_by_index(&'file self, index: SectionIndex) -> Result<WasmSection<'data, 'file>> {
+        // TODO: Missing sections should return an empty section.
+        let id_section = self
+            .id_sections
+            .get(index.0)
+            .and_then(|x| *x)
+            .read_error("Invalid Wasm section index")?;
+        let section = self.sections.get(id_section).unwrap();
+        Ok(WasmSection { section })
     }
 
     fn sections(&'file self) -> Self::SectionIterator {
@@ -133,9 +140,9 @@ where
     }
 
     #[inline]
-    fn symbol_by_index(&self, _index: SymbolIndex) -> Option<Symbol<'data>> {
-        // WASM doesn't need or support looking up symbols by index.
-        None
+    fn symbol_by_index(&self, _index: SymbolIndex) -> Result<Symbol<'data>> {
+        // Wasm doesn't need or support looking up symbols by index.
+        Err(Error("Unsupported Wasm symbol index"))
     }
 
     fn symbols(&'file self) -> Self::SymbolIterator {
@@ -225,16 +232,16 @@ impl<'data, 'file> ObjectSegment<'data> for WasmSegment<'data, 'file> {
         unreachable!()
     }
 
-    fn data(&self) -> &'data [u8] {
+    fn data(&self) -> Result<&'data [u8]> {
         unreachable!()
     }
 
-    fn data_range(&self, _address: u64, _size: u64) -> Option<&'data [u8]> {
+    fn data_range(&self, _address: u64, _size: u64) -> Result<Option<&'data [u8]>> {
         unreachable!()
     }
 
     #[inline]
-    fn name(&self) -> Option<&str> {
+    fn name(&self) -> Result<Option<&str>> {
         unreachable!()
     }
 }
@@ -295,26 +302,26 @@ impl<'data, 'file> ObjectSection<'data> for WasmSection<'data, 'file> {
     }
 
     #[inline]
-    fn data(&self) -> &'data [u8] {
+    fn data(&self) -> Result<&'data [u8]> {
         let mut reader = self.section.get_binary_reader();
         // TODO: raise a feature request upstream to be able
         // to get remaining slice from a BinaryReader directly.
-        reader.read_bytes(reader.bytes_remaining()).unwrap()
+        Ok(reader.read_bytes(reader.bytes_remaining()).unwrap())
     }
 
-    fn data_range(&self, _address: u64, _size: u64) -> Option<&'data [u8]> {
+    fn data_range(&self, _address: u64, _size: u64) -> Result<Option<&'data [u8]>> {
         unimplemented!()
     }
 
     #[cfg(feature = "compression")]
     #[inline]
-    fn uncompressed_data(&self) -> Option<Cow<'data, [u8]>> {
-        Some(Cow::from(self.data()))
+    fn uncompressed_data(&self) -> Result<Cow<'data, [u8]>> {
+        Ok(Cow::from(self.data()?))
     }
 
     #[inline]
-    fn name(&self) -> Option<&str> {
-        Some(match self.section.code {
+    fn name(&self) -> Result<&str> {
+        Ok(match self.section.code {
             wp::SectionCode::Custom { name, .. } => name,
             wp::SectionCode::Type => "<type>",
             wp::SectionCode::Import => "<import>",
@@ -332,8 +339,8 @@ impl<'data, 'file> ObjectSection<'data> for WasmSection<'data, 'file> {
     }
 
     #[inline]
-    fn segment_name(&self) -> Option<&str> {
-        None
+    fn segment_name(&self) -> Result<Option<&str>> {
+        Ok(None)
     }
 
     #[inline]

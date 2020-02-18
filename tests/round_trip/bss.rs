@@ -48,10 +48,10 @@ fn coff_x86_64_bss() {
     let bss = sections.next().unwrap();
     println!("{:?}", bss);
     let bss_index = bss.index();
-    assert_eq!(bss.name(), Some(".bss"));
+    assert_eq!(bss.name(), Ok(".bss"));
     assert_eq!(bss.kind(), SectionKind::UninitializedData);
     assert_eq!(bss.size(), 58);
-    assert_eq!(&*bss.data(), &[]);
+    assert_eq!(bss.data(), Ok(&[][..]));
 
     let section = sections.next();
     assert!(
@@ -127,7 +127,7 @@ fn elf_x86_64_bss() {
 
     let section = sections.next().unwrap();
     println!("{:?}", section);
-    assert_eq!(section.name(), Some(""));
+    assert_eq!(section.name(), Ok(""));
     assert_eq!(section.kind(), SectionKind::Metadata);
     assert_eq!(section.address(), 0);
     assert_eq!(section.size(), 0);
@@ -135,10 +135,10 @@ fn elf_x86_64_bss() {
     let bss = sections.next().unwrap();
     println!("{:?}", bss);
     let bss_index = bss.index();
-    assert_eq!(bss.name(), Some(".bss"));
+    assert_eq!(bss.name(), Ok(".bss"));
     assert_eq!(bss.kind(), SectionKind::UninitializedData);
     assert_eq!(bss.size(), 58);
-    assert_eq!(&*bss.data(), &[]);
+    assert_eq!(bss.data(), Ok(&[][..]));
 
     let mut symbols = object.symbols();
 
@@ -215,11 +215,11 @@ fn macho_x86_64_bss() {
     let bss = sections.next().unwrap();
     println!("{:?}", bss);
     let bss_index = bss.index();
-    assert_eq!(bss.name(), Some("__bss"));
-    assert_eq!(bss.segment_name(), Some("__DATA"));
+    assert_eq!(bss.name(), Ok("__bss"));
+    assert_eq!(bss.segment_name(), Ok(Some("__DATA")));
     assert_eq!(bss.kind(), SectionKind::UninitializedData);
     assert_eq!(bss.size(), 58);
-    assert_eq!(&*bss.data(), &[]);
+    assert_eq!(bss.data(), Ok(&[][..]));
 
     let section = sections.next();
     assert!(

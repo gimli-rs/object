@@ -10,7 +10,7 @@ use alloc::borrow::Cow;
 use alloc::vec::Vec;
 use core::fmt::Debug;
 use core::marker::PhantomData;
-use core::{cmp, iter, mem, slice, str};
+use core::{cmp, iter, mem, result, slice, str};
 use target_lexicon::Architecture;
 
 use crate::endian::LittleEndian as LE;
@@ -18,8 +18,8 @@ use crate::pe;
 use crate::pod::{Bytes, Pod};
 use crate::read::coff::{parse_symbol, CoffSymbolIterator, SymbolTable};
 use crate::read::{
-    self, FileFlags, Object, ObjectSection, ObjectSegment, Relocation, SectionFlags, SectionIndex,
-    SectionKind, Symbol, SymbolIndex, SymbolMap,
+    self, Error, FileFlags, Object, ObjectSection, ObjectSegment, ReadError, Relocation, Result,
+    SectionFlags, SectionIndex, SectionKind, Symbol, SymbolIndex, SymbolMap,
 };
 
 /// A PE32 (32-bit) image file.
@@ -40,68 +40,68 @@ pub struct PeFile<'data, Pe: ImageNtHeaders> {
 
 impl<'data, Pe: ImageNtHeaders> PeFile<'data, Pe> {
     /// Find the optional header and read the `optional_header.magic`.
-    pub fn optional_header_magic(data: &'data [u8]) -> Result<u16, &'static str> {
+    pub fn optional_header_magic(data: &'data [u8]) -> Result<u16> {
         let data = Bytes(data);
         // DOS header comes first.
         let dos_header = data
             .read_at::<pe::ImageDosHeader>(0)
-            .map_err(|()| "Invalid DOS header size or alignment")?;
+            .read_error("Invalid DOS header size or alignment")?;
         if dos_header.e_magic.get(LE) != pe::IMAGE_DOS_SIGNATURE {
-            return Err("Invalid DOS magic");
+            return Err(Error("Invalid DOS magic"));
         }
         // NT headers are at an offset specified in the DOS header.
         let nt_headers = data
             .read_at::<Pe>(dos_header.e_lfanew.get(LE) as usize)
-            .map_err(|()| "Invalid NT headers offset, size, or alignment")?;
+            .read_error("Invalid NT headers offset, size, or alignment")?;
         if nt_headers.signature() != pe::IMAGE_NT_SIGNATURE {
-            return Err("Invalid PE magic");
+            return Err(Error("Invalid PE magic"));
         }
         Ok(nt_headers.optional_header().magic())
     }
 
     /// Parse the raw PE file data.
-    pub fn parse(data: &'data [u8]) -> Result<Self, &'static str> {
+    pub fn parse(data: &'data [u8]) -> Result<Self> {
         let data = Bytes(data);
         // DOS header comes first.
         let dos_header = data
             .read_at::<pe::ImageDosHeader>(0)
-            .map_err(|()| "Invalid DOS header size or alignment")?;
+            .read_error("Invalid DOS header size or alignment")?;
         if dos_header.e_magic.get(LE) != pe::IMAGE_DOS_SIGNATURE {
-            return Err("Invalid DOS magic");
+            return Err(Error("Invalid DOS magic"));
         }
 
         // NT headers are at an offset specified in the DOS header.
         let mut nt_tail = data;
         nt_tail
             .skip(dos_header.e_lfanew.get(LE) as usize)
-            .map_err(|()| "Invalid NT headers offset")?;
+            .read_error("Invalid PE headers offset")?;
         // Note that this does not include the data directories in the optional header.
         let nt_headers = nt_tail
             .read::<Pe>()
-            .map_err(|()| "Invalid NT headers size or alignment")?;
+            .read_error("Invalid PE headers size or alignment")?;
         if nt_headers.signature() != pe::IMAGE_NT_SIGNATURE {
-            return Err("Invalid PE magic");
+            return Err(Error("Invalid PE magic"));
         }
         if !nt_headers.is_valid_optional_magic() {
-            return Err("Invalid optional header magic");
+            return Err(Error("Invalid PE optional header magic"));
         }
 
         // Read the rest of the optional header, and then read the data directories from that.
         let optional_data_size = (nt_headers.file_header().size_of_optional_header.get(LE)
             as usize)
             .checked_sub(mem::size_of::<Pe::ImageOptionalHeader>())
-            .ok_or("Size of optional header is too small")?;
+            .read_error("PE optional header size is too small")?;
         let mut optional_data = nt_tail
             .read_bytes(optional_data_size)
-            .map_err(|()| "Invalid size of optional header")?;
+            .read_error("Invalid PE optional header size")?;
         let data_directories = optional_data
             .read_slice(nt_headers.optional_header().number_of_rva_and_sizes() as usize)
-            .map_err(|()| "Invalid number of RVA and sizes")?;
+            .read_error("Invalid PE number of RVA and sizes")?;
 
         // Section headers are after the optional header.
         let sections = nt_tail
             .read_slice(nt_headers.file_header().number_of_sections.get(LE) as usize)
-            .map_err(|()| "Invalid section headers")?;
+            .read_error("Invalid PE section headers")?;
 
         let symbols = SymbolTable::parse(&nt_headers.file_header(), data)?;
 
@@ -162,11 +162,19 @@ where
 
     fn section_by_name(&'file self, section_name: &str) -> Option<PeSection<'data, 'file, Pe>> {
         self.sections()
-            .find(|section| section.name() == Some(section_name))
+            .find(|section| section.name() == Ok(section_name))
     }
 
-    fn section_by_index(&'file self, index: SectionIndex) -> Option<PeSection<'data, 'file, Pe>> {
-        self.sections().find(|section| section.index() == index)
+    fn section_by_index(&'file self, index: SectionIndex) -> Result<PeSection<'data, 'file, Pe>> {
+        let section = self
+            .sections
+            .get(index.0)
+            .read_error("Invalid PE section index")?;
+        Ok(PeSection {
+            file: self,
+            index,
+            section,
+        })
     }
 
     fn sections(&'file self) -> PeSectionIterator<'data, 'file, Pe> {
@@ -176,12 +184,12 @@ where
         }
     }
 
-    fn symbol_by_index(&self, index: SymbolIndex) -> Option<Symbol<'data>> {
-        Some(parse_symbol(
-            &self.symbols,
-            index.0,
-            self.symbols.get(index.0)?,
-        ))
+    fn symbol_by_index(&self, index: SymbolIndex) -> Result<Symbol<'data>> {
+        let symbol = self
+            .symbols
+            .get(index.0)
+            .read_error("Invalid PE symbol index")?;
+        Ok(parse_symbol(&self.symbols, index.0, symbol))
     }
 
     fn symbols(&'file self) -> CoffSymbolIterator<'data, 'file> {
@@ -270,8 +278,10 @@ where
 }
 
 impl<'data, 'file, Pe: ImageNtHeaders> PeSegment<'data, 'file, Pe> {
-    fn bytes(&self) -> Bytes<'data> {
-        self.section.pe_bytes(self.file.data).unwrap_or(Bytes(&[]))
+    fn bytes(&self) -> Result<Bytes<'data>> {
+        self.section
+            .pe_bytes(self.file.data)
+            .read_error("Invalid PE section offset or size")
     }
 }
 
@@ -299,17 +309,27 @@ impl<'data, 'file, Pe: ImageNtHeaders> ObjectSegment<'data> for PeSegment<'data,
         (u64::from(offset), u64::from(size))
     }
 
-    fn data(&self) -> &'data [u8] {
-        self.bytes().0
+    fn data(&self) -> Result<&'data [u8]> {
+        Ok(self.bytes()?.0)
     }
 
-    fn data_range(&self, address: u64, size: u64) -> Option<&'data [u8]> {
-        read::data_range(self.bytes(), self.address(), address, size).ok()
+    fn data_range(&self, address: u64, size: u64) -> Result<Option<&'data [u8]>> {
+        Ok(read::data_range(
+            self.bytes()?,
+            self.address(),
+            address,
+            size,
+        ))
     }
 
     #[inline]
-    fn name(&self) -> Option<&str> {
-        self.section.name(self.file.symbols.strings).ok()
+    fn name(&self) -> Result<Option<&str>> {
+        let name = self.section.name(self.file.symbols.strings)?;
+        Ok(Some(
+            str::from_utf8(name)
+                .ok()
+                .read_error("Non UTF-8 PE section name")?,
+        ))
     }
 }
 
@@ -359,8 +379,10 @@ where
 }
 
 impl<'data, 'file, Pe: ImageNtHeaders> PeSection<'data, 'file, Pe> {
-    fn bytes(&self) -> Bytes<'data> {
-        self.section.pe_bytes(self.file.data).unwrap_or(Bytes(&[]))
+    fn bytes(&self) -> Result<Bytes<'data>> {
+        self.section
+            .pe_bytes(self.file.data)
+            .read_error("Invalid PE section offset or size")
     }
 }
 
@@ -399,28 +421,36 @@ impl<'data, 'file, Pe: ImageNtHeaders> ObjectSection<'data> for PeSection<'data,
         }
     }
 
-    fn data(&self) -> &'data [u8] {
-        self.bytes().0
+    fn data(&self) -> Result<&'data [u8]> {
+        Ok(self.bytes()?.0)
     }
 
-    fn data_range(&self, address: u64, size: u64) -> Option<&'data [u8]> {
-        read::data_range(self.bytes(), self.address(), address, size).ok()
+    fn data_range(&self, address: u64, size: u64) -> Result<Option<&'data [u8]>> {
+        Ok(read::data_range(
+            self.bytes()?,
+            self.address(),
+            address,
+            size,
+        ))
     }
 
     #[cfg(feature = "compression")]
     #[inline]
-    fn uncompressed_data(&self) -> Option<Cow<'data, [u8]>> {
-        Some(Cow::from(self.data()))
+    fn uncompressed_data(&self) -> Result<Cow<'data, [u8]>> {
+        Ok(Cow::from(self.data()?))
     }
 
     #[inline]
-    fn name(&self) -> Option<&str> {
-        self.section.name(self.file.symbols.strings).ok()
+    fn name(&self) -> Result<&str> {
+        let name = self.section.name(self.file.symbols.strings)?;
+        str::from_utf8(name)
+            .ok()
+            .read_error("Non UTF-8 PE section name")
     }
 
     #[inline]
-    fn segment_name(&self) -> Option<&str> {
-        None
+    fn segment_name(&self) -> Result<Option<&str>> {
+        Ok(None)
     }
 
     #[inline]
@@ -594,7 +624,7 @@ impl pe::ImageSectionHeader {
         (offset, size)
     }
 
-    fn pe_bytes<'data>(&self, data: Bytes<'data>) -> Result<Bytes<'data>, ()> {
+    fn pe_bytes<'data>(&self, data: Bytes<'data>) -> result::Result<Bytes<'data>, ()> {
         let (offset, size) = self.pe_file_range();
         data.read_bytes_at(offset as usize, size as usize)
     }

@@ -1,5 +1,4 @@
 use std::mem;
-use std::string::String;
 use std::vec::Vec;
 
 use crate::endian::*;
@@ -144,7 +143,7 @@ impl Object {
         self.add_relocation(
             section,
             Relocation {
-                offset: offset,
+                offset,
                 size: pointer_width * 8,
                 kind: RelocationKind::Absolute,
                 encoding: RelocationEncoding::Generic,
@@ -186,7 +185,7 @@ impl Object {
         constant
     }
 
-    pub(crate) fn macho_write(&self) -> Result<Vec<u8>, String> {
+    pub(crate) fn macho_write(&self) -> Result<Vec<u8>> {
         let (is_32, pointer_align) = match self.architecture.pointer_width().unwrap() {
             PointerWidth::U16 | PointerWidth::U32 => (true, 4),
             PointerWidth::U64 => (false, 8),
@@ -268,18 +267,18 @@ impl Object {
                 SymbolKind::File | SymbolKind::Section => continue,
                 SymbolKind::Unknown => {
                     if symbol.section != SymbolSection::Undefined {
-                        return Err(format!(
+                        return Err(Error(format!(
                             "defined symbol `{}` with unknown kind",
                             symbol.name().unwrap_or(""),
-                        ));
+                        )));
                     }
                 }
                 SymbolKind::Null | SymbolKind::Label => {
-                    return Err(format!(
+                    return Err(Error(format!(
                         "unimplemented symbol `{}` kind {:?}",
                         symbol.name().unwrap_or(""),
                         symbol.kind
-                    ));
+                    )));
                 }
             }
             symbol_offsets[index].emit = true;
@@ -325,10 +324,10 @@ impl Object {
             Architecture::I386 => (macho::CPU_TYPE_X86, macho::CPU_SUBTYPE_I386_ALL),
             Architecture::X86_64 => (macho::CPU_TYPE_X86_64, macho::CPU_SUBTYPE_X86_64_ALL),
             _ => {
-                return Err(format!(
+                return Err(Error(format!(
                     "unimplemented architecture {:?}",
                     self.architecture
-                ))
+                )));
             }
         };
 
@@ -390,11 +389,11 @@ impl Object {
                     SectionKind::OtherString => macho::S_CSTRING_LITERALS,
                     SectionKind::Other | SectionKind::Linker | SectionKind::Metadata => 0,
                     SectionKind::Unknown => {
-                        return Err(format!(
+                        return Err(Error(format!(
                             "unimplemented section `{}` kind {:?}",
                             section.name().unwrap_or(""),
                             section.kind
-                        ));
+                        )));
                     }
                 }
             };
@@ -450,11 +449,11 @@ impl Object {
                 SymbolSection::Absolute => (macho::N_ABS, 0),
                 SymbolSection::Section(id) => (macho::N_SECT, id.0 + 1),
                 SymbolSection::None | SymbolSection::Common => {
-                    return Err(format!(
+                    return Err(Error(format!(
                         "unimplemented symbol `{}` section {:?}",
                         symbol.name().unwrap_or(""),
                         symbol.section
-                    ))
+                    )));
                 }
             };
             match symbol.scope {
@@ -528,12 +527,14 @@ impl Object {
                         16 => 1,
                         32 => 2,
                         64 => 3,
-                        _ => return Err(format!("unimplemented reloc size {:?}", reloc)),
+                        _ => return Err(Error(format!("unimplemented reloc size {:?}", reloc))),
                     };
                     let (r_pcrel, r_type) = match self.architecture {
                         Architecture::I386 => match reloc.kind {
                             RelocationKind::Absolute => (false, macho::GENERIC_RELOC_VANILLA),
-                            _ => return Err(format!("unimplemented relocation {:?}", reloc)),
+                            _ => {
+                                return Err(Error(format!("unimplemented relocation {:?}", reloc)));
+                            }
                         },
                         Architecture::X86_64 => match (reloc.kind, reloc.encoding, reloc.addend) {
                             (RelocationKind::Absolute, RelocationEncoding::Generic, 0) => {
@@ -560,13 +561,15 @@ impl Object {
                                 -4,
                             ) => (true, macho::X86_64_RELOC_GOT_LOAD),
                             (RelocationKind::MachO { value, relative }, _, _) => (relative, value),
-                            _ => return Err(format!("unimplemented relocation {:?}", reloc)),
+                            _ => {
+                                return Err(Error(format!("unimplemented relocation {:?}", reloc)));
+                            }
                         },
                         _ => {
-                            return Err(format!(
+                            return Err(Error(format!(
                                 "unimplemented architecture {:?}",
                                 self.architecture
-                            ))
+                            )));
                         }
                     };
                     let reloc_info = macho::RelocationInfo {

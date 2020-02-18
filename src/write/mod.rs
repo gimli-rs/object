@@ -1,13 +1,15 @@
 //! Interface for writing object files.
 
-#![allow(clippy::collapsible_if)]
 #![allow(clippy::cognitive_complexity)]
-#![allow(clippy::module_inception)]
+#![allow(clippy::collapsible_if)]
+#![allow(clippy::comparison_chain)]
+#![allow(clippy::single_match)]
+#![allow(clippy::useless_let_if_seq)]
 
 use std::collections::HashMap;
-use std::str;
 use std::string::String;
 use std::vec::Vec;
+use std::{error, fmt, result, str};
 
 use crate::endian::{RunTimeEndian, U32, U64};
 use crate::pod::BytesMut;
@@ -25,6 +27,22 @@ mod elf;
 mod macho;
 mod string;
 mod util;
+
+/// The error type used within the write module.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Error(String);
+
+impl fmt::Display for Error {
+    #[inline]
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.write_str(&self.0)
+    }
+}
+
+impl error::Error for Error {}
+
+/// The result type used within the write module.
+pub type Result<T> = result::Result<T, Error>;
 
 /// A writable object file.
 #[derive(Debug)]
@@ -79,7 +97,7 @@ impl Object {
         self.mangling
     }
 
-    /// Return the current mangling setting.
+    /// Specify the mangling setting.
     #[inline]
     pub fn set_mangling(&mut self, mangling: Mangling) {
         self.mangling = mangling;
@@ -420,30 +438,23 @@ impl Object {
 
     /// Convert a symbol to a section symbol and offset.
     ///
-    /// Returns an error if the symbol is not defined.
-    pub fn symbol_section_and_offset(
-        &mut self,
-        symbol_id: SymbolId,
-    ) -> Result<(SymbolId, u64), ()> {
+    /// Returns `None` if the symbol does not have a section.
+    pub fn symbol_section_and_offset(&mut self, symbol_id: SymbolId) -> Option<(SymbolId, u64)> {
         let symbol = self.symbol(symbol_id);
         if symbol.kind == SymbolKind::Section {
-            return Ok((symbol_id, 0));
+            return Some((symbol_id, 0));
         }
         let symbol_offset = symbol.value;
-        let section = symbol.section.id().ok_or(())?;
+        let section = symbol.section.id()?;
         let section_symbol = self.section_symbol(section);
-        Ok((section_symbol, symbol_offset))
+        Some((section_symbol, symbol_offset))
     }
 
     /// Add a relocation to a section.
     ///
     /// Relocations must only be added after the referenced symbols have been added
     /// and defined (if applicable).
-    pub fn add_relocation(
-        &mut self,
-        section: SectionId,
-        mut relocation: Relocation,
-    ) -> Result<(), String> {
+    pub fn add_relocation(&mut self, section: SectionId, mut relocation: Relocation) -> Result<()> {
         let addend = match self.format {
             #[cfg(feature = "coff")]
             BinaryFormat::Coff => self.coff_fixup_relocation(&mut relocation),
@@ -465,7 +476,7 @@ impl Object {
         section: SectionId,
         relocation: &Relocation,
         addend: i64,
-    ) -> Result<(), String> {
+    ) -> Result<()> {
         let endian = match self.architecture.endianness().unwrap() {
             Endianness::Little => RunTimeEndian::Little,
             Endianness::Big => RunTimeEndian::Big,
@@ -476,20 +487,25 @@ impl Object {
         match relocation.size {
             32 => data.write_at(offset, &U32::new(endian, addend as u32)),
             64 => data.write_at(offset, &U64::new(endian, addend as u64)),
-            _ => return Err(format!("unimplemented relocation addend {:?}", relocation)),
+            _ => {
+                return Err(Error(format!(
+                    "unimplemented relocation addend {:?}",
+                    relocation
+                )));
+            }
         }
         .map_err(|_| {
-            format!(
+            Error(format!(
                 "invalid relocation offset {}+{} (max {})",
                 relocation.offset,
                 relocation.size,
                 data.len()
-            )
+            ))
         })
     }
 
     /// Write the object to a `Vec`.
-    pub fn write(&self) -> Result<Vec<u8>, String> {
+    pub fn write(&self) -> Result<Vec<u8>> {
         match self.format {
             #[cfg(feature = "coff")]
             BinaryFormat::Coff => self.coff_write(),
