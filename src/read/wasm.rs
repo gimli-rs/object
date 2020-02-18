@@ -8,7 +8,7 @@ use alloc::borrow::Cow;
 use alloc::boxed::Box;
 use alloc::vec::Vec;
 use core::marker::PhantomData;
-use core::{fmt, slice, str};
+use core::{slice, str};
 use target_lexicon::Architecture;
 use wasmparser as wp;
 
@@ -41,37 +41,252 @@ pub struct WasmFile<'data> {
     sections: Vec<wp::Section<'data>>,
     // Indices into `sections` of sections with a non-zero id.
     id_sections: Box<[Option<usize>; MAX_SECTION_ID + 1]>,
-    // Payload of custom section called "name".
-    names_data: Option<&'data [u8]>,
     // Whether the file has DWARF information.
     has_debug_symbols: bool,
+    // Symbols collected from imports, exports, code and name sections.
+    symbols: Vec<Symbol<'data>>,
+    // Address of the function body for the entry point.
+    entry: u64,
+}
+
+#[derive(Clone)]
+enum LocalFunctionKind {
+    Unknown,
+    Exported { symbol_ids: Vec<u32> },
+    Local { symbol_id: u32 },
+}
+
+impl<T> ReadError<T> for wasmparser::Result<T> {
+    fn read_error(self, error: &'static str) -> Result<T> {
+        self.map_err(|_| Error(error))
+    }
 }
 
 impl<'data> WasmFile<'data> {
     /// Parse the raw wasm data.
     pub fn parse(data: &'data [u8]) -> Result<Self> {
-        let module = wp::ModuleReader::new(data)
-            .ok()
-            .read_error("Invalid Wasm header")?;
+        let module = wp::ModuleReader::new(data).read_error("Invalid Wasm header")?;
 
         let mut file = WasmFile::default();
 
+        let mut main_file_symbol = Some(Symbol {
+            name: None,
+            address: 0,
+            size: 0,
+            kind: SymbolKind::File,
+            section: SymbolSection::None,
+            weak: false,
+            scope: SymbolScope::Compilation,
+            flags: SymbolFlags::None,
+        });
+
+        let mut imported_funcs_count = 0;
+        let mut local_func_kinds = Vec::new();
+        let mut entry_func_id = None;
+
         for section in module {
-            let section = section.ok().read_error("Invalid Wasm section header")?;
+            let section = section.read_error("Invalid Wasm section header")?;
 
             match section.code {
-                wp::SectionCode::Custom { kind, name } => {
-                    if kind == wp::CustomSectionKind::Name {
-                        file.names_data = Some(section.range().slice(data));
-                    } else if name.starts_with(".debug_") {
-                        file.has_debug_symbols = true;
+                wp::SectionCode::Import => {
+                    let mut last_module_name = None;
+
+                    for import in section
+                        .get_import_section_reader()
+                        .read_error("Couldn't read header of the import section")?
+                    {
+                        let import = import.read_error("Couldn't read an import item")?;
+                        let module_name = Some(import.module);
+
+                        if last_module_name != module_name {
+                            file.symbols.push(Symbol {
+                                name: module_name,
+                                address: 0,
+                                size: 0,
+                                kind: SymbolKind::File,
+                                section: SymbolSection::None,
+                                weak: false,
+                                scope: SymbolScope::Dynamic,
+                                flags: SymbolFlags::None,
+                            });
+                            last_module_name = module_name;
+                        }
+
+                        let kind = match import.ty {
+                            wp::ImportSectionEntryType::Function(_) => {
+                                imported_funcs_count += 1;
+                                SymbolKind::Text
+                            }
+                            wp::ImportSectionEntryType::Table(_)
+                            | wp::ImportSectionEntryType::Memory(_)
+                            | wp::ImportSectionEntryType::Global(_) => SymbolKind::Data,
+                        };
+
+                        file.symbols.push(Symbol {
+                            name: Some(import.field),
+                            address: 0,
+                            size: 0,
+                            kind,
+                            section: SymbolSection::Undefined,
+                            weak: false,
+                            scope: SymbolScope::Dynamic,
+                            flags: SymbolFlags::None,
+                        });
                     }
                 }
-                code => {
-                    let id = section_code_to_id(code);
-                    file.id_sections[id] = Some(file.sections.len());
+                wp::SectionCode::Function => {
+                    local_func_kinds = vec![
+                        LocalFunctionKind::Unknown;
+                        section
+                            .get_function_section_reader()
+                            .read_error("Couldn't read header of the function section")?
+                            .get_count() as usize
+                    ];
                 }
+                wp::SectionCode::Export => {
+                    if let Some(main_file_symbol) = main_file_symbol.take() {
+                        file.symbols.push(main_file_symbol);
+                    }
+
+                    for export in section
+                        .get_export_section_reader()
+                        .read_error("Couldn't read header of the export section")?
+                    {
+                        let export = export.read_error("Couldn't read an export item")?;
+
+                        let (kind, section_idx) = match export.kind {
+                            wp::ExternalKind::Function => {
+                                if let Some(local_func_id) =
+                                    export.index.checked_sub(imported_funcs_count)
+                                {
+                                    let local_func_kind =
+                                        &mut local_func_kinds[local_func_id as usize];
+                                    if let LocalFunctionKind::Unknown = local_func_kind {
+                                        *local_func_kind = LocalFunctionKind::Exported {
+                                            symbol_ids: Vec::new(),
+                                        };
+                                    }
+                                    let symbol_ids = match local_func_kind {
+                                        LocalFunctionKind::Exported { symbol_ids } => symbol_ids,
+                                        _ => unreachable!(),
+                                    };
+                                    symbol_ids.push(file.symbols.len() as u32);
+                                }
+                                (SymbolKind::Text, SECTION_CODE)
+                            }
+                            wp::ExternalKind::Table
+                            | wp::ExternalKind::Memory
+                            | wp::ExternalKind::Global => (SymbolKind::Data, SECTION_DATA),
+                        };
+
+                        file.symbols.push(Symbol {
+                            name: Some(export.field),
+                            address: 0,
+                            size: 0,
+                            kind,
+                            section: SymbolSection::Section(SectionIndex(section_idx)),
+                            weak: false,
+                            scope: SymbolScope::Dynamic,
+                            flags: SymbolFlags::None,
+                        });
+                    }
+                }
+                wp::SectionCode::Start => {
+                    entry_func_id = Some(
+                        section
+                            .get_start_section_content()
+                            .read_error("Couldn't read contents of the start section")?,
+                    );
+                }
+                wp::SectionCode::Code => {
+                    if let Some(main_file_symbol) = main_file_symbol.take() {
+                        file.symbols.push(main_file_symbol);
+                    }
+
+                    for (i, (body, local_func_kind)) in section
+                        .get_code_section_reader()
+                        .read_error("Couldn't read header of the code section")?
+                        .into_iter()
+                        .zip(&mut local_func_kinds)
+                        .enumerate()
+                    {
+                        let body = body.read_error("Couldn't read a function body")?;
+                        let range = body.range();
+
+                        let address = range.start as u64 - section.range().start as u64;
+                        let size = (range.end - range.start) as u64;
+
+                        if entry_func_id == Some(i as u32) {
+                            file.entry = address;
+                        }
+
+                        match local_func_kind {
+                            LocalFunctionKind::Unknown => {
+                                *local_func_kind = LocalFunctionKind::Local {
+                                    symbol_id: file.symbols.len() as u32,
+                                };
+                                file.symbols.push(Symbol {
+                                    section: SymbolSection::Section(SectionIndex(SECTION_CODE)),
+                                    address,
+                                    size,
+                                    kind: SymbolKind::Text,
+                                    name: None,
+                                    weak: false,
+                                    scope: SymbolScope::Compilation,
+                                    flags: SymbolFlags::None,
+                                });
+                            }
+                            LocalFunctionKind::Exported { symbol_ids } => {
+                                for symbol_id in core::mem::replace(symbol_ids, Vec::new()) {
+                                    let export_symbol = &mut file.symbols[symbol_id as usize];
+                                    export_symbol.address = address;
+                                    export_symbol.size = size;
+                                }
+                            }
+                            _ => unreachable!(),
+                        }
+                    }
+                }
+                wp::SectionCode::Custom {
+                    kind: wp::CustomSectionKind::Name,
+                    ..
+                } => {
+                    for name in section
+                        .get_name_section_reader()
+                        .read_error("Couldn't read header of the name section")?
+                    {
+                        let name =
+                            match name.read_error("Couldn't read header of a name subsection")? {
+                                wp::Name::Function(name) => name,
+                                _ => continue,
+                            };
+                        let mut name_map = name
+                            .get_map()
+                            .read_error("Couldn't read header of the function name subsection")?;
+                        for _ in 0..name_map.get_count() {
+                            let naming = name_map
+                                .read()
+                                .read_error("Couldn't read a function name")?;
+                            if let Some(local_index) =
+                                naming.index.checked_sub(imported_funcs_count)
+                            {
+                                if let LocalFunctionKind::Local { symbol_id } =
+                                    local_func_kinds[local_index as usize]
+                                {
+                                    file.symbols[symbol_id as usize].name = Some(naming.name);
+                                }
+                            }
+                        }
+                    }
+                }
+                wp::SectionCode::Custom { name, .. } if name.starts_with(".debug_") => {
+                    file.has_debug_symbols = true;
+                }
+                _ => {}
             }
+
+            let id = section_code_to_id(section.code);
+            file.id_sections[id] = Some(file.sections.len());
 
             file.sections.push(section);
         }
@@ -113,8 +328,7 @@ where
 
     #[inline]
     fn entry(&'file self) -> u64 {
-        // TODO: Convert start section to an address.
-        0
+        self.entry
     }
 
     fn section_by_name(&'file self, section_name: &str) -> Option<WasmSection<'data, 'file>> {
@@ -140,41 +354,28 @@ where
     }
 
     #[inline]
-    fn symbol_by_index(&self, _index: SymbolIndex) -> Result<Symbol<'data>> {
-        // Wasm doesn't need or support looking up symbols by index.
-        Err(Error("Unsupported Wasm symbol index"))
+    fn symbol_by_index(&self, index: SymbolIndex) -> Result<Symbol<'data>> {
+        self.symbols
+            .get(index.0)
+            .cloned()
+            .read_error("Invalid Wasm symbol index")
     }
 
     fn symbols(&'file self) -> Self::SymbolIterator {
         WasmSymbolIterator {
-            file: self,
-            names: self.names_data.and_then(|names| {
-                let func = wp::NameSectionReader::new(names, 0)
-                    .ok()?
-                    .into_iter()
-                    .filter_map(|name| name.ok())
-                    .find_map(|name| match name {
-                        wp::Name::Function(func) => Some(func),
-                        _ => None,
-                    })?;
-
-                let reader = func.get_map().ok()?;
-
-                Some(NamingIterator { reader }.enumerate())
-            }),
+            symbols: self.symbols.iter().enumerate(),
         }
     }
 
     fn dynamic_symbols(&'file self) -> Self::SymbolIterator {
         WasmSymbolIterator {
-            file: self,
-            names: None,
+            symbols: [].iter().enumerate(),
         }
     }
 
     fn symbol_map(&self) -> SymbolMap<'data> {
         SymbolMap {
-            symbols: Vec::new(),
+            symbols: self.symbols.clone(),
         }
     }
 
@@ -281,7 +482,6 @@ impl<'data, 'file> ObjectSection<'data> for WasmSection<'data, 'file> {
 
     #[inline]
     fn address(&self) -> u64 {
-        // TODO: figure out if this should be different for code sections
         0
     }
 
@@ -298,7 +498,8 @@ impl<'data, 'file> ObjectSection<'data> for WasmSection<'data, 'file> {
 
     #[inline]
     fn file_range(&self) -> Option<(u64, u64)> {
-        None
+        let range = self.section.range();
+        Some((range.start as _, range.end as _))
     }
 
     #[inline]
@@ -345,7 +546,26 @@ impl<'data, 'file> ObjectSection<'data> for WasmSection<'data, 'file> {
 
     #[inline]
     fn kind(&self) -> SectionKind {
-        SectionKind::Unknown
+        match self.section.code {
+            wp::SectionCode::Custom { kind, .. } => match kind {
+                wp::CustomSectionKind::Reloc | wp::CustomSectionKind::Linking => {
+                    SectionKind::Linker
+                }
+                _ => SectionKind::Other,
+            },
+            wp::SectionCode::Type => SectionKind::Metadata,
+            wp::SectionCode::Import => SectionKind::Linker,
+            wp::SectionCode::Function => SectionKind::Metadata,
+            wp::SectionCode::Table => SectionKind::UninitializedData,
+            wp::SectionCode::Memory => SectionKind::UninitializedData,
+            wp::SectionCode::Global => SectionKind::Data,
+            wp::SectionCode::Export => SectionKind::Linker,
+            wp::SectionCode::Start => SectionKind::Linker,
+            wp::SectionCode::Element => SectionKind::Data,
+            wp::SectionCode::Code => SectionKind::Text,
+            wp::SectionCode::Data => SectionKind::Data,
+            wp::SectionCode::DataCount => SectionKind::UninitializedData,
+        }
     }
 
     #[inline]
@@ -359,54 +579,18 @@ impl<'data, 'file> ObjectSection<'data> for WasmSection<'data, 'file> {
     }
 }
 
-// Upstream NamingReader doesn't have Debug derived,
-// so we provide own wrapper that also serves as an Iterator.
-struct NamingIterator<'data> {
-    reader: wp::NamingReader<'data>,
-}
-
-impl fmt::Debug for NamingIterator<'_> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("NamingIterator")
-            .field("count", &self.reader.get_count())
-            .finish()
-    }
-}
-
-impl<'data> Iterator for NamingIterator<'data> {
-    type Item = wp::Naming<'data>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        self.reader.read().ok()
-    }
-}
-
 /// An iterator over the symbols of a `WasmFile`.
 #[derive(Debug)]
 pub struct WasmSymbolIterator<'data, 'file> {
-    file: &'file WasmFile<'data>,
-    names: Option<core::iter::Enumerate<NamingIterator<'data>>>,
+    symbols: core::iter::Enumerate<slice::Iter<'file, Symbol<'data>>>,
 }
 
 impl<'data, 'file> Iterator for WasmSymbolIterator<'data, 'file> {
     type Item = (SymbolIndex, Symbol<'data>);
 
     fn next(&mut self) -> Option<Self::Item> {
-        let (index, naming) = self.names.as_mut()?.next()?;
-        Some((
-            SymbolIndex(index),
-            Symbol {
-                name: Some(naming.name),
-                address: naming.index as u64,
-                size: 0,
-                kind: SymbolKind::Text,
-                // TODO: maybe treat each function as a section?
-                section: SymbolSection::Unknown,
-                weak: false,
-                scope: SymbolScope::Unknown,
-                flags: SymbolFlags::None,
-            },
-        ))
+        let (index, symbol) = self.symbols.next()?;
+        Some((SymbolIndex(index), symbol.clone()))
     }
 }
 
