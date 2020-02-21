@@ -1,16 +1,6 @@
-//! Support for reading ELF files.
-//!
-//! Defines traits to abstract over the difference between PE32/PE32+,
-//! and implements read functionality in terms of these traits.
-//!
-//! Also provides `PeFile` and related types which implement the `Object` trait.
-
-#[cfg(feature = "compression")]
-use alloc::borrow::Cow;
 use alloc::vec::Vec;
 use core::fmt::Debug;
-use core::marker::PhantomData;
-use core::{cmp, iter, mem, result, slice, str};
+use core::{mem, str};
 use target_lexicon::Architecture;
 
 use crate::endian::LittleEndian as LE;
@@ -18,9 +8,11 @@ use crate::pe;
 use crate::pod::{Bytes, Pod};
 use crate::read::coff::{parse_symbol, CoffSymbolIterator, SymbolTable};
 use crate::read::{
-    self, Error, FileFlags, Object, ObjectSection, ObjectSegment, ReadError, Relocation, Result,
-    SectionFlags, SectionIndex, SectionKind, Symbol, SymbolIndex, SymbolMap,
+    self, Error, FileFlags, Object, ObjectSection, ReadError, Result, SectionIndex, Symbol,
+    SymbolIndex, SymbolMap,
 };
+
+use super::{PeSection, PeSectionIterator, PeSegment, PeSegmentIterator};
 
 /// A PE32 (32-bit) image file.
 pub type PeFile32<'data> = PeFile<'data, pe::ImageNtHeaders32>;
@@ -30,12 +22,12 @@ pub type PeFile64<'data> = PeFile<'data, pe::ImageNtHeaders64>;
 /// A PE object file.
 #[derive(Debug)]
 pub struct PeFile<'data, Pe: ImageNtHeaders> {
-    dos_header: &'data pe::ImageDosHeader,
-    nt_headers: &'data Pe,
-    data_directories: &'data [pe::ImageDataDirectory],
-    sections: &'data [pe::ImageSectionHeader],
-    symbols: SymbolTable<'data>,
-    data: Bytes<'data>,
+    pub(super) dos_header: &'data pe::ImageDosHeader,
+    pub(super) nt_headers: &'data Pe,
+    pub(super) data_directories: &'data [pe::ImageDataDirectory],
+    pub(super) sections: &'data [pe::ImageSectionHeader],
+    pub(super) symbols: SymbolTable<'data>,
+    pub(super) data: Bytes<'data>,
 }
 
 impl<'data, Pe: ImageNtHeaders> PeFile<'data, Pe> {
@@ -115,7 +107,7 @@ impl<'data, Pe: ImageNtHeaders> PeFile<'data, Pe> {
         })
     }
 
-    fn section_alignment(&self) -> u64 {
+    pub(super) fn section_alignment(&self) -> u64 {
         u64::from(self.nt_headers.optional_header().section_alignment())
     }
 }
@@ -231,253 +223,6 @@ where
         FileFlags::Coff {
             characteristics: self.nt_headers.file_header().characteristics.get(LE),
         }
-    }
-}
-
-/// An iterator over the loadable sections of a `PeFile32`.
-pub type PeSegmentIterator32<'data, 'file> = PeSegmentIterator<'data, 'file, pe::ImageNtHeaders32>;
-/// An iterator over the loadable sections of a `PeFile64`.
-pub type PeSegmentIterator64<'data, 'file> = PeSegmentIterator<'data, 'file, pe::ImageNtHeaders64>;
-
-/// An iterator over the loadable sections of a `PeFile`.
-#[derive(Debug)]
-pub struct PeSegmentIterator<'data, 'file, Pe>
-where
-    'data: 'file,
-    Pe: ImageNtHeaders,
-{
-    file: &'file PeFile<'data, Pe>,
-    iter: slice::Iter<'file, pe::ImageSectionHeader>,
-}
-
-impl<'data, 'file, Pe: ImageNtHeaders> Iterator for PeSegmentIterator<'data, 'file, Pe> {
-    type Item = PeSegment<'data, 'file, Pe>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        self.iter.next().map(|section| PeSegment {
-            file: self.file,
-            section,
-        })
-    }
-}
-
-/// A loadable section of a `PeFile32`.
-pub type PeSegment32<'data, 'file> = PeSegment<'data, 'file, pe::ImageNtHeaders32>;
-/// A loadable section of a `PeFile64`.
-pub type PeSegment64<'data, 'file> = PeSegment<'data, 'file, pe::ImageNtHeaders64>;
-
-/// A loadable section of a `PeFile`.
-#[derive(Debug)]
-pub struct PeSegment<'data, 'file, Pe>
-where
-    'data: 'file,
-    Pe: ImageNtHeaders,
-{
-    file: &'file PeFile<'data, Pe>,
-    section: &'file pe::ImageSectionHeader,
-}
-
-impl<'data, 'file, Pe: ImageNtHeaders> PeSegment<'data, 'file, Pe> {
-    fn bytes(&self) -> Result<Bytes<'data>> {
-        self.section
-            .pe_bytes(self.file.data)
-            .read_error("Invalid PE section offset or size")
-    }
-}
-
-impl<'data, 'file, Pe: ImageNtHeaders> read::private::Sealed for PeSegment<'data, 'file, Pe> {}
-
-impl<'data, 'file, Pe: ImageNtHeaders> ObjectSegment<'data> for PeSegment<'data, 'file, Pe> {
-    #[inline]
-    fn address(&self) -> u64 {
-        u64::from(self.section.virtual_address.get(LE))
-    }
-
-    #[inline]
-    fn size(&self) -> u64 {
-        u64::from(self.section.virtual_size.get(LE))
-    }
-
-    #[inline]
-    fn align(&self) -> u64 {
-        self.file.section_alignment()
-    }
-
-    #[inline]
-    fn file_range(&self) -> (u64, u64) {
-        let (offset, size) = self.section.pe_file_range();
-        (u64::from(offset), u64::from(size))
-    }
-
-    fn data(&self) -> Result<&'data [u8]> {
-        Ok(self.bytes()?.0)
-    }
-
-    fn data_range(&self, address: u64, size: u64) -> Result<Option<&'data [u8]>> {
-        Ok(read::data_range(
-            self.bytes()?,
-            self.address(),
-            address,
-            size,
-        ))
-    }
-
-    #[inline]
-    fn name(&self) -> Result<Option<&str>> {
-        let name = self.section.name(self.file.symbols.strings)?;
-        Ok(Some(
-            str::from_utf8(name)
-                .ok()
-                .read_error("Non UTF-8 PE section name")?,
-        ))
-    }
-}
-
-/// An iterator over the sections of a `PeFile32`.
-pub type PeSectionIterator32<'data, 'file> = PeSectionIterator<'data, 'file, pe::ImageNtHeaders32>;
-/// An iterator over the sections of a `PeFile64`.
-pub type PeSectionIterator64<'data, 'file> = PeSectionIterator<'data, 'file, pe::ImageNtHeaders64>;
-
-/// An iterator over the sections of a `PeFile`.
-#[derive(Debug)]
-pub struct PeSectionIterator<'data, 'file, Pe>
-where
-    'data: 'file,
-    Pe: ImageNtHeaders,
-{
-    file: &'file PeFile<'data, Pe>,
-    iter: iter::Enumerate<slice::Iter<'file, pe::ImageSectionHeader>>,
-}
-
-impl<'data, 'file, Pe: ImageNtHeaders> Iterator for PeSectionIterator<'data, 'file, Pe> {
-    type Item = PeSection<'data, 'file, Pe>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        self.iter.next().map(|(index, section)| PeSection {
-            file: self.file,
-            index: SectionIndex(index),
-            section,
-        })
-    }
-}
-
-/// A section of a `PeFile32`.
-pub type PeSection32<'data, 'file> = PeSection<'data, 'file, pe::ImageNtHeaders32>;
-/// A section of a `PeFile64`.
-pub type PeSection64<'data, 'file> = PeSection<'data, 'file, pe::ImageNtHeaders64>;
-
-/// A section of a `PeFile`.
-#[derive(Debug)]
-pub struct PeSection<'data, 'file, Pe>
-where
-    'data: 'file,
-    Pe: ImageNtHeaders,
-{
-    file: &'file PeFile<'data, Pe>,
-    index: SectionIndex,
-    section: &'file pe::ImageSectionHeader,
-}
-
-impl<'data, 'file, Pe: ImageNtHeaders> PeSection<'data, 'file, Pe> {
-    fn bytes(&self) -> Result<Bytes<'data>> {
-        self.section
-            .pe_bytes(self.file.data)
-            .read_error("Invalid PE section offset or size")
-    }
-}
-
-impl<'data, 'file, Pe: ImageNtHeaders> read::private::Sealed for PeSection<'data, 'file, Pe> {}
-
-impl<'data, 'file, Pe: ImageNtHeaders> ObjectSection<'data> for PeSection<'data, 'file, Pe> {
-    type RelocationIterator = PeRelocationIterator<'data, 'file>;
-
-    #[inline]
-    fn index(&self) -> SectionIndex {
-        self.index
-    }
-
-    #[inline]
-    fn address(&self) -> u64 {
-        u64::from(self.section.virtual_address.get(LE))
-    }
-
-    #[inline]
-    fn size(&self) -> u64 {
-        u64::from(self.section.virtual_size.get(LE))
-    }
-
-    #[inline]
-    fn align(&self) -> u64 {
-        self.file.section_alignment()
-    }
-
-    #[inline]
-    fn file_range(&self) -> Option<(u64, u64)> {
-        let (offset, size) = self.section.pe_file_range();
-        if size == 0 {
-            None
-        } else {
-            Some((u64::from(offset), u64::from(size)))
-        }
-    }
-
-    fn data(&self) -> Result<&'data [u8]> {
-        Ok(self.bytes()?.0)
-    }
-
-    fn data_range(&self, address: u64, size: u64) -> Result<Option<&'data [u8]>> {
-        Ok(read::data_range(
-            self.bytes()?,
-            self.address(),
-            address,
-            size,
-        ))
-    }
-
-    #[cfg(feature = "compression")]
-    #[inline]
-    fn uncompressed_data(&self) -> Result<Cow<'data, [u8]>> {
-        Ok(Cow::from(self.data()?))
-    }
-
-    #[inline]
-    fn name(&self) -> Result<&str> {
-        let name = self.section.name(self.file.symbols.strings)?;
-        str::from_utf8(name)
-            .ok()
-            .read_error("Non UTF-8 PE section name")
-    }
-
-    #[inline]
-    fn segment_name(&self) -> Result<Option<&str>> {
-        Ok(None)
-    }
-
-    #[inline]
-    fn kind(&self) -> SectionKind {
-        self.section.kind()
-    }
-
-    fn relocations(&self) -> PeRelocationIterator<'data, 'file> {
-        PeRelocationIterator::default()
-    }
-
-    fn flags(&self) -> SectionFlags {
-        SectionFlags::Coff {
-            characteristics: self.section.characteristics.get(LE),
-        }
-    }
-}
-
-/// An iterator over the relocations in an `PeSection`.
-#[derive(Debug, Default)]
-pub struct PeRelocationIterator<'data, 'file>(PhantomData<(&'data (), &'file ())>);
-
-impl<'data, 'file> Iterator for PeRelocationIterator<'data, 'file> {
-    type Item = (u64, Relocation);
-
-    fn next(&mut self) -> Option<Self::Item> {
-        None
     }
 }
 
@@ -612,20 +357,5 @@ impl ImageOptionalHeader for pe::ImageOptionalHeader64 {
     #[inline]
     fn number_of_rva_and_sizes(&self) -> u32 {
         self.number_of_rva_and_sizes.get(LE)
-    }
-}
-
-impl pe::ImageSectionHeader {
-    // This is not `pub(crate)` because the COFF version is different.
-    fn pe_file_range(&self) -> (u32, u32) {
-        // Pointer and size will be zero for uninitialized data; we don't need to validate this.
-        let offset = self.pointer_to_raw_data.get(LE);
-        let size = cmp::min(self.virtual_size.get(LE), self.size_of_raw_data.get(LE));
-        (offset, size)
-    }
-
-    fn pe_bytes<'data>(&self, data: Bytes<'data>) -> result::Result<Bytes<'data>, ()> {
-        let (offset, size) = self.pe_file_range();
-        data.read_bytes_at(offset as usize, size as usize)
     }
 }
