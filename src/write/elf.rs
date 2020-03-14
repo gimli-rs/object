@@ -36,9 +36,7 @@ impl Object {
             StandardSection::ReadOnlyData | StandardSection::ReadOnlyString => {
                 (&[], &b".rodata"[..], SectionKind::ReadOnlyData)
             }
-            StandardSection::ReadOnlyDataWithRel => {
-                (&[], b".data.rel.ro", SectionKind::ReadOnlyData)
-            }
+            StandardSection::ReadOnlyDataWithRel => (&[], b".data.rel.ro", SectionKind::Data),
             StandardSection::UninitializedData => {
                 (&[], &b".bss"[..], SectionKind::UninitializedData)
             }
