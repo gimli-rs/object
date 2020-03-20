@@ -1,22 +1,22 @@
 [package]
-authors = ["Nick Fitzgerald <fitzgen@gmail.com>", "Philip Craig <philipjcraig@gmail.com>"]
 name = "object"
 version = "0.17.0"
+authors = ["Nick Fitzgerald <fitzgen@gmail.com>", "Philip Craig <philipjcraig@gmail.com>"]
 edition = "2018"
-description = "A unified interface for reading and writing object file formats."
+exclude = ["/.coveralls.yml", "/.travis.yml"]
 keywords = ["object", "elf", "mach-o", "pe", "coff"]
 license = "Apache-2.0/MIT"
 repository = "https://github.com/gimli-rs/object"
-exclude = ["/.coveralls.yml", "/.travis.yml"]
+description = "A unified interface for reading and writing object file formats."
 
 [package.metadata.docs.rs]
 all-features = true
 
 [dependencies]
-target-lexicon = { version = "0.10" }
-flate2 = { version = "1", optional = true }
 crc32fast = { version = "1.2", optional = true }
+flate2 = { version = "1", optional = true }
 indexmap = { version = "1.1", optional = true }
+target-lexicon = { version = "0.10" }
 wasmparser = { version = "0.51.0", optional = true }
 
 [dev-dependencies]
@@ -40,13 +40,13 @@ wasm = ["wasmparser"]
 default = ["read", "compression"]
 
 [[example]]
-name = "objdump"
-required-features = ["read"]
-
-[[example]]
 name = "nm"
 required-features = ["read"]
 
 [[example]]
 name = "objcopy"
 required-features = ["read", "write"]
+
+[[example]]
+name = "objdump"
+required-features = ["read"]
