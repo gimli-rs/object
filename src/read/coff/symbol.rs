@@ -169,7 +169,7 @@ pub(crate) fn parse_symbol<'data>(
     };
     let section = match section_number {
         pe::IMAGE_SYM_UNDEFINED => {
-            if symbol.storage_class == pe::IMAGE_SYM_CLASS_EXTERNAL {
+            if symbol.storage_class == pe::IMAGE_SYM_CLASS_EXTERNAL && value != 0 {
                 SymbolSection::Common
             } else {
                 SymbolSection::Undefined
@@ -189,9 +189,7 @@ pub(crate) fn parse_symbol<'data>(
     let weak = symbol.storage_class == pe::IMAGE_SYM_CLASS_WEAK_EXTERNAL;
     let scope = match symbol.storage_class {
         _ if section == SymbolSection::Undefined => SymbolScope::Unknown,
-        pe::IMAGE_SYM_CLASS_EXTERNAL
-        | pe::IMAGE_SYM_CLASS_EXTERNAL_DEF
-        | pe::IMAGE_SYM_CLASS_WEAK_EXTERNAL => {
+        pe::IMAGE_SYM_CLASS_EXTERNAL | pe::IMAGE_SYM_CLASS_WEAK_EXTERNAL => {
             // TODO: determine if symbol is exported
             SymbolScope::Linkage
         }

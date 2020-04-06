@@ -33,6 +33,19 @@ fn coff_x86_64_common() {
     };
     object.add_common_symbol(symbol, 8, 8);
 
+    // Also check undefined symbols, which are very similar.
+    let symbol = write::Symbol {
+        name: b"v3".to_vec(),
+        value: 0,
+        size: 0,
+        kind: SymbolKind::Data,
+        scope: SymbolScope::Linkage,
+        weak: false,
+        section: write::SymbolSection::Undefined,
+        flags: SymbolFlags::None,
+    };
+    object.add_symbol(symbol);
+
     let bytes = object.write().unwrap();
 
     //std::fs::write(&"common.o", &bytes).unwrap();
@@ -64,6 +77,17 @@ fn coff_x86_64_common() {
     assert_eq!(symbol.is_undefined(), false);
     assert_eq!(symbol.address(), 0);
     assert_eq!(symbol.size(), 8);
+
+    let (_, symbol) = symbols.next().unwrap();
+    println!("{:?}", symbol);
+    assert_eq!(symbol.name(), Some("v3"));
+    assert_eq!(symbol.kind(), SymbolKind::Data);
+    assert_eq!(symbol.section(), read::SymbolSection::Undefined);
+    assert_eq!(symbol.scope(), SymbolScope::Unknown);
+    assert_eq!(symbol.is_weak(), false);
+    assert_eq!(symbol.is_undefined(), true);
+    assert_eq!(symbol.address(), 0);
+    assert_eq!(symbol.size(), 0);
 
     let symbol = symbols.next();
     assert!(symbol.is_none(), format!("unexpected symbol {:?}", symbol));

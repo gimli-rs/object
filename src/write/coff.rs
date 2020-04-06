@@ -468,8 +468,9 @@ impl Object {
                                 symbol.name().unwrap_or("")
                             )));
                         }
-                        SymbolSection::Undefined => coff::IMAGE_SYM_CLASS_EXTERNAL_DEF,
-                        SymbolSection::Common => coff::IMAGE_SYM_CLASS_EXTERNAL,
+                        SymbolSection::Undefined | SymbolSection::Common => {
+                            coff::IMAGE_SYM_CLASS_EXTERNAL
+                        }
                         SymbolSection::Absolute | SymbolSection::Section(_) => {
                             match symbol.scope {
                                 // TODO: does this need aux symbol records too?
