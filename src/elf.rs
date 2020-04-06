@@ -2622,35 +2622,35 @@ pub const DT_MIPS_RLD_MAP_REL: u32 = 0x7000_0035;
 /// No flags
 pub const RHF_NONE: u32 = 0;
 /// Use quickstart
-pub const RHF_QUICKSTART: u32 = (1 << 0);
+pub const RHF_QUICKSTART: u32 = 1 << 0;
 /// Hash size not power of 2
-pub const RHF_NOTPOT: u32 = (1 << 1);
+pub const RHF_NOTPOT: u32 = 1 << 1;
 /// Ignore LD_LIBRARY_PATH
-pub const RHF_NO_LIBRARY_REPLACEMENT: u32 = (1 << 2);
+pub const RHF_NO_LIBRARY_REPLACEMENT: u32 = 1 << 2;
 #[allow(missing_docs)]
-pub const RHF_NO_MOVE: u32 = (1 << 3);
+pub const RHF_NO_MOVE: u32 = 1 << 3;
 #[allow(missing_docs)]
-pub const RHF_SGI_ONLY: u32 = (1 << 4);
+pub const RHF_SGI_ONLY: u32 = 1 << 4;
 #[allow(missing_docs)]
-pub const RHF_GUARANTEE_INIT: u32 = (1 << 5);
+pub const RHF_GUARANTEE_INIT: u32 = 1 << 5;
 #[allow(missing_docs)]
-pub const RHF_DELTA_C_PLUS_PLUS: u32 = (1 << 6);
+pub const RHF_DELTA_C_PLUS_PLUS: u32 = 1 << 6;
 #[allow(missing_docs)]
-pub const RHF_GUARANTEE_START_INIT: u32 = (1 << 7);
+pub const RHF_GUARANTEE_START_INIT: u32 = 1 << 7;
 #[allow(missing_docs)]
-pub const RHF_PIXIE: u32 = (1 << 8);
+pub const RHF_PIXIE: u32 = 1 << 8;
 #[allow(missing_docs)]
-pub const RHF_DEFAULT_DELAY_LOAD: u32 = (1 << 9);
+pub const RHF_DEFAULT_DELAY_LOAD: u32 = 1 << 9;
 #[allow(missing_docs)]
-pub const RHF_REQUICKSTART: u32 = (1 << 10);
+pub const RHF_REQUICKSTART: u32 = 1 << 10;
 #[allow(missing_docs)]
-pub const RHF_REQUICKSTARTED: u32 = (1 << 11);
+pub const RHF_REQUICKSTARTED: u32 = 1 << 11;
 #[allow(missing_docs)]
-pub const RHF_CORD: u32 = (1 << 12);
+pub const RHF_CORD: u32 = 1 << 12;
 #[allow(missing_docs)]
-pub const RHF_NO_UNRES_UNDEF: u32 = (1 << 13);
+pub const RHF_NO_UNRES_UNDEF: u32 = 1 << 13;
 #[allow(missing_docs)]
-pub const RHF_RLD_ORDER_SAFE: u32 = (1 << 14);
+pub const RHF_RLD_ORDER_SAFE: u32 = 1 << 14;
 
 // Entries found in sections of type `SHT_MIPS_LIBLIST`.
 
@@ -2661,17 +2661,17 @@ pub const RHF_RLD_ORDER_SAFE: u32 = (1 << 14);
 #[allow(missing_docs)]
 pub const LL_NONE: u32 = 0;
 /// Require exact match
-pub const LL_EXACT_MATCH: u32 = (1 << 0);
+pub const LL_EXACT_MATCH: u32 = 1 << 0;
 /// Ignore interface version
-pub const LL_IGNORE_INT_VER: u32 = (1 << 1);
+pub const LL_IGNORE_INT_VER: u32 = 1 << 1;
 #[allow(missing_docs)]
-pub const LL_REQUIRE_MINOR: u32 = (1 << 2);
+pub const LL_REQUIRE_MINOR: u32 = 1 << 2;
 #[allow(missing_docs)]
-pub const LL_EXPORTS: u32 = (1 << 3);
+pub const LL_EXPORTS: u32 = 1 << 3;
 #[allow(missing_docs)]
-pub const LL_DELAY_LOAD: u32 = (1 << 4);
+pub const LL_DELAY_LOAD: u32 = 1 << 4;
 #[allow(missing_docs)]
-pub const LL_DELTA: u32 = (1 << 5);
+pub const LL_DELTA: u32 = 1 << 5;
 
 // TODO: MIPS ABI flags
 
@@ -2964,35 +2964,35 @@ pub const R_PARISC_HIRESERVE: u32 = 255;
 // PA-RISC values for `ProgramHeader*::p_type`.
 
 #[allow(missing_docs)]
-pub const PT_HP_TLS: u32 = (PT_LOOS + 0x0);
+pub const PT_HP_TLS: u32 = PT_LOOS + 0x0;
 #[allow(missing_docs)]
-pub const PT_HP_CORE_NONE: u32 = (PT_LOOS + 0x1);
+pub const PT_HP_CORE_NONE: u32 = PT_LOOS + 0x1;
 #[allow(missing_docs)]
-pub const PT_HP_CORE_VERSION: u32 = (PT_LOOS + 0x2);
+pub const PT_HP_CORE_VERSION: u32 = PT_LOOS + 0x2;
 #[allow(missing_docs)]
-pub const PT_HP_CORE_KERNEL: u32 = (PT_LOOS + 0x3);
+pub const PT_HP_CORE_KERNEL: u32 = PT_LOOS + 0x3;
 #[allow(missing_docs)]
-pub const PT_HP_CORE_COMM: u32 = (PT_LOOS + 0x4);
+pub const PT_HP_CORE_COMM: u32 = PT_LOOS + 0x4;
 #[allow(missing_docs)]
-pub const PT_HP_CORE_PROC: u32 = (PT_LOOS + 0x5);
+pub const PT_HP_CORE_PROC: u32 = PT_LOOS + 0x5;
 #[allow(missing_docs)]
-pub const PT_HP_CORE_LOADABLE: u32 = (PT_LOOS + 0x6);
+pub const PT_HP_CORE_LOADABLE: u32 = PT_LOOS + 0x6;
 #[allow(missing_docs)]
-pub const PT_HP_CORE_STACK: u32 = (PT_LOOS + 0x7);
+pub const PT_HP_CORE_STACK: u32 = PT_LOOS + 0x7;
 #[allow(missing_docs)]
-pub const PT_HP_CORE_SHM: u32 = (PT_LOOS + 0x8);
+pub const PT_HP_CORE_SHM: u32 = PT_LOOS + 0x8;
 #[allow(missing_docs)]
-pub const PT_HP_CORE_MMF: u32 = (PT_LOOS + 0x9);
+pub const PT_HP_CORE_MMF: u32 = PT_LOOS + 0x9;
 #[allow(missing_docs)]
-pub const PT_HP_PARALLEL: u32 = (PT_LOOS + 0x10);
+pub const PT_HP_PARALLEL: u32 = PT_LOOS + 0x10;
 #[allow(missing_docs)]
-pub const PT_HP_FASTBIND: u32 = (PT_LOOS + 0x11);
+pub const PT_HP_FASTBIND: u32 = PT_LOOS + 0x11;
 #[allow(missing_docs)]
-pub const PT_HP_OPT_ANNOT: u32 = (PT_LOOS + 0x12);
+pub const PT_HP_OPT_ANNOT: u32 = PT_LOOS + 0x12;
 #[allow(missing_docs)]
-pub const PT_HP_HSL_ANNOT: u32 = (PT_LOOS + 0x13);
+pub const PT_HP_HSL_ANNOT: u32 = PT_LOOS + 0x13;
 #[allow(missing_docs)]
-pub const PT_HP_STACK: u32 = (PT_LOOS + 0x14);
+pub const PT_HP_STACK: u32 = PT_LOOS + 0x14;
 
 #[allow(missing_docs)]
 pub const PT_PARISC_ARCHEXT: u32 = 0x7000_0000;
@@ -3132,7 +3132,7 @@ pub const LITUSE_ALPHA_TLS_LDM: u32 = 5;
 
 // Alpha values for `Dyn64::d_tag`.
 #[allow(missing_docs)]
-pub const DT_ALPHA_PLTRO: u32 = (DT_LOPROC + 0);
+pub const DT_ALPHA_PLTRO: u32 = DT_LOPROC + 0;
 
 // PowerPC specific declarations.
 
@@ -3351,9 +3351,9 @@ pub const R_PPC_TOC16: u32 = 255;
 
 // PowerPC specific values for `Dyn*::d_tag`.
 #[allow(missing_docs)]
-pub const DT_PPC_GOT: u32 = (DT_LOPROC + 0);
+pub const DT_PPC_GOT: u32 = DT_LOPROC + 0;
 #[allow(missing_docs)]
-pub const DT_PPC_OPT: u32 = (DT_LOPROC + 1);
+pub const DT_PPC_OPT: u32 = DT_LOPROC + 1;
 
 // PowerPC specific values for the `DT_PPC_OPT` entry.
 #[allow(missing_docs)]
@@ -3620,13 +3620,13 @@ pub const EF_PPC64_ABI: u32 = 3;
 
 // PowerPC64 values for `Dyn64::d_tag.
 #[allow(missing_docs)]
-pub const DT_PPC64_GLINK: u32 = (DT_LOPROC + 0);
+pub const DT_PPC64_GLINK: u32 = DT_LOPROC + 0;
 #[allow(missing_docs)]
-pub const DT_PPC64_OPD: u32 = (DT_LOPROC + 1);
+pub const DT_PPC64_OPD: u32 = DT_LOPROC + 1;
 #[allow(missing_docs)]
-pub const DT_PPC64_OPDSZ: u32 = (DT_LOPROC + 2);
+pub const DT_PPC64_OPDSZ: u32 = DT_LOPROC + 2;
 #[allow(missing_docs)]
-pub const DT_PPC64_OPT: u32 = (DT_LOPROC + 3);
+pub const DT_PPC64_OPT: u32 = DT_LOPROC + 3;
 
 // PowerPC64 bits for `DT_PPC64_OPT` entry.
 #[allow(missing_docs)]
@@ -3640,7 +3640,7 @@ pub const PPC64_OPT_LOCALENTRY: u32 = 4;
 #[allow(missing_docs)]
 pub const STO_PPC64_LOCAL_BIT: u8 = 5;
 #[allow(missing_docs)]
-pub const STO_PPC64_LOCAL_MASK: u8 = (7 << STO_PPC64_LOCAL_BIT);
+pub const STO_PPC64_LOCAL_MASK: u8 = 7 << STO_PPC64_LOCAL_BIT;
 
 // ARM specific declarations.
 
@@ -3727,15 +3727,15 @@ pub const PF_ARM_ABS: u32 = 0x4000_0000;
 
 // ARM values for `ProgramHeader*::p_type`.
 /// ARM unwind segment.
-pub const PT_ARM_EXIDX: u32 = (PT_LOPROC + 1);
+pub const PT_ARM_EXIDX: u32 = PT_LOPROC + 1;
 
 // ARM values for `SectionHeader*::sh_type`.
 /// ARM unwind section.
-pub const SHT_ARM_EXIDX: u32 = (SHT_LOPROC + 1);
+pub const SHT_ARM_EXIDX: u32 = SHT_LOPROC + 1;
 /// Preemption details.
-pub const SHT_ARM_PREEMPTMAP: u32 = (SHT_LOPROC + 2);
+pub const SHT_ARM_PREEMPTMAP: u32 = SHT_LOPROC + 2;
 /// ARM attributes section.
-pub const SHT_ARM_ATTRIBUTES: u32 = (SHT_LOPROC + 3);
+pub const SHT_ARM_ATTRIBUTES: u32 = SHT_LOPROC + 3;
 
 // AArch64 values for `Rel*::r_type`.
 
@@ -4392,7 +4392,7 @@ pub const EF_CSKY_ABIV2: u32 = 0x2000_0000;
 
 // C-SKY values for `SectionHeader*::sh_type`.
 /// C-SKY attributes section.
-pub const SHT_CSKY_ATTRIBUTES: u32 = (SHT_LOPROC + 1);
+pub const SHT_CSKY_ATTRIBUTES: u32 = SHT_LOPROC + 1;
 
 // IA-64 specific declarations.
 
@@ -4406,15 +4406,15 @@ pub const EF_IA_64_ARCH: u32 = 0xff00_0000;
 
 // IA-64 values for `ProgramHeader64::p_type`.
 /// arch extension bits
-pub const PT_IA_64_ARCHEXT: u32 = (PT_LOPROC + 0);
+pub const PT_IA_64_ARCHEXT: u32 = PT_LOPROC + 0;
 /// ia64 unwind bits
-pub const PT_IA_64_UNWIND: u32 = (PT_LOPROC + 1);
+pub const PT_IA_64_UNWIND: u32 = PT_LOPROC + 1;
 #[allow(missing_docs)]
-pub const PT_IA_64_HP_OPT_ANOT: u32 = (PT_LOOS + 0x12);
+pub const PT_IA_64_HP_OPT_ANOT: u32 = PT_LOOS + 0x12;
 #[allow(missing_docs)]
-pub const PT_IA_64_HP_HSL_ANOT: u32 = (PT_LOOS + 0x13);
+pub const PT_IA_64_HP_HSL_ANOT: u32 = PT_LOOS + 0x13;
 #[allow(missing_docs)]
-pub const PT_IA_64_HP_STACK: u32 = (PT_LOOS + 0x14);
+pub const PT_IA_64_HP_STACK: u32 = PT_LOOS + 0x14;
 
 // IA-64 values for `ProgramHeader64::p_flags`.
 /// spec insns w/o recovery
@@ -4422,9 +4422,9 @@ pub const PF_IA_64_NORECOV: u32 = 0x8000_0000;
 
 // IA-64 values for `SectionHeader64::sh_type`.
 /// extension bits
-pub const SHT_IA_64_EXT: u32 = (SHT_LOPROC + 0);
+pub const SHT_IA_64_EXT: u32 = SHT_LOPROC + 0;
 /// unwind bits
-pub const SHT_IA_64_UNWIND: u32 = (SHT_LOPROC + 1);
+pub const SHT_IA_64_UNWIND: u32 = SHT_LOPROC + 1;
 
 // IA-64 values for `SectionHeader64::sh_flags`.
 /// section near gp
@@ -4434,7 +4434,7 @@ pub const SHF_IA_64_NORECOV: u32 = 0x2000_0000;
 
 // IA-64 values for `Dyn64::d_tag`.
 #[allow(missing_docs)]
-pub const DT_IA_64_PLT_RESERVE: u32 = (DT_LOPROC + 0);
+pub const DT_IA_64_PLT_RESERVE: u32 = DT_LOPROC + 0;
 
 // IA-64 values for `Rel*::r_type`.
 /// none

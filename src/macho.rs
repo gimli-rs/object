@@ -607,7 +607,7 @@ pub const LC_PREBIND_CKSUM: u32 = 0x17;
  * load a dynamically linked shared library that is allowed to be missing
  * (all symbols are weak imported).
  */
-pub const LC_LOAD_WEAK_DYLIB: u32 = (0x18 | LC_REQ_DYLD);
+pub const LC_LOAD_WEAK_DYLIB: u32 = 0x18 | LC_REQ_DYLD;
 
 /// 64-bit segment of this file to be mapped
 pub const LC_SEGMENT_64: u32 = 0x19;
@@ -616,13 +616,13 @@ pub const LC_ROUTINES_64: u32 = 0x1a;
 /// the uuid
 pub const LC_UUID: u32 = 0x1b;
 /// runpath additions
-pub const LC_RPATH: u32 = (0x1c | LC_REQ_DYLD);
+pub const LC_RPATH: u32 = 0x1c | LC_REQ_DYLD;
 /// local of code signature
 pub const LC_CODE_SIGNATURE: u32 = 0x1d;
 /// local of info to split segments
 pub const LC_SEGMENT_SPLIT_INFO: u32 = 0x1e;
 /// load and re-export dylib
-pub const LC_REEXPORT_DYLIB: u32 = (0x1f | LC_REQ_DYLD);
+pub const LC_REEXPORT_DYLIB: u32 = 0x1f | LC_REQ_DYLD;
 /// delay load of dylib until first use
 pub const LC_LAZY_LOAD_DYLIB: u32 = 0x20;
 /// encrypted segment information
@@ -630,9 +630,9 @@ pub const LC_ENCRYPTION_INFO: u32 = 0x21;
 /// compressed dyld information
 pub const LC_DYLD_INFO: u32 = 0x22;
 /// compressed dyld information only
-pub const LC_DYLD_INFO_ONLY: u32 = (0x22 | LC_REQ_DYLD);
+pub const LC_DYLD_INFO_ONLY: u32 = 0x22 | LC_REQ_DYLD;
 /// load upward dylib
-pub const LC_LOAD_UPWARD_DYLIB: u32 = (0x23 | LC_REQ_DYLD);
+pub const LC_LOAD_UPWARD_DYLIB: u32 = 0x23 | LC_REQ_DYLD;
 /// build for MacOSX min OS version
 pub const LC_VERSION_MIN_MACOSX: u32 = 0x24;
 /// build for iPhoneOS min OS version
@@ -642,7 +642,7 @@ pub const LC_FUNCTION_STARTS: u32 = 0x26;
 /// string for dyld to treat like environment variable
 pub const LC_DYLD_ENVIRONMENT: u32 = 0x27;
 /// replacement for LC_UNIXTHREAD
-pub const LC_MAIN: u32 = (0x28 | LC_REQ_DYLD);
+pub const LC_MAIN: u32 = 0x28 | LC_REQ_DYLD;
 /// table of non-instructions in __text
 pub const LC_DATA_IN_CODE: u32 = 0x29;
 /// source version used to build binary
@@ -664,9 +664,9 @@ pub const LC_NOTE: u32 = 0x31;
 /// build for platform min OS version
 pub const LC_BUILD_VERSION: u32 = 0x32;
 /// used with `LinkeditDataCommand`, payload is trie
-pub const LC_DYLD_EXPORTS_TRIE: u32 = (0x33 | LC_REQ_DYLD);
+pub const LC_DYLD_EXPORTS_TRIE: u32 = 0x33 | LC_REQ_DYLD;
 /// used with `LinkeditDataCommand`
-pub const LC_DYLD_CHAINED_FIXUPS: u32 = (0x34 | LC_REQ_DYLD);
+pub const LC_DYLD_CHAINED_FIXUPS: u32 = 0x34 | LC_REQ_DYLD;
 
 /// A variable length string in a load command.
 ///
