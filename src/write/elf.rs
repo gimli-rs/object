@@ -554,6 +554,18 @@ impl Object {
                                 return Err(Error(format!("unimplemented relocation {:?}", reloc)));
                             }
                         },
+                        Architecture::Aarch64(_) => match (reloc.kind, reloc.encoding, reloc.size) {
+                            (RelocationKind::Absolute, RelocationEncoding::Generic, 32) => {
+                                elf::R_AARCH64_ABS32
+                            }
+                            (RelocationKind::Absolute, RelocationEncoding::Generic, 64) => {
+                                elf::R_AARCH64_ABS64
+                            }
+                            (RelocationKind::Elf(x), _, _) => x,
+                            _ => {
+                                return Err(Error(format!("unimplemented relocation {:?}", reloc)));
+                            }
+                        }
                         _ => {
                             return Err(Error(format!(
                                 "unimplemented architecture {:?}",
