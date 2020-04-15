@@ -65,7 +65,7 @@ impl Object {
     fn elf_has_relocation_addend(&self) -> Result<bool> {
         Ok(match self.architecture {
             Architecture::Arm(_) => false,
-            Architecture::Aarch64(_) => false,
+            Architecture::Aarch64(_) => true,
             Architecture::I386 => false,
             Architecture::X86_64 => true,
             _ => {
