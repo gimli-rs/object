@@ -42,15 +42,7 @@ impl<'data, Elf: FileHeader> ElfFile<'data, Elf> {
     /// Parse the raw ELF file data.
     pub fn parse(data: &'data [u8]) -> read::Result<Self> {
         let data = Bytes(data);
-        let header = data
-            .read_at::<Elf>(0)
-            .read_error("Invalid ELF header size or alignment")?;
-        if !header.is_supported() {
-            return Err(Error("Unsupported ELF header"));
-        }
-
-        // TODO: Check self.e_ehsize?
-
+        let header = Elf::parse(data)?;
         let endian = header.endian()?;
         let segments = header.program_headers(endian, data)?;
         let sections = header.sections(endian, data)?;
@@ -319,6 +311,23 @@ pub trait FileHeader: Debug + Pod {
 
     // Provided methods.
 
+    /// Read the file header.
+    ///
+    /// Also checks that the ident field in the file header is a supported format.
+    fn parse<'data>(data: Bytes<'data>) -> read::Result<&'data Self> {
+        let header = data
+            .read_at::<Self>(0)
+            .read_error("Invalid ELF header size or alignment")?;
+        if !header.is_supported() {
+            return Err(Error("Unsupported ELF header"));
+        }
+        // TODO: Check self.e_ehsize?
+        Ok(header)
+    }
+
+    /// Check that the ident field in the file header is a supported format.
+    ///
+    /// This checks the magic number, version, class, and endianness.
     fn is_supported(&self) -> bool {
         let ident = self.e_ident();
         // TODO: Check self.e_version too? Requires endian though.
