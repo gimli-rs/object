@@ -27,12 +27,11 @@ pub use common::*;
 
 #[macro_use]
 pub mod endian;
+pub use endian::*;
 
 #[macro_use]
-mod pod;
-// This isn't really intended for users yet, but other traits required it.
-#[doc(hidden)]
-pub use pod::Pod;
+pub mod pod;
+pub use pod::*;
 
 #[cfg(feature = "read_core")]
 pub mod read;
