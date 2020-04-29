@@ -44,7 +44,7 @@ impl<'data> SymbolTable<'data> {
 
         Ok(SymbolTable {
             symbols,
-            strings: StringTable { data: strings },
+            strings: StringTable::new(strings),
         })
     }
 

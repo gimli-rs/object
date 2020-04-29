@@ -68,9 +68,7 @@ impl<'data, Elf: FileHeader> ElfFile<'data, Elf> {
         } else {
             Bytes(&[])
         };
-        let section_strings = StringTable {
-            data: section_string_data,
-        };
+        let section_strings = StringTable::new(section_string_data);
 
         let mut symbol_section = None;
         let mut symbols = &[][..];
@@ -118,17 +116,13 @@ impl<'data, Elf: FileHeader> ElfFile<'data, Elf> {
                 _ => {}
             }
         }
-        let symbol_strings = StringTable {
-            data: symbol_string_data,
-        };
+        let symbol_strings = StringTable::new(symbol_string_data);
         let symbols = SymbolTable {
             symbols,
             strings: symbol_strings,
             shndx: symbol_shndx,
         };
-        let dynamic_symbol_strings = StringTable {
-            data: dynamic_symbol_string_data,
-        };
+        let dynamic_symbol_strings = StringTable::new(dynamic_symbol_string_data);
         let dynamic_symbols = SymbolTable {
             symbols: dynamic_symbols,
             strings: dynamic_symbol_strings,

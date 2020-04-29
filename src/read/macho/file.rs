@@ -76,7 +76,7 @@ impl<'data, Mach: MachHeader> MachOFile<'data, Mach> {
             }
         }
 
-        let strings = StringTable { data: strings };
+        let strings = StringTable::new(strings);
         let symbols = SymbolTable { symbols, strings };
 
         Ok(MachOFile {
