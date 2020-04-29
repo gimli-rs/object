@@ -10,7 +10,9 @@ use crate::read::{
     self, ObjectSection, ReadError, SectionFlags, SectionIndex, SectionKind, StringTable,
 };
 
-use super::{ElfFile, ElfNoteIterator, ElfRelocationIterator, FileHeader, SymbolTable};
+use super::{
+    ElfFile, ElfNoteIterator, ElfRelocationIterator, FileHeader, RelocationSections, SymbolTable,
+};
 
 /// The table of section headers in an ELF file.
 ///
@@ -89,6 +91,16 @@ impl<'data, Elf: FileHeader> SectionTable<'data, Elf> {
         sh_type: u32,
     ) -> read::Result<SymbolTable<'data, Elf>> {
         SymbolTable::parse(endian, data, self, sh_type)
+    }
+
+    /// Create a mapping from section index to associated relocation sections.
+    #[inline]
+    pub fn relocation_sections(
+        &self,
+        endian: Elf::Endian,
+        symbol_section: usize,
+    ) -> read::Result<RelocationSections> {
+        RelocationSections::parse(endian, self, symbol_section)
     }
 }
 
@@ -265,7 +277,7 @@ impl<'data, 'file, Elf: FileHeader> ObjectSection<'data> for ElfSection<'data, '
 
     fn relocations(&self) -> ElfRelocationIterator<'data, 'file, Elf> {
         ElfRelocationIterator {
-            section_index: self.file.relocations[self.index.0],
+            section_index: self.index.0,
             file: self.file,
             relocations: None,
         }

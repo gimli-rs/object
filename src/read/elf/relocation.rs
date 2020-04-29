@@ -1,13 +1,70 @@
 use alloc::fmt;
+use alloc::vec::Vec;
 use core::fmt::Debug;
 use core::slice;
 
 use crate::elf;
 use crate::endian::{self, RunTimeEndian};
 use crate::pod::Pod;
-use crate::read::{Relocation, RelocationEncoding, RelocationKind, RelocationTarget, SymbolIndex};
+use crate::read::{
+    self, Error, Relocation, RelocationEncoding, RelocationKind, RelocationTarget, SymbolIndex,
+};
 
-use super::{ElfFile, FileHeader, SectionHeader};
+use super::{ElfFile, FileHeader, SectionHeader, SectionTable};
+
+/// A mapping from section index to associated relocation sections.
+#[derive(Debug)]
+pub struct RelocationSections {
+    relocations: Vec<usize>,
+}
+
+impl RelocationSections {
+    /// Create a new mapping using the section table.
+    ///
+    /// Returns an error if any of the relocation sections do not use the given symbol table
+    /// section.
+    pub fn parse<Elf: FileHeader>(
+        endian: Elf::Endian,
+        sections: &SectionTable<Elf>,
+        symbol_section: usize,
+    ) -> read::Result<Self> {
+        let mut relocations = vec![0; sections.len()];
+        for (index, section) in sections.iter().enumerate().rev() {
+            let sh_type = section.sh_type(endian);
+            if sh_type == elf::SHT_REL || sh_type == elf::SHT_RELA {
+                // The symbol indices used in relocations must be for the symbol table
+                // we are expecting to use.
+                let sh_link = section.sh_link(endian) as usize;
+                if sh_link != symbol_section {
+                    return Err(Error("Unsupported ELF sh_link for relocation section"));
+                }
+
+                let sh_info = section.sh_info(endian) as usize;
+                if sh_info == 0 {
+                    // Skip dynamic relocations.
+                    continue;
+                }
+                if sh_info >= relocations.len() {
+                    return Err(Error("Invalid ELF sh_info for relocation section"));
+                }
+
+                // Handle multiple relocation sections by chaining them.
+                let next = relocations[sh_info];
+                relocations[sh_info] = index;
+                relocations[index] = next;
+            }
+        }
+        Ok(Self { relocations })
+    }
+
+    /// Given a section index, return the section index of the associated relocation section.
+    ///
+    /// This may also be called with a relocation section index, and it will return the
+    /// next associated relocation section.
+    pub fn get(&self, index: usize) -> Option<usize> {
+        self.relocations.get(index).cloned().filter(|x| *x != 0)
+    }
+}
 
 pub(super) enum ElfRelaIterator<'data, Elf: FileHeader> {
     Rel(slice::Iter<'data, Elf::Rel>),
@@ -123,11 +180,9 @@ impl<'data, 'file, Elf: FileHeader> Iterator for ElfRelocationIterator<'data, 'f
                     ));
                 }
             }
-            // End of the relocation section chain?
-            if self.section_index == 0 {
-                return None;
-            }
-            let section = self.file.sections.section(self.section_index).ok()?;
+            self.section_index = self.file.relocations.get(self.section_index)?;
+            // The construction of RelocationSections ensures section_index is valid.
+            let section = self.file.sections.section(self.section_index).unwrap();
             match section.sh_type(endian) {
                 elf::SHT_REL => {
                     if let Ok(relocations) = section.data_as_array(endian, self.file.data) {
@@ -141,8 +196,6 @@ impl<'data, 'file, Elf: FileHeader> Iterator for ElfRelocationIterator<'data, 'f
                 }
                 _ => {}
             }
-            // Get the next relocation section in the chain.
-            self.section_index = self.file.relocations[self.section_index];
         }
     }
 }

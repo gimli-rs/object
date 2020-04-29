@@ -1,4 +1,3 @@
-use alloc::vec;
 use alloc::vec::Vec;
 use core::fmt::Debug;
 use core::{mem, str};
@@ -15,8 +14,8 @@ use crate::read::{
 
 use super::{
     parse_symbol, CompressionHeader, ElfSection, ElfSectionIterator, ElfSegment,
-    ElfSegmentIterator, ElfSymbolIterator, NoteHeader, ProgramHeader, Rela, SectionHeader,
-    SectionTable, Sym, SymbolTable,
+    ElfSegmentIterator, ElfSymbolIterator, NoteHeader, ProgramHeader, Rela, RelocationSections,
+    SectionHeader, SectionTable, Sym, SymbolTable,
 };
 
 /// A 32-bit ELF object file.
@@ -34,7 +33,7 @@ pub struct ElfFile<'data, Elf: FileHeader> {
     pub(super) header: &'data Elf,
     pub(super) segments: &'data [Elf::ProgramHeader],
     pub(super) sections: SectionTable<'data, Elf>,
-    pub(super) relocations: Vec<usize>,
+    pub(super) relocations: RelocationSections,
     pub(super) symbols: SymbolTable<'data, Elf>,
     pub(super) dynamic_symbols: SymbolTable<'data, Elf>,
 }
@@ -58,27 +57,8 @@ impl<'data, Elf: FileHeader> ElfFile<'data, Elf> {
         let symbols = sections.symbols(endian, data, elf::SHT_SYMTAB)?;
         // TODO: get dynamic symbols from DT_SYMTAB if there are no sections
         let dynamic_symbols = sections.symbols(endian, data, elf::SHT_DYNSYM)?;
-
         // The API we provide requires a mapping from section to relocations, so build it now.
-        // TODO: only do this if the user requires it (and then we can return an error
-        // for invalid sh_link values).
-        let symbol_section = symbols.section();
-        let mut relocations = vec![0; sections.len()];
-        for (index, section) in sections.iter().enumerate().rev() {
-            let sh_type = section.sh_type(endian);
-            if sh_type == elf::SHT_REL || sh_type == elf::SHT_RELA {
-                let sh_info = section.sh_info(endian) as usize;
-                let sh_link = section.sh_link(endian) as usize;
-                // Skip dynamic relocations (sh_info = 0), invalid sh_info, and section
-                // relocations with the wrong symbol table (sh_link).
-                if sh_info != 0 && sh_info < relocations.len() && sh_link == symbol_section {
-                    // Handle multiple relocation sections by chaining them.
-                    let next = relocations[sh_info];
-                    relocations[sh_info] = index;
-                    relocations[index] = next;
-                }
-            }
-        }
+        let relocations = sections.relocation_sections(endian, symbols.section())?;
 
         Ok(ElfFile {
             endian,
