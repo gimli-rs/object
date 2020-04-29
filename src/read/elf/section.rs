@@ -10,7 +10,7 @@ use crate::read::{
     self, ObjectSection, ReadError, SectionFlags, SectionIndex, SectionKind, StringTable,
 };
 
-use super::{ElfFile, ElfNoteIterator, ElfRelocationIterator, FileHeader};
+use super::{ElfFile, ElfNoteIterator, ElfRelocationIterator, FileHeader, SymbolTable};
 
 /// The table of section headers in an ELF file.
 ///
@@ -76,6 +76,19 @@ impl<'data, Elf: FileHeader> SectionTable<'data, Elf> {
         self.strings
             .get(section.sh_name(endian))
             .read_error("Invalid ELF section name offset")
+    }
+
+    /// Return the symbol table of the given section type.
+    ///
+    /// Returns an empty symbol table if the symbol table does not exist.
+    #[inline]
+    pub fn symbols(
+        &self,
+        endian: Elf::Endian,
+        data: Bytes<'data>,
+        sh_type: u32,
+    ) -> read::Result<SymbolTable<'data, Elf>> {
+        SymbolTable::parse(endian, data, self, sh_type)
     }
 }
 

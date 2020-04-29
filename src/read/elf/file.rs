@@ -55,65 +55,14 @@ impl<'data, Elf: FileHeader> ElfFile<'data, Elf> {
         let endian = header.endian()?;
         let segments = header.program_headers(endian, data)?;
         let sections = header.sections(endian, data)?;
-
-        let mut symbol_section = None;
-        let mut symbols = &[][..];
-        let mut symbol_string_data = Bytes(&[]);
-        let mut symbol_shndx = &[][..];
-        let mut dynamic_symbols = &[][..];
-        let mut dynamic_symbol_string_data = Bytes(&[]);
-        // TODO: only do this if the user requires it.
-        for (index, section) in sections.iter().enumerate() {
-            match section.sh_type(endian) {
-                elf::SHT_DYNSYM => {
-                    if dynamic_symbols.is_empty() {
-                        dynamic_symbols = section
-                            .data_as_array(endian, data)
-                            .read_error("Invalid ELF dynsym data")?;
-                        let strtab_section = sections.section(section.sh_link(endian) as usize)?;
-                        dynamic_symbol_string_data = strtab_section
-                            .data(endian, data)
-                            .read_error("Invalid ELF dynstr data")?;
-                    }
-                }
-                elf::SHT_SYMTAB => {
-                    if symbols.is_empty() {
-                        symbol_section = Some(index);
-                        symbols = section
-                            .data_as_array(endian, data)
-                            .read_error("Invalid ELF symtab data")?;
-                        let strtab_section = sections.section(section.sh_link(endian) as usize)?;
-                        symbol_string_data = strtab_section
-                            .data(endian, data)
-                            .read_error("Invalid ELF strtab data")?;
-                    }
-                }
-                elf::SHT_SYMTAB_SHNDX => {
-                    if symbol_shndx.is_empty() {
-                        symbol_shndx = section
-                            .data_as_array(endian, data)
-                            .read_error("Invalid ELF symtab_shndx data")?;
-                    }
-                }
-                _ => {}
-            }
-        }
-        let symbol_strings = StringTable::new(symbol_string_data);
-        let symbols = SymbolTable {
-            symbols,
-            strings: symbol_strings,
-            shndx: symbol_shndx,
-        };
-        let dynamic_symbol_strings = StringTable::new(dynamic_symbol_string_data);
-        let dynamic_symbols = SymbolTable {
-            symbols: dynamic_symbols,
-            strings: dynamic_symbol_strings,
-            shndx: &[],
-        };
+        let symbols = sections.symbols(endian, data, elf::SHT_SYMTAB)?;
+        // TODO: get dynamic symbols from DT_SYMTAB if there are no sections
+        let dynamic_symbols = sections.symbols(endian, data, elf::SHT_DYNSYM)?;
 
         // The API we provide requires a mapping from section to relocations, so build it now.
         // TODO: only do this if the user requires it (and then we can return an error
         // for invalid sh_link values).
+        let symbol_section = symbols.section();
         let mut relocations = vec![0; sections.len()];
         for (index, section) in sections.iter().enumerate().rev() {
             let sh_type = section.sh_type(endian);
@@ -122,7 +71,7 @@ impl<'data, Elf: FileHeader> ElfFile<'data, Elf> {
                 let sh_link = section.sh_link(endian) as usize;
                 // Skip dynamic relocations (sh_info = 0), invalid sh_info, and section
                 // relocations with the wrong symbol table (sh_link).
-                if sh_info != 0 && sh_info < relocations.len() && Some(sh_link) == symbol_section {
+                if sh_info != 0 && sh_info < relocations.len() && sh_link == symbol_section {
                     // Handle multiple relocation sections by chaining them.
                     let next = relocations[sh_info];
                     relocations[sh_info] = index;
@@ -242,17 +191,14 @@ where
     }
 
     fn symbol_by_index(&self, index: SymbolIndex) -> read::Result<Symbol<'data>> {
-        let symbol = self
-            .symbols
-            .symbols
-            .get(index.0)
-            .read_error("Invalid ELF symbol index")?;
-        let shndx = self.symbols.shndx.get(index.0).cloned();
+        let symbol = self.symbols.symbol(index.0)?;
+        let shndx = self.symbols.shndx(index.0);
+        let name = symbol.name(self.endian, self.symbols.strings()).ok();
         Ok(parse_symbol::<Elf>(
             self.endian,
             index.0,
             symbol,
-            self.symbols.strings,
+            name,
             shndx,
         ))
     }

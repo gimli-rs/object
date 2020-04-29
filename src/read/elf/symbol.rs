@@ -1,22 +1,128 @@
 use alloc::fmt;
 use core::fmt::Debug;
+use core::slice;
 use core::str;
 
 use crate::elf;
 use crate::endian::{self, RunTimeEndian};
-use crate::pod::Pod;
+use crate::pod::{Bytes, Pod};
 use crate::read::util::StringTable;
 use crate::read::{
-    SectionIndex, Symbol, SymbolFlags, SymbolIndex, SymbolKind, SymbolScope, SymbolSection,
+    self, ReadError, SectionIndex, Symbol, SymbolFlags, SymbolIndex, SymbolKind, SymbolScope,
+    SymbolSection,
 };
 
-use super::{ElfFile, FileHeader};
+use super::{ElfFile, FileHeader, SectionHeader, SectionTable};
 
+/// A table of symbol entries in an ELF file.
+///
+/// Also includes the string table used for the symbol names.
 #[derive(Debug, Clone, Copy)]
-pub(super) struct SymbolTable<'data, Elf: FileHeader> {
-    pub symbols: &'data [Elf::Sym],
-    pub strings: StringTable<'data>,
-    pub shndx: &'data [u32],
+pub struct SymbolTable<'data, Elf: FileHeader> {
+    section: usize,
+    symbols: &'data [Elf::Sym],
+    strings: StringTable<'data>,
+    shndx: &'data [u32],
+}
+
+impl<'data, Elf: FileHeader> Default for SymbolTable<'data, Elf> {
+    fn default() -> Self {
+        SymbolTable {
+            section: 0,
+            symbols: &[],
+            strings: Default::default(),
+            shndx: &[],
+        }
+    }
+}
+
+impl<'data, Elf: FileHeader> SymbolTable<'data, Elf> {
+    /// Parse the symbol table of the given section type.
+    ///
+    /// Returns an empty symbol table if the symbol table does not exist.
+    pub fn parse(
+        endian: Elf::Endian,
+        data: Bytes<'data>,
+        sections: &SectionTable<Elf>,
+        sh_type: u32,
+    ) -> read::Result<SymbolTable<'data, Elf>> {
+        debug_assert!(sh_type == elf::SHT_DYNSYM || sh_type == elf::SHT_SYMTAB);
+
+        let (section, symtab) = match sections
+            .iter()
+            .enumerate()
+            .find(|s| s.1.sh_type(endian) == sh_type)
+        {
+            Some(s) => s,
+            None => return Ok(SymbolTable::default()),
+        };
+        let symbols = symtab
+            .data_as_array(endian, data)
+            .read_error("Invalid ELF symbol table data")?;
+
+        let strtab = sections.section(symtab.sh_link(endian) as usize)?;
+        let strtab_data = strtab
+            .data(endian, data)
+            .read_error("Invalid ELF string table data")?;
+        let strings = StringTable::new(strtab_data);
+
+        let shndx = sections
+            .iter()
+            .find(|s| {
+                s.sh_type(endian) == elf::SHT_SYMTAB_SHNDX && s.sh_link(endian) as usize == section
+            })
+            .map(|section| {
+                section
+                    .data_as_array(endian, data)
+                    .read_error("Invalid ELF symtab_shndx data")
+            })
+            .transpose()?
+            .unwrap_or(&[]);
+
+        Ok(SymbolTable {
+            section,
+            symbols,
+            strings,
+            shndx,
+        })
+    }
+
+    /// Return the section index of this symbol table.
+    #[inline]
+    pub fn section(&self) -> usize {
+        self.section
+    }
+
+    /// Return the string table used for the symbol names.
+    #[inline]
+    pub fn strings(&self) -> StringTable<'data> {
+        self.strings
+    }
+
+    /// Iterate over the symbols.
+    #[inline]
+    pub fn iter(&self) -> slice::Iter<'data, Elf::Sym> {
+        self.symbols.iter()
+    }
+
+    /// Return true if the symbol table is empty.
+    #[inline]
+    pub fn is_empty(&self) -> bool {
+        self.symbols.is_empty()
+    }
+
+    /// Return the symbol at the given index.
+    pub fn symbol(&self, index: usize) -> read::Result<&'data Elf::Sym> {
+        self.symbols
+            .get(index)
+            .read_error("Invalid ELF symbol index")
+    }
+
+    /// Return the extended section index for the given symbol if present.
+    #[inline]
+    pub fn shndx(&self, index: usize) -> Option<u32> {
+        self.shndx.get(index).cloned()
+    }
 }
 
 /// An iterator over the symbols of an `ElfFile32`.
@@ -48,12 +154,13 @@ impl<'data, 'file, Elf: FileHeader> Iterator for ElfSymbolIterator<'data, 'file,
 
     fn next(&mut self) -> Option<Self::Item> {
         let index = self.index;
-        let shndx = self.symbols.shndx.get(index).cloned();
+        let shndx = self.symbols.shndx(index);
         self.symbols.symbols.get(index).map(|symbol| {
             self.index += 1;
+            let name = symbol.name(self.file.endian, self.symbols.strings()).ok();
             (
                 SymbolIndex(index),
-                parse_symbol::<Elf>(self.file.endian, index, symbol, self.symbols.strings, shndx),
+                parse_symbol::<Elf>(self.file.endian, index, symbol, name, shndx),
             )
         })
     }
@@ -63,13 +170,10 @@ pub(super) fn parse_symbol<'data, Elf: FileHeader>(
     endian: Elf::Endian,
     index: usize,
     symbol: &Elf::Sym,
-    strings: StringTable<'data>,
+    name: Option<&'data [u8]>,
     shndx: Option<u32>,
 ) -> Symbol<'data> {
-    let name = strings
-        .get(symbol.st_name(endian))
-        .ok()
-        .and_then(|s| str::from_utf8(s).ok());
+    let name = name.and_then(|s| str::from_utf8(s).ok());
     let kind = match symbol.st_type() {
         elf::STT_NOTYPE if index == 0 => SymbolKind::Null,
         elf::STT_OBJECT | elf::STT_COMMON => SymbolKind::Data,
@@ -140,6 +244,17 @@ pub trait Sym: Debug + Pod {
     fn st_shndx(&self, endian: Self::Endian) -> u16;
     fn st_value(&self, endian: Self::Endian) -> Self::Word;
     fn st_size(&self, endian: Self::Endian) -> Self::Word;
+
+    /// Parse the symbol name from the string table.
+    fn name<'data>(
+        &self,
+        endian: Self::Endian,
+        strings: StringTable<'data>,
+    ) -> read::Result<&'data [u8]> {
+        strings
+            .get(self.st_name(endian))
+            .read_error("Invalid ELF symbol name offset")
+    }
 }
 
 impl<Endian: endian::Endian> Sym for elf::Sym32<Endian> {
