@@ -15,8 +15,8 @@ use crate::read::{
 
 use super::{
     parse_symbol, CompressionHeader, ElfSection, ElfSectionIterator, ElfSegment,
-    ElfSegmentIterator, ElfSymbolIterator, NoteHeader, ProgramHeader, Rela, SectionHeader, Sym,
-    SymbolTable,
+    ElfSegmentIterator, ElfSymbolIterator, NoteHeader, ProgramHeader, Rela, SectionHeader,
+    SectionTable, Sym, SymbolTable,
 };
 
 /// A 32-bit ELF object file.
@@ -33,8 +33,7 @@ pub struct ElfFile<'data, Elf: FileHeader> {
     pub(super) data: Bytes<'data>,
     pub(super) header: &'data Elf,
     pub(super) segments: &'data [Elf::ProgramHeader],
-    pub(super) sections: &'data [Elf::SectionHeader],
-    pub(super) section_strings: StringTable<'data>,
+    pub(super) sections: SectionTable<'data, Elf>,
     pub(super) relocations: Vec<usize>,
     pub(super) symbols: SymbolTable<'data, Elf>,
     pub(super) dynamic_symbols: SymbolTable<'data, Elf>,
@@ -55,20 +54,7 @@ impl<'data, Elf: FileHeader> ElfFile<'data, Elf> {
 
         let endian = header.endian()?;
         let segments = header.program_headers(endian, data)?;
-        let sections = header.section_headers(endian, data)?;
-
-        let section_string_data = if !sections.is_empty() {
-            let index = header.shstrndx(endian, data)?;
-            let shstrtab_section = sections
-                .get(index as usize)
-                .read_error("Invalid ELF section header strtab index")?;
-            shstrtab_section
-                .data(endian, data)
-                .read_error("Invalid ELF section header strtab data")?
-        } else {
-            Bytes(&[])
-        };
-        let section_strings = StringTable::new(section_string_data);
+        let sections = header.sections(endian, data)?;
 
         let mut symbol_section = None;
         let mut symbols = &[][..];
@@ -84,9 +70,7 @@ impl<'data, Elf: FileHeader> ElfFile<'data, Elf> {
                         dynamic_symbols = section
                             .data_as_array(endian, data)
                             .read_error("Invalid ELF dynsym data")?;
-                        let strtab_section = sections
-                            .get(section.sh_link(endian) as usize)
-                            .read_error("Invalid ELF dynstr section index")?;
+                        let strtab_section = sections.section(section.sh_link(endian) as usize)?;
                         dynamic_symbol_string_data = strtab_section
                             .data(endian, data)
                             .read_error("Invalid ELF dynstr data")?;
@@ -98,9 +82,7 @@ impl<'data, Elf: FileHeader> ElfFile<'data, Elf> {
                         symbols = section
                             .data_as_array(endian, data)
                             .read_error("Invalid ELF symtab data")?;
-                        let strtab_section = sections
-                            .get(section.sh_link(endian) as usize)
-                            .read_error("Invalid ELF strtab section index")?;
+                        let strtab_section = sections.section(section.sh_link(endian) as usize)?;
                         symbol_string_data = strtab_section
                             .data(endian, data)
                             .read_error("Invalid ELF strtab data")?;
@@ -154,7 +136,6 @@ impl<'data, Elf: FileHeader> ElfFile<'data, Elf> {
             header,
             segments,
             sections,
-            section_strings,
             relocations,
             symbols,
             dynamic_symbols,
@@ -166,18 +147,13 @@ impl<'data, Elf: FileHeader> ElfFile<'data, Elf> {
         &'file self,
         section_name: &str,
     ) -> Option<ElfSection<'data, 'file, Elf>> {
-        for (index, section) in self.sections.iter().enumerate() {
-            if let Ok(name) = self.section_strings.get(section.sh_name(self.endian)) {
-                if name == section_name.as_bytes() {
-                    return Some(ElfSection {
-                        file: self,
-                        index: SectionIndex(index),
-                        section,
-                    });
-                }
-            }
-        }
-        None
+        self.sections
+            .section_by_name(self.endian, section_name.as_bytes())
+            .map(|(index, section)| ElfSection {
+                file: self,
+                index: SectionIndex(index),
+                section,
+            })
     }
 
     #[cfg(feature = "compression")]
@@ -250,10 +226,7 @@ where
         &'file self,
         index: SectionIndex,
     ) -> read::Result<ElfSection<'data, 'file, Elf>> {
-        let section = self
-            .sections
-            .get(index.0)
-            .read_error("Invalid ELF section index")?;
+        let section = self.sections.section(index.0)?;
         Ok(ElfSection {
             file: self,
             index,
@@ -311,8 +284,8 @@ where
     }
 
     fn has_debug_symbols(&self) -> bool {
-        for section in self.sections {
-            if let Ok(name) = self.section_strings.get(section.sh_name(self.endian)) {
+        for section in self.sections.iter() {
+            if let Ok(name) = self.sections.section_name(self.endian, section) {
                 if name == b".debug_info" || name == b".zdebug_info" {
                     return true;
                 }
@@ -325,7 +298,7 @@ where
         let endian = self.endian;
         // Use section headers if present, otherwise use program headers.
         if !self.sections.is_empty() {
-            for section in self.sections {
+            for section in self.sections.iter() {
                 if let Some(mut notes) = section.notes(endian, self.data)? {
                     while let Some(note) = notes.next()? {
                         if note.name() == elf::ELF_NOTE_GNU
@@ -578,6 +551,35 @@ pub trait FileHeader: Debug + Pod {
         }
         data.read_slice_at(shoff as usize, shnum)
             .read_error("Invalid ELF section header offset/size/alignment")
+    }
+
+    /// Return the string table for the section headers.
+    fn section_strings<'data>(
+        &self,
+        endian: Self::Endian,
+        data: Bytes<'data>,
+        sections: &[Self::SectionHeader],
+    ) -> read::Result<StringTable<'data>> {
+        if sections.is_empty() {
+            return Ok(StringTable::default());
+        }
+        let index = self.shstrndx(endian, data)? as usize;
+        let shstrtab = sections.get(index).read_error("Invalid ELF e_shstrndx")?;
+        let data = shstrtab
+            .data(endian, data)
+            .read_error("Invalid ELF shstrtab data")?;
+        Ok(StringTable::new(data))
+    }
+
+    /// Return the section table.
+    fn sections<'data>(
+        &self,
+        endian: Self::Endian,
+        data: Bytes<'data>,
+    ) -> read::Result<SectionTable<'data, Self>> {
+        let sections = self.section_headers(endian, data)?;
+        let strings = self.section_strings(endian, data, sections)?;
+        Ok(SectionTable::new(sections, strings))
     }
 }
 

@@ -127,7 +127,7 @@ impl<'data, 'file, Elf: FileHeader> Iterator for ElfRelocationIterator<'data, 'f
             if self.section_index == 0 {
                 return None;
             }
-            let section = self.file.sections.get(self.section_index)?;
+            let section = self.file.sections.section(self.section_index).ok()?;
             match section.sh_type(endian) {
                 elf::SHT_REL => {
                     if let Ok(relocations) = section.data_as_array(endian, self.file.data) {

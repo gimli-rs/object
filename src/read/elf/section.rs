@@ -6,9 +6,78 @@ use core::{iter, mem, slice, str};
 use crate::elf;
 use crate::endian::{self, RunTimeEndian};
 use crate::pod::{Bytes, Pod};
-use crate::read::{self, ObjectSection, ReadError, SectionFlags, SectionIndex, SectionKind};
+use crate::read::{
+    self, ObjectSection, ReadError, SectionFlags, SectionIndex, SectionKind, StringTable,
+};
 
 use super::{ElfFile, ElfNoteIterator, ElfRelocationIterator, FileHeader};
+
+/// The table of section headers in an ELF file.
+///
+/// Also includes the string table used for the section names.
+#[derive(Debug, Default, Clone, Copy)]
+pub struct SectionTable<'data, Elf: FileHeader> {
+    sections: &'data [Elf::SectionHeader],
+    strings: StringTable<'data>,
+}
+
+impl<'data, Elf: FileHeader> SectionTable<'data, Elf> {
+    /// Create a new section table.
+    #[inline]
+    pub fn new(sections: &'data [Elf::SectionHeader], strings: StringTable<'data>) -> Self {
+        SectionTable { sections, strings }
+    }
+
+    /// Iterate over the section headers.
+    #[inline]
+    pub fn iter(&self) -> slice::Iter<'data, Elf::SectionHeader> {
+        self.sections.iter()
+    }
+
+    /// Return true if the section table is empty.
+    #[inline]
+    pub fn is_empty(&self) -> bool {
+        self.sections.is_empty()
+    }
+
+    /// The number of section headers.
+    #[inline]
+    pub fn len(&self) -> usize {
+        self.sections.len()
+    }
+
+    /// Return the section header at the given index.
+    pub fn section(&self, index: usize) -> read::Result<&'data Elf::SectionHeader> {
+        self.sections
+            .get(index)
+            .read_error("Invalid ELF section index")
+    }
+
+    /// Return the section header with the given name.
+    ///
+    /// Ignores sections with invalid names.
+    pub fn section_by_name(
+        &self,
+        endian: Elf::Endian,
+        name: &[u8],
+    ) -> Option<(usize, &'data Elf::SectionHeader)> {
+        self.sections
+            .iter()
+            .enumerate()
+            .find(|(_, section)| self.section_name(endian, section) == Ok(name))
+    }
+
+    /// Return the section name for the given section header.
+    pub fn section_name(
+        &self,
+        endian: Elf::Endian,
+        section: &'data Elf::SectionHeader,
+    ) -> read::Result<&'data [u8]> {
+        self.strings
+            .get(section.sh_name(endian))
+            .read_error("Invalid ELF section name offset")
+    }
+}
 
 /// An iterator over the sections of an `ElfFile32`.
 pub type ElfSectionIterator32<'data, 'file, Endian = RunTimeEndian> =
@@ -125,9 +194,8 @@ impl<'data, 'file, Elf: FileHeader> ObjectSection<'data> for ElfSection<'data, '
     fn name(&self) -> read::Result<&str> {
         let name = self
             .file
-            .section_strings
-            .get(self.section.sh_name(self.file.endian))
-            .read_error("Invalid ELF section name offset")?;
+            .sections
+            .section_name(self.file.endian, self.section)?;
         str::from_utf8(name)
             .ok()
             .read_error("Non UTF-8 ELF section name")
