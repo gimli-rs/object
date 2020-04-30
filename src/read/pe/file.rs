@@ -252,9 +252,37 @@ pub trait ImageNtHeaders: Debug + Pod {
 /// A trait for generic access to `ImageOptionalHeader32` and `ImageOptionalHeader64`.
 #[allow(missing_docs)]
 pub trait ImageOptionalHeader: Debug + Pod {
+    // Standard fields.
     fn magic(&self) -> u16;
+    fn major_linker_version(&self) -> u8;
+    fn minor_linker_version(&self) -> u8;
+    fn size_of_code(&self) -> u32;
+    fn size_of_initialized_data(&self) -> u32;
+    fn size_of_uninitialized_data(&self) -> u32;
     fn address_of_entry_point(&self) -> u32;
+    fn base_of_code(&self) -> u32;
+
+    // NT additional fields.
+    fn image_base(&self) -> u64;
     fn section_alignment(&self) -> u32;
+    fn file_alignment(&self) -> u32;
+    fn major_operating_system_version(&self) -> u16;
+    fn minor_operating_system_version(&self) -> u16;
+    fn major_image_version(&self) -> u16;
+    fn minor_image_version(&self) -> u16;
+    fn major_subsystem_version(&self) -> u16;
+    fn minor_subsystem_version(&self) -> u16;
+    fn win32_version_value(&self) -> u32;
+    fn size_of_image(&self) -> u32;
+    fn size_of_headers(&self) -> u32;
+    fn check_sum(&self) -> u32;
+    fn subsystem(&self) -> u16;
+    fn dll_characteristics(&self) -> u16;
+    fn size_of_stack_reserve(&self) -> u64;
+    fn size_of_stack_commit(&self) -> u64;
+    fn size_of_heap_reserve(&self) -> u64;
+    fn size_of_heap_commit(&self) -> u64;
+    fn loader_flags(&self) -> u32;
     fn number_of_rva_and_sizes(&self) -> u32;
 }
 
@@ -294,13 +322,138 @@ impl ImageOptionalHeader for pe::ImageOptionalHeader32 {
     }
 
     #[inline]
+    fn major_linker_version(&self) -> u8 {
+        self.major_linker_version
+    }
+
+    #[inline]
+    fn minor_linker_version(&self) -> u8 {
+        self.minor_linker_version
+    }
+
+    #[inline]
+    fn size_of_code(&self) -> u32 {
+        self.size_of_code.get(LE)
+    }
+
+    #[inline]
+    fn size_of_initialized_data(&self) -> u32 {
+        self.size_of_initialized_data.get(LE)
+    }
+
+    #[inline]
+    fn size_of_uninitialized_data(&self) -> u32 {
+        self.size_of_uninitialized_data.get(LE)
+    }
+
+    #[inline]
     fn address_of_entry_point(&self) -> u32 {
         self.address_of_entry_point.get(LE)
     }
 
     #[inline]
+    fn base_of_code(&self) -> u32 {
+        self.base_of_code.get(LE)
+    }
+
+    #[inline]
+    fn image_base(&self) -> u64 {
+        self.image_base.get(LE).into()
+    }
+
+    #[inline]
     fn section_alignment(&self) -> u32 {
         self.section_alignment.get(LE)
+    }
+
+    #[inline]
+    fn file_alignment(&self) -> u32 {
+        self.file_alignment.get(LE)
+    }
+
+    #[inline]
+    fn major_operating_system_version(&self) -> u16 {
+        self.major_operating_system_version.get(LE)
+    }
+
+    #[inline]
+    fn minor_operating_system_version(&self) -> u16 {
+        self.minor_operating_system_version.get(LE)
+    }
+
+    #[inline]
+    fn major_image_version(&self) -> u16 {
+        self.major_image_version.get(LE)
+    }
+
+    #[inline]
+    fn minor_image_version(&self) -> u16 {
+        self.minor_image_version.get(LE)
+    }
+
+    #[inline]
+    fn major_subsystem_version(&self) -> u16 {
+        self.major_subsystem_version.get(LE)
+    }
+
+    #[inline]
+    fn minor_subsystem_version(&self) -> u16 {
+        self.minor_subsystem_version.get(LE)
+    }
+
+    #[inline]
+    fn win32_version_value(&self) -> u32 {
+        self.win32_version_value.get(LE)
+    }
+
+    #[inline]
+    fn size_of_image(&self) -> u32 {
+        self.size_of_image.get(LE)
+    }
+
+    #[inline]
+    fn size_of_headers(&self) -> u32 {
+        self.size_of_headers.get(LE)
+    }
+
+    #[inline]
+    fn check_sum(&self) -> u32 {
+        self.check_sum.get(LE)
+    }
+
+    #[inline]
+    fn subsystem(&self) -> u16 {
+        self.subsystem.get(LE)
+    }
+
+    #[inline]
+    fn dll_characteristics(&self) -> u16 {
+        self.dll_characteristics.get(LE)
+    }
+
+    #[inline]
+    fn size_of_stack_reserve(&self) -> u64 {
+        self.size_of_stack_reserve.get(LE).into()
+    }
+
+    #[inline]
+    fn size_of_stack_commit(&self) -> u64 {
+        self.size_of_stack_commit.get(LE).into()
+    }
+
+    #[inline]
+    fn size_of_heap_reserve(&self) -> u64 {
+        self.size_of_heap_reserve.get(LE).into()
+    }
+
+    #[inline]
+    fn size_of_heap_commit(&self) -> u64 {
+        self.size_of_heap_commit.get(LE).into()
+    }
+
+    #[inline]
+    fn loader_flags(&self) -> u32 {
+        self.loader_flags.get(LE)
     }
 
     #[inline]
@@ -345,13 +498,138 @@ impl ImageOptionalHeader for pe::ImageOptionalHeader64 {
     }
 
     #[inline]
+    fn major_linker_version(&self) -> u8 {
+        self.major_linker_version
+    }
+
+    #[inline]
+    fn minor_linker_version(&self) -> u8 {
+        self.minor_linker_version
+    }
+
+    #[inline]
+    fn size_of_code(&self) -> u32 {
+        self.size_of_code.get(LE)
+    }
+
+    #[inline]
+    fn size_of_initialized_data(&self) -> u32 {
+        self.size_of_initialized_data.get(LE)
+    }
+
+    #[inline]
+    fn size_of_uninitialized_data(&self) -> u32 {
+        self.size_of_uninitialized_data.get(LE)
+    }
+
+    #[inline]
     fn address_of_entry_point(&self) -> u32 {
         self.address_of_entry_point.get(LE)
     }
 
     #[inline]
+    fn base_of_code(&self) -> u32 {
+        self.base_of_code.get(LE)
+    }
+
+    #[inline]
+    fn image_base(&self) -> u64 {
+        self.image_base.get(LE)
+    }
+
+    #[inline]
     fn section_alignment(&self) -> u32 {
         self.section_alignment.get(LE)
+    }
+
+    #[inline]
+    fn file_alignment(&self) -> u32 {
+        self.file_alignment.get(LE)
+    }
+
+    #[inline]
+    fn major_operating_system_version(&self) -> u16 {
+        self.major_operating_system_version.get(LE)
+    }
+
+    #[inline]
+    fn minor_operating_system_version(&self) -> u16 {
+        self.minor_operating_system_version.get(LE)
+    }
+
+    #[inline]
+    fn major_image_version(&self) -> u16 {
+        self.major_image_version.get(LE)
+    }
+
+    #[inline]
+    fn minor_image_version(&self) -> u16 {
+        self.minor_image_version.get(LE)
+    }
+
+    #[inline]
+    fn major_subsystem_version(&self) -> u16 {
+        self.major_subsystem_version.get(LE)
+    }
+
+    #[inline]
+    fn minor_subsystem_version(&self) -> u16 {
+        self.minor_subsystem_version.get(LE)
+    }
+
+    #[inline]
+    fn win32_version_value(&self) -> u32 {
+        self.win32_version_value.get(LE)
+    }
+
+    #[inline]
+    fn size_of_image(&self) -> u32 {
+        self.size_of_image.get(LE)
+    }
+
+    #[inline]
+    fn size_of_headers(&self) -> u32 {
+        self.size_of_headers.get(LE)
+    }
+
+    #[inline]
+    fn check_sum(&self) -> u32 {
+        self.check_sum.get(LE)
+    }
+
+    #[inline]
+    fn subsystem(&self) -> u16 {
+        self.subsystem.get(LE)
+    }
+
+    #[inline]
+    fn dll_characteristics(&self) -> u16 {
+        self.dll_characteristics.get(LE)
+    }
+
+    #[inline]
+    fn size_of_stack_reserve(&self) -> u64 {
+        self.size_of_stack_reserve.get(LE)
+    }
+
+    #[inline]
+    fn size_of_stack_commit(&self) -> u64 {
+        self.size_of_stack_commit.get(LE)
+    }
+
+    #[inline]
+    fn size_of_heap_reserve(&self) -> u64 {
+        self.size_of_heap_reserve.get(LE)
+    }
+
+    #[inline]
+    fn size_of_heap_commit(&self) -> u64 {
+        self.size_of_heap_commit.get(LE)
+    }
+
+    #[inline]
+    fn loader_flags(&self) -> u32 {
+        self.loader_flags.get(LE)
     }
 
     #[inline]
