@@ -12,14 +12,14 @@ use crate::read::{
 
 use super::{
     parse_symbol, CoffSection, CoffSectionIterator, CoffSegment, CoffSegmentIterator,
-    CoffSymbolIterator, SymbolTable,
+    CoffSymbolIterator, SectionTable, SymbolTable,
 };
 
 /// A COFF object file.
 #[derive(Debug)]
 pub struct CoffFile<'data> {
     pub(super) header: &'data pe::ImageFileHeader,
-    pub(super) sections: &'data [pe::ImageSectionHeader],
+    pub(super) sections: SectionTable<'data>,
     // TODO: ImageSymbolExBytes
     pub(super) symbols: SymbolTable<'data>,
     pub(super) data: Bytes<'data>,
@@ -37,10 +37,7 @@ impl<'data> CoffFile<'data> {
         // Skip over the optional header and get the section headers.
         tail.skip(header.size_of_optional_header.get(LE) as usize)
             .read_error("Invalid COFF optional header size")?;
-        let sections = tail
-            .read_slice(header.number_of_sections.get(LE) as usize)
-            .read_error("Invalid COFF section headers")?;
-
+        let sections = SectionTable::parse(header, tail)?;
         let symbols = SymbolTable::parse(header, data)?;
 
         // TODO: maybe validate that the machine is known?
@@ -96,10 +93,7 @@ where
     }
 
     fn section_by_index(&'file self, index: SectionIndex) -> Result<CoffSection<'data, 'file>> {
-        let section = self
-            .sections
-            .get(index.0)
-            .read_error("Invalid COFF section index")?;
+        let section = self.sections.section(index.0)?;
         Ok(CoffSection {
             file: self,
             index,

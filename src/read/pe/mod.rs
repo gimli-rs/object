@@ -12,3 +12,5 @@ pub use file::*;
 
 mod section;
 pub use section::*;
+
+pub use super::coff::SectionTable;

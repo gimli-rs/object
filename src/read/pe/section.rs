@@ -134,7 +134,7 @@ impl<'data, 'file, Pe: ImageNtHeaders> Iterator for PeSectionIterator<'data, 'fi
     fn next(&mut self) -> Option<Self::Item> {
         self.iter.next().map(|(index, section)| PeSection {
             file: self.file,
-            index: SectionIndex(index),
+            index: SectionIndex(index + 1),
             section,
         })
     }

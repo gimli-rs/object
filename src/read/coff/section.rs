@@ -13,6 +13,70 @@ use crate::read::{
 
 use super::{CoffFile, CoffRelocationIterator};
 
+/// The table of section headers in a COFF or PE file.
+#[derive(Debug, Default, Clone, Copy)]
+pub struct SectionTable<'data> {
+    sections: &'data [pe::ImageSectionHeader],
+}
+
+impl<'data> SectionTable<'data> {
+    /// Parse the section table.
+    ///
+    /// `data` must be the data following the optional header.
+    pub fn parse(header: &pe::ImageFileHeader, mut data: Bytes<'data>) -> Result<Self> {
+        let sections = data
+            .read_slice(header.number_of_sections.get(LE) as usize)
+            .read_error("Invalid COFF/PE section headers")?;
+        Ok(SectionTable { sections })
+    }
+
+    /// Iterate over the section headers.
+    ///
+    /// Warning: sections indices start at 1.
+    #[inline]
+    pub fn iter(&self) -> slice::Iter<'data, pe::ImageSectionHeader> {
+        self.sections.iter()
+    }
+
+    /// Return true if the section table is empty.
+    #[inline]
+    pub fn is_empty(&self) -> bool {
+        self.sections.is_empty()
+    }
+
+    /// The number of section headers.
+    #[inline]
+    pub fn len(&self) -> usize {
+        self.sections.len()
+    }
+
+    /// Return the section header at the given index.
+    ///
+    /// The index is 1-based.
+    pub fn section(&self, index: usize) -> read::Result<&'data pe::ImageSectionHeader> {
+        self.sections
+            .get(index.wrapping_sub(1))
+            .read_error("Invalid COFF/PE section index")
+    }
+
+    /// Return the section header with the given name.
+    ///
+    /// The returned index is 1-based.
+    ///
+    /// Ignores sections with invalid names.
+    pub fn section_by_name(
+        &self,
+        strings: StringTable<'data>,
+        name: &[u8],
+    ) -> Option<(usize, &'data pe::ImageSectionHeader)> {
+        self.sections
+            .iter()
+            .enumerate()
+            .find(|(_, section)| section.name(strings) == Ok(name))
+            .map(|(index, section)| (index + 1, section))
+    }
+}
+
 /// An iterator over the loadable sections of a `CoffFile`.
 #[derive(Debug)]
 pub struct CoffSegmentIterator<'data, 'file>

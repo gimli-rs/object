@@ -8,11 +8,10 @@ use crate::pe;
 use crate::pod::{Bytes, Pod};
 use crate::read::coff::{parse_symbol, CoffSymbolIterator, SymbolTable};
 use crate::read::{
-    self, Error, FileFlags, Object, ObjectSection, ReadError, Result, SectionIndex, Symbol,
-    SymbolIndex, SymbolMap,
+    self, Error, FileFlags, Object, ReadError, Result, SectionIndex, Symbol, SymbolIndex, SymbolMap,
 };
 
-use super::{PeSection, PeSectionIterator, PeSegment, PeSegmentIterator};
+use super::{PeSection, PeSectionIterator, PeSegment, PeSegmentIterator, SectionTable};
 
 /// A PE32 (32-bit) image file.
 pub type PeFile32<'data> = PeFile<'data, pe::ImageNtHeaders32>;
@@ -25,7 +24,7 @@ pub struct PeFile<'data, Pe: ImageNtHeaders> {
     pub(super) dos_header: &'data pe::ImageDosHeader,
     pub(super) nt_headers: &'data Pe,
     pub(super) data_directories: &'data [pe::ImageDataDirectory],
-    pub(super) sections: &'data [pe::ImageSectionHeader],
+    pub(super) sections: SectionTable<'data>,
     pub(super) symbols: SymbolTable<'data>,
     pub(super) data: Bytes<'data>,
 }
@@ -91,11 +90,9 @@ impl<'data, Pe: ImageNtHeaders> PeFile<'data, Pe> {
             .read_error("Invalid PE number of RVA and sizes")?;
 
         // Section headers are after the optional header.
-        let sections = nt_tail
-            .read_slice(nt_headers.file_header().number_of_sections.get(LE) as usize)
-            .read_error("Invalid PE section headers")?;
-
-        let symbols = SymbolTable::parse(&nt_headers.file_header(), data)?;
+        let sections = SectionTable::parse(nt_headers.file_header(), nt_tail)?;
+        // Symbols are at an offset specified in the file header.
+        let symbols = SymbolTable::parse(nt_headers.file_header(), data)?;
 
         Ok(PeFile {
             dos_header,
@@ -153,15 +150,17 @@ where
     }
 
     fn section_by_name(&'file self, section_name: &str) -> Option<PeSection<'data, 'file, Pe>> {
-        self.sections()
-            .find(|section| section.name() == Ok(section_name))
+        self.sections
+            .section_by_name(self.symbols.strings, section_name.as_bytes())
+            .map(|(index, section)| PeSection {
+                file: self,
+                index: SectionIndex(index),
+                section,
+            })
     }
 
     fn section_by_index(&'file self, index: SectionIndex) -> Result<PeSection<'data, 'file, Pe>> {
-        let section = self
-            .sections
-            .get(index.0)
-            .read_error("Invalid PE section index")?;
+        let section = self.sections.section(index.0)?;
         Ok(PeSection {
             file: self,
             index,
