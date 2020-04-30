@@ -33,13 +33,7 @@ impl<'data, Pe: ImageNtHeaders> PeFile<'data, Pe> {
     /// Find the optional header and read the `optional_header.magic`.
     pub fn optional_header_magic(data: &'data [u8]) -> Result<u16> {
         let data = Bytes(data);
-        // DOS header comes first.
-        let dos_header = data
-            .read_at::<pe::ImageDosHeader>(0)
-            .read_error("Invalid DOS header size or alignment")?;
-        if dos_header.e_magic.get(LE) != pe::IMAGE_DOS_SIGNATURE {
-            return Err(Error("Invalid DOS magic"));
-        }
+        let dos_header = pe::ImageDosHeader::parse(data)?;
         // NT headers are at an offset specified in the DOS header.
         let nt_headers = data
             .read_at::<Pe>(dos_header.e_lfanew.get(LE) as usize)
@@ -53,46 +47,10 @@ impl<'data, Pe: ImageNtHeaders> PeFile<'data, Pe> {
     /// Parse the raw PE file data.
     pub fn parse(data: &'data [u8]) -> Result<Self> {
         let data = Bytes(data);
-        // DOS header comes first.
-        let dos_header = data
-            .read_at::<pe::ImageDosHeader>(0)
-            .read_error("Invalid DOS header size or alignment")?;
-        if dos_header.e_magic.get(LE) != pe::IMAGE_DOS_SIGNATURE {
-            return Err(Error("Invalid DOS magic"));
-        }
-
-        // NT headers are at an offset specified in the DOS header.
-        let mut nt_tail = data;
-        nt_tail
-            .skip(dos_header.e_lfanew.get(LE) as usize)
-            .read_error("Invalid PE headers offset")?;
-        // Note that this does not include the data directories in the optional header.
-        let nt_headers = nt_tail
-            .read::<Pe>()
-            .read_error("Invalid PE headers size or alignment")?;
-        if nt_headers.signature() != pe::IMAGE_NT_SIGNATURE {
-            return Err(Error("Invalid PE magic"));
-        }
-        if !nt_headers.is_valid_optional_magic() {
-            return Err(Error("Invalid PE optional header magic"));
-        }
-
-        // Read the rest of the optional header, and then read the data directories from that.
-        let optional_data_size = (nt_headers.file_header().size_of_optional_header.get(LE)
-            as usize)
-            .checked_sub(mem::size_of::<Pe::ImageOptionalHeader>())
-            .read_error("PE optional header size is too small")?;
-        let mut optional_data = nt_tail
-            .read_bytes(optional_data_size)
-            .read_error("Invalid PE optional header size")?;
-        let data_directories = optional_data
-            .read_slice(nt_headers.optional_header().number_of_rva_and_sizes() as usize)
-            .read_error("Invalid PE number of RVA and sizes")?;
-
-        // Section headers are after the optional header.
-        let sections = SectionTable::parse(nt_headers.file_header(), nt_tail)?;
-        // Symbols are at an offset specified in the file header.
-        let symbols = SymbolTable::parse(nt_headers.file_header(), data)?;
+        let dos_header = pe::ImageDosHeader::parse(data)?;
+        let (nt_headers, data_directories, nt_tail) = dos_header.nt_headers::<Pe>(data)?;
+        let sections = nt_headers.sections(nt_tail)?;
+        let symbols = nt_headers.symbols(data)?;
 
         Ok(PeFile {
             dos_header,
@@ -225,6 +183,36 @@ where
     }
 }
 
+impl pe::ImageDosHeader {
+    /// Read the DOS header.
+    ///
+    /// Also checks that the `e_magic` field in the header is valid.
+    pub fn parse<'data>(data: Bytes<'data>) -> read::Result<&'data Self> {
+        // DOS header comes first.
+        let dos_header = data
+            .read_at::<pe::ImageDosHeader>(0)
+            .read_error("Invalid DOS header size or alignment")?;
+        if dos_header.e_magic.get(LE) != pe::IMAGE_DOS_SIGNATURE {
+            return Err(Error("Invalid DOS magic"));
+        }
+        Ok(dos_header)
+    }
+
+    /// Read the NT headers, including the data directories.
+    ///
+    /// The given data must be for the entire file.  Returns the data following the NT headers,
+    /// which will contain the section headers.
+    ///
+    /// Also checks that the `signature` and `magic` fields in the headers are valid.
+    #[inline]
+    pub fn nt_headers<'data, Pe: ImageNtHeaders>(
+        &self,
+        data: Bytes<'data>,
+    ) -> read::Result<(&'data Pe, &'data [pe::ImageDataDirectory], Bytes<'data>)> {
+        Pe::parse(self, data)
+    }
+}
+
 /// A trait for generic access to `ImageNtHeaders32` and `ImageNtHeaders64`.
 #[allow(missing_docs)]
 pub trait ImageNtHeaders: Debug + Pod {
@@ -246,6 +234,64 @@ pub trait ImageNtHeaders: Debug + Pod {
 
     /// Return the optional header.
     fn optional_header(&self) -> &Self::ImageOptionalHeader;
+
+    // Provided methods.
+
+    /// Read the NT headers, including the data directories.
+    ///
+    /// The DOS header is required to determine the NT headers offset.
+    ///
+    /// The given data must be for the entire file.  Returns the data following the NT headers,
+    /// which will contain the section headers.
+    ///
+    /// Also checks that the `signature` and `magic` fields in the headers are valid.
+    fn parse<'data>(
+        dos_header: &pe::ImageDosHeader,
+        mut data: Bytes<'data>,
+    ) -> read::Result<(&'data Self, &'data [pe::ImageDataDirectory], Bytes<'data>)> {
+        data.skip(dos_header.e_lfanew.get(LE) as usize)
+            .read_error("Invalid PE headers offset")?;
+        // Note that this does not include the data directories in the optional header.
+        let nt_headers = data
+            .read::<Self>()
+            .read_error("Invalid PE headers size or alignment")?;
+        if nt_headers.signature() != pe::IMAGE_NT_SIGNATURE {
+            return Err(Error("Invalid PE magic"));
+        }
+        if !nt_headers.is_valid_optional_magic() {
+            return Err(Error("Invalid PE optional header magic"));
+        }
+
+        // Read the rest of the optional header, and then read the data directories from that.
+        let optional_data_size = (nt_headers.file_header().size_of_optional_header.get(LE)
+            as usize)
+            .checked_sub(mem::size_of::<Self::ImageOptionalHeader>())
+            .read_error("PE optional header size is too small")?;
+        let mut optional_data = data
+            .read_bytes(optional_data_size)
+            .read_error("Invalid PE optional header size")?;
+        let data_directories = optional_data
+            .read_slice(nt_headers.optional_header().number_of_rva_and_sizes() as usize)
+            .read_error("Invalid PE number of RVA and sizes")?;
+
+        Ok((nt_headers, data_directories, data))
+    }
+
+    /// Read the section table.
+    ///
+    /// `nt_tail` must be the data following the NT headers.
+    #[inline]
+    fn sections<'data>(&self, nt_tail: Bytes<'data>) -> read::Result<SectionTable<'data>> {
+        SectionTable::parse(self.file_header(), nt_tail)
+    }
+
+    /// Read the symbol table and string table.
+    ///
+    /// `data` must be the entire file data.
+    #[inline]
+    fn symbols<'data>(&self, data: Bytes<'data>) -> read::Result<SymbolTable<'data>> {
+        SymbolTable::parse(self.file_header(), data)
+    }
 }
 
 /// A trait for generic access to `ImageOptionalHeader32` and `ImageOptionalHeader64`.
