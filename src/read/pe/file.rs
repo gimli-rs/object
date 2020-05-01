@@ -109,7 +109,7 @@ where
 
     fn section_by_name(&'file self, section_name: &str) -> Option<PeSection<'data, 'file, Pe>> {
         self.sections
-            .section_by_name(self.symbols.strings, section_name.as_bytes())
+            .section_by_name(self.symbols.strings(), section_name.as_bytes())
             .map(|(index, section)| PeSection {
                 file: self,
                 index: SectionIndex(index),
@@ -153,7 +153,7 @@ where
         CoffSymbolIterator {
             symbols: &self.symbols,
             // Hack: don't return any.
-            index: self.symbols.symbols.len(),
+            index: self.symbols.len(),
         }
     }
 

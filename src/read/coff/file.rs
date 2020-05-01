@@ -127,7 +127,7 @@ where
         CoffSymbolIterator {
             symbols: &self.symbols,
             // Hack: don't return any.
-            index: self.symbols.symbols.len(),
+            index: self.symbols.len(),
         }
     }
 
