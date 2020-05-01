@@ -59,7 +59,7 @@ where
 impl<'data, 'file, Pe: ImageNtHeaders> PeSegment<'data, 'file, Pe> {
     fn bytes(&self) -> Result<Bytes<'data>> {
         self.section
-            .pe_bytes(self.file.data)
+            .pe_data(self.file.data)
             .read_error("Invalid PE section offset or size")
     }
 }
@@ -160,7 +160,7 @@ where
 impl<'data, 'file, Pe: ImageNtHeaders> PeSection<'data, 'file, Pe> {
     fn bytes(&self) -> Result<Bytes<'data>> {
         self.section
-            .pe_bytes(self.file.data)
+            .pe_data(self.file.data)
             .read_error("Invalid PE section offset or size")
     }
 }
@@ -249,7 +249,6 @@ impl<'data, 'file, Pe: ImageNtHeaders> ObjectSection<'data> for PeSection<'data,
 }
 
 impl pe::ImageSectionHeader {
-    // This is not `pub(crate)` because the COFF version is different.
     fn pe_file_range(&self) -> (u32, u32) {
         // Pointer and size will be zero for uninitialized data; we don't need to validate this.
         let offset = self.pointer_to_raw_data.get(LE);
@@ -257,7 +256,8 @@ impl pe::ImageSectionHeader {
         (offset, size)
     }
 
-    fn pe_bytes<'data>(&self, data: Bytes<'data>) -> result::Result<Bytes<'data>, ()> {
+    /// Return the data for a PE section.
+    pub fn pe_data<'data>(&self, data: Bytes<'data>) -> result::Result<Bytes<'data>, ()> {
         let (offset, size) = self.pe_file_range();
         data.read_bytes_at(offset as usize, size as usize)
     }
