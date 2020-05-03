@@ -6,7 +6,6 @@ use target_lexicon::{Aarch64Architecture, Architecture, ArmArchitecture};
 use crate::endian::{self, BigEndian, Endian, RunTimeEndian};
 use crate::macho;
 use crate::pod::{Bytes, Pod};
-use crate::read::util::StringTable;
 use crate::read::{
     self, Error, FileFlags, Object, ObjectSection, ReadError, Result, SectionIndex, Symbol,
     SymbolFlags, SymbolIndex, SymbolKind, SymbolMap, SymbolScope, SymbolSection,
@@ -48,8 +47,7 @@ impl<'data, Mach: MachHeader> MachOFile<'data, Mach> {
 
         let endian = header.endian().read_error("Unsupported Mach-O endian")?;
 
-        let mut symbols = &[][..];
-        let mut strings = Bytes(&[]);
+        let mut symbols = SymbolTable::default();
         // Build a list of sections to make some operations more efficient.
         let mut sections = Vec::new();
         if let Ok(mut commands) = header.load_commands(endian, data) {
@@ -60,24 +58,10 @@ impl<'data, Mach: MachHeader> MachOFile<'data, Mach> {
                         sections.push(MachOSectionInternal::parse(index, section));
                     }
                 } else if let Some(symtab) = command.symtab()? {
-                    symbols = data
-                        .read_slice_at(
-                            symtab.symoff.get(endian) as usize,
-                            symtab.nsyms.get(endian) as usize,
-                        )
-                        .read_error("Invalid Mach-O symbol table offset or size")?;
-                    strings = data
-                        .read_bytes_at(
-                            symtab.stroff.get(endian) as usize,
-                            symtab.strsize.get(endian) as usize,
-                        )
-                        .read_error("Invalid Mach-O string table offset or size")?;
+                    symbols = symtab.symbols(endian, data)?;
                 }
             }
         }
-
-        let strings = StringTable::new(strings);
-        let symbols = SymbolTable { symbols, strings };
 
         Ok(MachOFile {
             endian,
@@ -188,12 +172,8 @@ where
     }
 
     fn symbol_by_index(&self, index: SymbolIndex) -> Result<Symbol<'data>> {
-        let nlist = self
-            .symbols
-            .symbols
-            .get(index.0)
-            .read_error("Invalid Mach-O symbol index")?;
-        parse_symbol(self, nlist, self.symbols.strings)
+        let nlist = self.symbols.symbol(index.0)?;
+        parse_symbol(self, nlist, self.symbols.strings())
             .read_error("Unsupported Mach-O symbol index")
     }
 
