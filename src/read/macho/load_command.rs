@@ -23,7 +23,8 @@ impl<'data, E: Endian> MachOLoadCommandIterator<'data, E> {
         }
     }
 
-    pub(super) fn next(&mut self) -> Result<Option<MachOLoadCommand<'data, E>>> {
+    /// Return the next load command.
+    pub fn next(&mut self) -> Result<Option<MachOLoadCommand<'data, E>>> {
         if self.ncmds == 0 {
             return Ok(None);
         }
