@@ -10,6 +10,7 @@ use crate::common::{
 use crate::pod::Bytes;
 
 mod util;
+pub use util::StringTable;
 
 mod any;
 pub use any::*;

@@ -12,14 +12,14 @@ use crate::read::{
 
 use super::{
     parse_symbol, CoffSection, CoffSectionIterator, CoffSegment, CoffSegmentIterator,
-    CoffSymbolIterator, SymbolTable,
+    CoffSymbolIterator, SectionTable, SymbolTable,
 };
 
 /// A COFF object file.
 #[derive(Debug)]
 pub struct CoffFile<'data> {
     pub(super) header: &'data pe::ImageFileHeader,
-    pub(super) sections: &'data [pe::ImageSectionHeader],
+    pub(super) sections: SectionTable<'data>,
     // TODO: ImageSymbolExBytes
     pub(super) symbols: SymbolTable<'data>,
     pub(super) data: Bytes<'data>,
@@ -29,21 +29,10 @@ impl<'data> CoffFile<'data> {
     /// Parse the raw COFF file data.
     pub fn parse(data: &'data [u8]) -> Result<Self> {
         let data = Bytes(data);
-        let mut tail = data;
-        let header = tail
-            .read::<pe::ImageFileHeader>()
-            .read_error("Invalid COFF file header size or alignment")?;
+        let (header, tail) = pe::ImageFileHeader::parse(data)?;
+        let sections = header.sections(tail)?;
+        let symbols = header.symbols(data)?;
 
-        // Skip over the optional header and get the section headers.
-        tail.skip(header.size_of_optional_header.get(LE) as usize)
-            .read_error("Invalid COFF optional header size")?;
-        let sections = tail
-            .read_slice(header.number_of_sections.get(LE) as usize)
-            .read_error("Invalid COFF section headers")?;
-
-        let symbols = SymbolTable::parse(header, data)?;
-
-        // TODO: maybe validate that the machine is known?
         Ok(CoffFile {
             header,
             sections,
@@ -96,10 +85,7 @@ where
     }
 
     fn section_by_index(&'file self, index: SectionIndex) -> Result<CoffSection<'data, 'file>> {
-        let section = self
-            .sections
-            .get(index.0)
-            .read_error("Invalid COFF section index")?;
+        let section = self.sections.section(index.0)?;
         Ok(CoffSection {
             file: self,
             index,
@@ -133,7 +119,7 @@ where
         CoffSymbolIterator {
             symbols: &self.symbols,
             // Hack: don't return any.
-            index: self.symbols.symbols.len(),
+            index: self.symbols.len(),
         }
     }
 
@@ -161,5 +147,40 @@ where
         FileFlags::Coff {
             characteristics: self.header.characteristics.get(LE),
         }
+    }
+}
+
+impl pe::ImageFileHeader {
+    /// Read the DOS header.
+    ///
+    /// The given data must be for the entire file.  Returns the data following the optional
+    /// header, which will contain the section headers.
+    pub fn parse<'data>(mut data: Bytes<'data>) -> read::Result<(&'data Self, Bytes<'data>)> {
+        let header = data
+            .read::<pe::ImageFileHeader>()
+            .read_error("Invalid COFF file header size or alignment")?;
+
+        // Skip over the optional header.
+        data.skip(header.size_of_optional_header.get(LE) as usize)
+            .read_error("Invalid COFF optional header size")?;
+
+        // TODO: maybe validate that the machine is known?
+        Ok((header, data))
+    }
+
+    /// Read the section table.
+    ///
+    /// `tail` must be the data following the optional header.
+    #[inline]
+    fn sections<'data>(&self, tail: Bytes<'data>) -> read::Result<SectionTable<'data>> {
+        SectionTable::parse(self, tail)
+    }
+
+    /// Read the symbol table and string table.
+    ///
+    /// `data` must be the entire file data.
+    #[inline]
+    fn symbols<'data>(&self, data: Bytes<'data>) -> read::Result<SymbolTable<'data>> {
+        SymbolTable::parse(self, data)
     }
 }

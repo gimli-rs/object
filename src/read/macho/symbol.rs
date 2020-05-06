@@ -1,21 +1,65 @@
 use core::fmt::Debug;
-use core::{fmt, str};
+use core::{fmt, slice, str};
 
 use crate::endian::{self, RunTimeEndian};
 use crate::macho;
 use crate::pod::Pod;
 use crate::read::util::StringTable;
 use crate::read::{
-    SectionIndex, SectionKind, Symbol, SymbolFlags, SymbolIndex, SymbolKind, SymbolScope,
-    SymbolSection,
+    ReadError, Result, SectionIndex, SectionKind, Symbol, SymbolFlags, SymbolIndex, SymbolKind,
+    SymbolScope, SymbolSection,
 };
 
 use super::{MachHeader, MachOFile};
 
-#[derive(Debug, Default, Clone, Copy)]
-pub(super) struct SymbolTable<'data, Mach: MachHeader> {
-    pub symbols: &'data [Mach::Nlist],
-    pub strings: StringTable<'data>,
+/// A table of symbol entries in a Mach-O file.
+///
+/// Also includes the string table used for the symbol names.
+#[derive(Debug, Clone, Copy)]
+pub struct SymbolTable<'data, Mach: MachHeader> {
+    symbols: &'data [Mach::Nlist],
+    strings: StringTable<'data>,
+}
+
+impl<'data, Mach: MachHeader> Default for SymbolTable<'data, Mach> {
+    fn default() -> Self {
+        SymbolTable {
+            symbols: &[],
+            strings: Default::default(),
+        }
+    }
+}
+
+impl<'data, Mach: MachHeader> SymbolTable<'data, Mach> {
+    #[inline]
+    pub(super) fn new(symbols: &'data [Mach::Nlist], strings: StringTable<'data>) -> Self {
+        SymbolTable { symbols, strings }
+    }
+
+    /// Return the string table used for the symbol names.
+    #[inline]
+    pub fn strings(&self) -> StringTable<'data> {
+        self.strings
+    }
+
+    /// Iterate over the symbols.
+    #[inline]
+    pub fn iter(&self) -> slice::Iter<'data, Mach::Nlist> {
+        self.symbols.iter()
+    }
+
+    /// Return true if the symbol table is empty.
+    #[inline]
+    pub fn is_empty(&self) -> bool {
+        self.symbols.is_empty()
+    }
+
+    /// Return the symbol at the given index.
+    pub fn symbol(&self, index: usize) -> Result<&'data Mach::Nlist> {
+        self.symbols
+            .get(index)
+            .read_error("Invalid Mach-O symbol index")
+    }
 }
 
 /// An iterator over the symbols of a `MachOFile32`.
@@ -59,8 +103,8 @@ pub(super) fn parse_symbol<'data, Mach: MachHeader>(
     strings: StringTable<'data>,
 ) -> Option<Symbol<'data>> {
     let endian = file.endian;
-    let name = strings
-        .get(nlist.n_strx(endian))
+    let name = nlist
+        .name(endian, strings)
         .ok()
         .and_then(|s| str::from_utf8(s).ok());
     let n_type = nlist.n_type();
@@ -132,6 +176,20 @@ pub trait Nlist: Debug + Pod {
     fn n_sect(&self) -> u8;
     fn n_desc(&self, endian: Self::Endian) -> u16;
     fn n_value(&self, endian: Self::Endian) -> Self::Word;
+
+    fn name<'data>(
+        &self,
+        endian: Self::Endian,
+        strings: StringTable<'data>,
+    ) -> Result<&'data [u8]> {
+        strings
+            .get(self.n_strx(endian))
+            .read_error("Invalid Mach-O symbol name offset")
+    }
+
+    fn is_undefined(&self) -> bool {
+        self.n_type() & macho::N_TYPE == macho::N_UNDF
+    }
 }
 
 impl<Endian: endian::Endian> Nlist for macho::Nlist32<Endian> {

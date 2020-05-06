@@ -1,4 +1,3 @@
-use alloc::vec;
 use alloc::vec::Vec;
 use core::fmt::Debug;
 use core::{mem, str};
@@ -15,8 +14,8 @@ use crate::read::{
 
 use super::{
     parse_symbol, CompressionHeader, ElfSection, ElfSectionIterator, ElfSegment,
-    ElfSegmentIterator, ElfSymbolIterator, NoteHeader, ProgramHeader, Rela, SectionHeader, Sym,
-    SymbolTable,
+    ElfSegmentIterator, ElfSymbolIterator, NoteHeader, ProgramHeader, Rela, RelocationSections,
+    SectionHeader, SectionTable, Sym, SymbolTable,
 };
 
 /// A 32-bit ELF object file.
@@ -33,9 +32,8 @@ pub struct ElfFile<'data, Elf: FileHeader> {
     pub(super) data: Bytes<'data>,
     pub(super) header: &'data Elf,
     pub(super) segments: &'data [Elf::ProgramHeader],
-    pub(super) sections: &'data [Elf::SectionHeader],
-    pub(super) section_strings: StringTable<'data>,
-    pub(super) relocations: Vec<usize>,
+    pub(super) sections: SectionTable<'data, Elf>,
+    pub(super) relocations: RelocationSections,
     pub(super) symbols: SymbolTable<'data, Elf>,
     pub(super) dynamic_symbols: SymbolTable<'data, Elf>,
 }
@@ -44,123 +42,21 @@ impl<'data, Elf: FileHeader> ElfFile<'data, Elf> {
     /// Parse the raw ELF file data.
     pub fn parse(data: &'data [u8]) -> read::Result<Self> {
         let data = Bytes(data);
-        let header = data
-            .read_at::<Elf>(0)
-            .read_error("Invalid ELF header size or alignment")?;
-        if !header.is_supported() {
-            return Err(Error("Unsupported ELF header"));
-        }
-
-        // TODO: Check self.e_ehsize?
-
+        let header = Elf::parse(data)?;
         let endian = header.endian()?;
         let segments = header.program_headers(endian, data)?;
-        let sections = header.section_headers(endian, data)?;
-
-        let section_string_data = if !sections.is_empty() {
-            let index = header.shstrndx(endian, data)?;
-            let shstrtab_section = sections
-                .get(index as usize)
-                .read_error("Invalid ELF section header strtab index")?;
-            shstrtab_section
-                .data(endian, data)
-                .read_error("Invalid ELF section header strtab data")?
-        } else {
-            Bytes(&[])
-        };
-        let section_strings = StringTable {
-            data: section_string_data,
-        };
-
-        let mut symbol_section = None;
-        let mut symbols = &[][..];
-        let mut symbol_string_data = Bytes(&[]);
-        let mut symbol_shndx = &[][..];
-        let mut dynamic_symbols = &[][..];
-        let mut dynamic_symbol_string_data = Bytes(&[]);
-        // TODO: only do this if the user requires it.
-        for (index, section) in sections.iter().enumerate() {
-            match section.sh_type(endian) {
-                elf::SHT_DYNSYM => {
-                    if dynamic_symbols.is_empty() {
-                        dynamic_symbols = section
-                            .data_as_array(endian, data)
-                            .read_error("Invalid ELF dynsym data")?;
-                        let strtab_section = sections
-                            .get(section.sh_link(endian) as usize)
-                            .read_error("Invalid ELF dynstr section index")?;
-                        dynamic_symbol_string_data = strtab_section
-                            .data(endian, data)
-                            .read_error("Invalid ELF dynstr data")?;
-                    }
-                }
-                elf::SHT_SYMTAB => {
-                    if symbols.is_empty() {
-                        symbol_section = Some(index);
-                        symbols = section
-                            .data_as_array(endian, data)
-                            .read_error("Invalid ELF symtab data")?;
-                        let strtab_section = sections
-                            .get(section.sh_link(endian) as usize)
-                            .read_error("Invalid ELF strtab section index")?;
-                        symbol_string_data = strtab_section
-                            .data(endian, data)
-                            .read_error("Invalid ELF strtab data")?;
-                    }
-                }
-                elf::SHT_SYMTAB_SHNDX => {
-                    if symbol_shndx.is_empty() {
-                        symbol_shndx = section
-                            .data_as_array(endian, data)
-                            .read_error("Invalid ELF symtab_shndx data")?;
-                    }
-                }
-                _ => {}
-            }
-        }
-        let symbol_strings = StringTable {
-            data: symbol_string_data,
-        };
-        let symbols = SymbolTable {
-            symbols,
-            strings: symbol_strings,
-            shndx: symbol_shndx,
-        };
-        let dynamic_symbol_strings = StringTable {
-            data: dynamic_symbol_string_data,
-        };
-        let dynamic_symbols = SymbolTable {
-            symbols: dynamic_symbols,
-            strings: dynamic_symbol_strings,
-            shndx: &[],
-        };
-
+        let sections = header.sections(endian, data)?;
+        let symbols = sections.symbols(endian, data, elf::SHT_SYMTAB)?;
+        // TODO: get dynamic symbols from DT_SYMTAB if there are no sections
+        let dynamic_symbols = sections.symbols(endian, data, elf::SHT_DYNSYM)?;
         // The API we provide requires a mapping from section to relocations, so build it now.
-        // TODO: only do this if the user requires it (and then we can return an error
-        // for invalid sh_link values).
-        let mut relocations = vec![0; sections.len()];
-        for (index, section) in sections.iter().enumerate().rev() {
-            let sh_type = section.sh_type(endian);
-            if sh_type == elf::SHT_REL || sh_type == elf::SHT_RELA {
-                let sh_info = section.sh_info(endian) as usize;
-                let sh_link = section.sh_link(endian) as usize;
-                // Skip dynamic relocations (sh_info = 0), invalid sh_info, and section
-                // relocations with the wrong symbol table (sh_link).
-                if sh_info != 0 && sh_info < relocations.len() && Some(sh_link) == symbol_section {
-                    // Handle multiple relocation sections by chaining them.
-                    let next = relocations[sh_info];
-                    relocations[sh_info] = index;
-                    relocations[index] = next;
-                }
-            }
-        }
+        let relocations = sections.relocation_sections(endian, symbols.section())?;
 
         Ok(ElfFile {
             endian,
             header,
             segments,
             sections,
-            section_strings,
             relocations,
             symbols,
             dynamic_symbols,
@@ -172,18 +68,13 @@ impl<'data, Elf: FileHeader> ElfFile<'data, Elf> {
         &'file self,
         section_name: &str,
     ) -> Option<ElfSection<'data, 'file, Elf>> {
-        for (index, section) in self.sections.iter().enumerate() {
-            if let Ok(name) = self.section_strings.get(section.sh_name(self.endian)) {
-                if name == section_name.as_bytes() {
-                    return Some(ElfSection {
-                        file: self,
-                        index: SectionIndex(index),
-                        section,
-                    });
-                }
-            }
-        }
-        None
+        self.sections
+            .section_by_name(self.endian, section_name.as_bytes())
+            .map(|(index, section)| ElfSection {
+                file: self,
+                index: SectionIndex(index),
+                section,
+            })
     }
 
     #[cfg(feature = "compression")]
@@ -256,10 +147,7 @@ where
         &'file self,
         index: SectionIndex,
     ) -> read::Result<ElfSection<'data, 'file, Elf>> {
-        let section = self
-            .sections
-            .get(index.0)
-            .read_error("Invalid ELF section index")?;
+        let section = self.sections.section(index.0)?;
         Ok(ElfSection {
             file: self,
             index,
@@ -275,17 +163,14 @@ where
     }
 
     fn symbol_by_index(&self, index: SymbolIndex) -> read::Result<Symbol<'data>> {
-        let symbol = self
-            .symbols
-            .symbols
-            .get(index.0)
-            .read_error("Invalid ELF symbol index")?;
-        let shndx = self.symbols.shndx.get(index.0).cloned();
+        let symbol = self.symbols.symbol(index.0)?;
+        let shndx = self.symbols.shndx(index.0);
+        let name = symbol.name(self.endian, self.symbols.strings()).ok();
         Ok(parse_symbol::<Elf>(
             self.endian,
             index.0,
             symbol,
-            self.symbols.strings,
+            name,
             shndx,
         ))
     }
@@ -317,8 +202,8 @@ where
     }
 
     fn has_debug_symbols(&self) -> bool {
-        for section in self.sections {
-            if let Ok(name) = self.section_strings.get(section.sh_name(self.endian)) {
+        for section in self.sections.iter() {
+            if let Ok(name) = self.sections.section_name(self.endian, section) {
                 if name == b".debug_info" || name == b".zdebug_info" {
                     return true;
                 }
@@ -331,7 +216,7 @@ where
         let endian = self.endian;
         // Use section headers if present, otherwise use program headers.
         if !self.sections.is_empty() {
-            for section in self.sections {
+            for section in self.sections.iter() {
                 if let Some(mut notes) = section.notes(endian, self.data)? {
                     while let Some(note) = notes.next()? {
                         if note.name() == elf::ELF_NOTE_GNU
@@ -426,6 +311,23 @@ pub trait FileHeader: Debug + Pod {
 
     // Provided methods.
 
+    /// Read the file header.
+    ///
+    /// Also checks that the ident field in the file header is a supported format.
+    fn parse<'data>(data: Bytes<'data>) -> read::Result<&'data Self> {
+        let header = data
+            .read_at::<Self>(0)
+            .read_error("Invalid ELF header size or alignment")?;
+        if !header.is_supported() {
+            return Err(Error("Unsupported ELF header"));
+        }
+        // TODO: Check self.e_ehsize?
+        Ok(header)
+    }
+
+    /// Check that the ident field in the file header is a supported format.
+    ///
+    /// This checks the magic number, version, class, and endianness.
     fn is_supported(&self) -> bool {
         let ident = self.e_ident();
         // TODO: Check self.e_version too? Requires endian though.
@@ -584,6 +486,35 @@ pub trait FileHeader: Debug + Pod {
         }
         data.read_slice_at(shoff as usize, shnum)
             .read_error("Invalid ELF section header offset/size/alignment")
+    }
+
+    /// Return the string table for the section headers.
+    fn section_strings<'data>(
+        &self,
+        endian: Self::Endian,
+        data: Bytes<'data>,
+        sections: &[Self::SectionHeader],
+    ) -> read::Result<StringTable<'data>> {
+        if sections.is_empty() {
+            return Ok(StringTable::default());
+        }
+        let index = self.shstrndx(endian, data)? as usize;
+        let shstrtab = sections.get(index).read_error("Invalid ELF e_shstrndx")?;
+        let data = shstrtab
+            .data(endian, data)
+            .read_error("Invalid ELF shstrtab data")?;
+        Ok(StringTable::new(data))
+    }
+
+    /// Return the section table.
+    fn sections<'data>(
+        &self,
+        endian: Self::Endian,
+        data: Bytes<'data>,
+    ) -> read::Result<SectionTable<'data, Self>> {
+        let sections = self.section_headers(endian, data)?;
+        let strings = self.section_strings(endian, data, sections)?;
+        Ok(SectionTable::new(sections, strings))
     }
 }
 

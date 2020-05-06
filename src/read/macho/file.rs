@@ -6,7 +6,6 @@ use target_lexicon::{Aarch64Architecture, Architecture, ArmArchitecture};
 use crate::endian::{self, BigEndian, Endian, RunTimeEndian};
 use crate::macho;
 use crate::pod::{Bytes, Pod};
-use crate::read::util::StringTable;
 use crate::read::{
     self, Error, FileFlags, Object, ObjectSection, ReadError, Result, SectionIndex, Symbol,
     SymbolFlags, SymbolIndex, SymbolKind, SymbolMap, SymbolScope, SymbolSection,
@@ -39,17 +38,10 @@ impl<'data, Mach: MachHeader> MachOFile<'data, Mach> {
     /// Parse the raw Mach-O file data.
     pub fn parse(data: &'data [u8]) -> Result<Self> {
         let data = Bytes(data);
-        let header = data
-            .read_at::<Mach>(0)
-            .read_error("Invalid Mach-O header size or alignment")?;
-        if !header.is_supported() {
-            return Err(Error("Unsupported Mach-O header"));
-        }
+        let header = Mach::parse(data)?;
+        let endian = header.endian()?;
 
-        let endian = header.endian().read_error("Unsupported Mach-O endian")?;
-
-        let mut symbols = &[][..];
-        let mut strings = Bytes(&[]);
+        let mut symbols = SymbolTable::default();
         // Build a list of sections to make some operations more efficient.
         let mut sections = Vec::new();
         if let Ok(mut commands) = header.load_commands(endian, data) {
@@ -60,24 +52,10 @@ impl<'data, Mach: MachHeader> MachOFile<'data, Mach> {
                         sections.push(MachOSectionInternal::parse(index, section));
                     }
                 } else if let Some(symtab) = command.symtab()? {
-                    symbols = data
-                        .read_slice_at(
-                            symtab.symoff.get(endian) as usize,
-                            symtab.nsyms.get(endian) as usize,
-                        )
-                        .read_error("Invalid Mach-O symbol table offset or size")?;
-                    strings = data
-                        .read_bytes_at(
-                            symtab.stroff.get(endian) as usize,
-                            symtab.strsize.get(endian) as usize,
-                        )
-                        .read_error("Invalid Mach-O string table offset or size")?;
+                    symbols = symtab.symbols(endian, data)?;
                 }
             }
         }
-
-        let strings = StringTable { data: strings };
-        let symbols = SymbolTable { symbols, strings };
 
         Ok(MachOFile {
             endian,
@@ -188,12 +166,8 @@ where
     }
 
     fn symbol_by_index(&self, index: SymbolIndex) -> Result<Symbol<'data>> {
-        let nlist = self
-            .symbols
-            .symbols
-            .get(index.0)
-            .read_error("Invalid Mach-O symbol index")?;
-        parse_symbol(self, nlist, self.symbols.strings)
+        let nlist = self.symbols.symbol(index.0)?;
+        parse_symbol(self, nlist, self.symbols.strings())
             .read_error("Unsupported Mach-O symbol index")
     }
 
@@ -259,14 +233,7 @@ where
     }
 
     fn mach_uuid(&self) -> Result<Option<[u8; 16]>> {
-        // Return the UUID from the `LC_UUID` load command, if one is present.
-        let mut commands = self.header.load_commands(self.endian, self.data)?;
-        while let Some(command) = commands.next()? {
-            if let Some(uuid) = command.uuid()? {
-                return Ok(Some(uuid.uuid));
-            }
-        }
-        Ok(None)
+        self.header.uuid(self.endian, self.data)
     }
 
     fn entry(&self) -> u64 {
@@ -317,12 +284,25 @@ pub trait MachHeader: Debug + Pod {
 
     // Provided methods.
 
+    /// Read the file header.
+    ///
+    /// Also checks that the magic field in the file header is a supported format.
+    fn parse<'data>(mut data: Bytes<'data>) -> read::Result<&'data Self> {
+        let header = data
+            .read::<Self>()
+            .read_error("Invalid Mach-O header size or alignment")?;
+        if !header.is_supported() {
+            return Err(Error("Unsupported Mach-O header"));
+        }
+        Ok(header)
+    }
+
     fn is_supported(&self) -> bool {
         self.is_little_endian() || self.is_big_endian()
     }
 
-    fn endian(&self) -> Option<Self::Endian> {
-        Self::Endian::from_big_endian(self.is_big_endian())
+    fn endian(&self) -> Result<Self::Endian> {
+        Self::Endian::from_big_endian(self.is_big_endian()).read_error("Unsupported Mach-O endian")
     }
 
     fn load_commands<'data>(
@@ -338,6 +318,17 @@ pub trait MachHeader: Debug + Pod {
             data,
             self.ncmds(endian),
         ))
+    }
+
+    /// Return the UUID from the `LC_UUID` load command, if one is present.
+    fn uuid<'data>(&self, endian: Self::Endian, data: Bytes<'data>) -> Result<Option<[u8; 16]>> {
+        let mut commands = self.load_commands(endian, data)?;
+        while let Some(command) = commands.next()? {
+            if let Ok(Some(uuid)) = command.uuid() {
+                return Ok(Some(uuid.uuid));
+            }
+        }
+        Ok(None)
     }
 }
 

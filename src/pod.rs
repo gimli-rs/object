@@ -74,16 +74,23 @@ impl<'data> fmt::Debug for Bytes<'data> {
 }
 
 impl<'data> Bytes<'data> {
+    /// Return the length of the byte slice.
     #[inline]
     pub fn len(&self) -> usize {
         self.0.len()
     }
 
+    /// Return true if the byte slice is empty.
     #[inline]
     pub fn is_empty(&self) -> bool {
         self.0.is_empty()
     }
 
+    /// Skip over the given number of bytes at the start of the byte slice.
+    ///
+    /// Modifies the byte slice to start after the bytes.
+    ///
+    /// Returns an error if there are too few bytes.
     #[inline]
     pub fn skip(&mut self, offset: usize) -> Result<()> {
         match self.0.get(offset..) {
@@ -98,6 +105,11 @@ impl<'data> Bytes<'data> {
         }
     }
 
+    /// Return a reference to the given number of bytes at the start of the byte slice.
+    ///
+    /// Modifies the byte slice to start after the bytes.
+    ///
+    /// Returns an error if there are too few bytes.
     #[inline]
     pub fn read_bytes(&mut self, count: usize) -> Result<Bytes<'data>> {
         match (self.0.get(..count), self.0.get(count..)) {
@@ -112,12 +124,20 @@ impl<'data> Bytes<'data> {
         }
     }
 
+    /// Return a reference to the given number of bytes at the given offset of the byte slice.
+    ///
+    /// Returns an error if the offset is invalid or there are too few bytes.
     #[inline]
     pub fn read_bytes_at(mut self, offset: usize, count: usize) -> Result<Bytes<'data>> {
         self.skip(offset)?;
         self.read_bytes(count)
     }
 
+    /// Return a reference to a `Pod` struct at the start of the byte slice.
+    ///
+    /// Modifies the byte slice to start after the bytes.
+    ///
+    /// Returns an error if there are too few bytes or the slice is incorrectly aligned.
     #[inline]
     pub fn read<T: Pod>(&mut self) -> Result<&'data T> {
         match from_bytes(self.0) {
@@ -132,12 +152,20 @@ impl<'data> Bytes<'data> {
         }
     }
 
+    /// Return a reference to a `Pod` struct at the given offset of the byte slice.
+    ///
+    /// Returns an error if there are too few bytes or the offset is incorrectly aligned.
     #[inline]
     pub fn read_at<T: Pod>(mut self, offset: usize) -> Result<&'data T> {
         self.skip(offset)?;
         self.read()
     }
 
+    /// Return a reference to a slice of `Pod` structs at the start of the byte slice.
+    ///
+    /// Modifies the byte slice to start after the bytes.
+    ///
+    /// Returns an error if there are too few bytes or the offset is incorrectly aligned.
     #[inline]
     pub fn read_slice<T: Pod>(&mut self, count: usize) -> Result<&'data [T]> {
         match slice_from_bytes(self.0, count) {
@@ -152,6 +180,9 @@ impl<'data> Bytes<'data> {
         }
     }
 
+    /// Return a reference to a slice of `Pod` structs at the given offset of the byte slice.
+    ///
+    /// Returns an error if there are too few bytes or the offset is incorrectly aligned.
     #[inline]
     pub fn read_slice_at<T: Pod>(mut self, offset: usize, count: usize) -> Result<&'data [T]> {
         self.skip(offset)?;

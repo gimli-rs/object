@@ -3,7 +3,8 @@ use core::marker::PhantomData;
 use crate::endian::Endian;
 use crate::macho;
 use crate::pod::Bytes;
-use crate::read::{ReadError, Result};
+use crate::read::macho::{MachHeader, SymbolTable};
+use crate::read::{ReadError, Result, StringTable};
 
 /// An iterator over the load commands of a `MachHeader`.
 #[derive(Debug, Default, Clone, Copy)]
@@ -22,7 +23,8 @@ impl<'data, E: Endian> MachOLoadCommandIterator<'data, E> {
         }
     }
 
-    pub(super) fn next(&mut self) -> Result<Option<MachOLoadCommand<'data, E>>> {
+    /// Return the next load command.
+    pub fn next(&mut self) -> Result<Option<MachOLoadCommand<'data, E>>> {
         if self.ncmds == 0 {
             return Ok(None);
         }
@@ -124,5 +126,29 @@ impl<'data, E: Endian> MachOLoadCommand<'data, E> {
         } else {
             Ok(None)
         }
+    }
+}
+
+impl<E: Endian> macho::SymtabCommand<E> {
+    /// Return the symbol table that this command references.
+    pub fn symbols<'data, Mach: MachHeader<Endian = E>>(
+        &self,
+        endian: E,
+        data: Bytes<'data>,
+    ) -> Result<SymbolTable<'data, Mach>> {
+        let symbols = data
+            .read_slice_at(
+                self.symoff.get(endian) as usize,
+                self.nsyms.get(endian) as usize,
+            )
+            .read_error("Invalid Mach-O symbol table offset or size")?;
+        let strings = data
+            .read_bytes_at(
+                self.stroff.get(endian) as usize,
+                self.strsize.get(endian) as usize,
+            )
+            .read_error("Invalid Mach-O string table offset or size")?;
+        let strings = StringTable::new(strings);
+        Ok(SymbolTable::new(symbols, strings))
     }
 }

@@ -59,7 +59,7 @@ where
 impl<'data, 'file, Pe: ImageNtHeaders> PeSegment<'data, 'file, Pe> {
     fn bytes(&self) -> Result<Bytes<'data>> {
         self.section
-            .pe_bytes(self.file.data)
+            .pe_data(self.file.data)
             .read_error("Invalid PE section offset or size")
     }
 }
@@ -103,7 +103,7 @@ impl<'data, 'file, Pe: ImageNtHeaders> ObjectSegment<'data> for PeSegment<'data,
 
     #[inline]
     fn name(&self) -> Result<Option<&str>> {
-        let name = self.section.name(self.file.symbols.strings)?;
+        let name = self.section.name(self.file.symbols.strings())?;
         Ok(Some(
             str::from_utf8(name)
                 .ok()
@@ -134,7 +134,7 @@ impl<'data, 'file, Pe: ImageNtHeaders> Iterator for PeSectionIterator<'data, 'fi
     fn next(&mut self) -> Option<Self::Item> {
         self.iter.next().map(|(index, section)| PeSection {
             file: self.file,
-            index: SectionIndex(index),
+            index: SectionIndex(index + 1),
             section,
         })
     }
@@ -160,7 +160,7 @@ where
 impl<'data, 'file, Pe: ImageNtHeaders> PeSection<'data, 'file, Pe> {
     fn bytes(&self) -> Result<Bytes<'data>> {
         self.section
-            .pe_bytes(self.file.data)
+            .pe_data(self.file.data)
             .read_error("Invalid PE section offset or size")
     }
 }
@@ -221,7 +221,7 @@ impl<'data, 'file, Pe: ImageNtHeaders> ObjectSection<'data> for PeSection<'data,
 
     #[inline]
     fn name(&self) -> Result<&str> {
-        let name = self.section.name(self.file.symbols.strings)?;
+        let name = self.section.name(self.file.symbols.strings())?;
         str::from_utf8(name)
             .ok()
             .read_error("Non UTF-8 PE section name")
@@ -249,7 +249,6 @@ impl<'data, 'file, Pe: ImageNtHeaders> ObjectSection<'data> for PeSection<'data,
 }
 
 impl pe::ImageSectionHeader {
-    // This is not `pub(crate)` because the COFF version is different.
     fn pe_file_range(&self) -> (u32, u32) {
         // Pointer and size will be zero for uninitialized data; we don't need to validate this.
         let offset = self.pointer_to_raw_data.get(LE);
@@ -257,7 +256,8 @@ impl pe::ImageSectionHeader {
         (offset, size)
     }
 
-    fn pe_bytes<'data>(&self, data: Bytes<'data>) -> result::Result<Bytes<'data>, ()> {
+    /// Return the data for a PE section.
+    pub fn pe_data<'data>(&self, data: Bytes<'data>) -> result::Result<Bytes<'data>, ()> {
         let (offset, size) = self.pe_file_range();
         data.read_bytes_at(offset as usize, size as usize)
     }

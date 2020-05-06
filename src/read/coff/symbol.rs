@@ -11,13 +11,17 @@ use crate::read::{
     SymbolSection,
 };
 
+/// A table of symbol entries in a COFF or PE file.
+///
+/// Also includes the string table used for the symbol names.
 #[derive(Debug)]
-pub(crate) struct SymbolTable<'data> {
-    pub symbols: &'data [pe::ImageSymbolBytes],
-    pub strings: StringTable<'data>,
+pub struct SymbolTable<'data> {
+    symbols: &'data [pe::ImageSymbolBytes],
+    strings: StringTable<'data>,
 }
 
 impl<'data> SymbolTable<'data> {
+    /// Read the symbol table.
     pub fn parse(header: &pe::ImageFileHeader, mut data: Bytes<'data>) -> Result<Self> {
         // The symbol table may not be present.
         let symbol_offset = header.pointer_to_symbol_table.get(LE) as usize;
@@ -44,13 +48,59 @@ impl<'data> SymbolTable<'data> {
 
         Ok(SymbolTable {
             symbols,
-            strings: StringTable { data: strings },
+            strings: StringTable::new(strings),
         })
     }
 
+    /// Return the string table used for the symbol names.
+    #[inline]
+    pub fn strings(&self) -> StringTable<'data> {
+        self.strings
+    }
+
+    /// Return true if the symbol table is empty.
+    #[inline]
+    pub fn is_empty(&self) -> bool {
+        self.symbols.is_empty()
+    }
+
+    /// The number of symbols.
+    #[inline]
+    pub fn len(&self) -> usize {
+        self.symbols.len()
+    }
+
+    /// Return the symbol table entry at the given index.
+    #[inline]
+    pub fn symbol(&self, index: usize) -> Option<&'data pe::ImageSymbol> {
+        self.get::<pe::ImageSymbol>(index)
+    }
+
+    /// Return the symbol table entry or auxilliary record at the given index.
     pub fn get<T: Pod>(&self, index: usize) -> Option<&'data T> {
         let bytes = self.symbols.get(index)?;
         Bytes(&bytes.0[..]).read().ok()
+    }
+}
+
+impl pe::ImageSymbol {
+    /// Parse a COFF symbol name.
+    ///
+    /// `strings` must be the string table used for symbols names.
+    pub fn name<'data>(&'data self, strings: StringTable<'data>) -> Result<&'data [u8]> {
+        if self.name[0] == 0 {
+            // If the name starts with 0 then the last 4 bytes are a string table offset.
+            let offset = u32::from_le_bytes(self.name[4..8].try_into().unwrap());
+            strings
+                .get(offset)
+                .read_error("Invalid COFF symbol name offset")
+        } else {
+            // The name is inline and padded with nulls.
+            Ok(match self.name.iter().position(|&x| x == 0) {
+                Some(end) => &self.name[..end],
+                None => &self.name[..],
+            })
+        }
     }
 }
 
@@ -104,16 +154,8 @@ pub(crate) fn parse_symbol<'data>(
         } else {
             None
         }
-    } else if symbol.name[0] == 0 {
-        // If the name starts with 0 then the last 4 bytes are a string table offset.
-        let offset = u32::from_le_bytes(symbol.name[4..8].try_into().unwrap());
-        symbols.strings.get(offset).ok()
     } else {
-        // The name is inline and padded with nulls.
-        Some(match symbol.name.iter().position(|&x| x == 0) {
-            Some(end) => &symbol.name[..end],
-            None => &symbol.name[..],
-        })
+        symbol.name(symbols.strings()).ok()
     };
     let name = name.and_then(|s| str::from_utf8(s).ok());
 
