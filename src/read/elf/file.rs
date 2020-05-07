@@ -2,8 +2,6 @@ use alloc::vec::Vec;
 use core::fmt::Debug;
 use core::{mem, str};
 
-use target_lexicon::{Aarch64Architecture, Architecture, ArmArchitecture};
-
 use crate::elf;
 use crate::endian::{self, Endian, RunTimeEndian, U32};
 use crate::pod::{Bytes, Pod};
@@ -110,7 +108,9 @@ where
     type SectionIterator = ElfSectionIterator<'data, 'file, Elf>;
     type SymbolIterator = ElfSymbolIterator<'data, 'file, Elf>;
 
-    fn architecture(&self) -> Architecture {
+    #[cfg(feature = "architecture")]
+    fn architecture(&self) -> target_lexicon::Architecture {
+        use target_lexicon::{Aarch64Architecture, Architecture, ArmArchitecture};
         match self.header.e_machine(self.endian) {
             elf::EM_ARM => Architecture::Arm(ArmArchitecture::Arm),
             elf::EM_AARCH64 => Architecture::Aarch64(Aarch64Architecture::Aarch64),

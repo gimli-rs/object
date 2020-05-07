@@ -1,7 +1,6 @@
 #[cfg(feature = "compression")]
 use alloc::borrow::Cow;
 use alloc::fmt;
-use target_lexicon::{Architecture, BinaryFormat};
 
 #[cfg(feature = "coff")]
 use crate::read::coff;
@@ -219,7 +218,9 @@ impl<'data> File<'data> {
     }
 
     /// Return the file format.
-    pub fn format(&self) -> BinaryFormat {
+    #[cfg(feature = "architecture")]
+    pub fn format(&self) -> target_lexicon::BinaryFormat {
+        use target_lexicon::BinaryFormat;
         match self.inner {
             #[cfg(feature = "coff")]
             FileInternal::Coff(_) => BinaryFormat::Coff,
@@ -247,7 +248,8 @@ where
     type SectionIterator = SectionIterator<'data, 'file>;
     type SymbolIterator = SymbolIterator<'data, 'file>;
 
-    fn architecture(&self) -> Architecture {
+    #[cfg(feature = "architecture")]
+    fn architecture(&self) -> target_lexicon::Architecture {
         with_inner!(self.inner, FileInternal, |x| x.architecture())
     }
 

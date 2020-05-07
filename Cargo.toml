@@ -16,7 +16,7 @@ all-features = true
 crc32fast = { version = "1.2", optional = true }
 flate2 = { version = "1", optional = true }
 indexmap = { version = "1.1", optional = true }
-target-lexicon = { version = "0.10" }
+target-lexicon = { version = "0.10", optional = true }
 wasmparser = { version = "0.52", optional = true }
 
 [dev-dependencies]
@@ -24,9 +24,10 @@ memmap = "0.7"
 
 [features]
 read_core = []
-read = ["read_core", "coff", "elf", "macho", "pe", "wasm"]
+read = ["read_core", "coff", "elf", "macho", "pe", "wasm", "architecture"]
 write_core = ["crc32fast", "indexmap", "std"]
 write = ["write_core", "coff", "elf", "macho"]
+architecture = ["target-lexicon"]
 
 std = []
 compression = ["flate2", "std"]

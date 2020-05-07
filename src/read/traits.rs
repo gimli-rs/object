@@ -1,6 +1,5 @@
 #[cfg(feature = "compression")]
 use alloc::borrow::Cow;
-use target_lexicon::{Architecture, Endianness};
 
 use crate::read::{self, Result};
 use crate::{
@@ -25,15 +24,17 @@ pub trait Object<'data, 'file>: read::private::Sealed {
     type SymbolIterator: Iterator<Item = (SymbolIndex, Symbol<'data>)>;
 
     /// Get the architecture type of the file.
-    fn architecture(&self) -> Architecture;
+    #[cfg(feature = "architecture")]
+    fn architecture(&self) -> target_lexicon::Architecture;
 
     /// Get the endianness of the file.
     #[inline]
-    fn endianness(&self) -> Endianness {
+    #[cfg(feature = "architecture")]
+    fn endianness(&self) -> target_lexicon::Endianness {
         if self.is_little_endian() {
-            Endianness::Little
+            target_lexicon::Endianness::Little
         } else {
-            Endianness::Big
+            target_lexicon::Endianness::Big
         }
     }
 

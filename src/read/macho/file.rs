@@ -1,7 +1,6 @@
 use alloc::vec::Vec;
 use core::fmt::Debug;
 use core::{mem, str};
-use target_lexicon::{Aarch64Architecture, Architecture, ArmArchitecture};
 
 use crate::endian::{self, BigEndian, Endian, RunTimeEndian};
 use crate::macho;
@@ -93,7 +92,9 @@ where
     type SectionIterator = MachOSectionIterator<'data, 'file, Mach>;
     type SymbolIterator = MachOSymbolIterator<'data, 'file, Mach>;
 
-    fn architecture(&self) -> Architecture {
+    #[cfg(feature = "architecture")]
+    fn architecture(&self) -> target_lexicon::Architecture {
+        use target_lexicon::{Aarch64Architecture, Architecture, ArmArchitecture};
         match self.header.cputype(self.endian) {
             macho::CPU_TYPE_ARM => Architecture::Arm(ArmArchitecture::Arm),
             macho::CPU_TYPE_ARM64 => Architecture::Aarch64(Aarch64Architecture::Aarch64),

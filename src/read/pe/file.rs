@@ -1,7 +1,6 @@
 use alloc::vec::Vec;
 use core::fmt::Debug;
 use core::{mem, str};
-use target_lexicon::Architecture;
 
 use crate::endian::LittleEndian as LE;
 use crate::pe;
@@ -80,7 +79,9 @@ where
     type SectionIterator = PeSectionIterator<'data, 'file, Pe>;
     type SymbolIterator = CoffSymbolIterator<'data, 'file>;
 
-    fn architecture(&self) -> Architecture {
+    #[cfg(feature = "architecture")]
+    fn architecture(&self) -> target_lexicon::Architecture {
+        use target_lexicon::Architecture;
         match self.nt_headers.file_header().machine.get(LE) {
             // TODO: Arm/Arm64
             pe::IMAGE_FILE_MACHINE_I386 => Architecture::I386,

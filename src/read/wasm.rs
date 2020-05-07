@@ -9,7 +9,6 @@ use alloc::boxed::Box;
 use alloc::vec::Vec;
 use core::marker::PhantomData;
 use core::{slice, str};
-use target_lexicon::Architecture;
 use wasmparser as wp;
 
 use crate::read::{
@@ -308,8 +307,9 @@ where
     type SymbolIterator = WasmSymbolIterator<'data, 'file>;
 
     #[inline]
-    fn architecture(&self) -> Architecture {
-        Architecture::Wasm32
+    #[cfg(feature = "architecture")]
+    fn architecture(&self) -> target_lexicon::Architecture {
+        target_lexicon::Architecture::Wasm32
     }
 
     #[inline]

@@ -20,6 +20,7 @@ extern crate alloc;
 extern crate std;
 
 // Re-export since these are used in public signatures.
+#[cfg(feature = "architecture")]
 pub use target_lexicon;
 
 mod common;
