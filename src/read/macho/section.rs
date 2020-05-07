@@ -3,7 +3,7 @@ use alloc::borrow::Cow;
 use core::fmt::Debug;
 use core::{fmt, result, slice, str};
 
-use crate::endian::{self, RunTimeEndian};
+use crate::endian::{self, Endianness};
 use crate::macho;
 use crate::pod::{Bytes, Pod};
 use crate::read::{
@@ -13,10 +13,10 @@ use crate::read::{
 use super::{MachHeader, MachOFile, MachORelocationIterator};
 
 /// An iterator over the sections of a `MachOFile32`.
-pub type MachOSectionIterator32<'data, 'file, Endian = RunTimeEndian> =
+pub type MachOSectionIterator32<'data, 'file, Endian = Endianness> =
     MachOSectionIterator<'data, 'file, macho::MachHeader32<Endian>>;
 /// An iterator over the sections of a `MachOFile64`.
-pub type MachOSectionIterator64<'data, 'file, Endian = RunTimeEndian> =
+pub type MachOSectionIterator64<'data, 'file, Endian = Endianness> =
     MachOSectionIterator<'data, 'file, macho::MachHeader64<Endian>>;
 
 /// An iterator over the sections of a `MachOFile`.
@@ -48,10 +48,10 @@ impl<'data, 'file, Mach: MachHeader> Iterator for MachOSectionIterator<'data, 'f
 }
 
 /// A section of a `MachOFile32`.
-pub type MachOSection32<'data, 'file, Endian = RunTimeEndian> =
+pub type MachOSection32<'data, 'file, Endian = Endianness> =
     MachOSection<'data, 'file, macho::MachHeader32<Endian>>;
 /// A section of a `MachOFile64`.
-pub type MachOSection64<'data, 'file, Endian = RunTimeEndian> =
+pub type MachOSection64<'data, 'file, Endian = Endianness> =
     MachOSection<'data, 'file, macho::MachHeader64<Endian>>;
 
 /// A section of a `MachOFile`.

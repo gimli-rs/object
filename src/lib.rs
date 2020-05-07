@@ -19,9 +19,6 @@ extern crate alloc;
 #[macro_use]
 extern crate std;
 
-// Re-export since these are used in public signatures.
-pub use target_lexicon;
-
 mod common;
 pub use common::*;
 

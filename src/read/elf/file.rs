@@ -2,15 +2,11 @@ use alloc::vec::Vec;
 use core::fmt::Debug;
 use core::{mem, str};
 
-use target_lexicon::{Aarch64Architecture, Architecture, ArmArchitecture};
-
-use crate::elf;
-use crate::endian::{self, Endian, RunTimeEndian, U32};
-use crate::pod::{Bytes, Pod};
-use crate::read::util::{self, StringTable};
 use crate::read::{
-    self, Error, FileFlags, Object, ReadError, SectionIndex, Symbol, SymbolIndex, SymbolMap,
+    self, util, Architecture, Error, FileFlags, Object, ReadError, SectionIndex, StringTable,
+    Symbol, SymbolIndex, SymbolMap,
 };
+use crate::{elf, endian, Bytes, Endian, Endianness, Pod, U32};
 
 use super::{
     parse_symbol, CompressionHeader, ElfSection, ElfSectionIterator, ElfSegment,
@@ -19,9 +15,9 @@ use super::{
 };
 
 /// A 32-bit ELF object file.
-pub type ElfFile32<'data, Endian = RunTimeEndian> = ElfFile<'data, elf::FileHeader32<Endian>>;
+pub type ElfFile32<'data, Endian = Endianness> = ElfFile<'data, elf::FileHeader32<Endian>>;
 /// A 64-bit ELF object file.
-pub type ElfFile64<'data, Endian = RunTimeEndian> = ElfFile<'data, elf::FileHeader64<Endian>>;
+pub type ElfFile64<'data, Endian = Endianness> = ElfFile<'data, elf::FileHeader64<Endian>>;
 
 /// A partially parsed ELF file.
 ///
@@ -112,8 +108,8 @@ where
 
     fn architecture(&self) -> Architecture {
         match self.header.e_machine(self.endian) {
-            elf::EM_ARM => Architecture::Arm(ArmArchitecture::Arm),
-            elf::EM_AARCH64 => Architecture::Aarch64(Aarch64Architecture::Aarch64),
+            elf::EM_ARM => Architecture::Arm,
+            elf::EM_AARCH64 => Architecture::Aarch64,
             elf::EM_386 => Architecture::I386,
             elf::EM_X86_64 => Architecture::X86_64,
             elf::EM_MIPS => Architecture::Mips,

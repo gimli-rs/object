@@ -1,11 +1,14 @@
 use object::read::Object;
 use object::{read, write};
-use object::{SectionIndex, SymbolFlags, SymbolKind, SymbolScope, SymbolSection};
-use target_lexicon::{Architecture, BinaryFormat};
+use object::{
+    Architecture, BinaryFormat, Endianness, SectionIndex, SymbolFlags, SymbolKind, SymbolScope,
+    SymbolSection,
+};
 
 #[test]
 fn symtab_shndx() {
-    let mut object = write::Object::new(BinaryFormat::Elf, Architecture::X86_64);
+    let mut object =
+        write::Object::new(BinaryFormat::Elf, Architecture::X86_64, Endianness::Little);
 
     for i in 0..0x10000 {
         let name = format!("func{}", i).into_bytes();

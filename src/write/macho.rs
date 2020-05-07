@@ -134,17 +134,17 @@ impl Object {
         //   - spare pointer - used when mapped by the runtime
         //   - pointer to symbol initializer
         let section = self.section_id(StandardSection::TlsVariables);
-        let pointer_width = self.architecture.pointer_width().unwrap().bytes();
-        let size = u64::from(pointer_width) * 3;
+        let address_size = self.architecture.address_size().unwrap().bytes();
+        let size = u64::from(address_size) * 3;
         let data = vec![0; size as usize];
-        let offset = self.append_section_data(section, &data, u64::from(pointer_width));
+        let offset = self.append_section_data(section, &data, u64::from(address_size));
 
         let tlv_bootstrap = self.macho_tlv_bootstrap();
         self.add_relocation(
             section,
             Relocation {
                 offset,
-                size: pointer_width * 8,
+                size: address_size * 8,
                 kind: RelocationKind::Absolute,
                 encoding: RelocationEncoding::Generic,
                 symbol: tlv_bootstrap,
@@ -155,8 +155,8 @@ impl Object {
         self.add_relocation(
             section,
             Relocation {
-                offset: offset + u64::from(pointer_width) * 2,
-                size: pointer_width * 8,
+                offset: offset + u64::from(address_size) * 2,
+                size: address_size * 8,
                 kind: RelocationKind::Absolute,
                 encoding: RelocationEncoding::Generic,
                 symbol: init_symbol_id,
@@ -186,17 +186,15 @@ impl Object {
     }
 
     pub(crate) fn macho_write(&self) -> Result<Vec<u8>> {
-        let (is_32, pointer_align) = match self.architecture.pointer_width().unwrap() {
-            PointerWidth::U16 | PointerWidth::U32 => (true, 4),
-            PointerWidth::U64 => (false, 8),
-        };
-        let endian = match self.architecture.endianness().unwrap() {
-            Endianness::Little => RunTimeEndian::Little,
-            Endianness::Big => RunTimeEndian::Big,
-        };
+        let address_size = self.architecture.address_size().unwrap();
+        let endian = self.endian;
         let macho32 = MachO32 { endian };
         let macho64 = MachO64 { endian };
-        let macho: &dyn MachO = if is_32 { &macho32 } else { &macho64 };
+        let macho: &dyn MachO = match address_size {
+            AddressSize::U32 => &macho32,
+            AddressSize::U64 => &macho64,
+        };
+        let pointer_align = address_size.bytes() as usize;
 
         // Calculate offsets of everything, and build strtab.
         let mut offset = 0;
@@ -217,7 +215,7 @@ impl Object {
 
         // Calculate size of symtab command.
         let symtab_command_offset = offset;
-        let symtab_command_len = mem::size_of::<macho::SymtabCommand<RunTimeEndian>>();
+        let symtab_command_len = mem::size_of::<macho::SymtabCommand<Endianness>>();
         offset += symtab_command_len;
         ncmds += 1;
 
@@ -309,7 +307,7 @@ impl Object {
             if count != 0 {
                 offset = align(offset, 4);
                 section_offsets[index].reloc_offset = offset;
-                let len = count * mem::size_of::<macho::Relocation<RunTimeEndian>>();
+                let len = count * mem::size_of::<macho::Relocation<Endianness>>();
                 offset += len;
             }
         }
@@ -319,8 +317,8 @@ impl Object {
 
         // Write file header.
         let (cputype, cpusubtype) = match self.architecture {
-            Architecture::Arm(_) => (macho::CPU_TYPE_ARM, macho::CPU_SUBTYPE_ARM_ALL),
-            Architecture::Aarch64(_) => (macho::CPU_TYPE_ARM64, macho::CPU_SUBTYPE_ARM64_ALL),
+            Architecture::Arm => (macho::CPU_TYPE_ARM, macho::CPU_SUBTYPE_ARM_ALL),
+            Architecture::Aarch64 => (macho::CPU_TYPE_ARM64, macho::CPU_SUBTYPE_ARM64_ALL),
             Architecture::I386 => (macho::CPU_TYPE_X86, macho::CPU_SUBTYPE_I386_ALL),
             Architecture::X86_64 => (macho::CPU_TYPE_X86_64, macho::CPU_SUBTYPE_X86_64_ALL),
             _ => {

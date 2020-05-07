@@ -2,12 +2,14 @@
 
 use object::read::{Object, ObjectSection};
 use object::{read, write};
-use object::{SectionKind, SymbolFlags, SymbolKind, SymbolScope};
-use target_lexicon::{Architecture, BinaryFormat};
+use object::{
+    Architecture, BinaryFormat, Endianness, SectionKind, SymbolFlags, SymbolKind, SymbolScope,
+};
 
 #[test]
 fn coff_x86_64_bss() {
-    let mut object = write::Object::new(BinaryFormat::Coff, Architecture::X86_64);
+    let mut object =
+        write::Object::new(BinaryFormat::Coff, Architecture::X86_64, Endianness::Little);
 
     let section = object.section_id(write::StandardSection::UninitializedData);
 
@@ -87,7 +89,8 @@ fn coff_x86_64_bss() {
 
 #[test]
 fn elf_x86_64_bss() {
-    let mut object = write::Object::new(BinaryFormat::Elf, Architecture::X86_64);
+    let mut object =
+        write::Object::new(BinaryFormat::Elf, Architecture::X86_64, Endianness::Little);
 
     let section = object.section_id(write::StandardSection::UninitializedData);
 
@@ -174,7 +177,11 @@ fn elf_x86_64_bss() {
 
 #[test]
 fn macho_x86_64_bss() {
-    let mut object = write::Object::new(BinaryFormat::Macho, Architecture::X86_64);
+    let mut object = write::Object::new(
+        BinaryFormat::MachO,
+        Architecture::X86_64,
+        Endianness::Little,
+    );
 
     let section = object.section_id(write::StandardSection::UninitializedData);
 
@@ -207,7 +214,7 @@ fn macho_x86_64_bss() {
     //std::fs::write(&"bss.o", &bytes).unwrap();
 
     let object = read::File::parse(&bytes).unwrap();
-    assert_eq!(object.format(), BinaryFormat::Macho);
+    assert_eq!(object.format(), BinaryFormat::MachO);
     assert_eq!(object.architecture(), Architecture::X86_64);
 
     let mut sections = object.sections();

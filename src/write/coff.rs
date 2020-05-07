@@ -104,7 +104,7 @@ impl Object {
         if let Some(stub_id) = self.stub_symbols.get(&symbol_id) {
             return *stub_id;
         }
-        let stub_size = self.architecture.pointer_width().unwrap().bytes();
+        let stub_size = self.architecture.address_size().unwrap().bytes();
 
         let mut name = b".rdata$.refptr.".to_vec();
         name.extend(&self.symbols[symbol_id.0].name);

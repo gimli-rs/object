@@ -11,12 +11,11 @@ use std::string::String;
 use std::vec::Vec;
 use std::{error, fmt, result, str};
 
-use crate::endian::{RunTimeEndian, U32, U64};
+use crate::endian::{Endianness, U32, U64};
 use crate::pod::BytesMut;
-use crate::target_lexicon::{Architecture, BinaryFormat, Endianness, PointerWidth};
 use crate::{
-    FileFlags, RelocationEncoding, RelocationKind, SectionFlags, SectionKind, SymbolFlags,
-    SymbolKind, SymbolScope,
+    AddressSize, Architecture, BinaryFormat, FileFlags, RelocationEncoding, RelocationKind,
+    SectionFlags, SectionKind, SymbolFlags, SymbolKind, SymbolScope,
 };
 
 #[cfg(feature = "coff")]
@@ -49,6 +48,7 @@ pub type Result<T> = result::Result<T, Error>;
 pub struct Object {
     format: BinaryFormat,
     architecture: Architecture,
+    endian: Endianness,
     sections: Vec<Section>,
     standard_sections: HashMap<StandardSection, SectionId>,
     symbols: Vec<Symbol>,
@@ -64,10 +64,11 @@ pub struct Object {
 
 impl Object {
     /// Create an empty object file.
-    pub fn new(format: BinaryFormat, architecture: Architecture) -> Object {
+    pub fn new(format: BinaryFormat, architecture: Architecture, endian: Endianness) -> Object {
         Object {
             format,
             architecture,
+            endian,
             sections: Vec::new(),
             standard_sections: HashMap::new(),
             symbols: Vec::new(),
@@ -113,7 +114,7 @@ impl Object {
             #[cfg(feature = "elf")]
             BinaryFormat::Elf => &[],
             #[cfg(feature = "macho")]
-            BinaryFormat::Macho => self.macho_segment_name(segment),
+            BinaryFormat::MachO => self.macho_segment_name(segment),
             _ => unimplemented!(),
         }
     }
@@ -194,7 +195,7 @@ impl Object {
             #[cfg(feature = "elf")]
             BinaryFormat::Elf => self.elf_section_info(section),
             #[cfg(feature = "macho")]
-            BinaryFormat::Macho => self.macho_section_info(section),
+            BinaryFormat::MachO => self.macho_section_info(section),
             _ => unimplemented!(),
         }
     }
@@ -221,7 +222,7 @@ impl Object {
     fn has_subsections_via_symbols(&self) -> bool {
         match self.format {
             BinaryFormat::Coff | BinaryFormat::Elf => false,
-            BinaryFormat::Macho => true,
+            BinaryFormat::MachO => true,
             _ => unimplemented!(),
         }
     }
@@ -229,7 +230,7 @@ impl Object {
     fn set_subsections_via_symbols(&mut self) {
         match self.format {
             #[cfg(feature = "macho")]
-            BinaryFormat::Macho => self.macho_set_subsections_via_symbols(),
+            BinaryFormat::MachO => self.macho_set_subsections_via_symbols(),
             _ => unimplemented!(),
         }
     }
@@ -317,7 +318,7 @@ impl Object {
     /// Return true if the file format supports `StandardSection::Common`.
     #[inline]
     pub fn has_common(&self) -> bool {
-        self.format == BinaryFormat::Macho
+        self.format == BinaryFormat::MachO
     }
 
     /// Add a new common symbol and return its `SymbolId`.
@@ -427,7 +428,7 @@ impl Object {
         debug_assert!(self.symbol(symbol_id).scope != SymbolScope::Unknown);
         match self.format {
             #[cfg(feature = "macho")]
-            BinaryFormat::Macho => symbol_id = self.macho_add_thread_var(symbol_id),
+            BinaryFormat::MachO => symbol_id = self.macho_add_thread_var(symbol_id),
             _ => {}
         }
         let symbol = self.symbol_mut(symbol_id);
@@ -461,7 +462,7 @@ impl Object {
             #[cfg(feature = "elf")]
             BinaryFormat::Elf => self.elf_fixup_relocation(&mut relocation)?,
             #[cfg(feature = "macho")]
-            BinaryFormat::Macho => self.macho_fixup_relocation(&mut relocation),
+            BinaryFormat::MachO => self.macho_fixup_relocation(&mut relocation),
             _ => unimplemented!(),
         };
         if addend != 0 {
@@ -477,16 +478,11 @@ impl Object {
         relocation: &Relocation,
         addend: i64,
     ) -> Result<()> {
-        let endian = match self.architecture.endianness().unwrap() {
-            Endianness::Little => RunTimeEndian::Little,
-            Endianness::Big => RunTimeEndian::Big,
-        };
-
         let data = &mut self.sections[section.0].data;
         let offset = relocation.offset as usize;
         match relocation.size {
-            32 => data.write_at(offset, &U32::new(endian, addend as u32)),
-            64 => data.write_at(offset, &U64::new(endian, addend as u64)),
+            32 => data.write_at(offset, &U32::new(self.endian, addend as u32)),
+            64 => data.write_at(offset, &U64::new(self.endian, addend as u64)),
             _ => {
                 return Err(Error(format!(
                     "unimplemented relocation addend {:?}",
@@ -512,7 +508,7 @@ impl Object {
             #[cfg(feature = "elf")]
             BinaryFormat::Elf => self.elf_write(),
             #[cfg(feature = "macho")]
-            BinaryFormat::Macho => self.macho_write(),
+            BinaryFormat::MachO => self.macho_write(),
             _ => unimplemented!(),
         }
     }
@@ -781,7 +777,7 @@ pub enum Mangling {
     /// ELF symbol mangling.
     Elf,
     /// Mach-O symbol mangling.
-    Macho,
+    MachO,
 }
 
 impl Mangling {
@@ -791,7 +787,7 @@ impl Mangling {
             (BinaryFormat::Coff, Architecture::I386) => Mangling::CoffI386,
             (BinaryFormat::Coff, _) => Mangling::Coff,
             (BinaryFormat::Elf, _) => Mangling::Elf,
-            (BinaryFormat::Macho, _) => Mangling::Macho,
+            (BinaryFormat::MachO, _) => Mangling::MachO,
             _ => Mangling::None,
         }
     }
@@ -800,7 +796,7 @@ impl Mangling {
     pub fn global_prefix(self) -> Option<u8> {
         match self {
             Mangling::None | Mangling::Elf | Mangling::Coff => None,
-            Mangling::CoffI386 | Mangling::Macho => Some(b'_'),
+            Mangling::CoffI386 | Mangling::MachO => Some(b'_'),
         }
     }
 }

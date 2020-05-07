@@ -1,6 +1,6 @@
 use core::{fmt, slice};
 
-use crate::endian::RunTimeEndian;
+use crate::endian::Endianness;
 use crate::macho;
 use crate::read::{
     Relocation, RelocationEncoding, RelocationKind, RelocationTarget, SectionIndex, SymbolIndex,
@@ -9,10 +9,10 @@ use crate::read::{
 use super::{MachHeader, MachOFile};
 
 /// An iterator over the relocations in a `MachOSection32`.
-pub type MachORelocationIterator32<'data, 'file, Endian = RunTimeEndian> =
+pub type MachORelocationIterator32<'data, 'file, Endian = Endianness> =
     MachORelocationIterator<'data, 'file, macho::MachHeader32<Endian>>;
 /// An iterator over the relocations in a `MachOSection64`.
-pub type MachORelocationIterator64<'data, 'file, Endian = RunTimeEndian> =
+pub type MachORelocationIterator64<'data, 'file, Endian = Endianness> =
     MachORelocationIterator<'data, 'file, macho::MachHeader64<Endian>>;
 
 /// An iterator over the relocations in a `MachOSection`.

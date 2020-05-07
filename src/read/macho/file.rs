@@ -1,15 +1,12 @@
 use alloc::vec::Vec;
 use core::fmt::Debug;
 use core::{mem, str};
-use target_lexicon::{Aarch64Architecture, Architecture, ArmArchitecture};
 
-use crate::endian::{self, BigEndian, Endian, RunTimeEndian};
-use crate::macho;
-use crate::pod::{Bytes, Pod};
 use crate::read::{
-    self, Error, FileFlags, Object, ObjectSection, ReadError, Result, SectionIndex, Symbol,
-    SymbolFlags, SymbolIndex, SymbolKind, SymbolMap, SymbolScope, SymbolSection,
+    self, Architecture, Error, FileFlags, Object, ObjectSection, ReadError, Result, SectionIndex,
+    Symbol, SymbolFlags, SymbolIndex, SymbolKind, SymbolMap, SymbolScope, SymbolSection,
 };
+use crate::{endian, macho, BigEndian, Bytes, Endian, Endianness, Pod};
 
 use super::{
     parse_symbol, MachOLoadCommandIterator, MachOSection, MachOSectionInternal,
@@ -18,9 +15,9 @@ use super::{
 };
 
 /// A 32-bit Mach-O object file.
-pub type MachOFile32<'data, Endian = RunTimeEndian> = MachOFile<'data, macho::MachHeader32<Endian>>;
+pub type MachOFile32<'data, Endian = Endianness> = MachOFile<'data, macho::MachHeader32<Endian>>;
 /// A 64-bit Mach-O object file.
-pub type MachOFile64<'data, Endian = RunTimeEndian> = MachOFile<'data, macho::MachHeader64<Endian>>;
+pub type MachOFile64<'data, Endian = Endianness> = MachOFile<'data, macho::MachHeader64<Endian>>;
 
 /// A partially parsed Mach-O file.
 ///
@@ -95,8 +92,8 @@ where
 
     fn architecture(&self) -> Architecture {
         match self.header.cputype(self.endian) {
-            macho::CPU_TYPE_ARM => Architecture::Arm(ArmArchitecture::Arm),
-            macho::CPU_TYPE_ARM64 => Architecture::Aarch64(Aarch64Architecture::Aarch64),
+            macho::CPU_TYPE_ARM => Architecture::Arm,
+            macho::CPU_TYPE_ARM64 => Architecture::Aarch64,
             macho::CPU_TYPE_X86 => Architecture::I386,
             macho::CPU_TYPE_X86_64 => Architecture::X86_64,
             macho::CPU_TYPE_MIPS => Architecture::Mips,

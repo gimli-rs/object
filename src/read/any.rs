@@ -1,7 +1,6 @@
 #[cfg(feature = "compression")]
 use alloc::borrow::Cow;
 use alloc::fmt;
-use target_lexicon::{Architecture, BinaryFormat};
 
 #[cfg(feature = "coff")]
 use crate::read::coff;
@@ -14,8 +13,8 @@ use crate::read::pe;
 #[cfg(feature = "wasm")]
 use crate::read::wasm;
 use crate::read::{
-    self, Error, FileFlags, Object, ObjectSection, ObjectSegment, Relocation, Result, SectionFlags,
-    SectionIndex, SectionKind, Symbol, SymbolIndex, SymbolMap,
+    self, Architecture, BinaryFormat, Error, FileFlags, Object, ObjectSection, ObjectSegment,
+    Relocation, Result, SectionFlags, SectionIndex, SectionKind, Symbol, SymbolIndex, SymbolMap,
 };
 
 /// Evaluate an expression on the contents of a file format enum.
@@ -226,9 +225,9 @@ impl<'data> File<'data> {
             #[cfg(feature = "elf")]
             FileInternal::Elf32(_) | FileInternal::Elf64(_) => BinaryFormat::Elf,
             #[cfg(feature = "macho")]
-            FileInternal::MachO32(_) | FileInternal::MachO64(_) => BinaryFormat::Macho,
+            FileInternal::MachO32(_) | FileInternal::MachO64(_) => BinaryFormat::MachO,
             #[cfg(feature = "pe")]
-            FileInternal::Pe32(_) | FileInternal::Pe64(_) => BinaryFormat::Coff,
+            FileInternal::Pe32(_) | FileInternal::Pe64(_) => BinaryFormat::Pe,
             #[cfg(feature = "wasm")]
             FileInternal::Wasm(_) => BinaryFormat::Wasm,
         }

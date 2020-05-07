@@ -64,8 +64,8 @@ impl Object {
 
     fn elf_has_relocation_addend(&self) -> Result<bool> {
         Ok(match self.architecture {
-            Architecture::Arm(_) => false,
-            Architecture::Aarch64(_) => true,
+            Architecture::Arm => false,
+            Architecture::Aarch64 => true,
             Architecture::I386 => false,
             Architecture::X86_64 => true,
             _ => {
@@ -133,17 +133,15 @@ impl Object {
     }
 
     pub(crate) fn elf_write(&self) -> Result<Vec<u8>> {
-        let (is_32, pointer_align) = match self.architecture.pointer_width().unwrap() {
-            PointerWidth::U16 | PointerWidth::U32 => (true, 4),
-            PointerWidth::U64 => (false, 8),
-        };
-        let endian = match self.architecture.endianness().unwrap() {
-            Endianness::Little => RunTimeEndian::Little,
-            Endianness::Big => RunTimeEndian::Big,
-        };
+        let address_size = self.architecture.address_size().unwrap();
+        let endian = self.endian;
         let elf32 = Elf32 { endian };
         let elf64 = Elf64 { endian };
-        let elf: &dyn Elf = if is_32 { &elf32 } else { &elf64 };
+        let elf: &dyn Elf = match address_size {
+            AddressSize::U32 => &elf32,
+            AddressSize::U64 => &elf64,
+        };
+        let pointer_align = address_size.bytes() as usize;
 
         // Calculate offsets of everything.
         let mut offset = 0;
@@ -300,10 +298,9 @@ impl Object {
         // Write file header.
         let e_ident = elf::Ident {
             magic: elf::ELFMAG,
-            class: if is_32 {
-                elf::ELFCLASS32
-            } else {
-                elf::ELFCLASS64
+            class: match address_size {
+                AddressSize::U32 => elf::ELFCLASS32,
+                AddressSize::U64 => elf::ELFCLASS64,
             },
             data: if endian.is_little_endian() {
                 elf::ELFDATA2LSB
@@ -317,8 +314,8 @@ impl Object {
         };
         let e_type = elf::ET_REL;
         let e_machine = match self.architecture {
-            Architecture::Arm(_) => elf::EM_ARM,
-            Architecture::Aarch64(_) => elf::EM_AARCH64,
+            Architecture::Arm => elf::EM_ARM,
+            Architecture::Aarch64 => elf::EM_AARCH64,
             Architecture::I386 => elf::EM_386,
             Architecture::X86_64 => elf::EM_X86_64,
             _ => {
@@ -554,23 +551,18 @@ impl Object {
                                 return Err(Error(format!("unimplemented relocation {:?}", reloc)));
                             }
                         },
-                        Architecture::Aarch64(_) => {
-                            match (reloc.kind, reloc.encoding, reloc.size) {
-                                (RelocationKind::Absolute, RelocationEncoding::Generic, 32) => {
-                                    elf::R_AARCH64_ABS32
-                                }
-                                (RelocationKind::Absolute, RelocationEncoding::Generic, 64) => {
-                                    elf::R_AARCH64_ABS64
-                                }
-                                (RelocationKind::Elf(x), _, _) => x,
-                                _ => {
-                                    return Err(Error(format!(
-                                        "unimplemented relocation {:?}",
-                                        reloc
-                                    )));
-                                }
+                        Architecture::Aarch64 => match (reloc.kind, reloc.encoding, reloc.size) {
+                            (RelocationKind::Absolute, RelocationEncoding::Generic, 32) => {
+                                elf::R_AARCH64_ABS32
                             }
-                        }
+                            (RelocationKind::Absolute, RelocationEncoding::Generic, 64) => {
+                                elf::R_AARCH64_ABS64
+                            }
+                            (RelocationKind::Elf(x), _, _) => x,
+                            _ => {
+                                return Err(Error(format!("unimplemented relocation {:?}", reloc)));
+                            }
+                        },
                         _ => {
                             return Err(Error(format!(
                                 "unimplemented architecture {:?}",

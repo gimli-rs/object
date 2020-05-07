@@ -9,13 +9,12 @@ use alloc::boxed::Box;
 use alloc::vec::Vec;
 use core::marker::PhantomData;
 use core::{slice, str};
-use target_lexicon::Architecture;
 use wasmparser as wp;
 
 use crate::read::{
-    self, Error, FileFlags, Object, ObjectSection, ObjectSegment, ReadError, Relocation, Result,
-    SectionFlags, SectionIndex, SectionKind, Symbol, SymbolFlags, SymbolIndex, SymbolKind,
-    SymbolMap, SymbolScope, SymbolSection,
+    self, Architecture, Error, FileFlags, Object, ObjectSection, ObjectSegment, ReadError,
+    Relocation, Result, SectionFlags, SectionIndex, SectionKind, Symbol, SymbolFlags, SymbolIndex,
+    SymbolKind, SymbolMap, SymbolScope, SymbolSection,
 };
 
 const SECTION_CUSTOM: usize = 0;

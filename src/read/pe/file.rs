@@ -1,15 +1,13 @@
 use alloc::vec::Vec;
 use core::fmt::Debug;
 use core::{mem, str};
-use target_lexicon::Architecture;
 
-use crate::endian::LittleEndian as LE;
-use crate::pe;
-use crate::pod::{Bytes, Pod};
 use crate::read::coff::{parse_symbol, CoffSymbolIterator, SymbolTable};
 use crate::read::{
-    self, Error, FileFlags, Object, ReadError, Result, SectionIndex, Symbol, SymbolIndex, SymbolMap,
+    self, Architecture, Error, FileFlags, Object, ReadError, Result, SectionIndex, Symbol,
+    SymbolIndex, SymbolMap,
 };
+use crate::{pe, Bytes, LittleEndian as LE, Pod};
 
 use super::{PeSection, PeSectionIterator, PeSegment, PeSegmentIterator, SectionTable};
 

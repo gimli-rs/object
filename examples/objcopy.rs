@@ -39,7 +39,11 @@ fn main() {
         }
     };
 
-    let mut out_object = write::Object::new(in_object.format(), in_object.architecture());
+    let mut out_object = write::Object::new(
+        in_object.format(),
+        in_object.architecture(),
+        in_object.endianness(),
+    );
     out_object.mangling = write::Mangling::None;
     out_object.flags = in_object.flags();
 
