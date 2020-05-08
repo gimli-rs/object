@@ -1,3 +1,63 @@
+/// A CPU architecture.
+#[allow(missing_docs)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum Architecture {
+    Unknown,
+    Aarch64,
+    Arm,
+    I386,
+    Mips,
+    Wasm32,
+    X86_64,
+}
+
+impl Architecture {
+    /// The size of an address value for this architecture.
+    ///
+    /// Returns `None` for unknown architectures.
+    pub fn address_size(self) -> Option<AddressSize> {
+        match self {
+            Architecture::Unknown => None,
+            Architecture::Aarch64 => Some(AddressSize::U64),
+            Architecture::Arm => Some(AddressSize::U32),
+            Architecture::I386 => Some(AddressSize::U32),
+            Architecture::Mips => Some(AddressSize::U32),
+            Architecture::Wasm32 => Some(AddressSize::U32),
+            Architecture::X86_64 => Some(AddressSize::U64),
+        }
+    }
+}
+
+/// The size of an address value for an architecture.
+///
+/// This may differ from the address size supported by the file format (such as for COFF).
+#[allow(missing_docs)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[repr(u8)]
+pub enum AddressSize {
+    U32 = 4,
+    U64 = 8,
+}
+
+impl AddressSize {
+    /// The size in bytes of an address value.
+    #[inline]
+    pub fn bytes(self) -> u8 {
+        self as u8
+    }
+}
+
+/// A binary file format.
+#[allow(missing_docs)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum BinaryFormat {
+    Coff,
+    Elf,
+    MachO,
+    Pe,
+    Wasm,
+}
+
 /// The kind of a section.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SectionKind {

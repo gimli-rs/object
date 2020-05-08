@@ -1,7 +1,7 @@
 use core::fmt::Debug;
 
 use crate::elf;
-use crate::endian::{self, RunTimeEndian};
+use crate::endian::{self, Endianness};
 use crate::pod::{Bytes, Pod};
 use crate::read::util;
 use crate::read::{self, Error, ReadError};
@@ -80,9 +80,9 @@ where
 }
 
 /// A parsed `NoteHeader32`.
-pub type ElfNote32<'data, Endian = RunTimeEndian> = ElfNote<'data, elf::FileHeader32<Endian>>;
+pub type ElfNote32<'data, Endian = Endianness> = ElfNote<'data, elf::FileHeader32<Endian>>;
 /// A parsed `NoteHeader64`.
-pub type ElfNote64<'data, Endian = RunTimeEndian> = ElfNote<'data, elf::FileHeader64<Endian>>;
+pub type ElfNote64<'data, Endian = Endianness> = ElfNote<'data, elf::FileHeader64<Endian>>;
 
 /// A parsed `NoteHeader`.
 #[derive(Debug)]

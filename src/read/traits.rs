@@ -1,11 +1,11 @@
 #[cfg(feature = "compression")]
 use alloc::borrow::Cow;
-use target_lexicon::{Architecture, Endianness};
 
-use crate::read::{self, Result};
-use crate::{
-    FileFlags, Relocation, SectionFlags, SectionIndex, SectionKind, Symbol, SymbolIndex, SymbolMap,
+use crate::read::{
+    self, Architecture, FileFlags, Relocation, Result, SectionFlags, SectionIndex, SectionKind,
+    Symbol, SymbolIndex, SymbolMap,
 };
+use crate::Endianness;
 
 /// An object file.
 pub trait Object<'data, 'file>: read::private::Sealed {

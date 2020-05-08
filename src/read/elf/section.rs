@@ -4,7 +4,7 @@ use core::fmt::Debug;
 use core::{iter, mem, slice, str};
 
 use crate::elf;
-use crate::endian::{self, RunTimeEndian};
+use crate::endian::{self, Endianness};
 use crate::pod::{Bytes, Pod};
 use crate::read::{
     self, ObjectSection, ReadError, SectionFlags, SectionIndex, SectionKind, StringTable,
@@ -105,10 +105,10 @@ impl<'data, Elf: FileHeader> SectionTable<'data, Elf> {
 }
 
 /// An iterator over the sections of an `ElfFile32`.
-pub type ElfSectionIterator32<'data, 'file, Endian = RunTimeEndian> =
+pub type ElfSectionIterator32<'data, 'file, Endian = Endianness> =
     ElfSectionIterator<'data, 'file, elf::FileHeader32<Endian>>;
 /// An iterator over the sections of an `ElfFile64`.
-pub type ElfSectionIterator64<'data, 'file, Endian = RunTimeEndian> =
+pub type ElfSectionIterator64<'data, 'file, Endian = Endianness> =
     ElfSectionIterator<'data, 'file, elf::FileHeader64<Endian>>;
 
 /// An iterator over the sections of an `ElfFile`.
@@ -135,10 +135,10 @@ impl<'data, 'file, Elf: FileHeader> Iterator for ElfSectionIterator<'data, 'file
 }
 
 /// A section of an `ElfFile32`.
-pub type ElfSection32<'data, 'file, Endian = RunTimeEndian> =
+pub type ElfSection32<'data, 'file, Endian = Endianness> =
     ElfSection<'data, 'file, elf::FileHeader32<Endian>>;
 /// A section of an `ElfFile64`.
-pub type ElfSection64<'data, 'file, Endian = RunTimeEndian> =
+pub type ElfSection64<'data, 'file, Endian = Endianness> =
     ElfSection<'data, 'file, elf::FileHeader64<Endian>>;
 
 /// A section of an `ElfFile`.

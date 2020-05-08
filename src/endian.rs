@@ -215,40 +215,40 @@ pub trait Endian: Debug + Default + Clone + Copy + PartialEq + Eq + 'static {
 
 /// An endianness that is selectable at run-time.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum RunTimeEndian {
+pub enum Endianness {
     /// Little endian byte order.
     Little,
     /// Big endian byte order.
     Big,
 }
 
-impl Default for RunTimeEndian {
+impl Default for Endianness {
     #[cfg(target_endian = "little")]
     #[inline]
-    fn default() -> RunTimeEndian {
-        RunTimeEndian::Little
+    fn default() -> Endianness {
+        Endianness::Little
     }
 
     #[cfg(target_endian = "big")]
     #[inline]
-    fn default() -> RunTimeEndian {
-        RunTimeEndian::Big
+    fn default() -> Endianness {
+        Endianness::Big
     }
 }
 
-impl Endian for RunTimeEndian {
+impl Endian for Endianness {
     #[inline]
     fn from_big_endian(big_endian: bool) -> Option<Self> {
         Some(if big_endian {
-            RunTimeEndian::Big
+            Endianness::Big
         } else {
-            RunTimeEndian::Little
+            Endianness::Little
         })
     }
 
     #[inline]
     fn is_big_endian(self) -> bool {
-        self != RunTimeEndian::Little
+        self != Endianness::Little
     }
 }
 

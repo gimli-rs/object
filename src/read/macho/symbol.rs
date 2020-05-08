@@ -1,7 +1,7 @@
 use core::fmt::Debug;
 use core::{fmt, slice, str};
 
-use crate::endian::{self, RunTimeEndian};
+use crate::endian::{self, Endianness};
 use crate::macho;
 use crate::pod::Pod;
 use crate::read::util::StringTable;
@@ -63,10 +63,10 @@ impl<'data, Mach: MachHeader> SymbolTable<'data, Mach> {
 }
 
 /// An iterator over the symbols of a `MachOFile32`.
-pub type MachOSymbolIterator32<'data, 'file, Endian = RunTimeEndian> =
+pub type MachOSymbolIterator32<'data, 'file, Endian = Endianness> =
     MachOSymbolIterator<'data, 'file, macho::MachHeader32<Endian>>;
 /// An iterator over the symbols of a `MachOFile64`.
-pub type MachOSymbolIterator64<'data, 'file, Endian = RunTimeEndian> =
+pub type MachOSymbolIterator64<'data, 'file, Endian = Endianness> =
     MachOSymbolIterator<'data, 'file, macho::MachHeader64<Endian>>;
 
 /// An iterator over the symbols of a `MachOFile`.

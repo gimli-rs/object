@@ -3,13 +3,14 @@
 use object::read::{Object, ObjectSection};
 use object::{read, write};
 use object::{
-    RelocationEncoding, RelocationKind, SectionKind, SymbolFlags, SymbolKind, SymbolScope,
+    Architecture, BinaryFormat, Endianness, RelocationEncoding, RelocationKind, SectionKind,
+    SymbolFlags, SymbolKind, SymbolScope,
 };
-use target_lexicon::{Architecture, BinaryFormat};
 
 #[test]
 fn coff_x86_64_tls() {
-    let mut object = write::Object::new(BinaryFormat::Coff, Architecture::X86_64);
+    let mut object =
+        write::Object::new(BinaryFormat::Coff, Architecture::X86_64, Endianness::Little);
 
     let section = object.section_id(write::StandardSection::Tls);
     let symbol = object.add_symbol(write::Symbol {
@@ -56,7 +57,8 @@ fn coff_x86_64_tls() {
 
 #[test]
 fn elf_x86_64_tls() {
-    let mut object = write::Object::new(BinaryFormat::Elf, Architecture::X86_64);
+    let mut object =
+        write::Object::new(BinaryFormat::Elf, Architecture::X86_64, Endianness::Little);
 
     let section = object.section_id(write::StandardSection::Tls);
     let symbol = object.add_symbol(write::Symbol {
@@ -143,7 +145,11 @@ fn elf_x86_64_tls() {
 
 #[test]
 fn macho_x86_64_tls() {
-    let mut object = write::Object::new(BinaryFormat::Macho, Architecture::X86_64);
+    let mut object = write::Object::new(
+        BinaryFormat::MachO,
+        Architecture::X86_64,
+        Endianness::Little,
+    );
 
     let section = object.section_id(write::StandardSection::Tls);
     let symbol = object.add_symbol(write::Symbol {
@@ -176,7 +182,7 @@ fn macho_x86_64_tls() {
     //std::fs::write(&"tls.o", &bytes).unwrap();
 
     let object = read::File::parse(&bytes).unwrap();
-    assert_eq!(object.format(), BinaryFormat::Macho);
+    assert_eq!(object.format(), BinaryFormat::MachO);
     assert_eq!(object.architecture(), Architecture::X86_64);
 
     let mut sections = object.sections();

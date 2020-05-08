@@ -4,7 +4,7 @@ use core::fmt::Debug;
 use core::slice;
 
 use crate::elf;
-use crate::endian::{self, RunTimeEndian};
+use crate::endian::{self, Endianness};
 use crate::pod::Pod;
 use crate::read::{
     self, Error, Relocation, RelocationEncoding, RelocationKind, RelocationTarget, SymbolIndex,
@@ -92,10 +92,10 @@ impl<'data, Elf: FileHeader> Iterator for ElfRelaIterator<'data, Elf> {
 }
 
 /// An iterator over the relocations for an `ElfSection32`.
-pub type ElfRelocationIterator32<'data, 'file, Endian = RunTimeEndian> =
+pub type ElfRelocationIterator32<'data, 'file, Endian = Endianness> =
     ElfRelocationIterator<'data, 'file, elf::FileHeader32<Endian>>;
 /// An iterator over the relocations for an `ElfSection64`.
-pub type ElfRelocationIterator64<'data, 'file, Endian = RunTimeEndian> =
+pub type ElfRelocationIterator64<'data, 'file, Endian = Endianness> =
     ElfRelocationIterator<'data, 'file, elf::FileHeader64<Endian>>;
 
 /// An iterator over the relocations for an `ElfSection`.

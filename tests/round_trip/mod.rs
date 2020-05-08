@@ -3,10 +3,9 @@
 use object::read::{Object, ObjectSection};
 use object::{read, write};
 use object::{
-    RelocationEncoding, RelocationKind, SectionKind, SymbolFlags, SymbolKind, SymbolScope,
-    SymbolSection,
+    Architecture, BinaryFormat, Endianness, RelocationEncoding, RelocationKind, SectionKind,
+    SymbolFlags, SymbolKind, SymbolScope, SymbolSection,
 };
-use target_lexicon::{Architecture, BinaryFormat};
 
 mod bss;
 mod common;
@@ -15,7 +14,8 @@ mod tls;
 
 #[test]
 fn coff_x86_64() {
-    let mut object = write::Object::new(BinaryFormat::Coff, Architecture::X86_64);
+    let mut object =
+        write::Object::new(BinaryFormat::Coff, Architecture::X86_64, Endianness::Little);
 
     object.add_file_symbol(b"file.c".to_vec());
 
@@ -52,6 +52,7 @@ fn coff_x86_64() {
     let object = read::File::parse(&bytes).unwrap();
     assert_eq!(object.format(), BinaryFormat::Coff);
     assert_eq!(object.architecture(), Architecture::X86_64);
+    assert_eq!(object.endianness(), Endianness::Little);
 
     let mut sections = object.sections();
 
@@ -103,7 +104,8 @@ fn coff_x86_64() {
 
 #[test]
 fn elf_x86_64() {
-    let mut object = write::Object::new(BinaryFormat::Elf, Architecture::X86_64);
+    let mut object =
+        write::Object::new(BinaryFormat::Elf, Architecture::X86_64, Endianness::Little);
 
     object.add_file_symbol(b"file.c".to_vec());
 
@@ -140,6 +142,7 @@ fn elf_x86_64() {
     let object = read::File::parse(&bytes).unwrap();
     assert_eq!(object.format(), BinaryFormat::Elf);
     assert_eq!(object.architecture(), Architecture::X86_64);
+    assert_eq!(object.endianness(), Endianness::Little);
 
     let mut sections = object.sections();
 
@@ -208,7 +211,11 @@ fn elf_x86_64() {
 
 #[test]
 fn macho_x86_64() {
-    let mut object = write::Object::new(BinaryFormat::Macho, Architecture::X86_64);
+    let mut object = write::Object::new(
+        BinaryFormat::MachO,
+        Architecture::X86_64,
+        Endianness::Little,
+    );
 
     object.add_file_symbol(b"file.c".to_vec());
 
@@ -256,8 +263,9 @@ fn macho_x86_64() {
 
     let bytes = object.write().unwrap();
     let object = read::File::parse(&bytes).unwrap();
-    assert_eq!(object.format(), BinaryFormat::Macho);
+    assert_eq!(object.format(), BinaryFormat::MachO);
     assert_eq!(object.architecture(), Architecture::X86_64);
+    assert_eq!(object.endianness(), Endianness::Little);
 
     let mut sections = object.sections();
 

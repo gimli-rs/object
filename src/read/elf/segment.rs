@@ -2,17 +2,17 @@ use core::fmt::Debug;
 use core::{slice, str};
 
 use crate::elf;
-use crate::endian::{self, RunTimeEndian};
+use crate::endian::{self, Endianness};
 use crate::pod::{Bytes, Pod};
 use crate::read::{self, ObjectSegment, ReadError};
 
 use super::{ElfFile, ElfNoteIterator, FileHeader};
 
 /// An iterator over the segments of an `ElfFile32`.
-pub type ElfSegmentIterator32<'data, 'file, Endian = RunTimeEndian> =
+pub type ElfSegmentIterator32<'data, 'file, Endian = Endianness> =
     ElfSegmentIterator<'data, 'file, elf::FileHeader32<Endian>>;
 /// An iterator over the segments of an `ElfFile64`.
-pub type ElfSegmentIterator64<'data, 'file, Endian = RunTimeEndian> =
+pub type ElfSegmentIterator64<'data, 'file, Endian = Endianness> =
     ElfSegmentIterator<'data, 'file, elf::FileHeader64<Endian>>;
 
 /// An iterator over the segments of an `ElfFile`.
@@ -43,10 +43,10 @@ impl<'data, 'file, Elf: FileHeader> Iterator for ElfSegmentIterator<'data, 'file
 }
 
 /// A segment of an `ElfFile32`.
-pub type ElfSegment32<'data, 'file, Endian = RunTimeEndian> =
+pub type ElfSegment32<'data, 'file, Endian = Endianness> =
     ElfSegment<'data, 'file, elf::FileHeader32<Endian>>;
 /// A segment of an `ElfFile64`.
-pub type ElfSegment64<'data, 'file, Endian = RunTimeEndian> =
+pub type ElfSegment64<'data, 'file, Endian = Endianness> =
     ElfSegment<'data, 'file, elf::FileHeader64<Endian>>;
 
 /// A segment of an `ElfFile`.

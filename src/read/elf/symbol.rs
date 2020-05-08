@@ -4,7 +4,7 @@ use core::slice;
 use core::str;
 
 use crate::elf;
-use crate::endian::{self, RunTimeEndian};
+use crate::endian::{self, Endianness};
 use crate::pod::{Bytes, Pod};
 use crate::read::util::StringTable;
 use crate::read::{
@@ -126,10 +126,10 @@ impl<'data, Elf: FileHeader> SymbolTable<'data, Elf> {
 }
 
 /// An iterator over the symbols of an `ElfFile32`.
-pub type ElfSymbolIterator32<'data, 'file, Endian = RunTimeEndian> =
+pub type ElfSymbolIterator32<'data, 'file, Endian = Endianness> =
     ElfSymbolIterator<'data, 'file, elf::FileHeader32<Endian>>;
 /// An iterator over the symbols of an `ElfFile64`.
-pub type ElfSymbolIterator64<'data, 'file, Endian = RunTimeEndian> =
+pub type ElfSymbolIterator64<'data, 'file, Endian = Endianness> =
     ElfSymbolIterator<'data, 'file, elf::FileHeader64<Endian>>;
 
 /// An iterator over the symbols of an `ElfFile`.

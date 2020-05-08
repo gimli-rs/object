@@ -1,14 +1,11 @@
 use alloc::vec::Vec;
 use core::str;
-use target_lexicon::Architecture;
 
-use crate::endian::LittleEndian as LE;
-use crate::pe;
-use crate::pod::Bytes;
 use crate::read::{
-    self, FileFlags, Object, ObjectSection, ReadError, Result, SectionIndex, Symbol, SymbolIndex,
-    SymbolMap,
+    self, Architecture, FileFlags, Object, ObjectSection, ReadError, Result, SectionIndex, Symbol,
+    SymbolIndex, SymbolMap,
 };
+use crate::{pe, Bytes, LittleEndian as LE};
 
 use super::{
     parse_symbol, CoffSection, CoffSectionIterator, CoffSegment, CoffSegmentIterator,
@@ -69,6 +66,7 @@ where
 
     #[inline]
     fn is_64(&self) -> bool {
+        // Windows COFF is always 32-bit, even for 64-bit architectures. This could be confusing.
         false
     }
 

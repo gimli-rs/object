@@ -1,7 +1,7 @@
 use core::fmt::Debug;
 use core::{result, str};
 
-use crate::endian::{self, RunTimeEndian};
+use crate::endian::{self, Endianness};
 use crate::macho;
 use crate::pod::{Bytes, Pod};
 use crate::read::{self, ObjectSegment, ReadError, Result};
@@ -9,10 +9,10 @@ use crate::read::{self, ObjectSegment, ReadError, Result};
 use super::{MachHeader, MachOFile, MachOLoadCommand, MachOLoadCommandIterator, Section};
 
 /// An iterator over the segments of a `MachOFile32`.
-pub type MachOSegmentIterator32<'data, 'file, Endian = RunTimeEndian> =
+pub type MachOSegmentIterator32<'data, 'file, Endian = Endianness> =
     MachOSegmentIterator<'data, 'file, macho::MachHeader32<Endian>>;
 /// An iterator over the segments of a `MachOFile64`.
-pub type MachOSegmentIterator64<'data, 'file, Endian = RunTimeEndian> =
+pub type MachOSegmentIterator64<'data, 'file, Endian = Endianness> =
     MachOSegmentIterator<'data, 'file, macho::MachHeader64<Endian>>;
 
 /// An iterator over the segments of a `MachOFile`.
@@ -43,10 +43,10 @@ impl<'data, 'file, Mach: MachHeader> Iterator for MachOSegmentIterator<'data, 'f
 }
 
 /// A segment of a `MachOFile32`.
-pub type MachOSegment32<'data, 'file, Endian = RunTimeEndian> =
+pub type MachOSegment32<'data, 'file, Endian = Endianness> =
     MachOSegment<'data, 'file, macho::MachHeader32<Endian>>;
 /// A segment of a `MachOFile64`.
-pub type MachOSegment64<'data, 'file, Endian = RunTimeEndian> =
+pub type MachOSegment64<'data, 'file, Endian = Endianness> =
     MachOSegment<'data, 'file, macho::MachHeader64<Endian>>;
 
 /// A segment of a `MachOFile`.
