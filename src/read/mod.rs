@@ -68,11 +68,21 @@ impl<T> ReadError<T> for Option<T> {
 }
 
 /// The native executable file for the target platform.
-#[cfg(all(target_os = "linux", target_pointer_width = "32", feature = "elf"))]
+#[cfg(all(
+    unix,
+    not(target_os = "macos"),
+    target_pointer_width = "32",
+    feature = "elf"
+))]
 pub type NativeFile<'data> = elf::ElfFile32<'data>;
 
 /// The native executable file for the target platform.
-#[cfg(all(target_os = "linux", target_pointer_width = "64", feature = "elf"))]
+#[cfg(all(
+    unix,
+    not(target_os = "macos"),
+    target_pointer_width = "64",
+    feature = "elf"
+))]
 pub type NativeFile<'data> = elf::ElfFile64<'data>;
 
 /// The native executable file for the target platform.
