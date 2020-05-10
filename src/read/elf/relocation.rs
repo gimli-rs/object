@@ -21,8 +21,7 @@ pub struct RelocationSections {
 impl RelocationSections {
     /// Create a new mapping using the section table.
     ///
-    /// Returns an error if any of the relocation sections do not use the given symbol table
-    /// section.
+    /// Skips relocation sections that do not use the given symbol table section.
     pub fn parse<Elf: FileHeader>(
         endian: Elf::Endian,
         sections: &SectionTable<Elf>,
@@ -34,9 +33,10 @@ impl RelocationSections {
             if sh_type == elf::SHT_REL || sh_type == elf::SHT_RELA {
                 // The symbol indices used in relocations must be for the symbol table
                 // we are expecting to use.
+                // TODO: support relocations that use dynamic symbols.
                 let sh_link = section.sh_link(endian) as usize;
                 if sh_link != symbol_section {
-                    return Err(Error("Unsupported ELF sh_link for relocation section"));
+                    continue;
                 }
 
                 let sh_info = section.sh_info(endian) as usize;
