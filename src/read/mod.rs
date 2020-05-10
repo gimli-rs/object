@@ -1,5 +1,6 @@
 //! Interface for reading object files.
 
+use alloc::borrow::Cow;
 use alloc::vec::Vec;
 use core::{cmp, fmt, result};
 
@@ -349,4 +350,66 @@ fn data_range(data: Bytes, data_address: u64, range_address: u64, size: u64) -> 
     let offset = range_address.checked_sub(data_address)?;
     let data = data.read_bytes_at(offset as usize, size as usize).ok()?;
     Some(data.0)
+}
+
+/// Data that may be compressed.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct CompressedData<'data> {
+    /// The data compression format.
+    pub format: CompressionFormat,
+    /// The compressed data.
+    pub data: &'data [u8],
+    /// The uncompressed data size.
+    pub uncompressed_size: usize,
+}
+
+/// A data compression format.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum CompressionFormat {
+    /// The data is uncompressed.
+    None,
+    /// The data is compressed, but the compression format is unknown.
+    Unknown,
+    /// ZLIB/DEFLATE.
+    ///
+    /// Used for ELF compression and GNU compressed debug information.
+    Zlib,
+}
+
+impl<'data> CompressedData<'data> {
+    /// Data that is uncompressed.
+    #[inline]
+    pub fn none(data: &'data [u8]) -> Self {
+        CompressedData {
+            format: CompressionFormat::None,
+            data,
+            uncompressed_size: data.len(),
+        }
+    }
+
+    /// Return the uncompressed data.
+    ///
+    /// Returns an error for invalid data or unsupported compression.
+    /// This includes if the data is compressed but the `compression` feature
+    /// for this crate is disabled.
+    pub fn decompress(self) -> Result<Cow<'data, [u8]>> {
+        match self.format {
+            CompressionFormat::None => Ok(Cow::Borrowed(self.data)),
+            #[cfg(feature = "compression")]
+            CompressionFormat::Zlib => {
+                let mut decompressed = Vec::with_capacity(self.uncompressed_size);
+                let mut decompress = flate2::Decompress::new(true);
+                decompress
+                    .decompress_vec(
+                        self.data,
+                        &mut decompressed,
+                        flate2::FlushDecompress::Finish,
+                    )
+                    .ok()
+                    .read_error("Invalid zlib compressed data")?;
+                Ok(Cow::Owned(decompressed))
+            }
+            _ => Err(Error("Unsupported compressed data.")),
+        }
+    }
 }

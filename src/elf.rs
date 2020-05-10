@@ -737,7 +737,7 @@ pub const SHF_MASKPROC: u32 = 0xf000_0000;
 /// Section compression header.
 ///
 /// Used when `SHF_COMPRESSED` is set.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Default, Clone, Copy)]
 #[repr(C)]
 pub struct CompressionHeader32<E: Endian> {
     /// Compression format. One of the `ELFCOMPRESS_*` values.
@@ -751,7 +751,7 @@ pub struct CompressionHeader32<E: Endian> {
 /// Section compression header.
 ///
 /// Used when `SHF_COMPRESSED` is set.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Default, Clone, Copy)]
 #[repr(C)]
 pub struct CompressionHeader64<E: Endian> {
     /// Compression format. One of the `ELFCOMPRESS_*` values.

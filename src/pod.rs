@@ -18,8 +18,11 @@ type Result<T> = result::Result<T, ()>;
 /// - have no padding
 pub unsafe trait Pod: Copy + 'static {}
 
+/// Cast a byte slice to a `Pod` type.
+///
+/// Returns the type and the tail of the slice.
 #[inline]
-pub(crate) fn from_bytes<T: Pod>(data: &[u8]) -> Result<(&T, &[u8])> {
+pub fn from_bytes<T: Pod>(data: &[u8]) -> Result<(&T, &[u8])> {
     let ptr = data.as_ptr();
     if (ptr as usize) % mem::align_of::<T>() != 0 {
         return Err(());
@@ -33,8 +36,11 @@ pub(crate) fn from_bytes<T: Pod>(data: &[u8]) -> Result<(&T, &[u8])> {
     Ok((val, tail))
 }
 
+/// Cast a byte slice to a slice of a `Pod` type.
+///
+/// Returns the type slice and the tail of the byte slice.
 #[inline]
-pub(crate) fn slice_from_bytes<T: Pod>(data: &[u8], count: usize) -> Result<(&[T], &[u8])> {
+pub fn slice_from_bytes<T: Pod>(data: &[u8], count: usize) -> Result<(&[T], &[u8])> {
     let ptr = data.as_ptr();
     if (ptr as usize) % mem::align_of::<T>() != 0 {
         return Err(());
@@ -48,8 +54,9 @@ pub(crate) fn slice_from_bytes<T: Pod>(data: &[u8], count: usize) -> Result<(&[T
     Ok((slice, tail))
 }
 
+/// Cast a `Pod` type to a byte slice.
 #[inline]
-pub(crate) fn bytes_of<T: Pod>(val: &T) -> &[u8] {
+pub fn bytes_of<T: Pod>(val: &T) -> &[u8] {
     let size = mem::size_of::<T>();
     // Safety:
     // Any alignment is allowed.
