@@ -1,6 +1,6 @@
 [package]
 name = "object"
-version = "0.18.0"
+version = "0.19.0"
 authors = ["Nick Fitzgerald <fitzgen@gmail.com>", "Philip Craig <philipjcraig@gmail.com>"]
 edition = "2018"
 exclude = ["/.coveralls.yml", "/.travis.yml"]
@@ -16,7 +16,7 @@ all-features = true
 crc32fast = { version = "1.2", optional = true }
 flate2 = { version = "1", optional = true }
 indexmap = { version = "1.1", optional = true }
-wasmparser = { version = "0.52", optional = true }
+wasmparser = { version = "0.54", optional = true }
 
 [dev-dependencies]
 memmap = "0.7"
