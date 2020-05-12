@@ -1,5 +1,3 @@
-#[cfg(feature = "compression")]
-use alloc::borrow::Cow;
 use core::marker::PhantomData;
 use core::{cmp, iter, result, slice, str};
 
@@ -7,8 +5,8 @@ use crate::endian::LittleEndian as LE;
 use crate::pe;
 use crate::pod::Bytes;
 use crate::read::{
-    self, ObjectSection, ObjectSegment, ReadError, Relocation, Result, SectionFlags, SectionIndex,
-    SectionKind,
+    self, CompressedData, ObjectSection, ObjectSegment, ReadError, Relocation, Result,
+    SectionFlags, SectionIndex, SectionKind,
 };
 
 use super::{ImageNtHeaders, PeFile};
@@ -213,10 +211,9 @@ impl<'data, 'file, Pe: ImageNtHeaders> ObjectSection<'data> for PeSection<'data,
         ))
     }
 
-    #[cfg(feature = "compression")]
     #[inline]
-    fn uncompressed_data(&self) -> Result<Cow<'data, [u8]>> {
-        Ok(Cow::from(self.data()?))
+    fn compressed_data(&self) -> Result<CompressedData<'data>> {
+        self.data().map(CompressedData::none)
     }
 
     #[inline]

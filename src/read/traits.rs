@@ -1,9 +1,8 @@
-#[cfg(feature = "compression")]
 use alloc::borrow::Cow;
 
 use crate::read::{
-    self, Architecture, FileFlags, Relocation, Result, SectionFlags, SectionIndex, SectionKind,
-    Symbol, SymbolIndex, SymbolMap,
+    self, Architecture, CompressedData, FileFlags, Relocation, Result, SectionFlags, SectionIndex,
+    SectionKind, Symbol, SymbolIndex, SymbolMap,
 };
 use crate::Endianness;
 
@@ -216,6 +215,10 @@ pub trait ObjectSection<'data>: read::private::Sealed {
     /// Returns `Ok(None)` if the section does not contain the given range.
     fn data_range(&self, address: u64, size: u64) -> Result<Option<&'data [u8]>>;
 
+    /// Returns the potentially compressed contents of the section,
+    /// along with information about the compression.
+    fn compressed_data(&self) -> Result<CompressedData<'data>>;
+
     /// Returns the uncompressed contents of the section.
     ///
     /// The length of this data may be different from the size of the
@@ -223,8 +226,9 @@ pub trait ObjectSection<'data>: read::private::Sealed {
     ///
     /// If no compression is detected, then returns the data unchanged.
     /// Returns `Err` if decompression fails.
-    #[cfg(feature = "compression")]
-    fn uncompressed_data(&self) -> Result<Cow<'data, [u8]>>;
+    fn uncompressed_data(&self) -> Result<Cow<'data, [u8]>> {
+        self.compressed_data()?.decompress()
+    }
 
     /// Returns the name of the section.
     fn name(&self) -> Result<&str>;

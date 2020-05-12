@@ -1,5 +1,3 @@
-#[cfg(feature = "compression")]
-use alloc::borrow::Cow;
 use core::{iter, result, slice, str};
 
 use crate::endian::LittleEndian as LE;
@@ -7,8 +5,8 @@ use crate::pe;
 use crate::pod::Bytes;
 use crate::read::util::StringTable;
 use crate::read::{
-    self, Error, ObjectSection, ObjectSegment, ReadError, Result, SectionFlags, SectionIndex,
-    SectionKind,
+    self, CompressedData, Error, ObjectSection, ObjectSegment, ReadError, Result, SectionFlags,
+    SectionIndex, SectionKind,
 };
 
 use super::{CoffFile, CoffRelocationIterator};
@@ -250,10 +248,9 @@ impl<'data, 'file> ObjectSection<'data> for CoffSection<'data, 'file> {
         ))
     }
 
-    #[cfg(feature = "compression")]
     #[inline]
-    fn uncompressed_data(&self) -> Result<Cow<'data, [u8]>> {
-        Ok(Cow::from(self.data()?))
+    fn compressed_data(&self) -> Result<CompressedData<'data>> {
+        self.data().map(CompressedData::none)
     }
 
     #[inline]

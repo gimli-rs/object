@@ -3,8 +3,6 @@
 //! Provides `WasmFile` and related types which implement the `Object` trait.
 //!
 //! Currently implements the minimum required to access DWARF debugging information.
-#[cfg(feature = "compression")]
-use alloc::borrow::Cow;
 use alloc::boxed::Box;
 use alloc::vec::Vec;
 use core::marker::PhantomData;
@@ -12,9 +10,9 @@ use core::{slice, str};
 use wasmparser as wp;
 
 use crate::read::{
-    self, Architecture, Error, FileFlags, Object, ObjectSection, ObjectSegment, ReadError,
-    Relocation, Result, SectionFlags, SectionIndex, SectionKind, Symbol, SymbolFlags, SymbolIndex,
-    SymbolKind, SymbolMap, SymbolScope, SymbolSection,
+    self, Architecture, CompressedData, Error, FileFlags, Object, ObjectSection, ObjectSegment,
+    ReadError, Relocation, Result, SectionFlags, SectionIndex, SectionKind, Symbol, SymbolFlags,
+    SymbolIndex, SymbolKind, SymbolMap, SymbolScope, SymbolSection,
 };
 
 const SECTION_CUSTOM: usize = 0;
@@ -513,10 +511,9 @@ impl<'data, 'file> ObjectSection<'data> for WasmSection<'data, 'file> {
         unimplemented!()
     }
 
-    #[cfg(feature = "compression")]
     #[inline]
-    fn uncompressed_data(&self) -> Result<Cow<'data, [u8]>> {
-        Ok(Cow::from(self.data()?))
+    fn compressed_data(&self) -> Result<CompressedData<'data>> {
+        self.data().map(CompressedData::none)
     }
 
     #[inline]

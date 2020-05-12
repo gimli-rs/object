@@ -1,5 +1,3 @@
-#[cfg(feature = "compression")]
-use alloc::borrow::Cow;
 use alloc::fmt;
 
 #[cfg(feature = "coff")]
@@ -13,8 +11,9 @@ use crate::read::pe;
 #[cfg(feature = "wasm")]
 use crate::read::wasm;
 use crate::read::{
-    self, Architecture, BinaryFormat, Error, FileFlags, Object, ObjectSection, ObjectSegment,
-    Relocation, Result, SectionFlags, SectionIndex, SectionKind, Symbol, SymbolIndex, SymbolMap,
+    self, Architecture, BinaryFormat, CompressedData, Error, FileFlags, Object, ObjectSection,
+    ObjectSegment, Relocation, Result, SectionFlags, SectionIndex, SectionKind, Symbol,
+    SymbolIndex, SymbolMap,
 };
 
 /// Evaluate an expression on the contents of a file format enum.
@@ -583,9 +582,8 @@ impl<'data, 'file> ObjectSection<'data> for Section<'data, 'file> {
         with_inner!(self.inner, SectionInternal, |x| x.data_range(address, size))
     }
 
-    #[cfg(feature = "compression")]
-    fn uncompressed_data(&self) -> Result<Cow<'data, [u8]>> {
-        with_inner!(self.inner, SectionInternal, |x| x.uncompressed_data())
+    fn compressed_data(&self) -> Result<CompressedData<'data>> {
+        with_inner!(self.inner, SectionInternal, |x| x.compressed_data())
     }
 
     fn name(&self) -> Result<&str> {

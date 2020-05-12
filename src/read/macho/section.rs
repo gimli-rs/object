@@ -1,5 +1,3 @@
-#[cfg(feature = "compression")]
-use alloc::borrow::Cow;
 use core::fmt::Debug;
 use core::{fmt, result, slice, str};
 
@@ -7,7 +5,7 @@ use crate::endian::{self, Endianness};
 use crate::macho;
 use crate::pod::{Bytes, Pod};
 use crate::read::{
-    self, ObjectSection, ReadError, Result, SectionFlags, SectionIndex, SectionKind,
+    self, CompressedData, ObjectSection, ReadError, Result, SectionFlags, SectionIndex, SectionKind,
 };
 
 use super::{MachHeader, MachOFile, MachORelocationIterator};
@@ -118,10 +116,9 @@ impl<'data, 'file, Mach: MachHeader> ObjectSection<'data> for MachOSection<'data
         ))
     }
 
-    #[cfg(feature = "compression")]
     #[inline]
-    fn uncompressed_data(&self) -> Result<Cow<'data, [u8]>> {
-        Ok(Cow::from(self.data()?))
+    fn compressed_data(&self) -> Result<CompressedData<'data>> {
+        self.data().map(CompressedData::none)
     }
 
     #[inline]
