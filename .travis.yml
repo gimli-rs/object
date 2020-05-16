@@ -25,7 +25,7 @@ addons:
     - libssl-dev
 
 script:
-  - cargo build --all-features && cargo test --all-features && cargo doc --all-features
+  - cargo build --features all && cargo test --features all && cargo doc --features all
   - cargo build --no-default-features --features read
   - cargo build --no-default-features --features write
   - cargo build --no-default-features --features read_core,write_core,coff
@@ -41,5 +41,5 @@ script:
 after_success:
   - if [ "$TRAVIS_OS_NAME" = "linux" ] && [ "$TRAVIS_RUST_VERSION" = "nightly" ]; then
       RUSTFLAGS='--cfg procmacro2_semver_exempt' cargo install -f cargo-tarpaulin;
-      cargo tarpaulin --all-features --ciserver travis-ci --coveralls $TRAVIS_JOB_ID;
+      cargo tarpaulin --features all --ciserver travis-ci --coveralls $TRAVIS_JOB_ID;
     fi

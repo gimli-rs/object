@@ -10,13 +10,19 @@ repository = "https://github.com/gimli-rs/object"
 description = "A unified interface for reading and writing object file formats."
 
 [package.metadata.docs.rs]
-all-features = true
+features = ['all']
 
 [dependencies]
 crc32fast = { version = "1.2", optional = true }
 flate2 = { version = "1", optional = true }
 indexmap = { version = "1.1", optional = true }
 wasmparser = { version = "0.54", optional = true }
+
+# Internal feature, only used when building as part of libstd, not part of the
+# stable interface of this crate.
+core = { version = '1.0.0', optional = true, package = 'rustc-std-workspace-core' }
+compiler_builtins = { version = '0.1.2', optional = true }
+alloc = { version = '1.0.0', optional = true, package = 'rustc-std-workspace-alloc' }
 
 [dev-dependencies]
 memmap = "0.7"
@@ -37,6 +43,14 @@ pe = ["coff"]
 wasm = ["wasmparser"]
 
 default = ["read", "compression"]
+
+# Umbrella feature for enabling all user-facing features of this crate. Does not
+# enable internal features like `rustc-dep-of-std`.
+all = ["read", "write", "std", "compression", "default"]
+
+# Internal feature, only used when building as part of libstd, not part of the
+# stable interface of this crate.
+rustc-dep-of-std = ['core', 'compiler_builtins', 'alloc']
 
 [[example]]
 name = "nm"
