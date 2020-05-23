@@ -29,12 +29,15 @@ memmap = "0.7"
 
 [features]
 read_core = []
-read = ["read_core", "coff", "elf", "macho", "pe", "wasm"]
+read = ["read_core", "coff", "elf", "macho", "pe", "wasm", "unaligned"]
 write_core = ["crc32fast", "indexmap", "std"]
 write = ["write_core", "coff", "elf", "macho"]
 
 std = []
 compression = ["flate2", "std"]
+# Treat all types as unaligned. May be useful to enable when processing files
+# for architectures that have no alignment constraints.
+unaligned = []
 
 coff = []
 elf = []
