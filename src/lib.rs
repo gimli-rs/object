@@ -10,6 +10,9 @@
 #![deny(missing_debug_implementations)]
 #![no_std]
 
+#[cfg(feature = "cargo-all")]
+compile_error!("'--all-features' is not supported; use '--features all' instead");
+
 #[allow(unused_imports)]
 #[macro_use]
 extern crate alloc;
