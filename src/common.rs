@@ -131,6 +131,8 @@ pub enum SectionKind {
     ///
     /// Example COFF sections: `.drectve`
     Linker,
+    /// ELF note section.
+    Note,
     /// Metadata such as symbols or relocations.
     ///
     /// Example ELF sections: `.symtab`, `.strtab`

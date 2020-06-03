@@ -619,6 +619,7 @@ impl Object {
         for (index, section) in self.sections.iter().enumerate() {
             let sh_type = match section.kind {
                 SectionKind::UninitializedData | SectionKind::UninitializedTls => elf::SHT_NOBITS,
+                SectionKind::Note => elf::SHT_NOTE,
                 _ => elf::SHT_PROGBITS,
             };
             let sh_flags = if let SectionFlags::Elf { sh_flags } = section.flags {
@@ -638,7 +639,8 @@ impl Object {
                     SectionKind::Other
                     | SectionKind::Debug
                     | SectionKind::Metadata
-                    | SectionKind::Linker => 0,
+                    | SectionKind::Linker
+                    | SectionKind::Note => 0,
                     SectionKind::Unknown | SectionKind::Common | SectionKind::TlsVariables => {
                         return Err(Error(format!(
                             "unimplemented section `{}` kind {:?}",

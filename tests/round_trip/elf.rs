@@ -1,9 +1,10 @@
+use object::read::elf::{FileHeader, SectionHeader};
 use object::read::Object;
-use object::{read, write};
 use object::{
-    Architecture, BinaryFormat, Endianness, SectionIndex, SymbolFlags, SymbolKind, SymbolScope,
-    SymbolSection,
+    elf, read, write, Architecture, BinaryFormat, Bytes, Endianness, LittleEndian, SectionFlags,
+    SectionIndex, SectionKind, SymbolFlags, SymbolKind, SymbolScope, SymbolSection, U32,
 };
+use std::io::Write;
 
 #[test]
 fn symtab_shndx() {
@@ -46,7 +47,6 @@ fn symtab_shndx() {
 fn compression_zlib() {
     use object::read::ObjectSection;
     use object::LittleEndian as LE;
-    use std::io::Write;
 
     let data = b"test data data data";
     let len = data.len() as u64;
@@ -121,4 +121,99 @@ fn compression_gnu() {
     let section = object.section_by_name(".zdebug_info").unwrap();
     let uncompressed = section.uncompressed_data().unwrap();
     assert_eq!(data, &*uncompressed);
+}
+
+#[test]
+fn note() {
+    let endian = Endianness::Little;
+    let mut object = write::Object::new(BinaryFormat::Elf, Architecture::X86_64, endian);
+
+    // Add note section with align = 4.
+    let mut buffer = Vec::new();
+
+    buffer
+        .write(object::bytes_of(&elf::NoteHeader32 {
+            n_namesz: U32::new(endian, 6),
+            n_descsz: U32::new(endian, 11),
+            n_type: U32::new(endian, 1),
+        }))
+        .unwrap();
+    buffer.write(b"name1\0\0\0").unwrap();
+    buffer.write(b"descriptor\0\0").unwrap();
+
+    buffer
+        .write(object::bytes_of(&elf::NoteHeader32 {
+            n_namesz: U32::new(endian, 6),
+            n_descsz: U32::new(endian, 11),
+            n_type: U32::new(endian, 2),
+        }))
+        .unwrap();
+    buffer.write(b"name2\0\0\0").unwrap();
+    buffer.write(b"descriptor\0\0").unwrap();
+
+    let section = object.add_section(Vec::new(), b".note4".to_vec(), SectionKind::Note);
+    object.section_mut(section).set_data(buffer, 4);
+
+    // Add note section with align = 8.
+    let mut buffer = Vec::new();
+
+    buffer
+        .write(object::bytes_of(&elf::NoteHeader32 {
+            n_namesz: U32::new(endian, 6),
+            n_descsz: U32::new(endian, 11),
+            n_type: U32::new(endian, 1),
+        }))
+        .unwrap();
+    buffer.write(b"name1\0\0\0\0\0\0\0").unwrap();
+    buffer.write(b"descriptor\0\0\0\0\0\0").unwrap();
+
+    buffer
+        .write(object::bytes_of(&elf::NoteHeader32 {
+            n_namesz: U32::new(endian, 4),
+            n_descsz: U32::new(endian, 11),
+            n_type: U32::new(endian, 2),
+        }))
+        .unwrap();
+    buffer.write(b"abc\0").unwrap();
+    buffer.write(b"descriptor\0\0\0\0\0\0").unwrap();
+
+    let section = object.add_section(Vec::new(), b".note8".to_vec(), SectionKind::Note);
+    object.section_mut(section).set_data(buffer, 8);
+
+    let bytes = object.write().unwrap();
+
+    //std::fs::write(&"note.o", &bytes).unwrap();
+
+    let bytes = Bytes(&bytes);
+    let header = elf::FileHeader64::parse(bytes).unwrap();
+    let endian: LittleEndian = header.endian().unwrap();
+    let sections = header.sections(endian, bytes).unwrap();
+
+    let section = sections.section(1).unwrap();
+    assert_eq!(sections.section_name(endian, section).unwrap(), b".note4");
+    assert_eq!(section.sh_addralign(endian), 4);
+    let mut notes = section.notes(endian, bytes).unwrap().unwrap();
+    let note = notes.next().unwrap().unwrap();
+    assert_eq!(note.name(), b"name1\0");
+    assert_eq!(note.desc(), b"descriptor\0");
+    assert_eq!(note.n_type(endian), 1);
+    let note = notes.next().unwrap().unwrap();
+    assert_eq!(note.name(), b"name2\0");
+    assert_eq!(note.desc(), b"descriptor\0");
+    assert_eq!(note.n_type(endian), 2);
+    assert!(notes.next().unwrap().is_none());
+
+    let section = sections.section(2).unwrap();
+    assert_eq!(sections.section_name(endian, section).unwrap(), b".note8");
+    assert_eq!(section.sh_addralign(endian), 8);
+    let mut notes = section.notes(endian, bytes).unwrap().unwrap();
+    let note = notes.next().unwrap().unwrap();
+    assert_eq!(note.name(), b"name1\0");
+    assert_eq!(note.desc(), b"descriptor\0");
+    assert_eq!(note.n_type(endian), 1);
+    let note = notes.next().unwrap().unwrap();
+    assert_eq!(note.name(), b"abc\0");
+    assert_eq!(note.desc(), b"descriptor\0");
+    assert_eq!(note.n_type(endian), 2);
+    assert!(notes.next().unwrap().is_none());
 }
