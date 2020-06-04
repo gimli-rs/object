@@ -1,4 +1,5 @@
 use core::fmt::Debug;
+use core::mem;
 
 use crate::elf;
 use crate::endian::{self, Endianness};
@@ -43,34 +44,35 @@ where
     }
 
     /// Returns the next note.
-    pub(super) fn next(&mut self) -> read::Result<Option<ElfNote<'data, Elf>>> {
+    pub fn next(&mut self) -> read::Result<Option<ElfNote<'data, Elf>>> {
         let mut data = self.data;
         if data.is_empty() {
             return Ok(None);
         }
 
         let header = data
-            .read::<Elf::NoteHeader>()
+            .read_at::<Elf::NoteHeader>(0)
             .read_error("ELF note is too short")?;
 
+        // The name has no alignment requirement.
+        let offset = mem::size_of::<Elf::NoteHeader>();
         let namesz = header.n_namesz(self.endian) as usize;
         let name = data
-            .read_bytes_at(0, namesz)
+            .read_bytes_at(offset, namesz)
             .read_error("Invalid ELF note namesz")?
             .0;
 
-        // Skip both the name and the alignment padding.
-        data.skip(util::align(namesz, self.align))
-            .read_error("ELF note is too short")?;
-
+        // The descriptor must be aligned.
+        let offset = util::align(offset + namesz, self.align);
         let descsz = header.n_descsz(self.endian) as usize;
         let desc = data
-            .read_bytes_at(0, descsz)
+            .read_bytes_at(offset, descsz)
             .read_error("Invalid ELF note descsz")?
             .0;
 
-        // Skip both the descriptor and the alignment padding (if any).
-        if data.skip(util::align(descsz, self.align)).is_err() {
+        // The next note (if any) must be aligned.
+        let offset = util::align(offset + descsz, self.align);
+        if data.skip(offset).is_err() {
             data = Bytes(&[]);
         }
         self.data = data;

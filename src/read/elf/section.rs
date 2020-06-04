@@ -316,6 +316,7 @@ impl<'data, 'file, Elf: FileHeader> ObjectSection<'data> for ElfSection<'data, '
                     SectionKind::UninitializedData
                 }
             }
+            elf::SHT_NOTE => SectionKind::Note,
             elf::SHT_NULL
             | elf::SHT_SYMTAB
             | elf::SHT_STRTAB

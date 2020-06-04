@@ -280,6 +280,7 @@ impl Object {
                 | SectionKind::Tls
                 | SectionKind::UninitializedTls
                 | SectionKind::TlsVariables
+                | SectionKind::Note
                 | SectionKind::Unknown
                 | SectionKind::Metadata => {
                     return Err(Error(format!(
