@@ -16,7 +16,7 @@ features = ['all']
 crc32fast = { version = "1.2", optional = true }
 flate2 = { version = "1", optional = true }
 indexmap = { version = "1.1", optional = true }
-wasmparser = { version = "0.54", optional = true }
+wasmparser = { version = "0.57", optional = true }
 
 # Internal feature, only used when building as part of libstd, not part of the
 # stable interface of this crate.
