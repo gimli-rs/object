@@ -226,6 +226,21 @@ impl<'data> Bytes<'data> {
     }
 }
 
+/// Trait for writable buffer.
+pub trait WritableBuffer {
+    /// Returns position/offset for data to be written at.
+    fn len(&self) -> usize;
+    /// Returns true if buffer contains no data.
+    fn is_empty(&self) -> bool;
+    /// Reserves specified number of bytes in the buffer.
+    fn reserve(&mut self, additional: usize) -> Result<()>;
+    /// Resizes buffer to the specified length, fills new items
+    /// with the specified value.
+    fn resize(&mut self, new_len: usize, value: u8);
+    /// Extends buffer with the specified slice of bytes.
+    fn extend(&mut self, val: &[u8]);
+}
+
 /// A newtype for byte vectors.
 ///
 /// It provides convenience methods for `Pod` types.
@@ -246,21 +261,6 @@ impl BytesMut {
     }
 
     #[inline]
-    pub fn len(&self) -> usize {
-        self.0.len()
-    }
-
-    #[inline]
-    pub fn is_empty(&self) -> bool {
-        self.0.is_empty()
-    }
-
-    #[inline]
-    pub fn resize(&mut self, new_len: usize, value: u8) {
-        self.0.resize(new_len, value);
-    }
-
-    #[inline]
     pub fn write<T: Pod>(&mut self, val: &T) {
         self.0.extend_from_slice(bytes_of(val))
     }
@@ -275,12 +275,35 @@ impl BytesMut {
     }
 
     #[inline]
-    pub fn write_bytes(&mut self, bytes: &BytesMut) {
-        self.0.extend_from_slice(&bytes.0)
+    pub fn as_slice(&self) -> &[u8] {
+        self.0.as_slice()
+    }
+}
+
+impl WritableBuffer for BytesMut {
+    #[inline]
+    fn len(&self) -> usize {
+        self.0.len()
     }
 
     #[inline]
-    pub fn extend(&mut self, val: &[u8]) {
+    fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
+
+    #[inline]
+    fn reserve(&mut self, additional: usize) -> Result<()> {
+        self.0.reserve(additional);
+        Ok(())
+    }
+
+    #[inline]
+    fn resize(&mut self, new_len: usize, value: u8) {
+        self.0.resize(new_len, value);
+    }
+
+    #[inline]
+    fn extend(&mut self, val: &[u8]) {
         self.0.extend_from_slice(val)
     }
 }

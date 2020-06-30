@@ -12,7 +12,7 @@ use std::vec::Vec;
 use std::{error, fmt, result, str};
 
 use crate::endian::{Endianness, U32, U64};
-use crate::pod::BytesMut;
+use crate::pod::{BytesMut, WritableBuffer};
 use crate::{
     AddressSize, Architecture, BinaryFormat, FileFlags, RelocationEncoding, RelocationKind,
     SectionFlags, SectionKind, SymbolFlags, SymbolKind, SymbolScope,
@@ -502,13 +502,20 @@ impl Object {
 
     /// Write the object to a `Vec`.
     pub fn write(&self) -> Result<Vec<u8>> {
+        let mut buffer = BytesMut::new();
+        self.emit(&mut buffer)?;
+        Ok(buffer.0)
+    }
+
+    /// Write the object to a `WritableBuffer`.
+    pub fn emit(&self, buffer: &mut dyn WritableBuffer) -> Result<()> {
         match self.format {
             #[cfg(feature = "coff")]
-            BinaryFormat::Coff => self.coff_write(),
+            BinaryFormat::Coff => self.coff_write(buffer),
             #[cfg(feature = "elf")]
-            BinaryFormat::Elf => self.elf_write(),
+            BinaryFormat::Elf => self.elf_write(buffer),
             #[cfg(feature = "macho")]
-            BinaryFormat::MachO => self.macho_write(),
+            BinaryFormat::MachO => self.macho_write(buffer),
             _ => unimplemented!(),
         }
     }

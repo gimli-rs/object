@@ -4,7 +4,7 @@ use std::vec::Vec;
 
 use crate::endian::{LittleEndian as LE, U16Bytes, U32Bytes, U16, U32};
 use crate::pe as coff;
-use crate::pod::BytesMut;
+use crate::pod::{bytes_of, WritableBuffer};
 use crate::write::string::*;
 use crate::write::util::*;
 use crate::write::*;
@@ -137,7 +137,7 @@ impl Object {
         stub_id
     }
 
-    pub(crate) fn coff_write(&self) -> Result<Vec<u8>> {
+    pub(crate) fn coff_write(&self, buffer: &mut dyn WritableBuffer) -> Result<()> {
         // Calculate offsets of everything, and build strtab.
         let mut offset = 0;
         let mut strtab = StringTable::default();
@@ -214,7 +214,9 @@ impl Object {
         offset += strtab_len;
 
         // Start writing.
-        let mut buffer = BytesMut(Vec::with_capacity(offset));
+        buffer
+            .reserve(offset)
+            .map_err(|_| Error(String::from("Cannot allocate buffer")))?;
 
         // Write file header.
         let header = coff::ImageFileHeader {
@@ -241,7 +243,7 @@ impl Object {
                 _ => U16::default(),
             },
         };
-        buffer.write(&header);
+        buffer.extend(bytes_of(&header));
 
         // Write section headers.
         for (index, section) in self.sections.iter().enumerate() {
@@ -365,16 +367,16 @@ impl Object {
                     return Err(Error(format!("invalid section name offset {}", str_offset)));
                 }
             }
-            buffer.write(&coff_section);
+            buffer.extend(bytes_of(&coff_section));
         }
 
         // Write section data and relocations.
         for (index, section) in self.sections.iter().enumerate() {
             let len = section.data.len();
             if len != 0 {
-                write_align(&mut buffer, 4);
+                write_align(buffer, 4);
                 debug_assert_eq!(section_offsets[index].offset, buffer.len());
-                buffer.write_bytes(&section.data);
+                buffer.extend(section.data.as_slice());
             }
 
             if !section.relocations.is_empty() {
@@ -429,7 +431,7 @@ impl Object {
                         ),
                         typ: U16Bytes::new(LE, typ),
                     };
-                    buffer.write(&coff_relocation);
+                    buffer.extend(bytes_of(&coff_relocation));
                 }
             }
         }
@@ -519,7 +521,7 @@ impl Object {
                 let str_offset = strtab.get_offset(symbol_offsets[index].str_id.unwrap());
                 coff_symbol.name[4..8].copy_from_slice(&u32::to_le_bytes(str_offset as u32));
             }
-            buffer.write(&coff_symbol);
+            buffer.extend(bytes_of(&coff_symbol));
 
             // Write auxiliary symbols.
             match symbol.kind {
@@ -544,14 +546,14 @@ impl Object {
                         length: U32Bytes::new(LE, section.size as u32),
                         number_of_relocations: U16Bytes::new(LE, section.relocations.len() as u16),
                         number_of_linenumbers: U16Bytes::default(),
-                        check_sum: U32Bytes::new(LE, checksum(&section.data.0)),
+                        check_sum: U32Bytes::new(LE, checksum(section.data.as_slice())),
                         number: U16Bytes::new(LE, number),
                         selection,
                         reserved: 0,
                         // TODO: bigobj
                         high_number: U16Bytes::default(),
                     };
-                    buffer.write(&aux);
+                    buffer.extend(bytes_of(&aux));
                 }
                 _ => {
                     debug_assert_eq!(number_of_aux_symbols, 0);
@@ -564,7 +566,9 @@ impl Object {
         buffer.extend(&u32::to_le_bytes(strtab_len as u32));
         buffer.extend(&strtab_data);
 
-        Ok(buffer.0)
+        debug_assert_eq!(offset, buffer.len());
+
+        Ok(())
     }
 }
 

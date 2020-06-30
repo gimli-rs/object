@@ -3,7 +3,7 @@ use std::vec::Vec;
 
 use crate::elf;
 use crate::endian::*;
-use crate::pod::BytesMut;
+use crate::pod::{bytes_of, BytesMut, WritableBuffer};
 use crate::write::string::*;
 use crate::write::util::*;
 use crate::write::*;
@@ -132,7 +132,7 @@ impl Object {
         }
     }
 
-    pub(crate) fn elf_write(&self) -> Result<Vec<u8>> {
+    pub(crate) fn elf_write(&self, buffer: &mut dyn WritableBuffer) -> Result<()> {
         let address_size = self.architecture.address_size().unwrap();
         let endian = self.endian;
         let elf32 = Elf32 { endian };
@@ -293,7 +293,9 @@ impl Object {
         offset += section_num * e_shentsize;
 
         // Start writing.
-        let mut buffer = BytesMut(Vec::with_capacity(offset));
+        buffer
+            .reserve(offset)
+            .map_err(|_| Error(String::from("Cannot allocate buffer")))?;
 
         // Write file header.
         let e_ident = elf::Ident {
@@ -342,7 +344,7 @@ impl Object {
         };
 
         elf.write_file_header(
-            &mut buffer,
+            buffer,
             FileHeader {
                 e_ident,
                 e_type,
@@ -365,17 +367,17 @@ impl Object {
         for (index, section) in self.sections.iter().enumerate() {
             let len = section.data.len();
             if len != 0 {
-                write_align(&mut buffer, section.align as usize);
+                write_align(buffer, section.align as usize);
                 debug_assert_eq!(section_offsets[index].offset, buffer.len());
-                buffer.write_bytes(&section.data);
+                buffer.extend(section.data.as_slice());
             }
         }
 
         // Write symbols.
-        write_align(&mut buffer, pointer_align);
+        write_align(buffer, pointer_align);
         debug_assert_eq!(symtab_offset, buffer.len());
         elf.write_symbol(
-            &mut buffer,
+            buffer,
             Sym {
                 st_name: 0,
                 st_info: 0,
@@ -470,7 +472,7 @@ impl Object {
                 .map(|id| strtab.get_offset(id))
                 .unwrap_or(0) as u32;
             elf.write_symbol(
-                &mut buffer,
+                buffer,
                 Sym {
                     st_name,
                     st_info,
@@ -498,7 +500,7 @@ impl Object {
         if need_symtab_shndx {
             debug_assert_eq!(symtab_shndx_offset, buffer.len());
             debug_assert_eq!(symtab_shndx_len, symtab_shndx.len());
-            buffer.write_bytes(&symtab_shndx);
+            buffer.extend(symtab_shndx.as_slice());
         }
 
         // Write strtab section.
@@ -508,7 +510,7 @@ impl Object {
         // Write relocations.
         for (index, section) in self.sections.iter().enumerate() {
             if !section.relocations.is_empty() {
-                write_align(&mut buffer, pointer_align);
+                write_align(buffer, pointer_align);
                 debug_assert_eq!(section_offsets[index].reloc_offset, buffer.len());
                 for reloc in &section.relocations {
                     let r_type = match self.architecture {
@@ -572,7 +574,7 @@ impl Object {
                     };
                     let r_sym = symbol_offsets[reloc.symbol.0].index as u32;
                     elf.write_rel(
-                        &mut buffer,
+                        buffer,
                         is_rela,
                         Rel {
                             r_offset: reloc.offset,
@@ -590,10 +592,10 @@ impl Object {
         buffer.extend(&shstrtab_data);
 
         // Write section headers.
-        write_align(&mut buffer, pointer_align);
+        write_align(buffer, pointer_align);
         debug_assert_eq!(e_shoff, buffer.len());
         elf.write_section_header(
-            &mut buffer,
+            buffer,
             SectionHeader {
                 sh_name: 0,
                 sh_type: 0,
@@ -661,7 +663,7 @@ impl Object {
                 .map(|id| shstrtab.get_offset(id))
                 .unwrap_or(0) as u32;
             elf.write_section_header(
-                &mut buffer,
+                buffer,
                 SectionHeader {
                     sh_name,
                     sh_type,
@@ -682,7 +684,7 @@ impl Object {
                     .map(|id| shstrtab.get_offset(id))
                     .unwrap_or(0);
                 elf.write_section_header(
-                    &mut buffer,
+                    buffer,
                     SectionHeader {
                         sh_name: sh_name as u32,
                         sh_type: if is_rela { elf::SHT_RELA } else { elf::SHT_REL },
@@ -701,7 +703,7 @@ impl Object {
 
         // Write symtab section header.
         elf.write_section_header(
-            &mut buffer,
+            buffer,
             SectionHeader {
                 sh_name: shstrtab.get_offset(symtab_str_id) as u32,
                 sh_type: elf::SHT_SYMTAB,
@@ -719,7 +721,7 @@ impl Object {
         // Write symtab_shndx section header.
         if need_symtab_shndx {
             elf.write_section_header(
-                &mut buffer,
+                buffer,
                 SectionHeader {
                     sh_name: shstrtab.get_offset(symtab_shndx_str_id.unwrap()) as u32,
                     sh_type: elf::SHT_SYMTAB_SHNDX,
@@ -737,7 +739,7 @@ impl Object {
 
         // Write strtab section header.
         elf.write_section_header(
-            &mut buffer,
+            buffer,
             SectionHeader {
                 sh_name: shstrtab.get_offset(strtab_str_id) as u32,
                 sh_type: elf::SHT_STRTAB,
@@ -754,7 +756,7 @@ impl Object {
 
         // Write shstrtab section header.
         elf.write_section_header(
-            &mut buffer,
+            buffer,
             SectionHeader {
                 sh_name: shstrtab.get_offset(shstrtab_str_id) as u32,
                 sh_type: elf::SHT_STRTAB,
@@ -769,7 +771,9 @@ impl Object {
             },
         );
 
-        Ok(buffer.0)
+        debug_assert_eq!(offset, buffer.len());
+
+        Ok(())
     }
 }
 
@@ -828,10 +832,10 @@ trait Elf {
     fn section_header_size(&self) -> usize;
     fn symbol_size(&self) -> usize;
     fn rel_size(&self, is_rela: bool) -> usize;
-    fn write_file_header(&self, buffer: &mut BytesMut, section: FileHeader);
-    fn write_section_header(&self, buffer: &mut BytesMut, section: SectionHeader);
-    fn write_symbol(&self, buffer: &mut BytesMut, symbol: Sym);
-    fn write_rel(&self, buffer: &mut BytesMut, is_rela: bool, rel: Rel);
+    fn write_file_header(&self, buffer: &mut dyn WritableBuffer, section: FileHeader);
+    fn write_section_header(&self, buffer: &mut dyn WritableBuffer, section: SectionHeader);
+    fn write_symbol(&self, buffer: &mut dyn WritableBuffer, symbol: Sym);
+    fn write_rel(&self, buffer: &mut dyn WritableBuffer, is_rela: bool, rel: Rel);
 }
 
 struct Elf32<E> {
@@ -859,7 +863,7 @@ impl<E: Endian> Elf for Elf32<E> {
         }
     }
 
-    fn write_file_header(&self, buffer: &mut BytesMut, file: FileHeader) {
+    fn write_file_header(&self, buffer: &mut dyn WritableBuffer, file: FileHeader) {
         let endian = self.endian;
         let file = elf::FileHeader32 {
             e_ident: file.e_ident,
@@ -877,10 +881,10 @@ impl<E: Endian> Elf for Elf32<E> {
             e_shnum: U16::new(endian, file.e_shnum),
             e_shstrndx: U16::new(endian, file.e_shstrndx),
         };
-        buffer.write(&file);
+        buffer.extend(bytes_of(&file));
     }
 
-    fn write_section_header(&self, buffer: &mut BytesMut, section: SectionHeader) {
+    fn write_section_header(&self, buffer: &mut dyn WritableBuffer, section: SectionHeader) {
         let endian = self.endian;
         let section = elf::SectionHeader32 {
             sh_name: U32::new(endian, section.sh_name),
@@ -894,10 +898,10 @@ impl<E: Endian> Elf for Elf32<E> {
             sh_addralign: U32::new(endian, section.sh_addralign as u32),
             sh_entsize: U32::new(endian, section.sh_entsize as u32),
         };
-        buffer.write(&section);
+        buffer.extend(bytes_of(&section));
     }
 
-    fn write_symbol(&self, buffer: &mut BytesMut, symbol: Sym) {
+    fn write_symbol(&self, buffer: &mut dyn WritableBuffer, symbol: Sym) {
         let endian = self.endian;
         let symbol = elf::Sym32 {
             st_name: U32::new(endian, symbol.st_name),
@@ -907,10 +911,10 @@ impl<E: Endian> Elf for Elf32<E> {
             st_value: U32::new(endian, symbol.st_value as u32),
             st_size: U32::new(endian, symbol.st_size as u32),
         };
-        buffer.write(&symbol);
+        buffer.extend(bytes_of(&symbol));
     }
 
-    fn write_rel(&self, buffer: &mut BytesMut, is_rela: bool, rel: Rel) {
+    fn write_rel(&self, buffer: &mut dyn WritableBuffer, is_rela: bool, rel: Rel) {
         let endian = self.endian;
         if is_rela {
             let rel = elf::Rela32 {
@@ -918,13 +922,13 @@ impl<E: Endian> Elf for Elf32<E> {
                 r_info: elf::Rel32::r_info(endian, rel.r_sym, rel.r_type as u8),
                 r_addend: I32::new(endian, rel.r_addend as i32),
             };
-            buffer.write(&rel);
+            buffer.extend(bytes_of(&rel));
         } else {
             let rel = elf::Rel32 {
                 r_offset: U32::new(endian, rel.r_offset as u32),
                 r_info: elf::Rel32::r_info(endian, rel.r_sym, rel.r_type as u8),
             };
-            buffer.write(&rel);
+            buffer.extend(bytes_of(&rel));
         }
     }
 }
@@ -954,7 +958,7 @@ impl<E: Endian> Elf for Elf64<E> {
         }
     }
 
-    fn write_file_header(&self, buffer: &mut BytesMut, file: FileHeader) {
+    fn write_file_header(&self, buffer: &mut dyn WritableBuffer, file: FileHeader) {
         let endian = self.endian;
         let file = elf::FileHeader64 {
             e_ident: file.e_ident,
@@ -972,10 +976,10 @@ impl<E: Endian> Elf for Elf64<E> {
             e_shnum: U16::new(endian, file.e_shnum),
             e_shstrndx: U16::new(endian, file.e_shstrndx),
         };
-        buffer.write(&file)
+        buffer.extend(bytes_of(&file))
     }
 
-    fn write_section_header(&self, buffer: &mut BytesMut, section: SectionHeader) {
+    fn write_section_header(&self, buffer: &mut dyn WritableBuffer, section: SectionHeader) {
         let endian = self.endian;
         let section = elf::SectionHeader64 {
             sh_name: U32::new(endian, section.sh_name),
@@ -989,10 +993,10 @@ impl<E: Endian> Elf for Elf64<E> {
             sh_addralign: U64::new(endian, section.sh_addralign),
             sh_entsize: U64::new(endian, section.sh_entsize),
         };
-        buffer.write(&section);
+        buffer.extend(bytes_of(&section));
     }
 
-    fn write_symbol(&self, buffer: &mut BytesMut, symbol: Sym) {
+    fn write_symbol(&self, buffer: &mut dyn WritableBuffer, symbol: Sym) {
         let endian = self.endian;
         let symbol = elf::Sym64 {
             st_name: U32::new(endian, symbol.st_name),
@@ -1002,10 +1006,10 @@ impl<E: Endian> Elf for Elf64<E> {
             st_value: U64::new(endian, symbol.st_value),
             st_size: U64::new(endian, symbol.st_size),
         };
-        buffer.write(&symbol);
+        buffer.extend(bytes_of(&symbol));
     }
 
-    fn write_rel(&self, buffer: &mut BytesMut, is_rela: bool, rel: Rel) {
+    fn write_rel(&self, buffer: &mut dyn WritableBuffer, is_rela: bool, rel: Rel) {
         let endian = self.endian;
         if is_rela {
             let rel = elf::Rela64 {
@@ -1013,13 +1017,13 @@ impl<E: Endian> Elf for Elf64<E> {
                 r_info: elf::Rela64::r_info(endian, rel.r_sym, rel.r_type),
                 r_addend: I64::new(endian, rel.r_addend),
             };
-            buffer.write(&rel);
+            buffer.extend(bytes_of(&rel));
         } else {
             let rel = elf::Rel64 {
                 r_offset: U64::new(endian, rel.r_offset),
                 r_info: elf::Rel64::r_info(endian, rel.r_sym, rel.r_type),
             };
-            buffer.write(&rel);
+            buffer.extend(bytes_of(&rel));
         }
     }
 }
