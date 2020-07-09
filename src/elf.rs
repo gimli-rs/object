@@ -890,9 +890,9 @@ impl<E: Endian> Sym64<E> {
 #[repr(C)]
 pub struct Syminfo32<E: Endian> {
     /// Direct bindings, symbol bound to.
-    si_boundto: U16<E>,
+    pub si_boundto: U16<E>,
     /// Per symbol flags.
-    si_flags: U16<E>,
+    pub si_flags: U16<E>,
 }
 
 /// Additional information about a `Sym64`.
@@ -900,9 +900,9 @@ pub struct Syminfo32<E: Endian> {
 #[repr(C)]
 pub struct Syminfo64<E: Endian> {
     /// Direct bindings, symbol bound to.
-    si_boundto: U16<E>,
+    pub si_boundto: U16<E>,
     /// Per symbol flags.
-    si_flags: U16<E>,
+    pub si_flags: U16<E>,
 }
 
 // Values for `Syminfo*::si_boundto`.
@@ -1392,9 +1392,9 @@ pub const NT_VERSION: u32 = 1;
 #[repr(C)]
 pub struct Dyn32<E: Endian> {
     /// Dynamic entry type.
-    d_tag: I32<E>,
+    pub d_tag: I32<E>,
     /// Value (integer or address).
-    d_val: U32<E>,
+    pub d_val: U32<E>,
 }
 
 /// Dynamic section entry.
@@ -1402,9 +1402,9 @@ pub struct Dyn32<E: Endian> {
 #[repr(C)]
 pub struct Dyn64<E: Endian> {
     /// Dynamic entry type.
-    d_tag: I64<E>,
+    pub d_tag: I64<E>,
     /// Value (integer or address).
-    d_val: U64<E>,
+    pub d_val: U64<E>,
 }
 
 // Values for `Dyn*::d_tag`.
