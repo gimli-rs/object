@@ -3,8 +3,9 @@ use core::fmt::Debug;
 use core::{mem, str};
 
 use crate::read::{
-    self, Architecture, Error, FileFlags, Object, ObjectSection, ReadError, Result, SectionIndex,
-    Symbol, SymbolFlags, SymbolIndex, SymbolKind, SymbolMap, SymbolScope, SymbolSection,
+    self, Architecture, ComdatKind, Error, FileFlags, Object, ObjectComdat, ObjectSection,
+    ReadError, Result, SectionIndex, Symbol, SymbolFlags, SymbolIndex, SymbolKind, SymbolMap,
+    SymbolScope, SymbolSection,
 };
 use crate::{endian, macho, BigEndian, Bytes, Endian, Endianness, Pod};
 
@@ -88,6 +89,8 @@ where
     type SegmentIterator = MachOSegmentIterator<'data, 'file, Mach>;
     type Section = MachOSection<'data, 'file, Mach>;
     type SectionIterator = MachOSectionIterator<'data, 'file, Mach>;
+    type Comdat = MachOComdat<'data, 'file, Mach>;
+    type ComdatIterator = MachOComdatIterator<'data, 'file, Mach>;
     type SymbolIterator = MachOSymbolIterator<'data, 'file, Mach>;
 
     fn architecture(&self) -> Architecture {
@@ -160,6 +163,10 @@ where
             file: self,
             iter: self.sections.iter(),
         }
+    }
+
+    fn comdats(&'file self) -> MachOComdatIterator<'data, 'file, Mach> {
+        MachOComdatIterator { file: self }
     }
 
     fn symbol_by_index(&self, index: SymbolIndex) -> Result<Symbol<'data>> {
@@ -248,6 +255,92 @@ where
         FileFlags::MachO {
             flags: self.header.flags(self.endian),
         }
+    }
+}
+
+/// An iterator over the COMDAT section groups of a `MachOFile64`.
+pub type MachOComdatIterator32<'data, 'file, Endian = Endianness> =
+    MachOComdatIterator<'data, 'file, macho::MachHeader32<Endian>>;
+/// An iterator over the COMDAT section groups of a `MachOFile64`.
+pub type MachOComdatIterator64<'data, 'file, Endian = Endianness> =
+    MachOComdatIterator<'data, 'file, macho::MachHeader64<Endian>>;
+
+/// An iterator over the COMDAT section groups of a `MachOFile`.
+#[derive(Debug)]
+pub struct MachOComdatIterator<'data, 'file, Mach: MachHeader> {
+    file: &'file MachOFile<'data, Mach>,
+}
+
+impl<'data, 'file, Mach: MachHeader> Iterator for MachOComdatIterator<'data, 'file, Mach> {
+    type Item = MachOComdat<'data, 'file, Mach>;
+
+    #[inline]
+    fn next(&mut self) -> Option<Self::Item> {
+        None
+    }
+}
+
+/// A COMDAT section group of a `MachOFile32`.
+pub type MachOComdat32<'data, 'file, Endian = Endianness> =
+    MachOComdat<'data, 'file, macho::MachHeader32<Endian>>;
+
+/// A COMDAT section group of a `MachOFile64`.
+pub type MachOComdat64<'data, 'file, Endian = Endianness> =
+    MachOComdat<'data, 'file, macho::MachHeader64<Endian>>;
+
+/// A COMDAT section group of a `MachOFile`.
+#[derive(Debug)]
+pub struct MachOComdat<'data, 'file, Mach: MachHeader> {
+    file: &'file MachOFile<'data, Mach>,
+}
+
+impl<'data, 'file, Mach: MachHeader> read::private::Sealed for MachOComdat<'data, 'file, Mach> {}
+
+impl<'data, 'file, Mach: MachHeader> ObjectComdat<'data> for MachOComdat<'data, 'file, Mach> {
+    type SectionIterator = MachOComdatSectionIterator<'data, 'file, Mach>;
+
+    #[inline]
+    fn kind(&self) -> ComdatKind {
+        unreachable!();
+    }
+
+    #[inline]
+    fn symbol(&self) -> SymbolIndex {
+        unreachable!();
+    }
+
+    #[inline]
+    fn name(&self) -> Result<&str> {
+        unreachable!();
+    }
+
+    #[inline]
+    fn sections(&self) -> Self::SectionIterator {
+        unreachable!();
+    }
+}
+
+/// An iterator over the sections in a COMDAT section group of a `MachOFile32`.
+pub type MachOComdatSectionIterator32<'data, 'file, Endian = Endianness> =
+    MachOComdatSectionIterator<'data, 'file, macho::MachHeader32<Endian>>;
+/// An iterator over the sections in a COMDAT section group of a `MachOFile64`.
+pub type MachOComdatSectionIterator64<'data, 'file, Endian = Endianness> =
+    MachOComdatSectionIterator<'data, 'file, macho::MachHeader64<Endian>>;
+
+/// An iterator over the sections in a COMDAT section group of a `MachOFile`.
+#[derive(Debug)]
+pub struct MachOComdatSectionIterator<'data, 'file, Mach: MachHeader>
+where
+    'data: 'file,
+{
+    file: &'file MachOFile<'data, Mach>,
+}
+
+impl<'data, 'file, Mach: MachHeader> Iterator for MachOComdatSectionIterator<'data, 'file, Mach> {
+    type Item = SectionIndex;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        None
     }
 }
 

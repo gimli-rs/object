@@ -9,9 +9,9 @@ use crate::read::{
 use crate::{elf, endian, Bytes, Endian, Endianness, Pod, U32};
 
 use super::{
-    parse_symbol, CompressionHeader, ElfSection, ElfSectionIterator, ElfSegment,
-    ElfSegmentIterator, ElfSymbolIterator, NoteHeader, ProgramHeader, Rela, RelocationSections,
-    SectionHeader, SectionTable, Sym, SymbolTable,
+    parse_symbol, CompressionHeader, ElfComdat, ElfComdatIterator, ElfSection, ElfSectionIterator,
+    ElfSegment, ElfSegmentIterator, ElfSymbolIterator, NoteHeader, ProgramHeader, Rela,
+    RelocationSections, SectionHeader, SectionTable, Sym, SymbolTable,
 };
 
 /// A 32-bit ELF object file.
@@ -104,6 +104,8 @@ where
     type SegmentIterator = ElfSegmentIterator<'data, 'file, Elf>;
     type Section = ElfSection<'data, 'file, Elf>;
     type SectionIterator = ElfSectionIterator<'data, 'file, Elf>;
+    type Comdat = ElfComdat<'data, 'file, Elf>;
+    type ComdatIterator = ElfComdatIterator<'data, 'file, Elf>;
     type SymbolIterator = ElfSymbolIterator<'data, 'file, Elf>;
 
     fn architecture(&self) -> Architecture {
@@ -153,6 +155,13 @@ where
 
     fn sections(&'file self) -> ElfSectionIterator<'data, 'file, Elf> {
         ElfSectionIterator {
+            file: self,
+            iter: self.sections.iter().enumerate(),
+        }
+    }
+
+    fn comdats(&'file self) -> ElfComdatIterator<'data, 'file, Elf> {
+        ElfComdatIterator {
             file: self,
             iter: self.sections.iter().enumerate(),
         }

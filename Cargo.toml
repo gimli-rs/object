@@ -69,4 +69,4 @@ required-features = ["read", "write"]
 
 [[example]]
 name = "objdump"
-required-features = ["read"]
+required-features = ["read_core"]

@@ -1,8 +1,8 @@
 use alloc::borrow::Cow;
 
 use crate::read::{
-    self, Architecture, CompressedData, FileFlags, Relocation, Result, SectionFlags, SectionIndex,
-    SectionKind, Symbol, SymbolIndex, SymbolMap,
+    self, Architecture, ComdatKind, CompressedData, FileFlags, Relocation, Result, SectionFlags,
+    SectionIndex, SectionKind, Symbol, SymbolIndex, SymbolMap,
 };
 use crate::Endianness;
 
@@ -19,6 +19,12 @@ pub trait Object<'data, 'file>: read::private::Sealed {
 
     /// An iterator over the sections in the object file.
     type SectionIterator: Iterator<Item = Self::Section>;
+
+    /// A COMDAT section group in the object file.
+    type Comdat: ObjectComdat<'data>;
+
+    /// An iterator over the COMDAT section groups in the object file.
+    type ComdatIterator: Iterator<Item = Self::Comdat>;
 
     /// An iterator over the symbols in the object file.
     type SymbolIterator: Iterator<Item = (SymbolIndex, Symbol<'data>)>;
@@ -75,6 +81,9 @@ pub trait Object<'data, 'file>: read::private::Sealed {
 
     /// Get an iterator over the sections in the file.
     fn sections(&'file self) -> Self::SectionIterator;
+
+    /// Get an iterator over the COMDAT section groups in the file.
+    fn comdats(&'file self) -> Self::ComdatIterator;
 
     /// Get the debugging symbol at the given index.
     ///
@@ -244,4 +253,22 @@ pub trait ObjectSection<'data>: read::private::Sealed {
 
     /// Section flags that are specific to each file format.
     fn flags(&self) -> SectionFlags;
+}
+
+/// A COMDAT section group defined in an object file.
+pub trait ObjectComdat<'data>: read::private::Sealed {
+    /// An iterator over the sections in the object file.
+    type SectionIterator: Iterator<Item = SectionIndex>;
+
+    /// Returns the COMDAT selection kind.
+    fn kind(&self) -> ComdatKind;
+
+    /// Returns the index of the symbol used for the name of COMDAT section group.
+    fn symbol(&self) -> SymbolIndex;
+
+    /// Returns the name of the COMDAT section group.
+    fn name(&self) -> Result<&str>;
+
+    /// Get the sections in this section group.
+    fn sections(&self) -> Self::SectionIterator;
 }

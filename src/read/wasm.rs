@@ -10,9 +10,10 @@ use core::{slice, str};
 use wasmparser as wp;
 
 use crate::read::{
-    self, Architecture, CompressedData, Error, FileFlags, Object, ObjectSection, ObjectSegment,
-    ReadError, Relocation, Result, SectionFlags, SectionIndex, SectionKind, Symbol, SymbolFlags,
-    SymbolIndex, SymbolKind, SymbolMap, SymbolScope, SymbolSection,
+    self, Architecture, ComdatKind, CompressedData, Error, FileFlags, Object, ObjectComdat,
+    ObjectSection, ObjectSegment, ReadError, Relocation, Result, SectionFlags, SectionIndex,
+    SectionKind, Symbol, SymbolFlags, SymbolIndex, SymbolKind, SymbolMap, SymbolScope,
+    SymbolSection,
 };
 
 const SECTION_CUSTOM: usize = 0;
@@ -302,6 +303,8 @@ where
     type SegmentIterator = WasmSegmentIterator<'data, 'file>;
     type Section = WasmSection<'data, 'file>;
     type SectionIterator = WasmSectionIterator<'data, 'file>;
+    type Comdat = WasmComdat<'data, 'file>;
+    type ComdatIterator = WasmComdatIterator<'data, 'file>;
     type SymbolIterator = WasmSymbolIterator<'data, 'file>;
 
     #[inline]
@@ -348,6 +351,10 @@ where
         WasmSectionIterator {
             sections: self.sections.iter(),
         }
+    }
+
+    fn comdats(&'file self) -> Self::ComdatIterator {
+        WasmComdatIterator { file: self }
     }
 
     #[inline]
@@ -572,6 +579,70 @@ impl<'data, 'file> ObjectSection<'data> for WasmSection<'data, 'file> {
     #[inline]
     fn flags(&self) -> SectionFlags {
         SectionFlags::None
+    }
+}
+
+/// An iterator over the COMDAT section groups of a `WasmFile`.
+#[derive(Debug)]
+pub struct WasmComdatIterator<'data, 'file> {
+    file: &'file WasmFile<'data>,
+}
+
+impl<'data, 'file> Iterator for WasmComdatIterator<'data, 'file> {
+    type Item = WasmComdat<'data, 'file>;
+
+    #[inline]
+    fn next(&mut self) -> Option<Self::Item> {
+        None
+    }
+}
+
+/// A COMDAT section group of a `WasmFile`.
+#[derive(Debug)]
+pub struct WasmComdat<'data, 'file> {
+    file: &'file WasmFile<'data>,
+}
+
+impl<'data, 'file> read::private::Sealed for WasmComdat<'data, 'file> {}
+
+impl<'data, 'file> ObjectComdat<'data> for WasmComdat<'data, 'file> {
+    type SectionIterator = WasmComdatSectionIterator<'data, 'file>;
+
+    #[inline]
+    fn kind(&self) -> ComdatKind {
+        unreachable!();
+    }
+
+    #[inline]
+    fn symbol(&self) -> SymbolIndex {
+        unreachable!();
+    }
+
+    #[inline]
+    fn name(&self) -> Result<&str> {
+        unreachable!();
+    }
+
+    #[inline]
+    fn sections(&self) -> Self::SectionIterator {
+        unreachable!();
+    }
+}
+
+/// An iterator over the sections in a COMDAT section group of a `WasmFile`.
+#[derive(Debug)]
+pub struct WasmComdatSectionIterator<'data, 'file>
+where
+    'data: 'file,
+{
+    file: &'file WasmFile<'data>,
+}
+
+impl<'data, 'file> Iterator for WasmComdatSectionIterator<'data, 'file> {
+    type Item = SectionIndex;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        None
     }
 }
 

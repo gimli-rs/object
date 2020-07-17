@@ -8,8 +8,8 @@ use crate::read::{
 use crate::{pe, Bytes, LittleEndian as LE};
 
 use super::{
-    parse_symbol, CoffSection, CoffSectionIterator, CoffSegment, CoffSegmentIterator,
-    CoffSymbolIterator, SectionTable, SymbolTable,
+    parse_symbol, CoffComdat, CoffComdatIterator, CoffSection, CoffSectionIterator, CoffSegment,
+    CoffSegmentIterator, CoffSymbolIterator, SectionTable, SymbolTable,
 };
 
 /// A COFF object file.
@@ -49,6 +49,8 @@ where
     type SegmentIterator = CoffSegmentIterator<'data, 'file>;
     type Section = CoffSection<'data, 'file>;
     type SectionIterator = CoffSectionIterator<'data, 'file>;
+    type Comdat = CoffComdat<'data, 'file>;
+    type ComdatIterator = CoffComdatIterator<'data, 'file>;
     type SymbolIterator = CoffSymbolIterator<'data, 'file>;
 
     fn architecture(&self) -> Architecture {
@@ -95,6 +97,13 @@ where
         CoffSectionIterator {
             file: self,
             iter: self.sections.iter().enumerate(),
+        }
+    }
+
+    fn comdats(&'file self) -> CoffComdatIterator<'data, 'file> {
+        CoffComdatIterator {
+            file: self,
+            index: 0,
         }
     }
 

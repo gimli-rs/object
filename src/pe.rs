@@ -936,7 +936,7 @@ pub struct ImageAuxSymbolTokenDef {
 
 pub const IMAGE_AUX_SYMBOL_TYPE_TOKEN_DEF: u16 = 1;
 
-/// Auxilliary symbol format 1: function definitions.
+/// Auxiliary symbol format 1: function definitions.
 // This struct has alignment 1.
 #[derive(Debug, Clone, Copy)]
 #[repr(C)]
@@ -948,7 +948,7 @@ pub struct ImageAuxSymbolFunction {
     pub unused: [u8; 2],
 }
 
-/// Auxilliary symbol format 2: .bf and .ef symbols.
+/// Auxiliary symbol format 2: .bf and .ef symbols.
 // This struct has alignment 1.
 #[derive(Debug, Clone, Copy)]
 #[repr(C)]
@@ -961,7 +961,7 @@ pub struct ImageAuxSymbolFunctionBeginEnd {
     pub unused3: [u8; 2],
 }
 
-/// Auxilliary symbol format 3: weak externals.
+/// Auxiliary symbol format 3: weak externals.
 ///
 /// Used for both `ImageSymbol` and `ImageSymbolEx` (both with padding).
 // This struct has alignment 1.
@@ -973,7 +973,7 @@ pub struct ImageAuxSymbolWeak {
     pub weak_search_type: U32Bytes<LE>,
 }
 
-/// Auxilliary symbol format 5: sections.
+/// Auxiliary symbol format 5: sections.
 ///
 /// Used for both `ImageSymbol` and `ImageSymbolEx` (with padding).
 // This struct has alignment 1.
@@ -1009,13 +1009,13 @@ pub struct ImageAuxSymbolCrc {
 // Communal selection types.
 //
 
-pub const IMAGE_COMDAT_SELECT_NODUPLICATES: u16 = 1;
-pub const IMAGE_COMDAT_SELECT_ANY: u16 = 2;
-pub const IMAGE_COMDAT_SELECT_SAME_SIZE: u16 = 3;
-pub const IMAGE_COMDAT_SELECT_EXACT_MATCH: u16 = 4;
-pub const IMAGE_COMDAT_SELECT_ASSOCIATIVE: u16 = 5;
-pub const IMAGE_COMDAT_SELECT_LARGEST: u16 = 6;
-pub const IMAGE_COMDAT_SELECT_NEWEST: u16 = 7;
+pub const IMAGE_COMDAT_SELECT_NODUPLICATES: u8 = 1;
+pub const IMAGE_COMDAT_SELECT_ANY: u8 = 2;
+pub const IMAGE_COMDAT_SELECT_SAME_SIZE: u8 = 3;
+pub const IMAGE_COMDAT_SELECT_EXACT_MATCH: u8 = 4;
+pub const IMAGE_COMDAT_SELECT_ASSOCIATIVE: u8 = 5;
+pub const IMAGE_COMDAT_SELECT_LARGEST: u8 = 6;
+pub const IMAGE_COMDAT_SELECT_NEWEST: u8 = 7;
 
 pub const IMAGE_WEAK_EXTERN_SEARCH_NOLIBRARY: u16 = 1;
 pub const IMAGE_WEAK_EXTERN_SEARCH_LIBRARY: u16 = 2;

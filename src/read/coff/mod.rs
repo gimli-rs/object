@@ -13,3 +13,6 @@ pub use symbol::*;
 
 mod relocation;
 pub use relocation::*;
+
+mod comdat;
+pub use comdat::*;

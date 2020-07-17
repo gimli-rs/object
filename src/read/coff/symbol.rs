@@ -76,7 +76,7 @@ impl<'data> SymbolTable<'data> {
         self.get::<pe::ImageSymbol>(index)
     }
 
-    /// Return the symbol table entry or auxilliary record at the given index.
+    /// Return the symbol table entry or auxiliary record at the given index.
     pub fn get<T: Pod>(&self, index: usize) -> Option<&'data T> {
         let bytes = self.symbols.get(index)?;
         Bytes(&bytes.0[..]).read().ok()

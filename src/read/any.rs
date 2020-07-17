@@ -11,9 +11,9 @@ use crate::read::pe;
 #[cfg(feature = "wasm")]
 use crate::read::wasm;
 use crate::read::{
-    self, Architecture, BinaryFormat, CompressedData, Error, FileFlags, Object, ObjectSection,
-    ObjectSegment, Relocation, Result, SectionFlags, SectionIndex, SectionKind, Symbol,
-    SymbolIndex, SymbolMap,
+    self, Architecture, BinaryFormat, ComdatKind, CompressedData, Error, FileFlags, Object,
+    ObjectComdat, ObjectSection, ObjectSegment, Relocation, Result, SectionFlags, SectionIndex,
+    SectionKind, Symbol, SymbolIndex, SymbolMap,
 };
 
 /// Evaluate an expression on the contents of a file format enum.
@@ -243,6 +243,8 @@ where
     type SegmentIterator = SegmentIterator<'data, 'file>;
     type Section = Section<'data, 'file>;
     type SectionIterator = SectionIterator<'data, 'file>;
+    type Comdat = Comdat<'data, 'file>;
+    type ComdatIterator = ComdatIterator<'data, 'file>;
     type SymbolIterator = SymbolIterator<'data, 'file>;
 
     fn architecture(&self) -> Architecture {
@@ -280,6 +282,13 @@ where
         SectionIterator {
             inner: map_inner!(self.inner, FileInternal, SectionIteratorInternal, |x| x
                 .sections()),
+        }
+    }
+
+    fn comdats(&'file self) -> ComdatIterator<'data, 'file> {
+        ComdatIterator {
+            inner: map_inner!(self.inner, FileInternal, ComdatIteratorInternal, |x| x
+                .comdats()),
         }
     }
 
@@ -544,7 +553,9 @@ impl<'data, 'file> fmt::Debug for Section<'data, 'file> {
         s.field("name", &self.name().unwrap_or("<invalid>"))
             .field("address", &self.address())
             .field("size", &self.size())
+            .field("align", &self.align())
             .field("kind", &self.kind())
+            .field("flags", &self.flags())
             .finish()
     }
 }
@@ -611,6 +622,156 @@ impl<'data, 'file> ObjectSection<'data> for Section<'data, 'file> {
 
     fn flags(&self) -> SectionFlags {
         with_inner!(self.inner, SectionInternal, |x| x.flags())
+    }
+}
+
+/// An iterator of the COMDAT section groups of a `File`.
+#[derive(Debug)]
+pub struct ComdatIterator<'data, 'file>
+where
+    'data: 'file,
+{
+    inner: ComdatIteratorInternal<'data, 'file>,
+}
+
+#[derive(Debug)]
+enum ComdatIteratorInternal<'data, 'file>
+where
+    'data: 'file,
+{
+    #[cfg(feature = "coff")]
+    Coff(coff::CoffComdatIterator<'data, 'file>),
+    #[cfg(feature = "elf")]
+    Elf32(elf::ElfComdatIterator32<'data, 'file>),
+    #[cfg(feature = "elf")]
+    Elf64(elf::ElfComdatIterator64<'data, 'file>),
+    #[cfg(feature = "macho")]
+    MachO32(macho::MachOComdatIterator32<'data, 'file>),
+    #[cfg(feature = "macho")]
+    MachO64(macho::MachOComdatIterator64<'data, 'file>),
+    #[cfg(feature = "pe")]
+    Pe32(pe::PeComdatIterator32<'data, 'file>),
+    #[cfg(feature = "pe")]
+    Pe64(pe::PeComdatIterator64<'data, 'file>),
+    #[cfg(feature = "wasm")]
+    Wasm(wasm::WasmComdatIterator<'data, 'file>),
+}
+
+impl<'data, 'file> Iterator for ComdatIterator<'data, 'file> {
+    type Item = Comdat<'data, 'file>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        next_inner!(self.inner, ComdatIteratorInternal, ComdatInternal)
+            .map(|inner| Comdat { inner })
+    }
+}
+
+/// A COMDAT section group of a `File`.
+pub struct Comdat<'data, 'file>
+where
+    'data: 'file,
+{
+    inner: ComdatInternal<'data, 'file>,
+}
+
+enum ComdatInternal<'data, 'file>
+where
+    'data: 'file,
+{
+    #[cfg(feature = "coff")]
+    Coff(coff::CoffComdat<'data, 'file>),
+    #[cfg(feature = "elf")]
+    Elf32(elf::ElfComdat32<'data, 'file>),
+    #[cfg(feature = "elf")]
+    Elf64(elf::ElfComdat64<'data, 'file>),
+    #[cfg(feature = "macho")]
+    MachO32(macho::MachOComdat32<'data, 'file>),
+    #[cfg(feature = "macho")]
+    MachO64(macho::MachOComdat64<'data, 'file>),
+    #[cfg(feature = "pe")]
+    Pe32(pe::PeComdat32<'data, 'file>),
+    #[cfg(feature = "pe")]
+    Pe64(pe::PeComdat64<'data, 'file>),
+    #[cfg(feature = "wasm")]
+    Wasm(wasm::WasmComdat<'data, 'file>),
+}
+
+impl<'data, 'file> fmt::Debug for Comdat<'data, 'file> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let mut s = f.debug_struct("Comdat");
+        s.field("symbol", &self.symbol())
+            .field("name", &self.name().unwrap_or("<invalid>"))
+            .field("kind", &self.kind())
+            .finish()
+    }
+}
+
+impl<'data, 'file> read::private::Sealed for Comdat<'data, 'file> {}
+
+impl<'data, 'file> ObjectComdat<'data> for Comdat<'data, 'file> {
+    type SectionIterator = ComdatSectionIterator<'data, 'file>;
+
+    fn kind(&self) -> ComdatKind {
+        with_inner!(self.inner, ComdatInternal, |x| x.kind())
+    }
+
+    fn symbol(&self) -> SymbolIndex {
+        with_inner!(self.inner, ComdatInternal, |x| x.symbol())
+    }
+
+    fn name(&self) -> Result<&str> {
+        with_inner!(self.inner, ComdatInternal, |x| x.name())
+    }
+
+    fn sections(&self) -> ComdatSectionIterator<'data, 'file> {
+        ComdatSectionIterator {
+            inner: map_inner!(
+                self.inner,
+                ComdatInternal,
+                ComdatSectionIteratorInternal,
+                |x| x.sections()
+            ),
+        }
+    }
+}
+
+/// An iterator over COMDAT section entries.
+#[derive(Debug)]
+pub struct ComdatSectionIterator<'data, 'file>
+where
+    'data: 'file,
+{
+    inner: ComdatSectionIteratorInternal<'data, 'file>,
+}
+
+#[derive(Debug)]
+enum ComdatSectionIteratorInternal<'data, 'file>
+where
+    'data: 'file,
+{
+    #[cfg(feature = "coff")]
+    Coff(coff::CoffComdatSectionIterator<'data, 'file>),
+    #[cfg(feature = "elf")]
+    Elf32(elf::ElfComdatSectionIterator32<'data, 'file>),
+    #[cfg(feature = "elf")]
+    Elf64(elf::ElfComdatSectionIterator64<'data, 'file>),
+    #[cfg(feature = "macho")]
+    MachO32(macho::MachOComdatSectionIterator32<'data, 'file>),
+    #[cfg(feature = "macho")]
+    MachO64(macho::MachOComdatSectionIterator64<'data, 'file>),
+    #[cfg(feature = "pe")]
+    Pe32(pe::PeComdatSectionIterator32<'data, 'file>),
+    #[cfg(feature = "pe")]
+    Pe64(pe::PeComdatSectionIterator64<'data, 'file>),
+    #[cfg(feature = "wasm")]
+    Wasm(wasm::WasmComdatSectionIterator<'data, 'file>),
+}
+
+impl<'data, 'file> Iterator for ComdatSectionIterator<'data, 'file> {
+    type Item = SectionIndex;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        with_inner_mut!(self.inner, ComdatSectionIteratorInternal, |x| x.next())
     }
 }
 
