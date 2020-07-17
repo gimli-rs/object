@@ -14,6 +14,8 @@ struct SectionOffsets {
     offset: usize,
     str_id: Option<StringId>,
     reloc_offset: usize,
+    selection: u8,
+    associative_section: u16,
 }
 
 #[derive(Default, Clone, Copy)]
@@ -173,6 +175,42 @@ impl Object {
             }
         }
 
+        // Set COMDAT flags.
+        for comdat in &self.comdats {
+            let symbol = &self.symbols[comdat.symbol.0];
+            let comdat_section = match symbol.section {
+                SymbolSection::Section(id) => id.0,
+                _ => {
+                    return Err(Error(format!(
+                        "unsupported COMDAT symbol `{}` section {:?}",
+                        symbol.name().unwrap_or(""),
+                        symbol.section
+                    )));
+                }
+            };
+            section_offsets[comdat_section].selection = match comdat.kind {
+                ComdatKind::NoDuplicates => coff::IMAGE_COMDAT_SELECT_NODUPLICATES,
+                ComdatKind::Any => coff::IMAGE_COMDAT_SELECT_ANY,
+                ComdatKind::SameSize => coff::IMAGE_COMDAT_SELECT_SAME_SIZE,
+                ComdatKind::ExactMatch => coff::IMAGE_COMDAT_SELECT_EXACT_MATCH,
+                ComdatKind::Largest => coff::IMAGE_COMDAT_SELECT_LARGEST,
+                ComdatKind::Newest => coff::IMAGE_COMDAT_SELECT_NEWEST,
+                ComdatKind::Unknown => {
+                    return Err(Error(format!(
+                        "unsupported COMDAT symbol `{}` kind {:?}",
+                        symbol.name().unwrap_or(""),
+                        comdat.kind
+                    )));
+                }
+            };
+            for section in &comdat.sections {
+                if section.0 != comdat_section {
+                    section_offsets[section.0].selection = coff::IMAGE_COMDAT_SELECT_ASSOCIATIVE;
+                    section_offsets[section.0].associative_section = comdat_section as u16 + 1;
+                }
+            }
+        }
+
         // Calculate size of symbols and add symbol strings to strtab.
         let mut symbol_offsets = vec![SymbolOffsets::default(); self.symbols.len()];
         let mut symtab_count = 0;
@@ -247,13 +285,16 @@ impl Object {
 
         // Write section headers.
         for (index, section) in self.sections.iter().enumerate() {
-            // TODO: IMAGE_SCN_LNK_COMDAT
-            let characteristics = match section.flags {
+            let mut characteristics = match section.flags {
                 SectionFlags::Coff {
                     characteristics, ..
                 } => characteristics,
                 _ => 0,
-            } | match section.kind {
+            };
+            if section_offsets[index].selection != 0 {
+                characteristics |= coff::IMAGE_SCN_LNK_COMDAT;
+            };
+            characteristics |= match section.kind {
                 SectionKind::Text => {
                     coff::IMAGE_SCN_CNT_CODE
                         | coff::IMAGE_SCN_MEM_EXECUTE
@@ -534,24 +575,18 @@ impl Object {
                 }
                 SymbolKind::Section => {
                     debug_assert_eq!(number_of_aux_symbols, 1);
-                    let section = &self.sections[symbol.section.id().unwrap().0];
-                    let (selection, number) = match symbol.flags {
-                        SymbolFlags::CoffSection {
-                            selection,
-                            associative_section,
-                        } => (
-                            selection,
-                            associative_section.map(|id| id.0 as u16 + 1).unwrap_or(0),
-                        ),
-                        _ => (0, 0),
-                    };
+                    let section_index = symbol.section.id().unwrap().0;
+                    let section = &self.sections[section_index];
                     let aux = coff::ImageAuxSymbolSection {
                         length: U32Bytes::new(LE, section.size as u32),
                         number_of_relocations: U16Bytes::new(LE, section.relocations.len() as u16),
                         number_of_linenumbers: U16Bytes::default(),
                         check_sum: U32Bytes::new(LE, checksum(section.data.as_slice())),
-                        number: U16Bytes::new(LE, number),
-                        selection,
+                        number: U16Bytes::new(
+                            LE,
+                            section_offsets[section_index].associative_section,
+                        ),
+                        selection: section_offsets[section_index].selection,
                         reserved: 0,
                         // TODO: bigobj
                         high_number: U16Bytes::default(),

@@ -14,8 +14,8 @@ use std::{error, fmt, result, str};
 use crate::endian::{Endianness, U32, U64};
 use crate::pod::{BytesMut, WritableBuffer};
 use crate::{
-    AddressSize, Architecture, BinaryFormat, FileFlags, RelocationEncoding, RelocationKind,
-    SectionFlags, SectionKind, SymbolFlags, SymbolKind, SymbolScope,
+    AddressSize, Architecture, BinaryFormat, ComdatKind, FileFlags, RelocationEncoding,
+    RelocationKind, SectionFlags, SectionKind, SymbolFlags, SymbolKind, SymbolScope,
 };
 
 #[cfg(feature = "coff")]
@@ -54,6 +54,7 @@ pub struct Object {
     symbols: Vec<Symbol>,
     symbol_map: HashMap<Vec<u8>, SymbolId>,
     stub_symbols: HashMap<SymbolId, SymbolId>,
+    comdats: Vec<Comdat>,
     /// File flags that are specific to each file format.
     pub flags: FileFlags,
     /// The symbol name mangling scheme.
@@ -74,6 +75,7 @@ impl Object {
             symbols: Vec::new(),
             symbol_map: HashMap::new(),
             stub_symbols: HashMap::new(),
+            comdats: Vec::new(),
             flags: FileFlags::None,
             mangling: Mangling::default(format, architecture),
             tlv_bootstrap: None,
@@ -254,6 +256,25 @@ impl Object {
             BinaryFormat::Elf => self.elf_subsection_name(section, value),
             _ => unimplemented!(),
         }
+    }
+
+    /// Get the COMDAT section group with the given `ComdatId`.
+    #[inline]
+    pub fn comdat(&self, comdat: ComdatId) -> &Comdat {
+        &self.comdats[comdat.0]
+    }
+
+    /// Mutably get the COMDAT section group with the given `ComdatId`.
+    #[inline]
+    pub fn comdat_mut(&mut self, comdat: ComdatId) -> &mut Comdat {
+        &mut self.comdats[comdat.0]
+    }
+
+    /// Add a new COMDAT section group and return its `ComdatId`.
+    pub fn add_comdat(&mut self, comdat: Comdat) -> ComdatId {
+        let comdat_id = ComdatId(self.comdats.len());
+        self.comdats.push(comdat);
+        comdat_id
     }
 
     /// Get the `SymbolId` of the symbol with the given name.
@@ -770,6 +791,27 @@ pub struct Relocation {
     ///
     /// This may be in addition to an implicit addend stored at the place of the relocation.
     pub addend: i64,
+}
+
+/// An identifier used to reference a COMDAT section group.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct ComdatId(usize);
+
+/// A COMDAT section group.
+#[derive(Debug)]
+pub struct Comdat {
+    /// The COMDAT selection kind.
+    ///
+    /// This determines the way in which the linker resolves multiple definitions of the COMDAT
+    /// sections.
+    pub kind: ComdatKind,
+    /// The COMDAT symbol.
+    ///
+    /// If this symbol is referenced, then all sections in the group will be included by the
+    /// linker.
+    pub symbol: SymbolId,
+    /// The sections in the group.
+    pub sections: Vec<SectionId>,
 }
 
 /// The symbol name mangling scheme.

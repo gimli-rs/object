@@ -9,6 +9,13 @@ use crate::write::util::*;
 use crate::write::*;
 
 #[derive(Default, Clone, Copy)]
+struct ComdatOffsets {
+    offset: usize,
+    str_id: Option<StringId>,
+    len: usize,
+}
+
+#[derive(Default, Clone, Copy)]
 struct SectionOffsets {
     index: usize,
     offset: usize,
@@ -171,9 +178,27 @@ impl Object {
 
         // Calculate size of section data.
         let mut shstrtab = StringTable::default();
+        let mut comdat_offsets = vec![ComdatOffsets::default(); self.comdats.len()];
         let mut section_offsets = vec![SectionOffsets::default(); self.sections.len()];
         // Null section.
         let mut section_num = 1;
+        for (index, comdat) in self.comdats.iter().enumerate() {
+            if comdat.kind != ComdatKind::Any {
+                return Err(Error(format!(
+                    "unsupported COMDAT symbol `{}` kind {:?}",
+                    self.symbols[comdat.symbol.0].name().unwrap_or(""),
+                    comdat.kind
+                )));
+            }
+
+            comdat_offsets[index].str_id = Some(shstrtab.add(b".group"));
+            section_num += 1;
+            offset = align(offset, 4);
+            comdat_offsets[index].offset = offset;
+            let len = (comdat.sections.len() + 1) * 4;
+            comdat_offsets[index].len = len;
+            offset += len;
+        }
         for (index, section) in self.sections.iter().enumerate() {
             section_offsets[index].str_id = Some(shstrtab.add(&section.name));
             section_offsets[index].index = section_num;
@@ -364,6 +389,18 @@ impl Object {
         );
 
         // Write section data.
+        for (index, comdat) in self.comdats.iter().enumerate() {
+            let mut data = BytesMut::new();
+            data.write(&U32::new(endian, elf::GRP_COMDAT));
+            for section in &comdat.sections {
+                data.write(&U32::new(endian, section_offsets[section.0].index as u32));
+            }
+
+            write_align(buffer, 4);
+            debug_assert_eq!(comdat_offsets[index].offset, buffer.len());
+            debug_assert_eq!(comdat_offsets[index].len, data.len());
+            buffer.extend(data.as_slice());
+        }
         for (index, section) in self.sections.iter().enumerate() {
             let len = section.data.len();
             if len != 0 {
@@ -618,6 +655,27 @@ impl Object {
                 sh_entsize: 0,
             },
         );
+        for (index, comdat) in self.comdats.iter().enumerate() {
+            let sh_name = comdat_offsets[index]
+                .str_id
+                .map(|id| shstrtab.get_offset(id))
+                .unwrap_or(0) as u32;
+            elf.write_section_header(
+                buffer,
+                SectionHeader {
+                    sh_name,
+                    sh_type: elf::SHT_GROUP,
+                    sh_flags: 0,
+                    sh_addr: 0,
+                    sh_offset: comdat_offsets[index].offset as u64,
+                    sh_size: comdat_offsets[index].len as u64,
+                    sh_link: symtab_index as u32,
+                    sh_info: symbol_offsets[comdat.symbol.0].index as u32,
+                    sh_addralign: 4,
+                    sh_entsize: 4,
+                },
+            );
+        }
         for (index, section) in self.sections.iter().enumerate() {
             let sh_type = match section.kind {
                 SectionKind::UninitializedData | SectionKind::UninitializedTls => elf::SHT_NOBITS,
