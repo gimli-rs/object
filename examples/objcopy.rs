@@ -96,7 +96,8 @@ fn main() {
                 selection,
                 associative_section,
             } => {
-                let associative_section = *out_sections.get(&associative_section).unwrap();
+                let associative_section =
+                    associative_section.map(|index| *out_sections.get(&index).unwrap());
                 SymbolFlags::CoffSection {
                     selection,
                     associative_section,

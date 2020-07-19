@@ -325,6 +325,6 @@ pub enum SymbolFlags<Section> {
         /// `Selection` field in the auxiliary symbol for the section.
         selection: u8,
         /// `Number` field in the auxiliary symbol for the section.
-        associative_section: Section,
+        associative_section: Option<Section>,
     },
 }

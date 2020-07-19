@@ -1,8 +1,8 @@
 use object::read::elf::{FileHeader, SectionHeader};
 use object::read::Object;
 use object::{
-    elf, read, write, Architecture, BinaryFormat, Bytes, Endianness, LittleEndian, SectionFlags,
-    SectionIndex, SectionKind, SymbolFlags, SymbolKind, SymbolScope, SymbolSection, U32,
+    elf, read, write, Architecture, BinaryFormat, Bytes, Endianness, LittleEndian, SectionIndex,
+    SectionKind, SymbolFlags, SymbolKind, SymbolScope, SymbolSection, U32,
 };
 use std::io::Write;
 

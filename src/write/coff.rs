@@ -539,7 +539,10 @@ impl Object {
                         SymbolFlags::CoffSection {
                             selection,
                             associative_section,
-                        } => (selection, associative_section.0 as u16),
+                        } => (
+                            selection,
+                            associative_section.map(|id| id.0 as u16 + 1).unwrap_or(0),
+                        ),
                         _ => (0, 0),
                     };
                     let aux = coff::ImageAuxSymbolSection {
