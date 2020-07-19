@@ -203,10 +203,17 @@ impl Object {
                     )));
                 }
             };
-            for section in &comdat.sections {
-                if section.0 != comdat_section {
-                    section_offsets[section.0].selection = coff::IMAGE_COMDAT_SELECT_ASSOCIATIVE;
-                    section_offsets[section.0].associative_section = comdat_section as u16 + 1;
+            for id in &comdat.sections {
+                let section = &self.sections[id.0];
+                if section.symbol.is_none() {
+                    return Err(Error(format!(
+                        "missing symbol for COMDAT section `{}`",
+                        section.name().unwrap_or(""),
+                    )));
+                }
+                if id.0 != comdat_section {
+                    section_offsets[id.0].selection = coff::IMAGE_COMDAT_SELECT_ASSOCIATIVE;
+                    section_offsets[id.0].associative_section = comdat_section as u16 + 1;
                 }
             }
         }

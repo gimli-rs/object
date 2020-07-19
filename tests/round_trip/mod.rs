@@ -8,6 +8,7 @@ use object::{
 };
 
 mod bss;
+mod comdat;
 mod common;
 mod elf;
 mod tls;
