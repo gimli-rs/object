@@ -76,7 +76,7 @@ impl<'data> SymbolTable<'data> {
         self.get::<pe::ImageSymbol>(index)
     }
 
-    /// Return the symbol table entry or auxilliary record at the given index.
+    /// Return the symbol table entry or auxiliary record at the given index.
     pub fn get<T: Pod>(&self, index: usize) -> Option<&'data T> {
         let bytes = self.symbols.get(index)?;
         Bytes(&bytes.0[..]).read().ok()
@@ -176,7 +176,11 @@ pub(crate) fn parse_symbol<'data>(
                     let number = aux.number.get(LE) as usize;
                     flags = SymbolFlags::CoffSection {
                         selection: aux.selection,
-                        associative_section: SectionIndex(number),
+                        associative_section: if number == 0 {
+                            None
+                        } else {
+                            Some(SectionIndex(number))
+                        },
                     };
                 }
                 (SymbolKind::Section, 0, size)
@@ -225,7 +229,7 @@ pub(crate) fn parse_symbol<'data>(
                 SymbolSection::Unknown
             }
         }
-        index if index > 0 => SymbolSection::Section(SectionIndex(index as usize - 1)),
+        index if index > 0 => SymbolSection::Section(SectionIndex(index as usize)),
         _ => SymbolSection::Unknown,
     };
     let weak = symbol.storage_class == pe::IMAGE_SYM_CLASS_WEAK_EXTERNAL;

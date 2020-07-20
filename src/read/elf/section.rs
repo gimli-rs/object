@@ -324,7 +324,8 @@ impl<'data, 'file, Elf: FileHeader> ObjectSection<'data> for ElfSection<'data, '
             | elf::SHT_HASH
             | elf::SHT_DYNAMIC
             | elf::SHT_REL
-            | elf::SHT_DYNSYM => SectionKind::Metadata,
+            | elf::SHT_DYNSYM
+            | elf::SHT_GROUP => SectionKind::Metadata,
             _ => {
                 // TODO: maybe add more specialised kinds based on sh_type (e.g. Unwind)
                 SectionKind::Unknown

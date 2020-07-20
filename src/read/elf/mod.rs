@@ -25,3 +25,6 @@ pub use compression::*;
 
 mod note;
 pub use note::*;
+
+mod comdat;
+pub use comdat::*;

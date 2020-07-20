@@ -2,8 +2,8 @@ use std::collections::HashMap;
 use std::{env, fs, process};
 
 use object::{
-    write, Object, ObjectSection, RelocationTarget, SectionKind, SymbolFlags, SymbolKind,
-    SymbolSection,
+    write, Object, ObjectComdat, ObjectSection, RelocationTarget, SectionKind, SymbolFlags,
+    SymbolKind, SymbolSection,
 };
 
 fn main() {
@@ -83,10 +83,18 @@ fn main() {
             SymbolSection::Undefined => (write::SymbolSection::Undefined, in_symbol.address()),
             SymbolSection::Absolute => (write::SymbolSection::Absolute, in_symbol.address()),
             SymbolSection::Common => (write::SymbolSection::Common, in_symbol.address()),
-            SymbolSection::Section(index) => (
-                write::SymbolSection::Section(*out_sections.get(&index).unwrap()),
-                in_symbol.address() - in_object.section_by_index(index).unwrap().address(),
-            ),
+            SymbolSection::Section(index) => {
+                if let Some(out_section) = out_sections.get(&index) {
+                    (
+                        write::SymbolSection::Section(*out_section),
+                        in_symbol.address() - in_object.section_by_index(index).unwrap().address(),
+                    )
+                } else {
+                    // Ignore symbols for sections that we have skipped.
+                    assert_eq!(in_symbol.kind(), SymbolKind::Section);
+                    continue;
+                }
+            }
         };
         let flags = match in_symbol.flags() {
             SymbolFlags::None => SymbolFlags::None,
@@ -96,7 +104,8 @@ fn main() {
                 selection,
                 associative_section,
             } => {
-                let associative_section = *out_sections.get(&associative_section).unwrap();
+                let associative_section =
+                    associative_section.map(|index| *out_sections.get(&index).unwrap());
                 SymbolFlags::CoffSection {
                     selection,
                     associative_section,
@@ -141,6 +150,18 @@ fn main() {
                 .add_relocation(out_section, out_relocation)
                 .unwrap();
         }
+    }
+
+    for in_comdat in in_object.comdats() {
+        let mut sections = Vec::new();
+        for in_section in in_comdat.sections() {
+            sections.push(*out_sections.get(&in_section).unwrap());
+        }
+        out_object.add_comdat(write::Comdat {
+            kind: in_comdat.kind(),
+            symbol: *out_symbols.get(&in_comdat.symbol()).unwrap(),
+            sections,
+        });
     }
 
     let out_data = out_object.write().unwrap();

@@ -178,7 +178,7 @@ impl<'data, 'file> Iterator for CoffSectionIterator<'data, 'file> {
     fn next(&mut self) -> Option<Self::Item> {
         self.iter.next().map(|(index, section)| CoffSection {
             file: self.file,
-            index: SectionIndex(index),
+            index: SectionIndex(index + 1),
             section,
         })
     }
