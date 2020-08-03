@@ -7,6 +7,7 @@ pub enum Architecture {
     Arm,
     I386,
     Mips,
+    S390x,
     Wasm32,
     X86_64,
 }
@@ -22,6 +23,7 @@ impl Architecture {
             Architecture::Arm => Some(AddressSize::U32),
             Architecture::I386 => Some(AddressSize::U32),
             Architecture::Mips => Some(AddressSize::U32),
+            Architecture::S390x => Some(AddressSize::U64),
             Architecture::Wasm32 => Some(AddressSize::U32),
             Architecture::X86_64 => Some(AddressSize::U64),
         }
@@ -291,6 +293,11 @@ pub enum RelocationEncoding {
     ///
     /// The `RelocationKind` must be PC relative.
     X86Branch,
+
+    /// s390x PC-relative offset shifted right by one bit.
+    ///
+    /// The `RelocationKind` must be PC relative.
+    S390xDbl,
 }
 
 /// File flags that are specific to each file format.
