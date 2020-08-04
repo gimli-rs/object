@@ -115,6 +115,15 @@ where
             elf::EM_386 => Architecture::I386,
             elf::EM_X86_64 => Architecture::X86_64,
             elf::EM_MIPS => Architecture::Mips,
+            elf::EM_S390 => {
+                // This is either s390 or s390x, depending on the ELF class.
+                // We only support the 64-bit variant s390x here.
+                if self.is_64() {
+                    Architecture::S390x
+                } else {
+                    Architecture::Unknown
+                }
+            }
             _ => Architecture::Unknown,
         }
     }

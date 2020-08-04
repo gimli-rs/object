@@ -163,6 +163,47 @@ impl<'data, 'file, Elf: FileHeader> Iterator for ElfRelocationIterator<'data, 'f
                             elf::R_X86_64_PC8 => (RelocationKind::Relative, 8),
                             r_type => (RelocationKind::Elf(r_type), 0),
                         },
+                        elf::EM_S390 => match reloc.r_type(endian) {
+                            elf::R_390_8 => (RelocationKind::Absolute, 8),
+                            elf::R_390_16 => (RelocationKind::Absolute, 16),
+                            elf::R_390_32 => (RelocationKind::Absolute, 32),
+                            elf::R_390_64 => (RelocationKind::Absolute, 64),
+                            elf::R_390_PC16 => (RelocationKind::Relative, 16),
+                            elf::R_390_PC32 => (RelocationKind::Relative, 32),
+                            elf::R_390_PC64 => (RelocationKind::Relative, 64),
+                            elf::R_390_PC16DBL => {
+                                encoding = RelocationEncoding::S390xDbl;
+                                (RelocationKind::Relative, 16)
+                            }
+                            elf::R_390_PC32DBL => {
+                                encoding = RelocationEncoding::S390xDbl;
+                                (RelocationKind::Relative, 32)
+                            }
+                            elf::R_390_PLT16DBL => {
+                                encoding = RelocationEncoding::S390xDbl;
+                                (RelocationKind::PltRelative, 16)
+                            }
+                            elf::R_390_PLT32DBL => {
+                                encoding = RelocationEncoding::S390xDbl;
+                                (RelocationKind::PltRelative, 32)
+                            }
+                            elf::R_390_GOT16 => (RelocationKind::Got, 16),
+                            elf::R_390_GOT32 => (RelocationKind::Got, 32),
+                            elf::R_390_GOT64 => (RelocationKind::Got, 64),
+                            elf::R_390_GOTENT => {
+                                encoding = RelocationEncoding::S390xDbl;
+                                (RelocationKind::GotRelative, 32)
+                            }
+                            elf::R_390_GOTOFF16 => (RelocationKind::GotBaseOffset, 16),
+                            elf::R_390_GOTOFF32 => (RelocationKind::GotBaseOffset, 32),
+                            elf::R_390_GOTOFF64 => (RelocationKind::GotBaseOffset, 64),
+                            elf::R_390_GOTPC => (RelocationKind::GotBaseRelative, 64),
+                            elf::R_390_GOTPCDBL => {
+                                encoding = RelocationEncoding::S390xDbl;
+                                (RelocationKind::GotBaseRelative, 32)
+                            }
+                            r_type => (RelocationKind::Elf(r_type), 0),
+                        },
                         _ => (RelocationKind::Elf(reloc.r_type(endian)), 0),
                     };
                     let target =

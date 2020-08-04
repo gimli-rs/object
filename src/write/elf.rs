@@ -75,6 +75,7 @@ impl Object {
             Architecture::Aarch64 => true,
             Architecture::I386 => false,
             Architecture::X86_64 => true,
+            Architecture::S390x => true,
             _ => {
                 return Err(Error(format!(
                     "unimplemented architecture {:?}",
@@ -345,6 +346,7 @@ impl Object {
             Architecture::Aarch64 => elf::EM_AARCH64,
             Architecture::I386 => elf::EM_386,
             Architecture::X86_64 => elf::EM_X86_64,
+            Architecture::S390x => elf::EM_S390,
             _ => {
                 return Err(Error(format!(
                     "unimplemented architecture {:?}",
@@ -596,6 +598,72 @@ impl Object {
                             }
                             (RelocationKind::Absolute, RelocationEncoding::Generic, 64) => {
                                 elf::R_AARCH64_ABS64
+                            }
+                            (RelocationKind::Elf(x), _, _) => x,
+                            _ => {
+                                return Err(Error(format!("unimplemented relocation {:?}", reloc)));
+                            }
+                        },
+                        Architecture::S390x => match (reloc.kind, reloc.encoding, reloc.size) {
+                            (RelocationKind::Absolute, RelocationEncoding::Generic, 8) => {
+                                elf::R_390_8
+                            }
+                            (RelocationKind::Absolute, RelocationEncoding::Generic, 16) => {
+                                elf::R_390_16
+                            }
+                            (RelocationKind::Absolute, RelocationEncoding::Generic, 32) => {
+                                elf::R_390_32
+                            }
+                            (RelocationKind::Absolute, RelocationEncoding::Generic, 64) => {
+                                elf::R_390_64
+                            }
+                            (RelocationKind::Relative, RelocationEncoding::Generic, 16) => {
+                                elf::R_390_PC16
+                            }
+                            (RelocationKind::Relative, RelocationEncoding::Generic, 32) => {
+                                elf::R_390_PC32
+                            }
+                            (RelocationKind::Relative, RelocationEncoding::Generic, 64) => {
+                                elf::R_390_PC64
+                            }
+                            (RelocationKind::Relative, RelocationEncoding::S390xDbl, 16) => {
+                                elf::R_390_PC16DBL
+                            }
+                            (RelocationKind::Relative, RelocationEncoding::S390xDbl, 32) => {
+                                elf::R_390_PC32DBL
+                            }
+                            (RelocationKind::PltRelative, RelocationEncoding::S390xDbl, 16) => {
+                                elf::R_390_PLT16DBL
+                            }
+                            (RelocationKind::PltRelative, RelocationEncoding::S390xDbl, 32) => {
+                                elf::R_390_PLT32DBL
+                            }
+                            (RelocationKind::Got, RelocationEncoding::Generic, 16) => {
+                                elf::R_390_GOT16
+                            }
+                            (RelocationKind::Got, RelocationEncoding::Generic, 32) => {
+                                elf::R_390_GOT32
+                            }
+                            (RelocationKind::Got, RelocationEncoding::Generic, 64) => {
+                                elf::R_390_GOT64
+                            }
+                            (RelocationKind::GotRelative, RelocationEncoding::S390xDbl, 32) => {
+                                elf::R_390_GOTENT
+                            }
+                            (RelocationKind::GotBaseOffset, RelocationEncoding::Generic, 16) => {
+                                elf::R_390_GOTOFF16
+                            }
+                            (RelocationKind::GotBaseOffset, RelocationEncoding::Generic, 32) => {
+                                elf::R_390_GOTOFF32
+                            }
+                            (RelocationKind::GotBaseOffset, RelocationEncoding::Generic, 64) => {
+                                elf::R_390_GOTOFF64
+                            }
+                            (RelocationKind::GotBaseRelative, RelocationEncoding::Generic, 64) => {
+                                elf::R_390_GOTPC
+                            }
+                            (RelocationKind::GotBaseRelative, RelocationEncoding::S390xDbl, 32) => {
+                                elf::R_390_GOTPCDBL
                             }
                             (RelocationKind::Elf(x), _, _) => x,
                             _ => {
