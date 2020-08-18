@@ -468,12 +468,12 @@ impl Object {
                         }
                     }
                 };
-                let st_bind = if symbol.is_undefined() {
+                let st_bind = if symbol.weak {
+                    elf::STB_WEAK
+                } else if symbol.is_undefined() {
                     elf::STB_GLOBAL
                 } else if symbol.is_local() {
                     elf::STB_LOCAL
-                } else if symbol.weak {
-                    elf::STB_WEAK
                 } else {
                     elf::STB_GLOBAL
                 };
