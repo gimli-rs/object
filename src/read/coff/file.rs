@@ -1,24 +1,31 @@
-use alloc::vec::Vec;
 use core::str;
 
 use crate::read::{
-    self, Architecture, FileFlags, Object, ObjectSection, ReadError, Result, SectionIndex, Symbol,
-    SymbolIndex, SymbolMap,
+    self, Architecture, FileFlags, Object, ObjectSection, ReadError, Result, SectionIndex,
+    SymbolIndex,
 };
 use crate::{pe, Bytes, LittleEndian as LE};
 
 use super::{
-    parse_symbol, CoffComdat, CoffComdatIterator, CoffSection, CoffSectionIterator, CoffSegment,
-    CoffSegmentIterator, CoffSymbolIterator, SectionTable, SymbolTable,
+    CoffComdat, CoffComdatIterator, CoffSection, CoffSectionIterator, CoffSegment,
+    CoffSegmentIterator, CoffSymbol, CoffSymbolIterator, CoffSymbolTable, SectionTable,
+    SymbolTable,
 };
+
+/// The common parts of `PeFile` and `CoffFile`.
+#[derive(Debug)]
+pub(crate) struct CoffCommon<'data> {
+    pub(crate) sections: SectionTable<'data>,
+    // TODO: ImageSymbolExBytes
+    pub(crate) symbols: SymbolTable<'data>,
+    pub(crate) image_base: u64,
+}
 
 /// A COFF object file.
 #[derive(Debug)]
 pub struct CoffFile<'data> {
     pub(super) header: &'data pe::ImageFileHeader,
-    pub(super) sections: SectionTable<'data>,
-    // TODO: ImageSymbolExBytes
-    pub(super) symbols: SymbolTable<'data>,
+    pub(super) common: CoffCommon<'data>,
     pub(super) data: Bytes<'data>,
 }
 
@@ -32,8 +39,11 @@ impl<'data> CoffFile<'data> {
 
         Ok(CoffFile {
             header,
-            sections,
-            symbols,
+            common: CoffCommon {
+                sections,
+                symbols,
+                image_base: 0,
+            },
             data,
         })
     }
@@ -51,7 +61,9 @@ where
     type SectionIterator = CoffSectionIterator<'data, 'file>;
     type Comdat = CoffComdat<'data, 'file>;
     type ComdatIterator = CoffComdatIterator<'data, 'file>;
+    type Symbol = CoffSymbol<'data, 'file>;
     type SymbolIterator = CoffSymbolIterator<'data, 'file>;
+    type SymbolTable = CoffSymbolTable<'data, 'file>;
 
     fn architecture(&self) -> Architecture {
         match self.header.machine.get(LE) {
@@ -75,7 +87,7 @@ where
     fn segments(&'file self) -> CoffSegmentIterator<'data, 'file> {
         CoffSegmentIterator {
             file: self,
-            iter: self.sections.iter(),
+            iter: self.common.sections.iter(),
         }
     }
 
@@ -85,7 +97,7 @@ where
     }
 
     fn section_by_index(&'file self, index: SectionIndex) -> Result<CoffSection<'data, 'file>> {
-        let section = self.sections.section(index.0)?;
+        let section = self.common.sections.section(index.0)?;
         Ok(CoffSection {
             file: self,
             index,
@@ -96,7 +108,7 @@ where
     fn sections(&'file self) -> CoffSectionIterator<'data, 'file> {
         CoffSectionIterator {
             file: self,
-            iter: self.sections.iter().enumerate(),
+            iter: self.common.sections.iter().enumerate(),
         }
     }
 
@@ -107,38 +119,38 @@ where
         }
     }
 
-    fn symbol_by_index(&self, index: SymbolIndex) -> Result<Symbol<'data>> {
-        let symbol = self
-            .symbols
-            .get(index.0)
-            .read_error("Invalid COFF symbol index")?;
-        Ok(parse_symbol(&self.symbols, index.0, symbol))
+    fn symbol_by_index(&'file self, index: SymbolIndex) -> Result<CoffSymbol<'data, 'file>> {
+        let symbol = self.common.symbols.symbol(index.0)?;
+        Ok(CoffSymbol {
+            file: &self.common,
+            index,
+            symbol,
+        })
     }
 
     fn symbols(&'file self) -> CoffSymbolIterator<'data, 'file> {
         CoffSymbolIterator {
-            symbols: &self.symbols,
+            file: &self.common,
             index: 0,
         }
     }
 
+    #[inline]
+    fn symbol_table(&'file self) -> Option<CoffSymbolTable<'data, 'file>> {
+        Some(CoffSymbolTable { file: &self.common })
+    }
+
     fn dynamic_symbols(&'file self) -> CoffSymbolIterator<'data, 'file> {
         CoffSymbolIterator {
-            symbols: &self.symbols,
+            file: &self.common,
             // Hack: don't return any.
-            index: self.symbols.len(),
+            index: self.common.symbols.len(),
         }
     }
 
-    fn symbol_map(&self) -> SymbolMap<'data> {
-        // TODO: untested
-        let mut symbols: Vec<_> = self
-            .symbols()
-            .map(|(_, s)| s)
-            .filter(SymbolMap::filter)
-            .collect();
-        symbols.sort_by_key(|x| x.address);
-        SymbolMap { symbols }
+    #[inline]
+    fn dynamic_symbol_table(&'file self) -> Option<CoffSymbolTable<'data, 'file>> {
+        None
     }
 
     fn has_debug_symbols(&self) -> bool {

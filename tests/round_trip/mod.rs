@@ -1,6 +1,6 @@
 #![cfg(all(feature = "read", feature = "write"))]
 
-use object::read::{Object, ObjectSection};
+use object::read::{Object, ObjectSection, ObjectSymbol};
 use object::{read, write};
 use object::{
     Architecture, BinaryFormat, Endianness, RelocationEncoding, RelocationKind, SectionKind,
@@ -69,18 +69,19 @@ fn coff_x86_64() {
 
     let mut symbols = object.symbols();
 
-    let (_, symbol) = symbols.next().unwrap();
+    let symbol = symbols.next().unwrap();
     println!("{:?}", symbol);
-    assert_eq!(symbol.name(), Some("file.c"));
+    assert_eq!(symbol.name(), Ok("file.c"));
     assert_eq!(symbol.address(), 0);
     assert_eq!(symbol.kind(), SymbolKind::File);
     assert_eq!(symbol.section(), SymbolSection::None);
     assert_eq!(symbol.scope(), SymbolScope::Compilation);
     assert_eq!(symbol.is_weak(), false);
 
-    let (func1_symbol, symbol) = symbols.next().unwrap();
+    let symbol = symbols.next().unwrap();
     println!("{:?}", symbol);
-    assert_eq!(symbol.name(), Some("func1"));
+    let func1_symbol = symbol.index();
+    assert_eq!(symbol.name(), Ok("func1"));
     assert_eq!(symbol.address(), func1_offset);
     assert_eq!(symbol.kind(), SymbolKind::Text);
     assert_eq!(symbol.section_index(), Some(text_index));
@@ -101,6 +102,12 @@ fn coff_x86_64() {
         read::RelocationTarget::Symbol(func1_symbol)
     );
     assert_eq!(relocation.addend(), 0);
+
+    let map = object.symbol_map();
+    let symbol = map.get(func1_offset + 1).unwrap();
+    assert_eq!(symbol.address(), func1_offset);
+    assert_eq!(symbol.name(), "func1");
+    assert_eq!(map.get(func1_offset - 1), None);
 }
 
 #[test]
@@ -166,9 +173,9 @@ fn elf_x86_64() {
 
     let mut symbols = object.symbols();
 
-    let (_, symbol) = symbols.next().unwrap();
+    let symbol = symbols.next().unwrap();
     println!("{:?}", symbol);
-    assert_eq!(symbol.name(), Some(""));
+    assert_eq!(symbol.name(), Ok(""));
     assert_eq!(symbol.address(), 0);
     assert_eq!(symbol.kind(), SymbolKind::Null);
     assert_eq!(symbol.section_index(), None);
@@ -176,18 +183,19 @@ fn elf_x86_64() {
     assert_eq!(symbol.is_weak(), false);
     assert_eq!(symbol.is_undefined(), true);
 
-    let (_, symbol) = symbols.next().unwrap();
+    let symbol = symbols.next().unwrap();
     println!("{:?}", symbol);
-    assert_eq!(symbol.name(), Some("file.c"));
+    assert_eq!(symbol.name(), Ok("file.c"));
     assert_eq!(symbol.address(), 0);
     assert_eq!(symbol.kind(), SymbolKind::File);
     assert_eq!(symbol.section(), SymbolSection::None);
     assert_eq!(symbol.scope(), SymbolScope::Compilation);
     assert_eq!(symbol.is_weak(), false);
 
-    let (func1_symbol, symbol) = symbols.next().unwrap();
+    let symbol = symbols.next().unwrap();
     println!("{:?}", symbol);
-    assert_eq!(symbol.name(), Some("func1"));
+    let func1_symbol = symbol.index();
+    assert_eq!(symbol.name(), Ok("func1"));
     assert_eq!(symbol.address(), func1_offset);
     assert_eq!(symbol.kind(), SymbolKind::Text);
     assert_eq!(symbol.section_index(), Some(text_index));
@@ -208,6 +216,12 @@ fn elf_x86_64() {
         read::RelocationTarget::Symbol(func1_symbol)
     );
     assert_eq!(relocation.addend(), 0);
+
+    let map = object.symbol_map();
+    let symbol = map.get(func1_offset + 1).unwrap();
+    assert_eq!(symbol.address(), func1_offset);
+    assert_eq!(symbol.name(), "func1");
+    assert_eq!(map.get(func1_offset - 1), None);
 }
 
 #[test]
@@ -283,9 +297,10 @@ fn macho_x86_64() {
 
     let mut symbols = object.symbols();
 
-    let (func1_symbol, symbol) = symbols.next().unwrap();
+    let symbol = symbols.next().unwrap();
     println!("{:?}", symbol);
-    assert_eq!(symbol.name(), Some("_func1"));
+    let func1_symbol = symbol.index();
+    assert_eq!(symbol.name(), Ok("_func1"));
     assert_eq!(symbol.address(), func1_offset);
     assert_eq!(symbol.kind(), SymbolKind::Text);
     assert_eq!(symbol.section_index(), Some(text_index));
@@ -318,4 +333,10 @@ fn macho_x86_64() {
         read::RelocationTarget::Symbol(func1_symbol)
     );
     assert_eq!(relocation.addend(), -4);
+
+    let map = object.symbol_map();
+    let symbol = map.get(func1_offset + 1).unwrap();
+    assert_eq!(symbol.address(), func1_offset);
+    assert_eq!(symbol.name(), "_func1");
+    assert_eq!(map.get(func1_offset - 1), None);
 }

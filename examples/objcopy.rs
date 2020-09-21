@@ -2,8 +2,8 @@ use std::collections::HashMap;
 use std::{env, fs, process};
 
 use object::{
-    write, Object, ObjectComdat, ObjectSection, RelocationTarget, SectionKind, SymbolFlags,
-    SymbolKind, SymbolSection,
+    write, Object, ObjectComdat, ObjectSection, ObjectSymbol, RelocationTarget, SectionKind,
+    SymbolFlags, SymbolKind, SymbolSection,
 };
 
 fn main() {
@@ -73,7 +73,7 @@ fn main() {
     }
 
     let mut out_symbols = HashMap::new();
-    for (symbol_index, in_symbol) in in_object.symbols() {
+    for in_symbol in in_object.symbols() {
         if in_symbol.kind() == SymbolKind::Null {
             continue;
         }
@@ -123,7 +123,7 @@ fn main() {
             flags,
         };
         let symbol_id = out_object.add_symbol(out_symbol);
-        out_symbols.insert(symbol_index, symbol_id);
+        out_symbols.insert(in_symbol.index(), symbol_id);
     }
 
     for in_section in in_object.sections() {

@@ -1,13 +1,15 @@
 use alloc::borrow::Cow;
+use alloc::vec::Vec;
 
 use crate::read::{
     self, Architecture, ComdatKind, CompressedData, FileFlags, Relocation, Result, SectionFlags,
-    SectionIndex, SectionKind, Symbol, SymbolIndex, SymbolMap,
+    SectionIndex, SectionKind, SymbolFlags, SymbolIndex, SymbolKind, SymbolMap, SymbolMapName,
+    SymbolScope, SymbolSection,
 };
 use crate::Endianness;
 
 /// An object file.
-pub trait Object<'data, 'file>: read::private::Sealed {
+pub trait Object<'data: 'file, 'file>: read::private::Sealed {
     /// A segment in the object file.
     type Segment: ObjectSegment<'data>;
 
@@ -26,8 +28,18 @@ pub trait Object<'data, 'file>: read::private::Sealed {
     /// An iterator over the COMDAT section groups in the object file.
     type ComdatIterator: Iterator<Item = Self::Comdat>;
 
-    /// An iterator over the symbols in the object file.
-    type SymbolIterator: Iterator<Item = (SymbolIndex, Symbol<'data>)>;
+    /// A symbol in the object file.
+    type Symbol: ObjectSymbol<'data>;
+
+    /// An iterator over symbols in the object file.
+    type SymbolIterator: Iterator<Item = Self::Symbol>;
+
+    /// A symbol table in the object file.
+    type SymbolTable: ObjectSymbolTable<
+        'data,
+        Symbol = Self::Symbol,
+        SymbolIterator = Self::SymbolIterator,
+    >;
 
     /// Get the architecture type of the file.
     fn architecture(&self) -> Architecture;
@@ -85,49 +97,47 @@ pub trait Object<'data, 'file>: read::private::Sealed {
     /// Get an iterator over the COMDAT section groups in the file.
     fn comdats(&'file self) -> Self::ComdatIterator;
 
+    /// Get the symbol table, if any.
+    fn symbol_table(&'file self) -> Option<Self::SymbolTable>;
+
     /// Get the debugging symbol at the given index.
     ///
     /// The meaning of the index depends on the object file.
     ///
     /// Returns an error if the index is invalid.
-    fn symbol_by_index(&self, index: SymbolIndex) -> Result<Symbol<'data>>;
+    fn symbol_by_index(&'file self, index: SymbolIndex) -> Result<Self::Symbol>;
 
     /// Get an iterator over the debugging symbols in the file.
     ///
     /// This may skip over symbols that are malformed or unsupported.
     fn symbols(&'file self) -> Self::SymbolIterator;
 
-    /// Get the data for the given symbol.
-    ///
-    /// This may iterate over segments.
-    ///
-    /// Returns `Ok(None)` for undefined symbols or if the data could not be found.
-    fn symbol_data(&'file self, symbol: &Symbol<'data>) -> Result<Option<&'data [u8]>> {
-        if symbol.is_undefined() {
-            return Ok(None);
-        }
-        let address = symbol.address();
-        let size = symbol.size();
-        if let Some(index) = symbol.section_index() {
-            let section = self.section_by_index(index)?;
-            section.data_range(address, size)
-        } else {
-            for segment in self.segments() {
-                if let Some(data) = segment.data_range(address, size)? {
-                    return Ok(Some(data));
-                }
-            }
-            Ok(None)
-        }
-    }
+    /// Get the dynamic linking symbol table, if any.
+    fn dynamic_symbol_table(&'file self) -> Option<Self::SymbolTable>;
 
     /// Get an iterator over the dynamic linking symbols in the file.
     ///
     /// This may skip over symbols that are malformed or unsupported.
     fn dynamic_symbols(&'file self) -> Self::SymbolIterator;
 
-    /// Construct a map from addresses to symbols.
-    fn symbol_map(&self) -> SymbolMap<'data>;
+    /// Construct a map from addresses to symbol names.
+    ///
+    /// The map will only contain defined text and data symbols.
+    /// The dynamic symbol table will only be used if there are no debugging symbols.
+    fn symbol_map(&'file self) -> SymbolMap<SymbolMapName<'data>> {
+        let mut symbols = Vec::new();
+        if let Some(table) = self.symbol_table().or_else(|| self.dynamic_symbol_table()) {
+            for symbol in table.symbols() {
+                if !symbol.is_definition() {
+                    continue;
+                }
+                if let Ok(name) = symbol.name() {
+                    symbols.push(SymbolMapName::new(symbol.address(), name));
+                }
+            }
+        }
+        SymbolMap::new(symbols)
+    }
 
     /// Return true if the file contains debug information sections, false if not.
     fn has_debug_symbols(&self) -> bool;
@@ -271,4 +281,82 @@ pub trait ObjectComdat<'data>: read::private::Sealed {
 
     /// Get the sections in this section group.
     fn sections(&self) -> Self::SectionIterator;
+}
+
+/// A symbol table.
+pub trait ObjectSymbolTable<'data>: read::private::Sealed {
+    /// A symbol table entry.
+    type Symbol: ObjectSymbol<'data>;
+
+    /// An iterator over the symbols in a symbol table.
+    type SymbolIterator: Iterator<Item = Self::Symbol>;
+
+    /// Get an iterator over the symbols in the table.
+    ///
+    /// This may skip over symbols that are malformed or unsupported.
+    fn symbols(&self) -> Self::SymbolIterator;
+
+    /// Get the symbol at the given index.
+    ///
+    /// The meaning of the index depends on the object file.
+    ///
+    /// Returns an error if the index is invalid.
+    fn symbol_by_index(&self, index: SymbolIndex) -> Result<Self::Symbol>;
+}
+
+/// A symbol table entry.
+pub trait ObjectSymbol<'data>: read::private::Sealed {
+    /// The index of the symbol.
+    fn index(&self) -> SymbolIndex;
+
+    /// The name of the symbol.
+    fn name(&self) -> Result<&'data str>;
+
+    /// The address of the symbol. May be zero if the address is unknown.
+    fn address(&self) -> u64;
+
+    /// The size of the symbol. May be zero if the size is unknown.
+    fn size(&self) -> u64;
+
+    /// Return the kind of this symbol.
+    fn kind(&self) -> SymbolKind;
+
+    /// Returns the section where the symbol is defined.
+    fn section(&self) -> SymbolSection;
+
+    /// Returns the section index for the section containing this symbol.
+    ///
+    /// May return `None` if the symbol is not defined in a section.
+    fn section_index(&self) -> Option<SectionIndex> {
+        self.section().index()
+    }
+
+    /// Return true if the symbol is undefined.
+    fn is_undefined(&self) -> bool;
+
+    /// Return true if the symbol is a definition of a function or data object
+    /// that has a known address.
+    fn is_definition(&self) -> bool;
+
+    /// Return true if the symbol is common data.
+    ///
+    /// Note: does not check for `SymbolSection::Section` with `SectionKind::Common`.
+    fn is_common(&self) -> bool;
+
+    /// Return true if the symbol is weak.
+    fn is_weak(&self) -> bool;
+
+    /// Returns the symbol scope.
+    fn scope(&self) -> SymbolScope;
+
+    /// Return true if the symbol visible outside of the compilation unit.
+    ///
+    /// This treats `SymbolScope::Unknown` as global.
+    fn is_global(&self) -> bool;
+
+    /// Return true if the symbol is only visible within the compilation unit.
+    fn is_local(&self) -> bool;
+
+    /// Symbol flags that are specific to each file format.
+    fn flags(&self) -> SymbolFlags<SectionIndex>;
 }

@@ -1,6 +1,6 @@
 #![cfg(all(feature = "read", feature = "write"))]
 
-use object::read::{Object, ObjectSection};
+use object::read::{Object, ObjectSection, ObjectSymbol};
 use object::{read, write};
 use object::{
     Architecture, BinaryFormat, Endianness, RelocationEncoding, RelocationKind, SectionKind,
@@ -45,9 +45,9 @@ fn coff_x86_64_tls() {
 
     let mut symbols = object.symbols();
 
-    let (_, symbol) = symbols.next().unwrap();
+    let symbol = symbols.next().unwrap();
     println!("{:?}", symbol);
-    assert_eq!(symbol.name(), Some("tls1"));
+    assert_eq!(symbol.name(), Ok("tls1"));
     assert_eq!(symbol.kind(), SymbolKind::Data);
     assert_eq!(symbol.section_index(), Some(tls_index));
     assert_eq!(symbol.scope(), SymbolScope::Linkage);
@@ -118,13 +118,13 @@ fn elf_x86_64_tls() {
 
     let mut symbols = object.symbols();
 
-    let (_, symbol) = symbols.next().unwrap();
+    let symbol = symbols.next().unwrap();
     println!("{:?}", symbol);
-    assert_eq!(symbol.name(), Some(""));
+    assert_eq!(symbol.name(), Ok(""));
 
-    let (_, symbol) = symbols.next().unwrap();
+    let symbol = symbols.next().unwrap();
     println!("{:?}", symbol);
-    assert_eq!(symbol.name(), Some("tls1"));
+    assert_eq!(symbol.name(), Ok("tls1"));
     assert_eq!(symbol.kind(), SymbolKind::Tls);
     assert_eq!(symbol.section_index(), Some(tdata_index));
     assert_eq!(symbol.scope(), SymbolScope::Linkage);
@@ -132,9 +132,9 @@ fn elf_x86_64_tls() {
     assert_eq!(symbol.is_undefined(), false);
     assert_eq!(symbol.size(), 30);
 
-    let (_, symbol) = symbols.next().unwrap();
+    let symbol = symbols.next().unwrap();
     println!("{:?}", symbol);
-    assert_eq!(symbol.name(), Some("tls2"));
+    assert_eq!(symbol.name(), Ok("tls2"));
     assert_eq!(symbol.kind(), SymbolKind::Tls);
     assert_eq!(symbol.section_index(), Some(tbss_index));
     assert_eq!(symbol.scope(), SymbolScope::Linkage);
@@ -216,45 +216,48 @@ fn macho_x86_64_tls() {
 
     let mut symbols = object.symbols();
 
-    let (_, symbol) = symbols.next().unwrap();
+    let symbol = symbols.next().unwrap();
     println!("{:?}", symbol);
-    assert_eq!(symbol.name(), Some("_tls1"));
+    assert_eq!(symbol.name(), Ok("_tls1"));
     assert_eq!(symbol.kind(), SymbolKind::Tls);
     assert_eq!(symbol.section_index(), Some(thread_vars_index));
     assert_eq!(symbol.scope(), SymbolScope::Linkage);
     assert_eq!(symbol.is_weak(), false);
     assert_eq!(symbol.is_undefined(), false);
 
-    let (tls1_init_symbol, symbol) = symbols.next().unwrap();
+    let symbol = symbols.next().unwrap();
     println!("{:?}", symbol);
-    assert_eq!(symbol.name(), Some("_tls1$tlv$init"));
+    let tls1_init_symbol = symbol.index();
+    assert_eq!(symbol.name(), Ok("_tls1$tlv$init"));
     assert_eq!(symbol.kind(), SymbolKind::Tls);
     assert_eq!(symbol.section_index(), Some(thread_data_index));
     assert_eq!(symbol.scope(), SymbolScope::Compilation);
     assert_eq!(symbol.is_weak(), false);
     assert_eq!(symbol.is_undefined(), false);
 
-    let (tlv_bootstrap_symbol, symbol) = symbols.next().unwrap();
+    let symbol = symbols.next().unwrap();
     println!("{:?}", symbol);
-    assert_eq!(symbol.name(), Some("__tlv_bootstrap"));
+    let tlv_bootstrap_symbol = symbol.index();
+    assert_eq!(symbol.name(), Ok("__tlv_bootstrap"));
     assert_eq!(symbol.kind(), SymbolKind::Unknown);
     assert_eq!(symbol.section_index(), None);
     assert_eq!(symbol.scope(), SymbolScope::Unknown);
     assert_eq!(symbol.is_weak(), false);
     assert_eq!(symbol.is_undefined(), true);
 
-    let (_, symbol) = symbols.next().unwrap();
+    let symbol = symbols.next().unwrap();
     println!("{:?}", symbol);
-    assert_eq!(symbol.name(), Some("_tls2"));
+    assert_eq!(symbol.name(), Ok("_tls2"));
     assert_eq!(symbol.kind(), SymbolKind::Tls);
     assert_eq!(symbol.section_index(), Some(thread_vars_index));
     assert_eq!(symbol.scope(), SymbolScope::Linkage);
     assert_eq!(symbol.is_weak(), false);
     assert_eq!(symbol.is_undefined(), false);
 
-    let (tls2_init_symbol, symbol) = symbols.next().unwrap();
+    let symbol = symbols.next().unwrap();
     println!("{:?}", symbol);
-    assert_eq!(symbol.name(), Some("_tls2$tlv$init"));
+    let tls2_init_symbol = symbol.index();
+    assert_eq!(symbol.name(), Ok("_tls2$tlv$init"));
     assert_eq!(symbol.kind(), SymbolKind::Tls);
     assert_eq!(symbol.section_index(), Some(thread_bss_index));
     assert_eq!(symbol.scope(), SymbolScope::Compilation);

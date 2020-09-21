@@ -1,6 +1,6 @@
 #![cfg(all(feature = "read", feature = "write"))]
 
-use object::read::{Object, ObjectSection};
+use object::read::{Object, ObjectSection, ObjectSymbol};
 use object::{read, write};
 use object::{
     Architecture, BinaryFormat, Endianness, SectionKind, SymbolFlags, SymbolKind, SymbolScope,
@@ -58,9 +58,9 @@ fn coff_x86_64_common() {
 
     let mut symbols = object.symbols();
 
-    let (_, symbol) = symbols.next().unwrap();
+    let symbol = symbols.next().unwrap();
     println!("{:?}", symbol);
-    assert_eq!(symbol.name(), Some("v1"));
+    assert_eq!(symbol.name(), Ok("v1"));
     assert_eq!(symbol.kind(), SymbolKind::Data);
     assert_eq!(symbol.section(), read::SymbolSection::Common);
     assert_eq!(symbol.scope(), SymbolScope::Linkage);
@@ -69,9 +69,9 @@ fn coff_x86_64_common() {
     assert_eq!(symbol.address(), 0);
     assert_eq!(symbol.size(), 4);
 
-    let (_, symbol) = symbols.next().unwrap();
+    let symbol = symbols.next().unwrap();
     println!("{:?}", symbol);
-    assert_eq!(symbol.name(), Some("v2"));
+    assert_eq!(symbol.name(), Ok("v2"));
     assert_eq!(symbol.kind(), SymbolKind::Data);
     assert_eq!(symbol.section(), read::SymbolSection::Common);
     assert_eq!(symbol.scope(), SymbolScope::Linkage);
@@ -80,12 +80,12 @@ fn coff_x86_64_common() {
     assert_eq!(symbol.address(), 0);
     assert_eq!(symbol.size(), 8);
 
-    let (_, symbol) = symbols.next().unwrap();
+    let symbol = symbols.next().unwrap();
     println!("{:?}", symbol);
-    assert_eq!(symbol.name(), Some("v3"));
+    assert_eq!(symbol.name(), Ok("v3"));
     assert_eq!(symbol.kind(), SymbolKind::Data);
     assert_eq!(symbol.section(), read::SymbolSection::Undefined);
-    assert_eq!(symbol.scope(), SymbolScope::Unknown);
+    assert_eq!(symbol.scope(), SymbolScope::Linkage);
     assert_eq!(symbol.is_weak(), false);
     assert_eq!(symbol.is_undefined(), true);
     assert_eq!(symbol.address(), 0);
@@ -134,13 +134,13 @@ fn elf_x86_64_common() {
 
     let mut symbols = object.symbols();
 
-    let (_, symbol) = symbols.next().unwrap();
+    let symbol = symbols.next().unwrap();
     println!("{:?}", symbol);
-    assert_eq!(symbol.name(), Some(""));
+    assert_eq!(symbol.name(), Ok(""));
 
-    let (_, symbol) = symbols.next().unwrap();
+    let symbol = symbols.next().unwrap();
     println!("{:?}", symbol);
-    assert_eq!(symbol.name(), Some("v1"));
+    assert_eq!(symbol.name(), Ok("v1"));
     assert_eq!(symbol.kind(), SymbolKind::Data);
     assert_eq!(symbol.section(), read::SymbolSection::Common);
     assert_eq!(symbol.scope(), SymbolScope::Linkage);
@@ -149,9 +149,9 @@ fn elf_x86_64_common() {
     assert_eq!(symbol.address(), 0);
     assert_eq!(symbol.size(), 4);
 
-    let (_, symbol) = symbols.next().unwrap();
+    let symbol = symbols.next().unwrap();
     println!("{:?}", symbol);
-    assert_eq!(symbol.name(), Some("v2"));
+    assert_eq!(symbol.name(), Ok("v2"));
     assert_eq!(symbol.kind(), SymbolKind::Data);
     assert_eq!(symbol.section(), read::SymbolSection::Common);
     assert_eq!(symbol.scope(), SymbolScope::Linkage);
@@ -223,9 +223,9 @@ fn macho_x86_64_common() {
 
     let mut symbols = object.symbols();
 
-    let (_, symbol) = symbols.next().unwrap();
+    let symbol = symbols.next().unwrap();
     println!("{:?}", symbol);
-    assert_eq!(symbol.name(), Some("_v1"));
+    assert_eq!(symbol.name(), Ok("_v1"));
     assert_eq!(symbol.kind(), SymbolKind::Data);
     assert_eq!(symbol.section_index(), Some(common_index));
     assert_eq!(symbol.scope(), SymbolScope::Linkage);
@@ -233,9 +233,9 @@ fn macho_x86_64_common() {
     assert_eq!(symbol.is_undefined(), false);
     assert_eq!(symbol.address(), 0);
 
-    let (_, symbol) = symbols.next().unwrap();
+    let symbol = symbols.next().unwrap();
     println!("{:?}", symbol);
-    assert_eq!(symbol.name(), Some("_v2"));
+    assert_eq!(symbol.name(), Ok("_v2"));
     assert_eq!(symbol.kind(), SymbolKind::Data);
     assert_eq!(symbol.section_index(), Some(common_index));
     assert_eq!(symbol.scope(), SymbolScope::Linkage);

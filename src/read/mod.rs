@@ -2,7 +2,7 @@
 
 use alloc::borrow::Cow;
 use alloc::vec::Vec;
-use core::{cmp, fmt, result};
+use core::{fmt, result};
 
 use crate::common::*;
 use crate::Bytes;
@@ -145,147 +145,76 @@ impl SymbolSection {
     }
 }
 
-/// A symbol table entry.
-#[derive(Clone, Debug)]
-pub struct Symbol<'data> {
-    name: Option<&'data str>,
-    address: u64,
-    size: u64,
-    kind: SymbolKind,
-    section: SymbolSection,
-    weak: bool,
-    scope: SymbolScope,
-    flags: SymbolFlags<SectionIndex>,
+/// An entry in a `SymbolMap`.
+pub trait SymbolMapEntry {
+    /// The symbol address.
+    fn address(&self) -> u64;
 }
 
-impl<'data> Symbol<'data> {
-    /// Return the kind of this symbol.
-    #[inline]
-    pub fn kind(&self) -> SymbolKind {
-        self.kind
-    }
+/// A map from addresses to symbols.
+#[derive(Debug)]
+pub struct SymbolMap<T: SymbolMapEntry> {
+    symbols: Vec<T>,
+}
 
-    /// Returns the section where the symbol is defined.
-    #[inline]
-    pub fn section(&self) -> SymbolSection {
-        self.section
-    }
-
-    /// Returns the section index for the section containing this symbol.
+impl<T: SymbolMapEntry> SymbolMap<T> {
+    /// Construct a new symbol map.
     ///
-    /// May return `None` if the symbol is not defined in a section.
-    #[inline]
-    pub fn section_index(&self) -> Option<SectionIndex> {
-        self.section.index()
+    /// This function will sort the symbols by address.
+    pub fn new(mut symbols: Vec<T>) -> Self {
+        symbols.sort_unstable_by_key(|s| s.address());
+        SymbolMap { symbols }
     }
 
-    /// Return true if the symbol is undefined.
-    #[inline]
-    pub fn is_undefined(&self) -> bool {
-        self.section == SymbolSection::Undefined
+    /// Get the symbol before the given address.
+    pub fn get(&self, address: u64) -> Option<&T> {
+        let index = match self
+            .symbols
+            .binary_search_by_key(&address, |symbol| symbol.address())
+        {
+            Ok(index) => index,
+            Err(index) => index.checked_sub(1)?,
+        };
+        self.symbols.get(index)
     }
 
-    /// Return true if the symbol is common data.
-    ///
-    /// Note: does not check for `SymbolSection::Section` with `SectionKind::Common`.
+    /// Get all symbols in the map.
     #[inline]
-    fn is_common(&self) -> bool {
-        self.section == SymbolSection::Common
+    pub fn symbols(&self) -> &[T] {
+        &self.symbols
+    }
+}
+
+/// A `SymbolMap` entry for symbol names.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct SymbolMapName<'data> {
+    address: u64,
+    name: &'data str,
+}
+
+impl<'data> SymbolMapName<'data> {
+    /// Construct a `SymbolMapName`.
+    pub fn new(address: u64, name: &'data str) -> Self {
+        SymbolMapName { address, name }
     }
 
-    /// Return true if the symbol is weak.
-    #[inline]
-    pub fn is_weak(&self) -> bool {
-        self.weak
-    }
-
-    /// Return true if the symbol visible outside of the compilation unit.
-    ///
-    /// This treats `SymbolScope::Unknown` as global.
-    #[inline]
-    pub fn is_global(&self) -> bool {
-        !self.is_local()
-    }
-
-    /// Return true if the symbol is only visible within the compilation unit.
-    #[inline]
-    pub fn is_local(&self) -> bool {
-        self.scope == SymbolScope::Compilation
-    }
-
-    /// Returns the symbol scope.
-    #[inline]
-    pub fn scope(&self) -> SymbolScope {
-        self.scope
-    }
-
-    /// Symbol flags that are specific to each file format.
-    #[inline]
-    pub fn flags(&self) -> SymbolFlags<SectionIndex> {
-        self.flags
-    }
-
-    /// The name of the symbol.
-    #[inline]
-    pub fn name(&self) -> Option<&'data str> {
-        self.name
-    }
-
-    /// The address of the symbol. May be zero if the address is unknown.
+    /// The symbol address.
     #[inline]
     pub fn address(&self) -> u64 {
         self.address
     }
 
-    /// The size of the symbol. May be zero if the size is unknown.
+    /// The symbol name.
     #[inline]
-    pub fn size(&self) -> u64 {
-        self.size
+    pub fn name(&self) -> &'data str {
+        self.name
     }
 }
 
-/// A map from addresses to symbols.
-#[derive(Debug)]
-pub struct SymbolMap<'data> {
-    symbols: Vec<Symbol<'data>>,
-}
-
-impl<'data> SymbolMap<'data> {
-    /// Get the symbol containing the given address.
-    pub fn get(&self, address: u64) -> Option<&Symbol<'data>> {
-        self.symbols
-            .binary_search_by(|symbol| {
-                if address < symbol.address {
-                    cmp::Ordering::Greater
-                } else if address < symbol.address + symbol.size {
-                    cmp::Ordering::Equal
-                } else {
-                    cmp::Ordering::Less
-                }
-            })
-            .ok()
-            .and_then(|index| self.symbols.get(index))
-    }
-
-    /// Get all symbols in the map.
+impl<'data> SymbolMapEntry for SymbolMapName<'data> {
     #[inline]
-    pub fn symbols(&self) -> &[Symbol<'data>] {
-        &self.symbols
-    }
-
-    /// Return true for symbols that should be included in the map.
-    fn filter(symbol: &Symbol<'_>) -> bool {
-        match symbol.kind() {
-            SymbolKind::Unknown | SymbolKind::Text | SymbolKind::Data => {}
-            SymbolKind::Null
-            | SymbolKind::Section
-            | SymbolKind::File
-            | SymbolKind::Label
-            | SymbolKind::Tls => {
-                return false;
-            }
-        }
-        !symbol.is_undefined() && !symbol.is_common() && symbol.size() > 0
+    fn address(&self) -> u64 {
+        self.address
     }
 }
 

@@ -11,8 +11,8 @@ use wasmparser as wp;
 
 use crate::read::{
     self, Architecture, ComdatKind, CompressedData, Error, FileFlags, Object, ObjectComdat,
-    ObjectSection, ObjectSegment, ReadError, Relocation, Result, SectionFlags, SectionIndex,
-    SectionKind, Symbol, SymbolFlags, SymbolIndex, SymbolKind, SymbolMap, SymbolScope,
+    ObjectSection, ObjectSegment, ObjectSymbol, ObjectSymbolTable, ReadError, Relocation, Result,
+    SectionFlags, SectionIndex, SectionKind, SymbolFlags, SymbolIndex, SymbolKind, SymbolScope,
     SymbolSection,
 };
 
@@ -42,7 +42,7 @@ pub struct WasmFile<'data> {
     // Whether the file has DWARF information.
     has_debug_symbols: bool,
     // Symbols collected from imports, exports, code and name sections.
-    symbols: Vec<Symbol<'data>>,
+    symbols: Vec<WasmSymbolInternal<'data>>,
     // Address of the function body for the entry point.
     entry: u64,
 }
@@ -67,15 +67,13 @@ impl<'data> WasmFile<'data> {
 
         let mut file = WasmFile::default();
 
-        let mut main_file_symbol = Some(Symbol {
-            name: None,
+        let mut main_file_symbol = Some(WasmSymbolInternal {
+            name: "",
             address: 0,
             size: 0,
             kind: SymbolKind::File,
             section: SymbolSection::None,
-            weak: false,
             scope: SymbolScope::Compilation,
-            flags: SymbolFlags::None,
         });
 
         let mut imported_funcs_count = 0;
@@ -94,20 +92,18 @@ impl<'data> WasmFile<'data> {
                         .read_error("Couldn't read header of the import section")?
                     {
                         let import = import.read_error("Couldn't read an import item")?;
-                        let module_name = Some(import.module);
+                        let module_name = import.module;
 
-                        if last_module_name != module_name {
-                            file.symbols.push(Symbol {
+                        if last_module_name != Some(module_name) {
+                            file.symbols.push(WasmSymbolInternal {
                                 name: module_name,
                                 address: 0,
                                 size: 0,
                                 kind: SymbolKind::File,
                                 section: SymbolSection::None,
-                                weak: false,
                                 scope: SymbolScope::Dynamic,
-                                flags: SymbolFlags::None,
                             });
-                            last_module_name = module_name;
+                            last_module_name = Some(module_name);
                         }
 
                         let kind = match import.ty {
@@ -120,15 +116,13 @@ impl<'data> WasmFile<'data> {
                             | wp::ImportSectionEntryType::Global(_) => SymbolKind::Data,
                         };
 
-                        file.symbols.push(Symbol {
-                            name: Some(import.field),
+                        file.symbols.push(WasmSymbolInternal {
+                            name: import.field,
                             address: 0,
                             size: 0,
                             kind,
                             section: SymbolSection::Undefined,
-                            weak: false,
                             scope: SymbolScope::Dynamic,
-                            flags: SymbolFlags::None,
                         });
                     }
                 }
@@ -177,15 +171,13 @@ impl<'data> WasmFile<'data> {
                             | wp::ExternalKind::Global => (SymbolKind::Data, SECTION_DATA),
                         };
 
-                        file.symbols.push(Symbol {
-                            name: Some(export.field),
+                        file.symbols.push(WasmSymbolInternal {
+                            name: export.field,
                             address: 0,
                             size: 0,
                             kind,
                             section: SymbolSection::Section(SectionIndex(section_idx)),
-                            weak: false,
                             scope: SymbolScope::Dynamic,
-                            flags: SymbolFlags::None,
                         });
                     }
                 }
@@ -223,15 +215,13 @@ impl<'data> WasmFile<'data> {
                                 *local_func_kind = LocalFunctionKind::Local {
                                     symbol_id: file.symbols.len() as u32,
                                 };
-                                file.symbols.push(Symbol {
-                                    section: SymbolSection::Section(SectionIndex(SECTION_CODE)),
+                                file.symbols.push(WasmSymbolInternal {
+                                    name: "",
                                     address,
                                     size,
                                     kind: SymbolKind::Text,
-                                    name: None,
-                                    weak: false,
+                                    section: SymbolSection::Section(SectionIndex(SECTION_CODE)),
                                     scope: SymbolScope::Compilation,
-                                    flags: SymbolFlags::None,
                                 });
                             }
                             LocalFunctionKind::Exported { symbol_ids } => {
@@ -271,7 +261,7 @@ impl<'data> WasmFile<'data> {
                                 if let LocalFunctionKind::Local { symbol_id } =
                                     local_func_kinds[local_index as usize]
                                 {
-                                    file.symbols[symbol_id as usize].name = Some(naming.name);
+                                    file.symbols[symbol_id as usize].name = naming.name;
                                 }
                             }
                         }
@@ -305,7 +295,9 @@ where
     type SectionIterator = WasmSectionIterator<'data, 'file>;
     type Comdat = WasmComdat<'data, 'file>;
     type ComdatIterator = WasmComdatIterator<'data, 'file>;
+    type Symbol = WasmSymbol<'data, 'file>;
     type SymbolIterator = WasmSymbolIterator<'data, 'file>;
+    type SymbolTable = WasmSymbolTable<'data, 'file>;
 
     #[inline]
     fn architecture(&self) -> Architecture {
@@ -358,11 +350,12 @@ where
     }
 
     #[inline]
-    fn symbol_by_index(&self, index: SymbolIndex) -> Result<Symbol<'data>> {
-        self.symbols
+    fn symbol_by_index(&'file self, index: SymbolIndex) -> Result<WasmSymbol<'data, 'file>> {
+        let symbol = self
+            .symbols
             .get(index.0)
-            .cloned()
-            .read_error("Invalid Wasm symbol index")
+            .read_error("Invalid Wasm symbol index")?;
+        Ok(WasmSymbol { index, symbol })
     }
 
     fn symbols(&'file self) -> Self::SymbolIterator {
@@ -371,16 +364,21 @@ where
         }
     }
 
+    fn symbol_table(&'file self) -> Option<WasmSymbolTable<'data, 'file>> {
+        Some(WasmSymbolTable {
+            symbols: &self.symbols,
+        })
+    }
+
     fn dynamic_symbols(&'file self) -> Self::SymbolIterator {
         WasmSymbolIterator {
             symbols: [].iter().enumerate(),
         }
     }
 
-    fn symbol_map(&self) -> SymbolMap<'data> {
-        SymbolMap {
-            symbols: self.symbols.clone(),
-        }
+    #[inline]
+    fn dynamic_symbol_table(&'file self) -> Option<WasmSymbolTable<'data, 'file>> {
+        None
     }
 
     fn has_debug_symbols(&self) -> bool {
@@ -646,18 +644,139 @@ impl<'data, 'file> Iterator for WasmComdatSectionIterator<'data, 'file> {
     }
 }
 
+/// A symbol table of a `WasmFile`.
+#[derive(Debug)]
+pub struct WasmSymbolTable<'data, 'file> {
+    symbols: &'file [WasmSymbolInternal<'data>],
+}
+
+impl<'data, 'file> read::private::Sealed for WasmSymbolTable<'data, 'file> {}
+
+impl<'data, 'file> ObjectSymbolTable<'data> for WasmSymbolTable<'data, 'file> {
+    type Symbol = WasmSymbol<'data, 'file>;
+    type SymbolIterator = WasmSymbolIterator<'data, 'file>;
+
+    fn symbols(&self) -> Self::SymbolIterator {
+        WasmSymbolIterator {
+            symbols: self.symbols.iter().enumerate(),
+        }
+    }
+
+    fn symbol_by_index(&self, index: SymbolIndex) -> Result<Self::Symbol> {
+        let symbol = self
+            .symbols
+            .get(index.0)
+            .read_error("Invalid Wasm symbol index")?;
+        Ok(WasmSymbol { index, symbol })
+    }
+}
+
 /// An iterator over the symbols of a `WasmFile`.
 #[derive(Debug)]
 pub struct WasmSymbolIterator<'data, 'file> {
-    symbols: core::iter::Enumerate<slice::Iter<'file, Symbol<'data>>>,
+    symbols: core::iter::Enumerate<slice::Iter<'file, WasmSymbolInternal<'data>>>,
 }
 
 impl<'data, 'file> Iterator for WasmSymbolIterator<'data, 'file> {
-    type Item = (SymbolIndex, Symbol<'data>);
+    type Item = WasmSymbol<'data, 'file>;
 
     fn next(&mut self) -> Option<Self::Item> {
         let (index, symbol) = self.symbols.next()?;
-        Some((SymbolIndex(index), symbol.clone()))
+        Some(WasmSymbol {
+            index: SymbolIndex(index),
+            symbol,
+        })
+    }
+}
+
+/// A symbol of a `WasmFile`.
+#[derive(Clone, Copy, Debug)]
+pub struct WasmSymbol<'data, 'file> {
+    index: SymbolIndex,
+    symbol: &'file WasmSymbolInternal<'data>,
+}
+
+#[derive(Clone, Debug)]
+struct WasmSymbolInternal<'data> {
+    name: &'data str,
+    address: u64,
+    size: u64,
+    kind: SymbolKind,
+    section: SymbolSection,
+    scope: SymbolScope,
+}
+
+impl<'data, 'file> read::private::Sealed for WasmSymbol<'data, 'file> {}
+
+impl<'data, 'file> ObjectSymbol<'data> for WasmSymbol<'data, 'file> {
+    #[inline]
+    fn index(&self) -> SymbolIndex {
+        self.index
+    }
+
+    #[inline]
+    fn name(&self) -> read::Result<&'data str> {
+        Ok(self.symbol.name)
+    }
+
+    #[inline]
+    fn address(&self) -> u64 {
+        self.symbol.address
+    }
+
+    #[inline]
+    fn size(&self) -> u64 {
+        self.symbol.size
+    }
+
+    #[inline]
+    fn kind(&self) -> SymbolKind {
+        self.symbol.kind
+    }
+
+    #[inline]
+    fn section(&self) -> SymbolSection {
+        self.symbol.section
+    }
+
+    #[inline]
+    fn is_undefined(&self) -> bool {
+        self.symbol.section == SymbolSection::Undefined
+    }
+
+    #[inline]
+    fn is_definition(&self) -> bool {
+        self.symbol.kind == SymbolKind::Text && self.symbol.section != SymbolSection::Undefined
+    }
+
+    #[inline]
+    fn is_common(&self) -> bool {
+        self.symbol.section == SymbolSection::Common
+    }
+
+    #[inline]
+    fn is_weak(&self) -> bool {
+        false
+    }
+
+    #[inline]
+    fn scope(&self) -> SymbolScope {
+        self.symbol.scope
+    }
+
+    #[inline]
+    fn is_global(&self) -> bool {
+        self.symbol.scope != SymbolScope::Compilation
+    }
+
+    #[inline]
+    fn is_local(&self) -> bool {
+        self.symbol.scope == SymbolScope::Compilation
+    }
+
+    #[inline]
+    fn flags(&self) -> SymbolFlags<SectionIndex> {
+        SymbolFlags::None
     }
 }
 

@@ -1,17 +1,16 @@
-use alloc::vec::Vec;
 use core::fmt::Debug;
 use core::{mem, str};
 
 use crate::read::{
     self, util, Architecture, Error, FileFlags, Object, ReadError, SectionIndex, StringTable,
-    Symbol, SymbolIndex, SymbolMap,
+    SymbolIndex,
 };
 use crate::{elf, endian, Bytes, Endian, Endianness, Pod, U32};
 
 use super::{
-    parse_symbol, CompressionHeader, ElfComdat, ElfComdatIterator, ElfSection, ElfSectionIterator,
-    ElfSegment, ElfSegmentIterator, ElfSymbolIterator, NoteHeader, ProgramHeader, Rela,
-    RelocationSections, SectionHeader, SectionTable, Sym, SymbolTable,
+    CompressionHeader, ElfComdat, ElfComdatIterator, ElfSection, ElfSectionIterator, ElfSegment,
+    ElfSegmentIterator, ElfSymbol, ElfSymbolIterator, ElfSymbolTable, NoteHeader, ProgramHeader,
+    Rela, RelocationSections, SectionHeader, SectionTable, Sym, SymbolTable,
 };
 
 /// A 32-bit ELF object file.
@@ -106,7 +105,9 @@ where
     type SectionIterator = ElfSectionIterator<'data, 'file, Elf>;
     type Comdat = ElfComdat<'data, 'file, Elf>;
     type ComdatIterator = ElfComdatIterator<'data, 'file, Elf>;
+    type Symbol = ElfSymbol<'data, 'file, Elf>;
     type SymbolIterator = ElfSymbolIterator<'data, 'file, Elf>;
+    type SymbolTable = ElfSymbolTable<'data, 'file, Elf>;
 
     fn architecture(&self) -> Architecture {
         match self.header.e_machine(self.endian) {
@@ -176,43 +177,47 @@ where
         }
     }
 
-    fn symbol_by_index(&self, index: SymbolIndex) -> read::Result<Symbol<'data>> {
+    fn symbol_by_index(
+        &'file self,
+        index: SymbolIndex,
+    ) -> read::Result<ElfSymbol<'data, 'file, Elf>> {
         let symbol = self.symbols.symbol(index.0)?;
-        let shndx = self.symbols.shndx(index.0);
-        let name = symbol.name(self.endian, self.symbols.strings()).ok();
-        Ok(parse_symbol::<Elf>(
-            self.endian,
-            index.0,
+        Ok(ElfSymbol {
+            endian: self.endian,
+            symbols: &self.symbols,
+            index,
             symbol,
-            name,
-            shndx,
-        ))
+        })
     }
 
     fn symbols(&'file self) -> ElfSymbolIterator<'data, 'file, Elf> {
         ElfSymbolIterator {
-            file: self,
-            symbols: self.symbols,
+            endian: self.endian,
+            symbols: &self.symbols,
             index: 0,
         }
+    }
+
+    fn symbol_table(&'file self) -> Option<ElfSymbolTable<'data, 'file, Elf>> {
+        Some(ElfSymbolTable {
+            endian: self.endian,
+            symbols: &self.symbols,
+        })
     }
 
     fn dynamic_symbols(&'file self) -> ElfSymbolIterator<'data, 'file, Elf> {
         ElfSymbolIterator {
-            file: self,
-            symbols: self.dynamic_symbols,
+            endian: self.endian,
+            symbols: &self.dynamic_symbols,
             index: 0,
         }
     }
 
-    fn symbol_map(&self) -> SymbolMap<'data> {
-        let mut symbols: Vec<_> = self
-            .symbols()
-            .map(|(_, s)| s)
-            .filter(SymbolMap::filter)
-            .collect();
-        symbols.sort_by_key(|x| x.address);
-        SymbolMap { symbols }
+    fn dynamic_symbol_table(&'file self) -> Option<ElfSymbolTable<'data, 'file, Elf>> {
+        Some(ElfSymbolTable {
+            endian: self.endian,
+            symbols: &self.dynamic_symbols,
+        })
     }
 
     fn has_debug_symbols(&self) -> bool {

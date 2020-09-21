@@ -101,7 +101,7 @@ impl<'data, 'file, Pe: ImageNtHeaders> ObjectSegment<'data> for PeSegment<'data,
 
     #[inline]
     fn name(&self) -> Result<Option<&str>> {
-        let name = self.section.name(self.file.symbols.strings())?;
+        let name = self.section.name(self.file.common.symbols.strings())?;
         Ok(Some(
             str::from_utf8(name)
                 .ok()
@@ -218,7 +218,7 @@ impl<'data, 'file, Pe: ImageNtHeaders> ObjectSection<'data> for PeSection<'data,
 
     #[inline]
     fn name(&self) -> Result<&str> {
-        let name = self.section.name(self.file.symbols.strings())?;
+        let name = self.section.name(self.file.common.symbols.strings())?;
         str::from_utf8(name)
             .ok()
             .read_error("Non UTF-8 PE section name")

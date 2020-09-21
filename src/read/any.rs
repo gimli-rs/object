@@ -12,8 +12,9 @@ use crate::read::pe;
 use crate::read::wasm;
 use crate::read::{
     self, Architecture, BinaryFormat, ComdatKind, CompressedData, Error, FileFlags, Object,
-    ObjectComdat, ObjectSection, ObjectSegment, Relocation, Result, SectionFlags, SectionIndex,
-    SectionKind, Symbol, SymbolIndex, SymbolMap,
+    ObjectComdat, ObjectSection, ObjectSegment, ObjectSymbol, ObjectSymbolTable, Relocation,
+    Result, SectionFlags, SectionIndex, SectionKind, SymbolFlags, SymbolIndex, SymbolKind,
+    SymbolMap, SymbolMapName, SymbolScope, SymbolSection,
 };
 
 /// Evaluate an expression on the contents of a file format enum.
@@ -245,7 +246,9 @@ where
     type SectionIterator = SectionIterator<'data, 'file>;
     type Comdat = Comdat<'data, 'file>;
     type ComdatIterator = ComdatIterator<'data, 'file>;
+    type Symbol = Symbol<'data, 'file>;
     type SymbolIterator = SymbolIterator<'data, 'file>;
+    type SymbolTable = SymbolTable<'data, 'file>;
 
     fn architecture(&self) -> Architecture {
         with_inner!(self.inner, FileInternal, |x| x.architecture())
@@ -292,8 +295,10 @@ where
         }
     }
 
-    fn symbol_by_index(&self, index: SymbolIndex) -> Result<Symbol<'data>> {
-        with_inner!(self.inner, FileInternal, |x| x.symbol_by_index(index))
+    fn symbol_by_index(&'file self, index: SymbolIndex) -> Result<Symbol<'data, 'file>> {
+        map_inner_option!(self.inner, FileInternal, SymbolInternal, |x| x
+            .symbol_by_index(index))
+        .map(|inner| Symbol { inner })
     }
 
     fn symbols(&'file self) -> SymbolIterator<'data, 'file> {
@@ -303,6 +308,12 @@ where
         }
     }
 
+    fn symbol_table(&'file self) -> Option<SymbolTable<'data, 'file>> {
+        map_inner_option!(self.inner, FileInternal, SymbolTableInternal, |x| x
+            .symbol_table())
+        .map(|inner| SymbolTable { inner })
+    }
+
     fn dynamic_symbols(&'file self) -> SymbolIterator<'data, 'file> {
         SymbolIterator {
             inner: map_inner!(self.inner, FileInternal, SymbolIteratorInternal, |x| x
@@ -310,7 +321,13 @@ where
         }
     }
 
-    fn symbol_map(&self) -> SymbolMap<'data> {
+    fn dynamic_symbol_table(&'file self) -> Option<SymbolTable<'data, 'file>> {
+        map_inner_option!(self.inner, FileInternal, SymbolTableInternal, |x| x
+            .dynamic_symbol_table())
+        .map(|inner| SymbolTable { inner })
+    }
+
+    fn symbol_map(&self) -> SymbolMap<SymbolMapName<'data>> {
         with_inner!(self.inner, FileInternal, |x| x.symbol_map())
     }
 
@@ -775,6 +792,62 @@ impl<'data, 'file> Iterator for ComdatSectionIterator<'data, 'file> {
     }
 }
 
+/// A symbol table.
+#[derive(Debug)]
+pub struct SymbolTable<'data, 'file>
+where
+    'data: 'file,
+{
+    inner: SymbolTableInternal<'data, 'file>,
+}
+
+#[derive(Debug)]
+enum SymbolTableInternal<'data, 'file>
+where
+    'data: 'file,
+{
+    #[cfg(feature = "coff")]
+    Coff(coff::CoffSymbolTable<'data, 'file>),
+    #[cfg(feature = "elf")]
+    Elf32(elf::ElfSymbolTable32<'data, 'file>),
+    #[cfg(feature = "elf")]
+    Elf64(elf::ElfSymbolTable64<'data, 'file>),
+    #[cfg(feature = "macho")]
+    MachO32(macho::MachOSymbolTable32<'data, 'file>),
+    #[cfg(feature = "macho")]
+    MachO64(macho::MachOSymbolTable64<'data, 'file>),
+    #[cfg(feature = "pe")]
+    Pe32(coff::CoffSymbolTable<'data, 'file>),
+    #[cfg(feature = "pe")]
+    Pe64(coff::CoffSymbolTable<'data, 'file>),
+    #[cfg(feature = "wasm")]
+    Wasm(wasm::WasmSymbolTable<'data, 'file>),
+}
+
+impl<'data, 'file> read::private::Sealed for SymbolTable<'data, 'file> {}
+
+impl<'data, 'file> ObjectSymbolTable<'data> for SymbolTable<'data, 'file> {
+    type Symbol = Symbol<'data, 'file>;
+    type SymbolIterator = SymbolIterator<'data, 'file>;
+
+    fn symbols(&self) -> Self::SymbolIterator {
+        SymbolIterator {
+            inner: map_inner!(
+                self.inner,
+                SymbolTableInternal,
+                SymbolIteratorInternal,
+                |x| x.symbols()
+            ),
+        }
+    }
+
+    fn symbol_by_index(&self, index: SymbolIndex) -> Result<Self::Symbol> {
+        map_inner_option!(self.inner, SymbolTableInternal, SymbolInternal, |x| x
+            .symbol_by_index(index))
+        .map(|inner| Symbol { inner })
+    }
+}
+
 /// An iterator over symbol table entries.
 #[derive(Debug)]
 pub struct SymbolIterator<'data, 'file>
@@ -808,10 +881,116 @@ where
 }
 
 impl<'data, 'file> Iterator for SymbolIterator<'data, 'file> {
-    type Item = (SymbolIndex, Symbol<'data>);
+    type Item = Symbol<'data, 'file>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        with_inner_mut!(self.inner, SymbolIteratorInternal, |x| x.next())
+        next_inner!(self.inner, SymbolIteratorInternal, SymbolInternal)
+            .map(|inner| Symbol { inner })
+    }
+}
+
+/// A symbol table entry.
+pub struct Symbol<'data, 'file>
+where
+    'data: 'file,
+{
+    inner: SymbolInternal<'data, 'file>,
+}
+
+enum SymbolInternal<'data, 'file>
+where
+    'data: 'file,
+{
+    #[cfg(feature = "coff")]
+    Coff(coff::CoffSymbol<'data, 'file>),
+    #[cfg(feature = "elf")]
+    Elf32(elf::ElfSymbol32<'data, 'file>),
+    #[cfg(feature = "elf")]
+    Elf64(elf::ElfSymbol64<'data, 'file>),
+    #[cfg(feature = "macho")]
+    MachO32(macho::MachOSymbol32<'data, 'file>),
+    #[cfg(feature = "macho")]
+    MachO64(macho::MachOSymbol64<'data, 'file>),
+    #[cfg(feature = "pe")]
+    Pe32(coff::CoffSymbol<'data, 'file>),
+    #[cfg(feature = "pe")]
+    Pe64(coff::CoffSymbol<'data, 'file>),
+    #[cfg(feature = "wasm")]
+    Wasm(wasm::WasmSymbol<'data, 'file>),
+}
+
+impl<'data, 'file> fmt::Debug for Symbol<'data, 'file> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Symbol")
+            .field("name", &self.name().unwrap_or("<invalid>"))
+            .field("address", &self.address())
+            .field("size", &self.size())
+            .field("kind", &self.kind())
+            .field("section", &self.section())
+            .field("scope", &self.scope())
+            .field("weak", &self.is_weak())
+            .field("flags", &self.flags())
+            .finish()
+    }
+}
+
+impl<'data, 'file> read::private::Sealed for Symbol<'data, 'file> {}
+
+impl<'data, 'file> ObjectSymbol<'data> for Symbol<'data, 'file> {
+    fn index(&self) -> SymbolIndex {
+        with_inner!(self.inner, SymbolInternal, |x| x.index())
+    }
+
+    fn name(&self) -> Result<&'data str> {
+        with_inner!(self.inner, SymbolInternal, |x| x.name())
+    }
+
+    fn address(&self) -> u64 {
+        with_inner!(self.inner, SymbolInternal, |x| x.address())
+    }
+
+    fn size(&self) -> u64 {
+        with_inner!(self.inner, SymbolInternal, |x| x.size())
+    }
+
+    fn kind(&self) -> SymbolKind {
+        with_inner!(self.inner, SymbolInternal, |x| x.kind())
+    }
+
+    fn section(&self) -> SymbolSection {
+        with_inner!(self.inner, SymbolInternal, |x| x.section())
+    }
+
+    fn is_undefined(&self) -> bool {
+        with_inner!(self.inner, SymbolInternal, |x| x.is_undefined())
+    }
+
+    fn is_definition(&self) -> bool {
+        with_inner!(self.inner, SymbolInternal, |x| x.is_definition())
+    }
+
+    fn is_common(&self) -> bool {
+        with_inner!(self.inner, SymbolInternal, |x| x.is_common())
+    }
+
+    fn is_weak(&self) -> bool {
+        with_inner!(self.inner, SymbolInternal, |x| x.is_weak())
+    }
+
+    fn scope(&self) -> SymbolScope {
+        with_inner!(self.inner, SymbolInternal, |x| x.scope())
+    }
+
+    fn is_global(&self) -> bool {
+        with_inner!(self.inner, SymbolInternal, |x| x.is_global())
+    }
+
+    fn is_local(&self) -> bool {
+        with_inner!(self.inner, SymbolInternal, |x| x.is_local())
+    }
+
+    fn flags(&self) -> SymbolFlags<SectionIndex> {
+        with_inner!(self.inner, SymbolInternal, |x| x.flags())
     }
 }
 
