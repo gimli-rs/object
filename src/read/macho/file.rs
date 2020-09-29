@@ -3,8 +3,8 @@ use core::fmt::Debug;
 use core::{mem, str};
 
 use crate::read::{
-    self, Architecture, ComdatKind, Error, FileFlags, Object, ObjectComdat, ObjectSection,
-    ReadError, Result, SectionIndex, SymbolIndex,
+    self, Architecture, ComdatKind, Error, FileFlags, Object, ObjectComdat, ObjectMap,
+    ObjectSection, ReadError, Result, SectionIndex, SymbolIndex,
 };
 use crate::{endian, macho, BigEndian, Bytes, Endian, Endianness, Pod};
 
@@ -197,6 +197,10 @@ where
     #[inline]
     fn dynamic_symbol_table(&'file self) -> Option<MachOSymbolTable<'data, 'file, Mach>> {
         None
+    }
+
+    fn object_map(&'file self) -> ObjectMap<'data> {
+        self.symbols.object_map(self.endian)
     }
 
     fn has_debug_symbols(&self) -> bool {

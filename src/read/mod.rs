@@ -155,7 +155,7 @@ pub trait SymbolMapEntry {
 }
 
 /// A map from addresses to symbols.
-#[derive(Debug)]
+#[derive(Debug, Default, Clone)]
 pub struct SymbolMap<T: SymbolMapEntry> {
     symbols: Vec<T>,
 }
@@ -215,6 +215,86 @@ impl<'data> SymbolMapName<'data> {
 }
 
 impl<'data> SymbolMapEntry for SymbolMapName<'data> {
+    #[inline]
+    fn address(&self) -> u64 {
+        self.address
+    }
+}
+
+/// A map from addresses to symbol names and object files.
+///
+/// This is derived from STAB entries in Mach-O files.
+#[derive(Debug, Default, Clone)]
+pub struct ObjectMap<'data> {
+    symbols: SymbolMap<ObjectMapEntry<'data>>,
+    objects: Vec<&'data [u8]>,
+}
+
+impl<'data> ObjectMap<'data> {
+    /// Get the entry containing the given address.
+    pub fn get(&self, address: u64) -> Option<&ObjectMapEntry<'data>> {
+        self.symbols
+            .get(address)
+            .filter(|entry| entry.size == 0 || address.wrapping_sub(entry.address) < entry.size)
+    }
+
+    /// Get all symbols in the map.
+    #[inline]
+    pub fn symbols(&self) -> &[ObjectMapEntry<'data>] {
+        self.symbols.symbols()
+    }
+
+    /// Get all objects in the map.
+    #[inline]
+    pub fn objects(&self) -> &[&'data [u8]] {
+        &self.objects
+    }
+}
+
+/// A `ObjectMap` entry.
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct ObjectMapEntry<'data> {
+    address: u64,
+    size: u64,
+    name: &'data [u8],
+    object: usize,
+}
+
+impl<'data> ObjectMapEntry<'data> {
+    /// Get the symbol address.
+    #[inline]
+    pub fn address(&self) -> u64 {
+        self.address
+    }
+
+    /// Get the symbol size.
+    ///
+    /// This may be 0 if the size is unknown.
+    #[inline]
+    pub fn size(&self) -> u64 {
+        self.size
+    }
+
+    /// Get the symbol name.
+    #[inline]
+    pub fn name(&self) -> &'data [u8] {
+        self.name
+    }
+
+    /// Get the index of the object file name.
+    #[inline]
+    pub fn object_index(&self) -> usize {
+        self.object
+    }
+
+    /// Get the object file name.
+    #[inline]
+    pub fn object(&self, map: &ObjectMap<'data>) -> &'data [u8] {
+        map.objects[self.object]
+    }
+}
+
+impl<'data> SymbolMapEntry for ObjectMapEntry<'data> {
     #[inline]
     fn address(&self) -> u64 {
         self.address

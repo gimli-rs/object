@@ -112,7 +112,7 @@ impl<'data> SymbolTable<'data> {
 impl pe::ImageSymbol {
     /// Parse a COFF symbol name.
     ///
-    /// `strings` must be the string table used for symbols names.
+    /// `strings` must be the string table used for symbol names.
     pub fn name<'data>(&'data self, strings: StringTable<'data>) -> Result<&'data [u8]> {
         if self.name[0] == 0 {
             // If the name starts with 0 then the last 4 bytes are a string table offset.
