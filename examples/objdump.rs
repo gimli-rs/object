@@ -1,4 +1,4 @@
-use object::{Object, ObjectComdat, ObjectSection};
+use object::{Object, ObjectComdat, ObjectSection, ObjectSymbol};
 use std::{env, fs, process};
 
 fn main() {
@@ -72,8 +72,8 @@ fn main() {
             println!();
         }
 
-        for (index, symbol) in file.symbols() {
-            println!("{}: {:?}", index.0, symbol);
+        for symbol in file.symbols() {
+            println!("{}: {:?}", symbol.index().0, symbol);
         }
 
         for section in file.sections() {

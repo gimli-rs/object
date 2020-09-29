@@ -1,7 +1,7 @@
 #![cfg(all(feature = "read", feature = "write"))]
 
 use object::pe;
-use object::read::{Object, ObjectComdat, ObjectSection};
+use object::read::{Object, ObjectComdat, ObjectSection, ObjectSymbol};
 use object::{read, write};
 use object::{
     Architecture, BinaryFormat, ComdatKind, Endianness, SectionKind, SymbolFlags, SymbolKind,
@@ -65,9 +65,9 @@ fn coff_x86_64_comdat() {
 
     let mut symbols = object.symbols();
 
-    let (_, symbol) = symbols.next().unwrap();
+    let symbol = symbols.next().unwrap();
     println!("{:?}", symbol);
-    assert_eq!(symbol.name(), Some(".text$s1"));
+    assert_eq!(symbol.name(), Ok(".text$s1"));
     assert_eq!(symbol.kind(), SymbolKind::Section);
     assert_eq!(
         symbol.section(),
@@ -81,9 +81,9 @@ fn coff_x86_64_comdat() {
         }
     );
 
-    let (_, symbol) = symbols.next().unwrap();
+    let symbol = symbols.next().unwrap();
     println!("{:?}", symbol);
-    assert_eq!(symbol.name(), Some(".data$s1"));
+    assert_eq!(symbol.name(), Ok(".data$s1"));
     assert_eq!(symbol.kind(), SymbolKind::Section);
     assert_eq!(
         symbol.section(),
@@ -97,9 +97,10 @@ fn coff_x86_64_comdat() {
         }
     );
 
-    let (symbol_index, symbol) = symbols.next().unwrap();
+    let symbol = symbols.next().unwrap();
+    let symbol_index = symbol.index();
     println!("{:?}", symbol);
-    assert_eq!(symbol.name(), Some("s1"));
+    assert_eq!(symbol.name(), Ok("s1"));
     assert_eq!(symbol.kind(), SymbolKind::Data);
     assert_eq!(
         symbol.section(),
@@ -189,13 +190,14 @@ fn elf_x86_64_common() {
 
     let mut symbols = object.symbols();
 
-    let (_, symbol) = symbols.next().unwrap();
+    let symbol = symbols.next().unwrap();
     println!("{:?}", symbol);
-    assert_eq!(symbol.name(), Some(""));
+    assert_eq!(symbol.name(), Ok(""));
 
-    let (symbol_index, symbol) = symbols.next().unwrap();
+    let symbol = symbols.next().unwrap();
+    let symbol_index = symbol.index();
     println!("{:?}", symbol);
-    assert_eq!(symbol.name(), Some("s1"));
+    assert_eq!(symbol.name(), Ok("s1"));
     assert_eq!(symbol.kind(), SymbolKind::Data);
     assert_eq!(
         symbol.section(),

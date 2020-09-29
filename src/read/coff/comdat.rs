@@ -22,7 +22,12 @@ impl<'data, 'file> Iterator for CoffComdatIterator<'data, 'file> {
     fn next(&mut self) -> Option<Self::Item> {
         loop {
             let index = self.index;
-            let symbol = self.file.symbols.get::<pe::ImageSymbol>(index)?;
+            let symbol = self
+                .file
+                .common
+                .symbols
+                .get::<pe::ImageSymbol>(index)
+                .ok()?;
             self.index += 1 + symbol.number_of_aux_symbols as usize;
             if let Some(comdat) = CoffComdat::parse(self.file, symbol, index) {
                 return Some(comdat);
@@ -59,7 +64,11 @@ impl<'data, 'file> CoffComdat<'data, 'file> {
         }
 
         // Auxiliary record must have a non-associative selection.
-        let aux = file.symbols.get::<pe::ImageAuxSymbolSection>(index + 1)?;
+        let aux = file
+            .common
+            .symbols
+            .get::<pe::ImageAuxSymbolSection>(index + 1)
+            .ok()?;
         let selection = aux.selection;
         if selection == 0 || selection == pe::IMAGE_COMDAT_SELECT_ASSOCIATIVE {
             return None;
@@ -71,7 +80,11 @@ impl<'data, 'file> CoffComdat<'data, 'file> {
         let section_number = section_symbol.section_number.get(LE);
         loop {
             symbol_index += 1 + symbol.number_of_aux_symbols as usize;
-            symbol = file.symbols.get::<pe::ImageSymbol>(symbol_index)?;
+            symbol = file
+                .common
+                .symbols
+                .get::<pe::ImageSymbol>(symbol_index)
+                .ok()?;
             if section_number == symbol.section_number.get(LE) {
                 break;
             }
@@ -112,7 +125,7 @@ impl<'data, 'file> ObjectComdat<'data> for CoffComdat<'data, 'file> {
     #[inline]
     fn name(&self) -> Result<&str> {
         // Find the name of first symbol referring to the section.
-        let name = self.symbol.name(self.file.symbols.strings())?;
+        let name = self.symbol.name(self.file.common.symbols.strings())?;
         str::from_utf8(name)
             .ok()
             .read_error("Non UTF-8 COFF COMDAT name")
@@ -147,7 +160,12 @@ impl<'data, 'file> Iterator for CoffComdatSectionIterator<'data, 'file> {
         // TODO: it seems gcc doesn't use associated symbols for this
         loop {
             let index = self.index;
-            let symbol = self.file.symbols.get::<pe::ImageSymbol>(index)?;
+            let symbol = self
+                .file
+                .common
+                .symbols
+                .get::<pe::ImageSymbol>(index)
+                .ok()?;
             self.index += 1 + symbol.number_of_aux_symbols as usize;
 
             // Must be a section symbol.
@@ -163,8 +181,10 @@ impl<'data, 'file> Iterator for CoffComdatSectionIterator<'data, 'file> {
 
             let aux = self
                 .file
+                .common
                 .symbols
-                .get::<pe::ImageAuxSymbolSection>(index + 1)?;
+                .get::<pe::ImageAuxSymbolSection>(index + 1)
+                .ok()?;
             if aux.selection == pe::IMAGE_COMDAT_SELECT_ASSOCIATIVE {
                 // TODO: use high_number for bigobj
                 if aux.number.get(LE) == self.section_number {

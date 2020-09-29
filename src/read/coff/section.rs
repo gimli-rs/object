@@ -153,7 +153,7 @@ impl<'data, 'file> ObjectSegment<'data> for CoffSegment<'data, 'file> {
 
     #[inline]
     fn name(&self) -> Result<Option<&str>> {
-        let name = self.section.name(self.file.symbols.strings())?;
+        let name = self.section.name(self.file.common.symbols.strings())?;
         Ok(Some(
             str::from_utf8(name)
                 .ok()
@@ -255,7 +255,7 @@ impl<'data, 'file> ObjectSection<'data> for CoffSection<'data, 'file> {
 
     #[inline]
     fn name(&self) -> Result<&str> {
-        let name = self.section.name(self.file.symbols.strings())?;
+        let name = self.section.name(self.file.common.symbols.strings())?;
         str::from_utf8(name)
             .ok()
             .read_error("Non UTF-8 COFF section name")
