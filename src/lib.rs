@@ -41,6 +41,8 @@ pub use read::*;
 #[cfg(feature = "write_core")]
 pub mod write;
 
+#[cfg(feature = "archive")]
+pub mod archive;
 #[cfg(feature = "elf")]
 pub mod elf;
 #[cfg(feature = "macho")]

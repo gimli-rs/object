@@ -13,6 +13,9 @@ pub use util::StringTable;
 mod any;
 pub use any::*;
 
+#[cfg(feature = "archive")]
+pub mod archive;
+
 #[cfg(feature = "coff")]
 pub mod coff;
 

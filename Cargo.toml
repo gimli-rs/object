@@ -29,7 +29,7 @@ memmap = "0.7"
 
 [features]
 read_core = []
-read = ["read_core", "coff", "elf", "macho", "pe", "wasm", "unaligned"]
+read = ["read_core", "archive", "coff", "elf", "macho", "pe", "wasm", "unaligned"]
 write_core = ["crc32fast", "indexmap", "std"]
 write = ["write_core", "coff", "elf", "macho"]
 
@@ -39,6 +39,7 @@ compression = ["flate2", "std"]
 # for architectures that have no alignment constraints.
 unaligned = []
 
+archive = []
 coff = []
 elf = []
 macho = []
@@ -70,3 +71,7 @@ required-features = ["read", "write"]
 [[example]]
 name = "objdump"
 required-features = ["read_core"]
+
+[[example]]
+name = "ar"
+required-features = ["read_core", "archive"]
