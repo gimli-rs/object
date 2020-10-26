@@ -75,3 +75,7 @@ required-features = ["read_core"]
 [[example]]
 name = "ar"
 required-features = ["read_core", "archive"]
+
+[[example]]
+name = "objectmap"
+required-features = ["read_core"]

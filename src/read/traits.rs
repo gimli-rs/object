@@ -2,9 +2,9 @@ use alloc::borrow::Cow;
 use alloc::vec::Vec;
 
 use crate::read::{
-    self, Architecture, ComdatKind, CompressedData, FileFlags, Relocation, Result, SectionFlags,
-    SectionIndex, SectionKind, SymbolFlags, SymbolIndex, SymbolKind, SymbolMap, SymbolMapName,
-    SymbolScope, SymbolSection,
+    self, Architecture, ComdatKind, CompressedData, FileFlags, ObjectMap, Relocation, Result,
+    SectionFlags, SectionIndex, SectionKind, SymbolFlags, SymbolIndex, SymbolKind, SymbolMap,
+    SymbolMapName, SymbolScope, SymbolSection,
 };
 use crate::Endianness;
 
@@ -110,9 +110,13 @@ pub trait Object<'data: 'file, 'file>: read::private::Sealed {
     /// Get an iterator over the debugging symbols in the file.
     ///
     /// This may skip over symbols that are malformed or unsupported.
+    ///
+    /// For Mach-O files, this does not include STAB entries.
     fn symbols(&'file self) -> Self::SymbolIterator;
 
     /// Get the dynamic linking symbol table, if any.
+    ///
+    /// Only ELF has a separate dynamic linking symbol table.
     fn dynamic_symbol_table(&'file self) -> Option<Self::SymbolTable>;
 
     /// Get an iterator over the dynamic linking symbols in the file.
@@ -137,6 +141,13 @@ pub trait Object<'data: 'file, 'file>: read::private::Sealed {
             }
         }
         SymbolMap::new(symbols)
+    }
+
+    /// Construct a map from addresses to symbol names and object file names.
+    ///
+    /// This is derived from Mach-O STAB entries.
+    fn object_map(&'file self) -> ObjectMap<'data> {
+        ObjectMap::default()
     }
 
     /// Return true if the file contains debug information sections, false if not.

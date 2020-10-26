@@ -7,8 +7,9 @@ use crate::macho;
 use crate::pod::Pod;
 use crate::read::util::StringTable;
 use crate::read::{
-    self, ObjectSymbol, ObjectSymbolTable, ReadError, Result, SectionIndex, SectionKind,
-    SymbolFlags, SymbolIndex, SymbolKind, SymbolMap, SymbolMapEntry, SymbolScope, SymbolSection,
+    self, ObjectMap, ObjectMapEntry, ObjectSymbol, ObjectSymbolTable, ReadError, Result,
+    SectionIndex, SectionKind, SymbolFlags, SymbolIndex, SymbolKind, SymbolMap, SymbolMapEntry,
+    SymbolScope, SymbolSection,
 };
 
 use super::{MachHeader, MachOFile};
@@ -73,7 +74,7 @@ impl<'data, Mach: MachHeader> SymbolTable<'data, Mach> {
         &self,
         f: F,
     ) -> SymbolMap<Entry> {
-        let mut symbols = Vec::with_capacity(self.symbols.len());
+        let mut symbols = Vec::new();
         for nlist in self.symbols {
             if !nlist.is_definition() {
                 continue;
@@ -83,6 +84,59 @@ impl<'data, Mach: MachHeader> SymbolTable<'data, Mach> {
             }
         }
         SymbolMap::new(symbols)
+    }
+
+    /// Construct a map from addresses to symbol names and object file names.
+    pub fn object_map(&self, endian: Mach::Endian) -> ObjectMap<'data> {
+        let mut symbols = Vec::new();
+        let mut objects = Vec::new();
+        let mut object = None;
+        let mut current_function = None;
+        // Each module starts with one or two N_SO symbols (path, or directory + filename)
+        // and one N_OSO symbol. The module is terminated by an empty N_SO symbol.
+        for nlist in self.symbols {
+            let n_type = nlist.n_type();
+            if n_type & macho::N_STAB == 0 {
+                continue;
+            }
+            // TODO: includes variables too (N_GSYM, N_STSYM). These may need to get their
+            // address from regular symbols though.
+            match n_type {
+                macho::N_SO => {
+                    object = None;
+                }
+                macho::N_OSO => {
+                    object = None;
+                    if let Ok(name) = nlist.name(endian, self.strings) {
+                        if !name.is_empty() {
+                            object = Some(objects.len());
+                            objects.push(name);
+                        }
+                    }
+                }
+                macho::N_FUN => {
+                    if let Ok(name) = nlist.name(endian, self.strings) {
+                        if !name.is_empty() {
+                            current_function = Some((name, nlist.n_value(endian).into()))
+                        } else if let Some((name, address)) = current_function.take() {
+                            if let Some(object) = object {
+                                symbols.push(ObjectMapEntry {
+                                    address,
+                                    size: nlist.n_value(endian).into(),
+                                    name,
+                                    object,
+                                });
+                            }
+                        }
+                    }
+                }
+                _ => {}
+            }
+        }
+        ObjectMap {
+            symbols: SymbolMap::new(symbols),
+            objects,
+        }
     }
 }
 
