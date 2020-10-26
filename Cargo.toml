@@ -1,6 +1,6 @@
 [package]
 name = "object"
-version = "0.21.1"
+version = "0.22.0"
 authors = ["Nick Fitzgerald <fitzgen@gmail.com>", "Philip Craig <philipjcraig@gmail.com>"]
 edition = "2018"
 exclude = ["/.coveralls.yml", "/.travis.yml"]
