@@ -4,7 +4,27 @@
 //! across platforms. It supports reading object files and executable files,
 //! and writing object files.
 //!
-//! See the [`File` struct](./read/struct.File.html) for details.
+//! ## Raw struct definitions
+//!
+//! Raw structs are defined for: [ELF](elf), [Mach-O](macho), [PE/COFF](pe), [archive].
+//! Types and traits for zerocopy support are defined in [pod] and [endian].
+//!
+//! ## Unified read API
+//!
+//! The [read::Object] trait defines the unified interace. This trait is implemented
+//! by [read::File], which allows reading any file format, as well as implementations
+//! for each file format: [ELF](read::elf::ElfFile), [Mach-O](read::macho::MachOFile),
+//! [COFF](read::coff::CoffFile), [PE](read::pe::PeFile), [Wasm](read::wasm::WasmFile).
+//!
+//! ## Low level read API
+//!
+//! In addition to the unified read API, the various `read` modules define helpers that
+//! operate on the raw structs. These also provide traits that abstract over the differences
+//! between 32-bit and 64-bit versions of the file format.
+//!
+//! ## Unified write API
+//!
+//! [write::Object] allows building an object and then writing it out.
 
 #![deny(missing_docs)]
 #![deny(missing_debug_implementations)]
