@@ -328,6 +328,8 @@ impl<'data, 'file, Elf: FileHeader> ObjectSection<'data> for ElfSection<'data, '
             | elf::SHT_GROUP => SectionKind::Metadata,
             _ => {
                 // TODO: maybe add more specialised kinds based on sh_type (e.g. Unwind)
+                // FIXME: This misclassifies `.debug_str` on MIPS as `Unknown`, since that uses
+                // architecture-specific section types, so we need to know the architecture here.
                 SectionKind::Unknown
             }
         }
