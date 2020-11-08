@@ -79,6 +79,8 @@ fn dump_object(data: &[u8]) {
         if file.is_64() { "64" } else { "32" }
     );
     println!("Architecture: {:?}", file.architecture());
+    println!("Flags: {:?}", file.flags());
+
     match file.mach_uuid() {
         Ok(Some(uuid)) => println!("Mach UUID: {:x?}", uuid),
         Ok(None) => {}
