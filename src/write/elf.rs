@@ -76,6 +76,7 @@ impl Object {
             Architecture::I386 => false,
             Architecture::X86_64 => true,
             Architecture::S390x => true,
+            Architecture::Mips => false,
             _ => {
                 return Err(Error(format!(
                     "unimplemented architecture {:?}",
@@ -347,6 +348,7 @@ impl Object {
             Architecture::I386 => elf::EM_386,
             Architecture::X86_64 => elf::EM_X86_64,
             Architecture::S390x => elf::EM_S390,
+            Architecture::Mips => elf::EM_MIPS,
             _ => {
                 return Err(Error(format!(
                     "unimplemented architecture {:?}",
@@ -665,6 +667,12 @@ impl Object {
                             (RelocationKind::GotBaseRelative, RelocationEncoding::S390xDbl, 32) => {
                                 elf::R_390_GOTPCDBL
                             }
+                            (RelocationKind::Elf(x), _, _) => x,
+                            _ => {
+                                return Err(Error(format!("unimplemented relocation {:?}", reloc)));
+                            }
+                        },
+                        Architecture::Mips => match (reloc.kind, reloc.encoding, reloc.size) {
                             (RelocationKind::Elf(x), _, _) => x,
                             _ => {
                                 return Err(Error(format!("unimplemented relocation {:?}", reloc)));
