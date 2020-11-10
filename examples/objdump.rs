@@ -117,6 +117,8 @@ fn dump_object(data: &[u8]) {
         println!();
     }
 
+    println!();
+    println!("Symbols");
     for symbol in file.symbols() {
         println!("{}: {:?}", symbol.index().0, symbol);
     }
@@ -130,6 +132,20 @@ fn dump_object(data: &[u8]) {
             for relocation in section.relocations() {
                 println!("{:?}", relocation);
             }
+        }
+    }
+
+    println!();
+    println!("Dynamic symbols");
+    for symbol in file.dynamic_symbols() {
+        println!("{}: {:?}", symbol.index().0, symbol);
+    }
+
+    if let Some(relocations) = file.dynamic_relocations() {
+        println!();
+        println!("Dynamic relocations");
+        for relocation in relocations {
+            println!("{:?}", relocation);
         }
     }
 }

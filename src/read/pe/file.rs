@@ -3,8 +3,8 @@ use core::{mem, str};
 
 use crate::read::coff::{CoffCommon, CoffSymbol, CoffSymbolIterator, CoffSymbolTable, SymbolTable};
 use crate::read::{
-    self, Architecture, ComdatKind, Error, FileFlags, Object, ObjectComdat, ReadError, Result,
-    SectionIndex, SymbolIndex,
+    self, Architecture, ComdatKind, Error, FileFlags, NoDynamicRelocationIterator, Object,
+    ObjectComdat, ReadError, Result, SectionIndex, SymbolIndex,
 };
 use crate::{pe, Bytes, LittleEndian as LE, Pod};
 
@@ -83,6 +83,7 @@ where
     type Symbol = CoffSymbol<'data, 'file>;
     type SymbolIterator = CoffSymbolIterator<'data, 'file>;
     type SymbolTable = CoffSymbolTable<'data, 'file>;
+    type DynamicRelocationIterator = NoDynamicRelocationIterator;
 
     fn architecture(&self) -> Architecture {
         match self.nt_headers.file_header().machine.get(LE) {
@@ -171,6 +172,10 @@ where
     }
 
     fn dynamic_symbol_table(&'file self) -> Option<CoffSymbolTable<'data, 'file>> {
+        None
+    }
+
+    fn dynamic_relocations(&'file self) -> Option<NoDynamicRelocationIterator> {
         None
     }
 

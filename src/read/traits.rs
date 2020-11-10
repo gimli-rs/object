@@ -41,6 +41,12 @@ pub trait Object<'data: 'file, 'file>: read::private::Sealed {
         SymbolIterator = Self::SymbolIterator,
     >;
 
+    /// An iterator over dynamic relocations in the file.
+    ///
+    /// The first field in the item tuple is the address
+    /// that the relocation applies to.
+    type DynamicRelocationIterator: Iterator<Item = (u64, Relocation)>;
+
     /// Get the architecture type of the file.
     fn architecture(&self) -> Architecture;
 
@@ -122,7 +128,17 @@ pub trait Object<'data: 'file, 'file>: read::private::Sealed {
     /// Get an iterator over the dynamic linking symbols in the file.
     ///
     /// This may skip over symbols that are malformed or unsupported.
+    ///
+    /// Only ELF has separate dynamic linking symbols.
+    /// Other file formats will return an empty iterator.
     fn dynamic_symbols(&'file self) -> Self::SymbolIterator;
+
+    /// Get the dynamic relocations for this file.
+    ///
+    /// Symbol indices in these relocations refer to the dynamic symbol table.
+    ///
+    /// Only ELF has dynamic relocations.
+    fn dynamic_relocations(&'file self) -> Option<Self::DynamicRelocationIterator>;
 
     /// Construct a map from addresses to symbol names.
     ///
@@ -370,4 +386,17 @@ pub trait ObjectSymbol<'data>: read::private::Sealed {
 
     /// Symbol flags that are specific to each file format.
     fn flags(&self) -> SymbolFlags<SectionIndex>;
+}
+
+/// An iterator for files that don't have dynamic relocations.
+#[derive(Debug)]
+pub struct NoDynamicRelocationIterator;
+
+impl Iterator for NoDynamicRelocationIterator {
+    type Item = (u64, Relocation);
+
+    #[inline]
+    fn next(&mut self) -> Option<Self::Item> {
+        None
+    }
 }

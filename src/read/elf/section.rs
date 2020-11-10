@@ -10,7 +10,7 @@ use crate::read::{
 };
 
 use super::{
-    CompressionHeader, ElfFile, ElfNoteIterator, ElfRelocationIterator, FileHeader,
+    CompressionHeader, ElfFile, ElfNoteIterator, ElfSectionRelocationIterator, FileHeader,
     RelocationSections, SymbolTable,
 };
 
@@ -221,7 +221,7 @@ impl<'data, 'file, Elf: FileHeader> ElfSection<'data, 'file, Elf> {
 impl<'data, 'file, Elf: FileHeader> read::private::Sealed for ElfSection<'data, 'file, Elf> {}
 
 impl<'data, 'file, Elf: FileHeader> ObjectSection<'data> for ElfSection<'data, 'file, Elf> {
-    type RelocationIterator = ElfRelocationIterator<'data, 'file, Elf>;
+    type RelocationIterator = ElfSectionRelocationIterator<'data, 'file, Elf>;
 
     #[inline]
     fn index(&self) -> SectionIndex {
@@ -335,8 +335,8 @@ impl<'data, 'file, Elf: FileHeader> ObjectSection<'data> for ElfSection<'data, '
         }
     }
 
-    fn relocations(&self) -> ElfRelocationIterator<'data, 'file, Elf> {
-        ElfRelocationIterator {
+    fn relocations(&self) -> ElfSectionRelocationIterator<'data, 'file, Elf> {
+        ElfSectionRelocationIterator {
             section_index: self.index.0,
             file: self.file,
             relocations: None,

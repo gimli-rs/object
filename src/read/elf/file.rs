@@ -8,9 +8,10 @@ use crate::read::{
 use crate::{elf, endian, Bytes, Endian, Endianness, Pod, U32};
 
 use super::{
-    CompressionHeader, ElfComdat, ElfComdatIterator, ElfSection, ElfSectionIterator, ElfSegment,
-    ElfSegmentIterator, ElfSymbol, ElfSymbolIterator, ElfSymbolTable, NoteHeader, ProgramHeader,
-    Rela, RelocationSections, SectionHeader, SectionTable, Sym, SymbolTable,
+    CompressionHeader, ElfComdat, ElfComdatIterator, ElfDynamicRelocationIterator, ElfSection,
+    ElfSectionIterator, ElfSegment, ElfSegmentIterator, ElfSymbol, ElfSymbolIterator,
+    ElfSymbolTable, NoteHeader, ProgramHeader, Rela, RelocationSections, SectionHeader,
+    SectionTable, Sym, SymbolTable,
 };
 
 /// A 32-bit ELF object file.
@@ -108,6 +109,7 @@ where
     type Symbol = ElfSymbol<'data, 'file, Elf>;
     type SymbolIterator = ElfSymbolIterator<'data, 'file, Elf>;
     type SymbolTable = ElfSymbolTable<'data, 'file, Elf>;
+    type DynamicRelocationIterator = ElfDynamicRelocationIterator<'data, 'file, Elf>;
 
     fn architecture(&self) -> Architecture {
         match self.header.e_machine(self.endian) {
@@ -217,6 +219,14 @@ where
         Some(ElfSymbolTable {
             endian: self.endian,
             symbols: &self.dynamic_symbols,
+        })
+    }
+
+    fn dynamic_relocations(&'file self) -> Option<ElfDynamicRelocationIterator<'data, 'file, Elf>> {
+        Some(ElfDynamicRelocationIterator {
+            section_index: 1,
+            file: self,
+            relocations: None,
         })
     }
 

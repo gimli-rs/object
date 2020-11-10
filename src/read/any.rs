@@ -1,4 +1,5 @@
 use alloc::fmt;
+use core::marker::PhantomData;
 
 #[cfg(feature = "coff")]
 use crate::read::coff;
@@ -249,6 +250,7 @@ where
     type Symbol = Symbol<'data, 'file>;
     type SymbolIterator = SymbolIterator<'data, 'file>;
     type SymbolTable = SymbolTable<'data, 'file>;
+    type DynamicRelocationIterator = DynamicRelocationIterator<'data, 'file>;
 
     fn architecture(&self) -> Architecture {
         with_inner!(self.inner, FileInternal, |x| x.architecture())
@@ -325,6 +327,25 @@ where
         map_inner_option!(self.inner, FileInternal, SymbolTableInternal, |x| x
             .dynamic_symbol_table())
         .map(|inner| SymbolTable { inner })
+    }
+
+    #[cfg(feature = "elf")]
+    fn dynamic_relocations(&'file self) -> Option<DynamicRelocationIterator<'data, 'file>> {
+        let inner = match self.inner {
+            FileInternal::Elf32(ref elf) => {
+                DynamicRelocationIteratorInternal::Elf32(elf.dynamic_relocations()?)
+            }
+            FileInternal::Elf64(ref elf) => {
+                DynamicRelocationIteratorInternal::Elf64(elf.dynamic_relocations()?)
+            }
+            _ => return None,
+        };
+        Some(DynamicRelocationIterator { inner })
+    }
+
+    #[cfg(not(feature = "elf"))]
+    fn dynamic_relocations(&'file self) -> Option<DynamicRelocationIterator<'data, 'file>> {
+        None
     }
 
     fn symbol_map(&self) -> SymbolMap<SymbolMapName<'data>> {
@@ -584,7 +605,7 @@ impl<'data, 'file> fmt::Debug for Section<'data, 'file> {
 impl<'data, 'file> read::private::Sealed for Section<'data, 'file> {}
 
 impl<'data, 'file> ObjectSection<'data> for Section<'data, 'file> {
-    type RelocationIterator = RelocationIterator<'data, 'file>;
+    type RelocationIterator = SectionRelocationIterator<'data, 'file>;
 
     fn index(&self) -> SectionIndex {
         with_inner!(self.inner, SectionInternal, |x| x.index())
@@ -630,12 +651,12 @@ impl<'data, 'file> ObjectSection<'data> for Section<'data, 'file> {
         with_inner!(self.inner, SectionInternal, |x| x.kind())
     }
 
-    fn relocations(&self) -> RelocationIterator<'data, 'file> {
-        RelocationIterator {
+    fn relocations(&self) -> SectionRelocationIterator<'data, 'file> {
+        SectionRelocationIterator {
             inner: map_inner!(
                 self.inner,
                 SectionInternal,
-                RelocationIteratorInternal,
+                SectionRelocationIteratorInternal,
                 |x| x.relocations()
             ),
         }
@@ -998,26 +1019,63 @@ impl<'data, 'file> ObjectSymbol<'data> for Symbol<'data, 'file> {
     }
 }
 
-/// An iterator over relocation entries
+/// An iterator over dynamic relocation entries.
 #[derive(Debug)]
-pub struct RelocationIterator<'data, 'file>
+pub struct DynamicRelocationIterator<'data, 'file>
 where
     'data: 'file,
 {
-    inner: RelocationIteratorInternal<'data, 'file>,
+    inner: DynamicRelocationIteratorInternal<'data, 'file>,
 }
 
 #[derive(Debug)]
-enum RelocationIteratorInternal<'data, 'file>
+enum DynamicRelocationIteratorInternal<'data, 'file>
+where
+    'data: 'file,
+{
+    #[cfg(feature = "elf")]
+    Elf32(elf::ElfDynamicRelocationIterator32<'data, 'file>),
+    #[cfg(feature = "elf")]
+    Elf64(elf::ElfDynamicRelocationIterator64<'data, 'file>),
+    // We need to always use the lifetime parameters.
+    #[allow(unused)]
+    None(PhantomData<(&'data (), &'file ())>),
+}
+
+impl<'data, 'file> Iterator for DynamicRelocationIterator<'data, 'file> {
+    type Item = (u64, Relocation);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        match self.inner {
+            #[cfg(feature = "elf")]
+            DynamicRelocationIteratorInternal::Elf32(ref mut elf) => elf.next(),
+            #[cfg(feature = "elf")]
+            DynamicRelocationIteratorInternal::Elf64(ref mut elf) => elf.next(),
+            DynamicRelocationIteratorInternal::None(_) => None,
+        }
+    }
+}
+
+/// An iterator over section relocation entries.
+#[derive(Debug)]
+pub struct SectionRelocationIterator<'data, 'file>
+where
+    'data: 'file,
+{
+    inner: SectionRelocationIteratorInternal<'data, 'file>,
+}
+
+#[derive(Debug)]
+enum SectionRelocationIteratorInternal<'data, 'file>
 where
     'data: 'file,
 {
     #[cfg(feature = "coff")]
     Coff(coff::CoffRelocationIterator<'data, 'file>),
     #[cfg(feature = "elf")]
-    Elf32(elf::ElfRelocationIterator32<'data, 'file>),
+    Elf32(elf::ElfSectionRelocationIterator32<'data, 'file>),
     #[cfg(feature = "elf")]
-    Elf64(elf::ElfRelocationIterator64<'data, 'file>),
+    Elf64(elf::ElfSectionRelocationIterator64<'data, 'file>),
     #[cfg(feature = "macho")]
     MachO32(macho::MachORelocationIterator32<'data, 'file>),
     #[cfg(feature = "macho")]
@@ -1030,10 +1088,10 @@ where
     Wasm(wasm::WasmRelocationIterator<'data, 'file>),
 }
 
-impl<'data, 'file> Iterator for RelocationIterator<'data, 'file> {
+impl<'data, 'file> Iterator for SectionRelocationIterator<'data, 'file> {
     type Item = (u64, Relocation);
 
     fn next(&mut self) -> Option<Self::Item> {
-        with_inner_mut!(self.inner, RelocationIteratorInternal, |x| x.next())
+        with_inner_mut!(self.inner, SectionRelocationIteratorInternal, |x| x.next())
     }
 }
