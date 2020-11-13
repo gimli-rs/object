@@ -3,8 +3,8 @@ use core::fmt::Debug;
 use core::{mem, str};
 
 use crate::read::{
-    self, Architecture, ComdatKind, Error, FileFlags, Object, ObjectComdat, ObjectMap,
-    ObjectSection, ReadError, Result, SectionIndex, SymbolIndex,
+    self, Architecture, ComdatKind, Error, FileFlags, NoDynamicRelocationIterator, Object,
+    ObjectComdat, ObjectMap, ObjectSection, ReadError, Result, SectionIndex, SymbolIndex,
 };
 use crate::{endian, macho, BigEndian, Bytes, Endian, Endianness, Pod};
 
@@ -93,6 +93,7 @@ where
     type Symbol = MachOSymbol<'data, 'file, Mach>;
     type SymbolIterator = MachOSymbolIterator<'data, 'file, Mach>;
     type SymbolTable = MachOSymbolTable<'data, 'file, Mach>;
+    type DynamicRelocationIterator = NoDynamicRelocationIterator;
 
     fn architecture(&self) -> Architecture {
         match self.header.cputype(self.endian) {
@@ -201,6 +202,11 @@ where
 
     fn object_map(&'file self) -> ObjectMap<'data> {
         self.symbols.object_map(self.endian)
+    }
+
+    #[inline]
+    fn dynamic_relocations(&'file self) -> Option<NoDynamicRelocationIterator> {
+        None
     }
 
     fn has_debug_symbols(&self) -> bool {

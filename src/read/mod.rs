@@ -308,6 +308,8 @@ pub enum RelocationTarget {
     Symbol(SymbolIndex),
     /// The target is a section.
     Section(SectionIndex),
+    /// The offset is an absolute address.
+    Absolute,
 }
 
 /// A relocation entry.
