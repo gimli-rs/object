@@ -289,7 +289,8 @@ impl<'data, 'file, Elf: FileHeader> ObjectSection<'data> for ElfSection<'data, '
 
     fn kind(&self) -> SectionKind {
         let flags = self.section.sh_flags(self.file.endian).into();
-        match self.section.sh_type(self.file.endian) {
+        let sh_type = self.section.sh_type(self.file.endian);
+        match sh_type {
             elf::SHT_PROGBITS => {
                 if flags & u64::from(elf::SHF_ALLOC) != 0 {
                     if flags & u64::from(elf::SHF_EXECINSTR) != 0 {
@@ -326,12 +327,7 @@ impl<'data, 'file, Elf: FileHeader> ObjectSection<'data> for ElfSection<'data, '
             | elf::SHT_REL
             | elf::SHT_DYNSYM
             | elf::SHT_GROUP => SectionKind::Metadata,
-            _ => {
-                // TODO: maybe add more specialised kinds based on sh_type (e.g. Unwind)
-                // FIXME: This misclassifies `.debug_str` on MIPS as `Unknown`, since that uses
-                // architecture-specific section types, so we need to know the architecture here.
-                SectionKind::Unknown
-            }
+            _ => SectionKind::Elf(sh_type),
         }
     }
 
