@@ -242,7 +242,7 @@ impl Object {
             }
         }
         for (index, symbol) in self.symbols.iter().enumerate() {
-            if symbol.kind != SymbolKind::Section {
+            if symbol.kind != SymbolKind::Section && !symbol.name.is_empty() {
                 symbol_offsets[index].str_id = Some(strtab.add(&symbol.name));
             }
         }

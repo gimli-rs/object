@@ -139,7 +139,10 @@ pub enum SectionKind {
     ///
     /// Example ELF sections: `.symtab`, `.strtab`, `.group`
     Metadata,
-    /// Some other ELF section type. The value may be dependent on the architecture.
+    /// Some other ELF section type.
+    ///
+    /// This is the `sh_type` field in the section header.
+    /// The meaning may be dependent on the architecture.
     Elf(u32),
 }
 
