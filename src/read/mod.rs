@@ -5,7 +5,7 @@ use alloc::vec::Vec;
 use core::{fmt, result};
 
 use crate::common::*;
-use crate::Bytes;
+use crate::{ByteString, Bytes};
 
 mod util;
 pub use util::StringTable;
@@ -297,6 +297,50 @@ impl<'data> ObjectMapEntry<'data> {
 impl<'data> SymbolMapEntry for ObjectMapEntry<'data> {
     #[inline]
     fn address(&self) -> u64 {
+        self.address
+    }
+}
+
+/// An imported symbol.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Import<'data> {
+    // TODO: or ordinal
+    name: ByteString<'data>,
+    library: ByteString<'data>,
+}
+
+impl<'data> Import<'data> {
+    /// The symbol name.
+    #[inline]
+    pub fn name(&self) -> &'data [u8] {
+        self.name.0
+    }
+
+    /// The name of the library to import the symbol from.
+    #[inline]
+    pub fn library(&self) -> &'data [u8] {
+        self.library.0
+    }
+}
+
+/// An exported symbol.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Export<'data> {
+    // TODO: and ordinal?
+    name: ByteString<'data>,
+    address: u64,
+}
+
+impl<'data> Export<'data> {
+    /// The symbol name.
+    #[inline]
+    pub fn name(&self) -> &'data [u8] {
+        self.name.0
+    }
+
+    /// The symbol address.
+    #[inline]
+    pub fn address(&self) -> u64 {
         self.address
     }
 }

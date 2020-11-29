@@ -1,4 +1,5 @@
 use alloc::fmt;
+use alloc::vec::Vec;
 use core::marker::PhantomData;
 
 #[cfg(feature = "coff")]
@@ -12,8 +13,8 @@ use crate::read::pe;
 #[cfg(feature = "wasm")]
 use crate::read::wasm;
 use crate::read::{
-    self, Architecture, BinaryFormat, ComdatKind, CompressedData, Error, FileFlags, Object,
-    ObjectComdat, ObjectMap, ObjectSection, ObjectSegment, ObjectSymbol, ObjectSymbolTable,
+    self, Architecture, BinaryFormat, ComdatKind, CompressedData, Error, Export, FileFlags, Import,
+    Object, ObjectComdat, ObjectMap, ObjectSection, ObjectSegment, ObjectSymbol, ObjectSymbolTable,
     Relocation, Result, SectionFlags, SectionIndex, SectionKind, SymbolFlags, SymbolIndex,
     SymbolKind, SymbolMap, SymbolMapName, SymbolScope, SymbolSection,
 };
@@ -354,6 +355,14 @@ where
 
     fn object_map(&self) -> ObjectMap<'data> {
         with_inner!(self.inner, FileInternal, |x| x.object_map())
+    }
+
+    fn imports(&self) -> Result<Vec<Import<'data>>> {
+        with_inner!(self.inner, FileInternal, |x| x.imports())
+    }
+
+    fn exports(&self) -> Result<Vec<Export<'data>>> {
+        with_inner!(self.inner, FileInternal, |x| x.exports())
     }
 
     fn has_debug_symbols(&self) -> bool {

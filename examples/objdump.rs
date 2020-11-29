@@ -79,7 +79,7 @@ fn dump_object(data: &[u8]) {
         if file.is_64() { "64" } else { "32" }
     );
     println!("Architecture: {:?}", file.architecture());
-    println!("Flags: {:?}", file.flags());
+    println!("Flags: {:x?}", file.flags());
 
     match file.mach_uuid() {
         Ok(Some(uuid)) => println!("Mach UUID: {:x?}", uuid),
@@ -102,11 +102,11 @@ fn dump_object(data: &[u8]) {
     }
 
     for segment in file.segments() {
-        println!("{:?}", segment);
+        println!("{:x?}", segment);
     }
 
     for section in file.sections() {
-        println!("{}: {:?}", section.index().0, section);
+        println!("{}: {:x?}", section.index().0, section);
     }
 
     for comdat in file.comdats() {
@@ -120,7 +120,7 @@ fn dump_object(data: &[u8]) {
     println!();
     println!("Symbols");
     for symbol in file.symbols() {
-        println!("{}: {:?}", symbol.index().0, symbol);
+        println!("{}: {:x?}", symbol.index().0, symbol);
     }
 
     for section in file.sections() {
@@ -130,7 +130,7 @@ fn dump_object(data: &[u8]) {
                 section.name().unwrap_or("<invalid name>")
             );
             for relocation in section.relocations() {
-                println!("{:?}", relocation);
+                println!("{:x?}", relocation);
             }
         }
     }
@@ -138,14 +138,30 @@ fn dump_object(data: &[u8]) {
     println!();
     println!("Dynamic symbols");
     for symbol in file.dynamic_symbols() {
-        println!("{}: {:?}", symbol.index().0, symbol);
+        println!("{}: {:x?}", symbol.index().0, symbol);
     }
 
     if let Some(relocations) = file.dynamic_relocations() {
         println!();
         println!("Dynamic relocations");
         for relocation in relocations {
-            println!("{:?}", relocation);
+            println!("{:x?}", relocation);
+        }
+    }
+
+    let imports = file.imports().unwrap();
+    if !imports.is_empty() {
+        println!();
+        for import in imports {
+            println!("{:?}", import);
+        }
+    }
+
+    let exports = file.exports().unwrap();
+    if !exports.is_empty() {
+        println!();
+        for export in exports {
+            println!("{:x?}", export);
         }
     }
 }

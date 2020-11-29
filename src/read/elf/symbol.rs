@@ -396,6 +396,12 @@ pub trait Sym: Debug + Pod {
             .read_error("Invalid ELF symbol name offset")
     }
 
+    /// Return true if the symbol is undefined.
+    #[inline]
+    fn is_undefined(&self, endian: Self::Endian) -> bool {
+        self.st_shndx(endian) == elf::SHN_UNDEF
+    }
+
     /// Return true if the symbol is a definition of a function or data object.
     fn is_definition(&self, endian: Self::Endian) -> bool {
         let st_type = self.st_type();
