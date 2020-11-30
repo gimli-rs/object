@@ -1,11 +1,12 @@
+use alloc::vec::Vec;
 use core::fmt::Debug;
 use core::{mem, str};
 
 use crate::read::{
-    self, util, Architecture, Error, FileFlags, Object, ReadError, SectionIndex, StringTable,
-    SymbolIndex,
+    self, util, Architecture, Error, Export, FileFlags, Import, Object, ReadError, SectionIndex,
+    StringTable, SymbolIndex,
 };
-use crate::{elf, endian, Bytes, Endian, Endianness, Pod, U32};
+use crate::{elf, endian, ByteString, Bytes, Endian, Endianness, Pod, U32};
 
 use super::{
     CompressionHeader, ElfComdat, ElfComdatIterator, ElfDynamicRelocationIterator, ElfSection,
@@ -228,6 +229,40 @@ where
             file: self,
             relocations: None,
         })
+    }
+
+    /// Get the imported symbols.
+    fn imports(&self) -> read::Result<Vec<Import<'data>>> {
+        let mut imports = Vec::new();
+        for symbol in self.dynamic_symbols.iter() {
+            if symbol.is_undefined(self.endian) {
+                let name = symbol.name(self.endian, self.dynamic_symbols.strings())?;
+                if !name.is_empty() {
+                    // TODO: use symbol versioning to determine library
+                    imports.push(Import {
+                        name: ByteString(name),
+                        library: ByteString(&[]),
+                    });
+                }
+            }
+        }
+        Ok(imports)
+    }
+
+    /// Get the exported symbols.
+    fn exports(&self) -> read::Result<Vec<Export<'data>>> {
+        let mut exports = Vec::new();
+        for symbol in self.dynamic_symbols.iter() {
+            if symbol.is_definition(self.endian) {
+                let name = symbol.name(self.endian, self.dynamic_symbols.strings())?;
+                let address = symbol.st_value(self.endian).into();
+                exports.push(Export {
+                    name: ByteString(name),
+                    address,
+                });
+            }
+        }
+        Ok(exports)
     }
 
     fn has_debug_symbols(&self) -> bool {

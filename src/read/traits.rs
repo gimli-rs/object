@@ -2,9 +2,9 @@ use alloc::borrow::Cow;
 use alloc::vec::Vec;
 
 use crate::read::{
-    self, Architecture, ComdatKind, CompressedData, FileFlags, ObjectMap, Relocation, Result,
-    SectionFlags, SectionIndex, SectionKind, SymbolFlags, SymbolIndex, SymbolKind, SymbolMap,
-    SymbolMapName, SymbolScope, SymbolSection,
+    self, Architecture, ComdatKind, CompressedData, Export, FileFlags, Import, ObjectMap,
+    Relocation, Result, SectionFlags, SectionIndex, SectionKind, SymbolFlags, SymbolIndex,
+    SymbolKind, SymbolMap, SymbolMapName, SymbolScope, SymbolSection,
 };
 use crate::Endianness;
 
@@ -165,6 +165,12 @@ pub trait Object<'data: 'file, 'file>: read::private::Sealed {
     fn object_map(&'file self) -> ObjectMap<'data> {
         ObjectMap::default()
     }
+
+    /// Get the imported symbols.
+    fn imports(&self) -> Result<Vec<Import<'data>>>;
+
+    /// Get the exported symbols.
+    fn exports(&self) -> Result<Vec<Export<'data>>>;
 
     /// Return true if the file contains debug information sections, false if not.
     fn has_debug_symbols(&self) -> bool;
