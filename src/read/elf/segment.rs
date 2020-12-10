@@ -6,7 +6,7 @@ use crate::endian::{self, Endianness};
 use crate::pod::{Bytes, Pod};
 use crate::read::{self, ObjectSegment, ReadError};
 
-use super::{ElfFile, ElfNoteIterator, FileHeader};
+use super::{ElfFile, FileHeader, NoteIterator};
 
 /// An iterator over the segments of an `ElfFile32`.
 pub type ElfSegmentIterator32<'data, 'file, Endian = Endianness> =
@@ -114,9 +114,9 @@ impl<'data, 'file, Elf: FileHeader> ObjectSegment<'data> for ElfSegment<'data, '
 /// A trait for generic access to `ProgramHeader32` and `ProgramHeader64`.
 #[allow(missing_docs)]
 pub trait ProgramHeader: Debug + Pod {
+    type Elf: FileHeader<ProgramHeader = Self, Endian = Self::Endian, Word = Self::Word>;
     type Word: Into<u64>;
     type Endian: endian::Endian;
-    type Elf: FileHeader<Word = Self::Word, Endian = Self::Endian>;
 
     fn p_type(&self, endian: Self::Endian) -> u32;
     fn p_flags(&self, endian: Self::Endian) -> u32;
@@ -148,14 +148,14 @@ pub trait ProgramHeader: Debug + Pod {
         &self,
         endian: Self::Endian,
         data: Bytes<'data>,
-    ) -> read::Result<Option<ElfNoteIterator<'data, Self::Elf>>> {
-        if self.p_type(endian) == elf::PT_NOTE {
+    ) -> read::Result<Option<NoteIterator<'data, Self::Elf>>> {
+        if self.p_type(endian) != elf::PT_NOTE {
             return Ok(None);
         }
         let data = self
             .data(endian, data)
             .read_error("Invalid ELF note segment offset or size")?;
-        let notes = ElfNoteIterator::new(endian, self.p_align(endian), data)?;
+        let notes = NoteIterator::new(endian, self.p_align(endian), data)?;
         Ok(Some(notes))
     }
 }

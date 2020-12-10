@@ -11,7 +11,7 @@ use crate::{elf, endian, ByteString, Bytes, Endian, Endianness, Pod, U32};
 use super::{
     CompressionHeader, ElfComdat, ElfComdatIterator, ElfDynamicRelocationIterator, ElfSection,
     ElfSectionIterator, ElfSegment, ElfSegmentIterator, ElfSymbol, ElfSymbolIterator,
-    ElfSymbolTable, NoteHeader, ProgramHeader, Rela, RelocationSections, SectionHeader,
+    ElfSymbolTable, NoteHeader, ProgramHeader, Rel, Rela, RelocationSections, SectionHeader,
     SectionTable, Sym, SymbolTable,
 };
 
@@ -345,13 +345,13 @@ pub trait FileHeader: Debug + Pod {
     type Word: Into<u64>;
     type Sword: Into<i64>;
     type Endian: endian::Endian;
-    type ProgramHeader: ProgramHeader<Endian = Self::Endian>;
-    type SectionHeader: SectionHeader<Endian = Self::Endian>;
-    type CompressionHeader: CompressionHeader<Endian = Self::Endian>;
+    type ProgramHeader: ProgramHeader<Elf = Self, Endian = Self::Endian, Word = Self::Word>;
+    type SectionHeader: SectionHeader<Elf = Self, Endian = Self::Endian, Word = Self::Word>;
+    type CompressionHeader: CompressionHeader<Endian = Self::Endian, Word = Self::Word>;
     type NoteHeader: NoteHeader<Endian = Self::Endian>;
-    type Sym: Sym<Endian = Self::Endian>;
-    type Rel: Clone + Pod;
-    type Rela: Rela<Endian = Self::Endian> + From<Self::Rel>;
+    type Sym: Sym<Endian = Self::Endian, Word = Self::Word>;
+    type Rel: Rel<Endian = Self::Endian, Word = Self::Word>;
+    type Rela: Rela<Endian = Self::Endian, Word = Self::Word> + From<Self::Rel>;
 
     /// Return true if this type is a 64-bit header.
     ///

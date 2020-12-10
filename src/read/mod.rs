@@ -109,6 +109,97 @@ pub type NativeFile<'data> = pe::PeFile64<'data>;
 #[cfg(all(feature = "wasm", target_arch = "wasm32", feature = "wasm"))]
 pub type NativeFile<'data> = wasm::WasmFile<'data>;
 
+/// An object file kind.
+#[derive(Debug)]
+#[non_exhaustive]
+pub enum FileKind {
+    /// A Unix archive.
+    #[cfg(feature = "archive")]
+    Archive,
+    /// A COFF object file.
+    #[cfg(feature = "coff")]
+    Coff,
+    /// A 32-bit ELF file.
+    #[cfg(feature = "elf")]
+    Elf32,
+    /// A 64-bit ELF file.
+    #[cfg(feature = "elf")]
+    Elf64,
+    /// A 32-bit Mach-O file.
+    #[cfg(feature = "macho")]
+    MachO32,
+    /// A 64-bit Mach-O file.
+    #[cfg(feature = "macho")]
+    MachO64,
+    /// A 32-bit Mach-O fat binary.
+    #[cfg(feature = "macho")]
+    MachOFat32,
+    /// A 64-bit Mach-O fat binary.
+    #[cfg(feature = "macho")]
+    MachOFat64,
+    /// A 32-bit PE file.
+    #[cfg(feature = "pe")]
+    Pe32,
+    /// A 64-bit PE file.
+    #[cfg(feature = "pe")]
+    Pe64,
+    /// A Wasm file.
+    #[cfg(feature = "wasm")]
+    Wasm,
+}
+
+impl FileKind {
+    /// Determine a file kind by parsing the start of the file.
+    pub fn parse(data: &[u8]) -> Result<FileKind> {
+        if data.len() < 16 {
+            return Err(Error("File too short"));
+        }
+
+        let kind = match [data[0], data[1], data[2], data[3], data[4], data[5], data[6], data[7]] {
+            #[cfg(feature = "archive")]
+            [b'!', b'<', b'a', b'r', b'c', b'h', b'>', b'\n'] => FileKind::Archive,
+            #[cfg(feature = "elf")]
+            [0x7f, b'E', b'L', b'F', 1, ..] => FileKind::Elf32,
+            #[cfg(feature = "elf")]
+            [0x7f, b'E', b'L', b'F', 2, ..] => FileKind::Elf64,
+            #[cfg(feature = "macho")]
+            [0xfe, 0xed, 0xfa, 0xce, ..]
+            | [0xce, 0xfa, 0xed, 0xfe, ..] => FileKind::MachO32,
+            #[cfg(feature = "macho")]
+            | [0xfe, 0xed, 0xfa, 0xcf, ..]
+            | [0xcf, 0xfa, 0xed, 0xfe, ..] => FileKind::MachO64,
+            #[cfg(feature = "macho")]
+            [0xca, 0xfe, 0xba, 0xbe, ..] => FileKind::MachOFat32,
+            #[cfg(feature = "macho")]
+            [0xca, 0xfe, 0xba, 0xbf, ..] => FileKind::MachOFat64,
+            #[cfg(feature = "wasm")]
+            [0x00, b'a', b's', b'm', ..] => FileKind::Wasm,
+            #[cfg(feature = "pe")]
+            [b'M', b'Z', ..] => {
+                // `optional_header_magic` doesn't care if it's `PeFile32` and `PeFile64`.
+                // TODO: avoid use of PeFile
+                match pe::PeFile64::optional_header_magic(data) {
+                    Ok(crate::pe::IMAGE_NT_OPTIONAL_HDR32_MAGIC) => {
+                        FileKind::Pe32
+                    }
+                    Ok(crate::pe::IMAGE_NT_OPTIONAL_HDR64_MAGIC) => {
+                        FileKind::Pe64
+                    }
+                    _ => return Err(Error("Unknown MS-DOS file")),
+                }
+            }
+            // TODO: more COFF machines
+            #[cfg(feature = "coff")]
+            // COFF x86
+            [0x4c, 0x01, ..]
+            // COFF x86-64
+            | [0x64, 0x86, ..] => FileKind::Coff,
+            _ => return Err(Error("Unknown file magic")),
+        };
+        Ok(kind)
+    }
+}
+
 /// The index used to identify a section of a file.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct SectionIndex(pub usize);
