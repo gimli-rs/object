@@ -3,7 +3,10 @@
 //! This module should be replaced once rust provides safe transmutes.
 
 // This module provides functions for both read and write features.
-#![cfg_attr(not(all(feature = "read_core", feature = "write_core")), allow(dead_code))]
+#![cfg_attr(
+    not(all(feature = "read_core", feature = "write_core")),
+    allow(dead_code)
+)]
 
 use alloc::string::String;
 use alloc::vec::Vec;

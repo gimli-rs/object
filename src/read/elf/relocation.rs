@@ -324,6 +324,71 @@ fn parse_relocation<Elf: FileHeader>(
     }
 }
 
+/// A trait for generic access to `Rel32` and `Rel64`.
+#[allow(missing_docs)]
+pub trait Rel: Debug + Pod + Clone {
+    type Word: Into<u64>;
+    type Sword: Into<i64>;
+    type Endian: endian::Endian;
+
+    fn r_offset(&self, endian: Self::Endian) -> Self::Word;
+    fn r_info(&self, endian: Self::Endian) -> Self::Word;
+    fn r_sym(&self, endian: Self::Endian) -> u32;
+    fn r_type(&self, endian: Self::Endian) -> u32;
+}
+
+impl<Endian: endian::Endian> Rel for elf::Rel32<Endian> {
+    type Word = u32;
+    type Sword = i32;
+    type Endian = Endian;
+
+    #[inline]
+    fn r_offset(&self, endian: Self::Endian) -> Self::Word {
+        self.r_offset.get(endian)
+    }
+
+    #[inline]
+    fn r_info(&self, endian: Self::Endian) -> Self::Word {
+        self.r_info.get(endian)
+    }
+
+    #[inline]
+    fn r_sym(&self, endian: Self::Endian) -> u32 {
+        self.r_sym(endian)
+    }
+
+    #[inline]
+    fn r_type(&self, endian: Self::Endian) -> u32 {
+        self.r_type(endian)
+    }
+}
+
+impl<Endian: endian::Endian> Rel for elf::Rel64<Endian> {
+    type Word = u64;
+    type Sword = i64;
+    type Endian = Endian;
+
+    #[inline]
+    fn r_offset(&self, endian: Self::Endian) -> Self::Word {
+        self.r_offset.get(endian)
+    }
+
+    #[inline]
+    fn r_info(&self, endian: Self::Endian) -> Self::Word {
+        self.r_info.get(endian)
+    }
+
+    #[inline]
+    fn r_sym(&self, endian: Self::Endian) -> u32 {
+        self.r_sym(endian)
+    }
+
+    #[inline]
+    fn r_type(&self, endian: Self::Endian) -> u32 {
+        self.r_type(endian)
+    }
+}
+
 /// A trait for generic access to `Rela32` and `Rela64`.
 #[allow(missing_docs)]
 pub trait Rela: Debug + Pod + Clone {

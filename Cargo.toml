@@ -61,8 +61,8 @@ cargo-all = []
 rustc-dep-of-std = ['core', 'compiler_builtins', 'alloc']
 
 [[example]]
-name = "nm"
-required-features = ["read"]
+name = "ar"
+required-features = ["read_core", "archive"]
 
 [[example]]
 name = "objcopy"
@@ -73,9 +73,13 @@ name = "objdump"
 required-features = ["read"]
 
 [[example]]
-name = "ar"
-required-features = ["read_core", "archive"]
-
-[[example]]
 name = "objectmap"
 required-features = ["read_core"]
+
+[[example]]
+name = "nm"
+required-features = ["read"]
+
+[[example]]
+name = "readobj"
+required-features = ["read"]
