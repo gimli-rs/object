@@ -1,5 +1,5 @@
 use core::fmt::Debug;
-use core::{slice, str};
+use core::{mem, slice, str};
 
 use crate::elf;
 use crate::endian::{self, Endianness};
@@ -138,6 +138,58 @@ pub trait ProgramHeader: Debug + Pod {
     fn data<'data>(&self, endian: Self::Endian, data: Bytes<'data>) -> Result<Bytes<'data>, ()> {
         let (offset, size) = self.file_range(endian);
         data.read_bytes_at(offset as usize, size as usize)
+    }
+
+    /// Return the segment data as a slice of the given type.
+    ///
+    /// Allows padding at the end of the data.
+    /// Returns `Ok(&[])` if the segment has no data.
+    /// Returns `Err` for invalid values, including bad alignment.
+    fn data_as_array<'data, T: Pod>(
+        &self,
+        endian: Self::Endian,
+        data: Bytes<'data>,
+    ) -> Result<&'data [T], ()> {
+        let mut data = self.data(endian, data)?;
+        data.read_slice(data.len() / mem::size_of::<T>())
+    }
+
+    /// Return the segment data in the given virtual address range
+    ///
+    /// Returns `Ok(None)` if the segment does not contain the address.
+    /// Returns `Err` for invalid values.
+    fn data_range<'data>(
+        &self,
+        endian: Self::Endian,
+        data: Bytes<'data>,
+        address: u64,
+        size: u64,
+    ) -> Result<Option<Bytes<'data>>, ()> {
+        Ok(read::data_range(
+            self.data(endian, data)?,
+            self.p_vaddr(endian).into(),
+            address,
+            size,
+        )
+        .map(Bytes))
+    }
+
+    /// Return entries in a dynamic segment.
+    ///
+    /// Returns `Ok(None)` if the segment is not `PT_DYNAMIC`.
+    /// Returns `Err` for invalid values.
+    fn dynamic<'data>(
+        &self,
+        endian: Self::Endian,
+        data: Bytes<'data>,
+    ) -> read::Result<Option<&'data [<Self::Elf as FileHeader>::Dyn]>> {
+        if self.p_type(endian) != elf::PT_DYNAMIC {
+            return Ok(None);
+        }
+        let dynamic = self
+            .data_as_array(endian, data)
+            .read_error("Invalid ELF dynamic segment offset or size")?;
+        Ok(Some(dynamic))
     }
 
     /// Return a note iterator for the segment data.

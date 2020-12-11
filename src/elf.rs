@@ -1390,7 +1390,7 @@ pub const NT_VERSION: u32 = 1;
 #[repr(C)]
 pub struct Dyn32<E: Endian> {
     /// Dynamic entry type.
-    pub d_tag: I32<E>,
+    pub d_tag: U32<E>,
     /// Value (integer or address).
     pub d_val: U32<E>,
 }
@@ -1400,7 +1400,7 @@ pub struct Dyn32<E: Endian> {
 #[repr(C)]
 pub struct Dyn64<E: Endian> {
     /// Dynamic entry type.
-    pub d_tag: I64<E>,
+    pub d_tag: U64<E>,
     /// Value (integer or address).
     pub d_val: U64<E>,
 }
