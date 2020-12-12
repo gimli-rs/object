@@ -7,7 +7,7 @@ use crate::read::{
     self, Architecture, ComdatKind, Error, Export, FileFlags, Import, NoDynamicRelocationIterator,
     Object, ObjectComdat, ReadError, Result, SectionIndex, SymbolIndex,
 };
-use crate::{pe, ByteString, Bytes, LittleEndian as LE, Pod, U16, U32, U64};
+use crate::{pe, ByteString, Bytes, LittleEndian as LE, Pod, U16Bytes, U32Bytes, U32, U64};
 
 use super::{PeSection, PeSectionIterator, PeSegment, PeSegmentIterator, SectionTable};
 
@@ -284,7 +284,7 @@ where
             .read_at::<pe::ImageExportDirectory>(0)
             .read_error("Invalid PE export dir size")?;
         let addresses = export_data
-            .read_slice_at::<U32<_>>(
+            .read_slice_at::<U32Bytes<_>>(
                 export_dir
                     .address_of_functions
                     .get(LE)
@@ -294,13 +294,13 @@ where
             .read_error("Invalid PE export address table")?;
         let number = export_dir.number_of_names.get(LE) as usize;
         let names = export_data
-            .read_slice_at::<U32<_>>(
+            .read_slice_at::<U32Bytes<_>>(
                 export_dir.address_of_names.get(LE).wrapping_sub(export_va) as usize,
                 number,
             )
             .read_error("Invalid PE export name table")?;
         let ordinals = export_data
-            .read_slice_at::<U16<_>>(
+            .read_slice_at::<U16Bytes<_>>(
                 export_dir
                     .address_of_name_ordinals
                     .get(LE)
