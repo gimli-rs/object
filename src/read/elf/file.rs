@@ -9,7 +9,7 @@ use crate::read::{
 use crate::{elf, endian, ByteString, Bytes, Endian, Endianness, Pod, U32};
 
 use super::{
-    CompressionHeader, ElfComdat, ElfComdatIterator, ElfDynamicRelocationIterator, ElfSection,
+    CompressionHeader, Dyn, ElfComdat, ElfComdatIterator, ElfDynamicRelocationIterator, ElfSection,
     ElfSectionIterator, ElfSegment, ElfSegmentIterator, ElfSymbol, ElfSymbolIterator,
     ElfSymbolTable, NoteHeader, ProgramHeader, Rel, Rela, RelocationSections, SectionHeader,
     SectionTable, Sym, SymbolTable,
@@ -349,6 +349,7 @@ pub trait FileHeader: Debug + Pod {
     type SectionHeader: SectionHeader<Elf = Self, Endian = Self::Endian, Word = Self::Word>;
     type CompressionHeader: CompressionHeader<Endian = Self::Endian, Word = Self::Word>;
     type NoteHeader: NoteHeader<Endian = Self::Endian>;
+    type Dyn: Dyn<Endian = Self::Endian, Word = Self::Word>;
     type Sym: Sym<Endian = Self::Endian, Word = Self::Word>;
     type Rel: Rel<Endian = Self::Endian, Word = Self::Word>;
     type Rela: Rela<Endian = Self::Endian, Word = Self::Word> + From<Self::Rel>;
@@ -590,6 +591,7 @@ impl<Endian: endian::Endian> FileHeader for elf::FileHeader32<Endian> {
     type SectionHeader = elf::SectionHeader32<Endian>;
     type CompressionHeader = elf::CompressionHeader32<Endian>;
     type NoteHeader = elf::NoteHeader32<Endian>;
+    type Dyn = elf::Dyn32<Endian>;
     type Sym = elf::Sym32<Endian>;
     type Rel = elf::Rel32<Endian>;
     type Rela = elf::Rela32<Endian>;
@@ -678,6 +680,7 @@ impl<Endian: endian::Endian> FileHeader for elf::FileHeader64<Endian> {
     type SectionHeader = elf::SectionHeader64<Endian>;
     type CompressionHeader = elf::CompressionHeader64<Endian>;
     type NoteHeader = elf::NoteHeader32<Endian>;
+    type Dyn = elf::Dyn64<Endian>;
     type Sym = elf::Sym64<Endian>;
     type Rel = elf::Rel64<Endian>;
     type Rela = elf::Rela64<Endian>;

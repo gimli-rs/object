@@ -3,6 +3,7 @@
 use object::read::archive::ArchiveFile;
 use object::read::macho::{FatArch, FatHeader};
 use object::{Bytes, Endianness};
+use std::convert::TryInto;
 use std::io::Write;
 use std::{env, fmt, fs, io, process, str};
 
@@ -374,9 +375,8 @@ mod elf {
 
                 match segment.p_type(endian) {
                     PT_NOTE => print_segment_notes(p, endian, data, elf, segment),
+                    PT_DYNAMIC => print_segment_dynamic(p, endian, data, elf, segments, segment),
                     // TODO:
-                    //PT_LOAD =>
-                    //PT_DYNAMIC =>
                     //PT_INTERP =>
                     //PT_SHLIB =>
                     //PT_PHDR =>
@@ -399,6 +399,76 @@ mod elf {
     ) {
         if let Ok(Some(notes)) = segment.notes(endian, data) {
             print_notes(p, endian, notes);
+        }
+    }
+
+    fn print_segment_dynamic<Elf: FileHeader>(
+        p: &mut Printer<impl Write>,
+        endian: Elf::Endian,
+        data: Bytes,
+        elf: &Elf,
+        segments: &[Elf::ProgramHeader],
+        segment: &Elf::ProgramHeader,
+    ) {
+        if let Ok(Some(dynamic)) = segment.dynamic(endian, data) {
+            // TODO: add a helper API for this and the other mandatory tags?
+            let mut strtab = 0;
+            let mut strsz = 0;
+            for d in dynamic {
+                let tag = d.d_tag(endian).into();
+                if tag == DT_STRTAB.into() {
+                    strtab = d.d_val(endian).into();
+                } else if tag == DT_STRSZ.into() {
+                    strsz = d.d_val(endian).into();
+                }
+            }
+            let mut dynstr = object::StringTable::default();
+            for s in segments {
+                if let Ok(Some(data)) = s.data_range(endian, data, strtab, strsz) {
+                    dynstr = object::StringTable::new(data);
+                    break;
+                }
+            }
+
+            let proc = match elf.e_machine(endian) {
+                EM_SPARC => FLAGS_DT_SPARC,
+                EM_MIPS => FLAGS_DT_MIPS,
+                EM_ALPHA => FLAGS_DT_ALPHA,
+                EM_PPC => FLAGS_DT_PPC,
+                EM_PPC64 => FLAGS_DT_PPC64,
+                EM_IA_64 => FLAGS_DT_IA_64,
+                EM_ALTERA_NIOS2 => FLAGS_DT_NIOS2,
+                _ => &[],
+            };
+            for d in dynamic {
+                let tag = d.d_tag(endian).into();
+                let val = d.d_val(endian).into();
+                p.group("Dynamic", |p| {
+                    if let Ok(tag) = tag.try_into() {
+                        p.field_enums("Tag", tag, &[FLAGS_DT, proc]);
+                        if tag == DT_NEEDED {
+                            p.field_string(
+                                "Value",
+                                val,
+                                val.try_into().ok().and_then(|val| dynstr.get(val).ok()),
+                            );
+                        } else {
+                            p.field_hex("Value", val);
+                            if tag == DT_FLAGS {
+                                p.flags(val, 0, FLAGS_DF);
+                            } else if tag == DT_FLAGS_1 {
+                                p.flags(val, 0, FLAGS_DF_1);
+                            }
+                        }
+                    } else {
+                        p.field_hex("Tag", tag);
+                        p.field_hex("Value", val);
+                    }
+                });
+                if tag == DT_NULL.into() {
+                    break;
+                }
+            }
         }
     }
 
@@ -2934,4 +3004,164 @@ mod elf {
         NT_GNU_PROPERTY_TYPE_0,
     );
     static FLAGS_GRP: &[Flag<u32>] = &flags!(GRP_COMDAT);
+    static FLAGS_DT: &[Flag<u32>] = &flags!(
+        DT_NULL,
+        DT_NEEDED,
+        DT_PLTRELSZ,
+        DT_PLTGOT,
+        DT_HASH,
+        DT_STRTAB,
+        DT_SYMTAB,
+        DT_RELA,
+        DT_RELASZ,
+        DT_RELAENT,
+        DT_STRSZ,
+        DT_SYMENT,
+        DT_INIT,
+        DT_FINI,
+        DT_SONAME,
+        DT_RPATH,
+        DT_SYMBOLIC,
+        DT_REL,
+        DT_RELSZ,
+        DT_RELENT,
+        DT_PLTREL,
+        DT_DEBUG,
+        DT_TEXTREL,
+        DT_JMPREL,
+        DT_BIND_NOW,
+        DT_INIT_ARRAY,
+        DT_FINI_ARRAY,
+        DT_INIT_ARRAYSZ,
+        DT_FINI_ARRAYSZ,
+        DT_RUNPATH,
+        DT_FLAGS,
+        DT_PREINIT_ARRAY,
+        DT_PREINIT_ARRAYSZ,
+        DT_SYMTAB_SHNDX,
+        DT_GNU_PRELINKED,
+        DT_GNU_CONFLICTSZ,
+        DT_GNU_LIBLISTSZ,
+        DT_CHECKSUM,
+        DT_PLTPADSZ,
+        DT_MOVEENT,
+        DT_MOVESZ,
+        DT_FEATURE_1,
+        DT_POSFLAG_1,
+        DT_SYMINSZ,
+        DT_SYMINENT,
+        DT_GNU_HASH,
+        DT_TLSDESC_PLT,
+        DT_TLSDESC_GOT,
+        DT_GNU_CONFLICT,
+        DT_GNU_LIBLIST,
+        DT_CONFIG,
+        DT_DEPAUDIT,
+        DT_AUDIT,
+        DT_PLTPAD,
+        DT_MOVETAB,
+        DT_SYMINFO,
+        DT_VERSYM,
+        DT_RELACOUNT,
+        DT_RELCOUNT,
+        DT_FLAGS_1,
+        DT_VERDEF,
+        DT_VERDEFNUM,
+        DT_VERNEED,
+        DT_VERNEEDNUM,
+        DT_AUXILIARY,
+        DT_FILTER,
+    );
+    static FLAGS_DT_SPARC: &[Flag<u32>] = &flags!(DT_SPARC_REGISTER);
+    static FLAGS_DT_MIPS: &[Flag<u32>] = &flags!(
+        DT_MIPS_RLD_VERSION,
+        DT_MIPS_TIME_STAMP,
+        DT_MIPS_ICHECKSUM,
+        DT_MIPS_IVERSION,
+        DT_MIPS_FLAGS,
+        DT_MIPS_BASE_ADDRESS,
+        DT_MIPS_MSYM,
+        DT_MIPS_CONFLICT,
+        DT_MIPS_LIBLIST,
+        DT_MIPS_LOCAL_GOTNO,
+        DT_MIPS_CONFLICTNO,
+        DT_MIPS_LIBLISTNO,
+        DT_MIPS_SYMTABNO,
+        DT_MIPS_UNREFEXTNO,
+        DT_MIPS_GOTSYM,
+        DT_MIPS_HIPAGENO,
+        DT_MIPS_RLD_MAP,
+        DT_MIPS_DELTA_CLASS,
+        DT_MIPS_DELTA_CLASS_NO,
+        DT_MIPS_DELTA_INSTANCE,
+        DT_MIPS_DELTA_INSTANCE_NO,
+        DT_MIPS_DELTA_RELOC,
+        DT_MIPS_DELTA_RELOC_NO,
+        DT_MIPS_DELTA_SYM,
+        DT_MIPS_DELTA_SYM_NO,
+        DT_MIPS_DELTA_CLASSSYM,
+        DT_MIPS_DELTA_CLASSSYM_NO,
+        DT_MIPS_CXX_FLAGS,
+        DT_MIPS_PIXIE_INIT,
+        DT_MIPS_SYMBOL_LIB,
+        DT_MIPS_LOCALPAGE_GOTIDX,
+        DT_MIPS_LOCAL_GOTIDX,
+        DT_MIPS_HIDDEN_GOTIDX,
+        DT_MIPS_PROTECTED_GOTIDX,
+        DT_MIPS_OPTIONS,
+        DT_MIPS_INTERFACE,
+        DT_MIPS_DYNSTR_ALIGN,
+        DT_MIPS_INTERFACE_SIZE,
+        DT_MIPS_RLD_TEXT_RESOLVE_ADDR,
+        DT_MIPS_PERF_SUFFIX,
+        DT_MIPS_COMPACT_SIZE,
+        DT_MIPS_GP_VALUE,
+        DT_MIPS_AUX_DYNAMIC,
+        DT_MIPS_PLTGOT,
+        DT_MIPS_RWPLT,
+        DT_MIPS_RLD_MAP_REL,
+    );
+    static FLAGS_DT_ALPHA: &[Flag<u32>] = &flags!(DT_ALPHA_PLTRO);
+    static FLAGS_DT_PPC: &[Flag<u32>] = &flags!(DT_PPC_GOT, DT_PPC_OPT);
+    static FLAGS_DT_PPC64: &[Flag<u32>] =
+        &flags!(DT_PPC64_GLINK, DT_PPC64_OPD, DT_PPC64_OPDSZ, DT_PPC64_OPT);
+    static FLAGS_DT_IA_64: &[Flag<u32>] = &flags!(DT_IA_64_PLT_RESERVE);
+    static FLAGS_DT_NIOS2: &[Flag<u32>] = &flags!(DT_NIOS2_GP);
+    static FLAGS_DF: &[Flag<u32>] = &flags!(
+        DF_ORIGIN,
+        DF_SYMBOLIC,
+        DF_TEXTREL,
+        DF_BIND_NOW,
+        DF_STATIC_TLS,
+    );
+    static FLAGS_DF_1: &[Flag<u32>] = &flags!(
+        DF_1_NOW,
+        DF_1_GLOBAL,
+        DF_1_GROUP,
+        DF_1_NODELETE,
+        DF_1_LOADFLTR,
+        DF_1_INITFIRST,
+        DF_1_NOOPEN,
+        DF_1_ORIGIN,
+        DF_1_DIRECT,
+        DF_1_TRANS,
+        DF_1_INTERPOSE,
+        DF_1_NODEFLIB,
+        DF_1_NODUMP,
+        DF_1_CONFALT,
+        DF_1_ENDFILTEE,
+        DF_1_DISPRELDNE,
+        DF_1_DISPRELPND,
+        DF_1_NODIRECT,
+        DF_1_IGNMULDEF,
+        DF_1_NOKSYMS,
+        DF_1_NOHDR,
+        DF_1_EDITED,
+        DF_1_NORELOC,
+        DF_1_SYMINTPOSE,
+        DF_1_GLOBAUDIT,
+        DF_1_SINGLETON,
+        DF_1_STUB,
+        DF_1_PIE,
+    );
 }
