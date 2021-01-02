@@ -9,9 +9,9 @@ use crate::read::{
 use crate::{endian, macho, BigEndian, ByteString, Bytes, Endian, Endianness, Pod};
 
 use super::{
-    MachOLoadCommandIterator, MachOSection, MachOSectionInternal, MachOSectionIterator,
-    MachOSegment, MachOSegmentIterator, MachOSymbol, MachOSymbolIterator, MachOSymbolTable, Nlist,
-    Section, Segment, SymbolTable,
+    LoadCommandIterator, MachOSection, MachOSectionInternal, MachOSectionIterator, MachOSegment,
+    MachOSegmentIterator, MachOSymbol, MachOSymbolIterator, MachOSymbolTable, Nlist, Section,
+    Segment, SymbolTable,
 };
 
 /// A 32-bit Mach-O object file.
@@ -218,7 +218,7 @@ where
             }
             if twolevel {
                 if let Some(dylib) = command.dylib()? {
-                    libraries.push(command.string(self.endian, dylib.name)?);
+                    libraries.push(command.string(self.endian, dylib.dylib.name)?);
                 }
             }
         }
@@ -446,15 +446,11 @@ pub trait MachHeader: Debug + Pod {
         &self,
         endian: Self::Endian,
         data: Bytes<'data>,
-    ) -> Result<MachOLoadCommandIterator<'data, Self::Endian>> {
+    ) -> Result<LoadCommandIterator<'data, Self::Endian>> {
         let data = data
             .read_bytes_at(mem::size_of::<Self>(), self.sizeofcmds(endian) as usize)
             .read_error("Invalid Mach-O load command table size")?;
-        Ok(MachOLoadCommandIterator::new(
-            endian,
-            data,
-            self.ncmds(endian),
-        ))
+        Ok(LoadCommandIterator::new(endian, data, self.ncmds(endian)))
     }
 
     /// Return the UUID from the `LC_UUID` load command, if one is present.
