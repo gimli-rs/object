@@ -12,7 +12,7 @@ mod file;
 pub use file::*;
 
 mod load_command;
-use load_command::*;
+pub use load_command::*;
 
 mod segment;
 pub use segment::*;

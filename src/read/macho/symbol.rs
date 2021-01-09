@@ -374,6 +374,19 @@ pub trait Nlist: Debug + Pod {
             .read_error("Invalid Mach-O symbol name offset")
     }
 
+    /// Return true if this is a STAB symbol.
+    ///
+    /// This determines the meaning of the `n_type` field.
+    fn is_stab(&self) -> bool {
+        self.n_type() & macho::N_STAB != 0
+    }
+
+    /// Return true if this is an undefined symbol.
+    fn is_undefined(&self) -> bool {
+        let n_type = self.n_type();
+        n_type & macho::N_STAB == 0 && n_type & macho::N_TYPE == macho::N_UNDF
+    }
+
     /// Return true if the symbol is a definition of a function or data object.
     fn is_definition(&self) -> bool {
         let n_type = self.n_type();

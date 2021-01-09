@@ -1276,7 +1276,7 @@ pub struct ThreadCommand<E: Endian> {
  */
 #[derive(Debug, Clone, Copy)]
 #[repr(C)]
-pub struct RoutinesCommand<E: Endian> {
+pub struct RoutinesCommand32<E: Endian> {
     /* for 32-bit architectures */
     /// LC_ROUTINES
     pub cmd: U32<E>,
@@ -1299,7 +1299,7 @@ pub struct RoutinesCommand<E: Endian> {
  */
 #[derive(Debug, Clone, Copy)]
 #[repr(C)]
-pub struct RoutinesCommand_64<E: Endian> {
+pub struct RoutinesCommand64<E: Endian> {
     /* for 64-bit architectures */
     /// LC_ROUTINES_64
     pub cmd: U32<E>,
@@ -1739,15 +1739,15 @@ pub struct LinkeditDataCommand<E: Endian> {
 }
 
 /*
- * The EncryptionInfoCommand contains the file offset and size of an
+ * The EncryptionInfoCommand32 contains the file offset and size of an
  * of an encrypted segment.
  */
 #[derive(Debug, Clone, Copy)]
 #[repr(C)]
-pub struct EncryptionInfoCommand<E: Endian> {
+pub struct EncryptionInfoCommand32<E: Endian> {
     /// LC_ENCRYPTION_INFO
     pub cmd: U32<E>,
-    /// sizeof(struct EncryptionInfoCommand)
+    /// sizeof(struct EncryptionInfoCommand32)
     pub cmdsize: U32<E>,
     /// file offset of encrypted range
     pub cryptoff: U32<E>,
@@ -2048,7 +2048,7 @@ pub struct LinkerOptionCommand<E: Endian> {
 }
 
 /*
- * The SymSegCommand contains the offset and size of the GNU style
+ * The SymsegCommand contains the offset and size of the GNU style
  * symbol table information as described in the header file <symseg.h>.
  * The symbol roots of the symbol segments must also be aligned properly
  * in the file.  So the requirement of keeping the offsets aligned to a
@@ -2058,10 +2058,10 @@ pub struct LinkerOptionCommand<E: Endian> {
  */
 #[derive(Debug, Clone, Copy)]
 #[repr(C)]
-pub struct SymSegCommand<E: Endian> {
+pub struct SymsegCommand<E: Endian> {
     /// LC_SYMSEG
     pub cmd: U32<E>,
-    /// sizeof(struct SymSegCommand)
+    /// sizeof(struct SymsegCommand)
     pub cmdsize: U32<E>,
     /// symbol segment offset
     pub offset: U32<E>,
@@ -3125,8 +3125,8 @@ unsafe_impl_endian_pod!(
     PreboundDylibCommand,
     DylinkerCommand,
     ThreadCommand,
-    RoutinesCommand,
-    RoutinesCommand_64,
+    RoutinesCommand32,
+    RoutinesCommand64,
     SymtabCommand,
     DysymtabCommand,
     DylibTableOfContents,
@@ -3139,14 +3139,14 @@ unsafe_impl_endian_pod!(
     UuidCommand,
     RpathCommand,
     LinkeditDataCommand,
-    EncryptionInfoCommand,
+    EncryptionInfoCommand32,
     EncryptionInfoCommand64,
     VersionMinCommand,
     BuildVersionCommand,
     BuildToolVersion,
     DyldInfoCommand,
     LinkerOptionCommand,
-    SymSegCommand,
+    SymsegCommand,
     IdentCommand,
     FvmfileCommand,
     EntryPointCommand,

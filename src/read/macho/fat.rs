@@ -4,7 +4,16 @@ use crate::{macho, BigEndian, Bytes, Pod};
 pub use macho::{FatArch32, FatArch64, FatHeader};
 
 impl FatHeader {
-    /// Attempt to parse a 32-bit fat header.
+    /// Attempt to parse a fat header.
+    ///
+    /// Does not validate the magic value.
+    pub fn parse<'data>(file: &'data [u8]) -> Result<&'data FatHeader> {
+        let mut file = Bytes(file);
+        file.read::<FatHeader>()
+            .read_error("Invalid fat header size or alignment")
+    }
+
+    /// Attempt to parse a fat header and 32-bit fat arches.
     pub fn parse_arch32<'data>(file: &'data [u8]) -> Result<&'data [FatArch32]> {
         let mut file = Bytes(file);
         let header = file
@@ -17,7 +26,7 @@ impl FatHeader {
             .read_error("Invalid nfat_arch")
     }
 
-    /// Attempt to parse a 64-bit fat header.
+    /// Attempt to parse a fat header and 64-bit fat arches.
     pub fn parse_arch64<'data>(file: &'data [u8]) -> Result<&'data [FatArch64]> {
         let mut file = Bytes(file);
         let header = file

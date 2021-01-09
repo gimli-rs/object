@@ -6,7 +6,7 @@ use crate::macho;
 use crate::pod::{Bytes, Pod};
 use crate::read::{self, ObjectSegment, ReadError, Result};
 
-use super::{MachHeader, MachOFile, MachOLoadCommand, MachOLoadCommandIterator, Section};
+use super::{LoadCommandData, LoadCommandIterator, MachHeader, MachOFile, Section};
 
 /// An iterator over the segments of a `MachOFile32`.
 pub type MachOSegmentIterator32<'data, 'file, Endian = Endianness> =
@@ -23,7 +23,7 @@ where
     Mach: MachHeader,
 {
     pub(super) file: &'file MachOFile<'data, Mach>,
-    pub(super) commands: MachOLoadCommandIterator<'data, Mach::Endian>,
+    pub(super) commands: LoadCommandIterator<'data, Mach::Endian>,
 }
 
 impl<'data, 'file, Mach: MachHeader> Iterator for MachOSegmentIterator<'data, 'file, Mach> {
@@ -122,7 +122,7 @@ pub trait Segment: Debug + Pod {
     type Endian: endian::Endian;
     type Section: Section<Endian = Self::Endian>;
 
-    fn from_command(command: MachOLoadCommand<Self::Endian>) -> Result<Option<(&Self, Bytes)>>;
+    fn from_command(command: LoadCommandData<Self::Endian>) -> Result<Option<(&Self, Bytes)>>;
 
     fn cmd(&self, endian: Self::Endian) -> u32;
     fn cmdsize(&self, endian: Self::Endian) -> u32;
@@ -168,9 +168,10 @@ pub trait Segment: Debug + Pod {
     fn sections<'data>(
         &self,
         endian: Self::Endian,
-        data: Bytes<'data>,
+        section_data: Bytes<'data>,
     ) -> Result<&'data [Self::Section]> {
-        data.read_slice_at(0, self.nsects(endian) as usize)
+        section_data
+            .read_slice_at(0, self.nsects(endian) as usize)
             .read_error("Invalid Mach-O number of sections")
     }
 }
@@ -180,7 +181,7 @@ impl<Endian: endian::Endian> Segment for macho::SegmentCommand32<Endian> {
     type Endian = Endian;
     type Section = macho::Section32<Self::Endian>;
 
-    fn from_command(command: MachOLoadCommand<Self::Endian>) -> Result<Option<(&Self, Bytes)>> {
+    fn from_command(command: LoadCommandData<Self::Endian>) -> Result<Option<(&Self, Bytes)>> {
         command.segment_32()
     }
 
@@ -224,7 +225,7 @@ impl<Endian: endian::Endian> Segment for macho::SegmentCommand64<Endian> {
     type Endian = Endian;
     type Section = macho::Section64<Self::Endian>;
 
-    fn from_command(command: MachOLoadCommand<Self::Endian>) -> Result<Option<(&Self, Bytes)>> {
+    fn from_command(command: LoadCommandData<Self::Endian>) -> Result<Option<(&Self, Bytes)>> {
         command.segment_64()
     }
 
