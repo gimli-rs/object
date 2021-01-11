@@ -9,7 +9,7 @@ use crate::read::{
     SectionFlags, SectionIndex, SectionKind,
 };
 
-use super::{ImageNtHeaders, PeFile};
+use super::{ImageNtHeaders, PeFile, SectionTable};
 
 /// An iterator over the loadable sections of a `PeFile32`.
 pub type PeSegmentIterator32<'data, 'file> = PeSegmentIterator<'data, 'file, pe::ImageNtHeaders32>;
@@ -245,15 +245,27 @@ impl<'data, 'file, Pe: ImageNtHeaders> ObjectSection<'data> for PeSection<'data,
     }
 }
 
+impl<'data> SectionTable<'data> {
+    /// Return the data at the given virtual address in a PE file.
+    pub fn pe_data_at(&self, data: Bytes<'data>, va: u32) -> Option<Bytes<'data>> {
+        self.iter()
+            .filter_map(|section| section.pe_data_at(data, va))
+            .next()
+    }
+}
+
 impl pe::ImageSectionHeader {
-    fn pe_file_range(&self) -> (u32, u32) {
+    /// Return the offset and size of the section in a PE file.
+    ///
+    /// Returns `None` for sections that have no data in the file.
+    pub fn pe_file_range(&self) -> (u32, u32) {
         // Pointer and size will be zero for uninitialized data; we don't need to validate this.
         let offset = self.pointer_to_raw_data.get(LE);
         let size = cmp::min(self.virtual_size.get(LE), self.size_of_raw_data.get(LE));
         (offset, size)
     }
 
-    /// Return the data for a PE section.
+    /// Return the section data in a PE file.
     pub fn pe_data<'data>(&self, data: Bytes<'data>) -> result::Result<Bytes<'data>, ()> {
         let (offset, size) = self.pe_file_range();
         data.read_bytes_at(offset as usize, size as usize)

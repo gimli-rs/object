@@ -109,7 +109,7 @@ where
 impl<'data, 'file> CoffSegment<'data, 'file> {
     fn bytes(&self) -> Result<Bytes<'data>> {
         self.section
-            .coff_bytes(self.file.data)
+            .coff_data(self.file.data)
             .read_error("Invalid COFF section offset or size")
     }
 }
@@ -198,7 +198,7 @@ where
 impl<'data, 'file> CoffSection<'data, 'file> {
     fn bytes(&self) -> Result<Bytes<'data>> {
         self.section
-            .coff_bytes(self.file.data)
+            .coff_data(self.file.data)
             .read_error("Invalid COFF section offset or size")
     }
 }
@@ -272,9 +272,7 @@ impl<'data, 'file> ObjectSection<'data> for CoffSection<'data, 'file> {
     }
 
     fn relocations(&self) -> CoffRelocationIterator<'data, 'file> {
-        let pointer = self.section.pointer_to_relocations.get(LE) as usize;
-        let number = self.section.number_of_relocations.get(LE) as usize;
-        let relocations = self.file.data.read_slice_at(pointer, number).unwrap_or(&[]);
+        let relocations = self.section.coff_relocations(self.file.data).unwrap_or(&[]);
         CoffRelocationIterator {
             file: self.file,
             iter: relocations.iter(),
@@ -289,33 +287,33 @@ impl<'data, 'file> ObjectSection<'data> for CoffSection<'data, 'file> {
 }
 
 impl pe::ImageSectionHeader {
-    /// Return the offset and size of the section in the file.
-    ///
-    /// Returns `None` for sections that have no data in the file.
-    fn coff_file_range(&self) -> Option<(u32, u32)> {
-        if self.characteristics.get(LE) & pe::IMAGE_SCN_CNT_UNINITIALIZED_DATA != 0 {
-            None
+    pub(crate) fn kind(&self) -> SectionKind {
+        let characteristics = self.characteristics.get(LE);
+        if characteristics & (pe::IMAGE_SCN_CNT_CODE | pe::IMAGE_SCN_MEM_EXECUTE) != 0 {
+            SectionKind::Text
+        } else if characteristics & pe::IMAGE_SCN_CNT_INITIALIZED_DATA != 0 {
+            if characteristics & pe::IMAGE_SCN_MEM_DISCARDABLE != 0 {
+                SectionKind::Other
+            } else if characteristics & pe::IMAGE_SCN_MEM_WRITE != 0 {
+                SectionKind::Data
+            } else {
+                SectionKind::ReadOnlyData
+            }
+        } else if characteristics & pe::IMAGE_SCN_CNT_UNINITIALIZED_DATA != 0 {
+            SectionKind::UninitializedData
+        } else if characteristics & pe::IMAGE_SCN_LNK_INFO != 0 {
+            SectionKind::Linker
         } else {
-            let offset = self.pointer_to_raw_data.get(LE);
-            // Note: virtual size is not used for COFF.
-            let size = self.size_of_raw_data.get(LE);
-            Some((offset, size))
+            SectionKind::Unknown
         }
     }
+}
 
-    /// Return the section data.
+impl pe::ImageSectionHeader {
+    /// Return the section name.
     ///
-    /// Returns `Ok(&[])` if the section has no data.
-    /// Returns `Err` for invalid values.
-    fn coff_bytes<'data>(&self, data: Bytes<'data>) -> result::Result<Bytes<'data>, ()> {
-        if let Some((offset, size)) = self.coff_file_range() {
-            data.read_bytes_at(offset as usize, size as usize)
-        } else {
-            Ok(Bytes(&[]))
-        }
-    }
-
-    pub(crate) fn name<'data>(&'data self, strings: StringTable<'data>) -> Result<&'data [u8]> {
+    /// This handles decoding names that are offsets into the symbol string table.
+    pub fn name<'data>(&'data self, strings: StringTable<'data>) -> Result<&'data [u8]> {
         let bytes = &self.name;
         Ok(if bytes[0] == b'/' {
             let mut offset = 0;
@@ -345,35 +343,49 @@ impl pe::ImageSectionHeader {
                 .get(offset)
                 .read_error("Invalid COFF section name offset")?
         } else {
-            match bytes.iter().position(|&x| x == 0) {
-                Some(end) => &bytes[..end],
-                None => &bytes[..],
-            }
+            self.raw_name()
         })
     }
 
-    pub(crate) fn kind(&self) -> SectionKind {
-        let characteristics = self.characteristics.get(LE);
-        if characteristics & (pe::IMAGE_SCN_CNT_CODE | pe::IMAGE_SCN_MEM_EXECUTE) != 0 {
-            SectionKind::Text
-        } else if characteristics & pe::IMAGE_SCN_CNT_INITIALIZED_DATA != 0 {
-            if characteristics & pe::IMAGE_SCN_MEM_DISCARDABLE != 0 {
-                SectionKind::Other
-            } else if characteristics & pe::IMAGE_SCN_MEM_WRITE != 0 {
-                SectionKind::Data
-            } else {
-                SectionKind::ReadOnlyData
-            }
-        } else if characteristics & pe::IMAGE_SCN_CNT_UNINITIALIZED_DATA != 0 {
-            SectionKind::UninitializedData
-        } else if characteristics & pe::IMAGE_SCN_LNK_INFO != 0 {
-            SectionKind::Linker
-        } else {
-            SectionKind::Unknown
+    /// Return the raw section name.
+    pub fn raw_name(&self) -> &[u8] {
+        let bytes = &self.name;
+        match bytes.iter().position(|&x| x == 0) {
+            Some(end) => &bytes[..end],
+            None => &bytes[..],
         }
     }
 
-    fn coff_alignment(&self) -> u64 {
+    /// Return the offset and size of the section in a COFF file.
+    ///
+    /// Returns `None` for sections that have no data in the file.
+    pub fn coff_file_range(&self) -> Option<(u32, u32)> {
+        if self.characteristics.get(LE) & pe::IMAGE_SCN_CNT_UNINITIALIZED_DATA != 0 {
+            None
+        } else {
+            let offset = self.pointer_to_raw_data.get(LE);
+            // Note: virtual size is not used for COFF.
+            let size = self.size_of_raw_data.get(LE);
+            Some((offset, size))
+        }
+    }
+
+    /// Return the section data in a COFF file.
+    ///
+    /// Returns `Ok(&[])` if the section has no data.
+    /// Returns `Err` for invalid values.
+    pub fn coff_data<'data>(&self, data: Bytes<'data>) -> result::Result<Bytes<'data>, ()> {
+        if let Some((offset, size)) = self.coff_file_range() {
+            data.read_bytes_at(offset as usize, size as usize)
+        } else {
+            Ok(Bytes(&[]))
+        }
+    }
+
+    /// Return the section alignment in bytes.
+    ///
+    /// This is only valid for sections in a COFF file.
+    pub fn coff_alignment(&self) -> u64 {
         match self.characteristics.get(LE) & pe::IMAGE_SCN_ALIGN_MASK {
             pe::IMAGE_SCN_ALIGN_1BYTES => 1,
             pe::IMAGE_SCN_ALIGN_2BYTES => 2,
@@ -391,5 +403,18 @@ impl pe::ImageSectionHeader {
             pe::IMAGE_SCN_ALIGN_8192BYTES => 8192,
             _ => 16,
         }
+    }
+
+    /// Read the relocations in a COFF file.
+    ///
+    /// `data` must be the entire file data.
+    pub fn coff_relocations<'data>(
+        &self,
+        data: Bytes<'data>,
+    ) -> read::Result<&'data [pe::ImageRelocation]> {
+        let pointer = self.pointer_to_relocations.get(LE) as usize;
+        let number = self.number_of_relocations.get(LE) as usize;
+        data.read_slice_at(pointer, number)
+            .read_error("Invalid COFF relocation offset or number")
     }
 }

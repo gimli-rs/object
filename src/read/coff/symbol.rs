@@ -6,7 +6,7 @@ use core::str;
 use super::{CoffCommon, SectionTable};
 use crate::endian::{LittleEndian as LE, U32Bytes};
 use crate::pe;
-use crate::pod::{Bytes, Pod};
+use crate::pod::{bytes_of_slice, Bytes, Pod};
 use crate::read::util::StringTable;
 use crate::read::{
     self, ObjectSymbol, ObjectSymbolTable, ReadError, Result, SectionIndex, SymbolFlags,
@@ -66,23 +66,67 @@ impl<'data> SymbolTable<'data> {
         self.symbols.is_empty()
     }
 
-    /// The number of symbols.
+    /// The number of symbol table entries.
+    ///
+    /// This includes auxiliary symbol table entries.
     #[inline]
     pub fn len(&self) -> usize {
         self.symbols.len()
     }
 
+    /// Iterate over the symbols.
+    #[inline]
+    pub fn iter<'table>(&'table self) -> SymbolIterator<'data, 'table> {
+        SymbolIterator {
+            symbols: self,
+            index: 0,
+        }
+    }
+
     /// Return the symbol table entry at the given index.
     #[inline]
     pub fn symbol(&self, index: usize) -> Result<&'data pe::ImageSymbol> {
-        self.get::<pe::ImageSymbol>(index)
+        self.get::<pe::ImageSymbol>(index, 0)
     }
 
-    /// Return the symbol table entry or auxiliary record at the given index.
-    pub fn get<T: Pod>(&self, index: usize) -> Result<&'data T> {
-        let bytes = self
-            .symbols
-            .get(index)
+    /// Return the auxiliary function symbol for the symbol table entry at the given index.
+    ///
+    /// Note that the index is of the symbol, not the first auxiliary record.
+    #[inline]
+    pub fn aux_function(&self, index: usize) -> Result<&'data pe::ImageAuxSymbolFunction> {
+        self.get::<pe::ImageAuxSymbolFunction>(index, 1)
+    }
+
+    /// Return the auxiliary section symbol for the symbol table entry at the given index.
+    ///
+    /// Note that the index is of the symbol, not the first auxiliary record.
+    #[inline]
+    pub fn aux_section(&self, index: usize) -> Result<&'data pe::ImageAuxSymbolSection> {
+        self.get::<pe::ImageAuxSymbolSection>(index, 1)
+    }
+
+    /// Return the auxiliary file name for the symbol table entry at the given index.
+    ///
+    /// Note that the index is of the symbol, not the first auxiliary record.
+    pub fn aux_file_name(&self, index: usize, aux_count: u8) -> Result<&'data [u8]> {
+        let entries = index
+            .checked_add(1)
+            .and_then(|x| Some(x..x.checked_add(aux_count.into())?))
+            .and_then(|x| self.symbols.get(x))
+            .read_error("Invalid COFF symbol index")?;
+        let bytes = bytes_of_slice(entries);
+        // The name is padded with nulls.
+        Ok(match bytes.iter().position(|&x| x == 0) {
+            Some(end) => &bytes[..end],
+            None => &bytes[..],
+        })
+    }
+
+    /// Return the symbol table entry or auxiliary record at the given index and offset.
+    pub fn get<T: Pod>(&self, index: usize, offset: usize) -> Result<&'data T> {
+        let bytes = index
+            .checked_add(offset)
+            .and_then(|x| self.symbols.get(x))
             .read_error("Invalid COFF symbol index")?;
         Bytes(&bytes.0[..])
             .read()
@@ -95,9 +139,7 @@ impl<'data> SymbolTable<'data> {
         f: F,
     ) -> SymbolMap<Entry> {
         let mut symbols = Vec::with_capacity(self.symbols.len());
-        let mut i = 0;
-        while let Ok(symbol) = self.symbol(i) {
-            i += 1 + symbol.number_of_aux_symbols as usize;
+        for (_, symbol) in self.iter() {
             if !symbol.is_definition() {
                 continue;
             }
@@ -106,6 +148,26 @@ impl<'data> SymbolTable<'data> {
             }
         }
         SymbolMap::new(symbols)
+    }
+}
+
+/// An iterator for symbol entries in a COFF or PE file.
+///
+/// Yields the index and symbol structure for each symbol.
+#[derive(Debug)]
+pub struct SymbolIterator<'data, 'table> {
+    symbols: &'table SymbolTable<'data>,
+    index: usize,
+}
+
+impl<'data, 'table> Iterator for SymbolIterator<'data, 'table> {
+    type Item = (usize, &'data pe::ImageSymbol);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let index = self.index;
+        let symbol = self.symbols.symbol(index).ok()?;
+        self.index += 1 + symbol.number_of_aux_symbols as usize;
+        Some((index, symbol))
     }
 }
 
@@ -158,6 +220,23 @@ impl pe::ImageSymbol {
             pe::IMAGE_SYM_CLASS_EXTERNAL | pe::IMAGE_SYM_CLASS_WEAK_EXTERNAL => true,
             _ => false,
         }
+    }
+
+    /// Return true if the symbol has an auxiliary file name.
+    pub fn has_aux_file_name(&self) -> bool {
+        self.number_of_aux_symbols > 0 && self.storage_class == pe::IMAGE_SYM_CLASS_FILE
+    }
+
+    /// Return true if the symbol has an auxiliary function symbol.
+    pub fn has_aux_function(&self) -> bool {
+        self.number_of_aux_symbols > 0 && self.derived_type() == pe::IMAGE_SYM_DTYPE_FUNCTION
+    }
+
+    /// Return true if the symbol has an auxiliary section symbol.
+    pub fn has_aux_section(&self) -> bool {
+        self.number_of_aux_symbols > 0
+            && self.storage_class == pe::IMAGE_SYM_CLASS_STATIC
+            && self.value.get(LE) == 0
     }
 }
 
@@ -243,21 +322,10 @@ impl<'data, 'file> ObjectSymbol<'data> for CoffSymbol<'data, 'file> {
     }
 
     fn name(&self) -> read::Result<&'data str> {
-        let name = if self.symbol.storage_class == pe::IMAGE_SYM_CLASS_FILE {
-            // The file name is in the following auxiliary symbol.
-            if self.symbol.number_of_aux_symbols > 0 {
-                let s = self
-                    .file
-                    .symbols
-                    .get::<pe::ImageSymbolBytes>(self.index.0 + 1)?;
-                // The name is padded with nulls.
-                match s.0.iter().position(|&x| x == 0) {
-                    Some(end) => &s.0[..end],
-                    None => &s.0[..],
-                }
-            } else {
-                &[][..]
-            }
+        let name = if self.symbol.has_aux_file_name() {
+            self.file
+                .symbols
+                .aux_file_name(self.index.0, self.symbol.number_of_aux_symbols)?
         } else {
             self.symbol.name(self.file.symbols.strings())?
         };
@@ -289,12 +357,8 @@ impl<'data, 'file> ObjectSymbol<'data> for CoffSymbol<'data, 'file> {
         match self.symbol.storage_class {
             pe::IMAGE_SYM_CLASS_STATIC => {
                 // Section symbols may duplicate the size from the section table.
-                if self.symbol.value.get(LE) == 0 && self.symbol.number_of_aux_symbols > 0 {
-                    if let Ok(aux) = self
-                        .file
-                        .symbols
-                        .get::<pe::ImageAuxSymbolSection>(self.index.0 + 1)
-                    {
+                if self.symbol.has_aux_section() {
+                    if let Ok(aux) = self.file.symbols.aux_section(self.index.0) {
                         u64::from(aux.length.get(LE))
                     } else {
                         0
@@ -308,15 +372,9 @@ impl<'data, 'file> ObjectSymbol<'data> for CoffSymbol<'data, 'file> {
                     // For undefined symbols, symbol.value is 0 and the size is 0.
                     // For common data, symbol.value is the size.
                     u64::from(self.symbol.value.get(LE))
-                } else if self.symbol.derived_type() == pe::IMAGE_SYM_DTYPE_FUNCTION
-                    && self.symbol.number_of_aux_symbols > 0
-                {
+                } else if self.symbol.has_aux_function() {
                     // Function symbols may have a size.
-                    if let Ok(aux) = self
-                        .file
-                        .symbols
-                        .get::<pe::ImageAuxSymbolFunction>(self.index.0 + 1)
-                    {
+                    if let Ok(aux) = self.file.symbols.aux_function(self.index.0) {
                         u64::from(aux.total_size.get(LE))
                     } else {
                         0
@@ -425,15 +483,8 @@ impl<'data, 'file> ObjectSymbol<'data> for CoffSymbol<'data, 'file> {
     }
 
     fn flags(&self) -> SymbolFlags<SectionIndex> {
-        if self.symbol.storage_class == pe::IMAGE_SYM_CLASS_STATIC
-            && self.symbol.value.get(LE) == 0
-            && self.symbol.number_of_aux_symbols > 0
-        {
-            if let Ok(aux) = self
-                .file
-                .symbols
-                .get::<pe::ImageAuxSymbolSection>(self.index.0 + 1)
-            {
+        if self.symbol.has_aux_section() {
+            if let Ok(aux) = self.file.symbols.aux_section(self.index.0) {
                 // TODO: use high_number for bigobj
                 let number = aux.number.get(LE) as usize;
                 return SymbolFlags::CoffSection {
