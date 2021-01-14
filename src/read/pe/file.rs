@@ -27,20 +27,6 @@ pub struct PeFile<'data, Pe: ImageNtHeaders> {
 }
 
 impl<'data, Pe: ImageNtHeaders> PeFile<'data, Pe> {
-    /// Find the optional header and read the `optional_header.magic`.
-    pub fn optional_header_magic(data: &'data [u8]) -> Result<u16> {
-        let data = Bytes(data);
-        let dos_header = pe::ImageDosHeader::parse(data)?;
-        // NT headers are at an offset specified in the DOS header.
-        let nt_headers = data
-            .read_at::<Pe>(dos_header.e_lfanew.get(LE) as usize)
-            .read_error("Invalid NT headers offset, size, or alignment")?;
-        if nt_headers.signature() != pe::IMAGE_NT_SIGNATURE {
-            return Err(Error("Invalid PE magic"));
-        }
-        Ok(nt_headers.optional_header().magic())
-    }
-
     /// Parse the raw PE file data.
     pub fn parse(data: &'data [u8]) -> Result<Self> {
         let data = Bytes(data);
@@ -74,11 +60,7 @@ impl<'data, Pe: ImageNtHeaders> PeFile<'data, Pe> {
     }
 
     fn data_at(&self, va: u32) -> Option<Bytes<'data>> {
-        self.common
-            .sections
-            .iter()
-            .filter_map(|section| section.pe_data_at(self.data, va))
-            .next()
+        self.common.sections.pe_data_at(self.data, va)
     }
 }
 
@@ -199,14 +181,8 @@ where
             Some(data_dir) => data_dir,
             None => return Ok(Vec::new()),
         };
-        let import_data = self
-            .data_at(data_dir.virtual_address.get(LE))
-            .read_error("Invalid PE import dir virtual address")?
-            .read_bytes(data_dir.size.get(LE) as usize)
-            .read_error("Invalid PE import dir size")?;
-
+        let mut import_descriptors = data_dir.data(self.data, &self.common.sections)?;
         let mut imports = Vec::new();
-        let mut import_descriptors = import_data;
         loop {
             let import_desc = import_descriptors
                 .read::<pe::ImageImportDescriptor>()
@@ -275,11 +251,7 @@ where
         };
         let export_va = data_dir.virtual_address.get(LE);
         let export_size = data_dir.size.get(LE);
-        let export_data = self
-            .data_at(export_va)
-            .read_error("Invalid PE export dir virtual address")?
-            .read_bytes(export_size as usize)
-            .read_error("Invalid PE export dir size")?;
+        let export_data = data_dir.data(self.data, &self.common.sections)?;
         let export_dir = export_data
             .read_at::<pe::ImageExportDirectory>(0)
             .read_error("Invalid PE export dir size")?;
@@ -453,6 +425,25 @@ impl pe::ImageDosHeader {
     ) -> read::Result<(&'data Pe, &'data [pe::ImageDataDirectory], Bytes<'data>)> {
         Pe::parse(self, data)
     }
+}
+
+/// Find the optional header and read the `optional_header.magic`.
+///
+/// It can be useful to know this magic value before trying to
+/// fully parse the NT headers.
+pub fn optional_header_magic(data: &[u8]) -> Result<u16> {
+    let data = Bytes(data);
+    let dos_header = pe::ImageDosHeader::parse(data)?;
+    // NT headers are at an offset specified in the DOS header.
+    // It doesn't matter which NT header type is used for the purpose
+    // of reading the optional header magic.
+    let nt_headers = data
+        .read_at::<pe::ImageNtHeaders32>(dos_header.e_lfanew.get(LE) as usize)
+        .read_error("Invalid NT headers offset, size, or alignment")?;
+    if nt_headers.signature() != pe::IMAGE_NT_SIGNATURE {
+        return Err(Error("Invalid PE magic"));
+    }
+    Ok(nt_headers.optional_header().magic())
 }
 
 /// A trait for generic access to `ImageNtHeaders32` and `ImageNtHeaders64`.
@@ -922,5 +913,20 @@ impl ImageOptionalHeader for pe::ImageOptionalHeader64 {
     #[inline]
     fn number_of_rva_and_sizes(&self) -> u32 {
         self.number_of_rva_and_sizes.get(LE)
+    }
+}
+
+impl pe::ImageDataDirectory {
+    /// Get the data referenced by this directory entry.
+    pub fn data<'data>(
+        &self,
+        data: Bytes<'data>,
+        sections: &SectionTable<'data>,
+    ) -> Result<Bytes<'data>> {
+        sections
+            .pe_data_at(data, self.virtual_address.get(LE))
+            .read_error("Invalid data dir virtual address")?
+            .read_bytes(self.size.get(LE) as usize)
+            .read_error("Invalid data dir size")
     }
 }

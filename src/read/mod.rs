@@ -176,9 +176,7 @@ impl FileKind {
             [0x00, b'a', b's', b'm', ..] => FileKind::Wasm,
             #[cfg(feature = "pe")]
             [b'M', b'Z', ..] => {
-                // `optional_header_magic` doesn't care if it's `PeFile32` and `PeFile64`.
-                // TODO: avoid use of PeFile
-                match pe::PeFile64::optional_header_magic(data) {
+                match pe::optional_header_magic(data) {
                     Ok(crate::pe::IMAGE_NT_OPTIONAL_HDR32_MAGIC) => {
                         FileKind::Pe32
                     }

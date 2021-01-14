@@ -210,7 +210,7 @@ impl pe::ImageFileHeader {
     ///
     /// `tail` must be the data following the optional header.
     #[inline]
-    fn sections<'data>(&self, tail: Bytes<'data>) -> read::Result<SectionTable<'data>> {
+    pub fn sections<'data>(&self, tail: Bytes<'data>) -> read::Result<SectionTable<'data>> {
         SectionTable::parse(self, tail)
     }
 
@@ -218,7 +218,7 @@ impl pe::ImageFileHeader {
     ///
     /// `data` must be the entire file data.
     #[inline]
-    fn symbols<'data>(&self, data: Bytes<'data>) -> read::Result<SymbolTable<'data>> {
+    pub fn symbols<'data>(&self, data: Bytes<'data>) -> read::Result<SymbolTable<'data>> {
         SymbolTable::parse(self, data)
     }
 }

@@ -22,12 +22,7 @@ impl<'data, 'file> Iterator for CoffComdatIterator<'data, 'file> {
     fn next(&mut self) -> Option<Self::Item> {
         loop {
             let index = self.index;
-            let symbol = self
-                .file
-                .common
-                .symbols
-                .get::<pe::ImageSymbol>(index)
-                .ok()?;
+            let symbol = self.file.common.symbols.symbol(index).ok()?;
             self.index += 1 + symbol.number_of_aux_symbols as usize;
             if let Some(comdat) = CoffComdat::parse(self.file, symbol, index) {
                 return Some(comdat);
@@ -55,20 +50,12 @@ impl<'data, 'file> CoffComdat<'data, 'file> {
         index: usize,
     ) -> Option<CoffComdat<'data, 'file>> {
         // Must be a section symbol.
-        if section_symbol.value.get(LE) != 0
-            || section_symbol.base_type() != pe::IMAGE_SYM_TYPE_NULL
-            || section_symbol.storage_class != pe::IMAGE_SYM_CLASS_STATIC
-            || section_symbol.number_of_aux_symbols == 0
-        {
+        if !section_symbol.has_aux_section() {
             return None;
         }
 
         // Auxiliary record must have a non-associative selection.
-        let aux = file
-            .common
-            .symbols
-            .get::<pe::ImageAuxSymbolSection>(index + 1)
-            .ok()?;
+        let aux = file.common.symbols.aux_section(index).ok()?;
         let selection = aux.selection;
         if selection == 0 || selection == pe::IMAGE_COMDAT_SELECT_ASSOCIATIVE {
             return None;
@@ -80,11 +67,7 @@ impl<'data, 'file> CoffComdat<'data, 'file> {
         let section_number = section_symbol.section_number.get(LE);
         loop {
             symbol_index += 1 + symbol.number_of_aux_symbols as usize;
-            symbol = file
-                .common
-                .symbols
-                .get::<pe::ImageSymbol>(symbol_index)
-                .ok()?;
+            symbol = file.common.symbols.symbol(symbol_index).ok()?;
             if section_number == symbol.section_number.get(LE) {
                 break;
             }
@@ -160,31 +143,17 @@ impl<'data, 'file> Iterator for CoffComdatSectionIterator<'data, 'file> {
         // TODO: it seems gcc doesn't use associated symbols for this
         loop {
             let index = self.index;
-            let symbol = self
-                .file
-                .common
-                .symbols
-                .get::<pe::ImageSymbol>(index)
-                .ok()?;
+            let symbol = self.file.common.symbols.symbol(index).ok()?;
             self.index += 1 + symbol.number_of_aux_symbols as usize;
 
             // Must be a section symbol.
-            if symbol.value.get(LE) != 0
-                || symbol.base_type() != pe::IMAGE_SYM_TYPE_NULL
-                || symbol.storage_class != pe::IMAGE_SYM_CLASS_STATIC
-                || symbol.number_of_aux_symbols == 0
-            {
+            if !symbol.has_aux_section() {
                 continue;
             }
 
             let section_number = symbol.section_number.get(LE);
 
-            let aux = self
-                .file
-                .common
-                .symbols
-                .get::<pe::ImageAuxSymbolSection>(index + 1)
-                .ok()?;
+            let aux = self.file.common.symbols.aux_section(index).ok()?;
             if aux.selection == pe::IMAGE_COMDAT_SELECT_ASSOCIATIVE {
                 // TODO: use high_number for bigobj
                 if aux.number.get(LE) == self.section_number {

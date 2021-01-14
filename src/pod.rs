@@ -69,6 +69,17 @@ pub fn bytes_of<T: Pod>(val: &T) -> &[u8] {
     unsafe { slice::from_raw_parts(slice::from_ref(val).as_ptr().cast(), size) }
 }
 
+/// Cast a slice of a `Pod` type to a byte slice.
+#[inline]
+pub fn bytes_of_slice<T: Pod>(val: &[T]) -> &[u8] {
+    let size = val.len().wrapping_mul(mem::size_of::<T>());
+    // Safety:
+    // Any alignment is allowed.
+    // The size is determined in this function.
+    // The Pod trait ensures the type is valid to cast to bytes.
+    unsafe { slice::from_raw_parts(val.as_ptr().cast(), size) }
+}
+
 /// A newtype for byte slices.
 ///
 /// It has these important features:
@@ -393,23 +404,21 @@ mod tests {
 
     #[test]
     fn slice() {
-        let x = u64::to_be(0x0123_4567_89ab_cdef);
-        let bytes = bytes_of(&x);
-        assert_eq!(bytes, [0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef]);
-
-        let x16 = [
+        let x = [
             u16::to_be(0x0123),
             u16::to_be(0x4567),
             u16::to_be(0x89ab),
             u16::to_be(0xcdef),
         ];
+        let bytes = bytes_of_slice(&x);
+        assert_eq!(bytes, [0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef]);
 
         let (y, tail) = slice_from_bytes::<u16>(&bytes, 4).unwrap();
-        assert_eq!(y, x16);
+        assert_eq!(y, x);
         assert_eq!(tail, &[]);
 
         let (y, tail) = slice_from_bytes::<u16>(&bytes[2..], 2).unwrap();
-        assert_eq!(y, &x16[1..3]);
+        assert_eq!(y, &x[1..3]);
         assert_eq!(tail, &bytes[6..]);
 
         assert_eq!(slice_from_bytes::<u16>(&bytes, 5), Err(()));
