@@ -3580,6 +3580,20 @@ mod macho {
                         // TODO: dump tools
                     });
                 }
+                LoadCommandVariant::FilesetEntry(x) => {
+                    p.group("FilesetEntryCommand", |p| {
+                        p.field_enum("Cmd", x.cmd.get(endian), FLAGS_LC);
+                        p.field_hex("CmdSize", x.cmdsize.get(endian));
+                        p.field_hex("VmAddress", x.vmaddr.get(endian));
+                        p.field_hex("FileOffset", x.fileoff.get(endian));
+                        p.field_string(
+                            "EntryId",
+                            x.entry_id.offset.get(endian),
+                            command.string(endian, x.entry_id).ok(),
+                        );
+                        p.field_hex("Reserved", x.reserved.get(endian));
+                    });
+                }
                 LoadCommandVariant::Other => {
                     p.group("LoadCommand", |p| {
                         p.field_enum("Cmd", command.cmd(), FLAGS_LC);
