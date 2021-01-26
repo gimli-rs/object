@@ -131,7 +131,9 @@ impl<'data, E: Endian> LoadCommandData<'data, E> {
             | macho::LC_FUNCTION_STARTS
             | macho::LC_DATA_IN_CODE
             | macho::LC_DYLIB_CODE_SIGN_DRS
-            | macho::LC_LINKER_OPTIMIZATION_HINT => LoadCommandVariant::LinkeditData(self.data()?),
+            | macho::LC_LINKER_OPTIMIZATION_HINT
+            | macho::LC_DYLD_EXPORTS_TRIE
+            | macho::LC_DYLD_CHAINED_FIXUPS => LoadCommandVariant::LinkeditData(self.data()?),
             macho::LC_ENCRYPTION_INFO => LoadCommandVariant::EncryptionInfo32(self.data()?),
             macho::LC_DYLD_INFO | macho::LC_DYLD_INFO_ONLY => {
                 LoadCommandVariant::DyldInfo(self.data()?)
@@ -147,6 +149,7 @@ impl<'data, E: Endian> LoadCommandData<'data, E> {
             macho::LC_LINKER_OPTION => LoadCommandVariant::LinkerOption(self.data()?),
             macho::LC_NOTE => LoadCommandVariant::Note(self.data()?),
             macho::LC_BUILD_VERSION => LoadCommandVariant::BuildVersion(self.data()?),
+            macho::LC_FILESET_ENTRY => LoadCommandVariant::FilesetEntry(self.data()?),
             _ => LoadCommandVariant::Other,
         })
     }
@@ -291,7 +294,8 @@ pub enum LoadCommandVariant<'data, E: Endian> {
     /// `LC_RPATH`
     Rpath(&'data macho::RpathCommand<E>),
     /// `LC_CODE_SIGNATURE`, `LC_SEGMENT_SPLIT_INFO`, `LC_FUNCTION_STARTS`,
-    /// `LC_DATA_IN_CODE`, `LC_DYLIB_CODE_SIGN_DRS` or `LC_LINKER_OPTIMIZATION_HINT`
+    /// `LC_DATA_IN_CODE`, `LC_DYLIB_CODE_SIGN_DRS`, `LC_LINKER_OPTIMIZATION_HINT`,
+    /// `LC_DYLD_EXPORTS_TRIE`, or `LC_DYLD_CHAINED_FIXUPS`.
     LinkeditData(&'data macho::LinkeditDataCommand<E>),
     /// `LC_ENCRYPTION_INFO`
     EncryptionInfo32(&'data macho::EncryptionInfoCommand32<E>),
@@ -314,8 +318,8 @@ pub enum LoadCommandVariant<'data, E: Endian> {
     Note(&'data macho::NoteCommand<E>),
     /// `LC_BUILD_VERSION`
     BuildVersion(&'data macho::BuildVersionCommand<E>),
-    // unknown format: LC_DYLD_EXPORTS_TRIE,
-    // unknown format: LC_DYLD_CHAINED_FIXUPS,
+    /// `LC_FILESET_ENTRY`
+    FilesetEntry(&'data macho::FilesetEntryCommand<E>),
     /// An unrecognized or obsolete load command.
     Other,
 }
