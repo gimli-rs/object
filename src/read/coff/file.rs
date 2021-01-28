@@ -1,9 +1,9 @@
 use alloc::vec::Vec;
-use core::str;
+use core::{mem, str};
 
 use crate::read::{
     self, Architecture, Export, FileFlags, Import, NoDynamicRelocationIterator, Object,
-    ObjectSection, ReadError, Result, SectionIndex, SymbolIndex,
+    ObjectSection, ReadError, ReadRef, Result, SectionIndex, SymbolIndex,
 };
 use crate::{pe, Bytes, LittleEndian as LE};
 
@@ -24,18 +24,17 @@ pub(crate) struct CoffCommon<'data> {
 
 /// A COFF object file.
 #[derive(Debug)]
-pub struct CoffFile<'data> {
+pub struct CoffFile<'data, R: ReadRef + ?Sized> {
     pub(super) header: &'data pe::ImageFileHeader,
     pub(super) common: CoffCommon<'data>,
-    pub(super) data: Bytes<'data>,
+    pub(super) data: &'data R,
 }
 
-impl<'data> CoffFile<'data> {
+impl<'data, R: ReadRef + ?Sized> CoffFile<'data, R> {
     /// Parse the raw COFF file data.
-    pub fn parse(data: &'data [u8]) -> Result<Self> {
-        let data = Bytes(data);
-        let (header, tail) = pe::ImageFileHeader::parse(data)?;
-        let sections = header.sections(tail)?;
+    pub fn parse(data: &'data R) -> Result<Self> {
+        let header = pe::ImageFileHeader::parse(data)?;
+        let sections = header.sections(data)?;
         let symbols = header.symbols(data)?;
 
         Ok(CoffFile {
@@ -50,18 +49,18 @@ impl<'data> CoffFile<'data> {
     }
 }
 
-impl<'data> read::private::Sealed for CoffFile<'data> {}
+impl<'data, R: ReadRef + ?Sized> read::private::Sealed for CoffFile<'data, R> {}
 
-impl<'data, 'file> Object<'data, 'file> for CoffFile<'data>
+impl<'data, 'file, R: ReadRef + ?Sized> Object<'data, 'file> for CoffFile<'data, R>
 where
     'data: 'file,
 {
-    type Segment = CoffSegment<'data, 'file>;
-    type SegmentIterator = CoffSegmentIterator<'data, 'file>;
-    type Section = CoffSection<'data, 'file>;
-    type SectionIterator = CoffSectionIterator<'data, 'file>;
-    type Comdat = CoffComdat<'data, 'file>;
-    type ComdatIterator = CoffComdatIterator<'data, 'file>;
+    type Segment = CoffSegment<'data, 'file, R>;
+    type SegmentIterator = CoffSegmentIterator<'data, 'file, R>;
+    type Section = CoffSection<'data, 'file, R>;
+    type SectionIterator = CoffSectionIterator<'data, 'file, R>;
+    type Comdat = CoffComdat<'data, 'file, R>;
+    type ComdatIterator = CoffComdatIterator<'data, 'file, R>;
     type Symbol = CoffSymbol<'data, 'file>;
     type SymbolIterator = CoffSymbolIterator<'data, 'file>;
     type SymbolTable = CoffSymbolTable<'data, 'file>;
@@ -86,19 +85,19 @@ where
         false
     }
 
-    fn segments(&'file self) -> CoffSegmentIterator<'data, 'file> {
+    fn segments(&'file self) -> CoffSegmentIterator<'data, 'file, R> {
         CoffSegmentIterator {
             file: self,
             iter: self.common.sections.iter(),
         }
     }
 
-    fn section_by_name(&'file self, section_name: &str) -> Option<CoffSection<'data, 'file>> {
+    fn section_by_name(&'file self, section_name: &str) -> Option<CoffSection<'data, 'file, R>> {
         self.sections()
             .find(|section| section.name() == Ok(section_name))
     }
 
-    fn section_by_index(&'file self, index: SectionIndex) -> Result<CoffSection<'data, 'file>> {
+    fn section_by_index(&'file self, index: SectionIndex) -> Result<CoffSection<'data, 'file, R>> {
         let section = self.common.sections.section(index.0)?;
         Ok(CoffSection {
             file: self,
@@ -107,14 +106,14 @@ where
         })
     }
 
-    fn sections(&'file self) -> CoffSectionIterator<'data, 'file> {
+    fn sections(&'file self) -> CoffSectionIterator<'data, 'file, R> {
         CoffSectionIterator {
             file: self,
             iter: self.common.sections.iter().enumerate(),
         }
     }
 
-    fn comdats(&'file self) -> CoffComdatIterator<'data, 'file> {
+    fn comdats(&'file self) -> CoffComdatIterator<'data, 'file, R> {
         CoffComdatIterator {
             file: self,
             index: 0,
@@ -189,36 +188,39 @@ where
 }
 
 impl pe::ImageFileHeader {
-    /// Read the DOS header.
+    /// Read the file header.
     ///
-    /// The given data must be for the entire file.  Returns the data following the optional
-    /// header, which will contain the section headers.
-    pub fn parse<'data>(mut data: Bytes<'data>) -> read::Result<(&'data Self, Bytes<'data>)> {
-        let header = data
-            .read::<pe::ImageFileHeader>()
-            .read_error("Invalid COFF file header size or alignment")?;
-
-        // Skip over the optional header.
-        data.skip(header.size_of_optional_header.get(LE) as usize)
-            .read_error("Invalid COFF optional header size")?;
-
+    /// The given data must be for the entire file.
+    pub fn parse<'data, R: ReadRef + ?Sized>(data: &'data R) -> read::Result<&'data Self> {
+        data.read_at::<pe::ImageFileHeader>(0)
+            .read_error("Invalid COFF file header size or alignment")
         // TODO: maybe validate that the machine is known?
-        Ok((header, data))
     }
 
     /// Read the section table.
     ///
-    /// `tail` must be the data following the optional header.
+    /// `data` must be the entire file data.
     #[inline]
-    pub fn sections<'data>(&self, tail: Bytes<'data>) -> read::Result<SectionTable<'data>> {
-        SectionTable::parse(self, tail)
+    pub fn sections<'data, R: ReadRef + ?Sized>(
+        &self,
+        data: &'data R,
+    ) -> read::Result<SectionTable<'data>> {
+        // Skip over the optional header.
+        let offset = mem::size_of::<Self>()
+            .checked_add(self.size_of_optional_header.get(LE) as usize)
+            .read_error("Invalid COFF optional header size")?;
+
+        SectionTable::parse(self, data, offset)
     }
 
     /// Read the symbol table and string table.
     ///
     /// `data` must be the entire file data.
     #[inline]
-    pub fn symbols<'data>(&self, data: Bytes<'data>) -> read::Result<SymbolTable<'data>> {
+    pub fn symbols<'data, R: ReadRef + ?Sized>(
+        &self,
+        data: &'data R,
+    ) -> read::Result<SymbolTable<'data>> {
         SymbolTable::parse(self, data)
     }
 }

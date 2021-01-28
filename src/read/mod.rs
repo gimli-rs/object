@@ -10,6 +10,9 @@ use crate::{ByteString, Bytes};
 mod util;
 pub use util::StringTable;
 
+mod read_ref;
+pub use read_ref::*;
+
 mod any;
 pub use any::*;
 
@@ -150,12 +153,13 @@ pub enum FileKind {
 
 impl FileKind {
     /// Determine a file kind by parsing the start of the file.
-    pub fn parse(data: &[u8]) -> Result<FileKind> {
-        if data.len() < 16 {
+    pub fn parse<R: ReadRef + ?Sized>(data: &R) -> Result<FileKind> {
+        let magic = data.read_bytes(0, 16).read_error("Could not read magic")?;
+        if magic.len() < 16 {
             return Err(Error("File too short"));
         }
 
-        let kind = match [data[0], data[1], data[2], data[3], data[4], data[5], data[6], data[7]] {
+        let kind = match [magic[0], magic[1], magic[2], magic[3], magic[4], magic[5], magic[6], magic[7]] {
             #[cfg(feature = "archive")]
             [b'!', b'<', b'a', b'r', b'c', b'h', b'>', b'\n'] => FileKind::Archive,
             #[cfg(feature = "elf")]

@@ -1,4 +1,6 @@
+#[cfg(feature = "archive")]
 use object::read::archive::ArchiveFile;
+#[cfg(feature = "macho")]
 use object::read::macho::{FatArch, FatHeader};
 use object::{Object, ObjectComdat, ObjectSection, ObjectSymbol};
 use std::{env, fs, process};
@@ -23,6 +25,7 @@ fn main() {
                 continue;
             }
         };
+        /*
         let file = match unsafe { memmap::Mmap::map(&file) } {
             Ok(mmap) => mmap,
             Err(err) => {
@@ -61,10 +64,13 @@ fn main() {
         } else {
             dump_object(&*file);
         }
+        */
+        let data = object::read::ReadCache::new(file);
+        dump_object(&data);
     }
 }
 
-fn dump_object(data: &[u8]) {
+fn dump_object(data: &object::read::ReadCache<fs::File>) {
     let file = match object::File::parse(data) {
         Ok(file) => file,
         Err(err) => {

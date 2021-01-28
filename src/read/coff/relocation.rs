@@ -3,17 +3,19 @@ use core::slice;
 
 use crate::endian::LittleEndian as LE;
 use crate::pe;
-use crate::read::{Relocation, RelocationEncoding, RelocationKind, RelocationTarget, SymbolIndex};
+use crate::read::{
+    ReadRef, Relocation, RelocationEncoding, RelocationKind, RelocationTarget, SymbolIndex,
+};
 
 use super::CoffFile;
 
 /// An iterator over the relocations in a `CoffSection`.
-pub struct CoffRelocationIterator<'data, 'file> {
-    pub(super) file: &'file CoffFile<'data>,
+pub struct CoffRelocationIterator<'data, 'file, R: ReadRef + ?Sized> {
+    pub(super) file: &'file CoffFile<'data, R>,
     pub(super) iter: slice::Iter<'data, pe::ImageRelocation>,
 }
 
-impl<'data, 'file> Iterator for CoffRelocationIterator<'data, 'file> {
+impl<'data, 'file, R: ReadRef + ?Sized> Iterator for CoffRelocationIterator<'data, 'file, R> {
     type Item = (u64, Relocation);
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -65,7 +67,7 @@ impl<'data, 'file> Iterator for CoffRelocationIterator<'data, 'file> {
     }
 }
 
-impl<'data, 'file> fmt::Debug for CoffRelocationIterator<'data, 'file> {
+impl<'data, 'file, R: ReadRef + ?Sized> fmt::Debug for CoffRelocationIterator<'data, 'file, R> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("CoffRelocationIterator").finish()
     }

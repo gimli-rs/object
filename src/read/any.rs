@@ -15,8 +15,8 @@ use crate::read::wasm;
 use crate::read::{
     self, Architecture, BinaryFormat, ComdatKind, CompressedData, Error, Export, FileFlags,
     FileKind, Import, Object, ObjectComdat, ObjectMap, ObjectSection, ObjectSegment, ObjectSymbol,
-    ObjectSymbolTable, Relocation, Result, SectionFlags, SectionIndex, SectionKind, SymbolFlags,
-    SymbolIndex, SymbolKind, SymbolMap, SymbolMapName, SymbolScope, SymbolSection,
+    ObjectSymbolTable, ReadRef, Relocation, Result, SectionFlags, SectionIndex, SectionKind,
+    SymbolFlags, SymbolIndex, SymbolKind, SymbolMap, SymbolMapName, SymbolScope, SymbolSection,
 };
 
 /// Evaluate an expression on the contents of a file format enum.
@@ -144,15 +144,15 @@ macro_rules! next_inner {
 ///
 /// Most functionality is provided by the `Object` trait implementation.
 #[derive(Debug)]
-pub struct File<'data> {
-    inner: FileInternal<'data>,
+pub struct File<'data, R: ReadRef + ?Sized> {
+    inner: FileInternal<'data, R>,
 }
 
 #[allow(clippy::large_enum_variant)]
 #[derive(Debug)]
-enum FileInternal<'data> {
+enum FileInternal<'data, R: ReadRef + ?Sized = [u8]> {
     #[cfg(feature = "coff")]
-    Coff(coff::CoffFile<'data>),
+    Coff(coff::CoffFile<'data, R>),
     #[cfg(feature = "elf")]
     Elf32(elf::ElfFile32<'data>),
     #[cfg(feature = "elf")]
@@ -169,10 +169,11 @@ enum FileInternal<'data> {
     Wasm(wasm::WasmFile<'data>),
 }
 
-impl<'data> File<'data> {
+impl<'data, R: ReadRef + ?Sized> File<'data, R> {
     /// Parse the raw file data.
-    pub fn parse(data: &'data [u8]) -> Result<Self> {
+    pub fn parse(data: &'data R) -> Result<Self> {
         let inner = match FileKind::parse(data)? {
+            /*
             #[cfg(feature = "elf")]
             FileKind::Elf32 => FileInternal::Elf32(elf::ElfFile32::parse(data)?),
             #[cfg(feature = "elf")]
@@ -187,6 +188,7 @@ impl<'data> File<'data> {
             FileKind::Pe32 => FileInternal::Pe32(pe::PeFile32::parse(data)?),
             #[cfg(feature = "pe")]
             FileKind::Pe64 => FileInternal::Pe64(pe::PeFile64::parse(data)?),
+            */
             #[cfg(feature = "coff")]
             FileKind::Coff => FileInternal::Coff(coff::CoffFile::parse(data)?),
             _ => return Err(Error("Unsupported file format")),
@@ -211,18 +213,18 @@ impl<'data> File<'data> {
     }
 }
 
-impl<'data> read::private::Sealed for File<'data> {}
+impl<'data, R: ReadRef + ?Sized> read::private::Sealed for File<'data, R> {}
 
-impl<'data, 'file> Object<'data, 'file> for File<'data>
+impl<'data, 'file, R: ReadRef + ?Sized> Object<'data, 'file> for File<'data, R>
 where
     'data: 'file,
 {
-    type Segment = Segment<'data, 'file>;
-    type SegmentIterator = SegmentIterator<'data, 'file>;
-    type Section = Section<'data, 'file>;
-    type SectionIterator = SectionIterator<'data, 'file>;
-    type Comdat = Comdat<'data, 'file>;
-    type ComdatIterator = ComdatIterator<'data, 'file>;
+    type Segment = Segment<'data, 'file, R>;
+    type SegmentIterator = SegmentIterator<'data, 'file, R>;
+    type Section = Section<'data, 'file, R>;
+    type SectionIterator = SectionIterator<'data, 'file, R>;
+    type Comdat = Comdat<'data, 'file, R>;
+    type ComdatIterator = ComdatIterator<'data, 'file, R>;
     type Symbol = Symbol<'data, 'file>;
     type SymbolIterator = SymbolIterator<'data, 'file>;
     type SymbolTable = SymbolTable<'data, 'file>;
@@ -240,33 +242,33 @@ where
         with_inner!(self.inner, FileInternal, |x| x.is_64())
     }
 
-    fn segments(&'file self) -> SegmentIterator<'data, 'file> {
+    fn segments(&'file self) -> SegmentIterator<'data, 'file, R> {
         SegmentIterator {
             inner: map_inner!(self.inner, FileInternal, SegmentIteratorInternal, |x| x
                 .segments()),
         }
     }
 
-    fn section_by_name(&'file self, section_name: &str) -> Option<Section<'data, 'file>> {
+    fn section_by_name(&'file self, section_name: &str) -> Option<Section<'data, 'file, R>> {
         map_inner_option!(self.inner, FileInternal, SectionInternal, |x| x
             .section_by_name(section_name))
         .map(|inner| Section { inner })
     }
 
-    fn section_by_index(&'file self, index: SectionIndex) -> Result<Section<'data, 'file>> {
+    fn section_by_index(&'file self, index: SectionIndex) -> Result<Section<'data, 'file, R>> {
         map_inner_option!(self.inner, FileInternal, SectionInternal, |x| x
             .section_by_index(index))
         .map(|inner| Section { inner })
     }
 
-    fn sections(&'file self) -> SectionIterator<'data, 'file> {
+    fn sections(&'file self) -> SectionIterator<'data, 'file, R> {
         SectionIterator {
             inner: map_inner!(self.inner, FileInternal, SectionIteratorInternal, |x| x
                 .sections()),
         }
     }
 
-    fn comdats(&'file self) -> ComdatIterator<'data, 'file> {
+    fn comdats(&'file self) -> ComdatIterator<'data, 'file, R> {
         ComdatIterator {
             inner: map_inner!(self.inner, FileInternal, ComdatIteratorInternal, |x| x
                 .comdats()),
@@ -370,20 +372,20 @@ where
 
 /// An iterator over the segments of a `File`.
 #[derive(Debug)]
-pub struct SegmentIterator<'data, 'file>
+pub struct SegmentIterator<'data, 'file, R: ReadRef + ?Sized>
 where
     'data: 'file,
 {
-    inner: SegmentIteratorInternal<'data, 'file>,
+    inner: SegmentIteratorInternal<'data, 'file, R>,
 }
 
 #[derive(Debug)]
-enum SegmentIteratorInternal<'data, 'file>
+enum SegmentIteratorInternal<'data, 'file, R: ReadRef + ?Sized>
 where
     'data: 'file,
 {
     #[cfg(feature = "coff")]
-    Coff(coff::CoffSegmentIterator<'data, 'file>),
+    Coff(coff::CoffSegmentIterator<'data, 'file, R>),
     #[cfg(feature = "elf")]
     Elf32(elf::ElfSegmentIterator32<'data, 'file>),
     #[cfg(feature = "elf")]
@@ -400,8 +402,8 @@ where
     Wasm(wasm::WasmSegmentIterator<'data, 'file>),
 }
 
-impl<'data, 'file> Iterator for SegmentIterator<'data, 'file> {
-    type Item = Segment<'data, 'file>;
+impl<'data, 'file, R: ReadRef + ?Sized> Iterator for SegmentIterator<'data, 'file, R> {
+    type Item = Segment<'data, 'file, R>;
 
     fn next(&mut self) -> Option<Self::Item> {
         next_inner!(self.inner, SegmentIteratorInternal, SegmentInternal)
@@ -410,20 +412,20 @@ impl<'data, 'file> Iterator for SegmentIterator<'data, 'file> {
 }
 
 /// A segment of a `File`.
-pub struct Segment<'data, 'file>
+pub struct Segment<'data, 'file, R: ReadRef + ?Sized>
 where
     'data: 'file,
 {
-    inner: SegmentInternal<'data, 'file>,
+    inner: SegmentInternal<'data, 'file, R>,
 }
 
 #[derive(Debug)]
-enum SegmentInternal<'data, 'file>
+enum SegmentInternal<'data, 'file, R: ReadRef + ?Sized>
 where
     'data: 'file,
 {
     #[cfg(feature = "coff")]
-    Coff(coff::CoffSegment<'data, 'file>),
+    Coff(coff::CoffSegment<'data, 'file, R>),
     #[cfg(feature = "elf")]
     Elf32(elf::ElfSegment32<'data, 'file>),
     #[cfg(feature = "elf")]
@@ -440,7 +442,7 @@ where
     Wasm(wasm::WasmSegment<'data, 'file>),
 }
 
-impl<'data, 'file> fmt::Debug for Segment<'data, 'file> {
+impl<'data, 'file, R: ReadRef + ?Sized> fmt::Debug for Segment<'data, 'file, R> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         // It's painful to do much better than this
         let mut s = f.debug_struct("Segment");
@@ -459,9 +461,9 @@ impl<'data, 'file> fmt::Debug for Segment<'data, 'file> {
     }
 }
 
-impl<'data, 'file> read::private::Sealed for Segment<'data, 'file> {}
+impl<'data, 'file, R: ReadRef + ?Sized> read::private::Sealed for Segment<'data, 'file, R> {}
 
-impl<'data, 'file> ObjectSegment<'data> for Segment<'data, 'file> {
+impl<'data, 'file, R: ReadRef + ?Sized> ObjectSegment<'data> for Segment<'data, 'file, R> {
     fn address(&self) -> u64 {
         with_inner!(self.inner, SegmentInternal, |x| x.address())
     }
@@ -493,21 +495,21 @@ impl<'data, 'file> ObjectSegment<'data> for Segment<'data, 'file> {
 
 /// An iterator of the sections of a `File`.
 #[derive(Debug)]
-pub struct SectionIterator<'data, 'file>
+pub struct SectionIterator<'data, 'file, R: ReadRef + ?Sized>
 where
     'data: 'file,
 {
-    inner: SectionIteratorInternal<'data, 'file>,
+    inner: SectionIteratorInternal<'data, 'file, R>,
 }
 
 // we wrap our enums in a struct so that they are kept private.
 #[derive(Debug)]
-enum SectionIteratorInternal<'data, 'file>
+enum SectionIteratorInternal<'data, 'file, R: ReadRef + ?Sized>
 where
     'data: 'file,
 {
     #[cfg(feature = "coff")]
-    Coff(coff::CoffSectionIterator<'data, 'file>),
+    Coff(coff::CoffSectionIterator<'data, 'file, R>),
     #[cfg(feature = "elf")]
     Elf32(elf::ElfSectionIterator32<'data, 'file>),
     #[cfg(feature = "elf")]
@@ -524,8 +526,8 @@ where
     Wasm(wasm::WasmSectionIterator<'data, 'file>),
 }
 
-impl<'data, 'file> Iterator for SectionIterator<'data, 'file> {
-    type Item = Section<'data, 'file>;
+impl<'data, 'file, R: ReadRef + ?Sized> Iterator for SectionIterator<'data, 'file, R> {
+    type Item = Section<'data, 'file, R>;
 
     fn next(&mut self) -> Option<Self::Item> {
         next_inner!(self.inner, SectionIteratorInternal, SectionInternal)
@@ -534,19 +536,19 @@ impl<'data, 'file> Iterator for SectionIterator<'data, 'file> {
 }
 
 /// A Section of a File
-pub struct Section<'data, 'file>
+pub struct Section<'data, 'file, R: ReadRef + ?Sized>
 where
     'data: 'file,
 {
-    inner: SectionInternal<'data, 'file>,
+    inner: SectionInternal<'data, 'file, R>,
 }
 
-enum SectionInternal<'data, 'file>
+enum SectionInternal<'data, 'file, R: ReadRef + ?Sized>
 where
     'data: 'file,
 {
     #[cfg(feature = "coff")]
-    Coff(coff::CoffSection<'data, 'file>),
+    Coff(coff::CoffSection<'data, 'file, R>),
     #[cfg(feature = "elf")]
     Elf32(elf::ElfSection32<'data, 'file>),
     #[cfg(feature = "elf")]
@@ -563,7 +565,7 @@ where
     Wasm(wasm::WasmSection<'data, 'file>),
 }
 
-impl<'data, 'file> fmt::Debug for Section<'data, 'file> {
+impl<'data, 'file, R: ReadRef + ?Sized> fmt::Debug for Section<'data, 'file, R> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         // It's painful to do much better than this
         let mut s = f.debug_struct("Section");
@@ -586,10 +588,10 @@ impl<'data, 'file> fmt::Debug for Section<'data, 'file> {
     }
 }
 
-impl<'data, 'file> read::private::Sealed for Section<'data, 'file> {}
+impl<'data, 'file, R: ReadRef + ?Sized> read::private::Sealed for Section<'data, 'file, R> {}
 
-impl<'data, 'file> ObjectSection<'data> for Section<'data, 'file> {
-    type RelocationIterator = SectionRelocationIterator<'data, 'file>;
+impl<'data, 'file, R: ReadRef + ?Sized> ObjectSection<'data> for Section<'data, 'file, R> {
+    type RelocationIterator = SectionRelocationIterator<'data, 'file, R>;
 
     fn index(&self) -> SectionIndex {
         with_inner!(self.inner, SectionInternal, |x| x.index())
@@ -635,7 +637,7 @@ impl<'data, 'file> ObjectSection<'data> for Section<'data, 'file> {
         with_inner!(self.inner, SectionInternal, |x| x.kind())
     }
 
-    fn relocations(&self) -> SectionRelocationIterator<'data, 'file> {
+    fn relocations(&self) -> SectionRelocationIterator<'data, 'file, R> {
         SectionRelocationIterator {
             inner: map_inner!(
                 self.inner,
@@ -653,20 +655,20 @@ impl<'data, 'file> ObjectSection<'data> for Section<'data, 'file> {
 
 /// An iterator of the COMDAT section groups of a `File`.
 #[derive(Debug)]
-pub struct ComdatIterator<'data, 'file>
+pub struct ComdatIterator<'data, 'file, R: ReadRef + ?Sized>
 where
     'data: 'file,
 {
-    inner: ComdatIteratorInternal<'data, 'file>,
+    inner: ComdatIteratorInternal<'data, 'file, R>,
 }
 
 #[derive(Debug)]
-enum ComdatIteratorInternal<'data, 'file>
+enum ComdatIteratorInternal<'data, 'file, R: ReadRef + ?Sized>
 where
     'data: 'file,
 {
     #[cfg(feature = "coff")]
-    Coff(coff::CoffComdatIterator<'data, 'file>),
+    Coff(coff::CoffComdatIterator<'data, 'file, R>),
     #[cfg(feature = "elf")]
     Elf32(elf::ElfComdatIterator32<'data, 'file>),
     #[cfg(feature = "elf")]
@@ -683,8 +685,8 @@ where
     Wasm(wasm::WasmComdatIterator<'data, 'file>),
 }
 
-impl<'data, 'file> Iterator for ComdatIterator<'data, 'file> {
-    type Item = Comdat<'data, 'file>;
+impl<'data, 'file, R: ReadRef + ?Sized> Iterator for ComdatIterator<'data, 'file, R> {
+    type Item = Comdat<'data, 'file, R>;
 
     fn next(&mut self) -> Option<Self::Item> {
         next_inner!(self.inner, ComdatIteratorInternal, ComdatInternal)
@@ -693,19 +695,19 @@ impl<'data, 'file> Iterator for ComdatIterator<'data, 'file> {
 }
 
 /// A COMDAT section group of a `File`.
-pub struct Comdat<'data, 'file>
+pub struct Comdat<'data, 'file, R: ReadRef + ?Sized>
 where
     'data: 'file,
 {
-    inner: ComdatInternal<'data, 'file>,
+    inner: ComdatInternal<'data, 'file, R>,
 }
 
-enum ComdatInternal<'data, 'file>
+enum ComdatInternal<'data, 'file, R: ReadRef + ?Sized>
 where
     'data: 'file,
 {
     #[cfg(feature = "coff")]
-    Coff(coff::CoffComdat<'data, 'file>),
+    Coff(coff::CoffComdat<'data, 'file, R>),
     #[cfg(feature = "elf")]
     Elf32(elf::ElfComdat32<'data, 'file>),
     #[cfg(feature = "elf")]
@@ -722,7 +724,7 @@ where
     Wasm(wasm::WasmComdat<'data, 'file>),
 }
 
-impl<'data, 'file> fmt::Debug for Comdat<'data, 'file> {
+impl<'data, 'file, R: ReadRef + ?Sized> fmt::Debug for Comdat<'data, 'file, R> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut s = f.debug_struct("Comdat");
         s.field("symbol", &self.symbol())
@@ -732,10 +734,10 @@ impl<'data, 'file> fmt::Debug for Comdat<'data, 'file> {
     }
 }
 
-impl<'data, 'file> read::private::Sealed for Comdat<'data, 'file> {}
+impl<'data, 'file, R: ReadRef + ?Sized> read::private::Sealed for Comdat<'data, 'file, R> {}
 
-impl<'data, 'file> ObjectComdat<'data> for Comdat<'data, 'file> {
-    type SectionIterator = ComdatSectionIterator<'data, 'file>;
+impl<'data, 'file, R: ReadRef + ?Sized> ObjectComdat<'data> for Comdat<'data, 'file, R> {
+    type SectionIterator = ComdatSectionIterator<'data, 'file, R>;
 
     fn kind(&self) -> ComdatKind {
         with_inner!(self.inner, ComdatInternal, |x| x.kind())
@@ -749,7 +751,7 @@ impl<'data, 'file> ObjectComdat<'data> for Comdat<'data, 'file> {
         with_inner!(self.inner, ComdatInternal, |x| x.name())
     }
 
-    fn sections(&self) -> ComdatSectionIterator<'data, 'file> {
+    fn sections(&self) -> ComdatSectionIterator<'data, 'file, R> {
         ComdatSectionIterator {
             inner: map_inner!(
                 self.inner,
@@ -763,20 +765,20 @@ impl<'data, 'file> ObjectComdat<'data> for Comdat<'data, 'file> {
 
 /// An iterator over COMDAT section entries.
 #[derive(Debug)]
-pub struct ComdatSectionIterator<'data, 'file>
+pub struct ComdatSectionIterator<'data, 'file, R: ReadRef + ?Sized>
 where
     'data: 'file,
 {
-    inner: ComdatSectionIteratorInternal<'data, 'file>,
+    inner: ComdatSectionIteratorInternal<'data, 'file, R>,
 }
 
 #[derive(Debug)]
-enum ComdatSectionIteratorInternal<'data, 'file>
+enum ComdatSectionIteratorInternal<'data, 'file, R: ReadRef + ?Sized>
 where
     'data: 'file,
 {
     #[cfg(feature = "coff")]
-    Coff(coff::CoffComdatSectionIterator<'data, 'file>),
+    Coff(coff::CoffComdatSectionIterator<'data, 'file, R>),
     #[cfg(feature = "elf")]
     Elf32(elf::ElfComdatSectionIterator32<'data, 'file>),
     #[cfg(feature = "elf")]
@@ -793,7 +795,7 @@ where
     Wasm(wasm::WasmComdatSectionIterator<'data, 'file>),
 }
 
-impl<'data, 'file> Iterator for ComdatSectionIterator<'data, 'file> {
+impl<'data, 'file, R: ReadRef + ?Sized> Iterator for ComdatSectionIterator<'data, 'file, R> {
     type Item = SectionIndex;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -1042,20 +1044,20 @@ impl<'data, 'file> Iterator for DynamicRelocationIterator<'data, 'file> {
 
 /// An iterator over section relocation entries.
 #[derive(Debug)]
-pub struct SectionRelocationIterator<'data, 'file>
+pub struct SectionRelocationIterator<'data, 'file, R: ReadRef + ?Sized>
 where
     'data: 'file,
 {
-    inner: SectionRelocationIteratorInternal<'data, 'file>,
+    inner: SectionRelocationIteratorInternal<'data, 'file, R>,
 }
 
 #[derive(Debug)]
-enum SectionRelocationIteratorInternal<'data, 'file>
+enum SectionRelocationIteratorInternal<'data, 'file, R: ReadRef + ?Sized>
 where
     'data: 'file,
 {
     #[cfg(feature = "coff")]
-    Coff(coff::CoffRelocationIterator<'data, 'file>),
+    Coff(coff::CoffRelocationIterator<'data, 'file, R>),
     #[cfg(feature = "elf")]
     Elf32(elf::ElfSectionRelocationIterator32<'data, 'file>),
     #[cfg(feature = "elf")]
@@ -1072,7 +1074,7 @@ where
     Wasm(wasm::WasmRelocationIterator<'data, 'file>),
 }
 
-impl<'data, 'file> Iterator for SectionRelocationIterator<'data, 'file> {
+impl<'data, 'file, R: ReadRef + ?Sized> Iterator for SectionRelocationIterator<'data, 'file, R> {
     type Item = (u64, Relocation);
 
     fn next(&mut self) -> Option<Self::Item> {

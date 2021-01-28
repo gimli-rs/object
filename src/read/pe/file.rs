@@ -5,7 +5,7 @@ use core::{mem, str};
 use crate::read::coff::{CoffCommon, CoffSymbol, CoffSymbolIterator, CoffSymbolTable, SymbolTable};
 use crate::read::{
     self, Architecture, ComdatKind, Error, Export, FileFlags, Import, NoDynamicRelocationIterator,
-    Object, ObjectComdat, ReadError, Result, SectionIndex, SymbolIndex,
+    Object, ObjectComdat, ReadError, ReadRef, Result, SectionIndex, SymbolIndex,
 };
 use crate::{pe, ByteString, Bytes, LittleEndian as LE, Pod, U16Bytes, U32Bytes, U32, U64};
 
@@ -18,18 +18,17 @@ pub type PeFile64<'data> = PeFile<'data, pe::ImageNtHeaders64>;
 
 /// A PE object file.
 #[derive(Debug)]
-pub struct PeFile<'data, Pe: ImageNtHeaders> {
+pub struct PeFile<'data, Pe: ImageNtHeaders, R: ReadRef + ?Sized = [u8]> {
     pub(super) dos_header: &'data pe::ImageDosHeader,
     pub(super) nt_headers: &'data Pe,
     pub(super) data_directories: &'data [pe::ImageDataDirectory],
     pub(super) common: CoffCommon<'data>,
-    pub(super) data: Bytes<'data>,
+    pub(super) data: &'data R,
 }
 
-impl<'data, Pe: ImageNtHeaders> PeFile<'data, Pe> {
+impl<'data, Pe: ImageNtHeaders, R: ReadRef + ?Sized> PeFile<'data, Pe, R> {
     /// Parse the raw PE file data.
-    pub fn parse(data: &'data [u8]) -> Result<Self> {
-        let data = Bytes(data);
+    pub fn parse(data: &'data R) -> Result<Self> {
         let dos_header = pe::ImageDosHeader::parse(data)?;
         let (nt_headers, data_directories, nt_tail) = dos_header.nt_headers::<Pe>(data)?;
         let sections = nt_headers.sections(nt_tail)?;
@@ -401,7 +400,7 @@ impl pe::ImageDosHeader {
     /// Read the DOS header.
     ///
     /// Also checks that the `e_magic` field in the header is valid.
-    pub fn parse<'data>(data: Bytes<'data>) -> read::Result<&'data Self> {
+    pub fn parse<'data, R: ReadRef + ?Sized>(data: &'data R) -> read::Result<&'data Self> {
         // DOS header comes first.
         let dos_header = data
             .read_at::<pe::ImageDosHeader>(0)

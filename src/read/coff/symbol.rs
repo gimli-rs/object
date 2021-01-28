@@ -9,7 +9,7 @@ use crate::pe;
 use crate::pod::{bytes_of_slice, Bytes, Pod};
 use crate::read::util::StringTable;
 use crate::read::{
-    self, ObjectSymbol, ObjectSymbolTable, ReadError, Result, SectionIndex, SymbolFlags,
+    self, ObjectSymbol, ObjectSymbolTable, ReadError, ReadRef, Result, SectionIndex, SymbolFlags,
     SymbolIndex, SymbolKind, SymbolMap, SymbolMapEntry, SymbolScope, SymbolSection,
 };
 
@@ -24,33 +24,34 @@ pub struct SymbolTable<'data> {
 
 impl<'data> SymbolTable<'data> {
     /// Read the symbol table.
-    pub fn parse(header: &pe::ImageFileHeader, mut data: Bytes<'data>) -> Result<Self> {
+    pub fn parse<R: ReadRef + ?Sized>(
+        header: &pe::ImageFileHeader,
+        data: &'data R,
+    ) -> Result<Self> {
         // The symbol table may not be present.
-        let symbol_offset = header.pointer_to_symbol_table.get(LE) as usize;
-        let (symbols, strings) = if symbol_offset != 0 {
-            data.skip(symbol_offset)
-                .read_error("Invalid COFF symbol table offset")?;
+        let mut offset = header.pointer_to_symbol_table.get(LE) as usize;
+        let (symbols, strings) = if offset != 0 {
             let symbols = data
-                .read_slice(header.number_of_symbols.get(LE) as usize)
-                .read_error("Invalid COFF symbol table size")?;
+                .read_slice(&mut offset, header.number_of_symbols.get(LE) as usize)
+                .read_error("Invalid COFF symbol table offset or size")?;
 
             // Note: don't update data when reading length; the length includes itself.
             let length = data
-                .read_at::<U32Bytes<_>>(0)
+                .read_at::<U32Bytes<_>>(offset)
                 .read_error("Missing COFF string table")?
                 .get(LE);
             let strings = data
-                .read_bytes(length as usize)
+                .read_bytes(offset, length as usize)
                 .read_error("Invalid COFF string table length")?;
 
             (symbols, strings)
         } else {
-            (&[][..], Bytes(&[]))
+            (&[][..], &[][..])
         };
 
         Ok(SymbolTable {
             symbols,
-            strings: StringTable::new(strings),
+            strings: StringTable::new(Bytes(strings)),
         })
     }
 
