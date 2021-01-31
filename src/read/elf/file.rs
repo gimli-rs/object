@@ -62,23 +62,23 @@ impl<'data, Elf: FileHeader> ElfFile<'data, Elf> {
     }
 
     /// Returns the endianness.
-    pub fn endianess<'file>(&'file self) -> Elf::Endian {
+    pub fn endianess(&self) -> Elf::Endian {
         self.endian
     }
 
     /// Returns the raw data.
-    pub fn data<'file>(&'file self) -> Bytes<'data> {
-        self.data.clone()
+    pub fn data(&self) -> &Bytes<'data> {
+        &self.data
     }
 
-    /// Returns the raw elf file header.
-    pub fn raw_header<'file>(&'file self) -> &'data Elf {
-        &self.header
+    /// Returns the raw ELF file header.
+    pub fn raw_header(&self) -> &'data Elf {
+        self.header
     }
 
-    /// Returns the raw elf segments.
-    pub fn raw_segments<'file>(&'file self) -> &'data [Elf::ProgramHeader] {
-        &self.segments
+    /// Returns the raw ELF segments.
+    pub fn raw_segments(&self) -> &'data [Elf::ProgramHeader] {
+        self.segments
     }
 
     fn raw_section_by_name<'file>(
