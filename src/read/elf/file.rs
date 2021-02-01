@@ -67,8 +67,8 @@ impl<'data, Elf: FileHeader> ElfFile<'data, Elf> {
     }
 
     /// Returns the raw data.
-    pub fn data(&self) -> &Bytes<'data> {
-        &self.data
+    pub fn data(&self) -> Bytes<'data> {
+        self.data
     }
 
     /// Returns the raw ELF file header.
