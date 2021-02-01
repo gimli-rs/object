@@ -62,7 +62,7 @@ impl<'data, Elf: FileHeader> ElfFile<'data, Elf> {
     }
 
     /// Returns the endianness.
-    pub fn endianess(&self) -> Elf::Endian {
+    pub fn endian(&self) -> Elf::Endian {
         self.endian
     }
 
