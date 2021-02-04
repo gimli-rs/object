@@ -10,12 +10,12 @@ use crate::read::{
 use super::CoffFile;
 
 /// An iterator over the relocations in a `CoffSection`.
-pub struct CoffRelocationIterator<'data, 'file, R: ReadRef + ?Sized> {
+pub struct CoffRelocationIterator<'data, 'file, R: ReadRef<'data>> {
     pub(super) file: &'file CoffFile<'data, R>,
     pub(super) iter: slice::Iter<'data, pe::ImageRelocation>,
 }
 
-impl<'data, 'file, R: ReadRef + ?Sized> Iterator for CoffRelocationIterator<'data, 'file, R> {
+impl<'data, 'file, R: ReadRef<'data>> Iterator for CoffRelocationIterator<'data, 'file, R> {
     type Item = (u64, Relocation);
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -67,7 +67,7 @@ impl<'data, 'file, R: ReadRef + ?Sized> Iterator for CoffRelocationIterator<'dat
     }
 }
 
-impl<'data, 'file, R: ReadRef + ?Sized> fmt::Debug for CoffRelocationIterator<'data, 'file, R> {
+impl<'data, 'file, R: ReadRef<'data>> fmt::Debug for CoffRelocationIterator<'data, 'file, R> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("CoffRelocationIterator").finish()
     }

@@ -144,13 +144,13 @@ macro_rules! next_inner {
 ///
 /// Most functionality is provided by the `Object` trait implementation.
 #[derive(Debug)]
-pub struct File<'data, R: ReadRef + ?Sized> {
+pub struct File<'data, R: ReadRef<'data>> {
     inner: FileInternal<'data, R>,
 }
 
 #[allow(clippy::large_enum_variant)]
 #[derive(Debug)]
-enum FileInternal<'data, R: ReadRef + ?Sized = [u8]> {
+enum FileInternal<'data, R: ReadRef<'data>> {
     #[cfg(feature = "coff")]
     Coff(coff::CoffFile<'data, R>),
     #[cfg(feature = "elf")]
@@ -169,9 +169,9 @@ enum FileInternal<'data, R: ReadRef + ?Sized = [u8]> {
     Wasm(wasm::WasmFile<'data>),
 }
 
-impl<'data, R: ReadRef + ?Sized> File<'data, R> {
+impl<'data, R: ReadRef<'data>> File<'data, R> {
     /// Parse the raw file data.
-    pub fn parse(data: &'data R) -> Result<Self> {
+    pub fn parse(data: R) -> Result<Self> {
         let inner = match FileKind::parse(data)? {
             /*
             #[cfg(feature = "elf")]
@@ -213,9 +213,9 @@ impl<'data, R: ReadRef + ?Sized> File<'data, R> {
     }
 }
 
-impl<'data, R: ReadRef + ?Sized> read::private::Sealed for File<'data, R> {}
+impl<'data, R: ReadRef<'data>> read::private::Sealed for File<'data, R> {}
 
-impl<'data, 'file, R: ReadRef + ?Sized> Object<'data, 'file> for File<'data, R>
+impl<'data, 'file, R: ReadRef<'data>> Object<'data, 'file> for File<'data, R>
 where
     'data: 'file,
 {
@@ -372,7 +372,7 @@ where
 
 /// An iterator over the segments of a `File`.
 #[derive(Debug)]
-pub struct SegmentIterator<'data, 'file, R: ReadRef + ?Sized>
+pub struct SegmentIterator<'data, 'file, R: ReadRef<'data>>
 where
     'data: 'file,
 {
@@ -380,7 +380,7 @@ where
 }
 
 #[derive(Debug)]
-enum SegmentIteratorInternal<'data, 'file, R: ReadRef + ?Sized>
+enum SegmentIteratorInternal<'data, 'file, R: ReadRef<'data>>
 where
     'data: 'file,
 {
@@ -402,7 +402,7 @@ where
     Wasm(wasm::WasmSegmentIterator<'data, 'file>),
 }
 
-impl<'data, 'file, R: ReadRef + ?Sized> Iterator for SegmentIterator<'data, 'file, R> {
+impl<'data, 'file, R: ReadRef<'data>> Iterator for SegmentIterator<'data, 'file, R> {
     type Item = Segment<'data, 'file, R>;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -412,7 +412,7 @@ impl<'data, 'file, R: ReadRef + ?Sized> Iterator for SegmentIterator<'data, 'fil
 }
 
 /// A segment of a `File`.
-pub struct Segment<'data, 'file, R: ReadRef + ?Sized>
+pub struct Segment<'data, 'file, R: ReadRef<'data>>
 where
     'data: 'file,
 {
@@ -420,7 +420,7 @@ where
 }
 
 #[derive(Debug)]
-enum SegmentInternal<'data, 'file, R: ReadRef + ?Sized>
+enum SegmentInternal<'data, 'file, R: ReadRef<'data>>
 where
     'data: 'file,
 {
@@ -442,7 +442,7 @@ where
     Wasm(wasm::WasmSegment<'data, 'file>),
 }
 
-impl<'data, 'file, R: ReadRef + ?Sized> fmt::Debug for Segment<'data, 'file, R> {
+impl<'data, 'file, R: ReadRef<'data>> fmt::Debug for Segment<'data, 'file, R> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         // It's painful to do much better than this
         let mut s = f.debug_struct("Segment");
@@ -461,9 +461,9 @@ impl<'data, 'file, R: ReadRef + ?Sized> fmt::Debug for Segment<'data, 'file, R> 
     }
 }
 
-impl<'data, 'file, R: ReadRef + ?Sized> read::private::Sealed for Segment<'data, 'file, R> {}
+impl<'data, 'file, R: ReadRef<'data>> read::private::Sealed for Segment<'data, 'file, R> {}
 
-impl<'data, 'file, R: ReadRef + ?Sized> ObjectSegment<'data> for Segment<'data, 'file, R> {
+impl<'data, 'file, R: ReadRef<'data>> ObjectSegment<'data> for Segment<'data, 'file, R> {
     fn address(&self) -> u64 {
         with_inner!(self.inner, SegmentInternal, |x| x.address())
     }
@@ -495,7 +495,7 @@ impl<'data, 'file, R: ReadRef + ?Sized> ObjectSegment<'data> for Segment<'data, 
 
 /// An iterator of the sections of a `File`.
 #[derive(Debug)]
-pub struct SectionIterator<'data, 'file, R: ReadRef + ?Sized>
+pub struct SectionIterator<'data, 'file, R: ReadRef<'data>>
 where
     'data: 'file,
 {
@@ -504,7 +504,7 @@ where
 
 // we wrap our enums in a struct so that they are kept private.
 #[derive(Debug)]
-enum SectionIteratorInternal<'data, 'file, R: ReadRef + ?Sized>
+enum SectionIteratorInternal<'data, 'file, R: ReadRef<'data>>
 where
     'data: 'file,
 {
@@ -526,7 +526,7 @@ where
     Wasm(wasm::WasmSectionIterator<'data, 'file>),
 }
 
-impl<'data, 'file, R: ReadRef + ?Sized> Iterator for SectionIterator<'data, 'file, R> {
+impl<'data, 'file, R: ReadRef<'data>> Iterator for SectionIterator<'data, 'file, R> {
     type Item = Section<'data, 'file, R>;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -536,14 +536,14 @@ impl<'data, 'file, R: ReadRef + ?Sized> Iterator for SectionIterator<'data, 'fil
 }
 
 /// A Section of a File
-pub struct Section<'data, 'file, R: ReadRef + ?Sized>
+pub struct Section<'data, 'file, R: ReadRef<'data>>
 where
     'data: 'file,
 {
     inner: SectionInternal<'data, 'file, R>,
 }
 
-enum SectionInternal<'data, 'file, R: ReadRef + ?Sized>
+enum SectionInternal<'data, 'file, R: ReadRef<'data>>
 where
     'data: 'file,
 {
@@ -565,7 +565,7 @@ where
     Wasm(wasm::WasmSection<'data, 'file>),
 }
 
-impl<'data, 'file, R: ReadRef + ?Sized> fmt::Debug for Section<'data, 'file, R> {
+impl<'data, 'file, R: ReadRef<'data>> fmt::Debug for Section<'data, 'file, R> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         // It's painful to do much better than this
         let mut s = f.debug_struct("Section");
@@ -588,9 +588,9 @@ impl<'data, 'file, R: ReadRef + ?Sized> fmt::Debug for Section<'data, 'file, R> 
     }
 }
 
-impl<'data, 'file, R: ReadRef + ?Sized> read::private::Sealed for Section<'data, 'file, R> {}
+impl<'data, 'file, R: ReadRef<'data>> read::private::Sealed for Section<'data, 'file, R> {}
 
-impl<'data, 'file, R: ReadRef + ?Sized> ObjectSection<'data> for Section<'data, 'file, R> {
+impl<'data, 'file, R: ReadRef<'data>> ObjectSection<'data> for Section<'data, 'file, R> {
     type RelocationIterator = SectionRelocationIterator<'data, 'file, R>;
 
     fn index(&self) -> SectionIndex {
@@ -655,7 +655,7 @@ impl<'data, 'file, R: ReadRef + ?Sized> ObjectSection<'data> for Section<'data, 
 
 /// An iterator of the COMDAT section groups of a `File`.
 #[derive(Debug)]
-pub struct ComdatIterator<'data, 'file, R: ReadRef + ?Sized>
+pub struct ComdatIterator<'data, 'file, R: ReadRef<'data>>
 where
     'data: 'file,
 {
@@ -663,7 +663,7 @@ where
 }
 
 #[derive(Debug)]
-enum ComdatIteratorInternal<'data, 'file, R: ReadRef + ?Sized>
+enum ComdatIteratorInternal<'data, 'file, R: ReadRef<'data>>
 where
     'data: 'file,
 {
@@ -685,7 +685,7 @@ where
     Wasm(wasm::WasmComdatIterator<'data, 'file>),
 }
 
-impl<'data, 'file, R: ReadRef + ?Sized> Iterator for ComdatIterator<'data, 'file, R> {
+impl<'data, 'file, R: ReadRef<'data>> Iterator for ComdatIterator<'data, 'file, R> {
     type Item = Comdat<'data, 'file, R>;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -695,14 +695,14 @@ impl<'data, 'file, R: ReadRef + ?Sized> Iterator for ComdatIterator<'data, 'file
 }
 
 /// A COMDAT section group of a `File`.
-pub struct Comdat<'data, 'file, R: ReadRef + ?Sized>
+pub struct Comdat<'data, 'file, R: ReadRef<'data>>
 where
     'data: 'file,
 {
     inner: ComdatInternal<'data, 'file, R>,
 }
 
-enum ComdatInternal<'data, 'file, R: ReadRef + ?Sized>
+enum ComdatInternal<'data, 'file, R: ReadRef<'data>>
 where
     'data: 'file,
 {
@@ -724,7 +724,7 @@ where
     Wasm(wasm::WasmComdat<'data, 'file>),
 }
 
-impl<'data, 'file, R: ReadRef + ?Sized> fmt::Debug for Comdat<'data, 'file, R> {
+impl<'data, 'file, R: ReadRef<'data>> fmt::Debug for Comdat<'data, 'file, R> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut s = f.debug_struct("Comdat");
         s.field("symbol", &self.symbol())
@@ -734,9 +734,9 @@ impl<'data, 'file, R: ReadRef + ?Sized> fmt::Debug for Comdat<'data, 'file, R> {
     }
 }
 
-impl<'data, 'file, R: ReadRef + ?Sized> read::private::Sealed for Comdat<'data, 'file, R> {}
+impl<'data, 'file, R: ReadRef<'data>> read::private::Sealed for Comdat<'data, 'file, R> {}
 
-impl<'data, 'file, R: ReadRef + ?Sized> ObjectComdat<'data> for Comdat<'data, 'file, R> {
+impl<'data, 'file, R: ReadRef<'data>> ObjectComdat<'data> for Comdat<'data, 'file, R> {
     type SectionIterator = ComdatSectionIterator<'data, 'file, R>;
 
     fn kind(&self) -> ComdatKind {
@@ -765,7 +765,7 @@ impl<'data, 'file, R: ReadRef + ?Sized> ObjectComdat<'data> for Comdat<'data, 'f
 
 /// An iterator over COMDAT section entries.
 #[derive(Debug)]
-pub struct ComdatSectionIterator<'data, 'file, R: ReadRef + ?Sized>
+pub struct ComdatSectionIterator<'data, 'file, R: ReadRef<'data>>
 where
     'data: 'file,
 {
@@ -773,7 +773,7 @@ where
 }
 
 #[derive(Debug)]
-enum ComdatSectionIteratorInternal<'data, 'file, R: ReadRef + ?Sized>
+enum ComdatSectionIteratorInternal<'data, 'file, R: ReadRef<'data>>
 where
     'data: 'file,
 {
@@ -795,7 +795,7 @@ where
     Wasm(wasm::WasmComdatSectionIterator<'data, 'file>),
 }
 
-impl<'data, 'file, R: ReadRef + ?Sized> Iterator for ComdatSectionIterator<'data, 'file, R> {
+impl<'data, 'file, R: ReadRef<'data>> Iterator for ComdatSectionIterator<'data, 'file, R> {
     type Item = SectionIndex;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -1044,7 +1044,7 @@ impl<'data, 'file> Iterator for DynamicRelocationIterator<'data, 'file> {
 
 /// An iterator over section relocation entries.
 #[derive(Debug)]
-pub struct SectionRelocationIterator<'data, 'file, R: ReadRef + ?Sized>
+pub struct SectionRelocationIterator<'data, 'file, R: ReadRef<'data>>
 where
     'data: 'file,
 {
@@ -1052,7 +1052,7 @@ where
 }
 
 #[derive(Debug)]
-enum SectionRelocationIteratorInternal<'data, 'file, R: ReadRef + ?Sized>
+enum SectionRelocationIteratorInternal<'data, 'file, R: ReadRef<'data>>
 where
     'data: 'file,
 {
@@ -1074,7 +1074,7 @@ where
     Wasm(wasm::WasmRelocationIterator<'data, 'file>),
 }
 
-impl<'data, 'file, R: ReadRef + ?Sized> Iterator for SectionRelocationIterator<'data, 'file, R> {
+impl<'data, 'file, R: ReadRef<'data>> Iterator for SectionRelocationIterator<'data, 'file, R> {
     type Item = (u64, Relocation);
 
     fn next(&mut self) -> Option<Self::Item> {

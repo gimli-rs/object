@@ -22,9 +22,9 @@ impl<'data> SectionTable<'data> {
     ///
     /// `data` must be the entire file data.
     /// `offset` must be the file offset following the optional header.
-    pub fn parse<R: ReadRef + ?Sized>(
+    pub fn parse<R: ReadRef<'data>>(
         header: &pe::ImageFileHeader,
-        data: &'data R,
+        data: R,
         offset: usize,
     ) -> Result<Self> {
         // TODO: maybe offset should be the `ImageFileHeader` offset.
@@ -83,7 +83,7 @@ impl<'data> SectionTable<'data> {
 
 /// An iterator over the loadable sections of a `CoffFile`.
 #[derive(Debug)]
-pub struct CoffSegmentIterator<'data, 'file, R: ReadRef + ?Sized>
+pub struct CoffSegmentIterator<'data, 'file, R: ReadRef<'data>>
 where
     'data: 'file,
 {
@@ -91,7 +91,7 @@ where
     pub(super) iter: slice::Iter<'data, pe::ImageSectionHeader>,
 }
 
-impl<'data, 'file, R: ReadRef + ?Sized> Iterator for CoffSegmentIterator<'data, 'file, R> {
+impl<'data, 'file, R: ReadRef<'data>> Iterator for CoffSegmentIterator<'data, 'file, R> {
     type Item = CoffSegment<'data, 'file, R>;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -104,7 +104,7 @@ impl<'data, 'file, R: ReadRef + ?Sized> Iterator for CoffSegmentIterator<'data, 
 
 /// A loadable section of a `CoffFile`.
 #[derive(Debug)]
-pub struct CoffSegment<'data, 'file, R: ReadRef + ?Sized>
+pub struct CoffSegment<'data, 'file, R: ReadRef<'data>>
 where
     'data: 'file,
 {
@@ -112,7 +112,7 @@ where
     pub(super) section: &'data pe::ImageSectionHeader,
 }
 
-impl<'data, 'file, R: ReadRef + ?Sized> CoffSegment<'data, 'file, R> {
+impl<'data, 'file, R: ReadRef<'data>> CoffSegment<'data, 'file, R> {
     fn bytes(&self) -> Result<Bytes<'data>> {
         self.section
             .coff_data(self.file.data)
@@ -120,9 +120,9 @@ impl<'data, 'file, R: ReadRef + ?Sized> CoffSegment<'data, 'file, R> {
     }
 }
 
-impl<'data, 'file, R: ReadRef + ?Sized> read::private::Sealed for CoffSegment<'data, 'file, R> {}
+impl<'data, 'file, R: ReadRef<'data>> read::private::Sealed for CoffSegment<'data, 'file, R> {}
 
-impl<'data, 'file, R: ReadRef + ?Sized> ObjectSegment<'data> for CoffSegment<'data, 'file, R> {
+impl<'data, 'file, R: ReadRef<'data>> ObjectSegment<'data> for CoffSegment<'data, 'file, R> {
     #[inline]
     fn address(&self) -> u64 {
         u64::from(self.section.virtual_address.get(LE))
@@ -170,7 +170,7 @@ impl<'data, 'file, R: ReadRef + ?Sized> ObjectSegment<'data> for CoffSegment<'da
 
 /// An iterator over the sections of a `CoffFile`.
 #[derive(Debug)]
-pub struct CoffSectionIterator<'data, 'file, R: ReadRef + ?Sized>
+pub struct CoffSectionIterator<'data, 'file, R: ReadRef<'data>>
 where
     'data: 'file,
 {
@@ -178,7 +178,7 @@ where
     pub(super) iter: iter::Enumerate<slice::Iter<'data, pe::ImageSectionHeader>>,
 }
 
-impl<'data, 'file, R: ReadRef + ?Sized> Iterator for CoffSectionIterator<'data, 'file, R> {
+impl<'data, 'file, R: ReadRef<'data>> Iterator for CoffSectionIterator<'data, 'file, R> {
     type Item = CoffSection<'data, 'file, R>;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -192,7 +192,7 @@ impl<'data, 'file, R: ReadRef + ?Sized> Iterator for CoffSectionIterator<'data, 
 
 /// A section of a `CoffFile`.
 #[derive(Debug)]
-pub struct CoffSection<'data, 'file, R: ReadRef + ?Sized>
+pub struct CoffSection<'data, 'file, R: ReadRef<'data>>
 where
     'data: 'file,
 {
@@ -201,7 +201,7 @@ where
     pub(super) section: &'data pe::ImageSectionHeader,
 }
 
-impl<'data, 'file, R: ReadRef + ?Sized> CoffSection<'data, 'file, R> {
+impl<'data, 'file, R: ReadRef<'data>> CoffSection<'data, 'file, R> {
     fn bytes(&self) -> Result<Bytes<'data>> {
         self.section
             .coff_data(self.file.data)
@@ -209,9 +209,9 @@ impl<'data, 'file, R: ReadRef + ?Sized> CoffSection<'data, 'file, R> {
     }
 }
 
-impl<'data, 'file, R: ReadRef + ?Sized> read::private::Sealed for CoffSection<'data, 'file, R> {}
+impl<'data, 'file, R: ReadRef<'data>> read::private::Sealed for CoffSection<'data, 'file, R> {}
 
-impl<'data, 'file, R: ReadRef + ?Sized> ObjectSection<'data> for CoffSection<'data, 'file, R> {
+impl<'data, 'file, R: ReadRef<'data>> ObjectSection<'data> for CoffSection<'data, 'file, R> {
     type RelocationIterator = CoffRelocationIterator<'data, 'file, R>;
 
     #[inline]
@@ -380,10 +380,7 @@ impl pe::ImageSectionHeader {
     ///
     /// Returns `Ok(&[])` if the section has no data.
     /// Returns `Err` for invalid values.
-    pub fn coff_data<'data, R: ReadRef + ?Sized>(
-        &self,
-        data: &'data R,
-    ) -> result::Result<Bytes<'data>, ()> {
+    pub fn coff_data<'data, R: ReadRef<'data>>(&self, data: R) -> result::Result<Bytes<'data>, ()> {
         if let Some((offset, size)) = self.coff_file_range() {
             data.read_bytes(offset as usize, size as usize).map(Bytes)
         } else {
@@ -417,9 +414,9 @@ impl pe::ImageSectionHeader {
     /// Read the relocations in a COFF file.
     ///
     /// `data` must be the entire file data.
-    pub fn coff_relocations<'data, R: ReadRef + ?Sized>(
+    pub fn coff_relocations<'data, R: ReadRef<'data>>(
         &self,
-        data: &'data R,
+        data: R,
     ) -> read::Result<&'data [pe::ImageRelocation]> {
         let pointer = self.pointer_to_relocations.get(LE) as usize;
         let number = self.number_of_relocations.get(LE) as usize;

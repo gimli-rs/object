@@ -24,15 +24,15 @@ pub(crate) struct CoffCommon<'data> {
 
 /// A COFF object file.
 #[derive(Debug)]
-pub struct CoffFile<'data, R: ReadRef + ?Sized> {
+pub struct CoffFile<'data, R: ReadRef<'data>> {
     pub(super) header: &'data pe::ImageFileHeader,
     pub(super) common: CoffCommon<'data>,
-    pub(super) data: &'data R,
+    pub(super) data: R,
 }
 
-impl<'data, R: ReadRef + ?Sized> CoffFile<'data, R> {
+impl<'data, R: ReadRef<'data>> CoffFile<'data, R> {
     /// Parse the raw COFF file data.
-    pub fn parse(data: &'data R) -> Result<Self> {
+    pub fn parse(data: R) -> Result<Self> {
         let header = pe::ImageFileHeader::parse(data)?;
         let sections = header.sections(data)?;
         let symbols = header.symbols(data)?;
@@ -49,9 +49,9 @@ impl<'data, R: ReadRef + ?Sized> CoffFile<'data, R> {
     }
 }
 
-impl<'data, R: ReadRef + ?Sized> read::private::Sealed for CoffFile<'data, R> {}
+impl<'data, R: ReadRef<'data>> read::private::Sealed for CoffFile<'data, R> {}
 
-impl<'data, 'file, R: ReadRef + ?Sized> Object<'data, 'file> for CoffFile<'data, R>
+impl<'data, 'file, R: ReadRef<'data>> Object<'data, 'file> for CoffFile<'data, R>
 where
     'data: 'file,
 {
@@ -191,7 +191,7 @@ impl pe::ImageFileHeader {
     /// Read the file header.
     ///
     /// The given data must be for the entire file.
-    pub fn parse<'data, R: ReadRef + ?Sized>(data: &'data R) -> read::Result<&'data Self> {
+    pub fn parse<'data, R: ReadRef<'data>>(data: R) -> read::Result<&'data Self> {
         data.read_at::<pe::ImageFileHeader>(0)
             .read_error("Invalid COFF file header size or alignment")
         // TODO: maybe validate that the machine is known?
@@ -201,10 +201,7 @@ impl pe::ImageFileHeader {
     ///
     /// `data` must be the entire file data.
     #[inline]
-    pub fn sections<'data, R: ReadRef + ?Sized>(
-        &self,
-        data: &'data R,
-    ) -> read::Result<SectionTable<'data>> {
+    pub fn sections<'data, R: ReadRef<'data>>(&self, data: R) -> read::Result<SectionTable<'data>> {
         // Skip over the optional header.
         let offset = mem::size_of::<Self>()
             .checked_add(self.size_of_optional_header.get(LE) as usize)
@@ -217,10 +214,7 @@ impl pe::ImageFileHeader {
     ///
     /// `data` must be the entire file data.
     #[inline]
-    pub fn symbols<'data, R: ReadRef + ?Sized>(
-        &self,
-        data: &'data R,
-    ) -> read::Result<SymbolTable<'data>> {
+    pub fn symbols<'data, R: ReadRef<'data>>(&self, data: R) -> read::Result<SymbolTable<'data>> {
         SymbolTable::parse(self, data)
     }
 }

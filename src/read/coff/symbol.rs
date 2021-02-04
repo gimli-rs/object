@@ -24,10 +24,7 @@ pub struct SymbolTable<'data> {
 
 impl<'data> SymbolTable<'data> {
     /// Read the symbol table.
-    pub fn parse<R: ReadRef + ?Sized>(
-        header: &pe::ImageFileHeader,
-        data: &'data R,
-    ) -> Result<Self> {
+    pub fn parse<R: ReadRef<'data>>(header: &pe::ImageFileHeader, data: R) -> Result<Self> {
         // The symbol table may not be present.
         let mut offset = header.pointer_to_symbol_table.get(LE) as usize;
         let (symbols, strings) = if offset != 0 {

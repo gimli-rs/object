@@ -10,7 +10,7 @@ use super::CoffFile;
 
 /// An iterator over the COMDAT section groups of a `CoffFile`.
 #[derive(Debug)]
-pub struct CoffComdatIterator<'data, 'file, R: ReadRef + ?Sized>
+pub struct CoffComdatIterator<'data, 'file, R: ReadRef<'data>>
 where
     'data: 'file,
 {
@@ -18,7 +18,7 @@ where
     pub(super) index: usize,
 }
 
-impl<'data, 'file, R: ReadRef + ?Sized> Iterator for CoffComdatIterator<'data, 'file, R> {
+impl<'data, 'file, R: ReadRef<'data>> Iterator for CoffComdatIterator<'data, 'file, R> {
     type Item = CoffComdat<'data, 'file, R>;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -35,7 +35,7 @@ impl<'data, 'file, R: ReadRef + ?Sized> Iterator for CoffComdatIterator<'data, '
 
 /// A COMDAT section group of a `CoffFile`.
 #[derive(Debug)]
-pub struct CoffComdat<'data, 'file, R: ReadRef + ?Sized>
+pub struct CoffComdat<'data, 'file, R: ReadRef<'data>>
 where
     'data: 'file,
 {
@@ -45,7 +45,7 @@ where
     selection: u8,
 }
 
-impl<'data, 'file, R: ReadRef + ?Sized> CoffComdat<'data, 'file, R> {
+impl<'data, 'file, R: ReadRef<'data>> CoffComdat<'data, 'file, R> {
     fn parse(
         file: &'file CoffFile<'data, R>,
         section_symbol: &'data pe::ImageSymbol,
@@ -84,9 +84,9 @@ impl<'data, 'file, R: ReadRef + ?Sized> CoffComdat<'data, 'file, R> {
     }
 }
 
-impl<'data, 'file, R: ReadRef + ?Sized> read::private::Sealed for CoffComdat<'data, 'file, R> {}
+impl<'data, 'file, R: ReadRef<'data>> read::private::Sealed for CoffComdat<'data, 'file, R> {}
 
-impl<'data, 'file, R: ReadRef + ?Sized> ObjectComdat<'data> for CoffComdat<'data, 'file, R> {
+impl<'data, 'file, R: ReadRef<'data>> ObjectComdat<'data> for CoffComdat<'data, 'file, R> {
     type SectionIterator = CoffComdatSectionIterator<'data, 'file, R>;
 
     #[inline]
@@ -128,7 +128,7 @@ impl<'data, 'file, R: ReadRef + ?Sized> ObjectComdat<'data> for CoffComdat<'data
 
 /// An iterator over the sections in a COMDAT section group of a `CoffFile`.
 #[derive(Debug)]
-pub struct CoffComdatSectionIterator<'data, 'file, R: ReadRef + ?Sized>
+pub struct CoffComdatSectionIterator<'data, 'file, R: ReadRef<'data>>
 where
     'data: 'file,
 {
@@ -137,7 +137,7 @@ where
     index: usize,
 }
 
-impl<'data, 'file, R: ReadRef + ?Sized> Iterator for CoffComdatSectionIterator<'data, 'file, R> {
+impl<'data, 'file, R: ReadRef<'data>> Iterator for CoffComdatSectionIterator<'data, 'file, R> {
     type Item = SectionIndex;
 
     fn next(&mut self) -> Option<Self::Item> {

@@ -7,12 +7,12 @@ use std::io::{Read, Seek, SeekFrom};
 use std::mem;
 
 /// TODO
-pub trait ReadRef {
+pub trait ReadRef<'data>: 'data + Clone + Copy {
     /// TODO
-    fn read_bytes(&self, offset: usize, size: usize) -> Result<&[u8], ()>;
+    fn read_bytes(self, offset: usize, size: usize) -> Result<&'data [u8], ()>;
 
     /// TODO
-    fn read<T: Pod>(&self, offset: &mut usize) -> Result<&T, ()> {
+    fn read<T: Pod>(self, offset: &mut usize) -> Result<&'data T, ()> {
         let size = mem::size_of::<T>();
         let bytes = self.read_bytes(*offset, size)?;
         let (t, _) = from_bytes(bytes)?;
@@ -21,12 +21,12 @@ pub trait ReadRef {
     }
 
     /// TODO
-    fn read_at<T: Pod>(&self, mut offset: usize) -> Result<&T, ()> {
+    fn read_at<T: Pod>(self, mut offset: usize) -> Result<&'data T, ()> {
         self.read(&mut offset)
     }
 
     /// TODO
-    fn read_slice<T: Pod>(&self, offset: &mut usize, count: usize) -> Result<&[T], ()> {
+    fn read_slice<T: Pod>(self, offset: &mut usize, count: usize) -> Result<&'data [T], ()> {
         let size = count.checked_mul(mem::size_of::<T>()).ok_or(())?;
         let bytes = self.read_bytes(*offset, size)?;
         let (t, _) = slice_from_bytes(bytes, count)?;
@@ -35,14 +35,14 @@ pub trait ReadRef {
     }
 
     /// TODO
-    fn read_slice_at<T: Pod>(&self, mut offset: usize, count: usize) -> Result<&[T], ()> {
+    fn read_slice_at<T: Pod>(self, mut offset: usize, count: usize) -> Result<&'data [T], ()> {
         self.read_slice(&mut offset, count)
     }
 }
 
 /// TODO
-impl ReadRef for [u8] {
-    fn read_bytes(&self, offset: usize, size: usize) -> Result<&[u8], ()> {
+impl<'data> ReadRef<'data> for &'data [u8] {
+    fn read_bytes(self, offset: usize, size: usize) -> Result<&'data [u8], ()> {
         self.get(offset..).ok_or(())?.get(..size).ok_or(())
     }
 }
@@ -72,8 +72,8 @@ impl<R: Read + Seek> ReadCache<R> {
     }
 }
 
-impl<R: Read + Seek> ReadRef for ReadCache<R> {
-    fn read_bytes(&self, offset: usize, size: usize) -> Result<&[u8], ()> {
+impl<'data, R: Read + Seek> ReadRef<'data> for &'data ReadCache<R> {
+    fn read_bytes(self, offset: usize, size: usize) -> Result<&'data [u8], ()> {
         let cache = &mut *self.cache.borrow_mut();
         let buf = match cache.bufs.entry((offset, size)) {
             Entry::Occupied(entry) => {
