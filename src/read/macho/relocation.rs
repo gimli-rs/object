@@ -3,29 +3,33 @@ use core::{fmt, slice};
 use crate::endian::Endianness;
 use crate::macho;
 use crate::read::{
-    Relocation, RelocationEncoding, RelocationKind, RelocationTarget, SectionIndex, SymbolIndex,
+    ReadRef, Relocation, RelocationEncoding, RelocationKind, RelocationTarget, SectionIndex,
+    SymbolIndex,
 };
 
 use super::{MachHeader, MachOFile};
 
 /// An iterator over the relocations in a `MachOSection32`.
-pub type MachORelocationIterator32<'data, 'file, Endian = Endianness> =
-    MachORelocationIterator<'data, 'file, macho::MachHeader32<Endian>>;
+pub type MachORelocationIterator32<'data, 'file, R, Endian = Endianness> =
+    MachORelocationIterator<'data, 'file, macho::MachHeader32<Endian>, R>;
 /// An iterator over the relocations in a `MachOSection64`.
-pub type MachORelocationIterator64<'data, 'file, Endian = Endianness> =
-    MachORelocationIterator<'data, 'file, macho::MachHeader64<Endian>>;
+pub type MachORelocationIterator64<'data, 'file, R, Endian = Endianness> =
+    MachORelocationIterator<'data, 'file, macho::MachHeader64<Endian>, R>;
 
 /// An iterator over the relocations in a `MachOSection`.
-pub struct MachORelocationIterator<'data, 'file, Mach>
+pub struct MachORelocationIterator<'data, 'file, Mach, R>
 where
     'data: 'file,
     Mach: MachHeader,
+    R: ReadRef<'data>,
 {
-    pub(super) file: &'file MachOFile<'data, Mach>,
+    pub(super) file: &'file MachOFile<'data, Mach, R>,
     pub(super) relocations: slice::Iter<'data, macho::Relocation<Mach::Endian>>,
 }
 
-impl<'data, 'file, Mach: MachHeader> Iterator for MachORelocationIterator<'data, 'file, Mach> {
+impl<'data, 'file, Mach: MachHeader, R: ReadRef<'data>> Iterator
+    for MachORelocationIterator<'data, 'file, Mach, R>
+{
     type Item = (u64, Relocation);
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -109,7 +113,9 @@ impl<'data, 'file, Mach: MachHeader> Iterator for MachORelocationIterator<'data,
     }
 }
 
-impl<'data, 'file, Mach: MachHeader> fmt::Debug for MachORelocationIterator<'data, 'file, Mach> {
+impl<'data, 'file, Mach: MachHeader, R: ReadRef<'data>> fmt::Debug
+    for MachORelocationIterator<'data, 'file, Mach, R>
+{
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("MachORelocationIterator").finish()
     }

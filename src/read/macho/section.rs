@@ -5,37 +5,43 @@ use crate::endian::{self, Endianness};
 use crate::macho;
 use crate::pod::{Bytes, Pod};
 use crate::read::{
-    self, CompressedData, ObjectSection, ReadError, Result, SectionFlags, SectionIndex, SectionKind,
+    self, CompressedData, ObjectSection, ReadError, ReadRef, Result, SectionFlags, SectionIndex,
+    SectionKind,
 };
 
 use super::{MachHeader, MachOFile, MachORelocationIterator};
 
 /// An iterator over the sections of a `MachOFile32`.
-pub type MachOSectionIterator32<'data, 'file, Endian = Endianness> =
-    MachOSectionIterator<'data, 'file, macho::MachHeader32<Endian>>;
+pub type MachOSectionIterator32<'data, 'file, R, Endian = Endianness> =
+    MachOSectionIterator<'data, 'file, macho::MachHeader32<Endian>, R>;
 /// An iterator over the sections of a `MachOFile64`.
-pub type MachOSectionIterator64<'data, 'file, Endian = Endianness> =
-    MachOSectionIterator<'data, 'file, macho::MachHeader64<Endian>>;
+pub type MachOSectionIterator64<'data, 'file, R, Endian = Endianness> =
+    MachOSectionIterator<'data, 'file, macho::MachHeader64<Endian>, R>;
 
 /// An iterator over the sections of a `MachOFile`.
-pub struct MachOSectionIterator<'data, 'file, Mach>
+pub struct MachOSectionIterator<'data, 'file, Mach, R>
 where
     'data: 'file,
     Mach: MachHeader,
+    R: ReadRef<'data>,
 {
-    pub(super) file: &'file MachOFile<'data, Mach>,
+    pub(super) file: &'file MachOFile<'data, Mach, R>,
     pub(super) iter: slice::Iter<'file, MachOSectionInternal<'data, Mach>>,
 }
 
-impl<'data, 'file, Mach: MachHeader> fmt::Debug for MachOSectionIterator<'data, 'file, Mach> {
+impl<'data, 'file, Mach: MachHeader, R: ReadRef<'data>> fmt::Debug
+    for MachOSectionIterator<'data, 'file, Mach, R>
+{
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         // It's painful to do much better than this
         f.debug_struct("MachOSectionIterator").finish()
     }
 }
 
-impl<'data, 'file, Mach: MachHeader> Iterator for MachOSectionIterator<'data, 'file, Mach> {
-    type Item = MachOSection<'data, 'file, Mach>;
+impl<'data, 'file, Mach: MachHeader, R: ReadRef<'data>> Iterator
+    for MachOSectionIterator<'data, 'file, Mach, R>
+{
+    type Item = MachOSection<'data, 'file, Mach, R>;
 
     fn next(&mut self) -> Option<Self::Item> {
         self.iter.next().map(|&internal| MachOSection {
@@ -46,24 +52,25 @@ impl<'data, 'file, Mach: MachHeader> Iterator for MachOSectionIterator<'data, 'f
 }
 
 /// A section of a `MachOFile32`.
-pub type MachOSection32<'data, 'file, Endian = Endianness> =
-    MachOSection<'data, 'file, macho::MachHeader32<Endian>>;
+pub type MachOSection32<'data, 'file, R, Endian = Endianness> =
+    MachOSection<'data, 'file, macho::MachHeader32<Endian>, R>;
 /// A section of a `MachOFile64`.
-pub type MachOSection64<'data, 'file, Endian = Endianness> =
-    MachOSection<'data, 'file, macho::MachHeader64<Endian>>;
+pub type MachOSection64<'data, 'file, R, Endian = Endianness> =
+    MachOSection<'data, 'file, macho::MachHeader64<Endian>, R>;
 
 /// A section of a `MachOFile`.
 #[derive(Debug)]
-pub struct MachOSection<'data, 'file, Mach>
+pub struct MachOSection<'data, 'file, Mach, R>
 where
     'data: 'file,
     Mach: MachHeader,
+    R: ReadRef<'data>,
 {
-    pub(super) file: &'file MachOFile<'data, Mach>,
+    pub(super) file: &'file MachOFile<'data, Mach, R>,
     pub(super) internal: MachOSectionInternal<'data, Mach>,
 }
 
-impl<'data, 'file, Mach: MachHeader> MachOSection<'data, 'file, Mach> {
+impl<'data, 'file, Mach: MachHeader, R: ReadRef<'data>> MachOSection<'data, 'file, Mach, R> {
     fn bytes(&self) -> Result<Bytes<'data>> {
         self.internal
             .section
@@ -72,10 +79,15 @@ impl<'data, 'file, Mach: MachHeader> MachOSection<'data, 'file, Mach> {
     }
 }
 
-impl<'data, 'file, Mach: MachHeader> read::private::Sealed for MachOSection<'data, 'file, Mach> {}
+impl<'data, 'file, Mach: MachHeader, R: ReadRef<'data>> read::private::Sealed
+    for MachOSection<'data, 'file, Mach, R>
+{
+}
 
-impl<'data, 'file, Mach: MachHeader> ObjectSection<'data> for MachOSection<'data, 'file, Mach> {
-    type RelocationIterator = MachORelocationIterator<'data, 'file, Mach>;
+impl<'data, 'file, Mach: MachHeader, R: ReadRef<'data>> ObjectSection<'data>
+    for MachOSection<'data, 'file, Mach, R>
+{
+    type RelocationIterator = MachORelocationIterator<'data, 'file, Mach, R>;
 
     #[inline]
     fn index(&self) -> SectionIndex {
@@ -141,7 +153,7 @@ impl<'data, 'file, Mach: MachHeader> ObjectSection<'data> for MachOSection<'data
         self.internal.kind
     }
 
-    fn relocations(&self) -> MachORelocationIterator<'data, 'file, Mach> {
+    fn relocations(&self) -> MachORelocationIterator<'data, 'file, Mach, R> {
         MachORelocationIterator {
             file: self.file,
             relocations: self
@@ -245,13 +257,14 @@ pub trait Section: Debug + Pod {
     ///
     /// Returns `Ok(&[])` if the section has no data.
     /// Returns `Err` for invalid values.
-    fn data<'data>(
+    fn data<'data, R: ReadRef<'data>>(
         &self,
         endian: Self::Endian,
-        data: Bytes<'data>,
+        data: R,
     ) -> result::Result<Bytes<'data>, ()> {
         if let Some((offset, size)) = self.file_range(endian) {
             data.read_bytes_at(offset as usize, size as usize)
+                .map(Bytes)
         } else {
             Ok(Bytes(&[]))
         }
@@ -260,10 +273,10 @@ pub trait Section: Debug + Pod {
     /// Return the relocation array.
     ///
     /// Returns `Err` for invalid values.
-    fn relocations<'data>(
+    fn relocations<'data, R: ReadRef<'data>>(
         &self,
         endian: Self::Endian,
-        data: Bytes<'data>,
+        data: R,
     ) -> Result<&'data [macho::Relocation<Self::Endian>]> {
         data.read_slice_at(self.reloff(endian) as usize, self.nreloc(endian) as usize)
             .read_error("Invalid Mach-O relocations offset or number")

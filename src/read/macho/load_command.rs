@@ -4,7 +4,7 @@ use crate::endian::Endian;
 use crate::macho;
 use crate::pod::{Bytes, Pod};
 use crate::read::macho::{MachHeader, SymbolTable};
-use crate::read::{ReadError, Result, StringTable};
+use crate::read::{ReadError, ReadRef, Result, StringTable};
 
 /// An iterator over the load commands of a `MachHeader`.
 #[derive(Debug, Default, Clone, Copy)]
@@ -326,10 +326,10 @@ pub enum LoadCommandVariant<'data, E: Endian> {
 
 impl<E: Endian> macho::SymtabCommand<E> {
     /// Return the symbol table that this command references.
-    pub fn symbols<'data, Mach: MachHeader<Endian = E>>(
+    pub fn symbols<'data, Mach: MachHeader<Endian = E>, R: ReadRef<'data>>(
         &self,
         endian: E,
-        data: Bytes<'data>,
+        data: R,
     ) -> Result<SymbolTable<'data, Mach>> {
         let symbols = data
             .read_slice_at(
@@ -343,7 +343,7 @@ impl<E: Endian> macho::SymtabCommand<E> {
                 self.strsize.get(endian) as usize,
             )
             .read_error("Invalid Mach-O string table offset or size")?;
-        let strings = StringTable::new(strings);
+        let strings = StringTable::new(Bytes(strings));
         Ok(SymbolTable::new(symbols, strings))
     }
 }

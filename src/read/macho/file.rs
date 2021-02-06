@@ -4,7 +4,8 @@ use core::{mem, str};
 
 use crate::read::{
     self, Architecture, ComdatKind, Error, Export, FileFlags, Import, NoDynamicRelocationIterator,
-    Object, ObjectComdat, ObjectMap, ObjectSection, ReadError, Result, SectionIndex, SymbolIndex,
+    Object, ObjectComdat, ObjectMap, ObjectSection, ReadError, ReadRef, Result, SectionIndex,
+    SymbolIndex,
 };
 use crate::{endian, macho, BigEndian, ByteString, Bytes, Endian, Endianness, Pod};
 
@@ -15,26 +16,27 @@ use super::{
 };
 
 /// A 32-bit Mach-O object file.
-pub type MachOFile32<'data, Endian = Endianness> = MachOFile<'data, macho::MachHeader32<Endian>>;
+pub type MachOFile32<'data, R, Endian = Endianness> =
+    MachOFile<'data, macho::MachHeader32<Endian>, R>;
 /// A 64-bit Mach-O object file.
-pub type MachOFile64<'data, Endian = Endianness> = MachOFile<'data, macho::MachHeader64<Endian>>;
+pub type MachOFile64<'data, R, Endian = Endianness> =
+    MachOFile<'data, macho::MachHeader64<Endian>, R>;
 
 /// A partially parsed Mach-O file.
 ///
 /// Most of the functionality of this type is provided by the `Object` trait implementation.
 #[derive(Debug)]
-pub struct MachOFile<'data, Mach: MachHeader> {
+pub struct MachOFile<'data, Mach: MachHeader, R: ReadRef<'data>> {
     pub(super) endian: Mach::Endian,
-    pub(super) data: Bytes<'data>,
+    pub(super) data: R,
     pub(super) header: &'data Mach,
     pub(super) sections: Vec<MachOSectionInternal<'data, Mach>>,
     pub(super) symbols: SymbolTable<'data, Mach>,
 }
 
-impl<'data, Mach: MachHeader> MachOFile<'data, Mach> {
+impl<'data, Mach: MachHeader, R: ReadRef<'data>> MachOFile<'data, Mach, R> {
     /// Parse the raw Mach-O file data.
-    pub fn parse(data: &'data [u8]) -> Result<Self> {
-        let data = Bytes(data);
+    pub fn parse(data: R) -> Result<Self> {
         let header = Mach::parse(data)?;
         let endian = header.endian()?;
 
@@ -77,22 +79,26 @@ impl<'data, Mach: MachHeader> MachOFile<'data, Mach> {
     }
 }
 
-impl<'data, Mach: MachHeader> read::private::Sealed for MachOFile<'data, Mach> {}
+impl<'data, Mach: MachHeader, R: ReadRef<'data>> read::private::Sealed
+    for MachOFile<'data, Mach, R>
+{
+}
 
-impl<'data, 'file, Mach> Object<'data, 'file> for MachOFile<'data, Mach>
+impl<'data, 'file, Mach, R> Object<'data, 'file> for MachOFile<'data, Mach, R>
 where
     'data: 'file,
     Mach: MachHeader,
+    R: ReadRef<'data>,
 {
-    type Segment = MachOSegment<'data, 'file, Mach>;
-    type SegmentIterator = MachOSegmentIterator<'data, 'file, Mach>;
-    type Section = MachOSection<'data, 'file, Mach>;
-    type SectionIterator = MachOSectionIterator<'data, 'file, Mach>;
-    type Comdat = MachOComdat<'data, 'file, Mach>;
-    type ComdatIterator = MachOComdatIterator<'data, 'file, Mach>;
-    type Symbol = MachOSymbol<'data, 'file, Mach>;
-    type SymbolIterator = MachOSymbolIterator<'data, 'file, Mach>;
-    type SymbolTable = MachOSymbolTable<'data, 'file, Mach>;
+    type Segment = MachOSegment<'data, 'file, Mach, R>;
+    type SegmentIterator = MachOSegmentIterator<'data, 'file, Mach, R>;
+    type Section = MachOSection<'data, 'file, Mach, R>;
+    type SectionIterator = MachOSectionIterator<'data, 'file, Mach, R>;
+    type Comdat = MachOComdat<'data, 'file, Mach, R>;
+    type ComdatIterator = MachOComdatIterator<'data, 'file, Mach, R>;
+    type Symbol = MachOSymbol<'data, 'file, Mach, R>;
+    type SymbolIterator = MachOSymbolIterator<'data, 'file, Mach, R>;
+    type SymbolTable = MachOSymbolTable<'data, 'file, Mach, R>;
     type DynamicRelocationIterator = NoDynamicRelocationIterator;
 
     fn architecture(&self) -> Architecture {
@@ -116,7 +122,7 @@ where
         self.header.is_type_64()
     }
 
-    fn segments(&'file self) -> MachOSegmentIterator<'data, 'file, Mach> {
+    fn segments(&'file self) -> MachOSegmentIterator<'data, 'file, Mach, R> {
         MachOSegmentIterator {
             file: self,
             commands: self
@@ -130,11 +136,11 @@ where
     fn section_by_name(
         &'file self,
         section_name: &str,
-    ) -> Option<MachOSection<'data, 'file, Mach>> {
+    ) -> Option<MachOSection<'data, 'file, Mach, R>> {
         // Translate the "." prefix to the "__" prefix used by OSX/Mach-O, eg
         // ".debug_info" to "__debug_info".
         let system_section = section_name.starts_with('.');
-        let cmp_section_name = |section: &MachOSection<Mach>| {
+        let cmp_section_name = |section: &MachOSection<'data, 'file, Mach, R>| {
             section
                 .name()
                 .map(|name| {
@@ -152,7 +158,7 @@ where
     fn section_by_index(
         &'file self,
         index: SectionIndex,
-    ) -> Result<MachOSection<'data, 'file, Mach>> {
+    ) -> Result<MachOSection<'data, 'file, Mach, R>> {
         let internal = *self.section_internal(index)?;
         Ok(MachOSection {
             file: self,
@@ -160,23 +166,26 @@ where
         })
     }
 
-    fn sections(&'file self) -> MachOSectionIterator<'data, 'file, Mach> {
+    fn sections(&'file self) -> MachOSectionIterator<'data, 'file, Mach, R> {
         MachOSectionIterator {
             file: self,
             iter: self.sections.iter(),
         }
     }
 
-    fn comdats(&'file self) -> MachOComdatIterator<'data, 'file, Mach> {
+    fn comdats(&'file self) -> MachOComdatIterator<'data, 'file, Mach, R> {
         MachOComdatIterator { file: self }
     }
 
-    fn symbol_by_index(&'file self, index: SymbolIndex) -> Result<MachOSymbol<'data, 'file, Mach>> {
+    fn symbol_by_index(
+        &'file self,
+        index: SymbolIndex,
+    ) -> Result<MachOSymbol<'data, 'file, Mach, R>> {
         let nlist = self.symbols.symbol(index.0)?;
         MachOSymbol::new(self, index, nlist).read_error("Unsupported Mach-O symbol index")
     }
 
-    fn symbols(&'file self) -> MachOSymbolIterator<'data, 'file, Mach> {
+    fn symbols(&'file self) -> MachOSymbolIterator<'data, 'file, Mach, R> {
         MachOSymbolIterator {
             file: self,
             index: 0,
@@ -184,11 +193,11 @@ where
     }
 
     #[inline]
-    fn symbol_table(&'file self) -> Option<MachOSymbolTable<'data, 'file, Mach>> {
+    fn symbol_table(&'file self) -> Option<MachOSymbolTable<'data, 'file, Mach, R>> {
         Some(MachOSymbolTable { file: self })
     }
 
-    fn dynamic_symbols(&'file self) -> MachOSymbolIterator<'data, 'file, Mach> {
+    fn dynamic_symbols(&'file self) -> MachOSymbolIterator<'data, 'file, Mach, R> {
         MachOSymbolIterator {
             file: self,
             index: self.symbols.len(),
@@ -196,7 +205,7 @@ where
     }
 
     #[inline]
-    fn dynamic_symbol_table(&'file self) -> Option<MachOSymbolTable<'data, 'file, Mach>> {
+    fn dynamic_symbol_table(&'file self) -> Option<MachOSymbolTable<'data, 'file, Mach, R>> {
         None
     }
 
@@ -306,20 +315,22 @@ where
 }
 
 /// An iterator over the COMDAT section groups of a `MachOFile64`.
-pub type MachOComdatIterator32<'data, 'file, Endian = Endianness> =
-    MachOComdatIterator<'data, 'file, macho::MachHeader32<Endian>>;
+pub type MachOComdatIterator32<'data, 'file, R, Endian = Endianness> =
+    MachOComdatIterator<'data, 'file, macho::MachHeader32<Endian>, R>;
 /// An iterator over the COMDAT section groups of a `MachOFile64`.
-pub type MachOComdatIterator64<'data, 'file, Endian = Endianness> =
-    MachOComdatIterator<'data, 'file, macho::MachHeader64<Endian>>;
+pub type MachOComdatIterator64<'data, 'file, R, Endian = Endianness> =
+    MachOComdatIterator<'data, 'file, macho::MachHeader64<Endian>, R>;
 
 /// An iterator over the COMDAT section groups of a `MachOFile`.
 #[derive(Debug)]
-pub struct MachOComdatIterator<'data, 'file, Mach: MachHeader> {
-    file: &'file MachOFile<'data, Mach>,
+pub struct MachOComdatIterator<'data, 'file, Mach: MachHeader, R: ReadRef<'data>> {
+    file: &'file MachOFile<'data, Mach, R>,
 }
 
-impl<'data, 'file, Mach: MachHeader> Iterator for MachOComdatIterator<'data, 'file, Mach> {
-    type Item = MachOComdat<'data, 'file, Mach>;
+impl<'data, 'file, Mach: MachHeader, R: ReadRef<'data>> Iterator
+    for MachOComdatIterator<'data, 'file, Mach, R>
+{
+    type Item = MachOComdat<'data, 'file, Mach, R>;
 
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
@@ -328,23 +339,28 @@ impl<'data, 'file, Mach: MachHeader> Iterator for MachOComdatIterator<'data, 'fi
 }
 
 /// A COMDAT section group of a `MachOFile32`.
-pub type MachOComdat32<'data, 'file, Endian = Endianness> =
-    MachOComdat<'data, 'file, macho::MachHeader32<Endian>>;
+pub type MachOComdat32<'data, 'file, R, Endian = Endianness> =
+    MachOComdat<'data, 'file, macho::MachHeader32<Endian>, R>;
 
 /// A COMDAT section group of a `MachOFile64`.
-pub type MachOComdat64<'data, 'file, Endian = Endianness> =
-    MachOComdat<'data, 'file, macho::MachHeader64<Endian>>;
+pub type MachOComdat64<'data, 'file, R, Endian = Endianness> =
+    MachOComdat<'data, 'file, macho::MachHeader64<Endian>, R>;
 
 /// A COMDAT section group of a `MachOFile`.
 #[derive(Debug)]
-pub struct MachOComdat<'data, 'file, Mach: MachHeader> {
-    file: &'file MachOFile<'data, Mach>,
+pub struct MachOComdat<'data, 'file, Mach: MachHeader, R: ReadRef<'data>> {
+    file: &'file MachOFile<'data, Mach, R>,
 }
 
-impl<'data, 'file, Mach: MachHeader> read::private::Sealed for MachOComdat<'data, 'file, Mach> {}
+impl<'data, 'file, Mach: MachHeader, R: ReadRef<'data>> read::private::Sealed
+    for MachOComdat<'data, 'file, Mach, R>
+{
+}
 
-impl<'data, 'file, Mach: MachHeader> ObjectComdat<'data> for MachOComdat<'data, 'file, Mach> {
-    type SectionIterator = MachOComdatSectionIterator<'data, 'file, Mach>;
+impl<'data, 'file, Mach: MachHeader, R: ReadRef<'data>> ObjectComdat<'data>
+    for MachOComdat<'data, 'file, Mach, R>
+{
+    type SectionIterator = MachOComdatSectionIterator<'data, 'file, Mach, R>;
 
     #[inline]
     fn kind(&self) -> ComdatKind {
@@ -368,22 +384,24 @@ impl<'data, 'file, Mach: MachHeader> ObjectComdat<'data> for MachOComdat<'data, 
 }
 
 /// An iterator over the sections in a COMDAT section group of a `MachOFile32`.
-pub type MachOComdatSectionIterator32<'data, 'file, Endian = Endianness> =
-    MachOComdatSectionIterator<'data, 'file, macho::MachHeader32<Endian>>;
+pub type MachOComdatSectionIterator32<'data, 'file, R, Endian = Endianness> =
+    MachOComdatSectionIterator<'data, 'file, macho::MachHeader32<Endian>, R>;
 /// An iterator over the sections in a COMDAT section group of a `MachOFile64`.
-pub type MachOComdatSectionIterator64<'data, 'file, Endian = Endianness> =
-    MachOComdatSectionIterator<'data, 'file, macho::MachHeader64<Endian>>;
+pub type MachOComdatSectionIterator64<'data, 'file, R, Endian = Endianness> =
+    MachOComdatSectionIterator<'data, 'file, macho::MachHeader64<Endian>, R>;
 
 /// An iterator over the sections in a COMDAT section group of a `MachOFile`.
 #[derive(Debug)]
-pub struct MachOComdatSectionIterator<'data, 'file, Mach: MachHeader>
+pub struct MachOComdatSectionIterator<'data, 'file, Mach: MachHeader, R: ReadRef<'data>>
 where
     'data: 'file,
 {
-    file: &'file MachOFile<'data, Mach>,
+    file: &'file MachOFile<'data, Mach, R>,
 }
 
-impl<'data, 'file, Mach: MachHeader> Iterator for MachOComdatSectionIterator<'data, 'file, Mach> {
+impl<'data, 'file, Mach: MachHeader, R: ReadRef<'data>> Iterator
+    for MachOComdatSectionIterator<'data, 'file, Mach, R>
+{
     type Item = SectionIndex;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -424,9 +442,9 @@ pub trait MachHeader: Debug + Pod {
     /// Read the file header.
     ///
     /// Also checks that the magic field in the file header is a supported format.
-    fn parse<'data>(mut data: Bytes<'data>) -> read::Result<&'data Self> {
+    fn parse<'data, R: ReadRef<'data>>(data: R) -> read::Result<&'data Self> {
         let header = data
-            .read::<Self>()
+            .read_at::<Self>(0)
             .read_error("Invalid Mach-O header size or alignment")?;
         if !header.is_supported() {
             return Err(Error("Unsupported Mach-O header"));
@@ -442,19 +460,27 @@ pub trait MachHeader: Debug + Pod {
         Self::Endian::from_big_endian(self.is_big_endian()).read_error("Unsupported Mach-O endian")
     }
 
-    fn load_commands<'data>(
+    fn load_commands<'data, R: ReadRef<'data>>(
         &self,
         endian: Self::Endian,
-        data: Bytes<'data>,
+        data: R,
     ) -> Result<LoadCommandIterator<'data, Self::Endian>> {
         let data = data
             .read_bytes_at(mem::size_of::<Self>(), self.sizeofcmds(endian) as usize)
             .read_error("Invalid Mach-O load command table size")?;
-        Ok(LoadCommandIterator::new(endian, data, self.ncmds(endian)))
+        Ok(LoadCommandIterator::new(
+            endian,
+            Bytes(data),
+            self.ncmds(endian),
+        ))
     }
 
     /// Return the UUID from the `LC_UUID` load command, if one is present.
-    fn uuid<'data>(&self, endian: Self::Endian, data: Bytes<'data>) -> Result<Option<[u8; 16]>> {
+    fn uuid<'data, R: ReadRef<'data>>(
+        &self,
+        endian: Self::Endian,
+        data: R,
+    ) -> Result<Option<[u8; 16]>> {
         let mut commands = self.load_commands(endian, data)?;
         while let Some(command) = commands.next()? {
             if let Ok(Some(uuid)) = command.uuid() {

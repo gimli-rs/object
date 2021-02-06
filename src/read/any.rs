@@ -158,9 +158,9 @@ enum FileInternal<'data, R: ReadRef<'data>> {
     #[cfg(feature = "elf")]
     Elf64(elf::ElfFile64<'data>),
     #[cfg(feature = "macho")]
-    MachO32(macho::MachOFile32<'data>),
+    MachO32(macho::MachOFile32<'data, R>),
     #[cfg(feature = "macho")]
-    MachO64(macho::MachOFile64<'data>),
+    MachO64(macho::MachOFile64<'data, R>),
     #[cfg(feature = "pe")]
     Pe32(pe::PeFile32<'data, R>),
     #[cfg(feature = "pe")]
@@ -224,9 +224,9 @@ where
     type SectionIterator = SectionIterator<'data, 'file, R>;
     type Comdat = Comdat<'data, 'file, R>;
     type ComdatIterator = ComdatIterator<'data, 'file, R>;
-    type Symbol = Symbol<'data, 'file>;
-    type SymbolIterator = SymbolIterator<'data, 'file>;
-    type SymbolTable = SymbolTable<'data, 'file>;
+    type Symbol = Symbol<'data, 'file, R>;
+    type SymbolIterator = SymbolIterator<'data, 'file, R>;
+    type SymbolTable = SymbolTable<'data, 'file, R>;
     type DynamicRelocationIterator = DynamicRelocationIterator<'data, 'file>;
 
     fn architecture(&self) -> Architecture {
@@ -274,33 +274,33 @@ where
         }
     }
 
-    fn symbol_by_index(&'file self, index: SymbolIndex) -> Result<Symbol<'data, 'file>> {
+    fn symbol_by_index(&'file self, index: SymbolIndex) -> Result<Symbol<'data, 'file, R>> {
         map_inner_option!(self.inner, FileInternal, SymbolInternal, |x| x
             .symbol_by_index(index))
         .map(|inner| Symbol { inner })
     }
 
-    fn symbols(&'file self) -> SymbolIterator<'data, 'file> {
+    fn symbols(&'file self) -> SymbolIterator<'data, 'file, R> {
         SymbolIterator {
             inner: map_inner!(self.inner, FileInternal, SymbolIteratorInternal, |x| x
                 .symbols()),
         }
     }
 
-    fn symbol_table(&'file self) -> Option<SymbolTable<'data, 'file>> {
+    fn symbol_table(&'file self) -> Option<SymbolTable<'data, 'file, R>> {
         map_inner_option!(self.inner, FileInternal, SymbolTableInternal, |x| x
             .symbol_table())
         .map(|inner| SymbolTable { inner })
     }
 
-    fn dynamic_symbols(&'file self) -> SymbolIterator<'data, 'file> {
+    fn dynamic_symbols(&'file self) -> SymbolIterator<'data, 'file, R> {
         SymbolIterator {
             inner: map_inner!(self.inner, FileInternal, SymbolIteratorInternal, |x| x
                 .dynamic_symbols()),
         }
     }
 
-    fn dynamic_symbol_table(&'file self) -> Option<SymbolTable<'data, 'file>> {
+    fn dynamic_symbol_table(&'file self) -> Option<SymbolTable<'data, 'file, R>> {
         map_inner_option!(self.inner, FileInternal, SymbolTableInternal, |x| x
             .dynamic_symbol_table())
         .map(|inner| SymbolTable { inner })
@@ -390,9 +390,9 @@ where
     #[cfg(feature = "elf")]
     Elf64(elf::ElfSegmentIterator64<'data, 'file>),
     #[cfg(feature = "macho")]
-    MachO32(macho::MachOSegmentIterator32<'data, 'file>),
+    MachO32(macho::MachOSegmentIterator32<'data, 'file, R>),
     #[cfg(feature = "macho")]
-    MachO64(macho::MachOSegmentIterator64<'data, 'file>),
+    MachO64(macho::MachOSegmentIterator64<'data, 'file, R>),
     #[cfg(feature = "pe")]
     Pe32(pe::PeSegmentIterator32<'data, 'file, R>),
     #[cfg(feature = "pe")]
@@ -430,9 +430,9 @@ where
     #[cfg(feature = "elf")]
     Elf64(elf::ElfSegment64<'data, 'file>),
     #[cfg(feature = "macho")]
-    MachO32(macho::MachOSegment32<'data, 'file>),
+    MachO32(macho::MachOSegment32<'data, 'file, R>),
     #[cfg(feature = "macho")]
-    MachO64(macho::MachOSegment64<'data, 'file>),
+    MachO64(macho::MachOSegment64<'data, 'file, R>),
     #[cfg(feature = "pe")]
     Pe32(pe::PeSegment32<'data, 'file, R>),
     #[cfg(feature = "pe")]
@@ -514,9 +514,9 @@ where
     #[cfg(feature = "elf")]
     Elf64(elf::ElfSectionIterator64<'data, 'file>),
     #[cfg(feature = "macho")]
-    MachO32(macho::MachOSectionIterator32<'data, 'file>),
+    MachO32(macho::MachOSectionIterator32<'data, 'file, R>),
     #[cfg(feature = "macho")]
-    MachO64(macho::MachOSectionIterator64<'data, 'file>),
+    MachO64(macho::MachOSectionIterator64<'data, 'file, R>),
     #[cfg(feature = "pe")]
     Pe32(pe::PeSectionIterator32<'data, 'file, R>),
     #[cfg(feature = "pe")]
@@ -553,9 +553,9 @@ where
     #[cfg(feature = "elf")]
     Elf64(elf::ElfSection64<'data, 'file>),
     #[cfg(feature = "macho")]
-    MachO32(macho::MachOSection32<'data, 'file>),
+    MachO32(macho::MachOSection32<'data, 'file, R>),
     #[cfg(feature = "macho")]
-    MachO64(macho::MachOSection64<'data, 'file>),
+    MachO64(macho::MachOSection64<'data, 'file, R>),
     #[cfg(feature = "pe")]
     Pe32(pe::PeSection32<'data, 'file, R>),
     #[cfg(feature = "pe")]
@@ -673,9 +673,9 @@ where
     #[cfg(feature = "elf")]
     Elf64(elf::ElfComdatIterator64<'data, 'file>),
     #[cfg(feature = "macho")]
-    MachO32(macho::MachOComdatIterator32<'data, 'file>),
+    MachO32(macho::MachOComdatIterator32<'data, 'file, R>),
     #[cfg(feature = "macho")]
-    MachO64(macho::MachOComdatIterator64<'data, 'file>),
+    MachO64(macho::MachOComdatIterator64<'data, 'file, R>),
     #[cfg(feature = "pe")]
     Pe32(pe::PeComdatIterator32<'data, 'file, R>),
     #[cfg(feature = "pe")]
@@ -712,9 +712,9 @@ where
     #[cfg(feature = "elf")]
     Elf64(elf::ElfComdat64<'data, 'file>),
     #[cfg(feature = "macho")]
-    MachO32(macho::MachOComdat32<'data, 'file>),
+    MachO32(macho::MachOComdat32<'data, 'file, R>),
     #[cfg(feature = "macho")]
-    MachO64(macho::MachOComdat64<'data, 'file>),
+    MachO64(macho::MachOComdat64<'data, 'file, R>),
     #[cfg(feature = "pe")]
     Pe32(pe::PeComdat32<'data, 'file, R>),
     #[cfg(feature = "pe")]
@@ -783,9 +783,9 @@ where
     #[cfg(feature = "elf")]
     Elf64(elf::ElfComdatSectionIterator64<'data, 'file>),
     #[cfg(feature = "macho")]
-    MachO32(macho::MachOComdatSectionIterator32<'data, 'file>),
+    MachO32(macho::MachOComdatSectionIterator32<'data, 'file, R>),
     #[cfg(feature = "macho")]
-    MachO64(macho::MachOComdatSectionIterator64<'data, 'file>),
+    MachO64(macho::MachOComdatSectionIterator64<'data, 'file, R>),
     #[cfg(feature = "pe")]
     Pe32(pe::PeComdatSectionIterator32<'data, 'file, R>),
     #[cfg(feature = "pe")]
@@ -804,17 +804,19 @@ impl<'data, 'file, R: ReadRef<'data>> Iterator for ComdatSectionIterator<'data, 
 
 /// A symbol table.
 #[derive(Debug)]
-pub struct SymbolTable<'data, 'file>
+pub struct SymbolTable<'data, 'file, R>
 where
     'data: 'file,
+    R: ReadRef<'data>,
 {
-    inner: SymbolTableInternal<'data, 'file>,
+    inner: SymbolTableInternal<'data, 'file, R>,
 }
 
 #[derive(Debug)]
-enum SymbolTableInternal<'data, 'file>
+enum SymbolTableInternal<'data, 'file, R>
 where
     'data: 'file,
+    R: ReadRef<'data>,
 {
     #[cfg(feature = "coff")]
     Coff(coff::CoffSymbolTable<'data, 'file>),
@@ -823,9 +825,9 @@ where
     #[cfg(feature = "elf")]
     Elf64(elf::ElfSymbolTable64<'data, 'file>),
     #[cfg(feature = "macho")]
-    MachO32(macho::MachOSymbolTable32<'data, 'file>),
+    MachO32(macho::MachOSymbolTable32<'data, 'file, R>),
     #[cfg(feature = "macho")]
-    MachO64(macho::MachOSymbolTable64<'data, 'file>),
+    MachO64(macho::MachOSymbolTable64<'data, 'file, R>),
     #[cfg(feature = "pe")]
     Pe32(coff::CoffSymbolTable<'data, 'file>),
     #[cfg(feature = "pe")]
@@ -834,11 +836,11 @@ where
     Wasm(wasm::WasmSymbolTable<'data, 'file>),
 }
 
-impl<'data, 'file> read::private::Sealed for SymbolTable<'data, 'file> {}
+impl<'data, 'file, R: ReadRef<'data>> read::private::Sealed for SymbolTable<'data, 'file, R> {}
 
-impl<'data, 'file> ObjectSymbolTable<'data> for SymbolTable<'data, 'file> {
-    type Symbol = Symbol<'data, 'file>;
-    type SymbolIterator = SymbolIterator<'data, 'file>;
+impl<'data, 'file, R: ReadRef<'data>> ObjectSymbolTable<'data> for SymbolTable<'data, 'file, R> {
+    type Symbol = Symbol<'data, 'file, R>;
+    type SymbolIterator = SymbolIterator<'data, 'file, R>;
 
     fn symbols(&self) -> Self::SymbolIterator {
         SymbolIterator {
@@ -860,17 +862,19 @@ impl<'data, 'file> ObjectSymbolTable<'data> for SymbolTable<'data, 'file> {
 
 /// An iterator over symbol table entries.
 #[derive(Debug)]
-pub struct SymbolIterator<'data, 'file>
+pub struct SymbolIterator<'data, 'file, R>
 where
     'data: 'file,
+    R: ReadRef<'data>,
 {
-    inner: SymbolIteratorInternal<'data, 'file>,
+    inner: SymbolIteratorInternal<'data, 'file, R>,
 }
 
 #[derive(Debug)]
-enum SymbolIteratorInternal<'data, 'file>
+enum SymbolIteratorInternal<'data, 'file, R>
 where
     'data: 'file,
+    R: ReadRef<'data>,
 {
     #[cfg(feature = "coff")]
     Coff(coff::CoffSymbolIterator<'data, 'file>),
@@ -879,9 +883,9 @@ where
     #[cfg(feature = "elf")]
     Elf64(elf::ElfSymbolIterator64<'data, 'file>),
     #[cfg(feature = "macho")]
-    MachO32(macho::MachOSymbolIterator32<'data, 'file>),
+    MachO32(macho::MachOSymbolIterator32<'data, 'file, R>),
     #[cfg(feature = "macho")]
-    MachO64(macho::MachOSymbolIterator64<'data, 'file>),
+    MachO64(macho::MachOSymbolIterator64<'data, 'file, R>),
     #[cfg(feature = "pe")]
     Pe32(coff::CoffSymbolIterator<'data, 'file>),
     #[cfg(feature = "pe")]
@@ -890,8 +894,8 @@ where
     Wasm(wasm::WasmSymbolIterator<'data, 'file>),
 }
 
-impl<'data, 'file> Iterator for SymbolIterator<'data, 'file> {
-    type Item = Symbol<'data, 'file>;
+impl<'data, 'file, R: ReadRef<'data>> Iterator for SymbolIterator<'data, 'file, R> {
+    type Item = Symbol<'data, 'file, R>;
 
     fn next(&mut self) -> Option<Self::Item> {
         next_inner!(self.inner, SymbolIteratorInternal, SymbolInternal)
@@ -900,16 +904,18 @@ impl<'data, 'file> Iterator for SymbolIterator<'data, 'file> {
 }
 
 /// A symbol table entry.
-pub struct Symbol<'data, 'file>
+pub struct Symbol<'data, 'file, R>
 where
     'data: 'file,
+    R: ReadRef<'data>,
 {
-    inner: SymbolInternal<'data, 'file>,
+    inner: SymbolInternal<'data, 'file, R>,
 }
 
-enum SymbolInternal<'data, 'file>
+enum SymbolInternal<'data, 'file, R>
 where
     'data: 'file,
+    R: ReadRef<'data>,
 {
     #[cfg(feature = "coff")]
     Coff(coff::CoffSymbol<'data, 'file>),
@@ -918,9 +924,9 @@ where
     #[cfg(feature = "elf")]
     Elf64(elf::ElfSymbol64<'data, 'file>),
     #[cfg(feature = "macho")]
-    MachO32(macho::MachOSymbol32<'data, 'file>),
+    MachO32(macho::MachOSymbol32<'data, 'file, R>),
     #[cfg(feature = "macho")]
-    MachO64(macho::MachOSymbol64<'data, 'file>),
+    MachO64(macho::MachOSymbol64<'data, 'file, R>),
     #[cfg(feature = "pe")]
     Pe32(coff::CoffSymbol<'data, 'file>),
     #[cfg(feature = "pe")]
@@ -929,7 +935,7 @@ where
     Wasm(wasm::WasmSymbol<'data, 'file>),
 }
 
-impl<'data, 'file> fmt::Debug for Symbol<'data, 'file> {
+impl<'data, 'file, R: ReadRef<'data>> fmt::Debug for Symbol<'data, 'file, R> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Symbol")
             .field("name", &self.name().unwrap_or("<invalid>"))
@@ -944,9 +950,9 @@ impl<'data, 'file> fmt::Debug for Symbol<'data, 'file> {
     }
 }
 
-impl<'data, 'file> read::private::Sealed for Symbol<'data, 'file> {}
+impl<'data, 'file, R: ReadRef<'data>> read::private::Sealed for Symbol<'data, 'file, R> {}
 
-impl<'data, 'file> ObjectSymbol<'data> for Symbol<'data, 'file> {
+impl<'data, 'file, R: ReadRef<'data>> ObjectSymbol<'data> for Symbol<'data, 'file, R> {
     fn index(&self) -> SymbolIndex {
         with_inner!(self.inner, SymbolInternal, |x| x.index())
     }
@@ -1062,9 +1068,9 @@ where
     #[cfg(feature = "elf")]
     Elf64(elf::ElfSectionRelocationIterator64<'data, 'file>),
     #[cfg(feature = "macho")]
-    MachO32(macho::MachORelocationIterator32<'data, 'file>),
+    MachO32(macho::MachORelocationIterator32<'data, 'file, R>),
     #[cfg(feature = "macho")]
-    MachO64(macho::MachORelocationIterator64<'data, 'file>),
+    MachO64(macho::MachORelocationIterator64<'data, 'file, R>),
     #[cfg(feature = "pe")]
     Pe32(pe::PeRelocationIterator<'data, 'file>),
     #[cfg(feature = "pe")]

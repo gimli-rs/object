@@ -7,7 +7,7 @@ use crate::macho;
 use crate::pod::Pod;
 use crate::read::util::StringTable;
 use crate::read::{
-    self, ObjectMap, ObjectMapEntry, ObjectSymbol, ObjectSymbolTable, ReadError, Result,
+    self, ObjectMap, ObjectMapEntry, ObjectSymbol, ObjectSymbolTable, ReadError, ReadRef, Result,
     SectionIndex, SectionKind, SymbolFlags, SymbolIndex, SymbolKind, SymbolMap, SymbolMapEntry,
     SymbolScope, SymbolSection,
 };
@@ -141,28 +141,28 @@ impl<'data, Mach: MachHeader> SymbolTable<'data, Mach> {
 }
 
 /// An iterator over the symbols of a `MachOFile32`.
-pub type MachOSymbolTable32<'data, 'file, Endian = Endianness> =
-    MachOSymbolTable<'data, 'file, macho::MachHeader32<Endian>>;
+pub type MachOSymbolTable32<'data, 'file, R, Endian = Endianness> =
+    MachOSymbolTable<'data, 'file, macho::MachHeader32<Endian>, R>;
 /// An iterator over the symbols of a `MachOFile64`.
-pub type MachOSymbolTable64<'data, 'file, Endian = Endianness> =
-    MachOSymbolTable<'data, 'file, macho::MachHeader64<Endian>>;
+pub type MachOSymbolTable64<'data, 'file, R, Endian = Endianness> =
+    MachOSymbolTable<'data, 'file, macho::MachHeader64<Endian>, R>;
 
 /// A symbol table of a `MachOFile`.
 #[derive(Debug, Clone, Copy)]
-pub struct MachOSymbolTable<'data, 'file, Mach: MachHeader> {
-    pub(super) file: &'file MachOFile<'data, Mach>,
+pub struct MachOSymbolTable<'data, 'file, Mach: MachHeader, R: ReadRef<'data>> {
+    pub(super) file: &'file MachOFile<'data, Mach, R>,
 }
 
-impl<'data, 'file, Mach: MachHeader> read::private::Sealed
-    for MachOSymbolTable<'data, 'file, Mach>
+impl<'data, 'file, Mach: MachHeader, R: ReadRef<'data>> read::private::Sealed
+    for MachOSymbolTable<'data, 'file, Mach, R>
 {
 }
 
-impl<'data, 'file, Mach: MachHeader> ObjectSymbolTable<'data>
-    for MachOSymbolTable<'data, 'file, Mach>
+impl<'data, 'file, Mach: MachHeader, R: ReadRef<'data>> ObjectSymbolTable<'data>
+    for MachOSymbolTable<'data, 'file, Mach, R>
 {
-    type Symbol = MachOSymbol<'data, 'file, Mach>;
-    type SymbolIterator = MachOSymbolIterator<'data, 'file, Mach>;
+    type Symbol = MachOSymbol<'data, 'file, Mach, R>;
+    type SymbolIterator = MachOSymbolIterator<'data, 'file, Mach, R>;
 
     fn symbols(&self) -> Self::SymbolIterator {
         MachOSymbolIterator {
@@ -178,26 +178,30 @@ impl<'data, 'file, Mach: MachHeader> ObjectSymbolTable<'data>
 }
 
 /// An iterator over the symbols of a `MachOFile32`.
-pub type MachOSymbolIterator32<'data, 'file, Endian = Endianness> =
-    MachOSymbolIterator<'data, 'file, macho::MachHeader32<Endian>>;
+pub type MachOSymbolIterator32<'data, 'file, R, Endian = Endianness> =
+    MachOSymbolIterator<'data, 'file, macho::MachHeader32<Endian>, R>;
 /// An iterator over the symbols of a `MachOFile64`.
-pub type MachOSymbolIterator64<'data, 'file, Endian = Endianness> =
-    MachOSymbolIterator<'data, 'file, macho::MachHeader64<Endian>>;
+pub type MachOSymbolIterator64<'data, 'file, R, Endian = Endianness> =
+    MachOSymbolIterator<'data, 'file, macho::MachHeader64<Endian>, R>;
 
 /// An iterator over the symbols of a `MachOFile`.
-pub struct MachOSymbolIterator<'data, 'file, Mach: MachHeader> {
-    pub(super) file: &'file MachOFile<'data, Mach>,
+pub struct MachOSymbolIterator<'data, 'file, Mach: MachHeader, R: ReadRef<'data>> {
+    pub(super) file: &'file MachOFile<'data, Mach, R>,
     pub(super) index: usize,
 }
 
-impl<'data, 'file, Mach: MachHeader> fmt::Debug for MachOSymbolIterator<'data, 'file, Mach> {
+impl<'data, 'file, Mach: MachHeader, R: ReadRef<'data>> fmt::Debug
+    for MachOSymbolIterator<'data, 'file, Mach, R>
+{
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("MachOSymbolIterator").finish()
     }
 }
 
-impl<'data, 'file, Mach: MachHeader> Iterator for MachOSymbolIterator<'data, 'file, Mach> {
-    type Item = MachOSymbol<'data, 'file, Mach>;
+impl<'data, 'file, Mach: MachHeader, R: ReadRef<'data>> Iterator
+    for MachOSymbolIterator<'data, 'file, Mach, R>
+{
+    type Item = MachOSymbol<'data, 'file, Mach, R>;
 
     fn next(&mut self) -> Option<Self::Item> {
         loop {
@@ -212,23 +216,23 @@ impl<'data, 'file, Mach: MachHeader> Iterator for MachOSymbolIterator<'data, 'fi
 }
 
 /// A symbol of a `MachOFile32`.
-pub type MachOSymbol32<'data, 'file, Endian = Endianness> =
-    MachOSymbol<'data, 'file, macho::MachHeader32<Endian>>;
+pub type MachOSymbol32<'data, 'file, R, Endian = Endianness> =
+    MachOSymbol<'data, 'file, macho::MachHeader32<Endian>, R>;
 /// A symbol of a `MachOFile64`.
-pub type MachOSymbol64<'data, 'file, Endian = Endianness> =
-    MachOSymbol<'data, 'file, macho::MachHeader64<Endian>>;
+pub type MachOSymbol64<'data, 'file, R, Endian = Endianness> =
+    MachOSymbol<'data, 'file, macho::MachHeader64<Endian>, R>;
 
 /// A symbol of a `MachOFile`.
 #[derive(Debug, Clone, Copy)]
-pub struct MachOSymbol<'data, 'file, Mach: MachHeader> {
-    file: &'file MachOFile<'data, Mach>,
+pub struct MachOSymbol<'data, 'file, Mach: MachHeader, R: ReadRef<'data>> {
+    file: &'file MachOFile<'data, Mach, R>,
     index: SymbolIndex,
     nlist: &'data Mach::Nlist,
 }
 
-impl<'data, 'file, Mach: MachHeader> MachOSymbol<'data, 'file, Mach> {
+impl<'data, 'file, Mach: MachHeader, R: ReadRef<'data>> MachOSymbol<'data, 'file, Mach, R> {
     pub(super) fn new(
-        file: &'file MachOFile<'data, Mach>,
+        file: &'file MachOFile<'data, Mach, R>,
         index: SymbolIndex,
         nlist: &'data Mach::Nlist,
     ) -> Option<Self> {
@@ -239,9 +243,14 @@ impl<'data, 'file, Mach: MachHeader> MachOSymbol<'data, 'file, Mach> {
     }
 }
 
-impl<'data, 'file, Mach: MachHeader> read::private::Sealed for MachOSymbol<'data, 'file, Mach> {}
+impl<'data, 'file, Mach: MachHeader, R: ReadRef<'data>> read::private::Sealed
+    for MachOSymbol<'data, 'file, Mach, R>
+{
+}
 
-impl<'data, 'file, Mach: MachHeader> ObjectSymbol<'data> for MachOSymbol<'data, 'file, Mach> {
+impl<'data, 'file, Mach: MachHeader, R: ReadRef<'data>> ObjectSymbol<'data>
+    for MachOSymbol<'data, 'file, Mach, R>
+{
     #[inline]
     fn index(&self) -> SymbolIndex {
         self.index

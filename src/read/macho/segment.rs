@@ -4,30 +4,33 @@ use core::{result, str};
 use crate::endian::{self, Endianness};
 use crate::macho;
 use crate::pod::{Bytes, Pod};
-use crate::read::{self, ObjectSegment, ReadError, Result};
+use crate::read::{self, ObjectSegment, ReadError, ReadRef, Result};
 
 use super::{LoadCommandData, LoadCommandIterator, MachHeader, MachOFile, Section};
 
 /// An iterator over the segments of a `MachOFile32`.
-pub type MachOSegmentIterator32<'data, 'file, Endian = Endianness> =
-    MachOSegmentIterator<'data, 'file, macho::MachHeader32<Endian>>;
+pub type MachOSegmentIterator32<'data, 'file, R, Endian = Endianness> =
+    MachOSegmentIterator<'data, 'file, macho::MachHeader32<Endian>, R>;
 /// An iterator over the segments of a `MachOFile64`.
-pub type MachOSegmentIterator64<'data, 'file, Endian = Endianness> =
-    MachOSegmentIterator<'data, 'file, macho::MachHeader64<Endian>>;
+pub type MachOSegmentIterator64<'data, 'file, R, Endian = Endianness> =
+    MachOSegmentIterator<'data, 'file, macho::MachHeader64<Endian>, R>;
 
 /// An iterator over the segments of a `MachOFile`.
 #[derive(Debug)]
-pub struct MachOSegmentIterator<'data, 'file, Mach>
+pub struct MachOSegmentIterator<'data, 'file, Mach, R>
 where
     'data: 'file,
     Mach: MachHeader,
+    R: ReadRef<'data>,
 {
-    pub(super) file: &'file MachOFile<'data, Mach>,
+    pub(super) file: &'file MachOFile<'data, Mach, R>,
     pub(super) commands: LoadCommandIterator<'data, Mach::Endian>,
 }
 
-impl<'data, 'file, Mach: MachHeader> Iterator for MachOSegmentIterator<'data, 'file, Mach> {
-    type Item = MachOSegment<'data, 'file, Mach>;
+impl<'data, 'file, Mach: MachHeader, R: ReadRef<'data>> Iterator
+    for MachOSegmentIterator<'data, 'file, Mach, R>
+{
+    type Item = MachOSegment<'data, 'file, Mach, R>;
 
     fn next(&mut self) -> Option<Self::Item> {
         loop {
@@ -43,24 +46,25 @@ impl<'data, 'file, Mach: MachHeader> Iterator for MachOSegmentIterator<'data, 'f
 }
 
 /// A segment of a `MachOFile32`.
-pub type MachOSegment32<'data, 'file, Endian = Endianness> =
-    MachOSegment<'data, 'file, macho::MachHeader32<Endian>>;
+pub type MachOSegment32<'data, 'file, R, Endian = Endianness> =
+    MachOSegment<'data, 'file, macho::MachHeader32<Endian>, R>;
 /// A segment of a `MachOFile64`.
-pub type MachOSegment64<'data, 'file, Endian = Endianness> =
-    MachOSegment<'data, 'file, macho::MachHeader64<Endian>>;
+pub type MachOSegment64<'data, 'file, R, Endian = Endianness> =
+    MachOSegment<'data, 'file, macho::MachHeader64<Endian>, R>;
 
 /// A segment of a `MachOFile`.
 #[derive(Debug)]
-pub struct MachOSegment<'data, 'file, Mach>
+pub struct MachOSegment<'data, 'file, Mach, R>
 where
     'data: 'file,
     Mach: MachHeader,
+    R: ReadRef<'data>,
 {
-    file: &'file MachOFile<'data, Mach>,
+    file: &'file MachOFile<'data, Mach, R>,
     segment: &'data Mach::Segment,
 }
 
-impl<'data, 'file, Mach: MachHeader> MachOSegment<'data, 'file, Mach> {
+impl<'data, 'file, Mach: MachHeader, R: ReadRef<'data>> MachOSegment<'data, 'file, Mach, R> {
     fn bytes(&self) -> Result<Bytes<'data>> {
         self.segment
             .data(self.file.endian, self.file.data)
@@ -68,9 +72,14 @@ impl<'data, 'file, Mach: MachHeader> MachOSegment<'data, 'file, Mach> {
     }
 }
 
-impl<'data, 'file, Mach: MachHeader> read::private::Sealed for MachOSegment<'data, 'file, Mach> {}
+impl<'data, 'file, Mach: MachHeader, R: ReadRef<'data>> read::private::Sealed
+    for MachOSegment<'data, 'file, Mach, R>
+{
+}
 
-impl<'data, 'file, Mach: MachHeader> ObjectSegment<'data> for MachOSegment<'data, 'file, Mach> {
+impl<'data, 'file, Mach: MachHeader, R: ReadRef<'data>> ObjectSegment<'data>
+    for MachOSegment<'data, 'file, Mach, R>
+{
     #[inline]
     fn address(&self) -> u64 {
         self.segment.vmaddr(self.file.endian).into()
@@ -153,13 +162,14 @@ pub trait Segment: Debug + Pod {
     /// Get the segment data from the file data.
     ///
     /// Returns `Err` for invalid values.
-    fn data<'data>(
+    fn data<'data, R: ReadRef<'data>>(
         &self,
         endian: Self::Endian,
-        data: Bytes<'data>,
+        data: R,
     ) -> result::Result<Bytes<'data>, ()> {
         let (offset, size) = self.file_range(endian);
         data.read_bytes_at(offset as usize, size as usize)
+            .map(Bytes)
     }
 
     /// Get the array of sections from the data following the segment command.
