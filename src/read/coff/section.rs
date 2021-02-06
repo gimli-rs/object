@@ -21,13 +21,12 @@ impl<'data> SectionTable<'data> {
     /// Parse the section table.
     ///
     /// `data` must be the entire file data.
-    /// `offset` must be the file offset following the optional header.
+    /// `offset` must be after the optional file header.
     pub fn parse<R: ReadRef<'data>>(
         header: &pe::ImageFileHeader,
         data: R,
         offset: usize,
     ) -> Result<Self> {
-        // TODO: maybe offset should be the `ImageFileHeader` offset.
         let sections = data
             .read_slice_at(offset, header.number_of_sections.get(LE) as usize)
             .read_error("Invalid COFF/PE section headers")?;
@@ -382,7 +381,8 @@ impl pe::ImageSectionHeader {
     /// Returns `Err` for invalid values.
     pub fn coff_data<'data, R: ReadRef<'data>>(&self, data: R) -> result::Result<Bytes<'data>, ()> {
         if let Some((offset, size)) = self.coff_file_range() {
-            data.read_bytes(offset as usize, size as usize).map(Bytes)
+            data.read_bytes_at(offset as usize, size as usize)
+                .map(Bytes)
         } else {
             Ok(Bytes(&[]))
         }

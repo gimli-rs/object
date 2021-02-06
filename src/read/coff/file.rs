@@ -1,11 +1,11 @@
 use alloc::vec::Vec;
-use core::{mem, str};
+use core::str;
 
 use crate::read::{
     self, Architecture, Export, FileFlags, Import, NoDynamicRelocationIterator, Object,
     ObjectSection, ReadError, ReadRef, Result, SectionIndex, SymbolIndex,
 };
-use crate::{pe, Bytes, LittleEndian as LE};
+use crate::{pe, LittleEndian as LE};
 
 use super::{
     CoffComdat, CoffComdatIterator, CoffSection, CoffSectionIterator, CoffSegment,
@@ -33,8 +33,9 @@ pub struct CoffFile<'data, R: ReadRef<'data>> {
 impl<'data, R: ReadRef<'data>> CoffFile<'data, R> {
     /// Parse the raw COFF file data.
     pub fn parse(data: R) -> Result<Self> {
-        let header = pe::ImageFileHeader::parse(data)?;
-        let sections = header.sections(data)?;
+        let mut offset = 0;
+        let header = pe::ImageFileHeader::parse(data, &mut offset)?;
+        let sections = header.sections(data, offset)?;
         let symbols = header.symbols(data)?;
 
         Ok(CoffFile {
@@ -190,23 +191,36 @@ where
 impl pe::ImageFileHeader {
     /// Read the file header.
     ///
-    /// The given data must be for the entire file.
-    pub fn parse<'data, R: ReadRef<'data>>(data: R) -> read::Result<&'data Self> {
-        data.read_at::<pe::ImageFileHeader>(0)
-            .read_error("Invalid COFF file header size or alignment")
+    /// `data` must be the entire file data.
+    /// `offset` must be the file header offset. It is updated to point after the optional header,
+    /// which is where the section headers are located.
+    pub fn parse<'data, R: ReadRef<'data>>(
+        data: R,
+        offset: &mut usize,
+    ) -> read::Result<&'data Self> {
+        let header = data
+            .read::<pe::ImageFileHeader>(offset)
+            .read_error("Invalid COFF file header size or alignment")?;
+
+        // Skip over the optional header.
+        *offset = offset
+            .checked_add(header.size_of_optional_header.get(LE) as usize)
+            .read_error("Invalid COFF optional header size")?;
+
         // TODO: maybe validate that the machine is known?
+        Ok(header)
     }
 
     /// Read the section table.
     ///
     /// `data` must be the entire file data.
+    /// `offset` must be after the optional file header.
     #[inline]
-    pub fn sections<'data, R: ReadRef<'data>>(&self, data: R) -> read::Result<SectionTable<'data>> {
-        // Skip over the optional header.
-        let offset = mem::size_of::<Self>()
-            .checked_add(self.size_of_optional_header.get(LE) as usize)
-            .read_error("Invalid COFF optional header size")?;
-
+    pub fn sections<'data, R: ReadRef<'data>>(
+        &self,
+        data: R,
+        offset: usize,
+    ) -> read::Result<SectionTable<'data>> {
         SectionTable::parse(self, data, offset)
     }
 

@@ -162,9 +162,9 @@ enum FileInternal<'data, R: ReadRef<'data>> {
     #[cfg(feature = "macho")]
     MachO64(macho::MachOFile64<'data>),
     #[cfg(feature = "pe")]
-    Pe32(pe::PeFile32<'data>),
+    Pe32(pe::PeFile32<'data, R>),
     #[cfg(feature = "pe")]
-    Pe64(pe::PeFile64<'data>),
+    Pe64(pe::PeFile64<'data, R>),
     #[cfg(feature = "wasm")]
     Wasm(wasm::WasmFile<'data>),
 }
@@ -173,7 +173,6 @@ impl<'data, R: ReadRef<'data>> File<'data, R> {
     /// Parse the raw file data.
     pub fn parse(data: R) -> Result<Self> {
         let inner = match FileKind::parse(data)? {
-            /*
             #[cfg(feature = "elf")]
             FileKind::Elf32 => FileInternal::Elf32(elf::ElfFile32::parse(data)?),
             #[cfg(feature = "elf")]
@@ -188,9 +187,9 @@ impl<'data, R: ReadRef<'data>> File<'data, R> {
             FileKind::Pe32 => FileInternal::Pe32(pe::PeFile32::parse(data)?),
             #[cfg(feature = "pe")]
             FileKind::Pe64 => FileInternal::Pe64(pe::PeFile64::parse(data)?),
-            */
             #[cfg(feature = "coff")]
             FileKind::Coff => FileInternal::Coff(coff::CoffFile::parse(data)?),
+            #[allow(unreachable_patterns)]
             _ => return Err(Error("Unsupported file format")),
         };
         Ok(File { inner })
@@ -395,9 +394,9 @@ where
     #[cfg(feature = "macho")]
     MachO64(macho::MachOSegmentIterator64<'data, 'file>),
     #[cfg(feature = "pe")]
-    Pe32(pe::PeSegmentIterator32<'data, 'file>),
+    Pe32(pe::PeSegmentIterator32<'data, 'file, R>),
     #[cfg(feature = "pe")]
-    Pe64(pe::PeSegmentIterator64<'data, 'file>),
+    Pe64(pe::PeSegmentIterator64<'data, 'file, R>),
     #[cfg(feature = "wasm")]
     Wasm(wasm::WasmSegmentIterator<'data, 'file>),
 }
@@ -435,9 +434,9 @@ where
     #[cfg(feature = "macho")]
     MachO64(macho::MachOSegment64<'data, 'file>),
     #[cfg(feature = "pe")]
-    Pe32(pe::PeSegment32<'data, 'file>),
+    Pe32(pe::PeSegment32<'data, 'file, R>),
     #[cfg(feature = "pe")]
-    Pe64(pe::PeSegment64<'data, 'file>),
+    Pe64(pe::PeSegment64<'data, 'file, R>),
     #[cfg(feature = "wasm")]
     Wasm(wasm::WasmSegment<'data, 'file>),
 }
@@ -519,9 +518,9 @@ where
     #[cfg(feature = "macho")]
     MachO64(macho::MachOSectionIterator64<'data, 'file>),
     #[cfg(feature = "pe")]
-    Pe32(pe::PeSectionIterator32<'data, 'file>),
+    Pe32(pe::PeSectionIterator32<'data, 'file, R>),
     #[cfg(feature = "pe")]
-    Pe64(pe::PeSectionIterator64<'data, 'file>),
+    Pe64(pe::PeSectionIterator64<'data, 'file, R>),
     #[cfg(feature = "wasm")]
     Wasm(wasm::WasmSectionIterator<'data, 'file>),
 }
@@ -558,9 +557,9 @@ where
     #[cfg(feature = "macho")]
     MachO64(macho::MachOSection64<'data, 'file>),
     #[cfg(feature = "pe")]
-    Pe32(pe::PeSection32<'data, 'file>),
+    Pe32(pe::PeSection32<'data, 'file, R>),
     #[cfg(feature = "pe")]
-    Pe64(pe::PeSection64<'data, 'file>),
+    Pe64(pe::PeSection64<'data, 'file, R>),
     #[cfg(feature = "wasm")]
     Wasm(wasm::WasmSection<'data, 'file>),
 }
@@ -678,9 +677,9 @@ where
     #[cfg(feature = "macho")]
     MachO64(macho::MachOComdatIterator64<'data, 'file>),
     #[cfg(feature = "pe")]
-    Pe32(pe::PeComdatIterator32<'data, 'file>),
+    Pe32(pe::PeComdatIterator32<'data, 'file, R>),
     #[cfg(feature = "pe")]
-    Pe64(pe::PeComdatIterator64<'data, 'file>),
+    Pe64(pe::PeComdatIterator64<'data, 'file, R>),
     #[cfg(feature = "wasm")]
     Wasm(wasm::WasmComdatIterator<'data, 'file>),
 }
@@ -717,9 +716,9 @@ where
     #[cfg(feature = "macho")]
     MachO64(macho::MachOComdat64<'data, 'file>),
     #[cfg(feature = "pe")]
-    Pe32(pe::PeComdat32<'data, 'file>),
+    Pe32(pe::PeComdat32<'data, 'file, R>),
     #[cfg(feature = "pe")]
-    Pe64(pe::PeComdat64<'data, 'file>),
+    Pe64(pe::PeComdat64<'data, 'file, R>),
     #[cfg(feature = "wasm")]
     Wasm(wasm::WasmComdat<'data, 'file>),
 }
@@ -788,9 +787,9 @@ where
     #[cfg(feature = "macho")]
     MachO64(macho::MachOComdatSectionIterator64<'data, 'file>),
     #[cfg(feature = "pe")]
-    Pe32(pe::PeComdatSectionIterator32<'data, 'file>),
+    Pe32(pe::PeComdatSectionIterator32<'data, 'file, R>),
     #[cfg(feature = "pe")]
-    Pe64(pe::PeComdatSectionIterator64<'data, 'file>),
+    Pe64(pe::PeComdatSectionIterator64<'data, 'file, R>),
     #[cfg(feature = "wasm")]
     Wasm(wasm::WasmComdatSectionIterator<'data, 'file>),
 }

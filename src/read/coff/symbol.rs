@@ -38,7 +38,7 @@ impl<'data> SymbolTable<'data> {
                 .read_error("Missing COFF string table")?
                 .get(LE);
             let strings = data
-                .read_bytes(offset, length as usize)
+                .read_bytes_at(offset, length as usize)
                 .read_error("Invalid COFF string table length")?;
 
             (symbols, strings)

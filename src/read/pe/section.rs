@@ -5,30 +5,35 @@ use crate::endian::LittleEndian as LE;
 use crate::pe;
 use crate::pod::Bytes;
 use crate::read::{
-    self, CompressedData, ObjectSection, ObjectSegment, ReadError, Relocation, Result,
+    self, CompressedData, ObjectSection, ObjectSegment, ReadError, ReadRef, Relocation, Result,
     SectionFlags, SectionIndex, SectionKind,
 };
 
 use super::{ImageNtHeaders, PeFile, SectionTable};
 
 /// An iterator over the loadable sections of a `PeFile32`.
-pub type PeSegmentIterator32<'data, 'file> = PeSegmentIterator<'data, 'file, pe::ImageNtHeaders32>;
+pub type PeSegmentIterator32<'data, 'file, R> =
+    PeSegmentIterator<'data, 'file, pe::ImageNtHeaders32, R>;
 /// An iterator over the loadable sections of a `PeFile64`.
-pub type PeSegmentIterator64<'data, 'file> = PeSegmentIterator<'data, 'file, pe::ImageNtHeaders64>;
+pub type PeSegmentIterator64<'data, 'file, R> =
+    PeSegmentIterator<'data, 'file, pe::ImageNtHeaders64, R>;
 
 /// An iterator over the loadable sections of a `PeFile`.
 #[derive(Debug)]
-pub struct PeSegmentIterator<'data, 'file, Pe>
+pub struct PeSegmentIterator<'data, 'file, Pe, R>
 where
     'data: 'file,
     Pe: ImageNtHeaders,
+    R: ReadRef<'data>,
 {
-    pub(super) file: &'file PeFile<'data, Pe>,
+    pub(super) file: &'file PeFile<'data, Pe, R>,
     pub(super) iter: slice::Iter<'file, pe::ImageSectionHeader>,
 }
 
-impl<'data, 'file, Pe: ImageNtHeaders> Iterator for PeSegmentIterator<'data, 'file, Pe> {
-    type Item = PeSegment<'data, 'file, Pe>;
+impl<'data, 'file, Pe: ImageNtHeaders, R: ReadRef<'data>> Iterator
+    for PeSegmentIterator<'data, 'file, Pe, R>
+{
+    type Item = PeSegment<'data, 'file, Pe, R>;
 
     fn next(&mut self) -> Option<Self::Item> {
         self.iter.next().map(|section| PeSegment {
@@ -39,22 +44,23 @@ impl<'data, 'file, Pe: ImageNtHeaders> Iterator for PeSegmentIterator<'data, 'fi
 }
 
 /// A loadable section of a `PeFile32`.
-pub type PeSegment32<'data, 'file> = PeSegment<'data, 'file, pe::ImageNtHeaders32>;
+pub type PeSegment32<'data, 'file, R> = PeSegment<'data, 'file, pe::ImageNtHeaders32, R>;
 /// A loadable section of a `PeFile64`.
-pub type PeSegment64<'data, 'file> = PeSegment<'data, 'file, pe::ImageNtHeaders64>;
+pub type PeSegment64<'data, 'file, R> = PeSegment<'data, 'file, pe::ImageNtHeaders64, R>;
 
 /// A loadable section of a `PeFile`.
 #[derive(Debug)]
-pub struct PeSegment<'data, 'file, Pe>
+pub struct PeSegment<'data, 'file, Pe, R>
 where
     'data: 'file,
     Pe: ImageNtHeaders,
+    R: ReadRef<'data>,
 {
-    file: &'file PeFile<'data, Pe>,
+    file: &'file PeFile<'data, Pe, R>,
     section: &'file pe::ImageSectionHeader,
 }
 
-impl<'data, 'file, Pe: ImageNtHeaders> PeSegment<'data, 'file, Pe> {
+impl<'data, 'file, Pe: ImageNtHeaders, R: ReadRef<'data>> PeSegment<'data, 'file, Pe, R> {
     fn bytes(&self) -> Result<Bytes<'data>> {
         self.section
             .pe_data(self.file.data)
@@ -62,9 +68,14 @@ impl<'data, 'file, Pe: ImageNtHeaders> PeSegment<'data, 'file, Pe> {
     }
 }
 
-impl<'data, 'file, Pe: ImageNtHeaders> read::private::Sealed for PeSegment<'data, 'file, Pe> {}
+impl<'data, 'file, Pe: ImageNtHeaders, R: ReadRef<'data>> read::private::Sealed
+    for PeSegment<'data, 'file, Pe, R>
+{
+}
 
-impl<'data, 'file, Pe: ImageNtHeaders> ObjectSegment<'data> for PeSegment<'data, 'file, Pe> {
+impl<'data, 'file, Pe: ImageNtHeaders, R: ReadRef<'data>> ObjectSegment<'data>
+    for PeSegment<'data, 'file, Pe, R>
+{
     #[inline]
     fn address(&self) -> u64 {
         u64::from(self.section.virtual_address.get(LE))
@@ -111,23 +122,28 @@ impl<'data, 'file, Pe: ImageNtHeaders> ObjectSegment<'data> for PeSegment<'data,
 }
 
 /// An iterator over the sections of a `PeFile32`.
-pub type PeSectionIterator32<'data, 'file> = PeSectionIterator<'data, 'file, pe::ImageNtHeaders32>;
+pub type PeSectionIterator32<'data, 'file, R> =
+    PeSectionIterator<'data, 'file, pe::ImageNtHeaders32, R>;
 /// An iterator over the sections of a `PeFile64`.
-pub type PeSectionIterator64<'data, 'file> = PeSectionIterator<'data, 'file, pe::ImageNtHeaders64>;
+pub type PeSectionIterator64<'data, 'file, R> =
+    PeSectionIterator<'data, 'file, pe::ImageNtHeaders64, R>;
 
 /// An iterator over the sections of a `PeFile`.
 #[derive(Debug)]
-pub struct PeSectionIterator<'data, 'file, Pe>
+pub struct PeSectionIterator<'data, 'file, Pe, R>
 where
     'data: 'file,
     Pe: ImageNtHeaders,
+    R: ReadRef<'data>,
 {
-    pub(super) file: &'file PeFile<'data, Pe>,
+    pub(super) file: &'file PeFile<'data, Pe, R>,
     pub(super) iter: iter::Enumerate<slice::Iter<'file, pe::ImageSectionHeader>>,
 }
 
-impl<'data, 'file, Pe: ImageNtHeaders> Iterator for PeSectionIterator<'data, 'file, Pe> {
-    type Item = PeSection<'data, 'file, Pe>;
+impl<'data, 'file, Pe: ImageNtHeaders, R: ReadRef<'data>> Iterator
+    for PeSectionIterator<'data, 'file, Pe, R>
+{
+    type Item = PeSection<'data, 'file, Pe, R>;
 
     fn next(&mut self) -> Option<Self::Item> {
         self.iter.next().map(|(index, section)| PeSection {
@@ -139,23 +155,24 @@ impl<'data, 'file, Pe: ImageNtHeaders> Iterator for PeSectionIterator<'data, 'fi
 }
 
 /// A section of a `PeFile32`.
-pub type PeSection32<'data, 'file> = PeSection<'data, 'file, pe::ImageNtHeaders32>;
+pub type PeSection32<'data, 'file, R> = PeSection<'data, 'file, pe::ImageNtHeaders32, R>;
 /// A section of a `PeFile64`.
-pub type PeSection64<'data, 'file> = PeSection<'data, 'file, pe::ImageNtHeaders64>;
+pub type PeSection64<'data, 'file, R> = PeSection<'data, 'file, pe::ImageNtHeaders64, R>;
 
 /// A section of a `PeFile`.
 #[derive(Debug)]
-pub struct PeSection<'data, 'file, Pe>
+pub struct PeSection<'data, 'file, Pe, R>
 where
     'data: 'file,
     Pe: ImageNtHeaders,
+    R: ReadRef<'data>,
 {
-    pub(super) file: &'file PeFile<'data, Pe>,
+    pub(super) file: &'file PeFile<'data, Pe, R>,
     pub(super) index: SectionIndex,
     pub(super) section: &'file pe::ImageSectionHeader,
 }
 
-impl<'data, 'file, Pe: ImageNtHeaders> PeSection<'data, 'file, Pe> {
+impl<'data, 'file, Pe: ImageNtHeaders, R: ReadRef<'data>> PeSection<'data, 'file, Pe, R> {
     fn bytes(&self) -> Result<Bytes<'data>> {
         self.section
             .pe_data(self.file.data)
@@ -163,9 +180,14 @@ impl<'data, 'file, Pe: ImageNtHeaders> PeSection<'data, 'file, Pe> {
     }
 }
 
-impl<'data, 'file, Pe: ImageNtHeaders> read::private::Sealed for PeSection<'data, 'file, Pe> {}
+impl<'data, 'file, Pe: ImageNtHeaders, R: ReadRef<'data>> read::private::Sealed
+    for PeSection<'data, 'file, Pe, R>
+{
+}
 
-impl<'data, 'file, Pe: ImageNtHeaders> ObjectSection<'data> for PeSection<'data, 'file, Pe> {
+impl<'data, 'file, Pe: ImageNtHeaders, R: ReadRef<'data>> ObjectSection<'data>
+    for PeSection<'data, 'file, Pe, R>
+{
     type RelocationIterator = PeRelocationIterator<'data, 'file>;
 
     #[inline]
@@ -247,7 +269,7 @@ impl<'data, 'file, Pe: ImageNtHeaders> ObjectSection<'data> for PeSection<'data,
 
 impl<'data> SectionTable<'data> {
     /// Return the data at the given virtual address in a PE file.
-    pub fn pe_data_at(&self, data: Bytes<'data>, va: u32) -> Option<Bytes<'data>> {
+    pub fn pe_data_at<R: ReadRef<'data>>(&self, data: R, va: u32) -> Option<Bytes<'data>> {
         self.iter()
             .filter_map(|section| section.pe_data_at(data, va))
             .next()
@@ -266,13 +288,14 @@ impl pe::ImageSectionHeader {
     }
 
     /// Return the section data in a PE file.
-    pub fn pe_data<'data>(&self, data: Bytes<'data>) -> result::Result<Bytes<'data>, ()> {
+    pub fn pe_data<'data, R: ReadRef<'data>>(&self, data: R) -> result::Result<Bytes<'data>, ()> {
         let (offset, size) = self.pe_file_range();
         data.read_bytes_at(offset as usize, size as usize)
+            .map(Bytes)
     }
 
     /// Return the data at the given virtual address if this section contains it.
-    pub fn pe_data_at<'data>(&self, data: Bytes<'data>, va: u32) -> Option<Bytes<'data>> {
+    pub fn pe_data_at<'data, R: ReadRef<'data>>(&self, data: R, va: u32) -> Option<Bytes<'data>> {
         let section_va = self.virtual_address.get(LE);
         let offset = va.checked_sub(section_va)?;
         let mut section_data = self.pe_data(data).ok()?;
