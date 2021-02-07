@@ -49,7 +49,6 @@ fn main() {
                     }
                 }
             }
-        /*
         } else if let Ok(arches) = FatHeader::parse_arch32(file) {
             println!("Format: Mach-O Fat 32");
             for arch in arches {
@@ -68,7 +67,6 @@ fn main() {
                     dump_object(data);
                 }
             }
-            */
         } else {
             dump_object(file);
         }
