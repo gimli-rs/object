@@ -4,30 +4,33 @@ use core::{mem, slice, str};
 use crate::elf;
 use crate::endian::{self, Endianness};
 use crate::pod::{Bytes, Pod};
-use crate::read::{self, ObjectSegment, ReadError};
+use crate::read::{self, ObjectSegment, ReadError, ReadRef};
 
 use super::{ElfFile, FileHeader, NoteIterator};
 
 /// An iterator over the segments of an `ElfFile32`.
-pub type ElfSegmentIterator32<'data, 'file, Endian = Endianness> =
-    ElfSegmentIterator<'data, 'file, elf::FileHeader32<Endian>>;
+pub type ElfSegmentIterator32<'data, 'file, R, Endian = Endianness> =
+    ElfSegmentIterator<'data, 'file, elf::FileHeader32<Endian>, R>;
 /// An iterator over the segments of an `ElfFile64`.
-pub type ElfSegmentIterator64<'data, 'file, Endian = Endianness> =
-    ElfSegmentIterator<'data, 'file, elf::FileHeader64<Endian>>;
+pub type ElfSegmentIterator64<'data, 'file, R, Endian = Endianness> =
+    ElfSegmentIterator<'data, 'file, elf::FileHeader64<Endian>, R>;
 
 /// An iterator over the segments of an `ElfFile`.
 #[derive(Debug)]
-pub struct ElfSegmentIterator<'data, 'file, Elf>
+pub struct ElfSegmentIterator<'data, 'file, Elf, R>
 where
     'data: 'file,
     Elf: FileHeader,
+    R: ReadRef<'data>,
 {
-    pub(super) file: &'file ElfFile<'data, Elf>,
+    pub(super) file: &'file ElfFile<'data, Elf, R>,
     pub(super) iter: slice::Iter<'data, Elf::ProgramHeader>,
 }
 
-impl<'data, 'file, Elf: FileHeader> Iterator for ElfSegmentIterator<'data, 'file, Elf> {
-    type Item = ElfSegment<'data, 'file, Elf>;
+impl<'data, 'file, Elf: FileHeader, R: ReadRef<'data>> Iterator
+    for ElfSegmentIterator<'data, 'file, Elf, R>
+{
+    type Item = ElfSegment<'data, 'file, Elf, R>;
 
     fn next(&mut self) -> Option<Self::Item> {
         while let Some(segment) = self.iter.next() {
@@ -43,24 +46,25 @@ impl<'data, 'file, Elf: FileHeader> Iterator for ElfSegmentIterator<'data, 'file
 }
 
 /// A segment of an `ElfFile32`.
-pub type ElfSegment32<'data, 'file, Endian = Endianness> =
-    ElfSegment<'data, 'file, elf::FileHeader32<Endian>>;
+pub type ElfSegment32<'data, 'file, R, Endian = Endianness> =
+    ElfSegment<'data, 'file, elf::FileHeader32<Endian>, R>;
 /// A segment of an `ElfFile64`.
-pub type ElfSegment64<'data, 'file, Endian = Endianness> =
-    ElfSegment<'data, 'file, elf::FileHeader64<Endian>>;
+pub type ElfSegment64<'data, 'file, R, Endian = Endianness> =
+    ElfSegment<'data, 'file, elf::FileHeader64<Endian>, R>;
 
 /// A segment of an `ElfFile`.
 #[derive(Debug)]
-pub struct ElfSegment<'data, 'file, Elf>
+pub struct ElfSegment<'data, 'file, Elf, R>
 where
     'data: 'file,
     Elf: FileHeader,
+    R: ReadRef<'data>,
 {
-    pub(super) file: &'file ElfFile<'data, Elf>,
+    pub(super) file: &'file ElfFile<'data, Elf, R>,
     pub(super) segment: &'data Elf::ProgramHeader,
 }
 
-impl<'data, 'file, Elf: FileHeader> ElfSegment<'data, 'file, Elf> {
+impl<'data, 'file, Elf: FileHeader, R: ReadRef<'data>> ElfSegment<'data, 'file, Elf, R> {
     fn bytes(&self) -> read::Result<Bytes<'data>> {
         self.segment
             .data(self.file.endian, self.file.data)
@@ -68,9 +72,14 @@ impl<'data, 'file, Elf: FileHeader> ElfSegment<'data, 'file, Elf> {
     }
 }
 
-impl<'data, 'file, Elf: FileHeader> read::private::Sealed for ElfSegment<'data, 'file, Elf> {}
+impl<'data, 'file, Elf: FileHeader, R: ReadRef<'data>> read::private::Sealed
+    for ElfSegment<'data, 'file, Elf, R>
+{
+}
 
-impl<'data, 'file, Elf: FileHeader> ObjectSegment<'data> for ElfSegment<'data, 'file, Elf> {
+impl<'data, 'file, Elf: FileHeader, R: ReadRef<'data>> ObjectSegment<'data>
+    for ElfSegment<'data, 'file, Elf, R>
+{
     #[inline]
     fn address(&self) -> u64 {
         self.segment.p_vaddr(self.file.endian).into()
@@ -135,9 +144,14 @@ pub trait ProgramHeader: Debug + Pod {
     /// Return the segment data.
     ///
     /// Returns `Err` for invalid values.
-    fn data<'data>(&self, endian: Self::Endian, data: Bytes<'data>) -> Result<Bytes<'data>, ()> {
+    fn data<'data, R: ReadRef<'data>>(
+        &self,
+        endian: Self::Endian,
+        data: R,
+    ) -> Result<Bytes<'data>, ()> {
         let (offset, size) = self.file_range(endian);
         data.read_bytes_at(offset as usize, size as usize)
+            .map(Bytes)
     }
 
     /// Return the segment data as a slice of the given type.
@@ -145,10 +159,10 @@ pub trait ProgramHeader: Debug + Pod {
     /// Allows padding at the end of the data.
     /// Returns `Ok(&[])` if the segment has no data.
     /// Returns `Err` for invalid values, including bad alignment.
-    fn data_as_array<'data, T: Pod>(
+    fn data_as_array<'data, T: Pod, R: ReadRef<'data>>(
         &self,
         endian: Self::Endian,
-        data: Bytes<'data>,
+        data: R,
     ) -> Result<&'data [T], ()> {
         let mut data = self.data(endian, data)?;
         data.read_slice(data.len() / mem::size_of::<T>())
@@ -158,10 +172,10 @@ pub trait ProgramHeader: Debug + Pod {
     ///
     /// Returns `Ok(None)` if the segment does not contain the address.
     /// Returns `Err` for invalid values.
-    fn data_range<'data>(
+    fn data_range<'data, R: ReadRef<'data>>(
         &self,
         endian: Self::Endian,
-        data: Bytes<'data>,
+        data: R,
         address: u64,
         size: u64,
     ) -> Result<Option<Bytes<'data>>, ()> {
@@ -178,10 +192,10 @@ pub trait ProgramHeader: Debug + Pod {
     ///
     /// Returns `Ok(None)` if the segment is not `PT_DYNAMIC`.
     /// Returns `Err` for invalid values.
-    fn dynamic<'data>(
+    fn dynamic<'data, R: ReadRef<'data>>(
         &self,
         endian: Self::Endian,
-        data: Bytes<'data>,
+        data: R,
     ) -> read::Result<Option<&'data [<Self::Elf as FileHeader>::Dyn]>> {
         if self.p_type(endian) != elf::PT_DYNAMIC {
             return Ok(None);
@@ -196,10 +210,10 @@ pub trait ProgramHeader: Debug + Pod {
     ///
     /// Returns `Ok(None)` if the segment does not contain notes.
     /// Returns `Err` for invalid values.
-    fn notes<'data>(
+    fn notes<'data, R: ReadRef<'data>>(
         &self,
         endian: Self::Endian,
-        data: Bytes<'data>,
+        data: R,
     ) -> read::Result<Option<NoteIterator<'data, Self::Elf>>> {
         if self.p_type(endian) != elf::PT_NOTE {
             return Ok(None);

@@ -154,9 +154,9 @@ enum FileInternal<'data, R: ReadRef<'data>> {
     #[cfg(feature = "coff")]
     Coff(coff::CoffFile<'data, R>),
     #[cfg(feature = "elf")]
-    Elf32(elf::ElfFile32<'data>),
+    Elf32(elf::ElfFile32<'data, R>),
     #[cfg(feature = "elf")]
-    Elf64(elf::ElfFile64<'data>),
+    Elf64(elf::ElfFile64<'data, R>),
     #[cfg(feature = "macho")]
     MachO32(macho::MachOFile32<'data, R>),
     #[cfg(feature = "macho")]
@@ -227,7 +227,7 @@ where
     type Symbol = Symbol<'data, 'file, R>;
     type SymbolIterator = SymbolIterator<'data, 'file, R>;
     type SymbolTable = SymbolTable<'data, 'file, R>;
-    type DynamicRelocationIterator = DynamicRelocationIterator<'data, 'file>;
+    type DynamicRelocationIterator = DynamicRelocationIterator<'data, 'file, R>;
 
     fn architecture(&self) -> Architecture {
         with_inner!(self.inner, FileInternal, |x| x.architecture())
@@ -307,7 +307,7 @@ where
     }
 
     #[cfg(feature = "elf")]
-    fn dynamic_relocations(&'file self) -> Option<DynamicRelocationIterator<'data, 'file>> {
+    fn dynamic_relocations(&'file self) -> Option<DynamicRelocationIterator<'data, 'file, R>> {
         let inner = match self.inner {
             FileInternal::Elf32(ref elf) => {
                 DynamicRelocationIteratorInternal::Elf32(elf.dynamic_relocations()?)
@@ -321,7 +321,7 @@ where
     }
 
     #[cfg(not(feature = "elf"))]
-    fn dynamic_relocations(&'file self) -> Option<DynamicRelocationIterator<'data, 'file>> {
+    fn dynamic_relocations(&'file self) -> Option<DynamicRelocationIterator<'data, 'file, R>> {
         None
     }
 
@@ -386,9 +386,9 @@ where
     #[cfg(feature = "coff")]
     Coff(coff::CoffSegmentIterator<'data, 'file, R>),
     #[cfg(feature = "elf")]
-    Elf32(elf::ElfSegmentIterator32<'data, 'file>),
+    Elf32(elf::ElfSegmentIterator32<'data, 'file, R>),
     #[cfg(feature = "elf")]
-    Elf64(elf::ElfSegmentIterator64<'data, 'file>),
+    Elf64(elf::ElfSegmentIterator64<'data, 'file, R>),
     #[cfg(feature = "macho")]
     MachO32(macho::MachOSegmentIterator32<'data, 'file, R>),
     #[cfg(feature = "macho")]
@@ -426,9 +426,9 @@ where
     #[cfg(feature = "coff")]
     Coff(coff::CoffSegment<'data, 'file, R>),
     #[cfg(feature = "elf")]
-    Elf32(elf::ElfSegment32<'data, 'file>),
+    Elf32(elf::ElfSegment32<'data, 'file, R>),
     #[cfg(feature = "elf")]
-    Elf64(elf::ElfSegment64<'data, 'file>),
+    Elf64(elf::ElfSegment64<'data, 'file, R>),
     #[cfg(feature = "macho")]
     MachO32(macho::MachOSegment32<'data, 'file, R>),
     #[cfg(feature = "macho")]
@@ -510,9 +510,9 @@ where
     #[cfg(feature = "coff")]
     Coff(coff::CoffSectionIterator<'data, 'file, R>),
     #[cfg(feature = "elf")]
-    Elf32(elf::ElfSectionIterator32<'data, 'file>),
+    Elf32(elf::ElfSectionIterator32<'data, 'file, R>),
     #[cfg(feature = "elf")]
-    Elf64(elf::ElfSectionIterator64<'data, 'file>),
+    Elf64(elf::ElfSectionIterator64<'data, 'file, R>),
     #[cfg(feature = "macho")]
     MachO32(macho::MachOSectionIterator32<'data, 'file, R>),
     #[cfg(feature = "macho")]
@@ -549,9 +549,9 @@ where
     #[cfg(feature = "coff")]
     Coff(coff::CoffSection<'data, 'file, R>),
     #[cfg(feature = "elf")]
-    Elf32(elf::ElfSection32<'data, 'file>),
+    Elf32(elf::ElfSection32<'data, 'file, R>),
     #[cfg(feature = "elf")]
-    Elf64(elf::ElfSection64<'data, 'file>),
+    Elf64(elf::ElfSection64<'data, 'file, R>),
     #[cfg(feature = "macho")]
     MachO32(macho::MachOSection32<'data, 'file, R>),
     #[cfg(feature = "macho")]
@@ -669,9 +669,9 @@ where
     #[cfg(feature = "coff")]
     Coff(coff::CoffComdatIterator<'data, 'file, R>),
     #[cfg(feature = "elf")]
-    Elf32(elf::ElfComdatIterator32<'data, 'file>),
+    Elf32(elf::ElfComdatIterator32<'data, 'file, R>),
     #[cfg(feature = "elf")]
-    Elf64(elf::ElfComdatIterator64<'data, 'file>),
+    Elf64(elf::ElfComdatIterator64<'data, 'file, R>),
     #[cfg(feature = "macho")]
     MachO32(macho::MachOComdatIterator32<'data, 'file, R>),
     #[cfg(feature = "macho")]
@@ -708,9 +708,9 @@ where
     #[cfg(feature = "coff")]
     Coff(coff::CoffComdat<'data, 'file, R>),
     #[cfg(feature = "elf")]
-    Elf32(elf::ElfComdat32<'data, 'file>),
+    Elf32(elf::ElfComdat32<'data, 'file, R>),
     #[cfg(feature = "elf")]
-    Elf64(elf::ElfComdat64<'data, 'file>),
+    Elf64(elf::ElfComdat64<'data, 'file, R>),
     #[cfg(feature = "macho")]
     MachO32(macho::MachOComdat32<'data, 'file, R>),
     #[cfg(feature = "macho")]
@@ -779,9 +779,9 @@ where
     #[cfg(feature = "coff")]
     Coff(coff::CoffComdatSectionIterator<'data, 'file, R>),
     #[cfg(feature = "elf")]
-    Elf32(elf::ElfComdatSectionIterator32<'data, 'file>),
+    Elf32(elf::ElfComdatSectionIterator32<'data, 'file, R>),
     #[cfg(feature = "elf")]
-    Elf64(elf::ElfComdatSectionIterator64<'data, 'file>),
+    Elf64(elf::ElfComdatSectionIterator64<'data, 'file, R>),
     #[cfg(feature = "macho")]
     MachO32(macho::MachOComdatSectionIterator32<'data, 'file, R>),
     #[cfg(feature = "macho")]
@@ -1012,28 +1012,30 @@ impl<'data, 'file, R: ReadRef<'data>> ObjectSymbol<'data> for Symbol<'data, 'fil
 
 /// An iterator over dynamic relocation entries.
 #[derive(Debug)]
-pub struct DynamicRelocationIterator<'data, 'file>
+pub struct DynamicRelocationIterator<'data, 'file, R>
 where
     'data: 'file,
+    R: ReadRef<'data>,
 {
-    inner: DynamicRelocationIteratorInternal<'data, 'file>,
+    inner: DynamicRelocationIteratorInternal<'data, 'file, R>,
 }
 
 #[derive(Debug)]
-enum DynamicRelocationIteratorInternal<'data, 'file>
+enum DynamicRelocationIteratorInternal<'data, 'file, R>
 where
     'data: 'file,
+    R: ReadRef<'data>,
 {
     #[cfg(feature = "elf")]
-    Elf32(elf::ElfDynamicRelocationIterator32<'data, 'file>),
+    Elf32(elf::ElfDynamicRelocationIterator32<'data, 'file, R>),
     #[cfg(feature = "elf")]
-    Elf64(elf::ElfDynamicRelocationIterator64<'data, 'file>),
+    Elf64(elf::ElfDynamicRelocationIterator64<'data, 'file, R>),
     // We need to always use the lifetime parameters.
     #[allow(unused)]
-    None(PhantomData<(&'data (), &'file ())>),
+    None(PhantomData<(&'data (), &'file (), R)>),
 }
 
-impl<'data, 'file> Iterator for DynamicRelocationIterator<'data, 'file> {
+impl<'data, 'file, R: ReadRef<'data>> Iterator for DynamicRelocationIterator<'data, 'file, R> {
     type Item = (u64, Relocation);
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -1064,9 +1066,9 @@ where
     #[cfg(feature = "coff")]
     Coff(coff::CoffRelocationIterator<'data, 'file, R>),
     #[cfg(feature = "elf")]
-    Elf32(elf::ElfSectionRelocationIterator32<'data, 'file>),
+    Elf32(elf::ElfSectionRelocationIterator32<'data, 'file, R>),
     #[cfg(feature = "elf")]
-    Elf64(elf::ElfSectionRelocationIterator64<'data, 'file>),
+    Elf64(elf::ElfSectionRelocationIterator64<'data, 'file, R>),
     #[cfg(feature = "macho")]
     MachO32(macho::MachORelocationIterator32<'data, 'file, R>),
     #[cfg(feature = "macho")]

@@ -7,7 +7,8 @@ use crate::elf;
 use crate::endian::{self, Endianness};
 use crate::pod::Pod;
 use crate::read::{
-    self, Error, Relocation, RelocationEncoding, RelocationKind, RelocationTarget, SymbolIndex,
+    self, Error, ReadRef, Relocation, RelocationEncoding, RelocationKind, RelocationTarget,
+    SymbolIndex,
 };
 
 use super::{ElfFile, FileHeader, SectionHeader, SectionTable};
@@ -91,25 +92,28 @@ impl<'data, Elf: FileHeader> Iterator for ElfRelaIterator<'data, Elf> {
 }
 
 /// An iterator over the dynamic relocations for an `ElfFile32`.
-pub type ElfDynamicRelocationIterator32<'data, 'file, Endian = Endianness> =
-    ElfDynamicRelocationIterator<'data, 'file, elf::FileHeader32<Endian>>;
+pub type ElfDynamicRelocationIterator32<'data, 'file, R, Endian = Endianness> =
+    ElfDynamicRelocationIterator<'data, 'file, elf::FileHeader32<Endian>, R>;
 /// An iterator over the dynamic relocations for an `ElfFile64`.
-pub type ElfDynamicRelocationIterator64<'data, 'file, Endian = Endianness> =
-    ElfDynamicRelocationIterator<'data, 'file, elf::FileHeader64<Endian>>;
+pub type ElfDynamicRelocationIterator64<'data, 'file, R, Endian = Endianness> =
+    ElfDynamicRelocationIterator<'data, 'file, elf::FileHeader64<Endian>, R>;
 
 /// An iterator over the dynamic relocations for an `ElfFile`.
-pub struct ElfDynamicRelocationIterator<'data, 'file, Elf>
+pub struct ElfDynamicRelocationIterator<'data, 'file, Elf, R>
 where
     'data: 'file,
     Elf: FileHeader,
+    R: ReadRef<'data>,
 {
     /// The current relocation section index.
     pub(super) section_index: usize,
-    pub(super) file: &'file ElfFile<'data, Elf>,
+    pub(super) file: &'file ElfFile<'data, Elf, R>,
     pub(super) relocations: Option<ElfRelaIterator<'data, Elf>>,
 }
 
-impl<'data, 'file, Elf: FileHeader> Iterator for ElfDynamicRelocationIterator<'data, 'file, Elf> {
+impl<'data, 'file, Elf: FileHeader, R: ReadRef<'data>> Iterator
+    for ElfDynamicRelocationIterator<'data, 'file, Elf, R>
+{
     type Item = (u64, Relocation);
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -149,32 +153,37 @@ impl<'data, 'file, Elf: FileHeader> Iterator for ElfDynamicRelocationIterator<'d
     }
 }
 
-impl<'data, 'file, Elf: FileHeader> fmt::Debug for ElfDynamicRelocationIterator<'data, 'file, Elf> {
+impl<'data, 'file, Elf: FileHeader, R: ReadRef<'data>> fmt::Debug
+    for ElfDynamicRelocationIterator<'data, 'file, Elf, R>
+{
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("ElfDynamicRelocationIterator").finish()
     }
 }
 
 /// An iterator over the relocations for an `ElfSection32`.
-pub type ElfSectionRelocationIterator32<'data, 'file, Endian = Endianness> =
-    ElfSectionRelocationIterator<'data, 'file, elf::FileHeader32<Endian>>;
+pub type ElfSectionRelocationIterator32<'data, 'file, R, Endian = Endianness> =
+    ElfSectionRelocationIterator<'data, 'file, elf::FileHeader32<Endian>, R>;
 /// An iterator over the relocations for an `ElfSection64`.
-pub type ElfSectionRelocationIterator64<'data, 'file, Endian = Endianness> =
-    ElfSectionRelocationIterator<'data, 'file, elf::FileHeader64<Endian>>;
+pub type ElfSectionRelocationIterator64<'data, 'file, R, Endian = Endianness> =
+    ElfSectionRelocationIterator<'data, 'file, elf::FileHeader64<Endian>, R>;
 
 /// An iterator over the relocations for an `ElfSection`.
-pub struct ElfSectionRelocationIterator<'data, 'file, Elf>
+pub struct ElfSectionRelocationIterator<'data, 'file, Elf, R>
 where
     'data: 'file,
     Elf: FileHeader,
+    R: ReadRef<'data>,
 {
     /// The current pointer in the chain of relocation sections.
     pub(super) section_index: usize,
-    pub(super) file: &'file ElfFile<'data, Elf>,
+    pub(super) file: &'file ElfFile<'data, Elf, R>,
     pub(super) relocations: Option<ElfRelaIterator<'data, Elf>>,
 }
 
-impl<'data, 'file, Elf: FileHeader> Iterator for ElfSectionRelocationIterator<'data, 'file, Elf> {
+impl<'data, 'file, Elf: FileHeader, R: ReadRef<'data>> Iterator
+    for ElfSectionRelocationIterator<'data, 'file, Elf, R>
+{
     type Item = (u64, Relocation);
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -208,7 +217,9 @@ impl<'data, 'file, Elf: FileHeader> Iterator for ElfSectionRelocationIterator<'d
     }
 }
 
-impl<'data, 'file, Elf: FileHeader> fmt::Debug for ElfSectionRelocationIterator<'data, 'file, Elf> {
+impl<'data, 'file, Elf: FileHeader, R: ReadRef<'data>> fmt::Debug
+    for ElfSectionRelocationIterator<'data, 'file, Elf, R>
+{
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("ElfSectionRelocationIterator").finish()
     }

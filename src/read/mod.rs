@@ -81,7 +81,7 @@ impl<T> ReadError<T> for Option<T> {
     target_pointer_width = "32",
     feature = "elf"
 ))]
-pub type NativeFile<'data> = elf::ElfFile32<'data>;
+pub type NativeFile<'data, R> = elf::ElfFile32<'data, R>;
 
 /// The native executable file for the target platform.
 #[cfg(all(
@@ -90,27 +90,27 @@ pub type NativeFile<'data> = elf::ElfFile32<'data>;
     target_pointer_width = "64",
     feature = "elf"
 ))]
-pub type NativeFile<'data> = elf::ElfFile64<'data>;
+pub type NativeFile<'data, R> = elf::ElfFile64<'data, R>;
 
 /// The native executable file for the target platform.
 #[cfg(all(target_os = "macos", target_pointer_width = "32", feature = "macho"))]
-pub type NativeFile<'data> = macho::MachOFile32<'data>;
+pub type NativeFile<'data, R> = macho::MachOFile32<'data, R>;
 
 /// The native executable file for the target platform.
 #[cfg(all(target_os = "macos", target_pointer_width = "64", feature = "macho"))]
-pub type NativeFile<'data> = macho::MachOFile64<'data>;
+pub type NativeFile<'data, R> = macho::MachOFile64<'data, R>;
 
 /// The native executable file for the target platform.
 #[cfg(all(target_os = "windows", target_pointer_width = "32", feature = "pe"))]
-pub type NativeFile<'data> = pe::PeFile32<'data>;
+pub type NativeFile<'data, R> = pe::PeFile32<'data, R>;
 
 /// The native executable file for the target platform.
 #[cfg(all(target_os = "windows", target_pointer_width = "64", feature = "pe"))]
-pub type NativeFile<'data> = pe::PeFile64<'data>;
+pub type NativeFile<'data, R> = pe::PeFile64<'data, R>;
 
 /// The native executable file for the target platform.
 #[cfg(all(feature = "wasm", target_arch = "wasm32", feature = "wasm"))]
-pub type NativeFile<'data> = wasm::WasmFile<'data>;
+pub type NativeFile<'data, R> = wasm::WasmFile<'data, R>;
 
 /// An object file kind.
 #[derive(Debug)]
