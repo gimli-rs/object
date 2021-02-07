@@ -259,7 +259,6 @@ impl<'data> ArchiveMember<'data> {
     /// Return the file data.
     #[inline]
     pub fn data<R: ReadRef<'data>>(&self, data: R) -> read::Result<&'data [u8]> {
-        println!("{} {}", self.offset, self.size);
         data.read_bytes_at(self.offset, self.size)
             .read_error("Archive member size is too large")
     }

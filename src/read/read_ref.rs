@@ -1,12 +1,6 @@
 use crate::pod::{from_bytes, slice_from_bytes, Pod};
 use alloc::vec::Vec;
-use std::boxed::Box;
-use std::cell::RefCell;
-use std::collections::hash_map::Entry;
-use std::collections::HashMap;
-use std::convert::TryInto;
-use std::io::{Read, Seek, SeekFrom};
-use std::mem;
+use core::mem;
 
 /// TODO
 pub trait ReadRef<'data>: 'data + Clone + Copy {
@@ -73,64 +67,74 @@ impl<'data> ReadRef<'data> for &'data Vec<u8> {
 }
 
 /// TODO
-#[derive(Debug)]
-pub struct ReadCache<R: Read + Seek> {
-    cache: RefCell<ReadCacheInternal<R>>,
-}
+#[cfg(feature = "std")]
+mod cache {
+    use super::*;
+    use std::boxed::Box;
+    use std::cell::RefCell;
+    use std::collections::hash_map::Entry;
+    use std::collections::HashMap;
+    use std::convert::TryInto;
+    use std::io::{Read, Seek, SeekFrom};
 
-#[derive(Debug)]
-struct ReadCacheInternal<R: Read + Seek> {
-    read: R,
-    bufs: HashMap<(usize, usize), Box<[u8]>>,
-}
-
-/// TODO
-impl<R: Read + Seek> ReadCache<R> {
     /// TODO
-    pub fn new(read: R) -> Self {
-        ReadCache {
-            cache: RefCell::new(ReadCacheInternal {
-                read,
-                bufs: HashMap::new(),
-            }),
+    #[derive(Debug)]
+    pub struct ReadCache<R: Read + Seek> {
+        cache: RefCell<ReadCacheInternal<R>>,
+    }
+
+    #[derive(Debug)]
+    struct ReadCacheInternal<R: Read + Seek> {
+        read: R,
+        bufs: HashMap<(usize, usize), Box<[u8]>>,
+    }
+
+    /// TODO
+    impl<R: Read + Seek> ReadCache<R> {
+        /// TODO
+        pub fn new(read: R) -> Self {
+            ReadCache {
+                cache: RefCell::new(ReadCacheInternal {
+                    read,
+                    bufs: HashMap::new(),
+                }),
+            }
+        }
+    }
+
+    impl<'data, R: Read + Seek> ReadRef<'data> for &'data ReadCache<R> {
+        fn len(self) -> Result<usize, ()> {
+            let cache = &mut *self.cache.borrow_mut();
+            cache
+                .read
+                .seek(SeekFrom::End(0))
+                .map_err(|_| ())?
+                .try_into()
+                .map_err(|_| ())
+        }
+
+        fn read_bytes_at(self, offset: usize, size: usize) -> Result<&'data [u8], ()> {
+            if size == 0 {
+                return Ok(&[]);
+            }
+            let cache = &mut *self.cache.borrow_mut();
+            let buf = match cache.bufs.entry((offset, size)) {
+                Entry::Occupied(entry) => entry.into_mut(),
+                Entry::Vacant(entry) => {
+                    cache
+                        .read
+                        .seek(SeekFrom::Start(offset as u64))
+                        .map_err(|_| ())?;
+                    let mut bytes = vec![0; size].into_boxed_slice();
+                    cache.read.read_exact(&mut bytes).map_err(|_| ())?;
+                    entry.insert(bytes)
+                }
+            };
+            // Extend the lifetime to that of self.
+            // This is OK because we never mutate or remove entries.
+            Ok(unsafe { mem::transmute::<&[u8], &[u8]>(buf) })
         }
     }
 }
-
-impl<'data, R: Read + Seek> ReadRef<'data> for &'data ReadCache<R> {
-    fn len(self) -> Result<usize, ()> {
-        let cache = &mut *self.cache.borrow_mut();
-        cache
-            .read
-            .seek(SeekFrom::End(0))
-            .map_err(|_| ())?
-            .try_into()
-            .map_err(|_| ())
-    }
-
-    fn read_bytes_at(self, offset: usize, size: usize) -> Result<&'data [u8], ()> {
-        if size == 0 {
-            return Ok(&[]);
-        }
-        let cache = &mut *self.cache.borrow_mut();
-        let buf = match cache.bufs.entry((offset, size)) {
-            Entry::Occupied(entry) => {
-                println!("Cache hit at {:x}[{:x}]", offset, size);
-                entry.into_mut()
-            }
-            Entry::Vacant(entry) => {
-                println!("Reading at {:x}[{:x}]", offset, size);
-                cache
-                    .read
-                    .seek(SeekFrom::Start(offset as u64))
-                    .map_err(|_| ())?;
-                let mut bytes = vec![0; size].into_boxed_slice();
-                cache.read.read_exact(&mut bytes).map_err(|_| ())?;
-                entry.insert(bytes)
-            }
-        };
-        // Extend the lifetime to that of self.
-        // This is OK because we never mutate or remove entries.
-        Ok(unsafe { mem::transmute::<&[u8], &[u8]>(buf) })
-    }
-}
+#[cfg(feature = "std")]
+pub use cache::*;
