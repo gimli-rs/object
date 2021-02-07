@@ -3,11 +3,15 @@ use std::boxed::Box;
 use std::cell::RefCell;
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
+use std::convert::TryInto;
 use std::io::{Read, Seek, SeekFrom};
 use std::mem;
 
 /// TODO
 pub trait ReadRef<'data>: 'data + Clone + Copy {
+    /// TODO
+    fn len(self) -> Result<usize, ()>;
+
     /// TODO
     fn read_bytes_at(self, offset: usize, size: usize) -> Result<&'data [u8], ()>;
 
@@ -47,6 +51,10 @@ pub trait ReadRef<'data>: 'data + Clone + Copy {
 
 /// TODO
 impl<'data> ReadRef<'data> for &'data [u8] {
+    fn len(self) -> Result<usize, ()> {
+        Ok(self.len())
+    }
+
     fn read_bytes_at(self, offset: usize, size: usize) -> Result<&'data [u8], ()> {
         self.get(offset..).ok_or(())?.get(..size).ok_or(())
     }
@@ -78,6 +86,16 @@ impl<R: Read + Seek> ReadCache<R> {
 }
 
 impl<'data, R: Read + Seek> ReadRef<'data> for &'data ReadCache<R> {
+    fn len(self) -> Result<usize, ()> {
+        let cache = &mut *self.cache.borrow_mut();
+        cache
+            .read
+            .seek(SeekFrom::End(0))
+            .map_err(|_| ())?
+            .try_into()
+            .map_err(|_| ())
+    }
+
     fn read_bytes_at(self, offset: usize, size: usize) -> Result<&'data [u8], ()> {
         if size == 0 {
             return Ok(&[]);

@@ -12,8 +12,8 @@ use wasmparser as wp;
 use crate::read::{
     self, Architecture, ComdatKind, CompressedData, Error, Export, FileFlags, Import,
     NoDynamicRelocationIterator, Object, ObjectComdat, ObjectSection, ObjectSegment, ObjectSymbol,
-    ObjectSymbolTable, ReadError, Relocation, Result, SectionFlags, SectionIndex, SectionKind,
-    SymbolFlags, SymbolIndex, SymbolKind, SymbolScope, SymbolSection,
+    ObjectSymbolTable, ReadError, ReadRef, Relocation, Result, SectionFlags, SectionIndex,
+    SectionKind, SymbolFlags, SymbolIndex, SymbolKind, SymbolScope, SymbolSection,
 };
 
 const SECTION_CUSTOM: usize = 0;
@@ -62,7 +62,9 @@ impl<T> ReadError<T> for wasmparser::Result<T> {
 
 impl<'data> WasmFile<'data> {
     /// Parse the raw wasm data.
-    pub fn parse(data: &'data [u8]) -> Result<Self> {
+    pub fn parse<R: ReadRef<'data>>(data: R) -> Result<Self> {
+        let len = data.len().read_error("Unknown Wasm file size")?;
+        let data = data.read_bytes_at(0, len).read_error("Wasm read failed")?;
         let module = wp::ModuleReader::new(data).read_error("Invalid Wasm header")?;
 
         let mut file = WasmFile::default();
