@@ -904,7 +904,7 @@ impl<'data, 'file, R: ReadRef<'data>> Iterator for SymbolIterator<'data, 'file, 
 }
 
 /// A symbol table entry.
-pub struct Symbol<'data, 'file, R>
+pub struct Symbol<'data, 'file, R = &'data [u8]>
 where
     'data: 'file,
     R: ReadRef<'data>,

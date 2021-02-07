@@ -1,4 +1,5 @@
 use crate::pod::{from_bytes, slice_from_bytes, Pod};
+use alloc::vec::Vec;
 use std::boxed::Box;
 use std::cell::RefCell;
 use std::collections::hash_map::Entry;
@@ -51,6 +52,17 @@ pub trait ReadRef<'data>: 'data + Clone + Copy {
 
 /// TODO
 impl<'data> ReadRef<'data> for &'data [u8] {
+    fn len(self) -> Result<usize, ()> {
+        Ok(self.len())
+    }
+
+    fn read_bytes_at(self, offset: usize, size: usize) -> Result<&'data [u8], ()> {
+        self.get(offset..).ok_or(())?.get(..size).ok_or(())
+    }
+}
+
+/// TODO
+impl<'data> ReadRef<'data> for &'data Vec<u8> {
     fn len(self) -> Result<usize, ()> {
         Ok(self.len())
     }

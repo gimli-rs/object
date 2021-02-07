@@ -66,7 +66,7 @@ impl<'data, Elf: FileHeader, R: ReadRef<'data>> ElfFile<'data, Elf, R> {
     }
 
     /// Returns the raw data.
-    pub fn data(&self) -> Bytes<'data> {
+    pub fn data(&self) -> R {
         self.data
     }
 

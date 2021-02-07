@@ -2,7 +2,7 @@
 
 use object::read::archive::ArchiveFile;
 use object::read::macho::{FatArch, FatHeader};
-use object::{Bytes, Endianness};
+use object::{Bytes, Endianness, ReadRef};
 use std::convert::TryInto;
 use std::io::Write;
 use std::{env, fmt, fs, io, process, str};
@@ -191,15 +191,15 @@ fn print_object(p: &mut Printer<impl Write>, data: &[u8]) {
     };
     match kind {
         object::FileKind::Archive => print_archive(p, data),
-        object::FileKind::Coff => pe::print_coff(p, Bytes(data)),
-        object::FileKind::Elf32 => elf::print_elf32(p, Bytes(data)),
-        object::FileKind::Elf64 => elf::print_elf64(p, Bytes(data)),
-        object::FileKind::MachO32 => macho::print_macho32(p, Bytes(data)),
-        object::FileKind::MachO64 => macho::print_macho64(p, Bytes(data)),
+        object::FileKind::Coff => pe::print_coff(p, data),
+        object::FileKind::Elf32 => elf::print_elf32(p, data),
+        object::FileKind::Elf64 => elf::print_elf64(p, data),
+        object::FileKind::MachO32 => macho::print_macho32(p, data),
+        object::FileKind::MachO64 => macho::print_macho64(p, data),
         object::FileKind::MachOFat32 => macho::print_macho_fat32(p, data),
         object::FileKind::MachOFat64 => macho::print_macho_fat64(p, data),
-        object::FileKind::Pe32 => pe::print_pe32(p, Bytes(data)),
-        object::FileKind::Pe64 => pe::print_pe64(p, Bytes(data)),
+        object::FileKind::Pe32 => pe::print_pe32(p, data),
+        object::FileKind::Pe64 => pe::print_pe64(p, data),
         // TODO
         _ => {}
     }
@@ -212,7 +212,9 @@ fn print_archive(p: &mut Printer<impl Write>, data: &[u8]) {
             if let Ok(member) = member {
                 p.blank();
                 p.field("Member", String::from_utf8_lossy(member.name()));
-                print_object(p, member.data());
+                if let Ok(member_data) = member.data(data) {
+                    print_object(p, member_data);
+                }
             }
         }
     }
@@ -223,14 +225,14 @@ mod elf {
     use object::elf::*;
     use object::read::elf::*;
 
-    pub(super) fn print_elf32(p: &mut Printer<impl Write>, data: Bytes) {
+    pub(super) fn print_elf32(p: &mut Printer<impl Write>, data: &[u8]) {
         if let Ok(elf) = FileHeader32::<Endianness>::parse(data) {
             println!("Format: ELF 32-bit");
             print_elf(p, elf, data);
         }
     }
 
-    pub(super) fn print_elf64(p: &mut Printer<impl Write>, data: Bytes) {
+    pub(super) fn print_elf64(p: &mut Printer<impl Write>, data: &[u8]) {
         if let Ok(elf) = FileHeader64::<Endianness>::parse(data) {
             println!("Format: ELF 64-bit");
             print_elf(p, elf, data);
@@ -240,7 +242,7 @@ mod elf {
     fn print_elf<Elf: FileHeader<Endian = Endianness>>(
         p: &mut Printer<impl Write>,
         elf: &Elf,
-        data: Bytes,
+        data: &[u8],
     ) {
         if let Ok(endian) = elf.endian() {
             print_file_header(p, endian, elf);
@@ -324,7 +326,7 @@ mod elf {
     fn print_program_headers<Elf: FileHeader>(
         p: &mut Printer<impl Write>,
         endian: Elf::Endian,
-        data: Bytes,
+        data: &[u8],
         elf: &Elf,
         segments: &[Elf::ProgramHeader],
     ) {
@@ -386,7 +388,7 @@ mod elf {
     fn print_segment_notes<Elf: FileHeader>(
         p: &mut Printer<impl Write>,
         endian: Elf::Endian,
-        data: Bytes,
+        data: &[u8],
         _elf: &Elf,
         segment: &Elf::ProgramHeader,
     ) {
@@ -398,7 +400,7 @@ mod elf {
     fn print_segment_dynamic<Elf: FileHeader>(
         p: &mut Printer<impl Write>,
         endian: Elf::Endian,
-        data: Bytes,
+        data: &[u8],
         elf: &Elf,
         segments: &[Elf::ProgramHeader],
         segment: &Elf::ProgramHeader,
@@ -468,7 +470,7 @@ mod elf {
     fn print_section_headers<Elf: FileHeader>(
         p: &mut Printer<impl Write>,
         endian: Elf::Endian,
-        data: Bytes,
+        data: &[u8],
         elf: &Elf,
         sections: &SectionTable<Elf>,
     ) {
@@ -537,7 +539,7 @@ mod elf {
     fn print_section_symbols<Elf: FileHeader>(
         p: &mut Printer<impl Write>,
         endian: Elf::Endian,
-        data: Bytes,
+        data: &[u8],
         elf: &Elf,
         sections: &SectionTable<Elf>,
         section_index: usize,
@@ -615,7 +617,7 @@ mod elf {
     fn print_section_rel<Elf: FileHeader>(
         p: &mut Printer<impl Write>,
         endian: Elf::Endian,
-        data: Bytes,
+        data: &[u8],
         elf: &Elf,
         sections: &SectionTable<Elf>,
         section: &Elf::SectionHeader,
@@ -637,7 +639,7 @@ mod elf {
     fn print_section_rela<Elf: FileHeader>(
         p: &mut Printer<impl Write>,
         endian: Elf::Endian,
-        data: Bytes,
+        data: &[u8],
         elf: &Elf,
         sections: &SectionTable<Elf>,
         section: &Elf::SectionHeader,
@@ -705,7 +707,7 @@ mod elf {
     fn print_section_notes<Elf: FileHeader>(
         p: &mut Printer<impl Write>,
         endian: Elf::Endian,
-        data: Bytes,
+        data: &[u8],
         _elf: &Elf,
         section: &Elf::SectionHeader,
     ) {
@@ -717,7 +719,7 @@ mod elf {
     fn print_section_group<Elf: FileHeader>(
         p: &mut Printer<impl Write>,
         endian: Elf::Endian,
-        data: Bytes,
+        data: &[u8],
         _elf: &Elf,
         sections: &SectionTable<Elf>,
         section: &Elf::SectionHeader,
@@ -3215,14 +3217,14 @@ mod macho {
         });
     }
 
-    pub(super) fn print_macho32(p: &mut Printer<impl Write>, data: Bytes) {
+    pub(super) fn print_macho32(p: &mut Printer<impl Write>, data: &[u8]) {
         if let Ok(header) = MachHeader32::parse(data) {
             println!("Format: Mach-O 32-bit");
             print_macho(p, header, data);
         }
     }
 
-    pub(super) fn print_macho64(p: &mut Printer<impl Write>, data: Bytes) {
+    pub(super) fn print_macho64(p: &mut Printer<impl Write>, data: &[u8]) {
         if let Ok(header) = MachHeader64::parse(data) {
             println!("Format: Mach-O 64-bit");
             print_macho(p, header, data);
@@ -3237,7 +3239,7 @@ mod macho {
     fn print_macho<Mach: MachHeader<Endian = Endianness>>(
         p: &mut Printer<impl Write>,
         header: &Mach,
-        data: Bytes,
+        data: &[u8],
     ) {
         if let Ok(endian) = header.endian() {
             let mut state = MachState::default();
@@ -3268,7 +3270,7 @@ mod macho {
     fn print_load_command<Mach: MachHeader>(
         p: &mut Printer<impl Write>,
         endian: Mach::Endian,
-        data: Bytes,
+        data: &[u8],
         header: &Mach,
         command: LoadCommandData<Mach::Endian>,
         state: &mut MachState,
@@ -3282,7 +3284,7 @@ mod macho {
                         data,
                         header.cputype(endian),
                         segment,
-                        section_data,
+                        section_data.0,
                         state,
                     );
                 }
@@ -3293,7 +3295,7 @@ mod macho {
                         data,
                         header.cputype(endian),
                         segment,
-                        section_data,
+                        section_data.0,
                         state,
                     );
                 }
@@ -3612,10 +3614,10 @@ mod macho {
     fn print_segment<S: Segment>(
         p: &mut Printer<impl Write>,
         endian: S::Endian,
-        data: Bytes,
+        data: &[u8],
         cputype: u32,
         segment: &S,
-        section_data: Bytes,
+        section_data: &[u8],
         state: &mut MachState,
     ) {
         p.group("SegmentCommand", |p| {
@@ -3633,7 +3635,7 @@ mod macho {
             p.field("NumberOfSections", segment.nsects(endian));
             p.field_hex("Flags", segment.flags(endian));
             p.flags(segment.flags(endian), 0, FLAGS_SG);
-            if let Ok(sections) = segment.sections(endian, section_data) {
+            if let Ok(sections) = segment.sections(endian, Bytes(section_data)) {
                 for section in sections {
                     print_section(p, endian, data, cputype, section, state);
                 }
@@ -3644,7 +3646,7 @@ mod macho {
     fn print_section<S: Section>(
         p: &mut Printer<impl Write>,
         endian: S::Endian,
-        data: Bytes,
+        data: &[u8],
         cputype: u32,
         section: &S,
         state: &mut MachState,
@@ -3711,7 +3713,7 @@ mod macho {
     fn print_symtab<Mach: MachHeader, W: Write>(
         p: &mut Printer<W>,
         endian: Mach::Endian,
-        data: Bytes,
+        data: &[u8],
         symtab: &SymtabCommand<Mach::Endian>,
     ) {
         p.group("SymtabCommand", |p| {
@@ -3721,7 +3723,7 @@ mod macho {
             p.field_hex("NumberOfSymbols", symtab.nsyms.get(endian));
             p.field_hex("StringOffset", symtab.stroff.get(endian));
             p.field_hex("StringSize", symtab.strsize.get(endian));
-            if let Ok(symbols) = symtab.symbols::<Mach>(endian, data) {
+            if let Ok(symbols) = symtab.symbols::<Mach, _>(endian, data) {
                 for (index, nlist) in symbols.iter().enumerate() {
                     p.group("Nlist", |p| {
                         p.field("Index", index);
@@ -4153,11 +4155,12 @@ mod pe {
     use object::read::pe::*;
     use object::LittleEndian as LE;
 
-    pub(super) fn print_coff(p: &mut Printer<impl Write>, data: Bytes) {
-        if let Ok((header, tail)) = ImageFileHeader::parse(data) {
+    pub(super) fn print_coff(p: &mut Printer<impl Write>, data: &[u8]) {
+        let mut tail = 0;
+        if let Ok(header) = ImageFileHeader::parse(data, &mut tail) {
             println!("Format: COFF");
             print_file(p, header);
-            let sections = header.sections(tail).ok();
+            let sections = header.sections(data, tail).ok();
             let symbols = header.symbols(data).ok();
             if let Some(ref sections) = sections {
                 print_sections(p, data, header.machine.get(LE), symbols.as_ref(), &sections);
@@ -4168,21 +4171,21 @@ mod pe {
         }
     }
 
-    pub(super) fn print_pe32(p: &mut Printer<impl Write>, data: Bytes) {
+    pub(super) fn print_pe32(p: &mut Printer<impl Write>, data: &[u8]) {
         println!("Format: PE 32-bit");
         print_pe::<ImageNtHeaders32, _>(p, data);
     }
 
-    pub(super) fn print_pe64(p: &mut Printer<impl Write>, data: Bytes) {
+    pub(super) fn print_pe64(p: &mut Printer<impl Write>, data: &[u8]) {
         println!("Format: PE 64-bit");
         print_pe::<ImageNtHeaders64, _>(p, data);
     }
 
-    fn print_pe<Pe: ImageNtHeaders, W: Write>(p: &mut Printer<W>, data: Bytes) {
+    fn print_pe<Pe: ImageNtHeaders, W: Write>(p: &mut Printer<W>, data: &[u8]) {
         if let Ok(dos_header) = ImageDosHeader::parse(data) {
             p.group("ImageDosHeader", |p| {
                 p.field_hex("Magic", dos_header.e_magic.get(LE));
-                p.field_hex("CountBytesLastPage", dos_header.e_cblp.get(LE));
+                p.field_hex("Count&[u8]", dos_header.e_cblp.get(LE));
                 p.field_hex("CountPages", dos_header.e_cp.get(LE));
                 p.field_hex("CountRelocations", dos_header.e_crlc.get(LE));
                 p.field_hex("CountHeaderParagraphs", dos_header.e_cparhdr.get(LE));
@@ -4199,12 +4202,13 @@ mod pe {
                 p.field_hex("OemInfo", dos_header.e_oeminfo.get(LE));
                 p.field_hex("AddressOfNewHeader", dos_header.e_lfanew.get(LE));
             });
-            if let Ok((nt_headers, data_directories, nt_tail)) = dos_header.nt_headers::<Pe>(data) {
+            let mut nt_tail = dos_header.nt_headers_offset();
+            if let Ok((nt_headers, data_directories)) = Pe::parse(data, &mut nt_tail) {
                 p.group("ImageNtHeaders", |p| {
                     p.field_hex("Signature", nt_headers.signature());
                 });
                 let header = nt_headers.file_header();
-                let sections = header.sections(nt_tail).ok();
+                let sections = header.sections(data, nt_tail).ok();
                 let symbols = header.symbols(data).ok();
                 print_file(p, header);
                 print_optional(p, nt_headers.optional_header());
@@ -4218,7 +4222,9 @@ mod pe {
                             .and_then(|sections| dir.data(data, sections).ok())
                         {
                             match index {
-                                IMAGE_DIRECTORY_ENTRY_EXPORT => print_export_dir(p, dir, dir_data),
+                                IMAGE_DIRECTORY_ENTRY_EXPORT => {
+                                    print_export_dir(p, dir, dir_data.0)
+                                }
                                 // TODO
                                 _ => {}
                             }
@@ -4301,7 +4307,7 @@ mod pe {
         });
     }
 
-    fn print_export_dir(p: &mut Printer<impl Write>, _dir: &ImageDataDirectory, dir_data: Bytes) {
+    fn print_export_dir(p: &mut Printer<impl Write>, _dir: &ImageDataDirectory, dir_data: &[u8]) {
         if let Ok(export_dir) = dir_data.read_at::<pe::ImageExportDirectory>(0) {
             p.group("ImageExportDirectory", |p| {
                 p.field_hex("Characteristics", export_dir.characteristics.get(LE));
@@ -4328,7 +4334,7 @@ mod pe {
 
     fn print_sections(
         p: &mut Printer<impl Write>,
-        data: Bytes,
+        data: &[u8],
         machine: u16,
         symbols: Option<&SymbolTable>,
         sections: &SectionTable,

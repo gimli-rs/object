@@ -176,7 +176,7 @@ impl<'data> ArchiveMember<'data> {
         }
 
         let mut file_offset = *offset;
-        let file_size =
+        let mut file_size =
             parse_usize_digits(&header.size, 10).read_error("Invalid archive member size")?;
         *offset = offset
             .checked_add(file_size)
@@ -192,7 +192,7 @@ impl<'data> ArchiveMember<'data> {
                 .read_error("Invalid archive extended name offset")?
         } else if &header.name[..3] == b"#1/" && (header.name[3] as char).is_digit(10) {
             // Read file name from the start of the file data.
-            parse_bsd_extended_name(&header.name[3..], data, &mut file_offset)
+            parse_bsd_extended_name(&header.name[3..], data, &mut file_offset, &mut file_size)
                 .read_error("Invalid archive extended name length")?
         } else if header.name[0] == b'/' {
             let name_len =
@@ -259,6 +259,7 @@ impl<'data> ArchiveMember<'data> {
     /// Return the file data.
     #[inline]
     pub fn data<R: ReadRef<'data>>(&self, data: R) -> read::Result<&'data [u8]> {
+        println!("{} {}", self.offset, self.size);
         data.read_bytes_at(self.offset, self.size)
             .read_error("Archive member size is too large")
     }
@@ -299,8 +300,10 @@ fn parse_bsd_extended_name<'data, R: ReadRef<'data>>(
     digits: &[u8],
     data: R,
     offset: &mut usize,
+    size: &mut usize,
 ) -> Result<&'data [u8], ()> {
     let len = parse_usize_digits(digits, 10).ok_or(())?;
+    *size = size.checked_sub(len).ok_or(())?;
     let name_data = data.read_bytes(offset, len)?;
     let name = match name_data.iter().position(|&x| x == 0) {
         Some(len) => &name_data[..len],
@@ -316,6 +319,7 @@ mod tests {
     #[test]
     fn kind() {
         let data = b"!<arch>\n";
+        let data = &data[..];
         let archive = ArchiveFile::parse(data).unwrap();
         assert_eq!(archive.kind(), ArchiveKind::Unknown);
 
@@ -323,6 +327,7 @@ mod tests {
             !<arch>\n\
             /                                               4         `\n\
             0000";
+        let data = &data[..];
         let archive = ArchiveFile::parse(data).unwrap();
         assert_eq!(archive.kind(), ArchiveKind::Gnu);
 
@@ -330,6 +335,7 @@ mod tests {
             !<arch>\n\
             //                                              4         `\n\
             0000";
+        let data = &data[..];
         let archive = ArchiveFile::parse(data).unwrap();
         assert_eq!(archive.kind(), ArchiveKind::Gnu);
 
@@ -339,6 +345,7 @@ mod tests {
             0000\
             //                                              4         `\n\
             0000";
+        let data = &data[..];
         let archive = ArchiveFile::parse(data).unwrap();
         assert_eq!(archive.kind(), ArchiveKind::Gnu);
 
@@ -346,6 +353,7 @@ mod tests {
             !<arch>\n\
             __.SYMDEF                                       4         `\n\
             0000";
+        let data = &data[..];
         let archive = ArchiveFile::parse(data).unwrap();
         assert_eq!(archive.kind(), ArchiveKind::Bsd);
 
@@ -353,6 +361,7 @@ mod tests {
             !<arch>\n\
             #1/9                                            13        `\n\
             __.SYMDEF0000";
+        let data = &data[..];
         let archive = ArchiveFile::parse(data).unwrap();
         assert_eq!(archive.kind(), ArchiveKind::Bsd);
 
@@ -360,6 +369,7 @@ mod tests {
             !<arch>\n\
             #1/16                                           20        `\n\
             __.SYMDEF SORTED0000";
+        let data = &data[..];
         let archive = ArchiveFile::parse(data).unwrap();
         assert_eq!(archive.kind(), ArchiveKind::Bsd);
 
@@ -371,6 +381,7 @@ mod tests {
             0000\
             //                                              4         `\n\
             0000";
+        let data = &data[..];
         let archive = ArchiveFile::parse(data).unwrap();
         assert_eq!(archive.kind(), ArchiveKind::Coff);
     }
@@ -385,17 +396,18 @@ mod tests {
             odd\n\
             /0              0           0     0     644     4         `\n\
             even";
+        let data = &data[..];
         let archive = ArchiveFile::parse(data).unwrap();
         assert_eq!(archive.kind(), ArchiveKind::Gnu);
         let mut members = archive.members();
 
         let member = members.next().unwrap().unwrap();
         assert_eq!(member.name(), b"0123456789abcde");
-        assert_eq!(member.data(), b"odd");
+        assert_eq!(member.data(data), Ok(&b"odd"[..]));
 
         let member = members.next().unwrap().unwrap();
         assert_eq!(member.name(), b"0123456789abcdef");
-        assert_eq!(member.data(), b"even");
+        assert_eq!(member.data(data), Ok(&b"even"[..]));
 
         assert!(members.next().is_none());
     }
@@ -408,17 +420,18 @@ mod tests {
             odd\n\
             #1/16           0           0     0     644     20        `\n\
             0123456789abcdefeven";
+        let data = &data[..];
         let archive = ArchiveFile::parse(data).unwrap();
         assert_eq!(archive.kind(), ArchiveKind::Unknown);
         let mut members = archive.members();
 
         let member = members.next().unwrap().unwrap();
         assert_eq!(member.name(), b"0123456789abcde");
-        assert_eq!(member.data(), b"odd");
+        assert_eq!(member.data(data), Ok(&b"odd"[..]));
 
         let member = members.next().unwrap().unwrap();
         assert_eq!(member.name(), b"0123456789abcdef");
-        assert_eq!(member.data(), b"even");
+        assert_eq!(member.data(data), Ok(&b"even"[..]));
 
         assert!(members.next().is_none());
     }
