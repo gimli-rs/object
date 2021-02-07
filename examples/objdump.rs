@@ -33,44 +33,49 @@ fn main() {
                 continue;
             }
         };
+        */
 
-        if let Ok(archive) = ArchiveFile::parse(&*file) {
+        let file = &object::read::ReadCache::new(file);
+        if let Ok(archive) = ArchiveFile::parse(file) {
             println!("Format: Archive (kind: {:?})", archive.kind());
             for member in archive.members() {
                 if let Ok(member) = member {
                     println!();
                     println!("{}:", String::from_utf8_lossy(member.name()));
-                    dump_object(member.data());
+                    // TODO: this should parse the file at an offset, instead of reading the
+                    // entire member.
+                    if let Ok(data) = member.data(file) {
+                        dump_object(data);
+                    }
                 }
             }
-        } else if let Ok(arches) = FatHeader::parse_arch32(&*file) {
+        /*
+        } else if let Ok(arches) = FatHeader::parse_arch32(file) {
             println!("Format: Mach-O Fat 32");
             for arch in arches {
                 println!();
                 println!("Fat Arch: {:?}", arch.architecture());
-                if let Ok(data) = arch.data(&*file) {
+                if let Ok(data) = arch.data(file) {
                     dump_object(data);
                 }
             }
-        } else if let Ok(arches) = FatHeader::parse_arch64(&*file) {
+        } else if let Ok(arches) = FatHeader::parse_arch64(file) {
             println!("Format: Mach-O Fat 64");
             for arch in arches {
                 println!();
                 println!("Fat Arch: {:?}", arch.architecture());
-                if let Ok(data) = arch.data(&*file) {
+                if let Ok(data) = arch.data(file) {
                     dump_object(data);
                 }
             }
+            */
         } else {
-            dump_object(&*file);
+            dump_object(file);
         }
-        */
-        let data = object::read::ReadCache::new(file);
-        dump_object(&data);
     }
 }
 
-fn dump_object(data: &object::read::ReadCache<fs::File>) {
+fn dump_object<'data, R: object::read::ReadRef<'data>>(data: R) {
     let file = match object::File::parse(data) {
         Ok(file) => file,
         Err(err) => {
