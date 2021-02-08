@@ -188,7 +188,7 @@ impl<'data, 'file, Pe: ImageNtHeaders, R: ReadRef<'data>> read::private::Sealed
 impl<'data, 'file, Pe: ImageNtHeaders, R: ReadRef<'data>> ObjectSection<'data>
     for PeSection<'data, 'file, Pe, R>
 {
-    type RelocationIterator = PeRelocationIterator<'data, 'file>;
+    type RelocationIterator = PeRelocationIterator<'data, 'file, R>;
 
     #[inline]
     fn index(&self) -> SectionIndex {
@@ -256,8 +256,8 @@ impl<'data, 'file, Pe: ImageNtHeaders, R: ReadRef<'data>> ObjectSection<'data>
         self.section.kind()
     }
 
-    fn relocations(&self) -> PeRelocationIterator<'data, 'file> {
-        PeRelocationIterator::default()
+    fn relocations(&self) -> PeRelocationIterator<'data, 'file, R> {
+        PeRelocationIterator(PhantomData)
     }
 
     fn flags(&self) -> SectionFlags {
@@ -305,10 +305,10 @@ impl pe::ImageSectionHeader {
 }
 
 /// An iterator over the relocations in an `PeSection`.
-#[derive(Debug, Default)]
-pub struct PeRelocationIterator<'data, 'file>(PhantomData<(&'data (), &'file ())>);
+#[derive(Debug)]
+pub struct PeRelocationIterator<'data, 'file, R>(PhantomData<(&'data (), &'file (), R)>);
 
-impl<'data, 'file> Iterator for PeRelocationIterator<'data, 'file> {
+impl<'data, 'file, R> Iterator for PeRelocationIterator<'data, 'file, R> {
     type Item = (u64, Relocation);
 
     fn next(&mut self) -> Option<Self::Item> {
