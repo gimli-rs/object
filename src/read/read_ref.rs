@@ -100,6 +100,15 @@ mod cache {
                 }),
             }
         }
+
+        /// TODO
+        pub fn range<'data>(&'data self, offset: usize, size: usize) -> ReadCacheRange<'data, R> {
+            ReadCacheRange {
+                r: self,
+                offset,
+                size,
+            }
+        }
     }
 
     impl<'data, R: Read + Seek> ReadRef<'data> for &'data ReadCache<R> {
@@ -133,6 +142,44 @@ mod cache {
             // Extend the lifetime to that of self.
             // This is OK because we never mutate or remove entries.
             Ok(unsafe { mem::transmute::<&[u8], &[u8]>(buf) })
+        }
+    }
+
+    /// TODO
+    #[derive(Debug)]
+    pub struct ReadCacheRange<'data, R: Read + Seek> {
+        r: &'data ReadCache<R>,
+        offset: usize,
+        size: usize,
+    }
+
+    impl<'data, R: Read + Seek> Clone for ReadCacheRange<'data, R> {
+        fn clone(&self) -> Self {
+            Self {
+                r: self.r,
+                offset: self.offset,
+                size: self.size,
+            }
+        }
+    }
+
+    impl<'data, R: Read + Seek> Copy for ReadCacheRange<'data, R> {}
+
+    impl<'data, R: Read + Seek> ReadRef<'data> for ReadCacheRange<'data, R> {
+        fn len(self) -> Result<usize, ()> {
+            Ok(self.size)
+        }
+
+        fn read_bytes_at(self, offset: usize, size: usize) -> Result<&'data [u8], ()> {
+            if size == 0 {
+                return Ok(&[]);
+            }
+            let end = offset.checked_add(size).ok_or(())?;
+            if end >= self.size {
+                return Err(());
+            }
+            let r_offset = self.offset.checked_add(offset).ok_or(())?;
+            self.r.read_bytes_at(r_offset, size)
         }
     }
 }

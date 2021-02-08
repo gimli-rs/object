@@ -61,10 +61,13 @@ pub trait FatArch: Pod {
         }
     }
 
+    fn file_range(&self) -> (usize, usize) {
+        (self.offset().into() as usize, self.size().into() as usize)
+    }
+
     fn data<'data, R: ReadRef<'data>>(&self, file: R) -> Result<&'data [u8]> {
-        let offset = self.offset().into();
-        let size = self.size().into();
-        file.read_bytes_at(offset as usize, size as usize)
+        let (offset, size) = self.file_range();
+        file.read_bytes_at(offset, size)
             .read_error("Invalid fat arch offset or size")
     }
 }

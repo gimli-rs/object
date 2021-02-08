@@ -44,9 +44,8 @@ fn main() {
                     println!("{}:", String::from_utf8_lossy(member.name()));
                     // TODO: this should parse the file at an offset, instead of reading the
                     // entire member.
-                    if let Ok(data) = member.data(file) {
-                        dump_object(data);
-                    }
+                    let (offset, size) = member.file_range();
+                    dump_object(file.range(offset, size));
                 }
             }
         } else if let Ok(arches) = FatHeader::parse_arch32(file) {
@@ -54,18 +53,16 @@ fn main() {
             for arch in arches {
                 println!();
                 println!("Fat Arch: {:?}", arch.architecture());
-                if let Ok(data) = arch.data(file) {
-                    dump_object(data);
-                }
+                let (offset, size) = arch.file_range();
+                dump_object(file.range(offset, size));
             }
         } else if let Ok(arches) = FatHeader::parse_arch64(file) {
             println!("Format: Mach-O Fat 64");
             for arch in arches {
                 println!();
                 println!("Fat Arch: {:?}", arch.architecture());
-                if let Ok(data) = arch.data(file) {
-                    dump_object(data);
-                }
+                let (offset, size) = arch.file_range();
+                dump_object(file.range(offset, size));
             }
         } else {
             dump_object(file);
