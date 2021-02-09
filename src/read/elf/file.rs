@@ -581,6 +581,11 @@ pub trait FileHeader: Debug + Pod {
         let strings = self.section_strings(endian, data, sections)?;
         Ok(SectionTable::new(sections, strings))
     }
+
+    /// Returns whether this is a mips64el elf file.
+    fn is_mips64el(&self, endian: Self::Endian) -> bool {
+        self.is_class_64() && self.is_little_endian() && self.e_machine(endian) == elf::EM_MIPS
+    }
 }
 
 impl<Endian: endian::Endian> FileHeader for elf::FileHeader32<Endian> {

@@ -19,6 +19,17 @@ impl<'data, 'file> Iterator for CoffRelocationIterator<'data, 'file> {
     fn next(&mut self) -> Option<Self::Item> {
         self.iter.next().map(|relocation| {
             let (kind, size, addend) = match self.file.header.machine.get(LE) {
+                pe::IMAGE_FILE_MACHINE_ARMNT => match relocation.typ.get(LE) {
+                    pe::IMAGE_REL_ARM_ADDR32 => (RelocationKind::Absolute, 32, 0),
+                    pe::IMAGE_REL_ARM_SECREL => (RelocationKind::SectionOffset, 32, 0),
+                    typ => (RelocationKind::Coff(typ), 0, 0),
+                },
+                pe::IMAGE_FILE_MACHINE_ARM64 => match relocation.typ.get(LE) {
+                    pe::IMAGE_REL_ARM64_ADDR32 => (RelocationKind::Absolute, 32, 0),
+                    pe::IMAGE_REL_ARM64_SECREL => (RelocationKind::SectionOffset, 32, 0),
+                    pe::IMAGE_REL_ARM64_ADDR64 => (RelocationKind::Absolute, 64, 0),
+                    typ => (RelocationKind::Coff(typ), 0, 0),
+                },
                 pe::IMAGE_FILE_MACHINE_I386 => match relocation.typ.get(LE) {
                     pe::IMAGE_REL_I386_DIR16 => (RelocationKind::Absolute, 16, 0),
                     pe::IMAGE_REL_I386_REL16 => (RelocationKind::Relative, 16, 0),

@@ -188,8 +188,12 @@ impl FileKind {
             }
             // TODO: more COFF machines
             #[cfg(feature = "coff")]
+            // COFF arm
+            [0xc4, 0x01, ..]
+            // COFF arm64
+            | [0x64, 0xaa, ..]
             // COFF x86
-            [0x4c, 0x01, ..]
+            | [0x4c, 0x01, ..]
             // COFF x86-64
             | [0x64, 0x86, ..] => FileKind::Coff,
             _ => return Err(Error("Unknown file magic")),
