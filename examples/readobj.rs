@@ -648,8 +648,12 @@ mod elf {
             for relocation in relocations {
                 p.group("Relocation", |p| {
                     p.field_hex("Offset", relocation.r_offset(endian).into());
-                    p.field_enum("Type", relocation.r_type(endian), proc);
-                    let sym = relocation.r_sym(endian);
+                    p.field_enum(
+                        "Type",
+                        relocation.r_type(endian, elf.is_mips64el(endian)),
+                        proc,
+                    );
+                    let sym = relocation.r_sym(endian, elf.is_mips64el(endian));
                     p.field_string("Symbol", sym, rel_symbol(endian, symbols, sym as usize));
                     let addend = relocation.r_addend(endian).into() as u64;
                     if addend != 0 {
@@ -912,7 +916,7 @@ mod elf {
         EM_CYPRESS_M8C,
         EM_R32C,
         EM_TRIMEDIA,
-        EM_QDSP6,
+        EM_HEXAGON,
         EM_8051,
         EM_STXP7X,
         EM_NDS32,
