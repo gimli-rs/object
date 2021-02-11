@@ -348,6 +348,11 @@ fn parse_relocation<Elf: FileHeader>(
             elf::R_HEX_32 => (RelocationKind::Absolute, 32),
             r_type => (RelocationKind::Elf(r_type), 0),
         },
+        elf::EM_BPF => match reloc.r_type(endian, false) {
+            elf::R_BPF_64_64 => (RelocationKind::Absolute, 64),
+            elf::R_BPF_64_32 => (RelocationKind::Absolute, 32),
+            r_type => (RelocationKind::Elf(r_type), 0),
+        },
         _ => (RelocationKind::Elf(reloc.r_type(endian, false)), 0),
     };
     let sym = reloc.r_sym(endian, is_mips64el) as usize;
