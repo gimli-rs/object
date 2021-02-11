@@ -53,6 +53,16 @@ impl<'data, Pe: ImageNtHeaders> PeFile<'data, Pe> {
         u64::from(self.nt_headers.optional_header().section_alignment())
     }
 
+    /// Return the DOS header of this file
+    pub fn dos_header(&self) -> &'data pe::ImageDosHeader {
+        self.dos_header
+    }
+
+    /// Return the NT Headers of this file
+    pub fn nt_headers(&self) -> &'data Pe {
+        self.nt_headers
+    }
+
     fn data_directory(&self, id: usize) -> Option<&'data pe::ImageDataDirectory> {
         self.data_directories
             .get(id)
