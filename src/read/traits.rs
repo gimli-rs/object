@@ -77,8 +77,8 @@ pub trait Object<'data: 'file, 'file>: read::private::Sealed {
     /// If `section_name` starts with a '.' then it is treated as a system section name,
     /// and is compared using the conventions specific to the object file format. This
     /// includes:
-    /// - if ".text" is requested for a Mach-O object file, then the actual
-    /// section name that is searched for is "__text".
+    /// - if ".debug_str_offsets" is requested for a Mach-O object file, then the actual
+    /// section name that is searched for is "__debug_str_offs".
     /// - if ".debug_info" is requested for an ELF object file, then
     /// ".zdebug_info" may be returned (and similarly for other debug sections).
     ///
