@@ -359,6 +359,11 @@ where
         with_inner!(self.inner, FileInternal, |x| x.gnu_debuglink())
     }
 
+    #[inline]
+    fn gnu_debugaltlink(&self) -> Result<Option<(&'data [u8], &'data [u8])>> {
+        with_inner!(self.inner, FileInternal, |x| x.gnu_debugaltlink())
+    }
+
     fn entry(&self) -> u64 {
         with_inner!(self.inner, FileInternal, |x| x.entry())
     }

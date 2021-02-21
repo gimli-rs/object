@@ -100,6 +100,15 @@ fn dump_object(data: &[u8]) {
         Ok(None) => {}
         Err(e) => println!("Failed to parse GNU debug link: {}", e),
     }
+    match file.gnu_debugaltlink() {
+        Ok(Some((filename, build_id))) => println!(
+            "GNU debug alt link: {}, build ID: {:x?}",
+            String::from_utf8_lossy(filename),
+            build_id,
+        ),
+        Ok(None) => {}
+        Err(e) => println!("Failed to parse GNU debug alt link: {}", e),
+    }
 
     for segment in file.segments() {
         println!("{:x?}", segment);

@@ -193,6 +193,12 @@ pub trait Object<'data: 'file, 'file>: read::private::Sealed {
         Ok(None)
     }
 
+    /// The filename and build ID from a `.gnu_debugaltlink` section.
+    #[inline]
+    fn gnu_debugaltlink(&self) -> Result<Option<(&'data [u8], &'data [u8])>> {
+        Ok(None)
+    }
+
     /// File flags that are specific to each file format.
     fn flags(&self) -> FileFlags;
 }
