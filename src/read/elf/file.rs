@@ -347,6 +347,22 @@ where
         Ok(Some((filename, crc)))
     }
 
+    fn gnu_debugaltlink(&self) -> read::Result<Option<(&'data [u8], &'data [u8])>> {
+        let section = match self.raw_section_by_name(".gnu_debugaltlink") {
+            Some(section) => section,
+            None => return Ok(None),
+        };
+        let mut data = section
+            .section
+            .data(self.endian, self.data)
+            .read_error("Invalid ELF .gnu_debugaltlink section offset or size")?;
+        let filename = data
+            .read_string()
+            .read_error("Missing ELF .gnu_debugaltlink filename")?;
+        let build_id = data.0;
+        Ok(Some((filename, build_id)))
+    }
+
     fn entry(&self) -> u64 {
         self.header.e_entry(self.endian).into()
     }
