@@ -132,16 +132,26 @@ where
         section_name: &str,
     ) -> Option<MachOSection<'data, 'file, Mach>> {
         // Translate the "." prefix to the "__" prefix used by OSX/Mach-O, eg
-        // ".debug_info" to "__debug_info".
-        let system_section = section_name.starts_with('.');
+        // ".debug_info" to "__debug_info", and limit to 16 bytes total.
+        let system_name = if section_name.starts_with('.') {
+            if section_name.len() > 15 {
+                Some(&section_name[1..15])
+            } else {
+                Some(&section_name[1..])
+            }
+        } else {
+            None
+        };
         let cmp_section_name = |section: &MachOSection<Mach>| {
             section
                 .name()
                 .map(|name| {
                     section_name == name
-                        || (system_section
-                            && name.starts_with("__")
-                            && section_name[1..] == name[2..])
+                        || system_name
+                            .filter(|system_name| {
+                                name.starts_with("__") && name[2..] == **system_name
+                            })
+                            .is_some()
                 })
                 .unwrap_or(false)
         };
