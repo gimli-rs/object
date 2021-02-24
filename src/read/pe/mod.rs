@@ -1,4 +1,4 @@
-//! Support for reading ELF files.
+//! Support for reading PE files.
 //!
 //! Defines traits to abstract over the difference between PE32/PE32+,
 //! and implements read functionality in terms of these traits.
