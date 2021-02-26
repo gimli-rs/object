@@ -1,7 +1,7 @@
 use object::read::elf::{FileHeader, SectionHeader};
 use object::read::{Object, ObjectSymbol};
 use object::{
-    elf, read, write, Architecture, BinaryFormat, Bytes, Endianness, LittleEndian, SectionIndex,
+    elf, read, write, Architecture, BinaryFormat, Endianness, LittleEndian, SectionIndex,
     SectionKind, SymbolFlags, SymbolKind, SymbolScope, SymbolSection, U32,
 };
 use std::io::Write;
@@ -180,11 +180,10 @@ fn note() {
     let section = object.add_section(Vec::new(), b".note8".to_vec(), SectionKind::Note);
     object.section_mut(section).set_data(buffer, 8);
 
-    let bytes = object.write().unwrap();
+    let bytes = &*object.write().unwrap();
 
     //std::fs::write(&"note.o", &bytes).unwrap();
 
-    let bytes = Bytes(&bytes);
     let header = elf::FileHeader64::parse(bytes).unwrap();
     let endian: LittleEndian = header.endian().unwrap();
     let sections = header.sections(endian, bytes).unwrap();

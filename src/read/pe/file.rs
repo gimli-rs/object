@@ -5,7 +5,7 @@ use core::{mem, str};
 use crate::read::coff::{CoffCommon, CoffSymbol, CoffSymbolIterator, CoffSymbolTable, SymbolTable};
 use crate::read::{
     self, Architecture, ComdatKind, Error, Export, FileFlags, Import, NoDynamicRelocationIterator,
-    Object, ObjectComdat, ReadError, Result, SectionIndex, SymbolIndex,
+    Object, ObjectComdat, ReadError, ReadRef, Result, SectionIndex, SymbolIndex,
 };
 use crate::{pe, ByteString, Bytes, LittleEndian as LE, Pod, U16Bytes, U32Bytes, U32, U64};
 
@@ -23,16 +23,16 @@ pub struct PeFile<'data, Pe: ImageNtHeaders> {
     pub(super) nt_headers: &'data Pe,
     pub(super) data_directories: &'data [pe::ImageDataDirectory],
     pub(super) common: CoffCommon<'data>,
-    pub(super) data: Bytes<'data>,
+    pub(super) data: &'data [u8],
 }
 
 impl<'data, Pe: ImageNtHeaders> PeFile<'data, Pe> {
     /// Parse the raw PE file data.
     pub fn parse(data: &'data [u8]) -> Result<Self> {
-        let data = Bytes(data);
         let dos_header = pe::ImageDosHeader::parse(data)?;
-        let (nt_headers, data_directories, nt_tail) = dos_header.nt_headers::<Pe>(data)?;
-        let sections = nt_headers.sections(nt_tail)?;
+        let mut offset = dos_header.nt_headers_offset().into();
+        let (nt_headers, data_directories) = Pe::parse(data, &mut offset)?;
+        let sections = nt_headers.sections(data, offset)?;
         let symbols = nt_headers.symbols(data)?;
         let image_base = u64::from(nt_headers.optional_header().image_base());
 
@@ -70,7 +70,7 @@ impl<'data, Pe: ImageNtHeaders> PeFile<'data, Pe> {
     }
 
     fn data_at(&self, va: u32) -> Option<Bytes<'data>> {
-        self.common.sections.pe_data_at(self.data, va)
+        self.common.sections.pe_data_at(self.data, va).map(Bytes)
     }
 }
 
@@ -191,7 +191,7 @@ where
             Some(data_dir) => data_dir,
             None => return Ok(Vec::new()),
         };
-        let mut import_descriptors = data_dir.data(self.data, &self.common.sections)?;
+        let mut import_descriptors = data_dir.data(self.data, &self.common.sections).map(Bytes)?;
         let mut imports = Vec::new();
         loop {
             let import_desc = import_descriptors
@@ -261,7 +261,7 @@ where
         };
         let export_va = data_dir.virtual_address.get(LE);
         let export_size = data_dir.size.get(LE);
-        let export_data = data_dir.data(self.data, &self.common.sections)?;
+        let export_data = data_dir.data(self.data, &self.common.sections).map(Bytes)?;
         let export_dir = export_data
             .read_at::<pe::ImageExportDirectory>(0)
             .read_error("Invalid PE export dir size")?;
@@ -411,7 +411,7 @@ impl pe::ImageDosHeader {
     /// Read the DOS header.
     ///
     /// Also checks that the `e_magic` field in the header is valid.
-    pub fn parse<'data>(data: Bytes<'data>) -> read::Result<&'data Self> {
+    pub fn parse<'data, R: ReadRef<'data>>(data: R) -> read::Result<&'data Self> {
         // DOS header comes first.
         let dos_header = data
             .read_at::<pe::ImageDosHeader>(0)
@@ -422,18 +422,10 @@ impl pe::ImageDosHeader {
         Ok(dos_header)
     }
 
-    /// Read the NT headers, including the data directories.
-    ///
-    /// The given data must be for the entire file.  Returns the data following the NT headers,
-    /// which will contain the section headers.
-    ///
-    /// Also checks that the `signature` and `magic` fields in the headers are valid.
+    /// Return the file offset of the nt_headers.
     #[inline]
-    pub fn nt_headers<'data, Pe: ImageNtHeaders>(
-        &self,
-        data: Bytes<'data>,
-    ) -> read::Result<(&'data Pe, &'data [pe::ImageDataDirectory], Bytes<'data>)> {
-        Pe::parse(self, data)
+    pub fn nt_headers_offset(&self) -> u32 {
+        self.e_lfanew.get(LE)
     }
 }
 
@@ -441,14 +433,14 @@ impl pe::ImageDosHeader {
 ///
 /// It can be useful to know this magic value before trying to
 /// fully parse the NT headers.
-pub fn optional_header_magic(data: &[u8]) -> Result<u16> {
-    let data = Bytes(data);
+pub fn optional_header_magic<'data, R: ReadRef<'data>>(data: R) -> Result<u16> {
     let dos_header = pe::ImageDosHeader::parse(data)?;
     // NT headers are at an offset specified in the DOS header.
+    let offset = dos_header.nt_headers_offset().into();
     // It doesn't matter which NT header type is used for the purpose
     // of reading the optional header magic.
     let nt_headers = data
-        .read_at::<pe::ImageNtHeaders32>(dos_header.e_lfanew.get(LE) as usize)
+        .read_at::<pe::ImageNtHeaders32>(offset)
         .read_error("Invalid NT headers offset, size, or alignment")?;
     if nt_headers.signature() != pe::IMAGE_NT_SIGNATURE {
         return Err(Error("Invalid PE magic"));
@@ -482,22 +474,20 @@ pub trait ImageNtHeaders: Debug + Pod {
 
     /// Read the NT headers, including the data directories.
     ///
-    /// The DOS header is required to determine the NT headers offset.
+    /// `data` must be for the entire file.
     ///
-    /// The given data must be for the entire file.  Returns the data following the NT headers,
-    /// which will contain the section headers.
+    /// `offset` must be headers offset, which can be obtained from `ImageDosHeader::nt_headers_offset`.
+    /// It is updated to point after the optional header, which is where the section headers are located.
     ///
     /// Also checks that the `signature` and `magic` fields in the headers are valid.
-    fn parse<'data>(
-        dos_header: &pe::ImageDosHeader,
-        mut data: Bytes<'data>,
-    ) -> read::Result<(&'data Self, &'data [pe::ImageDataDirectory], Bytes<'data>)> {
-        data.skip(dos_header.e_lfanew.get(LE) as usize)
-            .read_error("Invalid PE headers offset")?;
+    fn parse<'data, R: ReadRef<'data>>(
+        data: R,
+        offset: &mut u64,
+    ) -> read::Result<(&'data Self, &'data [pe::ImageDataDirectory])> {
         // Note that this does not include the data directories in the optional header.
         let nt_headers = data
-            .read::<Self>()
-            .read_error("Invalid PE headers size or alignment")?;
+            .read::<Self>(offset)
+            .read_error("Invalid PE headers offset or size")?;
         if nt_headers.signature() != pe::IMAGE_NT_SIGNATURE {
             return Err(Error("Invalid PE magic"));
         }
@@ -506,33 +496,39 @@ pub trait ImageNtHeaders: Debug + Pod {
         }
 
         // Read the rest of the optional header, and then read the data directories from that.
-        let optional_data_size = (nt_headers.file_header().size_of_optional_header.get(LE)
-            as usize)
-            .checked_sub(mem::size_of::<Self::ImageOptionalHeader>())
-            .read_error("PE optional header size is too small")?;
+        let optional_data_size =
+            u64::from(nt_headers.file_header().size_of_optional_header.get(LE))
+                .checked_sub(mem::size_of::<Self::ImageOptionalHeader>() as u64)
+                .read_error("PE optional header size is too small")?;
         let mut optional_data = data
-            .read_bytes(optional_data_size)
-            .read_error("Invalid PE optional header size")?;
+            .read_bytes(offset, optional_data_size)
+            .read_error("Invalid PE optional header size")
+            .map(Bytes)?;
         let data_directories = optional_data
             .read_slice(nt_headers.optional_header().number_of_rva_and_sizes() as usize)
             .read_error("Invalid PE number of RVA and sizes")?;
 
-        Ok((nt_headers, data_directories, data))
+        Ok((nt_headers, data_directories))
     }
 
     /// Read the section table.
     ///
-    /// `nt_tail` must be the data following the NT headers.
+    /// `data` must be for the entire file.
+    /// `offset` must be after the optional file header.
     #[inline]
-    fn sections<'data>(&self, nt_tail: Bytes<'data>) -> read::Result<SectionTable<'data>> {
-        SectionTable::parse(self.file_header(), nt_tail)
+    fn sections<'data, R: ReadRef<'data>>(
+        &self,
+        data: R,
+        offset: u64,
+    ) -> read::Result<SectionTable<'data>> {
+        SectionTable::parse(self.file_header(), data, offset)
     }
 
     /// Read the symbol table and string table.
     ///
     /// `data` must be the entire file data.
     #[inline]
-    fn symbols<'data>(&self, data: Bytes<'data>) -> read::Result<SymbolTable<'data>> {
+    fn symbols<'data, R: ReadRef<'data>>(&self, data: R) -> read::Result<SymbolTable<'data>> {
         SymbolTable::parse(self.file_header(), data)
     }
 }
@@ -930,13 +926,13 @@ impl pe::ImageDataDirectory {
     /// Get the data referenced by this directory entry.
     pub fn data<'data>(
         &self,
-        data: Bytes<'data>,
+        data: &'data [u8],
         sections: &SectionTable<'data>,
-    ) -> Result<Bytes<'data>> {
+    ) -> Result<&'data [u8]> {
         sections
             .pe_data_at(data, self.virtual_address.get(LE))
-            .read_error("Invalid data dir virtual address")?
-            .read_bytes(self.size.get(LE) as usize)
+            .read_error("Invalid data dir virtual address or size")?
+            .get(..self.size.get(LE) as usize)
             .read_error("Invalid data dir size")
     }
 }

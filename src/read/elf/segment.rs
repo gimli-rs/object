@@ -4,7 +4,7 @@ use core::{mem, slice, str};
 use crate::elf;
 use crate::endian::{self, Endianness};
 use crate::pod::{Bytes, Pod};
-use crate::read::{self, ObjectSegment, ReadError};
+use crate::read::{self, ObjectSegment, ReadError, ReadRef};
 
 use super::{ElfFile, FileHeader, NoteIterator};
 
@@ -61,7 +61,7 @@ where
 }
 
 impl<'data, 'file, Elf: FileHeader> ElfSegment<'data, 'file, Elf> {
-    fn bytes(&self) -> read::Result<Bytes<'data>> {
+    fn bytes(&self) -> read::Result<&'data [u8]> {
         self.segment
             .data(self.file.endian, self.file.data)
             .read_error("Invalid ELF segment size or offset")
@@ -93,11 +93,11 @@ impl<'data, 'file, Elf: FileHeader> ObjectSegment<'data> for ElfSegment<'data, '
 
     #[inline]
     fn data(&self) -> read::Result<&'data [u8]> {
-        Ok(self.bytes()?.0)
+        Ok(self.bytes()?)
     }
 
     fn data_range(&self, address: u64, size: u64) -> read::Result<Option<&'data [u8]>> {
-        Ok(read::data_range(
+        Ok(read::util::data_range(
             self.bytes()?,
             self.address(),
             address,
@@ -135,9 +135,13 @@ pub trait ProgramHeader: Debug + Pod {
     /// Return the segment data.
     ///
     /// Returns `Err` for invalid values.
-    fn data<'data>(&self, endian: Self::Endian, data: Bytes<'data>) -> Result<Bytes<'data>, ()> {
+    fn data<'data, R: ReadRef<'data>>(
+        &self,
+        endian: Self::Endian,
+        data: R,
+    ) -> Result<&'data [u8], ()> {
         let (offset, size) = self.file_range(endian);
-        data.read_bytes_at(offset as usize, size as usize)
+        data.read_bytes_at(offset, size)
     }
 
     /// Return the segment data as a slice of the given type.
@@ -145,12 +149,12 @@ pub trait ProgramHeader: Debug + Pod {
     /// Allows padding at the end of the data.
     /// Returns `Ok(&[])` if the segment has no data.
     /// Returns `Err` for invalid values, including bad alignment.
-    fn data_as_array<'data, T: Pod>(
+    fn data_as_array<'data, T: Pod, R: ReadRef<'data>>(
         &self,
         endian: Self::Endian,
-        data: Bytes<'data>,
+        data: R,
     ) -> Result<&'data [T], ()> {
-        let mut data = self.data(endian, data)?;
+        let mut data = self.data(endian, data).map(Bytes)?;
         data.read_slice(data.len() / mem::size_of::<T>())
     }
 
@@ -158,30 +162,29 @@ pub trait ProgramHeader: Debug + Pod {
     ///
     /// Returns `Ok(None)` if the segment does not contain the address.
     /// Returns `Err` for invalid values.
-    fn data_range<'data>(
+    fn data_range<'data, R: ReadRef<'data>>(
         &self,
         endian: Self::Endian,
-        data: Bytes<'data>,
+        data: R,
         address: u64,
         size: u64,
-    ) -> Result<Option<Bytes<'data>>, ()> {
-        Ok(read::data_range(
+    ) -> Result<Option<&'data [u8]>, ()> {
+        Ok(read::util::data_range(
             self.data(endian, data)?,
             self.p_vaddr(endian).into(),
             address,
             size,
-        )
-        .map(Bytes))
+        ))
     }
 
     /// Return entries in a dynamic segment.
     ///
     /// Returns `Ok(None)` if the segment is not `PT_DYNAMIC`.
     /// Returns `Err` for invalid values.
-    fn dynamic<'data>(
+    fn dynamic<'data, R: ReadRef<'data>>(
         &self,
         endian: Self::Endian,
-        data: Bytes<'data>,
+        data: R,
     ) -> read::Result<Option<&'data [<Self::Elf as FileHeader>::Dyn]>> {
         if self.p_type(endian) != elf::PT_DYNAMIC {
             return Ok(None);
@@ -196,10 +199,10 @@ pub trait ProgramHeader: Debug + Pod {
     ///
     /// Returns `Ok(None)` if the segment does not contain notes.
     /// Returns `Err` for invalid values.
-    fn notes<'data>(
+    fn notes<'data, R: ReadRef<'data>>(
         &self,
         endian: Self::Endian,
-        data: Bytes<'data>,
+        data: R,
     ) -> read::Result<Option<NoteIterator<'data, Self::Elf>>> {
         if self.p_type(endian) != elf::PT_NOTE {
             return Ok(None);

@@ -3,8 +3,8 @@ use core::{result, str};
 
 use crate::endian::{self, Endianness};
 use crate::macho;
-use crate::pod::{Bytes, Pod};
-use crate::read::{self, ObjectSegment, ReadError, Result};
+use crate::pod::Pod;
+use crate::read::{self, ObjectSegment, ReadError, ReadRef, Result};
 
 use super::{LoadCommandData, LoadCommandIterator, MachHeader, MachOFile, Section};
 
@@ -61,7 +61,7 @@ where
 }
 
 impl<'data, 'file, Mach: MachHeader> MachOSegment<'data, 'file, Mach> {
-    fn bytes(&self) -> Result<Bytes<'data>> {
+    fn bytes(&self) -> Result<&'data [u8]> {
         self.segment
             .data(self.file.endian, self.file.data)
             .read_error("Invalid Mach-O segment size or offset")
@@ -93,11 +93,11 @@ impl<'data, 'file, Mach: MachHeader> ObjectSegment<'data> for MachOSegment<'data
     }
 
     fn data(&self) -> Result<&'data [u8]> {
-        Ok(self.bytes()?.0)
+        Ok(self.bytes()?)
     }
 
     fn data_range(&self, address: u64, size: u64) -> Result<Option<&'data [u8]>> {
-        Ok(read::data_range(
+        Ok(read::util::data_range(
             self.bytes()?,
             self.address(),
             address,
@@ -122,7 +122,7 @@ pub trait Segment: Debug + Pod {
     type Endian: endian::Endian;
     type Section: Section<Endian = Self::Endian>;
 
-    fn from_command(command: LoadCommandData<Self::Endian>) -> Result<Option<(&Self, Bytes)>>;
+    fn from_command(command: LoadCommandData<Self::Endian>) -> Result<Option<(&Self, &[u8])>>;
 
     fn cmd(&self, endian: Self::Endian) -> u32;
     fn cmdsize(&self, endian: Self::Endian) -> u32;
@@ -153,22 +153,22 @@ pub trait Segment: Debug + Pod {
     /// Get the segment data from the file data.
     ///
     /// Returns `Err` for invalid values.
-    fn data<'data>(
+    fn data<'data, R: ReadRef<'data>>(
         &self,
         endian: Self::Endian,
-        data: Bytes<'data>,
-    ) -> result::Result<Bytes<'data>, ()> {
+        data: R,
+    ) -> result::Result<&'data [u8], ()> {
         let (offset, size) = self.file_range(endian);
-        data.read_bytes_at(offset as usize, size as usize)
+        data.read_bytes_at(offset, size)
     }
 
     /// Get the array of sections from the data following the segment command.
     ///
     /// Returns `Err` for invalid values.
-    fn sections<'data>(
+    fn sections<'data, R: ReadRef<'data>>(
         &self,
         endian: Self::Endian,
-        section_data: Bytes<'data>,
+        section_data: R,
     ) -> Result<&'data [Self::Section]> {
         section_data
             .read_slice_at(0, self.nsects(endian) as usize)
@@ -181,7 +181,7 @@ impl<Endian: endian::Endian> Segment for macho::SegmentCommand32<Endian> {
     type Endian = Endian;
     type Section = macho::Section32<Self::Endian>;
 
-    fn from_command(command: LoadCommandData<Self::Endian>) -> Result<Option<(&Self, Bytes)>> {
+    fn from_command(command: LoadCommandData<Self::Endian>) -> Result<Option<(&Self, &[u8])>> {
         command.segment_32()
     }
 
@@ -225,7 +225,7 @@ impl<Endian: endian::Endian> Segment for macho::SegmentCommand64<Endian> {
     type Endian = Endian;
     type Section = macho::Section64<Self::Endian>;
 
-    fn from_command(command: LoadCommandData<Self::Endian>) -> Result<Option<(&Self, Bytes)>> {
+    fn from_command(command: LoadCommandData<Self::Endian>) -> Result<Option<(&Self, &[u8])>> {
         command.segment_64()
     }
 

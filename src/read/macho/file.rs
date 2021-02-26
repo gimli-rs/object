@@ -4,9 +4,10 @@ use core::{mem, str};
 
 use crate::read::{
     self, Architecture, ComdatKind, Error, Export, FileFlags, Import, NoDynamicRelocationIterator,
-    Object, ObjectComdat, ObjectMap, ObjectSection, ReadError, Result, SectionIndex, SymbolIndex,
+    Object, ObjectComdat, ObjectMap, ObjectSection, ReadError, ReadRef, Result, SectionIndex,
+    SymbolIndex,
 };
-use crate::{endian, macho, BigEndian, ByteString, Bytes, Endian, Endianness, Pod};
+use crate::{endian, macho, BigEndian, ByteString, Endian, Endianness, Pod};
 
 use super::{
     LoadCommandIterator, MachOSection, MachOSectionInternal, MachOSectionIterator, MachOSegment,
@@ -25,7 +26,7 @@ pub type MachOFile64<'data, Endian = Endianness> = MachOFile<'data, macho::MachH
 #[derive(Debug)]
 pub struct MachOFile<'data, Mach: MachHeader> {
     pub(super) endian: Mach::Endian,
-    pub(super) data: Bytes<'data>,
+    pub(super) data: &'data [u8],
     pub(super) header: &'data Mach,
     pub(super) sections: Vec<MachOSectionInternal<'data, Mach>>,
     pub(super) symbols: SymbolTable<'data, Mach>,
@@ -34,7 +35,6 @@ pub struct MachOFile<'data, Mach: MachHeader> {
 impl<'data, Mach: MachHeader> MachOFile<'data, Mach> {
     /// Parse the raw Mach-O file data.
     pub fn parse(data: &'data [u8]) -> Result<Self> {
-        let data = Bytes(data);
         let header = Mach::parse(data)?;
         let endian = header.endian()?;
 
@@ -434,9 +434,9 @@ pub trait MachHeader: Debug + Pod {
     /// Read the file header.
     ///
     /// Also checks that the magic field in the file header is a supported format.
-    fn parse<'data>(mut data: Bytes<'data>) -> read::Result<&'data Self> {
+    fn parse<'data, R: ReadRef<'data>>(data: R) -> read::Result<&'data Self> {
         let header = data
-            .read::<Self>()
+            .read_at::<Self>(0)
             .read_error("Invalid Mach-O header size or alignment")?;
         if !header.is_supported() {
             return Err(Error("Unsupported Mach-O header"));
@@ -452,19 +452,26 @@ pub trait MachHeader: Debug + Pod {
         Self::Endian::from_big_endian(self.is_big_endian()).read_error("Unsupported Mach-O endian")
     }
 
-    fn load_commands<'data>(
+    fn load_commands<'data, R: ReadRef<'data>>(
         &self,
         endian: Self::Endian,
-        data: Bytes<'data>,
+        data: R,
     ) -> Result<LoadCommandIterator<'data, Self::Endian>> {
         let data = data
-            .read_bytes_at(mem::size_of::<Self>(), self.sizeofcmds(endian) as usize)
+            .read_bytes_at(
+                mem::size_of::<Self>() as u64,
+                self.sizeofcmds(endian).into(),
+            )
             .read_error("Invalid Mach-O load command table size")?;
         Ok(LoadCommandIterator::new(endian, data, self.ncmds(endian)))
     }
 
     /// Return the UUID from the `LC_UUID` load command, if one is present.
-    fn uuid<'data>(&self, endian: Self::Endian, data: Bytes<'data>) -> Result<Option<[u8; 16]>> {
+    fn uuid<'data, R: ReadRef<'data>>(
+        &self,
+        endian: Self::Endian,
+        data: R,
+    ) -> Result<Option<[u8; 16]>> {
         let mut commands = self.load_commands(endian, data)?;
         while let Some(command) = commands.next()? {
             if let Ok(Some(uuid)) = command.uuid() {

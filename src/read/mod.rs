@@ -5,7 +5,7 @@ use alloc::vec::Vec;
 use core::{fmt, result};
 
 use crate::common::*;
-use crate::{ByteString, Bytes};
+use crate::ByteString;
 
 mod read_ref;
 pub use read_ref::*;
@@ -508,12 +508,6 @@ impl Relocation {
     pub fn has_implicit_addend(&self) -> bool {
         self.implicit_addend
     }
-}
-
-fn data_range(data: Bytes, data_address: u64, range_address: u64, size: u64) -> Option<&[u8]> {
-    let offset = range_address.checked_sub(data_address)?;
-    let data = data.read_bytes_at(offset as usize, size as usize).ok()?;
-    Some(data.0)
 }
 
 /// Data that may be compressed.

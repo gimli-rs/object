@@ -6,11 +6,11 @@ use core::str;
 
 use crate::elf;
 use crate::endian::{self, Endianness};
-use crate::pod::{Bytes, Pod};
+use crate::pod::Pod;
 use crate::read::util::StringTable;
 use crate::read::{
-    self, ObjectSymbol, ObjectSymbolTable, ReadError, SectionIndex, SymbolFlags, SymbolIndex,
-    SymbolKind, SymbolMap, SymbolMapEntry, SymbolScope, SymbolSection,
+    self, ObjectSymbol, ObjectSymbolTable, ReadError, ReadRef, SectionIndex, SymbolFlags,
+    SymbolIndex, SymbolKind, SymbolMap, SymbolMapEntry, SymbolScope, SymbolSection,
 };
 
 use super::{FileHeader, SectionHeader, SectionTable};
@@ -39,9 +39,9 @@ impl<'data, Elf: FileHeader> Default for SymbolTable<'data, Elf> {
 
 impl<'data, Elf: FileHeader> SymbolTable<'data, Elf> {
     /// Parse the given symbol table section.
-    pub fn parse(
+    pub fn parse<R: ReadRef<'data>>(
         endian: Elf::Endian,
-        data: Bytes<'data>,
+        data: R,
         sections: &SectionTable<Elf>,
         section_index: usize,
         section: &Elf::SectionHeader,

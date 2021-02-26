@@ -3,9 +3,8 @@ use core::{cmp, iter, result, slice, str};
 
 use crate::endian::LittleEndian as LE;
 use crate::pe;
-use crate::pod::Bytes;
 use crate::read::{
-    self, CompressedData, ObjectSection, ObjectSegment, ReadError, Relocation, Result,
+    self, CompressedData, ObjectSection, ObjectSegment, ReadError, ReadRef, Relocation, Result,
     SectionFlags, SectionIndex, SectionKind,
 };
 
@@ -55,7 +54,7 @@ where
 }
 
 impl<'data, 'file, Pe: ImageNtHeaders> PeSegment<'data, 'file, Pe> {
-    fn bytes(&self) -> Result<Bytes<'data>> {
+    fn bytes(&self) -> Result<&'data [u8]> {
         self.section
             .pe_data(self.file.data)
             .read_error("Invalid PE section offset or size")
@@ -87,11 +86,11 @@ impl<'data, 'file, Pe: ImageNtHeaders> ObjectSegment<'data> for PeSegment<'data,
     }
 
     fn data(&self) -> Result<&'data [u8]> {
-        Ok(self.bytes()?.0)
+        Ok(self.bytes()?)
     }
 
     fn data_range(&self, address: u64, size: u64) -> Result<Option<&'data [u8]>> {
-        Ok(read::data_range(
+        Ok(read::util::data_range(
             self.bytes()?,
             self.address(),
             address,
@@ -156,7 +155,7 @@ where
 }
 
 impl<'data, 'file, Pe: ImageNtHeaders> PeSection<'data, 'file, Pe> {
-    fn bytes(&self) -> Result<Bytes<'data>> {
+    fn bytes(&self) -> Result<&'data [u8]> {
         self.section
             .pe_data(self.file.data)
             .read_error("Invalid PE section offset or size")
@@ -199,11 +198,11 @@ impl<'data, 'file, Pe: ImageNtHeaders> ObjectSection<'data> for PeSection<'data,
     }
 
     fn data(&self) -> Result<&'data [u8]> {
-        Ok(self.bytes()?.0)
+        Ok(self.bytes()?)
     }
 
     fn data_range(&self, address: u64, size: u64) -> Result<Option<&'data [u8]>> {
-        Ok(read::data_range(
+        Ok(read::util::data_range(
             self.bytes()?,
             self.address(),
             address,
@@ -247,7 +246,7 @@ impl<'data, 'file, Pe: ImageNtHeaders> ObjectSection<'data> for PeSection<'data,
 
 impl<'data> SectionTable<'data> {
     /// Return the data at the given virtual address in a PE file.
-    pub fn pe_data_at(&self, data: Bytes<'data>, va: u32) -> Option<Bytes<'data>> {
+    pub fn pe_data_at(&self, data: &'data [u8], va: u32) -> Option<&'data [u8]> {
         self.iter()
             .filter_map(|section| section.pe_data_at(data, va))
             .next()
@@ -266,18 +265,17 @@ impl pe::ImageSectionHeader {
     }
 
     /// Return the section data in a PE file.
-    pub fn pe_data<'data>(&self, data: Bytes<'data>) -> result::Result<Bytes<'data>, ()> {
+    pub fn pe_data<'data, R: ReadRef<'data>>(&self, data: R) -> result::Result<&'data [u8], ()> {
         let (offset, size) = self.pe_file_range();
-        data.read_bytes_at(offset as usize, size as usize)
+        data.read_bytes_at(offset.into(), size.into())
     }
 
     /// Return the data at the given virtual address if this section contains it.
-    pub fn pe_data_at<'data>(&self, data: Bytes<'data>, va: u32) -> Option<Bytes<'data>> {
+    pub fn pe_data_at<'data, R: ReadRef<'data>>(&self, data: R, va: u32) -> Option<&'data [u8]> {
         let section_va = self.virtual_address.get(LE);
         let offset = va.checked_sub(section_va)?;
-        let mut section_data = self.pe_data(data).ok()?;
-        section_data.skip(offset as usize).ok()?;
-        Some(section_data)
+        let section_data = self.pe_data(data).ok()?;
+        section_data.get(offset as usize..)
     }
 }
 

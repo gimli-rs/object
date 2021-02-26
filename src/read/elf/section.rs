@@ -5,8 +5,8 @@ use crate::elf;
 use crate::endian::{self, Endianness, U32Bytes};
 use crate::pod::{Bytes, Pod};
 use crate::read::{
-    self, CompressedData, CompressionFormat, Error, ObjectSection, ReadError, SectionFlags,
-    SectionIndex, SectionKind, StringTable,
+    self, CompressedData, CompressionFormat, Error, ObjectSection, ReadError, ReadRef,
+    SectionFlags, SectionIndex, SectionKind, StringTable,
 };
 
 use super::{
@@ -82,10 +82,10 @@ impl<'data, Elf: FileHeader> SectionTable<'data, Elf> {
     ///
     /// Returns an empty symbol table if the symbol table does not exist.
     #[inline]
-    pub fn symbols(
+    pub fn symbols<R: ReadRef<'data>>(
         &self,
         endian: Elf::Endian,
-        data: Bytes<'data>,
+        data: R,
         sh_type: u32,
     ) -> read::Result<SymbolTable<'data, Elf>> {
         debug_assert!(sh_type == elf::SHT_DYNSYM || sh_type == elf::SHT_SYMTAB);
@@ -106,10 +106,10 @@ impl<'data, Elf: FileHeader> SectionTable<'data, Elf> {
     ///
     /// Returns an error if the section is not a symbol table.
     #[inline]
-    pub fn symbol_table_by_index(
+    pub fn symbol_table_by_index<R: ReadRef<'data>>(
         &self,
         endian: Elf::Endian,
-        data: Bytes<'data>,
+        data: R,
         index: usize,
     ) -> read::Result<SymbolTable<'data, Elf>> {
         let section = self.section(index)?;
@@ -181,7 +181,7 @@ where
 }
 
 impl<'data, 'file, Elf: FileHeader> ElfSection<'data, 'file, Elf> {
-    fn bytes(&self) -> read::Result<Bytes<'data>> {
+    fn bytes(&self) -> read::Result<&'data [u8]> {
         self.section
             .data(self.file.endian, self.file.data)
             .read_error("Invalid ELF section size or offset")
@@ -196,7 +196,8 @@ impl<'data, 'file, Elf: FileHeader> ElfSection<'data, 'file, Elf> {
         let mut data = self
             .section
             .data(endian, self.file.data)
-            .read_error("Invalid ELF compressed section offset or size")?;
+            .read_error("Invalid ELF compressed section offset or size")
+            .map(Bytes)?;
         let header = data
             .read::<Elf::CompressionHeader>()
             .read_error("Invalid ELF compression header size or alignment")?;
@@ -221,7 +222,7 @@ impl<'data, 'file, Elf: FileHeader> ElfSection<'data, 'file, Elf> {
         if !name.starts_with(".zdebug_") {
             return Ok(None);
         }
-        let mut data = self.bytes()?;
+        let mut data = self.bytes().map(Bytes)?;
         // Assume ZLIB-style uncompressed data is no more than 4GB to avoid accidentally
         // huge allocations. This also reduces the chance of accidentally matching on a
         // .debug_str that happens to start with "ZLIB".
@@ -277,11 +278,11 @@ impl<'data, 'file, Elf: FileHeader> ObjectSection<'data> for ElfSection<'data, '
 
     #[inline]
     fn data(&self) -> read::Result<&'data [u8]> {
-        Ok(self.bytes()?.0)
+        Ok(self.bytes()?)
     }
 
     fn data_range(&self, address: u64, size: u64) -> read::Result<Option<&'data [u8]>> {
-        Ok(read::data_range(
+        Ok(read::util::data_range(
             self.bytes()?,
             self.address(),
             address,
@@ -417,11 +418,15 @@ pub trait SectionHeader: Debug + Pod {
     ///
     /// Returns `Ok(&[])` if the section has no data.
     /// Returns `Err` for invalid values.
-    fn data<'data>(&self, endian: Self::Endian, data: Bytes<'data>) -> Result<Bytes<'data>, ()> {
+    fn data<'data, R: ReadRef<'data>>(
+        &self,
+        endian: Self::Endian,
+        data: R,
+    ) -> Result<&'data [u8], ()> {
         if let Some((offset, size)) = self.file_range(endian) {
-            data.read_bytes_at(offset as usize, size as usize)
+            data.read_bytes_at(offset, size)
         } else {
-            Ok(Bytes(&[]))
+            Ok(&[])
         }
     }
 
@@ -430,12 +435,12 @@ pub trait SectionHeader: Debug + Pod {
     /// Allows padding at the end of the data.
     /// Returns `Ok(&[])` if the section has no data.
     /// Returns `Err` for invalid values, including bad alignment.
-    fn data_as_array<'data, T: Pod>(
+    fn data_as_array<'data, T: Pod, R: ReadRef<'data>>(
         &self,
         endian: Self::Endian,
-        data: Bytes<'data>,
+        data: R,
     ) -> Result<&'data [T], ()> {
-        let mut data = self.data(endian, data)?;
+        let mut data = self.data(endian, data).map(Bytes)?;
         data.read_slice(data.len() / mem::size_of::<T>())
     }
 
@@ -448,10 +453,10 @@ pub trait SectionHeader: Debug + Pod {
     ///
     /// Returns `Ok(None)` if the section does not contain symbols.
     /// Returns `Err` for invalid values.
-    fn symbols<'data>(
+    fn symbols<'data, R: ReadRef<'data>>(
         &self,
         endian: Self::Endian,
-        data: Bytes<'data>,
+        data: R,
         sections: &SectionTable<Self::Elf>,
         section_index: usize,
     ) -> read::Result<Option<SymbolTable<'data, Self::Elf>>> {
@@ -466,10 +471,10 @@ pub trait SectionHeader: Debug + Pod {
     ///
     /// Returns `Ok(None)` if the section does not contain relocations.
     /// Returns `Err` for invalid values.
-    fn rel<'data>(
+    fn rel<'data, R: ReadRef<'data>>(
         &self,
         endian: Self::Endian,
-        data: Bytes<'data>,
+        data: R,
     ) -> read::Result<Option<&'data [<Self::Elf as FileHeader>::Rel]>> {
         if self.sh_type(endian) != elf::SHT_REL {
             return Ok(None);
@@ -483,10 +488,10 @@ pub trait SectionHeader: Debug + Pod {
     ///
     /// Returns `Ok(None)` if the section does not contain relocations.
     /// Returns `Err` for invalid values.
-    fn rela<'data>(
+    fn rela<'data, R: ReadRef<'data>>(
         &self,
         endian: Self::Endian,
-        data: Bytes<'data>,
+        data: R,
     ) -> read::Result<Option<&'data [<Self::Elf as FileHeader>::Rela]>> {
         if self.sh_type(endian) != elf::SHT_RELA {
             return Ok(None);
@@ -500,10 +505,10 @@ pub trait SectionHeader: Debug + Pod {
     ///
     /// Returns `Err` for invalid values, including if the section does not contain
     /// relocations.
-    fn relocation_symbols<'data>(
+    fn relocation_symbols<'data, R: ReadRef<'data>>(
         &self,
         endian: Self::Endian,
-        data: Bytes<'data>,
+        data: R,
         sections: &SectionTable<'data, Self::Elf>,
     ) -> read::Result<SymbolTable<'data, Self::Elf>> {
         let sh_type = self.sh_type(endian);
@@ -517,10 +522,10 @@ pub trait SectionHeader: Debug + Pod {
     ///
     /// Returns `Ok(None)` if the section does not contain notes.
     /// Returns `Err` for invalid values.
-    fn notes<'data>(
+    fn notes<'data, R: ReadRef<'data>>(
         &self,
         endian: Self::Endian,
-        data: Bytes<'data>,
+        data: R,
     ) -> read::Result<Option<NoteIterator<'data, Self::Elf>>> {
         if self.sh_type(endian) != elf::SHT_NOTE {
             return Ok(None);
@@ -539,17 +544,18 @@ pub trait SectionHeader: Debug + Pod {
     ///
     /// Returns `Ok(None)` if the section does not define a group.
     /// Returns `Err` for invalid values.
-    fn group<'data>(
+    fn group<'data, R: ReadRef<'data>>(
         &self,
         endian: Self::Endian,
-        data: Bytes<'data>,
+        data: R,
     ) -> read::Result<Option<(u32, &'data [U32Bytes<Self::Endian>])>> {
         if self.sh_type(endian) != elf::SHT_GROUP {
             return Ok(None);
         }
         let mut data = self
             .data(endian, data)
-            .read_error("Invalid ELF group section offset or size")?;
+            .read_error("Invalid ELF group section offset or size")
+            .map(Bytes)?;
         let flag = data
             .read::<U32Bytes<_>>()
             .read_error("Invalid ELF group section offset or size")?

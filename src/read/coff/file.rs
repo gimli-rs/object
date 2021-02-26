@@ -3,9 +3,9 @@ use core::str;
 
 use crate::read::{
     self, Architecture, Export, FileFlags, Import, NoDynamicRelocationIterator, Object,
-    ObjectSection, ReadError, Result, SectionIndex, SymbolIndex,
+    ObjectSection, ReadError, ReadRef, Result, SectionIndex, SymbolIndex,
 };
-use crate::{pe, Bytes, LittleEndian as LE};
+use crate::{pe, LittleEndian as LE};
 
 use super::{
     CoffComdat, CoffComdatIterator, CoffSection, CoffSectionIterator, CoffSegment,
@@ -27,15 +27,15 @@ pub(crate) struct CoffCommon<'data> {
 pub struct CoffFile<'data> {
     pub(super) header: &'data pe::ImageFileHeader,
     pub(super) common: CoffCommon<'data>,
-    pub(super) data: Bytes<'data>,
+    pub(super) data: &'data [u8],
 }
 
 impl<'data> CoffFile<'data> {
     /// Parse the raw COFF file data.
     pub fn parse(data: &'data [u8]) -> Result<Self> {
-        let data = Bytes(data);
-        let (header, tail) = pe::ImageFileHeader::parse(data)?;
-        let sections = header.sections(tail)?;
+        let mut offset = 0;
+        let header = pe::ImageFileHeader::parse(data, &mut offset)?;
+        let sections = header.sections(data, offset)?;
         let symbols = header.symbols(data)?;
 
         Ok(CoffFile {
@@ -189,36 +189,43 @@ where
 }
 
 impl pe::ImageFileHeader {
-    /// Read the DOS header.
+    /// Read the file header.
     ///
-    /// The given data must be for the entire file.  Returns the data following the optional
-    /// header, which will contain the section headers.
-    pub fn parse<'data>(mut data: Bytes<'data>) -> read::Result<(&'data Self, Bytes<'data>)> {
+    /// `data` must be the entire file data.
+    /// `offset` must be the file header offset. It is updated to point after the optional header,
+    /// which is where the section headers are located.
+    pub fn parse<'data, R: ReadRef<'data>>(data: R, offset: &mut u64) -> read::Result<&'data Self> {
         let header = data
-            .read::<pe::ImageFileHeader>()
+            .read::<pe::ImageFileHeader>(offset)
             .read_error("Invalid COFF file header size or alignment")?;
 
         // Skip over the optional header.
-        data.skip(header.size_of_optional_header.get(LE) as usize)
+        *offset = offset
+            .checked_add(header.size_of_optional_header.get(LE).into())
             .read_error("Invalid COFF optional header size")?;
 
         // TODO: maybe validate that the machine is known?
-        Ok((header, data))
+        Ok(header)
     }
 
     /// Read the section table.
     ///
-    /// `tail` must be the data following the optional header.
+    /// `data` must be the entire file data.
+    /// `offset` must be after the optional file header.
     #[inline]
-    pub fn sections<'data>(&self, tail: Bytes<'data>) -> read::Result<SectionTable<'data>> {
-        SectionTable::parse(self, tail)
+    pub fn sections<'data>(
+        &self,
+        data: &'data [u8],
+        offset: u64,
+    ) -> read::Result<SectionTable<'data>> {
+        SectionTable::parse(self, data, offset)
     }
 
     /// Read the symbol table and string table.
     ///
     /// `data` must be the entire file data.
     #[inline]
-    pub fn symbols<'data>(&self, data: Bytes<'data>) -> read::Result<SymbolTable<'data>> {
+    pub fn symbols<'data>(&self, data: &'data [u8]) -> read::Result<SymbolTable<'data>> {
         SymbolTable::parse(self, data)
     }
 }

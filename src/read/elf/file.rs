@@ -1,10 +1,11 @@
 use alloc::vec::Vec;
+use core::convert::TryInto;
 use core::fmt::Debug;
 use core::{mem, str};
 
 use crate::read::{
-    self, util, Architecture, Error, Export, FileFlags, Import, Object, ReadError, SectionIndex,
-    StringTable, SymbolIndex,
+    self, util, Architecture, Error, Export, FileFlags, Import, Object, ReadError, ReadRef,
+    SectionIndex, StringTable, SymbolIndex,
 };
 use crate::{elf, endian, ByteString, Bytes, Endian, Endianness, Pod, U32};
 
@@ -26,7 +27,7 @@ pub type ElfFile64<'data, Endian = Endianness> = ElfFile<'data, elf::FileHeader6
 #[derive(Debug)]
 pub struct ElfFile<'data, Elf: FileHeader> {
     pub(super) endian: Elf::Endian,
-    pub(super) data: Bytes<'data>,
+    pub(super) data: &'data [u8],
     pub(super) header: &'data Elf,
     pub(super) segments: &'data [Elf::ProgramHeader],
     pub(super) sections: SectionTable<'data, Elf>,
@@ -38,7 +39,6 @@ pub struct ElfFile<'data, Elf: FileHeader> {
 impl<'data, Elf: FileHeader> ElfFile<'data, Elf> {
     /// Parse the raw ELF file data.
     pub fn parse(data: &'data [u8]) -> read::Result<Self> {
-        let data = Bytes(data);
         let header = Elf::parse(data)?;
         let endian = header.endian()?;
         let segments = header.program_headers(endian, data)?;
@@ -67,7 +67,7 @@ impl<'data, Elf: FileHeader> ElfFile<'data, Elf> {
     }
 
     /// Returns the raw data.
-    pub fn data(&self) -> Bytes<'data> {
+    pub fn data(&self) -> &'data [u8] {
         self.data
     }
 
@@ -335,7 +335,8 @@ where
         let data = section
             .section
             .data(self.endian, self.data)
-            .read_error("Invalid ELF .gnu_debuglink section offset or size")?;
+            .read_error("Invalid ELF .gnu_debuglink section offset or size")
+            .map(Bytes)?;
         let filename = data
             .read_string_at(0)
             .read_error("Missing ELF .gnu_debuglink filename")?;
@@ -355,7 +356,8 @@ where
         let mut data = section
             .section
             .data(self.endian, self.data)
-            .read_error("Invalid ELF .gnu_debugaltlink section offset or size")?;
+            .read_error("Invalid ELF .gnu_debugaltlink section offset or size")
+            .map(Bytes)?;
         let filename = data
             .read_string()
             .read_error("Missing ELF .gnu_debugaltlink filename")?;
@@ -415,7 +417,7 @@ pub trait FileHeader: Debug + Pod {
     /// Read the file header.
     ///
     /// Also checks that the ident field in the file header is a supported format.
-    fn parse<'data>(data: Bytes<'data>) -> read::Result<&'data Self> {
+    fn parse<'data, R: ReadRef<'data>>(data: R) -> read::Result<&'data Self> {
         let header = data
             .read_at::<Self>(0)
             .read_error("Invalid ELF header size or alignment")?;
@@ -463,22 +465,22 @@ pub trait FileHeader: Debug + Pod {
     ///
     /// Section 0 is a special case because getting the section headers normally
     /// requires `shnum`, but `shnum` may be in the first section header.
-    fn section_0<'data>(
+    fn section_0<'data, R: ReadRef<'data>>(
         &self,
         endian: Self::Endian,
-        data: Bytes<'data>,
+        data: R,
     ) -> read::Result<Option<&'data Self::SectionHeader>> {
         let shoff: u64 = self.e_shoff(endian).into();
         if shoff == 0 {
             // No section headers is ok.
             return Ok(None);
         }
-        let shentsize = self.e_shentsize(endian) as usize;
+        let shentsize = usize::from(self.e_shentsize(endian));
         if shentsize != mem::size_of::<Self::SectionHeader>() {
             // Section header size must match.
             return Err(Error("Invalid ELF section header entry size"));
         }
-        data.read_at(shoff as usize)
+        data.read_at(shoff)
             .map(Some)
             .read_error("Invalid ELF section header offset or size")
     }
@@ -486,7 +488,11 @@ pub trait FileHeader: Debug + Pod {
     /// Return the `e_phnum` field of the header. Handles extended values.
     ///
     /// Returns `Err` for invalid values.
-    fn phnum<'data>(&self, endian: Self::Endian, data: Bytes<'data>) -> read::Result<usize> {
+    fn phnum<'data, R: ReadRef<'data>>(
+        &self,
+        endian: Self::Endian,
+        data: R,
+    ) -> read::Result<usize> {
         let e_phnum = self.e_phnum(endian);
         if e_phnum < elf::PN_XNUM {
             Ok(e_phnum as usize)
@@ -501,13 +507,21 @@ pub trait FileHeader: Debug + Pod {
     /// Return the `e_shnum` field of the header. Handles extended values.
     ///
     /// Returns `Err` for invalid values.
-    fn shnum<'data>(&self, endian: Self::Endian, data: Bytes<'data>) -> read::Result<usize> {
+    fn shnum<'data, R: ReadRef<'data>>(
+        &self,
+        endian: Self::Endian,
+        data: R,
+    ) -> read::Result<usize> {
         let e_shnum = self.e_shnum(endian);
         if e_shnum > 0 {
             Ok(e_shnum as usize)
         } else if let Some(section_0) = self.section_0(endian, data)? {
-            let size: u64 = section_0.sh_size(endian).into();
-            Ok(size as usize)
+            section_0
+                .sh_size(endian)
+                .into()
+                .try_into()
+                .ok()
+                .read_error("Invalid ELF extended e_shnum")
         } else {
             // No section headers is ok.
             Ok(0)
@@ -517,7 +531,11 @@ pub trait FileHeader: Debug + Pod {
     /// Return the `e_shstrndx` field of the header. Handles extended values.
     ///
     /// Returns `Err` for invalid values (including if the index is 0).
-    fn shstrndx<'data>(&self, endian: Self::Endian, data: Bytes<'data>) -> read::Result<u32> {
+    fn shstrndx<'data, R: ReadRef<'data>>(
+        &self,
+        endian: Self::Endian,
+        data: R,
+    ) -> read::Result<u32> {
         let e_shstrndx = self.e_shstrndx(endian);
         let index = if e_shstrndx != elf::SHN_XINDEX {
             e_shstrndx.into()
@@ -537,10 +555,10 @@ pub trait FileHeader: Debug + Pod {
     ///
     /// Returns `Ok(&[])` if there are no program headers.
     /// Returns `Err` for invalid values.
-    fn program_headers<'data>(
+    fn program_headers<'data, R: ReadRef<'data>>(
         &self,
         endian: Self::Endian,
-        data: Bytes<'data>,
+        data: R,
     ) -> read::Result<&'data [Self::ProgramHeader]> {
         let phoff: u64 = self.e_phoff(endian).into();
         if phoff == 0 {
@@ -557,7 +575,7 @@ pub trait FileHeader: Debug + Pod {
             // Program header size must match.
             return Err(Error("Invalid ELF program header entry size"));
         }
-        data.read_slice_at(phoff as usize, phnum)
+        data.read_slice_at(phoff.into(), phnum)
             .read_error("Invalid ELF program header size or alignment")
     }
 
@@ -565,10 +583,10 @@ pub trait FileHeader: Debug + Pod {
     ///
     /// Returns `Ok(&[])` if there are no section headers.
     /// Returns `Err` for invalid values.
-    fn section_headers<'data>(
+    fn section_headers<'data, R: ReadRef<'data>>(
         &self,
         endian: Self::Endian,
-        data: Bytes<'data>,
+        data: R,
     ) -> read::Result<&'data [Self::SectionHeader]> {
         let shoff: u64 = self.e_shoff(endian).into();
         if shoff == 0 {
@@ -580,20 +598,20 @@ pub trait FileHeader: Debug + Pod {
             // No section headers is ok.
             return Ok(&[]);
         }
-        let shentsize = self.e_shentsize(endian) as usize;
+        let shentsize = usize::from(self.e_shentsize(endian));
         if shentsize != mem::size_of::<Self::SectionHeader>() {
             // Section header size must match.
             return Err(Error("Invalid ELF section header entry size"));
         }
-        data.read_slice_at(shoff as usize, shnum)
+        data.read_slice_at(shoff.into(), shnum)
             .read_error("Invalid ELF section header offset/size/alignment")
     }
 
     /// Return the string table for the section headers.
-    fn section_strings<'data>(
+    fn section_strings<'data, R: ReadRef<'data>>(
         &self,
         endian: Self::Endian,
-        data: Bytes<'data>,
+        data: R,
         sections: &[Self::SectionHeader],
     ) -> read::Result<StringTable<'data>> {
         if sections.is_empty() {
@@ -608,10 +626,10 @@ pub trait FileHeader: Debug + Pod {
     }
 
     /// Return the section table.
-    fn sections<'data>(
+    fn sections<'data, R: ReadRef<'data>>(
         &self,
         endian: Self::Endian,
-        data: Bytes<'data>,
+        data: R,
     ) -> read::Result<SectionTable<'data, Self>> {
         let sections = self.section_headers(endian, data)?;
         let strings = self.section_strings(endian, data, sections)?;

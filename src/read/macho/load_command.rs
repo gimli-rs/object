@@ -4,7 +4,7 @@ use crate::endian::Endian;
 use crate::macho;
 use crate::pod::{Bytes, Pod};
 use crate::read::macho::{MachHeader, SymbolTable};
-use crate::read::{ReadError, Result, StringTable};
+use crate::read::{ReadError, ReadRef, Result, StringTable};
 
 /// An iterator over the load commands of a `MachHeader`.
 #[derive(Debug, Default, Clone, Copy)]
@@ -15,10 +15,10 @@ pub struct LoadCommandIterator<'data, E: Endian> {
 }
 
 impl<'data, E: Endian> LoadCommandIterator<'data, E> {
-    pub(super) fn new(endian: E, data: Bytes<'data>, ncmds: u32) -> Self {
+    pub(super) fn new(endian: E, data: &'data [u8], ncmds: u32) -> Self {
         LoadCommandIterator {
             endian,
-            data,
+            data: Bytes(data),
             ncmds,
         }
     }
@@ -93,13 +93,13 @@ impl<'data, E: Endian> LoadCommandData<'data, E> {
             macho::LC_SEGMENT => {
                 let mut data = self.data;
                 let segment = data.read().read_error("Invalid Mach-O command size")?;
-                LoadCommandVariant::Segment32(segment, data)
+                LoadCommandVariant::Segment32(segment, data.0)
             }
             macho::LC_SYMTAB => LoadCommandVariant::Symtab(self.data()?),
             macho::LC_THREAD | macho::LC_UNIXTHREAD => {
                 let mut data = self.data;
                 let thread = data.read().read_error("Invalid Mach-O command size")?;
-                LoadCommandVariant::Thread(thread, data)
+                LoadCommandVariant::Thread(thread, data.0)
             }
             macho::LC_DYSYMTAB => LoadCommandVariant::Dysymtab(self.data()?),
             macho::LC_LOAD_DYLIB
@@ -121,7 +121,7 @@ impl<'data, E: Endian> LoadCommandData<'data, E> {
             macho::LC_SEGMENT_64 => {
                 let mut data = self.data;
                 let segment = data.read().read_error("Invalid Mach-O command size")?;
-                LoadCommandVariant::Segment64(segment, data)
+                LoadCommandVariant::Segment64(segment, data.0)
             }
             macho::LC_ROUTINES_64 => LoadCommandVariant::Routines64(self.data()?),
             macho::LC_UUID => LoadCommandVariant::Uuid(self.data()?),
@@ -157,11 +157,11 @@ impl<'data, E: Endian> LoadCommandData<'data, E> {
     /// Try to parse this command as a `SegmentCommand32`.
     ///
     /// Returns the segment command and the data containing the sections.
-    pub fn segment_32(self) -> Result<Option<(&'data macho::SegmentCommand32<E>, Bytes<'data>)>> {
+    pub fn segment_32(self) -> Result<Option<(&'data macho::SegmentCommand32<E>, &'data [u8])>> {
         if self.cmd == macho::LC_SEGMENT {
             let mut data = self.data;
             let segment = data.read().read_error("Invalid Mach-O command size")?;
-            Ok(Some((segment, data)))
+            Ok(Some((segment, data.0)))
         } else {
             Ok(None)
         }
@@ -211,11 +211,11 @@ impl<'data, E: Endian> LoadCommandData<'data, E> {
     }
 
     /// Try to parse this command as a `SegmentCommand64`.
-    pub fn segment_64(self) -> Result<Option<(&'data macho::SegmentCommand64<E>, Bytes<'data>)>> {
+    pub fn segment_64(self) -> Result<Option<(&'data macho::SegmentCommand64<E>, &'data [u8])>> {
         if self.cmd == macho::LC_SEGMENT_64 {
             let mut data = self.data;
             let command = data.read().read_error("Invalid Mach-O command size")?;
-            Ok(Some((command, data)))
+            Ok(Some((command, data.0)))
         } else {
             Ok(None)
         }
@@ -244,13 +244,13 @@ impl<'data, E: Endian> LoadCommandData<'data, E> {
 #[derive(Debug, Clone, Copy)]
 pub enum LoadCommandVariant<'data, E: Endian> {
     /// `LC_SEGMENT`
-    Segment32(&'data macho::SegmentCommand32<E>, Bytes<'data>),
+    Segment32(&'data macho::SegmentCommand32<E>, &'data [u8]),
     /// `LC_SYMTAB`
     Symtab(&'data macho::SymtabCommand<E>),
     // obsolete: `LC_SYMSEG`
     //Symseg(&'data macho::SymsegCommand<E>),
     /// `LC_THREAD` or `LC_UNIXTHREAD`
-    Thread(&'data macho::ThreadCommand<E>, Bytes<'data>),
+    Thread(&'data macho::ThreadCommand<E>, &'data [u8]),
     // obsolete: `LC_IDFVMLIB` or `LC_LOADFVMLIB`
     //Fvmlib(&'data macho::FvmlibCommand<E>),
     // obsolete: `LC_IDENT`
@@ -286,7 +286,7 @@ pub enum LoadCommandVariant<'data, E: Endian> {
     /// `LC_PREBIND_CKSUM`
     PrebindCksum(&'data macho::PrebindCksumCommand<E>),
     /// `LC_SEGMENT_64`
-    Segment64(&'data macho::SegmentCommand64<E>, Bytes<'data>),
+    Segment64(&'data macho::SegmentCommand64<E>, &'data [u8]),
     /// `LC_ROUTINES_64`
     Routines64(&'data macho::RoutinesCommand64<E>),
     /// `LC_UUID`
@@ -326,21 +326,21 @@ pub enum LoadCommandVariant<'data, E: Endian> {
 
 impl<E: Endian> macho::SymtabCommand<E> {
     /// Return the symbol table that this command references.
-    pub fn symbols<'data, Mach: MachHeader<Endian = E>>(
+    pub fn symbols<'data, Mach: MachHeader<Endian = E>, R: ReadRef<'data>>(
         &self,
         endian: E,
-        data: Bytes<'data>,
+        data: R,
     ) -> Result<SymbolTable<'data, Mach>> {
         let symbols = data
             .read_slice_at(
-                self.symoff.get(endian) as usize,
+                self.symoff.get(endian).into(),
                 self.nsyms.get(endian) as usize,
             )
             .read_error("Invalid Mach-O symbol table offset or size")?;
         let strings = data
             .read_bytes_at(
-                self.stroff.get(endian) as usize,
-                self.strsize.get(endian) as usize,
+                self.stroff.get(endian).into(),
+                self.strsize.get(endian).into(),
             )
             .read_error("Invalid Mach-O string table offset or size")?;
         let strings = StringTable::new(strings);

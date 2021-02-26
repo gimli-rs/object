@@ -3,9 +3,10 @@ use core::{fmt, result, slice, str};
 
 use crate::endian::{self, Endianness};
 use crate::macho;
-use crate::pod::{Bytes, Pod};
+use crate::pod::Pod;
 use crate::read::{
-    self, CompressedData, ObjectSection, ReadError, Result, SectionFlags, SectionIndex, SectionKind,
+    self, CompressedData, ObjectSection, ReadError, ReadRef, Result, SectionFlags, SectionIndex,
+    SectionKind,
 };
 
 use super::{MachHeader, MachOFile, MachORelocationIterator};
@@ -64,7 +65,7 @@ where
 }
 
 impl<'data, 'file, Mach: MachHeader> MachOSection<'data, 'file, Mach> {
-    fn bytes(&self) -> Result<Bytes<'data>> {
+    fn bytes(&self) -> Result<&'data [u8]> {
         self.internal
             .section
             .data(self.file.endian, self.file.data)
@@ -104,11 +105,11 @@ impl<'data, 'file, Mach: MachHeader> ObjectSection<'data> for MachOSection<'data
 
     #[inline]
     fn data(&self) -> Result<&'data [u8]> {
-        Ok(self.bytes()?.0)
+        Ok(self.bytes()?)
     }
 
     fn data_range(&self, address: u64, size: u64) -> Result<Option<&'data [u8]>> {
-        Ok(read::data_range(
+        Ok(read::util::data_range(
             self.bytes()?,
             self.address(),
             address,
@@ -245,27 +246,27 @@ pub trait Section: Debug + Pod {
     ///
     /// Returns `Ok(&[])` if the section has no data.
     /// Returns `Err` for invalid values.
-    fn data<'data>(
+    fn data<'data, R: ReadRef<'data>>(
         &self,
         endian: Self::Endian,
-        data: Bytes<'data>,
-    ) -> result::Result<Bytes<'data>, ()> {
+        data: R,
+    ) -> result::Result<&'data [u8], ()> {
         if let Some((offset, size)) = self.file_range(endian) {
-            data.read_bytes_at(offset as usize, size as usize)
+            data.read_bytes_at(offset, size)
         } else {
-            Ok(Bytes(&[]))
+            Ok(&[])
         }
     }
 
     /// Return the relocation array.
     ///
     /// Returns `Err` for invalid values.
-    fn relocations<'data>(
+    fn relocations<'data, R: ReadRef<'data>>(
         &self,
         endian: Self::Endian,
-        data: Bytes<'data>,
+        data: R,
     ) -> Result<&'data [macho::Relocation<Self::Endian>]> {
-        data.read_slice_at(self.reloff(endian) as usize, self.nreloc(endian) as usize)
+        data.read_slice_at(self.reloff(endian).into(), self.nreloc(endian) as usize)
             .read_error("Invalid Mach-O relocations offset or number")
     }
 }

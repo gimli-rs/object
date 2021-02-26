@@ -1,5 +1,5 @@
 use object::read::macho::MachHeader;
-use object::{macho, write, Architecture, BinaryFormat, Bytes, Endianness};
+use object::{macho, write, Architecture, BinaryFormat, Endianness};
 
 #[test]
 // Test that segment size is valid when the first section needs alignment.
@@ -13,8 +13,7 @@ fn issue_286_segment_file_size() {
     let text = object.section_id(write::StandardSection::Text);
     object.append_section_data(text, &[1; 30], 0x1000);
 
-    let data = object.write().unwrap();
-    let bytes = Bytes(&data);
+    let bytes = &*object.write().unwrap();
     let header = macho::MachHeader64::parse(bytes).unwrap();
     let endian: Endianness = header.endian().unwrap();
     let mut commands = header.load_commands(endian, bytes).unwrap();

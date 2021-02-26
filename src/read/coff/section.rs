@@ -2,11 +2,10 @@ use core::{iter, result, slice, str};
 
 use crate::endian::LittleEndian as LE;
 use crate::pe;
-use crate::pod::Bytes;
 use crate::read::util::StringTable;
 use crate::read::{
-    self, CompressedData, Error, ObjectSection, ObjectSegment, ReadError, Result, SectionFlags,
-    SectionIndex, SectionKind,
+    self, CompressedData, Error, ObjectSection, ObjectSegment, ReadError, ReadRef, Result,
+    SectionFlags, SectionIndex, SectionKind,
 };
 
 use super::{CoffFile, CoffRelocationIterator};
@@ -20,10 +19,15 @@ pub struct SectionTable<'data> {
 impl<'data> SectionTable<'data> {
     /// Parse the section table.
     ///
-    /// `data` must be the data following the optional header.
-    pub fn parse(header: &pe::ImageFileHeader, mut data: Bytes<'data>) -> Result<Self> {
+    /// `data` must be the entire file data.
+    /// `offset` must be after the optional file header.
+    pub fn parse<R: ReadRef<'data>>(
+        header: &pe::ImageFileHeader,
+        data: R,
+        offset: u64,
+    ) -> Result<Self> {
         let sections = data
-            .read_slice(header.number_of_sections.get(LE) as usize)
+            .read_slice_at(offset, header.number_of_sections.get(LE).into())
             .read_error("Invalid COFF/PE section headers")?;
         Ok(SectionTable { sections })
     }
@@ -107,7 +111,7 @@ where
 }
 
 impl<'data, 'file> CoffSegment<'data, 'file> {
-    fn bytes(&self) -> Result<Bytes<'data>> {
+    fn bytes(&self) -> Result<&'data [u8]> {
         self.section
             .coff_data(self.file.data)
             .read_error("Invalid COFF section offset or size")
@@ -139,11 +143,11 @@ impl<'data, 'file> ObjectSegment<'data> for CoffSegment<'data, 'file> {
     }
 
     fn data(&self) -> Result<&'data [u8]> {
-        Ok(self.bytes()?.0)
+        Ok(self.bytes()?)
     }
 
     fn data_range(&self, address: u64, size: u64) -> Result<Option<&'data [u8]>> {
-        Ok(read::data_range(
+        Ok(read::util::data_range(
             self.bytes()?,
             self.address(),
             address,
@@ -196,7 +200,7 @@ where
 }
 
 impl<'data, 'file> CoffSection<'data, 'file> {
-    fn bytes(&self) -> Result<Bytes<'data>> {
+    fn bytes(&self) -> Result<&'data [u8]> {
         self.section
             .coff_data(self.file.data)
             .read_error("Invalid COFF section offset or size")
@@ -236,11 +240,11 @@ impl<'data, 'file> ObjectSection<'data> for CoffSection<'data, 'file> {
     }
 
     fn data(&self) -> Result<&'data [u8]> {
-        Ok(self.bytes()?.0)
+        Ok(self.bytes()?)
     }
 
     fn data_range(&self, address: u64, size: u64) -> Result<Option<&'data [u8]>> {
-        Ok(read::data_range(
+        Ok(read::util::data_range(
             self.bytes()?,
             self.address(),
             address,
@@ -374,11 +378,11 @@ impl pe::ImageSectionHeader {
     ///
     /// Returns `Ok(&[])` if the section has no data.
     /// Returns `Err` for invalid values.
-    pub fn coff_data<'data>(&self, data: Bytes<'data>) -> result::Result<Bytes<'data>, ()> {
+    pub fn coff_data<'data, R: ReadRef<'data>>(&self, data: R) -> result::Result<&'data [u8], ()> {
         if let Some((offset, size)) = self.coff_file_range() {
-            data.read_bytes_at(offset as usize, size as usize)
+            data.read_bytes_at(offset.into(), size.into())
         } else {
-            Ok(Bytes(&[]))
+            Ok(&[])
         }
     }
 
@@ -408,12 +412,12 @@ impl pe::ImageSectionHeader {
     /// Read the relocations in a COFF file.
     ///
     /// `data` must be the entire file data.
-    pub fn coff_relocations<'data>(
+    pub fn coff_relocations<'data, R: ReadRef<'data>>(
         &self,
-        data: Bytes<'data>,
+        data: R,
     ) -> read::Result<&'data [pe::ImageRelocation]> {
-        let pointer = self.pointer_to_relocations.get(LE) as usize;
-        let number = self.number_of_relocations.get(LE) as usize;
+        let pointer = self.pointer_to_relocations.get(LE).into();
+        let number = self.number_of_relocations.get(LE).into();
         data.read_slice_at(pointer, number)
             .read_error("Invalid COFF relocation offset or number")
     }
