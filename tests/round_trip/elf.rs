@@ -180,7 +180,7 @@ fn note() {
     let section = object.add_section(Vec::new(), b".note8".to_vec(), SectionKind::Note);
     object.section_mut(section).set_data(buffer, 8);
 
-    let bytes = &*object.write().unwrap();
+    let bytes = &object.write().unwrap();
 
     //std::fs::write(&"note.o", &bytes).unwrap();
 

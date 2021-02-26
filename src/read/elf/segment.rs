@@ -9,25 +9,29 @@ use crate::read::{self, ObjectSegment, ReadError, ReadRef};
 use super::{ElfFile, FileHeader, NoteIterator};
 
 /// An iterator over the segments of an `ElfFile32`.
-pub type ElfSegmentIterator32<'data, 'file, Endian = Endianness> =
-    ElfSegmentIterator<'data, 'file, elf::FileHeader32<Endian>>;
+pub type ElfSegmentIterator32<'data, 'file, Endian = Endianness, R = &'data [u8]> =
+    ElfSegmentIterator<'data, 'file, elf::FileHeader32<Endian>, R>;
 /// An iterator over the segments of an `ElfFile64`.
-pub type ElfSegmentIterator64<'data, 'file, Endian = Endianness> =
-    ElfSegmentIterator<'data, 'file, elf::FileHeader64<Endian>>;
+pub type ElfSegmentIterator64<'data, 'file, Endian = Endianness, R = &'data [u8]> =
+    ElfSegmentIterator<'data, 'file, elf::FileHeader64<Endian>, R>;
 
 /// An iterator over the segments of an `ElfFile`.
 #[derive(Debug)]
-pub struct ElfSegmentIterator<'data, 'file, Elf>
+pub struct ElfSegmentIterator<'data, 'file, Elf, R = &'data [u8]>
 where
-    'data: 'file,
     Elf: FileHeader,
+    R: ReadRef<'data>,
 {
-    pub(super) file: &'file ElfFile<'data, Elf>,
+    pub(super) file: &'file ElfFile<'data, Elf, R>,
     pub(super) iter: slice::Iter<'data, Elf::ProgramHeader>,
 }
 
-impl<'data, 'file, Elf: FileHeader> Iterator for ElfSegmentIterator<'data, 'file, Elf> {
-    type Item = ElfSegment<'data, 'file, Elf>;
+impl<'data, 'file, Elf, R> Iterator for ElfSegmentIterator<'data, 'file, Elf, R>
+where
+    Elf: FileHeader,
+    R: ReadRef<'data>,
+{
+    type Item = ElfSegment<'data, 'file, Elf, R>;
 
     fn next(&mut self) -> Option<Self::Item> {
         while let Some(segment) = self.iter.next() {
@@ -43,24 +47,25 @@ impl<'data, 'file, Elf: FileHeader> Iterator for ElfSegmentIterator<'data, 'file
 }
 
 /// A segment of an `ElfFile32`.
-pub type ElfSegment32<'data, 'file, Endian = Endianness> =
-    ElfSegment<'data, 'file, elf::FileHeader32<Endian>>;
+pub type ElfSegment32<'data, 'file, Endian = Endianness, R = &'data [u8]> =
+    ElfSegment<'data, 'file, elf::FileHeader32<Endian>, R>;
 /// A segment of an `ElfFile64`.
-pub type ElfSegment64<'data, 'file, Endian = Endianness> =
-    ElfSegment<'data, 'file, elf::FileHeader64<Endian>>;
+pub type ElfSegment64<'data, 'file, Endian = Endianness, R = &'data [u8]> =
+    ElfSegment<'data, 'file, elf::FileHeader64<Endian>, R>;
 
 /// A segment of an `ElfFile`.
 #[derive(Debug)]
-pub struct ElfSegment<'data, 'file, Elf>
+pub struct ElfSegment<'data, 'file, Elf, R = &'data [u8]>
 where
     'data: 'file,
     Elf: FileHeader,
+    R: ReadRef<'data>,
 {
-    pub(super) file: &'file ElfFile<'data, Elf>,
+    pub(super) file: &'file ElfFile<'data, Elf, R>,
     pub(super) segment: &'data Elf::ProgramHeader,
 }
 
-impl<'data, 'file, Elf: FileHeader> ElfSegment<'data, 'file, Elf> {
+impl<'data, 'file, Elf: FileHeader, R: ReadRef<'data>> ElfSegment<'data, 'file, Elf, R> {
     fn bytes(&self) -> read::Result<&'data [u8]> {
         self.segment
             .data(self.file.endian, self.file.data)
@@ -68,9 +73,18 @@ impl<'data, 'file, Elf: FileHeader> ElfSegment<'data, 'file, Elf> {
     }
 }
 
-impl<'data, 'file, Elf: FileHeader> read::private::Sealed for ElfSegment<'data, 'file, Elf> {}
+impl<'data, 'file, Elf, R> read::private::Sealed for ElfSegment<'data, 'file, Elf, R>
+where
+    Elf: FileHeader,
+    R: ReadRef<'data>,
+{
+}
 
-impl<'data, 'file, Elf: FileHeader> ObjectSegment<'data> for ElfSegment<'data, 'file, Elf> {
+impl<'data, 'file, Elf, R> ObjectSegment<'data> for ElfSegment<'data, 'file, Elf, R>
+where
+    Elf: FileHeader,
+    R: ReadRef<'data>,
+{
     #[inline]
     fn address(&self) -> u64 {
         self.segment.p_vaddr(self.file.endian).into()

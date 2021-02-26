@@ -132,25 +132,29 @@ impl<'data, Elf: FileHeader> SectionTable<'data, Elf> {
 }
 
 /// An iterator over the sections of an `ElfFile32`.
-pub type ElfSectionIterator32<'data, 'file, Endian = Endianness> =
-    ElfSectionIterator<'data, 'file, elf::FileHeader32<Endian>>;
+pub type ElfSectionIterator32<'data, 'file, Endian = Endianness, R = &'data [u8]> =
+    ElfSectionIterator<'data, 'file, elf::FileHeader32<Endian>, R>;
 /// An iterator over the sections of an `ElfFile64`.
-pub type ElfSectionIterator64<'data, 'file, Endian = Endianness> =
-    ElfSectionIterator<'data, 'file, elf::FileHeader64<Endian>>;
+pub type ElfSectionIterator64<'data, 'file, Endian = Endianness, R = &'data [u8]> =
+    ElfSectionIterator<'data, 'file, elf::FileHeader64<Endian>, R>;
 
 /// An iterator over the sections of an `ElfFile`.
 #[derive(Debug)]
-pub struct ElfSectionIterator<'data, 'file, Elf>
+pub struct ElfSectionIterator<'data, 'file, Elf, R = &'data [u8]>
 where
-    'data: 'file,
     Elf: FileHeader,
+    R: ReadRef<'data>,
 {
-    pub(super) file: &'file ElfFile<'data, Elf>,
+    pub(super) file: &'file ElfFile<'data, Elf, R>,
     pub(super) iter: iter::Enumerate<slice::Iter<'data, Elf::SectionHeader>>,
 }
 
-impl<'data, 'file, Elf: FileHeader> Iterator for ElfSectionIterator<'data, 'file, Elf> {
-    type Item = ElfSection<'data, 'file, Elf>;
+impl<'data, 'file, Elf, R> Iterator for ElfSectionIterator<'data, 'file, Elf, R>
+where
+    Elf: FileHeader,
+    R: ReadRef<'data>,
+{
+    type Item = ElfSection<'data, 'file, Elf, R>;
 
     fn next(&mut self) -> Option<Self::Item> {
         self.iter.next().map(|(index, section)| ElfSection {
@@ -162,25 +166,26 @@ impl<'data, 'file, Elf: FileHeader> Iterator for ElfSectionIterator<'data, 'file
 }
 
 /// A section of an `ElfFile32`.
-pub type ElfSection32<'data, 'file, Endian = Endianness> =
-    ElfSection<'data, 'file, elf::FileHeader32<Endian>>;
+pub type ElfSection32<'data, 'file, Endian = Endianness, R = &'data [u8]> =
+    ElfSection<'data, 'file, elf::FileHeader32<Endian>, R>;
 /// A section of an `ElfFile64`.
-pub type ElfSection64<'data, 'file, Endian = Endianness> =
-    ElfSection<'data, 'file, elf::FileHeader64<Endian>>;
+pub type ElfSection64<'data, 'file, Endian = Endianness, R = &'data [u8]> =
+    ElfSection<'data, 'file, elf::FileHeader64<Endian>, R>;
 
 /// A section of an `ElfFile`.
 #[derive(Debug)]
-pub struct ElfSection<'data, 'file, Elf>
+pub struct ElfSection<'data, 'file, Elf, R = &'data [u8]>
 where
     'data: 'file,
     Elf: FileHeader,
+    R: ReadRef<'data>,
 {
-    pub(super) file: &'file ElfFile<'data, Elf>,
+    pub(super) file: &'file ElfFile<'data, Elf, R>,
     pub(super) index: SectionIndex,
     pub(super) section: &'data Elf::SectionHeader,
 }
 
-impl<'data, 'file, Elf: FileHeader> ElfSection<'data, 'file, Elf> {
+impl<'data, 'file, Elf: FileHeader, R: ReadRef<'data>> ElfSection<'data, 'file, Elf, R> {
     fn bytes(&self) -> read::Result<&'data [u8]> {
         self.section
             .data(self.file.endian, self.file.data)
@@ -246,10 +251,19 @@ impl<'data, 'file, Elf: FileHeader> ElfSection<'data, 'file, Elf> {
     }
 }
 
-impl<'data, 'file, Elf: FileHeader> read::private::Sealed for ElfSection<'data, 'file, Elf> {}
+impl<'data, 'file, Elf, R> read::private::Sealed for ElfSection<'data, 'file, Elf, R>
+where
+    Elf: FileHeader,
+    R: ReadRef<'data>,
+{
+}
 
-impl<'data, 'file, Elf: FileHeader> ObjectSection<'data> for ElfSection<'data, 'file, Elf> {
-    type RelocationIterator = ElfSectionRelocationIterator<'data, 'file, Elf>;
+impl<'data, 'file, Elf, R> ObjectSection<'data> for ElfSection<'data, 'file, Elf, R>
+where
+    Elf: FileHeader,
+    R: ReadRef<'data>,
+{
+    type RelocationIterator = ElfSectionRelocationIterator<'data, 'file, Elf, R>;
 
     #[inline]
     fn index(&self) -> SectionIndex {
@@ -359,7 +373,7 @@ impl<'data, 'file, Elf: FileHeader> ObjectSection<'data> for ElfSection<'data, '
         }
     }
 
-    fn relocations(&self) -> ElfSectionRelocationIterator<'data, 'file, Elf> {
+    fn relocations(&self) -> ElfSectionRelocationIterator<'data, 'file, Elf, R> {
         ElfSectionRelocationIterator {
             section_index: self.index.0,
             file: self.file,
