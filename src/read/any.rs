@@ -189,6 +189,7 @@ impl<'data> File<'data> {
             FileKind::Pe64 => FileInternal::Pe64(pe::PeFile64::parse(data)?),
             #[cfg(feature = "coff")]
             FileKind::Coff => FileInternal::Coff(coff::CoffFile::parse(data)?),
+            #[allow(unreachable_patterns)]
             _ => return Err(Error("Unsupported file format")),
         };
         Ok(File { inner })
@@ -314,6 +315,7 @@ where
             FileInternal::Elf64(ref elf) => {
                 DynamicRelocationIteratorInternal::Elf64(elf.dynamic_relocations()?)
             }
+            #[allow(unreachable_patterns)]
             _ => return None,
         };
         Some(DynamicRelocationIterator { inner })
