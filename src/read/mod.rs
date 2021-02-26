@@ -7,6 +7,9 @@ use core::{fmt, result};
 use crate::common::*;
 use crate::{ByteString, Bytes};
 
+mod read_ref;
+pub use read_ref::*;
+
 mod util;
 pub use util::StringTable;
 
