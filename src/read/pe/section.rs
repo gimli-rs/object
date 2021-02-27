@@ -11,23 +11,29 @@ use crate::read::{
 use super::{ImageNtHeaders, PeFile, SectionTable};
 
 /// An iterator over the loadable sections of a `PeFile32`.
-pub type PeSegmentIterator32<'data, 'file> = PeSegmentIterator<'data, 'file, pe::ImageNtHeaders32>;
+pub type PeSegmentIterator32<'data, 'file, R = &'data [u8]> =
+    PeSegmentIterator<'data, 'file, pe::ImageNtHeaders32, R>;
 /// An iterator over the loadable sections of a `PeFile64`.
-pub type PeSegmentIterator64<'data, 'file> = PeSegmentIterator<'data, 'file, pe::ImageNtHeaders64>;
+pub type PeSegmentIterator64<'data, 'file, R = &'data [u8]> =
+    PeSegmentIterator<'data, 'file, pe::ImageNtHeaders64, R>;
 
 /// An iterator over the loadable sections of a `PeFile`.
 #[derive(Debug)]
-pub struct PeSegmentIterator<'data, 'file, Pe>
+pub struct PeSegmentIterator<'data, 'file, Pe, R = &'data [u8]>
 where
-    'data: 'file,
     Pe: ImageNtHeaders,
+    R: ReadRef<'data>,
 {
-    pub(super) file: &'file PeFile<'data, Pe>,
+    pub(super) file: &'file PeFile<'data, Pe, R>,
     pub(super) iter: slice::Iter<'file, pe::ImageSectionHeader>,
 }
 
-impl<'data, 'file, Pe: ImageNtHeaders> Iterator for PeSegmentIterator<'data, 'file, Pe> {
-    type Item = PeSegment<'data, 'file, Pe>;
+impl<'data, 'file, Pe, R> Iterator for PeSegmentIterator<'data, 'file, Pe, R>
+where
+    Pe: ImageNtHeaders,
+    R: ReadRef<'data>,
+{
+    type Item = PeSegment<'data, 'file, Pe, R>;
 
     fn next(&mut self) -> Option<Self::Item> {
         self.iter.next().map(|section| PeSegment {
@@ -38,22 +44,28 @@ impl<'data, 'file, Pe: ImageNtHeaders> Iterator for PeSegmentIterator<'data, 'fi
 }
 
 /// A loadable section of a `PeFile32`.
-pub type PeSegment32<'data, 'file> = PeSegment<'data, 'file, pe::ImageNtHeaders32>;
+pub type PeSegment32<'data, 'file, R = &'data [u8]> =
+    PeSegment<'data, 'file, pe::ImageNtHeaders32, R>;
 /// A loadable section of a `PeFile64`.
-pub type PeSegment64<'data, 'file> = PeSegment<'data, 'file, pe::ImageNtHeaders64>;
+pub type PeSegment64<'data, 'file, R = &'data [u8]> =
+    PeSegment<'data, 'file, pe::ImageNtHeaders64, R>;
 
 /// A loadable section of a `PeFile`.
 #[derive(Debug)]
-pub struct PeSegment<'data, 'file, Pe>
+pub struct PeSegment<'data, 'file, Pe, R = &'data [u8]>
 where
-    'data: 'file,
     Pe: ImageNtHeaders,
+    R: ReadRef<'data>,
 {
-    file: &'file PeFile<'data, Pe>,
+    file: &'file PeFile<'data, Pe, R>,
     section: &'file pe::ImageSectionHeader,
 }
 
-impl<'data, 'file, Pe: ImageNtHeaders> PeSegment<'data, 'file, Pe> {
+impl<'data, 'file, Pe, R> PeSegment<'data, 'file, Pe, R>
+where
+    Pe: ImageNtHeaders,
+    R: ReadRef<'data>,
+{
     fn bytes(&self) -> Result<&'data [u8]> {
         self.section
             .pe_data(self.file.data)
@@ -61,9 +73,18 @@ impl<'data, 'file, Pe: ImageNtHeaders> PeSegment<'data, 'file, Pe> {
     }
 }
 
-impl<'data, 'file, Pe: ImageNtHeaders> read::private::Sealed for PeSegment<'data, 'file, Pe> {}
+impl<'data, 'file, Pe, R> read::private::Sealed for PeSegment<'data, 'file, Pe, R>
+where
+    Pe: ImageNtHeaders,
+    R: ReadRef<'data>,
+{
+}
 
-impl<'data, 'file, Pe: ImageNtHeaders> ObjectSegment<'data> for PeSegment<'data, 'file, Pe> {
+impl<'data, 'file, Pe, R> ObjectSegment<'data> for PeSegment<'data, 'file, Pe, R>
+where
+    Pe: ImageNtHeaders,
+    R: ReadRef<'data>,
+{
     #[inline]
     fn address(&self) -> u64 {
         u64::from(self.section.virtual_address.get(LE))
@@ -110,23 +131,30 @@ impl<'data, 'file, Pe: ImageNtHeaders> ObjectSegment<'data> for PeSegment<'data,
 }
 
 /// An iterator over the sections of a `PeFile32`.
-pub type PeSectionIterator32<'data, 'file> = PeSectionIterator<'data, 'file, pe::ImageNtHeaders32>;
+pub type PeSectionIterator32<'data, 'file, R = &'data [u8]> =
+    PeSectionIterator<'data, 'file, pe::ImageNtHeaders32, R>;
 /// An iterator over the sections of a `PeFile64`.
-pub type PeSectionIterator64<'data, 'file> = PeSectionIterator<'data, 'file, pe::ImageNtHeaders64>;
+pub type PeSectionIterator64<'data, 'file, R = &'data [u8]> =
+    PeSectionIterator<'data, 'file, pe::ImageNtHeaders64, R>;
 
 /// An iterator over the sections of a `PeFile`.
 #[derive(Debug)]
-pub struct PeSectionIterator<'data, 'file, Pe>
+pub struct PeSectionIterator<'data, 'file, Pe, R = &'data [u8]>
 where
     'data: 'file,
     Pe: ImageNtHeaders,
+    R: ReadRef<'data>,
 {
-    pub(super) file: &'file PeFile<'data, Pe>,
+    pub(super) file: &'file PeFile<'data, Pe, R>,
     pub(super) iter: iter::Enumerate<slice::Iter<'file, pe::ImageSectionHeader>>,
 }
 
-impl<'data, 'file, Pe: ImageNtHeaders> Iterator for PeSectionIterator<'data, 'file, Pe> {
-    type Item = PeSection<'data, 'file, Pe>;
+impl<'data, 'file, Pe, R> Iterator for PeSectionIterator<'data, 'file, Pe, R>
+where
+    Pe: ImageNtHeaders,
+    R: ReadRef<'data>,
+{
+    type Item = PeSection<'data, 'file, Pe, R>;
 
     fn next(&mut self) -> Option<Self::Item> {
         self.iter.next().map(|(index, section)| PeSection {
@@ -138,23 +166,30 @@ impl<'data, 'file, Pe: ImageNtHeaders> Iterator for PeSectionIterator<'data, 'fi
 }
 
 /// A section of a `PeFile32`.
-pub type PeSection32<'data, 'file> = PeSection<'data, 'file, pe::ImageNtHeaders32>;
+pub type PeSection32<'data, 'file, R = &'data [u8]> =
+    PeSection<'data, 'file, pe::ImageNtHeaders32, R>;
 /// A section of a `PeFile64`.
-pub type PeSection64<'data, 'file> = PeSection<'data, 'file, pe::ImageNtHeaders64>;
+pub type PeSection64<'data, 'file, R = &'data [u8]> =
+    PeSection<'data, 'file, pe::ImageNtHeaders64, R>;
 
 /// A section of a `PeFile`.
 #[derive(Debug)]
-pub struct PeSection<'data, 'file, Pe>
+pub struct PeSection<'data, 'file, Pe, R = &'data [u8]>
 where
     'data: 'file,
     Pe: ImageNtHeaders,
+    R: ReadRef<'data>,
 {
-    pub(super) file: &'file PeFile<'data, Pe>,
+    pub(super) file: &'file PeFile<'data, Pe, R>,
     pub(super) index: SectionIndex,
     pub(super) section: &'file pe::ImageSectionHeader,
 }
 
-impl<'data, 'file, Pe: ImageNtHeaders> PeSection<'data, 'file, Pe> {
+impl<'data, 'file, Pe, R> PeSection<'data, 'file, Pe, R>
+where
+    Pe: ImageNtHeaders,
+    R: ReadRef<'data>,
+{
     fn bytes(&self) -> Result<&'data [u8]> {
         self.section
             .pe_data(self.file.data)
@@ -162,10 +197,19 @@ impl<'data, 'file, Pe: ImageNtHeaders> PeSection<'data, 'file, Pe> {
     }
 }
 
-impl<'data, 'file, Pe: ImageNtHeaders> read::private::Sealed for PeSection<'data, 'file, Pe> {}
+impl<'data, 'file, Pe, R> read::private::Sealed for PeSection<'data, 'file, Pe, R>
+where
+    Pe: ImageNtHeaders,
+    R: ReadRef<'data>,
+{
+}
 
-impl<'data, 'file, Pe: ImageNtHeaders> ObjectSection<'data> for PeSection<'data, 'file, Pe> {
-    type RelocationIterator = PeRelocationIterator<'data, 'file>;
+impl<'data, 'file, Pe, R> ObjectSection<'data> for PeSection<'data, 'file, Pe, R>
+where
+    Pe: ImageNtHeaders,
+    R: ReadRef<'data>,
+{
+    type RelocationIterator = PeRelocationIterator<'data, 'file, R>;
 
     #[inline]
     fn index(&self) -> SectionIndex {
@@ -233,8 +277,8 @@ impl<'data, 'file, Pe: ImageNtHeaders> ObjectSection<'data> for PeSection<'data,
         self.section.kind()
     }
 
-    fn relocations(&self) -> PeRelocationIterator<'data, 'file> {
-        PeRelocationIterator::default()
+    fn relocations(&self) -> PeRelocationIterator<'data, 'file, R> {
+        PeRelocationIterator(PhantomData)
     }
 
     fn flags(&self) -> SectionFlags {
@@ -246,7 +290,7 @@ impl<'data, 'file, Pe: ImageNtHeaders> ObjectSection<'data> for PeSection<'data,
 
 impl<'data> SectionTable<'data> {
     /// Return the data at the given virtual address in a PE file.
-    pub fn pe_data_at(&self, data: &'data [u8], va: u32) -> Option<&'data [u8]> {
+    pub fn pe_data_at<R: ReadRef<'data>>(&self, data: R, va: u32) -> Option<&'data [u8]> {
         self.iter()
             .filter_map(|section| section.pe_data_at(data, va))
             .next()
@@ -280,10 +324,12 @@ impl pe::ImageSectionHeader {
 }
 
 /// An iterator over the relocations in an `PeSection`.
-#[derive(Debug, Default)]
-pub struct PeRelocationIterator<'data, 'file>(PhantomData<(&'data (), &'file ())>);
+#[derive(Debug)]
+pub struct PeRelocationIterator<'data, 'file, R = &'data [u8]>(
+    PhantomData<(&'data (), &'file (), R)>,
+);
 
-impl<'data, 'file> Iterator for PeRelocationIterator<'data, 'file> {
+impl<'data, 'file, R> Iterator for PeRelocationIterator<'data, 'file, R> {
     type Item = (u64, Relocation);
 
     fn next(&mut self) -> Option<Self::Item> {
