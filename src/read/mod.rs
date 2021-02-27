@@ -5,7 +5,7 @@ use alloc::vec::Vec;
 use core::{fmt, result};
 
 use crate::common::*;
-use crate::ByteString;
+use crate::{ByteString, Endianness};
 
 mod read_ref;
 pub use read_ref::*;
@@ -81,7 +81,7 @@ impl<T> ReadError<T> for Option<T> {
     target_pointer_width = "32",
     feature = "elf"
 ))]
-pub type NativeFile<'data> = elf::ElfFile32<'data>;
+pub type NativeFile<'data, R = &'data [u8]> = elf::ElfFile32<'data, Endianness, R>;
 
 /// The native executable file for the target platform.
 #[cfg(all(
@@ -90,27 +90,27 @@ pub type NativeFile<'data> = elf::ElfFile32<'data>;
     target_pointer_width = "64",
     feature = "elf"
 ))]
-pub type NativeFile<'data> = elf::ElfFile64<'data>;
+pub type NativeFile<'data, R = &'data [u8]> = elf::ElfFile64<'data, Endianness, R>;
 
 /// The native executable file for the target platform.
 #[cfg(all(target_os = "macos", target_pointer_width = "32", feature = "macho"))]
-pub type NativeFile<'data> = macho::MachOFile32<'data>;
+pub type NativeFile<'data, R = &'data [u8]> = macho::MachOFile32<'data, Endianness, R>;
 
 /// The native executable file for the target platform.
 #[cfg(all(target_os = "macos", target_pointer_width = "64", feature = "macho"))]
-pub type NativeFile<'data> = macho::MachOFile64<'data>;
+pub type NativeFile<'data, R = &'data [u8]> = macho::MachOFile64<'data, Endianness, R>;
 
 /// The native executable file for the target platform.
 #[cfg(all(target_os = "windows", target_pointer_width = "32", feature = "pe"))]
-pub type NativeFile<'data> = pe::PeFile32<'data>;
+pub type NativeFile<'data, R = &'data [u8]> = pe::PeFile32<'data, R>;
 
 /// The native executable file for the target platform.
 #[cfg(all(target_os = "windows", target_pointer_width = "64", feature = "pe"))]
-pub type NativeFile<'data> = pe::PeFile64<'data>;
+pub type NativeFile<'data, R = &'data [u8]> = pe::PeFile64<'data, R>;
 
 /// The native executable file for the target platform.
 #[cfg(all(feature = "wasm", target_arch = "wasm32", feature = "wasm"))]
-pub type NativeFile<'data> = wasm::WasmFile<'data>;
+pub type NativeFile<'data, R = &'data [u8]> = wasm::WasmFile<'data, R>;
 
 /// An object file kind.
 #[derive(Debug)]
@@ -153,12 +153,15 @@ pub enum FileKind {
 
 impl FileKind {
     /// Determine a file kind by parsing the start of the file.
-    pub fn parse(data: &[u8]) -> Result<FileKind> {
-        if data.len() < 16 {
+    pub fn parse<'data, R: ReadRef<'data>>(data: R) -> Result<FileKind> {
+        let magic = data
+            .read_bytes_at(0, 16)
+            .read_error("Could not read file magic")?;
+        if magic.len() < 16 {
             return Err(Error("File too short"));
         }
 
-        let kind = match [data[0], data[1], data[2], data[3], data[4], data[5], data[6], data[7]] {
+        let kind = match [magic[0], magic[1], magic[2], magic[3], magic[4], magic[5], magic[6], magic[7]] {
             #[cfg(feature = "archive")]
             [b'!', b'<', b'a', b'r', b'c', b'h', b'>', b'\n'] => FileKind::Archive,
             #[cfg(feature = "elf")]
