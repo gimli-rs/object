@@ -37,7 +37,9 @@ fn main() {
                 if let Ok(member) = member {
                     println!();
                     println!("{}:", String::from_utf8_lossy(member.name()));
-                    dump_object(member.data());
+                    if let Ok(data) = member.data(&*file) {
+                        dump_object(data);
+                    }
                 }
             }
         } else if let Ok(arches) = FatHeader::parse_arch32(&*file) {

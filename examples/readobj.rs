@@ -212,7 +212,9 @@ fn print_archive(p: &mut Printer<impl Write>, data: &[u8]) {
             if let Ok(member) = member {
                 p.blank();
                 p.field("Member", String::from_utf8_lossy(member.name()));
-                print_object(p, member.data());
+                if let Ok(data) = member.data(data) {
+                    print_object(p, data);
+                }
             }
         }
     }
