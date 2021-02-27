@@ -240,10 +240,7 @@ impl pe::ImageSymbol {
 
 /// A symbol table of a `CoffFile`.
 #[derive(Debug, Clone, Copy)]
-pub struct CoffSymbolTable<'data, 'file>
-where
-    'data: 'file,
-{
+pub struct CoffSymbolTable<'data, 'file> {
     pub(crate) file: &'file CoffCommon<'data>,
 }
 
@@ -271,10 +268,7 @@ impl<'data, 'file> ObjectSymbolTable<'data> for CoffSymbolTable<'data, 'file> {
 }
 
 /// An iterator over the symbols of a `CoffFile`.
-pub struct CoffSymbolIterator<'data, 'file>
-where
-    'data: 'file,
-{
+pub struct CoffSymbolIterator<'data, 'file> {
     pub(crate) file: &'file CoffCommon<'data>,
     pub(crate) index: usize,
 }
@@ -302,10 +296,7 @@ impl<'data, 'file> Iterator for CoffSymbolIterator<'data, 'file> {
 
 /// A symbol of a `CoffFile`.
 #[derive(Debug, Clone, Copy)]
-pub struct CoffSymbol<'data, 'file>
-where
-    'data: 'file,
-{
+pub struct CoffSymbol<'data, 'file> {
     pub(crate) file: &'file CoffCommon<'data>,
     pub(crate) index: SymbolIndex,
     pub(crate) symbol: &'data pe::ImageSymbol,

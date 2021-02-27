@@ -24,15 +24,15 @@ pub(crate) struct CoffCommon<'data> {
 
 /// A COFF object file.
 #[derive(Debug)]
-pub struct CoffFile<'data> {
+pub struct CoffFile<'data, R: ReadRef<'data> = &'data [u8]> {
     pub(super) header: &'data pe::ImageFileHeader,
     pub(super) common: CoffCommon<'data>,
-    pub(super) data: &'data [u8],
+    pub(super) data: R,
 }
 
-impl<'data> CoffFile<'data> {
+impl<'data, R: ReadRef<'data>> CoffFile<'data, R> {
     /// Parse the raw COFF file data.
-    pub fn parse(data: &'data [u8]) -> Result<Self> {
+    pub fn parse(data: R) -> Result<Self> {
         let mut offset = 0;
         let header = pe::ImageFileHeader::parse(data, &mut offset)?;
         let sections = header.sections(data, offset)?;
@@ -50,18 +50,19 @@ impl<'data> CoffFile<'data> {
     }
 }
 
-impl<'data> read::private::Sealed for CoffFile<'data> {}
+impl<'data, R: ReadRef<'data>> read::private::Sealed for CoffFile<'data, R> {}
 
-impl<'data, 'file> Object<'data, 'file> for CoffFile<'data>
+impl<'data, 'file, R> Object<'data, 'file> for CoffFile<'data, R>
 where
     'data: 'file,
+    R: 'file + ReadRef<'data>,
 {
-    type Segment = CoffSegment<'data, 'file>;
-    type SegmentIterator = CoffSegmentIterator<'data, 'file>;
-    type Section = CoffSection<'data, 'file>;
-    type SectionIterator = CoffSectionIterator<'data, 'file>;
-    type Comdat = CoffComdat<'data, 'file>;
-    type ComdatIterator = CoffComdatIterator<'data, 'file>;
+    type Segment = CoffSegment<'data, 'file, R>;
+    type SegmentIterator = CoffSegmentIterator<'data, 'file, R>;
+    type Section = CoffSection<'data, 'file, R>;
+    type SectionIterator = CoffSectionIterator<'data, 'file, R>;
+    type Comdat = CoffComdat<'data, 'file, R>;
+    type ComdatIterator = CoffComdatIterator<'data, 'file, R>;
     type Symbol = CoffSymbol<'data, 'file>;
     type SymbolIterator = CoffSymbolIterator<'data, 'file>;
     type SymbolTable = CoffSymbolTable<'data, 'file>;
@@ -86,19 +87,19 @@ where
         false
     }
 
-    fn segments(&'file self) -> CoffSegmentIterator<'data, 'file> {
+    fn segments(&'file self) -> CoffSegmentIterator<'data, 'file, R> {
         CoffSegmentIterator {
             file: self,
             iter: self.common.sections.iter(),
         }
     }
 
-    fn section_by_name(&'file self, section_name: &str) -> Option<CoffSection<'data, 'file>> {
+    fn section_by_name(&'file self, section_name: &str) -> Option<CoffSection<'data, 'file, R>> {
         self.sections()
             .find(|section| section.name() == Ok(section_name))
     }
 
-    fn section_by_index(&'file self, index: SectionIndex) -> Result<CoffSection<'data, 'file>> {
+    fn section_by_index(&'file self, index: SectionIndex) -> Result<CoffSection<'data, 'file, R>> {
         let section = self.common.sections.section(index.0)?;
         Ok(CoffSection {
             file: self,
@@ -107,14 +108,14 @@ where
         })
     }
 
-    fn sections(&'file self) -> CoffSectionIterator<'data, 'file> {
+    fn sections(&'file self) -> CoffSectionIterator<'data, 'file, R> {
         CoffSectionIterator {
             file: self,
             iter: self.common.sections.iter().enumerate(),
         }
     }
 
-    fn comdats(&'file self) -> CoffComdatIterator<'data, 'file> {
+    fn comdats(&'file self) -> CoffComdatIterator<'data, 'file, R> {
         CoffComdatIterator {
             file: self,
             index: 0,
@@ -213,9 +214,9 @@ impl pe::ImageFileHeader {
     /// `data` must be the entire file data.
     /// `offset` must be after the optional file header.
     #[inline]
-    pub fn sections<'data>(
+    pub fn sections<'data, R: ReadRef<'data>>(
         &self,
-        data: &'data [u8],
+        data: R,
         offset: u64,
     ) -> read::Result<SectionTable<'data>> {
         SectionTable::parse(self, data, offset)
@@ -225,7 +226,7 @@ impl pe::ImageFileHeader {
     ///
     /// `data` must be the entire file data.
     #[inline]
-    pub fn symbols<'data>(&self, data: &'data [u8]) -> read::Result<SymbolTable<'data>> {
+    pub fn symbols<'data, R: ReadRef<'data>>(&self, data: R) -> read::Result<SymbolTable<'data>> {
         SymbolTable::parse(self, data)
     }
 }
