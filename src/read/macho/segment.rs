@@ -9,25 +9,30 @@ use crate::read::{self, ObjectSegment, ReadError, ReadRef, Result};
 use super::{LoadCommandData, LoadCommandIterator, MachHeader, MachOFile, Section};
 
 /// An iterator over the segments of a `MachOFile32`.
-pub type MachOSegmentIterator32<'data, 'file, Endian = Endianness> =
-    MachOSegmentIterator<'data, 'file, macho::MachHeader32<Endian>>;
+pub type MachOSegmentIterator32<'data, 'file, Endian = Endianness, R = &'data [u8]> =
+    MachOSegmentIterator<'data, 'file, macho::MachHeader32<Endian>, R>;
 /// An iterator over the segments of a `MachOFile64`.
-pub type MachOSegmentIterator64<'data, 'file, Endian = Endianness> =
-    MachOSegmentIterator<'data, 'file, macho::MachHeader64<Endian>>;
+pub type MachOSegmentIterator64<'data, 'file, Endian = Endianness, R = &'data [u8]> =
+    MachOSegmentIterator<'data, 'file, macho::MachHeader64<Endian>, R>;
 
 /// An iterator over the segments of a `MachOFile`.
 #[derive(Debug)]
-pub struct MachOSegmentIterator<'data, 'file, Mach>
+pub struct MachOSegmentIterator<'data, 'file, Mach, R = &'data [u8]>
 where
     'data: 'file,
     Mach: MachHeader,
+    R: ReadRef<'data>,
 {
-    pub(super) file: &'file MachOFile<'data, Mach>,
+    pub(super) file: &'file MachOFile<'data, Mach, R>,
     pub(super) commands: LoadCommandIterator<'data, Mach::Endian>,
 }
 
-impl<'data, 'file, Mach: MachHeader> Iterator for MachOSegmentIterator<'data, 'file, Mach> {
-    type Item = MachOSegment<'data, 'file, Mach>;
+impl<'data, 'file, Mach, R> Iterator for MachOSegmentIterator<'data, 'file, Mach, R>
+where
+    Mach: MachHeader,
+    R: ReadRef<'data>,
+{
+    type Item = MachOSegment<'data, 'file, Mach, R>;
 
     fn next(&mut self) -> Option<Self::Item> {
         loop {
@@ -43,24 +48,29 @@ impl<'data, 'file, Mach: MachHeader> Iterator for MachOSegmentIterator<'data, 'f
 }
 
 /// A segment of a `MachOFile32`.
-pub type MachOSegment32<'data, 'file, Endian = Endianness> =
-    MachOSegment<'data, 'file, macho::MachHeader32<Endian>>;
+pub type MachOSegment32<'data, 'file, Endian = Endianness, R = &'data [u8]> =
+    MachOSegment<'data, 'file, macho::MachHeader32<Endian>, R>;
 /// A segment of a `MachOFile64`.
-pub type MachOSegment64<'data, 'file, Endian = Endianness> =
-    MachOSegment<'data, 'file, macho::MachHeader64<Endian>>;
+pub type MachOSegment64<'data, 'file, Endian = Endianness, R = &'data [u8]> =
+    MachOSegment<'data, 'file, macho::MachHeader64<Endian>, R>;
 
 /// A segment of a `MachOFile`.
 #[derive(Debug)]
-pub struct MachOSegment<'data, 'file, Mach>
+pub struct MachOSegment<'data, 'file, Mach, R = &'data [u8]>
 where
     'data: 'file,
     Mach: MachHeader,
+    R: ReadRef<'data>,
 {
-    file: &'file MachOFile<'data, Mach>,
+    file: &'file MachOFile<'data, Mach, R>,
     segment: &'data Mach::Segment,
 }
 
-impl<'data, 'file, Mach: MachHeader> MachOSegment<'data, 'file, Mach> {
+impl<'data, 'file, Mach, R> MachOSegment<'data, 'file, Mach, R>
+where
+    Mach: MachHeader,
+    R: ReadRef<'data>,
+{
     fn bytes(&self) -> Result<&'data [u8]> {
         self.segment
             .data(self.file.endian, self.file.data)
@@ -68,9 +78,18 @@ impl<'data, 'file, Mach: MachHeader> MachOSegment<'data, 'file, Mach> {
     }
 }
 
-impl<'data, 'file, Mach: MachHeader> read::private::Sealed for MachOSegment<'data, 'file, Mach> {}
+impl<'data, 'file, Mach, R> read::private::Sealed for MachOSegment<'data, 'file, Mach, R>
+where
+    Mach: MachHeader,
+    R: ReadRef<'data>,
+{
+}
 
-impl<'data, 'file, Mach: MachHeader> ObjectSegment<'data> for MachOSegment<'data, 'file, Mach> {
+impl<'data, 'file, Mach, R> ObjectSegment<'data> for MachOSegment<'data, 'file, Mach, R>
+where
+    Mach: MachHeader,
+    R: ReadRef<'data>,
+{
     #[inline]
     fn address(&self) -> u64 {
         self.segment.vmaddr(self.file.endian).into()
