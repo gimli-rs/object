@@ -10,6 +10,11 @@ use crate::{ByteString, Endianness};
 mod read_ref;
 pub use read_ref::*;
 
+#[cfg(feature = "std")]
+mod read_cache;
+#[cfg(feature = "std")]
+pub use read_cache::*;
+
 mod util;
 pub use util::StringTable;
 
