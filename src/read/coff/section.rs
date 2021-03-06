@@ -4,8 +4,8 @@ use crate::endian::LittleEndian as LE;
 use crate::pe;
 use crate::read::util::StringTable;
 use crate::read::{
-    self, CompressedData, Error, ObjectSection, ObjectSegment, ReadError, ReadRef, Result,
-    SectionFlags, SectionIndex, SectionKind,
+    self, CompressedData, CompressedFileRange, Error, ObjectSection, ObjectSegment, ReadError,
+    ReadRef, Result, SectionFlags, SectionIndex, SectionKind,
 };
 
 use super::{CoffFile, CoffRelocationIterator};
@@ -238,6 +238,11 @@ impl<'data, 'file, R: ReadRef<'data>> ObjectSection<'data> for CoffSection<'data
             address,
             size,
         ))
+    }
+
+    #[inline]
+    fn compressed_file_range(&self) -> Result<CompressedFileRange> {
+        Ok(CompressedFileRange::none(self.file_range()))
     }
 
     #[inline]

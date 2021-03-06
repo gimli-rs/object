@@ -518,17 +518,6 @@ impl Relocation {
     }
 }
 
-/// Data that may be compressed.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct CompressedData<'data> {
-    /// The data compression format.
-    pub format: CompressionFormat,
-    /// The compressed data.
-    pub data: &'data [u8],
-    /// The uncompressed data size.
-    pub uncompressed_size: usize,
-}
-
 /// A data compression format.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum CompressionFormat {
@@ -542,6 +531,64 @@ pub enum CompressionFormat {
     Zlib,
 }
 
+/// A range in a file that may be compressed.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct CompressedFileRange {
+    /// The data compression format.
+    pub format: CompressionFormat,
+    /// The file offset of the compressed data.
+    pub offset: u64,
+    /// The compressed data size.
+    pub compressed_size: u64,
+    /// The uncompressed data size.
+    pub uncompressed_size: u64,
+}
+
+impl CompressedFileRange {
+    /// Data that is uncompressed.
+    #[inline]
+    pub fn none(range: Option<(u64, u64)>) -> Self {
+        if let Some((offset, size)) = range {
+            CompressedFileRange {
+                format: CompressionFormat::None,
+                offset,
+                compressed_size: size,
+                uncompressed_size: size,
+            }
+        } else {
+            CompressedFileRange {
+                format: CompressionFormat::None,
+                offset: 0,
+                compressed_size: 0,
+                uncompressed_size: 0,
+            }
+        }
+    }
+
+    /// Convert to `CompressedData` by reading from the file.
+    pub fn data<'data, R: ReadRef<'data>>(self, file: R) -> Result<CompressedData<'data>> {
+        let data = file
+            .read_bytes_at(self.offset, self.compressed_size)
+            .read_error("Invalid compressed data size or offset")?;
+        Ok(CompressedData {
+            format: self.format,
+            data,
+            uncompressed_size: self.uncompressed_size,
+        })
+    }
+}
+
+/// Data that may be compressed.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct CompressedData<'data> {
+    /// The data compression format.
+    pub format: CompressionFormat,
+    /// The compressed data.
+    pub data: &'data [u8],
+    /// The uncompressed data size.
+    pub uncompressed_size: u64,
+}
+
 impl<'data> CompressedData<'data> {
     /// Data that is uncompressed.
     #[inline]
@@ -549,7 +596,7 @@ impl<'data> CompressedData<'data> {
         CompressedData {
             format: CompressionFormat::None,
             data,
-            uncompressed_size: data.len(),
+            uncompressed_size: data.len() as u64,
         }
     }
 
@@ -563,7 +610,13 @@ impl<'data> CompressedData<'data> {
             CompressionFormat::None => Ok(Cow::Borrowed(self.data)),
             #[cfg(feature = "compression")]
             CompressionFormat::Zlib => {
-                let mut decompressed = Vec::with_capacity(self.uncompressed_size);
+                use core::convert::TryInto;
+                let size = self
+                    .uncompressed_size
+                    .try_into()
+                    .ok()
+                    .read_error("Uncompressed data size is too large.")?;
+                let mut decompressed = Vec::with_capacity(size);
                 let mut decompress = flate2::Decompress::new(true);
                 decompress
                     .decompress_vec(

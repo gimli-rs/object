@@ -5,8 +5,8 @@ use crate::elf;
 use crate::endian::{self, Endianness, U32Bytes};
 use crate::pod::{Bytes, Pod};
 use crate::read::{
-    self, CompressedData, CompressionFormat, Error, ObjectSection, ReadError, ReadRef,
-    SectionFlags, SectionIndex, SectionKind, StringTable,
+    self, CompressedData, CompressedFileRange, CompressionFormat, Error, ObjectSection, ReadError,
+    ReadRef, SectionFlags, SectionIndex, SectionKind, StringTable,
 };
 
 use super::{
@@ -192,33 +192,38 @@ impl<'data, 'file, Elf: FileHeader, R: ReadRef<'data>> ElfSection<'data, 'file, 
             .read_error("Invalid ELF section size or offset")
     }
 
-    fn maybe_compressed_data(&self) -> read::Result<Option<CompressedData<'data>>> {
+    fn maybe_compressed(&self) -> read::Result<Option<CompressedFileRange>> {
         let endian = self.file.endian;
         if (self.section.sh_flags(endian).into() & u64::from(elf::SHF_COMPRESSED)) == 0 {
             return Ok(None);
         }
-
-        let mut data = self
+        let (section_offset, section_size) = self
             .section
-            .data(endian, self.file.data)
-            .read_error("Invalid ELF compressed section offset or size")
-            .map(Bytes)?;
-        let header = data
-            .read::<Elf::CompressionHeader>()
-            .read_error("Invalid ELF compression header size or alignment")?;
+            .file_range(endian)
+            .read_error("Invalid ELF compressed section type")?;
+        let mut offset = section_offset;
+        let header = self
+            .file
+            .data
+            .read::<Elf::CompressionHeader>(&mut offset)
+            .read_error("Invalid ELF compressed section offset")?;
         if header.ch_type(endian) != elf::ELFCOMPRESS_ZLIB {
             return Err(Error("Unsupported ELF compression type"));
         }
-        let uncompressed_size: u64 = header.ch_size(endian).into();
-        Ok(Some(CompressedData {
+        let uncompressed_size = header.ch_size(endian).into();
+        let compressed_size = section_size
+            .checked_sub(offset - section_offset)
+            .read_error("Invalid ELF compressed section size")?;
+        Ok(Some(CompressedFileRange {
             format: CompressionFormat::Zlib,
-            data: data.0,
-            uncompressed_size: uncompressed_size as usize,
+            offset,
+            compressed_size,
+            uncompressed_size,
         }))
     }
 
     /// Try GNU-style "ZLIB" header decompression.
-    fn maybe_compressed_data_gnu(&self) -> read::Result<Option<CompressedData<'data>>> {
+    fn maybe_compressed_gnu(&self) -> read::Result<Option<CompressedFileRange>> {
         let name = match self.name() {
             Ok(name) => name,
             // I think it's ok to ignore this error?
@@ -227,26 +232,35 @@ impl<'data, 'file, Elf: FileHeader, R: ReadRef<'data>> ElfSection<'data, 'file, 
         if !name.starts_with(".zdebug_") {
             return Ok(None);
         }
-        let mut data = self.bytes().map(Bytes)?;
+        let (section_offset, section_size) = self
+            .section
+            .file_range(self.file.endian)
+            .read_error("Invalid ELF GNU compressed section type")?;
+        let mut offset = section_offset;
+        let data = self.file.data;
         // Assume ZLIB-style uncompressed data is no more than 4GB to avoid accidentally
         // huge allocations. This also reduces the chance of accidentally matching on a
         // .debug_str that happens to start with "ZLIB".
         if data
-            .read_bytes(8)
+            .read_bytes(&mut offset, 8)
             .read_error("ELF GNU compressed section is too short")?
-            .0
             != b"ZLIB\0\0\0\0"
         {
             return Err(Error("Invalid ELF GNU compressed section header"));
         }
         let uncompressed_size = data
-            .read::<U32Bytes<_>>()
+            .read::<U32Bytes<_>>(&mut offset)
             .read_error("ELF GNU compressed section is too short")?
-            .get(endian::BigEndian);
-        Ok(Some(CompressedData {
+            .get(endian::BigEndian)
+            .into();
+        let compressed_size = section_size
+            .checked_sub(offset - section_offset)
+            .read_error("ELF GNU compressed section is too short")?;
+        Ok(Some(CompressedFileRange {
             format: CompressionFormat::Zlib,
-            data: data.0,
-            uncompressed_size: uncompressed_size as usize,
+            offset,
+            compressed_size,
+            uncompressed_size,
         }))
     }
 }
@@ -304,14 +318,18 @@ where
         ))
     }
 
-    fn compressed_data(&self) -> read::Result<CompressedData<'data>> {
-        Ok(if let Some(data) = self.maybe_compressed_data()? {
+    fn compressed_file_range(&self) -> read::Result<CompressedFileRange> {
+        Ok(if let Some(data) = self.maybe_compressed()? {
             data
-        } else if let Some(data) = self.maybe_compressed_data_gnu()? {
+        } else if let Some(data) = self.maybe_compressed_gnu()? {
             data
         } else {
-            CompressedData::none(self.data()?)
+            CompressedFileRange::none(self.file_range())
         })
+    }
+
+    fn compressed_data(&self) -> read::Result<CompressedData<'data>> {
+        self.compressed_file_range()?.data(self.file.data)
     }
 
     fn name(&self) -> read::Result<&str> {

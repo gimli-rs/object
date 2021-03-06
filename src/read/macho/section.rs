@@ -5,8 +5,8 @@ use crate::endian::{self, Endianness};
 use crate::macho;
 use crate::pod::Pod;
 use crate::read::{
-    self, CompressedData, ObjectSection, ReadError, ReadRef, Result, SectionFlags, SectionIndex,
-    SectionKind,
+    self, CompressedData, CompressedFileRange, ObjectSection, ReadError, ReadRef, Result,
+    SectionFlags, SectionIndex, SectionKind,
 };
 
 use super::{MachHeader, MachOFile, MachORelocationIterator};
@@ -138,6 +138,11 @@ where
             address,
             size,
         ))
+    }
+
+    #[inline]
+    fn compressed_file_range(&self) -> Result<CompressedFileRange> {
+        Ok(CompressedFileRange::none(self.file_range()))
     }
 
     #[inline]

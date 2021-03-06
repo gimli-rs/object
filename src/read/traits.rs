@@ -2,9 +2,9 @@ use alloc::borrow::Cow;
 use alloc::vec::Vec;
 
 use crate::read::{
-    self, Architecture, ComdatKind, CompressedData, Export, FileFlags, Import, ObjectMap,
-    Relocation, Result, SectionFlags, SectionIndex, SectionKind, SymbolFlags, SymbolIndex,
-    SymbolKind, SymbolMap, SymbolMapName, SymbolScope, SymbolSection,
+    self, Architecture, ComdatKind, CompressedData, CompressedFileRange, Export, FileFlags, Import,
+    ObjectMap, Relocation, Result, SectionFlags, SectionIndex, SectionKind, SymbolFlags,
+    SymbolIndex, SymbolKind, SymbolMap, SymbolMapName, SymbolScope, SymbolSection,
 };
 use crate::Endianness;
 
@@ -272,6 +272,10 @@ pub trait ObjectSection<'data>: read::private::Sealed {
     ///
     /// Returns `Ok(None)` if the section does not contain the given range.
     fn data_range(&self, address: u64, size: u64) -> Result<Option<&'data [u8]>>;
+
+    /// Returns the potentially compressed file range of the section,
+    /// along with information about the compression.
+    fn compressed_file_range(&self) -> Result<CompressedFileRange>;
 
     /// Returns the potentially compressed contents of the section,
     /// along with information about the compression.

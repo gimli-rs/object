@@ -13,10 +13,11 @@ use crate::read::pe;
 #[cfg(feature = "wasm")]
 use crate::read::wasm;
 use crate::read::{
-    self, Architecture, BinaryFormat, ComdatKind, CompressedData, Error, Export, FileFlags,
-    FileKind, Import, Object, ObjectComdat, ObjectMap, ObjectSection, ObjectSegment, ObjectSymbol,
-    ObjectSymbolTable, ReadRef, Relocation, Result, SectionFlags, SectionIndex, SectionKind,
-    SymbolFlags, SymbolIndex, SymbolKind, SymbolMap, SymbolMapName, SymbolScope, SymbolSection,
+    self, Architecture, BinaryFormat, ComdatKind, CompressedData, CompressedFileRange, Error,
+    Export, FileFlags, FileKind, Import, Object, ObjectComdat, ObjectMap, ObjectSection,
+    ObjectSegment, ObjectSymbol, ObjectSymbolTable, ReadRef, Relocation, Result, SectionFlags,
+    SectionIndex, SectionKind, SymbolFlags, SymbolIndex, SymbolKind, SymbolMap, SymbolMapName,
+    SymbolScope, SymbolSection,
 };
 use crate::Endianness;
 
@@ -655,6 +656,10 @@ impl<'data, 'file, R: ReadRef<'data>> ObjectSection<'data> for Section<'data, 'f
 
     fn data_range(&self, address: u64, size: u64) -> Result<Option<&'data [u8]>> {
         with_inner!(self.inner, SectionInternal, |x| x.data_range(address, size))
+    }
+
+    fn compressed_file_range(&self) -> Result<CompressedFileRange> {
+        with_inner!(self.inner, SectionInternal, |x| x.compressed_file_range())
     }
 
     fn compressed_data(&self) -> Result<CompressedData<'data>> {

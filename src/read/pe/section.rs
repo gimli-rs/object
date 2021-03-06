@@ -4,8 +4,8 @@ use core::{cmp, iter, result, slice, str};
 use crate::endian::LittleEndian as LE;
 use crate::pe;
 use crate::read::{
-    self, CompressedData, ObjectSection, ObjectSegment, ReadError, ReadRef, Relocation, Result,
-    SectionFlags, SectionIndex, SectionKind,
+    self, CompressedData, CompressedFileRange, ObjectSection, ObjectSegment, ReadError, ReadRef,
+    Relocation, Result, SectionFlags, SectionIndex, SectionKind,
 };
 
 use super::{ImageNtHeaders, PeFile, SectionTable};
@@ -252,6 +252,11 @@ where
             address,
             size,
         ))
+    }
+
+    #[inline]
+    fn compressed_file_range(&self) -> Result<CompressedFileRange> {
+        Ok(CompressedFileRange::none(self.file_range()))
     }
 
     #[inline]

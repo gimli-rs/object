@@ -10,10 +10,10 @@ use core::{slice, str};
 use wasmparser as wp;
 
 use crate::read::{
-    self, Architecture, ComdatKind, CompressedData, Error, Export, FileFlags, Import,
-    NoDynamicRelocationIterator, Object, ObjectComdat, ObjectSection, ObjectSegment, ObjectSymbol,
-    ObjectSymbolTable, ReadError, ReadRef, Relocation, Result, SectionFlags, SectionIndex,
-    SectionKind, SymbolFlags, SymbolIndex, SymbolKind, SymbolScope, SymbolSection,
+    self, Architecture, ComdatKind, CompressedData, CompressedFileRange, Error, Export, FileFlags,
+    Import, NoDynamicRelocationIterator, Object, ObjectComdat, ObjectSection, ObjectSegment,
+    ObjectSymbol, ObjectSymbolTable, ReadError, ReadRef, Relocation, Result, SectionFlags,
+    SectionIndex, SectionKind, SymbolFlags, SymbolIndex, SymbolKind, SymbolScope, SymbolSection,
 };
 
 const SECTION_CUSTOM: usize = 0;
@@ -550,6 +550,11 @@ impl<'data, 'file, R> ObjectSection<'data> for WasmSection<'data, 'file, R> {
 
     fn data_range(&self, _address: u64, _size: u64) -> Result<Option<&'data [u8]>> {
         unimplemented!()
+    }
+
+    #[inline]
+    fn compressed_file_range(&self) -> Result<CompressedFileRange> {
+        Ok(CompressedFileRange::none(self.file_range()))
     }
 
     #[inline]
