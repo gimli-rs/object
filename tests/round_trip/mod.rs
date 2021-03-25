@@ -11,6 +11,7 @@ mod bss;
 mod comdat;
 mod common;
 mod elf;
+mod macho;
 mod tls;
 
 #[test]
