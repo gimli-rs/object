@@ -222,7 +222,7 @@ impl Object {
         let sizeofcmds = offset - command_offset;
 
         // Calculate size of section data.
-        let segment_data_offset = offset;
+        let mut segment_file_offset = None;
         let mut section_offsets = vec![SectionOffsets::default(); self.sections.len()];
         let mut address = 0;
         for (index, section) in self.sections.iter().enumerate() {
@@ -232,6 +232,9 @@ impl Object {
                 if len != 0 {
                     offset = align(offset, section.align as usize);
                     section_offsets[index].offset = offset;
+                    if segment_file_offset.is_none() {
+                        segment_file_offset = Some(offset);
+                    }
                     offset += len;
                 } else {
                     section_offsets[index].offset = offset;
@@ -249,7 +252,9 @@ impl Object {
                 address += section.size;
             }
         }
-        let segment_data_size = offset - segment_data_offset;
+        let segment_file_offset = segment_file_offset.unwrap_or(offset);
+        let segment_file_size = offset - segment_file_offset;
+        debug_assert!(segment_file_size as u64 <= address);
 
         // Count symbols and add symbol strings to strtab.
         let mut strtab = StringTable::default();
@@ -356,8 +361,8 @@ impl Object {
                 segname: [0; 16],
                 vmaddr: 0,
                 vmsize: address,
-                fileoff: segment_data_offset as u64,
-                filesize: segment_data_size as u64,
+                fileoff: segment_file_offset as u64,
+                filesize: segment_file_size as u64,
                 maxprot: macho::VM_PROT_READ | macho::VM_PROT_WRITE | macho::VM_PROT_EXECUTE,
                 initprot: macho::VM_PROT_READ | macho::VM_PROT_WRITE | macho::VM_PROT_EXECUTE,
                 nsects: self.sections.len() as u32,
@@ -426,7 +431,6 @@ impl Object {
         buffer.extend(bytes_of(&symtab_command));
 
         // Write section data.
-        debug_assert_eq!(segment_data_offset, buffer.len());
         for (index, section) in self.sections.iter().enumerate() {
             let len = section.data.len();
             if len != 0 {
@@ -435,6 +439,7 @@ impl Object {
                 buffer.extend(section.data.as_slice());
             }
         }
+        debug_assert_eq!(segment_file_offset + segment_file_size, buffer.len());
 
         // Write symtab.
         write_align(buffer, pointer_align);
