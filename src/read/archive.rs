@@ -1,7 +1,9 @@
 //! Support for archive files.
 
-use crate::read::{self, Error, ReadError};
-use crate::{archive, Bytes};
+use core::convert::TryInto;
+
+use crate::archive;
+use crate::read::{self, Error, ReadError, ReadRef};
 
 /// The kind of archive format.
 // TODO: Gnu64 and Darwin64 (and Darwin for writing)
@@ -19,31 +21,34 @@ pub enum ArchiveKind {
 
 /// A partially parsed archive file.
 #[derive(Debug)]
-pub struct ArchiveFile<'data> {
-    data: Bytes<'data>,
+pub struct ArchiveFile<'data, R: ReadRef<'data> = &'data [u8]> {
+    data: R,
+    len: u64,
+    offset: u64,
     kind: ArchiveKind,
-    symbols: Bytes<'data>,
-    names: Bytes<'data>,
+    symbols: &'data [u8],
+    names: &'data [u8],
 }
 
-impl<'data> ArchiveFile<'data> {
+impl<'data, R: ReadRef<'data>> ArchiveFile<'data, R> {
     /// Parse the archive header and special members.
-    pub fn parse(data: &'data [u8]) -> read::Result<Self> {
-        let data = Bytes(data);
-        let mut tail = data;
-
-        let magic = tail
-            .read_bytes(archive::MAGIC.len())
+    pub fn parse(data: R) -> read::Result<Self> {
+        let len = data.len().read_error("Unknown archive length")?;
+        let mut tail = 0;
+        let magic = data
+            .read_bytes(&mut tail, archive::MAGIC.len() as u64)
             .read_error("Invalid archive size")?;
-        if magic.0 != &archive::MAGIC[..] {
+        if magic != &archive::MAGIC[..] {
             return Err(Error("Unsupported archive identifier"));
         }
 
         let mut file = ArchiveFile {
-            data: tail,
+            data,
+            offset: tail,
+            len,
             kind: ArchiveKind::Unknown,
-            symbols: Bytes(&[]),
-            names: Bytes(&[]),
+            symbols: &[],
+            names: &[],
         };
 
         // The first few members may be special, so parse them.
@@ -56,46 +61,46 @@ impl<'data> ArchiveFile<'data> {
         // - "//": names table
         // BSD has:
         // - "__.SYMDEF" or "__.SYMDEF SORTED": symbol table (optional)
-        if !tail.is_empty() {
-            let member = ArchiveMember::parse(&mut tail, Bytes(&[]))?;
+        if tail < len {
+            let member = ArchiveMember::parse(data, &mut tail, &[])?;
             if member.name == b"/" {
                 // GNU symbol table (unless we later determine this is COFF).
                 file.kind = ArchiveKind::Gnu;
-                file.symbols = member.data;
-                file.data = tail;
+                file.symbols = member.data(data)?;
+                file.offset = tail;
 
-                if !tail.is_empty() {
-                    let member = ArchiveMember::parse(&mut tail, Bytes(&[]))?;
+                if tail < len {
+                    let member = ArchiveMember::parse(data, &mut tail, &[])?;
                     if member.name == b"/" {
                         // COFF linker member.
                         file.kind = ArchiveKind::Coff;
-                        file.symbols = member.data;
-                        file.data = tail;
+                        file.symbols = member.data(data)?;
+                        file.offset = tail;
 
-                        if !tail.is_empty() {
-                            let member = ArchiveMember::parse(&mut tail, Bytes(&[]))?;
+                        if tail < len {
+                            let member = ArchiveMember::parse(data, &mut tail, &[])?;
                             if member.name == b"//" {
                                 // COFF names table.
-                                file.names = member.data;
-                                file.data = tail;
+                                file.names = member.data(data)?;
+                                file.offset = tail;
                             }
                         }
                     } else if member.name == b"//" {
                         // GNU names table.
-                        file.names = member.data;
-                        file.data = tail;
+                        file.names = member.data(data)?;
+                        file.offset = tail;
                     }
                 }
             } else if member.name == b"//" {
                 // GNU names table.
                 file.kind = ArchiveKind::Gnu;
-                file.names = member.data;
-                file.data = tail;
+                file.names = member.data(data)?;
+                file.offset = tail;
             } else if member.name == b"__.SYMDEF" || member.name == b"__.SYMDEF SORTED" {
                 // BSD symbol table.
                 file.kind = ArchiveKind::Bsd;
-                file.symbols = member.data;
-                file.data = tail;
+                file.symbols = member.data(data)?;
+                file.offset = tail;
             } else {
                 // TODO: This could still be a BSD file. We leave this as unknown for now.
             }
@@ -113,9 +118,11 @@ impl<'data> ArchiveFile<'data> {
     ///
     /// This does not return special members.
     #[inline]
-    pub fn members(&self) -> ArchiveMemberIterator<'data> {
+    pub fn members(&self) -> ArchiveMemberIterator<'data, R> {
         ArchiveMemberIterator {
             data: self.data,
+            offset: self.offset,
+            len: self.len,
             names: self.names,
         }
     }
@@ -123,21 +130,23 @@ impl<'data> ArchiveFile<'data> {
 
 /// An iterator over the members of an archive.
 #[derive(Debug)]
-pub struct ArchiveMemberIterator<'data> {
-    data: Bytes<'data>,
-    names: Bytes<'data>,
+pub struct ArchiveMemberIterator<'data, R: ReadRef<'data>> {
+    data: R,
+    offset: u64,
+    len: u64,
+    names: &'data [u8],
 }
 
-impl<'data> Iterator for ArchiveMemberIterator<'data> {
+impl<'data, R: ReadRef<'data>> Iterator for ArchiveMemberIterator<'data, R> {
     type Item = read::Result<ArchiveMember<'data>>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.data.is_empty() {
+        if self.offset >= self.len {
             return None;
         }
-        let member = ArchiveMember::parse(&mut self.data, self.names);
+        let member = ArchiveMember::parse(self.data, &mut self.offset, self.names);
         if member.is_err() {
-            self.data = Bytes(&[]);
+            self.offset = self.len;
         }
         Some(member)
     }
@@ -148,29 +157,35 @@ impl<'data> Iterator for ArchiveMemberIterator<'data> {
 pub struct ArchiveMember<'data> {
     header: &'data archive::Header,
     name: &'data [u8],
-    data: Bytes<'data>,
+    offset: u64,
+    size: u64,
 }
 
 impl<'data> ArchiveMember<'data> {
     /// Parse the archive member header, name, and file data.
     ///
     /// This reads the extended name (if any) and adjusts the file size.
-    fn parse(data: &mut Bytes<'data>, names: Bytes<'data>) -> read::Result<Self> {
+    fn parse<R: ReadRef<'data>>(
+        data: R,
+        offset: &mut u64,
+        names: &'data [u8],
+    ) -> read::Result<Self> {
         let header = data
-            .read::<archive::Header>()
+            .read::<archive::Header>(offset)
             .read_error("Invalid archive member header")?;
         if header.terminator != archive::TERMINATOR {
             return Err(Error("Invalid archive terminator"));
         }
 
-        let size =
-            parse_usize_digits(&header.size, 10).read_error("Invalid archive member size")?;
-        let mut file_data = data
-            .read_bytes(size)
+        let mut file_offset = *offset;
+        let mut file_size =
+            parse_u64_digits(&header.size, 10).read_error("Invalid archive member size")?;
+        *offset = offset
+            .checked_add(file_size)
             .read_error("Archive member size is too large")?;
         // Entries are padded to an even number of bytes.
-        if (size & 1) != 0 {
-            data.skip(1).ok();
+        if (file_size & 1) != 0 {
+            *offset = offset.saturating_add(1);
         }
 
         let name = if header.name[0] == b'/' && (header.name[1] as char).is_digit(10) {
@@ -179,7 +194,7 @@ impl<'data> ArchiveMember<'data> {
                 .read_error("Invalid archive extended name offset")?
         } else if &header.name[..3] == b"#1/" && (header.name[3] as char).is_digit(10) {
             // Read file name from the start of the file data.
-            parse_bsd_extended_name(&header.name[3..], &mut file_data)
+            parse_bsd_extended_name(&header.name[3..], data, &mut file_offset, &mut file_size)
                 .read_error("Invalid archive extended name length")?
         } else if header.name[0] == b'/' {
             let name_len =
@@ -195,7 +210,8 @@ impl<'data> ArchiveMember<'data> {
         Ok(ArchiveMember {
             header,
             name,
-            data: file_data,
+            offset: file_offset,
+            size: file_size,
         })
     }
 
@@ -215,37 +231,43 @@ impl<'data> ArchiveMember<'data> {
 
     /// Parse the file modification timestamp from the header.
     #[inline]
-    pub fn date(&self) -> Option<usize> {
-        parse_usize_digits(&self.header.date, 10)
+    pub fn date(&self) -> Option<u64> {
+        parse_u64_digits(&self.header.date, 10)
     }
 
     /// Parse the user ID from the header.
     #[inline]
-    pub fn uid(&self) -> Option<usize> {
-        parse_usize_digits(&self.header.uid, 10)
+    pub fn uid(&self) -> Option<u64> {
+        parse_u64_digits(&self.header.uid, 10)
     }
 
     /// Parse the group ID from the header.
     #[inline]
-    pub fn gid(&self) -> Option<usize> {
-        parse_usize_digits(&self.header.gid, 10)
+    pub fn gid(&self) -> Option<u64> {
+        parse_u64_digits(&self.header.gid, 10)
     }
 
     /// Parse the file mode from the header.
     #[inline]
-    pub fn mode(&self) -> Option<usize> {
-        parse_usize_digits(&self.header.mode, 8)
+    pub fn mode(&self) -> Option<u64> {
+        parse_u64_digits(&self.header.mode, 8)
+    }
+
+    /// Return the offset and size of the file data.
+    pub fn file_range(&self) -> (u64, u64) {
+        (self.offset, self.size)
     }
 
     /// Return the file data.
     #[inline]
-    pub fn data(&self) -> &'data [u8] {
-        self.data.0
+    pub fn data<R: ReadRef<'data>>(&self, data: R) -> read::Result<&'data [u8]> {
+        data.read_bytes_at(self.offset, self.size)
+            .read_error("Archive member size is too large")
     }
 }
 
 // Ignores bytes starting from the first space.
-fn parse_usize_digits(digits: &[u8], radix: u32) -> Option<usize> {
+fn parse_u64_digits(digits: &[u8], radix: u32) -> Option<u64> {
     let len = digits
         .iter()
         .position(|&x| x == b' ')
@@ -254,41 +276,42 @@ fn parse_usize_digits(digits: &[u8], radix: u32) -> Option<usize> {
     if digits.is_empty() {
         return None;
     }
-    let mut result: usize = 0;
+    let mut result: u64 = 0;
     for &c in digits {
         let x = (c as char).to_digit(radix)?;
         result = result
-            .checked_mul(radix as usize)?
-            .checked_add(x as usize)?;
+            .checked_mul(u64::from(radix))?
+            .checked_add(u64::from(x))?;
     }
     Some(result)
 }
 
-fn parse_sysv_extended_name<'data>(
-    digits: &[u8],
-    mut names: Bytes<'data>,
-) -> Result<&'data [u8], ()> {
-    let offset = parse_usize_digits(digits, 10).ok_or(())?;
-    names.skip(offset)?;
-    let name = match names.0.iter().position(|&x| x == b'/' || x == 0) {
-        Some(len) => names.read_bytes(len)?,
-        None => names,
+fn parse_sysv_extended_name<'data>(digits: &[u8], names: &'data [u8]) -> Result<&'data [u8], ()> {
+    let offset = parse_u64_digits(digits, 10).ok_or(())?;
+    let offset = offset.try_into().map_err(|_| ())?;
+    let name_data = names.get(offset..).ok_or(())?;
+    let name = match name_data.iter().position(|&x| x == b'/' || x == 0) {
+        Some(len) => &name_data[..len],
+        None => name_data,
     };
-    Ok(name.0)
+    Ok(name)
 }
 
 /// Modifies `data` to start after the extended name.
-fn parse_bsd_extended_name<'data>(
+fn parse_bsd_extended_name<'data, R: ReadRef<'data>>(
     digits: &[u8],
-    data: &mut Bytes<'data>,
+    data: R,
+    offset: &mut u64,
+    size: &mut u64,
 ) -> Result<&'data [u8], ()> {
-    let len = parse_usize_digits(digits, 10).ok_or(())?;
-    let mut name_data = data.read_bytes(len)?;
-    let name = match name_data.0.iter().position(|&x| x == 0) {
-        Some(len) => name_data.read_bytes(len)?,
+    let len = parse_u64_digits(digits, 10).ok_or(())?;
+    *size = size.checked_sub(len).ok_or(())?;
+    let name_data = data.read_bytes(offset, len)?;
+    let name = match name_data.iter().position(|&x| x == 0) {
+        Some(len) => &name_data[..len],
         None => name_data,
     };
-    Ok(name.0)
+    Ok(name)
 }
 
 #[cfg(test)]
@@ -298,21 +321,21 @@ mod tests {
     #[test]
     fn kind() {
         let data = b"!<arch>\n";
-        let archive = ArchiveFile::parse(data).unwrap();
+        let archive = ArchiveFile::parse(&data[..]).unwrap();
         assert_eq!(archive.kind(), ArchiveKind::Unknown);
 
         let data = b"\
             !<arch>\n\
             /                                               4         `\n\
             0000";
-        let archive = ArchiveFile::parse(data).unwrap();
+        let archive = ArchiveFile::parse(&data[..]).unwrap();
         assert_eq!(archive.kind(), ArchiveKind::Gnu);
 
         let data = b"\
             !<arch>\n\
             //                                              4         `\n\
             0000";
-        let archive = ArchiveFile::parse(data).unwrap();
+        let archive = ArchiveFile::parse(&data[..]).unwrap();
         assert_eq!(archive.kind(), ArchiveKind::Gnu);
 
         let data = b"\
@@ -321,28 +344,28 @@ mod tests {
             0000\
             //                                              4         `\n\
             0000";
-        let archive = ArchiveFile::parse(data).unwrap();
+        let archive = ArchiveFile::parse(&data[..]).unwrap();
         assert_eq!(archive.kind(), ArchiveKind::Gnu);
 
         let data = b"\
             !<arch>\n\
             __.SYMDEF                                       4         `\n\
             0000";
-        let archive = ArchiveFile::parse(data).unwrap();
+        let archive = ArchiveFile::parse(&data[..]).unwrap();
         assert_eq!(archive.kind(), ArchiveKind::Bsd);
 
         let data = b"\
             !<arch>\n\
             #1/9                                            13        `\n\
             __.SYMDEF0000";
-        let archive = ArchiveFile::parse(data).unwrap();
+        let archive = ArchiveFile::parse(&data[..]).unwrap();
         assert_eq!(archive.kind(), ArchiveKind::Bsd);
 
         let data = b"\
             !<arch>\n\
             #1/16                                           20        `\n\
             __.SYMDEF SORTED0000";
-        let archive = ArchiveFile::parse(data).unwrap();
+        let archive = ArchiveFile::parse(&data[..]).unwrap();
         assert_eq!(archive.kind(), ArchiveKind::Bsd);
 
         let data = b"\
@@ -353,7 +376,7 @@ mod tests {
             0000\
             //                                              4         `\n\
             0000";
-        let archive = ArchiveFile::parse(data).unwrap();
+        let archive = ArchiveFile::parse(&data[..]).unwrap();
         assert_eq!(archive.kind(), ArchiveKind::Coff);
     }
 
@@ -367,17 +390,18 @@ mod tests {
             odd\n\
             /0              0           0     0     644     4         `\n\
             even";
+        let data = &data[..];
         let archive = ArchiveFile::parse(data).unwrap();
         assert_eq!(archive.kind(), ArchiveKind::Gnu);
         let mut members = archive.members();
 
         let member = members.next().unwrap().unwrap();
         assert_eq!(member.name(), b"0123456789abcde");
-        assert_eq!(member.data(), b"odd");
+        assert_eq!(member.data(data).unwrap(), &b"odd"[..]);
 
         let member = members.next().unwrap().unwrap();
         assert_eq!(member.name(), b"0123456789abcdef");
-        assert_eq!(member.data(), b"even");
+        assert_eq!(member.data(data).unwrap(), &b"even"[..]);
 
         assert!(members.next().is_none());
     }
@@ -390,17 +414,18 @@ mod tests {
             odd\n\
             #1/16           0           0     0     644     20        `\n\
             0123456789abcdefeven";
+        let data = &data[..];
         let archive = ArchiveFile::parse(data).unwrap();
         assert_eq!(archive.kind(), ArchiveKind::Unknown);
         let mut members = archive.members();
 
         let member = members.next().unwrap().unwrap();
         assert_eq!(member.name(), b"0123456789abcde");
-        assert_eq!(member.data(), b"odd");
+        assert_eq!(member.data(data).unwrap(), &b"odd"[..]);
 
         let member = members.next().unwrap().unwrap();
         assert_eq!(member.name(), b"0123456789abcdef");
-        assert_eq!(member.data(), b"even");
+        assert_eq!(member.data(data).unwrap(), &b"even"[..]);
 
         assert!(members.next().is_none());
     }

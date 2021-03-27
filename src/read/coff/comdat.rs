@@ -2,22 +2,21 @@ use core::str;
 
 use crate::endian::LittleEndian as LE;
 use crate::pe;
-use crate::read::{self, ComdatKind, ObjectComdat, ReadError, Result, SectionIndex, SymbolIndex};
+use crate::read::{
+    self, ComdatKind, ObjectComdat, ReadError, ReadRef, Result, SectionIndex, SymbolIndex,
+};
 
 use super::CoffFile;
 
 /// An iterator over the COMDAT section groups of a `CoffFile`.
 #[derive(Debug)]
-pub struct CoffComdatIterator<'data, 'file>
-where
-    'data: 'file,
-{
-    pub(super) file: &'file CoffFile<'data>,
+pub struct CoffComdatIterator<'data, 'file, R: ReadRef<'data> = &'data [u8]> {
+    pub(super) file: &'file CoffFile<'data, R>,
     pub(super) index: usize,
 }
 
-impl<'data, 'file> Iterator for CoffComdatIterator<'data, 'file> {
-    type Item = CoffComdat<'data, 'file>;
+impl<'data, 'file, R: ReadRef<'data>> Iterator for CoffComdatIterator<'data, 'file, R> {
+    type Item = CoffComdat<'data, 'file, R>;
 
     fn next(&mut self) -> Option<Self::Item> {
         loop {
@@ -33,22 +32,19 @@ impl<'data, 'file> Iterator for CoffComdatIterator<'data, 'file> {
 
 /// A COMDAT section group of a `CoffFile`.
 #[derive(Debug)]
-pub struct CoffComdat<'data, 'file>
-where
-    'data: 'file,
-{
-    file: &'file CoffFile<'data>,
+pub struct CoffComdat<'data, 'file, R: ReadRef<'data> = &'data [u8]> {
+    file: &'file CoffFile<'data, R>,
     symbol_index: SymbolIndex,
     symbol: &'data pe::ImageSymbol,
     selection: u8,
 }
 
-impl<'data, 'file> CoffComdat<'data, 'file> {
+impl<'data, 'file, R: ReadRef<'data>> CoffComdat<'data, 'file, R> {
     fn parse(
-        file: &'file CoffFile<'data>,
+        file: &'file CoffFile<'data, R>,
         section_symbol: &'data pe::ImageSymbol,
         index: usize,
-    ) -> Option<CoffComdat<'data, 'file>> {
+    ) -> Option<CoffComdat<'data, 'file, R>> {
         // Must be a section symbol.
         if !section_symbol.has_aux_section() {
             return None;
@@ -82,10 +78,10 @@ impl<'data, 'file> CoffComdat<'data, 'file> {
     }
 }
 
-impl<'data, 'file> read::private::Sealed for CoffComdat<'data, 'file> {}
+impl<'data, 'file, R: ReadRef<'data>> read::private::Sealed for CoffComdat<'data, 'file, R> {}
 
-impl<'data, 'file> ObjectComdat<'data> for CoffComdat<'data, 'file> {
-    type SectionIterator = CoffComdatSectionIterator<'data, 'file>;
+impl<'data, 'file, R: ReadRef<'data>> ObjectComdat<'data> for CoffComdat<'data, 'file, R> {
+    type SectionIterator = CoffComdatSectionIterator<'data, 'file, R>;
 
     #[inline]
     fn kind(&self) -> ComdatKind {
@@ -126,16 +122,13 @@ impl<'data, 'file> ObjectComdat<'data> for CoffComdat<'data, 'file> {
 
 /// An iterator over the sections in a COMDAT section group of a `CoffFile`.
 #[derive(Debug)]
-pub struct CoffComdatSectionIterator<'data, 'file>
-where
-    'data: 'file,
-{
-    file: &'file CoffFile<'data>,
+pub struct CoffComdatSectionIterator<'data, 'file, R: ReadRef<'data> = &'data [u8]> {
+    file: &'file CoffFile<'data, R>,
     section_number: u16,
     index: usize,
 }
 
-impl<'data, 'file> Iterator for CoffComdatSectionIterator<'data, 'file> {
+impl<'data, 'file, R: ReadRef<'data>> Iterator for CoffComdatSectionIterator<'data, 'file, R> {
     type Item = SectionIndex;
 
     fn next(&mut self) -> Option<Self::Item> {

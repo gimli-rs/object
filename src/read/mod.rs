@@ -5,7 +5,15 @@ use alloc::vec::Vec;
 use core::{fmt, result};
 
 use crate::common::*;
-use crate::{ByteString, Bytes};
+use crate::{ByteString, Endianness};
+
+mod read_ref;
+pub use read_ref::*;
+
+#[cfg(feature = "std")]
+mod read_cache;
+#[cfg(feature = "std")]
+pub use read_cache::*;
 
 mod util;
 pub use util::StringTable;
@@ -78,7 +86,7 @@ impl<T> ReadError<T> for Option<T> {
     target_pointer_width = "32",
     feature = "elf"
 ))]
-pub type NativeFile<'data> = elf::ElfFile32<'data>;
+pub type NativeFile<'data, R = &'data [u8]> = elf::ElfFile32<'data, Endianness, R>;
 
 /// The native executable file for the target platform.
 #[cfg(all(
@@ -87,27 +95,27 @@ pub type NativeFile<'data> = elf::ElfFile32<'data>;
     target_pointer_width = "64",
     feature = "elf"
 ))]
-pub type NativeFile<'data> = elf::ElfFile64<'data>;
+pub type NativeFile<'data, R = &'data [u8]> = elf::ElfFile64<'data, Endianness, R>;
 
 /// The native executable file for the target platform.
 #[cfg(all(target_os = "macos", target_pointer_width = "32", feature = "macho"))]
-pub type NativeFile<'data> = macho::MachOFile32<'data>;
+pub type NativeFile<'data, R = &'data [u8]> = macho::MachOFile32<'data, Endianness, R>;
 
 /// The native executable file for the target platform.
 #[cfg(all(target_os = "macos", target_pointer_width = "64", feature = "macho"))]
-pub type NativeFile<'data> = macho::MachOFile64<'data>;
+pub type NativeFile<'data, R = &'data [u8]> = macho::MachOFile64<'data, Endianness, R>;
 
 /// The native executable file for the target platform.
 #[cfg(all(target_os = "windows", target_pointer_width = "32", feature = "pe"))]
-pub type NativeFile<'data> = pe::PeFile32<'data>;
+pub type NativeFile<'data, R = &'data [u8]> = pe::PeFile32<'data, R>;
 
 /// The native executable file for the target platform.
 #[cfg(all(target_os = "windows", target_pointer_width = "64", feature = "pe"))]
-pub type NativeFile<'data> = pe::PeFile64<'data>;
+pub type NativeFile<'data, R = &'data [u8]> = pe::PeFile64<'data, R>;
 
 /// The native executable file for the target platform.
 #[cfg(all(feature = "wasm", target_arch = "wasm32", feature = "wasm"))]
-pub type NativeFile<'data> = wasm::WasmFile<'data>;
+pub type NativeFile<'data, R = &'data [u8]> = wasm::WasmFile<'data, R>;
 
 /// An object file kind.
 #[derive(Debug)]
@@ -150,12 +158,15 @@ pub enum FileKind {
 
 impl FileKind {
     /// Determine a file kind by parsing the start of the file.
-    pub fn parse(data: &[u8]) -> Result<FileKind> {
-        if data.len() < 16 {
+    pub fn parse<'data, R: ReadRef<'data>>(data: R) -> Result<FileKind> {
+        let magic = data
+            .read_bytes_at(0, 16)
+            .read_error("Could not read file magic")?;
+        if magic.len() < 16 {
             return Err(Error("File too short"));
         }
 
-        let kind = match [data[0], data[1], data[2], data[3], data[4], data[5], data[6], data[7]] {
+        let kind = match [magic[0], magic[1], magic[2], magic[3], magic[4], magic[5], magic[6], magic[7]] {
             #[cfg(feature = "archive")]
             [b'!', b'<', b'a', b'r', b'c', b'h', b'>', b'\n'] => FileKind::Archive,
             #[cfg(feature = "elf")]
@@ -507,23 +518,6 @@ impl Relocation {
     }
 }
 
-fn data_range(data: Bytes, data_address: u64, range_address: u64, size: u64) -> Option<&[u8]> {
-    let offset = range_address.checked_sub(data_address)?;
-    let data = data.read_bytes_at(offset as usize, size as usize).ok()?;
-    Some(data.0)
-}
-
-/// Data that may be compressed.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct CompressedData<'data> {
-    /// The data compression format.
-    pub format: CompressionFormat,
-    /// The compressed data.
-    pub data: &'data [u8],
-    /// The uncompressed data size.
-    pub uncompressed_size: usize,
-}
-
 /// A data compression format.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum CompressionFormat {
@@ -537,6 +531,64 @@ pub enum CompressionFormat {
     Zlib,
 }
 
+/// A range in a file that may be compressed.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct CompressedFileRange {
+    /// The data compression format.
+    pub format: CompressionFormat,
+    /// The file offset of the compressed data.
+    pub offset: u64,
+    /// The compressed data size.
+    pub compressed_size: u64,
+    /// The uncompressed data size.
+    pub uncompressed_size: u64,
+}
+
+impl CompressedFileRange {
+    /// Data that is uncompressed.
+    #[inline]
+    pub fn none(range: Option<(u64, u64)>) -> Self {
+        if let Some((offset, size)) = range {
+            CompressedFileRange {
+                format: CompressionFormat::None,
+                offset,
+                compressed_size: size,
+                uncompressed_size: size,
+            }
+        } else {
+            CompressedFileRange {
+                format: CompressionFormat::None,
+                offset: 0,
+                compressed_size: 0,
+                uncompressed_size: 0,
+            }
+        }
+    }
+
+    /// Convert to `CompressedData` by reading from the file.
+    pub fn data<'data, R: ReadRef<'data>>(self, file: R) -> Result<CompressedData<'data>> {
+        let data = file
+            .read_bytes_at(self.offset, self.compressed_size)
+            .read_error("Invalid compressed data size or offset")?;
+        Ok(CompressedData {
+            format: self.format,
+            data,
+            uncompressed_size: self.uncompressed_size,
+        })
+    }
+}
+
+/// Data that may be compressed.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct CompressedData<'data> {
+    /// The data compression format.
+    pub format: CompressionFormat,
+    /// The compressed data.
+    pub data: &'data [u8],
+    /// The uncompressed data size.
+    pub uncompressed_size: u64,
+}
+
 impl<'data> CompressedData<'data> {
     /// Data that is uncompressed.
     #[inline]
@@ -544,7 +596,7 @@ impl<'data> CompressedData<'data> {
         CompressedData {
             format: CompressionFormat::None,
             data,
-            uncompressed_size: data.len(),
+            uncompressed_size: data.len() as u64,
         }
     }
 
@@ -558,7 +610,13 @@ impl<'data> CompressedData<'data> {
             CompressionFormat::None => Ok(Cow::Borrowed(self.data)),
             #[cfg(feature = "compression")]
             CompressionFormat::Zlib => {
-                let mut decompressed = Vec::with_capacity(self.uncompressed_size);
+                use core::convert::TryInto;
+                let size = self
+                    .uncompressed_size
+                    .try_into()
+                    .ok()
+                    .read_error("Uncompressed data size is too large.")?;
+                let mut decompressed = Vec::with_capacity(size);
                 let mut decompress = flate2::Decompress::new(true);
                 decompress
                     .decompress_vec(

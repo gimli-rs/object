@@ -10,10 +10,10 @@ use core::{slice, str};
 use wasmparser as wp;
 
 use crate::read::{
-    self, Architecture, ComdatKind, CompressedData, Error, Export, FileFlags, Import,
-    NoDynamicRelocationIterator, Object, ObjectComdat, ObjectSection, ObjectSegment, ObjectSymbol,
-    ObjectSymbolTable, ReadError, Relocation, Result, SectionFlags, SectionIndex, SectionKind,
-    SymbolFlags, SymbolIndex, SymbolKind, SymbolScope, SymbolSection,
+    self, Architecture, ComdatKind, CompressedData, CompressedFileRange, Error, Export, FileFlags,
+    Import, NoDynamicRelocationIterator, Object, ObjectComdat, ObjectSection, ObjectSegment,
+    ObjectSymbol, ObjectSymbolTable, ReadError, ReadRef, Relocation, Result, SectionFlags,
+    SectionIndex, SectionKind, SymbolFlags, SymbolIndex, SymbolKind, SymbolScope, SymbolSection,
 };
 
 const SECTION_CUSTOM: usize = 0;
@@ -33,8 +33,8 @@ const SECTION_DATA_COUNT: usize = 12;
 const MAX_SECTION_ID: usize = SECTION_DATA_COUNT;
 
 /// A WebAssembly object file.
-#[derive(Debug, Default)]
-pub struct WasmFile<'data> {
+#[derive(Debug)]
+pub struct WasmFile<'data, R = &'data [u8]> {
     // All sections, including custom sections.
     sections: Vec<wp::Section<'data>>,
     // Indices into `sections` of sections with a non-zero id.
@@ -45,6 +45,7 @@ pub struct WasmFile<'data> {
     symbols: Vec<WasmSymbolInternal<'data>>,
     // Address of the function body for the entry point.
     entry: u64,
+    marker: PhantomData<R>,
 }
 
 #[derive(Clone)]
@@ -60,12 +61,21 @@ impl<T> ReadError<T> for wasmparser::Result<T> {
     }
 }
 
-impl<'data> WasmFile<'data> {
+impl<'data, R: ReadRef<'data>> WasmFile<'data, R> {
     /// Parse the raw wasm data.
-    pub fn parse(data: &'data [u8]) -> Result<Self> {
+    pub fn parse(data: R) -> Result<Self> {
+        let len = data.len().read_error("Unknown Wasm file size")?;
+        let data = data.read_bytes_at(0, len).read_error("Wasm read failed")?;
         let module = wp::ModuleReader::new(data).read_error("Invalid Wasm header")?;
 
-        let mut file = WasmFile::default();
+        let mut file = WasmFile {
+            sections: Vec::new(),
+            id_sections: Default::default(),
+            has_debug_symbols: false,
+            symbols: Vec::new(),
+            entry: 0,
+            marker: PhantomData,
+        };
 
         let mut main_file_symbol = Some(WasmSymbolInternal {
             name: "",
@@ -283,18 +293,19 @@ impl<'data> WasmFile<'data> {
     }
 }
 
-impl<'data> read::private::Sealed for WasmFile<'data> {}
+impl<'data, R> read::private::Sealed for WasmFile<'data, R> {}
 
-impl<'data, 'file> Object<'data, 'file> for WasmFile<'data>
+impl<'data, 'file, R> Object<'data, 'file> for WasmFile<'data, R>
 where
     'data: 'file,
+    R: 'file,
 {
-    type Segment = WasmSegment<'data, 'file>;
-    type SegmentIterator = WasmSegmentIterator<'data, 'file>;
-    type Section = WasmSection<'data, 'file>;
-    type SectionIterator = WasmSectionIterator<'data, 'file>;
-    type Comdat = WasmComdat<'data, 'file>;
-    type ComdatIterator = WasmComdatIterator<'data, 'file>;
+    type Segment = WasmSegment<'data, 'file, R>;
+    type SegmentIterator = WasmSegmentIterator<'data, 'file, R>;
+    type Section = WasmSection<'data, 'file, R>;
+    type SectionIterator = WasmSectionIterator<'data, 'file, R>;
+    type Comdat = WasmComdat<'data, 'file, R>;
+    type ComdatIterator = WasmComdatIterator<'data, 'file, R>;
     type Symbol = WasmSymbol<'data, 'file>;
     type SymbolIterator = WasmSymbolIterator<'data, 'file>;
     type SymbolTable = WasmSymbolTable<'data, 'file>;
@@ -324,12 +335,12 @@ where
         self.entry
     }
 
-    fn section_by_name(&'file self, section_name: &str) -> Option<WasmSection<'data, 'file>> {
+    fn section_by_name(&'file self, section_name: &str) -> Option<WasmSection<'data, 'file, R>> {
         self.sections()
             .find(|section| section.name() == Ok(section_name))
     }
 
-    fn section_by_index(&'file self, index: SectionIndex) -> Result<WasmSection<'data, 'file>> {
+    fn section_by_index(&'file self, index: SectionIndex) -> Result<WasmSection<'data, 'file, R>> {
         // TODO: Missing sections should return an empty section.
         let id_section = self
             .id_sections
@@ -337,12 +348,16 @@ where
             .and_then(|x| *x)
             .read_error("Invalid Wasm section index")?;
         let section = self.sections.get(id_section).unwrap();
-        Ok(WasmSection { section })
+        Ok(WasmSection {
+            section,
+            marker: PhantomData,
+        })
     }
 
     fn sections(&'file self) -> Self::SectionIterator {
         WasmSectionIterator {
             sections: self.sections.iter(),
+            marker: PhantomData,
         }
     }
 
@@ -409,12 +424,12 @@ where
 
 /// An iterator over the segments of a `WasmFile`.
 #[derive(Debug)]
-pub struct WasmSegmentIterator<'data, 'file> {
-    file: &'file WasmFile<'data>,
+pub struct WasmSegmentIterator<'data, 'file, R = &'data [u8]> {
+    file: &'file WasmFile<'data, R>,
 }
 
-impl<'data, 'file> Iterator for WasmSegmentIterator<'data, 'file> {
-    type Item = WasmSegment<'data, 'file>;
+impl<'data, 'file, R> Iterator for WasmSegmentIterator<'data, 'file, R> {
+    type Item = WasmSegment<'data, 'file, R>;
 
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
@@ -424,13 +439,13 @@ impl<'data, 'file> Iterator for WasmSegmentIterator<'data, 'file> {
 
 /// A segment of a `WasmFile`.
 #[derive(Debug)]
-pub struct WasmSegment<'data, 'file> {
-    file: &'file WasmFile<'data>,
+pub struct WasmSegment<'data, 'file, R = &'data [u8]> {
+    file: &'file WasmFile<'data, R>,
 }
 
-impl<'data, 'file> read::private::Sealed for WasmSegment<'data, 'file> {}
+impl<'data, 'file, R> read::private::Sealed for WasmSegment<'data, 'file, R> {}
 
-impl<'data, 'file> ObjectSegment<'data> for WasmSegment<'data, 'file> {
+impl<'data, 'file, R> ObjectSegment<'data> for WasmSegment<'data, 'file, R> {
     #[inline]
     fn address(&self) -> u64 {
         unreachable!()
@@ -467,29 +482,34 @@ impl<'data, 'file> ObjectSegment<'data> for WasmSegment<'data, 'file> {
 
 /// An iterator over the sections of a `WasmFile`.
 #[derive(Debug)]
-pub struct WasmSectionIterator<'data, 'file> {
+pub struct WasmSectionIterator<'data, 'file, R = &'data [u8]> {
     sections: slice::Iter<'file, wp::Section<'data>>,
+    marker: PhantomData<R>,
 }
 
-impl<'data, 'file> Iterator for WasmSectionIterator<'data, 'file> {
-    type Item = WasmSection<'data, 'file>;
+impl<'data, 'file, R> Iterator for WasmSectionIterator<'data, 'file, R> {
+    type Item = WasmSection<'data, 'file, R>;
 
     fn next(&mut self) -> Option<Self::Item> {
         let section = self.sections.next()?;
-        Some(WasmSection { section })
+        Some(WasmSection {
+            section,
+            marker: PhantomData,
+        })
     }
 }
 
 /// A section of a `WasmFile`.
 #[derive(Debug)]
-pub struct WasmSection<'data, 'file> {
+pub struct WasmSection<'data, 'file, R = &'data [u8]> {
     section: &'file wp::Section<'data>,
+    marker: PhantomData<R>,
 }
 
-impl<'data, 'file> read::private::Sealed for WasmSection<'data, 'file> {}
+impl<'data, 'file, R> read::private::Sealed for WasmSection<'data, 'file, R> {}
 
-impl<'data, 'file> ObjectSection<'data> for WasmSection<'data, 'file> {
-    type RelocationIterator = WasmRelocationIterator<'data, 'file>;
+impl<'data, 'file, R> ObjectSection<'data> for WasmSection<'data, 'file, R> {
+    type RelocationIterator = WasmRelocationIterator<'data, 'file, R>;
 
     #[inline]
     fn index(&self) -> SectionIndex {
@@ -530,6 +550,11 @@ impl<'data, 'file> ObjectSection<'data> for WasmSection<'data, 'file> {
 
     fn data_range(&self, _address: u64, _size: u64) -> Result<Option<&'data [u8]>> {
         unimplemented!()
+    }
+
+    #[inline]
+    fn compressed_file_range(&self) -> Result<CompressedFileRange> {
+        Ok(CompressedFileRange::none(self.file_range()))
     }
 
     #[inline]
@@ -586,8 +611,8 @@ impl<'data, 'file> ObjectSection<'data> for WasmSection<'data, 'file> {
     }
 
     #[inline]
-    fn relocations(&self) -> WasmRelocationIterator<'data, 'file> {
-        WasmRelocationIterator::default()
+    fn relocations(&self) -> WasmRelocationIterator<'data, 'file, R> {
+        WasmRelocationIterator(PhantomData)
     }
 
     #[inline]
@@ -598,12 +623,12 @@ impl<'data, 'file> ObjectSection<'data> for WasmSection<'data, 'file> {
 
 /// An iterator over the COMDAT section groups of a `WasmFile`.
 #[derive(Debug)]
-pub struct WasmComdatIterator<'data, 'file> {
-    file: &'file WasmFile<'data>,
+pub struct WasmComdatIterator<'data, 'file, R = &'data [u8]> {
+    file: &'file WasmFile<'data, R>,
 }
 
-impl<'data, 'file> Iterator for WasmComdatIterator<'data, 'file> {
-    type Item = WasmComdat<'data, 'file>;
+impl<'data, 'file, R> Iterator for WasmComdatIterator<'data, 'file, R> {
+    type Item = WasmComdat<'data, 'file, R>;
 
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
@@ -613,14 +638,14 @@ impl<'data, 'file> Iterator for WasmComdatIterator<'data, 'file> {
 
 /// A COMDAT section group of a `WasmFile`.
 #[derive(Debug)]
-pub struct WasmComdat<'data, 'file> {
-    file: &'file WasmFile<'data>,
+pub struct WasmComdat<'data, 'file, R = &'data [u8]> {
+    file: &'file WasmFile<'data, R>,
 }
 
-impl<'data, 'file> read::private::Sealed for WasmComdat<'data, 'file> {}
+impl<'data, 'file, R> read::private::Sealed for WasmComdat<'data, 'file, R> {}
 
-impl<'data, 'file> ObjectComdat<'data> for WasmComdat<'data, 'file> {
-    type SectionIterator = WasmComdatSectionIterator<'data, 'file>;
+impl<'data, 'file, R> ObjectComdat<'data> for WasmComdat<'data, 'file, R> {
+    type SectionIterator = WasmComdatSectionIterator<'data, 'file, R>;
 
     #[inline]
     fn kind(&self) -> ComdatKind {
@@ -645,14 +670,14 @@ impl<'data, 'file> ObjectComdat<'data> for WasmComdat<'data, 'file> {
 
 /// An iterator over the sections in a COMDAT section group of a `WasmFile`.
 #[derive(Debug)]
-pub struct WasmComdatSectionIterator<'data, 'file>
+pub struct WasmComdatSectionIterator<'data, 'file, R = &'data [u8]>
 where
     'data: 'file,
 {
-    file: &'file WasmFile<'data>,
+    file: &'file WasmFile<'data, R>,
 }
 
-impl<'data, 'file> Iterator for WasmComdatSectionIterator<'data, 'file> {
+impl<'data, 'file, R> Iterator for WasmComdatSectionIterator<'data, 'file, R> {
     type Item = SectionIndex;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -797,10 +822,12 @@ impl<'data, 'file> ObjectSymbol<'data> for WasmSymbol<'data, 'file> {
 }
 
 /// An iterator over the relocations in a `WasmSection`.
-#[derive(Debug, Default)]
-pub struct WasmRelocationIterator<'data, 'file>(PhantomData<(&'data (), &'file ())>);
+#[derive(Debug)]
+pub struct WasmRelocationIterator<'data, 'file, R = &'data [u8]>(
+    PhantomData<(&'data (), &'file (), R)>,
+);
 
-impl<'data, 'file> Iterator for WasmRelocationIterator<'data, 'file> {
+impl<'data, 'file, R> Iterator for WasmRelocationIterator<'data, 'file, R> {
     type Item = (u64, Relocation);
 
     #[inline]

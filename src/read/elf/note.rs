@@ -28,7 +28,7 @@ where
     pub(super) fn new(
         endian: Elf::Endian,
         align: Elf::Word,
-        data: Bytes<'data>,
+        data: &'data [u8],
     ) -> read::Result<Self> {
         let align = match align.into() {
             0u64..=4 => 4,
@@ -39,7 +39,7 @@ where
         Ok(NoteIterator {
             endian,
             align,
-            data,
+            data: Bytes(data),
         })
     }
 
