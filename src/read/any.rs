@@ -348,6 +348,7 @@ where
             FileInternal::Elf64(ref elf) => {
                 DynamicRelocationIteratorInternal::Elf64(elf.dynamic_relocations()?)
             }
+            #[allow(unreachable_patterns)]
             _ => return None,
         };
         Some(DynamicRelocationIterator { inner })
