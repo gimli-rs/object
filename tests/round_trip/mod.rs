@@ -51,7 +51,7 @@ fn coff_x86_64() {
         .unwrap();
 
     let bytes = object.write().unwrap();
-    let object = read::File::parse(&bytes).unwrap();
+    let object = read::File::parse(&*bytes).unwrap();
     assert_eq!(object.format(), BinaryFormat::Coff);
     assert_eq!(object.architecture(), Architecture::X86_64);
     assert_eq!(object.endianness(), Endianness::Little);
@@ -148,7 +148,7 @@ fn elf_x86_64() {
         .unwrap();
 
     let bytes = object.write().unwrap();
-    let object = read::File::parse(&bytes).unwrap();
+    let object = read::File::parse(&*bytes).unwrap();
     assert_eq!(object.format(), BinaryFormat::Elf);
     assert_eq!(object.architecture(), Architecture::X86_64);
     assert_eq!(object.endianness(), Endianness::Little);
@@ -278,7 +278,7 @@ fn macho_x86_64() {
         .unwrap();
 
     let bytes = object.write().unwrap();
-    let object = read::File::parse(&bytes).unwrap();
+    let object = read::File::parse(&*bytes).unwrap();
     assert_eq!(object.format(), BinaryFormat::MachO);
     assert_eq!(object.architecture(), Architecture::X86_64);
     assert_eq!(object.endianness(), Endianness::Little);

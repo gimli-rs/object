@@ -30,7 +30,7 @@ fn symtab_shndx() {
 
     //std::fs::write(&"symtab_shndx.o", &bytes).unwrap();
 
-    let object = read::File::parse(&bytes).unwrap();
+    let object = read::File::parse(&*bytes).unwrap();
     assert_eq!(object.format(), BinaryFormat::Elf);
     assert_eq!(object.architecture(), Architecture::X86_64);
 
@@ -77,7 +77,7 @@ fn compression_zlib() {
 
     //std::fs::write(&"compression.o", &bytes).unwrap();
 
-    let object = read::File::parse(&bytes).unwrap();
+    let object = read::File::parse(&*bytes).unwrap();
     assert_eq!(object.format(), BinaryFormat::Elf);
     assert_eq!(object.architecture(), Architecture::X86_64);
 
@@ -114,7 +114,7 @@ fn compression_gnu() {
 
     //std::fs::write(&"compression.o", &bytes).unwrap();
 
-    let object = read::File::parse(&bytes).unwrap();
+    let object = read::File::parse(&*bytes).unwrap();
     assert_eq!(object.format(), BinaryFormat::Elf);
     assert_eq!(object.architecture(), Architecture::X86_64);
 
@@ -180,7 +180,7 @@ fn note() {
     let section = object.add_section(Vec::new(), b".note8".to_vec(), SectionKind::Note);
     object.section_mut(section).set_data(buffer, 8);
 
-    let bytes = &object.write().unwrap();
+    let bytes = &*object.write().unwrap();
 
     //std::fs::write(&"note.o", &bytes).unwrap();
 
