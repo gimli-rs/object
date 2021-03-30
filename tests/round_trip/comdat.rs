@@ -112,7 +112,7 @@ fn coff_x86_64_comdat() {
     assert_eq!(symbol.address(), 0);
 
     let symbol = symbols.next();
-    assert!(symbol.is_none(), format!("unexpected symbol {:?}", symbol));
+    assert!(symbol.is_none(), "unexpected symbol {:?}", symbol);
 
     let mut comdats = object.comdats();
 
@@ -209,7 +209,7 @@ fn elf_x86_64_common() {
     assert_eq!(symbol.address(), 0);
 
     let symbol = symbols.next();
-    assert!(symbol.is_none(), format!("unexpected symbol {:?}", symbol));
+    assert!(symbol.is_none(), "unexpected symbol {:?}", symbol);
 
     let mut comdats = object.comdats();
 
