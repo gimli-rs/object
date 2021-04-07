@@ -1,4 +1,3 @@
-use alloc::vec::Vec;
 use core::convert::TryInto;
 use core::{mem, result};
 
@@ -102,18 +101,6 @@ pub trait ReadRef<'a>: Clone + Copy {
 }
 
 impl<'a> ReadRef<'a> for &'a [u8] {
-    fn len(self) -> Result<u64> {
-        self.len().try_into().map_err(|_| ())
-    }
-
-    fn read_bytes_at(self, offset: u64, size: u64) -> Result<&'a [u8]> {
-        let offset: usize = offset.try_into().map_err(|_| ())?;
-        let size: usize = size.try_into().map_err(|_| ())?;
-        self.get(offset..).ok_or(())?.get(..size).ok_or(())
-    }
-}
-
-impl<'a> ReadRef<'a> for &'a Vec<u8> {
     fn len(self) -> Result<u64> {
         self.len().try_into().map_err(|_| ())
     }

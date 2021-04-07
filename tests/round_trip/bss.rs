@@ -41,7 +41,7 @@ fn coff_x86_64_bss() {
 
     //std::fs::write(&"bss.o", &bytes).unwrap();
 
-    let object = read::File::parse(&bytes).unwrap();
+    let object = read::File::parse(&*bytes).unwrap();
     assert_eq!(object.format(), BinaryFormat::Coff);
     assert_eq!(object.architecture(), Architecture::X86_64);
 
@@ -56,10 +56,7 @@ fn coff_x86_64_bss() {
     assert_eq!(bss.data(), Ok(&[][..]));
 
     let section = sections.next();
-    assert!(
-        section.is_none(),
-        format!("unexpected section {:?}", section)
-    );
+    assert!(section.is_none(), "unexpected section {:?}", section);
 
     let mut symbols = object.symbols();
 
@@ -84,7 +81,7 @@ fn coff_x86_64_bss() {
     assert_eq!(symbol.address(), 24);
 
     let symbol = symbols.next();
-    assert!(symbol.is_none(), format!("unexpected symbol {:?}", symbol));
+    assert!(symbol.is_none(), "unexpected symbol {:?}", symbol);
 }
 
 #[test]
@@ -122,7 +119,7 @@ fn elf_x86_64_bss() {
 
     //std::fs::write(&"bss.o", &bytes).unwrap();
 
-    let object = read::File::parse(&bytes).unwrap();
+    let object = read::File::parse(&*bytes).unwrap();
     assert_eq!(object.format(), BinaryFormat::Elf);
     assert_eq!(object.architecture(), Architecture::X86_64);
 
@@ -172,7 +169,7 @@ fn elf_x86_64_bss() {
     assert_eq!(symbol.size(), 34);
 
     let symbol = symbols.next();
-    assert!(symbol.is_none(), format!("unexpected symbol {:?}", symbol));
+    assert!(symbol.is_none(), "unexpected symbol {:?}", symbol);
 }
 
 #[test]
@@ -213,7 +210,7 @@ fn macho_x86_64_bss() {
 
     //std::fs::write(&"bss.o", &bytes).unwrap();
 
-    let object = read::File::parse(&bytes).unwrap();
+    let object = read::File::parse(&*bytes).unwrap();
     assert_eq!(object.format(), BinaryFormat::MachO);
     assert_eq!(object.architecture(), Architecture::X86_64);
 
@@ -229,10 +226,7 @@ fn macho_x86_64_bss() {
     assert_eq!(bss.data(), Ok(&[][..]));
 
     let section = sections.next();
-    assert!(
-        section.is_none(),
-        format!("unexpected section {:?}", section)
-    );
+    assert!(section.is_none(), "unexpected section {:?}", section);
 
     let mut symbols = object.symbols();
 
@@ -257,5 +251,5 @@ fn macho_x86_64_bss() {
     assert_eq!(symbol.address(), 24);
 
     let symbol = symbols.next();
-    assert!(symbol.is_none(), format!("unexpected symbol {:?}", symbol));
+    assert!(symbol.is_none(), "unexpected symbol {:?}", symbol);
 }

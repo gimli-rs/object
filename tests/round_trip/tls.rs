@@ -29,7 +29,7 @@ fn coff_x86_64_tls() {
 
     //std::fs::write(&"tls.o", &bytes).unwrap();
 
-    let object = read::File::parse(&bytes).unwrap();
+    let object = read::File::parse(&*bytes).unwrap();
     assert_eq!(object.format(), BinaryFormat::Coff);
     assert_eq!(object.architecture(), Architecture::X86_64);
 
@@ -90,7 +90,7 @@ fn elf_x86_64_tls() {
 
     //std::fs::write(&"tls.o", &bytes).unwrap();
 
-    let object = read::File::parse(&bytes).unwrap();
+    let object = read::File::parse(&*bytes).unwrap();
     assert_eq!(object.format(), BinaryFormat::Elf);
     assert_eq!(object.architecture(), Architecture::X86_64);
 
@@ -181,7 +181,7 @@ fn macho_x86_64_tls() {
 
     //std::fs::write(&"tls.o", &bytes).unwrap();
 
-    let object = read::File::parse(&bytes).unwrap();
+    let object = read::File::parse(&*bytes).unwrap();
     assert_eq!(object.format(), BinaryFormat::MachO);
     assert_eq!(object.architecture(), Architecture::X86_64);
 
