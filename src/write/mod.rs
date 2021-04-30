@@ -631,6 +631,12 @@ impl Section {
         str::from_utf8(&self.name).ok()
     }
 
+    /// Try to convert the segment to a utf8 string.
+    #[inline]
+    pub fn segment(&self) -> Option<&str> {
+        str::from_utf8(&self.segment).ok()
+    }
+
     /// Return true if this section contains zerofill data.
     #[inline]
     pub fn is_bss(&self) -> bool {
