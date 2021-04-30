@@ -373,9 +373,25 @@ impl Object {
         // Write section headers.
         for (index, section) in self.sections.iter().enumerate() {
             let mut sectname = [0; 16];
-            sectname[..section.name.len()].copy_from_slice(&section.name);
+            sectname
+                .get_mut(..section.name.len())
+                .ok_or_else(|| {
+                    Error(format!(
+                        "section name `{}` is too long",
+                        section.name().unwrap_or(""),
+                    ))
+                })?
+                .copy_from_slice(&section.name);
             let mut segname = [0; 16];
-            segname[..section.segment.len()].copy_from_slice(&section.segment);
+            segname
+                .get_mut(..section.segment.len())
+                .ok_or_else(|| {
+                    Error(format!(
+                        "segment name `{}` is too long",
+                        section.segment().unwrap_or(""),
+                    ))
+                })?
+                .copy_from_slice(&section.segment);
             let flags = if let SectionFlags::MachO { flags } = section.flags {
                 flags
             } else {
