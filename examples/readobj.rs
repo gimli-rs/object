@@ -3264,7 +3264,7 @@ mod macho {
         p.group("MachHeader", |p| {
             p.field_hex("Magic", header.magic().to_be());
             print_cputype(p, header.cputype(endian), header.cpusubtype(endian));
-            p.field_enum("FileType", header.filetype(endian), FLAGS_MH);
+            p.field_enum("FileType", header.filetype(endian), FLAGS_MH_FILETYPE);
             p.field("NumberOfCmds", header.ncmds(endian));
             p.field_hex("SizeOfCmds", header.sizeofcmds(endian));
             p.field_enum("Flags", header.flags(endian), FLAGS_MH);
@@ -3579,7 +3579,7 @@ mod macho {
                     p.group("BuildVersionCommand", |p| {
                         p.field_enum("Cmd", x.cmd.get(endian), FLAGS_LC);
                         p.field_hex("CmdSize", x.cmdsize.get(endian));
-                        p.field_hex("Platform", x.platform.get(endian));
+                        p.field_enum("Platform", x.platform.get(endian), FLAGS_PLATFORM);
                         p.field_hex("MinOs", x.minos.get(endian));
                         p.field_hex("Sdk", x.sdk.get(endian));
                         p.field_hex("NumberOfTools", x.ntools.get(endian));
@@ -3672,7 +3672,7 @@ mod macho {
             } else {
                 p.field_hex("Flags", section.flags(endian));
                 p.flags(flags, SECTION_TYPE, FLAGS_S_TYPE);
-                p.flags(flags, 0, FLAGS_S);
+                p.flags(flags, 0, FLAGS_S_ATTR);
             }
             if let Ok(relocations) = section.relocations(endian, data) {
                 let proc = match cputype {
@@ -3912,6 +3912,7 @@ mod macho {
         CPU_SUBTYPE_ARM_V6M,
         CPU_SUBTYPE_ARM_V7M,
         CPU_SUBTYPE_ARM_V7EM,
+        CPU_SUBTYPE_ARM_V8M,
     );
     static FLAGS_CPU_SUBTYPE_ARM64: &[Flag<u32>] = &flags!(
         CPU_SUBTYPE_ARM64_ALL,
@@ -3920,7 +3921,7 @@ mod macho {
     );
     static FLAGS_CPU_SUBTYPE_ARM64_32: &[Flag<u32>] =
         &flags!(CPU_SUBTYPE_ARM64_32_ALL, CPU_SUBTYPE_ARM64_32_V8);
-    static FLAGS_MH: &[Flag<u32>] = &flags!(
+    static FLAGS_MH_FILETYPE: &[Flag<u32>] = &flags!(
         MH_OBJECT,
         MH_EXECUTE,
         MH_FVMLIB,
@@ -3932,6 +3933,9 @@ mod macho {
         MH_DYLIB_STUB,
         MH_DSYM,
         MH_KEXT_BUNDLE,
+        MH_FILESET,
+    );
+    static FLAGS_MH: &[Flag<u32>] = &flags!(
         MH_NOUNDEFS,
         MH_INCRLINK,
         MH_DYLDLINK,
@@ -3960,6 +3964,7 @@ mod macho {
         MH_APP_EXTENSION_SAFE,
         MH_NLIST_OUTOFSYNC_WITH_DYLDINFO,
         MH_SIM_SUPPORT,
+        MH_DYLIB_IN_CACHE,
     );
     static FLAGS_LC: &[Flag<u32>] = &flags!(
         LC_SEGMENT,
@@ -4015,6 +4020,7 @@ mod macho {
         LC_BUILD_VERSION,
         LC_DYLD_EXPORTS_TRIE,
         LC_DYLD_CHAINED_FIXUPS,
+        LC_FILESET_ENTRY,
     );
     static FLAGS_VM: &[Flag<u32>] = &flags!(VM_PROT_READ, VM_PROT_WRITE, VM_PROT_EXECUTE);
     static FLAGS_SG: &[Flag<u32>] = &flags!(
@@ -4049,7 +4055,7 @@ mod macho {
         S_THREAD_LOCAL_INIT_FUNCTION_POINTERS,
         S_INIT_FUNC_OFFSETS,
     );
-    static FLAGS_S: &[Flag<u32>] = &flags!(
+    static FLAGS_S_ATTR: &[Flag<u32>] = &flags!(
         S_ATTR_PURE_INSTRUCTIONS,
         S_ATTR_NO_TOC,
         S_ATTR_STRIP_STATIC_SYMS,
@@ -4060,6 +4066,18 @@ mod macho {
         S_ATTR_SOME_INSTRUCTIONS,
         S_ATTR_EXT_RELOC,
         S_ATTR_LOC_RELOC,
+    );
+    static FLAGS_PLATFORM: &[Flag<u32>] = &flags!(
+        PLATFORM_MACOS,
+        PLATFORM_IOS,
+        PLATFORM_TVOS,
+        PLATFORM_WATCHOS,
+        PLATFORM_BRIDGEOS,
+        PLATFORM_MACCATALYST,
+        PLATFORM_IOSSIMULATOR,
+        PLATFORM_TVOSSIMULATOR,
+        PLATFORM_WATCHOSSIMULATOR,
+        PLATFORM_DRIVERKIT,
     );
     static FLAGS_N_EXT: &[Flag<u8>] = &flags!(N_PEXT, N_EXT);
     static FLAGS_N_TYPE: &[Flag<u8>] = &flags!(N_UNDF, N_ABS, N_SECT, N_PBUD, N_INDR);
