@@ -34,7 +34,7 @@ memmap = "0.7"
 # Core read support. You will need to enable some file formats too.
 read_core = []
 # Read support for all file formats (including unaligned files).
-read = ["read_core", "archive", "coff", "elf", "macho", "pe", "wasm", "unaligned"]
+read = ["read_core", "archive", "coff", "elf", "macho", "pe", "unaligned"]
 # Core write support. You will need to enable some file formats too.
 write_core = ["crc32fast", "indexmap", "std"]
 # Write support for all file formats.
