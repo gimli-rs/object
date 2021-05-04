@@ -130,7 +130,7 @@ impl<'data, R: ReadRef<'data>> ArchiveFile<'data, R> {
 
 /// An iterator over the members of an archive.
 #[derive(Debug)]
-pub struct ArchiveMemberIterator<'data, R: ReadRef<'data>> {
+pub struct ArchiveMemberIterator<'data, R: ReadRef<'data> = &'data [u8]> {
     data: R,
     offset: u64,
     len: u64,
