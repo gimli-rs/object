@@ -27,16 +27,37 @@ pub unsafe trait Pod: Copy + 'static {}
 /// Returns the type and the tail of the slice.
 #[inline]
 pub fn from_bytes<T: Pod>(data: &[u8]) -> Result<(&T, &[u8])> {
+    let size = mem::size_of::<T>();
+    let tail = data.get(size..).ok_or(())?;
     let ptr = data.as_ptr();
     if (ptr as usize) % mem::align_of::<T>() != 0 {
         return Err(());
     }
-    let size = mem::size_of::<T>();
-    let tail = data.get(size..).ok_or(())?;
     // Safety:
     // The alignment and size are checked by this function.
     // The Pod trait ensures the type is valid to cast from bytes.
     let val = unsafe { &*ptr.cast() };
+    Ok((val, tail))
+}
+
+/// Cast a mutable byte slice to a `Pod` type.
+///
+/// Returns the type and the tail of the slice.
+#[inline]
+pub fn from_bytes_mut<T: Pod>(data: &mut [u8]) -> Result<(&mut T, &mut [u8])> {
+    let size = mem::size_of::<T>();
+    if size > data.len() {
+        return Err(());
+    }
+    let (data, tail) = data.split_at_mut(size);
+    let ptr = data.as_mut_ptr();
+    if (ptr as usize) % mem::align_of::<T>() != 0 {
+        return Err(());
+    }
+    // Safety:
+    // The alignment and size are checked by this function.
+    // The Pod trait ensures the type is valid to cast from bytes.
+    let val = unsafe { &mut *ptr.cast() };
     Ok((val, tail))
 }
 
@@ -45,16 +66,40 @@ pub fn from_bytes<T: Pod>(data: &[u8]) -> Result<(&T, &[u8])> {
 /// Returns the type slice and the tail of the byte slice.
 #[inline]
 pub fn slice_from_bytes<T: Pod>(data: &[u8], count: usize) -> Result<(&[T], &[u8])> {
+    let size = count.checked_mul(mem::size_of::<T>()).ok_or(())?;
+    let tail = data.get(size..).ok_or(())?;
     let ptr = data.as_ptr();
     if (ptr as usize) % mem::align_of::<T>() != 0 {
         return Err(());
     }
-    let size = count.checked_mul(mem::size_of::<T>()).ok_or(())?;
-    let tail = data.get(size..).ok_or(())?;
     // Safety:
     // The alignment and size are checked by this function.
     // The Pod trait ensures the type is valid to cast from bytes.
     let slice = unsafe { slice::from_raw_parts(ptr.cast(), count) };
+    Ok((slice, tail))
+}
+
+/// Cast a mutable byte slice to a slice of a `Pod` type.
+///
+/// Returns the type slice and the tail of the byte slice.
+#[inline]
+pub fn slice_from_bytes_mut<T: Pod>(
+    data: &mut [u8],
+    count: usize,
+) -> Result<(&mut [T], &mut [u8])> {
+    let size = count.checked_mul(mem::size_of::<T>()).ok_or(())?;
+    if size > data.len() {
+        return Err(());
+    }
+    let (data, tail) = data.split_at_mut(size);
+    let ptr = data.as_mut_ptr();
+    if (ptr as usize) % mem::align_of::<T>() != 0 {
+        return Err(());
+    }
+    // Safety:
+    // The alignment and size are checked by this function.
+    // The Pod trait ensures the type is valid to cast from bytes.
+    let slice = unsafe { slice::from_raw_parts_mut(ptr.cast(), count) };
     Ok((slice, tail))
 }
 
