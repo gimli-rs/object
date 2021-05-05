@@ -2,9 +2,9 @@ use alloc::borrow::Cow;
 use alloc::vec::Vec;
 
 use crate::read::{
-    self, Architecture, ComdatKind, CompressedData, CompressedFileRange, Export, FileFlags, Import,
-    ObjectMap, Relocation, Result, SectionFlags, SectionIndex, SectionKind, SymbolFlags,
-    SymbolIndex, SymbolKind, SymbolMap, SymbolMapName, SymbolScope, SymbolSection,
+    self, Architecture, CodeView, ComdatKind, CompressedData, CompressedFileRange, Export,
+    FileFlags, Import, ObjectMap, Relocation, Result, SectionFlags, SectionIndex, SectionKind,
+    SymbolFlags, SymbolIndex, SymbolKind, SymbolMap, SymbolMapName, SymbolScope, SymbolSection,
 };
 use crate::Endianness;
 
@@ -196,6 +196,12 @@ pub trait Object<'data: 'file, 'file>: read::private::Sealed {
     /// The filename and build ID from a `.gnu_debugaltlink` section.
     #[inline]
     fn gnu_debugaltlink(&self) -> Result<Option<(&'data [u8], &'data [u8])>> {
+        Ok(None)
+    }
+
+    /// The filename and GUID from the PE CodeView section
+    #[inline]
+    fn pdb_info(&self) -> Result<Option<CodeView>> {
         Ok(None)
     }
 
