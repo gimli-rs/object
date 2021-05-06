@@ -2,6 +2,8 @@ use alloc::vec::Vec;
 use core::fmt::Debug;
 use core::{mem, str};
 
+use std::convert::TryInto;
+
 use crate::read::coff::{CoffCommon, CoffSymbol, CoffSymbolIterator, CoffSymbolTable, SymbolTable};
 use crate::read::{
     self, Architecture, ComdatKind, Error, Export, FileFlags, Import, NoDynamicRelocationIterator,
@@ -361,7 +363,12 @@ where
             return Ok(None);
         }
 
-        let guid = info.read_bytes(16).read_error("Invalid CodeView GUID")?;
+        let guid: &[u8; 16] = info
+            .read_bytes(16)
+            .read_error("Invalid CodeView GUID")?
+            .0
+            .try_into()
+            .unwrap();
 
         let age = info.read::<U32<LE>>().read_error("Invalid CodeView Age")?;
 

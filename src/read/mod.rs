@@ -5,7 +5,7 @@ use alloc::vec::Vec;
 use core::{fmt, result};
 
 use crate::common::*;
-use crate::{ByteString, Bytes, Endianness};
+use crate::{ByteString, Endianness};
 
 mod read_ref;
 pub use read_ref::*;
@@ -452,7 +452,7 @@ impl<'data> Export<'data> {
 /// PDB Information
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct CodeView<'data> {
-    guid: Bytes<'data>,
+    guid: &'data [u8; 16],
     path: ByteString<'data>,
     age: u32,
 }
@@ -472,8 +472,8 @@ impl<'data> CodeView<'data> {
 
     /// The GUID of the PDB.
     #[inline]
-    pub fn guid(&self) -> &'data [u8] {
-        self.guid.0
+    pub fn guid(&self) -> &'data [u8; 16] {
+        self.guid
     }
 }
 
