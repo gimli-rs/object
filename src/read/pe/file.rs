@@ -363,7 +363,7 @@ where
             return Ok(None);
         }
 
-        let guid: &[u8; 16] = info
+        let guid: [u8; 16] = info
             .read_bytes(16)
             .read_error("Invalid CodeView GUID")?
             .0

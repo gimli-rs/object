@@ -452,7 +452,7 @@ impl<'data> Export<'data> {
 /// PDB Information
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct CodeView<'data> {
-    guid: &'data [u8; 16],
+    guid: [u8; 16],
     path: ByteString<'data>,
     age: u32,
 }
@@ -472,7 +472,7 @@ impl<'data> CodeView<'data> {
 
     /// The GUID of the PDB.
     #[inline]
-    pub fn guid(&self) -> &'data [u8; 16] {
+    pub fn guid(&self) -> [u8; 16] {
         self.guid
     }
 }
