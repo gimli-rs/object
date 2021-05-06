@@ -358,7 +358,7 @@ where
             .read_bytes(4)
             .read_error("Invalid CodeView signature")?;
         if sig.0 != b"RSDS" {
-            return Err(Error("Invalid CodeView Signature"));
+            return Ok(None);
         }
 
         let guid = info.read_bytes(16).read_error("Invalid CodeView GUID")?;
