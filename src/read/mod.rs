@@ -470,7 +470,7 @@ impl<'data> CodeView<'data> {
         self.age
     }
 
-    /// The PDB of the guid
+    /// The GUID of the PDB.
     #[inline]
     pub fn guid(&self) -> &'data [u8] {
         self.guid.0
