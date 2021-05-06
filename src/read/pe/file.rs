@@ -2,7 +2,7 @@ use alloc::vec::Vec;
 use core::fmt::Debug;
 use core::{mem, str};
 
-use std::convert::TryInto;
+use core::convert::TryInto;
 
 use crate::read::coff::{CoffCommon, CoffSymbol, CoffSymbolIterator, CoffSymbolTable, SymbolTable};
 use crate::read::{
