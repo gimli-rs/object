@@ -449,6 +449,34 @@ impl<'data> Export<'data> {
     }
 }
 
+/// PDB Information
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct CodeView<'data> {
+    guid: [u8; 16],
+    path: ByteString<'data>,
+    age: u32,
+}
+
+impl<'data> CodeView<'data> {
+    /// The path to the PDB as stored in CodeView
+    #[inline]
+    pub fn path(&self) -> &'data [u8] {
+        self.path.0
+    }
+
+    /// The age of the PDB
+    #[inline]
+    pub fn age(&self) -> u32 {
+        self.age
+    }
+
+    /// The GUID of the PDB.
+    #[inline]
+    pub fn guid(&self) -> [u8; 16] {
+        self.guid
+    }
+}
+
 /// The target referenced by a relocation.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum RelocationTarget {

@@ -111,6 +111,16 @@ fn dump_object(data: &[u8]) {
         Ok(None) => {}
         Err(e) => println!("Failed to parse GNU debug alt link: {}", e),
     }
+    match file.pdb_info() {
+        Ok(Some(info)) => println!(
+            "PDB file: {}, GUID: {:x?}, Age: {}",
+            String::from_utf8_lossy(info.path()),
+            info.guid(),
+            info.age()
+        ),
+        Ok(None) => {}
+        Err(e) => println!("Failed to parse PE CodeView info: {}", e),
+    }
 
     for segment in file.segments() {
         println!("{:x?}", segment);

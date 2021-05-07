@@ -13,8 +13,8 @@ use crate::read::pe;
 #[cfg(feature = "wasm")]
 use crate::read::wasm;
 use crate::read::{
-    self, Architecture, BinaryFormat, ComdatKind, CompressedData, CompressedFileRange, Error,
-    Export, FileFlags, FileKind, Import, Object, ObjectComdat, ObjectMap, ObjectSection,
+    self, Architecture, BinaryFormat, CodeView, ComdatKind, CompressedData, CompressedFileRange,
+    Error, Export, FileFlags, FileKind, Import, Object, ObjectComdat, ObjectMap, ObjectSection,
     ObjectSegment, ObjectSymbol, ObjectSymbolTable, ReadRef, Relocation, Result, SectionFlags,
     SectionIndex, SectionKind, SymbolFlags, SymbolIndex, SymbolKind, SymbolMap, SymbolMapName,
     SymbolScope, SymbolSection,
@@ -397,6 +397,11 @@ where
     #[inline]
     fn gnu_debugaltlink(&self) -> Result<Option<(&'data [u8], &'data [u8])>> {
         with_inner!(self.inner, FileInternal, |x| x.gnu_debugaltlink())
+    }
+
+    #[inline]
+    fn pdb_info(&self) -> Result<Option<CodeView>> {
+        with_inner!(self.inner, FileInternal, |x| x.pdb_info())
     }
 
     fn entry(&self) -> u64 {
