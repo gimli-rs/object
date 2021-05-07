@@ -24,7 +24,7 @@ fn main() {
             process::exit(1);
         }
     };
-    let in_file = match unsafe { memmap::Mmap::map(&in_file) } {
+    let in_file = match unsafe { memmap2::Mmap::map(&in_file) } {
         Ok(mmap) => mmap,
         Err(err) => {
             eprintln!("Failed to map file '{}': {}", in_file_path, err,);

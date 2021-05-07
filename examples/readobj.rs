@@ -27,7 +27,7 @@ fn main() {
                 continue;
             }
         };
-        let file = match unsafe { memmap::Mmap::map(&file) } {
+        let file = match unsafe { memmap2::Mmap::map(&file) } {
             Ok(mmap) => mmap,
             Err(err) => {
                 println!("Failed to map file '{}': {}", file_path, err);
