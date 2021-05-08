@@ -267,17 +267,19 @@ impl<'data> ArchiveMember<'data> {
 
 // Ignores bytes starting from the first space.
 fn parse_u64_digits(digits: &[u8], radix: u32) -> Option<u64> {
-    let len = memchr::memchr(b' ', digits).unwrap_or(digits.len());
-    let digits = &digits[..len];
-    if digits.is_empty() {
+    if let [b' ', ..] = digits {
         return None;
     }
     let mut result: u64 = 0;
     for &c in digits {
-        let x = (c as char).to_digit(radix)?;
-        result = result
-            .checked_mul(u64::from(radix))?
-            .checked_add(u64::from(x))?;
+        if c == b' ' {
+            return Some(result);
+        } else {
+            let x = (c as char).to_digit(radix)?;
+            result = result
+                .checked_mul(u64::from(radix))?
+                .checked_add(u64::from(x))?;
+        }
     }
     Some(result)
 }
@@ -286,7 +288,7 @@ fn parse_sysv_extended_name<'data>(digits: &[u8], names: &'data [u8]) -> Result<
     let offset = parse_u64_digits(digits, 10).ok_or(())?;
     let offset = offset.try_into().map_err(|_| ())?;
     let name_data = names.get(offset..).ok_or(())?;
-    let name = match memchr::memchr2(b'/', 0, name_data) {
+    let name = match memchr::memchr2(b'/', b'\0', name_data) {
         Some(len) => &name_data[..len],
         None => name_data,
     };
@@ -303,7 +305,7 @@ fn parse_bsd_extended_name<'data, R: ReadRef<'data>>(
     let len = parse_u64_digits(digits, 10).ok_or(())?;
     *size = size.checked_sub(len).ok_or(())?;
     let name_data = data.read_bytes(offset, len)?;
-    let name = match memchr::memchr(0, name_data) {
+    let name = match memchr::memchr(b'\0', name_data) {
         Some(len) => &name_data[..len],
         None => name_data,
     };
