@@ -197,13 +197,12 @@ impl<'data> ArchiveMember<'data> {
             parse_bsd_extended_name(&header.name[3..], data, &mut file_offset, &mut file_size)
                 .read_error("Invalid archive extended name length")?
         } else if header.name[0] == b'/' {
-            let name_len =
-                (header.name.iter().position(|&x| x == b' ')).unwrap_or_else(|| header.name.len());
+            let name_len = memchr::memchr(b' ', &header.name).unwrap_or(header.name.len());
             &header.name[..name_len]
         } else {
-            let name_len = (header.name.iter().position(|&x| x == b'/'))
-                .or_else(|| header.name.iter().position(|&x| x == b' '))
-                .unwrap_or_else(|| header.name.len());
+            let name_len = memchr::memchr(b'/', &header.name)
+                .or_else(|| memchr::memchr(b' ', &header.name))
+                .unwrap_or(header.name.len());
             &header.name[..name_len]
         };
 
@@ -268,10 +267,7 @@ impl<'data> ArchiveMember<'data> {
 
 // Ignores bytes starting from the first space.
 fn parse_u64_digits(digits: &[u8], radix: u32) -> Option<u64> {
-    let len = digits
-        .iter()
-        .position(|&x| x == b' ')
-        .unwrap_or_else(|| digits.len());
+    let len = memchr::memchr(b' ', digits).unwrap_or(digits.len());
     let digits = &digits[..len];
     if digits.is_empty() {
         return None;
@@ -290,7 +286,7 @@ fn parse_sysv_extended_name<'data>(digits: &[u8], names: &'data [u8]) -> Result<
     let offset = parse_u64_digits(digits, 10).ok_or(())?;
     let offset = offset.try_into().map_err(|_| ())?;
     let name_data = names.get(offset..).ok_or(())?;
-    let name = match name_data.iter().position(|&x| x == b'/' || x == 0) {
+    let name = match memchr::memchr2(b'/', 0, name_data) {
         Some(len) => &name_data[..len],
         None => name_data,
     };
@@ -307,7 +303,7 @@ fn parse_bsd_extended_name<'data, R: ReadRef<'data>>(
     let len = parse_u64_digits(digits, 10).ok_or(())?;
     *size = size.checked_sub(len).ok_or(())?;
     let name_data = data.read_bytes(offset, len)?;
-    let name = match name_data.iter().position(|&x| x == 0) {
+    let name = match memchr::memchr(0, name_data) {
         Some(len) => &name_data[..len],
         None => name_data,
     };
