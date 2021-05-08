@@ -245,7 +245,7 @@ pub trait Section: Debug + Pod {
     /// Return the `sectname` bytes up until the null terminator.
     fn name(&self) -> &[u8] {
         let sectname = &self.sectname()[..];
-        match sectname.iter().position(|&x| x == 0) {
+        match memchr::memchr(b'\0', sectname) {
             Some(end) => &sectname[..end],
             None => sectname,
         }
@@ -254,7 +254,7 @@ pub trait Section: Debug + Pod {
     /// Return the `segname` bytes up until the null terminator.
     fn segment_name(&self) -> &[u8] {
         let segname = &self.segname()[..];
-        match segname.iter().position(|&x| x == 0) {
+        match memchr::memchr(b'\0', segname) {
             Some(end) => &segname[..end],
             None => segname,
         }

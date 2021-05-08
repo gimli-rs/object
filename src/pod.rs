@@ -284,7 +284,7 @@ impl<'data> Bytes<'data> {
     /// Reads past the null byte, but doesn't return it.
     #[inline]
     pub fn read_string(&mut self) -> Result<&'data [u8]> {
-        match self.0.iter().position(|&x| x == 0) {
+        match memchr::memchr(b'\0', self.0) {
             Some(null) => {
                 // These will never fail.
                 let bytes = self.read_bytes(null)?;

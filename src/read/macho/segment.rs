@@ -158,7 +158,7 @@ pub trait Segment: Debug + Pod {
     /// Return the `segname` bytes up until the null terminator.
     fn name(&self) -> &[u8] {
         let segname = &self.segname()[..];
-        match segname.iter().position(|&x| x == 0) {
+        match memchr::memchr(b'\0', segname) {
             Some(end) => &segname[..end],
             None => segname,
         }

@@ -114,7 +114,7 @@ impl<'data> SymbolTable<'data> {
             .read_error("Invalid COFF symbol index")?;
         let bytes = bytes_of_slice(entries);
         // The name is padded with nulls.
-        Ok(match bytes.iter().position(|&x| x == 0) {
+        Ok(match memchr::memchr(b'\0', bytes) {
             Some(end) => &bytes[..end],
             None => &bytes[..],
         })
@@ -182,7 +182,7 @@ impl pe::ImageSymbol {
                 .read_error("Invalid COFF symbol name offset")
         } else {
             // The name is inline and padded with nulls.
-            Ok(match self.name.iter().position(|&x| x == 0) {
+            Ok(match memchr::memchr(b'\0', &self.name) {
                 Some(end) => &self.name[..end],
                 None => &self.name[..],
             })

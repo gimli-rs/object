@@ -347,7 +347,7 @@ impl pe::ImageSectionHeader {
     /// Return the raw section name.
     pub fn raw_name(&self) -> &[u8] {
         let bytes = &self.name;
-        match bytes.iter().position(|&x| x == 0) {
+        match memchr::memchr(b'\0', bytes) {
             Some(end) => &bytes[..end],
             None => &bytes[..],
         }
