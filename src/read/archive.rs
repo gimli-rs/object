@@ -385,6 +385,8 @@ mod tests {
             !<arch>\n\
             //                                              18        `\n\
             0123456789abcdef/\n\
+            s p a c e/      0           0     0     644     4         `\n\
+            0000\
             0123456789abcde/0           0     0     644     3         `\n\
             odd\n\
             /0              0           0     0     644     4         `\n\
@@ -393,6 +395,10 @@ mod tests {
         let archive = ArchiveFile::parse(data).unwrap();
         assert_eq!(archive.kind(), ArchiveKind::Gnu);
         let mut members = archive.members();
+
+        let member = members.next().unwrap().unwrap();
+        assert_eq!(member.name(), b"s p a c e");
+        assert_eq!(member.data(data).unwrap(), &b"0000"[..]);
 
         let member = members.next().unwrap().unwrap();
         assert_eq!(member.name(), b"0123456789abcde");
