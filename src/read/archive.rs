@@ -27,7 +27,7 @@ pub struct ArchiveFile<'data, R: ReadRef<'data> = &'data [u8]> {
     len: u64,
     offset: u64,
     kind: ArchiveKind,
-    symbols: &'data [u8],
+    symbols: (u64, u64),
     names: &'data [u8],
 }
 
@@ -48,7 +48,7 @@ impl<'data, R: ReadRef<'data>> ArchiveFile<'data, R> {
             offset: tail,
             len,
             kind: ArchiveKind::Unknown,
-            symbols: &[],
+            symbols: (0, 0),
             names: &[],
         };
 
@@ -67,7 +67,7 @@ impl<'data, R: ReadRef<'data>> ArchiveFile<'data, R> {
             if member.name == b"/" {
                 // GNU symbol table (unless we later determine this is COFF).
                 file.kind = ArchiveKind::Gnu;
-                file.symbols = member.data(data)?;
+                file.symbols = member.file_range();
                 file.offset = tail;
 
                 if tail < len {
@@ -75,7 +75,7 @@ impl<'data, R: ReadRef<'data>> ArchiveFile<'data, R> {
                     if member.name == b"/" {
                         // COFF linker member.
                         file.kind = ArchiveKind::Coff;
-                        file.symbols = member.data(data)?;
+                        file.symbols = member.file_range();
                         file.offset = tail;
 
                         if tail < len {
@@ -100,7 +100,7 @@ impl<'data, R: ReadRef<'data>> ArchiveFile<'data, R> {
             } else if member.name == b"__.SYMDEF" || member.name == b"__.SYMDEF SORTED" {
                 // BSD symbol table.
                 file.kind = ArchiveKind::Bsd;
-                file.symbols = member.data(data)?;
+                file.symbols = member.file_range();
                 file.offset = tail;
             } else {
                 // TODO: This could still be a BSD file. We leave this as unknown for now.
