@@ -235,6 +235,22 @@ impl<'data, R: ReadRef<'data>> File<'data, R> {
             FileInternal::Wasm(_) => BinaryFormat::Wasm,
         }
     }
+
+    /// Initialize with an existing Mach-O 32 file.
+    #[cfg(feature = "macho")]
+    pub(crate) fn from_macho_32(inner: macho::MachOFile32<'data, Endianness, R>) -> Self {
+        File {
+            inner: FileInternal::MachO32(inner),
+        }
+    }
+
+    /// Initialize with an existing Mach-O 64 file.
+    #[cfg(feature = "macho")]
+    pub(crate) fn from_macho_64(inner: macho::MachOFile64<'data, Endianness, R>) -> Self {
+        File {
+            inner: FileInternal::MachO64(inner),
+        }
+    }
 }
 
 impl<'data, R: ReadRef<'data>> read::private::Sealed for File<'data, R> {}
