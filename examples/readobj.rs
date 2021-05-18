@@ -3222,14 +3222,14 @@ mod macho {
     }
 
     pub(super) fn print_macho32(p: &mut Printer<impl Write>, data: &[u8]) {
-        if let Ok(header) = MachHeader32::parse(data) {
+        if let Ok(header) = MachHeader32::parse(data, 0) {
             println!("Format: Mach-O 32-bit");
             print_macho(p, header, data);
         }
     }
 
     pub(super) fn print_macho64(p: &mut Printer<impl Write>, data: &[u8]) {
-        if let Ok(header) = MachHeader64::parse(data) {
+        if let Ok(header) = MachHeader64::parse(data, 0) {
             println!("Format: Mach-O 64-bit");
             print_macho(p, header, data);
         }
@@ -3248,7 +3248,7 @@ mod macho {
         if let Ok(endian) = header.endian() {
             let mut state = MachState::default();
             print_mach_header(p, endian, header);
-            if let Ok(mut commands) = header.load_commands(endian, data) {
+            if let Ok(mut commands) = header.load_commands(endian, data, 0) {
                 while let Ok(Some(command)) = commands.next() {
                     print_load_command(p, endian, data, header, command, &mut state);
                 }
