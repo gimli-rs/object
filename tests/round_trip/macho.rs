@@ -16,7 +16,7 @@ fn issue_286_segment_file_size() {
     let bytes = &*object.write().unwrap();
     let header = macho::MachHeader64::parse(bytes).unwrap();
     let endian: Endianness = header.endian().unwrap();
-    let mut commands = header.load_commands(endian, bytes).unwrap();
+    let mut commands = header.load_commands(endian, bytes, 0).unwrap();
     let command = commands.next().unwrap().unwrap();
     let (segment, _) = command.segment_64().unwrap().unwrap();
     assert_eq!(segment.vmsize.get(endian), 30);

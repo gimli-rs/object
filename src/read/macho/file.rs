@@ -33,6 +33,7 @@ where
 {
     pub(super) endian: Mach::Endian,
     pub(super) data: R,
+    pub(super) header_offset: u64,
     pub(super) header: &'data Mach,
     pub(super) sections: Vec<MachOSectionInternal<'data, Mach>>,
     pub(super) symbols: SymbolTable<'data, Mach>,
@@ -45,13 +46,21 @@ where
 {
     /// Parse the raw Mach-O file data.
     pub fn parse(data: R) -> Result<Self> {
-        let header = Mach::parse(data)?;
+        Self::parse_at_offset(data, 0)
+    }
+
+    /// Parse the raw Mach-O file data at an arbitrary offset inside the input data.
+    /// This can be used for parsing Mach-O images inside the dyld shared cache,
+    /// where multiple images, located at different offsets, share the same address
+    /// space.
+    pub fn parse_at_offset(data: R, header_offset: u64) -> Result<Self> {
+        let header = Mach::parse_at_offset(data, header_offset)?;
         let endian = header.endian()?;
 
         let mut symbols = SymbolTable::default();
         // Build a list of sections to make some operations more efficient.
         let mut sections = Vec::new();
-        if let Ok(mut commands) = header.load_commands(endian, data) {
+        if let Ok(mut commands) = header.load_commands(endian, data, header_offset) {
             while let Ok(Some(command)) = commands.next() {
                 if let Some((segment, section_data)) = Mach::Segment::from_command(command)? {
                     for section in segment.sections(endian, section_data)? {
@@ -67,6 +76,7 @@ where
         Ok(MachOFile {
             endian,
             header,
+            header_offset,
             sections,
             symbols,
             data,
@@ -137,7 +147,7 @@ where
             file: self,
             commands: self
                 .header
-                .load_commands(self.endian, self.data)
+                .load_commands(self.endian, self.data, self.header_offset)
                 .ok()
                 .unwrap_or_else(Default::default),
         }
@@ -240,7 +250,9 @@ where
         if twolevel {
             libraries.push(&[][..]);
         }
-        let mut commands = self.header.load_commands(self.endian, self.data)?;
+        let mut commands = self
+            .header
+            .load_commands(self.endian, self.data, self.header_offset)?;
         while let Some(command) = commands.next()? {
             if let Some(command) = command.dysymtab()? {
                 dysymtab = Some(command);
@@ -278,7 +290,9 @@ where
 
     fn exports(&self) -> Result<Vec<Export<'data>>> {
         let mut dysymtab = None;
-        let mut commands = self.header.load_commands(self.endian, self.data)?;
+        let mut commands = self
+            .header
+            .load_commands(self.endian, self.data, self.header_offset)?;
         while let Some(command) = commands.next()? {
             if let Some(command) = command.dysymtab()? {
                 dysymtab = Some(command);
@@ -313,11 +327,14 @@ where
     }
 
     fn mach_uuid(&self) -> Result<Option<[u8; 16]>> {
-        self.header.uuid(self.endian, self.data)
+        self.header.uuid(self.endian, self.data, self.header_offset)
     }
 
     fn entry(&self) -> u64 {
-        if let Ok(mut commands) = self.header.load_commands(self.endian, self.data) {
+        if let Ok(mut commands) =
+            self.header
+                .load_commands(self.endian, self.data, self.header_offset)
+        {
             while let Ok(Some(command)) = commands.next() {
                 if let Ok(Some(command)) = command.entry_point() {
                     return command.entryoff.get(self.endian);
@@ -481,8 +498,15 @@ pub trait MachHeader: Debug + Pod {
     ///
     /// Also checks that the magic field in the file header is a supported format.
     fn parse<'data, R: ReadRef<'data>>(data: R) -> read::Result<&'data Self> {
+        Self::parse_at_offset(data, 0)
+    }
+
+    fn parse_at_offset<'data, R: ReadRef<'data>>(
+        data: R,
+        offset: u64,
+    ) -> read::Result<&'data Self> {
         let header = data
-            .read_at::<Self>(0)
+            .read_at::<Self>(offset)
             .read_error("Invalid Mach-O header size or alignment")?;
         if !header.is_supported() {
             return Err(Error("Unsupported Mach-O header"));
@@ -502,10 +526,11 @@ pub trait MachHeader: Debug + Pod {
         &self,
         endian: Self::Endian,
         data: R,
+        header_offset: u64,
     ) -> Result<LoadCommandIterator<'data, Self::Endian>> {
         let data = data
             .read_bytes_at(
-                mem::size_of::<Self>() as u64,
+                header_offset + mem::size_of::<Self>() as u64,
                 self.sizeofcmds(endian).into(),
             )
             .read_error("Invalid Mach-O load command table size")?;
@@ -517,8 +542,9 @@ pub trait MachHeader: Debug + Pod {
         &self,
         endian: Self::Endian,
         data: R,
+        header_offset: u64,
     ) -> Result<Option<[u8; 16]>> {
-        let mut commands = self.load_commands(endian, data)?;
+        let mut commands = self.load_commands(endian, data, header_offset)?;
         while let Some(command) = commands.next()? {
             if let Ok(Some(uuid)) = command.uuid() {
                 return Ok(Some(uuid.uuid));

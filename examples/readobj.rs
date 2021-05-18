@@ -3248,7 +3248,7 @@ mod macho {
         if let Ok(endian) = header.endian() {
             let mut state = MachState::default();
             print_mach_header(p, endian, header);
-            if let Ok(mut commands) = header.load_commands(endian, data) {
+            if let Ok(mut commands) = header.load_commands(endian, data, 0) {
                 while let Ok(Some(command)) = commands.next() {
                     print_load_command(p, endian, data, header, command, &mut state);
                 }
