@@ -7,8 +7,12 @@ pub enum Architecture {
     Arm,
     I386,
     Mips,
+    Mips64,
     S390x,
     Wasm32,
+    PowerPc,
+    PowerPc64,
+    Riscv64,
     X86_64,
 }
 
@@ -23,9 +27,13 @@ impl Architecture {
             Architecture::Arm => Some(AddressSize::U32),
             Architecture::I386 => Some(AddressSize::U32),
             Architecture::Mips => Some(AddressSize::U32),
+            Architecture::Mips64 => Some(AddressSize::U64),
             Architecture::S390x => Some(AddressSize::U64),
             Architecture::Wasm32 => Some(AddressSize::U32),
             Architecture::X86_64 => Some(AddressSize::U64),
+            Architecture::PowerPc => Some(AddressSize::U32),
+            Architecture::PowerPc64 => Some(AddressSize::U64),
+            Architecture::Riscv64 => Some(AddressSize::U64),
         }
     }
 }
