@@ -12,6 +12,7 @@ pub enum Architecture {
     Wasm32,
     PowerPc,
     PowerPc64,
+    Riscv32,
     Riscv64,
     X86_64,
 }
@@ -34,6 +35,7 @@ impl Architecture {
             Architecture::PowerPc => Some(AddressSize::U32),
             Architecture::PowerPc64 => Some(AddressSize::U64),
             Architecture::Riscv64 => Some(AddressSize::U64),
+            Architecture::Riscv32 => Some(AddressSize::U32),
         }
     }
 }

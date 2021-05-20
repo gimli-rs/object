@@ -81,6 +81,7 @@ impl Object {
             Architecture::PowerPc => false,
             Architecture::PowerPc64 => false,
             Architecture::Riscv64 => false,
+            Architecture::Riscv32 => false,
             _ => {
                 return Err(Error(format!(
                     "unimplemented architecture {:?}",
@@ -357,6 +358,7 @@ impl Object {
             Architecture::PowerPc => elf::EM_PPC,
             Architecture::PowerPc64 => elf::EM_PPC64,
             Architecture::Riscv64 => elf::EM_RISCV,
+            Architecture::Riscv32 => elf::EM_RISCV,
             _ => {
                 return Err(Error(format!(
                     "unimplemented architecture {:?}",
