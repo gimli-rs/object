@@ -735,6 +735,8 @@ pub const SHF_COMPRESSED: u32 = 1 << 11;
 pub const SHF_MASKOS: u32 = 0x0ff0_0000;
 /// Processor-specific section flags.
 pub const SHF_MASKPROC: u32 = 0xf000_0000;
+/// This section is excluded from the final executable or shared library.
+pub const SHF_EXCLUDE: u32 = 0x8000_0000;
 
 /// Section compression header.
 ///
