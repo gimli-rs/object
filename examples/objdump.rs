@@ -4,37 +4,35 @@ use object::{Object, ObjectComdat, ObjectSection, ObjectSymbol};
 use std::{env, fs, process};
 
 fn main() {
-    let arg_len = env::args().len();
-    if arg_len <= 1 {
-        eprintln!("Usage: {} <file> ...", env::args().next().unwrap());
+    let mut args = env::args();
+    let cmd = args.next().unwrap();
+    if args.len() == 0 {
+        eprintln!("Usage: {} <file> [<member>...]", cmd);
         process::exit(1);
     }
+    let file_path = args.next().unwrap();
+    let mut member_names: Vec<_> = args.map(|name| (name, false)).collect();
 
-    for file_path in env::args().skip(1) {
-        if arg_len > 2 {
-            println!();
-            println!("{}:", file_path);
+    let file = match fs::File::open(&file_path) {
+        Ok(file) => file,
+        Err(err) => {
+            eprintln!("Failed to open file '{}': {}", file_path, err,);
+            process::exit(1);
         }
+    };
+    let file = match unsafe { memmap2::Mmap::map(&file) } {
+        Ok(mmap) => mmap,
+        Err(err) => {
+            eprintln!("Failed to map file '{}': {}", file_path, err,);
+            process::exit(1);
+        }
+    };
 
-        let file = match fs::File::open(&file_path) {
-            Ok(file) => file,
-            Err(err) => {
-                println!("Failed to open file '{}': {}", file_path, err,);
-                continue;
-            }
-        };
-        let file = match unsafe { memmap2::Mmap::map(&file) } {
-            Ok(mmap) => mmap,
-            Err(err) => {
-                println!("Failed to map file '{}': {}", file_path, err,);
-                continue;
-            }
-        };
-
-        if let Ok(archive) = ArchiveFile::parse(&*file) {
-            println!("Format: Archive (kind: {:?})", archive.kind());
-            for member in archive.members() {
-                if let Ok(member) = member {
+    if let Ok(archive) = ArchiveFile::parse(&*file) {
+        eprintln!("Format: Archive (kind: {:?})", archive.kind());
+        for member in archive.members() {
+            if let Ok(member) = member {
+                if find_member(&mut member_names, member.name()) {
                     println!();
                     println!("{}:", String::from_utf8_lossy(member.name()));
                     if let Ok(data) = member.data(&*file) {
@@ -42,27 +40,46 @@ fn main() {
                     }
                 }
             }
-        } else if let Ok(arches) = FatHeader::parse_arch32(&*file) {
-            println!("Format: Mach-O Fat 32");
-            for arch in arches {
-                println!();
-                println!("Fat Arch: {:?}", arch.architecture());
-                if let Ok(data) = arch.data(&*file) {
-                    dump_object(data);
-                }
-            }
-        } else if let Ok(arches) = FatHeader::parse_arch64(&*file) {
-            println!("Format: Mach-O Fat 64");
-            for arch in arches {
-                println!();
-                println!("Fat Arch: {:?}", arch.architecture());
-                if let Ok(data) = arch.data(&*file) {
-                    dump_object(data);
-                }
-            }
-        } else {
-            dump_object(&*file);
         }
+    } else if let Ok(arches) = FatHeader::parse_arch32(&*file) {
+        println!("Format: Mach-O Fat 32");
+        for arch in arches {
+            println!();
+            println!("Fat Arch: {:?}", arch.architecture());
+            if let Ok(data) = arch.data(&*file) {
+                dump_object(data);
+            }
+        }
+    } else if let Ok(arches) = FatHeader::parse_arch64(&*file) {
+        println!("Format: Mach-O Fat 64");
+        for arch in arches {
+            println!();
+            println!("Fat Arch: {:?}", arch.architecture());
+            if let Ok(data) = arch.data(&*file) {
+                dump_object(data);
+            }
+        }
+    } else {
+        dump_object(&*file);
+    }
+
+    for (name, found) in member_names {
+        if !found {
+            eprintln!("Failed to find member '{}", name);
+        }
+    }
+}
+
+fn find_member(member_names: &mut [(String, bool)], name: &[u8]) -> bool {
+    if member_names.is_empty() {
+        return true;
+    }
+    match member_names.iter().position(|x| x.0.as_bytes() == name) {
+        Some(i) => {
+            member_names[i].1 = true;
+            true
+        }
+        None => false,
     }
 }
 
