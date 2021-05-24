@@ -1,6 +1,6 @@
 use object::read::archive::ArchiveFile;
-use object::read::macho::{FatArch, FatHeader};
-use object::{Object, ObjectComdat, ObjectSection, ObjectSymbol};
+use object::read::macho::{DyldCache, FatArch, FatHeader};
+use object::{Endianness, Object, ObjectComdat, ObjectSection, ObjectSymbol};
 use std::{env, fs, process};
 
 fn main() {
@@ -59,6 +59,26 @@ fn main() {
                 dump_object(data);
             }
         }
+    } else if let Ok(cache) = DyldCache::<Endianness>::parse(&*file) {
+        println!("Format: dyld cache {:?}-endian", cache.endianness());
+        println!("Architecture: {:?}", cache.architecture());
+        let mut images = cache.iter_images();
+        while let Ok(Some(image)) = images.next() {
+            if let Ok(path) = image.path() {
+                if find_member(&mut member_names, path.as_bytes()) {
+                    println!();
+                    println!("{}:", path);
+                    let file = match image.parse_object() {
+                        Ok(file) => file,
+                        Err(err) => {
+                            eprintln!("Failed to parse file: {}", err);
+                            continue;
+                        }
+                    };
+                    dump_parsed_object(&file);
+                }
+            }
+        }
     } else {
         dump_object(&*file);
     }
@@ -91,6 +111,10 @@ fn dump_object(data: &[u8]) {
             return;
         }
     };
+    dump_parsed_object(&file);
+}
+
+fn dump_parsed_object(file: &object::File) {
     println!(
         "Format: {:?} {:?}-endian {}-bit",
         file.format(),
