@@ -1,6 +1,7 @@
 /// A CPU architecture.
 #[allow(missing_docs)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[non_exhaustive]
 pub enum Architecture {
     Unknown,
     Aarch64,
@@ -8,12 +9,12 @@ pub enum Architecture {
     I386,
     Mips,
     Mips64,
-    S390x,
-    Wasm32,
     PowerPc,
     PowerPc64,
     Riscv32,
     Riscv64,
+    S390x,
+    Wasm32,
     X86_64,
 }
 
@@ -29,13 +30,13 @@ impl Architecture {
             Architecture::I386 => Some(AddressSize::U32),
             Architecture::Mips => Some(AddressSize::U32),
             Architecture::Mips64 => Some(AddressSize::U64),
+            Architecture::PowerPc => Some(AddressSize::U32),
+            Architecture::PowerPc64 => Some(AddressSize::U64),
+            Architecture::Riscv32 => Some(AddressSize::U32),
+            Architecture::Riscv64 => Some(AddressSize::U64),
             Architecture::S390x => Some(AddressSize::U64),
             Architecture::Wasm32 => Some(AddressSize::U32),
             Architecture::X86_64 => Some(AddressSize::U64),
-            Architecture::PowerPc => Some(AddressSize::U32),
-            Architecture::PowerPc64 => Some(AddressSize::U64),
-            Architecture::Riscv64 => Some(AddressSize::U64),
-            Architecture::Riscv32 => Some(AddressSize::U32),
         }
     }
 }
@@ -45,6 +46,7 @@ impl Architecture {
 /// This may differ from the address size supported by the file format (such as for COFF).
 #[allow(missing_docs)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[non_exhaustive]
 #[repr(u8)]
 pub enum AddressSize {
     U32 = 4,
@@ -62,6 +64,7 @@ impl AddressSize {
 /// A binary file format.
 #[allow(missing_docs)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[non_exhaustive]
 pub enum BinaryFormat {
     Coff,
     Elf,
@@ -72,6 +75,7 @@ pub enum BinaryFormat {
 
 /// The kind of a section.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum SectionKind {
     /// The section kind is unknown.
     Unknown,
@@ -170,6 +174,7 @@ impl SectionKind {
 /// This determines the way in which the linker resolves multiple definitions of the COMDAT
 /// sections.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum ComdatKind {
     /// The selection kind is unknown.
     Unknown,
@@ -201,6 +206,7 @@ pub enum ComdatKind {
 
 /// The kind of a symbol.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum SymbolKind {
     /// The symbol kind is unknown.
     Unknown,
@@ -249,6 +255,7 @@ pub enum SymbolScope {
 ///
 /// 'XxxRelative' means 'Xxx + A - P'.  'XxxOffset' means 'S + A - Xxx'.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum RelocationKind {
     /// S + A
     Absolute,
@@ -288,6 +295,7 @@ pub enum RelocationKind {
 /// This is usually architecture specific, such as specifying an addressing mode or
 /// a specific instruction.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum RelocationEncoding {
     /// Generic encoding.
     Generic,
@@ -317,6 +325,7 @@ pub enum RelocationEncoding {
 
 /// File flags that are specific to each file format.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum FileFlags {
     /// No file flags.
     None,
@@ -339,6 +348,7 @@ pub enum FileFlags {
 
 /// Section flags that are specific to each file format.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum SectionFlags {
     /// No section flags.
     None,
@@ -361,6 +371,7 @@ pub enum SectionFlags {
 
 /// Symbol flags that are specific to each file format.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum SymbolFlags<Section> {
     /// No symbol flags.
     None,

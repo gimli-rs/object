@@ -233,6 +233,7 @@ pub struct SymbolIndex(pub usize);
 
 /// The section where a symbol is defined.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[non_exhaustive]
 pub enum SymbolSection {
     /// The section is unknown.
     Unknown,
@@ -489,6 +490,7 @@ impl<'data> CodeView<'data> {
 
 /// The target referenced by a relocation.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[non_exhaustive]
 pub enum RelocationTarget {
     /// The target is a symbol.
     Symbol(SymbolIndex),
@@ -558,6 +560,7 @@ impl Relocation {
 
 /// A data compression format.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[non_exhaustive]
 pub enum CompressionFormat {
     /// The data is uncompressed.
     None,

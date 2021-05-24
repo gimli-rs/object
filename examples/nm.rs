@@ -61,20 +61,10 @@ fn print_symbol(symbol: &Symbol<'_, '_>, section_kinds: &HashMap<SectionIndex, S
     }
 
     let mut kind = match symbol.section() {
-        SymbolSection::Unknown | SymbolSection::None => '?',
         SymbolSection::Undefined => 'U',
         SymbolSection::Absolute => 'A',
         SymbolSection::Common => 'C',
         SymbolSection::Section(index) => match section_kinds.get(&index) {
-            None
-            | Some(SectionKind::Unknown)
-            | Some(SectionKind::Other)
-            | Some(SectionKind::OtherString)
-            | Some(SectionKind::Debug)
-            | Some(SectionKind::Linker)
-            | Some(SectionKind::Note)
-            | Some(SectionKind::Metadata)
-            | Some(SectionKind::Elf(_)) => '?',
             Some(SectionKind::Text) => 't',
             Some(SectionKind::Data) | Some(SectionKind::Tls) | Some(SectionKind::TlsVariables) => {
                 'd'
@@ -82,7 +72,9 @@ fn print_symbol(symbol: &Symbol<'_, '_>, section_kinds: &HashMap<SectionIndex, S
             Some(SectionKind::ReadOnlyData) | Some(SectionKind::ReadOnlyString) => 'r',
             Some(SectionKind::UninitializedData) | Some(SectionKind::UninitializedTls) => 'b',
             Some(SectionKind::Common) => 'C',
+            _ => '?',
         },
+        _ => '?',
     };
 
     if symbol.is_global() {
