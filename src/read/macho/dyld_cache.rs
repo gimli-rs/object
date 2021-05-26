@@ -1,7 +1,7 @@
 use core::slice;
 
 use crate::read::{Error, File, ReadError, ReadRef, Result};
-use crate::{macho, Architecture, Bytes, Endian, Endianness};
+use crate::{macho, Architecture, Endian, Endianness};
 
 /// A parsed representation of the dyld shared cache.
 #[derive(Debug)]
@@ -192,16 +192,8 @@ impl<E: Endian> macho::DyldCacheHeader<E> {
 impl<E: Endian> macho::DyldCacheImageInfo<E> {
     /// The file system path of this image.
     pub fn path<'data, R: ReadRef<'data>>(&self, endian: E, data: R) -> Result<&'data [u8]> {
-        // The longest path I've seen is 164 bytes long. In theory paths could be longer than 256.
-        const MAX_PATH_LEN: u64 = 256;
-
-        let path_offset = self.path_file_offset.get(endian).into();
-        let slice_containing_path = data
-            .read_bytes_at(path_offset, MAX_PATH_LEN)
-            .read_error("Couldn't read path")?;
-        Bytes(slice_containing_path)
-            .read_string()
-            .read_error("Couldn't read path string (didn't find nul byte within first 256 bytes)")
+        data.read_bytes_at_until(self.path_file_offset.get(endian).into(), 0)
+            .read_error("Couldn't read dyld cache image path")
     }
 
     /// Find the file offset of the image by looking up its address in the mappings.
