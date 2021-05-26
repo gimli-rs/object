@@ -1,7 +1,5 @@
-use crate::read::{Error, ReadError, ReadRef, Result};
+use crate::read::{Error, File, ReadError, ReadRef, Result};
 use crate::{macho, Architecture, Bytes, Endian, Endianness};
-
-use super::{MachOFile32, MachOFile64};
 
 /// A parsed representation of the dyld shared cache.
 #[derive(Debug)]
@@ -15,7 +13,6 @@ where
     first_mapping_address: u64,
     header: &'data macho::DyldCacheHeader<E>,
     arch: Architecture,
-    is_64: bool,
 }
 
 impl<'data, E, R> DyldCache<'data, E, R>
@@ -30,7 +27,7 @@ where
             .read::<macho::DyldCacheHeader<E>>(&mut offset)
             .read_error("Invalid dyld cache header size or alignment")?;
 
-        let (arch, is_64, endianness) = match Self::parse_magic(&header.magic) {
+        let (arch, endianness) = match Self::parse_magic(&header.magic) {
             Some(props) => props,
             None => return Err(Error("Unrecognized magic value")),
         };
@@ -61,24 +58,23 @@ where
             first_mapping_address,
             data,
             arch,
-            is_64,
         })
     }
 
-    /// Returns (arch, is_64, endianness) based on the magic string.
-    fn parse_magic(magic: &[u8; 16]) -> Option<(Architecture, bool, Endianness)> {
+    /// Returns (arch, endianness) based on the magic string.
+    fn parse_magic(magic: &[u8; 16]) -> Option<(Architecture, Endianness)> {
         Some(match magic {
-            b"dyld_v1    i386\0" => (Architecture::I386, false, Endianness::Little),
-            b"dyld_v1  x86_64\0" => (Architecture::X86_64, true, Endianness::Little),
-            b"dyld_v1 x86_64h\0" => (Architecture::X86_64, true, Endianness::Little),
-            b"dyld_v1     ppc\0" => (Architecture::PowerPc, false, Endianness::Big),
-            b"dyld_v1   armv6\0" => (Architecture::Arm, false, Endianness::Little),
-            b"dyld_v1   armv7\0" => (Architecture::Arm, false, Endianness::Little),
-            b"dyld_v1  armv7f\0" => (Architecture::Arm, false, Endianness::Little),
-            b"dyld_v1  armv7s\0" => (Architecture::Arm, false, Endianness::Little),
-            b"dyld_v1  armv7k\0" => (Architecture::Arm, false, Endianness::Little),
-            b"dyld_v1   arm64\0" => (Architecture::Aarch64, true, Endianness::Little),
-            b"dyld_v1  arm64e\0" => (Architecture::Aarch64, true, Endianness::Little),
+            b"dyld_v1    i386\0" => (Architecture::I386, Endianness::Little),
+            b"dyld_v1  x86_64\0" => (Architecture::X86_64, Endianness::Little),
+            b"dyld_v1 x86_64h\0" => (Architecture::X86_64, Endianness::Little),
+            b"dyld_v1     ppc\0" => (Architecture::PowerPc, Endianness::Big),
+            b"dyld_v1   armv6\0" => (Architecture::Arm, Endianness::Little),
+            b"dyld_v1   armv7\0" => (Architecture::Arm, Endianness::Little),
+            b"dyld_v1  armv7f\0" => (Architecture::Arm, Endianness::Little),
+            b"dyld_v1  armv7s\0" => (Architecture::Arm, Endianness::Little),
+            b"dyld_v1  armv7k\0" => (Architecture::Arm, Endianness::Little),
+            b"dyld_v1   arm64\0" => (Architecture::Aarch64, Endianness::Little),
+            b"dyld_v1  arm64e\0" => (Architecture::Aarch64, Endianness::Little),
             _ => return None,
         })
     }
@@ -101,11 +97,6 @@ where
     /// Return true if the file is little endian, false if it is big endian.
     pub fn is_little_endian(&self) -> bool {
         self.endian.is_little_endian()
-    }
-
-    /// Return true if the file can contain 64-bit addresses.
-    pub fn is_64(&self) -> bool {
-        self.is_64
     }
 
     /// Iterate over the images in this cache.
@@ -151,7 +142,6 @@ where
             .read_error("Couldn't read macho::DyldCacheImageInfo")?;
         Ok(Some(DyldCacheImage {
             endian: self.cache.endian,
-            is_64: self.cache.is_64,
             data,
             first_mapping_address: self.cache.first_mapping_address,
             image_info,
@@ -167,7 +157,6 @@ where
     R: ReadRef<'data>,
 {
     endian: E,
-    is_64: bool,
     data: R,
     first_mapping_address: u64,
     image_info: &'data macho::DyldCacheImageInfo<E>,
@@ -202,13 +191,7 @@ where
     }
 
     /// Parse this image into an Object.
-    pub fn parse_object(&self) -> Result<crate::File<'data, R>> {
-        if !self.is_64 {
-            let file = MachOFile32::<Endianness, R>::parse_at_offset(self.data, self.offset())?;
-            Ok(crate::File::from_macho_32(file))
-        } else {
-            let file = MachOFile64::<Endianness, R>::parse_at_offset(self.data, self.offset())?;
-            Ok(crate::File::from_macho_64(file))
-        }
+    pub fn parse_object(&self) -> Result<File<'data, R>> {
+        File::parse_at(self.data, self.offset())
     }
 }

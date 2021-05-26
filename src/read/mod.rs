@@ -159,8 +159,13 @@ pub enum FileKind {
 impl FileKind {
     /// Determine a file kind by parsing the start of the file.
     pub fn parse<'data, R: ReadRef<'data>>(data: R) -> Result<FileKind> {
+        Self::parse_at(data, 0)
+    }
+
+    /// Determine a file kind by parsing at the given offset.
+    pub fn parse_at<'data, R: ReadRef<'data>>(data: R, offset: u64) -> Result<FileKind> {
         let magic = data
-            .read_bytes_at(0, 16)
+            .read_bytes_at(offset, 16)
             .read_error("Could not read file magic")?;
         if magic.len() < 16 {
             return Err(Error("File too short"));

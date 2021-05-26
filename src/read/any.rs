@@ -220,6 +220,24 @@ impl<'data, R: ReadRef<'data>> File<'data, R> {
         Ok(File { inner })
     }
 
+    /// Parse the raw file data at an arbitrary offset inside the input data.
+    ///
+    /// Currently, this is only supported for Mach-O images.
+    /// This can be used for parsing Mach-O images inside the dyld shared cache,
+    /// where multiple images, located at different offsets, share the same address
+    /// space.
+    pub fn parse_at(data: R, offset: u64) -> Result<Self> {
+        let inner = match FileKind::parse_at(data, offset)? {
+            #[cfg(feature = "macho")]
+            FileKind::MachO32 => FileInternal::MachO32(macho::MachOFile32::parse_at(data, offset)?),
+            #[cfg(feature = "macho")]
+            FileKind::MachO64 => FileInternal::MachO64(macho::MachOFile64::parse_at(data, offset)?),
+            #[allow(unreachable_patterns)]
+            _ => return Err(Error("Unsupported file format")),
+        };
+        Ok(File { inner })
+    }
+
     /// Return the file format.
     pub fn format(&self) -> BinaryFormat {
         match self.inner {
@@ -233,22 +251,6 @@ impl<'data, R: ReadRef<'data>> File<'data, R> {
             FileInternal::Pe32(_) | FileInternal::Pe64(_) => BinaryFormat::Pe,
             #[cfg(feature = "wasm")]
             FileInternal::Wasm(_) => BinaryFormat::Wasm,
-        }
-    }
-
-    /// Initialize with an existing Mach-O 32 file.
-    #[cfg(feature = "macho")]
-    pub(crate) fn from_macho_32(inner: macho::MachOFile32<'data, Endianness, R>) -> Self {
-        File {
-            inner: FileInternal::MachO32(inner),
-        }
-    }
-
-    /// Initialize with an existing Mach-O 64 file.
-    #[cfg(feature = "macho")]
-    pub(crate) fn from_macho_64(inner: macho::MachOFile64<'data, Endianness, R>) -> Self {
-        File {
-            inner: FileInternal::MachO64(inner),
         }
     }
 }
