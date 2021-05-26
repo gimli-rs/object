@@ -192,14 +192,31 @@ fn print_object(p: &mut Printer<impl Write>, data: &[u8]) {
     match kind {
         object::FileKind::Archive => print_archive(p, data),
         object::FileKind::Coff => pe::print_coff(p, data),
+        object::FileKind::DyldCache => macho::print_dyld_cache(p, data),
         object::FileKind::Elf32 => elf::print_elf32(p, data),
         object::FileKind::Elf64 => elf::print_elf64(p, data),
-        object::FileKind::MachO32 => macho::print_macho32(p, data),
-        object::FileKind::MachO64 => macho::print_macho64(p, data),
+        object::FileKind::MachO32 => macho::print_macho32(p, data, 0),
+        object::FileKind::MachO64 => macho::print_macho64(p, data, 0),
         object::FileKind::MachOFat32 => macho::print_macho_fat32(p, data),
         object::FileKind::MachOFat64 => macho::print_macho_fat64(p, data),
         object::FileKind::Pe32 => pe::print_pe32(p, data),
         object::FileKind::Pe64 => pe::print_pe64(p, data),
+        // TODO
+        _ => {}
+    }
+}
+
+fn print_object_at(p: &mut Printer<impl Write>, data: &[u8], offset: u64) {
+    let kind = match object::FileKind::parse_at(data, offset) {
+        Ok(file) => file,
+        Err(err) => {
+            println!("Failed to parse file: {}", err);
+            return;
+        }
+    };
+    match kind {
+        object::FileKind::MachO32 => macho::print_macho32(p, data, offset),
+        object::FileKind::MachO64 => macho::print_macho64(p, data, offset),
         // TODO
         _ => {}
     }
@@ -3171,6 +3188,83 @@ mod macho {
     use object::read::macho::*;
     use object::BigEndian;
 
+    pub(super) fn print_dyld_cache(p: &mut Printer<impl Write>, data: &[u8]) {
+        if let Ok(header) = DyldCacheHeader::<Endianness>::parse(data) {
+            if let Ok((_, endian)) = header.parse_magic() {
+                print_dyld_cache_header(p, endian, header);
+                let mappings = header.mappings(endian, data).ok();
+                if let Some(mappings) = mappings {
+                    print_dyld_cache_mappings(p, endian, mappings);
+                }
+                if let Ok(images) = header.images(endian, data) {
+                    print_dyld_cache_images(p, endian, data, mappings, images);
+                }
+            }
+        }
+    }
+
+    pub(super) fn print_dyld_cache_header(
+        p: &mut Printer<impl Write>,
+        endian: Endianness,
+        header: &DyldCacheHeader<Endianness>,
+    ) {
+        p.group("DyldCacheHeader", |p| {
+            p.field_bytes("Magic", &header.magic);
+            p.field_hex("MappingOffset", header.mapping_offset.get(endian));
+            p.field("MappingCount", header.mapping_count.get(endian));
+            p.field_hex("ImagesOffset", header.images_offset.get(endian));
+            p.field("ImagesCount", header.images_count.get(endian));
+            p.field_hex("DyldBaseAddress", header.dyld_base_address.get(endian));
+        });
+    }
+
+    pub(super) fn print_dyld_cache_mappings(
+        p: &mut Printer<impl Write>,
+        endian: Endianness,
+        mappings: &[DyldCacheMappingInfo<Endianness>],
+    ) {
+        for mapping in mappings {
+            p.group("DyldCacheMappingInfo", |p| {
+                p.field_hex("Address", mapping.address.get(endian));
+                p.field_hex("Size", mapping.size.get(endian));
+                p.field_hex("FileOffset", mapping.file_offset.get(endian));
+                p.field_hex("MaxProt", mapping.max_prot.get(endian));
+                p.flags(mapping.max_prot.get(endian), 0, FLAGS_VM);
+                p.field_hex("InitProt", mapping.init_prot.get(endian));
+                p.flags(mapping.init_prot.get(endian), 0, FLAGS_VM);
+            });
+        }
+    }
+
+    pub(super) fn print_dyld_cache_images(
+        p: &mut Printer<impl Write>,
+        endian: Endianness,
+        data: &[u8],
+        mappings: Option<&[DyldCacheMappingInfo<Endianness>]>,
+        images: &[DyldCacheImageInfo<Endianness>],
+    ) {
+        for image in images {
+            p.group("DyldCacheImageInfo", |p| {
+                p.field_hex("Address", image.address.get(endian));
+                p.field_hex("ModTime", image.mod_time.get(endian));
+                p.field_hex("Inode", image.inode.get(endian));
+                p.field_string(
+                    "Path",
+                    image.path_file_offset.get(endian),
+                    image.path(endian, data).ok(),
+                );
+                p.field_hex("Pad", image.pad.get(endian));
+            });
+            if let Some(offset) =
+                mappings.and_then(|mappings| image.file_offset(endian, mappings).ok())
+            {
+                p.blank();
+                print_object_at(p, data, offset);
+                p.blank();
+            }
+        }
+    }
+
     pub(super) fn print_macho_fat32(p: &mut Printer<impl Write>, data: &[u8]) {
         if let Ok(arches) = FatHeader::parse_arch32(data) {
             println!("Format: Mach-O Fat 32-bit");
@@ -3221,17 +3315,17 @@ mod macho {
         });
     }
 
-    pub(super) fn print_macho32(p: &mut Printer<impl Write>, data: &[u8]) {
-        if let Ok(header) = MachHeader32::parse(data, 0) {
+    pub(super) fn print_macho32(p: &mut Printer<impl Write>, data: &[u8], offset: u64) {
+        if let Ok(header) = MachHeader32::parse(data, offset) {
             println!("Format: Mach-O 32-bit");
-            print_macho(p, header, data);
+            print_macho(p, header, data, offset);
         }
     }
 
-    pub(super) fn print_macho64(p: &mut Printer<impl Write>, data: &[u8]) {
-        if let Ok(header) = MachHeader64::parse(data, 0) {
+    pub(super) fn print_macho64(p: &mut Printer<impl Write>, data: &[u8], offset: u64) {
+        if let Ok(header) = MachHeader64::parse(data, offset) {
             println!("Format: Mach-O 64-bit");
-            print_macho(p, header, data);
+            print_macho(p, header, data, offset);
         }
     }
 
@@ -3244,11 +3338,12 @@ mod macho {
         p: &mut Printer<impl Write>,
         header: &Mach,
         data: &[u8],
+        offset: u64,
     ) {
         if let Ok(endian) = header.endian() {
             let mut state = MachState::default();
             print_mach_header(p, endian, header);
-            if let Ok(mut commands) = header.load_commands(endian, data, 0) {
+            if let Ok(mut commands) = header.load_commands(endian, data, offset) {
                 while let Ok(Some(command)) = commands.next() {
                     print_load_command(p, endian, data, header, command, &mut state);
                 }
