@@ -41,8 +41,7 @@ fn main() {
         };
 
         // Print the list of image paths in this file.
-        let mut images = cache.iter_images();
-        while let Ok(Some(image)) = images.next() {
+        for image in cache.images() {
             if let Ok(path) = image.path() {
                 println!("{}", path);
             }

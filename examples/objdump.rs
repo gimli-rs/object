@@ -62,8 +62,7 @@ fn main() {
     } else if let Ok(cache) = DyldCache::<Endianness>::parse(&*file) {
         println!("Format: dyld cache {:?}-endian", cache.endianness());
         println!("Architecture: {:?}", cache.architecture());
-        let mut images = cache.iter_images();
-        while let Ok(Some(image)) = images.next() {
+        for image in cache.images() {
             if let Ok(path) = image.path() {
                 if find_member(&mut member_names, path.as_bytes()) {
                     println!();

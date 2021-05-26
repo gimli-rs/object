@@ -1,3 +1,5 @@
+use core::slice;
+
 use crate::read::{Error, File, ReadError, ReadRef, Result};
 use crate::{macho, Architecture, Bytes, Endian, Endianness};
 
@@ -10,8 +12,9 @@ where
 {
     endian: E,
     data: R,
-    first_mapping_address: u64,
     header: &'data macho::DyldCacheHeader<E>,
+    mappings: &'data [macho::DyldCacheMappingInfo<E>],
+    images: &'data [macho::DyldCacheImageInfo<E>],
     arch: Architecture,
 }
 
@@ -22,60 +25,17 @@ where
 {
     /// Parse the raw dyld shared cache data.
     pub fn parse(data: R) -> Result<Self> {
-        let mut offset = 0;
-        let header = data
-            .read::<macho::DyldCacheHeader<E>>(&mut offset)
-            .read_error("Invalid dyld cache header size or alignment")?;
-
-        let (arch, endianness) = match Self::parse_magic(&header.magic) {
-            Some(props) => props,
-            None => return Err(Error("Unrecognized magic value")),
-        };
-
-        let is_big_endian = endianness.is_big_endian();
-        let endian = E::from_big_endian(is_big_endian).read_error("Unsupported Mach-O endian")?;
-        let mapping_count = header.mapping_count.get(endian);
-        if mapping_count == 0 {
-            return Err(Error("No mappings in dyld cache"));
-        }
-
-        let mapping_offset = header.mapping_offset.get(endian) as u64;
-        let first_mapping = data
-            .read_at::<macho::DyldCacheMappingInfo<E>>(mapping_offset)
-            .read_error("Couldn't read macho::DyldCacheMappingInfo")?;
-        if first_mapping.file_offset.get(endian) != 0 {
-            // dsc_extractor.cpp bails out in this case, in forEachDylibInCache
-            return Err(Error(
-                "Unexpected non-zero first mapping file offset in dyld cache",
-            ));
-        }
-
-        let first_mapping_address = first_mapping.address.get(endian);
-
+        let header = macho::DyldCacheHeader::parse(data)?;
+        let (arch, endian) = header.parse_magic()?;
+        let mappings = header.mappings(endian, data)?;
+        let images = header.images(endian, data)?;
         Ok(DyldCache {
             endian,
             header,
-            first_mapping_address,
+            mappings,
+            images,
             data,
             arch,
-        })
-    }
-
-    /// Returns (arch, endianness) based on the magic string.
-    fn parse_magic(magic: &[u8; 16]) -> Option<(Architecture, Endianness)> {
-        Some(match magic {
-            b"dyld_v1    i386\0" => (Architecture::I386, Endianness::Little),
-            b"dyld_v1  x86_64\0" => (Architecture::X86_64, Endianness::Little),
-            b"dyld_v1 x86_64h\0" => (Architecture::X86_64, Endianness::Little),
-            b"dyld_v1     ppc\0" => (Architecture::PowerPc, Endianness::Big),
-            b"dyld_v1   armv6\0" => (Architecture::Arm, Endianness::Little),
-            b"dyld_v1   armv7\0" => (Architecture::Arm, Endianness::Little),
-            b"dyld_v1  armv7f\0" => (Architecture::Arm, Endianness::Little),
-            b"dyld_v1  armv7s\0" => (Architecture::Arm, Endianness::Little),
-            b"dyld_v1  armv7k\0" => (Architecture::Arm, Endianness::Little),
-            b"dyld_v1   arm64\0" => (Architecture::Aarch64, Endianness::Little),
-            b"dyld_v1  arm64e\0" => (Architecture::Aarch64, Endianness::Little),
-            _ => return None,
         })
     }
 
@@ -100,14 +60,10 @@ where
     }
 
     /// Iterate over the images in this cache.
-    pub fn iter_images<'cache>(&'cache self) -> DyldCacheImageIterator<'data, 'cache, E, R> {
-        let images_offset = self.header.images_offset.get(self.endian) as u64;
-        let images_count = self.header.images_count.get(self.endian);
+    pub fn images<'cache>(&'cache self) -> DyldCacheImageIterator<'data, 'cache, E, R> {
         DyldCacheImageIterator {
             cache: self,
-            images_count,
-            next_image_index: 0,
-            next_image_offset: images_offset,
+            iter: self.images.iter(),
         }
     }
 }
@@ -120,32 +76,24 @@ where
     R: ReadRef<'data>,
 {
     cache: &'cache DyldCache<'data, E, R>,
-    images_count: u32,
-    next_image_index: u32,
-    next_image_offset: u64,
+    iter: slice::Iter<'data, macho::DyldCacheImageInfo<E>>,
 }
 
-impl<'data, 'cache, E, R> DyldCacheImageIterator<'data, 'cache, E, R>
+impl<'data, 'cache, E, R> Iterator for DyldCacheImageIterator<'data, 'cache, E, R>
 where
     E: Endian,
     R: ReadRef<'data>,
 {
-    /// Advance the iterator and return the current image.
-    pub fn next(&mut self) -> Result<Option<DyldCacheImage<'data, E, R>>> {
-        if self.next_image_index >= self.images_count {
-            return Ok(None);
-        }
-        self.next_image_index += 1;
-        let data = self.cache.data;
-        let image_info = data
-            .read::<macho::DyldCacheImageInfo<E>>(&mut self.next_image_offset)
-            .read_error("Couldn't read macho::DyldCacheImageInfo")?;
-        Ok(Some(DyldCacheImage {
+    type Item = DyldCacheImage<'data, E, R>;
+
+    fn next(&mut self) -> Option<DyldCacheImage<'data, E, R>> {
+        let image_info = self.iter.next()?;
+        Some(DyldCacheImage {
             endian: self.cache.endian,
-            data,
-            first_mapping_address: self.cache.first_mapping_address,
+            data: self.cache.data,
+            mappings: self.cache.mappings,
             image_info,
-        }))
+        })
     }
 }
 
@@ -158,7 +106,7 @@ where
 {
     endian: E,
     data: R,
-    first_mapping_address: u64,
+    mappings: &'data [macho::DyldCacheMappingInfo<E>],
     image_info: &'data macho::DyldCacheImageInfo<E>,
 }
 
@@ -169,29 +117,108 @@ where
 {
     /// The file system path of this image.
     pub fn path(&self) -> Result<&'data str> {
-        // The longest path I've seen is 164 bytes long. In theory paths could be longer than 256.
-        const MAX_PATH_LEN: u64 = 256;
-
-        let path_offset = self.image_info.path_file_offset.get(self.endian) as u64;
-        let slice_containing_path = self
-            .data
-            .read_bytes_at(path_offset, MAX_PATH_LEN)
-            .read_error("Couldn't read path")?;
-        let path = Bytes(slice_containing_path).read_string().read_error(
-            "Couldn't read path string (didn't find nul byte within first 256 bytes)",
-        )?;
+        let path = self.image_info.path(self.endian, self.data)?;
         // The path should always be ascii, so from_utf8 should alway succeed.
         let path = core::str::from_utf8(path).map_err(|_| Error("Path string not valid utf-8"))?;
         Ok(path)
     }
 
     /// The offset in the dyld cache file where this image starts.
-    pub fn offset(&self) -> u64 {
-        self.image_info.address.get(self.endian) - self.first_mapping_address
+    pub fn file_offset(&self) -> Result<u64> {
+        self.image_info.file_offset(self.endian, self.mappings)
     }
 
     /// Parse this image into an Object.
     pub fn parse_object(&self) -> Result<File<'data, R>> {
-        File::parse_at(self.data, self.offset())
+        File::parse_at(self.data, self.file_offset()?)
+    }
+}
+
+impl<E: Endian> macho::DyldCacheHeader<E> {
+    /// Read the dyld cache header.
+    pub fn parse<'data, R: ReadRef<'data>>(data: R) -> Result<&'data Self> {
+        data.read_at::<macho::DyldCacheHeader<E>>(0)
+            .read_error("Invalid dyld cache header size or alignment")
+    }
+
+    /// Returns (arch, endian) based on the magic string.
+    pub fn parse_magic(&self) -> Result<(Architecture, E)> {
+        let (arch, is_big_endian) = match &self.magic {
+            b"dyld_v1    i386\0" => (Architecture::I386, false),
+            b"dyld_v1  x86_64\0" => (Architecture::X86_64, false),
+            b"dyld_v1 x86_64h\0" => (Architecture::X86_64, false),
+            b"dyld_v1     ppc\0" => (Architecture::PowerPc, true),
+            b"dyld_v1   armv6\0" => (Architecture::Arm, false),
+            b"dyld_v1   armv7\0" => (Architecture::Arm, false),
+            b"dyld_v1  armv7f\0" => (Architecture::Arm, false),
+            b"dyld_v1  armv7s\0" => (Architecture::Arm, false),
+            b"dyld_v1  armv7k\0" => (Architecture::Arm, false),
+            b"dyld_v1   arm64\0" => (Architecture::Aarch64, false),
+            b"dyld_v1  arm64e\0" => (Architecture::Aarch64, false),
+            _ => return Err(Error("Unrecognized dyld cache magic")),
+        };
+        let endian =
+            E::from_big_endian(is_big_endian).read_error("Unsupported dyld cache endian")?;
+        Ok((arch, endian))
+    }
+
+    /// Return the mapping information table.
+    pub fn mappings<'data, R: ReadRef<'data>>(
+        &self,
+        endian: E,
+        data: R,
+    ) -> Result<&'data [macho::DyldCacheMappingInfo<E>]> {
+        data.read_slice_at::<macho::DyldCacheMappingInfo<E>>(
+            self.mapping_offset.get(endian).into(),
+            self.mapping_count.get(endian) as usize,
+        )
+        .read_error("Invalid dyld cache mapping size or alignment")
+    }
+
+    /// Return the image information table.
+    pub fn images<'data, R: ReadRef<'data>>(
+        &self,
+        endian: E,
+        data: R,
+    ) -> Result<&'data [macho::DyldCacheImageInfo<E>]> {
+        data.read_slice_at::<macho::DyldCacheImageInfo<E>>(
+            self.images_offset.get(endian).into(),
+            self.images_count.get(endian) as usize,
+        )
+        .read_error("Invalid dyld cache image size or alignment")
+    }
+}
+
+impl<E: Endian> macho::DyldCacheImageInfo<E> {
+    /// The file system path of this image.
+    pub fn path<'data, R: ReadRef<'data>>(&self, endian: E, data: R) -> Result<&'data [u8]> {
+        // The longest path I've seen is 164 bytes long. In theory paths could be longer than 256.
+        const MAX_PATH_LEN: u64 = 256;
+
+        let path_offset = self.path_file_offset.get(endian).into();
+        let slice_containing_path = data
+            .read_bytes_at(path_offset, MAX_PATH_LEN)
+            .read_error("Couldn't read path")?;
+        Bytes(slice_containing_path)
+            .read_string()
+            .read_error("Couldn't read path string (didn't find nul byte within first 256 bytes)")
+    }
+
+    /// Find the file offset of the image by looking up its address in the mappings.
+    pub fn file_offset(
+        &self,
+        endian: E,
+        mappings: &[macho::DyldCacheMappingInfo<E>],
+    ) -> Result<u64> {
+        let address = self.address.get(endian);
+        for mapping in mappings {
+            let mapping_address = mapping.address.get(endian);
+            if address >= mapping_address
+                && address < mapping_address.wrapping_add(mapping.size.get(endian))
+            {
+                return Ok(address - mapping_address + mapping.file_offset.get(endian));
+            }
+        }
+        Err(Error("Invalid dyld cache image address"))
     }
 }
