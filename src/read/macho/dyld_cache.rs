@@ -23,7 +23,7 @@ where
     E: Endian,
     R: ReadRef<'data>,
 {
-    /// Parse the raw Mach-O file data.
+    /// Parse the raw dyld shared cache data.
     pub fn parse(data: R) -> Result<Self> {
         let mut offset = 0;
         let header = data
@@ -71,7 +71,7 @@ where
             b"dyld_v1    i386\0" => (Architecture::I386, false, Endianness::Little),
             b"dyld_v1  x86_64\0" => (Architecture::X86_64, true, Endianness::Little),
             b"dyld_v1 x86_64h\0" => (Architecture::X86_64, true, Endianness::Little),
-            b"dyld_v1     ppc\0" => (Architecture::Unknown, false, Endianness::Big),
+            b"dyld_v1     ppc\0" => (Architecture::PowerPc, false, Endianness::Big),
             b"dyld_v1   armv6\0" => (Architecture::Arm, false, Endianness::Little),
             b"dyld_v1   armv7\0" => (Architecture::Arm, false, Endianness::Little),
             b"dyld_v1  armv7f\0" => (Architecture::Arm, false, Endianness::Little),
