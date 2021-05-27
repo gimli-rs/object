@@ -3695,7 +3695,7 @@ mod macho {
                         p.field_hex("Reserved", x.reserved.get(endian));
                     });
                 }
-                LoadCommandVariant::Other => {
+                _ => {
                     p.group("LoadCommand", |p| {
                         p.field_enum("Cmd", command.cmd(), FLAGS_LC);
                         p.field_hex("CmdSize", command.cmdsize());

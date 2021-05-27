@@ -78,7 +78,6 @@ fn main() {
             continue;
         }
         let (section, value) = match in_symbol.section() {
-            SymbolSection::Unknown => panic!("unknown symbol section for {:?}", in_symbol),
             SymbolSection::None => (write::SymbolSection::None, in_symbol.address()),
             SymbolSection::Undefined => (write::SymbolSection::Undefined, in_symbol.address()),
             SymbolSection::Absolute => (write::SymbolSection::Absolute, in_symbol.address()),
@@ -95,6 +94,7 @@ fn main() {
                     continue;
                 }
             }
+            _ => panic!("unknown symbol section for {:?}", in_symbol),
         };
         let flags = match in_symbol.flags() {
             SymbolFlags::None => SymbolFlags::None,
@@ -111,6 +111,7 @@ fn main() {
                     associative_section,
                 }
             }
+            _ => panic!("unknown symbol flags for {:?}", in_symbol),
         };
         let out_symbol = write::Symbol {
             name: in_symbol.name().unwrap_or("").as_bytes().to_vec(),
@@ -133,11 +134,11 @@ fn main() {
         let out_section = *out_sections.get(&in_section.index()).unwrap();
         for (offset, in_relocation) in in_section.relocations() {
             let symbol = match in_relocation.target() {
-                RelocationTarget::Absolute => unimplemented!(),
                 RelocationTarget::Symbol(symbol) => *out_symbols.get(&symbol).unwrap(),
                 RelocationTarget::Section(section) => {
                     out_object.section_symbol(*out_sections.get(&section).unwrap())
                 }
+                _ => panic!("unknown relocation target for {:?}", in_relocation),
             };
             let out_relocation = write::Relocation {
                 offset,

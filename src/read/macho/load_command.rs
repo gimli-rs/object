@@ -242,6 +242,7 @@ impl<'data, E: Endian> LoadCommandData<'data, E> {
 
 /// A `LoadCommand` that has been interpreted according to its `cmd` field.
 #[derive(Debug, Clone, Copy)]
+#[non_exhaustive]
 pub enum LoadCommandVariant<'data, E: Endian> {
     /// `LC_SEGMENT`
     Segment32(&'data macho::SegmentCommand32<E>, &'data [u8]),

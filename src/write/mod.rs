@@ -545,6 +545,7 @@ impl Object {
 /// A standard segment kind.
 #[allow(missing_docs)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[non_exhaustive]
 pub enum StandardSegment {
     Text,
     Data,
@@ -554,6 +555,7 @@ pub enum StandardSegment {
 /// A standard section kind.
 #[allow(missing_docs)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[non_exhaustive]
 pub enum StandardSection {
     Text,
     Data,
@@ -696,6 +698,7 @@ impl Section {
 
 /// The section where a symbol is defined.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[non_exhaustive]
 pub enum SymbolSection {
     /// The section is not applicable for this symbol (such as file symbols).
     None,
@@ -822,6 +825,7 @@ pub struct Comdat {
 
 /// The symbol name mangling scheme.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum Mangling {
     /// No symbol mangling.
     None,

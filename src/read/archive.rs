@@ -8,6 +8,7 @@ use crate::read::{self, Error, ReadError, ReadRef};
 /// The kind of archive format.
 // TODO: Gnu64 and Darwin64 (and Darwin for writing)
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[non_exhaustive]
 pub enum ArchiveKind {
     /// There are no special files that indicate the archive format.
     Unknown,
