@@ -5,6 +5,7 @@ use std::collections::HashMap;
 use std::convert::TryInto;
 use std::io::{Read, Seek, SeekFrom};
 use std::mem;
+use std::vec::Vec;
 
 use crate::read::ReadRef;
 
@@ -24,6 +25,7 @@ pub struct ReadCache<R: Read + Seek> {
 struct ReadCacheInternal<R: Read + Seek> {
     read: R,
     bufs: HashMap<(u64, u64), Box<[u8]>>,
+    strings: HashMap<(u64, u8), Box<[u8]>>,
 }
 
 impl<R: Read + Seek> ReadCache<R> {
@@ -33,6 +35,7 @@ impl<R: Read + Seek> ReadCache<R> {
             cache: RefCell::new(ReadCacheInternal {
                 read,
                 bufs: HashMap::new(),
+                strings: HashMap::new(),
             }),
         }
     }
@@ -86,6 +89,44 @@ impl<'a, R: Read + Seek> ReadRef<'a> for &'a ReadCache<R> {
         // This is OK because we never mutate or remove entries.
         Ok(unsafe { mem::transmute::<&[u8], &[u8]>(buf) })
     }
+
+    fn read_bytes_at_until(self, offset: u64, delimiter: u8) -> Result<&'a [u8], ()> {
+        let cache = &mut *self.cache.borrow_mut();
+        let buf = match cache.strings.entry((offset, delimiter)) {
+            Entry::Occupied(entry) => entry.into_mut(),
+            Entry::Vacant(entry) => {
+                cache
+                    .read
+                    .seek(SeekFrom::Start(offset as u64))
+                    .map_err(|_| ())?;
+                let mut bytes = Vec::new();
+                let mut checked = 0;
+                loop {
+                    bytes.resize(checked + 256, 0);
+                    let read = cache.read.read(&mut bytes[checked..]).map_err(|_| ())?;
+                    if read == 0 {
+                        return Err(());
+                    }
+                    match memchr::memchr(delimiter, &bytes[checked..][..read]) {
+                        Some(len) => {
+                            bytes.truncate(checked + len);
+                            break entry.insert(bytes.into_boxed_slice());
+                        }
+                        None => {}
+                    }
+                    checked += read;
+                    // Strings should be relatively small.
+                    // TODO: make this configurable?
+                    if checked > 4096 {
+                        return Err(());
+                    }
+                }
+            }
+        };
+        // Extend the lifetime to that of self.
+        // This is OK because we never mutate or remove entries.
+        Ok(unsafe { mem::transmute::<&[u8], &[u8]>(buf) })
+    }
 }
 
 /// An implementation of `ReadRef` for a range of data in a stream that
@@ -126,5 +167,16 @@ impl<'a, R: Read + Seek> ReadRef<'a> for ReadCacheRange<'a, R> {
         }
         let r_offset = self.offset.checked_add(offset).ok_or(())?;
         self.r.read_bytes_at(r_offset, size)
+    }
+
+    fn read_bytes_at_until(self, offset: u64, delimiter: u8) -> Result<&'a [u8], ()> {
+        let r_offset = self.offset.checked_add(offset).ok_or(())?;
+        let bytes = self.r.read_bytes_at_until(r_offset, delimiter)?;
+        let size = bytes.len().try_into().map_err(|_| ())?;
+        let end = offset.checked_add(size).ok_or(())?;
+        if end > self.size {
+            return Err(());
+        }
+        Ok(bytes)
     }
 }

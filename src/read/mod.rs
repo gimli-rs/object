@@ -127,6 +127,9 @@ pub enum FileKind {
     /// A COFF object file.
     #[cfg(feature = "coff")]
     Coff,
+    /// A dyld cache file containing Mach-O images.
+    #[cfg(feature = "macho")]
+    DyldCache,
     /// A 32-bit ELF file.
     #[cfg(feature = "elf")]
     Elf32,
@@ -159,8 +162,13 @@ pub enum FileKind {
 impl FileKind {
     /// Determine a file kind by parsing the start of the file.
     pub fn parse<'data, R: ReadRef<'data>>(data: R) -> Result<FileKind> {
+        Self::parse_at(data, 0)
+    }
+
+    /// Determine a file kind by parsing at the given offset.
+    pub fn parse_at<'data, R: ReadRef<'data>>(data: R, offset: u64) -> Result<FileKind> {
         let magic = data
-            .read_bytes_at(0, 16)
+            .read_bytes_at(offset, 16)
             .read_error("Could not read file magic")?;
         if magic.len() < 16 {
             return Err(Error("File too short"));
@@ -169,6 +177,8 @@ impl FileKind {
         let kind = match [magic[0], magic[1], magic[2], magic[3], magic[4], magic[5], magic[6], magic[7]] {
             #[cfg(feature = "archive")]
             [b'!', b'<', b'a', b'r', b'c', b'h', b'>', b'\n'] => FileKind::Archive,
+            #[cfg(feature = "macho")]
+            [b'd', b'y', b'l', b'd', b'_', b'v', b'1', b' '] => FileKind::DyldCache,
             #[cfg(feature = "elf")]
             [0x7f, b'E', b'L', b'F', 1, ..] => FileKind::Elf32,
             #[cfg(feature = "elf")]

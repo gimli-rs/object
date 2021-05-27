@@ -282,6 +282,62 @@ pub const VM_PROT_WRITE: u32 = 0x02;
 /// execute permission
 pub const VM_PROT_EXECUTE: u32 = 0x04;
 
+// Definitions from https://opensource.apple.com/source/dyld/dyld-210.2.3/launch-cache/dyld_cache_format.h.auto.html
+
+/// The dyld cache header, containing only the fields which are present
+/// in all versions of dyld caches (dyld-95.3 and up).
+/// Many more fields exist in later dyld versions, but we currently do
+/// not need to parse those.
+/// Corresponds to struct dyld_cache_header from dyld_cache_format.h.
+#[derive(Debug, Clone, Copy)]
+#[repr(C)]
+pub struct DyldCacheHeader<E: Endian> {
+    /// e.g. "dyld_v0    i386"
+    pub magic: [u8; 16],
+    /// file offset to first dyld_cache_mapping_info
+    pub mapping_offset: U32<E>,
+    /// number of dyld_cache_mapping_info entries
+    pub mapping_count: U32<E>,
+    /// file offset to first dyld_cache_image_info
+    pub images_offset: U32<E>,
+    /// number of dyld_cache_image_info entries
+    pub images_count: U32<E>,
+    /// base address of dyld when cache was built
+    pub dyld_base_address: U64<E>,
+}
+
+/// Corresponds to struct dyld_cache_mapping_info from dyld_cache_format.h.
+#[derive(Debug, Clone, Copy)]
+#[repr(C)]
+pub struct DyldCacheMappingInfo<E: Endian> {
+    ///
+    pub address: U64<E>,
+    ///
+    pub size: U64<E>,
+    ///
+    pub file_offset: U64<E>,
+    ///
+    pub max_prot: U32<E>,
+    ///
+    pub init_prot: U32<E>,
+}
+
+/// Corresponds to struct dyld_cache_image_info from dyld_cache_format.h.
+#[derive(Debug, Clone, Copy)]
+#[repr(C)]
+pub struct DyldCacheImageInfo<E: Endian> {
+    ///
+    pub address: U64<E>,
+    ///
+    pub mod_time: U64<E>,
+    ///
+    pub inode: U64<E>,
+    ///
+    pub path_file_offset: U32<E>,
+    ///
+    pub pad: U32<E>,
+}
+
 // Definitions from "/usr/include/mach-o/loader.h".
 
 /*
@@ -3140,6 +3196,9 @@ pub const X86_64_RELOC_TLV: u8 = 9;
 
 unsafe_impl_pod!(FatHeader, FatArch32, FatArch64,);
 unsafe_impl_endian_pod!(
+    DyldCacheHeader,
+    DyldCacheMappingInfo,
+    DyldCacheImageInfo,
     MachHeader32,
     MachHeader64,
     LoadCommand,

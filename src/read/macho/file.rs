@@ -46,14 +46,14 @@ where
 {
     /// Parse the raw Mach-O file data.
     pub fn parse(data: R) -> Result<Self> {
-        Self::parse_at_offset(data, 0)
+        Self::parse_at(data, 0)
     }
 
     /// Parse the raw Mach-O file data at an arbitrary offset inside the input data.
     /// This can be used for parsing Mach-O images inside the dyld shared cache,
     /// where multiple images, located at different offsets, share the same address
     /// space.
-    pub fn parse_at_offset(data: R, header_offset: u64) -> Result<Self> {
+    pub fn parse_at(data: R, header_offset: u64) -> Result<Self> {
         let header = Mach::parse(data, header_offset)?;
         let endian = header.endian()?;
 
