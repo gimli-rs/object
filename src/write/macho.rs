@@ -191,7 +191,7 @@ impl Object {
         let macho32 = MachO32 { endian };
         let macho64 = MachO64 { endian };
         let macho: &dyn MachO = match address_size {
-            AddressSize::U32 => &macho32,
+            AddressSize::U8 | AddressSize::U16 | AddressSize::U32 => &macho32,
             AddressSize::U64 => &macho64,
         };
         let pointer_align = address_size.bytes() as usize;
