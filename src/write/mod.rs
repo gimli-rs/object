@@ -824,7 +824,7 @@ pub struct Comdat {
 }
 
 /// The symbol name mangling scheme.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[non_exhaustive]
 pub enum Mangling {
     /// No symbol mangling.
