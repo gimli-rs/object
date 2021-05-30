@@ -118,7 +118,7 @@ pub type NativeFile<'data, R = &'data [u8]> = pe::PeFile64<'data, R>;
 pub type NativeFile<'data, R = &'data [u8]> = wasm::WasmFile<'data, R>;
 
 /// An object file kind.
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[non_exhaustive]
 pub enum FileKind {
     /// A Unix archive.

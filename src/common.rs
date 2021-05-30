@@ -86,7 +86,7 @@ pub enum BinaryFormat {
 }
 
 /// The kind of a section.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[non_exhaustive]
 pub enum SectionKind {
     /// The section kind is unknown.
@@ -185,7 +185,7 @@ impl SectionKind {
 ///
 /// This determines the way in which the linker resolves multiple definitions of the COMDAT
 /// sections.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[non_exhaustive]
 pub enum ComdatKind {
     /// The selection kind is unknown.
@@ -217,7 +217,7 @@ pub enum ComdatKind {
 }
 
 /// The kind of a symbol.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[non_exhaustive]
 pub enum SymbolKind {
     /// The symbol kind is unknown.
@@ -239,7 +239,7 @@ pub enum SymbolKind {
 }
 
 /// A symbol scope.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum SymbolScope {
     /// Unknown scope.
     Unknown,
@@ -266,7 +266,7 @@ pub enum SymbolScope {
 /// * Section - The address of the section containing the symbol.
 ///
 /// 'XxxRelative' means 'Xxx + A - P'.  'XxxOffset' means 'S + A - Xxx'.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[non_exhaustive]
 pub enum RelocationKind {
     /// S + A
@@ -306,7 +306,7 @@ pub enum RelocationKind {
 ///
 /// This is usually architecture specific, such as specifying an addressing mode or
 /// a specific instruction.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[non_exhaustive]
 pub enum RelocationEncoding {
     /// Generic encoding.
@@ -336,7 +336,7 @@ pub enum RelocationEncoding {
 }
 
 /// File flags that are specific to each file format.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[non_exhaustive]
 pub enum FileFlags {
     /// No file flags.
@@ -359,7 +359,7 @@ pub enum FileFlags {
 }
 
 /// Section flags that are specific to each file format.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[non_exhaustive]
 pub enum SectionFlags {
     /// No section flags.
@@ -382,7 +382,7 @@ pub enum SectionFlags {
 }
 
 /// Symbol flags that are specific to each file format.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[non_exhaustive]
 pub enum SymbolFlags<Section> {
     /// No symbol flags.
