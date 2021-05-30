@@ -42,7 +42,7 @@ impl<R: Read + Seek> ReadCache<R> {
 
     /// Return an implementation of `ReadRef` that restricts reads
     /// to the given range of the stream.
-    pub fn range<'a>(&'a self, offset: u64, size: u64) -> ReadCacheRange<'a, R> {
+    pub fn range(&self, offset: u64, size: u64) -> ReadCacheRange<'_, R> {
         ReadCacheRange {
             r: self,
             offset,
@@ -107,12 +107,9 @@ impl<'a, R: Read + Seek> ReadRef<'a> for &'a ReadCache<R> {
                     if read == 0 {
                         return Err(());
                     }
-                    match memchr::memchr(delimiter, &bytes[checked..][..read]) {
-                        Some(len) => {
-                            bytes.truncate(checked + len);
-                            break entry.insert(bytes.into_boxed_slice());
-                        }
-                        None => {}
+                    if let Some(len) = memchr::memchr(delimiter, &bytes[checked..][..read]) {
+                        bytes.truncate(checked + len);
+                        break entry.insert(bytes.into_boxed_slice());
                     }
                     checked += read;
                     // Strings should be relatively small.

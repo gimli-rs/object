@@ -61,13 +61,13 @@ where
 
         Ok(ElfFile {
             endian,
+            data,
             header,
             segments,
             sections,
             relocations,
             symbols,
             dynamic_symbols,
-            data,
         })
     }
 

@@ -75,11 +75,11 @@ where
 
         Ok(MachOFile {
             endian,
-            header,
+            data,
             header_offset,
+            header,
             sections,
             symbols,
-            data,
         })
     }
 

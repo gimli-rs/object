@@ -31,10 +31,10 @@ where
         let images = header.images(endian, data)?;
         Ok(DyldCache {
             endian,
+            data,
             header,
             mappings,
             images,
-            data,
             arch,
         })
     }

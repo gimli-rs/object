@@ -1,11 +1,5 @@
 //! Interface for writing object files.
 
-#![allow(clippy::cognitive_complexity)]
-#![allow(clippy::collapsible_if)]
-#![allow(clippy::comparison_chain)]
-#![allow(clippy::single_match)]
-#![allow(clippy::useless_let_if_seq)]
-
 use std::collections::HashMap;
 use std::string::String;
 use std::vec::Vec;

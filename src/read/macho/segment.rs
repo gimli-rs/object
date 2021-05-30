@@ -112,7 +112,7 @@ where
     }
 
     fn data(&self) -> Result<&'data [u8]> {
-        Ok(self.bytes()?)
+        self.bytes()
     }
 
     fn data_range(&self, address: u64, size: u64) -> Result<Option<&'data [u8]>> {
