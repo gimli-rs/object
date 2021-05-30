@@ -6,16 +6,21 @@ pub enum Architecture {
     Unknown,
     Aarch64,
     Arm,
+    Avr,
+    Bpf,
     I386,
+    X86_64,
+    Hexagon,
     Mips,
     Mips64,
+    Msp430,
     PowerPc,
     PowerPc64,
     Riscv32,
     Riscv64,
     S390x,
+    Sparc64,
     Wasm32,
-    X86_64,
 }
 
 impl Architecture {
@@ -27,16 +32,21 @@ impl Architecture {
             Architecture::Unknown => None,
             Architecture::Aarch64 => Some(AddressSize::U64),
             Architecture::Arm => Some(AddressSize::U32),
+            Architecture::Avr => Some(AddressSize::U8),
+            Architecture::Bpf => Some(AddressSize::U64),
             Architecture::I386 => Some(AddressSize::U32),
+            Architecture::X86_64 => Some(AddressSize::U64),
+            Architecture::Hexagon => Some(AddressSize::U32),
             Architecture::Mips => Some(AddressSize::U32),
             Architecture::Mips64 => Some(AddressSize::U64),
+            Architecture::Msp430 => Some(AddressSize::U16),
             Architecture::PowerPc => Some(AddressSize::U32),
             Architecture::PowerPc64 => Some(AddressSize::U64),
             Architecture::Riscv32 => Some(AddressSize::U32),
             Architecture::Riscv64 => Some(AddressSize::U64),
             Architecture::S390x => Some(AddressSize::U64),
+            Architecture::Sparc64 => Some(AddressSize::U64),
             Architecture::Wasm32 => Some(AddressSize::U32),
-            Architecture::X86_64 => Some(AddressSize::U64),
         }
     }
 }
@@ -49,6 +59,8 @@ impl Architecture {
 #[non_exhaustive]
 #[repr(u8)]
 pub enum AddressSize {
+    U8 = 1,
+    U16 = 2,
     U32 = 4,
     U64 = 8,
 }

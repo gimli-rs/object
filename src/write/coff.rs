@@ -268,6 +268,8 @@ impl Object {
             machine: U16::new(
                 LE,
                 match self.architecture {
+                    Architecture::Arm => coff::IMAGE_FILE_MACHINE_ARMNT,
+                    Architecture::Aarch64 => coff::IMAGE_FILE_MACHINE_ARM64,
                     Architecture::I386 => coff::IMAGE_FILE_MACHINE_I386,
                     Architecture::X86_64 => coff::IMAGE_FILE_MACHINE_AMD64,
                     _ => {

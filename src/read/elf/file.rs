@@ -149,21 +149,28 @@ where
     type DynamicRelocationIterator = ElfDynamicRelocationIterator<'data, 'file, Elf, R>;
 
     fn architecture(&self) -> Architecture {
-        match self.header.e_machine(self.endian) {
-            elf::EM_ARM => Architecture::Arm,
-            elf::EM_AARCH64 => Architecture::Aarch64,
-            elf::EM_386 => Architecture::I386,
-            elf::EM_X86_64 => Architecture::X86_64,
-            elf::EM_MIPS => Architecture::Mips,
-            elf::EM_S390 => {
-                // This is either s390 or s390x, depending on the ELF class.
-                // We only support the 64-bit variant s390x here.
-                if self.is_64() {
-                    Architecture::S390x
-                } else {
-                    Architecture::Unknown
-                }
-            }
+        match (
+            self.header.e_machine(self.endian),
+            self.header.is_class_64(),
+        ) {
+            (elf::EM_AARCH64, _) => Architecture::Aarch64,
+            (elf::EM_ARM, _) => Architecture::Arm,
+            (elf::EM_AVR, _) => Architecture::Avr,
+            (elf::EM_BPF, _) => Architecture::Bpf,
+            (elf::EM_386, _) => Architecture::I386,
+            (elf::EM_X86_64, _) => Architecture::X86_64,
+            (elf::EM_HEXAGON, _) => Architecture::Hexagon,
+            (elf::EM_MIPS, false) => Architecture::Mips,
+            (elf::EM_MIPS, true) => Architecture::Mips64,
+            (elf::EM_MSP430, _) => Architecture::Msp430,
+            (elf::EM_PPC, _) => Architecture::PowerPc,
+            (elf::EM_PPC64, _) => Architecture::PowerPc64,
+            (elf::EM_RISCV, false) => Architecture::Riscv32,
+            (elf::EM_RISCV, true) => Architecture::Riscv64,
+            // This is either s390 or s390x, depending on the ELF class.
+            // We only support the 64-bit variant s390x here.
+            (elf::EM_S390, true) => Architecture::S390x,
+            (elf::EM_SPARCV9, true) => Architecture::Sparc64,
             _ => Architecture::Unknown,
         }
     }

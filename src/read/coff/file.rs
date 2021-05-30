@@ -70,6 +70,8 @@ where
 
     fn architecture(&self) -> Architecture {
         match self.header.machine.get(LE) {
+            pe::IMAGE_FILE_MACHINE_ARMNT => Architecture::Arm,
+            pe::IMAGE_FILE_MACHINE_ARM64 => Architecture::Aarch64,
             pe::IMAGE_FILE_MACHINE_I386 => Architecture::I386,
             pe::IMAGE_FILE_MACHINE_AMD64 => Architecture::X86_64,
             _ => Architecture::Unknown,
