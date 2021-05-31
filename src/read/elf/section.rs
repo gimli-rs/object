@@ -306,7 +306,7 @@ where
 
     #[inline]
     fn data(&self) -> read::Result<&'data [u8]> {
-        Ok(self.bytes()?)
+        self.bytes()
     }
 
     fn data_range(&self, address: u64, size: u64) -> read::Result<Option<&'data [u8]>> {

@@ -1,5 +1,4 @@
 use std::mem;
-use std::vec::Vec;
 
 use crate::endian::*;
 use crate::macho;
@@ -300,9 +299,8 @@ impl Object {
 
         // Calculate size of strtab.
         let strtab_offset = offset;
-        let mut strtab_data = Vec::new();
-        // Null name.
-        strtab_data.push(0);
+        // Start with null name.
+        let mut strtab_data = vec![0];
         strtab.write(1, &mut strtab_data);
         offset += strtab_data.len();
 

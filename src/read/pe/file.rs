@@ -46,7 +46,7 @@ where
         let (nt_headers, data_directories) = Pe::parse(data, &mut offset)?;
         let sections = nt_headers.sections(data, offset)?;
         let symbols = nt_headers.symbols(data)?;
-        let image_base = u64::from(nt_headers.optional_header().image_base());
+        let image_base = nt_headers.optional_header().image_base();
 
         Ok(PeFile {
             dos_header,

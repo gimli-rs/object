@@ -116,7 +116,7 @@ impl<'data> SymbolTable<'data> {
         // The name is padded with nulls.
         Ok(match memchr::memchr(b'\0', bytes) {
             Some(end) => &bytes[..end],
-            None => &bytes[..],
+            None => bytes,
         })
     }
 
@@ -208,12 +208,8 @@ impl pe::ImageSymbol {
         }
         match self.storage_class {
             pe::IMAGE_SYM_CLASS_STATIC => {
-                if self.value.get(LE) == 0 && self.number_of_aux_symbols > 0 {
-                    // This is a section symbol.
-                    false
-                } else {
-                    true
-                }
+                // Exclude section symbols.
+                !(self.value.get(LE) == 0 && self.number_of_aux_symbols > 0)
             }
             pe::IMAGE_SYM_CLASS_EXTERNAL | pe::IMAGE_SYM_CLASS_WEAK_EXTERNAL => true,
             _ => false,

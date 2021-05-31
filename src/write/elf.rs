@@ -287,9 +287,8 @@ impl Object {
         // Calculate size of strtab.
         let strtab_str_id = shstrtab.add(&b".strtab"[..]);
         let strtab_offset = offset;
-        let mut strtab_data = Vec::new();
-        // Null name.
-        strtab_data.push(0);
+        // Start with null name.
+        let mut strtab_data = vec![0];
         strtab.write(1, &mut strtab_data);
         offset += strtab_data.len();
         let strtab_index = section_num;
@@ -310,9 +309,8 @@ impl Object {
         // Calculate size of shstrtab.
         let shstrtab_str_id = shstrtab.add(&b".shstrtab"[..]);
         let shstrtab_offset = offset;
-        let mut shstrtab_data = Vec::new();
-        // Null section name.
-        shstrtab_data.push(0);
+        // Start with null section name.
+        let mut shstrtab_data = vec![0];
         shstrtab.write(1, &mut shstrtab_data);
         offset += shstrtab_data.len();
         let shstrtab_index = section_num;

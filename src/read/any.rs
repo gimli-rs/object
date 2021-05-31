@@ -173,7 +173,6 @@ pub struct File<'data, R: ReadRef<'data> = &'data [u8]> {
     inner: FileInternal<'data, R>,
 }
 
-#[allow(clippy::large_enum_variant)]
 #[derive(Debug)]
 enum FileInternal<'data, R: ReadRef<'data>> {
     #[cfg(feature = "coff")]
