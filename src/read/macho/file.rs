@@ -330,6 +330,10 @@ where
         self.header.uuid(self.endian, self.data, self.header_offset)
     }
 
+    fn relative_address_base(&self) -> u64 {
+        0
+    }
+
     fn entry(&self) -> u64 {
         if let Ok(mut commands) =
             self.header

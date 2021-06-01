@@ -388,8 +388,13 @@ where
         self.section_by_name(".debug_info").is_some()
     }
 
+    fn relative_address_base(&self) -> u64 {
+        self.common.image_base
+    }
+
     fn entry(&self) -> u64 {
         u64::from(self.nt_headers.optional_header().address_of_entry_point())
+            .wrapping_add(self.common.image_base)
     }
 
     fn flags(&self) -> FileFlags {

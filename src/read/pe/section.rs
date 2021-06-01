@@ -87,7 +87,7 @@ where
 {
     #[inline]
     fn address(&self) -> u64 {
-        u64::from(self.section.virtual_address.get(LE))
+        u64::from(self.section.virtual_address.get(LE)).wrapping_add(self.file.common.image_base)
     }
 
     #[inline]
@@ -218,7 +218,7 @@ where
 
     #[inline]
     fn address(&self) -> u64 {
-        u64::from(self.section.virtual_address.get(LE))
+        u64::from(self.section.virtual_address.get(LE)).wrapping_add(self.file.common.image_base)
     }
 
     #[inline]

@@ -179,6 +179,10 @@ where
         self.section_by_name(".debug_info").is_some()
     }
 
+    fn relative_address_base(&self) -> u64 {
+        0
+    }
+
     #[inline]
     fn entry(&self) -> u64 {
         0

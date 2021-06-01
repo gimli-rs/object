@@ -69,9 +69,6 @@ pub trait Object<'data: 'file, 'file>: read::private::Sealed {
     /// Get an iterator over the segments in the file.
     fn segments(&'file self) -> Self::SegmentIterator;
 
-    /// Get the entry point address of the binary
-    fn entry(&'file self) -> u64;
-
     /// Get the section named `section_name`, if such a section exists.
     ///
     /// If `section_name` starts with a '.' then it is treated as a system section name,
@@ -204,6 +201,14 @@ pub trait Object<'data: 'file, 'file>: read::private::Sealed {
     fn pdb_info(&self) -> Result<Option<CodeView>> {
         Ok(None)
     }
+
+    /// Get the base address used for relative virtual addresses.
+    ///
+    /// Currently this is only non-zero for PE.
+    fn relative_address_base(&'file self) -> u64;
+
+    /// Get the virtual address of the entry point of the binary
+    fn entry(&'file self) -> u64;
 
     /// File flags that are specific to each file format.
     fn flags(&self) -> FileFlags;

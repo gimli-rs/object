@@ -330,11 +330,6 @@ where
         WasmSegmentIterator { file: self }
     }
 
-    #[inline]
-    fn entry(&'file self) -> u64 {
-        self.entry
-    }
-
     fn section_by_name(&'file self, section_name: &str) -> Option<WasmSection<'data, 'file, R>> {
         self.sections()
             .find(|section| section.name() == Ok(section_name))
@@ -414,6 +409,15 @@ where
 
     fn has_debug_symbols(&self) -> bool {
         self.has_debug_symbols
+    }
+
+    fn relative_address_base(&self) -> u64 {
+        0
+    }
+
+    #[inline]
+    fn entry(&'file self) -> u64 {
+        self.entry
     }
 
     #[inline]

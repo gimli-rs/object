@@ -393,6 +393,10 @@ where
         Ok(Some((filename, build_id)))
     }
 
+    fn relative_address_base(&self) -> u64 {
+        0
+    }
+
     fn entry(&self) -> u64 {
         self.header.e_entry(self.endian).into()
     }
