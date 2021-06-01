@@ -421,6 +421,10 @@ where
         with_inner!(self.inner, FileInternal, |x| x.pdb_info())
     }
 
+    fn relative_address_base(&self) -> u64 {
+        with_inner!(self.inner, FileInternal, |x| x.relative_address_base())
+    }
+
     fn entry(&self) -> u64 {
         with_inner!(self.inner, FileInternal, |x| x.entry())
     }

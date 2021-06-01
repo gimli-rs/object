@@ -453,7 +453,7 @@ impl<'data> Export<'data> {
         self.name.0
     }
 
-    /// The symbol address.
+    /// The virtual address of the symbol.
     #[inline]
     pub fn address(&self) -> u64 {
         self.address

@@ -122,6 +122,8 @@ fn dump_parsed_object(file: &object::File) {
     );
     println!("Architecture: {:?}", file.architecture());
     println!("Flags: {:x?}", file.flags());
+    println!("Relative Address Base: {:x?}", file.relative_address_base());
+    println!("Entry Address: {:x?}", file.entry());
 
     match file.mach_uuid() {
         Ok(Some(uuid)) => println!("Mach UUID: {:x?}", uuid),
