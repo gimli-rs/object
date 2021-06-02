@@ -2,12 +2,13 @@ use core::convert::TryInto;
 
 use crate::pod::Bytes;
 
-#[allow(unused)]
+#[allow(dead_code)]
 #[inline]
 pub(crate) fn align(offset: usize, size: usize) -> usize {
     (offset + (size - 1)) & !(size - 1)
 }
 
+#[allow(dead_code)]
 pub(crate) fn data_range(
     data: &[u8],
     data_address: u64,
