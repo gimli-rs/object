@@ -83,6 +83,7 @@ impl Object {
             Architecture::PowerPc64 => false,
             Architecture::Riscv64 => false,
             Architecture::Riscv32 => false,
+            Architecture::Sparc64 => false,
             _ => {
                 return Err(Error(format!(
                     "unimplemented architecture {:?}",
