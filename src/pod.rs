@@ -343,6 +343,7 @@ impl BytesMut {
     }
 
     #[inline]
+    #[allow(dead_code)]
     pub fn write<T: Pod>(&mut self, val: &T) {
         self.0.extend_from_slice(bytes_of(val))
     }

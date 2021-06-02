@@ -8,8 +8,8 @@ use std::{error, fmt, result, str};
 use crate::endian::{Endianness, U32, U64};
 use crate::pod::{BytesMut, WritableBuffer};
 use crate::{
-    AddressSize, Architecture, BinaryFormat, ComdatKind, FileFlags, RelocationEncoding,
-    RelocationKind, SectionFlags, SectionKind, SymbolFlags, SymbolKind, SymbolScope,
+    Architecture, BinaryFormat, ComdatKind, FileFlags, RelocationEncoding, RelocationKind,
+    SectionFlags, SectionKind, SymbolFlags, SymbolKind, SymbolScope,
 };
 
 #[cfg(feature = "coff")]
@@ -103,6 +103,7 @@ impl Object {
     /// Return the name for a standard segment.
     ///
     /// This will vary based on the file format.
+    #[allow(unused_variables)]
     pub fn segment_name(&self, segment: StandardSegment) -> &'static [u8] {
         match self.format {
             #[cfg(feature = "coff")]
@@ -241,6 +242,7 @@ impl Object {
         (segment, name, kind)
     }
 
+    #[allow(unused_variables)]
     fn subsection_name(&self, section: &[u8], value: &[u8]) -> Vec<u8> {
         debug_assert!(!self.has_subsections_via_symbols());
         match self.format {
@@ -432,6 +434,7 @@ impl Object {
     ///
     /// For Mach-O, this also creates a `__thread_vars` entry for TLS symbols, and the
     /// symbol will indirectly point to the data via the `__thread_vars` entry.
+    #[allow(unused_mut)]
     pub fn set_symbol_data(
         &mut self,
         mut symbol_id: SymbolId,

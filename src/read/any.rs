@@ -19,6 +19,7 @@ use crate::read::{
     SectionIndex, SectionKind, SymbolFlags, SymbolIndex, SymbolKind, SymbolMap, SymbolMapName,
     SymbolScope, SymbolSection,
 };
+#[allow(unused_imports)]
 use crate::Endianness;
 
 /// Evaluate an expression on the contents of a file format enum.
@@ -226,7 +227,7 @@ impl<'data, R: ReadRef<'data>> File<'data, R> {
     /// where multiple images, located at different offsets, share the same address
     /// space.
     pub fn parse_at(data: R, offset: u64) -> Result<Self> {
-        let inner = match FileKind::parse_at(data, offset)? {
+        let _inner = match FileKind::parse_at(data, offset)? {
             #[cfg(feature = "macho")]
             FileKind::MachO32 => FileInternal::MachO32(macho::MachOFile32::parse_at(data, offset)?),
             #[cfg(feature = "macho")]
@@ -234,7 +235,8 @@ impl<'data, R: ReadRef<'data>> File<'data, R> {
             #[allow(unreachable_patterns)]
             _ => return Err(Error("Unsupported file format")),
         };
-        Ok(File { inner })
+        #[allow(unreachable_code)]
+        Ok(File { inner: _inner })
     }
 
     /// Return the file format.
