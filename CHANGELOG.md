@@ -2,6 +2,20 @@
 
 --------------------------------------------------------------------------------
 
+## 0.25.1
+
+Released 2021/06/03.
+
+### Changed
+
+* write: Fix choice of `SHT_REL` or `SHT_RELA` for most architectures.
+  [#318](https://github.com/gimli-rs/object/pull/318)
+
+* write: Fix relocation encoding for MIPS64EL.
+  [#318](https://github.com/gimli-rs/object/pull/318)
+
+--------------------------------------------------------------------------------
+
 ## 0.25.0
 
 Released 2021/06/02.
