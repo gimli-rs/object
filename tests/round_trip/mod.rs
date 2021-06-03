@@ -234,7 +234,7 @@ fn elf_any() {
         (Architecture::Bpf, Endianness::Little),
         (Architecture::I386, Endianness::Little),
         (Architecture::X86_64, Endianness::Little),
-        (Architecture::X86_32, Endianness::Little),
+        (Architecture::X86_64_X32, Endianness::Little),
         (Architecture::Hexagon, Endianness::Little),
         (Architecture::Mips, Endianness::Little),
         (Architecture::Mips64, Endianness::Little),

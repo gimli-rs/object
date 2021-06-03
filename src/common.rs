@@ -10,7 +10,8 @@ pub enum Architecture {
     Bpf,
     I386,
     X86_64,
-    X86_32,
+    #[allow(non_camel_case_types)]
+    X86_64_X32,
     Hexagon,
     Mips,
     Mips64,
@@ -37,7 +38,7 @@ impl Architecture {
             Architecture::Bpf => Some(AddressSize::U64),
             Architecture::I386 => Some(AddressSize::U32),
             Architecture::X86_64 => Some(AddressSize::U64),
-            Architecture::X86_32 => Some(AddressSize::U32),
+            Architecture::X86_64_X32 => Some(AddressSize::U32),
             Architecture::Hexagon => Some(AddressSize::U32),
             Architecture::Mips => Some(AddressSize::U32),
             Architecture::Mips64 => Some(AddressSize::U64),

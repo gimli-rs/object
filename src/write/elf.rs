@@ -78,7 +78,7 @@ impl Object {
             Architecture::Bpf => false,
             Architecture::I386 => false,
             Architecture::X86_64 => true,
-            Architecture::X86_32 => true,
+            Architecture::X86_64_X32 => true,
             Architecture::Hexagon => true,
             Architecture::Mips => false,
             Architecture::Mips64 => true,
@@ -361,7 +361,7 @@ impl Object {
             Architecture::Bpf => elf::EM_BPF,
             Architecture::I386 => elf::EM_386,
             Architecture::X86_64 => elf::EM_X86_64,
-            Architecture::X86_32 => elf::EM_X86_64,
+            Architecture::X86_64_X32 => elf::EM_X86_64,
             Architecture::Hexagon => elf::EM_HEXAGON,
             Architecture::Mips => elf::EM_MIPS,
             Architecture::Mips64 => elf::EM_MIPS,
@@ -641,7 +641,7 @@ impl Object {
                                 return Err(Error(format!("unimplemented relocation {:?}", reloc)));
                             }
                         },
-                        Architecture::X86_64 | Architecture::X86_32 => {
+                        Architecture::X86_64 | Architecture::X86_64_X32 => {
                             match (reloc.kind, reloc.encoding, reloc.size) {
                                 (RelocationKind::Absolute, RelocationEncoding::Generic, 64) => {
                                     elf::R_X86_64_64
