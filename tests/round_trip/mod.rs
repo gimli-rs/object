@@ -226,6 +226,107 @@ fn elf_x86_64() {
 }
 
 #[test]
+fn elf_any() {
+    for (arch, endian) in [
+        (Architecture::Aarch64, Endianness::Little),
+        (Architecture::Arm, Endianness::Little),
+        (Architecture::Avr, Endianness::Little),
+        (Architecture::Bpf, Endianness::Little),
+        (Architecture::I386, Endianness::Little),
+        (Architecture::X86_64, Endianness::Little),
+        (Architecture::Hexagon, Endianness::Little),
+        (Architecture::Mips, Endianness::Little),
+        (Architecture::Mips64, Endianness::Little),
+        (Architecture::Msp430, Endianness::Little),
+        (Architecture::PowerPc, Endianness::Big),
+        (Architecture::PowerPc64, Endianness::Big),
+        (Architecture::Riscv32, Endianness::Little),
+        (Architecture::Riscv64, Endianness::Little),
+        (Architecture::S390x, Endianness::Big),
+        (Architecture::Sparc64, Endianness::Big),
+    ]
+    .iter()
+    .copied()
+    {
+        let mut object = write::Object::new(BinaryFormat::Elf, arch, endian);
+
+        let section = object.section_id(write::StandardSection::Data);
+        object.append_section_data(section, &[1; 30], 4);
+        let symbol = object.section_symbol(section);
+
+        object
+            .add_relocation(
+                section,
+                write::Relocation {
+                    offset: 8,
+                    size: 32,
+                    kind: RelocationKind::Absolute,
+                    encoding: RelocationEncoding::Generic,
+                    symbol,
+                    addend: 0,
+                },
+            )
+            .unwrap();
+        if arch.address_size().unwrap().bytes() >= 8 {
+            object
+                .add_relocation(
+                    section,
+                    write::Relocation {
+                        offset: 16,
+                        size: 64,
+                        kind: RelocationKind::Absolute,
+                        encoding: RelocationEncoding::Generic,
+                        symbol,
+                        addend: 0,
+                    },
+                )
+                .unwrap();
+        }
+
+        let bytes = object.write().unwrap();
+        let object = read::File::parse(&*bytes).unwrap();
+        println!("{:?}", object.architecture());
+        assert_eq!(object.format(), BinaryFormat::Elf);
+        assert_eq!(object.architecture(), arch);
+        assert_eq!(object.endianness(), endian);
+
+        let mut sections = object.sections();
+
+        let section = sections.next().unwrap();
+        println!("{:?}", section);
+        assert_eq!(section.name(), Ok(""));
+        assert_eq!(section.kind(), SectionKind::Metadata);
+        assert_eq!(section.address(), 0);
+        assert_eq!(section.size(), 0);
+
+        let data = sections.next().unwrap();
+        println!("{:?}", data);
+        assert_eq!(data.name(), Ok(".data"));
+        assert_eq!(data.kind(), SectionKind::Data);
+
+        let mut relocations = data.relocations();
+
+        let (offset, relocation) = relocations.next().unwrap();
+        println!("{:?}", relocation);
+        assert_eq!(offset, 8);
+        assert_eq!(relocation.kind(), RelocationKind::Absolute);
+        assert_eq!(relocation.encoding(), RelocationEncoding::Generic);
+        assert_eq!(relocation.size(), 32);
+        assert_eq!(relocation.addend(), 0);
+
+        if arch.address_size().unwrap().bytes() >= 8 {
+            let (offset, relocation) = relocations.next().unwrap();
+            println!("{:?}", relocation);
+            assert_eq!(offset, 16);
+            assert_eq!(relocation.kind(), RelocationKind::Absolute);
+            assert_eq!(relocation.encoding(), RelocationEncoding::Generic);
+            assert_eq!(relocation.size(), 64);
+            assert_eq!(relocation.addend(), 0);
+        }
+    }
+}
+
+#[test]
 fn macho_x86_64() {
     let mut object = write::Object::new(
         BinaryFormat::MachO,
