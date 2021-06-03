@@ -162,6 +162,8 @@ impl Object {
             AddressSize::U64 => &elf64,
         };
         let pointer_align = address_size.bytes() as usize;
+        let is_mips64el =
+            self.architecture == Architecture::Mips64 && self.endian == Endianness::Little;
 
         // Calculate offsets of everything.
         let mut offset = 0;
@@ -667,15 +669,20 @@ impl Object {
                                 return Err(Error(format!("unimplemented relocation {:?}", reloc)));
                             }
                         },
-                        Architecture::Mips => match (reloc.kind, reloc.encoding, reloc.size) {
-                            (RelocationKind::Absolute, _, 16) => elf::R_MIPS_16,
-                            (RelocationKind::Absolute, _, 32) => elf::R_MIPS_32,
-                            (RelocationKind::Absolute, _, 64) => elf::R_MIPS_64,
-                            (RelocationKind::Elf(x), _, _) => x,
-                            _ => {
-                                return Err(Error(format!("unimplemented relocation {:?}", reloc)));
+                        Architecture::Mips | Architecture::Mips64 => {
+                            match (reloc.kind, reloc.encoding, reloc.size) {
+                                (RelocationKind::Absolute, _, 16) => elf::R_MIPS_16,
+                                (RelocationKind::Absolute, _, 32) => elf::R_MIPS_32,
+                                (RelocationKind::Absolute, _, 64) => elf::R_MIPS_64,
+                                (RelocationKind::Elf(x), _, _) => x,
+                                _ => {
+                                    return Err(Error(format!(
+                                        "unimplemented relocation {:?}",
+                                        reloc
+                                    )));
+                                }
                             }
-                        },
+                        }
                         Architecture::Msp430 => match (reloc.kind, reloc.encoding, reloc.size) {
                             (RelocationKind::Absolute, _, 32) => elf::R_MSP430_32,
                             (RelocationKind::Absolute, _, 16) => elf::R_MSP430_16_BYTE,
@@ -798,6 +805,7 @@ impl Object {
                     let r_sym = symbol_offsets[reloc.symbol.0].index as u32;
                     elf.write_rel(
                         buffer,
+                        is_mips64el,
                         is_rela,
                         Rel {
                             r_offset: reloc.offset,
@@ -1081,7 +1089,13 @@ trait Elf {
     fn write_file_header(&self, buffer: &mut dyn WritableBuffer, section: FileHeader);
     fn write_section_header(&self, buffer: &mut dyn WritableBuffer, section: SectionHeader);
     fn write_symbol(&self, buffer: &mut dyn WritableBuffer, symbol: Sym);
-    fn write_rel(&self, buffer: &mut dyn WritableBuffer, is_rela: bool, rel: Rel);
+    fn write_rel(
+        &self,
+        buffer: &mut dyn WritableBuffer,
+        is_mips64el: bool,
+        is_rela: bool,
+        rel: Rel,
+    );
 }
 
 struct Elf32<E> {
@@ -1160,7 +1174,13 @@ impl<E: Endian> Elf for Elf32<E> {
         buffer.extend(bytes_of(&symbol));
     }
 
-    fn write_rel(&self, buffer: &mut dyn WritableBuffer, is_rela: bool, rel: Rel) {
+    fn write_rel(
+        &self,
+        buffer: &mut dyn WritableBuffer,
+        _is_mips64el: bool,
+        is_rela: bool,
+        rel: Rel,
+    ) {
         let endian = self.endian;
         if is_rela {
             let rel = elf::Rela32 {
@@ -1255,12 +1275,18 @@ impl<E: Endian> Elf for Elf64<E> {
         buffer.extend(bytes_of(&symbol));
     }
 
-    fn write_rel(&self, buffer: &mut dyn WritableBuffer, is_rela: bool, rel: Rel) {
+    fn write_rel(
+        &self,
+        buffer: &mut dyn WritableBuffer,
+        is_mips64el: bool,
+        is_rela: bool,
+        rel: Rel,
+    ) {
         let endian = self.endian;
         if is_rela {
             let rel = elf::Rela64 {
                 r_offset: U64::new(endian, rel.r_offset),
-                r_info: elf::Rela64::r_info(endian, rel.r_sym, rel.r_type),
+                r_info: elf::Rela64::r_info2(endian, is_mips64el, rel.r_sym, rel.r_type),
                 r_addend: I64::new(endian, rel.r_addend),
             };
             buffer.extend(bytes_of(&rel));
