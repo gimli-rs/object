@@ -72,17 +72,22 @@ impl Object {
 
     fn elf_has_relocation_addend(&self) -> Result<bool> {
         Ok(match self.architecture {
-            Architecture::Arm => false,
             Architecture::Aarch64 => true,
+            Architecture::Arm => false,
+            Architecture::Avr => true,
+            Architecture::Bpf => false,
             Architecture::I386 => false,
             Architecture::X86_64 => true,
-            Architecture::S390x => true,
+            Architecture::Hexagon => true,
             Architecture::Mips => false,
-            Architecture::Mips64 => false,
-            Architecture::PowerPc => false,
-            Architecture::PowerPc64 => false,
-            Architecture::Riscv64 => false,
-            Architecture::Riscv32 => false,
+            Architecture::Mips64 => true,
+            Architecture::Msp430 => true,
+            Architecture::PowerPc => true,
+            Architecture::PowerPc64 => true,
+            Architecture::Riscv64 => true,
+            Architecture::Riscv32 => true,
+            Architecture::S390x => true,
+            Architecture::Sparc64 => true,
             _ => {
                 return Err(Error(format!(
                     "unimplemented architecture {:?}",
