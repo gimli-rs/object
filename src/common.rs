@@ -336,6 +336,11 @@ pub enum RelocationEncoding {
     ///
     /// The `RelocationKind` must be PC relative.
     S390xDbl,
+
+    /// AArch64 call target.
+    ///
+    /// The `RelocationKind` must be PC relative.
+    AArch64Call,
 }
 
 /// File flags that are specific to each file format.
