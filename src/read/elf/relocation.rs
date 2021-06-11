@@ -247,6 +247,10 @@ fn parse_relocation<Elf: FileHeader>(
             elf::R_AARCH64_PREL64 => (RelocationKind::Relative, 64),
             elf::R_AARCH64_PREL32 => (RelocationKind::Relative, 32),
             elf::R_AARCH64_PREL16 => (RelocationKind::Relative, 16),
+            elf::R_AARCH64_CALL26 => {
+                encoding = RelocationEncoding::AArch64Call;
+                (RelocationKind::PltRelative, 26)
+            }
             r_type => (RelocationKind::Elf(r_type), 0),
         },
         elf::EM_ARM => match reloc.r_type(endian, false) {
