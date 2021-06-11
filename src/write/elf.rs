@@ -597,7 +597,8 @@ impl Object {
                             (RelocationKind::Relative, RelocationEncoding::Generic, 16) => {
                                 elf::R_AARCH64_PREL16
                             }
-                            (RelocationKind::Relative, RelocationEncoding::AArch64Call, 26) => {
+                            (RelocationKind::Relative, RelocationEncoding::AArch64Call, 26)
+                            | (RelocationKind::PltRelative, RelocationEncoding::AArch64Call, 26) => {
                                 elf::R_AARCH64_CALL26
                             }
                             (RelocationKind::Elf(x), _, _) => x,
