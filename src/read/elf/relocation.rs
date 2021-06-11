@@ -249,7 +249,7 @@ fn parse_relocation<Elf: FileHeader>(
             elf::R_AARCH64_PREL16 => (RelocationKind::Relative, 16),
             elf::R_AARCH64_CALL26 => {
                 encoding = RelocationEncoding::AArch64Call;
-                (RelocationKind::Relative, 26)
+                (RelocationKind::PltRelative, 26)
             }
             r_type => (RelocationKind::Elf(r_type), 0),
         },
