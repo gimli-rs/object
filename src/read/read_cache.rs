@@ -1,3 +1,4 @@
+use core::ops::Range;
 use std::boxed::Box;
 use std::cell::RefCell;
 use std::collections::hash_map::Entry;
@@ -90,19 +91,25 @@ impl<'a, R: Read + Seek> ReadRef<'a> for &'a ReadCache<R> {
         Ok(unsafe { mem::transmute::<&[u8], &[u8]>(buf) })
     }
 
-    fn read_bytes_at_until(self, offset: u64, delimiter: u8) -> Result<&'a [u8], ()> {
+    fn read_bytes_at_until(self, range: Range<u64>, delimiter: u8) -> Result<&'a [u8], ()> {
         let cache = &mut *self.cache.borrow_mut();
-        let buf = match cache.strings.entry((offset, delimiter)) {
+        let buf = match cache.strings.entry((range.start, delimiter)) {
             Entry::Occupied(entry) => entry.into_mut(),
             Entry::Vacant(entry) => {
                 cache
                     .read
-                    .seek(SeekFrom::Start(offset as u64))
+                    .seek(SeekFrom::Start(range.start))
                     .map_err(|_| ())?;
+
+                let max_check: usize = (range.end - range.start).try_into().map_err(|_| ())?;
+                // Strings should be relatively small.
+                // TODO: make this configurable?
+                let max_check = max_check.min(4096);
+
                 let mut bytes = Vec::new();
                 let mut checked = 0;
                 loop {
-                    bytes.resize(checked + 256, 0);
+                    bytes.resize((checked + 256).min(max_check), 0);
                     let read = cache.read.read(&mut bytes[checked..]).map_err(|_| ())?;
                     if read == 0 {
                         return Err(());
@@ -112,9 +119,7 @@ impl<'a, R: Read + Seek> ReadRef<'a> for &'a ReadCache<R> {
                         break entry.insert(bytes.into_boxed_slice());
                     }
                     checked += read;
-                    // Strings should be relatively small.
-                    // TODO: make this configurable?
-                    if checked > 4096 {
+                    if checked >= max_check {
                         return Err(());
                     }
                 }
@@ -166,11 +171,12 @@ impl<'a, R: Read + Seek> ReadRef<'a> for ReadCacheRange<'a, R> {
         self.r.read_bytes_at(r_offset, size)
     }
 
-    fn read_bytes_at_until(self, offset: u64, delimiter: u8) -> Result<&'a [u8], ()> {
-        let r_offset = self.offset.checked_add(offset).ok_or(())?;
-        let bytes = self.r.read_bytes_at_until(r_offset, delimiter)?;
+    fn read_bytes_at_until(self, range: Range<u64>, delimiter: u8) -> Result<&'a [u8], ()> {
+        let r_start = self.offset.checked_add(range.start).ok_or(())?;
+        let r_end = self.offset.checked_add(range.end).ok_or(())?;
+        let bytes = self.r.read_bytes_at_until(r_start..r_end, delimiter)?;
         let size = bytes.len().try_into().map_err(|_| ())?;
-        let end = offset.checked_add(size).ok_or(())?;
+        let end = range.start.checked_add(size).ok_or(())?;
         if end > self.size {
             return Err(());
         }

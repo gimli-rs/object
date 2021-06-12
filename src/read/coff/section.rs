@@ -66,9 +66,9 @@ impl<'data> SectionTable<'data> {
     /// The returned index is 1-based.
     ///
     /// Ignores sections with invalid names.
-    pub fn section_by_name(
+    pub fn section_by_name<R: ReadRef<'data>>(
         &self,
-        strings: StringTable<'data>,
+        strings: StringTable<'data, R>,
         name: &[u8],
     ) -> Option<(usize, &'data pe::ImageSectionHeader)> {
         self.sections
@@ -310,7 +310,10 @@ impl pe::ImageSectionHeader {
     /// Return the section name.
     ///
     /// This handles decoding names that are offsets into the symbol string table.
-    pub fn name<'data>(&'data self, strings: StringTable<'data>) -> Result<&'data [u8]> {
+    pub fn name<'data, R: ReadRef<'data>>(
+        &'data self,
+        strings: StringTable<'data, R>,
+    ) -> Result<&'data [u8]> {
         let bytes = &self.name;
         Ok(if bytes[0] == b'/' {
             let mut offset = 0;

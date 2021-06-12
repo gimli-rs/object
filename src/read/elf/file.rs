@@ -36,10 +36,10 @@ where
     pub(super) data: R,
     pub(super) header: &'data Elf,
     pub(super) segments: &'data [Elf::ProgramHeader],
-    pub(super) sections: SectionTable<'data, Elf>,
+    pub(super) sections: SectionTable<'data, Elf, R>,
     pub(super) relocations: RelocationSections,
-    pub(super) symbols: SymbolTable<'data, Elf>,
-    pub(super) dynamic_symbols: SymbolTable<'data, Elf>,
+    pub(super) symbols: SymbolTable<'data, Elf, R>,
+    pub(super) dynamic_symbols: SymbolTable<'data, Elf, R>,
 }
 
 impl<'data, Elf, R> ElfFile<'data, Elf, R>
@@ -143,9 +143,9 @@ where
     type SectionIterator = ElfSectionIterator<'data, 'file, Elf, R>;
     type Comdat = ElfComdat<'data, 'file, Elf, R>;
     type ComdatIterator = ElfComdatIterator<'data, 'file, Elf, R>;
-    type Symbol = ElfSymbol<'data, 'file, Elf>;
-    type SymbolIterator = ElfSymbolIterator<'data, 'file, Elf>;
-    type SymbolTable = ElfSymbolTable<'data, 'file, Elf>;
+    type Symbol = ElfSymbol<'data, 'file, Elf, R>;
+    type SymbolIterator = ElfSymbolIterator<'data, 'file, Elf, R>;
+    type SymbolTable = ElfSymbolTable<'data, 'file, Elf, R>;
     type DynamicRelocationIterator = ElfDynamicRelocationIterator<'data, 'file, Elf, R>;
 
     fn architecture(&self) -> Architecture {
@@ -230,7 +230,7 @@ where
     fn symbol_by_index(
         &'file self,
         index: SymbolIndex,
-    ) -> read::Result<ElfSymbol<'data, 'file, Elf>> {
+    ) -> read::Result<ElfSymbol<'data, 'file, Elf, R>> {
         let symbol = self.symbols.symbol(index.0)?;
         Ok(ElfSymbol {
             endian: self.endian,
@@ -240,7 +240,7 @@ where
         })
     }
 
-    fn symbols(&'file self) -> ElfSymbolIterator<'data, 'file, Elf> {
+    fn symbols(&'file self) -> ElfSymbolIterator<'data, 'file, Elf, R> {
         ElfSymbolIterator {
             endian: self.endian,
             symbols: &self.symbols,
@@ -248,14 +248,14 @@ where
         }
     }
 
-    fn symbol_table(&'file self) -> Option<ElfSymbolTable<'data, 'file, Elf>> {
+    fn symbol_table(&'file self) -> Option<ElfSymbolTable<'data, 'file, Elf, R>> {
         Some(ElfSymbolTable {
             endian: self.endian,
             symbols: &self.symbols,
         })
     }
 
-    fn dynamic_symbols(&'file self) -> ElfSymbolIterator<'data, 'file, Elf> {
+    fn dynamic_symbols(&'file self) -> ElfSymbolIterator<'data, 'file, Elf, R> {
         ElfSymbolIterator {
             endian: self.endian,
             symbols: &self.dynamic_symbols,
@@ -263,7 +263,7 @@ where
         }
     }
 
-    fn dynamic_symbol_table(&'file self) -> Option<ElfSymbolTable<'data, 'file, Elf>> {
+    fn dynamic_symbol_table(&'file self) -> Option<ElfSymbolTable<'data, 'file, Elf, R>> {
         Some(ElfSymbolTable {
             endian: self.endian,
             symbols: &self.dynamic_symbols,
@@ -646,16 +646,21 @@ pub trait FileHeader: Debug + Pod {
         endian: Self::Endian,
         data: R,
         sections: &[Self::SectionHeader],
-    ) -> read::Result<StringTable<'data>> {
+    ) -> read::Result<StringTable<'data, R>> {
         if sections.is_empty() {
             return Ok(StringTable::default());
         }
         let index = self.shstrndx(endian, data)? as usize;
         let shstrtab = sections.get(index).read_error("Invalid ELF e_shstrndx")?;
-        let data = shstrtab
-            .data(endian, data)
-            .read_error("Invalid ELF shstrtab data")?;
-        Ok(StringTable::new(data))
+        let strings = if let Some((shstrtab_offset, shstrtab_size)) = shstrtab.file_range(endian) {
+            let shstrtab_end = shstrtab_offset
+                .checked_add(shstrtab_size)
+                .read_error("Invalid ELF shstrtab size")?;
+            StringTable::new(data, shstrtab_offset, shstrtab_end)
+        } else {
+            StringTable::default()
+        };
+        Ok(strings)
     }
 
     /// Return the section table.
@@ -663,7 +668,7 @@ pub trait FileHeader: Debug + Pod {
         &self,
         endian: Self::Endian,
         data: R,
-    ) -> read::Result<SectionTable<'data, Self>> {
+    ) -> read::Result<SectionTable<'data, Self, R>> {
         let sections = self.section_headers(endian, data)?;
         let strings = self.section_strings(endian, data, sections)?;
         Ok(SectionTable::new(sections, strings))
