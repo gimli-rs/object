@@ -957,7 +957,27 @@ impl Object {
                             dynstr_index.unwrap() as u32,
                         _ => 0,
                     },
-                    sh_info: 0,
+                    // The dynsym index needs to record it's first non-local
+                    // symbol in the `sh_info` section, so iterate the symbols
+                    // to find this.
+                    sh_info:  match section.kind {
+                        SectionKind::Elf(typ) if typ == elf::SHT_DYNSYM => {
+                            let mut info = 0;
+                            let mut symbols: &[Sym] =
+                                unsafe { std::slice::from_raw_parts(
+                                    section.data.as_slice().as_ptr() as *const Sym,
+                                    section.data.len() / std::mem::size_of::<Sym>(),
+                                ) };
+                            for sym in symbols {
+                                if sym.st_info >> 4 != elf::STB_LOCAL {
+                                    break;
+                                }
+                                info += 1;
+                            }
+                            info
+                        }
+                        _ => 0,
+                    },
                     sh_addralign: section.align,
                     sh_entsize,
                 },
@@ -1095,6 +1115,7 @@ struct SectionHeader {
 }
 
 /// Native endian version of `Sym64`.
+#[repr(C)]
 struct Sym {
     st_name: u32,
     st_info: u8,
