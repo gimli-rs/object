@@ -353,7 +353,14 @@ impl Object {
             abi_version: 0,
             padding: [0; 7],
         };
-        let e_type = elf::ET_REL;
+        // Currently there's no way for user to determine what type of object
+        // is produced.  So, try inferring from the presence of the dynamic
+        // section type (which is only slightly better).
+        let e_type = if self.sections.iter().find(|s| s.kind == SectionKind::Elf(elf::SHT_DYNAMIC)).is_some() {
+            elf::ET_DYN
+        } else {
+            elf::ET_REL
+        };
         let e_machine = match self.architecture {
             Architecture::Aarch64 => elf::EM_AARCH64,
             Architecture::Arm => elf::EM_ARM,
