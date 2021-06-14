@@ -934,6 +934,8 @@ impl Object {
             // TODO: not sure if this is correct, maybe user should determine this
             let sh_entsize = match section.kind {
                 SectionKind::ReadOnlyString | SectionKind::OtherString => 1,
+                SectionKind::Elf(typ) if typ == elf::SHT_DYNSYM => elf.symbol_size() as u64,
+                SectionKind::Elf(typ) if typ == elf::SHT_DYNAMIC => elf.dynamic_entsize() as u64,
                 _ => 0,
             };
             let sh_name = section_offsets[index]
@@ -1114,6 +1116,7 @@ trait Elf {
     fn file_header_size(&self) -> usize;
     fn section_header_size(&self) -> usize;
     fn symbol_size(&self) -> usize;
+    fn dynamic_entsize(&self) -> usize;
     fn rel_size(&self, is_rela: bool) -> usize;
     fn write_file_header(&self, buffer: &mut dyn WritableBuffer, section: FileHeader);
     fn write_section_header(&self, buffer: &mut dyn WritableBuffer, section: SectionHeader);
@@ -1142,6 +1145,10 @@ impl<E: Endian> Elf for Elf32<E> {
 
     fn symbol_size(&self) -> usize {
         mem::size_of::<elf::Sym32<E>>()
+    }
+
+    fn dynamic_entsize(&self) -> usize {
+        mem::size_of::<elf::Dyn32<E>>()
     }
 
     fn rel_size(&self, is_rela: bool) -> usize {
@@ -1243,6 +1250,10 @@ impl<E: Endian> Elf for Elf64<E> {
 
     fn symbol_size(&self) -> usize {
         mem::size_of::<elf::Sym64<E>>()
+    }
+
+    fn dynamic_entsize(&self) -> usize {
+        mem::size_of::<elf::Dyn64<E>>()
     }
 
     fn rel_size(&self, is_rela: bool) -> usize {
