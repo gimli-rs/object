@@ -75,7 +75,13 @@ where
         self.nt_headers
     }
 
-    fn data_directory(&self, id: usize) -> Option<&'data pe::ImageDataDirectory> {
+    /// Returns the section table of this binary.
+    pub fn section_table(&self) -> SectionTable<'data> {
+        self.common.sections
+    }
+
+    /// Returns the data directory at the given index.
+    pub fn data_directory(&self, id: usize) -> Option<&'data pe::ImageDataDirectory> {
         self.data_directories
             .get(id)
             .filter(|d| d.size.get(LE) != 0)
@@ -83,6 +89,11 @@ where
 
     fn data_at(&self, va: u32) -> Option<Bytes<'data>> {
         self.common.sections.pe_data_at(self.data, va).map(Bytes)
+    }
+
+    /// Returns this binary data.
+    pub fn data(&self) -> R {
+        self.data
     }
 }
 
