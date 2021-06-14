@@ -888,6 +888,12 @@ impl Object {
                 },
             );
         }
+        // Dynamic sections need to `sh_link` to the dynstr section, so lookup
+        // it's section index now.
+        let dynstr_index = self.sections.iter()
+            .enumerate()
+            .find(|(idx, s)| s.name() == Some(".dynstr"))
+            .map(|(idx, s)| section_offsets[idx].index);
         for (index, section) in self.sections.iter().enumerate() {
             let sh_type = match section.kind {
                 SectionKind::UninitializedData | SectionKind::UninitializedTls => elf::SHT_NOBITS,
@@ -943,7 +949,12 @@ impl Object {
                     sh_addr: 0,
                     sh_offset: section_offsets[index].offset as u64,
                     sh_size: section.size,
-                    sh_link: 0,
+                    // Link dynsyn and dynamic sections to the dynstr section.
+                    sh_link: match section.kind {
+                        SectionKind::Elf(typ) if typ == elf::SHT_DYNSYM || typ == elf::SHT_DYNAMIC =>
+                            dynstr_index.unwrap() as u32,
+                        _ => 0,
+                    },
                     sh_info: 0,
                     sh_addralign: section.align,
                     sh_entsize,
