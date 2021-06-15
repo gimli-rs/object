@@ -25,7 +25,7 @@ where
     R: ReadRef<'data>,
 {
     pub(super) file: &'file PeFile<'data, Pe, R>,
-    pub(super) iter: slice::Iter<'file, pe::ImageSectionHeader>,
+    pub(super) iter: slice::Iter<'data, pe::ImageSectionHeader>,
 }
 
 impl<'data, 'file, Pe, R> Iterator for PeSegmentIterator<'data, 'file, Pe, R>
@@ -58,7 +58,7 @@ where
     R: ReadRef<'data>,
 {
     file: &'file PeFile<'data, Pe, R>,
-    section: &'file pe::ImageSectionHeader,
+    section: &'data pe::ImageSectionHeader,
 }
 
 impl<'data, 'file, Pe, R> PeSegment<'data, 'file, Pe, R>
@@ -146,7 +146,7 @@ where
     R: ReadRef<'data>,
 {
     pub(super) file: &'file PeFile<'data, Pe, R>,
-    pub(super) iter: iter::Enumerate<slice::Iter<'file, pe::ImageSectionHeader>>,
+    pub(super) iter: iter::Enumerate<slice::Iter<'data, pe::ImageSectionHeader>>,
 }
 
 impl<'data, 'file, Pe, R> Iterator for PeSectionIterator<'data, 'file, Pe, R>
@@ -182,7 +182,7 @@ where
 {
     pub(super) file: &'file PeFile<'data, Pe, R>,
     pub(super) index: SectionIndex,
-    pub(super) section: &'file pe::ImageSectionHeader,
+    pub(super) section: &'data pe::ImageSectionHeader,
 }
 
 impl<'data, 'file, Pe, R> PeSection<'data, 'file, Pe, R>
