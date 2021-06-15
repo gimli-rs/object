@@ -76,7 +76,7 @@ default = ["read", "compression"]
 #=======================================
 # Umbrella feature for enabling all user-facing features of this crate. Does not
 # enable internal features like `rustc-dep-of-std`.
-all = ["read", "write", "std", "compression", "default"]
+all = ["read", "write", "std", "compression", "wasm"]
 
 # Use of --all-features is not supported.
 # This is a dummy feature to detect when --all-features is used.
