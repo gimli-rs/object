@@ -890,11 +890,21 @@ where
     R: ReadRef<'data>,
 {
     #[cfg(feature = "coff")]
-    Coff((coff::CoffSymbolTable<'data, 'file>, PhantomData<R>)),
+    Coff((coff::CoffSymbolTable<'data, 'file, R>, PhantomData<R>)),
     #[cfg(feature = "elf")]
-    Elf32((elf::ElfSymbolTable32<'data, 'file>, PhantomData<R>)),
+    Elf32(
+        (
+            elf::ElfSymbolTable32<'data, 'file, Endianness, R>,
+            PhantomData<R>,
+        ),
+    ),
     #[cfg(feature = "elf")]
-    Elf64((elf::ElfSymbolTable64<'data, 'file>, PhantomData<R>)),
+    Elf64(
+        (
+            elf::ElfSymbolTable64<'data, 'file, Endianness, R>,
+            PhantomData<R>,
+        ),
+    ),
     #[cfg(feature = "macho")]
     MachO32(
         (
@@ -910,9 +920,9 @@ where
         ),
     ),
     #[cfg(feature = "pe")]
-    Pe32((coff::CoffSymbolTable<'data, 'file>, PhantomData<R>)),
+    Pe32((coff::CoffSymbolTable<'data, 'file, R>, PhantomData<R>)),
     #[cfg(feature = "pe")]
-    Pe64((coff::CoffSymbolTable<'data, 'file>, PhantomData<R>)),
+    Pe64((coff::CoffSymbolTable<'data, 'file, R>, PhantomData<R>)),
     #[cfg(feature = "wasm")]
     Wasm((wasm::WasmSymbolTable<'data, 'file>, PhantomData<R>)),
 }
@@ -960,11 +970,21 @@ where
     R: ReadRef<'data>,
 {
     #[cfg(feature = "coff")]
-    Coff((coff::CoffSymbolIterator<'data, 'file>, PhantomData<R>)),
+    Coff((coff::CoffSymbolIterator<'data, 'file, R>, PhantomData<R>)),
     #[cfg(feature = "elf")]
-    Elf32((elf::ElfSymbolIterator32<'data, 'file>, PhantomData<R>)),
+    Elf32(
+        (
+            elf::ElfSymbolIterator32<'data, 'file, Endianness, R>,
+            PhantomData<R>,
+        ),
+    ),
     #[cfg(feature = "elf")]
-    Elf64((elf::ElfSymbolIterator64<'data, 'file>, PhantomData<R>)),
+    Elf64(
+        (
+            elf::ElfSymbolIterator64<'data, 'file, Endianness, R>,
+            PhantomData<R>,
+        ),
+    ),
     #[cfg(feature = "macho")]
     MachO32(
         (
@@ -980,9 +1000,9 @@ where
         ),
     ),
     #[cfg(feature = "pe")]
-    Pe32((coff::CoffSymbolIterator<'data, 'file>, PhantomData<R>)),
+    Pe32((coff::CoffSymbolIterator<'data, 'file, R>, PhantomData<R>)),
     #[cfg(feature = "pe")]
-    Pe64((coff::CoffSymbolIterator<'data, 'file>, PhantomData<R>)),
+    Pe64((coff::CoffSymbolIterator<'data, 'file, R>, PhantomData<R>)),
     #[cfg(feature = "wasm")]
     Wasm((wasm::WasmSymbolIterator<'data, 'file>, PhantomData<R>)),
 }
@@ -1013,11 +1033,21 @@ where
     R: ReadRef<'data>,
 {
     #[cfg(feature = "coff")]
-    Coff((coff::CoffSymbol<'data, 'file>, PhantomData<R>)),
+    Coff((coff::CoffSymbol<'data, 'file, R>, PhantomData<R>)),
     #[cfg(feature = "elf")]
-    Elf32((elf::ElfSymbol32<'data, 'file>, PhantomData<R>)),
+    Elf32(
+        (
+            elf::ElfSymbol32<'data, 'file, Endianness, R>,
+            PhantomData<R>,
+        ),
+    ),
     #[cfg(feature = "elf")]
-    Elf64((elf::ElfSymbol64<'data, 'file>, PhantomData<R>)),
+    Elf64(
+        (
+            elf::ElfSymbol64<'data, 'file, Endianness, R>,
+            PhantomData<R>,
+        ),
+    ),
     #[cfg(feature = "macho")]
     MachO32(
         (
@@ -1033,9 +1063,9 @@ where
         ),
     ),
     #[cfg(feature = "pe")]
-    Pe32((coff::CoffSymbol<'data, 'file>, PhantomData<R>)),
+    Pe32((coff::CoffSymbol<'data, 'file, R>, PhantomData<R>)),
     #[cfg(feature = "pe")]
-    Pe64((coff::CoffSymbol<'data, 'file>, PhantomData<R>)),
+    Pe64((coff::CoffSymbol<'data, 'file, R>, PhantomData<R>)),
     #[cfg(feature = "wasm")]
     Wasm((wasm::WasmSymbol<'data, 'file>, PhantomData<R>)),
 }

@@ -18,15 +18,18 @@ use super::{
 ///
 /// Also includes the string table used for the section names.
 #[derive(Debug, Default, Clone, Copy)]
-pub struct SectionTable<'data, Elf: FileHeader> {
+pub struct SectionTable<'data, Elf: FileHeader, R = &'data [u8]>
+where
+    R: ReadRef<'data>,
+{
     sections: &'data [Elf::SectionHeader],
-    strings: StringTable<'data>,
+    strings: StringTable<'data, R>,
 }
 
-impl<'data, Elf: FileHeader> SectionTable<'data, Elf> {
+impl<'data, Elf: FileHeader, R: ReadRef<'data>> SectionTable<'data, Elf, R> {
     /// Create a new section table.
     #[inline]
-    pub fn new(sections: &'data [Elf::SectionHeader], strings: StringTable<'data>) -> Self {
+    pub fn new(sections: &'data [Elf::SectionHeader], strings: StringTable<'data, R>) -> Self {
         SectionTable { sections, strings }
     }
 
@@ -82,12 +85,12 @@ impl<'data, Elf: FileHeader> SectionTable<'data, Elf> {
     ///
     /// Returns an empty symbol table if the symbol table does not exist.
     #[inline]
-    pub fn symbols<R: ReadRef<'data>>(
+    pub fn symbols(
         &self,
         endian: Elf::Endian,
         data: R,
         sh_type: u32,
-    ) -> read::Result<SymbolTable<'data, Elf>> {
+    ) -> read::Result<SymbolTable<'data, Elf, R>> {
         debug_assert!(sh_type == elf::SHT_DYNSYM || sh_type == elf::SHT_SYMTAB);
 
         let (index, section) = match self
@@ -106,12 +109,12 @@ impl<'data, Elf: FileHeader> SectionTable<'data, Elf> {
     ///
     /// Returns an error if the section is not a symbol table.
     #[inline]
-    pub fn symbol_table_by_index<R: ReadRef<'data>>(
+    pub fn symbol_table_by_index(
         &self,
         endian: Elf::Endian,
         data: R,
         index: usize,
-    ) -> read::Result<SymbolTable<'data, Elf>> {
+    ) -> read::Result<SymbolTable<'data, Elf, R>> {
         let section = self.section(index)?;
         match section.sh_type(endian) {
             elf::SHT_DYNSYM | elf::SHT_SYMTAB => {}
@@ -425,10 +428,10 @@ pub trait SectionHeader: Debug + Pod {
     fn sh_entsize(&self, endian: Self::Endian) -> Self::Word;
 
     /// Parse the section name from the string table.
-    fn name<'data>(
+    fn name<'data, R: ReadRef<'data>>(
         &self,
         endian: Self::Endian,
-        strings: StringTable<'data>,
+        strings: StringTable<'data, R>,
     ) -> read::Result<&'data [u8]> {
         strings
             .get(self.sh_name(endian))
@@ -489,9 +492,9 @@ pub trait SectionHeader: Debug + Pod {
         &self,
         endian: Self::Endian,
         data: R,
-        sections: &SectionTable<Self::Elf>,
+        sections: &SectionTable<'data, Self::Elf, R>,
         section_index: usize,
-    ) -> read::Result<Option<SymbolTable<'data, Self::Elf>>> {
+    ) -> read::Result<Option<SymbolTable<'data, Self::Elf, R>>> {
         let sh_type = self.sh_type(endian);
         if sh_type != elf::SHT_SYMTAB && sh_type != elf::SHT_DYNSYM {
             return Ok(None);
@@ -541,8 +544,8 @@ pub trait SectionHeader: Debug + Pod {
         &self,
         endian: Self::Endian,
         data: R,
-        sections: &SectionTable<'data, Self::Elf>,
-    ) -> read::Result<SymbolTable<'data, Self::Elf>> {
+        sections: &SectionTable<'data, Self::Elf, R>,
+    ) -> read::Result<SymbolTable<'data, Self::Elf, R>> {
         let sh_type = self.sh_type(endian);
         if sh_type != elf::SHT_REL && sh_type != elf::SHT_RELA {
             return Err(Error("Invalid ELF relocation section type"));

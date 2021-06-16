@@ -437,7 +437,7 @@ mod elf {
             let mut dynstr = object::StringTable::default();
             for s in segments {
                 if let Ok(Some(data)) = s.data_range(endian, data, strtab, strsz) {
-                    dynstr = object::StringTable::new(data);
+                    dynstr = object::StringTable::new(data, 0, data.len() as u64);
                     break;
                 }
             }

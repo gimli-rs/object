@@ -192,7 +192,9 @@ impl<E: Endian> macho::DyldCacheHeader<E> {
 impl<E: Endian> macho::DyldCacheImageInfo<E> {
     /// The file system path of this image.
     pub fn path<'data, R: ReadRef<'data>>(&self, endian: E, data: R) -> Result<&'data [u8]> {
-        data.read_bytes_at_until(self.path_file_offset.get(endian).into(), 0)
+        let r_start = self.path_file_offset.get(endian).into();
+        let r_end = data.len().read_error("Couldn't get data len()")?;
+        data.read_bytes_at_until(r_start..r_end, 0)
             .read_error("Couldn't read dyld cache image path")
     }
 

@@ -18,12 +18,15 @@ use super::{MachHeader, MachOFile};
 ///
 /// Also includes the string table used for the symbol names.
 #[derive(Debug, Clone, Copy)]
-pub struct SymbolTable<'data, Mach: MachHeader> {
+pub struct SymbolTable<'data, Mach: MachHeader, R = &'data [u8]>
+where
+    R: ReadRef<'data>,
+{
     symbols: &'data [Mach::Nlist],
-    strings: StringTable<'data>,
+    strings: StringTable<'data, R>,
 }
 
-impl<'data, Mach: MachHeader> Default for SymbolTable<'data, Mach> {
+impl<'data, Mach: MachHeader, R: ReadRef<'data>> Default for SymbolTable<'data, Mach, R> {
     fn default() -> Self {
         SymbolTable {
             symbols: &[],
@@ -32,15 +35,15 @@ impl<'data, Mach: MachHeader> Default for SymbolTable<'data, Mach> {
     }
 }
 
-impl<'data, Mach: MachHeader> SymbolTable<'data, Mach> {
+impl<'data, Mach: MachHeader, R: ReadRef<'data>> SymbolTable<'data, Mach, R> {
     #[inline]
-    pub(super) fn new(symbols: &'data [Mach::Nlist], strings: StringTable<'data>) -> Self {
+    pub(super) fn new(symbols: &'data [Mach::Nlist], strings: StringTable<'data, R>) -> Self {
         SymbolTable { symbols, strings }
     }
 
     /// Return the string table used for the symbol names.
     #[inline]
-    pub fn strings(&self) -> StringTable<'data> {
+    pub fn strings(&self) -> StringTable<'data, R> {
         self.strings
     }
 
@@ -401,10 +404,10 @@ pub trait Nlist: Debug + Pod {
     fn n_desc(&self, endian: Self::Endian) -> u16;
     fn n_value(&self, endian: Self::Endian) -> Self::Word;
 
-    fn name<'data>(
+    fn name<'data, R: ReadRef<'data>>(
         &self,
         endian: Self::Endian,
-        strings: StringTable<'data>,
+        strings: StringTable<'data, R>,
     ) -> Result<&'data [u8]> {
         strings
             .get(self.n_strx(endian))

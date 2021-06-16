@@ -36,7 +36,7 @@ where
     pub(super) header_offset: u64,
     pub(super) header: &'data Mach,
     pub(super) sections: Vec<MachOSectionInternal<'data, Mach>>,
-    pub(super) symbols: SymbolTable<'data, Mach>,
+    pub(super) symbols: SymbolTable<'data, Mach, R>,
 }
 
 impl<'data, Mach, R> MachOFile<'data, Mach, R>

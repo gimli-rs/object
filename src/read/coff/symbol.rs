@@ -17,14 +17,17 @@ use crate::read::{
 ///
 /// Also includes the string table used for the symbol names.
 #[derive(Debug)]
-pub struct SymbolTable<'data> {
+pub struct SymbolTable<'data, R = &'data [u8]>
+where
+    R: ReadRef<'data>,
+{
     symbols: &'data [pe::ImageSymbolBytes],
-    strings: StringTable<'data>,
+    strings: StringTable<'data, R>,
 }
 
-impl<'data> SymbolTable<'data> {
+impl<'data, R: ReadRef<'data>> SymbolTable<'data, R> {
     /// Read the symbol table.
-    pub fn parse<R: ReadRef<'data>>(header: &pe::ImageFileHeader, data: R) -> Result<Self> {
+    pub fn parse(header: &pe::ImageFileHeader, data: R) -> Result<Self> {
         // The symbol table may not be present.
         let mut offset = header.pointer_to_symbol_table.get(LE).into();
         let (symbols, strings) = if offset != 0 {
@@ -37,24 +40,22 @@ impl<'data> SymbolTable<'data> {
                 .read_at::<U32Bytes<_>>(offset)
                 .read_error("Missing COFF string table")?
                 .get(LE);
-            let strings = data
-                .read_bytes(&mut offset, length.into())
+            let str_end = offset
+                .checked_add(length as u64)
                 .read_error("Invalid COFF string table length")?;
+            let strings = StringTable::new(data, offset, str_end);
 
             (symbols, strings)
         } else {
-            (&[][..], &[][..])
+            (&[][..], StringTable::default())
         };
 
-        Ok(SymbolTable {
-            symbols,
-            strings: StringTable::new(strings),
-        })
+        Ok(SymbolTable { symbols, strings })
     }
 
     /// Return the string table used for the symbol names.
     #[inline]
-    pub fn strings(&self) -> StringTable<'data> {
+    pub fn strings(&self) -> StringTable<'data, R> {
         self.strings
     }
 
@@ -74,7 +75,7 @@ impl<'data> SymbolTable<'data> {
 
     /// Iterate over the symbols.
     #[inline]
-    pub fn iter<'table>(&'table self) -> SymbolIterator<'data, 'table> {
+    pub fn iter<'table>(&'table self) -> SymbolIterator<'data, 'table, R> {
         SymbolIterator {
             symbols: self,
             index: 0,
@@ -153,12 +154,15 @@ impl<'data> SymbolTable<'data> {
 ///
 /// Yields the index and symbol structure for each symbol.
 #[derive(Debug)]
-pub struct SymbolIterator<'data, 'table> {
-    symbols: &'table SymbolTable<'data>,
+pub struct SymbolIterator<'data, 'table, R = &'data [u8]>
+where
+    R: ReadRef<'data>,
+{
+    symbols: &'table SymbolTable<'data, R>,
     index: usize,
 }
 
-impl<'data, 'table> Iterator for SymbolIterator<'data, 'table> {
+impl<'data, 'table, R: ReadRef<'data>> Iterator for SymbolIterator<'data, 'table, R> {
     type Item = (usize, &'data pe::ImageSymbol);
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -173,7 +177,10 @@ impl pe::ImageSymbol {
     /// Parse a COFF symbol name.
     ///
     /// `strings` must be the string table used for symbol names.
-    pub fn name<'data>(&'data self, strings: StringTable<'data>) -> Result<&'data [u8]> {
+    pub fn name<'data, R: ReadRef<'data>>(
+        &'data self,
+        strings: StringTable<'data, R>,
+    ) -> Result<&'data [u8]> {
         if self.name[0] == 0 {
             // If the name starts with 0 then the last 4 bytes are a string table offset.
             let offset = u32::from_le_bytes(self.name[4..8].try_into().unwrap());
@@ -236,15 +243,20 @@ impl pe::ImageSymbol {
 
 /// A symbol table of a `CoffFile`.
 #[derive(Debug, Clone, Copy)]
-pub struct CoffSymbolTable<'data, 'file> {
-    pub(crate) file: &'file CoffCommon<'data>,
+pub struct CoffSymbolTable<'data, 'file, R = &'data [u8]>
+where
+    R: ReadRef<'data>,
+{
+    pub(crate) file: &'file CoffCommon<'data, R>,
 }
 
-impl<'data, 'file> read::private::Sealed for CoffSymbolTable<'data, 'file> {}
+impl<'data, 'file, R: ReadRef<'data>> read::private::Sealed for CoffSymbolTable<'data, 'file, R> {}
 
-impl<'data, 'file> ObjectSymbolTable<'data> for CoffSymbolTable<'data, 'file> {
-    type Symbol = CoffSymbol<'data, 'file>;
-    type SymbolIterator = CoffSymbolIterator<'data, 'file>;
+impl<'data, 'file, R: ReadRef<'data>> ObjectSymbolTable<'data>
+    for CoffSymbolTable<'data, 'file, R>
+{
+    type Symbol = CoffSymbol<'data, 'file, R>;
+    type SymbolIterator = CoffSymbolIterator<'data, 'file, R>;
 
     fn symbols(&self) -> Self::SymbolIterator {
         CoffSymbolIterator {
@@ -264,19 +276,22 @@ impl<'data, 'file> ObjectSymbolTable<'data> for CoffSymbolTable<'data, 'file> {
 }
 
 /// An iterator over the symbols of a `CoffFile`.
-pub struct CoffSymbolIterator<'data, 'file> {
-    pub(crate) file: &'file CoffCommon<'data>,
+pub struct CoffSymbolIterator<'data, 'file, R = &'data [u8]>
+where
+    R: ReadRef<'data>,
+{
+    pub(crate) file: &'file CoffCommon<'data, R>,
     pub(crate) index: usize,
 }
 
-impl<'data, 'file> fmt::Debug for CoffSymbolIterator<'data, 'file> {
+impl<'data, 'file, R: ReadRef<'data>> fmt::Debug for CoffSymbolIterator<'data, 'file, R> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("CoffSymbolIterator").finish()
     }
 }
 
-impl<'data, 'file> Iterator for CoffSymbolIterator<'data, 'file> {
-    type Item = CoffSymbol<'data, 'file>;
+impl<'data, 'file, R: ReadRef<'data>> Iterator for CoffSymbolIterator<'data, 'file, R> {
+    type Item = CoffSymbol<'data, 'file, R>;
 
     fn next(&mut self) -> Option<Self::Item> {
         let index = self.index;
@@ -292,15 +307,18 @@ impl<'data, 'file> Iterator for CoffSymbolIterator<'data, 'file> {
 
 /// A symbol of a `CoffFile`.
 #[derive(Debug, Clone, Copy)]
-pub struct CoffSymbol<'data, 'file> {
-    pub(crate) file: &'file CoffCommon<'data>,
+pub struct CoffSymbol<'data, 'file, R = &'data [u8]>
+where
+    R: ReadRef<'data>,
+{
+    pub(crate) file: &'file CoffCommon<'data, R>,
     pub(crate) index: SymbolIndex,
     pub(crate) symbol: &'data pe::ImageSymbol,
 }
 
-impl<'data, 'file> read::private::Sealed for CoffSymbol<'data, 'file> {}
+impl<'data, 'file, R: ReadRef<'data>> read::private::Sealed for CoffSymbol<'data, 'file, R> {}
 
-impl<'data, 'file> ObjectSymbol<'data> for CoffSymbol<'data, 'file> {
+impl<'data, 'file, R: ReadRef<'data>> ObjectSymbol<'data> for CoffSymbol<'data, 'file, R> {
     #[inline]
     fn index(&self) -> SymbolIndex {
         self.index
