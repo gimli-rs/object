@@ -936,6 +936,7 @@ impl Object {
                 SectionKind::ReadOnlyString | SectionKind::OtherString => 1,
                 SectionKind::Elf(typ) if typ == elf::SHT_DYNSYM => elf.symbol_size() as u64,
                 SectionKind::Elf(typ) if typ == elf::SHT_DYNAMIC => elf.dynamic_entsize() as u64,
+                SectionKind::Elf(typ) if typ == elf::SHT_GNU_versym => std::mem::size_of::<U16<Endianness>>() as u64,
                 _ => 0,
             };
             let sh_name = section_offsets[index]
