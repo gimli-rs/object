@@ -353,7 +353,14 @@ impl Object {
             abi_version: 0,
             padding: [0; 7],
         };
-        let e_type = elf::ET_REL;
+        // Currently there's no way for user to determine what type of object
+        // is produced.  So, try inferring from the presence of the dynamic
+        // section type (which is only slightly better).
+        let e_type = if self.sections.iter().find(|s| s.kind == SectionKind::Elf(elf::SHT_DYNAMIC)).is_some() {
+            elf::ET_DYN
+        } else {
+            elf::ET_REL
+        };
         let e_machine = match self.architecture {
             Architecture::Aarch64 => elf::EM_AARCH64,
             Architecture::Arm => elf::EM_ARM,
@@ -881,6 +888,12 @@ impl Object {
                 },
             );
         }
+        // Dynamic sections need to `sh_link` to the dynstr section, so lookup
+        // it's section index now.
+        let dynstr_index = self.sections.iter()
+            .enumerate()
+            .find(|(idx, s)| s.name() == Some(".dynstr"))
+            .map(|(idx, s)| section_offsets[idx].index);
         for (index, section) in self.sections.iter().enumerate() {
             let sh_type = match section.kind {
                 SectionKind::UninitializedData | SectionKind::UninitializedTls => elf::SHT_NOBITS,
@@ -921,6 +934,9 @@ impl Object {
             // TODO: not sure if this is correct, maybe user should determine this
             let sh_entsize = match section.kind {
                 SectionKind::ReadOnlyString | SectionKind::OtherString => 1,
+                SectionKind::Elf(typ) if typ == elf::SHT_DYNSYM => elf.symbol_size() as u64,
+                SectionKind::Elf(typ) if typ == elf::SHT_DYNAMIC => elf.dynamic_entsize() as u64,
+                SectionKind::Elf(typ) if typ == elf::SHT_GNU_versym => std::mem::size_of::<U16<Endianness>>() as u64,
                 _ => 0,
             };
             let sh_name = section_offsets[index]
@@ -936,8 +952,33 @@ impl Object {
                     sh_addr: 0,
                     sh_offset: section_offsets[index].offset as u64,
                     sh_size: section.size,
-                    sh_link: 0,
-                    sh_info: 0,
+                    // Link dynsyn and dynamic sections to the dynstr section.
+                    sh_link: match section.kind {
+                        SectionKind::Elf(typ) if typ == elf::SHT_DYNSYM || typ == elf::SHT_DYNAMIC =>
+                            dynstr_index.unwrap() as u32,
+                        _ => 0,
+                    },
+                    // The dynsym index needs to record it's first non-local
+                    // symbol in the `sh_info` section, so iterate the symbols
+                    // to find this.
+                    sh_info:  match section.kind {
+                        SectionKind::Elf(typ) if typ == elf::SHT_DYNSYM => {
+                            let mut info = 0;
+                            let mut symbols: &[Sym] =
+                                unsafe { std::slice::from_raw_parts(
+                                    section.data.as_slice().as_ptr() as *const Sym,
+                                    section.data.len() / std::mem::size_of::<Sym>(),
+                                ) };
+                            for sym in symbols {
+                                if sym.st_info >> 4 != elf::STB_LOCAL {
+                                    break;
+                                }
+                                info += 1;
+                            }
+                            info
+                        }
+                        _ => 0,
+                    },
                     sh_addralign: section.align,
                     sh_entsize,
                 },
@@ -1075,6 +1116,7 @@ struct SectionHeader {
 }
 
 /// Native endian version of `Sym64`.
+#[repr(C)]
 struct Sym {
     st_name: u32,
     st_info: u8,
@@ -1096,6 +1138,7 @@ trait Elf {
     fn file_header_size(&self) -> usize;
     fn section_header_size(&self) -> usize;
     fn symbol_size(&self) -> usize;
+    fn dynamic_entsize(&self) -> usize;
     fn rel_size(&self, is_rela: bool) -> usize;
     fn write_file_header(&self, buffer: &mut dyn WritableBuffer, section: FileHeader);
     fn write_section_header(&self, buffer: &mut dyn WritableBuffer, section: SectionHeader);
@@ -1124,6 +1167,10 @@ impl<E: Endian> Elf for Elf32<E> {
 
     fn symbol_size(&self) -> usize {
         mem::size_of::<elf::Sym32<E>>()
+    }
+
+    fn dynamic_entsize(&self) -> usize {
+        mem::size_of::<elf::Dyn32<E>>()
     }
 
     fn rel_size(&self, is_rela: bool) -> usize {
@@ -1225,6 +1272,10 @@ impl<E: Endian> Elf for Elf64<E> {
 
     fn symbol_size(&self) -> usize {
         mem::size_of::<elf::Sym64<E>>()
+    }
+
+    fn dynamic_entsize(&self) -> usize {
+        mem::size_of::<elf::Dyn64<E>>()
     }
 
     fn rel_size(&self, is_rela: bool) -> usize {

@@ -705,6 +705,8 @@ pub const SHT_HIPROC: u32 = 0x7fff_ffff;
 pub const SHT_LOUSER: u32 = 0x8000_0000;
 /// End of application-specific section types.
 pub const SHT_HIUSER: u32 = 0x8fff_ffff;
+/// Symbol versions.
+pub const SHT_GNU_versym: u32 = 0x6fff_ffff;
 
 // Values for `SectionHeader*::sh_flags`.
 /// Section is writable.
