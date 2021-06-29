@@ -3,7 +3,6 @@ use std::vec::Vec;
 
 use crate::endian::{LittleEndian as LE, U16Bytes, U32Bytes, U16, U32};
 use crate::pe as coff;
-use crate::pod::{bytes_of, WritableBuffer};
 use crate::write::string::*;
 use crate::write::util::*;
 use crate::write::*;
@@ -58,7 +57,7 @@ impl Object {
     pub(crate) fn coff_subsection_name(&self, section: &[u8], value: &[u8]) -> Vec<u8> {
         let mut name = section.to_vec();
         name.push(b'$');
-        name.extend(value);
+        name.extend_from_slice(value);
         name
     }
 
@@ -108,7 +107,7 @@ impl Object {
         let stub_size = self.architecture.address_size().unwrap().bytes();
 
         let mut name = b".rdata$.refptr.".to_vec();
-        name.extend(&self.symbols[symbol_id.0].name);
+        name.extend_from_slice(&self.symbols[symbol_id.0].name);
         let section_id = self.add_section(Vec::new(), name, SectionKind::ReadOnlyData);
         let section = self.section_mut(section_id);
         section.set_data(vec![0; stub_size as usize], u64::from(stub_size));
@@ -122,7 +121,7 @@ impl Object {
         }];
 
         let mut name = b".refptr.".to_vec();
-        name.extend(&self.symbol(symbol_id).name);
+        name.extend_from_slice(&self.symbol(symbol_id).name);
         let stub_id = self.add_raw_symbol(Symbol {
             name,
             value: 0,
@@ -289,7 +288,7 @@ impl Object {
                 _ => U16::default(),
             },
         };
-        buffer.extend(bytes_of(&header));
+        buffer.write(&header);
 
         // Write section headers.
         for (index, section) in self.sections.iter().enumerate() {
@@ -417,7 +416,7 @@ impl Object {
                     return Err(Error(format!("invalid section name offset {}", str_offset)));
                 }
             }
-            buffer.extend(bytes_of(&coff_section));
+            buffer.write(&coff_section);
         }
 
         // Write section data and relocations.
@@ -426,7 +425,7 @@ impl Object {
             if len != 0 {
                 write_align(buffer, 4);
                 debug_assert_eq!(section_offsets[index].offset, buffer.len());
-                buffer.extend(section.data.as_slice());
+                buffer.write_bytes(&section.data);
             }
 
             if !section.relocations.is_empty() {
@@ -481,7 +480,7 @@ impl Object {
                         ),
                         typ: U16Bytes::new(LE, typ),
                     };
-                    buffer.extend(bytes_of(&coff_relocation));
+                    buffer.write(&coff_relocation);
                 }
             }
         }
@@ -571,7 +570,7 @@ impl Object {
                 let str_offset = strtab.get_offset(symbol_offsets[index].str_id.unwrap());
                 coff_symbol.name[4..8].copy_from_slice(&u32::to_le_bytes(str_offset as u32));
             }
-            buffer.extend(bytes_of(&coff_symbol));
+            buffer.write(&coff_symbol);
 
             // Write auxiliary symbols.
             match symbol.kind {
@@ -579,7 +578,7 @@ impl Object {
                     let aux_len = number_of_aux_symbols as usize * coff::IMAGE_SIZEOF_SYMBOL;
                     debug_assert!(aux_len >= symbol.name.len());
                     let old_len = buffer.len();
-                    buffer.extend(&symbol.name);
+                    buffer.write_bytes(&symbol.name);
                     buffer.resize(old_len + aux_len, 0);
                 }
                 SymbolKind::Section => {
@@ -600,7 +599,7 @@ impl Object {
                         // TODO: bigobj
                         high_number: U16Bytes::default(),
                     };
-                    buffer.extend(bytes_of(&aux));
+                    buffer.write(&aux);
                 }
                 _ => {
                     debug_assert_eq!(number_of_aux_symbols, 0);
@@ -610,8 +609,8 @@ impl Object {
 
         // Write strtab section.
         debug_assert_eq!(strtab_offset, buffer.len());
-        buffer.extend(&u32::to_le_bytes(strtab_len as u32));
-        buffer.extend(&strtab_data);
+        buffer.write_bytes(&u32::to_le_bytes(strtab_len as u32));
+        buffer.write_bytes(&strtab_data);
 
         debug_assert_eq!(offset, buffer.len());
 

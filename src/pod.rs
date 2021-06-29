@@ -9,7 +9,6 @@
 )]
 
 use alloc::string::String;
-use alloc::vec::Vec;
 use core::{fmt, mem, result, slice};
 
 type Result<T> = result::Result<T, ()>;
@@ -308,90 +307,7 @@ impl<'data> Bytes<'data> {
     }
 }
 
-/// Trait for writable buffer.
-pub trait WritableBuffer {
-    /// Returns position/offset for data to be written at.
-    fn len(&self) -> usize;
-    /// Returns true if buffer contains no data.
-    fn is_empty(&self) -> bool;
-    /// Reserves specified number of bytes in the buffer.
-    fn reserve(&mut self, additional: usize) -> Result<()>;
-    /// Resizes buffer to the specified length, fills new items
-    /// with the specified value.
-    fn resize(&mut self, new_len: usize, value: u8);
-    /// Extends buffer with the specified slice of bytes.
-    fn extend(&mut self, val: &[u8]);
-}
-
-/// A newtype for byte vectors.
-///
-/// It provides convenience methods for `Pod` types.
-// TODO: should this be an extension trait for `Vec<u8>` instead?
-#[derive(Default, Clone, PartialEq, Eq)]
-pub(crate) struct BytesMut(pub Vec<u8>);
-
-impl fmt::Debug for BytesMut {
-    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
-        debug_list_bytes(&self.0, fmt)
-    }
-}
-
-impl BytesMut {
-    #[inline]
-    pub fn new() -> Self {
-        BytesMut(Vec::new())
-    }
-
-    #[inline]
-    #[allow(dead_code)]
-    pub fn write<T: Pod>(&mut self, val: &T) {
-        self.0.extend_from_slice(bytes_of(val))
-    }
-
-    #[inline]
-    pub fn write_at<T: Pod>(&mut self, offset: usize, val: &T) -> Result<()> {
-        let src = bytes_of(val);
-        let dest = self.0.get_mut(offset..).ok_or(())?;
-        let dest = dest.get_mut(..src.len()).ok_or(())?;
-        dest.copy_from_slice(src);
-        Ok(())
-    }
-
-    #[inline]
-    pub fn as_slice(&self) -> &[u8] {
-        self.0.as_slice()
-    }
-}
-
-impl WritableBuffer for BytesMut {
-    #[inline]
-    fn len(&self) -> usize {
-        self.0.len()
-    }
-
-    #[inline]
-    fn is_empty(&self) -> bool {
-        self.0.is_empty()
-    }
-
-    #[inline]
-    fn reserve(&mut self, additional: usize) -> Result<()> {
-        self.0.reserve(additional);
-        Ok(())
-    }
-
-    #[inline]
-    fn resize(&mut self, new_len: usize, value: u8) {
-        self.0.resize(new_len, value);
-    }
-
-    #[inline]
-    fn extend(&mut self, val: &[u8]) {
-        self.0.extend_from_slice(val)
-    }
-}
-
-// Only for Debug impl of `Bytes/BytesMut`.
+// Only for Debug impl of `Bytes`.
 fn debug_list_bytes(bytes: &[u8], fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
     let mut list = fmt.debug_list();
     list.entries(bytes.iter().take(8).copied().map(DebugByte));
@@ -606,30 +522,6 @@ mod tests {
     }
 
     #[test]
-    fn bytes_mut() {
-        let data = BytesMut(vec![0x01, 0x23, 0x45, 0x67]);
-
-        let mut bytes = data.clone();
-        bytes.write(&u16::to_be(0x89ab));
-        assert_eq!(bytes.0, [0x01, 0x23, 0x45, 0x67, 0x89, 0xab]);
-
-        let mut bytes = data.clone();
-        assert_eq!(bytes.write_at(0, &u16::to_be(0x89ab)), Ok(()));
-        assert_eq!(bytes.0, [0x89, 0xab, 0x45, 0x67]);
-
-        let mut bytes = data.clone();
-        assert_eq!(bytes.write_at(2, &u16::to_be(0x89ab)), Ok(()));
-        assert_eq!(bytes.0, [0x01, 0x23, 0x89, 0xab]);
-
-        assert_eq!(bytes.write_at(3, &u16::to_be(0x89ab)), Err(()));
-        assert_eq!(bytes.write_at(4, &u16::to_be(0x89ab)), Err(()));
-        assert_eq!(
-            BytesMut::default().write_at(0, &u32::to_be(0x89ab)),
-            Err(())
-        );
-    }
-
-    #[test]
     fn bytes_debug() {
         assert_eq!(format!("{:?}", Bytes(&[])), "[]");
         assert_eq!(format!("{:?}", Bytes(&[0x01])), "[0x01]");
@@ -644,15 +536,6 @@ mod tests {
             format!(
                 "{:?}",
                 Bytes(&[0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09])
-            ),
-            "[0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, ...; 9]"
-        );
-
-        assert_eq!(format!("{:?}", BytesMut(vec![])), "[]");
-        assert_eq!(
-            format!(
-                "{:?}",
-                BytesMut(vec![0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09])
             ),
             "[0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, ...; 9]"
         );
