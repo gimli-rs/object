@@ -87,6 +87,12 @@ impl<T> ReadError<T> for result::Result<T, ()> {
     }
 }
 
+impl<T> ReadError<T> for result::Result<T, Error> {
+    fn read_error(self, error: &'static str) -> Result<T> {
+        self.map_err(|_| Error(error))
+    }
+}
+
 impl<T> ReadError<T> for Option<T> {
     fn read_error(self, error: &'static str) -> Result<T> {
         self.ok_or(Error(error))

@@ -457,9 +457,10 @@ pub trait SectionHeader: Debug + Pod {
         &self,
         endian: Self::Endian,
         data: R,
-    ) -> Result<&'data [u8], ()> {
+    ) -> read::Result<&'data [u8]> {
         if let Some((offset, size)) = self.file_range(endian) {
             data.read_bytes_at(offset, size)
+                .read_error("Invalid ELF section size or offset")
         } else {
             Ok(&[])
         }
@@ -474,9 +475,10 @@ pub trait SectionHeader: Debug + Pod {
         &self,
         endian: Self::Endian,
         data: R,
-    ) -> Result<&'data [T], ()> {
+    ) -> read::Result<&'data [T]> {
         let mut data = self.data(endian, data).map(Bytes)?;
         data.read_slice(data.len() / mem::size_of::<T>())
+            .read_error("Invalid ELF section size or offset")
     }
 
     /// Return the symbols in the section.
