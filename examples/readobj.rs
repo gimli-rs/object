@@ -1173,6 +1173,16 @@ mod elf {
         SHT_PREINIT_ARRAY,
         SHT_GROUP,
         SHT_SYMTAB_SHNDX,
+        SHT_GNU_ATTRIBUTES,
+        SHT_GNU_HASH,
+        SHT_GNU_LIBLIST,
+        SHT_CHECKSUM,
+        SHT_SUNW_move,
+        SHT_SUNW_COMDAT,
+        SHT_SUNW_syminfo,
+        SHT_GNU_VERDEF,
+        SHT_GNU_VERNEED,
+        SHT_GNU_VERSYM,
     );
     static FLAGS_SHT_MIPS: &[Flag<u32>] = &flags!(
         SHT_MIPS_LIBLIST,

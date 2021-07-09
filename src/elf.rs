@@ -695,6 +695,33 @@ pub const SHT_GROUP: u32 = 17;
 pub const SHT_SYMTAB_SHNDX: u32 = 18;
 /// Start of OS-specific section types.
 pub const SHT_LOOS: u32 = 0x6000_0000;
+/// Object attributes.
+pub const SHT_GNU_ATTRIBUTES: u32 = 0x6fff_fff5;
+/// GNU-style hash table.
+pub const SHT_GNU_HASH: u32 = 0x6fff_fff6;
+/// Prelink library list
+pub const SHT_GNU_LIBLIST: u32 = 0x6fff_fff7;
+/// Checksum for DSO content.
+pub const SHT_CHECKSUM: u32 = 0x6fff_fff8;
+/// Sun-specific low bound.
+pub const SHT_LOSUNW: u32 = 0x6fff_fffa;
+#[allow(missing_docs, non_upper_case_globals)]
+pub const SHT_SUNW_move: u32 = 0x6fff_fffa;
+#[allow(missing_docs)]
+pub const SHT_SUNW_COMDAT: u32 = 0x6fff_fffb;
+#[allow(missing_docs, non_upper_case_globals)]
+pub const SHT_SUNW_syminfo: u32 = 0x6fff_fffc;
+/// Version definition section.
+#[allow(non_upper_case_globals)]
+pub const SHT_GNU_VERDEF: u32 = 0x6fff_fffd;
+/// Version needs section.
+#[allow(non_upper_case_globals)]
+pub const SHT_GNU_VERNEED: u32 = 0x6fff_fffe;
+/// Version symbol table.
+#[allow(non_upper_case_globals)]
+pub const SHT_GNU_VERSYM: u32 = 0x6fff_ffff;
+/// Sun-specific high bound.
+pub const SHT_HISUNW: u32 = 0x6fff_ffff;
 /// End of OS-specific section types.
 pub const SHT_HIOS: u32 = 0x6fff_ffff;
 /// Start of processor-specific section types.
