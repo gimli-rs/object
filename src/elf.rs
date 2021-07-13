@@ -1796,6 +1796,65 @@ pub const NT_GNU_PROPERTY_TYPE_0: u32 = 5;
 // TODO: GNU_PROPERTY_*
 // TODO: Elf*_Move
 
+/// Header of `SHT_HASH` section.
+#[derive(Debug, Clone, Copy)]
+#[repr(C)]
+pub struct HashHeader<E: Endian> {
+    /// The number of hash buckets.
+    pub bucket_count: U32<E>,
+    /// The number of chain values.
+    pub chain_count: U32<E>,
+    // Array of hash bucket start indices.
+    // buckets: U32<E>[bucket_count]
+    // Array of hash chain links. An index of 0 terminates the chain.
+    // chains: U32<E>[chain_count]
+}
+
+/// Calculate the SysV hash for a symbol name.
+///
+/// Used for `SHT_HASH`.
+pub fn hash(name: &[u8]) -> u32 {
+    let mut hash = 0u32;
+    for byte in name {
+        hash = hash.wrapping_mul(16).wrapping_add(u32::from(*byte));
+        hash ^= (hash >> 24) & 0xf0;
+    }
+    hash & 0xfff_ffff
+}
+
+/// Header of `SHT_GNU_HASH` section.
+#[derive(Debug, Clone, Copy)]
+#[repr(C)]
+pub struct GnuHashHeader<E: Endian> {
+    /// The number of hash buckets.
+    pub bucket_count: U32<E>,
+    /// The symbol table index of the first symbol in the hash.
+    pub symbol_base: U32<E>,
+    /// The number of words in the bloom filter.
+    ///
+    /// Must be a non-zero power of 2.
+    pub bloom_count: U32<E>,
+    /// The bit shift count for the bloom filter.
+    pub bloom_shift: U32<E>,
+    // Array of bloom filter words.
+    // bloom_filters: U32<E>[bloom_count] or U64<E>[bloom_count]
+    // Array of hash bucket start indices.
+    // buckets: U32<E>[bucket_count]
+    // Array of hash values, one for each symbol starting at symbol_base.
+    // values: U32<E>[symbol_count]
+}
+
+/// Calculate the GNU hash for a symbol name.
+///
+/// Used for `SHT_GNU_HASH`.
+pub fn gnu_hash(name: &[u8]) -> u32 {
+    let mut hash = 5381u32;
+    for byte in name {
+        hash = hash.wrapping_mul(33).wrapping_add(u32::from(*byte));
+    }
+    hash
+}
+
 // Motorola 68k specific definitions.
 
 // m68k values for `Rel*::r_type`.
@@ -6097,4 +6156,6 @@ unsafe_impl_endian_pod!(
     Dyn64,
     NoteHeader32,
     NoteHeader64,
+    HashHeader,
+    GnuHashHeader,
 );

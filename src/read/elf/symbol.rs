@@ -102,6 +102,12 @@ impl<'data, Elf: FileHeader, R: ReadRef<'data>> SymbolTable<'data, Elf, R> {
         self.strings
     }
 
+    /// Return the symbol table.
+    #[inline]
+    pub fn symbols(&self) -> &'data [Elf::Sym] {
+        self.symbols
+    }
+
     /// Iterate over the symbols.
     #[inline]
     pub fn iter(&self) -> slice::Iter<'data, Elf::Sym> {

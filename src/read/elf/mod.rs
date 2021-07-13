@@ -31,3 +31,6 @@ pub use compression::*;
 
 mod note;
 pub use note::*;
+
+mod hash;
+pub use hash::*;

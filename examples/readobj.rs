@@ -540,8 +540,9 @@ mod elf {
                     SHT_RELA => print_section_rela(p, endian, data, elf, sections, section),
                     SHT_NOTE => print_section_notes(p, endian, data, elf, section),
                     SHT_GROUP => print_section_group(p, endian, data, elf, sections, section),
+                    SHT_HASH => print_hash(p, endian, data, elf, sections, section),
+                    SHT_GNU_HASH => print_gnu_hash(p, endian, data, elf, sections, section),
                     // TODO:
-                    //SHT_HASH =>
                     //SHT_DYNAMIC =>
                     //SHT_SHLIB =>
                     //SHT_INIT_ARRAY =>
@@ -790,6 +791,69 @@ mod elf {
                 p.field_bytes("Desc", note.desc());
             });
         }
+    }
+
+    fn print_hash<Elf: FileHeader>(
+        p: &mut Printer<impl Write>,
+        endian: Elf::Endian,
+        data: &[u8],
+        _elf: &Elf,
+        _sections: &SectionTable<Elf>,
+        section: &Elf::SectionHeader,
+    ) {
+        if let Ok(Some(hash)) = section.hash_header(endian, data) {
+            p.group("Hash", |p| {
+                p.field("BucketCount", hash.bucket_count.get(endian));
+                p.field("ChainCount", hash.chain_count.get(endian));
+            });
+        }
+        /* TODO: add this in a test somewhere
+        if let Ok(Some(hash_table)) = section.hash(endian, data) {
+            if let Ok(symbols) = _sections.symbols(endian, data, SHT_DYNSYM) {
+                for symbol in symbols.symbols() {
+                    let name = symbols.symbol_name(endian, symbol).unwrap();
+                    if !symbol.is_definition(endian) {
+                        continue;
+                    }
+                    let hash = hash(name);
+                    let hash_symbol = hash_table.find(endian, name, hash, &symbols).unwrap();
+                    let hash_name = symbols.symbol_name(endian, hash_symbol).unwrap();
+                    assert_eq!(name, hash_name);
+                }
+            }
+        }
+        */
+    }
+
+    fn print_gnu_hash<Elf: FileHeader>(
+        p: &mut Printer<impl Write>,
+        endian: Elf::Endian,
+        data: &[u8],
+        _elf: &Elf,
+        _sections: &SectionTable<Elf>,
+        section: &Elf::SectionHeader,
+    ) {
+        if let Ok(Some(hash)) = section.gnu_hash_header(endian, data) {
+            p.group("GnuHash", |p| {
+                p.field("BucketCount", hash.bucket_count.get(endian));
+                p.field("SymbolBase", hash.symbol_base.get(endian));
+                p.field("BloomCount", hash.bloom_count.get(endian));
+                p.field("BloomShift", hash.bloom_shift.get(endian));
+            });
+        }
+        /* TODO: add this in a test somewhere
+        if let Ok(Some(hash_table)) = section.gnu_hash(endian, data) {
+            if let Ok(symbols) = _sections.symbols(endian, data, SHT_DYNSYM) {
+                for symbol in &symbols.symbols()[hash_table.symbol_base() as usize..] {
+                    let name = symbols.symbol_name(endian, symbol).unwrap();
+                    let hash = gnu_hash(name);
+                    let hash_symbol = hash_table.find(endian, name, hash, &symbols).unwrap();
+                    let hash_name = symbols.symbol_name(endian, hash_symbol).unwrap();
+                    assert_eq!(name, hash_name);
+                }
+            }
+        }
+        */
     }
 
     static FLAGS_EI_CLASS: &[Flag<u8>] = &flags!(ELFCLASSNONE, ELFCLASS32, ELFCLASS64);
