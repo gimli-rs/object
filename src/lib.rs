@@ -25,6 +25,25 @@
 //! ## Unified write API
 //!
 //! [write::Object] allows building an object and then writing it out.
+//!
+//! ## Example
+//!  ```rust
+//! use std::fs::File;
+//! use std::io::Read;
+//! use object::{Object, ObjectSection, File as ObjectFile};
+//!
+//! /// Reads an ELF-file and displays the content of the ".boot" section.
+//! fn main() {
+//!     let mut file = File::open("./multiboot2-binary.elf").unwrap();
+//!     let mut data = vec![];
+//!     file.read_to_end(&mut data).unwrap();
+//!     let data = data.into_boxed_slice();
+//!     let obj_file = ObjectFile::parse(&*data).unwrap();
+//!     let section = obj_file.section_by_name(".boot").unwrap();
+//!     let data = section.data().unwrap();
+//!     println!("{:#x?}", data)
+//! }
+// ```
 
 #![deny(missing_docs)]
 #![deny(missing_debug_implementations)]
