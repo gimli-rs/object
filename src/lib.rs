@@ -27,7 +27,7 @@
 //! [write::Object] allows building an object and then writing it out.
 //!
 //! ## Example for unified read API
-//!  ```rust
+//!  ```no_run
 //! use object::{Object, ObjectSection};
 //! use std::error::Error;
 //! use std::fs;
