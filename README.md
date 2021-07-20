@@ -13,22 +13,22 @@ For reading files, it provides multiple levels of support:
 
 Supported file formats: ELF, Mach-O, Windows PE/COFF, Wasm, and Unix archive.
 
-## Example
+## Example for unified read API
 ```rust
-use std::fs::File;
-use std::io::Read;
-use object::{Object, ObjectSection, File as ObjectFile};
+use object::{Object, ObjectSection};
+use std::error::Error;
+use std::fs;
 
-/// Reads an ELF-file and displays the content of the ".boot" section.
-fn main() {
-    let mut file = File::open("./multiboot2-binary.elf").unwrap();
-    let mut data = vec![];
-    file.read_to_end(&mut data).unwrap();
-    let data = data.into_boxed_slice();
-    let obj_file = ObjectFile::parse(&*data).unwrap();
-    let section = obj_file.section_by_name(".boot").unwrap();
-    let data = section.data().unwrap();
-    println!("{:#x?}", data)
+/// Reads a file and displays the content of the ".boot" section.
+fn main() -> Result<(), Box<dyn Error>> {
+  let bin_data = fs::read("./multiboot2-binary.elf")?;
+  let obj_file = object::File::parse(&*bin_data)?;
+  if let Some(section) = obj_file.section_by_name(".boot") {
+    println!("{:#x?}", section.data()?);
+  } else {
+    eprintln!("section not available");
+  }
+  Ok(())
 }
 ```
 
