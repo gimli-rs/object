@@ -1696,10 +1696,99 @@ pub const DF_1_STUB: u32 = 0x0400_0000;
 #[allow(missing_docs)]
 pub const DF_1_PIE: u32 = 0x0800_0000;
 
-// TODO: ELF*_Verdef, VER_DEF_*, VER_FLG_*, VER_NDX_*
-// TODO: Elf*_Verdaux
-// TODO: Elf*_Verneed, VER_NEED_*
-// TODO: Elf*_Vernaux, VER_FLG_*
+/// Version symbol information
+#[derive(Debug, Clone, Copy)]
+#[repr(C)]
+pub struct Versym<E: Endian>(pub U16<E>);
+
+/// Version definition sections
+#[derive(Debug, Clone, Copy)]
+#[repr(C)]
+pub struct Verdef<E: Endian> {
+    /// Version revision
+    pub vd_version: U16<E>,
+    /// Version information
+    pub vd_flags: U16<E>,
+    /// Version Index
+    pub vd_ndx: U16<E>,
+    /// Number of associated aux entries
+    pub vd_cnt: U16<E>,
+    /// Version name hash value
+    pub vd_hash: U32<E>,
+    /// Offset in bytes to verdaux array
+    pub vd_aux: U32<E>,
+    /// Offset in bytes to next verdef entry
+    pub vd_next: U32<E>,
+}
+
+// Legal values for vd_version (version revision).
+/// No version
+pub const VER_DEF_NONE: u16 = 0;
+/// Current version
+pub const VER_DEF_CURRENT: u16 = 1;
+
+// Legal values for vd_flags and vna_flags (version information flags).
+/// Version definition of file itself
+pub const VER_FLG_BASE: u16 = 0x1;
+/// Weak version identifier
+pub const VER_FLG_WEAK: u16 = 0x2;
+
+// Versym symbol index values.
+/// Symbol is local.
+pub const VER_NDX_LOCAL: u16 = 0;
+/// Symbol is global.
+pub const VER_NDX_GLOBAL: u16 = 1;
+/// Symbol is hidden.
+pub const VER_NDX_HIDDEN: u16 = 0x8000;
+
+/// Auxiliary version information.
+#[derive(Debug, Clone, Copy)]
+#[repr(C)]
+pub struct Verdaux<E: Endian> {
+    /// Version or dependency names
+    pub vda_name: U32<E>,
+    /// Offset in bytes to next verdaux
+    pub vda_next: U32<E>,
+}
+
+/// Version dependency.
+#[derive(Debug, Clone, Copy)]
+#[repr(C)]
+pub struct Verneed<E: Endian> {
+    /// Version of structure
+    pub vn_version: U16<E>,
+    /// Number of associated aux entries
+    pub vn_cnt: U16<E>,
+    /// Offset of filename for this dependency
+    pub vn_file: U32<E>,
+    /// Offset in bytes to vernaux array
+    pub vn_aux: U32<E>,
+    /// Offset in bytes to next verneed entry
+    pub vn_next: U32<E>,
+}
+
+// Legal values for vn_version (version revision).
+/// No version
+pub const VER_NEED_NONE: u16 = 0;
+/// Current version
+pub const VER_NEED_CURRENT: u16 = 1;
+
+/// Auxiliary needed version information.
+#[derive(Debug, Clone, Copy)]
+#[repr(C)]
+pub struct Vernaux<E: Endian> {
+    /// Hash value of dependency name
+    pub vna_hash: U32<E>,
+    /// Dependency specific information
+    pub vna_flags: U16<E>,
+    /// Version Index
+    pub vna_other: U16<E>,
+    /// Dependency name string offset
+    pub vna_name: U32<E>,
+    /// Offset in bytes to next vernaux entry
+    pub vna_next: U32<E>,
+}
+
 // TODO: Elf*_auxv_t, AT_*
 
 /// Note section entry header.
@@ -6154,6 +6243,11 @@ unsafe_impl_endian_pod!(
     ProgramHeader64,
     Dyn32,
     Dyn64,
+    Versym,
+    Verdef,
+    Verdaux,
+    Verneed,
+    Vernaux,
     NoteHeader32,
     NoteHeader64,
     HashHeader,

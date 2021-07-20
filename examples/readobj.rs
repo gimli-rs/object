@@ -542,6 +542,9 @@ mod elf {
                     SHT_GROUP => print_section_group(p, endian, data, elf, sections, section),
                     SHT_HASH => print_hash(p, endian, data, elf, sections, section),
                     SHT_GNU_HASH => print_gnu_hash(p, endian, data, elf, sections, section),
+                    SHT_GNU_VERDEF => print_gnu_verdef(p, endian, data, elf, sections, section),
+                    SHT_GNU_VERNEED => print_gnu_verneed(p, endian, data, elf, sections, section),
+                    SHT_GNU_VERSYM => print_gnu_versym(p, endian, data, elf, sections, section),
                     // TODO:
                     //SHT_DYNAMIC =>
                     //SHT_SHLIB =>
@@ -854,6 +857,90 @@ mod elf {
             }
         }
         */
+    }
+
+    fn print_gnu_verdef<Elf: FileHeader>(
+        p: &mut Printer<impl Write>,
+        endian: Elf::Endian,
+        data: &[u8],
+        _elf: &Elf,
+        _sections: &SectionTable<Elf>,
+        section: &Elf::SectionHeader,
+    ) {
+        if let Ok(Some(mut verdefs)) = section.gnu_verdef(endian, data) {
+            while let Ok(Some((verdef, mut verdauxs))) = verdefs.next() {
+                p.group("VersionDefinition", |p| {
+                    // TODO: names
+                    p.field("Version", verdef.vd_version.get(endian));
+                    p.field_hex("Flags", verdef.vd_flags.get(endian));
+                    p.flags(verdef.vd_flags.get(endian), 0, FLAGS_VER_FLG);
+                    p.field("Index", verdef.vd_ndx.get(endian) & !VER_NDX_HIDDEN);
+                    p.flags(verdef.vd_ndx.get(endian), 0, FLAGS_VER_NDX);
+                    p.field("AuxCount", verdef.vd_cnt.get(endian));
+                    p.field_hex("Hash", verdef.vd_hash.get(endian));
+                    p.field("AuxOffset", verdef.vd_aux.get(endian));
+                    p.field("NextOffset", verdef.vd_next.get(endian));
+                    while let Ok(Some(verdaux)) = verdauxs.next() {
+                        p.group("Aux", |p| {
+                            p.field_hex("Name", verdaux.vda_name.get(endian));
+                            p.field("NextOffset", verdaux.vda_next.get(endian));
+                        });
+                    }
+                });
+            }
+        }
+    }
+
+    fn print_gnu_verneed<Elf: FileHeader>(
+        p: &mut Printer<impl Write>,
+        endian: Elf::Endian,
+        data: &[u8],
+        _elf: &Elf,
+        _sections: &SectionTable<Elf>,
+        section: &Elf::SectionHeader,
+    ) {
+        if let Ok(Some(mut verneeds)) = section.gnu_verneed(endian, data) {
+            while let Ok(Some((verneed, mut vernauxs))) = verneeds.next() {
+                p.group("VersionNeed", |p| {
+                    // TODO: names
+                    p.field("Version", verneed.vn_version.get(endian));
+                    p.field("AuxCount", verneed.vn_cnt.get(endian));
+                    p.field_hex("Filename", verneed.vn_file.get(endian));
+                    p.field("AuxOffset", verneed.vn_aux.get(endian));
+                    p.field("NextOffset", verneed.vn_next.get(endian));
+                    while let Ok(Some(vernaux)) = vernauxs.next() {
+                        p.group("Aux", |p| {
+                            p.field_hex("Hash", vernaux.vna_hash.get(endian));
+                            p.field_hex("Flags", vernaux.vna_flags.get(endian));
+                            p.flags(vernaux.vna_flags.get(endian), 0, FLAGS_VER_FLG);
+                            p.field("Index", vernaux.vna_other.get(endian) & !VER_NDX_HIDDEN);
+                            p.flags(vernaux.vna_other.get(endian), 0, FLAGS_VER_NDX);
+                            p.field_hex("Name", vernaux.vna_name.get(endian));
+                            p.field("NextOffset", vernaux.vna_next.get(endian));
+                        });
+                    }
+                });
+            }
+        }
+    }
+
+    fn print_gnu_versym<Elf: FileHeader>(
+        p: &mut Printer<impl Write>,
+        endian: Elf::Endian,
+        data: &[u8],
+        _elf: &Elf,
+        _sections: &SectionTable<Elf>,
+        section: &Elf::SectionHeader,
+    ) {
+        if let Ok(Some(syms)) = section.gnu_versym(endian, data) {
+            for sym in syms {
+                p.group("VersionSymbol", |p| {
+                    p.field("Version", sym.0.get(endian) & !VER_NDX_HIDDEN);
+                    p.flags(sym.0.get(endian), 0, FLAGS_VER_NDX);
+                    // TODO: version name
+                });
+            }
+        }
     }
 
     static FLAGS_EI_CLASS: &[Flag<u8>] = &flags!(ELFCLASSNONE, ELFCLASS32, ELFCLASS64);
@@ -3254,6 +3341,8 @@ mod elf {
         DF_1_STUB,
         DF_1_PIE,
     );
+    static FLAGS_VER_FLG: &[Flag<u16>] = &flags!(VER_FLG_BASE, VER_FLG_WEAK);
+    static FLAGS_VER_NDX: &[Flag<u16>] = &flags!(VER_NDX_HIDDEN);
 }
 
 mod macho {

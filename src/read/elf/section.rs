@@ -11,7 +11,7 @@ use crate::read::{
 
 use super::{
     CompressionHeader, ElfFile, ElfSectionRelocationIterator, FileHeader, GnuHashTable, HashTable,
-    NoteIterator, RelocationSections, SymbolTable,
+    NoteIterator, RelocationSections, SymbolTable, VerdefIterator, VerneedIterator,
 };
 
 /// The table of section headers in an ELF file.
@@ -196,6 +196,57 @@ impl<'data, Elf: FileHeader, R: ReadRef<'data>> SectionTable<'data, Elf, R> {
         for section in self.sections {
             if let Some(hash) = section.gnu_hash(endian, data)? {
                 return Ok(Some(hash));
+            }
+        }
+        Ok(None)
+    }
+
+    /// Return the contents of a `SHT_GNU_VERSYM` section.
+    ///
+    /// Returns `Ok(None)` if there is no `SHT_GNU_VERSYM` section.
+    /// Returns `Err` for invalid values.
+    pub fn gnu_versym(
+        &self,
+        endian: Elf::Endian,
+        data: R,
+    ) -> read::Result<Option<&'data [elf::Versym<Elf::Endian>]>> {
+        for section in self.sections {
+            if let Some(syms) = section.gnu_versym(endian, data)? {
+                return Ok(Some(syms));
+            }
+        }
+        Ok(None)
+    }
+
+    /// Return the contents of a `SHT_GNU_VERDEF` section.
+    ///
+    /// Returns `Ok(None)` if there is no `SHT_GNU_VERDEF` section.
+    /// Returns `Err` for invalid values.
+    pub fn gnu_verdef(
+        &self,
+        endian: Elf::Endian,
+        data: R,
+    ) -> read::Result<Option<VerdefIterator<'data, Elf>>> {
+        for section in self.sections {
+            if let Some(defs) = section.gnu_verdef(endian, data)? {
+                return Ok(Some(defs));
+            }
+        }
+        Ok(None)
+    }
+
+    /// Return the contents of a `SHT_GNU_VERNEED` section.
+    ///
+    /// Returns `Ok(None)` if there is no `SHT_GNU_VERNEED` section.
+    /// Returns `Err` for invalid values.
+    pub fn gnu_verneed(
+        &self,
+        endian: Elf::Endian,
+        data: R,
+    ) -> read::Result<Option<VerneedIterator<'data, Elf>>> {
+        for section in self.sections {
+            if let Some(needs) = section.gnu_verneed(endian, data)? {
+                return Ok(Some(needs));
             }
         }
         Ok(None)
@@ -750,6 +801,59 @@ pub trait SectionHeader: Debug + Pod {
             .read_error("Invalid ELF GNU hash section offset or size")?;
         let hash = GnuHashTable::parse(endian, data)?;
         Ok(Some(hash))
+    }
+
+    /// Return the contents of a `SHT_GNU_VERSYM` section.
+    ///
+    /// Returns `Ok(None)` if the section type is not `SHT_GNU_VERSYM`.
+    /// Returns `Err` for invalid values.
+    fn gnu_versym<'data, R: ReadRef<'data>>(
+        &self,
+        endian: Self::Endian,
+        data: R,
+    ) -> read::Result<Option<&'data [elf::Versym<Self::Endian>]>> {
+        if self.sh_type(endian) != elf::SHT_GNU_VERSYM {
+            return Ok(None);
+        }
+        self.data_as_array(endian, data)
+            .read_error("Invalid ELF GNU versym section offset or size")
+            .map(Some)
+    }
+
+    /// Return an iterator for the entries of a `SHT_GNU_VERDEF` section.
+    ///
+    /// Returns `Ok(None)` if the section type is not `SHT_GNU_VERDEF`.
+    /// Returns `Err` for invalid values.
+    fn gnu_verdef<'data, R: ReadRef<'data>>(
+        &self,
+        endian: Self::Endian,
+        data: R,
+    ) -> read::Result<Option<VerdefIterator<'data, Self::Elf>>> {
+        if self.sh_type(endian) != elf::SHT_GNU_VERDEF {
+            return Ok(None);
+        }
+        let data = self
+            .data_as_array(endian, data)
+            .read_error("Invalid ELF GNU verdef section offset or size")?;
+        Ok(Some(VerdefIterator::new(endian, data)))
+    }
+
+    /// Return an iterator for the entries of a `SHT_GNU_VERNEED` section.
+    ///
+    /// Returns `Ok(None)` if the section type is not `SHT_GNU_VERNEED`.
+    /// Returns `Err` for invalid values.
+    fn gnu_verneed<'data, R: ReadRef<'data>>(
+        &self,
+        endian: Self::Endian,
+        data: R,
+    ) -> read::Result<Option<VerneedIterator<'data, Self::Elf>>> {
+        if self.sh_type(endian) != elf::SHT_GNU_VERNEED {
+            return Ok(None);
+        }
+        let data = self
+            .data_as_array(endian, data)
+            .read_error("Invalid ELF GNU verneed section offset or size")?;
+        Ok(Some(VerneedIterator::new(endian, data)))
     }
 }
 
