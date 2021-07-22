@@ -695,6 +695,33 @@ pub const SHT_GROUP: u32 = 17;
 pub const SHT_SYMTAB_SHNDX: u32 = 18;
 /// Start of OS-specific section types.
 pub const SHT_LOOS: u32 = 0x6000_0000;
+/// Object attributes.
+pub const SHT_GNU_ATTRIBUTES: u32 = 0x6fff_fff5;
+/// GNU-style hash table.
+pub const SHT_GNU_HASH: u32 = 0x6fff_fff6;
+/// Prelink library list
+pub const SHT_GNU_LIBLIST: u32 = 0x6fff_fff7;
+/// Checksum for DSO content.
+pub const SHT_CHECKSUM: u32 = 0x6fff_fff8;
+/// Sun-specific low bound.
+pub const SHT_LOSUNW: u32 = 0x6fff_fffa;
+#[allow(missing_docs, non_upper_case_globals)]
+pub const SHT_SUNW_move: u32 = 0x6fff_fffa;
+#[allow(missing_docs)]
+pub const SHT_SUNW_COMDAT: u32 = 0x6fff_fffb;
+#[allow(missing_docs, non_upper_case_globals)]
+pub const SHT_SUNW_syminfo: u32 = 0x6fff_fffc;
+/// Version definition section.
+#[allow(non_upper_case_globals)]
+pub const SHT_GNU_VERDEF: u32 = 0x6fff_fffd;
+/// Version needs section.
+#[allow(non_upper_case_globals)]
+pub const SHT_GNU_VERNEED: u32 = 0x6fff_fffe;
+/// Version symbol table.
+#[allow(non_upper_case_globals)]
+pub const SHT_GNU_VERSYM: u32 = 0x6fff_ffff;
+/// Sun-specific high bound.
+pub const SHT_HISUNW: u32 = 0x6fff_ffff;
 /// End of OS-specific section types.
 pub const SHT_HIOS: u32 = 0x6fff_ffff;
 /// Start of processor-specific section types.
@@ -1669,10 +1696,99 @@ pub const DF_1_STUB: u32 = 0x0400_0000;
 #[allow(missing_docs)]
 pub const DF_1_PIE: u32 = 0x0800_0000;
 
-// TODO: ELF*_Verdef, VER_DEF_*, VER_FLG_*, VER_NDX_*
-// TODO: Elf*_Verdaux
-// TODO: Elf*_Verneed, VER_NEED_*
-// TODO: Elf*_Vernaux, VER_FLG_*
+/// Version symbol information
+#[derive(Debug, Clone, Copy)]
+#[repr(C)]
+pub struct Versym<E: Endian>(pub U16<E>);
+
+/// Version definition sections
+#[derive(Debug, Clone, Copy)]
+#[repr(C)]
+pub struct Verdef<E: Endian> {
+    /// Version revision
+    pub vd_version: U16<E>,
+    /// Version information
+    pub vd_flags: U16<E>,
+    /// Version Index
+    pub vd_ndx: U16<E>,
+    /// Number of associated aux entries
+    pub vd_cnt: U16<E>,
+    /// Version name hash value
+    pub vd_hash: U32<E>,
+    /// Offset in bytes to verdaux array
+    pub vd_aux: U32<E>,
+    /// Offset in bytes to next verdef entry
+    pub vd_next: U32<E>,
+}
+
+// Legal values for vd_version (version revision).
+/// No version
+pub const VER_DEF_NONE: u16 = 0;
+/// Current version
+pub const VER_DEF_CURRENT: u16 = 1;
+
+// Legal values for vd_flags and vna_flags (version information flags).
+/// Version definition of file itself
+pub const VER_FLG_BASE: u16 = 0x1;
+/// Weak version identifier
+pub const VER_FLG_WEAK: u16 = 0x2;
+
+// Versym symbol index values.
+/// Symbol is local.
+pub const VER_NDX_LOCAL: u16 = 0;
+/// Symbol is global.
+pub const VER_NDX_GLOBAL: u16 = 1;
+/// Symbol is hidden.
+pub const VER_NDX_HIDDEN: u16 = 0x8000;
+
+/// Auxiliary version information.
+#[derive(Debug, Clone, Copy)]
+#[repr(C)]
+pub struct Verdaux<E: Endian> {
+    /// Version or dependency names
+    pub vda_name: U32<E>,
+    /// Offset in bytes to next verdaux
+    pub vda_next: U32<E>,
+}
+
+/// Version dependency.
+#[derive(Debug, Clone, Copy)]
+#[repr(C)]
+pub struct Verneed<E: Endian> {
+    /// Version of structure
+    pub vn_version: U16<E>,
+    /// Number of associated aux entries
+    pub vn_cnt: U16<E>,
+    /// Offset of filename for this dependency
+    pub vn_file: U32<E>,
+    /// Offset in bytes to vernaux array
+    pub vn_aux: U32<E>,
+    /// Offset in bytes to next verneed entry
+    pub vn_next: U32<E>,
+}
+
+// Legal values for vn_version (version revision).
+/// No version
+pub const VER_NEED_NONE: u16 = 0;
+/// Current version
+pub const VER_NEED_CURRENT: u16 = 1;
+
+/// Auxiliary needed version information.
+#[derive(Debug, Clone, Copy)]
+#[repr(C)]
+pub struct Vernaux<E: Endian> {
+    /// Hash value of dependency name
+    pub vna_hash: U32<E>,
+    /// Dependency specific information
+    pub vna_flags: U16<E>,
+    /// Version Index
+    pub vna_other: U16<E>,
+    /// Dependency name string offset
+    pub vna_name: U32<E>,
+    /// Offset in bytes to next vernaux entry
+    pub vna_next: U32<E>,
+}
+
 // TODO: Elf*_auxv_t, AT_*
 
 /// Note section entry header.
@@ -1768,6 +1884,65 @@ pub const NT_GNU_PROPERTY_TYPE_0: u32 = 5;
 
 // TODO: GNU_PROPERTY_*
 // TODO: Elf*_Move
+
+/// Header of `SHT_HASH` section.
+#[derive(Debug, Clone, Copy)]
+#[repr(C)]
+pub struct HashHeader<E: Endian> {
+    /// The number of hash buckets.
+    pub bucket_count: U32<E>,
+    /// The number of chain values.
+    pub chain_count: U32<E>,
+    // Array of hash bucket start indices.
+    // buckets: U32<E>[bucket_count]
+    // Array of hash chain links. An index of 0 terminates the chain.
+    // chains: U32<E>[chain_count]
+}
+
+/// Calculate the SysV hash for a symbol name.
+///
+/// Used for `SHT_HASH`.
+pub fn hash(name: &[u8]) -> u32 {
+    let mut hash = 0u32;
+    for byte in name {
+        hash = hash.wrapping_mul(16).wrapping_add(u32::from(*byte));
+        hash ^= (hash >> 24) & 0xf0;
+    }
+    hash & 0xfff_ffff
+}
+
+/// Header of `SHT_GNU_HASH` section.
+#[derive(Debug, Clone, Copy)]
+#[repr(C)]
+pub struct GnuHashHeader<E: Endian> {
+    /// The number of hash buckets.
+    pub bucket_count: U32<E>,
+    /// The symbol table index of the first symbol in the hash.
+    pub symbol_base: U32<E>,
+    /// The number of words in the bloom filter.
+    ///
+    /// Must be a non-zero power of 2.
+    pub bloom_count: U32<E>,
+    /// The bit shift count for the bloom filter.
+    pub bloom_shift: U32<E>,
+    // Array of bloom filter words.
+    // bloom_filters: U32<E>[bloom_count] or U64<E>[bloom_count]
+    // Array of hash bucket start indices.
+    // buckets: U32<E>[bucket_count]
+    // Array of hash values, one for each symbol starting at symbol_base.
+    // values: U32<E>[symbol_count]
+}
+
+/// Calculate the GNU hash for a symbol name.
+///
+/// Used for `SHT_GNU_HASH`.
+pub fn gnu_hash(name: &[u8]) -> u32 {
+    let mut hash = 5381u32;
+    for byte in name {
+        hash = hash.wrapping_mul(33).wrapping_add(u32::from(*byte));
+    }
+    hash
+}
 
 // Motorola 68k specific definitions.
 
@@ -6068,6 +6243,13 @@ unsafe_impl_endian_pod!(
     ProgramHeader64,
     Dyn32,
     Dyn64,
+    Versym,
+    Verdef,
+    Verdaux,
+    Verneed,
+    Vernaux,
     NoteHeader32,
     NoteHeader64,
+    HashHeader,
+    GnuHashHeader,
 );

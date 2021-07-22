@@ -10,8 +10,8 @@ use crate::read::{
 };
 
 use super::{
-    CompressionHeader, ElfFile, ElfSectionRelocationIterator, FileHeader, NoteIterator,
-    RelocationSections, SymbolTable,
+    CompressionHeader, ElfFile, ElfSectionRelocationIterator, FileHeader, GnuHashTable, HashTable,
+    NoteIterator, RelocationSections, SymbolTable, VerdefIterator, VerneedIterator,
 };
 
 /// The table of section headers in an ELF file.
@@ -131,6 +131,125 @@ impl<'data, Elf: FileHeader, R: ReadRef<'data>> SectionTable<'data, Elf, R> {
         symbol_section: usize,
     ) -> read::Result<RelocationSections> {
         RelocationSections::parse(endian, self, symbol_section)
+    }
+
+    /// Return the header of a SysV hash section.
+    ///
+    /// Returns `Ok(None)` if there is no SysV GNU hash section.
+    /// Returns `Err` for invalid values.
+    pub fn hash_header(
+        &self,
+        endian: Elf::Endian,
+        data: R,
+    ) -> read::Result<Option<&'data elf::HashHeader<Elf::Endian>>> {
+        for section in self.sections {
+            if let Some(hash) = section.hash_header(endian, data)? {
+                return Ok(Some(hash));
+            }
+        }
+        Ok(None)
+    }
+
+    /// Return the contents of a SysV hash section.
+    ///
+    /// Returns `Ok(None)` if there is no SysV hash section.
+    /// Returns `Err` for invalid values.
+    pub fn hash(
+        &self,
+        endian: Elf::Endian,
+        data: R,
+    ) -> read::Result<Option<HashTable<'data, Elf>>> {
+        for section in self.sections {
+            if let Some(hash) = section.hash(endian, data)? {
+                return Ok(Some(hash));
+            }
+        }
+        Ok(None)
+    }
+
+    /// Return the header of a GNU hash section.
+    ///
+    /// Returns `Ok(None)` if there is no GNU hash section.
+    /// Returns `Err` for invalid values.
+    pub fn gnu_hash_header(
+        &self,
+        endian: Elf::Endian,
+        data: R,
+    ) -> read::Result<Option<&'data elf::GnuHashHeader<Elf::Endian>>> {
+        for section in self.sections {
+            if let Some(hash) = section.gnu_hash_header(endian, data)? {
+                return Ok(Some(hash));
+            }
+        }
+        Ok(None)
+    }
+
+    /// Return the contents of a GNU hash section.
+    ///
+    /// Returns `Ok(None)` if there is no GNU hash section.
+    /// Returns `Err` for invalid values.
+    pub fn gnu_hash(
+        &self,
+        endian: Elf::Endian,
+        data: R,
+    ) -> read::Result<Option<GnuHashTable<'data, Elf>>> {
+        for section in self.sections {
+            if let Some(hash) = section.gnu_hash(endian, data)? {
+                return Ok(Some(hash));
+            }
+        }
+        Ok(None)
+    }
+
+    /// Return the contents of a `SHT_GNU_VERSYM` section.
+    ///
+    /// Returns `Ok(None)` if there is no `SHT_GNU_VERSYM` section.
+    /// Returns `Err` for invalid values.
+    pub fn gnu_versym(
+        &self,
+        endian: Elf::Endian,
+        data: R,
+    ) -> read::Result<Option<&'data [elf::Versym<Elf::Endian>]>> {
+        for section in self.sections {
+            if let Some(syms) = section.gnu_versym(endian, data)? {
+                return Ok(Some(syms));
+            }
+        }
+        Ok(None)
+    }
+
+    /// Return the contents of a `SHT_GNU_VERDEF` section.
+    ///
+    /// Returns `Ok(None)` if there is no `SHT_GNU_VERDEF` section.
+    /// Returns `Err` for invalid values.
+    pub fn gnu_verdef(
+        &self,
+        endian: Elf::Endian,
+        data: R,
+    ) -> read::Result<Option<VerdefIterator<'data, Elf>>> {
+        for section in self.sections {
+            if let Some(defs) = section.gnu_verdef(endian, data)? {
+                return Ok(Some(defs));
+            }
+        }
+        Ok(None)
+    }
+
+    /// Return the contents of a `SHT_GNU_VERNEED` section.
+    ///
+    /// Returns `Ok(None)` if there is no `SHT_GNU_VERNEED` section.
+    /// Returns `Err` for invalid values.
+    pub fn gnu_verneed(
+        &self,
+        endian: Elf::Endian,
+        data: R,
+    ) -> read::Result<Option<VerneedIterator<'data, Elf>>> {
+        for section in self.sections {
+            if let Some(needs) = section.gnu_verneed(endian, data)? {
+                return Ok(Some(needs));
+            }
+        }
+        Ok(None)
     }
 }
 
@@ -457,9 +576,10 @@ pub trait SectionHeader: Debug + Pod {
         &self,
         endian: Self::Endian,
         data: R,
-    ) -> Result<&'data [u8], ()> {
+    ) -> read::Result<&'data [u8]> {
         if let Some((offset, size)) = self.file_range(endian) {
             data.read_bytes_at(offset, size)
+                .read_error("Invalid ELF section size or offset")
         } else {
             Ok(&[])
         }
@@ -474,9 +594,10 @@ pub trait SectionHeader: Debug + Pod {
         &self,
         endian: Self::Endian,
         data: R,
-    ) -> Result<&'data [T], ()> {
+    ) -> read::Result<&'data [T]> {
         let mut data = self.data(endian, data).map(Bytes)?;
         data.read_slice(data.len() / mem::size_of::<T>())
+            .read_error("Invalid ELF section size or offset")
     }
 
     /// Return the symbols in the section.
@@ -600,6 +721,139 @@ pub trait SectionHeader: Debug + Pod {
             .read_slice(count)
             .read_error("Invalid ELF group section offset or size")?;
         Ok(Some((flag, sections)))
+    }
+
+    /// Return the header of a SysV hash section.
+    ///
+    /// Returns `Ok(None)` if the section does not contain a SysV hash.
+    /// Returns `Err` for invalid values.
+    fn hash_header<'data, R: ReadRef<'data>>(
+        &self,
+        endian: Self::Endian,
+        data: R,
+    ) -> read::Result<Option<&'data elf::HashHeader<Self::Endian>>> {
+        if self.sh_type(endian) != elf::SHT_HASH {
+            return Ok(None);
+        }
+        let data = self
+            .data(endian, data)
+            .read_error("Invalid ELF hash section offset or size")?;
+        let header = data
+            .read_at::<elf::HashHeader<Self::Endian>>(0)
+            .read_error("Invalid hash header")?;
+        Ok(Some(header))
+    }
+
+    /// Return the contents of a SysV hash section.
+    ///
+    /// Returns `Ok(None)` if the section does not contain a SysV hash.
+    /// Returns `Err` for invalid values.
+    fn hash<'data, R: ReadRef<'data>>(
+        &self,
+        endian: Self::Endian,
+        data: R,
+    ) -> read::Result<Option<HashTable<'data, Self::Elf>>> {
+        if self.sh_type(endian) != elf::SHT_HASH {
+            return Ok(None);
+        }
+        let data = self
+            .data(endian, data)
+            .read_error("Invalid ELF hash section offset or size")?;
+        let hash = HashTable::parse(endian, data)?;
+        Ok(Some(hash))
+    }
+
+    /// Return the header of a GNU hash section.
+    ///
+    /// Returns `Ok(None)` if the section does not contain a GNU hash.
+    /// Returns `Err` for invalid values.
+    fn gnu_hash_header<'data, R: ReadRef<'data>>(
+        &self,
+        endian: Self::Endian,
+        data: R,
+    ) -> read::Result<Option<&'data elf::GnuHashHeader<Self::Endian>>> {
+        if self.sh_type(endian) != elf::SHT_GNU_HASH {
+            return Ok(None);
+        }
+        let data = self
+            .data(endian, data)
+            .read_error("Invalid ELF GNU hash section offset or size")?;
+        let header = data
+            .read_at::<elf::GnuHashHeader<Self::Endian>>(0)
+            .read_error("Invalid GNU hash header")?;
+        Ok(Some(header))
+    }
+
+    /// Return the contents of a GNU hash section.
+    ///
+    /// Returns `Ok(None)` if the section does not contain a GNU hash.
+    /// Returns `Err` for invalid values.
+    fn gnu_hash<'data, R: ReadRef<'data>>(
+        &self,
+        endian: Self::Endian,
+        data: R,
+    ) -> read::Result<Option<GnuHashTable<'data, Self::Elf>>> {
+        if self.sh_type(endian) != elf::SHT_GNU_HASH {
+            return Ok(None);
+        }
+        let data = self
+            .data(endian, data)
+            .read_error("Invalid ELF GNU hash section offset or size")?;
+        let hash = GnuHashTable::parse(endian, data)?;
+        Ok(Some(hash))
+    }
+
+    /// Return the contents of a `SHT_GNU_VERSYM` section.
+    ///
+    /// Returns `Ok(None)` if the section type is not `SHT_GNU_VERSYM`.
+    /// Returns `Err` for invalid values.
+    fn gnu_versym<'data, R: ReadRef<'data>>(
+        &self,
+        endian: Self::Endian,
+        data: R,
+    ) -> read::Result<Option<&'data [elf::Versym<Self::Endian>]>> {
+        if self.sh_type(endian) != elf::SHT_GNU_VERSYM {
+            return Ok(None);
+        }
+        self.data_as_array(endian, data)
+            .read_error("Invalid ELF GNU versym section offset or size")
+            .map(Some)
+    }
+
+    /// Return an iterator for the entries of a `SHT_GNU_VERDEF` section.
+    ///
+    /// Returns `Ok(None)` if the section type is not `SHT_GNU_VERDEF`.
+    /// Returns `Err` for invalid values.
+    fn gnu_verdef<'data, R: ReadRef<'data>>(
+        &self,
+        endian: Self::Endian,
+        data: R,
+    ) -> read::Result<Option<VerdefIterator<'data, Self::Elf>>> {
+        if self.sh_type(endian) != elf::SHT_GNU_VERDEF {
+            return Ok(None);
+        }
+        let data = self
+            .data_as_array(endian, data)
+            .read_error("Invalid ELF GNU verdef section offset or size")?;
+        Ok(Some(VerdefIterator::new(endian, data)))
+    }
+
+    /// Return an iterator for the entries of a `SHT_GNU_VERNEED` section.
+    ///
+    /// Returns `Ok(None)` if the section type is not `SHT_GNU_VERNEED`.
+    /// Returns `Err` for invalid values.
+    fn gnu_verneed<'data, R: ReadRef<'data>>(
+        &self,
+        endian: Self::Endian,
+        data: R,
+    ) -> read::Result<Option<VerneedIterator<'data, Self::Elf>>> {
+        if self.sh_type(endian) != elf::SHT_GNU_VERNEED {
+            return Ok(None);
+        }
+        let data = self
+            .data_as_array(endian, data)
+            .read_error("Invalid ELF GNU verneed section offset or size")?;
+        Ok(Some(VerneedIterator::new(endian, data)))
     }
 }
 

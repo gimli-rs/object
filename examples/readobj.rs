@@ -540,8 +540,12 @@ mod elf {
                     SHT_RELA => print_section_rela(p, endian, data, elf, sections, section),
                     SHT_NOTE => print_section_notes(p, endian, data, elf, section),
                     SHT_GROUP => print_section_group(p, endian, data, elf, sections, section),
+                    SHT_HASH => print_hash(p, endian, data, elf, sections, section),
+                    SHT_GNU_HASH => print_gnu_hash(p, endian, data, elf, sections, section),
+                    SHT_GNU_VERDEF => print_gnu_verdef(p, endian, data, elf, sections, section),
+                    SHT_GNU_VERNEED => print_gnu_verneed(p, endian, data, elf, sections, section),
+                    SHT_GNU_VERSYM => print_gnu_versym(p, endian, data, elf, sections, section),
                     // TODO:
-                    //SHT_HASH =>
                     //SHT_DYNAMIC =>
                     //SHT_SHLIB =>
                     //SHT_INIT_ARRAY =>
@@ -789,6 +793,153 @@ mod elf {
                 // TODO: interpret desc
                 p.field_bytes("Desc", note.desc());
             });
+        }
+    }
+
+    fn print_hash<Elf: FileHeader>(
+        p: &mut Printer<impl Write>,
+        endian: Elf::Endian,
+        data: &[u8],
+        _elf: &Elf,
+        _sections: &SectionTable<Elf>,
+        section: &Elf::SectionHeader,
+    ) {
+        if let Ok(Some(hash)) = section.hash_header(endian, data) {
+            p.group("Hash", |p| {
+                p.field("BucketCount", hash.bucket_count.get(endian));
+                p.field("ChainCount", hash.chain_count.get(endian));
+            });
+        }
+        /* TODO: add this in a test somewhere
+        if let Ok(Some(hash_table)) = section.hash(endian, data) {
+            if let Ok(symbols) = _sections.symbols(endian, data, SHT_DYNSYM) {
+                for symbol in symbols.symbols() {
+                    let name = symbols.symbol_name(endian, symbol).unwrap();
+                    if !symbol.is_definition(endian) {
+                        continue;
+                    }
+                    let hash = hash(name);
+                    let hash_symbol = hash_table.find(endian, name, hash, &symbols).unwrap();
+                    let hash_name = symbols.symbol_name(endian, hash_symbol).unwrap();
+                    assert_eq!(name, hash_name);
+                }
+            }
+        }
+        */
+    }
+
+    fn print_gnu_hash<Elf: FileHeader>(
+        p: &mut Printer<impl Write>,
+        endian: Elf::Endian,
+        data: &[u8],
+        _elf: &Elf,
+        _sections: &SectionTable<Elf>,
+        section: &Elf::SectionHeader,
+    ) {
+        if let Ok(Some(hash)) = section.gnu_hash_header(endian, data) {
+            p.group("GnuHash", |p| {
+                p.field("BucketCount", hash.bucket_count.get(endian));
+                p.field("SymbolBase", hash.symbol_base.get(endian));
+                p.field("BloomCount", hash.bloom_count.get(endian));
+                p.field("BloomShift", hash.bloom_shift.get(endian));
+            });
+        }
+        /* TODO: add this in a test somewhere
+        if let Ok(Some(hash_table)) = section.gnu_hash(endian, data) {
+            if let Ok(symbols) = _sections.symbols(endian, data, SHT_DYNSYM) {
+                for symbol in &symbols.symbols()[hash_table.symbol_base() as usize..] {
+                    let name = symbols.symbol_name(endian, symbol).unwrap();
+                    let hash = gnu_hash(name);
+                    let hash_symbol = hash_table.find(endian, name, hash, &symbols).unwrap();
+                    let hash_name = symbols.symbol_name(endian, hash_symbol).unwrap();
+                    assert_eq!(name, hash_name);
+                }
+            }
+        }
+        */
+    }
+
+    fn print_gnu_verdef<Elf: FileHeader>(
+        p: &mut Printer<impl Write>,
+        endian: Elf::Endian,
+        data: &[u8],
+        _elf: &Elf,
+        _sections: &SectionTable<Elf>,
+        section: &Elf::SectionHeader,
+    ) {
+        if let Ok(Some(mut verdefs)) = section.gnu_verdef(endian, data) {
+            while let Ok(Some((verdef, mut verdauxs))) = verdefs.next() {
+                p.group("VersionDefinition", |p| {
+                    // TODO: names
+                    p.field("Version", verdef.vd_version.get(endian));
+                    p.field_hex("Flags", verdef.vd_flags.get(endian));
+                    p.flags(verdef.vd_flags.get(endian), 0, FLAGS_VER_FLG);
+                    p.field("Index", verdef.vd_ndx.get(endian) & !VER_NDX_HIDDEN);
+                    p.flags(verdef.vd_ndx.get(endian), 0, FLAGS_VER_NDX);
+                    p.field("AuxCount", verdef.vd_cnt.get(endian));
+                    p.field_hex("Hash", verdef.vd_hash.get(endian));
+                    p.field("AuxOffset", verdef.vd_aux.get(endian));
+                    p.field("NextOffset", verdef.vd_next.get(endian));
+                    while let Ok(Some(verdaux)) = verdauxs.next() {
+                        p.group("Aux", |p| {
+                            p.field_hex("Name", verdaux.vda_name.get(endian));
+                            p.field("NextOffset", verdaux.vda_next.get(endian));
+                        });
+                    }
+                });
+            }
+        }
+    }
+
+    fn print_gnu_verneed<Elf: FileHeader>(
+        p: &mut Printer<impl Write>,
+        endian: Elf::Endian,
+        data: &[u8],
+        _elf: &Elf,
+        _sections: &SectionTable<Elf>,
+        section: &Elf::SectionHeader,
+    ) {
+        if let Ok(Some(mut verneeds)) = section.gnu_verneed(endian, data) {
+            while let Ok(Some((verneed, mut vernauxs))) = verneeds.next() {
+                p.group("VersionNeed", |p| {
+                    // TODO: names
+                    p.field("Version", verneed.vn_version.get(endian));
+                    p.field("AuxCount", verneed.vn_cnt.get(endian));
+                    p.field_hex("Filename", verneed.vn_file.get(endian));
+                    p.field("AuxOffset", verneed.vn_aux.get(endian));
+                    p.field("NextOffset", verneed.vn_next.get(endian));
+                    while let Ok(Some(vernaux)) = vernauxs.next() {
+                        p.group("Aux", |p| {
+                            p.field_hex("Hash", vernaux.vna_hash.get(endian));
+                            p.field_hex("Flags", vernaux.vna_flags.get(endian));
+                            p.flags(vernaux.vna_flags.get(endian), 0, FLAGS_VER_FLG);
+                            p.field("Index", vernaux.vna_other.get(endian) & !VER_NDX_HIDDEN);
+                            p.flags(vernaux.vna_other.get(endian), 0, FLAGS_VER_NDX);
+                            p.field_hex("Name", vernaux.vna_name.get(endian));
+                            p.field("NextOffset", vernaux.vna_next.get(endian));
+                        });
+                    }
+                });
+            }
+        }
+    }
+
+    fn print_gnu_versym<Elf: FileHeader>(
+        p: &mut Printer<impl Write>,
+        endian: Elf::Endian,
+        data: &[u8],
+        _elf: &Elf,
+        _sections: &SectionTable<Elf>,
+        section: &Elf::SectionHeader,
+    ) {
+        if let Ok(Some(syms)) = section.gnu_versym(endian, data) {
+            for sym in syms {
+                p.group("VersionSymbol", |p| {
+                    p.field("Version", sym.0.get(endian) & !VER_NDX_HIDDEN);
+                    p.flags(sym.0.get(endian), 0, FLAGS_VER_NDX);
+                    // TODO: version name
+                });
+            }
         }
     }
 
@@ -1173,6 +1324,16 @@ mod elf {
         SHT_PREINIT_ARRAY,
         SHT_GROUP,
         SHT_SYMTAB_SHNDX,
+        SHT_GNU_ATTRIBUTES,
+        SHT_GNU_HASH,
+        SHT_GNU_LIBLIST,
+        SHT_CHECKSUM,
+        SHT_SUNW_move,
+        SHT_SUNW_COMDAT,
+        SHT_SUNW_syminfo,
+        SHT_GNU_VERDEF,
+        SHT_GNU_VERNEED,
+        SHT_GNU_VERSYM,
     );
     static FLAGS_SHT_MIPS: &[Flag<u32>] = &flags!(
         SHT_MIPS_LIBLIST,
@@ -3180,6 +3341,8 @@ mod elf {
         DF_1_STUB,
         DF_1_PIE,
     );
+    static FLAGS_VER_FLG: &[Flag<u16>] = &flags!(VER_FLG_BASE, VER_FLG_WEAK);
+    static FLAGS_VER_NDX: &[Flag<u16>] = &flags!(VER_NDX_HIDDEN);
 }
 
 mod macho {
