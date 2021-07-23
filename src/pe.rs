@@ -343,6 +343,12 @@ pub const IMAGE_FILE_MACHINE_M32R: u16 = 0x9041;
 /// ARM64 Little-Endian
 pub const IMAGE_FILE_MACHINE_ARM64: u16 = 0xAA64;
 pub const IMAGE_FILE_MACHINE_CEE: u16 = 0xC0EE;
+/// RISCV32
+pub const IMAGE_FILE_MACHINE_RISCV32: u16 = 0x5032;
+/// RISCV64
+pub const IMAGE_FILE_MACHINE_RISCV64: u16 = 0x5064;
+/// RISCV128
+pub const IMAGE_FILE_MACHINE_RISCV128: u16 = 0x5128;
 
 //
 // Directory format.
@@ -1731,6 +1737,10 @@ pub const IMAGE_REL_BASED_MIPS_JMPADDR16: u16 = 9;
 
 pub const IMAGE_REL_BASED_ARM_MOV32: u16 = 5;
 pub const IMAGE_REL_BASED_THUMB_MOV32: u16 = 7;
+
+pub const IMAGE_REL_BASED_RISCV_HIGH20: u16 = 5;
+pub const IMAGE_REL_BASED_RISCV_LOW12I: u16 = 7;
+pub const IMAGE_REL_BASED_RISCV_LOW12S: u16 = 8;
 
 //
 // Archive format.
