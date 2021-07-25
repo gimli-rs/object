@@ -1178,13 +1178,7 @@ impl<E: Endian> Rela64<E> {
     }
 
     /// Calculate the `r_info` field given the `r_sym` and `r_type` components.
-    // TODO: add is_mips64el parameter
-    pub fn r_info(endian: E, r_sym: u32, r_type: u32) -> U64<E> {
-        U64::new(endian, (u64::from(r_sym) << 32) | u64::from(r_type))
-    }
-
-    #[allow(dead_code)]
-    pub(crate) fn r_info2(endian: E, is_mips64el: bool, r_sym: u32, r_type: u32) -> U64<E> {
+    pub fn r_info(endian: E, is_mips64el: bool, r_sym: u32, r_type: u32) -> U64<E> {
         let mut t = (u64::from(r_sym) << 32) | u64::from(r_type);
         if is_mips64el {
             t = (t >> 32)
@@ -1197,9 +1191,8 @@ impl<E: Endian> Rela64<E> {
     }
 
     /// Set the `r_info` field given the `r_sym` and `r_type` components.
-    // TODO: add is_mips64el parameter
-    pub fn set_r_info(&mut self, endian: E, r_sym: u32, r_type: u32) {
-        self.r_info = Self::r_info(endian, r_sym, r_type);
+    pub fn set_r_info(&mut self, endian: E, is_mips64el: bool, r_sym: u32, r_type: u32) {
+        self.r_info = Self::r_info(endian, is_mips64el, r_sym, r_type);
     }
 }
 

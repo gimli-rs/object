@@ -1299,7 +1299,7 @@ impl<E: Endian> Elf for Elf64<E> {
         if is_rela {
             let rel = elf::Rela64 {
                 r_offset: U64::new(endian, rel.r_offset),
-                r_info: elf::Rela64::r_info2(endian, is_mips64el, rel.r_sym, rel.r_type),
+                r_info: elf::Rela64::r_info(endian, is_mips64el, rel.r_sym, rel.r_type),
                 r_addend: I64::new(endian, rel.r_addend),
             };
             buffer.write(&rel);
