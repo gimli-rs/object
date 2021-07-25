@@ -2,9 +2,9 @@ use core::marker::PhantomData;
 
 use crate::endian::Endian;
 use crate::macho;
-use crate::pod::{Bytes, Pod};
+use crate::pod::Pod;
 use crate::read::macho::{MachHeader, SymbolTable};
-use crate::read::{ReadError, ReadRef, Result, StringTable};
+use crate::read::{Bytes, ReadError, ReadRef, Result, StringTable};
 
 /// An iterator over the load commands of a `MachHeader`.
 #[derive(Debug, Default, Clone, Copy)]

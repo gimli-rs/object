@@ -3,10 +3,10 @@ use core::{iter, mem, slice, str};
 
 use crate::elf;
 use crate::endian::{self, Endianness, U32Bytes};
-use crate::pod::{Bytes, Pod};
+use crate::pod::Pod;
 use crate::read::{
-    self, CompressedData, CompressedFileRange, CompressionFormat, Error, ObjectSection, ReadError,
-    ReadRef, SectionFlags, SectionIndex, SectionKind, StringTable,
+    self, Bytes, CompressedData, CompressedFileRange, CompressionFormat, Error, ObjectSection,
+    ReadError, ReadRef, SectionFlags, SectionIndex, SectionKind, StringTable,
 };
 
 use super::{
