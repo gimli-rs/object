@@ -6,7 +6,6 @@ use std::vec::Vec;
 use std::{error, fmt, result, str};
 
 use crate::endian::{Endianness, U32, U64};
-use crate::pod::{BytesMut, WritableBuffer};
 use crate::{
     Architecture, BinaryFormat, ComdatKind, FileFlags, RelocationEncoding, RelocationKind,
     SectionFlags, SectionKind, SymbolFlags, SymbolKind, SymbolScope,
@@ -20,6 +19,7 @@ mod elf;
 mod macho;
 mod string;
 mod util;
+pub use util::*;
 
 /// The error type used within the write module.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -162,7 +162,7 @@ impl Object {
             kind,
             size: 0,
             align: 1,
-            data: BytesMut::new(),
+            data: Vec::new(),
             relocations: Vec::new(),
             symbol: None,
             flags: SectionFlags::None,
@@ -520,9 +520,9 @@ impl Object {
 
     /// Write the object to a `Vec`.
     pub fn write(&self) -> Result<Vec<u8>> {
-        let mut buffer = BytesMut::new();
+        let mut buffer = Vec::new();
         self.emit(&mut buffer)?;
-        Ok(buffer.0)
+        Ok(buffer)
     }
 
     /// Write the object to a `WritableBuffer`.
@@ -616,7 +616,7 @@ pub struct Section {
     kind: SectionKind,
     size: u64,
     align: u64,
-    data: BytesMut,
+    data: Vec<u8>,
     relocations: Vec<Relocation>,
     symbol: Option<SymbolId>,
     /// Section flags that are specific to each file format.
@@ -650,7 +650,7 @@ impl Section {
         debug_assert_eq!(align & (align - 1), 0);
         debug_assert!(self.data.is_empty());
         self.size = data.len() as u64;
-        self.data = BytesMut(data);
+        self.data = data;
         self.align = align;
     }
 
@@ -669,7 +669,7 @@ impl Section {
             offset += align - (offset & (align - 1));
             self.data.resize(offset, 0);
         }
-        self.data.extend(data);
+        self.data.extend_from_slice(data);
         self.size = self.data.len() as u64;
         offset as u64
     }
