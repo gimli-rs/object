@@ -3,9 +3,9 @@ use core::mem;
 
 use crate::elf;
 use crate::endian;
-use crate::pod::{Bytes, Pod};
+use crate::pod::Pod;
 use crate::read::util;
-use crate::read::{self, Error, ReadError};
+use crate::read::{self, Bytes, Error, ReadError};
 
 use super::FileHeader;
 

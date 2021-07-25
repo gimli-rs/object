@@ -1,6 +1,5 @@
 use crate::elf;
-use crate::pod::Bytes;
-use crate::read::{ReadError, Result};
+use crate::read::{Bytes, ReadError, Result};
 
 use super::FileHeader;
 

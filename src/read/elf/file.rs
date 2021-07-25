@@ -4,10 +4,10 @@ use core::fmt::Debug;
 use core::{mem, str};
 
 use crate::read::{
-    self, util, Architecture, Error, Export, FileFlags, Import, Object, ReadError, ReadRef,
-    SectionIndex, StringTable, SymbolIndex,
+    self, util, Architecture, ByteString, Bytes, Error, Export, FileFlags, Import, Object,
+    ReadError, ReadRef, SectionIndex, StringTable, SymbolIndex,
 };
-use crate::{elf, endian, ByteString, Bytes, Endian, Endianness, Pod, U32};
+use crate::{elf, endian, Endian, Endianness, Pod, U32};
 
 use super::{
     CompressionHeader, Dyn, ElfComdat, ElfComdatIterator, ElfDynamicRelocationIterator, ElfSection,

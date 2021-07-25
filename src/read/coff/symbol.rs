@@ -6,11 +6,11 @@ use core::str;
 use super::{CoffCommon, SectionTable};
 use crate::endian::{LittleEndian as LE, U32Bytes};
 use crate::pe;
-use crate::pod::{bytes_of_slice, Bytes, Pod};
+use crate::pod::{bytes_of_slice, Pod};
 use crate::read::util::StringTable;
 use crate::read::{
-    self, ObjectSymbol, ObjectSymbolTable, ReadError, ReadRef, Result, SectionIndex, SymbolFlags,
-    SymbolIndex, SymbolKind, SymbolMap, SymbolMapEntry, SymbolScope, SymbolSection,
+    self, Bytes, ObjectSymbol, ObjectSymbolTable, ReadError, ReadRef, Result, SectionIndex,
+    SymbolFlags, SymbolIndex, SymbolKind, SymbolMap, SymbolMapEntry, SymbolScope, SymbolSection,
 };
 
 /// A table of symbol entries in a COFF or PE file.
