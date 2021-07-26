@@ -2,6 +2,58 @@
 
 --------------------------------------------------------------------------------
 
+## 0.26.0
+
+Released 2021/07/26.
+
+### Breaking changes
+
+* Changed `ReadRef::read_bytes_at_until` to accept a range parameter.
+  [#326](https://github.com/gimli-rs/object/pull/326)
+
+* Added `ReadRef` type parameter to `read::StringTable` and types that
+  contain it. String table entries are now only read as required.
+  [#326](https://github.com/gimli-rs/object/pull/326)
+
+* Changed result type of `read::elf::SectionHeader::data` and `data_as_array`.
+  [#332](https://github.com/gimli-rs/object/pull/332)
+
+* Moved `pod::WritableBuffer` to `write::WritableBuffer`.
+  Renamed `WritableBuffer::extend` to `write_bytes`.
+  Added more provided methods to `WritableBuffer`.
+  [#335](https://github.com/gimli-rs/object/pull/335)
+
+* Moved `pod::Bytes` to `read::Bytes`.
+  [#336](https://github.com/gimli-rs/object/pull/336)
+
+* Added `is_mips64el` parameter to `elf::Rela64::r_info/set_r_info`.
+  [#337](https://github.com/gimli-rs/object/pull/337)
+
+### Changed
+
+* Removed `alloc` dependency when no features are enabled.
+  [#336](https://github.com/gimli-rs/object/pull/336)
+
+### Added
+
+* Added `read::pe::PeFile` methods: `section_table`, `data_directory`, and `data`.
+  [#324](https://github.com/gimli-rs/object/pull/324)
+
+* Added more ELF definitions.
+  [#332](https://github.com/gimli-rs/object/pull/332)
+
+* Added `read::elf::SectionTable` methods for hash tables and symbol version
+  information.
+  [#332](https://github.com/gimli-rs/object/pull/332)
+
+* Added PE RISC-V definitions.
+  [#333](https://github.com/gimli-rs/object/pull/333)
+
+* Added `WritableBuffer` implementation for `Vec`.
+  [#335](https://github.com/gimli-rs/object/pull/335)
+
+--------------------------------------------------------------------------------
+
 ## 0.25.3
 
 Released 2021/06/12.
