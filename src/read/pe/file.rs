@@ -31,6 +31,7 @@ where
     pub(super) nt_headers: &'data Pe,
     pub(super) data_directories: &'data [pe::ImageDataDirectory],
     pub(super) common: CoffCommon<'data, R>,
+    pub(super) overlay_offset: Option<u64>,
     pub(super) data: R,
 }
 
@@ -48,6 +49,16 @@ where
         let symbols = nt_headers.symbols(data)?;
         let image_base = nt_headers.optional_header().image_base();
 
+        let file_size = data
+            .len()
+            .map_err(|()| read::Error("Unable to get file length"))?;
+        let final_offset = Self::compute_final_offset(offset, file_size, &sections);
+        let overlay_offset = if final_offset < file_size {
+            Some(final_offset + 1)
+        } else {
+            None
+        };
+
         Ok(PeFile {
             dos_header,
             nt_headers,
@@ -57,6 +68,7 @@ where
                 symbols,
                 image_base,
             },
+            overlay_offset,
             data,
         })
     }
@@ -94,6 +106,32 @@ where
     /// Returns this binary data.
     pub fn data(&self) -> R {
         self.data
+    }
+
+    /// Returns the offset where the overlay (if any) starts.
+    ///
+    /// A [data overlay](https://security.stackexchange.com/questions/77336/how-is-the-file-overlay-read-by-an-exe-virus)
+    /// is the part of the PE file after all headers and sections. Some malware use it to conceal data
+    pub fn overlay_offset(&self) -> Option<u64> {
+        self.overlay_offset
+    }
+
+    /// Compute the end of file, according to the offset and sizes declared in the headers
+    fn compute_final_offset(end_of_headers: u64, file_size: u64, sections: &SectionTable) -> u64 {
+        let mut final_offset: u64 = end_of_headers;
+        for section in sections.iter() {
+            let new_offset = section.pointer_to_raw_data.get(LE);
+            let new_size = section.size_of_raw_data.get(LE);
+            let new_final = new_offset as u64 + new_size as u64;
+            if new_final <= file_size && new_final > final_offset {
+                final_offset = new_final
+            }
+        }
+
+        // We'll assume the PE "data directories" are all contained within the sections
+        // Note that some other parsing libraries (e.g. the `pefile` Python library) does not make such an assumption
+
+        final_offset
     }
 }
 
