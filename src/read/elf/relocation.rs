@@ -8,7 +8,7 @@ use crate::endian::{self, Endianness};
 use crate::pod::Pod;
 use crate::read::{
     self, Error, ReadRef, Relocation, RelocationEncoding, RelocationKind, RelocationTarget,
-    SymbolIndex,
+    SectionIndex, SymbolIndex,
 };
 
 use super::{ElfFile, FileHeader, SectionHeader, SectionTable};
@@ -26,7 +26,7 @@ impl RelocationSections {
     pub fn parse<'data, Elf: FileHeader, R: ReadRef<'data>>(
         endian: Elf::Endian,
         sections: &SectionTable<'data, Elf, R>,
-        symbol_section: usize,
+        symbol_section: SectionIndex,
     ) -> read::Result<Self> {
         let mut relocations = vec![0; sections.len()];
         for (index, section) in sections.iter().enumerate().rev() {
@@ -34,7 +34,7 @@ impl RelocationSections {
             if sh_type == elf::SHT_REL || sh_type == elf::SHT_RELA {
                 // The symbol indices used in relocations must be for the symbol table
                 // we are expecting to use.
-                let sh_link = section.sh_link(endian) as usize;
+                let sh_link = SectionIndex(section.sh_link(endian) as usize);
                 if sh_link != symbol_section {
                     continue;
                 }
@@ -105,7 +105,7 @@ where
     R: ReadRef<'data>,
 {
     /// The current relocation section index.
-    pub(super) section_index: usize,
+    pub(super) section_index: SectionIndex,
     pub(super) file: &'file ElfFile<'data, Elf, R>,
     pub(super) relocations: Option<ElfRelaIterator<'data, Elf>>,
 }
@@ -130,9 +130,9 @@ where
             }
 
             let section = self.file.sections.section(self.section_index).ok()?;
-            self.section_index += 1;
+            self.section_index.0 += 1;
 
-            let sh_link = section.sh_link(endian) as usize;
+            let sh_link = SectionIndex(section.sh_link(endian) as usize);
             if sh_link != self.file.dynamic_symbols.section() {
                 continue;
             }
@@ -178,7 +178,7 @@ where
     R: ReadRef<'data>,
 {
     /// The current pointer in the chain of relocation sections.
-    pub(super) section_index: usize,
+    pub(super) section_index: SectionIndex,
     pub(super) file: &'file ElfFile<'data, Elf, R>,
     pub(super) relocations: Option<ElfRelaIterator<'data, Elf>>,
 }
@@ -201,7 +201,7 @@ where
                 }
                 self.relocations = None;
             }
-            self.section_index = self.file.relocations.get(self.section_index)?;
+            self.section_index = SectionIndex(self.file.relocations.get(self.section_index.0)?);
             // The construction of RelocationSections ensures section_index is valid.
             let section = self.file.sections.section(self.section_index).unwrap();
             match section.sh_type(endian) {

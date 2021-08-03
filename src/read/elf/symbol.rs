@@ -23,7 +23,8 @@ pub struct SymbolTable<'data, Elf: FileHeader, R = &'data [u8]>
 where
     R: ReadRef<'data>,
 {
-    section: usize,
+    section: SectionIndex,
+    string_section: SectionIndex,
     symbols: &'data [Elf::Sym],
     strings: StringTable<'data, R>,
     shndx: &'data [u32],
@@ -32,7 +33,8 @@ where
 impl<'data, Elf: FileHeader, R: ReadRef<'data>> Default for SymbolTable<'data, Elf, R> {
     fn default() -> Self {
         SymbolTable {
-            section: 0,
+            section: SectionIndex(0),
+            string_section: SectionIndex(0),
             symbols: &[],
             strings: Default::default(),
             shndx: &[],
@@ -46,7 +48,7 @@ impl<'data, Elf: FileHeader, R: ReadRef<'data>> SymbolTable<'data, Elf, R> {
         endian: Elf::Endian,
         data: R,
         sections: &SectionTable<'data, Elf, R>,
-        section_index: usize,
+        section_index: SectionIndex,
         section: &Elf::SectionHeader,
     ) -> read::Result<SymbolTable<'data, Elf, R>> {
         debug_assert!(
@@ -58,7 +60,8 @@ impl<'data, Elf: FileHeader, R: ReadRef<'data>> SymbolTable<'data, Elf, R> {
             .data_as_array(endian, data)
             .read_error("Invalid ELF symbol table data")?;
 
-        let strtab = sections.section(section.sh_link(endian) as usize)?;
+        let link = SectionIndex(section.sh_link(endian) as usize);
+        let strtab = sections.section(link)?;
         let strings = if let Some((str_offset, str_size)) = strtab.file_range(endian) {
             let str_end = str_offset
                 .checked_add(str_size)
@@ -72,7 +75,7 @@ impl<'data, Elf: FileHeader, R: ReadRef<'data>> SymbolTable<'data, Elf, R> {
             .iter()
             .find(|s| {
                 s.sh_type(endian) == elf::SHT_SYMTAB_SHNDX
-                    && s.sh_link(endian) as usize == section_index
+                    && s.sh_link(endian) as usize == section_index.0
             })
             .map(|section| {
                 section
@@ -84,6 +87,7 @@ impl<'data, Elf: FileHeader, R: ReadRef<'data>> SymbolTable<'data, Elf, R> {
 
         Ok(SymbolTable {
             section: section_index,
+            string_section: link,
             symbols,
             strings,
             shndx,
@@ -92,8 +96,14 @@ impl<'data, Elf: FileHeader, R: ReadRef<'data>> SymbolTable<'data, Elf, R> {
 
     /// Return the section index of this symbol table.
     #[inline]
-    pub fn section(&self) -> usize {
+    pub fn section(&self) -> SectionIndex {
         self.section
+    }
+
+    /// Return the section index of the linked string table.
+    #[inline]
+    pub fn string_section(&self) -> SectionIndex {
+        self.string_section
     }
 
     /// Return the string table used for the symbol names.

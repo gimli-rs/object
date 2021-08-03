@@ -188,7 +188,7 @@ fn note() {
     let endian: LittleEndian = header.endian().unwrap();
     let sections = header.sections(endian, bytes).unwrap();
 
-    let section = sections.section(1).unwrap();
+    let section = sections.section(SectionIndex(1)).unwrap();
     assert_eq!(sections.section_name(endian, section).unwrap(), b".note4");
     assert_eq!(section.sh_addralign(endian), 4);
     let mut notes = section.notes(endian, bytes).unwrap().unwrap();
@@ -202,7 +202,7 @@ fn note() {
     assert_eq!(note.n_type(endian), 2);
     assert!(notes.next().unwrap().is_none());
 
-    let section = sections.section(2).unwrap();
+    let section = sections.section(SectionIndex(2)).unwrap();
     assert_eq!(sections.section_name(endian, section).unwrap(), b".note8");
     assert_eq!(section.sh_addralign(endian), 8);
     let mut notes = section.notes(endian, bytes).unwrap().unwrap();

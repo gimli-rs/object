@@ -52,9 +52,9 @@ impl<'data, Elf: FileHeader, R: ReadRef<'data>> SectionTable<'data, Elf, R> {
     }
 
     /// Return the section header at the given index.
-    pub fn section(&self, index: usize) -> read::Result<&'data Elf::SectionHeader> {
+    pub fn section(&self, index: SectionIndex) -> read::Result<&'data Elf::SectionHeader> {
         self.sections
-            .get(index)
+            .get(index.0)
             .read_error("Invalid ELF section index")
     }
 
@@ -102,7 +102,7 @@ impl<'data, Elf: FileHeader, R: ReadRef<'data>> SectionTable<'data, Elf, R> {
             None => return Ok(SymbolTable::default()),
         };
 
-        SymbolTable::parse(endian, data, self, index, section)
+        SymbolTable::parse(endian, data, self, SectionIndex(index), section)
     }
 
     /// Return the symbol table at the given section index.
@@ -113,7 +113,7 @@ impl<'data, Elf: FileHeader, R: ReadRef<'data>> SectionTable<'data, Elf, R> {
         &self,
         endian: Elf::Endian,
         data: R,
-        index: usize,
+        index: SectionIndex,
     ) -> read::Result<SymbolTable<'data, Elf, R>> {
         let section = self.section(index)?;
         match section.sh_type(endian) {
@@ -128,7 +128,7 @@ impl<'data, Elf: FileHeader, R: ReadRef<'data>> SectionTable<'data, Elf, R> {
     pub fn relocation_sections(
         &self,
         endian: Elf::Endian,
-        symbol_section: usize,
+        symbol_section: SectionIndex,
     ) -> read::Result<RelocationSections> {
         RelocationSections::parse(endian, self, symbol_section)
     }
@@ -515,7 +515,7 @@ where
 
     fn relocations(&self) -> ElfSectionRelocationIterator<'data, 'file, Elf, R> {
         ElfSectionRelocationIterator {
-            section_index: self.index.0,
+            section_index: self.index,
             file: self.file,
             relocations: None,
         }
@@ -614,7 +614,7 @@ pub trait SectionHeader: Debug + Pod {
         endian: Self::Endian,
         data: R,
         sections: &SectionTable<'data, Self::Elf, R>,
-        section_index: usize,
+        section_index: SectionIndex,
     ) -> read::Result<Option<SymbolTable<'data, Self::Elf, R>>> {
         let sh_type = self.sh_type(endian);
         if sh_type != elf::SHT_SYMTAB && sh_type != elf::SHT_DYNSYM {
@@ -671,7 +671,8 @@ pub trait SectionHeader: Debug + Pod {
         if sh_type != elf::SHT_REL && sh_type != elf::SHT_RELA {
             return Err(Error("Invalid ELF relocation section type"));
         }
-        sections.symbol_table_by_index(endian, data, self.sh_link(endian) as usize)
+        let link = SectionIndex(self.sh_link(endian) as usize);
+        sections.symbol_table_by_index(endian, data, link)
     }
 
     /// Return a note iterator for the section data.

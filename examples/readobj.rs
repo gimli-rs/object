@@ -241,6 +241,7 @@ mod elf {
     use super::*;
     use object::elf::*;
     use object::read::elf::*;
+    use object::read::{SectionIndex, StringTable};
 
     pub(super) fn print_elf32(p: &mut Printer<impl Write>, data: &[u8]) {
         if let Ok(elf) = FileHeader32::<Endianness>::parse(data) {
@@ -434,10 +435,10 @@ mod elf {
                     strsz = d.d_val(endian).into();
                 }
             }
-            let mut dynstr = object::StringTable::default();
+            let mut dynstr = StringTable::default();
             for s in segments {
                 if let Ok(Some(data)) = s.data_range(endian, data, strtab, strsz) {
-                    dynstr = object::StringTable::new(data, 0, data.len() as u64);
+                    dynstr = StringTable::new(data, 0, data.len() as u64);
                     break;
                 }
             }
@@ -492,8 +493,9 @@ mod elf {
         sections: &SectionTable<Elf>,
     ) {
         for (index, section) in sections.iter().enumerate() {
+            let index = SectionIndex(index);
             p.group("SectionHeader", |p| {
-                p.field("Index", index);
+                p.field("Index", index.0);
                 p.field_string(
                     "Name",
                     section.sh_name(endian),
@@ -563,7 +565,7 @@ mod elf {
         data: &[u8],
         elf: &Elf,
         sections: &SectionTable<Elf>,
-        section_index: usize,
+        section_index: SectionIndex,
         section: &Elf::SectionHeader,
     ) {
         if let Ok(Some(symbols)) = section.symbols(endian, data, sections, section_index) {
@@ -755,7 +757,7 @@ mod elf {
                 for member in members {
                     let index = member.get(endian);
                     p.print_indent();
-                    if let Ok(section) = sections.section(index as usize) {
+                    if let Ok(section) = sections.section(SectionIndex(index as usize)) {
                         if let Ok(name) = sections.section_name(endian, section) {
                             p.print_string(name);
                             writeln!(p.w, " ({})", index).unwrap();
