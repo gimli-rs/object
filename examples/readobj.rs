@@ -645,8 +645,8 @@ mod elf {
         sections: &SectionTable<Elf>,
         section: &Elf::SectionHeader,
     ) {
-        if let Ok(Some(relocations)) = section.rel(endian, data) {
-            let symbols = section.relocation_symbols(endian, data, sections).ok();
+        if let Ok(Some((relocations, link))) = section.rel(endian, data) {
+            let symbols = sections.symbol_table_by_index(endian, data, link).ok();
             let proc = rel_flag_type(endian, elf);
             for relocation in relocations {
                 p.group("Relocation", |p| {
@@ -667,8 +667,8 @@ mod elf {
         sections: &SectionTable<Elf>,
         section: &Elf::SectionHeader,
     ) {
-        if let Ok(Some(relocations)) = section.rela(endian, data) {
-            let symbols = section.relocation_symbols(endian, data, sections).ok();
+        if let Ok(Some((relocations, link))) = section.rela(endian, data) {
+            let symbols = sections.symbol_table_by_index(endian, data, link).ok();
             let proc = rel_flag_type(endian, elf);
             for relocation in relocations {
                 p.group("Relocation", |p| {
@@ -866,13 +866,15 @@ mod elf {
         endian: Elf::Endian,
         data: &[u8],
         _elf: &Elf,
-        _sections: &SectionTable<Elf>,
+        sections: &SectionTable<Elf>,
         section: &Elf::SectionHeader,
     ) {
-        if let Ok(Some(mut verdefs)) = section.gnu_verdef(endian, data) {
+        if let Ok(Some((mut verdefs, link))) = section.gnu_verdef(endian, data) {
+            let strings = sections
+                .strings(endian, data, link)
+                .unwrap_or(StringTable::default());
             while let Ok(Some((verdef, mut verdauxs))) = verdefs.next() {
                 p.group("VersionDefinition", |p| {
-                    // TODO: names
                     p.field("Version", verdef.vd_version.get(endian));
                     p.field_hex("Flags", verdef.vd_flags.get(endian));
                     p.flags(verdef.vd_flags.get(endian), 0, FLAGS_VER_FLG);
@@ -884,7 +886,11 @@ mod elf {
                     p.field("NextOffset", verdef.vd_next.get(endian));
                     while let Ok(Some(verdaux)) = verdauxs.next() {
                         p.group("Aux", |p| {
-                            p.field_hex("Name", verdaux.vda_name.get(endian));
+                            p.field_string(
+                                "Name",
+                                verdaux.vda_name.get(endian),
+                                verdaux.name(endian, strings).ok(),
+                            );
                             p.field("NextOffset", verdaux.vda_next.get(endian));
                         });
                     }
@@ -898,16 +904,22 @@ mod elf {
         endian: Elf::Endian,
         data: &[u8],
         _elf: &Elf,
-        _sections: &SectionTable<Elf>,
+        sections: &SectionTable<Elf>,
         section: &Elf::SectionHeader,
     ) {
-        if let Ok(Some(mut verneeds)) = section.gnu_verneed(endian, data) {
+        if let Ok(Some((mut verneeds, link))) = section.gnu_verneed(endian, data) {
+            let strings = sections
+                .strings(endian, data, link)
+                .unwrap_or(StringTable::default());
             while let Ok(Some((verneed, mut vernauxs))) = verneeds.next() {
                 p.group("VersionNeed", |p| {
-                    // TODO: names
                     p.field("Version", verneed.vn_version.get(endian));
                     p.field("AuxCount", verneed.vn_cnt.get(endian));
-                    p.field_hex("Filename", verneed.vn_file.get(endian));
+                    p.field_string(
+                        "Filename",
+                        verneed.vn_file.get(endian),
+                        verneed.file(endian, strings).ok(),
+                    );
                     p.field("AuxOffset", verneed.vn_aux.get(endian));
                     p.field("NextOffset", verneed.vn_next.get(endian));
                     while let Ok(Some(vernaux)) = vernauxs.next() {
@@ -917,7 +929,11 @@ mod elf {
                             p.flags(vernaux.vna_flags.get(endian), 0, FLAGS_VER_FLG);
                             p.field("Index", vernaux.vna_other.get(endian) & !VER_NDX_HIDDEN);
                             p.flags(vernaux.vna_other.get(endian), 0, FLAGS_VER_NDX);
-                            p.field_hex("Name", vernaux.vna_name.get(endian));
+                            p.field_string(
+                                "Name",
+                                vernaux.vna_name.get(endian),
+                                vernaux.name(endian, strings).ok(),
+                            );
                             p.field("NextOffset", vernaux.vna_next.get(endian));
                         });
                     }
@@ -934,7 +950,7 @@ mod elf {
         _sections: &SectionTable<Elf>,
         section: &Elf::SectionHeader,
     ) {
-        if let Ok(Some(syms)) = section.gnu_versym(endian, data) {
+        if let Ok(Some((syms, _link))) = section.gnu_versym(endian, data) {
             for sym in syms {
                 p.group("VersionSymbol", |p| {
                     p.field("Version", sym.0.get(endian) & !VER_NDX_HIDDEN);

@@ -61,15 +61,7 @@ impl<'data, Elf: FileHeader, R: ReadRef<'data>> SymbolTable<'data, Elf, R> {
             .read_error("Invalid ELF symbol table data")?;
 
         let link = SectionIndex(section.sh_link(endian) as usize);
-        let strtab = sections.section(link)?;
-        let strings = if let Some((str_offset, str_size)) = strtab.file_range(endian) {
-            let str_end = str_offset
-                .checked_add(str_size)
-                .read_error("Invalid str_size")?;
-            StringTable::new(data, str_offset, str_end)
-        } else {
-            StringTable::default()
-        };
+        let strings = sections.strings(endian, data, link)?;
 
         let shndx = sections
             .iter()

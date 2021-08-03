@@ -1,5 +1,5 @@
-use crate::elf;
-use crate::read::{Bytes, ReadError, Result};
+use crate::read::{Bytes, ReadError, ReadRef, Result, StringTable};
+use crate::{elf, endian};
 
 use super::FileHeader;
 
@@ -171,5 +171,44 @@ impl<'data, Elf: FileHeader> VernauxIterator<'data, Elf> {
             .read_error("Invalid ELF vna_next")?;
         self.count -= 1;
         Ok(Some(vernaux))
+    }
+}
+
+impl<Endian: endian::Endian> elf::Verdaux<Endian> {
+    /// Parse the version name from the string table.
+    pub fn name<'data, R: ReadRef<'data>>(
+        &self,
+        endian: Endian,
+        strings: StringTable<'data, R>,
+    ) -> Result<&'data [u8]> {
+        strings
+            .get(self.vda_name.get(endian))
+            .read_error("Invalid ELF vda_name")
+    }
+}
+
+impl<Endian: endian::Endian> elf::Verneed<Endian> {
+    /// Parse the file from the string table.
+    pub fn file<'data, R: ReadRef<'data>>(
+        &self,
+        endian: Endian,
+        strings: StringTable<'data, R>,
+    ) -> Result<&'data [u8]> {
+        strings
+            .get(self.vn_file.get(endian))
+            .read_error("Invalid ELF vn_file")
+    }
+}
+
+impl<Endian: endian::Endian> elf::Vernaux<Endian> {
+    /// Parse the version name from the string table.
+    pub fn name<'data, R: ReadRef<'data>>(
+        &self,
+        endian: Endian,
+        strings: StringTable<'data, R>,
+    ) -> Result<&'data [u8]> {
+        strings
+            .get(self.vna_name.get(endian))
+            .read_error("Invalid ELF vna_name")
     }
 }
