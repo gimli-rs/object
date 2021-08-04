@@ -228,7 +228,9 @@ where
         // The size declared in the IMAGE_DIRECTORY_ENTRY_IMPORT is ignored by the Windows loader
         // Hence, we'll parse the list until a null entry, without restricting the read to this declared size
         // (i.e. we're not using `data_dir.data()`)
-        let mut import_descriptors = self.common.sections
+        let mut import_descriptors = self
+            .common
+            .sections
             .pe_data_at(self.data, data_dir.virtual_address.get(LE))
             .map(Bytes)
             .ok_or(read::Error("Unable to read PE import descriptors"))?;
