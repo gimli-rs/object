@@ -84,7 +84,7 @@ where
     pub fn data_directory(&self, id: usize) -> Option<&'data pe::ImageDataDirectory> {
         self.data_directories
             .get(id)
-            .filter(|d| d.size.get(LE) != 0)
+            .filter(|d| d.virtual_address.get(LE) != 0)
     }
 
     fn data_at(&self, va: u32) -> Option<Bytes<'data>> {
@@ -224,7 +224,16 @@ where
             Some(data_dir) => data_dir,
             None => return Ok(Vec::new()),
         };
-        let mut import_descriptors = data_dir.data(self.data, &self.common.sections).map(Bytes)?;
+
+        // The size declared in the IMAGE_DIRECTORY_ENTRY_IMPORT is ignored by the Windows loader
+        // Hence, we'll parse the list until a null entry, without restricting the read to this declared size
+        // (i.e. we're not using `data_dir.data()`)
+        let mut import_descriptors = self
+            .common
+            .sections
+            .pe_data_at(self.data, data_dir.virtual_address.get(LE))
+            .map(Bytes)
+            .ok_or(read::Error("Unable to read PE import descriptors"))?;
         let mut imports = Vec::new();
         loop {
             let import_desc = import_descriptors
