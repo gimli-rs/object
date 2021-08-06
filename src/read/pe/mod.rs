@@ -13,4 +13,7 @@ pub use file::*;
 mod section;
 pub use section::*;
 
+mod pe_export;
+pub use pe_export::*;
+
 pub use super::coff::{SectionTable, SymbolTable};

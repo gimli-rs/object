@@ -1,6 +1,7 @@
 use alloc::vec::Vec;
 use core::fmt::Debug;
 use core::{mem, str};
+use std::collections::HashMap;
 
 use core::convert::TryInto;
 
@@ -13,7 +14,7 @@ use crate::{
     pe, ByteString, Bytes, CodeView, LittleEndian as LE, Pod, U16Bytes, U32Bytes, U32, U64,
 };
 
-use super::{PeSection, PeSectionIterator, PeSegment, PeSegmentIterator, SectionTable};
+use super::{PeExport, PeSection, PeSectionIterator, PeSegment, PeSegmentIterator, SectionTable};
 
 /// A PE32 (32-bit) image file.
 pub type PeFile32<'data, R = &'data [u8]> = PeFile<'data, pe::ImageNtHeaders32, R>;
@@ -94,6 +95,122 @@ where
     /// Returns this binary data.
     pub fn data(&self) -> R {
         self.data
+    }
+
+    /// Returns the exports of this PE file (in no particular order)
+    ///
+    /// See also the [`PeFile::exports`] function, which only returns the regular exports.
+    pub fn pe_exports(&self) -> Result<Vec<PeExport<'data>>> {
+        let data_dir = match self.data_directory(pe::IMAGE_DIRECTORY_ENTRY_EXPORT) {
+            Some(data_dir) => data_dir,
+            None => return Ok(Vec::new()),
+        };
+        let export_va = data_dir.virtual_address.get(LE);
+        let export_size = data_dir.size.get(LE);
+        let export_data = data_dir.data(self.data, &self.common.sections).map(Bytes)?;
+        let export_dir = export_data
+            .read_at::<pe::ImageExportDirectory>(0)
+            .read_error("Invalid PE export dir size")?;
+        let addresses = export_data
+            .read_slice_at::<U32Bytes<_>>(
+                export_dir
+                    .address_of_functions
+                    .get(LE)
+                    .wrapping_sub(export_va) as usize,
+                export_dir.number_of_functions.get(LE) as usize,
+            )
+            .read_error("Invalid PE export address table")?;
+        let number = export_dir.number_of_names.get(LE) as usize;
+        let names = export_data
+            .read_slice_at::<U32Bytes<_>>(
+                export_dir.address_of_names.get(LE).wrapping_sub(export_va) as usize,
+                number,
+            )
+            .read_error("Invalid PE export name table")?;
+        let base_ordinal = export_dir.base.get(LE);
+        let ordinals = export_data
+            .read_slice_at::<U16Bytes<_>>(
+                export_dir
+                    .address_of_name_ordinals
+                    .get(LE)
+                    .wrapping_sub(export_va) as usize,
+                number,
+            )
+            .read_error("Invalid PE export ordinal table")?;
+
+        // First, let's list all exports...
+        let mut exports_without_a_name = HashMap::new();
+        for (i, address) in addresses.iter().enumerate() {
+            // Convert from an array index to an ordinal
+            // The MSDN documentation is wrong here, see https://stackoverflow.com/a/40001778/721832
+            let ordinal: u32 = match i.try_into() {
+                Err(_err) => continue,
+                Ok(index) => index,
+            };
+            let ordinal = ordinal + base_ordinal;
+            let address = address.get(LE);
+
+            // is it a regular or forwarded export?
+            if address < export_va || (address - export_va) >= export_size {
+                exports_without_a_name.insert(
+                    ordinal,
+                    PeExport::ByOrdinal {
+                        ordinal: ordinal,
+                        address: self.common.image_base.wrapping_add(address as u64),
+                    },
+                );
+            } else {
+                let forwarded_to = export_data
+                    .read_string_at(address.wrapping_sub(export_va) as usize)
+                    .read_error("Invalid target for PE forwarded export")?;
+                exports_without_a_name.insert(
+                    ordinal,
+                    PeExport::ForwardedByOrdinal {
+                        ordinal: ordinal,
+                        forwarded_to: forwarded_to,
+                    },
+                );
+            }
+        }
+
+        // Now, check whether some (or all) of them have an associated name
+        let mut named_exports = Vec::new();
+        for (name_ptr, ordinal_index) in names.iter().zip(ordinals.iter()) {
+            // Items in the ordinal array are biased.
+            // The MSDN documentation is wrong regarding this bias, see https://stackoverflow.com/a/40001778/721832
+            let ordinal_index = ordinal_index.get(LE) as u32;
+            let ordinal = ordinal_index + base_ordinal;
+
+            let name = export_data
+                .read_string_at(name_ptr.get(LE).wrapping_sub(export_va) as usize)
+                .read_error("Invalid PE export name entry")?;
+
+            match exports_without_a_name.remove(&ordinal) {
+                Some(PeExport::ByOrdinal { ordinal, address }) => {
+                    named_exports.push(PeExport::Regular {
+                        name,
+                        address,
+                        ordinal,
+                    })
+                }
+                Some(PeExport::ForwardedByOrdinal {
+                    ordinal,
+                    forwarded_to,
+                }) => named_exports.push(PeExport::Forwarded {
+                    name,
+                    ordinal,
+                    forwarded_to,
+                }),
+                _ => continue, // unless ordinals are not unique in the ordinals array, this should not happen
+            }
+        }
+
+        let mut exports = named_exports;
+        for (_addr, unnamed_export) in exports_without_a_name.drain() {
+            exports.push(unnamed_export);
+        }
+
+        Ok(exports)
     }
 }
 
@@ -296,61 +413,21 @@ where
         Ok(imports)
     }
 
+    /// Note that this only returns "regular" exports.
+    /// [`PeFile::pe_exports`] may have more results
     fn exports(&self) -> Result<Vec<Export<'data>>> {
-        let data_dir = match self.data_directory(pe::IMAGE_DIRECTORY_ENTRY_EXPORT) {
-            Some(data_dir) => data_dir,
-            None => return Ok(Vec::new()),
-        };
-        let export_va = data_dir.virtual_address.get(LE);
-        let export_size = data_dir.size.get(LE);
-        let export_data = data_dir.data(self.data, &self.common.sections).map(Bytes)?;
-        let export_dir = export_data
-            .read_at::<pe::ImageExportDirectory>(0)
-            .read_error("Invalid PE export dir size")?;
-        let addresses = export_data
-            .read_slice_at::<U32Bytes<_>>(
-                export_dir
-                    .address_of_functions
-                    .get(LE)
-                    .wrapping_sub(export_va) as usize,
-                export_dir.number_of_functions.get(LE) as usize,
-            )
-            .read_error("Invalid PE export address table")?;
-        let number = export_dir.number_of_names.get(LE) as usize;
-        let names = export_data
-            .read_slice_at::<U32Bytes<_>>(
-                export_dir.address_of_names.get(LE).wrapping_sub(export_va) as usize,
-                number,
-            )
-            .read_error("Invalid PE export name table")?;
-        let ordinals = export_data
-            .read_slice_at::<U16Bytes<_>>(
-                export_dir
-                    .address_of_name_ordinals
-                    .get(LE)
-                    .wrapping_sub(export_va) as usize,
-                number,
-            )
-            .read_error("Invalid PE export ordinal table")?;
-
-        let mut exports = Vec::new();
-        for (name, ordinal) in names.iter().zip(ordinals.iter()) {
-            let name = export_data
-                .read_string_at(name.get(LE).wrapping_sub(export_va) as usize)
-                .read_error("Invalid PE export name entry")?;
-            let address = addresses
-                .get(ordinal.get(LE) as usize)
-                .read_error("Invalid PE export ordinal entry")?
-                .get(LE);
-            // Check for export address (vs forwarder address).
-            if address < export_va || (address - export_va) >= export_size {
-                exports.push(Export {
-                    name: ByteString(name),
-                    address: self.common.image_base.wrapping_add(address.into()),
-                })
+        self.pe_exports().map(|pe_exports| {
+            let mut exports = Vec::new();
+            for pe_export in pe_exports {
+                if let PeExport::Regular { name, address, .. } = pe_export {
+                    exports.push(Export {
+                        name: ByteString(name),
+                        address,
+                    })
+                }
             }
-        }
-        Ok(exports)
+            exports
+        })
     }
 
     fn pdb_info(&self) -> Result<Option<CodeView>> {
