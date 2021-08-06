@@ -1694,6 +1694,11 @@ pub const DF_1_PIE: u32 = 0x0800_0000;
 #[repr(C)]
 pub struct Versym<E: Endian>(pub U16<E>);
 
+/// Symbol is hidden.
+pub const VERSYM_HIDDEN: u16 = 0x8000;
+/// Symbol version index.
+pub const VERSYM_VERSION: u16 = 0x7fff;
+
 /// Version definition sections
 #[derive(Debug, Clone, Copy)]
 #[repr(C)]
@@ -1720,9 +1725,10 @@ pub const VER_DEF_NONE: u16 = 0;
 /// Current version
 pub const VER_DEF_CURRENT: u16 = 1;
 
-// Legal values for vd_flags and vna_flags (version information flags).
+// Legal values for vd_flags (version information flags).
 /// Version definition of file itself
 pub const VER_FLG_BASE: u16 = 0x1;
+// Legal values for vd_flags and vna_flags (version information flags).
 /// Weak version identifier
 pub const VER_FLG_WEAK: u16 = 0x2;
 
@@ -1731,8 +1737,6 @@ pub const VER_FLG_WEAK: u16 = 0x2;
 pub const VER_NDX_LOCAL: u16 = 0;
 /// Symbol is global.
 pub const VER_NDX_GLOBAL: u16 = 1;
-/// Symbol is hidden.
-pub const VER_NDX_HIDDEN: u16 = 0x8000;
 
 /// Auxiliary version information.
 #[derive(Debug, Clone, Copy)]

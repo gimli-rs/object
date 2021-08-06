@@ -569,6 +569,11 @@ mod elf {
         section: &Elf::SectionHeader,
     ) {
         if let Ok(Some(symbols)) = section.symbols(endian, data, sections, section_index) {
+            let versions = if section.sh_type(endian) == SHT_DYNSYM {
+                sections.versions(endian, data).ok()
+            } else {
+                None
+            };
             let os_stt = match elf.e_ident().os_abi {
                 ELFOSABI_GNU => FLAGS_STT_GNU,
                 ELFOSABI_HPUX => FLAGS_STT_HP,
@@ -601,6 +606,13 @@ mod elf {
                         symbol.st_name(endian),
                         symbol.name(endian, symbols.strings()).ok(),
                     );
+                    if let Some(versions) = versions.as_ref() {
+                        let version_index = versions.version_index(endian, index);
+                        if let Some(version) = versions.version(version_index) {
+                            p.field_string("Version", version_index.0, Some(version.name()));
+                            p.flags(version_index.0, 0, FLAGS_VERSYM);
+                        }
+                    }
                     p.field_hex("Value", symbol.st_value(endian).into());
                     p.field_hex("Size", symbol.st_size(endian).into());
                     p.field_enums("Type", symbol.st_type(), &[FLAGS_STT, os_stt, proc_stt]);
@@ -813,17 +825,23 @@ mod elf {
             });
         }
         /* TODO: add this in a test somewhere
-        if let Ok(Some(hash_table)) = section.hash(endian, data) {
-            if let Ok(symbols) = _sections.symbols(endian, data, SHT_DYNSYM) {
-                for symbol in symbols.symbols() {
-                    let name = symbols.symbol_name(endian, symbol).unwrap();
-                    if !symbol.is_definition(endian) {
-                        continue;
+        if let Ok(Some((hash_table, link))) = section.hash(endian, data) {
+            if let Ok(symbols) = _sections.symbol_table_by_index(endian, data, link) {
+                if let Ok(versions) = _sections.versions(endian, data) {
+                    for (index, symbol) in symbols.symbols().iter().enumerate() {
+                        let name = symbols.symbol_name(endian, symbol).unwrap();
+                        if !symbol.is_definition(endian) {
+                            continue;
+                        }
+                        let hash = hash(name);
+                        let version = versions.version(versions.version_index(endian, index));
+                        let (hash_index, hash_symbol) = hash_table
+                            .find(endian, name, hash, version, &symbols, &versions)
+                            .unwrap();
+                        let hash_name = symbols.symbol_name(endian, hash_symbol).unwrap();
+                        assert_eq!(name, hash_name);
+                        assert_eq!(index, hash_index);
                     }
-                    let hash = hash(name);
-                    let hash_symbol = hash_table.find(endian, name, hash, &symbols).unwrap();
-                    let hash_name = symbols.symbol_name(endian, hash_symbol).unwrap();
-                    assert_eq!(name, hash_name);
                 }
             }
         }
@@ -847,14 +865,25 @@ mod elf {
             });
         }
         /* TODO: add this in a test somewhere
-        if let Ok(Some(hash_table)) = section.gnu_hash(endian, data) {
-            if let Ok(symbols) = _sections.symbols(endian, data, SHT_DYNSYM) {
-                for symbol in &symbols.symbols()[hash_table.symbol_base() as usize..] {
-                    let name = symbols.symbol_name(endian, symbol).unwrap();
-                    let hash = gnu_hash(name);
-                    let hash_symbol = hash_table.find(endian, name, hash, &symbols).unwrap();
-                    let hash_name = symbols.symbol_name(endian, hash_symbol).unwrap();
-                    assert_eq!(name, hash_name);
+        if let Ok(Some((hash_table, link))) = section.gnu_hash(endian, data) {
+            if let Ok(symbols) = _sections.symbol_table_by_index(endian, data, link) {
+                if let Ok(versions) = _sections.versions(endian, data) {
+                    for (index, symbol) in symbols
+                        .symbols()
+                        .iter()
+                        .enumerate()
+                        .skip(hash_table.symbol_base() as usize)
+                    {
+                        let name = symbols.symbol_name(endian, symbol).unwrap();
+                        let hash = gnu_hash(name);
+                        let version = versions.version(versions.version_index(endian, index));
+                        let (hash_index, hash_symbol) = hash_table
+                            .find(endian, name, hash, version, &symbols, &versions)
+                            .unwrap();
+                        let hash_name = symbols.symbol_name(endian, hash_symbol).unwrap();
+                        assert_eq!(name, hash_name);
+                        assert_eq!(index, hash_index);
+                    }
                 }
             }
         }
@@ -878,8 +907,7 @@ mod elf {
                     p.field("Version", verdef.vd_version.get(endian));
                     p.field_hex("Flags", verdef.vd_flags.get(endian));
                     p.flags(verdef.vd_flags.get(endian), 0, FLAGS_VER_FLG);
-                    p.field("Index", verdef.vd_ndx.get(endian) & !VER_NDX_HIDDEN);
-                    p.flags(verdef.vd_ndx.get(endian), 0, FLAGS_VER_NDX);
+                    p.field("Index", verdef.vd_ndx.get(endian));
                     p.field("AuxCount", verdef.vd_cnt.get(endian));
                     p.field_hex("Hash", verdef.vd_hash.get(endian));
                     p.field("AuxOffset", verdef.vd_aux.get(endian));
@@ -927,8 +955,7 @@ mod elf {
                             p.field_hex("Hash", vernaux.vna_hash.get(endian));
                             p.field_hex("Flags", vernaux.vna_flags.get(endian));
                             p.flags(vernaux.vna_flags.get(endian), 0, FLAGS_VER_FLG);
-                            p.field("Index", vernaux.vna_other.get(endian) & !VER_NDX_HIDDEN);
-                            p.flags(vernaux.vna_other.get(endian), 0, FLAGS_VER_NDX);
+                            p.field("Index", vernaux.vna_other.get(endian));
                             p.field_string(
                                 "Name",
                                 vernaux.vna_name.get(endian),
@@ -947,15 +974,25 @@ mod elf {
         endian: Elf::Endian,
         data: &[u8],
         _elf: &Elf,
-        _sections: &SectionTable<Elf>,
+        sections: &SectionTable<Elf>,
         section: &Elf::SectionHeader,
     ) {
         if let Ok(Some((syms, _link))) = section.gnu_versym(endian, data) {
-            for sym in syms {
+            let versions = sections.versions(endian, data).ok();
+            for (index, sym) in syms.iter().enumerate() {
+                let sym = VersionIndex(sym.0.get(endian));
                 p.group("VersionSymbol", |p| {
-                    p.field("Version", sym.0.get(endian) & !VER_NDX_HIDDEN);
-                    p.flags(sym.0.get(endian), 0, FLAGS_VER_NDX);
-                    // TODO: version name
+                    p.field("Index", index);
+                    if sym.0 <= VER_NDX_GLOBAL {
+                        p.field_enum("Version", sym.0, FLAGS_VER_NDX);
+                    } else {
+                        let name = versions
+                            .as_ref()
+                            .and_then(|versions| versions.version(sym))
+                            .map(|version| version.name());
+                        p.field_string("Version", sym.0, name);
+                    };
+                    p.flags(sym.0, 0, FLAGS_VERSYM);
                 });
             }
         }
@@ -3360,7 +3397,8 @@ mod elf {
         DF_1_PIE,
     );
     static FLAGS_VER_FLG: &[Flag<u16>] = &flags!(VER_FLG_BASE, VER_FLG_WEAK);
-    static FLAGS_VER_NDX: &[Flag<u16>] = &flags!(VER_NDX_HIDDEN);
+    static FLAGS_VER_NDX: &[Flag<u16>] = &flags!(VER_NDX_LOCAL, VER_NDX_GLOBAL);
+    static FLAGS_VERSYM: &[Flag<u16>] = &flags!(VERSYM_HIDDEN);
 }
 
 mod macho {

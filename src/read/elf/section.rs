@@ -11,7 +11,7 @@ use crate::read::{
 
 use super::{
     CompressionHeader, ElfFile, ElfSectionRelocationIterator, FileHeader, GnuHashTable, HashTable,
-    NoteIterator, RelocationSections, SymbolTable, VerdefIterator, VerneedIterator,
+    NoteIterator, RelocationSections, SymbolTable, VerdefIterator, VerneedIterator, VersionTable,
 };
 
 /// The table of section headers in an ELF file.
@@ -275,6 +275,22 @@ impl<'data, Elf: FileHeader, R: ReadRef<'data>> SectionTable<'data, Elf, R> {
             }
         }
         Ok(None)
+    }
+
+    /// Returns the symbol version table.
+    ///
+    /// Returns an empty table if symbol versions are not present.
+    pub fn versions(&self, endian: Elf::Endian, data: R) -> read::Result<VersionTable<'data, Elf>> {
+        let (versyms, strings) = match self.gnu_versym(endian, data)? {
+            Some((versyms, link)) => (
+                versyms,
+                self.symbol_table_by_index(endian, data, link)?.strings(),
+            ),
+            None => return Ok(VersionTable::default()),
+        };
+        let verdefs = self.gnu_verdef(endian, data)?.map(|x| x.0);
+        let verneeds = self.gnu_verneed(endian, data)?.map(|x| x.0);
+        VersionTable::new(endian, versyms, verdefs, verneeds, strings)
     }
 }
 
