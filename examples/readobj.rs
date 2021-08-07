@@ -443,45 +443,7 @@ mod elf {
                 }
             }
 
-            let proc = match elf.e_machine(endian) {
-                EM_SPARC => FLAGS_DT_SPARC,
-                EM_MIPS => FLAGS_DT_MIPS,
-                EM_ALPHA => FLAGS_DT_ALPHA,
-                EM_PPC => FLAGS_DT_PPC,
-                EM_PPC64 => FLAGS_DT_PPC64,
-                EM_IA_64 => FLAGS_DT_IA_64,
-                EM_ALTERA_NIOS2 => FLAGS_DT_NIOS2,
-                _ => &[],
-            };
-            for d in dynamic {
-                let tag = d.d_tag(endian).into();
-                let val = d.d_val(endian).into();
-                p.group("Dynamic", |p| {
-                    if let Ok(tag) = tag.try_into() {
-                        p.field_enums("Tag", tag, &[FLAGS_DT, proc]);
-                        if tag == DT_NEEDED {
-                            p.field_string(
-                                "Value",
-                                val,
-                                val.try_into().ok().and_then(|val| dynstr.get(val).ok()),
-                            );
-                        } else {
-                            p.field_hex("Value", val);
-                            if tag == DT_FLAGS {
-                                p.flags(val, 0, FLAGS_DF);
-                            } else if tag == DT_FLAGS_1 {
-                                p.flags(val, 0, FLAGS_DF_1);
-                            }
-                        }
-                    } else {
-                        p.field_hex("Tag", tag);
-                        p.field_hex("Value", val);
-                    }
-                });
-                if tag == DT_NULL.into() {
-                    break;
-                }
-            }
+            print_dynamic(p, endian, elf, dynamic, dynstr);
         }
     }
 
@@ -541,6 +503,7 @@ mod elf {
                     SHT_REL => print_section_rel(p, endian, data, elf, sections, section),
                     SHT_RELA => print_section_rela(p, endian, data, elf, sections, section),
                     SHT_NOTE => print_section_notes(p, endian, data, elf, section),
+                    SHT_DYNAMIC => print_section_dynamic(p, endian, data, elf, sections, section),
                     SHT_GROUP => print_section_group(p, endian, data, elf, sections, section),
                     SHT_HASH => print_hash(p, endian, data, elf, sections, section),
                     SHT_GNU_HASH => print_gnu_hash(p, endian, data, elf, sections, section),
@@ -548,7 +511,6 @@ mod elf {
                     SHT_GNU_VERNEED => print_gnu_verneed(p, endian, data, elf, sections, section),
                     SHT_GNU_VERSYM => print_gnu_versym(p, endian, data, elf, sections, section),
                     // TODO:
-                    //SHT_DYNAMIC =>
                     //SHT_SHLIB =>
                     //SHT_INIT_ARRAY =>
                     //SHT_FINI_ARRAY =>
@@ -755,6 +717,22 @@ mod elf {
         }
     }
 
+    fn print_section_dynamic<Elf: FileHeader>(
+        p: &mut Printer<impl Write>,
+        endian: Elf::Endian,
+        data: &[u8],
+        elf: &Elf,
+        sections: &SectionTable<Elf>,
+        section: &Elf::SectionHeader,
+    ) {
+        if let Ok(Some((dynamic, index))) = section.dynamic(endian, data) {
+            let strings = sections
+                .strings(endian, data, index)
+                .unwrap_or(StringTable::default());
+            print_dynamic(p, endian, elf, dynamic, strings);
+        }
+    }
+
     fn print_section_group<Elf: FileHeader>(
         p: &mut Printer<impl Write>,
         endian: Elf::Endian,
@@ -807,6 +785,54 @@ mod elf {
                 // TODO: interpret desc
                 p.field_bytes("Desc", note.desc());
             });
+        }
+    }
+
+    fn print_dynamic<Elf: FileHeader>(
+        p: &mut Printer<impl Write>,
+        endian: Elf::Endian,
+        elf: &Elf,
+        dynamic: &[Elf::Dyn],
+        dynstr: StringTable,
+    ) {
+        let proc = match elf.e_machine(endian) {
+            EM_SPARC => FLAGS_DT_SPARC,
+            EM_MIPS => FLAGS_DT_MIPS,
+            EM_ALPHA => FLAGS_DT_ALPHA,
+            EM_PPC => FLAGS_DT_PPC,
+            EM_PPC64 => FLAGS_DT_PPC64,
+            EM_IA_64 => FLAGS_DT_IA_64,
+            EM_ALTERA_NIOS2 => FLAGS_DT_NIOS2,
+            _ => &[],
+        };
+        for d in dynamic {
+            let tag = d.d_tag(endian).into();
+            let val = d.d_val(endian).into();
+            p.group("Dynamic", |p| {
+                if let Ok(tag) = tag.try_into() {
+                    p.field_enums("Tag", tag, &[FLAGS_DT, proc]);
+                    if d.is_string(endian) {
+                        p.field_string(
+                            "Value",
+                            val,
+                            val.try_into().ok().and_then(|val| dynstr.get(val).ok()),
+                        );
+                    } else {
+                        p.field_hex("Value", val);
+                        if tag == DT_FLAGS {
+                            p.flags(val, 0, FLAGS_DF);
+                        } else if tag == DT_FLAGS_1 {
+                            p.flags(val, 0, FLAGS_DF_1);
+                        }
+                    }
+                } else {
+                    p.field_hex("Tag", tag);
+                    p.field_hex("Value", val);
+                }
+            });
+            if tag == DT_NULL.into() {
+                break;
+            }
         }
     }
 
