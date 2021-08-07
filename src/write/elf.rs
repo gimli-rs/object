@@ -178,7 +178,9 @@ impl Object {
             .sections
             .iter()
             .map(|section| {
-                let mut reloc_name = Vec::new();
+                let mut reloc_name = Vec::with_capacity(
+                    if is_rela { ".rela".len() } else { ".rel".len() } + section.name.len(),
+                );
                 if !section.relocations.is_empty() {
                     reloc_name.extend_from_slice(if is_rela {
                         &b".rela"[..]
@@ -416,7 +418,7 @@ impl Object {
 
         // Write section data.
         for (index, comdat) in self.comdats.iter().enumerate() {
-            let mut data = Vec::new();
+            let mut data = Vec::with_capacity(comdat_offsets[index].len);
             data.write_pod(&U32::new(self.endian, elf::GRP_COMDAT));
             for section in &comdat.sections {
                 data.write_pod(&U32::new(
@@ -453,7 +455,7 @@ impl Object {
                 st_size: 0,
             },
         );
-        let mut symtab_shndx = Vec::new();
+        let mut symtab_shndx = Vec::with_capacity(symtab_shndx_len);
         if need_symtab_shndx {
             symtab_shndx.write_pod(&U32::new(endian, 0));
         }
