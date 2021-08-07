@@ -6,10 +6,14 @@ use crate::pod::{bytes_of, bytes_of_slice, Pod};
 #[allow(clippy::len_without_is_empty)]
 pub trait WritableBuffer {
     /// Returns position/offset for data to be written at.
+    /// Should only be used in debug assertions
     fn len(&self) -> usize;
 
     /// Reserves specified number of bytes in the buffer.
-    fn reserve(&mut self, additional: usize) -> Result<(), ()>;
+    /// Must be called exactly once before writing anything to the buffer.
+    /// Must be given the exact of the buffer after writing everything, calling with a smaller size
+    /// may result in a panic, while calling with a bigger size may result in trailing garbage.
+    fn reserve(&mut self, size: usize) -> Result<(), ()>;
 
     /// Writes zero bytes at the end of the buffer until the buffer
     /// has the specified length.
@@ -54,8 +58,9 @@ impl WritableBuffer for Vec<u8> {
     }
 
     #[inline]
-    fn reserve(&mut self, additional: usize) -> Result<(), ()> {
-        self.reserve(additional);
+    fn reserve(&mut self, size: usize) -> Result<(), ()> {
+        assert_eq!(self.len(), 0, "Buffer must be empty");
+        self.reserve(size);
         Ok(())
     }
 
@@ -67,6 +72,7 @@ impl WritableBuffer for Vec<u8> {
 
     #[inline]
     fn write_bytes(&mut self, val: &[u8]) {
+        debug_assert!(self.len() + val.len() <= self.capacity());
         self.extend_from_slice(val)
     }
 }
