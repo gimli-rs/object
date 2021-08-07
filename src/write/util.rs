@@ -1,3 +1,4 @@
+use std::io::Write;
 use std::vec::Vec;
 
 use crate::pod::{bytes_of, bytes_of_slice, Pod};
@@ -74,6 +75,55 @@ impl WritableBuffer for Vec<u8> {
     fn write_bytes(&mut self, val: &[u8]) {
         debug_assert!(self.len() + val.len() <= self.capacity());
         self.extend_from_slice(val)
+    }
+}
+
+/// A [`WritableBuffer`] that streams data to a [`Write`]r.
+///
+/// It is advisable to use a buffered writer like [`BufWriter`](std::io::BufWriter) instead of an
+/// unbuffered writer like [`File`](std::fs::File).
+#[derive(Debug)]
+pub struct StreamingBuffer<W> {
+    writer: W,
+    length: usize,
+}
+
+impl<W> StreamingBuffer<W> {
+    /// Create a new `WriteBuf` backed by the given writer.
+    pub fn new(writer: W) -> Self {
+        StreamingBuffer { writer, length: 0 }
+    }
+
+    /// Unwraps this [`WriteBuf`] giving back the original writer.
+    pub fn into_inner(self) -> W {
+        self.writer
+    }
+}
+
+impl<W: Write> WritableBuffer for StreamingBuffer<W> {
+    #[inline]
+    fn len(&self) -> usize {
+        self.length
+    }
+
+    #[inline]
+    fn reserve(&mut self, _additional: usize) -> Result<(), ()> {
+        Ok(())
+    }
+
+    #[inline]
+    fn resize(&mut self, new_len: usize) {
+        debug_assert!(new_len >= self.length);
+        while self.length < new_len {
+            let write_amt = (new_len - self.length - 1) % 1024 + 1;
+            self.write_bytes(&[0; 1024][..write_amt]);
+        }
+    }
+
+    #[inline]
+    fn write_bytes(&mut self, val: &[u8]) {
+        self.writer.write_all(val).unwrap();
+        self.length += val.len();
     }
 }
 
