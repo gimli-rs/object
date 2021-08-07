@@ -4,7 +4,7 @@ use crate::elf;
 use crate::read::{ReadError, ReadRef, Result};
 use crate::{U32, U64};
 
-use super::{FileHeader, Sym, SymbolTable};
+use super::{FileHeader, Sym, SymbolTable, Version, VersionTable};
 
 /// A SysV symbol hash table in an ELF file.
 #[derive(Debug)]
@@ -39,14 +39,16 @@ impl<'data, Elf: FileHeader> HashTable<'data, Elf> {
         self.chains.len() as u32
     }
 
-    /// Use the hash table to find the symbol table entry with the given name and hash.
+    /// Use the hash table to find the symbol table entry with the given name, hash and version.
     pub fn find<R: ReadRef<'data>>(
         &self,
         endian: Elf::Endian,
         name: &[u8],
         hash: u32,
+        version: Option<&Version>,
         symbols: &SymbolTable<'data, Elf, R>,
-    ) -> Option<&'data Elf::Sym> {
+        versions: &VersionTable<'data, Elf>,
+    ) -> Option<(usize, &'data Elf::Sym)> {
         // Get the chain start from the bucket for this hash.
         let mut index = self.buckets[(hash as usize) % self.buckets.len()].get(endian) as usize;
         // Avoid infinite loop.
@@ -54,8 +56,10 @@ impl<'data, Elf: FileHeader> HashTable<'data, Elf> {
         let strings = symbols.strings();
         while index != 0 && i < self.chains.len() {
             if let Ok(symbol) = symbols.symbol(index) {
-                if symbol.name(endian, strings) == Ok(name) {
-                    return Some(symbol);
+                if symbol.name(endian, strings) == Ok(name)
+                    && versions.matches(endian, index, version)
+                {
+                    return Some((index, symbol));
                 }
             }
             index = self.chains.get(index)?.get(endian) as usize;
@@ -150,14 +154,16 @@ impl<'data, Elf: FileHeader> GnuHashTable<'data, Elf> {
         None
     }
 
-    /// Use the hash table to find the symbol table entry with the given name and hash.
+    /// Use the hash table to find the symbol table entry with the given name, hash, and version.
     pub fn find<R: ReadRef<'data>>(
         &self,
         endian: Elf::Endian,
         name: &[u8],
         hash: u32,
+        version: Option<&Version>,
         symbols: &SymbolTable<'data, Elf, R>,
-    ) -> Option<&'data Elf::Sym> {
+        versions: &VersionTable<'data, Elf>,
+    ) -> Option<(usize, &'data Elf::Sym)> {
         let word_bits = mem::size_of::<Elf::Word>() as u32 * 8;
 
         // Test against bloom filter.
@@ -184,7 +190,7 @@ impl<'data, Elf: FileHeader> GnuHashTable<'data, Elf> {
         }
 
         // Get the chain start from the bucket for this hash.
-        let index = self.buckets[(hash as usize) % self.buckets.len()].get(endian) as usize;
+        let mut index = self.buckets[(hash as usize) % self.buckets.len()].get(endian) as usize;
         if index == 0 {
             return None;
         }
@@ -198,13 +204,16 @@ impl<'data, Elf: FileHeader> GnuHashTable<'data, Elf> {
         for (symbol, value) in symbols.iter().zip(values.iter()) {
             let value = value.get(endian);
             if value | 1 == hash | 1 {
-                if symbol.name(endian, strings) == Ok(name) {
-                    return Some(symbol);
+                if symbol.name(endian, strings) == Ok(name)
+                    && versions.matches(endian, index, version)
+                {
+                    return Some((index, symbol));
                 }
             }
             if value & 1 != 0 {
                 break;
             }
+            index += 1;
         }
         None
     }

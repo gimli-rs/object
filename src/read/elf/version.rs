@@ -1,7 +1,206 @@
-use crate::elf;
-use crate::read::{Bytes, ReadError, Result};
+use alloc::vec::Vec;
+
+use crate::read::{Bytes, ReadError, ReadRef, Result, StringTable};
+use crate::{elf, endian};
 
 use super::FileHeader;
+
+/// A version index.
+#[derive(Debug, Default, Clone, Copy)]
+pub struct VersionIndex(pub u16);
+
+impl VersionIndex {
+    /// Return the version index.
+    pub fn index(&self) -> u16 {
+        self.0 & elf::VERSYM_VERSION
+    }
+
+    /// Return true if it is the local index.
+    pub fn is_local(&self) -> bool {
+        self.index() == elf::VER_NDX_LOCAL
+    }
+
+    /// Return true if it is the global index.
+    pub fn is_global(&self) -> bool {
+        self.index() == elf::VER_NDX_GLOBAL
+    }
+
+    /// Return the hidden flag.
+    pub fn is_hidden(&self) -> bool {
+        self.0 & elf::VERSYM_HIDDEN != 0
+    }
+}
+
+/// A version definition or requirement.
+///
+/// This is derived from entries in the `SHT_GNU_verdef` and `SHT_GNU_verneed` sections.
+#[derive(Debug, Default, Clone, Copy)]
+pub struct Version<'data> {
+    name: &'data [u8],
+    hash: u32,
+    // Used to keep track of valid indices in `VersionTable`.
+    valid: bool,
+}
+
+impl<'data> Version<'data> {
+    /// Return the version name.
+    pub fn name(&self) -> &'data [u8] {
+        self.name
+    }
+
+    /// Return hash of the version name.
+    pub fn hash(&self) -> u32 {
+        self.hash
+    }
+}
+
+/// A table of version definitions and requirements.
+///
+/// It allows looking up the version information for a given symbol index.
+///
+/// This is derived from entries in the `SHT_GNU_versym`, `SHT_GNU_verdef` and `SHT_GNU_verneed` sections.
+#[derive(Debug, Clone)]
+pub struct VersionTable<'data, Elf: FileHeader> {
+    symbols: &'data [elf::Versym<Elf::Endian>],
+    versions: Vec<Version<'data>>,
+}
+
+impl<'data, Elf: FileHeader> Default for VersionTable<'data, Elf> {
+    fn default() -> Self {
+        VersionTable {
+            symbols: &[],
+            versions: Vec::new(),
+        }
+    }
+}
+
+impl<'data, Elf: FileHeader> VersionTable<'data, Elf> {
+    /// Parse the version sections.
+    pub fn new<R: ReadRef<'data>>(
+        endian: Elf::Endian,
+        versyms: &'data [elf::Versym<Elf::Endian>],
+        verdefs: Option<VerdefIterator<'data, Elf>>,
+        verneeds: Option<VerneedIterator<'data, Elf>>,
+        strings: StringTable<'data, R>,
+    ) -> Result<Self> {
+        let mut max_index = 0;
+        if let Some(mut verdefs) = verdefs.clone() {
+            while let Some((verdef, _)) = verdefs.next()? {
+                if verdef.vd_flags.get(endian) & elf::VER_FLG_BASE != 0 {
+                    continue;
+                }
+                let index = verdef.vd_ndx.get(endian) & elf::VERSYM_VERSION;
+                if max_index < index {
+                    max_index = index;
+                }
+            }
+        }
+        if let Some(mut verneeds) = verneeds.clone() {
+            while let Some((_, mut vernauxs)) = verneeds.next()? {
+                while let Some(vernaux) = vernauxs.next()? {
+                    let index = vernaux.vna_other.get(endian) & elf::VERSYM_VERSION;
+                    if max_index < index {
+                        max_index = index;
+                    }
+                }
+            }
+        }
+
+        // Indices should be sequential, but this could be up to
+        // 32k * size_of::<Version>() if max_index is bad.
+        let mut versions = vec![Version::default(); max_index as usize + 1];
+
+        if let Some(mut verdefs) = verdefs {
+            while let Some((verdef, mut verdauxs)) = verdefs.next()? {
+                if verdef.vd_flags.get(endian) & elf::VER_FLG_BASE != 0 {
+                    continue;
+                }
+                let index = verdef.vd_ndx.get(endian) & elf::VERSYM_VERSION;
+                if index <= elf::VER_NDX_GLOBAL {
+                    // TODO: return error?
+                    continue;
+                }
+                if let Some(verdaux) = verdauxs.next()? {
+                    versions[usize::from(index)] = Version {
+                        name: verdaux.name(endian, strings)?,
+                        hash: verdef.vd_hash.get(endian),
+                        valid: true,
+                    };
+                }
+            }
+        }
+        if let Some(mut verneeds) = verneeds {
+            while let Some((_, mut vernauxs)) = verneeds.next()? {
+                while let Some(vernaux) = vernauxs.next()? {
+                    let index = vernaux.vna_other.get(endian) & elf::VERSYM_VERSION;
+                    if index <= elf::VER_NDX_GLOBAL {
+                        // TODO: return error?
+                        continue;
+                    }
+                    versions[usize::from(index)] = Version {
+                        name: vernaux.name(endian, strings)?,
+                        hash: vernaux.vna_hash.get(endian),
+                        valid: true,
+                    };
+                }
+            }
+        }
+
+        Ok(VersionTable {
+            symbols: versyms,
+            versions,
+        })
+    }
+
+    /// Return true if the version table is empty.
+    pub fn is_empty(&self) -> bool {
+        self.symbols.is_empty()
+    }
+
+    /// Return version index for a given symbol index.
+    pub fn version_index(&self, endian: Elf::Endian, index: usize) -> VersionIndex {
+        let version_index = match self.symbols.get(index) {
+            Some(x) => x.0.get(endian),
+            // Ideally this would be VER_NDX_LOCAL for undefined symbols,
+            // but currently there are no checks that need this distinction.
+            None => elf::VER_NDX_GLOBAL,
+        };
+        VersionIndex(version_index)
+    }
+
+    /// Return version information for a given symbol version index.
+    ///
+    /// Returns `None` if index is invalid. This may occur for local and global versions.
+    pub fn version(&self, index: VersionIndex) -> Option<&Version<'data>> {
+        if index.index() <= elf::VER_NDX_GLOBAL {
+            return None;
+        }
+        self.versions
+            .get(usize::from(index.index()))
+            .filter(|version| version.valid)
+    }
+
+    /// Return true if the given symbol index satisifies the requirements of `need`.
+    ///
+    /// Note: this function hasn't been fully tested and is likely to be incomplete.
+    pub fn matches(&self, endian: Elf::Endian, index: usize, need: Option<&Version>) -> bool {
+        let version_index = self.version_index(endian, index);
+        let def = self.version(version_index);
+        match (def, need) {
+            (Some(def), Some(need)) => need.hash == def.hash && need.name == def.name,
+            (None, Some(_need)) => {
+                // Version must be present if needed.
+                false
+            }
+            (Some(_def), None) => {
+                // For a dlsym call, use the newest version.
+                // TODO: if not a dlsym call, then use the oldest version.
+                !version_index.is_hidden()
+            }
+            (None, None) => true,
+        }
+    }
+}
 
 /// An iterator over the entries in an ELF `SHT_GNU_verdef` section.
 #[derive(Debug, Clone)]
@@ -171,5 +370,44 @@ impl<'data, Elf: FileHeader> VernauxIterator<'data, Elf> {
             .read_error("Invalid ELF vna_next")?;
         self.count -= 1;
         Ok(Some(vernaux))
+    }
+}
+
+impl<Endian: endian::Endian> elf::Verdaux<Endian> {
+    /// Parse the version name from the string table.
+    pub fn name<'data, R: ReadRef<'data>>(
+        &self,
+        endian: Endian,
+        strings: StringTable<'data, R>,
+    ) -> Result<&'data [u8]> {
+        strings
+            .get(self.vda_name.get(endian))
+            .read_error("Invalid ELF vda_name")
+    }
+}
+
+impl<Endian: endian::Endian> elf::Verneed<Endian> {
+    /// Parse the file from the string table.
+    pub fn file<'data, R: ReadRef<'data>>(
+        &self,
+        endian: Endian,
+        strings: StringTable<'data, R>,
+    ) -> Result<&'data [u8]> {
+        strings
+            .get(self.vn_file.get(endian))
+            .read_error("Invalid ELF vn_file")
+    }
+}
+
+impl<Endian: endian::Endian> elf::Vernaux<Endian> {
+    /// Parse the version name from the string table.
+    pub fn name<'data, R: ReadRef<'data>>(
+        &self,
+        endian: Endian,
+        strings: StringTable<'data, R>,
+    ) -> Result<&'data [u8]> {
+        strings
+            .get(self.vna_name.get(endian))
+            .read_error("Invalid ELF vna_name")
     }
 }

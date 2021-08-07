@@ -205,7 +205,7 @@ where
         &'file self,
         index: SectionIndex,
     ) -> read::Result<ElfSection<'data, 'file, Elf, R>> {
-        let section = self.sections.section(index.0)?;
+        let section = self.sections.section(index)?;
         Ok(ElfSection {
             file: self,
             index,
@@ -274,7 +274,7 @@ where
         &'file self,
     ) -> Option<ElfDynamicRelocationIterator<'data, 'file, Elf, R>> {
         Some(ElfDynamicRelocationIterator {
-            section_index: 1,
+            section_index: SectionIndex(1),
             file: self,
             relocations: None,
         })
