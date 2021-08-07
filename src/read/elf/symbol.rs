@@ -138,7 +138,27 @@ impl<'data, Elf: FileHeader, R: ReadRef<'data>> SymbolTable<'data, Elf, R> {
     /// Return the extended section index for the given symbol if present.
     #[inline]
     pub fn shndx(&self, index: usize) -> Option<u32> {
-        self.shndx.get(index).cloned()
+        self.shndx.get(index).copied()
+    }
+
+    /// Return the section index for the given symbol.
+    ///
+    /// This uses the extended section index if present.
+    pub fn symbol_section(
+        &self,
+        endian: Elf::Endian,
+        symbol: &'data Elf::Sym,
+        index: usize,
+    ) -> read::Result<Option<SectionIndex>> {
+        match symbol.st_shndx(endian) {
+            elf::SHN_UNDEF => Ok(None),
+            elf::SHN_XINDEX => self
+                .shndx(index)
+                .read_error("Missing ELF symbol extended index")
+                .map(|index| Some(SectionIndex(index as usize))),
+            shndx if shndx < elf::SHN_LORESERVE => Ok(Some(SectionIndex(shndx.into()))),
+            _ => Ok(None),
+        }
     }
 
     /// Return the symbol name for the given symbol.
