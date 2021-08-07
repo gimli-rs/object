@@ -148,6 +148,25 @@ impl<'data, Elf: FileHeader, R: ReadRef<'data>> SectionTable<'data, Elf, R> {
         RelocationSections::parse(endian, self, symbol_section)
     }
 
+    /// Return the contents of a dynamic section.
+    ///
+    /// Also returns the linked string table index.
+    ///
+    /// Returns `Ok(None)` if there is no `SHT_DYNAMIC` section.
+    /// Returns `Err` for invalid values.
+    pub fn dynamic(
+        &self,
+        endian: Elf::Endian,
+        data: R,
+    ) -> read::Result<Option<(&'data [Elf::Dyn], SectionIndex)>> {
+        for section in self.sections {
+            if let Some(dynamic) = section.dynamic(endian, data)? {
+                return Ok(Some(dynamic));
+            }
+        }
+        Ok(None)
+    }
+
     /// Return the header of a SysV hash section.
     ///
     /// Returns `Ok(None)` if there is no SysV GNU hash section.
@@ -724,6 +743,27 @@ pub trait SectionHeader: Debug + Pod {
             .read_error("Invalid ELF relocation section offset or size")?;
         let link = SectionIndex(self.sh_link(endian) as usize);
         Ok(Some((rela, link)))
+    }
+
+    /// Return entries in a dynamic section.
+    ///
+    /// Also returns the linked string table index.
+    ///
+    /// Returns `Ok(None)` if the section type is not `SHT_DYNAMIC`.
+    /// Returns `Err` for invalid values.
+    fn dynamic<'data, R: ReadRef<'data>>(
+        &self,
+        endian: Self::Endian,
+        data: R,
+    ) -> read::Result<Option<(&'data [<Self::Elf as FileHeader>::Dyn], SectionIndex)>> {
+        if self.sh_type(endian) != elf::SHT_DYNAMIC {
+            return Ok(None);
+        }
+        let dynamic = self
+            .data_as_array(endian, data)
+            .read_error("Invalid ELF dynamic section offset or size")?;
+        let link = SectionIndex(self.sh_link(endian) as usize);
+        Ok(Some((dynamic, link)))
     }
 
     /// Return a note iterator for the section data.
