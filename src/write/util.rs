@@ -11,9 +11,9 @@ pub trait WritableBuffer {
     /// Reserves specified number of bytes in the buffer.
     fn reserve(&mut self, additional: usize) -> Result<(), ()>;
 
-    /// Writes the specified value at the end of the buffer
-    /// until the buffer has the specified length.
-    fn resize(&mut self, new_len: usize, value: u8);
+    /// Writes zero bytes at the end of the buffer until the buffer
+    /// has the specified length.
+    fn resize(&mut self, new_len: usize);
 
     /// Writes the specified slice of bytes at the end of the buffer.
     fn write_bytes(&mut self, val: &[u8]);
@@ -60,8 +60,9 @@ impl WritableBuffer for Vec<u8> {
     }
 
     #[inline]
-    fn resize(&mut self, new_len: usize, value: u8) {
-        self.resize(new_len, value);
+    fn resize(&mut self, new_len: usize) {
+        debug_assert!(new_len >= self.len());
+        self.resize(new_len, 0);
     }
 
     #[inline]
@@ -99,7 +100,7 @@ pub(crate) fn align_u64(offset: u64, size: u64) -> u64 {
 
 pub(crate) fn write_align(buffer: &mut dyn WritableBuffer, size: usize) {
     let new_len = align(buffer.len(), size);
-    buffer.resize(new_len, 0);
+    buffer.resize(new_len);
 }
 
 #[cfg(test)]

@@ -246,7 +246,7 @@ impl<'a> Writer<'a> {
     /// Write padding up to the given file offset.
     pub fn pad_until(&mut self, offset: usize) {
         debug_assert!(self.buffer.len() <= offset);
-        self.buffer.resize(offset, 0);
+        self.buffer.resize(offset);
     }
 
     fn file_header_size(&self) -> usize {
