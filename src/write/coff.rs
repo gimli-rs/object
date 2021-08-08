@@ -579,7 +579,7 @@ impl Object {
                     debug_assert!(aux_len >= symbol.name.len());
                     let old_len = buffer.len();
                     buffer.write_bytes(&symbol.name);
-                    buffer.resize(old_len + aux_len, 0);
+                    buffer.resize(old_len + aux_len);
                 }
                 SymbolKind::Section => {
                     debug_assert_eq!(number_of_aux_symbols, 1);
