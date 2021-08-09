@@ -44,6 +44,26 @@ pub enum PeExport<'data> {
     },
 }
 
+impl<'a> PeExport<'a> {
+    /// Returns the ordinal of this export
+    pub fn ordinal(&self) -> u32 {
+        match &self {
+            &PeExport::Regular { ordinal, .. }
+            | &PeExport::Forwarded { ordinal, .. }
+            | &PeExport::ByOrdinal { ordinal, .. }
+            | &PeExport::ForwardedByOrdinal { ordinal, .. } => *ordinal,
+        }
+    }
+
+    /// Whether this export has a name
+    pub fn has_name(&self) -> bool {
+        match &self {
+            &PeExport::Regular { .. } | &PeExport::Forwarded { .. } => true,
+            &PeExport::ByOrdinal { .. } | &PeExport::ForwardedByOrdinal { .. } => false,
+        }
+    }
+}
+
 impl<'a> Debug for PeExport<'a> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::result::Result<(), core::fmt::Error> {
         match &self {
