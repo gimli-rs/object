@@ -1,6 +1,7 @@
 use core::fmt::Debug;
 
 /// Possible exports from a PE file
+#[derive(Clone)]
 pub enum PeExport<'data> {
     /// A named exported symbol from this PE file
     Regular {
@@ -44,7 +45,7 @@ pub enum PeExport<'data> {
 }
 
 impl<'a> Debug for PeExport<'a> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::result::Result<(), std::fmt::Error> {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::result::Result<(), core::fmt::Error> {
         match &self {
             PeExport::Regular {
                 ordinal,
@@ -55,7 +56,7 @@ impl<'a> Debug for PeExport<'a> {
                 .field("ordinal", &ordinal)
                 .field(
                     "data",
-                    &std::str::from_utf8(name).unwrap_or("<invalid name>"),
+                    &core::str::from_utf8(name).unwrap_or("<invalid name>"),
                 )
                 .field("address", &address)
                 .finish(),
@@ -73,11 +74,11 @@ impl<'a> Debug for PeExport<'a> {
                 .field("ordinal", &ordinal)
                 .field(
                     "name",
-                    &std::str::from_utf8(name).unwrap_or("<invalid name>"),
+                    &core::str::from_utf8(name).unwrap_or("<invalid name>"),
                 )
                 .field(
                     "forwarded_to",
-                    &std::str::from_utf8(forwarded_to).unwrap_or("<invalid forward name>"),
+                    &core::str::from_utf8(forwarded_to).unwrap_or("<invalid forward name>"),
                 )
                 .finish(),
             PeExport::ForwardedByOrdinal {
@@ -88,7 +89,7 @@ impl<'a> Debug for PeExport<'a> {
                 .field("ordinal", &ordinal)
                 .field(
                     "forwarded_to",
-                    &std::str::from_utf8(forwarded_to).unwrap_or("<invalid forward name>"),
+                    &core::str::from_utf8(forwarded_to).unwrap_or("<invalid forward name>"),
                 )
                 .finish(),
         }

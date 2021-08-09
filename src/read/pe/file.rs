@@ -1,7 +1,6 @@
 use alloc::vec::Vec;
 use core::fmt::Debug;
 use core::{mem, str};
-use std::collections::HashMap;
 
 use core::convert::TryInto;
 
@@ -97,7 +96,7 @@ where
         self.data
     }
 
-    /// Returns the exports of this PE file (in no particular order)
+    /// Returns the exports of this PE file
     ///
     /// See also the [`PeFile::exports`] function, which only returns the regular exports.
     pub fn pe_exports(&self) -> Result<Vec<PeExport<'data>>> {
@@ -139,7 +138,7 @@ where
             .read_error("Invalid PE export ordinal table")?;
 
         // First, let's list all exports...
-        let mut exports_without_a_name = HashMap::new();
+        let mut exports = Vec::new();
         for (i, address) in addresses.iter().enumerate() {
             // Convert from an array index to an ordinal
             // The MSDN documentation is wrong here, see https://stackoverflow.com/a/40001778/721832
@@ -152,62 +151,60 @@ where
 
             // is it a regular or forwarded export?
             if address < export_va || (address - export_va) >= export_size {
-                exports_without_a_name.insert(
-                    ordinal,
-                    PeExport::ByOrdinal {
-                        ordinal: ordinal,
-                        address: self.common.image_base.wrapping_add(address as u64),
-                    },
-                );
+                exports.push(PeExport::ByOrdinal {
+                    ordinal: ordinal,
+                    address: self.common.image_base.wrapping_add(address as u64),
+                });
             } else {
                 let forwarded_to = export_data
                     .read_string_at(address.wrapping_sub(export_va) as usize)
                     .read_error("Invalid target for PE forwarded export")?;
-                exports_without_a_name.insert(
-                    ordinal,
-                    PeExport::ForwardedByOrdinal {
-                        ordinal: ordinal,
-                        forwarded_to: forwarded_to,
-                    },
-                );
+                exports.push(PeExport::ForwardedByOrdinal {
+                    ordinal: ordinal,
+                    forwarded_to: forwarded_to,
+                });
             }
         }
 
         // Now, check whether some (or all) of them have an associated name
-        let mut named_exports = Vec::new();
         for (name_ptr, ordinal_index) in names.iter().zip(ordinals.iter()) {
             // Items in the ordinal array are biased.
             // The MSDN documentation is wrong regarding this bias, see https://stackoverflow.com/a/40001778/721832
             let ordinal_index = ordinal_index.get(LE) as u32;
-            let ordinal = ordinal_index + base_ordinal;
 
             let name = export_data
                 .read_string_at(name_ptr.get(LE).wrapping_sub(export_va) as usize)
                 .read_error("Invalid PE export name entry")?;
 
-            match exports_without_a_name.remove(&ordinal) {
+            let unnamed_equivalent = exports.get(ordinal_index as usize).cloned();
+            match unnamed_equivalent {
                 Some(PeExport::ByOrdinal { ordinal, address }) => {
-                    named_exports.push(PeExport::Regular {
-                        name,
-                        address,
-                        ordinal,
-                    })
+                    let _ = core::mem::replace(
+                        &mut exports[ordinal_index as usize],
+                        PeExport::Regular {
+                            name,
+                            address,
+                            ordinal,
+                        },
+                    );
                 }
+
                 Some(PeExport::ForwardedByOrdinal {
                     ordinal,
                     forwarded_to,
-                }) => named_exports.push(PeExport::Forwarded {
-                    name,
-                    ordinal,
-                    forwarded_to,
-                }),
+                }) => {
+                    let _ = core::mem::replace(
+                        &mut exports[ordinal_index as usize],
+                        PeExport::Forwarded {
+                            name,
+                            ordinal,
+                            forwarded_to,
+                        },
+                    );
+                }
+
                 _ => continue, // unless ordinals are not unique in the ordinals array, this should not happen
             }
-        }
-
-        let mut exports = named_exports;
-        for (_addr, unnamed_export) in exports_without_a_name.drain() {
-            exports.push(unnamed_export);
         }
 
         Ok(exports)
