@@ -77,6 +77,21 @@ impl<'data> SectionTable<'data> {
             .find(|(_, section)| section.name(strings) == Ok(name))
             .map(|(index, section)| (index + 1, section))
     }
+
+    /// Compute the maximum file offset used by sections.
+    /// This will usually match the end of file, unless the PE file has a [data overlay]
+    /// (https://security.stackexchange.com/questions/77336/how-is-the-file-overlay-read-by-an-exe-virus)
+    pub fn max_section_file_offset(&self) -> u64 {
+        let mut max = 0;
+        for section in self.iter() {
+            let end_of_section = section.pointer_to_raw_data.get(LE) as u64
+                + section.size_of_raw_data.get(LE) as u64;
+            if end_of_section > max {
+                max = end_of_section;
+            }
+        }
+        max
+    }
 }
 
 /// An iterator over the loadable sections of a `CoffFile`.
