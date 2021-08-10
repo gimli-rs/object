@@ -79,15 +79,24 @@ impl<'data> SectionTable<'data> {
     }
 
     /// Compute the maximum file offset used by sections.
+    ///
     /// This will usually match the end of file, unless the PE file has a [data overlay]
     /// (https://security.stackexchange.com/questions/77336/how-is-the-file-overlay-read-by-an-exe-virus)
     pub fn max_section_file_offset(&self) -> u64 {
         let mut max = 0;
         for section in self.iter() {
-            let end_of_section = section.pointer_to_raw_data.get(LE) as u64
-                + section.size_of_raw_data.get(LE) as u64;
-            if end_of_section > max {
-                max = end_of_section;
+            match (section.pointer_to_raw_data.get(LE) as u64)
+                .checked_add(section.size_of_raw_data.get(LE) as u64)
+            {
+                None => {
+                    // This cannot happen, we're suming two u32 into a u64
+                    continue;
+                }
+                Some(end_of_section) => {
+                    if end_of_section > max {
+                        max = end_of_section;
+                    }
+                }
             }
         }
         max
