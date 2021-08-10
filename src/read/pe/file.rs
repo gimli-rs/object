@@ -13,7 +13,8 @@ use crate::{
     pe, ByteString, Bytes, CodeView, LittleEndian as LE, Pod, U16Bytes, U32Bytes, U32, U64,
 };
 
-use super::{PeExport, PeSection, PeSectionIterator, PeSegment, PeSegmentIterator, SectionTable};
+use super::Export as PeExport;
+use super::{PeSection, PeSectionIterator, PeSegment, PeSegmentIterator, SectionTable};
 
 /// A PE32 (32-bit) image file.
 pub type PeFile32<'data, R = &'data [u8]> = PeFile<'data, pe::ImageNtHeaders32, R>;

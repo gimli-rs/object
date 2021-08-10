@@ -2,7 +2,7 @@ use core::fmt::Debug;
 
 /// Possible exports from a PE file
 #[derive(Clone)]
-pub enum PeExport<'data> {
+pub enum Export<'data> {
     /// A named exported symbol from this PE file
     Regular {
         /// The ordinal of this export
@@ -44,30 +44,30 @@ pub enum PeExport<'data> {
     },
 }
 
-impl<'a> PeExport<'a> {
+impl<'a> Export<'a> {
     /// Returns the ordinal of this export
     pub fn ordinal(&self) -> u32 {
         match &self {
-            &PeExport::Regular { ordinal, .. }
-            | &PeExport::Forwarded { ordinal, .. }
-            | &PeExport::ByOrdinal { ordinal, .. }
-            | &PeExport::ForwardedByOrdinal { ordinal, .. } => *ordinal,
+            &Export::Regular { ordinal, .. }
+            | &Export::Forwarded { ordinal, .. }
+            | &Export::ByOrdinal { ordinal, .. }
+            | &Export::ForwardedByOrdinal { ordinal, .. } => *ordinal,
         }
     }
 
     /// Whether this export has a name
     pub fn has_name(&self) -> bool {
         match &self {
-            &PeExport::Regular { .. } | &PeExport::Forwarded { .. } => true,
-            &PeExport::ByOrdinal { .. } | &PeExport::ForwardedByOrdinal { .. } => false,
+            &Export::Regular { .. } | &Export::Forwarded { .. } => true,
+            &Export::ByOrdinal { .. } | &Export::ForwardedByOrdinal { .. } => false,
         }
     }
 }
 
-impl<'a> Debug for PeExport<'a> {
+impl<'a> Debug for Export<'a> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::result::Result<(), core::fmt::Error> {
         match &self {
-            PeExport::Regular {
+            Export::Regular {
                 ordinal,
                 name,
                 address,
@@ -80,12 +80,12 @@ impl<'a> Debug for PeExport<'a> {
                 )
                 .field("address", &address)
                 .finish(),
-            PeExport::ByOrdinal { ordinal, address } => f
+            Export::ByOrdinal { ordinal, address } => f
                 .debug_struct("ByOrdinal")
                 .field("ordinal", &ordinal)
                 .field("address", &address)
                 .finish(),
-            PeExport::Forwarded {
+            Export::Forwarded {
                 ordinal,
                 name,
                 forwarded_to,
@@ -101,7 +101,7 @@ impl<'a> Debug for PeExport<'a> {
                     &core::str::from_utf8(forwarded_to).unwrap_or("<invalid forward name>"),
                 )
                 .finish(),
-            PeExport::ForwardedByOrdinal {
+            Export::ForwardedByOrdinal {
                 ordinal,
                 forwarded_to,
             } => f
