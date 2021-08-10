@@ -100,7 +100,7 @@ where
     /// Returns the exports of this PE file
     ///
     /// See also the [`PeFile::exports`] function, which only returns a subset of these exports.
-    pub fn pe_exports(&self) -> Result<Vec<PeExport<'data>>> {
+    pub fn export_table(&self) -> Result<Vec<PeExport<'data>>> {
         let data_dir = match self.data_directory(pe::IMAGE_DIRECTORY_ENTRY_EXPORT) {
             Some(data_dir) => data_dir,
             None => return Ok(Vec::new()),
@@ -412,7 +412,7 @@ where
     }
 
     fn exports(&self) -> Result<Vec<Export<'data>>> {
-        self.pe_exports().map(|pe_exports| {
+        self.export_table().map(|pe_exports| {
             let mut exports = Vec::new();
             for pe_export in pe_exports {
                 if let PeExport::Regular { name, address, .. } = pe_export {
