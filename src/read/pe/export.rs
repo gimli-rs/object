@@ -4,6 +4,7 @@ use core::fmt::Debug;
 
 use crate::read::ReadError;
 use crate::read::Result;
+use crate::ByteString;
 use crate::{pe, Bytes, LittleEndian as LE, U16Bytes, U32Bytes};
 
 /// Possible exports from a PE file
@@ -80,10 +81,7 @@ impl<'a> Debug for Export<'a> {
             } => f
                 .debug_struct("Regular")
                 .field("ordinal", &ordinal)
-                .field(
-                    "data",
-                    &core::str::from_utf8(name).unwrap_or("<invalid name>"),
-                )
+                .field("data", &ByteString(name))
                 .field("address", &address)
                 .finish(),
             Export::ByOrdinal { ordinal, address } => f
@@ -98,14 +96,8 @@ impl<'a> Debug for Export<'a> {
             } => f
                 .debug_struct("Forwarded")
                 .field("ordinal", &ordinal)
-                .field(
-                    "name",
-                    &core::str::from_utf8(name).unwrap_or("<invalid name>"),
-                )
-                .field(
-                    "forwarded_to",
-                    &core::str::from_utf8(forwarded_to).unwrap_or("<invalid forward name>"),
-                )
+                .field("name", &ByteString(name))
+                .field("forwarded_to", &ByteString(forwarded_to))
                 .finish(),
             Export::ForwardedByOrdinal {
                 ordinal,
@@ -113,10 +105,7 @@ impl<'a> Debug for Export<'a> {
             } => f
                 .debug_struct("ForwardedByOrdinal")
                 .field("ordinal", &ordinal)
-                .field(
-                    "forwarded_to",
-                    &core::str::from_utf8(forwarded_to).unwrap_or("<invalid forward name>"),
-                )
+                .field("forwarded_to", &ByteString(forwarded_to))
                 .finish(),
         }
     }
