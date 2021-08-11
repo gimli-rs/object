@@ -7,106 +7,47 @@ use crate::read::Result;
 use crate::ByteString;
 use crate::{pe, Bytes, LittleEndian as LE, U16Bytes, U32Bytes};
 
-/// Possible exports from a PE file
+/// Where an export is pointing to
 #[derive(Clone)]
-pub enum Export<'data> {
-    /// A named exported symbol from this PE file
-    Regular {
-        /// The ordinal of this export
-        ordinal: u32,
-        /// The name of this export
-        name: &'data [u8],
-        /// The virtual address pointed to by this export
-        address: u64,
-    },
-
-    /// An export that only has an ordinal, but no name
-    ByOrdinal {
-        /// The ordinal of this export
-        ordinal: u32,
-        /// The virtual address pointed to by this export
-        address: u64,
-    },
-
-    /// A forwarded export (i.e. a symbol that is contained in some other DLL).
-    /// This concept is [PE-specific](https://docs.microsoft.com/en-us/windows/win32/debug/pe-format#export-address-table)
-    Forwarded {
-        /// The ordinal of this export
-        ordinal: u32,
-        /// The name of this export
-        name: &'data [u8],
-        /// The name of the actual symbol, in some other lib.
-        /// for example, "MYDLL.expfunc" or "MYDLL.#27"
-        forwarded_to: &'data [u8],
-    },
-
-    /// A forwarded export (i.e. a symbol that is contained in some other DLL) that has no name.
-    /// This concept is [PE-specific](https://docs.microsoft.com/en-us/windows/win32/debug/pe-format#export-address-table)
-    ForwardedByOrdinal {
-        /// The ordinal of this export
-        ordinal: u32,
-        /// The name of the actual symbol, in some other lib.
-        /// for example, "MYDLL.expfunc" or "MYDLL.#27"
-        forwarded_to: &'data [u8],
-    },
+pub enum Target<'data> {
+    /// The export points at a RVA in the file
+    Local(u64),
+    /// The export is "forwarded" to another DLL
+    ///
+    /// for example, "MYDLL.expfunc" or "MYDLL.#27"
+    Forwarded(&'data [u8]),
 }
 
-impl<'a> Export<'a> {
-    /// Returns the ordinal of this export
-    pub fn ordinal(&self) -> u32 {
-        match &self {
-            &Export::Regular { ordinal, .. }
-            | &Export::Forwarded { ordinal, .. }
-            | &Export::ByOrdinal { ordinal, .. }
-            | &Export::ForwardedByOrdinal { ordinal, .. } => *ordinal,
-        }
-    }
-
-    /// Whether this export has a name
-    pub fn has_name(&self) -> bool {
-        match &self {
-            &Export::Regular { .. } | &Export::Forwarded { .. } => true,
-            &Export::ByOrdinal { .. } | &Export::ForwardedByOrdinal { .. } => false,
-        }
-    }
+/// An export from a PE file
+///
+/// There are multiple kinds of PE exports (with or without a name, and local or exported)
+#[derive(Clone)]
+pub struct Export<'data> {
+    /// The ordinal of the export
+    pub ordinal: u32,
+    /// The name of the export, if ever the PE file has named it
+    pub name: Option<&'data [u8]>,
+    /// The target of this export
+    pub target: Target<'data>,
 }
 
 impl<'a> Debug for Export<'a> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::result::Result<(), core::fmt::Error> {
-        match &self {
-            Export::Regular {
-                ordinal,
-                name,
-                address,
-            } => f
-                .debug_struct("Regular")
-                .field("ordinal", &ordinal)
-                .field("data", &ByteString(name))
-                .field("address", &address)
-                .finish(),
-            Export::ByOrdinal { ordinal, address } => f
-                .debug_struct("ByOrdinal")
-                .field("ordinal", &ordinal)
-                .field("address", &address)
-                .finish(),
-            Export::Forwarded {
-                ordinal,
-                name,
-                forwarded_to,
-            } => f
-                .debug_struct("Forwarded")
-                .field("ordinal", &ordinal)
-                .field("name", &ByteString(name))
-                .field("forwarded_to", &ByteString(forwarded_to))
-                .finish(),
-            Export::ForwardedByOrdinal {
-                ordinal,
-                forwarded_to,
-            } => f
-                .debug_struct("ForwardedByOrdinal")
-                .field("ordinal", &ordinal)
-                .field("forwarded_to", &ByteString(forwarded_to))
-                .finish(),
+        f.debug_struct("Export")
+            .field("ordinal", &self.ordinal)
+            .field("name", &self.name.map(|n| ByteString(n)))
+            .field("target", &self.target)
+            .finish()
+    }
+}
+
+impl<'a> Debug for Target<'a> {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::result::Result<(), core::fmt::Error> {
+        match self {
+            Target::Local(addr) => f.write_fmt(format_args!("Local({:#x})", addr)),
+            Target::Forwarded(forward) => {
+                f.write_fmt(format_args!("Forwarded({:?})", ByteString(forward)))
+            }
         }
     }
 }
@@ -171,17 +112,19 @@ where
 
             // is it a regular or forwarded export?
             if address < export_va || (address - export_va) >= export_size {
-                exports.push(Export::ByOrdinal {
+                exports.push(Export {
                     ordinal: ordinal,
-                    address: self.common.image_base.wrapping_add(address as u64),
+                    target: Target::Local(self.common.image_base.wrapping_add(address as u64)),
+                    name: None, // might be populated later
                 });
             } else {
                 let forwarded_to = export_data
                     .read_string_at(address.wrapping_sub(export_va) as usize)
                     .read_error("Invalid target for PE forwarded export")?;
-                exports.push(Export::ForwardedByOrdinal {
+                exports.push(Export {
                     ordinal: ordinal,
-                    forwarded_to: forwarded_to,
+                    target: Target::Forwarded(forwarded_to),
+                    name: None, // might be populated later
                 });
             }
         }
@@ -196,35 +139,9 @@ where
                 .read_string_at(name_ptr.get(LE).wrapping_sub(export_va) as usize)
                 .read_error("Invalid PE export name entry")?;
 
-            let unnamed_equivalent = exports.get(ordinal_index as usize).cloned();
-            match unnamed_equivalent {
-                Some(Export::ByOrdinal { ordinal, address }) => {
-                    let _ = core::mem::replace(
-                        &mut exports[ordinal_index as usize],
-                        Export::Regular {
-                            name,
-                            address,
-                            ordinal,
-                        },
-                    );
-                }
-
-                Some(Export::ForwardedByOrdinal {
-                    ordinal,
-                    forwarded_to,
-                }) => {
-                    let _ = core::mem::replace(
-                        &mut exports[ordinal_index as usize],
-                        Export::Forwarded {
-                            name,
-                            ordinal,
-                            forwarded_to,
-                        },
-                    );
-                }
-
-                _ => continue, // unless ordinals are not unique in the ordinals array, this should not happen
-            }
+            exports
+                .get_mut(ordinal_index as usize)
+                .map(|export| export.name = Some(name));
         }
 
         Ok(exports)

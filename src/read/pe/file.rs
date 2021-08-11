@@ -299,11 +299,12 @@ where
         self.export_table().map(|pe_exports| {
             let mut exports = Vec::new();
             for pe_export in pe_exports {
-                if let PeExport::Regular { name, address, .. } = pe_export {
-                    exports.push(Export {
+                match (pe_export.name, pe_export.target) {
+                    (Some(name), super::export::Target::Local(address)) => exports.push(Export {
                         name: ByteString(name),
                         address,
-                    })
+                    }),
+                    _ => continue,
                 }
             }
             exports
