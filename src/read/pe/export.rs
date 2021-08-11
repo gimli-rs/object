@@ -9,7 +9,7 @@ use crate::{pe, Bytes, LittleEndian as LE, U16Bytes, U32Bytes};
 
 /// Where an export is pointing to
 #[derive(Clone)]
-pub enum Target<'data> {
+pub enum ExportTarget<'data> {
     /// The export points at a RVA in the file
     Local(u64),
     /// The export is "forwarded" to another DLL
@@ -28,7 +28,7 @@ pub struct Export<'data> {
     /// The name of the export, if ever the PE file has named it
     pub name: Option<&'data [u8]>,
     /// The target of this export
-    pub target: Target<'data>,
+    pub target: ExportTarget<'data>,
 }
 
 impl<'a> Debug for Export<'a> {
@@ -41,11 +41,11 @@ impl<'a> Debug for Export<'a> {
     }
 }
 
-impl<'a> Debug for Target<'a> {
+impl<'a> Debug for ExportTarget<'a> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::result::Result<(), core::fmt::Error> {
         match self {
-            Target::Local(addr) => f.write_fmt(format_args!("Local({:#x})", addr)),
-            Target::Forwarded(forward) => {
+            ExportTarget::Local(addr) => f.write_fmt(format_args!("Local({:#x})", addr)),
+            ExportTarget::Forwarded(forward) => {
                 f.write_fmt(format_args!("Forwarded({:?})", ByteString(forward)))
             }
         }
@@ -114,7 +114,7 @@ where
             if address < export_va || (address - export_va) >= export_size {
                 exports.push(Export {
                     ordinal: ordinal,
-                    target: Target::Local(self.common.image_base.wrapping_add(address as u64)),
+                    target: ExportTarget::Local(self.common.image_base.wrapping_add(address as u64)),
                     name: None, // might be populated later
                 });
             } else {
@@ -123,7 +123,7 @@ where
                     .read_error("Invalid target for PE forwarded export")?;
                 exports.push(Export {
                     ordinal: ordinal,
-                    target: Target::Forwarded(forwarded_to),
+                    target: ExportTarget::Forwarded(forwarded_to),
                     name: None, // might be populated later
                 });
             }
