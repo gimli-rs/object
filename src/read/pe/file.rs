@@ -11,7 +11,6 @@ use crate::read::{
 };
 use crate::{pe, ByteString, Bytes, CodeView, LittleEndian as LE, Pod, U32, U64};
 
-use super::Export as PeExport;
 use super::{PeSection, PeSectionIterator, PeSegment, PeSegmentIterator, SectionTable};
 
 /// A PE32 (32-bit) image file.
