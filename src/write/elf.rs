@@ -356,7 +356,7 @@ impl Object {
         // Currently there's no way for user to determine what type of object
         // is produced.  So, try inferring from the presence of the dynamic
         // section type (which is only slightly better).
-        let e_type = if self.sections.iter().find(|s| s.kind == SectionKind::Elf(elf::SHT_DYNAMIC)).is_some() {
+        let e_type = if self.sections.iter().find(|s| match s.kind { SectionKind::Elf(typ, _) if typ == elf::SHT_DYNAMIC => true, _ => false}).is_some() {
             elf::ET_DYN
         } else {
             elf::ET_REL
@@ -898,7 +898,7 @@ impl Object {
             let sh_type = match section.kind {
                 SectionKind::UninitializedData | SectionKind::UninitializedTls => elf::SHT_NOBITS,
                 SectionKind::Note => elf::SHT_NOTE,
-                SectionKind::Elf(sh_type) => sh_type,
+                SectionKind::Elf(sh_type, _) => sh_type,
                 _ => elf::SHT_PROGBITS,
             };
             let sh_flags = if let SectionFlags::Elf { sh_flags } = section.flags {
@@ -920,7 +920,7 @@ impl Object {
                     | SectionKind::Metadata
                     | SectionKind::Linker
                     | SectionKind::Note
-                    | SectionKind::Elf(_) => 0,
+                    | SectionKind::Elf(_, _) => 0,
                     SectionKind::Unknown | SectionKind::Common | SectionKind::TlsVariables => {
                         return Err(Error(format!(
                             "unimplemented section `{}` kind {:?}",
@@ -934,9 +934,9 @@ impl Object {
             // TODO: not sure if this is correct, maybe user should determine this
             let sh_entsize = match section.kind {
                 SectionKind::ReadOnlyString | SectionKind::OtherString => 1,
-                SectionKind::Elf(typ) if typ == elf::SHT_DYNSYM => elf.symbol_size() as u64,
-                SectionKind::Elf(typ) if typ == elf::SHT_DYNAMIC => elf.dynamic_entsize() as u64,
-                SectionKind::Elf(typ) if typ == elf::SHT_GNU_versym => std::mem::size_of::<U16<Endianness>>() as u64,
+                SectionKind::Elf(typ, _) if typ == elf::SHT_DYNSYM => elf.symbol_size() as u64,
+                SectionKind::Elf(typ, _) if typ == elf::SHT_DYNAMIC => elf.dynamic_entsize() as u64,
+                SectionKind::Elf(typ, _) if typ == elf::SHT_GNU_versym => std::mem::size_of::<U16<Endianness>>() as u64,
                 _ => 0,
             };
             let sh_name = section_offsets[index]
@@ -954,7 +954,7 @@ impl Object {
                     sh_size: section.size,
                     // Link dynsyn and dynamic sections to the dynstr section.
                     sh_link: match section.kind {
-                        SectionKind::Elf(typ) if typ == elf::SHT_DYNSYM || typ == elf::SHT_DYNAMIC =>
+                        SectionKind::Elf(typ, _) if typ == elf::SHT_DYNSYM || typ == elf::SHT_DYNAMIC =>
                             dynstr_index.unwrap() as u32,
                         _ => 0,
                     },
@@ -962,7 +962,8 @@ impl Object {
                     // symbol in the `sh_info` section, so iterate the symbols
                     // to find this.
                     sh_info:  match section.kind {
-                        SectionKind::Elf(typ) if typ == elf::SHT_DYNSYM => {
+                        SectionKind::Elf(_, Some(info)) => info,
+                        SectionKind::Elf(typ, _) if typ == elf::SHT_DYNSYM => {
                             let mut info = 0;
                             let mut symbols: &[Sym] =
                                 unsafe { std::slice::from_raw_parts(

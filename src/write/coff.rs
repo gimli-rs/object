@@ -334,7 +334,7 @@ impl Object {
                 | SectionKind::Note
                 | SectionKind::Unknown
                 | SectionKind::Metadata
-                | SectionKind::Elf(_) => {
+                | SectionKind::Elf(_, _) => {
                     return Err(Error(format!(
                         "unimplemented section `{}` kind {:?}",
                         section.name().unwrap_or(""),

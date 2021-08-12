@@ -408,7 +408,7 @@ impl Object {
                     SectionKind::Debug => macho::S_ATTR_DEBUG,
                     SectionKind::OtherString => macho::S_CSTRING_LITERALS,
                     SectionKind::Other | SectionKind::Linker | SectionKind::Metadata => 0,
-                    SectionKind::Note | SectionKind::Unknown | SectionKind::Elf(_) => {
+                    SectionKind::Note | SectionKind::Unknown | SectionKind::Elf(_, _) => {
                         return Err(Error(format!(
                             "unimplemented section `{}` kind {:?}",
                             section.name().unwrap_or(""),

@@ -172,7 +172,7 @@ pub enum SectionKind {
     ///
     /// This is the `sh_type` field in the section header.
     /// The meaning may be dependent on the architecture.
-    Elf(u32),
+    Elf(u32, Option<u32>),
 }
 
 impl SectionKind {
