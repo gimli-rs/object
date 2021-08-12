@@ -954,7 +954,7 @@ impl Object {
                     sh_size: section.size,
                     // Link dynsyn and dynamic sections to the dynstr section.
                     sh_link: match section.kind {
-                        SectionKind::Elf(typ, _) if typ == elf::SHT_DYNSYM || typ == elf::SHT_DYNAMIC =>
+                        SectionKind::Elf(typ, _) if typ == elf::SHT_DYNSYM || typ == elf::SHT_DYNAMIC || typ == elf::SHT_GNU_verdef =>
                             dynstr_index.unwrap() as u32,
                         _ => 0,
                     },
