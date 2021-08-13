@@ -324,14 +324,18 @@ impl<'data, 'file, R: ReadRef<'data>> ObjectSymbol<'data> for CoffSymbol<'data, 
         self.index
     }
 
-    fn name(&self) -> read::Result<&'data str> {
-        let name = if self.symbol.has_aux_file_name() {
+    fn name_bytes(&self) -> read::Result<&'data [u8]> {
+        if self.symbol.has_aux_file_name() {
             self.file
                 .symbols
-                .aux_file_name(self.index.0, self.symbol.number_of_aux_symbols)?
+                .aux_file_name(self.index.0, self.symbol.number_of_aux_symbols)
         } else {
-            self.symbol.name(self.file.symbols.strings())?
-        };
+            self.symbol.name(self.file.symbols.strings())
+        }
+    }
+
+    fn name(&self) -> read::Result<&'data str> {
+        let name = self.name_bytes()?;
         str::from_utf8(name)
             .ok()
             .read_error("Non UTF-8 COFF symbol name")

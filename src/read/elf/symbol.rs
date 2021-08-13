@@ -317,8 +317,12 @@ impl<'data, 'file, Elf: FileHeader, R: ReadRef<'data>> ObjectSymbol<'data>
         self.index
     }
 
+    fn name_bytes(&self) -> read::Result<&'data [u8]> {
+        self.symbol.name(self.endian, self.symbols.strings())
+    }
+
     fn name(&self) -> read::Result<&'data str> {
-        let name = self.symbol.name(self.endian, self.symbols.strings())?;
+        let name = self.name_bytes()?;
         str::from_utf8(name)
             .ok()
             .read_error("Non UTF-8 ELF symbol name")

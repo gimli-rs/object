@@ -149,10 +149,13 @@ where
         }
     }
 
-    fn section_by_name(&'file self, section_name: &str) -> Option<PeSection<'data, 'file, Pe, R>> {
+    fn section_by_name_bytes(
+        &'file self,
+        section_name: &[u8],
+    ) -> Option<PeSection<'data, 'file, Pe, R>> {
         self.common
             .sections
-            .section_by_name(self.common.symbols.strings(), section_name.as_bytes())
+            .section_by_name(self.common.symbols.strings(), section_name)
             .map(|(index, section)| PeSection {
                 file: self,
                 index: SectionIndex(index),
@@ -492,6 +495,11 @@ where
 
     #[inline]
     fn symbol(&self) -> SymbolIndex {
+        unreachable!();
+    }
+
+    #[inline]
+    fn name_bytes(&self) -> Result<&[u8]> {
         unreachable!();
     }
 

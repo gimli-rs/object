@@ -1,5 +1,4 @@
 use alloc::vec::Vec;
-use core::str;
 
 use crate::read::{
     self, Architecture, Export, FileFlags, Import, NoDynamicRelocationIterator, Object,
@@ -96,9 +95,12 @@ where
         }
     }
 
-    fn section_by_name(&'file self, section_name: &str) -> Option<CoffSection<'data, 'file, R>> {
+    fn section_by_name_bytes(
+        &'file self,
+        section_name: &[u8],
+    ) -> Option<CoffSection<'data, 'file, R>> {
         self.sections()
-            .find(|section| section.name() == Ok(section_name))
+            .find(|section| section.name_bytes() == Ok(section_name))
     }
 
     fn section_by_index(&'file self, index: SectionIndex) -> Result<CoffSection<'data, 'file, R>> {

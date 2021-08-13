@@ -514,14 +514,22 @@ where
         self.compressed_file_range()?.data(self.file.data)
     }
 
-    fn name(&self) -> read::Result<&str> {
-        let name = self
-            .file
+    fn name_bytes(&self) -> read::Result<&[u8]> {
+        self.file
             .sections
-            .section_name(self.file.endian, self.section)?;
+            .section_name(self.file.endian, self.section)
+    }
+
+    fn name(&self) -> read::Result<&str> {
+        let name = self.name_bytes()?;
         str::from_utf8(name)
             .ok()
             .read_error("Non UTF-8 ELF section name")
+    }
+
+    #[inline]
+    fn segment_name_bytes(&self) -> read::Result<Option<&[u8]>> {
+        Ok(None)
     }
 
     #[inline]

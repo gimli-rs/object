@@ -102,10 +102,15 @@ impl<'data, 'file, R: ReadRef<'data>> ObjectComdat<'data> for CoffComdat<'data, 
     }
 
     #[inline]
-    fn name(&self) -> Result<&str> {
+    fn name_bytes(&self) -> Result<&[u8]> {
         // Find the name of first symbol referring to the section.
-        let name = self.symbol.name(self.file.common.symbols.strings())?;
-        str::from_utf8(name)
+        self.symbol.name(self.file.common.symbols.strings())
+    }
+
+    #[inline]
+    fn name(&self) -> Result<&str> {
+        let bytes = self.name_bytes()?;
+        str::from_utf8(bytes)
             .ok()
             .read_error("Non UTF-8 COFF COMDAT name")
     }
