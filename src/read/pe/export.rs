@@ -114,7 +114,9 @@ where
             if address < export_va || (address - export_va) >= export_size {
                 exports.push(Export {
                     ordinal: ordinal,
-                    target: ExportTarget::Local(self.common.image_base.wrapping_add(address as u64)),
+                    target: ExportTarget::Local(
+                        self.common.image_base.wrapping_add(address as u64),
+                    ),
                     name: None, // might be populated later
                 });
             } else {
