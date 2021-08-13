@@ -96,6 +96,23 @@ pub struct Writer<'a> {
     gnu_hash_str_id: Option<StringId>,
     gnu_hash_offset: usize,
     gnu_hash_size: usize,
+
+    gnu_versym_str_id: Option<StringId>,
+    gnu_versym_offset: usize,
+
+    gnu_verdef_str_id: Option<StringId>,
+    gnu_verdef_offset: usize,
+    gnu_verdef_size: usize,
+    gnu_verdef_count: u16,
+    gnu_verdef_remaining: u16,
+    gnu_verdaux_remaining: u16,
+
+    gnu_verneed_str_id: Option<StringId>,
+    gnu_verneed_offset: usize,
+    gnu_verneed_size: usize,
+    gnu_verneed_count: u16,
+    gnu_verneed_remaining: u16,
+    gnu_vernaux_remaining: u16,
 }
 
 impl<'a> Writer<'a> {
@@ -164,6 +181,23 @@ impl<'a> Writer<'a> {
             gnu_hash_str_id: None,
             gnu_hash_offset: 0,
             gnu_hash_size: 0,
+
+            gnu_versym_str_id: None,
+            gnu_versym_offset: 0,
+
+            gnu_verdef_str_id: None,
+            gnu_verdef_offset: 0,
+            gnu_verdef_size: 0,
+            gnu_verdef_count: 0,
+            gnu_verdef_remaining: 0,
+            gnu_verdaux_remaining: 0,
+
+            gnu_verneed_str_id: None,
+            gnu_verneed_offset: 0,
+            gnu_verneed_size: 0,
+            gnu_verneed_count: 0,
+            gnu_verneed_remaining: 0,
+            gnu_vernaux_remaining: 0,
         }
     }
 
@@ -911,6 +945,13 @@ impl<'a> Writer<'a> {
         self.dynstr.add(name)
     }
 
+    /// Get a string that was previously added to the dynamic string table.
+    ///
+    /// Panics if the string was not added.
+    pub fn get_dynamic_string(&self, name: &'a [u8]) -> StringId {
+        self.dynstr.get_id(name)
+    }
+
     /// Return true if `.dynstr` is needed.
     pub fn dynstr_needed(&self) -> bool {
         self.need_dynstr
@@ -1412,6 +1453,253 @@ impl<'a> Writer<'a> {
         });
     }
 
+    /// Reserve the range for the `.gnu.version` section.
+    ///
+    /// This function does nothing if no dynamic symbols were reserved.
+    pub fn reserve_gnu_versym(&mut self) {
+        debug_assert_eq!(self.gnu_versym_offset, 0);
+        if self.dynsym_num == 0 {
+            return;
+        }
+        self.gnu_versym_offset = self.reserve(self.dynsym_num as usize * 2, 2);
+    }
+
+    /// Write the null symbol version entry.
+    ///
+    /// This must be the first symbol version that is written.
+    /// This function does nothing if no dynamic symbols were reserved.
+    pub fn write_null_gnu_versym(&mut self) {
+        if self.dynsym_num == 0 {
+            return;
+        }
+        util::write_align(self.buffer, 2);
+        debug_assert_eq!(self.gnu_versym_offset, self.buffer.len());
+        self.write_gnu_versym(0);
+    }
+
+    /// Write a symbol version entry.
+    pub fn write_gnu_versym(&mut self, versym: u16) {
+        self.buffer.write(&U16::new(self.endian, versym));
+    }
+
+    /// Reserve the section index for the `.gnu.version` section.
+    pub fn reserve_gnu_versym_section_index(&mut self) -> SectionIndex {
+        debug_assert!(self.gnu_versym_str_id.is_none());
+        self.gnu_versym_str_id = Some(self.add_section_name(&b".gnu.version"[..]));
+        self.reserve_section_index()
+    }
+
+    /// Write the section header for the `.gnu.version` section.
+    ///
+    /// This function does nothing if the section index was not reserved.
+    pub fn write_gnu_versym_section_header(&mut self, sh_addr: u64) {
+        if self.gnu_versym_str_id.is_none() {
+            return;
+        }
+        self.write_section_header(&SectionHeader {
+            name: self.gnu_versym_str_id,
+            sh_type: elf::SHT_GNU_VERSYM,
+            sh_flags: elf::SHF_ALLOC.into(),
+            sh_addr,
+            sh_offset: self.gnu_versym_offset as u64,
+            sh_size: self.dynsym_num as u64 * 2,
+            sh_link: self.dynsym_index.0,
+            sh_info: 0,
+            sh_addralign: 2,
+            sh_entsize: 2,
+        });
+    }
+
+    /// Reserve the range for the `.gnu.version_d` section.
+    pub fn reserve_gnu_verdef(&mut self, verdef_count: usize, verdaux_count: usize) {
+        debug_assert_eq!(self.gnu_verdef_offset, 0);
+        if verdef_count == 0 {
+            return;
+        }
+        self.gnu_verdef_size = verdef_count * mem::size_of::<elf::Verdef<Endianness>>()
+            + verdaux_count * mem::size_of::<elf::Verdaux<Endianness>>();
+        self.gnu_verdef_offset = self.reserve(self.gnu_verdef_size, self.elf_align);
+        self.gnu_verdef_count = verdef_count as u16;
+        self.gnu_verdef_remaining = self.gnu_verdef_count;
+    }
+
+    /// Write alignment padding bytes prior to a `.gnu.version_d` section.
+    pub fn write_align_gnu_verdef(&mut self) {
+        if self.gnu_verdef_offset == 0 {
+            return;
+        }
+        util::write_align(self.buffer, self.elf_align);
+        debug_assert_eq!(self.gnu_verdef_offset, self.buffer.len());
+    }
+
+    /// Write a version definition entry.
+    pub fn write_gnu_verdef(&mut self, verdef: &Verdef) {
+        debug_assert_ne!(self.gnu_verdef_remaining, 0);
+        self.gnu_verdef_remaining -= 1;
+        let vd_next = if self.gnu_verdef_remaining == 0 {
+            0
+        } else {
+            mem::size_of::<elf::Verdef<Endianness>>() as u32
+                + verdef.aux_count as u32 * mem::size_of::<elf::Verdaux<Endianness>>() as u32
+        };
+
+        self.gnu_verdaux_remaining = verdef.aux_count;
+        let vd_aux = if verdef.aux_count == 0 {
+            0
+        } else {
+            mem::size_of::<elf::Verdef<Endianness>>() as u32
+        };
+
+        self.buffer.write(&elf::Verdef {
+            vd_version: U16::new(self.endian, verdef.version),
+            vd_flags: U16::new(self.endian, verdef.flags),
+            vd_ndx: U16::new(self.endian, verdef.index),
+            vd_cnt: U16::new(self.endian, verdef.aux_count),
+            vd_hash: U32::new(self.endian, elf::hash(self.dynstr.get_string(verdef.name))),
+            vd_aux: U32::new(self.endian, vd_aux),
+            vd_next: U32::new(self.endian, vd_next),
+        });
+        self.write_gnu_verdaux(verdef.name);
+    }
+
+    /// Write a version definition auxiliary entry.
+    pub fn write_gnu_verdaux(&mut self, name: StringId) {
+        debug_assert_ne!(self.gnu_verdaux_remaining, 0);
+        self.gnu_verdaux_remaining -= 1;
+        let vda_next = if self.gnu_verdaux_remaining == 0 {
+            0
+        } else {
+            mem::size_of::<elf::Verdaux<Endianness>>() as u32
+        };
+        self.buffer.write(&elf::Verdaux {
+            vda_name: U32::new(self.endian, self.dynstr.get_offset(name) as u32),
+            vda_next: U32::new(self.endian, vda_next),
+        });
+    }
+
+    /// Reserve the section index for the `.gnu.version_d` section.
+    pub fn reserve_gnu_verdef_section_index(&mut self) -> SectionIndex {
+        debug_assert!(self.gnu_verdef_str_id.is_none());
+        self.gnu_verdef_str_id = Some(self.add_section_name(&b".gnu.version_d"[..]));
+        self.reserve_section_index()
+    }
+
+    /// Write the section header for the `.gnu.version_d` section.
+    ///
+    /// This function does nothing if the section index was not reserved.
+    pub fn write_gnu_verdef_section_header(&mut self, sh_addr: u64) {
+        if self.gnu_verdef_str_id.is_none() {
+            return;
+        }
+        self.write_section_header(&SectionHeader {
+            name: self.gnu_verdef_str_id,
+            sh_type: elf::SHT_GNU_VERDEF,
+            sh_flags: elf::SHF_ALLOC.into(),
+            sh_addr,
+            sh_offset: self.gnu_verdef_offset as u64,
+            sh_size: self.gnu_verdef_size as u64,
+            sh_link: self.dynstr_index.0,
+            sh_info: self.gnu_verdef_count.into(),
+            sh_addralign: self.elf_align as u64,
+            sh_entsize: 0,
+        });
+    }
+
+    /// Reserve the range for the `.gnu.version_r` section.
+    pub fn reserve_gnu_verneed(&mut self, verneed_count: usize, vernaux_count: usize) {
+        debug_assert_eq!(self.gnu_verneed_offset, 0);
+        if verneed_count == 0 {
+            return;
+        }
+        self.gnu_verneed_size = verneed_count * mem::size_of::<elf::Verneed<Endianness>>()
+            + vernaux_count * mem::size_of::<elf::Vernaux<Endianness>>();
+        self.gnu_verneed_offset = self.reserve(self.gnu_verneed_size, self.elf_align);
+        self.gnu_verneed_count = verneed_count as u16;
+        self.gnu_verneed_remaining = self.gnu_verneed_count;
+    }
+
+    /// Write alignment padding bytes prior to a `.gnu.version_r` section.
+    pub fn write_align_gnu_verneed(&mut self) {
+        if self.gnu_verneed_offset == 0 {
+            return;
+        }
+        util::write_align(self.buffer, self.elf_align);
+        debug_assert_eq!(self.gnu_verneed_offset, self.buffer.len());
+    }
+
+    /// Write a version need entry.
+    pub fn write_gnu_verneed(&mut self, verneed: &Verneed) {
+        debug_assert_ne!(self.gnu_verneed_remaining, 0);
+        self.gnu_verneed_remaining -= 1;
+        let vn_next = if self.gnu_verneed_remaining == 0 {
+            0
+        } else {
+            mem::size_of::<elf::Verneed<Endianness>>() as u32
+                + verneed.aux_count as u32 * mem::size_of::<elf::Vernaux<Endianness>>() as u32
+        };
+
+        self.gnu_vernaux_remaining = verneed.aux_count;
+        let vn_aux = if verneed.aux_count == 0 {
+            0
+        } else {
+            mem::size_of::<elf::Verneed<Endianness>>() as u32
+        };
+
+        self.buffer.write(&elf::Verneed {
+            vn_version: U16::new(self.endian, verneed.version),
+            vn_cnt: U16::new(self.endian, verneed.aux_count),
+            vn_file: U32::new(self.endian, self.dynstr.get_offset(verneed.file) as u32),
+            vn_aux: U32::new(self.endian, vn_aux),
+            vn_next: U32::new(self.endian, vn_next),
+        });
+    }
+
+    /// Write a version need auxiliary entry.
+    pub fn write_gnu_vernaux(&mut self, vernaux: &Vernaux) {
+        debug_assert_ne!(self.gnu_vernaux_remaining, 0);
+        self.gnu_vernaux_remaining -= 1;
+        let vna_next = if self.gnu_vernaux_remaining == 0 {
+            0
+        } else {
+            mem::size_of::<elf::Vernaux<Endianness>>() as u32
+        };
+        self.buffer.write(&elf::Vernaux {
+            vna_hash: U32::new(self.endian, elf::hash(self.dynstr.get_string(vernaux.name))),
+            vna_flags: U16::new(self.endian, vernaux.flags),
+            vna_other: U16::new(self.endian, vernaux.index),
+            vna_name: U32::new(self.endian, self.dynstr.get_offset(vernaux.name) as u32),
+            vna_next: U32::new(self.endian, vna_next),
+        });
+    }
+
+    /// Reserve the section index for the `.gnu.version_r` section.
+    pub fn reserve_gnu_verneed_section_index(&mut self) -> SectionIndex {
+        debug_assert!(self.gnu_verneed_str_id.is_none());
+        self.gnu_verneed_str_id = Some(self.add_section_name(&b".gnu.version_r"[..]));
+        self.reserve_section_index()
+    }
+
+    /// Write the section header for the `.gnu.version_r` section.
+    ///
+    /// This function does nothing if the section index was not reserved.
+    pub fn write_gnu_verneed_section_header(&mut self, sh_addr: u64) {
+        if self.gnu_verneed_str_id.is_none() {
+            return;
+        }
+        self.write_section_header(&SectionHeader {
+            name: self.gnu_verneed_str_id,
+            sh_type: elf::SHT_GNU_VERNEED,
+            sh_flags: elf::SHF_ALLOC.into(),
+            sh_addr,
+            sh_offset: self.gnu_verneed_offset as u64,
+            sh_size: self.gnu_verneed_size as u64,
+            sh_link: self.dynstr_index.0,
+            sh_info: self.gnu_verneed_count.into(),
+            sh_addralign: self.elf_align as u64,
+            sh_entsize: 0,
+        });
+    }
+
     /// Reserve a file range for the given number of relocations.
     ///
     /// Returns the offset of the range.
@@ -1599,4 +1887,34 @@ pub struct Rel {
     pub r_sym: u32,
     pub r_type: u32,
     pub r_addend: i64,
+}
+
+/// Information required for writing [`elf::Verdef`].
+#[allow(missing_docs)]
+#[derive(Debug, Clone)]
+pub struct Verdef {
+    pub version: u16,
+    pub flags: u16,
+    pub index: u16,
+    pub aux_count: u16,
+    /// The name for the first [`elf::Verdaux`] entry.
+    pub name: StringId,
+}
+
+/// Information required for writing [`elf::Verneed`].
+#[allow(missing_docs)]
+#[derive(Debug, Clone)]
+pub struct Verneed {
+    pub version: u16,
+    pub aux_count: u16,
+    pub file: StringId,
+}
+
+/// Information required for writing [`elf::Vernaux`].
+#[allow(missing_docs)]
+#[derive(Debug, Clone)]
+pub struct Vernaux {
+    pub flags: u16,
+    pub index: u16,
+    pub name: StringId,
 }

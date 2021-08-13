@@ -98,6 +98,9 @@ fn copy_file<Elf: FileHeader<Endian = Endianness>>(
     let mut in_dynamic = None;
     let mut in_hash = None;
     let mut in_gnu_hash = None;
+    let mut in_versym = None;
+    let mut in_verdef = None;
+    let mut in_verneed = None;
     let mut out_sections = Vec::with_capacity(in_sections.len());
     let mut out_sections_index = Vec::with_capacity(in_sections.len());
     for (i, in_section) in in_sections.iter().enumerate() {
@@ -113,10 +116,7 @@ fn copy_file<Elf: FileHeader<Endian = Endianness>>(
             | elf::SHT_REL
             | elf::SHT_RELA
             | elf::SHT_INIT_ARRAY
-            | elf::SHT_FINI_ARRAY
-            | elf::SHT_GNU_VERDEF
-            | elf::SHT_GNU_VERNEED
-            | elf::SHT_GNU_VERSYM => {
+            | elf::SHT_FINI_ARRAY => {
                 name = Some(writer.add_section_name(in_sections.section_name(endian, in_section)?));
                 index = writer.reserve_section_index();
             }
@@ -169,6 +169,21 @@ fn copy_file<Elf: FileHeader<Endian = Endianness>>(
                 in_gnu_hash = in_section.gnu_hash_header(endian, in_data)?;
                 debug_assert!(in_gnu_hash.is_some());
                 index = writer.reserve_gnu_hash_section_index();
+            }
+            elf::SHT_GNU_VERSYM => {
+                in_versym = in_section.gnu_versym(endian, in_data)?;
+                debug_assert!(in_versym.is_some());
+                index = writer.reserve_gnu_versym_section_index();
+            }
+            elf::SHT_GNU_VERDEF => {
+                in_verdef = in_section.gnu_verdef(endian, in_data)?;
+                debug_assert!(in_verdef.is_some());
+                index = writer.reserve_gnu_verdef_section_index();
+            }
+            elf::SHT_GNU_VERNEED => {
+                in_verneed = in_section.gnu_verneed(endian, in_data)?;
+                debug_assert!(in_verneed.is_some());
+                index = writer.reserve_gnu_verneed_section_index();
             }
             other => {
                 panic!("Unsupported section type {:x}", other);
@@ -300,11 +315,43 @@ fn copy_file<Elf: FileHeader<Endian = Endianness>>(
         }
     }
 
+    // Symbol version parameters.
+    let mut verdef_count = 0;
+    let mut verdaux_count = 0;
+    if let Some((mut verdefs, link)) = in_verdef.clone() {
+        let strings = in_sections.strings(endian, in_data, link)?;
+        while let Some((verdef, mut verdauxs)) = verdefs.next()? {
+            assert!(verdef.vd_cnt.get(endian) > 0);
+            verdef_count += 1;
+            while let Some(verdaux) = verdauxs.next()? {
+                writer.add_dynamic_string(verdaux.name(endian, strings)?);
+                verdaux_count += 1;
+            }
+        }
+    }
+
+    let mut verneed_count = 0;
+    let mut vernaux_count = 0;
+    if let Some((mut verneeds, link)) = in_verneed.clone() {
+        let strings = in_sections.strings(endian, in_data, link)?;
+        while let Some((verneed, mut vernauxs)) = verneeds.next()? {
+            writer.add_dynamic_string(verneed.file(endian, strings)?);
+            verneed_count += 1;
+            while let Some(vernaux) = vernauxs.next()? {
+                writer.add_dynamic_string(vernaux.name(endian, strings)?);
+                vernaux_count += 1;
+            }
+        }
+    }
+
     // Start reserving file ranges.
     writer.reserve_file_header();
 
     let mut hash_addr = 0;
     let mut gnu_hash_addr = 0;
+    let mut versym_addr = 0;
+    let mut verdef_addr = 0;
+    let mut verneed_addr = 0;
     let mut dynamic_addr = 0;
     let mut dynsym_addr = 0;
     let mut dynstr_addr = 0;
@@ -340,13 +387,7 @@ fn copy_file<Elf: FileHeader<Endian = Endianness>>(
         for (i, in_section) in alloc_sections.iter() {
             writer.reserve_until(in_section.sh_offset(endian).into() as usize);
             match in_section.sh_type(endian) {
-                elf::SHT_PROGBITS
-                | elf::SHT_NOTE
-                | elf::SHT_INIT_ARRAY
-                | elf::SHT_FINI_ARRAY
-                | elf::SHT_GNU_VERDEF
-                | elf::SHT_GNU_VERNEED
-                | elf::SHT_GNU_VERSYM => {
+                elf::SHT_PROGBITS | elf::SHT_NOTE | elf::SHT_INIT_ARRAY | elf::SHT_FINI_ARRAY => {
                     out_sections[*i].offset =
                         writer.reserve(in_section.sh_size(endian).into() as usize, 1);
                 }
@@ -386,6 +427,18 @@ fn copy_file<Elf: FileHeader<Endian = Endianness>>(
                         hash.bucket_count.get(endian),
                         gnu_hash_symbol_count,
                     );
+                }
+                elf::SHT_GNU_VERSYM => {
+                    versym_addr = in_section.sh_addr(endian).into();
+                    writer.reserve_gnu_versym();
+                }
+                elf::SHT_GNU_VERDEF => {
+                    verdef_addr = in_section.sh_addr(endian).into();
+                    writer.reserve_gnu_verdef(verdef_count, verdaux_count);
+                }
+                elf::SHT_GNU_VERNEED => {
+                    verneed_addr = in_section.sh_addr(endian).into();
+                    writer.reserve_gnu_verneed(verneed_count, vernaux_count);
                 }
                 other => {
                     panic!("Unsupported alloc section index {}, type {}", *i, other);
@@ -474,15 +527,8 @@ fn copy_file<Elf: FileHeader<Endian = Endianness>>(
         for (i, in_section) in alloc_sections.iter() {
             writer.pad_until(in_section.sh_offset(endian).into() as usize);
             match in_section.sh_type(endian) {
-                elf::SHT_PROGBITS
-                | elf::SHT_NOTE
-                | elf::SHT_INIT_ARRAY
-                | elf::SHT_FINI_ARRAY
-                | elf::SHT_GNU_VERDEF
-                | elf::SHT_GNU_VERNEED
-                | elf::SHT_GNU_VERSYM => {
+                elf::SHT_PROGBITS | elf::SHT_NOTE | elf::SHT_INIT_ARRAY | elf::SHT_FINI_ARRAY => {
                     debug_assert_eq!(out_sections[*i].offset, writer.len());
-                    // TODO: rebuild special sections
                     writer.write(in_section.data(endian, in_data)?);
                 }
                 elf::SHT_NOBITS => {}
@@ -581,6 +627,54 @@ fn copy_file<Elf: FileHeader<Endian = Endianness>>(
                                 .unwrap()
                         },
                     );
+                }
+                elf::SHT_GNU_VERSYM => {
+                    let (in_versym, _) = in_versym.as_ref().unwrap();
+                    writer.write_null_gnu_versym();
+                    for out_dynsym in &out_dynsyms {
+                        writer.write_gnu_versym(
+                            in_versym.get(out_dynsym.in_sym).unwrap().0.get(endian),
+                        );
+                    }
+                }
+                elf::SHT_GNU_VERDEF => {
+                    let (mut verdefs, link) = in_verdef.clone().unwrap();
+                    let strings = in_sections.strings(endian, in_data, link)?;
+                    writer.write_align_gnu_verdef();
+                    while let Some((verdef, mut verdauxs)) = verdefs.next()? {
+                        let verdaux = verdauxs.next()?.unwrap();
+                        writer.write_gnu_verdef(&object::write::elf::Verdef {
+                            version: verdef.vd_version.get(endian),
+                            flags: verdef.vd_flags.get(endian),
+                            index: verdef.vd_ndx.get(endian),
+                            aux_count: verdef.vd_cnt.get(endian),
+                            name: writer.get_dynamic_string(verdaux.name(endian, strings)?),
+                        });
+                        while let Some(verdaux) = verdauxs.next()? {
+                            writer.write_gnu_verdaux(
+                                writer.get_dynamic_string(verdaux.name(endian, strings)?),
+                            );
+                        }
+                    }
+                }
+                elf::SHT_GNU_VERNEED => {
+                    let (mut verneeds, link) = in_verneed.clone().unwrap();
+                    let strings = in_sections.strings(endian, in_data, link)?;
+                    writer.write_align_gnu_verneed();
+                    while let Some((verneed, mut vernauxs)) = verneeds.next()? {
+                        writer.write_gnu_verneed(&object::write::elf::Verneed {
+                            version: verneed.vn_version.get(endian),
+                            aux_count: verneed.vn_cnt.get(endian),
+                            file: writer.get_dynamic_string(verneed.file(endian, strings)?),
+                        });
+                        while let Some(vernaux) = vernauxs.next()? {
+                            writer.write_gnu_vernaux(&object::write::elf::Vernaux {
+                                flags: vernaux.vna_flags.get(endian),
+                                index: vernaux.vna_other.get(endian),
+                                name: writer.get_dynamic_string(vernaux.name(endian, strings)?),
+                            });
+                        }
+                    }
                 }
                 other => {
                     panic!("Unsupported alloc section type {:x}", other);
@@ -749,6 +843,15 @@ fn copy_file<Elf: FileHeader<Endian = Endianness>>(
             }
             elf::SHT_GNU_HASH => {
                 writer.write_gnu_hash_section_header(gnu_hash_addr);
+            }
+            elf::SHT_GNU_VERSYM => {
+                writer.write_gnu_versym_section_header(versym_addr);
+            }
+            elf::SHT_GNU_VERDEF => {
+                writer.write_gnu_verdef_section_header(verdef_addr);
+            }
+            elf::SHT_GNU_VERNEED => {
+                writer.write_gnu_verneed_section_header(verneed_addr);
             }
             other => {
                 panic!("Unsupported section type {:x}", other);
