@@ -88,6 +88,14 @@ pub struct Writer<'a> {
     dynamic_str_id: Option<StringId>,
     dynamic_offset: usize,
     dynamic_num: usize,
+
+    hash_str_id: Option<StringId>,
+    hash_offset: usize,
+    hash_size: usize,
+
+    gnu_hash_str_id: Option<StringId>,
+    gnu_hash_offset: usize,
+    gnu_hash_size: usize,
 }
 
 impl<'a> Writer<'a> {
@@ -148,6 +156,14 @@ impl<'a> Writer<'a> {
             dynamic_str_id: None,
             dynamic_offset: 0,
             dynamic_num: 0,
+
+            hash_str_id: None,
+            hash_offset: 0,
+            hash_size: 0,
+
+            gnu_hash_str_id: None,
+            gnu_hash_offset: 0,
+            gnu_hash_size: 0,
         }
     }
 
@@ -1206,6 +1222,194 @@ impl<'a> Writer<'a> {
                 mem::size_of::<elf::Rel32<Endianness>>()
             }
         }
+    }
+
+    /// Reserve a file range for a SysV hash section.
+    ///
+    /// `symbol_count` is the number of symbols in the hash,
+    /// not the total number of symbols.
+    pub fn reserve_hash(&mut self, bucket_count: u32, chain_count: u32) {
+        self.hash_size = mem::size_of::<elf::HashHeader<Endianness>>()
+            + bucket_count as usize * 4
+            + chain_count as usize * 4;
+        self.hash_offset = self.reserve(self.hash_size, self.elf_align);
+    }
+
+    /// Write a SysV hash section.
+    ///
+    /// `chain_count` is the number of symbols in the hash.
+    /// The argument to `hash` will be in the range `0..chain_count`.
+    pub fn write_hash<F>(&mut self, bucket_count: u32, chain_count: u32, hash: F)
+    where
+        F: Fn(u32) -> Option<u32>,
+    {
+        let mut buckets = vec![U32::new(self.endian, 0); bucket_count as usize];
+        let mut chains = vec![U32::new(self.endian, 0); chain_count as usize];
+        for i in 0..chain_count {
+            if let Some(hash) = hash(i) {
+                let bucket = hash % bucket_count;
+                chains[i as usize] = buckets[bucket as usize];
+                buckets[bucket as usize] = U32::new(self.endian, i);
+            }
+        }
+
+        util::write_align(self.buffer, self.elf_align);
+        debug_assert_eq!(self.hash_offset, self.buffer.len());
+        self.buffer.write(&elf::HashHeader {
+            bucket_count: U32::new(self.endian, bucket_count),
+            chain_count: U32::new(self.endian, chain_count),
+        });
+        self.buffer.write_slice(&buckets);
+        self.buffer.write_slice(&chains);
+    }
+
+    /// Reserve the section index for the SysV hash table.
+    pub fn reserve_hash_section_index(&mut self) -> SectionIndex {
+        debug_assert!(self.hash_str_id.is_none());
+        self.hash_str_id = Some(self.add_section_name(&b".hash"[..]));
+        self.reserve_section_index()
+    }
+
+    /// Write the section header for the SysV hash table.
+    ///
+    /// This function does nothing if the section index was not reserved.
+    pub fn write_hash_section_header(&mut self, sh_addr: u64) {
+        if self.hash_str_id.is_none() {
+            return;
+        }
+        self.write_section_header(&SectionHeader {
+            name: self.hash_str_id,
+            sh_type: elf::SHT_HASH,
+            sh_flags: elf::SHF_ALLOC.into(),
+            sh_addr,
+            sh_offset: self.hash_offset as u64,
+            sh_size: self.hash_size as u64,
+            sh_link: self.dynsym_index.0,
+            sh_info: 0,
+            sh_addralign: self.elf_align as u64,
+            sh_entsize: 4,
+        });
+    }
+
+    /// Reserve a file range for a GNU hash section.
+    ///
+    /// `symbol_count` is the number of symbols in the hash,
+    /// not the total number of symbols.
+    pub fn reserve_gnu_hash(&mut self, bloom_count: u32, bucket_count: u32, symbol_count: u32) {
+        self.gnu_hash_size = mem::size_of::<elf::GnuHashHeader<Endianness>>()
+            + bloom_count as usize * self.elf_align
+            + bucket_count as usize * 4
+            + symbol_count as usize * 4;
+        self.gnu_hash_offset = self.reserve(self.gnu_hash_size, self.elf_align);
+    }
+
+    /// Write a GNU hash section.
+    ///
+    /// `symbol_count` is the number of symbols in the hash.
+    /// The argument to `hash` will be in the range `0..symbol_count`.
+    ///
+    /// This requires that symbols are already sorted by bucket.
+    pub fn write_gnu_hash<F>(
+        &mut self,
+        symbol_base: u32,
+        bloom_shift: u32,
+        bloom_count: u32,
+        bucket_count: u32,
+        symbol_count: u32,
+        hash: F,
+    ) where
+        F: Fn(u32) -> u32,
+    {
+        util::write_align(self.buffer, self.elf_align);
+        debug_assert_eq!(self.gnu_hash_offset, self.buffer.len());
+        self.buffer.write(&elf::GnuHashHeader {
+            bucket_count: U32::new(self.endian, bucket_count),
+            symbol_base: U32::new(self.endian, symbol_base),
+            bloom_count: U32::new(self.endian, bloom_count),
+            bloom_shift: U32::new(self.endian, bloom_shift),
+        });
+
+        // Calculate and write bloom filter.
+        if self.is_64 {
+            let mut bloom_filters = vec![0; bloom_count as usize];
+            for i in 0..symbol_count {
+                let h = hash(i);
+                bloom_filters[((h / 64) & (bloom_count - 1)) as usize] |=
+                    1 << (h % 64) | 1 << ((h >> bloom_shift) % 64);
+            }
+            for bloom_filter in bloom_filters {
+                self.buffer.write(&U64::new(self.endian, bloom_filter));
+            }
+        } else {
+            let mut bloom_filters = vec![0; bloom_count as usize];
+            for i in 0..symbol_count {
+                let h = hash(i);
+                bloom_filters[((h / 32) & (bloom_count - 1)) as usize] |=
+                    1 << (h % 32) | 1 << ((h >> bloom_shift) % 32);
+            }
+            for bloom_filter in bloom_filters {
+                self.buffer.write(&U32::new(self.endian, bloom_filter));
+            }
+        }
+
+        // Write buckets.
+        //
+        // This requires that symbols are already sorted by bucket.
+        let mut bucket = 0;
+        for i in 0..symbol_count {
+            let symbol_bucket = hash(i) % bucket_count;
+            while bucket < symbol_bucket {
+                self.buffer.write(&U32::new(self.endian, 0));
+                bucket += 1;
+            }
+            if bucket == symbol_bucket {
+                self.buffer.write(&U32::new(self.endian, symbol_base + i));
+                bucket += 1;
+            }
+        }
+        while bucket < bucket_count {
+            self.buffer.write(&U32::new(self.endian, 0));
+            bucket += 1;
+        }
+
+        // Write hash values.
+        for i in 0..symbol_count {
+            let mut h = hash(i);
+            if i == symbol_count - 1 || h % bucket_count != hash(i + 1) % bucket_count {
+                h |= 1;
+            } else {
+                h &= !1;
+            }
+            self.buffer.write(&U32::new(self.endian, h));
+        }
+    }
+
+    /// Reserve the section index for the GNU hash table.
+    pub fn reserve_gnu_hash_section_index(&mut self) -> SectionIndex {
+        debug_assert!(self.gnu_hash_str_id.is_none());
+        self.gnu_hash_str_id = Some(self.add_section_name(&b".gnu.hash"[..]));
+        self.reserve_section_index()
+    }
+
+    /// Write the section header for the GNU hash table.
+    ///
+    /// This function does nothing if the section index was not reserved.
+    pub fn write_gnu_hash_section_header(&mut self, sh_addr: u64) {
+        if self.gnu_hash_str_id.is_none() {
+            return;
+        }
+        self.write_section_header(&SectionHeader {
+            name: self.gnu_hash_str_id,
+            sh_type: elf::SHT_GNU_HASH,
+            sh_flags: elf::SHF_ALLOC.into(),
+            sh_addr,
+            sh_offset: self.gnu_hash_offset as u64,
+            sh_size: self.gnu_hash_size as u64,
+            sh_link: self.dynsym_index.0,
+            sh_info: 0,
+            sh_addralign: self.elf_align as u64,
+            sh_entsize: 0,
+        });
     }
 
     /// Reserve a file range for the given number of relocations.

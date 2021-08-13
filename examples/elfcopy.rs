@@ -72,6 +72,14 @@ struct Symbol {
     section: Option<object::write::elf::SectionIndex>,
 }
 
+struct DynamicSymbol {
+    in_sym: usize,
+    name: Option<object::write::StringId>,
+    section: Option<object::write::elf::SectionIndex>,
+    hash: Option<u32>,
+    gnu_hash: Option<u32>,
+}
+
 fn copy_file<Elf: FileHeader<Endian = Endianness>>(
     in_data: &[u8],
 ) -> Result<Vec<u8>, Box<dyn Error>> {
@@ -88,6 +96,8 @@ fn copy_file<Elf: FileHeader<Endian = Endianness>>(
 
     // Find metadata sections, and assign section indices.
     let mut in_dynamic = None;
+    let mut in_hash = None;
+    let mut in_gnu_hash = None;
     let mut out_sections = Vec::with_capacity(in_sections.len());
     let mut out_sections_index = Vec::with_capacity(in_sections.len());
     for (i, in_section) in in_sections.iter().enumerate() {
@@ -104,8 +114,6 @@ fn copy_file<Elf: FileHeader<Endian = Endianness>>(
             | elf::SHT_RELA
             | elf::SHT_INIT_ARRAY
             | elf::SHT_FINI_ARRAY
-            | elf::SHT_HASH
-            | elf::SHT_GNU_HASH
             | elf::SHT_GNU_VERDEF
             | elf::SHT_GNU_VERNEED
             | elf::SHT_GNU_VERSYM => {
@@ -150,6 +158,18 @@ fn copy_file<Elf: FileHeader<Endian = Endianness>>(
                 debug_assert!(in_dynamic.is_some());
                 index = writer.reserve_dynamic_section_index();
             }
+            elf::SHT_HASH => {
+                assert!(in_hash.is_none());
+                in_hash = in_section.hash_header(endian, in_data)?;
+                debug_assert!(in_hash.is_some());
+                index = writer.reserve_hash_section_index();
+            }
+            elf::SHT_GNU_HASH => {
+                assert!(in_gnu_hash.is_none());
+                in_gnu_hash = in_section.gnu_hash_header(endian, in_data)?;
+                debug_assert!(in_gnu_hash.is_some());
+                index = writer.reserve_gnu_hash_section_index();
+            }
             other => {
                 panic!("Unsupported section type {:x}", other);
             }
@@ -183,32 +203,69 @@ fn copy_file<Elf: FileHeader<Endian = Endianness>>(
 
     // Assign dynamic symbol indices.
     let mut out_dynsyms = Vec::with_capacity(in_dynsyms.len());
-    let mut out_dynsyms_index = Vec::with_capacity(in_dynsyms.len());
-    out_dynsyms_index.push(Default::default());
     for (i, in_dynsym) in in_dynsyms.iter().enumerate().skip(1) {
         let section = match in_dynsyms.symbol_section(endian, in_dynsym, i)? {
             Some(in_section) => {
                 // Skip symbols for sections we aren't copying.
                 if out_sections_index[in_section.0].0 == 0 {
-                    out_dynsyms_index.push(Default::default());
                     continue;
                 }
                 Some(out_sections_index[in_section.0])
             }
             None => None,
         };
-        out_dynsyms_index.push(writer.reserve_dynamic_symbol_index());
-        let name = if in_dynsym.st_name(endian) != 0 {
-            Some(writer.add_dynamic_string(in_dynsyms.symbol_name(endian, in_dynsym)?))
-        } else {
-            None
+        let mut name = None;
+        let mut hash = None;
+        let mut gnu_hash = None;
+        if in_dynsym.st_name(endian) != 0 {
+            let in_name = in_dynsyms.symbol_name(endian, in_dynsym)?;
+            name = Some(writer.add_dynamic_string(in_name));
+            if !in_name.is_empty() {
+                hash = Some(elf::hash(in_name));
+                if !in_dynsym.is_undefined(endian) {
+                    gnu_hash = Some(elf::gnu_hash(in_name));
+                }
+            }
         };
-        out_dynsyms.push(Symbol {
+        out_dynsyms.push(DynamicSymbol {
             in_sym: i,
             name,
             section,
+            hash,
+            gnu_hash,
         });
     }
+    // We must sort for GNU hash before allocating symbol indices.
+    if let Some(in_gnu_hash) = in_gnu_hash.as_ref() {
+        // TODO: recalculate bucket_count
+        out_dynsyms.sort_by_key(|sym| match sym.gnu_hash {
+            None => (0, 0),
+            Some(hash) => (1, hash % in_gnu_hash.bucket_count.get(endian)),
+        });
+    }
+    let mut out_dynsyms_index = vec![Default::default(); in_dynsyms.len()];
+    for out_dynsym in out_dynsyms.iter_mut() {
+        out_dynsyms_index[out_dynsym.in_sym] = writer.reserve_dynamic_symbol_index();
+    }
+
+    // Hash parameters.
+    let hash_index_base = out_dynsyms
+        .first()
+        .map(|sym| out_dynsyms_index[sym.in_sym].0)
+        .unwrap_or(0);
+    let hash_chain_count = writer.dynamic_symbol_count();
+
+    // GNU hash parameters.
+    let gnu_hash_index_base = out_dynsyms
+        .iter()
+        .position(|sym| sym.gnu_hash.is_some())
+        .unwrap_or(0);
+    let gnu_hash_symbol_base = out_dynsyms
+        .iter()
+        .find(|sym| sym.gnu_hash.is_some())
+        .map(|sym| out_dynsyms_index[sym.in_sym].0)
+        .unwrap_or(writer.dynamic_symbol_count());
+    let gnu_hash_symbol_count = writer.dynamic_symbol_count() - gnu_hash_symbol_base;
 
     // Assign symbol indices.
     let mut num_local = 0;
@@ -246,6 +303,8 @@ fn copy_file<Elf: FileHeader<Endian = Endianness>>(
     // Start reserving file ranges.
     writer.reserve_file_header();
 
+    let mut hash_addr = 0;
+    let mut gnu_hash_addr = 0;
     let mut dynamic_addr = 0;
     let mut dynsym_addr = 0;
     let mut dynstr_addr = 0;
@@ -285,8 +344,6 @@ fn copy_file<Elf: FileHeader<Endian = Endianness>>(
                 | elf::SHT_NOTE
                 | elf::SHT_INIT_ARRAY
                 | elf::SHT_FINI_ARRAY
-                | elf::SHT_HASH
-                | elf::SHT_GNU_HASH
                 | elf::SHT_GNU_VERDEF
                 | elf::SHT_GNU_VERNEED
                 | elf::SHT_GNU_VERSYM => {
@@ -315,6 +372,20 @@ fn copy_file<Elf: FileHeader<Endian = Endianness>>(
                 elf::SHT_STRTAB if *i == in_dynsyms.string_section().0 => {
                     dynstr_addr = in_section.sh_addr(endian).into();
                     writer.reserve_dynstr();
+                }
+                elf::SHT_HASH => {
+                    hash_addr = in_section.sh_addr(endian).into();
+                    let hash = in_hash.as_ref().unwrap();
+                    writer.reserve_hash(hash.bucket_count.get(endian), hash_chain_count);
+                }
+                elf::SHT_GNU_HASH => {
+                    gnu_hash_addr = in_section.sh_addr(endian).into();
+                    let hash = in_gnu_hash.as_ref().unwrap();
+                    writer.reserve_gnu_hash(
+                        hash.bloom_count.get(endian),
+                        hash.bucket_count.get(endian),
+                        gnu_hash_symbol_count,
+                    );
                 }
                 other => {
                     panic!("Unsupported alloc section index {}, type {}", *i, other);
@@ -407,8 +478,6 @@ fn copy_file<Elf: FileHeader<Endian = Endianness>>(
                 | elf::SHT_NOTE
                 | elf::SHT_INIT_ARRAY
                 | elf::SHT_FINI_ARRAY
-                | elf::SHT_HASH
-                | elf::SHT_GNU_HASH
                 | elf::SHT_GNU_VERDEF
                 | elf::SHT_GNU_VERNEED
                 | elf::SHT_GNU_VERSYM => {
@@ -489,6 +558,29 @@ fn copy_file<Elf: FileHeader<Endian = Endianness>>(
                 }
                 elf::SHT_STRTAB if *i == in_dynsyms.string_section().0 => {
                     writer.write_dynstr();
+                }
+                elf::SHT_HASH => {
+                    let hash = in_hash.as_ref().unwrap();
+                    writer.write_hash(hash.bucket_count.get(endian), hash_chain_count, |index| {
+                        out_dynsyms
+                            .get(index.checked_sub(hash_index_base)? as usize)?
+                            .hash
+                    });
+                }
+                elf::SHT_GNU_HASH => {
+                    let gnu_hash = in_gnu_hash.as_ref().unwrap();
+                    writer.write_gnu_hash(
+                        gnu_hash_symbol_base,
+                        gnu_hash.bloom_shift.get(endian),
+                        gnu_hash.bloom_count.get(endian),
+                        gnu_hash.bucket_count.get(endian),
+                        gnu_hash_symbol_count,
+                        |index| {
+                            out_dynsyms[gnu_hash_index_base + index as usize]
+                                .gnu_hash
+                                .unwrap()
+                        },
+                    );
                 }
                 other => {
                     panic!("Unsupported alloc section type {:x}", other);
@@ -651,6 +743,12 @@ fn copy_file<Elf: FileHeader<Endian = Endianness>>(
             }
             elf::SHT_DYNAMIC => {
                 writer.write_dynamic_section_header(dynamic_addr);
+            }
+            elf::SHT_HASH => {
+                writer.write_hash_section_header(hash_addr);
+            }
+            elf::SHT_GNU_HASH => {
+                writer.write_gnu_hash_section_header(gnu_hash_addr);
             }
             other => {
                 panic!("Unsupported section type {:x}", other);
