@@ -9,9 +9,7 @@ use crate::read::{
     self, Architecture, ComdatKind, Error, Export, FileFlags, Import, NoDynamicRelocationIterator,
     Object, ObjectComdat, ReadError, ReadRef, Result, SectionIndex, SymbolIndex,
 };
-use crate::{
-    pe, ByteString, Bytes, CodeView, LittleEndian as LE, Pod, U16Bytes, U32Bytes, U32, U64,
-};
+use crate::{pe, ByteString, Bytes, CodeView, LittleEndian as LE, Pod, U32, U64};
 
 use super::{PeSection, PeSectionIterator, PeSegment, PeSegmentIterator, SectionTable};
 
@@ -297,60 +295,21 @@ where
     }
 
     fn exports(&self) -> Result<Vec<Export<'data>>> {
-        let data_dir = match self.data_directory(pe::IMAGE_DIRECTORY_ENTRY_EXPORT) {
-            Some(data_dir) => data_dir,
-            None => return Ok(Vec::new()),
-        };
-        let export_va = data_dir.virtual_address.get(LE);
-        let export_size = data_dir.size.get(LE);
-        let export_data = data_dir.data(self.data, &self.common.sections).map(Bytes)?;
-        let export_dir = export_data
-            .read_at::<pe::ImageExportDirectory>(0)
-            .read_error("Invalid PE export dir size")?;
-        let addresses = export_data
-            .read_slice_at::<U32Bytes<_>>(
-                export_dir
-                    .address_of_functions
-                    .get(LE)
-                    .wrapping_sub(export_va) as usize,
-                export_dir.number_of_functions.get(LE) as usize,
-            )
-            .read_error("Invalid PE export address table")?;
-        let number = export_dir.number_of_names.get(LE) as usize;
-        let names = export_data
-            .read_slice_at::<U32Bytes<_>>(
-                export_dir.address_of_names.get(LE).wrapping_sub(export_va) as usize,
-                number,
-            )
-            .read_error("Invalid PE export name table")?;
-        let ordinals = export_data
-            .read_slice_at::<U16Bytes<_>>(
-                export_dir
-                    .address_of_name_ordinals
-                    .get(LE)
-                    .wrapping_sub(export_va) as usize,
-                number,
-            )
-            .read_error("Invalid PE export ordinal table")?;
-
-        let mut exports = Vec::new();
-        for (name, ordinal) in names.iter().zip(ordinals.iter()) {
-            let name = export_data
-                .read_string_at(name.get(LE).wrapping_sub(export_va) as usize)
-                .read_error("Invalid PE export name entry")?;
-            let address = addresses
-                .get(ordinal.get(LE) as usize)
-                .read_error("Invalid PE export ordinal entry")?
-                .get(LE);
-            // Check for export address (vs forwarder address).
-            if address < export_va || (address - export_va) >= export_size {
-                exports.push(Export {
-                    name: ByteString(name),
-                    address: self.common.image_base.wrapping_add(address.into()),
-                })
+        self.export_table().map(|pe_exports| {
+            let mut exports = Vec::new();
+            for pe_export in pe_exports {
+                match (pe_export.name, pe_export.target) {
+                    (Some(name), super::export::ExportTarget::Local(address)) => {
+                        exports.push(Export {
+                            name: ByteString(name),
+                            address,
+                        })
+                    }
+                    _ => continue,
+                }
             }
-        }
-        Ok(exports)
+            exports
+        })
     }
 
     fn pdb_info(&self) -> Result<Option<CodeView>> {
