@@ -51,6 +51,20 @@ pub trait ReadRef<'a>: Clone + Copy {
     /// not found in the range.
     fn read_bytes_at_until(self, range: Range<u64>, delimiter: u8) -> Result<&'a [u8]>;
 
+    /// Get a reference to a delimited `u8` slice which starts at range.start, ends before
+    /// the given final sequence and cannot end after `max_end`
+    ///
+    /// Does not include the final sequence.
+    ///
+    /// Returns an error if the range is out of bounds or the final sequence is
+    /// not found before `max_end`.
+    fn read_bytes_at_until_sequence(
+        self,
+        offset: usize,
+        seq: &[u8],
+        max_end: usize,
+    ) -> Result<&'a [u8]>;
+
     /// Get a reference to a `u8` slice at the given offset, and update the offset.
     ///
     /// Returns an error if offset or size are out of bounds.
@@ -133,5 +147,19 @@ impl<'a> ReadRef<'a> for &'a [u8] {
             }
             None => Err(()),
         }
+    }
+
+    fn read_bytes_at_until_sequence(
+        self,
+        offset: usize,
+        needle: &[u8],
+        max_end: usize,
+    ) -> Result<&'a [u8]> {
+        let sub: &[u8] = self.get(offset..max_end).ok_or(())?;
+
+        sub.windows(needle.len())
+            .position(|window| window == needle)
+            .ok_or(())
+            .and_then(|end| self.read_bytes_at(offset as u64, end as u64))
     }
 }

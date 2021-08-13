@@ -4,6 +4,7 @@ use core::{mem, str};
 
 use core::convert::TryInto;
 
+use crate::pe::RichHeaderEntry;
 use crate::read::coff::{CoffCommon, CoffSymbol, CoffSymbolIterator, CoffSymbolTable, SymbolTable};
 use crate::read::{
     self, Architecture, ComdatKind, Error, Export, FileFlags, Import, NoDynamicRelocationIterator,
@@ -21,6 +22,19 @@ pub type PeFile32<'data, R = &'data [u8]> = PeFile<'data, pe::ImageNtHeaders32, 
 /// A PE32+ (64-bit) image file.
 pub type PeFile64<'data, R = &'data [u8]> = PeFile<'data, pe::ImageNtHeaders64, R>;
 
+/// Extracted infos about a possible Rich Header
+#[derive(Debug, Clone, Copy)]
+pub struct RichHeaderInfos<'data> {
+    /// The offset at which the rich header starts
+    pub start: usize,
+    /// The length (in bytes) of the rich header
+    pub length: usize,
+    /// The data used to mask the rich header.
+    /// Unless the file has been tampered with, it should be equal to a checksum of the file header
+    pub mask: U32<LE>,
+    masked_entries: &'data [pe::MaskedRichHeaderEntry],
+}
+
 /// A PE object file.
 #[derive(Debug)]
 pub struct PeFile<'data, Pe, R = &'data [u8]>
@@ -29,6 +43,7 @@ where
     R: ReadRef<'data>,
 {
     pub(super) dos_header: &'data pe::ImageDosHeader,
+    pub(super) rich_header_infos: Option<RichHeaderInfos<'data>>,
     pub(super) nt_headers: &'data Pe,
     pub(super) data_directories: DataDirectories<'data>,
     pub(super) common: CoffCommon<'data, R>,
@@ -44,6 +59,7 @@ where
     pub fn parse(data: R) -> Result<Self> {
         let dos_header = pe::ImageDosHeader::parse(data)?;
         let mut offset = dos_header.nt_headers_offset().into();
+        let rich_header_infos = RichHeaderInfos::parse(data, offset);
         let (nt_headers, data_directories) = Pe::parse(data, &mut offset)?;
         let sections = nt_headers.sections(data, offset)?;
         let symbols = nt_headers.symbols(data)?;
@@ -51,6 +67,7 @@ where
 
         Ok(PeFile {
             dos_header,
+            rich_header_infos,
             nt_headers,
             data_directories,
             common: CoffCommon {
@@ -75,6 +92,11 @@ where
     /// Return the NT Headers of this file
     pub fn nt_headers(&self) -> &'data Pe {
         self.nt_headers
+    }
+
+    /// Returns infos about the rich header of this file (if any)
+    pub fn rich_header_infos(&self) -> Option<&'data RichHeaderInfos> {
+        self.rich_header_infos.as_ref()
     }
 
     /// Returns the section table of this binary.
@@ -493,6 +515,76 @@ impl pe::ImageDosHeader {
     #[inline]
     pub fn nt_headers_offset(&self) -> u32 {
         self.e_lfanew.get(LE)
+    }
+}
+
+impl<'data> RichHeaderInfos<'data> {
+    /// Try to detect a rich header in the current PE file, and locate its [`MaskedRichHeaderEntry`s]
+    fn parse<R: ReadRef<'data>>(data: R, nt_header_offset: u64) -> Option<Self> {
+        const RICH_SEQUENCE: &[u8] = &[0x52, 0x69, 0x63, 0x68]; // "Rich"
+        const CLEARTEXT_MARKER: u32 = 0x536e6144; // little-endian "DanS"
+
+        // Locate the rich header, if any
+        // It ends with the ASCII 'Rich' string, before the NT header
+        // It starts at the start marker (a masked ASCII 'DanS' string)
+        let dos_and_rich_header =
+            match data.read_bytes_at_until_sequence(0, RICH_SEQUENCE, nt_header_offset as usize) {
+                Err(()) => return None,
+                Ok(slice) => slice,
+            };
+
+        let xor_key = match data.read_at::<pe::RichCheckSum>(dos_and_rich_header.len() as u64 + 4) {
+            Err(()) => return None,
+            Ok(key) => key,
+        };
+
+        let mut start_marker: Vec<u8> = U32::<LE>::new(LE, CLEARTEXT_MARKER)
+            .as_slice()
+            .iter()
+            .zip(xor_key.checksum.as_slice())
+            .map(|(a, b)| *a ^ *b)
+            .collect();
+        start_marker.extend_from_slice(xor_key.checksum.as_slice());
+        start_marker.extend_from_slice(xor_key.checksum.as_slice());
+        start_marker.extend_from_slice(xor_key.checksum.as_slice());
+
+        let rich_header_start =
+            match data.read_bytes_at_until_sequence(0, &start_marker, nt_header_offset as usize) {
+                Err(()) => return None,
+                Ok(slice) => slice.len(),
+            };
+        let rh_len = dos_and_rich_header.len() - rich_header_start;
+
+        // Extract the contents of the rich header
+        let items_start = rich_header_start + 16;
+        let items_len = rh_len - 16;
+        let item_count = items_len / std::mem::size_of::<pe::MaskedRichHeaderEntry>();
+        let items =
+            match data.read_slice_at::<pe::MaskedRichHeaderEntry>(items_start as u64, item_count) {
+                Err(()) => return None,
+                Ok(items) => items,
+            };
+        Some(RichHeaderInfos {
+            start: rich_header_start,
+            length: rh_len,
+            mask: xor_key.checksum,
+            masked_entries: items,
+        })
+    }
+
+    /// Creates a new vector of unmasked entries
+    pub fn unmasked_entries(&self) -> Vec<pe::RichHeaderEntry> {
+        self.masked_entries
+            .iter()
+            .map(|entry| RichHeaderEntry {
+                comp_id: Self::unmask_rich_header_item(entry.masked_comp_id, self.mask),
+                count: Self::unmask_rich_header_item(entry.masked_count, self.mask),
+            })
+            .collect()
+    }
+
+    fn unmask_rich_header_item(item: U32<LE>, mask: U32<LE>) -> u32 {
+        item.get(LE) ^ mask.get(LE)
     }
 }
 
