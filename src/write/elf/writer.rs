@@ -44,6 +44,9 @@ pub struct Writer<'a> {
     buffer: &'a mut dyn WritableBuffer,
     len: usize,
 
+    segment_offset: usize,
+    segment_num: u32,
+
     section_offset: usize,
     section_num: u32,
 
@@ -69,6 +72,22 @@ pub struct Writer<'a> {
     symtab_shndx_str_id: Option<StringId>,
     symtab_shndx_offset: usize,
     symtab_shndx_data: Vec<u8>,
+
+    need_dynstr: bool,
+    dynstr: StringTable<'a>,
+    dynstr_str_id: Option<StringId>,
+    dynstr_index: SectionIndex,
+    dynstr_offset: usize,
+    dynstr_data: Vec<u8>,
+
+    dynsym_str_id: Option<StringId>,
+    dynsym_index: SectionIndex,
+    dynsym_offset: usize,
+    dynsym_num: u32,
+
+    dynamic_str_id: Option<StringId>,
+    dynamic_offset: usize,
+    dynamic_num: usize,
 }
 
 impl<'a> Writer<'a> {
@@ -84,6 +103,9 @@ impl<'a> Writer<'a> {
 
             buffer,
             len: 0,
+
+            segment_offset: 0,
+            segment_num: 0,
 
             section_offset: 0,
             section_num: 0,
@@ -110,6 +132,22 @@ impl<'a> Writer<'a> {
             symtab_shndx_str_id: None,
             symtab_shndx_offset: 0,
             symtab_shndx_data: Vec::new(),
+
+            need_dynstr: false,
+            dynstr: StringTable::default(),
+            dynstr_str_id: None,
+            dynstr_index: SectionIndex(0),
+            dynstr_offset: 0,
+            dynstr_data: Vec::new(),
+
+            dynsym_str_id: None,
+            dynsym_index: SectionIndex(0),
+            dynsym_offset: 0,
+            dynsym_num: 0,
+
+            dynamic_str_id: None,
+            dynamic_offset: 0,
+            dynamic_num: 0,
         }
     }
 
@@ -147,6 +185,18 @@ impl<'a> Writer<'a> {
     /// This is typically used to write section data.
     pub fn write(&mut self, data: &[u8]) {
         self.buffer.write_bytes(data);
+    }
+
+    /// Reserve the file range up to the given file offset.
+    pub fn reserve_until(&mut self, offset: usize) {
+        debug_assert!(self.len <= offset);
+        self.len = offset;
+    }
+
+    /// Write padding up to the given file offset.
+    pub fn pad_until(&mut self, offset: usize) {
+        debug_assert!(self.buffer.len() <= offset);
+        self.buffer.resize(offset, 0);
     }
 
     fn file_header_size(&self) -> usize {
@@ -202,6 +252,15 @@ impl<'a> Writer<'a> {
 
         let e_ehsize = self.file_header_size() as u16;
 
+        let e_phoff = self.segment_offset as u64;
+        let e_phentsize = if self.segment_num == 0 {
+            0
+        } else {
+            self.program_header_size() as u16
+        };
+        // TODO: overflow
+        let e_phnum = self.segment_num as u16;
+
         let e_shoff = self.section_offset as u64;
         let e_shentsize = if self.section_num == 0 {
             0
@@ -227,12 +286,12 @@ impl<'a> Writer<'a> {
                 e_machine: U16::new(endian, header.e_machine),
                 e_version: U32::new(endian, elf::EV_CURRENT.into()),
                 e_entry: U64::new(endian, header.e_entry),
-                e_phoff: U64::new(endian, 0),
+                e_phoff: U64::new(endian, e_phoff),
                 e_shoff: U64::new(endian, e_shoff),
                 e_flags: U32::new(endian, header.e_flags),
                 e_ehsize: U16::new(endian, e_ehsize),
-                e_phentsize: U16::new(endian, 0),
-                e_phnum: U16::new(endian, 0),
+                e_phentsize: U16::new(endian, e_phentsize),
+                e_phnum: U16::new(endian, e_phnum),
                 e_shentsize: U16::new(endian, e_shentsize),
                 e_shnum: U16::new(endian, e_shnum),
                 e_shstrndx: U16::new(endian, e_shstrndx),
@@ -245,12 +304,12 @@ impl<'a> Writer<'a> {
                 e_machine: U16::new(endian, header.e_machine),
                 e_version: U32::new(endian, elf::EV_CURRENT.into()),
                 e_entry: U32::new(endian, header.e_entry as u32),
-                e_phoff: U32::new(endian, 0),
+                e_phoff: U32::new(endian, e_phoff as u32),
                 e_shoff: U32::new(endian, e_shoff as u32),
                 e_flags: U32::new(endian, header.e_flags),
                 e_ehsize: U16::new(endian, e_ehsize),
-                e_phentsize: U16::new(endian, 0),
-                e_phnum: U16::new(endian, 0),
+                e_phentsize: U16::new(endian, e_phentsize),
+                e_phnum: U16::new(endian, e_phnum),
                 e_shentsize: U16::new(endian, e_shentsize),
                 e_shnum: U16::new(endian, e_shnum),
                 e_shstrndx: U16::new(endian, e_shstrndx),
@@ -259,6 +318,64 @@ impl<'a> Writer<'a> {
         }
 
         Ok(())
+    }
+
+    fn program_header_size(&self) -> usize {
+        if self.is_64 {
+            mem::size_of::<elf::ProgramHeader64<Endianness>>()
+        } else {
+            mem::size_of::<elf::ProgramHeader32<Endianness>>()
+        }
+    }
+
+    /// Reserve the range for the program headers.
+    pub fn reserve_program_headers(&mut self, num: u32) {
+        debug_assert_eq!(self.segment_offset, 0);
+        if num == 0 {
+            return;
+        }
+        self.segment_num = num;
+        self.segment_offset =
+            self.reserve(num as usize * self.program_header_size(), self.elf_align);
+    }
+
+    /// Write alignment padding bytes prior to the program headers.
+    pub fn write_align_program_headers(&mut self) {
+        if self.segment_offset == 0 {
+            return;
+        }
+        util::write_align(self.buffer, self.elf_align);
+        debug_assert_eq!(self.segment_offset, self.buffer.len());
+    }
+
+    /// Write a program header.
+    pub fn write_program_header(&mut self, header: &ProgramHeader) {
+        let endian = self.endian;
+        if self.is_64 {
+            let header = elf::ProgramHeader64 {
+                p_type: U32::new(endian, header.p_type),
+                p_flags: U32::new(endian, header.p_flags),
+                p_offset: U64::new(endian, header.p_offset),
+                p_vaddr: U64::new(endian, header.p_vaddr),
+                p_paddr: U64::new(endian, header.p_paddr),
+                p_filesz: U64::new(endian, header.p_filesz),
+                p_memsz: U64::new(endian, header.p_memsz),
+                p_align: U64::new(endian, header.p_align),
+            };
+            self.buffer.write(&header);
+        } else {
+            let header = elf::ProgramHeader32 {
+                p_type: U32::new(endian, header.p_type),
+                p_offset: U32::new(endian, header.p_offset as u32),
+                p_vaddr: U32::new(endian, header.p_vaddr as u32),
+                p_paddr: U32::new(endian, header.p_paddr as u32),
+                p_filesz: U32::new(endian, header.p_filesz as u32),
+                p_memsz: U32::new(endian, header.p_memsz as u32),
+                p_flags: U32::new(endian, header.p_flags),
+                p_align: U32::new(endian, header.p_align as u32),
+            };
+            self.buffer.write(&header);
+        }
     }
 
     /// Reserve the section index for the null section header.
@@ -767,6 +884,314 @@ impl<'a> Writer<'a> {
         });
     }
 
+    /// Add a string to the dynamic string table.
+    ///
+    /// This will be stored in the `.dynstr` section.
+    ///
+    /// This must be called before [`Self::reserve_dynstr`].
+    pub fn add_dynamic_string(&mut self, name: &'a [u8]) -> StringId {
+        debug_assert_eq!(self.dynstr_offset, 0);
+        self.need_dynstr = true;
+        self.dynstr.add(name)
+    }
+
+    /// Return true if `.dynstr` is needed.
+    pub fn dynstr_needed(&self) -> bool {
+        self.need_dynstr
+    }
+
+    /// Reserve the range for the dynamic string table.
+    ///
+    /// This range is used for a section named `.dynstr`.
+    ///
+    /// This function does nothing if no dynamic strings or symbols were defined.
+    /// This must be called after [`Self::add_dynamic_string`].
+    pub fn reserve_dynstr(&mut self) {
+        debug_assert_eq!(self.dynstr_offset, 0);
+        if !self.need_dynstr {
+            return;
+        }
+        // Start with null string.
+        self.dynstr_data = vec![0];
+        self.dynstr.write(1, &mut self.dynstr_data);
+        self.dynstr_offset = self.reserve(self.dynstr_data.len(), 1);
+    }
+
+    /// Write the dynamic string table.
+    ///
+    /// This function does nothing if the section was not reserved.
+    pub fn write_dynstr(&mut self) {
+        if self.dynstr_offset == 0 {
+            return;
+        }
+        debug_assert_eq!(self.dynstr_offset, self.buffer.len());
+        self.buffer.write_bytes(&self.dynstr_data);
+    }
+
+    /// Reserve the section index for the dynamic string table.
+    ///
+    /// This must be called before [`Self::reserve_section_headers`].
+    pub fn reserve_dynstr_section_index(&mut self) -> SectionIndex {
+        debug_assert_eq!(self.dynstr_index, SectionIndex(0));
+        self.dynstr_str_id = Some(self.add_section_name(&b".dynstr"[..]));
+        self.dynstr_index = self.reserve_section_index();
+        self.dynstr_index
+    }
+
+    /// Return the section index of the dynamic string table.
+    pub fn dynstr_index(&mut self) -> SectionIndex {
+        self.dynstr_index
+    }
+
+    /// Write the section header for the dynamic string table.
+    ///
+    /// This function does nothing if the section index was not reserved.
+    pub fn write_dynstr_section_header(&mut self, sh_addr: u64) {
+        if self.dynstr_index == SectionIndex(0) {
+            return;
+        }
+        self.write_section_header(&SectionHeader {
+            name: self.dynstr_str_id,
+            sh_type: elf::SHT_STRTAB,
+            sh_flags: elf::SHF_ALLOC.into(),
+            sh_addr,
+            sh_offset: self.dynstr_offset as u64,
+            sh_size: self.dynstr_data.len() as u64,
+            sh_link: 0,
+            sh_info: 0,
+            sh_addralign: 1,
+            sh_entsize: 0,
+        });
+    }
+
+    /// Reserve a dynamic symbol table entry.
+    ///
+    /// This will be stored in the `.dynsym` section.
+    ///
+    /// Automatically also reserves the null symbol if required.
+    /// Callers may assume that the returned indices will be sequential
+    /// starting at 1.
+    ///
+    /// This must be called before [`Self::reserve_dynsym`].
+    pub fn reserve_dynamic_symbol_index(&mut self) -> SymbolIndex {
+        debug_assert_eq!(self.dynsym_offset, 0);
+        if self.dynsym_num == 0 {
+            self.dynsym_num = 1;
+            // The symtab must link to a strtab.
+            self.need_dynstr = true;
+        }
+        let index = self.dynsym_num;
+        self.dynsym_num += 1;
+        SymbolIndex(index)
+    }
+
+    /// Return the number of reserved dynamic symbols.
+    ///
+    /// Includes the null symbol.
+    pub fn dynamic_symbol_count(&mut self) -> u32 {
+        self.dynsym_num
+    }
+
+    /// Reserve the range for the dynamic symbol table.
+    ///
+    /// This range is used for a section named `.dynsym`.
+    ///
+    /// This function does nothing if no dynamic symbols were reserved.
+    /// This must be called after [`Self::reserve_dynamic_symbol_index`].
+    pub fn reserve_dynsym(&mut self) {
+        debug_assert_eq!(self.dynsym_offset, 0);
+        if self.dynsym_num == 0 {
+            return;
+        }
+        self.dynsym_offset = self.reserve(
+            self.dynsym_num as usize * self.symbol_size(),
+            self.elf_align,
+        );
+    }
+
+    /// Write the null dynamic symbol.
+    ///
+    /// This must be the first dynamic symbol that is written.
+    /// This function does nothing if no dynamic symbols were reserved.
+    pub fn write_null_dynamic_symbol(&mut self) {
+        if self.dynsym_num == 0 {
+            return;
+        }
+        util::write_align(self.buffer, self.elf_align);
+        debug_assert_eq!(self.dynsym_offset, self.buffer.len());
+        if self.is_64 {
+            self.buffer.write(&elf::Sym64::<Endianness>::default());
+        } else {
+            self.buffer.write(&elf::Sym32::<Endianness>::default());
+        }
+    }
+
+    /// Write a dynamic symbol.
+    pub fn write_dynamic_symbol(&mut self, sym: &Sym) {
+        let st_name = if let Some(name) = sym.name {
+            self.dynstr.get_offset(name) as u32
+        } else {
+            0
+        };
+
+        let st_shndx = if let Some(section) = sym.section {
+            if section.0 >= elf::SHN_LORESERVE as u32 {
+                // TODO: we don't actually write out .dynsym_shndx yet.
+                // This is unlikely to be needed though.
+                elf::SHN_XINDEX
+            } else {
+                section.0 as u16
+            }
+        } else {
+            sym.st_shndx
+        };
+
+        let endian = self.endian;
+        if self.is_64 {
+            let sym = elf::Sym64 {
+                st_name: U32::new(endian, st_name),
+                st_info: sym.st_info,
+                st_other: sym.st_other,
+                st_shndx: U16::new(endian, st_shndx),
+                st_value: U64::new(endian, sym.st_value),
+                st_size: U64::new(endian, sym.st_size),
+            };
+            self.buffer.write(&sym);
+        } else {
+            let sym = elf::Sym32 {
+                st_name: U32::new(endian, st_name),
+                st_info: sym.st_info,
+                st_other: sym.st_other,
+                st_shndx: U16::new(endian, st_shndx),
+                st_value: U32::new(endian, sym.st_value as u32),
+                st_size: U32::new(endian, sym.st_size as u32),
+            };
+            self.buffer.write(&sym);
+        }
+    }
+
+    /// Reserve the section index for the dynamic symbol table.
+    ///
+    /// This must be called before [`Self::reserve_section_headers`].
+    pub fn reserve_dynsym_section_index(&mut self) -> SectionIndex {
+        debug_assert_eq!(self.dynsym_index, SectionIndex(0));
+        self.dynsym_str_id = Some(self.add_section_name(&b".dynsym"[..]));
+        self.dynsym_index = self.reserve_section_index();
+        self.dynsym_index
+    }
+
+    /// Return the section index of the dynamic symbol table.
+    pub fn dynsym_index(&mut self) -> SectionIndex {
+        self.dynsym_index
+    }
+
+    /// Write the section header for the dynamic symbol table.
+    ///
+    /// This function does nothing if the section index was not reserved.
+    pub fn write_dynsym_section_header(&mut self, sh_addr: u64, num_local: u32) {
+        if self.dynsym_index == SectionIndex(0) {
+            return;
+        }
+        self.write_section_header(&SectionHeader {
+            name: self.dynsym_str_id,
+            sh_type: elf::SHT_DYNSYM,
+            sh_flags: elf::SHF_ALLOC.into(),
+            sh_addr,
+            sh_offset: self.dynsym_offset as u64,
+            sh_size: self.dynsym_num as u64 * self.symbol_size() as u64,
+            sh_link: self.dynstr_index.0,
+            sh_info: num_local,
+            sh_addralign: self.elf_align as u64,
+            sh_entsize: self.symbol_size() as u64,
+        });
+    }
+
+    fn dyn_size(&self) -> usize {
+        if self.is_64 {
+            mem::size_of::<elf::Dyn64<Endianness>>()
+        } else {
+            mem::size_of::<elf::Dyn32<Endianness>>()
+        }
+    }
+
+    /// Reserve the range for the `.dynamic` section.
+    ///
+    /// This function does nothing if `dynamic_num` is zero.
+    pub fn reserve_dynamic(&mut self, dynamic_num: usize) {
+        debug_assert_eq!(self.dynamic_offset, 0);
+        if dynamic_num == 0 {
+            return;
+        }
+        self.dynamic_num = dynamic_num;
+        self.dynamic_offset = self.reserve(dynamic_num * self.dyn_size(), self.elf_align);
+    }
+
+    /// Write alignment padding bytes prior to the `.dynamic` section.
+    ///
+    /// This function does nothing if the section was not reserved.
+    pub fn write_align_dynamic(&mut self) {
+        if self.dynamic_offset == 0 {
+            return;
+        }
+        util::write_align(self.buffer, self.elf_align);
+        debug_assert_eq!(self.dynamic_offset, self.buffer.len());
+    }
+
+    /// Write a dynamic string entry.
+    pub fn write_dynamic_string(&mut self, tag: u32, id: StringId) {
+        self.write_dynamic(tag, self.dynstr.get_offset(id) as u64);
+    }
+
+    /// Write a dynamic value entry.
+    pub fn write_dynamic(&mut self, d_tag: u32, d_val: u64) {
+        debug_assert!(self.dynamic_offset <= self.buffer.len());
+        let endian = self.endian;
+        if self.is_64 {
+            let d = elf::Dyn64 {
+                d_tag: U64::new(endian, d_tag.into()),
+                d_val: U64::new(endian, d_val),
+            };
+            self.buffer.write(&d);
+        } else {
+            let d = elf::Dyn32 {
+                d_tag: U32::new(endian, d_tag),
+                d_val: U32::new(endian, d_val as u32),
+            };
+            self.buffer.write(&d);
+        }
+        debug_assert!(
+            self.dynamic_offset + self.dynamic_num * self.dyn_size() >= self.buffer.len()
+        );
+    }
+
+    /// Reserve the section index for the dynamic table.
+    pub fn reserve_dynamic_section_index(&mut self) -> SectionIndex {
+        debug_assert!(self.dynamic_str_id.is_none());
+        self.dynamic_str_id = Some(self.add_section_name(&b".dynamic"[..]));
+        self.reserve_section_index()
+    }
+
+    /// Write the section header for the dynamic table.
+    ///
+    /// This function does nothing if the section index was not reserved.
+    pub fn write_dynamic_section_header(&mut self, sh_addr: u64) {
+        if self.dynamic_str_id.is_none() {
+            return;
+        }
+        self.write_section_header(&SectionHeader {
+            name: self.dynamic_str_id,
+            sh_type: elf::SHT_DYNAMIC,
+            sh_flags: (elf::SHF_WRITE | elf::SHF_ALLOC).into(),
+            sh_addr,
+            sh_offset: self.dynamic_offset as u64,
+            sh_size: (self.dynamic_num * self.dyn_size()) as u64,
+            sh_link: self.dynstr_index.0,
+            sh_info: 0,
+            sh_addralign: self.elf_align as u64,
+            sh_entsize: self.dyn_size() as u64,
+        });
+    }
+
     fn rel_size(&self, is_rela: bool) -> usize {
         if self.is_64 {
             if is_rela {
@@ -917,6 +1342,20 @@ pub struct FileHeader {
     pub e_machine: u16,
     pub e_entry: u64,
     pub e_flags: u32,
+}
+
+/// Native endian version of [`elf::ProgramHeader64`].
+#[allow(missing_docs)]
+#[derive(Debug, Clone)]
+pub struct ProgramHeader {
+    pub p_type: u32,
+    pub p_flags: u32,
+    pub p_offset: u64,
+    pub p_vaddr: u64,
+    pub p_paddr: u64,
+    pub p_filesz: u64,
+    pub p_memsz: u64,
+    pub p_align: u64,
 }
 
 /// Native endian version of [`elf::SectionHeader64`].

@@ -88,6 +88,10 @@ name = "ar"
 required-features = ["read_core", "archive"]
 
 [[example]]
+name = "elfcopy"
+required-features = ["read_core", "write_core", "elf"]
+
+[[example]]
 name = "objcopy"
 required-features = ["read", "write"]
 
