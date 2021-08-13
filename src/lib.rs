@@ -60,6 +60,8 @@
 #![allow(clippy::result_unit_err)]
 // Clippy is wrong.
 #![allow(clippy::transmute_ptr_to_ptr)]
+// Worse readability sometimes.
+#![allow(clippy::collapsible_else_if)]
 
 #[cfg(feature = "cargo-all")]
 compile_error!("'--all-features' is not supported; use '--features all' instead");

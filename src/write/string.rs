@@ -1,8 +1,9 @@
 use indexmap::IndexSet;
 use std::vec::Vec;
 
+/// An identifer for an entry in a string table.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) struct StringId(usize);
+pub struct StringId(usize);
 
 #[derive(Debug, Default)]
 pub(crate) struct StringTable<'a> {
