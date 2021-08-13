@@ -141,7 +141,8 @@ where
 
             exports
                 .get_mut(ordinal_index as usize)
-                .map(|export| export.name = Some(name));
+                .ok_or_else(|| crate::read::Error("Invalid PE export ordinal"))?
+                .name = Some(name);
         }
 
         Ok(exports)
