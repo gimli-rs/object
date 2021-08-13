@@ -129,6 +129,15 @@ impl<'a, R: Read + Seek> ReadRef<'a> for &'a ReadCache<R> {
         // This is OK because we never mutate or remove entries.
         Ok(unsafe { mem::transmute::<&[u8], &[u8]>(buf) })
     }
+
+    fn read_bytes_at_until_sequence(
+        self,
+        offset: usize,
+        needle: &[u8],
+        max_end: usize,
+    ) -> Result<&'a [u8], ()> {
+        todo!()
+    }
 }
 
 /// An implementation of `ReadRef` for a range of data in a stream that
@@ -181,5 +190,14 @@ impl<'a, R: Read + Seek> ReadRef<'a> for ReadCacheRange<'a, R> {
             return Err(());
         }
         Ok(bytes)
+    }
+
+    fn read_bytes_at_until_sequence(
+        self,
+        offset: usize,
+        needle: &[u8],
+        max_end: usize,
+    ) -> Result<&'a [u8], ()> {
+        todo!()
     }
 }
