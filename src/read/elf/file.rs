@@ -5,7 +5,7 @@ use core::mem;
 
 use crate::read::{
     self, util, Architecture, ByteString, Bytes, Error, Export, FileFlags, Import, Object,
-    ReadError, ReadRef, SectionIndex, StringTable, SymbolIndex,
+    ObjectKind, ReadError, ReadRef, SectionIndex, StringTable, SymbolIndex,
 };
 use crate::{elf, endian, Endian, Endianness, Pod, U32};
 
@@ -187,6 +187,17 @@ where
     #[inline]
     fn is_64(&self) -> bool {
         self.header.is_class_64()
+    }
+
+    fn kind(&self) -> ObjectKind {
+        match self.header.e_type(self.endian) {
+            elf::ET_REL => ObjectKind::Relocatable,
+            elf::ET_EXEC => ObjectKind::Executable,
+            // TODO: check for `DF_1_PIE`?
+            elf::ET_DYN => ObjectKind::Dynamic,
+            elf::ET_CORE => ObjectKind::Core,
+            _ => ObjectKind::Unknown,
+        }
     }
 
     fn segments(&'file self) -> ElfSegmentIterator<'data, 'file, Elf, R> {

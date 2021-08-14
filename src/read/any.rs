@@ -14,10 +14,10 @@ use crate::read::pe;
 use crate::read::wasm;
 use crate::read::{
     self, Architecture, BinaryFormat, CodeView, ComdatKind, CompressedData, CompressedFileRange,
-    Error, Export, FileFlags, FileKind, Import, Object, ObjectComdat, ObjectMap, ObjectSection,
-    ObjectSegment, ObjectSymbol, ObjectSymbolTable, ReadRef, Relocation, Result, SectionFlags,
-    SectionIndex, SectionKind, SymbolFlags, SymbolIndex, SymbolKind, SymbolMap, SymbolMapName,
-    SymbolScope, SymbolSection,
+    Error, Export, FileFlags, FileKind, Import, Object, ObjectComdat, ObjectKind, ObjectMap,
+    ObjectSection, ObjectSegment, ObjectSymbol, ObjectSymbolTable, ReadRef, Relocation, Result,
+    SectionFlags, SectionIndex, SectionKind, SymbolFlags, SymbolIndex, SymbolKind, SymbolMap,
+    SymbolMapName, SymbolScope, SymbolSection,
 };
 #[allow(unused_imports)]
 use crate::Endianness;
@@ -284,6 +284,10 @@ where
 
     fn is_64(&self) -> bool {
         with_inner!(self.inner, FileInternal, |x| x.is_64())
+    }
+
+    fn kind(&self) -> ObjectKind {
+        with_inner!(self.inner, FileInternal, |x| x.kind())
     }
 
     fn segments(&'file self) -> SegmentIterator<'data, 'file, R> {

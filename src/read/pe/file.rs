@@ -7,7 +7,7 @@ use core::convert::TryInto;
 use crate::read::coff::{CoffCommon, CoffSymbol, CoffSymbolIterator, CoffSymbolTable, SymbolTable};
 use crate::read::{
     self, Architecture, ComdatKind, Error, Export, FileFlags, Import, NoDynamicRelocationIterator,
-    Object, ObjectComdat, ReadError, ReadRef, Result, SectionIndex, SymbolIndex,
+    Object, ObjectComdat, ObjectKind, ReadError, ReadRef, Result, SectionIndex, SymbolIndex,
 };
 use crate::{pe, ByteString, Bytes, CodeView, LittleEndian as LE, Pod, U32, U64};
 
@@ -138,6 +138,17 @@ where
     #[inline]
     fn is_64(&self) -> bool {
         self.nt_headers.is_type_64()
+    }
+
+    fn kind(&self) -> ObjectKind {
+        let characteristics = self.nt_headers.file_header().characteristics.get(LE);
+        if characteristics & pe::IMAGE_FILE_DLL != 0 {
+            ObjectKind::Dynamic
+        } else if characteristics & pe::IMAGE_FILE_SYSTEM != 0 {
+            ObjectKind::Unknown
+        } else {
+            ObjectKind::Executable
+        }
     }
 
     fn segments(&'file self) -> PeSegmentIterator<'data, 'file, Pe, R> {

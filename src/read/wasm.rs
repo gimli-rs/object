@@ -11,9 +11,10 @@ use wasmparser as wp;
 
 use crate::read::{
     self, Architecture, ComdatKind, CompressedData, CompressedFileRange, Error, Export, FileFlags,
-    Import, NoDynamicRelocationIterator, Object, ObjectComdat, ObjectSection, ObjectSegment,
-    ObjectSymbol, ObjectSymbolTable, ReadError, ReadRef, Relocation, Result, SectionFlags,
-    SectionIndex, SectionKind, SymbolFlags, SymbolIndex, SymbolKind, SymbolScope, SymbolSection,
+    Import, NoDynamicRelocationIterator, Object, ObjectComdat, ObjectKind, ObjectSection,
+    ObjectSegment, ObjectSymbol, ObjectSymbolTable, ReadError, ReadRef, Relocation, Result,
+    SectionFlags, SectionIndex, SectionKind, SymbolFlags, SymbolIndex, SymbolKind, SymbolScope,
+    SymbolSection,
 };
 
 const SECTION_CUSTOM: usize = 0;
@@ -324,6 +325,11 @@ where
     #[inline]
     fn is_64(&self) -> bool {
         false
+    }
+
+    fn kind(&self) -> ObjectKind {
+        // TODO: check for `linking` custom section
+        ObjectKind::Unknown
     }
 
     fn segments(&'file self) -> Self::SegmentIterator {

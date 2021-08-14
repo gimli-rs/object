@@ -3,8 +3,9 @@ use alloc::vec::Vec;
 
 use crate::read::{
     self, Architecture, CodeView, ComdatKind, CompressedData, CompressedFileRange, Export,
-    FileFlags, Import, ObjectMap, Relocation, Result, SectionFlags, SectionIndex, SectionKind,
-    SymbolFlags, SymbolIndex, SymbolKind, SymbolMap, SymbolMapName, SymbolScope, SymbolSection,
+    FileFlags, Import, ObjectKind, ObjectMap, Relocation, Result, SectionFlags, SectionIndex,
+    SectionKind, SymbolFlags, SymbolIndex, SymbolKind, SymbolMap, SymbolMapName, SymbolScope,
+    SymbolSection,
 };
 use crate::Endianness;
 
@@ -65,6 +66,9 @@ pub trait Object<'data: 'file, 'file>: read::private::Sealed {
 
     /// Return true if the file can contain 64-bit addresses.
     fn is_64(&self) -> bool;
+
+    /// Return the kind of this object.
+    fn kind(&self) -> ObjectKind;
 
     /// Get an iterator over the segments in the file.
     fn segments(&'file self) -> Self::SegmentIterator;
