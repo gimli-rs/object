@@ -151,10 +151,20 @@ where
     }
 
     #[inline]
+    fn name_bytes(&self) -> Result<&[u8]> {
+        Ok(self.internal.section.name())
+    }
+
+    #[inline]
     fn name(&self) -> Result<&str> {
         str::from_utf8(self.internal.section.name())
             .ok()
             .read_error("Non UTF-8 Mach-O section name")
+    }
+
+    #[inline]
+    fn segment_name_bytes(&self) -> Result<Option<&[u8]>> {
+        Ok(Some(self.internal.section.segment_name()))
     }
 
     #[inline]

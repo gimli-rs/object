@@ -120,6 +120,11 @@ where
     }
 
     #[inline]
+    fn name_bytes(&self) -> read::Result<Option<&[u8]>> {
+        Ok(None)
+    }
+
+    #[inline]
     fn name(&self) -> read::Result<Option<&str>> {
         Ok(None)
     }

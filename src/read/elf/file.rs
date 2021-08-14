@@ -1,7 +1,7 @@
 use alloc::vec::Vec;
 use core::convert::TryInto;
 use core::fmt::Debug;
-use core::{mem, str};
+use core::mem;
 
 use crate::read::{
     self, util, Architecture, ByteString, Bytes, Error, Export, FileFlags, Import, Object,
@@ -93,10 +93,10 @@ where
 
     fn raw_section_by_name<'file>(
         &'file self,
-        section_name: &str,
+        section_name: &[u8],
     ) -> Option<ElfSection<'data, 'file, Elf, R>> {
         self.sections
-            .section_by_name(self.endian, section_name.as_bytes())
+            .section_by_name(self.endian, section_name)
             .map(|(index, section)| ElfSection {
                 file: self,
                 index: SectionIndex(index),
@@ -107,18 +107,21 @@ where
     #[cfg(feature = "compression")]
     fn zdebug_section_by_name<'file>(
         &'file self,
-        section_name: &str,
+        section_name: &[u8],
     ) -> Option<ElfSection<'data, 'file, Elf, R>> {
-        if !section_name.starts_with(".debug_") {
+        if !section_name.starts_with(b".debug_") {
             return None;
         }
-        self.raw_section_by_name(&format!(".zdebug_{}", &section_name[7..]))
+        let mut name = Vec::with_capacity(section_name.len() + 1);
+        name.extend_from_slice(b".zdebug_");
+        name.extend_from_slice(&section_name[7..]);
+        self.raw_section_by_name(&name)
     }
 
     #[cfg(not(feature = "compression"))]
     fn zdebug_section_by_name<'file>(
         &'file self,
-        _section_name: &str,
+        _section_name: &[u8],
     ) -> Option<ElfSection<'data, 'file, Elf, R>> {
         None
     }
@@ -193,9 +196,9 @@ where
         }
     }
 
-    fn section_by_name(
+    fn section_by_name_bytes(
         &'file self,
-        section_name: &str,
+        section_name: &[u8],
     ) -> Option<ElfSection<'data, 'file, Elf, R>> {
         self.raw_section_by_name(section_name)
             .or_else(|| self.zdebug_section_by_name(section_name))
@@ -357,7 +360,7 @@ where
     }
 
     fn gnu_debuglink(&self) -> read::Result<Option<(&'data [u8], u32)>> {
-        let section = match self.raw_section_by_name(".gnu_debuglink") {
+        let section = match self.raw_section_by_name(b".gnu_debuglink") {
             Some(section) => section,
             None => return Ok(None),
         };
@@ -378,7 +381,7 @@ where
     }
 
     fn gnu_debugaltlink(&self) -> read::Result<Option<(&'data [u8], &'data [u8])>> {
-        let section = match self.raw_section_by_name(".gnu_debugaltlink") {
+        let section = match self.raw_section_by_name(b".gnu_debugaltlink") {
             Some(section) => section,
             None => return Ok(None),
         };

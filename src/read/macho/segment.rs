@@ -125,6 +125,11 @@ where
     }
 
     #[inline]
+    fn name_bytes(&self) -> Result<Option<&[u8]>> {
+        Ok(Some(self.segment.name()))
+    }
+
+    #[inline]
     fn name(&self) -> Result<Option<&str>> {
         Ok(Some(
             str::from_utf8(self.segment.name())

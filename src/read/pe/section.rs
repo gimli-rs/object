@@ -120,6 +120,13 @@ where
     }
 
     #[inline]
+    fn name_bytes(&self) -> Result<Option<&[u8]>> {
+        self.section
+            .name(self.file.common.symbols.strings())
+            .map(Some)
+    }
+
+    #[inline]
     fn name(&self) -> Result<Option<&str>> {
         let name = self.section.name(self.file.common.symbols.strings())?;
         Ok(Some(
@@ -265,11 +272,21 @@ where
     }
 
     #[inline]
+    fn name_bytes(&self) -> Result<&[u8]> {
+        self.section.name(self.file.common.symbols.strings())
+    }
+
+    #[inline]
     fn name(&self) -> Result<&str> {
-        let name = self.section.name(self.file.common.symbols.strings())?;
+        let name = self.name_bytes()?;
         str::from_utf8(name)
             .ok()
             .read_error("Non UTF-8 PE section name")
+    }
+
+    #[inline]
+    fn segment_name_bytes(&self) -> Result<Option<&[u8]>> {
+        Ok(None)
     }
 
     #[inline]

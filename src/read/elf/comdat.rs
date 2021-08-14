@@ -110,11 +110,15 @@ where
         SymbolIndex(self.section.sh_info(self.file.endian) as usize)
     }
 
-    fn name(&self) -> read::Result<&str> {
+    fn name_bytes(&self) -> read::Result<&[u8]> {
         // FIXME: check sh_link
         let index = self.section.sh_info(self.file.endian) as usize;
         let symbol = self.file.symbols.symbol(index)?;
-        let name = symbol.name(self.file.endian, self.file.symbols.strings())?;
+        symbol.name(self.file.endian, self.file.symbols.strings())
+    }
+
+    fn name(&self) -> read::Result<&str> {
+        let name = self.name_bytes()?;
         str::from_utf8(name)
             .ok()
             .read_error("Non UTF-8 ELF COMDAT name")

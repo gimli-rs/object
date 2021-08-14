@@ -287,10 +287,12 @@ where
         self.index
     }
 
+    fn name_bytes(&self) -> Result<&'data [u8]> {
+        self.nlist.name(self.file.endian, self.file.symbols.strings)
+    }
+
     fn name(&self) -> Result<&'data str> {
-        let name = self
-            .nlist
-            .name(self.file.endian, self.file.symbols.strings)?;
+        let name = self.name_bytes()?;
         str::from_utf8(name)
             .ok()
             .read_error("Non UTF-8 Mach-O symbol name")
