@@ -25,6 +25,7 @@ where
 {
     section: SectionIndex,
     string_section: SectionIndex,
+    shndx_section: SectionIndex,
     symbols: &'data [Elf::Sym],
     strings: StringTable<'data, R>,
     shndx: &'data [u32],
@@ -35,6 +36,7 @@ impl<'data, Elf: FileHeader, R: ReadRef<'data>> Default for SymbolTable<'data, E
         SymbolTable {
             section: SectionIndex(0),
             string_section: SectionIndex(0),
+            shndx_section: SectionIndex(0),
             symbols: &[],
             strings: Default::default(),
             shndx: &[],
@@ -63,19 +65,18 @@ impl<'data, Elf: FileHeader, R: ReadRef<'data>> SymbolTable<'data, Elf, R> {
         let link = SectionIndex(section.sh_link(endian) as usize);
         let strings = sections.strings(endian, data, link)?;
 
-        let shndx = sections
-            .iter()
-            .find(|s| {
-                s.sh_type(endian) == elf::SHT_SYMTAB_SHNDX
-                    && s.sh_link(endian) as usize == section_index.0
-            })
-            .map(|section| {
-                section
+        let mut shndx_section = SectionIndex(0);
+        let mut shndx = &[][..];
+        for (i, s) in sections.iter().enumerate() {
+            if s.sh_type(endian) == elf::SHT_SYMTAB_SHNDX
+                && s.sh_link(endian) as usize == section_index.0
+            {
+                shndx_section = SectionIndex(i);
+                shndx = s
                     .data_as_array(endian, data)
-                    .read_error("Invalid ELF symtab_shndx data")
-            })
-            .transpose()?
-            .unwrap_or(&[]);
+                    .read_error("Invalid ELF symtab_shndx data")?;
+            }
+        }
 
         Ok(SymbolTable {
             section: section_index,
@@ -83,6 +84,7 @@ impl<'data, Elf: FileHeader, R: ReadRef<'data>> SymbolTable<'data, Elf, R> {
             symbols,
             strings,
             shndx,
+            shndx_section,
         })
     }
 
@@ -90,6 +92,12 @@ impl<'data, Elf: FileHeader, R: ReadRef<'data>> SymbolTable<'data, Elf, R> {
     #[inline]
     pub fn section(&self) -> SectionIndex {
         self.section
+    }
+
+    /// Return the section index of the shndx table.
+    #[inline]
+    pub fn shndx_section(&self) -> SectionIndex {
+        self.string_section
     }
 
     /// Return the section index of the linked string table.

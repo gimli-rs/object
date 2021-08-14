@@ -1,34 +1,29 @@
-use std::mem;
 use std::vec::Vec;
 
 use crate::elf;
-use crate::endian::*;
-use crate::write::string::*;
-use crate::write::util::*;
+use crate::write::elf::writer::*;
+use crate::write::string::StringId;
 use crate::write::*;
 use crate::AddressSize;
 
-#[derive(Default, Clone, Copy)]
+#[derive(Clone, Copy)]
 struct ComdatOffsets {
     offset: usize,
-    str_id: Option<StringId>,
-    len: usize,
+    str_id: StringId,
 }
 
-#[derive(Default, Clone, Copy)]
+#[derive(Clone, Copy)]
 struct SectionOffsets {
-    index: usize,
+    index: SectionIndex,
     offset: usize,
-    str_id: Option<StringId>,
-    reloc_index: usize,
+    str_id: StringId,
     reloc_offset: usize,
-    reloc_len: usize,
     reloc_str_id: Option<StringId>,
 }
 
 #[derive(Default, Clone, Copy)]
 struct SymbolOffsets {
-    index: usize,
+    index: SymbolIndex,
     str_id: Option<StringId>,
 }
 
@@ -153,26 +148,7 @@ impl Object {
     }
 
     pub(crate) fn elf_write(&self, buffer: &mut dyn WritableBuffer) -> Result<()> {
-        let address_size = self.architecture.address_size().unwrap();
-        let endian = self.endian;
-        let elf32 = Elf32 { endian };
-        let elf64 = Elf64 { endian };
-        let elf: &dyn Elf = match address_size {
-            AddressSize::U8 | AddressSize::U16 | AddressSize::U32 => &elf32,
-            AddressSize::U64 => &elf64,
-        };
-        let pointer_align = address_size.bytes() as usize;
-        let is_mips64el =
-            self.architecture == Architecture::Mips64 && self.endian == Endianness::Little;
-
-        // Calculate offsets of everything.
-        let mut offset = 0;
-
-        // ELF header.
-        let e_ehsize = elf.file_header_size();
-        offset += e_ehsize;
-
-        // Create reloc section header names.
+        // Create reloc section header names so we can reference them.
         let is_rela = self.elf_has_relocation_addend()?;
         let reloc_names: Vec<_> = self
             .sections
@@ -191,13 +167,17 @@ impl Object {
             })
             .collect();
 
+        // Start calculating offsets of everything.
+        let is_64 = match self.architecture.address_size().unwrap() {
+            AddressSize::U8 | AddressSize::U16 | AddressSize::U32 => false,
+            AddressSize::U64 => true,
+        };
+        let mut writer = Writer::new(self.endian, is_64, buffer);
+        writer.reserve_file_header();
+
         // Calculate size of section data.
-        let mut shstrtab = StringTable::default();
-        let mut comdat_offsets = vec![ComdatOffsets::default(); self.comdats.len()];
-        let mut section_offsets = vec![SectionOffsets::default(); self.sections.len()];
-        // Null section.
-        let mut section_num = 1;
-        for (index, comdat) in self.comdats.iter().enumerate() {
+        let mut comdat_offsets = Vec::with_capacity(self.comdats.len());
+        for comdat in &self.comdats {
             if comdat.kind != ComdatKind::Any {
                 return Err(Error(format!(
                     "unsupported COMDAT symbol `{}` kind {:?}",
@@ -206,152 +186,77 @@ impl Object {
                 )));
             }
 
-            comdat_offsets[index].str_id = Some(shstrtab.add(b".group"));
-            section_num += 1;
-            offset = align(offset, 4);
-            comdat_offsets[index].offset = offset;
-            let len = (comdat.sections.len() + 1) * 4;
-            comdat_offsets[index].len = len;
-            offset += len;
+            writer.reserve_section_index();
+            let offset = writer.reserve_comdat(comdat.sections.len());
+            let str_id = writer.add_section_name(b".group");
+            comdat_offsets.push(ComdatOffsets { offset, str_id });
         }
-        for (index, section) in self.sections.iter().enumerate() {
-            section_offsets[index].str_id = Some(shstrtab.add(&section.name));
-            section_offsets[index].index = section_num;
-            section_num += 1;
-
-            let len = section.data.len();
-            if len != 0 {
-                offset = align(offset, section.align as usize);
-                section_offsets[index].offset = offset;
-                offset += len;
-            } else {
-                section_offsets[index].offset = offset;
-            }
-
+        let mut section_offsets = Vec::with_capacity(self.sections.len());
+        for (section, reloc_name) in self.sections.iter().zip(reloc_names.iter()) {
+            let index = writer.reserve_section_index();
+            let offset = writer.reserve(section.data.len(), section.align as usize);
+            let str_id = writer.add_section_name(&section.name);
+            let mut reloc_str_id = None;
             if !section.relocations.is_empty() {
-                section_offsets[index].reloc_str_id = Some(shstrtab.add(&reloc_names[index]));
-                section_offsets[index].reloc_index = section_num;
-                section_num += 1;
+                writer.reserve_section_index();
+                reloc_str_id = Some(writer.add_section_name(reloc_name));
             }
+            section_offsets.push(SectionOffsets {
+                index,
+                offset,
+                str_id,
+                // Relocation data is reserved later.
+                reloc_offset: 0,
+                reloc_str_id,
+            });
         }
 
         // Calculate index of symbols and add symbol strings to strtab.
-        let mut strtab = StringTable::default();
         let mut symbol_offsets = vec![SymbolOffsets::default(); self.symbols.len()];
-        // Null symbol.
-        let mut symtab_count = 1;
         // Local symbols must come before global.
         for (index, symbol) in self.symbols.iter().enumerate() {
             if symbol.is_local() {
-                symbol_offsets[index].index = symtab_count;
-                symtab_count += 1;
+                let section_index = symbol.section.id().map(|s| section_offsets[s.0].index);
+                symbol_offsets[index].index = writer.reserve_symbol_index(section_index);
             }
         }
-        let symtab_count_local = symtab_count;
+        let symtab_num_local = writer.symbol_count();
         for (index, symbol) in self.symbols.iter().enumerate() {
             if !symbol.is_local() {
-                symbol_offsets[index].index = symtab_count;
-                symtab_count += 1;
+                let section_index = symbol.section.id().map(|s| section_offsets[s.0].index);
+                symbol_offsets[index].index = writer.reserve_symbol_index(section_index);
             }
         }
         for (index, symbol) in self.symbols.iter().enumerate() {
             if symbol.kind != SymbolKind::Section && !symbol.name.is_empty() {
-                symbol_offsets[index].str_id = Some(strtab.add(&symbol.name));
+                symbol_offsets[index].str_id = Some(writer.add_string(&symbol.name));
             }
         }
 
-        // Calculate size of symtab.
-        let symtab_str_id = shstrtab.add(&b".symtab"[..]);
-        offset = align(offset, pointer_align);
-        let symtab_offset = offset;
-        let symtab_len = symtab_count * elf.symbol_size();
-        offset += symtab_len;
-        let symtab_index = section_num;
-        section_num += 1;
-
-        // Calculate size of symtab_shndx.
-        let mut need_symtab_shndx = false;
-        for symbol in &self.symbols {
-            let index = symbol
-                .section
-                .id()
-                .map(|s| section_offsets[s.0].index)
-                .unwrap_or(0);
-            if index >= elf::SHN_LORESERVE as usize {
-                need_symtab_shndx = true;
-                break;
-            }
+        // Calculate size of symbols.
+        writer.reserve_symtab_section_index();
+        writer.reserve_symtab();
+        if writer.symtab_shndx_needed() {
+            writer.reserve_symtab_shndx_section_index();
         }
-        let symtab_shndx_offset = offset;
-        let mut symtab_shndx_str_id = None;
-        let mut symtab_shndx_len = 0;
-        if need_symtab_shndx {
-            symtab_shndx_str_id = Some(shstrtab.add(&b".symtab_shndx"[..]));
-            symtab_shndx_len = symtab_count * 4;
-            offset += symtab_shndx_len;
-            section_num += 1;
-        }
-
-        // Calculate size of strtab.
-        let strtab_str_id = shstrtab.add(&b".strtab"[..]);
-        let strtab_offset = offset;
-        // Start with null name.
-        let mut strtab_data = vec![0];
-        strtab.write(1, &mut strtab_data);
-        offset += strtab_data.len();
-        let strtab_index = section_num;
-        section_num += 1;
+        writer.reserve_symtab_shndx();
+        writer.reserve_strtab_section_index();
+        writer.reserve_strtab();
 
         // Calculate size of relocations.
         for (index, section) in self.sections.iter().enumerate() {
             let count = section.relocations.len();
             if count != 0 {
-                offset = align(offset, pointer_align);
-                section_offsets[index].reloc_offset = offset;
-                let len = count * elf.rel_size(is_rela);
-                section_offsets[index].reloc_len = len;
-                offset += len;
+                section_offsets[index].reloc_offset = writer.reserve_relocations(count, is_rela);
             }
         }
 
-        // Calculate size of shstrtab.
-        let shstrtab_str_id = shstrtab.add(&b".shstrtab"[..]);
-        let shstrtab_offset = offset;
-        // Start with null section name.
-        let mut shstrtab_data = vec![0];
-        shstrtab.write(1, &mut shstrtab_data);
-        offset += shstrtab_data.len();
-        let shstrtab_index = section_num;
-        section_num += 1;
-
         // Calculate size of section headers.
-        offset = align(offset, pointer_align);
-        let e_shoff = offset;
-        let e_shentsize = elf.section_header_size();
-        offset += section_num * e_shentsize;
+        writer.reserve_shstrtab_section_index();
+        writer.reserve_shstrtab();
+        writer.reserve_section_headers();
 
         // Start writing.
-        buffer
-            .reserve(offset)
-            .map_err(|_| Error(String::from("Cannot allocate buffer")))?;
-
-        // Write file header.
-        let e_ident = elf::Ident {
-            magic: elf::ELFMAG,
-            class: match address_size {
-                AddressSize::U8 | AddressSize::U16 | AddressSize::U32 => elf::ELFCLASS32,
-                AddressSize::U64 => elf::ELFCLASS64,
-            },
-            data: if endian.is_little_endian() {
-                elf::ELFDATA2LSB
-            } else {
-                elf::ELFDATA2MSB
-            },
-            version: elf::EV_CURRENT,
-            os_abi: elf::ELFOSABI_NONE,
-            abi_version: 0,
-            padding: [0; 7],
-        };
         let e_type = elf::ET_REL;
         let e_machine = match self.architecture {
             Architecture::Aarch64 => elf::EM_AARCH64,
@@ -383,80 +288,33 @@ impl Object {
         } else {
             0
         };
-        let e_shnum = if section_num >= elf::SHN_LORESERVE as usize {
-            0
-        } else {
-            section_num as u16
-        };
-        let e_shstrndx = if shstrtab_index >= elf::SHN_LORESERVE as usize {
-            elf::SHN_XINDEX
-        } else {
-            shstrtab_index as u16
-        };
-
-        elf.write_file_header(
-            buffer,
-            FileHeader {
-                e_ident,
-                e_type,
-                e_machine,
-                e_version: elf::EV_CURRENT.into(),
-                e_entry: 0,
-                e_phoff: 0,
-                e_shoff: e_shoff as u64,
-                e_flags,
-                e_ehsize: e_ehsize as u16,
-                e_phentsize: 0,
-                e_phnum: 0,
-                e_shentsize: e_shentsize as u16,
-                e_shnum,
-                e_shstrndx,
-            },
-        );
+        writer.write_file_header(&FileHeader {
+            os_abi: elf::ELFOSABI_NONE,
+            abi_version: 0,
+            e_type,
+            e_machine,
+            e_entry: 0,
+            e_flags,
+        })?;
 
         // Write section data.
-        for (index, comdat) in self.comdats.iter().enumerate() {
-            let mut data = Vec::new();
-            data.write_pod(&U32::new(self.endian, elf::GRP_COMDAT));
+        for comdat in &self.comdats {
+            writer.write_comdat_header();
             for section in &comdat.sections {
-                data.write_pod(&U32::new(
-                    self.endian,
-                    section_offsets[section.0].index as u32,
-                ));
+                writer.write_comdat_entry(section_offsets[section.0].index);
             }
-
-            write_align(buffer, 4);
-            debug_assert_eq!(comdat_offsets[index].offset, buffer.len());
-            debug_assert_eq!(comdat_offsets[index].len, data.len());
-            buffer.write_bytes(&data);
         }
         for (index, section) in self.sections.iter().enumerate() {
             let len = section.data.len();
             if len != 0 {
-                write_align(buffer, section.align as usize);
-                debug_assert_eq!(section_offsets[index].offset, buffer.len());
-                buffer.write_bytes(&section.data);
+                writer.write_align(section.align as usize);
+                debug_assert_eq!(section_offsets[index].offset, writer.len());
+                writer.write(&section.data);
             }
         }
 
         // Write symbols.
-        write_align(buffer, pointer_align);
-        debug_assert_eq!(symtab_offset, buffer.len());
-        elf.write_symbol(
-            buffer,
-            Sym {
-                st_name: 0,
-                st_info: 0,
-                st_other: 0,
-                st_shndx: 0,
-                st_value: 0,
-                st_size: 0,
-            },
-        );
-        let mut symtab_shndx = Vec::new();
-        if need_symtab_shndx {
-            symtab_shndx.write_pod(&U32::new(endian, 0));
-        }
+        writer.write_null_symbol();
         let mut write_symbol = |index: usize, symbol: &Symbol| -> Result<()> {
             let st_info = if let SymbolFlags::Elf { st_info, .. } = symbol.flags {
                 st_info
@@ -513,44 +371,25 @@ impl Object {
             } else {
                 elf::STV_DEFAULT
             };
-            let (st_shndx, xindex) = match symbol.section {
+            let (st_shndx, section) = match symbol.section {
                 SymbolSection::None => {
                     debug_assert_eq!(symbol.kind, SymbolKind::File);
-                    (elf::SHN_ABS, 0)
+                    (elf::SHN_ABS, None)
                 }
-                SymbolSection::Undefined => (elf::SHN_UNDEF, 0),
-                SymbolSection::Absolute => (elf::SHN_ABS, 0),
-                SymbolSection::Common => (elf::SHN_COMMON, 0),
-                SymbolSection::Section(id) => {
-                    let index = section_offsets[id.0].index as u32;
-                    (
-                        if index >= elf::SHN_LORESERVE as u32 {
-                            elf::SHN_XINDEX
-                        } else {
-                            index as u16
-                        },
-                        index,
-                    )
-                }
+                SymbolSection::Undefined => (elf::SHN_UNDEF, None),
+                SymbolSection::Absolute => (elf::SHN_ABS, None),
+                SymbolSection::Common => (elf::SHN_COMMON, None),
+                SymbolSection::Section(id) => (0, Some(section_offsets[id.0].index)),
             };
-            let st_name = symbol_offsets[index]
-                .str_id
-                .map(|id| strtab.get_offset(id))
-                .unwrap_or(0) as u32;
-            elf.write_symbol(
-                buffer,
-                Sym {
-                    st_name,
-                    st_info,
-                    st_other,
-                    st_shndx,
-                    st_value: symbol.value,
-                    st_size: symbol.size,
-                },
-            );
-            if need_symtab_shndx {
-                symtab_shndx.write_pod(&U32::new(endian, xindex));
-            }
+            writer.write_symbol(&Sym {
+                name: symbol_offsets[index].str_id,
+                section,
+                st_info,
+                st_other,
+                st_shndx,
+                st_value: symbol.value,
+                st_size: symbol.size,
+            });
             Ok(())
         };
         for (index, symbol) in self.symbols.iter().enumerate() {
@@ -563,21 +402,14 @@ impl Object {
                 write_symbol(index, symbol)?;
             }
         }
-        if need_symtab_shndx {
-            debug_assert_eq!(symtab_shndx_offset, buffer.len());
-            debug_assert_eq!(symtab_shndx_len, symtab_shndx.len());
-            buffer.write_bytes(&symtab_shndx);
-        }
-
-        // Write strtab section.
-        debug_assert_eq!(strtab_offset, buffer.len());
-        buffer.write_bytes(&strtab_data);
+        writer.write_symtab_shndx();
+        writer.write_strtab();
 
         // Write relocations.
         for (index, section) in self.sections.iter().enumerate() {
             if !section.relocations.is_empty() {
-                write_align(buffer, pointer_align);
-                debug_assert_eq!(section_offsets[index].reloc_offset, buffer.len());
+                writer.write_align_relocation();
+                debug_assert_eq!(section_offsets[index].reloc_offset, writer.len());
                 for reloc in &section.relocations {
                     let r_type = match self.architecture {
                         Architecture::Aarch64 => match (reloc.kind, reloc.encoding, reloc.size) {
@@ -815,12 +647,10 @@ impl Object {
                             }
                         }
                     };
-                    let r_sym = symbol_offsets[reloc.symbol.0].index as u32;
-                    elf.write_rel(
-                        buffer,
-                        is_mips64el,
+                    let r_sym = symbol_offsets[reloc.symbol.0].index.0;
+                    writer.write_relocation(
                         is_rela,
-                        Rel {
+                        &Rel {
                             r_offset: reloc.offset,
                             r_sym,
                             r_type,
@@ -831,56 +661,19 @@ impl Object {
             }
         }
 
-        // Write shstrtab section.
-        debug_assert_eq!(shstrtab_offset, buffer.len());
-        buffer.write_bytes(&shstrtab_data);
+        writer.write_shstrtab();
 
         // Write section headers.
-        write_align(buffer, pointer_align);
-        debug_assert_eq!(e_shoff, buffer.len());
-        elf.write_section_header(
-            buffer,
-            SectionHeader {
-                sh_name: 0,
-                sh_type: 0,
-                sh_flags: 0,
-                sh_addr: 0,
-                sh_offset: 0,
-                sh_size: if section_num >= elf::SHN_LORESERVE as usize {
-                    section_num as u64
-                } else {
-                    0
-                },
-                sh_link: if shstrtab_index >= elf::SHN_LORESERVE as usize {
-                    shstrtab_index as u32
-                } else {
-                    0
-                },
-                // TODO: e_phnum overflow
-                sh_info: 0,
-                sh_addralign: 0,
-                sh_entsize: 0,
-            },
-        );
-        for (index, comdat) in self.comdats.iter().enumerate() {
-            let sh_name = comdat_offsets[index]
-                .str_id
-                .map(|id| shstrtab.get_offset(id))
-                .unwrap_or(0) as u32;
-            elf.write_section_header(
-                buffer,
-                SectionHeader {
-                    sh_name,
-                    sh_type: elf::SHT_GROUP,
-                    sh_flags: 0,
-                    sh_addr: 0,
-                    sh_offset: comdat_offsets[index].offset as u64,
-                    sh_size: comdat_offsets[index].len as u64,
-                    sh_link: symtab_index as u32,
-                    sh_info: symbol_offsets[comdat.symbol.0].index as u32,
-                    sh_addralign: 4,
-                    sh_entsize: 4,
-                },
+        writer.write_null_section_header();
+
+        let symtab_index = writer.symtab_index();
+        for (comdat, comdat_offset) in self.comdats.iter().zip(comdat_offsets.iter()) {
+            writer.write_comdat_section_header(
+                comdat_offset.str_id,
+                symtab_index,
+                symbol_offsets[comdat.symbol.0].index,
+                comdat_offset.offset,
+                comdat.sections.len(),
             );
         }
         for (index, section) in self.sections.iter().enumerate() {
@@ -925,390 +718,38 @@ impl Object {
                 SectionKind::ReadOnlyString | SectionKind::OtherString => 1,
                 _ => 0,
             };
-            let sh_name = section_offsets[index]
-                .str_id
-                .map(|id| shstrtab.get_offset(id))
-                .unwrap_or(0) as u32;
-            elf.write_section_header(
-                buffer,
-                SectionHeader {
-                    sh_name,
-                    sh_type,
-                    sh_flags,
-                    sh_addr: 0,
-                    sh_offset: section_offsets[index].offset as u64,
-                    sh_size: section.size,
-                    sh_link: 0,
-                    sh_info: 0,
-                    sh_addralign: section.align,
-                    sh_entsize,
-                },
-            );
+            writer.write_section_header(&SectionHeader {
+                name: Some(section_offsets[index].str_id),
+                sh_type,
+                sh_flags,
+                sh_addr: 0,
+                sh_offset: section_offsets[index].offset as u64,
+                sh_size: section.size,
+                sh_link: 0,
+                sh_info: 0,
+                sh_addralign: section.align,
+                sh_entsize,
+            });
 
             if !section.relocations.is_empty() {
-                let sh_name = section_offsets[index]
-                    .reloc_str_id
-                    .map(|id| shstrtab.get_offset(id))
-                    .unwrap_or(0);
-                elf.write_section_header(
-                    buffer,
-                    SectionHeader {
-                        sh_name: sh_name as u32,
-                        sh_type: if is_rela { elf::SHT_RELA } else { elf::SHT_REL },
-                        sh_flags: elf::SHF_INFO_LINK.into(),
-                        sh_addr: 0,
-                        sh_offset: section_offsets[index].reloc_offset as u64,
-                        sh_size: section_offsets[index].reloc_len as u64,
-                        sh_link: symtab_index as u32,
-                        sh_info: section_offsets[index].index as u32,
-                        sh_addralign: pointer_align as u64,
-                        sh_entsize: elf.rel_size(is_rela) as u64,
-                    },
+                writer.write_relocation_section_header(
+                    section_offsets[index].reloc_str_id.unwrap(),
+                    section_offsets[index].index,
+                    symtab_index,
+                    section_offsets[index].reloc_offset,
+                    section.relocations.len(),
+                    is_rela,
                 );
             }
         }
 
-        // Write symtab section header.
-        elf.write_section_header(
-            buffer,
-            SectionHeader {
-                sh_name: shstrtab.get_offset(symtab_str_id) as u32,
-                sh_type: elf::SHT_SYMTAB,
-                sh_flags: 0,
-                sh_addr: 0,
-                sh_offset: symtab_offset as u64,
-                sh_size: symtab_len as u64,
-                sh_link: strtab_index as u32,
-                sh_info: symtab_count_local as u32,
-                sh_addralign: pointer_align as u64,
-                sh_entsize: elf.symbol_size() as u64,
-            },
-        );
+        writer.write_symtab_section_header(symtab_num_local);
+        writer.write_symtab_shndx_section_header();
+        writer.write_strtab_section_header();
+        writer.write_shstrtab_section_header();
 
-        // Write symtab_shndx section header.
-        if need_symtab_shndx {
-            elf.write_section_header(
-                buffer,
-                SectionHeader {
-                    sh_name: shstrtab.get_offset(symtab_shndx_str_id.unwrap()) as u32,
-                    sh_type: elf::SHT_SYMTAB_SHNDX,
-                    sh_flags: 0,
-                    sh_addr: 0,
-                    sh_offset: symtab_shndx_offset as u64,
-                    sh_size: symtab_shndx_len as u64,
-                    sh_link: symtab_index as u32,
-                    sh_info: symtab_count_local as u32,
-                    sh_addralign: 4,
-                    sh_entsize: 4,
-                },
-            );
-        }
-
-        // Write strtab section header.
-        elf.write_section_header(
-            buffer,
-            SectionHeader {
-                sh_name: shstrtab.get_offset(strtab_str_id) as u32,
-                sh_type: elf::SHT_STRTAB,
-                sh_flags: 0,
-                sh_addr: 0,
-                sh_offset: strtab_offset as u64,
-                sh_size: strtab_data.len() as u64,
-                sh_link: 0,
-                sh_info: 0,
-                sh_addralign: 1,
-                sh_entsize: 0,
-            },
-        );
-
-        // Write shstrtab section header.
-        elf.write_section_header(
-            buffer,
-            SectionHeader {
-                sh_name: shstrtab.get_offset(shstrtab_str_id) as u32,
-                sh_type: elf::SHT_STRTAB,
-                sh_flags: 0,
-                sh_addr: 0,
-                sh_offset: shstrtab_offset as u64,
-                sh_size: shstrtab_data.len() as u64,
-                sh_link: 0,
-                sh_info: 0,
-                sh_addralign: 1,
-                sh_entsize: 0,
-            },
-        );
-
-        debug_assert_eq!(offset, buffer.len());
+        debug_assert_eq!(writer.reserved_len(), writer.len());
 
         Ok(())
-    }
-}
-
-/// Native endian version of `FileHeader64`.
-struct FileHeader {
-    e_ident: elf::Ident,
-    e_type: u16,
-    e_machine: u16,
-    e_version: u32,
-    e_entry: u64,
-    e_phoff: u64,
-    e_shoff: u64,
-    e_flags: u32,
-    e_ehsize: u16,
-    e_phentsize: u16,
-    e_phnum: u16,
-    e_shentsize: u16,
-    e_shnum: u16,
-    e_shstrndx: u16,
-}
-
-/// Native endian version of `SectionHeader64`.
-struct SectionHeader {
-    sh_name: u32,
-    sh_type: u32,
-    sh_flags: u64,
-    sh_addr: u64,
-    sh_offset: u64,
-    sh_size: u64,
-    sh_link: u32,
-    sh_info: u32,
-    sh_addralign: u64,
-    sh_entsize: u64,
-}
-
-/// Native endian version of `Sym64`.
-struct Sym {
-    st_name: u32,
-    st_info: u8,
-    st_other: u8,
-    st_shndx: u16,
-    st_value: u64,
-    st_size: u64,
-}
-
-/// Unified native endian version of `Rel*`.
-struct Rel {
-    r_offset: u64,
-    r_sym: u32,
-    r_type: u32,
-    r_addend: i64,
-}
-
-trait Elf {
-    fn file_header_size(&self) -> usize;
-    fn section_header_size(&self) -> usize;
-    fn symbol_size(&self) -> usize;
-    fn rel_size(&self, is_rela: bool) -> usize;
-    fn write_file_header(&self, buffer: &mut dyn WritableBuffer, section: FileHeader);
-    fn write_section_header(&self, buffer: &mut dyn WritableBuffer, section: SectionHeader);
-    fn write_symbol(&self, buffer: &mut dyn WritableBuffer, symbol: Sym);
-    fn write_rel(
-        &self,
-        buffer: &mut dyn WritableBuffer,
-        is_mips64el: bool,
-        is_rela: bool,
-        rel: Rel,
-    );
-}
-
-struct Elf32<E> {
-    endian: E,
-}
-
-impl<E: Endian> Elf for Elf32<E> {
-    fn file_header_size(&self) -> usize {
-        mem::size_of::<elf::FileHeader32<E>>()
-    }
-
-    fn section_header_size(&self) -> usize {
-        mem::size_of::<elf::SectionHeader32<E>>()
-    }
-
-    fn symbol_size(&self) -> usize {
-        mem::size_of::<elf::Sym32<E>>()
-    }
-
-    fn rel_size(&self, is_rela: bool) -> usize {
-        if is_rela {
-            mem::size_of::<elf::Rela32<E>>()
-        } else {
-            mem::size_of::<elf::Rel32<E>>()
-        }
-    }
-
-    fn write_file_header(&self, buffer: &mut dyn WritableBuffer, file: FileHeader) {
-        let endian = self.endian;
-        let file = elf::FileHeader32 {
-            e_ident: file.e_ident,
-            e_type: U16::new(endian, file.e_type),
-            e_machine: U16::new(endian, file.e_machine),
-            e_version: U32::new(endian, file.e_version),
-            e_entry: U32::new(endian, file.e_entry as u32),
-            e_phoff: U32::new(endian, file.e_phoff as u32),
-            e_shoff: U32::new(endian, file.e_shoff as u32),
-            e_flags: U32::new(endian, file.e_flags),
-            e_ehsize: U16::new(endian, file.e_ehsize),
-            e_phentsize: U16::new(endian, file.e_phentsize),
-            e_phnum: U16::new(endian, file.e_phnum),
-            e_shentsize: U16::new(endian, file.e_shentsize),
-            e_shnum: U16::new(endian, file.e_shnum),
-            e_shstrndx: U16::new(endian, file.e_shstrndx),
-        };
-        buffer.write(&file);
-    }
-
-    fn write_section_header(&self, buffer: &mut dyn WritableBuffer, section: SectionHeader) {
-        let endian = self.endian;
-        let section = elf::SectionHeader32 {
-            sh_name: U32::new(endian, section.sh_name),
-            sh_type: U32::new(endian, section.sh_type),
-            sh_flags: U32::new(endian, section.sh_flags as u32),
-            sh_addr: U32::new(endian, section.sh_addr as u32),
-            sh_offset: U32::new(endian, section.sh_offset as u32),
-            sh_size: U32::new(endian, section.sh_size as u32),
-            sh_link: U32::new(endian, section.sh_link),
-            sh_info: U32::new(endian, section.sh_info),
-            sh_addralign: U32::new(endian, section.sh_addralign as u32),
-            sh_entsize: U32::new(endian, section.sh_entsize as u32),
-        };
-        buffer.write(&section);
-    }
-
-    fn write_symbol(&self, buffer: &mut dyn WritableBuffer, symbol: Sym) {
-        let endian = self.endian;
-        let symbol = elf::Sym32 {
-            st_name: U32::new(endian, symbol.st_name),
-            st_info: symbol.st_info,
-            st_other: symbol.st_other,
-            st_shndx: U16::new(endian, symbol.st_shndx),
-            st_value: U32::new(endian, symbol.st_value as u32),
-            st_size: U32::new(endian, symbol.st_size as u32),
-        };
-        buffer.write(&symbol);
-    }
-
-    fn write_rel(
-        &self,
-        buffer: &mut dyn WritableBuffer,
-        _is_mips64el: bool,
-        is_rela: bool,
-        rel: Rel,
-    ) {
-        let endian = self.endian;
-        if is_rela {
-            let rel = elf::Rela32 {
-                r_offset: U32::new(endian, rel.r_offset as u32),
-                r_info: elf::Rel32::r_info(endian, rel.r_sym, rel.r_type as u8),
-                r_addend: I32::new(endian, rel.r_addend as i32),
-            };
-            buffer.write(&rel);
-        } else {
-            let rel = elf::Rel32 {
-                r_offset: U32::new(endian, rel.r_offset as u32),
-                r_info: elf::Rel32::r_info(endian, rel.r_sym, rel.r_type as u8),
-            };
-            buffer.write(&rel);
-        }
-    }
-}
-
-struct Elf64<E> {
-    endian: E,
-}
-
-impl<E: Endian> Elf for Elf64<E> {
-    fn file_header_size(&self) -> usize {
-        mem::size_of::<elf::FileHeader64<E>>()
-    }
-
-    fn section_header_size(&self) -> usize {
-        mem::size_of::<elf::SectionHeader64<E>>()
-    }
-
-    fn symbol_size(&self) -> usize {
-        mem::size_of::<elf::Sym64<E>>()
-    }
-
-    fn rel_size(&self, is_rela: bool) -> usize {
-        if is_rela {
-            mem::size_of::<elf::Rela64<E>>()
-        } else {
-            mem::size_of::<elf::Rel64<E>>()
-        }
-    }
-
-    fn write_file_header(&self, buffer: &mut dyn WritableBuffer, file: FileHeader) {
-        let endian = self.endian;
-        let file = elf::FileHeader64 {
-            e_ident: file.e_ident,
-            e_type: U16::new(endian, file.e_type),
-            e_machine: U16::new(endian, file.e_machine),
-            e_version: U32::new(endian, file.e_version),
-            e_entry: U64::new(endian, file.e_entry),
-            e_phoff: U64::new(endian, file.e_phoff),
-            e_shoff: U64::new(endian, file.e_shoff),
-            e_flags: U32::new(endian, file.e_flags),
-            e_ehsize: U16::new(endian, file.e_ehsize),
-            e_phentsize: U16::new(endian, file.e_phentsize),
-            e_phnum: U16::new(endian, file.e_phnum),
-            e_shentsize: U16::new(endian, file.e_shentsize),
-            e_shnum: U16::new(endian, file.e_shnum),
-            e_shstrndx: U16::new(endian, file.e_shstrndx),
-        };
-        buffer.write(&file)
-    }
-
-    fn write_section_header(&self, buffer: &mut dyn WritableBuffer, section: SectionHeader) {
-        let endian = self.endian;
-        let section = elf::SectionHeader64 {
-            sh_name: U32::new(endian, section.sh_name),
-            sh_type: U32::new(endian, section.sh_type),
-            sh_flags: U64::new(endian, section.sh_flags),
-            sh_addr: U64::new(endian, section.sh_addr),
-            sh_offset: U64::new(endian, section.sh_offset),
-            sh_size: U64::new(endian, section.sh_size),
-            sh_link: U32::new(endian, section.sh_link),
-            sh_info: U32::new(endian, section.sh_info),
-            sh_addralign: U64::new(endian, section.sh_addralign),
-            sh_entsize: U64::new(endian, section.sh_entsize),
-        };
-        buffer.write(&section);
-    }
-
-    fn write_symbol(&self, buffer: &mut dyn WritableBuffer, symbol: Sym) {
-        let endian = self.endian;
-        let symbol = elf::Sym64 {
-            st_name: U32::new(endian, symbol.st_name),
-            st_info: symbol.st_info,
-            st_other: symbol.st_other,
-            st_shndx: U16::new(endian, symbol.st_shndx),
-            st_value: U64::new(endian, symbol.st_value),
-            st_size: U64::new(endian, symbol.st_size),
-        };
-        buffer.write(&symbol);
-    }
-
-    fn write_rel(
-        &self,
-        buffer: &mut dyn WritableBuffer,
-        is_mips64el: bool,
-        is_rela: bool,
-        rel: Rel,
-    ) {
-        let endian = self.endian;
-        if is_rela {
-            let rel = elf::Rela64 {
-                r_offset: U64::new(endian, rel.r_offset),
-                r_info: elf::Rela64::r_info(endian, is_mips64el, rel.r_sym, rel.r_type),
-                r_addend: I64::new(endian, rel.r_addend),
-            };
-            buffer.write(&rel);
-        } else {
-            let rel = elf::Rel64 {
-                r_offset: U64::new(endian, rel.r_offset),
-                r_info: elf::Rel64::r_info(endian, rel.r_sym, rel.r_type),
-            };
-            buffer.write(&rel);
-        }
     }
 }

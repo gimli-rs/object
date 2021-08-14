@@ -856,7 +856,7 @@ mod elf {
                 if let Ok(versions) = _sections.versions(endian, data) {
                     for (index, symbol) in symbols.symbols().iter().enumerate() {
                         let name = symbols.symbol_name(endian, symbol).unwrap();
-                        if !symbol.is_definition(endian) {
+                        if name.is_empty() {
                             continue;
                         }
                         let hash = hash(name);

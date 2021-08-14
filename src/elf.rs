@@ -817,7 +817,7 @@ pub const ELFCOMPRESS_HIPROC: u32 = 0x7fff_ffff;
 pub const GRP_COMDAT: u32 = 1;
 
 /// Symbol table entry.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Default, Clone, Copy)]
 #[repr(C)]
 pub struct Sym32<E: Endian> {
     /// Symbol name.
@@ -867,7 +867,7 @@ impl<E: Endian> Sym32<E> {
 }
 
 /// Symbol table entry.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Default, Clone, Copy)]
 #[repr(C)]
 pub struct Sym64<E: Endian> {
     /// Symbol name.
