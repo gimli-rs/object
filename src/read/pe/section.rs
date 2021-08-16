@@ -312,10 +312,24 @@ where
 
 impl<'data> SectionTable<'data> {
     /// Return the data at the given virtual address in a PE file.
+    ///
+    /// Ignores sections with invalid data.
     pub fn pe_data_at<R: ReadRef<'data>>(&self, data: R, va: u32) -> Option<&'data [u8]> {
+        self.iter().find_map(|section| section.pe_data_at(data, va))
+    }
+
+    /// Return the section data at the given virtual address in a PE file.
+    ///
+    /// Also returns the virtual address of the data.
+    ///
+    /// Ignores sections with invalid data.
+    pub fn pe_data_containing<R: ReadRef<'data>>(
+        &self,
+        data: R,
+        va: u32,
+    ) -> Option<(&'data [u8], u32)> {
         self.iter()
-            .filter_map(|section| section.pe_data_at(data, va))
-            .next()
+            .find_map(|section| section.pe_data_containing(data, va))
     }
 }
 
@@ -337,14 +351,43 @@ impl pe::ImageSectionHeader {
     }
 
     /// Return the data at the given virtual address if this section contains it.
+    ///
+    /// Ignores sections with invalid data.
     pub fn pe_data_at<'data, R: ReadRef<'data>>(&self, data: R, va: u32) -> Option<&'data [u8]> {
         let section_va = self.virtual_address.get(LE);
         let offset = va.checked_sub(section_va)?;
-        let section_data = self.pe_data(data).ok()?;
-        if (offset as usize) < section_data.len() {
+        let (section_offset, section_size) = self.pe_file_range();
+        // Address must be within section (and not at its end).
+        if offset < section_size {
+            let section_data = data
+                .read_bytes_at(section_offset.into(), section_size.into())
+                .ok()?;
             section_data.get(offset as usize..)
         } else {
-            // We're calling `.get(i..)` with a range. In case i == section_data.len(), this will return Some([]), not None
+            None
+        }
+    }
+
+    /// Return the section data if it contains the given virtual address.
+    ///
+    /// Also returns the virtual address of the data.
+    ///
+    /// Ignores sections with invalid data.
+    pub fn pe_data_containing<'data, R: ReadRef<'data>>(
+        &self,
+        data: R,
+        va: u32,
+    ) -> Option<(&'data [u8], u32)> {
+        let section_va = self.virtual_address.get(LE);
+        let offset = va.checked_sub(section_va)?;
+        let (section_offset, section_size) = self.pe_file_range();
+        // Address must be within section (and not at its end).
+        if offset < section_size {
+            let section_data = data
+                .read_bytes_at(section_offset.into(), section_size.into())
+                .ok()?;
+            Some((section_data, section_va))
+        } else {
             None
         }
     }

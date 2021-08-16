@@ -1813,12 +1813,10 @@ pub struct ImageImportByName {
     //pub name: [i8; 1],
 }
 
-/*
-// TODO? unions
-
 #[derive(Debug, Clone, Copy)]
 #[repr(C)]
-pub struct ImageThunkData64 {
+pub struct ImageThunkData64(pub U64<LE>);
+/*
     union {
 /// PBYTE
         pub forwarder_string: U64<LE>,
@@ -1828,11 +1826,12 @@ pub struct ImageThunkData64 {
 /// PIMAGE_IMPORT_BY_NAME
         pub address_of_data: U64<LE>,
     } u1;
-}
+*/
 
 #[derive(Debug, Clone, Copy)]
 #[repr(C)]
-pub struct ImageThunkData32 {
+pub struct ImageThunkData32(pub U32<LE>);
+/*
     union {
 /// PBYTE
         pub forwarder_string: U32<LE>,
@@ -2905,8 +2904,8 @@ unsafe_impl_pod!(
     ImageArchiveMemberHeader,
     ImageExportDirectory,
     ImageImportByName,
-    //ImageThunkData64,
-    //ImageThunkData32,
+    ImageThunkData64,
+    ImageThunkData32,
     ImageTlsDirectory64,
     ImageTlsDirectory32,
     ImageImportDescriptor,

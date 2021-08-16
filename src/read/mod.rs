@@ -454,9 +454,9 @@ impl<'data> SymbolMapEntry for ObjectMapEntry<'data> {
 /// An imported symbol.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Import<'data> {
+    library: ByteString<'data>,
     // TODO: or ordinal
     name: ByteString<'data>,
-    library: ByteString<'data>,
 }
 
 impl<'data> Import<'data> {
