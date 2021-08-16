@@ -136,7 +136,7 @@ pub type NativeFile<'data, R = &'data [u8]> = pe::PeFile64<'data, R>;
 #[cfg(all(feature = "wasm", target_arch = "wasm32", feature = "wasm"))]
 pub type NativeFile<'data, R = &'data [u8]> = wasm::WasmFile<'data, R>;
 
-/// An object file kind.
+/// A file format kind.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[non_exhaustive]
 pub enum FileKind {
@@ -240,6 +240,22 @@ impl FileKind {
         };
         Ok(kind)
     }
+}
+
+/// An object kind.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[non_exhaustive]
+pub enum ObjectKind {
+    /// The object kind is unknown.
+    Unknown,
+    /// Relocatable object.
+    Relocatable,
+    /// Executable.
+    Executable,
+    /// Dynamic shared object.
+    Dynamic,
+    /// Core.
+    Core,
 }
 
 /// The index used to identify a section of a file.

@@ -1,7 +1,7 @@
 use alloc::vec::Vec;
 
 use crate::read::{
-    self, Architecture, Export, FileFlags, Import, NoDynamicRelocationIterator, Object,
+    self, Architecture, Export, FileFlags, Import, NoDynamicRelocationIterator, Object, ObjectKind,
     ObjectSection, ReadError, ReadRef, Result, SectionIndex, SymbolIndex,
 };
 use crate::{pe, LittleEndian as LE};
@@ -86,6 +86,10 @@ where
     fn is_64(&self) -> bool {
         // Windows COFF is always 32-bit, even for 64-bit architectures. This could be confusing.
         false
+    }
+
+    fn kind(&self) -> ObjectKind {
+        ObjectKind::Relocatable
     }
 
     fn segments(&'file self) -> CoffSegmentIterator<'data, 'file, R> {

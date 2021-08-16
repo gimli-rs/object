@@ -4,8 +4,8 @@ use core::{mem, str};
 
 use crate::read::{
     self, Architecture, ComdatKind, Error, Export, FileFlags, Import, NoDynamicRelocationIterator,
-    Object, ObjectComdat, ObjectMap, ObjectSection, ReadError, ReadRef, Result, SectionIndex,
-    SymbolIndex,
+    Object, ObjectComdat, ObjectKind, ObjectMap, ObjectSection, ReadError, ReadRef, Result,
+    SectionIndex, SymbolIndex,
 };
 use crate::{endian, macho, BigEndian, ByteString, Endian, Endianness, Pod};
 
@@ -140,6 +140,16 @@ where
     #[inline]
     fn is_64(&self) -> bool {
         self.header.is_type_64()
+    }
+
+    fn kind(&self) -> ObjectKind {
+        match self.header.filetype(self.endian) {
+            macho::MH_OBJECT => ObjectKind::Relocatable,
+            macho::MH_EXECUTE => ObjectKind::Executable,
+            macho::MH_CORE => ObjectKind::Core,
+            macho::MH_DYLIB => ObjectKind::Dynamic,
+            _ => ObjectKind::Unknown,
+        }
     }
 
     fn segments(&'file self) -> MachOSegmentIterator<'data, 'file, Mach, R> {

@@ -120,6 +120,7 @@ fn dump_parsed_object(file: &object::File) {
         file.endianness(),
         if file.is_64() { "64" } else { "32" }
     );
+    println!("Kind: {:?}", file.kind());
     println!("Architecture: {:?}", file.architecture());
     println!("Flags: {:x?}", file.flags());
     println!("Relative Address Base: {:x?}", file.relative_address_base());
