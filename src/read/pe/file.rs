@@ -11,7 +11,9 @@ use crate::read::{
 };
 use crate::{pe, ByteString, Bytes, CodeView, LittleEndian as LE, Pod, U32, U64};
 
-use super::{PeSection, PeSectionIterator, PeSegment, PeSegmentIterator, SectionTable};
+use super::{
+    ExportTable, PeSection, PeSectionIterator, PeSegment, PeSegmentIterator, SectionTable,
+};
 
 /// A PE32 (32-bit) image file.
 pub type PeFile32<'data, R = &'data [u8]> = PeFile<'data, pe::ImageNtHeaders32, R>;
@@ -59,8 +61,9 @@ where
         })
     }
 
-    pub(super) fn section_alignment(&self) -> u64 {
-        u64::from(self.nt_headers.optional_header().section_alignment())
+    /// Returns this binary data.
+    pub fn data(&self) -> R {
+        self.data
     }
 
     /// Return the DOS header of this file
@@ -85,13 +88,25 @@ where
             .filter(|d| d.virtual_address.get(LE) != 0)
     }
 
-    fn data_at(&self, va: u32) -> Option<Bytes<'data>> {
-        self.common.sections.pe_data_at(self.data, va).map(Bytes)
+    /// Returns the export table of this file.
+    ///
+    /// The export table is located using the data directory.
+    pub fn export_table(&self) -> Result<Option<ExportTable<'data>>> {
+        let data_dir = match self.data_directory(pe::IMAGE_DIRECTORY_ENTRY_EXPORT) {
+            Some(data_dir) => data_dir,
+            None => return Ok(None),
+        };
+        let export_data = data_dir.data(self.data, &self.common.sections)?;
+        let export_va = data_dir.virtual_address.get(LE);
+        ExportTable::parse(export_data, export_va).map(Some)
     }
 
-    /// Returns this binary data.
-    pub fn data(&self) -> R {
-        self.data
+    pub(super) fn section_alignment(&self) -> u64 {
+        u64::from(self.nt_headers.optional_header().section_alignment())
+    }
+
+    fn data_at(&self, va: u32) -> Option<Bytes<'data>> {
+        self.common.sections.pe_data_at(self.data, va).map(Bytes)
     }
 }
 
@@ -298,21 +313,20 @@ where
     }
 
     fn exports(&self) -> Result<Vec<Export<'data>>> {
-        self.export_table().map(|pe_exports| {
-            let mut exports = Vec::new();
-            for pe_export in pe_exports {
-                match (pe_export.name, pe_export.target) {
-                    (Some(name), super::export::ExportTarget::Local(address)) => {
-                        exports.push(Export {
-                            name: ByteString(name),
-                            address,
-                        })
-                    }
-                    _ => continue,
+        let mut exports = Vec::new();
+        if let Some(export_table) = self.export_table()? {
+            for (name_pointer, address_index) in export_table.name_iter() {
+                let name = export_table.name_from_pointer(name_pointer)?;
+                let address = export_table.address_by_index(address_index.into())?;
+                if !export_table.is_forward(address) {
+                    exports.push(Export {
+                        name: ByteString(name),
+                        address: self.common.image_base.wrapping_add(address.into()),
+                    })
                 }
             }
-            exports
-        })
+        }
+        Ok(exports)
     }
 
     fn pdb_info(&self) -> Result<Option<CodeView>> {
