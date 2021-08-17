@@ -344,7 +344,7 @@ impl pe::ImageSectionHeader {
         if (offset as usize) < section_data.len() {
             section_data.get(offset as usize..)
         } else {
-            // We're calling `.get(i..)` with a range. In case i == offset.len(), this will return Some([]), not None
+            // We're calling `.get(i..)` with a range. In case i == section_data.len(), this will return Some([]), not None
             None
         }
     }
