@@ -4667,7 +4667,7 @@ mod pe {
         });
     }
 
-    fn print_export_dir(p: &mut Printer<impl Write>, _dir: &ImageDataDirectory, dir_data: &[u8]) {
+    fn print_export_dir(p: &mut Printer<impl Write>, dir: &ImageDataDirectory, dir_data: &[u8]) {
         if let Ok((export_dir, _)) = object::from_bytes::<pe::ImageExportDirectory>(dir_data) {
             p.group("ImageExportDirectory", |p| {
                 p.field_hex("Characteristics", export_dir.characteristics.get(LE));
@@ -4687,7 +4687,48 @@ mod pe {
                     "AddressOfNameOrdinals",
                     export_dir.address_of_name_ordinals.get(LE),
                 );
-                // TODO: display tables
+                if let Ok(export_table) = ExportTable::parse(dir_data, dir.virtual_address.get(LE))
+                {
+                    // TODO: the order of the name pointers might be interesting?
+                    let mut names = vec![None; export_table.addresses().len()];
+                    for (name_pointer, ordinal) in export_table.name_iter() {
+                        if let Some(name) = names.get_mut(ordinal as usize) {
+                            *name = Some(name_pointer);
+                        }
+                    }
+
+                    let ordinal_base = export_table.ordinal_base();
+                    for (ordinal, address) in export_table.addresses().iter().enumerate() {
+                        p.group("Export", |p| {
+                            p.field("Ordinal", ordinal_base.wrapping_add(ordinal as u32));
+                            if let Some(name_pointer) = names[ordinal] {
+                                p.field_string(
+                                    "Name",
+                                    name_pointer,
+                                    export_table.name_from_pointer(name_pointer).ok(),
+                                );
+                            }
+                            p.field_hex("Address", address.get(LE));
+                            if let Ok(target) = export_table.target_from_address(address.get(LE)) {
+                                match target {
+                                    ExportTarget::Address(_) => {}
+                                    ExportTarget::ForwardByOrdinal(library, ordinal) => {
+                                        p.field_inline_string("ForwardLibrary", library);
+                                        p.field("ForwardOrdinal", ordinal);
+                                    }
+                                    ExportTarget::ForwardByName(library, name) => {
+                                        p.field_inline_string("ForwardLibrary", library);
+                                        p.field_inline_string("ForwardName", name);
+                                    }
+                                }
+                            } else if let Ok(Some(forward)) =
+                                export_table.forward_string(address.get(LE))
+                            {
+                                p.field_inline_string("Forward", forward);
+                            }
+                        });
+                    }
+                }
             });
         }
     }

@@ -177,7 +177,8 @@ pub trait Object<'data: 'file, 'file>: read::private::Sealed {
 
     /// Get the exported symbols that expose both a name and an address.
     ///
-    /// Some file formats may provide other kinds of symbols, that can be retrieved using the lower-level API
+    /// Some file formats may provide other kinds of symbols, that can be retrieved using
+    /// the lower-level API.
     fn exports(&self) -> Result<Vec<Export<'data>>>;
 
     /// Return true if the file contains debug information sections, false if not.

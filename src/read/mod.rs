@@ -476,7 +476,7 @@ impl<'data> Import<'data> {
 /// An exported symbol.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Export<'data> {
-    // TODO: and ordinal
+    // TODO: and ordinal?
     name: ByteString<'data>,
     address: u64,
 }
