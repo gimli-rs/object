@@ -341,7 +341,12 @@ impl pe::ImageSectionHeader {
         let section_va = self.virtual_address.get(LE);
         let offset = va.checked_sub(section_va)?;
         let section_data = self.pe_data(data).ok()?;
-        section_data.get(offset as usize..)
+        if (offset as usize) < section_data.len() {
+            section_data.get(offset as usize..)
+        } else {
+            // We're calling `.get(i..)` with a range. In case i == section_data.len(), this will return Some([]), not None
+            None
+        }
     }
 }
 
