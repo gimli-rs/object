@@ -4579,23 +4579,27 @@ mod pe {
                         p.field_enum("Index", index, FLAGS_IMAGE_DIRECTORY_ENTRY);
                         p.field_hex("VirtualAddress", dir.virtual_address.get(LE));
                         p.field_hex("Size", dir.size.get(LE));
-                        if let Some(dir_data) = sections
-                            .as_ref()
-                            .and_then(|sections| dir.data(data, sections).ok())
-                        {
-                            match index {
-                                IMAGE_DIRECTORY_ENTRY_EXPORT => print_export_dir(p, dir, dir_data),
-                                // TODO
-                                _ => {}
-                            }
-                        }
                     });
                 }
                 if let Some(ref sections) = sections {
-                    print_sections(p, data, header.machine.get(LE), symbols.as_ref(), &sections);
+                    print_sections(p, data, header.machine.get(LE), symbols.as_ref(), sections);
                 }
                 if let Some(ref symbols) = symbols {
                     print_symbols(p, sections.as_ref(), &symbols);
+                }
+                if let Some(ref sections) = sections {
+                    for (index, dir) in data_directories.iter().enumerate() {
+                        match index {
+                            IMAGE_DIRECTORY_ENTRY_EXPORT => {
+                                print_export_dir(p, data, &sections, dir);
+                            }
+                            IMAGE_DIRECTORY_ENTRY_IMPORT => {
+                                print_import_dir::<Pe, _>(p, data, &sections, dir);
+                            }
+                            // TODO
+                            _ => {}
+                        }
+                    }
                 }
             }
         }
@@ -4667,70 +4671,127 @@ mod pe {
         });
     }
 
-    fn print_export_dir(p: &mut Printer<impl Write>, dir: &ImageDataDirectory, dir_data: &[u8]) {
-        if let Ok((export_dir, _)) = object::from_bytes::<pe::ImageExportDirectory>(dir_data) {
-            p.group("ImageExportDirectory", |p| {
-                p.field_hex("Characteristics", export_dir.characteristics.get(LE));
-                p.field_hex("TimeDateStamp", export_dir.time_date_stamp.get(LE));
-                p.field("MajorVersion", export_dir.major_version.get(LE));
-                p.field("MinorVersion", export_dir.minor_version.get(LE));
-                p.field_hex("Name", export_dir.name.get(LE));
-                p.field("Base", export_dir.base.get(LE));
-                p.field("NumberOfFunctions", export_dir.number_of_functions.get(LE));
-                p.field("NumberOfNames", export_dir.number_of_names.get(LE));
-                p.field_hex(
-                    "AddressOfFunctions",
-                    export_dir.address_of_functions.get(LE),
-                );
-                p.field_hex("AddressOfNames", export_dir.address_of_names.get(LE));
-                p.field_hex(
-                    "AddressOfNameOrdinals",
-                    export_dir.address_of_name_ordinals.get(LE),
-                );
-                if let Ok(export_table) = ExportTable::parse(dir_data, dir.virtual_address.get(LE))
-                {
-                    // TODO: the order of the name pointers might be interesting?
-                    let mut names = vec![None; export_table.addresses().len()];
-                    for (name_pointer, ordinal) in export_table.name_iter() {
-                        if let Some(name) = names.get_mut(ordinal as usize) {
-                            *name = Some(name_pointer);
-                        }
-                    }
-
-                    let ordinal_base = export_table.ordinal_base();
-                    for (ordinal, address) in export_table.addresses().iter().enumerate() {
-                        p.group("Export", |p| {
-                            p.field("Ordinal", ordinal_base.wrapping_add(ordinal as u32));
-                            if let Some(name_pointer) = names[ordinal] {
-                                p.field_string(
-                                    "Name",
-                                    name_pointer,
-                                    export_table.name_from_pointer(name_pointer).ok(),
-                                );
-                            }
-                            p.field_hex("Address", address.get(LE));
-                            if let Ok(target) = export_table.target_from_address(address.get(LE)) {
-                                match target {
-                                    ExportTarget::Address(_) => {}
-                                    ExportTarget::ForwardByOrdinal(library, ordinal) => {
-                                        p.field_inline_string("ForwardLibrary", library);
-                                        p.field("ForwardOrdinal", ordinal);
-                                    }
-                                    ExportTarget::ForwardByName(library, name) => {
-                                        p.field_inline_string("ForwardLibrary", library);
-                                        p.field_inline_string("ForwardName", name);
-                                    }
-                                }
-                            } else if let Ok(Some(forward)) =
-                                export_table.forward_string(address.get(LE))
-                            {
-                                p.field_inline_string("Forward", forward);
-                            }
-                        });
+    fn print_export_dir(
+        p: &mut Printer<impl Write>,
+        data: &[u8],
+        sections: &SectionTable,
+        dir: &ImageDataDirectory,
+    ) -> Option<()> {
+        let dir_data = dir.data(data, sections).ok()?;
+        let export_dir = object::from_bytes::<pe::ImageExportDirectory>(dir_data)
+            .ok()?
+            .0;
+        p.group("ImageExportDirectory", |p| {
+            p.field_hex("Characteristics", export_dir.characteristics.get(LE));
+            p.field_hex("TimeDateStamp", export_dir.time_date_stamp.get(LE));
+            p.field("MajorVersion", export_dir.major_version.get(LE));
+            p.field("MinorVersion", export_dir.minor_version.get(LE));
+            p.field_hex("Name", export_dir.name.get(LE));
+            p.field("Base", export_dir.base.get(LE));
+            p.field("NumberOfFunctions", export_dir.number_of_functions.get(LE));
+            p.field("NumberOfNames", export_dir.number_of_names.get(LE));
+            p.field_hex(
+                "AddressOfFunctions",
+                export_dir.address_of_functions.get(LE),
+            );
+            p.field_hex("AddressOfNames", export_dir.address_of_names.get(LE));
+            p.field_hex(
+                "AddressOfNameOrdinals",
+                export_dir.address_of_name_ordinals.get(LE),
+            );
+            if let Ok(export_table) = ExportTable::parse(dir_data, dir.virtual_address.get(LE)) {
+                // TODO: the order of the name pointers might be interesting?
+                let mut names = vec![None; export_table.addresses().len()];
+                for (name_pointer, ordinal) in export_table.name_iter() {
+                    if let Some(name) = names.get_mut(ordinal as usize) {
+                        *name = Some(name_pointer);
                     }
                 }
-            });
-        }
+
+                let ordinal_base = export_table.ordinal_base();
+                for (ordinal, address) in export_table.addresses().iter().enumerate() {
+                    p.group("Export", |p| {
+                        p.field("Ordinal", ordinal_base.wrapping_add(ordinal as u32));
+                        if let Some(name_pointer) = names[ordinal] {
+                            p.field_string(
+                                "Name",
+                                name_pointer,
+                                export_table.name_from_pointer(name_pointer).ok(),
+                            );
+                        }
+                        p.field_hex("Address", address.get(LE));
+                        if let Ok(target) = export_table.target_from_address(address.get(LE)) {
+                            match target {
+                                ExportTarget::Address(_) => {}
+                                ExportTarget::ForwardByOrdinal(library, ordinal) => {
+                                    p.field_inline_string("ForwardLibrary", library);
+                                    p.field("ForwardOrdinal", ordinal);
+                                }
+                                ExportTarget::ForwardByName(library, name) => {
+                                    p.field_inline_string("ForwardLibrary", library);
+                                    p.field_inline_string("ForwardName", name);
+                                }
+                            }
+                        } else if let Ok(Some(forward)) =
+                            export_table.forward_string(address.get(LE))
+                        {
+                            p.field_inline_string("Forward", forward);
+                        }
+                    });
+                }
+            }
+        });
+        Some(())
+    }
+
+    fn print_import_dir<Pe: ImageNtHeaders, W: Write>(
+        p: &mut Printer<W>,
+        data: &[u8],
+        sections: &SectionTable,
+        dir: &ImageDataDirectory,
+    ) -> Option<()> {
+        let import_address = dir.virtual_address.get(LE);
+        let (section_data, section_address) = sections.pe_data_containing(data, import_address)?;
+        let import_table = ImportTable::new(section_data, section_address, import_address);
+        let mut import_descs = import_table.descriptors().ok()?;
+        p.group("ImageImportDirectory", |p| {
+            while let Ok(Some(import_desc)) = import_descs.next() {
+                p.group("ImageImportDescriptor", |p| {
+                    p.field_hex("LookupTable", import_desc.original_first_thunk.get(LE));
+                    p.field_hex("TimeDataStamp", import_desc.time_date_stamp.get(LE));
+                    p.field_hex("ForwarderChain", import_desc.forwarder_chain.get(LE));
+                    let name = import_desc.name.get(LE);
+                    p.field_string("Name", name, import_table.name(name).ok());
+                    p.field_hex("AddressTable", import_desc.first_thunk.get(LE));
+                    let mut address_thunks =
+                        import_table.thunks(import_desc.first_thunk.get(LE)).ok();
+                    if let Ok(mut lookup_thunks) =
+                        import_table.thunks(import_desc.original_first_thunk.get(LE))
+                    {
+                        while let Ok(Some(thunk)) = lookup_thunks.next::<Pe>() {
+                            p.group("Thunk", |p| {
+                                p.field_hex("Lookup", thunk.raw());
+                                if let Some(Some(thunk)) = address_thunks
+                                    .as_mut()
+                                    .and_then(|thunks| thunks.next::<Pe>().ok())
+                                {
+                                    p.field_hex("Address", thunk.raw());
+                                }
+                                if thunk.is_ordinal() {
+                                    p.field("Ordinal", thunk.ordinal());
+                                } else if let Ok((hint, name)) =
+                                    import_table.hint_name(thunk.address())
+                                {
+                                    p.field("Hint", hint);
+                                    p.field_inline_string("Name", name);
+                                }
+                            });
+                        }
+                    }
+                });
+            }
+        });
+        Some(())
     }
 
     fn print_sections(

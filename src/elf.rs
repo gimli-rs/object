@@ -2576,7 +2576,7 @@ pub const OHW_R4KEOP: u32 = 0x1;
 pub const OHW_R8KPFETCH: u32 = 0x2;
 /// R5000 end-of-page patch.
 pub const OHW_R5KEOP: u32 = 0x4;
-/// R5000 cvt.[ds].l bug.  clean=1.
+/// R5000 cvt.\[ds\].l bug.  clean=1.
 pub const OHW_R5KCVTL: u32 = 0x8;
 
 #[allow(missing_docs)]

@@ -9,10 +9,11 @@ use crate::read::{
     self, Architecture, ComdatKind, Error, Export, FileFlags, Import, NoDynamicRelocationIterator,
     Object, ObjectComdat, ObjectKind, ReadError, ReadRef, Result, SectionIndex, SymbolIndex,
 };
-use crate::{pe, ByteString, Bytes, CodeView, LittleEndian as LE, Pod, U32, U64};
+use crate::{pe, ByteString, Bytes, CodeView, LittleEndian as LE, Pod, U32};
 
 use super::{
-    ExportTable, PeSection, PeSectionIterator, PeSegment, PeSegmentIterator, SectionTable,
+    DataDirectories, ExportTable, ImageThunkData, ImportTable, PeSection, PeSectionIterator,
+    PeSegment, PeSegmentIterator, SectionTable,
 };
 
 /// A PE32 (32-bit) image file.
@@ -29,7 +30,7 @@ where
 {
     pub(super) dos_header: &'data pe::ImageDosHeader,
     pub(super) nt_headers: &'data Pe,
-    pub(super) data_directories: &'data [pe::ImageDataDirectory],
+    pub(super) data_directories: DataDirectories<'data>,
     pub(super) common: CoffCommon<'data, R>,
     pub(super) data: R,
 }
@@ -81,32 +82,34 @@ where
         self.common.sections
     }
 
+    /// Returns the data directories of this file.
+    pub fn data_directories(&self) -> DataDirectories<'data> {
+        self.data_directories
+    }
+
     /// Returns the data directory at the given index.
     pub fn data_directory(&self, id: usize) -> Option<&'data pe::ImageDataDirectory> {
-        self.data_directories
-            .get(id)
-            .filter(|d| d.virtual_address.get(LE) != 0)
+        self.data_directories.get(id)
     }
 
     /// Returns the export table of this file.
     ///
     /// The export table is located using the data directory.
     pub fn export_table(&self) -> Result<Option<ExportTable<'data>>> {
-        let data_dir = match self.data_directory(pe::IMAGE_DIRECTORY_ENTRY_EXPORT) {
-            Some(data_dir) => data_dir,
-            None => return Ok(None),
-        };
-        let export_data = data_dir.data(self.data, &self.common.sections)?;
-        let export_va = data_dir.virtual_address.get(LE);
-        ExportTable::parse(export_data, export_va).map(Some)
+        self.data_directories
+            .export_table(self.data, &self.common.sections)
+    }
+
+    /// Returns the import table of this file.
+    ///
+    /// The import table is located using the data directory.
+    pub fn import_table(&self) -> Result<Option<ImportTable<'data>>> {
+        self.data_directories
+            .import_table(self.data, &self.common.sections)
     }
 
     pub(super) fn section_alignment(&self) -> u64 {
         u64::from(self.nt_headers.optional_header().section_alignment())
-    }
-
-    fn data_at(&self, va: u32) -> Option<Bytes<'data>> {
-        self.common.sections.pe_data_at(self.data, va).map(Bytes)
     }
 }
 
@@ -247,77 +250,21 @@ where
     }
 
     fn imports(&self) -> Result<Vec<Import<'data>>> {
-        let data_dir = match self.data_directory(pe::IMAGE_DIRECTORY_ENTRY_IMPORT) {
-            Some(data_dir) => data_dir,
-            None => return Ok(Vec::new()),
-        };
-
-        // The size declared in the IMAGE_DIRECTORY_ENTRY_IMPORT is ignored by the Windows loader
-        // Hence, we'll parse the list until a null entry, without restricting the read to this declared size
-        // (i.e. we're not using `data_dir.data()`)
-        let mut import_descriptors = self
-            .common
-            .sections
-            .pe_data_at(self.data, data_dir.virtual_address.get(LE))
-            .map(Bytes)
-            .ok_or(read::Error("Unable to read PE import descriptors"))?;
         let mut imports = Vec::new();
-        loop {
-            let import_desc = import_descriptors
-                .read::<pe::ImageImportDescriptor>()
-                .read_error("Missing PE null import descriptor")?;
-            if import_desc.original_first_thunk.get(LE) == 0 {
-                break;
-            }
-
-            let library = self
-                .data_at(import_desc.name.get(LE))
-                .read_error("Invalid PE import descriptor name")?
-                .read_string()
-                .read_error("Invalid PE import descriptor name")?;
-
-            let thunk_va = import_desc.original_first_thunk.get(LE);
-            let mut thunk_data = self
-                .data_at(thunk_va)
-                .read_error("Invalid PE import thunk address")?;
-            loop {
-                let hint_name = if self.is_64() {
-                    let thunk = thunk_data
-                        .read::<U64<_>>()
-                        .read_error("Missing PE null import thunk")?
-                        .get(LE);
-                    if thunk == 0 {
-                        break;
+        if let Some(import_table) = self.import_table()? {
+            let mut import_descs = import_table.descriptors()?;
+            while let Some(import_desc) = import_descs.next()? {
+                let library = import_table.name(import_desc.name.get(LE))?;
+                let mut thunks = import_table.thunks(import_desc.original_first_thunk.get(LE))?;
+                while let Some(thunk) = thunks.next::<Pe>()? {
+                    if !thunk.is_ordinal() {
+                        let (_hint, name) = import_table.hint_name(thunk.address())?;
+                        imports.push(Import {
+                            library: ByteString(library),
+                            name: ByteString(name),
+                        });
                     }
-                    if thunk & pe::IMAGE_ORDINAL_FLAG64 != 0 {
-                        // TODO: handle import by ordinal
-                        continue;
-                    }
-                    thunk as u32
-                } else {
-                    let thunk = thunk_data
-                        .read::<U32<_>>()
-                        .read_error("Missing PE null import thunk")?
-                        .get(LE);
-                    if thunk == 0 {
-                        break;
-                    }
-                    if thunk & pe::IMAGE_ORDINAL_FLAG32 != 0 {
-                        // TODO: handle import by ordinal
-                        continue;
-                    }
-                    thunk
-                };
-                let name = self
-                    .data_at(hint_name)
-                    .read_error("Invalid PE import thunk name")?
-                    .read_string_at(2)
-                    .read_error("Invalid PE import thunk name")?;
-
-                imports.push(Import {
-                    name: ByteString(name),
-                    library: ByteString(library),
-                });
+                }
             }
         }
         Ok(imports)
@@ -572,6 +519,7 @@ pub fn optional_header_magic<'data, R: ReadRef<'data>>(data: R) -> Result<u16> {
 #[allow(missing_docs)]
 pub trait ImageNtHeaders: Debug + Pod {
     type ImageOptionalHeader: ImageOptionalHeader;
+    type ImageThunkData: ImageThunkData;
 
     /// Return true if this type is a 64-bit header.
     ///
@@ -603,7 +551,7 @@ pub trait ImageNtHeaders: Debug + Pod {
     fn parse<'data, R: ReadRef<'data>>(
         data: R,
         offset: &mut u64,
-    ) -> read::Result<(&'data Self, &'data [pe::ImageDataDirectory])> {
+    ) -> read::Result<(&'data Self, DataDirectories<'data>)> {
         // Note that this does not include the data directories in the optional header.
         let nt_headers = data
             .read::<Self>(offset)
@@ -620,13 +568,13 @@ pub trait ImageNtHeaders: Debug + Pod {
             u64::from(nt_headers.file_header().size_of_optional_header.get(LE))
                 .checked_sub(mem::size_of::<Self::ImageOptionalHeader>() as u64)
                 .read_error("PE optional header size is too small")?;
-        let mut optional_data = data
+        let optional_data = data
             .read_bytes(offset, optional_data_size)
-            .read_error("Invalid PE optional header size")
-            .map(Bytes)?;
-        let data_directories = optional_data
-            .read_slice(nt_headers.optional_header().number_of_rva_and_sizes() as usize)
-            .read_error("Invalid PE number of RVA and sizes")?;
+            .read_error("Invalid PE optional header size")?;
+        let data_directories = DataDirectories::parse(
+            optional_data,
+            nt_headers.optional_header().number_of_rva_and_sizes(),
+        )?;
 
         Ok((nt_headers, data_directories))
     }
@@ -692,6 +640,7 @@ pub trait ImageOptionalHeader: Debug + Pod {
 
 impl ImageNtHeaders for pe::ImageNtHeaders32 {
     type ImageOptionalHeader = pe::ImageOptionalHeader32;
+    type ImageThunkData = pe::ImageThunkData32;
 
     #[inline]
     fn is_type_64(&self) -> bool {
@@ -868,6 +817,7 @@ impl ImageOptionalHeader for pe::ImageOptionalHeader32 {
 
 impl ImageNtHeaders for pe::ImageNtHeaders64 {
     type ImageOptionalHeader = pe::ImageOptionalHeader64;
+    type ImageThunkData = pe::ImageThunkData64;
 
     #[inline]
     fn is_type_64(&self) -> bool {
@@ -1039,20 +989,5 @@ impl ImageOptionalHeader for pe::ImageOptionalHeader64 {
     #[inline]
     fn number_of_rva_and_sizes(&self) -> u32 {
         self.number_of_rva_and_sizes.get(LE)
-    }
-}
-
-impl pe::ImageDataDirectory {
-    /// Get the data referenced by this directory entry.
-    pub fn data<'data, R: ReadRef<'data>>(
-        &self,
-        data: R,
-        sections: &SectionTable<'data>,
-    ) -> Result<&'data [u8]> {
-        sections
-            .pe_data_at(data, self.virtual_address.get(LE))
-            .read_error("Invalid data dir virtual address or size")?
-            .get(..self.size.get(LE) as usize)
-            .read_error("Invalid data dir size")
     }
 }
