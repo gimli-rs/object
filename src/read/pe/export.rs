@@ -1,7 +1,7 @@
 use alloc::vec::Vec;
 use core::fmt::Debug;
 
-use crate::read::{ByteString, Bytes, Error, ReadError, Result};
+use crate::read::{ByteString, Bytes, Error, ReadError, ReadRef, Result};
 use crate::{pe, LittleEndian as LE, U16Bytes, U32Bytes};
 
 /// Where an export is pointing to.
@@ -93,10 +93,8 @@ pub struct ExportTable<'data> {
 impl<'data> ExportTable<'data> {
     /// Parse the export table given its section data and address.
     pub fn parse(data: &'data [u8], virtual_address: u32) -> Result<Self> {
+        let directory = Self::parse_directory(data)?;
         let data = Bytes(data);
-        let directory = data
-            .read_at::<pe::ImageExportDirectory>(0)
-            .read_error("Invalid PE export dir size")?;
 
         let mut addresses = &[][..];
         let address_of_functions = directory.address_of_functions.get(LE);
@@ -141,6 +139,12 @@ impl<'data> ExportTable<'data> {
             names,
             name_ordinals,
         })
+    }
+
+    /// Parse the export directory given its section data.
+    pub fn parse_directory(data: &'data [u8]) -> Result<&'data pe::ImageExportDirectory> {
+        data.read_at::<pe::ImageExportDirectory>(0)
+            .read_error("Invalid PE export dir size")
     }
 
     /// Returns the header of the export table.

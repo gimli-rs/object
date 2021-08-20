@@ -4,6 +4,7 @@ use core::fmt::Debug;
 use crate::elf;
 use crate::endian;
 use crate::pod::Pod;
+use crate::read::{ReadError, Result, StringTable};
 
 /// A trait for generic access to `Dyn32` and `Dyn64`.
 #[allow(missing_docs)]
@@ -17,6 +18,11 @@ pub trait Dyn: Debug + Pod {
     /// Try to convert the tag to a `u32`.
     fn tag32(&self, endian: Self::Endian) -> Option<u32> {
         self.d_tag(endian).into().try_into().ok()
+    }
+
+    /// Try to convert the value to a `u32`.
+    fn val32(&self, endian: Self::Endian) -> Option<u32> {
+        self.d_val(endian).into().try_into().ok()
     }
 
     /// Return true if the value is an offset in the dynamic string table.
@@ -34,6 +40,19 @@ pub trait Dyn: Debug + Pod {
         } else {
             false
         }
+    }
+
+    /// Use the value to get a string in a string table.
+    ///
+    /// Does not check for an appropriate tag.
+    fn string<'data>(
+        &self,
+        endian: Self::Endian,
+        strings: StringTable<'data>,
+    ) -> Result<&'data [u8]> {
+        self.val32(endian)
+            .and_then(|val| strings.get(val).ok())
+            .read_error("Invalid ELF dyn string")
     }
 
     /// Return true if the value is an address.

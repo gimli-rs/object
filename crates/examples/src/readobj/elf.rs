@@ -4,26 +4,26 @@ use object::read::elf::*;
 use object::read::{SectionIndex, StringTable};
 
 pub(super) fn print_elf32(p: &mut Printer<'_>, data: &[u8]) {
-    if let Ok(elf) = FileHeader32::<Endianness>::parse(data) {
+    if let Some(elf) = FileHeader32::<Endianness>::parse(data).print_err(p) {
         writeln!(p.w(), "Format: ELF 32-bit").unwrap();
         print_elf(p, elf, data);
     }
 }
 
 pub(super) fn print_elf64(p: &mut Printer<'_>, data: &[u8]) {
-    if let Ok(elf) = FileHeader64::<Endianness>::parse(data) {
+    if let Some(elf) = FileHeader64::<Endianness>::parse(data).print_err(p) {
         writeln!(p.w(), "Format: ELF 64-bit").unwrap();
         print_elf(p, elf, data);
     }
 }
 
 fn print_elf<Elf: FileHeader<Endian = Endianness>>(p: &mut Printer<'_>, elf: &Elf, data: &[u8]) {
-    if let Ok(endian) = elf.endian() {
+    if let Some(endian) = elf.endian().print_err(p) {
         print_file_header(p, endian, elf);
-        if let Ok(segments) = elf.program_headers(endian, data) {
+        if let Some(segments) = elf.program_headers(endian, data).print_err(p) {
             print_program_headers(p, endian, data, elf, segments);
         }
-        if let Ok(sections) = elf.sections(endian, data) {
+        if let Some(sections) = elf.sections(endian, data).print_err(p) {
             print_section_headers(p, endian, data, elf, &sections);
         }
     }
@@ -162,7 +162,7 @@ fn print_segment_notes<Elf: FileHeader>(
     _elf: &Elf,
     segment: &Elf::ProgramHeader,
 ) {
-    if let Ok(Some(notes)) = segment.notes(endian, data) {
+    if let Some(Some(notes)) = segment.notes(endian, data).print_err(p) {
         print_notes(p, endian, notes);
     }
 }
@@ -175,7 +175,7 @@ fn print_segment_dynamic<Elf: FileHeader>(
     segments: &[Elf::ProgramHeader],
     segment: &Elf::ProgramHeader,
 ) {
-    if let Ok(Some(dynamic)) = segment.dynamic(endian, data) {
+    if let Some(Some(dynamic)) = segment.dynamic(endian, data).print_err(p) {
         // TODO: add a helper API for this and the other mandatory tags?
         let mut strtab = 0;
         let mut strsz = 0;
@@ -188,6 +188,7 @@ fn print_segment_dynamic<Elf: FileHeader>(
             }
         }
         let mut dynstr = StringTable::default();
+        // TODO: print error if DT_STRTAB/DT_STRSZ are invalid
         for s in segments {
             if let Ok(Some(data)) = s.data_range(endian, data, strtab, strsz) {
                 dynstr = StringTable::new(data, 0, data.len() as u64);
@@ -213,7 +214,7 @@ fn print_section_headers<Elf: FileHeader>(
             p.field_string(
                 "Name",
                 section.sh_name(endian),
-                sections.section_name(endian, section).ok(),
+                sections.section_name(endian, section),
             );
 
             let proc = match elf.e_machine(endian) {
@@ -282,9 +283,12 @@ fn print_section_symbols<Elf: FileHeader>(
     section_index: SectionIndex,
     section: &Elf::SectionHeader,
 ) {
-    if let Ok(Some(symbols)) = section.symbols(endian, data, sections, section_index) {
+    if let Some(Some(symbols)) = section
+        .symbols(endian, data, sections, section_index)
+        .print_err(p)
+    {
         let versions = if section.sh_type(endian) == SHT_DYNSYM {
-            sections.versions(endian, data).ok()
+            sections.versions(endian, data).print_err(p).flatten()
         } else {
             None
         };
@@ -318,14 +322,11 @@ fn print_section_symbols<Elf: FileHeader>(
                 p.field_string(
                     "Name",
                     symbol.st_name(endian),
-                    symbol.name(endian, symbols.strings()).ok(),
+                    symbol.name(endian, symbols.strings()),
                 );
                 if let Some(versions) = versions.as_ref() {
                     let version_index = versions.version_index(endian, index);
-                    if let Some(version) = versions.version(version_index) {
-                        p.field_string("Version", version_index.0, Some(version.name()));
-                        p.flags(version_index.0, 0, FLAGS_VERSYM);
-                    }
+                    print_version(p, Some(versions), version_index);
                 }
                 p.field_hex("Value", symbol.st_value(endian).into());
                 p.field_hex("Size", symbol.st_size(endian).into());
@@ -371,15 +372,17 @@ fn print_section_rel<Elf: FileHeader>(
     sections: &SectionTable<Elf>,
     section: &Elf::SectionHeader,
 ) {
-    if let Ok(Some((relocations, link))) = section.rel(endian, data) {
-        let symbols = sections.symbol_table_by_index(endian, data, link).ok();
+    if let Some(Some((relocations, link))) = section.rel(endian, data).print_err(p) {
+        let symbols = sections
+            .symbol_table_by_index(endian, data, link)
+            .print_err(p);
         let proc = rel_flag_type(endian, elf);
         for relocation in relocations {
             p.group("Relocation", |p| {
                 p.field_hex("Offset", relocation.r_offset(endian).into());
                 p.field_enum("Type", relocation.r_type(endian), proc);
                 let sym = relocation.r_sym(endian);
-                p.field_string("Symbol", sym, rel_symbol(endian, symbols, sym as usize));
+                print_rel_symbol(p, endian, symbols, sym);
             });
         }
     }
@@ -393,8 +396,10 @@ fn print_section_rela<Elf: FileHeader>(
     sections: &SectionTable<Elf>,
     section: &Elf::SectionHeader,
 ) {
-    if let Ok(Some((relocations, link))) = section.rela(endian, data) {
-        let symbols = sections.symbol_table_by_index(endian, data, link).ok();
+    if let Some(Some((relocations, link))) = section.rela(endian, data).print_err(p) {
+        let symbols = sections
+            .symbol_table_by_index(endian, data, link)
+            .print_err(p);
         let proc = rel_flag_type(endian, elf);
         for relocation in relocations {
             p.group("Relocation", |p| {
@@ -405,7 +410,7 @@ fn print_section_rela<Elf: FileHeader>(
                     proc,
                 );
                 let sym = relocation.r_sym(endian, elf.is_mips64el(endian));
-                p.field_string("Symbol", sym, rel_symbol(endian, symbols, sym as usize));
+                print_rel_symbol(p, endian, symbols, sym);
                 let addend = relocation.r_addend(endian).into() as u64;
                 if addend != 0 {
                     p.field_hex("Addend", addend);
@@ -415,14 +420,19 @@ fn print_section_rela<Elf: FileHeader>(
     }
 }
 
-fn rel_symbol<'data, Elf: FileHeader>(
+fn print_rel_symbol<'data, Elf: FileHeader>(
+    p: &mut Printer<'_>,
     endian: Elf::Endian,
     symbols: Option<SymbolTable<'data, Elf>>,
-    sym: usize,
-) -> Option<&'data [u8]> {
-    let symbols = symbols?;
-    let symbol = symbols.symbol(sym as usize).ok()?;
-    symbol.name(endian, symbols.strings()).ok()
+    sym: u32,
+) {
+    let name = symbols.and_then(|symbols| {
+        symbols
+            .symbol(sym as usize)
+            .and_then(|symbol| symbol.name(endian, symbols.strings()))
+            .print_err(p)
+    });
+    p.field_string_option("Symbol", sym, name);
 }
 
 fn rel_flag_type<Elf: FileHeader>(endian: Elf::Endian, elf: &Elf) -> &'static [Flag<u32>] {
@@ -464,7 +474,7 @@ fn print_section_notes<Elf: FileHeader>(
     _elf: &Elf,
     section: &Elf::SectionHeader,
 ) {
-    if let Ok(Some(notes)) = section.notes(endian, data) {
+    if let Some(Some(notes)) = section.notes(endian, data).print_err(p) {
         print_notes(p, endian, notes);
     }
 }
@@ -477,10 +487,8 @@ fn print_section_dynamic<Elf: FileHeader>(
     sections: &SectionTable<Elf>,
     section: &Elf::SectionHeader,
 ) {
-    if let Ok(Some((dynamic, index))) = section.dynamic(endian, data) {
-        let strings = sections
-            .strings(endian, data, index)
-            .unwrap_or(StringTable::default());
+    if let Some(Some((dynamic, index))) = section.dynamic(endian, data).print_err(p) {
+        let strings = sections.strings(endian, data, index).unwrap_or_default();
         print_dynamic(p, endian, elf, dynamic, strings);
     }
 }
@@ -493,14 +501,14 @@ fn print_section_group<Elf: FileHeader>(
     sections: &SectionTable<Elf>,
     section: &Elf::SectionHeader,
 ) {
-    if let Ok(Some((flag, members))) = section.group(endian, data) {
+    if let Some(Some((flag, members))) = section.group(endian, data).print_err(p) {
         p.field_enum("GroupFlag", flag, FLAGS_GRP);
         p.group("GroupSections", |p| {
             for member in members {
                 let index = member.get(endian);
                 p.print_indent();
-                if let Ok(section) = sections.section(SectionIndex(index as usize)) {
-                    if let Ok(name) = sections.section_name(endian, section) {
+                if let Some(section) = sections.section(SectionIndex(index as usize)).print_err(p) {
+                    if let Some(name) = sections.section_name(endian, section).print_err(p) {
                         p.print_string(name);
                         writeln!(p.w, " ({})", index).unwrap();
                     } else {
@@ -519,10 +527,10 @@ fn print_notes<Elf: FileHeader>(
     endian: Elf::Endian,
     mut notes: NoteIterator<Elf>,
 ) {
-    while let Ok(Some(note)) = notes.next() {
+    while let Some(Some(note)) = notes.next().print_err(p) {
         p.group("Note", |p| {
             let name = note.name();
-            p.field_string("Name", note.n_namesz(endian), Some(name));
+            p.field_string_option("Name", note.n_namesz(endian), Some(name));
             let flags = if name == ELF_NOTE_CORE || name == ELF_NOTE_LINUX {
                 FLAGS_NT_CORE
             } else if name == ELF_NOTE_SOLARIS {
@@ -561,14 +569,10 @@ fn print_dynamic<Elf: FileHeader>(
         let tag = d.d_tag(endian).into();
         let val = d.d_val(endian).into();
         p.group("Dynamic", |p| {
-            if let Ok(tag) = tag.try_into() {
+            if let Some(tag) = d.tag32(endian) {
                 p.field_enums("Tag", tag, &[FLAGS_DT, proc]);
                 if d.is_string(endian) {
-                    p.field_string(
-                        "Value",
-                        val,
-                        val.try_into().ok().and_then(|val| dynstr.get(val).ok()),
-                    );
+                    p.field_string("Value", val, d.string(endian, dynstr));
                 } else {
                     p.field_hex("Value", val);
                     if tag == DT_FLAGS {
@@ -596,7 +600,7 @@ fn print_hash<Elf: FileHeader>(
     _sections: &SectionTable<Elf>,
     section: &Elf::SectionHeader,
 ) {
-    if let Ok(Some(hash)) = section.hash_header(endian, data) {
+    if let Some(Some(hash)) = section.hash_header(endian, data).print_err(p) {
         p.group("Hash", |p| {
             p.field("BucketCount", hash.bucket_count.get(endian));
             p.field("ChainCount", hash.chain_count.get(endian));
@@ -604,24 +608,24 @@ fn print_hash<Elf: FileHeader>(
     }
     /* TODO: add this in a test somewhere
     if let Ok(Some((hash_table, link))) = section.hash(endian, data) {
-    if let Ok(symbols) = _sections.symbol_table_by_index(endian, data, link) {
-    if let Ok(versions) = _sections.versions(endian, data) {
-    for (index, symbol) in symbols.symbols().iter().enumerate() {
-    let name = symbols.symbol_name(endian, symbol).unwrap();
-    if name.is_empty() {
-    continue;
-    }
-    let hash = hash(name);
-    let version = versions.version(versions.version_index(endian, index));
-    let (hash_index, hash_symbol) = hash_table
-    .find(endian, name, hash, version, &symbols, &versions)
-    .unwrap();
-    let hash_name = symbols.symbol_name(endian, hash_symbol).unwrap();
-    assert_eq!(name, hash_name);
-    assert_eq!(index, hash_index);
-    }
-    }
-    }
+        if let Ok(symbols) = _sections.symbol_table_by_index(endian, data, link) {
+            if let Ok(versions) = _sections.versions(endian, data) {
+                for (index, symbol) in symbols.symbols().iter().enumerate() {
+                    let name = symbols.symbol_name(endian, symbol).unwrap();
+                    if name.is_empty() {
+                        continue;
+                    }
+                    let hash = hash(name);
+                    let version = versions.version(versions.version_index(endian, index));
+                    let (hash_index, hash_symbol) = hash_table
+                        .find(endian, name, hash, version, &symbols, &versions)
+                        .unwrap();
+                    let hash_name = symbols.symbol_name(endian, hash_symbol).unwrap();
+                    assert_eq!(name, hash_name);
+                    assert_eq!(index, hash_index);
+                }
+            }
+        }
     }
     */
 }
@@ -634,7 +638,7 @@ fn print_gnu_hash<Elf: FileHeader>(
     _sections: &SectionTable<Elf>,
     section: &Elf::SectionHeader,
 ) {
-    if let Ok(Some(hash)) = section.gnu_hash_header(endian, data) {
+    if let Some(Some(hash)) = section.gnu_hash_header(endian, data).print_err(p) {
         p.group("GnuHash", |p| {
             p.field("BucketCount", hash.bucket_count.get(endian));
             p.field("SymbolBase", hash.symbol_base.get(endian));
@@ -644,26 +648,26 @@ fn print_gnu_hash<Elf: FileHeader>(
     }
     /* TODO: add this in a test somewhere
     if let Ok(Some((hash_table, link))) = section.gnu_hash(endian, data) {
-    if let Ok(symbols) = _sections.symbol_table_by_index(endian, data, link) {
-    if let Ok(versions) = _sections.versions(endian, data) {
-    for (index, symbol) in symbols
-    .symbols()
-    .iter()
-    .enumerate()
-    .skip(hash_table.symbol_base() as usize)
-    {
-    let name = symbols.symbol_name(endian, symbol).unwrap();
-    let hash = gnu_hash(name);
-    let version = versions.version(versions.version_index(endian, index));
-    let (hash_index, hash_symbol) = hash_table
-    .find(endian, name, hash, version, &symbols, &versions)
-    .unwrap();
-    let hash_name = symbols.symbol_name(endian, hash_symbol).unwrap();
-    assert_eq!(name, hash_name);
-    assert_eq!(index, hash_index);
-    }
-    }
-    }
+        if let Ok(symbols) = _sections.symbol_table_by_index(endian, data, link) {
+            if let Ok(versions) = _sections.versions(endian, data) {
+                for (index, symbol) in symbols
+                    .symbols()
+                    .iter()
+                    .enumerate()
+                    .skip(hash_table.symbol_base() as usize)
+                {
+                    let name = symbols.symbol_name(endian, symbol).unwrap();
+                    let hash = gnu_hash(name);
+                    let version = versions.version(versions.version_index(endian, index));
+                    let (hash_index, hash_symbol) = hash_table
+                        .find(endian, name, hash, version, &symbols, &versions)
+                        .unwrap();
+                    let hash_name = symbols.symbol_name(endian, hash_symbol).unwrap();
+                    assert_eq!(name, hash_name);
+                    assert_eq!(index, hash_index);
+                }
+            }
+        }
     }
     */
 }
@@ -676,11 +680,9 @@ fn print_gnu_verdef<Elf: FileHeader>(
     sections: &SectionTable<Elf>,
     section: &Elf::SectionHeader,
 ) {
-    if let Ok(Some((mut verdefs, link))) = section.gnu_verdef(endian, data) {
-        let strings = sections
-            .strings(endian, data, link)
-            .unwrap_or(StringTable::default());
-        while let Ok(Some((verdef, mut verdauxs))) = verdefs.next() {
+    if let Some(Some((mut verdefs, link))) = section.gnu_verdef(endian, data).print_err(p) {
+        let strings = sections.strings(endian, data, link).unwrap_or_default();
+        while let Some(Some((verdef, mut verdauxs))) = verdefs.next().print_err(p) {
             p.group("VersionDefinition", |p| {
                 p.field("Version", verdef.vd_version.get(endian));
                 p.field_hex("Flags", verdef.vd_flags.get(endian));
@@ -690,12 +692,12 @@ fn print_gnu_verdef<Elf: FileHeader>(
                 p.field_hex("Hash", verdef.vd_hash.get(endian));
                 p.field("AuxOffset", verdef.vd_aux.get(endian));
                 p.field("NextOffset", verdef.vd_next.get(endian));
-                while let Ok(Some(verdaux)) = verdauxs.next() {
+                while let Some(Some(verdaux)) = verdauxs.next().print_err(p) {
                     p.group("Aux", |p| {
                         p.field_string(
                             "Name",
                             verdaux.vda_name.get(endian),
-                            verdaux.name(endian, strings).ok(),
+                            verdaux.name(endian, strings),
                         );
                         p.field("NextOffset", verdaux.vda_next.get(endian));
                     });
@@ -713,22 +715,20 @@ fn print_gnu_verneed<Elf: FileHeader>(
     sections: &SectionTable<Elf>,
     section: &Elf::SectionHeader,
 ) {
-    if let Ok(Some((mut verneeds, link))) = section.gnu_verneed(endian, data) {
-        let strings = sections
-            .strings(endian, data, link)
-            .unwrap_or(StringTable::default());
-        while let Ok(Some((verneed, mut vernauxs))) = verneeds.next() {
+    if let Some(Some((mut verneeds, link))) = section.gnu_verneed(endian, data).print_err(p) {
+        let strings = sections.strings(endian, data, link).unwrap_or_default();
+        while let Some(Some((verneed, mut vernauxs))) = verneeds.next().print_err(p) {
             p.group("VersionNeed", |p| {
                 p.field("Version", verneed.vn_version.get(endian));
                 p.field("AuxCount", verneed.vn_cnt.get(endian));
                 p.field_string(
                     "Filename",
                     verneed.vn_file.get(endian),
-                    verneed.file(endian, strings).ok(),
+                    verneed.file(endian, strings),
                 );
                 p.field("AuxOffset", verneed.vn_aux.get(endian));
                 p.field("NextOffset", verneed.vn_next.get(endian));
-                while let Ok(Some(vernaux)) = vernauxs.next() {
+                while let Some(Some(vernaux)) = vernauxs.next().print_err(p) {
                     p.group("Aux", |p| {
                         p.field_hex("Hash", vernaux.vna_hash.get(endian));
                         p.field_hex("Flags", vernaux.vna_flags.get(endian));
@@ -737,7 +737,7 @@ fn print_gnu_verneed<Elf: FileHeader>(
                         p.field_string(
                             "Name",
                             vernaux.vna_name.get(endian),
-                            vernaux.name(endian, strings).ok(),
+                            vernaux.name(endian, strings),
                         );
                         p.field("NextOffset", vernaux.vna_next.get(endian));
                     });
@@ -755,25 +755,30 @@ fn print_gnu_versym<Elf: FileHeader>(
     sections: &SectionTable<Elf>,
     section: &Elf::SectionHeader,
 ) {
-    if let Ok(Some((syms, _link))) = section.gnu_versym(endian, data) {
-        let versions = sections.versions(endian, data).ok();
+    if let Some(Some((syms, _link))) = section.gnu_versym(endian, data).print_err(p) {
+        let versions = sections.versions(endian, data).print_err(p).flatten();
         for (index, sym) in syms.iter().enumerate() {
-            let sym = VersionIndex(sym.0.get(endian));
+            let version_index = VersionIndex(sym.0.get(endian));
             p.group("VersionSymbol", |p| {
                 p.field("Index", index);
-                if sym.0 <= VER_NDX_GLOBAL {
-                    p.field_enum("Version", sym.0, FLAGS_VER_NDX);
-                } else {
-                    let name = versions
-                        .as_ref()
-                        .and_then(|versions| versions.version(sym))
-                        .map(|version| version.name());
-                    p.field_string("Version", sym.0, name);
-                };
-                p.flags(sym.0, 0, FLAGS_VERSYM);
+                print_version(p, versions.as_ref(), version_index);
             });
         }
     }
+}
+
+fn print_version<Elf: FileHeader>(
+    p: &mut Printer<'_>,
+    versions: Option<&VersionTable<Elf>>,
+    version_index: VersionIndex,
+) {
+    match versions.and_then(|versions| versions.version(version_index).print_err(p)) {
+        Some(Some(version)) => {
+            p.field_string_option("Version", version_index.0, Some(version.name()))
+        }
+        _ => p.field_enum("Version", version_index.0, FLAGS_VER_NDX),
+    }
+    p.flags(version_index.0, 0, FLAGS_VERSYM);
 }
 
 static FLAGS_EI_CLASS: &[Flag<u8>] = &flags!(ELFCLASSNONE, ELFCLASS32, ELFCLASS64);

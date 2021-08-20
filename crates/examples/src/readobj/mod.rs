@@ -1,4 +1,3 @@
-use std::convert::TryInto;
 use std::io::Write;
 use std::{fmt, str};
 
@@ -6,19 +5,20 @@ use object::read::archive::ArchiveFile;
 use object::read::macho::{FatArch, FatHeader};
 use object::Endianness;
 
-pub fn print(w: &'_ mut dyn Write, file: &[u8]) {
-    let mut printer = Printer::new(w);
+pub fn print(w: &'_ mut dyn Write, e: &'_ mut dyn Write, file: &[u8]) {
+    let mut printer = Printer::new(w, e);
     print_object(&mut printer, &*file);
 }
 
 struct Printer<'a> {
     w: &'a mut dyn Write,
+    e: &'a mut dyn Write,
     indent: usize,
 }
 
 impl<'a> Printer<'a> {
-    fn new(w: &'a mut dyn Write) -> Self {
-        Self { w, indent: 0 }
+    fn new(w: &'a mut dyn Write, e: &'a mut dyn Write) -> Self {
+        Self { w, e, indent: 0 }
     }
 
     fn w(&mut self) -> &mut dyn Write {
@@ -79,7 +79,7 @@ impl<'a> Printer<'a> {
         writeln!(self.w, "{:X?}", value).unwrap();
     }
 
-    fn field_string<T: fmt::UpperHex>(&mut self, name: &str, value: T, s: Option<&[u8]>) {
+    fn field_string_option<T: fmt::UpperHex>(&mut self, name: &str, value: T, s: Option<&[u8]>) {
         if let Some(s) = s {
             self.field_name(name);
             self.print_string(s);
@@ -87,6 +87,16 @@ impl<'a> Printer<'a> {
         } else {
             self.field_hex(name, value);
         }
+    }
+
+    fn field_string<T: fmt::UpperHex, E: fmt::Display>(
+        &mut self,
+        name: &str,
+        value: T,
+        s: Result<&[u8], E>,
+    ) {
+        let s = s.print_err(self);
+        self.field_string_option(name, value, s);
     }
 
     fn field_inline_string(&mut self, name: &str, s: &[u8]) {
@@ -197,15 +207,31 @@ fn print_object_at(p: &mut Printer<'_>, data: &[u8], offset: u64) {
 }
 
 fn print_archive(p: &mut Printer<'_>, data: &[u8]) {
-    if let Ok(archive) = ArchiveFile::parse(data) {
+    if let Some(archive) = ArchiveFile::parse(data).print_err(p) {
         p.field("Format", format!("Archive ({:?})", archive.kind()));
         for member in archive.members() {
-            if let Ok(member) = member {
+            if let Some(member) = member.print_err(p) {
                 p.blank();
                 p.field("Member", String::from_utf8_lossy(member.name()));
-                if let Ok(data) = member.data(data) {
+                if let Some(data) = member.data(data).print_err(p) {
                     print_object(p, data);
                 }
+            }
+        }
+    }
+}
+
+trait PrintErr<T> {
+    fn print_err(self, p: &mut Printer<'_>) -> Option<T>;
+}
+
+impl<T, E: fmt::Display> PrintErr<T> for Result<T, E> {
+    fn print_err(self, p: &mut Printer<'_>) -> Option<T> {
+        match self {
+            Ok(val) => Some(val),
+            Err(err) => {
+                writeln!(p.e, "Error: {}", err).unwrap();
+                None
             }
         }
     }

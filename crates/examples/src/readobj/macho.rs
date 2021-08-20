@@ -4,14 +4,14 @@ use object::read::macho::*;
 use object::BigEndian;
 
 pub(super) fn print_dyld_cache(p: &mut Printer<'_>, data: &[u8]) {
-    if let Ok(header) = DyldCacheHeader::<Endianness>::parse(data) {
-        if let Ok((_, endian)) = header.parse_magic() {
+    if let Some(header) = DyldCacheHeader::<Endianness>::parse(data).print_err(p) {
+        if let Some((_, endian)) = header.parse_magic().print_err(p) {
             print_dyld_cache_header(p, endian, header);
-            let mappings = header.mappings(endian, data).ok();
+            let mappings = header.mappings(endian, data).print_err(p);
             if let Some(mappings) = mappings {
                 print_dyld_cache_mappings(p, endian, mappings);
             }
-            if let Ok(images) = header.images(endian, data) {
+            if let Some(images) = header.images(endian, data).print_err(p) {
                 print_dyld_cache_images(p, endian, data, mappings, images);
             }
         }
@@ -66,11 +66,12 @@ pub(super) fn print_dyld_cache_images(
             p.field_string(
                 "Path",
                 image.path_file_offset.get(endian),
-                image.path(endian, data).ok(),
+                image.path(endian, data),
             );
             p.field_hex("Pad", image.pad.get(endian));
         });
-        if let Some(offset) = mappings.and_then(|mappings| image.file_offset(endian, mappings).ok())
+        if let Some(offset) =
+            mappings.and_then(|mappings| image.file_offset(endian, mappings).print_err(p))
         {
             p.blank();
             print_object_at(p, data, offset);
@@ -80,14 +81,14 @@ pub(super) fn print_dyld_cache_images(
 }
 
 pub(super) fn print_macho_fat32(p: &mut Printer<'_>, data: &[u8]) {
-    if let Ok(arches) = FatHeader::parse_arch32(data) {
+    if let Some(arches) = FatHeader::parse_arch32(data).print_err(p) {
         writeln!(p.w(), "Format: Mach-O Fat 32-bit").unwrap();
         print_fat_header(p, data);
         for arch in arches {
             print_fat_arch(p, arch);
         }
         for arch in arches {
-            if let Ok(data) = arch.data(data) {
+            if let Some(data) = arch.data(data).print_err(p) {
                 p.blank();
                 print_object(p, data);
             }
@@ -96,14 +97,14 @@ pub(super) fn print_macho_fat32(p: &mut Printer<'_>, data: &[u8]) {
 }
 
 pub(super) fn print_macho_fat64(p: &mut Printer<'_>, data: &[u8]) {
-    if let Ok(arches) = FatHeader::parse_arch64(data) {
+    if let Some(arches) = FatHeader::parse_arch64(data).print_err(p) {
         writeln!(p.w(), "Format: Mach-O Fat 64-bit").unwrap();
         print_fat_header(p, data);
         for arch in arches {
             print_fat_arch(p, arch);
         }
         for arch in arches {
-            if let Ok(data) = arch.data(data) {
+            if let Some(data) = arch.data(data).print_err(p) {
                 p.blank();
                 print_object(p, data);
             }
@@ -112,7 +113,7 @@ pub(super) fn print_macho_fat64(p: &mut Printer<'_>, data: &[u8]) {
 }
 
 pub(super) fn print_fat_header(p: &mut Printer<'_>, data: &[u8]) {
-    if let Ok(header) = FatHeader::parse(data) {
+    if let Some(header) = FatHeader::parse(data).print_err(p) {
         p.group("FatHeader", |p| {
             p.field_hex("Magic", header.magic.get(BigEndian));
             p.field("NumberOfFatArch", header.nfat_arch.get(BigEndian));
@@ -130,14 +131,14 @@ pub(super) fn print_fat_arch<Arch: FatArch>(p: &mut Printer<'_>, arch: &Arch) {
 }
 
 pub(super) fn print_macho32(p: &mut Printer<'_>, data: &[u8], offset: u64) {
-    if let Ok(header) = MachHeader32::parse(data, offset) {
+    if let Some(header) = MachHeader32::parse(data, offset).print_err(p) {
         writeln!(p.w(), "Format: Mach-O 32-bit").unwrap();
         print_macho(p, header, data, offset);
     }
 }
 
 pub(super) fn print_macho64(p: &mut Printer<'_>, data: &[u8], offset: u64) {
-    if let Ok(header) = MachHeader64::parse(data, offset) {
+    if let Some(header) = MachHeader64::parse(data, offset).print_err(p) {
         writeln!(p.w(), "Format: Mach-O 64-bit").unwrap();
         print_macho(p, header, data, offset);
     }
@@ -154,11 +155,11 @@ fn print_macho<Mach: MachHeader<Endian = Endianness>>(
     data: &[u8],
     offset: u64,
 ) {
-    if let Ok(endian) = header.endian() {
+    if let Some(endian) = header.endian().print_err(p) {
         let mut state = MachState::default();
         print_mach_header(p, endian, header);
-        if let Ok(mut commands) = header.load_commands(endian, data, offset) {
-            while let Ok(Some(command)) = commands.next() {
+        if let Some(mut commands) = header.load_commands(endian, data, offset).print_err(p) {
+            while let Some(Some(command)) = commands.next().print_err(p) {
                 print_load_command(p, endian, data, header, command, &mut state);
             }
         }
@@ -184,7 +185,7 @@ fn print_load_command<Mach: MachHeader>(
     command: LoadCommandData<Mach::Endian>,
     state: &mut MachState,
 ) {
-    if let Ok(variant) = command.variant() {
+    if let Some(variant) = command.variant().print_err(p) {
         match variant {
             LoadCommandVariant::Segment32(segment, section_data) => {
                 print_segment(
@@ -251,7 +252,7 @@ fn print_load_command<Mach: MachHeader>(
                         p.field_string(
                             "Name",
                             x.dylib.name.offset.get(endian),
-                            command.string(endian, x.dylib.name).ok(),
+                            command.string(endian, x.dylib.name),
                         );
                         p.field("Timestamp", x.dylib.timestamp.get(endian));
                         p.field_hex("CurrentVersion", x.dylib.current_version.get(endian));
@@ -271,7 +272,7 @@ fn print_load_command<Mach: MachHeader>(
                     p.field_string(
                         "Name",
                         x.name.offset.get(endian),
-                        command.string(endian, x.name).ok(),
+                        command.string(endian, x.name),
                     );
                 });
             }
@@ -282,7 +283,7 @@ fn print_load_command<Mach: MachHeader>(
                     p.field_string(
                         "Name",
                         x.name.offset.get(endian),
-                        command.string(endian, x.name).ok(),
+                        command.string(endian, x.name),
                     );
                     p.field("NumberOfModules", x.nmodules.get(endian));
                     // TODO: display bit vector
@@ -324,7 +325,7 @@ fn print_load_command<Mach: MachHeader>(
                     p.field_string(
                         "Umbrella",
                         x.umbrella.offset.get(endian),
-                        command.string(endian, x.umbrella).ok(),
+                        command.string(endian, x.umbrella),
                     );
                 });
             }
@@ -335,7 +336,7 @@ fn print_load_command<Mach: MachHeader>(
                     p.field_string(
                         "SubUmbrella",
                         x.sub_umbrella.offset.get(endian),
-                        command.string(endian, x.sub_umbrella).ok(),
+                        command.string(endian, x.sub_umbrella),
                     );
                 });
             }
@@ -346,7 +347,7 @@ fn print_load_command<Mach: MachHeader>(
                     p.field_string(
                         "Client",
                         x.client.offset.get(endian),
-                        command.string(endian, x.client).ok(),
+                        command.string(endian, x.client),
                     );
                 });
             }
@@ -357,7 +358,7 @@ fn print_load_command<Mach: MachHeader>(
                     p.field_string(
                         "SubLibrary",
                         x.sub_library.offset.get(endian),
-                        command.string(endian, x.sub_library).ok(),
+                        command.string(endian, x.sub_library),
                     );
                 });
             }
@@ -391,7 +392,7 @@ fn print_load_command<Mach: MachHeader>(
                     p.field_string(
                         "Path",
                         x.path.offset.get(endian),
-                        command.string(endian, x.path).ok(),
+                        command.string(endian, x.path),
                     );
                 });
             }
@@ -500,7 +501,7 @@ fn print_load_command<Mach: MachHeader>(
                     p.field_string(
                         "EntryId",
                         x.entry_id.offset.get(endian),
-                        command.string(endian, x.entry_id).ok(),
+                        command.string(endian, x.entry_id),
                     );
                     p.field_hex("Reserved", x.reserved.get(endian));
                 });
@@ -544,7 +545,7 @@ fn print_segment<S: Segment>(
         p.field("NumberOfSections", segment.nsects(endian));
         p.field_hex("Flags", segment.flags(endian));
         p.flags(segment.flags(endian), 0, FLAGS_SG);
-        if let Ok(sections) = segment.sections(endian, section_data) {
+        if let Some(sections) = segment.sections(endian, section_data).print_err(p) {
             for section in sections {
                 print_section(p, endian, data, cputype, section, state);
             }
@@ -579,7 +580,7 @@ fn print_section<S: Section>(
             p.flags(flags, SECTION_TYPE, FLAGS_S_TYPE);
             p.flags(flags, 0, FLAGS_S_ATTR);
         }
-        if let Ok(relocations) = section.relocations(endian, data) {
+        if let Some(relocations) = section.relocations(endian, data).print_err(p) {
             let proc = match cputype {
                 CPU_TYPE_X86 => FLAGS_GENERIC_RELOC,
                 CPU_TYPE_X86_64 => FLAGS_X86_64_RELOC,
@@ -632,14 +633,14 @@ fn print_symtab<Mach: MachHeader>(
         p.field_hex("NumberOfSymbols", symtab.nsyms.get(endian));
         p.field_hex("StringOffset", symtab.stroff.get(endian));
         p.field_hex("StringSize", symtab.strsize.get(endian));
-        if let Ok(symbols) = symtab.symbols::<Mach, _>(endian, data) {
+        if let Some(symbols) = symtab.symbols::<Mach, _>(endian, data).print_err(p) {
             for (index, nlist) in symbols.iter().enumerate() {
                 p.group("Nlist", |p| {
                     p.field("Index", index);
                     p.field_string(
                         "String",
                         nlist.n_strx(endian),
-                        nlist.name(endian, symbols.strings()).ok(),
+                        nlist.name(endian, symbols.strings()),
                     );
                     let n_type = nlist.n_type();
                     if nlist.is_stab() {

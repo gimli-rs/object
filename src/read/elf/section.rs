@@ -298,18 +298,22 @@ impl<'data, Elf: FileHeader, R: ReadRef<'data>> SectionTable<'data, Elf, R> {
 
     /// Returns the symbol version table.
     ///
-    /// Returns an empty table if symbol versions are not present.
-    pub fn versions(&self, endian: Elf::Endian, data: R) -> read::Result<VersionTable<'data, Elf>> {
-        let (versyms, strings) = match self.gnu_versym(endian, data)? {
-            Some((versyms, link)) => (
-                versyms,
-                self.symbol_table_by_index(endian, data, link)?.strings(),
-            ),
-            None => return Ok(VersionTable::default()),
+    /// Returns `Ok(None)` if there is no `SHT_GNU_VERSYM` section.
+    /// Returns `Err` for invalid values.
+    pub fn versions(
+        &self,
+        endian: Elf::Endian,
+        data: R,
+    ) -> read::Result<Option<VersionTable<'data, Elf>>> {
+        let (versyms, link) = match self.gnu_versym(endian, data)? {
+            Some(val) => val,
+            None => return Ok(None),
         };
+        let strings = self.symbol_table_by_index(endian, data, link)?.strings();
+        // TODO: check links?
         let verdefs = self.gnu_verdef(endian, data)?.map(|x| x.0);
         let verneeds = self.gnu_verneed(endian, data)?.map(|x| x.0);
-        VersionTable::new(endian, versyms, verdefs, verneeds, strings)
+        VersionTable::parse(endian, versyms, verdefs, verneeds, strings).map(Some)
     }
 }
 

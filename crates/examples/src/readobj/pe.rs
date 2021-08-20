@@ -5,11 +5,11 @@ use object::LittleEndian as LE;
 
 pub(super) fn print_coff(p: &mut Printer<'_>, data: &[u8]) {
     let mut offset = 0;
-    if let Ok(header) = ImageFileHeader::parse(data, &mut offset) {
+    if let Some(header) = ImageFileHeader::parse(data, &mut offset).print_err(p) {
         writeln!(p.w(), "Format: COFF").unwrap();
         print_file(p, header);
-        let sections = header.sections(data, offset).ok();
-        let symbols = header.symbols(data).ok();
+        let sections = header.sections(data, offset).print_err(p);
+        let symbols = header.symbols(data).print_err(p);
         if let Some(ref sections) = sections {
             print_sections(p, data, header.machine.get(LE), symbols.as_ref(), &sections);
         }
@@ -30,7 +30,7 @@ pub(super) fn print_pe64(p: &mut Printer<'_>, data: &[u8]) {
 }
 
 fn print_pe<Pe: ImageNtHeaders>(p: &mut Printer<'_>, data: &[u8]) {
-    if let Ok(dos_header) = ImageDosHeader::parse(data) {
+    if let Some(dos_header) = ImageDosHeader::parse(data).print_err(p) {
         p.group("ImageDosHeader", |p| {
             p.field_hex("Magic", dos_header.e_magic.get(LE));
             p.field_hex("CountBytesLastPage", dos_header.e_cblp.get(LE));
@@ -51,13 +51,13 @@ fn print_pe<Pe: ImageNtHeaders>(p: &mut Printer<'_>, data: &[u8]) {
             p.field_hex("AddressOfNewHeader", dos_header.e_lfanew.get(LE));
         });
         let mut offset = dos_header.nt_headers_offset().into();
-        if let Ok((nt_headers, data_directories)) = Pe::parse(data, &mut offset) {
+        if let Some((nt_headers, data_directories)) = Pe::parse(data, &mut offset).print_err(p) {
             p.group("ImageNtHeaders", |p| {
                 p.field_hex("Signature", nt_headers.signature());
             });
             let header = nt_headers.file_header();
-            let sections = header.sections(data, offset).ok();
-            let symbols = header.symbols(data).ok();
+            let sections = header.sections(data, offset).print_err(p);
+            let symbols = header.symbols(data).print_err(p);
             print_file(p, header);
             print_optional(p, nt_headers.optional_header());
             for (index, dir) in data_directories.iter().enumerate() {
@@ -75,6 +75,9 @@ fn print_pe<Pe: ImageNtHeaders>(p: &mut Printer<'_>, data: &[u8]) {
             }
             if let Some(ref sections) = sections {
                 for (index, dir) in data_directories.iter().enumerate() {
+                    if dir.virtual_address.get(LE) == 0 {
+                        continue;
+                    }
                     match index {
                         IMAGE_DIRECTORY_ENTRY_EXPORT => {
                             print_export_dir(p, data, &sections, dir);
@@ -163,10 +166,8 @@ fn print_export_dir(
     sections: &SectionTable,
     dir: &ImageDataDirectory,
 ) -> Option<()> {
-    let dir_data = dir.data(data, sections).ok()?;
-    let export_dir = object::from_bytes::<pe::ImageExportDirectory>(dir_data)
-        .ok()?
-        .0;
+    let dir_data = dir.data(data, sections).print_err(p)?;
+    let export_dir = ExportTable::parse_directory(data).print_err(p)?;
     p.group("ImageExportDirectory", |p| {
         p.field_hex("Characteristics", export_dir.characteristics.get(LE));
         p.field_hex("TimeDateStamp", export_dir.time_date_stamp.get(LE));
@@ -185,7 +186,9 @@ fn print_export_dir(
             "AddressOfNameOrdinals",
             export_dir.address_of_name_ordinals.get(LE),
         );
-        if let Ok(export_table) = ExportTable::parse(dir_data, dir.virtual_address.get(LE)) {
+        if let Some(export_table) =
+            ExportTable::parse(dir_data, dir.virtual_address.get(LE)).print_err(p)
+        {
             // TODO: the order of the name pointers might be interesting?
             let mut names = vec![None; export_table.addresses().len()];
             for (name_pointer, ordinal) in export_table.name_iter() {
@@ -202,11 +205,14 @@ fn print_export_dir(
                         p.field_string(
                             "Name",
                             name_pointer,
-                            export_table.name_from_pointer(name_pointer).ok(),
+                            export_table.name_from_pointer(name_pointer),
                         );
                     }
                     p.field_hex("Address", address.get(LE));
-                    if let Ok(target) = export_table.target_from_address(address.get(LE)) {
+                    if let Some(target) = export_table
+                        .target_from_address(address.get(LE))
+                        .print_err(p)
+                    {
                         match target {
                             ExportTarget::Address(_) => {}
                             ExportTarget::ForwardByOrdinal(library, ordinal) => {
@@ -218,7 +224,9 @@ fn print_export_dir(
                                 p.field_inline_string("ForwardName", name);
                             }
                         }
-                    } else if let Ok(Some(forward)) = export_table.forward_string(address.get(LE)) {
+                    } else if let Some(Some(forward)) =
+                        export_table.forward_string(address.get(LE)).print_err(p)
+                    {
                         p.field_inline_string("Forward", forward);
                     }
                 });
@@ -237,32 +245,36 @@ fn print_import_dir<Pe: ImageNtHeaders>(
     let import_address = dir.virtual_address.get(LE);
     let (section_data, section_address) = sections.pe_data_containing(data, import_address)?;
     let import_table = ImportTable::new(section_data, section_address, import_address);
-    let mut import_descs = import_table.descriptors().ok()?;
+    let mut import_descs = import_table.descriptors().print_err(p)?;
     p.group("ImageImportDirectory", |p| {
-        while let Ok(Some(import_desc)) = import_descs.next() {
+        while let Some(Some(import_desc)) = import_descs.next().print_err(p) {
             p.group("ImageImportDescriptor", |p| {
                 p.field_hex("LookupTable", import_desc.original_first_thunk.get(LE));
                 p.field_hex("TimeDataStamp", import_desc.time_date_stamp.get(LE));
                 p.field_hex("ForwarderChain", import_desc.forwarder_chain.get(LE));
                 let name = import_desc.name.get(LE);
-                p.field_string("Name", name, import_table.name(name).ok());
+                p.field_string("Name", name, import_table.name(name));
                 p.field_hex("AddressTable", import_desc.first_thunk.get(LE));
-                let mut address_thunks = import_table.thunks(import_desc.first_thunk.get(LE)).ok();
-                if let Ok(mut lookup_thunks) =
-                    import_table.thunks(import_desc.original_first_thunk.get(LE))
+                let mut address_thunks = import_table
+                    .thunks(import_desc.first_thunk.get(LE))
+                    .print_err(p);
+                if let Some(mut lookup_thunks) = import_table
+                    .thunks(import_desc.original_first_thunk.get(LE))
+                    .print_err(p)
                 {
-                    while let Ok(Some(thunk)) = lookup_thunks.next::<Pe>() {
+                    while let Some(Some(thunk)) = lookup_thunks.next::<Pe>().print_err(p) {
                         p.group("Thunk", |p| {
                             p.field_hex("Lookup", thunk.raw());
                             if let Some(Some(thunk)) = address_thunks
                                 .as_mut()
-                                .and_then(|thunks| thunks.next::<Pe>().ok())
+                                .and_then(|thunks| thunks.next::<Pe>().print_err(p))
                             {
                                 p.field_hex("Address", thunk.raw());
                             }
                             if thunk.is_ordinal() {
                                 p.field("Ordinal", thunk.ordinal());
-                            } else if let Ok((hint, name)) = import_table.hint_name(thunk.address())
+                            } else if let Some((hint, name)) =
+                                import_table.hint_name(thunk.address()).print_err(p)
                             {
                                 p.field("Hint", hint);
                                 p.field_inline_string("Name", name);
@@ -286,7 +298,9 @@ fn print_sections(
     for (index, section) in sections.iter().enumerate() {
         p.group("ImageSectionHeader", |p| {
             p.field("Index", index + 1);
-            if let Some(name) = symbols.and_then(|symbols| section.name(symbols.strings()).ok()) {
+            if let Some(name) =
+                symbols.and_then(|symbols| section.name(symbols.strings()).print_err(p))
+            {
                 p.field_inline_string("Name", name);
             } else {
                 p.field_inline_string("Name", section.raw_name());
@@ -312,7 +326,7 @@ fn print_sections(
                 IMAGE_SCN_ALIGN_MASK,
                 FLAGS_IMAGE_SCN_ALIGN,
             );
-            if let Ok(relocations) = section.coff_relocations(data) {
+            if let Some(relocations) = section.coff_relocations(data).print_err(p) {
                 for relocation in relocations {
                     p.group("ImageRelocation", |p| {
                         p.field_hex("VirtualAddress", relocation.virtual_address.get(LE));
@@ -321,9 +335,9 @@ fn print_sections(
                             symbols
                                 .symbol(index as usize)
                                 .and_then(|symbol| symbol.name(symbols.strings()))
-                                .ok()
+                                .print_err(p)
                         });
-                        p.field_string("Symbol", index, name);
+                        p.field_string_option("Symbol", index, name);
                         let proc = match machine {
                             IMAGE_FILE_MACHINE_I386 => FLAGS_IMAGE_REL_I386,
                             IMAGE_FILE_MACHINE_MIPS16
@@ -375,7 +389,7 @@ fn print_symbols(p: &mut Printer<'_>, sections: Option<&SectionTable>, symbols: 
     for (index, symbol) in symbols.iter() {
         p.group("ImageSymbol", |p| {
             p.field("Index", index);
-            if let Ok(name) = symbol.name(symbols.strings()) {
+            if let Some(name) = symbol.name(symbols.strings()).print_err(p) {
                 p.field_inline_string("Name", name);
             } else {
                 p.field("Name", format!("{:X?}", symbol.name));
@@ -389,9 +403,9 @@ fn print_symbols(p: &mut Printer<'_>, sections: Option<&SectionTable>, symbols: 
                     sections
                         .section(section.into())
                         .and_then(|section| section.name(symbols.strings()))
-                        .ok()
+                        .print_err(p)
                 });
-                p.field_string("Section", section, section_name);
+                p.field_string_option("Section", section, section_name);
             }
             p.field_hex("Type", symbol.typ.get(LE));
             p.field_enum("BaseType", symbol.base_type(), FLAGS_IMAGE_SYM_TYPE);
@@ -399,13 +413,16 @@ fn print_symbols(p: &mut Printer<'_>, sections: Option<&SectionTable>, symbols: 
             p.field_enum("StorageClass", symbol.storage_class, FLAGS_IMAGE_SYM_CLASS);
             p.field_hex("NumberOfAuxSymbols", symbol.number_of_aux_symbols);
             if symbol.has_aux_file_name() {
-                if let Ok(name) = symbols.aux_file_name(index, symbol.number_of_aux_symbols) {
+                if let Some(name) = symbols
+                    .aux_file_name(index, symbol.number_of_aux_symbols)
+                    .print_err(p)
+                {
                     p.group("ImageAuxSymbolFile", |p| {
                         p.field_inline_string("Name", name);
                     });
                 }
             } else if symbol.has_aux_function() {
-                if let Ok(aux) = symbols.aux_function(index) {
+                if let Some(aux) = symbols.aux_function(index).print_err(p) {
                     p.group("ImageAuxSymbolFunction", |p| {
                         p.field("TagIndex", aux.tag_index.get(LE));
                         p.field("TotalSize", aux.total_size.get(LE));
@@ -418,7 +435,7 @@ fn print_symbols(p: &mut Printer<'_>, sections: Option<&SectionTable>, symbols: 
                     });
                 }
             } else if symbol.has_aux_section() {
-                if let Ok(aux) = symbols.aux_section(index) {
+                if let Some(aux) = symbols.aux_section(index).print_err(p) {
                     p.group("ImageAuxSymbolSection", |p| {
                         p.field_hex("Length", aux.length.get(LE));
                         p.field("NumberOfRelocations", aux.number_of_relocations.get(LE));
