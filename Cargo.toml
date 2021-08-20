@@ -83,30 +83,6 @@ cargo-all = []
 # stable interface of this crate.
 rustc-dep-of-std = ['core', 'compiler_builtins', 'alloc', 'memchr/rustc-dep-of-std']
 
-[[example]]
-name = "ar"
-required-features = ["read_core", "archive"]
-
-[[example]]
-name = "elfcopy"
-required-features = ["read_core", "write_core", "elf"]
-
-[[example]]
-name = "objcopy"
-required-features = ["read", "write"]
-
-[[example]]
-name = "objdump"
-required-features = ["read"]
-
-[[example]]
-name = "objectmap"
-required-features = ["read_core"]
-
-[[example]]
-name = "nm"
-required-features = ["read"]
-
-[[example]]
-name = "readobj"
-required-features = ["read"]
+[workspace]
+members = ["crates/examples"]
+default-members = [".", "crates/examples"]
