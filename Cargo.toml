@@ -86,3 +86,4 @@ rustc-dep-of-std = ['core', 'compiler_builtins', 'alloc', 'memchr/rustc-dep-of-s
 [workspace]
 members = ["crates/examples"]
 default-members = [".", "crates/examples"]
+resolver = "2"

@@ -7,6 +7,10 @@ edition = "2018"
 memmap2 = "0.3"
 object = { path = "../..", default-features = false }
 
+[features]
+read = ["object/read"]
+default = ["read"]
+
 [[bin]]
 name = "ar"
 required-features = ["object/read_core", "object/archive"]
@@ -37,4 +41,4 @@ required-features = ["object/read"]
 
 [[bin]]
 name = "readobj"
-required-features = ["object/read"]
+required-features = ["read"]
