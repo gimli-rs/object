@@ -1021,6 +1021,23 @@ impl<'a> Writer<'a> {
         });
     }
 
+    /// Reserve the null dynamic symbol table entry.
+    ///
+    /// This will be stored in the `.dynsym` section.
+    ///
+    /// The null dynamic symbol table entry is usually automatically reserved,
+    /// but this can be used to force an empty dynamic symbol table.
+    ///
+    /// This must be called before [`Self::reserve_dynsym`].
+    pub fn reserve_null_dynamic_symbol_index(&mut self) -> SymbolIndex {
+        debug_assert_eq!(self.dynsym_offset, 0);
+        debug_assert_eq!(self.dynsym_num, 0);
+        self.dynsym_num = 1;
+        // The symtab must link to a strtab.
+        self.need_dynstr = true;
+        SymbolIndex(0)
+    }
+
     /// Reserve a dynamic symbol table entry.
     ///
     /// This will be stored in the `.dynsym` section.
