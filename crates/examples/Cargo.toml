@@ -29,7 +29,7 @@ required-features = ["object/read", "object/write"]
 
 [[bin]]
 name = "objdump"
-required-features = ["object/read"]
+required-features = ["read"]
 
 [[bin]]
 name = "objectmap"
