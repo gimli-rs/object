@@ -6,19 +6,23 @@ use object::read::archive::ArchiveFile;
 use object::read::macho::{FatArch, FatHeader};
 use object::Endianness;
 
-pub fn print<W: Write>(w: W, file: &[u8]) {
+pub fn print(w: &'_ mut dyn Write, file: &[u8]) {
     let mut printer = Printer::new(w);
     print_object(&mut printer, &*file);
 }
 
-struct Printer<W: Write> {
-    w: W,
+struct Printer<'a> {
+    w: &'a mut dyn Write,
     indent: usize,
 }
 
-impl<W: Write> Printer<W> {
-    fn new(w: W) -> Self {
+impl<'a> Printer<'a> {
+    fn new(w: &'a mut dyn Write) -> Self {
         Self { w, indent: 0 }
+    }
+
+    fn w(&mut self) -> &mut dyn Write {
+        self.w
     }
 
     fn blank(&mut self) {
@@ -151,7 +155,7 @@ macro_rules! flags {
     ($($name:ident),+ $(,)?) => ( [ $(Flag { value: $name, name: stringify!($name), }),+ ] )
 }
 
-fn print_object(p: &mut Printer<impl Write>, data: &[u8]) {
+fn print_object(p: &mut Printer<'_>, data: &[u8]) {
     let kind = match object::FileKind::parse(data) {
         Ok(file) => file,
         Err(err) => {
@@ -176,7 +180,7 @@ fn print_object(p: &mut Printer<impl Write>, data: &[u8]) {
     }
 }
 
-fn print_object_at(p: &mut Printer<impl Write>, data: &[u8], offset: u64) {
+fn print_object_at(p: &mut Printer<'_>, data: &[u8], offset: u64) {
     let kind = match object::FileKind::parse_at(data, offset) {
         Ok(file) => file,
         Err(err) => {
@@ -192,7 +196,7 @@ fn print_object_at(p: &mut Printer<impl Write>, data: &[u8], offset: u64) {
     }
 }
 
-fn print_archive(p: &mut Printer<impl Write>, data: &[u8]) {
+fn print_archive(p: &mut Printer<'_>, data: &[u8]) {
     if let Ok(archive) = ArchiveFile::parse(data) {
         p.field("Format", format!("Archive ({:?})", archive.kind()));
         for member in archive.members() {

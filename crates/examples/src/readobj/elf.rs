@@ -3,25 +3,21 @@ use object::elf::*;
 use object::read::elf::*;
 use object::read::{SectionIndex, StringTable};
 
-pub(super) fn print_elf32(p: &mut Printer<impl Write>, data: &[u8]) {
+pub(super) fn print_elf32(p: &mut Printer<'_>, data: &[u8]) {
     if let Ok(elf) = FileHeader32::<Endianness>::parse(data) {
-        println!("Format: ELF 32-bit");
+        writeln!(p.w(), "Format: ELF 32-bit").unwrap();
         print_elf(p, elf, data);
     }
 }
 
-pub(super) fn print_elf64(p: &mut Printer<impl Write>, data: &[u8]) {
+pub(super) fn print_elf64(p: &mut Printer<'_>, data: &[u8]) {
     if let Ok(elf) = FileHeader64::<Endianness>::parse(data) {
-        println!("Format: ELF 64-bit");
+        writeln!(p.w(), "Format: ELF 64-bit").unwrap();
         print_elf(p, elf, data);
     }
 }
 
-fn print_elf<Elf: FileHeader<Endian = Endianness>>(
-    p: &mut Printer<impl Write>,
-    elf: &Elf,
-    data: &[u8],
-) {
+fn print_elf<Elf: FileHeader<Endian = Endianness>>(p: &mut Printer<'_>, elf: &Elf, data: &[u8]) {
     if let Ok(endian) = elf.endian() {
         print_file_header(p, endian, elf);
         if let Ok(segments) = elf.program_headers(endian, data) {
@@ -33,7 +29,7 @@ fn print_elf<Elf: FileHeader<Endian = Endianness>>(
     }
 }
 
-fn print_file_header<Elf: FileHeader>(p: &mut Printer<impl Write>, endian: Elf::Endian, elf: &Elf) {
+fn print_file_header<Elf: FileHeader>(p: &mut Printer<'_>, endian: Elf::Endian, elf: &Elf) {
     p.group("FileHeader", |p| {
         p.group("Ident", |p| print_ident(p, elf.e_ident()));
         p.field_enum("Type", elf.e_type(endian), &FLAGS_ET);
@@ -87,7 +83,7 @@ fn print_file_header<Elf: FileHeader>(p: &mut Printer<impl Write>, endian: Elf::
     });
 }
 
-fn print_ident(p: &mut Printer<impl Write>, ident: &Ident) {
+fn print_ident(p: &mut Printer<'_>, ident: &Ident) {
     p.field("Magic", format!("{:X?}", ident.magic));
     p.field_enum("Class", ident.class, &FLAGS_EI_CLASS);
     p.field_enum("Data", ident.data, &FLAGS_EI_DATA);
@@ -98,7 +94,7 @@ fn print_ident(p: &mut Printer<impl Write>, ident: &Ident) {
 }
 
 fn print_program_headers<Elf: FileHeader>(
-    p: &mut Printer<impl Write>,
+    p: &mut Printer<'_>,
     endian: Elf::Endian,
     data: &[u8],
     elf: &Elf,
@@ -160,7 +156,7 @@ fn print_program_headers<Elf: FileHeader>(
 }
 
 fn print_segment_notes<Elf: FileHeader>(
-    p: &mut Printer<impl Write>,
+    p: &mut Printer<'_>,
     endian: Elf::Endian,
     data: &[u8],
     _elf: &Elf,
@@ -172,7 +168,7 @@ fn print_segment_notes<Elf: FileHeader>(
 }
 
 fn print_segment_dynamic<Elf: FileHeader>(
-    p: &mut Printer<impl Write>,
+    p: &mut Printer<'_>,
     endian: Elf::Endian,
     data: &[u8],
     elf: &Elf,
@@ -204,7 +200,7 @@ fn print_segment_dynamic<Elf: FileHeader>(
 }
 
 fn print_section_headers<Elf: FileHeader>(
-    p: &mut Printer<impl Write>,
+    p: &mut Printer<'_>,
     endian: Elf::Endian,
     data: &[u8],
     elf: &Elf,
@@ -278,7 +274,7 @@ fn print_section_headers<Elf: FileHeader>(
 }
 
 fn print_section_symbols<Elf: FileHeader>(
-    p: &mut Printer<impl Write>,
+    p: &mut Printer<'_>,
     endian: Elf::Endian,
     data: &[u8],
     elf: &Elf,
@@ -368,7 +364,7 @@ fn print_section_symbols<Elf: FileHeader>(
 }
 
 fn print_section_rel<Elf: FileHeader>(
-    p: &mut Printer<impl Write>,
+    p: &mut Printer<'_>,
     endian: Elf::Endian,
     data: &[u8],
     elf: &Elf,
@@ -390,7 +386,7 @@ fn print_section_rel<Elf: FileHeader>(
 }
 
 fn print_section_rela<Elf: FileHeader>(
-    p: &mut Printer<impl Write>,
+    p: &mut Printer<'_>,
     endian: Elf::Endian,
     data: &[u8],
     elf: &Elf,
@@ -462,7 +458,7 @@ fn rel_flag_type<Elf: FileHeader>(endian: Elf::Endian, elf: &Elf) -> &'static [F
 }
 
 fn print_section_notes<Elf: FileHeader>(
-    p: &mut Printer<impl Write>,
+    p: &mut Printer<'_>,
     endian: Elf::Endian,
     data: &[u8],
     _elf: &Elf,
@@ -474,7 +470,7 @@ fn print_section_notes<Elf: FileHeader>(
 }
 
 fn print_section_dynamic<Elf: FileHeader>(
-    p: &mut Printer<impl Write>,
+    p: &mut Printer<'_>,
     endian: Elf::Endian,
     data: &[u8],
     elf: &Elf,
@@ -490,7 +486,7 @@ fn print_section_dynamic<Elf: FileHeader>(
 }
 
 fn print_section_group<Elf: FileHeader>(
-    p: &mut Printer<impl Write>,
+    p: &mut Printer<'_>,
     endian: Elf::Endian,
     data: &[u8],
     _elf: &Elf,
@@ -519,7 +515,7 @@ fn print_section_group<Elf: FileHeader>(
 }
 
 fn print_notes<Elf: FileHeader>(
-    p: &mut Printer<impl Write>,
+    p: &mut Printer<'_>,
     endian: Elf::Endian,
     mut notes: NoteIterator<Elf>,
 ) {
@@ -545,7 +541,7 @@ fn print_notes<Elf: FileHeader>(
 }
 
 fn print_dynamic<Elf: FileHeader>(
-    p: &mut Printer<impl Write>,
+    p: &mut Printer<'_>,
     endian: Elf::Endian,
     elf: &Elf,
     dynamic: &[Elf::Dyn],
@@ -593,7 +589,7 @@ fn print_dynamic<Elf: FileHeader>(
 }
 
 fn print_hash<Elf: FileHeader>(
-    p: &mut Printer<impl Write>,
+    p: &mut Printer<'_>,
     endian: Elf::Endian,
     data: &[u8],
     _elf: &Elf,
@@ -631,7 +627,7 @@ fn print_hash<Elf: FileHeader>(
 }
 
 fn print_gnu_hash<Elf: FileHeader>(
-    p: &mut Printer<impl Write>,
+    p: &mut Printer<'_>,
     endian: Elf::Endian,
     data: &[u8],
     _elf: &Elf,
@@ -673,7 +669,7 @@ fn print_gnu_hash<Elf: FileHeader>(
 }
 
 fn print_gnu_verdef<Elf: FileHeader>(
-    p: &mut Printer<impl Write>,
+    p: &mut Printer<'_>,
     endian: Elf::Endian,
     data: &[u8],
     _elf: &Elf,
@@ -710,7 +706,7 @@ fn print_gnu_verdef<Elf: FileHeader>(
 }
 
 fn print_gnu_verneed<Elf: FileHeader>(
-    p: &mut Printer<impl Write>,
+    p: &mut Printer<'_>,
     endian: Elf::Endian,
     data: &[u8],
     _elf: &Elf,
@@ -752,7 +748,7 @@ fn print_gnu_verneed<Elf: FileHeader>(
 }
 
 fn print_gnu_versym<Elf: FileHeader>(
-    p: &mut Printer<impl Write>,
+    p: &mut Printer<'_>,
     endian: Elf::Endian,
     data: &[u8],
     _elf: &Elf,

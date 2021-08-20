@@ -3,7 +3,7 @@ use object::macho::*;
 use object::read::macho::*;
 use object::BigEndian;
 
-pub(super) fn print_dyld_cache(p: &mut Printer<impl Write>, data: &[u8]) {
+pub(super) fn print_dyld_cache(p: &mut Printer<'_>, data: &[u8]) {
     if let Ok(header) = DyldCacheHeader::<Endianness>::parse(data) {
         if let Ok((_, endian)) = header.parse_magic() {
             print_dyld_cache_header(p, endian, header);
@@ -19,7 +19,7 @@ pub(super) fn print_dyld_cache(p: &mut Printer<impl Write>, data: &[u8]) {
 }
 
 pub(super) fn print_dyld_cache_header(
-    p: &mut Printer<impl Write>,
+    p: &mut Printer<'_>,
     endian: Endianness,
     header: &DyldCacheHeader<Endianness>,
 ) {
@@ -34,7 +34,7 @@ pub(super) fn print_dyld_cache_header(
 }
 
 pub(super) fn print_dyld_cache_mappings(
-    p: &mut Printer<impl Write>,
+    p: &mut Printer<'_>,
     endian: Endianness,
     mappings: &[DyldCacheMappingInfo<Endianness>],
 ) {
@@ -52,7 +52,7 @@ pub(super) fn print_dyld_cache_mappings(
 }
 
 pub(super) fn print_dyld_cache_images(
-    p: &mut Printer<impl Write>,
+    p: &mut Printer<'_>,
     endian: Endianness,
     data: &[u8],
     mappings: Option<&[DyldCacheMappingInfo<Endianness>]>,
@@ -79,9 +79,9 @@ pub(super) fn print_dyld_cache_images(
     }
 }
 
-pub(super) fn print_macho_fat32(p: &mut Printer<impl Write>, data: &[u8]) {
+pub(super) fn print_macho_fat32(p: &mut Printer<'_>, data: &[u8]) {
     if let Ok(arches) = FatHeader::parse_arch32(data) {
-        println!("Format: Mach-O Fat 32-bit");
+        writeln!(p.w(), "Format: Mach-O Fat 32-bit").unwrap();
         print_fat_header(p, data);
         for arch in arches {
             print_fat_arch(p, arch);
@@ -95,9 +95,9 @@ pub(super) fn print_macho_fat32(p: &mut Printer<impl Write>, data: &[u8]) {
     }
 }
 
-pub(super) fn print_macho_fat64(p: &mut Printer<impl Write>, data: &[u8]) {
+pub(super) fn print_macho_fat64(p: &mut Printer<'_>, data: &[u8]) {
     if let Ok(arches) = FatHeader::parse_arch64(data) {
-        println!("Format: Mach-O Fat 64-bit");
+        writeln!(p.w(), "Format: Mach-O Fat 64-bit").unwrap();
         print_fat_header(p, data);
         for arch in arches {
             print_fat_arch(p, arch);
@@ -111,7 +111,7 @@ pub(super) fn print_macho_fat64(p: &mut Printer<impl Write>, data: &[u8]) {
     }
 }
 
-pub(super) fn print_fat_header(p: &mut Printer<impl Write>, data: &[u8]) {
+pub(super) fn print_fat_header(p: &mut Printer<'_>, data: &[u8]) {
     if let Ok(header) = FatHeader::parse(data) {
         p.group("FatHeader", |p| {
             p.field_hex("Magic", header.magic.get(BigEndian));
@@ -120,7 +120,7 @@ pub(super) fn print_fat_header(p: &mut Printer<impl Write>, data: &[u8]) {
     }
 }
 
-pub(super) fn print_fat_arch<Arch: FatArch>(p: &mut Printer<impl Write>, arch: &Arch) {
+pub(super) fn print_fat_arch<Arch: FatArch>(p: &mut Printer<'_>, arch: &Arch) {
     p.group("FatArch", |p| {
         print_cputype(p, arch.cputype(), arch.cpusubtype());
         p.field_hex("Offset", arch.offset().into());
@@ -129,16 +129,16 @@ pub(super) fn print_fat_arch<Arch: FatArch>(p: &mut Printer<impl Write>, arch: &
     });
 }
 
-pub(super) fn print_macho32(p: &mut Printer<impl Write>, data: &[u8], offset: u64) {
+pub(super) fn print_macho32(p: &mut Printer<'_>, data: &[u8], offset: u64) {
     if let Ok(header) = MachHeader32::parse(data, offset) {
-        println!("Format: Mach-O 32-bit");
+        writeln!(p.w(), "Format: Mach-O 32-bit").unwrap();
         print_macho(p, header, data, offset);
     }
 }
 
-pub(super) fn print_macho64(p: &mut Printer<impl Write>, data: &[u8], offset: u64) {
+pub(super) fn print_macho64(p: &mut Printer<'_>, data: &[u8], offset: u64) {
     if let Ok(header) = MachHeader64::parse(data, offset) {
-        println!("Format: Mach-O 64-bit");
+        writeln!(p.w(), "Format: Mach-O 64-bit").unwrap();
         print_macho(p, header, data, offset);
     }
 }
@@ -149,7 +149,7 @@ struct MachState {
 }
 
 fn print_macho<Mach: MachHeader<Endian = Endianness>>(
-    p: &mut Printer<impl Write>,
+    p: &mut Printer<'_>,
     header: &Mach,
     data: &[u8],
     offset: u64,
@@ -165,11 +165,7 @@ fn print_macho<Mach: MachHeader<Endian = Endianness>>(
     }
 }
 
-fn print_mach_header<Mach: MachHeader>(
-    p: &mut Printer<impl Write>,
-    endian: Mach::Endian,
-    header: &Mach,
-) {
+fn print_mach_header<Mach: MachHeader>(p: &mut Printer<'_>, endian: Mach::Endian, header: &Mach) {
     p.group("MachHeader", |p| {
         p.field_hex("Magic", header.magic().to_be());
         print_cputype(p, header.cputype(endian), header.cpusubtype(endian));
@@ -181,7 +177,7 @@ fn print_mach_header<Mach: MachHeader>(
 }
 
 fn print_load_command<Mach: MachHeader>(
-    p: &mut Printer<impl Write>,
+    p: &mut Printer<'_>,
     endian: Mach::Endian,
     data: &[u8],
     header: &Mach,
@@ -213,7 +209,7 @@ fn print_load_command<Mach: MachHeader>(
                 );
             }
             LoadCommandVariant::Symtab(symtab) => {
-                print_symtab::<Mach, _>(p, endian, data, symtab);
+                print_symtab::<Mach>(p, endian, data, symtab);
             }
             LoadCommandVariant::Thread(x, _thread_data) => {
                 p.group("ThreadCommand", |p| {
@@ -525,7 +521,7 @@ fn print_load_command<Mach: MachHeader>(
 }
 
 fn print_segment<S: Segment>(
-    p: &mut Printer<impl Write>,
+    p: &mut Printer<'_>,
     endian: S::Endian,
     data: &[u8],
     cputype: u32,
@@ -557,7 +553,7 @@ fn print_segment<S: Segment>(
 }
 
 fn print_section<S: Section>(
-    p: &mut Printer<impl Write>,
+    p: &mut Printer<'_>,
     endian: S::Endian,
     data: &[u8],
     cputype: u32,
@@ -623,8 +619,8 @@ fn print_section<S: Section>(
     });
 }
 
-fn print_symtab<Mach: MachHeader, W: Write>(
-    p: &mut Printer<W>,
+fn print_symtab<Mach: MachHeader>(
+    p: &mut Printer<'_>,
     endian: Mach::Endian,
     data: &[u8],
     symtab: &SymtabCommand<Mach::Endian>,
@@ -672,7 +668,7 @@ fn print_symtab<Mach: MachHeader, W: Write>(
     });
 }
 
-fn print_cputype(p: &mut Printer<impl Write>, cputype: u32, cpusubtype: u32) {
+fn print_cputype(p: &mut Printer<'_>, cputype: u32, cpusubtype: u32) {
     let proc = match cputype {
         CPU_TYPE_ANY => FLAGS_CPU_SUBTYPE_ANY,
         CPU_TYPE_VAX => FLAGS_CPU_SUBTYPE_VAX,

@@ -3,10 +3,10 @@ use object::pe::*;
 use object::read::pe::*;
 use object::LittleEndian as LE;
 
-pub(super) fn print_coff(p: &mut Printer<impl Write>, data: &[u8]) {
+pub(super) fn print_coff(p: &mut Printer<'_>, data: &[u8]) {
     let mut offset = 0;
     if let Ok(header) = ImageFileHeader::parse(data, &mut offset) {
-        println!("Format: COFF");
+        writeln!(p.w(), "Format: COFF").unwrap();
         print_file(p, header);
         let sections = header.sections(data, offset).ok();
         let symbols = header.symbols(data).ok();
@@ -19,17 +19,17 @@ pub(super) fn print_coff(p: &mut Printer<impl Write>, data: &[u8]) {
     }
 }
 
-pub(super) fn print_pe32(p: &mut Printer<impl Write>, data: &[u8]) {
-    println!("Format: PE 32-bit");
-    print_pe::<ImageNtHeaders32, _>(p, data);
+pub(super) fn print_pe32(p: &mut Printer<'_>, data: &[u8]) {
+    writeln!(p.w(), "Format: PE 32-bit").unwrap();
+    print_pe::<ImageNtHeaders32>(p, data);
 }
 
-pub(super) fn print_pe64(p: &mut Printer<impl Write>, data: &[u8]) {
-    println!("Format: PE 64-bit");
-    print_pe::<ImageNtHeaders64, _>(p, data);
+pub(super) fn print_pe64(p: &mut Printer<'_>, data: &[u8]) {
+    writeln!(p.w(), "Format: PE 64-bit").unwrap();
+    print_pe::<ImageNtHeaders64>(p, data);
 }
 
-fn print_pe<Pe: ImageNtHeaders, W: Write>(p: &mut Printer<W>, data: &[u8]) {
+fn print_pe<Pe: ImageNtHeaders>(p: &mut Printer<'_>, data: &[u8]) {
     if let Ok(dos_header) = ImageDosHeader::parse(data) {
         p.group("ImageDosHeader", |p| {
             p.field_hex("Magic", dos_header.e_magic.get(LE));
@@ -80,7 +80,7 @@ fn print_pe<Pe: ImageNtHeaders, W: Write>(p: &mut Printer<W>, data: &[u8]) {
                             print_export_dir(p, data, &sections, dir);
                         }
                         IMAGE_DIRECTORY_ENTRY_IMPORT => {
-                            print_import_dir::<Pe, _>(p, data, &sections, dir);
+                            print_import_dir::<Pe>(p, data, &sections, dir);
                         }
                         // TODO
                         _ => {}
@@ -91,7 +91,7 @@ fn print_pe<Pe: ImageNtHeaders, W: Write>(p: &mut Printer<W>, data: &[u8]) {
     }
 }
 
-fn print_file(p: &mut Printer<impl Write>, header: &ImageFileHeader) {
+fn print_file(p: &mut Printer<'_>, header: &ImageFileHeader) {
     p.group("ImageFileHeader", |p| {
         p.field_enum("Machine", header.machine.get(LE), FLAGS_IMAGE_FILE_MACHINE);
         p.field("NumberOfSections", header.number_of_sections.get(LE));
@@ -110,7 +110,7 @@ fn print_file(p: &mut Printer<impl Write>, header: &ImageFileHeader) {
     });
 }
 
-fn print_optional(p: &mut Printer<impl Write>, header: &impl ImageOptionalHeader) {
+fn print_optional(p: &mut Printer<'_>, header: &impl ImageOptionalHeader) {
     p.group("ImageOptionalHeader", |p| {
         p.field_hex("Magic", header.magic());
         p.field("MajorLinkerVersion", header.major_linker_version());
@@ -158,7 +158,7 @@ fn print_optional(p: &mut Printer<impl Write>, header: &impl ImageOptionalHeader
 }
 
 fn print_export_dir(
-    p: &mut Printer<impl Write>,
+    p: &mut Printer<'_>,
     data: &[u8],
     sections: &SectionTable,
     dir: &ImageDataDirectory,
@@ -228,8 +228,8 @@ fn print_export_dir(
     Some(())
 }
 
-fn print_import_dir<Pe: ImageNtHeaders, W: Write>(
-    p: &mut Printer<W>,
+fn print_import_dir<Pe: ImageNtHeaders>(
+    p: &mut Printer<'_>,
     data: &[u8],
     sections: &SectionTable,
     dir: &ImageDataDirectory,
@@ -277,7 +277,7 @@ fn print_import_dir<Pe: ImageNtHeaders, W: Write>(
 }
 
 fn print_sections(
-    p: &mut Printer<impl Write>,
+    p: &mut Printer<'_>,
     data: &[u8],
     machine: u16,
     symbols: Option<&SymbolTable>,
@@ -371,11 +371,7 @@ fn print_sections(
     }
 }
 
-fn print_symbols(
-    p: &mut Printer<impl Write>,
-    sections: Option<&SectionTable>,
-    symbols: &SymbolTable,
-) {
+fn print_symbols(p: &mut Printer<'_>, sections: Option<&SectionTable>, symbols: &SymbolTable) {
     for (index, symbol) in symbols.iter() {
         p.group("ImageSymbol", |p| {
             p.field("Index", index);

@@ -32,6 +32,6 @@ fn main() {
         };
 
         let stdout = io::stdout();
-        readobj::print(stdout.lock(), &*file);
+        readobj::print(&mut stdout.lock(), &*file);
     }
 }
