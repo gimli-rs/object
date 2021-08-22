@@ -7,6 +7,9 @@ edition = "2018"
 memmap2 = "0.3"
 object = { path = "../..", default-features = false }
 
+[dev-dependencies]
+glob = "0.3"
+
 [features]
 read = ["object/read"]
 default = ["read"]

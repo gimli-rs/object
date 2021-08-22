@@ -1,0 +1,1761 @@
+Format: ELF 64-bit
+FileHeader {
+    Ident {
+        Magic: [7F, 45, 4C, 46]
+        Class: ELFCLASS64 (0x2)
+        Data: ELFDATA2LSB (0x1)
+        Version: EV_CURRENT (0x1)
+        OsAbi: ELFOSABI_SYSV (0x0)
+        AbiVersion: 0x0
+        Unused: [0, 0, 0, 0, 0, 0, 0]
+    }
+    Type: ET_EXEC (0x2)
+    Machine: EM_MIPS (0x8)
+    Version: EV_CURRENT (0x1)
+    Type: ET_EXEC (0x2)
+    Entry: 0x120000900
+    ProgramHeaderOffset: 0x40
+    SectionHeaderOffset: 0x1C50
+    Flags: 0x80000007
+        EF_MIPS_NOREORDER (0x1)
+        EF_MIPS_PIC (0x2)
+        EF_MIPS_CPIC (0x4)
+        EF_MIPS_ARCH_64R2 (0x80000000)
+    HeaderSize: 0x40
+    ProgramHeaderEntrySize: 0x38
+    ProgramHeaderCount: 10
+    SectionHeaderEntrySize: 0x40
+    SectionHeaderCount: 31
+    SectionHeaderStringTableIndex: 30
+}
+ProgramHeader {
+    Type: PT_PHDR (0x6)
+    Offset: 0x40
+    VirtualAddress: 0x120000040
+    PhysicalAddress: 0x120000040
+    FileSize: 0x230
+    MemorySize: 0x230
+    Flags: 0x4
+        PF_R (0x4)
+    Align: 0x8
+}
+ProgramHeader {
+    Type: PT_INTERP (0x3)
+    Offset: 0xD00
+    VirtualAddress: 0x120000D00
+    PhysicalAddress: 0x120000D00
+    FileSize: 0xF
+    MemorySize: 0xF
+    Flags: 0x4
+        PF_R (0x4)
+    Align: 0x1
+}
+ProgramHeader {
+    Type: PT_MIPS_ABIFLAGS (0x70000003)
+    Offset: 0x270
+    VirtualAddress: 0x120000270
+    PhysicalAddress: 0x120000270
+    FileSize: 0x18
+    MemorySize: 0x18
+    Flags: 0x4
+        PF_R (0x4)
+    Align: 0x8
+}
+ProgramHeader {
+    Type: PT_LOAD (0x1)
+    Offset: 0x0
+    VirtualAddress: 0x120000000
+    PhysicalAddress: 0x120000000
+    FileSize: 0xD34
+    MemorySize: 0xD34
+    Flags: 0x5
+        PF_X (0x1)
+        PF_R (0x4)
+    Align: 0x10000
+}
+ProgramHeader {
+    Type: PT_LOAD (0x1)
+    Offset: 0xFE0
+    VirtualAddress: 0x120010FE0
+    PhysicalAddress: 0x120010FE0
+    FileSize: 0x100
+    MemorySize: 0x110
+    Flags: 0x6
+        PF_W (0x2)
+        PF_R (0x4)
+    Align: 0x10000
+}
+ProgramHeader {
+    Type: PT_DYNAMIC (0x2)
+    Offset: 0x440
+    VirtualAddress: 0x120000440
+    PhysicalAddress: 0x120000440
+    FileSize: 0x1C0
+    MemorySize: 0x1C0
+    Flags: 0x4
+        PF_R (0x4)
+    Align: 0x8
+    Dynamic {
+        Tag: DT_NEEDED (0x1)
+        Value: "libc.so.6" (0x1)
+    }
+    Dynamic {
+        Tag: DT_INIT (0xC)
+        Value: 0x120000878
+    }
+    Dynamic {
+        Tag: DT_FINI (0xD)
+        Value: 0x120000C90
+    }
+    Dynamic {
+        Tag: DT_HASH (0x4)
+        Value: 0x120000600
+    }
+    Dynamic {
+        Tag: DT_STRTAB (0x5)
+        Value: 0x120000780
+    }
+    Dynamic {
+        Tag: DT_SYMTAB (0x6)
+        Value: 0x120000648
+    }
+    Dynamic {
+        Tag: DT_STRSZ (0xA)
+        Value: 0xBD
+    }
+    Dynamic {
+        Tag: DT_SYMENT (0xB)
+        Value: 0x18
+    }
+    Dynamic {
+        Tag: DT_MIPS_RLD_MAP (0x70000016)
+        Value: 0x120011010
+    }
+    Dynamic {
+        Tag: DT_MIPS_RLD_MAP_REL (0x70000035)
+        Value: 0x10B40
+    }
+    Dynamic {
+        Tag: DT_DEBUG (0x15)
+        Value: 0x0
+    }
+    Dynamic {
+        Tag: DT_PLTGOT (0x3)
+        Value: 0x120011020
+    }
+    Dynamic {
+        Tag: DT_MIPS_RLD_VERSION (0x70000001)
+        Value: 0x1
+    }
+    Dynamic {
+        Tag: DT_MIPS_FLAGS (0x70000005)
+        Value: 0x2
+    }
+    Dynamic {
+        Tag: DT_MIPS_BASE_ADDRESS (0x70000006)
+        Value: 0x120000000
+    }
+    Dynamic {
+        Tag: DT_MIPS_LOCAL_GOTNO (0x7000000A)
+        Value: 0x12
+    }
+    Dynamic {
+        Tag: DT_MIPS_SYMTABNO (0x70000011)
+        Value: 0xD
+    }
+    Dynamic {
+        Tag: DT_MIPS_UNREFEXTNO (0x70000012)
+        Value: 0x1C
+    }
+    Dynamic {
+        Tag: DT_MIPS_GOTSYM (0x70000013)
+        Value: 0x8
+    }
+    Dynamic {
+        Tag: DT_VERNEED (0x6FFFFFFE)
+        Value: 0x120000858
+    }
+    Dynamic {
+        Tag: DT_VERNEEDNUM (0x6FFFFFFF)
+        Value: 0x1
+    }
+    Dynamic {
+        Tag: DT_VERSYM (0x6FFFFFF0)
+        Value: 0x12000083E
+    }
+    Dynamic {
+        Tag: DT_NULL (0x0)
+        Value: 0x0
+    }
+}
+ProgramHeader {
+    Type: PT_NOTE (0x4)
+    Offset: 0x418
+    VirtualAddress: 0x120000418
+    PhysicalAddress: 0x120000418
+    FileSize: 0x24
+    MemorySize: 0x24
+    Flags: 0x4
+        PF_R (0x4)
+    Align: 0x4
+    Note {
+        Name: "GNU" (0x4)
+        Type: NT_GNU_BUILD_ID (0x3)
+        Desc: [B0, 22, E3, 1D, E3, 3C, FC, 18, A5, 3D, E, 97, 37, 4F, 49, F0, F3, 2F, 7D, 65]
+    }
+}
+ProgramHeader {
+    Type: PT_NOTE (0x4)
+    Offset: 0xD14
+    VirtualAddress: 0x120000D14
+    PhysicalAddress: 0x120000D14
+    FileSize: 0x20
+    MemorySize: 0x20
+    Flags: 0x4
+        PF_R (0x4)
+    Align: 0x4
+    Note {
+        Name: "GNU" (0x4)
+        Type: NT_GNU_ABI_TAG (0x1)
+        Desc: [0, 0, 0, 0, 3, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0]
+    }
+}
+ProgramHeader {
+    Type: PT_GNU_RELRO (0x6474E552)
+    Offset: 0xFE0
+    VirtualAddress: 0x120010FE0
+    PhysicalAddress: 0x120010FE0
+    FileSize: 0x20
+    MemorySize: 0x20
+    Flags: 0x4
+        PF_R (0x4)
+    Align: 0x1
+}
+ProgramHeader {
+    Type: PT_NULL (0x0)
+    Offset: 0x0
+    VirtualAddress: 0x0
+    PhysicalAddress: 0x0
+    FileSize: 0x0
+    MemorySize: 0x0
+    Flags: 0x0
+    Align: 0x8
+}
+SectionHeader {
+    Index: 0
+    Name: "" (0x0)
+    Type: SHT_NULL (0x0)
+    Flags: 0x0
+    Address: 0x0
+    Offset: 0x0
+    Size: 0x0
+    Link: 0
+    Info: 0
+    AddressAlign: 0x0
+    EntrySize: 0x0
+}
+SectionHeader {
+    Index: 1
+    Name: ".MIPS.abiflags" (0x1B)
+    Type: 0x7000002A
+    Flags: 0x2
+        SHF_ALLOC (0x2)
+    Address: 0x120000270
+    Offset: 0x270
+    Size: 0x18
+    Link: 0
+    Info: 0
+    AddressAlign: 0x8
+    EntrySize: 0x18
+}
+SectionHeader {
+    Index: 2
+    Name: ".MIPS.options" (0x2A)
+    Type: SHT_MIPS_OPTIONS (0x7000000D)
+    Flags: 0x8000002
+        SHF_ALLOC (0x2)
+        SHF_MIPS_NOSTRIP (0x8000000)
+    Address: 0x120000288
+    Offset: 0x288
+    Size: 0x190
+    Link: 0
+    Info: 0
+    AddressAlign: 0x8
+    EntrySize: 0x1
+}
+SectionHeader {
+    Index: 3
+    Name: ".note.gnu.build-id" (0x38)
+    Type: SHT_NOTE (0x7)
+    Flags: 0x2
+        SHF_ALLOC (0x2)
+    Address: 0x120000418
+    Offset: 0x418
+    Size: 0x24
+    Link: 0
+    Info: 0
+    AddressAlign: 0x4
+    EntrySize: 0x0
+    Note {
+        Name: "GNU" (0x4)
+        Type: NT_GNU_BUILD_ID (0x3)
+        Desc: [B0, 22, E3, 1D, E3, 3C, FC, 18, A5, 3D, E, 97, 37, 4F, 49, F0, F3, 2F, 7D, 65]
+    }
+}
+SectionHeader {
+    Index: 4
+    Name: ".dynamic" (0x4B)
+    Type: SHT_DYNAMIC (0x6)
+    Flags: 0x2
+        SHF_ALLOC (0x2)
+    Address: 0x120000440
+    Offset: 0x440
+    Size: 0x1C0
+    Link: 7
+    Info: 0
+    AddressAlign: 0x8
+    EntrySize: 0x10
+    Dynamic {
+        Tag: DT_NEEDED (0x1)
+        Value: "libc.so.6" (0x1)
+    }
+    Dynamic {
+        Tag: DT_INIT (0xC)
+        Value: 0x120000878
+    }
+    Dynamic {
+        Tag: DT_FINI (0xD)
+        Value: 0x120000C90
+    }
+    Dynamic {
+        Tag: DT_HASH (0x4)
+        Value: 0x120000600
+    }
+    Dynamic {
+        Tag: DT_STRTAB (0x5)
+        Value: 0x120000780
+    }
+    Dynamic {
+        Tag: DT_SYMTAB (0x6)
+        Value: 0x120000648
+    }
+    Dynamic {
+        Tag: DT_STRSZ (0xA)
+        Value: 0xBD
+    }
+    Dynamic {
+        Tag: DT_SYMENT (0xB)
+        Value: 0x18
+    }
+    Dynamic {
+        Tag: DT_MIPS_RLD_MAP (0x70000016)
+        Value: 0x120011010
+    }
+    Dynamic {
+        Tag: DT_MIPS_RLD_MAP_REL (0x70000035)
+        Value: 0x10B40
+    }
+    Dynamic {
+        Tag: DT_DEBUG (0x15)
+        Value: 0x0
+    }
+    Dynamic {
+        Tag: DT_PLTGOT (0x3)
+        Value: 0x120011020
+    }
+    Dynamic {
+        Tag: DT_MIPS_RLD_VERSION (0x70000001)
+        Value: 0x1
+    }
+    Dynamic {
+        Tag: DT_MIPS_FLAGS (0x70000005)
+        Value: 0x2
+    }
+    Dynamic {
+        Tag: DT_MIPS_BASE_ADDRESS (0x70000006)
+        Value: 0x120000000
+    }
+    Dynamic {
+        Tag: DT_MIPS_LOCAL_GOTNO (0x7000000A)
+        Value: 0x12
+    }
+    Dynamic {
+        Tag: DT_MIPS_SYMTABNO (0x70000011)
+        Value: 0xD
+    }
+    Dynamic {
+        Tag: DT_MIPS_UNREFEXTNO (0x70000012)
+        Value: 0x1C
+    }
+    Dynamic {
+        Tag: DT_MIPS_GOTSYM (0x70000013)
+        Value: 0x8
+    }
+    Dynamic {
+        Tag: DT_VERNEED (0x6FFFFFFE)
+        Value: 0x120000858
+    }
+    Dynamic {
+        Tag: DT_VERNEEDNUM (0x6FFFFFFF)
+        Value: 0x1
+    }
+    Dynamic {
+        Tag: DT_VERSYM (0x6FFFFFF0)
+        Value: 0x12000083E
+    }
+    Dynamic {
+        Tag: DT_NULL (0x0)
+        Value: 0x0
+    }
+}
+SectionHeader {
+    Index: 5
+    Name: ".hash" (0x54)
+    Type: SHT_HASH (0x5)
+    Flags: 0x2
+        SHF_ALLOC (0x2)
+    Address: 0x120000600
+    Offset: 0x600
+    Size: 0x48
+    Link: 6
+    Info: 0
+    AddressAlign: 0x8
+    EntrySize: 0x4
+    Hash {
+        BucketCount: 3
+        ChainCount: 13
+    }
+}
+SectionHeader {
+    Index: 6
+    Name: ".dynsym" (0x5A)
+    Type: SHT_DYNSYM (0xB)
+    Flags: 0x2
+        SHF_ALLOC (0x2)
+    Address: 0x120000648
+    Offset: 0x648
+    Size: 0x138
+    Link: 7
+    Info: 1
+    AddressAlign: 0x8
+    EntrySize: 0x18
+    Symbol {
+        Index: 0
+        Name: "" (0x0)
+        Version: VER_NDX_LOCAL (0x0)
+        Value: 0x0
+        Size: 0x0
+        Type: STT_NOTYPE (0x0)
+        Bind: STB_LOCAL (0x0)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: SHN_UNDEF (0x0)
+    }
+    Symbol {
+        Index: 1
+        Name: "__libc_csu_fini" (0x5E)
+        Version: VER_NDX_GLOBAL (0x1)
+        Value: 0x120000BE8
+        Size: 0x8
+        Type: STT_FUNC (0x2)
+        Bind: STB_GLOBAL (0x1)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: 11
+    }
+    Symbol {
+        Index: 2
+        Name: "_DYNAMIC_LINKING" (0x12)
+        Version: VER_NDX_GLOBAL (0x1)
+        Value: 0x1
+        Size: 0x0
+        Type: STT_SECTION (0x3)
+        Bind: STB_GLOBAL (0x1)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: SHN_ABS (0xFFF1)
+    }
+    Symbol {
+        Index: 3
+        Name: "_IO_stdin_used" (0x3F)
+        Version: VER_NDX_GLOBAL (0x1)
+        Value: 0x120000CE0
+        Size: 0x4
+        Type: STT_OBJECT (0x1)
+        Bind: STB_GLOBAL (0x1)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: 14
+    }
+    Symbol {
+        Index: 4
+        Name: "__RLD_MAP" (0x23)
+        Version: VER_NDX_GLOBAL (0x1)
+        Value: 0x120011010
+        Size: 0x0
+        Type: STT_OBJECT (0x1)
+        Bind: STB_GLOBAL (0x1)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: 21
+    }
+    Symbol {
+        Index: 5
+        Name: "__libc_csu_init" (0x4E)
+        Version: VER_NDX_GLOBAL (0x1)
+        Value: 0x120000B40
+        Size: 0xA8
+        Type: STT_FUNC (0x2)
+        Bind: STB_GLOBAL (0x1)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: 11
+    }
+    Symbol {
+        Index: 6
+        Name: "main" (0x3A)
+        Version: VER_NDX_GLOBAL (0x1)
+        Value: 0x120000AE0
+        Size: 0x58
+        Type: STT_FUNC (0x2)
+        Bind: STB_GLOBAL (0x1)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: 11
+    }
+    Symbol {
+        Index: 7
+        Name: "_init" (0x58)
+        Version: VER_NDX_GLOBAL (0x1)
+        Value: 0x120000878
+        Size: 0x0
+        Type: STT_FUNC (0x2)
+        Bind: STB_GLOBAL (0x1)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: 10
+    }
+    Symbol {
+        Index: 8
+        Name: "_ITM_registerTMCloneTable" (0x99)
+        Version: VER_NDX_LOCAL (0x0)
+        Value: 0x0
+        Size: 0x0
+        Type: STT_NOTYPE (0x0)
+        Bind: STB_WEAK (0x2)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: SHN_UNDEF (0x0)
+    }
+    Symbol {
+        Index: 9
+        Name: "__libc_start_main" (0x2D)
+        Version: "GLIBC_2.0" (0x2)
+        Value: 0x120000C70
+        Size: 0x0
+        Type: STT_FUNC (0x2)
+        Bind: STB_GLOBAL (0x1)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: SHN_UNDEF (0x0)
+    }
+    Symbol {
+        Index: 10
+        Name: "__gmon_start__" (0x6E)
+        Version: VER_NDX_LOCAL (0x0)
+        Value: 0x0
+        Size: 0x0
+        Type: STT_FUNC (0x2)
+        Bind: STB_WEAK (0x2)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: SHN_UNDEF (0x0)
+    }
+    Symbol {
+        Index: 11
+        Name: "printf" (0xB)
+        Version: "GLIBC_2.0" (0x2)
+        Value: 0x120000C60
+        Size: 0x0
+        Type: STT_FUNC (0x2)
+        Bind: STB_GLOBAL (0x1)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: SHN_UNDEF (0x0)
+    }
+    Symbol {
+        Index: 12
+        Name: "_ITM_deregisterTMCloneTable" (0x7D)
+        Version: VER_NDX_LOCAL (0x0)
+        Value: 0x0
+        Size: 0x0
+        Type: STT_NOTYPE (0x0)
+        Bind: STB_WEAK (0x2)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: SHN_UNDEF (0x0)
+    }
+}
+SectionHeader {
+    Index: 7
+    Name: ".dynstr" (0x62)
+    Type: SHT_STRTAB (0x3)
+    Flags: 0x2
+        SHF_ALLOC (0x2)
+    Address: 0x120000780
+    Offset: 0x780
+    Size: 0xBD
+    Link: 0
+    Info: 0
+    AddressAlign: 0x1
+    EntrySize: 0x0
+}
+SectionHeader {
+    Index: 8
+    Name: ".gnu.version" (0x6A)
+    Type: SHT_GNU_VERSYM (0x6FFFFFFF)
+    Flags: 0x2
+        SHF_ALLOC (0x2)
+    Address: 0x12000083E
+    Offset: 0x83E
+    Size: 0x1A
+    Link: 6
+    Info: 0
+    AddressAlign: 0x2
+    EntrySize: 0x2
+    VersionSymbol {
+        Index: 0
+        Version: VER_NDX_LOCAL (0x0)
+    }
+    VersionSymbol {
+        Index: 1
+        Version: VER_NDX_GLOBAL (0x1)
+    }
+    VersionSymbol {
+        Index: 2
+        Version: VER_NDX_GLOBAL (0x1)
+    }
+    VersionSymbol {
+        Index: 3
+        Version: VER_NDX_GLOBAL (0x1)
+    }
+    VersionSymbol {
+        Index: 4
+        Version: VER_NDX_GLOBAL (0x1)
+    }
+    VersionSymbol {
+        Index: 5
+        Version: VER_NDX_GLOBAL (0x1)
+    }
+    VersionSymbol {
+        Index: 6
+        Version: VER_NDX_GLOBAL (0x1)
+    }
+    VersionSymbol {
+        Index: 7
+        Version: VER_NDX_GLOBAL (0x1)
+    }
+    VersionSymbol {
+        Index: 8
+        Version: VER_NDX_LOCAL (0x0)
+    }
+    VersionSymbol {
+        Index: 9
+        Version: "GLIBC_2.0" (0x2)
+    }
+    VersionSymbol {
+        Index: 10
+        Version: VER_NDX_LOCAL (0x0)
+    }
+    VersionSymbol {
+        Index: 11
+        Version: "GLIBC_2.0" (0x2)
+    }
+    VersionSymbol {
+        Index: 12
+        Version: VER_NDX_LOCAL (0x0)
+    }
+}
+SectionHeader {
+    Index: 9
+    Name: ".gnu.version_r" (0x77)
+    Type: SHT_GNU_VERNEED (0x6FFFFFFE)
+    Flags: 0x2
+        SHF_ALLOC (0x2)
+    Address: 0x120000858
+    Offset: 0x858
+    Size: 0x20
+    Link: 7
+    Info: 1
+    AddressAlign: 0x8
+    EntrySize: 0x0
+    VersionNeed {
+        Version: 1
+        AuxCount: 1
+        Filename: "libc.so.6" (0x1)
+        AuxOffset: 16
+        NextOffset: 0
+        Aux {
+            Hash: 0xD696910
+            Flags: 0x0
+            Index: 2
+            Name: "GLIBC_2.0" (0xB3)
+            NextOffset: 0
+        }
+    }
+}
+SectionHeader {
+    Index: 10
+    Name: ".init" (0x86)
+    Type: SHT_PROGBITS (0x1)
+    Flags: 0x6
+        SHF_ALLOC (0x2)
+        SHF_EXECINSTR (0x4)
+    Address: 0x120000878
+    Offset: 0x878
+    Size: 0x88
+    Link: 0
+    Info: 0
+    AddressAlign: 0x4
+    EntrySize: 0x0
+}
+SectionHeader {
+    Index: 11
+    Name: ".text" (0x8C)
+    Type: SHT_PROGBITS (0x1)
+    Flags: 0x6
+        SHF_ALLOC (0x2)
+        SHF_EXECINSTR (0x4)
+    Address: 0x120000900
+    Offset: 0x900
+    Size: 0x360
+    Link: 0
+    Info: 0
+    AddressAlign: 0x10
+    EntrySize: 0x0
+}
+SectionHeader {
+    Index: 12
+    Name: ".MIPS.stubs" (0x92)
+    Type: SHT_PROGBITS (0x1)
+    Flags: 0x6
+        SHF_ALLOC (0x2)
+        SHF_EXECINSTR (0x4)
+    Address: 0x120000C60
+    Offset: 0xC60
+    Size: 0x30
+    Link: 0
+    Info: 0
+    AddressAlign: 0x8
+    EntrySize: 0x0
+}
+SectionHeader {
+    Index: 13
+    Name: ".fini" (0x9E)
+    Type: SHT_PROGBITS (0x1)
+    Flags: 0x6
+        SHF_ALLOC (0x2)
+        SHF_EXECINSTR (0x4)
+    Address: 0x120000C90
+    Offset: 0xC90
+    Size: 0x4C
+    Link: 0
+    Info: 0
+    AddressAlign: 0x4
+    EntrySize: 0x0
+}
+SectionHeader {
+    Index: 14
+    Name: ".rodata" (0xA4)
+    Type: SHT_PROGBITS (0x1)
+    Flags: 0x2
+        SHF_ALLOC (0x2)
+    Address: 0x120000CE0
+    Offset: 0xCE0
+    Size: 0x20
+    Link: 0
+    Info: 0
+    AddressAlign: 0x10
+    EntrySize: 0x0
+}
+SectionHeader {
+    Index: 15
+    Name: ".interp" (0xAC)
+    Type: SHT_PROGBITS (0x1)
+    Flags: 0x2
+        SHF_ALLOC (0x2)
+    Address: 0x120000D00
+    Offset: 0xD00
+    Size: 0xF
+    Link: 0
+    Info: 0
+    AddressAlign: 0x1
+    EntrySize: 0x0
+}
+SectionHeader {
+    Index: 16
+    Name: ".eh_frame" (0xB4)
+    Type: SHT_PROGBITS (0x1)
+    Flags: 0x2
+        SHF_ALLOC (0x2)
+    Address: 0x120000D10
+    Offset: 0xD10
+    Size: 0x4
+    Link: 0
+    Info: 0
+    AddressAlign: 0x4
+    EntrySize: 0x0
+}
+SectionHeader {
+    Index: 17
+    Name: ".note.ABI-tag" (0xBE)
+    Type: SHT_NOTE (0x7)
+    Flags: 0x2
+        SHF_ALLOC (0x2)
+    Address: 0x120000D14
+    Offset: 0xD14
+    Size: 0x20
+    Link: 0
+    Info: 0
+    AddressAlign: 0x4
+    EntrySize: 0x0
+    Note {
+        Name: "GNU" (0x4)
+        Type: NT_GNU_ABI_TAG (0x1)
+        Desc: [0, 0, 0, 0, 3, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0]
+    }
+}
+SectionHeader {
+    Index: 18
+    Name: ".ctors" (0xCC)
+    Type: SHT_PROGBITS (0x1)
+    Flags: 0x3
+        SHF_WRITE (0x1)
+        SHF_ALLOC (0x2)
+    Address: 0x120010FE0
+    Offset: 0xFE0
+    Size: 0x10
+    Link: 0
+    Info: 0
+    AddressAlign: 0x8
+    EntrySize: 0x0
+}
+SectionHeader {
+    Index: 19
+    Name: ".dtors" (0xD3)
+    Type: SHT_PROGBITS (0x1)
+    Flags: 0x3
+        SHF_WRITE (0x1)
+        SHF_ALLOC (0x2)
+    Address: 0x120010FF0
+    Offset: 0xFF0
+    Size: 0x10
+    Link: 0
+    Info: 0
+    AddressAlign: 0x8
+    EntrySize: 0x0
+}
+SectionHeader {
+    Index: 20
+    Name: ".data" (0xDA)
+    Type: SHT_PROGBITS (0x1)
+    Flags: 0x3
+        SHF_WRITE (0x1)
+        SHF_ALLOC (0x2)
+    Address: 0x120011000
+    Offset: 0x1000
+    Size: 0x10
+    Link: 0
+    Info: 0
+    AddressAlign: 0x10
+    EntrySize: 0x0
+}
+SectionHeader {
+    Index: 21
+    Name: ".rld_map" (0xE0)
+    Type: SHT_PROGBITS (0x1)
+    Flags: 0x3
+        SHF_WRITE (0x1)
+        SHF_ALLOC (0x2)
+    Address: 0x120011010
+    Offset: 0x1010
+    Size: 0x8
+    Link: 0
+    Info: 0
+    AddressAlign: 0x8
+    EntrySize: 0x0
+}
+SectionHeader {
+    Index: 22
+    Name: ".got" (0xE9)
+    Type: SHT_PROGBITS (0x1)
+    Flags: 0x10000003
+        SHF_WRITE (0x1)
+        SHF_ALLOC (0x2)
+        SHF_MIPS_GPREL (0x10000000)
+    Address: 0x120011020
+    Offset: 0x1020
+    Size: 0xB8
+    Link: 0
+    Info: 0
+    AddressAlign: 0x10
+    EntrySize: 0x8
+}
+SectionHeader {
+    Index: 23
+    Name: ".sdata" (0xEE)
+    Type: SHT_PROGBITS (0x1)
+    Flags: 0x10000003
+        SHF_WRITE (0x1)
+        SHF_ALLOC (0x2)
+        SHF_MIPS_GPREL (0x10000000)
+    Address: 0x1200110D8
+    Offset: 0x10D8
+    Size: 0x8
+    Link: 0
+    Info: 0
+    AddressAlign: 0x8
+    EntrySize: 0x0
+}
+SectionHeader {
+    Index: 24
+    Name: ".bss" (0xF5)
+    Type: SHT_NOBITS (0x8)
+    Flags: 0x3
+        SHF_WRITE (0x1)
+        SHF_ALLOC (0x2)
+    Address: 0x1200110E0
+    Offset: 0x10E0
+    Size: 0x10
+    Link: 0
+    Info: 0
+    AddressAlign: 0x10
+    EntrySize: 0x0
+}
+SectionHeader {
+    Index: 25
+    Name: ".comment" (0xFA)
+    Type: SHT_PROGBITS (0x1)
+    Flags: 0x30
+        SHF_MERGE (0x10)
+        SHF_STRINGS (0x20)
+    Address: 0x0
+    Offset: 0x10E0
+    Size: 0x29
+    Link: 0
+    Info: 0
+    AddressAlign: 0x1
+    EntrySize: 0x1
+}
+SectionHeader {
+    Index: 26
+    Name: ".pdr" (0x103)
+    Type: SHT_PROGBITS (0x1)
+    Flags: 0x0
+    Address: 0x0
+    Offset: 0x110C
+    Size: 0x60
+    Link: 0
+    Info: 0
+    AddressAlign: 0x4
+    EntrySize: 0x0
+}
+SectionHeader {
+    Index: 27
+    Name: ".gnu.attributes" (0x108)
+    Type: SHT_GNU_ATTRIBUTES (0x6FFFFFF5)
+    Flags: 0x0
+    Address: 0x0
+    Offset: 0x116C
+    Size: 0x10
+    Link: 0
+    Info: 0
+    AddressAlign: 0x1
+    EntrySize: 0x0
+}
+SectionHeader {
+    Index: 28
+    Name: ".symtab" (0x1)
+    Type: SHT_SYMTAB (0x2)
+    Flags: 0x0
+    Address: 0x0
+    Offset: 0x1180
+    Size: 0x720
+    Link: 29
+    Info: 52
+    AddressAlign: 0x8
+    EntrySize: 0x18
+    Symbol {
+        Index: 0
+        Name: "" (0x0)
+        Value: 0x0
+        Size: 0x0
+        Type: STT_NOTYPE (0x0)
+        Bind: STB_LOCAL (0x0)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: SHN_UNDEF (0x0)
+    }
+    Symbol {
+        Index: 1
+        Name: "" (0x0)
+        Value: 0x120000270
+        Size: 0x0
+        Type: STT_SECTION (0x3)
+        Bind: STB_LOCAL (0x0)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: 1
+    }
+    Symbol {
+        Index: 2
+        Name: "" (0x0)
+        Value: 0x120000288
+        Size: 0x0
+        Type: STT_SECTION (0x3)
+        Bind: STB_LOCAL (0x0)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: 2
+    }
+    Symbol {
+        Index: 3
+        Name: "" (0x0)
+        Value: 0x120000418
+        Size: 0x0
+        Type: STT_SECTION (0x3)
+        Bind: STB_LOCAL (0x0)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: 3
+    }
+    Symbol {
+        Index: 4
+        Name: "" (0x0)
+        Value: 0x120000440
+        Size: 0x0
+        Type: STT_SECTION (0x3)
+        Bind: STB_LOCAL (0x0)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: 4
+    }
+    Symbol {
+        Index: 5
+        Name: "" (0x0)
+        Value: 0x120000600
+        Size: 0x0
+        Type: STT_SECTION (0x3)
+        Bind: STB_LOCAL (0x0)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: 5
+    }
+    Symbol {
+        Index: 6
+        Name: "" (0x0)
+        Value: 0x120000648
+        Size: 0x0
+        Type: STT_SECTION (0x3)
+        Bind: STB_LOCAL (0x0)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: 6
+    }
+    Symbol {
+        Index: 7
+        Name: "" (0x0)
+        Value: 0x120000780
+        Size: 0x0
+        Type: STT_SECTION (0x3)
+        Bind: STB_LOCAL (0x0)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: 7
+    }
+    Symbol {
+        Index: 8
+        Name: "" (0x0)
+        Value: 0x12000083E
+        Size: 0x0
+        Type: STT_SECTION (0x3)
+        Bind: STB_LOCAL (0x0)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: 8
+    }
+    Symbol {
+        Index: 9
+        Name: "" (0x0)
+        Value: 0x120000858
+        Size: 0x0
+        Type: STT_SECTION (0x3)
+        Bind: STB_LOCAL (0x0)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: 9
+    }
+    Symbol {
+        Index: 10
+        Name: "" (0x0)
+        Value: 0x120000878
+        Size: 0x0
+        Type: STT_SECTION (0x3)
+        Bind: STB_LOCAL (0x0)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: 10
+    }
+    Symbol {
+        Index: 11
+        Name: "" (0x0)
+        Value: 0x120000900
+        Size: 0x0
+        Type: STT_SECTION (0x3)
+        Bind: STB_LOCAL (0x0)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: 11
+    }
+    Symbol {
+        Index: 12
+        Name: "" (0x0)
+        Value: 0x120000C60
+        Size: 0x0
+        Type: STT_SECTION (0x3)
+        Bind: STB_LOCAL (0x0)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: 12
+    }
+    Symbol {
+        Index: 13
+        Name: "" (0x0)
+        Value: 0x120000C90
+        Size: 0x0
+        Type: STT_SECTION (0x3)
+        Bind: STB_LOCAL (0x0)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: 13
+    }
+    Symbol {
+        Index: 14
+        Name: "" (0x0)
+        Value: 0x120000CE0
+        Size: 0x0
+        Type: STT_SECTION (0x3)
+        Bind: STB_LOCAL (0x0)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: 14
+    }
+    Symbol {
+        Index: 15
+        Name: "" (0x0)
+        Value: 0x120000D00
+        Size: 0x0
+        Type: STT_SECTION (0x3)
+        Bind: STB_LOCAL (0x0)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: 15
+    }
+    Symbol {
+        Index: 16
+        Name: "" (0x0)
+        Value: 0x120000D10
+        Size: 0x0
+        Type: STT_SECTION (0x3)
+        Bind: STB_LOCAL (0x0)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: 16
+    }
+    Symbol {
+        Index: 17
+        Name: "" (0x0)
+        Value: 0x120000D14
+        Size: 0x0
+        Type: STT_SECTION (0x3)
+        Bind: STB_LOCAL (0x0)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: 17
+    }
+    Symbol {
+        Index: 18
+        Name: "" (0x0)
+        Value: 0x120010FE0
+        Size: 0x0
+        Type: STT_SECTION (0x3)
+        Bind: STB_LOCAL (0x0)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: 18
+    }
+    Symbol {
+        Index: 19
+        Name: "" (0x0)
+        Value: 0x120010FF0
+        Size: 0x0
+        Type: STT_SECTION (0x3)
+        Bind: STB_LOCAL (0x0)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: 19
+    }
+    Symbol {
+        Index: 20
+        Name: "" (0x0)
+        Value: 0x120011000
+        Size: 0x0
+        Type: STT_SECTION (0x3)
+        Bind: STB_LOCAL (0x0)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: 20
+    }
+    Symbol {
+        Index: 21
+        Name: "" (0x0)
+        Value: 0x120011010
+        Size: 0x0
+        Type: STT_SECTION (0x3)
+        Bind: STB_LOCAL (0x0)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: 21
+    }
+    Symbol {
+        Index: 22
+        Name: "" (0x0)
+        Value: 0x120011020
+        Size: 0x0
+        Type: STT_SECTION (0x3)
+        Bind: STB_LOCAL (0x0)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: 22
+    }
+    Symbol {
+        Index: 23
+        Name: "" (0x0)
+        Value: 0x1200110D8
+        Size: 0x0
+        Type: STT_SECTION (0x3)
+        Bind: STB_LOCAL (0x0)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: 23
+    }
+    Symbol {
+        Index: 24
+        Name: "" (0x0)
+        Value: 0x1200110E0
+        Size: 0x0
+        Type: STT_SECTION (0x3)
+        Bind: STB_LOCAL (0x0)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: 24
+    }
+    Symbol {
+        Index: 25
+        Name: "" (0x0)
+        Value: 0x0
+        Size: 0x0
+        Type: STT_SECTION (0x3)
+        Bind: STB_LOCAL (0x0)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: 25
+    }
+    Symbol {
+        Index: 26
+        Name: "" (0x0)
+        Value: 0x0
+        Size: 0x0
+        Type: STT_SECTION (0x3)
+        Bind: STB_LOCAL (0x0)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: 26
+    }
+    Symbol {
+        Index: 27
+        Name: "" (0x0)
+        Value: 0x0
+        Size: 0x0
+        Type: STT_SECTION (0x3)
+        Bind: STB_LOCAL (0x0)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: 27
+    }
+    Symbol {
+        Index: 28
+        Name: "/usr/lib/gcc-cross/mips64el-linux-gnuabi64/7/../../../../mips64el-linux-gnuabi64/lib/../lib/crt1.o" (0x1)
+        Value: 0x0
+        Size: 0x0
+        Type: STT_FILE (0x4)
+        Bind: STB_LOCAL (0x0)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: SHN_ABS (0xFFF1)
+    }
+    Symbol {
+        Index: 29
+        Name: "hlt" (0x64)
+        Value: 0x120000950
+        Size: 0x0
+        Type: STT_NOTYPE (0x0)
+        Bind: STB_LOCAL (0x0)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: 11
+    }
+    Symbol {
+        Index: 30
+        Name: "crtstuff.c" (0x68)
+        Value: 0x0
+        Size: 0x0
+        Type: STT_FILE (0x4)
+        Bind: STB_LOCAL (0x0)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: SHN_ABS (0xFFF1)
+    }
+    Symbol {
+        Index: 31
+        Name: "__CTOR_LIST__" (0x73)
+        Value: 0x120010FE0
+        Size: 0x0
+        Type: STT_OBJECT (0x1)
+        Bind: STB_LOCAL (0x0)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: 18
+    }
+    Symbol {
+        Index: 32
+        Name: "__DTOR_LIST__" (0x81)
+        Value: 0x120010FF0
+        Size: 0x0
+        Type: STT_OBJECT (0x1)
+        Bind: STB_LOCAL (0x0)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: 19
+    }
+    Symbol {
+        Index: 33
+        Name: "deregister_tm_clones" (0x8F)
+        Value: 0x120000960
+        Size: 0x0
+        Type: STT_FUNC (0x2)
+        Bind: STB_LOCAL (0x0)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: 11
+    }
+    Symbol {
+        Index: 34
+        Name: "register_tm_clones" (0x91)
+        Value: 0x120000998
+        Size: 0x0
+        Type: STT_FUNC (0x2)
+        Bind: STB_LOCAL (0x0)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: 11
+    }
+    Symbol {
+        Index: 35
+        Name: "__do_global_dtors_aux" (0xA4)
+        Value: 0x1200009E8
+        Size: 0x0
+        Type: STT_FUNC (0x2)
+        Bind: STB_LOCAL (0x0)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: 11
+    }
+    Symbol {
+        Index: 36
+        Name: "completed.6993" (0xBA)
+        Value: 0x1200110E0
+        Size: 0x1
+        Type: STT_OBJECT (0x1)
+        Bind: STB_LOCAL (0x0)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: 24
+    }
+    Symbol {
+        Index: 37
+        Name: "dtor_idx.6995" (0xC9)
+        Value: 0x1200110E8
+        Size: 0x8
+        Type: STT_OBJECT (0x1)
+        Bind: STB_LOCAL (0x0)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: 24
+    }
+    Symbol {
+        Index: 38
+        Name: "frame_dummy" (0xD7)
+        Value: 0x120000AB8
+        Size: 0x0
+        Type: STT_FUNC (0x2)
+        Bind: STB_LOCAL (0x0)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: 11
+    }
+    Symbol {
+        Index: 39
+        Name: "base.c" (0xE3)
+        Value: 0x0
+        Size: 0x0
+        Type: STT_FILE (0x4)
+        Bind: STB_LOCAL (0x0)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: SHN_ABS (0xFFF1)
+    }
+    Symbol {
+        Index: 40
+        Name: "crtstuff.c" (0x68)
+        Value: 0x0
+        Size: 0x0
+        Type: STT_FILE (0x4)
+        Bind: STB_LOCAL (0x0)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: SHN_ABS (0xFFF1)
+    }
+    Symbol {
+        Index: 41
+        Name: "__CTOR_END__" (0xEA)
+        Value: 0x120010FE8
+        Size: 0x0
+        Type: STT_OBJECT (0x1)
+        Bind: STB_LOCAL (0x0)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: 18
+    }
+    Symbol {
+        Index: 42
+        Name: "__FRAME_END__" (0xF7)
+        Value: 0x120000D10
+        Size: 0x0
+        Type: STT_OBJECT (0x1)
+        Bind: STB_LOCAL (0x0)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: 16
+    }
+    Symbol {
+        Index: 43
+        Name: "__do_global_ctors_aux" (0x105)
+        Value: 0x120000BF0
+        Size: 0x0
+        Type: STT_FUNC (0x2)
+        Bind: STB_LOCAL (0x0)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: 11
+    }
+    Symbol {
+        Index: 44
+        Name: "" (0x0)
+        Value: 0x0
+        Size: 0x0
+        Type: STT_FILE (0x4)
+        Bind: STB_LOCAL (0x0)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: SHN_ABS (0xFFF1)
+    }
+    Symbol {
+        Index: 45
+        Name: "_MIPS_STUBS_" (0x11B)
+        Value: 0x120000C60
+        Size: 0x0
+        Type: STT_FUNC (0x2)
+        Bind: STB_LOCAL (0x0)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: 12
+    }
+    Symbol {
+        Index: 46
+        Name: "__DTOR_END__" (0x128)
+        Value: 0x120010FF8
+        Size: 0x0
+        Type: STT_OBJECT (0x1)
+        Bind: STB_LOCAL (0x0)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: 19
+    }
+    Symbol {
+        Index: 47
+        Name: "__init_array_end" (0x135)
+        Value: 0x120010FE0
+        Size: 0x0
+        Type: STT_NOTYPE (0x0)
+        Bind: STB_LOCAL (0x0)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: 18
+    }
+    Symbol {
+        Index: 48
+        Name: "_DYNAMIC" (0x146)
+        Value: 0x120000440
+        Size: 0x0
+        Type: STT_OBJECT (0x1)
+        Bind: STB_LOCAL (0x0)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: 4
+    }
+    Symbol {
+        Index: 49
+        Name: "__init_array_start" (0x14F)
+        Value: 0x120010FE0
+        Size: 0x0
+        Type: STT_NOTYPE (0x0)
+        Bind: STB_LOCAL (0x0)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: 18
+    }
+    Symbol {
+        Index: 50
+        Name: "__TMC_END__" (0x162)
+        Value: 0x120011018
+        Size: 0x0
+        Type: STT_OBJECT (0x1)
+        Bind: STB_LOCAL (0x0)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: 21
+    }
+    Symbol {
+        Index: 51
+        Name: "_gp" (0x16E)
+        Value: 0x120019010
+        Size: 0x0
+        Type: STT_NOTYPE (0x0)
+        Bind: STB_LOCAL (0x0)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: 22
+    }
+    Symbol {
+        Index: 52
+        Name: "__libc_csu_fini" (0x172)
+        Value: 0x120000BE8
+        Size: 0x8
+        Type: STT_FUNC (0x2)
+        Bind: STB_GLOBAL (0x1)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: 11
+    }
+    Symbol {
+        Index: 53
+        Name: "_DYNAMIC_LINKING" (0x182)
+        Value: 0x1
+        Size: 0x0
+        Type: STT_SECTION (0x3)
+        Bind: STB_GLOBAL (0x1)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: SHN_ABS (0xFFF1)
+    }
+    Symbol {
+        Index: 54
+        Name: "_ITM_deregisterTMCloneTable" (0x193)
+        Value: 0x0
+        Size: 0x0
+        Type: STT_NOTYPE (0x0)
+        Bind: STB_WEAK (0x2)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: SHN_UNDEF (0x0)
+    }
+    Symbol {
+        Index: 55
+        Name: "data_start" (0x1CA)
+        Value: 0x120011000
+        Size: 0x0
+        Type: STT_OBJECT (0x1)
+        Bind: STB_WEAK (0x2)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: 20
+    }
+    Symbol {
+        Index: 56
+        Name: "printf@@GLIBC_2.0" (0x1AF)
+        Value: 0x120000C60
+        Size: 0x0
+        Type: STT_FUNC (0x2)
+        Bind: STB_GLOBAL (0x1)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: SHN_UNDEF (0x0)
+    }
+    Symbol {
+        Index: 57
+        Name: "_edata" (0x1C1)
+        Value: 0x1200110E0
+        Size: 0x0
+        Type: STT_NOTYPE (0x0)
+        Bind: STB_GLOBAL (0x1)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: 23
+    }
+    Symbol {
+        Index: 58
+        Name: "_fini" (0x17C)
+        Value: 0x120000C90
+        Size: 0x0
+        Type: STT_FUNC (0x2)
+        Bind: STB_GLOBAL (0x1)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: 13
+    }
+    Symbol {
+        Index: 59
+        Name: "__data_start" (0x1C8)
+        Value: 0x120011000
+        Size: 0x0
+        Type: STT_OBJECT (0x1)
+        Bind: STB_GLOBAL (0x1)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: 20
+    }
+    Symbol {
+        Index: 60
+        Name: "__gmon_start__" (0x1D5)
+        Value: 0x0
+        Size: 0x0
+        Type: STT_FUNC (0x2)
+        Bind: STB_WEAK (0x2)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: SHN_UNDEF (0x0)
+    }
+    Symbol {
+        Index: 61
+        Name: "__dso_handle" (0x1E4)
+        Value: 0x1200110D8
+        Size: 0x0
+        Type: STT_OBJECT (0x1)
+        Bind: STB_GLOBAL (0x1)
+        Other: STV_HIDDEN (0x2)
+        SectionIndex: 23
+    }
+    Symbol {
+        Index: 62
+        Name: "_IO_stdin_used" (0x1F1)
+        Value: 0x120000CE0
+        Size: 0x4
+        Type: STT_OBJECT (0x1)
+        Bind: STB_GLOBAL (0x1)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: 14
+    }
+    Symbol {
+        Index: 63
+        Name: "_fdata" (0x200)
+        Value: 0x120011000
+        Size: 0x0
+        Type: STT_NOTYPE (0x0)
+        Bind: STB_GLOBAL (0x1)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: 20
+    }
+    Symbol {
+        Index: 64
+        Name: "__libc_start_main@@GLIBC_2.0" (0x207)
+        Value: 0x120000C70
+        Size: 0x0
+        Type: STT_FUNC (0x2)
+        Bind: STB_GLOBAL (0x1)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: SHN_UNDEF (0x0)
+    }
+    Symbol {
+        Index: 65
+        Name: "__RLD_MAP" (0x224)
+        Value: 0x120011010
+        Size: 0x0
+        Type: STT_OBJECT (0x1)
+        Bind: STB_GLOBAL (0x1)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: 21
+    }
+    Symbol {
+        Index: 66
+        Name: "__libc_csu_init" (0x22E)
+        Value: 0x120000B40
+        Size: 0xA8
+        Type: STT_FUNC (0x2)
+        Bind: STB_GLOBAL (0x1)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: 11
+    }
+    Symbol {
+        Index: 67
+        Name: "_end" (0x141)
+        Value: 0x1200110F0
+        Size: 0x0
+        Type: STT_NOTYPE (0x0)
+        Bind: STB_GLOBAL (0x1)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: 24
+    }
+    Symbol {
+        Index: 68
+        Name: "__bss_start" (0x23E)
+        Value: 0x1200110E0
+        Size: 0x0
+        Type: STT_NOTYPE (0x0)
+        Bind: STB_GLOBAL (0x1)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: 24
+    }
+    Symbol {
+        Index: 69
+        Name: "main" (0x24A)
+        Value: 0x120000AE0
+        Size: 0x58
+        Type: STT_FUNC (0x2)
+        Bind: STB_GLOBAL (0x1)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: 11
+    }
+    Symbol {
+        Index: 70
+        Name: "__start" (0x24F)
+        Value: 0x120000900
+        Size: 0x0
+        Type: STT_FUNC (0x2)
+        Bind: STB_GLOBAL (0x1)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: 11
+    }
+    Symbol {
+        Index: 71
+        Name: "_ftext" (0x257)
+        Value: 0x120000900
+        Size: 0x0
+        Type: STT_NOTYPE (0x0)
+        Bind: STB_GLOBAL (0x1)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: 11
+    }
+    Symbol {
+        Index: 72
+        Name: "_GLOBAL_OFFSET_TABLE_" (0x25E)
+        Value: 0x120011020
+        Size: 0x0
+        Type: STT_OBJECT (0x1)
+        Bind: STB_GLOBAL (0x1)
+        Other: STV_HIDDEN (0x2)
+        SectionIndex: 22
+    }
+    Symbol {
+        Index: 73
+        Name: "_fbss" (0x274)
+        Value: 0x1200110E0
+        Size: 0x0
+        Type: STT_NOTYPE (0x0)
+        Bind: STB_GLOBAL (0x1)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: 24
+    }
+    Symbol {
+        Index: 74
+        Name: "_ITM_registerTMCloneTable" (0x27A)
+        Value: 0x0
+        Size: 0x0
+        Type: STT_NOTYPE (0x0)
+        Bind: STB_WEAK (0x2)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: SHN_UNDEF (0x0)
+    }
+    Symbol {
+        Index: 75
+        Name: "_init" (0x238)
+        Value: 0x120000878
+        Size: 0x0
+        Type: STT_FUNC (0x2)
+        Bind: STB_GLOBAL (0x1)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: 10
+    }
+}
+SectionHeader {
+    Index: 29
+    Name: ".strtab" (0x9)
+    Type: SHT_STRTAB (0x3)
+    Flags: 0x0
+    Address: 0x0
+    Offset: 0x18A0
+    Size: 0x294
+    Link: 0
+    Info: 0
+    AddressAlign: 0x1
+    EntrySize: 0x0
+}
+SectionHeader {
+    Index: 30
+    Name: ".shstrtab" (0x11)
+    Type: SHT_STRTAB (0x3)
+    Flags: 0x0
+    Address: 0x0
+    Offset: 0x1B34
+    Size: 0x118
+    Link: 0
+    Info: 0
+    AddressAlign: 0x1
+    EntrySize: 0x0
+}

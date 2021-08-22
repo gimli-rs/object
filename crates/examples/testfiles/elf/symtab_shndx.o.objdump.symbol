@@ -1,0 +1,4 @@
+65535: Symbol { name: "", address: 0, size: 0, kind: Section, section: Section(SectionIndex(fffe)), scope: Compilation, weak: false, flags: Elf { st_info: 3, st_other: 0 } }
+65536: Symbol { name: "", address: 0, size: 0, kind: Section, section: Section(SectionIndex(ffff)), scope: Compilation, weak: false, flags: Elf { st_info: 3, st_other: 0 } }
+65537: Symbol { name: "", address: 0, size: 0, kind: Section, section: Section(SectionIndex(10000)), scope: Compilation, weak: false, flags: Elf { st_info: 3, st_other: 0 } }
+65538: Symbol { name: "", address: 0, size: 0, kind: Section, section: Section(SectionIndex(10001)), scope: Compilation, weak: false, flags: Elf { st_info: 3, st_other: 0 } }

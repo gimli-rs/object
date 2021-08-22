@@ -1,0 +1,2 @@
+Comdat { symbol: SymbolIndex(12), name: "_Z4foo1i", kind: Any } Sections: 7
+Comdat { symbol: SymbolIndex(13), name: "_Z4foo2i", kind: Any } Sections: 8

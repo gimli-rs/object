@@ -1,0 +1,51 @@
+Format: Coff Little-endian 32-bit
+Kind: Relocatable
+Architecture: X86_64
+Flags: Coff { characteristics: 4 }
+Relative Address Base: 0
+Entry Address: 0
+Segment { name: ".text", address: 0, size: 0 }
+Segment { name: ".data", address: 0, size: 0 }
+Segment { name: ".bss", address: 0, size: 0 }
+Segment { name: ".xdata", address: 0, size: 0 }
+Segment { name: ".pdata", address: 0, size: 0 }
+Segment { name: ".rdata", address: 0, size: 0 }
+Segment { name: ".rdata$zzz", address: 0, size: 0 }
+1: Section { name: ".text", address: 0, size: 80, align: 10, kind: Text, flags: Coff { characteristics: 60500020 } }
+2: Section { name: ".data", address: 0, size: 0, align: 10, kind: Data, flags: Coff { characteristics: c0500040 } }
+3: Section { name: ".bss", address: 0, size: 0, align: 10, kind: UninitializedData, flags: Coff { characteristics: c0500080 } }
+4: Section { name: ".xdata", address: 0, size: 18, align: 4, kind: ReadOnlyData, flags: Coff { characteristics: 40300040 } }
+5: Section { name: ".pdata", address: 0, size: 18, align: 4, kind: ReadOnlyData, flags: Coff { characteristics: 40300040 } }
+6: Section { name: ".rdata", address: 0, size: 10, align: 10, kind: ReadOnlyData, flags: Coff { characteristics: 40500040 } }
+7: Section { name: ".rdata$zzz", address: 0, size: 30, align: 10, kind: ReadOnlyData, flags: Coff { characteristics: 40500040 } }
+
+Symbols
+0: Symbol { name: "base.c", address: 0, size: 0, kind: File, section: None, scope: Compilation, weak: false, flags: None }
+2: Symbol { name: "printf", address: 0, size: 0, kind: Section, section: Section(SectionIndex(1)), scope: Compilation, weak: false, flags: CoffSection { selection: 0, associative_section: None } }
+4: Symbol { name: "main", address: 51, size: 0, kind: Text, section: Section(SectionIndex(1)), scope: Linkage, weak: false, flags: None }
+5: Symbol { name: ".text", address: 0, size: 75, kind: Section, section: Section(SectionIndex(1)), scope: Compilation, weak: false, flags: CoffSection { selection: 0, associative_section: None } }
+7: Symbol { name: ".data", address: 0, size: 0, kind: Section, section: Section(SectionIndex(2)), scope: Compilation, weak: false, flags: CoffSection { selection: 0, associative_section: None } }
+9: Symbol { name: ".bss", address: 0, size: 0, kind: Section, section: Section(SectionIndex(3)), scope: Compilation, weak: false, flags: CoffSection { selection: 0, associative_section: None } }
+11: Symbol { name: ".xdata", address: 0, size: 18, kind: Section, section: Section(SectionIndex(4)), scope: Compilation, weak: false, flags: CoffSection { selection: 0, associative_section: None } }
+13: Symbol { name: ".pdata", address: 0, size: 18, kind: Section, section: Section(SectionIndex(5)), scope: Compilation, weak: false, flags: CoffSection { selection: 0, associative_section: None } }
+15: Symbol { name: ".rdata", address: 0, size: d, kind: Section, section: Section(SectionIndex(6)), scope: Compilation, weak: false, flags: CoffSection { selection: 0, associative_section: None } }
+17: Symbol { name: ".rdata$zzz", address: 0, size: 2b, kind: Section, section: Section(SectionIndex(7)), scope: Compilation, weak: false, flags: CoffSection { selection: 0, associative_section: None } }
+19: Symbol { name: "__imp___acrt_iob_func", address: 0, size: 0, kind: Data, section: Undefined, scope: Linkage, weak: false, flags: None }
+20: Symbol { name: "__main", address: 0, size: 0, kind: Text, section: Undefined, scope: Linkage, weak: false, flags: None }
+21: Symbol { name: "__mingw_vfprintf", address: 0, size: 0, kind: Text, section: Undefined, scope: Linkage, weak: false, flags: None }
+
+.text relocations
+(2f, Relocation { kind: Relative, encoding: Generic, size: 20, target: Symbol(SymbolIndex(13)), addend: fffffffffffffffc, implicit_addend: true })
+(40, Relocation { kind: Relative, encoding: Generic, size: 20, target: Symbol(SymbolIndex(15)), addend: fffffffffffffffc, implicit_addend: true })
+(5a, Relocation { kind: Relative, encoding: Generic, size: 20, target: Symbol(SymbolIndex(14)), addend: fffffffffffffffc, implicit_addend: true })
+(61, Relocation { kind: Relative, encoding: Generic, size: 20, target: Symbol(SymbolIndex(f)), addend: fffffffffffffffc, implicit_addend: true })
+
+.pdata relocations
+(0, Relocation { kind: ImageOffset, encoding: Generic, size: 20, target: Symbol(SymbolIndex(5)), addend: 0, implicit_addend: true })
+(4, Relocation { kind: ImageOffset, encoding: Generic, size: 20, target: Symbol(SymbolIndex(5)), addend: 0, implicit_addend: true })
+(8, Relocation { kind: ImageOffset, encoding: Generic, size: 20, target: Symbol(SymbolIndex(b)), addend: 0, implicit_addend: true })
+(c, Relocation { kind: ImageOffset, encoding: Generic, size: 20, target: Symbol(SymbolIndex(5)), addend: 0, implicit_addend: true })
+(10, Relocation { kind: ImageOffset, encoding: Generic, size: 20, target: Symbol(SymbolIndex(5)), addend: 0, implicit_addend: true })
+(14, Relocation { kind: ImageOffset, encoding: Generic, size: 20, target: Symbol(SymbolIndex(b)), addend: 0, implicit_addend: true })
+
+Dynamic symbols

@@ -1,0 +1,460 @@
+Format: COFF
+ImageFileHeader {
+    Machine: IMAGE_FILE_MACHINE_I386 (0x14C)
+    NumberOfSections: 8
+    TimeDateStamp: 1629804126
+    PointerToSymbolTable: 0x313
+    NumberOfSymbols: 26
+    SizeOfOptionalHeader: 0x0
+    Characteristics: 0x0
+}
+ImageSectionHeader {
+    Index: 1
+    Name: ".drectve"
+    VirtualSize: 0x0
+    VirtualAddress: 0x0
+    SizeOfRawData: 0x2F
+    PointerToRawData: 0x154
+    PointerToRelocations: 0x0
+    PointerToLinenumbers: 0x0
+    NumberOfRelocations: 0
+    NumberOfLinenumbers: 0
+    Characteristics: 0x100A00
+        IMAGE_SCN_LNK_INFO (0x200)
+        IMAGE_SCN_LNK_REMOVE (0x800)
+        IMAGE_SCN_ALIGN_1BYTES (0x100000)
+}
+ImageSectionHeader {
+    Index: 2
+    Name: ".debug$S"
+    VirtualSize: 0x0
+    VirtualAddress: 0x0
+    SizeOfRawData: 0x7C
+    PointerToRawData: 0x183
+    PointerToRelocations: 0x0
+    PointerToLinenumbers: 0x0
+    NumberOfRelocations: 0
+    NumberOfLinenumbers: 0
+    Characteristics: 0x42100040
+        IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
+        IMAGE_SCN_MEM_DISCARDABLE (0x2000000)
+        IMAGE_SCN_MEM_READ (0x40000000)
+        IMAGE_SCN_ALIGN_1BYTES (0x100000)
+}
+ImageSectionHeader {
+    Index: 3
+    Name: ".text$mn"
+    VirtualSize: 0x0
+    VirtualAddress: 0x0
+    SizeOfRawData: 0x14
+    PointerToRawData: 0x1FF
+    PointerToRelocations: 0x213
+    PointerToLinenumbers: 0x0
+    NumberOfRelocations: 2
+    NumberOfLinenumbers: 0
+    Characteristics: 0x60500020
+        IMAGE_SCN_CNT_CODE (0x20)
+        IMAGE_SCN_MEM_EXECUTE (0x20000000)
+        IMAGE_SCN_MEM_READ (0x40000000)
+        IMAGE_SCN_ALIGN_16BYTES (0x500000)
+    ImageRelocation {
+        VirtualAddress: 0x4
+        Symbol: "$SG9248" (0x17)
+        Type: IMAGE_REL_I386_DIR32 (0x6)
+    }
+    ImageRelocation {
+        VirtualAddress: 0x9
+        Symbol: "_printf" (0x12)
+        Type: IMAGE_REL_I386_REL32 (0x14)
+    }
+}
+ImageSectionHeader {
+    Index: 4
+    Name: ".text$mn"
+    VirtualSize: 0x0
+    VirtualAddress: 0x0
+    SizeOfRawData: 0xA
+    PointerToRawData: 0x227
+    PointerToRelocations: 0x231
+    PointerToLinenumbers: 0x0
+    NumberOfRelocations: 1
+    NumberOfLinenumbers: 0
+    Characteristics: 0x60501020
+        IMAGE_SCN_CNT_CODE (0x20)
+        IMAGE_SCN_LNK_COMDAT (0x1000)
+        IMAGE_SCN_MEM_EXECUTE (0x20000000)
+        IMAGE_SCN_MEM_READ (0x40000000)
+        IMAGE_SCN_ALIGN_16BYTES (0x500000)
+    ImageRelocation {
+        VirtualAddress: 0x4
+        Symbol: "?_OptionsStorage@?1??__local_stdio_printf_options@@9@9" (0x14)
+        Type: IMAGE_REL_I386_DIR32 (0x6)
+    }
+}
+ImageSectionHeader {
+    Index: 5
+    Name: ".text$mn"
+    VirtualSize: 0x0
+    VirtualAddress: 0x0
+    SizeOfRawData: 0x29
+    PointerToRawData: 0x23B
+    PointerToRelocations: 0x264
+    PointerToLinenumbers: 0x0
+    NumberOfRelocations: 2
+    NumberOfLinenumbers: 0
+    Characteristics: 0x60501020
+        IMAGE_SCN_CNT_CODE (0x20)
+        IMAGE_SCN_LNK_COMDAT (0x1000)
+        IMAGE_SCN_MEM_EXECUTE (0x20000000)
+        IMAGE_SCN_MEM_READ (0x40000000)
+        IMAGE_SCN_ALIGN_16BYTES (0x500000)
+    ImageRelocation {
+        VirtualAddress: 0x14
+        Symbol: "___local_stdio_printf_options" (0xE)
+        Type: IMAGE_REL_I386_REL32 (0x14)
+    }
+    ImageRelocation {
+        VirtualAddress: 0x20
+        Symbol: "___stdio_common_vfprintf" (0x10)
+        Type: IMAGE_REL_I386_REL32 (0x14)
+    }
+}
+ImageSectionHeader {
+    Index: 6
+    Name: ".text$mn"
+    VirtualSize: 0x0
+    VirtualAddress: 0x0
+    SizeOfRawData: 0x3A
+    PointerToRawData: 0x278
+    PointerToRelocations: 0x2B2
+    PointerToLinenumbers: 0x0
+    NumberOfRelocations: 2
+    NumberOfLinenumbers: 0
+    Characteristics: 0x60501020
+        IMAGE_SCN_CNT_CODE (0x20)
+        IMAGE_SCN_LNK_COMDAT (0x1000)
+        IMAGE_SCN_MEM_EXECUTE (0x20000000)
+        IMAGE_SCN_MEM_READ (0x40000000)
+        IMAGE_SCN_ALIGN_16BYTES (0x500000)
+    ImageRelocation {
+        VirtualAddress: 0x19
+        Symbol: "___acrt_iob_func" (0xF)
+        Type: IMAGE_REL_I386_REL32 (0x14)
+    }
+    ImageRelocation {
+        VirtualAddress: 0x22
+        Symbol: "__vfprintf_l" (0x11)
+        Type: IMAGE_REL_I386_REL32 (0x14)
+    }
+}
+ImageSectionHeader {
+    Index: 7
+    Name: ".data"
+    VirtualSize: 0x0
+    VirtualAddress: 0x0
+    SizeOfRawData: 0xD
+    PointerToRawData: 0x2C6
+    PointerToRelocations: 0x0
+    PointerToLinenumbers: 0x0
+    NumberOfRelocations: 0
+    NumberOfLinenumbers: 0
+    Characteristics: 0xC0300040
+        IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
+        IMAGE_SCN_MEM_READ (0x40000000)
+        IMAGE_SCN_MEM_WRITE (0x80000000)
+        IMAGE_SCN_ALIGN_4BYTES (0x300000)
+}
+ImageSectionHeader {
+    Index: 8
+    Name: ".chks64"
+    VirtualSize: 0x0
+    VirtualAddress: 0x0
+    SizeOfRawData: 0x40
+    PointerToRawData: 0x2D3
+    PointerToRelocations: 0x0
+    PointerToLinenumbers: 0x0
+    NumberOfRelocations: 0
+    NumberOfLinenumbers: 0
+    Characteristics: 0xA00
+        IMAGE_SCN_LNK_INFO (0x200)
+        IMAGE_SCN_LNK_REMOVE (0x800)
+        <unknown> (0x0)
+}
+ImageSymbol {
+    Index: 0
+    Name: "@comp.id"
+    Value: 0x1047556
+    Section: IMAGE_SYM_ABSOLUTE (0xFFFF)
+    Type: 0x0
+    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
+    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
+    StorageClass: IMAGE_SYM_CLASS_STATIC (0x3)
+    NumberOfAuxSymbols: 0x0
+}
+ImageSymbol {
+    Index: 1
+    Name: "@feat.00"
+    Value: 0x80010191
+    Section: IMAGE_SYM_ABSOLUTE (0xFFFF)
+    Type: 0x0
+    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
+    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
+    StorageClass: IMAGE_SYM_CLASS_STATIC (0x3)
+    NumberOfAuxSymbols: 0x0
+}
+ImageSymbol {
+    Index: 2
+    Name: ".drectve"
+    Value: 0x0
+    Section: ".drectve" (0x1)
+    Type: 0x0
+    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
+    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
+    StorageClass: IMAGE_SYM_CLASS_STATIC (0x3)
+    NumberOfAuxSymbols: 0x1
+    ImageAuxSymbolSection {
+        Length: 0x2F
+        NumberOfRelocations: 0
+        NumberOfLinenumbers: 0
+        CheckSum: 0x0
+        Number: 0
+        Selection: 0x0
+        Reserved: 0x0
+        HighNumber: 0
+    }
+}
+ImageSymbol {
+    Index: 4
+    Name: ".debug$S"
+    Value: 0x0
+    Section: ".debug$S" (0x2)
+    Type: 0x0
+    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
+    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
+    StorageClass: IMAGE_SYM_CLASS_STATIC (0x3)
+    NumberOfAuxSymbols: 0x1
+    ImageAuxSymbolSection {
+        Length: 0x7C
+        NumberOfRelocations: 0
+        NumberOfLinenumbers: 0
+        CheckSum: 0x0
+        Number: 0
+        Selection: 0x0
+        Reserved: 0x0
+        HighNumber: 0
+    }
+}
+ImageSymbol {
+    Index: 6
+    Name: ".text$mn"
+    Value: 0x0
+    Section: ".text$mn" (0x3)
+    Type: 0x0
+    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
+    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
+    StorageClass: IMAGE_SYM_CLASS_STATIC (0x3)
+    NumberOfAuxSymbols: 0x1
+    ImageAuxSymbolSection {
+        Length: 0x14
+        NumberOfRelocations: 2
+        NumberOfLinenumbers: 0
+        CheckSum: 0xF829D91C
+        Number: 0
+        Selection: 0x0
+        Reserved: 0x0
+        HighNumber: 0
+    }
+}
+ImageSymbol {
+    Index: 8
+    Name: ".text$mn"
+    Value: 0x0
+    Section: ".text$mn" (0x4)
+    Type: 0x0
+    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
+    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
+    StorageClass: IMAGE_SYM_CLASS_STATIC (0x3)
+    NumberOfAuxSymbols: 0x1
+    ImageAuxSymbolSection {
+        Length: 0xA
+        NumberOfRelocations: 1
+        NumberOfLinenumbers: 0
+        CheckSum: 0x71A05264
+        Number: 0
+        Selection: IMAGE_COMDAT_SELECT_ANY (0x2)
+        Reserved: 0x0
+        HighNumber: 0
+    }
+}
+ImageSymbol {
+    Index: 10
+    Name: ".text$mn"
+    Value: 0x0
+    Section: ".text$mn" (0x5)
+    Type: 0x0
+    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
+    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
+    StorageClass: IMAGE_SYM_CLASS_STATIC (0x3)
+    NumberOfAuxSymbols: 0x1
+    ImageAuxSymbolSection {
+        Length: 0x29
+        NumberOfRelocations: 2
+        NumberOfLinenumbers: 0
+        CheckSum: 0x2B25B17F
+        Number: 0
+        Selection: IMAGE_COMDAT_SELECT_ANY (0x2)
+        Reserved: 0x0
+        HighNumber: 0
+    }
+}
+ImageSymbol {
+    Index: 12
+    Name: ".text$mn"
+    Value: 0x0
+    Section: ".text$mn" (0x6)
+    Type: 0x0
+    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
+    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
+    StorageClass: IMAGE_SYM_CLASS_STATIC (0x3)
+    NumberOfAuxSymbols: 0x1
+    ImageAuxSymbolSection {
+        Length: 0x3A
+        NumberOfRelocations: 2
+        NumberOfLinenumbers: 0
+        CheckSum: 0xCAE6D625
+        Number: 0
+        Selection: IMAGE_COMDAT_SELECT_ANY (0x2)
+        Reserved: 0x0
+        HighNumber: 0
+    }
+}
+ImageSymbol {
+    Index: 14
+    Name: "___local_stdio_printf_options"
+    Value: 0x0
+    Section: ".text$mn" (0x4)
+    Type: 0x20
+    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
+    DerivedType: IMAGE_SYM_DTYPE_FUNCTION (0x2)
+    StorageClass: IMAGE_SYM_CLASS_EXTERNAL (0x2)
+    NumberOfAuxSymbols: 0x0
+}
+ImageSymbol {
+    Index: 15
+    Name: "___acrt_iob_func"
+    Value: 0x0
+    Section: IMAGE_SYM_UNDEFINED (0x0)
+    Type: 0x20
+    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
+    DerivedType: IMAGE_SYM_DTYPE_FUNCTION (0x2)
+    StorageClass: IMAGE_SYM_CLASS_EXTERNAL (0x2)
+    NumberOfAuxSymbols: 0x0
+}
+ImageSymbol {
+    Index: 16
+    Name: "___stdio_common_vfprintf"
+    Value: 0x0
+    Section: IMAGE_SYM_UNDEFINED (0x0)
+    Type: 0x20
+    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
+    DerivedType: IMAGE_SYM_DTYPE_FUNCTION (0x2)
+    StorageClass: IMAGE_SYM_CLASS_EXTERNAL (0x2)
+    NumberOfAuxSymbols: 0x0
+}
+ImageSymbol {
+    Index: 17
+    Name: "__vfprintf_l"
+    Value: 0x0
+    Section: ".text$mn" (0x5)
+    Type: 0x20
+    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
+    DerivedType: IMAGE_SYM_DTYPE_FUNCTION (0x2)
+    StorageClass: IMAGE_SYM_CLASS_EXTERNAL (0x2)
+    NumberOfAuxSymbols: 0x0
+}
+ImageSymbol {
+    Index: 18
+    Name: "_printf"
+    Value: 0x0
+    Section: ".text$mn" (0x6)
+    Type: 0x20
+    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
+    DerivedType: IMAGE_SYM_DTYPE_FUNCTION (0x2)
+    StorageClass: IMAGE_SYM_CLASS_EXTERNAL (0x2)
+    NumberOfAuxSymbols: 0x0
+}
+ImageSymbol {
+    Index: 19
+    Name: "_main"
+    Value: 0x0
+    Section: ".text$mn" (0x3)
+    Type: 0x20
+    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
+    DerivedType: IMAGE_SYM_DTYPE_FUNCTION (0x2)
+    StorageClass: IMAGE_SYM_CLASS_EXTERNAL (0x2)
+    NumberOfAuxSymbols: 0x0
+}
+ImageSymbol {
+    Index: 20
+    Name: "?_OptionsStorage@?1??__local_stdio_printf_options@@9@9"
+    Value: 0x8
+    Section: IMAGE_SYM_UNDEFINED (0x0)
+    Type: 0x0
+    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
+    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
+    StorageClass: IMAGE_SYM_CLASS_EXTERNAL (0x2)
+    NumberOfAuxSymbols: 0x0
+}
+ImageSymbol {
+    Index: 21
+    Name: ".data"
+    Value: 0x0
+    Section: ".data" (0x7)
+    Type: 0x0
+    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
+    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
+    StorageClass: IMAGE_SYM_CLASS_STATIC (0x3)
+    NumberOfAuxSymbols: 0x1
+    ImageAuxSymbolSection {
+        Length: 0xD
+        NumberOfRelocations: 0
+        NumberOfLinenumbers: 0
+        CheckSum: 0xA8FB903A
+        Number: 0
+        Selection: 0x0
+        Reserved: 0x0
+        HighNumber: 0
+    }
+}
+ImageSymbol {
+    Index: 23
+    Name: "$SG9248"
+    Value: 0x0
+    Section: ".data" (0x7)
+    Type: 0x0
+    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
+    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
+    StorageClass: IMAGE_SYM_CLASS_STATIC (0x3)
+    NumberOfAuxSymbols: 0x0
+}
+ImageSymbol {
+    Index: 24
+    Name: ".chks64"
+    Value: 0x0
+    Section: ".chks64" (0x8)
+    Type: 0x0
+    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
+    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
+    StorageClass: IMAGE_SYM_CLASS_STATIC (0x3)
+    NumberOfAuxSymbols: 0x1
+    ImageAuxSymbolSection {
+        Length: 0x40
+        NumberOfRelocations: 0
+        NumberOfLinenumbers: 0
+        CheckSum: 0x0
+        Number: 0
+        Selection: 0x0
+        Reserved: 0x0
+        HighNumber: 0
+    }
+}

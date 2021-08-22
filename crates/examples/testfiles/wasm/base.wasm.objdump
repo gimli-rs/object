@@ -1,0 +1,66 @@
+Format: Wasm Little-endian 32-bit
+Kind: Unknown
+Architecture: Wasm32
+Flags: None
+Relative Address Base: 0
+Entry Address: 0
+1: Section { name: "<type>", address: 0, size: 4a, align: 1, kind: Metadata, flags: None }
+2: Section { name: "<import>", address: 0, size: b0, align: 1, kind: Linker, flags: None }
+3: Section { name: "<function>", address: 0, size: 25, align: 1, kind: Metadata, flags: None }
+4: Section { name: "<table>", address: 0, size: 5, align: 1, kind: UninitializedData, flags: None }
+5: Section { name: "<memory>", address: 0, size: 3, align: 1, kind: UninitializedData, flags: None }
+6: Section { name: "<global>", address: 0, size: 8, align: 1, kind: Data, flags: None }
+7: Section { name: "<export>", address: 0, size: 13, align: 1, kind: Linker, flags: None }
+9: Section { name: "<element>", address: 0, size: a, align: 1, kind: Data, flags: None }
+10: Section { name: "<code>", address: 0, size: 3bc6, align: 1, kind: Text, flags: None }
+11: Section { name: "<data>", address: 0, size: a60, align: 1, kind: Data, flags: None }
+0: Section { name: "name", address: 0, size: 1e8, align: 1, kind: Other, flags: None }
+0: Section { name: "producers", address: 0, size: 6c, align: 1, kind: Other, flags: None }
+
+Symbols
+0: Symbol { name: "wasi_snapshot_preview1", address: 0, size: 0, kind: File, section: None, scope: Dynamic, weak: false, flags: None }
+1: Symbol { name: "proc_exit", address: 0, size: 0, kind: Text, section: Undefined, scope: Dynamic, weak: false, flags: None }
+2: Symbol { name: "fd_seek", address: 0, size: 0, kind: Text, section: Undefined, scope: Dynamic, weak: false, flags: None }
+3: Symbol { name: "fd_write", address: 0, size: 0, kind: Text, section: Undefined, scope: Dynamic, weak: false, flags: None }
+4: Symbol { name: "fd_close", address: 0, size: 0, kind: Text, section: Undefined, scope: Dynamic, weak: false, flags: None }
+5: Symbol { name: "fd_fdstat_get", address: 0, size: 0, kind: Text, section: Undefined, scope: Dynamic, weak: false, flags: None }
+6: Symbol { name: "", address: 0, size: 0, kind: File, section: None, scope: Compilation, weak: false, flags: None }
+7: Symbol { name: "memory", address: 0, size: 0, kind: Data, section: Section(SectionIndex(b)), scope: Dynamic, weak: false, flags: None }
+8: Symbol { name: "_start", address: 5, size: 29, kind: Text, section: Section(SectionIndex(a)), scope: Dynamic, weak: false, flags: None }
+9: Symbol { name: "__wasm_call_ctors", address: 2, size: 2, kind: Text, section: Section(SectionIndex(a)), scope: Compilation, weak: false, flags: None }
+10: Symbol { name: "__original_main", address: 2f, size: 5b, kind: Text, section: Section(SectionIndex(a)), scope: Compilation, weak: false, flags: None }
+11: Symbol { name: "dummy", address: 8b, size: 2, kind: Text, section: Section(SectionIndex(a)), scope: Compilation, weak: false, flags: None }
+12: Symbol { name: "__wasm_call_dtors", address: 8e, size: e, kind: Text, section: Section(SectionIndex(a)), scope: Compilation, weak: false, flags: None }
+13: Symbol { name: "printf", address: 9d, size: 3b, kind: Text, section: Section(SectionIndex(a)), scope: Compilation, weak: false, flags: None }
+14: Symbol { name: "__lseek", address: d9, size: 64, kind: Text, section: Section(SectionIndex(a)), scope: Compilation, weak: false, flags: None }
+15: Symbol { name: "__stdio_seek", address: 13e, size: 11, kind: Text, section: Section(SectionIndex(a)), scope: Compilation, weak: false, flags: None }
+16: Symbol { name: "__ofl_lock", address: 150, size: 8, kind: Text, section: Section(SectionIndex(a)), scope: Compilation, weak: false, flags: None }
+17: Symbol { name: "__stdio_exit", address: 15a, size: 183, kind: Text, section: Section(SectionIndex(a)), scope: Compilation, weak: false, flags: None }
+18: Symbol { name: "__towrite", address: 2de, size: 5c, kind: Text, section: Section(SectionIndex(a)), scope: Compilation, weak: false, flags: None }
+19: Symbol { name: "__fwritex", address: 33c, size: f4, kind: Text, section: Section(SectionIndex(a)), scope: Compilation, weak: false, flags: None }
+20: Symbol { name: "fwrite", address: 432, size: 121, kind: Text, section: Section(SectionIndex(a)), scope: Compilation, weak: false, flags: None }
+21: Symbol { name: "strerror", address: 554, size: 55, kind: Text, section: Section(SectionIndex(a)), scope: Compilation, weak: false, flags: None }
+22: Symbol { name: "writev", address: 5aa, size: 71, kind: Text, section: Section(SectionIndex(a)), scope: Compilation, weak: false, flags: None }
+23: Symbol { name: "__stdio_write", address: 61d, size: 141, kind: Text, section: Section(SectionIndex(a)), scope: Compilation, weak: false, flags: None }
+24: Symbol { name: "fputs", address: 75f, size: 24, kind: Text, section: Section(SectionIndex(a)), scope: Compilation, weak: false, flags: None }
+25: Symbol { name: "abort", address: 784, size: 4, kind: Text, section: Section(SectionIndex(a)), scope: Compilation, weak: false, flags: None }
+26: Symbol { name: "vfprintf", address: 78a, size: 193, kind: Text, section: Section(SectionIndex(a)), scope: Compilation, weak: false, flags: None }
+27: Symbol { name: "printf_core", address: 91f, size: 24e0, kind: Text, section: Section(SectionIndex(a)), scope: Compilation, weak: false, flags: None }
+28: Symbol { name: "pop_arg", address: 2e01, size: 233, kind: Text, section: Section(SectionIndex(a)), scope: Compilation, weak: false, flags: None }
+29: Symbol { name: "long_double_not_supported", address: 3035, size: 1c, kind: Text, section: Section(SectionIndex(a)), scope: Compilation, weak: false, flags: None }
+30: Symbol { name: "close", address: 3052, size: 21, kind: Text, section: Section(SectionIndex(a)), scope: Compilation, weak: false, flags: None }
+31: Symbol { name: "__stdio_close", address: 3074, size: d, kind: Text, section: Section(SectionIndex(a)), scope: Compilation, weak: false, flags: None }
+32: Symbol { name: "__isatty", address: 3082, size: 66, kind: Text, section: Section(SectionIndex(a)), scope: Compilation, weak: false, flags: None }
+33: Symbol { name: "__stdout_write", address: 30e9, size: 3b, kind: Text, section: Section(SectionIndex(a)), scope: Compilation, weak: false, flags: None }
+34: Symbol { name: "strnlen", address: 3125, size: 1a, kind: Text, section: Section(SectionIndex(a)), scope: Compilation, weak: false, flags: None }
+35: Symbol { name: "memcpy", address: 3141, size: 553, kind: Text, section: Section(SectionIndex(a)), scope: Compilation, weak: false, flags: None }
+36: Symbol { name: "memset", address: 3696, size: 17c, kind: Text, section: Section(SectionIndex(a)), scope: Compilation, weak: false, flags: None }
+37: Symbol { name: "strlen", address: 3814, size: b4, kind: Text, section: Section(SectionIndex(a)), scope: Compilation, weak: false, flags: None }
+38: Symbol { name: "memchr", address: 38ca, size: 108, kind: Text, section: Section(SectionIndex(a)), scope: Compilation, weak: false, flags: None }
+39: Symbol { name: "dummy", address: 39d3, size: 4, kind: Text, section: Section(SectionIndex(a)), scope: Compilation, weak: false, flags: None }
+40: Symbol { name: "__lctrans", address: 39d8, size: c, kind: Text, section: Section(SectionIndex(a)), scope: Compilation, weak: false, flags: None }
+41: Symbol { name: "wctomb", address: 39e5, size: 18, kind: Text, section: Section(SectionIndex(a)), scope: Compilation, weak: false, flags: None }
+42: Symbol { name: "wcrtomb", address: 39ff, size: 136, kind: Text, section: Section(SectionIndex(a)), scope: Compilation, weak: false, flags: None }
+43: Symbol { name: "frexp", address: 3b37, size: 8f, kind: Text, section: Section(SectionIndex(a)), scope: Compilation, weak: false, flags: None }
+
+Dynamic symbols

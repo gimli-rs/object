@@ -1,0 +1,85 @@
+Format: Pe Little-endian 32-bit
+Kind: Executable
+Architecture: I386
+Flags: Coff { characteristics: 102 }
+Relative Address Base: 400000
+Entry Address: 4012e1
+Segment { name: ".text", address: 401000, size: 104d3 }
+Segment { name: ".rdata", address: 412000, size: 6808 }
+Segment { name: ".data", address: 419000, size: 12f4 }
+Segment { name: ".reloc", address: 41b000, size: ec8 }
+1: Section { name: ".text", address: 401000, size: 104d3, align: 1000, kind: Text, flags: Coff { characteristics: 60000020 } }
+2: Section { name: ".rdata", address: 412000, size: 6808, align: 1000, kind: ReadOnlyData, flags: Coff { characteristics: 40000040 } }
+3: Section { name: ".data", address: 419000, size: 12f4, align: 1000, kind: Data, flags: Coff { characteristics: c0000040 } }
+4: Section { name: ".reloc", address: 41b000, size: ec8, align: 1000, kind: Other, flags: Coff { characteristics: 42000040 } }
+
+Symbols
+
+Dynamic symbols
+
+Import { library: "KERNEL32.dll", name: "QueryPerformanceCounter" }
+Import { library: "KERNEL32.dll", name: "GetCurrentProcessId" }
+Import { library: "KERNEL32.dll", name: "GetCurrentThreadId" }
+Import { library: "KERNEL32.dll", name: "GetSystemTimeAsFileTime" }
+Import { library: "KERNEL32.dll", name: "InitializeSListHead" }
+Import { library: "KERNEL32.dll", name: "IsDebuggerPresent" }
+Import { library: "KERNEL32.dll", name: "UnhandledExceptionFilter" }
+Import { library: "KERNEL32.dll", name: "SetUnhandledExceptionFilter" }
+Import { library: "KERNEL32.dll", name: "GetStartupInfoW" }
+Import { library: "KERNEL32.dll", name: "IsProcessorFeaturePresent" }
+Import { library: "KERNEL32.dll", name: "GetModuleHandleW" }
+Import { library: "KERNEL32.dll", name: "GetCurrentProcess" }
+Import { library: "KERNEL32.dll", name: "TerminateProcess" }
+Import { library: "KERNEL32.dll", name: "WriteConsoleW" }
+Import { library: "KERNEL32.dll", name: "RtlUnwind" }
+Import { library: "KERNEL32.dll", name: "GetLastError" }
+Import { library: "KERNEL32.dll", name: "SetLastError" }
+Import { library: "KERNEL32.dll", name: "EnterCriticalSection" }
+Import { library: "KERNEL32.dll", name: "LeaveCriticalSection" }
+Import { library: "KERNEL32.dll", name: "DeleteCriticalSection" }
+Import { library: "KERNEL32.dll", name: "InitializeCriticalSectionAndSpinCount" }
+Import { library: "KERNEL32.dll", name: "TlsAlloc" }
+Import { library: "KERNEL32.dll", name: "TlsGetValue" }
+Import { library: "KERNEL32.dll", name: "TlsSetValue" }
+Import { library: "KERNEL32.dll", name: "TlsFree" }
+Import { library: "KERNEL32.dll", name: "FreeLibrary" }
+Import { library: "KERNEL32.dll", name: "GetProcAddress" }
+Import { library: "KERNEL32.dll", name: "LoadLibraryExW" }
+Import { library: "KERNEL32.dll", name: "RaiseException" }
+Import { library: "KERNEL32.dll", name: "GetStdHandle" }
+Import { library: "KERNEL32.dll", name: "WriteFile" }
+Import { library: "KERNEL32.dll", name: "GetModuleFileNameW" }
+Import { library: "KERNEL32.dll", name: "ExitProcess" }
+Import { library: "KERNEL32.dll", name: "GetModuleHandleExW" }
+Import { library: "KERNEL32.dll", name: "GetCommandLineA" }
+Import { library: "KERNEL32.dll", name: "GetCommandLineW" }
+Import { library: "KERNEL32.dll", name: "HeapAlloc" }
+Import { library: "KERNEL32.dll", name: "HeapFree" }
+Import { library: "KERNEL32.dll", name: "CompareStringW" }
+Import { library: "KERNEL32.dll", name: "LCMapStringW" }
+Import { library: "KERNEL32.dll", name: "GetFileType" }
+Import { library: "KERNEL32.dll", name: "FindClose" }
+Import { library: "KERNEL32.dll", name: "FindFirstFileExW" }
+Import { library: "KERNEL32.dll", name: "FindNextFileW" }
+Import { library: "KERNEL32.dll", name: "IsValidCodePage" }
+Import { library: "KERNEL32.dll", name: "GetACP" }
+Import { library: "KERNEL32.dll", name: "GetOEMCP" }
+Import { library: "KERNEL32.dll", name: "GetCPInfo" }
+Import { library: "KERNEL32.dll", name: "MultiByteToWideChar" }
+Import { library: "KERNEL32.dll", name: "WideCharToMultiByte" }
+Import { library: "KERNEL32.dll", name: "GetEnvironmentStringsW" }
+Import { library: "KERNEL32.dll", name: "FreeEnvironmentStringsW" }
+Import { library: "KERNEL32.dll", name: "SetEnvironmentVariableW" }
+Import { library: "KERNEL32.dll", name: "SetStdHandle" }
+Import { library: "KERNEL32.dll", name: "GetStringTypeW" }
+Import { library: "KERNEL32.dll", name: "GetProcessHeap" }
+Import { library: "KERNEL32.dll", name: "FlushFileBuffers" }
+Import { library: "KERNEL32.dll", name: "GetConsoleOutputCP" }
+Import { library: "KERNEL32.dll", name: "GetConsoleMode" }
+Import { library: "KERNEL32.dll", name: "GetFileSizeEx" }
+Import { library: "KERNEL32.dll", name: "SetFilePointerEx" }
+Import { library: "KERNEL32.dll", name: "HeapSize" }
+Import { library: "KERNEL32.dll", name: "HeapReAlloc" }
+Import { library: "KERNEL32.dll", name: "CloseHandle" }
+Import { library: "KERNEL32.dll", name: "CreateFileW" }
+Import { library: "KERNEL32.dll", name: "DecodePointer" }

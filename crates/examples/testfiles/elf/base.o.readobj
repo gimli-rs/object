@@ -1,0 +1,344 @@
+Format: ELF 64-bit
+FileHeader {
+    Ident {
+        Magic: [7F, 45, 4C, 46]
+        Class: ELFCLASS64 (0x2)
+        Data: ELFDATA2LSB (0x1)
+        Version: EV_CURRENT (0x1)
+        OsAbi: ELFOSABI_SYSV (0x0)
+        AbiVersion: 0x0
+        Unused: [0, 0, 0, 0, 0, 0, 0]
+    }
+    Type: ET_REL (0x1)
+    Machine: EM_X86_64 (0x3E)
+    Version: EV_CURRENT (0x1)
+    Type: ET_REL (0x1)
+    Entry: 0x0
+    ProgramHeaderOffset: 0x0
+    SectionHeaderOffset: 0x2D0
+    Flags: 0x0
+    HeaderSize: 0x40
+    ProgramHeaderEntrySize: 0x0
+    ProgramHeaderCount: 0
+    SectionHeaderEntrySize: 0x40
+    SectionHeaderCount: 13
+    SectionHeaderStringTableIndex: 12
+}
+SectionHeader {
+    Index: 0
+    Name: "" (0x0)
+    Type: SHT_NULL (0x0)
+    Flags: 0x0
+    Address: 0x0
+    Offset: 0x0
+    Size: 0x0
+    Link: 0
+    Info: 0
+    AddressAlign: 0x0
+    EntrySize: 0x0
+}
+SectionHeader {
+    Index: 1
+    Name: ".text" (0x20)
+    Type: SHT_PROGBITS (0x1)
+    Flags: 0x6
+        SHF_ALLOC (0x2)
+        SHF_EXECINSTR (0x4)
+    Address: 0x0
+    Offset: 0x40
+    Size: 0x1C
+    Link: 0
+    Info: 0
+    AddressAlign: 0x1
+    EntrySize: 0x0
+}
+SectionHeader {
+    Index: 2
+    Name: ".rela.text" (0x1B)
+    Type: SHT_RELA (0x4)
+    Flags: 0x40
+        SHF_INFO_LINK (0x40)
+    Address: 0x0
+    Offset: 0x220
+    Size: 0x30
+    Link: 10
+    Info: 1
+    AddressAlign: 0x8
+    EntrySize: 0x18
+    Relocation {
+        Offset: 0x7
+        Type: R_X86_64_PC32 (0x2)
+        Symbol: "" (0x5)
+        Addend: 0xFFFFFFFFFFFFFFFC
+    }
+    Relocation {
+        Offset: 0x11
+        Type: R_X86_64_PLT32 (0x4)
+        Symbol: "printf" (0xB)
+        Addend: 0xFFFFFFFFFFFFFFFC
+    }
+}
+SectionHeader {
+    Index: 3
+    Name: ".data" (0x26)
+    Type: SHT_PROGBITS (0x1)
+    Flags: 0x3
+        SHF_WRITE (0x1)
+        SHF_ALLOC (0x2)
+    Address: 0x0
+    Offset: 0x5C
+    Size: 0x0
+    Link: 0
+    Info: 0
+    AddressAlign: 0x1
+    EntrySize: 0x0
+}
+SectionHeader {
+    Index: 4
+    Name: ".bss" (0x2C)
+    Type: SHT_NOBITS (0x8)
+    Flags: 0x3
+        SHF_WRITE (0x1)
+        SHF_ALLOC (0x2)
+    Address: 0x0
+    Offset: 0x5C
+    Size: 0x0
+    Link: 0
+    Info: 0
+    AddressAlign: 0x1
+    EntrySize: 0x0
+}
+SectionHeader {
+    Index: 5
+    Name: ".rodata" (0x31)
+    Type: SHT_PROGBITS (0x1)
+    Flags: 0x2
+        SHF_ALLOC (0x2)
+    Address: 0x0
+    Offset: 0x5C
+    Size: 0xD
+    Link: 0
+    Info: 0
+    AddressAlign: 0x1
+    EntrySize: 0x0
+}
+SectionHeader {
+    Index: 6
+    Name: ".comment" (0x39)
+    Type: SHT_PROGBITS (0x1)
+    Flags: 0x30
+        SHF_MERGE (0x10)
+        SHF_STRINGS (0x20)
+    Address: 0x0
+    Offset: 0x69
+    Size: 0x2A
+    Link: 0
+    Info: 0
+    AddressAlign: 0x1
+    EntrySize: 0x1
+}
+SectionHeader {
+    Index: 7
+    Name: ".note.GNU-stack" (0x42)
+    Type: SHT_PROGBITS (0x1)
+    Flags: 0x0
+    Address: 0x0
+    Offset: 0x93
+    Size: 0x0
+    Link: 0
+    Info: 0
+    AddressAlign: 0x1
+    EntrySize: 0x0
+}
+SectionHeader {
+    Index: 8
+    Name: ".eh_frame" (0x57)
+    Type: SHT_PROGBITS (0x1)
+    Flags: 0x2
+        SHF_ALLOC (0x2)
+    Address: 0x0
+    Offset: 0x98
+    Size: 0x38
+    Link: 0
+    Info: 0
+    AddressAlign: 0x8
+    EntrySize: 0x0
+}
+SectionHeader {
+    Index: 9
+    Name: ".rela.eh_frame" (0x52)
+    Type: SHT_RELA (0x4)
+    Flags: 0x40
+        SHF_INFO_LINK (0x40)
+    Address: 0x0
+    Offset: 0x250
+    Size: 0x18
+    Link: 10
+    Info: 8
+    AddressAlign: 0x8
+    EntrySize: 0x18
+    Relocation {
+        Offset: 0x20
+        Type: R_X86_64_PC32 (0x2)
+        Symbol: "" (0x2)
+    }
+}
+SectionHeader {
+    Index: 10
+    Name: ".symtab" (0x1)
+    Type: SHT_SYMTAB (0x2)
+    Flags: 0x0
+    Address: 0x0
+    Offset: 0xD0
+    Size: 0x120
+    Link: 11
+    Info: 9
+    AddressAlign: 0x8
+    EntrySize: 0x18
+    Symbol {
+        Index: 0
+        Name: "" (0x0)
+        Value: 0x0
+        Size: 0x0
+        Type: STT_NOTYPE (0x0)
+        Bind: STB_LOCAL (0x0)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: SHN_UNDEF (0x0)
+    }
+    Symbol {
+        Index: 1
+        Name: "base.c" (0x1)
+        Value: 0x0
+        Size: 0x0
+        Type: STT_FILE (0x4)
+        Bind: STB_LOCAL (0x0)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: SHN_ABS (0xFFF1)
+    }
+    Symbol {
+        Index: 2
+        Name: "" (0x0)
+        Value: 0x0
+        Size: 0x0
+        Type: STT_SECTION (0x3)
+        Bind: STB_LOCAL (0x0)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: 1
+    }
+    Symbol {
+        Index: 3
+        Name: "" (0x0)
+        Value: 0x0
+        Size: 0x0
+        Type: STT_SECTION (0x3)
+        Bind: STB_LOCAL (0x0)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: 3
+    }
+    Symbol {
+        Index: 4
+        Name: "" (0x0)
+        Value: 0x0
+        Size: 0x0
+        Type: STT_SECTION (0x3)
+        Bind: STB_LOCAL (0x0)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: 4
+    }
+    Symbol {
+        Index: 5
+        Name: "" (0x0)
+        Value: 0x0
+        Size: 0x0
+        Type: STT_SECTION (0x3)
+        Bind: STB_LOCAL (0x0)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: 5
+    }
+    Symbol {
+        Index: 6
+        Name: "" (0x0)
+        Value: 0x0
+        Size: 0x0
+        Type: STT_SECTION (0x3)
+        Bind: STB_LOCAL (0x0)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: 7
+    }
+    Symbol {
+        Index: 7
+        Name: "" (0x0)
+        Value: 0x0
+        Size: 0x0
+        Type: STT_SECTION (0x3)
+        Bind: STB_LOCAL (0x0)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: 8
+    }
+    Symbol {
+        Index: 8
+        Name: "" (0x0)
+        Value: 0x0
+        Size: 0x0
+        Type: STT_SECTION (0x3)
+        Bind: STB_LOCAL (0x0)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: 6
+    }
+    Symbol {
+        Index: 9
+        Name: "main" (0x8)
+        Value: 0x0
+        Size: 0x1C
+        Type: STT_FUNC (0x2)
+        Bind: STB_GLOBAL (0x1)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: 1
+    }
+    Symbol {
+        Index: 10
+        Name: "_GLOBAL_OFFSET_TABLE_" (0xD)
+        Value: 0x0
+        Size: 0x0
+        Type: STT_NOTYPE (0x0)
+        Bind: STB_GLOBAL (0x1)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: SHN_UNDEF (0x0)
+    }
+    Symbol {
+        Index: 11
+        Name: "printf" (0x23)
+        Value: 0x0
+        Size: 0x0
+        Type: STT_NOTYPE (0x0)
+        Bind: STB_GLOBAL (0x1)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: SHN_UNDEF (0x0)
+    }
+}
+SectionHeader {
+    Index: 11
+    Name: ".strtab" (0x9)
+    Type: SHT_STRTAB (0x3)
+    Flags: 0x0
+    Address: 0x0
+    Offset: 0x1F0
+    Size: 0x2A
+    Link: 0
+    Info: 0
+    AddressAlign: 0x1
+    EntrySize: 0x0
+}
+SectionHeader {
+    Index: 12
+    Name: ".shstrtab" (0x11)
+    Type: SHT_STRTAB (0x3)
+    Flags: 0x0
+    Address: 0x0
+    Offset: 0x268
+    Size: 0x61
+    Link: 0
+    Info: 0
+    AddressAlign: 0x1
+    EntrySize: 0x0
+}
