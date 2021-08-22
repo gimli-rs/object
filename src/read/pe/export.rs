@@ -97,38 +97,42 @@ impl<'data> ExportTable<'data> {
         let directory = data
             .read_at::<pe::ImageExportDirectory>(0)
             .read_error("Invalid PE export dir size")?;
-        let addresses = data
-            .read_slice_at::<U32Bytes<_>>(
-                directory
-                    .address_of_functions
-                    .get(LE)
-                    .wrapping_sub(virtual_address) as usize,
-                directory.number_of_functions.get(LE) as usize,
-            )
-            .read_error("Invalid PE export address table")?;
+
+        let mut addresses = &[][..];
+        let address_of_functions = directory.address_of_functions.get(LE);
+        if address_of_functions != 0 {
+            addresses = data
+                .read_slice_at::<U32Bytes<_>>(
+                    address_of_functions.wrapping_sub(virtual_address) as usize,
+                    directory.number_of_functions.get(LE) as usize,
+                )
+                .read_error("Invalid PE export address table")?;
+        }
+
         let mut names = &[][..];
         let mut name_ordinals = &[][..];
-        let number = directory.number_of_names.get(LE) as usize;
-        if number != 0 {
+        let address_of_names = directory.address_of_names.get(LE);
+        let address_of_name_ordinals = directory.address_of_name_ordinals.get(LE);
+        if address_of_names != 0 {
+            if address_of_name_ordinals == 0 {
+                return Err(Error("Missing PE export ordinal table"));
+            }
+
+            let number = directory.number_of_names.get(LE) as usize;
             names = data
                 .read_slice_at::<U32Bytes<_>>(
-                    directory
-                        .address_of_names
-                        .get(LE)
-                        .wrapping_sub(virtual_address) as usize,
+                    address_of_names.wrapping_sub(virtual_address) as usize,
                     number,
                 )
                 .read_error("Invalid PE export name pointer table")?;
             name_ordinals = data
                 .read_slice_at::<U16Bytes<_>>(
-                    directory
-                        .address_of_name_ordinals
-                        .get(LE)
-                        .wrapping_sub(virtual_address) as usize,
+                    address_of_name_ordinals.wrapping_sub(virtual_address) as usize,
                     number,
                 )
                 .read_error("Invalid PE export ordinal table")?;
         }
+
         Ok(ExportTable {
             data,
             virtual_address,
