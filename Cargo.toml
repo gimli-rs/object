@@ -2,7 +2,7 @@
 name = "object"
 version = "0.26.1"
 edition = "2018"
-exclude = ["/.coveralls.yml", "/.travis.yml"]
+exclude = ["/.github", "/testfiles"]
 keywords = ["object", "elf", "mach-o", "pe", "coff"]
 license = "Apache-2.0/MIT"
 repository = "https://github.com/gimli-rs/object"
