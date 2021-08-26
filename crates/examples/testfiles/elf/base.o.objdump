@@ -1,0 +1,44 @@
+Format: Elf Little-endian 64-bit
+Kind: Relocatable
+Architecture: X86_64
+Flags: Elf { e_flags: 0 }
+Relative Address Base: 0
+Entry Address: 0
+0: Section { name: "", address: 0, size: 0, align: 0, kind: Metadata, flags: Elf { sh_flags: 0 } }
+1: Section { name: ".text", address: 0, size: 1c, align: 1, kind: Text, flags: Elf { sh_flags: 6 } }
+2: Section { name: ".rela.text", address: 0, size: 30, align: 8, kind: Metadata, flags: Elf { sh_flags: 40 } }
+3: Section { name: ".data", address: 0, size: 0, align: 1, kind: Data, flags: Elf { sh_flags: 3 } }
+4: Section { name: ".bss", address: 0, size: 0, align: 1, kind: UninitializedData, flags: Elf { sh_flags: 3 } }
+5: Section { name: ".rodata", address: 0, size: d, align: 1, kind: ReadOnlyData, flags: Elf { sh_flags: 2 } }
+6: Section { name: ".comment", address: 0, size: 2a, align: 1, kind: OtherString, flags: Elf { sh_flags: 30 } }
+7: Section { name: ".note.GNU-stack", address: 0, size: 0, align: 1, kind: Other, flags: Elf { sh_flags: 0 } }
+8: Section { name: ".eh_frame", address: 0, size: 38, align: 8, kind: ReadOnlyData, flags: Elf { sh_flags: 2 } }
+9: Section { name: ".rela.eh_frame", address: 0, size: 18, align: 8, kind: Metadata, flags: Elf { sh_flags: 40 } }
+10: Section { name: ".symtab", address: 0, size: 120, align: 8, kind: Metadata, flags: Elf { sh_flags: 0 } }
+11: Section { name: ".strtab", address: 0, size: 2a, align: 1, kind: Metadata, flags: Elf { sh_flags: 0 } }
+12: Section { name: ".shstrtab", address: 0, size: 61, align: 1, kind: Metadata, flags: Elf { sh_flags: 0 } }
+
+Symbols
+0: Symbol { name: "", address: 0, size: 0, kind: Null, section: Undefined, scope: Unknown, weak: false, flags: Elf { st_info: 0, st_other: 0 } }
+1: Symbol { name: "base.c", address: 0, size: 0, kind: File, section: None, scope: Compilation, weak: false, flags: Elf { st_info: 4, st_other: 0 } }
+2: Symbol { name: "", address: 0, size: 0, kind: Section, section: Section(SectionIndex(1)), scope: Compilation, weak: false, flags: Elf { st_info: 3, st_other: 0 } }
+3: Symbol { name: "", address: 0, size: 0, kind: Section, section: Section(SectionIndex(3)), scope: Compilation, weak: false, flags: Elf { st_info: 3, st_other: 0 } }
+4: Symbol { name: "", address: 0, size: 0, kind: Section, section: Section(SectionIndex(4)), scope: Compilation, weak: false, flags: Elf { st_info: 3, st_other: 0 } }
+5: Symbol { name: "", address: 0, size: 0, kind: Section, section: Section(SectionIndex(5)), scope: Compilation, weak: false, flags: Elf { st_info: 3, st_other: 0 } }
+6: Symbol { name: "", address: 0, size: 0, kind: Section, section: Section(SectionIndex(7)), scope: Compilation, weak: false, flags: Elf { st_info: 3, st_other: 0 } }
+7: Symbol { name: "", address: 0, size: 0, kind: Section, section: Section(SectionIndex(8)), scope: Compilation, weak: false, flags: Elf { st_info: 3, st_other: 0 } }
+8: Symbol { name: "", address: 0, size: 0, kind: Section, section: Section(SectionIndex(6)), scope: Compilation, weak: false, flags: Elf { st_info: 3, st_other: 0 } }
+9: Symbol { name: "main", address: 0, size: 1c, kind: Text, section: Section(SectionIndex(1)), scope: Dynamic, weak: false, flags: Elf { st_info: 12, st_other: 0 } }
+10: Symbol { name: "_GLOBAL_OFFSET_TABLE_", address: 0, size: 0, kind: Unknown, section: Undefined, scope: Unknown, weak: false, flags: Elf { st_info: 10, st_other: 0 } }
+11: Symbol { name: "printf", address: 0, size: 0, kind: Unknown, section: Undefined, scope: Unknown, weak: false, flags: Elf { st_info: 10, st_other: 0 } }
+
+.text relocations
+(7, Relocation { kind: Relative, encoding: Generic, size: 20, target: Symbol(SymbolIndex(5)), addend: fffffffffffffffc, implicit_addend: false })
+(11, Relocation { kind: PltRelative, encoding: Generic, size: 20, target: Symbol(SymbolIndex(b)), addend: fffffffffffffffc, implicit_addend: false })
+
+.eh_frame relocations
+(20, Relocation { kind: Relative, encoding: Generic, size: 20, target: Symbol(SymbolIndex(2)), addend: 0, implicit_addend: false })
+
+Dynamic symbols
+
+Dynamic relocations

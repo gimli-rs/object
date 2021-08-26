@@ -1,0 +1,399 @@
+Format: COFF
+ImageFileHeader {
+    Machine: IMAGE_FILE_MACHINE_AMD64 (0x8664)
+    NumberOfSections: 7
+    TimeDateStamp: 0
+    PointerToSymbolTable: 0x280
+    NumberOfSymbols: 22
+    SizeOfOptionalHeader: 0x0
+    Characteristics: 0x4
+        IMAGE_FILE_LINE_NUMS_STRIPPED (0x4)
+}
+ImageSectionHeader {
+    Index: 1
+    Name: ".text"
+    VirtualSize: 0x0
+    VirtualAddress: 0x0
+    SizeOfRawData: 0x80
+    PointerToRawData: 0x12C
+    PointerToRelocations: 0x21C
+    PointerToLinenumbers: 0x0
+    NumberOfRelocations: 4
+    NumberOfLinenumbers: 0
+    Characteristics: 0x60500020
+        IMAGE_SCN_CNT_CODE (0x20)
+        IMAGE_SCN_MEM_EXECUTE (0x20000000)
+        IMAGE_SCN_MEM_READ (0x40000000)
+        IMAGE_SCN_ALIGN_16BYTES (0x500000)
+    ImageRelocation {
+        VirtualAddress: 0x2F
+        Symbol: "__imp___acrt_iob_func" (0x13)
+        Type: IMAGE_REL_AMD64_REL32 (0x4)
+    }
+    ImageRelocation {
+        VirtualAddress: 0x40
+        Symbol: "__mingw_vfprintf" (0x15)
+        Type: IMAGE_REL_AMD64_REL32 (0x4)
+    }
+    ImageRelocation {
+        VirtualAddress: 0x5A
+        Symbol: "__main" (0x14)
+        Type: IMAGE_REL_AMD64_REL32 (0x4)
+    }
+    ImageRelocation {
+        VirtualAddress: 0x61
+        Symbol: ".rdata" (0xF)
+        Type: IMAGE_REL_AMD64_REL32 (0x4)
+    }
+}
+ImageSectionHeader {
+    Index: 2
+    Name: ".data"
+    VirtualSize: 0x0
+    VirtualAddress: 0x0
+    SizeOfRawData: 0x0
+    PointerToRawData: 0x0
+    PointerToRelocations: 0x0
+    PointerToLinenumbers: 0x0
+    NumberOfRelocations: 0
+    NumberOfLinenumbers: 0
+    Characteristics: 0xC0500040
+        IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
+        IMAGE_SCN_MEM_READ (0x40000000)
+        IMAGE_SCN_MEM_WRITE (0x80000000)
+        IMAGE_SCN_ALIGN_16BYTES (0x500000)
+}
+ImageSectionHeader {
+    Index: 3
+    Name: ".bss"
+    VirtualSize: 0x0
+    VirtualAddress: 0x0
+    SizeOfRawData: 0x0
+    PointerToRawData: 0x0
+    PointerToRelocations: 0x0
+    PointerToLinenumbers: 0x0
+    NumberOfRelocations: 0
+    NumberOfLinenumbers: 0
+    Characteristics: 0xC0500080
+        IMAGE_SCN_CNT_UNINITIALIZED_DATA (0x80)
+        IMAGE_SCN_MEM_READ (0x40000000)
+        IMAGE_SCN_MEM_WRITE (0x80000000)
+        IMAGE_SCN_ALIGN_16BYTES (0x500000)
+}
+ImageSectionHeader {
+    Index: 4
+    Name: ".xdata"
+    VirtualSize: 0x0
+    VirtualAddress: 0x0
+    SizeOfRawData: 0x18
+    PointerToRawData: 0x1AC
+    PointerToRelocations: 0x0
+    PointerToLinenumbers: 0x0
+    NumberOfRelocations: 0
+    NumberOfLinenumbers: 0
+    Characteristics: 0x40300040
+        IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
+        IMAGE_SCN_MEM_READ (0x40000000)
+        IMAGE_SCN_ALIGN_4BYTES (0x300000)
+}
+ImageSectionHeader {
+    Index: 5
+    Name: ".pdata"
+    VirtualSize: 0x0
+    VirtualAddress: 0x0
+    SizeOfRawData: 0x18
+    PointerToRawData: 0x1C4
+    PointerToRelocations: 0x244
+    PointerToLinenumbers: 0x0
+    NumberOfRelocations: 6
+    NumberOfLinenumbers: 0
+    Characteristics: 0x40300040
+        IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
+        IMAGE_SCN_MEM_READ (0x40000000)
+        IMAGE_SCN_ALIGN_4BYTES (0x300000)
+    ImageRelocation {
+        VirtualAddress: 0x0
+        Symbol: ".text" (0x5)
+        Type: IMAGE_REL_AMD64_ADDR32NB (0x3)
+    }
+    ImageRelocation {
+        VirtualAddress: 0x4
+        Symbol: ".text" (0x5)
+        Type: IMAGE_REL_AMD64_ADDR32NB (0x3)
+    }
+    ImageRelocation {
+        VirtualAddress: 0x8
+        Symbol: ".xdata" (0xB)
+        Type: IMAGE_REL_AMD64_ADDR32NB (0x3)
+    }
+    ImageRelocation {
+        VirtualAddress: 0xC
+        Symbol: ".text" (0x5)
+        Type: IMAGE_REL_AMD64_ADDR32NB (0x3)
+    }
+    ImageRelocation {
+        VirtualAddress: 0x10
+        Symbol: ".text" (0x5)
+        Type: IMAGE_REL_AMD64_ADDR32NB (0x3)
+    }
+    ImageRelocation {
+        VirtualAddress: 0x14
+        Symbol: ".xdata" (0xB)
+        Type: IMAGE_REL_AMD64_ADDR32NB (0x3)
+    }
+}
+ImageSectionHeader {
+    Index: 6
+    Name: ".rdata"
+    VirtualSize: 0x0
+    VirtualAddress: 0x0
+    SizeOfRawData: 0x10
+    PointerToRawData: 0x1DC
+    PointerToRelocations: 0x0
+    PointerToLinenumbers: 0x0
+    NumberOfRelocations: 0
+    NumberOfLinenumbers: 0
+    Characteristics: 0x40500040
+        IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
+        IMAGE_SCN_MEM_READ (0x40000000)
+        IMAGE_SCN_ALIGN_16BYTES (0x500000)
+}
+ImageSectionHeader {
+    Index: 7
+    Name: ".rdata$zzz"
+    VirtualSize: 0x0
+    VirtualAddress: 0x0
+    SizeOfRawData: 0x30
+    PointerToRawData: 0x1EC
+    PointerToRelocations: 0x0
+    PointerToLinenumbers: 0x0
+    NumberOfRelocations: 0
+    NumberOfLinenumbers: 0
+    Characteristics: 0x40500040
+        IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
+        IMAGE_SCN_MEM_READ (0x40000000)
+        IMAGE_SCN_ALIGN_16BYTES (0x500000)
+}
+ImageSymbol {
+    Index: 0
+    Name: ".file"
+    Value: 0x0
+    Section: IMAGE_SYM_DEBUG (0xFFFE)
+    Type: 0x0
+    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
+    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
+    StorageClass: IMAGE_SYM_CLASS_FILE (0x67)
+    NumberOfAuxSymbols: 0x1
+    ImageAuxSymbolFile {
+        Name: "base.c"
+    }
+}
+ImageSymbol {
+    Index: 2
+    Name: "printf"
+    Value: 0x0
+    Section: ".text" (0x1)
+    Type: 0x20
+    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
+    DerivedType: IMAGE_SYM_DTYPE_FUNCTION (0x2)
+    StorageClass: IMAGE_SYM_CLASS_STATIC (0x3)
+    NumberOfAuxSymbols: 0x1
+    ImageAuxSymbolFunction {
+        TagIndex: 0
+        TotalSize: 0
+        PointerToLinenumber: 0x0
+        PointerToNextFunction: 0
+        Unused: [0, 0]
+    }
+}
+ImageSymbol {
+    Index: 4
+    Name: "main"
+    Value: 0x51
+    Section: ".text" (0x1)
+    Type: 0x20
+    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
+    DerivedType: IMAGE_SYM_DTYPE_FUNCTION (0x2)
+    StorageClass: IMAGE_SYM_CLASS_EXTERNAL (0x2)
+    NumberOfAuxSymbols: 0x0
+}
+ImageSymbol {
+    Index: 5
+    Name: ".text"
+    Value: 0x0
+    Section: ".text" (0x1)
+    Type: 0x0
+    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
+    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
+    StorageClass: IMAGE_SYM_CLASS_STATIC (0x3)
+    NumberOfAuxSymbols: 0x1
+    ImageAuxSymbolSection {
+        Length: 0x75
+        NumberOfRelocations: 4
+        NumberOfLinenumbers: 0
+        CheckSum: 0x0
+        Number: 0
+        Selection: 0x0
+        Reserved: 0x0
+        HighNumber: 0
+    }
+}
+ImageSymbol {
+    Index: 7
+    Name: ".data"
+    Value: 0x0
+    Section: ".data" (0x2)
+    Type: 0x0
+    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
+    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
+    StorageClass: IMAGE_SYM_CLASS_STATIC (0x3)
+    NumberOfAuxSymbols: 0x1
+    ImageAuxSymbolSection {
+        Length: 0x0
+        NumberOfRelocations: 0
+        NumberOfLinenumbers: 0
+        CheckSum: 0x0
+        Number: 0
+        Selection: 0x0
+        Reserved: 0x0
+        HighNumber: 0
+    }
+}
+ImageSymbol {
+    Index: 9
+    Name: ".bss"
+    Value: 0x0
+    Section: ".bss" (0x3)
+    Type: 0x0
+    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
+    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
+    StorageClass: IMAGE_SYM_CLASS_STATIC (0x3)
+    NumberOfAuxSymbols: 0x1
+    ImageAuxSymbolSection {
+        Length: 0x0
+        NumberOfRelocations: 0
+        NumberOfLinenumbers: 0
+        CheckSum: 0x0
+        Number: 0
+        Selection: 0x0
+        Reserved: 0x0
+        HighNumber: 0
+    }
+}
+ImageSymbol {
+    Index: 11
+    Name: ".xdata"
+    Value: 0x0
+    Section: ".xdata" (0x4)
+    Type: 0x0
+    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
+    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
+    StorageClass: IMAGE_SYM_CLASS_STATIC (0x3)
+    NumberOfAuxSymbols: 0x1
+    ImageAuxSymbolSection {
+        Length: 0x18
+        NumberOfRelocations: 0
+        NumberOfLinenumbers: 0
+        CheckSum: 0x0
+        Number: 0
+        Selection: 0x0
+        Reserved: 0x0
+        HighNumber: 0
+    }
+}
+ImageSymbol {
+    Index: 13
+    Name: ".pdata"
+    Value: 0x0
+    Section: ".pdata" (0x5)
+    Type: 0x0
+    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
+    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
+    StorageClass: IMAGE_SYM_CLASS_STATIC (0x3)
+    NumberOfAuxSymbols: 0x1
+    ImageAuxSymbolSection {
+        Length: 0x18
+        NumberOfRelocations: 6
+        NumberOfLinenumbers: 0
+        CheckSum: 0x0
+        Number: 0
+        Selection: 0x0
+        Reserved: 0x0
+        HighNumber: 0
+    }
+}
+ImageSymbol {
+    Index: 15
+    Name: ".rdata"
+    Value: 0x0
+    Section: ".rdata" (0x6)
+    Type: 0x0
+    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
+    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
+    StorageClass: IMAGE_SYM_CLASS_STATIC (0x3)
+    NumberOfAuxSymbols: 0x1
+    ImageAuxSymbolSection {
+        Length: 0xD
+        NumberOfRelocations: 0
+        NumberOfLinenumbers: 0
+        CheckSum: 0x0
+        Number: 0
+        Selection: 0x0
+        Reserved: 0x0
+        HighNumber: 0
+    }
+}
+ImageSymbol {
+    Index: 17
+    Name: ".rdata$zzz"
+    Value: 0x0
+    Section: ".rdata$zzz" (0x7)
+    Type: 0x0
+    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
+    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
+    StorageClass: IMAGE_SYM_CLASS_STATIC (0x3)
+    NumberOfAuxSymbols: 0x1
+    ImageAuxSymbolSection {
+        Length: 0x2B
+        NumberOfRelocations: 0
+        NumberOfLinenumbers: 0
+        CheckSum: 0x0
+        Number: 0
+        Selection: 0x0
+        Reserved: 0x0
+        HighNumber: 0
+    }
+}
+ImageSymbol {
+    Index: 19
+    Name: "__imp___acrt_iob_func"
+    Value: 0x0
+    Section: IMAGE_SYM_UNDEFINED (0x0)
+    Type: 0x0
+    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
+    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
+    StorageClass: IMAGE_SYM_CLASS_EXTERNAL (0x2)
+    NumberOfAuxSymbols: 0x0
+}
+ImageSymbol {
+    Index: 20
+    Name: "__main"
+    Value: 0x0
+    Section: IMAGE_SYM_UNDEFINED (0x0)
+    Type: 0x20
+    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
+    DerivedType: IMAGE_SYM_DTYPE_FUNCTION (0x2)
+    StorageClass: IMAGE_SYM_CLASS_EXTERNAL (0x2)
+    NumberOfAuxSymbols: 0x0
+}
+ImageSymbol {
+    Index: 21
+    Name: "__mingw_vfprintf"
+    Value: 0x0
+    Section: IMAGE_SYM_UNDEFINED (0x0)
+    Type: 0x20
+    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
+    DerivedType: IMAGE_SYM_DTYPE_FUNCTION (0x2)
+    StorageClass: IMAGE_SYM_CLASS_EXTERNAL (0x2)
+    NumberOfAuxSymbols: 0x0
+}

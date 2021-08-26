@@ -76,7 +76,7 @@ impl<'data, Elf: FileHeader> Default for VersionTable<'data, Elf> {
 
 impl<'data, Elf: FileHeader> VersionTable<'data, Elf> {
     /// Parse the version sections.
-    pub fn new<R: ReadRef<'data>>(
+    pub fn parse<R: ReadRef<'data>>(
         endian: Elf::Endian,
         versyms: &'data [elf::Versym<Elf::Endian>],
         verdefs: Option<VerdefIterator<'data, Elf>>,
@@ -170,22 +170,30 @@ impl<'data, Elf: FileHeader> VersionTable<'data, Elf> {
 
     /// Return version information for a given symbol version index.
     ///
-    /// Returns `None` if index is invalid. This may occur for local and global versions.
-    pub fn version(&self, index: VersionIndex) -> Option<&Version<'data>> {
+    /// Returns `Ok(None)` for local and global versions.
+    /// Returns `Err(_)` if index is invalid.
+    pub fn version(&self, index: VersionIndex) -> Result<Option<&Version<'data>>> {
         if index.index() <= elf::VER_NDX_GLOBAL {
-            return None;
+            return Ok(None);
         }
         self.versions
             .get(usize::from(index.index()))
             .filter(|version| version.valid)
+            .read_error("Invalid ELF symbol version index")
+            .map(Some)
     }
 
     /// Return true if the given symbol index satisifies the requirements of `need`.
     ///
+    /// Returns false for any error.
+    ///
     /// Note: this function hasn't been fully tested and is likely to be incomplete.
     pub fn matches(&self, endian: Elf::Endian, index: usize, need: Option<&Version>) -> bool {
         let version_index = self.version_index(endian, index);
-        let def = self.version(version_index);
+        let def = match self.version(version_index) {
+            Ok(def) => def,
+            Err(_) => return false,
+        };
         match (def, need) {
             (Some(def), Some(need)) => need.hash == def.hash && need.name == def.name,
             (None, Some(_need)) => {

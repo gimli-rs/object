@@ -1,0 +1,254 @@
+Format: ELF 64-bit
+FileHeader {
+    Ident {
+        Magic: [7F, 45, 4C, 46]
+        Class: ELFCLASS64 (0x2)
+        Data: ELFDATA2LSB (0x1)
+        Version: EV_CURRENT (0x1)
+        OsAbi: ELFOSABI_SYSV (0x0)
+        AbiVersion: 0x0
+        Unused: [0, 0, 0, 0, 0, 0, 0]
+    }
+    Type: ET_DYN (0x3)
+    Machine: EM_X86_64 (0x3E)
+    Version: EV_CURRENT (0x1)
+    Type: ET_DYN (0x3)
+    Entry: 0x570
+    ProgramHeaderOffset: 0x40
+    SectionHeaderOffset: 0x0
+    Flags: 0x0
+    HeaderSize: 0x40
+    ProgramHeaderEntrySize: 0x38
+    ProgramHeaderCount: 9
+    SectionHeaderEntrySize: 0x40
+    SectionHeaderCount: 0
+    SectionHeaderStringTableIndex: 0
+}
+ProgramHeader {
+    Type: PT_PHDR (0x6)
+    Offset: 0x40
+    VirtualAddress: 0x40
+    PhysicalAddress: 0x40
+    FileSize: 0x1F8
+    MemorySize: 0x1F8
+    Flags: 0x4
+        PF_R (0x4)
+    Align: 0x8
+}
+ProgramHeader {
+    Type: PT_INTERP (0x3)
+    Offset: 0x238
+    VirtualAddress: 0x238
+    PhysicalAddress: 0x238
+    FileSize: 0x1C
+    MemorySize: 0x1C
+    Flags: 0x4
+        PF_R (0x4)
+    Align: 0x1
+}
+ProgramHeader {
+    Type: PT_LOAD (0x1)
+    Offset: 0x0
+    VirtualAddress: 0x0
+    PhysicalAddress: 0x0
+    FileSize: 0x878
+    MemorySize: 0x878
+    Flags: 0x5
+        PF_X (0x1)
+        PF_R (0x4)
+    Align: 0x200000
+}
+ProgramHeader {
+    Type: PT_LOAD (0x1)
+    Offset: 0xDA8
+    VirtualAddress: 0x200DA8
+    PhysicalAddress: 0x200DA8
+    FileSize: 0x268
+    MemorySize: 0x270
+    Flags: 0x6
+        PF_W (0x2)
+        PF_R (0x4)
+    Align: 0x200000
+}
+ProgramHeader {
+    Type: PT_DYNAMIC (0x2)
+    Offset: 0xDB8
+    VirtualAddress: 0x200DB8
+    PhysicalAddress: 0x200DB8
+    FileSize: 0x200
+    MemorySize: 0x200
+    Flags: 0x6
+        PF_W (0x2)
+        PF_R (0x4)
+    Align: 0x8
+    Dynamic {
+        Tag: DT_NEEDED (0x1)
+        Value: "libc.so.6" (0x1)
+    }
+    Dynamic {
+        Tag: DT_INIT (0xC)
+        Value: 0x520
+    }
+    Dynamic {
+        Tag: DT_FINI (0xD)
+        Value: 0x714
+    }
+    Dynamic {
+        Tag: DT_INIT_ARRAY (0x19)
+        Value: 0x200DA8
+    }
+    Dynamic {
+        Tag: DT_INIT_ARRAYSZ (0x1B)
+        Value: 0x8
+    }
+    Dynamic {
+        Tag: DT_FINI_ARRAY (0x1A)
+        Value: 0x200DB0
+    }
+    Dynamic {
+        Tag: DT_FINI_ARRAYSZ (0x1C)
+        Value: 0x8
+    }
+    Dynamic {
+        Tag: DT_HASH (0x4)
+        Value: 0x298
+    }
+    Dynamic {
+        Tag: DT_GNU_HASH (0x6FFFFEF5)
+        Value: 0x2C8
+    }
+    Dynamic {
+        Tag: DT_STRTAB (0x5)
+        Value: 0x390
+    }
+    Dynamic {
+        Tag: DT_SYMTAB (0x6)
+        Value: 0x2E8
+    }
+    Dynamic {
+        Tag: DT_STRSZ (0xA)
+        Value: 0x84
+    }
+    Dynamic {
+        Tag: DT_SYMENT (0xB)
+        Value: 0x18
+    }
+    Dynamic {
+        Tag: DT_DEBUG (0x15)
+        Value: 0x0
+    }
+    Dynamic {
+        Tag: DT_PLTGOT (0x3)
+        Value: 0x200FB8
+    }
+    Dynamic {
+        Tag: DT_PLTRELSZ (0x2)
+        Value: 0x18
+    }
+    Dynamic {
+        Tag: DT_PLTREL (0x14)
+        Value: 0x7
+    }
+    Dynamic {
+        Tag: DT_JMPREL (0x17)
+        Value: 0x508
+    }
+    Dynamic {
+        Tag: DT_RELA (0x7)
+        Value: 0x448
+    }
+    Dynamic {
+        Tag: DT_RELASZ (0x8)
+        Value: 0xC0
+    }
+    Dynamic {
+        Tag: DT_RELAENT (0x9)
+        Value: 0x18
+    }
+    Dynamic {
+        Tag: DT_FLAGS (0x1E)
+        Value: 0x8
+            DF_BIND_NOW (0x8)
+    }
+    Dynamic {
+        Tag: DT_FLAGS_1 (0x6FFFFFFB)
+        Value: 0x8000001
+            DF_1_NOW (0x1)
+            DF_1_PIE (0x8000000)
+    }
+    Dynamic {
+        Tag: DT_VERNEED (0x6FFFFFFE)
+        Value: 0x428
+    }
+    Dynamic {
+        Tag: DT_VERNEEDNUM (0x6FFFFFFF)
+        Value: 0x1
+    }
+    Dynamic {
+        Tag: DT_VERSYM (0x6FFFFFF0)
+        Value: 0x414
+    }
+    Dynamic {
+        Tag: DT_RELACOUNT (0x6FFFFFF9)
+        Value: 0x3
+    }
+    Dynamic {
+        Tag: DT_NULL (0x0)
+        Value: 0x0
+    }
+}
+ProgramHeader {
+    Type: PT_NOTE (0x4)
+    Offset: 0x254
+    VirtualAddress: 0x254
+    PhysicalAddress: 0x254
+    FileSize: 0x44
+    MemorySize: 0x44
+    Flags: 0x4
+        PF_R (0x4)
+    Align: 0x4
+    Note {
+        Name: "GNU" (0x4)
+        Type: NT_GNU_ABI_TAG (0x1)
+        Desc: [0, 0, 0, 0, 3, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0]
+    }
+    Note {
+        Name: "GNU" (0x4)
+        Type: NT_GNU_BUILD_ID (0x3)
+        Desc: [D4, 46, A0, 61, BB, 9A, C2, 7A, B4, 3B, 11, 71, 8F, DE, DF, 5B, 7F, 3A, F6, F4]
+    }
+}
+ProgramHeader {
+    Type: PT_GNU_EH_FRAME (0x6474E550)
+    Offset: 0x734
+    VirtualAddress: 0x734
+    PhysicalAddress: 0x734
+    FileSize: 0x3C
+    MemorySize: 0x3C
+    Flags: 0x4
+        PF_R (0x4)
+    Align: 0x4
+}
+ProgramHeader {
+    Type: PT_GNU_STACK (0x6474E551)
+    Offset: 0x0
+    VirtualAddress: 0x0
+    PhysicalAddress: 0x0
+    FileSize: 0x0
+    MemorySize: 0x0
+    Flags: 0x6
+        PF_W (0x2)
+        PF_R (0x4)
+    Align: 0x10
+}
+ProgramHeader {
+    Type: PT_GNU_RELRO (0x6474E552)
+    Offset: 0xDA8
+    VirtualAddress: 0x200DA8
+    PhysicalAddress: 0x200DA8
+    FileSize: 0x258
+    MemorySize: 0x258
+    Flags: 0x4
+        PF_R (0x4)
+    Align: 0x1
+}

@@ -1,0 +1,619 @@
+Format: PE 32-bit
+ImageDosHeader {
+    Magic: 0x5A4D
+    CountBytesLastPage: 0x90
+    CountPages: 0x3
+    CountRelocations: 0x0
+    CountHeaderParagraphs: 0x4
+    MinAllocParagraphs: 0x0
+    MaxAllocParagraphs: 0xFFFF
+    StackSegment: 0x0
+    StackPointer: 0xB8
+    Checksum: 0x0
+    InstructionPointer: 0x0
+    CodeSegment: 0x0
+    AddressOfRelocations: 0x40
+    OverlayNumber: 0x0
+    OemId: 0x0
+    OemInfo: 0x0
+    AddressOfNewHeader: 0xF0
+}
+ImageNtHeaders {
+    Signature: 0x4550
+}
+ImageFileHeader {
+    Machine: IMAGE_FILE_MACHINE_I386 (0x14C)
+    NumberOfSections: 4
+    TimeDateStamp: 1629804126
+    PointerToSymbolTable: 0x0
+    NumberOfSymbols: 0
+    SizeOfOptionalHeader: 0xE0
+    Characteristics: 0x102
+        IMAGE_FILE_EXECUTABLE_IMAGE (0x2)
+        IMAGE_FILE_32BIT_MACHINE (0x100)
+}
+ImageOptionalHeader {
+    Magic: 0x10B
+    MajorLinkerVersion: 14
+    MinorLinkerVersion: 29
+    SizeOfCode: 0x10600
+    SizeOfInitializedData: 0x8E00
+    SizeOfUninitializedData: 0x0
+    AddressOfEntryPoint: 0x12E1
+    BaseOfCode: 0x1000
+    ImageBase: 0x400000
+    SectionAlignment: 0x1000
+    MajorOperatingSystemVersion: 6
+    MinorOperatingSystemVersion: 0
+    MajorImageVersion: 0
+    MinorImageVersion: 0
+    MajorSubsystemVersion: 6
+    MinorSubsystemVersion: 0
+    Win32VersionValue: 0
+    SizeOfImage: 0x1C000
+    SizeOfHeaders: 0x400
+    CheckSum: 0x0
+    Subsystem: IMAGE_SUBSYSTEM_WINDOWS_CUI (0x3)
+    DllCharacteristics: 0x8140
+        IMAGE_DLLCHARACTERISTICS_DYNAMIC_BASE (0x40)
+        IMAGE_DLLCHARACTERISTICS_NX_COMPAT (0x100)
+        IMAGE_DLLCHARACTERISTICS_TERMINAL_SERVER_AWARE (0x8000)
+    SizeOfStackReserve: 0x100000
+    SizeOfStackCommit: 0x1000
+    SizeOfHeapReserve: 0x100000
+    SizeOfHeapCommit: 0x1000
+    LoaderFlags: 0x0
+    NumberOfRvaAndSizes: 0x10
+}
+ImageDataDirectory {
+    Index: IMAGE_DIRECTORY_ENTRY_EXPORT (0x0)
+    VirtualAddress: 0x0
+    Size: 0x0
+}
+ImageDataDirectory {
+    Index: IMAGE_DIRECTORY_ENTRY_IMPORT (0x1)
+    VirtualAddress: 0x181FC
+    Size: 0x28
+}
+ImageDataDirectory {
+    Index: IMAGE_DIRECTORY_ENTRY_RESOURCE (0x2)
+    VirtualAddress: 0x0
+    Size: 0x0
+}
+ImageDataDirectory {
+    Index: IMAGE_DIRECTORY_ENTRY_EXCEPTION (0x3)
+    VirtualAddress: 0x0
+    Size: 0x0
+}
+ImageDataDirectory {
+    Index: IMAGE_DIRECTORY_ENTRY_SECURITY (0x4)
+    VirtualAddress: 0x0
+    Size: 0x0
+}
+ImageDataDirectory {
+    Index: IMAGE_DIRECTORY_ENTRY_BASERELOC (0x5)
+    VirtualAddress: 0x1B000
+    Size: 0xEC8
+}
+ImageDataDirectory {
+    Index: IMAGE_DIRECTORY_ENTRY_DEBUG (0x6)
+    VirtualAddress: 0x17A8C
+    Size: 0x1C
+}
+ImageDataDirectory {
+    Index: IMAGE_DIRECTORY_ENTRY_ARCHITECTURE (0x7)
+    VirtualAddress: 0x0
+    Size: 0x0
+}
+ImageDataDirectory {
+    Index: IMAGE_DIRECTORY_ENTRY_GLOBALPTR (0x8)
+    VirtualAddress: 0x0
+    Size: 0x0
+}
+ImageDataDirectory {
+    Index: IMAGE_DIRECTORY_ENTRY_TLS (0x9)
+    VirtualAddress: 0x0
+    Size: 0x0
+}
+ImageDataDirectory {
+    Index: IMAGE_DIRECTORY_ENTRY_LOAD_CONFIG (0xA)
+    VirtualAddress: 0x17AA8
+    Size: 0x40
+}
+ImageDataDirectory {
+    Index: IMAGE_DIRECTORY_ENTRY_BOUND_IMPORT (0xB)
+    VirtualAddress: 0x0
+    Size: 0x0
+}
+ImageDataDirectory {
+    Index: IMAGE_DIRECTORY_ENTRY_IAT (0xC)
+    VirtualAddress: 0x12000
+    Size: 0x10C
+}
+ImageDataDirectory {
+    Index: IMAGE_DIRECTORY_ENTRY_DELAY_IMPORT (0xD)
+    VirtualAddress: 0x0
+    Size: 0x0
+}
+ImageDataDirectory {
+    Index: IMAGE_DIRECTORY_ENTRY_COM_DESCRIPTOR (0xE)
+    VirtualAddress: 0x0
+    Size: 0x0
+}
+ImageDataDirectory {
+    Index: 0xF
+    VirtualAddress: 0x0
+    Size: 0x0
+}
+ImageSectionHeader {
+    Index: 1
+    Name: ".text"
+    VirtualSize: 0x104D3
+    VirtualAddress: 0x1000
+    SizeOfRawData: 0x10600
+    PointerToRawData: 0x400
+    PointerToRelocations: 0x0
+    PointerToLinenumbers: 0x0
+    NumberOfRelocations: 0
+    NumberOfLinenumbers: 0
+    Characteristics: 0x60000020
+        IMAGE_SCN_CNT_CODE (0x20)
+        IMAGE_SCN_MEM_EXECUTE (0x20000000)
+        IMAGE_SCN_MEM_READ (0x40000000)
+        <unknown> (0x0)
+}
+ImageSectionHeader {
+    Index: 2
+    Name: ".rdata"
+    VirtualSize: 0x6808
+    VirtualAddress: 0x12000
+    SizeOfRawData: 0x6A00
+    PointerToRawData: 0x10A00
+    PointerToRelocations: 0x0
+    PointerToLinenumbers: 0x0
+    NumberOfRelocations: 0
+    NumberOfLinenumbers: 0
+    Characteristics: 0x40000040
+        IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
+        IMAGE_SCN_MEM_READ (0x40000000)
+        <unknown> (0x0)
+}
+ImageSectionHeader {
+    Index: 3
+    Name: ".data"
+    VirtualSize: 0x12F4
+    VirtualAddress: 0x19000
+    SizeOfRawData: 0xA00
+    PointerToRawData: 0x17400
+    PointerToRelocations: 0x0
+    PointerToLinenumbers: 0x0
+    NumberOfRelocations: 0
+    NumberOfLinenumbers: 0
+    Characteristics: 0xC0000040
+        IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
+        IMAGE_SCN_MEM_READ (0x40000000)
+        IMAGE_SCN_MEM_WRITE (0x80000000)
+        <unknown> (0x0)
+}
+ImageSectionHeader {
+    Index: 4
+    Name: ".reloc"
+    VirtualSize: 0xEC8
+    VirtualAddress: 0x1B000
+    SizeOfRawData: 0x1000
+    PointerToRawData: 0x17E00
+    PointerToRelocations: 0x0
+    PointerToLinenumbers: 0x0
+    NumberOfRelocations: 0
+    NumberOfLinenumbers: 0
+    Characteristics: 0x42000040
+        IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
+        IMAGE_SCN_MEM_DISCARDABLE (0x2000000)
+        IMAGE_SCN_MEM_READ (0x40000000)
+        <unknown> (0x0)
+}
+ImageImportDirectory {
+    ImageImportDescriptor {
+        LookupTable: 0x18224
+        TimeDataStamp: 0x0
+        ForwarderChain: 0x0
+        Name: "KERNEL32.dll" (0x1845E)
+        AddressTable: 0x12000
+        Thunk {
+            Lookup: 0x18330
+            Address: 0x18330
+            Hint: 1103
+            Name: "QueryPerformanceCounter"
+        }
+        Thunk {
+            Lookup: 0x1834A
+            Address: 0x1834A
+            Hint: 539
+            Name: "GetCurrentProcessId"
+        }
+        Thunk {
+            Lookup: 0x18360
+            Address: 0x18360
+            Hint: 543
+            Name: "GetCurrentThreadId"
+        }
+        Thunk {
+            Lookup: 0x18376
+            Address: 0x18376
+            Hint: 748
+            Name: "GetSystemTimeAsFileTime"
+        }
+        Thunk {
+            Lookup: 0x18390
+            Address: 0x18390
+            Hint: 870
+            Name: "InitializeSListHead"
+        }
+        Thunk {
+            Lookup: 0x183A6
+            Address: 0x183A6
+            Hint: 898
+            Name: "IsDebuggerPresent"
+        }
+        Thunk {
+            Lookup: 0x183BA
+            Address: 0x183BA
+            Hint: 1457
+            Name: "UnhandledExceptionFilter"
+        }
+        Thunk {
+            Lookup: 0x183D6
+            Address: 0x183D6
+            Hint: 1393
+            Name: "SetUnhandledExceptionFilter"
+        }
+        Thunk {
+            Lookup: 0x183F4
+            Address: 0x183F4
+            Hint: 723
+            Name: "GetStartupInfoW"
+        }
+        Thunk {
+            Lookup: 0x18406
+            Address: 0x18406
+            Hint: 905
+            Name: "IsProcessorFeaturePresent"
+        }
+        Thunk {
+            Lookup: 0x18422
+            Address: 0x18422
+            Hint: 635
+            Name: "GetModuleHandleW"
+        }
+        Thunk {
+            Lookup: 0x18436
+            Address: 0x18436
+            Hint: 538
+            Name: "GetCurrentProcess"
+        }
+        Thunk {
+            Lookup: 0x1844A
+            Address: 0x1844A
+            Hint: 1424
+            Name: "TerminateProcess"
+        }
+        Thunk {
+            Lookup: 0x187E8
+            Address: 0x187E8
+            Hint: 1557
+            Name: "WriteConsoleW"
+        }
+        Thunk {
+            Lookup: 0x1846C
+            Address: 0x1846C
+            Hint: 1237
+            Name: "RtlUnwind"
+        }
+        Thunk {
+            Lookup: 0x18478
+            Address: 0x18478
+            Hint: 612
+            Name: "GetLastError"
+        }
+        Thunk {
+            Lookup: 0x18488
+            Address: 0x18488
+            Hint: 1332
+            Name: "SetLastError"
+        }
+        Thunk {
+            Lookup: 0x18498
+            Address: 0x18498
+            Hint: 308
+            Name: "EnterCriticalSection"
+        }
+        Thunk {
+            Lookup: 0x184B0
+            Address: 0x184B0
+            Hint: 961
+            Name: "LeaveCriticalSection"
+        }
+        Thunk {
+            Lookup: 0x184C8
+            Address: 0x184C8
+            Hint: 275
+            Name: "DeleteCriticalSection"
+        }
+        Thunk {
+            Lookup: 0x184E0
+            Address: 0x184E0
+            Hint: 866
+            Name: "InitializeCriticalSectionAndSpinCount"
+        }
+        Thunk {
+            Lookup: 0x18508
+            Address: 0x18508
+            Hint: 1442
+            Name: "TlsAlloc"
+        }
+        Thunk {
+            Lookup: 0x18514
+            Address: 0x18514
+            Hint: 1444
+            Name: "TlsGetValue"
+        }
+        Thunk {
+            Lookup: 0x18522
+            Address: 0x18522
+            Hint: 1445
+            Name: "TlsSetValue"
+        }
+        Thunk {
+            Lookup: 0x18530
+            Address: 0x18530
+            Hint: 1443
+            Name: "TlsFree"
+        }
+        Thunk {
+            Lookup: 0x1853A
+            Address: 0x1853A
+            Hint: 430
+            Name: "FreeLibrary"
+        }
+        Thunk {
+            Lookup: 0x18548
+            Address: 0x18548
+            Hint: 689
+            Name: "GetProcAddress"
+        }
+        Thunk {
+            Lookup: 0x1855A
+            Address: 0x1855A
+            Hint: 967
+            Name: "LoadLibraryExW"
+        }
+        Thunk {
+            Lookup: 0x1856C
+            Address: 0x1856C
+            Hint: 1124
+            Name: "RaiseException"
+        }
+        Thunk {
+            Lookup: 0x1857E
+            Address: 0x1857E
+            Hint: 725
+            Name: "GetStdHandle"
+        }
+        Thunk {
+            Lookup: 0x1858E
+            Address: 0x1858E
+            Hint: 1558
+            Name: "WriteFile"
+        }
+        Thunk {
+            Lookup: 0x1859A
+            Address: 0x1859A
+            Hint: 631
+            Name: "GetModuleFileNameW"
+        }
+        Thunk {
+            Lookup: 0x185B0
+            Address: 0x185B0
+            Hint: 353
+            Name: "ExitProcess"
+        }
+        Thunk {
+            Lookup: 0x185BE
+            Address: 0x185BE
+            Hint: 634
+            Name: "GetModuleHandleExW"
+        }
+        Thunk {
+            Lookup: 0x185D4
+            Address: 0x185D4
+            Hint: 473
+            Name: "GetCommandLineA"
+        }
+        Thunk {
+            Lookup: 0x185E6
+            Address: 0x185E6
+            Hint: 474
+            Name: "GetCommandLineW"
+        }
+        Thunk {
+            Lookup: 0x185F8
+            Address: 0x185F8
+            Hint: 840
+            Name: "HeapAlloc"
+        }
+        Thunk {
+            Lookup: 0x18604
+            Address: 0x18604
+            Hint: 844
+            Name: "HeapFree"
+        }
+        Thunk {
+            Lookup: 0x18610
+            Address: 0x18610
+            Hint: 158
+            Name: "CompareStringW"
+        }
+        Thunk {
+            Lookup: 0x18622
+            Address: 0x18622
+            Hint: 949
+            Name: "LCMapStringW"
+        }
+        Thunk {
+            Lookup: 0x18632
+            Address: 0x18632
+            Hint: 593
+            Name: "GetFileType"
+        }
+        Thunk {
+            Lookup: 0x18640
+            Address: 0x18640
+            Hint: 376
+            Name: "FindClose"
+        }
+        Thunk {
+            Lookup: 0x1864C
+            Address: 0x1864C
+            Hint: 382
+            Name: "FindFirstFileExW"
+        }
+        Thunk {
+            Lookup: 0x18660
+            Address: 0x18660
+            Hint: 399
+            Name: "FindNextFileW"
+        }
+        Thunk {
+            Lookup: 0x18670
+            Address: 0x18670
+            Hint: 911
+            Name: "IsValidCodePage"
+        }
+        Thunk {
+            Lookup: 0x18682
+            Address: 0x18682
+            Hint: 437
+            Name: "GetACP"
+        }
+        Thunk {
+            Lookup: 0x1868C
+            Address: 0x1868C
+            Hint: 666
+            Name: "GetOEMCP"
+        }
+        Thunk {
+            Lookup: 0x18698
+            Address: 0x18698
+            Hint: 452
+            Name: "GetCPInfo"
+        }
+        Thunk {
+            Lookup: 0x186A4
+            Address: 0x186A4
+            Hint: 1011
+            Name: "MultiByteToWideChar"
+        }
+        Thunk {
+            Lookup: 0x186BA
+            Address: 0x186BA
+            Hint: 1538
+            Name: "WideCharToMultiByte"
+        }
+        Thunk {
+            Lookup: 0x186D0
+            Address: 0x186D0
+            Hint: 570
+            Name: "GetEnvironmentStringsW"
+        }
+        Thunk {
+            Lookup: 0x186EA
+            Address: 0x186EA
+            Hint: 429
+            Name: "FreeEnvironmentStringsW"
+        }
+        Thunk {
+            Lookup: 0x18704
+            Address: 0x18704
+            Hint: 1302
+            Name: "SetEnvironmentVariableW"
+        }
+        Thunk {
+            Lookup: 0x1871E
+            Address: 0x1871E
+            Hint: 1358
+            Name: "SetStdHandle"
+        }
+        Thunk {
+            Lookup: 0x1872E
+            Address: 0x1872E
+            Hint: 730
+            Name: "GetStringTypeW"
+        }
+        Thunk {
+            Lookup: 0x18740
+            Address: 0x18740
+            Hint: 695
+            Name: "GetProcessHeap"
+        }
+        Thunk {
+            Lookup: 0x18752
+            Address: 0x18752
+            Hint: 418
+            Name: "FlushFileBuffers"
+        }
+        Thunk {
+            Lookup: 0x18766
+            Address: 0x18766
+            Hint: 515
+            Name: "GetConsoleOutputCP"
+        }
+        Thunk {
+            Lookup: 0x1877C
+            Address: 0x1877C
+            Hint: 511
+            Name: "GetConsoleMode"
+        }
+        Thunk {
+            Lookup: 0x1878E
+            Address: 0x1878E
+            Hint: 591
+            Name: "GetFileSizeEx"
+        }
+        Thunk {
+            Lookup: 0x1879E
+            Address: 0x1879E
+            Hint: 1317
+            Name: "SetFilePointerEx"
+        }
+        Thunk {
+            Lookup: 0x187B2
+            Address: 0x187B2
+            Hint: 849
+            Name: "HeapSize"
+        }
+        Thunk {
+            Lookup: 0x187BE
+            Address: 0x187BE
+            Hint: 847
+            Name: "HeapReAlloc"
+        }
+        Thunk {
+            Lookup: 0x187CC
+            Address: 0x187CC
+            Hint: 137
+            Name: "CloseHandle"
+        }
+        Thunk {
+            Lookup: 0x187DA
+            Address: 0x187DA
+            Hint: 206
+            Name: "CreateFileW"
+        }
+        Thunk {
+            Lookup: 0x187F8
+            Address: 0x187F8
+            Hint: 268
+            Name: "DecodePointer"
+        }
+    }
+}

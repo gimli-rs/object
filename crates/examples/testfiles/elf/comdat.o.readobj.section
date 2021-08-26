@@ -1,0 +1,34 @@
+SectionHeader {
+    Index: 1
+    Name: ".group" (0x77)
+    Type: SHT_GROUP (0x11)
+    Flags: 0x0
+    Address: 0x0
+    Offset: 0x40
+    Size: 0x8
+    Link: 13
+    Info: 12
+    AddressAlign: 0x4
+    EntrySize: 0x4
+    GroupFlag: GRP_COMDAT (0x1)
+    GroupSections {
+        ".text._Z4foo1i" (7)
+    }
+}
+SectionHeader {
+    Index: 2
+    Name: ".group" (0x77)
+    Type: SHT_GROUP (0x11)
+    Flags: 0x0
+    Address: 0x0
+    Offset: 0x48
+    Size: 0x8
+    Link: 13
+    Info: 13
+    AddressAlign: 0x4
+    EntrySize: 0x4
+    GroupFlag: GRP_COMDAT (0x1)
+    GroupSections {
+        ".text._Z4foo2i" (8)
+    }
+}
