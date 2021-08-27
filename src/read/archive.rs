@@ -6,7 +6,6 @@ use crate::archive;
 use crate::read::{self, Error, ReadError, ReadRef};
 
 /// The kind of archive format.
-// TODO: Gnu64 and Darwin64 (and Darwin for writing)
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[non_exhaustive]
 pub enum ArchiveKind {
@@ -14,8 +13,14 @@ pub enum ArchiveKind {
     Unknown,
     /// The GNU (or System V) archive format.
     Gnu,
+    /// The GNU (or System V) archive format with 64-bit symbol table.
+    Gnu64,
     /// The BSD archive format.
     Bsd,
+    /// The BSD archive format with 64-bit symbol table.
+    ///
+    /// This is used for Darwin.
+    Bsd64,
     /// The Windows COFF archive format.
     Coff,
 }
@@ -54,7 +59,7 @@ impl<'data, R: ReadRef<'data>> ArchiveFile<'data, R> {
 
         // The first few members may be special, so parse them.
         // GNU has:
-        // - "/": symbol table (optional)
+        // - "/" or "/SYM64/": symbol table (optional)
         // - "//": names table (optional)
         // COFF has:
         // - "/": first linker member
@@ -62,6 +67,10 @@ impl<'data, R: ReadRef<'data>> ArchiveFile<'data, R> {
         // - "//": names table
         // BSD has:
         // - "__.SYMDEF" or "__.SYMDEF SORTED": symbol table (optional)
+        // BSD 64-bit has:
+        // - "__.SYMDEF_64" or "__.SYMDEF_64 SORTED": symbol table (optional)
+        // BSD may use the extended name for the symbol table. This is handled
+        // by `ArchiveMember::parse`.
         if tail < len {
             let member = ArchiveMember::parse(data, &mut tail, &[])?;
             if member.name == b"/" {
@@ -92,6 +101,20 @@ impl<'data, R: ReadRef<'data>> ArchiveFile<'data, R> {
                         file.offset = tail;
                     }
                 }
+            } else if member.name == b"/SYM64/" {
+                // GNU 64-bit symbol table.
+                file.kind = ArchiveKind::Gnu64;
+                file.symbols = member.file_range();
+                file.offset = tail;
+
+                if tail < len {
+                    let member = ArchiveMember::parse(data, &mut tail, &[])?;
+                    if member.name == b"//" {
+                        // GNU names table.
+                        file.names = member.data(data)?;
+                        file.offset = tail;
+                    }
+                }
             } else if member.name == b"//" {
                 // GNU names table.
                 file.kind = ArchiveKind::Gnu;
@@ -100,6 +123,11 @@ impl<'data, R: ReadRef<'data>> ArchiveFile<'data, R> {
             } else if member.name == b"__.SYMDEF" || member.name == b"__.SYMDEF SORTED" {
                 // BSD symbol table.
                 file.kind = ArchiveKind::Bsd;
+                file.symbols = member.file_range();
+                file.offset = tail;
+            } else if member.name == b"__.SYMDEF_64" || member.name == b"__.SYMDEF_64 SORTED" {
+                // BSD 64-bit symbol table.
+                file.kind = ArchiveKind::Bsd64;
                 file.symbols = member.file_range();
                 file.offset = tail;
             } else {
@@ -348,6 +376,22 @@ mod tests {
 
         let data = b"\
             !<arch>\n\
+            /SYM64/                                         4         `\n\
+            0000";
+        let archive = ArchiveFile::parse(&data[..]).unwrap();
+        assert_eq!(archive.kind(), ArchiveKind::Gnu64);
+
+        let data = b"\
+            !<arch>\n\
+            /SYM64/                                         4         `\n\
+            0000\
+            //                                              4         `\n\
+            0000";
+        let archive = ArchiveFile::parse(&data[..]).unwrap();
+        assert_eq!(archive.kind(), ArchiveKind::Gnu64);
+
+        let data = b"\
+            !<arch>\n\
             __.SYMDEF                                       4         `\n\
             0000";
         let archive = ArchiveFile::parse(&data[..]).unwrap();
@@ -366,6 +410,27 @@ mod tests {
             __.SYMDEF SORTED0000";
         let archive = ArchiveFile::parse(&data[..]).unwrap();
         assert_eq!(archive.kind(), ArchiveKind::Bsd);
+
+        let data = b"\
+            !<arch>\n\
+            __.SYMDEF_64                                    4         `\n\
+            0000";
+        let archive = ArchiveFile::parse(&data[..]).unwrap();
+        assert_eq!(archive.kind(), ArchiveKind::Bsd64);
+
+        let data = b"\
+            !<arch>\n\
+            #1/12                                           16        `\n\
+            __.SYMDEF_640000";
+        let archive = ArchiveFile::parse(&data[..]).unwrap();
+        assert_eq!(archive.kind(), ArchiveKind::Bsd64);
+
+        let data = b"\
+            !<arch>\n\
+            #1/19                                           23        `\n\
+            __.SYMDEF_64 SORTED0000";
+        let archive = ArchiveFile::parse(&data[..]).unwrap();
+        assert_eq!(archive.kind(), ArchiveKind::Bsd64);
 
         let data = b"\
             !<arch>\n\
