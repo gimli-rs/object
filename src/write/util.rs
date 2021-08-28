@@ -1,3 +1,5 @@
+use std::io;
+use std::mem;
 use std::vec::Vec;
 
 use crate::pod::{bytes_of, bytes_of_slice, Pod};
@@ -75,6 +77,69 @@ impl WritableBuffer for Vec<u8> {
     fn write_bytes(&mut self, val: &[u8]) {
         debug_assert!(self.len() + val.len() <= self.capacity());
         self.extend_from_slice(val)
+    }
+}
+
+/// A [`WritableBuffer`] that streams data to a [`Write`](std::io::Write) implementation.
+///
+/// [`Self::result`] must be called to determine if an I/O error occurred during writing.
+///
+/// It is advisable to use a buffered writer like [`BufWriter`](std::io::BufWriter)
+/// instead of an unbuffered writer like [`File`](std::fs::File).
+#[derive(Debug)]
+pub struct StreamingBuffer<W> {
+    writer: W,
+    len: usize,
+    result: Result<(), io::Error>,
+}
+
+impl<W> StreamingBuffer<W> {
+    /// Create a new `StreamingBuffer` backed by the given writer.
+    pub fn new(writer: W) -> Self {
+        StreamingBuffer {
+            writer,
+            len: 0,
+            result: Ok(()),
+        }
+    }
+
+    /// Unwraps this [`StreamingBuffer`] giving back the original writer.
+    pub fn into_inner(self) -> W {
+        self.writer
+    }
+
+    /// Returns any error that occurred during writing.
+    pub fn result(&mut self) -> Result<(), io::Error> {
+        mem::replace(&mut self.result, Ok(()))
+    }
+}
+
+impl<W: io::Write> WritableBuffer for StreamingBuffer<W> {
+    #[inline]
+    fn len(&self) -> usize {
+        self.len
+    }
+
+    #[inline]
+    fn reserve(&mut self, _size: usize) -> Result<(), ()> {
+        Ok(())
+    }
+
+    #[inline]
+    fn resize(&mut self, new_len: usize) {
+        debug_assert!(self.len <= new_len);
+        while self.len < new_len {
+            let write_amt = (new_len - self.len - 1) % 1024 + 1;
+            self.write_bytes(&[0; 1024][..write_amt]);
+        }
+    }
+
+    #[inline]
+    fn write_bytes(&mut self, val: &[u8]) {
+        if self.result.is_ok() {
+            self.result = self.writer.write_all(val);
+        }
+        self.len += val.len();
     }
 }
 

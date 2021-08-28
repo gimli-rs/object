@@ -1,9 +1,10 @@
 //! Interface for writing object files.
 
+use std::boxed::Box;
 use std::collections::HashMap;
 use std::string::String;
 use std::vec::Vec;
-use std::{error, fmt, result, str};
+use std::{error, fmt, io, result, str};
 
 use crate::endian::{Endianness, U32, U64};
 use crate::{
@@ -528,6 +529,17 @@ impl Object {
         let mut buffer = Vec::new();
         self.emit(&mut buffer)?;
         Ok(buffer)
+    }
+
+    /// Write the object to a `Write` implementation.
+    ///
+    /// It is advisable to use a buffered writer like [`BufWriter`](std::io::BufWriter)
+    /// instead of an unbuffered writer like [`File`](std::fs::File).
+    pub fn write_stream<W: io::Write>(&self, w: W) -> result::Result<(), Box<dyn error::Error>> {
+        let mut stream = StreamingBuffer::new(w);
+        self.emit(&mut stream)?;
+        stream.result()?;
+        Ok(())
     }
 
     /// Write the object to a `WritableBuffer`.
