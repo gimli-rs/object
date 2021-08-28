@@ -1,6 +1,6 @@
 [package]
 name = "object"
-version = "0.26.1"
+version = "0.26.2"
 edition = "2018"
 exclude = ["/.coveralls.yml", "/.travis.yml"]
 keywords = ["object", "elf", "mach-o", "pe", "coff"]
