@@ -696,6 +696,22 @@ impl Section {
         self.size += size;
         offset as u64
     }
+
+    /// Returns the section as-built so far.
+    ///
+    /// This requires that the section is not a bss section.
+    pub fn data(&self) -> &[u8] {
+        debug_assert!(!self.is_bss());
+        &self.data
+    }
+
+    /// Returns the section as-built so far.
+    ///
+    /// This requires that the section is not a bss section.
+    pub fn data_mut(&mut self) -> &mut [u8] {
+        debug_assert!(!self.is_bss());
+        &mut self.data
+    }
 }
 
 /// The section where a symbol is defined.
