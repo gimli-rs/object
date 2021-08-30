@@ -22,7 +22,7 @@ struct SymbolOffsets {
     str_id: Option<StringId>,
 }
 
-impl Object {
+impl<'a> Object<'a> {
     pub(crate) fn macho_set_subsections_via_symbols(&mut self) {
         let flags = match self.flags {
             FileFlags::MachO { flags } => flags,
