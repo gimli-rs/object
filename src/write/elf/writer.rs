@@ -246,7 +246,7 @@ impl<'a> Writer<'a> {
     /// Write padding up to the given file offset.
     pub fn pad_until(&mut self, offset: usize) {
         debug_assert!(self.buffer.len() <= offset);
-        self.buffer.resize(offset, 0);
+        self.buffer.resize(offset);
     }
 
     fn file_header_size(&self) -> usize {
@@ -882,6 +882,7 @@ impl<'a> Writer<'a> {
             return;
         }
         self.symtab_shndx_offset = self.reserve(self.symtab_num as usize * 4, 4);
+        self.symtab_shndx_data.reserve(self.symtab_num as usize * 4);
     }
 
     /// Write the extended section indices for the symbol table.

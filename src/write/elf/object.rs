@@ -154,7 +154,9 @@ impl Object {
             .sections
             .iter()
             .map(|section| {
-                let mut reloc_name = Vec::new();
+                let mut reloc_name = Vec::with_capacity(
+                    if is_rela { ".rela".len() } else { ".rel".len() } + section.name.len(),
+                );
                 if !section.relocations.is_empty() {
                     reloc_name.extend_from_slice(if is_rela {
                         &b".rela"[..]
