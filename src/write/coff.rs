@@ -23,7 +23,7 @@ struct SymbolOffsets {
     aux_count: u8,
 }
 
-impl Object {
+impl<'a> Object<'a> {
     pub(crate) fn coff_section_info(
         &self,
         section: StandardSection,
@@ -589,7 +589,7 @@ impl Object {
                         length: U32Bytes::new(LE, section.size as u32),
                         number_of_relocations: U16Bytes::new(LE, section.relocations.len() as u16),
                         number_of_linenumbers: U16Bytes::default(),
-                        check_sum: U32Bytes::new(LE, checksum(section.data.as_slice())),
+                        check_sum: U32Bytes::new(LE, checksum(section.data())),
                         number: U16Bytes::new(
                             LE,
                             section_offsets[section_index].associative_section,

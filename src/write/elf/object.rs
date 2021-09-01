@@ -27,7 +27,7 @@ struct SymbolOffsets {
     str_id: Option<StringId>,
 }
 
-impl Object {
+impl<'a> Object<'a> {
     pub(crate) fn elf_section_info(
         &self,
         section: StandardSection,
