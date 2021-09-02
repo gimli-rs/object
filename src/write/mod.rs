@@ -544,12 +544,15 @@ impl<'a> Object<'a> {
 
     /// Write the object to a `Write` implementation.
     ///
+    /// Also flushes the writer.
+    ///
     /// It is advisable to use a buffered writer like [`BufWriter`](std::io::BufWriter)
     /// instead of an unbuffered writer like [`File`](std::fs::File).
     pub fn write_stream<W: io::Write>(&self, w: W) -> result::Result<(), Box<dyn error::Error>> {
         let mut stream = StreamingBuffer::new(w);
         self.emit(&mut stream)?;
         stream.result()?;
+        stream.into_inner().flush()?;
         Ok(())
     }
 
