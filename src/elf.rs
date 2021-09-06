@@ -2391,6 +2391,10 @@ pub const EF_MIPS_ARCH_64: u32 = 0x6000_0000;
 pub const EF_MIPS_ARCH_32R2: u32 = 0x7000_0000;
 /// MIPS64r2 code.
 pub const EF_MIPS_ARCH_64R2: u32 = 0x8000_0000;
+/// MIPS32r6 code
+pub const EF_MIPS_ARCH_32R6: u32 = 0x9000_0000;
+/// MIPS64r6 code
+pub const EF_MIPS_ARCH_64R6: u32 = 0xa000_0000;
 
 // MIPS values for `Sym32::st_shndx`.
 
