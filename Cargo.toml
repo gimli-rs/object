@@ -45,7 +45,7 @@ write = ["write_core", "coff", "elf", "macho"]
 
 # Enable things that require libstd.
 # Currently, this provides an `Error` implementation.
-std = ["memchr/std"]
+std = ["memchr/std", "indexmap/std"]
 # Enable decompression of compressed sections.
 # This feature is not required if you want to do your own decompression.
 compression = ["flate2", "std"]
