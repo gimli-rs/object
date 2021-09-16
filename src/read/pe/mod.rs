@@ -22,4 +22,7 @@ pub use export::*;
 mod import;
 pub use import::*;
 
+mod rich;
+pub use rich::*;
+
 pub use super::coff::{SectionTable, SymbolTable};

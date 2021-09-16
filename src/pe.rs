@@ -243,29 +243,13 @@ pub struct ImageVxdHeader {
 /// * http://www.ntcore.com/files/richsign.htm
 /// * https://www.researchgate.net/figure/Structure-of-the-Rich-Header_fig1_318145388
 ///
-/// These data are "masked", i.e. XORed with a rich header mask, that is file-specific. The mask is stored in the associated `read::pe::PeFile` instances
+/// These data are "masked", i.e. XORed with a rich header mask, that is file-specific.
+/// See [`read::pe::rich::RichHeaderInfos::unmasked_entries`] to unmask them.
 #[derive(Debug, Clone, Copy)]
 #[repr(C)]
 pub struct MaskedRichHeaderEntry {
     pub masked_comp_id: U32<LE>,
     pub masked_count: U32<LE>,
-}
-
-/// A PE reach header entry after it has been unmasked.
-///
-/// See [`MaskedRichHeaderEntry`]
-#[derive(Debug, Clone, Copy)]
-#[repr(C)]
-pub struct RichHeaderEntry {
-    pub comp_id: u32,
-    pub count: u32,
-}
-
-/// The checksum of a rich header
-#[derive(Debug, Clone, Copy)]
-#[repr(C)]
-pub struct RichCheckSum {
-    pub checksum: U32<LE>,
 }
 
 //
@@ -2986,5 +2970,4 @@ unsafe_impl_pod!(
     ImportObjectHeader,
     ImageCor20Header,
     MaskedRichHeaderEntry,
-    RichCheckSum,
 );
