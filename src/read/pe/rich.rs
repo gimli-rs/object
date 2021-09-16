@@ -4,7 +4,6 @@ use alloc::vec::Vec;
 
 use crate::{pe, ReadRef, LittleEndian as LE, U32};
 
-
 /// Extracted infos about a possible Rich Header
 #[derive(Debug, Clone, Copy)]
 pub struct RichHeaderInfos<'data> {
@@ -49,18 +48,15 @@ impl<'data> RichHeaderInfos<'data> {
             .read_at::<U32<LE>>(dos_and_rich_header.len() as u64 + 4)
             .ok()?;
 
-        let mut start_marker: Vec<u8> = U32::<LE>::new(LE, CLEARTEXT_MARKER)
-            .as_slice()
-            .iter()
-            .zip(xor_key.as_slice())
-            .map(|(a, b)| *a ^ *b)
-            .collect();
-        start_marker.extend_from_slice(xor_key.as_slice());
-        start_marker.extend_from_slice(xor_key.as_slice());
-        start_marker.extend_from_slice(xor_key.as_slice());
+        let marker = U32::new(LE, CLEARTEXT_MARKER ^ xor_key.get(LE));
+        let mut start_sequence: Vec<u8> = Vec::with_capacity(16);
+        start_sequence.extend_from_slice(crate::pod::bytes_of(&marker));
+        start_sequence.extend_from_slice(crate::pod::bytes_of(xor_key));
+        start_sequence.extend_from_slice(crate::pod::bytes_of(xor_key));
+        start_sequence.extend_from_slice(crate::pod::bytes_of(xor_key));
 
         let rich_header_start =
-            match read_bytes_until_sequence(all_headers, &start_marker, nt_header_offset as usize) {
+            match read_bytes_until_sequence(all_headers, &start_sequence, nt_header_offset as usize) {
                 Err(()) => return None,
                 Ok(slice) => slice.len(),
             };

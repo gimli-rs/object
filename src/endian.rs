@@ -626,11 +626,6 @@ impl<E: Endian> U32Bytes<E> {
     pub fn set(&mut self, e: E, n: u32) {
         self.0 = e.write_u32_bytes(n);
     }
-
-    /// Get the underlying representation of this value.
-    pub fn as_slice(&self) -> &[u8; 4] {
-        &self.0
-    }
 }
 
 /// An unaligned `u64` value with an externally specified endianness of type `E`.
