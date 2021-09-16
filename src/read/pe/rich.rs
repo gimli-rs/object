@@ -30,7 +30,7 @@ pub struct RichHeaderEntry {
 }
 
 impl<'data> RichHeaderInfos<'data> {
-    /// Try to detect a rich header in the current PE file, and locate its [`MaskedRichHeaderEntry`s]
+    /// Try to detect a rich header in the current PE file, and locate its [`crate::pe::MaskedRichHeaderEntry`]s
     pub fn parse<R: ReadRef<'data>>(data: R, nt_header_offset: u64) -> Option<Self> {
         const RICH_SEQUENCE: &[u8] = &[0x52, 0x69, 0x63, 0x68]; // "Rich"
         const CLEARTEXT_MARKER: u32 = 0x536e6144; // little-endian "DanS"

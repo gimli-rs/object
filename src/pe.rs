@@ -240,11 +240,10 @@ pub struct ImageVxdHeader {
 /// A PE rich header entry
 ///
 /// Rich headers have no official documentation, but have been heavily reversed-engineered and documented in the wild, e.g.:
-/// * http://www.ntcore.com/files/richsign.htm
-/// * https://www.researchgate.net/figure/Structure-of-the-Rich-Header_fig1_318145388
+/// * `http://www.ntcore.com/files/richsign.htm`
+/// * `https://www.researchgate.net/figure/Structure-of-the-Rich-Header_fig1_318145388`
 ///
 /// These data are "masked", i.e. XORed with a rich header mask, that is file-specific.
-/// See [`read::pe::rich::RichHeaderInfos::unmasked_entries`] to unmask them.
 #[derive(Debug, Clone, Copy)]
 #[repr(C)]
 pub struct MaskedRichHeaderEntry {
