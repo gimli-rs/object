@@ -2,7 +2,7 @@
 
 use alloc::vec::Vec;
 
-use crate::{pe, ReadRef, LittleEndian as LE, U32};
+use crate::{pe, LittleEndian as LE, ReadRef, U32};
 
 /// Extracted infos about a possible Rich Header
 #[derive(Debug, Clone, Copy)]
@@ -55,11 +55,14 @@ impl<'data> RichHeaderInfos<'data> {
         start_sequence.extend_from_slice(crate::pod::bytes_of(xor_key));
         start_sequence.extend_from_slice(crate::pod::bytes_of(xor_key));
 
-        let rich_header_start =
-            match read_bytes_until_sequence(all_headers, &start_sequence, nt_header_offset as usize) {
-                Err(()) => return None,
-                Ok(slice) => slice.len(),
-            };
+        let rich_header_start = match read_bytes_until_sequence(
+            all_headers,
+            &start_sequence,
+            nt_header_offset as usize,
+        ) {
+            Err(()) => return None,
+            Ok(slice) => slice.len(),
+        };
         let rh_len = dos_and_rich_header.len() - rich_header_start;
 
         // Extract the contents of the rich header
