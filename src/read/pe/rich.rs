@@ -9,7 +9,8 @@ use crate::{pe, LittleEndian as LE, ReadRef, U32};
 pub struct RichHeaderInfos<'data> {
     /// The offset at which the rich header starts
     pub start: usize,
-    /// The length (in bytes) of the rich header
+    /// The length (in bytes) of the rich header.
+    /// This includes the payload, but also the 16-byte start sequence and the 8-byte final "Rich" and XOR key
     pub length: usize,
     /// The data used to mask the rich header.
     /// Unless the file has been tampered with, it should be equal to a checksum of the file header
@@ -58,11 +59,11 @@ impl<'data> RichHeaderInfos<'data> {
                 Err(()) => return None,
                 Ok(slice) => slice.len(),
             };
-        let rh_len = dos_and_rich_header.len() - rich_header_start;
+        let rh_len = dos_and_rich_header.len() - rich_header_start + 8/* for the "Rich" marker and the XOR key */;
 
         // Extract the contents of the rich header
-        let items_start = rich_header_start + 16;
-        let items_len = rh_len - 16;
+        let items_start = rich_header_start + start_sequence.len();
+        let items_len = rh_len - start_sequence.len() - 8;
         let item_count = items_len / std::mem::size_of::<pe::MaskedRichHeaderEntry>();
         let items =
             match data.read_slice_at::<pe::MaskedRichHeaderEntry>(items_start as u64, item_count) {
