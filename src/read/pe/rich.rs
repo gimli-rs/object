@@ -32,8 +32,8 @@ pub struct RichHeaderEntry {
 impl<'data> RichHeaderInfos<'data> {
     /// Try to detect a rich header in the current PE file, and locate its [`crate::pe::MaskedRichHeaderEntry`]s
     pub fn parse<R: ReadRef<'data>>(data: R, nt_header_offset: u64) -> Option<Self> {
-        const RICH_SEQUENCE: &[u8] = &[0x52, 0x69, 0x63, 0x68]; // "Rich"
-        const CLEARTEXT_MARKER: u32 = 0x536e6144; // little-endian "DanS"
+        const END_MARKER: &[u8] = &[0x52, 0x69, 0x63, 0x68]; // "Rich"
+        const CLEARTEXT_START_MARKER: u32 = 0x536e6144; // little-endian "DanS"
 
         // Locate the rich header, if any
         // It ends with the ASCII 'Rich' string, before the NT header
@@ -41,14 +41,14 @@ impl<'data> RichHeaderInfos<'data> {
         let all_headers = data.read_bytes_at(0, nt_header_offset).ok()?;
 
         let dos_and_rich_header =
-            read_bytes_until_sequence(all_headers, RICH_SEQUENCE, nt_header_offset as usize)
+            read_bytes_until_sequence(all_headers, END_MARKER, nt_header_offset as usize)
                 .ok()?;
 
         let xor_key = data
             .read_at::<U32<LE>>(dos_and_rich_header.len() as u64 + 4)
             .ok()?;
 
-        let marker = U32::new(LE, CLEARTEXT_MARKER ^ xor_key.get(LE));
+        let marker = U32::new(LE, CLEARTEXT_START_MARKER ^ xor_key.get(LE));
         let mut start_sequence: Vec<u8> = Vec::with_capacity(16);
         start_sequence.extend_from_slice(crate::pod::bytes_of(&marker));
         start_sequence.extend_from_slice(crate::pod::bytes_of(xor_key));
