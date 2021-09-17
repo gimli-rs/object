@@ -41,7 +41,7 @@ impl<'data> RichHeaderInfos<'data> {
         let all_headers = data.read_bytes_at(0, nt_header_offset).ok()?;
 
         let dos_and_rich_header =
-            read_bytes_until_sequence(all_headers, END_MARKER, nt_header_offset as usize)
+            read_bytes_until_u32_sequence(all_headers, END_MARKER, nt_header_offset as usize)
                 .ok()?;
 
         let xor_key = data
@@ -55,7 +55,7 @@ impl<'data> RichHeaderInfos<'data> {
         start_sequence.extend_from_slice(crate::pod::bytes_of(xor_key));
         start_sequence.extend_from_slice(crate::pod::bytes_of(xor_key));
 
-        let rich_header_start = match read_bytes_until_sequence(
+        let rich_header_start = match read_bytes_until_u32_sequence(
             all_headers,
             &start_sequence,
             nt_header_offset as usize,
@@ -94,15 +94,18 @@ impl<'data> RichHeaderInfos<'data> {
     }
 }
 
-fn read_bytes_until_sequence<'a>(
+/// Read bytes until a sequence of u32-aligned values
+fn read_bytes_until_u32_sequence<'a>(
     data: &'a [u8],
     needle: &[u8],
     max_end: usize,
 ) -> Result<&'a [u8], ()> {
+    const U32_SIZE: usize = std::mem::size_of::<u32>();
     let sub: &[u8] = data.get(0..max_end).ok_or(())?;
 
     sub.windows(needle.len())
+        .step_by(U32_SIZE)
         .position(|window| window == needle)
         .ok_or(())
-        .and_then(|end| data.read_bytes_at(0, end as u64))
+        .and_then(|n_steps| data.read_bytes_at(0, (n_steps * U32_SIZE) as u64))
 }
