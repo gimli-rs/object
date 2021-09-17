@@ -40,9 +40,7 @@ impl<'data> RichHeaderInfos<'data> {
         // It starts at the start marker (a masked ASCII 'DanS' string)
         let all_headers = data.read_bytes_at(0, nt_header_offset).ok()?;
 
-        let dos_and_rich_header =
-            read_bytes_until_u32_sequence(all_headers, END_MARKER, nt_header_offset as usize)
-                .ok()?;
+        let dos_and_rich_header = read_bytes_until_u32_sequence(all_headers, END_MARKER).ok()?;
 
         let xor_key = data
             .read_at::<U32<LE>>(dos_and_rich_header.len() as u64 + 4)
@@ -55,14 +53,11 @@ impl<'data> RichHeaderInfos<'data> {
         start_sequence.extend_from_slice(crate::pod::bytes_of(xor_key));
         start_sequence.extend_from_slice(crate::pod::bytes_of(xor_key));
 
-        let rich_header_start = match read_bytes_until_u32_sequence(
-            all_headers,
-            &start_sequence,
-            nt_header_offset as usize,
-        ) {
-            Err(()) => return None,
-            Ok(slice) => slice.len(),
-        };
+        let rich_header_start =
+            match read_bytes_until_u32_sequence(dos_and_rich_header, &start_sequence) {
+                Err(()) => return None,
+                Ok(slice) => slice.len(),
+            };
         let rh_len = dos_and_rich_header.len() - rich_header_start;
 
         // Extract the contents of the rich header
@@ -95,15 +90,10 @@ impl<'data> RichHeaderInfos<'data> {
 }
 
 /// Read bytes until a sequence of u32-aligned values
-fn read_bytes_until_u32_sequence<'a>(
-    data: &'a [u8],
-    needle: &[u8],
-    max_end: usize,
-) -> Result<&'a [u8], ()> {
+fn read_bytes_until_u32_sequence<'a>(data: &'a [u8], needle: &[u8]) -> Result<&'a [u8], ()> {
     const U32_SIZE: usize = std::mem::size_of::<u32>();
-    let sub: &[u8] = data.get(0..max_end).ok_or(())?;
 
-    sub.windows(needle.len())
+    data.windows(needle.len())
         .step_by(U32_SIZE)
         .position(|window| window == needle)
         .ok_or(())
