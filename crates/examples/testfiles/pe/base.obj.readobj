@@ -178,7 +178,6 @@ ImageSectionHeader {
     Characteristics: 0xA00
         IMAGE_SCN_LNK_INFO (0x200)
         IMAGE_SCN_LNK_REMOVE (0x800)
-        <unknown> (0x0)
 }
 ImageSymbol {
     Index: 0

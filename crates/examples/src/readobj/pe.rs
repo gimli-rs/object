@@ -310,11 +310,14 @@ fn print_sections(
             p.field("NumberOfLinenumbers", section.number_of_linenumbers.get(LE));
             p.field_hex("Characteristics", section.characteristics.get(LE));
             p.flags(section.characteristics.get(LE), 0, FLAGS_IMAGE_SCN);
-            p.flags(
-                section.characteristics.get(LE),
-                IMAGE_SCN_ALIGN_MASK,
-                FLAGS_IMAGE_SCN_ALIGN,
-            );
+            // 0 means no alignment flag.
+            if section.characteristics.get(LE) & IMAGE_SCN_ALIGN_MASK != 0 {
+                p.flags(
+                    section.characteristics.get(LE),
+                    IMAGE_SCN_ALIGN_MASK,
+                    FLAGS_IMAGE_SCN_ALIGN,
+                );
+            }
             if let Some(relocations) = section.coff_relocations(data).print_err(p) {
                 for relocation in relocations {
                     p.group("ImageRelocation", |p| {
