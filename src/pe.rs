@@ -237,6 +237,20 @@ pub struct ImageVxdHeader {
     pub e32_ddkver: U16<LE>,
 }
 
+/// A PE rich header entry
+///
+/// Rich headers have no official documentation, but have been heavily reversed-engineered and documented in the wild, e.g.:
+/// * `http://www.ntcore.com/files/richsign.htm`
+/// * `https://www.researchgate.net/figure/Structure-of-the-Rich-Header_fig1_318145388`
+///
+/// These data are "masked", i.e. XORed with a rich header mask, that is file-specific.
+#[derive(Debug, Clone, Copy)]
+#[repr(C)]
+pub struct MaskedRichHeaderEntry {
+    pub masked_comp_id: U32<LE>,
+    pub masked_count: U32<LE>,
+}
+
 //
 // File header format.
 //
@@ -2954,4 +2968,5 @@ unsafe_impl_pod!(
     ImageArchitectureEntry,
     ImportObjectHeader,
     ImageCor20Header,
+    MaskedRichHeaderEntry,
 );
