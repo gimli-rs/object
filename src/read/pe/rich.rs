@@ -64,7 +64,7 @@ impl<'data> RichHeaderInfos<'data> {
         // Extract the contents of the rich header
         let items_start = rich_header_start + start_sequence.len();
         let items_len = rh_len - start_sequence.len() - 8;
-        let item_count = items_len / std::mem::size_of::<pe::MaskedRichHeaderEntry>();
+        let item_count = items_len / core::mem::size_of::<pe::MaskedRichHeaderEntry>();
         let items =
             match data.read_slice_at::<pe::MaskedRichHeaderEntry>(items_start as u64, item_count) {
                 Err(()) => return None,
@@ -92,7 +92,7 @@ impl<'data> RichHeaderInfos<'data> {
 
 /// Read bytes until a sequence of u32-aligned values
 fn read_bytes_until_u32_sequence<'a>(data: &'a [u8], needle: &[u8]) -> Result<&'a [u8], ()> {
-    const U32_SIZE: usize = std::mem::size_of::<u32>();
+    const U32_SIZE: usize = core::mem::size_of::<u32>();
 
     data.windows(needle.len())
         .step_by(U32_SIZE)
