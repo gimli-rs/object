@@ -56,6 +56,7 @@ fn print_pe<Pe: ImageNtHeaders>(p: &mut Printer<'_>, data: &[u8]) {
                 p.field_hex("Signature", nt_headers.signature());
             });
             let header = nt_headers.file_header();
+            let machine = header.machine.get(LE);
             let sections = header.sections(data, offset).print_err(p);
             let symbols = header.symbols(data).print_err(p);
             print_file(p, header);
@@ -68,27 +69,15 @@ fn print_pe<Pe: ImageNtHeaders>(p: &mut Printer<'_>, data: &[u8]) {
                 });
             }
             if let Some(ref sections) = sections {
-                print_sections(p, data, header.machine.get(LE), symbols.as_ref(), sections);
+                print_sections(p, data, machine, symbols.as_ref(), sections);
             }
             if let Some(ref symbols) = symbols {
                 print_symbols(p, sections.as_ref(), &symbols);
             }
             if let Some(ref sections) = sections {
-                for (index, dir) in data_directories.iter().enumerate() {
-                    if dir.virtual_address.get(LE) == 0 {
-                        continue;
-                    }
-                    match index {
-                        IMAGE_DIRECTORY_ENTRY_EXPORT => {
-                            print_export_dir(p, data, &sections, dir);
-                        }
-                        IMAGE_DIRECTORY_ENTRY_IMPORT => {
-                            print_import_dir::<Pe>(p, data, &sections, dir);
-                        }
-                        // TODO
-                        _ => {}
-                    }
-                }
+                print_export_dir(p, data, &sections, &data_directories);
+                print_import_dir::<Pe>(p, data, &sections, &data_directories);
+                print_reloc_dir(p, data, machine, &sections, &data_directories);
             }
         }
     }
@@ -164,10 +153,11 @@ fn print_export_dir(
     p: &mut Printer<'_>,
     data: &[u8],
     sections: &SectionTable,
-    dir: &ImageDataDirectory,
+    data_directories: &DataDirectories,
 ) -> Option<()> {
-    let dir_data = dir.data(data, sections).print_err(p)?;
-    let export_dir = ExportTable::parse_directory(data).print_err(p)?;
+    let export_dir = data_directories
+        .export_directory(data, sections)
+        .print_err(p)??;
     p.group("ImageExportDirectory", |p| {
         p.field_hex("Characteristics", export_dir.characteristics.get(LE));
         p.field_hex("TimeDateStamp", export_dir.time_date_stamp.get(LE));
@@ -186,8 +176,7 @@ fn print_export_dir(
             "AddressOfNameOrdinals",
             export_dir.address_of_name_ordinals.get(LE),
         );
-        if let Some(export_table) =
-            ExportTable::parse(dir_data, dir.virtual_address.get(LE)).print_err(p)
+        if let Some(Some(export_table)) = data_directories.export_table(data, sections).print_err(p)
         {
             // TODO: the order of the name pointers might be interesting?
             let mut names = vec![None; export_table.addresses().len()];
@@ -240,11 +229,11 @@ fn print_import_dir<Pe: ImageNtHeaders>(
     p: &mut Printer<'_>,
     data: &[u8],
     sections: &SectionTable,
-    dir: &ImageDataDirectory,
+    data_directories: &DataDirectories,
 ) -> Option<()> {
-    let import_address = dir.virtual_address.get(LE);
-    let (section_data, section_address) = sections.pe_data_containing(data, import_address)?;
-    let import_table = ImportTable::new(section_data, section_address, import_address);
+    let import_table = data_directories
+        .import_table(data, sections)
+        .print_err(p)??;
     let mut import_descs = import_table.descriptors().print_err(p)?;
     p.group("ImageImportDirectory", |p| {
         while let Some(Some(import_desc)) = import_descs.next().print_err(p) {
@@ -452,6 +441,38 @@ fn print_symbols(p: &mut Printer<'_>, sections: Option<&SectionTable>, symbols: 
             // TODO: ImageAuxSymbolWeak
         });
     }
+}
+
+fn print_reloc_dir(
+    p: &mut Printer<'_>,
+    data: &[u8],
+    machine: u16,
+    sections: &SectionTable,
+    data_directories: &DataDirectories,
+) -> Option<()> {
+    let proc = match machine {
+        IMAGE_FILE_MACHINE_IA64 => FLAGS_IMAGE_REL_IA64_BASED,
+        IMAGE_FILE_MACHINE_MIPS16 | IMAGE_FILE_MACHINE_MIPSFPU | IMAGE_FILE_MACHINE_MIPSFPU16 => {
+            FLAGS_IMAGE_REL_MIPS_BASED
+        }
+        IMAGE_FILE_MACHINE_ARM => FLAGS_IMAGE_REL_ARM_BASED,
+        IMAGE_FILE_MACHINE_RISCV32 | IMAGE_FILE_MACHINE_RISCV64 | IMAGE_FILE_MACHINE_RISCV128 => {
+            FLAGS_IMAGE_REL_RISCV_BASED
+        }
+        _ => &[],
+    };
+    let mut blocks = data_directories
+        .relocation_blocks(data, sections)
+        .print_err(p)??;
+    while let Some(block) = blocks.next().print_err(p)? {
+        for reloc in block {
+            p.group("ImageBaseRelocation", |p| {
+                p.field_hex("VirtualAddress", reloc.virtual_address);
+                p.field_enums("Type", reloc.typ, &[proc, FLAGS_IMAGE_REL_BASED]);
+            });
+        }
+    }
+    Some(())
 }
 
 static FLAGS_IMAGE_FILE: &[Flag<u16>] = &flags!(
@@ -929,4 +950,27 @@ static FLAGS_IMAGE_DIRECTORY_ENTRY: &[Flag<usize>] = &flags!(
     IMAGE_DIRECTORY_ENTRY_IAT,
     IMAGE_DIRECTORY_ENTRY_DELAY_IMPORT,
     IMAGE_DIRECTORY_ENTRY_COM_DESCRIPTOR,
+);
+static FLAGS_IMAGE_REL_BASED: &[Flag<u16>] = &flags!(
+    IMAGE_REL_BASED_ABSOLUTE,
+    IMAGE_REL_BASED_HIGH,
+    IMAGE_REL_BASED_LOW,
+    IMAGE_REL_BASED_HIGHLOW,
+    IMAGE_REL_BASED_HIGHADJ,
+    IMAGE_REL_BASED_MACHINE_SPECIFIC_5,
+    IMAGE_REL_BASED_RESERVED,
+    IMAGE_REL_BASED_MACHINE_SPECIFIC_7,
+    IMAGE_REL_BASED_MACHINE_SPECIFIC_8,
+    IMAGE_REL_BASED_MACHINE_SPECIFIC_9,
+    IMAGE_REL_BASED_DIR64,
+);
+static FLAGS_IMAGE_REL_IA64_BASED: &[Flag<u16>] = &flags!(IMAGE_REL_BASED_IA64_IMM64,);
+static FLAGS_IMAGE_REL_MIPS_BASED: &[Flag<u16>] =
+    &flags!(IMAGE_REL_BASED_MIPS_JMPADDR, IMAGE_REL_BASED_MIPS_JMPADDR16,);
+static FLAGS_IMAGE_REL_ARM_BASED: &[Flag<u16>] =
+    &flags!(IMAGE_REL_BASED_ARM_MOV32, IMAGE_REL_BASED_THUMB_MOV32,);
+static FLAGS_IMAGE_REL_RISCV_BASED: &[Flag<u16>] = &flags!(
+    IMAGE_REL_BASED_RISCV_HIGH20,
+    IMAGE_REL_BASED_RISCV_LOW12I,
+    IMAGE_REL_BASED_RISCV_LOW12S,
 );

@@ -1,0 +1,8 @@
+ImageBaseRelocation {
+    VirtualAddress: 0x1004
+    Type: IMAGE_REL_BASED_HIGHLOW (0x3)
+}
+ImageBaseRelocation {
+    VirtualAddress: 0x1024
+    Type: IMAGE_REL_BASED_HIGHLOW (0x3)
+}

@@ -3,7 +3,7 @@ use core::slice;
 use crate::read::{ReadError, ReadRef, Result};
 use crate::{pe, LittleEndian as LE};
 
-use super::{ExportTable, ImportTable, SectionTable};
+use super::{ExportTable, ImportTable, RelocationBlockIterator, SectionTable};
 
 /// The table of data directories in a PE file.
 #[derive(Debug, Clone, Copy)]
@@ -42,6 +42,22 @@ impl<'data> DataDirectories<'data> {
             .filter(|d| d.virtual_address.get(LE) != 0)
     }
 
+    /// Returns the unparsed export directory.
+    ///
+    /// `data` must be the entire file data.
+    pub fn export_directory<R: ReadRef<'data>>(
+        &self,
+        data: R,
+        sections: &SectionTable<'data>,
+    ) -> Result<Option<&'data pe::ImageExportDirectory>> {
+        let data_dir = match self.get(pe::IMAGE_DIRECTORY_ENTRY_EXPORT) {
+            Some(data_dir) => data_dir,
+            None => return Ok(None),
+        };
+        let export_data = data_dir.data(data, sections)?;
+        ExportTable::parse_directory(export_data).map(Some)
+    }
+
     /// Returns the partially parsed export directory.
     ///
     /// `data` must be the entire file data.
@@ -76,6 +92,22 @@ impl<'data> DataDirectories<'data> {
             .pe_data_containing(data, import_va)
             .read_error("Invalid import data dir virtual address")?;
         Ok(Some(ImportTable::new(section_data, section_va, import_va)))
+    }
+
+    /// Returns the blocks in the base relocation directory.
+    ///
+    /// `data` must be the entire file data.
+    pub fn relocation_blocks<R: ReadRef<'data>>(
+        &self,
+        data: R,
+        sections: &SectionTable<'data>,
+    ) -> Result<Option<RelocationBlockIterator<'data>>> {
+        let data_dir = match self.get(pe::IMAGE_DIRECTORY_ENTRY_BASERELOC) {
+            Some(data_dir) => data_dir,
+            None => return Ok(None),
+        };
+        let reloc_data = data_dir.data(data, sections)?;
+        Ok(Some(RelocationBlockIterator::new(reloc_data)))
     }
 }
 

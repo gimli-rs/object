@@ -1715,12 +1715,11 @@ pub struct ImageLinenumber {
 // Based relocation format.
 //
 
-// This struct has alignment 1.
 #[derive(Debug, Clone, Copy)]
 #[repr(C)]
 pub struct ImageBaseRelocation {
-    pub virtual_address: U32Bytes<LE>,
-    pub size_of_block: U32Bytes<LE>,
+    pub virtual_address: U32<LE>,
+    pub size_of_block: U32<LE>,
     //  pub type_offset[1]: U16<LE>,
 }
 

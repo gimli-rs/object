@@ -22,6 +22,9 @@ pub use export::*;
 mod import;
 pub use import::*;
 
+mod relocation;
+pub use relocation::*;
+
 mod rich;
 pub use rich::*;
 
