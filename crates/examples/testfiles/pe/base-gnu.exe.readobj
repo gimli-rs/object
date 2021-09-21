@@ -15441,3 +15441,199 @@ ImageImportDirectory {
         }
     }
 }
+ImageBaseRelocation {
+    VirtualAddress: 0x7BD8
+    Type: IMAGE_REL_BASED_DIR64 (0xA)
+}
+ImageBaseRelocation {
+    VirtualAddress: 0x8010
+    Type: IMAGE_REL_BASED_DIR64 (0xA)
+}
+ImageBaseRelocation {
+    VirtualAddress: 0x8080
+    Type: IMAGE_REL_BASED_DIR64 (0xA)
+}
+ImageBaseRelocation {
+    VirtualAddress: 0x8090
+    Type: IMAGE_REL_BASED_DIR64 (0xA)
+}
+ImageBaseRelocation {
+    VirtualAddress: 0x80A0
+    Type: IMAGE_REL_BASED_DIR64 (0xA)
+}
+ImageBaseRelocation {
+    VirtualAddress: 0x80A8
+    Type: IMAGE_REL_BASED_DIR64 (0xA)
+}
+ImageBaseRelocation {
+    VirtualAddress: 0x80B0
+    Type: IMAGE_REL_BASED_DIR64 (0xA)
+}
+ImageBaseRelocation {
+    VirtualAddress: 0x80B8
+    Type: IMAGE_REL_BASED_DIR64 (0xA)
+}
+ImageBaseRelocation {
+    VirtualAddress: 0x80C0
+    Type: IMAGE_REL_BASED_DIR64 (0xA)
+}
+ImageBaseRelocation {
+    VirtualAddress: 0x80D0
+    Type: IMAGE_REL_BASED_DIR64 (0xA)
+}
+ImageBaseRelocation {
+    VirtualAddress: 0x80E0
+    Type: IMAGE_REL_BASED_DIR64 (0xA)
+}
+ImageBaseRelocation {
+    VirtualAddress: 0x9020
+    Type: IMAGE_REL_BASED_DIR64 (0xA)
+}
+ImageBaseRelocation {
+    VirtualAddress: 0x9040
+    Type: IMAGE_REL_BASED_DIR64 (0xA)
+}
+ImageBaseRelocation {
+    VirtualAddress: 0x9048
+    Type: IMAGE_REL_BASED_DIR64 (0xA)
+}
+ImageBaseRelocation {
+    VirtualAddress: 0x9050
+    Type: IMAGE_REL_BASED_DIR64 (0xA)
+}
+ImageBaseRelocation {
+    VirtualAddress: 0x9058
+    Type: IMAGE_REL_BASED_DIR64 (0xA)
+}
+ImageBaseRelocation {
+    VirtualAddress: 0x9680
+    Type: IMAGE_REL_BASED_DIR64 (0xA)
+}
+ImageBaseRelocation {
+    VirtualAddress: 0x9690
+    Type: IMAGE_REL_BASED_DIR64 (0xA)
+}
+ImageBaseRelocation {
+    VirtualAddress: 0x96A0
+    Type: IMAGE_REL_BASED_DIR64 (0xA)
+}
+ImageBaseRelocation {
+    VirtualAddress: 0x96B0
+    Type: IMAGE_REL_BASED_DIR64 (0xA)
+}
+ImageBaseRelocation {
+    VirtualAddress: 0x96C0
+    Type: IMAGE_REL_BASED_DIR64 (0xA)
+}
+ImageBaseRelocation {
+    VirtualAddress: 0x96D0
+    Type: IMAGE_REL_BASED_DIR64 (0xA)
+}
+ImageBaseRelocation {
+    VirtualAddress: 0x96E0
+    Type: IMAGE_REL_BASED_DIR64 (0xA)
+}
+ImageBaseRelocation {
+    VirtualAddress: 0x96F0
+    Type: IMAGE_REL_BASED_DIR64 (0xA)
+}
+ImageBaseRelocation {
+    VirtualAddress: 0x9700
+    Type: IMAGE_REL_BASED_DIR64 (0xA)
+}
+ImageBaseRelocation {
+    VirtualAddress: 0x9710
+    Type: IMAGE_REL_BASED_DIR64 (0xA)
+}
+ImageBaseRelocation {
+    VirtualAddress: 0x9720
+    Type: IMAGE_REL_BASED_DIR64 (0xA)
+}
+ImageBaseRelocation {
+    VirtualAddress: 0x9730
+    Type: IMAGE_REL_BASED_DIR64 (0xA)
+}
+ImageBaseRelocation {
+    VirtualAddress: 0x9740
+    Type: IMAGE_REL_BASED_DIR64 (0xA)
+}
+ImageBaseRelocation {
+    VirtualAddress: 0x9750
+    Type: IMAGE_REL_BASED_DIR64 (0xA)
+}
+ImageBaseRelocation {
+    VirtualAddress: 0x9760
+    Type: IMAGE_REL_BASED_DIR64 (0xA)
+}
+ImageBaseRelocation {
+    VirtualAddress: 0x9770
+    Type: IMAGE_REL_BASED_DIR64 (0xA)
+}
+ImageBaseRelocation {
+    VirtualAddress: 0x9780
+    Type: IMAGE_REL_BASED_DIR64 (0xA)
+}
+ImageBaseRelocation {
+    VirtualAddress: 0x9790
+    Type: IMAGE_REL_BASED_DIR64 (0xA)
+}
+ImageBaseRelocation {
+    VirtualAddress: 0x97A0
+    Type: IMAGE_REL_BASED_DIR64 (0xA)
+}
+ImageBaseRelocation {
+    VirtualAddress: 0x97B0
+    Type: IMAGE_REL_BASED_DIR64 (0xA)
+}
+ImageBaseRelocation {
+    VirtualAddress: 0x97C0
+    Type: IMAGE_REL_BASED_DIR64 (0xA)
+}
+ImageBaseRelocation {
+    VirtualAddress: 0x97D0
+    Type: IMAGE_REL_BASED_DIR64 (0xA)
+}
+ImageBaseRelocation {
+    VirtualAddress: 0x97E0
+    Type: IMAGE_REL_BASED_DIR64 (0xA)
+}
+ImageBaseRelocation {
+    VirtualAddress: 0x97F0
+    Type: IMAGE_REL_BASED_DIR64 (0xA)
+}
+ImageBaseRelocation {
+    VirtualAddress: 0x9800
+    Type: IMAGE_REL_BASED_DIR64 (0xA)
+}
+ImageBaseRelocation {
+    VirtualAddress: 0x9810
+    Type: IMAGE_REL_BASED_DIR64 (0xA)
+}
+ImageBaseRelocation {
+    VirtualAddress: 0x9820
+    Type: IMAGE_REL_BASED_DIR64 (0xA)
+}
+ImageBaseRelocation {
+    VirtualAddress: 0x9830
+    Type: IMAGE_REL_BASED_DIR64 (0xA)
+}
+ImageBaseRelocation {
+    VirtualAddress: 0x9840
+    Type: IMAGE_REL_BASED_DIR64 (0xA)
+}
+ImageBaseRelocation {
+    VirtualAddress: 0xE008
+    Type: IMAGE_REL_BASED_DIR64 (0xA)
+}
+ImageBaseRelocation {
+    VirtualAddress: 0xE020
+    Type: IMAGE_REL_BASED_DIR64 (0xA)
+}
+ImageBaseRelocation {
+    VirtualAddress: 0xE038
+    Type: IMAGE_REL_BASED_DIR64 (0xA)
+}
+ImageBaseRelocation {
+    VirtualAddress: 0xE040
+    Type: IMAGE_REL_BASED_DIR64 (0xA)
+}
