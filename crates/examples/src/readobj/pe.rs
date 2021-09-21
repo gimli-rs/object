@@ -51,6 +51,19 @@ fn print_pe<Pe: ImageNtHeaders>(p: &mut Printer<'_>, data: &[u8]) {
             p.field_hex("AddressOfNewHeader", dos_header.e_lfanew.get(LE));
         });
         let mut offset = dos_header.nt_headers_offset().into();
+        if let Some(rich_header) = RichHeaderInfo::parse(data, offset) {
+            p.group("RichHeader", |p| {
+                p.field_hex("Offset", rich_header.offset);
+                p.field_hex("Length", rich_header.length);
+                p.field_hex("XorKey", rich_header.xor_key);
+                for entry in rich_header.unmasked_entries() {
+                    p.group("RichHeaderEntry", |p| {
+                        p.field("ComponentId", format!("0x{:08X}", entry.comp_id));
+                        p.field("Count", entry.count);
+                    });
+                }
+            });
+        }
         if let Some((nt_headers, data_directories)) = Pe::parse(data, &mut offset).print_err(p) {
             p.group("ImageNtHeaders", |p| {
                 p.field_hex("Signature", nt_headers.signature());
