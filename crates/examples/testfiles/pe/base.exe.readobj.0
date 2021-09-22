@@ -205,7 +205,6 @@ ImageSectionHeader {
         IMAGE_SCN_CNT_CODE (0x20)
         IMAGE_SCN_MEM_EXECUTE (0x20000000)
         IMAGE_SCN_MEM_READ (0x40000000)
-        <unknown> (0x0)
 }
 ImageSectionHeader {
     Index: 2
@@ -221,7 +220,6 @@ ImageSectionHeader {
     Characteristics: 0x40000040
         IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
         IMAGE_SCN_MEM_READ (0x40000000)
-        <unknown> (0x0)
 }
 ImageSectionHeader {
     Index: 3
@@ -238,7 +236,6 @@ ImageSectionHeader {
         IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
         IMAGE_SCN_MEM_READ (0x40000000)
         IMAGE_SCN_MEM_WRITE (0x80000000)
-        <unknown> (0x0)
 }
 ImageSectionHeader {
     Index: 4
@@ -255,7 +252,6 @@ ImageSectionHeader {
         IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
         IMAGE_SCN_MEM_DISCARDABLE (0x2000000)
         IMAGE_SCN_MEM_READ (0x40000000)
-        <unknown> (0x0)
 }
 ImageImportDirectory {
     ImageImportDescriptor {
