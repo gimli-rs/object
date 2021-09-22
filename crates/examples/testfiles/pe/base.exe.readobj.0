@@ -18,6 +18,51 @@ ImageDosHeader {
     OemInfo: 0x0
     AddressOfNewHeader: 0xF0
 }
+RichHeader {
+    Offset: 0x80
+    Length: 0x68
+    XorKey: 0x9B0CA48D
+    RichHeaderEntry {
+        ComponentId: 0x01036B14
+        Count: 10
+    }
+    RichHeaderEntry {
+        ComponentId: 0x01056B14
+        Count: 140
+    }
+    RichHeaderEntry {
+        ComponentId: 0x01046B14
+        Count: 18
+    }
+    RichHeaderEntry {
+        ComponentId: 0x01016B14
+        Count: 3
+    }
+    RichHeaderEntry {
+        ComponentId: 0x00010000
+        Count: 80
+    }
+    RichHeaderEntry {
+        ComponentId: 0x01057552
+        Count: 37
+    }
+    RichHeaderEntry {
+        ComponentId: 0x01047552
+        Count: 17
+    }
+    RichHeaderEntry {
+        ComponentId: 0x01037552
+        Count: 17
+    }
+    RichHeaderEntry {
+        ComponentId: 0x01047556
+        Count: 1
+    }
+    RichHeaderEntry {
+        ComponentId: 0x01027556
+        Count: 1
+    }
+}
 ImageNtHeaders {
     Signature: 0x4550
 }

@@ -5,7 +5,6 @@ use core::{mem, str};
 use core::convert::TryInto;
 
 use crate::read::coff::{CoffCommon, CoffSymbol, CoffSymbolIterator, CoffSymbolTable, SymbolTable};
-use crate::read::pe::RichHeaderInfos;
 use crate::read::{
     self, Architecture, ComdatKind, Error, Export, FileFlags, Import, NoDynamicRelocationIterator,
     Object, ObjectComdat, ObjectKind, ReadError, ReadRef, Result, SectionIndex, SymbolIndex,
@@ -14,7 +13,7 @@ use crate::{pe, ByteString, Bytes, CodeView, LittleEndian as LE, Pod, U32};
 
 use super::{
     DataDirectories, ExportTable, ImageThunkData, ImportTable, PeSection, PeSectionIterator,
-    PeSegment, PeSegmentIterator, SectionTable,
+    PeSegment, PeSegmentIterator, RichHeaderInfo, SectionTable,
 };
 
 /// A PE32 (32-bit) image file.
@@ -68,19 +67,19 @@ where
         self.data
     }
 
-    /// Return the DOS header of this file
+    /// Return the DOS header of this file.
     pub fn dos_header(&self) -> &'data pe::ImageDosHeader {
         self.dos_header
     }
 
-    /// Return the NT Headers of this file
+    /// Return the NT Headers of this file.
     pub fn nt_headers(&self) -> &'data Pe {
         self.nt_headers
     }
 
-    /// Returns infos about the rich header of this file (if any)
-    pub fn rich_header_infos(&self) -> Option<RichHeaderInfos> {
-        RichHeaderInfos::parse(self.data, self.dos_header.nt_headers_offset().into())
+    /// Returns information about the rich header of this file (if any).
+    pub fn rich_header_info(&self) -> Option<RichHeaderInfo> {
+        RichHeaderInfo::parse(self.data, self.dos_header.nt_headers_offset().into())
     }
 
     /// Returns the section table of this binary.
