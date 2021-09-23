@@ -294,9 +294,9 @@ impl<'data> SectionTable<'data> {
         self.iter().find_map(|section| section.pe_data_at(data, va))
     }
 
-    /// Return the section data at the given virtual address in a PE file.
+    /// Return the data of the section that contains the given virtual address in a PE file.
     ///
-    /// Also returns the virtual address of the data.
+    /// Also returns the virtual address of that section.
     ///
     /// Ignores sections with invalid data.
     pub fn pe_data_containing<R: ReadRef<'data>>(
@@ -354,7 +354,7 @@ impl pe::ImageSectionHeader {
 
     /// Return the section data if it contains the given virtual address.
     ///
-    /// Also returns the virtual address of the data.
+    /// Also returns the virtual address of that section.
     ///
     /// Ignores sections with invalid data.
     pub fn pe_data_containing<'data, R: ReadRef<'data>>(
