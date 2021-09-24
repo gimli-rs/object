@@ -618,6 +618,7 @@ pub trait ImageOptionalHeader: Debug + Pod {
     fn size_of_uninitialized_data(&self) -> u32;
     fn address_of_entry_point(&self) -> u32;
     fn base_of_code(&self) -> u32;
+    fn base_of_data(&self) -> Option<u32>;
 
     // NT additional fields.
     fn image_base(&self) -> u64;
@@ -712,6 +713,11 @@ impl ImageOptionalHeader for pe::ImageOptionalHeader32 {
     #[inline]
     fn base_of_code(&self) -> u32 {
         self.base_of_code.get(LE)
+    }
+
+    #[inline]
+    fn base_of_data(&self) -> Option<u32> {
+        Some(self.base_of_data.get(LE))
     }
 
     #[inline]
@@ -889,6 +895,11 @@ impl ImageOptionalHeader for pe::ImageOptionalHeader64 {
     #[inline]
     fn base_of_code(&self) -> u32 {
         self.base_of_code.get(LE)
+    }
+
+    #[inline]
+    fn base_of_data(&self) -> Option<u32> {
+        None
     }
 
     #[inline]

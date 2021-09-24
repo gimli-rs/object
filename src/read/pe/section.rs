@@ -1,5 +1,5 @@
 use core::marker::PhantomData;
-use core::{cmp, iter, result, slice, str};
+use core::{cmp, iter, slice, str};
 
 use crate::endian::LittleEndian as LE;
 use crate::pe;
@@ -61,18 +61,6 @@ where
     section: &'data pe::ImageSectionHeader,
 }
 
-impl<'data, 'file, Pe, R> PeSegment<'data, 'file, Pe, R>
-where
-    Pe: ImageNtHeaders,
-    R: ReadRef<'data>,
-{
-    fn bytes(&self) -> Result<&'data [u8]> {
-        self.section
-            .pe_data(self.file.data)
-            .read_error("Invalid PE section offset or size")
-    }
-}
-
 impl<'data, 'file, Pe, R> read::private::Sealed for PeSegment<'data, 'file, Pe, R>
 where
     Pe: ImageNtHeaders,
@@ -107,12 +95,12 @@ where
     }
 
     fn data(&self) -> Result<&'data [u8]> {
-        self.bytes()
+        self.section.pe_data(self.file.data)
     }
 
     fn data_range(&self, address: u64, size: u64) -> Result<Option<&'data [u8]>> {
         Ok(read::util::data_range(
-            self.bytes()?,
+            self.data()?,
             self.address(),
             address,
             size,
@@ -192,18 +180,6 @@ where
     pub(super) section: &'data pe::ImageSectionHeader,
 }
 
-impl<'data, 'file, Pe, R> PeSection<'data, 'file, Pe, R>
-where
-    Pe: ImageNtHeaders,
-    R: ReadRef<'data>,
-{
-    fn bytes(&self) -> Result<&'data [u8]> {
-        self.section
-            .pe_data(self.file.data)
-            .read_error("Invalid PE section offset or size")
-    }
-}
-
 impl<'data, 'file, Pe, R> read::private::Sealed for PeSection<'data, 'file, Pe, R>
 where
     Pe: ImageNtHeaders,
@@ -249,12 +225,12 @@ where
     }
 
     fn data(&self) -> Result<&'data [u8]> {
-        self.bytes()
+        self.section.pe_data(self.file.data)
     }
 
     fn data_range(&self, address: u64, size: u64) -> Result<Option<&'data [u8]>> {
         Ok(read::util::data_range(
-            self.bytes()?,
+            self.data()?,
             self.address(),
             address,
             size,
@@ -336,7 +312,7 @@ impl<'data> SectionTable<'data> {
 impl pe::ImageSectionHeader {
     /// Return the offset and size of the section in a PE file.
     ///
-    /// Returns `None` for sections that have no data in the file.
+    /// The size of the range will be the minimum of the file size and virtual size.
     pub fn pe_file_range(&self) -> (u32, u32) {
         // Pointer and size will be zero for uninitialized data; we don't need to validate this.
         let offset = self.pointer_to_raw_data.get(LE);
@@ -344,10 +320,18 @@ impl pe::ImageSectionHeader {
         (offset, size)
     }
 
+    /// Return the virtual address and size of the section.
+    pub fn pe_address_range(&self) -> (u32, u32) {
+        (self.virtual_address.get(LE), self.virtual_size.get(LE))
+    }
+
     /// Return the section data in a PE file.
-    pub fn pe_data<'data, R: ReadRef<'data>>(&self, data: R) -> result::Result<&'data [u8], ()> {
+    ///
+    /// The length of the data will be the minimum of the file size and virtual size.
+    pub fn pe_data<'data, R: ReadRef<'data>>(&self, data: R) -> Result<&'data [u8]> {
         let (offset, size) = self.pe_file_range();
         data.read_bytes_at(offset.into(), size.into())
+            .read_error("Invalid PE section offset or size")
     }
 
     /// Return the data at the given virtual address if this section contains it.

@@ -166,6 +166,11 @@ pub(crate) fn align(offset: usize, size: usize) -> usize {
 }
 
 #[allow(dead_code)]
+pub(crate) fn align_u32(offset: u32, size: u32) -> u32 {
+    (offset + (size - 1)) & !(size - 1)
+}
+
+#[allow(dead_code)]
 pub(crate) fn align_u64(offset: u64, size: u64) -> u64 {
     (offset + (size - 1)) & !(size - 1)
 }

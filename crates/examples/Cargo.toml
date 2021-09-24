@@ -43,5 +43,9 @@ name = "nm"
 required-features = ["object/read"]
 
 [[bin]]
+name = "pecopy"
+required-features = ["object/read_core", "object/write_core", "object/pe"]
+
+[[bin]]
 name = "readobj"
 required-features = ["read"]

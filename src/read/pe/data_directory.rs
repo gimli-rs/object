@@ -25,6 +25,11 @@ impl<'data> DataDirectories<'data> {
         Ok(DataDirectories { entries })
     }
 
+    /// The number of data directories.
+    pub fn len(&self) -> usize {
+        self.entries.len()
+    }
+
     /// Iterator over the data directories.
     pub fn iter(&self) -> slice::Iter<'data, pe::ImageDataDirectory> {
         self.entries.iter()
@@ -112,6 +117,11 @@ impl<'data> DataDirectories<'data> {
 }
 
 impl pe::ImageDataDirectory {
+    /// Return the virtual address range of this directory entry.
+    pub fn address_range(&self) -> (u32, u32) {
+        (self.virtual_address.get(LE), self.size.get(LE))
+    }
+
     /// Get the data referenced by this directory entry.
     ///
     /// This function has some limitations:
