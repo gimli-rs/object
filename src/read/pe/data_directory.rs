@@ -35,6 +35,11 @@ impl<'data> DataDirectories<'data> {
         self.entries.iter()
     }
 
+    /// Iterator which gives the directories as well as their index (one of the IMAGE_DIRECTORY_ENTRY_* constants).
+    pub fn enumerate(&self) -> core::iter::Enumerate<slice::Iter<'data, pe::ImageDataDirectory>> {
+        self.entries.iter().enumerate()
+    }
+
     /// Returns the data directory at the given index.
     ///
     /// Index should be one of the `IMAGE_DIRECTORY_ENTRY_*` constants.
