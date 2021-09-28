@@ -108,7 +108,7 @@ impl<'data> ImportDescriptorIterator<'data> {
             .data
             .read::<pe::ImageImportDescriptor>()
             .read_error("Missing PE null import descriptor")?;
-        if import_desc.original_first_thunk.get(LE) == 0 {
+        if import_desc.is_null() {
             Ok(None)
         } else {
             Ok(Some(import_desc))

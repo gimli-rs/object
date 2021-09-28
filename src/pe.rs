@@ -1917,6 +1917,18 @@ pub struct ImageImportDescriptor {
     pub first_thunk: U32Bytes<LE>,
 }
 
+impl ImageImportDescriptor {
+    /// Tell whether this import descriptor is the null descriptor
+    /// (used to mark the end of the iterator array in a PE)
+    pub fn is_null(&self) -> bool {
+        self.original_first_thunk.get(LE) == 0
+            && self.time_date_stamp.get(LE) == 0
+            && self.forwarder_chain.get(LE) == 0
+            && self.name.get(LE) == 0
+            && self.first_thunk.get(LE) == 0
+    }
+}
+
 //
 // New format import descriptors pointed to by DataDirectory[ IMAGE_DIRECTORY_ENTRY_BOUND_IMPORT ]
 //
