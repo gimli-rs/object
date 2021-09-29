@@ -95,11 +95,19 @@ impl<'a> Writer<'a> {
     /// The reserved length will be increased to match the section alignment.
     ///
     /// Returns the aligned offset of the start of the range.
-    fn reserve_virtual(&mut self, len: u32) -> u32 {
+    pub fn reserve_virtual(&mut self, len: u32) -> u32 {
         let offset = self.virtual_len;
         self.virtual_len += len;
         self.virtual_len = util::align_u32(self.virtual_len, self.section_alignment);
         offset
+    }
+
+    /// Reserve up to the given virtual address.
+    ///
+    /// The reserved length will be increased to match the section alignment.
+    pub fn reserve_virtual_until(&mut self, address: u32) {
+        debug_assert!(self.virtual_len <= address);
+        self.virtual_len = util::align_u32(address, self.section_alignment);
     }
 
     /// Return the current file length that has been reserved.
@@ -133,6 +141,11 @@ impl<'a> Writer<'a> {
         self.reserve(len, self.file_alignment)
     }
 
+    /// Write data.
+    pub fn write(&mut self, data: &[u8]) {
+        self.buffer.write_bytes(data);
+    }
+
     /// Reserve alignment padding bytes.
     pub fn reserve_align(&mut self, align_start: u32) {
         self.len = util::align_u32(self.len, align_start);
@@ -141,13 +154,6 @@ impl<'a> Writer<'a> {
     /// Write alignment padding bytes.
     pub fn write_align(&mut self, align_start: u32) {
         util::write_align(self.buffer, align_start as usize);
-    }
-
-    /// Write data.
-    ///
-    /// This is typically used to write section data.
-    pub fn write(&mut self, data: &[u8]) {
-        self.buffer.write_bytes(data);
     }
 
     /// Reserve the file range up to the given file offset.
@@ -162,20 +168,20 @@ impl<'a> Writer<'a> {
         self.buffer.resize(offset as usize);
     }
 
-    /// Reserve the range for the DOS header and stub.
+    /// Reserve the range for the DOS header.
     ///
     /// This must be at the start of the file.
+    ///
+    /// When writing, you may use `write_custom_dos_header` or `write_empty_dos_header`.
     pub fn reserve_dos_header(&mut self) {
         debug_assert_eq!(self.len, 0);
         self.reserve(mem::size_of::<pe::ImageDosHeader>() as u32, 1);
     }
 
-    /// Write the DOS header.
+    /// Write a custom DOS header.
     ///
     /// This must be at the start of the file.
-    ///
-    /// Uses default values for all fields.
-    pub fn write_dos_header(&mut self) -> Result<()> {
+    pub fn write_custom_dos_header(&mut self, dos_header: &pe::ImageDosHeader) -> Result<()> {
         debug_assert_eq!(self.buffer.len(), 0);
 
         // Start writing.
@@ -183,7 +189,52 @@ impl<'a> Writer<'a> {
             .reserve(self.len as usize)
             .map_err(|_| Error(String::from("Cannot allocate buffer")))?;
 
-        let dos_header = pe::ImageDosHeader {
+        self.buffer.write(dos_header);
+        Ok(())
+    }
+
+    /// Write the DOS header for a file without a stub.
+    ///
+    /// This must be at the start of the file.
+    ///
+    /// Uses default values for all fields.
+    pub fn write_empty_dos_header(&mut self) -> Result<()> {
+        self.write_custom_dos_header(&pe::ImageDosHeader {
+            e_magic: U16::new(LE, pe::IMAGE_DOS_SIGNATURE),
+            e_cblp: U16::new(LE, 0),
+            e_cp: U16::new(LE, 0),
+            e_crlc: U16::new(LE, 0),
+            e_cparhdr: U16::new(LE, 0),
+            e_minalloc: U16::new(LE, 0),
+            e_maxalloc: U16::new(LE, 0),
+            e_ss: U16::new(LE, 0),
+            e_sp: U16::new(LE, 0),
+            e_csum: U16::new(LE, 0),
+            e_ip: U16::new(LE, 0),
+            e_cs: U16::new(LE, 0),
+            e_lfarlc: U16::new(LE, 0),
+            e_ovno: U16::new(LE, 0),
+            e_res: [U16::new(LE, 0); 4],
+            e_oemid: U16::new(LE, 0),
+            e_oeminfo: U16::new(LE, 0),
+            e_res2: [U16::new(LE, 0); 10],
+            e_lfanew: U32::new(LE, self.nt_headers_offset),
+        })
+    }
+
+    /// Reserve a fixed DOS header and stub.
+    ///
+    /// Use `reserve_dos_header` and `reserve` if you need a custom stub.
+    pub fn reserve_dos_header_and_stub(&mut self) {
+        self.reserve_dos_header();
+        self.reserve(64, 1);
+    }
+
+    /// Write a fixed DOS header and stub.
+    ///
+    /// Use `write_custom_dos_header` and `write` if you need a custom stub.
+    pub fn write_dos_header_and_stub(&mut self) -> Result<()> {
+        self.write_custom_dos_header(&pe::ImageDosHeader {
             e_magic: U16::new(LE, pe::IMAGE_DOS_SIGNATURE),
             e_cblp: U16::new(LE, 0x90),
             e_cp: U16::new(LE, 3),
@@ -203,22 +254,8 @@ impl<'a> Writer<'a> {
             e_oeminfo: U16::new(LE, 0),
             e_res2: [U16::new(LE, 0); 10],
             e_lfanew: U32::new(LE, self.nt_headers_offset),
-        };
-        self.buffer.write(&dos_header);
-        Ok(())
-    }
+        })?;
 
-    /// Reserve a fixed DOS stub.
-    ///
-    /// Use `reserve` if you need a custom stub.
-    pub fn reserve_dos_stub(&mut self) {
-        self.reserve(64, 1);
-    }
-
-    /// Write a fixed DOS stub.
-    ///
-    /// Use `write` if you need a custom stub.
-    pub fn write_dos_stub(&mut self) {
         #[rustfmt::skip]
         self.buffer.write_bytes(&[
             0x0e, 0x1f, 0xba, 0x0e, 0x00, 0xb4, 0x09, 0xcd,
@@ -230,6 +267,8 @@ impl<'a> Writer<'a> {
             0x6d, 0x6f, 0x64, 0x65, 0x2e, 0x0d, 0x0d, 0x0a,
             0x24, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
         ]);
+
+        Ok(())
     }
 
     fn nt_headers_size(&self) -> u32 {
@@ -247,6 +286,11 @@ impl<'a> Writer<'a> {
             mem::size_of::<pe::ImageOptionalHeader32>() as u32
         };
         size + self.data_directories.len() as u32 * mem::size_of::<pe::ImageDataDirectory>() as u32
+    }
+
+    /// Return the offset of the NT headers, if reserved.
+    pub fn nt_headers_offset(&self) -> u32 {
+        self.nt_headers_offset
     }
 
     /// Reserve the range for the NT headers.
@@ -646,6 +690,11 @@ impl<'a> Writer<'a> {
             virtual_address,
             count: 1,
         });
+    }
+
+    /// Return true if a base relocation has been added.
+    pub fn has_relocs(&mut self) -> bool {
+        !self.relocs.is_empty()
     }
 
     /// Reserve a `.reloc` section.

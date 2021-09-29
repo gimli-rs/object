@@ -27,6 +27,10 @@ name = "elfcopy"
 required-features = ["object/read_core", "object/write_core", "object/elf"]
 
 [[bin]]
+name = "elftoefi"
+required-features = ["object/read_core", "object/write_core", "object/elf", "object/pe"]
+
+[[bin]]
 name = "objcopy"
 required-features = ["object/read", "object/write"]
 

@@ -71,8 +71,7 @@ fn copy_file<Pe: ImageNtHeaders>(in_data: &[u8]) -> Result<Vec<u8>, Box<dyn Erro
     );
 
     // Reserve file ranges and virtual addresses.
-    writer.reserve_dos_header();
-    writer.reserve_dos_stub();
+    writer.reserve_dos_header_and_stub();
     if let Some(in_rich_header) = in_rich_header.as_ref() {
         writer.reserve(in_rich_header.length as u32 + 8, 4);
     }
@@ -144,8 +143,7 @@ fn copy_file<Pe: ImageNtHeaders>(in_data: &[u8]) -> Result<Vec<u8>, Box<dyn Erro
     }
 
     // Start writing.
-    writer.write_dos_header()?;
-    writer.write_dos_stub();
+    writer.write_dos_header_and_stub()?;
     if let Some(in_rich_header) = in_rich_header.as_ref() {
         // TODO: recalculate xor key
         writer.write_align(4);
