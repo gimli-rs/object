@@ -258,16 +258,32 @@ fn print_import_dir<Pe: ImageNtHeaders>(
                 let name = import_desc.name.get(LE);
                 p.field_string("Name", name, import_table.name(name));
                 p.field_hex("AddressTable", import_desc.first_thunk.get(LE));
+
                 let mut address_thunks = import_table
                     .thunks(import_desc.first_thunk.get(LE))
                     .print_err(p);
-                if let Some(mut lookup_thunks) = import_table
-                    .thunks(import_desc.original_first_thunk.get(LE))
-                    .print_err(p)
-                {
-                    while let Some(Some(thunk)) = lookup_thunks.next::<Pe>().print_err(p) {
+
+                let mut lookup_thunks;
+                let mut thunks;
+                if import_desc.original_first_thunk.get(LE) != 0 {
+                    lookup_thunks = import_table
+                        .thunks(import_desc.original_first_thunk.get(LE))
+                        .print_err(p);
+                    thunks = lookup_thunks.clone();
+                } else {
+                    lookup_thunks = None;
+                    thunks = address_thunks.clone();
+                }
+
+                if let Some(thunks) = thunks.as_mut() {
+                    while let Some(Some(thunk)) = thunks.next::<Pe>().print_err(p) {
                         p.group("Thunk", |p| {
-                            p.field_hex("Lookup", thunk.raw());
+                            if let Some(Some(thunk)) = lookup_thunks
+                                .as_mut()
+                                .and_then(|thunks| thunks.next::<Pe>().print_err(p))
+                            {
+                                p.field_hex("Lookup", thunk.raw());
+                            }
                             if let Some(Some(thunk)) = address_thunks
                                 .as_mut()
                                 .and_then(|thunks| thunks.next::<Pe>().print_err(p))
