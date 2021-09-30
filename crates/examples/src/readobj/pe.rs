@@ -131,6 +131,7 @@ fn print_optional(p: &mut Printer<'_>, header: &impl ImageOptionalHeader) {
         p.field_hex("BaseOfCode", header.base_of_code());
         p.field_hex("ImageBase", header.image_base());
         p.field_hex("SectionAlignment", header.section_alignment());
+        p.field_hex("FileAlignment", header.file_alignment());
         p.field(
             "MajorOperatingSystemVersion",
             header.major_operating_system_version(),

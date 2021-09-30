@@ -44,6 +44,7 @@ ImageOptionalHeader {
     BaseOfCode: 0x1000
     ImageBase: 0x140000000
     SectionAlignment: 0x1000
+    FileAlignment: 0x200
     MajorOperatingSystemVersion: 4
     MinorOperatingSystemVersion: 0
     MajorImageVersion: 0
