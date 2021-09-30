@@ -260,7 +260,11 @@ where
             let mut import_descs = import_table.descriptors()?;
             while let Some(import_desc) = import_descs.next()? {
                 let library = import_table.name(import_desc.name.get(LE))?;
-                let mut thunks = import_table.thunks(import_desc.original_first_thunk.get(LE))?;
+                let mut first_thunk = import_desc.original_first_thunk.get(LE);
+                if first_thunk == 0 {
+                    first_thunk = import_desc.first_thunk.get(LE);
+                }
+                let mut thunks = import_table.thunks(first_thunk)?;
                 while let Some(thunk) = thunks.next::<Pe>()? {
                     if !thunk.is_ordinal() {
                         let (_hint, name) = import_table.hint_name(thunk.address())?;
