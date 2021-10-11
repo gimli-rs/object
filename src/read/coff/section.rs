@@ -1,3 +1,4 @@
+use core::convert::TryFrom;
 use core::{iter, result, slice, str};
 
 use crate::endian::LittleEndian as LE;
@@ -347,6 +348,47 @@ impl pe::ImageSectionHeader {
 }
 
 impl pe::ImageSectionHeader {
+    /// Return the string table offset of the section name.
+    ///
+    /// Returns `Ok(None)` if the name doesn't use the string table
+    /// and can be obtained with `raw_name` instead.
+    pub fn name_offset(&self) -> Result<Option<u32>> {
+        let bytes = &self.name;
+        if bytes[0] != b'/' {
+            return Ok(None);
+        }
+
+        if bytes[1] == b'/' {
+            let mut offset = 0;
+            for byte in bytes[2..].iter() {
+                let digit = match byte {
+                    b'A'..=b'Z' => byte - b'A',
+                    b'a'..=b'z' => byte - b'a' + 26,
+                    b'0'..=b'9' => byte - b'0' + 52,
+                    b'+' => 62,
+                    b'/' => 63,
+                    _ => return Err(Error("Invalid COFF section name base-64 offset")),
+                };
+                offset = offset * 64 + digit as u64;
+            }
+            u32::try_from(offset)
+                .ok()
+                .read_error("Invalid COFF section name base-64 offset")
+                .map(Some)
+        } else {
+            let mut offset = 0;
+            for byte in bytes[1..].iter() {
+                let digit = match byte {
+                    b'0'..=b'9' => byte - b'0',
+                    0 => break,
+                    _ => return Err(Error("Invalid COFF section name base-10 offset")),
+                };
+                offset = offset * 10 + digit as u32;
+            }
+            Ok(Some(offset))
+        }
+    }
+
     /// Return the section name.
     ///
     /// This handles decoding names that are offsets into the symbol string table.
@@ -354,37 +396,13 @@ impl pe::ImageSectionHeader {
         &'data self,
         strings: StringTable<'data, R>,
     ) -> Result<&'data [u8]> {
-        let bytes = &self.name;
-        Ok(if bytes[0] == b'/' {
-            let mut offset = 0;
-            if bytes[1] == b'/' {
-                for byte in bytes[2..].iter() {
-                    let digit = match byte {
-                        b'A'..=b'Z' => byte - b'A',
-                        b'a'..=b'z' => byte - b'a' + 26,
-                        b'0'..=b'9' => byte - b'0' + 52,
-                        b'+' => 62,
-                        b'/' => 63,
-                        _ => return Err(Error("Invalid COFF section name base-64 offset")),
-                    };
-                    offset = offset * 64 + digit as u32;
-                }
-            } else {
-                for byte in bytes[1..].iter() {
-                    let digit = match byte {
-                        b'0'..=b'9' => byte - b'0',
-                        0 => break,
-                        _ => return Err(Error("Invalid COFF section name base-10 offset")),
-                    };
-                    offset = offset * 10 + digit as u32;
-                }
-            };
+        if let Some(offset) = self.name_offset()? {
             strings
                 .get(offset)
-                .read_error("Invalid COFF section name offset")?
+                .read_error("Invalid COFF section name offset")
         } else {
-            self.raw_name()
-        })
+            Ok(self.raw_name())
+        }
     }
 
     /// Return the raw section name.
@@ -456,5 +474,29 @@ impl pe::ImageSectionHeader {
         let number = self.number_of_relocations.get(LE).into();
         data.read_slice_at(pointer, number)
             .read_error("Invalid COFF relocation offset or number")
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn name_offset() {
+        let mut section = pe::ImageSectionHeader::default();
+        section.name = *b"xxxxxxxx";
+        assert_eq!(section.name_offset(), Ok(None));
+        section.name = *b"/0\0\0\0\0\0\0";
+        assert_eq!(section.name_offset(), Ok(Some(0)));
+        section.name = *b"/9999999";
+        assert_eq!(section.name_offset(), Ok(Some(999_9999)));
+        section.name = *b"//AAAAAA";
+        assert_eq!(section.name_offset(), Ok(Some(0)));
+        section.name = *b"//D/////";
+        assert_eq!(section.name_offset(), Ok(Some(0xffff_ffff)));
+        section.name = *b"//EAAAAA";
+        assert!(section.name_offset().is_err());
+        section.name = *b"////////";
+        assert!(section.name_offset().is_err());
     }
 }

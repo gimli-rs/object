@@ -678,7 +678,7 @@ pub const IMAGE_SIZEOF_SHORT_NAME: usize = 8;
 // Section header format.
 //
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Default, Clone, Copy)]
 #[repr(C)]
 pub struct ImageSectionHeader {
     pub name: [u8; IMAGE_SIZEOF_SHORT_NAME],
