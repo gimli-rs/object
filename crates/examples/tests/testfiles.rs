@@ -1,3 +1,5 @@
+#![cfg(feature = "read")]
+
 use object_examples::{objdump, readobj};
 use std::io::Write;
 use std::{env, fs};

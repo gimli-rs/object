@@ -28,12 +28,14 @@
 //!
 //! ## Example for unified read API
 //!  ```no_run
+//! # #[cfg(feature = "read")]
 //! use object::{Object, ObjectSection};
 //! use std::error::Error;
 //! use std::fs;
 //!
 //! /// Reads a file and displays the content of the ".boot" section.
 //! fn main() -> Result<(), Box<dyn Error>> {
+//! # #[cfg(feature = "read")] {
 //!   let bin_data = fs::read("./multiboot2-binary.elf")?;
 //!   let obj_file = object::File::parse(&*bin_data)?;
 //!   if let Some(section) = obj_file.section_by_name(".boot") {
@@ -41,6 +43,7 @@
 //!   } else {
 //!     eprintln!("section not available");
 //!   }
+//! # }
 //!   Ok(())
 //! }
 //! ```
