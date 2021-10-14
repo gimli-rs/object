@@ -2,7 +2,7 @@
 //!
 //! The `object` crate provides a unified interface to working with object files
 //! across platforms. It supports reading object files and executable files,
-//! and writing object files.
+//! and writing object files and some executable files.
 //!
 //! ## Raw struct definitions
 //!
@@ -24,7 +24,11 @@
 //!
 //! ## Unified write API
 //!
-//! [write::Object] allows building an object and then writing it out.
+//! [write::Object] allows building a COFF/ELF/Mach-O object and then writing it out.
+//!
+//! ## Low level executable writers
+//!
+//! [write::elf::Writer] and [write::pe::Writer] allow writing executable files.
 //!
 //! ## Example for unified read API
 //!  ```no_run
