@@ -279,7 +279,7 @@ fn copy_file<Elf: FileHeader<Endian = Endianness>>(
         .iter()
         .find(|sym| sym.gnu_hash.is_some())
         .map(|sym| out_dynsyms_index[sym.in_sym].0)
-        .unwrap_or(writer.dynamic_symbol_count());
+        .unwrap_or_else(|| writer.dynamic_symbol_count());
     let gnu_hash_symbol_count = writer.dynamic_symbol_count() - gnu_hash_symbol_base;
 
     // Assign symbol indices.
@@ -580,9 +580,7 @@ fn copy_file<Elf: FileHeader<Endian = Endianness>>(
                             writer.write_dynamic_string(d.tag, string);
                         } else {
                             // TODO: fix values
-                            let val = match d.tag {
-                                _ => d.val,
-                            };
+                            let val = d.val;
                             writer.write_dynamic(d.tag, val);
                         }
                     }

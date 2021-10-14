@@ -236,7 +236,7 @@ impl<'data, R: ReadRef<'data>> WasmFile<'data, R> {
                                 });
                             }
                             LocalFunctionKind::Exported { symbol_ids } => {
-                                for symbol_id in core::mem::replace(symbol_ids, Vec::new()) {
+                                for symbol_id in core::mem::take(symbol_ids) {
                                     let export_symbol = &mut file.symbols[symbol_id as usize];
                                     export_symbol.address = address;
                                     export_symbol.size = size;
