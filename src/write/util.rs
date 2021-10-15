@@ -1,6 +1,6 @@
-use std::io;
-use std::mem;
-use std::vec::Vec;
+use alloc::vec::Vec;
+#[cfg(feature = "std")]
+use std::{io, mem};
 
 use crate::pod::{bytes_of, bytes_of_slice, Pod};
 
@@ -86,6 +86,7 @@ impl WritableBuffer for Vec<u8> {
 ///
 /// It is advisable to use a buffered writer like [`BufWriter`](std::io::BufWriter)
 /// instead of an unbuffered writer like [`File`](std::fs::File).
+#[cfg(feature = "std")]
 #[derive(Debug)]
 pub struct StreamingBuffer<W> {
     writer: W,
@@ -93,6 +94,7 @@ pub struct StreamingBuffer<W> {
     result: Result<(), io::Error>,
 }
 
+#[cfg(feature = "std")]
 impl<W> StreamingBuffer<W> {
     /// Create a new `StreamingBuffer` backed by the given writer.
     pub fn new(writer: W) -> Self {
@@ -114,6 +116,7 @@ impl<W> StreamingBuffer<W> {
     }
 }
 
+#[cfg(feature = "std")]
 impl<W: io::Write> WritableBuffer for StreamingBuffer<W> {
     #[inline]
     fn len(&self) -> usize {

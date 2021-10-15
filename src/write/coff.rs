@@ -1,5 +1,5 @@
-use std::mem;
-use std::vec::Vec;
+use core::mem;
+use alloc::vec::Vec;
 
 use crate::endian::{LittleEndian as LE, U16Bytes, U32Bytes, U16, U32};
 use crate::pe as coff;

@@ -1,5 +1,9 @@
-use indexmap::IndexSet;
-use std::vec::Vec;
+use alloc::vec::Vec;
+
+#[cfg(feature = "std")]
+type IndexSet<K> = indexmap::IndexSet<K>;
+#[cfg(not(feature = "std"))]
+type IndexSet<K> = indexmap::IndexSet<K, hashbrown::hash_map::DefaultHashBuilder>;
 
 /// An identifer for an entry in a string table.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
