@@ -741,8 +741,8 @@ impl<'a> Writer<'a> {
         let mut total = 0;
         for block in &self.reloc_blocks {
             self.buffer.write(&pe::ImageBaseRelocation {
-                virtual_address: U32Bytes::new(LE, block.virtual_address),
-                size_of_block: U32Bytes::new(LE, block.size()),
+                virtual_address: U32::new(LE, block.virtual_address),
+                size_of_block: U32::new(LE, block.size()),
             });
             self.buffer
                 .write_slice(&self.relocs[total..][..block.count as usize]);

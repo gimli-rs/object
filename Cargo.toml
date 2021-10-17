@@ -1,6 +1,6 @@
 [package]
 name = "object"
-version = "0.26.2"
+version = "0.27.0"
 edition = "2018"
 exclude = ["/.github", "/testfiles"]
 keywords = ["object", "elf", "mach-o", "pe", "coff"]
@@ -9,7 +9,7 @@ repository = "https://github.com/gimli-rs/object"
 description = "A unified interface for reading and writing object file formats."
 
 [package.metadata.docs.rs]
-features = ['all']
+features = ['doc']
 
 [dependencies]
 crc32fast = { version = "1.2", optional = true }
@@ -24,9 +24,6 @@ core = { version = '1.0.0', optional = true, package = 'rustc-std-workspace-core
 compiler_builtins = { version = '0.1.2', optional = true }
 alloc = { version = '1.0.0', optional = true, package = 'rustc-std-workspace-alloc' }
 
-[dev-dependencies]
-memmap2 = "0.3"
-
 [features]
 #=======================================
 # Read/write features.
@@ -36,9 +33,9 @@ read_core = []
 # Read support for all file formats (including unaligned files).
 read = ["read_core", "archive", "coff", "elf", "macho", "pe", "unaligned"]
 # Core write support. You will need to enable some file formats too.
-write_core = ["crc32fast", "indexmap", "std", "indexmap/std"]
+write_core = ["crc32fast", "indexmap/std", "std"]
 # Write support for all file formats.
-write = ["write_core", "coff", "elf", "macho"]
+write = ["write_core", "coff", "elf", "macho", "pe"]
 
 #=======================================
 # Misc features.
@@ -77,6 +74,14 @@ all = ["read", "write", "std", "compression", "wasm"]
 # Use of --all-features is not supported.
 # This is a dummy feature to detect when --all-features is used.
 cargo-all = []
+
+#=======================================
+# Documentation should be generated with everything in "all" except for "unaligned".
+doc = [
+  "read_core", "write_core",
+  "std", "compression",
+  "archive", "coff", "elf", "macho", "pe", "wasm",
+]
 
 #=======================================
 # Internal feature, only used when building as part of libstd, not part of the

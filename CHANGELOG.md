@@ -2,6 +2,105 @@
 
 --------------------------------------------------------------------------------
 
+## 0.27.0
+
+Released 2021/10/17.
+
+### Breaking changes
+
+* Changed `read::elf` to use `SectionIndex` instead of `usize` in more places.
+  [#341](https://github.com/gimli-rs/object/pull/341)
+
+* Changed some `read::elf` section methods to additionally return the linked section index.
+  [#341](https://github.com/gimli-rs/object/pull/341)
+
+* Changed `read::pe::ImageNtHeaders::parse` to return `DataDirectories` instead of a slice.
+  [#357](https://github.com/gimli-rs/object/pull/357)
+
+* Deleted `value` parameter for `write:WritableBuffer::resize`.
+  [#369](https://github.com/gimli-rs/object/pull/369)
+
+* Changed `write::Object` and `write::Section` to use `Cow` for section data.
+  This added a lifetime parameter, which existing users can set to `'static`.
+  [#370](https://github.com/gimli-rs/object/pull/370)
+
+### Changed
+
+* Fixed parsing when PE import directory has zero size.
+  [#341](https://github.com/gimli-rs/object/pull/341)
+
+* Fixed parsing when PE import directory has zero for original first thunk.
+  [#385](https://github.com/gimli-rs/object/pull/385)
+  [#387](https://github.com/gimli-rs/object/pull/387)
+
+* Fixed parsing when PE export directory has zero number of names.
+  [#353](https://github.com/gimli-rs/object/pull/353)
+
+* Fixed parsing when PE export directory has zero number of names and addresses.
+  [#362](https://github.com/gimli-rs/object/pull/362)
+
+* Fixed parsing when PE sections are contiguous.
+  [#354](https://github.com/gimli-rs/object/pull/354)
+
+* Fixed `std` feature for `indexmap` dependency.
+  [#374](https://github.com/gimli-rs/object/pull/374)
+
+* Fixed overflow in COFF section name offset parsing.
+  [#390](https://github.com/gimli-rs/object/pull/390)
+
+### Added
+
+* Added `name_bytes` methods to unified `read` traits.
+  [#351](https://github.com/gimli-rs/object/pull/351)
+
+* Added `read::Object::kind`.
+  [#352](https://github.com/gimli-rs/object/pull/352)
+
+* Added `read::elf::VersionTable` and related helpers.
+  [#341](https://github.com/gimli-rs/object/pull/341)
+
+* Added `read::elf::SectionTable::dynamic` and related helpers.
+  [#345](https://github.com/gimli-rs/object/pull/345)
+
+* Added `read::coff::SectionTable::max_section_file_offset`.
+  [#344](https://github.com/gimli-rs/object/pull/344)
+
+* Added `read::pe::ExportTable` and related helpers.
+  [#349](https://github.com/gimli-rs/object/pull/349)
+  [#353](https://github.com/gimli-rs/object/pull/353)
+
+* Added `read::pe::ImportTable` and related helpers.
+  [#357](https://github.com/gimli-rs/object/pull/357)
+
+* Added `read::pe::DataDirectories` and related helpers.
+  [#357](https://github.com/gimli-rs/object/pull/357)
+  [#384](https://github.com/gimli-rs/object/pull/384)
+
+* Added `read::pe::RichHeaderInfo` and related helpers.
+  [#375](https://github.com/gimli-rs/object/pull/375)
+  [#379](https://github.com/gimli-rs/object/pull/379)
+
+* Added `read::pe::RelocationBlocks` and related helpers.
+  [#378](https://github.com/gimli-rs/object/pull/378)
+
+* Added `write::elf::Writer`.
+  [#350](https://github.com/gimli-rs/object/pull/350)
+
+* Added `write::pe::Writer`.
+  [#382](https://github.com/gimli-rs/object/pull/382)
+  [#388](https://github.com/gimli-rs/object/pull/388)
+
+* Added `write::Section::data/data_mut`.
+  [#367](https://github.com/gimli-rs/object/pull/367)
+
+* Added `write::Object::write_stream`.
+  [#369](https://github.com/gimli-rs/object/pull/369)
+
+* Added MIPSr6 ELF header flag definitions.
+  [#372](https://github.com/gimli-rs/object/pull/372)
+
+--------------------------------------------------------------------------------
+
 ## 0.26.2
 
 Released 2021/08/28.
