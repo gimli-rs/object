@@ -9,7 +9,7 @@ repository = "https://github.com/gimli-rs/object"
 description = "A unified interface for reading and writing object file formats."
 
 [package.metadata.docs.rs]
-features = ['all']
+features = ['doc']
 
 [dependencies]
 crc32fast = { version = "1.2", optional = true }
@@ -74,6 +74,14 @@ all = ["read", "write", "std", "compression", "wasm"]
 # Use of --all-features is not supported.
 # This is a dummy feature to detect when --all-features is used.
 cargo-all = []
+
+#=======================================
+# Documentation should be generated with everything in "all" except for "unaligned".
+doc = [
+  "read_core", "write_core",
+  "std", "compression",
+  "archive", "coff", "elf", "macho", "pe", "wasm",
+]
 
 #=======================================
 # Internal feature, only used when building as part of libstd, not part of the
