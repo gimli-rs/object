@@ -156,6 +156,11 @@ impl<'a> Writer<'a> {
         util::write_align(self.buffer, align_start as usize);
     }
 
+    /// Write padding up to the next multiple of file alignment.
+    pub fn write_file_align(&mut self) {
+        self.write_align(self.file_alignment);
+    }
+
     /// Reserve the file range up to the given file offset.
     pub fn reserve_until(&mut self, offset: u32) {
         debug_assert!(self.len <= offset);
