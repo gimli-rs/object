@@ -20,7 +20,7 @@ use crate::read::{
     SymbolMapName, SymbolScope, SymbolSection,
 };
 #[allow(unused_imports)]
-use crate::Endianness;
+use crate::{AddressSize, Endian, Endianness};
 
 /// Evaluate an expression on the contents of a file format enum.
 ///
@@ -220,23 +220,21 @@ impl<'data, R: ReadRef<'data>> File<'data, R> {
         Ok(File { inner })
     }
 
-    /// Parse the raw file data at an arbitrary offset inside the input data.
-    ///
-    /// Currently, this is only supported for Mach-O images.
-    /// This can be used for parsing Mach-O images inside the dyld shared cache,
-    /// where multiple images, located at different offsets, share the same address
-    /// space.
-    pub fn parse_at(data: R, offset: u64) -> Result<Self> {
-        let _inner = match FileKind::parse_at(data, offset)? {
-            #[cfg(feature = "macho")]
-            FileKind::MachO32 => FileInternal::MachO32(macho::MachOFile32::parse_at(data, offset)?),
-            #[cfg(feature = "macho")]
-            FileKind::MachO64 => FileInternal::MachO64(macho::MachOFile64::parse_at(data, offset)?),
-            #[allow(unreachable_patterns)]
+    /// Parse a Mach-O image from the dyld shared cache.
+    #[cfg(feature = "macho")]
+    pub fn parse_dyld_cache_image<'cache, E: Endian>(
+        image: &macho::DyldCacheImage<'data, 'cache, E, R>,
+    ) -> Result<Self> {
+        let inner = match image.cache.architecture().address_size() {
+            Some(AddressSize::U64) => {
+                FileInternal::MachO64(macho::MachOFile64::parse_dyld_cache_image(image)?)
+            }
+            Some(AddressSize::U32) => {
+                FileInternal::MachO32(macho::MachOFile32::parse_dyld_cache_image(image)?)
+            }
             _ => return Err(Error("Unsupported file format")),
         };
-        #[allow(unreachable_code)]
-        Ok(File { inner: _inner })
+        Ok(File { inner })
     }
 
     /// Return the file format.

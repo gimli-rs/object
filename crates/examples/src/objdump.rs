@@ -7,6 +7,7 @@ pub fn print<W: Write, E: Write>(
     w: &mut W,
     e: &mut E,
     file: &[u8],
+    extra_files: &[&[u8]],
     member_names: Vec<String>,
 ) -> Result<()> {
     let mut member_names: Vec<_> = member_names.into_iter().map(|name| (name, false)).collect();
@@ -47,7 +48,7 @@ pub fn print<W: Write, E: Write>(
                 Err(err) => writeln!(e, "Failed to parse Fat 64 data: {}", err)?,
             }
         }
-    } else if let Ok(cache) = DyldCache::<Endianness>::parse(&*file) {
+    } else if let Ok(cache) = DyldCache::<Endianness>::parse(&*file, extra_files) {
         writeln!(w, "Format: dyld cache {:?}-endian", cache.endianness())?;
         writeln!(w, "Architecture: {:?}", cache.architecture())?;
         for image in cache.images() {

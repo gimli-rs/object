@@ -1,3 +1,4 @@
+use alloc::vec::Vec;
 use core::slice;
 
 use crate::read::{Error, File, ReadError, ReadRef, Result};
@@ -12,11 +13,27 @@ where
 {
     endian: E,
     data: R,
+    subcaches: Vec<DyldSubCache<'data, E, R>>,
+    symbols_subcache: Option<DyldSubCache<'data, E, R>>,
     header: &'data macho::DyldCacheHeader<E>,
     mappings: &'data [macho::DyldCacheMappingInfo<E>],
     images: &'data [macho::DyldCacheImageInfo<E>],
     arch: Architecture,
 }
+
+/// Information about a subcache.
+#[derive(Debug)]
+pub struct DyldSubCache<'data, E = Endianness, R = &'data [u8]>
+where
+    E: Endian,
+    R: ReadRef<'data>,
+{
+    data: R,
+    mappings: &'data [macho::DyldCacheMappingInfo<E>],
+}
+
+// This is the offset of the images_across_all_subcaches_count field.
+const MIN_HEADER_SIZE_SUBCACHES: u32 = 0x1c4;
 
 impl<'data, E, R> DyldCache<'data, E, R>
 where
@@ -24,14 +41,61 @@ where
     R: ReadRef<'data>,
 {
     /// Parse the raw dyld shared cache data.
-    pub fn parse(data: R) -> Result<Self> {
+    /// For shared caches from macOS 12 / iOS 15 and above, the subcache files need to be
+    /// supplied as well, in the correct order, with the .symbols subcache last (if present).
+    /// For example, data would be the data for dyld_shared_cache_x86_64,
+    /// and subcache_data would be the data for [dyld_shared_cache_x86_64.1, dyld_shared_cache_x86_64.2, ...]
+    pub fn parse(data: R, subcache_data: &[R]) -> Result<Self> {
         let header = macho::DyldCacheHeader::parse(data)?;
         let (arch, endian) = header.parse_magic()?;
         let mappings = header.mappings(endian, data)?;
+
+        let symbols_subcache_uuid = header.symbols_subcache_uuid(endian);
+        let subcaches_info = header.subcaches(endian, data)?.unwrap_or(&[]);
+
+        if subcache_data.len() != subcaches_info.len() + symbols_subcache_uuid.is_some() as usize {
+            return Err(Error("Incorrect number of SubCaches"));
+        }
+
+        // Split out the .symbols subcache data from the other subcaches.
+        let (symbols_subcache_data_and_uuid, subcache_data) =
+            if let Some(symbols_uuid) = symbols_subcache_uuid {
+                let (sym_data, rest_data) = subcache_data.split_last().unwrap();
+                (Some((*sym_data, symbols_uuid)), rest_data)
+            } else {
+                (None, subcache_data)
+            };
+
+        // Read the regular SubCaches (.1, .2, ...), if present.
+        let mut subcaches = Vec::new();
+        for (&data, info) in subcache_data.iter().zip(subcaches_info.iter()) {
+            let sc_header = macho::DyldCacheHeader::<E>::parse(data)?;
+            if sc_header.uuid != info.uuid {
+                return Err(Error("Unexpected SubCache UUID"));
+            }
+            let mappings = sc_header.mappings(endian, data)?;
+            subcaches.push(DyldSubCache { data, mappings });
+        }
+
+        // Read the .symbols SubCache, if present.
+        let symbols_subcache = match symbols_subcache_data_and_uuid {
+            Some((data, uuid)) => {
+                let sc_header = macho::DyldCacheHeader::<E>::parse(data)?;
+                if sc_header.uuid != uuid {
+                    return Err(Error("Unexpected .symbols SubCache UUID"));
+                }
+                let mappings = sc_header.mappings(endian, data)?;
+                Some(DyldSubCache { data, mappings })
+            }
+            None => None,
+        };
+
         let images = header.images(endian, data)?;
         Ok(DyldCache {
             endian,
             data,
+            subcaches,
+            symbols_subcache,
             header,
             mappings,
             images,
@@ -66,6 +130,22 @@ where
             iter: self.images.iter(),
         }
     }
+
+    /// Find the address in a mapping and return the cache or subcache data it was found in,
+    /// together with the translated file offset.
+    pub fn data_and_offset_for_address(&self, address: u64) -> Option<(R, u64)> {
+        if let Some(file_offset) = address_to_file_offset(address, self.endian, self.mappings) {
+            return Some((self.data, file_offset));
+        }
+        for subcache in &self.subcaches {
+            if let Some(file_offset) =
+                address_to_file_offset(address, self.endian, subcache.mappings)
+            {
+                return Some((subcache.data, file_offset));
+            }
+        }
+        None
+    }
 }
 
 /// An iterator over all the images (dylibs) in the dyld shared cache.
@@ -84,14 +164,12 @@ where
     E: Endian,
     R: ReadRef<'data>,
 {
-    type Item = DyldCacheImage<'data, E, R>;
+    type Item = DyldCacheImage<'data, 'cache, E, R>;
 
-    fn next(&mut self) -> Option<DyldCacheImage<'data, E, R>> {
+    fn next(&mut self) -> Option<DyldCacheImage<'data, 'cache, E, R>> {
         let image_info = self.iter.next()?;
         Some(DyldCacheImage {
-            endian: self.cache.endian,
-            data: self.cache.data,
-            mappings: self.cache.mappings,
+            cache: self.cache,
             image_info,
         })
     }
@@ -99,38 +177,40 @@ where
 
 /// One image (dylib) from inside the dyld shared cache.
 #[derive(Debug)]
-pub struct DyldCacheImage<'data, E = Endianness, R = &'data [u8]>
+pub struct DyldCacheImage<'data, 'cache, E = Endianness, R = &'data [u8]>
 where
     E: Endian,
     R: ReadRef<'data>,
 {
-    endian: E,
-    data: R,
-    mappings: &'data [macho::DyldCacheMappingInfo<E>],
+    pub(crate) cache: &'cache DyldCache<'data, E, R>,
     image_info: &'data macho::DyldCacheImageInfo<E>,
 }
 
-impl<'data, E, R> DyldCacheImage<'data, E, R>
+impl<'data, 'cache, E, R> DyldCacheImage<'data, 'cache, E, R>
 where
     E: Endian,
     R: ReadRef<'data>,
 {
     /// The file system path of this image.
     pub fn path(&self) -> Result<&'data str> {
-        let path = self.image_info.path(self.endian, self.data)?;
+        let path = self.image_info.path(self.cache.endian, self.cache.data)?;
         // The path should always be ascii, so from_utf8 should alway succeed.
         let path = core::str::from_utf8(path).map_err(|_| Error("Path string not valid utf-8"))?;
         Ok(path)
     }
 
-    /// The offset in the dyld cache file where this image starts.
-    pub fn file_offset(&self) -> Result<u64> {
-        self.image_info.file_offset(self.endian, self.mappings)
+    /// The subcache data which contains the Mach-O header for this image,
+    /// together with the file offset at which this image starts.
+    pub fn image_data_and_offset(&self) -> Result<(R, u64)> {
+        let address = self.image_info.address.get(self.cache.endian);
+        self.cache
+            .data_and_offset_for_address(address)
+            .ok_or(Error("Address not found in any mapping"))
     }
 
     /// Parse this image into an Object.
     pub fn parse_object(&self) -> Result<File<'data, R>> {
-        File::parse_at(self.data, self.file_offset()?)
+        File::parse_dyld_cache_image(self)
     }
 }
 
@@ -175,17 +255,55 @@ impl<E: Endian> macho::DyldCacheHeader<E> {
         .read_error("Invalid dyld cache mapping size or alignment")
     }
 
+    /// Return the information about subcaches, if present.
+    pub fn subcaches<'data, R: ReadRef<'data>>(
+        &self,
+        endian: E,
+        data: R,
+    ) -> Result<Option<&'data [macho::DyldSubCacheInfo<E>]>> {
+        if self.mapping_offset.get(endian) >= MIN_HEADER_SIZE_SUBCACHES {
+            let subcaches = data
+                .read_slice_at::<macho::DyldSubCacheInfo<E>>(
+                    self.subcaches_offset.get(endian).into(),
+                    self.subcaches_count.get(endian) as usize,
+                )
+                .read_error("Invalid dyld subcaches size or alignment")?;
+            Ok(Some(subcaches))
+        } else {
+            Ok(None)
+        }
+    }
+
+    /// Return the UUID for the .symbols subcache, if present.
+    pub fn symbols_subcache_uuid(&self, endian: E) -> Option<[u8; 16]> {
+        if self.mapping_offset.get(endian) >= MIN_HEADER_SIZE_SUBCACHES {
+            let uuid = self.symbols_subcache_uuid;
+            if uuid != [0; 16] {
+                return Some(uuid);
+            }
+        }
+        None
+    }
+
     /// Return the image information table.
     pub fn images<'data, R: ReadRef<'data>>(
         &self,
         endian: E,
         data: R,
     ) -> Result<&'data [macho::DyldCacheImageInfo<E>]> {
-        data.read_slice_at::<macho::DyldCacheImageInfo<E>>(
-            self.images_offset.get(endian).into(),
-            self.images_count.get(endian) as usize,
-        )
-        .read_error("Invalid dyld cache image size or alignment")
+        if self.mapping_offset.get(endian) >= MIN_HEADER_SIZE_SUBCACHES {
+            data.read_slice_at::<macho::DyldCacheImageInfo<E>>(
+                self.images_across_all_subcaches_offset.get(endian).into(),
+                self.images_across_all_subcaches_count.get(endian) as usize,
+            )
+            .read_error("Invalid dyld cache image size or alignment")
+        } else {
+            data.read_slice_at::<macho::DyldCacheImageInfo<E>>(
+                self.images_offset.get(endian).into(),
+                self.images_count.get(endian) as usize,
+            )
+            .read_error("Invalid dyld cache image size or alignment")
+        }
     }
 }
 
@@ -205,14 +323,24 @@ impl<E: Endian> macho::DyldCacheImageInfo<E> {
         mappings: &[macho::DyldCacheMappingInfo<E>],
     ) -> Result<u64> {
         let address = self.address.get(endian);
-        for mapping in mappings {
-            let mapping_address = mapping.address.get(endian);
-            if address >= mapping_address
-                && address < mapping_address.wrapping_add(mapping.size.get(endian))
-            {
-                return Ok(address - mapping_address + mapping.file_offset.get(endian));
-            }
-        }
-        Err(Error("Invalid dyld cache image address"))
+        address_to_file_offset(address, endian, mappings)
+            .read_error("Invalid dyld cache image address")
     }
+}
+
+/// Find the file offset of the image by looking up its address in the mappings.
+pub fn address_to_file_offset<E: Endian>(
+    address: u64,
+    endian: E,
+    mappings: &[macho::DyldCacheMappingInfo<E>],
+) -> Option<u64> {
+    for mapping in mappings {
+        let mapping_address = mapping.address.get(endian);
+        if address >= mapping_address
+            && address < mapping_address.wrapping_add(mapping.size.get(endian))
+        {
+            return Some(address - mapping_address + mapping.file_offset.get(endian));
+        }
+    }
+    None
 }
