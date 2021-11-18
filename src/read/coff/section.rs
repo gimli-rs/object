@@ -475,15 +475,19 @@ impl pe::ImageSectionHeader {
         if number == core::u16::MAX.into()
             && self.characteristics.get(LE) & pe::IMAGE_SCN_LNK_NRELOC_OVFL != 0
         {
-            // Extended relocations. Read first relocation and read extended count & adjust
+            // Extended relocations. Read first relocation (which contains extended count) & adjust
             // relocations pointer.
             let extended_relocation_info: &pe::ImageRelocation = data
                 .read_at(pointer)
                 .read_error("Invalid COFF relocation offset or number")
                 .expect("Invalid COFF relocation offset or number");
-            // Extended relocation info does not contribute to the count of sections.
-            number = extended_relocation_info.virtual_address.get(LE) as usize - 1;
+            number = extended_relocation_info.virtual_address.get(LE) as usize;
+            if number == 0 {
+                return Err(Error("Invalid COFF relocation number"));
+            }
             pointer += core::mem::size_of::<pe::ImageRelocation>() as u64;
+            // Extended relocation info does not contribute to the count of sections.
+            number -= 1;
         }
         data.read_slice_at(pointer, number)
             .read_error("Invalid COFF relocation offset or number")
