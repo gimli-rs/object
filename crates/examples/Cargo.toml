@@ -48,7 +48,7 @@ required-features = ["object/read"]
 
 [[bin]]
 name = "pecopy"
-required-features = ["object/read_core", "object/write_core", "object/pe", "object/elf", "object/std"]
+required-features = ["object/read_core", "object/write_core", "object/pe", "object/std"]
 
 [[bin]]
 name = "readobj"
