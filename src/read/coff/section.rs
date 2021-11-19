@@ -477,10 +477,9 @@ impl pe::ImageSectionHeader {
         {
             // Extended relocations. Read first relocation (which contains extended count) & adjust
             // relocations pointer.
-            let extended_relocation_info: &pe::ImageRelocation = data
-                .read_at(pointer)
-                .read_error("Invalid COFF relocation offset or number")
-                .expect("Invalid COFF relocation offset or number");
+            let extended_relocation_info = data
+                .read_at::<pe::ImageRelocation>(pointer)
+                .read_error("Invalid COFF relocation offset or number")?;
             number = extended_relocation_info.virtual_address.get(LE) as usize;
             if number == 0 {
                 return Err(Error("Invalid COFF relocation number"));
