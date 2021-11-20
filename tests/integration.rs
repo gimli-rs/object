@@ -1,2 +1,2 @@
-mod coff;
+mod read;
 mod round_trip;
