@@ -166,9 +166,12 @@ impl<'a> Object<'a> {
             }
 
             // Calculate size of relocations.
-            let count = section.relocations.len();
+            let mut count = section.relocations.len();
             if count != 0 {
                 section_offsets[index].reloc_offset = offset;
+                if count > 0xffff {
+                    count += 1;
+                }
                 offset += count * mem::size_of::<coff::ImageRelocation>();
             }
         }
@@ -301,6 +304,9 @@ impl<'a> Object<'a> {
             if section_offsets[index].selection != 0 {
                 characteristics |= coff::IMAGE_SCN_LNK_COMDAT;
             };
+            if section.relocations.len() > 0xffff {
+                characteristics |= coff::IMAGE_SCN_LNK_NRELOC_OVFL;
+            }
             characteristics |= match section.kind {
                 SectionKind::Text => {
                     coff::IMAGE_SCN_CNT_CODE
@@ -371,7 +377,11 @@ impl<'a> Object<'a> {
                 pointer_to_raw_data: U32::new(LE, section_offsets[index].offset as u32),
                 pointer_to_relocations: U32::new(LE, section_offsets[index].reloc_offset as u32),
                 pointer_to_linenumbers: U32::default(),
-                number_of_relocations: U16::new(LE, section.relocations.len() as u16),
+                number_of_relocations: if section.relocations.len() > 0xffff {
+                    U16::new(LE, 0xffff)
+                } else {
+                    U16::new(LE, section.relocations.len() as u16)
+                },
                 number_of_linenumbers: U16::default(),
                 characteristics: U32::new(LE, characteristics),
             };
@@ -430,6 +440,14 @@ impl<'a> Object<'a> {
 
             if !section.relocations.is_empty() {
                 debug_assert_eq!(section_offsets[index].reloc_offset, buffer.len());
+                if section.relocations.len() > 0xffff {
+                    let coff_relocation = coff::ImageRelocation {
+                        virtual_address: U32Bytes::new(LE, section.relocations.len() as u32 + 1),
+                        symbol_table_index: U32Bytes::new(LE, 0),
+                        typ: U16Bytes::new(LE, 0),
+                    };
+                    buffer.write(&coff_relocation);
+                }
                 for reloc in &section.relocations {
                     //assert!(reloc.implicit_addend);
                     let typ = match self.architecture {
@@ -587,7 +605,11 @@ impl<'a> Object<'a> {
                     let section = &self.sections[section_index];
                     let aux = coff::ImageAuxSymbolSection {
                         length: U32Bytes::new(LE, section.size as u32),
-                        number_of_relocations: U16Bytes::new(LE, section.relocations.len() as u16),
+                        number_of_relocations: if section.relocations.len() > 0xffff {
+                            U16Bytes::new(LE, 0xffff)
+                        } else {
+                            U16Bytes::new(LE, section.relocations.len() as u16)
+                        },
                         number_of_linenumbers: U16Bytes::default(),
                         check_sum: U32Bytes::new(LE, checksum(section.data())),
                         number: U16Bytes::new(
