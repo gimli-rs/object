@@ -36,6 +36,8 @@ read_core = []
 read = ["read_core", "archive", "coff", "elf", "macho", "pe", "unaligned"]
 # Core write support. You will need to enable some file formats too.
 write_core = ["crc32fast", "indexmap", "hashbrown"]
+# Core write support with libstd features. You will need to enable some file formats too.
+write_std = ["write_core", "std", "indexmap/std", "crc32fast/std"]
 # Write support for all file formats.
 write = ["write_core", "coff", "elf", "macho", "pe"]
 
@@ -44,7 +46,7 @@ write = ["write_core", "coff", "elf", "macho", "pe"]
 
 # Enable things that require libstd.
 # Currently, this provides an `Error` implementation.
-std = ["memchr/std", "indexmap/std", "crc32fast/std"]
+std = ["memchr/std"]
 # Enable decompression of compressed sections.
 # This feature is not required if you want to do your own decompression.
 compression = ["flate2", "std"]

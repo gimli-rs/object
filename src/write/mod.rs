@@ -1,12 +1,13 @@
 //! Interface for writing object files.
 
 use alloc::borrow::Cow;
-use hashbrown::HashMap;
 use alloc::string::String;
 use alloc::vec::Vec;
 use core::{fmt, result, str};
 #[cfg(feature = "std")]
-use std::{error, io, boxed::Box};
+use std::{boxed::Box, collections::HashMap, error, io};
+#[cfg(not(feature = "std"))]
+use hashbrown::HashMap;
 
 use crate::endian::{Endianness, U32, U64};
 use crate::{
