@@ -1,7 +1,7 @@
 //! Helper for writing PE files.
-use core::mem;
 use alloc::string::String;
 use alloc::vec::Vec;
+use core::mem;
 
 use crate::endian::{LittleEndian as LE, *};
 use crate::pe;

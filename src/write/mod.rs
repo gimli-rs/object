@@ -4,10 +4,10 @@ use alloc::borrow::Cow;
 use alloc::string::String;
 use alloc::vec::Vec;
 use core::{fmt, result, str};
-#[cfg(feature = "std")]
-use std::{boxed::Box, collections::HashMap, error, io};
 #[cfg(not(feature = "std"))]
 use hashbrown::HashMap;
+#[cfg(feature = "std")]
+use std::{boxed::Box, collections::HashMap, error, io};
 
 use crate::endian::{Endianness, U32, U64};
 use crate::{
