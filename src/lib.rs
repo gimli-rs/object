@@ -73,7 +73,7 @@
 #[cfg(feature = "cargo-all")]
 compile_error!("'--all-features' is not supported; use '--features all' instead");
 
-#[cfg(feature = "read_core")]
+#[cfg(any(feature = "read_core", feature = "write_core"))]
 #[allow(unused_imports)]
 #[macro_use]
 extern crate alloc;

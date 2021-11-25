@@ -13,11 +13,12 @@ description = "A unified interface for reading and writing object file formats."
 features = ['doc']
 
 [dependencies]
-crc32fast = { version = "1.2", optional = true }
+crc32fast = { version = "1.2", default-features = false, optional = true }
 flate2 = { version = "1", optional = true }
 indexmap = { version = "1.1", optional = true }
 wasmparser = { version = "0.57", optional = true }
 memchr = { version = "2.4.1", default-features = false }
+hashbrown = { version = "0.11", features = ["ahash"], default-features = false, optional = true }
 
 # Internal feature, only used when building as part of libstd, not part of the
 # stable interface of this crate.
@@ -34,9 +35,11 @@ read_core = []
 # Read support for all file formats (including unaligned files).
 read = ["read_core", "archive", "coff", "elf", "macho", "pe", "unaligned"]
 # Core write support. You will need to enable some file formats too.
-write_core = ["crc32fast", "indexmap/std", "std"]
-# Write support for all file formats.
-write = ["write_core", "coff", "elf", "macho", "pe"]
+write_core = ["crc32fast", "indexmap", "hashbrown"]
+# Core write support with libstd features. You will need to enable some file formats too.
+write_std = ["write_core", "std", "indexmap/std", "crc32fast/std"]
+# Write support for all file formats, including libstd features.
+write = ["write_std", "coff", "elf", "macho", "pe"]
 
 #=======================================
 # Misc features.
@@ -79,7 +82,7 @@ cargo-all = []
 #=======================================
 # Documentation should be generated with everything in "all" except for "unaligned".
 doc = [
-  "read_core", "write_core",
+  "read_core", "write_std",
   "std", "compression",
   "archive", "coff", "elf", "macho", "pe", "wasm",
 ]

@@ -24,11 +24,11 @@ required-features = ["object/read"]
 
 [[bin]]
 name = "elfcopy"
-required-features = ["object/read_core", "object/write_core", "object/elf"]
+required-features = ["object/read_core", "object/write_core", "object/elf", "object/std"]
 
 [[bin]]
 name = "elftoefi"
-required-features = ["object/read_core", "object/write_core", "object/elf", "object/pe"]
+required-features = ["object/read_core", "object/write_core", "object/elf", "object/pe", "object/std"]
 
 [[bin]]
 name = "objcopy"
@@ -48,7 +48,7 @@ required-features = ["object/read"]
 
 [[bin]]
 name = "pecopy"
-required-features = ["object/read_core", "object/write_core", "object/pe"]
+required-features = ["object/read_core", "object/write_core", "object/pe", "object/std"]
 
 [[bin]]
 name = "readobj"

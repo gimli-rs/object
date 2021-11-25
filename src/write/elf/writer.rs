@@ -1,7 +1,7 @@
 //! Helper for writing ELF files.
-use std::mem;
-use std::string::String;
-use std::vec::Vec;
+use alloc::string::String;
+use alloc::vec::Vec;
+use core::mem;
 
 use crate::elf;
 use crate::endian::*;

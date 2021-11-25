@@ -1,4 +1,4 @@
-use std::vec::Vec;
+use alloc::vec::Vec;
 
 use crate::elf;
 use crate::write::elf::writer::*;

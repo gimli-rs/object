@@ -1,11 +1,13 @@
 //! Interface for writing object files.
 
-use std::borrow::Cow;
-use std::boxed::Box;
-use std::collections::HashMap;
-use std::string::String;
-use std::vec::Vec;
-use std::{error, fmt, io, result, str};
+use alloc::borrow::Cow;
+use alloc::string::String;
+use alloc::vec::Vec;
+use core::{fmt, result, str};
+#[cfg(not(feature = "std"))]
+use hashbrown::HashMap;
+#[cfg(feature = "std")]
+use std::{boxed::Box, collections::HashMap, error, io};
 
 use crate::endian::{Endianness, U32, U64};
 use crate::{
@@ -42,6 +44,7 @@ impl fmt::Display for Error {
     }
 }
 
+#[cfg(feature = "std")]
 impl error::Error for Error {}
 
 /// The result type used within the write module.
@@ -551,6 +554,7 @@ impl<'a> Object<'a> {
     ///
     /// It is advisable to use a buffered writer like [`BufWriter`](std::io::BufWriter)
     /// instead of an unbuffered writer like [`File`](std::fs::File).
+    #[cfg(feature = "std")]
     pub fn write_stream<W: io::Write>(&self, w: W) -> result::Result<(), Box<dyn error::Error>> {
         let mut stream = StreamingBuffer::new(w);
         self.emit(&mut stream)?;

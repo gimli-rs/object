@@ -1,4 +1,4 @@
-use std::mem;
+use core::mem;
 
 use crate::endian::*;
 use crate::macho;
