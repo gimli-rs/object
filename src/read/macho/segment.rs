@@ -1,12 +1,12 @@
 use core::fmt::Debug;
-use core::{result, str};
+use core::{result, slice, str};
 
 use crate::endian::{self, Endianness};
 use crate::macho;
 use crate::pod::Pod;
 use crate::read::{self, ObjectSegment, ReadError, ReadRef, Result};
 
-use super::{LoadCommandData, LoadCommandIterator, MachHeader, MachOFile, Section};
+use super::{LoadCommandData, MachHeader, MachOFile, Section};
 
 /// An iterator over the segments of a `MachOFile32`.
 pub type MachOSegmentIterator32<'data, 'file, Endian = Endianness, R = &'data [u8]> =
@@ -24,7 +24,7 @@ where
     R: ReadRef<'data>,
 {
     pub(super) file: &'file MachOFile<'data, Mach, R>,
-    pub(super) commands: LoadCommandIterator<'data, Mach::Endian>,
+    pub(super) iter: slice::Iter<'file, MachOSegmentInternal<'data, Mach, R>>,
 }
 
 impl<'data, 'file, Mach, R> Iterator for MachOSegmentIterator<'data, 'file, Mach, R>
@@ -35,15 +35,10 @@ where
     type Item = MachOSegment<'data, 'file, Mach, R>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        loop {
-            let command = self.commands.next().ok()??;
-            if let Ok(Some((segment, _))) = Mach::Segment::from_command(command) {
-                return Some(MachOSegment {
-                    file: self.file,
-                    segment,
-                });
-            }
-        }
+        self.iter.next().map(|internal| MachOSegment {
+            file: self.file,
+            internal,
+        })
     }
 }
 
@@ -63,7 +58,7 @@ where
     R: ReadRef<'data>,
 {
     file: &'file MachOFile<'data, Mach, R>,
-    segment: &'data Mach::Segment,
+    internal: &'file MachOSegmentInternal<'data, Mach, R>,
 }
 
 impl<'data, 'file, Mach, R> MachOSegment<'data, 'file, Mach, R>
@@ -72,7 +67,8 @@ where
     R: ReadRef<'data>,
 {
     fn bytes(&self) -> Result<&'data [u8]> {
-        self.segment
+        self.internal
+            .segment
             .data(self.file.endian, self.file.data)
             .read_error("Invalid Mach-O segment size or offset")
     }
@@ -92,12 +88,12 @@ where
 {
     #[inline]
     fn address(&self) -> u64 {
-        self.segment.vmaddr(self.file.endian).into()
+        self.internal.segment.vmaddr(self.file.endian).into()
     }
 
     #[inline]
     fn size(&self) -> u64 {
-        self.segment.vmsize(self.file.endian).into()
+        self.internal.segment.vmsize(self.file.endian).into()
     }
 
     #[inline]
@@ -108,7 +104,7 @@ where
 
     #[inline]
     fn file_range(&self) -> (u64, u64) {
-        self.segment.file_range(self.file.endian)
+        self.internal.segment.file_range(self.file.endian)
     }
 
     fn data(&self) -> Result<&'data [u8]> {
@@ -126,17 +122,23 @@ where
 
     #[inline]
     fn name_bytes(&self) -> Result<Option<&[u8]>> {
-        Ok(Some(self.segment.name()))
+        Ok(Some(self.internal.segment.name()))
     }
 
     #[inline]
     fn name(&self) -> Result<Option<&str>> {
         Ok(Some(
-            str::from_utf8(self.segment.name())
+            str::from_utf8(self.internal.segment.name())
                 .ok()
                 .read_error("Non UTF-8 Mach-O segment name")?,
         ))
     }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub(super) struct MachOSegmentInternal<'data, Mach: MachHeader, R: ReadRef<'data>> {
+    pub data: R,
+    pub segment: &'data Mach::Segment,
 }
 
 /// A trait for generic access to `SegmentCommand32` and `SegmentCommand64`.

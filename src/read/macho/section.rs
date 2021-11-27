@@ -80,9 +80,11 @@ where
     R: ReadRef<'data>,
 {
     fn bytes(&self) -> Result<&'data [u8]> {
+        let segment_index = self.internal.segment_index;
+        let segment = self.file.segment_internal(segment_index)?;
         self.internal
             .section
-            .data(self.file.endian, self.file.data)
+            .data(self.file.endian, segment.data)
             .read_error("Invalid Mach-O section size or offset")
     }
 }
@@ -202,12 +204,17 @@ where
 #[derive(Debug, Clone, Copy)]
 pub(super) struct MachOSectionInternal<'data, Mach: MachHeader> {
     pub index: SectionIndex,
+    pub segment_index: usize,
     pub kind: SectionKind,
     pub section: &'data Mach::Section,
 }
 
 impl<'data, Mach: MachHeader> MachOSectionInternal<'data, Mach> {
-    pub(super) fn parse(index: SectionIndex, section: &'data Mach::Section) -> Self {
+    pub(super) fn parse(
+        index: SectionIndex,
+        segment_index: usize,
+        section: &'data Mach::Section,
+    ) -> Self {
         // TODO: we don't validate flags, should we?
         let kind = match (section.segment_name(), section.name()) {
             (b"__TEXT", b"__text") => SectionKind::Text,
@@ -230,6 +237,7 @@ impl<'data, Mach: MachHeader> MachOSectionInternal<'data, Mach> {
         };
         MachOSectionInternal {
             index,
+            segment_index,
             kind,
             section,
         }

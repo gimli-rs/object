@@ -284,26 +284,67 @@ pub const VM_PROT_EXECUTE: u32 = 0x04;
 
 // Definitions from https://opensource.apple.com/source/dyld/dyld-210.2.3/launch-cache/dyld_cache_format.h.auto.html
 
-/// The dyld cache header, containing only the fields which are present
-/// in all versions of dyld caches (dyld-95.3 and up).
-/// Many more fields exist in later dyld versions, but we currently do
-/// not need to parse those.
+/// The dyld cache header.
 /// Corresponds to struct dyld_cache_header from dyld_cache_format.h.
+/// This header has grown over time. Only the fields up to and including dyld_base_address
+/// are guaranteed to be present. For all other fields, check the header size before
+/// accessing the field. The header size is stored in mapping_offset; the mappings start
+/// right after the theader.
 #[derive(Debug, Clone, Copy)]
 #[repr(C)]
 pub struct DyldCacheHeader<E: Endian> {
     /// e.g. "dyld_v0    i386"
     pub magic: [u8; 16],
     /// file offset to first dyld_cache_mapping_info
-    pub mapping_offset: U32<E>,
+    pub mapping_offset: U32<E>, // offset: 0x10
     /// number of dyld_cache_mapping_info entries
-    pub mapping_count: U32<E>,
+    pub mapping_count: U32<E>, // offset: 0x14
     /// file offset to first dyld_cache_image_info
-    pub images_offset: U32<E>,
+    pub images_offset: U32<E>, // offset: 0x18
     /// number of dyld_cache_image_info entries
-    pub images_count: U32<E>,
+    pub images_count: U32<E>, // offset: 0x1c
     /// base address of dyld when cache was built
-    pub dyld_base_address: U64<E>,
+    pub dyld_base_address: U64<E>, // offset: 0x20
+    ///
+    reserved1: [u8; 32], // offset: 0x28
+    /// file offset of where local symbols are stored
+    pub local_symbols_offset: U64<E>, // offset: 0x48
+    /// size of local symbols information
+    pub local_symbols_size: U64<E>, // offset: 0x50
+    /// unique value for each shared cache file
+    pub uuid: [u8; 16], // offset: 0x58
+    ///
+    reserved2: [u8; 32], // offset: 0x68
+    ///
+    reserved3: [u8; 32], // offset: 0x88
+    ///
+    reserved4: [u8; 32], // offset: 0xa8
+    ///
+    reserved5: [u8; 32], // offset: 0xc8
+    ///
+    reserved6: [u8; 32], // offset: 0xe8
+    ///
+    reserved7: [u8; 32], // offset: 0x108
+    ///
+    reserved8: [u8; 32], // offset: 0x128
+    ///
+    reserved9: [u8; 32], // offset: 0x148
+    ///
+    reserved10: [u8; 32], // offset: 0x168
+    /// file offset to first dyld_subcache_info
+    pub subcaches_offset: U32<E>, // offset: 0x188
+    /// number of dyld_subcache_info entries
+    pub subcaches_count: U32<E>, // offset: 0x18c
+    /// the UUID of the .symbols subcache
+    pub symbols_subcache_uuid: [u8; 16], // offset: 0x190
+    ///
+    reserved11: [u8; 32], // offset: 0x1a0
+    /// file offset to first dyld_cache_image_info
+    /// Use this  instead of images_offset if mapping_offset is at least 0x1c4.
+    pub images_across_all_subcaches_offset: U32<E>, // offset: 0x1c0
+    /// number of dyld_cache_image_info entries
+    /// Use this  instead of images_count if mapping_offset is at least 0x1c4.
+    pub images_across_all_subcaches_count: U32<E>, // offset: 0x1c4
 }
 
 /// Corresponds to struct dyld_cache_mapping_info from dyld_cache_format.h.
@@ -336,6 +377,17 @@ pub struct DyldCacheImageInfo<E: Endian> {
     pub path_file_offset: U32<E>,
     ///
     pub pad: U32<E>,
+}
+
+/// Corresponds to a struct whose source code has not been published as of Nov 2021.
+/// Added in the dyld cache version which shipped with macOS 12 / iOS 15.
+#[derive(Debug, Clone, Copy)]
+#[repr(C)]
+pub struct DyldSubCacheInfo<E: Endian> {
+    /// The UUID of this subcache.
+    pub uuid: [u8; 16],
+    /// The size of this subcache plus all previous subcaches.
+    pub cumulative_size: U64<E>,
 }
 
 // Definitions from "/usr/include/mach-o/loader.h".
@@ -3199,6 +3251,7 @@ unsafe_impl_endian_pod!(
     DyldCacheHeader,
     DyldCacheMappingInfo,
     DyldCacheImageInfo,
+    DyldSubCacheInfo,
     MachHeader32,
     MachHeader64,
     LoadCommand,

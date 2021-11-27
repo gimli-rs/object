@@ -10,9 +10,9 @@ use crate::read::{
 use crate::{endian, macho, BigEndian, ByteString, Endian, Endianness, Pod};
 
 use super::{
-    LoadCommandIterator, MachOSection, MachOSectionInternal, MachOSectionIterator, MachOSegment,
-    MachOSegmentIterator, MachOSymbol, MachOSymbolIterator, MachOSymbolTable, Nlist, Section,
-    Segment, SymbolTable,
+    DyldCacheImage, LoadCommandIterator, MachOSection, MachOSectionInternal, MachOSectionIterator,
+    MachOSegment, MachOSegmentInternal, MachOSegmentIterator, MachOSymbol, MachOSymbolIterator,
+    MachOSymbolTable, Nlist, Section, Segment, SymbolTable,
 };
 
 /// A 32-bit Mach-O object file.
@@ -35,6 +35,7 @@ where
     pub(super) data: R,
     pub(super) header_offset: u64,
     pub(super) header: &'data Mach,
+    pub(super) segments: Vec<MachOSegmentInternal<'data, Mach, R>>,
     pub(super) sections: Vec<MachOSectionInternal<'data, Mach>>,
     pub(super) symbols: SymbolTable<'data, Mach, R>,
 }
@@ -46,26 +47,21 @@ where
 {
     /// Parse the raw Mach-O file data.
     pub fn parse(data: R) -> Result<Self> {
-        Self::parse_at(data, 0)
-    }
-
-    /// Parse the raw Mach-O file data at an arbitrary offset inside the input data.
-    /// This can be used for parsing Mach-O images inside the dyld shared cache,
-    /// where multiple images, located at different offsets, share the same address
-    /// space.
-    pub fn parse_at(data: R, header_offset: u64) -> Result<Self> {
-        let header = Mach::parse(data, header_offset)?;
+        let header = Mach::parse(data, 0)?;
         let endian = header.endian()?;
 
-        let mut symbols = SymbolTable::default();
-        // Build a list of sections to make some operations more efficient.
+        // Build a list of segments and sections to make some operations more efficient.
+        let mut segments = Vec::new();
         let mut sections = Vec::new();
-        if let Ok(mut commands) = header.load_commands(endian, data, header_offset) {
+        let mut symbols = SymbolTable::default();
+        if let Ok(mut commands) = header.load_commands(endian, data, 0) {
             while let Ok(Some(command)) = commands.next() {
                 if let Some((segment, section_data)) = Mach::Segment::from_command(command)? {
+                    let segment_index = segments.len();
+                    segments.push(MachOSegmentInternal { segment, data });
                     for section in segment.sections(endian, section_data)? {
                         let index = SectionIndex(sections.len() + 1);
-                        sections.push(MachOSectionInternal::parse(index, section));
+                        sections.push(MachOSectionInternal::parse(index, segment_index, section));
                     }
                 } else if let Some(symtab) = command.symtab()? {
                     symbols = symtab.symbols(endian, data)?;
@@ -76,8 +72,70 @@ where
         Ok(MachOFile {
             endian,
             data,
+            header_offset: 0,
+            header,
+            segments,
+            sections,
+            symbols,
+        })
+    }
+
+    /// Parse the Mach-O file for the given image from the dyld shared cache.
+    /// This will read different sections from different subcaches, if necessary.
+    pub fn parse_dyld_cache_image<'cache, E: Endian>(
+        image: &DyldCacheImage<'data, 'cache, E, R>,
+    ) -> Result<Self> {
+        let (data, header_offset) = image.image_data_and_offset()?;
+        let header = Mach::parse(data, header_offset)?;
+        let endian = header.endian()?;
+
+        // Build a list of sections to make some operations more efficient.
+        // Also build a list of segments, because we need to remember which ReadRef
+        // to read each section's data from. Only the DyldCache knows this information,
+        // and we won't have access to it once we've exited this function.
+        let mut segments = Vec::new();
+        let mut sections = Vec::new();
+        let mut linkedit_data: Option<R> = None;
+        let mut symtab = None;
+        if let Ok(mut commands) = header.load_commands(endian, data, header_offset) {
+            while let Ok(Some(command)) = commands.next() {
+                if let Some((segment, section_data)) = Mach::Segment::from_command(command)? {
+                    // Each segment can be stored in a different subcache. Get the segment's
+                    // address and look it up in the cache mappings, to find the correct cache data.
+                    let addr = segment.vmaddr(endian).into();
+                    let (data, _offset) = image
+                        .cache
+                        .data_and_offset_for_address(addr)
+                        .read_error("Could not find segment data in dyld shared cache")?;
+                    if segment.name() == macho::SEG_LINKEDIT.as_bytes() {
+                        linkedit_data = Some(data);
+                    }
+                    let segment_index = segments.len();
+                    segments.push(MachOSegmentInternal { segment, data });
+
+                    for section in segment.sections(endian, section_data)? {
+                        let index = SectionIndex(sections.len() + 1);
+                        sections.push(MachOSectionInternal::parse(index, segment_index, section));
+                    }
+                } else if let Some(st) = command.symtab()? {
+                    symtab = Some(st);
+                }
+            }
+        }
+
+        // The symbols are found in the __LINKEDIT segment, so make sure to read them from the
+        // correct subcache.
+        let symbols = match (symtab, linkedit_data) {
+            (Some(symtab), Some(linkedit_data)) => symtab.symbols(endian, linkedit_data)?,
+            _ => SymbolTable::default(),
+        };
+
+        Ok(MachOFile {
+            endian,
+            data,
             header_offset,
             header,
+            segments,
             sections,
             symbols,
         })
@@ -94,6 +152,15 @@ where
             .checked_sub(1)
             .and_then(|index| self.sections.get(index))
             .read_error("Invalid Mach-O section index")
+    }
+
+    pub(super) fn segment_internal(
+        &self,
+        index: usize,
+    ) -> Result<&MachOSegmentInternal<'data, Mach, R>> {
+        self.segments
+            .get(index)
+            .read_error("Invalid Mach-O segment index")
     }
 }
 
@@ -155,11 +222,7 @@ where
     fn segments(&'file self) -> MachOSegmentIterator<'data, 'file, Mach, R> {
         MachOSegmentIterator {
             file: self,
-            commands: self
-                .header
-                .load_commands(self.endian, self.data, self.header_offset)
-                .ok()
-                .unwrap_or_else(Default::default),
+            iter: self.segments.iter(),
         }
     }
 

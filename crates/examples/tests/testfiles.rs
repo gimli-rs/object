@@ -28,7 +28,7 @@ fn testfiles() {
             println!("File {}", path);
             let data = fs::read(&path).unwrap();
             fail |= testfile(path, &data, "objdump", |mut out, mut err, data| {
-                objdump::print(&mut out, &mut err, data, vec![]).unwrap()
+                objdump::print(&mut out, &mut err, data, &[], vec![]).unwrap()
             });
             fail |= testfile(path, &data, "readobj", readobj::print);
             println!();
