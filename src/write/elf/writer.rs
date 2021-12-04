@@ -699,6 +699,23 @@ impl<'a> Writer<'a> {
         });
     }
 
+    /// Reserve the null symbol table entry.
+    ///
+    /// This will be stored in the `.symtab` section.
+    ///
+    /// The null symbol table entry is usually automatically reserved,
+    /// but this can be used to force an empty symbol table.
+    ///
+    /// This must be called before [`Self::reserve_symtab`].
+    pub fn reserve_null_symbol_index(&mut self) -> SymbolIndex {
+        debug_assert_eq!(self.symtab_offset, 0);
+        debug_assert_eq!(self.symtab_num, 0);
+        self.symtab_num = 1;
+        // The symtab must link to a strtab.
+        self.need_strtab = true;
+        SymbolIndex(0)
+    }
+
     /// Reserve a symbol table entry.
     ///
     /// This will be stored in the `.symtab` section.

@@ -215,6 +215,7 @@ impl<'a> Object<'a> {
 
         // Calculate index of symbols and add symbol strings to strtab.
         let mut symbol_offsets = vec![SymbolOffsets::default(); self.symbols.len()];
+        writer.reserve_null_symbol_index();
         // Local symbols must come before global.
         for (index, symbol) in self.symbols.iter().enumerate() {
             if symbol.is_local() {
