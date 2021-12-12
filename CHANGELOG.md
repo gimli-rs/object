@@ -2,6 +2,34 @@
 
 --------------------------------------------------------------------------------
 
+## 0.28.0
+
+Released 2021/12/12.
+
+### Breaking changes
+
+* `write_core` feature no longer enables `std` support. Use `write_std` instead.
+  [#400](https://github.com/gimli-rs/object/pull/400)
+
+* Multiple changes related to Mach-O split dyld cache support.
+  [#398](https://github.com/gimli-rs/object/pull/398)
+
+### Added
+
+* Added `write::pe::Writer::write_file_align`.
+  [#397](https://github.com/gimli-rs/object/pull/397)
+
+* Added support for Mach-O split dyld cache.
+  [#398](https://github.com/gimli-rs/object/pull/398)
+
+* Added support for `IMAGE_SCN_LNK_NRELOC_OVFL` when reading and writing COFF.
+  [#399](https://github.com/gimli-rs/object/pull/399)
+
+* Added `write::elf::Writer::reserve_null_symbol_index`.
+  [#402](https://github.com/gimli-rs/object/pull/402)
+
+--------------------------------------------------------------------------------
+
 ## 0.27.1
 
 Released 2021/10/22.

@@ -1,7 +1,7 @@
 [package]
 name = "object"
 # Note: disable resolver in workspace setting before releases.
-version = "0.27.1"
+version = "0.28.0"
 edition = "2018"
 exclude = ["/.github", "/testfiles"]
 keywords = ["object", "elf", "mach-o", "pe", "coff"]
@@ -95,4 +95,4 @@ rustc-dep-of-std = ['core', 'compiler_builtins', 'alloc', 'memchr/rustc-dep-of-s
 [workspace]
 members = ["crates/examples"]
 default-members = [".", "crates/examples"]
-resolver = "2"
+#resolver = "2"
