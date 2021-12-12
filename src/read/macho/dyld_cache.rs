@@ -14,8 +14,6 @@ where
     endian: E,
     data: R,
     subcaches: Vec<DyldSubCache<'data, E, R>>,
-    symbols_subcache: Option<DyldSubCache<'data, E, R>>,
-    header: &'data macho::DyldCacheHeader<E>,
     mappings: &'data [macho::DyldCacheMappingInfo<E>],
     images: &'data [macho::DyldCacheImageInfo<E>],
     arch: Architecture,
@@ -78,7 +76,8 @@ where
         }
 
         // Read the .symbols SubCache, if present.
-        let symbols_subcache = match symbols_subcache_data_and_uuid {
+        // Other than the UUID verification, the symbols SubCache is currently unused.
+        let _symbols_subcache = match symbols_subcache_data_and_uuid {
             Some((data, uuid)) => {
                 let sc_header = macho::DyldCacheHeader::<E>::parse(data)?;
                 if sc_header.uuid != uuid {
@@ -95,8 +94,6 @@ where
             endian,
             data,
             subcaches,
-            symbols_subcache,
-            header,
             mappings,
             images,
             arch,
