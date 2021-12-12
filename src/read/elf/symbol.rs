@@ -97,7 +97,7 @@ impl<'data, Elf: FileHeader, R: ReadRef<'data>> SymbolTable<'data, Elf, R> {
     /// Return the section index of the shndx table.
     #[inline]
     pub fn shndx_section(&self) -> SectionIndex {
-        self.string_section
+        self.shndx_section
     }
 
     /// Return the section index of the linked string table.
