@@ -125,7 +125,7 @@ fn copy_file<Elf: FileHeader<Endian = Endianness>>(
                     index = writer.reserve_strtab_section_index();
                 } else if i == in_dynsyms.string_section().0 {
                     index = writer.reserve_dynstr_section_index();
-                } else if i == in_elf.e_shstrndx(endian).into() {
+                } else if i == in_elf.shstrndx(endian, in_data)? as usize {
                     index = writer.reserve_shstrtab_section_index();
                 } else {
                     panic!("Unsupported string section {}", i);
@@ -806,7 +806,7 @@ fn copy_file<Elf: FileHeader<Endian = Endianness>>(
                     writer.write_strtab_section_header();
                 } else if i == in_dynsyms.string_section().0 {
                     writer.write_dynstr_section_header(dynstr_addr);
-                } else if i == in_elf.e_shstrndx(endian).into() {
+                } else if i == in_elf.shstrndx(endian, in_data)? as usize {
                     writer.write_shstrtab_section_header();
                 } else {
                     panic!("Unsupported string section {}", i);
