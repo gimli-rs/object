@@ -2,6 +2,21 @@
 
 --------------------------------------------------------------------------------
 
+## 0.28.1
+
+Released 2021/12/12.
+
+### Changed
+
+* Fix `read::elf::SymbolTable::shndx_section`.
+  [#405](https://github.com/gimli-rs/object/pull/405)
+
+* Fix build warnings.
+  [#405](https://github.com/gimli-rs/object/pull/405)
+  [#406](https://github.com/gimli-rs/object/pull/406)
+
+--------------------------------------------------------------------------------
+
 ## 0.28.0
 
 Released 2021/12/12.
