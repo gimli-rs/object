@@ -438,6 +438,7 @@ where
 /// An iterator over the segments of a `WasmFile`.
 #[derive(Debug)]
 pub struct WasmSegmentIterator<'data, 'file, R = &'data [u8]> {
+    #[allow(unused)]
     file: &'file WasmFile<'data, R>,
 }
 
@@ -453,6 +454,7 @@ impl<'data, 'file, R> Iterator for WasmSegmentIterator<'data, 'file, R> {
 /// A segment of a `WasmFile`.
 #[derive(Debug)]
 pub struct WasmSegment<'data, 'file, R = &'data [u8]> {
+    #[allow(unused)]
     file: &'file WasmFile<'data, R>,
 }
 
@@ -652,6 +654,7 @@ impl<'data, 'file, R> ObjectSection<'data> for WasmSection<'data, 'file, R> {
 /// An iterator over the COMDAT section groups of a `WasmFile`.
 #[derive(Debug)]
 pub struct WasmComdatIterator<'data, 'file, R = &'data [u8]> {
+    #[allow(unused)]
     file: &'file WasmFile<'data, R>,
 }
 
@@ -667,6 +670,7 @@ impl<'data, 'file, R> Iterator for WasmComdatIterator<'data, 'file, R> {
 /// A COMDAT section group of a `WasmFile`.
 #[derive(Debug)]
 pub struct WasmComdat<'data, 'file, R = &'data [u8]> {
+    #[allow(unused)]
     file: &'file WasmFile<'data, R>,
 }
 
@@ -707,6 +711,7 @@ pub struct WasmComdatSectionIterator<'data, 'file, R = &'data [u8]>
 where
     'data: 'file,
 {
+    #[allow(unused)]
     file: &'file WasmFile<'data, R>,
 }
 
