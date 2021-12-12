@@ -381,6 +381,7 @@ where
     Pe: ImageNtHeaders,
     R: ReadRef<'data>,
 {
+    #[allow(unused)]
     file: &'file PeFile<'data, Pe, R>,
 }
 
@@ -411,6 +412,7 @@ where
     Pe: ImageNtHeaders,
     R: ReadRef<'data>,
 {
+    #[allow(unused)]
     file: &'file PeFile<'data, Pe, R>,
 }
 
@@ -468,6 +470,7 @@ where
     Pe: ImageNtHeaders,
     R: ReadRef<'data>,
 {
+    #[allow(unused)]
     file: &'file PeFile<'data, Pe, R>,
 }
 

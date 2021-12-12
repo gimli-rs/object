@@ -442,6 +442,7 @@ where
     Mach: MachHeader,
     R: ReadRef<'data>,
 {
+    #[allow(unused)]
     file: &'file MachOFile<'data, Mach, R>,
 }
 
@@ -473,6 +474,7 @@ where
     Mach: MachHeader,
     R: ReadRef<'data>,
 {
+    #[allow(unused)]
     file: &'file MachOFile<'data, Mach, R>,
 }
 
@@ -531,6 +533,7 @@ where
     Mach: MachHeader,
     R: ReadRef<'data>,
 {
+    #[allow(unused)]
     file: &'file MachOFile<'data, Mach, R>,
 }
 
