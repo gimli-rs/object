@@ -255,21 +255,17 @@ impl<'data, R: ReadRef<'data>> WasmFile<'data, R> {
                         .read_error("Couldn't read header of the name section")?
                     {
                         // TODO: Right now, ill-formed name subsections
-                        // are silently ignored in order to maintain 
-                        // compatibility with extended name sections, which 
-                        // are not yet supported by the version of 
+                        // are silently ignored in order to maintain
+                        // compatibility with extended name sections, which
+                        // are not yet supported by the version of
                         // `wasmparser` currently used.
-                        // A better fix would be to update `wasmparser` to 
+                        // A better fix would be to update `wasmparser` to
                         // the newester version, but this requires
                         // a major rewrite of this file.
-                        if let Ok(name) = name {
-                            let name = match name {
-                                wp::Name::Function(name) => name,
-                                _ => continue,
-                            };
-                            let mut name_map = name
-                                .get_map()
-                                .read_error("Couldn't read header of the function name subsection")?;
+                        if let Ok(wp::Name::Function(name)) = name {
+                            let mut name_map = name.get_map().read_error(
+                                "Couldn't read header of the function name subsection",
+                            )?;
                             for _ in 0..name_map.get_count() {
                                 let naming = name_map
                                     .read()
