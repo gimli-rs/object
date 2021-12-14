@@ -260,7 +260,7 @@ impl<'data, R: ReadRef<'data>> WasmFile<'data, R> {
                         // are not yet supported by the version of
                         // `wasmparser` currently used.
                         // A better fix would be to update `wasmparser` to
-                        // the newester version, but this requires
+                        // the newest version, but this requires
                         // a major rewrite of this file.
                         if let Ok(wp::Name::Function(name)) = name {
                             let mut name_map = name.get_map().read_error(
