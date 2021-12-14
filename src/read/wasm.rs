@@ -254,25 +254,34 @@ impl<'data, R: ReadRef<'data>> WasmFile<'data, R> {
                         .get_name_section_reader()
                         .read_error("Couldn't read header of the name section")?
                     {
-                        let name =
-                            match name.read_error("Couldn't read header of a name subsection")? {
+                        // TODO: Right now, ill-formed name subsections
+                        // are silently ignored in order to maintain 
+                        // compatibility with extended name sections, which 
+                        // are not yet supported by the version of 
+                        // `wasmparser` currently used.
+                        // A better fix would be to update `wasmparser` to 
+                        // the newester version, but this requires
+                        // a major rewrite of this file.
+                        if let Ok(name) = name {
+                            let name = match name {
                                 wp::Name::Function(name) => name,
                                 _ => continue,
                             };
-                        let mut name_map = name
-                            .get_map()
-                            .read_error("Couldn't read header of the function name subsection")?;
-                        for _ in 0..name_map.get_count() {
-                            let naming = name_map
-                                .read()
-                                .read_error("Couldn't read a function name")?;
-                            if let Some(local_index) =
-                                naming.index.checked_sub(imported_funcs_count)
-                            {
-                                if let LocalFunctionKind::Local { symbol_id } =
-                                    local_func_kinds[local_index as usize]
+                            let mut name_map = name
+                                .get_map()
+                                .read_error("Couldn't read header of the function name subsection")?;
+                            for _ in 0..name_map.get_count() {
+                                let naming = name_map
+                                    .read()
+                                    .read_error("Couldn't read a function name")?;
+                                if let Some(local_index) =
+                                    naming.index.checked_sub(imported_funcs_count)
                                 {
-                                    file.symbols[symbol_id as usize].name = naming.name;
+                                    if let LocalFunctionKind::Local { symbol_id } =
+                                        local_func_kinds[local_index as usize]
+                                    {
+                                        file.symbols[symbol_id as usize].name = naming.name;
+                                    }
                                 }
                             }
                         }
