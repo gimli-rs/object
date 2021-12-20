@@ -128,7 +128,7 @@ fn coff_x86_64_comdat() {
 }
 
 #[test]
-fn elf_x86_64_common() {
+fn elf_x86_64_comdat() {
     let mut object =
         write::Object::new(BinaryFormat::Elf, Architecture::X86_64, Endianness::Little);
 
