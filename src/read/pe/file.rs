@@ -46,7 +46,7 @@ where
         let mut offset = dos_header.nt_headers_offset().into();
         let (nt_headers, data_directories) = Pe::parse(data, &mut offset)?;
         let sections = nt_headers.sections(data, offset)?;
-        let symbols = nt_headers.symbols(data)?;
+        let coff_symbols = nt_headers.symbols(data);
         let image_base = nt_headers.optional_header().image_base();
 
         Ok(PeFile {
@@ -55,7 +55,9 @@ where
             data_directories,
             common: CoffCommon {
                 sections,
-                symbols,
+                // The PE file format deprecates the COFF symbol table (https://docs.microsoft.com/en-us/windows/win32/debug/pe-format#coff-file-header-object-and-image)
+                // We do not want to prevent parsing the rest of the PE file for a corrupt COFF header, but rather return an empty symbol table
+                symbols: coff_symbols.unwrap_or_default(),
                 image_base,
             },
             data,
@@ -604,7 +606,7 @@ pub trait ImageNtHeaders: Debug + Pod {
         SectionTable::parse(self.file_header(), data, offset)
     }
 
-    /// Read the symbol table and string table.
+    /// Read the COFF symbol table and string table.
     ///
     /// `data` must be the entire file data.
     #[inline]
