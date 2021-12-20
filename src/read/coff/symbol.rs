@@ -25,6 +25,15 @@ where
     strings: StringTable<'data, R>,
 }
 
+impl<'data, R: ReadRef<'data>> Default for SymbolTable<'data, R> {
+    fn default() -> Self {
+        Self {
+            symbols: &[],
+            strings: StringTable::default(),
+        }
+    }
+}
+
 impl<'data, R: ReadRef<'data>> SymbolTable<'data, R> {
     /// Read the symbol table.
     pub fn parse(header: &pe::ImageFileHeader, data: R) -> Result<Self> {
