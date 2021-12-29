@@ -415,3 +415,10 @@ pub enum SymbolFlags<Section> {
         associative_section: Option<Section>,
     },
 }
+
+/// Unified segment rwe_flag of read permission
+pub const SEGMENT_RWE_FLAG_READ: u32 = 0x01;
+/// Unified segment rwe_flag of write permission
+pub const SEGMENT_RWE_FLAG_WRITE: u32 = 0x02;
+/// Unified segment rwe_flag of execute permission
+pub const SEGMENT_RWE_FLAG_EXECUTE: u32 = 0x04;

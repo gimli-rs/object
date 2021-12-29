@@ -8,6 +8,7 @@ use crate::read::{
     self, CompressedData, CompressedFileRange, Error, ObjectSection, ObjectSegment, ReadError,
     ReadRef, Result, SectionFlags, SectionIndex, SectionKind,
 };
+use crate::{SEGMENT_RWE_FLAG_EXECUTE, SEGMENT_RWE_FLAG_READ, SEGMENT_RWE_FLAG_WRITE};
 
 use super::{CoffFile, CoffRelocationIterator};
 
@@ -188,6 +189,22 @@ impl<'data, 'file, R: ReadRef<'data>> ObjectSegment<'data> for CoffSegment<'data
             .ok()
             .read_error("Non UTF-8 COFF section name")
             .map(Some)
+    }
+
+    #[inline]
+    fn rwe_flags(&self) -> u32 {
+        let value = self.section.characteristics.get(LE);
+        let mut flag = 0;
+        if value & pe::IMAGE_SCN_MEM_READ > 0 {
+            flag |= SEGMENT_RWE_FLAG_READ;
+        }
+        if value & pe::IMAGE_SCN_MEM_WRITE > 0 {
+            flag |= SEGMENT_RWE_FLAG_WRITE
+        }
+        if value & pe::IMAGE_SCN_MEM_EXECUTE > 0 {
+            flag |= SEGMENT_RWE_FLAG_EXECUTE;
+        }
+        flag
     }
 }
 

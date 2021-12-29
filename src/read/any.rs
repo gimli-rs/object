@@ -563,6 +563,10 @@ impl<'data, 'file, R: ReadRef<'data>> ObjectSegment<'data> for Segment<'data, 'f
     fn name(&self) -> Result<Option<&str>> {
         with_inner!(self.inner, SegmentInternal, |x| x.name())
     }
+
+    fn rwe_flags(&self) -> u32 {
+        with_inner!(self.inner, SegmentInternal, |x| x.rwe_flags())
+    }
 }
 
 /// An iterator of the sections of a `File`.

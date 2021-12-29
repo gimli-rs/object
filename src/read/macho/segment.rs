@@ -5,6 +5,7 @@ use crate::endian::{self, Endianness};
 use crate::macho;
 use crate::pod::Pod;
 use crate::read::{self, ObjectSegment, ReadError, ReadRef, Result};
+use crate::{SEGMENT_RWE_FLAG_EXECUTE, SEGMENT_RWE_FLAG_READ, SEGMENT_RWE_FLAG_WRITE};
 
 use super::{LoadCommandData, MachHeader, MachOFile, Section};
 
@@ -132,6 +133,22 @@ where
                 .ok()
                 .read_error("Non UTF-8 Mach-O segment name")?,
         ))
+    }
+
+    #[inline]
+    fn rwe_flags(&self) -> u32 {
+        let value = self.internal.segment.initprot(self.file.endian);
+        let mut flag = 0;
+        if value & macho::VM_PROT_READ > 0 {
+            flag |= SEGMENT_RWE_FLAG_READ;
+        }
+        if value & macho::VM_PROT_WRITE > 0 {
+            flag |= SEGMENT_RWE_FLAG_WRITE
+        }
+        if value & macho::VM_PROT_EXECUTE > 0 {
+            flag |= SEGMENT_RWE_FLAG_EXECUTE;
+        }
+        flag
     }
 }
 

@@ -261,6 +261,13 @@ pub trait ObjectSegment<'data>: read::private::Sealed {
     ///
     /// Returns an error if the name is not UTF-8.
     fn name(&self) -> Result<Option<&str>>;
+
+    /// Return read/write/execute flag of segment.
+    ///
+    /// Returns 0 if none of r/w/e flags exist.
+    /// Otherwise returns value of
+    /// SEGMENT_RWE_FLAG_READ | SEGMENT_RWE_FLAG_WRITE | SEGMENT_RWE_FLAG_EXECUTE
+    fn rwe_flags(&self) -> u32;
 }
 
 /// A section defined in an object file.

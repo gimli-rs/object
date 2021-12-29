@@ -7,6 +7,7 @@ use crate::read::{
     self, CompressedData, CompressedFileRange, ObjectSection, ObjectSegment, ReadError, ReadRef,
     Relocation, Result, SectionFlags, SectionIndex, SectionKind,
 };
+use crate::{SEGMENT_RWE_FLAG_EXECUTE, SEGMENT_RWE_FLAG_READ, SEGMENT_RWE_FLAG_WRITE};
 
 use super::{ImageNtHeaders, PeFile, SectionTable};
 
@@ -122,6 +123,22 @@ where
                 .ok()
                 .read_error("Non UTF-8 PE section name")?,
         ))
+    }
+
+    #[inline]
+    fn rwe_flags(&self) -> u32 {
+        let value = self.section.characteristics.get(LE);
+        let mut flag = 0;
+        if value & pe::IMAGE_SCN_MEM_READ > 0 {
+            flag |= SEGMENT_RWE_FLAG_READ;
+        }
+        if value & pe::IMAGE_SCN_MEM_WRITE > 0 {
+            flag |= SEGMENT_RWE_FLAG_WRITE
+        }
+        if value & pe::IMAGE_SCN_MEM_EXECUTE > 0 {
+            flag |= SEGMENT_RWE_FLAG_EXECUTE;
+        }
+        flag
     }
 }
 
