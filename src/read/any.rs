@@ -16,8 +16,8 @@ use crate::read::{
     self, Architecture, BinaryFormat, CodeView, ComdatKind, CompressedData, CompressedFileRange,
     Error, Export, FileFlags, FileKind, Import, Object, ObjectComdat, ObjectKind, ObjectMap,
     ObjectSection, ObjectSegment, ObjectSymbol, ObjectSymbolTable, ReadRef, Relocation, Result,
-    SectionFlags, SectionIndex, SectionKind, SymbolFlags, SymbolIndex, SymbolKind, SymbolMap,
-    SymbolMapName, SymbolScope, SymbolSection,
+    SectionFlags, SectionIndex, SectionKind, SegmentFlags, SymbolFlags, SymbolIndex, SymbolKind,
+    SymbolMap, SymbolMapName, SymbolScope, SymbolSection,
 };
 #[allow(unused_imports)]
 use crate::{AddressSize, Endian, Endianness};
@@ -564,8 +564,8 @@ impl<'data, 'file, R: ReadRef<'data>> ObjectSegment<'data> for Segment<'data, 'f
         with_inner!(self.inner, SegmentInternal, |x| x.name())
     }
 
-    fn rwe_flags(&self) -> u32 {
-        with_inner!(self.inner, SegmentInternal, |x| x.rwe_flags())
+    fn flags(&self) -> SegmentFlags {
+        with_inner!(self.inner, SegmentInternal, |x| x.flags())
     }
 }
 

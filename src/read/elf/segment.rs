@@ -4,8 +4,7 @@ use core::{mem, slice, str};
 use crate::elf;
 use crate::endian::{self, Endianness};
 use crate::pod::Pod;
-use crate::read::{self, Bytes, ObjectSegment, ReadError, ReadRef};
-use crate::{SEGMENT_RWE_FLAG_EXECUTE, SEGMENT_RWE_FLAG_READ, SEGMENT_RWE_FLAG_WRITE};
+use crate::read::{self, Bytes, ObjectSegment, ReadError, ReadRef, SegmentFlags};
 
 use super::{ElfFile, FileHeader, NoteIterator};
 
@@ -131,19 +130,9 @@ where
     }
 
     #[inline]
-    fn rwe_flags(&self) -> u32 {
-        let value = self.segment.p_flags(self.file.endian);
-        let mut flag = 0;
-        if value & elf::PF_R > 0 {
-            flag |= SEGMENT_RWE_FLAG_READ;
-        }
-        if value & elf::PF_W > 0 {
-            flag |= SEGMENT_RWE_FLAG_WRITE
-        }
-        if value & elf::PF_X > 0 {
-            flag |= SEGMENT_RWE_FLAG_EXECUTE;
-        }
-        flag
+    fn flags(&self) -> SegmentFlags {
+        let p_flags = self.segment.p_flags(self.file.endian);
+        SegmentFlags::Elf { p_flags }
     }
 }
 

@@ -6,9 +6,8 @@ use crate::pe;
 use crate::read::util::StringTable;
 use crate::read::{
     self, CompressedData, CompressedFileRange, Error, ObjectSection, ObjectSegment, ReadError,
-    ReadRef, Result, SectionFlags, SectionIndex, SectionKind,
+    ReadRef, Result, SectionFlags, SectionIndex, SectionKind, SegmentFlags,
 };
-use crate::{SEGMENT_RWE_FLAG_EXECUTE, SEGMENT_RWE_FLAG_READ, SEGMENT_RWE_FLAG_WRITE};
 
 use super::{CoffFile, CoffRelocationIterator};
 
@@ -192,19 +191,9 @@ impl<'data, 'file, R: ReadRef<'data>> ObjectSegment<'data> for CoffSegment<'data
     }
 
     #[inline]
-    fn rwe_flags(&self) -> u32 {
-        let value = self.section.characteristics.get(LE);
-        let mut flag = 0;
-        if value & pe::IMAGE_SCN_MEM_READ > 0 {
-            flag |= SEGMENT_RWE_FLAG_READ;
-        }
-        if value & pe::IMAGE_SCN_MEM_WRITE > 0 {
-            flag |= SEGMENT_RWE_FLAG_WRITE
-        }
-        if value & pe::IMAGE_SCN_MEM_EXECUTE > 0 {
-            flag |= SEGMENT_RWE_FLAG_EXECUTE;
-        }
-        flag
+    fn flags(&self) -> SegmentFlags {
+        let characteristics = self.section.characteristics.get(LE);
+        SegmentFlags::Coff { characteristics }
     }
 }
 
