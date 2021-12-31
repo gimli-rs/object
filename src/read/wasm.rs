@@ -13,8 +13,8 @@ use crate::read::{
     self, Architecture, ComdatKind, CompressedData, CompressedFileRange, Error, Export, FileFlags,
     Import, NoDynamicRelocationIterator, Object, ObjectComdat, ObjectKind, ObjectSection,
     ObjectSegment, ObjectSymbol, ObjectSymbolTable, ReadError, ReadRef, Relocation, Result,
-    SectionFlags, SectionIndex, SectionKind, SymbolFlags, SymbolIndex, SymbolKind, SymbolScope,
-    SymbolSection,
+    SectionFlags, SectionIndex, SectionKind, SegmentFlags, SymbolFlags, SymbolIndex, SymbolKind,
+    SymbolScope, SymbolSection,
 };
 
 const SECTION_CUSTOM: usize = 0;
