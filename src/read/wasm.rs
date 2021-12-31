@@ -503,6 +503,11 @@ impl<'data, 'file, R> ObjectSegment<'data> for WasmSegment<'data, 'file, R> {
     fn name(&self) -> Result<Option<&str>> {
         unreachable!()
     }
+
+    #[inline]
+    fn flags(&self) -> SegmentFlags {
+        unreachable!()
+    }
 }
 
 /// An iterator over the sections of a `WasmFile`.
