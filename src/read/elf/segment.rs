@@ -4,7 +4,7 @@ use core::{mem, slice, str};
 use crate::elf;
 use crate::endian::{self, Endianness};
 use crate::pod::Pod;
-use crate::read::{self, Bytes, ObjectSegment, ReadError, ReadRef};
+use crate::read::{self, Bytes, ObjectSegment, ReadError, ReadRef, SegmentFlags};
 
 use super::{ElfFile, FileHeader, NoteIterator};
 
@@ -127,6 +127,12 @@ where
     #[inline]
     fn name(&self) -> read::Result<Option<&str>> {
         Ok(None)
+    }
+
+    #[inline]
+    fn flags(&self) -> SegmentFlags {
+        let p_flags = self.segment.p_flags(self.file.endian);
+        SegmentFlags::Elf { p_flags }
     }
 }
 

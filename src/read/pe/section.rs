@@ -5,7 +5,7 @@ use crate::endian::LittleEndian as LE;
 use crate::pe;
 use crate::read::{
     self, CompressedData, CompressedFileRange, ObjectSection, ObjectSegment, ReadError, ReadRef,
-    Relocation, Result, SectionFlags, SectionIndex, SectionKind,
+    Relocation, Result, SectionFlags, SectionIndex, SectionKind, SegmentFlags,
 };
 
 use super::{ImageNtHeaders, PeFile, SectionTable};
@@ -122,6 +122,12 @@ where
                 .ok()
                 .read_error("Non UTF-8 PE section name")?,
         ))
+    }
+
+    #[inline]
+    fn flags(&self) -> SegmentFlags {
+        let characteristics = self.section.characteristics.get(LE);
+        SegmentFlags::Coff { characteristics }
     }
 }
 

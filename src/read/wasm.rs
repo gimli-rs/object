@@ -13,8 +13,8 @@ use crate::read::{
     self, Architecture, ComdatKind, CompressedData, CompressedFileRange, Error, Export, FileFlags,
     Import, NoDynamicRelocationIterator, Object, ObjectComdat, ObjectKind, ObjectSection,
     ObjectSegment, ObjectSymbol, ObjectSymbolTable, ReadError, ReadRef, Relocation, Result,
-    SectionFlags, SectionIndex, SectionKind, SymbolFlags, SymbolIndex, SymbolKind, SymbolScope,
-    SymbolSection,
+    SectionFlags, SectionIndex, SectionKind, SegmentFlags, SymbolFlags, SymbolIndex, SymbolKind,
+    SymbolScope, SymbolSection,
 };
 
 const SECTION_CUSTOM: usize = 0;
@@ -501,6 +501,11 @@ impl<'data, 'file, R> ObjectSegment<'data> for WasmSegment<'data, 'file, R> {
 
     #[inline]
     fn name(&self) -> Result<Option<&str>> {
+        unreachable!()
+    }
+
+    #[inline]
+    fn flags(&self) -> SegmentFlags {
         unreachable!()
     }
 }

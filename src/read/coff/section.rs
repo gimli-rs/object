@@ -6,7 +6,7 @@ use crate::pe;
 use crate::read::util::StringTable;
 use crate::read::{
     self, CompressedData, CompressedFileRange, Error, ObjectSection, ObjectSegment, ReadError,
-    ReadRef, Result, SectionFlags, SectionIndex, SectionKind,
+    ReadRef, Result, SectionFlags, SectionIndex, SectionKind, SegmentFlags,
 };
 
 use super::{CoffFile, CoffRelocationIterator};
@@ -188,6 +188,12 @@ impl<'data, 'file, R: ReadRef<'data>> ObjectSegment<'data> for CoffSegment<'data
             .ok()
             .read_error("Non UTF-8 COFF section name")
             .map(Some)
+    }
+
+    #[inline]
+    fn flags(&self) -> SegmentFlags {
+        let characteristics = self.section.characteristics.get(LE);
+        SegmentFlags::Coff { characteristics }
     }
 }
 

@@ -366,6 +366,31 @@ pub enum FileFlags {
     },
 }
 
+/// Segment flags that are specific to each file format.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[non_exhaustive]
+pub enum SegmentFlags {
+    /// No segment flags.
+    None,
+    /// ELF segment flags.
+    Elf {
+        /// `p_flags` field in the segment header.
+        p_flags: u32,
+    },
+    /// Mach-O segment flags.
+    MachO {
+        /// `maxprot` field in the segment header.
+        maxprot: u32,
+        /// `initprot` field in the segment header.
+        initprot: u32,
+    },
+    /// COFF segment flags.
+    Coff {
+        /// `Characteristics` field in the segment header.
+        characteristics: u32,
+    },
+}
+
 /// Section flags that are specific to each file format.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[non_exhaustive]

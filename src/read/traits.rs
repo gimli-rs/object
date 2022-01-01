@@ -4,8 +4,8 @@ use alloc::vec::Vec;
 use crate::read::{
     self, Architecture, CodeView, ComdatKind, CompressedData, CompressedFileRange, Export,
     FileFlags, Import, ObjectKind, ObjectMap, Relocation, Result, SectionFlags, SectionIndex,
-    SectionKind, SymbolFlags, SymbolIndex, SymbolKind, SymbolMap, SymbolMapName, SymbolScope,
-    SymbolSection,
+    SectionKind, SegmentFlags, SymbolFlags, SymbolIndex, SymbolKind, SymbolMap, SymbolMapName,
+    SymbolScope, SymbolSection,
 };
 use crate::Endianness;
 
@@ -261,6 +261,9 @@ pub trait ObjectSegment<'data>: read::private::Sealed {
     ///
     /// Returns an error if the name is not UTF-8.
     fn name(&self) -> Result<Option<&str>>;
+
+    /// Return the flags of segment.
+    fn flags(&self) -> SegmentFlags;
 }
 
 /// A section defined in an object file.

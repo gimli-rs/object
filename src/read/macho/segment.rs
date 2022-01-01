@@ -4,7 +4,7 @@ use core::{result, slice, str};
 use crate::endian::{self, Endianness};
 use crate::macho;
 use crate::pod::Pod;
-use crate::read::{self, ObjectSegment, ReadError, ReadRef, Result};
+use crate::read::{self, ObjectSegment, ReadError, ReadRef, Result, SegmentFlags};
 
 use super::{LoadCommandData, MachHeader, MachOFile, Section};
 
@@ -132,6 +132,13 @@ where
                 .ok()
                 .read_error("Non UTF-8 Mach-O segment name")?,
         ))
+    }
+
+    #[inline]
+    fn flags(&self) -> SegmentFlags {
+        let maxprot = self.internal.segment.maxprot(self.file.endian);
+        let initprot = self.internal.segment.initprot(self.file.endian);
+        SegmentFlags::MachO { maxprot, initprot }
     }
 }
 
