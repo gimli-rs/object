@@ -77,7 +77,7 @@ fn copy_file<Elf: FileHeader<Endian = Endianness>>(
         if !is_alloc(in_section, endian) {
             continue;
         }
-        assert_eq!(in_section.sh_addralign(endian).into(), alignment);
+        assert!(in_section.sh_addralign(endian).into() <= alignment);
         let start = in_section.sh_addr(endian).into() as u32;
         let end = start + in_section.sh_size(endian).into() as u32;
         if is_text(in_section, endian) {
