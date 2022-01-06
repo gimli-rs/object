@@ -3,7 +3,7 @@ use std::{env, fs, process};
 
 use object::read::elf::{FileHeader, Rel, Rela, SectionHeader};
 use object::Endianness;
-use object::{elf, pe, SectionIndex};
+use object::{elf, pe, ReadRef, SectionIndex};
 
 fn main() {
     let mut args = env::args();
@@ -132,7 +132,7 @@ fn copy_file<Elf: FileHeader<Endian = Endianness>>(
     for in_section in in_sections.iter() {
         if let Some((rels, _)) = in_section.rel(endian, in_data)? {
             let info_index = SectionIndex(in_section.sh_info(endian) as usize);
-            let info = in_sections.section(info_index).unwrap();
+            let info = in_sections.section(info_index)?;
             if !is_alloc(info, endian) {
                 continue;
             }
@@ -168,6 +168,10 @@ fn copy_file<Elf: FileHeader<Endian = Endianness>>(
             if !is_alloc(info, endian) {
                 continue;
             }
+            let info_addr = info.sh_addr(endian).into();
+            let info_data = info.data(endian, in_data)?;
+            let mut got_address = None;
+            let mut got_addresses = Vec::new();
             for rela in relas {
                 let r_offset = rela.r_offset(endian).into() as u32;
                 let r_type = rela.r_type(endian, is_mips64el);
@@ -212,12 +216,49 @@ fn copy_file<Elf: FileHeader<Endian = Endianness>>(
                             elf::R_RISCV_BRANCH
                             | elf::R_RISCV_JAL
                             | elf::R_RISCV_CALL
+                            | elf::R_RISCV_CALL_PLT
                             | elf::R_RISCV_RVC_BRANCH
                             | elf::R_RISCV_RVC_JUMP
-                            | elf::R_RISCV_PCREL_HI20
-                            | elf::R_RISCV_PCREL_LO12_I => {
+                            | elf::R_RISCV_PCREL_HI20 => {
                                 // Relative relocations can be ignored if relative offsets
                                 // between sections are preserved.
+                            }
+                            elf::R_RISCV_ADD32 | elf::R_RISCV_SUB32 => {
+                                // While these are individually absolute, they appear as pairs
+                                // which generate a relative value, so they can be ignored.
+                            }
+                            elf::R_RISCV_GOT_HI20 => {
+                                // This is a relative relocation which can be ignored,
+                                // but it points to an absolute value for which we won't
+                                // have a relocation, so we need to generate one.
+                                // (Alternatively, we could modify the code to avoid the
+                                // indirection, but that's more complicated.)
+                                // This relocation is paired with a R_RISCV_PCREL_LO12_I.
+                                let info_offset = u64::from(r_offset).wrapping_sub(info_addr);
+                                let instruction = info_data
+                                    .read_at::<object::U32Bytes<Elf::Endian>>(info_offset)
+                                    .unwrap()
+                                    .get(endian);
+                                // auipc
+                                assert_eq!(instruction & 0x7f, 0x17);
+                                got_address =
+                                    Some(r_offset.wrapping_add(instruction & 0xffff_f000));
+                            }
+                            elf::R_RISCV_PCREL_LO12_I => {
+                                // May be paired with R_RISCV_GOT_HI20, which requires handling.
+                                if let Some(mut got_address) = got_address.take() {
+                                    let info_offset = u64::from(r_offset).wrapping_sub(info_addr);
+                                    let instruction = info_data
+                                        .read_at::<object::U32Bytes<Elf::Endian>>(info_offset)
+                                        .unwrap()
+                                        .get(endian);
+                                    // ld
+                                    assert_eq!(instruction & 0x707f, 0x3003);
+                                    got_address = got_address.wrapping_add(
+                                        ((instruction & 0xfff0_0000) as i32 >> 20) as u32,
+                                    );
+                                    got_addresses.push(got_address);
+                                }
                             }
                             elf::R_RISCV_64 => {
                                 writer.add_reloc(r_offset, pe::IMAGE_REL_BASED_DIR64);
@@ -232,6 +273,12 @@ fn copy_file<Elf: FileHeader<Endian = Endianness>>(
                     }
                     _ => unimplemented!(),
                 }
+            }
+
+            got_addresses.sort_unstable();
+            got_addresses.dedup();
+            for got_address in got_addresses {
+                writer.add_reloc(got_address, pe::IMAGE_REL_BASED_DIR64);
             }
         }
     }
