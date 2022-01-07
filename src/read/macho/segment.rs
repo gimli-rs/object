@@ -136,9 +136,14 @@ where
 
     #[inline]
     fn flags(&self) -> SegmentFlags {
+        let flags = self.internal.segment.flags(self.file.endian);
         let maxprot = self.internal.segment.maxprot(self.file.endian);
         let initprot = self.internal.segment.initprot(self.file.endian);
-        SegmentFlags::MachO { maxprot, initprot }
+        SegmentFlags::MachO {
+            flags,
+            maxprot,
+            initprot,
+        }
     }
 }
 
