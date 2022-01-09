@@ -2,16 +2,39 @@
 
 --------------------------------------------------------------------------------
 
+## 0.28.2
+
+Released 2022/01/09.
+
+### Changed
+
+* Ignored errors for the Wasm extended name section in `read::WasmFile::parse`.
+  [#408](https://github.com/gimli-rs/object/pull/408)
+
+* Ignored errors for the COFF symbol table in `read::PeFile::parse`.
+  [#410](https://github.com/gimli-rs/object/pull/410)
+
+* Fixed handling of `SectionFlags::Coff` in `write::Object::coff_write`.
+  [#412](https://github.com/gimli-rs/object/pull/412)
+
+### Added
+
+* Added `read::ObjectSegment::flags`.
+  [#416](https://github.com/gimli-rs/object/pull/416)
+  [#418](https://github.com/gimli-rs/object/pull/418)
+
+--------------------------------------------------------------------------------
+
 ## 0.28.1
 
 Released 2021/12/12.
 
 ### Changed
 
-* Fix `read::elf::SymbolTable::shndx_section`.
+* Fixed `read::elf::SymbolTable::shndx_section`.
   [#405](https://github.com/gimli-rs/object/pull/405)
 
-* Fix build warnings.
+* Fixed build warnings.
   [#405](https://github.com/gimli-rs/object/pull/405)
   [#406](https://github.com/gimli-rs/object/pull/406)
 
@@ -51,7 +74,7 @@ Released 2021/10/22.
 
 ### Changed
 
-* Fix build error with older Rust versions due to cargo resolver version.
+* Fixed build error with older Rust versions due to cargo resolver version.
 
 --------------------------------------------------------------------------------
 
