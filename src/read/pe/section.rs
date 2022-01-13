@@ -293,9 +293,20 @@ where
 }
 
 impl<'data> SectionTable<'data> {
-    /// Return the data at the given virtual address in a PE file.
+    /// Return the file offset of the given virtual address, and the size up
+    /// to the end of the section containing it.
+    ///
+    /// Returns `None` if no section contains the address.
+    pub fn pe_file_range_at(&self, va: u32) -> Option<(u32, u32)> {
+        self.iter().find_map(|section| section.pe_file_range_at(va))
+    }
+
+    /// Return the data starting at the given virtual address, up to the end of the
+    /// section containing it.
     ///
     /// Ignores sections with invalid data.
+    ///
+    /// Returns `None` if no section contains the address.
     pub fn pe_data_at<R: ReadRef<'data>>(&self, data: R, va: u32) -> Option<&'data [u8]> {
         self.iter().find_map(|section| section.pe_data_at(data, va))
     }
@@ -326,6 +337,22 @@ impl pe::ImageSectionHeader {
         (offset, size)
     }
 
+    /// Return the file offset of the given virtual address, and the remaining size up
+    /// to the end of the section.
+    ///
+    /// Returns `None` if the section does not contain the address.
+    pub fn pe_file_range_at(&self, va: u32) -> Option<(u32, u32)> {
+        let section_va = self.virtual_address.get(LE);
+        let offset = va.checked_sub(section_va)?;
+        let (section_offset, section_size) = self.pe_file_range();
+        // Address must be within section (and not at its end).
+        if offset < section_size {
+            Some((section_offset.checked_add(offset)?, section_size - offset))
+        } else {
+            None
+        }
+    }
+
     /// Return the virtual address and size of the section.
     pub fn pe_address_range(&self) -> (u32, u32) {
         (self.virtual_address.get(LE), self.virtual_size.get(LE))
@@ -340,22 +367,15 @@ impl pe::ImageSectionHeader {
             .read_error("Invalid PE section offset or size")
     }
 
-    /// Return the data at the given virtual address if this section contains it.
+    /// Return the data starting at the given virtual address, up to the end of the
+    /// section.
     ///
     /// Ignores sections with invalid data.
+    ///
+    /// Returns `None` if the section does not contain the address.
     pub fn pe_data_at<'data, R: ReadRef<'data>>(&self, data: R, va: u32) -> Option<&'data [u8]> {
-        let section_va = self.virtual_address.get(LE);
-        let offset = va.checked_sub(section_va)?;
-        let (section_offset, section_size) = self.pe_file_range();
-        // Address must be within section (and not at its end).
-        if offset < section_size {
-            let section_data = data
-                .read_bytes_at(section_offset.into(), section_size.into())
-                .ok()?;
-            section_data.get(offset as usize..)
-        } else {
-            None
-        }
+        let (offset, size) = self.pe_file_range_at(va)?;
+        data.read_bytes_at(offset.into(), size.into()).ok()
     }
 
     /// Return the section data if it contains the given virtual address.

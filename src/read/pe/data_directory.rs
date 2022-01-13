@@ -1,6 +1,6 @@
 use core::slice;
 
-use crate::read::{ReadError, ReadRef, Result};
+use crate::read::{Error, ReadError, ReadRef, Result};
 use crate::{pe, LittleEndian as LE};
 
 use super::{ExportTable, ImportTable, RelocationBlockIterator, SectionTable};
@@ -126,6 +126,25 @@ impl pe::ImageDataDirectory {
     /// Return the virtual address range of this directory entry.
     pub fn address_range(&self) -> (u32, u32) {
         (self.virtual_address.get(LE), self.size.get(LE))
+    }
+
+    /// Return the file offset and size of this directory entry.
+    ///
+    /// This function has some limitations:
+    /// - It requires that the data is contained in a single section.
+    /// - It uses the size field of the directory entry, which is
+    /// not desirable for all data directories.
+    /// - It uses the `virtual_address` of the directory entry as an address,
+    /// which is not valid for `IMAGE_DIRECTORY_ENTRY_SECURITY`.
+    pub fn file_range<'data>(&self, sections: &SectionTable<'data>) -> Result<(u32, u32)> {
+        let (offset, section_size) = sections
+            .pe_file_range_at(self.virtual_address.get(LE))
+            .read_error("Invalid data dir virtual address")?;
+        let size = self.size.get(LE);
+        if size > section_size {
+            return Err(Error("Invalid data dir size"));
+        }
+        Ok((offset, size))
     }
 
     /// Get the data referenced by this directory entry.
