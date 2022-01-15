@@ -584,11 +584,25 @@ impl<'a> Object<'a> {
                                 return Err(Error(format!("unimplemented relocation {:?}", reloc)));
                             }
                         },
+                        Architecture::Aarch64 => match (reloc.kind, reloc.encoding, reloc.addend) {
+                            (RelocationKind::Absolute, RelocationEncoding::Generic, 0) => {
+                                (false, macho::ARM64_RELOC_UNSIGNED)
+                            }
+                            (
+                                RelocationKind::MachO { value, relative },
+                                RelocationEncoding::Generic,
+                                0,
+                            ) => (relative, value),
+                            _ => {
+                                return Err(Error(format!("unimplemented relocation {:?}", reloc)));
+                            }
+                        },
                         _ => {
-                            return Err(Error(format!(
-                                "unimplemented architecture {:?}",
-                                self.architecture
-                            )));
+                            if let RelocationKind::MachO { value, relative } = reloc.kind {
+                                (relative, value)
+                            } else {
+                                return Err(Error(format!("unimplemented relocation {:?}", reloc)));
+                            }
                         }
                     };
                     let reloc_info = macho::RelocationInfo {
