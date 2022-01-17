@@ -23,6 +23,16 @@ struct SymbolOffsets {
     aux_count: u8,
 }
 
+/// Internal format to use for the `.drectve` section containing linker
+/// directives for symbol exports.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum CoffExportStyle {
+    /// MSVC format supported by link.exe and LLD.
+    Msvc,
+    /// Gnu format supported by GNU LD and LLD.
+    Gnu,
+}
+
 impl<'a> Object<'a> {
     pub(crate) fn coff_section_info(
         &self,
@@ -135,6 +145,34 @@ impl<'a> Object<'a> {
         self.stub_symbols.insert(symbol_id, stub_id);
 
         stub_id
+    }
+
+    /// Appends linker directives to the `.drectve` section to tell the linker
+    /// to export all symbols with `SymbolScope::Dynamic`.
+    ///
+    /// This must be called after all symbols have been defined.
+    pub fn add_coff_exports(&mut self, style: CoffExportStyle) {
+        assert_eq!(self.format, BinaryFormat::Coff);
+
+        let mut directives = vec![];
+        for symbol in &self.symbols {
+            if symbol.scope == SymbolScope::Dynamic {
+                match style {
+                    CoffExportStyle::Msvc => directives.extend(b" /EXPORT:\""),
+                    CoffExportStyle::Gnu => directives.extend(b" -export:\""),
+                }
+                directives.extend(&symbol.name);
+                directives.extend(b"\"");
+                if symbol.kind != SymbolKind::Text {
+                    match style {
+                        CoffExportStyle::Msvc => directives.extend(b",DATA"),
+                        CoffExportStyle::Gnu => directives.extend(b",data"),
+                    }
+                }
+            }
+        }
+        let drectve = self.add_section(vec![], b".drectve".to_vec(), SectionKind::Linker);
+        self.append_section_data(drectve, &directives, 1);
     }
 
     pub(crate) fn coff_write(&self, buffer: &mut dyn WritableBuffer) -> Result<()> {
