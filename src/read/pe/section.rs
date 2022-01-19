@@ -378,6 +378,18 @@ impl pe::ImageSectionHeader {
         data.read_bytes_at(offset.into(), size.into()).ok()
     }
 
+    /// Tests whether a given RVA is part of this section
+    pub fn contains_rva(&self, va: u32) -> bool {
+        let section_va = self.virtual_address.get(LE);
+        match va.checked_sub(section_va) {
+            None => false,
+            Some(offset) => {
+                // Address must be within section (and not at its end).
+                offset < self.virtual_size.get(LE)
+            }
+        }
+    }
+
     /// Return the section data if it contains the given virtual address.
     ///
     /// Also returns the virtual address of that section.
