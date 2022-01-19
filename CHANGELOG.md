@@ -2,6 +2,27 @@
 
 --------------------------------------------------------------------------------
 
+## 0.28.3
+
+Released 2022/01/19.
+
+### Changed
+
+* For the Mach-O support in `write::Object`, accept `RelocationKind::MachO` for all
+  architecures, and accept `RelocationKind::Absolute` for ARM64.
+  [#422](https://github.com/gimli-rs/object/pull/422)
+
+### Added
+
+* Added `pe::ImageDataDirectory::file_range`, `read::pe::SectionTable::pe_file_range_at`
+  and `pe::ImageSectionHeader::pe_file_range_at`.
+  [#421](https://github.com/gimli-rs/object/pull/421)
+
+* Added `write::Object::add_coff_exports`.
+  [#423](https://github.com/gimli-rs/object/pull/423)
+
+--------------------------------------------------------------------------------
+
 ## 0.28.2
 
 Released 2022/01/09.
