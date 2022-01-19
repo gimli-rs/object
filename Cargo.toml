@@ -1,7 +1,7 @@
 [package]
 name = "object"
 # Note: disable resolver in workspace setting before releases.
-version = "0.28.2"
+version = "0.28.3"
 edition = "2018"
 exclude = ["/.github", "/testfiles"]
 keywords = ["object", "elf", "mach-o", "pe", "coff"]
@@ -15,7 +15,7 @@ features = ['doc']
 [dependencies]
 crc32fast = { version = "1.2", default-features = false, optional = true }
 flate2 = { version = "1", optional = true }
-indexmap = { version = "1.6.*", optional = true }
+indexmap = { version = "1.6", optional = true }
 wasmparser = { version = "0.57", optional = true }
 memchr = { version = "2.4.1", default-features = false }
 hashbrown = { version = "0.11", features = ["ahash"], default-features = false, optional = true }
