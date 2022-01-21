@@ -326,8 +326,8 @@ impl<'data> SectionTable<'data> {
             .find_map(|section| section.pe_data_containing(data, va))
     }
 
-    /// Return the section that contains a given virtual address in a PE file.
-    pub fn section_at(&self, va: u32) -> Option<&'data ImageSectionHeader> {
+    /// Return the section that contains a given virtual address.
+    pub fn section_containing(&self, va: u32) -> Option<&'data ImageSectionHeader> {
         self.iter().find(|section| section.contains_rva(va))
     }
 }
