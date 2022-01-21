@@ -3,6 +3,7 @@ use core::{cmp, iter, slice, str};
 
 use crate::endian::LittleEndian as LE;
 use crate::pe;
+use crate::pe::ImageSectionHeader;
 use crate::read::{
     self, CompressedData, CompressedFileRange, ObjectSection, ObjectSegment, ReadError, ReadRef,
     Relocation, Result, SectionFlags, SectionIndex, SectionKind, SegmentFlags,
@@ -324,6 +325,11 @@ impl<'data> SectionTable<'data> {
         self.iter()
             .find_map(|section| section.pe_data_containing(data, va))
     }
+
+    /// Return the section that contains a given virtual address.
+    pub fn section_containing(&self, va: u32) -> Option<&'data ImageSectionHeader> {
+        self.iter().find(|section| section.contains_rva(va))
+    }
 }
 
 impl pe::ImageSectionHeader {
@@ -376,6 +382,18 @@ impl pe::ImageSectionHeader {
     pub fn pe_data_at<'data, R: ReadRef<'data>>(&self, data: R, va: u32) -> Option<&'data [u8]> {
         let (offset, size) = self.pe_file_range_at(va)?;
         data.read_bytes_at(offset.into(), size.into()).ok()
+    }
+
+    /// Tests whether a given RVA is part of this section
+    pub fn contains_rva(&self, va: u32) -> bool {
+        let section_va = self.virtual_address.get(LE);
+        match va.checked_sub(section_va) {
+            None => false,
+            Some(offset) => {
+                // Address must be within section (and not at its end).
+                offset < self.virtual_size.get(LE)
+            }
+        }
     }
 
     /// Return the section data if it contains the given virtual address.
