@@ -92,6 +92,7 @@ fn print_pe<Pe: ImageNtHeaders>(p: &mut Printer<'_>, data: &[u8]) {
                 print_export_dir(p, data, &sections, &data_directories);
                 print_import_dir::<Pe>(p, data, &sections, &data_directories);
                 print_reloc_dir(p, data, machine, &sections, &data_directories);
+                print_resource_dir(p, data, &sections, &data_directories);
             }
         }
     }
@@ -306,6 +307,57 @@ fn print_import_dir<Pe: ImageNtHeaders>(
         }
     });
     Some(())
+}
+
+fn print_resource_dir(
+    p: &mut Printer<'_>,
+    data: &[u8],
+    sections: &SectionTable,
+    data_directories: &DataDirectories,
+) -> Option<()> {
+    let rsc_table = data_directories
+        .resource_directory_table(data, sections)
+        .print_err(p)??;
+    p.group("ResourceDirectory", |p| print_resource_table(p, &rsc_table));
+    Some(())
+}
+
+fn print_resource_table(p: &mut Printer<'_>, table: &ResourceDirectoryTable<'_>) {
+    p.group("Directory", |p| {
+        p.field(
+            "Number of named entries",
+            table.table.number_of_named_entries.get(LE),
+        );
+        p.field(
+            "Number of ID entries",
+            table.table.number_of_id_entries.get(LE),
+        );
+        p.group("Entries", |p| {
+            for e in table.iter() {
+                match e.name() {
+                    ResourceNameOrId::Name(name) => match name.to_string_lossy() {
+                        Ok(name) => p.field("Name", name),
+                        Err(_) => p.field("Name", "Invalid"),
+                    },
+                    ResourceNameOrId::Id(id) => {
+                        p.field("Name ID", id);
+                    }
+                }
+
+                match e.data() {
+                    Ok(ResourceDirectoryEntryData::Directory(table)) => {
+                        print_resource_table(p, &table)
+                    }
+                    Ok(ResourceDirectoryEntryData::Entry(rsc)) => {
+                        p.field_hex("VirtualAddress", rsc.offset_to_data.get(LE));
+                        p.field("Size", rsc.size.get(LE));
+                        p.field("Code page", rsc.code_page.get(LE));
+                    }
+                    _ => p.field("Data", "Invalid"),
+                }
+            }
+        });
+    })
 }
 
 fn print_sections(
