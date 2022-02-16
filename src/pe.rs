@@ -2001,7 +2001,6 @@ pub struct ImageResourceDirectory {
     pub minor_version: U16<LE>,
     pub number_of_named_entries: U16<LE>,
     pub number_of_id_entries: U16<LE>,
-    // DirectoryEntries[ImageResourceDirectoryEntry];
 }
 
 pub const IMAGE_RESOURCE_NAME_IS_STRING: u32 = 0x8000_0000;
