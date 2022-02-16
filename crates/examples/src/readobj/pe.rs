@@ -315,48 +315,74 @@ fn print_resource_dir(
     sections: &SectionTable,
     data_directories: &DataDirectories,
 ) -> Option<()> {
-    let rsc_table = data_directories
-        .resource_directory_table(data, sections)
+    let directory = data_directories
+        .resource_directory(data, sections)
         .print_err(p)??;
-    p.group("ResourceDirectory", |p| print_resource_table(p, &rsc_table));
+    let root = directory.root().print_err(p)?;
+    print_resource_table(p, directory, root, 0);
     Some(())
 }
 
-fn print_resource_table(p: &mut Printer<'_>, table: &ResourceDirectoryTable<'_>) {
-    p.group("Directory", |p| {
+fn print_resource_table(
+    p: &mut Printer<'_>,
+    directory: ResourceDirectory<'_>,
+    table: ResourceDirectoryTable<'_>,
+    level: usize,
+) {
+    p.group("ImageResourceDirectory", |p| {
+        p.field("Characteristics", table.header.characteristics.get(LE));
+        p.field("TimeDateStamp", table.header.time_date_stamp.get(LE));
+        p.field("MajorVersion", table.header.major_version.get(LE));
+        p.field("MinorVersion", table.header.minor_version.get(LE));
         p.field(
-            "Number of named entries",
-            table.table.number_of_named_entries.get(LE),
+            "NumberOfNamedEntries",
+            table.header.number_of_named_entries.get(LE),
         );
         p.field(
-            "Number of ID entries",
-            table.table.number_of_id_entries.get(LE),
+            "NumberOfIdEntries",
+            table.header.number_of_id_entries.get(LE),
         );
-        p.group("Entries", |p| {
-            for e in table.iter() {
-                match e.name() {
-                    ResourceNameOrId::Name(name) => match name.to_string_lossy() {
-                        Ok(name) => p.field("Name", name),
-                        Err(_) => p.field("Name", "Invalid"),
-                    },
+        for entry in table.entries {
+            p.group("ImageResourceDirectoryEntry", |p| {
+                match entry.name_or_id() {
+                    ResourceNameOrId::Name(name) => {
+                        let offset = entry.name_or_id.get(LE);
+                        if let Some(name) = name.to_string_lossy(directory).print_err(p) {
+                            p.field_name("NameOrId");
+                            writeln!(p.w, "\"{}\" (0x{:X})", name, offset).unwrap();
+                        } else {
+                            p.field_hex("NameOrId", offset);
+                        }
+                    }
                     ResourceNameOrId::Id(id) => {
-                        p.field("Name ID", id);
+                        if level == 0 {
+                            p.field_enum("NameOrId", id, FLAGS_RT);
+                        } else {
+                            p.field("NameOrId", id);
+                        }
                     }
                 }
+                p.field_hex(
+                    "OffsetToDataOrDirectory",
+                    entry.offset_to_data_or_directory.get(LE),
+                );
 
-                match e.data() {
-                    Ok(ResourceDirectoryEntryData::Directory(table)) => {
-                        print_resource_table(p, &table)
+                match entry.data(directory).print_err(p) {
+                    Some(ResourceDirectoryEntryData::Table(table)) => {
+                        print_resource_table(p, directory, table, level + 1)
                     }
-                    Ok(ResourceDirectoryEntryData::Entry(rsc)) => {
-                        p.field_hex("VirtualAddress", rsc.offset_to_data.get(LE));
-                        p.field("Size", rsc.size.get(LE));
-                        p.field("Code page", rsc.code_page.get(LE));
+                    Some(ResourceDirectoryEntryData::Data(data_entry)) => {
+                        p.group("ImageResourceDataEntry", |p| {
+                            p.field_hex("VirtualAddress", data_entry.offset_to_data.get(LE));
+                            p.field("Size", data_entry.size.get(LE));
+                            p.field("CodePage", data_entry.code_page.get(LE));
+                            p.field_hex("Reserved", data_entry.reserved.get(LE));
+                        });
                     }
-                    _ => p.field("Data", "Invalid"),
+                    None => {}
                 }
-            }
-        });
+            });
+        }
     })
 }
 
@@ -1073,4 +1099,27 @@ static FLAGS_IMAGE_REL_RISCV_BASED: &[Flag<u16>] = &flags!(
     IMAGE_REL_BASED_RISCV_HIGH20,
     IMAGE_REL_BASED_RISCV_LOW12I,
     IMAGE_REL_BASED_RISCV_LOW12S,
+);
+static FLAGS_RT: &[Flag<u16>] = &flags!(
+    RT_CURSOR,
+    RT_BITMAP,
+    RT_ICON,
+    RT_MENU,
+    RT_DIALOG,
+    RT_STRING,
+    RT_FONTDIR,
+    RT_FONT,
+    RT_ACCELERATOR,
+    RT_RCDATA,
+    RT_MESSAGETABLE,
+    RT_GROUP_CURSOR,
+    RT_GROUP_ICON,
+    RT_VERSION,
+    RT_DLGINCLUDE,
+    RT_PLUGPLAY,
+    RT_VXD,
+    RT_ANICURSOR,
+    RT_ANIICON,
+    RT_HTML,
+    RT_MANIFEST,
 );
