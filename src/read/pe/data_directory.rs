@@ -3,9 +3,7 @@ use core::slice;
 use crate::read::{Error, ReadError, ReadRef, Result};
 use crate::{pe, LittleEndian as LE};
 
-use super::{
-    ExportTable, ImportTable, RelocationBlockIterator, ResourceDirectoryTable, SectionTable,
-};
+use super::{ExportTable, ImportTable, RelocationBlockIterator, ResourceDirectory, SectionTable};
 
 /// The table of data directories in a PE file.
 #[derive(Debug, Clone, Copy)]
@@ -123,20 +121,20 @@ impl<'data> DataDirectories<'data> {
         Ok(Some(RelocationBlockIterator::new(reloc_data)))
     }
 
-    /// Returns the root resource directory table.
+    /// Returns the resource directory.
     ///
     /// `data` must be the entire file data.
-    pub fn resource_directory_table<R: ReadRef<'data>>(
+    pub fn resource_directory<R: ReadRef<'data>>(
         &self,
         data: R,
         sections: &SectionTable<'data>,
-    ) -> Result<Option<ResourceDirectoryTable<'data>>> {
+    ) -> Result<Option<ResourceDirectory<'data>>> {
         let data_dir = match self.get(pe::IMAGE_DIRECTORY_ENTRY_RESOURCE) {
             Some(data_dir) => data_dir,
             None => return Ok(None),
         };
-        let rsc_data = data_dir.data(data, sections)?;
-        ResourceDirectoryTable::parse(rsc_data).map(Some)
+        let rsrc_data = data_dir.data(data, sections)?;
+        Ok(Some(ResourceDirectory::new(rsrc_data)))
     }
 }
 
