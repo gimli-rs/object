@@ -23,13 +23,19 @@ impl<'data, 'file, R: ReadRef<'data>> Iterator for CoffRelocationIterator<'data,
             let (kind, size, addend) = match self.file.header.machine.get(LE) {
                 pe::IMAGE_FILE_MACHINE_ARMNT => match relocation.typ.get(LE) {
                     pe::IMAGE_REL_ARM_ADDR32 => (RelocationKind::Absolute, 32, 0),
+                    pe::IMAGE_REL_ARM_ADDR32NB => (RelocationKind::ImageOffset, 32, 0),
+                    pe::IMAGE_REL_ARM_REL32 => (RelocationKind::Relative, 32, -4),
+                    pe::IMAGE_REL_ARM_SECTION => (RelocationKind::SectionIndex, 16, 0),
                     pe::IMAGE_REL_ARM_SECREL => (RelocationKind::SectionOffset, 32, 0),
                     typ => (RelocationKind::Coff(typ), 0, 0),
                 },
                 pe::IMAGE_FILE_MACHINE_ARM64 => match relocation.typ.get(LE) {
                     pe::IMAGE_REL_ARM64_ADDR32 => (RelocationKind::Absolute, 32, 0),
+                    pe::IMAGE_REL_ARM64_ADDR32NB => (RelocationKind::ImageOffset, 32, 0),
                     pe::IMAGE_REL_ARM64_SECREL => (RelocationKind::SectionOffset, 32, 0),
+                    pe::IMAGE_REL_ARM64_SECTION => (RelocationKind::SectionIndex, 16, 0),
                     pe::IMAGE_REL_ARM64_ADDR64 => (RelocationKind::Absolute, 64, 0),
+                    pe::IMAGE_REL_ARM64_REL32 => (RelocationKind::Relative, 32, -4),
                     typ => (RelocationKind::Coff(typ), 0, 0),
                 },
                 pe::IMAGE_FILE_MACHINE_I386 => match relocation.typ.get(LE) {
