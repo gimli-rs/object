@@ -86,9 +86,10 @@ impl<'a> Object<'a> {
         }
 
         let constant = match self.architecture {
-            Architecture::I386 => match relocation.kind {
+            Architecture::I386 | Architecture::Arm | Architecture::Aarch64 => match relocation.kind
+            {
                 RelocationKind::Relative => {
-                    // IMAGE_REL_I386_REL32
+                    // IMAGE_REL_I386_REL32, IMAGE_REL_ARM_REL32, IMAGE_REL_ARM64_REL32
                     relocation.addend + 4
                 }
                 _ => relocation.addend,
@@ -518,6 +519,29 @@ impl<'a> Object<'a> {
                             (RelocationKind::SectionIndex, 16, 0) => coff::IMAGE_REL_AMD64_SECTION,
                             (RelocationKind::SectionOffset, 32, 0) => coff::IMAGE_REL_AMD64_SECREL,
                             (RelocationKind::SectionOffset, 7, 0) => coff::IMAGE_REL_AMD64_SECREL7,
+                            (RelocationKind::Coff(x), _, _) => x,
+                            _ => {
+                                return Err(Error(format!("unimplemented relocation {:?}", reloc)));
+                            }
+                        },
+                        Architecture::Arm => match (reloc.kind, reloc.size, reloc.addend) {
+                            (RelocationKind::Absolute, 32, 0) => coff::IMAGE_REL_ARM_ADDR32,
+                            (RelocationKind::ImageOffset, 32, 0) => coff::IMAGE_REL_ARM_ADDR32NB,
+                            (RelocationKind::Relative, 32, -4) => coff::IMAGE_REL_ARM_REL32,
+                            (RelocationKind::SectionIndex, 16, 0) => coff::IMAGE_REL_ARM_SECTION,
+                            (RelocationKind::SectionOffset, 32, 0) => coff::IMAGE_REL_ARM_SECREL,
+                            (RelocationKind::Coff(x), _, _) => x,
+                            _ => {
+                                return Err(Error(format!("unimplemented relocation {:?}", reloc)));
+                            }
+                        },
+                        Architecture::Aarch64 => match (reloc.kind, reloc.size, reloc.addend) {
+                            (RelocationKind::Absolute, 32, 0) => coff::IMAGE_REL_ARM64_ADDR32,
+                            (RelocationKind::ImageOffset, 32, 0) => coff::IMAGE_REL_ARM64_ADDR32NB,
+                            (RelocationKind::SectionIndex, 16, 0) => coff::IMAGE_REL_ARM64_SECTION,
+                            (RelocationKind::SectionOffset, 32, 0) => coff::IMAGE_REL_ARM64_SECREL,
+                            (RelocationKind::Absolute, 64, 0) => coff::IMAGE_REL_ARM64_ADDR64,
+                            (RelocationKind::Relative, 32, -4) => coff::IMAGE_REL_ARM64_REL32,
                             (RelocationKind::Coff(x), _, _) => x,
                             _ => {
                                 return Err(Error(format!("unimplemented relocation {:?}", reloc)));

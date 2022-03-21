@@ -1277,6 +1277,8 @@ pub const IMAGE_REL_ARM_GPREL12: u16 = 0x0006;
 pub const IMAGE_REL_ARM_GPREL7: u16 = 0x0007;
 pub const IMAGE_REL_ARM_BLX24: u16 = 0x0008;
 pub const IMAGE_REL_ARM_BLX11: u16 = 0x0009;
+/// 32-bit relative address from byte following reloc
+pub const IMAGE_REL_ARM_REL32: u16 = 0x000A;
 /// Section table index
 pub const IMAGE_REL_ARM_SECTION: u16 = 0x000E;
 /// Offset within section
@@ -1348,6 +1350,10 @@ pub const IMAGE_REL_ARM64_SECTION: u16 = 0x000D;
 pub const IMAGE_REL_ARM64_ADDR64: u16 = 0x000E;
 /// 19 bit offset << 2 & sign ext. for conditional B
 pub const IMAGE_REL_ARM64_BRANCH19: u16 = 0x000F;
+/// TBZ/TBNZ
+pub const IMAGE_REL_ARM64_BRANCH14: u16 = 0x0010;
+/// 32-bit relative address from byte following reloc
+pub const IMAGE_REL_ARM64_REL32: u16 = 0x0011;
 
 //
 // x64 relocations
