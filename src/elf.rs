@@ -562,6 +562,8 @@ pub const EM_RISCV: u16 = 243;
 pub const EM_BPF: u16 = 247;
 /// C-SKY
 pub const EM_CSKY: u16 = 252;
+/// Loongson LoongArch
+pub const EM_LOONGARCH: u16 = 258;
 /// Digital Alpha
 pub const EM_ALPHA: u16 = 0x9026;
 
@@ -6224,6 +6226,129 @@ pub const R_NDS32_RELATIVE: u32 = 42;
 pub const R_NDS32_TLS_TPOFF: u32 = 102;
 #[allow(missing_docs)]
 pub const R_NDS32_TLS_DESC: u32 = 119;
+
+// LoongArch values `FileHeader*::e_flags`.
+/// Uses 64-bit GPRs and the stack for parameter passing
+pub const EF_LARCH_ABI_LP64S: u32 = 0x1;
+/// Uses 64-bit GPRs, 32-bit FPRs and the stack for parameter passing
+pub const EF_LARCH_ABI_LP64F: u32 = 0x2;
+/// Uses 64-bit GPRs, 64-bit FPRs and the stack for parameter passing
+pub const EF_LARCH_ABI_LP64D: u32 = 0x3;
+/// Uses 32-bit GPRs and the stack for parameter passing
+pub const EF_LARCH_ABI_ILP32S: u32 = 0x5;
+/// Uses 32-bit GPRs, 32-bit FPRs and the stack for parameter passing
+pub const EF_LARCH_ABI_ILP32F: u32 = 0x6;
+/// Uses 32-bit GPRs, 64-bit FPRs and the stack for parameter passing
+pub const EF_LARCH_ABI_ILP32D: u32 = 0x7;
+
+// LoongArch values `Rel*::r_type`.
+/// No reloc
+pub const R_LARCH_NONE: u32 = 0;
+/// Runtime address resolving
+pub const R_LARCH_32: u32 = 1;
+/// Runtime address resolving
+pub const R_LARCH_64: u32 = 2;
+/// Runtime fixup for load-address
+pub const R_LARCH_RELATIVE: u32 = 3;
+/// Runtime memory copy in executable
+pub const R_LARCH_COPY: u32 = 4;
+/// Runtime PLT supporting
+pub const R_LARCH_JUMP_SLOT: u32 = 5;
+/// Runtime relocation for TLS-GD
+pub const R_LARCH_TLS_DTPMOD32: u32 = 6;
+/// Runtime relocation for TLS-GD
+pub const R_LARCH_TLS_DTPMOD64: u32 = 7;
+/// Runtime relocation for TLS-GD
+pub const R_LARCH_TLS_DTPREL32: u32 = 8;
+/// Runtime relocation for TLS-GD
+pub const R_LARCH_TLS_DTPREL64: u32 = 9;
+/// Runtime relocation for TLE-IE
+pub const R_LARCH_TLS_TPREL32: u32 = 10;
+/// Runtime relocation for TLE-IE
+pub const R_LARCH_TLS_TPREL64: u32 = 11;
+/// Runtime local indirect function resolving
+pub const R_LARCH_IRELATIVE: u32 = 12;
+/// Mark la.abs: load absolute address for static link.
+pub const R_LARCH_MARK_LA: u32 = 20;
+/// Mark external label branch: access PC relative address for static link.
+pub const R_LARCH_MARK_PCREL: u32 = 21;
+/// Push PC-relative offset
+pub const R_LARCH_SOP_PUSH_PCREL: u32 = 22;
+/// Push constant or absolute address
+pub const R_LARCH_SOP_PUSH_ABSOLUTE: u32 = 23;
+/// Duplicate stack top
+pub const R_LARCH_SOP_PUSH_DUP: u32 = 24;
+/// Push for access GOT entry
+pub const R_LARCH_SOP_PUSH_GPREL: u32 = 25;
+/// Push for TLS-LE
+pub const R_LARCH_SOP_PUSH_TLS_TPREL: u32 = 26;
+/// Push for TLS-IE
+pub const R_LARCH_SOP_PUSH_TLS_GOT: u32 = 27;
+/// Push for TLS-GD
+pub const R_LARCH_SOP_PUSH_TLS_GD: u32 = 28;
+/// Push for external function calling
+pub const R_LARCH_SOP_PUSH_PLT_PCREL: u32 = 29;
+/// Assert stack top
+pub const R_LARCH_SOP_ASSERT: u32 = 30;
+/// Stack top logical not (unary)
+pub const R_LARCH_SOP_NOT: u32 = 31;
+/// Stack top subtraction (binary)
+pub const R_LARCH_SOP_SUB: u32 = 32;
+/// Stack top left shift (binary)
+pub const R_LARCH_SOP_SL: u32 = 33;
+/// Stack top right shift (binary)
+pub const R_LARCH_SOP_SR: u32 = 34;
+/// Stack top addition (binary)
+pub const R_LARCH_SOP_ADD: u32 = 35;
+/// Stack top bitwise and (binary)
+pub const R_LARCH_SOP_AND: u32 = 36;
+/// Stack top selection (tertiary)
+pub const R_LARCH_SOP_IF_ELSE: u32 = 37;
+/// Pop stack top to fill 5-bit signed immediate operand
+pub const R_LARCH_SOP_POP_32_S_10_5: u32 = 38;
+/// Pop stack top to fill 12-bit unsigned immediate operand
+pub const R_LARCH_SOP_POP_32_U_10_12: u32 = 39;
+/// Pop stack top to fill 12-bit signed immediate operand
+pub const R_LARCH_SOP_POP_32_S_10_12: u32 = 40;
+/// Pop stack top to fill 16-bit signed immediate operand
+pub const R_LARCH_SOP_POP_32_S_10_16: u32 = 41;
+/// Pop stack top to fill 18-bit signed immediate operand with two trailing
+/// zeros implied
+pub const R_LARCH_SOP_POP_32_S_10_16_S2: u32 = 42;
+/// Pop stack top to fill 20-bit signed immediate operand
+pub const R_LARCH_SOP_POP_32_S_5_20: u32 = 43;
+/// Pop stack top to fill 23-bit signed immediate operand with two trailing
+/// zeros implied
+pub const R_LARCH_SOP_POP_32_S_0_5_10_16_S2: u32 = 44;
+/// Pop stack top to fill 28-bit signed immediate operand with two trailing
+/// zeros implied
+pub const R_LARCH_SOP_POP_32_S_0_10_10_16_S2: u32 = 45;
+/// Pop stack top to fill an instruction
+pub const R_LARCH_SOP_POP_32_U: u32 = 46;
+/// 8-bit in-place addition
+pub const R_LARCH_ADD8: u32 = 47;
+/// 16-bit in-place addition
+pub const R_LARCH_ADD16: u32 = 48;
+/// 24-bit in-place addition
+pub const R_LARCH_ADD24: u32 = 49;
+/// 32-bit in-place addition
+pub const R_LARCH_ADD32: u32 = 50;
+/// 64-bit in-place addition
+pub const R_LARCH_ADD64: u32 = 51;
+/// 8-bit in-place subtraction
+pub const R_LARCH_SUB8: u32 = 52;
+/// 16-bit in-place subtraction
+pub const R_LARCH_SUB16: u32 = 53;
+/// 24-bit in-place subtraction
+pub const R_LARCH_SUB24: u32 = 54;
+/// 32-bit in-place subtraction
+pub const R_LARCH_SUB32: u32 = 55;
+/// 64-bit in-place subtraction
+pub const R_LARCH_SUB64: u32 = 56;
+/// GNU C++ vtable hierarchy
+pub const R_LARCH_GNU_VTINHERIT: u32 = 57;
+/// GNU C++ vtable member usage
+pub const R_LARCH_GNU_VTENTRY: u32 = 58;
 
 unsafe_impl_endian_pod!(
     FileHeader32,
