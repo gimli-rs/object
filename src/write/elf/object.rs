@@ -519,6 +519,15 @@ impl<'a> Object<'a> {
                                 return Err(Error(format!("unimplemented relocation {:?}", reloc)));
                             }
                         },
+                        Architecture::LoongArch64 => match (reloc.kind, reloc.encoding, reloc.size)
+                        {
+                            (RelocationKind::Absolute, _, 32) => elf::R_LARCH_32,
+                            (RelocationKind::Absolute, _, 64) => elf::R_LARCH_64,
+                            (RelocationKind::Elf(x), _, _) => x,
+                            _ => {
+                                return Err(Error(format!("unimplemented relocation {:?}", reloc)));
+                            }
+                        },
                         Architecture::Mips | Architecture::Mips64 => {
                             match (reloc.kind, reloc.encoding, reloc.size) {
                                 (RelocationKind::Absolute, _, 16) => elf::R_MIPS_16,
