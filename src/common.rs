@@ -13,6 +13,7 @@ pub enum Architecture {
     #[allow(non_camel_case_types)]
     X86_64_X32,
     Hexagon,
+    LoongArch64,
     Mips,
     Mips64,
     Msp430,
@@ -40,6 +41,7 @@ impl Architecture {
             Architecture::X86_64 => Some(AddressSize::U64),
             Architecture::X86_64_X32 => Some(AddressSize::U32),
             Architecture::Hexagon => Some(AddressSize::U32),
+            Architecture::LoongArch64 => Some(AddressSize::U64),
             Architecture::Mips => Some(AddressSize::U32),
             Architecture::Mips64 => Some(AddressSize::U64),
             Architecture::Msp430 => Some(AddressSize::U16),

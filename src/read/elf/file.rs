@@ -164,6 +164,7 @@ where
             (elf::EM_X86_64, false) => Architecture::X86_64_X32,
             (elf::EM_X86_64, true) => Architecture::X86_64,
             (elf::EM_HEXAGON, _) => Architecture::Hexagon,
+            (elf::EM_LOONGARCH, true) => Architecture::LoongArch64,
             (elf::EM_MIPS, false) => Architecture::Mips,
             (elf::EM_MIPS, true) => Architecture::Mips64,
             (elf::EM_MSP430, _) => Architecture::Msp430,

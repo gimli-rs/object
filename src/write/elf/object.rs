@@ -74,6 +74,7 @@ impl<'a> Object<'a> {
             Architecture::X86_64 => true,
             Architecture::X86_64_X32 => true,
             Architecture::Hexagon => true,
+            Architecture::LoongArch64 => true,
             Architecture::Mips => false,
             Architecture::Mips64 => true,
             Architecture::Msp430 => true,
@@ -270,6 +271,7 @@ impl<'a> Object<'a> {
             Architecture::X86_64 => elf::EM_X86_64,
             Architecture::X86_64_X32 => elf::EM_X86_64,
             Architecture::Hexagon => elf::EM_HEXAGON,
+            Architecture::LoongArch64 => elf::EM_LOONGARCH,
             Architecture::Mips => elf::EM_MIPS,
             Architecture::Mips64 => elf::EM_MIPS,
             Architecture::Msp430 => elf::EM_MSP430,
@@ -512,6 +514,15 @@ impl<'a> Object<'a> {
                         }
                         Architecture::Hexagon => match (reloc.kind, reloc.encoding, reloc.size) {
                             (RelocationKind::Absolute, _, 32) => elf::R_HEX_32,
+                            (RelocationKind::Elf(x), _, _) => x,
+                            _ => {
+                                return Err(Error(format!("unimplemented relocation {:?}", reloc)));
+                            }
+                        },
+                        Architecture::LoongArch64 => match (reloc.kind, reloc.encoding, reloc.size)
+                        {
+                            (RelocationKind::Absolute, _, 32) => elf::R_LARCH_32,
+                            (RelocationKind::Absolute, _, 64) => elf::R_LARCH_64,
                             (RelocationKind::Elf(x), _, _) => x,
                             _ => {
                                 return Err(Error(format!("unimplemented relocation {:?}", reloc)));
