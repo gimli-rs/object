@@ -72,6 +72,7 @@ fn print_file_header<Elf: FileHeader>(p: &mut Printer<'_>, endian: Elf::Endian, 
                 p.flags(flags, 0, &FLAGS_EF_RISCV);
                 p.flags(flags, EF_RISCV_FLOAT_ABI, &FLAGS_EF_RISCV_FLOAT_ABI);
             }
+            EM_LOONGARCH => p.flags(flags, 0, &FLAGS_EF_LOONGARCH),
             _ => {}
         };
         p.field_hex("HeaderSize", elf.e_ehsize(endian));
@@ -461,6 +462,7 @@ fn rel_flag_type<Elf: FileHeader>(endian: Elf::Endian, elf: &Elf) -> &'static [F
         EM_TILEGX => FLAGS_R_TILEGX,
         EM_RISCV => FLAGS_R_RISCV,
         EM_BPF => FLAGS_R_BPF,
+        EM_LOONGARCH => FLAGS_R_LOONGARCH,
         EM_METAG => FLAGS_R_METAG,
         EM_NDS32 => FLAGS_R_NDS32,
         _ => &[],
@@ -982,6 +984,7 @@ static FLAGS_EM: &[Flag<u16>] = &flags!(
     EM_BPF,
     EM_CSKY,
     EM_ALPHA,
+    EM_LOONGARCH,
 );
 static FLAGS_EF_SPARC: &[Flag<u32>] = &flags!(
     EF_SPARC_LEDATA,
@@ -1087,6 +1090,14 @@ static FLAGS_EF_RISCV_FLOAT_ABI: &[Flag<u32>] = &flags!(
     EF_RISCV_FLOAT_ABI_SINGLE,
     EF_RISCV_FLOAT_ABI_DOUBLE,
     EF_RISCV_FLOAT_ABI_QUAD,
+);
+static FLAGS_EF_LOONGARCH: &[Flag<u32>] = &flags!(
+    EF_LARCH_ABI_LP64S,
+    EF_LARCH_ABI_LP64F,
+    EF_LARCH_ABI_LP64D,
+    EF_LARCH_ABI_ILP32S,
+    EF_LARCH_ABI_ILP32F,
+    EF_LARCH_ABI_ILP32D,
 );
 static FLAGS_PT: &[Flag<u32>] = &flags!(
     PT_NULL,
@@ -2939,6 +2950,60 @@ static FLAGS_R_NDS32: &[Flag<u32>] = &flags!(
     R_NDS32_RELATIVE,
     R_NDS32_TLS_TPOFF,
     R_NDS32_TLS_DESC,
+);
+static FLAGS_R_LOONGARCH: &[Flag<u32>] = &flags!(
+    R_LARCH_NONE,
+    R_LARCH_32,
+    R_LARCH_64,
+    R_LARCH_RELATIVE,
+    R_LARCH_COPY,
+    R_LARCH_JUMP_SLOT,
+    R_LARCH_TLS_DTPMOD32,
+    R_LARCH_TLS_DTPMOD64,
+    R_LARCH_TLS_DTPREL32,
+    R_LARCH_TLS_DTPREL64,
+    R_LARCH_TLS_TPREL32,
+    R_LARCH_TLS_TPREL64,
+    R_LARCH_IRELATIVE,
+    R_LARCH_MARK_LA,
+    R_LARCH_MARK_PCREL,
+    R_LARCH_SOP_PUSH_PCREL,
+    R_LARCH_SOP_PUSH_ABSOLUTE,
+    R_LARCH_SOP_PUSH_DUP,
+    R_LARCH_SOP_PUSH_GPREL,
+    R_LARCH_SOP_PUSH_TLS_TPREL,
+    R_LARCH_SOP_PUSH_TLS_GOT,
+    R_LARCH_SOP_PUSH_TLS_GD,
+    R_LARCH_SOP_PUSH_PLT_PCREL,
+    R_LARCH_SOP_ASSERT,
+    R_LARCH_SOP_NOT,
+    R_LARCH_SOP_SUB,
+    R_LARCH_SOP_SL,
+    R_LARCH_SOP_SR,
+    R_LARCH_SOP_ADD,
+    R_LARCH_SOP_AND,
+    R_LARCH_SOP_IF_ELSE,
+    R_LARCH_SOP_POP_32_S_10_5,
+    R_LARCH_SOP_POP_32_U_10_12,
+    R_LARCH_SOP_POP_32_S_10_12,
+    R_LARCH_SOP_POP_32_S_10_16,
+    R_LARCH_SOP_POP_32_S_10_16_S2,
+    R_LARCH_SOP_POP_32_S_5_20,
+    R_LARCH_SOP_POP_32_S_0_5_10_16_S2,
+    R_LARCH_SOP_POP_32_S_0_10_10_16_S2,
+    R_LARCH_SOP_POP_32_U,
+    R_LARCH_ADD8,
+    R_LARCH_ADD16,
+    R_LARCH_ADD24,
+    R_LARCH_ADD32,
+    R_LARCH_ADD64,
+    R_LARCH_SUB8,
+    R_LARCH_SUB16,
+    R_LARCH_SUB24,
+    R_LARCH_SUB32,
+    R_LARCH_SUB64,
+    R_LARCH_GNU_VTINHERIT,
+    R_LARCH_GNU_VTENTRY,
 );
 static FLAGS_NT_CORE: &[Flag<u32>] = &flags!(
     NT_PRSTATUS,
