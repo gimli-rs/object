@@ -2373,6 +2373,17 @@ pub const EF_MIPS_NAN2008: u32 = 1024;
 /// MIPS architecture level.
 pub const EF_MIPS_ARCH: u32 = 0xf000_0000;
 
+/// The first MIPS 32 bit ABI
+pub const EF_MIPS_ABI_O32: u32 = 0x0000_1000;
+/// O32 ABI extended for 64-bit architectures
+pub const EF_MIPS_ABI_O64: u32 = 0x0000_2000;
+/// EABI in 32-bit mode
+pub const EF_MIPS_ABI_EABI32: u32 = 0x0000_3000;
+/// EABI in 64-bit mode
+pub const EF_MIPS_ABI_EABI64: u32 = 0x0000_4000;
+/// Mask for selecting EF_MIPS_ABI_ variant
+pub const EF_MIPS_ABI: u32 = 0x0000_f000;
+
 // Legal values for MIPS architecture level.
 
 /// -mips1 code.
