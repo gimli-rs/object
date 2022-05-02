@@ -52,6 +52,10 @@ fn print_file_header<Elf: FileHeader>(p: &mut Printer<'_>, endian: Elf::Endian, 
             EM_MIPS => {
                 p.flags(flags, 0, &FLAGS_EF_MIPS);
                 p.flags(flags, EF_MIPS_ARCH, &FLAGS_EF_MIPS_ARCH);
+                // Some ABIs may have all these bits zeroed out
+                if flags & EF_MIPS_ABI != 0 {
+                    p.flags(flags, EF_MIPS_ABI, &FLAGS_EF_MIPS_ABI);
+                }
             }
             EM_PARISC => {
                 p.flags(flags, 0, &FLAGS_EF_PARISC);
@@ -1021,6 +1025,12 @@ static FLAGS_EF_MIPS_ARCH: &[Flag<u32>] = &flags!(
     EF_MIPS_ARCH_64,
     EF_MIPS_ARCH_32R2,
     EF_MIPS_ARCH_64R2,
+);
+static FLAGS_EF_MIPS_ABI: &[Flag<u32>] = &flags!(
+    EF_MIPS_ABI_O32,
+    EF_MIPS_ABI_O64,
+    EF_MIPS_ABI_EABI32,
+    EF_MIPS_ABI_EABI64,
 );
 static FLAGS_EF_PARISC: &[Flag<u32>] = &flags!(
     EF_PARISC_TRAPNIL,
