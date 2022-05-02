@@ -1,0 +1,258 @@
+Format: ELF 32-bit
+FileHeader {
+    Ident {
+        Magic: [7F, 45, 4C, 46]
+        Class: ELFCLASS32 (0x1)
+        Data: ELFDATA2LSB (0x1)
+        Version: EV_CURRENT (0x1)
+        OsAbi: ELFOSABI_SYSV (0x0)
+        AbiVersion: 0x0
+        Unused: [0, 0, 0, 0, 0, 0, 0]
+    }
+    Type: ET_REL (0x1)
+    Machine: EM_MIPS (0x8)
+    Version: EV_CURRENT (0x1)
+    Type: ET_REL (0x1)
+    Entry: 0x0
+    ProgramHeaderOffset: 0x0
+    SectionHeaderOffset: 0x1A0
+    Flags: 0x70001005
+        EF_MIPS_NOREORDER (0x1)
+        EF_MIPS_CPIC (0x4)
+        EF_MIPS_ARCH_32R2 (0x70000000)
+        EF_MIPS_ABI_O32 (0x1000)
+    HeaderSize: 0x34
+    ProgramHeaderEntrySize: 0x0
+    ProgramHeaderCount: 0
+    SectionHeaderEntrySize: 0x28
+    SectionHeaderCount: 14
+    SectionHeaderStringTableIndex: 1
+}
+SectionHeader {
+    Index: 0
+    Name: "" (0x0)
+    Type: SHT_NULL (0x0)
+    Flags: 0x0
+    Address: 0x0
+    Offset: 0x0
+    Size: 0x0
+    Link: 0
+    Info: 0
+    AddressAlign: 0x0
+    EntrySize: 0x0
+}
+SectionHeader {
+    Index: 1
+    Name: ".strtab" (0x61)
+    Type: SHT_STRTAB (0x3)
+    Flags: 0x0
+    Address: 0x0
+    Offset: 0x118
+    Size: 0x85
+    Link: 0
+    Info: 0
+    AddressAlign: 0x1
+    EntrySize: 0x0
+}
+SectionHeader {
+    Index: 2
+    Name: ".text" (0x1)
+    Type: SHT_PROGBITS (0x1)
+    Flags: 0x6
+        SHF_ALLOC (0x2)
+        SHF_EXECINSTR (0x4)
+    Address: 0x0
+    Offset: 0x40
+    Size: 0x30
+    Link: 0
+    Info: 0
+    AddressAlign: 0x10
+    EntrySize: 0x0
+}
+SectionHeader {
+    Index: 3
+    Name: ".mdebug.abi32" (0x77)
+    Type: SHT_PROGBITS (0x1)
+    Flags: 0x0
+    Address: 0x0
+    Offset: 0x70
+    Size: 0x0
+    Link: 0
+    Info: 0
+    AddressAlign: 0x1
+    EntrySize: 0x0
+}
+SectionHeader {
+    Index: 4
+    Name: ".pdr" (0x28)
+    Type: SHT_PROGBITS (0x1)
+    Flags: 0x0
+    Address: 0x0
+    Offset: 0x70
+    Size: 0x20
+    Link: 0
+    Info: 0
+    AddressAlign: 0x4
+    EntrySize: 0x0
+}
+SectionHeader {
+    Index: 5
+    Name: ".rel.pdr" (0x24)
+    Type: SHT_REL (0x9)
+    Flags: 0x0
+    Address: 0x0
+    Offset: 0x110
+    Size: 0x8
+    Link: 13
+    Info: 4
+    AddressAlign: 0x4
+    EntrySize: 0x8
+    Relocation {
+        Offset: 0x0
+        Type: R_MIPS_32 (0x2)
+        Symbol: "main" (0x2)
+    }
+}
+SectionHeader {
+    Index: 6
+    Name: ".comment" (0x7)
+    Type: SHT_PROGBITS (0x1)
+    Flags: 0x30
+        SHF_MERGE (0x10)
+        SHF_STRINGS (0x20)
+    Address: 0x0
+    Offset: 0x90
+    Size: 0x16
+    Link: 0
+    Info: 0
+    AddressAlign: 0x1
+    EntrySize: 0x1
+}
+SectionHeader {
+    Index: 7
+    Name: ".note.GNU-stack" (0x3B)
+    Type: SHT_PROGBITS (0x1)
+    Flags: 0x0
+    Address: 0x0
+    Offset: 0xA6
+    Size: 0x0
+    Link: 0
+    Info: 0
+    AddressAlign: 0x1
+    EntrySize: 0x0
+}
+SectionHeader {
+    Index: 8
+    Name: ".data" (0x71)
+    Type: SHT_PROGBITS (0x1)
+    Flags: 0x3
+        SHF_WRITE (0x1)
+        SHF_ALLOC (0x2)
+    Address: 0x0
+    Offset: 0xB0
+    Size: 0x0
+    Link: 0
+    Info: 0
+    AddressAlign: 0x10
+    EntrySize: 0x0
+}
+SectionHeader {
+    Index: 9
+    Name: ".bss" (0x10)
+    Type: SHT_NOBITS (0x8)
+    Flags: 0x3
+        SHF_WRITE (0x1)
+        SHF_ALLOC (0x2)
+    Address: 0x0
+    Offset: 0xB0
+    Size: 0x0
+    Link: 0
+    Info: 0
+    AddressAlign: 0x10
+    EntrySize: 0x0
+}
+SectionHeader {
+    Index: 10
+    Name: ".reginfo" (0x2D)
+    Type: SHT_MIPS_REGINFO (0x70000006)
+    Flags: 0x2
+        SHF_ALLOC (0x2)
+    Address: 0x0
+    Offset: 0xB0
+    Size: 0x18
+    Link: 0
+    Info: 0
+    AddressAlign: 0x4
+    EntrySize: 0x18
+}
+SectionHeader {
+    Index: 11
+    Name: ".MIPS.abiflags" (0x15)
+    Type: 0x7000002A
+    Flags: 0x2
+        SHF_ALLOC (0x2)
+    Address: 0x0
+    Offset: 0xC8
+    Size: 0x18
+    Link: 0
+    Info: 0
+    AddressAlign: 0x8
+    EntrySize: 0x18
+}
+SectionHeader {
+    Index: 12
+    Name: ".llvm_addrsig" (0x4B)
+    Type: 0x6FFF4C03
+    Flags: 0x80000000
+        SHF_MIPS_STRINGS (0x80000000)
+    Address: 0x0
+    Offset: 0x118
+    Size: 0x0
+    Link: 13
+    Info: 0
+    AddressAlign: 0x1
+    EntrySize: 0x0
+}
+SectionHeader {
+    Index: 13
+    Name: ".symtab" (0x69)
+    Type: SHT_SYMTAB (0x2)
+    Flags: 0x0
+    Address: 0x0
+    Offset: 0xE0
+    Size: 0x30
+    Link: 1
+    Info: 2
+    AddressAlign: 0x4
+    EntrySize: 0x10
+    Symbol {
+        Index: 0
+        Name: "" (0x0)
+        Value: 0x0
+        Size: 0x0
+        Type: STT_NOTYPE (0x0)
+        Bind: STB_LOCAL (0x0)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: SHN_UNDEF (0x0)
+    }
+    Symbol {
+        Index: 1
+        Name: "nostd.c" (0x59)
+        Value: 0x0
+        Size: 0x0
+        Type: STT_FILE (0x4)
+        Bind: STB_LOCAL (0x0)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: SHN_ABS (0xFFF1)
+    }
+    Symbol {
+        Index: 2
+        Name: "main" (0x36)
+        Value: 0x0
+        Size: 0x30
+        Type: STT_FUNC (0x2)
+        Bind: STB_GLOBAL (0x1)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: 2
+    }
+}
