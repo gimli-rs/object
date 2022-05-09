@@ -2,6 +2,28 @@
 
 --------------------------------------------------------------------------------
 
+## 0.28.4
+
+Released 2022/05/09.
+
+### Added
+
+* Added `read::pe::DataDirectories::resource_directory`.
+  [#425](https://github.com/gimli-rs/object/pull/425)
+  [#427](https://github.com/gimli-rs/object/pull/427)
+
+* Added PE support for more ARM relocations.
+  [#428](https://github.com/gimli-rs/object/pull/428)
+
+* Added support for `Architecture::LoongArch64`.
+  [#430](https://github.com/gimli-rs/object/pull/430)
+  [#432](https://github.com/gimli-rs/object/pull/432)
+
+* Added `elf::EF_MIPS_ABI` and associated constants.
+  [#433](https://github.com/gimli-rs/object/pull/433)
+
+--------------------------------------------------------------------------------
+
 ## 0.28.3
 
 Released 2022/01/19.
