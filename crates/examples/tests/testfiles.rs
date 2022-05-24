@@ -1,8 +1,20 @@
 #![cfg(feature = "read")]
 
 use object_examples::{objdump, readobj};
+use std::ffi::OsStr;
 use std::io::Write;
+use std::path::PathBuf;
 use std::{env, fs};
+
+#[cfg(feature = "wasm")]
+fn skip_wasm_test_if_unsupport(_: &PathBuf) -> bool {
+    true
+}
+
+#[cfg(not(feature = "wasm"))]
+fn skip_wasm_test_if_unsupport(path: &PathBuf) -> bool {
+    path.extension().and_then(OsStr::to_str) != Some("wasm")
+}
 
 #[test]
 fn testfiles() {
@@ -15,6 +27,7 @@ fn testfiles() {
         for path in glob::glob(&format!("{}/*", dir))
             .unwrap()
             .filter_map(Result::ok)
+            .filter(skip_wasm_test_if_unsupport)
         {
             let path = path.to_str().unwrap();
             if glob::glob(&format!("crates/examples/{}.*", path))
