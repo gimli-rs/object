@@ -162,6 +162,8 @@ pub const ELFOSABI_GNU: u8 = 3;
 ///
 /// Compatibility alias.
 pub const ELFOSABI_LINUX: u8 = ELFOSABI_GNU;
+/// GNU/Hurd.
+pub const ELFOSABI_HURD: u8 = 4;
 /// Sun Solaris.
 pub const ELFOSABI_SOLARIS: u8 = 6;
 /// IBM AIX.
@@ -176,6 +178,16 @@ pub const ELFOSABI_TRU64: u8 = 10;
 pub const ELFOSABI_MODESTO: u8 = 11;
 /// OpenBSD.
 pub const ELFOSABI_OPENBSD: u8 = 12;
+/// OpenVMS.
+pub const ELFOSABI_OPENVMS: u8 = 13;
+/// Hewlett-Packard Non-Stop Kernel.
+pub const ELFOSABI_NSK: u8 = 14;
+/// AROS
+pub const ELFOSABI_AROS: u8 = 15;
+/// FenixOS
+pub const ELFOSABI_FENIXOS: u8 = 16;
+/// Nuxi CloudABI
+pub const ELFOSABI_CLOUDABI: u8 = 17;
 /// ARM EABI.
 pub const ELFOSABI_ARM_AEABI: u8 = 64;
 /// ARM.
