@@ -1,7 +1,7 @@
 Format: Elf Little-endian 64-bit
 Kind: Relocatable
 Architecture: X86_64
-Flags: Elf { e_flags: 0 }
+Flags: Elf { os_abi: 0, e_flags: 0 }
 Relative Address Base: 0
 Entry Address: 0
 0: Section { name: "", address: 0, size: 0, align: 0, kind: Metadata, flags: Elf { sh_flags: 0 } }
