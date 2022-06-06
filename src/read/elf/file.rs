@@ -420,6 +420,7 @@ where
     fn flags(&self) -> FileFlags {
         FileFlags::Elf {
             os_abi: self.header.e_ident().os_abi,
+            abi_version: self.header.e_ident().abi_version,
             e_flags: self.header.e_flags(self.endian),
         }
     }
