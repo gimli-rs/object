@@ -11,7 +11,7 @@ jobs:
     strategy:
       matrix:
         os: ["ubuntu-latest"]
-        rust_channel: ["stable", "beta", "nightly", "1.42.0"]
+        rust_channel: ["stable", "beta", "nightly"]
         include:
           - rust_channel: "stable"
             os: "macOS-latest"
@@ -20,15 +20,10 @@ jobs:
     - uses: actions/checkout@v2
       with:
         submodules: true
-    - name: Install rustup
-      run: curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile=minimal
     - name: Install rust channel
       run: |
         rustup install ${{matrix.rust_channel}}
         rustup default ${{matrix.rust_channel}}
-    - name: MSRV dependencies
-      if: matrix.rust_channel == '1.42.0'
-      run: cargo update -p indexmap --precise 1.6.2
     - name: Test debug
       run: cargo test --verbose --features all
     - name: Test release
@@ -49,12 +44,32 @@ jobs:
       - run: cargo build --no-default-features --features read_core,wasm
       - run: cargo build --no-default-features --features doc
 
+  msrv-read:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          submodules: true
+      - name: Install rust
+        run: rustup update 1.42.0 && rustup default 1.42.0
+      - name: Test
+        run: cargo test --verbose --no-default-features --features read,std
+
+  msrv-all:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          submodules: true
+      - name: Install rust
+        run: rustup update 1.56.1 && rustup default 1.56.1
+      - name: Test
+        run: cargo test --verbose --features all
+
   rustfmt:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - name: Install rustup
-        run: curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile=minimal
       - name: Install rust
         run: |
           rustup install stable
@@ -68,8 +83,6 @@ jobs:
       - uses: actions/checkout@v2
         with:
           submodules: true
-      - name: Install rustup
-        run: curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile=minimal
       - name: Install rust
         run: |
           rustup install stable
