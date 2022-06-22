@@ -2,6 +2,32 @@
 
 --------------------------------------------------------------------------------
 
+## 0.29.0
+
+Released 2022/06/22.
+
+### Breaking changes
+
+* The `write` feature now has a minimum supported rust version of 1.56.1.
+  [#444](https://github.com/gimli-rs/object/pull/444)
+
+* Added `os_abi` and `abi_version` fields to `FileFlags::Elf`.
+  [#438](https://github.com/gimli-rs/object/pull/438)
+  [#441](https://github.com/gimli-rs/object/pull/441)
+
+### Changed
+
+* Fixed handling of empty symbol tables in `read::elf::ElfFile::symbol_table` and
+  `read::elf::ElfFile::dynamic_symbol_table`.
+  [#443](https://github.com/gimli-rs/object/pull/443)
+
+### Added
+
+* Added more `ELF_OSABI_*` constants.
+  [#439](https://github.com/gimli-rs/object/pull/439)
+
+--------------------------------------------------------------------------------
+
 ## 0.28.4
 
 Released 2022/05/09.
