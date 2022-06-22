@@ -264,6 +264,9 @@ where
     }
 
     fn symbol_table(&'file self) -> Option<ElfSymbolTable<'data, 'file, Elf, R>> {
+        if self.symbols.is_empty() {
+            return None;
+        }
         Some(ElfSymbolTable {
             endian: self.endian,
             symbols: &self.symbols,
@@ -279,6 +282,9 @@ where
     }
 
     fn dynamic_symbol_table(&'file self) -> Option<ElfSymbolTable<'data, 'file, Elf, R>> {
+        if self.dynamic_symbols.is_empty() {
+            return None;
+        }
         Some(ElfSymbolTable {
             endian: self.endian,
             symbols: &self.dynamic_symbols,
