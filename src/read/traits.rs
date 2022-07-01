@@ -154,9 +154,7 @@ pub trait Object<'data: 'file, 'file>: read::private::Sealed {
         let mut symbols = Vec::new();
         if let Some(table) = self.symbol_table().or_else(|| self.dynamic_symbol_table()) {
             for symbol in table.symbols() {
-                if !symbol.is_definition()
-                    || !matches!(symbol.kind(), SymbolKind::Text | SymbolKind::Data)
-                {
+                if !symbol.is_definition() {
                     continue;
                 }
                 if let Ok(name) = symbol.name() {

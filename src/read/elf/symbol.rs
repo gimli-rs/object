@@ -473,7 +473,10 @@ pub trait Sym: Debug + Pod {
     /// Return true if the symbol is a definition of a function or data object.
     fn is_definition(&self, endian: Self::Endian) -> bool {
         let st_type = self.st_type();
-        (st_type == elf::STT_NOTYPE || st_type == elf::STT_FUNC || st_type == elf::STT_OBJECT)
+        self.st_size(endian).into() != 0
+            && (st_type == elf::STT_NOTYPE
+                || st_type == elf::STT_FUNC
+                || st_type == elf::STT_OBJECT)
             && self.st_shndx(endian) != elf::SHN_UNDEF
     }
 }
