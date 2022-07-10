@@ -91,6 +91,7 @@ fn print_pe<Pe: ImageNtHeaders>(p: &mut Printer<'_>, data: &[u8]) {
             if let Some(ref sections) = sections {
                 print_export_dir(p, data, &sections, &data_directories);
                 print_import_dir::<Pe>(p, data, &sections, &data_directories);
+                print_delay_load_dir::<Pe>(p, data, &sections, &data_directories);
                 print_reloc_dir(p, data, machine, &sections, &data_directories);
                 print_resource_dir(p, data, &sections, &data_directories);
             }
@@ -292,6 +293,62 @@ fn print_import_dir<Pe: ImageNtHeaders>(
                             {
                                 p.field_hex("Address", thunk.raw());
                             }
+                            if thunk.is_ordinal() {
+                                p.field("Ordinal", thunk.ordinal());
+                            } else if let Some((hint, name)) =
+                                import_table.hint_name(thunk.address()).print_err(p)
+                            {
+                                p.field("Hint", hint);
+                                p.field_inline_string("Name", name);
+                            }
+                        });
+                    }
+                }
+            });
+        }
+    });
+    Some(())
+}
+
+fn print_delay_load_dir<Pe: ImageNtHeaders>(
+    p: &mut Printer<'_>,
+    data: &[u8],
+    sections: &SectionTable,
+    data_directories: &DataDirectories,
+) -> Option<()> {
+    let import_table = data_directories
+        .delay_load_import_table(data, sections)
+        .print_err(p)??;
+    let mut import_descs = import_table.descriptors().print_err(p)?;
+    p.group("ImageDelayLoadDirectory", |p| {
+        while let Some(Some(import_desc)) = import_descs.next().print_err(p) {
+            p.group("ImageDelayLoadDescriptor", |p| {
+                p.field_hex("Attributes", import_desc.attributes.get(LE));
+                let dll_name = import_desc.dll_name_rva.get(LE);
+                p.field_string("DllName", dll_name, import_table.name(dll_name));
+                p.field_hex("ModuleHandle", import_desc.module_handle_rva.get(LE));
+                p.field_hex(
+                    "ImportAddressTable",
+                    import_desc.import_address_table_rva.get(LE),
+                );
+                p.field_hex("ImportNameTable", import_desc.import_name_table_rva.get(LE));
+                p.field_hex(
+                    "BoundImportAddressTable",
+                    import_desc.bound_import_address_table_rva.get(LE),
+                );
+                p.field_hex(
+                    "UnloadInformationTable",
+                    import_desc.unload_information_table_rva.get(LE),
+                );
+                p.field_hex("TimeDateStamp", import_desc.time_date_stamp.get(LE));
+
+                let mut name_thunks = import_table
+                    .thunks(import_desc.import_name_table_rva.get(LE))
+                    .print_err(p);
+
+                if let Some(thunks) = name_thunks.as_mut() {
+                    while let Some(Some(thunk)) = thunks.next::<Pe>().print_err(p) {
+                        p.group("Thunk", |p| {
                             if thunk.is_ordinal() {
                                 p.field("Ordinal", thunk.ordinal());
                             } else if let Some((hint, name)) =
