@@ -343,6 +343,11 @@ pub enum RelocationEncoding {
     ///
     /// The `RelocationKind` must be PC relative.
     AArch64Call,
+
+    /// LoongArch branch offset with two trailing zeros.
+    ///
+    /// The `RelocationKind` must be PC relative.
+    LoongArchBranch,
 }
 
 /// File flags that are specific to each file format.
