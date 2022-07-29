@@ -528,6 +528,25 @@ impl<'a> Object<'a> {
                         {
                             (RelocationKind::Absolute, _, 32) => elf::R_LARCH_32,
                             (RelocationKind::Absolute, _, 64) => elf::R_LARCH_64,
+                            (RelocationKind::Relative, _, 32) => elf::R_LARCH_32_PCREL,
+                            (RelocationKind::Relative, RelocationEncoding::LoongArchBranch, 16)
+                            | (
+                                RelocationKind::PltRelative,
+                                RelocationEncoding::LoongArchBranch,
+                                16,
+                            ) => elf::R_LARCH_B16,
+                            (RelocationKind::Relative, RelocationEncoding::LoongArchBranch, 21)
+                            | (
+                                RelocationKind::PltRelative,
+                                RelocationEncoding::LoongArchBranch,
+                                21,
+                            ) => elf::R_LARCH_B21,
+                            (RelocationKind::Relative, RelocationEncoding::LoongArchBranch, 26)
+                            | (
+                                RelocationKind::PltRelative,
+                                RelocationEncoding::LoongArchBranch,
+                                26,
+                            ) => elf::R_LARCH_B26,
                             (RelocationKind::Elf(x), _, _) => x,
                             _ => {
                                 return Err(Error(format!("unimplemented relocation {:?}", reloc)));
