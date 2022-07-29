@@ -304,6 +304,19 @@ fn parse_relocation<Elf: FileHeader>(
         elf::EM_LOONGARCH => match reloc.r_type(endian, false) {
             elf::R_LARCH_32 => (RelocationKind::Absolute, 32),
             elf::R_LARCH_64 => (RelocationKind::Absolute, 64),
+            elf::R_LARCH_32_PCREL => (RelocationKind::Relative, 32),
+            elf::R_LARCH_B16 => {
+                encoding = RelocationEncoding::LoongArchBranch;
+                (RelocationKind::Relative, 16)
+            }
+            elf::R_LARCH_B21 => {
+                encoding = RelocationEncoding::LoongArchBranch;
+                (RelocationKind::Relative, 21)
+            }
+            elf::R_LARCH_B26 => {
+                encoding = RelocationEncoding::LoongArchBranch;
+                (RelocationKind::Relative, 26)
+            }
             r_type => (RelocationKind::Elf(r_type), 0),
         },
         elf::EM_MIPS => match reloc.r_type(endian, is_mips64el) {
