@@ -62,7 +62,7 @@ pub struct ImageDosHeader {
     /// Reserved words
     pub e_res2: [U16<LE>; 10],
     /// File address of new exe header
-    pub e_lfanew: U32<LE>,
+    pub e_lfanew: I32<LE>,
 }
 
 /// OS/2 .EXE header
