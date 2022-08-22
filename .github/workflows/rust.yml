@@ -44,6 +44,27 @@ jobs:
       - run: cargo build --no-default-features --features read_core,wasm
       - run: cargo build --no-default-features --features doc
 
+  cross:
+    strategy:
+      matrix:
+        target:
+          # A 32-bit target.
+          - "i686-unknown-linux-gnu"
+          # A big-endian target
+          - "mips64-unknown-linux-gnuabi64"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          submodules: true
+      - name: Install rust
+        run: |
+          rustup install stable
+          rustup default stable
+      - run: cargo install cross
+      - run: rustup target add ${{matrix.target}}
+      - run: cross test --target ${{matrix.target}} --features all
+
   msrv-read:
     runs-on: ubuntu-latest
     steps:
