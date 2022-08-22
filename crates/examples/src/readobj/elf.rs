@@ -361,7 +361,7 @@ fn print_section_symbols<Elf: FileHeader>(
                 } else {
                     p.field("SectionIndex", shndx);
                 }
-                if let Some(shndx) = symbols.shndx(index) {
+                if let Some(shndx) = symbols.shndx(endian, index) {
                     p.field("ExtendedSectionIndex", shndx);
                 }
             });
