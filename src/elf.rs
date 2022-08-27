@@ -6386,28 +6386,35 @@ pub const R_LARCH_ABS_LO12: u32 = 68;
 pub const R_LARCH_ABS64_LO20: u32 = 69;
 /// 52..=63 bits of 64-bit absolute address
 pub const R_LARCH_ABS64_HI12: u32 = 70;
-/// 12..=31 bits of the 32/64-bit PC-relative offset to the PC-relative
-/// anchor, calculated as the 12..=31 bits of the distance between
-/// `PC & ~0xfff` and `(S + A + 0x800)`.
+/// The signed 32-bit offset `offs` from `PC & 0xfffff000` to
+/// `(S + A + 0x800) & 0xfffff000`, with 12 trailing zeros removed.
+///
+/// We define the *PC relative anchor* for `S + A` as `PC + offs` (`offs`
+/// is sign-extended to VA bits).
 pub const R_LARCH_PCALA_HI20: u32 = 71;
-/// Same as R_LARCH_ABS_LO12.  0..=11 bits of the 32/64-bit offset from
-/// the PC relative anchor.
+/// Same as R_LARCH_ABS_LO12.  0..=11 bits of the 32/64-bit offset from the
+/// [PC relative anchor][R_LARCH_PCALA_HI20].
 pub const R_LARCH_PCALA_LO12: u32 = 72;
-/// 32..=51 bits of the 64-bit offset from the PC relative anchor.
+/// 32..=51 bits of the 64-bit offset from the
+/// [PC relative anchor][R_LARCH_PCALA_HI20].
 pub const R_LARCH_PCALA64_LO20: u32 = 73;
-/// 52..=63 bits of the 64-bit offset from the PC relative anchor.
+/// 52..=63 bits of the 64-bit offset from the
+/// [PC relative anchor][R_LARCH_PCALA_HI20].
 pub const R_LARCH_PCALA64_HI12: u32 = 74;
-/// 12..=31 bits of the 32/64-bit PC-relative offset to the PC-relative
-/// anchor for the GOT entry.
+/// The signed 32-bit offset `offs` from `PC & 0xfffff000` to
+/// `(GP + G + 0x800) & 0xfffff000`, with 12 trailing zeros removed.
+///
+/// We define the *PC relative anchor* for the GOT entry at `GP + G` as
+/// `PC + offs` (`offs` is sign-extended to VA bits).
 pub const R_LARCH_GOT_PC_HI20: u32 = 75;
-/// 0..=11 bits of the 32/64-bit offset from the PC relative anchor to the
-/// GOT entry.
+/// 0..=11 bits of the 32/64-bit offset from the
+/// [PC relative anchor][R_LARCH_GOT_PC_HI20] to the GOT entry.
 pub const R_LARCH_GOT_PC_LO12: u32 = 76;
-/// 32..=51 bits of the 64-bit offset from the PC relative anchor to the
-/// GOT entry.
+/// 32..=51 bits of the 64-bit offset from the
+/// [PC relative anchor][R_LARCH_GOT_PC_HI20] to the GOT entry.
 pub const R_LARCH_GOT64_PC_LO20: u32 = 77;
-/// 52..=63 bits of the 64-bit offset from the PC relative anchor to the
-/// GOT entry.
+/// 52..=63 bits of the 64-bit offset from the
+/// [PC relative anchor][R_LARCH_GOT_PC_HI20] to the GOT entry.
 pub const R_LARCH_GOT64_PC_HI12: u32 = 78;
 /// 12..=31 bits of 32/64-bit GOT entry absolute address
 pub const R_LARCH_GOT_HI20: u32 = 79;
@@ -6425,17 +6432,20 @@ pub const R_LARCH_TLS_LE_LO12: u32 = 84;
 pub const R_LARCH_TLS_LE64_LO20: u32 = 85;
 /// 52..=63 bits of TLS LE 64-bit offset from thread pointer
 pub const R_LARCH_TLS_LE64_HI12: u32 = 86;
-/// 12..=31 bits of the 32/64-bit PC-relative offset to the PC-relative
-/// anchor for the TLE IE GOT entry.
+/// The signed 32-bit offset `offs` from `PC & 0xfffff000` to
+/// `(GP + IE + 0x800) & 0xfffff000`, with 12 trailing zeros removed.
+///
+/// We define the *PC relative anchor* for the TLS IE GOT entry at
+/// `GP + IE` as `PC + offs` (`offs` is sign-extended to VA bits).
 pub const R_LARCH_TLS_IE_PC_HI20: u32 = 87;
-/// 0..=12 bits of the 32/64-bit offset from the PC-relative anchor to the
-/// TLS IE GOT entry.
+/// 0..=12 bits of the 32/64-bit offset from the
+/// [PC-relative anchor][R_LARCH_TLS_IE_PC_HI20] to the TLS IE GOT entry.
 pub const R_LARCH_TLS_IE_PC_LO12: u32 = 88;
-/// 32..=51 bits of the 64-bit offset from the PC-relative anchor to the
-/// TLS IE GOT entry.
+/// 32..=51 bits of the 64-bit offset from the
+/// [PC-relative anchor][R_LARCH_TLS_IE_PC_HI20] to the TLS IE GOT entry.
 pub const R_LARCH_TLS_IE64_PC_LO20: u32 = 89;
-/// 52..=63 bits of the 64-bit offset from the PC-relative anchor to the
-/// TLS IE GOT entry.
+/// 52..=63 bits of the 64-bit offset from the
+/// [PC-relative anchor][R_LARCH_TLS_IE_PC_HI20] to the TLS IE GOT entry.
 pub const R_LARCH_TLS_IE64_PC_HI12: u32 = 90;
 /// 12..=31 bits of TLS IE GOT entry 32/64-bit absolute address
 pub const R_LARCH_TLS_IE_HI20: u32 = 91;
@@ -6445,8 +6455,8 @@ pub const R_LARCH_TLS_IE_LO12: u32 = 92;
 pub const R_LARCH_TLS_IE64_LO20: u32 = 93;
 /// 51..=63 bits of TLS IE GOT entry 64-bit absolute address
 pub const R_LARCH_TLS_IE64_HI12: u32 = 94;
-/// 12..=31 bits of the 32/64-bit PC-relative offset to the PC-relative
-/// anchor for the TLE LD GOT entry.
+/// 12..=31 bits of the offset from `PC` to `GP + GD + 0x800`, where
+/// `GP + GD` is a TLS LD GOT entry
 pub const R_LARCH_TLS_LD_PC_HI20: u32 = 95;
 /// 12..=31 bits of TLS LD GOT entry 32/64-bit absolute address
 pub const R_LARCH_TLS_LD_HI20: u32 = 96;
