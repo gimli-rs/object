@@ -1,0 +1,42 @@
+ImageResourceDirectory {
+    Characteristics: 0
+    TimeDateStamp: 0
+    MajorVersion: 0
+    MinorVersion: 0
+    NumberOfNamedEntries: 0
+    NumberOfIdEntries: 1
+    ImageResourceDirectoryEntry {
+        NameOrId: RT_VERSION (0x10)
+        OffsetToDataOrDirectory: 0x80000018
+        ImageResourceDirectory {
+            Characteristics: 0
+            TimeDateStamp: 0
+            MajorVersion: 0
+            MinorVersion: 0
+            NumberOfNamedEntries: 1
+            NumberOfIdEntries: 0
+            ImageResourceDirectoryEntry {
+                NameOrId: "MY VERSION" (0x80000048)
+                OffsetToDataOrDirectory: 0x80000030
+                ImageResourceDirectory {
+                    Characteristics: 0
+                    TimeDateStamp: 0
+                    MajorVersion: 0
+                    MinorVersion: 0
+                    NumberOfNamedEntries: 0
+                    NumberOfIdEntries: 1
+                    ImageResourceDirectoryEntry {
+                        NameOrId: 1033
+                        OffsetToDataOrDirectory: 0x60
+                        ImageResourceDataEntry {
+                            VirtualAddress: 0x10070
+                            Size: 92
+                            CodePage: 0
+                            Reserved: 0x0
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
