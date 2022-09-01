@@ -327,7 +327,7 @@ impl<'a> Object<'a> {
             Architecture::I386 => (macho::CPU_TYPE_X86, macho::CPU_SUBTYPE_I386_ALL),
             Architecture::X86_64 => (macho::CPU_TYPE_X86_64, macho::CPU_SUBTYPE_X86_64_ALL),
             Architecture::PowerPc => (macho::CPU_TYPE_POWERPC, macho::CPU_SUBTYPE_POWERPC_ALL),
-            Architecture::PowerPc64 => (macho::CPU_TYPE_POWERPC64, macho::CPU_SUBTYPE_POWERPC_ALL),    
+            Architecture::PowerPc64 => (macho::CPU_TYPE_POWERPC64, macho::CPU_SUBTYPE_POWERPC_ALL),
             _ => {
                 return Err(Error(format!(
                     "unimplemented architecture {:?}",
