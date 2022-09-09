@@ -229,7 +229,7 @@ impl<'data> ArchiveMember<'data> {
         let header = data
             .read::<archive::AixHeader>(offset)
             .read_error("Invalid AIX big archive member header")?;
-        let name_length = parse_u64_digits(&header.name_length, 10)
+        let name_length = parse_u64_digits(&header.namlen, 10)
             .read_error("Invalid archive member name length")?;
         let name = data
             .read_bytes(offset, name_length)
@@ -241,6 +241,7 @@ impl<'data> ArchiveMember<'data> {
         if *offset & 1 != 0 {
             *offset = offset.saturating_add(1);
         }
+        // Because of the even-byte boundary, we have to read and check terminator after header.
         let terminator = data
             .read_bytes(offset, 2)
             .read_error("Invalid archive head terminator")?;
@@ -249,7 +250,7 @@ impl<'data> ArchiveMember<'data> {
         }
         let file_offset = *offset;
         let nextmbroff =
-            parse_u64_digits(&header.next_member, 10).read_error("Invalid next member offset")?;
+            parse_u64_digits(&header.nxtmem, 10).read_error("Invalid next member offset")?;
 
         // Move the offset to next member offset
         *offset = nextmbroff;

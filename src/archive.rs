@@ -43,22 +43,22 @@ pub struct Header {
 #[derive(Debug, Clone, Copy)]
 #[repr(C)]
 pub struct AixHeader {
-    /// Member size in decimal.
+    /// File member size in decimal.
     pub size: [u8; 20],
-    /// Offset of next member in decimal.
-    pub next_member: [u8; 20],
-    /// Offset of previous member in decimal.
-    pub prev_member: [u8; 20],
-    /// File modification timestamp in decimal.
+    /// Next member offset in decimal.
+    pub nxtmem: [u8; 20],
+    /// Previous member offset in decimal.
+    pub prvmem: [u8; 20],
+    /// File member date in decimal.
     pub date: [u8; 12],
-    /// User ID in decimal.
+    /// File member user id in decimal.
     pub uid: [u8; 12],
-    /// Group ID in decimal.
+    /// File member group id in decimal.
     pub gid: [u8; 12],
-    /// File mode in octal.
+    /// File member mode in octal.
     pub mode: [u8; 12],
-    /// Name length in decimal.
-    pub name_length: [u8; 4],
+    /// File member name length in decimal.
+    pub namlen: [u8; 4],
 }
 
 /// Discriminated union for multiple type headers
