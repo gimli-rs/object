@@ -72,24 +72,3 @@ pub enum MemberHeader {
 
 unsafe_impl_pod!(Header);
 unsafe_impl_pod!(AixHeader);
-
-/// The AIX big archive fixed len header.
-#[derive(Debug, Clone, Copy)]
-#[repr(C)]
-pub struct AIXBigFixedHeader {
-    /// We read the magic number in advance , so don't put this in struct.
-    /// Offset to member table
-    pub memoffset: [u8; 20],
-    /// Offset to Global offset
-    pub globsymoffset: [u8; 20],
-    /// Offset to 64 bit Sym
-    pub globsym64offset: [u8; 20],
-    /// Offset to first Child
-    pub firstchildoffset: [u8; 20],
-    /// Offset to last child
-    pub lastchildoffset: [u8; 20],
-    /// Offset to free list
-    pub freeoffset: [u8; 20],
-}
-
-unsafe_impl_pod!(AIXBigFixedHeader);

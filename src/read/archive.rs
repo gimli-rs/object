@@ -46,72 +46,57 @@ impl<'data, R: ReadRef<'data>> ArchiveFile<'data, R> {
         let magic = data
             .read_bytes(&mut tail, archive::MAGIC.len() as u64)
             .read_error("Invalid archive size")?;
-        let mut kind_by_header = ArchiveKind::Unknown;
-        if magic == &archive::AIX_BIG_MAGIC[..] {
-            kind_by_header = ArchiveKind::AixBig;
-        } else if magic != &archive::MAGIC[..] {
+        let kind = if magic == &archive::MAGIC {
+            ArchiveKind::Unknown
+        } else if magic == &archive::AIX_BIG_MAGIC {
+            ArchiveKind::AixBig
+        } else {
             return Err(Error("Unsupported archive identifier"));
-        }
-
-        if kind_by_header == ArchiveKind::AixBig {
-            // Parse the Fix Header to get member offset
-            let fixedheader = data
-                .read::<archive::AIXBigFixedHeader>(&mut tail)
-                .read_error("Invalid AIX big archive fixed header")?;
-            let firstchildoff = parse_u64_digits(&fixedheader.firstchildoffset, 10)
-                .read_error("Invalid first child offset")?;
-
-            // Move to firstchild
-            tail = firstchildoff;
-
-            let mut file = ArchiveFile {
-                data,
-                offset: tail,
-                len,
-                kind: kind_by_header,
-                symbols: (0, 0),
-                names: &[],
-            };
-
-            // Both the member table and the global symbol table exist as members of the archive and
-            // are kept at the end of the archive file.
-            let mut gst64off = parse_u64_digits(&fixedheader.globsym64offset, 10)
-                .read_error("Invalid global symbol64 table offset")?;
-            if gst64off == 0 {
-                // Empty archive has 0 for globsym64offset.
-                return Ok(file);
-            }
-
-            let member = ArchiveMember::parse(data, &mut gst64off, &[], file.kind)?;
-            file.symbols = member.file_range();
-
-            return Ok(file);
-        }
+        };
 
         let mut file = ArchiveFile {
             data,
             offset: tail,
             len,
-            kind: ArchiveKind::Unknown,
+            kind,
             symbols: (0, 0),
             names: &[],
         };
 
-        // The first few members may be special, so parse them.
-        // GNU has:
-        // - "/" or "/SYM64/": symbol table (optional)
-        // - "//": names table (optional)
-        // COFF has:
-        // - "/": first linker member
-        // - "/": second linker member
-        // - "//": names table
-        // BSD has:
-        // - "__.SYMDEF" or "__.SYMDEF SORTED": symbol table (optional)
-        // BSD 64-bit has:
-        // - "__.SYMDEF_64" or "__.SYMDEF_64 SORTED": symbol table (optional)
-        // BSD may use the extended name for the symbol table. This is handled
-        // by `ArchiveMember::parse`.
-        if tail < len {
+        if file.kind == ArchiveKind::AixBig {
+            // Structure after magic number (fixed header):
+            // Offset of member table - 20 bytes
+            // Offset of global symbol table - 20 bytes
+            // Offset of global symbol table for 64-bit objects - 20 bytes
+            // Offset of first member - 20 bytes
+            // Offset of last member - 20 bytes
+            // Offset of first member on free list - 20 bytes
+            let fixed_header = data.read_bytes(&mut tail, 120)
+                .read_error("Invalid fixed header")?;
+            file.offset = parse_u64_digits(&fixed_header[60..80], 10)
+                .read_error("Invalid offset for first archive member")?;
+            // Member table is located just after all archive members.
+            file.len = parse_u64_digits(&fixed_header[0..20], 10)
+                .read_error("Invalid offset for member table")?;
+
+            // TODO: Parse symbol table according to the offset.
+
+            return Ok(file);
+        } else if tail < len {
+            // The first few members may be special, so parse them.
+            // GNU has:
+            // - "/" or "/SYM64/": symbol table (optional)
+            // - "//": names table (optional)
+            // COFF has:
+            // - "/": first linker member
+            // - "/": second linker member
+            // - "//": names table
+            // BSD has:
+            // - "__.SYMDEF" or "__.SYMDEF SORTED": symbol table (optional)
+            // BSD 64-bit has:
+            // - "__.SYMDEF_64" or "__.SYMDEF_64 SORTED": symbol table (optional)
+            // BSD may use the extended name for the symbol table. This is handled
+            // by `ArchiveMember::parse`.
             let member = ArchiveMember::parse(data, &mut tail, &[], file.kind)?;
             if member.name == b"/" {
                 // GNU symbol table (unless we later determine this is COFF).
@@ -348,7 +333,7 @@ impl<'data> ArchiveMember<'data> {
     #[inline]
     pub fn header(&self) -> &archive::MemberHeader {
         &self.header
-    }    
+    }
 
     /// Return the parsed file name.
     ///
@@ -558,22 +543,14 @@ mod tests {
 
         let data = b"\
             <bigaf>\n\
-            0\x20\x20\x20\x20\x20\x20\x20\
-            \x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x200\x20\x20\x20\
-            \x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\
-            0\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\
-            \x20\x20\x20\x200\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\
-            \x20\x20\x20\x20\x20\x20\x20\x200\x20\x20\x20\x20\x20\x20\x20\
-            \x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20128\x20\
-            \x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\
-            6\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\
-            \x20\x20\x20\x20\x30\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\
-            \x20\x20\x20\x20\x20\x20\x20\x20\x30\x20\x20\x20\x20\x20\x20\x20\
-            \x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\0\0\0\0\
+            0                   0                   \
+            0                   0                   \
+            0                   128                 \
+            6                   0                   \
+            0                   \0\0\0\0\0\0\0\0\0\0\0\0\
             \0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\
             \0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\
-            \0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\
-            \0\0\0\0\0\0\0\0";
+            \0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0";
         let archive = ArchiveFile::parse(&data[..]).unwrap();
         assert_eq!(archive.kind(), ArchiveKind::AixBig);
     }
@@ -630,6 +607,38 @@ mod tests {
         let member = members.next().unwrap().unwrap();
         assert_eq!(member.name(), b"0123456789abcdef");
         assert_eq!(member.data(data).unwrap(), &b"even"[..]);
+
+        assert!(members.next().is_none());
+    }
+
+    #[test]
+    fn aix_names() {
+        let data = b"\
+            <bigaf>\n\
+            396                 0                   0                   \
+            128                 262                 0                   \
+            4                   262                 0                   \
+            1662610370  223         1           644         16  \
+            0123456789abcdef`\nord\n\
+            4                   396                 128                 \
+            1662610374  223         1           644         16  \
+            fedcba9876543210`\nrev\n\
+            94                  0                   262                 \
+            0           0           0           0           0   \
+            `\n2                   128                 \
+            262                 0123456789abcdef\0fedcba9876543210\0";
+        let data = &data[..];
+        let archive = ArchiveFile::parse(data).unwrap();
+        assert_eq!(archive.kind(), ArchiveKind::AixBig);
+        let mut members = archive.members();
+
+        let member = members.next().unwrap().unwrap();
+        assert_eq!(member.name(), b"0123456789abcdef");
+        assert_eq!(member.data(data).unwrap(), &b"ord\n"[..]);
+
+        let member = members.next().unwrap().unwrap();
+        assert_eq!(member.name(), b"fedcba9876543210");
+        assert_eq!(member.data(data).unwrap(), &b"rev\n"[..]);
 
         assert!(members.next().is_none());
     }
