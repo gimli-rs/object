@@ -88,6 +88,7 @@ pub enum BinaryFormat {
     MachO,
     Pe,
     Wasm,
+    Xcoff,
 }
 
 /// The kind of a section.
