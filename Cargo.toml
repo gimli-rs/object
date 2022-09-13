@@ -65,6 +65,7 @@ elf = []
 macho = []
 pe = ["coff"]
 wasm = ["wasmparser"]
+xcoff = []
 
 #=======================================
 # By default, support all read features.
