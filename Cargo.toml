@@ -33,7 +33,7 @@ alloc = { version = '1.0.0', optional = true, package = 'rustc-std-workspace-all
 # Core read support. You will need to enable some file formats too.
 read_core = []
 # Read support for all file formats (including unaligned files).
-read = ["read_core", "archive", "coff", "elf", "macho", "pe", "unaligned"]
+read = ["read_core", "archive", "coff", "elf", "macho", "pe", "unaligned", "xcoff"]
 # Core write support. You will need to enable some file formats too.
 write_core = ["crc32fast", "indexmap", "hashbrown"]
 # Core write support with libstd features. You will need to enable some file formats too.
@@ -65,6 +65,7 @@ elf = []
 macho = []
 pe = ["coff"]
 wasm = ["wasmparser"]
+xcoff = []
 
 #=======================================
 # By default, support all read features.
@@ -84,7 +85,7 @@ cargo-all = []
 doc = [
   "read_core", "write_std",
   "std", "compression",
-  "archive", "coff", "elf", "macho", "pe", "wasm",
+  "archive", "coff", "elf", "macho", "pe", "wasm", "xcoff"
 ]
 
 #=======================================
