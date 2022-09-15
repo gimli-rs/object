@@ -61,14 +61,5 @@ pub struct AixHeader {
     pub namlen: [u8; 4],
 }
 
-/// Discriminated union for multiple type headers
-#[derive(Debug, Clone, Copy)]
-pub enum MemberHeader {
-    /// GNU or BSD style header
-    SystemV(Header),
-    /// AIX style big archive header
-    AixBig(AixHeader),
-}
-
 unsafe_impl_pod!(Header);
 unsafe_impl_pod!(AixHeader);
