@@ -61,5 +61,25 @@ pub struct AixHeader {
     pub namlen: [u8; 4],
 }
 
+/// The AIX big archive's fixed length header at file beginning.
+#[derive(Debug, Clone, Copy)]
+#[repr(C)]
+pub struct AIXFileHeader {
+    /// Offset of member table
+    pub memoff: [u8; 20],
+    /// Offset of global symbol table
+    pub gstoff: [u8; 20],
+    /// ffset of global symbol table for 64-bit objects
+    pub gst64off: [u8; 20],
+    /// Offset of first member
+    pub fstmoff: [u8; 20],
+    /// Offset of last member
+    pub lstmoff: [u8; 20],
+    /// Offset of first member on free list
+    pub freeoff: [u8; 20],
+}
+
+
 unsafe_impl_pod!(Header);
 unsafe_impl_pod!(AixHeader);
+unsafe_impl_pod!(AIXFileHeader);

@@ -73,27 +73,21 @@ impl<'data, R: ReadRef<'data>> ArchiveFile<'data, R> {
         };
 
         if file.kind == ArchiveKind::AixBig {
-            // Structure after magic number (fixed header):
-            // Offset of member table - 20 bytes
-            // Offset of global symbol table - 20 bytes
-            // Offset of global symbol table for 64-bit objects - 20 bytes
-            // Offset of first member - 20 bytes
-            // Offset of last member - 20 bytes
-            // Offset of first member on free list - 20 bytes
-            let fixed_header = data.read_bytes(&mut tail, 120)
-                .read_error("Invalid AIX big archive fixed header")?;
-            file.offset = parse_u64_digits(&fixed_header[60..80], 10)
+            // The fixed length header is located just after magic number.
+            let file_header = data.read::<archive::AIXFileHeader>(&mut tail)
+                .read_error("Invalid AIX big archive file header")?;
+            file.offset = parse_u64_digits(&file_header.fstmoff, 10)
                 .read_error("Invalid offset for first archive member in AIX big archive")?;
 
             // Member table is located just after all archive members.
-            file.len = parse_u64_digits(&fixed_header[0..20], 10)
+            file.len = parse_u64_digits(&file_header.memoff, 10)
                 .read_error("Invalid offset for member table of AIX big archive")?;
-            let symtbl64 = parse_u64_digits(&fixed_header[40..60], 10)
+            let symtbl64 = parse_u64_digits(&file_header.gst64off, 10)
                 .read_error("Invalid offset to 64-bit symbol table in AIX big archive")?;
             if symtbl64 > 0 {
                 file.symbols = (symtbl64, len);
             } else {
-                let symtbl = parse_u64_digits(&fixed_header[20..40], 10)
+                let symtbl = parse_u64_digits(&file_header.gstoff, 10)
                     .read_error("Invalid offset to symbol table in AIX big archive")?;
                 if symtbl > 0 {
                     file.symbols = (symtbl, len);
