@@ -534,7 +534,7 @@ impl<'a> Object<'a> {
                 debug_assert_eq!(section_offsets[index].reloc_offset, buffer.len());
                 for reloc in &section.relocations {
                     let r_extern;
-                    let r_symbolnum;
+                    let mut r_symbolnum;
                     let symbol = &self.symbols[reloc.symbol.0];
                     if symbol.kind == SymbolKind::Section {
                         r_symbolnum = section_offsets[symbol.section.id().unwrap().0].index as u32;
@@ -546,7 +546,7 @@ impl<'a> Object<'a> {
                     let r_length = match reloc.size {
                         8 => 0,
                         16 => 1,
-                        32 => 2,
+                        12 | 21 | 26 | 32 => 2,
                         64 => 3,
                         _ => return Err(Error(format!("unimplemented reloc size {:?}", reloc))),
                     };
@@ -589,6 +589,28 @@ impl<'a> Object<'a> {
                         Architecture::Aarch64 => match (reloc.kind, reloc.encoding, reloc.addend) {
                             (RelocationKind::Absolute, RelocationEncoding::Generic, 0) => {
                                 (false, macho::ARM64_RELOC_UNSIGNED)
+                            }
+                            // Due to the fixup an addend of -4 here means the original addend was 0
+                            (RelocationKind::Relative, RelocationEncoding::AArch64Call, -4) => {
+                                (true, macho::ARM64_RELOC_BRANCH26)
+                            }
+                            // Non-zero addend, so we have to encode the addend separately
+                            (RelocationKind::Relative, RelocationEncoding::AArch64Call, value) => {
+                                // first emit the BR26 relocation
+                                let reloc_info = macho::RelocationInfo {
+                                    r_address: reloc.offset as u32,
+                                    r_symbolnum,
+                                    r_pcrel: true,
+                                    r_length,
+                                    r_extern: true,
+                                    r_type: macho::ARM64_RELOC_BRANCH26,
+                                };
+                                buffer.write(&reloc_info.relocation(endian));
+
+                                // set up a separate relocation for the addend
+                                // we add 4 to undo the fixup of -4
+                                r_symbolnum = (value + 4) as u32;
+                                (false, macho::ARM64_RELOC_ADDEND)
                             }
                             (
                                 RelocationKind::MachO { value, relative },
