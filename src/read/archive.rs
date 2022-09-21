@@ -76,12 +76,8 @@ impl<'data, R: ReadRef<'data>> ArchiveFile<'data, R> {
             // The fixed length header is located just after magic number.
             let file_header = data.read::<archive::AIXFileHeader>(&mut tail)
                 .read_error("Invalid AIX big archive file header")?;
-            file.offset = parse_u64_digits(&file_header.fstmoff, 10)
-                .read_error("Invalid offset for first archive member in AIX big archive")?;
 
-            // Member table is located just after all archive members.
-            file.len = parse_u64_digits(&file_header.memoff, 10)
-                .read_error("Invalid offset for member table of AIX big archive")?;
+            // Read the span of symbol table.
             let symtbl64 = parse_u64_digits(&file_header.gst64off, 10)
                 .read_error("Invalid offset to 64-bit symbol table in AIX big archive")?;
             if symtbl64 > 0 {
@@ -92,6 +88,40 @@ impl<'data, R: ReadRef<'data>> ArchiveFile<'data, R> {
                 if symtbl > 0 {
                     file.symbols = (symtbl, len);
                 }
+            }
+
+            // Big archive member table lists file entries with offsets and names. To avoid
+            // potential infinite loop (members are double-linked list), the iterator goes
+            // through the table instead of real members.
+            let mut member_table_offset = parse_u64_digits(&file_header.memoff, 10)
+                .read_error("Invalid offset for member table of AIX big archive")?;
+            if member_table_offset > 0 {
+                // The table itself is also a file with header.
+                let header = data
+                    .read::<archive::AixHeader>(&mut member_table_offset)
+                    .read_error("Invalid AIX big archive member header")?;
+                let terminator = data
+                    .read_bytes(&mut member_table_offset, 2)
+                    .read_error("Invalid AIX big archive terminator")?;
+                if terminator != archive::TERMINATOR {
+                    return Err(Error("Invalid AIX big archive terminator"));
+                }
+
+                let nummem = data
+                    .read_bytes_at(member_table_offset, 20)
+                    .read_error("Invalid member count in AIX big archive")?;
+                let members_count = parse_u64_digits(nummem, 10)
+                    .read_error("Invalid member count in AIX big archive")?;
+                let table_size = parse_u64_digits(&header.size, 10)
+                    .read_error("Invalid AIX big archive member size")?;
+                file.offset = member_table_offset + 20;
+                file.len = file.offset + members_count * 20;
+                file.names = data.read_bytes_at(file.len, table_size - (members_count + 1) * 20)
+                    .read_error("Invalid AIX big archive member name list")?;
+            } else {
+                // The offset would be zero if archive contains no file.
+                file.offset = member_table_offset;
+                file.len = member_table_offset;
             }
             return Ok(file);
         } else if tail < len {
@@ -303,34 +333,33 @@ impl<'data> ArchiveMember<'data> {
     ) -> read::Result<Self> {
         // The format was described at
         // https://www.ibm.com/docs/en/aix/7.3?topic=formats-ar-file-format-big
+        let file_offset_dec = data.read_bytes(offset, 20)
+            .read_error("Invalid AIX big archive file member offset")?;
+        let mut file_offset = parse_u64_digits(file_offset_dec, 10)
+            .read_error("Invalid AIX big archive file member offset")?;
         let header = data
-            .read::<archive::AixHeader>(offset)
+            .read::<archive::AixHeader>(&mut file_offset)
             .read_error("Invalid AIX big archive member header")?;
         let name_length = parse_u64_digits(&header.namlen, 10)
             .read_error("Invalid AIX big archive member name length")?;
         let name = data
-            .read_bytes(offset, name_length)
+            .read_bytes(&mut file_offset, name_length)
             .read_error("Invalid AIX big archive member name")?;
 
         // The actual data for a file member begins at the first even-byte boundary beyond the
         // member header and continues for the number of bytes specified by the ar_size field. The
         // ar command inserts null bytes for padding where necessary.
-        if *offset & 1 != 0 {
-            *offset = offset.saturating_add(1);
+        if file_offset & 1 != 0 {
+            file_offset = file_offset.saturating_add(1);
         }
         // Because of the even-byte boundary, we have to read and check terminator after header.
         let terminator = data
-            .read_bytes(offset, 2)
+            .read_bytes(&mut file_offset, 2)
             .read_error("Invalid AIX big archive head terminator")?;
         if terminator != archive::TERMINATOR {
             return Err(Error("Invalid AIX big archive terminator"));
         }
-        let file_offset = *offset;
-        let nextmbroff = parse_u64_digits(&header.nxtmem, 10)
-            .read_error("Invalid next member offset in AIX big archive")?;
 
-        // Move the offset to next member offset
-        *offset = nextmbroff;
         let file_size = parse_u64_digits(&header.size, 10)
             .read_error("Invalid archive member size in AIX big archive")?;
         Ok(ArchiveMember {
@@ -654,6 +683,7 @@ mod tests {
         let data = &data[..];
         let archive = ArchiveFile::parse(data).unwrap();
         assert_eq!(archive.kind(), ArchiveKind::AixBig);
+        assert_eq!(archive.names, b"0123456789abcdef\0fedcba9876543210\0");
         let mut members = archive.members();
 
         let member = members.next().unwrap().unwrap();
