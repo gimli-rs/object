@@ -175,11 +175,17 @@ impl<'a> Object<'a> {
 
     pub(crate) fn macho_fixup_relocation(&mut self, mut relocation: &mut Relocation) -> i64 {
         let constant = match relocation.kind {
+            // AArch64Call relocations have special handling for the addend, so don't adjust it
+            RelocationKind::Relative if relocation.encoding == RelocationEncoding::AArch64Call => 0,
             RelocationKind::Relative
             | RelocationKind::GotRelative
             | RelocationKind::PltRelative => relocation.addend + 4,
             _ => relocation.addend,
         };
+        // Aarch64 relocs of these sizes act as if they are double-word length
+        if self.architecture == Architecture::Aarch64 && matches!(relocation.size, 12 | 21 | 26) {
+            relocation.size = 32;
+        }
         relocation.addend -= constant;
         constant
     }
@@ -546,7 +552,7 @@ impl<'a> Object<'a> {
                     let r_length = match reloc.size {
                         8 => 0,
                         16 => 1,
-                        12 | 21 | 26 | 32 => 2,
+                        32 => 2,
                         64 => 3,
                         _ => return Err(Error(format!("unimplemented reloc size {:?}", reloc))),
                     };
@@ -590,8 +596,7 @@ impl<'a> Object<'a> {
                             (RelocationKind::Absolute, RelocationEncoding::Generic, 0) => {
                                 (false, macho::ARM64_RELOC_UNSIGNED)
                             }
-                            // Due to the fixup an addend of -4 here means the original addend was 0
-                            (RelocationKind::Relative, RelocationEncoding::AArch64Call, -4) => {
+                            (RelocationKind::Relative, RelocationEncoding::AArch64Call, 0) => {
                                 (true, macho::ARM64_RELOC_BRANCH26)
                             }
                             // Non-zero addend, so we have to encode the addend separately
@@ -608,8 +613,7 @@ impl<'a> Object<'a> {
                                 buffer.write(&reloc_info.relocation(endian));
 
                                 // set up a separate relocation for the addend
-                                // we add 4 to undo the fixup of -4
-                                r_symbolnum = (value + 4) as u32;
+                                r_symbolnum = value as u32;
                                 (false, macho::ARM64_RELOC_ADDEND)
                             }
                             (

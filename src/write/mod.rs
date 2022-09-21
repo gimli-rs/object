@@ -526,14 +526,6 @@ impl<'a> Object<'a> {
         match relocation.size {
             32 => data.write_at(offset, &U32::new(self.endian, addend as u32)),
             64 => data.write_at(offset, &U64::new(self.endian, addend as u64)),
-
-            // For aarch64 call relocations in Mach-O, the addend is
-            // encoded in a separate relocation, so don't write it here
-            26 if relocation.encoding == RelocationEncoding::AArch64Call
-                && self.format == BinaryFormat::MachO =>
-            {
-                Ok(())
-            }
             _ => {
                 return Err(Error(format!(
                     "unimplemented relocation addend {:?}",
