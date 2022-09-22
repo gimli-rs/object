@@ -107,21 +107,33 @@ impl<'data, R: ReadRef<'data>> ArchiveFile<'data, R> {
                     return Err(Error("Invalid AIX big archive terminator"));
                 }
 
-                let nummem = data
-                    .read_bytes_at(member_table_offset, 20)
-                    .read_error("Invalid member count in AIX big archive")?;
-                let members_count = parse_u64_digits(nummem, 10)
-                    .read_error("Invalid member count in AIX big archive")?;
+                // Structure of member table:
+                // Number of entries (20 bytes)
+                // Offsets of each entry (20*N bytes)
+                // Names string table (the rest of bytes to fill size defined in header)
                 let table_size = parse_u64_digits(&header.size, 10)
                     .read_error("Invalid AIX big archive member size")?;
-                file.offset = member_table_offset + 20;
-                file.len = file.offset + members_count * 20;
-                file.names = data.read_bytes_at(file.len, table_size - (members_count + 1) * 20)
+                let members_count = data
+                    .read_bytes_at(member_table_offset, 30)
+                    .ok()
+                    .and_then(|bytes| parse_u64_digits(bytes, 10))
+                    .read_error("Invalid member count in AIX big archive")?;
+                file.offset = member_table_offset.checked_add(20)
+                    .read_error("AIX big archive offset overflow")?;
+                let member_offsets_size = members_count.checked_mul(20)
+                    .read_error("AIX big archive length overflow")?;
+                file.len = member_offsets_size.checked_add(file.offset)
+                    .read_error("AIX big archive length overflow")?;
+                let names_size = table_size
+                    .checked_sub(member_offsets_size)
+                    .and_then(|size| size.checked_sub(20))
+                    .read_error("AIX big archive string table size overflow")?;
+                file.names = data.read_bytes_at(file.len, names_size)
                     .read_error("Invalid AIX big archive member name list")?;
             } else {
                 // The offset would be zero if archive contains no file.
-                file.offset = member_table_offset;
-                file.len = member_table_offset;
+                file.offset = 0;
+                file.len = 0;
             }
             return Ok(file);
         } else if tail < len {
