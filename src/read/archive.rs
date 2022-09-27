@@ -74,7 +74,8 @@ impl<'data, R: ReadRef<'data>> ArchiveFile<'data, R> {
 
         if file.kind == ArchiveKind::AixBig {
             // The fixed length header is located just after magic number.
-            let file_header = data.read::<archive::AIXFileHeader>(&mut tail)
+            let file_header = data
+                .read::<archive::AIXFileHeader>(&mut tail)
                 .read_error("Invalid AIX big archive file header")?;
 
             // Read the span of symbol table.
@@ -118,17 +119,21 @@ impl<'data, R: ReadRef<'data>> ArchiveFile<'data, R> {
                     .ok()
                     .and_then(|bytes| parse_u64_digits(bytes, 10))
                     .read_error("Invalid member count in AIX big archive")?;
-                file.offset = member_table_offset.checked_add(20)
+                file.offset = member_table_offset
+                    .checked_add(20)
                     .read_error("AIX big archive offset overflow")?;
-                let member_offsets_size = members_count.checked_mul(20)
+                let member_offsets_size = members_count
+                    .checked_mul(20)
                     .read_error("AIX big archive length overflow")?;
-                file.len = member_offsets_size.checked_add(file.offset)
+                file.len = member_offsets_size
+                    .checked_add(file.offset)
                     .read_error("AIX big archive length overflow")?;
                 let names_size = table_size
                     .checked_sub(member_offsets_size)
                     .and_then(|size| size.checked_sub(20))
                     .read_error("AIX big archive string table size overflow")?;
-                file.names = data.read_bytes_at(file.len, names_size)
+                file.names = data
+                    .read_bytes_at(file.len, names_size)
                     .read_error("Invalid AIX big archive member name list")?;
             } else {
                 // The offset would be zero if archive contains no file.
@@ -345,7 +350,8 @@ impl<'data> ArchiveMember<'data> {
     ) -> read::Result<Self> {
         // The format was described at
         // https://www.ibm.com/docs/en/aix/7.3?topic=formats-ar-file-format-big
-        let file_offset_dec = data.read_bytes(offset, 20)
+        let file_offset_dec = data
+            .read_bytes(offset, 20)
             .read_error("Invalid AIX big archive file member offset")?;
         let mut file_offset = parse_u64_digits(file_offset_dec, 10)
             .read_error("Invalid AIX big archive file member offset")?;
