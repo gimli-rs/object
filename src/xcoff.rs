@@ -336,7 +336,7 @@ pub struct Symbol32 {
     /// Symbol value; storage class-dependent.
     pub n_value: U32<BE>,
     /// Section number of symbol.
-    pub n_scnum: U16<BE>,
+    pub n_scnum: I16<BE>,
     /// Basic and derived type specification.
     pub n_type: U16<BE>,
     /// Storage class of symbol.
@@ -498,6 +498,48 @@ pub const C_EFCN: u8 = 255;
 /// Reserved.
 pub const C_TCSYM: u8 = 134;
 
+/// Csect auxiliary entry for C_EXT, C_WEAKEXT, and C_HIDEXT symbols.
+#[derive(Debug, Clone, Copy)]
+#[repr(C)]
+pub struct CsectAux32 {
+    /// Section length.
+    pub x_scnlen: U32<BE>,
+    /// Offset of parameter type-check hash in .typchk section.
+    pub x_parmhash: U32<BE>,
+    /// .typchk section number.
+    pub x_snhash: U16<BE>,
+    /// Symbol alignment and type.
+    pub x_smtyp: u8,
+    /// Storage mapping class.
+    pub x_smclas: u8,
+    /// Reserved.
+    pub x_stab: U32<BE>,
+    /// x_snstab.
+    pub x_snstab: U16<BE>
+}
+
+/// Csect auxiliary entry for C_EXT, C_WEAKEXT, and C_HIDEXT symbols.
+#[derive(Debug, Clone, Copy)]
+#[repr(C)]
+pub struct CsectAux64 {
+    /// Low 4 bytes of section length.
+    pub x_scnlen_lo: U32<BE>,
+    /// Offset of parameter type-check hash in .typchk section.
+    pub x_parmhash: U32<BE>,
+    /// .typchk section number.
+    pub x_snhash: U16<BE>,
+    /// Symbol alignment and type.
+    pub x_smtyp: u8,
+    /// Storage mapping class.
+    pub x_smclas: u8,
+    /// High 4 bytes of section length.
+    pub x_scnlen_hi: U32<BE>,
+    /// Reserved.
+    pub pad: u8,
+    /// Contains _AUX_CSECT; indicates type of auxiliary entry.
+    pub x_auxtype: u8
+}
+
 /// Relocation table entry
 #[derive(Debug, Clone, Copy)]
 #[repr(C)]
@@ -584,6 +626,8 @@ unsafe_impl_pod!(
     SectionHeader64,
     Symbol32,
     Symbol64,
+    CsectAux32,
+    CsectAux64,
     Rel32,
     Rel64,
 );
