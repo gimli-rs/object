@@ -79,7 +79,6 @@ pub struct AIXFileHeader {
     pub freeoff: [u8; 20],
 }
 
-
 unsafe_impl_pod!(Header);
 unsafe_impl_pod!(AixHeader);
 unsafe_impl_pod!(AIXFileHeader);
