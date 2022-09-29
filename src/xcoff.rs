@@ -515,7 +515,7 @@ pub struct CsectAux32 {
     /// Reserved.
     pub x_stab: U32<BE>,
     /// x_snstab.
-    pub x_snstab: U16<BE>
+    pub x_snstab: U16<BE>,
 }
 
 /// Csect auxiliary entry for C_EXT, C_WEAKEXT, and C_HIDEXT symbols.
@@ -537,7 +537,7 @@ pub struct CsectAux64 {
     /// Reserved.
     pub pad: u8,
     /// Contains _AUX_CSECT; indicates type of auxiliary entry.
-    pub x_auxtype: u8
+    pub x_auxtype: u8,
 }
 
 /// Relocation table entry

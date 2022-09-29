@@ -5,7 +5,7 @@ use core::str;
 use crate::endian::{BigEndian as BE, U32Bytes};
 use crate::pod::Pod;
 use crate::read::util::StringTable;
-use crate::{xcoff, Object};
+use crate::{xcoff, Object, ObjectSection, SectionKind};
 
 use crate::read::{
     self, ObjectSymbol, ObjectSymbolTable, ReadError, ReadRef, Result, SectionIndex, SymbolFlags,
@@ -76,7 +76,7 @@ where
     pub fn symbol(&self, index: usize) -> read::Result<&'data Xcoff::Symbol> {
         self.symbols
             .get(index)
-            .read_error("Invalid ELF symbol index")
+            .read_error("Invalid XCOFF symbol index")
     }
 
     /// Return true if the symbol table is empty.
@@ -230,7 +230,7 @@ impl<'data, 'file, Xcoff: FileHeader, R: ReadRef<'data>> ObjectSymbol<'data>
         let name = self.name_bytes()?;
         str::from_utf8(name)
             .ok()
-            .read_error("Non UTF-8 ELF symbol name")
+            .read_error("Non UTF-8 XCOFF symbol name")
     }
 
     #[inline]
@@ -250,12 +250,10 @@ impl<'data, 'file, Xcoff: FileHeader, R: ReadRef<'data>> ObjectSymbol<'data>
             .file
             .section_by_index(SectionIndex(self.symbol.n_scnum() as usize))
             .unwrap();
-        let derived_kind = if section.is_section_text() {
-            SymbolKind::Text
-        } else if section.is_section_data() || section.is_section_bss() {
-            SymbolKind::Data
-        } else {
-            SymbolKind::Unknown
+        let derived_kind = match section.kind() {
+            SectionKind::Data | SectionKind::Tls | SectionKind::UninitializedData | SectionKind::UninitializedTls => SymbolKind::Data,
+            SectionKind::Text => SymbolKind::Text,
+            _ => SymbolKind::Unknown
         };
 
         match self.symbol.n_sclass() {

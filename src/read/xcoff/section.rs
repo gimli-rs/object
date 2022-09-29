@@ -1,7 +1,9 @@
 use core::fmt::Debug;
 use core::{iter, result, slice, str};
 
-use crate::{CompressedFileRange, xcoff, BigEndian as BE, Pod, SectionFlags, SectionKind, CompressedData};
+use crate::{
+    xcoff, BigEndian as BE, CompressedData, CompressedFileRange, Pod, SectionFlags, SectionKind,
+};
 
 use crate::read::{self, ObjectSection, ReadError, ReadRef, Result, SectionIndex};
 
@@ -66,24 +68,6 @@ impl<'data, 'file, Xcoff: FileHeader, R: ReadRef<'data>> XcoffSection<'data, 'fi
         self.section
             .xcoff_data(self.file.data)
             .read_error("Invalid XCOFF section offset or size")
-    }
-
-    fn section_flags(&self) -> u32 {
-        self.section.s_flags().into()
-    }
-
-    pub(super) fn is_section_text(&self) -> bool {
-        self.section_flags() & (xcoff::STYP_TEXT as u32) != 0
-    }
-
-    pub(super) fn is_section_data(&self) -> bool {
-        let flags = self.section_flags();
-        flags & (xcoff::STYP_DATA as u32) != 0 || flags & (xcoff::STYP_TDATA as u32) != 0
-    }
-
-    pub(super) fn is_section_bss(&self) -> bool {
-        let flags = self.section_flags();
-        flags & (xcoff::STYP_BSS as u32) != 0 || flags & (xcoff::STYP_TBSS as u32) != 0
     }
 }
 
@@ -163,13 +147,30 @@ where
     }
 
     fn kind(&self) -> SectionKind {
-        // TODO: return the section kind.
-        SectionKind::Text
+        let section_type = self.section.s_flags().into() as u16;
+        if section_type & xcoff::STYP_TEXT != 0 {
+            SectionKind::Text
+        } else if section_type & xcoff::STYP_DATA != 0 {
+            SectionKind::Data
+        } else if section_type & xcoff::STYP_TDATA != 0 {
+            SectionKind::Tls
+        } else if section_type & xcoff::STYP_BSS != 0 {
+            SectionKind::UninitializedData
+        } else if section_type & xcoff::STYP_TBSS != 0 {
+            SectionKind::UninitializedTls
+        } else if section_type & (xcoff::STYP_DEBUG | xcoff::STYP_DWARF) != 0 {
+            SectionKind::Debug
+        } else if section_type & xcoff::STYP_LOADER != 0 {
+            SectionKind::Loader
+        } else if section_type & (xcoff::STYP_INFO | xcoff::STYP_EXCEPT) != 0 {
+            SectionKind::Other
+        } else {
+            SectionKind::Unknown
+        }
     }
 
     fn relocations(&self) -> Self::RelocationIterator {
-        // TODO: relocations are not fully supported.
-        unreachable!()
+        unimplemented!()
     }
 
     fn flags(&self) -> SectionFlags {

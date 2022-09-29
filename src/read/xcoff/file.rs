@@ -1,11 +1,13 @@
 use core::fmt::Debug;
+use core::mem;
 
 use alloc::vec::Vec;
 
 use crate::read::{self, Error, NoDynamicRelocationIterator, Object, ReadError, ReadRef, Result};
 
 use crate::{
-    xcoff, Architecture, BigEndian as BE, ObjectKind, ObjectSection, Pod, SectionIndex, SymbolIndex, FileFlags,
+    xcoff, Architecture, BigEndian as BE, FileFlags, ObjectKind, ObjectSection, Pod, SectionIndex,
+    SymbolIndex,
 };
 
 use super::{
@@ -109,7 +111,7 @@ where
     }
 
     fn segments(&'file self) -> XcoffSegmentIterator<'data, 'file, Xcoff, R> {
-        unreachable!()
+        unimplemented!()
     }
 
     fn section_by_name_bytes(
@@ -210,13 +212,12 @@ where
     }
 
     fn entry(&'file self) -> u64 {
-        // TODO: get from the auxiliary file header.
-        0
+        unimplemented!()
     }
 
     fn flags(&self) -> FileFlags {
         FileFlags::Xcoff {
-            f_flags: self.header.f_flags()
+            f_flags: self.header.f_flags(),
         }
     }
 }
@@ -271,7 +272,7 @@ pub trait FileHeader: Debug + Pod {
         offset: &mut u64,
     ) -> read::Result<&'data [Self::AuxHeader]> {
         let total_len = self.f_opthdr() as usize;
-        let single_len = std::mem::size_of::<Self::AuxHeader>();
+        let single_len = mem::size_of::<Self::AuxHeader>();
         if total_len % single_len != 0 {
             return Err(Error("Invalid aux header length"));
         }

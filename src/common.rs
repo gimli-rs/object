@@ -171,6 +171,10 @@ pub enum SectionKind {
     ///
     /// Example ELF sections: `.symtab`, `.strtab`, `.group`
     Metadata,
+    /// Information for the system loader.
+    ///
+    /// Example XCOFF sections: `.loader`
+    Loader,
     /// Some other ELF section type.
     ///
     /// This is the `sh_type` field in the section header.
