@@ -71,7 +71,8 @@ fn main() {
 
 // If the file is a dyld shared cache, and we're on macOS 12 or later,
 // then there will be one or more "subcache" files next to this file,
-// with the names filename.1, filename.2, ..., filename.symbols.
+// with the names filename.1, filename.2, ..., filename.symbols
+// or filename.01, filename.02 on macOS 13
 fn open_subcaches_if_exist(path: &str) -> Vec<fs::File> {
     let mut files = Vec::new();
     for i in 1.. {
@@ -80,6 +81,15 @@ fn open_subcaches_if_exist(path: &str) -> Vec<fs::File> {
             Ok(subcache_file) => files.push(subcache_file),
             Err(_) => break,
         };
+    }
+    if files.is_empty() {
+        for i in 1.. {
+            let subcache_path = format!("{}.{:02}", path, i);
+            match fs::File::open(&subcache_path) {
+                Ok(subcache_file) => files.push(subcache_file),
+                Err(_) => break,
+            };
+        }
     }
     let symbols_subcache_path = format!("{}.symbols", path);
     if let Ok(subcache_file) = fs::File::open(&symbols_subcache_path) {
