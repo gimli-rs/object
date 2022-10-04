@@ -593,6 +593,9 @@ impl<'a> Object<'a> {
                             match (reloc.kind, reloc.encoding, reloc.size) {
                                 (RelocationKind::Absolute, _, 32) => elf::R_RISCV_32,
                                 (RelocationKind::Absolute, _, 64) => elf::R_RISCV_64,
+                                (RelocationKind::Relative, RelocationEncoding::Generic, 32) => {
+                                    elf::R_RISCV_32_PCREL
+                                }
                                 (RelocationKind::Elf(x), _, _) => x,
                                 _ => {
                                     return Err(Error(format!(
