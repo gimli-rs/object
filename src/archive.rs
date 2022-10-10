@@ -64,21 +64,28 @@ pub struct AixHeader {
 /// The AIX big archive's fixed length header at file beginning.
 #[derive(Debug, Clone, Copy)]
 #[repr(C)]
-pub struct AIXFileHeader {
-    /// Offset of member table
+pub struct AixFileHeader {
+    /// Archive magic string.
+    pub magic: [u8; 8],
+    /// Offset of member table.
     pub memoff: [u8; 20],
-    /// Offset of global symbol table
+    /// Offset of global symbol table.
     pub gstoff: [u8; 20],
-    /// ffset of global symbol table for 64-bit objects
+    /// Offset of global symbol table for 64-bit objects.
     pub gst64off: [u8; 20],
-    /// Offset of first member
+    /// Offset of first member.
     pub fstmoff: [u8; 20],
-    /// Offset of last member
+    /// Offset of last member.
     pub lstmoff: [u8; 20],
-    /// Offset of first member on free list
+    /// Offset of first member on free list.
     pub freeoff: [u8; 20],
 }
 
-unsafe_impl_pod!(Header);
-unsafe_impl_pod!(AixHeader);
-unsafe_impl_pod!(AIXFileHeader);
+/// Offset of a member in an AIX big archive.
+///
+/// This is used in the member index.
+#[derive(Debug, Clone, Copy)]
+#[repr(C)]
+pub struct AixMemberOffset(pub [u8; 20]);
+
+unsafe_impl_pod!(Header, AixHeader, AixFileHeader, AixMemberOffset,);

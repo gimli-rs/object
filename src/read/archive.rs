@@ -3,16 +3,7 @@
 use core::convert::TryInto;
 
 use crate::archive;
-use crate::read::{self, Error, ReadError, ReadRef};
-
-/// Discriminated union for multiple type headers
-#[derive(Debug, Clone, Copy)]
-enum MemberHeader<'data> {
-    /// GNU or BSD style header
-    SystemV(&'data archive::Header),
-    /// AIX style big archive header
-    AixBig(&'data archive::AixHeader),
-}
+use crate::read::{self, Bytes, Error, ReadError, ReadRef};
 
 /// The kind of archive format.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -36,13 +27,24 @@ pub enum ArchiveKind {
     AixBig,
 }
 
+/// The list of members in the archive.
+#[derive(Debug, Clone, Copy)]
+enum Members<'data> {
+    Common {
+        offset: u64,
+        end_offset: u64,
+    },
+    AixBig {
+        index: &'data [archive::AixMemberOffset],
+    },
+}
+
 /// A partially parsed archive file.
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct ArchiveFile<'data, R: ReadRef<'data> = &'data [u8]> {
     data: R,
-    len: u64,
-    offset: u64,
     kind: ArchiveKind,
+    members: Members<'data>,
     symbols: (u64, u64),
     names: &'data [u8],
 }
@@ -55,169 +57,174 @@ impl<'data, R: ReadRef<'data>> ArchiveFile<'data, R> {
         let magic = data
             .read_bytes(&mut tail, archive::MAGIC.len() as u64)
             .read_error("Invalid archive size")?;
-        let kind = if magic == &archive::MAGIC {
-            ArchiveKind::Unknown
-        } else if magic == &archive::AIX_BIG_MAGIC {
-            ArchiveKind::AixBig
-        } else {
+
+        if magic == &archive::AIX_BIG_MAGIC {
+            return Self::parse_aixbig(data);
+        } else if magic != &archive::MAGIC {
             return Err(Error("Unsupported archive identifier"));
-        };
+        }
+
+        let mut members_offset = tail;
+        let members_end_offset = len;
 
         let mut file = ArchiveFile {
             data,
-            offset: tail,
-            len,
-            kind,
+            kind: ArchiveKind::Unknown,
+            members: Members::Common {
+                offset: 0,
+                end_offset: 0,
+            },
             symbols: (0, 0),
             names: &[],
         };
 
-        if file.kind == ArchiveKind::AixBig {
-            // The fixed length header is located just after magic number.
-            let file_header = data
-                .read::<archive::AIXFileHeader>(&mut tail)
-                .read_error("Invalid AIX big archive file header")?;
-
-            // Read the span of symbol table.
-            let symtbl64 = parse_u64_digits(&file_header.gst64off, 10)
-                .read_error("Invalid offset to 64-bit symbol table in AIX big archive")?;
-            if symtbl64 > 0 {
-                file.symbols = (symtbl64, len);
-            } else {
-                let symtbl = parse_u64_digits(&file_header.gstoff, 10)
-                    .read_error("Invalid offset to symbol table in AIX big archive")?;
-                if symtbl > 0 {
-                    file.symbols = (symtbl, len);
-                }
-            }
-
-            // Big archive member table lists file entries with offsets and names. To avoid
-            // potential infinite loop (members are double-linked list), the iterator goes
-            // through the table instead of real members.
-            let mut member_table_offset = parse_u64_digits(&file_header.memoff, 10)
-                .read_error("Invalid offset for member table of AIX big archive")?;
-            if member_table_offset > 0 {
-                // The table itself is also a file with header.
-                let header = data
-                    .read::<archive::AixHeader>(&mut member_table_offset)
-                    .read_error("Invalid AIX big archive member header")?;
-                let terminator = data
-                    .read_bytes(&mut member_table_offset, 2)
-                    .read_error("Invalid AIX big archive terminator")?;
-                if terminator != archive::TERMINATOR {
-                    return Err(Error("Invalid AIX big archive terminator"));
-                }
-
-                // Structure of member table:
-                // Number of entries (20 bytes)
-                // Offsets of each entry (20*N bytes)
-                // Names string table (the rest of bytes to fill size defined in header)
-                let table_size = parse_u64_digits(&header.size, 10)
-                    .read_error("Invalid AIX big archive member size")?;
-                let members_count = data
-                    .read_bytes_at(member_table_offset, 30)
-                    .ok()
-                    .and_then(|bytes| parse_u64_digits(bytes, 10))
-                    .read_error("Invalid member count in AIX big archive")?;
-                file.offset = member_table_offset
-                    .checked_add(20)
-                    .read_error("AIX big archive offset overflow")?;
-                let member_offsets_size = members_count
-                    .checked_mul(20)
-                    .read_error("AIX big archive length overflow")?;
-                file.len = member_offsets_size
-                    .checked_add(file.offset)
-                    .read_error("AIX big archive length overflow")?;
-                let names_size = table_size
-                    .checked_sub(member_offsets_size)
-                    .and_then(|size| size.checked_sub(20))
-                    .read_error("AIX big archive string table size overflow")?;
-                file.names = data
-                    .read_bytes_at(file.len, names_size)
-                    .read_error("Invalid AIX big archive member name list")?;
-            } else {
-                // The offset would be zero if archive contains no file.
-                file.offset = 0;
-                file.len = 0;
-            }
-            return Ok(file);
-        } else if tail < len {
-            // The first few members may be special, so parse them.
-            // GNU has:
-            // - "/" or "/SYM64/": symbol table (optional)
-            // - "//": names table (optional)
-            // COFF has:
-            // - "/": first linker member
-            // - "/": second linker member
-            // - "//": names table
-            // BSD has:
-            // - "__.SYMDEF" or "__.SYMDEF SORTED": symbol table (optional)
-            // BSD 64-bit has:
-            // - "__.SYMDEF_64" or "__.SYMDEF_64 SORTED": symbol table (optional)
-            // BSD may use the extended name for the symbol table. This is handled
-            // by `ArchiveMember::parse`.
-            let member = ArchiveMember::parse(data, &mut tail, &[], file.kind)?;
+        // The first few members may be special, so parse them.
+        // GNU has:
+        // - "/" or "/SYM64/": symbol table (optional)
+        // - "//": names table (optional)
+        // COFF has:
+        // - "/": first linker member
+        // - "/": second linker member
+        // - "//": names table
+        // BSD has:
+        // - "__.SYMDEF" or "__.SYMDEF SORTED": symbol table (optional)
+        // BSD 64-bit has:
+        // - "__.SYMDEF_64" or "__.SYMDEF_64 SORTED": symbol table (optional)
+        // BSD may use the extended name for the symbol table. This is handled
+        // by `ArchiveMember::parse`.
+        if tail < len {
+            let member = ArchiveMember::parse(data, &mut tail, &[])?;
             if member.name == b"/" {
                 // GNU symbol table (unless we later determine this is COFF).
                 file.kind = ArchiveKind::Gnu;
                 file.symbols = member.file_range();
-                file.offset = tail;
+                members_offset = tail;
 
                 if tail < len {
-                    let member = ArchiveMember::parse(data, &mut tail, &[], file.kind)?;
+                    let member = ArchiveMember::parse(data, &mut tail, &[])?;
                     if member.name == b"/" {
                         // COFF linker member.
                         file.kind = ArchiveKind::Coff;
                         file.symbols = member.file_range();
-                        file.offset = tail;
+                        members_offset = tail;
 
                         if tail < len {
-                            let member = ArchiveMember::parse(data, &mut tail, &[], file.kind)?;
+                            let member = ArchiveMember::parse(data, &mut tail, &[])?;
                             if member.name == b"//" {
                                 // COFF names table.
                                 file.names = member.data(data)?;
-                                file.offset = tail;
+                                members_offset = tail;
                             }
                         }
                     } else if member.name == b"//" {
                         // GNU names table.
                         file.names = member.data(data)?;
-                        file.offset = tail;
+                        members_offset = tail;
                     }
                 }
             } else if member.name == b"/SYM64/" {
                 // GNU 64-bit symbol table.
                 file.kind = ArchiveKind::Gnu64;
                 file.symbols = member.file_range();
-                file.offset = tail;
+                members_offset = tail;
 
                 if tail < len {
-                    let member = ArchiveMember::parse(data, &mut tail, &[], file.kind)?;
+                    let member = ArchiveMember::parse(data, &mut tail, &[])?;
                     if member.name == b"//" {
                         // GNU names table.
                         file.names = member.data(data)?;
-                        file.offset = tail;
+                        members_offset = tail;
                     }
                 }
             } else if member.name == b"//" {
                 // GNU names table.
                 file.kind = ArchiveKind::Gnu;
                 file.names = member.data(data)?;
-                file.offset = tail;
+                members_offset = tail;
             } else if member.name == b"__.SYMDEF" || member.name == b"__.SYMDEF SORTED" {
                 // BSD symbol table.
                 file.kind = ArchiveKind::Bsd;
                 file.symbols = member.file_range();
-                file.offset = tail;
+                members_offset = tail;
             } else if member.name == b"__.SYMDEF_64" || member.name == b"__.SYMDEF_64 SORTED" {
                 // BSD 64-bit symbol table.
                 file.kind = ArchiveKind::Bsd64;
                 file.symbols = member.file_range();
-                file.offset = tail;
+                members_offset = tail;
             } else {
                 // TODO: This could still be a BSD file. We leave this as unknown for now.
             }
         }
+        file.members = Members::Common {
+            offset: members_offset,
+            end_offset: members_end_offset,
+        };
+        Ok(file)
+    }
+
+    fn parse_aixbig(data: R) -> read::Result<Self> {
+        let mut tail = 0;
+
+        let file_header = data
+            .read::<archive::AixFileHeader>(&mut tail)
+            .read_error("Invalid AIX big archive file header")?;
+        // Caller already validated this.
+        debug_assert_eq!(file_header.magic, archive::AIX_BIG_MAGIC);
+
+        let mut file = ArchiveFile {
+            data,
+            kind: ArchiveKind::AixBig,
+            members: Members::AixBig { index: &[] },
+            symbols: (0, 0),
+            names: &[],
+        };
+
+        // Read the span of symbol table.
+        let symtbl64 = parse_u64_digits(&file_header.gst64off, 10)
+            .read_error("Invalid offset to 64-bit symbol table in AIX big archive")?;
+        if symtbl64 > 0 {
+            // The symbol table is also a file with header.
+            let member = ArchiveMember::parse_aixbig(data, symtbl64)?;
+            file.symbols = member.file_range();
+        } else {
+            let symtbl = parse_u64_digits(&file_header.gstoff, 10)
+                .read_error("Invalid offset to symbol table in AIX big archive")?;
+            if symtbl > 0 {
+                // The symbol table is also a file with header.
+                let member = ArchiveMember::parse_aixbig(data, symtbl)?;
+                file.symbols = member.file_range();
+            }
+        }
+
+        // Big archive member index table lists file entries with offsets and names.
+        // To avoid potential infinite loop (members are double-linked list), the
+        // iterator goes through the index instead of real members.
+        let member_table_offset = parse_u64_digits(&file_header.memoff, 10)
+            .read_error("Invalid offset for member table of AIX big archive")?;
+        if member_table_offset == 0 {
+            // The offset would be zero if archive contains no file.
+            return Ok(file);
+        }
+
+        // The member index table is also a file with header.
+        let member = ArchiveMember::parse_aixbig(data, member_table_offset)?;
+        let mut member_data = Bytes(member.data(data)?);
+
+        // Structure of member index table:
+        // Number of entries (20 bytes)
+        // Offsets of each entry (20*N bytes)
+        // Names string table (the rest of bytes to fill size defined in header)
+        let members_count_bytes = member_data
+            .read_slice::<u8>(20)
+            .read_error("Missing member count in AIX big archive")?;
+        let members_count = parse_u64_digits(members_count_bytes, 10)
+            .and_then(|size| size.try_into().ok())
+            .read_error("Invalid member count in AIX big archive")?;
+        let index = member_data
+            .read_slice::<archive::AixMemberOffset>(members_count)
+            .read_error("Member count overflow in AIX big archive")?;
+        file.members = Members::AixBig { index };
+
         Ok(file)
     }
 
@@ -234,10 +241,8 @@ impl<'data, R: ReadRef<'data>> ArchiveFile<'data, R> {
     pub fn members(&self) -> ArchiveMemberIterator<'data, R> {
         ArchiveMemberIterator {
             data: self.data,
-            offset: self.offset,
-            len: self.len,
+            members: self.members,
             names: self.names,
-            kind: self.kind,
         }
     }
 }
@@ -246,25 +251,50 @@ impl<'data, R: ReadRef<'data>> ArchiveFile<'data, R> {
 #[derive(Debug)]
 pub struct ArchiveMemberIterator<'data, R: ReadRef<'data> = &'data [u8]> {
     data: R,
-    offset: u64,
-    len: u64,
+    members: Members<'data>,
     names: &'data [u8],
-    kind: ArchiveKind,
 }
 
 impl<'data, R: ReadRef<'data>> Iterator for ArchiveMemberIterator<'data, R> {
     type Item = read::Result<ArchiveMember<'data>>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.offset >= self.len {
-            return None;
+        match &mut self.members {
+            Members::Common {
+                ref mut offset,
+                ref mut end_offset,
+            } => {
+                if *offset >= *end_offset {
+                    return None;
+                }
+                let member = ArchiveMember::parse(self.data, offset, self.names);
+                if member.is_err() {
+                    *offset = *end_offset;
+                }
+                Some(member)
+            }
+            Members::AixBig { ref mut index } => match *index {
+                &[] => return None,
+                &[ref first, ref rest @ ..] => {
+                    *index = rest;
+                    let member = ArchiveMember::parse_aixbig_index(self.data, first);
+                    if member.is_err() {
+                        *index = &[];
+                    }
+                    Some(member)
+                }
+            },
         }
-        let member = ArchiveMember::parse(self.data, &mut self.offset, self.names, self.kind);
-        if member.is_err() {
-            self.offset = self.len;
-        }
-        Some(member)
     }
+}
+
+/// An archive member header.
+#[derive(Debug, Clone, Copy)]
+enum MemberHeader<'data> {
+    /// Common header used by many formats.
+    Common(&'data archive::Header),
+    /// AIX big archive header
+    AixBig(&'data archive::AixHeader),
 }
 
 /// A partially parsed archive member.
@@ -277,23 +307,10 @@ pub struct ArchiveMember<'data> {
 }
 
 impl<'data> ArchiveMember<'data> {
-    /// Parse the archive member header, name, and file data.
+    /// Parse the member header, name, and file data in an archive with the common format.
     ///
     /// This reads the extended name (if any) and adjusts the file size.
     fn parse<R: ReadRef<'data>>(
-        data: R,
-        offset: &mut u64,
-        names: &'data [u8],
-        kind: ArchiveKind,
-    ) -> read::Result<Self> {
-        match kind {
-            ArchiveKind::AixBig => Self::parse_aixbig(data, offset, &names),
-            _ => Self::parse_systemv(data, offset, &names),
-        }
-    }
-
-    /// Parse with SystemV style.
-    fn parse_systemv<R: ReadRef<'data>>(
         data: R,
         offset: &mut u64,
         names: &'data [u8],
@@ -335,73 +352,79 @@ impl<'data> ArchiveMember<'data> {
         };
 
         Ok(ArchiveMember {
-            header: MemberHeader::SystemV(header),
+            header: MemberHeader::Common(header),
             name,
             offset: file_offset,
             size: file_size,
         })
     }
 
-    /// Parse with AIX big archive style.
-    fn parse_aixbig<R: ReadRef<'data>>(
+    /// Parse a member index entry in an AIX big archive,
+    /// and then parse the member header, name, and file data.
+    fn parse_aixbig_index<R: ReadRef<'data>>(
         data: R,
-        offset: &mut u64,
-        _names: &'data [u8],
+        index: &archive::AixMemberOffset,
     ) -> read::Result<Self> {
+        let offset = parse_u64_digits(&index.0, 10)
+            .read_error("Invalid AIX big archive file member offset")?;
+        Self::parse_aixbig(data, offset)
+    }
+
+    /// Parse the member header, name, and file data in an AIX big archive.
+    fn parse_aixbig<R: ReadRef<'data>>(data: R, mut offset: u64) -> read::Result<Self> {
         // The format was described at
         // https://www.ibm.com/docs/en/aix/7.3?topic=formats-ar-file-format-big
-        let file_offset_dec = data
-            .read_bytes(offset, 20)
-            .read_error("Invalid AIX big archive file member offset")?;
-        let mut file_offset = parse_u64_digits(file_offset_dec, 10)
-            .read_error("Invalid AIX big archive file member offset")?;
         let header = data
-            .read::<archive::AixHeader>(&mut file_offset)
+            .read::<archive::AixHeader>(&mut offset)
             .read_error("Invalid AIX big archive member header")?;
         let name_length = parse_u64_digits(&header.namlen, 10)
             .read_error("Invalid AIX big archive member name length")?;
         let name = data
-            .read_bytes(&mut file_offset, name_length)
+            .read_bytes(&mut offset, name_length)
             .read_error("Invalid AIX big archive member name")?;
 
         // The actual data for a file member begins at the first even-byte boundary beyond the
         // member header and continues for the number of bytes specified by the ar_size field. The
         // ar command inserts null bytes for padding where necessary.
-        if file_offset & 1 != 0 {
-            file_offset = file_offset.saturating_add(1);
+        if offset & 1 != 0 {
+            offset = offset.saturating_add(1);
         }
         // Because of the even-byte boundary, we have to read and check terminator after header.
         let terminator = data
-            .read_bytes(&mut file_offset, 2)
-            .read_error("Invalid AIX big archive head terminator")?;
+            .read_bytes(&mut offset, 2)
+            .read_error("Invalid AIX big archive terminator")?;
         if terminator != archive::TERMINATOR {
             return Err(Error("Invalid AIX big archive terminator"));
         }
 
-        let file_size = parse_u64_digits(&header.size, 10)
+        let size = parse_u64_digits(&header.size, 10)
             .read_error("Invalid archive member size in AIX big archive")?;
         Ok(ArchiveMember {
             header: MemberHeader::AixBig(header),
             name,
-            offset: file_offset,
-            size: file_size,
+            offset,
+            size,
         })
     }
 
-    /// Return the raw header for SystemV archives.
+    /// Return the raw header that is common to many archive formats.
+    ///
+    /// Returns `None` if this archive does not use the common header format.
     #[inline]
     pub fn header(&self) -> Option<&'data archive::Header> {
         match self.header {
-            MemberHeader::SystemV(head) => Some(&head),
+            MemberHeader::Common(header) => Some(header),
             _ => None,
         }
     }
 
     /// Return the raw header for AIX big archives.
+    ///
+    /// Returns `None` if this is not an AIX big archive.
     #[inline]
     pub fn aix_header(&self) -> Option<&'data archive::AixHeader> {
         match self.header {
-            MemberHeader::AixBig(head) => Some(&head),
+            MemberHeader::AixBig(header) => Some(header),
             _ => None,
         }
     }
@@ -418,8 +441,8 @@ impl<'data> ArchiveMember<'data> {
     #[inline]
     pub fn date(&self) -> Option<u64> {
         match &self.header {
-            MemberHeader::AixBig(head) => parse_u64_digits(&head.date, 10),
-            MemberHeader::SystemV(head) => parse_u64_digits(&head.date, 10),
+            MemberHeader::Common(header) => parse_u64_digits(&header.date, 10),
+            MemberHeader::AixBig(header) => parse_u64_digits(&header.date, 10),
         }
     }
 
@@ -427,8 +450,8 @@ impl<'data> ArchiveMember<'data> {
     #[inline]
     pub fn uid(&self) -> Option<u64> {
         match &self.header {
-            MemberHeader::AixBig(head) => parse_u64_digits(&head.uid, 10),
-            MemberHeader::SystemV(head) => parse_u64_digits(&head.uid, 10),
+            MemberHeader::Common(header) => parse_u64_digits(&header.uid, 10),
+            MemberHeader::AixBig(header) => parse_u64_digits(&header.uid, 10),
         }
     }
 
@@ -436,8 +459,8 @@ impl<'data> ArchiveMember<'data> {
     #[inline]
     pub fn gid(&self) -> Option<u64> {
         match &self.header {
-            MemberHeader::AixBig(head) => parse_u64_digits(&head.gid, 10),
-            MemberHeader::SystemV(head) => parse_u64_digits(&head.gid, 10),
+            MemberHeader::Common(header) => parse_u64_digits(&header.gid, 10),
+            MemberHeader::AixBig(header) => parse_u64_digits(&header.gid, 10),
         }
     }
 
@@ -445,8 +468,8 @@ impl<'data> ArchiveMember<'data> {
     #[inline]
     pub fn mode(&self) -> Option<u64> {
         match &self.header {
-            MemberHeader::AixBig(head) => parse_u64_digits(&head.mode, 8),
-            MemberHeader::SystemV(head) => parse_u64_digits(&head.mode, 8),
+            MemberHeader::Common(header) => parse_u64_digits(&header.mode, 8),
+            MemberHeader::AixBig(header) => parse_u64_digits(&header.mode, 8),
         }
     }
 
@@ -701,7 +724,6 @@ mod tests {
         let data = &data[..];
         let archive = ArchiveFile::parse(data).unwrap();
         assert_eq!(archive.kind(), ArchiveKind::AixBig);
-        assert_eq!(archive.names, b"0123456789abcdef\0fedcba9876543210\0");
         let mut members = archive.members();
 
         let member = members.next().unwrap().unwrap();
