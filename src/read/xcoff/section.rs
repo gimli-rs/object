@@ -160,8 +160,6 @@ where
             SectionKind::UninitializedTls
         } else if section_type & (xcoff::STYP_DEBUG | xcoff::STYP_DWARF) != 0 {
             SectionKind::Debug
-        } else if section_type & xcoff::STYP_LOADER != 0 {
-            SectionKind::Loader
         } else if section_type & (xcoff::STYP_INFO | xcoff::STYP_EXCEPT) != 0 {
             SectionKind::Other
         } else {
@@ -170,7 +168,9 @@ where
     }
 
     fn relocations(&self) -> Self::RelocationIterator {
-        unimplemented!()
+        XcoffRelocationIterator {
+            file: self.file,
+        }
     }
 
     fn flags(&self) -> SectionFlags {

@@ -23,7 +23,7 @@ where
     R: ReadRef<'data>,
 {
     #[allow(unused)]
-    file: &'file XcoffFile<'data, Xcoff, R>,
+    pub(crate) file: &'file XcoffFile<'data, Xcoff, R>,
 }
 
 impl<'data, 'file, Xcoff, R> Iterator for XcoffComdatIterator<'data, 'file, Xcoff, R>

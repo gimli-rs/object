@@ -246,30 +246,40 @@ impl<'data, 'file, Xcoff: FileHeader, R: ReadRef<'data>> ObjectSymbol<'data>
     }
 
     fn kind(&self) -> SymbolKind {
-        let section = self
-            .file
-            .section_by_index(SectionIndex(self.symbol.n_scnum() as usize))
-            .unwrap();
-        let derived_kind = match section.kind() {
-            SectionKind::Data | SectionKind::Tls | SectionKind::UninitializedData | SectionKind::UninitializedTls => SymbolKind::Data,
-            SectionKind::Text => SymbolKind::Text,
-            _ => SymbolKind::Unknown
-        };
-
         match self.symbol.n_sclass() {
             xcoff::C_FILE => SymbolKind::File,
             xcoff::C_NULL => SymbolKind::Null,
             xcoff::C_GTLS | xcoff::C_STTLS => SymbolKind::Tls,
             xcoff::C_DWARF => SymbolKind::Section,
-            _ => derived_kind,
+            _ => {
+                if self.symbol.n_scnum() > 0 {
+                    let section = self
+                        .file
+                        .section_by_index(SectionIndex((self.symbol.n_scnum() - 1) as usize))
+                        .unwrap();
+                    match section.kind() {
+                        SectionKind::Data
+                        | SectionKind::Tls
+                        | SectionKind::UninitializedData
+                        | SectionKind::UninitializedTls => SymbolKind::Data,
+                        SectionKind::Text => SymbolKind::Text,
+                        _ => SymbolKind::Unknown,
+                    }
+                } else {
+                    SymbolKind::Unknown
+                }
+            }
         }
     }
 
     fn section(&self) -> SymbolSection {
-        // Section number in XCOFF is 1-based index.
-        // We treat SectionIndex internally 0-based index.
-        let index = self.symbol.n_scnum() - 1;
-        SymbolSection::Section(SectionIndex(index as usize))
+        match self.symbol.n_scnum() {
+            xcoff::N_ABS => SymbolSection::Absolute,
+            xcoff::N_UNDEF => SymbolSection::Undefined,
+            xcoff::N_DEBUG => SymbolSection::None,
+            index if index > 0 => SymbolSection::Section(SectionIndex(index as usize)),
+            _ => SymbolSection::Unknown,
+        }
     }
 
     #[inline]

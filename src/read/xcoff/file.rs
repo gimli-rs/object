@@ -111,7 +111,7 @@ where
     }
 
     fn segments(&'file self) -> XcoffSegmentIterator<'data, 'file, Xcoff, R> {
-        unimplemented!()
+        XcoffSegmentIterator { file: self }
     }
 
     fn section_by_name_bytes(
@@ -142,7 +142,7 @@ where
     }
 
     fn comdats(&'file self) -> XcoffComdatIterator<'data, 'file, Xcoff, R> {
-        unreachable!();
+        XcoffComdatIterator { file: self }
     }
 
     fn symbol_table(&'file self) -> Option<XcoffSymbolTable<'data, 'file, Xcoff, R>> {
@@ -212,7 +212,7 @@ where
     }
 
     fn entry(&'file self) -> u64 {
-        unimplemented!()
+        0
     }
 
     fn flags(&self) -> FileFlags {
