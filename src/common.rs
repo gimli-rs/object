@@ -435,7 +435,7 @@ pub enum SectionFlags {
     Xcoff {
         /// `s_flags` field in the section header.
         s_flags: u32,
-    },  
+    },
 }
 
 /// Symbol flags that are specific to each file format.

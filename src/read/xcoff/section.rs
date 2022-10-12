@@ -168,9 +168,7 @@ where
     }
 
     fn relocations(&self) -> Self::RelocationIterator {
-        XcoffRelocationIterator {
-            file: self.file,
-        }
+        XcoffRelocationIterator { file: self.file }
     }
 
     fn flags(&self) -> SectionFlags {
