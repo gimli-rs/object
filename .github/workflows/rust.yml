@@ -42,6 +42,7 @@ jobs:
       - run: cargo build --no-default-features --features read_core,write_core,macho
       - run: cargo build --no-default-features --features read_core,pe
       - run: cargo build --no-default-features --features read_core,wasm
+      - run: cargo build --no-default-features --features read_core,xcoff
       - run: cargo build --no-default-features --features doc
 
   cross:
