@@ -107,7 +107,16 @@ where
     }
 
     fn kind(&self) -> ObjectKind {
-        ObjectKind::Relocatable
+        let flags = self.header.f_flags();
+        if flags & xcoff::F_EXEC != 0 {
+            ObjectKind::Executable
+        } else if flags & xcoff::F_SHROBJ != 0 {
+            ObjectKind::Dynamic
+        } else if flags & xcoff::F_RELFLG == 0 {
+            ObjectKind::Relocatable
+        } else {
+            ObjectKind::Unknown
+        }
     }
 
     fn segments(&'file self) -> XcoffSegmentIterator<'data, 'file, Xcoff, R> {
@@ -181,6 +190,7 @@ where
     }
 
     fn dynamic_symbols(&'file self) -> XcoffSymbolIterator<'data, 'file, Xcoff, R> {
+        // TODO: return the symbols in the STYP_LOADER section.
         XcoffSymbolIterator {
             file: self,
             symbols: &self.symbols,
@@ -190,21 +200,22 @@ where
     }
 
     fn dynamic_relocations(&'file self) -> Option<Self::DynamicRelocationIterator> {
+        // TODO: return the relocations in the STYP_LOADER section.
         None
     }
 
     fn imports(&self) -> Result<alloc::vec::Vec<crate::Import<'data>>> {
-        // TODO: not needed yet.
+        // TODO: return the imports in the STYP_LOADER section.
         Ok(Vec::new())
     }
 
     fn exports(&self) -> Result<alloc::vec::Vec<crate::Export<'data>>> {
-        // TODO: not needed yet.
+        // TODO: return the exports in the STYP_LOADER section.
         Ok(Vec::new())
     }
 
     fn has_debug_symbols(&self) -> bool {
-        self.section_by_name(".debug").is_some() || self.section_by_name(".dw").is_some()
+        self.section_by_name(".debug").is_some() || self.section_by_name(".dwinfo").is_some()
     }
 
     fn relative_address_base(&'file self) -> u64 {
@@ -212,6 +223,7 @@ where
     }
 
     fn entry(&'file self) -> u64 {
+        // TODO: return the o_entry in the auxiliary header.
         0
     }
 
@@ -271,12 +283,15 @@ pub trait FileHeader: Debug + Pod {
         data: R,
         offset: &mut u64,
     ) -> read::Result<&'data [Self::AuxHeader]> {
-        let total_len = self.f_opthdr() as usize;
-        let single_len = mem::size_of::<Self::AuxHeader>();
-        if total_len % single_len != 0 {
+        let ahsize = self.f_opthdr() as usize;
+        if ahsize == 0 {
+            // No program headers is ok.
+            return Ok(&[]);
+        }
+        if ahsize > mem::size_of::<Self::AuxHeader>() {
             return Err(Error("Invalid aux header length"));
         }
-        data.read_slice(offset, total_len / single_len)
+        data.read_slice(offset, ahsize)
             .read_error("Invalid XCOFF aux header offset/size/alignment")
     }
 
@@ -287,7 +302,7 @@ pub trait FileHeader: Debug + Pod {
         data: R,
         offset: &mut u64,
     ) -> Result<SectionTable<'data, Self>> {
-        SectionTable::parse(*self, data, offset)
+        SectionTable::parse(self, data, offset)
     }
 
     /// Return the symbol table.

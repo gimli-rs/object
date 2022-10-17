@@ -160,7 +160,16 @@ where
             SectionKind::UninitializedTls
         } else if section_type & (xcoff::STYP_DEBUG | xcoff::STYP_DWARF) != 0 {
             SectionKind::Debug
-        } else if section_type & (xcoff::STYP_INFO | xcoff::STYP_EXCEPT) != 0 {
+        } else if section_type & xcoff::STYP_LOADER != 0 {
+            SectionKind::Metadata
+        } else if section_type
+            & (xcoff::STYP_INFO
+                | xcoff::STYP_EXCEPT
+                | xcoff::STYP_PAD
+                | xcoff::STYP_TYPCHK
+                | xcoff::STYP_OVRFLO)
+            != 0
+        {
             SectionKind::Other
         } else {
             SectionKind::Unknown
@@ -205,7 +214,7 @@ where
     ///
     /// `data` must be the entire file data.
     /// `offset` must be after the optional file header.
-    pub fn parse<R: ReadRef<'data>>(header: Xcoff, data: R, offset: &mut u64) -> Result<Self> {
+    pub fn parse<R: ReadRef<'data>>(header: &Xcoff, data: R, offset: &mut u64) -> Result<Self> {
         let section_num = header.f_nscns();
         if section_num == 0 {
             return Ok(SectionTable::default());

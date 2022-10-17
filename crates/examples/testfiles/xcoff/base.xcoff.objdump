@@ -1,5 +1,5 @@
 Format: Xcoff Big-endian 64-bit
-Kind: Relocatable
+Kind: Executable
 Architecture: PowerPc64
 Flags: Xcoff { f_flags: 1002 }
 Relative Address Base: 0
@@ -62,8 +62,8 @@ Symbols
 49: Symbol { name: "<invalid>", address: 800000000, size: 0, kind: Null, section: Undefined, scope: Unknown, weak: false, flags: None }
 50: Symbol { name: "printf", address: 110000970, size: 0, kind: Unknown, section: Section(SectionIndex(2)), scope: Compilation, weak: false, flags: None }
 51: Symbol { name: "<invalid>", address: 800000000, size: 0, kind: Null, section: Undefined, scope: Unknown, weak: false, flags: None }
-52: Symbol { name: "", address: 35, size: 0, kind: File, section: None, scope: Compilation, weak: false, flags: None }
-53: Symbol { name: "crt0_64.s", address: 48, size: 0, kind: File, section: None, scope: Compilation, weak: false, flags: None }
+52: Symbol { name: "", address: 0, size: 0, kind: File, section: None, scope: Compilation, weak: false, flags: None }
+53: Symbol { name: "crt0_64.s", address: 0, size: 0, kind: File, section: None, scope: Compilation, weak: false, flags: None }
 54: Symbol { name: ".__start", address: 1000001f8, size: 0, kind: Unknown, section: Section(SectionIndex(1)), scope: Compilation, weak: false, flags: None }
 55: Symbol { name: "<invalid>", address: ad00000000, size: 0, kind: Null, section: Undefined, scope: Unknown, weak: false, flags: None }
 56: Symbol { name: ".__start", address: 1000001f8, size: 0, kind: Unknown, section: Section(SectionIndex(1)), scope: Linkage, weak: false, flags: None }
@@ -82,7 +82,7 @@ Symbols
 69: Symbol { name: "<invalid>", address: 400000000, size: 0, kind: Null, section: Undefined, scope: Unknown, weak: false, flags: None }
 70: Symbol { name: "_malloc_user_defined_name", address: 1100008b8, size: 0, kind: Unknown, section: Section(SectionIndex(2)), scope: Linkage, weak: false, flags: None }
 71: Symbol { name: "<invalid>", address: 800000000, size: 0, kind: Null, section: Undefined, scope: Unknown, weak: false, flags: None }
-72: Symbol { name: ".file", address: 60, size: 0, kind: File, section: None, scope: Compilation, weak: false, flags: None }
+72: Symbol { name: ".file", address: 0, size: 0, kind: File, section: None, scope: Compilation, weak: false, flags: None }
 73: Symbol { name: "", address: 11c, size: 0, kind: Null, section: Undefined, scope: Unknown, weak: false, flags: None }
 74: Symbol { name: "", address: 15b, size: 0, kind: Null, section: Undefined, scope: Unknown, weak: false, flags: None }
 75: Symbol { name: "", address: 175, size: 0, kind: Null, section: Undefined, scope: Unknown, weak: false, flags: None }
@@ -106,7 +106,7 @@ Symbols
 93: Symbol { name: "<invalid>", address: 800000000, size: 0, kind: Null, section: Undefined, scope: Unknown, weak: false, flags: None }
 94: Symbol { name: "__dce_compat_init_routine", address: 1100008e8, size: 0, kind: Unknown, section: Section(SectionIndex(2)), scope: Linkage, weak: false, flags: None }
 95: Symbol { name: "<invalid>", address: 800000000, size: 0, kind: Null, section: Undefined, scope: Unknown, weak: false, flags: None }
-96: Symbol { name: ".file", address: 7a, size: 0, kind: File, section: None, scope: Compilation, weak: false, flags: None }
+96: Symbol { name: ".file", address: 0, size: 0, kind: File, section: None, scope: Compilation, weak: false, flags: None }
 97: Symbol { name: "", address: 226, size: 0, kind: Null, section: Undefined, scope: Unknown, weak: false, flags: None }
 98: Symbol { name: "", address: 261, size: 0, kind: Null, section: Undefined, scope: Unknown, weak: false, flags: None }
 99: Symbol { name: "", address: 27b, size: 0, kind: Null, section: Undefined, scope: Unknown, weak: false, flags: None }
@@ -132,7 +132,7 @@ Symbols
 119: Symbol { name: "<invalid>", address: 1000000000, size: 0, kind: Null, section: Undefined, scope: Unknown, weak: false, flags: None }
 120: Symbol { name: "__C_runtime_pstartup", address: 110000798, size: 0, kind: Unknown, section: Section(SectionIndex(2)), scope: Linkage, weak: false, flags: None }
 121: Symbol { name: "<invalid>", address: 800000000, size: 0, kind: Null, section: Undefined, scope: Unknown, weak: false, flags: None }
-122: Symbol { name: ".file", address: 83, size: 0, kind: File, section: None, scope: Compilation, weak: false, flags: None }
+122: Symbol { name: ".file", address: 0, size: 0, kind: File, section: None, scope: Compilation, weak: false, flags: None }
 123: Symbol { name: "", address: 626173652e630000, size: 0, kind: Null, section: Undefined, scope: Unknown, weak: false, flags: None }
 124: Symbol { name: "", address: 319, size: 0, kind: Null, section: Undefined, scope: Unknown, weak: false, flags: None }
 125: Symbol { name: ".text", address: 100000640, size: 0, kind: Unknown, section: Section(SectionIndex(1)), scope: Compilation, weak: false, flags: None }
@@ -141,27 +141,27 @@ Symbols
 128: Symbol { name: "nit_routine", address: 7d00000000, size: 0, kind: Null, section: Undefined, scope: Unknown, weak: false, flags: None }
 129: Symbol { name: ".rodata.str1.1L...str", address: 1000006c0, size: 0, kind: Unknown, section: Section(SectionIndex(1)), scope: Compilation, weak: false, flags: None }
 130: Symbol { name: "<invalid>", address: d00000000, size: 0, kind: Null, section: Undefined, scope: Unknown, weak: false, flags: None }
-131: Symbol { name: "glink64.s", address: 88, size: 0, kind: File, section: None, scope: Compilation, weak: false, flags: None }
+131: Symbol { name: "glink64.s", address: 0, size: 0, kind: File, section: None, scope: Compilation, weak: false, flags: None }
 132: Symbol { name: ".exit", address: 100000610, size: 0, kind: Unknown, section: Section(SectionIndex(1)), scope: Compilation, weak: false, flags: None }
 133: Symbol { name: "<invalid>", address: 2800000000, size: 0, kind: Null, section: Undefined, scope: Unknown, weak: false, flags: None }
 134: Symbol { name: ".exit", address: 100000610, size: 0, kind: Unknown, section: Section(SectionIndex(1)), scope: Linkage, weak: false, flags: None }
 135: Symbol { name: "utine", address: 8400000000, size: 0, kind: Null, section: Undefined, scope: Unknown, weak: false, flags: None }
-136: Symbol { name: "glink64.s", address: 8d, size: 0, kind: File, section: None, scope: Compilation, weak: false, flags: None }
+136: Symbol { name: "glink64.s", address: 0, size: 0, kind: File, section: None, scope: Compilation, weak: false, flags: None }
 137: Symbol { name: ".__run_final_dtors", address: 100000598, size: 0, kind: Unknown, section: Section(SectionIndex(1)), scope: Compilation, weak: false, flags: None }
 138: Symbol { name: "<invalid>", address: 2800000000, size: 0, kind: Null, section: Undefined, scope: Unknown, weak: false, flags: None }
 139: Symbol { name: ".__run_final_dtors", address: 100000598, size: 0, kind: Unknown, section: Section(SectionIndex(1)), scope: Linkage, weak: false, flags: None }
 140: Symbol { name: "utine", address: 8900000000, size: 0, kind: Null, section: Undefined, scope: Unknown, weak: false, flags: None }
-141: Symbol { name: "glink64.s", address: 92, size: 0, kind: File, section: None, scope: Compilation, weak: false, flags: None }
+141: Symbol { name: "glink64.s", address: 0, size: 0, kind: File, section: None, scope: Compilation, weak: false, flags: None }
 142: Symbol { name: ".atexit", address: 1000005c0, size: 0, kind: Unknown, section: Section(SectionIndex(1)), scope: Compilation, weak: false, flags: None }
 143: Symbol { name: "<invalid>", address: 2800000000, size: 0, kind: Null, section: Undefined, scope: Unknown, weak: false, flags: None }
 144: Symbol { name: ".atexit", address: 1000005c0, size: 0, kind: Unknown, section: Section(SectionIndex(1)), scope: Linkage, weak: false, flags: None }
 145: Symbol { name: "utine", address: 8e00000000, size: 0, kind: Null, section: Undefined, scope: Unknown, weak: false, flags: None }
-146: Symbol { name: "glink64.s", address: 97, size: 0, kind: File, section: None, scope: Compilation, weak: false, flags: None }
+146: Symbol { name: "glink64.s", address: 0, size: 0, kind: File, section: None, scope: Compilation, weak: false, flags: None }
 147: Symbol { name: ".__run_initial_ctors", address: 1000005e8, size: 0, kind: Unknown, section: Section(SectionIndex(1)), scope: Compilation, weak: false, flags: None }
 148: Symbol { name: "<invalid>", address: 2800000000, size: 0, kind: Null, section: Undefined, scope: Unknown, weak: false, flags: None }
 149: Symbol { name: ".__run_initial_ctors", address: 1000005e8, size: 0, kind: Unknown, section: Section(SectionIndex(1)), scope: Linkage, weak: false, flags: None }
 150: Symbol { name: "utine", address: 9300000000, size: 0, kind: Null, section: Undefined, scope: Unknown, weak: false, flags: None }
-151: Symbol { name: "glink64.s", address: ffffffffffffffff, size: 0, kind: File, section: None, scope: Compilation, weak: false, flags: None }
+151: Symbol { name: "glink64.s", address: 0, size: 0, kind: File, section: None, scope: Compilation, weak: false, flags: None }
 152: Symbol { name: ".printf", address: 100000698, size: 0, kind: Unknown, section: Section(SectionIndex(1)), scope: Compilation, weak: false, flags: None }
 153: Symbol { name: "<invalid>", address: 2800000000, size: 0, kind: Null, section: Undefined, scope: Unknown, weak: false, flags: None }
 154: Symbol { name: ".printf", address: 100000698, size: 0, kind: Unknown, section: Section(SectionIndex(1)), scope: Linkage, weak: false, flags: None }

@@ -235,7 +235,19 @@ impl<'data, 'file, Xcoff: FileHeader, R: ReadRef<'data>> ObjectSymbol<'data>
 
     #[inline]
     fn address(&self) -> u64 {
-        return self.symbol.n_value().into();
+        match self.symbol.n_sclass() {
+            xcoff::C_GSYM
+            | xcoff::C_BCOMM
+            | xcoff::C_DECL
+            | xcoff::C_ENTRY
+            | xcoff::C_ESTAT
+            | xcoff::C_ECOMM
+            | xcoff::C_FILE
+            | xcoff::C_BSTAT
+            | xcoff::C_RPSYM
+            | xcoff::C_RSYM => 0,
+            _ => self.symbol.n_value().into(),
+        }
     }
 
     #[inline]
@@ -250,7 +262,6 @@ impl<'data, 'file, Xcoff: FileHeader, R: ReadRef<'data>> ObjectSymbol<'data>
             xcoff::C_FILE => SymbolKind::File,
             xcoff::C_NULL => SymbolKind::Null,
             xcoff::C_GTLS | xcoff::C_STTLS => SymbolKind::Tls,
-            xcoff::C_DWARF => SymbolKind::Section,
             _ => {
                 if self.symbol.n_scnum() > 0 {
                     let section = self
@@ -258,10 +269,8 @@ impl<'data, 'file, Xcoff: FileHeader, R: ReadRef<'data>> ObjectSymbol<'data>
                         .section_by_index(SectionIndex((self.symbol.n_scnum() - 1) as usize))
                         .unwrap();
                     match section.kind() {
-                        SectionKind::Data
-                        | SectionKind::Tls
-                        | SectionKind::UninitializedData
-                        | SectionKind::UninitializedTls => SymbolKind::Data,
+                        SectionKind::Data | SectionKind::UninitializedData => SymbolKind::Data,
+                        SectionKind::UninitializedTls | SectionKind::Tls => SymbolKind::Tls,
                         SectionKind::Text => SymbolKind::Text,
                         _ => SymbolKind::Unknown,
                     }
@@ -408,6 +417,7 @@ impl Symbol for xcoff::Symbol32 {
     }
 
     fn n_offset(&self) -> u32 {
+        // TODO: this should be `n_name` field instead of `n_offset`.
         0
     }
 
