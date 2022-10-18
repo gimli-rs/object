@@ -1,4 +1,5 @@
 use alloc::fmt;
+use core::convert::TryInto;
 use core::fmt::Debug;
 use core::str;
 
@@ -178,7 +179,8 @@ impl<'data, 'file, Xcoff: FileHeader, R: ReadRef<'data>> Iterator
     fn next(&mut self) -> Option<Self::Item> {
         let index = self.index;
         let symbol = self.symbols.symbols.get(index)?;
-        self.index += 1;
+        // TODO: skip over the auxiliary symbols for now.
+        self.index += 1 + symbol.n_numaux() as usize;
         Some(XcoffSymbol {
             file: self.file,
             symbols: self.symbols,
@@ -236,17 +238,14 @@ impl<'data, 'file, Xcoff: FileHeader, R: ReadRef<'data>> ObjectSymbol<'data>
     #[inline]
     fn address(&self) -> u64 {
         match self.symbol.n_sclass() {
-            xcoff::C_GSYM
-            | xcoff::C_BCOMM
-            | xcoff::C_DECL
-            | xcoff::C_ENTRY
-            | xcoff::C_ESTAT
-            | xcoff::C_ECOMM
-            | xcoff::C_FILE
-            | xcoff::C_BSTAT
-            | xcoff::C_RPSYM
-            | xcoff::C_RSYM => 0,
-            _ => self.symbol.n_value().into(),
+            // Relocatable address.
+            xcoff::C_EXT
+            | xcoff::C_WEAKEXT
+            | xcoff::C_HIDEXT
+            | xcoff::C_FCN
+            | xcoff::C_BLOCK
+            | xcoff::C_STAT => self.symbol.n_value().into(),
+            _ => 0,
         }
     }
 
@@ -316,9 +315,13 @@ impl<'data, 'file, Xcoff: FileHeader, R: ReadRef<'data>> ObjectSymbol<'data>
             SymbolScope::Unknown
         } else {
             match self.symbol.n_sclass() {
-                xcoff::C_EXT | xcoff::C_WEAKEXT => {
-                    // TODO: determine if symbol is exported
-                    SymbolScope::Linkage
+                xcoff::C_EXT | xcoff::C_WEAKEXT | xcoff::C_HIDEXT => {
+                    let visbility = self.symbol.n_type() & xcoff::SYM_V_MASK;
+                    if visbility == xcoff::SYM_V_HIDDEN || visbility == xcoff::SYM_V_EXPORTED {
+                        SymbolScope::Linkage
+                    } else {
+                        SymbolScope::Dynamic
+                    }
                 }
                 _ => SymbolScope::Compilation,
             }
@@ -350,21 +353,15 @@ pub trait Symbol: Debug + Pod {
     type Word: Into<u64>;
 
     fn n_value(&self) -> Self::Word;
-    fn n_offset(&self) -> u32;
     fn n_scnum(&self) -> i16;
     fn n_type(&self) -> u16;
     fn n_sclass(&self) -> u8;
     fn n_numaux(&self) -> u8;
 
-    /// Parse the symbol name from the string table.
     fn name<'data, R: ReadRef<'data>>(
-        &self,
+        &'data self,
         strings: StringTable<'data, R>,
-    ) -> read::Result<&'data [u8]> {
-        strings
-            .get(self.n_offset())
-            .read_error("Invalid XCOFF symbol name offset")
-    }
+    ) -> Result<&'data [u8]>;
 
     /// Return true if the symbol is undefined.
     #[inline]
@@ -388,10 +385,6 @@ impl Symbol for xcoff::Symbol64 {
         self.n_value.get(BE)
     }
 
-    fn n_offset(&self) -> u32 {
-        self.n_offset.get(BE)
-    }
-
     fn n_scnum(&self) -> i16 {
         self.n_scnum.get(BE)
     }
@@ -406,6 +399,16 @@ impl Symbol for xcoff::Symbol64 {
 
     fn n_numaux(&self) -> u8 {
         self.n_numaux
+    }
+
+    /// Parse the symbol name for XCOFF64.
+    fn name<'data, R: ReadRef<'data>>(
+        &'data self,
+        strings: StringTable<'data, R>,
+    ) -> Result<&'data [u8]> {
+        strings
+            .get(self.n_offset.get(BE))
+            .read_error("Invalid XCOFF symbol name offset")
     }
 }
 
@@ -416,11 +419,6 @@ impl Symbol for xcoff::Symbol32 {
         self.n_value.get(BE)
     }
 
-    fn n_offset(&self) -> u32 {
-        // TODO: this should be `n_name` field instead of `n_offset`.
-        0
-    }
-
     fn n_scnum(&self) -> i16 {
         self.n_scnum.get(BE)
     }
@@ -435,5 +433,25 @@ impl Symbol for xcoff::Symbol32 {
 
     fn n_numaux(&self) -> u8 {
         self.n_numaux
+    }
+
+    /// Parse the symbol name for XCOFF32.
+    fn name<'data, R: ReadRef<'data>>(
+        &'data self,
+        strings: StringTable<'data, R>,
+    ) -> Result<&'data [u8]> {
+        if self.n_name[0] == 0 {
+            // If the name starts with 0 then the last 4 bytes are a string table offset.
+            let offset = u32::from_be_bytes(self.n_name[4..8].try_into().unwrap());
+            strings
+                .get(offset)
+                .read_error("Invalid XCOFF symbol name offset")
+        } else {
+            // The name is inline and padded with nulls.
+            Ok(match memchr::memchr(b'\0', &self.n_name) {
+                Some(end) => &self.n_name[..end],
+                None => &self.n_name,
+            })
+        }
     }
 }

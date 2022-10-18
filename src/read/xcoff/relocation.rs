@@ -34,6 +34,7 @@ where
     type Item = (u64, Relocation);
 
     fn next(&mut self) -> Option<Self::Item> {
+        // TODO: return the relocations in the section.
         None
     }
 }

@@ -1,5 +1,4 @@
 use core::fmt::Debug;
-use core::mem;
 
 use alloc::vec::Vec;
 
@@ -45,6 +44,8 @@ where
     pub fn parse(data: R) -> Result<Self> {
         let mut offset = 0;
         let header = Xcoff::parse(data, &mut offset)?;
+        // TODO: skip over the auxiliary header for now.
+        offset += header.f_opthdr() as u64;
         let sections = header.sections(data, &mut offset)?;
         let symbols = header.symbols(data)?;
         Ok(XcoffFile {
@@ -269,30 +270,8 @@ pub trait FileHeader: Debug + Pod {
         Ok(header)
     }
 
-    /// TODO: currently only 64-bit is supported.
     fn is_supported(&self) -> bool {
-        self.is_type_64()
-    }
-
-    /// Return the slice of auxiliary header.
-    ///
-    /// `data` must be the entire file data.
-    /// `offset` must be after the file header.
-    fn aux_headers<'data, R: ReadRef<'data>>(
-        &self,
-        data: R,
-        offset: &mut u64,
-    ) -> read::Result<&'data [Self::AuxHeader]> {
-        let ahsize = self.f_opthdr() as usize;
-        if ahsize == 0 {
-            // No program headers is ok.
-            return Ok(&[]);
-        }
-        if ahsize > mem::size_of::<Self::AuxHeader>() {
-            return Err(Error("Invalid aux header length"));
-        }
-        data.read_slice(offset, ahsize)
-            .read_error("Invalid XCOFF aux header offset/size/alignment")
+        self.f_magic() == xcoff::MAGIC_64 || self.f_magic() == xcoff::MAGIC_32
     }
 
     /// Read the section table.

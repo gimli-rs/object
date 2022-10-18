@@ -66,7 +66,7 @@ where
 impl<'data, 'file, Xcoff: FileHeader, R: ReadRef<'data>> XcoffSection<'data, 'file, Xcoff, R> {
     fn bytes(&self) -> Result<&'data [u8]> {
         self.section
-            .xcoff_data(self.file.data)
+            .data(self.file.data)
             .read_error("Invalid XCOFF section offset or size")
     }
 }
@@ -160,14 +160,10 @@ where
             SectionKind::UninitializedTls
         } else if section_type & (xcoff::STYP_DEBUG | xcoff::STYP_DWARF) != 0 {
             SectionKind::Debug
-        } else if section_type & xcoff::STYP_LOADER != 0 {
+        } else if section_type & (xcoff::STYP_LOADER | xcoff::STYP_OVRFLO) != 0 {
             SectionKind::Metadata
         } else if section_type
-            & (xcoff::STYP_INFO
-                | xcoff::STYP_EXCEPT
-                | xcoff::STYP_PAD
-                | xcoff::STYP_TYPCHK
-                | xcoff::STYP_OVRFLO)
+            & (xcoff::STYP_INFO | xcoff::STYP_EXCEPT | xcoff::STYP_PAD | xcoff::STYP_TYPCHK)
             != 0
         {
             SectionKind::Other
@@ -287,7 +283,7 @@ pub trait SectionHeader: Debug + Pod {
     ///
     /// Returns `Ok(&[])` if the section has no data.
     /// Returns `Err` for invalid values.
-    fn xcoff_data<'data, R: ReadRef<'data>>(&self, data: R) -> result::Result<&'data [u8], ()> {
+    fn data<'data, R: ReadRef<'data>>(&self, data: R) -> result::Result<&'data [u8], ()> {
         if let Some((offset, size)) = self.file_range() {
             data.read_bytes_at(offset.into(), size.into())
         } else {
