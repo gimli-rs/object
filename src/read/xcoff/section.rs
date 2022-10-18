@@ -98,7 +98,8 @@ where
     }
 
     fn align(&self) -> u64 {
-        // TODO: return the alignment for different sections.
+        // TODO: return the alignment from o_algntext or o_algndata in auxiliary header.
+        // The default section alignment is 4.
         4
     }
 

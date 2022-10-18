@@ -260,7 +260,6 @@ impl<'data, 'file, Xcoff: FileHeader, R: ReadRef<'data>> ObjectSymbol<'data>
         match self.symbol.n_sclass() {
             xcoff::C_FILE => SymbolKind::File,
             xcoff::C_NULL => SymbolKind::Null,
-            xcoff::C_GTLS | xcoff::C_STTLS => SymbolKind::Tls,
             _ => {
                 if self.symbol.n_scnum() > 0 {
                     let section = self
