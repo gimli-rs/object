@@ -88,6 +88,7 @@ pub enum BinaryFormat {
     MachO,
     Pe,
     Wasm,
+    Xcoff,
 }
 
 /// The kind of a section.
@@ -375,6 +376,11 @@ pub enum FileFlags {
         /// `Characteristics` field in the COFF file header.
         characteristics: u16,
     },
+    /// XCOFF file flags.
+    Xcoff {
+        /// `f_flags` field in the XCOFF file header.
+        f_flags: u16,
+    },
 }
 
 /// Segment flags that are specific to each file format.
@@ -424,6 +430,11 @@ pub enum SectionFlags {
     Coff {
         /// `Characteristics` field in the section header.
         characteristics: u32,
+    },
+    /// XCOFF section flags.
+    Xcoff {
+        /// `s_flags` field in the section header.
+        s_flags: u32,
     },
 }
 

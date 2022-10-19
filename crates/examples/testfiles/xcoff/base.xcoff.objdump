@@ -1,0 +1,93 @@
+Format: Xcoff Big-endian 64-bit
+Kind: Executable
+Architecture: PowerPc64
+Flags: Xcoff { f_flags: 1002 }
+Relative Address Base: 0
+Entry Address: 0
+0: Section { name: ".text", address: 1000001f8, size: 4d5, align: 4, kind: Text, flags: Xcoff { s_flags: 20 } }
+1: Section { name: ".data", address: 1100006cd, size: 2ab, align: 4, kind: Data, flags: Xcoff { s_flags: 40 } }
+2: Section { name: ".bss", address: 110000978, size: 0, align: 4, kind: UninitializedData, flags: Xcoff { s_flags: 80 } }
+3: Section { name: ".loader", address: 0, size: 485, align: 4, kind: Metadata, flags: Xcoff { s_flags: 1000 } }
+
+Symbols
+0: Symbol { name: "errno", address: 0, size: 0, kind: Unknown, section: Undefined, scope: Unknown, weak: false, flags: None }
+2: Symbol { name: "__mod_init", address: 0, size: 0, kind: Unknown, section: Undefined, scope: Unknown, weak: false, flags: None }
+4: Symbol { name: "exit", address: 0, size: 0, kind: Unknown, section: Undefined, scope: Unknown, weak: false, flags: None }
+6: Symbol { name: "atexit", address: 0, size: 0, kind: Unknown, section: Undefined, scope: Unknown, weak: false, flags: None }
+8: Symbol { name: "printf", address: 0, size: 0, kind: Unknown, section: Undefined, scope: Unknown, weak: false, flags: None }
+10: Symbol { name: "__run_final_dtors", address: 0, size: 0, kind: Unknown, section: Undefined, scope: Unknown, weak: false, flags: None }
+12: Symbol { name: "__run_initial_ctors", address: 0, size: 0, kind: Unknown, section: Undefined, scope: Unknown, weak: false, flags: None }
+14: Symbol { name: "__n_pthreads", address: 0, size: 0, kind: Unknown, section: Undefined, scope: Unknown, weak: false, flags: None }
+16: Symbol { name: "__crt0v", address: 0, size: 0, kind: Unknown, section: Undefined, scope: Unknown, weak: false, flags: None }
+18: Symbol { name: "__malloc_user_defined_name", address: 0, size: 0, kind: Unknown, section: Undefined, scope: Unknown, weak: false, flags: None }
+20: Symbol { name: "TOC", address: 1100008b8, size: 0, kind: Data, section: Section(SectionIndex(2)), scope: Dynamic, weak: false, flags: None }
+22: Symbol { name: "__crt0v", address: 110000900, size: 0, kind: Data, section: Section(SectionIndex(2)), scope: Dynamic, weak: false, flags: None }
+24: Symbol { name: "crt0_data", address: 110000908, size: 0, kind: Data, section: Section(SectionIndex(2)), scope: Dynamic, weak: false, flags: None }
+26: Symbol { name: "__run_final_dtors", address: 110000910, size: 0, kind: Data, section: Section(SectionIndex(2)), scope: Dynamic, weak: false, flags: None }
+28: Symbol { name: "_$STATIC", address: 110000918, size: 0, kind: Data, section: Section(SectionIndex(2)), scope: Dynamic, weak: false, flags: None }
+30: Symbol { name: "__C_runtime_termination", address: 110000920, size: 0, kind: Data, section: Section(SectionIndex(2)), scope: Dynamic, weak: false, flags: None }
+32: Symbol { name: "atexit", address: 110000928, size: 0, kind: Data, section: Section(SectionIndex(2)), scope: Dynamic, weak: false, flags: None }
+34: Symbol { name: "_cdtors", address: 110000930, size: 0, kind: Data, section: Section(SectionIndex(2)), scope: Dynamic, weak: false, flags: None }
+36: Symbol { name: "__run_initial_ctors", address: 110000938, size: 0, kind: Data, section: Section(SectionIndex(2)), scope: Dynamic, weak: false, flags: None }
+38: Symbol { name: "exit", address: 110000940, size: 0, kind: Data, section: Section(SectionIndex(2)), scope: Dynamic, weak: false, flags: None }
+40: Symbol { name: "__n_pthreads", address: 110000948, size: 0, kind: Data, section: Section(SectionIndex(2)), scope: Dynamic, weak: false, flags: None }
+42: Symbol { name: "__mod_init", address: 110000950, size: 0, kind: Data, section: Section(SectionIndex(2)), scope: Dynamic, weak: false, flags: None }
+44: Symbol { name: "__malloc_user_defined_name", address: 110000958, size: 0, kind: Data, section: Section(SectionIndex(2)), scope: Dynamic, weak: false, flags: None }
+46: Symbol { name: "errno", address: 110000960, size: 0, kind: Data, section: Section(SectionIndex(2)), scope: Dynamic, weak: false, flags: None }
+48: Symbol { name: ".rodata.str1.1L...str", address: 110000968, size: 0, kind: Data, section: Section(SectionIndex(2)), scope: Dynamic, weak: false, flags: None }
+50: Symbol { name: "printf", address: 110000970, size: 0, kind: Data, section: Section(SectionIndex(2)), scope: Dynamic, weak: false, flags: None }
+52: Symbol { name: "", address: 0, size: 0, kind: File, section: None, scope: Compilation, weak: false, flags: None }
+53: Symbol { name: "crt0_64.s", address: 0, size: 0, kind: File, section: None, scope: Compilation, weak: false, flags: None }
+54: Symbol { name: ".__start", address: 1000001f8, size: 0, kind: Text, section: Section(SectionIndex(1)), scope: Dynamic, weak: false, flags: None }
+56: Symbol { name: ".__start", address: 1000001f8, size: 0, kind: Text, section: Section(SectionIndex(1)), scope: Dynamic, weak: false, flags: None }
+58: Symbol { name: "__start", address: 110000848, size: 0, kind: Data, section: Section(SectionIndex(2)), scope: Dynamic, weak: false, flags: None }
+60: Symbol { name: "crt0_data", address: 1100006d0, size: 0, kind: Data, section: Section(SectionIndex(2)), scope: Dynamic, weak: false, flags: None }
+62: Symbol { name: "p_xargc", address: 1100008c0, size: 0, kind: Data, section: Section(SectionIndex(2)), scope: Dynamic, weak: false, flags: None }
+64: Symbol { name: "p_xargv", address: 1100008f0, size: 0, kind: Data, section: Section(SectionIndex(2)), scope: Dynamic, weak: false, flags: None }
+66: Symbol { name: "p_xrcfg", address: 1100008f8, size: 0, kind: Data, section: Section(SectionIndex(2)), scope: Dynamic, weak: false, flags: None }
+68: Symbol { name: "p_xrc", address: 1100008fc, size: 0, kind: Data, section: Section(SectionIndex(2)), scope: Dynamic, weak: false, flags: None }
+70: Symbol { name: "_malloc_user_defined_name", address: 1100008b8, size: 0, kind: Data, section: Section(SectionIndex(2)), scope: Dynamic, weak: false, flags: None }
+72: Symbol { name: ".file", address: 0, size: 0, kind: File, section: None, scope: Compilation, weak: false, flags: None }
+76: Symbol { name: "", address: 1000002c0, size: 0, kind: Text, section: Section(SectionIndex(1)), scope: Dynamic, weak: false, flags: None }
+78: Symbol { name: ".__threads_init", address: 1000002c0, size: 0, kind: Text, section: Section(SectionIndex(1)), scope: Dynamic, weak: false, flags: None }
+80: Symbol { name: ".__threads_init@AF2_1", address: 100000300, size: 0, kind: Text, section: Section(SectionIndex(1)), scope: Dynamic, weak: false, flags: None }
+82: Symbol { name: "_$STATIC", address: 110000738, size: 0, kind: Data, section: Section(SectionIndex(2)), scope: Dynamic, weak: false, flags: None }
+84: Symbol { name: "__threads_init", address: 110000858, size: 0, kind: Data, section: Section(SectionIndex(2)), scope: Dynamic, weak: false, flags: None }
+86: Symbol { name: "__pth_init_routine", address: 1100008c8, size: 0, kind: Data, section: Section(SectionIndex(2)), scope: Dynamic, weak: false, flags: None }
+88: Symbol { name: "_bsd_init_routine", address: 1100008d0, size: 0, kind: Data, section: Section(SectionIndex(2)), scope: Dynamic, weak: false, flags: None }
+90: Symbol { name: "_xti_tli_init_routine", address: 1100008d8, size: 0, kind: Data, section: Section(SectionIndex(2)), scope: Dynamic, weak: false, flags: None }
+92: Symbol { name: "_nsl_init_routine", address: 1100008e0, size: 0, kind: Data, section: Section(SectionIndex(2)), scope: Dynamic, weak: false, flags: None }
+94: Symbol { name: "__dce_compat_init_routine", address: 1100008e8, size: 0, kind: Data, section: Section(SectionIndex(2)), scope: Dynamic, weak: false, flags: None }
+96: Symbol { name: ".file", address: 0, size: 0, kind: File, section: None, scope: Compilation, weak: false, flags: None }
+100: Symbol { name: "", address: 100000420, size: 0, kind: Text, section: Section(SectionIndex(1)), scope: Dynamic, weak: false, flags: None }
+102: Symbol { name: ".__User_sinit_begin", address: 100000420, size: 0, kind: Text, section: Section(SectionIndex(1)), scope: Dynamic, weak: false, flags: None }
+104: Symbol { name: ".__C_runtime_termination", address: 100000448, size: 0, kind: Text, section: Section(SectionIndex(1)), scope: Dynamic, weak: false, flags: None }
+106: Symbol { name: ".__C_runtime_startup", address: 100000498, size: 0, kind: Text, section: Section(SectionIndex(1)), scope: Dynamic, weak: false, flags: None }
+108: Symbol { name: ".__dftdt__L304e50f8c42_5CatchFv", address: 100000520, size: 0, kind: Text, section: Section(SectionIndex(1)), scope: Dynamic, weak: false, flags: None }
+110: Symbol { name: "_$STATIC", address: 1100007a0, size: 0, kind: Data, section: Section(SectionIndex(2)), scope: Dynamic, weak: false, flags: None }
+112: Symbol { name: "__dftdt__L304e50f8c42_5CatchFv", address: 110000888, size: 0, kind: Data, section: Section(SectionIndex(2)), scope: Dynamic, weak: false, flags: None }
+114: Symbol { name: "__C_runtime_termination", address: 1100008a0, size: 0, kind: Data, section: Section(SectionIndex(2)), scope: Dynamic, weak: false, flags: None }
+116: Symbol { name: "__C_runtime_startup", address: 110000870, size: 0, kind: Data, section: Section(SectionIndex(2)), scope: Dynamic, weak: false, flags: None }
+118: Symbol { name: "_cdtors", address: 110000838, size: 0, kind: Data, section: Section(SectionIndex(2)), scope: Dynamic, weak: true, flags: None }
+120: Symbol { name: "__C_runtime_pstartup", address: 110000798, size: 0, kind: Data, section: Section(SectionIndex(2)), scope: Dynamic, weak: false, flags: None }
+122: Symbol { name: ".file", address: 0, size: 0, kind: File, section: None, scope: Compilation, weak: false, flags: None }
+125: Symbol { name: ".text", address: 100000640, size: 0, kind: Text, section: Section(SectionIndex(1)), scope: Dynamic, weak: false, flags: None }
+127: Symbol { name: ".main", address: 100000640, size: 0, kind: Text, section: Section(SectionIndex(1)), scope: Dynamic, weak: false, flags: None }
+129: Symbol { name: ".rodata.str1.1L...str", address: 1000006c0, size: 0, kind: Text, section: Section(SectionIndex(1)), scope: Dynamic, weak: false, flags: None }
+131: Symbol { name: "glink64.s", address: 0, size: 0, kind: File, section: None, scope: Compilation, weak: false, flags: None }
+132: Symbol { name: ".exit", address: 100000610, size: 0, kind: Text, section: Section(SectionIndex(1)), scope: Dynamic, weak: false, flags: None }
+134: Symbol { name: ".exit", address: 100000610, size: 0, kind: Text, section: Section(SectionIndex(1)), scope: Dynamic, weak: false, flags: None }
+136: Symbol { name: "glink64.s", address: 0, size: 0, kind: File, section: None, scope: Compilation, weak: false, flags: None }
+137: Symbol { name: ".__run_final_dtors", address: 100000598, size: 0, kind: Text, section: Section(SectionIndex(1)), scope: Dynamic, weak: false, flags: None }
+139: Symbol { name: ".__run_final_dtors", address: 100000598, size: 0, kind: Text, section: Section(SectionIndex(1)), scope: Dynamic, weak: false, flags: None }
+141: Symbol { name: "glink64.s", address: 0, size: 0, kind: File, section: None, scope: Compilation, weak: false, flags: None }
+142: Symbol { name: ".atexit", address: 1000005c0, size: 0, kind: Text, section: Section(SectionIndex(1)), scope: Dynamic, weak: false, flags: None }
+144: Symbol { name: ".atexit", address: 1000005c0, size: 0, kind: Text, section: Section(SectionIndex(1)), scope: Dynamic, weak: false, flags: None }
+146: Symbol { name: "glink64.s", address: 0, size: 0, kind: File, section: None, scope: Compilation, weak: false, flags: None }
+147: Symbol { name: ".__run_initial_ctors", address: 1000005e8, size: 0, kind: Text, section: Section(SectionIndex(1)), scope: Dynamic, weak: false, flags: None }
+149: Symbol { name: ".__run_initial_ctors", address: 1000005e8, size: 0, kind: Text, section: Section(SectionIndex(1)), scope: Dynamic, weak: false, flags: None }
+151: Symbol { name: "glink64.s", address: 0, size: 0, kind: File, section: None, scope: Compilation, weak: false, flags: None }
+152: Symbol { name: ".printf", address: 100000698, size: 0, kind: Text, section: Section(SectionIndex(1)), scope: Dynamic, weak: false, flags: None }
+154: Symbol { name: ".printf", address: 100000698, size: 0, kind: Text, section: Section(SectionIndex(1)), scope: Dynamic, weak: false, flags: None }
+
+Dynamic symbols
