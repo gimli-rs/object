@@ -271,7 +271,8 @@ pub trait FileHeader: Debug + Pod {
     }
 
     fn is_supported(&self) -> bool {
-        self.f_magic() == xcoff::MAGIC_64 || self.f_magic() == xcoff::MAGIC_32
+        (self.is_type_64() && self.f_magic() == xcoff::MAGIC_64)
+            || (!self.is_type_64() && self.f_magic() == xcoff::MAGIC_32)
     }
 
     /// Read the section table.

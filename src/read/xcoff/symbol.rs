@@ -260,22 +260,16 @@ impl<'data, 'file, Xcoff: FileHeader, R: ReadRef<'data>> ObjectSymbol<'data>
         match self.symbol.n_sclass() {
             xcoff::C_FILE => SymbolKind::File,
             xcoff::C_NULL => SymbolKind::Null,
-            _ => {
-                if self.symbol.n_scnum() > 0 {
-                    let section = self
-                        .file
-                        .section_by_index(SectionIndex((self.symbol.n_scnum() - 1) as usize))
-                        .unwrap();
-                    match section.kind() {
-                        SectionKind::Data | SectionKind::UninitializedData => SymbolKind::Data,
-                        SectionKind::UninitializedTls | SectionKind::Tls => SymbolKind::Tls,
-                        SectionKind::Text => SymbolKind::Text,
-                        _ => SymbolKind::Unknown,
-                    }
-                } else {
-                    SymbolKind::Unknown
-                }
-            }
+            _ => self
+                .file
+                .section_by_index(SectionIndex((self.symbol.n_scnum() - 1) as usize))
+                .map(|section| match section.kind() {
+                    SectionKind::Data | SectionKind::UninitializedData => SymbolKind::Data,
+                    SectionKind::UninitializedTls | SectionKind::Tls => SymbolKind::Tls,
+                    SectionKind::Text => SymbolKind::Text,
+                    _ => SymbolKind::Unknown,
+                })
+                .unwrap_or(SymbolKind::Unknown),
         }
     }
 
@@ -315,8 +309,8 @@ impl<'data, 'file, Xcoff: FileHeader, R: ReadRef<'data>> ObjectSymbol<'data>
         } else {
             match self.symbol.n_sclass() {
                 xcoff::C_EXT | xcoff::C_WEAKEXT | xcoff::C_HIDEXT => {
-                    let visbility = self.symbol.n_type() & xcoff::SYM_V_MASK;
-                    if visbility == xcoff::SYM_V_HIDDEN || visbility == xcoff::SYM_V_EXPORTED {
+                    let visibility = self.symbol.n_type() & xcoff::SYM_V_MASK;
+                    if visibility == xcoff::SYM_V_HIDDEN {
                         SymbolScope::Linkage
                     } else {
                         SymbolScope::Dynamic
