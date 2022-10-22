@@ -3,7 +3,7 @@ Kind: Executable
 Architecture: PowerPc
 Flags: Xcoff { f_flags: 1002 }
 Relative Address Base: 0
-Entry Address: 0
+Entry Address: 20000710
 0: Section { name: ".text", address: 10000128, size: 4c9, align: 4, kind: Unknown, flags: Xcoff { s_flags: 0 } }
 1: Section { name: ".data", address: 200005f1, size: 1b7, align: 4, kind: Unknown, flags: Xcoff { s_flags: 0 } }
 2: Section { name: ".bss", address: 200007a8, size: 0, align: 4, kind: Unknown, flags: Xcoff { s_flags: 0 } }

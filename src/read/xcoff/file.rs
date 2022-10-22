@@ -31,6 +31,7 @@ where
 {
     pub(super) data: R,
     pub(super) header: &'data Xcoff,
+    pub(super) aux_header: Option<&'data Xcoff::AuxHeader>,
     pub(super) sections: SectionTable<'data, Xcoff>,
     pub(super) symbols: SymbolTable<'data, Xcoff, R>,
 }
@@ -44,13 +45,13 @@ where
     pub fn parse(data: R) -> Result<Self> {
         let mut offset = 0;
         let header = Xcoff::parse(data, &mut offset)?;
-        // TODO: skip over the auxiliary header for now.
-        offset += header.f_opthdr() as u64;
+        let aux_header = header.aux_header(data, &mut offset)?;
         let sections = header.sections(data, &mut offset)?;
         let symbols = header.symbols(data)?;
         Ok(XcoffFile {
             data,
             header,
+            aux_header,
             sections,
             symbols,
         })
@@ -135,7 +136,7 @@ where
     fn section_by_index(
         &'file self,
         index: SectionIndex,
-    ) -> read::Result<XcoffSection<'data, 'file, Xcoff, R>> {
+    ) -> Result<XcoffSection<'data, 'file, Xcoff, R>> {
         let section = self.sections.section(index)?;
         Ok(XcoffSection {
             file: self,
@@ -168,7 +169,7 @@ where
     fn symbol_by_index(
         &'file self,
         index: SymbolIndex,
-    ) -> read::Result<XcoffSymbol<'data, 'file, Xcoff, R>> {
+    ) -> Result<XcoffSymbol<'data, 'file, Xcoff, R>> {
         let symbol = self.symbols.symbol(index.0)?;
         Ok(XcoffSymbol {
             symbols: &self.symbols,
@@ -224,8 +225,11 @@ where
     }
 
     fn entry(&'file self) -> u64 {
-        // TODO: return the o_entry in the auxiliary header.
-        0
+        if let Some(aux_header) = self.aux_header {
+            aux_header.o_entry().into()
+        } else {
+            0
+        }
     }
 
     fn flags(&self) -> FileFlags {
@@ -260,7 +264,7 @@ pub trait FileHeader: Debug + Pod {
     /// Read the file header.
     ///
     /// Also checks that the magic field in the file header is a supported format.
-    fn parse<'data, R: ReadRef<'data>>(data: R, offset: &mut u64) -> read::Result<&'data Self> {
+    fn parse<'data, R: ReadRef<'data>>(data: R, offset: &mut u64) -> Result<&'data Self> {
         let header = data
             .read::<Self>(offset)
             .read_error("Invalid XCOFF header size or alignment")?;
@@ -273,6 +277,31 @@ pub trait FileHeader: Debug + Pod {
     fn is_supported(&self) -> bool {
         (self.is_type_64() && self.f_magic() == xcoff::MAGIC_64)
             || (!self.is_type_64() && self.f_magic() == xcoff::MAGIC_32)
+    }
+
+    /// Read the auxiliary file header.
+    fn aux_header<'data, R: ReadRef<'data>>(
+        &self,
+        data: R,
+        offset: &mut u64,
+    ) -> Result<Option<&'data Self::AuxHeader>> {
+        let aux_header_size = self.f_opthdr();
+        if aux_header_size == 0 {
+            // No auxiliary header is ok.
+            return Ok(None);
+        }
+        if aux_header_size == xcoff::AOUTHSZ_SHORT {
+            // TODO: skip over the aux header with a size of AOUTHSZ_SHORT.
+            *offset += xcoff::AOUTHSZ_SHORT as u64;
+            return Ok(None);
+        }
+        if aux_header_size != std::mem::size_of::<Self::AuxHeader>() as u16 {
+            return Err(Error("Invalid auxiliary header size"));
+        }
+        let aux_header = data
+            .read::<Self::AuxHeader>(offset)
+            .read_error("Invalid XCOFF auxiliary header size")?;
+        Ok(Some(aux_header))
     }
 
     /// Read the section table.
@@ -375,12 +404,220 @@ impl FileHeader for xcoff::FileHeader64 {
 #[allow(missing_docs)]
 pub trait AuxHeader: Debug + Pod {
     type Word: Into<u64>;
+
+    fn o_vstamp(&self) -> u16;
+    fn o_tsize(&self) -> Self::Word;
+    fn o_dsize(&self) -> Self::Word;
+    fn o_bsize(&self) -> Self::Word;
+    fn o_entry(&self) -> Self::Word;
+    fn o_text_start(&self) -> Self::Word;
+    fn o_data_start(&self) -> Self::Word;
+    fn o_toc(&self) -> Self::Word;
+    fn o_snentry(&self) -> u16;
+    fn o_sntext(&self) -> u16;
+    fn o_sndata(&self) -> u16;
+    fn o_sntoc(&self) -> u16;
+    fn o_snloader(&self) -> u16;
+    fn o_snbss(&self) -> u16;
+    fn o_sntdata(&self) -> u16;
+    fn o_sntbss(&self) -> u16;
+    fn o_algntext(&self) -> u16;
+    fn o_algndata(&self) -> u16;
+    fn o_maxstack(&self) -> Self::Word;
+    fn o_maxdata(&self) -> Self::Word;
+    fn o_textpsize(&self) -> u8;
+    fn o_datapsize(&self) -> u8;
+    fn o_stackpsize(&self) -> u8;
 }
 
 impl AuxHeader for xcoff::AuxHeader32 {
     type Word = u32;
+
+    fn o_vstamp(&self) -> u16 {
+        self.o_vstamp.get(BE)
+    }
+
+    fn o_tsize(&self) -> Self::Word {
+        self.o_tsize.get(BE)
+    }
+
+    fn o_dsize(&self) -> Self::Word {
+        self.o_dsize.get(BE)
+    }
+
+    fn o_bsize(&self) -> Self::Word {
+        self.o_bsize.get(BE)
+    }
+
+    fn o_entry(&self) -> Self::Word {
+        self.o_entry.get(BE)
+    }
+
+    fn o_text_start(&self) -> Self::Word {
+        self.o_text_start.get(BE)
+    }
+
+    fn o_data_start(&self) -> Self::Word {
+        self.o_data_start.get(BE)
+    }
+
+    fn o_toc(&self) -> Self::Word {
+        self.o_toc.get(BE)
+    }
+
+    fn o_snentry(&self) -> u16 {
+        self.o_snentry.get(BE)
+    }
+
+    fn o_sntext(&self) -> u16 {
+        self.o_sntext.get(BE)
+    }
+
+    fn o_sndata(&self) -> u16 {
+        self.o_sndata.get(BE)
+    }
+
+    fn o_sntoc(&self) -> u16 {
+        self.o_sntoc.get(BE)
+    }
+
+    fn o_snloader(&self) -> u16 {
+        self.o_snloader.get(BE)
+    }
+
+    fn o_snbss(&self) -> u16 {
+        self.o_snbss.get(BE)
+    }
+
+    fn o_sntdata(&self) -> u16 {
+        self.o_sntdata.get(BE)
+    }
+
+    fn o_sntbss(&self) -> u16 {
+        self.o_sntbss.get(BE)
+    }
+
+    fn o_algntext(&self) -> u16 {
+        self.o_algntext.get(BE)
+    }
+
+    fn o_algndata(&self) -> u16 {
+        self.o_algndata.get(BE)
+    }
+
+    fn o_maxstack(&self) -> Self::Word {
+        self.o_maxstack.get(BE)
+    }
+
+    fn o_maxdata(&self) -> Self::Word {
+        self.o_maxdata.get(BE)
+    }
+
+    fn o_textpsize(&self) -> u8 {
+        self.o_textpsize
+    }
+
+    fn o_datapsize(&self) -> u8 {
+        self.o_datapsize
+    }
+
+    fn o_stackpsize(&self) -> u8 {
+        self.o_stackpsize
+    }
 }
 
 impl AuxHeader for xcoff::AuxHeader64 {
     type Word = u64;
+
+    fn o_vstamp(&self) -> u16 {
+        self.o_vstamp.get(BE)
+    }
+
+    fn o_tsize(&self) -> Self::Word {
+        self.o_tsize.get(BE)
+    }
+
+    fn o_dsize(&self) -> Self::Word {
+        self.o_dsize.get(BE)
+    }
+
+    fn o_bsize(&self) -> Self::Word {
+        self.o_bsize.get(BE)
+    }
+
+    fn o_entry(&self) -> Self::Word {
+        self.o_entry.get(BE)
+    }
+
+    fn o_text_start(&self) -> Self::Word {
+        self.o_text_start.get(BE)
+    }
+
+    fn o_data_start(&self) -> Self::Word {
+        self.o_data_start.get(BE)
+    }
+
+    fn o_toc(&self) -> Self::Word {
+        self.o_toc.get(BE)
+    }
+
+    fn o_snentry(&self) -> u16 {
+        self.o_snentry.get(BE)
+    }
+
+    fn o_sntext(&self) -> u16 {
+        self.o_sntext.get(BE)
+    }
+
+    fn o_sndata(&self) -> u16 {
+        self.o_sndata.get(BE)
+    }
+
+    fn o_sntoc(&self) -> u16 {
+        self.o_sntoc.get(BE)
+    }
+
+    fn o_snloader(&self) -> u16 {
+        self.o_snloader.get(BE)
+    }
+
+    fn o_snbss(&self) -> u16 {
+        self.o_snbss.get(BE)
+    }
+
+    fn o_sntdata(&self) -> u16 {
+        self.o_sntdata.get(BE)
+    }
+
+    fn o_sntbss(&self) -> u16 {
+        self.o_sntbss.get(BE)
+    }
+
+    fn o_algntext(&self) -> u16 {
+        self.o_algntext.get(BE)
+    }
+
+    fn o_algndata(&self) -> u16 {
+        self.o_algndata.get(BE)
+    }
+
+    fn o_maxstack(&self) -> Self::Word {
+        self.o_maxstack.get(BE)
+    }
+
+    fn o_maxdata(&self) -> Self::Word {
+        self.o_maxdata.get(BE)
+    }
+
+    fn o_textpsize(&self) -> u8 {
+        self.o_textpsize
+    }
+
+    fn o_datapsize(&self) -> u8 {
+        self.o_datapsize
+    }
+
+    fn o_stackpsize(&self) -> u8 {
+        self.o_stackpsize
+    }
 }
