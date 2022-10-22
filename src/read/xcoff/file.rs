@@ -1,4 +1,5 @@
 use core::fmt::Debug;
+use core::mem;
 
 use alloc::vec::Vec;
 
@@ -295,7 +296,7 @@ pub trait FileHeader: Debug + Pod {
             *offset += xcoff::AOUTHSZ_SHORT as u64;
             return Ok(None);
         }
-        if aux_header_size != std::mem::size_of::<Self::AuxHeader>() as u16 {
+        if aux_header_size != mem::size_of::<Self::AuxHeader>() as u16 {
             return Err(Error("Invalid auxiliary header size"));
         }
         let aux_header = data
