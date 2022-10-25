@@ -287,17 +287,18 @@ pub trait FileHeader: Debug + Pod {
         offset: &mut u64,
     ) -> Result<Option<&'data Self::AuxHeader>> {
         let aux_header_size = self.f_opthdr();
-        if aux_header_size == 0 {
-            // No auxiliary header is ok.
+        if self.f_flags() & xcoff::F_EXEC != 0 {
+            // No auxiliary header is required for an object file that is not an executable.
+            // TODO: Some AIX programs generate auxiliary headers for 32-bit object files
+            // that end after the data_start field. 
+            *offset += u64::from(aux_header_size);
             return Ok(None);
         }
-        if aux_header_size == xcoff::AOUTHSZ_SHORT {
-            // TODO: skip over the aux header with a size of AOUTHSZ_SHORT.
-            *offset += xcoff::AOUTHSZ_SHORT as u64;
-            return Ok(None);
-        }
+        // Executables, however, must have auxiliary headers that include the
+        // full structure definitions.
         if aux_header_size != mem::size_of::<Self::AuxHeader>() as u16 {
-            return Err(Error("Invalid auxiliary header size"));
+            *offset += u64::from(aux_header_size);
+            return Ok(None);
         }
         let aux_header = data
             .read::<Self::AuxHeader>(offset)
