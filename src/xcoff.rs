@@ -222,6 +222,10 @@ pub struct AuxHeader64 {
     pub o_resv3: [U32<BE>; 2],
 }
 
+/// Some AIX programs generate auxiliary headers for 32-bit object files that
+/// end after the data_start field.
+pub const AOUTHSZ_SHORT: u16 = 28;
+
 /// Section header.
 #[derive(Debug, Clone, Copy)]
 #[repr(C)]
@@ -245,9 +249,7 @@ pub struct SectionHeader32 {
     /// Number of line number entries.
     pub s_nlnno: U16<BE>,
     /// Flags to define the section type.
-    pub s_flags: U16<BE>,
-    /// Reserved.
-    pub s_reserve: U16<BE>,
+    pub s_flags: U32<BE>,
 }
 
 /// Section header.

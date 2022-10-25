@@ -7,7 +7,7 @@ use crate::{
 
 use crate::read::{self, ObjectSection, ReadError, ReadRef, Result, SectionIndex};
 
-use super::{FileHeader, XcoffFile, XcoffRelocationIterator};
+use super::{AuxHeader, FileHeader, XcoffFile, XcoffRelocationIterator};
 
 /// An iterator over the sections of an `XcoffFile32`.
 pub type XcoffSectionIterator32<'data, 'file, R = &'data [u8]> =
@@ -98,9 +98,16 @@ where
     }
 
     fn align(&self) -> u64 {
-        // TODO: return the alignment from o_algntext or o_algndata in auxiliary header.
         // The default section alignment is 4.
-        4
+        if let Some(aux_header) = self.file.aux_header {
+            match self.kind() {
+                SectionKind::Text => aux_header.o_algntext().into(),
+                SectionKind::Data => aux_header.o_algndata().into(),
+                _ => 4,
+            }
+        } else {
+            4
+        }
     }
 
     fn file_range(&self) -> Option<(u64, u64)> {
@@ -148,7 +155,7 @@ where
     }
 
     fn kind(&self) -> SectionKind {
-        let section_type = self.section.s_flags().into() as u16;
+        let section_type = self.section.s_flags() as u16;
         if section_type & xcoff::STYP_TEXT != 0 {
             SectionKind::Text
         } else if section_type & xcoff::STYP_DATA != 0 {
@@ -264,7 +271,7 @@ pub trait SectionHeader: Debug + Pod {
     fn s_lnnoptr(&self) -> Self::Word;
     fn s_nreloc(&self) -> Self::HalfWord;
     fn s_nlnno(&self) -> Self::HalfWord;
-    fn s_flags(&self) -> Self::HalfWord;
+    fn s_flags(&self) -> u32;
 
     /// Return the section name.
     fn name(&self) -> &[u8] {
@@ -334,7 +341,7 @@ impl SectionHeader for xcoff::SectionHeader32 {
         self.s_nlnno.get(BE)
     }
 
-    fn s_flags(&self) -> Self::HalfWord {
+    fn s_flags(&self) -> u32 {
         self.s_flags.get(BE)
     }
 }
@@ -380,7 +387,7 @@ impl SectionHeader for xcoff::SectionHeader64 {
         self.s_nlnno.get(BE)
     }
 
-    fn s_flags(&self) -> Self::HalfWord {
+    fn s_flags(&self) -> u32 {
         self.s_flags.get(BE)
     }
 }
