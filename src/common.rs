@@ -306,6 +306,8 @@ pub enum RelocationKind {
     },
     /// Some other COFF relocation. The value is dependent on the architecture.
     Coff(u16),
+    /// Some other XCOFF relocation.
+    Xcoff(u8),
 }
 
 /// Information about how the result of the relocation operation is encoded in the place.

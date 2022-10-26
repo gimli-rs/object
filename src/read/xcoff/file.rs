@@ -11,7 +11,7 @@ use crate::{
 };
 
 use super::{
-    Rel, SectionHeader, SectionTable, Symbol, SymbolTable, XcoffComdat, XcoffComdatIterator,
+    SectionHeader, SectionTable, Symbol, SymbolTable, XcoffComdat, XcoffComdatIterator,
     XcoffSection, XcoffSectionIterator, XcoffSegment, XcoffSegmentIterator, XcoffSymbol,
     XcoffSymbolIterator, XcoffSymbolTable,
 };
@@ -49,6 +49,7 @@ where
         let aux_header = header.aux_header(data, &mut offset)?;
         let sections = header.sections(data, &mut offset)?;
         let symbols = header.symbols(data)?;
+
         Ok(XcoffFile {
             data,
             header,
@@ -247,7 +248,6 @@ pub trait FileHeader: Debug + Pod {
     type AuxHeader: AuxHeader<Word = Self::Word>;
     type SectionHeader: SectionHeader<Word = Self::Word>;
     type Symbol: Symbol<Word = Self::Word>;
-    type Rel: Rel<Word = Self::Word>;
 
     /// Return true if this type is a 64-bit header.
     fn is_type_64(&self) -> bool;
@@ -328,7 +328,6 @@ impl FileHeader for xcoff::FileHeader32 {
     type AuxHeader = xcoff::AuxHeader32;
     type SectionHeader = xcoff::SectionHeader32;
     type Symbol = xcoff::Symbol32;
-    type Rel = xcoff::Rel32;
 
     fn is_type_64(&self) -> bool {
         false
@@ -368,7 +367,6 @@ impl FileHeader for xcoff::FileHeader64 {
     type AuxHeader = xcoff::AuxHeader64;
     type SectionHeader = xcoff::SectionHeader64;
     type Symbol = xcoff::Symbol64;
-    type Rel = xcoff::Rel64;
 
     fn is_type_64(&self) -> bool {
         true

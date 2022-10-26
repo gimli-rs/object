@@ -18,4 +18,13 @@ Symbols
 15: Symbol { name: "TOC", address: 80, size: 0, kind: Data, section: Section(SectionIndex(2)), scope: Dynamic, weak: false, flags: None }
 17: Symbol { name: ".rodata.str1.1L...str", address: 80, size: 0, kind: Data, section: Section(SectionIndex(2)), scope: Dynamic, weak: false, flags: None }
 
+.text relocations
+(1e, Relocation { kind: Got, encoding: Generic, size: 0, target: Symbol(SymbolIndex(11)), addend: 0, implicit_addend: true })
+(20, Relocation { kind: Relative, encoding: Generic, size: 0, target: Symbol(SymbolIndex(3)), addend: fffffffffffffffc, implicit_addend: true })
+
+.data relocations
+(68, Relocation { kind: Absolute, encoding: Generic, size: 0, target: Symbol(SymbolIndex(9)), addend: 0, implicit_addend: true })
+(70, Relocation { kind: Absolute, encoding: Generic, size: 0, target: Symbol(SymbolIndex(f)), addend: 0, implicit_addend: true })
+(80, Relocation { kind: Absolute, encoding: Generic, size: 0, target: Symbol(SymbolIndex(b)), addend: 0, implicit_addend: true })
+
 Dynamic symbols

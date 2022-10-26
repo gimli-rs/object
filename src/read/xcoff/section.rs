@@ -7,7 +7,7 @@ use crate::{
 
 use crate::read::{self, ObjectSection, ReadError, ReadRef, Result, SectionIndex};
 
-use super::{AuxHeader, FileHeader, XcoffFile, XcoffRelocationIterator};
+use super::{AuxHeader, FileHeader, Rel, XcoffFile, XcoffRelocationIterator};
 
 /// An iterator over the sections of an `XcoffFile32`.
 pub type XcoffSectionIterator32<'data, 'file, R = &'data [u8]> =
@@ -181,7 +181,14 @@ where
     }
 
     fn relocations(&self) -> Self::RelocationIterator {
-        XcoffRelocationIterator { file: self.file }
+        let rel = self
+            .section
+            .xcoff_relocations(self.file.data)
+            .unwrap_or(&[]);
+        XcoffRelocationIterator {
+            file: self.file,
+            relocations: rel.iter(),
+        }
     }
 
     fn flags(&self) -> SectionFlags {
@@ -261,6 +268,7 @@ pub trait SectionHeader: Debug + Pod {
     type Word: Into<u64>;
     type HalfWord: Into<u32>;
     type Xcoff: FileHeader<SectionHeader = Self, Word = Self::Word>;
+    type Rel: Rel<Word = Self::Word>;
 
     fn s_name(&self) -> &[u8; 8];
     fn s_paddr(&self) -> Self::Word;
@@ -298,12 +306,24 @@ pub trait SectionHeader: Debug + Pod {
             Ok(&[])
         }
     }
+
+    /// Read the relocations in a XCOFF file.
+    ///
+    /// `data` must be the entire file data.
+    fn xcoff_relocations<'data, R: ReadRef<'data>>(
+        &self,
+        data: R,
+    ) -> read::Result<&'data [Self::Rel]> {
+        data.read_slice_at(self.s_relptr().into(), self.s_nreloc().into() as usize)
+            .read_error("Invalid XCOFF relocation offset or number")
+    }
 }
 
 impl SectionHeader for xcoff::SectionHeader32 {
     type Word = u32;
     type HalfWord = u16;
     type Xcoff = xcoff::FileHeader32;
+    type Rel = xcoff::Rel32;
 
     fn s_name(&self) -> &[u8; 8] {
         &self.s_name
@@ -350,6 +370,7 @@ impl SectionHeader for xcoff::SectionHeader64 {
     type Word = u64;
     type HalfWord = u32;
     type Xcoff = xcoff::FileHeader64;
+    type Rel = xcoff::Rel64;
 
     fn s_name(&self) -> &[u8; 8] {
         &self.s_name
