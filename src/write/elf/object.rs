@@ -84,6 +84,7 @@ impl<'a> Object<'a> {
             Architecture::Riscv32 => true,
             Architecture::S390x => true,
             Architecture::Sparc64 => true,
+            Architecture::Xtensa => true,
             _ => {
                 return Err(Error(format!(
                     "unimplemented architecture {:?}",
@@ -281,6 +282,7 @@ impl<'a> Object<'a> {
             Architecture::Riscv64 => elf::EM_RISCV,
             Architecture::S390x => elf::EM_S390,
             Architecture::Sparc64 => elf::EM_SPARCV9,
+            Architecture::Xtensa => elf::EM_XTENSA,
             _ => {
                 return Err(Error(format!(
                     "unimplemented architecture {:?}",
