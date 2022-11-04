@@ -5,7 +5,7 @@ use crate::{
     xcoff, BigEndian as BE, CompressedData, CompressedFileRange, Pod, SectionFlags, SectionKind,
 };
 
-use crate::read::{self, ObjectSection, ReadError, ReadRef, Result, SectionIndex};
+use crate::read::{self, Error, ObjectSection, ReadError, ReadRef, Result, SectionIndex};
 
 use super::{AuxHeader, FileHeader, Rel, XcoffFile, XcoffRelocationIterator};
 
@@ -181,10 +181,7 @@ where
     }
 
     fn relocations(&self) -> Self::RelocationIterator {
-        let rel = self
-            .section
-            .xcoff_relocations(self.file.data)
-            .unwrap_or(&[]);
+        let rel = self.section.relocations(self.file.data).unwrap_or(&[]);
         XcoffRelocationIterator {
             file: self.file,
             relocations: rel.iter(),
@@ -307,16 +304,8 @@ pub trait SectionHeader: Debug + Pod {
         }
     }
 
-    /// Read the relocations in a XCOFF file.
-    ///
-    /// `data` must be the entire file data.
-    fn xcoff_relocations<'data, R: ReadRef<'data>>(
-        &self,
-        data: R,
-    ) -> read::Result<&'data [Self::Rel]> {
-        data.read_slice_at(self.s_relptr().into(), self.s_nreloc().into() as usize)
-            .read_error("Invalid XCOFF relocation offset or number")
-    }
+    /// Read the relocations.
+    fn relocations<'data, R: ReadRef<'data>>(&self, data: R) -> read::Result<&'data [Self::Rel]>;
 }
 
 impl SectionHeader for xcoff::SectionHeader32 {
@@ -364,6 +353,21 @@ impl SectionHeader for xcoff::SectionHeader32 {
     fn s_flags(&self) -> u32 {
         self.s_flags.get(BE)
     }
+
+    /// Read the relocations in a XCOFF32 file.
+    ///
+    /// `data` must be the entire file data.
+    fn relocations<'data, R: ReadRef<'data>>(&self, data: R) -> read::Result<&'data [Self::Rel]> {
+        let reloc_num = self.s_nreloc() as usize;
+        // TODO: If more than 65,534 relocation entries are required, the field value will be 65535,
+        // and an STYP_OVRFLO section header will contain the actual count of relocation entries in
+        // the s_paddr field.
+        if reloc_num == 65535 {
+            return Err(Error("Overflow section is not supported yet."));
+        }
+        data.read_slice_at(self.s_relptr().into(), reloc_num)
+            .read_error("Invalid XCOFF relocation offset or number")
+    }
 }
 
 impl SectionHeader for xcoff::SectionHeader64 {
@@ -410,5 +414,13 @@ impl SectionHeader for xcoff::SectionHeader64 {
 
     fn s_flags(&self) -> u32 {
         self.s_flags.get(BE)
+    }
+
+    /// Read the relocations in a XCOFF64 file.
+    ///
+    /// `data` must be the entire file data.
+    fn relocations<'data, R: ReadRef<'data>>(&self, data: R) -> read::Result<&'data [Self::Rel]> {
+        data.read_slice_at(self.s_relptr().into(), self.s_nreloc() as usize)
+            .read_error("Invalid XCOFF relocation offset or number")
     }
 }

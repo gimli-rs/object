@@ -46,9 +46,8 @@ where
                 | xcoff::R_BA
                 | xcoff::R_RBA
                 | xcoff::R_TLS => (RelocationKind::Absolute, 0),
-                xcoff::R_BR | xcoff::R_RBR => (RelocationKind::Relative, -4),
+                xcoff::R_REL | xcoff::R_BR | xcoff::R_RBR => (RelocationKind::Relative, -4),
                 xcoff::R_TOC | xcoff::R_TOCL | xcoff::R_TOCU => (RelocationKind::Got, 0),
-                xcoff::R_REL => (RelocationKind::SectionOffset, 0),
                 r_type => (RelocationKind::Xcoff(r_type), 0),
             };
             let size = relocation.r_rsize() & 0x3F + 1;
