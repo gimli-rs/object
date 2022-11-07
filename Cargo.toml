@@ -3,7 +3,7 @@ name = "object"
 version = "0.30.0"
 edition = "2018"
 exclude = ["/.github", "/testfiles"]
-keywords = ["object", "elf", "mach-o", "pe", "coff"]
+keywords = ["object", "elf", "mach-o", "pe", "coff", "xcoff"]
 license = "Apache-2.0 OR MIT"
 repository = "https://github.com/gimli-rs/object"
 description = "A unified interface for reading and writing object file formats."
@@ -38,7 +38,7 @@ write_core = ["crc32fast", "indexmap", "hashbrown"]
 # Core write support with libstd features. You will need to enable some file formats too.
 write_std = ["write_core", "std", "indexmap/std", "crc32fast/std"]
 # Write support for all file formats, including libstd features.
-write = ["write_std", "coff", "elf", "macho", "pe"]
+write = ["write_std", "coff", "elf", "macho", "pe", "xcoff"]
 
 #=======================================
 # Misc features.

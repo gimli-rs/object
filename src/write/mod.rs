@@ -29,6 +29,9 @@ mod macho;
 #[cfg(feature = "pe")]
 pub mod pe;
 
+#[cfg(feature = "xcoff")]
+mod xcoff;
+
 mod string;
 pub use string::StringId;
 
@@ -218,6 +221,8 @@ impl<'a> Object<'a> {
             BinaryFormat::Elf => self.elf_section_info(section),
             #[cfg(feature = "macho")]
             BinaryFormat::MachO => self.macho_section_info(section),
+            #[cfg(feature = "xcoff")]
+            BinaryFormat::Xcoff => self.xcoff_section_info(section),
             _ => unimplemented!(),
         }
     }
@@ -243,7 +248,7 @@ impl<'a> Object<'a> {
 
     fn has_subsections_via_symbols(&self) -> bool {
         match self.format {
-            BinaryFormat::Coff | BinaryFormat::Elf => false,
+            BinaryFormat::Coff | BinaryFormat::Elf | BinaryFormat::Xcoff => false,
             BinaryFormat::MachO => true,
             _ => unimplemented!(),
         }
@@ -506,6 +511,8 @@ impl<'a> Object<'a> {
             BinaryFormat::Elf => self.elf_fixup_relocation(&mut relocation)?,
             #[cfg(feature = "macho")]
             BinaryFormat::MachO => self.macho_fixup_relocation(&mut relocation),
+            #[cfg(feature = "xcoff")]
+            BinaryFormat::Xcoff => self.xcoff_fixup_relocation(&mut relocation),
             _ => unimplemented!(),
         };
         if addend != 0 {
@@ -574,6 +581,8 @@ impl<'a> Object<'a> {
             BinaryFormat::Elf => self.elf_write(buffer),
             #[cfg(feature = "macho")]
             BinaryFormat::MachO => self.macho_write(buffer),
+            #[cfg(feature = "xcoff")]
+            BinaryFormat::Xcoff => self.xcoff_write(buffer),
             _ => unimplemented!(),
         }
     }
@@ -894,6 +903,8 @@ pub enum Mangling {
     Elf,
     /// Mach-O symbol mangling.
     MachO,
+    /// Xcoff symbol mangling.
+    Xcoff,
 }
 
 impl Mangling {
@@ -904,6 +915,7 @@ impl Mangling {
             (BinaryFormat::Coff, _) => Mangling::Coff,
             (BinaryFormat::Elf, _) => Mangling::Elf,
             (BinaryFormat::MachO, _) => Mangling::MachO,
+            (BinaryFormat::Xcoff, _) => Mangling::Xcoff,
             _ => Mangling::None,
         }
     }
@@ -911,7 +923,7 @@ impl Mangling {
     /// Return the prefix to use for global symbols.
     pub fn global_prefix(self) -> Option<u8> {
         match self {
-            Mangling::None | Mangling::Elf | Mangling::Coff => None,
+            Mangling::None | Mangling::Elf | Mangling::Coff | Mangling::Xcoff => None,
             Mangling::CoffI386 | Mangling::MachO => Some(b'_'),
         }
     }
