@@ -76,7 +76,14 @@ fn print_file_header<Elf: FileHeader>(p: &mut Printer<'_>, endian: Elf::Endian, 
                 p.flags(flags, 0, &FLAGS_EF_RISCV);
                 p.flags(flags, EF_RISCV_FLOAT_ABI, &FLAGS_EF_RISCV_FLOAT_ABI);
             }
-            EM_LOONGARCH => p.flags(flags, 0, &FLAGS_EF_LOONGARCH),
+            EM_LOONGARCH => {
+                p.flags(flags, 0, &FLAGS_EF_LARCH_OBJABI);
+                p.flags(
+                    flags,
+                    EF_LARCH_ABI_MODIFIER_MASK,
+                    &FLAGS_EF_LARCH_ABI_MODIFIER,
+                );
+            }
             _ => {}
         };
         p.field_hex("HeaderSize", elf.e_ehsize(endian));
@@ -1107,14 +1114,12 @@ static FLAGS_EF_RISCV_FLOAT_ABI: &[Flag<u32>] = &flags!(
     EF_RISCV_FLOAT_ABI_DOUBLE,
     EF_RISCV_FLOAT_ABI_QUAD,
 );
-static FLAGS_EF_LOONGARCH: &[Flag<u32>] = &flags!(
-    EF_LARCH_ABI_LP64S,
-    EF_LARCH_ABI_LP64F,
-    EF_LARCH_ABI_LP64D,
-    EF_LARCH_ABI_ILP32S,
-    EF_LARCH_ABI_ILP32F,
-    EF_LARCH_ABI_ILP32D,
+static FLAGS_EF_LARCH_ABI_MODIFIER: &[Flag<u32>] = &flags!(
+    EF_LARCH_ABI_SOFT_FLOAT,
+    EF_LARCH_ABI_SINGLE_FLOAT,
+    EF_LARCH_ABI_DOUBLE_FLOAT,
 );
+static FLAGS_EF_LARCH_OBJABI: &[Flag<u32>] = &flags!(EF_LARCH_OBJABI_V1,);
 static FLAGS_PT: &[Flag<u32>] = &flags!(
     PT_NULL,
     PT_LOAD,
