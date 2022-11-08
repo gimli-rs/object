@@ -682,6 +682,16 @@ impl<'a> Object<'a> {
                                 return Err(Error(format!("unimplemented relocation {:?}", reloc)));
                             }
                         },
+                        Architecture::Xtensa => match (reloc.kind, reloc.encoding, reloc.size) {
+                            (RelocationKind::Absolute, _, 32) => elf::R_XTENSA_32,
+                            (RelocationKind::Relative, RelocationEncoding::Generic, 32) => {
+                                elf::R_XTENSA_32_PCREL
+                            }
+                            (RelocationKind::Elf(x), _, _) => x,
+                            _ => {
+                                return Err(Error(format!("unimplemented relocation {:?}", reloc)));
+                            }
+                        },
                         _ => {
                             if let RelocationKind::Elf(x) = reloc.kind {
                                 x

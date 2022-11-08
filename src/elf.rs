@@ -6471,6 +6471,130 @@ pub const R_LARCH_32_PCREL: u32 = 99;
 /// insturction can be relaxed
 pub const R_LARCH_RELAX: u32 = 100;
 
+// Xtensa values Rel*::r_type`.
+#[allow(missing_docs)]
+pub const R_XTENSA_NONE: u32 = 0;
+#[allow(missing_docs)]
+pub const R_XTENSA_32: u32 = 1;
+#[allow(missing_docs)]
+pub const R_XTENSA_RTLD: u32 = 2;
+#[allow(missing_docs)]
+pub const R_XTENSA_GLOB_DAT: u32 = 3;
+#[allow(missing_docs)]
+pub const R_XTENSA_JMP_SLOT: u32 = 4;
+#[allow(missing_docs)]
+pub const R_XTENSA_RELATIVE: u32 = 5;
+#[allow(missing_docs)]
+pub const R_XTENSA_PLT: u32 = 6;
+#[allow(missing_docs)]
+pub const R_XTENSA_OP0: u32 = 8;
+#[allow(missing_docs)]
+pub const R_XTENSA_OP1: u32 = 9;
+#[allow(missing_docs)]
+pub const R_XTENSA_OP2: u32 = 10;
+#[allow(missing_docs)]
+pub const R_XTENSA_ASM_EXPAND: u32 = 11;
+#[allow(missing_docs)]
+pub const R_XTENSA_ASM_SIMPLIFY: u32 = 12;
+#[allow(missing_docs)]
+pub const R_XTENSA_32_PCREL: u32 = 14;
+#[allow(missing_docs)]
+pub const R_XTENSA_GNU_VTINHERIT: u32 = 15;
+#[allow(missing_docs)]
+pub const R_XTENSA_GNU_VTENTRY: u32 = 16;
+#[allow(missing_docs)]
+pub const R_XTENSA_DIFF8: u32 = 17;
+#[allow(missing_docs)]
+pub const R_XTENSA_DIFF16: u32 = 18;
+#[allow(missing_docs)]
+pub const R_XTENSA_DIFF32: u32 = 19;
+#[allow(missing_docs)]
+pub const R_XTENSA_SLOT0_OP: u32 = 20;
+#[allow(missing_docs)]
+pub const R_XTENSA_SLOT1_OP: u32 = 21;
+#[allow(missing_docs)]
+pub const R_XTENSA_SLOT2_OP: u32 = 22;
+#[allow(missing_docs)]
+pub const R_XTENSA_SLOT3_OP: u32 = 23;
+#[allow(missing_docs)]
+pub const R_XTENSA_SLOT4_OP: u32 = 24;
+#[allow(missing_docs)]
+pub const R_XTENSA_SLOT5_OP: u32 = 25;
+#[allow(missing_docs)]
+pub const R_XTENSA_SLOT6_OP: u32 = 26;
+#[allow(missing_docs)]
+pub const R_XTENSA_SLOT7_OP: u32 = 27;
+#[allow(missing_docs)]
+pub const R_XTENSA_SLOT8_OP: u32 = 28;
+#[allow(missing_docs)]
+pub const R_XTENSA_SLOT9_OP: u32 = 29;
+#[allow(missing_docs)]
+pub const R_XTENSA_SLOT10_OP: u32 = 30;
+#[allow(missing_docs)]
+pub const R_XTENSA_SLOT11_OP: u32 = 31;
+#[allow(missing_docs)]
+pub const R_XTENSA_SLOT12_OP: u32 = 32;
+#[allow(missing_docs)]
+pub const R_XTENSA_SLOT13_OP: u32 = 33;
+#[allow(missing_docs)]
+pub const R_XTENSA_SLOT14_OP: u32 = 34;
+#[allow(missing_docs)]
+pub const R_XTENSA_SLOT0_ALT: u32 = 35;
+#[allow(missing_docs)]
+pub const R_XTENSA_SLOT1_ALT: u32 = 36;
+#[allow(missing_docs)]
+pub const R_XTENSA_SLOT2_ALT: u32 = 37;
+#[allow(missing_docs)]
+pub const R_XTENSA_SLOT3_ALT: u32 = 38;
+#[allow(missing_docs)]
+pub const R_XTENSA_SLOT4_ALT: u32 = 39;
+#[allow(missing_docs)]
+pub const R_XTENSA_SLOT5_ALT: u32 = 40;
+#[allow(missing_docs)]
+pub const R_XTENSA_SLOT6_ALT: u32 = 41;
+#[allow(missing_docs)]
+pub const R_XTENSA_SLOT7_ALT: u32 = 42;
+#[allow(missing_docs)]
+pub const R_XTENSA_SLOT8_ALT: u32 = 43;
+#[allow(missing_docs)]
+pub const R_XTENSA_SLOT9_ALT: u32 = 44;
+#[allow(missing_docs)]
+pub const R_XTENSA_SLOT10_ALT: u32 = 45;
+#[allow(missing_docs)]
+pub const R_XTENSA_SLOT11_ALT: u32 = 46;
+#[allow(missing_docs)]
+pub const R_XTENSA_SLOT12_ALT: u32 = 47;
+#[allow(missing_docs)]
+pub const R_XTENSA_SLOT13_ALT: u32 = 48;
+#[allow(missing_docs)]
+pub const R_XTENSA_SLOT14_ALT: u32 = 49;
+#[allow(missing_docs)]
+pub const R_XTENSA_TLSDESC_FN: u32 = 50;
+#[allow(missing_docs)]
+pub const R_XTENSA_TLSDESC_ARG: u32 = 51;
+#[allow(missing_docs)]
+pub const R_XTENSA_TLS_DTPOFF: u32 = 52;
+#[allow(missing_docs)]
+pub const R_XTENSA_TLS_TPOFF: u32 = 53;
+#[allow(missing_docs)]
+pub const R_XTENSA_TLS_FUNC: u32 = 54;
+#[allow(missing_docs)]
+pub const R_XTENSA_TLS_ARG: u32 = 55;
+#[allow(missing_docs)]
+pub const R_XTENSA_TLS_CALL: u32 = 56;
+#[allow(missing_docs)]
+pub const R_XTENSA_PDIFF8: u32 = 57;
+#[allow(missing_docs)]
+pub const R_XTENSA_PDIFF16: u32 = 58;
+#[allow(missing_docs)]
+pub const R_XTENSA_PDIFF32: u32 = 59;
+#[allow(missing_docs)]
+pub const R_XTENSA_NDIFF8: u32 = 60;
+#[allow(missing_docs)]
+pub const R_XTENSA_NDIFF16: u32 = 61;
+#[allow(missing_docs)]
+pub const R_XTENSA_NDIFF32: u32 = 62;
+
 unsafe_impl_endian_pod!(
     FileHeader32,
     FileHeader64,
