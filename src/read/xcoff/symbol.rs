@@ -1,8 +1,8 @@
 use alloc::fmt;
 use core::convert::TryInto;
 use core::fmt::Debug;
-use core::str;
 use core::marker::PhantomData;
+use core::str;
 
 use crate::endian::{BigEndian as BE, U32Bytes};
 use crate::pod::Pod;
