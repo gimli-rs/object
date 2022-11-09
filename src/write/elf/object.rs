@@ -84,6 +84,7 @@ impl<'a> Object<'a> {
             Architecture::Riscv32 => true,
             Architecture::S390x => true,
             Architecture::Sparc64 => true,
+            Architecture::Xtensa => true,
             _ => {
                 return Err(Error(format!(
                     "unimplemented architecture {:?}",
@@ -281,6 +282,7 @@ impl<'a> Object<'a> {
             Architecture::Riscv64 => elf::EM_RISCV,
             Architecture::S390x => elf::EM_S390,
             Architecture::Sparc64 => elf::EM_SPARCV9,
+            Architecture::Xtensa => elf::EM_XTENSA,
             _ => {
                 return Err(Error(format!(
                     "unimplemented architecture {:?}",
@@ -675,6 +677,16 @@ impl<'a> Object<'a> {
                             // TODO: use R_SPARC_32/R_SPARC_64 if aligned.
                             (RelocationKind::Absolute, _, 32) => elf::R_SPARC_UA32,
                             (RelocationKind::Absolute, _, 64) => elf::R_SPARC_UA64,
+                            (RelocationKind::Elf(x), _, _) => x,
+                            _ => {
+                                return Err(Error(format!("unimplemented relocation {:?}", reloc)));
+                            }
+                        },
+                        Architecture::Xtensa => match (reloc.kind, reloc.encoding, reloc.size) {
+                            (RelocationKind::Absolute, _, 32) => elf::R_XTENSA_32,
+                            (RelocationKind::Relative, RelocationEncoding::Generic, 32) => {
+                                elf::R_XTENSA_32_PCREL
+                            }
                             (RelocationKind::Elf(x), _, _) => x,
                             _ => {
                                 return Err(Error(format!("unimplemented relocation {:?}", reloc)));
