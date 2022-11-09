@@ -2,7 +2,7 @@ use alloc::fmt;
 use core::convert::TryInto;
 use core::fmt::Debug;
 use core::str;
-use std::marker::PhantomData;
+use core::marker::PhantomData;
 
 use crate::endian::{BigEndian as BE, U32Bytes};
 use crate::pod::Pod;
