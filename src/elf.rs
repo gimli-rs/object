@@ -6251,18 +6251,17 @@ pub const R_NDS32_TLS_TPOFF: u32 = 102;
 pub const R_NDS32_TLS_DESC: u32 = 119;
 
 // LoongArch values `FileHeader*::e_flags`.
-/// Uses 64-bit GPRs and the stack for parameter passing
-pub const EF_LARCH_ABI_LP64S: u32 = 0x1;
-/// Uses 64-bit GPRs, 32-bit FPRs and the stack for parameter passing
-pub const EF_LARCH_ABI_LP64F: u32 = 0x2;
-/// Uses 64-bit GPRs, 64-bit FPRs and the stack for parameter passing
-pub const EF_LARCH_ABI_LP64D: u32 = 0x3;
-/// Uses 32-bit GPRs and the stack for parameter passing
-pub const EF_LARCH_ABI_ILP32S: u32 = 0x5;
-/// Uses 32-bit GPRs, 32-bit FPRs and the stack for parameter passing
-pub const EF_LARCH_ABI_ILP32F: u32 = 0x6;
-/// Uses 32-bit GPRs, 64-bit FPRs and the stack for parameter passing
-pub const EF_LARCH_ABI_ILP32D: u32 = 0x7;
+/// Additional properties of the base ABI type, including the FP calling
+/// convention.
+pub const EF_LARCH_ABI_MODIFIER_MASK: u32 = 0x7;
+/// Uses GPRs and the stack for parameter passing
+pub const EF_LARCH_ABI_SOFT_FLOAT: u32 = 0x1;
+/// Uses GPRs, 32-bit FPRs and the stack for parameter passing
+pub const EF_LARCH_ABI_SINGLE_FLOAT: u32 = 0x2;
+/// Uses GPRs, 64-bit FPRs and the stack for parameter passing
+pub const EF_LARCH_ABI_DOUBLE_FLOAT: u32 = 0x3;
+/// Uses relocation types directly writing to immediate slots
+pub const EF_LARCH_OBJABI_V1: u32 = 0x40;
 
 // LoongArch values `Rel*::r_type`.
 /// No reloc
