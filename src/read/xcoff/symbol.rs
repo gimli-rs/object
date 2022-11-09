@@ -2,15 +2,16 @@ use alloc::fmt;
 use core::convert::TryInto;
 use core::fmt::Debug;
 use core::str;
+use std::marker::PhantomData;
 
 use crate::endian::{BigEndian as BE, U32Bytes};
 use crate::pod::Pod;
 use crate::read::util::StringTable;
-use crate::{xcoff, Object, ObjectSection, SectionKind};
+use crate::{bytes_of, xcoff, Object, ObjectSection, SectionKind};
 
 use crate::read::{
-    self, ObjectSymbol, ObjectSymbolTable, ReadError, ReadRef, Result, SectionIndex, SymbolFlags,
-    SymbolIndex, SymbolKind, SymbolScope, SymbolSection,
+    self, Bytes, ObjectSymbol, ObjectSymbolTable, ReadError, ReadRef, Result, SectionIndex,
+    SymbolFlags, SymbolIndex, SymbolKind, SymbolScope, SymbolSection,
 };
 
 use super::{FileHeader, XcoffFile};
@@ -24,8 +25,9 @@ where
     Xcoff: FileHeader,
     R: ReadRef<'data>,
 {
-    symbols: &'data [Xcoff::Symbol],
+    symbols: &'data [xcoff::SymbolBytes],
     strings: StringTable<'data, R>,
+    header: PhantomData<Xcoff>,
 }
 
 impl<'data, Xcoff, R> Default for SymbolTable<'data, Xcoff, R>
@@ -37,6 +39,7 @@ where
         Self {
             symbols: &[],
             strings: StringTable::default(),
+            header: PhantomData,
         }
     }
 }
@@ -70,14 +73,38 @@ where
             (&[][..], StringTable::default())
         };
 
-        Ok(SymbolTable { symbols, strings })
+        Ok(SymbolTable {
+            symbols,
+            strings,
+            header: PhantomData,
+        })
+    }
+
+    /// Return the auxiliary entry at the given index and offset.
+    pub fn get<T: Pod>(&self, index: usize, offset: usize) -> Result<&'data T> {
+        let entry = index
+            .checked_add(offset)
+            .and_then(|x| self.symbols.get(x))
+            .read_error("Invalid XCOFF symbol index")?;
+        let bytes = bytes_of(entry);
+        Bytes(bytes).read().read_error("Invalid XCOFF symbol data")
     }
 
     /// Return the symbol at the given index.
-    pub fn symbol(&self, index: usize) -> read::Result<&'data Xcoff::Symbol> {
-        self.symbols
-            .get(index)
-            .read_error("Invalid XCOFF symbol index")
+    pub fn symbol(&self, index: usize) -> Result<&'data Xcoff::Symbol> {
+        self.get::<Xcoff::Symbol>(index, 0)
+    }
+
+    /// Return the file auxiliary symbol.
+    pub fn aux_file(&self, index: usize) -> Result<&'data Xcoff::FileAux> {
+        assert!(self.symbol(index)?.has_aux_file());
+        self.get::<Xcoff::FileAux>(index, 1)
+    }
+
+    /// Return the csect auxiliary symbol.
+    pub fn aux_csect(&self, index: usize, offset: usize) -> Result<&'data Xcoff::CsectAux> {
+        assert!(self.symbol(index)?.has_aux_csect());
+        self.get::<Xcoff::CsectAux>(index, offset)
     }
 
     /// Return true if the symbol table is empty.
@@ -178,7 +205,7 @@ impl<'data, 'file, Xcoff: FileHeader, R: ReadRef<'data>> Iterator
 
     fn next(&mut self) -> Option<Self::Item> {
         let index = self.index;
-        let symbol = self.symbols.symbols.get(index)?;
+        let symbol = self.symbols.symbol(index).ok()?;
         // TODO: skip over the auxiliary symbols for now.
         self.index += 1 + symbol.n_numaux() as usize;
         Some(XcoffSymbol {
@@ -251,9 +278,22 @@ impl<'data, 'file, Xcoff: FileHeader, R: ReadRef<'data>> ObjectSymbol<'data>
 
     #[inline]
     fn size(&self) -> u64 {
-        // TODO: get the symbol size when the csect auxiliary symbol is supported.
-        // Most symbols don't have sizes.
-        0
+        if self.symbol.has_aux_csect() {
+            // XCOFF32 must have the csect auxiliary entry as the last auxiliary entry.
+            // XCOFF64 doesn't require this, but conventionally does.
+            let aux_csect = self
+                .symbols
+                .aux_csect(self.index.0, self.symbol.n_numaux() as usize)
+                .unwrap();
+            let sym_type = aux_csect.sym_type();
+            if sym_type == xcoff::XTY_SD || sym_type == xcoff::XTY_CM {
+                aux_csect.x_scnlen()
+            } else {
+                0
+            }
+        } else {
+            0
+        }
     }
 
     fn kind(&self) -> SymbolKind {
@@ -288,9 +328,16 @@ impl<'data, 'file, Xcoff: FileHeader, R: ReadRef<'data>> ObjectSymbol<'data>
         self.symbol.is_undefined()
     }
 
+    /// Return true if the symbol is a definition of a function or data object.
     #[inline]
     fn is_definition(&self) -> bool {
-        self.symbol.is_definition()
+        let aux_csect = self
+            .symbols
+            .aux_csect(self.index.0, self.symbol.n_numaux() as usize)
+            .unwrap();
+        let smclas = aux_csect.x_smclas();
+        self.symbol.n_scnum() != xcoff::N_UNDEF
+            && (smclas == xcoff::XMC_PR || smclas == xcoff::XMC_RW || smclas == xcoff::XMC_RO)
     }
 
     #[inline]
@@ -364,10 +411,19 @@ pub trait Symbol: Debug + Pod {
             && self.n_scnum() == xcoff::N_UNDEF
     }
 
-    /// Return true if the symbol is a definition of a function or data object.
-    /// TODO: get the x_smtyp value when csect auxiliary symbol is supported.
-    fn is_definition(&self) -> bool {
-        self.n_scnum() != xcoff::N_UNDEF
+    /// Return true if the symbol has file auxiliary entry.
+    fn has_aux_file(&self) -> bool {
+        self.n_numaux() > 0 && self.n_sclass() == xcoff::C_FILE
+    }
+
+    /// Return true if the symbol has csect auxiliary entry.
+    ///
+    /// A csect auxiliary entry is required for each symbol table entry that has
+    /// a storage class value of C_EXT, C_WEAKEXT, or C_HIDEXT.
+    fn has_aux_csect(&self) -> bool {
+        let sclass = self.n_sclass();
+        self.n_numaux() > 0
+            && (sclass == xcoff::C_EXT || sclass == xcoff::C_WEAKEXT || sclass == xcoff::C_HIDEXT)
     }
 }
 
@@ -446,5 +502,108 @@ impl Symbol for xcoff::Symbol32 {
                 None => &self.n_name,
             })
         }
+    }
+}
+
+/// A trait for generic access to `FileAux32` and `FileAux64`.
+#[allow(missing_docs)]
+pub trait FileAux: Debug + Pod {
+    fn x_fname(&self) -> &[u8; 8];
+    fn x_ftype(&self) -> u8;
+    fn x_auxtype(&self) -> Option<u8>;
+}
+
+impl FileAux for xcoff::FileAux64 {
+    fn x_fname(&self) -> &[u8; 8] {
+        &self.x_fname
+    }
+
+    fn x_ftype(&self) -> u8 {
+        self.x_ftype
+    }
+
+    fn x_auxtype(&self) -> Option<u8> {
+        Some(self.x_auxtype)
+    }
+}
+
+impl FileAux for xcoff::FileAux32 {
+    fn x_fname(&self) -> &[u8; 8] {
+        &self.x_fname
+    }
+
+    fn x_ftype(&self) -> u8 {
+        self.x_ftype
+    }
+
+    fn x_auxtype(&self) -> Option<u8> {
+        None
+    }
+}
+
+/// A trait for generic access to `CsectAux32` and `CsectAux64`.
+#[allow(missing_docs)]
+pub trait CsectAux: Debug + Pod {
+    fn x_scnlen(&self) -> u64;
+    fn x_parmhash(&self) -> u32;
+    fn x_snhash(&self) -> u16;
+    fn x_smtyp(&self) -> u8;
+    fn x_smclas(&self) -> u8;
+    fn x_auxtype(&self) -> Option<u8>;
+
+    fn sym_type(&self) -> u8 {
+        self.x_smtyp() & 0x07
+    }
+}
+
+impl CsectAux for xcoff::CsectAux64 {
+    fn x_scnlen(&self) -> u64 {
+        self.x_scnlen_lo.get(BE) as u64 | ((self.x_scnlen_hi.get(BE) as u64) << 32)
+    }
+
+    fn x_parmhash(&self) -> u32 {
+        self.x_parmhash.get(BE)
+    }
+
+    fn x_snhash(&self) -> u16 {
+        self.x_snhash.get(BE)
+    }
+
+    fn x_smtyp(&self) -> u8 {
+        self.x_smtyp
+    }
+
+    fn x_smclas(&self) -> u8 {
+        self.x_smclas
+    }
+
+    fn x_auxtype(&self) -> Option<u8> {
+        Some(self.x_auxtype)
+    }
+}
+
+impl CsectAux for xcoff::CsectAux32 {
+    fn x_scnlen(&self) -> u64 {
+        self.x_scnlen.get(BE) as u64
+    }
+
+    fn x_parmhash(&self) -> u32 {
+        self.x_parmhash.get(BE)
+    }
+
+    fn x_snhash(&self) -> u16 {
+        self.x_snhash.get(BE)
+    }
+
+    fn x_smtyp(&self) -> u8 {
+        self.x_smtyp
+    }
+
+    fn x_smclas(&self) -> u8 {
+        self.x_smclas
+    }
+
+    fn x_auxtype(&self) -> Option<u8> {
+        None
     }
 }

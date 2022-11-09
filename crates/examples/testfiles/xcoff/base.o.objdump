@@ -11,12 +11,12 @@ Symbols
 0: Symbol { name: ".file", address: 0, size: 0, kind: File, section: None, scope: Compilation, weak: false, flags: None }
 3: Symbol { name: ".printf", address: 0, size: 0, kind: Unknown, section: Undefined, scope: Unknown, weak: false, flags: None }
 5: Symbol { name: "printf", address: 0, size: 0, kind: Unknown, section: Undefined, scope: Unknown, weak: false, flags: None }
-7: Symbol { name: ".text", address: 0, size: 0, kind: Text, section: Section(SectionIndex(1)), scope: Dynamic, weak: false, flags: None }
+7: Symbol { name: ".text", address: 0, size: 57, kind: Text, section: Section(SectionIndex(1)), scope: Dynamic, weak: false, flags: None }
 9: Symbol { name: ".main", address: 0, size: 0, kind: Text, section: Section(SectionIndex(1)), scope: Dynamic, weak: false, flags: None }
-11: Symbol { name: ".rodata.str1.1L...str", address: 58, size: 0, kind: Text, section: Section(SectionIndex(1)), scope: Dynamic, weak: false, flags: None }
-13: Symbol { name: "main", address: 68, size: 0, kind: Data, section: Section(SectionIndex(2)), scope: Dynamic, weak: false, flags: None }
+11: Symbol { name: ".rodata.str1.1L...str", address: 58, size: d, kind: Text, section: Section(SectionIndex(1)), scope: Dynamic, weak: false, flags: None }
+13: Symbol { name: "main", address: 68, size: 18, kind: Data, section: Section(SectionIndex(2)), scope: Dynamic, weak: false, flags: None }
 15: Symbol { name: "TOC", address: 80, size: 0, kind: Data, section: Section(SectionIndex(2)), scope: Dynamic, weak: false, flags: None }
-17: Symbol { name: ".rodata.str1.1L...str", address: 80, size: 0, kind: Data, section: Section(SectionIndex(2)), scope: Dynamic, weak: false, flags: None }
+17: Symbol { name: ".rodata.str1.1L...str", address: 80, size: 8, kind: Data, section: Section(SectionIndex(2)), scope: Dynamic, weak: false, flags: None }
 
 .text relocations
 (1e, Relocation { kind: Got, encoding: Generic, size: 0, target: Symbol(SymbolIndex(11)), addend: 0, implicit_addend: true })
