@@ -80,7 +80,7 @@ where
         })
     }
 
-    /// Return the auxiliary entry at the given index and offset.
+    /// Return the symbol entry at the given index and offset.
     pub fn get<T: Pod>(&self, index: usize, offset: usize) -> Result<&'data T> {
         let entry = index
             .checked_add(offset)
@@ -97,14 +97,26 @@ where
 
     /// Return the file auxiliary symbol.
     pub fn aux_file(&self, index: usize) -> Result<&'data Xcoff::FileAux> {
-        assert!(self.symbol(index)?.has_aux_file());
-        self.get::<Xcoff::FileAux>(index, 1)
+        debug_assert!(self.symbol(index)?.has_aux_file());
+        let aux_entry = self.get::<Xcoff::FileAux>(index, 1);
+        if let Ok(aux_csect) = aux_entry {
+            if let Some(aux_type) = aux_csect.x_auxtype() {
+                debug_assert!(aux_type == xcoff::AUX_FILE);
+            }
+        }
+        return aux_entry;
     }
 
     /// Return the csect auxiliary symbol.
     pub fn aux_csect(&self, index: usize, offset: usize) -> Result<&'data Xcoff::CsectAux> {
-        assert!(self.symbol(index)?.has_aux_csect());
-        self.get::<Xcoff::CsectAux>(index, offset)
+        debug_assert!(self.symbol(index)?.has_aux_csect());
+        let aux_entry = self.get::<Xcoff::CsectAux>(index, offset);
+        if let Ok(aux_csect) = aux_entry {
+            if let Some(aux_type) = aux_csect.x_auxtype() {
+                debug_assert!(aux_type == xcoff::AUX_CSECT);
+            }
+        }
+        return aux_entry;
     }
 
     /// Return true if the symbol table is empty.
@@ -281,13 +293,17 @@ impl<'data, 'file, Xcoff: FileHeader, R: ReadRef<'data>> ObjectSymbol<'data>
         if self.symbol.has_aux_csect() {
             // XCOFF32 must have the csect auxiliary entry as the last auxiliary entry.
             // XCOFF64 doesn't require this, but conventionally does.
-            let aux_csect = self
+            if let Ok(aux_csect) = self
+                .file
                 .symbols
                 .aux_csect(self.index.0, self.symbol.n_numaux() as usize)
-                .unwrap();
-            let sym_type = aux_csect.sym_type();
-            if sym_type == xcoff::XTY_SD || sym_type == xcoff::XTY_CM {
-                aux_csect.x_scnlen()
+            {
+                let sym_type = aux_csect.sym_type() & 0x07;
+                if sym_type == xcoff::XTY_SD || sym_type == xcoff::XTY_CM {
+                    aux_csect.x_scnlen()
+                } else {
+                    0
+                }
             } else {
                 0
             }
@@ -331,13 +347,22 @@ impl<'data, 'file, Xcoff: FileHeader, R: ReadRef<'data>> ObjectSymbol<'data>
     /// Return true if the symbol is a definition of a function or data object.
     #[inline]
     fn is_definition(&self) -> bool {
-        let aux_csect = self
-            .symbols
-            .aux_csect(self.index.0, self.symbol.n_numaux() as usize)
-            .unwrap();
-        let smclas = aux_csect.x_smclas();
-        self.symbol.n_scnum() != xcoff::N_UNDEF
-            && (smclas == xcoff::XMC_PR || smclas == xcoff::XMC_RW || smclas == xcoff::XMC_RO)
+        if self.symbol.has_aux_csect() {
+            if let Ok(aux_csect) = self
+                .symbols
+                .aux_csect(self.index.0, self.symbol.n_numaux() as usize)
+            {
+                let smclas = aux_csect.x_smclas();
+                self.symbol.n_scnum() != xcoff::N_UNDEF
+                    && (smclas == xcoff::XMC_PR
+                        || smclas == xcoff::XMC_RW
+                        || smclas == xcoff::XMC_RO)
+            } else {
+                false
+            }
+        } else {
+            false
+        }
     }
 
     #[inline]
