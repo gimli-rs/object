@@ -11,9 +11,9 @@ use crate::{
 };
 
 use super::{
-    SectionHeader, SectionTable, Symbol, SymbolTable, XcoffComdat, XcoffComdatIterator,
-    XcoffSection, XcoffSectionIterator, XcoffSegment, XcoffSegmentIterator, XcoffSymbol,
-    XcoffSymbolIterator, XcoffSymbolTable,
+    CsectAux, FileAux, SectionHeader, SectionTable, Symbol, SymbolTable, XcoffComdat,
+    XcoffComdatIterator, XcoffSection, XcoffSectionIterator, XcoffSegment, XcoffSegmentIterator,
+    XcoffSymbol, XcoffSymbolIterator, XcoffSymbolTable,
 };
 
 /// A 32-bit XCOFF object file.
@@ -248,6 +248,8 @@ pub trait FileHeader: Debug + Pod {
     type AuxHeader: AuxHeader<Word = Self::Word>;
     type SectionHeader: SectionHeader<Word = Self::Word>;
     type Symbol: Symbol<Word = Self::Word>;
+    type FileAux: FileAux;
+    type CsectAux: CsectAux;
 
     /// Return true if this type is a 64-bit header.
     fn is_type_64(&self) -> bool;
@@ -328,6 +330,8 @@ impl FileHeader for xcoff::FileHeader32 {
     type AuxHeader = xcoff::AuxHeader32;
     type SectionHeader = xcoff::SectionHeader32;
     type Symbol = xcoff::Symbol32;
+    type FileAux = xcoff::FileAux32;
+    type CsectAux = xcoff::CsectAux32;
 
     fn is_type_64(&self) -> bool {
         false
@@ -367,6 +371,8 @@ impl FileHeader for xcoff::FileHeader64 {
     type AuxHeader = xcoff::AuxHeader64;
     type SectionHeader = xcoff::SectionHeader64;
     type Symbol = xcoff::Symbol64;
+    type FileAux = xcoff::FileAux64;
+    type CsectAux = xcoff::CsectAux64;
 
     fn is_type_64(&self) -> bool {
         true

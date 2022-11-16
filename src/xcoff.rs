@@ -5,6 +5,8 @@
 //!
 //! This module is the equivalent of /usr/include/xcoff.h, and is based heavily on it.
 
+#![allow(missing_docs)]
+
 use crate::endian::{BigEndian as BE, I16, U16, U32, U64};
 use crate::pod::Pod;
 
@@ -329,6 +331,12 @@ pub const STYP_TYPCHK: u16 = 0x4000;
 /// when either of the counts exceeds 65,534.
 pub const STYP_OVRFLO: u16 = 0x8000;
 
+pub const SIZEOF_SYMBOL: usize = 18;
+
+#[derive(Debug, Clone, Copy)]
+#[repr(C)]
+pub struct SymbolBytes(pub [u8; SIZEOF_SYMBOL]);
+
 /// Symbol table entry.
 #[derive(Debug, Clone, Copy)]
 #[repr(C)]
@@ -382,13 +390,9 @@ pub const N_UNDEF: i16 = 0;
 /// of the 16-bit unsigned n_type field of symbol table entries. Valid for
 /// 32-bit XCOFF only when the o_vstamp in the auxiliary header is greater than 1.
 pub const SYM_V_MASK: u16 = 0xF000;
-#[allow(missing_docs)]
 pub const SYM_V_INTERNAL: u16 = 0x1000;
-#[allow(missing_docs)]
 pub const SYM_V_HIDDEN: u16 = 0x2000;
-#[allow(missing_docs)]
 pub const SYM_V_PROTECTED: u16 = 0x3000;
-#[allow(missing_docs)]
 pub const SYM_V_EXPORTED: u16 = 0x4000;
 
 // Values for `n_sclass`.
@@ -506,6 +510,51 @@ pub const C_EFCN: u8 = 255;
 /// Reserved.
 pub const C_TCSYM: u8 = 134;
 
+/// File Auxiliary Entry for C_FILE Symbols.
+#[derive(Debug, Clone, Copy)]
+#[repr(C)]
+pub struct FileAux32 {
+    /// The source file name or compiler-related string.
+    ///
+    /// If first 4 bytes are 0, then second 4 bytes are offset into string table.
+    pub x_fname: [u8; 8],
+    /// Pad size for file name.
+    pub x_fpad: [u8; 6],
+    /// The source-file string type.
+    pub x_ftype: u8,
+    /// Reserved.
+    pub x_freserve: [u8; 3],
+}
+
+/// File Auxiliary Entry for C_FILE Symbols.
+#[derive(Debug, Clone, Copy)]
+#[repr(C)]
+pub struct FileAux64 {
+    /// The source file name or compiler-related string.
+    ///
+    /// If first 4 bytes are 0, then second 4 bytes are offset into string table.
+    pub x_fname: [u8; 8],
+    /// Pad size for file name.
+    pub x_fpad: [u8; 6],
+    /// The source-file string type.
+    pub x_ftype: u8,
+    /// Reserved.
+    pub x_freserve: [u8; 2],
+    /// Specifies the type of auxiliary entry. Contains _AUX_FILE for this auxiliary entry.
+    pub x_auxtype: u8,
+}
+
+// Values for `x_ftype`.
+//
+/// Specifies the source-file name.
+pub const XFT_FN: u8 = 0;
+/// Specifies the compiler time stamp.
+pub const XFT_CT: u8 = 1;
+/// Specifies the compiler version number.
+pub const XFT_CV: u8 = 2;
+/// Specifies compiler-defined information.
+pub const XFT_CD: u8 = 128;
+
 /// Csect auxiliary entry for C_EXT, C_WEAKEXT, and C_HIDEXT symbols.
 #[derive(Debug, Clone, Copy)]
 #[repr(C)]
@@ -547,6 +596,198 @@ pub struct CsectAux64 {
     /// Contains _AUX_CSECT; indicates type of auxiliary entry.
     pub x_auxtype: u8,
 }
+
+// Values for `x_smtyp`.
+//
+/// External reference.
+pub const XTY_ER: u8 = 0;
+/// Csect definition for initialized storage.
+pub const XTY_SD: u8 = 1;
+/// Defines an entry point to an initialized csect.
+pub const XTY_LD: u8 = 2;
+/// Common csect definition. For uninitialized storage.
+pub const XTY_CM: u8 = 3;
+
+// Values for `x_smclas`.
+//
+// READ ONLY CLASSES
+//
+/// Program Code
+pub const XMC_PR: u8 = 0;
+/// Read Only Constant
+pub const XMC_RO: u8 = 1;
+/// Debug Dictionary Table
+pub const XMC_DB: u8 = 2;
+/// Global Linkage (Interfile Interface Code)
+pub const XMC_GL: u8 = 6;
+/// Extended Operation (Pseudo Machine Instruction)
+pub const XMC_XO: u8 = 7;
+/// Supervisor Call (32-bit process only)
+pub const XMC_SV: u8 = 8;
+/// Supervisor Call for 64-bit process
+pub const XMC_SV64: u8 = 17;
+/// Supervisor Call for both 32- and 64-bit processes
+pub const XMC_SV3264: u8 = 18;
+/// Traceback Index csect
+pub const XMC_TI: u8 = 12;
+/// Traceback Table csect
+pub const XMC_TB: u8 = 13;
+//
+// READ WRITE CLASSES
+//
+/// Read Write Data
+pub const XMC_RW: u8 = 5;
+/// TOC Anchor for TOC Addressability
+pub const XMC_TC0: u8 = 15;
+/// General TOC item
+pub const XMC_TC: u8 = 3;
+/// Scalar data item in the TOC
+pub const XMC_TD: u8 = 16;
+/// Descriptor csect
+pub const XMC_DS: u8 = 10;
+/// Unclassified - Treated as Read Write
+pub const XMC_UA: u8 = 4;
+/// BSS class (uninitialized static internal)
+pub const XMC_BS: u8 = 9;
+/// Un-named Fortran Common
+pub const XMC_UC: u8 = 11;
+/// Initialized thread-local variable
+pub const XMC_TL: u8 = 20;
+/// Uninitialized thread-local variable
+pub const XMC_UL: u8 = 21;
+/// Symbol mapped at the end of TOC
+pub const XMC_TE: u8 = 22;
+
+/// Function auxiliary entry.
+#[derive(Debug, Clone, Copy)]
+#[repr(C)]
+pub struct FunAux32 {
+    /// File offset to exception table entry.
+    pub x_exptr: U32<BE>,
+    /// Size of function in bytes.
+    pub x_fsize: U32<BE>,
+    /// File pointer to line number
+    pub x_lnnoptr: U32<BE>,
+    /// Symbol table index of next entry beyond this function.
+    pub x_endndx: U32<BE>,
+    /// Pad
+    pub pad: U16<BE>,
+}
+
+/// Function auxiliary entry.
+#[derive(Debug, Clone, Copy)]
+#[repr(C)]
+pub struct FunAux64 {
+    /// File pointer to line number
+    pub x_lnnoptr: U64<BE>,
+    /// Size of function in bytes.
+    pub x_fsize: U32<BE>,
+    /// Symbol table index of next entry beyond this function.
+    pub x_endndx: U32<BE>,
+    /// Pad
+    pub pad: u8,
+    /// Contains _AUX_FCN; Type of auxiliary entry.
+    pub x_auxtype: u8,
+}
+
+/// Exception auxiliary entry. (XCOFF64 only)
+#[derive(Debug, Clone, Copy)]
+#[repr(C)]
+pub struct ExpAux {
+    /// File offset to exception table entry.
+    pub x_exptr: U64<BE>,
+    /// Size of function in bytes.
+    pub x_fsize: U32<BE>,
+    /// Symbol table index of next entry beyond this function.
+    pub x_endndx: U32<BE>,
+    /// Pad
+    pub pad: u8,
+    /// Contains _AUX_EXCEPT; Type of auxiliary entry
+    pub x_auxtype: u8,
+}
+
+/// Block auxiliary entry for the C_BLOCK and C_FCN Symbols.
+#[derive(Debug, Clone, Copy)]
+#[repr(C)]
+pub struct BlockAux32 {
+    /// Reserved.
+    pub pad: [u8; 2],
+    /// High-order 2 bytes of the source line number.
+    pub x_lnnohi: U16<BE>,
+    /// Low-order 2 bytes of the source line number.
+    pub x_lnnolo: U16<BE>,
+    /// Reserved.
+    pub pad2: [u8; 12],
+}
+
+/// Block auxiliary entry for the C_BLOCK and C_FCN Symbols.
+#[derive(Debug, Clone, Copy)]
+#[repr(C)]
+pub struct BlockAux64 {
+    /// Source line number.
+    pub x_lnno: U32<BE>,
+    /// Reserved.
+    pub pad: [u8; 13],
+    /// Contains _AUX_SYM; Type of auxiliary entry.
+    pub x_auxtype: u8,
+}
+
+/// Section auxiliary entry for the C_STAT Symbol. (XCOFF32 Only)
+#[derive(Debug, Clone, Copy)]
+#[repr(C)]
+pub struct StatAux {
+    /// Section length.
+    pub x_scnlen: U32<BE>,
+    /// Number of relocation entries.
+    pub x_nreloc: U16<BE>,
+    /// Number of line numbers.
+    pub x_nlinno: U16<BE>,
+    /// Reserved.
+    pub pad: [u8; 10],
+}
+
+/// Section auxiliary entry Format for C_DWARF symbols.
+#[derive(Debug, Clone, Copy)]
+#[repr(C)]
+pub struct DwarfAux32 {
+    /// Length of portion of section represented by symbol.
+    pub x_scnlen: U32<BE>,
+    /// Reserved.
+    pub pad: [u8; 4],
+    /// Number of relocation entries in section.
+    pub x_nreloc: U32<BE>,
+    /// Reserved.
+    pub pad2: [u8; 6],
+}
+
+/// Section auxiliary entry Format for C_DWARF symbols.
+#[derive(Debug, Clone, Copy)]
+#[repr(C)]
+pub struct DwarfAux64 {
+    /// Length of portion of section represented by symbol.
+    pub x_scnlen: U64<BE>,
+    /// Number of relocation entries in section.
+    pub x_nreloc: U64<BE>,
+    /// Reserved.
+    pub pad: u8,
+    /// Contains _AUX_SECT; Type of Auxillary entry.
+    pub x_auxtype: u8,
+}
+
+// Values for `x_auxtype`
+//
+/// Identifies an exception auxiliary entry.
+pub const AUX_EXCEPT: u8 = 255;
+/// Identifies a function auxiliary entry.
+pub const AUX_FCN: u8 = 254;
+/// Identifies a symbol auxiliary entry.
+pub const AUX_SYM: u8 = 253;
+/// Identifies a file auxiliary entry.
+pub const AUX_FILE: u8 = 252;
+/// Identifies a csect auxiliary entry.
+pub const AUX_CSECT: u8 = 251;
+/// Identifies a SECT auxiliary entry.
+pub const AUX_SECT: u8 = 250;
 
 /// Relocation table entry
 #[derive(Debug, Clone, Copy)]
@@ -632,10 +873,21 @@ unsafe_impl_pod!(
     AuxHeader64,
     SectionHeader32,
     SectionHeader64,
+    SymbolBytes,
     Symbol32,
     Symbol64,
+    FileAux32,
+    FileAux64,
     CsectAux32,
     CsectAux64,
+    FunAux32,
+    FunAux64,
+    ExpAux,
+    BlockAux32,
+    BlockAux64,
+    StatAux,
+    DwarfAux32,
+    DwarfAux64,
     Rel32,
     Rel64,
 );
