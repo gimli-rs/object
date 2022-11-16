@@ -10,7 +10,7 @@ use crate::read::util::StringTable;
 use crate::{bytes_of, xcoff, Object, ObjectSection, SectionKind};
 
 use crate::read::{
-    self, Bytes, ObjectSymbol, ObjectSymbolTable, ReadError, ReadRef, Result, SectionIndex,
+    self, Bytes, Error, ObjectSymbol, ObjectSymbolTable, ReadError, ReadRef, Result, SectionIndex,
     SymbolFlags, SymbolIndex, SymbolKind, SymbolScope, SymbolSection,
 };
 
@@ -98,25 +98,25 @@ where
     /// Return the file auxiliary symbol.
     pub fn aux_file(&self, index: usize) -> Result<&'data Xcoff::FileAux> {
         debug_assert!(self.symbol(index)?.has_aux_file());
-        let aux_entry = self.get::<Xcoff::FileAux>(index, 1);
-        if let Ok(aux_csect) = aux_entry {
-            if let Some(aux_type) = aux_csect.x_auxtype() {
-                debug_assert!(aux_type == xcoff::AUX_FILE);
+        let aux_file = self.get::<Xcoff::FileAux>(index, 1)?;
+        if let Some(aux_type) = aux_file.x_auxtype() {
+            if aux_type != xcoff::AUX_FILE {
+                return Err(Error("Invalid index for file auxiliary symbol."));
             }
         }
-        return aux_entry;
+        return Ok(aux_file);
     }
 
     /// Return the csect auxiliary symbol.
     pub fn aux_csect(&self, index: usize, offset: usize) -> Result<&'data Xcoff::CsectAux> {
         debug_assert!(self.symbol(index)?.has_aux_csect());
-        let aux_entry = self.get::<Xcoff::CsectAux>(index, offset);
-        if let Ok(aux_csect) = aux_entry {
-            if let Some(aux_type) = aux_csect.x_auxtype() {
-                debug_assert!(aux_type == xcoff::AUX_CSECT);
+        let aux_csect = self.get::<Xcoff::CsectAux>(index, offset)?;
+        if let Some(aux_type) = aux_csect.x_auxtype() {
+            if aux_type != xcoff::AUX_CSECT {
+                return Err(Error("Invalid index/offset for csect auxiliary symbol."));
             }
         }
-        return aux_entry;
+        return Ok(aux_csect);
     }
 
     /// Return true if the symbol table is empty.
