@@ -25,7 +25,9 @@ jobs:
         rustup install ${{matrix.rust_channel}}
         rustup default ${{matrix.rust_channel}}
     - name: Test debug
-      run: cargo test --verbose --features all
+      run: |
+        cargo test --verbose --features all
+        cargo test --verbose --features unstable-all
     - name: Test release
       run: cargo test --verbose --features all --release
 
@@ -42,7 +44,7 @@ jobs:
       - run: cargo build --no-default-features --features read_core,write_core,macho
       - run: cargo build --no-default-features --features read_core,pe
       - run: cargo build --no-default-features --features read_core,wasm
-      - run: cargo build --no-default-features --features read_core,xcoff
+      - run: cargo build --no-default-features --features read_core,xcoff,unstable
       - run: cargo build --no-default-features --features doc
 
   cross:
