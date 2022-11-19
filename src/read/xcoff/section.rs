@@ -190,7 +190,7 @@ where
 
     fn flags(&self) -> SectionFlags {
         SectionFlags::Xcoff {
-            s_flags: self.section.s_flags().into(),
+            s_flags: self.section.s_flags(),
         }
     }
 
@@ -298,7 +298,7 @@ pub trait SectionHeader: Debug + Pod {
     /// Returns `Err` for invalid values.
     fn data<'data, R: ReadRef<'data>>(&self, data: R) -> result::Result<&'data [u8], ()> {
         if let Some((offset, size)) = self.file_range() {
-            data.read_bytes_at(offset.into(), size.into())
+            data.read_bytes_at(offset, size)
         } else {
             Ok(&[])
         }
@@ -420,7 +420,7 @@ impl SectionHeader for xcoff::SectionHeader64 {
     ///
     /// `data` must be the entire file data.
     fn relocations<'data, R: ReadRef<'data>>(&self, data: R) -> read::Result<&'data [Self::Rel]> {
-        data.read_slice_at(self.s_relptr().into(), self.s_nreloc() as usize)
+        data.read_slice_at(self.s_relptr(), self.s_nreloc() as usize)
             .read_error("Invalid XCOFF relocation offset or number")
     }
 }

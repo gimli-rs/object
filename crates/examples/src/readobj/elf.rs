@@ -32,56 +32,56 @@ fn print_elf<Elf: FileHeader<Endian = Endianness>>(p: &mut Printer<'_>, elf: &El
 fn print_file_header<Elf: FileHeader>(p: &mut Printer<'_>, endian: Elf::Endian, elf: &Elf) {
     p.group("FileHeader", |p| {
         p.group("Ident", |p| print_ident(p, elf.e_ident()));
-        p.field_enum("Type", elf.e_type(endian), &FLAGS_ET);
-        p.field_enum("Machine", elf.e_machine(endian), &FLAGS_EM);
+        p.field_enum("Type", elf.e_type(endian), FLAGS_ET);
+        p.field_enum("Machine", elf.e_machine(endian), FLAGS_EM);
         let version = elf.e_version(endian);
         if version < 256 {
-            p.field_enum("Version", version as u8, &FLAGS_EV);
+            p.field_enum("Version", version as u8, FLAGS_EV);
         } else {
             p.field_hex("Version", version);
         }
-        p.field_enum("Type", elf.e_type(endian), &FLAGS_ET);
+        p.field_enum("Type", elf.e_type(endian), FLAGS_ET);
         p.field_hex("Entry", elf.e_entry(endian).into());
         p.field_hex("ProgramHeaderOffset", elf.e_phoff(endian).into());
         p.field_hex("SectionHeaderOffset", elf.e_shoff(endian).into());
         let flags = elf.e_flags(endian);
         p.field_hex("Flags", flags);
         match elf.e_machine(endian) {
-            EM_SPARC => p.flags(flags, 0, &FLAGS_EF_SPARC),
-            EM_SPARCV9 => p.flags(flags, 0, &FLAGS_EF_SPARCV9),
+            EM_SPARC => p.flags(flags, 0, FLAGS_EF_SPARC),
+            EM_SPARCV9 => p.flags(flags, 0, FLAGS_EF_SPARCV9),
             EM_MIPS => {
-                p.flags(flags, 0, &FLAGS_EF_MIPS);
-                p.flags(flags, EF_MIPS_ARCH, &FLAGS_EF_MIPS_ARCH);
+                p.flags(flags, 0, FLAGS_EF_MIPS);
+                p.flags(flags, EF_MIPS_ARCH, FLAGS_EF_MIPS_ARCH);
                 // Some ABIs may have all these bits zeroed out
                 if flags & EF_MIPS_ABI != 0 {
-                    p.flags(flags, EF_MIPS_ABI, &FLAGS_EF_MIPS_ABI);
+                    p.flags(flags, EF_MIPS_ABI, FLAGS_EF_MIPS_ABI);
                 }
             }
             EM_PARISC => {
-                p.flags(flags, 0, &FLAGS_EF_PARISC);
-                p.flags(flags, EF_PARISC_ARCH, &FLAGS_EF_PARISC_ARCH);
+                p.flags(flags, 0, FLAGS_EF_PARISC);
+                p.flags(flags, EF_PARISC_ARCH, FLAGS_EF_PARISC_ARCH);
             }
-            EM_ALPHA => p.flags(flags, 0, &FLAGS_EF_ALPHA),
-            EM_PPC => p.flags(flags, 0, &FLAGS_EF_PPC),
-            EM_PPC64 => p.flags(flags, 0, &FLAGS_EF_PPC64),
+            EM_ALPHA => p.flags(flags, 0, FLAGS_EF_ALPHA),
+            EM_PPC => p.flags(flags, 0, FLAGS_EF_PPC),
+            EM_PPC64 => p.flags(flags, 0, FLAGS_EF_PPC64),
             EM_ARM => {
-                p.flags(flags, 0, &FLAGS_EF_ARM);
-                p.flags(flags, EF_ARM_EABIMASK, &FLAGS_EF_ARM_EABI);
+                p.flags(flags, 0, FLAGS_EF_ARM);
+                p.flags(flags, EF_ARM_EABIMASK, FLAGS_EF_ARM_EABI);
             }
-            EM_CSKY => p.flags(flags, EF_CSKY_ABIMASK, &FLAGS_EF_CSKY_ABI),
-            EM_IA_64 => p.flags(flags, 0, &FLAGS_EF_IA_64),
-            EM_SH => p.flags(flags, EF_SH_MACH_MASK, &FLAGS_EF_SH_MACH),
-            EM_S390 => p.flags(flags, 0, &FLAGS_EF_S390),
+            EM_CSKY => p.flags(flags, EF_CSKY_ABIMASK, FLAGS_EF_CSKY_ABI),
+            EM_IA_64 => p.flags(flags, 0, FLAGS_EF_IA_64),
+            EM_SH => p.flags(flags, EF_SH_MACH_MASK, FLAGS_EF_SH_MACH),
+            EM_S390 => p.flags(flags, 0, FLAGS_EF_S390),
             EM_RISCV => {
-                p.flags(flags, 0, &FLAGS_EF_RISCV);
-                p.flags(flags, EF_RISCV_FLOAT_ABI, &FLAGS_EF_RISCV_FLOAT_ABI);
+                p.flags(flags, 0, FLAGS_EF_RISCV);
+                p.flags(flags, EF_RISCV_FLOAT_ABI, FLAGS_EF_RISCV_FLOAT_ABI);
             }
             EM_LOONGARCH => {
-                p.flags(flags, 0, &FLAGS_EF_LARCH_OBJABI);
+                p.flags(flags, 0, FLAGS_EF_LARCH_OBJABI);
                 p.flags(
                     flags,
                     EF_LARCH_ABI_MODIFIER_MASK,
-                    &FLAGS_EF_LARCH_ABI_MODIFIER,
+                    FLAGS_EF_LARCH_ABI_MODIFIER,
                 );
             }
             _ => {}
@@ -97,10 +97,10 @@ fn print_file_header<Elf: FileHeader>(p: &mut Printer<'_>, endian: Elf::Endian, 
 
 fn print_ident(p: &mut Printer<'_>, ident: &Ident) {
     p.field("Magic", format!("{:X?}", ident.magic));
-    p.field_enum("Class", ident.class, &FLAGS_EI_CLASS);
-    p.field_enum("Data", ident.data, &FLAGS_EI_DATA);
-    p.field_enum("Version", ident.version, &FLAGS_EV);
-    p.field_enum("OsAbi", ident.os_abi, &FLAGS_EI_OSABI);
+    p.field_enum("Class", ident.class, FLAGS_EI_CLASS);
+    p.field_enum("Data", ident.data, FLAGS_EI_DATA);
+    p.field_enum("Version", ident.version, FLAGS_EV);
+    p.field_enum("OsAbi", ident.os_abi, FLAGS_EI_OSABI);
     p.field_hex("AbiVersion", ident.abi_version);
     p.field("Unused", format!("{:X?}", ident.padding));
 }

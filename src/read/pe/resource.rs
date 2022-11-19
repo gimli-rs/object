@@ -18,7 +18,7 @@ impl<'data> ResourceDirectory<'data> {
 
     /// Parses the root resource directory.
     pub fn root(&self) -> Result<ResourceDirectoryTable<'data>> {
-        ResourceDirectoryTable::parse(&self.data, 0)
+        ResourceDirectoryTable::parse(self.data, 0)
     }
 }
 
@@ -93,13 +93,13 @@ impl pe::ImageResourceDirectoryEntry {
     ) -> Result<ResourceDirectoryEntryData<'data>> {
         if self.is_table() {
             ResourceDirectoryTable::parse(section.data, self.data_offset())
-                .map(|t| ResourceDirectoryEntryData::Table(t))
+                .map(ResourceDirectoryEntryData::Table)
         } else {
             section
                 .data
                 .read_at::<pe::ImageResourceDataEntry>(self.data_offset().into())
                 .read_error("Invalid resource entry")
-                .map(|d| ResourceDirectoryEntryData::Data(d))
+                .map(ResourceDirectoryEntryData::Data)
         }
     }
 }
