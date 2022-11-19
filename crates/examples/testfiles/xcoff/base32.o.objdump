@@ -19,12 +19,12 @@ Symbols
 17: Symbol { name: ".rodata.str1.1L...str", address: 78, size: 4, kind: Data, section: Section(SectionIndex(2)), scope: Dynamic, weak: false, flags: None }
 
 .text relocations
-(22, Relocation { kind: Got, encoding: Generic, size: 0, target: Symbol(SymbolIndex(11)), addend: 0, implicit_addend: true })
-(24, Relocation { kind: Relative, encoding: Generic, size: 0, target: Symbol(SymbolIndex(3)), addend: fffffffffffffffc, implicit_addend: true })
+(22, Relocation { kind: Got, encoding: Generic, size: 10, target: Symbol(SymbolIndex(11)), addend: 0, implicit_addend: true })
+(24, Relocation { kind: Relative, encoding: Generic, size: 1a, target: Symbol(SymbolIndex(3)), addend: fffffffffffffffc, implicit_addend: true })
 
 .data relocations
-(6c, Relocation { kind: Absolute, encoding: Generic, size: 0, target: Symbol(SymbolIndex(9)), addend: 0, implicit_addend: true })
-(70, Relocation { kind: Absolute, encoding: Generic, size: 0, target: Symbol(SymbolIndex(f)), addend: 0, implicit_addend: true })
-(78, Relocation { kind: Absolute, encoding: Generic, size: 0, target: Symbol(SymbolIndex(b)), addend: 0, implicit_addend: true })
+(6c, Relocation { kind: Absolute, encoding: Generic, size: 20, target: Symbol(SymbolIndex(9)), addend: 0, implicit_addend: true })
+(70, Relocation { kind: Absolute, encoding: Generic, size: 20, target: Symbol(SymbolIndex(f)), addend: 0, implicit_addend: true })
+(78, Relocation { kind: Absolute, encoding: Generic, size: 20, target: Symbol(SymbolIndex(b)), addend: 0, implicit_addend: true })
 
 Dynamic symbols

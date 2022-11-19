@@ -50,7 +50,7 @@ where
                 xcoff::R_TOC | xcoff::R_TOCL | xcoff::R_TOCU => (RelocationKind::Got, 0),
                 r_type => (RelocationKind::Xcoff(r_type), 0),
             };
-            let size = relocation.r_rsize() & 0x3F + 1;
+            let size = (relocation.r_rsize() & 0x3F) + 1;
             let target = RelocationTarget::Symbol(SymbolIndex(relocation.r_symndx() as usize));
             (
                 u64::from(relocation.r_vaddr().into()),
