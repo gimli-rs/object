@@ -40,7 +40,7 @@ Changes to MSRV are considered breaking changes. We are conservative about chang
 but sometimes are required to due to dependencies. The MSRV is:
 
   * 1.52.0 for the `read` feature and its dependencies.
-  * 1.56.1 for the `write` feature and its dependencies.
+  * 1.61.0 for the `write` feature and its dependencies.
 
 ## License
 

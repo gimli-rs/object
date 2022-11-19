@@ -86,7 +86,7 @@ jobs:
         with:
           submodules: true
       - name: Install rust
-        run: rustup update 1.56.1 && rustup default 1.56.1
+        run: rustup update 1.61.0 && rustup default 1.61.0
       - name: Test
         run: cargo test --verbose --features all
 
