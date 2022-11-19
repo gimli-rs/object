@@ -104,7 +104,7 @@ where
                 return Err(Error("Invalid index for file auxiliary symbol."));
             }
         }
-        return Ok(aux_file);
+        Ok(aux_file)
     }
 
     /// Return the csect auxiliary symbol.
@@ -116,7 +116,7 @@ where
                 return Err(Error("Invalid index/offset for csect auxiliary symbol."));
             }
         }
-        return Ok(aux_csect);
+        Ok(aux_csect)
     }
 
     /// Return true if the symbol table is empty.

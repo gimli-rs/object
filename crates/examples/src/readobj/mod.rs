@@ -7,7 +7,7 @@ use object::Endianness;
 
 pub fn print(w: &'_ mut dyn Write, e: &'_ mut dyn Write, file: &[u8]) {
     let mut printer = Printer::new(w, e);
-    print_object(&mut printer, &*file);
+    print_object(&mut printer, file);
 }
 
 struct Printer<'a> {

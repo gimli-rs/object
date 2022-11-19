@@ -12,7 +12,7 @@ pub fn print<W: Write, E: Write>(
 ) -> Result<()> {
     let mut member_names: Vec<_> = member_names.into_iter().map(|name| (name, false)).collect();
 
-    if let Ok(archive) = ArchiveFile::parse(&*file) {
+    if let Ok(archive) = ArchiveFile::parse(file) {
         writeln!(w, "Format: Archive (kind: {:?})", archive.kind())?;
         for member in archive.members() {
             match member {
@@ -20,7 +20,7 @@ pub fn print<W: Write, E: Write>(
                     if find_member(&mut member_names, member.name()) {
                         writeln!(w)?;
                         writeln!(w, "{}:", String::from_utf8_lossy(member.name()))?;
-                        if let Ok(data) = member.data(&*file) {
+                        if let Ok(data) = member.data(file) {
                             dump_object(w, e, data)?;
                         }
                     }
@@ -28,27 +28,27 @@ pub fn print<W: Write, E: Write>(
                 Err(err) => writeln!(e, "Failed to parse archive member: {}", err)?,
             }
         }
-    } else if let Ok(arches) = FatHeader::parse_arch32(&*file) {
+    } else if let Ok(arches) = FatHeader::parse_arch32(file) {
         writeln!(w, "Format: Mach-O Fat 32")?;
         for arch in arches {
             writeln!(w)?;
             writeln!(w, "Fat Arch: {:?}", arch.architecture())?;
-            match arch.data(&*file) {
+            match arch.data(file) {
                 Ok(data) => dump_object(w, e, data)?,
                 Err(err) => writeln!(e, "Failed to parse Fat 32 data: {}", err)?,
             }
         }
-    } else if let Ok(arches) = FatHeader::parse_arch64(&*file) {
+    } else if let Ok(arches) = FatHeader::parse_arch64(file) {
         writeln!(w, "Format: Mach-O Fat 64")?;
         for arch in arches {
             writeln!(w)?;
             writeln!(w, "Fat Arch: {:?}", arch.architecture())?;
-            match arch.data(&*file) {
+            match arch.data(file) {
                 Ok(data) => dump_object(w, e, data)?,
                 Err(err) => writeln!(e, "Failed to parse Fat 64 data: {}", err)?,
             }
         }
-    } else if let Ok(cache) = DyldCache::<Endianness>::parse(&*file, extra_files) {
+    } else if let Ok(cache) = DyldCache::<Endianness>::parse(file, extra_files) {
         writeln!(w, "Format: dyld cache {:?}-endian", cache.endianness())?;
         writeln!(w, "Architecture: {:?}", cache.architecture())?;
         for image in cache.images() {
@@ -74,7 +74,7 @@ pub fn print<W: Write, E: Write>(
             dump_parsed_object(w, e, &file)?;
         }
     } else {
-        dump_object(w, e, &*file)?;
+        dump_object(w, e, file)?;
     }
 
     for (name, found) in member_names {

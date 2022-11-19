@@ -58,9 +58,9 @@ impl<'data, R: ReadRef<'data>> ArchiveFile<'data, R> {
             .read_bytes(&mut tail, archive::MAGIC.len() as u64)
             .read_error("Invalid archive size")?;
 
-        if magic == &archive::AIX_BIG_MAGIC {
+        if magic == archive::AIX_BIG_MAGIC {
             return Self::parse_aixbig(data);
-        } else if magic != &archive::MAGIC {
+        } else if magic != archive::MAGIC {
             return Err(Error("Unsupported archive identifier"));
         }
 
@@ -273,9 +273,9 @@ impl<'data, R: ReadRef<'data>> Iterator for ArchiveMemberIterator<'data, R> {
                 }
                 Some(member)
             }
-            Members::AixBig { ref mut index } => match *index {
-                &[] => return None,
-                &[ref first, ref rest @ ..] => {
+            Members::AixBig { ref mut index } => match **index {
+                [] => None,
+                [ref first, ref rest @ ..] => {
                     *index = rest;
                     let member = ArchiveMember::parse_aixbig_index(self.data, first);
                     if member.is_err() {
@@ -333,11 +333,11 @@ impl<'data> ArchiveMember<'data> {
             *offset = offset.saturating_add(1);
         }
 
-        let name = if header.name[0] == b'/' && (header.name[1] as char).is_digit(10) {
+        let name = if header.name[0] == b'/' && (header.name[1] as char).is_ascii_digit() {
             // Read file name from the names table.
             parse_sysv_extended_name(&header.name[1..], names)
                 .read_error("Invalid archive extended name offset")?
-        } else if &header.name[..3] == b"#1/" && (header.name[3] as char).is_digit(10) {
+        } else if &header.name[..3] == b"#1/" && (header.name[3] as char).is_ascii_digit() {
             // Read file name from the start of the file data.
             parse_bsd_extended_name(&header.name[3..], data, &mut file_offset, &mut file_size)
                 .read_error("Invalid archive extended name length")?

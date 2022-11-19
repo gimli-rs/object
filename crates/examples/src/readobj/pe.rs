@@ -12,10 +12,10 @@ pub(super) fn print_coff(p: &mut Printer<'_>, data: &[u8]) {
         let sections = header.sections(data, offset).print_err(p);
         let symbols = header.symbols(data).print_err(p);
         if let Some(ref sections) = sections {
-            print_sections(p, data, header.machine.get(LE), symbols.as_ref(), &sections);
+            print_sections(p, data, header.machine.get(LE), symbols.as_ref(), sections);
         }
         if let Some(ref symbols) = symbols {
-            print_symbols(p, sections.as_ref(), &symbols);
+            print_symbols(p, sections.as_ref(), symbols);
         }
     }
 }
@@ -86,14 +86,14 @@ fn print_pe<Pe: ImageNtHeaders>(p: &mut Printer<'_>, data: &[u8]) {
                 print_sections(p, data, machine, symbols.as_ref(), sections);
             }
             if let Some(ref symbols) = symbols {
-                print_symbols(p, sections.as_ref(), &symbols);
+                print_symbols(p, sections.as_ref(), symbols);
             }
             if let Some(ref sections) = sections {
-                print_export_dir(p, data, &sections, &data_directories);
-                print_import_dir::<Pe>(p, data, &sections, &data_directories);
-                print_delay_load_dir::<Pe>(p, data, &sections, &data_directories);
-                print_reloc_dir(p, data, machine, &sections, &data_directories);
-                print_resource_dir(p, data, &sections, &data_directories);
+                print_export_dir(p, data, sections, &data_directories);
+                print_import_dir::<Pe>(p, data, sections, &data_directories);
+                print_delay_load_dir::<Pe>(p, data, sections, &data_directories);
+                print_reloc_dir(p, data, machine, sections, &data_directories);
+                print_resource_dir(p, data, sections, &data_directories);
             }
         }
     }

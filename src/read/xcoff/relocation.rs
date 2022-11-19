@@ -53,7 +53,7 @@ where
             let size = (relocation.r_rsize() & 0x3F) + 1;
             let target = RelocationTarget::Symbol(SymbolIndex(relocation.r_symndx() as usize));
             (
-                u64::from(relocation.r_vaddr().into()),
+                relocation.r_vaddr().into(),
                 Relocation {
                     kind,
                     encoding,
