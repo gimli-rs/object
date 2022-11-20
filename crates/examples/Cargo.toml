@@ -12,6 +12,10 @@ glob = "0.3"
 
 [features]
 read = ["object/read"]
+wasm = ["object/wasm"]
+xcoff = ["object/xcoff"]
+all = ["read", "wasm"]
+unstable-all = ["all", "xcoff"]
 default = ["read"]
 
 [[bin]]

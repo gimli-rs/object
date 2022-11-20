@@ -6,14 +6,18 @@ use std::io::Write;
 use std::path::PathBuf;
 use std::{env, fs};
 
-#[cfg(feature = "wasm")]
-fn skip_wasm_test_if_unsupport(_: &PathBuf) -> bool {
-    true
-}
+const DISABLED_TEST_DIRS: &[&'static str] = &[
+    #[cfg(not(feature = "wasm"))]
+    "wasm",
+    #[cfg(not(feature = "xcoff"))]
+    "xcoff",
+];
 
-#[cfg(not(feature = "wasm"))]
-fn skip_wasm_test_if_unsupport(path: &PathBuf) -> bool {
-    path.extension().and_then(OsStr::to_str) != Some("wasm")
+fn test_dir_filter(path: &PathBuf) -> bool {
+    match path.file_name().and_then(OsStr::to_str) {
+        Some(dir) => !DISABLED_TEST_DIRS.contains(&dir),
+        None => true,
+    }
 }
 
 #[test]
@@ -22,12 +26,15 @@ fn testfiles() {
     env::set_current_dir("../..").unwrap();
 
     let mut fail = false;
-    for dir in glob::glob("testfiles/*").unwrap().filter_map(Result::ok) {
+    for dir in glob::glob("testfiles/*")
+        .unwrap()
+        .filter_map(Result::ok)
+        .filter(test_dir_filter)
+    {
         let dir = dir.to_str().unwrap();
         for path in glob::glob(&format!("{}/*", dir))
             .unwrap()
             .filter_map(Result::ok)
-            .filter(skip_wasm_test_if_unsupport)
         {
             let path = path.to_str().unwrap();
             if glob::glob(&format!("crates/examples/{}.*", path))
