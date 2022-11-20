@@ -166,6 +166,11 @@ impl ResourceName {
             .read_slice::<U16Bytes<LE>>(&mut offset, len.get(LE).into())
             .read_error("Invalid resource name length")
     }
+
+    /// Returns the string buffer as raw bytes.
+    pub fn raw_data<'data>(&self, directory: ResourceDirectory<'data>) -> Result<&'data [u8]> {
+        self.data(directory).map(crate::pod::bytes_of_slice)
+    }
 }
 
 /// A resource name or ID.
