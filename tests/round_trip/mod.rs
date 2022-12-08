@@ -247,6 +247,7 @@ fn elf_any() {
         (Architecture::Riscv32, Endianness::Little),
         (Architecture::Riscv64, Endianness::Little),
         (Architecture::S390x, Endianness::Big),
+        (Architecture::Sbf, Endianness::Little),
         (Architecture::Sparc64, Endianness::Big),
         (Architecture::Xtensa, Endianness::Little),
     ]

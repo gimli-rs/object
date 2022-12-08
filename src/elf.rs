@@ -576,6 +576,8 @@ pub const EM_BPF: u16 = 247;
 pub const EM_CSKY: u16 = 252;
 /// Loongson LoongArch
 pub const EM_LOONGARCH: u16 = 258;
+/// Solana Binary Format
+pub const EM_SBF: u16 = 263;
 /// Digital Alpha
 pub const EM_ALPHA: u16 = 0x9026;
 
@@ -6121,6 +6123,14 @@ pub const R_BPF_NONE: u32 = 0;
 pub const R_BPF_64_64: u32 = 1;
 #[allow(missing_docs)]
 pub const R_BPF_64_32: u32 = 10;
+
+// SBF values `Rel*::r_type`.
+/// No reloc
+pub const R_SBF_NONE: u32 = 0;
+#[allow(missing_docs)]
+pub const R_SBF_64_64: u32 = 1;
+#[allow(missing_docs)]
+pub const R_SBF_64_32: u32 = 10;
 
 // Imagination Meta values `Rel*::r_type`.
 

@@ -83,6 +83,7 @@ impl<'a> Object<'a> {
             Architecture::Riscv64 => true,
             Architecture::Riscv32 => true,
             Architecture::S390x => true,
+            Architecture::Sbf => false,
             Architecture::Sparc64 => true,
             Architecture::Xtensa => true,
             _ => {
@@ -281,6 +282,7 @@ impl<'a> Object<'a> {
             Architecture::Riscv32 => elf::EM_RISCV,
             Architecture::Riscv64 => elf::EM_RISCV,
             Architecture::S390x => elf::EM_S390,
+            Architecture::Sbf => elf::EM_SBF,
             Architecture::Sparc64 => elf::EM_SPARCV9,
             Architecture::Xtensa => elf::EM_XTENSA,
             _ => {
@@ -668,6 +670,14 @@ impl<'a> Object<'a> {
                             (RelocationKind::GotBaseRelative, RelocationEncoding::S390xDbl, 32) => {
                                 elf::R_390_GOTPCDBL
                             }
+                            (RelocationKind::Elf(x), _, _) => x,
+                            _ => {
+                                return Err(Error(format!("unimplemented relocation {:?}", reloc)));
+                            }
+                        },
+                        Architecture::Sbf => match (reloc.kind, reloc.encoding, reloc.size) {
+                            (RelocationKind::Absolute, _, 64) => elf::R_SBF_64_64,
+                            (RelocationKind::Absolute, _, 32) => elf::R_SBF_64_32,
                             (RelocationKind::Elf(x), _, _) => x,
                             _ => {
                                 return Err(Error(format!("unimplemented relocation {:?}", reloc)));
