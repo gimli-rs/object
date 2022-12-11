@@ -385,6 +385,11 @@ fn parse_relocation<Elf: FileHeader>(
             }
             r_type => (RelocationKind::Elf(r_type), 0),
         },
+        elf::EM_SBF => match reloc.r_type(endian, false) {
+            elf::R_SBF_64_64 => (RelocationKind::Absolute, 64),
+            elf::R_SBF_64_32 => (RelocationKind::Absolute, 32),
+            r_type => (RelocationKind::Elf(r_type), 0),
+        },
         elf::EM_SPARC | elf::EM_SPARC32PLUS | elf::EM_SPARCV9 => {
             match reloc.r_type(endian, false) {
                 elf::R_SPARC_32 | elf::R_SPARC_UA32 => (RelocationKind::Absolute, 32),

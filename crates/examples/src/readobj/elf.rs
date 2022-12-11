@@ -473,6 +473,7 @@ fn rel_flag_type<Elf: FileHeader>(endian: Elf::Endian, elf: &Elf) -> &'static [F
         EM_TILEGX => FLAGS_R_TILEGX,
         EM_RISCV => FLAGS_R_RISCV,
         EM_BPF => FLAGS_R_BPF,
+        EM_SBF => FLAGS_R_SBF,
         EM_LOONGARCH => FLAGS_R_LOONGARCH,
         EM_METAG => FLAGS_R_METAG,
         EM_NDS32 => FLAGS_R_NDS32,
@@ -999,6 +1000,7 @@ static FLAGS_EM: &[Flag<u16>] = &flags!(
     EM_AMDGPU,
     EM_RISCV,
     EM_BPF,
+    EM_SBF,
     EM_CSKY,
     EM_ALPHA,
     EM_LOONGARCH,
@@ -2911,6 +2913,7 @@ static FLAGS_R_RISCV: &[Flag<u32>] = &flags!(
     R_RISCV_32_PCREL,
 );
 static FLAGS_R_BPF: &[Flag<u32>] = &flags!(R_BPF_NONE, R_BPF_64_64, R_BPF_64_32);
+static FLAGS_R_SBF: &[Flag<u32>] = &flags!(R_SBF_NONE, R_SBF_64_64, R_SBF_64_32);
 static FLAGS_R_METAG: &[Flag<u32>] = &flags!(
     R_METAG_HIADDR16,
     R_METAG_LOADDR16,

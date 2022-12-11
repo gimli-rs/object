@@ -175,6 +175,7 @@ where
             // This is either s390 or s390x, depending on the ELF class.
             // We only support the 64-bit variant s390x here.
             (elf::EM_S390, true) => Architecture::S390x,
+            (elf::EM_SBF, _) => Architecture::Sbf,
             (elf::EM_SPARCV9, true) => Architecture::Sparc64,
             (elf::EM_XTENSA, false) => Architecture::Xtensa,
             _ => Architecture::Unknown,
