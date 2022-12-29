@@ -327,7 +327,8 @@ where
 
 impl<'data, 'file, R: ReadRef<'data>> CoffSymbol<'data, 'file, R> {
     #[inline]
-    fn raw_symbol(&self) -> pe::ImageSymbol {
+    /// get the raw ImageSymbol struct.
+    pub fn raw_symbol(&self) -> pe::ImageSymbol {
         *self.symbol
     }
 }
