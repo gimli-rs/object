@@ -395,13 +395,6 @@ pub trait ObjectSymbolTable<'data>: read::private::Sealed {
 
 /// A symbol table entry.
 pub trait ObjectSymbol<'data>: read::private::Sealed {
-
-    /// native symbol type for object symbol
-    type NativeSymbolType;
-
-    /// gets the underlying native symbol by value.
-    fn native_symbol(&self) -> Self::NativeSymbolType;
-
     /// The index of the symbol.
     fn index(&self) -> SymbolIndex;
 

@@ -282,14 +282,6 @@ where
     Mach: MachHeader,
     R: ReadRef<'data>,
 {
-
-    type NativeSymbolType = Option<Mach::Nlist>;
-
-    #[inline]
-    fn native_symbol(&self) -> Self::NativeSymbolType {
-        Some(*self.nlist)
-    }
-
     #[inline]
     fn index(&self) -> SymbolIndex {
         self.index
