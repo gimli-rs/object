@@ -5,7 +5,7 @@ use core::str;
 
 use super::{CoffCommon, SectionTable};
 use crate::endian::{LittleEndian as LE, U32Bytes};
-use crate::pe;
+use crate::pe::{self, ImageSymbol};
 use crate::pod::{bytes_of_slice, Pod};
 use crate::read::util::StringTable;
 use crate::read::{
@@ -328,6 +328,14 @@ where
 impl<'data, 'file, R: ReadRef<'data>> read::private::Sealed for CoffSymbol<'data, 'file, R> {}
 
 impl<'data, 'file, R: ReadRef<'data>> ObjectSymbol<'data> for CoffSymbol<'data, 'file, R> {
+
+    type NativeSymbolType = ImageSymbol;
+
+    #[inline]
+    fn native_symbol(&self) -> Self::NativeSymbolType {
+        *self.symbol
+    }
+
     #[inline]
     fn index(&self) -> SymbolIndex {
         self.index

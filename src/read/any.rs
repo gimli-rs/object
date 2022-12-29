@@ -1196,6 +1196,13 @@ impl<'data, 'file, R: ReadRef<'data>> fmt::Debug for Symbol<'data, 'file, R> {
 impl<'data, 'file, R: ReadRef<'data>> read::private::Sealed for Symbol<'data, 'file, R> {}
 
 impl<'data, 'file, R: ReadRef<'data>> ObjectSymbol<'data> for Symbol<'data, 'file, R> {
+
+    type NativeSymbolType = Option<()>;
+
+    fn native_symbol(&self) -> Option<()> {
+        None
+    }
+
     fn index(&self) -> SymbolIndex {
         with_inner!(self.inner, SymbolInternal, |x| x.0.index())
     }

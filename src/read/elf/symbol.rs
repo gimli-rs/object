@@ -320,6 +320,14 @@ impl<'data, 'file, Elf: FileHeader, R: ReadRef<'data>> read::private::Sealed
 impl<'data, 'file, Elf: FileHeader, R: ReadRef<'data>> ObjectSymbol<'data>
     for ElfSymbol<'data, 'file, Elf, R>
 {
+    
+    type NativeSymbolType = Elf::Sym;
+
+    #[inline]
+    fn native_symbol(&self) -> Self::NativeSymbolType {
+        *self.symbol
+    }
+
     #[inline]
     fn index(&self) -> SymbolIndex {
         self.index
