@@ -321,11 +321,11 @@ impl<'data, 'file, Elf: FileHeader, R: ReadRef<'data>> ObjectSymbol<'data>
     for ElfSymbol<'data, 'file, Elf, R>
 {
     
-    type NativeSymbolType = Elf::Sym;
+    type NativeSymbolType = Option<Elf::Sym>;
 
     #[inline]
     fn native_symbol(&self) -> Self::NativeSymbolType {
-        *self.symbol
+        Some(*self.symbol)
     }
 
     #[inline]

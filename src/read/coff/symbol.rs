@@ -329,11 +329,11 @@ impl<'data, 'file, R: ReadRef<'data>> read::private::Sealed for CoffSymbol<'data
 
 impl<'data, 'file, R: ReadRef<'data>> ObjectSymbol<'data> for CoffSymbol<'data, 'file, R> {
 
-    type NativeSymbolType = ImageSymbol;
+    type NativeSymbolType = Option<ImageSymbol>;
 
     #[inline]
     fn native_symbol(&self) -> Self::NativeSymbolType {
-        *self.symbol
+        Some(*self.symbol)
     }
 
     #[inline]

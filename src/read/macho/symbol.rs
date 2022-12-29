@@ -283,11 +283,11 @@ where
     R: ReadRef<'data>,
 {
 
-    type NativeSymbolType = Mach::Nlist;
+    type NativeSymbolType = Option<Mach::Nlist>;
 
     #[inline]
     fn native_symbol(&self) -> Self::NativeSymbolType {
-        *self.nlist
+        Some(*self.nlist)
     }
 
     #[inline]
