@@ -10,8 +10,9 @@ use crate::read::{
 };
 
 use super::{
-    CompressionHeader, ElfFile, ElfSectionRelocationIterator, FileHeader, GnuHashTable, HashTable,
-    NoteIterator, RelocationSections, SymbolTable, VerdefIterator, VerneedIterator, VersionTable,
+    AttribSubsectionIterator, CompressionHeader, ElfFile, ElfSectionRelocationIterator, FileHeader,
+    GnuHashTable, HashTable, NoteIterator, RelocationSections, SymbolTable, VerdefIterator,
+    VerneedIterator, VersionTable,
 };
 
 /// The table of section headers in an ELF file.
@@ -974,6 +975,38 @@ pub trait SectionHeader: Debug + Pod {
             .read_error("Invalid ELF GNU verneed section offset or size")?;
         let link = SectionIndex(self.sh_link(endian) as usize);
         Ok(Some((VerneedIterator::new(endian, verneed), link)))
+    }
+
+    /// Return an iterator for the entries of a `SHT_GNU_ATTRIBUTES` section.
+    ///
+    /// Also returns the linked string table index.
+    ///
+    /// Returns `Ok(None)` if the section type is not `SHT_GNU_ATTRIBUTES`.
+    /// Returns `Err` for invalid values.
+    fn gnu_attributes<'data, R: ReadRef<'data>>(
+        &self,
+        endian: Self::Endian,
+        data: R,
+    ) -> read::Result<Option<AttribSubsectionIterator<'data, Self::Elf>>> {
+        if self.sh_type(endian) != elf::SHT_GNU_ATTRIBUTES {
+            return Ok(None);
+        }
+        let mut bytes = Bytes(
+            self.data(endian, data)
+                .read_error("Invalid ELF GNU bytes section offset or size")?,
+        );
+
+        // Skip the version field that is one byte long
+        let version = *bytes
+            .read::<u8>()
+            .read_error("Invalid ELF GNU bytes section offset or size")?;
+
+        // There is currently only one format version
+        if version != 65 {
+            return Err(Error(".gnu.attributes section not supported version 0x41"));
+        }
+
+        Ok(Some(AttribSubsectionIterator::new(endian, bytes)))
     }
 }
 
