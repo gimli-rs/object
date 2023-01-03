@@ -113,6 +113,10 @@ pub struct Writer<'a> {
     gnu_verneed_count: u16,
     gnu_verneed_remaining: u16,
     gnu_vernaux_remaining: u16,
+
+    gnu_attributes_str_id: Option<StringId>,
+    gnu_attributes_offset: usize,
+    gnu_attributes_size: usize,
 }
 
 impl<'a> Writer<'a> {
@@ -198,6 +202,10 @@ impl<'a> Writer<'a> {
             gnu_verneed_count: 0,
             gnu_verneed_remaining: 0,
             gnu_vernaux_remaining: 0,
+
+            gnu_attributes_str_id: None,
+            gnu_attributes_offset: 0,
+            gnu_attributes_size: 0,
         }
     }
 
@@ -1733,6 +1741,75 @@ impl<'a> Writer<'a> {
             sh_addralign: self.elf_align as u64,
             sh_entsize: 0,
         });
+    }
+
+    /// Reserve the section index for the `.gnu.attributes` section.
+    pub fn reserve_gnu_attributes_section_index(&mut self) -> SectionIndex {
+        debug_assert!(self.gnu_attributes_str_id.is_none());
+        self.gnu_attributes_str_id = Some(self.add_section_name(&b".gnu.attributes"[..]));
+        self.reserve_section_index()
+    }
+
+    /// Reserve the range for the `.gnu.attributes` section.
+    pub fn reserve_gnu_attributes(&mut self, gnu_attributes_size: usize) {
+        debug_assert_eq!(self.gnu_attributes_offset, 0);
+        if gnu_attributes_size == 0 {
+            return;
+        }
+        self.gnu_attributes_size = gnu_attributes_size;
+        self.gnu_attributes_offset = self.reserve(self.gnu_attributes_size, self.elf_align);
+    }
+
+    /// Write the section header for the `.gnu.attributes` section.
+    ///
+    /// This function does nothing if the section index was not reserved.
+    pub fn write_gnu_attributes_section_header(&mut self, sh_addr: u64) {
+        if self.gnu_attributes_str_id.is_none() {
+            return;
+        }
+        self.write_section_header(&SectionHeader {
+            name: self.gnu_attributes_str_id,
+            sh_type: elf::SHT_GNU_ATTRIBUTES,
+            sh_flags: 0,
+            sh_addr,
+            sh_offset: self.gnu_attributes_offset as u64,
+            sh_size: self.gnu_attributes_size as u64,
+            sh_link: self.dynstr_index.0,
+            sh_info: 0, // TODO
+            sh_addralign: self.elf_align as u64,
+            sh_entsize: 0,
+        });
+    }
+
+    /// Write alignment padding bytes prior to a `.gnu.attributes` section.
+    pub fn write_align_gnu_attributes(&mut self) {
+        if self.gnu_attributes_offset == 0 {
+            return;
+        }
+        util::write_align(self.buffer, self.elf_align);
+        debug_assert_eq!(self.gnu_attributes_offset, self.buffer.len());
+    }
+
+    /// Begin a `.gnu.attributes` section
+    pub fn write_gnu_attributes_version(&mut self) {
+        let version: u8 = 0x41;
+        self.buffer.write(&version);
+    }
+
+    /// Begin a `.gnu.attributes` sub-section
+    pub fn write_gnu_attributes_subsection(&mut self, section_length: u32, vendor_name: &[u8]) {
+        self.buffer.write(&U32::new(self.endian, section_length));
+        self.buffer.write_slice(vendor_name);
+        // Write a null byte to end the vendor name
+        self.buffer.write_slice(&[0 as u8]);
+    }
+
+    /// Write a `.gnu.attributes` subsection and attribute data
+    pub fn write_gnu_attributes_subsubsection(&mut self, tag: u8, attributes: &[u8]) {
+        self.buffer.write(&tag);
+        let size: u32 = 1 + mem::size_of::<u32>() as u32 + attributes.len() as u32;
+        self.buffer.write(&U32::new(self.endian, size));
+        self.buffer.write_slice(attributes);
     }
 
     /// Reserve a file range for the given number of relocations.
