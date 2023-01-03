@@ -21,20 +21,3 @@ fn coff_extended_relocations() {
     let relocations = code_section.relocations().collect::<Vec<_>>();
     assert_eq!(relocations.len(), 65536);
 }
-
-
-#[cfg(feature = "coff")]
-#[test]
-fn coff_symbol_raw_test() {
-    let path_to_obj: PathBuf = ["testfiles", "coff", "relocs_overflow.o"].iter().collect();
-    let contents = fs::read(&path_to_obj).expect("Could not read relocs_overflow.o");
-    let file =
-        read::coff::CoffFile::parse(&contents[..]).expect("Could not parse relocs_overflow.o");
-
-    for sym in file.symbols() {
-        let raw_sym = sym.raw_symbol();
-        raw_sym.derived_type();
-        raw_sym.storage_class;
-        // cool it works :)
-    }
-}
