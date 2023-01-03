@@ -29,8 +29,8 @@ Symbols
 7: Symbol { name: "", address: 0, size: 0, kind: Section, section: Section(SectionIndex(8)), scope: Compilation, weak: false, flags: Elf { st_info: 3, st_other: 0 } }
 8: Symbol { name: "", address: 0, size: 0, kind: Section, section: Section(SectionIndex(6)), scope: Compilation, weak: false, flags: Elf { st_info: 3, st_other: 0 } }
 9: Symbol { name: "main", address: 0, size: 1c, kind: Text, section: Section(SectionIndex(1)), scope: Dynamic, weak: false, flags: Elf { st_info: 12, st_other: 0 } }
-10: Symbol { name: "_GLOBAL_OFFSET_TABLE_", address: 0, size: 0, kind: Unknown, section: Undefined, scope: Unknown, weak: false, flags: Elf { st_info: 10, st_other: 0 } }
-11: Symbol { name: "printf", address: 0, size: 0, kind: Unknown, section: Undefined, scope: Unknown, weak: false, flags: Elf { st_info: 10, st_other: 0 } }
+10: Symbol { name: "_GLOBAL_OFFSET_TABLE_", address: 0, size: 0, kind: Label, section: Undefined, scope: Unknown, weak: false, flags: Elf { st_info: 10, st_other: 0 } }
+11: Symbol { name: "printf", address: 0, size: 0, kind: Label, section: Undefined, scope: Unknown, weak: false, flags: Elf { st_info: 10, st_other: 0 } }
 
 .text relocations
 (7, Relocation { kind: Relative, encoding: Generic, size: 20, target: Symbol(SymbolIndex(5)), addend: fffffffffffffffc, implicit_addend: false })
