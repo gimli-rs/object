@@ -78,39 +78,39 @@ Symbols
 36: Symbol { name: "crtstuff.c", address: 0, size: 0, kind: File, section: None, scope: Compilation, weak: false, flags: Elf { st_info: 4, st_other: 0 } }
 37: Symbol { name: "__FRAME_END__", address: 874, size: 0, kind: Data, section: Section(SectionIndex(13)), scope: Compilation, weak: false, flags: Elf { st_info: 1, st_other: 0 } }
 38: Symbol { name: "", address: 0, size: 0, kind: File, section: None, scope: Compilation, weak: false, flags: Elf { st_info: 4, st_other: 0 } }
-39: Symbol { name: "__init_array_end", address: 200db0, size: 0, kind: Unknown, section: Section(SectionIndex(14)), scope: Compilation, weak: false, flags: Elf { st_info: 0, st_other: 0 } }
+39: Symbol { name: "__init_array_end", address: 200db0, size: 0, kind: Label, section: Section(SectionIndex(14)), scope: Compilation, weak: false, flags: Elf { st_info: 0, st_other: 0 } }
 40: Symbol { name: "_DYNAMIC", address: 200db8, size: 0, kind: Data, section: Section(SectionIndex(16)), scope: Compilation, weak: false, flags: Elf { st_info: 1, st_other: 0 } }
-41: Symbol { name: "__init_array_start", address: 200da8, size: 0, kind: Unknown, section: Section(SectionIndex(14)), scope: Compilation, weak: false, flags: Elf { st_info: 0, st_other: 0 } }
-42: Symbol { name: "__GNU_EH_FRAME_HDR", address: 734, size: 0, kind: Unknown, section: Section(SectionIndex(12)), scope: Compilation, weak: false, flags: Elf { st_info: 0, st_other: 0 } }
+41: Symbol { name: "__init_array_start", address: 200da8, size: 0, kind: Label, section: Section(SectionIndex(14)), scope: Compilation, weak: false, flags: Elf { st_info: 0, st_other: 0 } }
+42: Symbol { name: "__GNU_EH_FRAME_HDR", address: 734, size: 0, kind: Label, section: Section(SectionIndex(12)), scope: Compilation, weak: false, flags: Elf { st_info: 0, st_other: 0 } }
 43: Symbol { name: "_GLOBAL_OFFSET_TABLE_", address: 200fb8, size: 0, kind: Data, section: Section(SectionIndex(17)), scope: Compilation, weak: false, flags: Elf { st_info: 1, st_other: 0 } }
 44: Symbol { name: "__libc_csu_fini", address: 710, size: 2, kind: Text, section: Section(SectionIndex(f)), scope: Dynamic, weak: false, flags: Elf { st_info: 12, st_other: 0 } }
-45: Symbol { name: "_ITM_deregisterTMCloneTable", address: 0, size: 0, kind: Unknown, section: Undefined, scope: Unknown, weak: true, flags: Elf { st_info: 20, st_other: 0 } }
-46: Symbol { name: "data_start", address: 201000, size: 0, kind: Unknown, section: Section(SectionIndex(18)), scope: Dynamic, weak: true, flags: Elf { st_info: 20, st_other: 0 } }
-47: Symbol { name: "_edata", address: 201010, size: 0, kind: Unknown, section: Section(SectionIndex(18)), scope: Dynamic, weak: false, flags: Elf { st_info: 10, st_other: 0 } }
+45: Symbol { name: "_ITM_deregisterTMCloneTable", address: 0, size: 0, kind: Label, section: Undefined, scope: Unknown, weak: true, flags: Elf { st_info: 20, st_other: 0 } }
+46: Symbol { name: "data_start", address: 201000, size: 0, kind: Label, section: Section(SectionIndex(18)), scope: Dynamic, weak: true, flags: Elf { st_info: 20, st_other: 0 } }
+47: Symbol { name: "_edata", address: 201010, size: 0, kind: Label, section: Section(SectionIndex(18)), scope: Dynamic, weak: false, flags: Elf { st_info: 10, st_other: 0 } }
 48: Symbol { name: "_fini", address: 714, size: 0, kind: Text, section: Section(SectionIndex(10)), scope: Dynamic, weak: false, flags: Elf { st_info: 12, st_other: 0 } }
 49: Symbol { name: "printf@@GLIBC_2.2.5", address: 0, size: 0, kind: Text, section: Undefined, scope: Unknown, weak: false, flags: Elf { st_info: 12, st_other: 0 } }
 50: Symbol { name: "__libc_start_main@@GLIBC_2.2.5", address: 0, size: 0, kind: Text, section: Undefined, scope: Unknown, weak: false, flags: Elf { st_info: 12, st_other: 0 } }
-51: Symbol { name: "__data_start", address: 201000, size: 0, kind: Unknown, section: Section(SectionIndex(18)), scope: Dynamic, weak: false, flags: Elf { st_info: 10, st_other: 0 } }
-52: Symbol { name: "__gmon_start__", address: 0, size: 0, kind: Unknown, section: Undefined, scope: Unknown, weak: true, flags: Elf { st_info: 20, st_other: 0 } }
+51: Symbol { name: "__data_start", address: 201000, size: 0, kind: Label, section: Section(SectionIndex(18)), scope: Dynamic, weak: false, flags: Elf { st_info: 10, st_other: 0 } }
+52: Symbol { name: "__gmon_start__", address: 0, size: 0, kind: Label, section: Undefined, scope: Unknown, weak: true, flags: Elf { st_info: 20, st_other: 0 } }
 53: Symbol { name: "__dso_handle", address: 201008, size: 0, kind: Data, section: Section(SectionIndex(18)), scope: Linkage, weak: false, flags: Elf { st_info: 11, st_other: 2 } }
 54: Symbol { name: "_IO_stdin_used", address: 720, size: 4, kind: Data, section: Section(SectionIndex(11)), scope: Dynamic, weak: false, flags: Elf { st_info: 11, st_other: 0 } }
 55: Symbol { name: "__libc_csu_init", address: 6a0, size: 65, kind: Text, section: Section(SectionIndex(f)), scope: Dynamic, weak: false, flags: Elf { st_info: 12, st_other: 0 } }
-56: Symbol { name: "_end", address: 201018, size: 0, kind: Unknown, section: Section(SectionIndex(19)), scope: Dynamic, weak: false, flags: Elf { st_info: 10, st_other: 0 } }
+56: Symbol { name: "_end", address: 201018, size: 0, kind: Label, section: Section(SectionIndex(19)), scope: Dynamic, weak: false, flags: Elf { st_info: 10, st_other: 0 } }
 57: Symbol { name: "_start", address: 570, size: 2b, kind: Text, section: Section(SectionIndex(f)), scope: Dynamic, weak: false, flags: Elf { st_info: 12, st_other: 0 } }
-58: Symbol { name: "__bss_start", address: 201010, size: 0, kind: Unknown, section: Section(SectionIndex(19)), scope: Dynamic, weak: false, flags: Elf { st_info: 10, st_other: 0 } }
+58: Symbol { name: "__bss_start", address: 201010, size: 0, kind: Label, section: Section(SectionIndex(19)), scope: Dynamic, weak: false, flags: Elf { st_info: 10, st_other: 0 } }
 59: Symbol { name: "main", address: 67a, size: 1c, kind: Text, section: Section(SectionIndex(f)), scope: Dynamic, weak: false, flags: Elf { st_info: 12, st_other: 0 } }
 60: Symbol { name: "__TMC_END__", address: 201010, size: 0, kind: Data, section: Section(SectionIndex(18)), scope: Linkage, weak: false, flags: Elf { st_info: 11, st_other: 2 } }
-61: Symbol { name: "_ITM_registerTMCloneTable", address: 0, size: 0, kind: Unknown, section: Undefined, scope: Unknown, weak: true, flags: Elf { st_info: 20, st_other: 0 } }
+61: Symbol { name: "_ITM_registerTMCloneTable", address: 0, size: 0, kind: Label, section: Undefined, scope: Unknown, weak: true, flags: Elf { st_info: 20, st_other: 0 } }
 62: Symbol { name: "__cxa_finalize@@GLIBC_2.2.5", address: 0, size: 0, kind: Text, section: Undefined, scope: Unknown, weak: true, flags: Elf { st_info: 22, st_other: 0 } }
 63: Symbol { name: "_init", address: 520, size: 0, kind: Text, section: Section(SectionIndex(c)), scope: Dynamic, weak: false, flags: Elf { st_info: 12, st_other: 0 } }
 
 Dynamic symbols
 0: Symbol { name: "", address: 0, size: 0, kind: Null, section: Undefined, scope: Unknown, weak: false, flags: Elf { st_info: 0, st_other: 0 } }
-1: Symbol { name: "_ITM_deregisterTMCloneTable", address: 0, size: 0, kind: Unknown, section: Undefined, scope: Unknown, weak: true, flags: Elf { st_info: 20, st_other: 0 } }
+1: Symbol { name: "_ITM_deregisterTMCloneTable", address: 0, size: 0, kind: Label, section: Undefined, scope: Unknown, weak: true, flags: Elf { st_info: 20, st_other: 0 } }
 2: Symbol { name: "printf", address: 0, size: 0, kind: Text, section: Undefined, scope: Unknown, weak: false, flags: Elf { st_info: 12, st_other: 0 } }
 3: Symbol { name: "__libc_start_main", address: 0, size: 0, kind: Text, section: Undefined, scope: Unknown, weak: false, flags: Elf { st_info: 12, st_other: 0 } }
-4: Symbol { name: "__gmon_start__", address: 0, size: 0, kind: Unknown, section: Undefined, scope: Unknown, weak: true, flags: Elf { st_info: 20, st_other: 0 } }
-5: Symbol { name: "_ITM_registerTMCloneTable", address: 0, size: 0, kind: Unknown, section: Undefined, scope: Unknown, weak: true, flags: Elf { st_info: 20, st_other: 0 } }
+4: Symbol { name: "__gmon_start__", address: 0, size: 0, kind: Label, section: Undefined, scope: Unknown, weak: true, flags: Elf { st_info: 20, st_other: 0 } }
+5: Symbol { name: "_ITM_registerTMCloneTable", address: 0, size: 0, kind: Label, section: Undefined, scope: Unknown, weak: true, flags: Elf { st_info: 20, st_other: 0 } }
 6: Symbol { name: "__cxa_finalize", address: 0, size: 0, kind: Text, section: Undefined, scope: Unknown, weak: true, flags: Elf { st_info: 22, st_other: 0 } }
 
 Dynamic relocations
