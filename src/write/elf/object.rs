@@ -67,6 +67,7 @@ impl<'a> Object<'a> {
     fn elf_has_relocation_addend(&self) -> Result<bool> {
         Ok(match self.architecture {
             Architecture::Aarch64 => true,
+            Architecture::Aarch64_Ilp32 => true,
             Architecture::Arm => false,
             Architecture::Avr => true,
             Architecture::Bpf => false,
@@ -266,6 +267,7 @@ impl<'a> Object<'a> {
         let e_type = elf::ET_REL;
         let e_machine = match self.architecture {
             Architecture::Aarch64 => elf::EM_AARCH64,
+            Architecture::Aarch64_Ilp32 => elf::EM_AARCH64,
             Architecture::Arm => elf::EM_ARM,
             Architecture::Avr => elf::EM_AVR,
             Architecture::Bpf => elf::EM_BPF,
@@ -454,6 +456,20 @@ impl<'a> Object<'a> {
                                 return Err(Error(format!("unimplemented relocation {:?}", reloc)));
                             }
                         },
+                        Architecture::Aarch64_Ilp32 => {
+                            match (reloc.kind, reloc.encoding, reloc.size) {
+                                (RelocationKind::Absolute, RelocationEncoding::Generic, 32) => {
+                                    elf::R_AARCH64_P32_ABS32
+                                }
+                                (RelocationKind::Elf(x), _, _) => x,
+                                _ => {
+                                    return Err(Error(format!(
+                                        "unimplemented relocation {:?}",
+                                        reloc
+                                    )));
+                                }
+                            }
+                        }
                         Architecture::Arm => match (reloc.kind, reloc.encoding, reloc.size) {
                             (RelocationKind::Absolute, _, 32) => elf::R_ARM_ABS32,
                             (RelocationKind::Elf(x), _, _) => x,

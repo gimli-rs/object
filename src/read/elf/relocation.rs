@@ -240,19 +240,28 @@ fn parse_relocation<Elf: FileHeader>(
     let mut encoding = RelocationEncoding::Generic;
     let is_mips64el = header.is_mips64el(endian);
     let (kind, size) = match header.e_machine(endian) {
-        elf::EM_AARCH64 => match reloc.r_type(endian, false) {
-            elf::R_AARCH64_ABS64 => (RelocationKind::Absolute, 64),
-            elf::R_AARCH64_ABS32 => (RelocationKind::Absolute, 32),
-            elf::R_AARCH64_ABS16 => (RelocationKind::Absolute, 16),
-            elf::R_AARCH64_PREL64 => (RelocationKind::Relative, 64),
-            elf::R_AARCH64_PREL32 => (RelocationKind::Relative, 32),
-            elf::R_AARCH64_PREL16 => (RelocationKind::Relative, 16),
-            elf::R_AARCH64_CALL26 => {
-                encoding = RelocationEncoding::AArch64Call;
-                (RelocationKind::PltRelative, 26)
+        elf::EM_AARCH64 => {
+            if header.is_type_64() {
+                match reloc.r_type(endian, false) {
+                    elf::R_AARCH64_ABS64 => (RelocationKind::Absolute, 64),
+                    elf::R_AARCH64_ABS32 => (RelocationKind::Absolute, 32),
+                    elf::R_AARCH64_ABS16 => (RelocationKind::Absolute, 16),
+                    elf::R_AARCH64_PREL64 => (RelocationKind::Relative, 64),
+                    elf::R_AARCH64_PREL32 => (RelocationKind::Relative, 32),
+                    elf::R_AARCH64_PREL16 => (RelocationKind::Relative, 16),
+                    elf::R_AARCH64_CALL26 => {
+                        encoding = RelocationEncoding::AArch64Call;
+                        (RelocationKind::PltRelative, 26)
+                    }
+                    r_type => (RelocationKind::Elf(r_type), 0),
+                }
+            } else {
+                match reloc.r_type(endian, false) {
+                    elf::R_AARCH64_P32_ABS32 => (RelocationKind::Absolute, 32),
+                    r_type => (RelocationKind::Elf(r_type), 0),
+                }
             }
-            r_type => (RelocationKind::Elf(r_type), 0),
-        },
+        }
         elf::EM_ARM => match reloc.r_type(endian, false) {
             elf::R_ARM_ABS32 => (RelocationKind::Absolute, 32),
             r_type => (RelocationKind::Elf(r_type), 0),

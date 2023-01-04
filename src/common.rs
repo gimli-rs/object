@@ -5,6 +5,8 @@
 pub enum Architecture {
     Unknown,
     Aarch64,
+    #[allow(non_camel_case_types)]
+    Aarch64_Ilp32,
     Arm,
     Avr,
     Bpf,
@@ -36,6 +38,7 @@ impl Architecture {
         match self {
             Architecture::Unknown => None,
             Architecture::Aarch64 => Some(AddressSize::U64),
+            Architecture::Aarch64_Ilp32 => Some(AddressSize::U32),
             Architecture::Arm => Some(AddressSize::U32),
             Architecture::Avr => Some(AddressSize::U8),
             Architecture::Bpf => Some(AddressSize::U64),
