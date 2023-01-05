@@ -101,16 +101,16 @@ impl<'a> Object<'a> {
                 || sectype == SectionKind::UninitializedData
             {
                 section_offsets[index].address = address;
+                address += len;
+                address = align(address, 4);
             } else {
                 section_offsets[index].address = 0;
             }
-            section_offsets[index].address = address;
             if len != 0 {
                 // Set the default section alignment as 4.
                 offset = align(offset, 4);
                 section_offsets[index].data_offset = offset;
                 offset += len;
-                address += offset;
             } else {
                 section_offsets[index].data_offset = 0;
             }
@@ -132,7 +132,7 @@ impl<'a> Object<'a> {
         let mut symtab_count = 0;
         for (index, symbol) in self.symbols.iter().enumerate() {
             symbol_offsets[index].index = symtab_count;
-            if !(!is_64 && symbol.name.len() <= 8) {
+            if is_64 || symbol.name.len() > 8 {
                 symbol_offsets[index].str_id = Some(strtab.add(&symbol.name));
             }
             symtab_count += 1;
