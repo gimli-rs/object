@@ -1,12 +1,18 @@
-Format: COFF
-ImageFileHeader {
+Format: COFF bigobj
+AnonObjectHeaderBigObj {
+    Signature1: 0x0
+    Signature2: 0xFFFF
+    Version: 2
     Machine: IMAGE_FILE_MACHINE_I386 (0x14C)
+    TimeDateStamp: 1669951910
+    ClassId: D1BAA1C7-BAEE-4BA9-AF20FAF66AA4DCB8
+    SizeOfData: 0x0
+    Flags: 0x0
+    MetaDataSize: 0x0
+    MetaDataOffset: 0x0
     NumberOfSections: 8
-    TimeDateStamp: 1629804126
-    PointerToSymbolTable: 0x313
+    PointerToSymbolTable: 0x337
     NumberOfSymbols: 26
-    SizeOfOptionalHeader: 0x0
-    Characteristics: 0x0
 }
 ImageSectionHeader {
     Index: 1
@@ -14,7 +20,7 @@ ImageSectionHeader {
     VirtualSize: 0x0
     VirtualAddress: 0x0
     SizeOfRawData: 0x2F
-    PointerToRawData: 0x154
+    PointerToRawData: 0x178
     PointerToRelocations: 0x0
     PointerToLinenumbers: 0x0
     NumberOfRelocations: 0
@@ -30,7 +36,7 @@ ImageSectionHeader {
     VirtualSize: 0x0
     VirtualAddress: 0x0
     SizeOfRawData: 0x7C
-    PointerToRawData: 0x183
+    PointerToRawData: 0x1A7
     PointerToRelocations: 0x0
     PointerToLinenumbers: 0x0
     NumberOfRelocations: 0
@@ -47,8 +53,8 @@ ImageSectionHeader {
     VirtualSize: 0x0
     VirtualAddress: 0x0
     SizeOfRawData: 0x14
-    PointerToRawData: 0x1FF
-    PointerToRelocations: 0x213
+    PointerToRawData: 0x223
+    PointerToRelocations: 0x237
     PointerToLinenumbers: 0x0
     NumberOfRelocations: 2
     NumberOfLinenumbers: 0
@@ -74,8 +80,8 @@ ImageSectionHeader {
     VirtualSize: 0x0
     VirtualAddress: 0x0
     SizeOfRawData: 0xA
-    PointerToRawData: 0x227
-    PointerToRelocations: 0x231
+    PointerToRawData: 0x24B
+    PointerToRelocations: 0x255
     PointerToLinenumbers: 0x0
     NumberOfRelocations: 1
     NumberOfLinenumbers: 0
@@ -97,8 +103,8 @@ ImageSectionHeader {
     VirtualSize: 0x0
     VirtualAddress: 0x0
     SizeOfRawData: 0x29
-    PointerToRawData: 0x23B
-    PointerToRelocations: 0x264
+    PointerToRawData: 0x25F
+    PointerToRelocations: 0x288
     PointerToLinenumbers: 0x0
     NumberOfRelocations: 2
     NumberOfLinenumbers: 0
@@ -125,8 +131,8 @@ ImageSectionHeader {
     VirtualSize: 0x0
     VirtualAddress: 0x0
     SizeOfRawData: 0x3A
-    PointerToRawData: 0x278
-    PointerToRelocations: 0x2B2
+    PointerToRawData: 0x29C
+    PointerToRelocations: 0x2D6
     PointerToLinenumbers: 0x0
     NumberOfRelocations: 2
     NumberOfLinenumbers: 0
@@ -153,7 +159,7 @@ ImageSectionHeader {
     VirtualSize: 0x0
     VirtualAddress: 0x0
     SizeOfRawData: 0xD
-    PointerToRawData: 0x2C6
+    PointerToRawData: 0x2EA
     PointerToRelocations: 0x0
     PointerToLinenumbers: 0x0
     NumberOfRelocations: 0
@@ -170,7 +176,7 @@ ImageSectionHeader {
     VirtualSize: 0x0
     VirtualAddress: 0x0
     SizeOfRawData: 0x40
-    PointerToRawData: 0x2D3
+    PointerToRawData: 0x2F7
     PointerToRelocations: 0x0
     PointerToLinenumbers: 0x0
     NumberOfRelocations: 0

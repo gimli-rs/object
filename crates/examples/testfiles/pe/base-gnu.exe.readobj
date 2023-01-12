@@ -472,7 +472,7 @@ ImageSymbol {
     Index: 0
     Name: ".file"
     Value: 0x5F
-    Section: IMAGE_SYM_DEBUG (0xFFFE)
+    Section: IMAGE_SYM_DEBUG (-2)
     Type: 0x0
     BaseType: IMAGE_SYM_TYPE_NULL (0x0)
     DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
@@ -1228,7 +1228,7 @@ ImageSymbol {
     Index: 95
     Name: ".file"
     Value: 0x70
-    Section: IMAGE_SYM_DEBUG (0xFFFE)
+    Section: IMAGE_SYM_DEBUG (-2)
     Type: 0x0
     BaseType: IMAGE_SYM_TYPE_NULL (0x0)
     DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
@@ -1337,7 +1337,7 @@ ImageSymbol {
     Index: 112
     Name: ".file"
     Value: 0x83
-    Section: IMAGE_SYM_DEBUG (0xFFFE)
+    Section: IMAGE_SYM_DEBUG (-2)
     Type: 0x0
     BaseType: IMAGE_SYM_TYPE_NULL (0x0)
     DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
@@ -1467,7 +1467,7 @@ ImageSymbol {
     Index: 131
     Name: ".file"
     Value: 0xA5
-    Section: IMAGE_SYM_DEBUG (0xFFFE)
+    Section: IMAGE_SYM_DEBUG (-2)
     Type: 0x0
     BaseType: IMAGE_SYM_TYPE_NULL (0x0)
     DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
@@ -1686,7 +1686,7 @@ ImageSymbol {
     Index: 165
     Name: ".file"
     Value: 0xB9
-    Section: IMAGE_SYM_DEBUG (0xFFFE)
+    Section: IMAGE_SYM_DEBUG (-2)
     Type: 0x0
     BaseType: IMAGE_SYM_TYPE_NULL (0x0)
     DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
@@ -1799,7 +1799,7 @@ ImageSymbol {
     Index: 185
     Name: ".file"
     Value: 0xCB
-    Section: IMAGE_SYM_DEBUG (0xFFFE)
+    Section: IMAGE_SYM_DEBUG (-2)
     Type: 0x0
     BaseType: IMAGE_SYM_TYPE_NULL (0x0)
     DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
@@ -1901,7 +1901,7 @@ ImageSymbol {
     Index: 203
     Name: ".file"
     Value: 0xE5
-    Section: IMAGE_SYM_DEBUG (0xFFFE)
+    Section: IMAGE_SYM_DEBUG (-2)
     Type: 0x0
     BaseType: IMAGE_SYM_TYPE_NULL (0x0)
     DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
@@ -2054,7 +2054,7 @@ ImageSymbol {
     Index: 229
     Name: ".file"
     Value: 0xF7
-    Section: IMAGE_SYM_DEBUG (0xFFFE)
+    Section: IMAGE_SYM_DEBUG (-2)
     Type: 0x0
     BaseType: IMAGE_SYM_TYPE_NULL (0x0)
     DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
@@ -2156,7 +2156,7 @@ ImageSymbol {
     Index: 247
     Name: ".file"
     Value: 0x12D
-    Section: IMAGE_SYM_DEBUG (0xFFFE)
+    Section: IMAGE_SYM_DEBUG (-2)
     Type: 0x0
     BaseType: IMAGE_SYM_TYPE_NULL (0x0)
     DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
@@ -2495,7 +2495,7 @@ ImageSymbol {
     Index: 301
     Name: ".file"
     Value: 0x13F
-    Section: IMAGE_SYM_DEBUG (0xFFFE)
+    Section: IMAGE_SYM_DEBUG (-2)
     Type: 0x0
     BaseType: IMAGE_SYM_TYPE_NULL (0x0)
     DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
@@ -2597,7 +2597,7 @@ ImageSymbol {
     Index: 319
     Name: ".file"
     Value: 0x159
-    Section: IMAGE_SYM_DEBUG (0xFFFE)
+    Section: IMAGE_SYM_DEBUG (-2)
     Type: 0x0
     BaseType: IMAGE_SYM_TYPE_NULL (0x0)
     DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
@@ -2753,7 +2753,7 @@ ImageSymbol {
     Index: 345
     Name: ".file"
     Value: 0x179
-    Section: IMAGE_SYM_DEBUG (0xFFFE)
+    Section: IMAGE_SYM_DEBUG (-2)
     Type: 0x0
     BaseType: IMAGE_SYM_TYPE_NULL (0x0)
     DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
@@ -2939,7 +2939,7 @@ ImageSymbol {
     Index: 377
     Name: ".file"
     Value: 0x194
-    Section: IMAGE_SYM_DEBUG (0xFFFE)
+    Section: IMAGE_SYM_DEBUG (-2)
     Type: 0x0
     BaseType: IMAGE_SYM_TYPE_NULL (0x0)
     DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
@@ -3103,7 +3103,7 @@ ImageSymbol {
     Index: 404
     Name: ".file"
     Value: 0x1A6
-    Section: IMAGE_SYM_DEBUG (0xFFFE)
+    Section: IMAGE_SYM_DEBUG (-2)
     Type: 0x0
     BaseType: IMAGE_SYM_TYPE_NULL (0x0)
     DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
@@ -3205,7 +3205,7 @@ ImageSymbol {
     Index: 422
     Name: ".file"
     Value: 0x1D1
-    Section: IMAGE_SYM_DEBUG (0xFFFE)
+    Section: IMAGE_SYM_DEBUG (-2)
     Type: 0x0
     BaseType: IMAGE_SYM_TYPE_NULL (0x0)
     DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
@@ -3479,7 +3479,7 @@ ImageSymbol {
     Index: 465
     Name: ".file"
     Value: 0x1F1
-    Section: IMAGE_SYM_DEBUG (0xFFFE)
+    Section: IMAGE_SYM_DEBUG (-2)
     Type: 0x0
     BaseType: IMAGE_SYM_TYPE_NULL (0x0)
     DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
@@ -3676,7 +3676,7 @@ ImageSymbol {
     Index: 497
     Name: ".file"
     Value: 0x203
-    Section: IMAGE_SYM_DEBUG (0xFFFE)
+    Section: IMAGE_SYM_DEBUG (-2)
     Type: 0x0
     BaseType: IMAGE_SYM_TYPE_NULL (0x0)
     DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
@@ -3778,7 +3778,7 @@ ImageSymbol {
     Index: 515
     Name: ".file"
     Value: 0x223
-    Section: IMAGE_SYM_DEBUG (0xFFFE)
+    Section: IMAGE_SYM_DEBUG (-2)
     Type: 0x0
     BaseType: IMAGE_SYM_TYPE_NULL (0x0)
     DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
@@ -3964,7 +3964,7 @@ ImageSymbol {
     Index: 547
     Name: ".file"
     Value: 0x249
-    Section: IMAGE_SYM_DEBUG (0xFFFE)
+    Section: IMAGE_SYM_DEBUG (-2)
     Type: 0x0
     BaseType: IMAGE_SYM_TYPE_NULL (0x0)
     DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
@@ -4216,7 +4216,7 @@ ImageSymbol {
     Index: 585
     Name: ".file"
     Value: 0x25B
-    Section: IMAGE_SYM_DEBUG (0xFFFE)
+    Section: IMAGE_SYM_DEBUG (-2)
     Type: 0x0
     BaseType: IMAGE_SYM_TYPE_NULL (0x0)
     DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
@@ -4318,7 +4318,7 @@ ImageSymbol {
     Index: 603
     Name: ".file"
     Value: 0x26D
-    Section: IMAGE_SYM_DEBUG (0xFFFE)
+    Section: IMAGE_SYM_DEBUG (-2)
     Type: 0x0
     BaseType: IMAGE_SYM_TYPE_NULL (0x0)
     DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
@@ -4420,7 +4420,7 @@ ImageSymbol {
     Index: 621
     Name: ".file"
     Value: 0x295
-    Section: IMAGE_SYM_DEBUG (0xFFFE)
+    Section: IMAGE_SYM_DEBUG (-2)
     Type: 0x0
     BaseType: IMAGE_SYM_TYPE_NULL (0x0)
     DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
@@ -4694,7 +4694,7 @@ ImageSymbol {
     Index: 661
     Name: ".file"
     Value: 0x2A7
-    Section: IMAGE_SYM_DEBUG (0xFFFE)
+    Section: IMAGE_SYM_DEBUG (-2)
     Type: 0x0
     BaseType: IMAGE_SYM_TYPE_NULL (0x0)
     DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
@@ -4796,7 +4796,7 @@ ImageSymbol {
     Index: 679
     Name: ".file"
     Value: 0x2B9
-    Section: IMAGE_SYM_DEBUG (0xFFFE)
+    Section: IMAGE_SYM_DEBUG (-2)
     Type: 0x0
     BaseType: IMAGE_SYM_TYPE_NULL (0x0)
     DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
@@ -4898,7 +4898,7 @@ ImageSymbol {
     Index: 697
     Name: ".file"
     Value: 0x2CB
-    Section: IMAGE_SYM_DEBUG (0xFFFE)
+    Section: IMAGE_SYM_DEBUG (-2)
     Type: 0x0
     BaseType: IMAGE_SYM_TYPE_NULL (0x0)
     DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
@@ -5000,7 +5000,7 @@ ImageSymbol {
     Index: 715
     Name: ".file"
     Value: 0x2E9
-    Section: IMAGE_SYM_DEBUG (0xFFFE)
+    Section: IMAGE_SYM_DEBUG (-2)
     Type: 0x0
     BaseType: IMAGE_SYM_TYPE_NULL (0x0)
     DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
@@ -5175,7 +5175,7 @@ ImageSymbol {
     Index: 745
     Name: ".file"
     Value: 0x31B
-    Section: IMAGE_SYM_DEBUG (0xFFFE)
+    Section: IMAGE_SYM_DEBUG (-2)
     Type: 0x0
     BaseType: IMAGE_SYM_TYPE_NULL (0x0)
     DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
@@ -5548,7 +5548,7 @@ ImageSymbol {
     Index: 795
     Name: ".file"
     Value: 0x33E
-    Section: IMAGE_SYM_DEBUG (0xFFFE)
+    Section: IMAGE_SYM_DEBUG (-2)
     Type: 0x0
     BaseType: IMAGE_SYM_TYPE_NULL (0x0)
     DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
@@ -5767,7 +5767,7 @@ ImageSymbol {
     Index: 830
     Name: ".file"
     Value: 0x362
-    Section: IMAGE_SYM_DEBUG (0xFFFE)
+    Section: IMAGE_SYM_DEBUG (-2)
     Type: 0x0
     BaseType: IMAGE_SYM_TYPE_NULL (0x0)
     DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
@@ -5975,7 +5975,7 @@ ImageSymbol {
     Index: 866
     Name: ".file"
     Value: 0x381
-    Section: IMAGE_SYM_DEBUG (0xFFFE)
+    Section: IMAGE_SYM_DEBUG (-2)
     Type: 0x0
     BaseType: IMAGE_SYM_TYPE_NULL (0x0)
     DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
@@ -6161,7 +6161,7 @@ ImageSymbol {
     Index: 897
     Name: ".file"
     Value: 0x3B7
-    Section: IMAGE_SYM_DEBUG (0xFFFE)
+    Section: IMAGE_SYM_DEBUG (-2)
     Type: 0x0
     BaseType: IMAGE_SYM_TYPE_NULL (0x0)
     DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
@@ -6578,7 +6578,7 @@ ImageSymbol {
     Index: 951
     Name: ".file"
     Value: 0x3D3
-    Section: IMAGE_SYM_DEBUG (0xFFFE)
+    Section: IMAGE_SYM_DEBUG (-2)
     Type: 0x0
     BaseType: IMAGE_SYM_TYPE_NULL (0x0)
     DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
@@ -6742,7 +6742,7 @@ ImageSymbol {
     Index: 979
     Name: ".file"
     Value: 0x4AC
-    Section: IMAGE_SYM_DEBUG (0xFFFE)
+    Section: IMAGE_SYM_DEBUG (-2)
     Type: 0x0
     BaseType: IMAGE_SYM_TYPE_NULL (0x0)
     DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
@@ -8985,7 +8985,7 @@ ImageSymbol {
     Index: 1196
     Name: ".file"
     Value: 0x4D2
-    Section: IMAGE_SYM_DEBUG (0xFFFE)
+    Section: IMAGE_SYM_DEBUG (-2)
     Type: 0x0
     BaseType: IMAGE_SYM_TYPE_NULL (0x0)
     DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
@@ -9237,7 +9237,7 @@ ImageSymbol {
     Index: 1234
     Name: ".file"
     Value: 0x4F4
-    Section: IMAGE_SYM_DEBUG (0xFFFE)
+    Section: IMAGE_SYM_DEBUG (-2)
     Type: 0x0
     BaseType: IMAGE_SYM_TYPE_NULL (0x0)
     DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
@@ -9445,7 +9445,7 @@ ImageSymbol {
     Index: 1268
     Name: ".file"
     Value: 0x512
-    Section: IMAGE_SYM_DEBUG (0xFFFE)
+    Section: IMAGE_SYM_DEBUG (-2)
     Type: 0x0
     BaseType: IMAGE_SYM_TYPE_NULL (0x0)
     DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
@@ -9620,7 +9620,7 @@ ImageSymbol {
     Index: 1298
     Name: ".file"
     Value: 0x532
-    Section: IMAGE_SYM_DEBUG (0xFFFE)
+    Section: IMAGE_SYM_DEBUG (-2)
     Type: 0x0
     BaseType: IMAGE_SYM_TYPE_NULL (0x0)
     DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
@@ -9828,7 +9828,7 @@ ImageSymbol {
     Index: 1330
     Name: ".file"
     Value: 0x553
-    Section: IMAGE_SYM_DEBUG (0xFFFE)
+    Section: IMAGE_SYM_DEBUG (-2)
     Type: 0x0
     BaseType: IMAGE_SYM_TYPE_NULL (0x0)
     DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
@@ -10025,7 +10025,7 @@ ImageSymbol {
     Index: 1363
     Name: ".file"
     Value: 0x56F
-    Section: IMAGE_SYM_DEBUG (0xFFFE)
+    Section: IMAGE_SYM_DEBUG (-2)
     Type: 0x0
     BaseType: IMAGE_SYM_TYPE_NULL (0x0)
     DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
@@ -10189,7 +10189,7 @@ ImageSymbol {
     Index: 1391
     Name: ".file"
     Value: 0x58B
-    Section: IMAGE_SYM_DEBUG (0xFFFE)
+    Section: IMAGE_SYM_DEBUG (-2)
     Type: 0x0
     BaseType: IMAGE_SYM_TYPE_NULL (0x0)
     DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
@@ -10353,7 +10353,7 @@ ImageSymbol {
     Index: 1419
     Name: ".file"
     Value: 0x5A7
-    Section: IMAGE_SYM_DEBUG (0xFFFE)
+    Section: IMAGE_SYM_DEBUG (-2)
     Type: 0x0
     BaseType: IMAGE_SYM_TYPE_NULL (0x0)
     DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
@@ -10517,7 +10517,7 @@ ImageSymbol {
     Index: 1447
     Name: ".file"
     Value: 0x5DF
-    Section: IMAGE_SYM_DEBUG (0xFFFE)
+    Section: IMAGE_SYM_DEBUG (-2)
     Type: 0x0
     BaseType: IMAGE_SYM_TYPE_NULL (0x0)
     DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
@@ -11081,7 +11081,7 @@ ImageSymbol {
     Index: 1503
     Name: ".file"
     Value: 0x64F
-    Section: IMAGE_SYM_DEBUG (0xFFFE)
+    Section: IMAGE_SYM_DEBUG (-2)
     Type: 0x0
     BaseType: IMAGE_SYM_TYPE_NULL (0x0)
     DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
@@ -12239,7 +12239,7 @@ ImageSymbol {
     Index: 1615
     Name: ".file"
     Value: 0x65D
-    Section: IMAGE_SYM_DEBUG (0xFFFE)
+    Section: IMAGE_SYM_DEBUG (-2)
     Type: 0x0
     BaseType: IMAGE_SYM_TYPE_NULL (0x0)
     DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
@@ -12351,7 +12351,7 @@ ImageSymbol {
     Index: 1629
     Name: ".file"
     Value: 0x679
-    Section: IMAGE_SYM_DEBUG (0xFFFE)
+    Section: IMAGE_SYM_DEBUG (-2)
     Type: 0x0
     BaseType: IMAGE_SYM_TYPE_NULL (0x0)
     DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
@@ -12585,7 +12585,7 @@ ImageSymbol {
     Index: 1657
     Name: ".file"
     Value: 0x68E
-    Section: IMAGE_SYM_DEBUG (0xFFFE)
+    Section: IMAGE_SYM_DEBUG (-2)
     Type: 0x0
     BaseType: IMAGE_SYM_TYPE_NULL (0x0)
     DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
@@ -12925,7 +12925,7 @@ ImageSymbol {
     Index: 1697
     Name: "__ImageBase"
     Value: 0x40000000
-    Section: IMAGE_SYM_ABSOLUTE (0xFFFF)
+    Section: IMAGE_SYM_ABSOLUTE (-1)
     Type: 0x0
     BaseType: IMAGE_SYM_TYPE_NULL (0x0)
     DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
@@ -12991,7 +12991,7 @@ ImageSymbol {
     Index: 1703
     Name: "__dll_characteristics__"
     Value: 0x160
-    Section: IMAGE_SYM_ABSOLUTE (0xFFFF)
+    Section: IMAGE_SYM_ABSOLUTE (-1)
     Type: 0x0
     BaseType: IMAGE_SYM_TYPE_NULL (0x0)
     DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
@@ -13002,7 +13002,7 @@ ImageSymbol {
     Index: 1704
     Name: "__size_of_stack_commit__"
     Value: 0x1000
-    Section: IMAGE_SYM_ABSOLUTE (0xFFFF)
+    Section: IMAGE_SYM_ABSOLUTE (-1)
     Type: 0x0
     BaseType: IMAGE_SYM_TYPE_NULL (0x0)
     DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
@@ -13046,7 +13046,7 @@ ImageSymbol {
     Index: 1708
     Name: "__size_of_stack_reserve__"
     Value: 0x200000
-    Section: IMAGE_SYM_ABSOLUTE (0xFFFF)
+    Section: IMAGE_SYM_ABSOLUTE (-1)
     Type: 0x0
     BaseType: IMAGE_SYM_TYPE_NULL (0x0)
     DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
@@ -13057,7 +13057,7 @@ ImageSymbol {
     Index: 1709
     Name: "__major_subsystem_version__"
     Value: 0x5
-    Section: IMAGE_SYM_ABSOLUTE (0xFFFF)
+    Section: IMAGE_SYM_ABSOLUTE (-1)
     Type: 0x0
     BaseType: IMAGE_SYM_TYPE_NULL (0x0)
     DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
@@ -13376,7 +13376,7 @@ ImageSymbol {
     Index: 1738
     Name: "__size_of_heap_commit__"
     Value: 0x1000
-    Section: IMAGE_SYM_ABSOLUTE (0xFFFF)
+    Section: IMAGE_SYM_ABSOLUTE (-1)
     Type: 0x0
     BaseType: IMAGE_SYM_TYPE_NULL (0x0)
     DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
@@ -13563,7 +13563,7 @@ ImageSymbol {
     Index: 1755
     Name: "__dll__"
     Value: 0x0
-    Section: IMAGE_SYM_ABSOLUTE (0xFFFF)
+    Section: IMAGE_SYM_ABSOLUTE (-1)
     Type: 0x0
     BaseType: IMAGE_SYM_TYPE_NULL (0x0)
     DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
@@ -13574,7 +13574,7 @@ ImageSymbol {
     Index: 1756
     Name: "__minor_os_version__"
     Value: 0x0
-    Section: IMAGE_SYM_ABSOLUTE (0xFFFF)
+    Section: IMAGE_SYM_ABSOLUTE (-1)
     Type: 0x0
     BaseType: IMAGE_SYM_TYPE_NULL (0x0)
     DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
@@ -13618,7 +13618,7 @@ ImageSymbol {
     Index: 1760
     Name: "__image_base__"
     Value: 0x40000000
-    Section: IMAGE_SYM_ABSOLUTE (0xFFFF)
+    Section: IMAGE_SYM_ABSOLUTE (-1)
     Type: 0x0
     BaseType: IMAGE_SYM_TYPE_NULL (0x0)
     DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
@@ -13640,7 +13640,7 @@ ImageSymbol {
     Index: 1762
     Name: "__section_alignment__"
     Value: 0x1000
-    Section: IMAGE_SYM_ABSOLUTE (0xFFFF)
+    Section: IMAGE_SYM_ABSOLUTE (-1)
     Type: 0x0
     BaseType: IMAGE_SYM_TYPE_NULL (0x0)
     DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
@@ -14047,7 +14047,7 @@ ImageSymbol {
     Index: 1799
     Name: "__rt_psrelocs_size"
     Value: 0x0
-    Section: IMAGE_SYM_ABSOLUTE (0xFFFF)
+    Section: IMAGE_SYM_ABSOLUTE (-1)
     Type: 0x0
     BaseType: IMAGE_SYM_TYPE_NULL (0x0)
     DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
@@ -14124,7 +14124,7 @@ ImageSymbol {
     Index: 1806
     Name: "__file_alignment__"
     Value: 0x200
-    Section: IMAGE_SYM_ABSOLUTE (0xFFFF)
+    Section: IMAGE_SYM_ABSOLUTE (-1)
     Type: 0x0
     BaseType: IMAGE_SYM_TYPE_NULL (0x0)
     DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
@@ -14212,7 +14212,7 @@ ImageSymbol {
     Index: 1814
     Name: "__major_os_version__"
     Value: 0x4
-    Section: IMAGE_SYM_ABSOLUTE (0xFFFF)
+    Section: IMAGE_SYM_ABSOLUTE (-1)
     Type: 0x0
     BaseType: IMAGE_SYM_TYPE_NULL (0x0)
     DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
@@ -14289,7 +14289,7 @@ ImageSymbol {
     Index: 1821
     Name: "__end__"
     Value: 0x0
-    Section: IMAGE_SYM_UNDEFINED (0x0)
+    Section: IMAGE_SYM_UNDEFINED (0)
     Type: 0x0
     BaseType: IMAGE_SYM_TYPE_NULL (0x0)
     DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
@@ -14432,7 +14432,7 @@ ImageSymbol {
     Index: 1834
     Name: "__size_of_heap_reserve__"
     Value: 0x100000
-    Section: IMAGE_SYM_ABSOLUTE (0xFFFF)
+    Section: IMAGE_SYM_ABSOLUTE (-1)
     Type: 0x0
     BaseType: IMAGE_SYM_TYPE_NULL (0x0)
     DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
@@ -14454,7 +14454,7 @@ ImageSymbol {
     Index: 1836
     Name: "__subsystem__"
     Value: 0x3
-    Section: IMAGE_SYM_ABSOLUTE (0xFFFF)
+    Section: IMAGE_SYM_ABSOLUTE (-1)
     Type: 0x0
     BaseType: IMAGE_SYM_TYPE_NULL (0x0)
     DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
@@ -14784,7 +14784,7 @@ ImageSymbol {
     Index: 1866
     Name: "__major_image_version__"
     Value: 0x0
-    Section: IMAGE_SYM_ABSOLUTE (0xFFFF)
+    Section: IMAGE_SYM_ABSOLUTE (-1)
     Type: 0x0
     BaseType: IMAGE_SYM_TYPE_NULL (0x0)
     DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
@@ -14795,7 +14795,7 @@ ImageSymbol {
     Index: 1867
     Name: "__loader_flags__"
     Value: 0x0
-    Section: IMAGE_SYM_ABSOLUTE (0xFFFF)
+    Section: IMAGE_SYM_ABSOLUTE (-1)
     Type: 0x0
     BaseType: IMAGE_SYM_TYPE_NULL (0x0)
     DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
@@ -14938,7 +14938,7 @@ ImageSymbol {
     Index: 1880
     Name: "__minor_subsystem_version__"
     Value: 0x2
-    Section: IMAGE_SYM_ABSOLUTE (0xFFFF)
+    Section: IMAGE_SYM_ABSOLUTE (-1)
     Type: 0x0
     BaseType: IMAGE_SYM_TYPE_NULL (0x0)
     DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
@@ -14949,7 +14949,7 @@ ImageSymbol {
     Index: 1881
     Name: "__minor_image_version__"
     Value: 0x0
-    Section: IMAGE_SYM_ABSOLUTE (0xFFFF)
+    Section: IMAGE_SYM_ABSOLUTE (-1)
     Type: 0x0
     BaseType: IMAGE_SYM_TYPE_NULL (0x0)
     DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
