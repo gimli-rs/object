@@ -38,7 +38,9 @@ impl<'a> Object<'a> {
             StandardSection::ReadOnlyData | StandardSection::ReadOnlyString => {
                 (&[], &b".rodata"[..], SectionKind::ReadOnlyData)
             }
-            StandardSection::ReadOnlyDataWithRel => (&[], b".data.rel.ro", SectionKind::Data),
+            StandardSection::ReadOnlyDataWithRel => {
+                (&[], b".data.rel.ro", SectionKind::ReadOnlyDataWithRel)
+            }
             StandardSection::UninitializedData => {
                 (&[], &b".bss"[..], SectionKind::UninitializedData)
             }
@@ -767,7 +769,9 @@ impl<'a> Object<'a> {
             } else {
                 match section.kind {
                     SectionKind::Text => elf::SHF_ALLOC | elf::SHF_EXECINSTR,
-                    SectionKind::Data => elf::SHF_ALLOC | elf::SHF_WRITE,
+                    SectionKind::Data | SectionKind::ReadOnlyDataWithRel => {
+                        elf::SHF_ALLOC | elf::SHF_WRITE
+                    }
                     SectionKind::Tls => elf::SHF_ALLOC | elf::SHF_WRITE | elf::SHF_TLS,
                     SectionKind::UninitializedData => elf::SHF_ALLOC | elf::SHF_WRITE,
                     SectionKind::UninitializedTls => elf::SHF_ALLOC | elf::SHF_WRITE | elf::SHF_TLS,
