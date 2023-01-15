@@ -193,6 +193,9 @@ impl<'a> Object<'a> {
             flags: SectionFlags::None,
         });
 
+        // Create a symbol for the section
+        self.section_symbol(id);
+
         // Add to self.standard_sections if required. This may match multiple standard sections.
         let section = &self.sections[id.0];
         for standard_section in StandardSection::all() {
