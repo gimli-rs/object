@@ -122,6 +122,11 @@ pub enum SectionKind {
     ///
     /// Example Mach-O sections: `__TEXT/__const`, `__DATA/__const`, `__TEXT/__literal4`
     ReadOnlyData,
+    /// A read only data section with relocations.
+    ///
+    /// This is the same as either `Data` or `ReadOnlyData`, depending on the file format.
+    /// This value is only used in the API for writing files. It is never returned when reading files.
+    ReadOnlyDataWithRel,
     /// A loadable string section.
     ///
     /// Example ELF sections: `.rodata.str`
