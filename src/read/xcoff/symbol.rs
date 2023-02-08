@@ -412,7 +412,7 @@ impl<'data, 'file, Xcoff: FileHeader, R: ReadRef<'data>> ObjectSymbol<'data>
 
     #[inline]
     fn flags(&self) -> SymbolFlags<SectionIndex> {
-        SymbolFlags::Xcoff { self.symbol.n_sclass() }
+        SymbolFlags::None
     }
 }
 
