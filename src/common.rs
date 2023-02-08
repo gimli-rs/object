@@ -468,5 +468,8 @@ pub enum SymbolFlags<Section> {
         associative_section: Option<Section>,
     },
     /// XCOFF symbol flags.
-    Xcoff { c_info: u8 },
+    Xcoff {
+        /// `n_sclass` field in the XCOFF symbol.
+        n_sclass: u8,
+    },
 }
