@@ -330,43 +330,43 @@ impl<'a> Object<'a> {
                 SymbolSection::Absolute => (xcoff::N_ABS, None),
                 SymbolSection::Section(id) => (id.0 as i16 + 1, Some(&self.sections[id.0])),
             };
-            let storage_class = match symbol.kind {
-                SymbolKind::File => xcoff::C_FILE,
-                SymbolKind::Null => xcoff::C_NULL,
-                SymbolKind::Data | SymbolKind::Text => {
-                    if symbol.is_local() {
-                        xcoff::C_STAT
-                    } else {
-                        xcoff::C_EXT
+            let storage_class = if let SymbolFlags::Xcoff { n_sclass } = symbol.flags {
+                n_sclass
+            } else {
+                match symbol.kind {
+                    SymbolKind::File => xcoff::C_FILE,
+                    SymbolKind::Null => xcoff::C_NULL,
+                    SymbolKind::Data | SymbolKind::Text => {
+                        if symbol.is_local() {
+                            xcoff::C_STAT
+                        } else {
+                            xcoff::C_EXT
+                        }
                     }
-                }
-                SymbolKind::Label => {
-                    if symbol.is_undefined() {
-                        xcoff::C_ULABEL
-                    } else {
-                        xcoff::C_LABEL
+                    SymbolKind::Label => {
+                        if symbol.is_undefined() {
+                            xcoff::C_ULABEL
+                        } else {
+                            xcoff::C_LABEL
+                        }
                     }
-                }
-                SymbolKind::Tls => {
-                    if symbol.is_local() {
-                        xcoff::C_STTLS
-                    } else {
-                        xcoff::C_GTLS
+                    SymbolKind::Tls => {
+                        if symbol.is_local() {
+                            xcoff::C_STTLS
+                        } else {
+                            xcoff::C_GTLS
+                        }
                     }
-                }
-                SymbolKind::Section => {
-                    if symbol.weak {
-                        xcoff::C_WEAKEXT
-                    } else if symbol.is_undefined() {
-                        xcoff::C_HIDEXT
-                    } else {
-                        xcoff::C_EXT
+                    SymbolKind::Section => {
+                        if symbol.weak {
+                            xcoff::C_WEAKEXT
+                        } else if symbol.is_undefined() {
+                            xcoff::C_HIDEXT
+                        } else {
+                            xcoff::C_EXT
+                        }
                     }
-                }
-                SymbolKind::Unknown => {
-                    if let SymbolFlags::Xcoff { c_info, .. } = symbol.flags {
-                        xcoff::C_INFO
-                    } else {
+                    SymbolKind::Unknown => {
                         return Err(Error(format!(
                             "unimplemented symbol `{}` kind {:?}",
                             symbol.name().unwrap_or(""),
