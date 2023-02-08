@@ -467,4 +467,6 @@ pub enum SymbolFlags<Section> {
         /// `Number` field in the auxiliary symbol for the section.
         associative_section: Option<Section>,
     },
+    /// XCOFF symbol flags.
+    Xcoff { c_info: u8 },
 }

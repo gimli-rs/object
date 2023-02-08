@@ -35,8 +35,10 @@ impl<'a> Object<'a> {
             StandardSection::UninitializedData => {
                 (&[], &b".bss"[..], SectionKind::UninitializedData)
             }
-            StandardSection::Tls => (&[], &b".tls$"[..], SectionKind::Tls),
-            StandardSection::UninitializedTls => (&[], &[], SectionKind::UninitializedTls),
+            StandardSection::Tls => (&[], &b".tdata"[..], SectionKind::Tls),
+            StandardSection::UninitializedTls => {
+                (&[], &b".tbss"[..], SectionKind::UninitializedTls)
+            }
             StandardSection::TlsVariables => {
                 // Unsupported section.
                 (&[], &[], SectionKind::TlsVariables)
@@ -331,7 +333,13 @@ impl<'a> Object<'a> {
             let storage_class = match symbol.kind {
                 SymbolKind::File => xcoff::C_FILE,
                 SymbolKind::Null => xcoff::C_NULL,
-                SymbolKind::Data => xcoff::C_STAT,
+                SymbolKind::Data | SymbolKind::Text => {
+                    if symbol.is_local() {
+                        xcoff::C_STAT
+                    } else {
+                        xcoff::C_EXT
+                    }
+                }
                 SymbolKind::Label => {
                     if symbol.is_undefined() {
                         xcoff::C_ULABEL
@@ -355,33 +363,16 @@ impl<'a> Object<'a> {
                         xcoff::C_EXT
                     }
                 }
-                SymbolKind::Text => {
-                    if let Some(section) = section {
-                        if let SectionFlags::Xcoff { s_flags } = section.flags {
-                            let flags = s_flags as u16;
-                            if flags & xcoff::STYP_INFO != 0 {
-                                xcoff::C_INFO
-                            } else if flags & xcoff::STYP_TEXT != 0 {
-                                xcoff::C_FUN
-                            } else {
-                                xcoff::C_EXT
-                            }
-                        } else {
-                            match section.kind {
-                                SectionKind::OtherString => xcoff::C_INFO,
-                                _ => xcoff::C_EXT,
-                            }
-                        }
-                    } else {
-                        xcoff::C_EXT
-                    }
-                }
                 SymbolKind::Unknown => {
-                    return Err(Error(format!(
-                        "unimplemented symbol `{}` kind {:?}",
-                        symbol.name().unwrap_or(""),
-                        symbol.kind
-                    )));
+                    if let SymbolFlags::Xcoff { c_info, .. } = symbol.flags {
+                        xcoff::C_INFO
+                    } else {
+                        return Err(Error(format!(
+                            "unimplemented symbol `{}` kind {:?}",
+                            symbol.name().unwrap_or(""),
+                            symbol.kind
+                        )));
+                    }
                 }
             };
             let sym_type = if (symbol.scope == SymbolScope::Linkage)

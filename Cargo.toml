@@ -38,7 +38,7 @@ write_core = ["crc32fast", "indexmap", "hashbrown"]
 # Core write support with libstd features. You will need to enable some file formats too.
 write_std = ["write_core", "std", "indexmap/std", "crc32fast/std"]
 # Write support for all file formats, including libstd features.
-write = ["write_std", "coff", "elf", "macho", "pe", "xcoff"]
+write = ["write_std", "coff", "elf", "macho", "pe"]
 
 #=======================================
 # Misc features.
