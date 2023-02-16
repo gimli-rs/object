@@ -216,9 +216,6 @@ impl<'a> Writer<'a> {
     ///
     /// Returns the aligned offset of the start of the range.
     pub fn reserve(&mut self, len: usize, align_start: usize) -> usize {
-        if len == 0 {
-            return self.len;
-        }
         self.len = util::align(self.len, align_start);
         let offset = self.len;
         self.len += len;
