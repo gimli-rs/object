@@ -120,7 +120,12 @@ where
 
     #[inline]
     fn align(&self) -> u64 {
-        1 << self.internal.section.align(self.file.endian)
+        let align = self.internal.section.align(self.file.endian);
+        if align < 64 {
+            1 << align
+        } else {
+            0
+        }
     }
 
     #[inline]
