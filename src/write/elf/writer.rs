@@ -216,10 +216,9 @@ impl<'a> Writer<'a> {
     ///
     /// Returns the aligned offset of the start of the range.
     pub fn reserve(&mut self, len: usize, align_start: usize) -> usize {
-        if len == 0 {
-            return self.len;
+        if align_start > 1 {
+            self.len = util::align(self.len, align_start);
         }
-        self.len = util::align(self.len, align_start);
         let offset = self.len;
         self.len += len;
         offset
@@ -227,7 +226,9 @@ impl<'a> Writer<'a> {
 
     /// Write alignment padding bytes.
     pub fn write_align(&mut self, align_start: usize) {
-        util::write_align(self.buffer, align_start);
+        if align_start > 1 {
+            util::write_align(self.buffer, align_start);
+        }
     }
 
     /// Write data.
