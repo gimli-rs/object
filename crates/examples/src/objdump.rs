@@ -219,20 +219,28 @@ fn dump_parsed_object<W: Write, E: Write>(w: &mut W, e: &mut E, file: &object::F
         }
     }
 
-    let imports = file.imports().unwrap();
-    if !imports.is_empty() {
-        writeln!(w)?;
-        for import in imports {
-            writeln!(w, "{:?}", import)?;
+    match file.imports() {
+        Ok(imports) => {
+            if !imports.is_empty() {
+                writeln!(w)?;
+                for import in imports {
+                    writeln!(w, "{:x?}", import)?;
+                }
+            }
         }
+        Err(err) => writeln!(e, "Failed to parse imports: {}", err)?,
     }
 
-    let exports = file.exports().unwrap();
-    if !exports.is_empty() {
-        writeln!(w)?;
-        for export in exports {
-            writeln!(w, "{:x?}", export)?;
+    match file.exports() {
+        Ok(exports) => {
+            if !exports.is_empty() {
+                writeln!(w)?;
+                for export in exports {
+                    writeln!(w, "{:x?}", export)?;
+                }
+            }
         }
+        Err(err) => writeln!(e, "Failed to parse exports: {}", err)?,
     }
 
     Ok(())
