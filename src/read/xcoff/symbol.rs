@@ -283,7 +283,8 @@ impl<'data, 'file, Xcoff: FileHeader, R: ReadRef<'data>> ObjectSymbol<'data>
             | xcoff::C_HIDEXT
             | xcoff::C_FCN
             | xcoff::C_BLOCK
-            | xcoff::C_STAT => self.symbol.n_value().into(),
+            | xcoff::C_STAT
+            | xcoff::C_INFO => self.symbol.n_value().into(),
             _ => 0,
         }
     }

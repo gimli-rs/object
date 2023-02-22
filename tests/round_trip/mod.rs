@@ -448,6 +448,7 @@ fn macho_x86_64() {
     assert_eq!(map.get(func1_offset - 1), None);
 }
 
+#[cfg(feature = "xcoff")]
 #[test]
 fn xcoff_powerpc() {
     for arch in [Architecture::PowerPc, Architecture::PowerPc64] {

@@ -469,7 +469,7 @@ pub enum SymbolFlags<Section> {
     },
     /// XCOFF symbol flags.
     Xcoff {
-        /// `n_sclass` in the XCOFF symbol.
+        /// `n_sclass` field in the XCOFF symbol.
         n_sclass: u8,
     },
 }
