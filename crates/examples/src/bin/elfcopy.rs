@@ -6,14 +6,34 @@ use object::elf;
 use object::read::elf::{Dyn, FileHeader, ProgramHeader, Rel, Rela, SectionHeader, Sym};
 use object::Endianness;
 
+use std::collections::HashMap;
+use std::fs::File;
+use std::io::{self, BufRead};
+
 fn main() {
     let mut args = env::args();
-    if args.len() != 3 {
-        eprintln!("Usage: {} <infile> <outfile>", args.next().unwrap());
+    if !(args.len() == 3 || args.len() == 5) {
+        eprintln!(
+            "Usage: {} [--redefine-syms <file>] <infile> <outfile>",
+            args.next().unwrap()
+        );
         process::exit(1);
     }
 
     args.next();
+
+    let redefine_file = match args.len() {
+        // 4 tokens remaining means we have specified --redefine-syms <file>
+        4 => {
+            if args.next() != Some("--redefine-syms".to_string()) {
+                eprintln!("Usage: [--redefine-syms <file>] <infile> <outfile>");
+                process::exit(1);
+            }
+            Some(args.next().unwrap())
+        }
+        _ => None,
+    };
+
     let in_file_path = args.next().unwrap();
     let out_file_path = args.next().unwrap();
 
@@ -41,8 +61,12 @@ fn main() {
         }
     };
     let out_data = match kind {
-        object::FileKind::Elf32 => copy_file::<elf::FileHeader32<Endianness>>(in_data).unwrap(),
-        object::FileKind::Elf64 => copy_file::<elf::FileHeader64<Endianness>>(in_data).unwrap(),
+        object::FileKind::Elf32 => {
+            copy_file::<elf::FileHeader32<Endianness>>(in_data, redefine_file).unwrap()
+        }
+        object::FileKind::Elf64 => {
+            copy_file::<elf::FileHeader64<Endianness>>(in_data, redefine_file).unwrap()
+        }
         _ => {
             eprintln!("Not an ELF file");
             process::exit(1);
@@ -80,8 +104,63 @@ struct DynamicSymbol {
     gnu_hash: Option<u32>,
 }
 
+/// Table that holds a map of the symbols we should rename while copying
+///
+/// This will be loaded by passing a file with lines of the form:
+/// ```
+/// <original_sym> <new_sym>
+/// ```
+/// A symbol name can then be passed to query the corresponding new
+/// name that we should provide the `out_*` variables in `copy_file`.
+struct RedefineSymTable {
+    map: Option<HashMap<Vec<u8>, Vec<u8>>>,
+}
+
+impl RedefineSymTable {
+    fn new(filename: Option<String>) -> Result<Self, Box<dyn Error>> {
+        match filename {
+            Some(filename) => {
+                let file = File::open(filename)?;
+
+                let mut map = HashMap::new();
+
+                for res in io::BufReader::new(file).lines() {
+                    let line = res?;
+                    let names: Vec<&str> = line.split(' ').take(2).collect();
+
+                    // check that there are two symbol names on each line
+                    if names.len() != 2 {
+                        return Err(
+                            "Error: invalid redefine file. --redefine-syms expects lines \
+                    of the form: <original_sym> <new_sym>"
+                                .into(),
+                        );
+                    }
+
+                    map.insert(names[0].into(), names[1].into());
+                }
+
+                Ok(Self { map: Some(map) })
+            }
+            None => Ok(Self { map: None }),
+        }
+    }
+
+    fn get_redefined_name<'a>(&'a self, original: &'a [u8]) -> &'a [u8] {
+        // check if we have a rename for this symbol
+        if let Some(map) = self.map.as_ref() {
+            if let Some(new_string) = map.get(original.into()) {
+                return new_string.as_slice();
+            }
+        }
+
+        return original;
+    }
+}
+
 fn copy_file<Elf: FileHeader<Endian = Endianness>>(
     in_data: &[u8],
+    redefine_file: Option<String>,
 ) -> Result<Vec<u8>, Box<dyn Error>> {
     let in_elf = Elf::parse(in_data)?;
     let endian = in_elf.endian()?;
@@ -90,6 +169,8 @@ fn copy_file<Elf: FileHeader<Endian = Endianness>>(
     let in_sections = in_elf.sections(endian, in_data)?;
     let in_syms = in_sections.symbols(endian, in_data, elf::SHT_SYMTAB)?;
     let in_dynsyms = in_sections.symbols(endian, in_data, elf::SHT_DYNSYM)?;
+
+    let redefine_table = RedefineSymTable::new(redefine_file)?;
 
     let mut out_data = Vec::new();
     let mut writer = object::write::elf::Writer::new(endian, in_elf.is_class_64(), &mut out_data);
@@ -101,6 +182,7 @@ fn copy_file<Elf: FileHeader<Endian = Endianness>>(
     let mut in_versym = None;
     let mut in_verdef = None;
     let mut in_verneed = None;
+    let mut in_attrib = None;
     let mut out_sections = Vec::with_capacity(in_sections.len());
     let mut out_sections_index = Vec::with_capacity(in_sections.len());
     for (i, in_section) in in_sections.iter().enumerate() {
@@ -185,6 +267,11 @@ fn copy_file<Elf: FileHeader<Endian = Endianness>>(
                 debug_assert!(in_verneed.is_some());
                 index = writer.reserve_gnu_verneed_section_index();
             }
+            elf::SHT_GNU_ATTRIBUTES => {
+                in_attrib = in_section.gnu_attributes(endian, in_data)?;
+                debug_assert!(in_attrib.is_some());
+                index = writer.reserve_gnu_attributes_section_index();
+            }
             other => {
                 panic!("Unsupported section type {:x}", other);
             }
@@ -234,11 +321,12 @@ fn copy_file<Elf: FileHeader<Endian = Endianness>>(
         let mut gnu_hash = None;
         if in_dynsym.st_name(endian) != 0 {
             let in_name = in_dynsyms.symbol_name(endian, in_dynsym)?;
-            name = Some(writer.add_dynamic_string(in_name));
-            if !in_name.is_empty() {
-                hash = Some(elf::hash(in_name));
+            let redefined_name = redefine_table.get_redefined_name(in_name);
+            name = Some(writer.add_dynamic_string(redefined_name));
+            if !redefined_name.is_empty() {
+                hash = Some(elf::hash(redefined_name));
                 if !in_dynsym.is_undefined(endian) {
-                    gnu_hash = Some(elf::gnu_hash(in_name));
+                    gnu_hash = Some(elf::gnu_hash(redefined_name));
                 }
             }
         };
@@ -301,7 +389,9 @@ fn copy_file<Elf: FileHeader<Endian = Endianness>>(
         };
         out_syms_index.push(writer.reserve_symbol_index(section));
         let name = if in_sym.st_name(endian) != 0 {
-            Some(writer.add_string(in_syms.symbol_name(endian, in_sym)?))
+            Some(writer.add_string(
+                redefine_table.get_redefined_name(in_syms.symbol_name(endian, in_sym)?),
+            ))
         } else {
             None
         };
@@ -344,6 +434,26 @@ fn copy_file<Elf: FileHeader<Endian = Endianness>>(
         }
     }
 
+    // Add one byte for the version field at the start of the section
+    let mut gnu_attributes_size = 1;
+    // We will cache all of our attribute data here for later
+    let mut gnu_attrib_vendor_sections = Vec::new();
+    if let Some(mut vsections) = in_attrib.clone() {
+        while let Some((vendor_name, mut tags)) = vsections.next()? {
+            let mut subsection = Vec::new();
+            let mut subsection_length = 0;
+            while let Some((tag, attrib_data)) = tags.next()? {
+                // Add the size of our tag (1-byte) + the size of the size field (4-bytes)
+                // plus the size of the sub-section data
+                subsection_length += 5 + attrib_data.len() as u32;
+                subsection.push((tag, attrib_data.clone()));
+            }
+            // Add the length of our size field + the length of the vendor string + the null byte
+            gnu_attributes_size += subsection_length as usize + 4 + vendor_name.len() + 1;
+            gnu_attrib_vendor_sections.push((vendor_name, subsection_length, subsection));
+        }
+    }
+
     // Start reserving file ranges.
     writer.reserve_file_header();
 
@@ -355,6 +465,7 @@ fn copy_file<Elf: FileHeader<Endian = Endianness>>(
     let mut dynamic_addr = 0;
     let mut dynsym_addr = 0;
     let mut dynstr_addr = 0;
+    let mut attributes_addr = 0;
 
     let mut alloc_sections = Vec::new();
     if in_segments.is_empty() {
@@ -457,6 +568,10 @@ fn copy_file<Elf: FileHeader<Endian = Endianness>>(
                         in_section.sh_size(endian).into() as usize,
                         in_section.sh_addralign(endian).into() as usize,
                     );
+                }
+                elf::SHT_GNU_ATTRIBUTES => {
+                    attributes_addr = in_section.sh_addr(endian).into();
+                    writer.reserve_gnu_attributes(gnu_attributes_size);
                 }
                 _ => {}
             }
@@ -690,6 +805,18 @@ fn copy_file<Elf: FileHeader<Endian = Endianness>>(
                     debug_assert_eq!(out_sections[i].offset, writer.len());
                     writer.write(in_section.data(endian, in_data)?);
                 }
+                elf::SHT_GNU_ATTRIBUTES => {
+                    writer.write_align_gnu_attributes();
+                    writer.write_gnu_attributes_version();
+                    for (vendor_name, section_length, subsections) in
+                        gnu_attrib_vendor_sections.iter()
+                    {
+                        writer.write_gnu_attributes_subsection(*section_length, vendor_name);
+                        for (tag, tag_data) in subsections.iter() {
+                            writer.write_gnu_attributes_subsubsection(*tag, tag_data);
+                        }
+                    }
+                }
                 _ => {}
             }
         }
@@ -850,6 +977,9 @@ fn copy_file<Elf: FileHeader<Endian = Endianness>>(
             }
             elf::SHT_GNU_VERNEED => {
                 writer.write_gnu_verneed_section_header(verneed_addr);
+            }
+            elf::SHT_GNU_ATTRIBUTES => {
+                writer.write_gnu_attributes_section_header(attributes_addr);
             }
             other => {
                 panic!("Unsupported section type {:x}", other);
