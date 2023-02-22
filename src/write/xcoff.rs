@@ -211,9 +211,10 @@ impl<'a> Object<'a> {
                 s_flags
             } else {
                 match section.kind {
-                    SectionKind::Text | SectionKind::ReadOnlyData | SectionKind::ReadOnlyString => {
-                        xcoff::STYP_TEXT
-                    }
+                    SectionKind::Text
+                    | SectionKind::ReadOnlyData
+                    | SectionKind::ReadOnlyString
+                    | SectionKind::ReadOnlyDataWithRel => xcoff::STYP_TEXT,
                     SectionKind::Data => xcoff::STYP_DATA,
                     SectionKind::UninitializedData => xcoff::STYP_BSS,
                     SectionKind::Tls => xcoff::STYP_TDATA,
