@@ -223,7 +223,7 @@ impl<'data, Mach: MachHeader> MachOSectionInternal<'data, Mach> {
         // TODO: we don't validate flags, should we?
         let kind = match (section.segment_name(), section.name()) {
             (b"__TEXT", b"__text") => SectionKind::Text,
-            (b"__LD", b"__compact_unwind") => SectionKind::Text,
+            (b"__LD", b"__compact_unwind") => SectionKind::ReadOnlyData,
             (b"__TEXT", b"__const") => SectionKind::ReadOnlyData,
             (b"__TEXT", b"__cstring") => SectionKind::ReadOnlyString,
             (b"__TEXT", b"__literal4") => SectionKind::ReadOnlyData,
@@ -234,11 +234,11 @@ impl<'data, Mach: MachHeader> MachOSectionInternal<'data, Mach> {
             (b"__DATA", b"__data") => SectionKind::Data,
             (b"__DATA", b"__const") => SectionKind::ReadOnlyData,
             (b"__DATA", b"__bss") => SectionKind::UninitializedData,
+            (b"__DATA", b"__mod_init_func") => SectionKind::UninitializedData,
             (b"__DATA", b"__common") => SectionKind::Common,
             (b"__DATA", b"__thread_data") => SectionKind::Tls,
             (b"__DATA", b"__thread_bss") => SectionKind::UninitializedTls,
             (b"__DATA", b"__thread_vars") => SectionKind::TlsVariables,
-            (b"__DATA", b"__mod_init_func") => SectionKind::TlsVariables,
             (b"__DWARF", _) => SectionKind::Debug,
             _ => SectionKind::Unknown,
         };
