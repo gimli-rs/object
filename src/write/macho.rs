@@ -273,16 +273,8 @@ impl<'a> Object<'a> {
             //
             // Since we don't actually emit the symbol kind, we validate it here too.
             match symbol.kind {
-                SymbolKind::Text | SymbolKind::Data | SymbolKind::Tls => {}
+                SymbolKind::Text | SymbolKind::Data | SymbolKind::Tls | SymbolKind::Unknown => {}
                 SymbolKind::File | SymbolKind::Section => continue,
-                SymbolKind::Unknown => {
-                    if symbol.section != SymbolSection::Undefined {
-                        return Err(Error(format!(
-                            "defined symbol `{}` with unknown kind",
-                            symbol.name().unwrap_or(""),
-                        )));
-                    }
-                }
                 SymbolKind::Null | SymbolKind::Label => {
                     return Err(Error(format!(
                         "unimplemented symbol `{}` kind {:?}",
