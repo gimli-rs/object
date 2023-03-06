@@ -17,7 +17,7 @@ jobs:
             os: "macOS-latest"
     runs-on: ${{matrix.os}}
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
       with:
         submodules: true
     - name: Install rust channel
@@ -34,7 +34,7 @@ jobs:
   features:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           submodules: true
       - run: cargo build --no-default-features --features read
@@ -57,7 +57,7 @@ jobs:
           - "mips64-unknown-linux-gnuabi64"
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           submodules: true
       - name: Install rust
@@ -71,7 +71,7 @@ jobs:
   msrv-read:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           submodules: true
       - name: Install rust
@@ -82,7 +82,7 @@ jobs:
   msrv-all:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           submodules: true
       - name: Install rust
@@ -93,7 +93,7 @@ jobs:
   rustfmt:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Install rust
         run: |
           rustup install stable
@@ -107,7 +107,7 @@ jobs:
       image: xd009642/tarpaulin
       options: --security-opt seccomp=unconfined
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           submodules: true
       - name: Install rust
@@ -125,5 +125,5 @@ jobs:
   doc:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - run: cargo doc --no-default-features --features doc
