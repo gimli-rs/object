@@ -701,7 +701,6 @@ impl<'data> CompressedData<'data> {
             CompressionFormat::None => Ok(Cow::Borrowed(self.data)),
             #[cfg(feature = "compression")]
             CompressionFormat::Zlib => {
-                use core::convert::TryInto;
                 let size = self
                     .uncompressed_size
                     .try_into()
