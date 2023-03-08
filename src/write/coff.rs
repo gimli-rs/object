@@ -311,6 +311,8 @@ impl<'a> Object<'a> {
                     Architecture::Aarch64 => coff::IMAGE_FILE_MACHINE_ARM64,
                     Architecture::I386 => coff::IMAGE_FILE_MACHINE_I386,
                     Architecture::X86_64 => coff::IMAGE_FILE_MACHINE_AMD64,
+                    Architecture::Riscv32 => coff::IMAGE_FILE_MACHINE_RISCV32,
+                    Architecture::Riscv64 => coff::IMAGE_FILE_MACHINE_RISCV64,
                     _ => {
                         return Err(Error(format!(
                             "unimplemented architecture {:?}",
