@@ -717,7 +717,7 @@ impl<'a> Section<'a> {
         offset as u64
     }
 
-    /// Append unitialized data to a section.
+    /// Append uninitialized data to a section.
     ///
     /// Must not be called for sections that contain initialized data.
     pub fn append_bss(&mut self, size: u64, align: u64) -> u64 {

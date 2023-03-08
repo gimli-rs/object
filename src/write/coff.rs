@@ -265,7 +265,7 @@ impl<'a> Object<'a> {
             symtab_count += 1;
             match symbol.kind {
                 SymbolKind::File => {
-                    // Name goes in auxilary symbol records.
+                    // Name goes in auxiliary symbol records.
                     let aux_count = (symbol.name.len() + coff::IMAGE_SIZEOF_SYMBOL - 1)
                         / coff::IMAGE_SIZEOF_SYMBOL;
                     symbol_offsets[index].aux_count = aux_count as u8;
@@ -589,7 +589,7 @@ impl<'a> Object<'a> {
             };
             let storage_class = match symbol.kind {
                 SymbolKind::File => {
-                    // Name goes in auxilary symbol records.
+                    // Name goes in auxiliary symbol records.
                     name = b".file";
                     coff::IMAGE_SYM_CLASS_FILE
                 }
