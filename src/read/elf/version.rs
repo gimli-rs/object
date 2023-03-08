@@ -183,7 +183,7 @@ impl<'data, Elf: FileHeader> VersionTable<'data, Elf> {
             .map(Some)
     }
 
-    /// Return true if the given symbol index satisifies the requirements of `need`.
+    /// Return true if the given symbol index satisfies the requirements of `need`.
     ///
     /// Returns false for any error.
     ///

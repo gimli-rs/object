@@ -274,7 +274,7 @@ pub const IMAGE_SIZEOF_FILE_HEADER: usize = 20;
 pub const IMAGE_FILE_RELOCS_STRIPPED: u16 = 0x0001;
 /// File is executable  (i.e. no unresolved external references).
 pub const IMAGE_FILE_EXECUTABLE_IMAGE: u16 = 0x0002;
-/// Line nunbers stripped from file.
+/// Line numbers stripped from file.
 pub const IMAGE_FILE_LINE_NUMS_STRIPPED: u16 = 0x0004;
 /// Local symbols stripped from file.
 pub const IMAGE_FILE_LOCAL_SYMS_STRIPPED: u16 = 0x0008;
@@ -756,7 +756,7 @@ pub const IMAGE_SCN_ALIGN_MASK: u32 = 0x00F0_0000;
 pub const IMAGE_SCN_LNK_NRELOC_OVFL: u32 = 0x0100_0000;
 /// Section can be discarded.
 pub const IMAGE_SCN_MEM_DISCARDABLE: u32 = 0x0200_0000;
-/// Section is not cachable.
+/// Section is not cacheable.
 pub const IMAGE_SCN_MEM_NOT_CACHED: u32 = 0x0400_0000;
 /// Section is not pageable.
 pub const IMAGE_SCN_MEM_NOT_PAGED: u32 = 0x0800_0000;
@@ -1095,7 +1095,7 @@ pub const IMAGE_REL_MIPS_GPREL: u16 = 0x0006;
 pub const IMAGE_REL_MIPS_LITERAL: u16 = 0x0007;
 pub const IMAGE_REL_MIPS_SECTION: u16 = 0x000A;
 pub const IMAGE_REL_MIPS_SECREL: u16 = 0x000B;
-/// Low 16-bit section relative referemce (used for >32k TLS)
+/// Low 16-bit section relative reference (used for >32k TLS)
 pub const IMAGE_REL_MIPS_SECRELLO: u16 = 0x000C;
 /// High 16-bit section relative reference (used for >32k TLS)
 pub const IMAGE_REL_MIPS_SECRELHI: u16 = 0x000D;
@@ -2010,7 +2010,7 @@ pub const IMAGE_DELAYLOAD_RVA_BASED: u32 = 0x8000_0000;
 //
 // This structure allows fast lookup by either name or number, but for any
 // given resource entry only one form of lookup is supported, not both.
-// This is consistant with the syntax of the .RC file and the .RES file.
+// This is consistent with the syntax of the .RC file and the .RES file.
 //
 
 #[derive(Debug, Clone, Copy)]
@@ -2560,7 +2560,7 @@ pub struct ImageRuntimeFunctionEntry {
 }
 
 //
-// Sofware enclave information
+// Software enclave information
 //
 
 pub const IMAGE_ENCLAVE_LONG_ID_LENGTH: usize = 32;
@@ -2754,7 +2754,7 @@ pub struct ImageFunctionEntry64 {
 // flag in the Characteristics field of the file header.  The beginning of
 // the .DBG file contains the following structure which captures certain
 // information from the image file.  This allows a debug to proceed even if
-// the original image file is not accessable.  This header is followed by
+// the original image file is not accessible.  This header is followed by
 // zero of more IMAGE_SECTION_HEADER structures, followed by zero or more
 // IMAGE_DEBUG_DIRECTORY structures.  The latter structures and those in
 // the image file contain file offsets relative to the beginning of the

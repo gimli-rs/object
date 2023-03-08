@@ -2933,7 +2933,7 @@ pub const EFA_PARISC_2_0: u32 = 0x0214;
 
 // PA-RISC values for `Sym*::st_shndx`.
 
-/// Section for tenatively declared symbols in ANSI C.
+/// Section for tentatively declared symbols in ANSI C.
 pub const SHN_PARISC_ANSI_COMMON: u16 = 0xff00;
 /// Common blocks in huge model.
 pub const SHN_PARISC_HUGE_COMMON: u16 = 0xff01;
@@ -6267,7 +6267,7 @@ pub const R_METAG_RELBRANCH: u32 = 4;
 #[allow(missing_docs)]
 pub const R_METAG_GETSETOFF: u32 = 5;
 
-// Backward compatability
+// Backward compatibility
 #[allow(missing_docs)]
 pub const R_METAG_REG32OP1: u32 = 6;
 #[allow(missing_docs)]

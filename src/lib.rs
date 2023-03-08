@@ -11,7 +11,7 @@
 //!
 //! ## Unified read API
 //!
-//! The [read::Object] trait defines the unified interace. This trait is implemented
+//! The [read::Object] trait defines the unified interface. This trait is implemented
 //! by [read::File], which allows reading any file format, as well as implementations
 //! for each file format: [ELF](read::elf::ElfFile), [Mach-O](read::macho::MachOFile),
 //! [COFF](read::coff::CoffFile), [PE](read::pe::PeFile), [Wasm](read::wasm::WasmFile).

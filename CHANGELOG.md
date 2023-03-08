@@ -162,7 +162,7 @@ Released 2022/01/19.
 ### Changed
 
 * For the Mach-O support in `write::Object`, accept `RelocationKind::MachO` for all
-  architecures, and accept `RelocationKind::Absolute` for ARM64.
+  architectures, and accept `RelocationKind::Absolute` for ARM64.
   [#422](https://github.com/gimli-rs/object/pull/422)
 
 ### Added
