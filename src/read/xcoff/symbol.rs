@@ -314,23 +314,19 @@ impl<'data, 'file, Xcoff: FileHeader, R: ReadRef<'data>> ObjectSymbol<'data>
     }
 
     fn kind(&self) -> SymbolKind {
-        if self.symbol.has_aux_csect() {
-            SymbolKind::Section
-        } else {
-            match self.symbol.n_sclass() {
-                xcoff::C_FILE => SymbolKind::File,
-                xcoff::C_NULL => SymbolKind::Null,
-                _ => self
-                    .file
-                    .section_by_index(SectionIndex((self.symbol.n_scnum() - 1) as usize))
-                    .map(|section| match section.kind() {
-                        SectionKind::Data | SectionKind::UninitializedData => SymbolKind::Data,
-                        SectionKind::UninitializedTls | SectionKind::Tls => SymbolKind::Tls,
-                        SectionKind::Text => SymbolKind::Text,
-                        _ => SymbolKind::Unknown,
-                    })
-                    .unwrap_or(SymbolKind::Unknown),
-            }
+        match self.symbol.n_sclass() {
+            xcoff::C_FILE => SymbolKind::File,
+            xcoff::C_NULL => SymbolKind::Null,
+            _ => self
+                .file
+                .section_by_index(SectionIndex((self.symbol.n_scnum() - 1) as usize))
+                .map(|section| match section.kind() {
+                    SectionKind::Data | SectionKind::UninitializedData => SymbolKind::Data,
+                    SectionKind::UninitializedTls | SectionKind::Tls => SymbolKind::Tls,
+                    SectionKind::Text => SymbolKind::Text,
+                    _ => SymbolKind::Unknown,
+                })
+                .unwrap_or(SymbolKind::Unknown),
         }
     }
 

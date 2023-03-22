@@ -19,6 +19,7 @@ struct SymbolOffsets {
     index: usize,
     str_id: Option<StringId>,
     aux_count: u8,
+    storage_class: u8
 }
 
 impl<'a> Object<'a> {
@@ -139,11 +140,58 @@ impl<'a> Object<'a> {
             }
             symtab_count += 1;
             symbol_offsets[index].aux_count = 0;
-            match symbol.kind {
-                SymbolKind::Section => {
+            let storage_class = if let SymbolFlags::Xcoff { n_sclass } = symbol.flags {
+                n_sclass
+            } else {
+                match symbol.kind {
+                    SymbolKind::File => xcoff::C_FILE,
+                    SymbolKind::Null => xcoff::C_NULL,
+                    SymbolKind::Data | SymbolKind::Text => {
+                        if symbol.is_local() {
+                            xcoff::C_STAT
+                        } else {
+                            xcoff::C_EXT
+                        }
+                    }
+                    SymbolKind::Label => {
+                        if symbol.is_undefined() {
+                            xcoff::C_ULABEL
+                        } else {
+                            xcoff::C_LABEL
+                        }
+                    }
+                    SymbolKind::Tls => {
+                        if symbol.is_local() {
+                            xcoff::C_STTLS
+                        } else {
+                            xcoff::C_GTLS
+                        }
+                    }
+                    SymbolKind::Section => {
+                        if symbol.weak {
+                            xcoff::C_WEAKEXT
+                        } else if symbol.is_undefined() {
+                            xcoff::C_HIDEXT
+                        } else {
+                            xcoff::C_EXT
+                        }
+                    }
+                    SymbolKind::Unknown => {
+                        return Err(Error(format!(
+                            "unimplemented symbol `{}` kind {:?}",
+                            symbol.name().unwrap_or(""),
+                            symbol.kind
+                        )));
+                    }
+                }
+            };
+            symbol_offsets[index].storage_class = storage_class;
+            match storage_class {
+                xcoff::C_EXT | xcoff::C_WEAKEXT | xcoff::C_HIDEXT => {
                     symbol_offsets[index].aux_count = 1;
                     symtab_count += 1;
                 }
+                // TODO: support auxiliary entry for other types of symbol.
                 _ => {}
             }
         }
@@ -331,51 +379,7 @@ impl<'a> Object<'a> {
                 SymbolSection::Absolute => (xcoff::N_ABS, None),
                 SymbolSection::Section(id) => (id.0 as i16 + 1, Some(&self.sections[id.0])),
             };
-            let storage_class = if let SymbolFlags::Xcoff { n_sclass } = symbol.flags {
-                n_sclass
-            } else {
-                match symbol.kind {
-                    SymbolKind::File => xcoff::C_FILE,
-                    SymbolKind::Null => xcoff::C_NULL,
-                    SymbolKind::Data | SymbolKind::Text => {
-                        if symbol.is_local() {
-                            xcoff::C_STAT
-                        } else {
-                            xcoff::C_EXT
-                        }
-                    }
-                    SymbolKind::Label => {
-                        if symbol.is_undefined() {
-                            xcoff::C_ULABEL
-                        } else {
-                            xcoff::C_LABEL
-                        }
-                    }
-                    SymbolKind::Tls => {
-                        if symbol.is_local() {
-                            xcoff::C_STTLS
-                        } else {
-                            xcoff::C_GTLS
-                        }
-                    }
-                    SymbolKind::Section => {
-                        if symbol.weak {
-                            xcoff::C_WEAKEXT
-                        } else if symbol.is_undefined() {
-                            xcoff::C_HIDEXT
-                        } else {
-                            xcoff::C_EXT
-                        }
-                    }
-                    SymbolKind::Unknown => {
-                        return Err(Error(format!(
-                            "unimplemented symbol `{}` kind {:?}",
-                            symbol.name().unwrap_or(""),
-                            symbol.kind
-                        )));
-                    }
-                }
-            };
+            let storage_class = symbol_offsets[index].storage_class;
             let sym_type = if (symbol.scope == SymbolScope::Linkage)
                 && (storage_class == xcoff::C_EXT
                     || storage_class == xcoff::C_WEAKEXT
@@ -418,8 +422,11 @@ impl<'a> Object<'a> {
                 };
                 buffer.write(&xcoff_sym);
             }
-            // Generate a csect auxiliary entry.
-            if symbol.kind == SymbolKind::Section {
+            // Generate a csect auxiliary entry for C_EXT, C_WEAKEXT, and C_HIDEXT Symbols.
+            if storage_class == xcoff::C_EXT
+                || storage_class == xcoff::C_WEAKEXT
+                || storage_class == xcoff::C_HIDEXT
+            {
                 debug_assert_eq!(aux_num, 1);
                 let (xsmtype, xsmclas) = if let Some(section) = section {
                     match section.kind {
