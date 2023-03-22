@@ -19,7 +19,7 @@ struct SymbolOffsets {
     index: usize,
     str_id: Option<StringId>,
     aux_count: u8,
-    storage_class: u8
+    storage_class: u8,
 }
 
 impl<'a> Object<'a> {
