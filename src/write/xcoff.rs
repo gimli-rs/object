@@ -370,7 +370,7 @@ impl<'a> Object<'a> {
         // Write symbols.
         debug_assert_eq!(symtab_offset, buffer.len());
         for (index, symbol) in self.symbols.iter().enumerate() {
-            let (section_number, section) = match symbol.section {
+            let (n_scnum, section) = match symbol.section {
                 SymbolSection::None => {
                     debug_assert_eq!(symbol.kind, SymbolKind::File);
                     (xcoff::N_DEBUG, None)
@@ -379,17 +379,17 @@ impl<'a> Object<'a> {
                 SymbolSection::Absolute => (xcoff::N_ABS, None),
                 SymbolSection::Section(id) => (id.0 as i16 + 1, Some(&self.sections[id.0])),
             };
-            let storage_class = symbol_offsets[index].storage_class;
-            let sym_type = if (symbol.scope == SymbolScope::Linkage)
-                && (storage_class == xcoff::C_EXT
-                    || storage_class == xcoff::C_WEAKEXT
-                    || storage_class == xcoff::C_HIDEXT)
+            let n_sclass = symbol_offsets[index].storage_class;
+            let n_type = if (symbol.scope == SymbolScope::Linkage)
+                && (n_sclass == xcoff::C_EXT
+                    || n_sclass == xcoff::C_WEAKEXT
+                    || n_sclass == xcoff::C_HIDEXT)
             {
                 xcoff::SYM_V_HIDDEN
             } else {
                 0
             };
-            let aux_num = symbol_offsets[index].aux_count;
+            let n_numaux = symbol_offsets[index].aux_count;
             if is_64 {
                 let xcoff_sym = xcoff::Symbol64 {
                     n_value: U64::new(BE, symbol.value),
@@ -397,10 +397,10 @@ impl<'a> Object<'a> {
                         BE,
                         strtab.get_offset(symbol_offsets[index].str_id.unwrap()) as u32,
                     ),
-                    n_scnum: I16::new(BE, section_number),
-                    n_type: U16::new(BE, sym_type),
-                    n_sclass: storage_class,
-                    n_numaux: aux_num,
+                    n_scnum: I16::new(BE, n_scnum),
+                    n_type: U16::new(BE, n_type),
+                    n_sclass: n_sclass,
+                    n_numaux: n_numaux,
                 };
                 buffer.write(&xcoff_sym);
             } else {
@@ -415,20 +415,20 @@ impl<'a> Object<'a> {
                 let xcoff_sym = xcoff::Symbol32 {
                     n_name: sym_name,
                     n_value: U32::new(BE, symbol.value as u32),
-                    n_scnum: I16::new(BE, section_number),
-                    n_type: U16::new(BE, sym_type),
-                    n_sclass: storage_class,
-                    n_numaux: aux_num,
+                    n_scnum: I16::new(BE, n_scnum),
+                    n_type: U16::new(BE, n_type),
+                    n_sclass: n_sclass,
+                    n_numaux: n_numaux,
                 };
                 buffer.write(&xcoff_sym);
             }
             // Generate a csect auxiliary entry for C_EXT, C_WEAKEXT, and C_HIDEXT Symbols.
-            if storage_class == xcoff::C_EXT
-                || storage_class == xcoff::C_WEAKEXT
-                || storage_class == xcoff::C_HIDEXT
+            if n_sclass == xcoff::C_EXT
+                || n_sclass == xcoff::C_WEAKEXT
+                || n_sclass == xcoff::C_HIDEXT
             {
-                debug_assert_eq!(aux_num, 1);
-                let (xsmtype, xsmclas) = if let Some(section) = section {
+                debug_assert_eq!(n_numaux, 1);
+                let (x_smtyp, x_smclas) = if let Some(section) = section {
                     match section.kind {
                         SectionKind::Data => (xcoff::XTY_SD, xcoff::XMC_RW),
                         SectionKind::Tls => (xcoff::XTY_SD, xcoff::XMC_TL),
@@ -453,10 +453,18 @@ impl<'a> Object<'a> {
                         }
                     }
                 } else {
-                    return Err(Error(format!(
-                        "missing section for symbol `{}`",
-                        symbol.name().unwrap_or("")
-                    )));
+                    match symbol.kind {
+                        SymbolKind::Text | SymbolKind::Data | SymbolKind::Tls | SymbolKind::Section => {
+                            let smt = xcoff::XTY_SD;
+                            let smc = if symbol.kind == SymbolKind::Data {
+                                xcoff::XMC_RW
+                            } else {
+                                xcoff::XMC_PR
+                            };
+                            (smt, smc)
+                        }
+                        _ => (xcoff::XTY_ER, xcoff::XMC_PR),
+                    }
                 };
                 if is_64 {
                     let csect_aux = xcoff::CsectAux64 {
@@ -464,8 +472,8 @@ impl<'a> Object<'a> {
                         x_scnlen_hi: U32::new(BE, ((symbol.size >> 32) & 0xFFFFFFFF) as u32),
                         x_parmhash: U32::new(BE, 0),
                         x_snhash: U16::new(BE, 0),
-                        x_smtyp: xsmtype,
-                        x_smclas: xsmclas,
+                        x_smtyp: x_smtyp,
+                        x_smclas: x_smclas,
                         pad: 0,
                         x_auxtype: xcoff::AUX_CSECT,
                     };
@@ -475,8 +483,8 @@ impl<'a> Object<'a> {
                         x_scnlen: U32::new(BE, symbol.size as u32),
                         x_parmhash: U32::new(BE, 0),
                         x_snhash: U16::new(BE, 0),
-                        x_smtyp: xsmtype,
-                        x_smclas: xsmclas,
+                        x_smtyp: x_smtyp,
+                        x_smclas: x_smclas,
                         x_stab: U32::new(BE, 0),
                         x_snstab: U16::new(BE, 0),
                     };
