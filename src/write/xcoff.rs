@@ -454,7 +454,10 @@ impl<'a> Object<'a> {
                     }
                 } else {
                     match symbol.kind {
-                        SymbolKind::Text | SymbolKind::Data | SymbolKind::Tls | SymbolKind::Section => {
+                        SymbolKind::Text
+                        | SymbolKind::Data
+                        | SymbolKind::Tls
+                        | SymbolKind::Section => {
                             let smt = xcoff::XTY_SD;
                             let smc = if symbol.kind == SymbolKind::Data {
                                 xcoff::XMC_RW
