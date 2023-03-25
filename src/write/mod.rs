@@ -25,6 +25,8 @@ pub mod elf;
 
 #[cfg(feature = "macho")]
 mod macho;
+#[cfg(feature = "macho")]
+pub use macho::MachOBuildVersion;
 
 #[cfg(feature = "pe")]
 pub mod pe;
@@ -70,6 +72,8 @@ pub struct Object<'a> {
     pub mangling: Mangling,
     /// Mach-O "_tlv_bootstrap" symbol.
     tlv_bootstrap: Option<SymbolId>,
+    #[cfg(feature = "macho")]
+    macho_build_version: Option<MachOBuildVersion>,
 }
 
 impl<'a> Object<'a> {
@@ -88,6 +92,8 @@ impl<'a> Object<'a> {
             flags: FileFlags::None,
             mangling: Mangling::default(format, architecture),
             tlv_bootstrap: None,
+            #[cfg(feature = "macho")]
+            macho_build_version: None,
         }
     }
 
@@ -113,6 +119,15 @@ impl<'a> Object<'a> {
     #[inline]
     pub fn set_mangling(&mut self, mangling: Mangling) {
         self.mangling = mangling;
+    }
+
+    /// Specify information for a Mach-O `LC_BUILD_VERSION` command.
+    ///
+    /// Requires `feature = "macho"`.
+    #[inline]
+    #[cfg(feature = "macho")]
+    pub fn set_macho_build_version(&mut self, info: MachOBuildVersion) {
+        self.macho_build_version = Some(info);
     }
 
     /// Return the name for a standard segment.
