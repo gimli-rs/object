@@ -275,6 +275,8 @@ fn print_section_headers<Elf: FileHeader>(
                 SHT_GNU_VERDEF => print_gnu_verdef(p, endian, data, elf, sections, section),
                 SHT_GNU_VERNEED => print_gnu_verneed(p, endian, data, elf, sections, section),
                 SHT_GNU_VERSYM => print_gnu_versym(p, endian, data, elf, sections, section),
+                // TODO: other sections that contain attributes
+                SHT_GNU_ATTRIBUTES => print_attributes(p, endian, data, elf, section),
                 // TODO:
                 //SHT_SHLIB =>
                 //SHT_INIT_ARRAY =>
@@ -778,6 +780,38 @@ fn print_gnu_versym<Elf: FileHeader>(
                 print_version(p, versions.as_ref(), version_index);
             });
         }
+    }
+}
+
+fn print_attributes<Elf: FileHeader>(
+    p: &mut Printer<'_>,
+    endian: Elf::Endian,
+    data: &[u8],
+    _elf: &Elf,
+    section: &Elf::SectionHeader,
+) {
+    if let Some(section) = section.attributes(endian, data).print_err(p) {
+        p.group("Attributes", |p| {
+            p.field("Version", section.version());
+            if let Some(mut subsections) = section.subsections().print_err(p) {
+                while let Some(Some(subsection)) = subsections.next().print_err(p) {
+                    p.group("Subsection", |p| {
+                        p.field_inline_string("Vendor", subsection.vendor());
+                        let mut subsubsections = subsection.subsubsections();
+                        while let Some(Some(subsubsection)) = subsubsections.next().print_err(p) {
+                            p.group("Subsubsection", |p| {
+                                p.field_enum("Tag", subsubsection.tag(), FLAGS_TAG);
+                                let mut indices = subsubsection.indices();
+                                while let Some(Some(index)) = indices.next().print_err(p) {
+                                    p.field("Index", index);
+                                }
+                                // TODO: print attributes
+                            });
+                        }
+                    });
+                }
+            }
+        });
     }
 }
 
@@ -3303,3 +3337,4 @@ static FLAGS_DF_1: &[Flag<u32>] = &flags!(
 static FLAGS_VER_FLG: &[Flag<u16>] = &flags!(VER_FLG_BASE, VER_FLG_WEAK);
 static FLAGS_VER_NDX: &[Flag<u16>] = &flags!(VER_NDX_LOCAL, VER_NDX_GLOBAL);
 static FLAGS_VERSYM: &[Flag<u16>] = &flags!(VERSYM_HIDDEN);
+static FLAGS_TAG: &[Flag<u8>] = &flags!(Tag_File, Tag_Section, Tag_Symbol);

@@ -182,7 +182,7 @@ fn copy_file<Elf: FileHeader<Endian = Endianness>>(
     let mut in_versym = None;
     let mut in_verdef = None;
     let mut in_verneed = None;
-    let mut in_attrib = None;
+    let mut in_attributes = None;
     let mut out_sections = Vec::with_capacity(in_sections.len());
     let mut out_sections_index = Vec::with_capacity(in_sections.len());
     for (i, in_section) in in_sections.iter().enumerate() {
@@ -268,8 +268,8 @@ fn copy_file<Elf: FileHeader<Endian = Endianness>>(
                 index = writer.reserve_gnu_verneed_section_index();
             }
             elf::SHT_GNU_ATTRIBUTES => {
-                in_attrib = in_section.gnu_attributes(endian, in_data)?;
-                debug_assert!(in_attrib.is_some());
+                in_attributes = in_section.gnu_attributes(endian, in_data)?;
+                debug_assert!(in_attributes.is_some());
                 index = writer.reserve_gnu_attributes_section_index();
             }
             other => {
@@ -434,24 +434,40 @@ fn copy_file<Elf: FileHeader<Endian = Endianness>>(
         }
     }
 
-    // Add one byte for the version field at the start of the section
-    let mut gnu_attributes_size = 1;
-    // We will cache all of our attribute data here for later
-    let mut gnu_attrib_vendor_sections = Vec::new();
-    if let Some(mut vsections) = in_attrib.clone() {
-        while let Some((vendor_name, mut tags)) = vsections.next()? {
-            let mut subsection = Vec::new();
-            let mut subsection_length = 0;
-            while let Some((tag, attrib_data)) = tags.next()? {
-                // Add the size of our tag (1-byte) + the size of the size field (4-bytes)
-                // plus the size of the sub-section data
-                subsection_length += 5 + attrib_data.len() as u32;
-                subsection.push((tag, attrib_data.clone()));
+    let mut gnu_attributes = Vec::new();
+    if let Some(attributes) = in_attributes {
+        let mut writer = writer.attributes_writer();
+        let mut subsections = attributes.subsections()?;
+        while let Some(subsection) = subsections.next()? {
+            writer.start_subsection(subsection.vendor());
+            let mut subsubsections = subsection.subsubsections();
+            while let Some(subsubsection) = subsubsections.next()? {
+                writer.start_subsubsection(subsubsection.tag());
+                match subsubsection.tag() {
+                    elf::Tag_File => {}
+                    elf::Tag_Section => {
+                        let mut indices = subsubsection.indices();
+                        while let Some(index) = indices.next()? {
+                            writer.write_subsubsection_index(out_sections_index[index as usize].0);
+                        }
+                        writer.write_subsubsection_index(0);
+                    }
+                    elf::Tag_Symbol => {
+                        let mut indices = subsubsection.indices();
+                        while let Some(index) = indices.next()? {
+                            writer.write_subsubsection_index(out_syms_index[index as usize].0);
+                        }
+                        writer.write_subsubsection_index(0);
+                    }
+                    _ => unimplemented!(),
+                }
+                writer.write_subsubsection_attributes(subsubsection.attributes_data());
+                writer.end_subsubsection();
             }
-            // Add the length of our size field + the length of the vendor string + the null byte
-            gnu_attributes_size += subsection_length as usize + 4 + vendor_name.len() + 1;
-            gnu_attrib_vendor_sections.push((vendor_name, subsection_length, subsection));
+            writer.end_subsection();
         }
+        gnu_attributes = writer.data();
+        assert_ne!(gnu_attributes.len(), 0);
     }
 
     // Start reserving file ranges.
@@ -465,7 +481,6 @@ fn copy_file<Elf: FileHeader<Endian = Endianness>>(
     let mut dynamic_addr = 0;
     let mut dynsym_addr = 0;
     let mut dynstr_addr = 0;
-    let mut attributes_addr = 0;
 
     let mut alloc_sections = Vec::new();
     if in_segments.is_empty() {
@@ -477,6 +492,9 @@ fn copy_file<Elf: FileHeader<Endian = Endianness>>(
                         in_section.sh_size(endian).into() as usize,
                         in_section.sh_addralign(endian).into() as usize,
                     );
+                }
+                elf::SHT_GNU_ATTRIBUTES => {
+                    writer.reserve_gnu_attributes(gnu_attributes.len());
                 }
                 _ => {}
             }
@@ -570,8 +588,7 @@ fn copy_file<Elf: FileHeader<Endian = Endianness>>(
                     );
                 }
                 elf::SHT_GNU_ATTRIBUTES => {
-                    attributes_addr = in_section.sh_addr(endian).into();
-                    writer.reserve_gnu_attributes(gnu_attributes_size);
+                    writer.reserve_gnu_attributes(gnu_attributes.len());
                 }
                 _ => {}
             }
@@ -620,6 +637,9 @@ fn copy_file<Elf: FileHeader<Endian = Endianness>>(
                     writer.write_align(in_section.sh_addralign(endian).into() as usize);
                     debug_assert_eq!(out_sections[i].offset, writer.len());
                     writer.write(in_section.data(endian, in_data)?);
+                }
+                elf::SHT_GNU_ATTRIBUTES => {
+                    writer.write_gnu_attributes(&gnu_attributes);
                 }
                 _ => {}
             }
@@ -806,16 +826,7 @@ fn copy_file<Elf: FileHeader<Endian = Endianness>>(
                     writer.write(in_section.data(endian, in_data)?);
                 }
                 elf::SHT_GNU_ATTRIBUTES => {
-                    writer.write_align_gnu_attributes();
-                    writer.write_gnu_attributes_version();
-                    for (vendor_name, section_length, subsections) in
-                        gnu_attrib_vendor_sections.iter()
-                    {
-                        writer.write_gnu_attributes_subsection(*section_length, vendor_name);
-                        for (tag, tag_data) in subsections.iter() {
-                            writer.write_gnu_attributes_subsubsection(*tag, tag_data);
-                        }
-                    }
+                    writer.write_gnu_attributes(&gnu_attributes);
                 }
                 _ => {}
             }
@@ -979,7 +990,7 @@ fn copy_file<Elf: FileHeader<Endian = Endianness>>(
                 writer.write_gnu_verneed_section_header(verneed_addr);
             }
             elf::SHT_GNU_ATTRIBUTES => {
-                writer.write_gnu_attributes_section_header(attributes_addr);
+                writer.write_gnu_attributes_section_header();
             }
             other => {
                 panic!("Unsupported section type {:x}", other);
