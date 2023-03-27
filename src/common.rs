@@ -477,4 +477,9 @@ pub enum SymbolFlags<Section> {
         /// `Number` field in the auxiliary symbol for the section.
         associative_section: Option<Section>,
     },
+    /// XCOFF symbol flags.
+    Xcoff {
+        /// `n_sclass` field in the XCOFF symbol.
+        n_sclass: u8,
+    },
 }
