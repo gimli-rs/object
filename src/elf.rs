@@ -6724,6 +6724,13 @@ pub const R_XTENSA_NDIFF16: u32 = 61;
 #[allow(missing_docs)]
 pub const R_XTENSA_NDIFF32: u32 = 62;
 
+#[allow(missing_docs, non_upper_case_globals)]
+pub const Tag_File: u8 = 1;
+#[allow(missing_docs, non_upper_case_globals)]
+pub const Tag_Section: u8 = 2;
+#[allow(missing_docs, non_upper_case_globals)]
+pub const Tag_Symbol: u8 = 3;
+
 unsafe_impl_endian_pod!(
     FileHeader32,
     FileHeader64,

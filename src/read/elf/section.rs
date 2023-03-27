@@ -10,7 +10,7 @@ use crate::read::{
 };
 
 use super::{
-    AttribSubsectionIterator, CompressionHeader, ElfFile, ElfSectionRelocationIterator, FileHeader,
+    AttributesSection, CompressionHeader, ElfFile, ElfSectionRelocationIterator, FileHeader,
     GnuHashTable, HashTable, NoteIterator, RelocationSections, SymbolTable, VerdefIterator,
     VerneedIterator, VersionTable,
 };
@@ -977,9 +977,7 @@ pub trait SectionHeader: Debug + Pod {
         Ok(Some((VerneedIterator::new(endian, verneed), link)))
     }
 
-    /// Return an iterator for the entries of a `SHT_GNU_ATTRIBUTES` section.
-    ///
-    /// Also returns the linked string table index.
+    /// Return the contents of a `SHT_GNU_ATTRIBUTES` section.
     ///
     /// Returns `Ok(None)` if the section type is not `SHT_GNU_ATTRIBUTES`.
     /// Returns `Err` for invalid values.
@@ -987,26 +985,26 @@ pub trait SectionHeader: Debug + Pod {
         &self,
         endian: Self::Endian,
         data: R,
-    ) -> read::Result<Option<AttribSubsectionIterator<'data, Self::Elf>>> {
+    ) -> read::Result<Option<AttributesSection<'data, Self::Elf>>> {
         if self.sh_type(endian) != elf::SHT_GNU_ATTRIBUTES {
             return Ok(None);
         }
-        let mut bytes = Bytes(
-            self.data(endian, data)
-                .read_error("Invalid ELF GNU bytes section offset or size")?,
-        );
+        self.attributes(endian, data).map(Some)
+    }
 
-        // Skip the version field that is one byte long
-        let version = *bytes
-            .read::<u8>()
-            .read_error("Invalid ELF GNU bytes section offset or size")?;
-
-        // There is currently only one format version
-        if version != 65 {
-            return Err(Error(".gnu.attributes section not supported version 0x41"));
-        }
-
-        Ok(Some(AttribSubsectionIterator::new(endian, bytes)))
+    /// Parse the contents of the section as attributes.
+    ///
+    /// This function does not check whether section type corresponds
+    /// to a section that contains attributes.
+    ///
+    /// Returns `Err` for invalid values.
+    fn attributes<'data, R: ReadRef<'data>>(
+        &self,
+        endian: Self::Endian,
+        data: R,
+    ) -> read::Result<AttributesSection<'data, Self::Elf>> {
+        let data = self.data(endian, data)?;
+        AttributesSection::new(endian, data)
     }
 }
 

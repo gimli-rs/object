@@ -245,6 +245,15 @@ SectionHeader {
     Info: 0
     AddressAlign: 0x1
     EntrySize: 0x0
+    Attributes {
+        Version: 65
+        Subsection {
+            Vendor: "gnu"
+            Subsubsection {
+                Tag: Tag_File (0x1)
+            }
+        }
+    }
 }
 SectionHeader {
     Index: 13
