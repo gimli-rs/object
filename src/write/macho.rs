@@ -22,6 +22,30 @@ struct SymbolOffsets {
     str_id: Option<StringId>,
 }
 
+/// The customizable portion of a [`macho::BuildVersionCommand`].
+#[derive(Debug, Default, Clone, Copy)]
+#[non_exhaustive] // May want to add the tool list?
+pub struct MachOBuildVersion {
+    /// One of the `PLATFORM_` constants (for example,
+    /// [`object::macho::PLATFORM_MACOS`](macho::PLATFORM_MACOS)).
+    pub platform: u32,
+    /// The minimum OS version, where `X.Y.Z` is encoded in nibbles as
+    /// `xxxx.yy.zz`.
+    pub minos: u32,
+    /// The SDK version as `X.Y.Z`, where `X.Y.Z` is encoded in nibbles as
+    /// `xxxx.yy.zz`.
+    pub sdk: u32,
+}
+
+impl MachOBuildVersion {
+    fn cmdsize(&self) -> u32 {
+        // Same size for both endianness, and we don't have `ntools`.
+        let sz = mem::size_of::<macho::BuildVersionCommand<Endianness>>();
+        debug_assert!(sz <= u32::MAX as usize);
+        sz as u32
+    }
+}
+
 impl<'a> Object<'a> {
     pub(crate) fn macho_set_subsections_via_symbols(&mut self) {
         let flags = match self.flags {
@@ -213,6 +237,12 @@ impl<'a> Object<'a> {
         let mut ncmds = 0;
         let command_offset = offset;
 
+        let build_version_offset = offset;
+        if let Some(version) = &self.macho_build_version {
+            offset += version.cmdsize() as usize;
+            ncmds += 1;
+        }
+
         // Calculate size of segment command and section headers.
         let segment_command_offset = offset;
         let segment_command_len =
@@ -351,6 +381,18 @@ impl<'a> Object<'a> {
                 flags,
             },
         );
+
+        if let Some(version) = &self.macho_build_version {
+            debug_assert_eq!(build_version_offset, buffer.len());
+            buffer.write(&macho::BuildVersionCommand {
+                cmd: U32::new(endian, macho::LC_BUILD_VERSION),
+                cmdsize: U32::new(endian, version.cmdsize()),
+                platform: U32::new(endian, version.platform),
+                minos: U32::new(endian, version.minos),
+                sdk: U32::new(endian, version.sdk),
+                ntools: U32::new(endian, 0),
+            });
+        }
 
         // Write segment command.
         debug_assert_eq!(segment_command_offset, buffer.len());
