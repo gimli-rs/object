@@ -4,10 +4,10 @@ Architecture: PowerPc64
 Flags: Xcoff { f_flags: 1002 }
 Relative Address Base: 0
 Entry Address: 110000848
-0: Section { name: ".text", address: 1000001f8, size: 4d5, align: 5, kind: Text, flags: Xcoff { s_flags: 20 } }
-1: Section { name: ".data", address: 1100006cd, size: 2ab, align: 3, kind: Data, flags: Xcoff { s_flags: 40 } }
-2: Section { name: ".bss", address: 110000978, size: 0, align: 4, kind: UninitializedData, flags: Xcoff { s_flags: 80 } }
-3: Section { name: ".loader", address: 0, size: 485, align: 4, kind: Metadata, flags: Xcoff { s_flags: 1000 } }
+1: Section { name: ".text", address: 1000001f8, size: 4d5, align: 5, kind: Text, flags: Xcoff { s_flags: 20 } }
+2: Section { name: ".data", address: 1100006cd, size: 2ab, align: 3, kind: Data, flags: Xcoff { s_flags: 40 } }
+3: Section { name: ".bss", address: 110000978, size: 0, align: 4, kind: UninitializedData, flags: Xcoff { s_flags: 80 } }
+4: Section { name: ".loader", address: 0, size: 485, align: 4, kind: Metadata, flags: Xcoff { s_flags: 1000 } }
 
 Symbols
 0: Symbol { name: "errno", address: 0, size: 0, kind: Unknown, section: Undefined, scope: Unknown, weak: false, flags: Xcoff { n_sclass: 2 } }

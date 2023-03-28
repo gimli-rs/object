@@ -4,8 +4,8 @@ Architecture: PowerPc
 Flags: Xcoff { f_flags: 0 }
 Relative Address Base: 0
 Entry Address: 0
-0: Section { name: ".text", address: 0, size: 6c, align: 4, kind: Text, flags: Xcoff { s_flags: 20 } }
-1: Section { name: ".data", address: 6c, size: 10, align: 4, kind: Data, flags: Xcoff { s_flags: 40 } }
+1: Section { name: ".text", address: 0, size: 6c, align: 4, kind: Text, flags: Xcoff { s_flags: 20 } }
+2: Section { name: ".data", address: 6c, size: 10, align: 4, kind: Data, flags: Xcoff { s_flags: 40 } }
 
 Symbols
 0: Symbol { name: ".file", address: 0, size: 0, kind: File, section: None, scope: Compilation, weak: false, flags: Xcoff { n_sclass: 67 } }
