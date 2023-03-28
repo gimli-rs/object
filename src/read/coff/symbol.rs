@@ -506,7 +506,7 @@ impl<'data, 'file, R: ReadRef<'data>> ObjectSymbol<'data> for CoffSymbol<'data, 
         !self.is_global()
     }
 
-    fn flags(&self) -> SymbolFlags<SectionIndex> {
+    fn flags(&self) -> SymbolFlags<SectionIndex, SymbolIndex> {
         if self.symbol.has_aux_section() {
             if let Ok(aux) = self.file.symbols.aux_section(self.index.0) {
                 // TODO: use high_number for bigobj

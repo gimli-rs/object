@@ -430,7 +430,7 @@ impl<'data, 'file, Elf: FileHeader, R: ReadRef<'data>> ObjectSymbol<'data>
     }
 
     #[inline]
-    fn flags(&self) -> SymbolFlags<SectionIndex> {
+    fn flags(&self) -> SymbolFlags<SectionIndex, SymbolIndex> {
         SymbolFlags::Elf {
             st_info: self.symbol.st_info(),
             st_other: self.symbol.st_other(),

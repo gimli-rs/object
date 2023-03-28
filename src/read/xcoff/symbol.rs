@@ -308,16 +308,11 @@ impl<'data, 'file, Xcoff: FileHeader, R: ReadRef<'data>> ObjectSymbol<'data>
             {
                 let sym_type = aux_csect.sym_type() & 0x07;
                 if sym_type == xcoff::XTY_SD || sym_type == xcoff::XTY_CM {
-                    aux_csect.x_scnlen()
-                } else {
-                    0
+                    return aux_csect.x_scnlen();
                 }
-            } else {
-                0
             }
-        } else {
-            0
         }
+        0
     }
 
     fn kind(&self) -> SymbolKind {
@@ -416,9 +411,28 @@ impl<'data, 'file, Xcoff: FileHeader, R: ReadRef<'data>> ObjectSymbol<'data>
     }
 
     #[inline]
-    fn flags(&self) -> SymbolFlags<SectionIndex> {
+    fn flags(&self) -> SymbolFlags<SectionIndex, SymbolIndex> {
+        let mut x_smtyp = 0;
+        let mut x_smclas = 0;
+        let mut containing_csect = None;
+        if self.symbol.has_aux_csect() {
+            if let Ok(aux_csect) = self
+                .file
+                .symbols
+                .aux_csect(self.index.0, self.symbol.n_numaux() as usize)
+            {
+                x_smtyp = aux_csect.x_smtyp();
+                x_smclas = aux_csect.x_smclas();
+                if x_smtyp == xcoff::XTY_LD {
+                    containing_csect = Some(SymbolIndex(aux_csect.x_scnlen() as usize))
+                }
+            }
+        }
         SymbolFlags::Xcoff {
             n_sclass: self.symbol.n_sclass(),
+            x_smtyp,
+            x_smclas,
+            containing_csect,
         }
     }
 }

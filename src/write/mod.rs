@@ -830,7 +830,7 @@ pub struct Symbol {
     /// The section containing the symbol.
     pub section: SymbolSection,
     /// Symbol flags that are specific to each file format.
-    pub flags: SymbolFlags<SectionId>,
+    pub flags: SymbolFlags<SectionId, SymbolId>,
 }
 
 impl Symbol {

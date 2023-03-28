@@ -115,6 +115,21 @@ fn main() {
                     associative_section,
                 }
             }
+            SymbolFlags::Xcoff {
+                n_sclass,
+                x_smtyp,
+                x_smclas,
+                containing_csect,
+            } => {
+                let containing_csect =
+                    containing_csect.map(|index| *out_symbols.get(&index).unwrap());
+                SymbolFlags::Xcoff {
+                    n_sclass,
+                    x_smtyp,
+                    x_smclas,
+                    containing_csect,
+                }
+            }
             _ => panic!("unknown symbol flags for {:?}", in_symbol),
         };
         let out_symbol = write::Symbol {

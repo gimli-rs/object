@@ -138,7 +138,7 @@ impl<'a> Object<'a> {
             symbol_offsets[index].index = symtab_count;
             symtab_count += 1;
 
-            let storage_class = if let SymbolFlags::Xcoff { n_sclass } = symbol.flags {
+            let storage_class = if let SymbolFlags::Xcoff { n_sclass, .. } = symbol.flags {
                 n_sclass
             } else {
                 match symbol.kind {
@@ -473,7 +473,12 @@ impl<'a> Object<'a> {
                 || n_sclass == xcoff::C_HIDEXT
             {
                 debug_assert_eq!(n_numaux, 1);
-                let (x_smtyp, x_smclas) = if let Some(section) = section {
+                let (x_smtyp, x_smclas) = if let SymbolFlags::Xcoff {
+                    x_smtyp, x_smclas, ..
+                } = symbol.flags
+                {
+                    (x_smtyp, x_smclas)
+                } else if let Some(section) = section {
                     match section.kind {
                         SectionKind::Data => (xcoff::XTY_SD, xcoff::XMC_RW),
                         SectionKind::Tls => (xcoff::XTY_SD, xcoff::XMC_TL),
@@ -514,10 +519,19 @@ impl<'a> Object<'a> {
                         _ => (xcoff::XTY_ER, xcoff::XMC_PR),
                     }
                 };
+                let scnlen = if let SymbolFlags::Xcoff {
+                    containing_csect: Some(containing_csect),
+                    ..
+                } = symbol.flags
+                {
+                    symbol_offsets[containing_csect.0].index as u64
+                } else {
+                    symbol.size
+                };
                 if is_64 {
                     let csect_aux = xcoff::CsectAux64 {
-                        x_scnlen_lo: U32::new(BE, (symbol.size & 0xFFFFFFFF) as u32),
-                        x_scnlen_hi: U32::new(BE, ((symbol.size >> 32) & 0xFFFFFFFF) as u32),
+                        x_scnlen_lo: U32::new(BE, (scnlen & 0xFFFFFFFF) as u32),
+                        x_scnlen_hi: U32::new(BE, ((scnlen >> 32) & 0xFFFFFFFF) as u32),
                         x_parmhash: U32::new(BE, 0),
                         x_snhash: U16::new(BE, 0),
                         x_smtyp: x_smtyp,
@@ -528,7 +542,7 @@ impl<'a> Object<'a> {
                     buffer.write(&csect_aux);
                 } else {
                     let csect_aux = xcoff::CsectAux32 {
-                        x_scnlen: U32::new(BE, symbol.size as u32),
+                        x_scnlen: U32::new(BE, scnlen as u32),
                         x_parmhash: U32::new(BE, 0),
                         x_snhash: U16::new(BE, 0),
                         x_smtyp: x_smtyp,
