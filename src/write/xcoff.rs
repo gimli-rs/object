@@ -131,15 +131,13 @@ impl<'a> Object<'a> {
         }
 
         // Calculate size of symbols.
+        let mut file_str_id = None;
         let mut symbol_offsets = vec![SymbolOffsets::default(); self.symbols.len()];
         let mut symtab_count = 0;
         for (index, symbol) in self.symbols.iter().enumerate() {
             symbol_offsets[index].index = symtab_count;
-            if is_64 || symbol.name.len() > 8 {
-                symbol_offsets[index].str_id = Some(strtab.add(&symbol.name));
-            }
             symtab_count += 1;
-            symbol_offsets[index].aux_count = 0;
+
             let storage_class = if let SymbolFlags::Xcoff { n_sclass } = symbol.flags {
                 n_sclass
             } else {
@@ -186,7 +184,24 @@ impl<'a> Object<'a> {
                 }
             };
             symbol_offsets[index].storage_class = storage_class;
+
+            if storage_class == xcoff::C_FILE {
+                if is_64 && file_str_id.is_none() {
+                    file_str_id = Some(strtab.add(b".file"));
+                }
+                if symbol.name.len() > 8 {
+                    symbol_offsets[index].str_id = Some(strtab.add(&symbol.name));
+                }
+            } else if is_64 || symbol.name.len() > 8 {
+                symbol_offsets[index].str_id = Some(strtab.add(&symbol.name));
+            }
+
+            symbol_offsets[index].aux_count = 0;
             match storage_class {
+                xcoff::C_FILE => {
+                    symbol_offsets[index].aux_count = 1;
+                    symtab_count += 1;
+                }
                 xcoff::C_EXT | xcoff::C_WEAKEXT | xcoff::C_HIDEXT => {
                     symbol_offsets[index].aux_count = 1;
                     symtab_count += 1;
@@ -391,12 +406,14 @@ impl<'a> Object<'a> {
             };
             let n_numaux = symbol_offsets[index].aux_count;
             if is_64 {
+                let str_id = if n_sclass == xcoff::C_FILE {
+                    file_str_id.unwrap()
+                } else {
+                    symbol_offsets[index].str_id.unwrap()
+                };
                 let xcoff_sym = xcoff::Symbol64 {
                     n_value: U64::new(BE, symbol.value),
-                    n_offset: U32::new(
-                        BE,
-                        strtab.get_offset(symbol_offsets[index].str_id.unwrap()) as u32,
-                    ),
+                    n_offset: U32::new(BE, strtab.get_offset(str_id) as u32),
                     n_scnum: I16::new(BE, n_scnum),
                     n_type: U16::new(BE, n_type),
                     n_sclass: n_sclass,
@@ -405,9 +422,10 @@ impl<'a> Object<'a> {
                 buffer.write(&xcoff_sym);
             } else {
                 let mut sym_name = [0; 8];
-                let name = &symbol.name[..];
-                if name.len() <= 8 {
-                    sym_name[..name.len()].copy_from_slice(name);
+                if n_sclass == xcoff::C_FILE {
+                    sym_name[..5].copy_from_slice(b".file");
+                } else if symbol.name.len() <= 8 {
+                    sym_name[..symbol.name.len()].copy_from_slice(&symbol.name[..]);
                 } else {
                     let str_offset = strtab.get_offset(symbol_offsets[index].str_id.unwrap());
                     sym_name[4..8].copy_from_slice(&u32::to_be_bytes(str_offset as u32));
@@ -422,8 +440,35 @@ impl<'a> Object<'a> {
                 };
                 buffer.write(&xcoff_sym);
             }
-            // Generate a csect auxiliary entry for C_EXT, C_WEAKEXT, and C_HIDEXT Symbols.
-            if n_sclass == xcoff::C_EXT
+            // Generate auxiliary entries.
+            if n_sclass == xcoff::C_FILE {
+                debug_assert_eq!(n_numaux, 1);
+                let mut x_fname = [0; 8];
+                if symbol.name.len() <= 8 {
+                    x_fname[..symbol.name.len()].copy_from_slice(&symbol.name[..]);
+                } else {
+                    let str_offset = strtab.get_offset(symbol_offsets[index].str_id.unwrap());
+                    x_fname[4..8].copy_from_slice(&u32::to_be_bytes(str_offset as u32));
+                }
+                if is_64 {
+                    let file_aux = xcoff::FileAux64 {
+                        x_fname,
+                        x_fpad: Default::default(),
+                        x_ftype: xcoff::XFT_FN,
+                        x_freserve: Default::default(),
+                        x_auxtype: xcoff::AUX_FILE,
+                    };
+                    buffer.write(&file_aux);
+                } else {
+                    let file_aux = xcoff::FileAux32 {
+                        x_fname,
+                        x_fpad: Default::default(),
+                        x_ftype: xcoff::XFT_FN,
+                        x_freserve: Default::default(),
+                    };
+                    buffer.write(&file_aux);
+                }
+            } else if n_sclass == xcoff::C_EXT
                 || n_sclass == xcoff::C_WEAKEXT
                 || n_sclass == xcoff::C_HIDEXT
             {
