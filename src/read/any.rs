@@ -1252,7 +1252,7 @@ impl<'data, 'file, R: ReadRef<'data>> ObjectSymbol<'data> for Symbol<'data, 'fil
         with_inner!(self.inner, SymbolInternal, |x| x.0.is_local())
     }
 
-    fn flags(&self) -> SymbolFlags<SectionIndex> {
+    fn flags(&self) -> SymbolFlags<SectionIndex, SymbolIndex> {
         with_inner!(self.inner, SymbolInternal, |x| x.0.flags())
     }
 }

@@ -455,7 +455,7 @@ pub enum SectionFlags {
 /// Symbol flags that are specific to each file format.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[non_exhaustive]
-pub enum SymbolFlags<Section> {
+pub enum SymbolFlags<Section, Symbol> {
     /// No symbol flags.
     None,
     /// ELF symbol flags.
@@ -481,5 +481,17 @@ pub enum SymbolFlags<Section> {
     Xcoff {
         /// `n_sclass` field in the XCOFF symbol.
         n_sclass: u8,
+        /// `x_smtyp` field in the CSECT auxiliary symbol.
+        ///
+        /// Only valid if `n_sclass` is `C_EXT`, `C_WEAKEXT`, or `C_HIDEXT`.
+        x_smtyp: u8,
+        /// `x_smclas` field in the CSECT auxiliary symbol.
+        ///
+        /// Only valid if `n_sclass` is `C_EXT`, `C_WEAKEXT`, or `C_HIDEXT`.
+        x_smclas: u8,
+        /// The containing csect for the symbol.
+        ///
+        /// Only valid if `x_smtyp` is `XTY_LD`.
+        containing_csect: Option<Symbol>,
     },
 }

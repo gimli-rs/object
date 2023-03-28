@@ -8,15 +8,15 @@ Entry Address: 0
 2: Section { name: ".data", address: 6c, size: 10, align: 4, kind: Data, flags: Xcoff { s_flags: 40 } }
 
 Symbols
-0: Symbol { name: "base.c", address: 0, size: 0, kind: File, section: None, scope: Compilation, weak: false, flags: Xcoff { n_sclass: 67 } }
-3: Symbol { name: ".printf", address: 0, size: 0, kind: Unknown, section: Undefined, scope: Unknown, weak: false, flags: Xcoff { n_sclass: 2 } }
-5: Symbol { name: "printf", address: 0, size: 0, kind: Unknown, section: Undefined, scope: Unknown, weak: false, flags: Xcoff { n_sclass: 2 } }
-7: Symbol { name: ".text", address: 0, size: 5b, kind: Text, section: Section(SectionIndex(1)), scope: Dynamic, weak: false, flags: Xcoff { n_sclass: 6b } }
-9: Symbol { name: ".main", address: 0, size: 0, kind: Text, section: Section(SectionIndex(1)), scope: Dynamic, weak: false, flags: Xcoff { n_sclass: 2 } }
-11: Symbol { name: ".rodata.str1.1L...str", address: 5c, size: d, kind: Text, section: Section(SectionIndex(1)), scope: Dynamic, weak: false, flags: Xcoff { n_sclass: 6b } }
-13: Symbol { name: "main", address: 6c, size: c, kind: Data, section: Section(SectionIndex(2)), scope: Dynamic, weak: false, flags: Xcoff { n_sclass: 2 } }
-15: Symbol { name: "TOC", address: 78, size: 0, kind: Data, section: Section(SectionIndex(2)), scope: Dynamic, weak: false, flags: Xcoff { n_sclass: 6b } }
-17: Symbol { name: ".rodata.str1.1L...str", address: 78, size: 4, kind: Data, section: Section(SectionIndex(2)), scope: Dynamic, weak: false, flags: Xcoff { n_sclass: 6b } }
+0: Symbol { name: "base.c", address: 0, size: 0, kind: File, section: None, scope: Compilation, weak: false, flags: Xcoff { n_sclass: 67, x_smtyp: 0, x_smclas: 0, containing_csect: None } }
+3: Symbol { name: ".printf", address: 0, size: 0, kind: Unknown, section: Undefined, scope: Unknown, weak: false, flags: Xcoff { n_sclass: 2, x_smtyp: 0, x_smclas: 0, containing_csect: None } }
+5: Symbol { name: "printf", address: 0, size: 0, kind: Unknown, section: Undefined, scope: Unknown, weak: false, flags: Xcoff { n_sclass: 2, x_smtyp: 0, x_smclas: a, containing_csect: None } }
+7: Symbol { name: ".text", address: 0, size: 5b, kind: Text, section: Section(SectionIndex(1)), scope: Dynamic, weak: false, flags: Xcoff { n_sclass: 6b, x_smtyp: 29, x_smclas: 0, containing_csect: None } }
+9: Symbol { name: ".main", address: 0, size: 0, kind: Text, section: Section(SectionIndex(1)), scope: Dynamic, weak: false, flags: Xcoff { n_sclass: 2, x_smtyp: 2, x_smclas: 0, containing_csect: Some(SymbolIndex(7)) } }
+11: Symbol { name: ".rodata.str1.1L...str", address: 5c, size: d, kind: Text, section: Section(SectionIndex(1)), scope: Dynamic, weak: false, flags: Xcoff { n_sclass: 6b, x_smtyp: 11, x_smclas: 1, containing_csect: None } }
+13: Symbol { name: "main", address: 6c, size: c, kind: Data, section: Section(SectionIndex(2)), scope: Dynamic, weak: false, flags: Xcoff { n_sclass: 2, x_smtyp: 11, x_smclas: a, containing_csect: None } }
+15: Symbol { name: "TOC", address: 78, size: 0, kind: Data, section: Section(SectionIndex(2)), scope: Dynamic, weak: false, flags: Xcoff { n_sclass: 6b, x_smtyp: 11, x_smclas: f, containing_csect: None } }
+17: Symbol { name: ".rodata.str1.1L...str", address: 78, size: 4, kind: Data, section: Section(SectionIndex(2)), scope: Dynamic, weak: false, flags: Xcoff { n_sclass: 6b, x_smtyp: 11, x_smclas: 3, containing_csect: None } }
 
 .text relocations
 (22, Relocation { kind: Got, encoding: Generic, size: 10, target: Symbol(SymbolIndex(11)), addend: 0, implicit_addend: true })
