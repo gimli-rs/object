@@ -36,7 +36,7 @@ where
 
     fn next(&mut self) -> Option<Self::Item> {
         self.iter.next().map(|(index, section)| XcoffSection {
-            index: SectionIndex(index),
+            index: SectionIndex(index + 1),
             file: self.file,
             section,
         })
@@ -252,9 +252,11 @@ where
     }
 
     /// Return the section header at the given index.
+    ///
+    /// The index is 1-based.
     pub fn section(&self, index: SectionIndex) -> read::Result<&'data Xcoff::SectionHeader> {
         self.sections
-            .get(index.0)
+            .get(index.0.wrapping_sub(1))
             .read_error("Invalid XCOFF section index")
     }
 }

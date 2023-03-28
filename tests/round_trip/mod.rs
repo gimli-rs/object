@@ -498,7 +498,7 @@ fn xcoff_powerpc() {
 
         let text = sections.next().unwrap();
         println!("{:?}", text);
-        let text_index = text.index().0 + 1;
+        let text_index = text.index().0;
         assert_eq!(text.name(), Ok(".text"));
         assert_eq!(text.kind(), SectionKind::Text);
         assert_eq!(text.address(), 0);
