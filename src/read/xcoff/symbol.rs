@@ -95,10 +95,10 @@ where
         self.get::<Xcoff::Symbol>(index, 0)
     }
 
-    /// Return the file auxiliary symbol.
-    pub fn aux_file(&self, index: usize) -> Result<&'data Xcoff::FileAux> {
+    /// Return a file auxiliary symbol.
+    pub fn aux_file(&self, index: usize, offset: usize) -> Result<&'data Xcoff::FileAux> {
         debug_assert!(self.symbol(index)?.has_aux_file());
-        let aux_file = self.get::<Xcoff::FileAux>(index, 1)?;
+        let aux_file = self.get::<Xcoff::FileAux>(index, offset)?;
         if let Some(aux_type) = aux_file.x_auxtype() {
             if aux_type != xcoff::AUX_FILE {
                 return Err(Error("Invalid index for file auxiliary symbol."));
@@ -264,7 +264,14 @@ impl<'data, 'file, Xcoff: FileHeader, R: ReadRef<'data>> ObjectSymbol<'data>
     }
 
     fn name_bytes(&self) -> Result<&'data [u8]> {
-        self.symbol.name(self.symbols.strings)
+        if self.symbol.has_aux_file() {
+            // By convention the file name is in the first auxiliary entry.
+            self.symbols
+                .aux_file(self.index.0, 1)?
+                .fname(self.symbols.strings)
+        } else {
+            self.symbol.name(self.symbols.strings)
+        }
     }
 
     fn name(&self) -> Result<&'data str> {
@@ -540,6 +547,27 @@ pub trait FileAux: Debug + Pod {
     fn x_fname(&self) -> &[u8; 8];
     fn x_ftype(&self) -> u8;
     fn x_auxtype(&self) -> Option<u8>;
+
+    /// Parse the x_fname field, which may be an inline string or a string table offset.
+    fn fname<'data, R: ReadRef<'data>>(
+        &'data self,
+        strings: StringTable<'data, R>,
+    ) -> Result<&'data [u8]> {
+        let x_fname = self.x_fname();
+        if x_fname[0] == 0 {
+            // If the name starts with 0 then the last 4 bytes are a string table offset.
+            let offset = u32::from_be_bytes(x_fname[4..8].try_into().unwrap());
+            strings
+                .get(offset)
+                .read_error("Invalid XCOFF symbol name offset")
+        } else {
+            // The name is inline and padded with nulls.
+            Ok(match memchr::memchr(b'\0', x_fname) {
+                Some(end) => &x_fname[..end],
+                None => x_fname,
+            })
+        }
+    }
 }
 
 impl FileAux for xcoff::FileAux64 {

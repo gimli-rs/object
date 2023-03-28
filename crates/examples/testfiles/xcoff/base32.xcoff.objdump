@@ -45,7 +45,7 @@ Symbols
 62: Symbol { name: "p_xrcfg", address: 20000768, size: 4, kind: Data, section: Section(SectionIndex(2)), scope: Dynamic, weak: false, flags: Xcoff { n_sclass: 2 } }
 64: Symbol { name: "p_xrc", address: 2000076c, size: 4, kind: Data, section: Section(SectionIndex(2)), scope: Dynamic, weak: false, flags: Xcoff { n_sclass: 2 } }
 66: Symbol { name: "_malloc_user_defined_name", address: 20000748, size: 4, kind: Data, section: Section(SectionIndex(2)), scope: Dynamic, weak: false, flags: Xcoff { n_sclass: 2 } }
-68: Symbol { name: ".file", address: 0, size: 0, kind: File, section: None, scope: Compilation, weak: false, flags: Xcoff { n_sclass: 67 } }
+68: Symbol { name: "../../../../../../../src/bos/usr/ccs/lib/libc/__threads_init.c", address: 0, size: 0, kind: File, section: None, scope: Compilation, weak: false, flags: Xcoff { n_sclass: 67 } }
 72: Symbol { name: "", address: 100001e0, size: 160, kind: Text, section: Section(SectionIndex(1)), scope: Dynamic, weak: false, flags: Xcoff { n_sclass: 6b } }
 74: Symbol { name: ".__threads_init", address: 100001e0, size: 0, kind: Text, section: Section(SectionIndex(1)), scope: Dynamic, weak: false, flags: Xcoff { n_sclass: 2 } }
 76: Symbol { name: ".__threads_init@AF2_1", address: 10000220, size: 0, kind: Text, section: Section(SectionIndex(1)), scope: Dynamic, weak: false, flags: Xcoff { n_sclass: 6b } }
@@ -56,7 +56,7 @@ Symbols
 86: Symbol { name: "_xti_tli_init_routine", address: 20000758, size: 4, kind: Data, section: Section(SectionIndex(2)), scope: Dynamic, weak: false, flags: Xcoff { n_sclass: 2 } }
 88: Symbol { name: "_nsl_init_routine", address: 2000075c, size: 4, kind: Data, section: Section(SectionIndex(2)), scope: Dynamic, weak: false, flags: Xcoff { n_sclass: 2 } }
 90: Symbol { name: "__dce_compat_init_routine", address: 20000760, size: 4, kind: Data, section: Section(SectionIndex(2)), scope: Dynamic, weak: false, flags: Xcoff { n_sclass: 2 } }
-92: Symbol { name: ".file", address: 0, size: 0, kind: File, section: None, scope: Compilation, weak: false, flags: Xcoff { n_sclass: 67 } }
+92: Symbol { name: "../../../../../../../src/bos/usr/ccs/lib/libc/POWER/crti.C", address: 0, size: 0, kind: File, section: None, scope: Compilation, weak: false, flags: Xcoff { n_sclass: 67 } }
 96: Symbol { name: "", address: 10000340, size: 178, kind: Text, section: Section(SectionIndex(1)), scope: Dynamic, weak: false, flags: Xcoff { n_sclass: 6b } }
 98: Symbol { name: ".__User_sinit_begin", address: 10000340, size: 0, kind: Text, section: Section(SectionIndex(1)), scope: Dynamic, weak: false, flags: Xcoff { n_sclass: 2 } }
 100: Symbol { name: ".__C_runtime_termination", address: 10000368, size: 0, kind: Text, section: Section(SectionIndex(1)), scope: Dynamic, weak: false, flags: Xcoff { n_sclass: 2 } }
@@ -68,7 +68,7 @@ Symbols
 112: Symbol { name: "__C_runtime_startup", address: 20000724, size: c, kind: Data, section: Section(SectionIndex(2)), scope: Dynamic, weak: false, flags: Xcoff { n_sclass: 2 } }
 114: Symbol { name: "_cdtors", address: 20000708, size: 8, kind: Data, section: Section(SectionIndex(2)), scope: Dynamic, weak: true, flags: Xcoff { n_sclass: 6f } }
 116: Symbol { name: "__C_runtime_pstartup", address: 2000067c, size: 4, kind: Data, section: Section(SectionIndex(2)), scope: Dynamic, weak: false, flags: Xcoff { n_sclass: 2 } }
-118: Symbol { name: ".file", address: 0, size: 0, kind: File, section: None, scope: Compilation, weak: false, flags: Xcoff { n_sclass: 67 } }
+118: Symbol { name: "base.c", address: 0, size: 0, kind: File, section: None, scope: Compilation, weak: false, flags: Xcoff { n_sclass: 67 } }
 121: Symbol { name: ".text", address: 10000560, size: 5b, kind: Text, section: Section(SectionIndex(1)), scope: Dynamic, weak: false, flags: Xcoff { n_sclass: 6b } }
 123: Symbol { name: ".main", address: 10000560, size: 0, kind: Text, section: Section(SectionIndex(1)), scope: Dynamic, weak: false, flags: Xcoff { n_sclass: 2 } }
 125: Symbol { name: ".rodata.str1.1L...str", address: 100005e4, size: d, kind: Text, section: Section(SectionIndex(1)), scope: Dynamic, weak: false, flags: Xcoff { n_sclass: 6b } }
