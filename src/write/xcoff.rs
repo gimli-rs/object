@@ -9,7 +9,7 @@ use crate::{xcoff, AddressSize};
 
 #[derive(Default, Clone, Copy)]
 struct SectionOffsets {
-    address: usize,
+    address: u64,
     data_offset: usize,
     reloc_offset: usize,
 }
@@ -103,7 +103,7 @@ impl<'a> Object<'a> {
                 || sectype == SectionKind::Text
                 || sectype == SectionKind::UninitializedData
             {
-                section_offsets[index].address = address;
+                section_offsets[index].address = address as u64;
                 address += len;
                 address = align(address, 4);
             } else {
@@ -364,14 +364,22 @@ impl<'a> Object<'a> {
         // Write symbols.
         debug_assert_eq!(symtab_offset, buffer.len());
         for (index, symbol) in self.symbols.iter().enumerate() {
-            let (n_scnum, section) = match symbol.section {
+            let (n_value, section_kind) = if let SymbolSection::Section(id) = symbol.section {
+                (
+                    section_offsets[id.0].address + symbol.value,
+                    self.sections[id.0].kind,
+                )
+            } else {
+                (symbol.value, SectionKind::Unknown)
+            };
+            let n_scnum = match symbol.section {
                 SymbolSection::None => {
                     debug_assert_eq!(symbol.kind, SymbolKind::File);
-                    (xcoff::N_DEBUG, None)
+                    xcoff::N_DEBUG
                 }
-                SymbolSection::Undefined | SymbolSection::Common => (xcoff::N_UNDEF, None),
-                SymbolSection::Absolute => (xcoff::N_ABS, None),
-                SymbolSection::Section(id) => (id.0 as i16 + 1, Some(&self.sections[id.0])),
+                SymbolSection::Undefined | SymbolSection::Common => xcoff::N_UNDEF,
+                SymbolSection::Absolute => xcoff::N_ABS,
+                SymbolSection::Section(id) => id.0 as i16 + 1,
             };
             let n_sclass = symbol_offsets[index].storage_class;
             let n_type = if (symbol.scope == SymbolScope::Linkage)
@@ -391,7 +399,7 @@ impl<'a> Object<'a> {
                     symbol_offsets[index].str_id.unwrap()
                 };
                 let xcoff_sym = xcoff::Symbol64 {
-                    n_value: U64::new(BE, symbol.value),
+                    n_value: U64::new(BE, n_value),
                     n_offset: U32::new(BE, strtab.get_offset(str_id) as u32),
                     n_scnum: I16::new(BE, n_scnum),
                     n_type: U16::new(BE, n_type),
@@ -411,7 +419,7 @@ impl<'a> Object<'a> {
                 }
                 let xcoff_sym = xcoff::Symbol32 {
                     n_name: sym_name,
-                    n_value: U32::new(BE, symbol.value as u32),
+                    n_value: U32::new(BE, n_value as u32),
                     n_scnum: I16::new(BE, n_scnum),
                     n_type: U16::new(BE, n_type),
                     n_sclass: n_sclass,
@@ -458,9 +466,6 @@ impl<'a> Object<'a> {
                 {
                     (x_smtyp, x_smclas)
                 } else {
-                    let section_kind = section
-                        .map(|section| section.kind)
-                        .unwrap_or(SectionKind::Unknown);
                     match symbol.kind {
                         SymbolKind::Text => (xcoff::XTY_SD, xcoff::XMC_PR),
                         SymbolKind::Data => {
