@@ -298,8 +298,9 @@ impl<'a> Object<'a> {
             } else {
                 let section_header = xcoff::SectionHeader32 {
                     s_name: sectname,
-                    s_paddr: U32::new(BE, 0),
-                    s_vaddr: U32::new(BE, 0),
+                    s_paddr: U32::new(BE, section_offsets[index].address as u32),
+                    // This field has the same value as the s_paddr field.
+                    s_vaddr: U32::new(BE, section_offsets[index].address as u32),
                     s_size: U32::new(BE, section.data.len() as u32),
                     s_scnptr: U32::new(BE, section_offsets[index].data_offset as u32),
                     s_relptr: U32::new(BE, section_offsets[index].reloc_offset as u32),
