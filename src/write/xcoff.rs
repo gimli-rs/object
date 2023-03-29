@@ -142,39 +142,18 @@ impl<'a> Object<'a> {
                 n_sclass
             } else {
                 match symbol.kind {
-                    SymbolKind::File => xcoff::C_FILE,
                     SymbolKind::Null => xcoff::C_NULL,
-                    SymbolKind::Data | SymbolKind::Text => {
+                    SymbolKind::File => xcoff::C_FILE,
+                    SymbolKind::Text | SymbolKind::Data | SymbolKind::Tls => {
                         if symbol.is_local() {
                             xcoff::C_STAT
-                        } else {
-                            xcoff::C_EXT
-                        }
-                    }
-                    SymbolKind::Label => {
-                        if symbol.is_undefined() {
-                            xcoff::C_ULABEL
-                        } else {
-                            xcoff::C_LABEL
-                        }
-                    }
-                    SymbolKind::Tls => {
-                        if symbol.is_local() {
-                            xcoff::C_STTLS
-                        } else {
-                            xcoff::C_GTLS
-                        }
-                    }
-                    SymbolKind::Section => {
-                        if symbol.weak {
+                        } else if symbol.weak {
                             xcoff::C_WEAKEXT
-                        } else if symbol.is_undefined() {
-                            xcoff::C_HIDEXT
                         } else {
                             xcoff::C_EXT
                         }
                     }
-                    SymbolKind::Unknown => {
+                    SymbolKind::Section | SymbolKind::Label | SymbolKind::Unknown => {
                         return Err(Error(format!(
                             "unimplemented symbol `{}` kind {:?}",
                             symbol.name().unwrap_or(""),
@@ -478,45 +457,35 @@ impl<'a> Object<'a> {
                 } = symbol.flags
                 {
                     (x_smtyp, x_smclas)
-                } else if let Some(section) = section {
-                    match section.kind {
-                        SectionKind::Data => (xcoff::XTY_SD, xcoff::XMC_RW),
-                        SectionKind::Tls => (xcoff::XTY_SD, xcoff::XMC_TL),
-                        SectionKind::UninitializedData => (xcoff::XTY_CM, xcoff::XMC_BS),
-                        SectionKind::UninitializedTls => (xcoff::XTY_CM, xcoff::XMC_UL),
-                        SectionKind::ReadOnlyData | SectionKind::ReadOnlyString => {
-                            (xcoff::XTY_SD, xcoff::XMC_RO)
-                        }
-                        SectionKind::Text | SectionKind::OtherString => {
-                            if symbol.kind == SymbolKind::Label {
-                                (xcoff::XTY_LD, xcoff::XMC_PR)
+                } else {
+                    let section_kind = section
+                        .map(|section| section.kind)
+                        .unwrap_or(SectionKind::Unknown);
+                    match symbol.kind {
+                        SymbolKind::Text => (xcoff::XTY_SD, xcoff::XMC_PR),
+                        SymbolKind::Data => {
+                            if section_kind == SectionKind::UninitializedData {
+                                (xcoff::XTY_CM, xcoff::XMC_BS)
+                            } else if section_kind == SectionKind::ReadOnlyData {
+                                (xcoff::XTY_SD, xcoff::XMC_RO)
                             } else {
-                                (xcoff::XTY_SD, xcoff::XMC_PR)
+                                (xcoff::XTY_SD, xcoff::XMC_RW)
+                            }
+                        }
+                        SymbolKind::Tls => {
+                            if section_kind == SectionKind::UninitializedTls {
+                                (xcoff::XTY_CM, xcoff::XMC_UL)
+                            } else {
+                                (xcoff::XTY_SD, xcoff::XMC_TL)
                             }
                         }
                         _ => {
                             return Err(Error(format!(
-                                "unimplemented section `{}` kind {:?}",
-                                section.name().unwrap_or(""),
-                                section.kind
+                                "unimplemented symbol `{}` kind {:?}",
+                                symbol.name().unwrap_or(""),
+                                symbol.kind
                             )));
                         }
-                    }
-                } else {
-                    match symbol.kind {
-                        SymbolKind::Text
-                        | SymbolKind::Data
-                        | SymbolKind::Tls
-                        | SymbolKind::Section => {
-                            let smt = xcoff::XTY_SD;
-                            let smc = if symbol.kind == SymbolKind::Data {
-                                xcoff::XMC_RW
-                            } else {
-                                xcoff::XMC_PR
-                            };
-                            (smt, smc)
-                        }
-                        _ => (xcoff::XTY_ER, xcoff::XMC_PR),
                     }
                 };
                 let scnlen = if let SymbolFlags::Xcoff {

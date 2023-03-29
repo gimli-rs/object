@@ -5,9 +5,9 @@ use core::marker::PhantomData;
 use core::str;
 
 use crate::endian::{BigEndian as BE, U32Bytes};
-use crate::pod::Pod;
+use crate::pod::{bytes_of, Pod};
 use crate::read::util::StringTable;
-use crate::{bytes_of, xcoff, Object, ObjectSection, SectionKind};
+use crate::xcoff;
 
 use crate::read::{
     self, Bytes, Error, ObjectSymbol, ObjectSymbolTable, ReadError, ReadRef, Result, SectionIndex,
@@ -316,20 +316,38 @@ impl<'data, 'file, Xcoff: FileHeader, R: ReadRef<'data>> ObjectSymbol<'data>
     }
 
     fn kind(&self) -> SymbolKind {
+        if self.symbol.has_aux_csect() {
+            if let Ok(aux_csect) = self
+                .file
+                .symbols
+                .aux_csect(self.index.0, self.symbol.n_numaux() as usize)
+            {
+                let sym_type = aux_csect.sym_type() & 0x07;
+                if sym_type == xcoff::XTY_SD || sym_type == xcoff::XTY_CM {
+                    return match aux_csect.x_smclas() {
+                        xcoff::XMC_PR | xcoff::XMC_GL => SymbolKind::Text,
+                        xcoff::XMC_RO | xcoff::XMC_RW | xcoff::XMC_TD | xcoff::XMC_BS => {
+                            SymbolKind::Data
+                        }
+                        xcoff::XMC_TL | xcoff::XMC_UL => SymbolKind::Tls,
+                        xcoff::XMC_DS | xcoff::XMC_TC0 | xcoff::XMC_TC => {
+                            // `Metadata` might be a better kind for these if we had it.
+                            SymbolKind::Data
+                        }
+                        _ => SymbolKind::Unknown,
+                    };
+                } else if sym_type == xcoff::XTY_LD {
+                    // A function entry point. Neither `Text` nor `Label` are a good fit for this.
+                    return SymbolKind::Text;
+                } else if sym_type == xcoff::XTY_ER {
+                    return SymbolKind::Unknown;
+                }
+            }
+        }
         match self.symbol.n_sclass() {
-            xcoff::C_FILE => SymbolKind::File,
-            xcoff::C_NULL => SymbolKind::Null,
-            _ => self
-                .section()
-                .index()
-                .and_then(|index| self.file.section_by_index(index).ok())
-                .map(|section| match section.kind() {
-                    SectionKind::Data | SectionKind::UninitializedData => SymbolKind::Data,
-                    SectionKind::UninitializedTls | SectionKind::Tls => SymbolKind::Tls,
-                    SectionKind::Text => SymbolKind::Text,
-                    _ => SymbolKind::Unknown,
-                })
-                .unwrap_or(SymbolKind::Unknown),
+            xcoff::C_NULL => return SymbolKind::Null,
+            xcoff::C_FILE => return SymbolKind::File,
+            _ => SymbolKind::Unknown,
         }
     }
 
