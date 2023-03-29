@@ -73,7 +73,7 @@ Symbols
 122: Symbol { name: "base.c", address: 0, size: 0, kind: File, section: None, scope: Compilation, weak: false, flags: Xcoff { n_sclass: 67, x_smtyp: 0, x_smclas: 0, containing_csect: None } }
 125: Symbol { name: ".text", address: 100000640, size: 57, kind: Text, section: Section(SectionIndex(1)), scope: Dynamic, weak: false, flags: Xcoff { n_sclass: 6b, x_smtyp: 29, x_smclas: 0, containing_csect: None } }
 127: Symbol { name: ".main", address: 100000640, size: 0, kind: Text, section: Section(SectionIndex(1)), scope: Dynamic, weak: false, flags: Xcoff { n_sclass: 2, x_smtyp: 2, x_smclas: 0, containing_csect: Some(SymbolIndex(7d)) } }
-129: Symbol { name: ".rodata.str1.1L...str", address: 1000006c0, size: d, kind: Text, section: Section(SectionIndex(1)), scope: Dynamic, weak: false, flags: Xcoff { n_sclass: 6b, x_smtyp: 11, x_smclas: 1, containing_csect: None } }
+129: Symbol { name: ".rodata.str1.1L...str", address: 1000006c0, size: d, kind: Data, section: Section(SectionIndex(1)), scope: Dynamic, weak: false, flags: Xcoff { n_sclass: 6b, x_smtyp: 11, x_smclas: 1, containing_csect: None } }
 131: Symbol { name: "glink64.s", address: 0, size: 0, kind: File, section: None, scope: Compilation, weak: false, flags: Xcoff { n_sclass: 67, x_smtyp: 0, x_smclas: 0, containing_csect: None } }
 132: Symbol { name: ".exit", address: 100000610, size: 28, kind: Text, section: Section(SectionIndex(1)), scope: Dynamic, weak: false, flags: Xcoff { n_sclass: 6b, x_smtyp: 11, x_smclas: 6, containing_csect: None } }
 134: Symbol { name: ".exit", address: 100000610, size: 0, kind: Text, section: Section(SectionIndex(1)), scope: Dynamic, weak: false, flags: Xcoff { n_sclass: 2, x_smtyp: 2, x_smclas: 6, containing_csect: Some(SymbolIndex(84)) } }
