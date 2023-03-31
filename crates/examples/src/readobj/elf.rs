@@ -161,6 +161,7 @@ fn print_program_headers<Elf: FileHeader>(
                 //PT_GNU_EH_FRAME =>
                 //PT_GNU_STACK =>
                 //PT_GNU_RELRO =>
+                //PT_GNU_PROPERTY =>
                 _ => {}
             }
         });
@@ -1169,6 +1170,7 @@ static FLAGS_PT: &[Flag<u32>] = &flags!(
     PT_GNU_EH_FRAME,
     PT_GNU_STACK,
     PT_GNU_RELRO,
+    PT_GNU_PROPERTY,
 );
 static FLAGS_PT_HP: &[Flag<u32>] = &flags!(
     PT_HP_TLS,
