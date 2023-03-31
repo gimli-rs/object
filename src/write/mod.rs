@@ -57,7 +57,7 @@ impl error::Error for Error {}
 /// The result type used within the write module.
 pub type Result<T> = result::Result<T, Error>;
 
-/// A writable object file.
+/// A writable relocatable object file.
 #[derive(Debug)]
 pub struct Object<'a> {
     format: BinaryFormat,
