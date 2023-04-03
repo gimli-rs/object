@@ -1287,6 +1287,8 @@ pub const PT_GNU_EH_FRAME: u32 = 0x6474_e550;
 pub const PT_GNU_STACK: u32 = 0x6474_e551;
 /// Read-only after relocation.
 pub const PT_GNU_RELRO: u32 = 0x6474_e552;
+/// Segment containing `.note.gnu.property` section.
+pub const PT_GNU_PROPERTY: u32 = 0x6474_e553;
 /// End of OS-specific segment types.
 pub const PT_HIOS: u32 = 0x6fff_ffff;
 /// Start of processor-specific segment types.
