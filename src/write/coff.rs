@@ -575,11 +575,11 @@ impl<'a> Object<'a> {
             let section_number = match symbol.section {
                 SymbolSection::None => {
                     debug_assert_eq!(symbol.kind, SymbolKind::File);
-                    coff::IMAGE_SYM_DEBUG
+                    coff::IMAGE_SYM_DEBUG as u16
                 }
-                SymbolSection::Undefined => coff::IMAGE_SYM_UNDEFINED,
-                SymbolSection::Absolute => coff::IMAGE_SYM_ABSOLUTE,
-                SymbolSection::Common => coff::IMAGE_SYM_UNDEFINED,
+                SymbolSection::Undefined => coff::IMAGE_SYM_UNDEFINED as u16,
+                SymbolSection::Absolute => coff::IMAGE_SYM_ABSOLUTE as u16,
+                SymbolSection::Common => coff::IMAGE_SYM_UNDEFINED as u16,
                 SymbolSection::Section(id) => id.0 as u16 + 1,
             };
             let typ = if symbol.kind == SymbolKind::Text {

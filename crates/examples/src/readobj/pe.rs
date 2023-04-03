@@ -1,5 +1,7 @@
 use super::*;
 use object::pe::*;
+use object::read::coff::ImageSymbol as _;
+use object::read::coff::*;
 use object::read::pe::*;
 use object::LittleEndian as LE;
 use object::{Bytes, U32Bytes, U64Bytes};
@@ -9,6 +11,22 @@ pub(super) fn print_coff(p: &mut Printer<'_>, data: &[u8]) {
     if let Some(header) = ImageFileHeader::parse(data, &mut offset).print_err(p) {
         writeln!(p.w(), "Format: COFF").unwrap();
         print_file(p, header);
+        let sections = header.sections(data, offset).print_err(p);
+        let symbols = header.symbols(data).print_err(p);
+        if let Some(ref sections) = sections {
+            print_sections(p, data, header.machine.get(LE), symbols.as_ref(), sections);
+        }
+        if let Some(ref symbols) = symbols {
+            print_symbols(p, sections.as_ref(), symbols);
+        }
+    }
+}
+
+pub(super) fn print_coff_big(p: &mut Printer<'_>, data: &[u8]) {
+    let mut offset = 0;
+    if let Some(header) = AnonObjectHeaderBigobj::parse(data, &mut offset).print_err(p) {
+        writeln!(p.w(), "Format: COFF bigobj").unwrap();
+        print_bigobj(p, header);
         let sections = header.sections(data, offset).print_err(p);
         let symbols = header.symbols(data).print_err(p);
         if let Some(ref sections) = sections {
@@ -163,6 +181,43 @@ fn print_optional(p: &mut Printer<'_>, header: &impl ImageOptionalHeader) {
         p.field_hex("SizeOfHeapCommit", header.size_of_heap_commit());
         p.field_hex("LoaderFlags", header.loader_flags());
         p.field_hex("NumberOfRvaAndSizes", header.number_of_rva_and_sizes());
+    });
+}
+
+fn print_bigobj(p: &mut Printer<'_>, header: &AnonObjectHeaderBigobj) {
+    p.group("AnonObjectHeaderBigObj", |p| {
+        p.field_hex("Signature1", header.sig1.get(LE));
+        p.field_hex("Signature2", header.sig2.get(LE));
+        p.field("Version", header.version.get(LE));
+        p.field_enum("Machine", header.machine.get(LE), FLAGS_IMAGE_FILE_MACHINE);
+        p.field("TimeDateStamp", header.time_date_stamp.get(LE));
+        p.field(
+            "ClassId",
+            format!(
+                "{:08X}-{:04X}-{:04X}-{:02X}{:02X}{:02X}{:02X}{:02X}{:02X}{:02X}{:02X}",
+                header.class_id.data1().get(LE),
+                header.class_id.data2().get(LE),
+                header.class_id.data3().get(LE),
+                header.class_id.data4()[0],
+                header.class_id.data4()[1],
+                header.class_id.data4()[2],
+                header.class_id.data4()[3],
+                header.class_id.data4()[4],
+                header.class_id.data4()[5],
+                header.class_id.data4()[6],
+                header.class_id.data4()[7],
+            ),
+        );
+        p.field_hex("SizeOfData", header.size_of_data.get(LE));
+        p.field_hex("Flags", header.flags.get(LE));
+        p.field_hex("MetaDataSize", header.meta_data_size.get(LE));
+        p.field_hex("MetaDataOffset", header.meta_data_offset.get(LE));
+        p.field("NumberOfSections", header.number_of_sections.get(LE));
+        p.field_hex(
+            "PointerToSymbolTable",
+            header.pointer_to_symbol_table.get(LE),
+        );
+        p.field("NumberOfSymbols", header.number_of_symbols.get(LE));
     });
 }
 
@@ -443,11 +498,11 @@ fn print_resource_table(
     })
 }
 
-fn print_sections(
+fn print_sections<'data, Coff: CoffHeader>(
     p: &mut Printer<'_>,
     data: &[u8],
     machine: u16,
-    symbols: Option<&SymbolTable>,
+    symbols: Option<&SymbolTable<'data, &'data [u8], Coff>>,
     sections: &SectionTable,
 ) {
     for (index, section) in sections.iter().enumerate() {
@@ -543,36 +598,44 @@ fn print_sections(
     }
 }
 
-fn print_symbols(p: &mut Printer<'_>, sections: Option<&SectionTable>, symbols: &SymbolTable) {
+fn print_symbols<'data, Coff: CoffHeader>(
+    p: &mut Printer<'_>,
+    sections: Option<&SectionTable>,
+    symbols: &SymbolTable<'data, &'data [u8], Coff>,
+) {
     for (index, symbol) in symbols.iter() {
         p.group("ImageSymbol", |p| {
             p.field("Index", index);
             if let Some(name) = symbol.name(symbols.strings()).print_err(p) {
                 p.field_inline_string("Name", name);
             } else {
-                p.field("Name", format!("{:X?}", symbol.name));
+                p.field("Name", format!("{:X?}", symbol.raw_name()));
             }
-            p.field_hex("Value", symbol.value.get(LE));
-            let section = symbol.section_number.get(LE);
-            if section == 0 || section >= IMAGE_SYM_SECTION_MAX {
-                p.field_enum("Section", section, FLAGS_IMAGE_SYM);
+            p.field_hex("Value", symbol.value());
+            let section = symbol.section_number();
+            if section <= 0 {
+                p.field_enum_display("Section", section, FLAGS_IMAGE_SYM);
             } else {
                 let section_name = sections.and_then(|sections| {
                     sections
-                        .section(section.into())
+                        .section(section as usize)
                         .and_then(|section| section.name(symbols.strings()))
                         .print_err(p)
                 });
                 p.field_string_option("Section", section, section_name);
             }
-            p.field_hex("Type", symbol.typ.get(LE));
+            p.field_hex("Type", symbol.typ());
             p.field_enum("BaseType", symbol.base_type(), FLAGS_IMAGE_SYM_TYPE);
             p.field_enum("DerivedType", symbol.derived_type(), FLAGS_IMAGE_SYM_DTYPE);
-            p.field_enum("StorageClass", symbol.storage_class, FLAGS_IMAGE_SYM_CLASS);
-            p.field_hex("NumberOfAuxSymbols", symbol.number_of_aux_symbols);
+            p.field_enum(
+                "StorageClass",
+                symbol.storage_class(),
+                FLAGS_IMAGE_SYM_CLASS,
+            );
+            p.field_hex("NumberOfAuxSymbols", symbol.number_of_aux_symbols());
             if symbol.has_aux_file_name() {
                 if let Some(name) = symbols
-                    .aux_file_name(index, symbol.number_of_aux_symbols)
+                    .aux_file_name(index, symbol.number_of_aux_symbols())
                     .print_err(p)
                 {
                     p.group("ImageAuxSymbolFile", |p| {
@@ -1021,7 +1084,7 @@ static FLAGS_IMAGE_REL_EBC: &[Flag<u16>] = &flags!(
     IMAGE_REL_EBC_SECTION,
     IMAGE_REL_EBC_SECREL,
 );
-static FLAGS_IMAGE_SYM: &[Flag<u16>] =
+static FLAGS_IMAGE_SYM: &[Flag<i32>] =
     &flags!(IMAGE_SYM_UNDEFINED, IMAGE_SYM_ABSOLUTE, IMAGE_SYM_DEBUG,);
 static FLAGS_IMAGE_SYM_TYPE: &[Flag<u16>] = &flags!(
     IMAGE_SYM_TYPE_NULL,

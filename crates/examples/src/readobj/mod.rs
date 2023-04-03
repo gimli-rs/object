@@ -116,6 +116,22 @@ impl<'a> Printer<'a> {
         self.field_hex(name, value);
     }
 
+    fn field_enum_display<T: Eq + fmt::Display>(
+        &mut self,
+        name: &str,
+        value: T,
+        flags: &[Flag<T>],
+    ) {
+        for flag in flags {
+            if value == flag.value {
+                self.field_name(name);
+                writeln!(self.w, "{} ({})", flag.name, value).unwrap();
+                return;
+            }
+        }
+        self.field(name, value);
+    }
+
     fn field_enums<T: Eq + fmt::UpperHex>(&mut self, name: &str, value: T, enums: &[&[Flag<T>]]) {
         for flags in enums {
             for flag in *flags {
@@ -176,6 +192,7 @@ fn print_object(p: &mut Printer<'_>, data: &[u8]) {
     match kind {
         object::FileKind::Archive => print_archive(p, data),
         object::FileKind::Coff => pe::print_coff(p, data),
+        object::FileKind::CoffBig => pe::print_coff_big(p, data),
         object::FileKind::DyldCache => macho::print_dyld_cache(p, data),
         object::FileKind::Elf32 => elf::print_elf32(p, data),
         object::FileKind::Elf64 => elf::print_elf64(p, data),

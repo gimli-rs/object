@@ -1,13 +1,18 @@
-Format: COFF
-ImageFileHeader {
+Format: COFF bigobj
+AnonObjectHeaderBigObj {
+    Signature1: 0x0
+    Signature2: 0xFFFF
+    Version: 2
     Machine: IMAGE_FILE_MACHINE_AMD64 (0x8664)
-    NumberOfSections: 7
     TimeDateStamp: 0
-    PointerToSymbolTable: 0x280
+    ClassId: D1BAA1C7-BAEE-4BA9-AF20FAF66AA4DCB8
+    SizeOfData: 0x0
+    Flags: 0x0
+    MetaDataSize: 0x0
+    MetaDataOffset: 0x0
+    NumberOfSections: 7
+    PointerToSymbolTable: 0x2A4
     NumberOfSymbols: 22
-    SizeOfOptionalHeader: 0x0
-    Characteristics: 0x4
-        IMAGE_FILE_LINE_NUMS_STRIPPED (0x4)
 }
 ImageSectionHeader {
     Index: 1
@@ -15,8 +20,8 @@ ImageSectionHeader {
     VirtualSize: 0x0
     VirtualAddress: 0x0
     SizeOfRawData: 0x80
-    PointerToRawData: 0x12C
-    PointerToRelocations: 0x21C
+    PointerToRawData: 0x150
+    PointerToRelocations: 0x240
     PointerToLinenumbers: 0x0
     NumberOfRelocations: 4
     NumberOfLinenumbers: 0
@@ -86,7 +91,7 @@ ImageSectionHeader {
     VirtualSize: 0x0
     VirtualAddress: 0x0
     SizeOfRawData: 0x18
-    PointerToRawData: 0x1AC
+    PointerToRawData: 0x1D0
     PointerToRelocations: 0x0
     PointerToLinenumbers: 0x0
     NumberOfRelocations: 0
@@ -102,8 +107,8 @@ ImageSectionHeader {
     VirtualSize: 0x0
     VirtualAddress: 0x0
     SizeOfRawData: 0x18
-    PointerToRawData: 0x1C4
-    PointerToRelocations: 0x244
+    PointerToRawData: 0x1E8
+    PointerToRelocations: 0x268
     PointerToLinenumbers: 0x0
     NumberOfRelocations: 6
     NumberOfLinenumbers: 0
@@ -148,7 +153,7 @@ ImageSectionHeader {
     VirtualSize: 0x0
     VirtualAddress: 0x0
     SizeOfRawData: 0x10
-    PointerToRawData: 0x1DC
+    PointerToRawData: 0x200
     PointerToRelocations: 0x0
     PointerToLinenumbers: 0x0
     NumberOfRelocations: 0
@@ -164,7 +169,7 @@ ImageSectionHeader {
     VirtualSize: 0x0
     VirtualAddress: 0x0
     SizeOfRawData: 0x30
-    PointerToRawData: 0x1EC
+    PointerToRawData: 0x210
     PointerToRelocations: 0x0
     PointerToLinenumbers: 0x0
     NumberOfRelocations: 0
@@ -200,7 +205,7 @@ ImageSymbol {
     NumberOfAuxSymbols: 0x1
     ImageAuxSymbolFunction {
         TagIndex: 0
-        TotalSize: 0
+        TotalSize: 1
         PointerToLinenumber: 0x0
         PointerToNextFunction: 0
         Unused: [0, 0]
