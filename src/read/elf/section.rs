@@ -381,32 +381,24 @@ impl<'data, 'file, Elf: FileHeader, R: ReadRef<'data>> ElfSection<'data, 'file, 
 
     fn maybe_compressed(&self) -> read::Result<Option<CompressedFileRange>> {
         let endian = self.file.endian;
-        if (self.section.sh_flags(endian).into() & u64::from(elf::SHF_COMPRESSED)) == 0 {
-            return Ok(None);
+        if let Some((header, offset, compressed_size)) =
+            self.section.compression(endian, self.file.data)?
+        {
+            let format = match header.ch_type(endian) {
+                elf::ELFCOMPRESS_ZLIB => CompressionFormat::Zlib,
+                elf::ELFCOMPRESS_ZSTD => CompressionFormat::Zstandard,
+                _ => return Err(Error("Unsupported ELF compression type")),
+            };
+            let uncompressed_size = header.ch_size(endian).into();
+            Ok(Some(CompressedFileRange {
+                format,
+                offset,
+                compressed_size,
+                uncompressed_size,
+            }))
+        } else {
+            Ok(None)
         }
-        let (section_offset, section_size) = self
-            .section
-            .file_range(endian)
-            .read_error("Invalid ELF compressed section type")?;
-        let mut offset = section_offset;
-        let header = self
-            .file
-            .data
-            .read::<Elf::CompressionHeader>(&mut offset)
-            .read_error("Invalid ELF compressed section offset")?;
-        if header.ch_type(endian) != elf::ELFCOMPRESS_ZLIB {
-            return Err(Error("Unsupported ELF compression type"));
-        }
-        let uncompressed_size = header.ch_size(endian).into();
-        let compressed_size = section_size
-            .checked_sub(offset - section_offset)
-            .read_error("Invalid ELF compressed section size")?;
-        Ok(Some(CompressedFileRange {
-            format: CompressionFormat::Zlib,
-            offset,
-            compressed_size,
-            uncompressed_size,
-        }))
     }
 
     /// Try GNU-style "ZLIB" header decompression.
@@ -1005,6 +997,40 @@ pub trait SectionHeader: Debug + Pod {
     ) -> read::Result<AttributesSection<'data, Self::Elf>> {
         let data = self.data(endian, data)?;
         AttributesSection::new(endian, data)
+    }
+
+    /// Parse the compression header if present.
+    ///
+    /// Returns the header, and the offset and size of the compressed section data
+    /// in the file.
+    ///
+    /// Returns `Ok(None)` if the section flags do not have `SHF_COMPRESSED`.
+    /// Returns `Err` for invalid values.
+    fn compression<'data, R: ReadRef<'data>>(
+        &self,
+        endian: Self::Endian,
+        data: R,
+    ) -> read::Result<
+        Option<(
+            &'data <Self::Elf as FileHeader>::CompressionHeader,
+            u64,
+            u64,
+        )>,
+    > {
+        if (self.sh_flags(endian).into() & u64::from(elf::SHF_COMPRESSED)) == 0 {
+            return Ok(None);
+        }
+        let (section_offset, section_size) = self
+            .file_range(endian)
+            .read_error("Invalid ELF compressed section type")?;
+        let mut offset = section_offset;
+        let header = data
+            .read::<<Self::Elf as FileHeader>::CompressionHeader>(&mut offset)
+            .read_error("Invalid ELF compressed section offset")?;
+        let compressed_size = section_size
+            .checked_sub(offset - section_offset)
+            .read_error("Invalid ELF compressed section size")?;
+        Ok(Some((header, offset, compressed_size)))
     }
 }
 

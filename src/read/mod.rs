@@ -632,6 +632,10 @@ pub enum CompressionFormat {
     ///
     /// Used for ELF compression and GNU compressed debug information.
     Zlib,
+    /// Zstandard.
+    ///
+    /// Used for ELF compression.
+    Zstandard,
 }
 
 /// A range in a file that may be compressed.
@@ -729,6 +733,25 @@ impl<'data> CompressedData<'data> {
                     )
                     .ok()
                     .read_error("Invalid zlib compressed data")?;
+                Ok(Cow::Owned(decompressed))
+            }
+            #[cfg(feature = "compression")]
+            CompressionFormat::Zstandard => {
+                use core::convert::TryInto;
+                use std::io::Read;
+                let size = self
+                    .uncompressed_size
+                    .try_into()
+                    .ok()
+                    .read_error("Uncompressed data size is too large.")?;
+                let mut decompressed = Vec::with_capacity(size);
+                let mut decoder = ruzstd::StreamingDecoder::new(self.data)
+                    .ok()
+                    .read_error("Invalid zstd compressed data")?;
+                decoder
+                    .read_to_end(&mut decompressed)
+                    .ok()
+                    .read_error("Invalid zstd compressed data")?;
                 Ok(Cow::Owned(decompressed))
             }
             _ => Err(Error("Unsupported compressed data.")),

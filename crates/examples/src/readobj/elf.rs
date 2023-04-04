@@ -262,6 +262,15 @@ fn print_section_headers<Elf: FileHeader>(
             p.field_hex("AddressAlign", section.sh_addralign(endian).into());
             p.field_hex("EntrySize", section.sh_entsize(endian).into());
 
+            if let Some(Some((compression, _, _))) = section.compression(endian, data).print_err(p)
+            {
+                p.group("CompressionHeader", |p| {
+                    p.field_enum("Type", compression.ch_type(endian), FLAGS_ELFCOMPRESS);
+                    p.field_hex("Size", compression.ch_size(endian).into());
+                    p.field_hex("AddressAlign", compression.ch_addralign(endian).into());
+                });
+            }
+
             match section.sh_type(endian) {
                 SHT_SYMTAB | SHT_DYNSYM => {
                     print_section_symbols(p, endian, data, elf, sections, index, section)
@@ -1315,6 +1324,7 @@ static FLAGS_SHF_PARISC: &[Flag<u32>] = &flags!(SHF_PARISC_SHORT, SHF_PARISC_HUG
 static FLAGS_SHF_ALPHA: &[Flag<u32>] = &flags!(SHF_ALPHA_GPREL);
 static FLAGS_SHF_ARM: &[Flag<u32>] = &flags!(SHF_ARM_ENTRYSECT, SHF_ARM_COMDEF);
 static FLAGS_SHF_IA_64: &[Flag<u32>] = &flags!(SHF_IA_64_SHORT, SHF_IA_64_NORECOV);
+static FLAGS_ELFCOMPRESS: &[Flag<u32>] = &flags!(ELFCOMPRESS_ZLIB, ELFCOMPRESS_ZSTD);
 static FLAGS_STT: &[Flag<u8>] = &flags!(
     STT_NOTYPE,
     STT_OBJECT,

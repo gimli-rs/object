@@ -18,6 +18,7 @@ indexmap = { version = "1.6", optional = true }
 wasmparser = { version = "0.102.0", optional = true }
 memchr = { version = "2.4.1", default-features = false }
 hashbrown = { version = "0.13.1", features = ["ahash"], default-features = false, optional = true }
+ruzstd = { version = "0.3.1", optional = true }
 
 # Internal feature, only used when building as part of libstd, not part of the
 # stable interface of this crate.
@@ -48,7 +49,7 @@ write = ["write_std", "coff", "elf", "macho", "pe", "xcoff"]
 std = ["memchr/std"]
 # Enable decompression of compressed sections.
 # This feature is not required if you want to do your own decompression.
-compression = ["flate2", "std"]
+compression = ["flate2", "ruzstd", "std"]
 # Treat all types as unaligned.
 # Normally types use the alignment required by the specifications, but
 # sometimes files do not strictly follow the specifications.
