@@ -1,0 +1,19 @@
+SectionHeader {
+    Index: 6
+    Name: ".debug_info" (0x3E)
+    Type: SHT_PROGBITS (0x1)
+    Flags: 0x800
+        SHF_COMPRESSED (0x800)
+    Address: 0x0
+    Offset: 0x70
+    Size: 0x84
+    Link: 0
+    Info: 0
+    AddressAlign: 0x8
+    EntrySize: 0x0
+    CompressionHeader {
+        Type: ELFCOMPRESS_ZSTD (0x2)
+        Size: 0xAF
+        AddressAlign: 0x1
+    }
+}
