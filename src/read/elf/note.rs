@@ -24,12 +24,15 @@ impl<'data, Elf> NoteIterator<'data, Elf>
 where
     Elf: FileHeader,
 {
+    /// An iterator over the notes in an ELF section or segment.
+    ///
+    /// `align` should be from the `p_align` field of the segment,
+    /// or the `sh_addralign` field of the section. Supported values are
+    /// either 4 or 8, but values less than 4 are treated as 4.
+    /// This matches the behaviour of binutils.
+    ///
     /// Returns `Err` if `align` is invalid.
-    pub(super) fn new(
-        endian: Elf::Endian,
-        align: Elf::Word,
-        data: &'data [u8],
-    ) -> read::Result<Self> {
+    pub fn new(endian: Elf::Endian, align: Elf::Word, data: &'data [u8]) -> read::Result<Self> {
         let align = match align.into() {
             0u64..=4 => 4,
             8 => 8,
