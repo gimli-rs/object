@@ -19,7 +19,6 @@ pub type MachORelocationIterator64<'data, 'file, Endian = Endianness, R = &'data
 /// An iterator over the relocations in a `MachOSection`.
 pub struct MachORelocationIterator<'data, 'file, Mach, R = &'data [u8]>
 where
-    'data: 'file,
     Mach: MachHeader,
     R: ReadRef<'data>,
 {

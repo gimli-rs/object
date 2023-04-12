@@ -210,7 +210,7 @@ pub trait Object<'data: 'file, 'file>: read::private::Sealed {
 
     /// The filename and GUID from the PE CodeView section
     #[inline]
-    fn pdb_info(&self) -> Result<Option<CodeView>> {
+    fn pdb_info(&self) -> Result<Option<CodeView<'_>>> {
         Ok(None)
     }
 

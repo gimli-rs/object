@@ -208,7 +208,6 @@ pub type ElfSymbolTable64<'data, 'file, Endian = Endianness, R = &'data [u8]> =
 #[derive(Debug, Clone, Copy)]
 pub struct ElfSymbolTable<'data, 'file, Elf, R = &'data [u8]>
 where
-    'data: 'file,
     Elf: FileHeader,
     R: ReadRef<'data>,
 {
@@ -256,7 +255,6 @@ pub type ElfSymbolIterator64<'data, 'file, Endian = Endianness, R = &'data [u8]>
 /// An iterator over the symbols of an `ElfFile`.
 pub struct ElfSymbolIterator<'data, 'file, Elf, R = &'data [u8]>
 where
-    'data: 'file,
     Elf: FileHeader,
     R: ReadRef<'data>,
 {
@@ -302,7 +300,6 @@ pub type ElfSymbol64<'data, 'file, Endian = Endianness, R = &'data [u8]> =
 #[derive(Debug, Clone, Copy)]
 pub struct ElfSymbol<'data, 'file, Elf, R = &'data [u8]>
 where
-    'data: 'file,
     Elf: FileHeader,
     R: ReadRef<'data>,
 {

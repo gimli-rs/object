@@ -528,7 +528,7 @@ pub trait ImageSymbol: Debug + Pod {
     /// Return the symbol address.
     ///
     /// This takes into account the image base and the section address.
-    fn address(&self, image_base: u64, sections: &SectionTable) -> Result<u64> {
+    fn address(&self, image_base: u64, sections: &SectionTable<'_>) -> Result<u64> {
         let section_number = self.section_number() as usize;
         let section = sections.section(section_number)?;
         let virtual_address = u64::from(section.virtual_address.get(LE));

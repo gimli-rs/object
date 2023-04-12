@@ -70,7 +70,7 @@ pub struct Error(&'static str);
 
 impl fmt::Display for Error {
     #[inline]
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str(self.0)
     }
 }

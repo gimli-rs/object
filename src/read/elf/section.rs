@@ -363,7 +363,6 @@ pub type ElfSection64<'data, 'file, Endian = Endianness, R = &'data [u8]> =
 #[derive(Debug)]
 pub struct ElfSection<'data, 'file, Elf, R = &'data [u8]>
 where
-    'data: 'file,
     Elf: FileHeader,
     R: ReadRef<'data>,
 {

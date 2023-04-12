@@ -58,6 +58,7 @@
 #![deny(missing_docs)]
 #![deny(missing_debug_implementations)]
 #![no_std]
+#![warn(rust_2018_idioms)]
 // Style.
 #![allow(clippy::collapsible_if)]
 #![allow(clippy::comparison_chain)]

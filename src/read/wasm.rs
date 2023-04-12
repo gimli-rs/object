@@ -744,10 +744,7 @@ impl<'data, 'file, R> ObjectComdat<'data> for WasmComdat<'data, 'file, R> {
 
 /// An iterator over the sections in a COMDAT section group of a `WasmFile`.
 #[derive(Debug)]
-pub struct WasmComdatSectionIterator<'data, 'file, R = &'data [u8]>
-where
-    'data: 'file,
-{
+pub struct WasmComdatSectionIterator<'data, 'file, R = &'data [u8]> {
     #[allow(unused)]
     file: &'file WasmFile<'data, R>,
 }
