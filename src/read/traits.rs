@@ -2,7 +2,7 @@ use alloc::borrow::Cow;
 use alloc::vec::Vec;
 
 use crate::read::{
-    self, Architecture, CodeView, ComdatKind, CompressedData, CompressedFileRange, Error, Export,
+    self, Architecture, CodeView, ComdatKind, CompressedData, CompressedFileRange, Export,
     FileFlags, Import, ObjectKind, ObjectMap, Relocation, Result, SectionFlags, SectionIndex,
     SectionKind, SegmentFlags, SymbolFlags, SymbolIndex, SymbolKind, SymbolMap, SymbolMapName,
     SymbolScope, SymbolSection,
@@ -118,21 +118,6 @@ pub trait Object<'data: 'file, 'file>: read::private::Sealed {
     ///
     /// Returns an error if the index is invalid.
     fn symbol_by_index(&'file self, index: SymbolIndex) -> Result<Self::Symbol>;
-
-    /// Get the address of symbol named `symbol_name`, if such a symbol exists.
-    fn symbol_address_by_name(&'file self, symbol_name: &str) -> Result<u64> {
-        if let Some(table) = self.symbol_table().or_else(|| self.dynamic_symbol_table()) {
-            for symbol in table.symbols() {
-                if !symbol.is_definition() {
-                    continue;
-                }
-                if symbol.name() == Ok(symbol_name) {
-                    return Ok(symbol.address());
-                }
-            }
-        }
-        return Err(Error("Invalid symbol name"));
-    }
 
     /// Get an iterator over the debugging symbols in the file.
     ///
