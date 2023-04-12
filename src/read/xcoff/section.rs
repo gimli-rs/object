@@ -54,7 +54,6 @@ pub type XcoffSection64<'data, 'file, R = &'data [u8]> =
 #[derive(Debug)]
 pub struct XcoffSection<'data, 'file, Xcoff, R = &'data [u8]>
 where
-    'data: 'file,
     Xcoff: FileHeader,
     R: ReadRef<'data>,
 {

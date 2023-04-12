@@ -473,7 +473,7 @@ where
     }
 
     #[inline]
-    fn pdb_info(&self) -> Result<Option<CodeView>> {
+    fn pdb_info(&self) -> Result<Option<CodeView<'_>>> {
         with_inner!(self.inner, FileInternal, |x| x.pdb_info())
     }
 
@@ -492,18 +492,12 @@ where
 
 /// An iterator over the segments of a `File`.
 #[derive(Debug)]
-pub struct SegmentIterator<'data, 'file, R: ReadRef<'data> = &'data [u8]>
-where
-    'data: 'file,
-{
+pub struct SegmentIterator<'data, 'file, R: ReadRef<'data> = &'data [u8]> {
     inner: SegmentIteratorInternal<'data, 'file, R>,
 }
 
 #[derive(Debug)]
-enum SegmentIteratorInternal<'data, 'file, R: ReadRef<'data>>
-where
-    'data: 'file,
-{
+enum SegmentIteratorInternal<'data, 'file, R: ReadRef<'data>> {
     #[cfg(feature = "coff")]
     Coff(coff::CoffSegmentIterator<'data, 'file, R>),
     #[cfg(feature = "coff")]
@@ -538,18 +532,12 @@ impl<'data, 'file, R: ReadRef<'data>> Iterator for SegmentIterator<'data, 'file,
 }
 
 /// A segment of a `File`.
-pub struct Segment<'data, 'file, R: ReadRef<'data> = &'data [u8]>
-where
-    'data: 'file,
-{
+pub struct Segment<'data, 'file, R: ReadRef<'data> = &'data [u8]> {
     inner: SegmentInternal<'data, 'file, R>,
 }
 
 #[derive(Debug)]
-enum SegmentInternal<'data, 'file, R: ReadRef<'data>>
-where
-    'data: 'file,
-{
+enum SegmentInternal<'data, 'file, R: ReadRef<'data>> {
     #[cfg(feature = "coff")]
     Coff(coff::CoffSegment<'data, 'file, R>),
     #[cfg(feature = "coff")]
@@ -635,19 +623,13 @@ impl<'data, 'file, R: ReadRef<'data>> ObjectSegment<'data> for Segment<'data, 'f
 
 /// An iterator of the sections of a `File`.
 #[derive(Debug)]
-pub struct SectionIterator<'data, 'file, R: ReadRef<'data> = &'data [u8]>
-where
-    'data: 'file,
-{
+pub struct SectionIterator<'data, 'file, R: ReadRef<'data> = &'data [u8]> {
     inner: SectionIteratorInternal<'data, 'file, R>,
 }
 
 // we wrap our enums in a struct so that they are kept private.
 #[derive(Debug)]
-enum SectionIteratorInternal<'data, 'file, R: ReadRef<'data>>
-where
-    'data: 'file,
-{
+enum SectionIteratorInternal<'data, 'file, R: ReadRef<'data>> {
     #[cfg(feature = "coff")]
     Coff(coff::CoffSectionIterator<'data, 'file, R>),
     #[cfg(feature = "coff")]
@@ -682,17 +664,11 @@ impl<'data, 'file, R: ReadRef<'data>> Iterator for SectionIterator<'data, 'file,
 }
 
 /// A Section of a File
-pub struct Section<'data, 'file, R: ReadRef<'data> = &'data [u8]>
-where
-    'data: 'file,
-{
+pub struct Section<'data, 'file, R: ReadRef<'data> = &'data [u8]> {
     inner: SectionInternal<'data, 'file, R>,
 }
 
-enum SectionInternal<'data, 'file, R: ReadRef<'data>>
-where
-    'data: 'file,
-{
+enum SectionInternal<'data, 'file, R: ReadRef<'data>> {
     #[cfg(feature = "coff")]
     Coff(coff::CoffSection<'data, 'file, R>),
     #[cfg(feature = "coff")]
@@ -819,18 +795,12 @@ impl<'data, 'file, R: ReadRef<'data>> ObjectSection<'data> for Section<'data, 'f
 
 /// An iterator of the COMDAT section groups of a `File`.
 #[derive(Debug)]
-pub struct ComdatIterator<'data, 'file, R: ReadRef<'data> = &'data [u8]>
-where
-    'data: 'file,
-{
+pub struct ComdatIterator<'data, 'file, R: ReadRef<'data> = &'data [u8]> {
     inner: ComdatIteratorInternal<'data, 'file, R>,
 }
 
 #[derive(Debug)]
-enum ComdatIteratorInternal<'data, 'file, R: ReadRef<'data>>
-where
-    'data: 'file,
-{
+enum ComdatIteratorInternal<'data, 'file, R: ReadRef<'data>> {
     #[cfg(feature = "coff")]
     Coff(coff::CoffComdatIterator<'data, 'file, R>),
     #[cfg(feature = "coff")]
@@ -865,17 +835,11 @@ impl<'data, 'file, R: ReadRef<'data>> Iterator for ComdatIterator<'data, 'file, 
 }
 
 /// A COMDAT section group of a `File`.
-pub struct Comdat<'data, 'file, R: ReadRef<'data> = &'data [u8]>
-where
-    'data: 'file,
-{
+pub struct Comdat<'data, 'file, R: ReadRef<'data> = &'data [u8]> {
     inner: ComdatInternal<'data, 'file, R>,
 }
 
-enum ComdatInternal<'data, 'file, R: ReadRef<'data>>
-where
-    'data: 'file,
-{
+enum ComdatInternal<'data, 'file, R: ReadRef<'data>> {
     #[cfg(feature = "coff")]
     Coff(coff::CoffComdat<'data, 'file, R>),
     #[cfg(feature = "coff")]
@@ -945,18 +909,12 @@ impl<'data, 'file, R: ReadRef<'data>> ObjectComdat<'data> for Comdat<'data, 'fil
 
 /// An iterator over COMDAT section entries.
 #[derive(Debug)]
-pub struct ComdatSectionIterator<'data, 'file, R: ReadRef<'data> = &'data [u8]>
-where
-    'data: 'file,
-{
+pub struct ComdatSectionIterator<'data, 'file, R: ReadRef<'data> = &'data [u8]> {
     inner: ComdatSectionIteratorInternal<'data, 'file, R>,
 }
 
 #[derive(Debug)]
-enum ComdatSectionIteratorInternal<'data, 'file, R: ReadRef<'data>>
-where
-    'data: 'file,
-{
+enum ComdatSectionIteratorInternal<'data, 'file, R: ReadRef<'data>> {
     #[cfg(feature = "coff")]
     Coff(coff::CoffComdatSectionIterator<'data, 'file, R>),
     #[cfg(feature = "coff")]
@@ -993,7 +951,6 @@ impl<'data, 'file, R: ReadRef<'data>> Iterator for ComdatSectionIterator<'data, 
 #[derive(Debug)]
 pub struct SymbolTable<'data, 'file, R = &'data [u8]>
 where
-    'data: 'file,
     R: ReadRef<'data>,
 {
     inner: SymbolTableInternal<'data, 'file, R>,
@@ -1002,7 +959,6 @@ where
 #[derive(Debug)]
 enum SymbolTableInternal<'data, 'file, R>
 where
-    'data: 'file,
     R: ReadRef<'data>,
 {
     #[cfg(feature = "coff")]
@@ -1079,7 +1035,6 @@ impl<'data, 'file, R: ReadRef<'data>> ObjectSymbolTable<'data> for SymbolTable<'
 #[derive(Debug)]
 pub struct SymbolIterator<'data, 'file, R = &'data [u8]>
 where
-    'data: 'file,
     R: ReadRef<'data>,
 {
     inner: SymbolIteratorInternal<'data, 'file, R>,
@@ -1088,7 +1043,6 @@ where
 #[derive(Debug)]
 enum SymbolIteratorInternal<'data, 'file, R>
 where
-    'data: 'file,
     R: ReadRef<'data>,
 {
     #[cfg(feature = "coff")]
@@ -1159,7 +1113,6 @@ impl<'data, 'file, R: ReadRef<'data>> Iterator for SymbolIterator<'data, 'file, 
 /// A symbol table entry.
 pub struct Symbol<'data, 'file, R = &'data [u8]>
 where
-    'data: 'file,
     R: ReadRef<'data>,
 {
     inner: SymbolInternal<'data, 'file, R>,
@@ -1167,7 +1120,6 @@ where
 
 enum SymbolInternal<'data, 'file, R>
 where
-    'data: 'file,
     R: ReadRef<'data>,
 {
     #[cfg(feature = "coff")]
@@ -1297,7 +1249,6 @@ impl<'data, 'file, R: ReadRef<'data>> ObjectSymbol<'data> for Symbol<'data, 'fil
 #[derive(Debug)]
 pub struct DynamicRelocationIterator<'data, 'file, R = &'data [u8]>
 where
-    'data: 'file,
     R: ReadRef<'data>,
 {
     inner: DynamicRelocationIteratorInternal<'data, 'file, R>,
@@ -1306,7 +1257,6 @@ where
 #[derive(Debug)]
 enum DynamicRelocationIteratorInternal<'data, 'file, R>
 where
-    'data: 'file,
     R: ReadRef<'data>,
 {
     #[cfg(feature = "elf")]
@@ -1334,18 +1284,12 @@ impl<'data, 'file, R: ReadRef<'data>> Iterator for DynamicRelocationIterator<'da
 
 /// An iterator over section relocation entries.
 #[derive(Debug)]
-pub struct SectionRelocationIterator<'data, 'file, R: ReadRef<'data> = &'data [u8]>
-where
-    'data: 'file,
-{
+pub struct SectionRelocationIterator<'data, 'file, R: ReadRef<'data> = &'data [u8]> {
     inner: SectionRelocationIteratorInternal<'data, 'file, R>,
 }
 
 #[derive(Debug)]
-enum SectionRelocationIteratorInternal<'data, 'file, R: ReadRef<'data>>
-where
-    'data: 'file,
-{
+enum SectionRelocationIteratorInternal<'data, 'file, R: ReadRef<'data>> {
     #[cfg(feature = "coff")]
     Coff(coff::CoffRelocationIterator<'data, 'file, R>),
     #[cfg(feature = "coff")]

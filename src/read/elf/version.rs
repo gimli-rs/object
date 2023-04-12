@@ -188,7 +188,7 @@ impl<'data, Elf: FileHeader> VersionTable<'data, Elf> {
     /// Returns false for any error.
     ///
     /// Note: this function hasn't been fully tested and is likely to be incomplete.
-    pub fn matches(&self, endian: Elf::Endian, index: usize, need: Option<&Version>) -> bool {
+    pub fn matches(&self, endian: Elf::Endian, index: usize, need: Option<&Version<'_>>) -> bool {
         let version_index = self.version_index(endian, index);
         let def = match self.version(version_index) {
             Ok(def) => def,

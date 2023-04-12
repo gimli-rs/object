@@ -21,7 +21,6 @@ pub type MachOSectionIterator64<'data, 'file, Endian = Endianness, R = &'data [u
 /// An iterator over the sections of a `MachOFile`.
 pub struct MachOSectionIterator<'data, 'file, Mach, R = &'data [u8]>
 where
-    'data: 'file,
     Mach: MachHeader,
     R: ReadRef<'data>,
 {
@@ -66,7 +65,6 @@ pub type MachOSection64<'data, 'file, Endian = Endianness, R = &'data [u8]> =
 #[derive(Debug)]
 pub struct MachOSection<'data, 'file, Mach, R = &'data [u8]>
 where
-    'data: 'file,
     Mach: MachHeader,
     R: ReadRef<'data>,
 {

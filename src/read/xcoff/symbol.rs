@@ -145,7 +145,6 @@ pub type XcoffSymbolTable64<'data, 'file, R = &'data [u8]> =
 #[derive(Debug, Clone, Copy)]
 pub struct XcoffSymbolTable<'data, 'file, Xcoff, R = &'data [u8]>
 where
-    'data: 'file,
     Xcoff: FileHeader,
     R: ReadRef<'data>,
 {
@@ -193,7 +192,6 @@ pub type XcoffSymbolIterator64<'data, 'file, R = &'data [u8]> =
 /// An iterator over the symbols of an `XcoffFile`.
 pub struct XcoffSymbolIterator<'data, 'file, Xcoff, R = &'data [u8]>
 where
-    'data: 'file,
     Xcoff: FileHeader,
     R: ReadRef<'data>,
 {
@@ -240,7 +238,6 @@ pub type XcoffSymbol64<'data, 'file, R = &'data [u8]> =
 #[derive(Debug, Clone, Copy)]
 pub struct XcoffSymbol<'data, 'file, Xcoff, R = &'data [u8]>
 where
-    'data: 'file,
     Xcoff: FileHeader,
     R: ReadRef<'data>,
 {

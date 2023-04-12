@@ -531,7 +531,6 @@ pub type MachOComdatSectionIterator64<'data, 'file, Endian = Endianness, R = &'d
 #[derive(Debug)]
 pub struct MachOComdatSectionIterator<'data, 'file, Mach, R = &'data [u8]>
 where
-    'data: 'file,
     Mach: MachHeader,
     R: ReadRef<'data>,
 {
