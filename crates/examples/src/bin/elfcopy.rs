@@ -149,12 +149,12 @@ impl RedefineSymTable {
     fn get_redefined_name<'a>(&'a self, original: &'a [u8]) -> &'a [u8] {
         // check if we have a rename for this symbol
         if let Some(map) = self.map.as_ref() {
-            if let Some(new_string) = map.get(original.into()) {
+            if let Some(new_string) = map.get(original) {
                 return new_string.as_slice();
             }
         }
 
-        return original;
+        original
     }
 }
 
@@ -921,10 +921,10 @@ fn copy_file<Elf: FileHeader<Endian = Endianness>>(
             | elf::SHT_INIT_ARRAY
             | elf::SHT_FINI_ARRAY => {
                 let out_section = &out_sections[i];
-                let sh_link = out_sections_index[in_section.sh_link(endian) as usize].0 as u32;
+                let sh_link = out_sections_index[in_section.sh_link(endian) as usize].0;
                 let mut sh_info = in_section.sh_info(endian);
                 if in_section.sh_flags(endian).into() as u32 & elf::SHF_INFO_LINK != 0 {
-                    sh_info = out_sections_index[sh_info as usize].0 as u32;
+                    sh_info = out_sections_index[sh_info as usize].0;
                 }
                 writer.write_section_header(&object::write::elf::SectionHeader {
                     name: out_section.name,

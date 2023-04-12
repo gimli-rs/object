@@ -45,7 +45,7 @@ fn main() {
     objdump::print(
         &mut stdout.lock(),
         &mut stderr.lock(),
-        &*file,
+        &file,
         &extra_file_data,
         member_names,
     )
@@ -68,7 +68,7 @@ fn open_subcaches_if_exist(path: &str) -> Vec<fs::File> {
         };
     }
     let symbols_subcache_path = format!("{}.symbols", path);
-    if let Ok(subcache_file) = fs::File::open(&symbols_subcache_path) {
+    if let Ok(subcache_file) = fs::File::open(symbols_subcache_path) {
         files.push(subcache_file);
     };
     files

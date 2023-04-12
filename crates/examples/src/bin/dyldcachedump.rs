@@ -77,7 +77,7 @@ fn open_subcaches_if_exist(path: &str) -> Vec<fs::File> {
     let mut files = Vec::new();
     for i in 1.. {
         let subcache_path = format!("{}.{}", path, i);
-        match fs::File::open(&subcache_path) {
+        match fs::File::open(subcache_path) {
             Ok(subcache_file) => files.push(subcache_file),
             Err(_) => break,
         };
@@ -85,14 +85,14 @@ fn open_subcaches_if_exist(path: &str) -> Vec<fs::File> {
     if files.is_empty() {
         for i in 1.. {
             let subcache_path = format!("{}.{:02}", path, i);
-            match fs::File::open(&subcache_path) {
+            match fs::File::open(subcache_path) {
                 Ok(subcache_file) => files.push(subcache_file),
                 Err(_) => break,
             };
         }
     }
     let symbols_subcache_path = format!("{}.symbols", path);
-    if let Ok(subcache_file) = fs::File::open(&symbols_subcache_path) {
+    if let Ok(subcache_file) = fs::File::open(symbols_subcache_path) {
         files.push(subcache_file);
     };
     println!("Found {} subcache files", files.len());

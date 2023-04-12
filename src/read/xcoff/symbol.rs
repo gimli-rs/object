@@ -345,8 +345,8 @@ impl<'data, 'file, Xcoff: FileHeader, R: ReadRef<'data>> ObjectSymbol<'data>
             }
         }
         match self.symbol.n_sclass() {
-            xcoff::C_NULL => return SymbolKind::Null,
-            xcoff::C_FILE => return SymbolKind::File,
+            xcoff::C_NULL => SymbolKind::Null,
+            xcoff::C_FILE => SymbolKind::File,
             _ => SymbolKind::Unknown,
         }
     }
