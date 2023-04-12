@@ -282,9 +282,9 @@ impl<'a> Object<'a> {
             if is_64 {
                 let section_header = xcoff::SectionHeader64 {
                     s_name: sectname,
-                    s_paddr: U64::new(BE, section_offsets[index].address as u64),
+                    s_paddr: U64::new(BE, section_offsets[index].address),
                     // This field has the same value as the s_paddr field.
-                    s_vaddr: U64::new(BE, section_offsets[index].address as u64),
+                    s_vaddr: U64::new(BE, section_offsets[index].address),
                     s_size: U64::new(BE, section.data.len() as u64),
                     s_scnptr: U64::new(BE, section_offsets[index].data_offset as u64),
                     s_relptr: U64::new(BE, section_offsets[index].reloc_offset as u64),
@@ -342,7 +342,7 @@ impl<'a> Object<'a> {
                     };
                     if is_64 {
                         let xcoff_rel = xcoff::Rel64 {
-                            r_vaddr: U64::new(BE, reloc.offset as u64),
+                            r_vaddr: U64::new(BE, reloc.offset),
                             r_symndx: U32::new(BE, symbol_offsets[reloc.symbol.0].index as u32),
                             // Specifies the bit length of the relocatable reference minus one.
                             r_rsize: (reloc.size - 1),
@@ -404,8 +404,8 @@ impl<'a> Object<'a> {
                     n_offset: U32::new(BE, strtab.get_offset(str_id) as u32),
                     n_scnum: I16::new(BE, n_scnum),
                     n_type: U16::new(BE, n_type),
-                    n_sclass: n_sclass,
-                    n_numaux: n_numaux,
+                    n_sclass,
+                    n_numaux,
                 };
                 buffer.write(&xcoff_sym);
             } else {
@@ -423,8 +423,8 @@ impl<'a> Object<'a> {
                     n_value: U32::new(BE, n_value as u32),
                     n_scnum: I16::new(BE, n_scnum),
                     n_type: U16::new(BE, n_type),
-                    n_sclass: n_sclass,
-                    n_numaux: n_numaux,
+                    n_sclass,
+                    n_numaux,
                 };
                 buffer.write(&xcoff_sym);
             }
@@ -509,8 +509,8 @@ impl<'a> Object<'a> {
                         x_scnlen_hi: U32::new(BE, ((scnlen >> 32) & 0xFFFFFFFF) as u32),
                         x_parmhash: U32::new(BE, 0),
                         x_snhash: U16::new(BE, 0),
-                        x_smtyp: x_smtyp,
-                        x_smclas: x_smclas,
+                        x_smtyp,
+                        x_smclas,
                         pad: 0,
                         x_auxtype: xcoff::AUX_CSECT,
                     };
@@ -520,8 +520,8 @@ impl<'a> Object<'a> {
                         x_scnlen: U32::new(BE, scnlen as u32),
                         x_parmhash: U32::new(BE, 0),
                         x_snhash: U16::new(BE, 0),
-                        x_smtyp: x_smtyp,
-                        x_smclas: x_smclas,
+                        x_smtyp,
+                        x_smclas,
                         x_stab: U32::new(BE, 0),
                         x_snstab: U16::new(BE, 0),
                     };

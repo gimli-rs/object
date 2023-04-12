@@ -756,7 +756,7 @@ impl<'a> Section<'a> {
             self.size = offset;
         }
         self.size += size;
-        offset as u64
+        offset
     }
 
     /// Returns the section as-built so far.

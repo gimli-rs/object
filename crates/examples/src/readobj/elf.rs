@@ -444,10 +444,10 @@ fn print_section_rela<Elf: FileHeader>(
     }
 }
 
-fn print_rel_symbol<'data, Elf: FileHeader>(
+fn print_rel_symbol<Elf: FileHeader>(
     p: &mut Printer<'_>,
     endian: Elf::Endian,
-    symbols: Option<SymbolTable<'data, Elf>>,
+    symbols: Option<SymbolTable<'_, Elf>>,
     sym: u32,
 ) {
     let name = symbols.and_then(|symbols| {

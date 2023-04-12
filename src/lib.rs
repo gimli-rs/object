@@ -68,8 +68,6 @@
 #![allow(clippy::should_implement_trait)]
 // Unit errors are converted to other types by callers.
 #![allow(clippy::result_unit_err)]
-// Clippy is wrong.
-#![allow(clippy::transmute_ptr_to_ptr)]
 // Worse readability sometimes.
 #![allow(clippy::collapsible_else_if)]
 

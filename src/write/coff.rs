@@ -642,7 +642,7 @@ impl<'a> Object<'a> {
             let mut coff_symbol = coff::ImageSymbol {
                 name: [0; 8],
                 value: U32Bytes::new(LE, value),
-                section_number: U16Bytes::new(LE, section_number as u16),
+                section_number: U16Bytes::new(LE, section_number),
                 typ: U16Bytes::new(LE, typ),
                 storage_class,
                 number_of_aux_symbols,
