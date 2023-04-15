@@ -2,6 +2,85 @@
 
 --------------------------------------------------------------------------------
 
+## 0.31.0
+
+Released 2023/04/14.
+
+### Breaking changes
+
+* Added a type parameter on existing COFF types to support reading COFF `/bigobj` files.
+  [#502](https://github.com/gimli-rs/object/pull/502)
+
+* Changed PE symbols to support COFF `/bigobj`.
+  Changed `pe::IMAGE_SYM_*` to `i32`.
+  Changed `pe::ImageSymbolEx::section_number` to `I32Bytes`.
+  Deleted a number of methods from `pe::ImageSymbol`.
+  Use the `read::pe::ImageSymbol` trait instead.
+  [#502](https://github.com/gimli-rs/object/pull/502)
+
+* Changed `pe::Guid` to a single array, and added methods to read the individual fields.
+  [#502](https://github.com/gimli-rs/object/pull/502)
+
+* Added `Symbol` type parameter to `SymbolFlags` to support `SymbolFlags::Xcoff`.
+  [#527](https://github.com/gimli-rs/object/pull/527)
+
+### Changed
+
+* Fix alignment when reserving zero length sections in `write::elf::Write::reserve`.
+  [#514](https://github.com/gimli-rs/object/pull/514)
+
+* Validate command size in `read::macho::LoadCommandIterator`.
+  [#516](https://github.com/gimli-rs/object/pull/516)
+
+* Handle invalid alignment in `read::macho::MachoSection::align`.
+  [#516](https://github.com/gimli-rs/object/pull/516)
+
+* Accept `SymbolKind::Unknown` in `write::Object::macho_write`.
+  [#519](https://github.com/gimli-rs/object/pull/519)
+
+* Updated `wasmparser` dependency.
+  [#528](https://github.com/gimli-rs/object/pull/528)
+
+### Added
+
+* Added more `elf::EF_RISCV_*` definitions.
+  [#507](https://github.com/gimli-rs/object/pull/507)
+
+* Added `read::elf::SectionHeader::gnu_attributes` and associated types.
+  Added `.gnu.attributes` support to `write::elf::Writer`.
+  [#509](https://github.com/gimli-rs/object/pull/509)
+  [#525](https://github.com/gimli-rs/object/pull/525)
+
+* Added `write::Object::set_macho_build_version`.
+  [#524](https://github.com/gimli-rs/object/pull/524)
+
+* Added `read::FileKind::Xcoff32`, `read::FileKind::Xcoff64`, `read::XcoffFile`,
+  and associated types.
+  Added XCOFF support to `write::Object`.
+  [#469](https://github.com/gimli-rs/object/pull/469)
+  [#476](https://github.com/gimli-rs/object/pull/476)
+  [#477](https://github.com/gimli-rs/object/pull/477)
+  [#482](https://github.com/gimli-rs/object/pull/482)
+  [#484](https://github.com/gimli-rs/object/pull/484)
+  [#486](https://github.com/gimli-rs/object/pull/486)
+  [#527](https://github.com/gimli-rs/object/pull/527)
+
+* Added `read::FileKind::CoffBig`, `read::pe::CoffHeader` and `read::pe::ImageSymbol`.
+  [#502](https://github.com/gimli-rs/object/pull/502)
+
+* Added `elf::PT_GNU_PROPERTY`.
+  [#530](https://github.com/gimli-rs/object/pull/530)
+
+* Added `elf::ELFCOMPRESS_ZSTD`, `read::CompressionFormat::Zstandard`,
+  and Zstandard decompression in `read::CompressedData::decompress` using
+  the `ruzstd` crate.
+  [#532](https://github.com/gimli-rs/object/pull/532)
+
+* Added `read::elf::NoteIterator::new`.
+  [#533](https://github.com/gimli-rs/object/pull/533)
+
+--------------------------------------------------------------------------------
+
 ## 0.30.3
 
 Released 2023/01/23.
