@@ -1900,6 +1900,20 @@ pub const NT_GNU_GOLD_VERSION: u32 = 4;
 pub const NT_GNU_PROPERTY_TYPE_0: u32 = 5;
 
 // TODO: GNU_PROPERTY_*
+
+/// GNU Property Type for X86
+pub const GNU_PROPERTY_X86_FEATURE_1_AND: u32 = 0xc0000002;
+/// GNU Property Type for IBT X86
+pub const GNU_PROPERTY_X86_FEATURE_1_IBT: u32 = 1 << 0;
+/// GNU Property Type for SHSTK X86
+pub const GNU_PROPERTY_X86_FEATURE_1_SHSTK: u32 = 1 << 1;
+/// GNU Property Type for AARCH64
+pub const GNU_PROPERTY_AARCH64_FEATURE_1_AND: u32 = 0xc0000000;
+/// GNU Property Type for BTI  AArch64
+pub const GNU_PROPERTY_AARCH64_FEATURE_1_BTI: u32 = 1 << 0;
+/// GNU Property Type for PAC AArch64
+pub const GNU_PROPERTY_AARCH64_FEATURE_1_PAC: u32 = 1 << 0;
+
 // TODO: Elf*_Move
 
 /// Header of `SHT_HASH` section.
