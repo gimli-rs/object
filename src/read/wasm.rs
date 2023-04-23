@@ -106,8 +106,10 @@ impl<'data, R: ReadRef<'data>> WasmFile<'data, R> {
         let mut entry_func_id = None;
         let mut code_range_start = 0;
         let mut code_func_index = 0;
-        // One-to-one mapping of globals to their value (if the global is a constant i32).
-        let mut global_i32_values = Vec::new();
+        // One-to-one mapping of globals to their value (if the global is a constant usize).
+        let mut global_usize_values = Vec::new();
+        // Whether the first linear memory is 64-bits.
+        let mut is_memory64 = false;
 
         for payload in parser {
             let payload = payload.read_error("Invalid Wasm section header")?;
@@ -167,25 +169,32 @@ impl<'data, R: ReadRef<'data>> WasmFile<'data, R> {
                 }
                 wp::Payload::MemorySection(section) => {
                     file.add_section(SectionId::Memory, section.range(), "");
+                    for memory in section {
+                        let memory = memory.read_error("Couldn't read a memory item")?;
+                        is_memory64 = memory.memory64;
+                        break;
+                    }
                 }
                 wp::Payload::GlobalSection(section) => {
                     file.add_section(SectionId::Global, section.range(), "");
+                    let usize_type = if is_memory64 {
+                        wp::ValType::I64
+                    } else {
+                        wp::ValType::I32
+                    };
                     for global in section {
                         let global = global.read_error("Couldn't read a global item")?;
                         let mut address = None;
-                        const I32_CONST: wp::GlobalType = wp::GlobalType {
-                            content_type: wp::ValType::I32,
-                            mutable: false,
-                        };
-                        if global.ty == I32_CONST {
-                            // There should be exactly one instruction, which is an `i32.const`.
+                        if !global.ty.mutable && global.ty.content_type == usize_type {
+                            // There should be exactly one instruction.
                             let init = global.init_expr.get_operators_reader().read();
-                            let init = init.read_error("Couldn't read a global init expr")?;
-                            if let wp::Operator::I32Const { value } = init {
-                                address = Some(value as u64);
-                            }
+                            address = match init.read_error("Couldn't read a global init expr")? {
+                                wp::Operator::I32Const { value } => Some(value as u64),
+                                wp::Operator::I64Const { value } => Some(value as u64),
+                                _ => None,
+                            };
                         }
-                        global_i32_values.push(address);
+                        global_usize_values.push(address);
                     }
                 }
                 wp::Payload::ExportSection(section) => {
@@ -227,7 +236,7 @@ impl<'data, R: ReadRef<'data>> WasmFile<'data, R> {
                         // Try to guess the symbol address.
                         let mut address = 0;
                         if export.kind == wp::ExternalKind::Global {
-                            if let Some(&Some(x)) = global_i32_values.get(export.index as usize) {
+                            if let Some(&Some(x)) = global_usize_values.get(export.index as usize) {
                                 address = x;
                             }
                         }
