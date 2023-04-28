@@ -172,11 +172,11 @@ fn print_segment_notes<Elf: FileHeader>(
     p: &mut Printer<'_>,
     endian: Elf::Endian,
     data: &[u8],
-    _elf: &Elf,
+    elf: &Elf,
     segment: &Elf::ProgramHeader,
 ) {
     if let Some(Some(notes)) = segment.notes(endian, data).print_err(p) {
-        print_notes(p, endian, notes);
+        print_notes(p, endian, elf, notes);
     }
 }
 
@@ -497,11 +497,11 @@ fn print_section_notes<Elf: FileHeader>(
     p: &mut Printer<'_>,
     endian: Elf::Endian,
     data: &[u8],
-    _elf: &Elf,
+    elf: &Elf,
     section: &Elf::SectionHeader,
 ) {
     if let Some(Some(notes)) = section.notes(endian, data).print_err(p) {
-        print_notes(p, endian, notes);
+        print_notes(p, endian, elf, notes);
     }
 }
 
@@ -551,6 +551,7 @@ fn print_section_group<Elf: FileHeader>(
 fn print_notes<Elf: FileHeader>(
     p: &mut Printer<'_>,
     endian: Elf::Endian,
+    elf: &Elf,
     mut notes: NoteIterator<Elf>,
 ) {
     while let Some(Some(note)) = notes.next().print_err(p) {
@@ -568,8 +569,57 @@ fn print_notes<Elf: FileHeader>(
                 &[]
             };
             p.field_enum("Type", note.n_type(endian), flags);
-            // TODO: interpret desc
-            p.field_bytes("Desc", note.desc());
+            if let Some(mut properties) = note.gnu_properties(endian) {
+                while let Some(Some(property)) = properties.next().print_err(p) {
+                    p.group("Property", |p| {
+                        let pr_type = property.pr_type();
+                        let proc = match elf.e_machine(endian) {
+                            EM_386 | EM_X86_64 => FLAGS_GNU_PROPERTY_X86,
+                            EM_AARCH64 => FLAGS_GNU_PROPERTY_AARCH64,
+                            _ => &[],
+                        };
+                        p.field_enums("Type", pr_type, &[FLAGS_GNU_PROPERTY, proc]);
+                        match pr_type {
+                            GNU_PROPERTY_1_NEEDED => {
+                                if let Some(val) = property.data_u32(endian).print_err(p) {
+                                    p.field_hex("Value", val);
+                                    p.flags(val, 0, FLAGS_GNU_PROPERTY_1_NEEDED);
+                                }
+                            }
+                            _ => {}
+                        }
+                        match elf.e_machine(endian) {
+                            EM_386 | EM_X86_64 => match pr_type {
+                                GNU_PROPERTY_X86_ISA_1_USED | GNU_PROPERTY_X86_ISA_1_NEEDED => {
+                                    if let Some(val) = property.data_u32(endian).print_err(p) {
+                                        p.field_hex("Value", val);
+                                        p.flags(val, 0, FLAGS_GNU_PROPERTY_X86_ISA_1);
+                                    }
+                                }
+                                GNU_PROPERTY_X86_FEATURE_1_AND => {
+                                    if let Some(val) = property.data_u32(endian).print_err(p) {
+                                        p.field_hex("Value", val);
+                                        p.flags(val, 0, FLAGS_GNU_PROPERTY_X86_FEATURE_1);
+                                    }
+                                }
+                                _ => {}
+                            },
+                            EM_AARCH64 => match pr_type {
+                                GNU_PROPERTY_AARCH64_FEATURE_1_AND => {
+                                    if let Some(val) = property.data_u32(endian).print_err(p) {
+                                        p.field_hex("Value", val);
+                                        p.flags(val, 0, FLAGS_GNU_PROPERTY_AARCH64_FEATURE_1);
+                                    }
+                                }
+                                _ => {}
+                            },
+                            _ => {}
+                        }
+                    });
+                }
+            } else {
+                p.field_bytes("Desc", note.desc());
+            }
         });
     }
 }
@@ -3184,6 +3234,33 @@ static FLAGS_NT_GNU: &[Flag<u32>] = &flags!(
     NT_GNU_BUILD_ID,
     NT_GNU_GOLD_VERSION,
     NT_GNU_PROPERTY_TYPE_0,
+);
+static FLAGS_GNU_PROPERTY: &[Flag<u32>] = &flags!(
+    GNU_PROPERTY_STACK_SIZE,
+    GNU_PROPERTY_NO_COPY_ON_PROTECTED,
+    GNU_PROPERTY_1_NEEDED,
+);
+static FLAGS_GNU_PROPERTY_1_NEEDED: &[Flag<u32>] =
+    &flags!(GNU_PROPERTY_1_NEEDED_INDIRECT_EXTERN_ACCESS);
+static FLAGS_GNU_PROPERTY_AARCH64: &[Flag<u32>] = &flags!(GNU_PROPERTY_AARCH64_FEATURE_1_AND);
+static FLAGS_GNU_PROPERTY_AARCH64_FEATURE_1: &[Flag<u32>] = &flags!(
+    GNU_PROPERTY_AARCH64_FEATURE_1_BTI,
+    GNU_PROPERTY_AARCH64_FEATURE_1_PAC,
+);
+static FLAGS_GNU_PROPERTY_X86: &[Flag<u32>] = &flags!(
+    GNU_PROPERTY_X86_ISA_1_USED,
+    GNU_PROPERTY_X86_ISA_1_NEEDED,
+    GNU_PROPERTY_X86_FEATURE_1_AND,
+);
+static FLAGS_GNU_PROPERTY_X86_ISA_1: &[Flag<u32>] = &flags!(
+    GNU_PROPERTY_X86_ISA_1_BASELINE,
+    GNU_PROPERTY_X86_ISA_1_V2,
+    GNU_PROPERTY_X86_ISA_1_V3,
+    GNU_PROPERTY_X86_ISA_1_V4,
+);
+static FLAGS_GNU_PROPERTY_X86_FEATURE_1: &[Flag<u32>] = &flags!(
+    GNU_PROPERTY_X86_FEATURE_1_IBT,
+    GNU_PROPERTY_X86_FEATURE_1_SHSTK,
 );
 static FLAGS_GRP: &[Flag<u32>] = &flags!(GRP_COMDAT);
 static FLAGS_DT: &[Flag<u32>] = &flags!(
