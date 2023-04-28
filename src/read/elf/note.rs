@@ -2,7 +2,7 @@ use core::fmt::Debug;
 use core::mem;
 
 use crate::elf;
-use crate::endian;
+use crate::endian::{self, U32};
 use crate::pod::Pod;
 use crate::read::util;
 use crate::read::{self, Bytes, Error, ReadError};
@@ -80,7 +80,12 @@ where
         }
         self.data = data;
 
-        Ok(Some(Note { header, name, desc }))
+        Ok(Some(Note {
+            align: self.align,
+            header,
+            name,
+            desc,
+        }))
     }
 }
 
@@ -90,6 +95,7 @@ pub struct Note<'data, Elf>
 where
     Elf: FileHeader,
 {
+    align: usize,
     header: &'data Elf::NoteHeader,
     name: &'data [u8],
     desc: &'data [u8],
@@ -136,6 +142,21 @@ impl<'data, Elf: FileHeader> Note<'data, Elf> {
     /// of this field is determined by `name` and `n_type`.
     pub fn desc(&self) -> &'data [u8] {
         self.desc
+    }
+
+    /// Return an iterator for properties if this note's type is `NT_GNU_PROPERTY_TYPE_0`.
+    pub fn gnu_properties(
+        &self,
+        endian: Elf::Endian,
+    ) -> Option<GnuPropertyIterator<'data, Elf::Endian>> {
+        if self.name() != elf::ELF_NOTE_GNU || self.n_type(endian) != elf::NT_GNU_PROPERTY_TYPE_0 {
+            return None;
+        }
+        Some(GnuPropertyIterator {
+            endian,
+            align: self.align,
+            data: Bytes(self.desc),
+        })
     }
 }
 
@@ -184,5 +205,62 @@ impl<Endian: endian::Endian> NoteHeader for elf::NoteHeader64<Endian> {
     #[inline]
     fn n_type(&self, endian: Self::Endian) -> u32 {
         self.n_type.get(endian)
+    }
+}
+
+/// An iterator over the properties in a `NT_GNU_PROPERTY_TYPE_0` note.
+#[derive(Debug)]
+pub struct GnuPropertyIterator<'data, Endian: endian::Endian> {
+    endian: Endian,
+    align: usize,
+    data: Bytes<'data>,
+}
+
+impl<'data, Endian: endian::Endian> GnuPropertyIterator<'data, Endian> {
+    /// Returns the next property.
+    pub fn next(&mut self) -> read::Result<Option<GnuProperty<'data>>> {
+        let mut data = self.data;
+        if data.is_empty() {
+            return Ok(None);
+        }
+
+        (|| -> Result<_, ()> {
+            let pr_type = data.read_at::<U32<Endian>>(0)?.get(self.endian);
+            let pr_datasz = data.read_at::<U32<Endian>>(4)?.get(self.endian) as usize;
+            let pr_data = data.read_bytes_at(8, pr_datasz)?.0;
+            data.skip(util::align(8 + pr_datasz, self.align))?;
+            self.data = data;
+            Ok(Some(GnuProperty { pr_type, pr_data }))
+        })()
+        .read_error("Invalid ELF GNU property")
+    }
+}
+
+/// A property in a `NT_GNU_PROPERTY_TYPE_0` note.
+#[derive(Debug)]
+pub struct GnuProperty<'data> {
+    pr_type: u32,
+    pr_data: &'data [u8],
+}
+
+impl<'data> GnuProperty<'data> {
+    /// Return the property type.
+    ///
+    /// This is one of the `GNU_PROPERTY_*` constants.
+    pub fn pr_type(&self) -> u32 {
+        self.pr_type
+    }
+
+    /// Return the property data.
+    pub fn pr_data(&self) -> &'data [u8] {
+        self.pr_data
+    }
+
+    /// Parse the property data as an unsigned 32-bit integer.
+    pub fn data_u32<E: endian::Endian>(&self, endian: E) -> read::Result<u32> {
+        Bytes(self.pr_data)
+            .read_at::<U32<E>>(0)
+            .read_error("Invalid ELF GNU property data")
+            .map(|val| val.get(endian))
     }
 }

@@ -1876,20 +1876,88 @@ pub const NT_GNU_GOLD_VERSION: u32 = 4;
 /// Program property.
 pub const NT_GNU_PROPERTY_TYPE_0: u32 = 5;
 
-// TODO: GNU_PROPERTY_*
+// Values used in GNU .note.gnu.property notes (NT_GNU_PROPERTY_TYPE_0).
 
-/// GNU Property Type for X86
-pub const GNU_PROPERTY_X86_FEATURE_1_AND: u32 = 0xc0000002;
-/// GNU Property Type for IBT X86
-pub const GNU_PROPERTY_X86_FEATURE_1_IBT: u32 = 1 << 0;
-/// GNU Property Type for SHSTK X86
-pub const GNU_PROPERTY_X86_FEATURE_1_SHSTK: u32 = 1 << 1;
-/// GNU Property Type for AARCH64
+/// Stack size.
+pub const GNU_PROPERTY_STACK_SIZE: u32 = 1;
+/// No copy relocation on protected data symbol.
+pub const GNU_PROPERTY_NO_COPY_ON_PROTECTED: u32 = 2;
+
+// A 4-byte unsigned integer property: A bit is set if it is set in all
+// relocatable inputs.
+pub const GNU_PROPERTY_UINT32_AND_LO: u32 = 0xb0000000;
+pub const GNU_PROPERTY_UINT32_AND_HI: u32 = 0xb0007fff;
+
+// A 4-byte unsigned integer property: A bit is set if it is set in any
+// relocatable inputs.
+pub const GNU_PROPERTY_UINT32_OR_LO: u32 = 0xb0008000;
+pub const GNU_PROPERTY_UINT32_OR_HI: u32 = 0xb000ffff;
+
+/// The needed properties by the object file.  */
+pub const GNU_PROPERTY_1_NEEDED: u32 = GNU_PROPERTY_UINT32_OR_LO;
+
+/// Set if the object file requires canonical function pointers and
+/// cannot be used with copy relocation.
+pub const GNU_PROPERTY_1_NEEDED_INDIRECT_EXTERN_ACCESS: u32 = 1 << 0;
+
+/// Processor-specific semantics, lo
+pub const GNU_PROPERTY_LOPROC: u32 = 0xc0000000;
+/// Processor-specific semantics, hi
+pub const GNU_PROPERTY_HIPROC: u32 = 0xdfffffff;
+/// Application-specific semantics, lo
+pub const GNU_PROPERTY_LOUSER: u32 = 0xe0000000;
+/// Application-specific semantics, hi
+pub const GNU_PROPERTY_HIUSER: u32 = 0xffffffff;
+
+/// AArch64 specific GNU properties.
 pub const GNU_PROPERTY_AARCH64_FEATURE_1_AND: u32 = 0xc0000000;
-/// GNU Property Type for BTI  AArch64
+
 pub const GNU_PROPERTY_AARCH64_FEATURE_1_BTI: u32 = 1 << 0;
-/// GNU Property Type for PAC AArch64
-pub const GNU_PROPERTY_AARCH64_FEATURE_1_PAC: u32 = 1 << 0;
+pub const GNU_PROPERTY_AARCH64_FEATURE_1_PAC: u32 = 1 << 1;
+
+// A 4-byte unsigned integer property: A bit is set if it is set in all
+// relocatable inputs.
+pub const GNU_PROPERTY_X86_UINT32_AND_LO: u32 = 0xc0000002;
+pub const GNU_PROPERTY_X86_UINT32_AND_HI: u32 = 0xc0007fff;
+
+// A 4-byte unsigned integer property: A bit is set if it is set in any
+// relocatable inputs.
+pub const GNU_PROPERTY_X86_UINT32_OR_LO: u32 = 0xc0008000;
+pub const GNU_PROPERTY_X86_UINT32_OR_HI: u32 = 0xc000ffff;
+
+// A 4-byte unsigned integer property: A bit is set if it is set in any
+// relocatable inputs and the property is present in all relocatable
+// inputs.
+pub const GNU_PROPERTY_X86_UINT32_OR_AND_LO: u32 = 0xc0010000;
+pub const GNU_PROPERTY_X86_UINT32_OR_AND_HI: u32 = 0xc0017fff;
+
+/// The x86 instruction sets indicated by the corresponding bits are
+/// used in program.  Their support in the hardware is optional.
+pub const GNU_PROPERTY_X86_ISA_1_USED: u32 = 0xc0010002;
+/// The x86 instruction sets indicated by the corresponding bits are
+/// used in program and they must be supported by the hardware.
+pub const GNU_PROPERTY_X86_ISA_1_NEEDED: u32 = 0xc0008002;
+/// X86 processor-specific features used in program.
+pub const GNU_PROPERTY_X86_FEATURE_1_AND: u32 = 0xc0000002;
+
+/// GNU_PROPERTY_X86_ISA_1_BASELINE: CMOV, CX8 (cmpxchg8b), FPU (fld),
+/// MMX, OSFXSR (fxsave), SCE (syscall), SSE and SSE2.
+pub const GNU_PROPERTY_X86_ISA_1_BASELINE: u32 = 1 << 0;
+/// GNU_PROPERTY_X86_ISA_1_V2: GNU_PROPERTY_X86_ISA_1_BASELINE,
+/// CMPXCHG16B (cmpxchg16b), LAHF-SAHF (lahf), POPCNT (popcnt), SSE3,
+/// SSSE3, SSE4.1 and SSE4.2.
+pub const GNU_PROPERTY_X86_ISA_1_V2: u32 = 1 << 1;
+/// GNU_PROPERTY_X86_ISA_1_V3: GNU_PROPERTY_X86_ISA_1_V2, AVX, AVX2, BMI1,
+/// BMI2, F16C, FMA, LZCNT, MOVBE, XSAVE.
+pub const GNU_PROPERTY_X86_ISA_1_V3: u32 = 1 << 2;
+/// GNU_PROPERTY_X86_ISA_1_V4: GNU_PROPERTY_X86_ISA_1_V3, AVX512F,
+/// AVX512BW, AVX512CD, AVX512DQ and AVX512VL.
+pub const GNU_PROPERTY_X86_ISA_1_V4: u32 = 1 << 3;
+
+/// This indicates that all executable sections are compatible with IBT.
+pub const GNU_PROPERTY_X86_FEATURE_1_IBT: u32 = 1 << 0;
+/// This indicates that all executable sections are compatible with SHSTK.
+pub const GNU_PROPERTY_X86_FEATURE_1_SHSTK: u32 = 1 << 1;
 
 // TODO: Elf*_Move
 

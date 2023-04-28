@@ -1,0 +1,24 @@
+SectionHeader {
+    Index: 8
+    Name: ".note.gnu.property" (0x52)
+    Type: SHT_NOTE (0x7)
+    Flags: 0x2
+        SHF_ALLOC (0x2)
+    Address: 0x0
+    Offset: 0xA0
+    Size: 0x20
+    Link: 0
+    Info: 0
+    AddressAlign: 0x8
+    EntrySize: 0x0
+    Note {
+        Name: "GNU" (0x4)
+        Type: NT_GNU_PROPERTY_TYPE_0 (0x5)
+        Property {
+            Type: GNU_PROPERTY_X86_FEATURE_1_AND (0xC0000002)
+            Value: 0x3
+                GNU_PROPERTY_X86_FEATURE_1_IBT (0x1)
+                GNU_PROPERTY_X86_FEATURE_1_SHSTK (0x2)
+        }
+    }
+}
