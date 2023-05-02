@@ -46,6 +46,18 @@ impl MachOBuildVersion {
     }
 }
 
+// Public methods.
+impl<'a> Object<'a> {
+    /// Specify information for a Mach-O `LC_BUILD_VERSION` command.
+    ///
+    /// Requires `feature = "macho"`.
+    #[inline]
+    pub fn set_macho_build_version(&mut self, info: MachOBuildVersion) {
+        self.macho_build_version = Some(info);
+    }
+}
+
+// Private methods.
 impl<'a> Object<'a> {
     pub(crate) fn macho_set_subsections_via_symbols(&mut self) {
         let flags = match self.flags {
@@ -102,6 +114,10 @@ impl<'a> Object<'a> {
                 SectionKind::TlsVariables,
             ),
             StandardSection::Common => (&b"__DATA"[..], &b"__common"[..], SectionKind::Common),
+            StandardSection::GnuProperty => {
+                // Unsupported section.
+                (&[], &[], SectionKind::Note)
+            }
         }
     }
 
