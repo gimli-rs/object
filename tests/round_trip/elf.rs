@@ -216,3 +216,42 @@ fn note() {
     assert_eq!(note.n_type(endian), 2);
     assert!(notes.next().unwrap().is_none());
 }
+
+#[test]
+fn gnu_property() {
+    gnu_property_inner::<elf::FileHeader32<Endianness>>(Architecture::I386);
+    gnu_property_inner::<elf::FileHeader64<Endianness>>(Architecture::X86_64);
+}
+
+fn gnu_property_inner<Elf: FileHeader<Endian = Endianness>>(architecture: Architecture) {
+    let endian = Endianness::Little;
+    let mut object = write::Object::new(BinaryFormat::Elf, architecture, endian);
+    object.add_elf_gnu_property_u32(
+        elf::GNU_PROPERTY_X86_FEATURE_1_AND,
+        elf::GNU_PROPERTY_X86_FEATURE_1_IBT | elf::GNU_PROPERTY_X86_FEATURE_1_SHSTK,
+    );
+
+    let bytes = &*object.write().unwrap();
+
+    //std::fs::write(&"note.o", &bytes).unwrap();
+
+    let header = Elf::parse(bytes).unwrap();
+    assert_eq!(header.endian().unwrap(), endian);
+    let sections = header.sections(endian, bytes).unwrap();
+    let section = sections.section(SectionIndex(1)).unwrap();
+    assert_eq!(
+        sections.section_name(endian, section).unwrap(),
+        b".note.gnu.property"
+    );
+    let mut notes = section.notes(endian, bytes).unwrap().unwrap();
+    let note = notes.next().unwrap().unwrap();
+    let mut props = note.gnu_properties(endian).unwrap();
+    let prop = props.next().unwrap().unwrap();
+    assert_eq!(prop.pr_type(), elf::GNU_PROPERTY_X86_FEATURE_1_AND);
+    assert_eq!(
+        prop.data_u32(endian).unwrap(),
+        elf::GNU_PROPERTY_X86_FEATURE_1_IBT | elf::GNU_PROPERTY_X86_FEATURE_1_SHSTK
+    );
+    assert!(props.next().unwrap().is_none());
+    assert!(notes.next().unwrap().is_none());
+}

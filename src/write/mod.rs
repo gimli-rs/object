@@ -124,15 +124,6 @@ impl<'a> Object<'a> {
         self.mangling = mangling;
     }
 
-    /// Specify information for a Mach-O `LC_BUILD_VERSION` command.
-    ///
-    /// Requires `feature = "macho"`.
-    #[inline]
-    #[cfg(feature = "macho")]
-    pub fn set_macho_build_version(&mut self, info: MachOBuildVersion) {
-        self.macho_build_version = Some(info);
-    }
-
     /// Return the name for a standard segment.
     ///
     /// This will vary based on the file format.
@@ -631,6 +622,8 @@ pub enum StandardSection {
     TlsVariables,
     /// Common data. Only supported for Mach-O.
     Common,
+    /// Notes for GNU properties. Only supported for ELF.
+    GnuProperty,
 }
 
 impl StandardSection {
@@ -647,6 +640,7 @@ impl StandardSection {
             StandardSection::UninitializedTls => SectionKind::UninitializedTls,
             StandardSection::TlsVariables => SectionKind::TlsVariables,
             StandardSection::Common => SectionKind::Common,
+            StandardSection::GnuProperty => SectionKind::Note,
         }
     }
 
@@ -663,6 +657,7 @@ impl StandardSection {
             StandardSection::UninitializedTls,
             StandardSection::TlsVariables,
             StandardSection::Common,
+            StandardSection::GnuProperty,
         ]
     }
 }

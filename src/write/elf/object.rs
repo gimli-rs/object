@@ -1,10 +1,10 @@
 use alloc::vec::Vec;
 
-use crate::elf;
 use crate::write::elf::writer::*;
 use crate::write::string::StringId;
 use crate::write::*;
 use crate::AddressSize;
+use crate::{elf, pod};
 
 #[derive(Clone, Copy)]
 struct ComdatOffsets {
@@ -27,6 +27,39 @@ struct SymbolOffsets {
     str_id: Option<StringId>,
 }
 
+// Public methods.
+impl<'a> Object<'a> {
+    /// Add a property with a u32 value to the ELF ".note.gnu.property" section.
+    ///
+    /// Requires `feature = "elf"`.
+    pub fn add_elf_gnu_property_u32(&mut self, property: u32, value: u32) {
+        if self.format != BinaryFormat::Elf {
+            return;
+        }
+
+        let align = if self.elf_is_64() { 8 } else { 4 };
+        let mut data = Vec::with_capacity(32);
+        let n_name = b"GNU\0";
+        data.extend_from_slice(pod::bytes_of(&elf::NoteHeader32 {
+            n_namesz: U32::new(self.endian, n_name.len() as u32),
+            n_descsz: U32::new(self.endian, util::align(3 * 4, align) as u32),
+            n_type: U32::new(self.endian, elf::NT_GNU_PROPERTY_TYPE_0),
+        }));
+        data.extend_from_slice(n_name);
+        // This happens to already be aligned correctly.
+        debug_assert_eq!(util::align(data.len(), align), data.len());
+        data.extend_from_slice(pod::bytes_of(&U32::new(self.endian, property)));
+        // Value size
+        data.extend_from_slice(pod::bytes_of(&U32::new(self.endian, 4)));
+        data.extend_from_slice(pod::bytes_of(&U32::new(self.endian, value)));
+        util::write_align(&mut data, align);
+
+        let section = self.section_id(StandardSection::GnuProperty);
+        self.append_section_data(section, &data, align as u64);
+    }
+}
+
+// Private methods.
 impl<'a> Object<'a> {
     pub(crate) fn elf_section_info(
         &self,
@@ -56,6 +89,7 @@ impl<'a> Object<'a> {
                 // Unsupported section.
                 (&[], &[], SectionKind::Common)
             }
+            StandardSection::GnuProperty => (&[], &b".note.gnu.property"[..], SectionKind::Note),
         }
     }
 
@@ -153,6 +187,13 @@ impl<'a> Object<'a> {
         }
     }
 
+    pub(crate) fn elf_is_64(&self) -> bool {
+        match self.architecture.address_size().unwrap() {
+            AddressSize::U8 | AddressSize::U16 | AddressSize::U32 => false,
+            AddressSize::U64 => true,
+        }
+    }
+
     pub(crate) fn elf_write(&self, buffer: &mut dyn WritableBuffer) -> Result<()> {
         // Create reloc section header names so we can reference them.
         let is_rela = self.elf_has_relocation_addend()?;
@@ -176,11 +217,7 @@ impl<'a> Object<'a> {
             .collect();
 
         // Start calculating offsets of everything.
-        let is_64 = match self.architecture.address_size().unwrap() {
-            AddressSize::U8 | AddressSize::U16 | AddressSize::U32 => false,
-            AddressSize::U64 => true,
-        };
-        let mut writer = Writer::new(self.endian, is_64, buffer);
+        let mut writer = Writer::new(self.endian, self.elf_is_64(), buffer);
         writer.reserve_file_header();
 
         // Calculate size of section data.

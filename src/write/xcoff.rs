@@ -48,6 +48,10 @@ impl<'a> Object<'a> {
                 // Unsupported section.
                 (&[], &[], SectionKind::Common)
             }
+            StandardSection::GnuProperty => {
+                // Unsupported section.
+                (&[], &[], SectionKind::Note)
+            }
         }
     }
 
