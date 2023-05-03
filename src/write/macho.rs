@@ -80,43 +80,71 @@ impl<'a> Object<'a> {
     pub(crate) fn macho_section_info(
         &self,
         section: StandardSection,
-    ) -> (&'static [u8], &'static [u8], SectionKind) {
+    ) -> (&'static [u8], &'static [u8], SectionKind, SectionFlags) {
         match section {
-            StandardSection::Text => (&b"__TEXT"[..], &b"__text"[..], SectionKind::Text),
-            StandardSection::Data => (&b"__DATA"[..], &b"__data"[..], SectionKind::Data),
-            StandardSection::ReadOnlyData => {
-                (&b"__TEXT"[..], &b"__const"[..], SectionKind::ReadOnlyData)
-            }
+            StandardSection::Text => (
+                &b"__TEXT"[..],
+                &b"__text"[..],
+                SectionKind::Text,
+                SectionFlags::None,
+            ),
+            StandardSection::Data => (
+                &b"__DATA"[..],
+                &b"__data"[..],
+                SectionKind::Data,
+                SectionFlags::None,
+            ),
+            StandardSection::ReadOnlyData => (
+                &b"__TEXT"[..],
+                &b"__const"[..],
+                SectionKind::ReadOnlyData,
+                SectionFlags::None,
+            ),
             StandardSection::ReadOnlyDataWithRel => (
                 &b"__DATA"[..],
                 &b"__const"[..],
                 SectionKind::ReadOnlyDataWithRel,
+                SectionFlags::None,
             ),
             StandardSection::ReadOnlyString => (
                 &b"__TEXT"[..],
                 &b"__cstring"[..],
                 SectionKind::ReadOnlyString,
+                SectionFlags::None,
             ),
             StandardSection::UninitializedData => (
                 &b"__DATA"[..],
                 &b"__bss"[..],
                 SectionKind::UninitializedData,
+                SectionFlags::None,
             ),
-            StandardSection::Tls => (&b"__DATA"[..], &b"__thread_data"[..], SectionKind::Tls),
+            StandardSection::Tls => (
+                &b"__DATA"[..],
+                &b"__thread_data"[..],
+                SectionKind::Tls,
+                SectionFlags::None,
+            ),
             StandardSection::UninitializedTls => (
                 &b"__DATA"[..],
                 &b"__thread_bss"[..],
                 SectionKind::UninitializedTls,
+                SectionFlags::None,
             ),
             StandardSection::TlsVariables => (
                 &b"__DATA"[..],
                 &b"__thread_vars"[..],
                 SectionKind::TlsVariables,
+                SectionFlags::None,
             ),
-            StandardSection::Common => (&b"__DATA"[..], &b"__common"[..], SectionKind::Common),
+            StandardSection::Common => (
+                &b"__DATA"[..],
+                &b"__common"[..],
+                SectionKind::Common,
+                SectionFlags::None,
+            ),
             StandardSection::GnuProperty => {
                 // Unsupported section.
-                (&[], &[], SectionKind::Note)
+                (&[], &[], SectionKind::Note, SectionFlags::None)
             }
         }
     }

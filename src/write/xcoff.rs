@@ -26,31 +26,42 @@ impl<'a> Object<'a> {
     pub(crate) fn xcoff_section_info(
         &self,
         section: StandardSection,
-    ) -> (&'static [u8], &'static [u8], SectionKind) {
+    ) -> (&'static [u8], &'static [u8], SectionKind, SectionFlags) {
         match section {
-            StandardSection::Text => (&[], &b".text"[..], SectionKind::Text),
-            StandardSection::Data => (&[], &b".data"[..], SectionKind::Data),
+            StandardSection::Text => (&[], &b".text"[..], SectionKind::Text, SectionFlags::None),
+            StandardSection::Data => (&[], &b".data"[..], SectionKind::Data, SectionFlags::None),
             StandardSection::ReadOnlyData
             | StandardSection::ReadOnlyDataWithRel
-            | StandardSection::ReadOnlyString => (&[], &b".rdata"[..], SectionKind::ReadOnlyData),
-            StandardSection::UninitializedData => {
-                (&[], &b".bss"[..], SectionKind::UninitializedData)
-            }
-            StandardSection::Tls => (&[], &b".tdata"[..], SectionKind::Tls),
-            StandardSection::UninitializedTls => {
-                (&[], &b".tbss"[..], SectionKind::UninitializedTls)
-            }
+            | StandardSection::ReadOnlyString => (
+                &[],
+                &b".rdata"[..],
+                SectionKind::ReadOnlyData,
+                SectionFlags::None,
+            ),
+            StandardSection::UninitializedData => (
+                &[],
+                &b".bss"[..],
+                SectionKind::UninitializedData,
+                SectionFlags::None,
+            ),
+            StandardSection::Tls => (&[], &b".tdata"[..], SectionKind::Tls, SectionFlags::None),
+            StandardSection::UninitializedTls => (
+                &[],
+                &b".tbss"[..],
+                SectionKind::UninitializedTls,
+                SectionFlags::None,
+            ),
             StandardSection::TlsVariables => {
                 // Unsupported section.
-                (&[], &[], SectionKind::TlsVariables)
+                (&[], &[], SectionKind::TlsVariables, SectionFlags::None)
             }
             StandardSection::Common => {
                 // Unsupported section.
-                (&[], &[], SectionKind::Common)
+                (&[], &[], SectionKind::Common, SectionFlags::None)
             }
             StandardSection::GnuProperty => {
                 // Unsupported section.
-                (&[], &[], SectionKind::Note)
+                (&[], &[], SectionKind::Note, SectionFlags::None)
             }
         }
     }

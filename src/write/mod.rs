@@ -180,8 +180,10 @@ impl<'a> Object<'a> {
             .get(&section)
             .cloned()
             .unwrap_or_else(|| {
-                let (segment, name, kind) = self.section_info(section);
-                self.add_section(segment.to_vec(), name.to_vec(), kind)
+                let (segment, name, kind, flags) = self.section_info(section);
+                let id = self.add_section(segment.to_vec(), name.to_vec(), kind);
+                self.section_mut(id).flags = flags;
+                id
             })
     }
 
@@ -206,7 +208,7 @@ impl<'a> Object<'a> {
         let section = &self.sections[id.0];
         for standard_section in StandardSection::all() {
             if !self.standard_sections.contains_key(standard_section) {
-                let (segment, name, kind) = self.section_info(*standard_section);
+                let (segment, name, kind, _flags) = self.section_info(*standard_section);
                 if segment == &*section.segment && name == &*section.name && kind == section.kind {
                     self.standard_sections.insert(*standard_section, id);
                 }
@@ -219,7 +221,7 @@ impl<'a> Object<'a> {
     fn section_info(
         &self,
         section: StandardSection,
-    ) -> (&'static [u8], &'static [u8], SectionKind) {
+    ) -> (&'static [u8], &'static [u8], SectionKind, SectionFlags) {
         match self.format {
             #[cfg(feature = "coff")]
             BinaryFormat::Coff => self.coff_section_info(section),
@@ -245,8 +247,10 @@ impl<'a> Object<'a> {
             self.set_subsections_via_symbols();
             self.section_id(section)
         } else {
-            let (segment, name, kind) = self.subsection_info(section, name);
-            self.add_section(segment.to_vec(), name, kind)
+            let (segment, name, kind, flags) = self.subsection_info(section, name);
+            let id = self.add_section(segment.to_vec(), name, kind);
+            self.section_mut(id).flags = flags;
+            id
         };
         let offset = self.append_section_data(section_id, data, align);
         (section_id, offset)
@@ -272,10 +276,10 @@ impl<'a> Object<'a> {
         &self,
         section: StandardSection,
         value: &[u8],
-    ) -> (&'static [u8], Vec<u8>, SectionKind) {
-        let (segment, section, kind) = self.section_info(section);
+    ) -> (&'static [u8], Vec<u8>, SectionKind, SectionFlags) {
+        let (segment, section, kind, flags) = self.section_info(section);
         let name = self.subsection_name(section, value);
-        (segment, name, kind)
+        (segment, name, kind, flags)
     }
 
     #[allow(unused_variables)]
