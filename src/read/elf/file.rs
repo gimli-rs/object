@@ -456,6 +456,15 @@ pub trait FileHeader: Debug + Pod {
     /// This is a property of the type, not a value in the header data.
     fn is_type_64(&self) -> bool;
 
+    /// Return true if this type is a 64-bit header.
+    ///
+    /// This is a property of the type, not a value in the header data.
+    ///
+    /// This is the same as `is_type_64`, but is non-dispatchable.
+    fn is_type_64_sized() -> bool
+    where
+        Self: Sized;
+
     fn e_ident(&self) -> &elf::Ident;
     fn e_type(&self, endian: Self::Endian) -> u16;
     fn e_machine(&self, endian: Self::Endian) -> u16;
@@ -725,6 +734,14 @@ impl<Endian: endian::Endian> FileHeader for elf::FileHeader32<Endian> {
     }
 
     #[inline]
+    fn is_type_64_sized() -> bool
+    where
+        Self: Sized,
+    {
+        false
+    }
+
+    #[inline]
     fn e_ident(&self) -> &elf::Ident {
         &self.e_ident
     }
@@ -810,6 +827,14 @@ impl<Endian: endian::Endian> FileHeader for elf::FileHeader64<Endian> {
 
     #[inline]
     fn is_type_64(&self) -> bool {
+        true
+    }
+
+    #[inline]
+    fn is_type_64_sized() -> bool
+    where
+        Self: Sized,
+    {
         true
     }
 

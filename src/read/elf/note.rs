@@ -80,12 +80,7 @@ where
         }
         self.data = data;
 
-        Ok(Some(Note {
-            align: self.align,
-            header,
-            name,
-            desc,
-        }))
+        Ok(Some(Note { header, name, desc }))
     }
 }
 
@@ -95,7 +90,6 @@ pub struct Note<'data, Elf>
 where
     Elf: FileHeader,
 {
-    align: usize,
     header: &'data Elf::NoteHeader,
     name: &'data [u8],
     desc: &'data [u8],
@@ -152,9 +146,12 @@ impl<'data, Elf: FileHeader> Note<'data, Elf> {
         if self.name() != elf::ELF_NOTE_GNU || self.n_type(endian) != elf::NT_GNU_PROPERTY_TYPE_0 {
             return None;
         }
+        // Use the ELF class instead of the section alignment.
+        // This matches what other parsers do.
+        let align = if Elf::is_type_64_sized() { 8 } else { 4 };
         Some(GnuPropertyIterator {
             endian,
-            align: self.align,
+            align,
             data: Bytes(self.desc),
         })
     }
