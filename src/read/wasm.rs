@@ -106,6 +106,8 @@ impl<'data, R: ReadRef<'data>> WasmFile<'data, R> {
         let mut entry_func_id = None;
         let mut code_range_start = 0;
         let mut code_func_index = 0;
+        // One-to-one mapping of globals to their value (if the global is a constant integer).
+        let mut global_values = Vec::new();
 
         for payload in parser {
             let payload = payload.read_error("Invalid Wasm section header")?;
@@ -168,6 +170,20 @@ impl<'data, R: ReadRef<'data>> WasmFile<'data, R> {
                 }
                 wp::Payload::GlobalSection(section) => {
                     file.add_section(SectionId::Global, section.range(), "");
+                    for global in section {
+                        let global = global.read_error("Couldn't read a global item")?;
+                        let mut address = None;
+                        if !global.ty.mutable {
+                            // There should be exactly one instruction.
+                            let init = global.init_expr.get_operators_reader().read();
+                            address = match init.read_error("Couldn't read a global init expr")? {
+                                wp::Operator::I32Const { value } => Some(value as u64),
+                                wp::Operator::I64Const { value } => Some(value as u64),
+                                _ => None,
+                            };
+                        }
+                        global_values.push(address);
+                    }
                 }
                 wp::Payload::ExportSection(section) => {
                     file.add_section(SectionId::Export, section.range(), "");
@@ -205,9 +221,18 @@ impl<'data, R: ReadRef<'data>> WasmFile<'data, R> {
                             wp::ExternalKind::Tag => continue,
                         };
 
+                        // Try to guess the symbol address. Rust and C export a global containing
+                        // the address in linear memory of the symbol.
+                        let mut address = 0;
+                        if export.kind == wp::ExternalKind::Global {
+                            if let Some(&Some(x)) = global_values.get(export.index as usize) {
+                                address = x;
+                            }
+                        }
+
                         file.symbols.push(WasmSymbolInternal {
                             name: export.name,
-                            address: 0,
+                            address,
                             size: 0,
                             kind,
                             section: SymbolSection::Section(SectionIndex(section_idx as usize)),
