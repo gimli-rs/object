@@ -42,6 +42,7 @@ const MAX_SECTION_ID: usize = SectionId::DataCount as usize;
 #[derive(Debug)]
 pub struct WasmFile<'data, R = &'data [u8]> {
     data: &'data [u8],
+    has_memory64: bool,
     // All sections, including custom sections.
     sections: Vec<SectionHeader<'data>>,
     // Indices into `sections` of sections with a non-zero id.
@@ -84,6 +85,7 @@ impl<'data, R: ReadRef<'data>> WasmFile<'data, R> {
 
         let mut file = WasmFile {
             data,
+            has_memory64: false,
             sections: Vec::new(),
             id_sections: Default::default(),
             has_debug_symbols: false,
@@ -141,9 +143,11 @@ impl<'data, R: ReadRef<'data>> WasmFile<'data, R> {
                                 imported_funcs_count += 1;
                                 SymbolKind::Text
                             }
-                            wp::TypeRef::Table(_)
-                            | wp::TypeRef::Memory(_)
-                            | wp::TypeRef::Global(_) => SymbolKind::Data,
+                            wp::TypeRef::Memory(memory) => {
+                                file.has_memory64 |= memory.memory64;
+                                SymbolKind::Data
+                            }
+                            wp::TypeRef::Table(_) | wp::TypeRef::Global(_) => SymbolKind::Data,
                             wp::TypeRef::Tag(_) => SymbolKind::Unknown,
                         };
 
@@ -167,6 +171,10 @@ impl<'data, R: ReadRef<'data>> WasmFile<'data, R> {
                 }
                 wp::Payload::MemorySection(section) => {
                     file.add_section(SectionId::Memory, section.range(), "");
+                    for memory in section {
+                        let memory = memory.read_error("Couldn't read a memory item")?;
+                        file.has_memory64 |= memory.memory64;
+                    }
                 }
                 wp::Payload::GlobalSection(section) => {
                     file.add_section(SectionId::Global, section.range(), "");
@@ -372,7 +380,11 @@ where
 
     #[inline]
     fn architecture(&self) -> Architecture {
-        Architecture::Wasm32
+        if self.has_memory64 {
+            Architecture::Wasm64
+        } else {
+            Architecture::Wasm32
+        }
     }
 
     #[inline]
@@ -382,7 +394,7 @@ where
 
     #[inline]
     fn is_64(&self) -> bool {
-        false
+        self.has_memory64
     }
 
     fn kind(&self) -> ObjectKind {

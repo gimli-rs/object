@@ -27,6 +27,7 @@ pub enum Architecture {
     Sbf,
     Sparc64,
     Wasm32,
+    Wasm64,
     Xtensa,
 }
 
@@ -58,6 +59,7 @@ impl Architecture {
             Architecture::Sbf => Some(AddressSize::U64),
             Architecture::Sparc64 => Some(AddressSize::U64),
             Architecture::Wasm32 => Some(AddressSize::U32),
+            Architecture::Wasm64 => Some(AddressSize::U64),
             Architecture::Xtensa => Some(AddressSize::U32),
         }
     }
