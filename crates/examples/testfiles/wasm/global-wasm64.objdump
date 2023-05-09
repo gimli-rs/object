@@ -1,0 +1,39 @@
+Format: Wasm Little-endian 64-bit
+Kind: Unknown
+Architecture: Wasm64
+Flags: None
+Relative Address Base: 0
+Entry Address: 0
+1: Section { name: "<type>", address: 0, size: 8, align: 1, kind: Metadata, flags: None }
+2: Section { name: "<import>", address: 0, size: 13, align: 1, kind: Linker, flags: None }
+3: Section { name: "<function>", address: 0, size: 3, align: 1, kind: Metadata, flags: None }
+5: Section { name: "<memory>", address: 0, size: 3, align: 1, kind: UninitializedData, flags: None }
+6: Section { name: "<global>", address: 0, size: 50, align: 1, kind: Data, flags: None }
+7: Section { name: "<export>", address: 0, size: ce, align: 1, kind: Linker, flags: None }
+10: Section { name: "<code>", address: 0, size: 48, align: 1, kind: Text, flags: None }
+11: Section { name: "<data>", address: 0, size: f, align: 1, kind: Data, flags: None }
+0: Section { name: "name", address: 0, size: 48, align: 1, kind: Other, flags: None }
+0: Section { name: "producers", address: 0, size: 5c, align: 1, kind: Other, flags: None }
+0: Section { name: "target_features", address: 0, size: 26, align: 1, kind: Other, flags: None }
+
+Symbols
+0: Symbol { name: "env", address: 0, size: 0, kind: File, section: None, scope: Dynamic, weak: false, flags: None }
+1: Symbol { name: "console_log", address: 0, size: 0, kind: Text, section: Undefined, scope: Dynamic, weak: false, flags: None }
+2: Symbol { name: "", address: 0, size: 0, kind: File, section: None, scope: Compilation, weak: false, flags: None }
+3: Symbol { name: "memory", address: 0, size: 0, kind: Data, section: Section(SectionIndex(b)), scope: Dynamic, weak: false, flags: None }
+4: Symbol { name: "__wasm_call_ctors", address: 2, size: 2, kind: Text, section: Section(SectionIndex(a)), scope: Dynamic, weak: false, flags: None }
+5: Symbol { name: "print", address: 5, size: 43, kind: Text, section: Section(SectionIndex(a)), scope: Dynamic, weak: false, flags: None }
+6: Symbol { name: "global1", address: 400, size: 0, kind: Data, section: Section(SectionIndex(b)), scope: Dynamic, weak: false, flags: None }
+7: Symbol { name: "global2", address: 404, size: 0, kind: Data, section: Section(SectionIndex(b)), scope: Dynamic, weak: false, flags: None }
+8: Symbol { name: "__dso_handle", address: 400, size: 0, kind: Data, section: Section(SectionIndex(b)), scope: Dynamic, weak: false, flags: None }
+9: Symbol { name: "__data_end", address: 408, size: 0, kind: Data, section: Section(SectionIndex(b)), scope: Dynamic, weak: false, flags: None }
+10: Symbol { name: "__stack_low", address: 410, size: 0, kind: Data, section: Section(SectionIndex(b)), scope: Dynamic, weak: false, flags: None }
+11: Symbol { name: "__stack_high", address: 10410, size: 0, kind: Data, section: Section(SectionIndex(b)), scope: Dynamic, weak: false, flags: None }
+12: Symbol { name: "__global_base", address: 400, size: 0, kind: Data, section: Section(SectionIndex(b)), scope: Dynamic, weak: false, flags: None }
+13: Symbol { name: "__heap_base", address: 10410, size: 0, kind: Data, section: Section(SectionIndex(b)), scope: Dynamic, weak: false, flags: None }
+14: Symbol { name: "__heap_end", address: 20000, size: 0, kind: Data, section: Section(SectionIndex(b)), scope: Dynamic, weak: false, flags: None }
+15: Symbol { name: "__memory_base", address: 0, size: 0, kind: Data, section: Section(SectionIndex(b)), scope: Dynamic, weak: false, flags: None }
+16: Symbol { name: "__table_base", address: 1, size: 0, kind: Data, section: Section(SectionIndex(b)), scope: Dynamic, weak: false, flags: None }
+17: Symbol { name: "__table_base32", address: 1, size: 0, kind: Data, section: Section(SectionIndex(b)), scope: Dynamic, weak: false, flags: None }
+
+Dynamic symbols
