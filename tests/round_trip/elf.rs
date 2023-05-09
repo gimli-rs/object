@@ -1,5 +1,5 @@
 use object::read::elf::{FileHeader, SectionHeader};
-use object::read::{Object, ObjectSymbol};
+use object::read::{Object, ObjectSection, ObjectSymbol};
 use object::{
     elf, read, write, Architecture, BinaryFormat, Endianness, LittleEndian, SectionIndex,
     SectionKind, SymbolFlags, SymbolKind, SymbolScope, SymbolSection, U32,
@@ -40,6 +40,37 @@ fn symtab_shndx() {
             SymbolSection::Section(SectionIndex(symbol.index().0))
         );
     }
+}
+
+#[test]
+fn aligned_sections() {
+    let mut object =
+        write::Object::new(BinaryFormat::Elf, Architecture::X86_64, Endianness::Little);
+
+    let text_section_id = object.add_section(vec![], b".text".to_vec(), SectionKind::Text);
+    let text_section = object.section_mut(text_section_id);
+    text_section.set_data(&[][..], 4096);
+
+    let data_section_id = object.add_section(vec![], b".data".to_vec(), SectionKind::Data);
+    let data_section = object.section_mut(data_section_id);
+    data_section.set_data(&b"1234"[..], 16);
+
+    let bytes = object.write().unwrap();
+
+    let object = read::File::parse(&*bytes).unwrap();
+    assert_eq!(object.format(), BinaryFormat::Elf);
+    assert_eq!(object.architecture(), Architecture::X86_64);
+
+    let mut sections = object.sections();
+    let _ = sections.next().unwrap();
+
+    let section = sections.next().unwrap();
+    assert_eq!(section.name(), Ok(".text"));
+    assert_eq!(section.file_range(), Some((4096, 0)));
+
+    let section = sections.next().unwrap();
+    assert_eq!(section.name(), Ok(".data"));
+    assert_eq!(section.file_range(), Some((4096, 4)));
 }
 
 #[cfg(feature = "compression")]
