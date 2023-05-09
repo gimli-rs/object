@@ -675,39 +675,48 @@ impl<'a> Object<'a> {
                                 return Err(Error(format!("unimplemented relocation {:?}", reloc)));
                             }
                         },
-                        Architecture::Aarch64 => match (reloc.kind, reloc.encoding, reloc.addend) {
-                            (RelocationKind::Absolute, RelocationEncoding::Generic, 0) => {
-                                (false, macho::ARM64_RELOC_UNSIGNED)
-                            }
-                            (RelocationKind::Relative, RelocationEncoding::AArch64Call, 0) => {
-                                (true, macho::ARM64_RELOC_BRANCH26)
-                            }
-                            // Non-zero addend, so we have to encode the addend separately
-                            (RelocationKind::Relative, RelocationEncoding::AArch64Call, value) => {
-                                // first emit the BR26 relocation
-                                let reloc_info = macho::RelocationInfo {
-                                    r_address: reloc.offset as u32,
-                                    r_symbolnum,
-                                    r_pcrel: true,
-                                    r_length,
-                                    r_extern: true,
-                                    r_type: macho::ARM64_RELOC_BRANCH26,
-                                };
-                                buffer.write(&reloc_info.relocation(endian));
+                        Architecture::Aarch64 | Architecture::Aarch64_Ilp32 => {
+                            match (reloc.kind, reloc.encoding, reloc.addend) {
+                                (RelocationKind::Absolute, RelocationEncoding::Generic, 0) => {
+                                    (false, macho::ARM64_RELOC_UNSIGNED)
+                                }
+                                (RelocationKind::Relative, RelocationEncoding::AArch64Call, 0) => {
+                                    (true, macho::ARM64_RELOC_BRANCH26)
+                                }
+                                // Non-zero addend, so we have to encode the addend separately
+                                (
+                                    RelocationKind::Relative,
+                                    RelocationEncoding::AArch64Call,
+                                    value,
+                                ) => {
+                                    // first emit the BR26 relocation
+                                    let reloc_info = macho::RelocationInfo {
+                                        r_address: reloc.offset as u32,
+                                        r_symbolnum,
+                                        r_pcrel: true,
+                                        r_length,
+                                        r_extern: true,
+                                        r_type: macho::ARM64_RELOC_BRANCH26,
+                                    };
+                                    buffer.write(&reloc_info.relocation(endian));
 
-                                // set up a separate relocation for the addend
-                                r_symbolnum = value as u32;
-                                (false, macho::ARM64_RELOC_ADDEND)
+                                    // set up a separate relocation for the addend
+                                    r_symbolnum = value as u32;
+                                    (false, macho::ARM64_RELOC_ADDEND)
+                                }
+                                (
+                                    RelocationKind::MachO { value, relative },
+                                    RelocationEncoding::Generic,
+                                    0,
+                                ) => (relative, value),
+                                _ => {
+                                    return Err(Error(format!(
+                                        "unimplemented relocation {:?}",
+                                        reloc
+                                    )));
+                                }
                             }
-                            (
-                                RelocationKind::MachO { value, relative },
-                                RelocationEncoding::Generic,
-                                0,
-                            ) => (relative, value),
-                            _ => {
-                                return Err(Error(format!("unimplemented relocation {:?}", reloc)));
-                            }
-                        },
+                        }
                         _ => {
                             if let RelocationKind::MachO { value, relative } = reloc.kind {
                                 (relative, value)

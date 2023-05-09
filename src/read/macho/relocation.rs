@@ -53,13 +53,15 @@ where
                         relative: reloc.r_pcrel,
                     },
                 },
-                macho::CPU_TYPE_ARM64 => match (reloc.r_type, reloc.r_pcrel) {
-                    (macho::ARM64_RELOC_UNSIGNED, false) => RelocationKind::Absolute,
-                    _ => RelocationKind::MachO {
-                        value: reloc.r_type,
-                        relative: reloc.r_pcrel,
-                    },
-                },
+                macho::CPU_TYPE_ARM64 | macho::CPU_TYPE_ARM64_32 => {
+                    match (reloc.r_type, reloc.r_pcrel) {
+                        (macho::ARM64_RELOC_UNSIGNED, false) => RelocationKind::Absolute,
+                        _ => RelocationKind::MachO {
+                            value: reloc.r_type,
+                            relative: reloc.r_pcrel,
+                        },
+                    }
+                }
                 macho::CPU_TYPE_X86 => match (reloc.r_type, reloc.r_pcrel) {
                     (macho::GENERIC_RELOC_VANILLA, false) => RelocationKind::Absolute,
                     _ => RelocationKind::MachO {
