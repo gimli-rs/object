@@ -379,12 +379,9 @@ impl<'a> Object<'a> {
             }
         }
         for (index, section) in self.sections.iter().enumerate() {
-            let len = section.data.len();
-            if len != 0 {
-                writer.write_align(section.align as usize);
-                debug_assert_eq!(section_offsets[index].offset, writer.len());
-                writer.write(&section.data);
-            }
+            writer.write_align(section.align as usize);
+            debug_assert_eq!(section_offsets[index].offset, writer.len());
+            writer.write(&section.data);
         }
 
         // Write symbols.
