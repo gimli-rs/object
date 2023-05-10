@@ -2,6 +2,35 @@
 
 --------------------------------------------------------------------------------
 
+## 0.31.1
+
+Released 2023/05/09.
+
+### Changed
+
+* Fixed address for global symbols in `read::wasm`.
+  [#539](https://github.com/gimli-rs/object/pull/539)
+
+* Fixed writing of alignment for empty ELF sections.
+  [#540](https://github.com/gimli-rs/object/pull/540)
+
+### Added
+
+* Added more `elf::GNU_PROPERTY_*` definitions.
+  Added `read::elf::note::gnu_properties`, `write::StandardSection::GnuProperty`,
+  and `write::Object::add_elf_gnu_property_u32`.
+  [#537](https://github.com/gimli-rs/object/pull/537)
+  [#541](https://github.com/gimli-rs/object/pull/541)
+
+* Added Mach-O support for `Architecture::Aarch64_Ilp32`.
+  [#542](https://github.com/gimli-rs/object/pull/542)
+  [#545](https://github.com/gimli-rs/object/pull/545)
+
+* Added `Architecture::Wasm64`.
+  [#543](https://github.com/gimli-rs/object/pull/543)
+
+--------------------------------------------------------------------------------
+
 ## 0.31.0
 
 Released 2023/04/14.
