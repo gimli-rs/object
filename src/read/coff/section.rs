@@ -15,6 +15,7 @@ use super::{CoffFile, CoffHeader, CoffRelocationIterator};
 #[derive(Debug, Default, Clone, Copy)]
 pub struct SectionTable<'data> {
     sections: &'data [pe::ImageSectionHeader],
+    pub(crate) va_space: bool,
 }
 
 impl<'data> SectionTable<'data> {
@@ -26,11 +27,12 @@ impl<'data> SectionTable<'data> {
         header: &Coff,
         data: R,
         offset: u64,
+        va_space: bool,
     ) -> Result<Self> {
         let sections = data
             .read_slice_at(offset, header.number_of_sections() as usize)
             .read_error("Invalid COFF/PE section headers")?;
-        Ok(SectionTable { sections })
+        Ok(SectionTable { sections, va_space })
     }
 
     /// Iterate over the section headers.

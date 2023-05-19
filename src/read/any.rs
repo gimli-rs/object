@@ -253,9 +253,9 @@ impl<'data, R: ReadRef<'data>> File<'data, R> {
             #[cfg(feature = "wasm")]
             FileKind::Wasm => FileInternal::Wasm(wasm::WasmFile::parse(data)?),
             #[cfg(feature = "pe")]
-            FileKind::Pe32 => FileInternal::Pe32(pe::PeFile32::parse(data)?),
+            FileKind::Pe32 => FileInternal::Pe32(pe::PeFile32::parse(data, false)?),
             #[cfg(feature = "pe")]
-            FileKind::Pe64 => FileInternal::Pe64(pe::PeFile64::parse(data)?),
+            FileKind::Pe64 => FileInternal::Pe64(pe::PeFile64::parse(data, false)?),
             #[cfg(feature = "coff")]
             FileKind::Coff => FileInternal::Coff(coff::CoffFile::parse(data)?),
             #[cfg(feature = "coff")]

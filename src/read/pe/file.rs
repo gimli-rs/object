@@ -40,12 +40,12 @@ where
     Pe: ImageNtHeaders,
     R: ReadRef<'data>,
 {
-    /// Parse the raw PE file data.
-    pub fn parse(data: R) -> Result<Self> {
+    /// Parse the raw PE data.
+    pub fn parse(data: R, va_space: bool) -> Result<Self> {
         let dos_header = pe::ImageDosHeader::parse(data)?;
         let mut offset = dos_header.nt_headers_offset().into();
         let (nt_headers, data_directories) = Pe::parse(data, &mut offset)?;
-        let sections = nt_headers.sections(data, offset)?;
+        let sections = nt_headers.sections(data, offset, va_space)?;
         let coff_symbols = nt_headers.symbols(data);
         let image_base = nt_headers.optional_header().image_base();
 
@@ -613,8 +613,9 @@ pub trait ImageNtHeaders: Debug + Pod {
         &self,
         data: R,
         offset: u64,
+        va_space: bool,
     ) -> read::Result<SectionTable<'data>> {
-        SectionTable::parse(self.file_header(), data, offset)
+        SectionTable::parse(self.file_header(), data, offset, va_space)
     }
 
     /// Read the COFF symbol table and string table.
