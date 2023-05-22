@@ -113,21 +113,24 @@ impl<'data, Elf: FileHeader> Note<'data, Elf> {
         self.header.n_descsz(endian)
     }
 
-    /// Return the bytes for the name field following the `NoteHeader`,
-    /// excluding any null terminator.
+    /// Return the bytes for the name field following the `NoteHeader`.
     ///
-    /// This field is usually a string including a null terminator
+    /// This field is usually a string including one or more trailing null bytes
     /// (but it is not required to be).
     ///
-    /// The length of this field (including any null terminator) is given by
-    /// `n_namesz`.
-    pub fn name(&self) -> &'data [u8] {
-        if let Some((last, name)) = self.name.split_last() {
-            if *last == 0 {
-                return name;
-            }
-        }
+    /// The length of this field is given by `n_namesz`.
+    pub fn name_bytes(&self) -> &'data [u8] {
         self.name
+    }
+
+    /// Return the bytes for the name field following the `NoteHeader`,
+    /// excluding all trailing null bytes.
+    pub fn name(&self) -> &'data [u8] {
+        let mut name = self.name;
+        while let [rest @ .., 0] = name {
+            name = rest;
+        }
+        name
     }
 
     /// Return the bytes for the desc field following the `NoteHeader`.
