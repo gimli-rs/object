@@ -562,6 +562,7 @@ fn print_notes<Elf: FileHeader>(
                 ELF_NOTE_CORE | ELF_NOTE_LINUX => FLAGS_NT_CORE,
                 ELF_NOTE_SOLARIS => FLAGS_NT_SOLARIS,
                 ELF_NOTE_GNU => FLAGS_NT_GNU,
+                ELF_NOTE_GO => FLAGS_NT_GO,
                 _ => {
                     // TODO: NT_VERSION
                     &[]
@@ -3234,6 +3235,7 @@ const FLAGS_NT_GNU: &[Flag<u32>] = &flags!(
     NT_GNU_GOLD_VERSION,
     NT_GNU_PROPERTY_TYPE_0,
 );
+const FLAGS_NT_GO: &[Flag<u32>] = &flags!(NT_GO_BUILD_ID);
 const FLAGS_GNU_PROPERTY: &[Flag<u32>] = &flags!(
     GNU_PROPERTY_STACK_SIZE,
     GNU_PROPERTY_NO_COPY_ON_PROTECTED,
