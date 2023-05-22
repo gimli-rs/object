@@ -1308,11 +1308,11 @@ pub const PF_MASKOS: u32 = 0x0ff0_0000;
 pub const PF_MASKPROC: u32 = 0xf000_0000;
 
 /// Note name for core files.
-pub static ELF_NOTE_CORE: &[u8] = b"CORE";
+pub const ELF_NOTE_CORE: &[u8] = b"CORE";
 /// Note name for linux core files.
 ///
 /// Notes in linux core files may also use `ELF_NOTE_CORE`.
-pub static ELF_NOTE_LINUX: &[u8] = b"LINUX";
+pub const ELF_NOTE_LINUX: &[u8] = b"LINUX";
 
 // Values for `NoteHeader*::n_type` in core files.
 //
@@ -1826,14 +1826,14 @@ pub struct NoteHeader64<E: Endian> {
 }
 
 /// Solaris entries in the note section have this name.
-pub static ELF_NOTE_SOLARIS: &[u8] = b"SUNW Solaris";
+pub const ELF_NOTE_SOLARIS: &[u8] = b"SUNW Solaris";
 
 // Values for `n_type` when the name is `ELF_NOTE_SOLARIS`.
 /// Desired pagesize for the binary.
 pub const NT_SOLARIS_PAGESIZE_HINT: u32 = 1;
 
 /// GNU entries in the note section have this name.
-pub static ELF_NOTE_GNU: &[u8] = b"GNU";
+pub const ELF_NOTE_GNU: &[u8] = b"GNU";
 
 // Note types for `ELF_NOTE_GNU`.
 

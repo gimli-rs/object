@@ -558,15 +558,14 @@ fn print_notes<Elf: FileHeader>(
         p.group("Note", |p| {
             let name = note.name();
             p.field_string_option("Name", note.n_namesz(endian), Some(name));
-            let flags = if name == ELF_NOTE_CORE || name == ELF_NOTE_LINUX {
-                FLAGS_NT_CORE
-            } else if name == ELF_NOTE_SOLARIS {
-                FLAGS_NT_SOLARIS
-            } else if name == ELF_NOTE_GNU {
-                FLAGS_NT_GNU
-            } else {
-                // TODO: NT_VERSION
-                &[]
+            let flags = match name {
+                ELF_NOTE_CORE | ELF_NOTE_LINUX => FLAGS_NT_CORE,
+                ELF_NOTE_SOLARIS => FLAGS_NT_SOLARIS,
+                ELF_NOTE_GNU => FLAGS_NT_GNU,
+                _ => {
+                    // TODO: NT_VERSION
+                    &[]
+                }
             };
             p.field_enum("Type", note.n_type(endian), flags);
             if let Some(mut properties) = note.gnu_properties(endian) {
@@ -889,10 +888,10 @@ fn print_version<Elf: FileHeader>(
     p.flags(version_index.0, 0, FLAGS_VERSYM);
 }
 
-static FLAGS_EI_CLASS: &[Flag<u8>] = &flags!(ELFCLASSNONE, ELFCLASS32, ELFCLASS64);
-static FLAGS_EI_DATA: &[Flag<u8>] = &flags!(ELFDATANONE, ELFDATA2LSB, ELFDATA2MSB);
-static FLAGS_EV: &[Flag<u8>] = &flags!(EV_NONE, EV_CURRENT);
-static FLAGS_EI_OSABI: &[Flag<u8>] = &flags!(
+const FLAGS_EI_CLASS: &[Flag<u8>] = &flags!(ELFCLASSNONE, ELFCLASS32, ELFCLASS64);
+const FLAGS_EI_DATA: &[Flag<u8>] = &flags!(ELFDATANONE, ELFDATA2LSB, ELFDATA2MSB);
+const FLAGS_EV: &[Flag<u8>] = &flags!(EV_NONE, EV_CURRENT);
+const FLAGS_EI_OSABI: &[Flag<u8>] = &flags!(
     ELFOSABI_SYSV,
     ELFOSABI_HPUX,
     ELFOSABI_NETBSD,
@@ -914,8 +913,8 @@ static FLAGS_EI_OSABI: &[Flag<u8>] = &flags!(
     ELFOSABI_ARM,
     ELFOSABI_STANDALONE,
 );
-static FLAGS_ET: &[Flag<u16>] = &flags!(ET_NONE, ET_REL, ET_EXEC, ET_DYN, ET_CORE);
-static FLAGS_EM: &[Flag<u16>] = &flags!(
+const FLAGS_ET: &[Flag<u16>] = &flags!(ET_NONE, ET_REL, ET_EXEC, ET_DYN, ET_CORE);
+const FLAGS_EM: &[Flag<u16>] = &flags!(
     EM_NONE,
     EM_M32,
     EM_SPARC,
@@ -1099,7 +1098,7 @@ static FLAGS_EM: &[Flag<u16>] = &flags!(
     EM_ALPHA,
     EM_LOONGARCH,
 );
-static FLAGS_EF_SPARC: &[Flag<u32>] = &flags!(
+const FLAGS_EF_SPARC: &[Flag<u32>] = &flags!(
     EF_SPARC_LEDATA,
     EF_SPARC_EXT_MASK,
     EF_SPARC_32PLUS,
@@ -1107,13 +1106,13 @@ static FLAGS_EF_SPARC: &[Flag<u32>] = &flags!(
     EF_SPARC_HAL_R1,
     EF_SPARC_SUN_US3,
 );
-static FLAGS_EF_SPARCV9: &[Flag<u32>] = &flags!(
+const FLAGS_EF_SPARCV9: &[Flag<u32>] = &flags!(
     EF_SPARCV9_MM,
     EF_SPARCV9_TSO,
     EF_SPARCV9_PSO,
     EF_SPARCV9_RMO,
 );
-static FLAGS_EF_MIPS: &[Flag<u32>] = &flags!(
+const FLAGS_EF_MIPS: &[Flag<u32>] = &flags!(
     EF_MIPS_NOREORDER,
     EF_MIPS_PIC,
     EF_MIPS_CPIC,
@@ -1124,7 +1123,7 @@ static FLAGS_EF_MIPS: &[Flag<u32>] = &flags!(
     EF_MIPS_FP64,
     EF_MIPS_NAN2008,
 );
-static FLAGS_EF_MIPS_ARCH: &[Flag<u32>] = &flags!(
+const FLAGS_EF_MIPS_ARCH: &[Flag<u32>] = &flags!(
     EF_MIPS_ARCH_1,
     EF_MIPS_ARCH_2,
     EF_MIPS_ARCH_3,
@@ -1135,13 +1134,13 @@ static FLAGS_EF_MIPS_ARCH: &[Flag<u32>] = &flags!(
     EF_MIPS_ARCH_32R2,
     EF_MIPS_ARCH_64R2,
 );
-static FLAGS_EF_MIPS_ABI: &[Flag<u32>] = &flags!(
+const FLAGS_EF_MIPS_ABI: &[Flag<u32>] = &flags!(
     EF_MIPS_ABI_O32,
     EF_MIPS_ABI_O64,
     EF_MIPS_ABI_EABI32,
     EF_MIPS_ABI_EABI64,
 );
-static FLAGS_EF_PARISC: &[Flag<u32>] = &flags!(
+const FLAGS_EF_PARISC: &[Flag<u32>] = &flags!(
     EF_PARISC_TRAPNIL,
     EF_PARISC_EXT,
     EF_PARISC_LSB,
@@ -1149,11 +1148,11 @@ static FLAGS_EF_PARISC: &[Flag<u32>] = &flags!(
     EF_PARISC_NO_KABP,
     EF_PARISC_LAZYSWAP,
 );
-static FLAGS_EF_PARISC_ARCH: &[Flag<u32>] = &flags!(EFA_PARISC_1_0, EFA_PARISC_1_1, EFA_PARISC_2_0);
-static FLAGS_EF_ALPHA: &[Flag<u32>] = &flags!(EF_ALPHA_32BIT, EF_ALPHA_CANRELAX);
-static FLAGS_EF_PPC: &[Flag<u32>] = &flags!(EF_PPC_EMB, EF_PPC_RELOCATABLE, EF_PPC_RELOCATABLE_LIB);
-static FLAGS_EF_PPC64: &[Flag<u32>] = &flags!(EF_PPC64_ABI);
-static FLAGS_EF_ARM: &[Flag<u32>] = &flags!(
+const FLAGS_EF_PARISC_ARCH: &[Flag<u32>] = &flags!(EFA_PARISC_1_0, EFA_PARISC_1_1, EFA_PARISC_2_0);
+const FLAGS_EF_ALPHA: &[Flag<u32>] = &flags!(EF_ALPHA_32BIT, EF_ALPHA_CANRELAX);
+const FLAGS_EF_PPC: &[Flag<u32>] = &flags!(EF_PPC_EMB, EF_PPC_RELOCATABLE, EF_PPC_RELOCATABLE_LIB);
+const FLAGS_EF_PPC64: &[Flag<u32>] = &flags!(EF_PPC64_ABI);
+const FLAGS_EF_ARM: &[Flag<u32>] = &flags!(
     EF_ARM_RELEXEC,
     EF_ARM_HASENTRY,
     EF_ARM_INTERWORK,
@@ -1169,7 +1168,7 @@ static FLAGS_EF_ARM: &[Flag<u32>] = &flags!(
     EF_ARM_BE8,
     EF_ARM_LE8,
 );
-static FLAGS_EF_ARM_EABI: &[Flag<u32>] = &flags!(
+const FLAGS_EF_ARM_EABI: &[Flag<u32>] = &flags!(
     EF_ARM_EABI_UNKNOWN,
     EF_ARM_EABI_VER1,
     EF_ARM_EABI_VER2,
@@ -1177,9 +1176,9 @@ static FLAGS_EF_ARM_EABI: &[Flag<u32>] = &flags!(
     EF_ARM_EABI_VER4,
     EF_ARM_EABI_VER5,
 );
-static FLAGS_EF_CSKY_ABI: &[Flag<u32>] = &flags!(EF_CSKY_ABIV1, EF_CSKY_ABIV2);
-static FLAGS_EF_IA_64: &[Flag<u32>] = &flags!(EF_IA_64_ABI64);
-static FLAGS_EF_SH_MACH: &[Flag<u32>] = &flags!(
+const FLAGS_EF_CSKY_ABI: &[Flag<u32>] = &flags!(EF_CSKY_ABIV1, EF_CSKY_ABIV2);
+const FLAGS_EF_IA_64: &[Flag<u32>] = &flags!(EF_IA_64_ABI64);
+const FLAGS_EF_SH_MACH: &[Flag<u32>] = &flags!(
     EF_SH_UNKNOWN,
     EF_SH1,
     EF_SH2,
@@ -1202,21 +1201,21 @@ static FLAGS_EF_SH_MACH: &[Flag<u32>] = &flags!(
     EF_SH2A_SH4,
     EF_SH2A_SH3E,
 );
-static FLAGS_EF_S390: &[Flag<u32>] = &flags!(EF_S390_HIGH_GPRS);
-static FLAGS_EF_RISCV: &[Flag<u32>] = &flags!(EF_RISCV_RVC, EF_RISCV_RVE, EF_RISCV_TSO);
-static FLAGS_EF_RISCV_FLOAT_ABI: &[Flag<u32>] = &flags!(
+const FLAGS_EF_S390: &[Flag<u32>] = &flags!(EF_S390_HIGH_GPRS);
+const FLAGS_EF_RISCV: &[Flag<u32>] = &flags!(EF_RISCV_RVC, EF_RISCV_RVE, EF_RISCV_TSO);
+const FLAGS_EF_RISCV_FLOAT_ABI: &[Flag<u32>] = &flags!(
     EF_RISCV_FLOAT_ABI_SOFT,
     EF_RISCV_FLOAT_ABI_SINGLE,
     EF_RISCV_FLOAT_ABI_DOUBLE,
     EF_RISCV_FLOAT_ABI_QUAD,
 );
-static FLAGS_EF_LARCH_ABI_MODIFIER: &[Flag<u32>] = &flags!(
+const FLAGS_EF_LARCH_ABI_MODIFIER: &[Flag<u32>] = &flags!(
     EF_LARCH_ABI_SOFT_FLOAT,
     EF_LARCH_ABI_SINGLE_FLOAT,
     EF_LARCH_ABI_DOUBLE_FLOAT,
 );
-static FLAGS_EF_LARCH_OBJABI: &[Flag<u32>] = &flags!(EF_LARCH_OBJABI_V1,);
-static FLAGS_PT: &[Flag<u32>] = &flags!(
+const FLAGS_EF_LARCH_OBJABI: &[Flag<u32>] = &flags!(EF_LARCH_OBJABI_V1,);
+const FLAGS_PT: &[Flag<u32>] = &flags!(
     PT_NULL,
     PT_LOAD,
     PT_DYNAMIC,
@@ -1231,7 +1230,7 @@ static FLAGS_PT: &[Flag<u32>] = &flags!(
     PT_GNU_RELRO,
     PT_GNU_PROPERTY,
 );
-static FLAGS_PT_HP: &[Flag<u32>] = &flags!(
+const FLAGS_PT_HP: &[Flag<u32>] = &flags!(
     PT_HP_TLS,
     PT_HP_CORE_NONE,
     PT_HP_CORE_VERSION,
@@ -1248,17 +1247,17 @@ static FLAGS_PT_HP: &[Flag<u32>] = &flags!(
     PT_HP_HSL_ANNOT,
     PT_HP_STACK,
 );
-static FLAGS_PT_MIPS: &[Flag<u32>] = &flags!(
+const FLAGS_PT_MIPS: &[Flag<u32>] = &flags!(
     PT_MIPS_REGINFO,
     PT_MIPS_RTPROC,
     PT_MIPS_OPTIONS,
     PT_MIPS_ABIFLAGS,
 );
-static FLAGS_PT_PARISC: &[Flag<u32>] = &flags!(PT_PARISC_ARCHEXT, PT_PARISC_UNWIND);
-static FLAGS_PT_ARM: &[Flag<u32>] = &flags!(PT_ARM_EXIDX);
-static FLAGS_PT_IA_64: &[Flag<u32>] = &flags!(PT_IA_64_ARCHEXT, PT_IA_64_UNWIND);
-static FLAGS_PF: &[Flag<u32>] = &flags!(PF_X, PF_W, PF_R);
-static FLAGS_PF_HP: &[Flag<u32>] = &flags!(
+const FLAGS_PT_PARISC: &[Flag<u32>] = &flags!(PT_PARISC_ARCHEXT, PT_PARISC_UNWIND);
+const FLAGS_PT_ARM: &[Flag<u32>] = &flags!(PT_ARM_EXIDX);
+const FLAGS_PT_IA_64: &[Flag<u32>] = &flags!(PT_IA_64_ARCHEXT, PT_IA_64_UNWIND);
+const FLAGS_PF: &[Flag<u32>] = &flags!(PF_X, PF_W, PF_R);
+const FLAGS_PF_HP: &[Flag<u32>] = &flags!(
     PF_HP_PAGE_SIZE,
     PF_HP_FAR_SHARED,
     PF_HP_NEAR_SHARED,
@@ -1267,11 +1266,11 @@ static FLAGS_PF_HP: &[Flag<u32>] = &flags!(
     PF_HP_LAZYSWAP,
     PF_HP_SBP,
 );
-static FLAGS_PF_MIPS: &[Flag<u32>] = &flags!(PF_MIPS_LOCAL);
-static FLAGS_PF_PARISC: &[Flag<u32>] = &flags!(PF_PARISC_SBP);
-static FLAGS_PF_ARM: &[Flag<u32>] = &flags!(PF_ARM_SB, PF_ARM_PI, PF_ARM_ABS);
-static FLAGS_PF_IA_64: &[Flag<u32>] = &flags!(PF_IA_64_NORECOV);
-static FLAGS_SHT: &[Flag<u32>] = &flags!(
+const FLAGS_PF_MIPS: &[Flag<u32>] = &flags!(PF_MIPS_LOCAL);
+const FLAGS_PF_PARISC: &[Flag<u32>] = &flags!(PF_PARISC_SBP);
+const FLAGS_PF_ARM: &[Flag<u32>] = &flags!(PF_ARM_SB, PF_ARM_PI, PF_ARM_ABS);
+const FLAGS_PF_IA_64: &[Flag<u32>] = &flags!(PF_IA_64_NORECOV);
+const FLAGS_SHT: &[Flag<u32>] = &flags!(
     SHT_NULL,
     SHT_PROGBITS,
     SHT_SYMTAB,
@@ -1300,7 +1299,7 @@ static FLAGS_SHT: &[Flag<u32>] = &flags!(
     SHT_GNU_VERNEED,
     SHT_GNU_VERSYM,
 );
-static FLAGS_SHT_MIPS: &[Flag<u32>] = &flags!(
+const FLAGS_SHT_MIPS: &[Flag<u32>] = &flags!(
     SHT_MIPS_LIBLIST,
     SHT_MIPS_MSYM,
     SHT_MIPS_CONFLICT,
@@ -1341,13 +1340,13 @@ static FLAGS_SHT_MIPS: &[Flag<u32>] = &flags!(
     SHT_MIPS_XLATE_OLD,
     SHT_MIPS_PDR_EXCEPTION,
 );
-static FLAGS_SHT_PARISC: &[Flag<u32>] = &flags!(SHT_PARISC_EXT, SHT_PARISC_UNWIND, SHT_PARISC_DOC);
-static FLAGS_SHT_ALPHA: &[Flag<u32>] = &flags!(SHT_ALPHA_DEBUG, SHT_ALPHA_REGINFO);
-static FLAGS_SHT_ARM: &[Flag<u32>] = &flags!(SHT_ARM_EXIDX, SHT_ARM_PREEMPTMAP, SHT_ARM_ATTRIBUTES);
-static FLAGS_SHT_CSKY: &[Flag<u32>] = &flags!(SHT_CSKY_ATTRIBUTES);
-static FLAGS_SHT_IA_64: &[Flag<u32>] = &flags!(SHT_IA_64_EXT, SHT_IA_64_UNWIND);
-static FLAGS_SHT_X86_64: &[Flag<u32>] = &flags!(SHT_X86_64_UNWIND);
-static FLAGS_SHF: &[Flag<u32>] = &flags!(
+const FLAGS_SHT_PARISC: &[Flag<u32>] = &flags!(SHT_PARISC_EXT, SHT_PARISC_UNWIND, SHT_PARISC_DOC);
+const FLAGS_SHT_ALPHA: &[Flag<u32>] = &flags!(SHT_ALPHA_DEBUG, SHT_ALPHA_REGINFO);
+const FLAGS_SHT_ARM: &[Flag<u32>] = &flags!(SHT_ARM_EXIDX, SHT_ARM_PREEMPTMAP, SHT_ARM_ATTRIBUTES);
+const FLAGS_SHT_CSKY: &[Flag<u32>] = &flags!(SHT_CSKY_ATTRIBUTES);
+const FLAGS_SHT_IA_64: &[Flag<u32>] = &flags!(SHT_IA_64_EXT, SHT_IA_64_UNWIND);
+const FLAGS_SHT_X86_64: &[Flag<u32>] = &flags!(SHT_X86_64_UNWIND);
+const FLAGS_SHF: &[Flag<u32>] = &flags!(
     SHF_WRITE,
     SHF_ALLOC,
     SHF_EXECINSTR,
@@ -1360,7 +1359,7 @@ static FLAGS_SHF: &[Flag<u32>] = &flags!(
     SHF_TLS,
     SHF_COMPRESSED,
 );
-static FLAGS_SHF_MIPS: &[Flag<u32>] = &flags!(
+const FLAGS_SHF_MIPS: &[Flag<u32>] = &flags!(
     SHF_MIPS_GPREL,
     SHF_MIPS_MERGE,
     SHF_MIPS_ADDR,
@@ -1370,12 +1369,12 @@ static FLAGS_SHF_MIPS: &[Flag<u32>] = &flags!(
     SHF_MIPS_NAMES,
     SHF_MIPS_NODUPE,
 );
-static FLAGS_SHF_PARISC: &[Flag<u32>] = &flags!(SHF_PARISC_SHORT, SHF_PARISC_HUGE, SHF_PARISC_SBP);
-static FLAGS_SHF_ALPHA: &[Flag<u32>] = &flags!(SHF_ALPHA_GPREL);
-static FLAGS_SHF_ARM: &[Flag<u32>] = &flags!(SHF_ARM_ENTRYSECT, SHF_ARM_COMDEF);
-static FLAGS_SHF_IA_64: &[Flag<u32>] = &flags!(SHF_IA_64_SHORT, SHF_IA_64_NORECOV);
-static FLAGS_ELFCOMPRESS: &[Flag<u32>] = &flags!(ELFCOMPRESS_ZLIB, ELFCOMPRESS_ZSTD);
-static FLAGS_STT: &[Flag<u8>] = &flags!(
+const FLAGS_SHF_PARISC: &[Flag<u32>] = &flags!(SHF_PARISC_SHORT, SHF_PARISC_HUGE, SHF_PARISC_SBP);
+const FLAGS_SHF_ALPHA: &[Flag<u32>] = &flags!(SHF_ALPHA_GPREL);
+const FLAGS_SHF_ARM: &[Flag<u32>] = &flags!(SHF_ARM_ENTRYSECT, SHF_ARM_COMDEF);
+const FLAGS_SHF_IA_64: &[Flag<u32>] = &flags!(SHF_IA_64_SHORT, SHF_IA_64_NORECOV);
+const FLAGS_ELFCOMPRESS: &[Flag<u32>] = &flags!(ELFCOMPRESS_ZLIB, ELFCOMPRESS_ZSTD);
+const FLAGS_STT: &[Flag<u8>] = &flags!(
     STT_NOTYPE,
     STT_OBJECT,
     STT_FUNC,
@@ -1384,27 +1383,27 @@ static FLAGS_STT: &[Flag<u8>] = &flags!(
     STT_COMMON,
     STT_TLS,
 );
-static FLAGS_STT_GNU: &[Flag<u8>] = &flags!(STT_GNU_IFUNC);
-static FLAGS_STT_HP: &[Flag<u8>] = &flags!(STT_HP_OPAQUE, STT_HP_STUB);
-static FLAGS_STT_SPARC: &[Flag<u8>] = &flags!(STT_SPARC_REGISTER);
-static FLAGS_STT_PARISC: &[Flag<u8>] = &flags!(STT_PARISC_MILLICODE);
-static FLAGS_STT_ARM: &[Flag<u8>] = &flags!(STT_ARM_TFUNC, STT_ARM_16BIT);
-static FLAGS_STB: &[Flag<u8>] = &flags!(STB_LOCAL, STB_GLOBAL, STB_WEAK);
-static FLAGS_STB_GNU: &[Flag<u8>] = &flags!(STB_GNU_UNIQUE);
-static FLAGS_STB_MIPS: &[Flag<u8>] = &flags!(STB_MIPS_SPLIT_COMMON);
-static FLAGS_STV: &[Flag<u8>] = &flags!(STV_DEFAULT, STV_INTERNAL, STV_HIDDEN, STV_PROTECTED);
-static FLAGS_STO_MIPS: &[Flag<u8>] = &flags!(STO_MIPS_PLT);
-static FLAGS_STO_ALPHA: &[Flag<u8>] = &flags!(STO_ALPHA_NOPV, STO_ALPHA_STD_GPLOAD);
-static FLAGS_SHN: &[Flag<u16>] = &flags!(SHN_UNDEF, SHN_ABS, SHN_COMMON, SHN_XINDEX);
-static FLAGS_SHN_MIPS: &[Flag<u16>] = &flags!(
+const FLAGS_STT_GNU: &[Flag<u8>] = &flags!(STT_GNU_IFUNC);
+const FLAGS_STT_HP: &[Flag<u8>] = &flags!(STT_HP_OPAQUE, STT_HP_STUB);
+const FLAGS_STT_SPARC: &[Flag<u8>] = &flags!(STT_SPARC_REGISTER);
+const FLAGS_STT_PARISC: &[Flag<u8>] = &flags!(STT_PARISC_MILLICODE);
+const FLAGS_STT_ARM: &[Flag<u8>] = &flags!(STT_ARM_TFUNC, STT_ARM_16BIT);
+const FLAGS_STB: &[Flag<u8>] = &flags!(STB_LOCAL, STB_GLOBAL, STB_WEAK);
+const FLAGS_STB_GNU: &[Flag<u8>] = &flags!(STB_GNU_UNIQUE);
+const FLAGS_STB_MIPS: &[Flag<u8>] = &flags!(STB_MIPS_SPLIT_COMMON);
+const FLAGS_STV: &[Flag<u8>] = &flags!(STV_DEFAULT, STV_INTERNAL, STV_HIDDEN, STV_PROTECTED);
+const FLAGS_STO_MIPS: &[Flag<u8>] = &flags!(STO_MIPS_PLT);
+const FLAGS_STO_ALPHA: &[Flag<u8>] = &flags!(STO_ALPHA_NOPV, STO_ALPHA_STD_GPLOAD);
+const FLAGS_SHN: &[Flag<u16>] = &flags!(SHN_UNDEF, SHN_ABS, SHN_COMMON, SHN_XINDEX);
+const FLAGS_SHN_MIPS: &[Flag<u16>] = &flags!(
     SHN_MIPS_ACOMMON,
     SHN_MIPS_TEXT,
     SHN_MIPS_DATA,
     SHN_MIPS_SCOMMON,
     SHN_MIPS_SUNDEFINED,
 );
-static FLAGS_SHN_PARISC: &[Flag<u16>] = &flags!(SHN_PARISC_ANSI_COMMON, SHN_PARISC_HUGE_COMMON);
-static FLAGS_R_68K: &[Flag<u32>] = &flags!(
+const FLAGS_SHN_PARISC: &[Flag<u16>] = &flags!(SHN_PARISC_ANSI_COMMON, SHN_PARISC_HUGE_COMMON);
+const FLAGS_R_68K: &[Flag<u32>] = &flags!(
     R_68K_NONE,
     R_68K_32,
     R_68K_16,
@@ -1447,7 +1446,7 @@ static FLAGS_R_68K: &[Flag<u32>] = &flags!(
     R_68K_TLS_DTPREL32,
     R_68K_TLS_TPREL32,
 );
-static FLAGS_R_386: &[Flag<u32>] = &flags!(
+const FLAGS_R_386: &[Flag<u32>] = &flags!(
     R_386_NONE,
     R_386_32,
     R_386_PC32,
@@ -1491,7 +1490,7 @@ static FLAGS_R_386: &[Flag<u32>] = &flags!(
     R_386_IRELATIVE,
     R_386_GOT32X,
 );
-static FLAGS_R_SPARC: &[Flag<u32>] = &flags!(
+const FLAGS_R_SPARC: &[Flag<u32>] = &flags!(
     R_SPARC_NONE,
     R_SPARC_8,
     R_SPARC_16,
@@ -1587,7 +1586,7 @@ static FLAGS_R_SPARC: &[Flag<u32>] = &flags!(
     R_SPARC_GNU_VTENTRY,
     R_SPARC_REV32,
 );
-static FLAGS_R_MIPS: &[Flag<u32>] = &flags!(
+const FLAGS_R_MIPS: &[Flag<u32>] = &flags!(
     R_MIPS_NONE,
     R_MIPS_16,
     R_MIPS_32,
@@ -1640,7 +1639,7 @@ static FLAGS_R_MIPS: &[Flag<u32>] = &flags!(
     R_MIPS_COPY,
     R_MIPS_JUMP_SLOT,
 );
-static FLAGS_R_PARISC: &[Flag<u32>] = &flags!(
+const FLAGS_R_PARISC: &[Flag<u32>] = &flags!(
     R_PARISC_NONE,
     R_PARISC_DIR32,
     R_PARISC_DIR21L,
@@ -1750,7 +1749,7 @@ static FLAGS_R_PARISC: &[Flag<u32>] = &flags!(
     R_PARISC_TLS_TPREL32,
     R_PARISC_TLS_TPREL64,
 );
-static FLAGS_R_ALPHA: &[Flag<u32>] = &flags!(
+const FLAGS_R_ALPHA: &[Flag<u32>] = &flags!(
     R_ALPHA_NONE,
     R_ALPHA_REFLONG,
     R_ALPHA_REFQUAD,
@@ -1785,7 +1784,7 @@ static FLAGS_R_ALPHA: &[Flag<u32>] = &flags!(
     R_ALPHA_TPRELLO,
     R_ALPHA_TPREL16,
 );
-static FLAGS_R_PPC: &[Flag<u32>] = &flags!(
+const FLAGS_R_PPC: &[Flag<u32>] = &flags!(
     R_PPC_NONE,
     R_PPC_ADDR32,
     R_PPC_ADDR24,
@@ -1882,7 +1881,7 @@ static FLAGS_R_PPC: &[Flag<u32>] = &flags!(
     R_PPC_REL16_HA,
     R_PPC_TOC16,
 );
-static FLAGS_R_PPC64: &[Flag<u32>] = &flags!(
+const FLAGS_R_PPC64: &[Flag<u32>] = &flags!(
     R_PPC64_NONE,
     R_PPC64_ADDR32,
     R_PPC64_ADDR24,
@@ -2003,7 +2002,7 @@ static FLAGS_R_PPC64: &[Flag<u32>] = &flags!(
     R_PPC64_REL16_HI,
     R_PPC64_REL16_HA,
 );
-static FLAGS_R_AARCH64: &[Flag<u32>] = &flags!(
+const FLAGS_R_AARCH64: &[Flag<u32>] = &flags!(
     R_AARCH64_NONE,
     R_AARCH64_P32_ABS32,
     R_AARCH64_P32_COPY,
@@ -2138,7 +2137,7 @@ static FLAGS_R_AARCH64: &[Flag<u32>] = &flags!(
     R_AARCH64_TLSDESC,
     R_AARCH64_IRELATIVE,
 );
-static FLAGS_R_ARM: &[Flag<u32>] = &flags!(
+const FLAGS_R_ARM: &[Flag<u32>] = &flags!(
     R_ARM_NONE,
     R_ARM_PC24,
     R_ARM_ABS32,
@@ -2266,7 +2265,7 @@ static FLAGS_R_ARM: &[Flag<u32>] = &flags!(
     R_ARM_RPC24,
     R_ARM_RBASE,
 );
-static FLAGS_R_CKCORE: &[Flag<u32>] = &flags!(
+const FLAGS_R_CKCORE: &[Flag<u32>] = &flags!(
     R_CKCORE_NONE,
     R_CKCORE_ADDR32,
     R_CKCORE_PCRELIMM8BY4,
@@ -2323,7 +2322,7 @@ static FLAGS_R_CKCORE: &[Flag<u32>] = &flags!(
     R_CKCORE_TLS_DTPOFF32,
     R_CKCORE_TLS_TPOFF32,
 );
-static FLAGS_R_IA64: &[Flag<u32>] = &flags!(
+const FLAGS_R_IA64: &[Flag<u32>] = &flags!(
     R_IA64_NONE,
     R_IA64_IMM14,
     R_IA64_IMM22,
@@ -2406,7 +2405,7 @@ static FLAGS_R_IA64: &[Flag<u32>] = &flags!(
     R_IA64_DTPREL64LSB,
     R_IA64_LTOFF_DTPREL22,
 );
-static FLAGS_R_SH: &[Flag<u32>] = &flags!(
+const FLAGS_R_SH: &[Flag<u32>] = &flags!(
     R_SH_NONE,
     R_SH_DIR32,
     R_SH_REL32,
@@ -2445,7 +2444,7 @@ static FLAGS_R_SH: &[Flag<u32>] = &flags!(
     R_SH_GOTOFF,
     R_SH_GOTPC,
 );
-static FLAGS_R_390: &[Flag<u32>] = &flags!(
+const FLAGS_R_390: &[Flag<u32>] = &flags!(
     R_390_NONE,
     R_390_8,
     R_390_12,
@@ -2509,7 +2508,7 @@ static FLAGS_R_390: &[Flag<u32>] = &flags!(
     R_390_TLS_GOTIE20,
     R_390_IRELATIVE,
 );
-static FLAGS_R_CRIS: &[Flag<u32>] = &flags!(
+const FLAGS_R_CRIS: &[Flag<u32>] = &flags!(
     R_CRIS_NONE,
     R_CRIS_8,
     R_CRIS_16,
@@ -2531,7 +2530,7 @@ static FLAGS_R_CRIS: &[Flag<u32>] = &flags!(
     R_CRIS_32_PLT_GOTREL,
     R_CRIS_32_PLT_PCREL,
 );
-static FLAGS_R_X86_64: &[Flag<u32>] = &flags!(
+const FLAGS_R_X86_64: &[Flag<u32>] = &flags!(
     R_X86_64_NONE,
     R_X86_64_64,
     R_X86_64_PC32,
@@ -2574,7 +2573,7 @@ static FLAGS_R_X86_64: &[Flag<u32>] = &flags!(
     R_X86_64_GOTPCRELX,
     R_X86_64_REX_GOTPCRELX,
 );
-static FLAGS_R_MN10300: &[Flag<u32>] = &flags!(
+const FLAGS_R_MN10300: &[Flag<u32>] = &flags!(
     R_MN10300_NONE,
     R_MN10300_32,
     R_MN10300_16,
@@ -2611,7 +2610,7 @@ static FLAGS_R_MN10300: &[Flag<u32>] = &flags!(
     R_MN10300_SYM_DIFF,
     R_MN10300_ALIGN,
 );
-static FLAGS_R_M32R: &[Flag<u32>] = &flags!(
+const FLAGS_R_M32R: &[Flag<u32>] = &flags!(
     R_M32R_NONE,
     R_M32R_16,
     R_M32R_32,
@@ -2657,7 +2656,7 @@ static FLAGS_R_M32R: &[Flag<u32>] = &flags!(
     R_M32R_GOTOFF_LO,
     R_M32R_NUM,
 );
-static FLAGS_R_MICROBLAZE: &[Flag<u32>] = &flags!(
+const FLAGS_R_MICROBLAZE: &[Flag<u32>] = &flags!(
     R_MICROBLAZE_NONE,
     R_MICROBLAZE_32,
     R_MICROBLAZE_32_PCREL,
@@ -2689,7 +2688,7 @@ static FLAGS_R_MICROBLAZE: &[Flag<u32>] = &flags!(
     R_MICROBLAZE_TLSGOTTPREL32,
     R_MICROBLAZE_TLSTPREL32,
 );
-static FLAGS_R_NIOS2: &[Flag<u32>] = &flags!(
+const FLAGS_R_NIOS2: &[Flag<u32>] = &flags!(
     R_NIOS2_NONE,
     R_NIOS2_S16,
     R_NIOS2_U16,
@@ -2737,7 +2736,7 @@ static FLAGS_R_NIOS2: &[Flag<u32>] = &flags!(
     R_NIOS2_CALL_LO,
     R_NIOS2_CALL_HA,
 );
-static FLAGS_R_TILEPRO: &[Flag<u32>] = &flags!(
+const FLAGS_R_TILEPRO: &[Flag<u32>] = &flags!(
     R_TILEPRO_NONE,
     R_TILEPRO_32,
     R_TILEPRO_16,
@@ -2830,7 +2829,7 @@ static FLAGS_R_TILEPRO: &[Flag<u32>] = &flags!(
     R_TILEPRO_GNU_VTINHERIT,
     R_TILEPRO_GNU_VTENTRY,
 );
-static FLAGS_R_TILEGX: &[Flag<u32>] = &flags!(
+const FLAGS_R_TILEGX: &[Flag<u32>] = &flags!(
     R_TILEGX_NONE,
     R_TILEGX_64,
     R_TILEGX_32,
@@ -2952,7 +2951,7 @@ static FLAGS_R_TILEGX: &[Flag<u32>] = &flags!(
     R_TILEGX_GNU_VTINHERIT,
     R_TILEGX_GNU_VTENTRY,
 );
-static FLAGS_R_RISCV: &[Flag<u32>] = &flags!(
+const FLAGS_R_RISCV: &[Flag<u32>] = &flags!(
     R_RISCV_NONE,
     R_RISCV_32,
     R_RISCV_64,
@@ -3008,9 +3007,9 @@ static FLAGS_R_RISCV: &[Flag<u32>] = &flags!(
     R_RISCV_SET32,
     R_RISCV_32_PCREL,
 );
-static FLAGS_R_BPF: &[Flag<u32>] = &flags!(R_BPF_NONE, R_BPF_64_64, R_BPF_64_32);
-static FLAGS_R_SBF: &[Flag<u32>] = &flags!(R_SBF_NONE, R_SBF_64_64, R_SBF_64_32);
-static FLAGS_R_METAG: &[Flag<u32>] = &flags!(
+const FLAGS_R_BPF: &[Flag<u32>] = &flags!(R_BPF_NONE, R_BPF_64_64, R_BPF_64_32);
+const FLAGS_R_SBF: &[Flag<u32>] = &flags!(R_SBF_NONE, R_SBF_64_64, R_SBF_64_32);
+const FLAGS_R_METAG: &[Flag<u32>] = &flags!(
     R_METAG_HIADDR16,
     R_METAG_LOADDR16,
     R_METAG_ADDR32,
@@ -3061,7 +3060,7 @@ static FLAGS_R_METAG: &[Flag<u32>] = &flags!(
     R_METAG_TLS_LE_HI16,
     R_METAG_TLS_LE_LO16,
 );
-static FLAGS_R_NDS32: &[Flag<u32>] = &flags!(
+const FLAGS_R_NDS32: &[Flag<u32>] = &flags!(
     R_NDS32_NONE,
     R_NDS32_32_RELA,
     R_NDS32_COPY,
@@ -3071,7 +3070,7 @@ static FLAGS_R_NDS32: &[Flag<u32>] = &flags!(
     R_NDS32_TLS_TPOFF,
     R_NDS32_TLS_DESC,
 );
-static FLAGS_R_LOONGARCH: &[Flag<u32>] = &flags!(
+const FLAGS_R_LOONGARCH: &[Flag<u32>] = &flags!(
     R_LARCH_NONE,
     R_LARCH_32,
     R_LARCH_64,
@@ -3162,7 +3161,7 @@ static FLAGS_R_LOONGARCH: &[Flag<u32>] = &flags!(
     R_LARCH_32_PCREL,
     R_LARCH_RELAX,
 );
-static FLAGS_NT_CORE: &[Flag<u32>] = &flags!(
+const FLAGS_NT_CORE: &[Flag<u32>] = &flags!(
     NT_PRSTATUS,
     NT_PRFPREG,
     NT_FPREGSET,
@@ -3227,43 +3226,43 @@ static FLAGS_NT_CORE: &[Flag<u32>] = &flags!(
     NT_MIPS_DSP,
     NT_MIPS_FP_MODE,
 );
-static FLAGS_NT_SOLARIS: &[Flag<u32>] = &flags!(NT_SOLARIS_PAGESIZE_HINT);
-static FLAGS_NT_GNU: &[Flag<u32>] = &flags!(
+const FLAGS_NT_SOLARIS: &[Flag<u32>] = &flags!(NT_SOLARIS_PAGESIZE_HINT);
+const FLAGS_NT_GNU: &[Flag<u32>] = &flags!(
     NT_GNU_ABI_TAG,
     NT_GNU_HWCAP,
     NT_GNU_BUILD_ID,
     NT_GNU_GOLD_VERSION,
     NT_GNU_PROPERTY_TYPE_0,
 );
-static FLAGS_GNU_PROPERTY: &[Flag<u32>] = &flags!(
+const FLAGS_GNU_PROPERTY: &[Flag<u32>] = &flags!(
     GNU_PROPERTY_STACK_SIZE,
     GNU_PROPERTY_NO_COPY_ON_PROTECTED,
     GNU_PROPERTY_1_NEEDED,
 );
-static FLAGS_GNU_PROPERTY_1_NEEDED: &[Flag<u32>] =
+const FLAGS_GNU_PROPERTY_1_NEEDED: &[Flag<u32>] =
     &flags!(GNU_PROPERTY_1_NEEDED_INDIRECT_EXTERN_ACCESS);
-static FLAGS_GNU_PROPERTY_AARCH64: &[Flag<u32>] = &flags!(GNU_PROPERTY_AARCH64_FEATURE_1_AND);
-static FLAGS_GNU_PROPERTY_AARCH64_FEATURE_1: &[Flag<u32>] = &flags!(
+const FLAGS_GNU_PROPERTY_AARCH64: &[Flag<u32>] = &flags!(GNU_PROPERTY_AARCH64_FEATURE_1_AND);
+const FLAGS_GNU_PROPERTY_AARCH64_FEATURE_1: &[Flag<u32>] = &flags!(
     GNU_PROPERTY_AARCH64_FEATURE_1_BTI,
     GNU_PROPERTY_AARCH64_FEATURE_1_PAC,
 );
-static FLAGS_GNU_PROPERTY_X86: &[Flag<u32>] = &flags!(
+const FLAGS_GNU_PROPERTY_X86: &[Flag<u32>] = &flags!(
     GNU_PROPERTY_X86_ISA_1_USED,
     GNU_PROPERTY_X86_ISA_1_NEEDED,
     GNU_PROPERTY_X86_FEATURE_1_AND,
 );
-static FLAGS_GNU_PROPERTY_X86_ISA_1: &[Flag<u32>] = &flags!(
+const FLAGS_GNU_PROPERTY_X86_ISA_1: &[Flag<u32>] = &flags!(
     GNU_PROPERTY_X86_ISA_1_BASELINE,
     GNU_PROPERTY_X86_ISA_1_V2,
     GNU_PROPERTY_X86_ISA_1_V3,
     GNU_PROPERTY_X86_ISA_1_V4,
 );
-static FLAGS_GNU_PROPERTY_X86_FEATURE_1: &[Flag<u32>] = &flags!(
+const FLAGS_GNU_PROPERTY_X86_FEATURE_1: &[Flag<u32>] = &flags!(
     GNU_PROPERTY_X86_FEATURE_1_IBT,
     GNU_PROPERTY_X86_FEATURE_1_SHSTK,
 );
-static FLAGS_GRP: &[Flag<u32>] = &flags!(GRP_COMDAT);
-static FLAGS_DT: &[Flag<u32>] = &flags!(
+const FLAGS_GRP: &[Flag<u32>] = &flags!(GRP_COMDAT);
+const FLAGS_DT: &[Flag<u32>] = &flags!(
     DT_NULL,
     DT_NEEDED,
     DT_PLTRELSZ,
@@ -3331,8 +3330,8 @@ static FLAGS_DT: &[Flag<u32>] = &flags!(
     DT_AUXILIARY,
     DT_FILTER,
 );
-static FLAGS_DT_SPARC: &[Flag<u32>] = &flags!(DT_SPARC_REGISTER);
-static FLAGS_DT_MIPS: &[Flag<u32>] = &flags!(
+const FLAGS_DT_SPARC: &[Flag<u32>] = &flags!(DT_SPARC_REGISTER);
+const FLAGS_DT_MIPS: &[Flag<u32>] = &flags!(
     DT_MIPS_RLD_VERSION,
     DT_MIPS_TIME_STAMP,
     DT_MIPS_ICHECKSUM,
@@ -3380,20 +3379,20 @@ static FLAGS_DT_MIPS: &[Flag<u32>] = &flags!(
     DT_MIPS_RWPLT,
     DT_MIPS_RLD_MAP_REL,
 );
-static FLAGS_DT_ALPHA: &[Flag<u32>] = &flags!(DT_ALPHA_PLTRO);
-static FLAGS_DT_PPC: &[Flag<u32>] = &flags!(DT_PPC_GOT, DT_PPC_OPT);
-static FLAGS_DT_PPC64: &[Flag<u32>] =
+const FLAGS_DT_ALPHA: &[Flag<u32>] = &flags!(DT_ALPHA_PLTRO);
+const FLAGS_DT_PPC: &[Flag<u32>] = &flags!(DT_PPC_GOT, DT_PPC_OPT);
+const FLAGS_DT_PPC64: &[Flag<u32>] =
     &flags!(DT_PPC64_GLINK, DT_PPC64_OPD, DT_PPC64_OPDSZ, DT_PPC64_OPT);
-static FLAGS_DT_IA_64: &[Flag<u32>] = &flags!(DT_IA_64_PLT_RESERVE);
-static FLAGS_DT_NIOS2: &[Flag<u32>] = &flags!(DT_NIOS2_GP);
-static FLAGS_DF: &[Flag<u32>] = &flags!(
+const FLAGS_DT_IA_64: &[Flag<u32>] = &flags!(DT_IA_64_PLT_RESERVE);
+const FLAGS_DT_NIOS2: &[Flag<u32>] = &flags!(DT_NIOS2_GP);
+const FLAGS_DF: &[Flag<u32>] = &flags!(
     DF_ORIGIN,
     DF_SYMBOLIC,
     DF_TEXTREL,
     DF_BIND_NOW,
     DF_STATIC_TLS,
 );
-static FLAGS_DF_1: &[Flag<u32>] = &flags!(
+const FLAGS_DF_1: &[Flag<u32>] = &flags!(
     DF_1_NOW,
     DF_1_GLOBAL,
     DF_1_GROUP,
@@ -3423,7 +3422,7 @@ static FLAGS_DF_1: &[Flag<u32>] = &flags!(
     DF_1_STUB,
     DF_1_PIE,
 );
-static FLAGS_VER_FLG: &[Flag<u16>] = &flags!(VER_FLG_BASE, VER_FLG_WEAK);
-static FLAGS_VER_NDX: &[Flag<u16>] = &flags!(VER_NDX_LOCAL, VER_NDX_GLOBAL);
-static FLAGS_VERSYM: &[Flag<u16>] = &flags!(VERSYM_HIDDEN);
-static FLAGS_TAG: &[Flag<u8>] = &flags!(Tag_File, Tag_Section, Tag_Symbol);
+const FLAGS_VER_FLG: &[Flag<u16>] = &flags!(VER_FLG_BASE, VER_FLG_WEAK);
+const FLAGS_VER_NDX: &[Flag<u16>] = &flags!(VER_NDX_LOCAL, VER_NDX_GLOBAL);
+const FLAGS_VERSYM: &[Flag<u16>] = &flags!(VERSYM_HIDDEN);
+const FLAGS_TAG: &[Flag<u8>] = &flags!(Tag_File, Tag_Section, Tag_Symbol);
