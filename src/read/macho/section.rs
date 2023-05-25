@@ -204,13 +204,34 @@ where
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug)]
 pub(super) struct MachOSectionInternal<'data, Mach: MachHeader> {
     pub index: SectionIndex,
     pub segment_index: usize,
     pub kind: SectionKind,
     pub section: &'data Mach::Section,
 }
+
+// derive(Clone) incorrectly requires Elf: Sized.
+impl<'data, Mach: MachHeader> Clone for MachOSectionInternal<'data, Mach> {
+    fn clone(&self) -> Self {
+        let &Self {
+            index,
+            segment_index,
+            kind,
+            section,
+        } = self;
+        Self {
+            index,
+            segment_index,
+            kind,
+            section,
+        }
+    }
+}
+
+// derive(Copy) incorrectly requires Mach: Sized.
+impl<'data, Mach: MachHeader> Copy for MachOSectionInternal<'data, Mach> {}
 
 impl<'data, Mach: MachHeader> MachOSectionInternal<'data, Mach> {
     pub(super) fn parse(

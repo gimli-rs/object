@@ -46,7 +46,10 @@ where
     R: ReadRef<'data>,
 {
     /// Parse the raw Mach-O file data.
-    pub fn parse(data: R) -> Result<Self> {
+    pub fn parse(data: R) -> Result<Self>
+    where
+        Mach: Pod,
+    {
         let header = Mach::parse(data, 0)?;
         let endian = header.endian()?;
 
@@ -84,7 +87,10 @@ where
     /// This will read different sections from different subcaches, if necessary.
     pub fn parse_dyld_cache_image<'cache, E: Endian>(
         image: &DyldCacheImage<'data, 'cache, E, R>,
-    ) -> Result<Self> {
+    ) -> Result<Self>
+    where
+        Mach: Pod,
+    {
         let (data, header_offset) = image.image_data_and_offset()?;
         let header = Mach::parse(data, header_offset)?;
         let endian = header.endian()?;
@@ -553,7 +559,7 @@ where
 
 /// A trait for generic access to `MachHeader32` and `MachHeader64`.
 #[allow(missing_docs)]
-pub trait MachHeader: Debug + Pod {
+pub trait MachHeader: Debug {
     type Word: Into<u64>;
     type Endian: endian::Endian;
     type Segment: Segment<Endian = Self::Endian, Section = Self::Section>;
@@ -584,7 +590,10 @@ pub trait MachHeader: Debug + Pod {
     /// Read the file header.
     ///
     /// Also checks that the magic field in the file header is a supported format.
-    fn parse<'data, R: ReadRef<'data>>(data: R, offset: u64) -> read::Result<&'data Self> {
+    fn parse<'data, R: ReadRef<'data>>(data: R, offset: u64) -> read::Result<&'data Self>
+    where
+        Self: Pod,
+    {
         let header = data
             .read_at::<Self>(offset)
             .read_error("Invalid Mach-O header size or alignment")?;
@@ -607,7 +616,10 @@ pub trait MachHeader: Debug + Pod {
         endian: Self::Endian,
         data: R,
         header_offset: u64,
-    ) -> Result<LoadCommandIterator<'data, Self::Endian>> {
+    ) -> Result<LoadCommandIterator<'data, Self::Endian>>
+    where
+        Self: Sized,
+    {
         let data = data
             .read_bytes_at(
                 header_offset + mem::size_of::<Self>() as u64,
@@ -623,7 +635,10 @@ pub trait MachHeader: Debug + Pod {
         endian: Self::Endian,
         data: R,
         header_offset: u64,
-    ) -> Result<Option<[u8; 16]>> {
+    ) -> Result<Option<[u8; 16]>>
+    where
+        Self: Sized,
+    {
         let mut commands = self.load_commands(endian, data, header_offset)?;
         while let Some(command) = commands.next()? {
             if let Ok(Some(uuid)) = command.uuid() {
