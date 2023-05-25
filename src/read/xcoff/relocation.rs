@@ -2,7 +2,6 @@ use alloc::fmt;
 use core::fmt::Debug;
 use core::slice;
 
-use crate::pod::Pod;
 use crate::{xcoff, BigEndian as BE, Relocation};
 
 use crate::read::{ReadRef, RelocationEncoding, RelocationKind, RelocationTarget, SymbolIndex};
@@ -78,7 +77,7 @@ where
 
 /// A trait for generic access to `Rel32` and `Rel64`.
 #[allow(missing_docs)]
-pub trait Rel: Debug + Pod {
+pub trait Rel: Debug {
     type Word: Into<u64>;
     fn r_vaddr(&self) -> Self::Word;
     fn r_symndx(&self) -> u32;
