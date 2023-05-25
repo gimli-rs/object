@@ -47,6 +47,7 @@ where
     where
         Xcoff: Pod,
         Xcoff::AuxHeader: Pod,
+        Xcoff::SectionHeader: Pod,
     {
         let mut offset = 0;
         let header = Xcoff::parse(data, &mut offset)?;
@@ -324,7 +325,10 @@ pub trait FileHeader: Debug {
         &self,
         data: R,
         offset: &mut u64,
-    ) -> Result<SectionTable<'data, Self>> {
+    ) -> Result<SectionTable<'data, Self>>
+    where
+        Self::SectionHeader: Pod,
+    {
         SectionTable::parse(self, data, offset)
     }
 

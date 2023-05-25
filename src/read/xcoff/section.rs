@@ -221,7 +221,10 @@ where
     ///
     /// `data` must be the entire file data.
     /// `offset` must be after the optional file header.
-    pub fn parse<R: ReadRef<'data>>(header: &Xcoff, data: R, offset: &mut u64) -> Result<Self> {
+    pub fn parse<R: ReadRef<'data>>(header: &Xcoff, data: R, offset: &mut u64) -> Result<Self>
+    where
+        Xcoff::SectionHeader: Pod,
+    {
         let section_num = header.f_nscns();
         if section_num == 0 {
             return Ok(SectionTable::default());
@@ -262,7 +265,7 @@ where
 
 /// A trait for generic access to `SectionHeader32` and `SectionHeader64`.
 #[allow(missing_docs)]
-pub trait SectionHeader: Debug + Pod {
+pub trait SectionHeader: Debug {
     type Word: Into<u64>;
     type HalfWord: Into<u32>;
     type Xcoff: FileHeader<SectionHeader = Self, Word = Self::Word>;
