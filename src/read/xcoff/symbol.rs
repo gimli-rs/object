@@ -101,6 +101,7 @@ where
     /// Return a file auxiliary symbol.
     pub fn aux_file(&self, index: usize, offset: usize) -> Result<&'data Xcoff::FileAux>
     where
+        Xcoff::FileAux: Pod,
         Xcoff::Symbol: Pod,
     {
         debug_assert!(self.symbol(index)?.has_aux_file());
@@ -169,6 +170,7 @@ impl<'data, 'file, Xcoff: FileHeader, R: ReadRef<'data>> read::private::Sealed
 impl<'data, 'file, Xcoff: FileHeader, R: ReadRef<'data>> ObjectSymbolTable<'data>
     for XcoffSymbolTable<'data, 'file, Xcoff, R>
 where
+    Xcoff::FileAux: Pod,
     Xcoff::Symbol: Pod,
 {
     type Symbol = XcoffSymbol<'data, 'file, Xcoff, R>;
@@ -268,6 +270,7 @@ impl<'data, 'file, Xcoff: FileHeader, R: ReadRef<'data>> read::private::Sealed
 impl<'data, 'file, Xcoff: FileHeader, R: ReadRef<'data>> ObjectSymbol<'data>
     for XcoffSymbol<'data, 'file, Xcoff, R>
 where
+    Xcoff::FileAux: Pod,
     Xcoff::Symbol: Pod,
 {
     #[inline]
@@ -587,7 +590,7 @@ impl Symbol for xcoff::Symbol32 {
 
 /// A trait for generic access to `FileAux32` and `FileAux64`.
 #[allow(missing_docs)]
-pub trait FileAux: Debug + Pod {
+pub trait FileAux: Debug {
     fn x_fname(&self) -> &[u8; 8];
     fn x_ftype(&self) -> u8;
     fn x_auxtype(&self) -> Option<u8>;
