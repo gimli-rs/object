@@ -1,5 +1,5 @@
 use crate::read::{Architecture, Error, ReadError, ReadRef, Result};
-use crate::{macho, BigEndian, Pod};
+use crate::{macho, BigEndian};
 
 pub use macho::{FatArch32, FatArch64, FatHeader};
 
@@ -41,7 +41,7 @@ impl FatHeader {
 
 /// A trait for generic access to `FatArch32` and `FatArch64`.
 #[allow(missing_docs)]
-pub trait FatArch: Pod {
+pub trait FatArch {
     type Word: Into<u64>;
 
     fn cputype(&self) -> u32;
