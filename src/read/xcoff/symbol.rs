@@ -22,7 +22,7 @@ use super::{FileHeader, XcoffFile};
 #[derive(Debug)]
 pub struct SymbolTable<'data, Xcoff, R = &'data [u8]>
 where
-    Xcoff: FileHeader,
+    Xcoff: FileHeader + ?Sized,
     R: ReadRef<'data>,
 {
     symbols: &'data [xcoff::SymbolBytes],
@@ -46,11 +46,11 @@ where
 
 impl<'data, Xcoff, R> SymbolTable<'data, Xcoff, R>
 where
-    Xcoff: FileHeader,
+    Xcoff: FileHeader + ?Sized,
     R: ReadRef<'data>,
 {
     /// Parse the symbol table.
-    pub fn parse(header: Xcoff, data: R) -> Result<Self> {
+    pub fn parse(header: &Xcoff, data: R) -> Result<Self> {
         let mut offset = header.f_symptr().into();
         let (symbols, strings) = if offset != 0 {
             let symbols = data

@@ -43,7 +43,10 @@ where
     R: ReadRef<'data>,
 {
     /// Parse the raw XCOFF file data.
-    pub fn parse(data: R) -> Result<Self> {
+    pub fn parse(data: R) -> Result<Self>
+    where
+        Xcoff: Pod,
+    {
         let mut offset = 0;
         let header = Xcoff::parse(data, &mut offset)?;
         let aux_header = header.aux_header(data, &mut offset)?;
@@ -243,7 +246,7 @@ where
 
 /// A trait for generic access to `FileHeader32` and `FileHeader64`.
 #[allow(missing_docs)]
-pub trait FileHeader: Debug + Pod {
+pub trait FileHeader: Debug {
     type Word: Into<u64>;
     type AuxHeader: AuxHeader<Word = Self::Word>;
     type SectionHeader: SectionHeader<Word = Self::Word>;
@@ -267,7 +270,10 @@ pub trait FileHeader: Debug + Pod {
     /// Read the file header.
     ///
     /// Also checks that the magic field in the file header is a supported format.
-    fn parse<'data, R: ReadRef<'data>>(data: R, offset: &mut u64) -> Result<&'data Self> {
+    fn parse<'data, R: ReadRef<'data>>(data: R, offset: &mut u64) -> Result<&'data Self>
+    where
+        Self: Pod,
+    {
         let header = data
             .read::<Self>(offset)
             .read_error("Invalid XCOFF header size or alignment")?;
@@ -321,7 +327,7 @@ pub trait FileHeader: Debug + Pod {
     /// Return the symbol table.
     #[inline]
     fn symbols<'data, R: ReadRef<'data>>(&self, data: R) -> Result<SymbolTable<'data, Self, R>> {
-        SymbolTable::parse(*self, data)
+        SymbolTable::parse(self, data)
     }
 }
 

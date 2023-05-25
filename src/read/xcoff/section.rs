@@ -200,13 +200,13 @@ where
 
 /// The table of section headers in an XCOFF file.
 #[derive(Debug, Clone, Copy)]
-pub struct SectionTable<'data, Xcoff: FileHeader> {
+pub struct SectionTable<'data, Xcoff: FileHeader + ?Sized> {
     sections: &'data [Xcoff::SectionHeader],
 }
 
 impl<'data, Xcoff> Default for SectionTable<'data, Xcoff>
 where
-    Xcoff: FileHeader,
+    Xcoff: FileHeader + ?Sized,
 {
     fn default() -> Self {
         Self { sections: &[] }
@@ -215,7 +215,7 @@ where
 
 impl<'data, Xcoff> SectionTable<'data, Xcoff>
 where
-    Xcoff: FileHeader,
+    Xcoff: FileHeader + ?Sized,
 {
     /// Parse the section table.
     ///
