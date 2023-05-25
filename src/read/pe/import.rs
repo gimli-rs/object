@@ -126,7 +126,10 @@ pub struct ImportThunkList<'data> {
 
 impl<'data> ImportThunkList<'data> {
     /// Get the thunk at the given index.
-    pub fn get<Pe: ImageNtHeaders>(&self, index: usize) -> Result<Pe::ImageThunkData> {
+    pub fn get<Pe: ImageNtHeaders>(&self, index: usize) -> Result<Pe::ImageThunkData>
+    where
+        Pe::ImageThunkData: Pod,
+    {
         let thunk = self
             .data
             .read_at(index * mem::size_of::<Pe::ImageThunkData>())
@@ -137,7 +140,10 @@ impl<'data> ImportThunkList<'data> {
     /// Return the first thunk in the list, and update `self` to point after it.
     ///
     /// Returns `Ok(None)` when a null thunk is found.
-    pub fn next<Pe: ImageNtHeaders>(&mut self) -> Result<Option<Pe::ImageThunkData>> {
+    pub fn next<Pe: ImageNtHeaders>(&mut self) -> Result<Option<Pe::ImageThunkData>>
+    where
+        Pe::ImageThunkData: Pod,
+    {
         let thunk = self
             .data
             .read::<Pe::ImageThunkData>()
@@ -163,12 +169,12 @@ pub enum Import<'data> {
 
 /// A trait for generic access to [`pe::ImageThunkData32`] and [`pe::ImageThunkData64`].
 #[allow(missing_docs)]
-pub trait ImageThunkData: Debug + Pod {
+pub trait ImageThunkData: Debug {
     /// Return the raw thunk value.
     fn raw(self) -> u64;
 
     /// Returns true if the ordinal flag is set.
-    fn is_ordinal(self) -> bool;
+    fn is_ordinal(&self) -> bool;
 
     /// Return the ordinal portion of the thunk.
     ///
@@ -186,7 +192,7 @@ impl ImageThunkData for pe::ImageThunkData64 {
         self.0.get(LE)
     }
 
-    fn is_ordinal(self) -> bool {
+    fn is_ordinal(&self) -> bool {
         self.0.get(LE) & pe::IMAGE_ORDINAL_FLAG64 != 0
     }
 
@@ -204,7 +210,7 @@ impl ImageThunkData for pe::ImageThunkData32 {
         self.0.get(LE).into()
     }
 
-    fn is_ordinal(self) -> bool {
+    fn is_ordinal(&self) -> bool {
         self.0.get(LE) & pe::IMAGE_ORDINAL_FLAG32 != 0
     }
 

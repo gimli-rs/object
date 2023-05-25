@@ -49,7 +49,10 @@ pub(super) fn print_pe64(p: &mut Printer<'_>, data: &[u8]) {
     print_pe::<ImageNtHeaders64>(p, data);
 }
 
-fn print_pe<Pe: ImageNtHeaders + Pod>(p: &mut Printer<'_>, data: &[u8]) {
+fn print_pe<Pe: ImageNtHeaders + Pod>(p: &mut Printer<'_>, data: &[u8])
+where
+    Pe::ImageThunkData: Pod,
+{
     if let Some(dos_header) = ImageDosHeader::parse(data).print_err(p) {
         p.group("ImageDosHeader", |p| {
             p.field_hex("Magic", dos_header.e_magic.get(LE));
@@ -303,7 +306,10 @@ fn print_import_dir<Pe: ImageNtHeaders>(
     data: &[u8],
     sections: &SectionTable,
     data_directories: &DataDirectories,
-) -> Option<()> {
+) -> Option<()>
+where
+    Pe::ImageThunkData: Pod,
+{
     let import_table = data_directories
         .import_table(data, sections)
         .print_err(p)??;
@@ -371,7 +377,10 @@ fn print_delay_load_dir<Pe: ImageNtHeaders>(
     data: &[u8],
     sections: &SectionTable,
     data_directories: &DataDirectories,
-) -> Option<()> {
+) -> Option<()>
+where
+    Pe::ImageThunkData: Pod,
+{
     let import_table = data_directories
         .delay_load_import_table(data, sections)
         .print_err(p)??;

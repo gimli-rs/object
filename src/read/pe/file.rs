@@ -131,6 +131,7 @@ impl<'data, 'file, Pe, R> Object<'data, 'file> for PeFile<'data, Pe, R>
 where
     'data: 'file,
     Pe: ImageNtHeaders + Pod,
+    Pe::ImageThunkData: Pod,
     R: 'file + ReadRef<'data>,
 {
     type Segment = PeSegment<'data, 'file, Pe, R>;
