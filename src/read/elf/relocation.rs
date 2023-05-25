@@ -23,7 +23,7 @@ impl RelocationSections {
     /// Create a new mapping using the section table.
     ///
     /// Skips relocation sections that do not use the given symbol table section.
-    pub fn parse<'data, Elf: FileHeader, R: ReadRef<'data>>(
+    pub fn parse<'data, Elf: FileHeader + ?Sized, R: ReadRef<'data>>(
         endian: Elf::Endian,
         sections: &SectionTable<'data, Elf, R>,
         symbol_section: SectionIndex,

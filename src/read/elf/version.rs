@@ -60,7 +60,7 @@ impl<'data> Version<'data> {
 ///
 /// This is derived from entries in the `SHT_GNU_versym`, `SHT_GNU_verdef` and `SHT_GNU_verneed` sections.
 #[derive(Debug, Clone)]
-pub struct VersionTable<'data, Elf: FileHeader> {
+pub struct VersionTable<'data, Elf: FileHeader + ?Sized> {
     symbols: &'data [elf::Versym<Elf::Endian>],
     versions: Vec<Version<'data>>,
 }
@@ -74,7 +74,7 @@ impl<'data, Elf: FileHeader> Default for VersionTable<'data, Elf> {
     }
 }
 
-impl<'data, Elf: FileHeader> VersionTable<'data, Elf> {
+impl<'data, Elf: FileHeader + ?Sized> VersionTable<'data, Elf> {
     /// Parse the version sections.
     pub fn parse<R: ReadRef<'data>>(
         endian: Elf::Endian,
@@ -211,13 +211,21 @@ impl<'data, Elf: FileHeader> VersionTable<'data, Elf> {
 }
 
 /// An iterator over the entries in an ELF `SHT_GNU_verdef` section.
-#[derive(Debug, Clone)]
-pub struct VerdefIterator<'data, Elf: FileHeader> {
+#[derive(Debug)]
+pub struct VerdefIterator<'data, Elf: FileHeader + ?Sized> {
     endian: Elf::Endian,
     data: Bytes<'data>,
 }
 
-impl<'data, Elf: FileHeader> VerdefIterator<'data, Elf> {
+// derive(Debug) incorrectly requires Elf: Sized.
+impl<Elf: FileHeader + ?Sized> Clone for VerdefIterator<'_, Elf> {
+    fn clone(&self) -> Self {
+        let &Self { endian, data } = self;
+        Self { endian, data }
+    }
+}
+
+impl<'data, Elf: FileHeader + ?Sized> VerdefIterator<'data, Elf> {
     pub(super) fn new(endian: Elf::Endian, data: &'data [u8]) -> Self {
         VerdefIterator {
             endian,
@@ -258,14 +266,30 @@ impl<'data, Elf: FileHeader> VerdefIterator<'data, Elf> {
 }
 
 /// An iterator over the auxiliary records for an entry in an ELF `SHT_GNU_verdef` section.
-#[derive(Debug, Clone)]
-pub struct VerdauxIterator<'data, Elf: FileHeader> {
+#[derive(Debug)]
+pub struct VerdauxIterator<'data, Elf: FileHeader + ?Sized> {
     endian: Elf::Endian,
     data: Bytes<'data>,
     count: u16,
 }
 
-impl<'data, Elf: FileHeader> VerdauxIterator<'data, Elf> {
+// derive(Debug) incorrectly requires Elf: Sized.
+impl<Elf: FileHeader + ?Sized> Clone for VerdauxIterator<'_, Elf> {
+    fn clone(&self) -> Self {
+        let &Self {
+            endian,
+            data,
+            count,
+        } = self;
+        Self {
+            endian,
+            data,
+            count,
+        }
+    }
+}
+
+impl<'data, Elf: FileHeader + ?Sized> VerdauxIterator<'data, Elf> {
     pub(super) fn new(endian: Elf::Endian, data: &'data [u8], count: u16) -> Self {
         VerdauxIterator {
             endian,
@@ -294,13 +318,21 @@ impl<'data, Elf: FileHeader> VerdauxIterator<'data, Elf> {
 }
 
 /// An iterator over the entries in an ELF `SHT_GNU_verneed` section.
-#[derive(Debug, Clone)]
-pub struct VerneedIterator<'data, Elf: FileHeader> {
+#[derive(Debug)]
+pub struct VerneedIterator<'data, Elf: FileHeader + ?Sized> {
     endian: Elf::Endian,
     data: Bytes<'data>,
 }
 
-impl<'data, Elf: FileHeader> VerneedIterator<'data, Elf> {
+// derive(Debug) incorrectly requires Elf: Sized.
+impl<Elf: FileHeader + ?Sized> Clone for VerneedIterator<'_, Elf> {
+    fn clone(&self) -> Self {
+        let &Self { endian, data } = self;
+        Self { endian, data }
+    }
+}
+
+impl<'data, Elf: FileHeader + ?Sized> VerneedIterator<'data, Elf> {
     pub(super) fn new(endian: Elf::Endian, data: &'data [u8]) -> Self {
         VerneedIterator {
             endian,
@@ -347,13 +379,13 @@ impl<'data, Elf: FileHeader> VerneedIterator<'data, Elf> {
 
 /// An iterator over the auxiliary records for an entry in an ELF `SHT_GNU_verneed` section.
 #[derive(Debug, Clone)]
-pub struct VernauxIterator<'data, Elf: FileHeader> {
+pub struct VernauxIterator<'data, Elf: FileHeader + ?Sized> {
     endian: Elf::Endian,
     data: Bytes<'data>,
     count: u16,
 }
 
-impl<'data, Elf: FileHeader> VernauxIterator<'data, Elf> {
+impl<'data, Elf: FileHeader + ?Sized> VernauxIterator<'data, Elf> {
     pub(super) fn new(endian: Elf::Endian, data: &'data [u8], count: u16) -> Self {
         VernauxIterator {
             endian,

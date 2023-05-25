@@ -18,8 +18,8 @@ use super::{FileHeader, SectionHeader, SectionTable};
 /// A table of symbol entries in an ELF file.
 ///
 /// Also includes the string table used for the symbol names.
-#[derive(Debug, Clone, Copy)]
-pub struct SymbolTable<'data, Elf: FileHeader, R = &'data [u8]>
+#[derive(Debug)]
+pub struct SymbolTable<'data, Elf: FileHeader + ?Sized, R = &'data [u8]>
 where
     R: ReadRef<'data>,
 {
@@ -31,7 +31,32 @@ where
     shndx: &'data [U32<Elf::Endian>],
 }
 
-impl<'data, Elf: FileHeader, R: ReadRef<'data>> Default for SymbolTable<'data, Elf, R> {
+// derive(Clone) incorrectly requires Elf: Sized.
+impl<'data, Elf: FileHeader, R: ReadRef<'data>> Clone for SymbolTable<'data, Elf, R> {
+    fn clone(&self) -> Self {
+        let &Self {
+            section,
+            string_section,
+            shndx_section,
+            symbols,
+            strings,
+            shndx,
+        } = self;
+        Self {
+            section,
+            string_section,
+            shndx_section,
+            symbols,
+            strings,
+            shndx,
+        }
+    }
+}
+
+// derive(Copy) incorrectly requires Elf: Sized.
+impl<'data, Elf: FileHeader, R: ReadRef<'data>> Copy for SymbolTable<'data, Elf, R> {}
+
+impl<'data, Elf: FileHeader + ?Sized, R: ReadRef<'data>> Default for SymbolTable<'data, Elf, R> {
     fn default() -> Self {
         SymbolTable {
             section: SectionIndex(0),
@@ -44,7 +69,7 @@ impl<'data, Elf: FileHeader, R: ReadRef<'data>> Default for SymbolTable<'data, E
     }
 }
 
-impl<'data, Elf: FileHeader, R: ReadRef<'data>> SymbolTable<'data, Elf, R> {
+impl<'data, Elf: FileHeader + ?Sized, R: ReadRef<'data>> SymbolTable<'data, Elf, R> {
     /// Parse the given symbol table section.
     pub fn parse(
         endian: Elf::Endian,
@@ -52,7 +77,7 @@ impl<'data, Elf: FileHeader, R: ReadRef<'data>> SymbolTable<'data, Elf, R> {
         sections: &SectionTable<'data, Elf, R>,
         section_index: SectionIndex,
         section: &Elf::SectionHeader,
-    ) -> read::Result<SymbolTable<'data, Elf, R>> {
+    ) -> read::Result<Self> {
         debug_assert!(
             section.sh_type(endian) == elf::SHT_DYNSYM
                 || section.sh_type(endian) == elf::SHT_SYMTAB

@@ -48,7 +48,10 @@ where
     R: ReadRef<'data>,
 {
     /// Parse the raw ELF file data.
-    pub fn parse(data: R) -> read::Result<Self> {
+    pub fn parse(data: R) -> read::Result<Self>
+    where
+        Elf: Pod,
+    {
         let header = Elf::parse(data)?;
         let endian = header.endian()?;
         let segments = header.program_headers(endian, data)?;
@@ -444,7 +447,7 @@ where
 
 /// A trait for generic access to `FileHeader32` and `FileHeader64`.
 #[allow(missing_docs)]
-pub trait FileHeader: Debug + Pod {
+pub trait FileHeader: Debug {
     // Ideally this would be a `u64: From<Word>`, but can't express that.
     type Word: Into<u64>;
     type Sword: Into<i64>;
@@ -492,7 +495,10 @@ pub trait FileHeader: Debug + Pod {
     /// Read the file header.
     ///
     /// Also checks that the ident field in the file header is a supported format.
-    fn parse<'data, R: ReadRef<'data>>(data: R) -> read::Result<&'data Self> {
+    fn parse<'data, R: ReadRef<'data>>(data: R) -> read::Result<&'data Self>
+    where
+        Self: Pod,
+    {
         let header = data
             .read_at::<Self>(0)
             .read_error("Invalid ELF header size or alignment")?;

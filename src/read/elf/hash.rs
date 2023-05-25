@@ -8,12 +8,12 @@ use super::{FileHeader, Sym, SymbolTable, Version, VersionTable};
 
 /// A SysV symbol hash table in an ELF file.
 #[derive(Debug)]
-pub struct HashTable<'data, Elf: FileHeader> {
+pub struct HashTable<'data, Elf: FileHeader + ?Sized> {
     buckets: &'data [U32<Elf::Endian>],
     chains: &'data [U32<Elf::Endian>],
 }
 
-impl<'data, Elf: FileHeader> HashTable<'data, Elf> {
+impl<'data, Elf: FileHeader + ?Sized> HashTable<'data, Elf> {
     /// Parse a SysV hash table.
     ///
     /// `data` should be from a `SHT_HASH` section, or from a
@@ -71,7 +71,7 @@ impl<'data, Elf: FileHeader> HashTable<'data, Elf> {
 
 /// A GNU symbol hash table in an ELF file.
 #[derive(Debug)]
-pub struct GnuHashTable<'data, Elf: FileHeader> {
+pub struct GnuHashTable<'data, Elf: FileHeader + ?Sized> {
     symbol_base: u32,
     bloom_shift: u32,
     bloom_filters: &'data [u8],

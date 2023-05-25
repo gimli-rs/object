@@ -19,7 +19,7 @@ use super::{
 ///
 /// Also includes the string table used for the section names.
 #[derive(Debug, Default, Clone, Copy)]
-pub struct SectionTable<'data, Elf: FileHeader, R = &'data [u8]>
+pub struct SectionTable<'data, Elf: FileHeader + ?Sized, R = &'data [u8]>
 where
     R: ReadRef<'data>,
 {
@@ -27,7 +27,7 @@ where
     strings: StringTable<'data, R>,
 }
 
-impl<'data, Elf: FileHeader, R: ReadRef<'data>> SectionTable<'data, Elf, R> {
+impl<'data, Elf: FileHeader + ?Sized, R: ReadRef<'data>> SectionTable<'data, Elf, R> {
     /// Create a new section table.
     #[inline]
     pub fn new(sections: &'data [Elf::SectionHeader], strings: StringTable<'data, R>) -> Self {
