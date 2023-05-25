@@ -148,6 +148,7 @@ where
     'data: 'file,
     Elf: FileHeader,
     Elf::CompressionHeader: Pod,
+    Elf::NoteHeader: Pod,
     R: 'file + ReadRef<'data>,
 {
     type Segment = ElfSegment<'data, 'file, Elf, R>;

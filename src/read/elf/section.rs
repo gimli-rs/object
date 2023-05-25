@@ -797,7 +797,10 @@ pub trait SectionHeader: Debug + Pod {
         &self,
         endian: Self::Endian,
         data: R,
-    ) -> read::Result<Option<NoteIterator<'data, Self::Elf>>> {
+    ) -> read::Result<Option<NoteIterator<'data, Self::Elf>>>
+    where
+        <Self::Elf as FileHeader>::NoteHeader: Pod,
+    {
         if self.sh_type(endian) != elf::SHT_NOTE {
             return Ok(None);
         }

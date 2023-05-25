@@ -22,6 +22,7 @@ fn print_elf<Elf: FileHeader<Endian = Endianness>>(p: &mut Printer<'_>, elf: &El
 where
     Elf::CompressionHeader: Pod,
     Elf::Dyn: Pod,
+    Elf::NoteHeader: Pod,
 {
     if let Some(endian) = elf.endian().print_err(p) {
         print_file_header(p, endian, elf);
@@ -118,6 +119,7 @@ fn print_program_headers<Elf: FileHeader>(
     segments: &[Elf::ProgramHeader],
 ) where
     Elf::Dyn: Pod,
+    Elf::NoteHeader: Pod,
 {
     for segment in segments {
         p.group("ProgramHeader", |p| {
@@ -181,7 +183,9 @@ fn print_segment_notes<Elf: FileHeader>(
     data: &[u8],
     elf: &Elf,
     segment: &Elf::ProgramHeader,
-) {
+) where
+    Elf::NoteHeader: Pod,
+{
     if let Some(Some(notes)) = segment.notes(endian, data).print_err(p) {
         print_notes(p, endian, elf, notes);
     }
@@ -231,6 +235,7 @@ fn print_section_headers<Elf: FileHeader>(
 ) where
     Elf::CompressionHeader: Pod,
     Elf::Dyn: Pod,
+    Elf::NoteHeader: Pod,
 {
     for (index, section) in sections.iter().enumerate() {
         let index = SectionIndex(index);
@@ -511,7 +516,9 @@ fn print_section_notes<Elf: FileHeader>(
     data: &[u8],
     elf: &Elf,
     section: &Elf::SectionHeader,
-) {
+) where
+    Elf::NoteHeader: Pod,
+{
     if let Some(Some(notes)) = section.notes(endian, data).print_err(p) {
         print_notes(p, endian, elf, notes);
     }
@@ -569,7 +576,9 @@ fn print_notes<Elf: FileHeader>(
     endian: Elf::Endian,
     elf: &Elf,
     mut notes: NoteIterator<Elf>,
-) {
+) where
+    Elf::NoteHeader: Pod,
+{
     while let Some(Some(note)) = notes.next().print_err(p) {
         p.group("Note", |p| {
             let name = note.name();

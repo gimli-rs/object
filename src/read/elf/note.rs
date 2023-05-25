@@ -23,6 +23,7 @@ where
 impl<'data, Elf> NoteIterator<'data, Elf>
 where
     Elf: FileHeader,
+    Elf::NoteHeader: Pod,
 {
     /// An iterator over the notes in an ELF section or segment.
     ///
@@ -159,7 +160,7 @@ impl<'data, Elf: FileHeader> Note<'data, Elf> {
 
 /// A trait for generic access to `NoteHeader32` and `NoteHeader64`.
 #[allow(missing_docs)]
-pub trait NoteHeader: Debug + Pod {
+pub trait NoteHeader: Debug {
     type Endian: endian::Endian;
 
     fn n_namesz(&self, endian: Self::Endian) -> u32;
