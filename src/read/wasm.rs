@@ -12,11 +12,12 @@ use wasmparser as wp;
 
 use crate::read::{
     self, Architecture, ComdatKind, CompressedData, CompressedFileRange, Error, Export, FileFlags,
-    Import, NoDynamicRelocationIterator, Object, ObjectComdat, ObjectKind, ObjectSection,
+    FileRef, Import, NoDynamicRelocationIterator, Object, ObjectComdat, ObjectKind, ObjectSection,
     ObjectSegment, ObjectSymbol, ObjectSymbolTable, ReadError, ReadRef, Relocation, Result,
     SectionFlags, SectionIndex, SectionKind, SegmentFlags, SymbolFlags, SymbolIndex, SymbolKind,
     SymbolScope, SymbolSection,
 };
+use crate::Endianness;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(usize)]
@@ -367,6 +368,8 @@ where
     'data: 'file,
     R: 'file,
 {
+    type ReadRef = R;
+    type Endian = Endianness;
     type Segment = WasmSegment<'data, 'file, R>;
     type SegmentIterator = WasmSegmentIterator<'data, 'file, R>;
     type Section = WasmSection<'data, 'file, R>;
@@ -377,6 +380,10 @@ where
     type SymbolIterator = WasmSymbolIterator<'data, 'file>;
     type SymbolTable = WasmSymbolTable<'data, 'file>;
     type DynamicRelocationIterator = NoDynamicRelocationIterator;
+
+    fn as_ref(&'file self) -> FileRef<'data, 'file, Self::Endian, Self::ReadRef> {
+        FileRef::Wasm(self)
+    }
 
     #[inline]
     fn architecture(&self) -> Architecture {

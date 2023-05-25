@@ -1,13 +1,13 @@
+use alloc::vec::Vec;
 use core::fmt::Debug;
 use core::mem;
 
-use alloc::vec::Vec;
-
-use crate::read::{self, Error, NoDynamicRelocationIterator, Object, ReadError, ReadRef, Result};
-
+use crate::read::{
+    self, Error, FileRef, NoDynamicRelocationIterator, Object, ReadError, ReadRef, Result,
+};
 use crate::{
-    xcoff, Architecture, BigEndian as BE, FileFlags, ObjectKind, ObjectSection, Pod, SectionIndex,
-    SymbolIndex,
+    xcoff, Architecture, BigEndian as BE, Endianness, FileFlags, ObjectKind, ObjectSection, Pod,
+    SectionIndex, SymbolIndex,
 };
 
 use super::{
@@ -83,6 +83,8 @@ where
     Xcoff: FileHeader,
     R: 'file + ReadRef<'data>,
 {
+    type ReadRef = R;
+    type Endian = Endianness;
     type Segment = XcoffSegment<'data, 'file, Xcoff, R>;
     type SegmentIterator = XcoffSegmentIterator<'data, 'file, Xcoff, R>;
     type Section = XcoffSection<'data, 'file, Xcoff, R>;
@@ -93,6 +95,10 @@ where
     type SymbolIterator = XcoffSymbolIterator<'data, 'file, Xcoff, R>;
     type SymbolTable = XcoffSymbolTable<'data, 'file, Xcoff, R>;
     type DynamicRelocationIterator = NoDynamicRelocationIterator;
+
+    fn as_ref(&'file self) -> FileRef<'data, 'file, Self::Endian, Self::ReadRef> {
+        Xcoff::as_ref(self)
+    }
 
     fn architecture(&self) -> crate::Architecture {
         if self.is_64() {
@@ -251,6 +257,11 @@ pub trait FileHeader: Debug + Pod {
     type FileAux: FileAux;
     type CsectAux: CsectAux;
 
+    /// TODO
+    fn as_ref<'data, 'file, Endian: crate::Endian, R: ReadRef<'data>>(
+        file: &'file XcoffFile<'data, Self, R>,
+    ) -> FileRef<'data, 'file, Endian, R>;
+
     /// Return true if this type is a 64-bit header.
     fn is_type_64(&self) -> bool;
 
@@ -333,6 +344,12 @@ impl FileHeader for xcoff::FileHeader32 {
     type FileAux = xcoff::FileAux32;
     type CsectAux = xcoff::CsectAux32;
 
+    fn as_ref<'data, 'file, Endian: crate::Endian, R: ReadRef<'data>>(
+        file: &'file XcoffFile<'data, Self, R>,
+    ) -> FileRef<'data, 'file, Endian, R> {
+        FileRef::Xcoff32(file)
+    }
+
     fn is_type_64(&self) -> bool {
         false
     }
@@ -373,6 +390,12 @@ impl FileHeader for xcoff::FileHeader64 {
     type Symbol = xcoff::Symbol64;
     type FileAux = xcoff::FileAux64;
     type CsectAux = xcoff::CsectAux64;
+
+    fn as_ref<'data, 'file, Endian: crate::Endian, R: ReadRef<'data>>(
+        file: &'file XcoffFile<'data, Self, R>,
+    ) -> FileRef<'data, 'file, Endian, R> {
+        FileRef::Xcoff64(file)
+    }
 
     fn is_type_64(&self) -> bool {
         true

@@ -6,10 +6,11 @@ use core::convert::TryInto;
 
 use crate::read::coff::{CoffCommon, CoffSymbol, CoffSymbolIterator, CoffSymbolTable, SymbolTable};
 use crate::read::{
-    self, Architecture, ComdatKind, Error, Export, FileFlags, Import, NoDynamicRelocationIterator,
-    Object, ObjectComdat, ObjectKind, ReadError, ReadRef, Result, SectionIndex, SymbolIndex,
+    self, Architecture, ComdatKind, Error, Export, FileFlags, FileRef, Import,
+    NoDynamicRelocationIterator, Object, ObjectComdat, ObjectKind, ReadError, ReadRef, Result,
+    SectionIndex, SymbolIndex,
 };
-use crate::{pe, ByteString, Bytes, CodeView, LittleEndian as LE, Pod, U32};
+use crate::{pe, ByteString, Bytes, CodeView, Endianness, LittleEndian as LE, Pod, U32};
 
 use super::{
     DataDirectories, ExportTable, ImageThunkData, ImportTable, PeSection, PeSectionIterator,
@@ -133,6 +134,8 @@ where
     Pe: ImageNtHeaders,
     R: 'file + ReadRef<'data>,
 {
+    type ReadRef = R;
+    type Endian = Endianness;
     type Segment = PeSegment<'data, 'file, Pe, R>;
     type SegmentIterator = PeSegmentIterator<'data, 'file, Pe, R>;
     type Section = PeSection<'data, 'file, Pe, R>;
@@ -143,6 +146,10 @@ where
     type SymbolIterator = CoffSymbolIterator<'data, 'file, R>;
     type SymbolTable = CoffSymbolTable<'data, 'file, R>;
     type DynamicRelocationIterator = NoDynamicRelocationIterator;
+
+    fn as_ref(&'file self) -> FileRef<'data, 'file, Self::Endian, Self::ReadRef> {
+        Pe::as_ref(self)
+    }
 
     fn architecture(&self) -> Architecture {
         match self.nt_headers.file_header().machine.get(LE) {
@@ -546,6 +553,11 @@ pub trait ImageNtHeaders: Debug + Pod {
     type ImageOptionalHeader: ImageOptionalHeader;
     type ImageThunkData: ImageThunkData;
 
+    /// TODO
+    fn as_ref<'data, 'file, Endian: crate::Endian, R: ReadRef<'data>>(
+        file: &'file PeFile<'data, Self, R>,
+    ) -> FileRef<'data, 'file, Endian, R>;
+
     /// Return true if this type is a 64-bit header.
     ///
     /// This is a property of the type, not a value in the header data.
@@ -667,6 +679,12 @@ pub trait ImageOptionalHeader: Debug + Pod {
 impl ImageNtHeaders for pe::ImageNtHeaders32 {
     type ImageOptionalHeader = pe::ImageOptionalHeader32;
     type ImageThunkData = pe::ImageThunkData32;
+
+    fn as_ref<'data, 'file, Endian: crate::Endian, R: ReadRef<'data>>(
+        file: &'file PeFile<'data, Self, R>,
+    ) -> FileRef<'data, 'file, Endian, R> {
+        FileRef::Pe32(file)
+    }
 
     #[inline]
     fn is_type_64(&self) -> bool {
@@ -849,6 +867,12 @@ impl ImageOptionalHeader for pe::ImageOptionalHeader32 {
 impl ImageNtHeaders for pe::ImageNtHeaders64 {
     type ImageOptionalHeader = pe::ImageOptionalHeader64;
     type ImageThunkData = pe::ImageThunkData64;
+
+    fn as_ref<'data, 'file, Endian: crate::Endian, R: ReadRef<'data>>(
+        file: &'file PeFile<'data, Self, R>,
+    ) -> FileRef<'data, 'file, Endian, R> {
+        FileRef::Pe64(file)
+    }
 
     #[inline]
     fn is_type_64(&self) -> bool {

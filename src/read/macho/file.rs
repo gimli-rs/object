@@ -3,9 +3,9 @@ use core::fmt::Debug;
 use core::{mem, str};
 
 use crate::read::{
-    self, Architecture, ComdatKind, Error, Export, FileFlags, Import, NoDynamicRelocationIterator,
-    Object, ObjectComdat, ObjectKind, ObjectMap, ObjectSection, ReadError, ReadRef, Result,
-    SectionIndex, SymbolIndex,
+    self, Architecture, ComdatKind, Error, Export, FileFlags, FileRef, Import,
+    NoDynamicRelocationIterator, Object, ObjectComdat, ObjectKind, ObjectMap, ObjectSection,
+    ReadError, ReadRef, Result, SectionIndex, SymbolIndex,
 };
 use crate::{endian, macho, BigEndian, ByteString, Endian, Endianness, Pod};
 
@@ -177,6 +177,8 @@ where
     Mach: MachHeader,
     R: 'file + ReadRef<'data>,
 {
+    type ReadRef = R;
+    type Endian = Mach::Endian;
     type Segment = MachOSegment<'data, 'file, Mach, R>;
     type SegmentIterator = MachOSegmentIterator<'data, 'file, Mach, R>;
     type Section = MachOSection<'data, 'file, Mach, R>;
@@ -187,6 +189,10 @@ where
     type SymbolIterator = MachOSymbolIterator<'data, 'file, Mach, R>;
     type SymbolTable = MachOSymbolTable<'data, 'file, Mach, R>;
     type DynamicRelocationIterator = NoDynamicRelocationIterator;
+
+    fn as_ref(&'file self) -> FileRef<'data, 'file, Self::Endian, Self::ReadRef> {
+        Mach::as_ref(self)
+    }
 
     fn architecture(&self) -> Architecture {
         match self.header.cputype(self.endian) {
@@ -560,6 +566,11 @@ pub trait MachHeader: Debug + Pod {
     type Section: Section<Endian = Self::Endian>;
     type Nlist: Nlist<Endian = Self::Endian>;
 
+    /// TODO
+    fn as_ref<'data, 'file, R: ReadRef<'data>>(
+        file: &'file MachOFile<'data, Self, R>,
+    ) -> FileRef<'data, 'file, Self::Endian, R>;
+
     /// Return true if this type is a 64-bit header.
     ///
     /// This is a property of the type, not a value in the header data.
@@ -641,6 +652,12 @@ impl<Endian: endian::Endian> MachHeader for macho::MachHeader32<Endian> {
     type Section = macho::Section32<Endian>;
     type Nlist = macho::Nlist32<Endian>;
 
+    fn as_ref<'data, 'file, R: ReadRef<'data>>(
+        file: &'file MachOFile<'data, Self, R>,
+    ) -> FileRef<'data, 'file, Self::Endian, R> {
+        FileRef::MachO32(file)
+    }
+
     fn is_type_64(&self) -> bool {
         false
     }
@@ -688,6 +705,12 @@ impl<Endian: endian::Endian> MachHeader for macho::MachHeader64<Endian> {
     type Segment = macho::SegmentCommand64<Endian>;
     type Section = macho::Section64<Endian>;
     type Nlist = macho::Nlist64<Endian>;
+
+    fn as_ref<'data, 'file, R: ReadRef<'data>>(
+        file: &'file MachOFile<'data, Self, R>,
+    ) -> FileRef<'data, 'file, Self::Endian, R> {
+        FileRef::MachO64(file)
+    }
 
     fn is_type_64(&self) -> bool {
         true

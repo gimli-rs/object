@@ -4,7 +4,7 @@ use core::fmt::Debug;
 use core::mem;
 
 use crate::read::{
-    self, util, Architecture, ByteString, Bytes, Error, Export, FileFlags, Import, Object,
+    self, util, Architecture, ByteString, Bytes, Error, Export, FileFlags, FileRef, Import, Object,
     ObjectKind, ReadError, ReadRef, SectionIndex, StringTable, SymbolIndex,
 };
 use crate::{elf, endian, Endian, Endianness, Pod, U32};
@@ -140,6 +140,8 @@ where
     Elf: FileHeader,
     R: 'file + ReadRef<'data>,
 {
+    type ReadRef = R;
+    type Endian = Elf::Endian;
     type Segment = ElfSegment<'data, 'file, Elf, R>;
     type SegmentIterator = ElfSegmentIterator<'data, 'file, Elf, R>;
     type Section = ElfSection<'data, 'file, Elf, R>;
@@ -150,6 +152,10 @@ where
     type SymbolIterator = ElfSymbolIterator<'data, 'file, Elf, R>;
     type SymbolTable = ElfSymbolTable<'data, 'file, Elf, R>;
     type DynamicRelocationIterator = ElfDynamicRelocationIterator<'data, 'file, Elf, R>;
+
+    fn as_ref(&'file self) -> FileRef<'data, 'file, Self::Endian, Self::ReadRef> {
+        Elf::as_ref(self)
+    }
 
     fn architecture(&self) -> Architecture {
         match (
@@ -451,6 +457,11 @@ pub trait FileHeader: Debug + Pod {
     type Rel: Rel<Endian = Self::Endian, Word = Self::Word>;
     type Rela: Rela<Endian = Self::Endian, Word = Self::Word> + From<Self::Rel>;
 
+    /// TODO
+    fn as_ref<'data, 'file, R: ReadRef<'data>>(
+        file: &'file ElfFile<'data, Self, R>,
+    ) -> FileRef<'data, 'file, Self::Endian, R>;
+
     /// Return true if this type is a 64-bit header.
     ///
     /// This is a property of the type, not a value in the header data.
@@ -728,6 +739,13 @@ impl<Endian: endian::Endian> FileHeader for elf::FileHeader32<Endian> {
     type Rel = elf::Rel32<Endian>;
     type Rela = elf::Rela32<Endian>;
 
+    /// TODO
+    fn as_ref<'data, 'file, R: ReadRef<'data>>(
+        file: &'file ElfFile<'data, Self, R>,
+    ) -> FileRef<'data, 'file, Self::Endian, R> {
+        FileRef::Elf32(file)
+    }
+
     #[inline]
     fn is_type_64(&self) -> bool {
         false
@@ -824,6 +842,13 @@ impl<Endian: endian::Endian> FileHeader for elf::FileHeader64<Endian> {
     type Sym = elf::Sym64<Endian>;
     type Rel = elf::Rel64<Endian>;
     type Rela = elf::Rela64<Endian>;
+
+    /// TODO
+    fn as_ref<'data, 'file, R: ReadRef<'data>>(
+        file: &'file ElfFile<'data, Self, R>,
+    ) -> FileRef<'data, 'file, Self::Endian, R> {
+        FileRef::Elf64(file)
+    }
 
     #[inline]
     fn is_type_64(&self) -> bool {

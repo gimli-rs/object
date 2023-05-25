@@ -16,10 +16,10 @@ use crate::read::wasm;
 use crate::read::xcoff;
 use crate::read::{
     self, Architecture, BinaryFormat, CodeView, ComdatKind, CompressedData, CompressedFileRange,
-    Error, Export, FileFlags, FileKind, Import, Object, ObjectComdat, ObjectKind, ObjectMap,
-    ObjectSection, ObjectSegment, ObjectSymbol, ObjectSymbolTable, ReadRef, Relocation, Result,
-    SectionFlags, SectionIndex, SectionKind, SegmentFlags, SymbolFlags, SymbolIndex, SymbolKind,
-    SymbolMap, SymbolMapName, SymbolScope, SymbolSection,
+    Error, Export, FileFlags, FileKind, FileRef, Import, Object, ObjectComdat, ObjectKind,
+    ObjectMap, ObjectSection, ObjectSegment, ObjectSymbol, ObjectSymbolTable, ReadRef, Relocation,
+    Result, SectionFlags, SectionIndex, SectionKind, SegmentFlags, SymbolFlags, SymbolIndex,
+    SymbolKind, SymbolMap, SymbolMapName, SymbolScope, SymbolSection,
 };
 #[allow(unused_imports)]
 use crate::{AddressSize, Endian, Endianness};
@@ -313,6 +313,8 @@ where
     'data: 'file,
     R: 'file + ReadRef<'data>,
 {
+    type ReadRef = R;
+    type Endian = Endianness;
     type Segment = Segment<'data, 'file, R>;
     type SegmentIterator = SegmentIterator<'data, 'file, R>;
     type Section = Section<'data, 'file, R>;
@@ -323,6 +325,10 @@ where
     type SymbolIterator = SymbolIterator<'data, 'file, R>;
     type SymbolTable = SymbolTable<'data, 'file, R>;
     type DynamicRelocationIterator = DynamicRelocationIterator<'data, 'file, R>;
+
+    fn as_ref(&'file self) -> FileRef<'data, 'file, Self::Endian, Self::ReadRef> {
+        map_inner!(self.inner, FileInternal, FileRef, |x| x)
+    }
 
     fn architecture(&self) -> Architecture {
         with_inner!(self.inner, FileInternal, |x| x.architecture())

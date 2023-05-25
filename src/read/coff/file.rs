@@ -2,10 +2,10 @@ use alloc::vec::Vec;
 use core::fmt::Debug;
 
 use crate::read::{
-    self, Architecture, Export, FileFlags, Import, NoDynamicRelocationIterator, Object, ObjectKind,
-    ObjectSection, ReadError, ReadRef, Result, SectionIndex, SymbolIndex,
+    self, Architecture, Export, FileFlags, FileRef, Import, NoDynamicRelocationIterator, Object,
+    ObjectKind, ObjectSection, ReadError, ReadRef, Result, SectionIndex, SymbolIndex,
 };
-use crate::{pe, LittleEndian as LE, Pod};
+use crate::{pe, Endianness, LittleEndian as LE, Pod};
 
 use super::{
     CoffComdat, CoffComdatIterator, CoffSection, CoffSectionIterator, CoffSegment,
@@ -64,6 +64,8 @@ where
     R: 'file + ReadRef<'data>,
     Coff: CoffHeader,
 {
+    type ReadRef = R;
+    type Endian = Endianness;
     type Segment = CoffSegment<'data, 'file, R, Coff>;
     type SegmentIterator = CoffSegmentIterator<'data, 'file, R, Coff>;
     type Section = CoffSection<'data, 'file, R, Coff>;
@@ -74,6 +76,10 @@ where
     type SymbolIterator = CoffSymbolIterator<'data, 'file, R, Coff>;
     type SymbolTable = CoffSymbolTable<'data, 'file, R, Coff>;
     type DynamicRelocationIterator = NoDynamicRelocationIterator;
+
+    fn as_ref(&'file self) -> FileRef<'data, 'file, Self::Endian, Self::ReadRef> {
+        Coff::as_ref(self)
+    }
 
     fn architecture(&self) -> Architecture {
         match self.header.machine() {
@@ -231,6 +237,11 @@ pub trait CoffHeader: Debug + Pod {
     type ImageSymbol: ImageSymbol;
     type ImageSymbolBytes: Debug + Pod;
 
+    /// TODO
+    fn as_ref<'data, 'file, Endian: crate::Endian, R: ReadRef<'data>>(
+        file: &'file CoffFile<'data, R, Self>,
+    ) -> FileRef<'data, 'file, Endian, R>;
+
     /// Return true if this type is `AnonObjectHeaderBigobj`.
     ///
     /// This is a property of the type, not a value in the header data.
@@ -278,6 +289,12 @@ impl CoffHeader for pe::ImageFileHeader {
     type ImageSymbol = pe::ImageSymbol;
     type ImageSymbolBytes = pe::ImageSymbolBytes;
 
+    fn as_ref<'data, 'file, Endian: crate::Endian, R: ReadRef<'data>>(
+        file: &'file CoffFile<'data, R, Self>,
+    ) -> FileRef<'data, 'file, Endian, R> {
+        FileRef::Coff(file)
+    }
+
     fn is_type_bigobj() -> bool {
         false
     }
@@ -320,6 +337,12 @@ impl CoffHeader for pe::ImageFileHeader {
 impl CoffHeader for pe::AnonObjectHeaderBigobj {
     type ImageSymbol = pe::ImageSymbolEx;
     type ImageSymbolBytes = pe::ImageSymbolExBytes;
+
+    fn as_ref<'data, 'file, Endian: crate::Endian, R: ReadRef<'data>>(
+        file: &'file CoffFile<'data, R, Self>,
+    ) -> FileRef<'data, 'file, Endian, R> {
+        FileRef::CoffBig(file)
+    }
 
     fn is_type_bigobj() -> bool {
         true

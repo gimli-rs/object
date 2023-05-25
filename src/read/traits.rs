@@ -1,16 +1,22 @@
 use alloc::borrow::Cow;
 use alloc::vec::Vec;
+use core::marker::PhantomData;
 
 use crate::read::{
     self, Architecture, CodeView, ComdatKind, CompressedData, CompressedFileRange, Export,
-    FileFlags, Import, ObjectKind, ObjectMap, Relocation, Result, SectionFlags, SectionIndex,
-    SectionKind, SegmentFlags, SymbolFlags, SymbolIndex, SymbolKind, SymbolMap, SymbolMapName,
-    SymbolScope, SymbolSection,
+    FileFlags, Import, ObjectKind, ObjectMap, ReadRef, Relocation, Result, SectionFlags,
+    SectionIndex, SectionKind, SegmentFlags, SymbolFlags, SymbolIndex, SymbolKind, SymbolMap,
+    SymbolMapName, SymbolScope, SymbolSection,
 };
 use crate::Endianness;
 
 /// An object file.
 pub trait Object<'data: 'file, 'file>: read::private::Sealed {
+    /// TODO
+    type ReadRef: crate::ReadRef<'data>;
+    /// TODO
+    type Endian: crate::Endian;
+
     /// A segment in the object file.
     type Segment: ObjectSegment<'data>;
 
@@ -47,6 +53,9 @@ pub trait Object<'data: 'file, 'file>: read::private::Sealed {
     /// The first field in the item tuple is the address
     /// that the relocation applies to.
     type DynamicRelocationIterator: Iterator<Item = (u64, Relocation)>;
+
+    /// Get details specific to each file format.
+    fn as_ref(&'file self) -> FileRef<'data, 'file, Self::Endian, Self::ReadRef>;
 
     /// Get the architecture type of the file.
     fn architecture(&self) -> Architecture;
@@ -466,4 +475,36 @@ impl Iterator for NoDynamicRelocationIterator {
     fn next(&mut self) -> Option<Self::Item> {
         None
     }
+}
+
+/// TODO
+#[derive(Debug)]
+#[non_exhaustive]
+#[allow(missing_docs)]
+pub enum FileRef<'data, 'file, Endian: crate::Endian = Endianness, R: ReadRef<'data> = &'data [u8]>
+{
+    #[cfg(feature = "coff")]
+    Coff(&'file crate::read::coff::CoffFile<'data, R>),
+    #[cfg(feature = "coff")]
+    CoffBig(&'file crate::read::coff::CoffBigFile<'data, R>),
+    #[cfg(feature = "elf")]
+    Elf32(&'file crate::read::elf::ElfFile32<'data, Endian, R>),
+    #[cfg(feature = "elf")]
+    Elf64(&'file crate::read::elf::ElfFile64<'data, Endian, R>),
+    #[cfg(feature = "macho")]
+    MachO32(&'file crate::read::macho::MachOFile32<'data, Endian, R>),
+    #[cfg(feature = "macho")]
+    MachO64(&'file crate::read::macho::MachOFile64<'data, Endian, R>),
+    #[cfg(feature = "pe")]
+    Pe32(&'file crate::read::pe::PeFile32<'data, R>),
+    #[cfg(feature = "pe")]
+    Pe64(&'file crate::read::pe::PeFile64<'data, R>),
+    #[cfg(feature = "wasm")]
+    Wasm(&'file crate::read::wasm::WasmFile<'data, R>),
+    #[cfg(feature = "xcoff")]
+    Xcoff32(&'file crate::read::xcoff::XcoffFile32<'data, R>),
+    #[cfg(feature = "xcoff")]
+    Xcoff64(&'file crate::read::xcoff::XcoffFile64<'data, R>),
+    #[doc(hidden)]
+    None(PhantomData<Endian>),
 }
