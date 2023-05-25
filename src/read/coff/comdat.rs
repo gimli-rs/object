@@ -2,6 +2,7 @@ use core::str;
 
 use crate::endian::LittleEndian as LE;
 use crate::pe;
+use crate::pod::Pod;
 use crate::read::{
     self, ComdatKind, ObjectComdat, ReadError, ReadRef, Result, SectionIndex, SymbolIndex,
 };
@@ -26,6 +27,8 @@ pub struct CoffComdatIterator<
 
 impl<'data, 'file, R: ReadRef<'data>, Coff: CoffHeader> Iterator
     for CoffComdatIterator<'data, 'file, R, Coff>
+where
+    Coff::ImageSymbol: Pod,
 {
     type Item = CoffComdat<'data, 'file, R, Coff>;
 
@@ -59,7 +62,10 @@ pub struct CoffComdat<
     selection: u8,
 }
 
-impl<'data, 'file, R: ReadRef<'data>, Coff: CoffHeader> CoffComdat<'data, 'file, R, Coff> {
+impl<'data, 'file, R: ReadRef<'data>, Coff: CoffHeader> CoffComdat<'data, 'file, R, Coff>
+where
+    Coff::ImageSymbol: Pod,
+{
     fn parse(
         file: &'file CoffFile<'data, R, Coff>,
         section_symbol: &'data Coff::ImageSymbol,
@@ -105,6 +111,8 @@ impl<'data, 'file, R: ReadRef<'data>, Coff: CoffHeader> read::private::Sealed
 
 impl<'data, 'file, R: ReadRef<'data>, Coff: CoffHeader> ObjectComdat<'data>
     for CoffComdat<'data, 'file, R, Coff>
+where
+    Coff::ImageSymbol: Pod,
 {
     type SectionIterator = CoffComdatSectionIterator<'data, 'file, R, Coff>;
 
@@ -169,6 +177,8 @@ pub struct CoffComdatSectionIterator<
 
 impl<'data, 'file, R: ReadRef<'data>, Coff: CoffHeader> Iterator
     for CoffComdatSectionIterator<'data, 'file, R, Coff>
+where
+    Coff::ImageSymbol: Pod,
 {
     type Item = SectionIndex;
 

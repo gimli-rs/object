@@ -63,6 +63,7 @@ where
     'data: 'file,
     R: 'file + ReadRef<'data>,
     Coff: CoffHeader,
+    Coff::ImageSymbol: Pod,
 {
     type Segment = CoffSegment<'data, 'file, R, Coff>;
     type SegmentIterator = CoffSegmentIterator<'data, 'file, R, Coff>;
@@ -228,7 +229,7 @@ pub fn anon_object_class_id<'data, R: ReadRef<'data>>(data: R) -> Result<pe::Cls
 /// A trait for generic access to `ImageFileHeader` and `AnonObjectHeaderBigobj`.
 #[allow(missing_docs)]
 pub trait CoffHeader: Debug {
-    type ImageSymbol: ImageSymbol;
+    type ImageSymbol: ImageSymbol + ?Sized;
     type ImageSymbolBytes: Debug + Pod;
 
     /// Return true if this type is `AnonObjectHeaderBigobj`.

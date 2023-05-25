@@ -95,7 +95,10 @@ impl<'data, R: ReadRef<'data>, Coff: CoffHeader + ?Sized> SymbolTable<'data, R, 
 
     /// Return the symbol table entry at the given index.
     #[inline]
-    pub fn symbol(&self, index: usize) -> Result<&'data Coff::ImageSymbol> {
+    pub fn symbol(&self, index: usize) -> Result<&'data Coff::ImageSymbol>
+    where
+        Coff::ImageSymbol: Pod,
+    {
         self.get::<Coff::ImageSymbol>(index, 0)
     }
 
@@ -147,7 +150,10 @@ impl<'data, R: ReadRef<'data>, Coff: CoffHeader + ?Sized> SymbolTable<'data, R, 
     pub fn map<Entry: SymbolMapEntry, F: Fn(&'data Coff::ImageSymbol) -> Option<Entry>>(
         &self,
         f: F,
-    ) -> SymbolMap<Entry> {
+    ) -> SymbolMap<Entry>
+    where
+        Coff::ImageSymbol: Pod,
+    {
         let mut symbols = Vec::with_capacity(self.symbols.len());
         for (_, symbol) in self.iter() {
             if !symbol.is_definition() {
@@ -176,6 +182,8 @@ where
 
 impl<'data, 'table, R: ReadRef<'data>, Coff: CoffHeader + ?Sized> Iterator
     for SymbolIterator<'data, 'table, R, Coff>
+where
+    Coff::ImageSymbol: Pod,
 {
     type Item = (usize, &'data Coff::ImageSymbol);
 
@@ -208,6 +216,8 @@ impl<'data, 'file, R: ReadRef<'data>, Coff: CoffHeader> read::private::Sealed
 
 impl<'data, 'file, R: ReadRef<'data>, Coff: CoffHeader> ObjectSymbolTable<'data>
     for CoffSymbolTable<'data, 'file, R, Coff>
+where
+    Coff::ImageSymbol: Pod,
 {
     type Symbol = CoffSymbol<'data, 'file, R, Coff>;
     type SymbolIterator = CoffSymbolIterator<'data, 'file, R, Coff>;
@@ -253,6 +263,8 @@ impl<'data, 'file, R: ReadRef<'data>, Coff: CoffHeader> fmt::Debug
 
 impl<'data, 'file, R: ReadRef<'data>, Coff: CoffHeader> Iterator
     for CoffSymbolIterator<'data, 'file, R, Coff>
+where
+    Coff::ImageSymbol: Pod,
 {
     type Item = CoffSymbol<'data, 'file, R, Coff>;
 
@@ -494,7 +506,7 @@ impl<'data, 'file, R: ReadRef<'data>, Coff: CoffHeader> ObjectSymbol<'data>
 
 /// A trait for generic access to `ImageSymbol` and `ImageSymbolEx`.
 #[allow(missing_docs)]
-pub trait ImageSymbol: Debug + Pod {
+pub trait ImageSymbol: Debug {
     fn raw_name(&self) -> &[u8; 8];
     fn value(&self) -> u32;
     fn section_number(&self) -> i32;

@@ -1,5 +1,6 @@
 use super::*;
 use object::pe::*;
+use object::pod::Pod;
 use object::read::coff::ImageSymbol as _;
 use object::read::coff::*;
 use object::read::pe::*;
@@ -504,7 +505,9 @@ fn print_sections<'data, Coff: CoffHeader>(
     machine: u16,
     symbols: Option<&SymbolTable<'data, &'data [u8], Coff>>,
     sections: &SectionTable,
-) {
+) where
+    Coff::ImageSymbol: Pod,
+{
     for (index, section) in sections.iter().enumerate() {
         p.group("ImageSectionHeader", |p| {
             p.field("Index", index + 1);
@@ -602,7 +605,9 @@ fn print_symbols<'data, Coff: CoffHeader>(
     p: &mut Printer<'_>,
     sections: Option<&SectionTable>,
     symbols: &SymbolTable<'data, &'data [u8], Coff>,
-) {
+) where
+    Coff::ImageSymbol: Pod,
+{
     for (index, symbol) in symbols.iter() {
         p.group("ImageSymbol", |p| {
             p.field("Index", index);
