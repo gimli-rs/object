@@ -46,6 +46,7 @@ where
     pub fn parse(data: R) -> Result<Self>
     where
         Xcoff: Pod,
+        Xcoff::AuxHeader: Pod,
     {
         let mut offset = 0;
         let header = Xcoff::parse(data, &mut offset)?;
@@ -293,7 +294,10 @@ pub trait FileHeader: Debug {
         &self,
         data: R,
         offset: &mut u64,
-    ) -> Result<Option<&'data Self::AuxHeader>> {
+    ) -> Result<Option<&'data Self::AuxHeader>>
+    where
+        Self::AuxHeader: Pod,
+    {
         let aux_header_size = self.f_opthdr();
         if self.f_flags() & xcoff::F_EXEC == 0 {
             // No auxiliary header is required for an object file that is not an executable.
@@ -414,7 +418,7 @@ impl FileHeader for xcoff::FileHeader64 {
 }
 
 #[allow(missing_docs)]
-pub trait AuxHeader: Debug + Pod {
+pub trait AuxHeader: Debug {
     type Word: Into<u64>;
 
     fn o_vstamp(&self) -> u16;
