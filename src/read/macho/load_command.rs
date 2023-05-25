@@ -340,7 +340,10 @@ impl<E: Endian> macho::SymtabCommand<E> {
         &self,
         endian: E,
         data: R,
-    ) -> Result<SymbolTable<'data, Mach, R>> {
+    ) -> Result<SymbolTable<'data, Mach, R>>
+    where
+        Mach::Nlist: Pod,
+    {
         let symbols = data
             .read_slice_at(
                 self.symoff.get(endian).into(),

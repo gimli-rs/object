@@ -50,6 +50,7 @@ where
     where
         Mach: Pod,
         Mach::Section: Pod,
+        Mach::Nlist: Pod,
     {
         let header = Mach::parse(data, 0)?;
         let endian = header.endian()?;
@@ -92,6 +93,7 @@ where
     where
         Mach: Pod,
         Mach::Section: Pod,
+        Mach::Nlist: Pod,
     {
         let (data, header_offset) = image.image_data_and_offset()?;
         let header = Mach::parse(data, header_offset)?;

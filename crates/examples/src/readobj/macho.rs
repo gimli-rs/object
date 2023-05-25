@@ -155,7 +155,9 @@ fn print_macho<Mach: MachHeader<Endian = Endianness>>(
     header: &Mach,
     data: &[u8],
     offset: u64,
-) {
+) where
+    Mach::Nlist: Pod,
+{
     if let Some(endian) = header.endian().print_err(p) {
         let mut state = MachState::default();
         print_mach_header(p, endian, header);
@@ -185,7 +187,9 @@ fn print_load_command<Mach: MachHeader>(
     header: &Mach,
     command: LoadCommandData<Mach::Endian>,
     state: &mut MachState,
-) {
+) where
+    Mach::Nlist: Pod,
+{
     if let Some(variant) = command.variant().print_err(p) {
         match variant {
             LoadCommandVariant::Segment32(segment, section_data) => {
@@ -628,7 +632,9 @@ fn print_symtab<Mach: MachHeader>(
     endian: Mach::Endian,
     data: &[u8],
     symtab: &SymtabCommand<Mach::Endian>,
-) {
+) where
+    Mach::Nlist: Pod,
+{
     p.group("SymtabCommand", |p| {
         p.field_enum("Cmd", symtab.cmd.get(endian), FLAGS_LC);
         p.field_hex("CmdSize", symtab.cmdsize.get(endian));

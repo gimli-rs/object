@@ -4,7 +4,6 @@ use core::{fmt, slice, str};
 
 use crate::endian::{self, Endianness};
 use crate::macho;
-use crate::pod::Pod;
 use crate::read::util::StringTable;
 use crate::read::{
     self, ObjectMap, ObjectMapEntry, ObjectSymbol, ObjectSymbolTable, ReadError, ReadRef, Result,
@@ -396,7 +395,7 @@ where
 
 /// A trait for generic access to `Nlist32` and `Nlist64`.
 #[allow(missing_docs)]
-pub trait Nlist: Debug + Pod {
+pub trait Nlist: Debug {
     type Word: Into<u64>;
     type Endian: endian::Endian;
 
