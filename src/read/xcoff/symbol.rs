@@ -117,6 +117,7 @@ where
     /// Return the csect auxiliary symbol.
     pub fn aux_csect(&self, index: usize, offset: usize) -> Result<&'data Xcoff::CsectAux>
     where
+        Xcoff::CsectAux: Pod,
         Xcoff::Symbol: Pod,
     {
         debug_assert!(self.symbol(index)?.has_aux_csect());
@@ -170,6 +171,7 @@ impl<'data, 'file, Xcoff: FileHeader, R: ReadRef<'data>> read::private::Sealed
 impl<'data, 'file, Xcoff: FileHeader, R: ReadRef<'data>> ObjectSymbolTable<'data>
     for XcoffSymbolTable<'data, 'file, Xcoff, R>
 where
+    Xcoff::CsectAux: Pod,
     Xcoff::FileAux: Pod,
     Xcoff::Symbol: Pod,
 {
@@ -270,6 +272,7 @@ impl<'data, 'file, Xcoff: FileHeader, R: ReadRef<'data>> read::private::Sealed
 impl<'data, 'file, Xcoff: FileHeader, R: ReadRef<'data>> ObjectSymbol<'data>
     for XcoffSymbol<'data, 'file, Xcoff, R>
 where
+    Xcoff::CsectAux: Pod,
     Xcoff::FileAux: Pod,
     Xcoff::Symbol: Pod,
 {
@@ -647,7 +650,7 @@ impl FileAux for xcoff::FileAux32 {
 
 /// A trait for generic access to `CsectAux32` and `CsectAux64`.
 #[allow(missing_docs)]
-pub trait CsectAux: Debug + Pod {
+pub trait CsectAux: Debug {
     fn x_scnlen(&self) -> u64;
     fn x_parmhash(&self) -> u32;
     fn x_snhash(&self) -> u16;
