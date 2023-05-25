@@ -209,7 +209,10 @@ pub trait ProgramHeader: Debug + Pod {
         &self,
         endian: Self::Endian,
         data: R,
-    ) -> read::Result<Option<&'data [<Self::Elf as FileHeader>::Dyn]>> {
+    ) -> read::Result<Option<&'data [<Self::Elf as FileHeader>::Dyn]>>
+    where
+        <Self::Elf as FileHeader>::Dyn: Pod,
+    {
         if self.p_type(endian) != elf::PT_DYNAMIC {
             return Ok(None);
         }

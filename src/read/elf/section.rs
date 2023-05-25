@@ -165,7 +165,10 @@ impl<'data, Elf: FileHeader, R: ReadRef<'data>> SectionTable<'data, Elf, R> {
         &self,
         endian: Elf::Endian,
         data: R,
-    ) -> read::Result<Option<(&'data [Elf::Dyn], SectionIndex)>> {
+    ) -> read::Result<Option<(&'data [Elf::Dyn], SectionIndex)>>
+    where
+        Elf::Dyn: Pod,
+    {
         for section in self.sections {
             if let Some(dynamic) = section.dynamic(endian, data)? {
                 return Ok(Some(dynamic));
@@ -772,7 +775,10 @@ pub trait SectionHeader: Debug + Pod {
         &self,
         endian: Self::Endian,
         data: R,
-    ) -> read::Result<Option<(&'data [<Self::Elf as FileHeader>::Dyn], SectionIndex)>> {
+    ) -> read::Result<Option<(&'data [<Self::Elf as FileHeader>::Dyn], SectionIndex)>>
+    where
+        <Self::Elf as FileHeader>::Dyn: Pod,
+    {
         if self.sh_type(endian) != elf::SHT_DYNAMIC {
             return Ok(None);
         }

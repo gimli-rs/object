@@ -21,6 +21,7 @@ pub(super) fn print_elf64(p: &mut Printer<'_>, data: &[u8]) {
 fn print_elf<Elf: FileHeader<Endian = Endianness>>(p: &mut Printer<'_>, elf: &Elf, data: &[u8])
 where
     Elf::CompressionHeader: Pod,
+    Elf::Dyn: Pod,
 {
     if let Some(endian) = elf.endian().print_err(p) {
         print_file_header(p, endian, elf);
@@ -115,7 +116,9 @@ fn print_program_headers<Elf: FileHeader>(
     data: &[u8],
     elf: &Elf,
     segments: &[Elf::ProgramHeader],
-) {
+) where
+    Elf::Dyn: Pod,
+{
     for segment in segments {
         p.group("ProgramHeader", |p| {
             let proc = match elf.e_machine(endian) {
@@ -191,7 +194,9 @@ fn print_segment_dynamic<Elf: FileHeader>(
     elf: &Elf,
     segments: &[Elf::ProgramHeader],
     segment: &Elf::ProgramHeader,
-) {
+) where
+    Elf::Dyn: Pod,
+{
     if let Some(Some(dynamic)) = segment.dynamic(endian, data).print_err(p) {
         // TODO: add a helper API for this and the other mandatory tags?
         let mut strtab = 0;
@@ -225,6 +230,7 @@ fn print_section_headers<Elf: FileHeader>(
     sections: &SectionTable<Elf>,
 ) where
     Elf::CompressionHeader: Pod,
+    Elf::Dyn: Pod,
 {
     for (index, section) in sections.iter().enumerate() {
         let index = SectionIndex(index);
@@ -518,7 +524,9 @@ fn print_section_dynamic<Elf: FileHeader>(
     elf: &Elf,
     sections: &SectionTable<Elf>,
     section: &Elf::SectionHeader,
-) {
+) where
+    Elf::Dyn: Pod,
+{
     if let Some(Some((dynamic, index))) = section.dynamic(endian, data).print_err(p) {
         let strings = sections.strings(endian, data, index).unwrap_or_default();
         print_dynamic(p, endian, elf, dynamic, strings);
