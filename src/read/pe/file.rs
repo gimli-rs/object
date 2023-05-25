@@ -37,7 +37,7 @@ where
 
 impl<'data, Pe, R> PeFile<'data, Pe, R>
 where
-    Pe: ImageNtHeaders,
+    Pe: ImageNtHeaders + Pod,
     R: ReadRef<'data>,
 {
     /// Parse the raw PE file data.
@@ -130,7 +130,7 @@ where
 impl<'data, 'file, Pe, R> Object<'data, 'file> for PeFile<'data, Pe, R>
 where
     'data: 'file,
-    Pe: ImageNtHeaders,
+    Pe: ImageNtHeaders + Pod,
     R: 'file + ReadRef<'data>,
 {
     type Segment = PeSegment<'data, 'file, Pe, R>;
@@ -542,7 +542,7 @@ pub fn optional_header_magic<'data, R: ReadRef<'data>>(data: R) -> Result<u16> {
 
 /// A trait for generic access to `ImageNtHeaders32` and `ImageNtHeaders64`.
 #[allow(missing_docs)]
-pub trait ImageNtHeaders: Debug + Pod {
+pub trait ImageNtHeaders: Debug {
     type ImageOptionalHeader: ImageOptionalHeader;
     type ImageThunkData: ImageThunkData;
 
@@ -576,7 +576,10 @@ pub trait ImageNtHeaders: Debug + Pod {
     fn parse<'data, R: ReadRef<'data>>(
         data: R,
         offset: &mut u64,
-    ) -> read::Result<(&'data Self, DataDirectories<'data>)> {
+    ) -> read::Result<(&'data Self, DataDirectories<'data>)>
+    where
+        Self: Pod,
+    {
         // Note that this does not include the data directories in the optional header.
         let nt_headers = data
             .read::<Self>(offset)

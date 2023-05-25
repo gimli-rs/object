@@ -4,6 +4,7 @@ use core::{cmp, iter, slice, str};
 use crate::endian::LittleEndian as LE;
 use crate::pe;
 use crate::pe::ImageSectionHeader;
+use crate::pod::Pod;
 use crate::read::{
     self, CompressedData, CompressedFileRange, ObjectSection, ObjectSegment, ReadError, ReadRef,
     Relocation, Result, SectionFlags, SectionIndex, SectionKind, SegmentFlags,
@@ -71,7 +72,7 @@ where
 
 impl<'data, 'file, Pe, R> ObjectSegment<'data> for PeSegment<'data, 'file, Pe, R>
 where
-    Pe: ImageNtHeaders,
+    Pe: ImageNtHeaders + Pod,
     R: ReadRef<'data>,
 {
     #[inline]
@@ -194,7 +195,7 @@ where
 
 impl<'data, 'file, Pe, R> ObjectSection<'data> for PeSection<'data, 'file, Pe, R>
 where
-    Pe: ImageNtHeaders,
+    Pe: ImageNtHeaders + Pod,
     R: ReadRef<'data>,
 {
     type RelocationIterator = PeRelocationIterator<'data, 'file, R>;

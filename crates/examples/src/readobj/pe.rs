@@ -49,7 +49,7 @@ pub(super) fn print_pe64(p: &mut Printer<'_>, data: &[u8]) {
     print_pe::<ImageNtHeaders64>(p, data);
 }
 
-fn print_pe<Pe: ImageNtHeaders>(p: &mut Printer<'_>, data: &[u8]) {
+fn print_pe<Pe: ImageNtHeaders + Pod>(p: &mut Printer<'_>, data: &[u8]) {
     if let Some(dos_header) = ImageDosHeader::parse(data).print_err(p) {
         p.group("ImageDosHeader", |p| {
             p.field_hex("Magic", dos_header.e_magic.get(LE));
