@@ -205,7 +205,10 @@ pub trait Segment: Debug + Pod {
         &self,
         endian: Self::Endian,
         section_data: R,
-    ) -> Result<&'data [Self::Section]> {
+    ) -> Result<&'data [Self::Section]>
+    where
+        Self::Section: Pod,
+    {
         section_data
             .read_slice_at(0, self.nsects(endian) as usize)
             .read_error("Invalid Mach-O number of sections")

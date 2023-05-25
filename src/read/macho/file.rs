@@ -49,6 +49,7 @@ where
     pub fn parse(data: R) -> Result<Self>
     where
         Mach: Pod,
+        Mach::Section: Pod,
     {
         let header = Mach::parse(data, 0)?;
         let endian = header.endian()?;
@@ -90,6 +91,7 @@ where
     ) -> Result<Self>
     where
         Mach: Pod,
+        Mach::Section: Pod,
     {
         let (data, header_offset) = image.image_data_and_offset()?;
         let header = Mach::parse(data, header_offset)?;

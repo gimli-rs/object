@@ -3,7 +3,6 @@ use core::{fmt, result, slice, str};
 
 use crate::endian::{self, Endianness};
 use crate::macho;
-use crate::pod::Pod;
 use crate::read::{
     self, CompressedData, CompressedFileRange, ObjectSection, ReadError, ReadRef, Result,
     SectionFlags, SectionIndex, SectionKind,
@@ -270,7 +269,7 @@ impl<'data, Mach: MachHeader> MachOSectionInternal<'data, Mach> {
 
 /// A trait for generic access to `Section32` and `Section64`.
 #[allow(missing_docs)]
-pub trait Section: Debug + Pod {
+pub trait Section: Debug {
     type Word: Into<u64>;
     type Endian: endian::Endian;
 
