@@ -631,7 +631,7 @@ pub trait ImageNtHeaders: Debug {
 
 /// A trait for generic access to `ImageOptionalHeader32` and `ImageOptionalHeader64`.
 #[allow(missing_docs)]
-pub trait ImageOptionalHeader: Debug + Pod {
+pub trait ImageOptionalHeader: Debug {
     // Standard fields.
     fn magic(&self) -> u16;
     fn major_linker_version(&self) -> u8;
