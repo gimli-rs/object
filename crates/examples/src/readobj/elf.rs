@@ -25,6 +25,7 @@ where
     Elf::NoteHeader: Pod,
     Elf::Rel: Pod,
     Elf::Rela: Pod,
+    Elf::SectionHeader: Pod,
 {
     if let Some(endian) = elf.endian().print_err(p) {
         print_file_header(p, endian, elf);

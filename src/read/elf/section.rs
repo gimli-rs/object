@@ -614,7 +614,7 @@ where
 
 /// A trait for generic access to `SectionHeader32` and `SectionHeader64`.
 #[allow(missing_docs)]
-pub trait SectionHeader: Debug + Pod {
+pub trait SectionHeader: Debug {
     type Elf: FileHeader<SectionHeader = Self, Endian = Self::Endian, Word = Self::Word>;
     type Word: Into<u64>;
     type Endian: endian::Endian;
