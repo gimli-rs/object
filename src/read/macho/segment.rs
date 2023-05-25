@@ -153,7 +153,7 @@ pub(super) struct MachOSegmentInternal<'data, Mach: MachHeader, R: ReadRef<'data
 
 /// A trait for generic access to `SegmentCommand32` and `SegmentCommand64`.
 #[allow(missing_docs)]
-pub trait Segment: Debug + Pod {
+pub trait Segment: Debug {
     type Word: Into<u64>;
     type Endian: endian::Endian;
     type Section: Section<Endian = Self::Endian>;
