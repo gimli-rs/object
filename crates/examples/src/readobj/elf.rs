@@ -27,6 +27,7 @@ where
     Elf::Rela: Pod,
     Elf::SectionHeader: Pod,
     Elf::ProgramHeader: Pod,
+    Elf::Sym: Pod,
 {
     if let Some(endian) = elf.endian().print_err(p) {
         print_file_header(p, endian, elf);
@@ -242,6 +243,7 @@ fn print_section_headers<Elf: FileHeader>(
     Elf::NoteHeader: Pod,
     Elf::Rel: Pod,
     Elf::Rela: Pod,
+    Elf::Sym: Pod,
 {
     for (index, section) in sections.iter().enumerate() {
         let index = SectionIndex(index);
@@ -329,7 +331,9 @@ fn print_section_symbols<Elf: FileHeader>(
     sections: &SectionTable<Elf>,
     section_index: SectionIndex,
     section: &Elf::SectionHeader,
-) {
+) where
+    Elf::Sym: Pod,
+{
     if let Some(Some(symbols)) = section
         .symbols(endian, data, sections, section_index)
         .print_err(p)
@@ -420,6 +424,7 @@ fn print_section_rel<Elf: FileHeader>(
     section: &Elf::SectionHeader,
 ) where
     Elf::Rel: Pod,
+    Elf::Sym: Pod,
 {
     if let Some(Some((relocations, link))) = section.rel(endian, data).print_err(p) {
         let symbols = sections
@@ -446,6 +451,7 @@ fn print_section_rela<Elf: FileHeader>(
     section: &Elf::SectionHeader,
 ) where
     Elf::Rela: Pod,
+    Elf::Sym: Pod,
 {
     if let Some(Some((relocations, link))) = section.rela(endian, data).print_err(p) {
         let symbols = sections
@@ -865,7 +871,9 @@ fn print_gnu_versym<Elf: FileHeader>(
     _elf: &Elf,
     sections: &SectionTable<Elf>,
     section: &Elf::SectionHeader,
-) {
+) where
+    Elf::Sym: Pod,
+{
     if let Some(Some((syms, _link))) = section.gnu_versym(endian, data).print_err(p) {
         let versions = sections.versions(endian, data).print_err(p).flatten();
         for (index, sym) in syms.iter().enumerate() {

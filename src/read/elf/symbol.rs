@@ -77,7 +77,10 @@ impl<'data, Elf: FileHeader + ?Sized, R: ReadRef<'data>> SymbolTable<'data, Elf,
         sections: &SectionTable<'data, Elf, R>,
         section_index: SectionIndex,
         section: &Elf::SectionHeader,
-    ) -> read::Result<Self> {
+    ) -> read::Result<Self>
+    where
+        Elf::Sym: Pod,
+    {
         debug_assert!(
             section.sh_type(endian) == elf::SHT_DYNSYM
                 || section.sh_type(endian) == elf::SHT_SYMTAB
@@ -462,7 +465,7 @@ impl<'data, 'file, Elf: FileHeader, R: ReadRef<'data>> ObjectSymbol<'data>
 
 /// A trait for generic access to `Sym32` and `Sym64`.
 #[allow(missing_docs)]
-pub trait Sym: Debug + Pod {
+pub trait Sym: Debug {
     type Word: Into<u64>;
     type Endian: endian::Endian;
 

@@ -112,7 +112,10 @@ impl<'data, Elf: FileHeader + ?Sized, R: ReadRef<'data>> SectionTable<'data, Elf
         endian: Elf::Endian,
         data: R,
         sh_type: u32,
-    ) -> read::Result<SymbolTable<'data, Elf, R>> {
+    ) -> read::Result<SymbolTable<'data, Elf, R>>
+    where
+        Elf::Sym: Pod,
+    {
         debug_assert!(sh_type == elf::SHT_DYNSYM || sh_type == elf::SHT_SYMTAB);
 
         let (index, section) = match self
@@ -136,7 +139,10 @@ impl<'data, Elf: FileHeader + ?Sized, R: ReadRef<'data>> SectionTable<'data, Elf
         endian: Elf::Endian,
         data: R,
         index: SectionIndex,
-    ) -> read::Result<SymbolTable<'data, Elf, R>> {
+    ) -> read::Result<SymbolTable<'data, Elf, R>>
+    where
+        Elf::Sym: Pod,
+    {
         let section = self.section(index)?;
         match section.sh_type(endian) {
             elf::SHT_DYNSYM | elf::SHT_SYMTAB => {}
@@ -314,7 +320,10 @@ impl<'data, Elf: FileHeader + ?Sized, R: ReadRef<'data>> SectionTable<'data, Elf
         &self,
         endian: Elf::Endian,
         data: R,
-    ) -> read::Result<Option<VersionTable<'data, Elf>>> {
+    ) -> read::Result<Option<VersionTable<'data, Elf>>>
+    where
+        Elf::Sym: Pod,
+    {
         let (versyms, link) = match self.gnu_versym(endian, data)? {
             Some(val) => val,
             None => return Ok(None),
@@ -719,7 +728,10 @@ pub trait SectionHeader: Debug {
         data: R,
         sections: &SectionTable<'data, Self::Elf, R>,
         section_index: SectionIndex,
-    ) -> read::Result<Option<SymbolTable<'data, Self::Elf, R>>> {
+    ) -> read::Result<Option<SymbolTable<'data, Self::Elf, R>>>
+    where
+        <Self::Elf as FileHeader>::Sym: Pod,
+    {
         let sh_type = self.sh_type(endian);
         if sh_type != elf::SHT_SYMTAB && sh_type != elf::SHT_DYNSYM {
             return Ok(None);

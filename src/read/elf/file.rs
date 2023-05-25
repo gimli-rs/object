@@ -53,6 +53,7 @@ where
         Elf: Pod,
         Elf::SectionHeader: Pod,
         Elf::ProgramHeader: Pod,
+        Elf::Sym: Pod,
     {
         let header = Elf::parse(data)?;
         let endian = header.endian()?;
