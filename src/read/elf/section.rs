@@ -416,6 +416,7 @@ impl<'data, 'file, Elf: FileHeader, R: ReadRef<'data>> ElfSection<'data, 'file, 
     fn maybe_compressed_gnu(&self) -> read::Result<Option<CompressedFileRange>>
     where
         Elf::CompressionHeader: Pod,
+        Elf::Rel: Pod + Clone,
     {
         let name = match self.name() {
             Ok(name) => name,
@@ -469,6 +470,7 @@ impl<'data, 'file, Elf, R> ObjectSection<'data> for ElfSection<'data, 'file, Elf
 where
     Elf: FileHeader,
     Elf::CompressionHeader: Pod,
+    Elf::Rel: Pod + Clone,
     R: ReadRef<'data>,
 {
     type RelocationIterator = ElfSectionRelocationIterator<'data, 'file, Elf, R>;
@@ -733,7 +735,10 @@ pub trait SectionHeader: Debug + Pod {
         &self,
         endian: Self::Endian,
         data: R,
-    ) -> read::Result<Option<(&'data [<Self::Elf as FileHeader>::Rel], SectionIndex)>> {
+    ) -> read::Result<Option<(&'data [<Self::Elf as FileHeader>::Rel], SectionIndex)>>
+    where
+        <Self::Elf as FileHeader>::Rel: Pod,
+    {
         if self.sh_type(endian) != elf::SHT_REL {
             return Ok(None);
         }

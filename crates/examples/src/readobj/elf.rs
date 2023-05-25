@@ -23,6 +23,7 @@ where
     Elf::CompressionHeader: Pod,
     Elf::Dyn: Pod,
     Elf::NoteHeader: Pod,
+    Elf::Rel: Pod,
 {
     if let Some(endian) = elf.endian().print_err(p) {
         print_file_header(p, endian, elf);
@@ -236,6 +237,7 @@ fn print_section_headers<Elf: FileHeader>(
     Elf::CompressionHeader: Pod,
     Elf::Dyn: Pod,
     Elf::NoteHeader: Pod,
+    Elf::Rel: Pod,
 {
     for (index, section) in sections.iter().enumerate() {
         let index = SectionIndex(index);
@@ -412,7 +414,9 @@ fn print_section_rel<Elf: FileHeader>(
     elf: &Elf,
     sections: &SectionTable<Elf>,
     section: &Elf::SectionHeader,
-) {
+) where
+    Elf::Rel: Pod,
+{
     if let Some(Some((relocations, link))) = section.rel(endian, data).print_err(p) {
         let symbols = sections
             .symbol_table_by_index(endian, data, link)
