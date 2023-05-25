@@ -417,6 +417,7 @@ impl<'data, 'file, Elf: FileHeader, R: ReadRef<'data>> ElfSection<'data, 'file, 
     where
         Elf::CompressionHeader: Pod,
         Elf::Rel: Pod + Clone,
+        Elf::Rela: Pod + Clone,
     {
         let name = match self.name() {
             Ok(name) => name,
@@ -471,6 +472,7 @@ where
     Elf: FileHeader,
     Elf::CompressionHeader: Pod,
     Elf::Rel: Pod + Clone,
+    Elf::Rela: Pod + Clone,
     R: ReadRef<'data>,
 {
     type RelocationIterator = ElfSectionRelocationIterator<'data, 'file, Elf, R>;
@@ -759,7 +761,10 @@ pub trait SectionHeader: Debug + Pod {
         &self,
         endian: Self::Endian,
         data: R,
-    ) -> read::Result<Option<(&'data [<Self::Elf as FileHeader>::Rela], SectionIndex)>> {
+    ) -> read::Result<Option<(&'data [<Self::Elf as FileHeader>::Rela], SectionIndex)>>
+    where
+        <Self::Elf as FileHeader>::Rela: Pod,
+    {
         if self.sh_type(endian) != elf::SHT_RELA {
             return Ok(None);
         }

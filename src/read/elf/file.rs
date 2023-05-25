@@ -150,6 +150,7 @@ where
     Elf::CompressionHeader: Pod,
     Elf::NoteHeader: Pod,
     Elf::Rel: Pod + Clone,
+    Elf::Rela: Pod + Clone,
     R: 'file + ReadRef<'data>,
 {
     type Segment = ElfSegment<'data, 'file, Elf, R>;

@@ -83,6 +83,7 @@ impl<'data, Elf: FileHeader> ElfRelaIterator<'data, Elf> {
 impl<'data, Elf: FileHeader> Iterator for ElfRelaIterator<'data, Elf>
 where
     Elf::Rel: Clone,
+    Elf::Rela: Clone,
 {
     type Item = Elf::Rela;
 
@@ -117,6 +118,7 @@ impl<'data, 'file, Elf, R> Iterator for ElfDynamicRelocationIterator<'data, 'fil
 where
     Elf: FileHeader,
     Elf::Rel: Pod + Clone,
+    Elf::Rela: Pod + Clone,
     R: ReadRef<'data>,
 {
     type Item = (u64, Relocation);
@@ -191,6 +193,7 @@ impl<'data, 'file, Elf, R> Iterator for ElfSectionRelocationIterator<'data, 'fil
 where
     Elf: FileHeader,
     Elf::Rel: Pod + Clone,
+    Elf::Rela: Pod + Clone,
     R: ReadRef<'data>,
 {
     type Item = (u64, Relocation);
@@ -501,7 +504,7 @@ impl<Endian: endian::Endian> Rel for elf::Rel64<Endian> {
 
 /// A trait for generic access to `Rela32` and `Rela64`.
 #[allow(missing_docs)]
-pub trait Rela: Debug + Pod + Clone {
+pub trait Rela: Debug {
     type Word: Into<u64>;
     type Sword: Into<i64>;
     type Endian: endian::Endian;
