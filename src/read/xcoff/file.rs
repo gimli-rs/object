@@ -86,6 +86,7 @@ impl<'data, 'file, Xcoff, R> Object<'data, 'file> for XcoffFile<'data, Xcoff, R>
 where
     'data: 'file,
     Xcoff: FileHeader,
+    Xcoff::Symbol: Pod,
     R: 'file + ReadRef<'data>,
 {
     type Segment = XcoffSegment<'data, 'file, Xcoff, R>;

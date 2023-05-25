@@ -91,12 +91,18 @@ where
     }
 
     /// Return the symbol at the given index.
-    pub fn symbol(&self, index: usize) -> Result<&'data Xcoff::Symbol> {
+    pub fn symbol(&self, index: usize) -> Result<&'data Xcoff::Symbol>
+    where
+        Xcoff::Symbol: Pod,
+    {
         self.get::<Xcoff::Symbol>(index, 0)
     }
 
     /// Return a file auxiliary symbol.
-    pub fn aux_file(&self, index: usize, offset: usize) -> Result<&'data Xcoff::FileAux> {
+    pub fn aux_file(&self, index: usize, offset: usize) -> Result<&'data Xcoff::FileAux>
+    where
+        Xcoff::Symbol: Pod,
+    {
         debug_assert!(self.symbol(index)?.has_aux_file());
         let aux_file = self.get::<Xcoff::FileAux>(index, offset)?;
         if let Some(aux_type) = aux_file.x_auxtype() {
@@ -108,7 +114,10 @@ where
     }
 
     /// Return the csect auxiliary symbol.
-    pub fn aux_csect(&self, index: usize, offset: usize) -> Result<&'data Xcoff::CsectAux> {
+    pub fn aux_csect(&self, index: usize, offset: usize) -> Result<&'data Xcoff::CsectAux>
+    where
+        Xcoff::Symbol: Pod,
+    {
         debug_assert!(self.symbol(index)?.has_aux_csect());
         let aux_csect = self.get::<Xcoff::CsectAux>(index, offset)?;
         if let Some(aux_type) = aux_csect.x_auxtype() {
@@ -159,6 +168,8 @@ impl<'data, 'file, Xcoff: FileHeader, R: ReadRef<'data>> read::private::Sealed
 
 impl<'data, 'file, Xcoff: FileHeader, R: ReadRef<'data>> ObjectSymbolTable<'data>
     for XcoffSymbolTable<'data, 'file, Xcoff, R>
+where
+    Xcoff::Symbol: Pod,
 {
     type Symbol = XcoffSymbol<'data, 'file, Xcoff, R>;
     type SymbolIterator = XcoffSymbolIterator<'data, 'file, Xcoff, R>;
@@ -210,6 +221,8 @@ impl<'data, 'file, Xcoff: FileHeader, R: ReadRef<'data>> fmt::Debug
 
 impl<'data, 'file, Xcoff: FileHeader, R: ReadRef<'data>> Iterator
     for XcoffSymbolIterator<'data, 'file, Xcoff, R>
+where
+    Xcoff::Symbol: Pod,
 {
     type Item = XcoffSymbol<'data, 'file, Xcoff, R>;
 
@@ -254,6 +267,8 @@ impl<'data, 'file, Xcoff: FileHeader, R: ReadRef<'data>> read::private::Sealed
 
 impl<'data, 'file, Xcoff: FileHeader, R: ReadRef<'data>> ObjectSymbol<'data>
     for XcoffSymbol<'data, 'file, Xcoff, R>
+where
+    Xcoff::Symbol: Pod,
 {
     #[inline]
     fn index(&self) -> SymbolIndex {
@@ -454,7 +469,7 @@ impl<'data, 'file, Xcoff: FileHeader, R: ReadRef<'data>> ObjectSymbol<'data>
 
 /// A trait for generic access to `Symbol32` and `Symbol64`.
 #[allow(missing_docs)]
-pub trait Symbol: Debug + Pod {
+pub trait Symbol: Debug {
     type Word: Into<u64>;
 
     fn n_value(&self) -> Self::Word;
