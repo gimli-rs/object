@@ -94,7 +94,10 @@ where
     fn raw_section_by_name<'file>(
         &'file self,
         section_name: &[u8],
-    ) -> Option<ElfSection<'data, 'file, Elf, R>> {
+    ) -> Option<ElfSection<'data, 'file, Elf, R>>
+    where
+        Elf::CompressionHeader: Pod,
+    {
         self.sections
             .section_by_name(self.endian, section_name)
             .map(|(index, section)| ElfSection {
@@ -108,7 +111,10 @@ where
     fn zdebug_section_by_name<'file>(
         &'file self,
         section_name: &[u8],
-    ) -> Option<ElfSection<'data, 'file, Elf, R>> {
+    ) -> Option<ElfSection<'data, 'file, Elf, R>>
+    where
+        Elf::CompressionHeader: Pod,
+    {
         if !section_name.starts_with(b".debug_") {
             return None;
         }
@@ -138,6 +144,7 @@ impl<'data, 'file, Elf, R> Object<'data, 'file> for ElfFile<'data, Elf, R>
 where
     'data: 'file,
     Elf: FileHeader,
+    Elf::CompressionHeader: Pod,
     R: 'file + ReadRef<'data>,
 {
     type Segment = ElfSegment<'data, 'file, Elf, R>;

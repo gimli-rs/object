@@ -2,11 +2,10 @@ use core::fmt::Debug;
 
 use crate::elf;
 use crate::endian;
-use crate::pod::Pod;
 
 /// A trait for generic access to `CompressionHeader32` and `CompressionHeader64`.
 #[allow(missing_docs)]
-pub trait CompressionHeader: Debug + Pod {
+pub trait CompressionHeader: Debug {
     type Word: Into<u64>;
     type Endian: endian::Endian;
 

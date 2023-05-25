@@ -66,7 +66,10 @@ impl<'data, Elf: FileHeader, R: ReadRef<'data>> SectionTable<'data, Elf, R> {
         &self,
         endian: Elf::Endian,
         name: &[u8],
-    ) -> Option<(usize, &'data Elf::SectionHeader)> {
+    ) -> Option<(usize, &'data Elf::SectionHeader)>
+    where
+        Elf::CompressionHeader: Pod,
+    {
         self.sections
             .iter()
             .enumerate()
@@ -78,7 +81,10 @@ impl<'data, Elf: FileHeader, R: ReadRef<'data>> SectionTable<'data, Elf, R> {
         &self,
         endian: Elf::Endian,
         section: &'data Elf::SectionHeader,
-    ) -> read::Result<&'data [u8]> {
+    ) -> read::Result<&'data [u8]>
+    where
+        Elf::CompressionHeader: Pod,
+    {
         section.name(endian, self.strings)
     }
 
@@ -378,7 +384,10 @@ impl<'data, 'file, Elf: FileHeader, R: ReadRef<'data>> ElfSection<'data, 'file, 
             .read_error("Invalid ELF section size or offset")
     }
 
-    fn maybe_compressed(&self) -> read::Result<Option<CompressedFileRange>> {
+    fn maybe_compressed(&self) -> read::Result<Option<CompressedFileRange>>
+    where
+        Elf::CompressionHeader: Pod,
+    {
         let endian = self.file.endian;
         if let Some((header, offset, compressed_size)) =
             self.section.compression(endian, self.file.data)?
@@ -401,7 +410,10 @@ impl<'data, 'file, Elf: FileHeader, R: ReadRef<'data>> ElfSection<'data, 'file, 
     }
 
     /// Try GNU-style "ZLIB" header decompression.
-    fn maybe_compressed_gnu(&self) -> read::Result<Option<CompressedFileRange>> {
+    fn maybe_compressed_gnu(&self) -> read::Result<Option<CompressedFileRange>>
+    where
+        Elf::CompressionHeader: Pod,
+    {
         let name = match self.name() {
             Ok(name) => name,
             // I think it's ok to ignore this error?
@@ -453,6 +465,7 @@ where
 impl<'data, 'file, Elf, R> ObjectSection<'data> for ElfSection<'data, 'file, Elf, R>
 where
     Elf: FileHeader,
+    Elf::CompressionHeader: Pod,
     R: ReadRef<'data>,
 {
     type RelocationIterator = ElfSectionRelocationIterator<'data, 'file, Elf, R>;
@@ -1015,7 +1028,10 @@ pub trait SectionHeader: Debug + Pod {
             u64,
             u64,
         )>,
-    > {
+    >
+    where
+        <Self::Elf as FileHeader>::CompressionHeader: Pod,
+    {
         if (self.sh_flags(endian).into() & u64::from(elf::SHF_COMPRESSED)) == 0 {
             return Ok(None);
         }

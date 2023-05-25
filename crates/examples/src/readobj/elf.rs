@@ -1,5 +1,6 @@
 use super::*;
 use object::elf::*;
+use object::pod::Pod;
 use object::read::elf::*;
 use object::read::{SectionIndex, StringTable};
 
@@ -17,7 +18,10 @@ pub(super) fn print_elf64(p: &mut Printer<'_>, data: &[u8]) {
     }
 }
 
-fn print_elf<Elf: FileHeader<Endian = Endianness>>(p: &mut Printer<'_>, elf: &Elf, data: &[u8]) {
+fn print_elf<Elf: FileHeader<Endian = Endianness>>(p: &mut Printer<'_>, elf: &Elf, data: &[u8])
+where
+    Elf::CompressionHeader: Pod,
+{
     if let Some(endian) = elf.endian().print_err(p) {
         print_file_header(p, endian, elf);
         if let Some(segments) = elf.program_headers(endian, data).print_err(p) {
@@ -219,7 +223,9 @@ fn print_section_headers<Elf: FileHeader>(
     data: &[u8],
     elf: &Elf,
     sections: &SectionTable<Elf>,
-) {
+) where
+    Elf::CompressionHeader: Pod,
+{
     for (index, section) in sections.iter().enumerate() {
         let index = SectionIndex(index);
         p.group("SectionHeader", |p| {
@@ -526,7 +532,9 @@ fn print_section_group<Elf: FileHeader>(
     _elf: &Elf,
     sections: &SectionTable<Elf>,
     section: &Elf::SectionHeader,
-) {
+) where
+    Elf::CompressionHeader: Pod,
+{
     if let Some(Some((flag, members))) = section.group(endian, data).print_err(p) {
         p.field_enum("GroupFlag", flag, FLAGS_GRP);
         p.group("GroupSections", |p| {
