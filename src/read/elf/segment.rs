@@ -137,7 +137,7 @@ where
 
 /// A trait for generic access to `ProgramHeader32` and `ProgramHeader64`.
 #[allow(missing_docs)]
-pub trait ProgramHeader: Debug + Pod {
+pub trait ProgramHeader: Debug {
     type Elf: FileHeader<ProgramHeader = Self, Endian = Self::Endian, Word = Self::Word>;
     type Word: Into<u64>;
     type Endian: endian::Endian;

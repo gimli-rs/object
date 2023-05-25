@@ -52,6 +52,7 @@ where
     where
         Elf: Pod,
         Elf::SectionHeader: Pod,
+        Elf::ProgramHeader: Pod,
     {
         let header = Elf::parse(data)?;
         let endian = header.endian()?;
@@ -647,6 +648,7 @@ pub trait FileHeader: Debug {
     ) -> read::Result<&'data [Self::ProgramHeader]>
     where
         Self::SectionHeader: Pod,
+        Self::ProgramHeader: Pod,
     {
         let phoff: u64 = self.e_phoff(endian).into();
         if phoff == 0 {
