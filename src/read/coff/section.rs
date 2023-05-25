@@ -22,7 +22,7 @@ impl<'data> SectionTable<'data> {
     ///
     /// `data` must be the entire file data.
     /// `offset` must be after the optional file header.
-    pub fn parse<Coff: CoffHeader, R: ReadRef<'data>>(
+    pub fn parse<Coff: CoffHeader + ?Sized, R: ReadRef<'data>>(
         header: &Coff,
         data: R,
         offset: u64,

@@ -21,7 +21,7 @@ use crate::read::{
 pub struct SymbolTable<'data, R = &'data [u8], Coff = pe::ImageFileHeader>
 where
     R: ReadRef<'data>,
-    Coff: CoffHeader,
+    Coff: CoffHeader + ?Sized,
 {
     symbols: &'data [Coff::ImageSymbolBytes],
     strings: StringTable<'data, R>,
@@ -36,7 +36,7 @@ impl<'data, R: ReadRef<'data>, Coff: CoffHeader> Default for SymbolTable<'data, 
     }
 }
 
-impl<'data, R: ReadRef<'data>, Coff: CoffHeader> SymbolTable<'data, R, Coff> {
+impl<'data, R: ReadRef<'data>, Coff: CoffHeader + ?Sized> SymbolTable<'data, R, Coff> {
     /// Read the symbol table.
     pub fn parse(header: &Coff, data: R) -> Result<Self> {
         // The symbol table may not be present.
@@ -168,13 +168,13 @@ impl<'data, R: ReadRef<'data>, Coff: CoffHeader> SymbolTable<'data, R, Coff> {
 pub struct SymbolIterator<'data, 'table, R = &'data [u8], Coff = pe::ImageFileHeader>
 where
     R: ReadRef<'data>,
-    Coff: CoffHeader,
+    Coff: CoffHeader + ?Sized,
 {
     symbols: &'table SymbolTable<'data, R, Coff>,
     index: usize,
 }
 
-impl<'data, 'table, R: ReadRef<'data>, Coff: CoffHeader> Iterator
+impl<'data, 'table, R: ReadRef<'data>, Coff: CoffHeader + ?Sized> Iterator
     for SymbolIterator<'data, 'table, R, Coff>
 {
     type Item = (usize, &'data Coff::ImageSymbol);
