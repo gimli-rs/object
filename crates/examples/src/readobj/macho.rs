@@ -694,7 +694,7 @@ fn print_cputype(p: &mut Printer<'_>, cputype: u32, cpusubtype: u32) {
     p.flags(cpusubtype, 0, FLAGS_CPU_SUBTYPE);
 }
 
-static FLAGS_CPU_TYPE: &[Flag<u32>] = &flags!(
+const FLAGS_CPU_TYPE: &[Flag<u32>] = &flags!(
     CPU_TYPE_ANY,
     CPU_TYPE_VAX,
     CPU_TYPE_MC680X0,
@@ -713,13 +713,13 @@ static FLAGS_CPU_TYPE: &[Flag<u32>] = &flags!(
     CPU_TYPE_POWERPC,
     CPU_TYPE_POWERPC64,
 );
-static FLAGS_CPU_SUBTYPE: &[Flag<u32>] = &flags!(CPU_SUBTYPE_LIB64);
-static FLAGS_CPU_SUBTYPE_ANY: &[Flag<u32>] = &flags!(
+const FLAGS_CPU_SUBTYPE: &[Flag<u32>] = &flags!(CPU_SUBTYPE_LIB64);
+const FLAGS_CPU_SUBTYPE_ANY: &[Flag<u32>] = &flags!(
     CPU_SUBTYPE_MULTIPLE,
     CPU_SUBTYPE_LITTLE_ENDIAN,
     CPU_SUBTYPE_BIG_ENDIAN,
 );
-static FLAGS_CPU_SUBTYPE_VAX: &[Flag<u32>] = &flags!(
+const FLAGS_CPU_SUBTYPE_VAX: &[Flag<u32>] = &flags!(
     CPU_SUBTYPE_VAX_ALL,
     CPU_SUBTYPE_VAX780,
     CPU_SUBTYPE_VAX785,
@@ -734,12 +734,12 @@ static FLAGS_CPU_SUBTYPE_VAX: &[Flag<u32>] = &flags!(
     CPU_SUBTYPE_VAX8800,
     CPU_SUBTYPE_UVAXIII,
 );
-static FLAGS_CPU_SUBTYPE_MC680X0: &[Flag<u32>] = &flags!(
+const FLAGS_CPU_SUBTYPE_MC680X0: &[Flag<u32>] = &flags!(
     CPU_SUBTYPE_MC680X0_ALL,
     CPU_SUBTYPE_MC68040,
     CPU_SUBTYPE_MC68030_ONLY,
 );
-static FLAGS_CPU_SUBTYPE_X86: &[Flag<u32>] = &flags!(
+const FLAGS_CPU_SUBTYPE_X86: &[Flag<u32>] = &flags!(
     CPU_SUBTYPE_I386_ALL,
     CPU_SUBTYPE_386,
     CPU_SUBTYPE_486,
@@ -762,12 +762,12 @@ static FLAGS_CPU_SUBTYPE_X86: &[Flag<u32>] = &flags!(
     CPU_SUBTYPE_XEON,
     CPU_SUBTYPE_XEON_MP,
 );
-static FLAGS_CPU_SUBTYPE_X86_64: &[Flag<u32>] = &flags!(
+const FLAGS_CPU_SUBTYPE_X86_64: &[Flag<u32>] = &flags!(
     CPU_SUBTYPE_X86_64_ALL,
     CPU_SUBTYPE_X86_ARCH1,
     CPU_SUBTYPE_X86_64_H,
 );
-static FLAGS_CPU_SUBTYPE_MIPS: &[Flag<u32>] = &flags!(
+const FLAGS_CPU_SUBTYPE_MIPS: &[Flag<u32>] = &flags!(
     CPU_SUBTYPE_MIPS_ALL,
     CPU_SUBTYPE_MIPS_R2300,
     CPU_SUBTYPE_MIPS_R2600,
@@ -777,18 +777,17 @@ static FLAGS_CPU_SUBTYPE_MIPS: &[Flag<u32>] = &flags!(
     CPU_SUBTYPE_MIPS_R3000A,
     CPU_SUBTYPE_MIPS_R3000,
 );
-static FLAGS_CPU_SUBTYPE_MC98000: &[Flag<u32>] =
+const FLAGS_CPU_SUBTYPE_MC98000: &[Flag<u32>] =
     &flags!(CPU_SUBTYPE_MC98000_ALL, CPU_SUBTYPE_MC98601);
-static FLAGS_CPU_SUBTYPE_HPPA: &[Flag<u32>] =
-    &flags!(CPU_SUBTYPE_HPPA_ALL, CPU_SUBTYPE_HPPA_7100LC);
-static FLAGS_CPU_SUBTYPE_MC88000: &[Flag<u32>] = &flags!(
+const FLAGS_CPU_SUBTYPE_HPPA: &[Flag<u32>] = &flags!(CPU_SUBTYPE_HPPA_ALL, CPU_SUBTYPE_HPPA_7100LC);
+const FLAGS_CPU_SUBTYPE_MC88000: &[Flag<u32>] = &flags!(
     CPU_SUBTYPE_MC88000_ALL,
     CPU_SUBTYPE_MC88100,
     CPU_SUBTYPE_MC88110,
 );
-static FLAGS_CPU_SUBTYPE_SPARC: &[Flag<u32>] = &flags!(CPU_SUBTYPE_SPARC_ALL);
-static FLAGS_CPU_SUBTYPE_I860: &[Flag<u32>] = &flags!(CPU_SUBTYPE_I860_ALL, CPU_SUBTYPE_I860_860);
-static FLAGS_CPU_SUBTYPE_POWERPC: &[Flag<u32>] = &flags!(
+const FLAGS_CPU_SUBTYPE_SPARC: &[Flag<u32>] = &flags!(CPU_SUBTYPE_SPARC_ALL);
+const FLAGS_CPU_SUBTYPE_I860: &[Flag<u32>] = &flags!(CPU_SUBTYPE_I860_ALL, CPU_SUBTYPE_I860_860);
+const FLAGS_CPU_SUBTYPE_POWERPC: &[Flag<u32>] = &flags!(
     CPU_SUBTYPE_POWERPC_ALL,
     CPU_SUBTYPE_POWERPC_601,
     CPU_SUBTYPE_POWERPC_602,
@@ -803,7 +802,7 @@ static FLAGS_CPU_SUBTYPE_POWERPC: &[Flag<u32>] = &flags!(
     CPU_SUBTYPE_POWERPC_7450,
     CPU_SUBTYPE_POWERPC_970,
 );
-static FLAGS_CPU_SUBTYPE_ARM: &[Flag<u32>] = &flags!(
+const FLAGS_CPU_SUBTYPE_ARM: &[Flag<u32>] = &flags!(
     CPU_SUBTYPE_ARM_ALL,
     CPU_SUBTYPE_ARM_V4T,
     CPU_SUBTYPE_ARM_V6,
@@ -819,14 +818,14 @@ static FLAGS_CPU_SUBTYPE_ARM: &[Flag<u32>] = &flags!(
     CPU_SUBTYPE_ARM_V7EM,
     CPU_SUBTYPE_ARM_V8M,
 );
-static FLAGS_CPU_SUBTYPE_ARM64: &[Flag<u32>] = &flags!(
+const FLAGS_CPU_SUBTYPE_ARM64: &[Flag<u32>] = &flags!(
     CPU_SUBTYPE_ARM64_ALL,
     CPU_SUBTYPE_ARM64_V8,
     CPU_SUBTYPE_ARM64E,
 );
-static FLAGS_CPU_SUBTYPE_ARM64_32: &[Flag<u32>] =
+const FLAGS_CPU_SUBTYPE_ARM64_32: &[Flag<u32>] =
     &flags!(CPU_SUBTYPE_ARM64_32_ALL, CPU_SUBTYPE_ARM64_32_V8);
-static FLAGS_MH_FILETYPE: &[Flag<u32>] = &flags!(
+const FLAGS_MH_FILETYPE: &[Flag<u32>] = &flags!(
     MH_OBJECT,
     MH_EXECUTE,
     MH_FVMLIB,
@@ -840,7 +839,7 @@ static FLAGS_MH_FILETYPE: &[Flag<u32>] = &flags!(
     MH_KEXT_BUNDLE,
     MH_FILESET,
 );
-static FLAGS_MH: &[Flag<u32>] = &flags!(
+const FLAGS_MH: &[Flag<u32>] = &flags!(
     MH_NOUNDEFS,
     MH_INCRLINK,
     MH_DYLDLINK,
@@ -871,7 +870,7 @@ static FLAGS_MH: &[Flag<u32>] = &flags!(
     MH_SIM_SUPPORT,
     MH_DYLIB_IN_CACHE,
 );
-static FLAGS_LC: &[Flag<u32>] = &flags!(
+const FLAGS_LC: &[Flag<u32>] = &flags!(
     LC_SEGMENT,
     LC_SYMTAB,
     LC_SYMSEG,
@@ -927,15 +926,15 @@ static FLAGS_LC: &[Flag<u32>] = &flags!(
     LC_DYLD_CHAINED_FIXUPS,
     LC_FILESET_ENTRY,
 );
-static FLAGS_VM: &[Flag<u32>] = &flags!(VM_PROT_READ, VM_PROT_WRITE, VM_PROT_EXECUTE);
-static FLAGS_SG: &[Flag<u32>] = &flags!(
+const FLAGS_VM: &[Flag<u32>] = &flags!(VM_PROT_READ, VM_PROT_WRITE, VM_PROT_EXECUTE);
+const FLAGS_SG: &[Flag<u32>] = &flags!(
     SG_HIGHVM,
     SG_FVMLIB,
     SG_NORELOC,
     SG_PROTECTED_VERSION_1,
     SG_READ_ONLY,
 );
-static FLAGS_S_TYPE: &[Flag<u32>] = &flags!(
+const FLAGS_S_TYPE: &[Flag<u32>] = &flags!(
     S_REGULAR,
     S_ZEROFILL,
     S_CSTRING_LITERALS,
@@ -960,7 +959,7 @@ static FLAGS_S_TYPE: &[Flag<u32>] = &flags!(
     S_THREAD_LOCAL_INIT_FUNCTION_POINTERS,
     S_INIT_FUNC_OFFSETS,
 );
-static FLAGS_S_ATTR: &[Flag<u32>] = &flags!(
+const FLAGS_S_ATTR: &[Flag<u32>] = &flags!(
     S_ATTR_PURE_INSTRUCTIONS,
     S_ATTR_NO_TOC,
     S_ATTR_STRIP_STATIC_SYMS,
@@ -972,7 +971,7 @@ static FLAGS_S_ATTR: &[Flag<u32>] = &flags!(
     S_ATTR_EXT_RELOC,
     S_ATTR_LOC_RELOC,
 );
-static FLAGS_PLATFORM: &[Flag<u32>] = &flags!(
+const FLAGS_PLATFORM: &[Flag<u32>] = &flags!(
     PLATFORM_MACOS,
     PLATFORM_IOS,
     PLATFORM_TVOS,
@@ -984,14 +983,14 @@ static FLAGS_PLATFORM: &[Flag<u32>] = &flags!(
     PLATFORM_WATCHOSSIMULATOR,
     PLATFORM_DRIVERKIT,
 );
-static FLAGS_N_EXT: &[Flag<u8>] = &flags!(N_PEXT, N_EXT);
-static FLAGS_N_TYPE: &[Flag<u8>] = &flags!(N_UNDF, N_ABS, N_SECT, N_PBUD, N_INDR);
-static FLAGS_N_STAB: &[Flag<u8>] = &flags!(
+const FLAGS_N_EXT: &[Flag<u8>] = &flags!(N_PEXT, N_EXT);
+const FLAGS_N_TYPE: &[Flag<u8>] = &flags!(N_UNDF, N_ABS, N_SECT, N_PBUD, N_INDR);
+const FLAGS_N_STAB: &[Flag<u8>] = &flags!(
     N_GSYM, N_FNAME, N_FUN, N_STSYM, N_LCSYM, N_BNSYM, N_AST, N_OPT, N_RSYM, N_SLINE, N_ENSYM,
     N_SSYM, N_SO, N_OSO, N_LSYM, N_BINCL, N_SOL, N_PARAMS, N_VERSION, N_OLEVEL, N_PSYM, N_EINCL,
     N_ENTRY, N_LBRAC, N_EXCL, N_RBRAC, N_BCOMM, N_ECOMM, N_ECOML, N_LENG, N_PC,
 );
-static FLAGS_REFERENCE: &[Flag<u16>] = &flags!(
+const FLAGS_REFERENCE: &[Flag<u16>] = &flags!(
     REFERENCE_FLAG_UNDEFINED_NON_LAZY,
     REFERENCE_FLAG_UNDEFINED_LAZY,
     REFERENCE_FLAG_DEFINED,
@@ -999,7 +998,7 @@ static FLAGS_REFERENCE: &[Flag<u16>] = &flags!(
     REFERENCE_FLAG_PRIVATE_UNDEFINED_NON_LAZY,
     REFERENCE_FLAG_PRIVATE_UNDEFINED_LAZY,
 );
-static FLAGS_N_DESC: &[Flag<u16>] = &flags!(
+const FLAGS_N_DESC: &[Flag<u16>] = &flags!(
     REFERENCED_DYNAMICALLY,
     N_NO_DEAD_STRIP,
     N_DESC_DISCARDED,
@@ -1010,7 +1009,7 @@ static FLAGS_N_DESC: &[Flag<u16>] = &flags!(
     N_SYMBOL_RESOLVER,
     N_ALT_ENTRY,
 );
-static FLAGS_GENERIC_RELOC: &[Flag<u8>] = &flags!(
+const FLAGS_GENERIC_RELOC: &[Flag<u8>] = &flags!(
     GENERIC_RELOC_VANILLA,
     GENERIC_RELOC_PAIR,
     GENERIC_RELOC_SECTDIFF,
@@ -1018,7 +1017,7 @@ static FLAGS_GENERIC_RELOC: &[Flag<u8>] = &flags!(
     GENERIC_RELOC_LOCAL_SECTDIFF,
     GENERIC_RELOC_TLV,
 );
-static FLAGS_ARM_RELOC: &[Flag<u8>] = &flags!(
+const FLAGS_ARM_RELOC: &[Flag<u8>] = &flags!(
     ARM_RELOC_VANILLA,
     ARM_RELOC_PAIR,
     ARM_RELOC_SECTDIFF,
@@ -1030,7 +1029,7 @@ static FLAGS_ARM_RELOC: &[Flag<u8>] = &flags!(
     ARM_RELOC_HALF,
     ARM_RELOC_HALF_SECTDIFF,
 );
-static FLAGS_ARM64_RELOC: &[Flag<u8>] = &flags!(
+const FLAGS_ARM64_RELOC: &[Flag<u8>] = &flags!(
     ARM64_RELOC_UNSIGNED,
     ARM64_RELOC_SUBTRACTOR,
     ARM64_RELOC_BRANCH26,
@@ -1044,7 +1043,7 @@ static FLAGS_ARM64_RELOC: &[Flag<u8>] = &flags!(
     ARM64_RELOC_ADDEND,
     ARM64_RELOC_AUTHENTICATED_POINTER,
 );
-static FLAGS_PPC_RELOC: &[Flag<u8>] = &flags!(
+const FLAGS_PPC_RELOC: &[Flag<u8>] = &flags!(
     PPC_RELOC_VANILLA,
     PPC_RELOC_PAIR,
     PPC_RELOC_BR14,
@@ -1062,7 +1061,7 @@ static FLAGS_PPC_RELOC: &[Flag<u8>] = &flags!(
     PPC_RELOC_LO14_SECTDIFF,
     PPC_RELOC_LOCAL_SECTDIFF,
 );
-static FLAGS_X86_64_RELOC: &[Flag<u8>] = &flags!(
+const FLAGS_X86_64_RELOC: &[Flag<u8>] = &flags!(
     X86_64_RELOC_UNSIGNED,
     X86_64_RELOC_SIGNED,
     X86_64_RELOC_BRANCH,
