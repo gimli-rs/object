@@ -229,39 +229,29 @@ impl<'a> Object<'a> {
         let sizeofcmds = offset - command_offset;
 
         // Calculate size of section data.
-        let mut segment_file_offset = None;
+        // Section data can immediately follow the load commands without any alignment padding.
+        let segment_file_offset = offset;
         let mut section_offsets = vec![SectionOffsets::default(); self.sections.len()];
         let mut address = 0;
         for (index, section) in self.sections.iter().enumerate() {
             section_offsets[index].index = 1 + index;
             if !section.is_bss() {
-                let len = section.data.len();
-                if len != 0 {
-                    offset = align(offset, section.align as usize);
-                    section_offsets[index].offset = offset;
-                    if segment_file_offset.is_none() {
-                        segment_file_offset = Some(offset);
-                    }
-                    offset += len;
-                } else {
-                    section_offsets[index].offset = offset;
-                }
                 address = align_u64(address, section.align);
                 section_offsets[index].address = address;
+                section_offsets[index].offset = segment_file_offset + address as usize;
                 address += section.size;
             }
         }
+        let segment_file_size = address as usize;
+        offset += address as usize;
         for (index, section) in self.sections.iter().enumerate() {
-            if section.kind.is_bss() {
-                assert!(section.data.is_empty());
+            if section.is_bss() {
+                debug_assert!(section.data.is_empty());
                 address = align_u64(address, section.align);
                 section_offsets[index].address = address;
                 address += section.size;
             }
         }
-        let segment_file_offset = segment_file_offset.unwrap_or(offset);
-        let segment_file_size = offset - segment_file_offset;
-        debug_assert!(segment_file_size as u64 <= address);
 
         // Count symbols and add symbol strings to strtab.
         let mut strtab = StringTable::default();
@@ -456,10 +446,8 @@ impl<'a> Object<'a> {
 
         // Write section data.
         for (index, section) in self.sections.iter().enumerate() {
-            let len = section.data.len();
-            if len != 0 {
-                write_align(buffer, section.align as usize);
-                debug_assert_eq!(section_offsets[index].offset, buffer.len());
+            if !section.is_bss() {
+                buffer.resize(section_offsets[index].offset);
                 buffer.write_bytes(&section.data);
             }
         }
