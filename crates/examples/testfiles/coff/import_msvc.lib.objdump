@@ -1,0 +1,256 @@
+Format: Archive (kind: Coff)
+
+test_x64.dll:
+Format: Short Import File
+Architecture: X86_64
+DLL: "test_x64.dll"
+Symbol: "foo_x64"
+Import: Name("foo_x64")
+Type: Code
+
+test_x64.dll:
+Format: Short Import File
+Architecture: X86_64
+DLL: "test_x64.dll"
+Symbol: "bar_x64"
+Import: Ordinal(1)
+Type: Code
+
+test_x64.dll:
+Format: Short Import File
+Architecture: X86_64
+DLL: "test_x64.dll"
+Symbol: "FOO_x64"
+Import: Name("FOO_x64")
+Type: Data
+
+test_x64.dll:
+Format: Short Import File
+Architecture: X86_64
+DLL: "test_x64.dll"
+Symbol: "BAR_x64"
+Import: Name("BAR_x64")
+Type: Const
+
+test_x64.dll:
+Format: Coff Little-endian 32-bit
+Kind: Relocatable
+Architecture: X86_64
+Flags: Coff { characteristics: 0 }
+Relative Address Base: 0
+Entry Address: 0
+Segment { name: ".debug$S", address: 0, size: 0 }
+Segment { name: ".idata$5", address: 0, size: 0 }
+Segment { name: ".idata$4", address: 0, size: 0 }
+1: Section { name: ".debug$S", address: 0, size: 42, align: 1, kind: Other, flags: Coff { characteristics: 42100040 } }
+2: Section { name: ".idata$5", address: 0, size: 8, align: 8, kind: Data, flags: Coff { characteristics: c0400040 } }
+3: Section { name: ".idata$4", address: 0, size: 8, align: 8, kind: Data, flags: Coff { characteristics: c0400040 } }
+
+Symbols
+0: Symbol { name: "@comp.id", address: 0, size: 0, kind: Data, section: Absolute, scope: Compilation, weak: false, flags: None }
+1: Symbol { name: "\u{7f}test_x64_NULL_THUNK_DATA", address: 0, size: 0, kind: Data, section: Section(SectionIndex(2)), scope: Linkage, weak: false, flags: None }
+
+Dynamic symbols
+
+test_x64.dll:
+Format: Coff Little-endian 32-bit
+Kind: Relocatable
+Architecture: X86_64
+Flags: Coff { characteristics: 0 }
+Relative Address Base: 0
+Entry Address: 0
+Segment { name: ".debug$S", address: 0, size: 0 }
+Segment { name: ".idata$3", address: 0, size: 0 }
+1: Section { name: ".debug$S", address: 0, size: 42, align: 1, kind: Other, flags: Coff { characteristics: 42100040 } }
+2: Section { name: ".idata$3", address: 0, size: 14, align: 4, kind: Data, flags: Coff { characteristics: c0300040 } }
+
+Symbols
+0: Symbol { name: "@comp.id", address: 0, size: 0, kind: Data, section: Absolute, scope: Compilation, weak: false, flags: None }
+1: Symbol { name: "__NULL_IMPORT_DESCRIPTOR", address: 0, size: 0, kind: Data, section: Section(SectionIndex(2)), scope: Linkage, weak: false, flags: None }
+
+Dynamic symbols
+
+test_x64.dll:
+Format: Coff Little-endian 32-bit
+Kind: Relocatable
+Architecture: X86_64
+Flags: Coff { characteristics: 0 }
+Relative Address Base: 0
+Entry Address: 0
+Segment { name: ".debug$S", address: 0, size: 0 }
+Segment { name: ".idata$2", address: 0, size: 0 }
+Segment { name: ".idata$6", address: 0, size: 0 }
+1: Section { name: ".debug$S", address: 0, size: 42, align: 1, kind: Other, flags: Coff { characteristics: 42100040 } }
+2: Section { name: ".idata$2", address: 0, size: 14, align: 4, kind: Data, flags: Coff { characteristics: c0300040 } }
+3: Section { name: ".idata$6", address: 0, size: e, align: 2, kind: Data, flags: Coff { characteristics: c0200040 } }
+
+Symbols
+0: Symbol { name: "@comp.id", address: 0, size: 0, kind: Data, section: Absolute, scope: Compilation, weak: false, flags: None }
+1: Symbol { name: "__IMPORT_DESCRIPTOR_test_x64", address: 0, size: 0, kind: Data, section: Section(SectionIndex(2)), scope: Linkage, weak: false, flags: None }
+2: Symbol { name: ".idata$2", address: 0, size: 0, kind: Section, section: Section(SectionIndex(2)), scope: Compilation, weak: false, flags: None }
+3: Symbol { name: ".idata$6", address: 0, size: 0, kind: Data, section: Section(SectionIndex(3)), scope: Compilation, weak: false, flags: None }
+4: Symbol { name: ".idata$4", address: 0, size: 0, kind: Section, section: Common, scope: Compilation, weak: false, flags: None }
+5: Symbol { name: ".idata$5", address: 0, size: 0, kind: Section, section: Common, scope: Compilation, weak: false, flags: None }
+6: Symbol { name: "__NULL_IMPORT_DESCRIPTOR", address: 0, size: 0, kind: Data, section: Undefined, scope: Linkage, weak: false, flags: None }
+7: Symbol { name: "\u{7f}test_x64_NULL_THUNK_DATA", address: 0, size: 0, kind: Data, section: Undefined, scope: Linkage, weak: false, flags: None }
+
+.idata$2 relocations
+(c, Relocation { kind: ImageOffset, encoding: Generic, size: 20, target: Symbol(SymbolIndex(3)), addend: 0, implicit_addend: true })
+(0, Relocation { kind: ImageOffset, encoding: Generic, size: 20, target: Symbol(SymbolIndex(4)), addend: 0, implicit_addend: true })
+(10, Relocation { kind: ImageOffset, encoding: Generic, size: 20, target: Symbol(SymbolIndex(5)), addend: 0, implicit_addend: true })
+
+Dynamic symbols
+
+test_x86.dll:
+Format: Short Import File
+Architecture: I386
+DLL: "test_x86.dll"
+Symbol: "_foo_x86"
+Import: Name("foo_x86")
+Type: Code
+
+test_x86.dll:
+Format: Coff Little-endian 32-bit
+Kind: Relocatable
+Architecture: I386
+Flags: Coff { characteristics: 100 }
+Relative Address Base: 0
+Entry Address: 0
+Segment { name: ".debug$S", address: 0, size: 0 }
+Segment { name: ".idata$5", address: 0, size: 0 }
+Segment { name: ".idata$4", address: 0, size: 0 }
+1: Section { name: ".debug$S", address: 0, size: 42, align: 1, kind: Other, flags: Coff { characteristics: 42100040 } }
+2: Section { name: ".idata$5", address: 0, size: 4, align: 4, kind: Data, flags: Coff { characteristics: c0300040 } }
+3: Section { name: ".idata$4", address: 0, size: 4, align: 4, kind: Data, flags: Coff { characteristics: c0300040 } }
+
+Symbols
+0: Symbol { name: "@comp.id", address: 0, size: 0, kind: Data, section: Absolute, scope: Compilation, weak: false, flags: None }
+1: Symbol { name: "\u{7f}test_x86_NULL_THUNK_DATA", address: 0, size: 0, kind: Data, section: Section(SectionIndex(2)), scope: Linkage, weak: false, flags: None }
+
+Dynamic symbols
+
+test_x86.dll:
+Format: Coff Little-endian 32-bit
+Kind: Relocatable
+Architecture: I386
+Flags: Coff { characteristics: 100 }
+Relative Address Base: 0
+Entry Address: 0
+Segment { name: ".debug$S", address: 0, size: 0 }
+Segment { name: ".idata$3", address: 0, size: 0 }
+1: Section { name: ".debug$S", address: 0, size: 42, align: 1, kind: Other, flags: Coff { characteristics: 42100040 } }
+2: Section { name: ".idata$3", address: 0, size: 14, align: 4, kind: Data, flags: Coff { characteristics: c0300040 } }
+
+Symbols
+0: Symbol { name: "@comp.id", address: 0, size: 0, kind: Data, section: Absolute, scope: Compilation, weak: false, flags: None }
+1: Symbol { name: "__NULL_IMPORT_DESCRIPTOR", address: 0, size: 0, kind: Data, section: Section(SectionIndex(2)), scope: Linkage, weak: false, flags: None }
+
+Dynamic symbols
+
+test_x86.dll:
+Format: Coff Little-endian 32-bit
+Kind: Relocatable
+Architecture: I386
+Flags: Coff { characteristics: 100 }
+Relative Address Base: 0
+Entry Address: 0
+Segment { name: ".debug$S", address: 0, size: 0 }
+Segment { name: ".idata$2", address: 0, size: 0 }
+Segment { name: ".idata$6", address: 0, size: 0 }
+1: Section { name: ".debug$S", address: 0, size: 42, align: 1, kind: Other, flags: Coff { characteristics: 42100040 } }
+2: Section { name: ".idata$2", address: 0, size: 14, align: 4, kind: Data, flags: Coff { characteristics: c0300040 } }
+3: Section { name: ".idata$6", address: 0, size: e, align: 2, kind: Data, flags: Coff { characteristics: c0200040 } }
+
+Symbols
+0: Symbol { name: "@comp.id", address: 0, size: 0, kind: Data, section: Absolute, scope: Compilation, weak: false, flags: None }
+1: Symbol { name: "__IMPORT_DESCRIPTOR_test_x86", address: 0, size: 0, kind: Data, section: Section(SectionIndex(2)), scope: Linkage, weak: false, flags: None }
+2: Symbol { name: ".idata$2", address: 0, size: 0, kind: Section, section: Section(SectionIndex(2)), scope: Compilation, weak: false, flags: None }
+3: Symbol { name: ".idata$6", address: 0, size: 0, kind: Data, section: Section(SectionIndex(3)), scope: Compilation, weak: false, flags: None }
+4: Symbol { name: ".idata$4", address: 0, size: 0, kind: Section, section: Common, scope: Compilation, weak: false, flags: None }
+5: Symbol { name: ".idata$5", address: 0, size: 0, kind: Section, section: Common, scope: Compilation, weak: false, flags: None }
+6: Symbol { name: "__NULL_IMPORT_DESCRIPTOR", address: 0, size: 0, kind: Data, section: Undefined, scope: Linkage, weak: false, flags: None }
+7: Symbol { name: "\u{7f}test_x86_NULL_THUNK_DATA", address: 0, size: 0, kind: Data, section: Undefined, scope: Linkage, weak: false, flags: None }
+
+.idata$2 relocations
+(c, Relocation { kind: ImageOffset, encoding: Generic, size: 20, target: Symbol(SymbolIndex(3)), addend: 0, implicit_addend: true })
+(0, Relocation { kind: ImageOffset, encoding: Generic, size: 20, target: Symbol(SymbolIndex(4)), addend: 0, implicit_addend: true })
+(10, Relocation { kind: ImageOffset, encoding: Generic, size: 20, target: Symbol(SymbolIndex(5)), addend: 0, implicit_addend: true })
+
+Dynamic symbols
+
+test_arm64ec.dll:
+Format: Short Import File
+Architecture: Unknown
+DLL: "test_arm64ec.dll"
+Symbol: "#foo_arm64ec"
+Import: Name("foo_arm64ec")
+Type: Code
+
+test_arm64ec.dll:
+Format: Coff Little-endian 32-bit
+Kind: Relocatable
+Architecture: Aarch64
+Flags: Coff { characteristics: 0 }
+Relative Address Base: 0
+Entry Address: 0
+Segment { name: ".debug$S", address: 0, size: 0 }
+Segment { name: ".idata$5", address: 0, size: 0 }
+Segment { name: ".idata$4", address: 0, size: 0 }
+1: Section { name: ".debug$S", address: 0, size: 46, align: 1, kind: Other, flags: Coff { characteristics: 42100040 } }
+2: Section { name: ".idata$5", address: 0, size: 8, align: 8, kind: Data, flags: Coff { characteristics: c0400040 } }
+3: Section { name: ".idata$4", address: 0, size: 8, align: 8, kind: Data, flags: Coff { characteristics: c0400040 } }
+
+Symbols
+0: Symbol { name: "@comp.id", address: 0, size: 0, kind: Data, section: Absolute, scope: Compilation, weak: false, flags: None }
+1: Symbol { name: "\u{7f}test_arm64ec_NULL_THUNK_DATA", address: 0, size: 0, kind: Data, section: Section(SectionIndex(2)), scope: Linkage, weak: false, flags: None }
+
+Dynamic symbols
+
+test_arm64ec.dll:
+Format: Coff Little-endian 32-bit
+Kind: Relocatable
+Architecture: Aarch64
+Flags: Coff { characteristics: 0 }
+Relative Address Base: 0
+Entry Address: 0
+Segment { name: ".debug$S", address: 0, size: 0 }
+Segment { name: ".idata$3", address: 0, size: 0 }
+1: Section { name: ".debug$S", address: 0, size: 46, align: 1, kind: Other, flags: Coff { characteristics: 42100040 } }
+2: Section { name: ".idata$3", address: 0, size: 14, align: 4, kind: Data, flags: Coff { characteristics: c0300040 } }
+
+Symbols
+0: Symbol { name: "@comp.id", address: 0, size: 0, kind: Data, section: Absolute, scope: Compilation, weak: false, flags: None }
+1: Symbol { name: "__NULL_IMPORT_DESCRIPTOR", address: 0, size: 0, kind: Data, section: Section(SectionIndex(2)), scope: Linkage, weak: false, flags: None }
+
+Dynamic symbols
+
+test_arm64ec.dll:
+Format: Coff Little-endian 32-bit
+Kind: Relocatable
+Architecture: Aarch64
+Flags: Coff { characteristics: 0 }
+Relative Address Base: 0
+Entry Address: 0
+Segment { name: ".debug$S", address: 0, size: 0 }
+Segment { name: ".idata$2", address: 0, size: 0 }
+Segment { name: ".idata$6", address: 0, size: 0 }
+1: Section { name: ".debug$S", address: 0, size: 46, align: 1, kind: Other, flags: Coff { characteristics: 42100040 } }
+2: Section { name: ".idata$2", address: 0, size: 14, align: 4, kind: Data, flags: Coff { characteristics: c0300040 } }
+3: Section { name: ".idata$6", address: 0, size: 12, align: 2, kind: Data, flags: Coff { characteristics: c0200040 } }
+
+Symbols
+0: Symbol { name: "@comp.id", address: 0, size: 0, kind: Data, section: Absolute, scope: Compilation, weak: false, flags: None }
+1: Symbol { name: "__IMPORT_DESCRIPTOR_test_arm64ec", address: 0, size: 0, kind: Data, section: Section(SectionIndex(2)), scope: Linkage, weak: false, flags: None }
+2: Symbol { name: ".idata$2", address: 0, size: 0, kind: Section, section: Section(SectionIndex(2)), scope: Compilation, weak: false, flags: None }
+3: Symbol { name: ".idata$6", address: 0, size: 0, kind: Data, section: Section(SectionIndex(3)), scope: Compilation, weak: false, flags: None }
+4: Symbol { name: ".idata$4", address: 0, size: 0, kind: Section, section: Common, scope: Compilation, weak: false, flags: None }
+5: Symbol { name: ".idata$5", address: 0, size: 0, kind: Section, section: Common, scope: Compilation, weak: false, flags: None }
+6: Symbol { name: "__NULL_IMPORT_DESCRIPTOR", address: 0, size: 0, kind: Data, section: Undefined, scope: Linkage, weak: false, flags: None }
+7: Symbol { name: "\u{7f}test_arm64ec_NULL_THUNK_DATA", address: 0, size: 0, kind: Data, section: Undefined, scope: Linkage, weak: false, flags: None }
+
+.idata$2 relocations
+(c, Relocation { kind: ImageOffset, encoding: Generic, size: 20, target: Symbol(SymbolIndex(3)), addend: 0, implicit_addend: true })
+(0, Relocation { kind: ImageOffset, encoding: Generic, size: 20, target: Symbol(SymbolIndex(4)), addend: 0, implicit_addend: true })
+(10, Relocation { kind: ImageOffset, encoding: Generic, size: 20, target: Symbol(SymbolIndex(5)), addend: 0, implicit_addend: true })
+
+Dynamic symbols

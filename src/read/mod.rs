@@ -156,6 +156,9 @@ pub enum FileKind {
     /// This supports a larger number of sections.
     #[cfg(feature = "coff")]
     CoffBig,
+    /// A Windows short import file.
+    #[cfg(feature = "coff")]
+    CoffImportFile,
     /// A dyld cache file containing Mach-O images.
     #[cfg(feature = "macho")]
     DyldCache,
@@ -263,6 +266,8 @@ impl FileKind {
             [0x01, 0xDF, ..] => FileKind::Xcoff32,
             #[cfg(feature = "xcoff")]
             [0x01, 0xF7, ..] => FileKind::Xcoff64,
+            #[cfg(feature = "coff")]
+            [0, 0, 0xFF, 0xFF, ..] => FileKind::CoffImportFile,
             _ => return Err(Error("Unknown file magic")),
         };
         Ok(kind)

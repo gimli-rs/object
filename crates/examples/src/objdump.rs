@@ -1,6 +1,7 @@
 use object::read::archive::ArchiveFile;
+use object::read::coff;
 use object::read::macho::{DyldCache, FatArch, FatHeader};
-use object::{Endianness, Object, ObjectComdat, ObjectSection, ObjectSymbol};
+use object::{Endianness, FileKind, Object, ObjectComdat, ObjectSection, ObjectSymbol};
 use std::io::{Result, Write};
 
 pub fn print<W: Write, E: Write>(
@@ -21,7 +22,11 @@ pub fn print<W: Write, E: Write>(
                         writeln!(w)?;
                         writeln!(w, "{}:", String::from_utf8_lossy(member.name()))?;
                         if let Ok(data) = member.data(file) {
-                            dump_object(w, e, data)?;
+                            if FileKind::parse(data) == Ok(FileKind::CoffImportFile) {
+                                dump_import(w, e, data)?;
+                            } else {
+                                dump_object(w, e, data)?;
+                            }
                         }
                     }
                 }
@@ -243,5 +248,27 @@ fn dump_parsed_object<W: Write, E: Write>(w: &mut W, e: &mut E, file: &object::F
         Err(err) => writeln!(e, "Failed to parse exports: {}", err)?,
     }
 
+    Ok(())
+}
+
+fn dump_import<W: Write, E: Write>(w: &mut W, e: &mut E, data: &[u8]) -> Result<()> {
+    let file = match coff::CoffImportFile::parse(data) {
+        Ok(import) => import,
+        Err(err) => {
+            writeln!(e, "Failed to parse short import: {}", err)?;
+            return Ok(());
+        }
+    };
+
+    writeln!(w, "Format: Short Import File")?;
+    writeln!(w, "Architecture: {:?}", file.architecture())?;
+    writeln!(w, "DLL: {:?}", String::from_utf8_lossy(file.dll()))?;
+    writeln!(w, "Symbol: {:?}", String::from_utf8_lossy(file.symbol()))?;
+    write!(w, "Import: ")?;
+    match file.import() {
+        coff::ImportName::Ordinal(n) => writeln!(w, "Ordinal({})", n)?,
+        coff::ImportName::Name(name) => writeln!(w, "Name({:?})", String::from_utf8_lossy(name))?,
+    }
+    writeln!(w, "Type: {:?}", file.import_type())?;
     Ok(())
 }
