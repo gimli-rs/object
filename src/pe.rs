@@ -2873,10 +2873,14 @@ pub struct ImportObjectHeader {
     pub name_type: U16<LE>,
 }
 
+pub const IMPORT_OBJECT_TYPE_MASK: u16 = 0b11;
+pub const IMPORT_OBJECT_TYPE_SHIFT: u16 = 0;
 pub const IMPORT_OBJECT_CODE: u16 = 0;
 pub const IMPORT_OBJECT_DATA: u16 = 1;
 pub const IMPORT_OBJECT_CONST: u16 = 2;
 
+pub const IMPORT_OBJECT_NAME_MASK: u16 = 0b111;
+pub const IMPORT_OBJECT_NAME_SHIFT: u16 = 2;
 /// Import by ordinal
 pub const IMPORT_OBJECT_ORDINAL: u16 = 0;
 /// Import name == public symbol name.

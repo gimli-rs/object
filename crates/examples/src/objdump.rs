@@ -22,7 +22,7 @@ pub fn print<W: Write, E: Write>(
                         writeln!(w)?;
                         writeln!(w, "{}:", String::from_utf8_lossy(member.name()))?;
                         if let Ok(data) = member.data(file) {
-                            if FileKind::parse(data) == Ok(FileKind::CoffImportFile) {
+                            if FileKind::parse(data) == Ok(FileKind::CoffImport) {
                                 dump_import(w, e, data)?;
                             } else {
                                 dump_object(w, e, data)?;
@@ -252,7 +252,7 @@ fn dump_parsed_object<W: Write, E: Write>(w: &mut W, e: &mut E, file: &object::F
 }
 
 fn dump_import<W: Write, E: Write>(w: &mut W, e: &mut E, data: &[u8]) -> Result<()> {
-    let file = match coff::CoffImportFile::parse(data) {
+    let file = match coff::ImportFile::parse(data) {
         Ok(import) => import,
         Err(err) => {
             writeln!(e, "Failed to parse short import: {}", err)?;
