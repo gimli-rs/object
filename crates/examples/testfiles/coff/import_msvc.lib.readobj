@@ -1,0 +1,1058 @@
+Format: Archive (Coff)
+
+Member: test_x64.dll
+Format: COFF import
+ImportObjectHeader {
+    Signature1: 0x0
+    Signature2: 0xFFFF
+    Version: 0
+    Machine: IMAGE_FILE_MACHINE_AMD64 (0x8664)
+    TimeDateStamp: 1687268223
+    SizeOfData: 0x15
+    OrdinalOrHint: 2
+    ImportType: IMPORT_OBJECT_CODE (0x0)
+    NameType: IMPORT_OBJECT_NAME (0x1)
+    Symbol: "foo_x64"
+    Dll: "test_x64.dll"
+}
+
+Member: test_x64.dll
+Format: COFF import
+ImportObjectHeader {
+    Signature1: 0x0
+    Signature2: 0xFFFF
+    Version: 0
+    Machine: IMAGE_FILE_MACHINE_AMD64 (0x8664)
+    TimeDateStamp: 1687268223
+    SizeOfData: 0x15
+    OrdinalOrHint: 1
+    ImportType: IMPORT_OBJECT_CODE (0x0)
+    NameType: IMPORT_OBJECT_ORDINAL (0x0)
+    Symbol: "bar_x64"
+    Dll: "test_x64.dll"
+}
+
+Member: test_x64.dll
+Format: COFF import
+ImportObjectHeader {
+    Signature1: 0x0
+    Signature2: 0xFFFF
+    Version: 0
+    Machine: IMAGE_FILE_MACHINE_AMD64 (0x8664)
+    TimeDateStamp: 1687268223
+    SizeOfData: 0x15
+    OrdinalOrHint: 1
+    ImportType: IMPORT_OBJECT_DATA (0x1)
+    NameType: IMPORT_OBJECT_NAME (0x1)
+    Symbol: "FOO_x64"
+    Dll: "test_x64.dll"
+}
+
+Member: test_x64.dll
+Format: COFF import
+ImportObjectHeader {
+    Signature1: 0x0
+    Signature2: 0xFFFF
+    Version: 0
+    Machine: IMAGE_FILE_MACHINE_AMD64 (0x8664)
+    TimeDateStamp: 1687268223
+    SizeOfData: 0x15
+    OrdinalOrHint: 0
+    ImportType: IMPORT_OBJECT_CONST (0x2)
+    NameType: IMPORT_OBJECT_NAME (0x1)
+    Symbol: "BAR_x64"
+    Dll: "test_x64.dll"
+}
+
+Member: test_x64.dll
+Format: COFF
+ImageFileHeader {
+    Machine: IMAGE_FILE_MACHINE_AMD64 (0x8664)
+    NumberOfSections: 3
+    TimeDateStamp: 1687268223
+    PointerToSymbolTable: 0xDE
+    NumberOfSymbols: 2
+    SizeOfOptionalHeader: 0x0
+    Characteristics: 0x0
+}
+ImageSectionHeader {
+    Index: 1
+    Name: ".debug$S"
+    VirtualSize: 0x0
+    VirtualAddress: 0x0
+    SizeOfRawData: 0x42
+    PointerToRawData: 0x8C
+    PointerToRelocations: 0x0
+    PointerToLinenumbers: 0x0
+    NumberOfRelocations: 0
+    NumberOfLinenumbers: 0
+    Characteristics: 0x42100040
+        IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
+        IMAGE_SCN_MEM_DISCARDABLE (0x2000000)
+        IMAGE_SCN_MEM_READ (0x40000000)
+        IMAGE_SCN_ALIGN_1BYTES (0x100000)
+}
+ImageSectionHeader {
+    Index: 2
+    Name: ".idata$5"
+    VirtualSize: 0x0
+    VirtualAddress: 0x0
+    SizeOfRawData: 0x8
+    PointerToRawData: 0xCE
+    PointerToRelocations: 0x0
+    PointerToLinenumbers: 0x0
+    NumberOfRelocations: 0
+    NumberOfLinenumbers: 0
+    Characteristics: 0xC0400040
+        IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
+        IMAGE_SCN_MEM_READ (0x40000000)
+        IMAGE_SCN_MEM_WRITE (0x80000000)
+        IMAGE_SCN_ALIGN_8BYTES (0x400000)
+}
+ImageSectionHeader {
+    Index: 3
+    Name: ".idata$4"
+    VirtualSize: 0x0
+    VirtualAddress: 0x0
+    SizeOfRawData: 0x8
+    PointerToRawData: 0xD6
+    PointerToRelocations: 0x0
+    PointerToLinenumbers: 0x0
+    NumberOfRelocations: 0
+    NumberOfLinenumbers: 0
+    Characteristics: 0xC0400040
+        IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
+        IMAGE_SCN_MEM_READ (0x40000000)
+        IMAGE_SCN_MEM_WRITE (0x80000000)
+        IMAGE_SCN_ALIGN_8BYTES (0x400000)
+}
+ImageSymbol {
+    Index: 0
+    Name: "@comp.id"
+    Value: 0x1017DD9
+    Section: IMAGE_SYM_ABSOLUTE (-1)
+    Type: 0x0
+    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
+    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
+    StorageClass: IMAGE_SYM_CLASS_STATIC (0x3)
+    NumberOfAuxSymbols: 0x0
+}
+ImageSymbol {
+    Index: 1
+    Name: "test_x64_NULL_THUNK_DATA"
+    Value: 0x0
+    Section: ".idata$5" (0x2)
+    Type: 0x0
+    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
+    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
+    StorageClass: IMAGE_SYM_CLASS_EXTERNAL (0x2)
+    NumberOfAuxSymbols: 0x0
+}
+
+Member: test_x64.dll
+Format: COFF
+ImageFileHeader {
+    Machine: IMAGE_FILE_MACHINE_AMD64 (0x8664)
+    NumberOfSections: 2
+    TimeDateStamp: 1687268223
+    PointerToSymbolTable: 0xBA
+    NumberOfSymbols: 2
+    SizeOfOptionalHeader: 0x0
+    Characteristics: 0x0
+}
+ImageSectionHeader {
+    Index: 1
+    Name: ".debug$S"
+    VirtualSize: 0x0
+    VirtualAddress: 0x0
+    SizeOfRawData: 0x42
+    PointerToRawData: 0x64
+    PointerToRelocations: 0x0
+    PointerToLinenumbers: 0x0
+    NumberOfRelocations: 0
+    NumberOfLinenumbers: 0
+    Characteristics: 0x42100040
+        IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
+        IMAGE_SCN_MEM_DISCARDABLE (0x2000000)
+        IMAGE_SCN_MEM_READ (0x40000000)
+        IMAGE_SCN_ALIGN_1BYTES (0x100000)
+}
+ImageSectionHeader {
+    Index: 2
+    Name: ".idata$3"
+    VirtualSize: 0x0
+    VirtualAddress: 0x0
+    SizeOfRawData: 0x14
+    PointerToRawData: 0xA6
+    PointerToRelocations: 0x0
+    PointerToLinenumbers: 0x0
+    NumberOfRelocations: 0
+    NumberOfLinenumbers: 0
+    Characteristics: 0xC0300040
+        IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
+        IMAGE_SCN_MEM_READ (0x40000000)
+        IMAGE_SCN_MEM_WRITE (0x80000000)
+        IMAGE_SCN_ALIGN_4BYTES (0x300000)
+}
+ImageSymbol {
+    Index: 0
+    Name: "@comp.id"
+    Value: 0x1017DD9
+    Section: IMAGE_SYM_ABSOLUTE (-1)
+    Type: 0x0
+    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
+    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
+    StorageClass: IMAGE_SYM_CLASS_STATIC (0x3)
+    NumberOfAuxSymbols: 0x0
+}
+ImageSymbol {
+    Index: 1
+    Name: "__NULL_IMPORT_DESCRIPTOR"
+    Value: 0x0
+    Section: ".idata$3" (0x2)
+    Type: 0x0
+    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
+    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
+    StorageClass: IMAGE_SYM_CLASS_EXTERNAL (0x2)
+    NumberOfAuxSymbols: 0x0
+}
+
+Member: test_x64.dll
+Format: COFF
+ImageFileHeader {
+    Machine: IMAGE_FILE_MACHINE_AMD64 (0x8664)
+    NumberOfSections: 3
+    TimeDateStamp: 1687268223
+    PointerToSymbolTable: 0x10E
+    NumberOfSymbols: 8
+    SizeOfOptionalHeader: 0x0
+    Characteristics: 0x0
+}
+ImageSectionHeader {
+    Index: 1
+    Name: ".debug$S"
+    VirtualSize: 0x0
+    VirtualAddress: 0x0
+    SizeOfRawData: 0x42
+    PointerToRawData: 0x8C
+    PointerToRelocations: 0x0
+    PointerToLinenumbers: 0x0
+    NumberOfRelocations: 0
+    NumberOfLinenumbers: 0
+    Characteristics: 0x42100040
+        IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
+        IMAGE_SCN_MEM_DISCARDABLE (0x2000000)
+        IMAGE_SCN_MEM_READ (0x40000000)
+        IMAGE_SCN_ALIGN_1BYTES (0x100000)
+}
+ImageSectionHeader {
+    Index: 2
+    Name: ".idata$2"
+    VirtualSize: 0x0
+    VirtualAddress: 0x0
+    SizeOfRawData: 0x14
+    PointerToRawData: 0xCE
+    PointerToRelocations: 0xE2
+    PointerToLinenumbers: 0x0
+    NumberOfRelocations: 3
+    NumberOfLinenumbers: 0
+    Characteristics: 0xC0300040
+        IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
+        IMAGE_SCN_MEM_READ (0x40000000)
+        IMAGE_SCN_MEM_WRITE (0x80000000)
+        IMAGE_SCN_ALIGN_4BYTES (0x300000)
+    ImageRelocation {
+        VirtualAddress: 0xC
+        Symbol: ".idata$6" (0x3)
+        Type: IMAGE_REL_AMD64_ADDR32NB (0x3)
+    }
+    ImageRelocation {
+        VirtualAddress: 0x0
+        Symbol: ".idata$4" (0x4)
+        Type: IMAGE_REL_AMD64_ADDR32NB (0x3)
+    }
+    ImageRelocation {
+        VirtualAddress: 0x10
+        Symbol: ".idata$5" (0x5)
+        Type: IMAGE_REL_AMD64_ADDR32NB (0x3)
+    }
+}
+ImageSectionHeader {
+    Index: 3
+    Name: ".idata$6"
+    VirtualSize: 0x0
+    VirtualAddress: 0x0
+    SizeOfRawData: 0xE
+    PointerToRawData: 0x100
+    PointerToRelocations: 0xE2
+    PointerToLinenumbers: 0x0
+    NumberOfRelocations: 0
+    NumberOfLinenumbers: 0
+    Characteristics: 0xC0200040
+        IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
+        IMAGE_SCN_MEM_READ (0x40000000)
+        IMAGE_SCN_MEM_WRITE (0x80000000)
+        IMAGE_SCN_ALIGN_2BYTES (0x200000)
+}
+ImageSymbol {
+    Index: 0
+    Name: "@comp.id"
+    Value: 0x1017DD9
+    Section: IMAGE_SYM_ABSOLUTE (-1)
+    Type: 0x0
+    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
+    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
+    StorageClass: IMAGE_SYM_CLASS_STATIC (0x3)
+    NumberOfAuxSymbols: 0x0
+}
+ImageSymbol {
+    Index: 1
+    Name: "__IMPORT_DESCRIPTOR_test_x64"
+    Value: 0x0
+    Section: ".idata$2" (0x2)
+    Type: 0x0
+    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
+    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
+    StorageClass: IMAGE_SYM_CLASS_EXTERNAL (0x2)
+    NumberOfAuxSymbols: 0x0
+}
+ImageSymbol {
+    Index: 2
+    Name: ".idata$2"
+    Value: 0xC0000040
+    Section: ".idata$2" (0x2)
+    Type: 0x0
+    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
+    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
+    StorageClass: IMAGE_SYM_CLASS_SECTION (0x68)
+    NumberOfAuxSymbols: 0x0
+}
+ImageSymbol {
+    Index: 3
+    Name: ".idata$6"
+    Value: 0x0
+    Section: ".idata$6" (0x3)
+    Type: 0x0
+    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
+    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
+    StorageClass: IMAGE_SYM_CLASS_STATIC (0x3)
+    NumberOfAuxSymbols: 0x0
+}
+ImageSymbol {
+    Index: 4
+    Name: ".idata$4"
+    Value: 0xC0000040
+    Section: IMAGE_SYM_UNDEFINED (0)
+    Type: 0x0
+    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
+    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
+    StorageClass: IMAGE_SYM_CLASS_SECTION (0x68)
+    NumberOfAuxSymbols: 0x0
+}
+ImageSymbol {
+    Index: 5
+    Name: ".idata$5"
+    Value: 0xC0000040
+    Section: IMAGE_SYM_UNDEFINED (0)
+    Type: 0x0
+    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
+    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
+    StorageClass: IMAGE_SYM_CLASS_SECTION (0x68)
+    NumberOfAuxSymbols: 0x0
+}
+ImageSymbol {
+    Index: 6
+    Name: "__NULL_IMPORT_DESCRIPTOR"
+    Value: 0x0
+    Section: IMAGE_SYM_UNDEFINED (0)
+    Type: 0x0
+    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
+    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
+    StorageClass: IMAGE_SYM_CLASS_EXTERNAL (0x2)
+    NumberOfAuxSymbols: 0x0
+}
+ImageSymbol {
+    Index: 7
+    Name: "test_x64_NULL_THUNK_DATA"
+    Value: 0x0
+    Section: IMAGE_SYM_UNDEFINED (0)
+    Type: 0x0
+    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
+    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
+    StorageClass: IMAGE_SYM_CLASS_EXTERNAL (0x2)
+    NumberOfAuxSymbols: 0x0
+}
+
+Member: test_x86.dll
+Format: COFF import
+ImportObjectHeader {
+    Signature1: 0x0
+    Signature2: 0xFFFF
+    Version: 0
+    Machine: IMAGE_FILE_MACHINE_I386 (0x14C)
+    TimeDateStamp: 1687268223
+    SizeOfData: 0x16
+    OrdinalOrHint: 0
+    ImportType: IMPORT_OBJECT_CODE (0x0)
+    NameType: IMPORT_OBJECT_NAME_NO_PREFIX (0x2)
+    Symbol: "_foo_x86"
+    Dll: "test_x86.dll"
+}
+
+Member: test_x86.dll
+Format: COFF
+ImageFileHeader {
+    Machine: IMAGE_FILE_MACHINE_I386 (0x14C)
+    NumberOfSections: 3
+    TimeDateStamp: 1687268223
+    PointerToSymbolTable: 0xD6
+    NumberOfSymbols: 2
+    SizeOfOptionalHeader: 0x0
+    Characteristics: 0x100
+        IMAGE_FILE_32BIT_MACHINE (0x100)
+}
+ImageSectionHeader {
+    Index: 1
+    Name: ".debug$S"
+    VirtualSize: 0x0
+    VirtualAddress: 0x0
+    SizeOfRawData: 0x42
+    PointerToRawData: 0x8C
+    PointerToRelocations: 0x0
+    PointerToLinenumbers: 0x0
+    NumberOfRelocations: 0
+    NumberOfLinenumbers: 0
+    Characteristics: 0x42100040
+        IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
+        IMAGE_SCN_MEM_DISCARDABLE (0x2000000)
+        IMAGE_SCN_MEM_READ (0x40000000)
+        IMAGE_SCN_ALIGN_1BYTES (0x100000)
+}
+ImageSectionHeader {
+    Index: 2
+    Name: ".idata$5"
+    VirtualSize: 0x0
+    VirtualAddress: 0x0
+    SizeOfRawData: 0x4
+    PointerToRawData: 0xCE
+    PointerToRelocations: 0x0
+    PointerToLinenumbers: 0x0
+    NumberOfRelocations: 0
+    NumberOfLinenumbers: 0
+    Characteristics: 0xC0300040
+        IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
+        IMAGE_SCN_MEM_READ (0x40000000)
+        IMAGE_SCN_MEM_WRITE (0x80000000)
+        IMAGE_SCN_ALIGN_4BYTES (0x300000)
+}
+ImageSectionHeader {
+    Index: 3
+    Name: ".idata$4"
+    VirtualSize: 0x0
+    VirtualAddress: 0x0
+    SizeOfRawData: 0x4
+    PointerToRawData: 0xD2
+    PointerToRelocations: 0x0
+    PointerToLinenumbers: 0x0
+    NumberOfRelocations: 0
+    NumberOfLinenumbers: 0
+    Characteristics: 0xC0300040
+        IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
+        IMAGE_SCN_MEM_READ (0x40000000)
+        IMAGE_SCN_MEM_WRITE (0x80000000)
+        IMAGE_SCN_ALIGN_4BYTES (0x300000)
+}
+ImageSymbol {
+    Index: 0
+    Name: "@comp.id"
+    Value: 0x1017DD9
+    Section: IMAGE_SYM_ABSOLUTE (-1)
+    Type: 0x0
+    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
+    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
+    StorageClass: IMAGE_SYM_CLASS_STATIC (0x3)
+    NumberOfAuxSymbols: 0x0
+}
+ImageSymbol {
+    Index: 1
+    Name: "test_x86_NULL_THUNK_DATA"
+    Value: 0x0
+    Section: ".idata$5" (0x2)
+    Type: 0x0
+    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
+    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
+    StorageClass: IMAGE_SYM_CLASS_EXTERNAL (0x2)
+    NumberOfAuxSymbols: 0x0
+}
+
+Member: test_x86.dll
+Format: COFF
+ImageFileHeader {
+    Machine: IMAGE_FILE_MACHINE_I386 (0x14C)
+    NumberOfSections: 2
+    TimeDateStamp: 1687268223
+    PointerToSymbolTable: 0xBA
+    NumberOfSymbols: 2
+    SizeOfOptionalHeader: 0x0
+    Characteristics: 0x100
+        IMAGE_FILE_32BIT_MACHINE (0x100)
+}
+ImageSectionHeader {
+    Index: 1
+    Name: ".debug$S"
+    VirtualSize: 0x0
+    VirtualAddress: 0x0
+    SizeOfRawData: 0x42
+    PointerToRawData: 0x64
+    PointerToRelocations: 0x0
+    PointerToLinenumbers: 0x0
+    NumberOfRelocations: 0
+    NumberOfLinenumbers: 0
+    Characteristics: 0x42100040
+        IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
+        IMAGE_SCN_MEM_DISCARDABLE (0x2000000)
+        IMAGE_SCN_MEM_READ (0x40000000)
+        IMAGE_SCN_ALIGN_1BYTES (0x100000)
+}
+ImageSectionHeader {
+    Index: 2
+    Name: ".idata$3"
+    VirtualSize: 0x0
+    VirtualAddress: 0x0
+    SizeOfRawData: 0x14
+    PointerToRawData: 0xA6
+    PointerToRelocations: 0x0
+    PointerToLinenumbers: 0x0
+    NumberOfRelocations: 0
+    NumberOfLinenumbers: 0
+    Characteristics: 0xC0300040
+        IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
+        IMAGE_SCN_MEM_READ (0x40000000)
+        IMAGE_SCN_MEM_WRITE (0x80000000)
+        IMAGE_SCN_ALIGN_4BYTES (0x300000)
+}
+ImageSymbol {
+    Index: 0
+    Name: "@comp.id"
+    Value: 0x1017DD9
+    Section: IMAGE_SYM_ABSOLUTE (-1)
+    Type: 0x0
+    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
+    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
+    StorageClass: IMAGE_SYM_CLASS_STATIC (0x3)
+    NumberOfAuxSymbols: 0x0
+}
+ImageSymbol {
+    Index: 1
+    Name: "__NULL_IMPORT_DESCRIPTOR"
+    Value: 0x0
+    Section: ".idata$3" (0x2)
+    Type: 0x0
+    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
+    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
+    StorageClass: IMAGE_SYM_CLASS_EXTERNAL (0x2)
+    NumberOfAuxSymbols: 0x0
+}
+
+Member: test_x86.dll
+Format: COFF
+ImageFileHeader {
+    Machine: IMAGE_FILE_MACHINE_I386 (0x14C)
+    NumberOfSections: 3
+    TimeDateStamp: 1687268223
+    PointerToSymbolTable: 0x10E
+    NumberOfSymbols: 8
+    SizeOfOptionalHeader: 0x0
+    Characteristics: 0x100
+        IMAGE_FILE_32BIT_MACHINE (0x100)
+}
+ImageSectionHeader {
+    Index: 1
+    Name: ".debug$S"
+    VirtualSize: 0x0
+    VirtualAddress: 0x0
+    SizeOfRawData: 0x42
+    PointerToRawData: 0x8C
+    PointerToRelocations: 0x0
+    PointerToLinenumbers: 0x0
+    NumberOfRelocations: 0
+    NumberOfLinenumbers: 0
+    Characteristics: 0x42100040
+        IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
+        IMAGE_SCN_MEM_DISCARDABLE (0x2000000)
+        IMAGE_SCN_MEM_READ (0x40000000)
+        IMAGE_SCN_ALIGN_1BYTES (0x100000)
+}
+ImageSectionHeader {
+    Index: 2
+    Name: ".idata$2"
+    VirtualSize: 0x0
+    VirtualAddress: 0x0
+    SizeOfRawData: 0x14
+    PointerToRawData: 0xCE
+    PointerToRelocations: 0xE2
+    PointerToLinenumbers: 0x0
+    NumberOfRelocations: 3
+    NumberOfLinenumbers: 0
+    Characteristics: 0xC0300040
+        IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
+        IMAGE_SCN_MEM_READ (0x40000000)
+        IMAGE_SCN_MEM_WRITE (0x80000000)
+        IMAGE_SCN_ALIGN_4BYTES (0x300000)
+    ImageRelocation {
+        VirtualAddress: 0xC
+        Symbol: ".idata$6" (0x3)
+        Type: IMAGE_REL_I386_DIR32NB (0x7)
+    }
+    ImageRelocation {
+        VirtualAddress: 0x0
+        Symbol: ".idata$4" (0x4)
+        Type: IMAGE_REL_I386_DIR32NB (0x7)
+    }
+    ImageRelocation {
+        VirtualAddress: 0x10
+        Symbol: ".idata$5" (0x5)
+        Type: IMAGE_REL_I386_DIR32NB (0x7)
+    }
+}
+ImageSectionHeader {
+    Index: 3
+    Name: ".idata$6"
+    VirtualSize: 0x0
+    VirtualAddress: 0x0
+    SizeOfRawData: 0xE
+    PointerToRawData: 0x100
+    PointerToRelocations: 0xE2
+    PointerToLinenumbers: 0x0
+    NumberOfRelocations: 0
+    NumberOfLinenumbers: 0
+    Characteristics: 0xC0200040
+        IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
+        IMAGE_SCN_MEM_READ (0x40000000)
+        IMAGE_SCN_MEM_WRITE (0x80000000)
+        IMAGE_SCN_ALIGN_2BYTES (0x200000)
+}
+ImageSymbol {
+    Index: 0
+    Name: "@comp.id"
+    Value: 0x1017DD9
+    Section: IMAGE_SYM_ABSOLUTE (-1)
+    Type: 0x0
+    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
+    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
+    StorageClass: IMAGE_SYM_CLASS_STATIC (0x3)
+    NumberOfAuxSymbols: 0x0
+}
+ImageSymbol {
+    Index: 1
+    Name: "__IMPORT_DESCRIPTOR_test_x86"
+    Value: 0x0
+    Section: ".idata$2" (0x2)
+    Type: 0x0
+    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
+    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
+    StorageClass: IMAGE_SYM_CLASS_EXTERNAL (0x2)
+    NumberOfAuxSymbols: 0x0
+}
+ImageSymbol {
+    Index: 2
+    Name: ".idata$2"
+    Value: 0xC0000040
+    Section: ".idata$2" (0x2)
+    Type: 0x0
+    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
+    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
+    StorageClass: IMAGE_SYM_CLASS_SECTION (0x68)
+    NumberOfAuxSymbols: 0x0
+}
+ImageSymbol {
+    Index: 3
+    Name: ".idata$6"
+    Value: 0x0
+    Section: ".idata$6" (0x3)
+    Type: 0x0
+    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
+    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
+    StorageClass: IMAGE_SYM_CLASS_STATIC (0x3)
+    NumberOfAuxSymbols: 0x0
+}
+ImageSymbol {
+    Index: 4
+    Name: ".idata$4"
+    Value: 0xC0000040
+    Section: IMAGE_SYM_UNDEFINED (0)
+    Type: 0x0
+    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
+    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
+    StorageClass: IMAGE_SYM_CLASS_SECTION (0x68)
+    NumberOfAuxSymbols: 0x0
+}
+ImageSymbol {
+    Index: 5
+    Name: ".idata$5"
+    Value: 0xC0000040
+    Section: IMAGE_SYM_UNDEFINED (0)
+    Type: 0x0
+    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
+    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
+    StorageClass: IMAGE_SYM_CLASS_SECTION (0x68)
+    NumberOfAuxSymbols: 0x0
+}
+ImageSymbol {
+    Index: 6
+    Name: "__NULL_IMPORT_DESCRIPTOR"
+    Value: 0x0
+    Section: IMAGE_SYM_UNDEFINED (0)
+    Type: 0x0
+    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
+    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
+    StorageClass: IMAGE_SYM_CLASS_EXTERNAL (0x2)
+    NumberOfAuxSymbols: 0x0
+}
+ImageSymbol {
+    Index: 7
+    Name: "test_x86_NULL_THUNK_DATA"
+    Value: 0x0
+    Section: IMAGE_SYM_UNDEFINED (0)
+    Type: 0x0
+    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
+    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
+    StorageClass: IMAGE_SYM_CLASS_EXTERNAL (0x2)
+    NumberOfAuxSymbols: 0x0
+}
+
+Member: test_arm64ec.dll
+Format: COFF import
+ImportObjectHeader {
+    Signature1: 0x0
+    Signature2: 0xFFFF
+    Version: 0
+    Machine: 0xA641
+    TimeDateStamp: 1687268223
+    SizeOfData: 0x2A
+    OrdinalOrHint: 0
+    ImportType: IMPORT_OBJECT_CODE (0x0)
+    NameType: IMPORT_OBJECT_NAME_EXPORTAS (0x4)
+    Symbol: "#foo_arm64ec"
+    Dll: "test_arm64ec.dll"
+    Export: "foo_arm64ec"
+}
+
+Member: test_arm64ec.dll
+Format: COFF
+ImageFileHeader {
+    Machine: IMAGE_FILE_MACHINE_ARM64 (0xAA64)
+    NumberOfSections: 3
+    TimeDateStamp: 1687268223
+    PointerToSymbolTable: 0xE2
+    NumberOfSymbols: 2
+    SizeOfOptionalHeader: 0x0
+    Characteristics: 0x0
+}
+ImageSectionHeader {
+    Index: 1
+    Name: ".debug$S"
+    VirtualSize: 0x0
+    VirtualAddress: 0x0
+    SizeOfRawData: 0x46
+    PointerToRawData: 0x8C
+    PointerToRelocations: 0x0
+    PointerToLinenumbers: 0x0
+    NumberOfRelocations: 0
+    NumberOfLinenumbers: 0
+    Characteristics: 0x42100040
+        IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
+        IMAGE_SCN_MEM_DISCARDABLE (0x2000000)
+        IMAGE_SCN_MEM_READ (0x40000000)
+        IMAGE_SCN_ALIGN_1BYTES (0x100000)
+}
+ImageSectionHeader {
+    Index: 2
+    Name: ".idata$5"
+    VirtualSize: 0x0
+    VirtualAddress: 0x0
+    SizeOfRawData: 0x8
+    PointerToRawData: 0xD2
+    PointerToRelocations: 0x0
+    PointerToLinenumbers: 0x0
+    NumberOfRelocations: 0
+    NumberOfLinenumbers: 0
+    Characteristics: 0xC0400040
+        IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
+        IMAGE_SCN_MEM_READ (0x40000000)
+        IMAGE_SCN_MEM_WRITE (0x80000000)
+        IMAGE_SCN_ALIGN_8BYTES (0x400000)
+}
+ImageSectionHeader {
+    Index: 3
+    Name: ".idata$4"
+    VirtualSize: 0x0
+    VirtualAddress: 0x0
+    SizeOfRawData: 0x8
+    PointerToRawData: 0xDA
+    PointerToRelocations: 0x0
+    PointerToLinenumbers: 0x0
+    NumberOfRelocations: 0
+    NumberOfLinenumbers: 0
+    Characteristics: 0xC0400040
+        IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
+        IMAGE_SCN_MEM_READ (0x40000000)
+        IMAGE_SCN_MEM_WRITE (0x80000000)
+        IMAGE_SCN_ALIGN_8BYTES (0x400000)
+}
+ImageSymbol {
+    Index: 0
+    Name: "@comp.id"
+    Value: 0x1017DD9
+    Section: IMAGE_SYM_ABSOLUTE (-1)
+    Type: 0x0
+    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
+    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
+    StorageClass: IMAGE_SYM_CLASS_STATIC (0x3)
+    NumberOfAuxSymbols: 0x0
+}
+ImageSymbol {
+    Index: 1
+    Name: "test_arm64ec_NULL_THUNK_DATA"
+    Value: 0x0
+    Section: ".idata$5" (0x2)
+    Type: 0x0
+    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
+    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
+    StorageClass: IMAGE_SYM_CLASS_EXTERNAL (0x2)
+    NumberOfAuxSymbols: 0x0
+}
+
+Member: test_arm64ec.dll
+Format: COFF
+ImageFileHeader {
+    Machine: IMAGE_FILE_MACHINE_ARM64 (0xAA64)
+    NumberOfSections: 2
+    TimeDateStamp: 1687268223
+    PointerToSymbolTable: 0xBE
+    NumberOfSymbols: 2
+    SizeOfOptionalHeader: 0x0
+    Characteristics: 0x0
+}
+ImageSectionHeader {
+    Index: 1
+    Name: ".debug$S"
+    VirtualSize: 0x0
+    VirtualAddress: 0x0
+    SizeOfRawData: 0x46
+    PointerToRawData: 0x64
+    PointerToRelocations: 0x0
+    PointerToLinenumbers: 0x0
+    NumberOfRelocations: 0
+    NumberOfLinenumbers: 0
+    Characteristics: 0x42100040
+        IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
+        IMAGE_SCN_MEM_DISCARDABLE (0x2000000)
+        IMAGE_SCN_MEM_READ (0x40000000)
+        IMAGE_SCN_ALIGN_1BYTES (0x100000)
+}
+ImageSectionHeader {
+    Index: 2
+    Name: ".idata$3"
+    VirtualSize: 0x0
+    VirtualAddress: 0x0
+    SizeOfRawData: 0x14
+    PointerToRawData: 0xAA
+    PointerToRelocations: 0x0
+    PointerToLinenumbers: 0x0
+    NumberOfRelocations: 0
+    NumberOfLinenumbers: 0
+    Characteristics: 0xC0300040
+        IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
+        IMAGE_SCN_MEM_READ (0x40000000)
+        IMAGE_SCN_MEM_WRITE (0x80000000)
+        IMAGE_SCN_ALIGN_4BYTES (0x300000)
+}
+ImageSymbol {
+    Index: 0
+    Name: "@comp.id"
+    Value: 0x1017DD9
+    Section: IMAGE_SYM_ABSOLUTE (-1)
+    Type: 0x0
+    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
+    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
+    StorageClass: IMAGE_SYM_CLASS_STATIC (0x3)
+    NumberOfAuxSymbols: 0x0
+}
+ImageSymbol {
+    Index: 1
+    Name: "__NULL_IMPORT_DESCRIPTOR"
+    Value: 0x0
+    Section: ".idata$3" (0x2)
+    Type: 0x0
+    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
+    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
+    StorageClass: IMAGE_SYM_CLASS_EXTERNAL (0x2)
+    NumberOfAuxSymbols: 0x0
+}
+
+Member: test_arm64ec.dll
+Format: COFF
+ImageFileHeader {
+    Machine: IMAGE_FILE_MACHINE_ARM64 (0xAA64)
+    NumberOfSections: 3
+    TimeDateStamp: 1687268223
+    PointerToSymbolTable: 0x116
+    NumberOfSymbols: 8
+    SizeOfOptionalHeader: 0x0
+    Characteristics: 0x0
+}
+ImageSectionHeader {
+    Index: 1
+    Name: ".debug$S"
+    VirtualSize: 0x0
+    VirtualAddress: 0x0
+    SizeOfRawData: 0x46
+    PointerToRawData: 0x8C
+    PointerToRelocations: 0x0
+    PointerToLinenumbers: 0x0
+    NumberOfRelocations: 0
+    NumberOfLinenumbers: 0
+    Characteristics: 0x42100040
+        IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
+        IMAGE_SCN_MEM_DISCARDABLE (0x2000000)
+        IMAGE_SCN_MEM_READ (0x40000000)
+        IMAGE_SCN_ALIGN_1BYTES (0x100000)
+}
+ImageSectionHeader {
+    Index: 2
+    Name: ".idata$2"
+    VirtualSize: 0x0
+    VirtualAddress: 0x0
+    SizeOfRawData: 0x14
+    PointerToRawData: 0xD2
+    PointerToRelocations: 0xE6
+    PointerToLinenumbers: 0x0
+    NumberOfRelocations: 3
+    NumberOfLinenumbers: 0
+    Characteristics: 0xC0300040
+        IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
+        IMAGE_SCN_MEM_READ (0x40000000)
+        IMAGE_SCN_MEM_WRITE (0x80000000)
+        IMAGE_SCN_ALIGN_4BYTES (0x300000)
+    ImageRelocation {
+        VirtualAddress: 0xC
+        Symbol: ".idata$6" (0x3)
+        Type: IMAGE_REL_ARM64_ADDR32NB (0x2)
+    }
+    ImageRelocation {
+        VirtualAddress: 0x0
+        Symbol: ".idata$4" (0x4)
+        Type: IMAGE_REL_ARM64_ADDR32NB (0x2)
+    }
+    ImageRelocation {
+        VirtualAddress: 0x10
+        Symbol: ".idata$5" (0x5)
+        Type: IMAGE_REL_ARM64_ADDR32NB (0x2)
+    }
+}
+ImageSectionHeader {
+    Index: 3
+    Name: ".idata$6"
+    VirtualSize: 0x0
+    VirtualAddress: 0x0
+    SizeOfRawData: 0x12
+    PointerToRawData: 0x104
+    PointerToRelocations: 0xE6
+    PointerToLinenumbers: 0x0
+    NumberOfRelocations: 0
+    NumberOfLinenumbers: 0
+    Characteristics: 0xC0200040
+        IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
+        IMAGE_SCN_MEM_READ (0x40000000)
+        IMAGE_SCN_MEM_WRITE (0x80000000)
+        IMAGE_SCN_ALIGN_2BYTES (0x200000)
+}
+ImageSymbol {
+    Index: 0
+    Name: "@comp.id"
+    Value: 0x1017DD9
+    Section: IMAGE_SYM_ABSOLUTE (-1)
+    Type: 0x0
+    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
+    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
+    StorageClass: IMAGE_SYM_CLASS_STATIC (0x3)
+    NumberOfAuxSymbols: 0x0
+}
+ImageSymbol {
+    Index: 1
+    Name: "__IMPORT_DESCRIPTOR_test_arm64ec"
+    Value: 0x0
+    Section: ".idata$2" (0x2)
+    Type: 0x0
+    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
+    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
+    StorageClass: IMAGE_SYM_CLASS_EXTERNAL (0x2)
+    NumberOfAuxSymbols: 0x0
+}
+ImageSymbol {
+    Index: 2
+    Name: ".idata$2"
+    Value: 0xC0000040
+    Section: ".idata$2" (0x2)
+    Type: 0x0
+    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
+    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
+    StorageClass: IMAGE_SYM_CLASS_SECTION (0x68)
+    NumberOfAuxSymbols: 0x0
+}
+ImageSymbol {
+    Index: 3
+    Name: ".idata$6"
+    Value: 0x0
+    Section: ".idata$6" (0x3)
+    Type: 0x0
+    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
+    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
+    StorageClass: IMAGE_SYM_CLASS_STATIC (0x3)
+    NumberOfAuxSymbols: 0x0
+}
+ImageSymbol {
+    Index: 4
+    Name: ".idata$4"
+    Value: 0xC0000040
+    Section: IMAGE_SYM_UNDEFINED (0)
+    Type: 0x0
+    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
+    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
+    StorageClass: IMAGE_SYM_CLASS_SECTION (0x68)
+    NumberOfAuxSymbols: 0x0
+}
+ImageSymbol {
+    Index: 5
+    Name: ".idata$5"
+    Value: 0xC0000040
+    Section: IMAGE_SYM_UNDEFINED (0)
+    Type: 0x0
+    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
+    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
+    StorageClass: IMAGE_SYM_CLASS_SECTION (0x68)
+    NumberOfAuxSymbols: 0x0
+}
+ImageSymbol {
+    Index: 6
+    Name: "__NULL_IMPORT_DESCRIPTOR"
+    Value: 0x0
+    Section: IMAGE_SYM_UNDEFINED (0)
+    Type: 0x0
+    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
+    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
+    StorageClass: IMAGE_SYM_CLASS_EXTERNAL (0x2)
+    NumberOfAuxSymbols: 0x0
+}
+ImageSymbol {
+    Index: 7
+    Name: "test_arm64ec_NULL_THUNK_DATA"
+    Value: 0x0
+    Section: IMAGE_SYM_UNDEFINED (0)
+    Type: 0x0
+    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
+    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
+    StorageClass: IMAGE_SYM_CLASS_EXTERNAL (0x2)
+    NumberOfAuxSymbols: 0x0
+}

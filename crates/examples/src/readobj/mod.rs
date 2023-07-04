@@ -193,6 +193,7 @@ fn print_object(p: &mut Printer<'_>, data: &[u8]) {
         object::FileKind::Archive => print_archive(p, data),
         object::FileKind::Coff => pe::print_coff(p, data),
         object::FileKind::CoffBig => pe::print_coff_big(p, data),
+        object::FileKind::CoffImport => pe::print_coff_import(p, data),
         object::FileKind::DyldCache => macho::print_dyld_cache(p, data),
         object::FileKind::Elf32 => elf::print_elf32(p, data),
         object::FileKind::Elf64 => elf::print_elf64(p, data),
