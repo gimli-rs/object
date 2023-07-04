@@ -170,7 +170,7 @@ impl pe::ImageDataDirectory {
         (self.virtual_address.get(LE), self.size.get(LE))
     }
 
-    /// Return the file offset and size of this directory entry.
+    /// Return the offset and size of this directory entry.
     ///
     /// This function has some limitations:
     /// - It requires that the data is contained in a single section.
@@ -178,9 +178,9 @@ impl pe::ImageDataDirectory {
     /// not desirable for all data directories.
     /// - It uses the `virtual_address` of the directory entry as an address,
     /// which is not valid for `IMAGE_DIRECTORY_ENTRY_SECURITY`.
-    pub fn file_range(&self, sections: &SectionTable<'_>) -> Result<(u32, u32)> {
+    pub fn range(&self, sections: &SectionTable<'_>) -> Result<(u32, u32)> {
         let (offset, section_size) = sections
-            .pe_file_range_at(self.virtual_address.get(LE))
+            .pe_range_at(self.virtual_address.get(LE))
             .read_error("Invalid data dir virtual address")?;
         let size = self.size.get(LE);
         if size > section_size {
