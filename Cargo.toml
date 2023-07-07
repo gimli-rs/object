@@ -14,10 +14,10 @@ features = ['doc']
 [dependencies]
 crc32fast = { version = "1.2", default-features = false, optional = true }
 flate2 = { version = "1", optional = true }
-indexmap = { version = "1.6", optional = true }
+indexmap = { version = "2.0", default-features = false, optional = true }
 wasmparser = { version = "0.102.0", optional = true }
 memchr = { version = "2.4.1", default-features = false }
-hashbrown = { version = "0.13.1", features = ["ahash"], default-features = false, optional = true }
+hashbrown = { version = "0.14.0", features = ["ahash"], default-features = false, optional = true }
 ruzstd = { version = "0.3.1", optional = true }
 
 # Internal feature, only used when building as part of libstd, not part of the
@@ -35,9 +35,9 @@ read_core = []
 # Read support for most file formats (including unaligned files).
 read = ["read_core", "archive", "coff", "elf", "macho", "pe", "xcoff", "unaligned"]
 # Core write support. You will need to enable some file formats too.
-write_core = ["crc32fast", "indexmap", "hashbrown"]
+write_core = ["crc32fast", "dep:indexmap", "dep:hashbrown"]
 # Core write support with libstd features. You will need to enable some file formats too.
-write_std = ["write_core", "std", "indexmap/std", "crc32fast/std"]
+write_std = ["write_core", "std", "indexmap?/std", "crc32fast/std"]
 # Write support for all file formats, including libstd features.
 write = ["write_std", "coff", "elf", "macho", "pe", "xcoff"]
 
