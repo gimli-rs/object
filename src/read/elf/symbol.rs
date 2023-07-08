@@ -88,6 +88,21 @@ impl<'data, Elf: FileHeader, R: ReadRef<'data>> SymbolTable<'data, Elf, R> {
         })
     }
 
+    /// Create dynamic symbol table.
+    pub fn dynamic(
+        symbols: &'data [Elf::Sym],
+        strings: StringTable<'data, R>,
+    ) -> read::Result<SymbolTable<'data, Elf, R>> {
+        Ok(SymbolTable {
+            section: SectionIndex(0),
+            string_section: SectionIndex(0),
+            symbols,
+            strings,
+            shndx: Default::default(),
+            shndx_section: SectionIndex(0),
+        })
+    }
+
     /// Return the section index of this symbol table.
     #[inline]
     pub fn section(&self) -> SectionIndex {
