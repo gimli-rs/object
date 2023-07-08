@@ -11,6 +11,7 @@ use crate::read::{
 };
 use crate::ReadRef;
 
+use super::ElfSymbolTable;
 use super::GnuHashTable;
 use super::HashTable;
 
@@ -171,7 +172,7 @@ where
     pub(super) symbols: SymbolTable<'data, Elf, R>,
 }
 
-impl<'data, Elf, R> Dynamic<'data, Elf, R>
+impl<'data, 'file, Elf, R> Dynamic<'data, Elf, R>
 where
     Elf: FileHeader,
     R: ReadRef<'data> + 'data,
@@ -204,9 +205,9 @@ where
             return Err(Error("Dynamic table's last element is not of type DT_NULL"));
         }
 
-        let strings = Self::strings(base, endian, data, dynamic)?;
-        let hash = Self::hash(base, endian, data, dynamic)?;
-        let symbols = Self::symbols(base, endian, data, dynamic, &hash, strings)?;
+        let strings = Self::parse_strings(base, endian, data, dynamic)?;
+        let hash = Self::parse_hash(base, endian, data, dynamic)?;
+        let symbols = Self::parse_symbols(base, endian, data, dynamic, &hash, strings)?;
 
         Ok(Self {
             base,
@@ -219,7 +220,35 @@ where
         })
     }
 
-    fn strings(
+    /// Returns base address of elf
+    pub fn base(&self) -> usize {
+        self.base
+    }
+
+    /// Returns endiannes
+    pub fn endian(&self) -> Elf::Endian {
+        self.endian
+    }
+
+    /// Returns string table
+    pub fn strings(&self) -> StringTable<'data, R> {
+        self.strings
+    }
+
+    /// Returns hash table
+    pub fn hash(&self) -> &'_ DynamicHashTable<'data, Elf> {
+        &self.hash
+    }
+
+    /// Returns symbol table
+    pub fn symbols(&'file self) -> ElfSymbolTable<'data, 'file, Elf, R> {
+        ElfSymbolTable {
+            endian: self.endian,
+            symbols: &self.symbols,
+        }
+    }
+
+    fn parse_strings(
         base: usize,
         endian: Elf::Endian,
         data: R,
@@ -238,7 +267,7 @@ where
         ))
     }
 
-    fn hash(
+    fn parse_hash(
         base: usize,
         endian: Elf::Endian,
         data: R,
@@ -282,7 +311,7 @@ where
         return Ok(DynamicHashTable { inner });
     }
 
-    fn symbols(
+    fn parse_symbols(
         base: usize,
         endian: Elf::Endian,
         data: R,
