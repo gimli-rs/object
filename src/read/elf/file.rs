@@ -10,8 +10,8 @@ use crate::read::{
 use crate::{elf, endian, Endian, Endianness, Pod, U32};
 
 use super::{
-    CompressionHeader, Dyn, ElfComdat, ElfComdatIterator, ElfDynamicRelocationIterator, ElfSection,
-    ElfSectionIterator, ElfSegment, ElfSegmentIterator, ElfSymbol, ElfSymbolIterator,
+    CompressionHeader, Dyn, ElfComdat, ElfComdatIterator, ElfDynamicRelocationIteratorFromFile,
+    ElfSection, ElfSectionIterator, ElfSegment, ElfSegmentIterator, ElfSymbol, ElfSymbolIterator,
     ElfSymbolTable, NoteHeader, ProgramHeader, Rel, Rela, RelocationSections, SectionHeader,
     SectionTable, Sym, SymbolTable,
 };
@@ -149,7 +149,7 @@ where
     type Symbol = ElfSymbol<'data, 'file, Elf, R>;
     type SymbolIterator = ElfSymbolIterator<'data, 'file, Elf, R>;
     type SymbolTable = ElfSymbolTable<'data, 'file, Elf, R>;
-    type DynamicRelocationIterator = ElfDynamicRelocationIterator<'data, 'file, Elf, R>;
+    type DynamicRelocationIterator = ElfDynamicRelocationIteratorFromFile<'data, 'file, Elf, R>;
 
     fn architecture(&self) -> Architecture {
         match (
@@ -296,8 +296,8 @@ where
 
     fn dynamic_relocations(
         &'file self,
-    ) -> Option<ElfDynamicRelocationIterator<'data, 'file, Elf, R>> {
-        Some(ElfDynamicRelocationIterator {
+    ) -> Option<ElfDynamicRelocationIteratorFromFile<'data, 'file, Elf, R>> {
+        Some(ElfDynamicRelocationIteratorFromFile {
             section_index: SectionIndex(1),
             file: self,
             relocations: None,

@@ -1260,9 +1260,9 @@ where
     R: ReadRef<'data>,
 {
     #[cfg(feature = "elf")]
-    Elf32(elf::ElfDynamicRelocationIterator32<'data, 'file, Endianness, R>),
+    Elf32(elf::ElfDynamicRelocationIteratorFromFile32<'data, 'file, Endianness, R>),
     #[cfg(feature = "elf")]
-    Elf64(elf::ElfDynamicRelocationIterator64<'data, 'file, Endianness, R>),
+    Elf64(elf::ElfDynamicRelocationIteratorFromFile64<'data, 'file, Endianness, R>),
     // We need to always use the lifetime parameters.
     #[allow(unused)]
     None(PhantomData<(&'data (), &'file (), R)>),

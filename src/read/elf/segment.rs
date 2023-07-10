@@ -219,6 +219,31 @@ pub trait ProgramHeader: Debug + Pod {
         Ok(Some(dynamic))
     }
 
+    /// Return entries in a dynamic segment in a loaded elf.
+    ///
+    /// Returns `Ok(None)` if the segment is not `PT_DYNAMIC`.
+    /// Returns `Err` for invalid values.
+    fn dynamic_loaded<'data, R: ReadRef<'data>>(
+        &self,
+        endian: Self::Endian,
+        data: R,
+    ) -> read::Result<Option<&'data [<Self::Elf as FileHeader>::Dyn]>> {
+        if self.p_type(endian) != elf::PT_DYNAMIC {
+            return Ok(None);
+        }
+        let offset = self.p_vaddr(endian).into();
+        let size = self.p_memsz(endian).into() as usize;
+
+        let dynamic = data
+            .read_slice_at(
+                offset,
+                size / mem::size_of::<<Self::Elf as FileHeader>::Dyn>(),
+            )
+            .read_error("Invalid ELF dynamic segment offset or size")?;
+
+        Ok(Some(dynamic))
+    }
+
     /// Return a note iterator for the segment data.
     ///
     /// Returns `Ok(None)` if the segment does not contain notes.

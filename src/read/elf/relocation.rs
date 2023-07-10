@@ -92,14 +92,22 @@ impl<'data, Elf: FileHeader> Iterator for ElfRelaIterator<'data, Elf> {
 }
 
 /// An iterator over the dynamic relocations for an `ElfFile32`.
-pub type ElfDynamicRelocationIterator32<'data, 'file, Endian = Endianness, R = &'data [u8]> =
-    ElfDynamicRelocationIterator<'data, 'file, elf::FileHeader32<Endian>, R>;
+pub type ElfDynamicRelocationIteratorFromFile32<
+    'data,
+    'file,
+    Endian = Endianness,
+    R = &'data [u8],
+> = ElfDynamicRelocationIteratorFromFile<'data, 'file, elf::FileHeader32<Endian>, R>;
 /// An iterator over the dynamic relocations for an `ElfFile64`.
-pub type ElfDynamicRelocationIterator64<'data, 'file, Endian = Endianness, R = &'data [u8]> =
-    ElfDynamicRelocationIterator<'data, 'file, elf::FileHeader64<Endian>, R>;
+pub type ElfDynamicRelocationIteratorFromFile64<
+    'data,
+    'file,
+    Endian = Endianness,
+    R = &'data [u8],
+> = ElfDynamicRelocationIteratorFromFile<'data, 'file, elf::FileHeader64<Endian>, R>;
 
 /// An iterator over the dynamic relocations for an `ElfFile`.
-pub struct ElfDynamicRelocationIterator<'data, 'file, Elf, R = &'data [u8]>
+pub struct ElfDynamicRelocationIteratorFromFile<'data, 'file, Elf, R = &'data [u8]>
 where
     Elf: FileHeader,
     R: ReadRef<'data>,
@@ -110,7 +118,7 @@ where
     pub(super) relocations: Option<ElfRelaIterator<'data, Elf>>,
 }
 
-impl<'data, 'file, Elf, R> Iterator for ElfDynamicRelocationIterator<'data, 'file, Elf, R>
+impl<'data, 'file, Elf, R> Iterator for ElfDynamicRelocationIteratorFromFile<'data, 'file, Elf, R>
 where
     Elf: FileHeader,
     R: ReadRef<'data>,
@@ -154,10 +162,53 @@ where
     }
 }
 
-impl<'data, 'file, Elf, R> fmt::Debug for ElfDynamicRelocationIterator<'data, 'file, Elf, R>
+impl<'data, 'file, Elf, R> fmt::Debug for ElfDynamicRelocationIteratorFromFile<'data, 'file, Elf, R>
 where
     Elf: FileHeader,
     R: ReadRef<'data>,
+{
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("ElfDynamicRelocationIterator").finish()
+    }
+}
+
+/// An iterator over the dynamic relocations for an `ElfFile32`.
+pub type ElfDynamicRelocationIteratorFromDynamic32<'data, 'file, Endian = Endianness> =
+    ElfDynamicRelocationIteratorFromDynamic<'data, 'file, elf::FileHeader32<Endian>>;
+/// An iterator over the dynamic relocations for an `ElfFile64`.
+pub type ElfDynamicRelocationIteratorFromDynamic64<'data, 'file, Endian = Endianness> =
+    ElfDynamicRelocationIteratorFromDynamic<'data, 'file, elf::FileHeader64<Endian>>;
+
+/// An iterator over the dynamic relocations for an `ElfFile`.
+pub struct ElfDynamicRelocationIteratorFromDynamic<'data, 'header, Elf>
+where
+    Elf: FileHeader,
+{
+    pub(super) header: &'header Elf,
+    pub(super) endian: Elf::Endian,
+    pub(super) relocations: ElfRelaIterator<'data, Elf>,
+}
+
+impl<'data, 'file, Elf> Iterator for ElfDynamicRelocationIteratorFromDynamic<'data, 'file, Elf>
+where
+    Elf: FileHeader,
+{
+    type Item = (u64, Relocation);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if let Some(reloc) = self.relocations.next() {
+            let relocation =
+                parse_relocation(self.header, self.endian, reloc, self.relocations.is_rel());
+            return Some((reloc.r_offset(self.endian).into(), relocation));
+        }
+
+        None
+    }
+}
+
+impl<'data, 'file, Elf> fmt::Debug for ElfDynamicRelocationIteratorFromDynamic<'data, 'file, Elf>
+where
+    Elf: FileHeader,
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("ElfDynamicRelocationIterator").finish()
