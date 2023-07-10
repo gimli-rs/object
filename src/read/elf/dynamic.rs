@@ -179,6 +179,14 @@ where
     R: ReadRef<'data> + 'data,
 {
     /// Parse the dynamic table of a static elf.
+    /// Example usage:
+    /// ```no_run
+    /// let file = std::fs::read("<path to elf>").unwrap();
+    /// let file = file.as_slice();
+    /// let elf  = ElfFile64::<Endianness>::parse(file).unwrap();
+    /// let dynamic = Dynamic::new(elf.raw_header(), file)
+    ///     .unwrap();
+    /// ```
     pub fn new(elf: &'data Elf, data: R) -> read::Result<Self> {
         // Since this elf is not loaded, the addresses should contain offsets into the elf, thus base is 0.
         let endian = elf.endian()?;
@@ -194,6 +202,8 @@ where
     /// Parse the dynamic table of a loaded elf.
     /// `base` should point to the base address of the elf, and will be used to convert absolute memory addresses into
     /// offsets into the elf.
+    /// `dynamic` is optional, as it can be derived from the header, or by the caller (for example using
+    /// `dl_iterate_phdr`).
     pub fn new_loaded(
         base: usize,
         header: &'data Elf,
