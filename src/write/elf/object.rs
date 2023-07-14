@@ -142,6 +142,7 @@ impl<'a> Object<'a> {
             Architecture::Sbf => false,
             Architecture::Sparc64 => true,
             Architecture::Xtensa => true,
+            Architecture::CSKY => true,
             _ => {
                 return Err(Error(format!(
                     "unimplemented architecture {:?}",
@@ -345,6 +346,7 @@ impl<'a> Object<'a> {
             Architecture::Sbf => elf::EM_SBF,
             Architecture::Sparc64 => elf::EM_SPARCV9,
             Architecture::Xtensa => elf::EM_XTENSA,
+            Architecture::CSKY => elf::EM_CSKY,
             _ => {
                 return Err(Error(format!(
                     "unimplemented architecture {:?}",
@@ -767,6 +769,16 @@ impl<'a> Object<'a> {
                             (RelocationKind::Absolute, _, 32) => elf::R_XTENSA_32,
                             (RelocationKind::Relative, RelocationEncoding::Generic, 32) => {
                                 elf::R_XTENSA_32_PCREL
+                            }
+                            (RelocationKind::Elf(x), _, _) => x,
+                            _ => {
+                                return Err(Error(format!("unimplemented relocation {:?}", reloc)));
+                            }
+                        },
+                        Architecture::CSKY => match (reloc.kind, reloc.encoding, reloc.size) {
+                            (RelocationKind::Absolute, _, 32) => elf::R_CKCORE_ADDR32,
+                            (RelocationKind::Relative, RelocationEncoding::Generic, 32) => {
+                                elf::R_CKCORE_PCREL32
                             }
                             (RelocationKind::Elf(x), _, _) => x,
                             _ => {
