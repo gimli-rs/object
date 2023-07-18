@@ -10,6 +10,7 @@ pub enum Architecture {
     Arm,
     Avr,
     Bpf,
+    Csky,
     I386,
     X86_64,
     #[allow(non_camel_case_types)]
@@ -43,6 +44,7 @@ impl Architecture {
             Architecture::Arm => Some(AddressSize::U32),
             Architecture::Avr => Some(AddressSize::U8),
             Architecture::Bpf => Some(AddressSize::U64),
+            Architecture::Csky => Some(AddressSize::U32),
             Architecture::I386 => Some(AddressSize::U32),
             Architecture::X86_64 => Some(AddressSize::U64),
             Architecture::X86_64_X32 => Some(AddressSize::U32),
