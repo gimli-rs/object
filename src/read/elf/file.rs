@@ -161,6 +161,7 @@ where
             (elf::EM_ARM, _) => Architecture::Arm,
             (elf::EM_AVR, _) => Architecture::Avr,
             (elf::EM_BPF, _) => Architecture::Bpf,
+            (elf::EM_CSKY, _) => Architecture::Csky,
             (elf::EM_386, _) => Architecture::I386,
             (elf::EM_X86_64, false) => Architecture::X86_64_X32,
             (elf::EM_X86_64, true) => Architecture::X86_64,
