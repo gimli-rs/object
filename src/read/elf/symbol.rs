@@ -5,6 +5,7 @@ use core::slice;
 use core::str;
 
 use crate::endian::{self, Endianness};
+use crate::pod::Pod;
 use crate::read::util::StringTable;
 use crate::read::{
     self, ObjectSymbol, ObjectSymbolTable, ReadError, ReadRef, SectionIndex, SymbolFlags,
@@ -436,7 +437,7 @@ impl<'data, 'file, Elf: FileHeader, R: ReadRef<'data>> ObjectSymbol<'data>
 
 /// A trait for generic access to `Sym32` and `Sym64`.
 #[allow(missing_docs)]
-pub trait Sym {
+pub trait Sym: Debug + Pod {
     type Word: Into<u64>;
     type Endian: endian::Endian;
 
@@ -572,113 +573,5 @@ impl<Endian: endian::Endian> Sym for elf::Sym64<Endian> {
     #[inline]
     fn st_size(&self, endian: Self::Endian) -> Self::Word {
         self.st_size.get(endian)
-    }
-}
-
-impl<'data, 'file, Endian, R> Sym for ElfSymbol32<'data, 'file, Endian, R>
-where
-    Endian: endian::Endian,
-    R: ReadRef<'data>,
-{
-    type Word = u32;
-    type Endian = Endian;
-
-    #[inline]
-    fn st_name(&self, endian: Self::Endian) -> u32 {
-        self.symbol.st_name(endian)
-    }
-
-    #[inline]
-    fn st_info(&self) -> u8 {
-        self.symbol.st_info()
-    }
-
-    #[inline]
-    fn st_bind(&self) -> u8 {
-        self.symbol.st_bind()
-    }
-
-    #[inline]
-    fn st_type(&self) -> u8 {
-        self.symbol.st_type()
-    }
-
-    #[inline]
-    fn st_other(&self) -> u8 {
-        self.symbol.st_other()
-    }
-
-    #[inline]
-    fn st_visibility(&self) -> u8 {
-        self.symbol.st_visibility()
-    }
-
-    #[inline]
-    fn st_shndx(&self, endian: Self::Endian) -> u16 {
-        self.symbol.st_shndx(endian)
-    }
-
-    #[inline]
-    fn st_value(&self, endian: Self::Endian) -> Self::Word {
-        self.symbol.st_value(endian)
-    }
-
-    #[inline]
-    fn st_size(&self, endian: Self::Endian) -> Self::Word {
-        self.symbol.st_size(endian)
-    }
-}
-
-impl<'data, 'file, Endian, R> Sym for ElfSymbol64<'data, 'file, Endian, R>
-where
-    Endian: endian::Endian,
-    R: ReadRef<'data>,
-{
-    type Word = u64;
-    type Endian = Endian;
-
-    #[inline]
-    fn st_name(&self, endian: Self::Endian) -> u32 {
-        self.symbol.st_name(endian)
-    }
-
-    #[inline]
-    fn st_info(&self) -> u8 {
-        self.symbol.st_info()
-    }
-
-    #[inline]
-    fn st_bind(&self) -> u8 {
-        self.symbol.st_bind()
-    }
-
-    #[inline]
-    fn st_type(&self) -> u8 {
-        self.symbol.st_type()
-    }
-
-    #[inline]
-    fn st_other(&self) -> u8 {
-        self.symbol.st_other()
-    }
-
-    #[inline]
-    fn st_visibility(&self) -> u8 {
-        self.symbol.st_visibility()
-    }
-
-    #[inline]
-    fn st_shndx(&self, endian: Self::Endian) -> u16 {
-        self.symbol.st_shndx(endian)
-    }
-
-    #[inline]
-    fn st_value(&self, endian: Self::Endian) -> Self::Word {
-        self.symbol.st_value(endian)
-    }
-
-    #[inline]
-    fn st_size(&self, endian: Self::Endian) -> Self::Word {
-        self.symbol.st_size(endian)
     }
 }
