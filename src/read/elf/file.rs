@@ -448,7 +448,7 @@ pub trait FileHeader: Debug + Pod {
     type CompressionHeader: CompressionHeader<Endian = Self::Endian, Word = Self::Word>;
     type NoteHeader: NoteHeader<Endian = Self::Endian>;
     type Dyn: Dyn<Endian = Self::Endian, Word = Self::Word>;
-    type Sym: Sym<Endian = Self::Endian, Word = Self::Word>;
+    type Sym: Sym<Endian = Self::Endian, Word = Self::Word> + Pod + Debug;
     type Rel: Rel<Endian = Self::Endian, Word = Self::Word>;
     type Rela: Rela<Endian = Self::Endian, Word = Self::Word> + From<Self::Rel>;
 
