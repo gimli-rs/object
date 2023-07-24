@@ -312,7 +312,7 @@ where
 impl<'data, 'file, Elf: FileHeader, R: ReadRef<'data>> ElfSymbol<'data, 'file, Elf, R> {
     /// Return a reference to the raw symbol structure.
     #[inline]
-    pub fn as_sym(&self) -> &'data Elf::Sym {
+    pub fn raw_symbol(&self) -> &'data Elf::Sym {
         self.symbol
     }
 }
