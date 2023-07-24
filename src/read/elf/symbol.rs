@@ -309,6 +309,14 @@ where
     pub(super) symbol: &'data Elf::Sym,
 }
 
+impl<'data, 'file, Elf: FileHeader, R: ReadRef<'data>> ElfSymbol<'data, 'file, Elf, R> {
+    /// Return a reference to the raw symbol structure.
+    #[inline]
+    pub fn raw_symbol(&self) -> &'data Elf::Sym {
+        self.symbol
+    }
+}
+
 impl<'data, 'file, Elf: FileHeader, R: ReadRef<'data>> read::private::Sealed
     for ElfSymbol<'data, 'file, Elf, R>
 {
