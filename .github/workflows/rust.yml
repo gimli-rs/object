@@ -75,7 +75,7 @@ jobs:
         with:
           submodules: true
       - name: Install rust
-        run: rustup update 1.52.0 && rustup default 1.52.0
+        run: rustup update 1.60.0 && rustup default 1.60.0
       - name: Test
         run: cargo test --verbose --no-default-features --features read,std
 
@@ -86,7 +86,7 @@ jobs:
         with:
           submodules: true
       - name: Install rust
-        run: rustup update 1.61.0 && rustup default 1.61.0
+        run: rustup update 1.64.0 && rustup default 1.64.0
       - name: Test
         run: cargo test --verbose --features all
 
