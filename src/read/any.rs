@@ -208,12 +208,9 @@ macro_rules! next_inner {
 ///
 /// Most functionality is provided by the `Object` trait implementation.
 #[derive(Debug)]
-pub struct File<'data, R: ReadRef<'data> = &'data [u8]> {
-    inner: FileInternal<'data, R>,
-}
-
-#[derive(Debug)]
-enum FileInternal<'data, R: ReadRef<'data>> {
+#[non_exhaustive]
+#[allow(missing_docs)]
+pub enum File<'data, R: ReadRef<'data> = &'data [u8]> {
     #[cfg(feature = "coff")]
     Coff(coff::CoffFile<'data, R>),
     #[cfg(feature = "coff")]
@@ -241,33 +238,32 @@ enum FileInternal<'data, R: ReadRef<'data>> {
 impl<'data, R: ReadRef<'data>> File<'data, R> {
     /// Parse the raw file data.
     pub fn parse(data: R) -> Result<Self> {
-        let inner = match FileKind::parse(data)? {
+        Ok(match FileKind::parse(data)? {
             #[cfg(feature = "elf")]
-            FileKind::Elf32 => FileInternal::Elf32(elf::ElfFile32::parse(data)?),
+            FileKind::Elf32 => File::Elf32(elf::ElfFile32::parse(data)?),
             #[cfg(feature = "elf")]
-            FileKind::Elf64 => FileInternal::Elf64(elf::ElfFile64::parse(data)?),
+            FileKind::Elf64 => File::Elf64(elf::ElfFile64::parse(data)?),
             #[cfg(feature = "macho")]
-            FileKind::MachO32 => FileInternal::MachO32(macho::MachOFile32::parse(data)?),
+            FileKind::MachO32 => File::MachO32(macho::MachOFile32::parse(data)?),
             #[cfg(feature = "macho")]
-            FileKind::MachO64 => FileInternal::MachO64(macho::MachOFile64::parse(data)?),
+            FileKind::MachO64 => File::MachO64(macho::MachOFile64::parse(data)?),
             #[cfg(feature = "wasm")]
-            FileKind::Wasm => FileInternal::Wasm(wasm::WasmFile::parse(data)?),
+            FileKind::Wasm => File::Wasm(wasm::WasmFile::parse(data)?),
             #[cfg(feature = "pe")]
-            FileKind::Pe32 => FileInternal::Pe32(pe::PeFile32::parse(data)?),
+            FileKind::Pe32 => File::Pe32(pe::PeFile32::parse(data)?),
             #[cfg(feature = "pe")]
-            FileKind::Pe64 => FileInternal::Pe64(pe::PeFile64::parse(data)?),
+            FileKind::Pe64 => File::Pe64(pe::PeFile64::parse(data)?),
             #[cfg(feature = "coff")]
-            FileKind::Coff => FileInternal::Coff(coff::CoffFile::parse(data)?),
+            FileKind::Coff => File::Coff(coff::CoffFile::parse(data)?),
             #[cfg(feature = "coff")]
-            FileKind::CoffBig => FileInternal::CoffBig(coff::CoffBigFile::parse(data)?),
+            FileKind::CoffBig => File::CoffBig(coff::CoffBigFile::parse(data)?),
             #[cfg(feature = "xcoff")]
-            FileKind::Xcoff32 => FileInternal::Xcoff32(xcoff::XcoffFile32::parse(data)?),
+            FileKind::Xcoff32 => File::Xcoff32(xcoff::XcoffFile32::parse(data)?),
             #[cfg(feature = "xcoff")]
-            FileKind::Xcoff64 => FileInternal::Xcoff64(xcoff::XcoffFile64::parse(data)?),
+            FileKind::Xcoff64 => File::Xcoff64(xcoff::XcoffFile64::parse(data)?),
             #[allow(unreachable_patterns)]
             _ => return Err(Error("Unsupported file format")),
-        };
-        Ok(File { inner })
+        })
     }
 
     /// Parse a Mach-O image from the dyld shared cache.
@@ -275,33 +271,32 @@ impl<'data, R: ReadRef<'data>> File<'data, R> {
     pub fn parse_dyld_cache_image<'cache, E: Endian>(
         image: &macho::DyldCacheImage<'data, 'cache, E, R>,
     ) -> Result<Self> {
-        let inner = match image.cache.architecture().address_size() {
+        Ok(match image.cache.architecture().address_size() {
             Some(AddressSize::U64) => {
-                FileInternal::MachO64(macho::MachOFile64::parse_dyld_cache_image(image)?)
+                File::MachO64(macho::MachOFile64::parse_dyld_cache_image(image)?)
             }
             Some(AddressSize::U32) => {
-                FileInternal::MachO32(macho::MachOFile32::parse_dyld_cache_image(image)?)
+                File::MachO32(macho::MachOFile32::parse_dyld_cache_image(image)?)
             }
             _ => return Err(Error("Unsupported file format")),
-        };
-        Ok(File { inner })
+        })
     }
 
     /// Return the file format.
     pub fn format(&self) -> BinaryFormat {
-        match self.inner {
+        match self {
             #[cfg(feature = "coff")]
-            FileInternal::Coff(_) | FileInternal::CoffBig(_) => BinaryFormat::Coff,
+            File::Coff(_) | File::CoffBig(_) => BinaryFormat::Coff,
             #[cfg(feature = "elf")]
-            FileInternal::Elf32(_) | FileInternal::Elf64(_) => BinaryFormat::Elf,
+            File::Elf32(_) | File::Elf64(_) => BinaryFormat::Elf,
             #[cfg(feature = "macho")]
-            FileInternal::MachO32(_) | FileInternal::MachO64(_) => BinaryFormat::MachO,
+            File::MachO32(_) | File::MachO64(_) => BinaryFormat::MachO,
             #[cfg(feature = "pe")]
-            FileInternal::Pe32(_) | FileInternal::Pe64(_) => BinaryFormat::Pe,
+            File::Pe32(_) | File::Pe64(_) => BinaryFormat::Pe,
             #[cfg(feature = "wasm")]
-            FileInternal::Wasm(_) => BinaryFormat::Wasm,
+            File::Wasm(_) => BinaryFormat::Wasm,
             #[cfg(feature = "xcoff")]
-            FileInternal::Xcoff32(_) | FileInternal::Xcoff64(_) => BinaryFormat::Xcoff,
+            File::Xcoff32(_) | File::Xcoff64(_) => BinaryFormat::Xcoff,
         }
     }
 }
@@ -325,56 +320,52 @@ where
     type DynamicRelocationIterator = DynamicRelocationIterator<'data, 'file, R>;
 
     fn architecture(&self) -> Architecture {
-        with_inner!(self.inner, FileInternal, |x| x.architecture())
+        with_inner!(self, File, |x| x.architecture())
     }
 
     fn is_little_endian(&self) -> bool {
-        with_inner!(self.inner, FileInternal, |x| x.is_little_endian())
+        with_inner!(self, File, |x| x.is_little_endian())
     }
 
     fn is_64(&self) -> bool {
-        with_inner!(self.inner, FileInternal, |x| x.is_64())
+        with_inner!(self, File, |x| x.is_64())
     }
 
     fn kind(&self) -> ObjectKind {
-        with_inner!(self.inner, FileInternal, |x| x.kind())
+        with_inner!(self, File, |x| x.kind())
     }
 
     fn segments(&'file self) -> SegmentIterator<'data, 'file, R> {
         SegmentIterator {
-            inner: map_inner!(self.inner, FileInternal, SegmentIteratorInternal, |x| x
-                .segments()),
+            inner: map_inner!(self, File, SegmentIteratorInternal, |x| x.segments()),
         }
     }
 
     fn section_by_name_bytes(&'file self, section_name: &[u8]) -> Option<Section<'data, 'file, R>> {
-        map_inner_option!(self.inner, FileInternal, SectionInternal, |x| x
+        map_inner_option!(self, File, SectionInternal, |x| x
             .section_by_name_bytes(section_name))
         .map(|inner| Section { inner })
     }
 
     fn section_by_index(&'file self, index: SectionIndex) -> Result<Section<'data, 'file, R>> {
-        map_inner_option!(self.inner, FileInternal, SectionInternal, |x| x
-            .section_by_index(index))
-        .map(|inner| Section { inner })
+        map_inner_option!(self, File, SectionInternal, |x| x.section_by_index(index))
+            .map(|inner| Section { inner })
     }
 
     fn sections(&'file self) -> SectionIterator<'data, 'file, R> {
         SectionIterator {
-            inner: map_inner!(self.inner, FileInternal, SectionIteratorInternal, |x| x
-                .sections()),
+            inner: map_inner!(self, File, SectionIteratorInternal, |x| x.sections()),
         }
     }
 
     fn comdats(&'file self) -> ComdatIterator<'data, 'file, R> {
         ComdatIterator {
-            inner: map_inner!(self.inner, FileInternal, ComdatIteratorInternal, |x| x
-                .comdats()),
+            inner: map_inner!(self, File, ComdatIteratorInternal, |x| x.comdats()),
         }
     }
 
     fn symbol_by_index(&'file self, index: SymbolIndex) -> Result<Symbol<'data, 'file, R>> {
-        map_inner_option!(self.inner, FileInternal, SymbolInternal, |x| x
+        map_inner_option!(self, File, SymbolInternal, |x| x
             .symbol_by_index(index)
             .map(|x| (x, PhantomData)))
         .map(|inner| Symbol { inner })
@@ -382,7 +373,7 @@ where
 
     fn symbols(&'file self) -> SymbolIterator<'data, 'file, R> {
         SymbolIterator {
-            inner: map_inner!(self.inner, FileInternal, SymbolIteratorInternal, |x| (
+            inner: map_inner!(self, File, SymbolIteratorInternal, |x| (
                 x.symbols(),
                 PhantomData
             )),
@@ -390,7 +381,7 @@ where
     }
 
     fn symbol_table(&'file self) -> Option<SymbolTable<'data, 'file, R>> {
-        map_inner_option!(self.inner, FileInternal, SymbolTableInternal, |x| x
+        map_inner_option!(self, File, SymbolTableInternal, |x| x
             .symbol_table()
             .map(|x| (x, PhantomData)))
         .map(|inner| SymbolTable { inner })
@@ -398,7 +389,7 @@ where
 
     fn dynamic_symbols(&'file self) -> SymbolIterator<'data, 'file, R> {
         SymbolIterator {
-            inner: map_inner!(self.inner, FileInternal, SymbolIteratorInternal, |x| (
+            inner: map_inner!(self, File, SymbolIteratorInternal, |x| (
                 x.dynamic_symbols(),
                 PhantomData
             )),
@@ -406,7 +397,7 @@ where
     }
 
     fn dynamic_symbol_table(&'file self) -> Option<SymbolTable<'data, 'file, R>> {
-        map_inner_option!(self.inner, FileInternal, SymbolTableInternal, |x| x
+        map_inner_option!(self, File, SymbolTableInternal, |x| x
             .dynamic_symbol_table()
             .map(|x| (x, PhantomData)))
         .map(|inner| SymbolTable { inner })
@@ -414,11 +405,11 @@ where
 
     #[cfg(feature = "elf")]
     fn dynamic_relocations(&'file self) -> Option<DynamicRelocationIterator<'data, 'file, R>> {
-        let inner = match self.inner {
-            FileInternal::Elf32(ref elf) => {
+        let inner = match self {
+            File::Elf32(ref elf) => {
                 DynamicRelocationIteratorInternal::Elf32(elf.dynamic_relocations()?)
             }
-            FileInternal::Elf64(ref elf) => {
+            File::Elf64(ref elf) => {
                 DynamicRelocationIteratorInternal::Elf64(elf.dynamic_relocations()?)
             }
             #[allow(unreachable_patterns)]
@@ -433,60 +424,60 @@ where
     }
 
     fn symbol_map(&self) -> SymbolMap<SymbolMapName<'data>> {
-        with_inner!(self.inner, FileInternal, |x| x.symbol_map())
+        with_inner!(self, File, |x| x.symbol_map())
     }
 
     fn object_map(&self) -> ObjectMap<'data> {
-        with_inner!(self.inner, FileInternal, |x| x.object_map())
+        with_inner!(self, File, |x| x.object_map())
     }
 
     fn imports(&self) -> Result<Vec<Import<'data>>> {
-        with_inner!(self.inner, FileInternal, |x| x.imports())
+        with_inner!(self, File, |x| x.imports())
     }
 
     fn exports(&self) -> Result<Vec<Export<'data>>> {
-        with_inner!(self.inner, FileInternal, |x| x.exports())
+        with_inner!(self, File, |x| x.exports())
     }
 
     fn has_debug_symbols(&self) -> bool {
-        with_inner!(self.inner, FileInternal, |x| x.has_debug_symbols())
+        with_inner!(self, File, |x| x.has_debug_symbols())
     }
 
     #[inline]
     fn mach_uuid(&self) -> Result<Option<[u8; 16]>> {
-        with_inner!(self.inner, FileInternal, |x| x.mach_uuid())
+        with_inner!(self, File, |x| x.mach_uuid())
     }
 
     #[inline]
     fn build_id(&self) -> Result<Option<&'data [u8]>> {
-        with_inner!(self.inner, FileInternal, |x| x.build_id())
+        with_inner!(self, File, |x| x.build_id())
     }
 
     #[inline]
     fn gnu_debuglink(&self) -> Result<Option<(&'data [u8], u32)>> {
-        with_inner!(self.inner, FileInternal, |x| x.gnu_debuglink())
+        with_inner!(self, File, |x| x.gnu_debuglink())
     }
 
     #[inline]
     fn gnu_debugaltlink(&self) -> Result<Option<(&'data [u8], &'data [u8])>> {
-        with_inner!(self.inner, FileInternal, |x| x.gnu_debugaltlink())
+        with_inner!(self, File, |x| x.gnu_debugaltlink())
     }
 
     #[inline]
     fn pdb_info(&self) -> Result<Option<CodeView<'_>>> {
-        with_inner!(self.inner, FileInternal, |x| x.pdb_info())
+        with_inner!(self, File, |x| x.pdb_info())
     }
 
     fn relative_address_base(&self) -> u64 {
-        with_inner!(self.inner, FileInternal, |x| x.relative_address_base())
+        with_inner!(self, File, |x| x.relative_address_base())
     }
 
     fn entry(&self) -> u64 {
-        with_inner!(self.inner, FileInternal, |x| x.entry())
+        with_inner!(self, File, |x| x.entry())
     }
 
     fn flags(&self) -> FileFlags {
-        with_inner!(self.inner, FileInternal, |x| x.flags())
+        with_inner!(self, File, |x| x.flags())
     }
 }
 
