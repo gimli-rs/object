@@ -1,12 +1,12 @@
 [package]
 name = "object"
-version = "0.31.1"
+version = "0.32.0"
 edition = "2018"
-rust-version = "1.60"
 exclude = ["/.github", "/testfiles"]
 keywords = ["object", "elf", "mach-o", "pe", "coff"]
 license = "Apache-2.0 OR MIT"
 repository = "https://github.com/gimli-rs/object"
+rust-version = "1.60"
 description = "A unified interface for reading and writing object file formats."
 
 [package.metadata.docs.rs]
