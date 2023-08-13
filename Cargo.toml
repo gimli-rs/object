@@ -2,6 +2,7 @@
 name = "object"
 version = "0.31.1"
 edition = "2018"
+rust-version = "1.60"
 exclude = ["/.github", "/testfiles"]
 keywords = ["object", "elf", "mach-o", "pe", "coff"]
 license = "Apache-2.0 OR MIT"
