@@ -2,6 +2,64 @@
 
 --------------------------------------------------------------------------------
 
+## 0.32.0
+
+Released 2023/08/12.
+
+### Breaking changes
+
+* Changed `read::elf::Note::name` to exclude all trailing null bytes.
+  [#549](https://github.com/gimli-rs/object/pull/549)
+
+* Updated dependencies, and changed some optional dependencies to use the `dep:`
+  feature syntax.
+  [#558](https://github.com/gimli-rs/object/pull/558)
+  [#569](https://github.com/gimli-rs/object/pull/569)
+
+### Changed
+
+* The minimum supported rust version for the `read` feature and its dependencies
+  has changed to 1.60.0.
+
+* The minimum supported rust version for other features has changed to 1.65.0.
+
+* Changed many definitions from `static` to `const`.
+  [#549](https://github.com/gimli-rs/object/pull/549)
+
+* Fixed Mach-O section alignment padding in `write::Object`.
+  [#553](https://github.com/gimli-rs/object/pull/553)
+
+* Changed `read::File` to an enum.
+  [#564](https://github.com/gimli-rs/object/pull/564)
+
+### Added
+
+* Added `elf::ELF_NOTE_GO`, `elf::NT_GO_BUILD_ID`, and `read::elf::Note::name_bytes`.
+  [#549](https://github.com/gimli-rs/object/pull/549)
+
+* Added `read::FileKind::CoffImport` and `read::coff::ImportFile`.
+  [#555](https://github.com/gimli-rs/object/pull/555)
+  [#556](https://github.com/gimli-rs/object/pull/556)
+
+* Added `Architecture::Csky` and basic ELF support for C-SKY.
+  [#561](https://github.com/gimli-rs/object/pull/561)
+
+* Added `read::elf::ElfSymbol::raw_symbol`.
+  [#562](https://github.com/gimli-rs/object/pull/562)
+
+--------------------------------------------------------------------------------
+
+## 0.30.4
+
+Released 2023/06/05.
+
+### Changed
+
+* Fixed Mach-O section alignment padding in `write::Object`.
+  [#553](https://github.com/gimli-rs/object/pull/553)
+
+--------------------------------------------------------------------------------
+
 ## 0.31.1
 
 Released 2023/05/09.
