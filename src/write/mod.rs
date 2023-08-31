@@ -75,6 +75,9 @@ pub struct Object<'a> {
     pub mangling: Mangling,
     /// Mach-O "_tlv_bootstrap" symbol.
     tlv_bootstrap: Option<SymbolId>,
+    /// Mach-O CPU subtype.
+    #[cfg(feature = "macho")]
+    macho_cpu_subtype: Option<u32>,
     #[cfg(feature = "macho")]
     macho_build_version: Option<MachOBuildVersion>,
 }
@@ -95,6 +98,8 @@ impl<'a> Object<'a> {
             flags: FileFlags::None,
             mangling: Mangling::default(format, architecture),
             tlv_bootstrap: None,
+            #[cfg(feature = "macho")]
+            macho_cpu_subtype: None,
             #[cfg(feature = "macho")]
             macho_build_version: None,
         }

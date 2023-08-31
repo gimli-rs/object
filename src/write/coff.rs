@@ -83,7 +83,7 @@ impl<'a> Object<'a> {
         name
     }
 
-    pub(crate) fn coff_fixup_relocation(&mut self, mut relocation: &mut Relocation) -> i64 {
+    pub(crate) fn coff_fixup_relocation(&mut self, relocation: &mut Relocation) -> i64 {
         if relocation.kind == RelocationKind::GotRelative {
             // Use a stub symbol for the relocation instead.
             // This isn't really a GOT, but it's a similar purpose.
