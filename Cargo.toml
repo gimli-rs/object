@@ -1,6 +1,6 @@
 [package]
 name = "object"
-version = "0.32.0"
+version = "0.32.1"
 edition = "2018"
 exclude = ["/.github", "/testfiles"]
 keywords = ["object", "elf", "mach-o", "pe", "coff"]
