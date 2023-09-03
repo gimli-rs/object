@@ -1921,6 +1921,7 @@ pub const GNU_PROPERTY_HIUSER: u32 = 0xffffffff;
 
 /// AArch64 specific GNU properties.
 pub const GNU_PROPERTY_AARCH64_FEATURE_1_AND: u32 = 0xc0000000;
+pub const GNU_PROPERTY_AARCH64_FEATURE_PAUTH: u32 = 0xc0000001;
 
 pub const GNU_PROPERTY_AARCH64_FEATURE_1_BTI: u32 = 1 << 0;
 pub const GNU_PROPERTY_AARCH64_FEATURE_1_PAC: u32 = 1 << 1;

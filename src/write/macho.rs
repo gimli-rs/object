@@ -48,6 +48,14 @@ impl MachOBuildVersion {
 
 // Public methods.
 impl<'a> Object<'a> {
+    /// Specify the Mach-O CPU subtype.
+    ///
+    /// Requires `feature = "macho"`.
+    #[inline]
+    pub fn set_macho_cpu_subtype(&mut self, cpu_subtype: u32) {
+        self.macho_cpu_subtype = Some(cpu_subtype);
+    }
+
     /// Specify information for a Mach-O `LC_BUILD_VERSION` command.
     ///
     /// Requires `feature = "macho"`.
@@ -243,7 +251,7 @@ impl<'a> Object<'a> {
         init_symbol_id
     }
 
-    pub(crate) fn macho_fixup_relocation(&mut self, mut relocation: &mut Relocation) -> i64 {
+    pub(crate) fn macho_fixup_relocation(&mut self, relocation: &mut Relocation) -> i64 {
         let constant = match relocation.kind {
             // AArch64Call relocations have special handling for the addend, so don't adjust it
             RelocationKind::Relative if relocation.encoding == RelocationEncoding::AArch64Call => 0,
@@ -385,7 +393,7 @@ impl<'a> Object<'a> {
             .map_err(|_| Error(String::from("Cannot allocate buffer")))?;
 
         // Write file header.
-        let (cputype, cpusubtype) = match self.architecture {
+        let (cputype, mut cpusubtype) = match self.architecture {
             Architecture::Arm => (macho::CPU_TYPE_ARM, macho::CPU_SUBTYPE_ARM_ALL),
             Architecture::Aarch64 => (macho::CPU_TYPE_ARM64, macho::CPU_SUBTYPE_ARM64_ALL),
             Architecture::Aarch64_Ilp32 => {
@@ -402,6 +410,10 @@ impl<'a> Object<'a> {
                 )));
             }
         };
+
+        if let Some(cpu_subtype) = self.macho_cpu_subtype {
+            cpusubtype = cpu_subtype;
+        }
 
         let flags = match self.flags {
             FileFlags::MachO { flags } => flags,

@@ -152,7 +152,7 @@ impl<'a> Object<'a> {
         })
     }
 
-    pub(crate) fn elf_fixup_relocation(&mut self, mut relocation: &mut Relocation) -> Result<i64> {
+    pub(crate) fn elf_fixup_relocation(&mut self, relocation: &mut Relocation) -> Result<i64> {
         // Return true if we should use a section symbol to avoid preemption.
         fn want_section_symbol(relocation: &Relocation, symbol: &Symbol) -> bool {
             if symbol.scope != SymbolScope::Dynamic {
