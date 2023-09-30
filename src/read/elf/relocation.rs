@@ -319,6 +319,7 @@ fn parse_relocation<Elf: FileHeader>(
             elf::R_LARCH_32 => (RelocationKind::Absolute, 32),
             elf::R_LARCH_64 => (RelocationKind::Absolute, 64),
             elf::R_LARCH_32_PCREL => (RelocationKind::Relative, 32),
+            elf::R_LARCH_64_PCREL => (RelocationKind::Relative, 64),
             elf::R_LARCH_B16 => {
                 encoding = RelocationEncoding::LoongArchBranch;
                 (RelocationKind::Relative, 16)

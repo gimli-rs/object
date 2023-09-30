@@ -6053,8 +6053,27 @@ pub const R_LARCH_TLS_GD_HI20: u32 = 98;
 /// 32-bit PC relative
 pub const R_LARCH_32_PCREL: u32 = 99;
 /// Paired with a normal relocation at the same address to indicate the
-/// insturction can be relaxed
+/// instruction can be relaxed
 pub const R_LARCH_RELAX: u32 = 100;
+/// Delete an instruction, should be only used internally by the linker
+pub const R_LARCH_DELETE: u32 = 101;
+/// Delete some bytes to ensure the instruction at PC + A aligned to
+/// `A.next_power_of_two()`-byte boundary
+pub const R_LARCH_ALIGN: u32 = 102;
+/// 22-bit PC-relative offset with two trailing zeros
+pub const R_LARCH_PCREL20_S2: u32 = 103;
+/// Reserved
+pub const R_LARCH_CFA: u32 = 104;
+/// 6-bit in-place addition
+pub const R_LARCH_ADD6: u32 = 105;
+/// 6-bit in-place subtraction
+pub const R_LARCH_SUB6: u32 = 106;
+/// LEB128 in-place addition
+pub const R_LARCH_ADD_ULEB128: u32 = 107;
+/// LEB128 in-place subtraction
+pub const R_LARCH_SUB_ULEB128: u32 = 108;
+/// 64-bit PC relative
+pub const R_LARCH_64_PCREL: u32 = 109;
 
 // Xtensa values Rel*::r_type`.
 pub const R_XTENSA_NONE: u32 = 0;
