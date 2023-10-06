@@ -768,6 +768,53 @@ impl<'a> Object<'a> {
                                 return Err(Error(format!("unimplemented relocation {:?}", reloc)));
                             }
                         },
+                        Architecture::Sharc => match (reloc.kind, reloc.encoding, reloc.size) {
+                            (RelocationKind::Absolute, RelocationEncoding::SharcAbs32TypeA, 48) => {
+                                elf::R_SHARC_ADDR32_V3
+                            }
+                            (RelocationKind::Absolute, RelocationEncoding::SharcAbs32Data, 32) => {
+                                elf::R_SHARC_ADDR_VAR_V3
+                            }
+                            (RelocationKind::Relative, RelocationEncoding::SharcPcr24TypeA, 48) => {
+                                elf::R_SHARC_PCRLONG_V3
+                            }
+                            (RelocationKind::Relative, RelocationEncoding::SharcPcr6TypeA, 48) => {
+                                elf::R_SHARC_PCRSHORT_V3
+                            }
+                            (RelocationKind::Relative, RelocationEncoding::SharcPcr6TypeB, 32) => {
+                                elf::R_SHARC_PCRSHORT_V3
+                            }
+                            (RelocationKind::Absolute, RelocationEncoding::SharcAbs16Data, 16) => {
+                                elf::R_SHARC_ADDR_VAR16_V3
+                            }
+                            (RelocationKind::Absolute, RelocationEncoding::SharcAbs16TypeA, 48) => {
+                                elf::R_SHARC_DATA16_V3
+                            }
+                            (RelocationKind::Absolute, RelocationEncoding::SharcAbs16TypeB, 32) => {
+                                elf::R_SHARC_DATA16_VISA_V3
+                            }
+                            (RelocationKind::Absolute, RelocationEncoding::SharcAbs24TypeA, 48) => {
+                                elf::R_SHARC_ADDR24_V3
+                            }
+                            (RelocationKind::Absolute, RelocationEncoding::SharcAbs6TypeA, 48) => {
+                                elf::R_SHARC_DATA6_V3
+                            }
+                            (RelocationKind::Absolute, RelocationEncoding::SharcAbs6TypeB, 32) => {
+                                elf::R_SHARC_DATA6_VISA_V3
+                            }
+                            (RelocationKind::Absolute, RelocationEncoding::SharcAbs7TypeB, 32) => {
+                                elf::R_SHARC_DATA7_VISA_V3
+                            }
+                            (_, RelocationEncoding::Generic, _) => {
+                                return Err(Error(format!(
+                                    "SHARC+ ISA does not have a generic relocation encoding"
+                                )));
+                            }
+                            (RelocationKind::Elf(x), _, _) => x,
+                            _ => {
+                                return Err(Error(format!("unimplemented relocation {:?}", reloc)));
+                            }
+                        },
                         Architecture::Sparc64 => match (reloc.kind, reloc.encoding, reloc.size) {
                             // TODO: use R_SPARC_32/R_SPARC_64 if aligned.
                             (RelocationKind::Absolute, _, 32) => elf::R_SPARC_UA32,

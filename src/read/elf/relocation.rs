@@ -404,6 +404,57 @@ fn parse_relocation<Elf: FileHeader>(
             elf::R_SBF_64_32 => (RelocationKind::Absolute, 32),
             r_type => (RelocationKind::Elf(r_type), 0),
         },
+        elf::EM_SHARC => match reloc.r_type(endian, false) {
+            elf::R_SHARC_ADDR24_V3 => {
+                encoding = RelocationEncoding::SharcAbs24TypeA;
+                (RelocationKind::Absolute, 48)
+            }
+            elf::R_SHARC_ADDR32_V3 => {
+                encoding = RelocationEncoding::SharcAbs32TypeA;
+                (RelocationKind::Absolute, 48)
+            }
+            elf::R_SHARC_ADDR_VAR_V3 => {
+                encoding = RelocationEncoding::SharcAbs32Data;
+                (RelocationKind::Absolute, 32)
+            }
+            elf::R_SHARC_PCRSHORT_V3 => {
+                encoding = RelocationEncoding::SharcPcr6TypeA;
+                (RelocationKind::Relative, 48)
+            }
+            elf::R_SHARC_PCRLONG_V3 => {
+                encoding = RelocationEncoding::SharcPcr24TypeA;
+                (RelocationKind::Relative, 48)
+            }
+            elf::R_SHARC_DATA6_V3 => {
+                encoding = RelocationEncoding::SharcAbs6TypeA;
+                (RelocationKind::Absolute, 48)
+            }
+            elf::R_SHARC_DATA16_V3 => {
+                encoding = RelocationEncoding::SharcAbs16TypeA;
+                (RelocationKind::Absolute, 48)
+            }
+            elf::R_SHARC_DATA6_VISA_V3 => {
+                encoding = RelocationEncoding::SharcAbs6TypeB;
+                (RelocationKind::Absolute, 32)
+            }
+            elf::R_SHARC_DATA7_VISA_V3 => {
+                encoding = RelocationEncoding::SharcAbs7TypeB;
+                (RelocationKind::Absolute, 32)
+            }
+            elf::R_SHARC_DATA16_VISA_V3 => {
+                encoding = RelocationEncoding::SharcAbs16TypeB;
+                (RelocationKind::Absolute, 32)
+            }
+            elf::R_SHARC_PCR6_VISA_V3 => {
+                encoding = RelocationEncoding::SharcPcr6TypeB;
+                (RelocationKind::Relative, 32)
+            }
+            elf::R_SHARC_ADDR_VAR16_V3 => {
+                encoding = RelocationEncoding::SharcAbs16Data;
+                (RelocationKind::Absolute, 16)
+            }
+            r_type => (RelocationKind::Elf(r_type), 0),
+        },
         elf::EM_SPARC | elf::EM_SPARC32PLUS | elf::EM_SPARCV9 => {
             match reloc.r_type(endian, false) {
                 elf::R_SPARC_32 | elf::R_SPARC_UA32 => (RelocationKind::Absolute, 32),
