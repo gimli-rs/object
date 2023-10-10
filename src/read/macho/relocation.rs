@@ -34,6 +34,7 @@ where
     type Item = (u64, Relocation);
 
     fn next(&mut self) -> Option<Self::Item> {
+        let mut paired_addend = 0;
         loop {
             let reloc = self.relocations.next()?;
             let endian = self.file.endian;
@@ -56,6 +57,12 @@ where
                 macho::CPU_TYPE_ARM64 | macho::CPU_TYPE_ARM64_32 => {
                     match (reloc.r_type, reloc.r_pcrel) {
                         (macho::ARM64_RELOC_UNSIGNED, false) => RelocationKind::Absolute,
+                        (macho::ARM64_RELOC_ADDEND, _) => {
+                            paired_addend = i64::from(reloc.r_symbolnum)
+                                .wrapping_shl(64 - 24)
+                                .wrapping_shr(64 - 24);
+                            continue;
+                        }
                         _ => RelocationKind::MachO {
                             value: reloc.r_type,
                             relative: reloc.r_pcrel,
@@ -100,7 +107,8 @@ where
             } else {
                 RelocationTarget::Section(SectionIndex(reloc.r_symbolnum as usize))
             };
-            let mut addend = 0;
+            let implicit_addend = paired_addend == 0;
+            let mut addend = paired_addend;
             if reloc.r_pcrel {
                 // For PC relative relocations on some architectures, the
                 // addend does not include the offset required due to the
@@ -132,7 +140,7 @@ where
                     size,
                     target,
                     addend,
-                    implicit_addend: true,
+                    implicit_addend,
                 },
             ));
         }
