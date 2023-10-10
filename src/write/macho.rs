@@ -13,6 +13,7 @@ struct SectionOffsets {
     offset: usize,
     address: u64,
     reloc_offset: usize,
+    reloc_count: usize,
 }
 
 #[derive(Default, Clone, Copy)]
@@ -259,7 +260,6 @@ impl<'a> Object<'a> {
             | RelocationKind::MachO { relative: true, .. } => true,
             _ => false,
         };
-        let mut constant = relocation.addend;
         if relative {
             // For PC relative relocations on some architectures, the
             // addend does not include the offset required due to the
@@ -286,13 +286,29 @@ impl<'a> Object<'a> {
                 // TODO: maybe missing support for some architectures and relocations
                 _ => 0,
             };
-            constant += pcrel_offset;
+            relocation.addend += pcrel_offset;
         }
         // Aarch64 relocs of these sizes act as if they are double-word length
         if self.architecture == Architecture::Aarch64 && matches!(relocation.size, 12 | 21 | 26) {
             relocation.size = 32;
         }
-        relocation.addend -= constant;
+        // Check for relocations that use an explicit addend.
+        if self.architecture == Architecture::Aarch64 {
+            if relocation.encoding == RelocationEncoding::AArch64Call {
+                return 0;
+            }
+            if let RelocationKind::MachO { value, .. } = relocation.kind {
+                match value {
+                    macho::ARM64_RELOC_BRANCH26
+                    | macho::ARM64_RELOC_PAGE21
+                    | macho::ARM64_RELOC_PAGEOFF12 => return 0,
+                    _ => {}
+                }
+            }
+        }
+        // Signify implicit addend.
+        let constant = relocation.addend;
+        relocation.addend = 0;
         constant
     }
 
@@ -406,10 +422,15 @@ impl<'a> Object<'a> {
 
         // Calculate size of relocations.
         for (index, section) in self.sections.iter().enumerate() {
-            let count = section.relocations.len();
+            let count: usize = section
+                .relocations
+                .iter()
+                .map(|reloc| 1 + usize::from(reloc.addend != 0))
+                .sum();
             if count != 0 {
                 offset = align(offset, 4);
                 section_offsets[index].reloc_offset = offset;
+                section_offsets[index].reloc_count = count;
                 let len = count * mem::size_of::<macho::Relocation<Endianness>>();
                 offset += len;
             }
@@ -547,7 +568,7 @@ impl<'a> Object<'a> {
                     offset: section_offsets[index].offset as u32,
                     align: section.align.trailing_zeros(),
                     reloff: section_offsets[index].reloc_offset as u32,
-                    nreloc: section.relocations.len() as u32,
+                    nreloc: section_offsets[index].reloc_count as u32,
                     flags,
                 },
             );
@@ -650,8 +671,38 @@ impl<'a> Object<'a> {
                 write_align(buffer, 4);
                 debug_assert_eq!(section_offsets[index].reloc_offset, buffer.len());
                 for reloc in &section.relocations {
+                    let r_length = match reloc.size {
+                        8 => 0,
+                        16 => 1,
+                        32 => 2,
+                        64 => 3,
+                        _ => return Err(Error(format!("unimplemented reloc size {:?}", reloc))),
+                    };
+
+                    // Write explicit addend.
+                    if reloc.addend != 0 {
+                        let r_type = match self.architecture {
+                            Architecture::Aarch64 | Architecture::Aarch64_Ilp32 => {
+                                macho::ARM64_RELOC_ADDEND
+                            }
+                            _ => {
+                                return Err(Error(format!("unimplemented relocation {:?}", reloc)))
+                            }
+                        };
+
+                        let reloc_info = macho::RelocationInfo {
+                            r_address: reloc.offset as u32,
+                            r_symbolnum: reloc.addend as u32,
+                            r_pcrel: false,
+                            r_length,
+                            r_extern: false,
+                            r_type,
+                        };
+                        buffer.write(&reloc_info.relocation(endian));
+                    }
+
                     let r_extern;
-                    let mut r_symbolnum;
+                    let r_symbolnum;
                     let symbol = &self.symbols[reloc.symbol.0];
                     if symbol.kind == SymbolKind::Section {
                         r_symbolnum = section_offsets[symbol.section.id().unwrap().0].index as u32;
@@ -660,13 +711,6 @@ impl<'a> Object<'a> {
                         r_symbolnum = symbol_offsets[reloc.symbol.0].index as u32;
                         r_extern = true;
                     }
-                    let r_length = match reloc.size {
-                        8 => 0,
-                        16 => 1,
-                        32 => 2,
-                        64 => 3,
-                        _ => return Err(Error(format!("unimplemented reloc size {:?}", reloc))),
-                    };
                     let (r_pcrel, r_type) = match self.architecture {
                         Architecture::I386 => match reloc.kind {
                             RelocationKind::Absolute => (false, macho::GENERIC_RELOC_VANILLA),
@@ -674,68 +718,45 @@ impl<'a> Object<'a> {
                                 return Err(Error(format!("unimplemented relocation {:?}", reloc)));
                             }
                         },
-                        Architecture::X86_64 => match (reloc.kind, reloc.encoding, reloc.addend) {
-                            (RelocationKind::Absolute, RelocationEncoding::Generic, 0) => {
+                        Architecture::X86_64 => match (reloc.kind, reloc.encoding) {
+                            (RelocationKind::Absolute, RelocationEncoding::Generic) => {
                                 (false, macho::X86_64_RELOC_UNSIGNED)
                             }
-                            (RelocationKind::Relative, RelocationEncoding::Generic, -4) => {
+                            (RelocationKind::Relative, RelocationEncoding::Generic) => {
                                 (true, macho::X86_64_RELOC_SIGNED)
                             }
-                            (RelocationKind::Relative, RelocationEncoding::X86RipRelative, -4) => {
+                            (RelocationKind::Relative, RelocationEncoding::X86RipRelative) => {
                                 (true, macho::X86_64_RELOC_SIGNED)
                             }
-                            (RelocationKind::Relative, RelocationEncoding::X86Branch, -4) => {
+                            (RelocationKind::Relative, RelocationEncoding::X86Branch) => {
                                 (true, macho::X86_64_RELOC_BRANCH)
                             }
-                            (RelocationKind::PltRelative, RelocationEncoding::X86Branch, -4) => {
+                            (RelocationKind::PltRelative, RelocationEncoding::X86Branch) => {
                                 (true, macho::X86_64_RELOC_BRANCH)
                             }
-                            (RelocationKind::GotRelative, RelocationEncoding::Generic, -4) => {
+                            (RelocationKind::GotRelative, RelocationEncoding::Generic) => {
                                 (true, macho::X86_64_RELOC_GOT)
                             }
                             (
                                 RelocationKind::GotRelative,
                                 RelocationEncoding::X86RipRelativeMovq,
-                                -4,
                             ) => (true, macho::X86_64_RELOC_GOT_LOAD),
-                            (RelocationKind::MachO { value, relative }, _, _) => (relative, value),
+                            (RelocationKind::MachO { value, relative }, _) => (relative, value),
                             _ => {
                                 return Err(Error(format!("unimplemented relocation {:?}", reloc)));
                             }
                         },
                         Architecture::Aarch64 | Architecture::Aarch64_Ilp32 => {
-                            match (reloc.kind, reloc.encoding, reloc.addend) {
-                                (RelocationKind::Absolute, RelocationEncoding::Generic, 0) => {
+                            match (reloc.kind, reloc.encoding) {
+                                (RelocationKind::Absolute, RelocationEncoding::Generic) => {
                                     (false, macho::ARM64_RELOC_UNSIGNED)
                                 }
-                                (RelocationKind::Relative, RelocationEncoding::AArch64Call, 0) => {
+                                (RelocationKind::Relative, RelocationEncoding::AArch64Call) => {
                                     (true, macho::ARM64_RELOC_BRANCH26)
-                                }
-                                // Non-zero addend, so we have to encode the addend separately
-                                (
-                                    RelocationKind::Relative,
-                                    RelocationEncoding::AArch64Call,
-                                    value,
-                                ) => {
-                                    // first emit the BR26 relocation
-                                    let reloc_info = macho::RelocationInfo {
-                                        r_address: reloc.offset as u32,
-                                        r_symbolnum,
-                                        r_pcrel: true,
-                                        r_length,
-                                        r_extern: true,
-                                        r_type: macho::ARM64_RELOC_BRANCH26,
-                                    };
-                                    buffer.write(&reloc_info.relocation(endian));
-
-                                    // set up a separate relocation for the addend
-                                    r_symbolnum = value as u32;
-                                    (false, macho::ARM64_RELOC_ADDEND)
                                 }
                                 (
                                     RelocationKind::MachO { value, relative },
                                     RelocationEncoding::Generic,
-                                    0,
                                 ) => (relative, value),
                                 _ => {
                                     return Err(Error(format!(
