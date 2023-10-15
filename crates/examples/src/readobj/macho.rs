@@ -145,7 +145,10 @@ pub(super) fn print_macho64(p: &mut Printer<'_>, data: &[u8], offset: u64) {
 }
 
 #[derive(Default)]
-struct MachState {
+struct MachState<'a> {
+    cputype: u32,
+    symbols: Vec<Option<&'a [u8]>>,
+    sections: Vec<Vec<u8>>,
     section_index: usize,
 }
 
@@ -156,7 +159,37 @@ fn print_macho<Mach: MachHeader<Endian = Endianness>>(
     offset: u64,
 ) {
     if let Some(endian) = header.endian().print_err(p) {
-        let mut state = MachState::default();
+        let mut state = MachState {
+            cputype: header.cputype(endian),
+            sections: vec![vec![]],
+            ..MachState::default()
+        };
+        if let Ok(mut commands) = header.load_commands(endian, data, 0) {
+            while let Ok(Some(command)) = commands.next() {
+                if let Ok(Some((segment, section_data))) = Mach::Segment::from_command(command) {
+                    if let Ok(segment_sections) = segment.sections(endian, section_data) {
+                        state
+                            .sections
+                            .extend(segment_sections.iter().map(|section| {
+                                let mut name = Vec::new();
+                                name.extend(section.segment_name());
+                                name.push(b',');
+                                name.extend(section.name());
+                                name
+                            }));
+                    }
+                } else if let Ok(Some(command)) = command.symtab() {
+                    if let Ok(symtab) = command.symbols::<Mach, _>(endian, data) {
+                        state.symbols.extend(
+                            symtab
+                                .iter()
+                                .map(|symbol| symbol.name(endian, symtab.strings()).ok()),
+                        );
+                    }
+                }
+            }
+        }
+
         print_mach_header(p, endian, header);
         if let Some(mut commands) = header.load_commands(endian, data, offset).print_err(p) {
             while let Some(Some(command)) = commands.next().print_err(p) {
@@ -181,36 +214,20 @@ fn print_load_command<Mach: MachHeader>(
     p: &mut Printer<'_>,
     endian: Mach::Endian,
     data: &[u8],
-    header: &Mach,
+    _header: &Mach,
     command: LoadCommandData<Mach::Endian>,
     state: &mut MachState,
 ) {
     if let Some(variant) = command.variant().print_err(p) {
         match variant {
             LoadCommandVariant::Segment32(segment, section_data) => {
-                print_segment(
-                    p,
-                    endian,
-                    data,
-                    header.cputype(endian),
-                    segment,
-                    section_data,
-                    state,
-                );
+                print_segment(p, endian, data, segment, section_data, state);
             }
             LoadCommandVariant::Segment64(segment, section_data) => {
-                print_segment(
-                    p,
-                    endian,
-                    data,
-                    header.cputype(endian),
-                    segment,
-                    section_data,
-                    state,
-                );
+                print_segment(p, endian, data, segment, section_data, state);
             }
             LoadCommandVariant::Symtab(symtab) => {
-                print_symtab::<Mach>(p, endian, data, symtab);
+                print_symtab::<Mach>(p, endian, data, symtab, state);
             }
             LoadCommandVariant::Thread(x, _thread_data) => {
                 p.group("ThreadCommand", |p| {
@@ -525,7 +542,6 @@ fn print_segment<S: Segment>(
     p: &mut Printer<'_>,
     endian: S::Endian,
     data: &[u8],
-    cputype: u32,
     segment: &S,
     section_data: &[u8],
     state: &mut MachState,
@@ -547,7 +563,7 @@ fn print_segment<S: Segment>(
         p.flags(segment.flags(endian), 0, FLAGS_SG);
         if let Some(sections) = segment.sections(endian, section_data).print_err(p) {
             for section in sections {
-                print_section(p, endian, data, cputype, section, state);
+                print_section(p, endian, data, section, state);
             }
         }
     });
@@ -557,7 +573,6 @@ fn print_section<S: Section>(
     p: &mut Printer<'_>,
     endian: S::Endian,
     data: &[u8],
-    cputype: u32,
     section: &S,
     state: &mut MachState,
 ) {
@@ -581,7 +596,7 @@ fn print_section<S: Section>(
             p.flags(flags, 0, FLAGS_S_ATTR);
         }
         if let Some(relocations) = section.relocations(endian, data).print_err(p) {
-            let proc = match cputype {
+            let proc = match state.cputype {
                 CPU_TYPE_X86 => FLAGS_GENERIC_RELOC,
                 CPU_TYPE_X86_64 => FLAGS_X86_64_RELOC,
                 CPU_TYPE_ARM => FLAGS_ARM_RELOC,
@@ -590,7 +605,7 @@ fn print_section<S: Section>(
                 _ => &[],
             };
             for relocation in relocations {
-                if relocation.r_scattered(endian, cputype) {
+                if relocation.r_scattered(endian, state.cputype) {
                     let info = relocation.scattered_info(endian);
                     p.group("ScatteredRelocationInfo", |p| {
                         p.field_hex("Address", info.r_address);
@@ -603,15 +618,23 @@ fn print_section<S: Section>(
                     let info = relocation.info(endian);
                     p.group("RelocationInfo", |p| {
                         p.field_hex("Address", info.r_address);
+                        p.field("Extern", if info.r_extern { "yes" } else { "no" });
                         if info.r_extern {
-                            // TODO: symbol name
-                            p.field("Symbol", info.r_symbolnum);
+                            let name = state
+                                .symbols
+                                .get(info.r_symbolnum as usize)
+                                .copied()
+                                .flatten();
+                            p.field_string_option("Symbol", info.r_symbolnum, name);
                         } else {
-                            p.field("Section", info.r_symbolnum);
+                            let name = state
+                                .sections
+                                .get(info.r_symbolnum as usize)
+                                .map(|name| &name[..]);
+                            p.field_string_option("Section", info.r_symbolnum, name);
                         }
                         p.field("PcRel", if info.r_pcrel { "yes" } else { "no" });
                         p.field("Length", info.r_length);
-                        p.field("Extern", if info.r_extern { "yes" } else { "no" });
                         p.field_enum("Type", info.r_type, proc);
                     });
                 }
@@ -625,6 +648,7 @@ fn print_symtab<Mach: MachHeader>(
     endian: Mach::Endian,
     data: &[u8],
     symtab: &SymtabCommand<Mach::Endian>,
+    state: &MachState,
 ) {
     p.group("SymtabCommand", |p| {
         p.field_enum("Cmd", symtab.cmd.get(endian), FLAGS_LC);
@@ -653,7 +677,9 @@ fn print_symtab<Mach: MachHeader>(
                         p.flags(n_type, N_TYPE, FLAGS_N_TYPE);
                         p.flags(n_type, 0, FLAGS_N_EXT);
                     }
-                    p.field("Section", nlist.n_sect());
+                    let n_sect = nlist.n_sect();
+                    let name = state.sections.get(n_sect as usize).map(|name| &name[..]);
+                    p.field_string_option("Section", n_sect, name);
                     let n_desc = nlist.n_desc(endian);
                     p.field_hex("Desc", n_desc);
                     if nlist.is_undefined() {
