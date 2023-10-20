@@ -252,14 +252,42 @@ impl<'a> Object<'a> {
     }
 
     pub(crate) fn macho_fixup_relocation(&mut self, relocation: &mut Relocation) -> i64 {
-        let constant = match relocation.kind {
-            // AArch64Call relocations have special handling for the addend, so don't adjust it
-            RelocationKind::Relative if relocation.encoding == RelocationEncoding::AArch64Call => 0,
+        let relative = match relocation.kind {
             RelocationKind::Relative
             | RelocationKind::GotRelative
-            | RelocationKind::PltRelative => relocation.addend + 4,
-            _ => relocation.addend,
+            | RelocationKind::PltRelative
+            | RelocationKind::MachO { relative: true, .. } => true,
+            _ => false,
         };
+        let mut constant = relocation.addend;
+        if relative {
+            // For PC relative relocations on some architectures, the
+            // addend does not include the offset required due to the
+            // PC being different from the place of the relocation.
+            // This differs from other file formats, so adjust the
+            // addend here to account for this.
+            let pcrel_offset = match self.architecture {
+                Architecture::I386 => 4,
+                Architecture::X86_64 => match relocation.kind {
+                    RelocationKind::MachO {
+                        value: macho::X86_64_RELOC_SIGNED_1,
+                        ..
+                    } => 5,
+                    RelocationKind::MachO {
+                        value: macho::X86_64_RELOC_SIGNED_2,
+                        ..
+                    } => 6,
+                    RelocationKind::MachO {
+                        value: macho::X86_64_RELOC_SIGNED_4,
+                        ..
+                    } => 8,
+                    _ => 4,
+                },
+                // TODO: maybe missing support for some architectures and relocations
+                _ => 0,
+            };
+            constant += pcrel_offset;
+        }
         // Aarch64 relocs of these sizes act as if they are double-word length
         if self.architecture == Architecture::Aarch64 && matches!(relocation.size, 12 | 21 | 26) {
             relocation.size = 32;

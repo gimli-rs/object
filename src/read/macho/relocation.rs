@@ -100,7 +100,30 @@ where
             } else {
                 RelocationTarget::Section(SectionIndex(reloc.r_symbolnum as usize))
             };
-            let addend = if reloc.r_pcrel { -4 } else { 0 };
+            let mut addend = 0;
+            if reloc.r_pcrel {
+                // For PC relative relocations on some architectures, the
+                // addend does not include the offset required due to the
+                // PC being different from the place of the relocation.
+                // This differs from other file formats, so adjust the
+                // addend here to account for this.
+                match cputype {
+                    macho::CPU_TYPE_X86 => {
+                        addend -= 1 << reloc.r_length;
+                    }
+                    macho::CPU_TYPE_X86_64 => {
+                        addend -= 1 << reloc.r_length;
+                        match reloc.r_type {
+                            macho::X86_64_RELOC_SIGNED_1 => addend -= 1,
+                            macho::X86_64_RELOC_SIGNED_2 => addend -= 2,
+                            macho::X86_64_RELOC_SIGNED_4 => addend -= 4,
+                            _ => {}
+                        }
+                    }
+                    // TODO: maybe missing support for some architectures and relocations
+                    _ => {}
+                }
+            }
             return Some((
                 reloc.r_address as u64,
                 Relocation {
