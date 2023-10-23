@@ -1,0 +1,28 @@
+Format: MachO Little-endian 64-bit
+Kind: Relocatable
+Architecture: X86_64
+Flags: MachO { flags: 2000 }
+Relative Address Base: 0
+Entry Address: 0
+Segment { name: "", address: 0, size: 98 }
+1: Section { segment: "__TEXT", name: "__text", address: 0, size: 25, align: 10, kind: Text, flags: MachO { flags: 80000400 } }
+2: Section { segment: "__TEXT", name: "__cstring", address: 25, size: d, align: 1, kind: ReadOnlyString, flags: MachO { flags: 2 } }
+3: Section { segment: "__LD", name: "__compact_unwind", address: 38, size: 20, align: 8, kind: Unknown, flags: MachO { flags: 2000000 } }
+4: Section { segment: "__TEXT", name: "__eh_frame", address: 58, size: 40, align: 8, kind: ReadOnlyData, flags: MachO { flags: 6800000b } }
+
+Symbols
+0: Symbol { name: "_main", address: 0, size: 0, kind: Text, section: Section(SectionIndex(1)), scope: Dynamic, weak: false, flags: MachO { n_desc: 0 } }
+1: Symbol { name: "_printf", address: 0, size: 0, kind: Unknown, section: Undefined, scope: Unknown, weak: false, flags: MachO { n_desc: 0 } }
+
+__text relocations
+(19, Relocation { kind: Relative, encoding: X86Branch, size: 20, target: Symbol(SymbolIndex(1)), addend: fffffffffffffffc, implicit_addend: true })
+(12, Relocation { kind: Relative, encoding: X86RipRelative, size: 20, target: Section(SectionIndex(2)), addend: fffffffffffffffc, implicit_addend: true })
+
+__compact_unwind relocations
+(0, Relocation { kind: Absolute, encoding: Generic, size: 40, target: Section(SectionIndex(1)), addend: 0, implicit_addend: true })
+
+Dynamic symbols
+
+Import { library: "", name: "_printf" }
+
+Export { name: "_main", address: 0 }

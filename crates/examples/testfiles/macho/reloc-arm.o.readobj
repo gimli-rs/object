@@ -1,0 +1,285 @@
+Format: Mach-O 32-bit
+MachHeader {
+    Magic: 0xCEFAEDFE
+    CpuType: CPU_TYPE_ARM (0xC)
+    CpuSubtype: 0x9
+        CPU_SUBTYPE_ARM_V7 (0x9)
+    FileType: MH_OBJECT (0x1)
+    NumberOfCmds: 3
+    SizeOfCmds: 0x128
+    Flags: MH_SUBSECTIONS_VIA_SYMBOLS (0x2000)
+}
+SegmentCommand {
+    Cmd: LC_SEGMENT (0x1)
+    CmdSize: 0xC0
+    SegmentName: ""
+    VmAddress: 0x0
+    VmSize: 0x3C
+    FileOffset: 0x144
+    FileSize: 0x3C
+    MaxProt: 0x7
+        VM_PROT_READ (0x1)
+        VM_PROT_WRITE (0x2)
+        VM_PROT_EXECUTE (0x4)
+    InitProt: 0x7
+        VM_PROT_READ (0x1)
+        VM_PROT_WRITE (0x2)
+        VM_PROT_EXECUTE (0x4)
+    NumberOfSections: 2
+    Flags: 0x0
+    Section {
+        Index: 0
+        SectionName: "__text"
+        SegmentName: "__TEXT"
+        Address: 0x0
+        Size: 0x28
+        Offset: 0x144
+        Align: 0x2
+        RelocationOffset: 0x180
+        NumberOfRelocations: 0xE
+        Flags: 0x80000400
+            S_REGULAR (0x0)
+            S_ATTR_PURE_INSTRUCTIONS (0x80000000)
+            S_ATTR_SOME_INSTRUCTIONS (0x400)
+        RelocationInfo {
+            Address: 0x24
+            Extern: yes
+            Symbol: "_g0" (0x3)
+            PcRel: no
+            Length: 3
+            Type: ARM_RELOC_HALF (0x8)
+        }
+        RelocationInfo {
+            Address: 0x14
+            Extern: no
+            Section: 0xFFFFFF
+            PcRel: no
+            Length: 3
+            Type: ARM_RELOC_PAIR (0x1)
+        }
+        RelocationInfo {
+            Address: 0x20
+            Extern: yes
+            Symbol: "_g0" (0x3)
+            PcRel: no
+            Length: 2
+            Type: ARM_RELOC_HALF (0x8)
+        }
+        RelocationInfo {
+            Address: 0x0
+            Extern: no
+            Section: 0xFFFFFF
+            PcRel: no
+            Length: 2
+            Type: ARM_RELOC_PAIR (0x1)
+        }
+        ScatteredRelocationInfo {
+            Address: 0x1C
+            PcRel: yes
+            Length: 2
+            Type: ARM_THUMB_RELOC_BR22 (0x6)
+            Value: 0x14
+        }
+        RelocationInfo {
+            Address: 0x18
+            Extern: no
+            Section: "__TEXT,__text" (0x1)
+            PcRel: yes
+            Length: 2
+            Type: ARM_THUMB_RELOC_BR22 (0x6)
+        }
+        RelocationInfo {
+            Address: 0x14
+            Extern: yes
+            Symbol: "_g0" (0x3)
+            PcRel: yes
+            Length: 2
+            Type: ARM_THUMB_RELOC_BR22 (0x6)
+        }
+        RelocationInfo {
+            Address: 0x10
+            Extern: yes
+            Symbol: "_g0" (0x3)
+            PcRel: no
+            Length: 1
+            Type: ARM_RELOC_HALF (0x8)
+        }
+        RelocationInfo {
+            Address: 0x14
+            Extern: no
+            Section: 0xFFFFFF
+            PcRel: no
+            Length: 1
+            Type: ARM_RELOC_PAIR (0x1)
+        }
+        RelocationInfo {
+            Address: 0xC
+            Extern: yes
+            Symbol: "_g0" (0x3)
+            PcRel: no
+            Length: 0
+            Type: ARM_RELOC_HALF (0x8)
+        }
+        RelocationInfo {
+            Address: 0x0
+            Extern: no
+            Section: 0xFFFFFF
+            PcRel: no
+            Length: 0
+            Type: ARM_RELOC_PAIR (0x1)
+        }
+        ScatteredRelocationInfo {
+            Address: 0x8
+            PcRel: yes
+            Length: 2
+            Type: ARM_RELOC_BR24 (0x5)
+            Value: 0x14
+        }
+        RelocationInfo {
+            Address: 0x4
+            Extern: yes
+            Symbol: "_g2" (0x2)
+            PcRel: yes
+            Length: 2
+            Type: ARM_RELOC_BR24 (0x5)
+        }
+        RelocationInfo {
+            Address: 0x0
+            Extern: yes
+            Symbol: "_g0" (0x3)
+            PcRel: yes
+            Length: 2
+            Type: ARM_RELOC_BR24 (0x5)
+        }
+    }
+    Section {
+        Index: 1
+        SectionName: "__data"
+        SegmentName: "__DATA"
+        Address: 0x28
+        Size: 0x14
+        Offset: 0x16C
+        Align: 0x0
+        RelocationOffset: 0x1F0
+        NumberOfRelocations: 0x7
+        Flags: S_REGULAR (0x0)
+        ScatteredRelocationInfo {
+            Address: 0x10
+            PcRel: no
+            Length: 2
+            Type: ARM_RELOC_SECTDIFF (0x2)
+            Value: 0x14
+        }
+        ScatteredRelocationInfo {
+            Address: 0x0
+            PcRel: no
+            Length: 2
+            Type: ARM_RELOC_PAIR (0x1)
+            Value: 0x0
+        }
+        ScatteredRelocationInfo {
+            Address: 0xC
+            PcRel: no
+            Length: 2
+            Type: ARM_RELOC_SECTDIFF (0x2)
+            Value: 0x14
+        }
+        ScatteredRelocationInfo {
+            Address: 0x0
+            PcRel: no
+            Length: 2
+            Type: ARM_RELOC_PAIR (0x1)
+            Value: 0x0
+        }
+        ScatteredRelocationInfo {
+            Address: 0x8
+            PcRel: no
+            Length: 2
+            Type: ARM_RELOC_VANILLA (0x0)
+            Value: 0x14
+        }
+        RelocationInfo {
+            Address: 0x4
+            Extern: no
+            Section: "__TEXT,__text" (0x1)
+            PcRel: no
+            Length: 2
+            Type: ARM_RELOC_VANILLA (0x0)
+        }
+        RelocationInfo {
+            Address: 0x0
+            Extern: yes
+            Symbol: "_g0" (0x3)
+            PcRel: no
+            Length: 2
+            Type: ARM_RELOC_VANILLA (0x0)
+        }
+    }
+}
+SymtabCommand {
+    Cmd: LC_SYMTAB (0x2)
+    CmdSize: 0x18
+    SymbolOffset: 0x228
+    NumberOfSymbols: 0x4
+    StringOffset: 0x258
+    StringSize: 0x14
+    Nlist {
+        Index: 0
+        String: "_g1" (0x9)
+        Type: N_SECT (0xE)
+        Section: "__TEXT,__text" (0x1)
+        Desc: 0x0
+        Value: 0x0
+    }
+    Nlist {
+        Index: 1
+        String: "_g3" (0x1)
+        Type: N_SECT (0xE)
+        Section: "__TEXT,__text" (0x1)
+        Desc: 0x0
+        Value: 0x14
+    }
+    Nlist {
+        Index: 2
+        String: "_g2" (0x5)
+        Type: 0xF
+            N_SECT (0xE)
+            N_EXT (0x1)
+        Section: "__TEXT,__text" (0x1)
+        Desc: 0x0
+        Value: 0x14
+    }
+    Nlist {
+        Index: 3
+        String: "_g0" (0xD)
+        Type: 0x1
+            N_UNDF (0x0)
+            N_EXT (0x1)
+        Section: "" (0x0)
+        Desc: 0x0
+            REFERENCE_FLAG_UNDEFINED_NON_LAZY (0x0)
+        Value: 0x0
+    }
+}
+DysymtabCommand {
+    Cmd: LC_DYSYMTAB (0xB)
+    CmdSize: 0x50
+    IndexOfLocalSymbols: 0
+    NumberOfLocalSymbols: 2
+    IndexOfExternallyDefinedSymbols: 2
+    NumberOfExternallyDefinedSymbols: 1
+    IndexOfUndefinedSymbols: 3
+    NumberOfUndefinedSymbols: 1
+    TocOffset: 0x0
+    NumberOfTocEntries: 0
+    ModuleTableOffset: 0x0
+    NumberOfModuleTableEntries: 0
+    ExternalRefSymbolOffset: 0x0
+    NumberOfExternalRefSymbols: 0
+    IndirectSymbolOffset: 0x0
+    NumberOfIndirectSymbols: 0
+    ExternalRelocationOffset: 0x0
+    NumberOfExternalRelocations: 0
+    LocalRelocationOffset: 0x0
+    NumberOfLocalRelocations: 0
+}

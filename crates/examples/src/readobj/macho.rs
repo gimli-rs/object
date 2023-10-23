@@ -201,7 +201,7 @@ fn print_macho<Mach: MachHeader<Endian = Endianness>>(
 
 fn print_mach_header<Mach: MachHeader>(p: &mut Printer<'_>, endian: Mach::Endian, header: &Mach) {
     p.group("MachHeader", |p| {
-        p.field_hex("Magic", header.magic().to_be());
+        p.field_hex("Magic", header.magic());
         print_cputype(p, header.cputype(endian), header.cpusubtype(endian));
         p.field_enum("FileType", header.filetype(endian), FLAGS_MH_FILETYPE);
         p.field("NumberOfCmds", header.ncmds(endian));

@@ -1,0 +1,28 @@
+Format: MachO Little-endian 64-bit
+Kind: Executable
+Architecture: Aarch64
+Flags: MachO { flags: 200085 }
+Relative Address Base: 0
+Entry Address: 3f68
+Mach UUID: [46, dd, c8, b7, f0, 47, 38, 6b, b2, 75, 9a, ec, a4, dc, de, 6f]
+Segment { name: "__PAGEZERO", address: 0, size: 100000000 }
+Segment { name: "__TEXT", address: 100000000, size: 4000 }
+Segment { name: "__DATA_CONST", address: 100004000, size: 4000 }
+Segment { name: "__LINKEDIT", address: 100008000, size: 4000 }
+1: Section { segment: "__TEXT", name: "__text", address: 100003f68, size: 34, align: 4, kind: Text, flags: MachO { flags: 80000400 } }
+2: Section { segment: "__TEXT", name: "__stubs", address: 100003f9c, size: c, align: 4, kind: Unknown, flags: MachO { flags: 80000408 } }
+3: Section { segment: "__TEXT", name: "__cstring", address: 100003fa8, size: d, align: 1, kind: ReadOnlyString, flags: MachO { flags: 2 } }
+4: Section { segment: "__TEXT", name: "__unwind_info", address: 100003fb8, size: 48, align: 4, kind: Unknown, flags: MachO { flags: 0 } }
+5: Section { segment: "__DATA_CONST", name: "__got", address: 100004000, size: 8, align: 8, kind: Unknown, flags: MachO { flags: 6 } }
+
+Symbols
+0: Symbol { name: "__mh_execute_header", address: 100000000, size: 0, kind: Text, section: Section(SectionIndex(1)), scope: Dynamic, weak: false, flags: MachO { n_desc: 10 } }
+1: Symbol { name: "_main", address: 100003f68, size: 0, kind: Text, section: Section(SectionIndex(1)), scope: Dynamic, weak: false, flags: MachO { n_desc: 0 } }
+2: Symbol { name: "_printf", address: 0, size: 0, kind: Unknown, section: Undefined, scope: Unknown, weak: false, flags: MachO { n_desc: 100 } }
+
+Dynamic symbols
+
+Import { library: "/usr/lib/libSystem.B.dylib", name: "_printf" }
+
+Export { name: "__mh_execute_header", address: 100000000 }
+Export { name: "_main", address: 100003f68 }

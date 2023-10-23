@@ -1,0 +1,35 @@
+Format: MachO Little-endian 64-bit
+Kind: Executable
+Architecture: X86_64
+Flags: MachO { flags: 200085 }
+Relative Address Base: 0
+Entry Address: 3f60
+Mach UUID: [ab, a4, a9, 90, 5c, 28, 30, b4, 84, b3, 89, 8e, 5d, 67, 4, be]
+Segment { name: "__PAGEZERO", address: 0, size: 100000000 }
+Segment { name: "__TEXT", address: 100000000, size: 4000 }
+Segment { name: "__DATA_CONST", address: 100004000, size: 4000 }
+Segment { name: "__DATA", address: 100008000, size: 4000 }
+Segment { name: "__LINKEDIT", address: 10000c000, size: 4000 }
+1: Section { segment: "__TEXT", name: "__text", address: 100003f60, size: 25, align: 10, kind: Text, flags: MachO { flags: 80000400 } }
+2: Section { segment: "__TEXT", name: "__stubs", address: 100003f86, size: 6, align: 2, kind: Unknown, flags: MachO { flags: 80000408 } }
+3: Section { segment: "__TEXT", name: "__stub_helper", address: 100003f8c, size: 1a, align: 4, kind: Unknown, flags: MachO { flags: 80000400 } }
+4: Section { segment: "__TEXT", name: "__cstring", address: 100003fa6, size: d, align: 1, kind: ReadOnlyString, flags: MachO { flags: 2 } }
+5: Section { segment: "__TEXT", name: "__unwind_info", address: 100003fb4, size: 48, align: 4, kind: Unknown, flags: MachO { flags: 0 } }
+6: Section { segment: "__DATA_CONST", name: "__got", address: 100004000, size: 8, align: 8, kind: Unknown, flags: MachO { flags: 6 } }
+7: Section { segment: "__DATA", name: "__la_symbol_ptr", address: 100008000, size: 8, align: 8, kind: Unknown, flags: MachO { flags: 7 } }
+8: Section { segment: "__DATA", name: "__data", address: 100008008, size: 8, align: 8, kind: Data, flags: MachO { flags: 0 } }
+
+Symbols
+0: Symbol { name: "__dyld_private", address: 100008008, size: 0, kind: Data, section: Section(SectionIndex(8)), scope: Compilation, weak: false, flags: MachO { n_desc: 0 } }
+1: Symbol { name: "__mh_execute_header", address: 100000000, size: 0, kind: Text, section: Section(SectionIndex(1)), scope: Dynamic, weak: false, flags: MachO { n_desc: 10 } }
+2: Symbol { name: "_main", address: 100003f60, size: 0, kind: Text, section: Section(SectionIndex(1)), scope: Dynamic, weak: false, flags: MachO { n_desc: 0 } }
+3: Symbol { name: "_printf", address: 0, size: 0, kind: Unknown, section: Undefined, scope: Unknown, weak: false, flags: MachO { n_desc: 100 } }
+4: Symbol { name: "dyld_stub_binder", address: 0, size: 0, kind: Unknown, section: Undefined, scope: Unknown, weak: false, flags: MachO { n_desc: 100 } }
+
+Dynamic symbols
+
+Import { library: "/usr/lib/libSystem.B.dylib", name: "_printf" }
+Import { library: "/usr/lib/libSystem.B.dylib", name: "dyld_stub_binder" }
+
+Export { name: "__mh_execute_header", address: 100000000 }
+Export { name: "_main", address: 100003f60 }
