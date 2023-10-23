@@ -1,0 +1,43 @@
+Format: MachO Little-endian 64-bit
+Kind: Relocatable
+Architecture: X86_64
+Flags: MachO { flags: 2000 }
+Relative Address Base: 0
+Entry Address: 0
+Segment { name: "", address: 0, size: 2f6 }
+1: Section { segment: "__TEXT", name: "__text", address: 0, size: 25, align: 10, kind: Text, flags: MachO { flags: 80000400 } }
+2: Section { segment: "__TEXT", name: "__cstring", address: 25, size: d, align: 1, kind: ReadOnlyString, flags: MachO { flags: 2 } }
+3: Section { segment: "__DWARF", name: "__debug_abbrev", address: 32, size: 3a, align: 1, kind: Debug, flags: MachO { flags: 2000000 } }
+4: Section { segment: "__DWARF", name: "__debug_info", address: 6c, size: 53, align: 1, kind: Debug, flags: MachO { flags: 2000000 } }
+5: Section { segment: "__DWARF", name: "__debug_str", address: bf, size: c8, align: 1, kind: Debug, flags: MachO { flags: 2000000 } }
+6: Section { segment: "__DWARF", name: "__apple_names", address: 187, size: 3c, align: 1, kind: Debug, flags: MachO { flags: 2000000 } }
+7: Section { segment: "__DWARF", name: "__apple_objc", address: 1c3, size: 24, align: 1, kind: Debug, flags: MachO { flags: 2000000 } }
+8: Section { segment: "__DWARF", name: "__apple_namespac", address: 1e7, size: 24, align: 1, kind: Debug, flags: MachO { flags: 2000000 } }
+9: Section { segment: "__DWARF", name: "__apple_types", address: 20b, size: 47, align: 1, kind: Debug, flags: MachO { flags: 2000000 } }
+10: Section { segment: "__LD", name: "__compact_unwind", address: 258, size: 20, align: 8, kind: Unknown, flags: MachO { flags: 2000000 } }
+11: Section { segment: "__TEXT", name: "__eh_frame", address: 278, size: 40, align: 8, kind: ReadOnlyData, flags: MachO { flags: 6800000b } }
+12: Section { segment: "__DWARF", name: "__debug_line", address: 2b8, size: 3e, align: 1, kind: Debug, flags: MachO { flags: 2000000 } }
+
+Symbols
+0: Symbol { name: "_main", address: 0, size: 0, kind: Text, section: Section(SectionIndex(1)), scope: Dynamic, weak: false, flags: MachO { n_desc: 0 } }
+1: Symbol { name: "_printf", address: 0, size: 0, kind: Unknown, section: Undefined, scope: Unknown, weak: false, flags: MachO { n_desc: 0 } }
+
+__text relocations
+(19, Relocation { kind: Relative, encoding: X86Branch, size: 20, target: Symbol(SymbolIndex(1)), addend: fffffffffffffffc, implicit_addend: true })
+(12, Relocation { kind: Relative, encoding: X86RipRelative, size: 20, target: Section(SectionIndex(2)), addend: fffffffffffffffc, implicit_addend: true })
+
+__debug_info relocations
+(33, Relocation { kind: Absolute, encoding: Generic, size: 40, target: Section(SectionIndex(1)), addend: 0, implicit_addend: true })
+(26, Relocation { kind: Absolute, encoding: Generic, size: 40, target: Section(SectionIndex(1)), addend: 0, implicit_addend: true })
+
+__compact_unwind relocations
+(0, Relocation { kind: Absolute, encoding: Generic, size: 40, target: Section(SectionIndex(1)), addend: 0, implicit_addend: true })
+
+__debug_line relocations
+(2b, Relocation { kind: Absolute, encoding: Generic, size: 40, target: Section(SectionIndex(1)), addend: 0, implicit_addend: true })
+
+Dynamic symbols
+
+Import { library: "", name: "_printf" }
+
+Export { name: "_main", address: 0 }

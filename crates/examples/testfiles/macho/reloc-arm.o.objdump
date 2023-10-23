@@ -1,0 +1,39 @@
+Format: MachO Little-endian 32-bit
+Kind: Relocatable
+Architecture: Arm
+Flags: MachO { flags: 2000 }
+Relative Address Base: 0
+Entry Address: 0
+Segment { name: "", address: 0, size: 3c }
+1: Section { segment: "__TEXT", name: "__text", address: 0, size: 28, align: 4, kind: Text, flags: MachO { flags: 80000400 } }
+2: Section { segment: "__DATA", name: "__data", address: 28, size: 14, align: 1, kind: Data, flags: MachO { flags: 0 } }
+
+Symbols
+0: Symbol { name: "_g1", address: 0, size: 0, kind: Text, section: Section(SectionIndex(1)), scope: Compilation, weak: false, flags: MachO { n_desc: 0 } }
+1: Symbol { name: "_g3", address: 14, size: 0, kind: Text, section: Section(SectionIndex(1)), scope: Compilation, weak: false, flags: MachO { n_desc: 0 } }
+2: Symbol { name: "_g2", address: 14, size: 0, kind: Text, section: Section(SectionIndex(1)), scope: Dynamic, weak: false, flags: MachO { n_desc: 0 } }
+3: Symbol { name: "_g0", address: 0, size: 0, kind: Unknown, section: Undefined, scope: Unknown, weak: false, flags: MachO { n_desc: 0 } }
+
+__text relocations
+(24, Relocation { kind: MachO { value: 8, relative: false }, encoding: Generic, size: 40, target: Symbol(SymbolIndex(3)), addend: 0, implicit_addend: true })
+(14, Relocation { kind: MachO { value: 1, relative: false }, encoding: Generic, size: 40, target: Section(SectionIndex(ffffff)), addend: 0, implicit_addend: true })
+(20, Relocation { kind: MachO { value: 8, relative: false }, encoding: Generic, size: 20, target: Symbol(SymbolIndex(3)), addend: 0, implicit_addend: true })
+(0, Relocation { kind: MachO { value: 1, relative: false }, encoding: Generic, size: 20, target: Section(SectionIndex(ffffff)), addend: 0, implicit_addend: true })
+(18, Relocation { kind: MachO { value: 6, relative: true }, encoding: Generic, size: 20, target: Section(SectionIndex(1)), addend: fffffffffffffffc, implicit_addend: true })
+(14, Relocation { kind: MachO { value: 6, relative: true }, encoding: Generic, size: 20, target: Symbol(SymbolIndex(3)), addend: fffffffffffffffc, implicit_addend: true })
+(10, Relocation { kind: MachO { value: 8, relative: false }, encoding: Generic, size: 10, target: Symbol(SymbolIndex(3)), addend: 0, implicit_addend: true })
+(14, Relocation { kind: MachO { value: 1, relative: false }, encoding: Generic, size: 10, target: Section(SectionIndex(ffffff)), addend: 0, implicit_addend: true })
+(c, Relocation { kind: MachO { value: 8, relative: false }, encoding: Generic, size: 8, target: Symbol(SymbolIndex(3)), addend: 0, implicit_addend: true })
+(0, Relocation { kind: MachO { value: 1, relative: false }, encoding: Generic, size: 8, target: Section(SectionIndex(ffffff)), addend: 0, implicit_addend: true })
+(4, Relocation { kind: MachO { value: 5, relative: true }, encoding: Generic, size: 20, target: Symbol(SymbolIndex(2)), addend: fffffffffffffffc, implicit_addend: true })
+(0, Relocation { kind: MachO { value: 5, relative: true }, encoding: Generic, size: 20, target: Symbol(SymbolIndex(3)), addend: fffffffffffffffc, implicit_addend: true })
+
+__data relocations
+(4, Relocation { kind: Absolute, encoding: Generic, size: 20, target: Section(SectionIndex(1)), addend: 0, implicit_addend: true })
+(0, Relocation { kind: Absolute, encoding: Generic, size: 20, target: Symbol(SymbolIndex(3)), addend: 0, implicit_addend: true })
+
+Dynamic symbols
+
+Import { library: "", name: "_g0" }
+
+Export { name: "_g2", address: 14 }

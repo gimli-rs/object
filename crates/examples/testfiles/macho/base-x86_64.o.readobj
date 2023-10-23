@@ -1,0 +1,170 @@
+Format: Mach-O 64-bit
+MachHeader {
+    Magic: 0xCFFAEDFE
+    CpuType: CPU_TYPE_X86_64 (0x1000007)
+    CpuSubtype: 0x3
+        CPU_SUBTYPE_X86_64_ALL (0x3)
+    FileType: MH_OBJECT (0x1)
+    NumberOfCmds: 4
+    SizeOfCmds: 0x208
+    Flags: MH_SUBSECTIONS_VIA_SYMBOLS (0x2000)
+}
+SegmentCommand {
+    Cmd: LC_SEGMENT_64 (0x19)
+    CmdSize: 0x188
+    SegmentName: ""
+    VmAddress: 0x0
+    VmSize: 0x98
+    FileOffset: 0x228
+    FileSize: 0x98
+    MaxProt: 0x7
+        VM_PROT_READ (0x1)
+        VM_PROT_WRITE (0x2)
+        VM_PROT_EXECUTE (0x4)
+    InitProt: 0x7
+        VM_PROT_READ (0x1)
+        VM_PROT_WRITE (0x2)
+        VM_PROT_EXECUTE (0x4)
+    NumberOfSections: 4
+    Flags: 0x0
+    Section {
+        Index: 0
+        SectionName: "__text"
+        SegmentName: "__TEXT"
+        Address: 0x0
+        Size: 0x25
+        Offset: 0x228
+        Align: 0x4
+        RelocationOffset: 0x2C0
+        NumberOfRelocations: 0x2
+        Flags: 0x80000400
+            S_REGULAR (0x0)
+            S_ATTR_PURE_INSTRUCTIONS (0x80000000)
+            S_ATTR_SOME_INSTRUCTIONS (0x400)
+        RelocationInfo {
+            Address: 0x19
+            Extern: yes
+            Symbol: "_printf" (0x1)
+            PcRel: yes
+            Length: 2
+            Type: X86_64_RELOC_BRANCH (0x2)
+        }
+        RelocationInfo {
+            Address: 0x12
+            Extern: no
+            Section: "__TEXT,__cstring" (0x2)
+            PcRel: yes
+            Length: 2
+            Type: X86_64_RELOC_SIGNED (0x1)
+        }
+    }
+    Section {
+        Index: 1
+        SectionName: "__cstring"
+        SegmentName: "__TEXT"
+        Address: 0x25
+        Size: 0xD
+        Offset: 0x24D
+        Align: 0x0
+        RelocationOffset: 0x0
+        NumberOfRelocations: 0x0
+        Flags: S_CSTRING_LITERALS (0x2)
+    }
+    Section {
+        Index: 2
+        SectionName: "__compact_unwind"
+        SegmentName: "__LD"
+        Address: 0x38
+        Size: 0x20
+        Offset: 0x260
+        Align: 0x3
+        RelocationOffset: 0x2D0
+        NumberOfRelocations: 0x1
+        Flags: 0x2000000
+            S_REGULAR (0x0)
+            S_ATTR_DEBUG (0x2000000)
+        RelocationInfo {
+            Address: 0x0
+            Extern: no
+            Section: "__TEXT,__text" (0x1)
+            PcRel: no
+            Length: 3
+            Type: X86_64_RELOC_UNSIGNED (0x0)
+        }
+    }
+    Section {
+        Index: 3
+        SectionName: "__eh_frame"
+        SegmentName: "__TEXT"
+        Address: 0x58
+        Size: 0x40
+        Offset: 0x280
+        Align: 0x3
+        RelocationOffset: 0x0
+        NumberOfRelocations: 0x0
+        Flags: 0x6800000B
+            S_COALESCED (0xB)
+            S_ATTR_NO_TOC (0x40000000)
+            S_ATTR_STRIP_STATIC_SYMS (0x20000000)
+            S_ATTR_LIVE_SUPPORT (0x8000000)
+    }
+}
+BuildVersionCommand {
+    Cmd: LC_BUILD_VERSION (0x32)
+    CmdSize: 0x18
+    Platform: PLATFORM_MACOS (0x1)
+    MinOs: 0xC0000
+    Sdk: 0xD0100
+    NumberOfTools: 0x0
+}
+SymtabCommand {
+    Cmd: LC_SYMTAB (0x2)
+    CmdSize: 0x18
+    SymbolOffset: 0x2D8
+    NumberOfSymbols: 0x2
+    StringOffset: 0x2F8
+    StringSize: 0x10
+    Nlist {
+        Index: 0
+        String: "_main" (0x1)
+        Type: 0xF
+            N_SECT (0xE)
+            N_EXT (0x1)
+        Section: "__TEXT,__text" (0x1)
+        Desc: 0x0
+        Value: 0x0
+    }
+    Nlist {
+        Index: 1
+        String: "_printf" (0x7)
+        Type: 0x1
+            N_UNDF (0x0)
+            N_EXT (0x1)
+        Section: "" (0x0)
+        Desc: 0x0
+            REFERENCE_FLAG_UNDEFINED_NON_LAZY (0x0)
+        Value: 0x0
+    }
+}
+DysymtabCommand {
+    Cmd: LC_DYSYMTAB (0xB)
+    CmdSize: 0x50
+    IndexOfLocalSymbols: 0
+    NumberOfLocalSymbols: 0
+    IndexOfExternallyDefinedSymbols: 0
+    NumberOfExternallyDefinedSymbols: 1
+    IndexOfUndefinedSymbols: 1
+    NumberOfUndefinedSymbols: 1
+    TocOffset: 0x0
+    NumberOfTocEntries: 0
+    ModuleTableOffset: 0x0
+    NumberOfModuleTableEntries: 0
+    ExternalRefSymbolOffset: 0x0
+    NumberOfExternalRefSymbols: 0
+    IndirectSymbolOffset: 0x0
+    NumberOfIndirectSymbols: 0
+    ExternalRelocationOffset: 0x0
+    NumberOfExternalRelocations: 0
+    LocalRelocationOffset: 0x0
+    NumberOfLocalRelocations: 0
+}

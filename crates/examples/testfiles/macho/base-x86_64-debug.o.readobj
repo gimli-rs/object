@@ -1,0 +1,306 @@
+Format: Mach-O 64-bit
+MachHeader {
+    Magic: 0xCFFAEDFE
+    CpuType: CPU_TYPE_X86_64 (0x1000007)
+    CpuSubtype: 0x3
+        CPU_SUBTYPE_X86_64_ALL (0x3)
+    FileType: MH_OBJECT (0x1)
+    NumberOfCmds: 4
+    SizeOfCmds: 0x488
+    Flags: MH_SUBSECTIONS_VIA_SYMBOLS (0x2000)
+}
+SegmentCommand {
+    Cmd: LC_SEGMENT_64 (0x19)
+    CmdSize: 0x408
+    SegmentName: ""
+    VmAddress: 0x0
+    VmSize: 0x2F6
+    FileOffset: 0x4A8
+    FileSize: 0x2F6
+    MaxProt: 0x7
+        VM_PROT_READ (0x1)
+        VM_PROT_WRITE (0x2)
+        VM_PROT_EXECUTE (0x4)
+    InitProt: 0x7
+        VM_PROT_READ (0x1)
+        VM_PROT_WRITE (0x2)
+        VM_PROT_EXECUTE (0x4)
+    NumberOfSections: 12
+    Flags: 0x0
+    Section {
+        Index: 0
+        SectionName: "__text"
+        SegmentName: "__TEXT"
+        Address: 0x0
+        Size: 0x25
+        Offset: 0x4A8
+        Align: 0x4
+        RelocationOffset: 0x7A0
+        NumberOfRelocations: 0x2
+        Flags: 0x80000400
+            S_REGULAR (0x0)
+            S_ATTR_PURE_INSTRUCTIONS (0x80000000)
+            S_ATTR_SOME_INSTRUCTIONS (0x400)
+        RelocationInfo {
+            Address: 0x19
+            Extern: yes
+            Symbol: "_printf" (0x1)
+            PcRel: yes
+            Length: 2
+            Type: X86_64_RELOC_BRANCH (0x2)
+        }
+        RelocationInfo {
+            Address: 0x12
+            Extern: no
+            Section: "__TEXT,__cstring" (0x2)
+            PcRel: yes
+            Length: 2
+            Type: X86_64_RELOC_SIGNED (0x1)
+        }
+    }
+    Section {
+        Index: 1
+        SectionName: "__cstring"
+        SegmentName: "__TEXT"
+        Address: 0x25
+        Size: 0xD
+        Offset: 0x4CD
+        Align: 0x0
+        RelocationOffset: 0x0
+        NumberOfRelocations: 0x0
+        Flags: S_CSTRING_LITERALS (0x2)
+    }
+    Section {
+        Index: 2
+        SectionName: "__debug_abbrev"
+        SegmentName: "__DWARF"
+        Address: 0x32
+        Size: 0x3A
+        Offset: 0x4DA
+        Align: 0x0
+        RelocationOffset: 0x0
+        NumberOfRelocations: 0x0
+        Flags: 0x2000000
+            S_REGULAR (0x0)
+            S_ATTR_DEBUG (0x2000000)
+    }
+    Section {
+        Index: 3
+        SectionName: "__debug_info"
+        SegmentName: "__DWARF"
+        Address: 0x6C
+        Size: 0x53
+        Offset: 0x514
+        Align: 0x0
+        RelocationOffset: 0x7B0
+        NumberOfRelocations: 0x2
+        Flags: 0x2000000
+            S_REGULAR (0x0)
+            S_ATTR_DEBUG (0x2000000)
+        RelocationInfo {
+            Address: 0x33
+            Extern: no
+            Section: "__TEXT,__text" (0x1)
+            PcRel: no
+            Length: 3
+            Type: X86_64_RELOC_UNSIGNED (0x0)
+        }
+        RelocationInfo {
+            Address: 0x26
+            Extern: no
+            Section: "__TEXT,__text" (0x1)
+            PcRel: no
+            Length: 3
+            Type: X86_64_RELOC_UNSIGNED (0x0)
+        }
+    }
+    Section {
+        Index: 4
+        SectionName: "__debug_str"
+        SegmentName: "__DWARF"
+        Address: 0xBF
+        Size: 0xC8
+        Offset: 0x567
+        Align: 0x0
+        RelocationOffset: 0x0
+        NumberOfRelocations: 0x0
+        Flags: 0x2000000
+            S_REGULAR (0x0)
+            S_ATTR_DEBUG (0x2000000)
+    }
+    Section {
+        Index: 5
+        SectionName: "__apple_names"
+        SegmentName: "__DWARF"
+        Address: 0x187
+        Size: 0x3C
+        Offset: 0x62F
+        Align: 0x0
+        RelocationOffset: 0x0
+        NumberOfRelocations: 0x0
+        Flags: 0x2000000
+            S_REGULAR (0x0)
+            S_ATTR_DEBUG (0x2000000)
+    }
+    Section {
+        Index: 6
+        SectionName: "__apple_objc"
+        SegmentName: "__DWARF"
+        Address: 0x1C3
+        Size: 0x24
+        Offset: 0x66B
+        Align: 0x0
+        RelocationOffset: 0x0
+        NumberOfRelocations: 0x0
+        Flags: 0x2000000
+            S_REGULAR (0x0)
+            S_ATTR_DEBUG (0x2000000)
+    }
+    Section {
+        Index: 7
+        SectionName: "__apple_namespac"
+        SegmentName: "__DWARF"
+        Address: 0x1E7
+        Size: 0x24
+        Offset: 0x68F
+        Align: 0x0
+        RelocationOffset: 0x0
+        NumberOfRelocations: 0x0
+        Flags: 0x2000000
+            S_REGULAR (0x0)
+            S_ATTR_DEBUG (0x2000000)
+    }
+    Section {
+        Index: 8
+        SectionName: "__apple_types"
+        SegmentName: "__DWARF"
+        Address: 0x20B
+        Size: 0x47
+        Offset: 0x6B3
+        Align: 0x0
+        RelocationOffset: 0x0
+        NumberOfRelocations: 0x0
+        Flags: 0x2000000
+            S_REGULAR (0x0)
+            S_ATTR_DEBUG (0x2000000)
+    }
+    Section {
+        Index: 9
+        SectionName: "__compact_unwind"
+        SegmentName: "__LD"
+        Address: 0x258
+        Size: 0x20
+        Offset: 0x700
+        Align: 0x3
+        RelocationOffset: 0x7C0
+        NumberOfRelocations: 0x1
+        Flags: 0x2000000
+            S_REGULAR (0x0)
+            S_ATTR_DEBUG (0x2000000)
+        RelocationInfo {
+            Address: 0x0
+            Extern: no
+            Section: "__TEXT,__text" (0x1)
+            PcRel: no
+            Length: 3
+            Type: X86_64_RELOC_UNSIGNED (0x0)
+        }
+    }
+    Section {
+        Index: 10
+        SectionName: "__eh_frame"
+        SegmentName: "__TEXT"
+        Address: 0x278
+        Size: 0x40
+        Offset: 0x720
+        Align: 0x3
+        RelocationOffset: 0x0
+        NumberOfRelocations: 0x0
+        Flags: 0x6800000B
+            S_COALESCED (0xB)
+            S_ATTR_NO_TOC (0x40000000)
+            S_ATTR_STRIP_STATIC_SYMS (0x20000000)
+            S_ATTR_LIVE_SUPPORT (0x8000000)
+    }
+    Section {
+        Index: 11
+        SectionName: "__debug_line"
+        SegmentName: "__DWARF"
+        Address: 0x2B8
+        Size: 0x3E
+        Offset: 0x760
+        Align: 0x0
+        RelocationOffset: 0x7C8
+        NumberOfRelocations: 0x1
+        Flags: 0x2000000
+            S_REGULAR (0x0)
+            S_ATTR_DEBUG (0x2000000)
+        RelocationInfo {
+            Address: 0x2B
+            Extern: no
+            Section: "__TEXT,__text" (0x1)
+            PcRel: no
+            Length: 3
+            Type: X86_64_RELOC_UNSIGNED (0x0)
+        }
+    }
+}
+BuildVersionCommand {
+    Cmd: LC_BUILD_VERSION (0x32)
+    CmdSize: 0x18
+    Platform: PLATFORM_MACOS (0x1)
+    MinOs: 0xC0000
+    Sdk: 0xD0100
+    NumberOfTools: 0x0
+}
+SymtabCommand {
+    Cmd: LC_SYMTAB (0x2)
+    CmdSize: 0x18
+    SymbolOffset: 0x7D0
+    NumberOfSymbols: 0x2
+    StringOffset: 0x7F0
+    StringSize: 0x10
+    Nlist {
+        Index: 0
+        String: "_main" (0x1)
+        Type: 0xF
+            N_SECT (0xE)
+            N_EXT (0x1)
+        Section: "__TEXT,__text" (0x1)
+        Desc: 0x0
+        Value: 0x0
+    }
+    Nlist {
+        Index: 1
+        String: "_printf" (0x7)
+        Type: 0x1
+            N_UNDF (0x0)
+            N_EXT (0x1)
+        Section: "" (0x0)
+        Desc: 0x0
+            REFERENCE_FLAG_UNDEFINED_NON_LAZY (0x0)
+        Value: 0x0
+    }
+}
+DysymtabCommand {
+    Cmd: LC_DYSYMTAB (0xB)
+    CmdSize: 0x50
+    IndexOfLocalSymbols: 0
+    NumberOfLocalSymbols: 0
+    IndexOfExternallyDefinedSymbols: 0
+    NumberOfExternallyDefinedSymbols: 1
+    IndexOfUndefinedSymbols: 1
+    NumberOfUndefinedSymbols: 1
+    TocOffset: 0x0
+    NumberOfTocEntries: 0
+    ModuleTableOffset: 0x0
+    NumberOfModuleTableEntries: 0
+    ExternalRefSymbolOffset: 0x0
+    NumberOfExternalRefSymbols: 0
+    IndirectSymbolOffset: 0x0
+    NumberOfIndirectSymbols: 0
+    ExternalRelocationOffset: 0x0
+    NumberOfExternalRelocations: 0
+    LocalRelocationOffset: 0x0
+    NumberOfLocalRelocations: 0
+}

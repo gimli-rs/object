@@ -1,0 +1,272 @@
+Format: Mach-O 64-bit
+MachHeader {
+    Magic: 0xCFFAEDFE
+    CpuType: CPU_TYPE_ARM64 (0x100000C)
+    CpuSubtype: 0x0
+        CPU_SUBTYPE_ARM64_ALL (0x0)
+    FileType: MH_EXECUTE (0x2)
+    NumberOfCmds: 17
+    SizeOfCmds: 0x420
+    Flags: 0x200085
+}
+SegmentCommand {
+    Cmd: LC_SEGMENT_64 (0x19)
+    CmdSize: 0x48
+    SegmentName: "__PAGEZERO"
+    VmAddress: 0x0
+    VmSize: 0x100000000
+    FileOffset: 0x0
+    FileSize: 0x0
+    MaxProt: 0x0
+    InitProt: 0x0
+    NumberOfSections: 0
+    Flags: 0x0
+}
+SegmentCommand {
+    Cmd: LC_SEGMENT_64 (0x19)
+    CmdSize: 0x188
+    SegmentName: "__TEXT"
+    VmAddress: 0x100000000
+    VmSize: 0x4000
+    FileOffset: 0x0
+    FileSize: 0x4000
+    MaxProt: 0x5
+        VM_PROT_READ (0x1)
+        VM_PROT_EXECUTE (0x4)
+    InitProt: 0x5
+        VM_PROT_READ (0x1)
+        VM_PROT_EXECUTE (0x4)
+    NumberOfSections: 4
+    Flags: 0x0
+    Section {
+        Index: 0
+        SectionName: "__text"
+        SegmentName: "__TEXT"
+        Address: 0x100003F68
+        Size: 0x34
+        Offset: 0x3F68
+        Align: 0x2
+        RelocationOffset: 0x0
+        NumberOfRelocations: 0x0
+        Flags: 0x80000400
+            S_REGULAR (0x0)
+            S_ATTR_PURE_INSTRUCTIONS (0x80000000)
+            S_ATTR_SOME_INSTRUCTIONS (0x400)
+    }
+    Section {
+        Index: 1
+        SectionName: "__stubs"
+        SegmentName: "__TEXT"
+        Address: 0x100003F9C
+        Size: 0xC
+        Offset: 0x3F9C
+        Align: 0x2
+        RelocationOffset: 0x0
+        NumberOfRelocations: 0x0
+        Flags: 0x80000408
+            S_SYMBOL_STUBS (0x8)
+            S_ATTR_PURE_INSTRUCTIONS (0x80000000)
+            S_ATTR_SOME_INSTRUCTIONS (0x400)
+    }
+    Section {
+        Index: 2
+        SectionName: "__cstring"
+        SegmentName: "__TEXT"
+        Address: 0x100003FA8
+        Size: 0xD
+        Offset: 0x3FA8
+        Align: 0x0
+        RelocationOffset: 0x0
+        NumberOfRelocations: 0x0
+        Flags: S_CSTRING_LITERALS (0x2)
+    }
+    Section {
+        Index: 3
+        SectionName: "__unwind_info"
+        SegmentName: "__TEXT"
+        Address: 0x100003FB8
+        Size: 0x48
+        Offset: 0x3FB8
+        Align: 0x2
+        RelocationOffset: 0x0
+        NumberOfRelocations: 0x0
+        Flags: S_REGULAR (0x0)
+    }
+}
+SegmentCommand {
+    Cmd: LC_SEGMENT_64 (0x19)
+    CmdSize: 0x98
+    SegmentName: "__DATA_CONST"
+    VmAddress: 0x100004000
+    VmSize: 0x4000
+    FileOffset: 0x4000
+    FileSize: 0x4000
+    MaxProt: 0x3
+        VM_PROT_READ (0x1)
+        VM_PROT_WRITE (0x2)
+    InitProt: 0x3
+        VM_PROT_READ (0x1)
+        VM_PROT_WRITE (0x2)
+    NumberOfSections: 1
+    Flags: 0x10
+        SG_READ_ONLY (0x10)
+    Section {
+        Index: 4
+        SectionName: "__got"
+        SegmentName: "__DATA_CONST"
+        Address: 0x100004000
+        Size: 0x8
+        Offset: 0x4000
+        Align: 0x3
+        RelocationOffset: 0x0
+        NumberOfRelocations: 0x0
+        Flags: S_NON_LAZY_SYMBOL_POINTERS (0x6)
+    }
+}
+SegmentCommand {
+    Cmd: LC_SEGMENT_64 (0x19)
+    CmdSize: 0x48
+    SegmentName: "__LINKEDIT"
+    VmAddress: 0x100008000
+    VmSize: 0x4000
+    FileOffset: 0x8000
+    FileSize: 0x291
+    MaxProt: 0x1
+        VM_PROT_READ (0x1)
+    InitProt: 0x1
+        VM_PROT_READ (0x1)
+    NumberOfSections: 0
+    Flags: 0x0
+}
+LinkeditDataCommand {
+    Cmd: LC_DYLD_CHAINED_FIXUPS (0x80000034)
+    CmdSize: 0x10
+    DataOffset: 0x8000
+    DataSize: 0x60
+}
+LinkeditDataCommand {
+    Cmd: LC_DYLD_EXPORTS_TRIE (0x80000033)
+    CmdSize: 0x10
+    DataOffset: 0x8060
+    DataSize: 0x30
+}
+SymtabCommand {
+    Cmd: LC_SYMTAB (0x2)
+    CmdSize: 0x18
+    SymbolOffset: 0x8098
+    NumberOfSymbols: 0x3
+    StringOffset: 0x80D0
+    StringSize: 0x28
+    Nlist {
+        Index: 0
+        String: "__mh_execute_header" (0x2)
+        Type: 0xF
+            N_SECT (0xE)
+            N_EXT (0x1)
+        Section: "__TEXT,__text" (0x1)
+        Desc: 0x10
+            REFERENCED_DYNAMICALLY (0x10)
+        Value: 0x100000000
+    }
+    Nlist {
+        Index: 1
+        String: "_main" (0x16)
+        Type: 0xF
+            N_SECT (0xE)
+            N_EXT (0x1)
+        Section: "__TEXT,__text" (0x1)
+        Desc: 0x0
+        Value: 0x100003F68
+    }
+    Nlist {
+        Index: 2
+        String: "_printf" (0x1C)
+        Type: 0x1
+            N_UNDF (0x0)
+            N_EXT (0x1)
+        Section: "" (0x0)
+        Desc: 0x100
+            REFERENCE_FLAG_UNDEFINED_NON_LAZY (0x0)
+            N_SYMBOL_RESOLVER (0x100)
+        Value: 0x0
+    }
+}
+DysymtabCommand {
+    Cmd: LC_DYSYMTAB (0xB)
+    CmdSize: 0x50
+    IndexOfLocalSymbols: 0
+    NumberOfLocalSymbols: 0
+    IndexOfExternallyDefinedSymbols: 0
+    NumberOfExternallyDefinedSymbols: 2
+    IndexOfUndefinedSymbols: 2
+    NumberOfUndefinedSymbols: 1
+    TocOffset: 0x0
+    NumberOfTocEntries: 0
+    ModuleTableOffset: 0x0
+    NumberOfModuleTableEntries: 0
+    ExternalRefSymbolOffset: 0x0
+    NumberOfExternalRefSymbols: 0
+    IndirectSymbolOffset: 0x80C8
+    NumberOfIndirectSymbols: 2
+    ExternalRelocationOffset: 0x0
+    NumberOfExternalRelocations: 0
+    LocalRelocationOffset: 0x0
+    NumberOfLocalRelocations: 0
+}
+DylinkerCommand {
+    Cmd: LC_LOAD_DYLINKER (0xE)
+    CmdSize: 0x20
+    Name: "/usr/lib/dyld" (0xC)
+}
+UuidCommand {
+    Cmd: LC_UUID (0x1B)
+    CmdSize: 0x18
+    Uuid: [46, DD, C8, B7, F0, 47, 38, 6B, B2, 75, 9A, EC, A4, DC, DE, 6F]
+}
+BuildVersionCommand {
+    Cmd: LC_BUILD_VERSION (0x32)
+    CmdSize: 0x20
+    Platform: PLATFORM_MACOS (0x1)
+    MinOs: 0xD0000
+    Sdk: 0xD0300
+    NumberOfTools: 0x1
+}
+SourceVersionCommand {
+    Cmd: LC_SOURCE_VERSION (0x2A)
+    CmdSize: 0x10
+    Version: 0x0
+}
+EntryPointCommand {
+    Cmd: LC_MAIN (0x80000028)
+    CmdSize: 0x18
+    EntryOffset: 0x3F68
+    StackSize: 0x0
+}
+DylibCommand {
+    Cmd: LC_LOAD_DYLIB (0xC)
+    CmdSize: 0x38
+    Dylib {
+        Name: "/usr/lib/libSystem.B.dylib" (0x18)
+        Timestamp: 2
+        CurrentVersion: 0x5276403
+        CompatibilityVersion: 0x10000
+    }
+}
+LinkeditDataCommand {
+    Cmd: LC_FUNCTION_STARTS (0x26)
+    CmdSize: 0x10
+    DataOffset: 0x8090
+    DataSize: 0x8
+}
+LinkeditDataCommand {
+    Cmd: LC_DATA_IN_CODE (0x29)
+    CmdSize: 0x10
+    DataOffset: 0x8098
+    DataSize: 0x0
+}
+LinkeditDataCommand {
+    Cmd: LC_CODE_SIGNATURE (0x1D)
+    CmdSize: 0x10
+    DataOffset: 0x8100
+    DataSize: 0x191
+}

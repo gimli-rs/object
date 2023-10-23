@@ -1,0 +1,293 @@
+Format: Mach-O 64-bit
+MachHeader {
+    Magic: 0xCFFAEDFE
+    CpuType: CPU_TYPE_ARM64 (0x100000C)
+    CpuSubtype: 0x0
+        CPU_SUBTYPE_ARM64_ALL (0x0)
+    FileType: MH_OBJECT (0x1)
+    NumberOfCmds: 3
+    SizeOfCmds: 0x150
+    Flags: MH_SUBSECTIONS_VIA_SYMBOLS (0x2000)
+}
+SegmentCommand {
+    Cmd: LC_SEGMENT_64 (0x19)
+    CmdSize: 0xE8
+    SegmentName: ""
+    VmAddress: 0x0
+    VmSize: 0x48
+    FileOffset: 0x170
+    FileSize: 0x48
+    MaxProt: 0x7
+        VM_PROT_READ (0x1)
+        VM_PROT_WRITE (0x2)
+        VM_PROT_EXECUTE (0x4)
+    InitProt: 0x7
+        VM_PROT_READ (0x1)
+        VM_PROT_WRITE (0x2)
+        VM_PROT_EXECUTE (0x4)
+    NumberOfSections: 2
+    Flags: 0x0
+    Section {
+        Index: 0
+        SectionName: "__text"
+        SegmentName: "__TEXT"
+        Address: 0x0
+        Size: 0x28
+        Offset: 0x170
+        Align: 0x0
+        RelocationOffset: 0x1B8
+        NumberOfRelocations: 0xD
+        Flags: 0x80000400
+            S_REGULAR (0x0)
+            S_ATTR_PURE_INSTRUCTIONS (0x80000000)
+            S_ATTR_SOME_INSTRUCTIONS (0x400)
+        RelocationInfo {
+            Address: 0x24
+            Extern: yes
+            Symbol: "_g0" (0x3)
+            PcRel: no
+            Length: 2
+            Type: ARM64_RELOC_TLVP_LOAD_PAGEOFF12 (0x9)
+        }
+        RelocationInfo {
+            Address: 0x20
+            Extern: yes
+            Symbol: "_g0" (0x3)
+            PcRel: yes
+            Length: 2
+            Type: ARM64_RELOC_TLVP_LOAD_PAGE21 (0x8)
+        }
+        RelocationInfo {
+            Address: 0x1C
+            Extern: yes
+            Symbol: "_g0" (0x3)
+            PcRel: no
+            Length: 2
+            Type: ARM64_RELOC_GOT_LOAD_PAGEOFF12 (0x6)
+        }
+        RelocationInfo {
+            Address: 0x18
+            Extern: yes
+            Symbol: "_g0" (0x3)
+            PcRel: yes
+            Length: 2
+            Type: ARM64_RELOC_GOT_LOAD_PAGE21 (0x5)
+        }
+        RelocationInfo {
+            Address: 0x14
+            Extern: no
+            Section: 0x14
+            PcRel: no
+            Length: 2
+            Type: ARM64_RELOC_ADDEND (0xA)
+        }
+        RelocationInfo {
+            Address: 0x14
+            Extern: yes
+            Symbol: "_g0" (0x3)
+            PcRel: no
+            Length: 2
+            Type: ARM64_RELOC_PAGEOFF12 (0x4)
+        }
+        RelocationInfo {
+            Address: 0x10
+            Extern: no
+            Section: 0x14
+            PcRel: no
+            Length: 2
+            Type: ARM64_RELOC_ADDEND (0xA)
+        }
+        RelocationInfo {
+            Address: 0x10
+            Extern: yes
+            Symbol: "_g0" (0x3)
+            PcRel: yes
+            Length: 2
+            Type: ARM64_RELOC_PAGE21 (0x3)
+        }
+        RelocationInfo {
+            Address: 0xC
+            Extern: yes
+            Symbol: "_g0" (0x3)
+            PcRel: no
+            Length: 2
+            Type: ARM64_RELOC_PAGEOFF12 (0x4)
+        }
+        RelocationInfo {
+            Address: 0x8
+            Extern: yes
+            Symbol: "_g0" (0x3)
+            PcRel: yes
+            Length: 2
+            Type: ARM64_RELOC_PAGE21 (0x3)
+        }
+        RelocationInfo {
+            Address: 0x4
+            Extern: no
+            Section: 0x14
+            PcRel: no
+            Length: 2
+            Type: ARM64_RELOC_ADDEND (0xA)
+        }
+        RelocationInfo {
+            Address: 0x4
+            Extern: yes
+            Symbol: "_g0" (0x3)
+            PcRel: yes
+            Length: 2
+            Type: ARM64_RELOC_BRANCH26 (0x2)
+        }
+        RelocationInfo {
+            Address: 0x0
+            Extern: yes
+            Symbol: "_g0" (0x3)
+            PcRel: yes
+            Length: 2
+            Type: ARM64_RELOC_BRANCH26 (0x2)
+        }
+    }
+    Section {
+        Index: 1
+        SectionName: "__data"
+        SegmentName: "__DATA"
+        Address: 0x28
+        Size: 0x20
+        Offset: 0x198
+        Align: 0x0
+        RelocationOffset: 0x220
+        NumberOfRelocations: 0x7
+        Flags: S_REGULAR (0x0)
+        RelocationInfo {
+            Address: 0x1C
+            Extern: yes
+            Symbol: "_g0" (0x3)
+            PcRel: yes
+            Length: 2
+            Type: ARM64_RELOC_POINTER_TO_GOT (0x7)
+        }
+        RelocationInfo {
+            Address: 0x14
+            Extern: yes
+            Symbol: "_g0" (0x3)
+            PcRel: no
+            Length: 3
+            Type: ARM64_RELOC_POINTER_TO_GOT (0x7)
+        }
+        RelocationInfo {
+            Address: 0x10
+            Extern: yes
+            Symbol: "_g1" (0x4)
+            PcRel: no
+            Length: 2
+            Type: ARM64_RELOC_SUBTRACTOR (0x1)
+        }
+        RelocationInfo {
+            Address: 0x10
+            Extern: yes
+            Symbol: "_g0" (0x3)
+            PcRel: no
+            Length: 2
+            Type: ARM64_RELOC_UNSIGNED (0x0)
+        }
+        RelocationInfo {
+            Address: 0x8
+            Extern: yes
+            Symbol: "_g1" (0x4)
+            PcRel: no
+            Length: 3
+            Type: ARM64_RELOC_SUBTRACTOR (0x1)
+        }
+        RelocationInfo {
+            Address: 0x8
+            Extern: yes
+            Symbol: "_g0" (0x3)
+            PcRel: no
+            Length: 3
+            Type: ARM64_RELOC_UNSIGNED (0x0)
+        }
+        RelocationInfo {
+            Address: 0x0
+            Extern: yes
+            Symbol: "_g0" (0x3)
+            PcRel: no
+            Length: 3
+            Type: ARM64_RELOC_UNSIGNED (0x0)
+        }
+    }
+}
+SymtabCommand {
+    Cmd: LC_SYMTAB (0x2)
+    CmdSize: 0x18
+    SymbolOffset: 0x258
+    NumberOfSymbols: 0x5
+    StringOffset: 0x2A8
+    StringSize: 0x20
+    Nlist {
+        Index: 0
+        String: "ltmp0" (0x11)
+        Type: N_SECT (0xE)
+        Section: "__TEXT,__text" (0x1)
+        Desc: 0x0
+        Value: 0x0
+    }
+    Nlist {
+        Index: 1
+        String: "ltmp1" (0x7)
+        Type: N_SECT (0xE)
+        Section: "__DATA,__data" (0x2)
+        Desc: 0x0
+        Value: 0x28
+    }
+    Nlist {
+        Index: 2
+        String: "_data" (0x1)
+        Type: N_SECT (0xE)
+        Section: "__DATA,__data" (0x2)
+        Desc: 0x0
+        Value: 0x28
+    }
+    Nlist {
+        Index: 3
+        String: "_g0" (0x17)
+        Type: 0x1
+            N_UNDF (0x0)
+            N_EXT (0x1)
+        Section: "" (0x0)
+        Desc: 0x0
+            REFERENCE_FLAG_UNDEFINED_NON_LAZY (0x0)
+        Value: 0x0
+    }
+    Nlist {
+        Index: 4
+        String: "_g1" (0xD)
+        Type: 0x1
+            N_UNDF (0x0)
+            N_EXT (0x1)
+        Section: "" (0x0)
+        Desc: 0x0
+            REFERENCE_FLAG_UNDEFINED_NON_LAZY (0x0)
+        Value: 0x0
+    }
+}
+DysymtabCommand {
+    Cmd: LC_DYSYMTAB (0xB)
+    CmdSize: 0x50
+    IndexOfLocalSymbols: 0
+    NumberOfLocalSymbols: 3
+    IndexOfExternallyDefinedSymbols: 3
+    NumberOfExternallyDefinedSymbols: 0
+    IndexOfUndefinedSymbols: 3
+    NumberOfUndefinedSymbols: 2
+    TocOffset: 0x0
+    NumberOfTocEntries: 0
+    ModuleTableOffset: 0x0
+    NumberOfModuleTableEntries: 0
+    ExternalRefSymbolOffset: 0x0
+    NumberOfExternalRefSymbols: 0
+    IndirectSymbolOffset: 0x0
+    NumberOfIndirectSymbols: 0
+    ExternalRelocationOffset: 0x0
+    NumberOfExternalRelocations: 0
+    LocalRelocationOffset: 0x0
+    NumberOfLocalRelocations: 0
+}
