@@ -19,14 +19,14 @@ __text relocations
 (14, Relocation { kind: MachO { value: 1, relative: false }, encoding: Generic, size: 40, target: Section(SectionIndex(ffffff)), addend: 0, implicit_addend: true })
 (20, Relocation { kind: MachO { value: 8, relative: false }, encoding: Generic, size: 20, target: Symbol(SymbolIndex(3)), addend: 0, implicit_addend: true })
 (0, Relocation { kind: MachO { value: 1, relative: false }, encoding: Generic, size: 20, target: Section(SectionIndex(ffffff)), addend: 0, implicit_addend: true })
-(18, Relocation { kind: MachO { value: 6, relative: true }, encoding: Generic, size: 20, target: Section(SectionIndex(1)), addend: fffffffffffffffc, implicit_addend: true })
-(14, Relocation { kind: MachO { value: 6, relative: true }, encoding: Generic, size: 20, target: Symbol(SymbolIndex(3)), addend: fffffffffffffffc, implicit_addend: true })
+(18, Relocation { kind: MachO { value: 6, relative: true }, encoding: Generic, size: 20, target: Section(SectionIndex(1)), addend: 0, implicit_addend: true })
+(14, Relocation { kind: MachO { value: 6, relative: true }, encoding: Generic, size: 20, target: Symbol(SymbolIndex(3)), addend: 0, implicit_addend: true })
 (10, Relocation { kind: MachO { value: 8, relative: false }, encoding: Generic, size: 10, target: Symbol(SymbolIndex(3)), addend: 0, implicit_addend: true })
 (14, Relocation { kind: MachO { value: 1, relative: false }, encoding: Generic, size: 10, target: Section(SectionIndex(ffffff)), addend: 0, implicit_addend: true })
 (c, Relocation { kind: MachO { value: 8, relative: false }, encoding: Generic, size: 8, target: Symbol(SymbolIndex(3)), addend: 0, implicit_addend: true })
 (0, Relocation { kind: MachO { value: 1, relative: false }, encoding: Generic, size: 8, target: Section(SectionIndex(ffffff)), addend: 0, implicit_addend: true })
-(4, Relocation { kind: MachO { value: 5, relative: true }, encoding: Generic, size: 20, target: Symbol(SymbolIndex(2)), addend: fffffffffffffffc, implicit_addend: true })
-(0, Relocation { kind: MachO { value: 5, relative: true }, encoding: Generic, size: 20, target: Symbol(SymbolIndex(3)), addend: fffffffffffffffc, implicit_addend: true })
+(4, Relocation { kind: MachO { value: 5, relative: true }, encoding: Generic, size: 20, target: Symbol(SymbolIndex(2)), addend: 0, implicit_addend: true })
+(0, Relocation { kind: MachO { value: 5, relative: true }, encoding: Generic, size: 20, target: Symbol(SymbolIndex(3)), addend: 0, implicit_addend: true })
 
 __data relocations
 (4, Relocation { kind: Absolute, encoding: Generic, size: 20, target: Section(SectionIndex(1)), addend: 0, implicit_addend: true })
