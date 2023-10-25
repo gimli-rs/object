@@ -35,7 +35,7 @@ SegmentCommand {
         Size: 0x25
         Offset: 0x228
         Align: 0x4
-        RelocationOffset: 0x2F0
+        RelocationOffset: 0x2C0
         NumberOfRelocations: 0x2
         Flags: 0x80000400
             S_REGULAR (0x0)
@@ -78,7 +78,7 @@ SegmentCommand {
         Size: 0x20
         Offset: 0x260
         Align: 0x3
-        RelocationOffset: 0x300
+        RelocationOffset: 0x2D0
         NumberOfRelocations: 0x1
         Flags: 0x2000000
             S_REGULAR (0x0)
@@ -120,9 +120,9 @@ BuildVersionCommand {
 SymtabCommand {
     Cmd: LC_SYMTAB (0x2)
     CmdSize: 0x18
-    SymbolOffset: 0x2C0
+    SymbolOffset: 0x2D8
     NumberOfSymbols: 0x2
-    StringOffset: 0x2E0
+    StringOffset: 0x2F8
     StringSize: 0xF
     Nlist {
         Index: 0

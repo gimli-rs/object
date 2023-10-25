@@ -434,6 +434,22 @@ impl<'a> Object<'a> {
             nsyms += 1;
         }
 
+        // Calculate size of relocations.
+        for (index, section) in self.sections.iter().enumerate() {
+            let count: usize = section
+                .relocations
+                .iter()
+                .map(|reloc| 1 + usize::from(reloc.addend != 0))
+                .sum();
+            if count != 0 {
+                offset = align(offset, pointer_align);
+                section_offsets[index].reloc_offset = offset;
+                section_offsets[index].reloc_count = count;
+                let len = count * mem::size_of::<macho::Relocation<Endianness>>();
+                offset += len;
+            }
+        }
+
         // Calculate size of symtab.
         offset = align(offset, pointer_align);
         let symtab_offset = offset;
@@ -446,22 +462,6 @@ impl<'a> Object<'a> {
         let mut strtab_data = vec![0];
         strtab.write(1, &mut strtab_data);
         offset += strtab_data.len();
-
-        // Calculate size of relocations.
-        for (index, section) in self.sections.iter().enumerate() {
-            let count: usize = section
-                .relocations
-                .iter()
-                .map(|reloc| 1 + usize::from(reloc.addend != 0))
-                .sum();
-            if count != 0 {
-                offset = align(offset, 4);
-                section_offsets[index].reloc_offset = offset;
-                section_offsets[index].reloc_count = count;
-                let len = count * mem::size_of::<macho::Relocation<Endianness>>();
-                offset += len;
-            }
-        }
 
         // Start writing.
         buffer
@@ -652,83 +652,10 @@ impl<'a> Object<'a> {
         }
         debug_assert_eq!(segment_file_offset + segment_file_size, buffer.len());
 
-        // Write symtab.
-        write_align(buffer, pointer_align);
-        debug_assert_eq!(symtab_offset, buffer.len());
-        for index in local_symbols
-            .iter()
-            .copied()
-            .chain(external_symbols.iter().copied())
-            .chain(undefined_symbols.iter().copied())
-        {
-            let symbol = &self.symbols[index];
-            // TODO: N_STAB
-            let (mut n_type, n_sect) = match symbol.section {
-                SymbolSection::Undefined => (macho::N_UNDF | macho::N_EXT, 0),
-                SymbolSection::Absolute => (macho::N_ABS, 0),
-                SymbolSection::Section(id) => (macho::N_SECT, id.0 + 1),
-                SymbolSection::None | SymbolSection::Common => {
-                    return Err(Error(format!(
-                        "unimplemented symbol `{}` section {:?}",
-                        symbol.name().unwrap_or(""),
-                        symbol.section
-                    )));
-                }
-            };
-            match symbol.scope {
-                SymbolScope::Unknown | SymbolScope::Compilation => {}
-                SymbolScope::Linkage => {
-                    n_type |= macho::N_EXT | macho::N_PEXT;
-                }
-                SymbolScope::Dynamic => {
-                    n_type |= macho::N_EXT;
-                }
-            }
-
-            let n_desc = if let SymbolFlags::MachO { n_desc } = symbol.flags {
-                n_desc
-            } else {
-                let mut n_desc = 0;
-                if symbol.weak {
-                    if symbol.is_undefined() {
-                        n_desc |= macho::N_WEAK_REF;
-                    } else {
-                        n_desc |= macho::N_WEAK_DEF;
-                    }
-                }
-                n_desc
-            };
-
-            let n_value = match symbol.section.id() {
-                Some(section) => section_offsets[section.0].address + symbol.value,
-                None => symbol.value,
-            };
-
-            let n_strx = symbol_offsets[index]
-                .str_id
-                .map(|id| strtab.get_offset(id))
-                .unwrap_or(0);
-
-            macho.write_nlist(
-                buffer,
-                Nlist {
-                    n_strx: n_strx as u32,
-                    n_type,
-                    n_sect: n_sect as u8,
-                    n_desc,
-                    n_value,
-                },
-            );
-        }
-
-        // Write strtab.
-        debug_assert_eq!(strtab_offset, buffer.len());
-        buffer.write_bytes(&strtab_data);
-
         // Write relocations.
         for (index, section) in self.sections.iter().enumerate() {
             if !section.relocations.is_empty() {
-                write_align(buffer, 4);
+                write_align(buffer, pointer_align);
                 debug_assert_eq!(section_offsets[index].reloc_offset, buffer.len());
                 for reloc in &section.relocations {
                     let r_length = match reloc.size {
@@ -846,6 +773,79 @@ impl<'a> Object<'a> {
                 }
             }
         }
+
+        // Write symtab.
+        write_align(buffer, pointer_align);
+        debug_assert_eq!(symtab_offset, buffer.len());
+        for index in local_symbols
+            .iter()
+            .copied()
+            .chain(external_symbols.iter().copied())
+            .chain(undefined_symbols.iter().copied())
+        {
+            let symbol = &self.symbols[index];
+            // TODO: N_STAB
+            let (mut n_type, n_sect) = match symbol.section {
+                SymbolSection::Undefined => (macho::N_UNDF | macho::N_EXT, 0),
+                SymbolSection::Absolute => (macho::N_ABS, 0),
+                SymbolSection::Section(id) => (macho::N_SECT, id.0 + 1),
+                SymbolSection::None | SymbolSection::Common => {
+                    return Err(Error(format!(
+                        "unimplemented symbol `{}` section {:?}",
+                        symbol.name().unwrap_or(""),
+                        symbol.section
+                    )));
+                }
+            };
+            match symbol.scope {
+                SymbolScope::Unknown | SymbolScope::Compilation => {}
+                SymbolScope::Linkage => {
+                    n_type |= macho::N_EXT | macho::N_PEXT;
+                }
+                SymbolScope::Dynamic => {
+                    n_type |= macho::N_EXT;
+                }
+            }
+
+            let n_desc = if let SymbolFlags::MachO { n_desc } = symbol.flags {
+                n_desc
+            } else {
+                let mut n_desc = 0;
+                if symbol.weak {
+                    if symbol.is_undefined() {
+                        n_desc |= macho::N_WEAK_REF;
+                    } else {
+                        n_desc |= macho::N_WEAK_DEF;
+                    }
+                }
+                n_desc
+            };
+
+            let n_value = match symbol.section.id() {
+                Some(section) => section_offsets[section.0].address + symbol.value,
+                None => symbol.value,
+            };
+
+            let n_strx = symbol_offsets[index]
+                .str_id
+                .map(|id| strtab.get_offset(id))
+                .unwrap_or(0);
+
+            macho.write_nlist(
+                buffer,
+                Nlist {
+                    n_strx: n_strx as u32,
+                    n_type,
+                    n_sect: n_sect as u8,
+                    n_desc,
+                    n_value,
+                },
+            );
+        }
+
+        // Write strtab.
+        debug_assert_eq!(strtab_offset, buffer.len());
+        buffer.write_bytes(&strtab_data);
 
         debug_assert_eq!(offset, buffer.len());
 
