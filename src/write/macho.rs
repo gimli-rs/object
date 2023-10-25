@@ -18,7 +18,6 @@ struct SectionOffsets {
 
 #[derive(Default, Clone, Copy)]
 struct SymbolOffsets {
-    emit: bool,
     index: usize,
     str_id: Option<StringId>,
 }
@@ -352,6 +351,12 @@ impl<'a> Object<'a> {
         offset += symtab_command_len;
         ncmds += 1;
 
+        // Calculate size of dysymtab command.
+        let dysymtab_command_offset = offset;
+        let dysymtab_command_len = mem::size_of::<macho::DysymtabCommand<Endianness>>();
+        offset += dysymtab_command_len;
+        ncmds += 1;
+
         let sizeofcmds = offset - command_offset;
 
         // Calculate size of section data.
@@ -379,10 +384,12 @@ impl<'a> Object<'a> {
             }
         }
 
-        // Count symbols and add symbol strings to strtab.
+        // Partition symbols and add symbol strings to strtab.
         let mut strtab = StringTable::default();
         let mut symbol_offsets = vec![SymbolOffsets::default(); self.symbols.len()];
-        let mut nsyms = 0;
+        let mut local_symbols = vec![];
+        let mut external_symbols = vec![];
+        let mut undefined_symbols = vec![];
         for (index, symbol) in self.symbols.iter().enumerate() {
             // The unified API allows creating symbols that we don't emit, so filter
             // them out here.
@@ -399,12 +406,31 @@ impl<'a> Object<'a> {
                     )));
                 }
             }
-            symbol_offsets[index].emit = true;
-            symbol_offsets[index].index = nsyms;
-            nsyms += 1;
             if !symbol.name.is_empty() {
                 symbol_offsets[index].str_id = Some(strtab.add(&symbol.name));
             }
+            if symbol.is_undefined() {
+                undefined_symbols.push(index);
+            } else if symbol.is_local() {
+                local_symbols.push(index);
+            } else {
+                external_symbols.push(index);
+            }
+        }
+
+        external_symbols.sort_by_key(|index| &*self.symbols[*index].name);
+        undefined_symbols.sort_by_key(|index| &*self.symbols[*index].name);
+
+        // Count symbols.
+        let mut nsyms = 0;
+        for index in local_symbols
+            .iter()
+            .copied()
+            .chain(external_symbols.iter().copied())
+            .chain(undefined_symbols.iter().copied())
+        {
+            symbol_offsets[index].index = nsyms;
+            nsyms += 1;
         }
 
         // Calculate size of symtab.
@@ -586,6 +612,35 @@ impl<'a> Object<'a> {
         };
         buffer.write(&symtab_command);
 
+        // Write dysymtab command.
+        debug_assert_eq!(dysymtab_command_offset, buffer.len());
+        let dysymtab_command = macho::DysymtabCommand {
+            cmd: U32::new(endian, macho::LC_DYSYMTAB),
+            cmdsize: U32::new(endian, dysymtab_command_len as u32),
+            ilocalsym: U32::new(endian, 0),
+            nlocalsym: U32::new(endian, local_symbols.len() as u32),
+            iextdefsym: U32::new(endian, local_symbols.len() as u32),
+            nextdefsym: U32::new(endian, external_symbols.len() as u32),
+            iundefsym: U32::new(
+                endian,
+                local_symbols.len() as u32 + external_symbols.len() as u32,
+            ),
+            nundefsym: U32::new(endian, undefined_symbols.len() as u32),
+            tocoff: U32::default(),
+            ntoc: U32::default(),
+            modtaboff: U32::default(),
+            nmodtab: U32::default(),
+            extrefsymoff: U32::default(),
+            nextrefsyms: U32::default(),
+            indirectsymoff: U32::default(),
+            nindirectsyms: U32::default(),
+            extreloff: U32::default(),
+            nextrel: U32::default(),
+            locreloff: U32::default(),
+            nlocrel: U32::default(),
+        };
+        buffer.write(&dysymtab_command);
+
         // Write section data.
         for (index, section) in self.sections.iter().enumerate() {
             if !section.is_bss() {
@@ -598,10 +653,13 @@ impl<'a> Object<'a> {
         // Write symtab.
         write_align(buffer, pointer_align);
         debug_assert_eq!(symtab_offset, buffer.len());
-        for (index, symbol) in self.symbols.iter().enumerate() {
-            if !symbol_offsets[index].emit {
-                continue;
-            }
+        for index in local_symbols
+            .iter()
+            .copied()
+            .chain(external_symbols.iter().copied())
+            .chain(undefined_symbols.iter().copied())
+        {
+            let symbol = &self.symbols[index];
             // TODO: N_STAB
             let (mut n_type, n_sect) = match symbol.section {
                 SymbolSection::Undefined => (macho::N_UNDF | macho::N_EXT, 0),

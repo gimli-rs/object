@@ -5,8 +5,8 @@ MachHeader {
     CpuSubtype: 0x0
         CPU_SUBTYPE_ARM64_ALL (0x0)
     FileType: MH_OBJECT (0x1)
-    NumberOfCmds: 2
-    SizeOfCmds: 0x100
+    NumberOfCmds: 3
+    SizeOfCmds: 0x150
     Flags: MH_SUBSECTIONS_VIA_SYMBOLS (0x2000)
 }
 SegmentCommand {
@@ -15,7 +15,7 @@ SegmentCommand {
     SegmentName: ""
     VmAddress: 0x0
     VmSize: 0x48
-    FileOffset: 0x120
+    FileOffset: 0x170
     FileSize: 0x48
     MaxProt: 0x7
         VM_PROT_READ (0x1)
@@ -33,9 +33,9 @@ SegmentCommand {
         SegmentName: "__TEXT"
         Address: 0x0
         Size: 0x28
-        Offset: 0x120
+        Offset: 0x170
         Align: 0x0
-        RelocationOffset: 0x1D4
+        RelocationOffset: 0x224
         NumberOfRelocations: 0xD
         Flags: 0x80000400
             S_REGULAR (0x0)
@@ -152,9 +152,9 @@ SegmentCommand {
         SegmentName: "__DATA"
         Address: 0x28
         Size: 0x20
-        Offset: 0x148
+        Offset: 0x198
         Align: 0x0
-        RelocationOffset: 0x23C
+        RelocationOffset: 0x28C
         NumberOfRelocations: 0x7
         Flags: S_REGULAR (0x0)
         RelocationInfo {
@@ -218,9 +218,9 @@ SegmentCommand {
 SymtabCommand {
     Cmd: LC_SYMTAB (0x2)
     CmdSize: 0x18
-    SymbolOffset: 0x168
+    SymbolOffset: 0x1B8
     NumberOfSymbols: 0x5
-    StringOffset: 0x1B8
+    StringOffset: 0x208
     StringSize: 0x1B
     Nlist {
         Index: 0
@@ -268,4 +268,26 @@ SymtabCommand {
             REFERENCE_FLAG_UNDEFINED_NON_LAZY (0x0)
         Value: 0x0
     }
+}
+DysymtabCommand {
+    Cmd: LC_DYSYMTAB (0xB)
+    CmdSize: 0x50
+    IndexOfLocalSymbols: 0
+    NumberOfLocalSymbols: 3
+    IndexOfExternallyDefinedSymbols: 3
+    NumberOfExternallyDefinedSymbols: 0
+    IndexOfUndefinedSymbols: 3
+    NumberOfUndefinedSymbols: 2
+    TocOffset: 0x0
+    NumberOfTocEntries: 0
+    ModuleTableOffset: 0x0
+    NumberOfModuleTableEntries: 0
+    ExternalRefSymbolOffset: 0x0
+    NumberOfExternalRefSymbols: 0
+    IndirectSymbolOffset: 0x0
+    NumberOfIndirectSymbols: 0
+    ExternalRelocationOffset: 0x0
+    NumberOfExternalRelocations: 0
+    LocalRelocationOffset: 0x0
+    NumberOfLocalRelocations: 0
 }

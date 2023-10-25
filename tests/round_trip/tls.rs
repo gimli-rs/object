@@ -218,39 +218,11 @@ fn macho_x86_64_tls() {
 
     let symbol = symbols.next().unwrap();
     println!("{:?}", symbol);
-    assert_eq!(symbol.name(), Ok("_tls1"));
-    assert_eq!(symbol.kind(), SymbolKind::Tls);
-    assert_eq!(symbol.section_index(), Some(thread_vars_index));
-    assert_eq!(symbol.scope(), SymbolScope::Linkage);
-    assert_eq!(symbol.is_weak(), false);
-    assert_eq!(symbol.is_undefined(), false);
-
-    let symbol = symbols.next().unwrap();
-    println!("{:?}", symbol);
     let tls1_init_symbol = symbol.index();
     assert_eq!(symbol.name(), Ok("_tls1$tlv$init"));
     assert_eq!(symbol.kind(), SymbolKind::Tls);
     assert_eq!(symbol.section_index(), Some(thread_data_index));
     assert_eq!(symbol.scope(), SymbolScope::Compilation);
-    assert_eq!(symbol.is_weak(), false);
-    assert_eq!(symbol.is_undefined(), false);
-
-    let symbol = symbols.next().unwrap();
-    println!("{:?}", symbol);
-    let tlv_bootstrap_symbol = symbol.index();
-    assert_eq!(symbol.name(), Ok("__tlv_bootstrap"));
-    assert_eq!(symbol.kind(), SymbolKind::Unknown);
-    assert_eq!(symbol.section_index(), None);
-    assert_eq!(symbol.scope(), SymbolScope::Unknown);
-    assert_eq!(symbol.is_weak(), false);
-    assert_eq!(symbol.is_undefined(), true);
-
-    let symbol = symbols.next().unwrap();
-    println!("{:?}", symbol);
-    assert_eq!(symbol.name(), Ok("_tls2"));
-    assert_eq!(symbol.kind(), SymbolKind::Tls);
-    assert_eq!(symbol.section_index(), Some(thread_vars_index));
-    assert_eq!(symbol.scope(), SymbolScope::Linkage);
     assert_eq!(symbol.is_weak(), false);
     assert_eq!(symbol.is_undefined(), false);
 
@@ -263,6 +235,34 @@ fn macho_x86_64_tls() {
     assert_eq!(symbol.scope(), SymbolScope::Compilation);
     assert_eq!(symbol.is_weak(), false);
     assert_eq!(symbol.is_undefined(), false);
+
+    let symbol = symbols.next().unwrap();
+    println!("{:?}", symbol);
+    assert_eq!(symbol.name(), Ok("_tls1"));
+    assert_eq!(symbol.kind(), SymbolKind::Tls);
+    assert_eq!(symbol.section_index(), Some(thread_vars_index));
+    assert_eq!(symbol.scope(), SymbolScope::Linkage);
+    assert_eq!(symbol.is_weak(), false);
+    assert_eq!(symbol.is_undefined(), false);
+
+    let symbol = symbols.next().unwrap();
+    println!("{:?}", symbol);
+    assert_eq!(symbol.name(), Ok("_tls2"));
+    assert_eq!(symbol.kind(), SymbolKind::Tls);
+    assert_eq!(symbol.section_index(), Some(thread_vars_index));
+    assert_eq!(symbol.scope(), SymbolScope::Linkage);
+    assert_eq!(symbol.is_weak(), false);
+    assert_eq!(symbol.is_undefined(), false);
+
+    let symbol = symbols.next().unwrap();
+    println!("{:?}", symbol);
+    let tlv_bootstrap_symbol = symbol.index();
+    assert_eq!(symbol.name(), Ok("__tlv_bootstrap"));
+    assert_eq!(symbol.kind(), SymbolKind::Unknown);
+    assert_eq!(symbol.section_index(), None);
+    assert_eq!(symbol.scope(), SymbolScope::Unknown);
+    assert_eq!(symbol.is_weak(), false);
+    assert_eq!(symbol.is_undefined(), true);
 
     let mut relocations = thread_vars.relocations();
 
