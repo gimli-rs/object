@@ -461,6 +461,7 @@ impl<'a> Object<'a> {
         // Start with null name.
         let mut strtab_data = vec![0];
         strtab.write(1, &mut strtab_data);
+        write_align(&mut strtab_data, pointer_align);
         offset += strtab_data.len();
 
         // Start writing.

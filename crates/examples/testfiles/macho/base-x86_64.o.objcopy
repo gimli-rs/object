@@ -123,7 +123,7 @@ SymtabCommand {
     SymbolOffset: 0x2D8
     NumberOfSymbols: 0x2
     StringOffset: 0x2F8
-    StringSize: 0xF
+    StringSize: 0x10
     Nlist {
         Index: 0
         String: "_main" (0x1)

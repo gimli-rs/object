@@ -221,7 +221,7 @@ SymtabCommand {
     SymbolOffset: 0x258
     NumberOfSymbols: 0x5
     StringOffset: 0x2A8
-    StringSize: 0x1B
+    StringSize: 0x20
     Nlist {
         Index: 0
         String: "ltmp0" (0x11)

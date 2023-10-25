@@ -181,7 +181,7 @@ SymtabCommand {
     SymbolOffset: 0x258
     NumberOfSymbols: 0x2
     StringOffset: 0x278
-    StringSize: 0x9
+    StringSize: 0x10
     Nlist {
         Index: 0
         String: "_g1" (0x5)
