@@ -1,5 +1,7 @@
 #![cfg(feature = "read")]
 
+#[cfg(feature = "write")]
+use object_examples::objcopy;
 use object_examples::{objdump, readobj};
 use std::ffi::OsStr;
 use std::io::Write;
@@ -22,6 +24,8 @@ fn test_dir_filter(path: &PathBuf) -> bool {
 
 #[test]
 fn testfiles() {
+    let update = env::var_os("OBJECT_TESTFILES_UPDATE").is_some();
+
     // Move from crates/examples to the workspace root.
     env::set_current_dir("../..").unwrap();
 
@@ -47,17 +51,25 @@ fn testfiles() {
 
             println!("File {}", path);
             let data = fs::read(&path).unwrap();
-            fail |= testfile(path, &data, "objdump", |mut out, mut err, data| {
+            fail |= testfile(update, path, &data, "objdump", |mut out, mut err, data| {
                 objdump::print(&mut out, &mut err, data, &[], vec![]).unwrap()
             });
-            fail |= testfile(path, &data, "readobj", readobj::print);
+            fail |= testfile(update, path, &data, "readobj", readobj::print);
+
+            #[cfg(feature = "write")]
+            {
+                fail |= testfile(update, path, &data, "objcopy", |out, err, in_data| {
+                    let out_data = objcopy::copy(in_data);
+                    readobj::print(out, err, &out_data)
+                });
+            }
             println!();
         }
     }
     assert!(!fail);
 }
 
-fn testfile<F>(path: &str, data: &[u8], ext: &str, f: F) -> bool
+fn testfile<F>(update: bool, path: &str, data: &[u8], ext: &str, f: F) -> bool
 where
     F: FnOnce(&mut dyn Write, &mut dyn Write, &[u8]),
 {
@@ -79,7 +91,9 @@ where
     let out_path = &format!("crates/examples/{}.{}", path, ext);
     if let Ok(expect_out) = fs::read(out_path) {
         println!("Test {}", out_path);
-        if out != expect_out {
+        if update {
+            fs::write(out_path, &out).unwrap();
+        } else if out != expect_out {
             println!("FAIL mismatch");
             fail = true;
         }
@@ -102,7 +116,9 @@ where
     let err_path = &format!("{}.err", out_path);
     if let Ok(expect_err) = fs::read(err_path) {
         println!("Test {}", err_path);
-        if err != expect_err {
+        if update {
+            fs::write(err_path, &err).unwrap();
+        } else if err != expect_err {
             println!("FAIL mismatch");
             fail = true;
         }

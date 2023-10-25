@@ -12,9 +12,10 @@ glob = "0.3"
 
 [features]
 read = ["object/read"]
+write = ["object/write"]
 wasm = ["object/wasm"]
 xcoff = ["object/xcoff"]
-all = ["read", "wasm", "xcoff"]
+all = ["read", "write", "wasm", "xcoff"]
 unstable-all = ["all"]
 default = ["read"]
 
@@ -36,7 +37,7 @@ required-features = ["object/read_core", "object/write_core", "object/elf", "obj
 
 [[bin]]
 name = "objcopy"
-required-features = ["object/read", "object/write"]
+required-features = ["read", "write"]
 
 [[bin]]
 name = "objdump"
