@@ -247,6 +247,15 @@ impl<'data, E: Endian> LoadCommandData<'data, E> {
             Ok(None)
         }
     }
+
+    /// Try to parse this command as a `BuildVersionCommand`.
+    pub fn build_version(self) -> Result<Option<&'data macho::BuildVersionCommand<E>>> {
+        if self.cmd == macho::LC_BUILD_VERSION {
+            Some(self.data()).transpose()
+        } else {
+            Ok(None)
+        }
+    }
 }
 
 /// A `LoadCommand` that has been interpreted according to its `cmd` field.

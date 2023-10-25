@@ -162,6 +162,34 @@ where
             .get(index)
             .read_error("Invalid Mach-O segment index")
     }
+
+    /// Returns the endianness.
+    pub fn endian(&self) -> Mach::Endian {
+        self.endian
+    }
+
+    /// Returns the raw data.
+    pub fn data(&self) -> R {
+        self.data
+    }
+
+    /// Returns the raw Mach-O file header.
+    pub fn raw_header(&self) -> &'data Mach {
+        self.header
+    }
+
+    /// Return the `LC_BUILD_VERSION` load command if present.
+    pub fn build_version(&self) -> Result<Option<&'data macho::BuildVersionCommand<Mach::Endian>>> {
+        let mut commands = self
+            .header
+            .load_commands(self.endian, self.data, self.header_offset)?;
+        while let Some(command) = commands.next()? {
+            if let Some(build_version) = command.build_version()? {
+                return Ok(Some(build_version));
+            }
+        }
+        Ok(None)
+    }
 }
 
 impl<'data, Mach, R> read::private::Sealed for MachOFile<'data, Mach, R>

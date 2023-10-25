@@ -5,8 +5,8 @@ MachHeader {
     CpuSubtype: 0x3
         CPU_SUBTYPE_X86_64_ALL (0x3)
     FileType: MH_OBJECT (0x1)
-    NumberOfCmds: 3
-    SizeOfCmds: 0x1F0
+    NumberOfCmds: 4
+    SizeOfCmds: 0x208
     Flags: MH_SUBSECTIONS_VIA_SYMBOLS (0x2000)
 }
 SegmentCommand {
@@ -15,7 +15,7 @@ SegmentCommand {
     SegmentName: ""
     VmAddress: 0x0
     VmSize: 0x98
-    FileOffset: 0x210
+    FileOffset: 0x228
     FileSize: 0x98
     MaxProt: 0x7
         VM_PROT_READ (0x1)
@@ -33,9 +33,9 @@ SegmentCommand {
         SegmentName: "__TEXT"
         Address: 0x0
         Size: 0x25
-        Offset: 0x210
+        Offset: 0x228
         Align: 0x4
-        RelocationOffset: 0x2D8
+        RelocationOffset: 0x2F0
         NumberOfRelocations: 0x2
         Flags: 0x80000400
             S_REGULAR (0x0)
@@ -64,7 +64,7 @@ SegmentCommand {
         SegmentName: "__TEXT"
         Address: 0x25
         Size: 0xD
-        Offset: 0x235
+        Offset: 0x24D
         Align: 0x0
         RelocationOffset: 0x0
         NumberOfRelocations: 0x0
@@ -76,9 +76,9 @@ SegmentCommand {
         SegmentName: "__LD"
         Address: 0x38
         Size: 0x20
-        Offset: 0x248
+        Offset: 0x260
         Align: 0x3
-        RelocationOffset: 0x2E8
+        RelocationOffset: 0x300
         NumberOfRelocations: 0x1
         Flags: 0x2000000
             S_REGULAR (0x0)
@@ -98,7 +98,7 @@ SegmentCommand {
         SegmentName: "__TEXT"
         Address: 0x58
         Size: 0x40
-        Offset: 0x268
+        Offset: 0x280
         Align: 0x3
         RelocationOffset: 0x0
         NumberOfRelocations: 0x0
@@ -109,12 +109,20 @@ SegmentCommand {
             S_ATTR_LIVE_SUPPORT (0x8000000)
     }
 }
+BuildVersionCommand {
+    Cmd: LC_BUILD_VERSION (0x32)
+    CmdSize: 0x18
+    Platform: PLATFORM_MACOS (0x1)
+    MinOs: 0xC0000
+    Sdk: 0xD0100
+    NumberOfTools: 0x0
+}
 SymtabCommand {
     Cmd: LC_SYMTAB (0x2)
     CmdSize: 0x18
-    SymbolOffset: 0x2A8
+    SymbolOffset: 0x2C0
     NumberOfSymbols: 0x2
-    StringOffset: 0x2C8
+    StringOffset: 0x2E0
     StringSize: 0xF
     Nlist {
         Index: 0

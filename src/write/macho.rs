@@ -332,18 +332,19 @@ impl<'a> Object<'a> {
         let mut ncmds = 0;
         let command_offset = offset;
 
-        let build_version_offset = offset;
-        if let Some(version) = &self.macho_build_version {
-            offset += version.cmdsize() as usize;
-            ncmds += 1;
-        }
-
         // Calculate size of segment command and section headers.
         let segment_command_offset = offset;
         let segment_command_len =
             macho.segment_command_size() + self.sections.len() * macho.section_header_size();
         offset += segment_command_len;
         ncmds += 1;
+
+        // Calculate size of build version.
+        let build_version_offset = offset;
+        if let Some(version) = &self.macho_build_version {
+            offset += version.cmdsize() as usize;
+            ncmds += 1;
+        }
 
         // Calculate size of symtab command.
         let symtab_command_offset = offset;
@@ -506,18 +507,6 @@ impl<'a> Object<'a> {
             },
         );
 
-        if let Some(version) = &self.macho_build_version {
-            debug_assert_eq!(build_version_offset, buffer.len());
-            buffer.write(&macho::BuildVersionCommand {
-                cmd: U32::new(endian, macho::LC_BUILD_VERSION),
-                cmdsize: U32::new(endian, version.cmdsize()),
-                platform: U32::new(endian, version.platform),
-                minos: U32::new(endian, version.minos),
-                sdk: U32::new(endian, version.sdk),
-                ntools: U32::new(endian, 0),
-            });
-        }
-
         // Write segment command.
         debug_assert_eq!(segment_command_offset, buffer.len());
         macho.write_segment_command(
@@ -598,6 +587,19 @@ impl<'a> Object<'a> {
                     flags,
                 },
             );
+        }
+
+        // Write build version.
+        if let Some(version) = &self.macho_build_version {
+            debug_assert_eq!(build_version_offset, buffer.len());
+            buffer.write(&macho::BuildVersionCommand {
+                cmd: U32::new(endian, macho::LC_BUILD_VERSION),
+                cmdsize: U32::new(endian, version.cmdsize()),
+                platform: U32::new(endian, version.platform),
+                minos: U32::new(endian, version.minos),
+                sdk: U32::new(endian, version.sdk),
+                ntools: U32::new(endian, 0),
+            });
         }
 
         // Write symtab command.
