@@ -18,7 +18,6 @@ struct SectionOffsets {
 
 #[derive(Default, Clone, Copy)]
 struct SymbolOffsets {
-    emit: bool,
     index: usize,
     str_id: Option<StringId>,
 }
@@ -333,12 +332,6 @@ impl<'a> Object<'a> {
         let mut ncmds = 0;
         let command_offset = offset;
 
-        let build_version_offset = offset;
-        if let Some(version) = &self.macho_build_version {
-            offset += version.cmdsize() as usize;
-            ncmds += 1;
-        }
-
         // Calculate size of segment command and section headers.
         let segment_command_offset = offset;
         let segment_command_len =
@@ -346,10 +339,23 @@ impl<'a> Object<'a> {
         offset += segment_command_len;
         ncmds += 1;
 
+        // Calculate size of build version.
+        let build_version_offset = offset;
+        if let Some(version) = &self.macho_build_version {
+            offset += version.cmdsize() as usize;
+            ncmds += 1;
+        }
+
         // Calculate size of symtab command.
         let symtab_command_offset = offset;
         let symtab_command_len = mem::size_of::<macho::SymtabCommand<Endianness>>();
         offset += symtab_command_len;
+        ncmds += 1;
+
+        // Calculate size of dysymtab command.
+        let dysymtab_command_offset = offset;
+        let dysymtab_command_len = mem::size_of::<macho::DysymtabCommand<Endianness>>();
+        offset += dysymtab_command_len;
         ncmds += 1;
 
         let sizeofcmds = offset - command_offset;
@@ -379,10 +385,12 @@ impl<'a> Object<'a> {
             }
         }
 
-        // Count symbols and add symbol strings to strtab.
+        // Partition symbols and add symbol strings to strtab.
         let mut strtab = StringTable::default();
         let mut symbol_offsets = vec![SymbolOffsets::default(); self.symbols.len()];
-        let mut nsyms = 0;
+        let mut local_symbols = vec![];
+        let mut external_symbols = vec![];
+        let mut undefined_symbols = vec![];
         for (index, symbol) in self.symbols.iter().enumerate() {
             // The unified API allows creating symbols that we don't emit, so filter
             // them out here.
@@ -399,11 +407,46 @@ impl<'a> Object<'a> {
                     )));
                 }
             }
-            symbol_offsets[index].emit = true;
-            symbol_offsets[index].index = nsyms;
-            nsyms += 1;
             if !symbol.name.is_empty() {
                 symbol_offsets[index].str_id = Some(strtab.add(&symbol.name));
+            }
+            if symbol.is_undefined() {
+                undefined_symbols.push(index);
+            } else if symbol.is_local() {
+                local_symbols.push(index);
+            } else {
+                external_symbols.push(index);
+            }
+        }
+
+        external_symbols.sort_by_key(|index| &*self.symbols[*index].name);
+        undefined_symbols.sort_by_key(|index| &*self.symbols[*index].name);
+
+        // Count symbols.
+        let mut nsyms = 0;
+        for index in local_symbols
+            .iter()
+            .copied()
+            .chain(external_symbols.iter().copied())
+            .chain(undefined_symbols.iter().copied())
+        {
+            symbol_offsets[index].index = nsyms;
+            nsyms += 1;
+        }
+
+        // Calculate size of relocations.
+        for (index, section) in self.sections.iter().enumerate() {
+            let count: usize = section
+                .relocations
+                .iter()
+                .map(|reloc| 1 + usize::from(reloc.addend != 0))
+                .sum();
+            if count != 0 {
+                offset = align(offset, pointer_align);
+                section_offsets[index].reloc_offset = offset;
+                section_offsets[index].reloc_count = count;
+                let len = count * mem::size_of::<macho::Relocation<Endianness>>();
+                offset += len;
             }
         }
 
@@ -418,23 +461,8 @@ impl<'a> Object<'a> {
         // Start with null name.
         let mut strtab_data = vec![0];
         strtab.write(1, &mut strtab_data);
+        write_align(&mut strtab_data, pointer_align);
         offset += strtab_data.len();
-
-        // Calculate size of relocations.
-        for (index, section) in self.sections.iter().enumerate() {
-            let count: usize = section
-                .relocations
-                .iter()
-                .map(|reloc| 1 + usize::from(reloc.addend != 0))
-                .sum();
-            if count != 0 {
-                offset = align(offset, 4);
-                section_offsets[index].reloc_offset = offset;
-                section_offsets[index].reloc_count = count;
-                let len = count * mem::size_of::<macho::Relocation<Endianness>>();
-                offset += len;
-            }
-        }
 
         // Start writing.
         buffer
@@ -479,18 +507,6 @@ impl<'a> Object<'a> {
                 flags,
             },
         );
-
-        if let Some(version) = &self.macho_build_version {
-            debug_assert_eq!(build_version_offset, buffer.len());
-            buffer.write(&macho::BuildVersionCommand {
-                cmd: U32::new(endian, macho::LC_BUILD_VERSION),
-                cmdsize: U32::new(endian, version.cmdsize()),
-                platform: U32::new(endian, version.platform),
-                minos: U32::new(endian, version.minos),
-                sdk: U32::new(endian, version.sdk),
-                ntools: U32::new(endian, 0),
-            });
-        }
 
         // Write segment command.
         debug_assert_eq!(segment_command_offset, buffer.len());
@@ -574,6 +590,19 @@ impl<'a> Object<'a> {
             );
         }
 
+        // Write build version.
+        if let Some(version) = &self.macho_build_version {
+            debug_assert_eq!(build_version_offset, buffer.len());
+            buffer.write(&macho::BuildVersionCommand {
+                cmd: U32::new(endian, macho::LC_BUILD_VERSION),
+                cmdsize: U32::new(endian, version.cmdsize()),
+                platform: U32::new(endian, version.platform),
+                minos: U32::new(endian, version.minos),
+                sdk: U32::new(endian, version.sdk),
+                ntools: U32::new(endian, 0),
+            });
+        }
+
         // Write symtab command.
         debug_assert_eq!(symtab_command_offset, buffer.len());
         let symtab_command = macho::SymtabCommand {
@@ -586,6 +615,35 @@ impl<'a> Object<'a> {
         };
         buffer.write(&symtab_command);
 
+        // Write dysymtab command.
+        debug_assert_eq!(dysymtab_command_offset, buffer.len());
+        let dysymtab_command = macho::DysymtabCommand {
+            cmd: U32::new(endian, macho::LC_DYSYMTAB),
+            cmdsize: U32::new(endian, dysymtab_command_len as u32),
+            ilocalsym: U32::new(endian, 0),
+            nlocalsym: U32::new(endian, local_symbols.len() as u32),
+            iextdefsym: U32::new(endian, local_symbols.len() as u32),
+            nextdefsym: U32::new(endian, external_symbols.len() as u32),
+            iundefsym: U32::new(
+                endian,
+                local_symbols.len() as u32 + external_symbols.len() as u32,
+            ),
+            nundefsym: U32::new(endian, undefined_symbols.len() as u32),
+            tocoff: U32::default(),
+            ntoc: U32::default(),
+            modtaboff: U32::default(),
+            nmodtab: U32::default(),
+            extrefsymoff: U32::default(),
+            nextrefsyms: U32::default(),
+            indirectsymoff: U32::default(),
+            nindirectsyms: U32::default(),
+            extreloff: U32::default(),
+            nextrel: U32::default(),
+            locreloff: U32::default(),
+            nlocrel: U32::default(),
+        };
+        buffer.write(&dysymtab_command);
+
         // Write section data.
         for (index, section) in self.sections.iter().enumerate() {
             if !section.is_bss() {
@@ -595,80 +653,10 @@ impl<'a> Object<'a> {
         }
         debug_assert_eq!(segment_file_offset + segment_file_size, buffer.len());
 
-        // Write symtab.
-        write_align(buffer, pointer_align);
-        debug_assert_eq!(symtab_offset, buffer.len());
-        for (index, symbol) in self.symbols.iter().enumerate() {
-            if !symbol_offsets[index].emit {
-                continue;
-            }
-            // TODO: N_STAB
-            let (mut n_type, n_sect) = match symbol.section {
-                SymbolSection::Undefined => (macho::N_UNDF | macho::N_EXT, 0),
-                SymbolSection::Absolute => (macho::N_ABS, 0),
-                SymbolSection::Section(id) => (macho::N_SECT, id.0 + 1),
-                SymbolSection::None | SymbolSection::Common => {
-                    return Err(Error(format!(
-                        "unimplemented symbol `{}` section {:?}",
-                        symbol.name().unwrap_or(""),
-                        symbol.section
-                    )));
-                }
-            };
-            match symbol.scope {
-                SymbolScope::Unknown | SymbolScope::Compilation => {}
-                SymbolScope::Linkage => {
-                    n_type |= macho::N_EXT | macho::N_PEXT;
-                }
-                SymbolScope::Dynamic => {
-                    n_type |= macho::N_EXT;
-                }
-            }
-
-            let n_desc = if let SymbolFlags::MachO { n_desc } = symbol.flags {
-                n_desc
-            } else {
-                let mut n_desc = 0;
-                if symbol.weak {
-                    if symbol.is_undefined() {
-                        n_desc |= macho::N_WEAK_REF;
-                    } else {
-                        n_desc |= macho::N_WEAK_DEF;
-                    }
-                }
-                n_desc
-            };
-
-            let n_value = match symbol.section.id() {
-                Some(section) => section_offsets[section.0].address + symbol.value,
-                None => symbol.value,
-            };
-
-            let n_strx = symbol_offsets[index]
-                .str_id
-                .map(|id| strtab.get_offset(id))
-                .unwrap_or(0);
-
-            macho.write_nlist(
-                buffer,
-                Nlist {
-                    n_strx: n_strx as u32,
-                    n_type,
-                    n_sect: n_sect as u8,
-                    n_desc,
-                    n_value,
-                },
-            );
-        }
-
-        // Write strtab.
-        debug_assert_eq!(strtab_offset, buffer.len());
-        buffer.write_bytes(&strtab_data);
-
         // Write relocations.
         for (index, section) in self.sections.iter().enumerate() {
             if !section.relocations.is_empty() {
-                write_align(buffer, 4);
+                write_align(buffer, pointer_align);
                 debug_assert_eq!(section_offsets[index].reloc_offset, buffer.len());
                 for reloc in &section.relocations {
                     let r_length = match reloc.size {
@@ -786,6 +774,79 @@ impl<'a> Object<'a> {
                 }
             }
         }
+
+        // Write symtab.
+        write_align(buffer, pointer_align);
+        debug_assert_eq!(symtab_offset, buffer.len());
+        for index in local_symbols
+            .iter()
+            .copied()
+            .chain(external_symbols.iter().copied())
+            .chain(undefined_symbols.iter().copied())
+        {
+            let symbol = &self.symbols[index];
+            // TODO: N_STAB
+            let (mut n_type, n_sect) = match symbol.section {
+                SymbolSection::Undefined => (macho::N_UNDF | macho::N_EXT, 0),
+                SymbolSection::Absolute => (macho::N_ABS, 0),
+                SymbolSection::Section(id) => (macho::N_SECT, id.0 + 1),
+                SymbolSection::None | SymbolSection::Common => {
+                    return Err(Error(format!(
+                        "unimplemented symbol `{}` section {:?}",
+                        symbol.name().unwrap_or(""),
+                        symbol.section
+                    )));
+                }
+            };
+            match symbol.scope {
+                SymbolScope::Unknown | SymbolScope::Compilation => {}
+                SymbolScope::Linkage => {
+                    n_type |= macho::N_EXT | macho::N_PEXT;
+                }
+                SymbolScope::Dynamic => {
+                    n_type |= macho::N_EXT;
+                }
+            }
+
+            let n_desc = if let SymbolFlags::MachO { n_desc } = symbol.flags {
+                n_desc
+            } else {
+                let mut n_desc = 0;
+                if symbol.weak {
+                    if symbol.is_undefined() {
+                        n_desc |= macho::N_WEAK_REF;
+                    } else {
+                        n_desc |= macho::N_WEAK_DEF;
+                    }
+                }
+                n_desc
+            };
+
+            let n_value = match symbol.section.id() {
+                Some(section) => section_offsets[section.0].address + symbol.value,
+                None => symbol.value,
+            };
+
+            let n_strx = symbol_offsets[index]
+                .str_id
+                .map(|id| strtab.get_offset(id))
+                .unwrap_or(0);
+
+            macho.write_nlist(
+                buffer,
+                Nlist {
+                    n_strx: n_strx as u32,
+                    n_type,
+                    n_sect: n_sect as u8,
+                    n_desc,
+                    n_value,
+                },
+            );
+        }
+
+        // Write strtab.
+        debug_assert_eq!(strtab_offset, buffer.len());
+        buffer.write_bytes(&strtab_data);
 
         debug_assert_eq!(offset, buffer.len());
 

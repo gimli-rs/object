@@ -33,7 +33,7 @@ fn issue_552_section_file_alignment() {
         Endianness::Little,
     );
 
-    // Odd number of sections ensures that the starting file offset is not a multiple of 32.
+    // The starting file offset is not a multiple of 32 (checked later).
     // Length of 32 ensures that the file offset of the end of this section is still not a
     // multiple of 32.
     let section = object.add_section(vec![], vec![], object::SectionKind::ReadOnlyDataWithRel);
@@ -44,20 +44,21 @@ fn issue_552_section_file_alignment() {
     let section = object.add_section(vec![], vec![], object::SectionKind::ReadOnlyData);
     object.append_section_data(section, &vec![0u8; 1], 32);
 
-    let section = object.add_section(vec![], vec![], object::SectionKind::Text);
-    object.append_section_data(section, &vec![0u8; 1], 1);
-
     let bytes = &*object.write().unwrap();
+    std::fs::write(&"align.o", &bytes).unwrap();
     let object = read::File::parse(bytes).unwrap();
     let mut sections = object.sections();
 
     let section = sections.next().unwrap();
-    assert_eq!(section.file_range(), Some((368, 32)));
+    let offset = section.file_range().unwrap().0;
+    // Check file offset is not aligned to 32.
+    assert_ne!(offset % 32, 0);
     assert_eq!(section.address(), 0);
     assert_eq!(section.size(), 32);
 
     let section = sections.next().unwrap();
-    assert_eq!(section.file_range(), Some((400, 1)));
+    // Check there is no padding.
+    assert_eq!(section.file_range(), Some((offset + 32, 1)));
     assert_eq!(section.address(), 32);
     assert_eq!(section.size(), 1);
 }
