@@ -688,7 +688,6 @@ impl<'a> Writer<'a> {
                 self.relocs.push(U16::new(LE, 0));
                 block.count += 1;
             }
-            debug_assert!(block.virtual_address < virtual_address);
         }
         self.relocs.push(reloc);
         self.reloc_blocks.push(RelocBlock {
