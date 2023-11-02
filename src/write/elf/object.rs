@@ -153,50 +153,6 @@ impl<'a> Object<'a> {
     }
 
     pub(crate) fn elf_fixup_relocation(&mut self, relocation: &mut Relocation) -> Result<i64> {
-        // Return true if we should use a section symbol to avoid preemption.
-        fn want_section_symbol(relocation: &Relocation, symbol: &Symbol) -> bool {
-            if symbol.scope != SymbolScope::Dynamic {
-                // Only dynamic symbols can be preemptible.
-                return false;
-            }
-            match symbol.kind {
-                SymbolKind::Text | SymbolKind::Data => {}
-                _ => return false,
-            }
-            match relocation.kind {
-                // Anything using GOT or PLT is preemptible.
-                // We also require that `Other` relocations must already be correct.
-                RelocationKind::Got
-                | RelocationKind::GotRelative
-                | RelocationKind::GotBaseRelative
-                | RelocationKind::PltRelative
-                | RelocationKind::Elf(_) => return false,
-                // Absolute relocations are preemptible for non-local data.
-                // TODO: not sure if this rule is exactly correct
-                // This rule was added to handle global data references in debuginfo.
-                // Maybe this should be a new relocation kind so that the caller can decide.
-                RelocationKind::Absolute => {
-                    if symbol.kind == SymbolKind::Data {
-                        return false;
-                    }
-                }
-                _ => {}
-            }
-            true
-        }
-
-        // Use section symbols for relocations where required to avoid preemption.
-        // Otherwise, the linker will fail with:
-        //     relocation R_X86_64_PC32 against symbol `SomeSymbolName' can not be used when
-        //     making a shared object; recompile with -fPIC
-        let symbol = &self.symbols[relocation.symbol.0];
-        if want_section_symbol(relocation, symbol) {
-            if let Some(section) = symbol.section.id() {
-                relocation.addend += symbol.value as i64;
-                relocation.symbol = self.section_symbol(section);
-            }
-        }
-
         // Determine whether the addend is stored in the relocation or the data.
         if self.elf_has_relocation_addend()? {
             Ok(0)
@@ -441,6 +397,8 @@ impl<'a> Object<'a> {
                 st_other
             } else if symbol.scope == SymbolScope::Linkage {
                 elf::STV_HIDDEN
+            } else if symbol.scope == SymbolScope::Dynamic && !symbol.is_undefined() {
+                elf::STV_PROTECTED
             } else {
                 elf::STV_DEFAULT
             };
