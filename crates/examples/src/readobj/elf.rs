@@ -3170,6 +3170,7 @@ const FLAGS_R_LOONGARCH: &[Flag<u32>] = &flags!(
     R_LARCH_ADD_ULEB128,
     R_LARCH_SUB_ULEB128,
     R_LARCH_64_PCREL,
+    R_LARCH_CALL36,
 );
 const FLAGS_NT_CORE: &[Flag<u32>] = &flags!(
     NT_PRSTATUS,
