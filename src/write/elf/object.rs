@@ -616,6 +616,7 @@ impl<'a> Object<'a> {
                             (RelocationKind::Absolute, _, 32) => elf::R_LARCH_32,
                             (RelocationKind::Absolute, _, 64) => elf::R_LARCH_64,
                             (RelocationKind::Relative, _, 32) => elf::R_LARCH_32_PCREL,
+                            (RelocationKind::Relative, _, 64) => elf::R_LARCH_64_PCREL,
                             (RelocationKind::Relative, RelocationEncoding::LoongArchBranch, 16)
                             | (
                                 RelocationKind::PltRelative,
