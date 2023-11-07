@@ -6055,7 +6055,7 @@ pub const R_LARCH_32_PCREL: u32 = 99;
 /// Paired with a normal relocation at the same address to indicate the
 /// instruction can be relaxed
 pub const R_LARCH_RELAX: u32 = 100;
-/// Delete an instruction, should be only used internally by the linker
+/// Reserved
 pub const R_LARCH_DELETE: u32 = 101;
 /// Delete some bytes to ensure the instruction at PC + A aligned to
 /// `A.next_power_of_two()`-byte boundary
@@ -6074,6 +6074,9 @@ pub const R_LARCH_ADD_ULEB128: u32 = 107;
 pub const R_LARCH_SUB_ULEB128: u32 = 108;
 /// 64-bit PC relative
 pub const R_LARCH_64_PCREL: u32 = 109;
+/// 18..=37 bits of `S + A - PC` into the `pcaddu18i` instruction at `PC`,
+/// and 2..=17 bits of `S + A - PC` into the `jirl` instruction at `PC + 4`
+pub const R_LARCH_CALL36: u32 = 110;
 
 // Xtensa values Rel*::r_type`.
 pub const R_XTENSA_NONE: u32 = 0;
