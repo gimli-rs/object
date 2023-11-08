@@ -470,6 +470,56 @@ impl<'a> Object<'a> {
         }
     }
 
+    pub(crate) fn elf_relocation_size(&self, reloc: &crate::write::RawRelocation) -> Result<u8> {
+        let r_type = if let RelocationFlags::Elf { r_type } = reloc.flags {
+            r_type
+        } else {
+            return Err(Error("invalid relocation flags".into()));
+        };
+        // This only needs to support architectures that use implicit addends.
+        let size = match self.architecture {
+            Architecture::Arm => match r_type {
+                elf::R_ARM_ABS16 => Some(16),
+                elf::R_ARM_ABS32 | elf::R_ARM_REL32 => Some(32),
+                _ => None,
+            },
+            Architecture::Bpf => match r_type {
+                elf::R_BPF_64_32 => Some(32),
+                elf::R_BPF_64_64 => Some(64),
+                _ => None,
+            },
+            Architecture::I386 => match r_type {
+                elf::R_386_8 | elf::R_386_PC8 => Some(8),
+                elf::R_386_16 | elf::R_386_PC16 => Some(16),
+                elf::R_386_32
+                | elf::R_386_PC32
+                | elf::R_386_GOT32
+                | elf::R_386_PLT32
+                | elf::R_386_GOTOFF
+                | elf::R_386_GOTPC => Some(32),
+                _ => None,
+            },
+            Architecture::Mips => match r_type {
+                elf::R_MIPS_16 => Some(16),
+                elf::R_MIPS_32 => Some(32),
+                elf::R_MIPS_64 => Some(64),
+                _ => None,
+            },
+            Architecture::Sbf => match r_type {
+                elf::R_SBF_64_32 => Some(32),
+                elf::R_SBF_64_64 => Some(64),
+                _ => None,
+            },
+            _ => {
+                return Err(Error(format!(
+                    "unimplemented architecture {:?}",
+                    self.architecture
+                )));
+            }
+        };
+        size.ok_or_else(|| Error(format!("unsupported relocation for size {:?}", reloc)))
+    }
+
     pub(crate) fn elf_is_64(&self) -> bool {
         match self.architecture.address_size().unwrap() {
             AddressSize::U8 | AddressSize::U16 | AddressSize::U32 => false,

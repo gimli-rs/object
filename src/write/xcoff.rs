@@ -91,6 +91,15 @@ impl<'a> Object<'a> {
         constant
     }
 
+    pub(crate) fn xcoff_relocation_size(&self, reloc: &crate::write::RawRelocation) -> Result<u8> {
+        let r_rsize = if let RelocationFlags::Xcoff { r_rsize, .. } = reloc.flags {
+            r_rsize
+        } else {
+            return Err(Error(format!("unexpected relocation {:?}", reloc)));
+        };
+        Ok(r_rsize + 1)
+    }
+
     pub(crate) fn xcoff_write(&self, buffer: &mut dyn WritableBuffer) -> Result<()> {
         let is_64 = match self.architecture.address_size().unwrap() {
             AddressSize::U8 | AddressSize::U16 | AddressSize::U32 => false,

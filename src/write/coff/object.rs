@@ -191,6 +191,63 @@ impl<'a> Object<'a> {
         constant
     }
 
+    pub(crate) fn coff_relocation_size(&self, reloc: &crate::write::RawRelocation) -> Result<u8> {
+        let typ = if let RelocationFlags::Coff { typ } = reloc.flags {
+            typ
+        } else {
+            return Err(Error(format!("unexpected relocation for size {:?}", reloc)));
+        };
+        let size = match self.architecture {
+            Architecture::I386 => match typ {
+                coff::IMAGE_REL_I386_DIR16
+                | coff::IMAGE_REL_I386_REL16
+                | coff::IMAGE_REL_I386_SECTION => Some(16),
+                coff::IMAGE_REL_I386_DIR32
+                | coff::IMAGE_REL_I386_DIR32NB
+                | coff::IMAGE_REL_I386_SECREL
+                | coff::IMAGE_REL_I386_TOKEN
+                | coff::IMAGE_REL_I386_REL32 => Some(32),
+                _ => None,
+            },
+            Architecture::X86_64 => match typ {
+                coff::IMAGE_REL_AMD64_SECTION => Some(16),
+                coff::IMAGE_REL_AMD64_ADDR32
+                | coff::IMAGE_REL_AMD64_ADDR32NB
+                | coff::IMAGE_REL_AMD64_REL32
+                | coff::IMAGE_REL_AMD64_REL32_1
+                | coff::IMAGE_REL_AMD64_REL32_2
+                | coff::IMAGE_REL_AMD64_REL32_3
+                | coff::IMAGE_REL_AMD64_REL32_4
+                | coff::IMAGE_REL_AMD64_REL32_5
+                | coff::IMAGE_REL_AMD64_SECREL
+                | coff::IMAGE_REL_AMD64_TOKEN => Some(32),
+                coff::IMAGE_REL_AMD64_ADDR64 => Some(64),
+                _ => None,
+            },
+            Architecture::Arm => match typ {
+                coff::IMAGE_REL_ARM_SECTION => Some(16),
+                coff::IMAGE_REL_ARM_ADDR32
+                | coff::IMAGE_REL_ARM_ADDR32NB
+                | coff::IMAGE_REL_ARM_TOKEN
+                | coff::IMAGE_REL_ARM_REL32
+                | coff::IMAGE_REL_ARM_SECREL => Some(32),
+                _ => None,
+            },
+            Architecture::Aarch64 => match typ {
+                coff::IMAGE_REL_ARM64_SECTION => Some(16),
+                coff::IMAGE_REL_ARM64_ADDR32
+                | coff::IMAGE_REL_ARM64_ADDR32NB
+                | coff::IMAGE_REL_ARM64_SECREL
+                | coff::IMAGE_REL_ARM64_TOKEN
+                | coff::IMAGE_REL_ARM64_REL32 => Some(32),
+                coff::IMAGE_REL_ARM64_ADDR64 => Some(64),
+                _ => None,
+            },
+            _ => None,
+        };
+        size.ok_or_else(|| Error(format!("unsupported relocation for size {:?}", reloc)))
+    }
+
     fn coff_add_stub_symbol(&mut self, symbol_id: SymbolId) -> Result<SymbolId> {
         if let Some(stub_id) = self.stub_symbols.get(&symbol_id) {
             return Ok(*stub_id);

@@ -387,6 +387,14 @@ impl<'a> Object<'a> {
         constant
     }
 
+    pub(crate) fn macho_relocation_size(&self, reloc: &crate::write::RawRelocation) -> Result<u8> {
+        if let RelocationFlags::MachO { r_length, .. } = reloc.flags {
+            Ok(8 << r_length)
+        } else {
+            return Err(Error("invalid relocation flags".into()));
+        }
+    }
+
     pub(crate) fn macho_write(&self, buffer: &mut dyn WritableBuffer) -> Result<()> {
         let address_size = self.architecture.address_size().unwrap();
         let endian = self.endian;

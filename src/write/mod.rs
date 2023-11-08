@@ -555,9 +555,6 @@ impl<'a> Object<'a> {
             BinaryFormat::Xcoff => self.xcoff_adjust_addend(&mut relocation),
             _ => unimplemented!(),
         };
-        if addend != 0 {
-            self.write_relocation_addend(section, &relocation, addend)?;
-        }
         let flags = match self.format {
             #[cfg(feature = "coff")]
             BinaryFormat::Coff => self.coff_relocation_flags(&relocation)?,
@@ -575,6 +572,9 @@ impl<'a> Object<'a> {
             addend: relocation.addend,
             flags,
         };
+        if addend != 0 {
+            self.write_relocation_addend(section, &relocation, addend)?;
+        }
         self.sections[section.0].relocations.push(relocation);
         Ok(())
     }
@@ -582,12 +582,23 @@ impl<'a> Object<'a> {
     fn write_relocation_addend(
         &mut self,
         section: SectionId,
-        relocation: &Relocation,
+        relocation: &RawRelocation,
         addend: i64,
     ) -> Result<()> {
+        let size = match self.format {
+            #[cfg(feature = "coff")]
+            BinaryFormat::Coff => self.coff_relocation_size(relocation)?,
+            #[cfg(feature = "elf")]
+            BinaryFormat::Elf => self.elf_relocation_size(relocation)?,
+            #[cfg(feature = "macho")]
+            BinaryFormat::MachO => self.macho_relocation_size(relocation)?,
+            #[cfg(feature = "xcoff")]
+            BinaryFormat::Xcoff => self.xcoff_relocation_size(relocation)?,
+            _ => unimplemented!(),
+        };
         let data = self.sections[section.0].data_mut();
         let offset = relocation.offset as usize;
-        match relocation.size {
+        match size {
             32 => data.write_at(offset, &U32::new(self.endian, addend as u32)),
             64 => data.write_at(offset, &U64::new(self.endian, addend as u64)),
             _ => {
@@ -601,7 +612,7 @@ impl<'a> Object<'a> {
             Error(format!(
                 "invalid relocation offset {}+{} (max {})",
                 relocation.offset,
-                relocation.size,
+                size,
                 data.len()
             ))
         })
@@ -930,7 +941,7 @@ pub struct Relocation {
 
 /// Temporary relocation structure introduced during refactor.
 #[derive(Debug)]
-struct RawRelocation {
+pub(crate) struct RawRelocation {
     /// The section offset of the place of the relocation.
     pub offset: u64,
     /// The symbol referred to by the relocation.
