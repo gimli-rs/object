@@ -66,7 +66,9 @@ impl<'a> Object<'a> {
         }
     }
 
-    pub(crate) fn xcoff_fixup_relocation(&mut self, relocation: &mut Relocation) -> i64 {
+    pub(crate) fn xcoff_translate_relocation(&mut self, _relocation: &mut Relocation) {}
+
+    pub(crate) fn xcoff_adjust_addend(&mut self, relocation: &mut Relocation) -> i64 {
         let constant = match relocation.kind {
             RelocationKind::Relative => relocation.addend + 4,
             _ => relocation.addend,

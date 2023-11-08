@@ -81,7 +81,7 @@ impl<'a> Object<'a> {
         name
     }
 
-    pub(crate) fn coff_fixup_relocation(&mut self, relocation: &mut Relocation) -> i64 {
+    pub(crate) fn coff_translate_relocation(&mut self, relocation: &mut Relocation) {
         if relocation.kind == RelocationKind::GotRelative {
             // Use a stub symbol for the relocation instead.
             // This isn't really a GOT, but it's a similar purpose.
@@ -94,7 +94,9 @@ impl<'a> Object<'a> {
             // For convenience, treat this the same as Relative.
             relocation.kind = RelocationKind::Relative;
         }
+    }
 
+    pub(crate) fn coff_adjust_addend(&self, relocation: &mut Relocation) -> i64 {
         let constant = match self.architecture {
             Architecture::I386 | Architecture::Arm | Architecture::Aarch64 => match relocation.kind
             {

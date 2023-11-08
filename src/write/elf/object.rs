@@ -153,7 +153,9 @@ impl<'a> Object<'a> {
         })
     }
 
-    pub(crate) fn elf_fixup_relocation(&mut self, relocation: &mut Relocation) -> Result<i64> {
+    pub(crate) fn elf_translate_relocation(&mut self, _relocation: &mut Relocation) {}
+
+    pub(crate) fn elf_adjust_addend(&mut self, relocation: &mut Relocation) -> Result<i64> {
         // Determine whether the addend is stored in the relocation or the data.
         if self.elf_has_relocation_addend()? {
             Ok(0)

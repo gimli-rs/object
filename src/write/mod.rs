@@ -532,15 +532,26 @@ impl<'a> Object<'a> {
     /// Relocations must only be added after the referenced symbols have been added
     /// and defined (if applicable).
     pub fn add_relocation(&mut self, section: SectionId, mut relocation: Relocation) -> Result<()> {
+        match self.format {
+            #[cfg(feature = "coff")]
+            BinaryFormat::Coff => self.coff_translate_relocation(&mut relocation),
+            #[cfg(feature = "elf")]
+            BinaryFormat::Elf => self.elf_translate_relocation(&mut relocation),
+            #[cfg(feature = "macho")]
+            BinaryFormat::MachO => self.macho_translate_relocation(&mut relocation),
+            #[cfg(feature = "xcoff")]
+            BinaryFormat::Xcoff => self.xcoff_translate_relocation(&mut relocation),
+            _ => unimplemented!(),
+        }
         let addend = match self.format {
             #[cfg(feature = "coff")]
-            BinaryFormat::Coff => self.coff_fixup_relocation(&mut relocation),
+            BinaryFormat::Coff => self.coff_adjust_addend(&mut relocation),
             #[cfg(feature = "elf")]
-            BinaryFormat::Elf => self.elf_fixup_relocation(&mut relocation)?,
+            BinaryFormat::Elf => self.elf_adjust_addend(&mut relocation)?,
             #[cfg(feature = "macho")]
-            BinaryFormat::MachO => self.macho_fixup_relocation(&mut relocation),
+            BinaryFormat::MachO => self.macho_adjust_addend(&mut relocation),
             #[cfg(feature = "xcoff")]
-            BinaryFormat::Xcoff => self.xcoff_fixup_relocation(&mut relocation),
+            BinaryFormat::Xcoff => self.xcoff_adjust_addend(&mut relocation),
             _ => unimplemented!(),
         };
         if addend != 0 {

@@ -251,7 +251,14 @@ impl<'a> Object<'a> {
         init_symbol_id
     }
 
-    pub(crate) fn macho_fixup_relocation(&mut self, relocation: &mut Relocation) -> i64 {
+    pub(crate) fn macho_translate_relocation(&mut self, relocation: &mut Relocation) {
+        // Aarch64 relocs of these sizes act as if they are double-word length
+        if self.architecture == Architecture::Aarch64 && matches!(relocation.size, 12 | 21 | 26) {
+            relocation.size = 32;
+        }
+    }
+
+    pub(crate) fn macho_adjust_addend(&mut self, relocation: &mut Relocation) -> i64 {
         let relative = match relocation.kind {
             RelocationKind::Relative
             | RelocationKind::GotRelative
@@ -286,10 +293,6 @@ impl<'a> Object<'a> {
                 _ => 0,
             };
             relocation.addend += pcrel_offset;
-        }
-        // Aarch64 relocs of these sizes act as if they are double-word length
-        if self.architecture == Architecture::Aarch64 && matches!(relocation.size, 12 | 21 | 26) {
-            relocation.size = 32;
         }
         // Check for relocations that use an explicit addend.
         if self.architecture == Architecture::Aarch64 {
