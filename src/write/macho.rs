@@ -746,7 +746,7 @@ impl<'a> Object<'a> {
                         r_type,
                         r_pcrel,
                         r_length,
-                    } = self.macho_relocation_flags(reloc)?
+                    } = reloc.flags
                     {
                         (r_type, r_pcrel, r_length)
                     } else {

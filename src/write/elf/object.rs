@@ -748,9 +748,7 @@ impl<'a> Object<'a> {
                 writer.write_align_relocation();
                 debug_assert_eq!(section_offsets[index].reloc_offset, writer.len());
                 for reloc in &section.relocations {
-                    let r_type = if let RelocationFlags::Elf { r_type } =
-                        self.elf_relocation_flags(reloc)?
-                    {
+                    let r_type = if let RelocationFlags::Elf { r_type } = reloc.flags {
                         r_type
                     } else {
                         return Err(Error("invalid relocation flags".into()));

@@ -81,19 +81,20 @@ impl<'a> Object<'a> {
         name
     }
 
-    pub(crate) fn coff_translate_relocation(&mut self, relocation: &mut Relocation) {
+    pub(crate) fn coff_translate_relocation(&mut self, relocation: &mut Relocation) -> Result<()> {
         if relocation.kind == RelocationKind::GotRelative {
             // Use a stub symbol for the relocation instead.
             // This isn't really a GOT, but it's a similar purpose.
             // TODO: need to handle DLL imports differently?
             relocation.kind = RelocationKind::Relative;
-            relocation.symbol = self.coff_add_stub_symbol(relocation.symbol);
+            relocation.symbol = self.coff_add_stub_symbol(relocation.symbol)?;
         } else if relocation.kind == RelocationKind::PltRelative {
             // Windows doesn't need a separate relocation type for
             // references to functions in import libraries.
             // For convenience, treat this the same as Relative.
             relocation.kind = RelocationKind::Relative;
         }
+        Ok(())
     }
 
     pub(crate) fn coff_relocation_flags(&self, reloc: &Relocation) -> Result<RelocationFlags> {
@@ -190,9 +191,9 @@ impl<'a> Object<'a> {
         constant
     }
 
-    fn coff_add_stub_symbol(&mut self, symbol_id: SymbolId) -> SymbolId {
+    fn coff_add_stub_symbol(&mut self, symbol_id: SymbolId) -> Result<SymbolId> {
         if let Some(stub_id) = self.stub_symbols.get(&symbol_id) {
-            return *stub_id;
+            return Ok(*stub_id);
         }
         let stub_size = self.architecture.address_size().unwrap().bytes();
 
@@ -200,14 +201,17 @@ impl<'a> Object<'a> {
         let section_id = self.add_section(Vec::new(), name, SectionKind::ReadOnlyData);
         let section = self.section_mut(section_id);
         section.set_data(vec![0; stub_size as usize], u64::from(stub_size));
-        section.relocations = vec![Relocation {
-            offset: 0,
-            size: stub_size * 8,
-            kind: RelocationKind::Absolute,
-            encoding: RelocationEncoding::Generic,
-            symbol: symbol_id,
-            addend: 0,
-        }];
+        self.add_relocation(
+            section_id,
+            Relocation {
+                offset: 0,
+                size: stub_size * 8,
+                kind: RelocationKind::Absolute,
+                encoding: RelocationEncoding::Generic,
+                symbol: symbol_id,
+                addend: 0,
+            },
+        )?;
 
         let mut name = b".refptr.".to_vec();
         name.extend_from_slice(&self.symbol(symbol_id).name);
@@ -223,7 +227,7 @@ impl<'a> Object<'a> {
         });
         self.stub_symbols.insert(symbol_id, stub_id);
 
-        stub_id
+        Ok(stub_id)
     }
 
     /// Appends linker directives to the `.drectve` section to tell the linker
@@ -459,12 +463,11 @@ impl<'a> Object<'a> {
                 //debug_assert_eq!(section_offsets[index].reloc_offset, buffer.len());
                 writer.write_relocations_count(section.relocations.len());
                 for reloc in &section.relocations {
-                    let typ =
-                        if let RelocationFlags::Coff { typ } = self.coff_relocation_flags(reloc)? {
-                            typ
-                        } else {
-                            return Err(Error("invalid relocation flags".into()));
-                        };
+                    let typ = if let RelocationFlags::Coff { typ } = reloc.flags {
+                        typ
+                    } else {
+                        return Err(Error("invalid relocation flags".into()));
+                    };
                     writer.write_relocation(writer::Relocation {
                         virtual_address: reloc.offset as u32,
                         symbol: symbol_offsets[reloc.symbol.0].index,

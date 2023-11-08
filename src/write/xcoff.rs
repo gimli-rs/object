@@ -362,13 +362,12 @@ impl<'a> Object<'a> {
             if !section.relocations.is_empty() {
                 debug_assert_eq!(section_offsets[index].reloc_offset, buffer.len());
                 for reloc in &section.relocations {
-                    let (r_rtype, r_rsize) = if let RelocationFlags::Xcoff { r_rtype, r_rsize } =
-                        self.xcoff_relocation_flags(reloc)?
-                    {
-                        (r_rtype, r_rsize)
-                    } else {
-                        return Err(Error("invalid relocation flags".into()));
-                    };
+                    let (r_rtype, r_rsize) =
+                        if let RelocationFlags::Xcoff { r_rtype, r_rsize } = reloc.flags {
+                            (r_rtype, r_rsize)
+                        } else {
+                            return Err(Error("invalid relocation flags".into()));
+                        };
                     if is_64 {
                         let xcoff_rel = xcoff::Rel64 {
                             r_vaddr: U64::new(BE, reloc.offset),

@@ -535,7 +535,7 @@ impl<'a> Object<'a> {
     pub fn add_relocation(&mut self, section: SectionId, mut relocation: Relocation) -> Result<()> {
         match self.format {
             #[cfg(feature = "coff")]
-            BinaryFormat::Coff => self.coff_translate_relocation(&mut relocation),
+            BinaryFormat::Coff => self.coff_translate_relocation(&mut relocation)?,
             #[cfg(feature = "elf")]
             BinaryFormat::Elf => self.elf_translate_relocation(&mut relocation),
             #[cfg(feature = "macho")]
@@ -558,6 +558,23 @@ impl<'a> Object<'a> {
         if addend != 0 {
             self.write_relocation_addend(section, &relocation, addend)?;
         }
+        let flags = match self.format {
+            #[cfg(feature = "coff")]
+            BinaryFormat::Coff => self.coff_relocation_flags(&relocation)?,
+            #[cfg(feature = "elf")]
+            BinaryFormat::Elf => self.elf_relocation_flags(&relocation)?,
+            #[cfg(feature = "macho")]
+            BinaryFormat::MachO => self.macho_relocation_flags(&relocation)?,
+            #[cfg(feature = "xcoff")]
+            BinaryFormat::Xcoff => self.xcoff_relocation_flags(&relocation)?,
+            _ => unimplemented!(),
+        };
+        let relocation = RawRelocation {
+            offset: relocation.offset,
+            symbol: relocation.symbol,
+            addend: relocation.addend,
+            flags,
+        };
         self.sections[section.0].relocations.push(relocation);
         Ok(())
     }
@@ -709,7 +726,7 @@ pub struct Section<'a> {
     size: u64,
     align: u64,
     data: Cow<'a, [u8]>,
-    relocations: Vec<Relocation>,
+    relocations: Vec<RawRelocation>,
     symbol: Option<SymbolId>,
     /// Section flags that are specific to each file format.
     pub flags: SectionFlags,
@@ -909,6 +926,23 @@ pub struct Relocation {
     ///
     /// This may be in addition to an implicit addend stored at the place of the relocation.
     pub addend: i64,
+}
+
+/// Temporary relocation structure introduced during refactor.
+#[derive(Debug)]
+struct RawRelocation {
+    /// The section offset of the place of the relocation.
+    pub offset: u64,
+    /// The symbol referred to by the relocation.
+    ///
+    /// This may be a section symbol.
+    pub symbol: SymbolId,
+    /// The addend to use in the relocation calculation.
+    ///
+    /// This may be in addition to an implicit addend stored at the place of the relocation.
+    pub addend: i64,
+    /// The fields that define the relocation type.
+    pub flags: RelocationFlags,
 }
 
 /// An identifier used to reference a COMDAT section group.
