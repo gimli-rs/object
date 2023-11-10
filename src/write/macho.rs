@@ -331,7 +331,7 @@ impl<'a> Object<'a> {
         })
     }
 
-    pub(crate) fn macho_adjust_addend(&mut self, relocation: &mut Relocation) -> i64 {
+    pub(crate) fn macho_adjust_addend(&mut self, relocation: &mut Relocation) -> bool {
         let relative = match relocation.kind {
             RelocationKind::Relative
             | RelocationKind::GotRelative
@@ -370,21 +370,19 @@ impl<'a> Object<'a> {
         // Check for relocations that use an explicit addend.
         if self.architecture == Architecture::Aarch64 {
             if relocation.encoding == RelocationEncoding::AArch64Call {
-                return 0;
+                return false;
             }
             if let RelocationKind::MachO { value, .. } = relocation.kind {
                 match value {
                     macho::ARM64_RELOC_BRANCH26
                     | macho::ARM64_RELOC_PAGE21
-                    | macho::ARM64_RELOC_PAGEOFF12 => return 0,
+                    | macho::ARM64_RELOC_PAGEOFF12 => return false,
                     _ => {}
                 }
             }
         }
         // Signify implicit addend.
-        let constant = relocation.addend;
-        relocation.addend = 0;
-        constant
+        true
     }
 
     pub(crate) fn macho_relocation_size(&self, reloc: &crate::write::RawRelocation) -> Result<u8> {

@@ -544,17 +544,6 @@ impl<'a> Object<'a> {
             BinaryFormat::Xcoff => self.xcoff_translate_relocation(&mut relocation),
             _ => unimplemented!(),
         }
-        let addend = match self.format {
-            #[cfg(feature = "coff")]
-            BinaryFormat::Coff => self.coff_adjust_addend(&mut relocation),
-            #[cfg(feature = "elf")]
-            BinaryFormat::Elf => self.elf_adjust_addend(&mut relocation)?,
-            #[cfg(feature = "macho")]
-            BinaryFormat::MachO => self.macho_adjust_addend(&mut relocation),
-            #[cfg(feature = "xcoff")]
-            BinaryFormat::Xcoff => self.xcoff_adjust_addend(&mut relocation),
-            _ => unimplemented!(),
-        };
         let flags = match self.format {
             #[cfg(feature = "coff")]
             BinaryFormat::Coff => self.coff_relocation_flags(&relocation)?,
@@ -566,14 +555,26 @@ impl<'a> Object<'a> {
             BinaryFormat::Xcoff => self.xcoff_relocation_flags(&relocation)?,
             _ => unimplemented!(),
         };
-        let relocation = RawRelocation {
+        let implicit = match self.format {
+            #[cfg(feature = "coff")]
+            BinaryFormat::Coff => self.coff_adjust_addend(&mut relocation),
+            #[cfg(feature = "elf")]
+            BinaryFormat::Elf => self.elf_adjust_addend(&mut relocation)?,
+            #[cfg(feature = "macho")]
+            BinaryFormat::MachO => self.macho_adjust_addend(&mut relocation),
+            #[cfg(feature = "xcoff")]
+            BinaryFormat::Xcoff => self.xcoff_adjust_addend(&mut relocation),
+            _ => unimplemented!(),
+        };
+        let mut relocation = RawRelocation {
             offset: relocation.offset,
             symbol: relocation.symbol,
             addend: relocation.addend,
             flags,
         };
-        if addend != 0 {
-            self.write_relocation_addend(section, &relocation, addend)?;
+        if implicit && relocation.addend != 0 {
+            self.write_relocation_addend(section, &relocation)?;
+            relocation.addend = 0;
         }
         self.sections[section.0].relocations.push(relocation);
         Ok(())
@@ -583,7 +584,6 @@ impl<'a> Object<'a> {
         &mut self,
         section: SectionId,
         relocation: &RawRelocation,
-        addend: i64,
     ) -> Result<()> {
         let size = match self.format {
             #[cfg(feature = "coff")]
@@ -599,8 +599,8 @@ impl<'a> Object<'a> {
         let data = self.sections[section.0].data_mut();
         let offset = relocation.offset as usize;
         match size {
-            32 => data.write_at(offset, &U32::new(self.endian, addend as u32)),
-            64 => data.write_at(offset, &U64::new(self.endian, addend as u64)),
+            32 => data.write_at(offset, &U32::new(self.endian, relocation.addend as u32)),
+            64 => data.write_at(offset, &U64::new(self.endian, relocation.addend as u64)),
             _ => {
                 return Err(Error(format!(
                     "unimplemented relocation addend {:?}",

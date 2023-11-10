@@ -82,13 +82,13 @@ impl<'a> Object<'a> {
         Ok(RelocationFlags::Xcoff { r_rtype, r_rsize })
     }
 
-    pub(crate) fn xcoff_adjust_addend(&mut self, relocation: &mut Relocation) -> i64 {
-        let constant = match relocation.kind {
+    pub(crate) fn xcoff_adjust_addend(&mut self, relocation: &mut Relocation) -> bool {
+        let addend = match relocation.kind {
             RelocationKind::Relative => relocation.addend + 4,
             _ => relocation.addend,
         };
-        relocation.addend -= constant;
-        constant
+        relocation.addend = addend;
+        true
     }
 
     pub(crate) fn xcoff_relocation_size(&self, reloc: &crate::write::RawRelocation) -> Result<u8> {
