@@ -82,13 +82,19 @@ impl<'a> Object<'a> {
         Ok(RelocationFlags::Xcoff { r_rtype, r_rsize })
     }
 
-    pub(crate) fn xcoff_adjust_addend(&mut self, relocation: &mut Relocation) -> bool {
-        let addend = match relocation.kind {
-            RelocationKind::Relative => relocation.addend + 4,
-            _ => relocation.addend,
+    pub(crate) fn xcoff_adjust_addend(
+        &mut self,
+        relocation: &mut crate::write::RawRelocation,
+    ) -> Result<bool> {
+        let r_rtype = if let RelocationFlags::Xcoff { r_rtype, .. } = relocation.flags {
+            r_rtype
+        } else {
+            return Err(Error(format!("invalid relocation flags {:?}", relocation)));
         };
-        relocation.addend = addend;
-        true
+        if r_rtype == xcoff::R_REL {
+            relocation.addend += 4;
+        }
+        Ok(true)
     }
 
     pub(crate) fn xcoff_relocation_size(&self, reloc: &crate::write::RawRelocation) -> Result<u8> {

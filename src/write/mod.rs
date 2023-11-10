@@ -555,22 +555,22 @@ impl<'a> Object<'a> {
             BinaryFormat::Xcoff => self.xcoff_relocation_flags(&relocation)?,
             _ => unimplemented!(),
         };
-        let implicit = match self.format {
-            #[cfg(feature = "coff")]
-            BinaryFormat::Coff => self.coff_adjust_addend(&mut relocation),
-            #[cfg(feature = "elf")]
-            BinaryFormat::Elf => self.elf_adjust_addend(&mut relocation)?,
-            #[cfg(feature = "macho")]
-            BinaryFormat::MachO => self.macho_adjust_addend(&mut relocation),
-            #[cfg(feature = "xcoff")]
-            BinaryFormat::Xcoff => self.xcoff_adjust_addend(&mut relocation),
-            _ => unimplemented!(),
-        };
         let mut relocation = RawRelocation {
             offset: relocation.offset,
             symbol: relocation.symbol,
             addend: relocation.addend,
             flags,
+        };
+        let implicit = match self.format {
+            #[cfg(feature = "coff")]
+            BinaryFormat::Coff => self.coff_adjust_addend(&mut relocation)?,
+            #[cfg(feature = "elf")]
+            BinaryFormat::Elf => self.elf_adjust_addend(&mut relocation)?,
+            #[cfg(feature = "macho")]
+            BinaryFormat::MachO => self.macho_adjust_addend(&mut relocation)?,
+            #[cfg(feature = "xcoff")]
+            BinaryFormat::Xcoff => self.xcoff_adjust_addend(&mut relocation)?,
+            _ => unimplemented!(),
         };
         if implicit && relocation.addend != 0 {
             self.write_relocation_addend(section, &relocation)?;

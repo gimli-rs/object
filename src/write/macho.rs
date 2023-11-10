@@ -331,15 +331,19 @@ impl<'a> Object<'a> {
         })
     }
 
-    pub(crate) fn macho_adjust_addend(&mut self, relocation: &mut Relocation) -> bool {
-        let relative = match relocation.kind {
-            RelocationKind::Relative
-            | RelocationKind::GotRelative
-            | RelocationKind::PltRelative
-            | RelocationKind::MachO { relative: true, .. } => true,
-            _ => false,
+    pub(crate) fn macho_adjust_addend(
+        &mut self,
+        relocation: &mut crate::write::RawRelocation,
+    ) -> Result<bool> {
+        let (r_type, r_pcrel) = if let RelocationFlags::MachO {
+            r_type, r_pcrel, ..
+        } = relocation.flags
+        {
+            (r_type, r_pcrel)
+        } else {
+            return Err(Error(format!("invalid relocation flags {:?}", relocation)));
         };
-        if relative {
+        if r_pcrel {
             // For PC relative relocations on some architectures, the
             // addend does not include the offset required due to the
             // PC being different from the place of the relocation.
@@ -347,19 +351,10 @@ impl<'a> Object<'a> {
             // addend here to account for this.
             let pcrel_offset = match self.architecture {
                 Architecture::I386 => 4,
-                Architecture::X86_64 => match relocation.kind {
-                    RelocationKind::MachO {
-                        value: macho::X86_64_RELOC_SIGNED_1,
-                        ..
-                    } => 5,
-                    RelocationKind::MachO {
-                        value: macho::X86_64_RELOC_SIGNED_2,
-                        ..
-                    } => 6,
-                    RelocationKind::MachO {
-                        value: macho::X86_64_RELOC_SIGNED_4,
-                        ..
-                    } => 8,
+                Architecture::X86_64 => match r_type {
+                    macho::X86_64_RELOC_SIGNED_1 => 5,
+                    macho::X86_64_RELOC_SIGNED_2 => 6,
+                    macho::X86_64_RELOC_SIGNED_4 => 8,
                     _ => 4,
                 },
                 // TODO: maybe missing support for some architectures and relocations
@@ -367,22 +362,18 @@ impl<'a> Object<'a> {
             };
             relocation.addend += pcrel_offset;
         }
-        // Check for relocations that use an explicit addend.
-        if self.architecture == Architecture::Aarch64 {
-            if relocation.encoding == RelocationEncoding::AArch64Call {
-                return false;
+        // Determine if addend is implicit.
+        let implicit = if self.architecture == Architecture::Aarch64 {
+            match r_type {
+                macho::ARM64_RELOC_BRANCH26
+                | macho::ARM64_RELOC_PAGE21
+                | macho::ARM64_RELOC_PAGEOFF12 => false,
+                _ => true,
             }
-            if let RelocationKind::MachO { value, .. } = relocation.kind {
-                match value {
-                    macho::ARM64_RELOC_BRANCH26
-                    | macho::ARM64_RELOC_PAGE21
-                    | macho::ARM64_RELOC_PAGEOFF12 => return false,
-                    _ => {}
-                }
-            }
-        }
-        // Signify implicit addend.
-        true
+        } else {
+            true
+        };
+        Ok(implicit)
     }
 
     pub(crate) fn macho_relocation_size(&self, reloc: &crate::write::RawRelocation) -> Result<u8> {

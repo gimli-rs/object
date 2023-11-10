@@ -166,31 +166,50 @@ impl<'a> Object<'a> {
         Ok(RelocationFlags::Coff { typ })
     }
 
-    pub(crate) fn coff_adjust_addend(&self, relocation: &mut Relocation) -> bool {
-        let addend = match self.architecture {
-            Architecture::I386 | Architecture::Arm | Architecture::Aarch64 => match relocation.kind
-            {
-                RelocationKind::Relative => {
-                    // IMAGE_REL_I386_REL32, IMAGE_REL_ARM_REL32, IMAGE_REL_ARM64_REL32
-                    relocation.addend + 4
-                }
-                _ => relocation.addend,
-            },
-            Architecture::X86_64 => match relocation.kind {
-                RelocationKind::Relative => {
-                    // IMAGE_REL_AMD64_REL32 through to IMAGE_REL_AMD64_REL32_5
-                    if relocation.addend <= -4 && relocation.addend >= -9 {
-                        0
-                    } else {
-                        relocation.addend + 4
-                    }
-                }
-                _ => relocation.addend,
-            },
-            _ => unimplemented!(),
+    pub(crate) fn coff_adjust_addend(
+        &self,
+        relocation: &mut crate::write::RawRelocation,
+    ) -> Result<bool> {
+        let typ = if let RelocationFlags::Coff { typ } = relocation.flags {
+            typ
+        } else {
+            return Err(Error(format!("invalid relocation flags {:?}", relocation)));
         };
-        relocation.addend = addend;
-        true
+        let offset = match self.architecture {
+            Architecture::Arm => {
+                if typ == coff::IMAGE_REL_ARM_REL32 {
+                    4
+                } else {
+                    0
+                }
+            }
+            Architecture::Aarch64 => {
+                if typ == coff::IMAGE_REL_ARM64_REL32 {
+                    4
+                } else {
+                    0
+                }
+            }
+            Architecture::I386 => {
+                if typ == coff::IMAGE_REL_I386_REL32 {
+                    4
+                } else {
+                    0
+                }
+            }
+            Architecture::X86_64 => match typ {
+                coff::IMAGE_REL_AMD64_REL32 => 4,
+                coff::IMAGE_REL_AMD64_REL32_1 => 5,
+                coff::IMAGE_REL_AMD64_REL32_2 => 6,
+                coff::IMAGE_REL_AMD64_REL32_3 => 7,
+                coff::IMAGE_REL_AMD64_REL32_4 => 8,
+                coff::IMAGE_REL_AMD64_REL32_5 => 9,
+                _ => 0,
+            },
+            _ => return Err(Error(format!("unimplemented relocation {:?}", relocation))),
+        };
+        relocation.addend += offset;
+        Ok(true)
     }
 
     pub(crate) fn coff_relocation_size(&self, reloc: &crate::write::RawRelocation) -> Result<u8> {

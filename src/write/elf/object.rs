@@ -459,7 +459,10 @@ impl<'a> Object<'a> {
         Ok(RelocationFlags::Elf { r_type })
     }
 
-    pub(crate) fn elf_adjust_addend(&mut self, _relocation: &mut Relocation) -> Result<bool> {
+    pub(crate) fn elf_adjust_addend(
+        &mut self,
+        _relocation: &mut crate::write::RawRelocation,
+    ) -> Result<bool> {
         // Determine whether the addend is stored in the relocation or the data.
         let implicit = !self.elf_has_relocation_addend()?;
         Ok(implicit)
