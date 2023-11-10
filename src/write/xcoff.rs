@@ -66,26 +66,32 @@ impl<'a> Object<'a> {
         }
     }
 
-    pub(crate) fn xcoff_translate_relocation(&mut self, _relocation: &mut Relocation) {}
+    pub(crate) fn xcoff_translate_relocation(&mut self, reloc: &mut Relocation) -> Result<()> {
+        let (kind, _encoding, size) = if let RelocationFlags::Generic {
+            kind,
+            encoding,
+            size,
+        } = reloc.flags
+        {
+            (kind, encoding, size)
+        } else {
+            return Ok(());
+        };
 
-    pub(crate) fn xcoff_relocation_flags(&self, reloc: &Relocation) -> Result<RelocationFlags> {
-        let r_rtype = match reloc.kind {
+        let r_rtype = match kind {
             RelocationKind::Absolute => xcoff::R_POS,
             RelocationKind::Relative => xcoff::R_REL,
             RelocationKind::Got => xcoff::R_TOC,
-            RelocationKind::Xcoff(x) => x,
             _ => {
                 return Err(Error(format!("unimplemented relocation {:?}", reloc)));
             }
         };
-        let r_rsize = reloc.size - 1;
-        Ok(RelocationFlags::Xcoff { r_rtype, r_rsize })
+        let r_rsize = size - 1;
+        reloc.flags = RelocationFlags::Xcoff { r_rtype, r_rsize };
+        Ok(())
     }
 
-    pub(crate) fn xcoff_adjust_addend(
-        &mut self,
-        relocation: &mut crate::write::RawRelocation,
-    ) -> Result<bool> {
+    pub(crate) fn xcoff_adjust_addend(&mut self, relocation: &mut Relocation) -> Result<bool> {
         let r_rtype = if let RelocationFlags::Xcoff { r_rtype, .. } = relocation.flags {
             r_rtype
         } else {
@@ -97,7 +103,7 @@ impl<'a> Object<'a> {
         Ok(true)
     }
 
-    pub(crate) fn xcoff_relocation_size(&self, reloc: &crate::write::RawRelocation) -> Result<u8> {
+    pub(crate) fn xcoff_relocation_size(&self, reloc: &Relocation) -> Result<u8> {
         let r_rsize = if let RelocationFlags::Xcoff { r_rsize, .. } = reloc.flags {
             r_rsize
         } else {

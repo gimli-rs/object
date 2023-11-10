@@ -138,21 +138,21 @@ Dynamic symbols
 9: Symbol { name: "printf", address: 0, size: 0, kind: Text, section: Undefined, scope: Unknown, weak: false, flags: Elf { st_info: 12, st_other: 0 } }
 
 Dynamic relocations
-(10d80, Relocation { kind: Elf(403), encoding: Generic, size: 0, target: Absolute, addend: 720, implicit_addend: false })
-(10d88, Relocation { kind: Elf(403), encoding: Generic, size: 0, target: Absolute, addend: 6d8, implicit_addend: false })
-(10fc8, Relocation { kind: Elf(403), encoding: Generic, size: 0, target: Absolute, addend: 7c8, implicit_addend: false })
-(10fe8, Relocation { kind: Elf(403), encoding: Generic, size: 0, target: Absolute, addend: 748, implicit_addend: false })
-(10ff0, Relocation { kind: Elf(403), encoding: Generic, size: 0, target: Absolute, addend: 724, implicit_addend: false })
-(11008, Relocation { kind: Elf(403), encoding: Generic, size: 0, target: Absolute, addend: 11008, implicit_addend: false })
-(10fd0, Relocation { kind: Elf(401), encoding: Generic, size: 0, target: Symbol(SymbolIndex(3)), addend: 0, implicit_addend: false })
-(10fd8, Relocation { kind: Elf(401), encoding: Generic, size: 0, target: Symbol(SymbolIndex(4)), addend: 0, implicit_addend: false })
-(10fe0, Relocation { kind: Elf(401), encoding: Generic, size: 0, target: Symbol(SymbolIndex(6)), addend: 0, implicit_addend: false })
-(10ff8, Relocation { kind: Elf(401), encoding: Generic, size: 0, target: Symbol(SymbolIndex(8)), addend: 0, implicit_addend: false })
-(10f98, Relocation { kind: Elf(402), encoding: Generic, size: 0, target: Symbol(SymbolIndex(4)), addend: 0, implicit_addend: false })
-(10fa0, Relocation { kind: Elf(402), encoding: Generic, size: 0, target: Symbol(SymbolIndex(5)), addend: 0, implicit_addend: false })
-(10fa8, Relocation { kind: Elf(402), encoding: Generic, size: 0, target: Symbol(SymbolIndex(6)), addend: 0, implicit_addend: false })
-(10fb0, Relocation { kind: Elf(402), encoding: Generic, size: 0, target: Symbol(SymbolIndex(7)), addend: 0, implicit_addend: false })
-(10fb8, Relocation { kind: Elf(402), encoding: Generic, size: 0, target: Symbol(SymbolIndex(9)), addend: 0, implicit_addend: false })
+(10d80, Relocation { kind: Unknown, encoding: Generic, size: 0, target: Absolute, addend: 720, implicit_addend: false, flags: Elf { r_type: 403 } })
+(10d88, Relocation { kind: Unknown, encoding: Generic, size: 0, target: Absolute, addend: 6d8, implicit_addend: false, flags: Elf { r_type: 403 } })
+(10fc8, Relocation { kind: Unknown, encoding: Generic, size: 0, target: Absolute, addend: 7c8, implicit_addend: false, flags: Elf { r_type: 403 } })
+(10fe8, Relocation { kind: Unknown, encoding: Generic, size: 0, target: Absolute, addend: 748, implicit_addend: false, flags: Elf { r_type: 403 } })
+(10ff0, Relocation { kind: Unknown, encoding: Generic, size: 0, target: Absolute, addend: 724, implicit_addend: false, flags: Elf { r_type: 403 } })
+(11008, Relocation { kind: Unknown, encoding: Generic, size: 0, target: Absolute, addend: 11008, implicit_addend: false, flags: Elf { r_type: 403 } })
+(10fd0, Relocation { kind: Unknown, encoding: Generic, size: 0, target: Symbol(SymbolIndex(3)), addend: 0, implicit_addend: false, flags: Elf { r_type: 401 } })
+(10fd8, Relocation { kind: Unknown, encoding: Generic, size: 0, target: Symbol(SymbolIndex(4)), addend: 0, implicit_addend: false, flags: Elf { r_type: 401 } })
+(10fe0, Relocation { kind: Unknown, encoding: Generic, size: 0, target: Symbol(SymbolIndex(6)), addend: 0, implicit_addend: false, flags: Elf { r_type: 401 } })
+(10ff8, Relocation { kind: Unknown, encoding: Generic, size: 0, target: Symbol(SymbolIndex(8)), addend: 0, implicit_addend: false, flags: Elf { r_type: 401 } })
+(10f98, Relocation { kind: Unknown, encoding: Generic, size: 0, target: Symbol(SymbolIndex(4)), addend: 0, implicit_addend: false, flags: Elf { r_type: 402 } })
+(10fa0, Relocation { kind: Unknown, encoding: Generic, size: 0, target: Symbol(SymbolIndex(5)), addend: 0, implicit_addend: false, flags: Elf { r_type: 402 } })
+(10fa8, Relocation { kind: Unknown, encoding: Generic, size: 0, target: Symbol(SymbolIndex(6)), addend: 0, implicit_addend: false, flags: Elf { r_type: 402 } })
+(10fb0, Relocation { kind: Unknown, encoding: Generic, size: 0, target: Symbol(SymbolIndex(7)), addend: 0, implicit_addend: false, flags: Elf { r_type: 402 } })
+(10fb8, Relocation { kind: Unknown, encoding: Generic, size: 0, target: Symbol(SymbolIndex(9)), addend: 0, implicit_addend: false, flags: Elf { r_type: 402 } })
 
 Import { library: "", name: "_ITM_deregisterTMCloneTable" }
 Import { library: "", name: "__cxa_finalize" }

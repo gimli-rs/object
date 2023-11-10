@@ -3,8 +3,8 @@ use core::{fmt, slice};
 use crate::endian::Endianness;
 use crate::macho;
 use crate::read::{
-    ReadRef, Relocation, RelocationEncoding, RelocationKind, RelocationTarget, SectionIndex,
-    SymbolIndex,
+    ReadRef, Relocation, RelocationEncoding, RelocationFlags, RelocationKind, RelocationTarget,
+    SectionIndex, SymbolIndex,
 };
 
 use super::{MachHeader, MachOFile};
@@ -45,14 +45,16 @@ where
                 continue;
             }
             let reloc = reloc.info(self.file.endian);
+            let flags = RelocationFlags::MachO {
+                r_type: reloc.r_type,
+                r_pcrel: reloc.r_pcrel,
+                r_length: reloc.r_length,
+            };
             let mut encoding = RelocationEncoding::Generic;
             let kind = match cputype {
                 macho::CPU_TYPE_ARM => match (reloc.r_type, reloc.r_pcrel) {
                     (macho::ARM_RELOC_VANILLA, false) => RelocationKind::Absolute,
-                    _ => RelocationKind::MachO {
-                        value: reloc.r_type,
-                        relative: reloc.r_pcrel,
-                    },
+                    _ => RelocationKind::Unknown,
                 },
                 macho::CPU_TYPE_ARM64 | macho::CPU_TYPE_ARM64_32 => {
                     match (reloc.r_type, reloc.r_pcrel) {
@@ -63,18 +65,12 @@ where
                                 .wrapping_shr(64 - 24);
                             continue;
                         }
-                        _ => RelocationKind::MachO {
-                            value: reloc.r_type,
-                            relative: reloc.r_pcrel,
-                        },
+                        _ => RelocationKind::Unknown,
                     }
                 }
                 macho::CPU_TYPE_X86 => match (reloc.r_type, reloc.r_pcrel) {
                     (macho::GENERIC_RELOC_VANILLA, false) => RelocationKind::Absolute,
-                    _ => RelocationKind::MachO {
-                        value: reloc.r_type,
-                        relative: reloc.r_pcrel,
-                    },
+                    _ => RelocationKind::Unknown,
                 },
                 macho::CPU_TYPE_X86_64 => match (reloc.r_type, reloc.r_pcrel) {
                     (macho::X86_64_RELOC_UNSIGNED, false) => RelocationKind::Absolute,
@@ -91,15 +87,9 @@ where
                         encoding = RelocationEncoding::X86RipRelativeMovq;
                         RelocationKind::GotRelative
                     }
-                    _ => RelocationKind::MachO {
-                        value: reloc.r_type,
-                        relative: reloc.r_pcrel,
-                    },
+                    _ => RelocationKind::Unknown,
                 },
-                _ => RelocationKind::MachO {
-                    value: reloc.r_type,
-                    relative: reloc.r_pcrel,
-                },
+                _ => RelocationKind::Unknown,
             };
             let size = 8 << reloc.r_length;
             let target = if reloc.r_extern {
@@ -141,6 +131,7 @@ where
                     target,
                     addend,
                     implicit_addend,
+                    flags,
                 },
             ));
         }

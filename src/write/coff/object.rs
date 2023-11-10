@@ -81,25 +81,32 @@ impl<'a> Object<'a> {
         name
     }
 
-    pub(crate) fn coff_translate_relocation(&mut self, relocation: &mut Relocation) -> Result<()> {
-        if relocation.kind == RelocationKind::GotRelative {
+    pub(crate) fn coff_translate_relocation(&mut self, reloc: &mut Relocation) -> Result<()> {
+        let (mut kind, _encoding, size) = if let RelocationFlags::Generic {
+            kind,
+            encoding,
+            size,
+        } = reloc.flags
+        {
+            (kind, encoding, size)
+        } else {
+            return Ok(());
+        };
+        if kind == RelocationKind::GotRelative {
             // Use a stub symbol for the relocation instead.
             // This isn't really a GOT, but it's a similar purpose.
             // TODO: need to handle DLL imports differently?
-            relocation.kind = RelocationKind::Relative;
-            relocation.symbol = self.coff_add_stub_symbol(relocation.symbol)?;
-        } else if relocation.kind == RelocationKind::PltRelative {
+            kind = RelocationKind::Relative;
+            reloc.symbol = self.coff_add_stub_symbol(reloc.symbol)?;
+        } else if kind == RelocationKind::PltRelative {
             // Windows doesn't need a separate relocation type for
             // references to functions in import libraries.
             // For convenience, treat this the same as Relative.
-            relocation.kind = RelocationKind::Relative;
+            kind = RelocationKind::Relative;
         }
-        Ok(())
-    }
 
-    pub(crate) fn coff_relocation_flags(&self, reloc: &Relocation) -> Result<RelocationFlags> {
         let typ = match self.architecture {
-            Architecture::I386 => match (reloc.kind, reloc.size) {
+            Architecture::I386 => match (kind, size) {
                 (RelocationKind::Absolute, 16) => coff::IMAGE_REL_I386_DIR16,
                 (RelocationKind::Relative, 16) => coff::IMAGE_REL_I386_REL16,
                 (RelocationKind::Absolute, 32) => coff::IMAGE_REL_I386_DIR32,
@@ -108,12 +115,11 @@ impl<'a> Object<'a> {
                 (RelocationKind::SectionOffset, 32) => coff::IMAGE_REL_I386_SECREL,
                 (RelocationKind::SectionOffset, 7) => coff::IMAGE_REL_I386_SECREL7,
                 (RelocationKind::Relative, 32) => coff::IMAGE_REL_I386_REL32,
-                (RelocationKind::Coff(x), _) => x,
                 _ => {
                     return Err(Error(format!("unimplemented relocation {:?}", reloc)));
                 }
             },
-            Architecture::X86_64 => match (reloc.kind, reloc.size) {
+            Architecture::X86_64 => match (kind, size) {
                 (RelocationKind::Absolute, 64) => coff::IMAGE_REL_AMD64_ADDR64,
                 (RelocationKind::Absolute, 32) => coff::IMAGE_REL_AMD64_ADDR32,
                 (RelocationKind::ImageOffset, 32) => coff::IMAGE_REL_AMD64_ADDR32NB,
@@ -128,30 +134,27 @@ impl<'a> Object<'a> {
                 (RelocationKind::SectionIndex, 16) => coff::IMAGE_REL_AMD64_SECTION,
                 (RelocationKind::SectionOffset, 32) => coff::IMAGE_REL_AMD64_SECREL,
                 (RelocationKind::SectionOffset, 7) => coff::IMAGE_REL_AMD64_SECREL7,
-                (RelocationKind::Coff(x), _) => x,
                 _ => {
                     return Err(Error(format!("unimplemented relocation {:?}", reloc)));
                 }
             },
-            Architecture::Arm => match (reloc.kind, reloc.size) {
+            Architecture::Arm => match (kind, size) {
                 (RelocationKind::Absolute, 32) => coff::IMAGE_REL_ARM_ADDR32,
                 (RelocationKind::ImageOffset, 32) => coff::IMAGE_REL_ARM_ADDR32NB,
                 (RelocationKind::Relative, 32) => coff::IMAGE_REL_ARM_REL32,
                 (RelocationKind::SectionIndex, 16) => coff::IMAGE_REL_ARM_SECTION,
                 (RelocationKind::SectionOffset, 32) => coff::IMAGE_REL_ARM_SECREL,
-                (RelocationKind::Coff(x), _) => x,
                 _ => {
                     return Err(Error(format!("unimplemented relocation {:?}", reloc)));
                 }
             },
-            Architecture::Aarch64 => match (reloc.kind, reloc.size) {
+            Architecture::Aarch64 => match (kind, size) {
                 (RelocationKind::Absolute, 32) => coff::IMAGE_REL_ARM64_ADDR32,
                 (RelocationKind::ImageOffset, 32) => coff::IMAGE_REL_ARM64_ADDR32NB,
                 (RelocationKind::SectionIndex, 16) => coff::IMAGE_REL_ARM64_SECTION,
                 (RelocationKind::SectionOffset, 32) => coff::IMAGE_REL_ARM64_SECREL,
                 (RelocationKind::Absolute, 64) => coff::IMAGE_REL_ARM64_ADDR64,
                 (RelocationKind::Relative, 32) => coff::IMAGE_REL_ARM64_REL32,
-                (RelocationKind::Coff(x), _) => x,
                 _ => {
                     return Err(Error(format!("unimplemented relocation {:?}", reloc)));
                 }
@@ -163,13 +166,11 @@ impl<'a> Object<'a> {
                 )));
             }
         };
-        Ok(RelocationFlags::Coff { typ })
+        reloc.flags = RelocationFlags::Coff { typ };
+        Ok(())
     }
 
-    pub(crate) fn coff_adjust_addend(
-        &self,
-        relocation: &mut crate::write::RawRelocation,
-    ) -> Result<bool> {
+    pub(crate) fn coff_adjust_addend(&self, relocation: &mut Relocation) -> Result<bool> {
         let typ = if let RelocationFlags::Coff { typ } = relocation.flags {
             typ
         } else {
@@ -212,7 +213,7 @@ impl<'a> Object<'a> {
         Ok(true)
     }
 
-    pub(crate) fn coff_relocation_size(&self, reloc: &crate::write::RawRelocation) -> Result<u8> {
+    pub(crate) fn coff_relocation_size(&self, reloc: &Relocation) -> Result<u8> {
         let typ = if let RelocationFlags::Coff { typ } = reloc.flags {
             typ
         } else {
@@ -283,11 +284,13 @@ impl<'a> Object<'a> {
             section_id,
             Relocation {
                 offset: 0,
-                size: stub_size * 8,
-                kind: RelocationKind::Absolute,
-                encoding: RelocationEncoding::Generic,
                 symbol: symbol_id,
                 addend: 0,
+                flags: RelocationFlags::Generic {
+                    kind: RelocationKind::Absolute,
+                    encoding: RelocationEncoding::Generic,
+                    size: stub_size * 8,
+                },
             },
         )?;
 

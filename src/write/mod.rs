@@ -537,30 +537,13 @@ impl<'a> Object<'a> {
             #[cfg(feature = "coff")]
             BinaryFormat::Coff => self.coff_translate_relocation(&mut relocation)?,
             #[cfg(feature = "elf")]
-            BinaryFormat::Elf => self.elf_translate_relocation(&mut relocation),
+            BinaryFormat::Elf => self.elf_translate_relocation(&mut relocation)?,
             #[cfg(feature = "macho")]
-            BinaryFormat::MachO => self.macho_translate_relocation(&mut relocation),
+            BinaryFormat::MachO => self.macho_translate_relocation(&mut relocation)?,
             #[cfg(feature = "xcoff")]
-            BinaryFormat::Xcoff => self.xcoff_translate_relocation(&mut relocation),
+            BinaryFormat::Xcoff => self.xcoff_translate_relocation(&mut relocation)?,
             _ => unimplemented!(),
         }
-        let flags = match self.format {
-            #[cfg(feature = "coff")]
-            BinaryFormat::Coff => self.coff_relocation_flags(&relocation)?,
-            #[cfg(feature = "elf")]
-            BinaryFormat::Elf => self.elf_relocation_flags(&relocation)?,
-            #[cfg(feature = "macho")]
-            BinaryFormat::MachO => self.macho_relocation_flags(&relocation)?,
-            #[cfg(feature = "xcoff")]
-            BinaryFormat::Xcoff => self.xcoff_relocation_flags(&relocation)?,
-            _ => unimplemented!(),
-        };
-        let mut relocation = RawRelocation {
-            offset: relocation.offset,
-            symbol: relocation.symbol,
-            addend: relocation.addend,
-            flags,
-        };
         let implicit = match self.format {
             #[cfg(feature = "coff")]
             BinaryFormat::Coff => self.coff_adjust_addend(&mut relocation)?,
@@ -583,7 +566,7 @@ impl<'a> Object<'a> {
     fn write_relocation_addend(
         &mut self,
         section: SectionId,
-        relocation: &RawRelocation,
+        relocation: &Relocation,
     ) -> Result<()> {
         let size = match self.format {
             #[cfg(feature = "coff")]
@@ -737,7 +720,7 @@ pub struct Section<'a> {
     size: u64,
     align: u64,
     data: Cow<'a, [u8]>,
-    relocations: Vec<RawRelocation>,
+    relocations: Vec<Relocation>,
     symbol: Option<SymbolId>,
     /// Section flags that are specific to each file format.
     pub flags: SectionFlags,
@@ -921,27 +904,6 @@ impl Symbol {
 /// A relocation in an object file.
 #[derive(Debug)]
 pub struct Relocation {
-    /// The section offset of the place of the relocation.
-    pub offset: u64,
-    /// The size in bits of the place of relocation.
-    pub size: u8,
-    /// The operation used to calculate the result of the relocation.
-    pub kind: RelocationKind,
-    /// Information about how the result of the relocation operation is encoded in the place.
-    pub encoding: RelocationEncoding,
-    /// The symbol referred to by the relocation.
-    ///
-    /// This may be a section symbol.
-    pub symbol: SymbolId,
-    /// The addend to use in the relocation calculation.
-    ///
-    /// This may be in addition to an implicit addend stored at the place of the relocation.
-    pub addend: i64,
-}
-
-/// Temporary relocation structure introduced during refactor.
-#[derive(Debug)]
-pub(crate) struct RawRelocation {
     /// The section offset of the place of the relocation.
     pub offset: u64,
     /// The symbol referred to by the relocation.

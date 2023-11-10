@@ -302,6 +302,8 @@ pub enum SymbolScope {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[non_exhaustive]
 pub enum RelocationKind {
+    /// The operation is unknown.
+    Unknown,
     /// S + A
     Absolute,
     /// S + A - P
@@ -322,19 +324,6 @@ pub enum RelocationKind {
     SectionOffset,
     /// The index of the section containing the symbol.
     SectionIndex,
-    /// Some other ELF relocation. The value is dependent on the architecture.
-    Elf(u32),
-    /// Some other Mach-O relocation. The value is dependent on the architecture.
-    MachO {
-        /// The relocation type.
-        value: u8,
-        /// Whether the relocation is relative to the place.
-        relative: bool,
-    },
-    /// Some other COFF relocation. The value is dependent on the architecture.
-    Coff(u16),
-    /// Some other XCOFF relocation.
-    Xcoff(u8),
 }
 
 /// Information about how the result of the relocation operation is encoded in the place.
@@ -344,6 +333,8 @@ pub enum RelocationKind {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[non_exhaustive]
 pub enum RelocationEncoding {
+    /// The relocation encoding is unknown.
+    Unknown,
     /// Generic encoding.
     Generic,
 
@@ -538,7 +529,16 @@ pub enum SymbolFlags<Section, Symbol> {
 /// Relocation fields that are specific to each file format and architecture.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[non_exhaustive]
-pub(crate) enum RelocationFlags {
+pub enum RelocationFlags {
+    /// Format independent representation.
+    Generic {
+        /// The operation used to calculate the result of the relocation.
+        kind: RelocationKind,
+        /// Information about how the result of the relocation operation is encoded in the place.
+        encoding: RelocationEncoding,
+        /// The size in bits of the place of relocation.
+        size: u8,
+    },
     /// ELF relocation fields.
     Elf {
         /// `r_type` field in the ELF relocation.

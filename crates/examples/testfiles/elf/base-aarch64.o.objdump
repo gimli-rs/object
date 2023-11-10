@@ -31,9 +31,9 @@ Symbols
 11: Symbol { name: "printf", address: 0, size: 0, kind: Unknown, section: Undefined, scope: Unknown, weak: false, flags: Elf { st_info: 10, st_other: 0 } }
 
 .text relocations
-(8, Relocation { kind: Elf(113), encoding: Generic, size: 0, target: Symbol(SymbolIndex(5)), addend: 0, implicit_addend: false })
-(c, Relocation { kind: Elf(115), encoding: Generic, size: 0, target: Symbol(SymbolIndex(5)), addend: 0, implicit_addend: false })
-(10, Relocation { kind: PltRelative, encoding: AArch64Call, size: 1a, target: Symbol(SymbolIndex(b)), addend: 0, implicit_addend: false })
+(8, Relocation { kind: Unknown, encoding: Generic, size: 0, target: Symbol(SymbolIndex(5)), addend: 0, implicit_addend: false, flags: Elf { r_type: 113 } })
+(c, Relocation { kind: Unknown, encoding: Generic, size: 0, target: Symbol(SymbolIndex(5)), addend: 0, implicit_addend: false, flags: Elf { r_type: 115 } })
+(10, Relocation { kind: PltRelative, encoding: AArch64Call, size: 1a, target: Symbol(SymbolIndex(b)), addend: 0, implicit_addend: false, flags: Elf { r_type: 11b } })
 
 Dynamic symbols
 

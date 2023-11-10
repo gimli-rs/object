@@ -137,11 +137,9 @@ pub fn copy(in_data: &[u8]) -> Vec<u8> {
             };
             let out_relocation = write::Relocation {
                 offset,
-                size: in_relocation.size(),
-                kind: in_relocation.kind(),
-                encoding: in_relocation.encoding(),
                 symbol,
                 addend: in_relocation.addend(),
+                flags: in_relocation.flags(),
             };
             out_object
                 .add_relocation(out_section, out_relocation)

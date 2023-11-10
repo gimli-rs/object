@@ -221,11 +221,13 @@ impl<'a> Object<'a> {
             section,
             Relocation {
                 offset,
-                size: address_size * 8,
-                kind: RelocationKind::Absolute,
-                encoding: RelocationEncoding::Generic,
                 symbol: tlv_bootstrap,
                 addend: 0,
+                flags: RelocationFlags::Generic {
+                    kind: RelocationKind::Absolute,
+                    encoding: RelocationEncoding::Generic,
+                    size: address_size * 8,
+                },
             },
         )
         .unwrap();
@@ -233,11 +235,13 @@ impl<'a> Object<'a> {
             section,
             Relocation {
                 offset: offset + u64::from(address_size) * 2,
-                size: address_size * 8,
-                kind: RelocationKind::Absolute,
-                encoding: RelocationEncoding::Generic,
                 symbol: init_symbol_id,
                 addend: 0,
+                flags: RelocationFlags::Generic {
+                    kind: RelocationKind::Absolute,
+                    encoding: RelocationEncoding::Generic,
+                    size: address_size * 8,
+                },
             },
         )
         .unwrap();
@@ -251,15 +255,22 @@ impl<'a> Object<'a> {
         init_symbol_id
     }
 
-    pub(crate) fn macho_translate_relocation(&mut self, relocation: &mut Relocation) {
+    pub(crate) fn macho_translate_relocation(&mut self, reloc: &mut Relocation) -> Result<()> {
+        let (kind, encoding, mut size) = if let RelocationFlags::Generic {
+            kind,
+            encoding,
+            size,
+        } = reloc.flags
+        {
+            (kind, encoding, size)
+        } else {
+            return Ok(());
+        };
         // Aarch64 relocs of these sizes act as if they are double-word length
-        if self.architecture == Architecture::Aarch64 && matches!(relocation.size, 12 | 21 | 26) {
-            relocation.size = 32;
+        if self.architecture == Architecture::Aarch64 && matches!(size, 12 | 21 | 26) {
+            size = 32;
         }
-    }
-
-    pub(crate) fn macho_relocation_flags(&self, reloc: &Relocation) -> Result<RelocationFlags> {
-        let r_length = match reloc.size {
+        let r_length = match size {
             8 => 0,
             16 => 1,
             32 => 2,
@@ -267,13 +278,13 @@ impl<'a> Object<'a> {
             _ => return Err(Error(format!("unimplemented reloc size {:?}", reloc))),
         };
         let (r_pcrel, r_type) = match self.architecture {
-            Architecture::I386 => match reloc.kind {
+            Architecture::I386 => match kind {
                 RelocationKind::Absolute => (false, macho::GENERIC_RELOC_VANILLA),
                 _ => {
                     return Err(Error(format!("unimplemented relocation {:?}", reloc)));
                 }
             },
-            Architecture::X86_64 => match (reloc.kind, reloc.encoding) {
+            Architecture::X86_64 => match (kind, encoding) {
                 (RelocationKind::Absolute, RelocationEncoding::Generic) => {
                     (false, macho::X86_64_RELOC_UNSIGNED)
                 }
@@ -295,46 +306,34 @@ impl<'a> Object<'a> {
                 (RelocationKind::GotRelative, RelocationEncoding::X86RipRelativeMovq) => {
                     (true, macho::X86_64_RELOC_GOT_LOAD)
                 }
-                (RelocationKind::MachO { value, relative }, _) => (relative, value),
                 _ => {
                     return Err(Error(format!("unimplemented relocation {:?}", reloc)));
                 }
             },
-            Architecture::Aarch64 | Architecture::Aarch64_Ilp32 => {
-                match (reloc.kind, reloc.encoding) {
-                    (RelocationKind::Absolute, RelocationEncoding::Generic) => {
-                        (false, macho::ARM64_RELOC_UNSIGNED)
-                    }
-                    (RelocationKind::Relative, RelocationEncoding::AArch64Call) => {
-                        (true, macho::ARM64_RELOC_BRANCH26)
-                    }
-                    (RelocationKind::MachO { value, relative }, RelocationEncoding::Generic) => {
-                        (relative, value)
-                    }
-                    _ => {
-                        return Err(Error(format!("unimplemented relocation {:?}", reloc)));
-                    }
+            Architecture::Aarch64 | Architecture::Aarch64_Ilp32 => match (kind, encoding) {
+                (RelocationKind::Absolute, RelocationEncoding::Generic) => {
+                    (false, macho::ARM64_RELOC_UNSIGNED)
                 }
-            }
-            _ => {
-                if let RelocationKind::MachO { value, relative } = reloc.kind {
-                    (relative, value)
-                } else {
+                (RelocationKind::Relative, RelocationEncoding::AArch64Call) => {
+                    (true, macho::ARM64_RELOC_BRANCH26)
+                }
+                _ => {
                     return Err(Error(format!("unimplemented relocation {:?}", reloc)));
                 }
+            },
+            _ => {
+                return Err(Error(format!("unimplemented relocation {:?}", reloc)));
             }
         };
-        Ok(RelocationFlags::MachO {
+        reloc.flags = RelocationFlags::MachO {
             r_type,
             r_pcrel,
             r_length,
-        })
+        };
+        Ok(())
     }
 
-    pub(crate) fn macho_adjust_addend(
-        &mut self,
-        relocation: &mut crate::write::RawRelocation,
-    ) -> Result<bool> {
+    pub(crate) fn macho_adjust_addend(&mut self, relocation: &mut Relocation) -> Result<bool> {
         let (r_type, r_pcrel) = if let RelocationFlags::MachO {
             r_type, r_pcrel, ..
         } = relocation.flags
@@ -376,7 +375,7 @@ impl<'a> Object<'a> {
         Ok(implicit)
     }
 
-    pub(crate) fn macho_relocation_size(&self, reloc: &crate::write::RawRelocation) -> Result<u8> {
+    pub(crate) fn macho_relocation_size(&self, reloc: &Relocation) -> Result<u8> {
         if let RelocationFlags::MachO { r_length, .. } = reloc.flags {
             Ok(8 << r_length)
         } else {
