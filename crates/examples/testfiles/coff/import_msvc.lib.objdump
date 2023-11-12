@@ -89,8 +89,8 @@ Symbols
 1: Symbol { name: "__IMPORT_DESCRIPTOR_test_x64", address: 0, size: 0, kind: Data, section: Section(SectionIndex(2)), scope: Linkage, weak: false, flags: None }
 2: Symbol { name: ".idata$2", address: 0, size: 0, kind: Section, section: Section(SectionIndex(2)), scope: Compilation, weak: false, flags: None }
 3: Symbol { name: ".idata$6", address: 0, size: 0, kind: Data, section: Section(SectionIndex(3)), scope: Compilation, weak: false, flags: None }
-4: Symbol { name: ".idata$4", address: 0, size: 0, kind: Section, section: Common, scope: Compilation, weak: false, flags: None }
-5: Symbol { name: ".idata$5", address: 0, size: 0, kind: Section, section: Common, scope: Compilation, weak: false, flags: None }
+4: Symbol { name: ".idata$4", address: 0, size: 0, kind: Section, section: Undefined, scope: Compilation, weak: false, flags: None }
+5: Symbol { name: ".idata$5", address: 0, size: 0, kind: Section, section: Undefined, scope: Compilation, weak: false, flags: None }
 6: Symbol { name: "__NULL_IMPORT_DESCRIPTOR", address: 0, size: 0, kind: Data, section: Undefined, scope: Linkage, weak: false, flags: None }
 7: Symbol { name: "\u{7f}test_x64_NULL_THUNK_DATA", address: 0, size: 0, kind: Data, section: Undefined, scope: Linkage, weak: false, flags: None }
 
@@ -166,8 +166,8 @@ Symbols
 1: Symbol { name: "__IMPORT_DESCRIPTOR_test_x86", address: 0, size: 0, kind: Data, section: Section(SectionIndex(2)), scope: Linkage, weak: false, flags: None }
 2: Symbol { name: ".idata$2", address: 0, size: 0, kind: Section, section: Section(SectionIndex(2)), scope: Compilation, weak: false, flags: None }
 3: Symbol { name: ".idata$6", address: 0, size: 0, kind: Data, section: Section(SectionIndex(3)), scope: Compilation, weak: false, flags: None }
-4: Symbol { name: ".idata$4", address: 0, size: 0, kind: Section, section: Common, scope: Compilation, weak: false, flags: None }
-5: Symbol { name: ".idata$5", address: 0, size: 0, kind: Section, section: Common, scope: Compilation, weak: false, flags: None }
+4: Symbol { name: ".idata$4", address: 0, size: 0, kind: Section, section: Undefined, scope: Compilation, weak: false, flags: None }
+5: Symbol { name: ".idata$5", address: 0, size: 0, kind: Section, section: Undefined, scope: Compilation, weak: false, flags: None }
 6: Symbol { name: "__NULL_IMPORT_DESCRIPTOR", address: 0, size: 0, kind: Data, section: Undefined, scope: Linkage, weak: false, flags: None }
 7: Symbol { name: "\u{7f}test_x86_NULL_THUNK_DATA", address: 0, size: 0, kind: Data, section: Undefined, scope: Linkage, weak: false, flags: None }
 
@@ -243,8 +243,8 @@ Symbols
 1: Symbol { name: "__IMPORT_DESCRIPTOR_test_arm64ec", address: 0, size: 0, kind: Data, section: Section(SectionIndex(2)), scope: Linkage, weak: false, flags: None }
 2: Symbol { name: ".idata$2", address: 0, size: 0, kind: Section, section: Section(SectionIndex(2)), scope: Compilation, weak: false, flags: None }
 3: Symbol { name: ".idata$6", address: 0, size: 0, kind: Data, section: Section(SectionIndex(3)), scope: Compilation, weak: false, flags: None }
-4: Symbol { name: ".idata$4", address: 0, size: 0, kind: Section, section: Common, scope: Compilation, weak: false, flags: None }
-5: Symbol { name: ".idata$5", address: 0, size: 0, kind: Section, section: Common, scope: Compilation, weak: false, flags: None }
+4: Symbol { name: ".idata$4", address: 0, size: 0, kind: Section, section: Undefined, scope: Compilation, weak: false, flags: None }
+5: Symbol { name: ".idata$5", address: 0, size: 0, kind: Section, section: Undefined, scope: Compilation, weak: false, flags: None }
 6: Symbol { name: "__NULL_IMPORT_DESCRIPTOR", address: 0, size: 0, kind: Data, section: Undefined, scope: Linkage, weak: false, flags: None }
 7: Symbol { name: "\u{7f}test_arm64ec_NULL_THUNK_DATA", address: 0, size: 0, kind: Data, section: Undefined, scope: Linkage, weak: false, flags: None }
 

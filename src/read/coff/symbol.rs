@@ -401,12 +401,16 @@ impl<'data, 'file, R: ReadRef<'data>, Coff: CoffHeader> ObjectSymbol<'data>
     fn section(&self) -> SymbolSection {
         match self.symbol.section_number() {
             pe::IMAGE_SYM_UNDEFINED => {
-                if self.symbol.storage_class() == pe::IMAGE_SYM_CLASS_EXTERNAL
-                    && self.symbol.value() == 0
-                {
+                if self.symbol.storage_class() == pe::IMAGE_SYM_CLASS_EXTERNAL {
+                    if self.symbol.value() == 0 {
+                        SymbolSection::Undefined
+                    } else {
+                        SymbolSection::Common
+                    }
+                } else if self.symbol.storage_class() == pe::IMAGE_SYM_CLASS_SECTION {
                     SymbolSection::Undefined
                 } else {
-                    SymbolSection::Common
+                    SymbolSection::Unknown
                 }
             }
             pe::IMAGE_SYM_ABSOLUTE => SymbolSection::Absolute,
