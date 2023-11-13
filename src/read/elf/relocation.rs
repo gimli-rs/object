@@ -407,11 +407,11 @@ fn parse_relocation<Elf: FileHeader>(
         elf::EM_SHARC => match reloc.r_type(endian, false) {
             elf::R_SHARC_ADDR24_V3 => {
                 encoding = RelocationEncoding::SharcAbs24TypeA;
-                (RelocationKind::Absolute, 48)
+                (RelocationKind::Absolute, 24)
             }
             elf::R_SHARC_ADDR32_V3 => {
                 encoding = RelocationEncoding::SharcAbs32TypeA;
-                (RelocationKind::Absolute, 48)
+                (RelocationKind::Absolute, 32)
             }
             elf::R_SHARC_ADDR_VAR_V3 => {
                 encoding = RelocationEncoding::SharcAbs32Data;
@@ -419,35 +419,35 @@ fn parse_relocation<Elf: FileHeader>(
             }
             elf::R_SHARC_PCRSHORT_V3 => {
                 encoding = RelocationEncoding::SharcPcr6TypeA;
-                (RelocationKind::Relative, 48)
+                (RelocationKind::Relative, 6)
             }
             elf::R_SHARC_PCRLONG_V3 => {
                 encoding = RelocationEncoding::SharcPcr24TypeA;
-                (RelocationKind::Relative, 48)
+                (RelocationKind::Relative, 24)
             }
             elf::R_SHARC_DATA6_V3 => {
                 encoding = RelocationEncoding::SharcAbs6TypeA;
-                (RelocationKind::Absolute, 48)
+                (RelocationKind::Absolute, 6)
             }
             elf::R_SHARC_DATA16_V3 => {
                 encoding = RelocationEncoding::SharcAbs16TypeA;
-                (RelocationKind::Absolute, 48)
+                (RelocationKind::Absolute, 16)
             }
             elf::R_SHARC_DATA6_VISA_V3 => {
                 encoding = RelocationEncoding::SharcAbs6TypeB;
-                (RelocationKind::Absolute, 32)
+                (RelocationKind::Absolute, 6)
             }
             elf::R_SHARC_DATA7_VISA_V3 => {
                 encoding = RelocationEncoding::SharcAbs7TypeB;
-                (RelocationKind::Absolute, 32)
+                (RelocationKind::Absolute, 7)
             }
             elf::R_SHARC_DATA16_VISA_V3 => {
                 encoding = RelocationEncoding::SharcAbs16TypeB;
-                (RelocationKind::Absolute, 32)
+                (RelocationKind::Absolute, 16)
             }
             elf::R_SHARC_PCR6_VISA_V3 => {
                 encoding = RelocationEncoding::SharcPcr6TypeB;
-                (RelocationKind::Relative, 32)
+                (RelocationKind::Relative, 16)
             }
             elf::R_SHARC_ADDR_VAR16_V3 => {
                 encoding = RelocationEncoding::SharcAbs16Data;
