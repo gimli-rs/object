@@ -2232,6 +2232,8 @@ pub const R_SHARC_ADDR24_V3: u32 = 0x0b;
 pub const R_SHARC_ADDR32_V3: u32 = 0x0c;
 
 /// 32-bit absolute address in bits 31:0 of a 32-bit data location
+///
+/// Represented with `RelocationEncoding::Generic`
 pub const R_SHARC_ADDR_VAR_V3: u32 = 0x0d;
 
 /// 6-bit PC-relative address in bits 32:27 of a 48-bit instr
@@ -2289,6 +2291,8 @@ pub const R_SHARC_DATA16_VISA_V3: u32 = 0x14;
 pub const R_SHARC_PCR6_VISA_V3: u32 = 0x17;
 
 /// 16-bit absolute address into bits 15:0 of a 16-bit location.
+///
+/// Represented with `RelocationEncoding::Generic`
 pub const R_SHARC_ADDR_VAR16_V3: u32 = 0x19;
 
 pub const R_SHARC_CALC_PUSH_ADDR: u32 = 0xe0;

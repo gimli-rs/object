@@ -369,54 +369,30 @@ pub enum RelocationEncoding {
     ///
     /// The `RelocationKind` must be PC relative.
     LoongArchBranch,
-    
-    /// SHARC+ 24-bit absolute address in a Type A instruction
-    /// 
-    /// Used with `RelocationKind::Absolute`.
-    /// See [elf::R_SHARC_ADDR24_v3]
-    SharcAbs24TypeA,
-    
-    /// SHARC+ 32-bit absolute address in a Type A instruction
-    /// 
-    /// Used with `RelocationKind::Absolute`.
-    /// See [elf::R_SHARC_ADDR32_v3]
-    SharcAbs32TypeA,
-    
-    /// SHARC+ 32-bit absolute address in a 32-bit STT_OBJECT location
-    /// 
-    /// See [elf::R_SHARC_ADDRVAR_V3]
-    SharcAbs32Data,
-    
-    /// SHARC+ 6-bit relative address in a Type A instruction
-    /// 
-    /// The `RelocationKind` must be PC relative.
-    SharcPcr6TypeA,
-    
-    /// SHARC+ 24-bit relative address in a Type A instruction
-    /// 
-    /// The `RelocationKind` must be PC relative.
-    SharcPcr24TypeA,
-    
-    /// SHARC+ 6-bit absolute address in the immediate value field of a Type A instruction
-    SharcAbs6TypeA,
-    
-    /// SHARC+ 16-bit absolute address in the immediate value field of a Type A instruction
-    SharcAbs16TypeA,
-    
-    /// SHARC+ 6-bit absolute address in the immediate value field of a Type B instruction
-    SharcAbs6TypeB,
-    
-    /// SHARC+ 7-bit absolute address in the immediate value field of a Type B instruction
-    SharcAbs7TypeB,
-    
-    /// SHARC+ 16-bit absolute address in a Type B instruction
-    SharcAbs16TypeB,
-    
-    /// SHARC+ 6-bit relative address in a Type B instruction
-    SharcPcr6TypeB,
-    
-    /// SHARC+ 16-bit absolute address in a 16-bit STT_OBJECT location
-    SharcAbs16Data,
+
+    /// SHARC+ 48-bit Type A instruction
+    ///
+    /// Represents these possible variants, each with a corresponding
+    /// `R_SHARC_*` constant:
+    ///
+    /// * 24-bit absolute address
+    /// * 32-bit absolute address
+    /// * 6-bit relative address
+    /// * 24-bit relative address
+    /// * 6-bit absolute address in the immediate value field
+    /// * 16-bit absolute address in the immediate value field
+    SharcTypeA,
+
+    /// SHARC+ 32-bit Type B instruction
+    ///
+    /// Represents these possible variants, each with a corresponding
+    /// `R_SHARC_*` constant:
+    ///
+    /// * 6-bit absolute address in the immediate value field
+    /// * 7-bit absolute address in the immediate value field
+    /// * 16-bit absolute address
+    /// * 6-bit relative address
+    SharcTypeB,
 }
 
 /// File flags that are specific to each file format.
