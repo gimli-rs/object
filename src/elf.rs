@@ -2306,6 +2306,10 @@ pub const R_SHARC_CALC_XOR: u32 = 0xeb;
 pub const R_SHARC_CALC_PUSH_LEN: u32 = 0xec;
 pub const R_SHARC_CALC_NOT: u32 = 0xf6;
 
+// SHARC values for `SectionHeader*::sh_type`.
+
+/// .adi.attributes
+pub const SHT_SHARC_ADI_ATTRIBUTES: u32 = SHT_LOPROC + 0x2;
 
 // SUN SPARC specific definitions.
 
