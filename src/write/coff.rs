@@ -285,7 +285,7 @@ impl<'a> Object<'a> {
                     // Don't add name to strtab.
                     continue;
                 }
-                SymbolKind::Section => {
+                SymbolKind::Section if symbol.section.id().is_some() => {
                     symbol_offsets[index].aux_count = 1;
                     symtab_count += 1;
                 }
@@ -605,7 +605,13 @@ impl<'a> Object<'a> {
                     name = b".file";
                     coff::IMAGE_SYM_CLASS_FILE
                 }
-                SymbolKind::Section => coff::IMAGE_SYM_CLASS_STATIC,
+                SymbolKind::Section => {
+                    if symbol.section.id().is_some() {
+                        coff::IMAGE_SYM_CLASS_STATIC
+                    } else {
+                        coff::IMAGE_SYM_CLASS_SECTION
+                    }
+                }
                 SymbolKind::Label => coff::IMAGE_SYM_CLASS_LABEL,
                 SymbolKind::Text | SymbolKind::Data | SymbolKind::Tls => {
                     match symbol.section {
@@ -676,7 +682,7 @@ impl<'a> Object<'a> {
                     buffer.write_bytes(&symbol.name);
                     buffer.resize(old_len + aux_len);
                 }
-                SymbolKind::Section => {
+                SymbolKind::Section if symbol.section.id().is_some() => {
                     debug_assert_eq!(number_of_aux_symbols, 1);
                     let section_index = symbol.section.id().unwrap().0;
                     let section = &self.sections[section_index];
