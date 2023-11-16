@@ -1,25 +1,23 @@
 use alloc::vec::Vec;
-use core::mem;
 
-use crate::endian::{LittleEndian as LE, U16Bytes, U32Bytes, U16, U32};
 use crate::pe as coff;
-use crate::write::string::*;
+use crate::write::coff::writer;
 use crate::write::util::*;
 use crate::write::*;
 
 #[derive(Default, Clone, Copy)]
 struct SectionOffsets {
-    offset: usize,
-    str_id: Option<StringId>,
-    reloc_offset: usize,
+    name: writer::Name,
+    offset: u32,
+    reloc_offset: u32,
     selection: u8,
-    associative_section: u16,
+    associative_section: u32,
 }
 
 #[derive(Default, Clone, Copy)]
 struct SymbolOffsets {
-    index: usize,
-    str_id: Option<StringId>,
+    name: writer::Name,
+    index: u32,
     aux_count: u8,
 }
 
@@ -188,42 +186,12 @@ impl<'a> Object<'a> {
     }
 
     pub(crate) fn coff_write(&self, buffer: &mut dyn WritableBuffer) -> Result<()> {
-        // Calculate offsets of everything, and build strtab.
-        let mut offset = 0;
-        let mut strtab = StringTable::default();
+        let mut writer = writer::Writer::new(buffer);
 
-        // COFF header.
-        offset += mem::size_of::<coff::ImageFileHeader>();
-
-        // Section headers.
-        offset += self.sections.len() * mem::size_of::<coff::ImageSectionHeader>();
-
-        // Calculate size of section data and add section strings to strtab.
+        // Add section strings to strtab.
         let mut section_offsets = vec![SectionOffsets::default(); self.sections.len()];
         for (index, section) in self.sections.iter().enumerate() {
-            if section.name.len() > 8 {
-                section_offsets[index].str_id = Some(strtab.add(&section.name));
-            }
-
-            let len = section.data.len();
-            if len != 0 {
-                // TODO: not sure what alignment is required here, but this seems to match LLVM
-                offset = align(offset, 4);
-                section_offsets[index].offset = offset;
-                offset += len;
-            } else {
-                section_offsets[index].offset = 0;
-            }
-
-            // Calculate size of relocations.
-            let mut count = section.relocations.len();
-            if count != 0 {
-                section_offsets[index].reloc_offset = offset;
-                if count > 0xffff {
-                    count += 1;
-                }
-                offset += count * mem::size_of::<coff::ImageRelocation>();
-            }
+            section_offsets[index].name = writer.add_name(&section.name);
         }
 
         // Set COMDAT flags.
@@ -264,84 +232,60 @@ impl<'a> Object<'a> {
                 }
                 if id.0 != comdat_section {
                     section_offsets[id.0].selection = coff::IMAGE_COMDAT_SELECT_ASSOCIATIVE;
-                    section_offsets[id.0].associative_section = comdat_section as u16 + 1;
+                    section_offsets[id.0].associative_section = comdat_section as u32 + 1;
                 }
             }
         }
 
-        // Calculate size of symbols and add symbol strings to strtab.
+        // Reserve symbol indices and add symbol strings to strtab.
         let mut symbol_offsets = vec![SymbolOffsets::default(); self.symbols.len()];
-        let mut symtab_count = 0;
         for (index, symbol) in self.symbols.iter().enumerate() {
-            symbol_offsets[index].index = symtab_count;
-            symtab_count += 1;
+            symbol_offsets[index].index = writer.reserve_symbol_index();
+            let mut name = &*symbol.name;
             match symbol.kind {
                 SymbolKind::File => {
                     // Name goes in auxiliary symbol records.
-                    let aux_count = (symbol.name.len() + coff::IMAGE_SIZEOF_SYMBOL - 1)
-                        / coff::IMAGE_SIZEOF_SYMBOL;
-                    symbol_offsets[index].aux_count = aux_count as u8;
-                    symtab_count += aux_count;
-                    // Don't add name to strtab.
-                    continue;
+                    symbol_offsets[index].aux_count = writer.reserve_aux_file_name(&symbol.name);
+                    name = b".file";
                 }
                 SymbolKind::Section if symbol.section.id().is_some() => {
-                    symbol_offsets[index].aux_count = 1;
-                    symtab_count += 1;
+                    symbol_offsets[index].aux_count = writer.reserve_aux_section();
                 }
                 _ => {}
-            }
-            if symbol.name.len() > 8 {
-                symbol_offsets[index].str_id = Some(strtab.add(&symbol.name));
-            }
+            };
+            symbol_offsets[index].name = writer.add_name(name);
         }
 
-        // Calculate size of symtab.
-        let symtab_offset = offset;
-        let symtab_len = symtab_count * coff::IMAGE_SIZEOF_SYMBOL;
-        offset += symtab_len;
-
-        // Calculate size of strtab.
-        let strtab_offset = offset;
-        let mut strtab_data = Vec::new();
-        // First 4 bytes of strtab are the length.
-        strtab.write(4, &mut strtab_data);
-        let strtab_len = strtab_data.len() + 4;
-        offset += strtab_len;
+        // Reserve file ranges.
+        writer.reserve_file_header();
+        writer.reserve_section_headers(self.sections.len() as u16);
+        for (index, section) in self.sections.iter().enumerate() {
+            section_offsets[index].offset = writer.reserve_section(section.data.len());
+            section_offsets[index].reloc_offset =
+                writer.reserve_relocations(section.relocations.len());
+        }
+        writer.reserve_symtab_strtab();
 
         // Start writing.
-        buffer
-            .reserve(offset)
-            .map_err(|_| Error(String::from("Cannot allocate buffer")))?;
-
-        // Write file header.
-        let header = coff::ImageFileHeader {
-            machine: U16::new(
-                LE,
-                match self.architecture {
-                    Architecture::Arm => coff::IMAGE_FILE_MACHINE_ARMNT,
-                    Architecture::Aarch64 => coff::IMAGE_FILE_MACHINE_ARM64,
-                    Architecture::I386 => coff::IMAGE_FILE_MACHINE_I386,
-                    Architecture::X86_64 => coff::IMAGE_FILE_MACHINE_AMD64,
-                    _ => {
-                        return Err(Error(format!(
-                            "unimplemented architecture {:?}",
-                            self.architecture
-                        )));
-                    }
-                },
-            ),
-            number_of_sections: U16::new(LE, self.sections.len() as u16),
-            time_date_stamp: U32::default(),
-            pointer_to_symbol_table: U32::new(LE, symtab_offset as u32),
-            number_of_symbols: U32::new(LE, symtab_count as u32),
-            size_of_optional_header: U16::default(),
-            characteristics: match self.flags {
-                FileFlags::Coff { characteristics } => U16::new(LE, characteristics),
-                _ => U16::default(),
+        writer.write_file_header(writer::FileHeader {
+            machine: match self.architecture {
+                Architecture::Arm => coff::IMAGE_FILE_MACHINE_ARMNT,
+                Architecture::Aarch64 => coff::IMAGE_FILE_MACHINE_ARM64,
+                Architecture::I386 => coff::IMAGE_FILE_MACHINE_I386,
+                Architecture::X86_64 => coff::IMAGE_FILE_MACHINE_AMD64,
+                _ => {
+                    return Err(Error(format!(
+                        "unimplemented architecture {:?}",
+                        self.architecture
+                    )));
+                }
             },
-        };
-        buffer.write(&header);
+            time_date_stamp: 0,
+            characteristics: match self.flags {
+                FileFlags::Coff { characteristics } => characteristics,
+                _ => 0,
+            },
+        })?;
 
         // Write section headers.
         for (index, section) in self.sections.iter().enumerate() {
@@ -423,85 +367,25 @@ impl<'a> Object<'a> {
                     )));
                 }
             };
-            let mut coff_section = coff::ImageSectionHeader {
-                name: [0; 8],
-                virtual_size: U32::default(),
-                virtual_address: U32::default(),
-                size_of_raw_data: U32::new(LE, section.size as u32),
-                pointer_to_raw_data: U32::new(LE, section_offsets[index].offset as u32),
-                pointer_to_relocations: U32::new(LE, section_offsets[index].reloc_offset as u32),
-                pointer_to_linenumbers: U32::default(),
-                number_of_relocations: if section.relocations.len() > 0xffff {
-                    U16::new(LE, 0xffff)
-                } else {
-                    U16::new(LE, section.relocations.len() as u16)
-                },
-                number_of_linenumbers: U16::default(),
-                characteristics: U32::new(LE, characteristics),
-            };
-            if section.name.len() <= 8 {
-                coff_section.name[..section.name.len()].copy_from_slice(&section.name);
-            } else {
-                let mut str_offset = strtab.get_offset(section_offsets[index].str_id.unwrap());
-                if str_offset <= 9_999_999 {
-                    let mut name = [0; 7];
-                    let mut len = 0;
-                    if str_offset == 0 {
-                        name[6] = b'0';
-                        len = 1;
-                    } else {
-                        while str_offset != 0 {
-                            let rem = (str_offset % 10) as u8;
-                            str_offset /= 10;
-                            name[6 - len] = b'0' + rem;
-                            len += 1;
-                        }
-                    }
-                    coff_section.name = [0; 8];
-                    coff_section.name[0] = b'/';
-                    coff_section.name[1..][..len].copy_from_slice(&name[7 - len..]);
-                } else if str_offset as u64 <= 0xf_ffff_ffff {
-                    coff_section.name[0] = b'/';
-                    coff_section.name[1] = b'/';
-                    for i in 0..6 {
-                        let rem = (str_offset % 64) as u8;
-                        str_offset /= 64;
-                        let c = match rem {
-                            0..=25 => b'A' + rem,
-                            26..=51 => b'a' + rem - 26,
-                            52..=61 => b'0' + rem - 52,
-                            62 => b'+',
-                            63 => b'/',
-                            _ => unreachable!(),
-                        };
-                        coff_section.name[7 - i] = c;
-                    }
-                } else {
-                    return Err(Error(format!("invalid section name offset {}", str_offset)));
-                }
-            }
-            buffer.write(&coff_section);
+            writer.write_section_header(writer::SectionHeader {
+                name: section_offsets[index].name,
+                size_of_raw_data: section.size as u32,
+                pointer_to_raw_data: section_offsets[index].offset,
+                pointer_to_relocations: section_offsets[index].reloc_offset,
+                pointer_to_linenumbers: 0,
+                number_of_relocations: section.relocations.len() as u32,
+                number_of_linenumbers: 0,
+                characteristics,
+            });
         }
 
         // Write section data and relocations.
-        for (index, section) in self.sections.iter().enumerate() {
-            let len = section.data.len();
-            if len != 0 {
-                write_align(buffer, 4);
-                debug_assert_eq!(section_offsets[index].offset, buffer.len());
-                buffer.write_bytes(&section.data);
-            }
+        for section in &self.sections {
+            writer.write_section(&section.data);
 
             if !section.relocations.is_empty() {
-                debug_assert_eq!(section_offsets[index].reloc_offset, buffer.len());
-                if section.relocations.len() > 0xffff {
-                    let coff_relocation = coff::ImageRelocation {
-                        virtual_address: U32Bytes::new(LE, section.relocations.len() as u32 + 1),
-                        symbol_table_index: U32Bytes::new(LE, 0),
-                        typ: U16Bytes::new(LE, 0),
-                    };
-                    buffer.write(&coff_relocation);
-                }
+                //debug_assert_eq!(section_offsets[index].reloc_offset, buffer.len());
+                writer.write_relocations_count(section.relocations.len());
                 for reloc in &section.relocations {
                     //assert!(reloc.implicit_addend);
                     let typ = match self.architecture {
@@ -567,23 +451,17 @@ impl<'a> Object<'a> {
                             )));
                         }
                     };
-                    let coff_relocation = coff::ImageRelocation {
-                        virtual_address: U32Bytes::new(LE, reloc.offset as u32),
-                        symbol_table_index: U32Bytes::new(
-                            LE,
-                            symbol_offsets[reloc.symbol.0].index as u32,
-                        ),
-                        typ: U16Bytes::new(LE, typ),
-                    };
-                    buffer.write(&coff_relocation);
+                    writer.write_relocation(writer::Relocation {
+                        virtual_address: reloc.offset as u32,
+                        symbol: symbol_offsets[reloc.symbol.0].index,
+                        typ,
+                    });
                 }
             }
         }
 
         // Write symbols.
-        debug_assert_eq!(symtab_offset, buffer.len());
         for (index, symbol) in self.symbols.iter().enumerate() {
-            let mut name = &symbol.name[..];
             let section_number = match symbol.section {
                 SymbolSection::None => {
                     debug_assert_eq!(symbol.kind, SymbolKind::File);
@@ -600,11 +478,7 @@ impl<'a> Object<'a> {
                 coff::IMAGE_SYM_TYPE_NULL
             };
             let storage_class = match symbol.kind {
-                SymbolKind::File => {
-                    // Name goes in auxiliary symbol records.
-                    name = b".file";
-                    coff::IMAGE_SYM_CLASS_FILE
-                }
+                SymbolKind::File => coff::IMAGE_SYM_CLASS_FILE,
                 SymbolKind::Section => {
                     if symbol.section.id().is_some() {
                         coff::IMAGE_SYM_CLASS_STATIC
@@ -657,54 +531,32 @@ impl<'a> Object<'a> {
             } else {
                 symbol.value as u32
             };
-            let mut coff_symbol = coff::ImageSymbol {
-                name: [0; 8],
-                value: U32Bytes::new(LE, value),
-                section_number: U16Bytes::new(LE, section_number),
-                typ: U16Bytes::new(LE, typ),
+            writer.write_symbol(writer::Symbol {
+                name: symbol_offsets[index].name,
+                value,
+                section_number,
+                typ,
                 storage_class,
                 number_of_aux_symbols,
-            };
-            if name.len() <= 8 {
-                coff_symbol.name[..name.len()].copy_from_slice(name);
-            } else {
-                let str_offset = strtab.get_offset(symbol_offsets[index].str_id.unwrap());
-                coff_symbol.name[4..8].copy_from_slice(&u32::to_le_bytes(str_offset as u32));
-            }
-            buffer.write(&coff_symbol);
+            });
 
             // Write auxiliary symbols.
             match symbol.kind {
                 SymbolKind::File => {
-                    let aux_len = number_of_aux_symbols as usize * coff::IMAGE_SIZEOF_SYMBOL;
-                    debug_assert!(aux_len >= symbol.name.len());
-                    let old_len = buffer.len();
-                    buffer.write_bytes(&symbol.name);
-                    buffer.resize(old_len + aux_len);
+                    writer.write_aux_file_name(&symbol.name, number_of_aux_symbols);
                 }
                 SymbolKind::Section if symbol.section.id().is_some() => {
                     debug_assert_eq!(number_of_aux_symbols, 1);
                     let section_index = symbol.section.id().unwrap().0;
                     let section = &self.sections[section_index];
-                    let aux = coff::ImageAuxSymbolSection {
-                        length: U32Bytes::new(LE, section.size as u32),
-                        number_of_relocations: if section.relocations.len() > 0xffff {
-                            U16Bytes::new(LE, 0xffff)
-                        } else {
-                            U16Bytes::new(LE, section.relocations.len() as u16)
-                        },
-                        number_of_linenumbers: U16Bytes::default(),
-                        check_sum: U32Bytes::new(LE, checksum(section.data())),
-                        number: U16Bytes::new(
-                            LE,
-                            section_offsets[section_index].associative_section,
-                        ),
+                    writer.write_aux_section(writer::AuxSymbolSection {
+                        length: section.size as u32,
+                        number_of_relocations: section.relocations.len() as u32,
+                        number_of_linenumbers: 0,
+                        check_sum: checksum(section.data()),
+                        number: section_offsets[section_index].associative_section,
                         selection: section_offsets[section_index].selection,
-                        reserved: 0,
-                        // TODO: bigobj
-                        high_number: U16Bytes::default(),
-                    };
-                    buffer.write(&aux);
+                    });
                 }
                 _ => {
                     debug_assert_eq!(number_of_aux_symbols, 0);
@@ -712,12 +564,9 @@ impl<'a> Object<'a> {
             }
         }
 
-        // Write strtab section.
-        debug_assert_eq!(strtab_offset, buffer.len());
-        buffer.write_bytes(&u32::to_le_bytes(strtab_len as u32));
-        buffer.write_bytes(&strtab_data);
+        writer.write_strtab();
 
-        debug_assert_eq!(offset, buffer.len());
+        debug_assert_eq!(writer.reserved_len(), writer.len());
 
         Ok(())
     }
