@@ -327,7 +327,7 @@ where
     fn exports(&self) -> read::Result<Vec<Export<'data>>> {
         let mut exports = Vec::new();
         for symbol in self.dynamic_symbols.iter() {
-            if symbol.is_definition(self.endian) {
+            if symbol.is_definition(self.endian, self.dynamic_symbols.strings()) {
                 let name = symbol.name(self.endian, self.dynamic_symbols.strings())?;
                 let address = symbol.st_value(self.endian).into();
                 exports.push(Export {
