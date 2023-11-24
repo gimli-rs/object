@@ -16,7 +16,7 @@ use crate::{
 };
 
 #[cfg(feature = "coff")]
-mod coff;
+pub mod coff;
 #[cfg(feature = "coff")]
 pub use coff::CoffExportStyle;
 

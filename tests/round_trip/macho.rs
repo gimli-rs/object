@@ -45,7 +45,7 @@ fn issue_552_section_file_alignment() {
     object.append_section_data(section, &vec![0u8; 1], 32);
 
     let bytes = &*object.write().unwrap();
-    std::fs::write(&"align.o", &bytes).unwrap();
+    //std::fs::write(&"align.o", &bytes).unwrap();
     let object = read::File::parse(bytes).unwrap();
     let mut sections = object.sections();
 

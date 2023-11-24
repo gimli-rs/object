@@ -38,6 +38,18 @@ fn coff_x86_64() {
         section: write::SymbolSection::Section(text),
         flags: SymbolFlags::None,
     });
+    let func2_offset = object.append_section_data(text, &[1; 30], 4);
+    assert_eq!(func2_offset, 64);
+    object.add_symbol(write::Symbol {
+        name: b"func2_long".to_vec(),
+        value: func2_offset,
+        size: 32,
+        kind: SymbolKind::Text,
+        scope: SymbolScope::Linkage,
+        weak: false,
+        section: write::SymbolSection::Section(text),
+        flags: SymbolFlags::None,
+    });
     object
         .add_relocation(
             text,
@@ -66,7 +78,7 @@ fn coff_x86_64() {
     assert_eq!(text.name(), Ok(".text"));
     assert_eq!(text.kind(), SectionKind::Text);
     assert_eq!(text.address(), 0);
-    assert_eq!(text.size(), 62);
+    assert_eq!(text.size(), 94);
     assert_eq!(&text.data().unwrap()[..30], &[1; 30]);
     assert_eq!(&text.data().unwrap()[32..62], &[1; 30]);
 
@@ -86,6 +98,16 @@ fn coff_x86_64() {
     let func1_symbol = symbol.index();
     assert_eq!(symbol.name(), Ok("func1"));
     assert_eq!(symbol.address(), func1_offset);
+    assert_eq!(symbol.kind(), SymbolKind::Text);
+    assert_eq!(symbol.section_index(), Some(text_index));
+    assert_eq!(symbol.scope(), SymbolScope::Linkage);
+    assert_eq!(symbol.is_weak(), false);
+    assert_eq!(symbol.is_undefined(), false);
+
+    let symbol = symbols.next().unwrap();
+    println!("{:?}", symbol);
+    assert_eq!(symbol.name(), Ok("func2_long"));
+    assert_eq!(symbol.address(), func2_offset);
     assert_eq!(symbol.kind(), SymbolKind::Text);
     assert_eq!(symbol.section_index(), Some(text_index));
     assert_eq!(symbol.scope(), SymbolScope::Linkage);
