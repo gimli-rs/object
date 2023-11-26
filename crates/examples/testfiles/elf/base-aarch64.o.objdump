@@ -40,6 +40,4 @@ Dynamic symbols
 Dynamic relocations
 
 Symbol map
-0x0 "$d"
-0x0 "$x"
 0x0 "main"
