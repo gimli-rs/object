@@ -248,6 +248,12 @@ fn dump_parsed_object<W: Write, E: Write>(w: &mut W, e: &mut E, file: &object::F
         Err(err) => writeln!(e, "Failed to parse exports: {}", err)?,
     }
 
+    writeln!(w)?;
+    writeln!(w, "Symbol map")?;
+    for symbol in file.symbol_map().symbols() {
+        writeln!(w, "0x{:x} \"{}\"", symbol.address(), symbol.name())?;
+    }
+
     Ok(())
 }
 

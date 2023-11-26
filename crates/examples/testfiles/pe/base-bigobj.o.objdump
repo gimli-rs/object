@@ -49,3 +49,6 @@ Symbols
 (14, Relocation { kind: ImageOffset, encoding: Generic, size: 20, target: Symbol(SymbolIndex(b)), addend: 0, implicit_addend: true })
 
 Dynamic symbols
+
+Symbol map
+0x51 "main"

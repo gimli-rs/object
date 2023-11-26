@@ -41,3 +41,6 @@ Dynamic symbols
 Import { library: "", name: "_printf" }
 
 Export { name: "_main", address: 0 }
+
+Symbol map
+0x0 "_main"

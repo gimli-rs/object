@@ -60,3 +60,12 @@ Symbols
 (22, Relocation { kind: Relative, encoding: Generic, size: 20, target: Symbol(SymbolIndex(11)), addend: fffffffffffffffc, implicit_addend: true })
 
 Dynamic symbols
+
+Symbol map
+0x0 "@comp.id"
+0x0 "@feat.00"
+0x0 "___local_stdio_printf_options"
+0x0 "__vfprintf_l"
+0x0 "_printf"
+0x0 "_main"
+0x0 "$SG9248"

@@ -32,3 +32,7 @@ __data relocations
 (0, Relocation { kind: Absolute, encoding: Generic, size: 40, target: Symbol(SymbolIndex(0)), addend: 0, implicit_addend: true })
 
 Dynamic symbols
+
+Symbol map
+0x0 "_g1"
+0x5 "_g2"

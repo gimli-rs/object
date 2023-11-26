@@ -40,3 +40,8 @@ Dynamic symbols
 
 Import { library: "", name: "_g0" }
 Import { library: "", name: "_g1" }
+
+Symbol map
+0x0 "ltmp0"
+0x28 "ltmp1"
+0x28 "_data"
