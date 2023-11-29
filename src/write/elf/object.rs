@@ -805,11 +805,6 @@ impl<'a> Object<'a> {
                             (RelocationKind::Absolute, RelocationEncoding::SharcTypeB, 7) => {
                                 elf::R_SHARC_DATA7_VISA_V3
                             }
-                            (_, RelocationEncoding::Generic, _) => {
-                                return Err(Error(format!(
-                                    "SHARC+ ISA does not have a generic relocation encoding"
-                                )));
-                            }
                             (RelocationKind::Elf(x), _, _) => x,
                             _ => {
                                 return Err(Error(format!("unimplemented relocation {:?}", reloc)));
