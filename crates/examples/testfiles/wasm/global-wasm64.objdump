@@ -37,3 +37,7 @@ Symbols
 17: Symbol { name: "__table_base32", address: 1, size: 0, kind: Data, section: Section(SectionIndex(b)), scope: Dynamic, weak: false, flags: None }
 
 Dynamic symbols
+
+Symbol map
+0x2 "__wasm_call_ctors"
+0x5 "print"

@@ -157,3 +157,23 @@ Symbols
 (200007a4, Relocation { kind: Absolute, encoding: Generic, size: 20, target: Symbol(SymbolIndex(6)), addend: 0, implicit_addend: true })
 
 Dynamic symbols
+
+Symbol map
+0x10000128 ".__start"
+0x10000128 ".__start"
+0x100001e0 ""
+0x100001e0 ".__threads_init"
+0x10000220 ".__threads_init@AF2_1"
+0x10000340 ""
+0x10000340 ".__User_sinit_begin"
+0x10000368 ".__C_runtime_termination"
+0x100003b8 ".__C_runtime_startup"
+0x10000440 ".__dftdt__L304e4b28c42_5CatchFv"
+0x10000560 ".text"
+0x10000560 ".main"
+0x100005e4 ".rodata.str1.1L...str"
+0x200005f4 "crt0_data"
+0x20000620 "_$STATIC"
+0x2000067c "__C_runtime_pstartup"
+0x20000680 "_$STATIC"
+0x20000708 "_cdtors"

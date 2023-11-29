@@ -1,0 +1,185 @@
+Format: Elf Little-endian 64-bit
+Kind: Dynamic
+Architecture: Aarch64
+Flags: Elf { os_abi: 0, abi_version: 0, e_flags: 0 }
+Relative Address Base: 0
+Entry Address: 620
+Build ID: [f7, 5e, 1f, d9, 4, 9a, 3f, cb, 21, dc, 15, f2, 7b, 5, 32, d8, 61, cf, 16, 2]
+Segment { address: 0, size: 7fc }
+Segment { address: 10d80, size: 298 }
+0: Section { name: "", address: 0, size: 0, align: 0, kind: Metadata, flags: Elf { sh_flags: 0 } }
+1: Section { name: ".interp", address: 200, size: 1b, align: 1, kind: ReadOnlyData, flags: Elf { sh_flags: 2 } }
+2: Section { name: ".note.ABI-tag", address: 21c, size: 20, align: 4, kind: Note, flags: Elf { sh_flags: 2 } }
+3: Section { name: ".note.gnu.build-id", address: 23c, size: 24, align: 4, kind: Note, flags: Elf { sh_flags: 2 } }
+4: Section { name: ".gnu.hash", address: 260, size: 1c, align: 8, kind: Elf(6ffffff6), flags: Elf { sh_flags: 2 } }
+5: Section { name: ".dynsym", address: 280, size: f0, align: 8, kind: Metadata, flags: Elf { sh_flags: 2 } }
+6: Section { name: ".dynstr", address: 370, size: 89, align: 1, kind: Metadata, flags: Elf { sh_flags: 2 } }
+7: Section { name: ".gnu.version", address: 3fa, size: 14, align: 2, kind: Elf(6fffffff), flags: Elf { sh_flags: 2 } }
+8: Section { name: ".gnu.version_r", address: 410, size: 20, align: 8, kind: Elf(6ffffffe), flags: Elf { sh_flags: 2 } }
+9: Section { name: ".rela.dyn", address: 430, size: f0, align: 8, kind: Metadata, flags: Elf { sh_flags: 2 } }
+10: Section { name: ".rela.plt", address: 520, size: 78, align: 8, kind: Metadata, flags: Elf { sh_flags: 42 } }
+11: Section { name: ".init", address: 598, size: 14, align: 4, kind: Text, flags: Elf { sh_flags: 6 } }
+12: Section { name: ".plt", address: 5b0, size: 70, align: 10, kind: Text, flags: Elf { sh_flags: 6 } }
+13: Section { name: ".text", address: 620, size: 1ac, align: 8, kind: Text, flags: Elf { sh_flags: 6 } }
+14: Section { name: ".fini", address: 7cc, size: 10, align: 4, kind: Text, flags: Elf { sh_flags: 6 } }
+15: Section { name: ".rodata", address: 7e0, size: 15, align: 8, kind: ReadOnlyData, flags: Elf { sh_flags: 2 } }
+16: Section { name: ".eh_frame", address: 7f8, size: 4, align: 4, kind: ReadOnlyData, flags: Elf { sh_flags: 2 } }
+17: Section { name: ".init_array", address: 10d80, size: 8, align: 8, kind: Elf(e), flags: Elf { sh_flags: 3 } }
+18: Section { name: ".fini_array", address: 10d88, size: 8, align: 8, kind: Elf(f), flags: Elf { sh_flags: 3 } }
+19: Section { name: ".dynamic", address: 10d90, size: 1f0, align: 8, kind: Metadata, flags: Elf { sh_flags: 3 } }
+20: Section { name: ".got", address: 10f80, size: 80, align: 8, kind: Data, flags: Elf { sh_flags: 3 } }
+21: Section { name: ".data", address: 11000, size: 10, align: 8, kind: Data, flags: Elf { sh_flags: 3 } }
+22: Section { name: ".bss", address: 11010, size: 8, align: 1, kind: UninitializedData, flags: Elf { sh_flags: 3 } }
+23: Section { name: ".comment", address: 0, size: 30, align: 1, kind: OtherString, flags: Elf { sh_flags: 30 } }
+24: Section { name: ".symtab", address: 0, size: 840, align: 8, kind: Metadata, flags: Elf { sh_flags: 0 } }
+25: Section { name: ".strtab", address: 0, size: 347, align: 1, kind: Metadata, flags: Elf { sh_flags: 0 } }
+26: Section { name: ".shstrtab", address: 0, size: ec, align: 1, kind: Metadata, flags: Elf { sh_flags: 0 } }
+
+Symbols
+0: Symbol { name: "", address: 0, size: 0, kind: Null, section: Undefined, scope: Unknown, weak: false, flags: Elf { st_info: 0, st_other: 0 } }
+1: Symbol { name: "", address: 200, size: 0, kind: Section, section: Section(SectionIndex(1)), scope: Compilation, weak: false, flags: Elf { st_info: 3, st_other: 0 } }
+2: Symbol { name: "", address: 21c, size: 0, kind: Section, section: Section(SectionIndex(2)), scope: Compilation, weak: false, flags: Elf { st_info: 3, st_other: 0 } }
+3: Symbol { name: "", address: 23c, size: 0, kind: Section, section: Section(SectionIndex(3)), scope: Compilation, weak: false, flags: Elf { st_info: 3, st_other: 0 } }
+4: Symbol { name: "", address: 260, size: 0, kind: Section, section: Section(SectionIndex(4)), scope: Compilation, weak: false, flags: Elf { st_info: 3, st_other: 0 } }
+5: Symbol { name: "", address: 280, size: 0, kind: Section, section: Section(SectionIndex(5)), scope: Compilation, weak: false, flags: Elf { st_info: 3, st_other: 0 } }
+6: Symbol { name: "", address: 370, size: 0, kind: Section, section: Section(SectionIndex(6)), scope: Compilation, weak: false, flags: Elf { st_info: 3, st_other: 0 } }
+7: Symbol { name: "", address: 3fa, size: 0, kind: Section, section: Section(SectionIndex(7)), scope: Compilation, weak: false, flags: Elf { st_info: 3, st_other: 0 } }
+8: Symbol { name: "", address: 410, size: 0, kind: Section, section: Section(SectionIndex(8)), scope: Compilation, weak: false, flags: Elf { st_info: 3, st_other: 0 } }
+9: Symbol { name: "", address: 430, size: 0, kind: Section, section: Section(SectionIndex(9)), scope: Compilation, weak: false, flags: Elf { st_info: 3, st_other: 0 } }
+10: Symbol { name: "", address: 520, size: 0, kind: Section, section: Section(SectionIndex(a)), scope: Compilation, weak: false, flags: Elf { st_info: 3, st_other: 0 } }
+11: Symbol { name: "", address: 598, size: 0, kind: Section, section: Section(SectionIndex(b)), scope: Compilation, weak: false, flags: Elf { st_info: 3, st_other: 0 } }
+12: Symbol { name: "", address: 5b0, size: 0, kind: Section, section: Section(SectionIndex(c)), scope: Compilation, weak: false, flags: Elf { st_info: 3, st_other: 0 } }
+13: Symbol { name: "", address: 620, size: 0, kind: Section, section: Section(SectionIndex(d)), scope: Compilation, weak: false, flags: Elf { st_info: 3, st_other: 0 } }
+14: Symbol { name: "", address: 7cc, size: 0, kind: Section, section: Section(SectionIndex(e)), scope: Compilation, weak: false, flags: Elf { st_info: 3, st_other: 0 } }
+15: Symbol { name: "", address: 7e0, size: 0, kind: Section, section: Section(SectionIndex(f)), scope: Compilation, weak: false, flags: Elf { st_info: 3, st_other: 0 } }
+16: Symbol { name: "", address: 7f8, size: 0, kind: Section, section: Section(SectionIndex(10)), scope: Compilation, weak: false, flags: Elf { st_info: 3, st_other: 0 } }
+17: Symbol { name: "", address: 10d80, size: 0, kind: Section, section: Section(SectionIndex(11)), scope: Compilation, weak: false, flags: Elf { st_info: 3, st_other: 0 } }
+18: Symbol { name: "", address: 10d88, size: 0, kind: Section, section: Section(SectionIndex(12)), scope: Compilation, weak: false, flags: Elf { st_info: 3, st_other: 0 } }
+19: Symbol { name: "", address: 10d90, size: 0, kind: Section, section: Section(SectionIndex(13)), scope: Compilation, weak: false, flags: Elf { st_info: 3, st_other: 0 } }
+20: Symbol { name: "", address: 10f80, size: 0, kind: Section, section: Section(SectionIndex(14)), scope: Compilation, weak: false, flags: Elf { st_info: 3, st_other: 0 } }
+21: Symbol { name: "", address: 11000, size: 0, kind: Section, section: Section(SectionIndex(15)), scope: Compilation, weak: false, flags: Elf { st_info: 3, st_other: 0 } }
+22: Symbol { name: "", address: 11010, size: 0, kind: Section, section: Section(SectionIndex(16)), scope: Compilation, weak: false, flags: Elf { st_info: 3, st_other: 0 } }
+23: Symbol { name: "", address: 0, size: 0, kind: Section, section: Section(SectionIndex(17)), scope: Compilation, weak: false, flags: Elf { st_info: 3, st_other: 0 } }
+24: Symbol { name: "/usr/lib/gcc-cross/aarch64-linux-gnu/7/../../../../aarch64-linux-gnu/lib/../lib/Scrt1.o", address: 0, size: 0, kind: File, section: None, scope: Compilation, weak: false, flags: Elf { st_info: 4, st_other: 0 } }
+25: Symbol { name: "$d", address: 21c, size: 0, kind: Label, section: Section(SectionIndex(2)), scope: Compilation, weak: false, flags: Elf { st_info: 0, st_other: 0 } }
+26: Symbol { name: "$x", address: 620, size: 0, kind: Label, section: Section(SectionIndex(d)), scope: Compilation, weak: false, flags: Elf { st_info: 0, st_other: 0 } }
+27: Symbol { name: "$d", address: 7e0, size: 0, kind: Label, section: Section(SectionIndex(f)), scope: Compilation, weak: false, flags: Elf { st_info: 0, st_other: 0 } }
+28: Symbol { name: "/usr/lib/gcc-cross/aarch64-linux-gnu/7/../../../../aarch64-linux-gnu/lib/../lib/crti.o", address: 0, size: 0, kind: File, section: None, scope: Compilation, weak: false, flags: Elf { st_info: 4, st_other: 0 } }
+29: Symbol { name: "$x", address: 658, size: 0, kind: Label, section: Section(SectionIndex(d)), scope: Compilation, weak: false, flags: Elf { st_info: 0, st_other: 0 } }
+30: Symbol { name: "call_weak_fn", address: 658, size: 14, kind: Text, section: Section(SectionIndex(d)), scope: Compilation, weak: false, flags: Elf { st_info: 2, st_other: 0 } }
+31: Symbol { name: "$x", address: 598, size: 0, kind: Label, section: Section(SectionIndex(b)), scope: Compilation, weak: false, flags: Elf { st_info: 0, st_other: 0 } }
+32: Symbol { name: "$x", address: 7cc, size: 0, kind: Label, section: Section(SectionIndex(e)), scope: Compilation, weak: false, flags: Elf { st_info: 0, st_other: 0 } }
+33: Symbol { name: "/usr/lib/gcc-cross/aarch64-linux-gnu/7/../../../../aarch64-linux-gnu/lib/../lib/crtn.o", address: 0, size: 0, kind: File, section: None, scope: Compilation, weak: false, flags: Elf { st_info: 4, st_other: 0 } }
+34: Symbol { name: "$x", address: 5a4, size: 0, kind: Label, section: Section(SectionIndex(b)), scope: Compilation, weak: false, flags: Elf { st_info: 0, st_other: 0 } }
+35: Symbol { name: "$x", address: 7d4, size: 0, kind: Label, section: Section(SectionIndex(e)), scope: Compilation, weak: false, flags: Elf { st_info: 0, st_other: 0 } }
+36: Symbol { name: "crtstuff.c", address: 0, size: 0, kind: File, section: None, scope: Compilation, weak: false, flags: Elf { st_info: 4, st_other: 0 } }
+37: Symbol { name: "$x", address: 670, size: 0, kind: Label, section: Section(SectionIndex(d)), scope: Compilation, weak: false, flags: Elf { st_info: 0, st_other: 0 } }
+38: Symbol { name: "deregister_tm_clones", address: 670, size: 0, kind: Text, section: Section(SectionIndex(d)), scope: Compilation, weak: false, flags: Elf { st_info: 2, st_other: 0 } }
+39: Symbol { name: "register_tm_clones", address: 6a0, size: 0, kind: Text, section: Section(SectionIndex(d)), scope: Compilation, weak: false, flags: Elf { st_info: 2, st_other: 0 } }
+40: Symbol { name: "$d", address: 11008, size: 0, kind: Label, section: Section(SectionIndex(15)), scope: Compilation, weak: false, flags: Elf { st_info: 0, st_other: 0 } }
+41: Symbol { name: "__do_global_dtors_aux", address: 6d8, size: 0, kind: Text, section: Section(SectionIndex(d)), scope: Compilation, weak: false, flags: Elf { st_info: 2, st_other: 0 } }
+42: Symbol { name: "completed.8500", address: 11010, size: 1, kind: Data, section: Section(SectionIndex(16)), scope: Compilation, weak: false, flags: Elf { st_info: 1, st_other: 0 } }
+43: Symbol { name: "$d", address: 10d88, size: 0, kind: Label, section: Section(SectionIndex(12)), scope: Compilation, weak: false, flags: Elf { st_info: 0, st_other: 0 } }
+44: Symbol { name: "__do_global_dtors_aux_fini_array_entry", address: 10d88, size: 0, kind: Data, section: Section(SectionIndex(12)), scope: Compilation, weak: false, flags: Elf { st_info: 1, st_other: 0 } }
+45: Symbol { name: "frame_dummy", address: 720, size: 0, kind: Text, section: Section(SectionIndex(d)), scope: Compilation, weak: false, flags: Elf { st_info: 2, st_other: 0 } }
+46: Symbol { name: "$d", address: 10d80, size: 0, kind: Label, section: Section(SectionIndex(11)), scope: Compilation, weak: false, flags: Elf { st_info: 0, st_other: 0 } }
+47: Symbol { name: "__frame_dummy_init_array_entry", address: 10d80, size: 0, kind: Data, section: Section(SectionIndex(11)), scope: Compilation, weak: false, flags: Elf { st_info: 1, st_other: 0 } }
+48: Symbol { name: "$d", address: 11010, size: 0, kind: Label, section: Section(SectionIndex(16)), scope: Compilation, weak: false, flags: Elf { st_info: 0, st_other: 0 } }
+49: Symbol { name: "base.c", address: 0, size: 0, kind: File, section: None, scope: Compilation, weak: false, flags: Elf { st_info: 4, st_other: 0 } }
+50: Symbol { name: "$d", address: 7e8, size: 0, kind: Label, section: Section(SectionIndex(f)), scope: Compilation, weak: false, flags: Elf { st_info: 0, st_other: 0 } }
+51: Symbol { name: "$x", address: 724, size: 0, kind: Label, section: Section(SectionIndex(d)), scope: Compilation, weak: false, flags: Elf { st_info: 0, st_other: 0 } }
+52: Symbol { name: "elf-init.oS", address: 0, size: 0, kind: File, section: None, scope: Compilation, weak: false, flags: Elf { st_info: 4, st_other: 0 } }
+53: Symbol { name: "$x", address: 748, size: 0, kind: Label, section: Section(SectionIndex(d)), scope: Compilation, weak: false, flags: Elf { st_info: 0, st_other: 0 } }
+54: Symbol { name: "crtstuff.c", address: 0, size: 0, kind: File, section: None, scope: Compilation, weak: false, flags: Elf { st_info: 4, st_other: 0 } }
+55: Symbol { name: "$d", address: 7f8, size: 0, kind: Label, section: Section(SectionIndex(10)), scope: Compilation, weak: false, flags: Elf { st_info: 0, st_other: 0 } }
+56: Symbol { name: "__FRAME_END__", address: 7f8, size: 0, kind: Data, section: Section(SectionIndex(10)), scope: Compilation, weak: false, flags: Elf { st_info: 1, st_other: 0 } }
+57: Symbol { name: "", address: 0, size: 0, kind: File, section: None, scope: Compilation, weak: false, flags: Elf { st_info: 4, st_other: 0 } }
+58: Symbol { name: "__init_array_end", address: 10d88, size: 0, kind: Label, section: Section(SectionIndex(11)), scope: Compilation, weak: false, flags: Elf { st_info: 0, st_other: 0 } }
+59: Symbol { name: "_DYNAMIC", address: 10d90, size: 0, kind: Data, section: Absolute, scope: Compilation, weak: false, flags: Elf { st_info: 1, st_other: 0 } }
+60: Symbol { name: "__init_array_start", address: 10d80, size: 0, kind: Label, section: Section(SectionIndex(11)), scope: Compilation, weak: false, flags: Elf { st_info: 0, st_other: 0 } }
+61: Symbol { name: "_GLOBAL_OFFSET_TABLE_", address: 10fc0, size: 0, kind: Data, section: Absolute, scope: Compilation, weak: false, flags: Elf { st_info: 1, st_other: 0 } }
+62: Symbol { name: "$x", address: 5b0, size: 0, kind: Label, section: Section(SectionIndex(c)), scope: Compilation, weak: false, flags: Elf { st_info: 0, st_other: 0 } }
+63: Symbol { name: "__libc_csu_fini", address: 7c8, size: 4, kind: Text, section: Section(SectionIndex(d)), scope: Dynamic, weak: false, flags: Elf { st_info: 12, st_other: 0 } }
+64: Symbol { name: "_ITM_deregisterTMCloneTable", address: 0, size: 0, kind: Label, section: Undefined, scope: Unknown, weak: true, flags: Elf { st_info: 20, st_other: 0 } }
+65: Symbol { name: "data_start", address: 11000, size: 0, kind: Label, section: Section(SectionIndex(15)), scope: Dynamic, weak: true, flags: Elf { st_info: 20, st_other: 0 } }
+66: Symbol { name: "__bss_start__", address: 11010, size: 0, kind: Label, section: Section(SectionIndex(16)), scope: Dynamic, weak: false, flags: Elf { st_info: 10, st_other: 0 } }
+67: Symbol { name: "__cxa_finalize@@GLIBC_2.17", address: 0, size: 0, kind: Text, section: Undefined, scope: Unknown, weak: true, flags: Elf { st_info: 22, st_other: 0 } }
+68: Symbol { name: "_bss_end__", address: 11018, size: 0, kind: Label, section: Section(SectionIndex(16)), scope: Dynamic, weak: false, flags: Elf { st_info: 10, st_other: 0 } }
+69: Symbol { name: "_edata", address: 11010, size: 0, kind: Label, section: Section(SectionIndex(15)), scope: Dynamic, weak: false, flags: Elf { st_info: 10, st_other: 0 } }
+70: Symbol { name: "_fini", address: 7cc, size: 0, kind: Text, section: Section(SectionIndex(e)), scope: Dynamic, weak: false, flags: Elf { st_info: 12, st_other: 0 } }
+71: Symbol { name: "__bss_end__", address: 11018, size: 0, kind: Label, section: Section(SectionIndex(16)), scope: Dynamic, weak: false, flags: Elf { st_info: 10, st_other: 0 } }
+72: Symbol { name: "__libc_start_main@@GLIBC_2.17", address: 0, size: 0, kind: Text, section: Undefined, scope: Unknown, weak: false, flags: Elf { st_info: 12, st_other: 0 } }
+73: Symbol { name: "__data_start", address: 11000, size: 0, kind: Label, section: Section(SectionIndex(15)), scope: Dynamic, weak: false, flags: Elf { st_info: 10, st_other: 0 } }
+74: Symbol { name: "__gmon_start__", address: 0, size: 0, kind: Label, section: Undefined, scope: Unknown, weak: true, flags: Elf { st_info: 20, st_other: 0 } }
+75: Symbol { name: "__dso_handle", address: 11008, size: 0, kind: Data, section: Section(SectionIndex(15)), scope: Linkage, weak: false, flags: Elf { st_info: 11, st_other: 2 } }
+76: Symbol { name: "abort@@GLIBC_2.17", address: 0, size: 0, kind: Text, section: Undefined, scope: Unknown, weak: false, flags: Elf { st_info: 12, st_other: 0 } }
+77: Symbol { name: "_IO_stdin_used", address: 7e0, size: 4, kind: Data, section: Section(SectionIndex(f)), scope: Dynamic, weak: false, flags: Elf { st_info: 11, st_other: 0 } }
+78: Symbol { name: "__libc_csu_init", address: 748, size: 80, kind: Text, section: Section(SectionIndex(d)), scope: Dynamic, weak: false, flags: Elf { st_info: 12, st_other: 0 } }
+79: Symbol { name: "_end", address: 11018, size: 0, kind: Label, section: Section(SectionIndex(16)), scope: Dynamic, weak: false, flags: Elf { st_info: 10, st_other: 0 } }
+80: Symbol { name: "_start", address: 620, size: 0, kind: Text, section: Section(SectionIndex(d)), scope: Dynamic, weak: false, flags: Elf { st_info: 12, st_other: 0 } }
+81: Symbol { name: "__end__", address: 11018, size: 0, kind: Label, section: Section(SectionIndex(16)), scope: Dynamic, weak: false, flags: Elf { st_info: 10, st_other: 0 } }
+82: Symbol { name: "__bss_start", address: 11010, size: 0, kind: Label, section: Section(SectionIndex(16)), scope: Dynamic, weak: false, flags: Elf { st_info: 10, st_other: 0 } }
+83: Symbol { name: "main", address: 724, size: 20, kind: Text, section: Section(SectionIndex(d)), scope: Dynamic, weak: false, flags: Elf { st_info: 12, st_other: 0 } }
+84: Symbol { name: "__TMC_END__", address: 11010, size: 0, kind: Data, section: Section(SectionIndex(15)), scope: Linkage, weak: false, flags: Elf { st_info: 11, st_other: 2 } }
+85: Symbol { name: "_ITM_registerTMCloneTable", address: 0, size: 0, kind: Label, section: Undefined, scope: Unknown, weak: true, flags: Elf { st_info: 20, st_other: 0 } }
+86: Symbol { name: "printf@@GLIBC_2.17", address: 0, size: 0, kind: Text, section: Undefined, scope: Unknown, weak: false, flags: Elf { st_info: 12, st_other: 0 } }
+87: Symbol { name: "_init", address: 598, size: 0, kind: Text, section: Section(SectionIndex(b)), scope: Dynamic, weak: false, flags: Elf { st_info: 12, st_other: 0 } }
+
+Dynamic symbols
+0: Symbol { name: "", address: 0, size: 0, kind: Null, section: Undefined, scope: Unknown, weak: false, flags: Elf { st_info: 0, st_other: 0 } }
+1: Symbol { name: "", address: 598, size: 0, kind: Section, section: Section(SectionIndex(b)), scope: Compilation, weak: false, flags: Elf { st_info: 3, st_other: 0 } }
+2: Symbol { name: "", address: 11000, size: 0, kind: Section, section: Section(SectionIndex(15)), scope: Compilation, weak: false, flags: Elf { st_info: 3, st_other: 0 } }
+3: Symbol { name: "_ITM_deregisterTMCloneTable", address: 0, size: 0, kind: Label, section: Undefined, scope: Unknown, weak: true, flags: Elf { st_info: 20, st_other: 0 } }
+4: Symbol { name: "__cxa_finalize", address: 0, size: 0, kind: Text, section: Undefined, scope: Unknown, weak: true, flags: Elf { st_info: 22, st_other: 0 } }
+5: Symbol { name: "__libc_start_main", address: 0, size: 0, kind: Text, section: Undefined, scope: Unknown, weak: false, flags: Elf { st_info: 12, st_other: 0 } }
+6: Symbol { name: "__gmon_start__", address: 0, size: 0, kind: Label, section: Undefined, scope: Unknown, weak: true, flags: Elf { st_info: 20, st_other: 0 } }
+7: Symbol { name: "abort", address: 0, size: 0, kind: Text, section: Undefined, scope: Unknown, weak: false, flags: Elf { st_info: 12, st_other: 0 } }
+8: Symbol { name: "_ITM_registerTMCloneTable", address: 0, size: 0, kind: Label, section: Undefined, scope: Unknown, weak: true, flags: Elf { st_info: 20, st_other: 0 } }
+9: Symbol { name: "printf", address: 0, size: 0, kind: Text, section: Undefined, scope: Unknown, weak: false, flags: Elf { st_info: 12, st_other: 0 } }
+
+Dynamic relocations
+(10d80, Relocation { kind: Elf(403), encoding: Generic, size: 0, target: Absolute, addend: 720, implicit_addend: false })
+(10d88, Relocation { kind: Elf(403), encoding: Generic, size: 0, target: Absolute, addend: 6d8, implicit_addend: false })
+(10fc8, Relocation { kind: Elf(403), encoding: Generic, size: 0, target: Absolute, addend: 7c8, implicit_addend: false })
+(10fe8, Relocation { kind: Elf(403), encoding: Generic, size: 0, target: Absolute, addend: 748, implicit_addend: false })
+(10ff0, Relocation { kind: Elf(403), encoding: Generic, size: 0, target: Absolute, addend: 724, implicit_addend: false })
+(11008, Relocation { kind: Elf(403), encoding: Generic, size: 0, target: Absolute, addend: 11008, implicit_addend: false })
+(10fd0, Relocation { kind: Elf(401), encoding: Generic, size: 0, target: Symbol(SymbolIndex(3)), addend: 0, implicit_addend: false })
+(10fd8, Relocation { kind: Elf(401), encoding: Generic, size: 0, target: Symbol(SymbolIndex(4)), addend: 0, implicit_addend: false })
+(10fe0, Relocation { kind: Elf(401), encoding: Generic, size: 0, target: Symbol(SymbolIndex(6)), addend: 0, implicit_addend: false })
+(10ff8, Relocation { kind: Elf(401), encoding: Generic, size: 0, target: Symbol(SymbolIndex(8)), addend: 0, implicit_addend: false })
+(10f98, Relocation { kind: Elf(402), encoding: Generic, size: 0, target: Symbol(SymbolIndex(4)), addend: 0, implicit_addend: false })
+(10fa0, Relocation { kind: Elf(402), encoding: Generic, size: 0, target: Symbol(SymbolIndex(5)), addend: 0, implicit_addend: false })
+(10fa8, Relocation { kind: Elf(402), encoding: Generic, size: 0, target: Symbol(SymbolIndex(6)), addend: 0, implicit_addend: false })
+(10fb0, Relocation { kind: Elf(402), encoding: Generic, size: 0, target: Symbol(SymbolIndex(7)), addend: 0, implicit_addend: false })
+(10fb8, Relocation { kind: Elf(402), encoding: Generic, size: 0, target: Symbol(SymbolIndex(9)), addend: 0, implicit_addend: false })
+
+Import { library: "", name: "_ITM_deregisterTMCloneTable" }
+Import { library: "", name: "__cxa_finalize" }
+Import { library: "", name: "__libc_start_main" }
+Import { library: "", name: "__gmon_start__" }
+Import { library: "", name: "abort" }
+Import { library: "", name: "_ITM_registerTMCloneTable" }
+Import { library: "", name: "printf" }
+
+Symbol map
+0x598 "_init"
+0x620 "_start"
+0x658 "call_weak_fn"
+0x670 "deregister_tm_clones"
+0x6a0 "register_tm_clones"
+0x6d8 "__do_global_dtors_aux"
+0x720 "frame_dummy"
+0x724 "main"
+0x748 "__libc_csu_init"
+0x7c8 "__libc_csu_fini"
+0x7cc "_fini"
+0x7e0 "_IO_stdin_used"
+0x7f8 "__FRAME_END__"
+0x10d80 "__frame_dummy_init_array_entry"
+0x10d88 "__do_global_dtors_aux_fini_array_entry"
+0x10d90 "_DYNAMIC"
+0x10fc0 "_GLOBAL_OFFSET_TABLE_"
+0x11008 "__dso_handle"
+0x11010 "completed.8500"
+0x11010 "__TMC_END__"

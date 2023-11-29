@@ -83,3 +83,5 @@ Import { library: "KERNEL32.dll", name: "HeapReAlloc" }
 Import { library: "KERNEL32.dll", name: "CloseHandle" }
 Import { library: "KERNEL32.dll", name: "CreateFileW" }
 Import { library: "KERNEL32.dll", name: "DecodePointer" }
+
+Symbol map

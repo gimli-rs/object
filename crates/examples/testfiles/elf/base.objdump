@@ -130,3 +130,24 @@ Import { library: "", name: "__libc_start_main" }
 Import { library: "", name: "__gmon_start__" }
 Import { library: "", name: "_ITM_registerTMCloneTable" }
 Import { library: "", name: "__cxa_finalize" }
+
+Symbol map
+0x520 "_init"
+0x570 "_start"
+0x5a0 "deregister_tm_clones"
+0x5e0 "register_tm_clones"
+0x630 "__do_global_dtors_aux"
+0x670 "frame_dummy"
+0x67a "main"
+0x6a0 "__libc_csu_init"
+0x710 "__libc_csu_fini"
+0x714 "_fini"
+0x720 "_IO_stdin_used"
+0x874 "__FRAME_END__"
+0x200da8 "__frame_dummy_init_array_entry"
+0x200db0 "__do_global_dtors_aux_fini_array_entry"
+0x200db8 "_DYNAMIC"
+0x200fb8 "_GLOBAL_OFFSET_TABLE_"
+0x201008 "__dso_handle"
+0x201010 "completed.7698"
+0x201010 "__TMC_END__"

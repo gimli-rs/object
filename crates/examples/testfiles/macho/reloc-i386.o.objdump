@@ -27,3 +27,8 @@ Dynamic symbols
 Import { library: "", name: "_g0" }
 
 Export { name: "_g2", address: 10 }
+
+Symbol map
+0x0 "_g1"
+0x10 "_g3"
+0x10 "_g2"
