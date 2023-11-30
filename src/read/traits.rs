@@ -126,6 +126,17 @@ pub trait Object<'data: 'file, 'file>: read::private::Sealed {
     /// For Mach-O files, this does not include STAB entries.
     fn symbols(&'file self) -> Self::SymbolIterator;
 
+    /// Get the symbol named `symbol_name`, if the symbol exists.
+    fn symbol_by_name(&'file self, symbol_name: &str) -> Option<Self::Symbol> {
+        self.symbol_by_name_bytes(symbol_name.as_bytes())
+    }
+
+    /// Like [`Self::symbol_by_name`], but allows names that are not UTF-8.
+    fn symbol_by_name_bytes(&'file self, symbol_name: &[u8]) -> Option<Self::Symbol> {
+        self.symbols()
+            .find(|sym| sym.name_bytes() == Ok(symbol_name))
+    }
+
     /// Get the dynamic linking symbol table, if any.
     ///
     /// Only ELF has a separate dynamic linking symbol table.
