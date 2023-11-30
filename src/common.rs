@@ -26,6 +26,7 @@ pub enum Architecture {
     Riscv64,
     S390x,
     Sbf,
+    Sharc,
     Sparc64,
     Wasm32,
     Wasm64,
@@ -59,6 +60,7 @@ impl Architecture {
             Architecture::Riscv64 => Some(AddressSize::U64),
             Architecture::S390x => Some(AddressSize::U64),
             Architecture::Sbf => Some(AddressSize::U64),
+            Architecture::Sharc => Some(AddressSize::U32),
             Architecture::Sparc64 => Some(AddressSize::U64),
             Architecture::Wasm32 => Some(AddressSize::U32),
             Architecture::Wasm64 => Some(AddressSize::U64),
@@ -367,6 +369,30 @@ pub enum RelocationEncoding {
     ///
     /// The `RelocationKind` must be PC relative.
     LoongArchBranch,
+
+    /// SHARC+ 48-bit Type A instruction
+    ///
+    /// Represents these possible variants, each with a corresponding
+    /// `R_SHARC_*` constant:
+    ///
+    /// * 24-bit absolute address
+    /// * 32-bit absolute address
+    /// * 6-bit relative address
+    /// * 24-bit relative address
+    /// * 6-bit absolute address in the immediate value field
+    /// * 16-bit absolute address in the immediate value field
+    SharcTypeA,
+
+    /// SHARC+ 32-bit Type B instruction
+    ///
+    /// Represents these possible variants, each with a corresponding
+    /// `R_SHARC_*` constant:
+    ///
+    /// * 6-bit absolute address in the immediate value field
+    /// * 7-bit absolute address in the immediate value field
+    /// * 16-bit absolute address
+    /// * 6-bit relative address
+    SharcTypeB,
 }
 
 /// File flags that are specific to each file format.

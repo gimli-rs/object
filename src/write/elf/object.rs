@@ -141,6 +141,7 @@ impl<'a> Object<'a> {
             Architecture::Riscv32 => true,
             Architecture::S390x => true,
             Architecture::Sbf => false,
+            Architecture::Sharc => true,
             Architecture::Sparc64 => true,
             Architecture::Xtensa => true,
             _ => {
@@ -301,6 +302,7 @@ impl<'a> Object<'a> {
             Architecture::Riscv64 => elf::EM_RISCV,
             Architecture::S390x => elf::EM_S390,
             Architecture::Sbf => elf::EM_SBF,
+            Architecture::Sharc => elf::EM_SHARC,
             Architecture::Sparc64 => elf::EM_SPARCV9,
             Architecture::Xtensa => elf::EM_XTENSA,
             _ => {
@@ -721,6 +723,48 @@ impl<'a> Object<'a> {
                         Architecture::Sbf => match (reloc.kind, reloc.encoding, reloc.size) {
                             (RelocationKind::Absolute, _, 64) => elf::R_SBF_64_64,
                             (RelocationKind::Absolute, _, 32) => elf::R_SBF_64_32,
+                            (RelocationKind::Elf(x), _, _) => x,
+                            _ => {
+                                return Err(Error(format!("unimplemented relocation {:?}", reloc)));
+                            }
+                        },
+                        Architecture::Sharc => match (reloc.kind, reloc.encoding, reloc.size) {
+                            (RelocationKind::Absolute, RelocationEncoding::SharcTypeA, 32) => {
+                                elf::R_SHARC_ADDR32_V3
+                            }
+                            (RelocationKind::Absolute, RelocationEncoding::Generic, 32) => {
+                                elf::R_SHARC_ADDR_VAR_V3
+                            }
+                            (RelocationKind::Relative, RelocationEncoding::SharcTypeA, 24) => {
+                                elf::R_SHARC_PCRLONG_V3
+                            }
+                            (RelocationKind::Relative, RelocationEncoding::SharcTypeA, 6) => {
+                                elf::R_SHARC_PCRSHORT_V3
+                            }
+                            (RelocationKind::Relative, RelocationEncoding::SharcTypeB, 6) => {
+                                elf::R_SHARC_PCRSHORT_V3
+                            }
+                            (RelocationKind::Absolute, RelocationEncoding::Generic, 16) => {
+                                elf::R_SHARC_ADDR_VAR16_V3
+                            }
+                            (RelocationKind::Absolute, RelocationEncoding::SharcTypeA, 16) => {
+                                elf::R_SHARC_DATA16_V3
+                            }
+                            (RelocationKind::Absolute, RelocationEncoding::SharcTypeB, 16) => {
+                                elf::R_SHARC_DATA16_VISA_V3
+                            }
+                            (RelocationKind::Absolute, RelocationEncoding::SharcTypeA, 24) => {
+                                elf::R_SHARC_ADDR24_V3
+                            }
+                            (RelocationKind::Absolute, RelocationEncoding::SharcTypeA, 6) => {
+                                elf::R_SHARC_DATA6_V3
+                            }
+                            (RelocationKind::Absolute, RelocationEncoding::SharcTypeB, 6) => {
+                                elf::R_SHARC_DATA6_VISA_V3
+                            }
+                            (RelocationKind::Absolute, RelocationEncoding::SharcTypeB, 7) => {
+                                elf::R_SHARC_DATA7_VISA_V3
+                            }
                             (RelocationKind::Elf(x), _, _) => x,
                             _ => {
                                 return Err(Error(format!("unimplemented relocation {:?}", reloc)));

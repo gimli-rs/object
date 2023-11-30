@@ -2207,6 +2207,114 @@ pub const R_386_IRELATIVE: u32 = 42;
 /// Load from 32 bit GOT entry, relaxable.
 pub const R_386_GOT32X: u32 = 43;
 
+// ADI SHARC specific definitions
+
+// SHARC values for `Rel*::r_type`
+
+/// 24-bit absolute address in bits 23:0 of a 48-bit instr
+///
+/// Targets:
+///
+/// * Type 25a (PC_DIRECT)
+pub const R_SHARC_ADDR24_V3: u32 = 0x0b;
+
+/// 32-bit absolute address in bits 31:0 of a 48-bit instr
+///
+/// Targets:
+///
+/// * Type 14a
+/// * Type 14d
+/// * Type 15a
+/// * Type 16a
+/// * Type 17a
+/// * Type 18a
+/// * Type 19a
+pub const R_SHARC_ADDR32_V3: u32 = 0x0c;
+
+/// 32-bit absolute address in bits 31:0 of a 32-bit data location
+///
+/// Represented with `RelocationEncoding::Generic`
+pub const R_SHARC_ADDR_VAR_V3: u32 = 0x0d;
+
+/// 6-bit PC-relative address in bits 32:27 of a 48-bit instr
+///
+/// Targets:
+///
+/// * Type 9a
+/// * Type 10a
+pub const R_SHARC_PCRSHORT_V3: u32 = 0x0e;
+
+/// 24-bit PC-relative address in bits 23:0 of a 48-bit instr
+///
+/// Targets:
+///
+/// * Type 8a
+/// * Type 12a (truncated to 23 bits after relocation)
+/// * Type 13a (truncated to 23 bits after relocation)
+/// * Type 25a (PC Relative)
+pub const R_SHARC_PCRLONG_V3: u32 = 0x0f;
+
+/// 6-bit absolute address in bits 32:27 of a 48-bit instr
+///
+/// Targets:
+///
+/// * Type 4a
+/// * Type 4b
+/// * Type 4d
+pub const R_SHARC_DATA6_V3: u32 = 0x10;
+
+/// 16-bit absolute address in bits 39:24 of a 48-bit instr
+///
+/// Targets:
+///
+/// * Type 12a
+pub const R_SHARC_DATA16_V3: u32 = 0x11;
+
+/// 6-bit absolute address into bits 16:11 of a 32-bit instr
+///
+/// Targets:
+///
+/// * Type 4b
+pub const R_SHARC_DATA6_VISA_V3: u32 = 0x12;
+
+/// 7-bit absolute address into bits 6:0 of a 32-bit instr
+pub const R_SHARC_DATA7_VISA_V3: u32 = 0x13;
+
+/// 16-bit absolute address into bits 15:0 of a 32-bit instr
+pub const R_SHARC_DATA16_VISA_V3: u32 = 0x14;
+
+/// 6-bit PC-relative address into bits 16:11 of a Type B
+///
+/// Targets:
+///
+/// * Type 9b
+pub const R_SHARC_PCR6_VISA_V3: u32 = 0x17;
+
+/// 16-bit absolute address into bits 15:0 of a 16-bit location.
+///
+/// Represented with `RelocationEncoding::Generic`
+pub const R_SHARC_ADDR_VAR16_V3: u32 = 0x19;
+
+pub const R_SHARC_CALC_PUSH_ADDR: u32 = 0xe0;
+pub const R_SHARC_CALC_PUSH_ADDEND: u32 = 0xe1;
+pub const R_SHARC_CALC_ADD: u32 = 0xe2;
+pub const R_SHARC_CALC_SUB: u32 = 0xe3;
+pub const R_SHARC_CALC_MUL: u32 = 0xe4;
+pub const R_SHARC_CALC_DIV: u32 = 0xe5;
+pub const R_SHARC_CALC_MOD: u32 = 0xe6;
+pub const R_SHARC_CALC_LSHIFT: u32 = 0xe7;
+pub const R_SHARC_CALC_RSHIFT: u32 = 0xe8;
+pub const R_SHARC_CALC_AND: u32 = 0xe9;
+pub const R_SHARC_CALC_OR: u32 = 0xea;
+pub const R_SHARC_CALC_XOR: u32 = 0xeb;
+pub const R_SHARC_CALC_PUSH_LEN: u32 = 0xec;
+pub const R_SHARC_CALC_NOT: u32 = 0xf6;
+
+// SHARC values for `SectionHeader*::sh_type`.
+
+/// .adi.attributes
+pub const SHT_SHARC_ADI_ATTRIBUTES: u32 = SHT_LOPROC + 0x2;
+
 // SUN SPARC specific definitions.
 
 // SPARC values for `st_type` component of `Sym*::st_info`.
