@@ -384,7 +384,7 @@ impl<'data, 'file, R: ReadRef<'data>, Coff: CoffHeader> ObjectSymbol<'data>
         };
         match self.symbol.storage_class() {
             pe::IMAGE_SYM_CLASS_STATIC => {
-                if self.symbol.value() == 0 && self.symbol.number_of_aux_symbols() > 0 {
+                if self.symbol.has_aux_section() {
                     SymbolKind::Section
                 } else {
                     derived_kind
@@ -547,10 +547,7 @@ pub trait ImageSymbol: Debug + Pod {
             return false;
         }
         match self.storage_class() {
-            pe::IMAGE_SYM_CLASS_STATIC => {
-                // Exclude section symbols.
-                !(self.value() == 0 && self.number_of_aux_symbols() > 0)
-            }
+            pe::IMAGE_SYM_CLASS_STATIC => !self.has_aux_section(),
             pe::IMAGE_SYM_CLASS_EXTERNAL | pe::IMAGE_SYM_CLASS_WEAK_EXTERNAL => true,
             _ => false,
         }
@@ -570,7 +567,7 @@ pub trait ImageSymbol: Debug + Pod {
     fn has_aux_section(&self) -> bool {
         self.number_of_aux_symbols() > 0
             && self.storage_class() == pe::IMAGE_SYM_CLASS_STATIC
-            && self.value() == 0
+            && self.typ() == 0
     }
 
     fn base_type(&self) -> u16 {

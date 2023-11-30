@@ -21,7 +21,7 @@ Segment { name: ".rdata$zzz", address: 0, size: 0 }
 
 Symbols
 0: Symbol { name: "base.c", address: 0, size: 0, kind: File, section: None, scope: Compilation, weak: false, flags: None }
-2: Symbol { name: "printf", address: 0, size: 0, kind: Section, section: Section(SectionIndex(1)), scope: Compilation, weak: false, flags: CoffSection { selection: 0, associative_section: None } }
+2: Symbol { name: "printf", address: 0, size: 0, kind: Text, section: Section(SectionIndex(1)), scope: Compilation, weak: false, flags: None }
 4: Symbol { name: "main", address: 51, size: 0, kind: Text, section: Section(SectionIndex(1)), scope: Linkage, weak: false, flags: None }
 5: Symbol { name: ".text", address: 0, size: 75, kind: Section, section: Section(SectionIndex(1)), scope: Compilation, weak: false, flags: CoffSection { selection: 0, associative_section: None } }
 7: Symbol { name: ".data", address: 0, size: 0, kind: Section, section: Section(SectionIndex(2)), scope: Compilation, weak: false, flags: CoffSection { selection: 0, associative_section: None } }
@@ -51,4 +51,5 @@ Symbols
 Dynamic symbols
 
 Symbol map
+0x0 "printf"
 0x51 "main"
