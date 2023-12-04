@@ -399,7 +399,7 @@ impl<'data, 'file, Xcoff: FileHeader, R: ReadRef<'data>> ObjectSymbol<'data>
             SymbolScope::Unknown
         } else {
             match self.symbol.n_sclass() {
-                xcoff::C_EXT | xcoff::C_WEAKEXT | xcoff::C_HIDEXT => {
+                xcoff::C_EXT | xcoff::C_WEAKEXT => {
                     let visibility = self.symbol.n_type() & xcoff::SYM_V_MASK;
                     if visibility == xcoff::SYM_V_HIDDEN {
                         SymbolScope::Linkage
