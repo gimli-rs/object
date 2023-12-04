@@ -62,8 +62,4 @@ Symbols
 Dynamic symbols
 
 Symbol map
-0x0 "___local_stdio_printf_options"
-0x0 "__vfprintf_l"
-0x0 "_printf"
 0x0 "_main"
-0x0 "$SG9248"

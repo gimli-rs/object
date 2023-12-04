@@ -109,7 +109,6 @@ Dynamic symbols
 
 Symbol map
 0x0 "__IMPORT_DESCRIPTOR_test_x64"
-0x0 ".idata$6"
 
 test_x86.dll:
 Format: Short Import File
@@ -196,7 +195,6 @@ Dynamic symbols
 
 Symbol map
 0x0 "__IMPORT_DESCRIPTOR_test_x86"
-0x0 ".idata$6"
 
 test_arm64ec.dll:
 Format: Short Import File
@@ -283,4 +281,3 @@ Dynamic symbols
 
 Symbol map
 0x0 "__IMPORT_DESCRIPTOR_test_arm64ec"
-0x0 ".idata$6"

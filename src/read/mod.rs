@@ -349,7 +349,6 @@ impl<T: SymbolMapEntry> SymbolMap<T> {
     ///
     /// This function will sort the symbols by address.
     pub fn new(mut symbols: Vec<T>) -> Self {
-        // TODO: deterministically remove duplicates
         symbols.sort_by_key(|s| s.address());
         SymbolMap { symbols }
     }

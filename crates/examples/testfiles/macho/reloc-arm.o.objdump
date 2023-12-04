@@ -40,5 +40,4 @@ Export { name: "_g2", address: 14 }
 
 Symbol map
 0x0 "_g1"
-0x14 "_g3"
 0x14 "_g2"

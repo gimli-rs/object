@@ -39,18 +39,13 @@ Symbols
 Dynamic symbols
 
 Symbol map
-0x0 "memory"
 0x0 "__memory_base"
-0x1 "__table_base"
 0x1 "__table_base32"
 0x2 "__wasm_call_ctors"
 0x5 "print"
-0x400 "global1"
-0x400 "__dso_handle"
 0x400 "__global_base"
 0x404 "global2"
 0x408 "__data_end"
 0x410 "__stack_low"
-0x10410 "__stack_high"
 0x10410 "__heap_base"
 0x20000 "__heap_end"

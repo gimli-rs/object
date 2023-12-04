@@ -164,12 +164,56 @@ pub trait Object<'data: 'file, 'file>: read::private::Sealed {
     fn symbol_map(&'file self) -> SymbolMap<SymbolMapName<'data>> {
         let mut symbols = Vec::new();
         if let Some(table) = self.symbol_table().or_else(|| self.dynamic_symbol_table()) {
+            // Sometimes symbols share addresses. Collect them all then choose the "best".
+            let mut all_symbols = Vec::new();
             for symbol in table.symbols() {
+                // Must have an address.
                 if !symbol.is_definition() {
                     continue;
                 }
-                if let Ok(name) = symbol.name() {
-                    symbols.push(SymbolMapName::new(symbol.address(), name));
+                // Must have a name.
+                let name = match symbol.name() {
+                    Ok(name) => name,
+                    _ => continue,
+                };
+                if name.is_empty() {
+                    continue;
+                }
+
+                // Lower is better.
+                let mut priority = 0u32;
+
+                // Prefer known kind.
+                match symbol.kind() {
+                    SymbolKind::Text | SymbolKind::Data => {}
+                    SymbolKind::Unknown => priority += 1,
+                    _ => continue,
+                }
+                priority *= 2;
+
+                // Prefer global visibility.
+                priority += match symbol.scope() {
+                    SymbolScope::Unknown => 3,
+                    SymbolScope::Compilation => 2,
+                    SymbolScope::Linkage => 1,
+                    SymbolScope::Dynamic => 0,
+                };
+                priority *= 4;
+
+                // Prefer later entries (earlier symbol is likely to be less specific).
+                let index = !0 - symbol.index().0;
+
+                // Tuple is ordered for sort.
+                all_symbols.push((symbol.address(), priority, index, name));
+            }
+            // Unstable sort is okay because tuple includes index.
+            all_symbols.sort_unstable();
+
+            let mut previous_address = !0;
+            for (address, _priority, _index, name) in all_symbols {
+                if address != previous_address {
+                    symbols.push(SymbolMapName::new(address, name));
+                    previous_address = address;
                 }
             }
         }

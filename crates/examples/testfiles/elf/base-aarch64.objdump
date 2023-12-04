@@ -179,5 +179,4 @@ Symbol map
 0x10d80 "__frame_dummy_init_array_entry"
 0x10d88 "__do_global_dtors_aux_fini_array_entry"
 0x11008 "__dso_handle"
-0x11010 "completed.8500"
 0x11010 "__TMC_END__"
