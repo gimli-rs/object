@@ -542,8 +542,7 @@ pub trait ImageSymbol: Debug + Pod {
 
     /// Return true if the symbol is a definition of a function or data object.
     fn is_definition(&self) -> bool {
-        let section_number = self.section_number();
-        if section_number == pe::IMAGE_SYM_UNDEFINED {
+        if self.section_number() <= 0 {
             return false;
         }
         match self.storage_class() {

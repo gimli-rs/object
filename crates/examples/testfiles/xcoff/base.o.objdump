@@ -33,3 +33,6 @@ Symbol map
 0x0 ".text"
 0x0 ".main"
 0x58 ".rodata.str1.1L...str"
+0x68 "main"
+0x80 "TOC"
+0x80 ".rodata.str1.1L...str"

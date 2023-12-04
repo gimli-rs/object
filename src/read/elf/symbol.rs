@@ -478,7 +478,8 @@ pub trait Sym: Debug + Pod {
 
     /// Return true if the symbol is a definition of a function or data object.
     fn is_definition(&self, endian: Self::Endian) -> bool {
-        if self.st_shndx(endian) == elf::SHN_UNDEF {
+        let shndx = self.st_shndx(endian);
+        if shndx == elf::SHN_UNDEF || (shndx >= elf::SHN_LORESERVE && shndx != elf::SHN_XINDEX) {
             return false;
         }
         match self.st_type() {

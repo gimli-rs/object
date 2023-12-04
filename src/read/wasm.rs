@@ -901,7 +901,8 @@ impl<'data, 'file> ObjectSymbol<'data> for WasmSymbol<'data, 'file> {
 
     #[inline]
     fn is_definition(&self) -> bool {
-        self.symbol.kind == SymbolKind::Text && self.symbol.section != SymbolSection::Undefined
+        (self.symbol.kind == SymbolKind::Text || self.symbol.kind == SymbolKind::Data)
+            && self.symbol.section != SymbolSection::Undefined
     }
 
     #[inline]

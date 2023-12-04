@@ -66,6 +66,7 @@ Symbols
 Dynamic symbols
 
 Symbol map
+0x0 "memory"
 0x2 "__wasm_call_ctors"
 0x5 "_start"
 0x2f "__original_main"

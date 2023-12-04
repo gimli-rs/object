@@ -432,7 +432,7 @@ pub trait Nlist: Debug + Pod {
     /// Return true if the symbol is a definition of a function or data object.
     fn is_definition(&self) -> bool {
         let n_type = self.n_type();
-        n_type & macho::N_STAB == 0 && n_type & macho::N_TYPE != macho::N_UNDF
+        n_type & macho::N_STAB == 0 && n_type & macho::N_TYPE == macho::N_SECT
     }
 
     /// Return the library ordinal.

@@ -62,8 +62,6 @@ Symbols
 Dynamic symbols
 
 Symbol map
-0x0 "@comp.id"
-0x0 "@feat.00"
 0x0 "___local_stdio_printf_options"
 0x0 "__vfprintf_l"
 0x0 "_printf"
