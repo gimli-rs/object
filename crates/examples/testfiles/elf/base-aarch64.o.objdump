@@ -23,12 +23,12 @@ Symbols
 3: Symbol { name: "", address: 0, size: 0, kind: Section, section: Section(SectionIndex(3)), scope: Compilation, weak: false, flags: Elf { st_info: 3, st_other: 0 } }
 4: Symbol { name: "", address: 0, size: 0, kind: Section, section: Section(SectionIndex(4)), scope: Compilation, weak: false, flags: Elf { st_info: 3, st_other: 0 } }
 5: Symbol { name: "", address: 0, size: 0, kind: Section, section: Section(SectionIndex(5)), scope: Compilation, weak: false, flags: Elf { st_info: 3, st_other: 0 } }
-6: Symbol { name: "$d", address: 0, size: 0, kind: Label, section: Section(SectionIndex(5)), scope: Compilation, weak: false, flags: Elf { st_info: 0, st_other: 0 } }
-7: Symbol { name: "$x", address: 0, size: 0, kind: Label, section: Section(SectionIndex(1)), scope: Compilation, weak: false, flags: Elf { st_info: 0, st_other: 0 } }
+6: Symbol { name: "$d", address: 0, size: 0, kind: Unknown, section: Section(SectionIndex(5)), scope: Compilation, weak: false, flags: Elf { st_info: 0, st_other: 0 } }
+7: Symbol { name: "$x", address: 0, size: 0, kind: Unknown, section: Section(SectionIndex(1)), scope: Compilation, weak: false, flags: Elf { st_info: 0, st_other: 0 } }
 8: Symbol { name: "", address: 0, size: 0, kind: Section, section: Section(SectionIndex(7)), scope: Compilation, weak: false, flags: Elf { st_info: 3, st_other: 0 } }
 9: Symbol { name: "", address: 0, size: 0, kind: Section, section: Section(SectionIndex(6)), scope: Compilation, weak: false, flags: Elf { st_info: 3, st_other: 0 } }
 10: Symbol { name: "main", address: 0, size: 20, kind: Text, section: Section(SectionIndex(1)), scope: Dynamic, weak: false, flags: Elf { st_info: 12, st_other: 0 } }
-11: Symbol { name: "printf", address: 0, size: 0, kind: Label, section: Undefined, scope: Unknown, weak: false, flags: Elf { st_info: 10, st_other: 0 } }
+11: Symbol { name: "printf", address: 0, size: 0, kind: Unknown, section: Undefined, scope: Unknown, weak: false, flags: Elf { st_info: 10, st_other: 0 } }
 
 .text relocations
 (8, Relocation { kind: Elf(113), encoding: Generic, size: 0, target: Symbol(SymbolIndex(5)), addend: 0, implicit_addend: false })
