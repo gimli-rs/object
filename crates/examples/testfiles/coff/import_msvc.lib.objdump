@@ -53,7 +53,6 @@ Symbols
 Dynamic symbols
 
 Symbol map
-0x0 "@comp.id"
 0x0 "test_x64_NULL_THUNK_DATA"
 
 test_x64.dll:
@@ -75,7 +74,6 @@ Symbols
 Dynamic symbols
 
 Symbol map
-0x0 "@comp.id"
 0x0 "__NULL_IMPORT_DESCRIPTOR"
 
 test_x64.dll:
@@ -110,9 +108,7 @@ Symbols
 Dynamic symbols
 
 Symbol map
-0x0 "@comp.id"
 0x0 "__IMPORT_DESCRIPTOR_test_x64"
-0x0 ".idata$6"
 
 test_x86.dll:
 Format: Short Import File
@@ -143,7 +139,6 @@ Symbols
 Dynamic symbols
 
 Symbol map
-0x0 "@comp.id"
 0x0 "test_x86_NULL_THUNK_DATA"
 
 test_x86.dll:
@@ -165,7 +160,6 @@ Symbols
 Dynamic symbols
 
 Symbol map
-0x0 "@comp.id"
 0x0 "__NULL_IMPORT_DESCRIPTOR"
 
 test_x86.dll:
@@ -200,9 +194,7 @@ Symbols
 Dynamic symbols
 
 Symbol map
-0x0 "@comp.id"
 0x0 "__IMPORT_DESCRIPTOR_test_x86"
-0x0 ".idata$6"
 
 test_arm64ec.dll:
 Format: Short Import File
@@ -233,7 +225,6 @@ Symbols
 Dynamic symbols
 
 Symbol map
-0x0 "@comp.id"
 0x0 "test_arm64ec_NULL_THUNK_DATA"
 
 test_arm64ec.dll:
@@ -255,7 +246,6 @@ Symbols
 Dynamic symbols
 
 Symbol map
-0x0 "@comp.id"
 0x0 "__NULL_IMPORT_DESCRIPTOR"
 
 test_arm64ec.dll:
@@ -290,6 +280,4 @@ Symbols
 Dynamic symbols
 
 Symbol map
-0x0 "@comp.id"
 0x0 "__IMPORT_DESCRIPTOR_test_arm64ec"
-0x0 ".idata$6"

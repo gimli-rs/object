@@ -149,5 +149,4 @@ Symbol map
 0x200db8 "_DYNAMIC"
 0x200fb8 "_GLOBAL_OFFSET_TABLE_"
 0x201008 "__dso_handle"
-0x201010 "completed.7698"
 0x201010 "__TMC_END__"

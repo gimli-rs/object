@@ -366,16 +366,16 @@ impl<'data, 'file, Xcoff: FileHeader, R: ReadRef<'data>> ObjectSymbol<'data>
     /// Return true if the symbol is a definition of a function or data object.
     #[inline]
     fn is_definition(&self) -> bool {
+        if self.symbol.n_scnum() <= 0 {
+            return false;
+        }
         if self.symbol.has_aux_csect() {
             if let Ok(aux_csect) = self
                 .symbols
                 .aux_csect(self.index.0, self.symbol.n_numaux() as usize)
             {
-                let smclas = aux_csect.x_smclas();
-                self.symbol.n_scnum() != xcoff::N_UNDEF
-                    && (smclas == xcoff::XMC_PR
-                        || smclas == xcoff::XMC_RW
-                        || smclas == xcoff::XMC_RO)
+                let sym_type = aux_csect.sym_type();
+                sym_type == xcoff::XTY_SD || sym_type == xcoff::XTY_LD || sym_type == xcoff::XTY_CM
             } else {
                 false
             }
