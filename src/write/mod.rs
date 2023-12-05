@@ -11,8 +11,9 @@ use std::{boxed::Box, collections::HashMap, error, io};
 
 use crate::endian::{Endianness, U32, U64};
 use crate::{
-    Architecture, BinaryFormat, ComdatKind, FileFlags, RelocationEncoding, RelocationKind,
-    SectionFlags, SectionKind, SubArchitecture, SymbolFlags, SymbolKind, SymbolScope,
+    Architecture, BinaryFormat, ComdatKind, FileFlags, RelocationEncoding, RelocationFlags,
+    RelocationKind, SectionFlags, SectionKind, SubArchitecture, SymbolFlags, SymbolKind,
+    SymbolScope,
 };
 
 #[cfg(feature = "coff")]

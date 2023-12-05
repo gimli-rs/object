@@ -258,6 +258,79 @@ impl<'a> Object<'a> {
         }
     }
 
+    pub(crate) fn macho_relocation_flags(&self, reloc: &Relocation) -> Result<RelocationFlags> {
+        let r_length = match reloc.size {
+            8 => 0,
+            16 => 1,
+            32 => 2,
+            64 => 3,
+            _ => return Err(Error(format!("unimplemented reloc size {:?}", reloc))),
+        };
+        let (r_pcrel, r_type) = match self.architecture {
+            Architecture::I386 => match reloc.kind {
+                RelocationKind::Absolute => (false, macho::GENERIC_RELOC_VANILLA),
+                _ => {
+                    return Err(Error(format!("unimplemented relocation {:?}", reloc)));
+                }
+            },
+            Architecture::X86_64 => match (reloc.kind, reloc.encoding) {
+                (RelocationKind::Absolute, RelocationEncoding::Generic) => {
+                    (false, macho::X86_64_RELOC_UNSIGNED)
+                }
+                (RelocationKind::Relative, RelocationEncoding::Generic) => {
+                    (true, macho::X86_64_RELOC_SIGNED)
+                }
+                (RelocationKind::Relative, RelocationEncoding::X86RipRelative) => {
+                    (true, macho::X86_64_RELOC_SIGNED)
+                }
+                (RelocationKind::Relative, RelocationEncoding::X86Branch) => {
+                    (true, macho::X86_64_RELOC_BRANCH)
+                }
+                (RelocationKind::PltRelative, RelocationEncoding::X86Branch) => {
+                    (true, macho::X86_64_RELOC_BRANCH)
+                }
+                (RelocationKind::GotRelative, RelocationEncoding::Generic) => {
+                    (true, macho::X86_64_RELOC_GOT)
+                }
+                (RelocationKind::GotRelative, RelocationEncoding::X86RipRelativeMovq) => {
+                    (true, macho::X86_64_RELOC_GOT_LOAD)
+                }
+                (RelocationKind::MachO { value, relative }, _) => (relative, value),
+                _ => {
+                    return Err(Error(format!("unimplemented relocation {:?}", reloc)));
+                }
+            },
+            Architecture::Aarch64 | Architecture::Aarch64_Ilp32 => {
+                match (reloc.kind, reloc.encoding) {
+                    (RelocationKind::Absolute, RelocationEncoding::Generic) => {
+                        (false, macho::ARM64_RELOC_UNSIGNED)
+                    }
+                    (RelocationKind::Relative, RelocationEncoding::AArch64Call) => {
+                        (true, macho::ARM64_RELOC_BRANCH26)
+                    }
+                    (RelocationKind::MachO { value, relative }, RelocationEncoding::Generic) => {
+                        (relative, value)
+                    }
+                    _ => {
+                        return Err(Error(format!("unimplemented relocation {:?}", reloc)));
+                    }
+                }
+            }
+            _ => {
+                if let RelocationKind::MachO { value, relative } = reloc.kind {
+                    (relative, value)
+                } else {
+                    return Err(Error(format!("unimplemented relocation {:?}", reloc)));
+                }
+            }
+        };
+        Ok(RelocationFlags::MachO {
+            r_type,
+            r_pcrel,
+            r_length,
+        })
+    }
+
     pub(crate) fn macho_adjust_addend(&mut self, relocation: &mut Relocation) -> i64 {
         let relative = match relocation.kind {
             RelocationKind::Relative
@@ -669,12 +742,15 @@ impl<'a> Object<'a> {
                 write_align(buffer, pointer_align);
                 debug_assert_eq!(section_offsets[index].reloc_offset, buffer.len());
                 for reloc in &section.relocations {
-                    let r_length = match reloc.size {
-                        8 => 0,
-                        16 => 1,
-                        32 => 2,
-                        64 => 3,
-                        _ => return Err(Error(format!("unimplemented reloc size {:?}", reloc))),
+                    let (r_type, r_pcrel, r_length) = if let RelocationFlags::MachO {
+                        r_type,
+                        r_pcrel,
+                        r_length,
+                    } = self.macho_relocation_flags(reloc)?
+                    {
+                        (r_type, r_pcrel, r_length)
+                    } else {
+                        return Err(Error("invalid relocation flags".into()));
                     };
 
                     // Write explicit addend.
@@ -709,69 +785,7 @@ impl<'a> Object<'a> {
                         r_symbolnum = symbol_offsets[reloc.symbol.0].index as u32;
                         r_extern = true;
                     }
-                    let (r_pcrel, r_type) = match self.architecture {
-                        Architecture::I386 => match reloc.kind {
-                            RelocationKind::Absolute => (false, macho::GENERIC_RELOC_VANILLA),
-                            _ => {
-                                return Err(Error(format!("unimplemented relocation {:?}", reloc)));
-                            }
-                        },
-                        Architecture::X86_64 => match (reloc.kind, reloc.encoding) {
-                            (RelocationKind::Absolute, RelocationEncoding::Generic) => {
-                                (false, macho::X86_64_RELOC_UNSIGNED)
-                            }
-                            (RelocationKind::Relative, RelocationEncoding::Generic) => {
-                                (true, macho::X86_64_RELOC_SIGNED)
-                            }
-                            (RelocationKind::Relative, RelocationEncoding::X86RipRelative) => {
-                                (true, macho::X86_64_RELOC_SIGNED)
-                            }
-                            (RelocationKind::Relative, RelocationEncoding::X86Branch) => {
-                                (true, macho::X86_64_RELOC_BRANCH)
-                            }
-                            (RelocationKind::PltRelative, RelocationEncoding::X86Branch) => {
-                                (true, macho::X86_64_RELOC_BRANCH)
-                            }
-                            (RelocationKind::GotRelative, RelocationEncoding::Generic) => {
-                                (true, macho::X86_64_RELOC_GOT)
-                            }
-                            (
-                                RelocationKind::GotRelative,
-                                RelocationEncoding::X86RipRelativeMovq,
-                            ) => (true, macho::X86_64_RELOC_GOT_LOAD),
-                            (RelocationKind::MachO { value, relative }, _) => (relative, value),
-                            _ => {
-                                return Err(Error(format!("unimplemented relocation {:?}", reloc)));
-                            }
-                        },
-                        Architecture::Aarch64 | Architecture::Aarch64_Ilp32 => {
-                            match (reloc.kind, reloc.encoding) {
-                                (RelocationKind::Absolute, RelocationEncoding::Generic) => {
-                                    (false, macho::ARM64_RELOC_UNSIGNED)
-                                }
-                                (RelocationKind::Relative, RelocationEncoding::AArch64Call) => {
-                                    (true, macho::ARM64_RELOC_BRANCH26)
-                                }
-                                (
-                                    RelocationKind::MachO { value, relative },
-                                    RelocationEncoding::Generic,
-                                ) => (relative, value),
-                                _ => {
-                                    return Err(Error(format!(
-                                        "unimplemented relocation {:?}",
-                                        reloc
-                                    )));
-                                }
-                            }
-                        }
-                        _ => {
-                            if let RelocationKind::MachO { value, relative } = reloc.kind {
-                                (relative, value)
-                            } else {
-                                return Err(Error(format!("unimplemented relocation {:?}", reloc)));
-                            }
-                        }
-                    };
+
                     let reloc_info = macho::RelocationInfo {
                         r_address: reloc.offset as u32,
                         r_symbolnum,

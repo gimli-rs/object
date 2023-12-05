@@ -68,6 +68,20 @@ impl<'a> Object<'a> {
 
     pub(crate) fn xcoff_translate_relocation(&mut self, _relocation: &mut Relocation) {}
 
+    pub(crate) fn xcoff_relocation_flags(&self, reloc: &Relocation) -> Result<RelocationFlags> {
+        let r_rtype = match reloc.kind {
+            RelocationKind::Absolute => xcoff::R_POS,
+            RelocationKind::Relative => xcoff::R_REL,
+            RelocationKind::Got => xcoff::R_TOC,
+            RelocationKind::Xcoff(x) => x,
+            _ => {
+                return Err(Error(format!("unimplemented relocation {:?}", reloc)));
+            }
+        };
+        let r_rsize = reloc.size - 1;
+        Ok(RelocationFlags::Xcoff { r_rtype, r_rsize })
+    }
+
     pub(crate) fn xcoff_adjust_addend(&mut self, relocation: &mut Relocation) -> i64 {
         let constant = match relocation.kind {
             RelocationKind::Relative => relocation.addend + 4,
@@ -348,30 +362,27 @@ impl<'a> Object<'a> {
             if !section.relocations.is_empty() {
                 debug_assert_eq!(section_offsets[index].reloc_offset, buffer.len());
                 for reloc in &section.relocations {
-                    let rtype = match reloc.kind {
-                        RelocationKind::Absolute => xcoff::R_POS,
-                        RelocationKind::Relative => xcoff::R_REL,
-                        RelocationKind::Got => xcoff::R_TOC,
-                        RelocationKind::Xcoff(x) => x,
-                        _ => {
-                            return Err(Error(format!("unimplemented relocation {:?}", reloc)));
-                        }
+                    let (r_rtype, r_rsize) = if let RelocationFlags::Xcoff { r_rtype, r_rsize } =
+                        self.xcoff_relocation_flags(reloc)?
+                    {
+                        (r_rtype, r_rsize)
+                    } else {
+                        return Err(Error("invalid relocation flags".into()));
                     };
                     if is_64 {
                         let xcoff_rel = xcoff::Rel64 {
                             r_vaddr: U64::new(BE, reloc.offset),
                             r_symndx: U32::new(BE, symbol_offsets[reloc.symbol.0].index as u32),
-                            // Specifies the bit length of the relocatable reference minus one.
-                            r_rsize: (reloc.size - 1),
-                            r_rtype: rtype,
+                            r_rsize,
+                            r_rtype,
                         };
                         buffer.write(&xcoff_rel);
                     } else {
                         let xcoff_rel = xcoff::Rel32 {
                             r_vaddr: U32::new(BE, reloc.offset as u32),
                             r_symndx: U32::new(BE, symbol_offsets[reloc.symbol.0].index as u32),
-                            r_rsize: (reloc.size - 1),
-                            r_rtype: rtype,
+                            r_rsize,
+                            r_rtype,
                         };
                         buffer.write(&xcoff_rel);
                     }

@@ -534,3 +534,35 @@ pub enum SymbolFlags<Section, Symbol> {
         containing_csect: Option<Symbol>,
     },
 }
+
+/// Relocation fields that are specific to each file format and architecture.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[non_exhaustive]
+pub(crate) enum RelocationFlags {
+    /// ELF relocation fields.
+    Elf {
+        /// `r_type` field in the ELF relocation.
+        r_type: u32,
+    },
+    /// Mach-O relocation fields.
+    MachO {
+        /// `r_type` field in the Mach-O relocation.
+        r_type: u8,
+        /// `r_pcrel` field in the Mach-O relocation.
+        r_pcrel: bool,
+        /// `r_length` field in the Mach-O relocation.
+        r_length: u8,
+    },
+    /// COFF relocation fields.
+    Coff {
+        /// `typ` field in the COFF relocation.
+        typ: u16,
+    },
+    /// XCOFF relocation fields.
+    Xcoff {
+        /// `r_rtype` field in the XCOFF relocation.
+        r_rtype: u8,
+        /// `r_rsize` field in the XCOFF relocation.
+        r_rsize: u8,
+    },
+}
