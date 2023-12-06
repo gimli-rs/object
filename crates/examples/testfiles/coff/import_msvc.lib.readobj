@@ -727,7 +727,7 @@ ImportObjectHeader {
     Signature1: 0x0
     Signature2: 0xFFFF
     Version: 0
-    Machine: 0xA641
+    Machine: IMAGE_FILE_MACHINE_ARM64EC (0xA641)
     TimeDateStamp: 1687268223
     SizeOfData: 0x2A
     OrdinalOrHint: 0

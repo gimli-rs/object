@@ -8,6 +8,7 @@ pub enum Architecture {
     #[allow(non_camel_case_types)]
     Aarch64_Ilp32,
     Arm,
+    Arm64EC,
     Avr,
     Bpf,
     Csky,
@@ -43,6 +44,7 @@ impl Architecture {
             Architecture::Aarch64 => Some(AddressSize::U64),
             Architecture::Aarch64_Ilp32 => Some(AddressSize::U32),
             Architecture::Arm => Some(AddressSize::U32),
+            Architecture::Arm64EC => Some(AddressSize::U64),
             Architecture::Avr => Some(AddressSize::U8),
             Architecture::Bpf => Some(AddressSize::U64),
             Architecture::Csky => Some(AddressSize::U32),

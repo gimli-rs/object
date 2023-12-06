@@ -17,122 +17,140 @@ mod section_flags;
 mod tls;
 
 #[test]
-fn coff_x86_64() {
-    let mut object =
-        write::Object::new(BinaryFormat::Coff, Architecture::X86_64, Endianness::Little);
+fn coff_any() {
+    for arch in [
+        Architecture::Aarch64,
+        Architecture::Arm,
+        Architecture::I386,
+        Architecture::X86_64,
+        Architecture::Arm64EC,
+    ]
+    .iter()
+    .copied()
+    {
+        let mut object = write::Object::new(BinaryFormat::Coff, arch, Endianness::Little);
 
-    object.add_file_symbol(b"file.c".to_vec());
+        object.add_file_symbol(b"file.c".to_vec());
 
-    let text = object.section_id(write::StandardSection::Text);
-    object.append_section_data(text, &[1; 30], 4);
+        let text = object.section_id(write::StandardSection::Text);
+        object.append_section_data(text, &[1; 30], 4);
 
-    let func1_offset = object.append_section_data(text, &[1; 30], 4);
-    assert_eq!(func1_offset, 32);
-    let func1_symbol = object.add_symbol(write::Symbol {
-        name: b"func1".to_vec(),
-        value: func1_offset,
-        size: 32,
-        kind: SymbolKind::Text,
-        scope: SymbolScope::Linkage,
-        weak: false,
-        section: write::SymbolSection::Section(text),
-        flags: SymbolFlags::None,
-    });
-    let func2_offset = object.append_section_data(text, &[1; 30], 4);
-    assert_eq!(func2_offset, 64);
-    object.add_symbol(write::Symbol {
-        name: b"func2_long".to_vec(),
-        value: func2_offset,
-        size: 32,
-        kind: SymbolKind::Text,
-        scope: SymbolScope::Linkage,
-        weak: false,
-        section: write::SymbolSection::Section(text),
-        flags: SymbolFlags::None,
-    });
-    object
-        .add_relocation(
-            text,
-            write::Relocation {
-                offset: 8,
-                size: 64,
-                kind: RelocationKind::Absolute,
-                encoding: RelocationEncoding::Generic,
-                symbol: func1_symbol,
-                addend: 0,
-            },
-        )
-        .unwrap();
+        let func1_offset = object.append_section_data(text, &[1; 30], 4);
+        assert_eq!(func1_offset, 32);
+        let func1_symbol = object.add_symbol(write::Symbol {
+            name: b"func1".to_vec(),
+            value: func1_offset,
+            size: 32,
+            kind: SymbolKind::Text,
+            scope: SymbolScope::Linkage,
+            weak: false,
+            section: write::SymbolSection::Section(text),
+            flags: SymbolFlags::None,
+        });
+        let func2_offset = object.append_section_data(text, &[1; 30], 4);
+        assert_eq!(func2_offset, 64);
+        object.add_symbol(write::Symbol {
+            name: b"func2_long".to_vec(),
+            value: func2_offset,
+            size: 32,
+            kind: SymbolKind::Text,
+            scope: SymbolScope::Linkage,
+            weak: false,
+            section: write::SymbolSection::Section(text),
+            flags: SymbolFlags::None,
+        });
+        object
+            .add_relocation(
+                text,
+                write::Relocation {
+                    offset: 8,
+                    size: arch.address_size().unwrap().bytes() * 8,
+                    kind: RelocationKind::Absolute,
+                    encoding: RelocationEncoding::Generic,
+                    symbol: func1_symbol,
+                    addend: 0,
+                },
+            )
+            .unwrap();
 
-    let bytes = object.write().unwrap();
-    let object = read::File::parse(&*bytes).unwrap();
-    assert_eq!(object.format(), BinaryFormat::Coff);
-    assert_eq!(object.architecture(), Architecture::X86_64);
-    assert_eq!(object.endianness(), Endianness::Little);
+        let bytes = object.write().unwrap();
+        let object = read::File::parse(&*bytes).unwrap();
+        assert_eq!(object.format(), BinaryFormat::Coff);
+        assert_eq!(object.architecture(), arch);
+        assert_eq!(object.endianness(), Endianness::Little);
 
-    let mut sections = object.sections();
+        let mut sections = object.sections();
 
-    let text = sections.next().unwrap();
-    println!("{:?}", text);
-    let text_index = text.index();
-    assert_eq!(text.name(), Ok(".text"));
-    assert_eq!(text.kind(), SectionKind::Text);
-    assert_eq!(text.address(), 0);
-    assert_eq!(text.size(), 94);
-    assert_eq!(&text.data().unwrap()[..30], &[1; 30]);
-    assert_eq!(&text.data().unwrap()[32..62], &[1; 30]);
+        let text = sections.next().unwrap();
+        println!("{:?}", text);
+        let text_index = text.index();
+        assert_eq!(text.name(), Ok(".text"));
+        assert_eq!(text.kind(), SectionKind::Text);
+        assert_eq!(text.address(), 0);
+        assert_eq!(text.size(), 94);
+        assert_eq!(&text.data().unwrap()[..30], &[1; 30]);
+        assert_eq!(&text.data().unwrap()[32..62], &[1; 30]);
 
-    let mut symbols = object.symbols();
+        let mut symbols = object.symbols();
 
-    let symbol = symbols.next().unwrap();
-    println!("{:?}", symbol);
-    assert_eq!(symbol.name(), Ok("file.c"));
-    assert_eq!(symbol.address(), 0);
-    assert_eq!(symbol.kind(), SymbolKind::File);
-    assert_eq!(symbol.section(), SymbolSection::None);
-    assert_eq!(symbol.scope(), SymbolScope::Compilation);
-    assert_eq!(symbol.is_weak(), false);
+        let symbol = symbols.next().unwrap();
+        println!("{:?}", symbol);
+        assert_eq!(symbol.name(), Ok("file.c"));
+        assert_eq!(symbol.address(), 0);
+        assert_eq!(symbol.kind(), SymbolKind::File);
+        assert_eq!(symbol.section(), SymbolSection::None);
+        assert_eq!(symbol.scope(), SymbolScope::Compilation);
+        assert_eq!(symbol.is_weak(), false);
 
-    let symbol = symbols.next().unwrap();
-    println!("{:?}", symbol);
-    let func1_symbol = symbol.index();
-    assert_eq!(symbol.name(), Ok("func1"));
-    assert_eq!(symbol.address(), func1_offset);
-    assert_eq!(symbol.kind(), SymbolKind::Text);
-    assert_eq!(symbol.section_index(), Some(text_index));
-    assert_eq!(symbol.scope(), SymbolScope::Linkage);
-    assert_eq!(symbol.is_weak(), false);
-    assert_eq!(symbol.is_undefined(), false);
+        let decorated_name = |name: &str| {
+            if arch == Architecture::I386 {
+                format!("_{name}")
+            } else {
+                name.to_owned()
+            }
+        };
 
-    let symbol = symbols.next().unwrap();
-    println!("{:?}", symbol);
-    assert_eq!(symbol.name(), Ok("func2_long"));
-    assert_eq!(symbol.address(), func2_offset);
-    assert_eq!(symbol.kind(), SymbolKind::Text);
-    assert_eq!(symbol.section_index(), Some(text_index));
-    assert_eq!(symbol.scope(), SymbolScope::Linkage);
-    assert_eq!(symbol.is_weak(), false);
-    assert_eq!(symbol.is_undefined(), false);
+        let symbol = symbols.next().unwrap();
+        println!("{:?}", symbol);
+        let func1_symbol = symbol.index();
+        assert_eq!(symbol.name(), Ok(decorated_name("func1").as_str()));
+        assert_eq!(symbol.address(), func1_offset);
+        assert_eq!(symbol.kind(), SymbolKind::Text);
+        assert_eq!(symbol.section_index(), Some(text_index));
+        assert_eq!(symbol.scope(), SymbolScope::Linkage);
+        assert_eq!(symbol.is_weak(), false);
+        assert_eq!(symbol.is_undefined(), false);
 
-    let mut relocations = text.relocations();
+        let symbol = symbols.next().unwrap();
+        println!("{:?}", symbol);
+        assert_eq!(symbol.name(), Ok(decorated_name("func2_long").as_str()));
+        assert_eq!(symbol.address(), func2_offset);
+        assert_eq!(symbol.kind(), SymbolKind::Text);
+        assert_eq!(symbol.section_index(), Some(text_index));
+        assert_eq!(symbol.scope(), SymbolScope::Linkage);
+        assert_eq!(symbol.is_weak(), false);
+        assert_eq!(symbol.is_undefined(), false);
 
-    let (offset, relocation) = relocations.next().unwrap();
-    println!("{:?}", relocation);
-    assert_eq!(offset, 8);
-    assert_eq!(relocation.kind(), RelocationKind::Absolute);
-    assert_eq!(relocation.encoding(), RelocationEncoding::Generic);
-    assert_eq!(relocation.size(), 64);
-    assert_eq!(
-        relocation.target(),
-        read::RelocationTarget::Symbol(func1_symbol)
-    );
-    assert_eq!(relocation.addend(), 0);
+        let mut relocations = text.relocations();
 
-    let map = object.symbol_map();
-    let symbol = map.get(func1_offset + 1).unwrap();
-    assert_eq!(symbol.address(), func1_offset);
-    assert_eq!(symbol.name(), "func1");
-    assert_eq!(map.get(func1_offset - 1), None);
+        let (offset, relocation) = relocations.next().unwrap();
+        println!("{:?}", relocation);
+        assert_eq!(offset, 8);
+        assert_eq!(relocation.kind(), RelocationKind::Absolute);
+        assert_eq!(relocation.encoding(), RelocationEncoding::Generic);
+        assert_eq!(relocation.size(), arch.address_size().unwrap().bytes() * 8);
+        assert_eq!(
+            relocation.target(),
+            read::RelocationTarget::Symbol(func1_symbol)
+        );
+        assert_eq!(relocation.addend(), 0);
+
+        let map = object.symbol_map();
+        let symbol = map.get(func1_offset + 1).unwrap();
+        assert_eq!(symbol.address(), func1_offset);
+        assert_eq!(symbol.name(), decorated_name("func1"));
+        assert_eq!(map.get(func1_offset - 1), None);
+    }
 }
 
 #[test]
