@@ -1,0 +1,1958 @@
+Format: XCOFF 32-bit
+FileHeader {
+    Magic: 0x1DF
+    NumberOfSections: 4
+    TimeDate: 0x6348EFCA
+    SymbolPointer: 0xDA2
+    NumberOfSymbols: 152
+    SizeOfOptionalHeader: 0x48
+    Flags: 0x1002
+        F_EXEC (0x2)
+        F_DYNLOAD (0x1000)
+}
+AuxHeader {
+    Magic: 0x10B
+    Version: 0x1
+    TextSize: 0x4C9
+    DataSize: 0x1B7
+    UninitializedDataSize: 0x0
+    EntryAddress: 0x20000710
+    TextAddress: 0x10000128
+    DataAddress: 0x200005F1
+    TocAddress: 0x20000748
+    EntrySectionNumber: 2
+    TextSectionNumber: 1
+    DataSectionNumber: 2
+    TocSectionNumber: 2
+    LoaderSectionNumber: 4
+    TextAlignment: 0x5
+    DataAlignment: 0x3
+    ModuleType: 0x314C
+    CpuFlags: 0x0
+    CpuType: 0x0
+    MaximumStack: 0x0
+    MaximumData: 0x0
+    Debugger: 0x0
+    TextPageSize: 0x0
+    DataPageSize: 0x0
+    StackPageSize: 0x0
+    Flags: 0x0
+    TlsDataSectionNumber: 0
+    TlsUninitializedDataSectionNumber: 3
+}
+SectionHeader {
+    Index: 1
+    Name: ".text"
+    PhysicalAddress: 0x10000128
+    VirtualAddress: 0x10000128
+    Size: 0x4C9
+    SectionDataPointer: 0x128
+    RelocationPointer: 0xB22
+    LineNumberPointer: 0x0
+    NumberOfRelocations: 35
+    NumberOfLineNumbers: 0
+    Type: STYP_TEXT (0x20)
+    Relocation {
+        VirtualAddress: 0x1000012A
+        Symbol: "_malloc_user_defined_name" (0x42)
+        Size: 0xF
+        Type: R_TOC (0x3)
+    }
+    Relocation {
+        VirtualAddress: 0x1000012E
+        Symbol: "__crt0v" (0x14)
+        Size: 0xF
+        Type: R_TOC (0x3)
+    }
+    Relocation {
+        VirtualAddress: 0x10000146
+        Symbol: "__mod_init" (0x16)
+        Size: 0xF
+        Type: R_TOC (0x3)
+    }
+    Relocation {
+        VirtualAddress: 0x1000014A
+        Symbol: "crt0_data" (0x18)
+        Size: 0x4F
+        Type: R_TRLA (0x13)
+    }
+    Relocation {
+        VirtualAddress: 0x1000014E
+        Symbol: "p_xargc" (0x3A)
+        Size: 0xF
+        Type: R_TOC (0x3)
+    }
+    Relocation {
+        VirtualAddress: 0x10000152
+        Symbol: "p_xargv" (0x3C)
+        Size: 0xF
+        Type: R_TOC (0x3)
+    }
+    Relocation {
+        VirtualAddress: 0x10000162
+        Symbol: "__malloc_user_defined_name" (0x28)
+        Size: 0xF
+        Type: R_TOC (0x3)
+    }
+    Relocation {
+        VirtualAddress: 0x10000182
+        Symbol: "errno" (0x2A)
+        Size: 0xF
+        Type: R_TOC (0x3)
+    }
+    Relocation {
+        VirtualAddress: 0x10000190
+        Symbol: ".main" (0x7B)
+        Size: 0x99
+        Type: R_RBR (0x1A)
+    }
+    Relocation {
+        VirtualAddress: 0x1000019A
+        Symbol: "p_xrcfg" (0x3E)
+        Size: 0xF
+        Type: R_TOC (0x3)
+    }
+    Relocation {
+        VirtualAddress: 0x100001A6
+        Symbol: "p_xrc" (0x40)
+        Size: 0xF
+        Type: R_TOC (0x3)
+    }
+    Relocation {
+        VirtualAddress: 0x100001A8
+        Symbol: ".exit" (0x82)
+        Size: 0x99
+        Type: R_RBR (0x1A)
+    }
+    Relocation {
+        VirtualAddress: 0x100001E2
+        Symbol: "__pth_init_routine" (0x52)
+        Size: 0x8F
+        Type: R_TOC (0x3)
+    }
+    Relocation {
+        VirtualAddress: 0x1000022A
+        Symbol: "__pth_init_routine" (0x52)
+        Size: 0x8F
+        Type: R_TOC (0x3)
+    }
+    Relocation {
+        VirtualAddress: 0x1000024E
+        Symbol: "_bsd_init_routine" (0x54)
+        Size: 0x8F
+        Type: R_TOC (0x3)
+    }
+    Relocation {
+        VirtualAddress: 0x10000272
+        Symbol: "_xti_tli_init_routine" (0x56)
+        Size: 0x8F
+        Type: R_TOC (0x3)
+    }
+    Relocation {
+        VirtualAddress: 0x10000296
+        Symbol: "_nsl_init_routine" (0x58)
+        Size: 0x8F
+        Type: R_TOC (0x3)
+    }
+    Relocation {
+        VirtualAddress: 0x100002BA
+        Symbol: "__dce_compat_init_routine" (0x5A)
+        Size: 0x8F
+        Type: R_TOC (0x3)
+    }
+    Relocation {
+        VirtualAddress: 0x100002EE
+        Symbol: "_nsl_init_routine" (0x58)
+        Size: 0x8F
+        Type: R_TOC (0x3)
+    }
+    Relocation {
+        VirtualAddress: 0x10000328
+        Symbol: "_$STATIC" (0x4E)
+        Size: 0x1F
+        Type: R_REF (0xF)
+    }
+    Relocation {
+        VirtualAddress: 0x10000374
+        Symbol: ".__run_final_dtors" (0x87)
+        Size: 0x99
+        Type: R_RBR (0x1A)
+    }
+    Relocation {
+        VirtualAddress: 0x100003C2
+        Symbol: "_$STATIC" (0x1C)
+        Size: 0xCF
+        Type: R_TRLA (0x13)
+    }
+    Relocation {
+        VirtualAddress: 0x100003CA
+        Symbol: "__C_runtime_termination" (0x1E)
+        Size: 0xCF
+        Type: R_TRLA (0x13)
+    }
+    Relocation {
+        VirtualAddress: 0x100003EC
+        Symbol: ".atexit" (0x8C)
+        Size: 0x99
+        Type: R_RBR (0x1A)
+    }
+    Relocation {
+        VirtualAddress: 0x100003F6
+        Symbol: "_cdtors" (0x22)
+        Size: 0xCF
+        Type: R_TRLA (0x13)
+    }
+    Relocation {
+        VirtualAddress: 0x100003F8
+        Symbol: ".__run_initial_ctors" (0x91)
+        Size: 0x99
+        Type: R_RBR (0x1A)
+    }
+    Relocation {
+        VirtualAddress: 0x10000460
+        Symbol: ".__run_final_dtors" (0x87)
+        Size: 0x99
+        Type: R_RBR (0x1A)
+    }
+    Relocation {
+        VirtualAddress: 0x1000046C
+        Symbol: ".exit" (0x82)
+        Size: 0x99
+        Type: R_RBR (0x1A)
+    }
+    Relocation {
+        VirtualAddress: 0x100004BA
+        Symbol: "__run_final_dtors" (0x1A)
+        Size: 0xF
+        Type: R_TOC (0x3)
+    }
+    Relocation {
+        VirtualAddress: 0x100004E2
+        Symbol: "atexit" (0x20)
+        Size: 0xF
+        Type: R_TOC (0x3)
+    }
+    Relocation {
+        VirtualAddress: 0x1000050A
+        Symbol: "__run_initial_ctors" (0x24)
+        Size: 0xF
+        Type: R_TOC (0x3)
+    }
+    Relocation {
+        VirtualAddress: 0x10000532
+        Symbol: "exit" (0x26)
+        Size: 0xF
+        Type: R_TOC (0x3)
+    }
+    Relocation {
+        VirtualAddress: 0x10000582
+        Symbol: ".rodata.str1.1L...str" (0x2C)
+        Size: 0xF
+        Type: R_TOC (0x3)
+    }
+    Relocation {
+        VirtualAddress: 0x10000584
+        Symbol: ".printf" (0x96)
+        Size: 0x99
+        Type: R_RBR (0x1A)
+    }
+    Relocation {
+        VirtualAddress: 0x100005BE
+        Symbol: "printf" (0x2E)
+        Size: 0xF
+        Type: R_TOC (0x3)
+    }
+}
+SectionHeader {
+    Index: 2
+    Name: ".data"
+    PhysicalAddress: 0x200005F1
+    VirtualAddress: 0x200005F1
+    Size: 0x1B7
+    SectionDataPointer: 0x5F1
+    RelocationPointer: 0xC80
+    LineNumberPointer: 0x0
+    NumberOfRelocations: 29
+    NumberOfLineNumbers: 0
+    Type: STYP_DATA (0x40)
+    Relocation {
+        VirtualAddress: 0x200005F4
+        Symbol: "p_xargc" (0x3A)
+        Size: 0x1F
+        Type: R_POS (0x0)
+    }
+    Relocation {
+        VirtualAddress: 0x200005F8
+        Symbol: "__threads_init" (0x50)
+        Size: 0x1F
+        Type: R_POS (0x0)
+    }
+    Relocation {
+        VirtualAddress: 0x20000600
+        Symbol: "__C_runtime_pstartup" (0x74)
+        Size: 0x1F
+        Type: R_POS (0x0)
+    }
+    Relocation {
+        VirtualAddress: 0x2000067C
+        Symbol: "__C_runtime_startup" (0x70)
+        Size: 0x1F
+        Type: R_POS (0x0)
+    }
+    Relocation {
+        VirtualAddress: 0x2000068C
+        Symbol: "__dftdt__L304e4b28c42_5CatchFv" (0x6C)
+        Size: 0x1F
+        Type: R_POS (0x0)
+    }
+    Relocation {
+        VirtualAddress: 0x20000710
+        Symbol: ".__start" (0x32)
+        Size: 0x1F
+        Type: R_POS (0x0)
+    }
+    Relocation {
+        VirtualAddress: 0x20000714
+        Symbol: "TOC" (0x12)
+        Size: 0x1F
+        Type: R_POS (0x0)
+    }
+    Relocation {
+        VirtualAddress: 0x20000718
+        Symbol: ".__threads_init" (0x4A)
+        Size: 0x1F
+        Type: R_POS (0x0)
+    }
+    Relocation {
+        VirtualAddress: 0x2000071C
+        Symbol: "TOC" (0x12)
+        Size: 0x1F
+        Type: R_POS (0x0)
+    }
+    Relocation {
+        VirtualAddress: 0x20000724
+        Symbol: ".__C_runtime_startup" (0x66)
+        Size: 0x1F
+        Type: R_POS (0x0)
+    }
+    Relocation {
+        VirtualAddress: 0x20000728
+        Symbol: "TOC" (0x12)
+        Size: 0x1F
+        Type: R_POS (0x0)
+    }
+    Relocation {
+        VirtualAddress: 0x20000730
+        Symbol: ".__dftdt__L304e4b28c42_5CatchFv" (0x68)
+        Size: 0x1F
+        Type: R_POS (0x0)
+    }
+    Relocation {
+        VirtualAddress: 0x20000734
+        Symbol: "TOC" (0x12)
+        Size: 0x1F
+        Type: R_POS (0x0)
+    }
+    Relocation {
+        VirtualAddress: 0x2000073C
+        Symbol: ".__C_runtime_termination" (0x64)
+        Size: 0x1F
+        Type: R_POS (0x0)
+    }
+    Relocation {
+        VirtualAddress: 0x20000740
+        Symbol: "TOC" (0x12)
+        Size: 0x1F
+        Type: R_POS (0x0)
+    }
+    Relocation {
+        VirtualAddress: 0x20000770
+        Symbol: "__crt0v" (0xE)
+        Size: 0x1F
+        Type: R_POS (0x0)
+    }
+    Relocation {
+        VirtualAddress: 0x20000774
+        Symbol: "__mod_init" (0xC)
+        Size: 0x1F
+        Type: R_POS (0x0)
+    }
+    Relocation {
+        VirtualAddress: 0x20000778
+        Symbol: "crt0_data" (0x38)
+        Size: 0x1F
+        Type: R_POS (0x0)
+    }
+    Relocation {
+        VirtualAddress: 0x2000077C
+        Symbol: "__run_final_dtors" (0x8)
+        Size: 0x1F
+        Type: R_POS (0x0)
+    }
+    Relocation {
+        VirtualAddress: 0x20000780
+        Symbol: "_$STATIC" (0x6A)
+        Size: 0x1F
+        Type: R_POS (0x0)
+    }
+    Relocation {
+        VirtualAddress: 0x20000784
+        Symbol: "__C_runtime_termination" (0x6E)
+        Size: 0x1F
+        Type: R_POS (0x0)
+    }
+    Relocation {
+        VirtualAddress: 0x20000788
+        Symbol: "atexit" (0x4)
+        Size: 0x1F
+        Type: R_POS (0x0)
+    }
+    Relocation {
+        VirtualAddress: 0x2000078C
+        Symbol: "_cdtors" (0x72)
+        Size: 0x1F
+        Type: R_POS (0x0)
+    }
+    Relocation {
+        VirtualAddress: 0x20000790
+        Symbol: "__run_initial_ctors" (0xA)
+        Size: 0x1F
+        Type: R_POS (0x0)
+    }
+    Relocation {
+        VirtualAddress: 0x20000794
+        Symbol: "exit" (0x2)
+        Size: 0x1F
+        Type: R_POS (0x0)
+    }
+    Relocation {
+        VirtualAddress: 0x20000798
+        Symbol: "__malloc_user_defined_name" (0x10)
+        Size: 0x1F
+        Type: R_POS (0x0)
+    }
+    Relocation {
+        VirtualAddress: 0x2000079C
+        Symbol: "errno" (0x0)
+        Size: 0x1F
+        Type: R_POS (0x0)
+    }
+    Relocation {
+        VirtualAddress: 0x200007A0
+        Symbol: ".rodata.str1.1L...str" (0x7D)
+        Size: 0x1F
+        Type: R_POS (0x0)
+    }
+    Relocation {
+        VirtualAddress: 0x200007A4
+        Symbol: "printf" (0x6)
+        Size: 0x1F
+        Type: R_POS (0x0)
+    }
+}
+SectionHeader {
+    Index: 3
+    Name: ".bss"
+    PhysicalAddress: 0x200007A8
+    VirtualAddress: 0x200007A8
+    Size: 0x0
+    SectionDataPointer: 0x0
+    RelocationPointer: 0x0
+    LineNumberPointer: 0x0
+    NumberOfRelocations: 0
+    NumberOfLineNumbers: 0
+    Type: STYP_BSS (0x80)
+}
+SectionHeader {
+    Index: 4
+    Name: ".loader"
+    PhysicalAddress: 0x0
+    VirtualAddress: 0x0
+    Size: 0x37A
+    SectionDataPointer: 0x7A8
+    RelocationPointer: 0x0
+    LineNumberPointer: 0x0
+    NumberOfRelocations: 0
+    NumberOfLineNumbers: 0
+    Type: STYP_LOADER (0x1000)
+}
+Symbol {
+    Index: 0
+    Name: "errno"
+    Value: 0x0
+    Section: N_UNDEF (0)
+    Type: 0x0
+    StorageClass: C_EXT (0x2)
+    NumberOfAuxSymbols: 1
+    CsectAux {
+        Index: 1
+        SectionLength: 0x0
+        ParameterHashOffset: 0x0
+        ParameterHashSectionNumber: 0
+        Alignment: 0x0
+        Type: XTY_ER (0x0)
+        StorageMappingClass: XMC_RW (0x5)
+        StabOffset: 0x0
+        StabSectionNumber: 0
+    }
+}
+Symbol {
+    Index: 2
+    Name: "exit"
+    Value: 0x0
+    Section: N_UNDEF (0)
+    Type: 0x0
+    StorageClass: C_EXT (0x2)
+    NumberOfAuxSymbols: 1
+    CsectAux {
+        Index: 3
+        SectionLength: 0x0
+        ParameterHashOffset: 0x0
+        ParameterHashSectionNumber: 0
+        Alignment: 0x0
+        Type: XTY_ER (0x0)
+        StorageMappingClass: XMC_DS (0xA)
+        StabOffset: 0x0
+        StabSectionNumber: 0
+    }
+}
+Symbol {
+    Index: 4
+    Name: "atexit"
+    Value: 0x0
+    Section: N_UNDEF (0)
+    Type: 0x0
+    StorageClass: C_EXT (0x2)
+    NumberOfAuxSymbols: 1
+    CsectAux {
+        Index: 5
+        SectionLength: 0x0
+        ParameterHashOffset: 0x0
+        ParameterHashSectionNumber: 0
+        Alignment: 0x0
+        Type: XTY_ER (0x0)
+        StorageMappingClass: XMC_DS (0xA)
+        StabOffset: 0x0
+        StabSectionNumber: 0
+    }
+}
+Symbol {
+    Index: 6
+    Name: "printf"
+    Value: 0x0
+    Section: N_UNDEF (0)
+    Type: 0x0
+    StorageClass: C_EXT (0x2)
+    NumberOfAuxSymbols: 1
+    CsectAux {
+        Index: 7
+        SectionLength: 0x0
+        ParameterHashOffset: 0x0
+        ParameterHashSectionNumber: 0
+        Alignment: 0x0
+        Type: XTY_ER (0x0)
+        StorageMappingClass: XMC_DS (0xA)
+        StabOffset: 0x0
+        StabSectionNumber: 0
+    }
+}
+Symbol {
+    Index: 8
+    Name: "__run_final_dtors" (0x4)
+    Value: 0x0
+    Section: N_UNDEF (0)
+    Type: 0x0
+    StorageClass: C_EXT (0x2)
+    NumberOfAuxSymbols: 1
+    CsectAux {
+        Index: 9
+        SectionLength: 0x0
+        ParameterHashOffset: 0x0
+        ParameterHashSectionNumber: 0
+        Alignment: 0x0
+        Type: XTY_ER (0x0)
+        StorageMappingClass: XMC_DS (0xA)
+        StabOffset: 0x0
+        StabSectionNumber: 0
+    }
+}
+Symbol {
+    Index: 10
+    Name: "__run_initial_ctors" (0x16)
+    Value: 0x0
+    Section: N_UNDEF (0)
+    Type: 0x0
+    StorageClass: C_EXT (0x2)
+    NumberOfAuxSymbols: 1
+    CsectAux {
+        Index: 11
+        SectionLength: 0x0
+        ParameterHashOffset: 0x0
+        ParameterHashSectionNumber: 0
+        Alignment: 0x0
+        Type: XTY_ER (0x0)
+        StorageMappingClass: XMC_DS (0xA)
+        StabOffset: 0x0
+        StabSectionNumber: 0
+    }
+}
+Symbol {
+    Index: 12
+    Name: "__mod_init" (0x2A)
+    Value: 0x0
+    Section: N_UNDEF (0)
+    Type: 0x0
+    StorageClass: C_EXT (0x2)
+    NumberOfAuxSymbols: 1
+    CsectAux {
+        Index: 13
+        SectionLength: 0x0
+        ParameterHashOffset: 0x0
+        ParameterHashSectionNumber: 0
+        Alignment: 0x0
+        Type: XTY_ER (0x0)
+        StorageMappingClass: XMC_DS (0xA)
+        StabOffset: 0x0
+        StabSectionNumber: 0
+    }
+}
+Symbol {
+    Index: 14
+    Name: "__crt0v"
+    Value: 0x0
+    Section: N_UNDEF (0)
+    Type: 0x0
+    StorageClass: C_EXT (0x2)
+    NumberOfAuxSymbols: 1
+    CsectAux {
+        Index: 15
+        SectionLength: 0x0
+        ParameterHashOffset: 0x0
+        ParameterHashSectionNumber: 0
+        Alignment: 0x0
+        Type: XTY_ER (0x0)
+        StorageMappingClass: XMC_RW (0x5)
+        StabOffset: 0x0
+        StabSectionNumber: 0
+    }
+}
+Symbol {
+    Index: 16
+    Name: "__malloc_user_defined_name" (0x35)
+    Value: 0x0
+    Section: N_UNDEF (0)
+    Type: 0x0
+    StorageClass: C_EXT (0x2)
+    NumberOfAuxSymbols: 1
+    CsectAux {
+        Index: 17
+        SectionLength: 0x0
+        ParameterHashOffset: 0x0
+        ParameterHashSectionNumber: 0
+        Alignment: 0x0
+        Type: XTY_ER (0x0)
+        StorageMappingClass: XMC_RW (0x5)
+        StabOffset: 0x0
+        StabSectionNumber: 0
+    }
+}
+Symbol {
+    Index: 18
+    Name: "TOC"
+    Value: 0x20000748
+    Section: ".data" (0x2)
+    Type: 0x0
+    StorageClass: C_HIDEXT (0x6B)
+    NumberOfAuxSymbols: 1
+    CsectAux {
+        Index: 19
+        SectionLength: 0x0
+        ParameterHashOffset: 0x0
+        ParameterHashSectionNumber: 0
+        Alignment: 0x2
+        Type: XTY_SD (0x1)
+        StorageMappingClass: XMC_TC0 (0xF)
+        StabOffset: 0x0
+        StabSectionNumber: 0
+    }
+}
+Symbol {
+    Index: 20
+    Name: "__crt0v"
+    Value: 0x20000770
+    Section: ".data" (0x2)
+    Type: 0x0
+    StorageClass: C_HIDEXT (0x6B)
+    NumberOfAuxSymbols: 1
+    CsectAux {
+        Index: 21
+        SectionLength: 0x4
+        ParameterHashOffset: 0x0
+        ParameterHashSectionNumber: 0
+        Alignment: 0x2
+        Type: XTY_SD (0x1)
+        StorageMappingClass: XMC_TC (0x3)
+        StabOffset: 0x0
+        StabSectionNumber: 0
+    }
+}
+Symbol {
+    Index: 22
+    Name: "__mod_init" (0x2A)
+    Value: 0x20000774
+    Section: ".data" (0x2)
+    Type: 0x0
+    StorageClass: C_HIDEXT (0x6B)
+    NumberOfAuxSymbols: 1
+    CsectAux {
+        Index: 23
+        SectionLength: 0x4
+        ParameterHashOffset: 0x0
+        ParameterHashSectionNumber: 0
+        Alignment: 0x2
+        Type: XTY_SD (0x1)
+        StorageMappingClass: XMC_TC (0x3)
+        StabOffset: 0x0
+        StabSectionNumber: 0
+    }
+}
+Symbol {
+    Index: 24
+    Name: "crt0_data" (0x50)
+    Value: 0x20000778
+    Section: ".data" (0x2)
+    Type: 0x0
+    StorageClass: C_HIDEXT (0x6B)
+    NumberOfAuxSymbols: 1
+    CsectAux {
+        Index: 25
+        SectionLength: 0x4
+        ParameterHashOffset: 0x0
+        ParameterHashSectionNumber: 0
+        Alignment: 0x2
+        Type: XTY_SD (0x1)
+        StorageMappingClass: XMC_TC (0x3)
+        StabOffset: 0x0
+        StabSectionNumber: 0
+    }
+}
+Symbol {
+    Index: 26
+    Name: "__run_final_dtors" (0x4)
+    Value: 0x2000077C
+    Section: ".data" (0x2)
+    Type: 0x0
+    StorageClass: C_HIDEXT (0x6B)
+    NumberOfAuxSymbols: 1
+    CsectAux {
+        Index: 27
+        SectionLength: 0x4
+        ParameterHashOffset: 0x0
+        ParameterHashSectionNumber: 0
+        Alignment: 0x2
+        Type: XTY_SD (0x1)
+        StorageMappingClass: XMC_TC (0x3)
+        StabOffset: 0x0
+        StabSectionNumber: 0
+    }
+}
+Symbol {
+    Index: 28
+    Name: "_$STATIC"
+    Value: 0x20000780
+    Section: ".data" (0x2)
+    Type: 0x0
+    StorageClass: C_HIDEXT (0x6B)
+    NumberOfAuxSymbols: 1
+    CsectAux {
+        Index: 29
+        SectionLength: 0x4
+        ParameterHashOffset: 0x0
+        ParameterHashSectionNumber: 0
+        Alignment: 0x2
+        Type: XTY_SD (0x1)
+        StorageMappingClass: XMC_TC (0x3)
+        StabOffset: 0x0
+        StabSectionNumber: 0
+    }
+}
+Symbol {
+    Index: 30
+    Name: "__C_runtime_termination" (0x5A)
+    Value: 0x20000784
+    Section: ".data" (0x2)
+    Type: 0x0
+    StorageClass: C_HIDEXT (0x6B)
+    NumberOfAuxSymbols: 1
+    CsectAux {
+        Index: 31
+        SectionLength: 0x4
+        ParameterHashOffset: 0x0
+        ParameterHashSectionNumber: 0
+        Alignment: 0x2
+        Type: XTY_SD (0x1)
+        StorageMappingClass: XMC_TC (0x3)
+        StabOffset: 0x0
+        StabSectionNumber: 0
+    }
+}
+Symbol {
+    Index: 32
+    Name: "atexit"
+    Value: 0x20000788
+    Section: ".data" (0x2)
+    Type: 0x0
+    StorageClass: C_HIDEXT (0x6B)
+    NumberOfAuxSymbols: 1
+    CsectAux {
+        Index: 33
+        SectionLength: 0x4
+        ParameterHashOffset: 0x0
+        ParameterHashSectionNumber: 0
+        Alignment: 0x2
+        Type: XTY_SD (0x1)
+        StorageMappingClass: XMC_TC (0x3)
+        StabOffset: 0x0
+        StabSectionNumber: 0
+    }
+}
+Symbol {
+    Index: 34
+    Name: "_cdtors"
+    Value: 0x2000078C
+    Section: ".data" (0x2)
+    Type: 0x0
+    StorageClass: C_HIDEXT (0x6B)
+    NumberOfAuxSymbols: 1
+    CsectAux {
+        Index: 35
+        SectionLength: 0x4
+        ParameterHashOffset: 0x0
+        ParameterHashSectionNumber: 0
+        Alignment: 0x2
+        Type: XTY_SD (0x1)
+        StorageMappingClass: XMC_TC (0x3)
+        StabOffset: 0x0
+        StabSectionNumber: 0
+    }
+}
+Symbol {
+    Index: 36
+    Name: "__run_initial_ctors" (0x16)
+    Value: 0x20000790
+    Section: ".data" (0x2)
+    Type: 0x0
+    StorageClass: C_HIDEXT (0x6B)
+    NumberOfAuxSymbols: 1
+    CsectAux {
+        Index: 37
+        SectionLength: 0x4
+        ParameterHashOffset: 0x0
+        ParameterHashSectionNumber: 0
+        Alignment: 0x2
+        Type: XTY_SD (0x1)
+        StorageMappingClass: XMC_TC (0x3)
+        StabOffset: 0x0
+        StabSectionNumber: 0
+    }
+}
+Symbol {
+    Index: 38
+    Name: "exit"
+    Value: 0x20000794
+    Section: ".data" (0x2)
+    Type: 0x0
+    StorageClass: C_HIDEXT (0x6B)
+    NumberOfAuxSymbols: 1
+    CsectAux {
+        Index: 39
+        SectionLength: 0x4
+        ParameterHashOffset: 0x0
+        ParameterHashSectionNumber: 0
+        Alignment: 0x2
+        Type: XTY_SD (0x1)
+        StorageMappingClass: XMC_TC (0x3)
+        StabOffset: 0x0
+        StabSectionNumber: 0
+    }
+}
+Symbol {
+    Index: 40
+    Name: "__malloc_user_defined_name" (0x35)
+    Value: 0x20000798
+    Section: ".data" (0x2)
+    Type: 0x0
+    StorageClass: C_HIDEXT (0x6B)
+    NumberOfAuxSymbols: 1
+    CsectAux {
+        Index: 41
+        SectionLength: 0x4
+        ParameterHashOffset: 0x0
+        ParameterHashSectionNumber: 0
+        Alignment: 0x2
+        Type: XTY_SD (0x1)
+        StorageMappingClass: XMC_TC (0x3)
+        StabOffset: 0x0
+        StabSectionNumber: 0
+    }
+}
+Symbol {
+    Index: 42
+    Name: "errno"
+    Value: 0x2000079C
+    Section: ".data" (0x2)
+    Type: 0x0
+    StorageClass: C_HIDEXT (0x6B)
+    NumberOfAuxSymbols: 1
+    CsectAux {
+        Index: 43
+        SectionLength: 0x4
+        ParameterHashOffset: 0x0
+        ParameterHashSectionNumber: 0
+        Alignment: 0x2
+        Type: XTY_SD (0x1)
+        StorageMappingClass: XMC_TC (0x3)
+        StabOffset: 0x0
+        StabSectionNumber: 0
+    }
+}
+Symbol {
+    Index: 44
+    Name: ".rodata.str1.1L...str" (0x72)
+    Value: 0x200007A0
+    Section: ".data" (0x2)
+    Type: 0x0
+    StorageClass: C_HIDEXT (0x6B)
+    NumberOfAuxSymbols: 1
+    CsectAux {
+        Index: 45
+        SectionLength: 0x4
+        ParameterHashOffset: 0x0
+        ParameterHashSectionNumber: 0
+        Alignment: 0x2
+        Type: XTY_SD (0x1)
+        StorageMappingClass: XMC_TC (0x3)
+        StabOffset: 0x0
+        StabSectionNumber: 0
+    }
+}
+Symbol {
+    Index: 46
+    Name: "printf"
+    Value: 0x200007A4
+    Section: ".data" (0x2)
+    Type: 0x0
+    StorageClass: C_HIDEXT (0x6B)
+    NumberOfAuxSymbols: 1
+    CsectAux {
+        Index: 47
+        SectionLength: 0x4
+        ParameterHashOffset: 0x0
+        ParameterHashSectionNumber: 0
+        Alignment: 0x2
+        Type: XTY_SD (0x1)
+        StorageMappingClass: XMC_TC (0x3)
+        StabOffset: 0x0
+        StabSectionNumber: 0
+    }
+}
+Symbol {
+    Index: 48
+    Name: " "
+    Value: 0x31
+    Section: N_DEBUG (-2)
+    SourceLanguage: 0xF9
+    CpuVersion: 0x3
+    StorageClass: C_FILE (0x67)
+    NumberOfAuxSymbols: 0
+}
+Symbol {
+    Index: 49
+    Name: "crt0main.s" (0x88)
+    Value: 0x44
+    Section: N_DEBUG (-2)
+    SourceLanguage: 0xC
+    CpuVersion: 0x3
+    StorageClass: C_FILE (0x67)
+    NumberOfAuxSymbols: 0
+}
+Symbol {
+    Index: 50
+    Name: ".__start"
+    Value: 0x10000128
+    Section: ".text" (0x1)
+    Type: 0x0
+    StorageClass: C_HIDEXT (0x6B)
+    NumberOfAuxSymbols: 1
+    CsectAux {
+        Index: 51
+        SectionLength: 0xA5
+        ParameterHashOffset: 0x0
+        ParameterHashSectionNumber: 0
+        Alignment: 0x2
+        Type: XTY_SD (0x1)
+        StorageMappingClass: XMC_PR (0x0)
+        StabOffset: 0x0
+        StabSectionNumber: 0
+    }
+}
+Symbol {
+    Index: 52
+    Name: ".__start"
+    Value: 0x10000128
+    Section: ".text" (0x1)
+    Type: 0x0
+    StorageClass: C_EXT (0x2)
+    NumberOfAuxSymbols: 1
+    CsectAux {
+        Index: 53
+        SectionLength: 0x32
+        ParameterHashOffset: 0x0
+        ParameterHashSectionNumber: 0
+        Alignment: 0x0
+        Type: XTY_LD (0x2)
+        StorageMappingClass: XMC_PR (0x0)
+        StabOffset: 0x0
+        StabSectionNumber: 0
+    }
+}
+Symbol {
+    Index: 54
+    Name: "__start"
+    Value: 0x20000710
+    Section: ".data" (0x2)
+    Type: 0x0
+    StorageClass: C_EXT (0x2)
+    NumberOfAuxSymbols: 1
+    CsectAux {
+        Index: 55
+        SectionLength: 0x8
+        ParameterHashOffset: 0x0
+        ParameterHashSectionNumber: 0
+        Alignment: 0x2
+        Type: XTY_SD (0x1)
+        StorageMappingClass: XMC_DS (0xA)
+        StabOffset: 0x0
+        StabSectionNumber: 0
+    }
+}
+Symbol {
+    Index: 56
+    Name: "crt0_data" (0x50)
+    Value: 0x200005F4
+    Section: ".data" (0x2)
+    Type: 0x0
+    StorageClass: C_HIDEXT (0x6B)
+    NumberOfAuxSymbols: 1
+    CsectAux {
+        Index: 57
+        SectionLength: 0x2C
+        ParameterHashOffset: 0x0
+        ParameterHashSectionNumber: 0
+        Alignment: 0x2
+        Type: XTY_SD (0x1)
+        StorageMappingClass: XMC_RW (0x5)
+        StabOffset: 0x0
+        StabSectionNumber: 0
+    }
+}
+Symbol {
+    Index: 58
+    Name: "p_xargc"
+    Value: 0x2000074C
+    Section: ".data" (0x2)
+    Type: 0x0
+    StorageClass: C_EXT (0x2)
+    NumberOfAuxSymbols: 1
+    CsectAux {
+        Index: 59
+        SectionLength: 0x4
+        ParameterHashOffset: 0x0
+        ParameterHashSectionNumber: 0
+        Alignment: 0x2
+        Type: XTY_CM (0x3)
+        StorageMappingClass: XMC_TD (0x10)
+        StabOffset: 0x0
+        StabSectionNumber: 0
+    }
+}
+Symbol {
+    Index: 60
+    Name: "p_xargv"
+    Value: 0x20000764
+    Section: ".data" (0x2)
+    Type: 0x0
+    StorageClass: C_EXT (0x2)
+    NumberOfAuxSymbols: 1
+    CsectAux {
+        Index: 61
+        SectionLength: 0x4
+        ParameterHashOffset: 0x0
+        ParameterHashSectionNumber: 0
+        Alignment: 0x2
+        Type: XTY_CM (0x3)
+        StorageMappingClass: XMC_TD (0x10)
+        StabOffset: 0x0
+        StabSectionNumber: 0
+    }
+}
+Symbol {
+    Index: 62
+    Name: "p_xrcfg"
+    Value: 0x20000768
+    Section: ".data" (0x2)
+    Type: 0x0
+    StorageClass: C_EXT (0x2)
+    NumberOfAuxSymbols: 1
+    CsectAux {
+        Index: 63
+        SectionLength: 0x4
+        ParameterHashOffset: 0x0
+        ParameterHashSectionNumber: 0
+        Alignment: 0x2
+        Type: XTY_CM (0x3)
+        StorageMappingClass: XMC_TD (0x10)
+        StabOffset: 0x0
+        StabSectionNumber: 0
+    }
+}
+Symbol {
+    Index: 64
+    Name: "p_xrc"
+    Value: 0x2000076C
+    Section: ".data" (0x2)
+    Type: 0x0
+    StorageClass: C_EXT (0x2)
+    NumberOfAuxSymbols: 1
+    CsectAux {
+        Index: 65
+        SectionLength: 0x4
+        ParameterHashOffset: 0x0
+        ParameterHashSectionNumber: 0
+        Alignment: 0x2
+        Type: XTY_CM (0x3)
+        StorageMappingClass: XMC_TD (0x10)
+        StabOffset: 0x0
+        StabSectionNumber: 0
+    }
+}
+Symbol {
+    Index: 66
+    Name: "_malloc_user_defined_name" (0x93)
+    Value: 0x20000748
+    Section: ".data" (0x2)
+    Type: 0x0
+    StorageClass: C_EXT (0x2)
+    NumberOfAuxSymbols: 1
+    CsectAux {
+        Index: 67
+        SectionLength: 0x4
+        ParameterHashOffset: 0x0
+        ParameterHashSectionNumber: 0
+        Alignment: 0x2
+        Type: XTY_CM (0x3)
+        StorageMappingClass: XMC_TD (0x10)
+        StabOffset: 0x0
+        StabSectionNumber: 0
+    }
+}
+Symbol {
+    Index: 68
+    Name: ".file"
+    Value: 0x5C
+    Section: N_DEBUG (-2)
+    SourceLanguage: 0x0
+    CpuVersion: 0x3
+    StorageClass: C_FILE (0x67)
+    NumberOfAuxSymbols: 3
+    FileAux {
+        Index: 69
+        Name: "../../../../../../../src/bos/usr/ccs/lib/libc/__threads_init.c" (0xAD)
+        Type: XFT_FN (0x0)
+    }
+    FileAux {
+        Index: 70
+        Name: "Tue Aug 18 14:11:08 2015 " (0xEC)
+        Type: XFT_CT (0x1)
+    }
+    FileAux {
+        Index: 71
+        Name: "IBM XL C for AIX, Version 13.1.0.2" (0x106)
+        Type: XFT_CV (0x2)
+    }
+}
+Symbol {
+    Index: 72
+    Name: "" (0x0)
+    Value: 0x100001E0
+    Section: ".text" (0x1)
+    Type: 0x0
+    StorageClass: C_HIDEXT (0x6B)
+    NumberOfAuxSymbols: 1
+    CsectAux {
+        Index: 73
+        SectionLength: 0x160
+        ParameterHashOffset: 0x0
+        ParameterHashSectionNumber: 0
+        Alignment: 0x5
+        Type: XTY_SD (0x1)
+        StorageMappingClass: XMC_PR (0x0)
+        StabOffset: 0x0
+        StabSectionNumber: 0
+    }
+}
+Symbol {
+    Index: 74
+    Name: ".__threads_init" (0x129)
+    Value: 0x100001E0
+    Section: ".text" (0x1)
+    Type: 0x20
+    StorageClass: C_EXT (0x2)
+    NumberOfAuxSymbols: 1
+    CsectAux {
+        Index: 75
+        SectionLength: 0x48
+        ParameterHashOffset: 0x0
+        ParameterHashSectionNumber: 0
+        Alignment: 0x0
+        Type: XTY_LD (0x2)
+        StorageMappingClass: XMC_PR (0x0)
+        StabOffset: 0x0
+        StabSectionNumber: 0
+    }
+}
+Symbol {
+    Index: 76
+    Name: ".__threads_init@AF2_1" (0x139)
+    Value: 0x10000220
+    Section: ".text" (0x1)
+    Type: 0x20
+    StorageClass: C_HIDEXT (0x6B)
+    NumberOfAuxSymbols: 1
+    CsectAux {
+        Index: 77
+        SectionLength: 0x48
+        ParameterHashOffset: 0x0
+        ParameterHashSectionNumber: 0
+        Alignment: 0x0
+        Type: XTY_LD (0x2)
+        StorageMappingClass: XMC_PR (0x0)
+        StabOffset: 0x0
+        StabSectionNumber: 0
+    }
+}
+Symbol {
+    Index: 78
+    Name: "_$STATIC"
+    Value: 0x20000620
+    Section: ".data" (0x2)
+    Type: 0x0
+    StorageClass: C_HIDEXT (0x6B)
+    NumberOfAuxSymbols: 1
+    CsectAux {
+        Index: 79
+        SectionLength: 0x59
+        ParameterHashOffset: 0x0
+        ParameterHashSectionNumber: 0
+        Alignment: 0x3
+        Type: XTY_SD (0x1)
+        StorageMappingClass: XMC_RW (0x5)
+        StabOffset: 0x0
+        StabSectionNumber: 0
+    }
+}
+Symbol {
+    Index: 80
+    Name: "__threads_init" (0x12A)
+    Value: 0x20000718
+    Section: ".data" (0x2)
+    Type: 0x0
+    StorageClass: C_EXT (0x2)
+    NumberOfAuxSymbols: 1
+    CsectAux {
+        Index: 81
+        SectionLength: 0xC
+        ParameterHashOffset: 0x0
+        ParameterHashSectionNumber: 0
+        Alignment: 0x2
+        Type: XTY_SD (0x1)
+        StorageMappingClass: XMC_DS (0xA)
+        StabOffset: 0x0
+        StabSectionNumber: 0
+    }
+}
+Symbol {
+    Index: 82
+    Name: "__pth_init_routine" (0x14F)
+    Value: 0x20000750
+    Section: ".data" (0x2)
+    Type: 0x0
+    StorageClass: C_EXT (0x2)
+    NumberOfAuxSymbols: 1
+    CsectAux {
+        Index: 83
+        SectionLength: 0x4
+        ParameterHashOffset: 0x0
+        ParameterHashSectionNumber: 0
+        Alignment: 0x2
+        Type: XTY_CM (0x3)
+        StorageMappingClass: XMC_TD (0x10)
+        StabOffset: 0x0
+        StabSectionNumber: 0
+    }
+}
+Symbol {
+    Index: 84
+    Name: "_bsd_init_routine" (0x162)
+    Value: 0x20000754
+    Section: ".data" (0x2)
+    Type: 0x0
+    StorageClass: C_EXT (0x2)
+    NumberOfAuxSymbols: 1
+    CsectAux {
+        Index: 85
+        SectionLength: 0x4
+        ParameterHashOffset: 0x0
+        ParameterHashSectionNumber: 0
+        Alignment: 0x2
+        Type: XTY_CM (0x3)
+        StorageMappingClass: XMC_TD (0x10)
+        StabOffset: 0x0
+        StabSectionNumber: 0
+    }
+}
+Symbol {
+    Index: 86
+    Name: "_xti_tli_init_routine" (0x174)
+    Value: 0x20000758
+    Section: ".data" (0x2)
+    Type: 0x0
+    StorageClass: C_EXT (0x2)
+    NumberOfAuxSymbols: 1
+    CsectAux {
+        Index: 87
+        SectionLength: 0x4
+        ParameterHashOffset: 0x0
+        ParameterHashSectionNumber: 0
+        Alignment: 0x2
+        Type: XTY_CM (0x3)
+        StorageMappingClass: XMC_TD (0x10)
+        StabOffset: 0x0
+        StabSectionNumber: 0
+    }
+}
+Symbol {
+    Index: 88
+    Name: "_nsl_init_routine" (0x18A)
+    Value: 0x2000075C
+    Section: ".data" (0x2)
+    Type: 0x0
+    StorageClass: C_EXT (0x2)
+    NumberOfAuxSymbols: 1
+    CsectAux {
+        Index: 89
+        SectionLength: 0x4
+        ParameterHashOffset: 0x0
+        ParameterHashSectionNumber: 0
+        Alignment: 0x2
+        Type: XTY_CM (0x3)
+        StorageMappingClass: XMC_TD (0x10)
+        StabOffset: 0x0
+        StabSectionNumber: 0
+    }
+}
+Symbol {
+    Index: 90
+    Name: "__dce_compat_init_routine" (0x19C)
+    Value: 0x20000760
+    Section: ".data" (0x2)
+    Type: 0x0
+    StorageClass: C_EXT (0x2)
+    NumberOfAuxSymbols: 1
+    CsectAux {
+        Index: 91
+        SectionLength: 0x4
+        ParameterHashOffset: 0x0
+        ParameterHashSectionNumber: 0
+        Alignment: 0x2
+        Type: XTY_CM (0x3)
+        StorageMappingClass: XMC_TD (0x10)
+        StabOffset: 0x0
+        StabSectionNumber: 0
+    }
+}
+Symbol {
+    Index: 92
+    Name: ".file"
+    Value: 0x76
+    Section: N_DEBUG (-2)
+    SourceLanguage: 0x9
+    CpuVersion: 0x3
+    StorageClass: C_FILE (0x67)
+    NumberOfAuxSymbols: 3
+    FileAux {
+        Index: 93
+        Name: "../../../../../../../src/bos/usr/ccs/lib/libc/POWER/crti.C" (0x1B6)
+        Type: XFT_FN (0x0)
+    }
+    FileAux {
+        Index: 94
+        Name: "Wed Jun 23 13:42:47 2021 " (0x1F1)
+        Type: XFT_CT (0x1)
+    }
+    FileAux {
+        Index: 95
+        Name: "IBM XL C/C++ for AIX, Version 13.1.0.2" (0x20B)
+        Type: XFT_CV (0x2)
+    }
+}
+Symbol {
+    Index: 96
+    Name: "" (0x0)
+    Value: 0x10000340
+    Section: ".text" (0x1)
+    Type: 0x0
+    StorageClass: C_HIDEXT (0x6B)
+    NumberOfAuxSymbols: 1
+    CsectAux {
+        Index: 97
+        SectionLength: 0x178
+        ParameterHashOffset: 0x0
+        ParameterHashSectionNumber: 0
+        Alignment: 0x3
+        Type: XTY_SD (0x1)
+        StorageMappingClass: XMC_PR (0x0)
+        StabOffset: 0x0
+        StabSectionNumber: 0
+    }
+}
+Symbol {
+    Index: 98
+    Name: ".__User_sinit_begin" (0x232)
+    Value: 0x10000340
+    Section: ".text" (0x1)
+    Type: 0x20
+    StorageClass: C_EXT (0x2)
+    NumberOfAuxSymbols: 1
+    CsectAux {
+        Index: 99
+        SectionLength: 0x60
+        ParameterHashOffset: 0x0
+        ParameterHashSectionNumber: 0
+        Alignment: 0x0
+        Type: XTY_LD (0x2)
+        StorageMappingClass: XMC_PR (0x0)
+        StabOffset: 0x0
+        StabSectionNumber: 0
+    }
+}
+Symbol {
+    Index: 100
+    Name: ".__C_runtime_termination" (0x246)
+    Value: 0x10000368
+    Section: ".text" (0x1)
+    Type: 0x20
+    StorageClass: C_EXT (0x2)
+    NumberOfAuxSymbols: 1
+    CsectAux {
+        Index: 101
+        SectionLength: 0x60
+        ParameterHashOffset: 0x0
+        ParameterHashSectionNumber: 0
+        Alignment: 0x0
+        Type: XTY_LD (0x2)
+        StorageMappingClass: XMC_PR (0x0)
+        StabOffset: 0x0
+        StabSectionNumber: 0
+    }
+}
+Symbol {
+    Index: 102
+    Name: ".__C_runtime_startup" (0x25F)
+    Value: 0x100003B8
+    Section: ".text" (0x1)
+    Type: 0x20
+    StorageClass: C_EXT (0x2)
+    NumberOfAuxSymbols: 1
+    CsectAux {
+        Index: 103
+        SectionLength: 0x60
+        ParameterHashOffset: 0x0
+        ParameterHashSectionNumber: 0
+        Alignment: 0x0
+        Type: XTY_LD (0x2)
+        StorageMappingClass: XMC_PR (0x0)
+        StabOffset: 0x0
+        StabSectionNumber: 0
+    }
+}
+Symbol {
+    Index: 104
+    Name: ".__dftdt__L304e4b28c42_5CatchFv" (0x274)
+    Value: 0x10000440
+    Section: ".text" (0x1)
+    Type: 0x20
+    StorageClass: C_HIDEXT (0x6B)
+    NumberOfAuxSymbols: 1
+    CsectAux {
+        Index: 105
+        SectionLength: 0x60
+        ParameterHashOffset: 0x0
+        ParameterHashSectionNumber: 0
+        Alignment: 0x0
+        Type: XTY_LD (0x2)
+        StorageMappingClass: XMC_PR (0x0)
+        StabOffset: 0x0
+        StabSectionNumber: 0
+    }
+}
+Symbol {
+    Index: 106
+    Name: "_$STATIC"
+    Value: 0x20000680
+    Section: ".data" (0x2)
+    Type: 0x0
+    StorageClass: C_HIDEXT (0x6B)
+    NumberOfAuxSymbols: 1
+    CsectAux {
+        Index: 107
+        SectionLength: 0x81
+        ParameterHashOffset: 0x0
+        ParameterHashSectionNumber: 0
+        Alignment: 0x3
+        Type: XTY_SD (0x1)
+        StorageMappingClass: XMC_RW (0x5)
+        StabOffset: 0x0
+        StabSectionNumber: 0
+    }
+}
+Symbol {
+    Index: 108
+    Name: "__dftdt__L304e4b28c42_5CatchFv" (0x275)
+    Value: 0x20000730
+    Section: ".data" (0x2)
+    Type: 0x0
+    StorageClass: C_HIDEXT (0x6B)
+    NumberOfAuxSymbols: 1
+    CsectAux {
+        Index: 109
+        SectionLength: 0xC
+        ParameterHashOffset: 0x0
+        ParameterHashSectionNumber: 0
+        Alignment: 0x2
+        Type: XTY_SD (0x1)
+        StorageMappingClass: XMC_DS (0xA)
+        StabOffset: 0x0
+        StabSectionNumber: 0
+    }
+}
+Symbol {
+    Index: 110
+    Name: "__C_runtime_termination" (0x5A)
+    Value: 0x2000073C
+    Section: ".data" (0x2)
+    Type: 0x0
+    StorageClass: C_EXT (0x2)
+    NumberOfAuxSymbols: 1
+    CsectAux {
+        Index: 111
+        SectionLength: 0xC
+        ParameterHashOffset: 0x0
+        ParameterHashSectionNumber: 0
+        Alignment: 0x2
+        Type: XTY_SD (0x1)
+        StorageMappingClass: XMC_DS (0xA)
+        StabOffset: 0x0
+        StabSectionNumber: 0
+    }
+}
+Symbol {
+    Index: 112
+    Name: "__C_runtime_startup" (0x260)
+    Value: 0x20000724
+    Section: ".data" (0x2)
+    Type: 0x0
+    StorageClass: C_EXT (0x2)
+    NumberOfAuxSymbols: 1
+    CsectAux {
+        Index: 113
+        SectionLength: 0xC
+        ParameterHashOffset: 0x0
+        ParameterHashSectionNumber: 0
+        Alignment: 0x2
+        Type: XTY_SD (0x1)
+        StorageMappingClass: XMC_DS (0xA)
+        StabOffset: 0x0
+        StabSectionNumber: 0
+    }
+}
+Symbol {
+    Index: 114
+    Name: "_cdtors"
+    Value: 0x20000708
+    Section: ".data" (0x2)
+    Type: 0x0
+    StorageClass: C_WEAKEXT (0x6F)
+    NumberOfAuxSymbols: 1
+    CsectAux {
+        Index: 115
+        SectionLength: 0x8
+        ParameterHashOffset: 0x0
+        ParameterHashSectionNumber: 0
+        Alignment: 0x3
+        Type: XTY_SD (0x1)
+        StorageMappingClass: XMC_RW (0x5)
+        StabOffset: 0x0
+        StabSectionNumber: 0
+    }
+}
+Symbol {
+    Index: 116
+    Name: "__C_runtime_pstartup" (0x294)
+    Value: 0x2000067C
+    Section: ".data" (0x2)
+    Type: 0x0
+    StorageClass: C_EXT (0x2)
+    NumberOfAuxSymbols: 1
+    CsectAux {
+        Index: 117
+        SectionLength: 0x4
+        ParameterHashOffset: 0x0
+        ParameterHashSectionNumber: 0
+        Alignment: 0x2
+        Type: XTY_SD (0x1)
+        StorageMappingClass: XMC_RW (0x5)
+        StabOffset: 0x0
+        StabSectionNumber: 0
+    }
+}
+Symbol {
+    Index: 118
+    Name: ".file"
+    Value: 0x7F
+    Section: N_DEBUG (-2)
+    SourceLanguage: 0x0
+    CpuVersion: 0x3
+    StorageClass: C_FILE (0x67)
+    NumberOfAuxSymbols: 2
+    FileAux {
+        Index: 119
+        Name: "base.c"
+        Type: XFT_FN (0x0)
+    }
+    FileAux {
+        Index: 120
+        Name: "IBM Open XL C/C++ for AIX 17.1.1 (5725-C72, 5765-J18), LLVM version 16.0.0git" (0x2A9)
+        Type: XFT_CT (0x1)
+    }
+}
+Symbol {
+    Index: 121
+    Name: ".text"
+    Value: 0x10000560
+    Section: ".text" (0x1)
+    Type: 0x0
+    StorageClass: C_HIDEXT (0x6B)
+    NumberOfAuxSymbols: 1
+    CsectAux {
+        Index: 122
+        SectionLength: 0x5B
+        ParameterHashOffset: 0x0
+        ParameterHashSectionNumber: 0
+        Alignment: 0x5
+        Type: XTY_SD (0x1)
+        StorageMappingClass: XMC_PR (0x0)
+        StabOffset: 0x0
+        StabSectionNumber: 0
+    }
+}
+Symbol {
+    Index: 123
+    Name: ".main"
+    Value: 0x10000560
+    Section: ".text" (0x1)
+    Type: 0x0
+    StorageClass: C_EXT (0x2)
+    NumberOfAuxSymbols: 1
+    CsectAux {
+        Index: 124
+        SectionLength: 0x79
+        ParameterHashOffset: 0x0
+        ParameterHashSectionNumber: 0
+        Alignment: 0x0
+        Type: XTY_LD (0x2)
+        StorageMappingClass: XMC_PR (0x0)
+        StabOffset: 0x0
+        StabSectionNumber: 0
+    }
+}
+Symbol {
+    Index: 125
+    Name: ".rodata.str1.1L...str" (0x72)
+    Value: 0x100005E4
+    Section: ".text" (0x1)
+    Type: 0x0
+    StorageClass: C_HIDEXT (0x6B)
+    NumberOfAuxSymbols: 1
+    CsectAux {
+        Index: 126
+        SectionLength: 0xD
+        ParameterHashOffset: 0x0
+        ParameterHashSectionNumber: 0
+        Alignment: 0x2
+        Type: XTY_SD (0x1)
+        StorageMappingClass: XMC_RO (0x1)
+        StabOffset: 0x0
+        StabSectionNumber: 0
+    }
+}
+Symbol {
+    Index: 127
+    Name: "glink.s"
+    Value: 0x84
+    Section: N_DEBUG (-2)
+    SourceLanguage: 0xC
+    CpuVersion: 0x3
+    StorageClass: C_FILE (0x67)
+    NumberOfAuxSymbols: 0
+}
+Symbol {
+    Index: 128
+    Name: ".exit"
+    Value: 0x10000530
+    Section: ".text" (0x1)
+    Type: 0x0
+    StorageClass: C_HIDEXT (0x6B)
+    NumberOfAuxSymbols: 1
+    CsectAux {
+        Index: 129
+        SectionLength: 0x28
+        ParameterHashOffset: 0x0
+        ParameterHashSectionNumber: 0
+        Alignment: 0x2
+        Type: XTY_SD (0x1)
+        StorageMappingClass: XMC_GL (0x6)
+        StabOffset: 0x0
+        StabSectionNumber: 0
+    }
+}
+Symbol {
+    Index: 130
+    Name: ".exit"
+    Value: 0x10000530
+    Section: ".text" (0x1)
+    Type: 0x0
+    StorageClass: C_EXT (0x2)
+    NumberOfAuxSymbols: 1
+    CsectAux {
+        Index: 131
+        SectionLength: 0x80
+        ParameterHashOffset: 0x0
+        ParameterHashSectionNumber: 0
+        Alignment: 0x0
+        Type: XTY_LD (0x2)
+        StorageMappingClass: XMC_GL (0x6)
+        StabOffset: 0x0
+        StabSectionNumber: 0
+    }
+}
+Symbol {
+    Index: 132
+    Name: "glink.s"
+    Value: 0x89
+    Section: N_DEBUG (-2)
+    SourceLanguage: 0xC
+    CpuVersion: 0x3
+    StorageClass: C_FILE (0x67)
+    NumberOfAuxSymbols: 0
+}
+Symbol {
+    Index: 133
+    Name: ".__run_final_dtors" (0x2F7)
+    Value: 0x100004B8
+    Section: ".text" (0x1)
+    Type: 0x0
+    StorageClass: C_HIDEXT (0x6B)
+    NumberOfAuxSymbols: 1
+    CsectAux {
+        Index: 134
+        SectionLength: 0x28
+        ParameterHashOffset: 0x0
+        ParameterHashSectionNumber: 0
+        Alignment: 0x2
+        Type: XTY_SD (0x1)
+        StorageMappingClass: XMC_GL (0x6)
+        StabOffset: 0x0
+        StabSectionNumber: 0
+    }
+}
+Symbol {
+    Index: 135
+    Name: ".__run_final_dtors" (0x2F7)
+    Value: 0x100004B8
+    Section: ".text" (0x1)
+    Type: 0x0
+    StorageClass: C_EXT (0x2)
+    NumberOfAuxSymbols: 1
+    CsectAux {
+        Index: 136
+        SectionLength: 0x85
+        ParameterHashOffset: 0x0
+        ParameterHashSectionNumber: 0
+        Alignment: 0x0
+        Type: XTY_LD (0x2)
+        StorageMappingClass: XMC_GL (0x6)
+        StabOffset: 0x0
+        StabSectionNumber: 0
+    }
+}
+Symbol {
+    Index: 137
+    Name: "glink.s"
+    Value: 0x8E
+    Section: N_DEBUG (-2)
+    SourceLanguage: 0xC
+    CpuVersion: 0x3
+    StorageClass: C_FILE (0x67)
+    NumberOfAuxSymbols: 0
+}
+Symbol {
+    Index: 138
+    Name: ".atexit"
+    Value: 0x100004E0
+    Section: ".text" (0x1)
+    Type: 0x0
+    StorageClass: C_HIDEXT (0x6B)
+    NumberOfAuxSymbols: 1
+    CsectAux {
+        Index: 139
+        SectionLength: 0x28
+        ParameterHashOffset: 0x0
+        ParameterHashSectionNumber: 0
+        Alignment: 0x2
+        Type: XTY_SD (0x1)
+        StorageMappingClass: XMC_GL (0x6)
+        StabOffset: 0x0
+        StabSectionNumber: 0
+    }
+}
+Symbol {
+    Index: 140
+    Name: ".atexit"
+    Value: 0x100004E0
+    Section: ".text" (0x1)
+    Type: 0x0
+    StorageClass: C_EXT (0x2)
+    NumberOfAuxSymbols: 1
+    CsectAux {
+        Index: 141
+        SectionLength: 0x8A
+        ParameterHashOffset: 0x0
+        ParameterHashSectionNumber: 0
+        Alignment: 0x0
+        Type: XTY_LD (0x2)
+        StorageMappingClass: XMC_GL (0x6)
+        StabOffset: 0x0
+        StabSectionNumber: 0
+    }
+}
+Symbol {
+    Index: 142
+    Name: "glink.s"
+    Value: 0x93
+    Section: N_DEBUG (-2)
+    SourceLanguage: 0xC
+    CpuVersion: 0x3
+    StorageClass: C_FILE (0x67)
+    NumberOfAuxSymbols: 0
+}
+Symbol {
+    Index: 143
+    Name: ".__run_initial_ctors" (0x30A)
+    Value: 0x10000508
+    Section: ".text" (0x1)
+    Type: 0x0
+    StorageClass: C_HIDEXT (0x6B)
+    NumberOfAuxSymbols: 1
+    CsectAux {
+        Index: 144
+        SectionLength: 0x28
+        ParameterHashOffset: 0x0
+        ParameterHashSectionNumber: 0
+        Alignment: 0x2
+        Type: XTY_SD (0x1)
+        StorageMappingClass: XMC_GL (0x6)
+        StabOffset: 0x0
+        StabSectionNumber: 0
+    }
+}
+Symbol {
+    Index: 145
+    Name: ".__run_initial_ctors" (0x30A)
+    Value: 0x10000508
+    Section: ".text" (0x1)
+    Type: 0x0
+    StorageClass: C_EXT (0x2)
+    NumberOfAuxSymbols: 1
+    CsectAux {
+        Index: 146
+        SectionLength: 0x8F
+        ParameterHashOffset: 0x0
+        ParameterHashSectionNumber: 0
+        Alignment: 0x0
+        Type: XTY_LD (0x2)
+        StorageMappingClass: XMC_GL (0x6)
+        StabOffset: 0x0
+        StabSectionNumber: 0
+    }
+}
+Symbol {
+    Index: 147
+    Name: "glink.s"
+    Value: 0xFFFFFFFF
+    Section: N_DEBUG (-2)
+    SourceLanguage: 0xC
+    CpuVersion: 0x3
+    StorageClass: C_FILE (0x67)
+    NumberOfAuxSymbols: 0
+}
+Symbol {
+    Index: 148
+    Name: ".printf"
+    Value: 0x100005BC
+    Section: ".text" (0x1)
+    Type: 0x0
+    StorageClass: C_HIDEXT (0x6B)
+    NumberOfAuxSymbols: 1
+    CsectAux {
+        Index: 149
+        SectionLength: 0x28
+        ParameterHashOffset: 0x0
+        ParameterHashSectionNumber: 0
+        Alignment: 0x2
+        Type: XTY_SD (0x1)
+        StorageMappingClass: XMC_GL (0x6)
+        StabOffset: 0x0
+        StabSectionNumber: 0
+    }
+}
+Symbol {
+    Index: 150
+    Name: ".printf"
+    Value: 0x100005BC
+    Section: ".text" (0x1)
+    Type: 0x0
+    StorageClass: C_EXT (0x2)
+    NumberOfAuxSymbols: 1
+    CsectAux {
+        Index: 151
+        SectionLength: 0x94
+        ParameterHashOffset: 0x0
+        ParameterHashSectionNumber: 0
+        Alignment: 0x0
+        Type: XTY_LD (0x2)
+        StorageMappingClass: XMC_GL (0x6)
+        StabOffset: 0x0
+        StabSectionNumber: 0
+    }
+}

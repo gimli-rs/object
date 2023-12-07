@@ -203,6 +203,8 @@ fn print_object(p: &mut Printer<'_>, data: &[u8]) {
         object::FileKind::MachOFat64 => macho::print_macho_fat64(p, data),
         object::FileKind::Pe32 => pe::print_pe32(p, data),
         object::FileKind::Pe64 => pe::print_pe64(p, data),
+        object::FileKind::Xcoff32 => xcoff::print_xcoff32(p, data),
+        object::FileKind::Xcoff64 => xcoff::print_xcoff64(p, data),
         // TODO
         _ => {}
     }
@@ -258,3 +260,4 @@ impl<T, E: fmt::Display> PrintErr<T> for Result<T, E> {
 mod elf;
 mod macho;
 mod pe;
+mod xcoff;
