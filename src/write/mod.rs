@@ -1,6 +1,6 @@
 //! Interface for writing object files.
 
-use alloc::borrow::Cow;
+use alloc::borrow::{Cow, ToOwned};
 use alloc::string::String;
 use alloc::vec::Vec;
 use core::{fmt, result, str};
@@ -12,7 +12,7 @@ use std::{boxed::Box, collections::HashMap, error, io};
 use crate::endian::{Endianness, U32, U64};
 use crate::{
     Architecture, BinaryFormat, ComdatKind, FileFlags, RelocationEncoding, RelocationKind,
-    SectionFlags, SectionKind, SymbolFlags, SymbolKind, SymbolScope,
+    SectionFlags, SectionKind, SubArchitecture, SymbolFlags, SymbolKind, SymbolScope,
 };
 
 #[cfg(feature = "coff")]
@@ -62,6 +62,7 @@ pub type Result<T> = result::Result<T, Error>;
 pub struct Object<'a> {
     format: BinaryFormat,
     architecture: Architecture,
+    sub_architecture: Option<SubArchitecture>,
     endian: Endianness,
     sections: Vec<Section<'a>>,
     standard_sections: HashMap<StandardSection, SectionId>,
@@ -88,6 +89,7 @@ impl<'a> Object<'a> {
         Object {
             format,
             architecture,
+            sub_architecture: None,
             endian,
             sections: Vec::new(),
             standard_sections: HashMap::new(),
@@ -115,6 +117,26 @@ impl<'a> Object<'a> {
     #[inline]
     pub fn architecture(&self) -> Architecture {
         self.architecture
+    }
+
+    /// Return the sub-architecture.
+    #[inline]
+    pub fn sub_architecture(&self) -> Option<SubArchitecture> {
+        self.sub_architecture
+    }
+
+    /// Specify the sub-architecture.
+    pub fn set_sub_architecture(
+        &mut self,
+        sub_architecture: Option<SubArchitecture>,
+    ) -> Result<()> {
+        match (self.architecture, sub_architecture) {
+            (Architecture::Aarch64, Some(SubArchitecture::Arm64EC)) | (_, None) => {
+                self.sub_architecture = sub_architecture;
+                Ok(())
+            }
+            _ => Err(Error("Unsupported sub-architecture".to_owned())),
+        }
     }
 
     /// Return the current mangling setting.

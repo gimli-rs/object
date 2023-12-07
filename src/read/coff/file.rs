@@ -3,7 +3,7 @@ use core::fmt::Debug;
 
 use crate::read::{
     self, Architecture, Export, FileFlags, Import, NoDynamicRelocationIterator, Object, ObjectKind,
-    ObjectSection, ReadError, ReadRef, Result, SectionIndex, SymbolIndex,
+    ObjectSection, ReadError, ReadRef, Result, SectionIndex, SubArchitecture, SymbolIndex,
 };
 use crate::{pe, LittleEndian as LE, Pod};
 
@@ -78,11 +78,17 @@ where
     fn architecture(&self) -> Architecture {
         match self.header.machine() {
             pe::IMAGE_FILE_MACHINE_ARMNT => Architecture::Arm,
-            pe::IMAGE_FILE_MACHINE_ARM64 => Architecture::Aarch64,
-            pe::IMAGE_FILE_MACHINE_ARM64EC => Architecture::Arm64EC,
+            pe::IMAGE_FILE_MACHINE_ARM64 | pe::IMAGE_FILE_MACHINE_ARM64EC => Architecture::Aarch64,
             pe::IMAGE_FILE_MACHINE_I386 => Architecture::I386,
             pe::IMAGE_FILE_MACHINE_AMD64 => Architecture::X86_64,
             _ => Architecture::Unknown,
+        }
+    }
+
+    fn sub_architecture(&self) -> Option<SubArchitecture> {
+        match self.header.machine() {
+            pe::IMAGE_FILE_MACHINE_ARM64EC => Some(SubArchitecture::Arm64EC),
+            _ => None,
         }
     }
 

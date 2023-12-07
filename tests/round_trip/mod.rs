@@ -1,7 +1,7 @@
 #![cfg(all(feature = "read", feature = "write"))]
 
 use object::read::{Object, ObjectSection, ObjectSymbol};
-use object::{read, write, SectionIndex};
+use object::{read, write, SectionIndex, SubArchitecture};
 use object::{
     Architecture, BinaryFormat, Endianness, RelocationEncoding, RelocationKind, SectionKind,
     SymbolFlags, SymbolKind, SymbolScope, SymbolSection,
@@ -18,17 +18,18 @@ mod tls;
 
 #[test]
 fn coff_any() {
-    for arch in [
-        Architecture::Aarch64,
-        Architecture::Arm,
-        Architecture::I386,
-        Architecture::X86_64,
-        Architecture::Arm64EC,
+    for (arch, sub_arch) in [
+        (Architecture::Aarch64, None),
+        (Architecture::Aarch64, Some(SubArchitecture::Arm64EC)),
+        (Architecture::Arm, None),
+        (Architecture::I386, None),
+        (Architecture::X86_64, None),
     ]
     .iter()
     .copied()
     {
         let mut object = write::Object::new(BinaryFormat::Coff, arch, Endianness::Little);
+        object.set_sub_architecture(sub_arch).unwrap();
 
         object.add_file_symbol(b"file.c".to_vec());
 
@@ -77,6 +78,7 @@ fn coff_any() {
         let object = read::File::parse(&*bytes).unwrap();
         assert_eq!(object.format(), BinaryFormat::Coff);
         assert_eq!(object.architecture(), arch);
+        assert_eq!(object.sub_architecture(), sub_arch);
         assert_eq!(object.endianness(), Endianness::Little);
 
         let mut sections = object.sections();

@@ -96,10 +96,8 @@ impl<'a> Object<'a> {
         }
 
         let constant = match self.architecture {
-            Architecture::I386
-            | Architecture::Arm
-            | Architecture::Aarch64
-            | Architecture::Arm64EC => match relocation.kind {
+            Architecture::I386 | Architecture::Arm | Architecture::Aarch64 => match relocation.kind
+            {
                 RelocationKind::Relative => {
                     // IMAGE_REL_I386_REL32, IMAGE_REL_ARM_REL32, IMAGE_REL_ARM64_REL32
                     relocation.addend + 4
@@ -272,8 +270,12 @@ impl<'a> Object<'a> {
         writer.write_file_header(writer::FileHeader {
             machine: match self.architecture {
                 Architecture::Arm => coff::IMAGE_FILE_MACHINE_ARMNT,
-                Architecture::Aarch64 => coff::IMAGE_FILE_MACHINE_ARM64,
-                Architecture::Arm64EC => coff::IMAGE_FILE_MACHINE_ARM64EC,
+                Architecture::Aarch64 => match self.sub_architecture {
+                    None => coff::IMAGE_FILE_MACHINE_ARM64,
+                    Some(SubArchitecture::Arm64EC) => coff::IMAGE_FILE_MACHINE_ARM64EC,
+                    #[allow(unreachable_patterns)]
+                    _ => unimplemented!(),
+                },
                 Architecture::I386 => coff::IMAGE_FILE_MACHINE_I386,
                 Architecture::X86_64 => coff::IMAGE_FILE_MACHINE_AMD64,
                 _ => {
@@ -435,29 +437,18 @@ impl<'a> Object<'a> {
                                 return Err(Error(format!("unimplemented relocation {:?}", reloc)));
                             }
                         },
-                        Architecture::Aarch64 | Architecture::Arm64EC => {
-                            match (reloc.kind, reloc.size, reloc.addend) {
-                                (RelocationKind::Absolute, 32, 0) => coff::IMAGE_REL_ARM64_ADDR32,
-                                (RelocationKind::ImageOffset, 32, 0) => {
-                                    coff::IMAGE_REL_ARM64_ADDR32NB
-                                }
-                                (RelocationKind::SectionIndex, 16, 0) => {
-                                    coff::IMAGE_REL_ARM64_SECTION
-                                }
-                                (RelocationKind::SectionOffset, 32, 0) => {
-                                    coff::IMAGE_REL_ARM64_SECREL
-                                }
-                                (RelocationKind::Absolute, 64, 0) => coff::IMAGE_REL_ARM64_ADDR64,
-                                (RelocationKind::Relative, 32, -4) => coff::IMAGE_REL_ARM64_REL32,
-                                (RelocationKind::Coff(x), _, _) => x,
-                                _ => {
-                                    return Err(Error(format!(
-                                        "unimplemented relocation {:?}",
-                                        reloc
-                                    )));
-                                }
+                        Architecture::Aarch64 => match (reloc.kind, reloc.size, reloc.addend) {
+                            (RelocationKind::Absolute, 32, 0) => coff::IMAGE_REL_ARM64_ADDR32,
+                            (RelocationKind::ImageOffset, 32, 0) => coff::IMAGE_REL_ARM64_ADDR32NB,
+                            (RelocationKind::SectionIndex, 16, 0) => coff::IMAGE_REL_ARM64_SECTION,
+                            (RelocationKind::SectionOffset, 32, 0) => coff::IMAGE_REL_ARM64_SECREL,
+                            (RelocationKind::Absolute, 64, 0) => coff::IMAGE_REL_ARM64_ADDR64,
+                            (RelocationKind::Relative, 32, -4) => coff::IMAGE_REL_ARM64_REL32,
+                            (RelocationKind::Coff(x), _, _) => x,
+                            _ => {
+                                return Err(Error(format!("unimplemented relocation {:?}", reloc)));
                             }
-                        }
+                        },
                         _ => {
                             return Err(Error(format!(
                                 "unimplemented architecture {:?}",

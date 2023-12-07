@@ -14,12 +14,15 @@ use crate::read::pe;
 use crate::read::wasm;
 #[cfg(feature = "xcoff")]
 use crate::read::xcoff;
-use crate::read::{
-    self, Architecture, BinaryFormat, CodeView, ComdatKind, CompressedData, CompressedFileRange,
-    Error, Export, FileFlags, FileKind, Import, Object, ObjectComdat, ObjectKind, ObjectMap,
-    ObjectSection, ObjectSegment, ObjectSymbol, ObjectSymbolTable, ReadRef, Relocation, Result,
-    SectionFlags, SectionIndex, SectionKind, SegmentFlags, SymbolFlags, SymbolIndex, SymbolKind,
-    SymbolMap, SymbolMapName, SymbolScope, SymbolSection,
+use crate::{
+    read::{
+        self, Architecture, BinaryFormat, CodeView, ComdatKind, CompressedData,
+        CompressedFileRange, Error, Export, FileFlags, FileKind, Import, Object, ObjectComdat,
+        ObjectKind, ObjectMap, ObjectSection, ObjectSegment, ObjectSymbol, ObjectSymbolTable,
+        ReadRef, Relocation, Result, SectionFlags, SectionIndex, SectionKind, SegmentFlags,
+        SymbolFlags, SymbolIndex, SymbolKind, SymbolMap, SymbolMapName, SymbolScope, SymbolSection,
+    },
+    SubArchitecture,
 };
 #[allow(unused_imports)]
 use crate::{AddressSize, Endian, Endianness};
@@ -321,6 +324,10 @@ where
 
     fn architecture(&self) -> Architecture {
         with_inner!(self, File, |x| x.architecture())
+    }
+
+    fn sub_architecture(&self) -> Option<SubArchitecture> {
+        with_inner!(self, File, |x| x.sub_architecture())
     }
 
     fn is_little_endian(&self) -> bool {

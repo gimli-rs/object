@@ -198,7 +198,8 @@ Symbol map
 
 test_arm64ec.dll:
 Format: Short Import File
-Architecture: Arm64EC
+Architecture: Aarch64
+Sub-Architecture: Arm64EC
 DLL: "test_arm64ec.dll"
 Symbol: "#foo_arm64ec"
 Import: Name("foo_arm64ec")
