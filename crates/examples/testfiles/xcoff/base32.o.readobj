@@ -1,0 +1,246 @@
+Format: XCOFF 32-bit
+FileHeader {
+    Magic: 0x1DF
+    NumberOfSections: 2
+    TimeDate: 0x6348EFFB
+    SymbolPointer: 0x112
+    NumberOfSymbols: 19
+    SizeOfOptionalHeader: 0x0
+    Flags: 0x0
+}
+SectionHeader {
+    Index: 1
+    Name: ".text"
+    PhysicalAddress: 0x0
+    VirtualAddress: 0x0
+    Size: 0x6C
+    SectionDataPointer: 0x64
+    RelocationPointer: 0xE0
+    LineNumberPointer: 0x0
+    NumberOfRelocations: 2
+    NumberOfLineNumbers: 0
+    Type: STYP_TEXT (0x20)
+    Relocation {
+        VirtualAddress: 0x22
+        Symbol: ".rodata.str1.1L...str" (0x11)
+        Size: 0xF
+        Type: R_TOC (0x3)
+    }
+    Relocation {
+        VirtualAddress: 0x24
+        Symbol: ".printf" (0x3)
+        Size: 0x99
+        Type: R_RBR (0x1A)
+    }
+}
+SectionHeader {
+    Index: 2
+    Name: ".data"
+    PhysicalAddress: 0x6C
+    VirtualAddress: 0x6C
+    Size: 0x10
+    SectionDataPointer: 0xD0
+    RelocationPointer: 0xF4
+    LineNumberPointer: 0x0
+    NumberOfRelocations: 3
+    NumberOfLineNumbers: 0
+    Type: STYP_DATA (0x40)
+    Relocation {
+        VirtualAddress: 0x6C
+        Symbol: ".main" (0x9)
+        Size: 0x1F
+        Type: R_POS (0x0)
+    }
+    Relocation {
+        VirtualAddress: 0x70
+        Symbol: "TOC" (0xF)
+        Size: 0x1F
+        Type: R_POS (0x0)
+    }
+    Relocation {
+        VirtualAddress: 0x78
+        Symbol: ".rodata.str1.1L...str" (0xB)
+        Size: 0x1F
+        Type: R_POS (0x0)
+    }
+}
+Symbol {
+    Index: 0
+    Name: ".file"
+    Value: 0x0
+    Section: N_DEBUG (-2)
+    SourceLanguage: 0x0
+    CpuVersion: 0x3
+    StorageClass: C_FILE (0x67)
+    NumberOfAuxSymbols: 2
+    FileAux {
+        Index: 1
+        Name: "base.c"
+        Type: XFT_FN (0x0)
+    }
+    FileAux {
+        Index: 2
+        Name: "IBM Open XL C/C++ for AIX 17.1.1 (5725-C72, 5765-J18), LLVM version 16.0.0git" (0x4)
+        Type: XFT_CT (0x1)
+    }
+}
+Symbol {
+    Index: 3
+    Name: ".printf"
+    Value: 0x0
+    Section: N_UNDEF (0)
+    Type: 0x0
+    StorageClass: C_EXT (0x2)
+    NumberOfAuxSymbols: 1
+    CsectAux {
+        Index: 4
+        SectionLength: 0x0
+        ParameterHashOffset: 0x0
+        ParameterHashSectionNumber: 0
+        Alignment: 0x0
+        Type: XTY_ER (0x0)
+        StorageMappingClass: XMC_PR (0x0)
+        StabOffset: 0x0
+        StabSectionNumber: 0
+    }
+}
+Symbol {
+    Index: 5
+    Name: "printf"
+    Value: 0x0
+    Section: N_UNDEF (0)
+    Type: 0x0
+    StorageClass: C_EXT (0x2)
+    NumberOfAuxSymbols: 1
+    CsectAux {
+        Index: 6
+        SectionLength: 0x0
+        ParameterHashOffset: 0x0
+        ParameterHashSectionNumber: 0
+        Alignment: 0x0
+        Type: XTY_ER (0x0)
+        StorageMappingClass: XMC_DS (0xA)
+        StabOffset: 0x0
+        StabSectionNumber: 0
+    }
+}
+Symbol {
+    Index: 7
+    Name: ".text"
+    Value: 0x0
+    Section: ".text" (0x1)
+    Type: 0x0
+    StorageClass: C_HIDEXT (0x6B)
+    NumberOfAuxSymbols: 1
+    CsectAux {
+        Index: 8
+        SectionLength: 0x5B
+        ParameterHashOffset: 0x0
+        ParameterHashSectionNumber: 0
+        Alignment: 0x5
+        Type: XTY_SD (0x1)
+        StorageMappingClass: XMC_PR (0x0)
+        StabOffset: 0x0
+        StabSectionNumber: 0
+    }
+}
+Symbol {
+    Index: 9
+    Name: ".main"
+    Value: 0x0
+    Section: ".text" (0x1)
+    Type: 0x0
+    StorageClass: C_EXT (0x2)
+    NumberOfAuxSymbols: 1
+    CsectAux {
+        Index: 10
+        SectionLength: 0x7
+        ParameterHashOffset: 0x0
+        ParameterHashSectionNumber: 0
+        Alignment: 0x0
+        Type: XTY_LD (0x2)
+        StorageMappingClass: XMC_PR (0x0)
+        StabOffset: 0x0
+        StabSectionNumber: 0
+    }
+}
+Symbol {
+    Index: 11
+    Name: ".rodata.str1.1L...str" (0x52)
+    Value: 0x5C
+    Section: ".text" (0x1)
+    Type: 0x0
+    StorageClass: C_HIDEXT (0x6B)
+    NumberOfAuxSymbols: 1
+    CsectAux {
+        Index: 12
+        SectionLength: 0xD
+        ParameterHashOffset: 0x0
+        ParameterHashSectionNumber: 0
+        Alignment: 0x2
+        Type: XTY_SD (0x1)
+        StorageMappingClass: XMC_RO (0x1)
+        StabOffset: 0x0
+        StabSectionNumber: 0
+    }
+}
+Symbol {
+    Index: 13
+    Name: "main"
+    Value: 0x6C
+    Section: ".data" (0x2)
+    Type: 0x0
+    StorageClass: C_EXT (0x2)
+    NumberOfAuxSymbols: 1
+    CsectAux {
+        Index: 14
+        SectionLength: 0xC
+        ParameterHashOffset: 0x0
+        ParameterHashSectionNumber: 0
+        Alignment: 0x2
+        Type: XTY_SD (0x1)
+        StorageMappingClass: XMC_DS (0xA)
+        StabOffset: 0x0
+        StabSectionNumber: 0
+    }
+}
+Symbol {
+    Index: 15
+    Name: "TOC"
+    Value: 0x78
+    Section: ".data" (0x2)
+    Type: 0x0
+    StorageClass: C_HIDEXT (0x6B)
+    NumberOfAuxSymbols: 1
+    CsectAux {
+        Index: 16
+        SectionLength: 0x0
+        ParameterHashOffset: 0x0
+        ParameterHashSectionNumber: 0
+        Alignment: 0x2
+        Type: XTY_SD (0x1)
+        StorageMappingClass: XMC_TC0 (0xF)
+        StabOffset: 0x0
+        StabSectionNumber: 0
+    }
+}
+Symbol {
+    Index: 17
+    Name: ".rodata.str1.1L...str" (0x68)
+    Value: 0x78
+    Section: ".data" (0x2)
+    Type: 0x0
+    StorageClass: C_HIDEXT (0x6B)
+    NumberOfAuxSymbols: 1
+    CsectAux {
+        Index: 18
+        SectionLength: 0x4
+        ParameterHashOffset: 0x0
+        ParameterHashSectionNumber: 0
+        Alignment: 0x2
+        Type: XTY_SD (0x1)
+        StorageMappingClass: XMC_TC (0x3)
+        StabOffset: 0x0
+        StabSectionNumber: 0
+    }
+}
