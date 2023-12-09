@@ -301,7 +301,7 @@ impl<'a> Writer<'a> {
 
     /// Reserve a symbol table entry.
     ///
-    /// This must be called before [`Self::reserve_symtab`].
+    /// This must be called before [`Self::reserve_symtab_strtab`].
     pub fn reserve_symbol_index(&mut self) -> u32 {
         debug_assert_eq!(self.symtab_offset, 0);
         let index = self.symtab_num;
@@ -339,7 +339,7 @@ impl<'a> Writer<'a> {
     ///
     /// Returns the number of auxiliary symbols required.
     ///
-    /// This must be called before [`Self::reserve_symtab`].
+    /// This must be called before [`Self::reserve_symtab_strtab`].
     pub fn reserve_aux_file_name(&mut self, name: &[u8]) -> u8 {
         debug_assert_eq!(self.symtab_offset, 0);
         let aux_count = (name.len() + pe::IMAGE_SIZEOF_SYMBOL - 1) / pe::IMAGE_SIZEOF_SYMBOL;
@@ -360,7 +360,7 @@ impl<'a> Writer<'a> {
     ///
     /// Returns the number of auxiliary symbols required.
     ///
-    /// This must be called before [`Self::reserve_symtab`].
+    /// This must be called before [`Self::reserve_symtab_strtab`].
     pub fn reserve_aux_section(&mut self) -> u8 {
         debug_assert_eq!(self.symtab_offset, 0);
         self.symtab_num += 1;

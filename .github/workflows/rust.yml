@@ -129,4 +129,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - run: cargo doc --no-default-features --features doc
+      - run: cargo rustdoc --no-default-features --features doc
+        env:
+          RUSTDOCFLAGS: "-D warnings"

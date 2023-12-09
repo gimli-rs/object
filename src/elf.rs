@@ -4196,14 +4196,14 @@ pub const R_ARM_PC13: u32 = 4;
 pub const R_ARM_ABS16: u32 = 5;
 /// Direct 12 bit
 pub const R_ARM_ABS12: u32 = 6;
-/// Direct & 0x7C (LDR, STR).
+/// Direct & 0x7C (`LDR`, `STR`).
 pub const R_ARM_THM_ABS5: u32 = 7;
 /// Direct 8 bit
 pub const R_ARM_ABS8: u32 = 8;
 pub const R_ARM_SBREL32: u32 = 9;
-/// PC relative 24 bit (Thumb32 BL).
+/// PC relative 24 bit (Thumb32 `BL`).
 pub const R_ARM_THM_PC22: u32 = 10;
-/// PC relative & 0x3FC (Thumb16 LDR, ADD, ADR).
+/// PC relative & 0x3FC (Thumb16 `LDR`, `ADD`, `ADR`).
 pub const R_ARM_THM_PC8: u32 = 11;
 pub const R_ARM_AMP_VCALL9: u32 = 12;
 /// Obsolete static relocation.
@@ -4238,11 +4238,11 @@ pub const R_ARM_GOTPC: u32 = 25;
 pub const R_ARM_GOT32: u32 = 26;
 /// Deprecated, 32 bit PLT address.
 pub const R_ARM_PLT32: u32 = 27;
-/// PC relative 24 bit (BL, BLX).
+/// PC relative 24 bit (`BL`, `BLX`).
 pub const R_ARM_CALL: u32 = 28;
-/// PC relative 24 bit (B, BL<cond>).
+/// PC relative 24 bit (`B`, `BL<cond>`).
 pub const R_ARM_JUMP24: u32 = 29;
-/// PC relative 24 bit (Thumb32 B.W).
+/// PC relative 24 bit (Thumb32 `B.W`).
 pub const R_ARM_THM_JUMP24: u32 = 30;
 /// Adjust by program base.
 pub const R_ARM_BASE_ABS: u32 = 31;
@@ -4265,99 +4265,99 @@ pub const R_ARM_V4BX: u32 = 40;
 pub const R_ARM_TARGET2: u32 = 41;
 /// 32 bit PC relative.
 pub const R_ARM_PREL31: u32 = 42;
-/// Direct 16-bit (MOVW).
+/// Direct 16-bit (`MOVW`).
 pub const R_ARM_MOVW_ABS_NC: u32 = 43;
-/// Direct high 16-bit (MOVT).
+/// Direct high 16-bit (`MOVT`).
 pub const R_ARM_MOVT_ABS: u32 = 44;
-/// PC relative 16-bit (MOVW).
+/// PC relative 16-bit (`MOVW`).
 pub const R_ARM_MOVW_PREL_NC: u32 = 45;
 /// PC relative (MOVT).
 pub const R_ARM_MOVT_PREL: u32 = 46;
-/// Direct 16 bit (Thumb32 MOVW).
+/// Direct 16 bit (Thumb32 `MOVW`).
 pub const R_ARM_THM_MOVW_ABS_NC: u32 = 47;
-/// Direct high 16 bit (Thumb32 MOVT).
+/// Direct high 16 bit (Thumb32 `MOVT`).
 pub const R_ARM_THM_MOVT_ABS: u32 = 48;
-/// PC relative 16 bit (Thumb32 MOVW).
+/// PC relative 16 bit (Thumb32 `MOVW`).
 pub const R_ARM_THM_MOVW_PREL_NC: u32 = 49;
-/// PC relative high 16 bit (Thumb32 MOVT).
+/// PC relative high 16 bit (Thumb32 `MOVT`).
 pub const R_ARM_THM_MOVT_PREL: u32 = 50;
-/// PC relative 20 bit (Thumb32 B<cond>.W).
+/// PC relative 20 bit (Thumb32 `B<cond>.W`).
 pub const R_ARM_THM_JUMP19: u32 = 51;
-/// PC relative X & 0x7E (Thumb16 CBZ, CBNZ).
+/// PC relative X & 0x7E (Thumb16 `CBZ`, `CBNZ`).
 pub const R_ARM_THM_JUMP6: u32 = 52;
-/// PC relative 12 bit (Thumb32 ADR.W).
+/// PC relative 12 bit (Thumb32 `ADR.W`).
 pub const R_ARM_THM_ALU_PREL_11_0: u32 = 53;
-/// PC relative 12 bit (Thumb32 LDR{D,SB,H,SH}).
+/// PC relative 12 bit (Thumb32 `LDR{D,SB,H,SH}`).
 pub const R_ARM_THM_PC12: u32 = 54;
 /// Direct 32-bit.
 pub const R_ARM_ABS32_NOI: u32 = 55;
 /// PC relative 32-bit.
 pub const R_ARM_REL32_NOI: u32 = 56;
-/// PC relative (ADD, SUB).
+/// PC relative (`ADD`, `SUB`).
 pub const R_ARM_ALU_PC_G0_NC: u32 = 57;
-/// PC relative (ADD, SUB).
+/// PC relative (`ADD`, `SUB`).
 pub const R_ARM_ALU_PC_G0: u32 = 58;
-/// PC relative (ADD, SUB).
+/// PC relative (`ADD`, `SUB`).
 pub const R_ARM_ALU_PC_G1_NC: u32 = 59;
-/// PC relative (ADD, SUB).
+/// PC relative (`ADD`, `SUB`).
 pub const R_ARM_ALU_PC_G1: u32 = 60;
-/// PC relative (ADD, SUB).
+/// PC relative (`ADD`, `SUB`).
 pub const R_ARM_ALU_PC_G2: u32 = 61;
-/// PC relative (LDR,STR,LDRB,STRB).
+/// PC relative (`LDR`,`STR`,`LDRB`,`STRB`).
 pub const R_ARM_LDR_PC_G1: u32 = 62;
-/// PC relative (LDR,STR,LDRB,STRB).
+/// PC relative (`LDR`,`STR`,`LDRB`,`STRB`).
 pub const R_ARM_LDR_PC_G2: u32 = 63;
-/// PC relative (STR{D,H}, LDR{D,SB,H,SH}).
+/// PC relative (`STR{D,H}`, `LDR{D,SB,H,SH}`).
 pub const R_ARM_LDRS_PC_G0: u32 = 64;
-/// PC relative (STR{D,H}, LDR{D,SB,H,SH}).
+/// PC relative (`STR{D,H}`, `LDR{D,SB,H,SH}`).
 pub const R_ARM_LDRS_PC_G1: u32 = 65;
-/// PC relative (STR{D,H}, LDR{D,SB,H,SH}).
+/// PC relative (`STR{D,H}`, `LDR{D,SB,H,SH}`).
 pub const R_ARM_LDRS_PC_G2: u32 = 66;
-/// PC relative (LDC, STC).
+/// PC relative (`LDC`, `STC`).
 pub const R_ARM_LDC_PC_G0: u32 = 67;
-/// PC relative (LDC, STC).
+/// PC relative (`LDC`, `STC`).
 pub const R_ARM_LDC_PC_G1: u32 = 68;
-/// PC relative (LDC, STC).
+/// PC relative (`LDC`, `STC`).
 pub const R_ARM_LDC_PC_G2: u32 = 69;
-/// Program base relative (ADD,SUB).
+/// Program base relative (`ADD`,`SUB`).
 pub const R_ARM_ALU_SB_G0_NC: u32 = 70;
-/// Program base relative (ADD,SUB).
+/// Program base relative (`ADD`,`SUB`).
 pub const R_ARM_ALU_SB_G0: u32 = 71;
-/// Program base relative (ADD,SUB).
+/// Program base relative (`ADD`,`SUB`).
 pub const R_ARM_ALU_SB_G1_NC: u32 = 72;
-/// Program base relative (ADD,SUB).
+/// Program base relative (`ADD`,`SUB`).
 pub const R_ARM_ALU_SB_G1: u32 = 73;
-/// Program base relative (ADD,SUB).
+/// Program base relative (`ADD`,`SUB`).
 pub const R_ARM_ALU_SB_G2: u32 = 74;
-/// Program base relative (LDR, STR, LDRB, STRB).
+/// Program base relative (`LDR`, `STR`, `LDRB`, `STRB`).
 pub const R_ARM_LDR_SB_G0: u32 = 75;
-/// Program base relative (LDR, STR, LDRB, STRB).
+/// Program base relative (`LDR`, `STR`, `LDRB`, `STRB`).
 pub const R_ARM_LDR_SB_G1: u32 = 76;
-/// Program base relative (LDR, STR, LDRB, STRB).
+/// Program base relative (`LDR`, `STR`, `LDRB`, `STRB`).
 pub const R_ARM_LDR_SB_G2: u32 = 77;
-/// Program base relative (LDR, STR, LDRB, STRB).
+/// Program base relative (`LDR`, `STR`, `LDRB`, `STRB`).
 pub const R_ARM_LDRS_SB_G0: u32 = 78;
-/// Program base relative (LDR, STR, LDRB, STRB).
+/// Program base relative (`LDR`, `STR`, `LDRB`, `STRB`).
 pub const R_ARM_LDRS_SB_G1: u32 = 79;
-/// Program base relative (LDR, STR, LDRB, STRB).
+/// Program base relative (`LDR`, `STR`, `LDRB`, `STRB`).
 pub const R_ARM_LDRS_SB_G2: u32 = 80;
-/// Program base relative (LDC,STC).
+/// Program base relative (`LDC`,`STC`).
 pub const R_ARM_LDC_SB_G0: u32 = 81;
-/// Program base relative (LDC,STC).
+/// Program base relative (`LDC`,`STC`).
 pub const R_ARM_LDC_SB_G1: u32 = 82;
-/// Program base relative (LDC,STC).
+/// Program base relative (`LDC`,`STC`).
 pub const R_ARM_LDC_SB_G2: u32 = 83;
-/// Program base relative 16 bit (MOVW).
+/// Program base relative 16 bit (`MOVW`).
 pub const R_ARM_MOVW_BREL_NC: u32 = 84;
-/// Program base relative high 16 bit (MOVT).
+/// Program base relative high 16 bit (`MOVT`).
 pub const R_ARM_MOVT_BREL: u32 = 85;
-/// Program base relative 16 bit (MOVW).
+/// Program base relative 16 bit (`MOVW`).
 pub const R_ARM_MOVW_BREL: u32 = 86;
-/// Program base relative 16 bit (Thumb32 MOVW).
+/// Program base relative 16 bit (Thumb32 `MOVW`).
 pub const R_ARM_THM_MOVW_BREL_NC: u32 = 87;
-/// Program base relative high 16 bit (Thumb32 MOVT).
+/// Program base relative high 16 bit (Thumb32 `MOVT`).
 pub const R_ARM_THM_MOVT_BREL: u32 = 88;
-/// Program base relative 16 bit (Thumb32 MOVW).
+/// Program base relative 16 bit (Thumb32 `MOVW`).
 pub const R_ARM_THM_MOVW_BREL: u32 = 89;
 pub const R_ARM_TLS_GOTDESC: u32 = 90;
 pub const R_ARM_TLS_CALL: u32 = 91;
@@ -4369,16 +4369,16 @@ pub const R_ARM_PLT32_ABS: u32 = 94;
 pub const R_ARM_GOT_ABS: u32 = 95;
 /// PC relative GOT entry.
 pub const R_ARM_GOT_PREL: u32 = 96;
-/// GOT entry relative to GOT origin (LDR).
+/// GOT entry relative to GOT origin (`LDR`).
 pub const R_ARM_GOT_BREL12: u32 = 97;
-/// 12 bit, GOT entry relative to GOT origin (LDR, STR).
+/// 12 bit, GOT entry relative to GOT origin (`LDR`, `STR`).
 pub const R_ARM_GOTOFF12: u32 = 98;
 pub const R_ARM_GOTRELAX: u32 = 99;
 pub const R_ARM_GNU_VTENTRY: u32 = 100;
 pub const R_ARM_GNU_VTINHERIT: u32 = 101;
-/// PC relative & 0xFFE (Thumb16 B).
+/// PC relative & 0xFFE (Thumb16 `B`).
 pub const R_ARM_THM_PC11: u32 = 102;
-/// PC relative & 0x1FE (Thumb16 B/B<cond>).
+/// PC relative & 0x1FE (Thumb16 `B`/`B<cond>`).
 pub const R_ARM_THM_PC9: u32 = 103;
 /// PC-rel 32 bit for global dynamic thread local data
 pub const R_ARM_TLS_GD32: u32 = 104;
@@ -4390,18 +4390,18 @@ pub const R_ARM_TLS_LDO32: u32 = 106;
 pub const R_ARM_TLS_IE32: u32 = 107;
 /// 32 bit offset relative to static TLS block
 pub const R_ARM_TLS_LE32: u32 = 108;
-/// 12 bit relative to TLS block (LDR, STR).
+/// 12 bit relative to TLS block (`LDR`, `STR`).
 pub const R_ARM_TLS_LDO12: u32 = 109;
-/// 12 bit relative to static TLS block (LDR, STR).
+/// 12 bit relative to static TLS block (`LDR`, `STR`).
 pub const R_ARM_TLS_LE12: u32 = 110;
-/// 12 bit GOT entry relative to GOT origin (LDR).
+/// 12 bit GOT entry relative to GOT origin (`LDR`).
 pub const R_ARM_TLS_IE12GP: u32 = 111;
 /// Obsolete.
 pub const R_ARM_ME_TOO: u32 = 128;
 pub const R_ARM_THM_TLS_DESCSEQ: u32 = 129;
 pub const R_ARM_THM_TLS_DESCSEQ16: u32 = 129;
 pub const R_ARM_THM_TLS_DESCSEQ32: u32 = 130;
-/// GOT entry relative to GOT origin, 12 bit (Thumb32 LDR).
+/// GOT entry relative to GOT origin, 12 bit (Thumb32 `LDR`).
 pub const R_ARM_THM_GOT_BREL12: u32 = 131;
 pub const R_ARM_IRELATIVE: u32 = 160;
 pub const R_ARM_RXPC25: u32 = 249;
