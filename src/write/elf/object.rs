@@ -281,34 +281,34 @@ impl<'a> Object<'a> {
 
         // Start writing.
         let e_type = elf::ET_REL;
-        let e_machine = match self.architecture {
-            Architecture::Aarch64 => elf::EM_AARCH64,
-            Architecture::Aarch64_Ilp32 => elf::EM_AARCH64,
-            Architecture::Arm => elf::EM_ARM,
-            Architecture::Avr => elf::EM_AVR,
-            Architecture::Bpf => elf::EM_BPF,
-            Architecture::Csky => elf::EM_CSKY,
-            Architecture::I386 => elf::EM_386,
-            Architecture::X86_64 => elf::EM_X86_64,
-            Architecture::X86_64_X32 => elf::EM_X86_64,
-            Architecture::Hexagon => elf::EM_HEXAGON,
-            Architecture::LoongArch64 => elf::EM_LOONGARCH,
-            Architecture::Mips => elf::EM_MIPS,
-            Architecture::Mips64 => elf::EM_MIPS,
-            Architecture::Msp430 => elf::EM_MSP430,
-            Architecture::PowerPc => elf::EM_PPC,
-            Architecture::PowerPc64 => elf::EM_PPC64,
-            Architecture::Riscv32 => elf::EM_RISCV,
-            Architecture::Riscv64 => elf::EM_RISCV,
-            Architecture::S390x => elf::EM_S390,
-            Architecture::Sbf => elf::EM_SBF,
-            Architecture::Sharc => elf::EM_SHARC,
-            Architecture::Sparc64 => elf::EM_SPARCV9,
-            Architecture::Xtensa => elf::EM_XTENSA,
+        let e_machine = match (self.architecture, self.sub_architecture) {
+            (Architecture::Aarch64, None) => elf::EM_AARCH64,
+            (Architecture::Aarch64_Ilp32, None) => elf::EM_AARCH64,
+            (Architecture::Arm, None) => elf::EM_ARM,
+            (Architecture::Avr, None) => elf::EM_AVR,
+            (Architecture::Bpf, None) => elf::EM_BPF,
+            (Architecture::Csky, None) => elf::EM_CSKY,
+            (Architecture::I386, None) => elf::EM_386,
+            (Architecture::X86_64, None) => elf::EM_X86_64,
+            (Architecture::X86_64_X32, None) => elf::EM_X86_64,
+            (Architecture::Hexagon, None) => elf::EM_HEXAGON,
+            (Architecture::LoongArch64, None) => elf::EM_LOONGARCH,
+            (Architecture::Mips, None) => elf::EM_MIPS,
+            (Architecture::Mips64, None) => elf::EM_MIPS,
+            (Architecture::Msp430, None) => elf::EM_MSP430,
+            (Architecture::PowerPc, None) => elf::EM_PPC,
+            (Architecture::PowerPc64, None) => elf::EM_PPC64,
+            (Architecture::Riscv32, None) => elf::EM_RISCV,
+            (Architecture::Riscv64, None) => elf::EM_RISCV,
+            (Architecture::S390x, None) => elf::EM_S390,
+            (Architecture::Sbf, None) => elf::EM_SBF,
+            (Architecture::Sharc, None) => elf::EM_SHARC,
+            (Architecture::Sparc64, None) => elf::EM_SPARCV9,
+            (Architecture::Xtensa, None) => elf::EM_XTENSA,
             _ => {
                 return Err(Error(format!(
-                    "unimplemented architecture {:?}",
-                    self.architecture
+                    "unimplemented architecture {:?} with sub-architecture {:?}",
+                    self.architecture, self.sub_architecture
                 )));
             }
         };

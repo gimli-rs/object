@@ -14,18 +14,15 @@ use crate::read::pe;
 use crate::read::wasm;
 #[cfg(feature = "xcoff")]
 use crate::read::xcoff;
-use crate::{
-    read::{
-        self, Architecture, BinaryFormat, CodeView, ComdatKind, CompressedData,
-        CompressedFileRange, Error, Export, FileFlags, FileKind, Import, Object, ObjectComdat,
-        ObjectKind, ObjectMap, ObjectSection, ObjectSegment, ObjectSymbol, ObjectSymbolTable,
-        ReadRef, Relocation, Result, SectionFlags, SectionIndex, SectionKind, SegmentFlags,
-        SymbolFlags, SymbolIndex, SymbolKind, SymbolMap, SymbolMapName, SymbolScope, SymbolSection,
-    },
-    SubArchitecture,
+use crate::read::{
+    self, Architecture, BinaryFormat, CodeView, ComdatKind, CompressedData, CompressedFileRange,
+    Error, Export, FileFlags, FileKind, Import, Object, ObjectComdat, ObjectKind, ObjectMap,
+    ObjectSection, ObjectSegment, ObjectSymbol, ObjectSymbolTable, ReadRef, Relocation, Result,
+    SectionFlags, SectionIndex, SectionKind, SegmentFlags, SymbolFlags, SymbolIndex, SymbolKind,
+    SymbolMap, SymbolMapName, SymbolScope, SymbolSection,
 };
 #[allow(unused_imports)]
-use crate::{AddressSize, Endian, Endianness};
+use crate::{AddressSize, Endian, Endianness, SubArchitecture};
 
 /// Evaluate an expression on the contents of a file format enum.
 ///

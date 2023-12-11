@@ -470,20 +470,24 @@ impl<'a> Object<'a> {
             .map_err(|_| Error(String::from("Cannot allocate buffer")))?;
 
         // Write file header.
-        let (cputype, mut cpusubtype) = match self.architecture {
-            Architecture::Arm => (macho::CPU_TYPE_ARM, macho::CPU_SUBTYPE_ARM_ALL),
-            Architecture::Aarch64 => (macho::CPU_TYPE_ARM64, macho::CPU_SUBTYPE_ARM64_ALL),
-            Architecture::Aarch64_Ilp32 => {
+        let (cputype, mut cpusubtype) = match (self.architecture, self.sub_architecture) {
+            (Architecture::Arm, None) => (macho::CPU_TYPE_ARM, macho::CPU_SUBTYPE_ARM_ALL),
+            (Architecture::Aarch64, None) => (macho::CPU_TYPE_ARM64, macho::CPU_SUBTYPE_ARM64_ALL),
+            (Architecture::Aarch64_Ilp32, None) => {
                 (macho::CPU_TYPE_ARM64_32, macho::CPU_SUBTYPE_ARM64_32_V8)
             }
-            Architecture::I386 => (macho::CPU_TYPE_X86, macho::CPU_SUBTYPE_I386_ALL),
-            Architecture::X86_64 => (macho::CPU_TYPE_X86_64, macho::CPU_SUBTYPE_X86_64_ALL),
-            Architecture::PowerPc => (macho::CPU_TYPE_POWERPC, macho::CPU_SUBTYPE_POWERPC_ALL),
-            Architecture::PowerPc64 => (macho::CPU_TYPE_POWERPC64, macho::CPU_SUBTYPE_POWERPC_ALL),
+            (Architecture::I386, None) => (macho::CPU_TYPE_X86, macho::CPU_SUBTYPE_I386_ALL),
+            (Architecture::X86_64, None) => (macho::CPU_TYPE_X86_64, macho::CPU_SUBTYPE_X86_64_ALL),
+            (Architecture::PowerPc, None) => {
+                (macho::CPU_TYPE_POWERPC, macho::CPU_SUBTYPE_POWERPC_ALL)
+            }
+            (Architecture::PowerPc64, None) => {
+                (macho::CPU_TYPE_POWERPC64, macho::CPU_SUBTYPE_POWERPC_ALL)
+            }
             _ => {
                 return Err(Error(format!(
-                    "unimplemented architecture {:?}",
-                    self.architecture
+                    "unimplemented architecture {:?} with sub-architecture {:?}",
+                    self.architecture, self.sub_architecture
                 )));
             }
         };

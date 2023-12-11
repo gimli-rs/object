@@ -29,7 +29,7 @@ fn coff_any() {
     .copied()
     {
         let mut object = write::Object::new(BinaryFormat::Coff, arch, Endianness::Little);
-        object.set_sub_architecture(sub_arch).unwrap();
+        object.set_sub_architecture(sub_arch);
 
         object.add_file_symbol(b"file.c".to_vec());
 

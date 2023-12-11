@@ -1,6 +1,6 @@
 //! Interface for writing object files.
 
-use alloc::borrow::{Cow, ToOwned};
+use alloc::borrow::Cow;
 use alloc::string::String;
 use alloc::vec::Vec;
 use core::{fmt, result, str};
@@ -126,17 +126,8 @@ impl<'a> Object<'a> {
     }
 
     /// Specify the sub-architecture.
-    pub fn set_sub_architecture(
-        &mut self,
-        sub_architecture: Option<SubArchitecture>,
-    ) -> Result<()> {
-        match (self.architecture, sub_architecture) {
-            (Architecture::Aarch64, Some(SubArchitecture::Arm64EC)) | (_, None) => {
-                self.sub_architecture = sub_architecture;
-                Ok(())
-            }
-            _ => Err(Error("Unsupported sub-architecture".to_owned())),
-        }
+    pub fn set_sub_architecture(&mut self, sub_architecture: Option<SubArchitecture>) {
+        self.sub_architecture = sub_architecture;
     }
 
     /// Return the current mangling setting.
