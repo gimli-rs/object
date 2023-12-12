@@ -9,7 +9,7 @@ use crate::read::{
     self, Architecture, ComdatKind, Error, Export, FileFlags, Import, NoDynamicRelocationIterator,
     Object, ObjectComdat, ObjectKind, ReadError, ReadRef, Result, SectionIndex, SymbolIndex,
 };
-use crate::{pe, ByteString, Bytes, CodeView, LittleEndian as LE, Pod, U32};
+use crate::{pe, ByteString, Bytes, CodeView, LittleEndian as LE, Pod, SubArchitecture, U32};
 
 use super::{
     DataDirectories, ExportTable, ImageThunkData, ImportTable, PeSection, PeSectionIterator,
@@ -147,10 +147,17 @@ where
     fn architecture(&self) -> Architecture {
         match self.nt_headers.file_header().machine.get(LE) {
             pe::IMAGE_FILE_MACHINE_ARMNT => Architecture::Arm,
-            pe::IMAGE_FILE_MACHINE_ARM64 => Architecture::Aarch64,
+            pe::IMAGE_FILE_MACHINE_ARM64 | pe::IMAGE_FILE_MACHINE_ARM64EC => Architecture::Aarch64,
             pe::IMAGE_FILE_MACHINE_I386 => Architecture::I386,
             pe::IMAGE_FILE_MACHINE_AMD64 => Architecture::X86_64,
             _ => Architecture::Unknown,
+        }
+    }
+
+    fn sub_architecture(&self) -> Option<SubArchitecture> {
+        match self.nt_headers.file_header().machine.get(LE) {
+            pe::IMAGE_FILE_MACHINE_ARM64EC => Some(SubArchitecture::Arm64EC),
+            _ => None,
         }
     }
 

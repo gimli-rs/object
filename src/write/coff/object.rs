@@ -268,15 +268,18 @@ impl<'a> Object<'a> {
 
         // Start writing.
         writer.write_file_header(writer::FileHeader {
-            machine: match self.architecture {
-                Architecture::Arm => coff::IMAGE_FILE_MACHINE_ARMNT,
-                Architecture::Aarch64 => coff::IMAGE_FILE_MACHINE_ARM64,
-                Architecture::I386 => coff::IMAGE_FILE_MACHINE_I386,
-                Architecture::X86_64 => coff::IMAGE_FILE_MACHINE_AMD64,
+            machine: match (self.architecture, self.sub_architecture) {
+                (Architecture::Arm, None) => coff::IMAGE_FILE_MACHINE_ARMNT,
+                (Architecture::Aarch64, None) => coff::IMAGE_FILE_MACHINE_ARM64,
+                (Architecture::Aarch64, Some(SubArchitecture::Arm64EC)) => {
+                    coff::IMAGE_FILE_MACHINE_ARM64EC
+                }
+                (Architecture::I386, None) => coff::IMAGE_FILE_MACHINE_I386,
+                (Architecture::X86_64, None) => coff::IMAGE_FILE_MACHINE_AMD64,
                 _ => {
                     return Err(Error(format!(
-                        "unimplemented architecture {:?}",
-                        self.architecture
+                        "unimplemented architecture {:?} with sub-architecture {:?}",
+                        self.architecture, self.sub_architecture
                     )));
                 }
             },

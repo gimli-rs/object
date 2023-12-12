@@ -125,6 +125,9 @@ fn dump_parsed_object<W: Write, E: Write>(w: &mut W, e: &mut E, file: &object::F
     )?;
     writeln!(w, "Kind: {:?}", file.kind())?;
     writeln!(w, "Architecture: {:?}", file.architecture())?;
+    if let Some(sub_architecture) = file.sub_architecture() {
+        writeln!(w, "Sub-Architecture: {:?}", sub_architecture)?;
+    }
     writeln!(w, "Flags: {:x?}", file.flags())?;
     writeln!(
         w,
@@ -268,6 +271,9 @@ fn dump_import<W: Write, E: Write>(w: &mut W, e: &mut E, data: &[u8]) -> Result<
 
     writeln!(w, "Format: Short Import File")?;
     writeln!(w, "Architecture: {:?}", file.architecture())?;
+    if let Some(sub_architecture) = file.sub_architecture() {
+        writeln!(w, "Sub-Architecture: {:?}", sub_architecture)?;
+    }
     writeln!(w, "DLL: {:?}", String::from_utf8_lossy(file.dll()))?;
     writeln!(w, "Symbol: {:?}", String::from_utf8_lossy(file.symbol()))?;
     write!(w, "Import: ")?;

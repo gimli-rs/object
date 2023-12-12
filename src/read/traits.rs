@@ -4,8 +4,8 @@ use alloc::vec::Vec;
 use crate::read::{
     self, Architecture, CodeView, ComdatKind, CompressedData, CompressedFileRange, Export,
     FileFlags, Import, ObjectKind, ObjectMap, Relocation, Result, SectionFlags, SectionIndex,
-    SectionKind, SegmentFlags, SymbolFlags, SymbolIndex, SymbolKind, SymbolMap, SymbolMapName,
-    SymbolScope, SymbolSection,
+    SectionKind, SegmentFlags, SubArchitecture, SymbolFlags, SymbolIndex, SymbolKind, SymbolMap,
+    SymbolMapName, SymbolScope, SymbolSection,
 };
 use crate::Endianness;
 
@@ -50,6 +50,11 @@ pub trait Object<'data: 'file, 'file>: read::private::Sealed {
 
     /// Get the architecture type of the file.
     fn architecture(&self) -> Architecture;
+
+    /// Get the sub-architecture type of the file.
+    fn sub_architecture(&self) -> Option<SubArchitecture> {
+        None
+    }
 
     /// Get the endianness of the file.
     #[inline]

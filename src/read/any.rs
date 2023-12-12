@@ -22,7 +22,7 @@ use crate::read::{
     SymbolMap, SymbolMapName, SymbolScope, SymbolSection,
 };
 #[allow(unused_imports)]
-use crate::{AddressSize, Endian, Endianness};
+use crate::{AddressSize, Endian, Endianness, SubArchitecture};
 
 /// Evaluate an expression on the contents of a file format enum.
 ///
@@ -321,6 +321,10 @@ where
 
     fn architecture(&self) -> Architecture {
         with_inner!(self, File, |x| x.architecture())
+    }
+
+    fn sub_architecture(&self) -> Option<SubArchitecture> {
+        with_inner!(self, File, |x| x.sub_architecture())
     }
 
     fn is_little_endian(&self) -> bool {

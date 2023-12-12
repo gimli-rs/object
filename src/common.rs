@@ -33,6 +33,14 @@ pub enum Architecture {
     Xtensa,
 }
 
+/// A CPU sub-architecture.
+#[allow(missing_docs)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[non_exhaustive]
+pub enum SubArchitecture {
+    Arm64EC,
+}
+
 impl Architecture {
     /// The size of an address value for this architecture.
     ///
