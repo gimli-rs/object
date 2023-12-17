@@ -8,14 +8,14 @@ use crate::read::{self, Bytes, ObjectSegment, ReadError, ReadRef, SegmentFlags};
 
 use super::{ElfFile, FileHeader, NoteIterator};
 
-/// An iterator over the segments of an `ElfFile32`.
+/// An iterator for the segments in an [`ElfFile32`](super::ElfFile32).
 pub type ElfSegmentIterator32<'data, 'file, Endian = Endianness, R = &'data [u8]> =
     ElfSegmentIterator<'data, 'file, elf::FileHeader32<Endian>, R>;
-/// An iterator over the segments of an `ElfFile64`.
+/// An iterator for the segments in an [`ElfFile64`](super::ElfFile64).
 pub type ElfSegmentIterator64<'data, 'file, Endian = Endianness, R = &'data [u8]> =
     ElfSegmentIterator<'data, 'file, elf::FileHeader64<Endian>, R>;
 
-/// An iterator over the segments of an `ElfFile`.
+/// An iterator for the segments in an [`ElfFile`].
 #[derive(Debug)]
 pub struct ElfSegmentIterator<'data, 'file, Elf, R = &'data [u8]>
 where
@@ -46,14 +46,16 @@ where
     }
 }
 
-/// A segment of an `ElfFile32`.
+/// A segment in an [`ElfFile32`](super::ElfFile32).
 pub type ElfSegment32<'data, 'file, Endian = Endianness, R = &'data [u8]> =
     ElfSegment<'data, 'file, elf::FileHeader32<Endian>, R>;
-/// A segment of an `ElfFile64`.
+/// A segment in an [`ElfFile64`](super::ElfFile64).
 pub type ElfSegment64<'data, 'file, Endian = Endianness, R = &'data [u8]> =
     ElfSegment<'data, 'file, elf::FileHeader64<Endian>, R>;
 
-/// A segment of an `ElfFile`.
+/// A segment in an [`ElfFile`].
+///
+/// Most functionality is provided by the [`ObjectSegment`] trait implementation.
 #[derive(Debug)]
 pub struct ElfSegment<'data, 'file, Elf, R = &'data [u8]>
 where
@@ -135,7 +137,7 @@ where
     }
 }
 
-/// A trait for generic access to `ProgramHeader32` and `ProgramHeader64`.
+/// A trait for generic access to [`elf::ProgramHeader32`] and [`elf::ProgramHeader64`].
 #[allow(missing_docs)]
 pub trait ProgramHeader: Debug + Pod {
     type Elf: FileHeader<ProgramHeader = Self, Endian = Self::Endian, Word = Self::Word>;

@@ -7,6 +7,8 @@ use crate::{pe, LittleEndian as LE, Pod, U16Bytes};
 use super::ImageNtHeaders;
 
 /// Information for parsing a PE import table.
+///
+/// Returned by [`DataDirectories::import_table`](super::DataDirectories::import_table).
 #[derive(Debug, Clone)]
 pub struct ImportTable<'data> {
     section_data: Bytes<'data>,
@@ -218,6 +220,9 @@ impl ImageThunkData for pe::ImageThunkData32 {
 }
 
 /// Information for parsing a PE delay-load import table.
+///
+/// Returned by
+/// [`DataDirectories::delay_load_import_table`](super::DataDirectories::delay_load_import_table).
 #[derive(Debug, Clone)]
 pub struct DelayLoadImportTable<'data> {
     section_data: Bytes<'data>,

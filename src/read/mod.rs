@@ -1,4 +1,45 @@
 //! Interface for reading object files.
+//!
+//! ## Unified read API
+//!
+//! The [`Object`] trait provides a unified read API for accessing common features of
+//! object files, such as sections and symbols. There is an implementation of this
+//! trait for [`File`], which allows reading any file format, as well as implementations
+//! for each file format:
+//! [`ElfFile`](elf::ElfFile), [`MachOFile`](macho::MachOFile), [`CoffFile`](coff::CoffFile),
+//! [`PeFile`](pe::PeFile), [`WasmFile`](wasm::WasmFile), [`XcoffFile`](xcoff::XcoffFile).
+//!
+//! ## Low level read API
+//!
+//! The submodules for each file format define helpers that operate on the raw structs.
+//! These can be used instead of the unified API, or in conjunction with it to access
+//! details that are not available via the unified API.
+//!
+//! See the [submodules](#modules) for examples of the low level read API.
+//!
+//! ## Naming Convention
+//!
+//! Types that form part of the unified API for a file format are prefixed with the
+//! name of the file format.
+//!
+//! ## Example for unified read API
+//!  ```no_run
+//! use object::{Object, ObjectSection};
+//! use std::error::Error;
+//! use std::fs;
+//!
+//! /// Reads a file and displays the name of each section.
+//! fn main() -> Result<(), Box<dyn Error>> {
+//! #   #[cfg(feature = "std")] {
+//!     let data = fs::read("path/to/binary")?;
+//!     let file = object::File::parse(&*data)?;
+//!     for section in file.sections() {
+//!         println!("{}", section.name()?);
+//!     }
+//! #   }
+//!     Ok(())
+//! }
+//! ```
 
 use alloc::borrow::Cow;
 use alloc::vec::Vec;
@@ -146,53 +187,85 @@ pub type NativeFile<'data, R = &'data [u8]> = wasm::WasmFile<'data, R>;
 #[non_exhaustive]
 pub enum FileKind {
     /// A Unix archive.
+    ///
+    /// See [`archive::ArchiveFile`].
     #[cfg(feature = "archive")]
     Archive,
     /// A COFF object file.
+    ///
+    /// See [`coff::CoffFile`].
     #[cfg(feature = "coff")]
     Coff,
     /// A COFF bigobj object file.
     ///
     /// This supports a larger number of sections.
+    ///
+    /// See [`coff::CoffBigFile`].
     #[cfg(feature = "coff")]
     CoffBig,
     /// A Windows short import file.
+    ///
+    /// See [`coff::ImportFile`].
     #[cfg(feature = "coff")]
     CoffImport,
     /// A dyld cache file containing Mach-O images.
+    ///
+    /// See [`macho::DyldCache`]
     #[cfg(feature = "macho")]
     DyldCache,
     /// A 32-bit ELF file.
+    ///
+    /// See [`elf::ElfFile32`].
     #[cfg(feature = "elf")]
     Elf32,
     /// A 64-bit ELF file.
+    ///
+    /// See [`elf::ElfFile64`].
     #[cfg(feature = "elf")]
     Elf64,
     /// A 32-bit Mach-O file.
+    ///
+    /// See [`macho::MachOFile32`].
     #[cfg(feature = "macho")]
     MachO32,
     /// A 64-bit Mach-O file.
+    ///
+    /// See [`macho::MachOFile64`].
     #[cfg(feature = "macho")]
     MachO64,
     /// A 32-bit Mach-O fat binary.
+    ///
+    /// See [`macho::FatHeader::parse_arch32`].
     #[cfg(feature = "macho")]
     MachOFat32,
     /// A 64-bit Mach-O fat binary.
+    ///
+    /// See [`macho::FatHeader::parse_arch64`].
     #[cfg(feature = "macho")]
     MachOFat64,
     /// A 32-bit PE file.
+    ///
+    /// See [`pe::PeFile32`].
     #[cfg(feature = "pe")]
     Pe32,
     /// A 64-bit PE file.
+    ///
+    /// See [`pe::PeFile64`].
     #[cfg(feature = "pe")]
     Pe64,
     /// A Wasm file.
+    ///
+    /// See [`wasm::WasmFile`].
     #[cfg(feature = "wasm")]
     Wasm,
     /// A 32-bit XCOFF file.
+    ///
+    /// See [`xcoff::XcoffFile32`].
     #[cfg(feature = "xcoff")]
     Xcoff32,
     /// A 64-bit XCOFF file.
+    ///
+    /// See [`xcoff::XcoffFile64`].
     #[cfg(feature = "xcoff")]
     Xcoff64,
 }
@@ -279,6 +352,8 @@ impl FileKind {
 }
 
 /// An object kind.
+///
+/// Returned by [`Object::kind`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[non_exhaustive]
 pub enum ObjectKind {
@@ -294,15 +369,15 @@ pub enum ObjectKind {
     Core,
 }
 
-/// The index used to identify a section of a file.
+/// The index used to identify a section in a file.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct SectionIndex(pub usize);
 
-/// The index used to identify a symbol of a file.
+/// The index used to identify a symbol in a symbol table.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct SymbolIndex(pub usize);
 
-/// The section where a symbol is defined.
+/// The section where an [`ObjectSymbol`] is defined.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[non_exhaustive]
 pub enum SymbolSection {
@@ -334,13 +409,17 @@ impl SymbolSection {
     }
 }
 
-/// An entry in a `SymbolMap`.
+/// An entry in a [`SymbolMap`].
 pub trait SymbolMapEntry {
     /// The symbol address.
     fn address(&self) -> u64;
 }
 
-/// A map from addresses to symbols.
+/// A map from addresses to symbol information.
+///
+/// The symbol information depends on the chosen entry type, such as [`SymbolMapName`].
+///
+/// Returned by [`Object::symbol_map`].
 #[derive(Debug, Default, Clone)]
 pub struct SymbolMap<T: SymbolMapEntry> {
     symbols: Vec<T>,
@@ -374,7 +453,7 @@ impl<T: SymbolMapEntry> SymbolMap<T> {
     }
 }
 
-/// A `SymbolMap` entry for symbol names.
+/// The type used for entries in a [`SymbolMap`] that maps from addresses to names.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct SymbolMapName<'data> {
     address: u64,
@@ -410,6 +489,8 @@ impl<'data> SymbolMapEntry for SymbolMapName<'data> {
 /// A map from addresses to symbol names and object files.
 ///
 /// This is derived from STAB entries in Mach-O files.
+///
+/// Returned by [`Object::object_map`].
 #[derive(Debug, Default, Clone)]
 pub struct ObjectMap<'data> {
     symbols: SymbolMap<ObjectMapEntry<'data>>,
@@ -437,7 +518,7 @@ impl<'data> ObjectMap<'data> {
     }
 }
 
-/// A `ObjectMap` entry.
+/// An [`ObjectMap`] entry.
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct ObjectMapEntry<'data> {
     address: u64,
@@ -488,6 +569,8 @@ impl<'data> SymbolMapEntry for ObjectMapEntry<'data> {
 }
 
 /// An imported symbol.
+///
+/// Returned by [`Object::imports`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Import<'data> {
     library: ByteString<'data>,
@@ -510,6 +593,8 @@ impl<'data> Import<'data> {
 }
 
 /// An exported symbol.
+///
+/// Returned by [`Object::exports`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Export<'data> {
     // TODO: and ordinal?
@@ -531,7 +616,7 @@ impl<'data> Export<'data> {
     }
 }
 
-/// PDB Information
+/// PDB information from the debug directory in a PE file.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct CodeView<'data> {
     guid: [u8; 16],
@@ -540,13 +625,13 @@ pub struct CodeView<'data> {
 }
 
 impl<'data> CodeView<'data> {
-    /// The path to the PDB as stored in CodeView
+    /// The path to the PDB as stored in CodeView.
     #[inline]
     pub fn path(&self) -> &'data [u8] {
         self.path.0
     }
 
-    /// The age of the PDB
+    /// The age of the PDB.
     #[inline]
     pub fn age(&self) -> u32 {
         self.age
@@ -559,7 +644,7 @@ impl<'data> CodeView<'data> {
     }
 }
 
-/// The target referenced by a relocation.
+/// The target referenced by a [`Relocation`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[non_exhaustive]
 pub enum RelocationTarget {
@@ -572,6 +657,8 @@ pub enum RelocationTarget {
 }
 
 /// A relocation entry.
+///
+/// Returned by [`Object::dynamic_relocations`] or [`ObjectSection::relocations`].
 #[derive(Debug)]
 pub struct Relocation {
     kind: RelocationKind,
@@ -648,6 +735,8 @@ pub enum CompressionFormat {
 }
 
 /// A range in a file that may be compressed.
+///
+/// Returned by [`ObjectSection::compressed_file_range`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct CompressedFileRange {
     /// The data compression format.
@@ -681,7 +770,7 @@ impl CompressedFileRange {
         }
     }
 
-    /// Convert to `CompressedData` by reading from the file.
+    /// Convert to [`CompressedData`] by reading from the file.
     pub fn data<'data, R: ReadRef<'data>>(self, file: R) -> Result<CompressedData<'data>> {
         let data = file
             .read_bytes_at(self.offset, self.compressed_size)
@@ -695,6 +784,8 @@ impl CompressedFileRange {
 }
 
 /// Data that may be compressed.
+///
+/// Returned by [`ObjectSection::compressed_data`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct CompressedData<'data> {
     /// The data compression format.

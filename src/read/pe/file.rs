@@ -17,11 +17,19 @@ use super::{
 };
 
 /// A PE32 (32-bit) image file.
+///
+/// This is a file that starts with [`pe::ImageNtHeaders32`], and corresponds
+/// to [`crate::FileKind::Pe32`].
 pub type PeFile32<'data, R = &'data [u8]> = PeFile<'data, pe::ImageNtHeaders32, R>;
 /// A PE32+ (64-bit) image file.
+///
+/// This is a file that starts with [`pe::ImageNtHeaders64`], and corresponds
+/// to [`crate::FileKind::Pe64`].
 pub type PeFile64<'data, R = &'data [u8]> = PeFile<'data, pe::ImageNtHeaders64, R>;
 
-/// A PE object file.
+/// A PE image file.
+///
+/// Most functionality is provided by the [`Object`] trait implementation.
 #[derive(Debug)]
 pub struct PeFile<'data, Pe, R = &'data [u8]>
 where
@@ -387,14 +395,16 @@ where
     }
 }
 
-/// An iterator over the COMDAT section groups of a `PeFile32`.
+/// An iterator for the COMDAT section groups in a [`PeFile32`].
 pub type PeComdatIterator32<'data, 'file, R = &'data [u8]> =
     PeComdatIterator<'data, 'file, pe::ImageNtHeaders32, R>;
-/// An iterator over the COMDAT section groups of a `PeFile64`.
+/// An iterator for the COMDAT section groups in a [`PeFile64`].
 pub type PeComdatIterator64<'data, 'file, R = &'data [u8]> =
     PeComdatIterator<'data, 'file, pe::ImageNtHeaders64, R>;
 
-/// An iterator over the COMDAT section groups of a `PeFile`.
+/// An iterator for the COMDAT section groups in a [`PeFile`].
+///
+/// This is a stub that doesn't implement any functionality.
 #[derive(Debug)]
 pub struct PeComdatIterator<'data, 'file, Pe, R = &'data [u8]>
 where
@@ -418,14 +428,16 @@ where
     }
 }
 
-/// A COMDAT section group of a `PeFile32`.
+/// A COMDAT section group in a [`PeFile32`].
 pub type PeComdat32<'data, 'file, R = &'data [u8]> =
     PeComdat<'data, 'file, pe::ImageNtHeaders32, R>;
-/// A COMDAT section group of a `PeFile64`.
+/// A COMDAT section group in a [`PeFile64`].
 pub type PeComdat64<'data, 'file, R = &'data [u8]> =
     PeComdat<'data, 'file, pe::ImageNtHeaders64, R>;
 
-/// A COMDAT section group of a `PeFile`.
+/// A COMDAT section group in a [`PeFile`].
+///
+/// This is a stub that doesn't implement any functionality.
 #[derive(Debug)]
 pub struct PeComdat<'data, 'file, Pe, R = &'data [u8]>
 where
@@ -476,14 +488,16 @@ where
     }
 }
 
-/// An iterator over the sections in a COMDAT section group of a `PeFile32`.
+/// An iterator for the sections in a COMDAT section group in a [`PeFile32`].
 pub type PeComdatSectionIterator32<'data, 'file, R = &'data [u8]> =
     PeComdatSectionIterator<'data, 'file, pe::ImageNtHeaders32, R>;
-/// An iterator over the sections in a COMDAT section group of a `PeFile64`.
+/// An iterator for the sections in a COMDAT section group in a [`PeFile64`].
 pub type PeComdatSectionIterator64<'data, 'file, R = &'data [u8]> =
     PeComdatSectionIterator<'data, 'file, pe::ImageNtHeaders64, R>;
 
-/// An iterator over the sections in a COMDAT section group of a `PeFile`.
+/// An iterator for the sections in a COMDAT section group in a [`PeFile`].
+///
+/// This is a stub that doesn't implement any functionality.
 #[derive(Debug)]
 pub struct PeComdatSectionIterator<'data, 'file, Pe, R = &'data [u8]>
 where
@@ -528,7 +542,7 @@ impl pe::ImageDosHeader {
     }
 }
 
-/// Find the optional header and read the `optional_header.magic`.
+/// Find the optional header and read its `magic` field.
 ///
 /// It can be useful to know this magic value before trying to
 /// fully parse the NT headers.
@@ -547,7 +561,7 @@ pub fn optional_header_magic<'data, R: ReadRef<'data>>(data: R) -> Result<u16> {
     Ok(nt_headers.optional_header().magic())
 }
 
-/// A trait for generic access to `ImageNtHeaders32` and `ImageNtHeaders64`.
+/// A trait for generic access to [`pe::ImageNtHeaders32`] and [`pe::ImageNtHeaders64`].
 #[allow(missing_docs)]
 pub trait ImageNtHeaders: Debug + Pod {
     type ImageOptionalHeader: ImageOptionalHeader;
@@ -576,7 +590,7 @@ pub trait ImageNtHeaders: Debug + Pod {
     ///
     /// `data` must be for the entire file.
     ///
-    /// `offset` must be headers offset, which can be obtained from `ImageDosHeader::nt_headers_offset`.
+    /// `offset` must be headers offset, which can be obtained from [`pe::ImageDosHeader::nt_headers_offset`].
     /// It is updated to point after the optional header, which is where the section headers are located.
     ///
     /// Also checks that the `signature` and `magic` fields in the headers are valid.
@@ -633,7 +647,7 @@ pub trait ImageNtHeaders: Debug + Pod {
     }
 }
 
-/// A trait for generic access to `ImageOptionalHeader32` and `ImageOptionalHeader64`.
+/// A trait for generic access to [`pe::ImageOptionalHeader32`] and [`pe::ImageOptionalHeader64`].
 #[allow(missing_docs)]
 pub trait ImageOptionalHeader: Debug + Pod {
     // Standard fields.

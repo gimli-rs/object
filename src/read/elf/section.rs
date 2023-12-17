@@ -18,6 +18,8 @@ use super::{
 /// The table of section headers in an ELF file.
 ///
 /// Also includes the string table used for the section names.
+///
+/// Returned by [`FileHeader::sections`].
 #[derive(Debug, Default, Clone, Copy)]
 pub struct SectionTable<'data, Elf: FileHeader, R = &'data [u8]>
 where
@@ -318,14 +320,14 @@ impl<'data, Elf: FileHeader, R: ReadRef<'data>> SectionTable<'data, Elf, R> {
     }
 }
 
-/// An iterator over the sections of an `ElfFile32`.
+/// An iterator for the sections in an [`ElfFile32`](super::ElfFile32).
 pub type ElfSectionIterator32<'data, 'file, Endian = Endianness, R = &'data [u8]> =
     ElfSectionIterator<'data, 'file, elf::FileHeader32<Endian>, R>;
-/// An iterator over the sections of an `ElfFile64`.
+/// An iterator for the sections in an [`ElfFile64`](super::ElfFile64).
 pub type ElfSectionIterator64<'data, 'file, Endian = Endianness, R = &'data [u8]> =
     ElfSectionIterator<'data, 'file, elf::FileHeader64<Endian>, R>;
 
-/// An iterator over the sections of an `ElfFile`.
+/// An iterator for the sections in an [`ElfFile`].
 #[derive(Debug)]
 pub struct ElfSectionIterator<'data, 'file, Elf, R = &'data [u8]>
 where
@@ -352,14 +354,16 @@ where
     }
 }
 
-/// A section of an `ElfFile32`.
+/// A section in an [`ElfFile32`](super::ElfFile32).
 pub type ElfSection32<'data, 'file, Endian = Endianness, R = &'data [u8]> =
     ElfSection<'data, 'file, elf::FileHeader32<Endian>, R>;
-/// A section of an `ElfFile64`.
+/// A section in an [`ElfFile64`](super::ElfFile64).
 pub type ElfSection64<'data, 'file, Endian = Endianness, R = &'data [u8]> =
     ElfSection<'data, 'file, elf::FileHeader64<Endian>, R>;
 
-/// A section of an `ElfFile`.
+/// A section in an [`ElfFile`].
+///
+/// Most functionality is provided by the [`ObjectSection`] trait implementation.
 #[derive(Debug)]
 pub struct ElfSection<'data, 'file, Elf, R = &'data [u8]>
 where
@@ -592,7 +596,7 @@ where
     }
 }
 
-/// A trait for generic access to `SectionHeader32` and `SectionHeader64`.
+/// A trait for generic access to [`elf::SectionHeader32`] and [`elf::SectionHeader64`].
 #[allow(missing_docs)]
 pub trait SectionHeader: Debug + Pod {
     type Elf: FileHeader<SectionHeader = Self, Endian = Self::Endian, Word = Self::Word>;

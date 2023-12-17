@@ -33,7 +33,7 @@ impl VersionIndex {
 
 /// A version definition or requirement.
 ///
-/// This is derived from entries in the `SHT_GNU_verdef` and `SHT_GNU_verneed` sections.
+/// This is derived from entries in the [`elf::SHT_GNU_VERDEF`] and [`elf::SHT_GNU_VERNEED`] sections.
 #[derive(Debug, Default, Clone, Copy)]
 pub struct Version<'data> {
     name: &'data [u8],
@@ -58,7 +58,10 @@ impl<'data> Version<'data> {
 ///
 /// It allows looking up the version information for a given symbol index.
 ///
-/// This is derived from entries in the `SHT_GNU_versym`, `SHT_GNU_verdef` and `SHT_GNU_verneed` sections.
+/// This is derived from entries in the [`elf::SHT_GNU_VERSYM`], [`elf::SHT_GNU_VERDEF`]
+/// and [`elf::SHT_GNU_VERNEED`] sections.
+///
+/// Returned by [`SectionTable::versions`](super::SectionTable::versions).
 #[derive(Debug, Clone)]
 pub struct VersionTable<'data, Elf: FileHeader> {
     symbols: &'data [elf::Versym<Elf::Endian>],
@@ -210,7 +213,7 @@ impl<'data, Elf: FileHeader> VersionTable<'data, Elf> {
     }
 }
 
-/// An iterator over the entries in an ELF `SHT_GNU_verdef` section.
+/// An iterator for the entries in an ELF [`elf::SHT_GNU_VERDEF`] section.
 #[derive(Debug, Clone)]
 pub struct VerdefIterator<'data, Elf: FileHeader> {
     endian: Elf::Endian,
@@ -257,7 +260,7 @@ impl<'data, Elf: FileHeader> VerdefIterator<'data, Elf> {
     }
 }
 
-/// An iterator over the auxiliary records for an entry in an ELF `SHT_GNU_verdef` section.
+/// An iterator for the auxiliary records for an entry in an ELF [`elf::SHT_GNU_VERDEF`] section.
 #[derive(Debug, Clone)]
 pub struct VerdauxIterator<'data, Elf: FileHeader> {
     endian: Elf::Endian,
@@ -293,7 +296,7 @@ impl<'data, Elf: FileHeader> VerdauxIterator<'data, Elf> {
     }
 }
 
-/// An iterator over the entries in an ELF `SHT_GNU_verneed` section.
+/// An iterator for the entries in an ELF [`elf::SHT_GNU_VERNEED`] section.
 #[derive(Debug, Clone)]
 pub struct VerneedIterator<'data, Elf: FileHeader> {
     endian: Elf::Endian,
@@ -345,7 +348,7 @@ impl<'data, Elf: FileHeader> VerneedIterator<'data, Elf> {
     }
 }
 
-/// An iterator over the auxiliary records for an entry in an ELF `SHT_GNU_verneed` section.
+/// An iterator for the auxiliary records for an entry in an ELF [`elf::SHT_GNU_VERNEED`] section.
 #[derive(Debug, Clone)]
 pub struct VernauxIterator<'data, Elf: FileHeader> {
     endian: Elf::Endian,

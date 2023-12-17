@@ -7,14 +7,14 @@ use crate::read::{self, ComdatKind, ObjectComdat, ReadError, ReadRef, SectionInd
 
 use super::{ElfFile, FileHeader, SectionHeader, Sym};
 
-/// An iterator over the COMDAT section groups of an `ElfFile32`.
+/// An iterator for the COMDAT section groups in an [`ElfFile32`](super::ElfFile32).
 pub type ElfComdatIterator32<'data, 'file, Endian = Endianness, R = &'data [u8]> =
     ElfComdatIterator<'data, 'file, elf::FileHeader32<Endian>, R>;
-/// An iterator over the COMDAT section groups of an `ElfFile64`.
+/// An iterator for the COMDAT section groups in an [`ElfFile64`](super::ElfFile64).
 pub type ElfComdatIterator64<'data, 'file, Endian = Endianness, R = &'data [u8]> =
     ElfComdatIterator<'data, 'file, elf::FileHeader64<Endian>, R>;
 
-/// An iterator over the COMDAT section groups of an `ElfFile`.
+/// An iterator for the COMDAT section groups in an [`ElfFile`].
 #[derive(Debug)]
 pub struct ElfComdatIterator<'data, 'file, Elf, R = &'data [u8]>
 where
@@ -42,14 +42,16 @@ where
     }
 }
 
-/// A COMDAT section group of an `ElfFile32`.
+/// A COMDAT section group in an [`ElfFile32`](super::ElfFile32).
 pub type ElfComdat32<'data, 'file, Endian = Endianness, R = &'data [u8]> =
     ElfComdat<'data, 'file, elf::FileHeader32<Endian>, R>;
-/// A COMDAT section group of an `ElfFile64`.
+/// A COMDAT section group in an [`ElfFile64`](super::ElfFile64).
 pub type ElfComdat64<'data, 'file, Endian = Endianness, R = &'data [u8]> =
     ElfComdat<'data, 'file, elf::FileHeader64<Endian>, R>;
 
-/// A COMDAT section group of an `ElfFile`.
+/// A COMDAT section group in an [`ElfFile`].
+///
+/// Most functionality is provided by the [`ObjectComdat`] trait implementation.
 #[derive(Debug)]
 pub struct ElfComdat<'data, 'file, Elf, R = &'data [u8]>
 where
@@ -128,14 +130,14 @@ where
     }
 }
 
-/// An iterator over the sections in a COMDAT section group of an `ElfFile32`.
+/// An iterator for the sections in a COMDAT section group in an [`ElfFile32`](super::ElfFile32).
 pub type ElfComdatSectionIterator32<'data, 'file, Endian = Endianness, R = &'data [u8]> =
     ElfComdatSectionIterator<'data, 'file, elf::FileHeader32<Endian>, R>;
-/// An iterator over the sections in a COMDAT section group of an `ElfFile64`.
+/// An iterator for the sections in a COMDAT section group in an [`ElfFile64`](super::ElfFile64).
 pub type ElfComdatSectionIterator64<'data, 'file, Endian = Endianness, R = &'data [u8]> =
     ElfComdatSectionIterator<'data, 'file, elf::FileHeader64<Endian>, R>;
 
-/// An iterator over the sections in a COMDAT section group of an `ElfFile`.
+/// An iterator for the sections in a COMDAT section group in an [`ElfFile`].
 #[derive(Debug)]
 pub struct ElfComdatSectionIterator<'data, 'file, Elf, R = &'data [u8]>
 where

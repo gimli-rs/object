@@ -8,52 +8,34 @@
 //!
 //! Raw structs are defined for: [ELF](elf), [Mach-O](macho), [PE/COFF](pe),
 //! [XCOFF](xcoff), [archive].
-//! Types and traits for zerocopy support are defined in [pod] and [endian].
+//! Types and traits for zerocopy support are defined in the [`pod`] and [`endian`] modules.
 //!
 //! ## Unified read API
 //!
-//! The [read::Object] trait defines the unified interface. This trait is implemented
-//! by [read::File], which allows reading any file format, as well as implementations
-//! for each file format: [ELF](read::elf::ElfFile), [Mach-O](read::macho::MachOFile),
-//! [COFF](read::coff::CoffFile), [PE](read::pe::PeFile), [Wasm](read::wasm::WasmFile),
-//! [XCOFF](read::xcoff::XcoffFile).
+//! The [`read`] module provides a unified read API using the [`read::Object`] trait.
+//! There is an implementation of this trait for [`read::File`], which allows reading any
+//! file format, as well as implementations for each file format.
 //!
 //! ## Low level read API
 //!
-//! In addition to the unified read API, the various `read` modules define helpers that
-//! operate on the raw structs. These also provide traits that abstract over the differences
-//! between 32-bit and 64-bit versions of the file format.
+//! The [`read#modules`] submodules define helpers that operate on the raw structs.
+//! These can be used instead of the unified API, or in conjunction with it to access
+//! details that are not available via the unified API.
 //!
 //! ## Unified write API
 //!
-//! [write::Object] allows building a COFF/ELF/Mach-O/XCOFF relocatable object file and
-//! then writing it out.
+//! The [`mod@write`] module provides a unified write API for relocatable object files
+//! using [`write::Object`]. This does not support writing executable files.
 //!
-//! ## Low level executable writers
+//! ## Low level write API
 //!
-//! [write::elf::Writer] and [write::pe::Writer] allow writing executable files.
+//! The [`mod@write#modules`] submodules define helpers for writing the raw structs.
 //!
-//! ## Example for unified read API
-//!  ```no_run
-//! # #[cfg(feature = "read")]
-//! use object::{Object, ObjectSection};
-//! use std::error::Error;
-//! use std::fs;
+//! ## Shared definitions
 //!
-//! /// Reads a file and displays the content of the ".boot" section.
-//! fn main() -> Result<(), Box<dyn Error>> {
-//! # #[cfg(all(feature = "read", feature = "std"))] {
-//!   let bin_data = fs::read("./multiboot2-binary.elf")?;
-//!   let obj_file = object::File::parse(&*bin_data)?;
-//!   if let Some(section) = obj_file.section_by_name(".boot") {
-//!     println!("{:#x?}", section.data()?);
-//!   } else {
-//!     eprintln!("section not available");
-//!   }
-//! # }
-//!   Ok(())
-//! }
-//! ```
+//! The crate provides a number of definitions that are used by both the read and write
+//! APIs. These are defined at the top level module, but none of these are the main entry
+//! points of the crate.
 
 #![deny(missing_docs)]
 #![deny(missing_debug_implementations)]

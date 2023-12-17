@@ -8,11 +8,11 @@ use crate::read::{
 
 use super::{CoffFile, CoffHeader, ImageSymbol};
 
-/// An iterator over the COMDAT section groups of a `CoffBigFile`.
+/// An iterator for the COMDAT section groups in a [`CoffBigFile`](super::CoffBigFile).
 pub type CoffBigComdatIterator<'data, 'file, R = &'data [u8]> =
     CoffComdatIterator<'data, 'file, R, pe::AnonObjectHeaderBigobj>;
 
-/// An iterator over the COMDAT section groups of a `CoffFile`.
+/// An iterator for the COMDAT section groups in a [`CoffFile`].
 #[derive(Debug)]
 pub struct CoffComdatIterator<
     'data,
@@ -41,11 +41,15 @@ impl<'data, 'file, R: ReadRef<'data>, Coff: CoffHeader> Iterator
     }
 }
 
-/// A COMDAT section group of a `CoffBigFile`.
+/// A COMDAT section group in a [`CoffBigFile`](super::CoffBigFile).
+///
+/// Most functionality is provided by the [`ObjectComdat`] trait implementation.
 pub type CoffBigComdat<'data, 'file, R = &'data [u8]> =
     CoffComdat<'data, 'file, R, pe::AnonObjectHeaderBigobj>;
 
-/// A COMDAT section group of a `CoffFile`.
+/// A COMDAT section group in a [`CoffFile`].
+///
+/// Most functionality is provided by the [`ObjectComdat`] trait implementation.
 #[derive(Debug)]
 pub struct CoffComdat<
     'data,
@@ -150,11 +154,11 @@ impl<'data, 'file, R: ReadRef<'data>, Coff: CoffHeader> ObjectComdat<'data>
     }
 }
 
-/// An iterator over the sections in a COMDAT section group of a `CoffBigFile`.
+/// An iterator for the sections in a COMDAT section group in a [`CoffBigFile`](super::CoffBigFile).
 pub type CoffBigComdatSectionIterator<'data, 'file, R = &'data [u8]> =
     CoffComdatSectionIterator<'data, 'file, R, pe::AnonObjectHeaderBigobj>;
 
-/// An iterator over the sections in a COMDAT section group of a `CoffFile`.
+/// An iterator for the sections in a COMDAT section group in a [`CoffFile`].
 #[derive(Debug)]
 pub struct CoffComdatSectionIterator<
     'data,

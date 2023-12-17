@@ -39,7 +39,7 @@ impl FatHeader {
     }
 }
 
-/// A trait for generic access to `FatArch32` and `FatArch64`.
+/// A trait for generic access to [`macho::FatArch32`] and [`macho::FatArch64`].
 #[allow(missing_docs)]
 pub trait FatArch: Pod {
     type Word: Into<u64>;

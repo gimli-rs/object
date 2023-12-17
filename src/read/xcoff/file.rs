@@ -17,13 +17,19 @@ use super::{
 };
 
 /// A 32-bit XCOFF object file.
+///
+/// This is a file that starts with [`xcoff::FileHeader32`], and corresponds
+/// to [`crate::FileKind::Xcoff32`].
 pub type XcoffFile32<'data, R = &'data [u8]> = XcoffFile<'data, xcoff::FileHeader32, R>;
 /// A 64-bit XCOFF object file.
+///
+/// This is a file that starts with [`xcoff::FileHeader64`], and corresponds
+/// to [`crate::FileKind::Xcoff64`].
 pub type XcoffFile64<'data, R = &'data [u8]> = XcoffFile<'data, xcoff::FileHeader64, R>;
 
 /// A partially parsed XCOFF file.
 ///
-/// Most of the functionality of this type is provided by the `Object` trait implementation.
+/// Most functionality is provided by the [`Object`] trait implementation.
 #[derive(Debug)]
 pub struct XcoffFile<'data, Xcoff, R = &'data [u8]>
 where
@@ -238,7 +244,7 @@ where
     }
 }
 
-/// A trait for generic access to `FileHeader32` and `FileHeader64`.
+/// A trait for generic access to [`xcoff::FileHeader32`] and [`xcoff::FileHeader64`].
 #[allow(missing_docs)]
 pub trait FileHeader: Debug + Pod {
     type Word: Into<u64>;
@@ -404,6 +410,7 @@ impl FileHeader for xcoff::FileHeader64 {
     }
 }
 
+/// A trait for generic access to [`xcoff::AuxHeader32`] and [`xcoff::AuxHeader64`].
 #[allow(missing_docs)]
 pub trait AuxHeader: Debug + Pod {
     type Word: Into<u64>;

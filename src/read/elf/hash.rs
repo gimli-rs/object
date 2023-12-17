@@ -7,6 +7,8 @@ use crate::{U32, U64};
 use super::{FileHeader, Sym, SymbolTable, Version, VersionTable};
 
 /// A SysV symbol hash table in an ELF file.
+///
+/// Returned by [`SectionHeader::hash`](super::SectionHeader::hash).
 #[derive(Debug)]
 pub struct HashTable<'data, Elf: FileHeader> {
     buckets: &'data [U32<Elf::Endian>],
@@ -16,8 +18,8 @@ pub struct HashTable<'data, Elf: FileHeader> {
 impl<'data, Elf: FileHeader> HashTable<'data, Elf> {
     /// Parse a SysV hash table.
     ///
-    /// `data` should be from a `SHT_HASH` section, or from a
-    /// segment pointed to via the `DT_HASH` entry.
+    /// `data` should be from an [`elf::SHT_HASH`] section, or from a
+    /// segment pointed to via the [`elf::DT_HASH`] entry.
     ///
     /// The header is read at offset 0 in the given `data`.
     pub fn parse(endian: Elf::Endian, data: &'data [u8]) -> Result<Self> {
@@ -70,6 +72,8 @@ impl<'data, Elf: FileHeader> HashTable<'data, Elf> {
 }
 
 /// A GNU symbol hash table in an ELF file.
+///
+/// Returned by [`SectionHeader::gnu_hash`](super::SectionHeader::gnu_hash).
 #[derive(Debug)]
 pub struct GnuHashTable<'data, Elf: FileHeader> {
     symbol_base: u32,
@@ -82,15 +86,15 @@ pub struct GnuHashTable<'data, Elf: FileHeader> {
 impl<'data, Elf: FileHeader> GnuHashTable<'data, Elf> {
     /// Parse a GNU hash table.
     ///
-    /// `data` should be from a `SHT_GNU_HASH` section, or from a
-    /// segment pointed to via the `DT_GNU_HASH` entry.
+    /// `data` should be from an [`elf::SHT_GNU_HASH`] section, or from a
+    /// segment pointed to via the [`elf::DT_GNU_HASH`] entry.
     ///
     /// The header is read at offset 0 in the given `data`.
     ///
     /// The header does not contain a length field, and so all of `data`
     /// will be used as the hash table values. It does not matter if this
     /// is longer than needed, and this will often the case when accessing
-    /// the hash table via the `DT_GNU_HASH` entry.
+    /// the hash table via the [`elf::DT_GNU_HASH`] entry.
     pub fn parse(endian: Elf::Endian, data: &'data [u8]) -> Result<Self> {
         let mut offset = 0;
         let header = data

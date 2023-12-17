@@ -17,6 +17,8 @@ use super::{MachHeader, MachOFile};
 /// A table of symbol entries in a Mach-O file.
 ///
 /// Also includes the string table used for the symbol names.
+///
+/// Returned by [`macho::SymtabCommand::symbols`].
 #[derive(Debug, Clone, Copy)]
 pub struct SymbolTable<'data, Mach: MachHeader, R = &'data [u8]>
 where
@@ -143,14 +145,14 @@ impl<'data, Mach: MachHeader, R: ReadRef<'data>> SymbolTable<'data, Mach, R> {
     }
 }
 
-/// An iterator over the symbols of a `MachOFile32`.
+/// A symbol table in a [`MachOFile32`](super::MachOFile32).
 pub type MachOSymbolTable32<'data, 'file, Endian = Endianness, R = &'data [u8]> =
     MachOSymbolTable<'data, 'file, macho::MachHeader32<Endian>, R>;
-/// An iterator over the symbols of a `MachOFile64`.
+/// A symbol table in a [`MachOFile64`](super::MachOFile64).
 pub type MachOSymbolTable64<'data, 'file, Endian = Endianness, R = &'data [u8]> =
     MachOSymbolTable<'data, 'file, macho::MachHeader64<Endian>, R>;
 
-/// A symbol table of a `MachOFile`.
+/// A symbol table in a [`MachOFile`].
 #[derive(Debug, Clone, Copy)]
 pub struct MachOSymbolTable<'data, 'file, Mach, R = &'data [u8]>
 where
@@ -188,14 +190,14 @@ where
     }
 }
 
-/// An iterator over the symbols of a `MachOFile32`.
+/// An iterator for the symbols in a [`MachOFile32`](super::MachOFile32).
 pub type MachOSymbolIterator32<'data, 'file, Endian = Endianness, R = &'data [u8]> =
     MachOSymbolIterator<'data, 'file, macho::MachHeader32<Endian>, R>;
-/// An iterator over the symbols of a `MachOFile64`.
+/// An iterator for the symbols in a [`MachOFile64`](super::MachOFile64).
 pub type MachOSymbolIterator64<'data, 'file, Endian = Endianness, R = &'data [u8]> =
     MachOSymbolIterator<'data, 'file, macho::MachHeader64<Endian>, R>;
 
-/// An iterator over the symbols of a `MachOFile`.
+/// An iterator for the symbols in a [`MachOFile`].
 pub struct MachOSymbolIterator<'data, 'file, Mach, R = &'data [u8]>
 where
     Mach: MachHeader,
@@ -234,14 +236,16 @@ where
     }
 }
 
-/// A symbol of a `MachOFile32`.
+/// A symbol in a [`MachOFile32`](super::MachOFile32).
 pub type MachOSymbol32<'data, 'file, Endian = Endianness, R = &'data [u8]> =
     MachOSymbol<'data, 'file, macho::MachHeader32<Endian>, R>;
-/// A symbol of a `MachOFile64`.
+/// A symbol in a [`MachOFile64`](super::MachOFile64).
 pub type MachOSymbol64<'data, 'file, Endian = Endianness, R = &'data [u8]> =
     MachOSymbol<'data, 'file, macho::MachHeader64<Endian>, R>;
 
-/// A symbol of a `MachOFile`.
+/// A symbol in a [`MachOFile`].
+///
+/// Most functionality is provided by the [`ObjectSymbol`] trait implementation.
 #[derive(Debug, Clone, Copy)]
 pub struct MachOSymbol<'data, 'file, Mach, R = &'data [u8]>
 where
@@ -394,7 +398,7 @@ where
     }
 }
 
-/// A trait for generic access to `Nlist32` and `Nlist64`.
+/// A trait for generic access to [`macho::Nlist32`] and [`macho::Nlist64`].
 #[allow(missing_docs)]
 pub trait Nlist: Debug + Pod {
     type Word: Into<u64>;

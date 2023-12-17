@@ -9,14 +9,14 @@ use crate::read::{
 
 use super::{MachHeader, MachOFile};
 
-/// An iterator over the relocations in a `MachOSection32`.
+/// An iterator for the relocations in a [`MachOSection32`](super::MachOSection32).
 pub type MachORelocationIterator32<'data, 'file, Endian = Endianness, R = &'data [u8]> =
     MachORelocationIterator<'data, 'file, macho::MachHeader32<Endian>, R>;
-/// An iterator over the relocations in a `MachOSection64`.
+/// An iterator for the relocations in a [`MachOSection64`](super::MachOSection64).
 pub type MachORelocationIterator64<'data, 'file, Endian = Endianness, R = &'data [u8]> =
     MachORelocationIterator<'data, 'file, macho::MachHeader64<Endian>, R>;
 
-/// An iterator over the relocations in a `MachOSection`.
+/// An iterator for the relocations in a [`MachOSection`](super::MachOSection).
 pub struct MachORelocationIterator<'data, 'file, Mach, R = &'data [u8]>
 where
     Mach: MachHeader,

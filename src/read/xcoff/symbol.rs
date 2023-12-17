@@ -19,6 +19,8 @@ use super::{FileHeader, XcoffFile};
 /// A table of symbol entries in an XCOFF file.
 ///
 /// Also includes the string table used for the symbol names.
+///
+/// Returned by [`FileHeader::symbols`].
 #[derive(Debug)]
 pub struct SymbolTable<'data, Xcoff, R = &'data [u8]>
 where
@@ -184,14 +186,14 @@ impl<'data, 'table, Xcoff: FileHeader, R: ReadRef<'data>> Iterator
     }
 }
 
-/// A symbol table of an `XcoffFile32`.
+/// A symbol table in an [`XcoffFile32`](super::XcoffFile32).
 pub type XcoffSymbolTable32<'data, 'file, R = &'data [u8]> =
     XcoffSymbolTable<'data, 'file, xcoff::FileHeader32, R>;
-/// A symbol table of an `XcoffFile64`.
+/// A symbol table in an [`XcoffFile64`](super::XcoffFile64).
 pub type XcoffSymbolTable64<'data, 'file, R = &'data [u8]> =
     XcoffSymbolTable<'data, 'file, xcoff::FileHeader64, R>;
 
-/// A symbol table of an `XcoffFile`.
+/// A symbol table in an [`XcoffFile`].
 #[derive(Debug, Clone, Copy)]
 pub struct XcoffSymbolTable<'data, 'file, Xcoff, R = &'data [u8]>
 where
@@ -231,14 +233,14 @@ impl<'data, 'file, Xcoff: FileHeader, R: ReadRef<'data>> ObjectSymbolTable<'data
     }
 }
 
-/// An iterator over the symbols of an `XcoffFile32`.
+/// An iterator for the symbols in an [`XcoffFile32`](super::XcoffFile32).
 pub type XcoffSymbolIterator32<'data, 'file, R = &'data [u8]> =
     XcoffSymbolIterator<'data, 'file, xcoff::FileHeader32, R>;
-/// An iterator over the symbols of an `XcoffFile64`.
+/// An iterator for the symbols in an [`XcoffFile64`](super::XcoffFile64).
 pub type XcoffSymbolIterator64<'data, 'file, R = &'data [u8]> =
     XcoffSymbolIterator<'data, 'file, xcoff::FileHeader64, R>;
 
-/// An iterator over the symbols of an `XcoffFile`.
+/// An iterator for the symbols in an [`XcoffFile`].
 pub struct XcoffSymbolIterator<'data, 'file, Xcoff, R = &'data [u8]>
 where
     Xcoff: FileHeader,
@@ -272,14 +274,16 @@ impl<'data, 'file, Xcoff: FileHeader, R: ReadRef<'data>> Iterator
     }
 }
 
-/// A symbol of an `XcoffFile32`.
+/// A symbol in an [`XcoffFile32`](super::XcoffFile32).
 pub type XcoffSymbol32<'data, 'file, R = &'data [u8]> =
     XcoffSymbol<'data, 'file, xcoff::FileHeader32, R>;
-/// A symbol of an `XcoffFile64`.
+/// A symbol in an [`XcoffFile64`](super::XcoffFile64).
 pub type XcoffSymbol64<'data, 'file, R = &'data [u8]> =
     XcoffSymbol<'data, 'file, xcoff::FileHeader64, R>;
 
-/// A symbol of an `XcoffFile`.
+/// A symbol in an [`XcoffFile`].
+///
+/// Most functionality is provided by the [`ObjectSymbol`] trait implementation.
 #[derive(Debug, Clone, Copy)]
 pub struct XcoffSymbol<'data, 'file, Xcoff, R = &'data [u8]>
 where
@@ -497,7 +501,7 @@ impl<'data, 'file, Xcoff: FileHeader, R: ReadRef<'data>> ObjectSymbol<'data>
     }
 }
 
-/// A trait for generic access to `Symbol32` and `Symbol64`.
+/// A trait for generic access to [`xcoff::Symbol32`] and [`xcoff::Symbol64`].
 #[allow(missing_docs)]
 pub trait Symbol: Debug + Pod {
     type Word: Into<u64>;
@@ -628,7 +632,7 @@ impl Symbol for xcoff::Symbol32 {
     }
 }
 
-/// A trait for generic access to `FileAux32` and `FileAux64`.
+/// A trait for generic access to [`xcoff::FileAux32`] and [`xcoff::FileAux64`].
 #[allow(missing_docs)]
 pub trait FileAux: Debug + Pod {
     fn x_fname(&self) -> &[u8; 8];
@@ -693,7 +697,7 @@ impl FileAux for xcoff::FileAux32 {
     }
 }
 
-/// A trait for generic access to `CsectAux32` and `CsectAux64`.
+/// A trait for generic access to [`xcoff::CsectAux32`] and [`xcoff::CsectAux64`].
 #[allow(missing_docs)]
 pub trait CsectAux: Debug + Pod {
     fn x_scnlen(&self) -> u64;

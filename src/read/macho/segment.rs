@@ -8,14 +8,14 @@ use crate::read::{self, ObjectSegment, ReadError, ReadRef, Result, SegmentFlags}
 
 use super::{LoadCommandData, MachHeader, MachOFile, Section};
 
-/// An iterator over the segments of a `MachOFile32`.
+/// An iterator for the segments in a [`MachOFile32`](super::MachOFile32).
 pub type MachOSegmentIterator32<'data, 'file, Endian = Endianness, R = &'data [u8]> =
     MachOSegmentIterator<'data, 'file, macho::MachHeader32<Endian>, R>;
-/// An iterator over the segments of a `MachOFile64`.
+/// An iterator for the segments in a [`MachOFile64`](super::MachOFile64).
 pub type MachOSegmentIterator64<'data, 'file, Endian = Endianness, R = &'data [u8]> =
     MachOSegmentIterator<'data, 'file, macho::MachHeader64<Endian>, R>;
 
-/// An iterator over the segments of a `MachOFile`.
+/// An iterator for the segments in a [`MachOFile`].
 #[derive(Debug)]
 pub struct MachOSegmentIterator<'data, 'file, Mach, R = &'data [u8]>
 where
@@ -41,14 +41,16 @@ where
     }
 }
 
-/// A segment of a `MachOFile32`.
+/// A segment in a [`MachOFile32`](super::MachOFile32).
 pub type MachOSegment32<'data, 'file, Endian = Endianness, R = &'data [u8]> =
     MachOSegment<'data, 'file, macho::MachHeader32<Endian>, R>;
-/// A segment of a `MachOFile64`.
+/// A segment in a [`MachOFile64`](super::MachOFile64).
 pub type MachOSegment64<'data, 'file, Endian = Endianness, R = &'data [u8]> =
     MachOSegment<'data, 'file, macho::MachHeader64<Endian>, R>;
 
-/// A segment of a `MachOFile`.
+/// A segment in a [`MachOFile`].
+///
+/// Most functionality is provided by the [`ObjectSegment`] trait implementation.
 #[derive(Debug)]
 pub struct MachOSegment<'data, 'file, Mach, R = &'data [u8]>
 where
@@ -151,7 +153,7 @@ pub(super) struct MachOSegmentInternal<'data, Mach: MachHeader, R: ReadRef<'data
     pub segment: &'data Mach::Segment,
 }
 
-/// A trait for generic access to `SegmentCommand32` and `SegmentCommand64`.
+/// A trait for generic access to [`macho::SegmentCommand32`] and [`macho::SegmentCommand64`].
 #[allow(missing_docs)]
 pub trait Segment: Debug + Pod {
     type Word: Into<u64>;

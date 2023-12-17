@@ -39,10 +39,11 @@ where
     R: ReadRef<'data>,
 {
     /// Parse the raw dyld shared cache data.
+    ///
     /// For shared caches from macOS 12 / iOS 15 and above, the subcache files need to be
-    /// supplied as well, in the correct order, with the .symbols subcache last (if present).
-    /// For example, data would be the data for dyld_shared_cache_x86_64,
-    /// and subcache_data would be the data for [dyld_shared_cache_x86_64.1, dyld_shared_cache_x86_64.2, ...]
+    /// supplied as well, in the correct order, with the `.symbols` subcache last (if present).
+    /// For example, `data` would be the data for `dyld_shared_cache_x86_64`,
+    /// and `subcache_data` would be the data for `[dyld_shared_cache_x86_64.1, dyld_shared_cache_x86_64.2, ...]`.
     pub fn parse(data: R, subcache_data: &[R]) -> Result<Self> {
         let header = macho::DyldCacheHeader::parse(data)?;
         let (arch, endian) = header.parse_magic()?;

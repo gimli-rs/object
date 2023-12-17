@@ -1,8 +1,6 @@
 //! Support for reading Wasm files.
 //!
-//! Provides `WasmFile` and related types which implement the `Object` trait.
-//!
-//! Currently implements the minimum required to access DWARF debugging information.
+//! [`WasmFile`] implements the [`Object`] trait for Wasm files.
 use alloc::boxed::Box;
 use alloc::vec::Vec;
 use core::marker::PhantomData;
@@ -505,7 +503,9 @@ where
     }
 }
 
-/// An iterator over the segments of a `WasmFile`.
+/// An iterator for the segments in a [`WasmFile`].
+///
+/// This is a stub that doesn't implement any functionality.
 #[derive(Debug)]
 pub struct WasmSegmentIterator<'data, 'file, R = &'data [u8]> {
     #[allow(unused)]
@@ -521,7 +521,9 @@ impl<'data, 'file, R> Iterator for WasmSegmentIterator<'data, 'file, R> {
     }
 }
 
-/// A segment of a `WasmFile`.
+/// A segment in a [`WasmFile`].
+///
+/// This is a stub that doesn't implement any functionality.
 #[derive(Debug)]
 pub struct WasmSegment<'data, 'file, R = &'data [u8]> {
     #[allow(unused)]
@@ -575,7 +577,7 @@ impl<'data, 'file, R> ObjectSegment<'data> for WasmSegment<'data, 'file, R> {
     }
 }
 
-/// An iterator over the sections of a `WasmFile`.
+/// An iterator for the sections in a [`WasmFile`].
 #[derive(Debug)]
 pub struct WasmSectionIterator<'data, 'file, R = &'data [u8]> {
     file: &'file WasmFile<'data, R>,
@@ -594,7 +596,9 @@ impl<'data, 'file, R> Iterator for WasmSectionIterator<'data, 'file, R> {
     }
 }
 
-/// A section of a `WasmFile`.
+/// A section in a [`WasmFile`].
+///
+/// Most functionality is provided by the [`ObjectSection`] trait implementation.
 #[derive(Debug)]
 pub struct WasmSection<'data, 'file, R = &'data [u8]> {
     file: &'file WasmFile<'data, R>,
@@ -725,7 +729,9 @@ impl<'data, 'file, R: ReadRef<'data>> ObjectSection<'data> for WasmSection<'data
     }
 }
 
-/// An iterator over the COMDAT section groups of a `WasmFile`.
+/// An iterator for the COMDAT section groups in a [`WasmFile`].
+///
+/// This is a stub that doesn't implement any functionality.
 #[derive(Debug)]
 pub struct WasmComdatIterator<'data, 'file, R = &'data [u8]> {
     #[allow(unused)]
@@ -741,7 +747,9 @@ impl<'data, 'file, R> Iterator for WasmComdatIterator<'data, 'file, R> {
     }
 }
 
-/// A COMDAT section group of a `WasmFile`.
+/// A COMDAT section group in a [`WasmFile`].
+///
+/// This is a stub that doesn't implement any functionality.
 #[derive(Debug)]
 pub struct WasmComdat<'data, 'file, R = &'data [u8]> {
     #[allow(unused)]
@@ -779,7 +787,9 @@ impl<'data, 'file, R> ObjectComdat<'data> for WasmComdat<'data, 'file, R> {
     }
 }
 
-/// An iterator over the sections in a COMDAT section group of a `WasmFile`.
+/// An iterator for the sections in a COMDAT section group in a [`WasmFile`].
+///
+/// This is a stub that doesn't implement any functionality.
 #[derive(Debug)]
 pub struct WasmComdatSectionIterator<'data, 'file, R = &'data [u8]> {
     #[allow(unused)]
@@ -794,7 +804,7 @@ impl<'data, 'file, R> Iterator for WasmComdatSectionIterator<'data, 'file, R> {
     }
 }
 
-/// A symbol table of a `WasmFile`.
+/// A symbol table in a [`WasmFile`].
 #[derive(Debug)]
 pub struct WasmSymbolTable<'data, 'file> {
     symbols: &'file [WasmSymbolInternal<'data>],
@@ -821,7 +831,7 @@ impl<'data, 'file> ObjectSymbolTable<'data> for WasmSymbolTable<'data, 'file> {
     }
 }
 
-/// An iterator over the symbols of a `WasmFile`.
+/// An iterator for the symbols in a [`WasmFile`].
 #[derive(Debug)]
 pub struct WasmSymbolIterator<'data, 'file> {
     symbols: core::iter::Enumerate<slice::Iter<'file, WasmSymbolInternal<'data>>>,
@@ -839,7 +849,9 @@ impl<'data, 'file> Iterator for WasmSymbolIterator<'data, 'file> {
     }
 }
 
-/// A symbol of a `WasmFile`.
+/// A symbol in a [`WasmFile`].
+///
+/// Most functionality is provided by the [`ObjectSymbol`] trait implementation.
 #[derive(Clone, Copy, Debug)]
 pub struct WasmSymbol<'data, 'file> {
     index: SymbolIndex,
@@ -936,7 +948,9 @@ impl<'data, 'file> ObjectSymbol<'data> for WasmSymbol<'data, 'file> {
     }
 }
 
-/// An iterator over the relocations in a `WasmSection`.
+/// An iterator for the relocations for a [`WasmSection`].
+///
+/// This is a stub that doesn't implement any functionality.
 #[derive(Debug)]
 pub struct WasmRelocationIterator<'data, 'file, R = &'data [u8]>(
     PhantomData<(&'data (), &'file (), R)>,

@@ -16,15 +16,21 @@ use super::{
 };
 
 /// A 32-bit Mach-O object file.
+///
+/// This is a file that starts with [`macho::MachHeader32`], and corresponds
+/// to [`crate::FileKind::MachO32`].
 pub type MachOFile32<'data, Endian = Endianness, R = &'data [u8]> =
     MachOFile<'data, macho::MachHeader32<Endian>, R>;
 /// A 64-bit Mach-O object file.
+///
+/// This is a file that starts with [`macho::MachHeader64`], and corresponds
+/// to [`crate::FileKind::MachO64`].
 pub type MachOFile64<'data, Endian = Endianness, R = &'data [u8]> =
     MachOFile<'data, macho::MachHeader64<Endian>, R>;
 
 /// A partially parsed Mach-O file.
 ///
-/// Most of the functionality of this type is provided by the `Object` trait implementation.
+/// Most of the functionality of this type is provided by the [`Object`] trait implementation.
 #[derive(Debug)]
 pub struct MachOFile<'data, Mach, R = &'data [u8]>
 where
@@ -459,14 +465,16 @@ where
     }
 }
 
-/// An iterator over the COMDAT section groups of a `MachOFile64`.
+/// An iterator for the COMDAT section groups in a [`MachOFile64`].
 pub type MachOComdatIterator32<'data, 'file, Endian = Endianness, R = &'data [u8]> =
     MachOComdatIterator<'data, 'file, macho::MachHeader32<Endian>, R>;
-/// An iterator over the COMDAT section groups of a `MachOFile64`.
+/// An iterator for the COMDAT section groups in a [`MachOFile64`].
 pub type MachOComdatIterator64<'data, 'file, Endian = Endianness, R = &'data [u8]> =
     MachOComdatIterator<'data, 'file, macho::MachHeader64<Endian>, R>;
 
-/// An iterator over the COMDAT section groups of a `MachOFile`.
+/// An iterator for the COMDAT section groups in a [`MachOFile`].
+///
+/// This is a stub that doesn't implement any functionality.
 #[derive(Debug)]
 pub struct MachOComdatIterator<'data, 'file, Mach, R = &'data [u8]>
 where
@@ -490,15 +498,17 @@ where
     }
 }
 
-/// A COMDAT section group of a `MachOFile32`.
+/// A COMDAT section group in a [`MachOFile32`].
 pub type MachOComdat32<'data, 'file, Endian = Endianness, R = &'data [u8]> =
     MachOComdat<'data, 'file, macho::MachHeader32<Endian>, R>;
 
-/// A COMDAT section group of a `MachOFile64`.
+/// A COMDAT section group in a [`MachOFile64`].
 pub type MachOComdat64<'data, 'file, Endian = Endianness, R = &'data [u8]> =
     MachOComdat<'data, 'file, macho::MachHeader64<Endian>, R>;
 
-/// A COMDAT section group of a `MachOFile`.
+/// A COMDAT section group in a [`MachOFile`].
+///
+/// This is a stub that doesn't implement any functionality.
 #[derive(Debug)]
 pub struct MachOComdat<'data, 'file, Mach, R = &'data [u8]>
 where
@@ -549,14 +559,16 @@ where
     }
 }
 
-/// An iterator over the sections in a COMDAT section group of a `MachOFile32`.
+/// An iterator for the sections in a COMDAT section group in a [`MachOFile32`].
 pub type MachOComdatSectionIterator32<'data, 'file, Endian = Endianness, R = &'data [u8]> =
     MachOComdatSectionIterator<'data, 'file, macho::MachHeader32<Endian>, R>;
-/// An iterator over the sections in a COMDAT section group of a `MachOFile64`.
+/// An iterator for the sections in a COMDAT section group in a [`MachOFile64`].
 pub type MachOComdatSectionIterator64<'data, 'file, Endian = Endianness, R = &'data [u8]> =
     MachOComdatSectionIterator<'data, 'file, macho::MachHeader64<Endian>, R>;
 
-/// An iterator over the sections in a COMDAT section group of a `MachOFile`.
+/// An iterator for the sections in a COMDAT section group in a [`MachOFile`].
+///
+/// This is a stub that doesn't implement any functionality.
 #[derive(Debug)]
 pub struct MachOComdatSectionIterator<'data, 'file, Mach, R = &'data [u8]>
 where
@@ -579,7 +591,7 @@ where
     }
 }
 
-/// A trait for generic access to `MachHeader32` and `MachHeader64`.
+/// A trait for generic access to [`macho::MachHeader32`] and [`macho::MachHeader64`].
 #[allow(missing_docs)]
 pub trait MachHeader: Debug + Pod {
     type Word: Into<u64>;

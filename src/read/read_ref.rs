@@ -8,7 +8,7 @@ use crate::pod::{from_bytes, slice_from_bytes, Pod};
 
 type Result<T> = result::Result<T, ()>;
 
-/// A trait for reading references to `Pod` types from a block of data.
+/// A trait for reading references to [`Pod`] types from a block of data.
 ///
 /// This allows parsers to handle both of these cases:
 /// - the block of data exists in memory, and it is desirable

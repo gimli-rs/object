@@ -17,15 +17,21 @@ use super::{
 };
 
 /// A 32-bit ELF object file.
+///
+/// This is a file that starts with [`elf::FileHeader32`], and corresponds
+/// to [`crate::FileKind::Elf32`].
 pub type ElfFile32<'data, Endian = Endianness, R = &'data [u8]> =
     ElfFile<'data, elf::FileHeader32<Endian>, R>;
 /// A 64-bit ELF object file.
+///
+/// This is a file that starts with [`elf::FileHeader64`], and corresponds
+/// to [`crate::FileKind::Elf64`].
 pub type ElfFile64<'data, Endian = Endianness, R = &'data [u8]> =
     ElfFile<'data, elf::FileHeader64<Endian>, R>;
 
 /// A partially parsed ELF file.
 ///
-/// Most of the functionality of this type is provided by the `Object` trait implementation.
+/// Most functionality is provided by the [`Object`] trait implementation.
 #[derive(Debug)]
 pub struct ElfFile<'data, Elf, R = &'data [u8]>
 where
@@ -306,7 +312,6 @@ where
         })
     }
 
-    /// Get the imported symbols.
     fn imports(&self) -> read::Result<Vec<Import<'data>>> {
         let mut imports = Vec::new();
         for symbol in self.dynamic_symbols.iter() {
@@ -324,7 +329,6 @@ where
         Ok(imports)
     }
 
-    /// Get the exported symbols.
     fn exports(&self) -> read::Result<Vec<Export<'data>>> {
         let mut exports = Vec::new();
         for symbol in self.dynamic_symbols.iter() {
@@ -437,7 +441,7 @@ where
     }
 }
 
-/// A trait for generic access to `FileHeader32` and `FileHeader64`.
+/// A trait for generic access to [`elf::FileHeader32`] and [`elf::FileHeader64`].
 #[allow(missing_docs)]
 pub trait FileHeader: Debug + Pod {
     // Ideally this would be a `u64: From<Word>`, but can't express that.
@@ -462,7 +466,7 @@ pub trait FileHeader: Debug + Pod {
     ///
     /// This is a property of the type, not a value in the header data.
     ///
-    /// This is the same as `is_type_64`, but is non-dispatchable.
+    /// This is the same as [`Self::is_type_64`], but is non-dispatchable.
     fn is_type_64_sized() -> bool
     where
         Self: Sized;

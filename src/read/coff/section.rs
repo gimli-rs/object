@@ -12,6 +12,9 @@ use crate::read::{
 use super::{CoffFile, CoffHeader, CoffRelocationIterator};
 
 /// The table of section headers in a COFF or PE file.
+///
+/// Returned by [`CoffHeader::sections`] and
+/// [`ImageNtHeaders::sections`](crate::read::pe::ImageNtHeaders::sections).
 #[derive(Debug, Default, Clone, Copy)]
 pub struct SectionTable<'data> {
     sections: &'data [pe::ImageSectionHeader],
@@ -104,11 +107,11 @@ impl<'data> SectionTable<'data> {
     }
 }
 
-/// An iterator over the loadable sections of a `CoffBigFile`.
+/// An iterator for the loadable sections in a [`CoffBigFile`](super::CoffBigFile).
 pub type CoffBigSegmentIterator<'data, 'file, R = &'data [u8]> =
     CoffSegmentIterator<'data, 'file, R, pe::AnonObjectHeaderBigobj>;
 
-/// An iterator over the loadable sections of a `CoffFile`.
+/// An iterator for the loadable sections in a [`CoffFile`].
 #[derive(Debug)]
 pub struct CoffSegmentIterator<
     'data,
@@ -133,11 +136,15 @@ impl<'data, 'file, R: ReadRef<'data>, Coff: CoffHeader> Iterator
     }
 }
 
-/// A loadable section of a `CoffBigFile`.
+/// A loadable section in a [`CoffBigFile`](super::CoffBigFile).
+///
+/// Most functionality is provided by the [`ObjectSegment`] trait implementation.
 pub type CoffBigSegment<'data, 'file, R = &'data [u8]> =
     CoffSegment<'data, 'file, R, pe::AnonObjectHeaderBigobj>;
 
-/// A loadable section of a `CoffFile`.
+/// A loadable section in a [`CoffFile`].
+///
+/// Most functionality is provided by the [`ObjectSegment`] trait implementation.
 #[derive(Debug)]
 pub struct CoffSegment<
     'data,
@@ -222,11 +229,11 @@ impl<'data, 'file, R: ReadRef<'data>, Coff: CoffHeader> ObjectSegment<'data>
     }
 }
 
-/// An iterator over the sections of a `CoffBigFile`.
+/// An iterator for the sections in a [`CoffBigFile`](super::CoffBigFile).
 pub type CoffBigSectionIterator<'data, 'file, R = &'data [u8]> =
     CoffSectionIterator<'data, 'file, R, pe::AnonObjectHeaderBigobj>;
 
-/// An iterator over the sections of a `CoffFile`.
+/// An iterator for the sections in a [`CoffFile`].
 #[derive(Debug)]
 pub struct CoffSectionIterator<
     'data,
@@ -252,11 +259,15 @@ impl<'data, 'file, R: ReadRef<'data>, Coff: CoffHeader> Iterator
     }
 }
 
-/// A section of a `CoffBigFile`.
+/// A section in a [`CoffBigFile`](super::CoffBigFile).
+///
+/// Most functionality is provided by the [`ObjectSection`] trait implementation.
 pub type CoffBigSection<'data, 'file, R = &'data [u8]> =
     CoffSection<'data, 'file, R, pe::AnonObjectHeaderBigobj>;
 
-/// A section of a `CoffFile`.
+/// A section in a [`CoffFile`].
+///
+/// Most functionality is provided by the [`ObjectSection`] trait implementation.
 #[derive(Debug)]
 pub struct CoffSection<
     'data,

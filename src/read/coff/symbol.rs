@@ -17,6 +17,9 @@ use crate::read::{
 /// A table of symbol entries in a COFF or PE file.
 ///
 /// Also includes the string table used for the symbol names.
+///
+/// Returned by [`CoffHeader::symbols`] and
+/// [`ImageNtHeaders::symbols`](crate::read::pe::ImageNtHeaders::symbols).
 #[derive(Debug)]
 pub struct SymbolTable<'data, R = &'data [u8], Coff = pe::ImageFileHeader>
 where
@@ -187,11 +190,12 @@ impl<'data, 'table, R: ReadRef<'data>, Coff: CoffHeader> Iterator
     }
 }
 
-/// A symbol table of a `CoffBigFile`.
+/// A symbol table in a [`CoffBigFile`](super::CoffBigFile).
 pub type CoffBigSymbolTable<'data, 'file, R = &'data [u8]> =
     CoffSymbolTable<'data, 'file, R, pe::AnonObjectHeaderBigobj>;
 
-/// A symbol table of a `CoffFile`.
+/// A symbol table in a [`CoffFile`](super::CoffFile)
+/// or [`PeFile`](crate::read::pe::PeFile).
 #[derive(Debug, Clone, Copy)]
 pub struct CoffSymbolTable<'data, 'file, R = &'data [u8], Coff = pe::ImageFileHeader>
 where
@@ -229,11 +233,12 @@ impl<'data, 'file, R: ReadRef<'data>, Coff: CoffHeader> ObjectSymbolTable<'data>
     }
 }
 
-/// An iterator over the symbols of a `CoffBigFile`.
+/// An iterator for the symbols in a [`CoffBigFile`](super::CoffBigFile).
 pub type CoffBigSymbolIterator<'data, 'file, R = &'data [u8]> =
     CoffSymbolIterator<'data, 'file, R, pe::AnonObjectHeaderBigobj>;
 
-/// An iterator over the symbols of a `CoffFile`.
+/// An iterator for the symbols in a [`CoffFile`](super::CoffFile)
+/// or [`PeFile`](crate::read::pe::PeFile).
 pub struct CoffSymbolIterator<'data, 'file, R = &'data [u8], Coff = pe::ImageFileHeader>
 where
     R: ReadRef<'data>,
@@ -268,11 +273,15 @@ impl<'data, 'file, R: ReadRef<'data>, Coff: CoffHeader> Iterator
     }
 }
 
-/// A symbol of a `CoffBigFile`.
+/// A symbol in a [`CoffBigFile`](super::CoffBigFile).
+///
+/// Most functionality is provided by the [`ObjectSymbol`] trait implementation.
 pub type CoffBigSymbol<'data, 'file, R = &'data [u8]> =
     CoffSymbol<'data, 'file, R, pe::AnonObjectHeaderBigobj>;
 
-/// A symbol of a `CoffFile`.
+/// A symbol in a [`CoffFile`](super::CoffFile) or [`PeFile`](crate::read::pe::PeFile).
+///
+/// Most functionality is provided by the [`ObjectSymbol`] trait implementation.
 #[derive(Debug, Clone, Copy)]
 pub struct CoffSymbol<'data, 'file, R = &'data [u8], Coff = pe::ImageFileHeader>
 where
@@ -496,7 +505,7 @@ impl<'data, 'file, R: ReadRef<'data>, Coff: CoffHeader> ObjectSymbol<'data>
     }
 }
 
-/// A trait for generic access to `ImageSymbol` and `ImageSymbolEx`.
+/// A trait for generic access to [`pe::ImageSymbol`] and [`pe::ImageSymbolEx`].
 #[allow(missing_docs)]
 pub trait ImageSymbol: Debug + Pod {
     fn raw_name(&self) -> &[u8; 8];
