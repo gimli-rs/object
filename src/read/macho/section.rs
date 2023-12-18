@@ -11,14 +11,14 @@ use crate::read::{
 
 use super::{MachHeader, MachOFile, MachORelocationIterator};
 
-/// An iterator over the sections of a `MachOFile32`.
+/// An iterator for the sections in a [`MachOFile32`](super::MachOFile32).
 pub type MachOSectionIterator32<'data, 'file, Endian = Endianness, R = &'data [u8]> =
     MachOSectionIterator<'data, 'file, macho::MachHeader32<Endian>, R>;
-/// An iterator over the sections of a `MachOFile64`.
+/// An iterator for the sections in a [`MachOFile64`](super::MachOFile64).
 pub type MachOSectionIterator64<'data, 'file, Endian = Endianness, R = &'data [u8]> =
     MachOSectionIterator<'data, 'file, macho::MachHeader64<Endian>, R>;
 
-/// An iterator over the sections of a `MachOFile`.
+/// An iterator for the sections in a [`MachOFile`].
 pub struct MachOSectionIterator<'data, 'file, Mach, R = &'data [u8]>
 where
     Mach: MachHeader,
@@ -54,14 +54,16 @@ where
     }
 }
 
-/// A section of a `MachOFile32`.
+/// A section in a [`MachOFile32`](super::MachOFile32).
 pub type MachOSection32<'data, 'file, Endian = Endianness, R = &'data [u8]> =
     MachOSection<'data, 'file, macho::MachHeader32<Endian>, R>;
-/// A section of a `MachOFile64`.
+/// A section in a [`MachOFile64`](super::MachOFile64).
 pub type MachOSection64<'data, 'file, Endian = Endianness, R = &'data [u8]> =
     MachOSection<'data, 'file, macho::MachHeader64<Endian>, R>;
 
-/// A section of a `MachOFile`.
+/// A section in a [`MachOFile`].
+///
+/// Most functionality is provided by the [`ObjectSection`] trait implementation.
 #[derive(Debug)]
 pub struct MachOSection<'data, 'file, Mach, R = &'data [u8]>
 where
@@ -247,7 +249,7 @@ impl<'data, Mach: MachHeader> MachOSectionInternal<'data, Mach> {
     }
 }
 
-/// A trait for generic access to `Section32` and `Section64`.
+/// A trait for generic access to [`macho::Section32`] and [`macho::Section64`].
 #[allow(missing_docs)]
 pub trait Section: Debug + Pod {
     type Word: Into<u64>;

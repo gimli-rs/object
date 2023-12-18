@@ -9,14 +9,14 @@ use crate::read::{self, Error, ObjectSection, ReadError, ReadRef, Result, Sectio
 
 use super::{AuxHeader, FileHeader, Rel, XcoffFile, XcoffRelocationIterator};
 
-/// An iterator over the sections of an `XcoffFile32`.
+/// An iterator for the sections in an [`XcoffFile32`](super::XcoffFile32).
 pub type XcoffSectionIterator32<'data, 'file, R = &'data [u8]> =
     XcoffSectionIterator<'data, 'file, xcoff::FileHeader32, R>;
-/// An iterator over the sections of an `XcoffFile64`.
+/// An iterator for the sections in an [`XcoffFile64`](super::XcoffFile64).
 pub type XcoffSectionIterator64<'data, 'file, R = &'data [u8]> =
     XcoffSectionIterator<'data, 'file, xcoff::FileHeader64, R>;
 
-/// An iterator over the sections of an `XcoffFile`.
+/// An iterator for the sections in an [`XcoffFile`].
 #[derive(Debug)]
 pub struct XcoffSectionIterator<'data, 'file, Xcoff, R = &'data [u8]>
 where
@@ -43,14 +43,16 @@ where
     }
 }
 
-/// A section of an `XcoffFile32`.
+/// A section in an [`XcoffFile32`](super::XcoffFile32).
 pub type XcoffSection32<'data, 'file, R = &'data [u8]> =
     XcoffSection<'data, 'file, xcoff::FileHeader32, R>;
-/// A section of an `XcoffFile64`.
+/// A section in an [`XcoffFile64`](super::XcoffFile64).
 pub type XcoffSection64<'data, 'file, R = &'data [u8]> =
     XcoffSection<'data, 'file, xcoff::FileHeader64, R>;
 
-/// A section of an `XcoffFile`.
+/// A section in an [`XcoffFile`].
+///
+/// Most functionality is provided by the [`ObjectSection`] trait implementation.
 #[derive(Debug)]
 pub struct XcoffSection<'data, 'file, Xcoff, R = &'data [u8]>
 where
@@ -199,6 +201,8 @@ where
 }
 
 /// The table of section headers in an XCOFF file.
+///
+/// Returned by [`FileHeader::sections`].
 #[derive(Debug, Clone, Copy)]
 pub struct SectionTable<'data, Xcoff: FileHeader> {
     sections: &'data [Xcoff::SectionHeader],
@@ -260,7 +264,7 @@ where
     }
 }
 
-/// A trait for generic access to `SectionHeader32` and `SectionHeader64`.
+/// A trait for generic access to [`xcoff::SectionHeader32`] and [`xcoff::SectionHeader64`].
 #[allow(missing_docs)]
 pub trait SectionHeader: Debug + Pod {
     type Word: Into<u64>;

@@ -10,6 +10,9 @@ use crate::{pe, ByteString, Bytes, LittleEndian as LE, SubArchitecture};
 ///
 /// Used in Windows import libraries to provide a mapping from
 /// a symbol name to a DLL export. This is not an object file.
+///
+/// This is a file that starts with [`pe::ImportObjectHeader`], and corresponds
+/// to [`crate::FileKind::CoffImport`].
 #[derive(Debug, Clone)]
 pub struct ImportFile<'data> {
     header: &'data pe::ImportObjectHeader,
@@ -189,7 +192,7 @@ impl pe::ImportObjectHeader {
     }
 }
 
-/// The data following `ImportObjectHeader`.
+/// The data following [`pe::ImportObjectHeader`].
 #[derive(Debug, Clone)]
 pub struct ImportObjectData<'data> {
     symbol: ByteString<'data>,

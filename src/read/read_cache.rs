@@ -10,7 +10,7 @@ use std::vec::Vec;
 
 use crate::read::ReadRef;
 
-/// An implementation of `ReadRef` for data in a stream that implements
+/// An implementation of [`ReadRef`] for data in a stream that implements
 /// `Read + Seek`.
 ///
 /// Contains a cache of read-only blocks of data, allowing references to
@@ -128,7 +128,7 @@ impl<'a, R: Read + Seek> ReadRef<'a> for &'a ReadCache<R> {
     }
 }
 
-/// An implementation of `ReadRef` for a range of data in a stream that
+/// An implementation of [`ReadRef`] for a range of data in a stream that
 /// implements `Read + Seek`.
 ///
 /// Shares an underlying `ReadCache` with a lifetime of `'a`.

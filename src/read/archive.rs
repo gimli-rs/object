@@ -1,4 +1,24 @@
 //! Support for archive files.
+//!
+//! ## Example
+//!  ```no_run
+//! use object::{Object, ObjectSection};
+//! use std::error::Error;
+//! use std::fs;
+//!
+//! /// Reads an archive and displays the name of each member.
+//! fn main() -> Result<(), Box<dyn Error>> {
+//! #   #[cfg(feature = "std")] {
+//!     let data = fs::read("path/to/binary")?;
+//!     let file = object::read::archive::ArchiveFile::parse(&*data)?;
+//!     for member in file.members() {
+//!         let member = member?;
+//!         println!("{}", String::from_utf8_lossy(member.name()));
+//!     }
+//! #   }
+//!     Ok(())
+//! }
+//! ```
 
 use core::convert::TryInto;
 

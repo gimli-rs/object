@@ -9,6 +9,8 @@ use super::{
 };
 
 /// The table of data directories in a PE file.
+///
+/// Returned by [`ImageNtHeaders::parse`](super::ImageNtHeaders::parse).
 #[derive(Debug, Clone, Copy)]
 pub struct DataDirectories<'data> {
     entries: &'data [pe::ImageDataDirectory],

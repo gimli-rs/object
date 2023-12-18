@@ -10,7 +10,10 @@ use super::FileHeader;
 ///
 /// This may be a GNU attributes section, or an architecture specific attributes section.
 ///
-/// An attributes section contains a series of subsections.
+/// An attributes section contains a series of [`AttributesSubsection`].
+///
+/// Returned by [`SectionHeader::attributes`](super::SectionHeader::attributes)
+/// and [`SectionHeader::gnu_attributes`](super::SectionHeader::gnu_attributes).
 #[derive(Debug, Clone)]
 pub struct AttributesSection<'data, Elf: FileHeader> {
     endian: Elf::Endian,
@@ -54,7 +57,7 @@ impl<'data, Elf: FileHeader> AttributesSection<'data, Elf> {
     }
 }
 
-/// An iterator over the subsections in an ELF attributes section.
+/// An iterator for the subsections in an [`AttributesSection`].
 #[derive(Debug, Clone)]
 pub struct AttributesSubsectionIterator<'data, Elf: FileHeader> {
     endian: Elf::Endian,
@@ -105,9 +108,10 @@ impl<'data, Elf: FileHeader> AttributesSubsectionIterator<'data, Elf> {
     }
 }
 
-/// A subsection in an ELF attributes section.
+/// A subsection in an [`AttributesSection`].
 ///
-/// A subsection is identified by a vendor name.  It contains a series of sub-subsections.
+/// A subsection is identified by a vendor name.  It contains a series of
+/// [`AttributesSubsubsection`].
 #[derive(Debug, Clone)]
 pub struct AttributesSubsection<'data, Elf: FileHeader> {
     endian: Elf::Endian,
@@ -136,7 +140,7 @@ impl<'data, Elf: FileHeader> AttributesSubsection<'data, Elf> {
     }
 }
 
-/// An iterator over the sub-subsections in an ELF attributes section.
+/// An iterator for the sub-subsections in an [`AttributesSubsection`].
 #[derive(Debug, Clone)]
 pub struct AttributesSubsubsectionIterator<'data, Elf: FileHeader> {
     endian: Elf::Endian,
@@ -200,7 +204,7 @@ impl<'data, Elf: FileHeader> AttributesSubsubsectionIterator<'data, Elf> {
     }
 }
 
-/// A sub-subsection in an ELF attributes section.
+/// A sub-subsection in an [`AttributesSubsection`].
 ///
 /// A sub-subsection is identified by a tag.  It contains an optional series of indices,
 /// followed by a series of attributes.
@@ -248,7 +252,7 @@ impl<'data> AttributesSubsubsection<'data> {
     }
 }
 
-/// An iterator over the indices in a sub-subsection in an ELF attributes section.
+/// An iterator over the indices in an [`AttributesSubsubsection`].
 #[derive(Debug, Clone)]
 pub struct AttributeIndexIterator<'data> {
     data: Bytes<'data>,
@@ -271,7 +275,7 @@ impl<'data> AttributeIndexIterator<'data> {
     }
 }
 
-/// A parser for the attributes in a sub-subsection in an ELF attributes section.
+/// A parser for the attributes in an [`AttributesSubsubsection`].
 ///
 /// The parser relies on the caller to know the format of the data for each attribute tag.
 #[derive(Debug, Clone)]

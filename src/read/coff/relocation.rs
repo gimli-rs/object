@@ -9,11 +9,11 @@ use crate::read::{
 
 use super::{CoffFile, CoffHeader};
 
-/// An iterator over the relocations in a `CoffBigSection`.
+/// An iterator for the relocations in a [`CoffBigSection`](super::CoffBigSection).
 pub type CoffBigRelocationIterator<'data, 'file, R = &'data [u8]> =
     CoffRelocationIterator<'data, 'file, R, pe::AnonObjectHeaderBigobj>;
 
-/// An iterator over the relocations in a `CoffSection`.
+/// An iterator for the relocations in a [`CoffSection`](super::CoffSection).
 pub struct CoffRelocationIterator<
     'data,
     'file,

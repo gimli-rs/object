@@ -18,6 +18,8 @@ use super::{FileHeader, SectionHeader, SectionTable};
 /// A table of symbol entries in an ELF file.
 ///
 /// Also includes the string table used for the symbol names.
+///
+/// Returned by [`SectionTable::symbols`].
 #[derive(Debug, Clone, Copy)]
 pub struct SymbolTable<'data, Elf: FileHeader, R = &'data [u8]>
 where
@@ -197,14 +199,14 @@ impl<'data, Elf: FileHeader, R: ReadRef<'data>> SymbolTable<'data, Elf, R> {
     }
 }
 
-/// A symbol table of an `ElfFile32`.
+/// A symbol table in an [`ElfFile32`](super::ElfFile32).
 pub type ElfSymbolTable32<'data, 'file, Endian = Endianness, R = &'data [u8]> =
     ElfSymbolTable<'data, 'file, elf::FileHeader32<Endian>, R>;
-/// A symbol table of an `ElfFile32`.
+/// A symbol table in an [`ElfFile32`](super::ElfFile32).
 pub type ElfSymbolTable64<'data, 'file, Endian = Endianness, R = &'data [u8]> =
     ElfSymbolTable<'data, 'file, elf::FileHeader64<Endian>, R>;
 
-/// A symbol table of an `ElfFile`.
+/// A symbol table in an [`ElfFile`](super::ElfFile).
 #[derive(Debug, Clone, Copy)]
 pub struct ElfSymbolTable<'data, 'file, Elf, R = &'data [u8]>
 where
@@ -245,14 +247,14 @@ impl<'data, 'file, Elf: FileHeader, R: ReadRef<'data>> ObjectSymbolTable<'data>
     }
 }
 
-/// An iterator over the symbols of an `ElfFile32`.
+/// An iterator for the symbols in an [`ElfFile32`](super::ElfFile32).
 pub type ElfSymbolIterator32<'data, 'file, Endian = Endianness, R = &'data [u8]> =
     ElfSymbolIterator<'data, 'file, elf::FileHeader32<Endian>, R>;
-/// An iterator over the symbols of an `ElfFile64`.
+/// An iterator for the symbols in an [`ElfFile64`](super::ElfFile64).
 pub type ElfSymbolIterator64<'data, 'file, Endian = Endianness, R = &'data [u8]> =
     ElfSymbolIterator<'data, 'file, elf::FileHeader64<Endian>, R>;
 
-/// An iterator over the symbols of an `ElfFile`.
+/// An iterator for the symbols in an [`ElfFile`](super::ElfFile).
 pub struct ElfSymbolIterator<'data, 'file, Elf, R = &'data [u8]>
 where
     Elf: FileHeader,
@@ -289,14 +291,16 @@ impl<'data, 'file, Elf: FileHeader, R: ReadRef<'data>> Iterator
     }
 }
 
-/// A symbol of an `ElfFile32`.
+/// A symbol in an [`ElfFile32`](super::ElfFile32).
 pub type ElfSymbol32<'data, 'file, Endian = Endianness, R = &'data [u8]> =
     ElfSymbol<'data, 'file, elf::FileHeader32<Endian>, R>;
-/// A symbol of an `ElfFile64`.
+/// A symbol in an [`ElfFile64`](super::ElfFile64).
 pub type ElfSymbol64<'data, 'file, Endian = Endianness, R = &'data [u8]> =
     ElfSymbol<'data, 'file, elf::FileHeader64<Endian>, R>;
 
-/// A symbol of an `ElfFile`.
+/// A symbol in an [`ElfFile`](super::ElfFile).
+///
+/// Most functionality is provided by the [`ObjectSymbol`] trait implementation.
 #[derive(Debug, Clone, Copy)]
 pub struct ElfSymbol<'data, 'file, Elf, R = &'data [u8]>
 where
@@ -443,7 +447,7 @@ impl<'data, 'file, Elf: FileHeader, R: ReadRef<'data>> ObjectSymbol<'data>
     }
 }
 
-/// A trait for generic access to `Sym32` and `Sym64`.
+/// A trait for generic access to [`elf::Sym32`] and [`elf::Sym64`].
 #[allow(missing_docs)]
 pub trait Sym: Debug + Pod {
     type Word: Into<u64>;

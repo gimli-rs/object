@@ -11,14 +11,14 @@ use crate::read::{
 
 use super::{ImageNtHeaders, PeFile, SectionTable};
 
-/// An iterator over the loadable sections of a `PeFile32`.
+/// An iterator for the loadable sections in a [`PeFile32`](super::PeFile32).
 pub type PeSegmentIterator32<'data, 'file, R = &'data [u8]> =
     PeSegmentIterator<'data, 'file, pe::ImageNtHeaders32, R>;
-/// An iterator over the loadable sections of a `PeFile64`.
+/// An iterator for the loadable sections in a [`PeFile64`](super::PeFile64).
 pub type PeSegmentIterator64<'data, 'file, R = &'data [u8]> =
     PeSegmentIterator<'data, 'file, pe::ImageNtHeaders64, R>;
 
-/// An iterator over the loadable sections of a `PeFile`.
+/// An iterator for the loadable sections in a [`PeFile`].
 #[derive(Debug)]
 pub struct PeSegmentIterator<'data, 'file, Pe, R = &'data [u8]>
 where
@@ -44,14 +44,16 @@ where
     }
 }
 
-/// A loadable section of a `PeFile32`.
+/// A loadable section in a [`PeFile32`](super::PeFile32).
 pub type PeSegment32<'data, 'file, R = &'data [u8]> =
     PeSegment<'data, 'file, pe::ImageNtHeaders32, R>;
-/// A loadable section of a `PeFile64`.
+/// A loadable section in a [`PeFile64`](super::PeFile64).
 pub type PeSegment64<'data, 'file, R = &'data [u8]> =
     PeSegment<'data, 'file, pe::ImageNtHeaders64, R>;
 
-/// A loadable section of a `PeFile`.
+/// A loadable section in a [`PeFile`].
+///
+/// Most functionality is provided by the [`ObjectSegment`] trait implementation.
 #[derive(Debug)]
 pub struct PeSegment<'data, 'file, Pe, R = &'data [u8]>
 where
@@ -132,14 +134,14 @@ where
     }
 }
 
-/// An iterator over the sections of a `PeFile32`.
+/// An iterator for the sections in a [`PeFile32`](super::PeFile32).
 pub type PeSectionIterator32<'data, 'file, R = &'data [u8]> =
     PeSectionIterator<'data, 'file, pe::ImageNtHeaders32, R>;
-/// An iterator over the sections of a `PeFile64`.
+/// An iterator for the sections in a [`PeFile64`](super::PeFile64).
 pub type PeSectionIterator64<'data, 'file, R = &'data [u8]> =
     PeSectionIterator<'data, 'file, pe::ImageNtHeaders64, R>;
 
-/// An iterator over the sections of a `PeFile`.
+/// An iterator for the sections in a [`PeFile`].
 #[derive(Debug)]
 pub struct PeSectionIterator<'data, 'file, Pe, R = &'data [u8]>
 where
@@ -166,14 +168,16 @@ where
     }
 }
 
-/// A section of a `PeFile32`.
+/// A section in a [`PeFile32`](super::PeFile32).
 pub type PeSection32<'data, 'file, R = &'data [u8]> =
     PeSection<'data, 'file, pe::ImageNtHeaders32, R>;
-/// A section of a `PeFile64`.
+/// A section in a [`PeFile64`](super::PeFile64).
 pub type PeSection64<'data, 'file, R = &'data [u8]> =
     PeSection<'data, 'file, pe::ImageNtHeaders64, R>;
 
-/// A section of a `PeFile`.
+/// A section in a [`PeFile`].
+///
+/// Most functionality is provided by the [`ObjectSection`] trait implementation.
 #[derive(Debug)]
 pub struct PeSection<'data, 'file, Pe, R = &'data [u8]>
 where
@@ -419,7 +423,9 @@ impl pe::ImageSectionHeader {
     }
 }
 
-/// An iterator over the relocations in an `PeSection`.
+/// An iterator for the relocations in an [`PeSection`].
+///
+/// This is a stub that doesn't implement any functionality.
 #[derive(Debug)]
 pub struct PeRelocationIterator<'data, 'file, R = &'data [u8]>(
     PhantomData<(&'data (), &'file (), R)>,

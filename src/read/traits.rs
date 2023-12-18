@@ -10,29 +10,31 @@ use crate::read::{
 use crate::Endianness;
 
 /// An object file.
+///
+/// This is the primary trait for the unified read API.
 pub trait Object<'data: 'file, 'file>: read::private::Sealed {
-    /// A segment in the object file.
+    /// A loadable segment in the object file.
     type Segment: ObjectSegment<'data>;
 
-    /// An iterator over the segments in the object file.
+    /// An iterator for the loadable segments in the object file.
     type SegmentIterator: Iterator<Item = Self::Segment>;
 
     /// A section in the object file.
     type Section: ObjectSection<'data>;
 
-    /// An iterator over the sections in the object file.
+    /// An iterator for the sections in the object file.
     type SectionIterator: Iterator<Item = Self::Section>;
 
     /// A COMDAT section group in the object file.
     type Comdat: ObjectComdat<'data>;
 
-    /// An iterator over the COMDAT section groups in the object file.
+    /// An iterator for the COMDAT section groups in the object file.
     type ComdatIterator: Iterator<Item = Self::Comdat>;
 
     /// A symbol in the object file.
     type Symbol: ObjectSymbol<'data>;
 
-    /// An iterator over symbols in the object file.
+    /// An iterator for symbols in the object file.
     type SymbolIterator: Iterator<Item = Self::Symbol>;
 
     /// A symbol table in the object file.
@@ -42,7 +44,7 @@ pub trait Object<'data: 'file, 'file>: read::private::Sealed {
         SymbolIterator = Self::SymbolIterator,
     >;
 
-    /// An iterator over dynamic relocations in the file.
+    /// An iterator for the dynamic relocations in the file.
     ///
     /// The first field in the item tuple is the address
     /// that the relocation applies to.
@@ -75,7 +77,12 @@ pub trait Object<'data: 'file, 'file>: read::private::Sealed {
     /// Return the kind of this object.
     fn kind(&self) -> ObjectKind;
 
-    /// Get an iterator over the segments in the file.
+    /// Get an iterator for the loadable segments in the file.
+    ///
+    /// For ELF, this is program headers with type [`PT_LOAD`](crate::elf::PT_LOAD).
+    /// For Mach-O, this is load commands with type [`LC_SEGMENT`](crate::macho::LC_SEGMENT)
+    /// or [`LC_SEGMENT_64`](crate::macho::LC_SEGMENT_64).
+    /// For PE, this is all sections.
     fn segments(&'file self) -> Self::SegmentIterator;
 
     /// Get the section named `section_name`, if such a section exists.
@@ -108,13 +115,13 @@ pub trait Object<'data: 'file, 'file>: read::private::Sealed {
     /// Returns an error if the index is invalid.
     fn section_by_index(&'file self, index: SectionIndex) -> Result<Self::Section>;
 
-    /// Get an iterator over the sections in the file.
+    /// Get an iterator for the sections in the file.
     fn sections(&'file self) -> Self::SectionIterator;
 
-    /// Get an iterator over the COMDAT section groups in the file.
+    /// Get an iterator for the COMDAT section groups in the file.
     fn comdats(&'file self) -> Self::ComdatIterator;
 
-    /// Get the symbol table, if any.
+    /// Get the debugging symbol table, if any.
     fn symbol_table(&'file self) -> Option<Self::SymbolTable>;
 
     /// Get the debugging symbol at the given index.
@@ -124,7 +131,7 @@ pub trait Object<'data: 'file, 'file>: read::private::Sealed {
     /// Returns an error if the index is invalid.
     fn symbol_by_index(&'file self, index: SymbolIndex) -> Result<Self::Symbol>;
 
-    /// Get an iterator over the debugging symbols in the file.
+    /// Get an iterator for the debugging symbols in the file.
     ///
     /// This may skip over symbols that are malformed or unsupported.
     ///
@@ -145,14 +152,16 @@ pub trait Object<'data: 'file, 'file>: read::private::Sealed {
     /// Get the dynamic linking symbol table, if any.
     ///
     /// Only ELF has a separate dynamic linking symbol table.
+    /// Consider using [`Self::exports`] or [`Self::imports`] instead.
     fn dynamic_symbol_table(&'file self) -> Option<Self::SymbolTable>;
 
-    /// Get an iterator over the dynamic linking symbols in the file.
+    /// Get an iterator for the dynamic linking symbols in the file.
     ///
     /// This may skip over symbols that are malformed or unsupported.
     ///
-    /// Only ELF has separate dynamic linking symbols.
+    /// Only ELF has dynamic linking symbols.
     /// Other file formats will return an empty iterator.
+    /// Consider using [`Self::exports`] or [`Self::imports`] instead.
     fn dynamic_symbols(&'file self) -> Self::SymbolIterator;
 
     /// Get the dynamic relocations for this file.
@@ -237,20 +246,20 @@ pub trait Object<'data: 'file, 'file>: read::private::Sealed {
 
     /// Get the exported symbols that expose both a name and an address.
     ///
-    /// Some file formats may provide other kinds of symbols, that can be retrieved using
-    /// the lower-level API.
+    /// Some file formats may provide other kinds of symbols that can be retrieved using
+    /// the low level API.
     fn exports(&self) -> Result<Vec<Export<'data>>>;
 
-    /// Return true if the file contains debug information sections, false if not.
+    /// Return true if the file contains DWARF debug information sections, false if not.
     fn has_debug_symbols(&self) -> bool;
 
-    /// The UUID from a Mach-O `LC_UUID` load command.
+    /// The UUID from a Mach-O [`LC_UUID`](crate::macho::LC_UUID) load command.
     #[inline]
     fn mach_uuid(&self) -> Result<Option<[u8; 16]>> {
         Ok(None)
     }
 
-    /// The build ID from an ELF `NT_GNU_BUILD_ID` note.
+    /// The build ID from an ELF [`NT_GNU_BUILD_ID`](crate::elf::NT_GNU_BUILD_ID) note.
     #[inline]
     fn build_id(&self) -> Result<Option<&'data [u8]>> {
         Ok(None)
@@ -268,7 +277,7 @@ pub trait Object<'data: 'file, 'file>: read::private::Sealed {
         Ok(None)
     }
 
-    /// The filename and GUID from the PE CodeView section
+    /// The filename and GUID from the PE CodeView section.
     #[inline]
     fn pdb_info(&self) -> Result<Option<CodeView<'_>>> {
         Ok(None)
@@ -279,17 +288,16 @@ pub trait Object<'data: 'file, 'file>: read::private::Sealed {
     /// Currently this is only non-zero for PE.
     fn relative_address_base(&'file self) -> u64;
 
-    /// Get the virtual address of the entry point of the binary
+    /// Get the virtual address of the entry point of the binary.
     fn entry(&'file self) -> u64;
 
     /// File flags that are specific to each file format.
     fn flags(&self) -> FileFlags;
 }
 
-/// A loadable segment defined in an object file.
+/// A loadable segment in an [`Object`].
 ///
-/// For ELF, this is a program header with type `PT_LOAD`.
-/// For Mach-O, this is a load command with type `LC_SEGMENT` or `LC_SEGMENT_64`.
+/// This trait is part of the unified read API.
 pub trait ObjectSegment<'data>: read::private::Sealed {
     /// Returns the virtual address of the segment.
     fn address(&self) -> u64;
@@ -326,9 +334,11 @@ pub trait ObjectSegment<'data>: read::private::Sealed {
     fn flags(&self) -> SegmentFlags;
 }
 
-/// A section defined in an object file.
+/// A section in an [`Object`].
+///
+/// This trait is part of the unified read API.
 pub trait ObjectSection<'data>: read::private::Sealed {
-    /// An iterator over the relocations for a section.
+    /// An iterator for the relocations for a section.
     ///
     /// The first field in the item tuple is the section offset
     /// that the relocation applies to.
@@ -409,9 +419,11 @@ pub trait ObjectSection<'data>: read::private::Sealed {
     fn flags(&self) -> SectionFlags;
 }
 
-/// A COMDAT section group defined in an object file.
+/// A COMDAT section group in an [`Object`].
+///
+/// This trait is part of the unified read API.
 pub trait ObjectComdat<'data>: read::private::Sealed {
-    /// An iterator over the sections in the object file.
+    /// An iterator for the sections in the section group.
     type SectionIterator: Iterator<Item = SectionIndex>;
 
     /// Returns the COMDAT selection kind.
@@ -432,15 +444,17 @@ pub trait ObjectComdat<'data>: read::private::Sealed {
     fn sections(&self) -> Self::SectionIterator;
 }
 
-/// A symbol table.
+/// A symbol table in an [`Object`].
+///
+/// This trait is part of the unified read API.
 pub trait ObjectSymbolTable<'data>: read::private::Sealed {
     /// A symbol table entry.
     type Symbol: ObjectSymbol<'data>;
 
-    /// An iterator over the symbols in a symbol table.
+    /// An iterator for the symbols in a symbol table.
     type SymbolIterator: Iterator<Item = Self::Symbol>;
 
-    /// Get an iterator over the symbols in the table.
+    /// Get an iterator for the symbols in the table.
     ///
     /// This may skip over symbols that are malformed or unsupported.
     fn symbols(&self) -> Self::SymbolIterator;
@@ -453,7 +467,9 @@ pub trait ObjectSymbolTable<'data>: read::private::Sealed {
     fn symbol_by_index(&self, index: SymbolIndex) -> Result<Self::Symbol>;
 }
 
-/// A symbol table entry.
+/// A symbol table entry in an [`Object`].
+///
+/// This trait is part of the unified read API.
 pub trait ObjectSymbol<'data>: read::private::Sealed {
     /// The index of the symbol.
     fn index(&self) -> SymbolIndex;
@@ -490,11 +506,13 @@ pub trait ObjectSymbol<'data>: read::private::Sealed {
 
     /// Return true if the symbol is a definition of a function or data object
     /// that has a known address.
+    ///
+    /// This is primarily used to implement [`Object::symbol_map`].
     fn is_definition(&self) -> bool;
 
     /// Return true if the symbol is common data.
     ///
-    /// Note: does not check for `SymbolSection::Section` with `SectionKind::Common`.
+    /// Note: does not check for [`SymbolSection::Section`] with [`SectionKind::Common`].
     fn is_common(&self) -> bool;
 
     /// Return true if the symbol is weak.
@@ -505,7 +523,7 @@ pub trait ObjectSymbol<'data>: read::private::Sealed {
 
     /// Return true if the symbol visible outside of the compilation unit.
     ///
-    /// This treats `SymbolScope::Unknown` as global.
+    /// This treats [`SymbolScope::Unknown`] as global.
     fn is_global(&self) -> bool;
 
     /// Return true if the symbol is only visible within the compilation unit.

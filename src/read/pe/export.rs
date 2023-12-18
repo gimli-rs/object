@@ -80,6 +80,8 @@ impl<'a> Debug for ExportTarget<'a> {
 }
 
 /// A partially parsed PE export table.
+///
+/// Returned by [`DataDirectories::export_table`](super::DataDirectories::export_table).
 #[derive(Debug, Clone)]
 pub struct ExportTable<'data> {
     data: Bytes<'data>,

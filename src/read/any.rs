@@ -204,9 +204,9 @@ macro_rules! next_inner {
     };
 }
 
-/// An object file.
+/// An object file that can be any supported file format.
 ///
-/// Most functionality is provided by the `Object` trait implementation.
+/// Most functionality is provided by the [`Object`] trait implementation.
 #[derive(Debug)]
 #[non_exhaustive]
 #[allow(missing_docs)]
@@ -485,7 +485,7 @@ where
     }
 }
 
-/// An iterator over the segments of a `File`.
+/// An iterator for the loadable segments in a [`File`].
 #[derive(Debug)]
 pub struct SegmentIterator<'data, 'file, R: ReadRef<'data> = &'data [u8]> {
     inner: SegmentIteratorInternal<'data, 'file, R>,
@@ -526,7 +526,9 @@ impl<'data, 'file, R: ReadRef<'data>> Iterator for SegmentIterator<'data, 'file,
     }
 }
 
-/// A segment of a `File`.
+/// A loadable segment in a [`File`].
+///
+/// Most functionality is provided by the [`ObjectSegment`] trait implementation.
 pub struct Segment<'data, 'file, R: ReadRef<'data> = &'data [u8]> {
     inner: SegmentInternal<'data, 'file, R>,
 }
@@ -616,7 +618,7 @@ impl<'data, 'file, R: ReadRef<'data>> ObjectSegment<'data> for Segment<'data, 'f
     }
 }
 
-/// An iterator of the sections of a `File`.
+/// An iterator for the sections in a [`File`].
 #[derive(Debug)]
 pub struct SectionIterator<'data, 'file, R: ReadRef<'data> = &'data [u8]> {
     inner: SectionIteratorInternal<'data, 'file, R>,
@@ -658,7 +660,9 @@ impl<'data, 'file, R: ReadRef<'data>> Iterator for SectionIterator<'data, 'file,
     }
 }
 
-/// A Section of a File
+/// A section in a [`File`].
+///
+/// Most functionality is provided by the [`ObjectSection`] trait implementation.
 pub struct Section<'data, 'file, R: ReadRef<'data> = &'data [u8]> {
     inner: SectionInternal<'data, 'file, R>,
 }
@@ -788,7 +792,7 @@ impl<'data, 'file, R: ReadRef<'data>> ObjectSection<'data> for Section<'data, 'f
     }
 }
 
-/// An iterator of the COMDAT section groups of a `File`.
+/// An iterator for the COMDAT section groups in a [`File`].
 #[derive(Debug)]
 pub struct ComdatIterator<'data, 'file, R: ReadRef<'data> = &'data [u8]> {
     inner: ComdatIteratorInternal<'data, 'file, R>,
@@ -829,7 +833,9 @@ impl<'data, 'file, R: ReadRef<'data>> Iterator for ComdatIterator<'data, 'file, 
     }
 }
 
-/// A COMDAT section group of a `File`.
+/// A COMDAT section group in a [`File`].
+///
+/// Most functionality is provided by the [`ObjectComdat`] trait implementation.
 pub struct Comdat<'data, 'file, R: ReadRef<'data> = &'data [u8]> {
     inner: ComdatInternal<'data, 'file, R>,
 }
@@ -902,7 +908,7 @@ impl<'data, 'file, R: ReadRef<'data>> ObjectComdat<'data> for Comdat<'data, 'fil
     }
 }
 
-/// An iterator over COMDAT section entries.
+/// An iterator for the sections in a [`Comdat`].
 #[derive(Debug)]
 pub struct ComdatSectionIterator<'data, 'file, R: ReadRef<'data> = &'data [u8]> {
     inner: ComdatSectionIteratorInternal<'data, 'file, R>,
@@ -942,7 +948,9 @@ impl<'data, 'file, R: ReadRef<'data>> Iterator for ComdatSectionIterator<'data, 
     }
 }
 
-/// A symbol table.
+/// A symbol table in a [`File`].
+///
+/// Most functionality is provided by the [`ObjectSymbolTable`] trait implementation.
 #[derive(Debug)]
 pub struct SymbolTable<'data, 'file, R = &'data [u8]>
 where
@@ -1026,7 +1034,7 @@ impl<'data, 'file, R: ReadRef<'data>> ObjectSymbolTable<'data> for SymbolTable<'
     }
 }
 
-/// An iterator over symbol table entries.
+/// An iterator for the symbols in a [`SymbolTable`].
 #[derive(Debug)]
 pub struct SymbolIterator<'data, 'file, R = &'data [u8]>
 where
@@ -1105,7 +1113,9 @@ impl<'data, 'file, R: ReadRef<'data>> Iterator for SymbolIterator<'data, 'file, 
     }
 }
 
-/// A symbol table entry.
+/// An symbol in a [`SymbolTable`].
+///
+/// Most functionality is provided by the [`ObjectSymbol`] trait implementation.
 pub struct Symbol<'data, 'file, R = &'data [u8]>
 where
     R: ReadRef<'data>,
@@ -1240,7 +1250,7 @@ impl<'data, 'file, R: ReadRef<'data>> ObjectSymbol<'data> for Symbol<'data, 'fil
     }
 }
 
-/// An iterator over dynamic relocation entries.
+/// An iterator for the dynamic relocation entries in a [`File`].
 #[derive(Debug)]
 pub struct DynamicRelocationIterator<'data, 'file, R = &'data [u8]>
 where
@@ -1277,7 +1287,7 @@ impl<'data, 'file, R: ReadRef<'data>> Iterator for DynamicRelocationIterator<'da
     }
 }
 
-/// An iterator over section relocation entries.
+/// An iterator for the relocation entries in a [`Section`].
 #[derive(Debug)]
 pub struct SectionRelocationIterator<'data, 'file, R: ReadRef<'data> = &'data [u8]> {
     inner: SectionRelocationIteratorInternal<'data, 'file, R>,

@@ -269,7 +269,7 @@ pub(crate) fn data_range(
 
 /// A table of zero-terminated strings.
 ///
-/// This is used for most file formats.
+/// This is used by most file formats for strings such as section names and symbol names.
 #[derive(Debug, Clone, Copy)]
 pub struct StringTable<'data, R = &'data [u8]>
 where

@@ -22,9 +22,19 @@ pub(crate) struct CoffCommon<'data, R: ReadRef<'data>, Coff: CoffHeader = pe::Im
 }
 
 /// A COFF bigobj object file with 32-bit section numbers.
+///
+/// This is a file that starts with [`pe::AnonObjectHeaderBigobj`], and corresponds
+/// to [`crate::FileKind::CoffBig`].
+///
+/// Most functionality is provided by the [`Object`] trait implementation.
 pub type CoffBigFile<'data, R = &'data [u8]> = CoffFile<'data, R, pe::AnonObjectHeaderBigobj>;
 
 /// A COFF object file.
+///
+/// This is a file that starts with [`pe::ImageFileHeader`], and corresponds
+/// to [`crate::FileKind::Coff`].
+///
+/// Most functionality is provided by the [`Object`] trait implementation.
 #[derive(Debug)]
 pub struct CoffFile<'data, R: ReadRef<'data> = &'data [u8], Coff: CoffHeader = pe::ImageFileHeader>
 {
@@ -222,7 +232,7 @@ where
     }
 }
 
-/// Read the `class_id` field from an anon object header.
+/// Read the `class_id` field from a [`pe::AnonObjectHeader`].
 ///
 /// This can be used to determine the format of the header.
 pub fn anon_object_class_id<'data, R: ReadRef<'data>>(data: R) -> Result<pe::ClsId> {
@@ -232,13 +242,13 @@ pub fn anon_object_class_id<'data, R: ReadRef<'data>>(data: R) -> Result<pe::Cls
     Ok(header.class_id)
 }
 
-/// A trait for generic access to `ImageFileHeader` and `AnonObjectHeaderBigobj`.
+/// A trait for generic access to [`pe::ImageFileHeader`] and [`pe::AnonObjectHeaderBigobj`].
 #[allow(missing_docs)]
 pub trait CoffHeader: Debug + Pod {
     type ImageSymbol: ImageSymbol;
     type ImageSymbolBytes: Debug + Pod;
 
-    /// Return true if this type is `AnonObjectHeaderBigobj`.
+    /// Return true if this type is [`pe::AnonObjectHeaderBigobj`].
     ///
     /// This is a property of the type, not a value in the header data.
     fn is_type_bigobj() -> bool;
