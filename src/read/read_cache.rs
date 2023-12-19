@@ -141,11 +141,7 @@ pub struct ReadCacheRange<'a, R: Read + Seek> {
 
 impl<'a, R: Read + Seek> Clone for ReadCacheRange<'a, R> {
     fn clone(&self) -> Self {
-        Self {
-            r: self.r,
-            offset: self.offset,
-            size: self.size,
-        }
+        *self
     }
 }
 

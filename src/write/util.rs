@@ -190,7 +190,7 @@ pub(crate) fn write_uleb128(buf: &mut Vec<u8>, mut val: u64) -> usize {
 ///
 /// Returns the number of bytes written.
 #[allow(dead_code)]
-pub(crate) fn write_sleb128<W>(buf: &mut Vec<u8>, mut val: i64) -> usize {
+pub(crate) fn write_sleb128(buf: &mut Vec<u8>, mut val: i64) -> usize {
     let mut len = 0;
     loop {
         let mut byte = val as u8;
