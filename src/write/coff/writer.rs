@@ -460,6 +460,8 @@ impl Default for Name {
     }
 }
 
+// From isn't useful.
+#[allow(clippy::from_over_into)]
 impl<'a> Into<Name> for &'a [u8; 8] {
     fn into(self) -> Name {
         Name::Short(*self)
