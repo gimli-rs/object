@@ -5,7 +5,7 @@ use core::{mem, str};
 use crate::read::{
     self, Architecture, ComdatKind, Error, Export, FileFlags, Import, NoDynamicRelocationIterator,
     Object, ObjectComdat, ObjectKind, ObjectMap, ObjectSection, ReadError, ReadRef, Result,
-    SectionIndex, SymbolIndex,
+    SectionIndex, SubArchitecture, SymbolIndex,
 };
 use crate::{endian, macho, BigEndian, ByteString, Endian, Endianness, Pod};
 
@@ -233,6 +233,16 @@ where
             macho::CPU_TYPE_POWERPC => Architecture::PowerPc,
             macho::CPU_TYPE_POWERPC64 => Architecture::PowerPc64,
             _ => Architecture::Unknown,
+        }
+    }
+
+    fn sub_architecture(&self) -> Option<SubArchitecture> {
+        match (
+            self.header.cputype(self.endian),
+            self.header.cpusubtype(self.endian),
+        ) {
+            (macho::CPU_TYPE_ARM64, macho::CPU_SUBTYPE_ARM64E) => Some(SubArchitecture::Arm64E),
+            _ => None,
         }
     }
 

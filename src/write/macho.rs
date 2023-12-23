@@ -473,6 +473,9 @@ impl<'a> Object<'a> {
         let (cputype, mut cpusubtype) = match (self.architecture, self.sub_architecture) {
             (Architecture::Arm, None) => (macho::CPU_TYPE_ARM, macho::CPU_SUBTYPE_ARM_ALL),
             (Architecture::Aarch64, None) => (macho::CPU_TYPE_ARM64, macho::CPU_SUBTYPE_ARM64_ALL),
+            (Architecture::Aarch64, Some(SubArchitecture::Arm64E)) => {
+                (macho::CPU_TYPE_ARM64, macho::CPU_SUBTYPE_ARM64E)
+            }
             (Architecture::Aarch64_Ilp32, None) => {
                 (macho::CPU_TYPE_ARM64_32, macho::CPU_SUBTYPE_ARM64_32_V8)
             }
