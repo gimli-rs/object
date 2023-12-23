@@ -495,23 +495,29 @@ fn macho_x86_64() {
 
 #[test]
 fn macho_any() {
-    for (arch, endian) in [
-        (Architecture::Aarch64, Endianness::Little),
-        (Architecture::Aarch64_Ilp32, Endianness::Little),
+    for (arch, subarch, endian) in [
+        (Architecture::Aarch64, None, Endianness::Little),
+        (
+            Architecture::Aarch64,
+            Some(SubArchitecture::Arm64E),
+            Endianness::Little,
+        ),
+        (Architecture::Aarch64_Ilp32, None, Endianness::Little),
         /* TODO:
-        (Architecture::Arm, Endianness::Little),
+        (Architecture::Arm, None, Endianness::Little),
         */
-        (Architecture::I386, Endianness::Little),
-        (Architecture::X86_64, Endianness::Little),
+        (Architecture::I386, None, Endianness::Little),
+        (Architecture::X86_64, None, Endianness::Little),
         /* TODO:
-        (Architecture::PowerPc, Endianness::Big),
-        (Architecture::PowerPc64, Endianness::Big),
+        (Architecture::PowerPc, None, Endianness::Big),
+        (Architecture::PowerPc64, None, Endianness::Big),
         */
     ]
     .iter()
     .copied()
     {
         let mut object = write::Object::new(BinaryFormat::MachO, arch, endian);
+        object.set_sub_architecture(subarch);
 
         let section = object.section_id(write::StandardSection::Data);
         object.append_section_data(section, &[1; 30], 4);
@@ -551,6 +557,7 @@ fn macho_any() {
         println!("{:?}", object.architecture());
         assert_eq!(object.format(), BinaryFormat::MachO);
         assert_eq!(object.architecture(), arch);
+        assert_eq!(object.sub_architecture(), subarch);
         assert_eq!(object.endianness(), endian);
 
         let mut sections = object.sections();
