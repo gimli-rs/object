@@ -53,7 +53,11 @@ pub trait Object<'data: 'file, 'file>: read::private::Sealed {
     /// Get the architecture type of the file.
     fn architecture(&self) -> Architecture;
 
-    /// Get the sub-architecture type of the file.
+    /// Get the sub-architecture type of the file if known.
+    ///
+    /// A value of `None` has a range of meanings: the file supports all
+    /// sub-architectures, the file does not explicitly specify a
+    /// sub-architecture, or the sub-architecture is currently unrecognized.
     fn sub_architecture(&self) -> Option<SubArchitecture> {
         None
     }

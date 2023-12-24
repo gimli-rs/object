@@ -1,6 +1,6 @@
 [package]
 name = "object"
-version = "0.32.1"
+version = "0.32.2"
 edition = "2018"
 exclude = ["/.github", "/testfiles"]
 keywords = ["object", "elf", "mach-o", "pe", "coff"]
@@ -16,10 +16,10 @@ features = ['doc']
 crc32fast = { version = "1.2", default-features = false, optional = true }
 flate2 = { version = "1", optional = true }
 indexmap = { version = "2.0", default-features = false, optional = true }
-wasmparser = { version = "0.110.0", optional = true }
+wasmparser = { version = "0.118.0", optional = true }
 memchr = { version = "2.4.1", default-features = false }
 hashbrown = { version = "0.14.0", features = ["ahash"], default-features = false, optional = true }
-ruzstd = { version = "0.4.0", optional = true }
+ruzstd = { version = "0.5.0", optional = true }
 
 # Internal feature, only used when building as part of libstd, not part of the
 # stable interface of this crate.
