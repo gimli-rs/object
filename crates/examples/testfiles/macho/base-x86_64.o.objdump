@@ -15,11 +15,11 @@ Symbols
 1: Symbol { name: "_printf", address: 0, size: 0, kind: Unknown, section: Undefined, scope: Unknown, weak: false, flags: MachO { n_desc: 0 } }
 
 __text relocations
-(19, Relocation { kind: Relative, encoding: X86Branch, size: 20, target: Symbol(SymbolIndex(1)), addend: fffffffffffffffc, implicit_addend: true })
-(12, Relocation { kind: Relative, encoding: X86RipRelative, size: 20, target: Section(SectionIndex(2)), addend: fffffffffffffffc, implicit_addend: true })
+(19, Relocation { kind: Relative, encoding: X86Branch, size: 20, target: Symbol(SymbolIndex(1)), addend: fffffffffffffffc, implicit_addend: true, flags: MachO { r_type: 2, r_pcrel: true, r_length: 2 } })
+(12, Relocation { kind: Relative, encoding: X86RipRelative, size: 20, target: Section(SectionIndex(2)), addend: fffffffffffffffc, implicit_addend: true, flags: MachO { r_type: 1, r_pcrel: true, r_length: 2 } })
 
 __compact_unwind relocations
-(0, Relocation { kind: Absolute, encoding: Generic, size: 40, target: Section(SectionIndex(1)), addend: 0, implicit_addend: true })
+(0, Relocation { kind: Absolute, encoding: Generic, size: 40, target: Section(SectionIndex(1)), addend: 0, implicit_addend: true, flags: MachO { r_type: 0, r_pcrel: false, r_length: 3 } })
 
 Dynamic symbols
 

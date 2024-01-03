@@ -35,18 +35,18 @@ Symbols
 21: Symbol { name: "__mingw_vfprintf", address: 0, size: 0, kind: Text, section: Undefined, scope: Linkage, weak: false, flags: None }
 
 .text relocations
-(2f, Relocation { kind: Relative, encoding: Generic, size: 20, target: Symbol(SymbolIndex(13)), addend: fffffffffffffffc, implicit_addend: true })
-(40, Relocation { kind: Relative, encoding: Generic, size: 20, target: Symbol(SymbolIndex(15)), addend: fffffffffffffffc, implicit_addend: true })
-(5a, Relocation { kind: Relative, encoding: Generic, size: 20, target: Symbol(SymbolIndex(14)), addend: fffffffffffffffc, implicit_addend: true })
-(61, Relocation { kind: Relative, encoding: Generic, size: 20, target: Symbol(SymbolIndex(f)), addend: fffffffffffffffc, implicit_addend: true })
+(2f, Relocation { kind: Relative, encoding: Generic, size: 20, target: Symbol(SymbolIndex(13)), addend: fffffffffffffffc, implicit_addend: true, flags: Coff { typ: 4 } })
+(40, Relocation { kind: Relative, encoding: Generic, size: 20, target: Symbol(SymbolIndex(15)), addend: fffffffffffffffc, implicit_addend: true, flags: Coff { typ: 4 } })
+(5a, Relocation { kind: Relative, encoding: Generic, size: 20, target: Symbol(SymbolIndex(14)), addend: fffffffffffffffc, implicit_addend: true, flags: Coff { typ: 4 } })
+(61, Relocation { kind: Relative, encoding: Generic, size: 20, target: Symbol(SymbolIndex(f)), addend: fffffffffffffffc, implicit_addend: true, flags: Coff { typ: 4 } })
 
 .pdata relocations
-(0, Relocation { kind: ImageOffset, encoding: Generic, size: 20, target: Symbol(SymbolIndex(5)), addend: 0, implicit_addend: true })
-(4, Relocation { kind: ImageOffset, encoding: Generic, size: 20, target: Symbol(SymbolIndex(5)), addend: 0, implicit_addend: true })
-(8, Relocation { kind: ImageOffset, encoding: Generic, size: 20, target: Symbol(SymbolIndex(b)), addend: 0, implicit_addend: true })
-(c, Relocation { kind: ImageOffset, encoding: Generic, size: 20, target: Symbol(SymbolIndex(5)), addend: 0, implicit_addend: true })
-(10, Relocation { kind: ImageOffset, encoding: Generic, size: 20, target: Symbol(SymbolIndex(5)), addend: 0, implicit_addend: true })
-(14, Relocation { kind: ImageOffset, encoding: Generic, size: 20, target: Symbol(SymbolIndex(b)), addend: 0, implicit_addend: true })
+(0, Relocation { kind: ImageOffset, encoding: Generic, size: 20, target: Symbol(SymbolIndex(5)), addend: 0, implicit_addend: true, flags: Coff { typ: 3 } })
+(4, Relocation { kind: ImageOffset, encoding: Generic, size: 20, target: Symbol(SymbolIndex(5)), addend: 0, implicit_addend: true, flags: Coff { typ: 3 } })
+(8, Relocation { kind: ImageOffset, encoding: Generic, size: 20, target: Symbol(SymbolIndex(b)), addend: 0, implicit_addend: true, flags: Coff { typ: 3 } })
+(c, Relocation { kind: ImageOffset, encoding: Generic, size: 20, target: Symbol(SymbolIndex(5)), addend: 0, implicit_addend: true, flags: Coff { typ: 3 } })
+(10, Relocation { kind: ImageOffset, encoding: Generic, size: 20, target: Symbol(SymbolIndex(5)), addend: 0, implicit_addend: true, flags: Coff { typ: 3 } })
+(14, Relocation { kind: ImageOffset, encoding: Generic, size: 20, target: Symbol(SymbolIndex(b)), addend: 0, implicit_addend: true, flags: Coff { typ: 3 } })
 
 Dynamic symbols
 

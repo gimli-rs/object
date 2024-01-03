@@ -3,8 +3,8 @@
 use object::read::{Object, ObjectSection, ObjectSymbol};
 use object::{read, write, SectionIndex, SubArchitecture};
 use object::{
-    Architecture, BinaryFormat, Endianness, RelocationEncoding, RelocationKind, SectionKind,
-    SymbolFlags, SymbolKind, SymbolScope, SymbolSection,
+    Architecture, BinaryFormat, Endianness, RelocationEncoding, RelocationFlags, RelocationKind,
+    SectionKind, SymbolFlags, SymbolKind, SymbolScope, SymbolSection,
 };
 
 mod bss;
@@ -65,11 +65,13 @@ fn coff_any() {
                 text,
                 write::Relocation {
                     offset: 8,
-                    size: arch.address_size().unwrap().bytes() * 8,
-                    kind: RelocationKind::Absolute,
-                    encoding: RelocationEncoding::Generic,
                     symbol: func1_symbol,
                     addend: 0,
+                    flags: RelocationFlags::Generic {
+                        kind: RelocationKind::Absolute,
+                        encoding: RelocationEncoding::Generic,
+                        size: arch.address_size().unwrap().bytes() * 8,
+                    },
                 },
             )
             .unwrap();
@@ -182,11 +184,13 @@ fn elf_x86_64() {
             text,
             write::Relocation {
                 offset: 8,
-                size: 64,
-                kind: RelocationKind::Absolute,
-                encoding: RelocationEncoding::Generic,
                 symbol: func1_symbol,
                 addend: 0,
+                flags: RelocationFlags::Generic {
+                    kind: RelocationKind::Absolute,
+                    encoding: RelocationEncoding::Generic,
+                    size: 64,
+                },
             },
         )
         .unwrap();
@@ -309,11 +313,13 @@ fn elf_any() {
                 section,
                 write::Relocation {
                     offset: 8,
-                    size: 32,
-                    kind: RelocationKind::Absolute,
-                    encoding: RelocationEncoding::Generic,
                     symbol,
                     addend: 0,
+                    flags: RelocationFlags::Generic {
+                        kind: RelocationKind::Absolute,
+                        encoding: RelocationEncoding::Generic,
+                        size: 32,
+                    },
                 },
             )
             .unwrap();
@@ -323,11 +329,13 @@ fn elf_any() {
                     section,
                     write::Relocation {
                         offset: 16,
-                        size: 64,
-                        kind: RelocationKind::Absolute,
-                        encoding: RelocationEncoding::Generic,
                         symbol,
                         addend: 0,
+                        flags: RelocationFlags::Generic {
+                            kind: RelocationKind::Absolute,
+                            encoding: RelocationEncoding::Generic,
+                            size: 64,
+                        },
                     },
                 )
                 .unwrap();
@@ -406,11 +414,13 @@ fn macho_x86_64() {
             text,
             write::Relocation {
                 offset: 8,
-                size: 64,
-                kind: RelocationKind::Absolute,
-                encoding: RelocationEncoding::Generic,
                 symbol: func1_symbol,
                 addend: 0,
+                flags: RelocationFlags::Generic {
+                    kind: RelocationKind::Absolute,
+                    encoding: RelocationEncoding::Generic,
+                    size: 64,
+                },
             },
         )
         .unwrap();
@@ -419,11 +429,13 @@ fn macho_x86_64() {
             text,
             write::Relocation {
                 offset: 16,
-                size: 32,
-                kind: RelocationKind::Relative,
-                encoding: RelocationEncoding::Generic,
                 symbol: func1_symbol,
                 addend: -4,
+                flags: RelocationFlags::Generic {
+                    kind: RelocationKind::Relative,
+                    encoding: RelocationEncoding::Generic,
+                    size: 32,
+                },
             },
         )
         .unwrap();
@@ -528,11 +540,13 @@ fn macho_any() {
                 section,
                 write::Relocation {
                     offset: 8,
-                    size: 32,
-                    kind: RelocationKind::Absolute,
-                    encoding: RelocationEncoding::Generic,
                     symbol,
                     addend: 0,
+                    flags: RelocationFlags::Generic {
+                        kind: RelocationKind::Absolute,
+                        encoding: RelocationEncoding::Generic,
+                        size: 32,
+                    },
                 },
             )
             .unwrap();
@@ -542,11 +556,13 @@ fn macho_any() {
                     section,
                     write::Relocation {
                         offset: 16,
-                        size: 64,
-                        kind: RelocationKind::Absolute,
-                        encoding: RelocationEncoding::Generic,
                         symbol,
                         addend: 0,
+                        flags: RelocationFlags::Generic {
+                            kind: RelocationKind::Absolute,
+                            encoding: RelocationEncoding::Generic,
+                            size: 64,
+                        },
                     },
                 )
                 .unwrap();
@@ -619,11 +635,13 @@ fn xcoff_powerpc() {
                 text,
                 write::Relocation {
                     offset: 8,
-                    size: 64,
-                    kind: RelocationKind::Absolute,
-                    encoding: RelocationEncoding::Generic,
                     symbol: func1_symbol,
                     addend: 0,
+                    flags: RelocationFlags::Generic {
+                        kind: RelocationKind::Absolute,
+                        encoding: RelocationEncoding::Generic,
+                        size: 64,
+                    },
                 },
             )
             .unwrap();

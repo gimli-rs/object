@@ -667,6 +667,7 @@ pub struct Relocation {
     target: RelocationTarget,
     addend: i64,
     implicit_addend: bool,
+    flags: RelocationFlags,
 }
 
 impl Relocation {
@@ -702,17 +703,20 @@ impl Relocation {
         self.addend
     }
 
-    /// Set the addend to use in the relocation calculation.
-    #[inline]
-    pub fn set_addend(&mut self, addend: i64) {
-        self.addend = addend
-    }
-
     /// Returns true if there is an implicit addend stored in the data at the offset
     /// to be relocated.
     #[inline]
     pub fn has_implicit_addend(&self) -> bool {
         self.implicit_addend
+    }
+
+    /// Relocation flags that are specific to each file format.
+    ///
+    /// The values returned by `kind`, `encoding` and `size` are derived
+    /// from these flags.
+    #[inline]
+    pub fn flags(&self) -> RelocationFlags {
+        self.flags
     }
 }
 

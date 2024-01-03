@@ -11,8 +11,9 @@ use std::{boxed::Box, collections::HashMap, error, io};
 
 use crate::endian::{Endianness, U32, U64};
 use crate::{
-    Architecture, BinaryFormat, ComdatKind, FileFlags, RelocationEncoding, RelocationKind,
-    SectionFlags, SectionKind, SubArchitecture, SymbolFlags, SymbolKind, SymbolScope,
+    Architecture, BinaryFormat, ComdatKind, FileFlags, RelocationEncoding, RelocationFlags,
+    RelocationKind, SectionFlags, SectionKind, SubArchitecture, SymbolFlags, SymbolKind,
+    SymbolScope,
 };
 
 #[cfg(feature = "coff")]
@@ -532,19 +533,31 @@ impl<'a> Object<'a> {
     /// Relocations must only be added after the referenced symbols have been added
     /// and defined (if applicable).
     pub fn add_relocation(&mut self, section: SectionId, mut relocation: Relocation) -> Result<()> {
-        let addend = match self.format {
+        match self.format {
             #[cfg(feature = "coff")]
-            BinaryFormat::Coff => self.coff_fixup_relocation(&mut relocation),
+            BinaryFormat::Coff => self.coff_translate_relocation(&mut relocation)?,
             #[cfg(feature = "elf")]
-            BinaryFormat::Elf => self.elf_fixup_relocation(&mut relocation)?,
+            BinaryFormat::Elf => self.elf_translate_relocation(&mut relocation)?,
             #[cfg(feature = "macho")]
-            BinaryFormat::MachO => self.macho_fixup_relocation(&mut relocation),
+            BinaryFormat::MachO => self.macho_translate_relocation(&mut relocation)?,
             #[cfg(feature = "xcoff")]
-            BinaryFormat::Xcoff => self.xcoff_fixup_relocation(&mut relocation),
+            BinaryFormat::Xcoff => self.xcoff_translate_relocation(&mut relocation)?,
+            _ => unimplemented!(),
+        }
+        let implicit = match self.format {
+            #[cfg(feature = "coff")]
+            BinaryFormat::Coff => self.coff_adjust_addend(&mut relocation)?,
+            #[cfg(feature = "elf")]
+            BinaryFormat::Elf => self.elf_adjust_addend(&mut relocation)?,
+            #[cfg(feature = "macho")]
+            BinaryFormat::MachO => self.macho_adjust_addend(&mut relocation)?,
+            #[cfg(feature = "xcoff")]
+            BinaryFormat::Xcoff => self.xcoff_adjust_addend(&mut relocation)?,
             _ => unimplemented!(),
         };
-        if addend != 0 {
-            self.write_relocation_addend(section, &relocation, addend)?;
+        if implicit && relocation.addend != 0 {
+            self.write_relocation_addend(section, &relocation)?;
+            relocation.addend = 0;
         }
         self.sections[section.0].relocations.push(relocation);
         Ok(())
@@ -554,13 +567,23 @@ impl<'a> Object<'a> {
         &mut self,
         section: SectionId,
         relocation: &Relocation,
-        addend: i64,
     ) -> Result<()> {
+        let size = match self.format {
+            #[cfg(feature = "coff")]
+            BinaryFormat::Coff => self.coff_relocation_size(relocation)?,
+            #[cfg(feature = "elf")]
+            BinaryFormat::Elf => self.elf_relocation_size(relocation)?,
+            #[cfg(feature = "macho")]
+            BinaryFormat::MachO => self.macho_relocation_size(relocation)?,
+            #[cfg(feature = "xcoff")]
+            BinaryFormat::Xcoff => self.xcoff_relocation_size(relocation)?,
+            _ => unimplemented!(),
+        };
         let data = self.sections[section.0].data_mut();
         let offset = relocation.offset as usize;
-        match relocation.size {
-            32 => data.write_at(offset, &U32::new(self.endian, addend as u32)),
-            64 => data.write_at(offset, &U64::new(self.endian, addend as u64)),
+        match size {
+            32 => data.write_at(offset, &U32::new(self.endian, relocation.addend as u32)),
+            64 => data.write_at(offset, &U64::new(self.endian, relocation.addend as u64)),
             _ => {
                 return Err(Error(format!(
                     "unimplemented relocation addend {:?}",
@@ -572,7 +595,7 @@ impl<'a> Object<'a> {
             Error(format!(
                 "invalid relocation offset {}+{} (max {})",
                 relocation.offset,
-                relocation.size,
+                size,
                 data.len()
             ))
         })
@@ -883,12 +906,6 @@ impl Symbol {
 pub struct Relocation {
     /// The section offset of the place of the relocation.
     pub offset: u64,
-    /// The size in bits of the place of relocation.
-    pub size: u8,
-    /// The operation used to calculate the result of the relocation.
-    pub kind: RelocationKind,
-    /// Information about how the result of the relocation operation is encoded in the place.
-    pub encoding: RelocationEncoding,
     /// The symbol referred to by the relocation.
     ///
     /// This may be a section symbol.
@@ -897,6 +914,8 @@ pub struct Relocation {
     ///
     /// This may be in addition to an implicit addend stored at the place of the relocation.
     pub addend: i64,
+    /// The fields that define the relocation type.
+    pub flags: RelocationFlags,
 }
 
 /// An identifier used to reference a COMDAT section group.

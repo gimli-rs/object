@@ -101,9 +101,9 @@ Symbols
 7: Symbol { name: "\u{7f}test_x64_NULL_THUNK_DATA", address: 0, size: 0, kind: Data, section: Undefined, scope: Linkage, weak: false, flags: None }
 
 .idata$2 relocations
-(c, Relocation { kind: ImageOffset, encoding: Generic, size: 20, target: Symbol(SymbolIndex(3)), addend: 0, implicit_addend: true })
-(0, Relocation { kind: ImageOffset, encoding: Generic, size: 20, target: Symbol(SymbolIndex(4)), addend: 0, implicit_addend: true })
-(10, Relocation { kind: ImageOffset, encoding: Generic, size: 20, target: Symbol(SymbolIndex(5)), addend: 0, implicit_addend: true })
+(c, Relocation { kind: ImageOffset, encoding: Generic, size: 20, target: Symbol(SymbolIndex(3)), addend: 0, implicit_addend: true, flags: Coff { typ: 3 } })
+(0, Relocation { kind: ImageOffset, encoding: Generic, size: 20, target: Symbol(SymbolIndex(4)), addend: 0, implicit_addend: true, flags: Coff { typ: 3 } })
+(10, Relocation { kind: ImageOffset, encoding: Generic, size: 20, target: Symbol(SymbolIndex(5)), addend: 0, implicit_addend: true, flags: Coff { typ: 3 } })
 
 Dynamic symbols
 
@@ -187,9 +187,9 @@ Symbols
 7: Symbol { name: "\u{7f}test_x86_NULL_THUNK_DATA", address: 0, size: 0, kind: Data, section: Undefined, scope: Linkage, weak: false, flags: None }
 
 .idata$2 relocations
-(c, Relocation { kind: ImageOffset, encoding: Generic, size: 20, target: Symbol(SymbolIndex(3)), addend: 0, implicit_addend: true })
-(0, Relocation { kind: ImageOffset, encoding: Generic, size: 20, target: Symbol(SymbolIndex(4)), addend: 0, implicit_addend: true })
-(10, Relocation { kind: ImageOffset, encoding: Generic, size: 20, target: Symbol(SymbolIndex(5)), addend: 0, implicit_addend: true })
+(c, Relocation { kind: ImageOffset, encoding: Generic, size: 20, target: Symbol(SymbolIndex(3)), addend: 0, implicit_addend: true, flags: Coff { typ: 7 } })
+(0, Relocation { kind: ImageOffset, encoding: Generic, size: 20, target: Symbol(SymbolIndex(4)), addend: 0, implicit_addend: true, flags: Coff { typ: 7 } })
+(10, Relocation { kind: ImageOffset, encoding: Generic, size: 20, target: Symbol(SymbolIndex(5)), addend: 0, implicit_addend: true, flags: Coff { typ: 7 } })
 
 Dynamic symbols
 
@@ -274,9 +274,9 @@ Symbols
 7: Symbol { name: "\u{7f}test_arm64ec_NULL_THUNK_DATA", address: 0, size: 0, kind: Data, section: Undefined, scope: Linkage, weak: false, flags: None }
 
 .idata$2 relocations
-(c, Relocation { kind: ImageOffset, encoding: Generic, size: 20, target: Symbol(SymbolIndex(3)), addend: 0, implicit_addend: true })
-(0, Relocation { kind: ImageOffset, encoding: Generic, size: 20, target: Symbol(SymbolIndex(4)), addend: 0, implicit_addend: true })
-(10, Relocation { kind: ImageOffset, encoding: Generic, size: 20, target: Symbol(SymbolIndex(5)), addend: 0, implicit_addend: true })
+(c, Relocation { kind: ImageOffset, encoding: Generic, size: 20, target: Symbol(SymbolIndex(3)), addend: 0, implicit_addend: true, flags: Coff { typ: 2 } })
+(0, Relocation { kind: ImageOffset, encoding: Generic, size: 20, target: Symbol(SymbolIndex(4)), addend: 0, implicit_addend: true, flags: Coff { typ: 2 } })
+(10, Relocation { kind: ImageOffset, encoding: Generic, size: 20, target: Symbol(SymbolIndex(5)), addend: 0, implicit_addend: true, flags: Coff { typ: 2 } })
 
 Dynamic symbols
 

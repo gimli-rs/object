@@ -81,49 +81,198 @@ impl<'a> Object<'a> {
         name
     }
 
-    pub(crate) fn coff_fixup_relocation(&mut self, relocation: &mut Relocation) -> i64 {
-        if relocation.kind == RelocationKind::GotRelative {
+    pub(crate) fn coff_translate_relocation(&mut self, reloc: &mut Relocation) -> Result<()> {
+        let (mut kind, _encoding, size) = if let RelocationFlags::Generic {
+            kind,
+            encoding,
+            size,
+        } = reloc.flags
+        {
+            (kind, encoding, size)
+        } else {
+            return Ok(());
+        };
+        if kind == RelocationKind::GotRelative {
             // Use a stub symbol for the relocation instead.
             // This isn't really a GOT, but it's a similar purpose.
             // TODO: need to handle DLL imports differently?
-            relocation.kind = RelocationKind::Relative;
-            relocation.symbol = self.coff_add_stub_symbol(relocation.symbol);
-        } else if relocation.kind == RelocationKind::PltRelative {
+            kind = RelocationKind::Relative;
+            reloc.symbol = self.coff_add_stub_symbol(reloc.symbol)?;
+        } else if kind == RelocationKind::PltRelative {
             // Windows doesn't need a separate relocation type for
             // references to functions in import libraries.
             // For convenience, treat this the same as Relative.
-            relocation.kind = RelocationKind::Relative;
+            kind = RelocationKind::Relative;
         }
 
-        let constant = match self.architecture {
-            Architecture::I386 | Architecture::Arm | Architecture::Aarch64 => match relocation.kind
-            {
-                RelocationKind::Relative => {
-                    // IMAGE_REL_I386_REL32, IMAGE_REL_ARM_REL32, IMAGE_REL_ARM64_REL32
-                    relocation.addend + 4
+        let typ = match self.architecture {
+            Architecture::I386 => match (kind, size) {
+                (RelocationKind::Absolute, 16) => coff::IMAGE_REL_I386_DIR16,
+                (RelocationKind::Relative, 16) => coff::IMAGE_REL_I386_REL16,
+                (RelocationKind::Absolute, 32) => coff::IMAGE_REL_I386_DIR32,
+                (RelocationKind::ImageOffset, 32) => coff::IMAGE_REL_I386_DIR32NB,
+                (RelocationKind::SectionIndex, 16) => coff::IMAGE_REL_I386_SECTION,
+                (RelocationKind::SectionOffset, 32) => coff::IMAGE_REL_I386_SECREL,
+                (RelocationKind::SectionOffset, 7) => coff::IMAGE_REL_I386_SECREL7,
+                (RelocationKind::Relative, 32) => coff::IMAGE_REL_I386_REL32,
+                _ => {
+                    return Err(Error(format!("unimplemented relocation {:?}", reloc)));
                 }
-                _ => relocation.addend,
             },
-            Architecture::X86_64 => match relocation.kind {
-                RelocationKind::Relative => {
-                    // IMAGE_REL_AMD64_REL32 through to IMAGE_REL_AMD64_REL32_5
-                    if relocation.addend <= -4 && relocation.addend >= -9 {
-                        0
-                    } else {
-                        relocation.addend + 4
-                    }
+            Architecture::X86_64 => match (kind, size) {
+                (RelocationKind::Absolute, 64) => coff::IMAGE_REL_AMD64_ADDR64,
+                (RelocationKind::Absolute, 32) => coff::IMAGE_REL_AMD64_ADDR32,
+                (RelocationKind::ImageOffset, 32) => coff::IMAGE_REL_AMD64_ADDR32NB,
+                (RelocationKind::Relative, 32) => match reloc.addend {
+                    -5 => coff::IMAGE_REL_AMD64_REL32_1,
+                    -6 => coff::IMAGE_REL_AMD64_REL32_2,
+                    -7 => coff::IMAGE_REL_AMD64_REL32_3,
+                    -8 => coff::IMAGE_REL_AMD64_REL32_4,
+                    -9 => coff::IMAGE_REL_AMD64_REL32_5,
+                    _ => coff::IMAGE_REL_AMD64_REL32,
+                },
+                (RelocationKind::SectionIndex, 16) => coff::IMAGE_REL_AMD64_SECTION,
+                (RelocationKind::SectionOffset, 32) => coff::IMAGE_REL_AMD64_SECREL,
+                (RelocationKind::SectionOffset, 7) => coff::IMAGE_REL_AMD64_SECREL7,
+                _ => {
+                    return Err(Error(format!("unimplemented relocation {:?}", reloc)));
                 }
-                _ => relocation.addend,
             },
-            _ => unimplemented!(),
+            Architecture::Arm => match (kind, size) {
+                (RelocationKind::Absolute, 32) => coff::IMAGE_REL_ARM_ADDR32,
+                (RelocationKind::ImageOffset, 32) => coff::IMAGE_REL_ARM_ADDR32NB,
+                (RelocationKind::Relative, 32) => coff::IMAGE_REL_ARM_REL32,
+                (RelocationKind::SectionIndex, 16) => coff::IMAGE_REL_ARM_SECTION,
+                (RelocationKind::SectionOffset, 32) => coff::IMAGE_REL_ARM_SECREL,
+                _ => {
+                    return Err(Error(format!("unimplemented relocation {:?}", reloc)));
+                }
+            },
+            Architecture::Aarch64 => match (kind, size) {
+                (RelocationKind::Absolute, 32) => coff::IMAGE_REL_ARM64_ADDR32,
+                (RelocationKind::ImageOffset, 32) => coff::IMAGE_REL_ARM64_ADDR32NB,
+                (RelocationKind::SectionIndex, 16) => coff::IMAGE_REL_ARM64_SECTION,
+                (RelocationKind::SectionOffset, 32) => coff::IMAGE_REL_ARM64_SECREL,
+                (RelocationKind::Absolute, 64) => coff::IMAGE_REL_ARM64_ADDR64,
+                (RelocationKind::Relative, 32) => coff::IMAGE_REL_ARM64_REL32,
+                _ => {
+                    return Err(Error(format!("unimplemented relocation {:?}", reloc)));
+                }
+            },
+            _ => {
+                return Err(Error(format!(
+                    "unimplemented architecture {:?}",
+                    self.architecture
+                )));
+            }
         };
-        relocation.addend -= constant;
-        constant
+        reloc.flags = RelocationFlags::Coff { typ };
+        Ok(())
     }
 
-    fn coff_add_stub_symbol(&mut self, symbol_id: SymbolId) -> SymbolId {
+    pub(crate) fn coff_adjust_addend(&self, relocation: &mut Relocation) -> Result<bool> {
+        let typ = if let RelocationFlags::Coff { typ } = relocation.flags {
+            typ
+        } else {
+            return Err(Error(format!("invalid relocation flags {:?}", relocation)));
+        };
+        let offset = match self.architecture {
+            Architecture::Arm => {
+                if typ == coff::IMAGE_REL_ARM_REL32 {
+                    4
+                } else {
+                    0
+                }
+            }
+            Architecture::Aarch64 => {
+                if typ == coff::IMAGE_REL_ARM64_REL32 {
+                    4
+                } else {
+                    0
+                }
+            }
+            Architecture::I386 => {
+                if typ == coff::IMAGE_REL_I386_REL32 {
+                    4
+                } else {
+                    0
+                }
+            }
+            Architecture::X86_64 => match typ {
+                coff::IMAGE_REL_AMD64_REL32 => 4,
+                coff::IMAGE_REL_AMD64_REL32_1 => 5,
+                coff::IMAGE_REL_AMD64_REL32_2 => 6,
+                coff::IMAGE_REL_AMD64_REL32_3 => 7,
+                coff::IMAGE_REL_AMD64_REL32_4 => 8,
+                coff::IMAGE_REL_AMD64_REL32_5 => 9,
+                _ => 0,
+            },
+            _ => return Err(Error(format!("unimplemented relocation {:?}", relocation))),
+        };
+        relocation.addend += offset;
+        Ok(true)
+    }
+
+    pub(crate) fn coff_relocation_size(&self, reloc: &Relocation) -> Result<u8> {
+        let typ = if let RelocationFlags::Coff { typ } = reloc.flags {
+            typ
+        } else {
+            return Err(Error(format!("unexpected relocation for size {:?}", reloc)));
+        };
+        let size = match self.architecture {
+            Architecture::I386 => match typ {
+                coff::IMAGE_REL_I386_DIR16
+                | coff::IMAGE_REL_I386_REL16
+                | coff::IMAGE_REL_I386_SECTION => Some(16),
+                coff::IMAGE_REL_I386_DIR32
+                | coff::IMAGE_REL_I386_DIR32NB
+                | coff::IMAGE_REL_I386_SECREL
+                | coff::IMAGE_REL_I386_TOKEN
+                | coff::IMAGE_REL_I386_REL32 => Some(32),
+                _ => None,
+            },
+            Architecture::X86_64 => match typ {
+                coff::IMAGE_REL_AMD64_SECTION => Some(16),
+                coff::IMAGE_REL_AMD64_ADDR32
+                | coff::IMAGE_REL_AMD64_ADDR32NB
+                | coff::IMAGE_REL_AMD64_REL32
+                | coff::IMAGE_REL_AMD64_REL32_1
+                | coff::IMAGE_REL_AMD64_REL32_2
+                | coff::IMAGE_REL_AMD64_REL32_3
+                | coff::IMAGE_REL_AMD64_REL32_4
+                | coff::IMAGE_REL_AMD64_REL32_5
+                | coff::IMAGE_REL_AMD64_SECREL
+                | coff::IMAGE_REL_AMD64_TOKEN => Some(32),
+                coff::IMAGE_REL_AMD64_ADDR64 => Some(64),
+                _ => None,
+            },
+            Architecture::Arm => match typ {
+                coff::IMAGE_REL_ARM_SECTION => Some(16),
+                coff::IMAGE_REL_ARM_ADDR32
+                | coff::IMAGE_REL_ARM_ADDR32NB
+                | coff::IMAGE_REL_ARM_TOKEN
+                | coff::IMAGE_REL_ARM_REL32
+                | coff::IMAGE_REL_ARM_SECREL => Some(32),
+                _ => None,
+            },
+            Architecture::Aarch64 => match typ {
+                coff::IMAGE_REL_ARM64_SECTION => Some(16),
+                coff::IMAGE_REL_ARM64_ADDR32
+                | coff::IMAGE_REL_ARM64_ADDR32NB
+                | coff::IMAGE_REL_ARM64_SECREL
+                | coff::IMAGE_REL_ARM64_TOKEN
+                | coff::IMAGE_REL_ARM64_REL32 => Some(32),
+                coff::IMAGE_REL_ARM64_ADDR64 => Some(64),
+                _ => None,
+            },
+            _ => None,
+        };
+        size.ok_or_else(|| Error(format!("unsupported relocation for size {:?}", reloc)))
+    }
+
+    fn coff_add_stub_symbol(&mut self, symbol_id: SymbolId) -> Result<SymbolId> {
         if let Some(stub_id) = self.stub_symbols.get(&symbol_id) {
-            return *stub_id;
+            return Ok(*stub_id);
         }
         let stub_size = self.architecture.address_size().unwrap().bytes();
 
@@ -131,14 +280,19 @@ impl<'a> Object<'a> {
         let section_id = self.add_section(Vec::new(), name, SectionKind::ReadOnlyData);
         let section = self.section_mut(section_id);
         section.set_data(vec![0; stub_size as usize], u64::from(stub_size));
-        section.relocations = vec![Relocation {
-            offset: 0,
-            size: stub_size * 8,
-            kind: RelocationKind::Absolute,
-            encoding: RelocationEncoding::Generic,
-            symbol: symbol_id,
-            addend: 0,
-        }];
+        self.add_relocation(
+            section_id,
+            Relocation {
+                offset: 0,
+                symbol: symbol_id,
+                addend: 0,
+                flags: RelocationFlags::Generic {
+                    kind: RelocationKind::Absolute,
+                    encoding: RelocationEncoding::Generic,
+                    size: stub_size * 8,
+                },
+            },
+        )?;
 
         let mut name = b".refptr.".to_vec();
         name.extend_from_slice(&self.symbol(symbol_id).name);
@@ -154,7 +308,7 @@ impl<'a> Object<'a> {
         });
         self.stub_symbols.insert(symbol_id, stub_id);
 
-        stub_id
+        Ok(stub_id)
     }
 
     /// Appends linker directives to the `.drectve` section to tell the linker
@@ -390,69 +544,10 @@ impl<'a> Object<'a> {
                 //debug_assert_eq!(section_offsets[index].reloc_offset, buffer.len());
                 writer.write_relocations_count(section.relocations.len());
                 for reloc in &section.relocations {
-                    //assert!(reloc.implicit_addend);
-                    let typ = match self.architecture {
-                        Architecture::I386 => match (reloc.kind, reloc.size, reloc.addend) {
-                            (RelocationKind::Absolute, 16, 0) => coff::IMAGE_REL_I386_DIR16,
-                            (RelocationKind::Relative, 16, 0) => coff::IMAGE_REL_I386_REL16,
-                            (RelocationKind::Absolute, 32, 0) => coff::IMAGE_REL_I386_DIR32,
-                            (RelocationKind::ImageOffset, 32, 0) => coff::IMAGE_REL_I386_DIR32NB,
-                            (RelocationKind::SectionIndex, 16, 0) => coff::IMAGE_REL_I386_SECTION,
-                            (RelocationKind::SectionOffset, 32, 0) => coff::IMAGE_REL_I386_SECREL,
-                            (RelocationKind::SectionOffset, 7, 0) => coff::IMAGE_REL_I386_SECREL7,
-                            (RelocationKind::Relative, 32, -4) => coff::IMAGE_REL_I386_REL32,
-                            (RelocationKind::Coff(x), _, _) => x,
-                            _ => {
-                                return Err(Error(format!("unimplemented relocation {:?}", reloc)));
-                            }
-                        },
-                        Architecture::X86_64 => match (reloc.kind, reloc.size, reloc.addend) {
-                            (RelocationKind::Absolute, 64, 0) => coff::IMAGE_REL_AMD64_ADDR64,
-                            (RelocationKind::Absolute, 32, 0) => coff::IMAGE_REL_AMD64_ADDR32,
-                            (RelocationKind::ImageOffset, 32, 0) => coff::IMAGE_REL_AMD64_ADDR32NB,
-                            (RelocationKind::Relative, 32, -4) => coff::IMAGE_REL_AMD64_REL32,
-                            (RelocationKind::Relative, 32, -5) => coff::IMAGE_REL_AMD64_REL32_1,
-                            (RelocationKind::Relative, 32, -6) => coff::IMAGE_REL_AMD64_REL32_2,
-                            (RelocationKind::Relative, 32, -7) => coff::IMAGE_REL_AMD64_REL32_3,
-                            (RelocationKind::Relative, 32, -8) => coff::IMAGE_REL_AMD64_REL32_4,
-                            (RelocationKind::Relative, 32, -9) => coff::IMAGE_REL_AMD64_REL32_5,
-                            (RelocationKind::SectionIndex, 16, 0) => coff::IMAGE_REL_AMD64_SECTION,
-                            (RelocationKind::SectionOffset, 32, 0) => coff::IMAGE_REL_AMD64_SECREL,
-                            (RelocationKind::SectionOffset, 7, 0) => coff::IMAGE_REL_AMD64_SECREL7,
-                            (RelocationKind::Coff(x), _, _) => x,
-                            _ => {
-                                return Err(Error(format!("unimplemented relocation {:?}", reloc)));
-                            }
-                        },
-                        Architecture::Arm => match (reloc.kind, reloc.size, reloc.addend) {
-                            (RelocationKind::Absolute, 32, 0) => coff::IMAGE_REL_ARM_ADDR32,
-                            (RelocationKind::ImageOffset, 32, 0) => coff::IMAGE_REL_ARM_ADDR32NB,
-                            (RelocationKind::Relative, 32, -4) => coff::IMAGE_REL_ARM_REL32,
-                            (RelocationKind::SectionIndex, 16, 0) => coff::IMAGE_REL_ARM_SECTION,
-                            (RelocationKind::SectionOffset, 32, 0) => coff::IMAGE_REL_ARM_SECREL,
-                            (RelocationKind::Coff(x), _, _) => x,
-                            _ => {
-                                return Err(Error(format!("unimplemented relocation {:?}", reloc)));
-                            }
-                        },
-                        Architecture::Aarch64 => match (reloc.kind, reloc.size, reloc.addend) {
-                            (RelocationKind::Absolute, 32, 0) => coff::IMAGE_REL_ARM64_ADDR32,
-                            (RelocationKind::ImageOffset, 32, 0) => coff::IMAGE_REL_ARM64_ADDR32NB,
-                            (RelocationKind::SectionIndex, 16, 0) => coff::IMAGE_REL_ARM64_SECTION,
-                            (RelocationKind::SectionOffset, 32, 0) => coff::IMAGE_REL_ARM64_SECREL,
-                            (RelocationKind::Absolute, 64, 0) => coff::IMAGE_REL_ARM64_ADDR64,
-                            (RelocationKind::Relative, 32, -4) => coff::IMAGE_REL_ARM64_REL32,
-                            (RelocationKind::Coff(x), _, _) => x,
-                            _ => {
-                                return Err(Error(format!("unimplemented relocation {:?}", reloc)));
-                            }
-                        },
-                        _ => {
-                            return Err(Error(format!(
-                                "unimplemented architecture {:?}",
-                                self.architecture
-                            )));
-                        }
+                    let typ = if let RelocationFlags::Coff { typ } = reloc.flags {
+                        typ
+                    } else {
+                        return Err(Error("invalid relocation flags".into()));
                     };
                     writer.write_relocation(writer::Relocation {
                         virtual_address: reloc.offset as u32,

@@ -45,19 +45,19 @@ Symbols
 24: Symbol { name: ".chks64", address: 0, size: 40, kind: Section, section: Section(SectionIndex(8)), scope: Compilation, weak: false, flags: CoffSection { selection: 0, associative_section: None } }
 
 .text$mn relocations
-(4, Relocation { kind: Absolute, encoding: Generic, size: 20, target: Symbol(SymbolIndex(17)), addend: 0, implicit_addend: true })
-(9, Relocation { kind: Relative, encoding: Generic, size: 20, target: Symbol(SymbolIndex(12)), addend: fffffffffffffffc, implicit_addend: true })
+(4, Relocation { kind: Absolute, encoding: Generic, size: 20, target: Symbol(SymbolIndex(17)), addend: 0, implicit_addend: true, flags: Coff { typ: 6 } })
+(9, Relocation { kind: Relative, encoding: Generic, size: 20, target: Symbol(SymbolIndex(12)), addend: fffffffffffffffc, implicit_addend: true, flags: Coff { typ: 14 } })
 
 .text$mn relocations
-(4, Relocation { kind: Absolute, encoding: Generic, size: 20, target: Symbol(SymbolIndex(14)), addend: 0, implicit_addend: true })
+(4, Relocation { kind: Absolute, encoding: Generic, size: 20, target: Symbol(SymbolIndex(14)), addend: 0, implicit_addend: true, flags: Coff { typ: 6 } })
 
 .text$mn relocations
-(14, Relocation { kind: Relative, encoding: Generic, size: 20, target: Symbol(SymbolIndex(e)), addend: fffffffffffffffc, implicit_addend: true })
-(20, Relocation { kind: Relative, encoding: Generic, size: 20, target: Symbol(SymbolIndex(10)), addend: fffffffffffffffc, implicit_addend: true })
+(14, Relocation { kind: Relative, encoding: Generic, size: 20, target: Symbol(SymbolIndex(e)), addend: fffffffffffffffc, implicit_addend: true, flags: Coff { typ: 14 } })
+(20, Relocation { kind: Relative, encoding: Generic, size: 20, target: Symbol(SymbolIndex(10)), addend: fffffffffffffffc, implicit_addend: true, flags: Coff { typ: 14 } })
 
 .text$mn relocations
-(19, Relocation { kind: Relative, encoding: Generic, size: 20, target: Symbol(SymbolIndex(f)), addend: fffffffffffffffc, implicit_addend: true })
-(22, Relocation { kind: Relative, encoding: Generic, size: 20, target: Symbol(SymbolIndex(11)), addend: fffffffffffffffc, implicit_addend: true })
+(19, Relocation { kind: Relative, encoding: Generic, size: 20, target: Symbol(SymbolIndex(f)), addend: fffffffffffffffc, implicit_addend: true, flags: Coff { typ: 14 } })
+(22, Relocation { kind: Relative, encoding: Generic, size: 20, target: Symbol(SymbolIndex(11)), addend: fffffffffffffffc, implicit_addend: true, flags: Coff { typ: 14 } })
 
 Dynamic symbols
 
