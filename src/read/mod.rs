@@ -30,7 +30,7 @@
 //!
 //! /// Reads a file and displays the name of each section.
 //! fn main() -> Result<(), Box<dyn Error>> {
-//! #   #[cfg(feature = "std")] {
+//! #   #[cfg(all(feature = "read", feature = "std"))] {
 //!     let data = fs::read("path/to/binary")?;
 //!     let file = object::File::parse(&*data)?;
 //!     for section in file.sections() {

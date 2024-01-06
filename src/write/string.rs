@@ -1,8 +1,8 @@
 use alloc::vec::Vec;
 
-#[cfg(feature = "std")]
+#[cfg(feature = "write_std")]
 type IndexSet<K> = indexmap::IndexSet<K>;
-#[cfg(not(feature = "std"))]
+#[cfg(not(feature = "write_std"))]
 type IndexSet<K> = indexmap::IndexSet<K, hashbrown::hash_map::DefaultHashBuilder>;
 
 /// An identifier for an entry in a string table.

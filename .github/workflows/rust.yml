@@ -37,15 +37,18 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: true
-      - run: cargo build --no-default-features --features read
-      - run: cargo build --no-default-features --features write
-      - run: cargo build --no-default-features --features read_core,write_core,coff
-      - run: cargo build --no-default-features --features read_core,write_core,elf
-      - run: cargo build --no-default-features --features read_core,write_core,macho
-      - run: cargo build --no-default-features --features read_core,pe
-      - run: cargo build --no-default-features --features read_core,wasm
-      - run: cargo build --no-default-features --features read_core,xcoff,unstable
-      - run: cargo build --no-default-features --features doc
+      - run: cargo test --no-default-features --features read
+      - run: cargo test --no-default-features --features write
+      - run: cargo test --no-default-features --features read_core,write_core,coff
+      - run: cargo test --no-default-features --features read_core,write_core,elf
+      - run: cargo test --no-default-features --features read_core,write_core,macho
+      - run: cargo test --no-default-features --features read_core,write_core,pe
+      - run: cargo test --no-default-features --features read_core,wasm
+      - run: cargo test --no-default-features --features read_core,xcoff
+      - run: cargo test --no-default-features --features std
+      - run: cargo test --no-default-features --features compression
+      - run: cargo test --no-default-features --features unaligned
+      - run: cargo test --no-default-features --features doc
 
   cross:
     strategy:
