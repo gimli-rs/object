@@ -372,11 +372,15 @@ mod tests {
 
     #[test]
     fn cmd_size_invalid() {
-        let mut commands = LoadCommandIterator::new(LittleEndian, &[0; 8], 10);
+        #[repr(align(16))]
+        struct Align<const N: usize>([u8; N]);
+        let mut commands = LoadCommandIterator::new(LittleEndian, &Align([0; 8]).0, 10);
         assert!(commands.next().is_err());
-        let mut commands = LoadCommandIterator::new(LittleEndian, &[0, 0, 0, 0, 7, 0, 0, 0, 0], 10);
+        let mut commands =
+            LoadCommandIterator::new(LittleEndian, &Align([0, 0, 0, 0, 7, 0, 0, 0, 0]).0, 10);
         assert!(commands.next().is_err());
-        let mut commands = LoadCommandIterator::new(LittleEndian, &[0, 0, 0, 0, 8, 0, 0, 0, 0], 10);
+        let mut commands =
+            LoadCommandIterator::new(LittleEndian, &Align([0, 0, 0, 0, 8, 0, 0, 0, 0]).0, 10);
         assert!(commands.next().is_ok());
     }
 }
