@@ -514,13 +514,13 @@ where
         self.compressed_file_range()?.data(self.file.data)
     }
 
-    fn name_bytes(&self) -> read::Result<&[u8]> {
+    fn name_bytes(&self) -> read::Result<&'data [u8]> {
         self.file
             .sections
             .section_name(self.file.endian, self.section)
     }
 
-    fn name(&self) -> read::Result<&str> {
+    fn name(&self) -> read::Result<&'data str> {
         let name = self.name_bytes()?;
         str::from_utf8(name)
             .ok()

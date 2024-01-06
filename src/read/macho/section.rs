@@ -158,12 +158,12 @@ where
     }
 
     #[inline]
-    fn name_bytes(&self) -> Result<&[u8]> {
+    fn name_bytes(&self) -> Result<&'data [u8]> {
         Ok(self.internal.section.name())
     }
 
     #[inline]
-    fn name(&self) -> Result<&str> {
+    fn name(&self) -> Result<&'data str> {
         str::from_utf8(self.internal.section.name())
             .ok()
             .read_error("Non UTF-8 Mach-O section name")

@@ -756,11 +756,11 @@ impl<'data, 'file, R: ReadRef<'data>> ObjectSection<'data> for Section<'data, 'f
         with_inner!(self.inner, SectionInternal, |x| x.compressed_data())
     }
 
-    fn name_bytes(&self) -> Result<&[u8]> {
+    fn name_bytes(&self) -> Result<&'data [u8]> {
         with_inner!(self.inner, SectionInternal, |x| x.name_bytes())
     }
 
-    fn name(&self) -> Result<&str> {
+    fn name(&self) -> Result<&'data str> {
         with_inner!(self.inner, SectionInternal, |x| x.name())
     }
 
