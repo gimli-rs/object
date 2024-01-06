@@ -136,11 +136,11 @@ where
         self.data().map(CompressedData::none)
     }
 
-    fn name_bytes(&self) -> read::Result<&[u8]> {
+    fn name_bytes(&self) -> read::Result<&'data [u8]> {
         Ok(self.section.name())
     }
 
-    fn name(&self) -> read::Result<&str> {
+    fn name(&self) -> read::Result<&'data str> {
         let name = self.name_bytes()?;
         str::from_utf8(name)
             .ok()

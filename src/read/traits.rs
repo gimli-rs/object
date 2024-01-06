@@ -398,12 +398,12 @@ pub trait ObjectSection<'data>: read::private::Sealed {
     }
 
     /// Returns the name of the section.
-    fn name_bytes(&self) -> Result<&[u8]>;
+    fn name_bytes(&self) -> Result<&'data [u8]>;
 
     /// Returns the name of the section.
     ///
     /// Returns an error if the name is not UTF-8.
-    fn name(&self) -> Result<&str>;
+    fn name(&self) -> Result<&'data str>;
 
     /// Returns the name of the segment for this section.
     fn segment_name_bytes(&self) -> Result<Option<&[u8]>>;

@@ -349,12 +349,12 @@ impl<'data, 'file, R: ReadRef<'data>, Coff: CoffHeader> ObjectSection<'data>
     }
 
     #[inline]
-    fn name_bytes(&self) -> Result<&[u8]> {
+    fn name_bytes(&self) -> Result<&'data [u8]> {
         self.section.name(self.file.common.symbols.strings())
     }
 
     #[inline]
-    fn name(&self) -> Result<&str> {
+    fn name(&self) -> Result<&'data str> {
         let name = self.name_bytes()?;
         str::from_utf8(name)
             .ok()
