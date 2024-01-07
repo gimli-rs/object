@@ -1,11 +1,13 @@
 use alloc::vec::Vec;
 use core::fmt::Debug;
 
+use crate::endian::LittleEndian as LE;
+use crate::pe;
+use crate::pod::Pod;
 use crate::read::{
     self, Architecture, Export, FileFlags, Import, NoDynamicRelocationIterator, Object, ObjectKind,
     ObjectSection, ReadError, ReadRef, Result, SectionIndex, SubArchitecture, SymbolIndex,
 };
-use crate::{pe, LittleEndian as LE, Pod};
 
 use super::{
     CoffComdat, CoffComdatIterator, CoffSection, CoffSectionIterator, CoffSegment,

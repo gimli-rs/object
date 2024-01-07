@@ -4,14 +4,14 @@ use core::fmt::Debug;
 use core::slice;
 use core::str;
 
-use crate::endian::{self, Endianness};
+use crate::elf;
+use crate::endian::{self, Endianness, U32};
 use crate::pod::Pod;
 use crate::read::util::StringTable;
 use crate::read::{
     self, ObjectSymbol, ObjectSymbolTable, ReadError, ReadRef, SectionIndex, SymbolFlags,
     SymbolIndex, SymbolKind, SymbolMap, SymbolMapEntry, SymbolScope, SymbolSection,
 };
-use crate::{elf, U32};
 
 use super::{FileHeader, SectionHeader, SectionTable};
 

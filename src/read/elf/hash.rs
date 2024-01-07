@@ -1,8 +1,8 @@
 use core::mem;
 
 use crate::elf;
+use crate::endian::{U32, U64};
 use crate::read::{ReadError, ReadRef, Result};
-use crate::{U32, U64};
 
 use super::{FileHeader, Sym, SymbolTable, Version, VersionTable};
 

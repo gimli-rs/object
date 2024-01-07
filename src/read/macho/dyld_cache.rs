@@ -1,8 +1,9 @@
 use alloc::vec::Vec;
 use core::slice;
 
-use crate::read::{Error, File, ReadError, ReadRef, Result};
-use crate::{macho, Architecture, Endian, Endianness};
+use crate::endian::{Endian, Endianness};
+use crate::macho;
+use crate::read::{Architecture, Error, File, ReadError, ReadRef, Result};
 
 /// A parsed representation of the dyld shared cache.
 #[derive(Debug)]

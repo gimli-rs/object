@@ -1,13 +1,13 @@
 use alloc::borrow::Cow;
 use alloc::vec::Vec;
 
+use crate::endian::Endianness;
 use crate::read::{
     self, Architecture, CodeView, ComdatKind, CompressedData, CompressedFileRange, Export,
     FileFlags, Import, ObjectKind, ObjectMap, Relocation, Result, SectionFlags, SectionIndex,
     SectionKind, SegmentFlags, SubArchitecture, SymbolFlags, SymbolIndex, SymbolKind, SymbolMap,
     SymbolMapName, SymbolScope, SymbolSection,
 };
-use crate::Endianness;
 
 /// An object file.
 ///

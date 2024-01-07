@@ -45,7 +45,7 @@ use alloc::borrow::Cow;
 use alloc::vec::Vec;
 use core::{fmt, result};
 
-use crate::common::*;
+pub use crate::common::*;
 
 mod read_ref;
 pub use read_ref::*;
@@ -151,7 +151,7 @@ impl<T> ReadError<T> for Option<T> {
     target_pointer_width = "32",
     feature = "elf"
 ))]
-pub type NativeFile<'data, R = &'data [u8]> = elf::ElfFile32<'data, crate::Endianness, R>;
+pub type NativeFile<'data, R = &'data [u8]> = elf::ElfFile32<'data, crate::endian::Endianness, R>;
 
 /// The native executable file for the target platform.
 #[cfg(all(
@@ -160,15 +160,17 @@ pub type NativeFile<'data, R = &'data [u8]> = elf::ElfFile32<'data, crate::Endia
     target_pointer_width = "64",
     feature = "elf"
 ))]
-pub type NativeFile<'data, R = &'data [u8]> = elf::ElfFile64<'data, crate::Endianness, R>;
+pub type NativeFile<'data, R = &'data [u8]> = elf::ElfFile64<'data, crate::endian::Endianness, R>;
 
 /// The native executable file for the target platform.
 #[cfg(all(target_os = "macos", target_pointer_width = "32", feature = "macho"))]
-pub type NativeFile<'data, R = &'data [u8]> = macho::MachOFile32<'data, crate::Endianness, R>;
+pub type NativeFile<'data, R = &'data [u8]> =
+    macho::MachOFile32<'data, crate::endian::Endianness, R>;
 
 /// The native executable file for the target platform.
 #[cfg(all(target_os = "macos", target_pointer_width = "64", feature = "macho"))]
-pub type NativeFile<'data, R = &'data [u8]> = macho::MachOFile64<'data, crate::Endianness, R>;
+pub type NativeFile<'data, R = &'data [u8]> =
+    macho::MachOFile64<'data, crate::endian::Endianness, R>;
 
 /// The native executable file for the target platform.
 #[cfg(all(target_os = "windows", target_pointer_width = "32", feature = "pe"))]
