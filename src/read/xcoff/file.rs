@@ -3,12 +3,13 @@ use core::mem;
 
 use alloc::vec::Vec;
 
-use crate::read::{self, Error, NoDynamicRelocationIterator, Object, ReadError, ReadRef, Result};
-
-use crate::{
-    xcoff, Architecture, BigEndian as BE, FileFlags, ObjectKind, ObjectSection, Pod, SectionIndex,
-    SymbolIndex,
+use crate::endian::BigEndian as BE;
+use crate::pod::Pod;
+use crate::read::{
+    self, Architecture, Error, Export, FileFlags, Import, NoDynamicRelocationIterator, Object,
+    ObjectKind, ObjectSection, ReadError, ReadRef, Result, SectionIndex, SymbolIndex,
 };
+use crate::xcoff;
 
 use super::{
     CsectAux, FileAux, SectionHeader, SectionTable, Symbol, SymbolTable, XcoffComdat,
@@ -100,7 +101,7 @@ where
     type SymbolTable = XcoffSymbolTable<'data, 'file, Xcoff, R>;
     type DynamicRelocationIterator = NoDynamicRelocationIterator;
 
-    fn architecture(&self) -> crate::Architecture {
+    fn architecture(&self) -> Architecture {
         if self.is_64() {
             Architecture::PowerPc64
         } else {
@@ -211,12 +212,12 @@ where
         None
     }
 
-    fn imports(&self) -> Result<alloc::vec::Vec<crate::Import<'data>>> {
+    fn imports(&self) -> Result<alloc::vec::Vec<Import<'data>>> {
         // TODO: return the imports in the STYP_LOADER section.
         Ok(Vec::new())
     }
 
-    fn exports(&self) -> Result<alloc::vec::Vec<crate::Export<'data>>> {
+    fn exports(&self) -> Result<alloc::vec::Vec<Export<'data>>> {
         // TODO: return the exports in the STYP_LOADER section.
         Ok(Vec::new())
     }

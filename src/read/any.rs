@@ -2,6 +2,7 @@ use alloc::fmt;
 use alloc::vec::Vec;
 use core::marker::PhantomData;
 
+use crate::endian::{Endian, Endianness};
 #[cfg(feature = "coff")]
 use crate::read::coff;
 #[cfg(feature = "elf")]
@@ -18,11 +19,9 @@ use crate::read::{
     self, Architecture, BinaryFormat, CodeView, ComdatKind, CompressedData, CompressedFileRange,
     Error, Export, FileFlags, FileKind, Import, Object, ObjectComdat, ObjectKind, ObjectMap,
     ObjectSection, ObjectSegment, ObjectSymbol, ObjectSymbolTable, ReadRef, Relocation, Result,
-    SectionFlags, SectionIndex, SectionKind, SegmentFlags, SymbolFlags, SymbolIndex, SymbolKind,
-    SymbolMap, SymbolMapName, SymbolScope, SymbolSection,
+    SectionFlags, SectionIndex, SectionKind, SegmentFlags, SubArchitecture, SymbolFlags,
+    SymbolIndex, SymbolKind, SymbolMap, SymbolMapName, SymbolScope, SymbolSection,
 };
-#[allow(unused_imports)]
-use crate::{AddressSize, Endian, Endianness, SubArchitecture};
 
 /// Evaluate an expression on the contents of a file format enum.
 ///
@@ -272,10 +271,10 @@ impl<'data, R: ReadRef<'data>> File<'data, R> {
         image: &macho::DyldCacheImage<'data, 'cache, E, R>,
     ) -> Result<Self> {
         Ok(match image.cache.architecture().address_size() {
-            Some(AddressSize::U64) => {
+            Some(read::AddressSize::U64) => {
                 File::MachO64(macho::MachOFile64::parse_dyld_cache_image(image)?)
             }
-            Some(AddressSize::U32) => {
+            Some(read::AddressSize::U32) => {
                 File::MachO32(macho::MachOFile32::parse_dyld_cache_image(image)?)
             }
             _ => return Err(Error("Unsupported file format")),

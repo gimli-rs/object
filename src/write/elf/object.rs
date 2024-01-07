@@ -3,7 +3,6 @@ use alloc::vec::Vec;
 use crate::write::elf::writer::*;
 use crate::write::string::StringId;
 use crate::write::*;
-use crate::AddressSize;
 use crate::{elf, pod};
 
 #[derive(Clone, Copy)]

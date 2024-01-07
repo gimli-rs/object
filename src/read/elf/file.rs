@@ -3,11 +3,13 @@ use core::convert::TryInto;
 use core::fmt::Debug;
 use core::mem;
 
+use crate::elf;
+use crate::endian::{self, Endian, Endianness, U32};
+use crate::pod::Pod;
 use crate::read::{
     self, util, Architecture, ByteString, Bytes, Error, Export, FileFlags, Import, Object,
     ObjectKind, ReadError, ReadRef, SectionIndex, StringTable, SymbolIndex,
 };
-use crate::{elf, endian, Endian, Endianness, Pod, U32};
 
 use super::{
     CompressionHeader, Dyn, ElfComdat, ElfComdatIterator, ElfDynamicRelocationIterator, ElfSection,

@@ -2,12 +2,13 @@ use alloc::fmt;
 use core::fmt::Debug;
 use core::slice;
 
+use crate::endian::BigEndian as BE;
 use crate::pod::Pod;
-use crate::{xcoff, BigEndian as BE, Relocation};
-
 use crate::read::{
-    ReadRef, RelocationEncoding, RelocationFlags, RelocationKind, RelocationTarget, SymbolIndex,
+    ReadRef, Relocation, RelocationEncoding, RelocationFlags, RelocationKind, RelocationTarget,
+    SymbolIndex,
 };
+use crate::xcoff;
 
 use super::{FileHeader, SectionHeader, XcoffFile};
 

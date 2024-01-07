@@ -4,12 +4,15 @@ use core::{mem, str};
 
 use core::convert::TryInto;
 
+use crate::endian::{LittleEndian as LE, U32};
+use crate::pe;
+use crate::pod::Pod;
 use crate::read::coff::{CoffCommon, CoffSymbol, CoffSymbolIterator, CoffSymbolTable, SymbolTable};
 use crate::read::{
-    self, Architecture, ComdatKind, Error, Export, FileFlags, Import, NoDynamicRelocationIterator,
-    Object, ObjectComdat, ObjectKind, ReadError, ReadRef, Result, SectionIndex, SymbolIndex,
+    self, Architecture, ByteString, Bytes, CodeView, ComdatKind, Error, Export, FileFlags, Import,
+    NoDynamicRelocationIterator, Object, ObjectComdat, ObjectKind, ReadError, ReadRef, Result,
+    SectionIndex, SubArchitecture, SymbolIndex,
 };
-use crate::{pe, ByteString, Bytes, CodeView, LittleEndian as LE, Pod, SubArchitecture, U32};
 
 use super::{
     DataDirectories, ExportTable, ImageThunkData, ImportTable, PeSection, PeSectionIterator,

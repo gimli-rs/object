@@ -6,13 +6,11 @@ use core::str;
 
 use crate::endian::{BigEndian as BE, U32Bytes};
 use crate::pod::{bytes_of, Pod};
-use crate::read::util::StringTable;
-use crate::xcoff;
-
 use crate::read::{
     self, Bytes, Error, ObjectSymbol, ObjectSymbolTable, ReadError, ReadRef, Result, SectionIndex,
-    SymbolFlags, SymbolIndex, SymbolKind, SymbolScope, SymbolSection,
+    StringTable, SymbolFlags, SymbolIndex, SymbolKind, SymbolScope, SymbolSection,
 };
+use crate::xcoff;
 
 use super::{FileHeader, XcoffFile};
 

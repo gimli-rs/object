@@ -1,8 +1,10 @@
 use core::fmt::Debug;
 use core::mem;
 
+use crate::endian::{LittleEndian as LE, U16Bytes};
+use crate::pe;
+use crate::pod::Pod;
 use crate::read::{Bytes, ReadError, Result};
-use crate::{pe, LittleEndian as LE, Pod, U16Bytes};
 
 use super::ImageNtHeaders;
 

@@ -1,5 +1,7 @@
+use crate::endian::BigEndian;
+use crate::macho;
+use crate::pod::Pod;
 use crate::read::{Architecture, Error, ReadError, ReadRef, Result};
-use crate::{macho, BigEndian, Pod};
 
 pub use macho::{FatArch32, FatArch64, FatHeader};
 

@@ -5,7 +5,6 @@ use crate::macho;
 use crate::write::string::*;
 use crate::write::util::*;
 use crate::write::*;
-use crate::AddressSize;
 
 #[derive(Default, Clone, Copy)]
 struct SectionOffsets {
