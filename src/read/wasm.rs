@@ -772,12 +772,12 @@ impl<'data, 'file, R> ObjectComdat<'data> for WasmComdat<'data, 'file, R> {
     }
 
     #[inline]
-    fn name_bytes(&self) -> Result<&[u8]> {
+    fn name_bytes(&self) -> Result<&'data [u8]> {
         unreachable!();
     }
 
     #[inline]
-    fn name(&self) -> Result<&str> {
+    fn name(&self) -> Result<&'data str> {
         unreachable!();
     }
 

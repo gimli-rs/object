@@ -437,12 +437,12 @@ pub trait ObjectComdat<'data>: read::private::Sealed {
     fn symbol(&self) -> SymbolIndex;
 
     /// Returns the name of the COMDAT section group.
-    fn name_bytes(&self) -> Result<&[u8]>;
+    fn name_bytes(&self) -> Result<&'data [u8]>;
 
     /// Returns the name of the COMDAT section group.
     ///
     /// Returns an error if the name is not UTF-8.
-    fn name(&self) -> Result<&str>;
+    fn name(&self) -> Result<&'data str>;
 
     /// Get the sections in this section group.
     fn sections(&self) -> Self::SectionIterator;
