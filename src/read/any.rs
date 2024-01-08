@@ -887,11 +887,11 @@ impl<'data, 'file, R: ReadRef<'data>> ObjectComdat<'data> for Comdat<'data, 'fil
         with_inner!(self.inner, ComdatInternal, |x| x.symbol())
     }
 
-    fn name_bytes(&self) -> Result<&[u8]> {
+    fn name_bytes(&self) -> Result<&'data [u8]> {
         with_inner!(self.inner, ComdatInternal, |x| x.name_bytes())
     }
 
-    fn name(&self) -> Result<&str> {
+    fn name(&self) -> Result<&'data str> {
         with_inner!(self.inner, ComdatInternal, |x| x.name())
     }
 

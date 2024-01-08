@@ -131,13 +131,13 @@ impl<'data, 'file, R: ReadRef<'data>, Coff: CoffHeader> ObjectComdat<'data>
     }
 
     #[inline]
-    fn name_bytes(&self) -> Result<&[u8]> {
+    fn name_bytes(&self) -> Result<&'data [u8]> {
         // Find the name of first symbol referring to the section.
         self.symbol.name(self.file.common.symbols.strings())
     }
 
     #[inline]
-    fn name(&self) -> Result<&str> {
+    fn name(&self) -> Result<&'data str> {
         let bytes = self.name_bytes()?;
         str::from_utf8(bytes)
             .ok()
