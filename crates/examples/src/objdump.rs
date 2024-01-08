@@ -1,6 +1,6 @@
 use object::read::archive::ArchiveFile;
 use object::read::coff;
-use object::read::macho::{DyldCache, FatArch, FatHeader};
+use object::read::macho::{DyldCache, FatArch, MachOFatFile32, MachOFatFile64};
 use object::{Endianness, FileKind, Object, ObjectComdat, ObjectSection, ObjectSymbol};
 use std::io::{Result, Write};
 
@@ -33,9 +33,9 @@ pub fn print<W: Write, E: Write>(
                 Err(err) => writeln!(e, "Failed to parse archive member: {}", err)?,
             }
         }
-    } else if let Ok(arches) = FatHeader::parse_arch32(file) {
+    } else if let Ok(fat) = MachOFatFile32::parse(file) {
         writeln!(w, "Format: Mach-O Fat 32")?;
-        for arch in arches {
+        for arch in fat.arches() {
             writeln!(w)?;
             writeln!(w, "Fat Arch: {:?}", arch.architecture())?;
             match arch.data(file) {
@@ -43,9 +43,9 @@ pub fn print<W: Write, E: Write>(
                 Err(err) => writeln!(e, "Failed to parse Fat 32 data: {}", err)?,
             }
         }
-    } else if let Ok(arches) = FatHeader::parse_arch64(file) {
+    } else if let Ok(fat) = MachOFatFile64::parse(file) {
         writeln!(w, "Format: Mach-O Fat 64")?;
-        for arch in arches {
+        for arch in fat.arches() {
             writeln!(w)?;
             writeln!(w, "Fat Arch: {:?}", arch.architecture())?;
             match arch.data(file) {

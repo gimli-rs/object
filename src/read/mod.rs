@@ -237,12 +237,12 @@ pub enum FileKind {
     MachO64,
     /// A 32-bit Mach-O fat binary.
     ///
-    /// See [`macho::FatHeader::parse_arch32`].
+    /// See [`macho::MachOFatFile32`].
     #[cfg(feature = "macho")]
     MachOFat32,
     /// A 64-bit Mach-O fat binary.
     ///
-    /// See [`macho::FatHeader::parse_arch64`].
+    /// See [`macho::MachOFatFile64`].
     #[cfg(feature = "macho")]
     MachOFat64,
     /// A 32-bit PE file.
