@@ -23,6 +23,9 @@ pub(super) fn print_dyld_cache_header(
     endian: Endianness,
     header: &DyldCacheHeader<Endianness>,
 ) {
+    if !p.options.file {
+        return;
+    }
     p.group("DyldCacheHeader", |p| {
         p.field_bytes("Magic", &header.magic);
         p.field_hex("MappingOffset", header.mapping_offset.get(endian));
@@ -38,6 +41,9 @@ pub(super) fn print_dyld_cache_mappings(
     endian: Endianness,
     mappings: &[DyldCacheMappingInfo<Endianness>],
 ) {
+    if !p.options.file {
+        return;
+    }
     for mapping in mappings {
         p.group("DyldCacheMappingInfo", |p| {
             p.field_hex("Address", mapping.address.get(endian));
@@ -59,21 +65,25 @@ pub(super) fn print_dyld_cache_images(
     images: &[DyldCacheImageInfo<Endianness>],
 ) {
     for image in images {
-        p.group("DyldCacheImageInfo", |p| {
-            p.field_hex("Address", image.address.get(endian));
-            p.field_hex("ModTime", image.mod_time.get(endian));
-            p.field_hex("Inode", image.inode.get(endian));
-            p.field_string(
-                "Path",
-                image.path_file_offset.get(endian),
-                image.path(endian, data),
-            );
-            p.field_hex("Pad", image.pad.get(endian));
-        });
+        if p.options.file {
+            p.group("DyldCacheImageInfo", |p| {
+                p.field_hex("Address", image.address.get(endian));
+                p.field_hex("ModTime", image.mod_time.get(endian));
+                p.field_hex("Inode", image.inode.get(endian));
+                p.field_string(
+                    "Path",
+                    image.path_file_offset.get(endian),
+                    image.path(endian, data),
+                );
+                p.field_hex("Pad", image.pad.get(endian));
+            });
+        }
         if let Some(offset) =
             mappings.and_then(|mappings| image.file_offset(endian, mappings).print_err(p))
         {
-            p.blank();
+            if p.options.file {
+                p.blank();
+            }
             print_object_at(p, data, offset);
             p.blank();
         }
@@ -113,6 +123,9 @@ pub(super) fn print_macho_fat64(p: &mut Printer<'_>, data: &[u8]) {
 }
 
 pub(super) fn print_fat_header(p: &mut Printer<'_>, data: &[u8]) {
+    if !p.options.file {
+        return;
+    }
     if let Some(header) = FatHeader::parse(data).print_err(p) {
         p.group("FatHeader", |p| {
             p.field_hex("Magic", header.magic.get(BigEndian));
@@ -122,6 +135,9 @@ pub(super) fn print_fat_header(p: &mut Printer<'_>, data: &[u8]) {
 }
 
 pub(super) fn print_fat_arch<Arch: FatArch>(p: &mut Printer<'_>, arch: &Arch) {
+    if !p.options.file {
+        return;
+    }
     p.group("FatArch", |p| {
         print_cputype(p, arch.cputype(), arch.cpusubtype());
         p.field_hex("Offset", arch.offset().into());
@@ -191,15 +207,14 @@ fn print_macho<Mach: MachHeader<Endian = Endianness>>(
         }
 
         print_mach_header(p, endian, header);
-        if let Some(mut commands) = header.load_commands(endian, data, offset).print_err(p) {
-            while let Some(Some(command)) = commands.next().print_err(p) {
-                print_load_command(p, endian, data, header, command, &mut state);
-            }
-        }
+        print_load_commands(p, endian, data, offset, header, &mut state);
     }
 }
 
 fn print_mach_header<Mach: MachHeader>(p: &mut Printer<'_>, endian: Mach::Endian, header: &Mach) {
+    if !p.options.file {
+        return;
+    }
     p.group("MachHeader", |p| {
         p.field_hex("Magic", header.magic());
         print_cputype(p, header.cputype(endian), header.cpusubtype(endian));
@@ -208,6 +223,21 @@ fn print_mach_header<Mach: MachHeader>(p: &mut Printer<'_>, endian: Mach::Endian
         p.field_hex("SizeOfCmds", header.sizeofcmds(endian));
         p.field_enum("Flags", header.flags(endian), FLAGS_MH);
     });
+}
+
+fn print_load_commands<Mach: MachHeader>(
+    p: &mut Printer<'_>,
+    endian: Mach::Endian,
+    data: &[u8],
+    offset: u64,
+    header: &Mach,
+    state: &mut MachState,
+) {
+    if let Some(mut commands) = header.load_commands(endian, data, offset).print_err(p) {
+        while let Some(Some(command)) = commands.next().print_err(p) {
+            print_load_command(p, endian, data, header, command, state);
+        }
+    }
 }
 
 fn print_load_command<Mach: MachHeader>(
@@ -229,6 +259,15 @@ fn print_load_command<Mach: MachHeader>(
             LoadCommandVariant::Symtab(symtab) => {
                 print_symtab::<Mach>(p, endian, data, symtab, state);
             }
+            _ => {}
+        }
+        if !p.options.macho_load_commands {
+            return;
+        }
+        match variant {
+            LoadCommandVariant::Segment32(..)
+            | LoadCommandVariant::Segment64(..)
+            | LoadCommandVariant::Symtab(..) => {}
             LoadCommandVariant::Thread(x, _thread_data) => {
                 p.group("ThreadCommand", |p| {
                     p.field_enum("Cmd", x.cmd.get(endian), FLAGS_LC);
@@ -546,24 +585,34 @@ fn print_segment<S: Segment>(
     section_data: &[u8],
     state: &mut MachState,
 ) {
+    if !p.options.macho_load_commands
+        && !p.options.segments
+        && !p.options.sections
+        && !p.options.relocations
+    {
+        return;
+    }
     p.group("SegmentCommand", |p| {
         p.field_enum("Cmd", segment.cmd(endian), FLAGS_LC);
         p.field_hex("CmdSize", segment.cmdsize(endian));
         p.field_inline_string("SegmentName", segment.name());
-        p.field_hex("VmAddress", segment.vmaddr(endian).into());
-        p.field_hex("VmSize", segment.vmsize(endian).into());
-        p.field_hex("FileOffset", segment.fileoff(endian).into());
-        p.field_hex("FileSize", segment.filesize(endian).into());
-        p.field_hex("MaxProt", segment.maxprot(endian));
-        p.flags(segment.maxprot(endian), 0, FLAGS_VM);
-        p.field_hex("InitProt", segment.initprot(endian));
-        p.flags(segment.initprot(endian), 0, FLAGS_VM);
-        p.field("NumberOfSections", segment.nsects(endian));
-        p.field_hex("Flags", segment.flags(endian));
-        p.flags(segment.flags(endian), 0, FLAGS_SG);
+        if p.options.macho_load_commands || p.options.segments {
+            p.field_hex("VmAddress", segment.vmaddr(endian).into());
+            p.field_hex("VmSize", segment.vmsize(endian).into());
+            p.field_hex("FileOffset", segment.fileoff(endian).into());
+            p.field_hex("FileSize", segment.filesize(endian).into());
+            p.field_hex("MaxProt", segment.maxprot(endian));
+            p.flags(segment.maxprot(endian), 0, FLAGS_VM);
+            p.field_hex("InitProt", segment.initprot(endian));
+            p.flags(segment.initprot(endian), 0, FLAGS_VM);
+            p.field("NumberOfSections", segment.nsects(endian));
+            p.field_hex("Flags", segment.flags(endian));
+            p.flags(segment.flags(endian), 0, FLAGS_SG);
+        }
         if let Some(sections) = segment.sections(endian, section_data).print_err(p) {
             for section in sections {
                 print_section(p, endian, data, section, state);
+                state.section_index += 1;
             }
         }
     });
@@ -576,71 +625,88 @@ fn print_section<S: Section>(
     section: &S,
     state: &mut MachState,
 ) {
+    if !p.options.sections && !(p.options.relocations && section.nreloc(endian) != 0) {
+        return;
+    }
     p.group("Section", |p| {
         p.field("Index", state.section_index);
-        state.section_index += 1;
         p.field_inline_string("SectionName", section.name());
         p.field_inline_string("SegmentName", section.segment_name());
-        p.field_hex("Address", section.addr(endian).into());
-        p.field_hex("Size", section.size(endian).into());
-        p.field_hex("Offset", section.offset(endian));
-        p.field_hex("Align", section.align(endian));
-        p.field_hex("RelocationOffset", section.reloff(endian));
-        p.field_hex("NumberOfRelocations", section.nreloc(endian));
-        let flags = section.flags(endian);
-        if flags & SECTION_TYPE == flags {
-            p.field_enum("Flags", flags, FLAGS_S_TYPE);
-        } else {
-            p.field_hex("Flags", section.flags(endian));
-            p.flags(flags, SECTION_TYPE, FLAGS_S_TYPE);
-            p.flags(flags, 0, FLAGS_S_ATTR);
-        }
-        if let Some(relocations) = section.relocations(endian, data).print_err(p) {
-            let proc = match state.cputype {
-                CPU_TYPE_X86 => FLAGS_GENERIC_RELOC,
-                CPU_TYPE_X86_64 => FLAGS_X86_64_RELOC,
-                CPU_TYPE_ARM => FLAGS_ARM_RELOC,
-                CPU_TYPE_ARM64 | CPU_TYPE_ARM64_32 => FLAGS_ARM64_RELOC,
-                CPU_TYPE_POWERPC | CPU_TYPE_POWERPC64 => FLAGS_PPC_RELOC,
-                _ => &[],
-            };
-            for relocation in relocations {
-                if relocation.r_scattered(endian, state.cputype) {
-                    let info = relocation.scattered_info(endian);
-                    p.group("ScatteredRelocationInfo", |p| {
-                        p.field_hex("Address", info.r_address);
-                        p.field("PcRel", if info.r_pcrel { "yes" } else { "no" });
-                        p.field("Length", info.r_length);
-                        p.field_enum("Type", info.r_type, proc);
-                        p.field_hex("Value", info.r_value);
-                    });
-                } else {
-                    let info = relocation.info(endian);
-                    p.group("RelocationInfo", |p| {
-                        p.field_hex("Address", info.r_address);
-                        p.field("Extern", if info.r_extern { "yes" } else { "no" });
-                        if info.r_extern {
-                            let name = state
-                                .symbols
-                                .get(info.r_symbolnum as usize)
-                                .copied()
-                                .flatten();
-                            p.field_string_option("Symbol", info.r_symbolnum, name);
-                        } else {
-                            let name = state
-                                .sections
-                                .get(info.r_symbolnum as usize)
-                                .map(|name| &name[..]);
-                            p.field_string_option("Section", info.r_symbolnum, name);
-                        }
-                        p.field("PcRel", if info.r_pcrel { "yes" } else { "no" });
-                        p.field("Length", info.r_length);
-                        p.field_enum("Type", info.r_type, proc);
-                    });
-                }
+        if p.options.sections {
+            p.field_hex("Address", section.addr(endian).into());
+            p.field_hex("Size", section.size(endian).into());
+            p.field_hex("Offset", section.offset(endian));
+            p.field_hex("Align", section.align(endian));
+            p.field_hex("RelocationOffset", section.reloff(endian));
+            p.field_hex("NumberOfRelocations", section.nreloc(endian));
+            let flags = section.flags(endian);
+            if flags & SECTION_TYPE == flags {
+                p.field_enum("Flags", flags, FLAGS_S_TYPE);
+            } else {
+                p.field_hex("Flags", section.flags(endian));
+                p.flags(flags, SECTION_TYPE, FLAGS_S_TYPE);
+                p.flags(flags, 0, FLAGS_S_ATTR);
             }
         }
+        print_section_relocations(p, endian, data, section, state);
     });
+}
+
+fn print_section_relocations<S: Section>(
+    p: &mut Printer<'_>,
+    endian: S::Endian,
+    data: &[u8],
+    section: &S,
+    state: &MachState,
+) {
+    if !p.options.relocations {
+        return;
+    }
+    if let Some(relocations) = section.relocations(endian, data).print_err(p) {
+        let proc = match state.cputype {
+            CPU_TYPE_X86 => FLAGS_GENERIC_RELOC,
+            CPU_TYPE_X86_64 => FLAGS_X86_64_RELOC,
+            CPU_TYPE_ARM => FLAGS_ARM_RELOC,
+            CPU_TYPE_ARM64 | CPU_TYPE_ARM64_32 => FLAGS_ARM64_RELOC,
+            CPU_TYPE_POWERPC | CPU_TYPE_POWERPC64 => FLAGS_PPC_RELOC,
+            _ => &[],
+        };
+        for relocation in relocations {
+            if relocation.r_scattered(endian, state.cputype) {
+                let info = relocation.scattered_info(endian);
+                p.group("ScatteredRelocationInfo", |p| {
+                    p.field_hex("Address", info.r_address);
+                    p.field("PcRel", if info.r_pcrel { "yes" } else { "no" });
+                    p.field("Length", info.r_length);
+                    p.field_enum("Type", info.r_type, proc);
+                    p.field_hex("Value", info.r_value);
+                });
+            } else {
+                let info = relocation.info(endian);
+                p.group("RelocationInfo", |p| {
+                    p.field_hex("Address", info.r_address);
+                    p.field("Extern", if info.r_extern { "yes" } else { "no" });
+                    if info.r_extern {
+                        let name = state
+                            .symbols
+                            .get(info.r_symbolnum as usize)
+                            .copied()
+                            .flatten();
+                        p.field_string_option("Symbol", info.r_symbolnum, name);
+                    } else {
+                        let name = state
+                            .sections
+                            .get(info.r_symbolnum as usize)
+                            .map(|name| &name[..]);
+                        p.field_string_option("Section", info.r_symbolnum, name);
+                    }
+                    p.field("PcRel", if info.r_pcrel { "yes" } else { "no" });
+                    p.field("Length", info.r_length);
+                    p.field_enum("Type", info.r_type, proc);
+                });
+            }
+        }
+    }
 }
 
 fn print_symtab<Mach: MachHeader>(
@@ -650,6 +716,9 @@ fn print_symtab<Mach: MachHeader>(
     symtab: &SymtabCommand<Mach::Endian>,
     state: &MachState,
 ) {
+    if !p.options.macho_load_commands && !p.options.symbols {
+        return;
+    }
     p.group("SymtabCommand", |p| {
         p.field_enum("Cmd", symtab.cmd.get(endian), FLAGS_LC);
         p.field_hex("CmdSize", symtab.cmdsize.get(endian));
@@ -657,42 +726,55 @@ fn print_symtab<Mach: MachHeader>(
         p.field_hex("NumberOfSymbols", symtab.nsyms.get(endian));
         p.field_hex("StringOffset", symtab.stroff.get(endian));
         p.field_hex("StringSize", symtab.strsize.get(endian));
-        if let Some(symbols) = symtab.symbols::<Mach, _>(endian, data).print_err(p) {
-            for (index, nlist) in symbols.iter().enumerate() {
-                p.group("Nlist", |p| {
-                    p.field("Index", index);
-                    p.field_string(
-                        "String",
-                        nlist.n_strx(endian),
-                        nlist.name(endian, symbols.strings()),
-                    );
-                    let n_type = nlist.n_type();
-                    if nlist.is_stab() {
-                        p.field_enum("Type", n_type, FLAGS_N_STAB);
-                    } else if n_type & N_TYPE == n_type {
-                        // Avoid an extra line if no flags.
-                        p.field_enum("Type", n_type, FLAGS_N_TYPE);
-                    } else {
-                        p.field_hex("Type", n_type);
-                        p.flags(n_type, N_TYPE, FLAGS_N_TYPE);
-                        p.flags(n_type, 0, FLAGS_N_EXT);
-                    }
-                    let n_sect = nlist.n_sect();
-                    let name = state.sections.get(n_sect as usize).map(|name| &name[..]);
-                    p.field_string_option("Section", n_sect, name);
-                    let n_desc = nlist.n_desc(endian);
-                    p.field_hex("Desc", n_desc);
-                    if nlist.is_undefined() {
-                        p.flags(n_desc, REFERENCE_TYPE, FLAGS_REFERENCE);
-                    }
-                    if !nlist.is_stab() {
-                        p.flags(n_desc, 0, FLAGS_N_DESC);
-                    }
-                    p.field_hex("Value", nlist.n_value(endian).into());
-                });
-            }
-        }
+        print_symtab_symbols::<Mach>(p, endian, data, symtab, state);
     });
+}
+
+fn print_symtab_symbols<Mach: MachHeader>(
+    p: &mut Printer<'_>,
+    endian: Mach::Endian,
+    data: &[u8],
+    symtab: &SymtabCommand<Mach::Endian>,
+    state: &MachState,
+) {
+    if !p.options.symbols {
+        return;
+    }
+    if let Some(symbols) = symtab.symbols::<Mach, _>(endian, data).print_err(p) {
+        for (index, nlist) in symbols.iter().enumerate() {
+            p.group("Nlist", |p| {
+                p.field("Index", index);
+                p.field_string(
+                    "String",
+                    nlist.n_strx(endian),
+                    nlist.name(endian, symbols.strings()),
+                );
+                let n_type = nlist.n_type();
+                if nlist.is_stab() {
+                    p.field_enum("Type", n_type, FLAGS_N_STAB);
+                } else if n_type & N_TYPE == n_type {
+                    // Avoid an extra line if no flags.
+                    p.field_enum("Type", n_type, FLAGS_N_TYPE);
+                } else {
+                    p.field_hex("Type", n_type);
+                    p.flags(n_type, N_TYPE, FLAGS_N_TYPE);
+                    p.flags(n_type, 0, FLAGS_N_EXT);
+                }
+                let n_sect = nlist.n_sect();
+                let name = state.sections.get(n_sect as usize).map(|name| &name[..]);
+                p.field_string_option("Section", n_sect, name);
+                let n_desc = nlist.n_desc(endian);
+                p.field_hex("Desc", n_desc);
+                if nlist.is_undefined() {
+                    p.flags(n_desc, REFERENCE_TYPE, FLAGS_REFERENCE);
+                }
+                if !nlist.is_stab() {
+                    p.flags(n_desc, 0, FLAGS_N_DESC);
+                }
+                p.field_hex("Value", nlist.n_value(endian).into());
+            });
+        }
+    }
 }
 
 fn print_cputype(p: &mut Printer<'_>, cputype: u32, cpusubtype: u32) {

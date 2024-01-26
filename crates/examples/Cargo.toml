@@ -4,6 +4,7 @@ version = "0.0.0"
 edition = "2018"
 
 [dependencies]
+clap = "4.3.24"
 memmap2 = "0.7.1"
 object = { path = "../..", default-features = false }
 

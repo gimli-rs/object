@@ -83,7 +83,7 @@ jobs:
         run: |
           cargo update -p memchr --precise 2.6.2
       - name: Test
-        run: cargo test --verbose --no-default-features --features read,std
+        run: cargo test -p object --verbose --no-default-features --features read,std
 
   msrv-all:
     runs-on: ubuntu-latest
@@ -94,7 +94,7 @@ jobs:
       - name: Install rust
         run: rustup update 1.65.0 && rustup default 1.65.0
       - name: Test
-        run: cargo test --verbose --features all
+        run: cargo test -p object --verbose --features all
 
   rustfmt:
     runs-on: ubuntu-latest

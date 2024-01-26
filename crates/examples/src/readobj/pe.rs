@@ -42,6 +42,9 @@ pub(super) fn print_coff_import(p: &mut Printer<'_>, data: &[u8]) {
     let mut offset = 0;
     if let Some(header) = ImportObjectHeader::parse(data, &mut offset).print_err(p) {
         writeln!(p.w(), "Format: COFF import").unwrap();
+        if !p.options.file {
+            return;
+        }
         p.group("ImportObjectHeader", |p| {
             p.field_hex("Signature1", header.sig1.get(LE));
             p.field_hex("Signature2", header.sig2.get(LE));
@@ -75,56 +78,22 @@ pub(super) fn print_pe64(p: &mut Printer<'_>, data: &[u8]) {
 
 fn print_pe<Pe: ImageNtHeaders>(p: &mut Printer<'_>, data: &[u8]) {
     if let Some(dos_header) = ImageDosHeader::parse(data).print_err(p) {
-        p.group("ImageDosHeader", |p| {
-            p.field_hex("Magic", dos_header.e_magic.get(LE));
-            p.field_hex("CountBytesLastPage", dos_header.e_cblp.get(LE));
-            p.field_hex("CountPages", dos_header.e_cp.get(LE));
-            p.field_hex("CountRelocations", dos_header.e_crlc.get(LE));
-            p.field_hex("CountHeaderParagraphs", dos_header.e_cparhdr.get(LE));
-            p.field_hex("MinAllocParagraphs", dos_header.e_minalloc.get(LE));
-            p.field_hex("MaxAllocParagraphs", dos_header.e_maxalloc.get(LE));
-            p.field_hex("StackSegment", dos_header.e_ss.get(LE));
-            p.field_hex("StackPointer", dos_header.e_sp.get(LE));
-            p.field_hex("Checksum", dos_header.e_csum.get(LE));
-            p.field_hex("InstructionPointer", dos_header.e_ip.get(LE));
-            p.field_hex("CodeSegment", dos_header.e_cs.get(LE));
-            p.field_hex("AddressOfRelocations", dos_header.e_lfarlc.get(LE));
-            p.field_hex("OverlayNumber", dos_header.e_ovno.get(LE));
-            p.field_hex("OemId", dos_header.e_oemid.get(LE));
-            p.field_hex("OemInfo", dos_header.e_oeminfo.get(LE));
-            p.field_hex("AddressOfNewHeader", dos_header.e_lfanew.get(LE));
-        });
+        print_dos(p, dos_header);
         let mut offset = dos_header.nt_headers_offset().into();
-        if let Some(rich_header) = RichHeaderInfo::parse(data, offset) {
-            p.group("RichHeader", |p| {
-                p.field_hex("Offset", rich_header.offset);
-                p.field_hex("Length", rich_header.length);
-                p.field_hex("XorKey", rich_header.xor_key);
-                for entry in rich_header.unmasked_entries() {
-                    p.group("RichHeaderEntry", |p| {
-                        p.field("ComponentId", format!("0x{:08X}", entry.comp_id));
-                        p.field("Count", entry.count);
-                    });
-                }
-            });
-        }
+        print_rich(p, data, offset);
         if let Some((nt_headers, data_directories)) = Pe::parse(data, &mut offset).print_err(p) {
-            p.group("ImageNtHeaders", |p| {
-                p.field_hex("Signature", nt_headers.signature());
-            });
+            if p.options.file {
+                p.group("ImageNtHeaders", |p| {
+                    p.field_hex("Signature", nt_headers.signature());
+                });
+            }
             let header = nt_headers.file_header();
             let machine = header.machine.get(LE);
             let sections = header.sections(data, offset).print_err(p);
             let symbols = header.symbols(data).print_err(p);
             print_file(p, header);
             print_optional(p, nt_headers.optional_header());
-            for (index, dir) in data_directories.iter().enumerate() {
-                p.group("ImageDataDirectory", |p| {
-                    p.field_enum("Index", index, FLAGS_IMAGE_DIRECTORY_ENTRY);
-                    p.field_hex("VirtualAddress", dir.virtual_address.get(LE));
-                    p.field_hex("Size", dir.size.get(LE));
-                });
-            }
+            print_data_directories(p, &data_directories);
             if let Some(ref sections) = sections {
                 print_sections(p, data, machine, symbols.as_ref(), sections);
             }
@@ -142,7 +111,54 @@ fn print_pe<Pe: ImageNtHeaders>(p: &mut Printer<'_>, data: &[u8]) {
     }
 }
 
+fn print_dos(p: &mut Printer<'_>, dos_header: &ImageDosHeader) {
+    if !p.options.file {
+        return;
+    }
+    p.group("ImageDosHeader", |p| {
+        p.field_hex("Magic", dos_header.e_magic.get(LE));
+        p.field_hex("CountBytesLastPage", dos_header.e_cblp.get(LE));
+        p.field_hex("CountPages", dos_header.e_cp.get(LE));
+        p.field_hex("CountRelocations", dos_header.e_crlc.get(LE));
+        p.field_hex("CountHeaderParagraphs", dos_header.e_cparhdr.get(LE));
+        p.field_hex("MinAllocParagraphs", dos_header.e_minalloc.get(LE));
+        p.field_hex("MaxAllocParagraphs", dos_header.e_maxalloc.get(LE));
+        p.field_hex("StackSegment", dos_header.e_ss.get(LE));
+        p.field_hex("StackPointer", dos_header.e_sp.get(LE));
+        p.field_hex("Checksum", dos_header.e_csum.get(LE));
+        p.field_hex("InstructionPointer", dos_header.e_ip.get(LE));
+        p.field_hex("CodeSegment", dos_header.e_cs.get(LE));
+        p.field_hex("AddressOfRelocations", dos_header.e_lfarlc.get(LE));
+        p.field_hex("OverlayNumber", dos_header.e_ovno.get(LE));
+        p.field_hex("OemId", dos_header.e_oemid.get(LE));
+        p.field_hex("OemInfo", dos_header.e_oeminfo.get(LE));
+        p.field_hex("AddressOfNewHeader", dos_header.e_lfanew.get(LE));
+    });
+}
+
+fn print_rich(p: &mut Printer<'_>, data: &[u8], offset: u64) {
+    if !p.options.pe_rich {
+        return;
+    }
+    if let Some(rich_header) = RichHeaderInfo::parse(data, offset) {
+        p.group("RichHeader", |p| {
+            p.field_hex("Offset", rich_header.offset);
+            p.field_hex("Length", rich_header.length);
+            p.field_hex("XorKey", rich_header.xor_key);
+            for entry in rich_header.unmasked_entries() {
+                p.group("RichHeaderEntry", |p| {
+                    p.field("ComponentId", format!("0x{:08X}", entry.comp_id));
+                    p.field("Count", entry.count);
+                });
+            }
+        });
+    }
+}
+
 fn print_file(p: &mut Printer<'_>, header: &ImageFileHeader) {
+    if !p.options.file {
+        return;
+    }
     p.group("ImageFileHeader", |p| {
         p.field_enum("Machine", header.machine.get(LE), FLAGS_IMAGE_FILE_MACHINE);
         p.field("NumberOfSections", header.number_of_sections.get(LE));
@@ -162,6 +178,9 @@ fn print_file(p: &mut Printer<'_>, header: &ImageFileHeader) {
 }
 
 fn print_optional(p: &mut Printer<'_>, header: &impl ImageOptionalHeader) {
+    if !p.options.file {
+        return;
+    }
     p.group("ImageOptionalHeader", |p| {
         p.field_hex("Magic", header.magic());
         p.field("MajorLinkerVersion", header.major_linker_version());
@@ -209,7 +228,23 @@ fn print_optional(p: &mut Printer<'_>, header: &impl ImageOptionalHeader) {
     });
 }
 
+fn print_data_directories(p: &mut Printer<'_>, data_directories: &DataDirectories) {
+    if !p.options.file {
+        return;
+    }
+    for (index, dir) in data_directories.iter().enumerate() {
+        p.group("ImageDataDirectory", |p| {
+            p.field_enum("Index", index, FLAGS_IMAGE_DIRECTORY_ENTRY);
+            p.field_hex("VirtualAddress", dir.virtual_address.get(LE));
+            p.field_hex("Size", dir.size.get(LE));
+        });
+    }
+}
+
 fn print_bigobj(p: &mut Printer<'_>, header: &AnonObjectHeaderBigobj) {
+    if !p.options.file {
+        return;
+    }
     p.group("AnonObjectHeaderBigObj", |p| {
         p.field_hex("Signature1", header.sig1.get(LE));
         p.field_hex("Signature2", header.sig2.get(LE));
@@ -252,6 +287,9 @@ fn print_export_dir(
     sections: &SectionTable,
     data_directories: &DataDirectories,
 ) -> Option<()> {
+    if !p.options.pe_exports {
+        return Some(());
+    }
     let export_dir = data_directories
         .export_directory(data, sections)
         .print_err(p)??;
@@ -328,6 +366,9 @@ fn print_import_dir<Pe: ImageNtHeaders>(
     sections: &SectionTable,
     data_directories: &DataDirectories,
 ) -> Option<()> {
+    if !p.options.pe_imports {
+        return Some(());
+    }
     let import_table = data_directories
         .import_table(data, sections)
         .print_err(p)??;
@@ -396,6 +437,9 @@ fn print_delay_load_dir<Pe: ImageNtHeaders>(
     sections: &SectionTable,
     data_directories: &DataDirectories,
 ) -> Option<()> {
+    if !p.options.pe_imports {
+        return Some(());
+    }
     let import_table = data_directories
         .delay_load_import_table(data, sections)
         .print_err(p)??;
@@ -452,6 +496,9 @@ fn print_resource_dir(
     sections: &SectionTable,
     data_directories: &DataDirectories,
 ) -> Option<()> {
+    if !p.options.pe_resources {
+        return Some(());
+    }
     let directory = data_directories
         .resource_directory(data, sections)
         .print_err(p)??;
@@ -530,7 +577,15 @@ fn print_sections<'data, Coff: CoffHeader>(
     symbols: Option<&SymbolTable<'data, &'data [u8], Coff>>,
     sections: &SectionTable,
 ) {
+    if !p.options.sections && !p.options.relocations {
+        return;
+    }
     for (index, section) in sections.iter().enumerate() {
+        if !p.options.sections
+            && !(p.options.relocations && section.number_of_relocations.get(LE) != 0)
+        {
+            continue;
+        }
         p.group("ImageSectionHeader", |p| {
             p.field("Index", index + 1);
             if let Some(name) =
@@ -540,86 +595,99 @@ fn print_sections<'data, Coff: CoffHeader>(
             } else {
                 p.field_inline_string("Name", section.raw_name());
             }
-            p.field_hex("VirtualSize", section.virtual_size.get(LE));
-            p.field_hex("VirtualAddress", section.virtual_address.get(LE));
-            p.field_hex("SizeOfRawData", section.size_of_raw_data.get(LE));
-            p.field_hex("PointerToRawData", section.pointer_to_raw_data.get(LE));
-            p.field_hex(
-                "PointerToRelocations",
-                section.pointer_to_relocations.get(LE),
-            );
-            p.field_hex(
-                "PointerToLinenumbers",
-                section.pointer_to_linenumbers.get(LE),
-            );
-            p.field("NumberOfRelocations", section.number_of_relocations.get(LE));
-            p.field("NumberOfLinenumbers", section.number_of_linenumbers.get(LE));
-            p.field_hex("Characteristics", section.characteristics.get(LE));
-            p.flags(section.characteristics.get(LE), 0, FLAGS_IMAGE_SCN);
-            // 0 means no alignment flag.
-            if section.characteristics.get(LE) & IMAGE_SCN_ALIGN_MASK != 0 {
-                p.flags(
-                    section.characteristics.get(LE),
-                    IMAGE_SCN_ALIGN_MASK,
-                    FLAGS_IMAGE_SCN_ALIGN,
+            if p.options.sections {
+                p.field_hex("VirtualSize", section.virtual_size.get(LE));
+                p.field_hex("VirtualAddress", section.virtual_address.get(LE));
+                p.field_hex("SizeOfRawData", section.size_of_raw_data.get(LE));
+                p.field_hex("PointerToRawData", section.pointer_to_raw_data.get(LE));
+                p.field_hex(
+                    "PointerToRelocations",
+                    section.pointer_to_relocations.get(LE),
                 );
-            }
-            if let Some(relocations) = section.coff_relocations(data).print_err(p) {
-                for relocation in relocations {
-                    p.group("ImageRelocation", |p| {
-                        p.field_hex("VirtualAddress", relocation.virtual_address.get(LE));
-                        let index = relocation.symbol_table_index.get(LE);
-                        let name = symbols.and_then(|symbols| {
-                            symbols
-                                .symbol(index as usize)
-                                .and_then(|symbol| symbol.name(symbols.strings()))
-                                .print_err(p)
-                        });
-                        p.field_string_option("Symbol", index, name);
-                        let proc = match machine {
-                            IMAGE_FILE_MACHINE_I386 => FLAGS_IMAGE_REL_I386,
-                            IMAGE_FILE_MACHINE_MIPS16
-                            | IMAGE_FILE_MACHINE_MIPSFPU
-                            | IMAGE_FILE_MACHINE_MIPSFPU16 => FLAGS_IMAGE_REL_MIPS,
-                            IMAGE_FILE_MACHINE_ALPHA | IMAGE_FILE_MACHINE_ALPHA64 => {
-                                FLAGS_IMAGE_REL_ALPHA
-                            }
-                            IMAGE_FILE_MACHINE_POWERPC | IMAGE_FILE_MACHINE_POWERPCFP => {
-                                FLAGS_IMAGE_REL_PPC
-                            }
-                            IMAGE_FILE_MACHINE_SH3
-                            | IMAGE_FILE_MACHINE_SH3DSP
-                            | IMAGE_FILE_MACHINE_SH3E
-                            | IMAGE_FILE_MACHINE_SH4
-                            | IMAGE_FILE_MACHINE_SH5 => FLAGS_IMAGE_REL_SH,
-                            IMAGE_FILE_MACHINE_ARM => FLAGS_IMAGE_REL_ARM,
-                            IMAGE_FILE_MACHINE_AM33 => FLAGS_IMAGE_REL_AM,
-                            IMAGE_FILE_MACHINE_ARM64 => FLAGS_IMAGE_REL_ARM64,
-                            IMAGE_FILE_MACHINE_AMD64 => FLAGS_IMAGE_REL_AMD64,
-                            IMAGE_FILE_MACHINE_IA64 => FLAGS_IMAGE_REL_IA64,
-                            IMAGE_FILE_MACHINE_CEF => FLAGS_IMAGE_REL_CEF,
-                            IMAGE_FILE_MACHINE_CEE => FLAGS_IMAGE_REL_CEE,
-                            IMAGE_FILE_MACHINE_M32R => FLAGS_IMAGE_REL_M32R,
-                            IMAGE_FILE_MACHINE_EBC => FLAGS_IMAGE_REL_EBC,
-                            _ => &[],
-                        };
-                        let typ = relocation.typ.get(LE);
-                        p.field_enum("Type", typ, proc);
-                        match machine {
-                            IMAGE_FILE_MACHINE_POWERPC | IMAGE_FILE_MACHINE_POWERPCFP => {
-                                p.flags(typ, 0, FLAGS_IMAGE_REL_PPC_BITS)
-                            }
-                            IMAGE_FILE_MACHINE_SH3
-                            | IMAGE_FILE_MACHINE_SH3DSP
-                            | IMAGE_FILE_MACHINE_SH3E
-                            | IMAGE_FILE_MACHINE_SH4
-                            | IMAGE_FILE_MACHINE_SH5 => p.flags(typ, 0, FLAGS_IMAGE_REL_SH_BITS),
-                            _ => {}
-                        }
-                    });
+                p.field_hex(
+                    "PointerToLinenumbers",
+                    section.pointer_to_linenumbers.get(LE),
+                );
+                p.field("NumberOfRelocations", section.number_of_relocations.get(LE));
+                p.field("NumberOfLinenumbers", section.number_of_linenumbers.get(LE));
+                p.field_hex("Characteristics", section.characteristics.get(LE));
+                p.flags(section.characteristics.get(LE), 0, FLAGS_IMAGE_SCN);
+                // 0 means no alignment flag.
+                if section.characteristics.get(LE) & IMAGE_SCN_ALIGN_MASK != 0 {
+                    p.flags(
+                        section.characteristics.get(LE),
+                        IMAGE_SCN_ALIGN_MASK,
+                        FLAGS_IMAGE_SCN_ALIGN,
+                    );
                 }
             }
+            print_relocations(p, data, machine, symbols, section);
         });
+    }
+}
+
+fn print_relocations<'data, Coff: CoffHeader>(
+    p: &mut Printer<'_>,
+    data: &[u8],
+    machine: u16,
+    symbols: Option<&SymbolTable<'data, &'data [u8], Coff>>,
+    section: &ImageSectionHeader,
+) {
+    if !p.options.relocations {
+        return;
+    }
+    if let Some(relocations) = section.coff_relocations(data).print_err(p) {
+        for relocation in relocations {
+            p.group("ImageRelocation", |p| {
+                p.field_hex("VirtualAddress", relocation.virtual_address.get(LE));
+                let index = relocation.symbol_table_index.get(LE);
+                let name = symbols.and_then(|symbols| {
+                    symbols
+                        .symbol(index as usize)
+                        .and_then(|symbol| symbol.name(symbols.strings()))
+                        .print_err(p)
+                });
+                p.field_string_option("Symbol", index, name);
+                let proc = match machine {
+                    IMAGE_FILE_MACHINE_I386 => FLAGS_IMAGE_REL_I386,
+                    IMAGE_FILE_MACHINE_MIPS16
+                    | IMAGE_FILE_MACHINE_MIPSFPU
+                    | IMAGE_FILE_MACHINE_MIPSFPU16 => FLAGS_IMAGE_REL_MIPS,
+                    IMAGE_FILE_MACHINE_ALPHA | IMAGE_FILE_MACHINE_ALPHA64 => FLAGS_IMAGE_REL_ALPHA,
+                    IMAGE_FILE_MACHINE_POWERPC | IMAGE_FILE_MACHINE_POWERPCFP => {
+                        FLAGS_IMAGE_REL_PPC
+                    }
+                    IMAGE_FILE_MACHINE_SH3
+                    | IMAGE_FILE_MACHINE_SH3DSP
+                    | IMAGE_FILE_MACHINE_SH3E
+                    | IMAGE_FILE_MACHINE_SH4
+                    | IMAGE_FILE_MACHINE_SH5 => FLAGS_IMAGE_REL_SH,
+                    IMAGE_FILE_MACHINE_ARM => FLAGS_IMAGE_REL_ARM,
+                    IMAGE_FILE_MACHINE_AM33 => FLAGS_IMAGE_REL_AM,
+                    IMAGE_FILE_MACHINE_ARM64 => FLAGS_IMAGE_REL_ARM64,
+                    IMAGE_FILE_MACHINE_AMD64 => FLAGS_IMAGE_REL_AMD64,
+                    IMAGE_FILE_MACHINE_IA64 => FLAGS_IMAGE_REL_IA64,
+                    IMAGE_FILE_MACHINE_CEF => FLAGS_IMAGE_REL_CEF,
+                    IMAGE_FILE_MACHINE_CEE => FLAGS_IMAGE_REL_CEE,
+                    IMAGE_FILE_MACHINE_M32R => FLAGS_IMAGE_REL_M32R,
+                    IMAGE_FILE_MACHINE_EBC => FLAGS_IMAGE_REL_EBC,
+                    _ => &[],
+                };
+                let typ = relocation.typ.get(LE);
+                p.field_enum("Type", typ, proc);
+                match machine {
+                    IMAGE_FILE_MACHINE_POWERPC | IMAGE_FILE_MACHINE_POWERPCFP => {
+                        p.flags(typ, 0, FLAGS_IMAGE_REL_PPC_BITS)
+                    }
+                    IMAGE_FILE_MACHINE_SH3
+                    | IMAGE_FILE_MACHINE_SH3DSP
+                    | IMAGE_FILE_MACHINE_SH3E
+                    | IMAGE_FILE_MACHINE_SH4
+                    | IMAGE_FILE_MACHINE_SH5 => p.flags(typ, 0, FLAGS_IMAGE_REL_SH_BITS),
+                    _ => {}
+                }
+            });
+        }
     }
 }
 
@@ -628,6 +696,9 @@ fn print_symbols<'data, Coff: CoffHeader>(
     sections: Option<&SectionTable>,
     symbols: &SymbolTable<'data, &'data [u8], Coff>,
 ) {
+    if !p.options.symbols {
+        return;
+    }
     for (index, symbol) in symbols.iter() {
         p.group("ImageSymbol", |p| {
             p.field("Index", index);
@@ -707,6 +778,9 @@ fn print_reloc_dir(
     sections: &SectionTable,
     data_directories: &DataDirectories,
 ) -> Option<()> {
+    if !p.options.pe_base_relocs {
+        return Some(());
+    }
     let proc = match machine {
         IMAGE_FILE_MACHINE_IA64 => FLAGS_IMAGE_REL_IA64_BASED,
         IMAGE_FILE_MACHINE_MIPS16 | IMAGE_FILE_MACHINE_MIPSFPU | IMAGE_FILE_MACHINE_MIPSFPU16 => {
