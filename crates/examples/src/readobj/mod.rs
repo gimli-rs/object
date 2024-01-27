@@ -5,8 +5,78 @@ use object::read::archive::ArchiveFile;
 use object::read::macho::{FatArch, FatHeader};
 use object::Endianness;
 
-pub fn print(w: &'_ mut dyn Write, e: &'_ mut dyn Write, file: &[u8]) {
-    let mut printer = Printer::new(w, e);
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct PrintOptions {
+    pub file: bool,
+    pub segments: bool,
+    pub sections: bool,
+    pub symbols: bool,
+    pub relocations: bool,
+
+    // ELF specific
+    pub elf_dynamic: bool,
+    pub elf_dynamic_symbols: bool,
+    pub elf_notes: bool,
+    pub elf_versions: bool,
+    pub elf_attributes: bool,
+
+    // Mach-O specific
+    pub macho_load_commands: bool,
+
+    // PE specific
+    pub pe_rich: bool,
+    pub pe_base_relocs: bool,
+    pub pe_imports: bool,
+    pub pe_exports: bool,
+    pub pe_resources: bool,
+}
+
+impl PrintOptions {
+    pub fn all() -> Self {
+        Self {
+            file: true,
+            segments: true,
+            sections: true,
+            symbols: true,
+            relocations: true,
+            elf_dynamic: true,
+            elf_dynamic_symbols: true,
+            elf_notes: true,
+            elf_versions: true,
+            elf_attributes: true,
+            macho_load_commands: true,
+            pe_rich: true,
+            pe_base_relocs: true,
+            pe_imports: true,
+            pe_exports: true,
+            pe_resources: true,
+        }
+    }
+
+    pub fn none() -> Self {
+        Self {
+            file: false,
+            segments: false,
+            sections: false,
+            symbols: false,
+            relocations: false,
+            elf_dynamic: false,
+            elf_dynamic_symbols: false,
+            elf_notes: false,
+            elf_versions: false,
+            elf_attributes: false,
+            macho_load_commands: false,
+            pe_rich: false,
+            pe_base_relocs: false,
+            pe_imports: false,
+            pe_exports: false,
+            pe_resources: false,
+        }
+    }
+}
+
+pub fn print(w: &mut dyn Write, e: &mut dyn Write, file: &[u8], options: &PrintOptions) {
+    let mut printer = Printer::new(w, e, options);
     print_object(&mut printer, file);
 }
 
@@ -14,11 +84,17 @@ struct Printer<'a> {
     w: &'a mut dyn Write,
     e: &'a mut dyn Write,
     indent: usize,
+    options: &'a PrintOptions,
 }
 
 impl<'a> Printer<'a> {
-    fn new(w: &'a mut dyn Write, e: &'a mut dyn Write) -> Self {
-        Self { w, e, indent: 0 }
+    fn new(w: &'a mut dyn Write, e: &'a mut dyn Write, options: &'a PrintOptions) -> Self {
+        Self {
+            w,
+            e,
+            indent: 0,
+            options,
+        }
     }
 
     fn w(&mut self) -> &mut dyn Write {

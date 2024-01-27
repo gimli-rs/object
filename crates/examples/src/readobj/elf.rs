@@ -30,6 +30,9 @@ fn print_elf<Elf: FileHeader<Endian = Endianness>>(p: &mut Printer<'_>, elf: &El
 }
 
 fn print_file_header<Elf: FileHeader>(p: &mut Printer<'_>, endian: Elf::Endian, elf: &Elf) {
+    if !p.options.file {
+        return;
+    }
     p.group("FileHeader", |p| {
         p.group("Ident", |p| print_ident(p, elf.e_ident()));
         p.field_enum("Type", elf.e_type(endian), FLAGS_ET);
@@ -113,6 +116,13 @@ fn print_program_headers<Elf: FileHeader>(
     segments: &[Elf::ProgramHeader],
 ) {
     for segment in segments {
+        let p_type = segment.p_type(endian);
+        if !p.options.segments
+            && !(p.options.elf_notes && p_type == PT_NOTE)
+            && !(p.options.elf_dynamic && p_type == PT_DYNAMIC)
+        {
+            continue;
+        }
         p.group("ProgramHeader", |p| {
             let proc = match elf.e_machine(endian) {
                 EM_MIPS => FLAGS_PT_MIPS,
@@ -175,6 +185,9 @@ fn print_segment_notes<Elf: FileHeader>(
     elf: &Elf,
     segment: &Elf::ProgramHeader,
 ) {
+    if !p.options.elf_notes {
+        return;
+    }
     if let Some(Some(notes)) = segment.notes(endian, data).print_err(p) {
         print_notes(p, endian, elf, notes);
     }
@@ -188,6 +201,9 @@ fn print_segment_dynamic<Elf: FileHeader>(
     segments: &[Elf::ProgramHeader],
     segment: &Elf::ProgramHeader,
 ) {
+    if !p.options.elf_dynamic {
+        return;
+    }
     if let Some(Some(dynamic)) = segment.dynamic(endian, data).print_err(p) {
         // TODO: add a helper API for this and the other mandatory tags?
         let mut strtab = 0;
@@ -221,6 +237,21 @@ fn print_section_headers<Elf: FileHeader>(
     sections: &SectionTable<Elf>,
 ) {
     for (index, section) in sections.iter().enumerate() {
+        let sh_type = section.sh_type(endian);
+        if !p.options.sections
+            && !(p.options.symbols && sh_type == SHT_SYMTAB)
+            && !(p.options.relocations && sh_type == SHT_REL)
+            && !(p.options.relocations && sh_type == SHT_RELA)
+            && !(p.options.elf_dynamic && sh_type == SHT_DYNAMIC)
+            && !(p.options.elf_dynamic_symbols && sh_type == SHT_DYNSYM)
+            && !(p.options.elf_notes && sh_type == SHT_NOTE)
+            && !(p.options.elf_versions && sh_type == SHT_GNU_VERDEF)
+            && !(p.options.elf_versions && sh_type == SHT_GNU_VERNEED)
+            && !(p.options.elf_versions && sh_type == SHT_GNU_VERSYM)
+            && !(p.options.elf_attributes && sh_type == SHT_GNU_ATTRIBUTES)
+        {
+            continue;
+        }
         let index = SectionIndex(index);
         p.group("SectionHeader", |p| {
             p.field("Index", index.0);
@@ -272,8 +303,15 @@ fn print_section_headers<Elf: FileHeader>(
             }
 
             match section.sh_type(endian) {
-                SHT_SYMTAB | SHT_DYNSYM => {
-                    print_section_symbols(p, endian, data, elf, sections, index, section)
+                SHT_SYMTAB => {
+                    if p.options.symbols {
+                        print_section_symbols(p, endian, data, elf, sections, index, section);
+                    }
+                }
+                SHT_DYNSYM => {
+                    if p.options.elf_dynamic_symbols {
+                        print_section_symbols(p, endian, data, elf, sections, index, section);
+                    }
                 }
                 SHT_REL => print_section_rel(p, endian, data, elf, sections, section),
                 SHT_RELA => print_section_rela(p, endian, data, elf, sections, section),
@@ -396,6 +434,9 @@ fn print_section_rel<Elf: FileHeader>(
     sections: &SectionTable<Elf>,
     section: &Elf::SectionHeader,
 ) {
+    if !p.options.relocations {
+        return;
+    }
     if let Some(Some((relocations, link))) = section.rel(endian, data).print_err(p) {
         let symbols = sections
             .symbol_table_by_index(endian, data, link)
@@ -420,6 +461,9 @@ fn print_section_rela<Elf: FileHeader>(
     sections: &SectionTable<Elf>,
     section: &Elf::SectionHeader,
 ) {
+    if !p.options.relocations {
+        return;
+    }
     if let Some(Some((relocations, link))) = section.rela(endian, data).print_err(p) {
         let symbols = sections
             .symbol_table_by_index(endian, data, link)
@@ -500,6 +544,9 @@ fn print_section_notes<Elf: FileHeader>(
     elf: &Elf,
     section: &Elf::SectionHeader,
 ) {
+    if !p.options.elf_notes {
+        return;
+    }
     if let Some(Some(notes)) = section.notes(endian, data).print_err(p) {
         print_notes(p, endian, elf, notes);
     }
@@ -513,6 +560,9 @@ fn print_section_dynamic<Elf: FileHeader>(
     sections: &SectionTable<Elf>,
     section: &Elf::SectionHeader,
 ) {
+    if !p.options.elf_dynamic {
+        return;
+    }
     if let Some(Some((dynamic, index))) = section.dynamic(endian, data).print_err(p) {
         let strings = sections.strings(endian, data, index).unwrap_or_default();
         print_dynamic(p, endian, elf, dynamic, strings);
@@ -756,6 +806,9 @@ fn print_gnu_verdef<Elf: FileHeader>(
     sections: &SectionTable<Elf>,
     section: &Elf::SectionHeader,
 ) {
+    if !p.options.elf_versions {
+        return;
+    }
     if let Some(Some((mut verdefs, link))) = section.gnu_verdef(endian, data).print_err(p) {
         let strings = sections.strings(endian, data, link).unwrap_or_default();
         while let Some(Some((verdef, mut verdauxs))) = verdefs.next().print_err(p) {
@@ -791,6 +844,9 @@ fn print_gnu_verneed<Elf: FileHeader>(
     sections: &SectionTable<Elf>,
     section: &Elf::SectionHeader,
 ) {
+    if !p.options.elf_versions {
+        return;
+    }
     if let Some(Some((mut verneeds, link))) = section.gnu_verneed(endian, data).print_err(p) {
         let strings = sections.strings(endian, data, link).unwrap_or_default();
         while let Some(Some((verneed, mut vernauxs))) = verneeds.next().print_err(p) {
@@ -831,6 +887,9 @@ fn print_gnu_versym<Elf: FileHeader>(
     sections: &SectionTable<Elf>,
     section: &Elf::SectionHeader,
 ) {
+    if !p.options.elf_versions {
+        return;
+    }
     if let Some(Some((syms, _link))) = section.gnu_versym(endian, data).print_err(p) {
         let versions = sections.versions(endian, data).print_err(p).flatten();
         for (index, sym) in syms.iter().enumerate() {
@@ -850,6 +909,9 @@ fn print_attributes<Elf: FileHeader>(
     _elf: &Elf,
     section: &Elf::SectionHeader,
 ) {
+    if !p.options.elf_attributes {
+        return;
+    }
     if let Some(section) = section.attributes(endian, data).print_err(p) {
         p.group("Attributes", |p| {
             p.field("Version", section.version());

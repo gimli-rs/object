@@ -25,53 +25,12 @@ fn print_xcoff<Xcoff: FileHeader>(
     data: &[u8],
     mut offset: u64,
 ) {
-    p.group("FileHeader", |p| {
-        p.field_hex("Magic", header.f_magic());
-        p.field("NumberOfSections", header.f_nscns());
-        p.field_hex("TimeDate", header.f_timdat());
-        p.field_hex("SymbolPointer", header.f_symptr().into());
-        p.field("NumberOfSymbols", header.f_nsyms());
-        p.field_hex("SizeOfOptionalHeader", header.f_opthdr());
-        p.field_hex("Flags", header.f_flags());
-        p.flags(header.f_flags(), 0, FLAGS_F);
-    });
+    print_file_header(p, header);
     if let Some(aux_header) = header.aux_header(data, &mut offset).print_err(p) {
         let sections = header.sections(data, &mut offset).print_err(p);
         let symbols = header.symbols(data).print_err(p);
         if let Some(aux_header) = aux_header {
-            p.group("AuxHeader", |p| {
-                p.field_hex("Magic", aux_header.o_mflag());
-                p.field_hex("Version", aux_header.o_vstamp());
-                p.field_hex("TextSize", aux_header.o_tsize().into());
-                p.field_hex("DataSize", aux_header.o_dsize().into());
-                p.field_hex("UninitializedDataSize", aux_header.o_bsize().into());
-                p.field_hex("EntryAddress", aux_header.o_entry().into());
-                p.field_hex("TextAddress", aux_header.o_text_start().into());
-                p.field_hex("DataAddress", aux_header.o_data_start().into());
-                p.field_hex("TocAddress", aux_header.o_toc().into());
-                p.field("EntrySectionNumber", aux_header.o_snentry());
-                p.field("TextSectionNumber", aux_header.o_sntext());
-                p.field("DataSectionNumber", aux_header.o_sndata());
-                p.field("TocSectionNumber", aux_header.o_sntoc());
-                p.field("LoaderSectionNumber", aux_header.o_snloader());
-                p.field_hex("TextAlignment", aux_header.o_algntext());
-                p.field_hex("DataAlignment", aux_header.o_algndata());
-                p.field_hex("ModuleType", aux_header.o_modtype());
-                p.field_hex("CpuFlags", aux_header.o_cpuflag());
-                p.field_hex("CpuType", aux_header.o_cputype());
-                p.field_hex("MaximumStack", aux_header.o_maxstack().into());
-                p.field_hex("MaximumData", aux_header.o_maxdata().into());
-                p.field_hex("Debugger", aux_header.o_debugger());
-                p.field_hex("TextPageSize", aux_header.o_textpsize());
-                p.field_hex("DataPageSize", aux_header.o_datapsize());
-                p.field_hex("StackPageSize", aux_header.o_stackpsize());
-                p.field_hex("Flags", aux_header.o_flags());
-                p.field("TlsDataSectionNumber", aux_header.o_sntdata());
-                p.field("TlsUninitializedDataSectionNumber", aux_header.o_snbss());
-                if let Some(x64flags) = aux_header.o_x64flags() {
-                    p.field_hex("Flags64", x64flags);
-                }
-            });
+            print_aux_header(p, aux_header);
         }
         if let Some(ref sections) = sections {
             print_sections(p, data, symbols.as_ref(), sections);
@@ -82,12 +41,70 @@ fn print_xcoff<Xcoff: FileHeader>(
     }
 }
 
+fn print_file_header<'data, Xcoff: FileHeader>(p: &mut Printer<'_>, header: &Xcoff) {
+    if !p.options.file {
+        return;
+    }
+    p.group("FileHeader", |p| {
+        p.field_hex("Magic", header.f_magic());
+        p.field("NumberOfSections", header.f_nscns());
+        p.field_hex("TimeDate", header.f_timdat());
+        p.field_hex("SymbolPointer", header.f_symptr().into());
+        p.field("NumberOfSymbols", header.f_nsyms());
+        p.field_hex("SizeOfOptionalHeader", header.f_opthdr());
+        p.field_hex("Flags", header.f_flags());
+        p.flags(header.f_flags(), 0, FLAGS_F);
+    });
+}
+
+fn print_aux_header<'data, Header: AuxHeader>(p: &mut Printer<'_>, aux_header: &Header) {
+    if !p.options.file {
+        return;
+    }
+    p.group("AuxHeader", |p| {
+        p.field_hex("Magic", aux_header.o_mflag());
+        p.field_hex("Version", aux_header.o_vstamp());
+        p.field_hex("TextSize", aux_header.o_tsize().into());
+        p.field_hex("DataSize", aux_header.o_dsize().into());
+        p.field_hex("UninitializedDataSize", aux_header.o_bsize().into());
+        p.field_hex("EntryAddress", aux_header.o_entry().into());
+        p.field_hex("TextAddress", aux_header.o_text_start().into());
+        p.field_hex("DataAddress", aux_header.o_data_start().into());
+        p.field_hex("TocAddress", aux_header.o_toc().into());
+        p.field("EntrySectionNumber", aux_header.o_snentry());
+        p.field("TextSectionNumber", aux_header.o_sntext());
+        p.field("DataSectionNumber", aux_header.o_sndata());
+        p.field("TocSectionNumber", aux_header.o_sntoc());
+        p.field("LoaderSectionNumber", aux_header.o_snloader());
+        p.field_hex("TextAlignment", aux_header.o_algntext());
+        p.field_hex("DataAlignment", aux_header.o_algndata());
+        p.field_hex("ModuleType", aux_header.o_modtype());
+        p.field_hex("CpuFlags", aux_header.o_cpuflag());
+        p.field_hex("CpuType", aux_header.o_cputype());
+        p.field_hex("MaximumStack", aux_header.o_maxstack().into());
+        p.field_hex("MaximumData", aux_header.o_maxdata().into());
+        p.field_hex("Debugger", aux_header.o_debugger());
+        p.field_hex("TextPageSize", aux_header.o_textpsize());
+        p.field_hex("DataPageSize", aux_header.o_datapsize());
+        p.field_hex("StackPageSize", aux_header.o_stackpsize());
+        p.field_hex("Flags", aux_header.o_flags());
+        p.field("TlsDataSectionNumber", aux_header.o_sntdata());
+        p.field("TlsUninitializedDataSectionNumber", aux_header.o_snbss());
+        if let Some(x64flags) = aux_header.o_x64flags() {
+            p.field_hex("Flags64", x64flags);
+        }
+    });
+}
+
 fn print_sections<'data, Xcoff: FileHeader>(
     p: &mut Printer<'_>,
     data: &[u8],
     symbols: Option<&SymbolTable<'data, Xcoff>>,
     sections: &SectionTable<'data, Xcoff>,
 ) {
+    if !p.options.sections {
+        return;
+    }
     for (index, section) in sections.iter().enumerate() {
         p.group("SectionHeader", |p| {
             p.field("Index", index + 1);
@@ -131,6 +148,9 @@ fn print_symbols<'data, Xcoff: FileHeader>(
     sections: Option<&SectionTable<'data, Xcoff>>,
     symbols: &SymbolTable<'data, Xcoff>,
 ) {
+    if !p.options.symbols {
+        return;
+    }
     for (index, symbol) in symbols.iter() {
         p.group("Symbol", |p| {
             p.field("Index", index.0);

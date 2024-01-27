@@ -54,13 +54,15 @@ fn testfiles() {
             fail |= testfile(update, path, &data, "objdump", |mut out, mut err, data| {
                 objdump::print(&mut out, &mut err, data, &[], vec![]).unwrap()
             });
-            fail |= testfile(update, path, &data, "readobj", readobj::print);
+            fail |= testfile(update, path, &data, "readobj", |out, err, data| {
+                readobj::print(out, err, data, &readobj::PrintOptions::all())
+            });
 
             #[cfg(feature = "write")]
             {
                 fail |= testfile(update, path, &data, "objcopy", |out, err, in_data| {
                     let out_data = objcopy::copy(in_data);
-                    readobj::print(out, err, &out_data)
+                    readobj::print(out, err, &out_data, &readobj::PrintOptions::all())
                 });
             }
             println!();
