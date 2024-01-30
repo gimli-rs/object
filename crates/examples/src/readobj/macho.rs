@@ -91,13 +91,13 @@ pub(super) fn print_dyld_cache_images(
 }
 
 pub(super) fn print_macho_fat32(p: &mut Printer<'_>, data: &[u8]) {
-    if let Some(arches) = FatHeader::parse_arch32(data).print_err(p) {
+    if let Some(fat) = MachOFatFile32::parse(data).print_err(p) {
         writeln!(p.w(), "Format: Mach-O Fat 32-bit").unwrap();
-        print_fat_header(p, data);
-        for arch in arches {
+        print_fat_header(p, fat.header());
+        for arch in fat.arches() {
             print_fat_arch(p, arch);
         }
-        for arch in arches {
+        for arch in fat.arches() {
             if let Some(data) = arch.data(data).print_err(p) {
                 p.blank();
                 print_object(p, data);
@@ -107,13 +107,13 @@ pub(super) fn print_macho_fat32(p: &mut Printer<'_>, data: &[u8]) {
 }
 
 pub(super) fn print_macho_fat64(p: &mut Printer<'_>, data: &[u8]) {
-    if let Some(arches) = FatHeader::parse_arch64(data).print_err(p) {
+    if let Some(fat) = MachOFatFile64::parse(data).print_err(p) {
         writeln!(p.w(), "Format: Mach-O Fat 64-bit").unwrap();
-        print_fat_header(p, data);
-        for arch in arches {
+        print_fat_header(p, fat.header());
+        for arch in fat.arches() {
             print_fat_arch(p, arch);
         }
-        for arch in arches {
+        for arch in fat.arches() {
             if let Some(data) = arch.data(data).print_err(p) {
                 p.blank();
                 print_object(p, data);
@@ -122,16 +122,14 @@ pub(super) fn print_macho_fat64(p: &mut Printer<'_>, data: &[u8]) {
     }
 }
 
-pub(super) fn print_fat_header(p: &mut Printer<'_>, data: &[u8]) {
+pub(super) fn print_fat_header(p: &mut Printer<'_>, header: &macho::FatHeader) {
     if !p.options.file {
         return;
     }
-    if let Some(header) = FatHeader::parse(data).print_err(p) {
-        p.group("FatHeader", |p| {
-            p.field_hex("Magic", header.magic.get(BigEndian));
-            p.field("NumberOfFatArch", header.nfat_arch.get(BigEndian));
-        });
-    }
+    p.group("FatHeader", |p| {
+        p.field_hex("Magic", header.magic.get(BigEndian));
+        p.field("NumberOfFatArch", header.nfat_arch.get(BigEndian));
+    });
 }
 
 pub(super) fn print_fat_arch<Arch: FatArch>(p: &mut Printer<'_>, arch: &Arch) {
