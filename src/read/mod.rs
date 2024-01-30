@@ -705,6 +705,12 @@ impl Relocation {
         self.addend
     }
 
+    /// Set the addend to use in the relocation calculation.
+    #[inline]
+    pub fn set_addend(&mut self, addend: i64) {
+        self.addend = addend;
+    }
+
     /// Returns true if there is an implicit addend stored in the data at the offset
     /// to be relocated.
     #[inline]
