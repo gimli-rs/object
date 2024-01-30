@@ -1978,6 +1978,8 @@ pub const PLATFORM_IOSSIMULATOR: u32 = 7;
 pub const PLATFORM_TVOSSIMULATOR: u32 = 8;
 pub const PLATFORM_WATCHOSSIMULATOR: u32 = 9;
 pub const PLATFORM_DRIVERKIT: u32 = 10;
+pub const PLATFORM_XROS: u32 = 11;
+pub const PLATFORM_XROSSIMULATOR: u32 = 12;
 
 /* Known values for the tool field above. */
 pub const TOOL_CLANG: u32 = 1;
