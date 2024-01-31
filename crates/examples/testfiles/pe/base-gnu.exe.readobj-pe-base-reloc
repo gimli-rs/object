@@ -1,0 +1,246 @@
+Format: PE 64-bit
+ImageBaseRelocation {
+    VirtualAddress: 0x7BD8
+    Type: IMAGE_REL_BASED_DIR64 (0xA)
+    Addend: 0x140007BC0
+}
+ImageBaseRelocation {
+    VirtualAddress: 0x8010
+    Type: IMAGE_REL_BASED_DIR64 (0xA)
+    Addend: 0x140007BF0
+}
+ImageBaseRelocation {
+    VirtualAddress: 0x8080
+    Type: IMAGE_REL_BASED_DIR64 (0xA)
+    Addend: 0x14000C1A0
+}
+ImageBaseRelocation {
+    VirtualAddress: 0x8090
+    Type: IMAGE_REL_BASED_DIR64 (0xA)
+    Addend: 0x1400079E0
+}
+ImageBaseRelocation {
+    VirtualAddress: 0x80A0
+    Type: IMAGE_REL_BASED_DIR64 (0xA)
+    Addend: 0x140007A00
+}
+ImageBaseRelocation {
+    VirtualAddress: 0x80A8
+    Type: IMAGE_REL_BASED_DIR64 (0xA)
+    Addend: 0x140007A10
+}
+ImageBaseRelocation {
+    VirtualAddress: 0x80B0
+    Type: IMAGE_REL_BASED_DIR64 (0xA)
+    Addend: 0x140007A90
+}
+ImageBaseRelocation {
+    VirtualAddress: 0x80B8
+    Type: IMAGE_REL_BASED_DIR64 (0xA)
+    Addend: 0x140007A20
+}
+ImageBaseRelocation {
+    VirtualAddress: 0x80C0
+    Type: IMAGE_REL_BASED_DIR64 (0xA)
+    Addend: 0x140007AF0
+}
+ImageBaseRelocation {
+    VirtualAddress: 0x80D0
+    Type: IMAGE_REL_BASED_DIR64 (0xA)
+    Addend: 0x140007B00
+}
+ImageBaseRelocation {
+    VirtualAddress: 0x80E0
+    Type: IMAGE_REL_BASED_DIR64 (0xA)
+    Addend: 0x140007B10
+}
+ImageBaseRelocation {
+    VirtualAddress: 0x9020
+    Type: IMAGE_REL_BASED_DIR64 (0xA)
+    Addend: 0x1400016C0
+}
+ImageBaseRelocation {
+    VirtualAddress: 0x9040
+    Type: IMAGE_REL_BASED_DIR64 (0xA)
+    Addend: 0x14000F000
+}
+ImageBaseRelocation {
+    VirtualAddress: 0x9048
+    Type: IMAGE_REL_BASED_DIR64 (0xA)
+    Addend: 0x14000F008
+}
+ImageBaseRelocation {
+    VirtualAddress: 0x9050
+    Type: IMAGE_REL_BASED_DIR64 (0xA)
+    Addend: 0x14000C07C
+}
+ImageBaseRelocation {
+    VirtualAddress: 0x9058
+    Type: IMAGE_REL_BASED_DIR64 (0xA)
+    Addend: 0x14000E038
+}
+ImageBaseRelocation {
+    VirtualAddress: 0x9680
+    Type: IMAGE_REL_BASED_DIR64 (0xA)
+    Addend: 0x140008040
+}
+ImageBaseRelocation {
+    VirtualAddress: 0x9690
+    Type: IMAGE_REL_BASED_DIR64 (0xA)
+    Addend: 0x140008050
+}
+ImageBaseRelocation {
+    VirtualAddress: 0x96A0
+    Type: IMAGE_REL_BASED_DIR64 (0xA)
+    Addend: 0x140007BD0
+}
+ImageBaseRelocation {
+    VirtualAddress: 0x96B0
+    Type: IMAGE_REL_BASED_DIR64 (0xA)
+    Addend: 0x14000A000
+}
+ImageBaseRelocation {
+    VirtualAddress: 0x96C0
+    Type: IMAGE_REL_BASED_DIR64 (0xA)
+    Addend: 0x14000A000
+}
+ImageBaseRelocation {
+    VirtualAddress: 0x96D0
+    Type: IMAGE_REL_BASED_DIR64 (0xA)
+    Addend: 0x140009020
+}
+ImageBaseRelocation {
+    VirtualAddress: 0x96E0
+    Type: IMAGE_REL_BASED_DIR64 (0xA)
+    Addend: 0x140000000
+}
+ImageBaseRelocation {
+    VirtualAddress: 0x96F0
+    Type: IMAGE_REL_BASED_DIR64 (0xA)
+    Addend: 0x14000D26C
+}
+ImageBaseRelocation {
+    VirtualAddress: 0x9700
+    Type: IMAGE_REL_BASED_DIR64 (0xA)
+    Addend: 0x14000D28C
+}
+ImageBaseRelocation {
+    VirtualAddress: 0x9710
+    Type: IMAGE_REL_BASED_DIR64 (0xA)
+    Addend: 0x14000D2A4
+}
+ImageBaseRelocation {
+    VirtualAddress: 0x9720
+    Type: IMAGE_REL_BASED_DIR64 (0xA)
+    Addend: 0x14000D2B4
+}
+ImageBaseRelocation {
+    VirtualAddress: 0x9730
+    Type: IMAGE_REL_BASED_DIR64 (0xA)
+    Addend: 0x14000C090
+}
+ImageBaseRelocation {
+    VirtualAddress: 0x9740
+    Type: IMAGE_REL_BASED_DIR64 (0xA)
+    Addend: 0x14000C078
+}
+ImageBaseRelocation {
+    VirtualAddress: 0x9750
+    Type: IMAGE_REL_BASED_DIR64 (0xA)
+    Addend: 0x14000C074
+}
+ImageBaseRelocation {
+    VirtualAddress: 0x9760
+    Type: IMAGE_REL_BASED_DIR64 (0xA)
+    Addend: 0x14000C070
+}
+ImageBaseRelocation {
+    VirtualAddress: 0x9770
+    Type: IMAGE_REL_BASED_DIR64 (0xA)
+    Addend: 0x14000C0D0
+}
+ImageBaseRelocation {
+    VirtualAddress: 0x9780
+    Type: IMAGE_REL_BASED_DIR64 (0xA)
+    Addend: 0x14000C050
+}
+ImageBaseRelocation {
+    VirtualAddress: 0x9790
+    Type: IMAGE_REL_BASED_DIR64 (0xA)
+    Addend: 0x14000C058
+}
+ImageBaseRelocation {
+    VirtualAddress: 0x97A0
+    Type: IMAGE_REL_BASED_DIR64 (0xA)
+    Addend: 0x140009540
+}
+ImageBaseRelocation {
+    VirtualAddress: 0x97B0
+    Type: IMAGE_REL_BASED_DIR64 (0xA)
+    Addend: 0x14000E000
+}
+ImageBaseRelocation {
+    VirtualAddress: 0x97C0
+    Type: IMAGE_REL_BASED_DIR64 (0xA)
+    Addend: 0x14000E010
+}
+ImageBaseRelocation {
+    VirtualAddress: 0x97D0
+    Type: IMAGE_REL_BASED_DIR64 (0xA)
+    Addend: 0x14000E018
+}
+ImageBaseRelocation {
+    VirtualAddress: 0x97E0
+    Type: IMAGE_REL_BASED_DIR64 (0xA)
+    Addend: 0x14000E028
+}
+ImageBaseRelocation {
+    VirtualAddress: 0x97F0
+    Type: IMAGE_REL_BASED_DIR64 (0xA)
+    Addend: 0x14000C080
+}
+ImageBaseRelocation {
+    VirtualAddress: 0x9800
+    Type: IMAGE_REL_BASED_DIR64 (0xA)
+    Addend: 0x140008030
+}
+ImageBaseRelocation {
+    VirtualAddress: 0x9810
+    Type: IMAGE_REL_BASED_DIR64 (0xA)
+    Addend: 0x14000C0C0
+}
+ImageBaseRelocation {
+    VirtualAddress: 0x9820
+    Type: IMAGE_REL_BASED_DIR64 (0xA)
+    Addend: 0x140001D30
+}
+ImageBaseRelocation {
+    VirtualAddress: 0x9830
+    Type: IMAGE_REL_BASED_DIR64 (0xA)
+    Addend: 0x140001760
+}
+ImageBaseRelocation {
+    VirtualAddress: 0x9840
+    Type: IMAGE_REL_BASED_DIR64 (0xA)
+    Addend: 0x14000C060
+}
+ImageBaseRelocation {
+    VirtualAddress: 0xE008
+    Type: IMAGE_REL_BASED_DIR64 (0xA)
+    Addend: 0x140001130
+}
+ImageBaseRelocation {
+    VirtualAddress: 0xE020
+    Type: IMAGE_REL_BASED_DIR64 (0xA)
+    Addend: 0x140001010
+}
+ImageBaseRelocation {
+    VirtualAddress: 0xE038
+    Type: IMAGE_REL_BASED_DIR64 (0xA)
+    Addend: 0x1400016C0
+}
+ImageBaseRelocation {
+    VirtualAddress: 0xE040
+    Type: IMAGE_REL_BASED_DIR64 (0xA)
+    Addend: 0x140001690
+}

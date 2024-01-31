@@ -1,3 +1,4 @@
+Format: PE 64-bit
 ImageResourceDirectory {
     Characteristics: 0
     TimeDateStamp: 0

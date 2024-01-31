@@ -1,3 +1,4 @@
+Format: ELF 64-bit
 SectionHeader {
     Index: 8
     Name: ".note.gnu.property" (0x52)
