@@ -1,0 +1,10 @@
+65530: Symbol { name: "", address: 0, size: 0, kind: Section, section: Section(SectionIndex(fff9)), scope: Compilation, weak: false, flags: Elf { st_info: 3, st_other: 0 } }
+65531: Symbol { name: "", address: 0, size: 0, kind: Section, section: Section(SectionIndex(fffa)), scope: Compilation, weak: false, flags: Elf { st_info: 3, st_other: 0 } }
+65532: Symbol { name: "", address: 0, size: 0, kind: Section, section: Section(SectionIndex(fffb)), scope: Compilation, weak: false, flags: Elf { st_info: 3, st_other: 0 } }
+65533: Symbol { name: "", address: 0, size: 0, kind: Section, section: Section(SectionIndex(fffc)), scope: Compilation, weak: false, flags: Elf { st_info: 3, st_other: 0 } }
+65534: Symbol { name: "", address: 0, size: 0, kind: Section, section: Section(SectionIndex(fffd)), scope: Compilation, weak: false, flags: Elf { st_info: 3, st_other: 0 } }
+65535: Symbol { name: "", address: 0, size: 0, kind: Section, section: Section(SectionIndex(fffe)), scope: Compilation, weak: false, flags: Elf { st_info: 3, st_other: 0 } }
+65536: Symbol { name: "", address: 0, size: 0, kind: Section, section: Section(SectionIndex(ffff)), scope: Compilation, weak: false, flags: Elf { st_info: 3, st_other: 0 } }
+65537: Symbol { name: "", address: 0, size: 0, kind: Section, section: Section(SectionIndex(10000)), scope: Compilation, weak: false, flags: Elf { st_info: 3, st_other: 0 } }
+65538: Symbol { name: "", address: 0, size: 0, kind: Section, section: Section(SectionIndex(10001)), scope: Compilation, weak: false, flags: Elf { st_info: 3, st_other: 0 } }
+65539: Symbol { name: "", address: 0, size: 0, kind: Section, section: Section(SectionIndex(10002)), scope: Compilation, weak: false, flags: Elf { st_info: 3, st_other: 0 } }

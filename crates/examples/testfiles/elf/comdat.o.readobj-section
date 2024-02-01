@@ -1,0 +1,234 @@
+Format: ELF 64-bit
+SectionHeader {
+    Index: 0
+    Name: "" (0x0)
+    Type: SHT_NULL (0x0)
+    Flags: 0x0
+    Address: 0x0
+    Offset: 0x0
+    Size: 0x0
+    Link: 0
+    Info: 0
+    AddressAlign: 0x0
+    EntrySize: 0x0
+}
+SectionHeader {
+    Index: 1
+    Name: ".group" (0x77)
+    Type: SHT_GROUP (0x11)
+    Flags: 0x0
+    Address: 0x0
+    Offset: 0x40
+    Size: 0x8
+    Link: 13
+    Info: 12
+    AddressAlign: 0x4
+    EntrySize: 0x4
+    GroupFlag: GRP_COMDAT (0x1)
+    GroupSections {
+        ".text._Z4foo1i" (7)
+    }
+}
+SectionHeader {
+    Index: 2
+    Name: ".group" (0x77)
+    Type: SHT_GROUP (0x11)
+    Flags: 0x0
+    Address: 0x0
+    Offset: 0x48
+    Size: 0x8
+    Link: 13
+    Info: 13
+    AddressAlign: 0x4
+    EntrySize: 0x4
+    GroupFlag: GRP_COMDAT (0x1)
+    GroupSections {
+        ".text._Z4foo2i" (8)
+    }
+}
+SectionHeader {
+    Index: 3
+    Name: ".text" (0x20)
+    Type: SHT_PROGBITS (0x1)
+    Flags: 0x6
+        SHF_ALLOC (0x2)
+        SHF_EXECINSTR (0x4)
+    Address: 0x0
+    Offset: 0x50
+    Size: 0x25
+    Link: 0
+    Info: 0
+    AddressAlign: 0x1
+    EntrySize: 0x0
+}
+SectionHeader {
+    Index: 4
+    Name: ".rela.text" (0x1B)
+    Type: SHT_RELA (0x4)
+    Flags: 0x40
+        SHF_INFO_LINK (0x40)
+    Address: 0x0
+    Offset: 0x348
+    Size: 0x30
+    Link: 13
+    Info: 3
+    AddressAlign: 0x8
+    EntrySize: 0x18
+}
+SectionHeader {
+    Index: 5
+    Name: ".data" (0x26)
+    Type: SHT_PROGBITS (0x1)
+    Flags: 0x3
+        SHF_WRITE (0x1)
+        SHF_ALLOC (0x2)
+    Address: 0x0
+    Offset: 0x75
+    Size: 0x0
+    Link: 0
+    Info: 0
+    AddressAlign: 0x1
+    EntrySize: 0x0
+}
+SectionHeader {
+    Index: 6
+    Name: ".bss" (0x2C)
+    Type: SHT_NOBITS (0x8)
+    Flags: 0x3
+        SHF_WRITE (0x1)
+        SHF_ALLOC (0x2)
+    Address: 0x0
+    Offset: 0x75
+    Size: 0x0
+    Link: 0
+    Info: 0
+    AddressAlign: 0x1
+    EntrySize: 0x0
+}
+SectionHeader {
+    Index: 7
+    Name: ".text._Z4foo1i" (0x31)
+    Type: SHT_PROGBITS (0x1)
+    Flags: 0x206
+        SHF_ALLOC (0x2)
+        SHF_EXECINSTR (0x4)
+        SHF_GROUP (0x200)
+    Address: 0x0
+    Offset: 0x75
+    Size: 0x10
+    Link: 0
+    Info: 0
+    AddressAlign: 0x1
+    EntrySize: 0x0
+}
+SectionHeader {
+    Index: 8
+    Name: ".text._Z4foo2i" (0x40)
+    Type: SHT_PROGBITS (0x1)
+    Flags: 0x206
+        SHF_ALLOC (0x2)
+        SHF_EXECINSTR (0x4)
+        SHF_GROUP (0x200)
+    Address: 0x0
+    Offset: 0x85
+    Size: 0xE
+    Link: 0
+    Info: 0
+    AddressAlign: 0x1
+    EntrySize: 0x0
+}
+SectionHeader {
+    Index: 9
+    Name: ".comment" (0x4F)
+    Type: SHT_PROGBITS (0x1)
+    Flags: 0x30
+        SHF_MERGE (0x10)
+        SHF_STRINGS (0x20)
+    Address: 0x0
+    Offset: 0x93
+    Size: 0x2A
+    Link: 0
+    Info: 0
+    AddressAlign: 0x1
+    EntrySize: 0x1
+}
+SectionHeader {
+    Index: 10
+    Name: ".note.GNU-stack" (0x58)
+    Type: SHT_PROGBITS (0x1)
+    Flags: 0x0
+    Address: 0x0
+    Offset: 0xBD
+    Size: 0x0
+    Link: 0
+    Info: 0
+    AddressAlign: 0x1
+    EntrySize: 0x0
+}
+SectionHeader {
+    Index: 11
+    Name: ".eh_frame" (0x6D)
+    Type: SHT_PROGBITS (0x1)
+    Flags: 0x2
+        SHF_ALLOC (0x2)
+    Address: 0x0
+    Offset: 0xC0
+    Size: 0xB8
+    Link: 0
+    Info: 0
+    AddressAlign: 0x8
+    EntrySize: 0x0
+}
+SectionHeader {
+    Index: 12
+    Name: ".rela.eh_frame" (0x68)
+    Type: SHT_RELA (0x4)
+    Flags: 0x40
+        SHF_INFO_LINK (0x40)
+    Address: 0x0
+    Offset: 0x378
+    Size: 0x78
+    Link: 13
+    Info: 11
+    AddressAlign: 0x8
+    EntrySize: 0x18
+}
+SectionHeader {
+    Index: 13
+    Name: ".symtab" (0x1)
+    Type: SHT_SYMTAB (0x2)
+    Flags: 0x0
+    Address: 0x0
+    Offset: 0x178
+    Size: 0x198
+    Link: 14
+    Info: 12
+    AddressAlign: 0x8
+    EntrySize: 0x18
+}
+SectionHeader {
+    Index: 14
+    Name: ".strtab" (0x9)
+    Type: SHT_STRTAB (0x3)
+    Flags: 0x0
+    Address: 0x0
+    Offset: 0x310
+    Size: 0x34
+    Link: 0
+    Info: 0
+    AddressAlign: 0x1
+    EntrySize: 0x0
+}
+SectionHeader {
+    Index: 15
+    Name: ".shstrtab" (0x11)
+    Type: SHT_STRTAB (0x3)
+    Flags: 0x0
+    Address: 0x0
+    Offset: 0x3F0
+    Size: 0x7E
+    Link: 0
+    Info: 0
+    AddressAlign: 0x1
+    EntrySize: 0x0
+}
