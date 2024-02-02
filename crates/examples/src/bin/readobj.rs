@@ -110,6 +110,12 @@ fn main() {
                 .action(ArgAction::SetTrue)
                 .help("Print the PE resource directory"),
         )
+        .arg(
+            Arg::new("no-string-indices")
+                .long("no-string-indices")
+                .action(ArgAction::SetTrue)
+                .help("Don't print string table indices"),
+        )
         .get_matches();
     let mut options = readobj::PrintOptions {
         file: matches.get_flag("file-header"),
@@ -128,10 +134,12 @@ fn main() {
         pe_imports: matches.get_flag("pe-imports"),
         pe_exports: matches.get_flag("pe-exports"),
         pe_resources: matches.get_flag("pe-resources"),
+        ..readobj::PrintOptions::none()
     };
     if options == readobj::PrintOptions::none() {
         options = readobj::PrintOptions::all();
     }
+    options.string_indices = !matches.get_flag("no-string-indices");
 
     let file_paths = matches.get_many::<PathBuf>("file").unwrap();
     let file_count = file_paths.len();
