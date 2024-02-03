@@ -7,31 +7,36 @@ use object::Endianness;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct PrintOptions {
+    // Selectors
     pub file: bool,
     pub segments: bool,
     pub sections: bool,
     pub symbols: bool,
     pub relocations: bool,
 
-    // ELF specific
+    // ELF specific selectors
     pub elf_dynamic: bool,
     pub elf_dynamic_symbols: bool,
     pub elf_notes: bool,
     pub elf_versions: bool,
     pub elf_attributes: bool,
 
-    // Mach-O specific
+    // Mach-O specific selectors
     pub macho_load_commands: bool,
 
-    // PE specific
+    // PE specific selectors
     pub pe_rich: bool,
     pub pe_base_relocs: bool,
     pub pe_imports: bool,
     pub pe_exports: bool,
     pub pe_resources: bool,
+
+    // Modifiers
+    pub string_indices: bool,
 }
 
 impl PrintOptions {
+    /// Returns a new `PrintOptions` with all selectors enabled and default modifiers.
     pub fn all() -> Self {
         Self {
             file: true,
@@ -50,9 +55,11 @@ impl PrintOptions {
             pe_imports: true,
             pe_exports: true,
             pe_resources: true,
+            string_indices: true,
         }
     }
 
+    /// Returns a new `PrintOptions` with all selectors disabled and default modifiers.
     pub fn none() -> Self {
         Self {
             file: false,
@@ -71,6 +78,7 @@ impl PrintOptions {
             pe_imports: false,
             pe_exports: false,
             pe_resources: false,
+            string_indices: true,
         }
     }
 }
@@ -159,7 +167,10 @@ impl<'a> Printer<'a> {
         if let Some(s) = s {
             self.field_name(name);
             self.print_string(s);
-            writeln!(self.w, " (0x{:X})", value).unwrap();
+            if self.options.string_indices {
+                write!(self.w, " (0x{:X})", value).unwrap();
+            }
+            writeln!(self.w).unwrap();
         } else {
             self.field_hex(name, value);
         }
