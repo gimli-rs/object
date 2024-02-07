@@ -27,9 +27,8 @@ impl<'data, Elf: FileHeader> AttributesSection<'data, Elf> {
         let mut data = Bytes(data);
 
         // Skip the version field that is one byte long.
-        let version = *data
-            .read::<u8>()
-            .read_error("Invalid ELF attributes section offset or size")?;
+        // If the section is empty then the version doesn't matter.
+        let version = data.read::<u8>().cloned().unwrap_or(b'A');
 
         Ok(AttributesSection {
             endian,

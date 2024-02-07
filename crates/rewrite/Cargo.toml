@@ -1,0 +1,22 @@
+[package]
+name = "object-rewrite"
+version = "0.0.0"
+edition = "2021"
+description = "Rewrite object files with modifications"
+
+[package.metadata.docs.rs]
+features = ['doc']
+
+[dependencies]
+object = { version = "0.32", default-features = false, features = ["build", "elf"], path = "../.." }
+log = { version = "0.4.20", optional = true }
+
+[dev-dependencies]
+object-examples = { path = "../examples" }
+
+[features]
+logging = ["dep:log"]
+
+default = []
+all = ["logging"]
+doc = []

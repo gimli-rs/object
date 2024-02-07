@@ -3826,6 +3826,10 @@ pub const SHT_ARM_PREEMPTMAP: u32 = SHT_LOPROC + 2;
 /// ARM attributes section.
 pub const SHT_ARM_ATTRIBUTES: u32 = SHT_LOPROC + 3;
 
+// AArch64 values for `SectionHeader*::sh_type`.
+/// AArch64 attributes section.
+pub const SHT_AARCH64_ATTRIBUTES: u32 = SHT_LOPROC + 3;
+
 // AArch64 values for `Rel*::r_type`.
 
 /// No relocation.

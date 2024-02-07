@@ -221,6 +221,28 @@ pub trait ProgramHeader: Debug + Pod {
         Ok(Some(dynamic))
     }
 
+    /// Return the data in an interpreter segment.
+    ///
+    /// Returns `Ok(None)` if the segment is not `PT_INTERP`.
+    /// Returns `Err` for invalid values.
+    fn interpreter<'data, R: ReadRef<'data>>(
+        &self,
+        endian: Self::Endian,
+        data: R,
+    ) -> read::Result<Option<&'data [u8]>> {
+        if self.p_type(endian) != elf::PT_INTERP {
+            return Ok(None);
+        }
+        let data = self
+            .data(endian, data)
+            .read_error("Invalid ELF interpreter segment offset or size")?;
+        let len = data
+            .iter()
+            .position(|&b| b == 0)
+            .read_error("Invalid ELF interpreter segment data")?;
+        Ok(Some(&data[..len]))
+    }
+
     /// Return a note iterator for the segment data.
     ///
     /// Returns `Ok(None)` if the segment does not contain notes.

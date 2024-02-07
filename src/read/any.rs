@@ -3,7 +3,7 @@ use alloc::vec::Vec;
 use core::marker::PhantomData;
 
 #[allow(unused_imports)] // Unused for Wasm
-use crate::endian::{Endian, Endianness};
+use crate::endian::Endianness;
 #[cfg(feature = "coff")]
 use crate::read::coff;
 #[cfg(feature = "elf")]
@@ -268,7 +268,7 @@ impl<'data, R: ReadRef<'data>> File<'data, R> {
 
     /// Parse a Mach-O image from the dyld shared cache.
     #[cfg(feature = "macho")]
-    pub fn parse_dyld_cache_image<'cache, E: Endian>(
+    pub fn parse_dyld_cache_image<'cache, E: crate::Endian>(
         image: &macho::DyldCacheImage<'data, 'cache, E, R>,
     ) -> Result<Self> {
         Ok(match image.cache.architecture().address_size() {
