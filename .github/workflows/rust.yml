@@ -93,6 +93,9 @@ jobs:
           submodules: true
       - name: Install rust
         run: rustup update 1.65.0 && rustup default 1.65.0
+      - name: MSRV dependencies
+        run: |
+          cargo update -p ahash --precise 0.8.6
       - name: Test
         run: cargo test -p object --verbose --features all
 
