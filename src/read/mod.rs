@@ -835,7 +835,11 @@ impl<'data> CompressedData<'data> {
                     .try_into()
                     .ok()
                     .read_error("Uncompressed data size is too large.")?;
-                let mut decompressed = Vec::with_capacity(size);
+                let mut decompressed = Vec::new();
+                decompressed
+                    .try_reserve_exact(size)
+                    .ok()
+                    .read_error("Uncompressed data allocation failed")?;
                 let mut decompress = flate2::Decompress::new(true);
                 decompress
                     .decompress_vec(
@@ -856,7 +860,11 @@ impl<'data> CompressedData<'data> {
                     .try_into()
                     .ok()
                     .read_error("Uncompressed data size is too large.")?;
-                let mut decompressed = Vec::with_capacity(size);
+                let mut decompressed = Vec::new();
+                decompressed
+                    .try_reserve_exact(size)
+                    .ok()
+                    .read_error("Uncompressed data allocation failed")?;
                 let mut decoder = ruzstd::StreamingDecoder::new(self.data)
                     .ok()
                     .read_error("Invalid zstd compressed data")?;
