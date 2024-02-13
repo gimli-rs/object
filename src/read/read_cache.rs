@@ -17,6 +17,12 @@ use crate::read::ReadRef;
 /// them to be returned. Entries in the cache are never removed.
 /// Entries are keyed on the offset and size of the read.
 /// Currently overlapping reads are considered separate reads.
+///
+/// This is primarily intended for environments where memory mapped files
+/// are not available or not suitable, such as WebAssembly.
+///
+/// Note that malformed files can cause the cache to grow much larger than
+/// the file size.
 #[derive(Debug)]
 pub struct ReadCache<R: Read + Seek> {
     cache: RefCell<ReadCacheInternal<R>>,
@@ -160,7 +166,7 @@ impl<'a, R: Read + Seek> ReadRef<'a> for &'a ReadCache<R> {
 /// An implementation of [`ReadRef`] for a range of data in a stream that
 /// implements `Read + Seek`.
 ///
-/// Shares an underlying `ReadCache` with a lifetime of `'a`.
+/// Shares an underlying [`ReadCache`] with a lifetime of `'a`.
 #[derive(Debug)]
 pub struct ReadCacheRange<'a, R: Read + Seek> {
     r: &'a ReadCache<R>,

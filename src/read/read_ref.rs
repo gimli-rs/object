@@ -16,6 +16,18 @@ type Result<T> = result::Result<T, ()>;
 /// - the block of data exists in storage, and it is desirable
 ///   to read on demand to minimize I/O and memory usage.
 ///
+/// A block of data typically exists in memory as a result of using a memory
+/// mapped file, and the crate was written with this use case in mind.
+/// Reading the entire file into a `Vec` is also possible, but it often uses
+/// more I/O and memory.
+/// Both of these are handled by the `ReadRef` implementation for `&[u8]`.
+///
+/// For the second use case, the `ReadRef` trait is implemented for
+/// [`&ReadCache`](super::ReadCache). This is useful for environments where
+/// memory mapped files are not available or not suitable, such as WebAssembly.
+/// This differs from reading into a `Vec` in that it only reads the portions
+/// of the file that are needed for parsing.
+///
 /// The methods accept `self` by value because `Self` is expected to behave
 /// similar to a reference: it may be a reference with a lifetime of `'a`,
 /// or it may be a wrapper of a reference.
