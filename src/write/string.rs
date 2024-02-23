@@ -30,6 +30,7 @@ impl<'a> StringTable<'a> {
     /// Return the id of the given string.
     ///
     /// Panics if the string is not in the string table.
+    #[allow(dead_code)]
     pub fn get_id(&self, string: &[u8]) -> StringId {
         let id = self.strings.get_index_of(string).unwrap();
         StringId(id)
@@ -38,6 +39,7 @@ impl<'a> StringTable<'a> {
     /// Return the string for the given id.
     ///
     /// Panics if the string is not in the string table.
+    #[allow(dead_code)]
     pub fn get_string(&self, id: StringId) -> &'a [u8] {
         self.strings.get_index(id.0).unwrap()
     }
