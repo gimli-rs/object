@@ -1,4 +1,5 @@
 // Style.
+#![allow(clippy::nonminimal_bool)]
 #![allow(clippy::single_match)]
 
 #[cfg(all(feature = "read", feature = "write"))]

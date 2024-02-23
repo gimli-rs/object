@@ -107,8 +107,8 @@ fn coff_x86_64_comdat() {
         read::SymbolSection::Section(section1.index())
     );
     assert_eq!(symbol.scope(), SymbolScope::Linkage);
-    assert_eq!(symbol.is_weak(), false);
-    assert_eq!(symbol.is_undefined(), false);
+    assert!(!symbol.is_weak());
+    assert!(!symbol.is_undefined());
     assert_eq!(symbol.address(), 0);
 
     let symbol = symbols.next();
@@ -204,8 +204,8 @@ fn elf_x86_64_comdat() {
         read::SymbolSection::Section(section1.index())
     );
     assert_eq!(symbol.scope(), SymbolScope::Linkage);
-    assert_eq!(symbol.is_weak(), false);
-    assert_eq!(symbol.is_undefined(), false);
+    assert!(!symbol.is_weak());
+    assert!(!symbol.is_undefined());
     assert_eq!(symbol.address(), 0);
 
     let symbol = symbols.next();

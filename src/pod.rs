@@ -223,7 +223,7 @@ mod tests {
         assert_eq!(tail, tail_mut);
 
         let (y, tail) = slice_from_bytes::<u16>(&bytes[2..], 2).unwrap();
-        let (y_mut, tail_mut) = slice_from_bytes::<u16>(&mut bytes_mut[2..], 2).unwrap();
+        let (y_mut, tail_mut) = slice_from_bytes_mut::<u16>(&mut bytes_mut[2..], 2).unwrap();
         assert_eq!(y, &x[1..3]);
         assert_eq!(y, y_mut);
         assert_eq!(tail, &bytes[6..]);

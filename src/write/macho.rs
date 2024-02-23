@@ -378,7 +378,7 @@ impl<'a> Object<'a> {
         if let RelocationFlags::MachO { r_length, .. } = reloc.flags {
             Ok(8 << r_length)
         } else {
-            return Err(Error("invalid relocation flags".into()));
+            Err(Error("invalid relocation flags".into()))
         }
     }
 
