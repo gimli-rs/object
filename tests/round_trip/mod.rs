@@ -104,7 +104,7 @@ fn coff_any() {
         assert_eq!(symbol.kind(), SymbolKind::File);
         assert_eq!(symbol.section(), SymbolSection::None);
         assert_eq!(symbol.scope(), SymbolScope::Compilation);
-        assert_eq!(symbol.is_weak(), false);
+        assert!(!symbol.is_weak());
 
         let decorated_name = |name: &str| {
             if arch == Architecture::I386 {
@@ -122,8 +122,8 @@ fn coff_any() {
         assert_eq!(symbol.kind(), SymbolKind::Text);
         assert_eq!(symbol.section_index(), Some(text_index));
         assert_eq!(symbol.scope(), SymbolScope::Linkage);
-        assert_eq!(symbol.is_weak(), false);
-        assert_eq!(symbol.is_undefined(), false);
+        assert!(!symbol.is_weak());
+        assert!(!symbol.is_undefined());
 
         let symbol = symbols.next().unwrap();
         println!("{:?}", symbol);
@@ -132,8 +132,8 @@ fn coff_any() {
         assert_eq!(symbol.kind(), SymbolKind::Text);
         assert_eq!(symbol.section_index(), Some(text_index));
         assert_eq!(symbol.scope(), SymbolScope::Linkage);
-        assert_eq!(symbol.is_weak(), false);
-        assert_eq!(symbol.is_undefined(), false);
+        assert!(!symbol.is_weak());
+        assert!(!symbol.is_undefined());
 
         let mut relocations = text.relocations();
 
@@ -229,8 +229,8 @@ fn elf_x86_64() {
     assert_eq!(symbol.kind(), SymbolKind::Null);
     assert_eq!(symbol.section_index(), None);
     assert_eq!(symbol.scope(), SymbolScope::Unknown);
-    assert_eq!(symbol.is_weak(), false);
-    assert_eq!(symbol.is_undefined(), true);
+    assert!(!symbol.is_weak());
+    assert!(symbol.is_undefined());
 
     let symbol = symbols.next().unwrap();
     println!("{:?}", symbol);
@@ -239,7 +239,7 @@ fn elf_x86_64() {
     assert_eq!(symbol.kind(), SymbolKind::File);
     assert_eq!(symbol.section(), SymbolSection::None);
     assert_eq!(symbol.scope(), SymbolScope::Compilation);
-    assert_eq!(symbol.is_weak(), false);
+    assert!(!symbol.is_weak());
 
     let symbol = symbols.next().unwrap();
     println!("{:?}", symbol);
@@ -249,8 +249,8 @@ fn elf_x86_64() {
     assert_eq!(symbol.kind(), SymbolKind::Text);
     assert_eq!(symbol.section_index(), Some(text_index));
     assert_eq!(symbol.scope(), SymbolScope::Linkage);
-    assert_eq!(symbol.is_weak(), false);
-    assert_eq!(symbol.is_undefined(), false);
+    assert!(!symbol.is_weak());
+    assert!(!symbol.is_undefined());
 
     let mut relocations = text.relocations();
 
@@ -469,8 +469,8 @@ fn macho_x86_64() {
     assert_eq!(symbol.kind(), SymbolKind::Text);
     assert_eq!(symbol.section_index(), Some(text_index));
     assert_eq!(symbol.scope(), SymbolScope::Linkage);
-    assert_eq!(symbol.is_weak(), false);
-    assert_eq!(symbol.is_undefined(), false);
+    assert!(!symbol.is_weak());
+    assert!(!symbol.is_undefined());
 
     let mut relocations = text.relocations();
 
@@ -673,8 +673,8 @@ fn xcoff_powerpc() {
         assert_eq!(symbol.kind(), SymbolKind::File);
         assert_eq!(symbol.section_index(), None);
         assert_eq!(symbol.scope(), SymbolScope::Compilation);
-        assert_eq!(symbol.is_weak(), false);
-        assert_eq!(symbol.is_undefined(), false);
+        assert!(!symbol.is_weak());
+        assert!(!symbol.is_undefined());
 
         symbol = symbols.next().unwrap();
         println!("{:?}", symbol);
@@ -684,8 +684,8 @@ fn xcoff_powerpc() {
         assert_eq!(symbol.kind(), SymbolKind::Text);
         assert_eq!(symbol.section_index(), Some(SectionIndex(text_index)));
         assert_eq!(symbol.scope(), SymbolScope::Linkage);
-        assert_eq!(symbol.is_weak(), false);
-        assert_eq!(symbol.is_undefined(), false);
+        assert!(!symbol.is_weak());
+        assert!(!symbol.is_undefined());
 
         let mut relocations = text.relocations();
 

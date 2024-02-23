@@ -149,7 +149,7 @@ fn main() {
             println!("{}:", file_path.display());
         }
 
-        let file = match fs::File::open(&file_path) {
+        let file = match fs::File::open(file_path) {
             Ok(file) => file,
             Err(err) => {
                 println!("Failed to open file '{}': {}", file_path.display(), err);

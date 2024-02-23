@@ -255,6 +255,6 @@ mod tests {
 
         assert_eq!(bytes.write_at(3, &u16::to_be(0x89ab)), Err(()));
         assert_eq!(bytes.write_at(4, &u16::to_be(0x89ab)), Err(()));
-        assert_eq!(vec![].write_at(0, &u32::to_be(0x89ab)), Err(()));
+        assert_eq!([].write_at(0, &u32::to_be(0x89ab)), Err(()));
     }
 }

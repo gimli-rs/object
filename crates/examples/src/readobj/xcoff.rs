@@ -41,7 +41,7 @@ fn print_xcoff<Xcoff: FileHeader>(
     }
 }
 
-fn print_file_header<'data, Xcoff: FileHeader>(p: &mut Printer<'_>, header: &Xcoff) {
+fn print_file_header<Xcoff: FileHeader>(p: &mut Printer<'_>, header: &Xcoff) {
     if !p.options.file {
         return;
     }
@@ -57,7 +57,7 @@ fn print_file_header<'data, Xcoff: FileHeader>(p: &mut Printer<'_>, header: &Xco
     });
 }
 
-fn print_aux_header<'data, Header: AuxHeader>(p: &mut Printer<'_>, aux_header: &Header) {
+fn print_aux_header<Header: AuxHeader>(p: &mut Printer<'_>, aux_header: &Header) {
     if !p.options.file {
         return;
     }

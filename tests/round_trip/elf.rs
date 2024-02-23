@@ -88,7 +88,7 @@ fn compression_zlib() {
     ch.ch_addralign.set(LE, 1);
 
     let mut buf = Vec::new();
-    buf.write(object::bytes_of(&ch)).unwrap();
+    buf.write_all(object::bytes_of(&ch)).unwrap();
     let mut encoder = flate2::write::ZlibEncoder::new(buf, flate2::Compression::default());
     encoder.write_all(data).unwrap();
     let compressed = encoder.finish().unwrap();
@@ -163,24 +163,24 @@ fn note() {
     let mut buffer = Vec::new();
 
     buffer
-        .write(object::bytes_of(&elf::NoteHeader32 {
+        .write_all(object::bytes_of(&elf::NoteHeader32 {
             n_namesz: U32::new(endian, 6),
             n_descsz: U32::new(endian, 11),
             n_type: U32::new(endian, 1),
         }))
         .unwrap();
-    buffer.write(b"name1\0\0\0").unwrap();
-    buffer.write(b"descriptor\0\0").unwrap();
+    buffer.write_all(b"name1\0\0\0").unwrap();
+    buffer.write_all(b"descriptor\0\0").unwrap();
 
     buffer
-        .write(object::bytes_of(&elf::NoteHeader32 {
+        .write_all(object::bytes_of(&elf::NoteHeader32 {
             n_namesz: U32::new(endian, 6),
             n_descsz: U32::new(endian, 11),
             n_type: U32::new(endian, 2),
         }))
         .unwrap();
-    buffer.write(b"name2\0\0\0").unwrap();
-    buffer.write(b"descriptor\0\0").unwrap();
+    buffer.write_all(b"name2\0\0\0").unwrap();
+    buffer.write_all(b"descriptor\0\0").unwrap();
 
     let section = object.add_section(Vec::new(), b".note4".to_vec(), SectionKind::Note);
     object.section_mut(section).set_data(buffer, 4);
@@ -189,24 +189,24 @@ fn note() {
     let mut buffer = Vec::new();
 
     buffer
-        .write(object::bytes_of(&elf::NoteHeader32 {
+        .write_all(object::bytes_of(&elf::NoteHeader32 {
             n_namesz: U32::new(endian, 6),
             n_descsz: U32::new(endian, 11),
             n_type: U32::new(endian, 1),
         }))
         .unwrap();
-    buffer.write(b"name1\0\0\0\0\0\0\0").unwrap();
-    buffer.write(b"descriptor\0\0\0\0\0\0").unwrap();
+    buffer.write_all(b"name1\0\0\0\0\0\0\0").unwrap();
+    buffer.write_all(b"descriptor\0\0\0\0\0\0").unwrap();
 
     buffer
-        .write(object::bytes_of(&elf::NoteHeader32 {
+        .write_all(object::bytes_of(&elf::NoteHeader32 {
             n_namesz: U32::new(endian, 4),
             n_descsz: U32::new(endian, 11),
             n_type: U32::new(endian, 2),
         }))
         .unwrap();
-    buffer.write(b"abc\0").unwrap();
-    buffer.write(b"descriptor\0\0\0\0\0\0").unwrap();
+    buffer.write_all(b"abc\0").unwrap();
+    buffer.write_all(b"descriptor\0\0\0\0\0\0").unwrap();
 
     let section = object.add_section(Vec::new(), b".note8".to_vec(), SectionKind::Note);
     object.section_mut(section).set_data(buffer, 8);

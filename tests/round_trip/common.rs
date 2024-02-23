@@ -64,8 +64,8 @@ fn coff_x86_64_common() {
     assert_eq!(symbol.kind(), SymbolKind::Data);
     assert_eq!(symbol.section(), read::SymbolSection::Common);
     assert_eq!(symbol.scope(), SymbolScope::Linkage);
-    assert_eq!(symbol.is_weak(), false);
-    assert_eq!(symbol.is_undefined(), false);
+    assert!(!symbol.is_weak());
+    assert!(!symbol.is_undefined());
     assert_eq!(symbol.address(), 0);
     assert_eq!(symbol.size(), 4);
 
@@ -75,8 +75,8 @@ fn coff_x86_64_common() {
     assert_eq!(symbol.kind(), SymbolKind::Data);
     assert_eq!(symbol.section(), read::SymbolSection::Common);
     assert_eq!(symbol.scope(), SymbolScope::Linkage);
-    assert_eq!(symbol.is_weak(), false);
-    assert_eq!(symbol.is_undefined(), false);
+    assert!(!symbol.is_weak());
+    assert!(!symbol.is_undefined());
     assert_eq!(symbol.address(), 0);
     assert_eq!(symbol.size(), 8);
 
@@ -86,8 +86,8 @@ fn coff_x86_64_common() {
     assert_eq!(symbol.kind(), SymbolKind::Data);
     assert_eq!(symbol.section(), read::SymbolSection::Undefined);
     assert_eq!(symbol.scope(), SymbolScope::Linkage);
-    assert_eq!(symbol.is_weak(), false);
-    assert_eq!(symbol.is_undefined(), true);
+    assert!(!symbol.is_weak());
+    assert!(symbol.is_undefined());
     assert_eq!(symbol.address(), 0);
     assert_eq!(symbol.size(), 0);
 
@@ -144,8 +144,8 @@ fn elf_x86_64_common() {
     assert_eq!(symbol.kind(), SymbolKind::Data);
     assert_eq!(symbol.section(), read::SymbolSection::Common);
     assert_eq!(symbol.scope(), SymbolScope::Linkage);
-    assert_eq!(symbol.is_weak(), false);
-    assert_eq!(symbol.is_undefined(), false);
+    assert!(!symbol.is_weak());
+    assert!(!symbol.is_undefined());
     assert_eq!(symbol.address(), 0);
     assert_eq!(symbol.size(), 4);
 
@@ -155,8 +155,8 @@ fn elf_x86_64_common() {
     assert_eq!(symbol.kind(), SymbolKind::Data);
     assert_eq!(symbol.section(), read::SymbolSection::Common);
     assert_eq!(symbol.scope(), SymbolScope::Linkage);
-    assert_eq!(symbol.is_weak(), false);
-    assert_eq!(symbol.is_undefined(), false);
+    assert!(!symbol.is_weak());
+    assert!(!symbol.is_undefined());
     assert_eq!(symbol.address(), 0);
     assert_eq!(symbol.size(), 8);
 
@@ -226,8 +226,8 @@ fn macho_x86_64_common() {
     assert_eq!(symbol.kind(), SymbolKind::Data);
     assert_eq!(symbol.section_index(), Some(common_index));
     assert_eq!(symbol.scope(), SymbolScope::Linkage);
-    assert_eq!(symbol.is_weak(), false);
-    assert_eq!(symbol.is_undefined(), false);
+    assert!(!symbol.is_weak());
+    assert!(!symbol.is_undefined());
     assert_eq!(symbol.address(), 0);
 
     let symbol = symbols.next().unwrap();
@@ -236,8 +236,8 @@ fn macho_x86_64_common() {
     assert_eq!(symbol.kind(), SymbolKind::Data);
     assert_eq!(symbol.section_index(), Some(common_index));
     assert_eq!(symbol.scope(), SymbolScope::Linkage);
-    assert_eq!(symbol.is_weak(), false);
-    assert_eq!(symbol.is_undefined(), false);
+    assert!(!symbol.is_weak());
+    assert!(!symbol.is_undefined());
     assert_eq!(symbol.address(), 8);
 
     let symbol = symbols.next();
