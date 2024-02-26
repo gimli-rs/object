@@ -2,6 +2,7 @@ use alloc::fmt;
 use alloc::vec::Vec;
 use core::marker::PhantomData;
 
+#[allow(unused_imports)] // Unused for Wasm
 use crate::endian::{Endian, Endianness};
 #[cfg(feature = "coff")]
 use crate::read::coff;

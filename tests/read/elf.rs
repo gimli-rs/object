@@ -1,9 +1,9 @@
-use object::Object;
-use std::path::Path;
-use std::path::PathBuf;
+#[cfg(feature = "std")]
+use std::path::{Path, PathBuf};
 
 #[cfg(feature = "std")]
 fn get_buildid(path: &Path) -> Result<Option<Vec<u8>>, object::read::Error> {
+    use object::Object;
     let file = std::fs::File::open(path).unwrap();
     let reader = object::read::ReadCache::new(file);
     let object = object::read::File::parse(&reader)?;

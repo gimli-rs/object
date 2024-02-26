@@ -66,13 +66,15 @@ pub struct Object<'a> {
     standard_sections: HashMap<StandardSection, SectionId>,
     symbols: Vec<Symbol>,
     symbol_map: HashMap<Vec<u8>, SymbolId>,
-    stub_symbols: HashMap<SymbolId, SymbolId>,
     comdats: Vec<Comdat>,
     /// File flags that are specific to each file format.
     pub flags: FileFlags,
     /// The symbol name mangling scheme.
     pub mangling: Mangling,
+    #[cfg(feature = "coff")]
+    stub_symbols: HashMap<SymbolId, SymbolId>,
     /// Mach-O "_tlv_bootstrap" symbol.
+    #[cfg(feature = "macho")]
     tlv_bootstrap: Option<SymbolId>,
     /// Mach-O CPU subtype.
     #[cfg(feature = "macho")]
@@ -93,10 +95,12 @@ impl<'a> Object<'a> {
             standard_sections: HashMap::new(),
             symbols: Vec::new(),
             symbol_map: HashMap::new(),
-            stub_symbols: HashMap::new(),
             comdats: Vec::new(),
             flags: FileFlags::None,
             mangling: Mangling::default(format, architecture),
+            #[cfg(feature = "coff")]
+            stub_symbols: HashMap::new(),
+            #[cfg(feature = "macho")]
             tlv_bootstrap: None,
             #[cfg(feature = "macho")]
             macho_cpu_subtype: None,
