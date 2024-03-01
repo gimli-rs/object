@@ -97,14 +97,20 @@ fn cmd_features() -> Result<(), DynError> {
     // Test the default features for everything.
     cargo(&["test", "--workspace"])?;
 
+    // Test no default features for everything.
+    cargo(&["test", "-p", "object", "--no-default-features"])?;
+    cargo(&["test", "-p", "object-examples", "--no-default-features"])?;
+    cargo(&["test", "-p", "object-rewrite", "--no-default-features"])?;
+
     // Feature combinations for the `object` and `object-examples` packages.
     for features in [
         // Test the main submodules.
         "read",
         "write",
+        "build",
         // Test each file format individually.
         "read_core,write_core,coff",
-        "read_core,write_core,elf",
+        "read_core,write_core,build_core,elf",
         "read_core,write_core,macho",
         "read_core,write_core,pe",
         "read_core,write_core,xcoff",
@@ -125,6 +131,16 @@ fn cmd_features() -> Result<(), DynError> {
             features,
         ])?;
     }
+
+    // Feature combinations for the `object-rewrite` package.
+    cargo(&[
+        "test",
+        "-p",
+        "object-rewrite",
+        "--no-default-features",
+        "--features",
+        "logging",
+    ])?;
     Ok(())
 }
 

@@ -107,7 +107,7 @@ mod private {
 
 /// The error type used within the read module.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct Error(&'static str);
+pub struct Error(pub(crate) &'static str);
 
 impl fmt::Display for Error {
     #[inline]

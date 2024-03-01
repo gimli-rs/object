@@ -31,6 +31,11 @@
 //!
 //! The [`mod@write#modules`] submodules define helpers for writing the raw structs.
 //!
+//! ## Build API
+//!
+//! The [`mod@build`] submodules define helpers for building object files, either from
+//! scratch or by modifying existing files.
+//!
 //! ## Shared definitions
 //!
 //! The crate provides a number of definitions that are used by both the read and write
@@ -86,6 +91,9 @@ pub use read::*;
 
 #[cfg(feature = "write_core")]
 pub mod write;
+
+#[cfg(feature = "build_core")]
+pub mod build;
 
 #[cfg(feature = "archive")]
 pub mod archive;

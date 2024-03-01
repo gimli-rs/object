@@ -23,8 +23,6 @@ fn test_dir_enabled(path: &Path) -> bool {
 
 #[test]
 fn testfiles() {
-    let update = env::var_os("OBJECT_TESTFILES_UPDATE").is_some();
-
     let in_testfiles = PathBuf::from("../..");
     let out_testfiles = PathBuf::from("testfiles");
 
@@ -63,19 +61,19 @@ fn testfiles() {
             };
 
             if extension == "objdump" {
-                fail |= testfile(update, &in_path, &out_path, err_path, |out, err, data| {
+                fail |= testfile(&in_path, &out_path, err_path, |out, err, data| {
                     objdump::print(out, err, data, &[], vec![]).unwrap();
                 });
             } else if extension == "objdump-shndx" {
                 // Special case for the large symtab shndx test.
-                fail |= testfile(update, &in_path, &out_path, err_path, |out, err, data| {
+                fail |= testfile(&in_path, &out_path, err_path, |out, err, data| {
                     objdump::print(out, err, data, &[], vec![]).unwrap();
                     *out = filter_lines(&*out, |line| {
                         line.starts_with("6553") && line[5..].starts_with(": Symbol {")
                     });
                 });
             } else if extension == "objdump-comdat" {
-                fail |= testfile(update, &in_path, &out_path, err_path, |out, err, data| {
+                fail |= testfile(&in_path, &out_path, err_path, |out, err, data| {
                     objdump::print(out, err, data, &[], vec![]).unwrap();
                     *out = filter_lines(&*out, |line| line.starts_with("Comdat "));
                 });
@@ -107,22 +105,16 @@ fn testfiles() {
                         continue;
                     }
                 };
-                fail |= testfile(update, &in_path, &out_path, err_path, |out, err, data| {
+                fail |= testfile(&in_path, &out_path, err_path, |out, err, data| {
                     readobj::print(out, err, data, &options);
                 });
             } else if extension == "objcopy" {
                 #[cfg(feature = "write")]
                 {
-                    fail |= testfile(
-                        update,
-                        &in_path,
-                        &out_path,
-                        err_path,
-                        |out, err, in_data| {
-                            let copy_data = objcopy::copy(in_data);
-                            readobj::print(out, err, &copy_data, &readobj::PrintOptions::all());
-                        },
-                    );
+                    fail |= testfile(&in_path, &out_path, err_path, |out, err, in_data| {
+                        let copy_data = objcopy::copy(in_data);
+                        readobj::print(out, err, &copy_data, &readobj::PrintOptions::all());
+                    });
                 }
             } else {
                 println!("Unknown test {}", out_path.display());
@@ -135,24 +127,25 @@ fn testfiles() {
     }
 }
 
-fn testfile<F>(update: bool, in_path: &Path, out_path: &Path, err_path: Option<&Path>, f: F) -> bool
+fn testfile<F>(in_path: &Path, out_path: &Path, err_path: Option<&Path>, f: F) -> bool
 where
     F: FnOnce(&mut Vec<u8>, &mut Vec<u8>, &[u8]),
 {
     println!("Test {}", out_path.display());
-    let source = match fs::read(in_path) {
-        Ok(source) => source,
+    let in_data = match fs::read(in_path) {
+        Ok(in_data) => in_data,
         Err(err) => {
-            println!("FAIL {}", err);
+            println!("FAIL Couldn't read {}: {}", in_path.display(), err);
             return true;
         }
     };
 
-    // TODO: print diffs for mismatches
-    let mut fail = false;
     let mut out_data = Vec::new();
     let mut err_data = Vec::new();
-    f(&mut out_data, &mut err_data, &source);
+    f(&mut out_data, &mut err_data, &in_data);
+
+    let update = env::var_os("OBJECT_TESTFILES_UPDATE").is_some();
+    let mut fail = false;
 
     // Check exact match of output.
     if update {

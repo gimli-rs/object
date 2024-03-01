@@ -58,6 +58,8 @@ impl<'a> StringTable<'a> {
     /// `base` is the initial string table offset. For example,
     /// this should be 1 for ELF, to account for the initial
     /// null byte (which must have been written by the caller).
+    ///
+    /// Panics if the string table has already been written.
     pub fn write(&mut self, base: usize, w: &mut Vec<u8>) {
         assert!(self.offsets.is_empty());
 
@@ -79,6 +81,29 @@ impl<'a> StringTable<'a> {
                 previous = string;
             }
         }
+    }
+
+    /// Calculate the size in bytes of the string table.
+    ///
+    /// `base` is the initial string table offset. For example,
+    /// this should be 1 for ELF, to account for the initial
+    /// null byte.
+    #[allow(dead_code)]
+    pub fn size(&self, base: usize) -> usize {
+        // TODO: cache this result?
+        let mut ids: Vec<_> = (0..self.strings.len()).collect();
+        sort(&mut ids, 1, &self.strings);
+
+        let mut size = base;
+        let mut previous = &[][..];
+        for id in ids {
+            let string = self.strings.get_index(id).unwrap();
+            if !previous.ends_with(string) {
+                size += string.len() + 1;
+                previous = string;
+            }
+        }
+        size
     }
 }
 

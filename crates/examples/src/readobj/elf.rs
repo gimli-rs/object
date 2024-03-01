@@ -163,8 +163,12 @@ fn print_program_headers<Elf: FileHeader>(
             match segment.p_type(endian) {
                 PT_NOTE => print_segment_notes(p, endian, data, elf, segment),
                 PT_DYNAMIC => print_segment_dynamic(p, endian, data, elf, segments, segment),
+                PT_INTERP => {
+                    if let Some(Some(data)) = segment.interpreter(endian, data).print_err(p) {
+                        p.field_inline_string("Interpreter", data);
+                    }
+                }
                 // TODO:
-                //PT_INTERP =>
                 //PT_SHLIB =>
                 //PT_PHDR =>
                 //PT_TLS =>
@@ -330,6 +334,19 @@ fn print_section_headers<Elf: FileHeader>(
                 //SHT_INIT_ARRAY =>
                 //SHT_FINI_ARRAY =>
                 //SHT_PREINIT_ARRAY =>
+                _ => {}
+            }
+            match elf.e_machine(endian) {
+                EM_ARM => {
+                    if section.sh_type(endian) == SHT_ARM_ATTRIBUTES {
+                        print_attributes(p, endian, data, elf, section);
+                    }
+                }
+                EM_AARCH64 => {
+                    if section.sh_type(endian) == SHT_AARCH64_ATTRIBUTES {
+                        print_attributes(p, endian, data, elf, section);
+                    }
+                }
                 _ => {}
             }
         });

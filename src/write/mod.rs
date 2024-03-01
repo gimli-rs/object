@@ -1,4 +1,13 @@
 //! Interface for writing object files.
+//!
+//! This module provides a unified write API for relocatable object files
+//! using [`Object`]. This does not support writing executable files.
+//! This supports the following file formats: COFF, ELF, Mach-O, and XCOFF.
+//!
+//! The submodules define helpers for writing the raw structs. These support
+//! writing both relocatable and executable files. There are writers for
+//! the following file formats: [COFF](coff::Writer), [ELF](elf::Writer),
+//! and [PE](pe::Writer).
 
 use alloc::borrow::Cow;
 use alloc::string::String;
@@ -32,7 +41,7 @@ pub mod pe;
 #[cfg(feature = "xcoff")]
 mod xcoff;
 
-mod string;
+pub(crate) mod string;
 pub use string::StringId;
 
 mod util;
@@ -40,7 +49,7 @@ pub use util::*;
 
 /// The error type used within the write module.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Error(String);
+pub struct Error(pub(crate) String);
 
 impl fmt::Display for Error {
     #[inline]

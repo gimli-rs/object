@@ -45,6 +45,7 @@ ProgramHeader {
     Flags: 0x4
         PF_R (0x4)
     Align: 0x1
+    Interpreter: "/lib64/ld-linux-x86-64.so.2"
 }
 ProgramHeader {
     Type: PT_LOAD (0x1)
