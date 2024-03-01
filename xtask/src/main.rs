@@ -12,43 +12,57 @@ fn main() {
 }
 
 fn try_main() -> Result<(), DynError> {
-    let task = env::args().nth(1);
-    match task.as_deref() {
-        Some("ci") => cmd_ci()?,
-        Some("check") => cmd_check()?,
-        Some("build") => cmd_build()?,
-        Some("test") => cmd_test()?,
-        Some("features") => cmd_features()?,
-        Some("cross") => cmd_cross()?,
-        Some("msrv") => cmd_msrv()?,
-        Some("fmt") => cmd_fmt()?,
-        Some("doc") => cmd_doc()?,
-        Some("coverage") => cmd_coverage()?,
-        Some("coverage_lcov") => cmd_coverage_lcov()?,
-        Some("clippy") => cmd_clippy()?,
-        _ => print_help(),
+    if let Some(name) = env::args().nth(1) {
+        if let Some(task) = TASKS.iter().find(|task| name == task.0) {
+            (task.1)()?;
+            return Ok(());
+        }
     }
+    print_help();
     Ok(())
 }
 
 fn print_help() {
-    eprintln!(
-        "Tasks:
-ci               runs everything in CI
-check            checks everything
-build            builds everything
-test             tests everything
-features         tests with various feature combinations
-cross            tests for other platforms
-msrv             tests minimum supported Rust version
-fmt              checks formatting
-doc              generates documentation for everything
-coverage         generates HTML test coverage with tarpaulin and pycobertura, and opens it
-coverage_lcov    generates Lcov test coverage with tarpaulin
-lint             lints everything
-"
-    )
+    eprintln!("Tasks:");
+    for task in TASKS {
+        eprintln!("  {:20}{}", task.0, task.2);
+    }
 }
+
+type Task = (&'static str, fn() -> Result<(), DynError>, &'static str);
+
+const TASKS: &[Task] = &[
+    ("ci", cmd_ci, "runs everything in CI"),
+    ("check", cmd_check, "checks everything"),
+    ("build", cmd_build, "builds everything"),
+    ("test", cmd_test, "tests everything"),
+    (
+        "test-update",
+        cmd_test_update,
+        "regenerates the expected test output",
+    ),
+    (
+        "features",
+        cmd_features,
+        "tests with various feature combinations",
+    ),
+    ("cross", cmd_cross, "tests for other platforms"),
+    ("msrv", cmd_msrv, "tests minimum supported Rust version"),
+    ("fmt", cmd_fmt, "checks formatting"),
+    ("doc", cmd_doc, "generates documentation for everything"),
+    (
+        "coverage",
+        cmd_coverage,
+        "generates HTML test coverage with tarpaulin and pycobertura, and opens it",
+    ),
+    (
+        "coverage_lcov",
+        cmd_coverage_lcov,
+        "generates Lcov test coverage with tarpaulin",
+    ),
+    ("clippy", cmd_clippy, "run clippy for everything"),
+    ("semver", cmd_semver, "run semver checks"),
+];
 
 fn cmd_ci() -> Result<(), DynError> {
     cmd_check()?;
@@ -71,6 +85,12 @@ fn cmd_build() -> Result<(), DynError> {
 
 fn cmd_test() -> Result<(), DynError> {
     cargo(&["test", "--workspace", "--features", "all"])
+}
+
+fn cmd_test_update() -> Result<(), DynError> {
+    cargo_with(&["test", "--workspace", "--features", "all"], |cmd| {
+        cmd.env("OBJECT_TESTFILES_UPDATE", "1");
+    })
 }
 
 fn cmd_features() -> Result<(), DynError> {
@@ -219,7 +239,24 @@ fn cmd_coverage_lcov() -> Result<(), DynError> {
 }
 
 fn cmd_clippy() -> Result<(), DynError> {
-    cargo(&["clippy", "--workspace", "--features", "all", "--all-targets"])
+    cargo(&[
+        "clippy",
+        "--workspace",
+        "--features",
+        "all",
+        "--all-targets",
+    ])
+}
+
+fn cmd_semver() -> Result<(), DynError> {
+    cargo(&[
+        "semver-checks",
+        "--only-explicit-features",
+        "--features",
+        "all",
+        "-p",
+        "object",
+    ])
 }
 
 fn cargo(args: &[&str]) -> Result<(), DynError> {
