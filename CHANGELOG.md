@@ -2,6 +2,49 @@
 
 --------------------------------------------------------------------------------
 
+## 0.33.0
+
+Released 2024/03/05.
+
+### Breaking changes
+
+* Deleted file format variants in `RelocationKind`. Replaced their usage
+  with `read::Relocation::flags` and `write::Relocation::flags`.
+  [#585](https://github.com/gimli-rs/object/pull/585)
+
+* Replaced `kind`, `encoding` and `size` fields in `write::Relocation`
+  with `RelocationFlags::Generic` in the `flags` field.
+  [#585](https://github.com/gimli-rs/object/pull/585)
+
+* Replaced `macho::FatHeader::parse`, `macho::FatHeader::parse_arch32`,
+  and `macho::FatHeader::parse_arch64` with `read::macho::MachOFatFile`,
+  `read::macho::MachOFatFile32` and `read::macho::MachOFatFile64`.
+  [#623](https://github.com/gimli-rs/object/pull/623)
+
+### Added
+
+* Added `macho::PLATFORM_XROS` and `macho::PLATFORM_XROSSIMULATOR`.
+  [#626](https://github.com/gimli-rs/object/pull/626)
+
+* Added `build::elf::Builder` and associated types.
+  Extended `write::elf::Writer` to support this.
+  [#618](https://github.com/gimli-rs/object/pull/618)
+
+### Changed
+
+* Changed the lifetime to `'data` for the return value of `ObjectSection::name`,
+  `ObjectSection::name_bytes`, `ObjectComdat::name`, `ObjectComdat::name_bytes`.
+  [#620](https://github.com/gimli-rs/object/pull/620)
+  [#622](https://github.com/gimli-rs/object/pull/622)
+
+* Checked that sizes are smaller than the file length in `read::ReadCache`.
+  [#630](https://github.com/gimli-rs/object/pull/630)
+
+* Used `Vec::try_reserve_exact` for large allocations.
+  [#632](https://github.com/gimli-rs/object/pull/632)
+
+--------------------------------------------------------------------------------
+
 ## 0.32.2
 
 Released 2023/12/24.
