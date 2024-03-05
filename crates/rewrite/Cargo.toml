@@ -3,7 +3,7 @@ name = "object-rewrite"
 version = "0.1.0"
 edition = "2021"
 license = "Apache-2.0 OR MIT"
-repository = "https://github.com/gimli-rs/object/rewrite"
+repository = "https://github.com/gimli-rs/object/tree/master/crates/rewrite"
 description = "Rewrite object files with modifications"
 include = [
   "/Cargo.lock",
