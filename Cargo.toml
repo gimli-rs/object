@@ -2,12 +2,20 @@
 name = "object"
 version = "0.33.0"
 edition = "2018"
-exclude = ["/.github", "/testfiles"]
 keywords = ["object", "elf", "mach-o", "pe", "coff"]
 license = "Apache-2.0 OR MIT"
 repository = "https://github.com/gimli-rs/object"
 rust-version = "1.60"
 description = "A unified interface for reading and writing object file formats."
+include = [
+  "/Cargo.toml",
+  "/CHANGELOG.md",
+  "/README.md",
+  "/LICENSE-APACHE",
+  "/LICENSE-MIT",
+  "/src",
+  "/tests",
+]
 
 [package.metadata.docs.rs]
 features = ['doc']
