@@ -379,15 +379,29 @@ pub struct DyldCacheImageInfo<E: Endian> {
     pub pad: U32<E>,
 }
 
-/// Corresponds to a struct whose source code has not been published as of Nov 2021.
-/// Added in the dyld cache version which shipped with macOS 12 / iOS 15.
+/// Added in dyld-940, which shipped with macOS 12 / iOS 15.
+/// Originally called `dyld_subcache_entry`, renamed to `dyld_subcache_entry_v1`
+/// in dyld-1042.1.
 #[derive(Debug, Clone, Copy)]
 #[repr(C)]
-pub struct DyldSubCacheInfo<E: Endian> {
+pub struct DyldSubCacheEntryV1<E: Endian> {
     /// The UUID of this subcache.
     pub uuid: [u8; 16],
-    /// The size of this subcache plus all previous subcaches.
-    pub cumulative_size: U64<E>,
+    /// The offset of this subcache from the main cache base address.
+    pub cache_vm_offset: U64<E>,
+}
+
+/// Added in dyld-1042.1, which shipped with macOS 13 / iOS 16.
+/// Called `dyld_subcache_entry` as of dyld-1042.1.
+#[derive(Debug, Clone, Copy)]
+#[repr(C)]
+pub struct DyldSubCacheEntryV2<E: Endian> {
+    /// The UUID of this subcache.
+    pub uuid: [u8; 16],
+    /// The offset of this subcache from the main cache base address.
+    pub cache_vm_offset: U64<E>,
+    /// The file name suffix of the subCache file, e.g. ".25.data" or ".03.development".
+    pub file_suffix: [u8; 32],
 }
 
 // Definitions from "/usr/include/mach-o/loader.h".
@@ -3253,7 +3267,8 @@ unsafe_impl_endian_pod!(
     DyldCacheHeader,
     DyldCacheMappingInfo,
     DyldCacheImageInfo,
-    DyldSubCacheInfo,
+    DyldSubCacheEntryV1,
+    DyldSubCacheEntryV2,
     MachHeader32,
     MachHeader64,
     LoadCommand,
