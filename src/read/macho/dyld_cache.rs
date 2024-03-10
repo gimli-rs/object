@@ -90,10 +90,11 @@ where
         // Read the regular SubCaches, if present.
         let mut subcaches = Vec::new();
         if let Some(subcaches_info) = subcaches_info {
-            let uuids: Vec<&[u8; 16]> = match subcaches_info {
-                DyldSubCacheSlice::V1(s) => s.iter().map(|e| &e.uuid).collect(),
-                DyldSubCacheSlice::V2(s) => s.iter().map(|e| &e.uuid).collect(),
+            let (v1, v2) = match subcaches_info {
+                DyldSubCacheSlice::V1(s) => (s, &[][..]),
+                DyldSubCacheSlice::V2(s) => (&[][..], s),
             };
+            let uuids = v1.iter().map(|e| &e.uuid).chain(v2.iter().map(|e| &e.uuid));
             for (&data, uuid) in subcache_data.iter().zip(uuids) {
                 let sc_header = macho::DyldCacheHeader::<E>::parse(data)?;
                 if &sc_header.uuid != uuid {
