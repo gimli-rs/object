@@ -35,6 +35,7 @@ where
 /// an additional field (the file suffix) in dyld-1042.1 (macOS 13 / iOS 16),
 /// so this is an enum of the two possible slice types.
 #[derive(Debug, Clone, Copy)]
+#[non_exhaustive]
 pub enum DyldSubCacheSlice<'data, E: Endian> {
     /// V1, used between dyld-940 and dyld-1042.1.
     V1(&'data [macho::DyldSubCacheEntryV1<E>]),

@@ -115,6 +115,10 @@ fn open_subcaches(path: &str, subcaches_info: DyldSubCacheSlice<Endianness>) -> 
                 })
                 .collect()
         }
+        _ => panic!(
+            "If this case is hit, it means that someone added a variant to the (non-exhaustive) \
+            DyldSubCacheSlice enum and forgot to update this example"
+        ),
     };
     let mut files = Vec::new();
     for suffix in subcache_suffixes {
