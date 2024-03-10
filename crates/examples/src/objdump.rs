@@ -60,7 +60,7 @@ pub fn print<W: Write, E: Write>(
             let path = match image.path() {
                 Ok(path) => path,
                 Err(err) => {
-                    writeln!(e, "Failed to parse dydld image name: {}", err)?;
+                    writeln!(e, "Failed to parse dyld image name: {}", err)?;
                     continue;
                 }
             };
