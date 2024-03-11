@@ -2,6 +2,24 @@
 
 --------------------------------------------------------------------------------
 
+## 0.34.0
+
+Released 2024/03/11.
+
+### Breaking changes
+
+* Replaced `macho::DyldSubCacheInfo` with `macho::DyldSubCacheEntryV1`.
+  Changed the return type of `macho::DyldCacheHeader::subcaches`.
+  [#642](https://github.com/gimli-rs/object/pull/642)
+
+### Changed
+
+* Added `macho::DyldSubCacheEntryV2` and changed `read::macho::DyldCache`
+  to handle both versions. This is needed for macOS 13 and above.
+  [#642](https://github.com/gimli-rs/object/pull/642)
+
+--------------------------------------------------------------------------------
+
 ## 0.33.0
 
 Released 2024/03/05.
