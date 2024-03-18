@@ -641,6 +641,11 @@ impl<'a> Writer<'a> {
         self.need_strtab
     }
 
+    /// Require the string table even if no strings were added.
+    pub fn require_strtab(&mut self) {
+        self.need_strtab = true;
+    }
+
     /// Reserve the range for the string table.
     ///
     /// This range is used for a section named `.strtab`.
@@ -719,8 +724,6 @@ impl<'a> Writer<'a> {
         debug_assert_eq!(self.symtab_offset, 0);
         debug_assert_eq!(self.symtab_num, 0);
         self.symtab_num = 1;
-        // The symtab must link to a strtab.
-        self.need_strtab = true;
         SymbolIndex(0)
     }
 
@@ -741,8 +744,6 @@ impl<'a> Writer<'a> {
         debug_assert_eq!(self.symtab_shndx_offset, 0);
         if self.symtab_num == 0 {
             self.symtab_num = 1;
-            // The symtab must link to a strtab.
-            self.need_strtab = true;
         }
         let index = self.symtab_num;
         self.symtab_num += 1;
@@ -893,6 +894,12 @@ impl<'a> Writer<'a> {
         self.need_symtab_shndx
     }
 
+    /// Require the extended section indices for the symbol table even
+    /// if no section indices are too large.
+    pub fn require_symtab_shndx(&mut self) {
+        self.need_symtab_shndx = true;
+    }
+
     /// Reserve the range for the extended section indices for the symbol table.
     ///
     /// This range is used for a section named `.symtab_shndx`.
@@ -992,6 +999,11 @@ impl<'a> Writer<'a> {
         self.need_dynstr
     }
 
+    /// Require the dynamic string table even if no strings were added.
+    pub fn require_dynstr(&mut self) {
+        self.need_dynstr = true;
+    }
+
     /// Reserve the range for the dynamic string table.
     ///
     /// This range is used for a section named `.dynstr`.
@@ -1000,9 +1012,6 @@ impl<'a> Writer<'a> {
     /// This must be called after [`Self::add_dynamic_string`].
     pub fn reserve_dynstr(&mut self) -> usize {
         debug_assert_eq!(self.dynstr_offset, 0);
-        if !self.need_dynstr {
-            return 0;
-        }
         // Start with null string.
         self.dynstr_data = vec![0];
         self.dynstr.write(1, &mut self.dynstr_data);
@@ -1014,9 +1023,6 @@ impl<'a> Writer<'a> {
     ///
     /// This must be called after [`Self::reserve_dynstr`].
     pub fn dynstr_len(&mut self) -> usize {
-        if !self.need_dynstr {
-            return 0;
-        }
         debug_assert_ne!(self.dynstr_offset, 0);
         self.dynstr_data.len()
     }
@@ -1087,8 +1093,6 @@ impl<'a> Writer<'a> {
         debug_assert_eq!(self.dynsym_offset, 0);
         debug_assert_eq!(self.dynsym_num, 0);
         self.dynsym_num = 1;
-        // The symtab must link to a strtab.
-        self.need_dynstr = true;
         SymbolIndex(0)
     }
 
@@ -1105,8 +1109,6 @@ impl<'a> Writer<'a> {
         debug_assert_eq!(self.dynsym_offset, 0);
         if self.dynsym_num == 0 {
             self.dynsym_num = 1;
-            // The symtab must link to a strtab.
-            self.need_dynstr = true;
         }
         let index = self.dynsym_num;
         self.dynsym_num += 1;

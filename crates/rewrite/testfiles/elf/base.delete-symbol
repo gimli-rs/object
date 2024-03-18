@@ -211,7 +211,7 @@ SectionHeader {
     EntrySize: 0x18
     Symbol {
         Index: 0
-        Name: ""
+        Name: 0x0
         Version: VER_NDX_LOCAL (0x0)
         Value: 0x0
         Size: 0x0
@@ -583,7 +583,7 @@ SectionHeader {
     EntrySize: 0x18
     Symbol {
         Index: 0
-        Name: ""
+        Name: 0x0
         Value: 0x0
         Size: 0x0
         Type: STT_NOTYPE (0x0)

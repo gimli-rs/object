@@ -1034,15 +1034,21 @@ impl<'data> Builder<'data> {
             return Err(Error::new(
                 ".symtab.shndx section is needed but not present",
             ));
+        } else if symtab_shndx_id.is_some() {
+            writer.require_symtab_shndx();
         }
         if strtab_id.is_none() && writer.strtab_needed() {
             return Err(Error::new(".strtab section is needed but not present"));
+        } else if strtab_id.is_some() {
+            writer.require_strtab();
         }
         if dynsym_id.is_none() && !out_dynsyms.is_empty() {
             return Err(Error::new(".dynsym section is needed but not present"));
         }
         if dynstr_id.is_none() && writer.dynstr_needed() {
             return Err(Error::new(".dynstr section is needed but not present"));
+        } else if dynstr_id.is_some() {
+            writer.require_dynstr();
         }
         if gnu_verdef_id.is_none() && verdef_count > 0 {
             return Err(Error::new(

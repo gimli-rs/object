@@ -371,7 +371,7 @@ SectionHeader {
     EntrySize: 0x18
     Symbol {
         Index: 0
-        Name: ""
+        Name: 0x0
         Version: VER_NDX_LOCAL (0x0)
         Value: 0x0
         Size: 0x0
@@ -547,19 +547,19 @@ SectionHeader {
     Relocation {
         Offset: 0x200DA8
         Type: R_X86_64_RELATIVE (0x8)
-        Symbol: ""
+        Symbol: 0x0
         Addend: 0x670
     }
     Relocation {
         Offset: 0x200DB0
         Type: R_X86_64_RELATIVE (0x8)
-        Symbol: ""
+        Symbol: 0x0
         Addend: 0x630
     }
     Relocation {
         Offset: 0x201008
         Type: R_X86_64_RELATIVE (0x8)
-        Symbol: ""
+        Symbol: 0x0
         Addend: 0x201008
     }
     Relocation {
@@ -959,7 +959,7 @@ SectionHeader {
     EntrySize: 0x18
     Symbol {
         Index: 0
-        Name: ""
+        Name: 0x0
         Value: 0x0
         Size: 0x0
         Type: STT_NOTYPE (0x0)
