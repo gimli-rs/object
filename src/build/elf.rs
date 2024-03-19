@@ -1096,17 +1096,19 @@ impl<'data> Builder<'data> {
             // from their section headers.
             alloc_sections.sort_by_key(|index| {
                 let section = &self.sections.get(out_sections[*index].id);
-                // SHT_NOBITS sections need to come before other sections at the same offset.
-                let file_size = if section.sh_type == elf::SHT_NOBITS {
-                    0
-                } else {
-                    section.sh_size
-                };
-                (section.sh_offset, file_size)
+                // Empty sections need to come before other sections at the same offset.
+                (section.sh_offset, section.sh_size)
             });
             for index in &alloc_sections {
                 let out_section = &mut out_sections[*index];
                 let section = &self.sections.get(out_section.id);
+
+                if section.sh_type == elf::SHT_NOBITS {
+                    // sh_offset is meaningless for SHT_NOBITS, so preserve the input
+                    // value without checking it.
+                    out_section.offset = section.sh_offset as usize;
+                    continue;
+                }
 
                 if section.sh_offset < writer.reserved_len() as u64 {
                     return Err(Error(format!(
@@ -1122,10 +1124,6 @@ impl<'data> Builder<'data> {
                 out_section.offset = match &section.data {
                     SectionData::Data(data) => {
                         writer.reserve(data.len(), section.sh_addralign as usize)
-                    }
-                    SectionData::UninitializedData(_) => {
-                        // Note: unaligned input sh_offset was observed in practice.
-                        writer.reserve(0, 1)
                     }
                     SectionData::DynamicRelocation(relocations) => writer
                         .reserve_relocations(relocations.len(), section.sh_type == elf::SHT_RELA),
@@ -1191,9 +1189,7 @@ impl<'data> Builder<'data> {
                 SectionData::Data(data) => {
                     writer.reserve(data.len(), section.sh_addralign as usize)
                 }
-                SectionData::UninitializedData(_) => {
-                    writer.reserve(0, section.sh_addralign as usize)
-                }
+                SectionData::UninitializedData(_) => writer.reserved_len(),
                 SectionData::Note(data) => {
                     writer.reserve(data.len(), section.sh_addralign as usize)
                 }
@@ -1268,12 +1264,16 @@ impl<'data> Builder<'data> {
             for index in &alloc_sections {
                 let out_section = &mut out_sections[*index];
                 let section = self.sections.get(out_section.id);
+
+                if section.sh_type == elf::SHT_NOBITS {
+                    continue;
+                }
+
                 writer.pad_until(out_section.offset);
                 match &section.data {
                     SectionData::Data(data) => {
                         writer.write(data);
                     }
-                    SectionData::UninitializedData(_) => {}
                     SectionData::DynamicRelocation(relocations) => {
                         for rel in relocations {
                             let r_sym = if let Some(symbol) = rel.symbol {
