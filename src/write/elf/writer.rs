@@ -1524,7 +1524,7 @@ impl<'a> Writer<'a> {
             sh_link: self.dynsym_index.0,
             sh_info: 0,
             sh_addralign: self.elf_align as u64,
-            sh_entsize: 0,
+            sh_entsize: if self.is_64 { 0 } else { 4 },
         });
     }
 
