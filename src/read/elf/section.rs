@@ -86,6 +86,7 @@ impl<'data, Elf: FileHeader, R: ReadRef<'data>> SectionTable<'data, Elf, R> {
 
     /// Return the string table at the given section index.
     ///
+    /// Returns an empty string table if the index is 0.
     /// Returns an error if the section is not a string table.
     #[inline]
     pub fn strings(
@@ -94,6 +95,9 @@ impl<'data, Elf: FileHeader, R: ReadRef<'data>> SectionTable<'data, Elf, R> {
         data: R,
         index: SectionIndex,
     ) -> read::Result<StringTable<'data, R>> {
+        if index == SectionIndex(0) {
+            return Ok(StringTable::default());
+        }
         self.section(index)?
             .strings(endian, data)?
             .read_error("Invalid ELF string section type")

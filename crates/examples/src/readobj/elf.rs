@@ -398,11 +398,15 @@ fn print_section_symbols<Elf: FileHeader>(
         for (index, symbol) in symbols.iter().enumerate() {
             p.group("Symbol", |p| {
                 p.field("Index", index);
-                p.field_string(
-                    "Name",
-                    symbol.st_name(endian),
-                    symbol.name(endian, symbols.strings()),
-                );
+                if index == 0 {
+                    p.field_hex("Name", symbol.st_name(endian));
+                } else {
+                    p.field_string(
+                        "Name",
+                        symbol.st_name(endian),
+                        symbol.name(endian, symbols.strings()),
+                    );
+                }
                 if let Some(versions) = versions.as_ref() {
                     let version_index = versions.version_index(endian, index);
                     print_version(p, Some(versions), version_index);
@@ -511,6 +515,10 @@ fn print_rel_symbol<Elf: FileHeader>(
     symbols: Option<SymbolTable<'_, Elf>>,
     sym: u32,
 ) {
+    if sym == 0 {
+        p.field_hex("Symbol", sym);
+        return;
+    }
     let name = symbols.and_then(|symbols| {
         symbols
             .symbol(sym as usize)
