@@ -25,6 +25,7 @@ jobs:
           toolchain: ${{matrix.rust_channel}}
       - run: cargo xtask check
       - run: cargo xtask test
+      - run: cargo xtask test-release
 
   features:
     runs-on: ubuntu-latest
