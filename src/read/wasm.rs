@@ -113,6 +113,11 @@ impl<'data, R: ReadRef<'data>> WasmFile<'data, R> {
             let payload = payload.read_error("Invalid Wasm section header")?;
 
             match payload {
+                wp::Payload::Version { encoding, .. } => {
+                    if encoding != wp::Encoding::Module {
+                        return Err(Error("Unsupported Wasm encoding"));
+                    }
+                }
                 wp::Payload::TypeSection(section) => {
                     file.add_section(SectionId::Type, section.range(), "");
                 }
