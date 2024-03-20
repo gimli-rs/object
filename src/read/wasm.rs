@@ -205,8 +205,9 @@ impl<'data, R: ReadRef<'data>> WasmFile<'data, R> {
                                 if let Some(local_func_id) =
                                     export.index.checked_sub(imported_funcs_count)
                                 {
-                                    let local_func_kind =
-                                        &mut local_func_kinds[local_func_id as usize];
+                                    let local_func_kind = local_func_kinds
+                                        .get_mut(local_func_id as usize)
+                                        .read_error("Invalid Wasm export index")?;
                                     if let LocalFunctionKind::Unknown = local_func_kind {
                                         *local_func_kind = LocalFunctionKind::Exported {
                                             symbol_ids: Vec::new(),
@@ -273,7 +274,9 @@ impl<'data, R: ReadRef<'data>> WasmFile<'data, R> {
                         file.entry = address;
                     }
 
-                    let local_func_kind = &mut local_func_kinds[i];
+                    let local_func_kind = local_func_kinds
+                        .get_mut(i)
+                        .read_error("Invalid Wasm code section index")?;
                     match local_func_kind {
                         LocalFunctionKind::Unknown => {
                             *local_func_kind = LocalFunctionKind::Local {
