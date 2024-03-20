@@ -32,9 +32,10 @@ enum SectionId {
     Code = 10,
     Data = 11,
     DataCount = 12,
+    Tag = 13,
 }
 // Update this constant when adding new section id:
-const MAX_SECTION_ID: usize = SectionId::DataCount as usize;
+const MAX_SECTION_ID: usize = SectionId::Tag as usize;
 
 /// A WebAssembly object file.
 #[derive(Debug)]
@@ -313,6 +314,9 @@ impl<'data, R: ReadRef<'data>> WasmFile<'data, R> {
                 }
                 wp::Payload::DataCountSection { range, .. } => {
                     file.add_section(SectionId::DataCount, range, "");
+                }
+                wp::Payload::TagSection(section) => {
+                    file.add_section(SectionId::Tag, section.range(), "");
                 }
                 wp::Payload::CustomSection(section) => {
                     let name = section.name();
@@ -691,6 +695,7 @@ impl<'data, 'file, R: ReadRef<'data>> ObjectSection<'data> for WasmSection<'data
             SectionId::Code => "<code>",
             SectionId::Data => "<data>",
             SectionId::DataCount => "<data_count>",
+            SectionId::Tag => "<tag>",
         })
     }
 
@@ -723,6 +728,7 @@ impl<'data, 'file, R: ReadRef<'data>> ObjectSection<'data> for WasmSection<'data
             SectionId::Code => SectionKind::Text,
             SectionId::Data => SectionKind::Data,
             SectionId::DataCount => SectionKind::UninitializedData,
+            SectionId::Tag => SectionKind::Data,
         }
     }
 
