@@ -171,10 +171,6 @@ fn main() -> Result<()> {
     let in_data = unsafe { memmap2::Mmap::map(&in_file) }
         .with_context(|| format!("Failed to map input file '{}'", in_path.display()))?;
     let in_data = &*in_data;
-    match object::FileKind::parse(in_data) {
-        Ok(object::FileKind::Elf32) | Ok(object::FileKind::Elf64) => {}
-        _ => return Ok(()),
-    }
     let mut rewriter = rewrite::Rewriter::read(in_data)
         .with_context(|| format!("Failed to parse input file '{}'", in_path.display()))?;
 
@@ -354,11 +350,7 @@ fn main() -> Result<()> {
                 fs::remove_file(out_path).ok();
             }
         }
-        format!(
-            "Failed to write output file '{}' from input '{}'",
-            out_path.display(),
-            in_path.display()
-        )
+        format!("Failed to write output file '{}'", out_path.display())
     })?;
     Ok(())
 }
