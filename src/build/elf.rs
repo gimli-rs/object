@@ -1589,7 +1589,13 @@ impl<'data> Builder<'data> {
                         SectionData::Dynamic(dynamics) => {
                             ((1 + dynamics.len()) * self.class().dyn_size()) as u64
                         }
-                        _ => 0,
+                        SectionData::Attributes(_) => out_section.attributes.len() as u64,
+                        _ => {
+                            return Err(Error(format!(
+                                "Unimplemented size for section type {:x}",
+                                section.sh_type
+                            )))
+                        }
                     };
                     let sh_link = if let Some(id) = section.sh_link_section {
                         if let Some(index) = out_sections_index[id.0] {
@@ -3011,7 +3017,7 @@ pub struct AttributesSubsubsection<'data> {
 }
 
 /// The tag for a sub-subsection in an attributes section.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum AttributeTag {
     /// The attributes apply to the whole file.
     ///

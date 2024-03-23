@@ -20,6 +20,11 @@ impl<'a> Bytes<'a> {
     pub fn to_mut(&mut self) -> &mut Vec<u8> {
         self.0.to_mut()
     }
+
+    /// Get the bytes as a slice.
+    pub fn as_slice(&self) -> &[u8] {
+        self.0.as_ref()
+    }
 }
 
 impl<'a> core::ops::Deref for Bytes<'a> {
