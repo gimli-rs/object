@@ -207,9 +207,10 @@ impl<'data> Builder<'data> {
             }
             let data = match section.sh_type(endian) {
                 elf::SHT_NOBITS => SectionData::UninitializedData(section.sh_size(endian).into()),
-                elf::SHT_PROGBITS | elf::SHT_INIT_ARRAY | elf::SHT_FINI_ARRAY => {
-                    SectionData::Data(section.data(endian, data)?.into())
-                }
+                elf::SHT_PROGBITS
+                | elf::SHT_INIT_ARRAY
+                | elf::SHT_FINI_ARRAY
+                | elf::SHT_PREINIT_ARRAY => SectionData::Data(section.data(endian, data)?.into()),
                 elf::SHT_REL | elf::SHT_RELA => relocations,
                 elf::SHT_SYMTAB => {
                     if index == symbols.section().0 {
@@ -272,7 +273,9 @@ impl<'data> Builder<'data> {
                 elf::SHT_GNU_VERNEED => SectionData::GnuVerneed,
                 other => match (builder.header.e_machine, other) {
                     (elf::EM_ARM, elf::SHT_ARM_ATTRIBUTES)
-                    | (elf::EM_AARCH64, elf::SHT_AARCH64_ATTRIBUTES) => {
+                    | (elf::EM_AARCH64, elf::SHT_AARCH64_ATTRIBUTES)
+                    | (elf::EM_CSKY, elf::SHT_CSKY_ATTRIBUTES)
+                    | (elf::EM_RISCV, elf::SHT_RISCV_ATTRIBUTES) => {
                         let attributes = section.attributes(endian, data)?;
                         Self::read_attributes(index, attributes, sections.len(), symbols.len())?
                     }
@@ -282,7 +285,8 @@ impl<'data> Builder<'data> {
                     (elf::EM_ARM, elf::SHT_ARM_EXIDX)
                     | (elf::EM_IA_64, elf::SHT_IA_64_UNWIND)
                     | (elf::EM_MIPS, elf::SHT_MIPS_REGINFO)
-                    | (elf::EM_MIPS, elf::SHT_MIPS_DWARF) => {
+                    | (elf::EM_MIPS, elf::SHT_MIPS_DWARF)
+                    | (elf::EM_X86_64, elf::SHT_X86_64_UNWIND) => {
                         SectionData::Data(section.data(endian, data)?.into())
                     }
                     _ => return Err(Error(format!("Unsupported section type {:x}", other))),
