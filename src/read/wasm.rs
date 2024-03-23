@@ -32,9 +32,10 @@ enum SectionId {
     Code = 10,
     Data = 11,
     DataCount = 12,
+    Tag = 13,
 }
 // Update this constant when adding new section id:
-const MAX_SECTION_ID: usize = SectionId::DataCount as usize;
+const MAX_SECTION_ID: usize = SectionId::Tag as usize;
 
 /// A WebAssembly object file.
 #[derive(Debug)]
@@ -113,6 +114,11 @@ impl<'data, R: ReadRef<'data>> WasmFile<'data, R> {
             let payload = payload.read_error("Invalid Wasm section header")?;
 
             match payload {
+                wp::Payload::Version { encoding, .. } => {
+                    if encoding != wp::Encoding::Module {
+                        return Err(Error("Unsupported Wasm encoding"));
+                    }
+                }
                 wp::Payload::TypeSection(section) => {
                     file.add_section(SectionId::Type, section.range(), "");
                 }
@@ -205,8 +211,9 @@ impl<'data, R: ReadRef<'data>> WasmFile<'data, R> {
                                 if let Some(local_func_id) =
                                     export.index.checked_sub(imported_funcs_count)
                                 {
-                                    let local_func_kind =
-                                        &mut local_func_kinds[local_func_id as usize];
+                                    let local_func_kind = local_func_kinds
+                                        .get_mut(local_func_id as usize)
+                                        .read_error("Invalid Wasm export index")?;
                                     if let LocalFunctionKind::Unknown = local_func_kind {
                                         *local_func_kind = LocalFunctionKind::Exported {
                                             symbol_ids: Vec::new(),
@@ -273,7 +280,9 @@ impl<'data, R: ReadRef<'data>> WasmFile<'data, R> {
                         file.entry = address;
                     }
 
-                    let local_func_kind = &mut local_func_kinds[i];
+                    let local_func_kind = local_func_kinds
+                        .get_mut(i)
+                        .read_error("Invalid Wasm code section index")?;
                     match local_func_kind {
                         LocalFunctionKind::Unknown => {
                             *local_func_kind = LocalFunctionKind::Local {
@@ -305,6 +314,9 @@ impl<'data, R: ReadRef<'data>> WasmFile<'data, R> {
                 }
                 wp::Payload::DataCountSection { range, .. } => {
                     file.add_section(SectionId::DataCount, range, "");
+                }
+                wp::Payload::TagSection(section) => {
+                    file.add_section(SectionId::Tag, section.range(), "");
                 }
                 wp::Payload::CustomSection(section) => {
                     let name = section.name();
@@ -683,6 +695,7 @@ impl<'data, 'file, R: ReadRef<'data>> ObjectSection<'data> for WasmSection<'data
             SectionId::Code => "<code>",
             SectionId::Data => "<data>",
             SectionId::DataCount => "<data_count>",
+            SectionId::Tag => "<tag>",
         })
     }
 
@@ -715,6 +728,7 @@ impl<'data, 'file, R: ReadRef<'data>> ObjectSection<'data> for WasmSection<'data
             SectionId::Code => SectionKind::Text,
             SectionId::Data => SectionKind::Data,
             SectionId::DataCount => SectionKind::UninitializedData,
+            SectionId::Tag => SectionKind::Data,
         }
     }
 

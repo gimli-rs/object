@@ -307,7 +307,7 @@ impl FileKind {
             #[cfg(feature = "macho")]
             [0xca, 0xfe, 0xba, 0xbf, ..] => FileKind::MachOFat64,
             #[cfg(feature = "wasm")]
-            [0x00, b'a', b's', b'm', ..] => FileKind::Wasm,
+            [0x00, b'a', b's', b'm', _, _, 0x00, 0x00] => FileKind::Wasm,
             #[cfg(feature = "pe")]
             [b'M', b'Z', ..] if offset == 0 => {
                 // offset == 0 restriction is because optional_header_magic only looks at offset 0
