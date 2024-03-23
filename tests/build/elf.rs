@@ -154,3 +154,101 @@ fn test_attribute() {
         }
     }
 }
+
+#[test]
+fn test_dynsym() {
+    let mut builder = build::elf::Builder::new(object::Endianness::Little, true);
+    builder.header.e_type = elf::ET_EXEC;
+    builder.header.e_machine = elf::EM_X86_64;
+    builder.header.e_phoff = 0x40;
+
+    let section = builder.sections.add();
+    section.name = b".shstrtab"[..].into();
+    section.sh_type = elf::SHT_STRTAB;
+    section.data = build::elf::SectionData::SectionString;
+
+    let section = builder.sections.add();
+    section.name = b".text"[..].into();
+    section.sh_type = elf::SHT_PROGBITS;
+    section.sh_flags = (elf::SHF_ALLOC | elf::SHF_EXECINSTR) as u64;
+    section.sh_addralign = 16;
+    section.data = build::elf::SectionData::Data(vec![0xcc; 100].into());
+    let text_id = section.id();
+
+    let section = builder.sections.add();
+    section.name = b".dynsym"[..].into();
+    section.sh_type = elf::SHT_DYNSYM;
+    section.sh_flags = elf::SHF_ALLOC as u64;
+    section.sh_addralign = 8;
+    section.data = build::elf::SectionData::DynamicSymbol;
+    let dynsym_id = section.id();
+
+    let section = builder.sections.add();
+    section.name = b".dynstr"[..].into();
+    section.sh_type = elf::SHT_STRTAB;
+    section.sh_flags = elf::SHF_ALLOC as u64;
+    section.sh_addralign = 1;
+    section.data = build::elf::SectionData::DynamicString;
+    let dynstr_id = section.id();
+
+    let section = builder.sections.add();
+    section.name = b".gnu.hash"[..].into();
+    section.sh_type = elf::SHT_GNU_HASH;
+    section.sh_flags = elf::SHF_ALLOC as u64;
+    section.sh_addralign = 8;
+    section.data = build::elf::SectionData::GnuHash;
+    let gnu_hash_id = section.id();
+    builder.gnu_hash_bloom_shift = 1;
+    builder.gnu_hash_bloom_count = 1;
+    builder.gnu_hash_bucket_count = 1;
+
+    let symbol = builder.dynamic_symbols.add();
+    symbol.name = b"global"[..].into();
+    symbol.set_st_info(elf::STB_GLOBAL, elf::STT_FUNC);
+    symbol.section = Some(text_id);
+
+    let symbol = builder.dynamic_symbols.add();
+    symbol.name = b"undefined"[..].into();
+    symbol.set_st_info(elf::STB_GLOBAL, elf::STT_NOTYPE);
+
+    let symbol = builder.dynamic_symbols.add();
+    symbol.name = b"local"[..].into();
+    symbol.set_st_info(elf::STB_LOCAL, elf::STT_FUNC);
+    symbol.section = Some(text_id);
+
+    builder.set_section_sizes();
+
+    let segment = builder.segments.add();
+    segment.p_type = elf::PT_LOAD;
+    segment.p_flags = elf::PF_R;
+    segment.p_filesz = 0x1000;
+    segment.p_memsz = 0x1000;
+    segment.p_align = 8;
+    segment.append_section(builder.sections.get_mut(text_id));
+    segment.append_section(builder.sections.get_mut(dynsym_id));
+    segment.append_section(builder.sections.get_mut(dynstr_id));
+    segment.append_section(builder.sections.get_mut(gnu_hash_id));
+
+    let mut buf = Vec::new();
+    builder.write(&mut buf).unwrap();
+
+    let builder = build::elf::Builder::read(&*buf).unwrap();
+    assert_eq!(builder.sections.count(), 5);
+    assert_eq!(builder.dynamic_symbols.count(), 3);
+    // Check that the dynamic symbol table sorting handles
+    // local and undefined symbols correctly.
+    assert_eq!(
+        builder
+            .dynamic_symbols
+            .iter()
+            .map(|s| s.name.as_slice())
+            .collect::<Vec<_>>(),
+        vec![&b"local"[..], &b"undefined"[..], &b"global"[..]]
+    );
+    for section in &builder.sections {
+        if let build::elf::SectionData::DynamicSymbol = &section.data {
+            // Check that sh_info includes the number of local symbols.
+            assert_eq!(section.sh_info, 2);
+        }
+    }
+}

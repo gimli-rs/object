@@ -862,8 +862,16 @@ impl<'data> Builder<'data> {
 
         // Assign dynamic symbol indices.
         let mut out_dynsyms = Vec::with_capacity(self.dynamic_symbols.len());
-        let mut gnu_hash_symbol_count = 0;
-        for symbol in &self.dynamic_symbols {
+        // Local symbols must come before global.
+        let local_symbols = self
+            .dynamic_symbols
+            .into_iter()
+            .filter(|symbol| symbol.st_bind() == elf::STB_LOCAL);
+        let global_symbols = self
+            .dynamic_symbols
+            .into_iter()
+            .filter(|symbol| symbol.st_bind() != elf::STB_LOCAL);
+        for symbol in local_symbols.chain(global_symbols) {
             let mut name = None;
             let mut hash = None;
             let mut gnu_hash = None;
@@ -872,9 +880,8 @@ impl<'data> Builder<'data> {
                 if hash_id.is_some() {
                     hash = Some(elf::hash(&symbol.name));
                 }
-                if gnu_hash_id.is_some() && symbol.st_shndx != elf::SHN_UNDEF {
+                if gnu_hash_id.is_some() && symbol.section.is_some() {
                     gnu_hash = Some(elf::gnu_hash(&symbol.name));
-                    gnu_hash_symbol_count += 1;
                 }
             }
             out_dynsyms.push(DynamicSymbolOut {
@@ -884,16 +891,26 @@ impl<'data> Builder<'data> {
                 gnu_hash,
             });
         }
+        let num_local_dynamic = out_dynsyms
+            .iter()
+            .take_while(|sym| self.dynamic_symbols.get(sym.id).st_bind() == elf::STB_LOCAL)
+            .count();
         // We must sort for GNU hash before allocating symbol indices.
+        let mut gnu_hash_symbol_count = 0;
         if gnu_hash_id.is_some() {
             if self.gnu_hash_bucket_count == 0 {
                 return Err(Error::new(".gnu.hash bucket count is zero"));
             }
             // TODO: recalculate bucket_count?
-            out_dynsyms.sort_by_key(|sym| match sym.gnu_hash {
+            out_dynsyms[num_local_dynamic..].sort_by_key(|sym| match sym.gnu_hash {
                 None => (0, 0),
                 Some(hash) => (1, hash % self.gnu_hash_bucket_count),
             });
+            gnu_hash_symbol_count = out_dynsyms
+                .iter()
+                .skip(num_local_dynamic)
+                .skip_while(|sym| sym.gnu_hash.is_none())
+                .count() as u32;
         }
         let mut out_dynsyms_index = vec![None; self.dynamic_symbols.len()];
         if dynsym_id.is_some() {
@@ -938,10 +955,10 @@ impl<'data> Builder<'data> {
                 name,
             });
         }
-        let num_local = 1 + out_syms
+        let num_local = out_syms
             .iter()
             .take_while(|sym| self.symbols.get(sym.id).st_bind() == elf::STB_LOCAL)
-            .count() as u32;
+            .count();
         let mut out_syms_index = vec![None; self.symbols.len()];
         if symtab_id.is_some() {
             writer.reserve_null_symbol_index();
@@ -1640,7 +1657,7 @@ impl<'data> Builder<'data> {
                     writer.write_shstrtab_section_header();
                 }
                 SectionData::Symbol => {
-                    writer.write_symtab_section_header(num_local);
+                    writer.write_symtab_section_header(1 + num_local as u32);
                 }
                 SectionData::SymbolSectionIndex => {
                     writer.write_symtab_shndx_section_header();
@@ -1652,7 +1669,8 @@ impl<'data> Builder<'data> {
                     writer.write_dynstr_section_header(section.sh_addr);
                 }
                 SectionData::DynamicSymbol => {
-                    writer.write_dynsym_section_header(section.sh_addr, 1);
+                    writer
+                        .write_dynsym_section_header(section.sh_addr, 1 + num_local_dynamic as u32);
                 }
                 SectionData::Hash => {
                     writer.write_hash_section_header(section.sh_addr);
