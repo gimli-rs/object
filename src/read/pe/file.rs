@@ -138,22 +138,21 @@ where
 {
 }
 
-impl<'data, 'file, Pe, R> Object<'data, 'file> for PeFile<'data, Pe, R>
+impl<'data, Pe, R> Object<'data> for PeFile<'data, Pe, R>
 where
-    'data: 'file,
     Pe: ImageNtHeaders,
-    R: 'file + ReadRef<'data>,
+    R: ReadRef<'data>,
 {
-    type Segment = PeSegment<'data, 'file, Pe, R>;
-    type SegmentIterator = PeSegmentIterator<'data, 'file, Pe, R>;
-    type Section = PeSection<'data, 'file, Pe, R>;
-    type SectionIterator = PeSectionIterator<'data, 'file, Pe, R>;
-    type Comdat = PeComdat<'data, 'file, Pe, R>;
-    type ComdatIterator = PeComdatIterator<'data, 'file, Pe, R>;
-    type Symbol = CoffSymbol<'data, 'file, R>;
-    type SymbolIterator = CoffSymbolIterator<'data, 'file, R>;
-    type SymbolTable = CoffSymbolTable<'data, 'file, R>;
-    type DynamicRelocationIterator = NoDynamicRelocationIterator;
+    type Segment<'file> = PeSegment<'data, 'file, Pe, R> where Self: 'file, 'data: 'file;
+    type SegmentIterator<'file> = PeSegmentIterator<'data, 'file, Pe, R> where Self: 'file, 'data: 'file;
+    type Section<'file> = PeSection<'data, 'file, Pe, R> where Self: 'file, 'data: 'file;
+    type SectionIterator<'file> = PeSectionIterator<'data, 'file, Pe, R> where Self: 'file, 'data: 'file;
+    type Comdat<'file> = PeComdat<'data, 'file, Pe, R> where Self: 'file, 'data: 'file;
+    type ComdatIterator<'file> = PeComdatIterator<'data, 'file, Pe, R> where Self: 'file, 'data: 'file;
+    type Symbol<'file> = CoffSymbol<'data, 'file, R> where Self: 'file, 'data: 'file;
+    type SymbolIterator<'file> = CoffSymbolIterator<'data, 'file, R> where Self: 'file, 'data: 'file;
+    type SymbolTable<'file> = CoffSymbolTable<'data, 'file, R> where Self: 'file, 'data: 'file;
+    type DynamicRelocationIterator<'file> = NoDynamicRelocationIterator where Self: 'file, 'data: 'file;
 
     fn architecture(&self) -> Architecture {
         match self.nt_headers.file_header().machine.get(LE) {
@@ -194,14 +193,14 @@ where
         }
     }
 
-    fn segments(&'file self) -> PeSegmentIterator<'data, 'file, Pe, R> {
+    fn segments(&self) -> PeSegmentIterator<'data, '_, Pe, R> {
         PeSegmentIterator {
             file: self,
             iter: self.common.sections.iter(),
         }
     }
 
-    fn section_by_name_bytes(
+    fn section_by_name_bytes<'file>(
         &'file self,
         section_name: &[u8],
     ) -> Option<PeSection<'data, 'file, Pe, R>> {
@@ -215,10 +214,7 @@ where
             })
     }
 
-    fn section_by_index(
-        &'file self,
-        index: SectionIndex,
-    ) -> Result<PeSection<'data, 'file, Pe, R>> {
+    fn section_by_index(&self, index: SectionIndex) -> Result<PeSection<'data, '_, Pe, R>> {
         let section = self.common.sections.section(index.0)?;
         Ok(PeSection {
             file: self,
@@ -227,18 +223,18 @@ where
         })
     }
 
-    fn sections(&'file self) -> PeSectionIterator<'data, 'file, Pe, R> {
+    fn sections(&self) -> PeSectionIterator<'data, '_, Pe, R> {
         PeSectionIterator {
             file: self,
             iter: self.common.sections.iter().enumerate(),
         }
     }
 
-    fn comdats(&'file self) -> PeComdatIterator<'data, 'file, Pe, R> {
+    fn comdats(&self) -> PeComdatIterator<'data, '_, Pe, R> {
         PeComdatIterator { file: self }
     }
 
-    fn symbol_by_index(&'file self, index: SymbolIndex) -> Result<CoffSymbol<'data, 'file, R>> {
+    fn symbol_by_index(&self, index: SymbolIndex) -> Result<CoffSymbol<'data, '_, R>> {
         let symbol = self.common.symbols.symbol(index.0)?;
         Ok(CoffSymbol {
             file: &self.common,
@@ -247,18 +243,18 @@ where
         })
     }
 
-    fn symbols(&'file self) -> CoffSymbolIterator<'data, 'file, R> {
+    fn symbols(&self) -> CoffSymbolIterator<'data, '_, R> {
         CoffSymbolIterator {
             file: &self.common,
             index: 0,
         }
     }
 
-    fn symbol_table(&'file self) -> Option<CoffSymbolTable<'data, 'file, R>> {
+    fn symbol_table(&self) -> Option<CoffSymbolTable<'data, '_, R>> {
         Some(CoffSymbolTable { file: &self.common })
     }
 
-    fn dynamic_symbols(&'file self) -> CoffSymbolIterator<'data, 'file, R> {
+    fn dynamic_symbols(&self) -> CoffSymbolIterator<'data, '_, R> {
         CoffSymbolIterator {
             file: &self.common,
             // Hack: don't return any.
@@ -266,11 +262,11 @@ where
         }
     }
 
-    fn dynamic_symbol_table(&'file self) -> Option<CoffSymbolTable<'data, 'file, R>> {
+    fn dynamic_symbol_table(&self) -> Option<CoffSymbolTable<'data, '_, R>> {
         None
     }
 
-    fn dynamic_relocations(&'file self) -> Option<NoDynamicRelocationIterator> {
+    fn dynamic_relocations(&self) -> Option<NoDynamicRelocationIterator> {
         None
     }
 
