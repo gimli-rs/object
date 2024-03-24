@@ -179,6 +179,7 @@ impl<'data> Builder<'data> {
                     index,
                     endian,
                     is_mips64el,
+                    section,
                     rels,
                     link,
                     &symbols,
@@ -189,6 +190,7 @@ impl<'data> Builder<'data> {
                     index,
                     endian,
                     is_mips64el,
+                    section,
                     rels,
                     link,
                     &symbols,
@@ -366,6 +368,7 @@ impl<'data> Builder<'data> {
         index: usize,
         endian: Elf::Endian,
         is_mips64el: bool,
+        section: &'data Elf::SectionHeader,
         rels: &'data [Rel],
         link: read::SectionIndex,
         symbols: &read::elf::SymbolTable<'data, Elf, R>,
@@ -376,7 +379,27 @@ impl<'data> Builder<'data> {
         Rel: Copy + Into<Elf::Rela>,
         R: ReadRef<'data>,
     {
-        if link.0 == 0 {
+        if link == dynamic_symbols.section() {
+            Self::read_relocations_impl::<Elf, Rel, true>(
+                index,
+                endian,
+                is_mips64el,
+                rels,
+                dynamic_symbols.len(),
+            )
+            .map(SectionData::DynamicRelocation)
+        } else if link.0 == 0 || section.sh_flags(endian).into() & u64::from(elf::SHF_ALLOC) != 0 {
+            // If there's no link, then none of the relocations may reference symbols.
+            // Assume that these are dynamic relocations, but don't use the dynamic
+            // symbol table when parsing.
+            //
+            // Additionally, sometimes there is an allocated section that links to
+            // the static symbol table. We don't currently support this case in general,
+            // but if none of the relocation entries reference a symbol then it is
+            // safe to treat it as a dynamic relocation section.
+            //
+            // For both of these cases, if there is a reference to a symbol then
+            // an error will be returned when parsing the relocations.
             Self::read_relocations_impl::<Elf, Rel, true>(index, endian, is_mips64el, rels, 0)
                 .map(SectionData::DynamicRelocation)
         } else if link == symbols.section() {
@@ -388,15 +411,6 @@ impl<'data> Builder<'data> {
                 symbols.len(),
             )
             .map(SectionData::Relocation)
-        } else if link == dynamic_symbols.section() {
-            Self::read_relocations_impl::<Elf, Rel, true>(
-                index,
-                endian,
-                is_mips64el,
-                rels,
-                dynamic_symbols.len(),
-            )
-            .map(SectionData::DynamicRelocation)
         } else {
             return Err(Error(format!(
                 "Invalid sh_link {} in relocation section at index {}",
