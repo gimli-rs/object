@@ -4,6 +4,7 @@ use std::path::{Path, PathBuf};
 
 use anyhow::{anyhow, Context, Result};
 use clap::{command, Arg, ArgAction, ArgGroup};
+use log::info;
 use object_rewrite as rewrite;
 
 fn main() -> Result<()> {
@@ -123,6 +124,10 @@ fn main() -> Result<()> {
                 .value_name("path")
                 .value_parser(clap::value_parser!(String))
                 .help("Set the interpreter path in the PT_INTERP segment"),
+            Arg::new("ignore-unknown-format")
+                .long("ignore-unknown-format")
+                .action(ArgAction::SetTrue)
+                .help("Ignore input files with unknown formats"),
             Arg::new("verbose")
                 .short('v')
                 .long("verbose")
@@ -171,6 +176,19 @@ fn main() -> Result<()> {
     let in_data = unsafe { memmap2::Mmap::map(&in_file) }
         .with_context(|| format!("Failed to map input file '{}'", in_path.display()))?;
     let in_data = &*in_data;
+
+    if matches.get_flag("ignore-unknown-format") {
+        match object::FileKind::parse(in_data) {
+            Ok(object::FileKind::Elf32) | Ok(object::FileKind::Elf64) => {}
+            _ => {
+                info!(
+                    "Ignoring input file '{}' with unknown format",
+                    in_path.display()
+                );
+                return Ok(());
+            }
+        }
+    }
     let mut rewriter = rewrite::Rewriter::read(in_data)
         .with_context(|| format!("Failed to parse input file '{}'", in_path.display()))?;
 
@@ -350,7 +368,11 @@ fn main() -> Result<()> {
                 fs::remove_file(out_path).ok();
             }
         }
-        format!("Failed to write output file '{}'", out_path.display())
+        format!(
+            "Failed to write output file '{}' from input '{}'",
+            out_path.display(),
+            in_path.display()
+        )
     })?;
     Ok(())
 }
