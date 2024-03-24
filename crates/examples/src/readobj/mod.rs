@@ -315,12 +315,18 @@ fn print_object_at(p: &mut Printer<'_>, data: &[u8], offset: u64) {
 
 fn print_archive(p: &mut Printer<'_>, data: &[u8]) {
     if let Some(archive) = ArchiveFile::parse(data).print_err(p) {
-        p.field("Format", format!("Archive ({:?})", archive.kind()));
+        write!(p.w(), "Format: Archive ({:?})", archive.kind()).unwrap();
+        if archive.is_thin() {
+            write!(p.w(), " (thin)").unwrap();
+        }
+        p.blank();
         for member in archive.members() {
             if let Some(member) = member.print_err(p) {
                 p.blank();
                 p.field("Member", String::from_utf8_lossy(member.name()));
-                if let Some(data) = member.data(data).print_err(p) {
+                if member.is_thin() {
+                    p.field("Size", member.size());
+                } else if let Some(data) = member.data(data).print_err(p) {
                     print_object(p, data);
                 }
             }

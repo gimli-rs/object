@@ -289,7 +289,8 @@ impl FileKind {
 
         let kind = match [magic[0], magic[1], magic[2], magic[3], magic[4], magic[5], magic[6], magic[7]] {
             #[cfg(feature = "archive")]
-            [b'!', b'<', b'a', b'r', b'c', b'h', b'>', b'\n'] => FileKind::Archive,
+            [b'!', b'<', b'a', b'r', b'c', b'h', b'>', b'\n']
+            | [b'!', b'<', b't', b'h', b'i', b'n', b'>', b'\n'] => FileKind::Archive,
             #[cfg(feature = "macho")]
             [b'd', b'y', b'l', b'd', b'_', b'v', b'1', b' '] => FileKind::DyldCache,
             #[cfg(feature = "elf")]

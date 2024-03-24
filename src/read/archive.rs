@@ -67,6 +67,7 @@ pub struct ArchiveFile<'data, R: ReadRef<'data> = &'data [u8]> {
     members: Members<'data>,
     symbols: (u64, u64),
     names: &'data [u8],
+    thin: bool,
 }
 
 impl<'data, R: ReadRef<'data>> ArchiveFile<'data, R> {
@@ -78,11 +79,15 @@ impl<'data, R: ReadRef<'data>> ArchiveFile<'data, R> {
             .read_bytes(&mut tail, archive::MAGIC.len() as u64)
             .read_error("Invalid archive size")?;
 
-        if magic == archive::AIX_BIG_MAGIC {
+        let thin = if magic == archive::AIX_BIG_MAGIC {
             return Self::parse_aixbig(data);
-        } else if magic != archive::MAGIC {
+        } else if magic == archive::THIN_MAGIC {
+            true
+        } else if magic == archive::MAGIC {
+            false
+        } else {
             return Err(Error("Unsupported archive identifier"));
-        }
+        };
 
         let mut members_offset = tail;
         let members_end_offset = len;
@@ -96,6 +101,7 @@ impl<'data, R: ReadRef<'data>> ArchiveFile<'data, R> {
             },
             symbols: (0, 0),
             names: &[],
+            thin,
         };
 
         // The first few members may be special, so parse them.
@@ -113,7 +119,7 @@ impl<'data, R: ReadRef<'data>> ArchiveFile<'data, R> {
         // BSD may use the extended name for the symbol table. This is handled
         // by `ArchiveMember::parse`.
         if tail < len {
-            let member = ArchiveMember::parse(data, &mut tail, &[])?;
+            let member = ArchiveMember::parse(data, &mut tail, &[], thin)?;
             if member.name == b"/" {
                 // GNU symbol table (unless we later determine this is COFF).
                 file.kind = ArchiveKind::Gnu;
@@ -121,7 +127,7 @@ impl<'data, R: ReadRef<'data>> ArchiveFile<'data, R> {
                 members_offset = tail;
 
                 if tail < len {
-                    let member = ArchiveMember::parse(data, &mut tail, &[])?;
+                    let member = ArchiveMember::parse(data, &mut tail, &[], thin)?;
                     if member.name == b"/" {
                         // COFF linker member.
                         file.kind = ArchiveKind::Coff;
@@ -129,7 +135,7 @@ impl<'data, R: ReadRef<'data>> ArchiveFile<'data, R> {
                         members_offset = tail;
 
                         if tail < len {
-                            let member = ArchiveMember::parse(data, &mut tail, &[])?;
+                            let member = ArchiveMember::parse(data, &mut tail, &[], thin)?;
                             if member.name == b"//" {
                                 // COFF names table.
                                 file.names = member.data(data)?;
@@ -149,7 +155,7 @@ impl<'data, R: ReadRef<'data>> ArchiveFile<'data, R> {
                 members_offset = tail;
 
                 if tail < len {
-                    let member = ArchiveMember::parse(data, &mut tail, &[])?;
+                    let member = ArchiveMember::parse(data, &mut tail, &[], thin)?;
                     if member.name == b"//" {
                         // GNU names table.
                         file.names = member.data(data)?;
@@ -197,6 +203,7 @@ impl<'data, R: ReadRef<'data>> ArchiveFile<'data, R> {
             members: Members::AixBig { index: &[] },
             symbols: (0, 0),
             names: &[],
+            thin: false,
         };
 
         // Read the span of symbol table.
@@ -254,6 +261,11 @@ impl<'data, R: ReadRef<'data>> ArchiveFile<'data, R> {
         self.kind
     }
 
+    /// Return true if the archive is a thin archive.
+    pub fn is_thin(&self) -> bool {
+        self.thin
+    }
+
     /// Iterate over the members of the archive.
     ///
     /// This does not return special members.
@@ -263,6 +275,7 @@ impl<'data, R: ReadRef<'data>> ArchiveFile<'data, R> {
             data: self.data,
             members: self.members,
             names: self.names,
+            thin: self.thin,
         }
     }
 }
@@ -273,6 +286,7 @@ pub struct ArchiveMemberIterator<'data, R: ReadRef<'data> = &'data [u8]> {
     data: R,
     members: Members<'data>,
     names: &'data [u8],
+    thin: bool,
 }
 
 impl<'data, R: ReadRef<'data>> Iterator for ArchiveMemberIterator<'data, R> {
@@ -287,7 +301,7 @@ impl<'data, R: ReadRef<'data>> Iterator for ArchiveMemberIterator<'data, R> {
                 if *offset >= *end_offset {
                     return None;
                 }
-                let member = ArchiveMember::parse(self.data, offset, self.names);
+                let member = ArchiveMember::parse(self.data, offset, self.names, self.thin);
                 if member.is_err() {
                     *offset = *end_offset;
                 }
@@ -322,6 +336,7 @@ enum MemberHeader<'data> {
 pub struct ArchiveMember<'data> {
     header: MemberHeader<'data>,
     name: &'data [u8],
+    // May be zero for thin members.
     offset: u64,
     size: u64,
 }
@@ -334,6 +349,7 @@ impl<'data> ArchiveMember<'data> {
         data: R,
         offset: &mut u64,
         names: &'data [u8],
+        thin: bool,
     ) -> read::Result<Self> {
         let header = data
             .read::<archive::Header>(offset)
@@ -342,16 +358,10 @@ impl<'data> ArchiveMember<'data> {
             return Err(Error("Invalid archive terminator"));
         }
 
-        let mut file_offset = *offset;
-        let mut file_size =
+        let header_file_size =
             parse_u64_digits(&header.size, 10).read_error("Invalid archive member size")?;
-        *offset = offset
-            .checked_add(file_size)
-            .read_error("Archive member size is too large")?;
-        // Entries are padded to an even number of bytes.
-        if (file_size & 1) != 0 {
-            *offset = offset.saturating_add(1);
-        }
+        let mut file_offset = *offset;
+        let mut file_size = header_file_size;
 
         let name = if header.name[0] == b'/' && (header.name[1] as char).is_ascii_digit() {
             // Read file name from the names table.
@@ -370,6 +380,25 @@ impl<'data> ArchiveMember<'data> {
                 .unwrap_or(header.name.len());
             &header.name[..name_len]
         };
+
+        // Members in thin archives don't have data unless they are special members.
+        if thin && name != b"/" && name != b"//" && name != b"/SYM64/" {
+            return Ok(ArchiveMember {
+                header: MemberHeader::Common(header),
+                name,
+                offset: 0,
+                size: file_size,
+            });
+        }
+
+        // Skip the file data.
+        *offset = offset
+            .checked_add(header_file_size)
+            .read_error("Archive member size is too large")?;
+        // Entries are padded to an even number of bytes.
+        if (header_file_size & 1) != 0 {
+            *offset = offset.saturating_add(1);
+        }
 
         Ok(ArchiveMember {
             header: MemberHeader::Common(header),
@@ -493,14 +522,31 @@ impl<'data> ArchiveMember<'data> {
         }
     }
 
+    /// Return the size of the file data.
+    pub fn size(&self) -> u64 {
+        self.size
+    }
+
     /// Return the offset and size of the file data.
     pub fn file_range(&self) -> (u64, u64) {
         (self.offset, self.size)
     }
 
+    /// Return true if the member is a thin member.
+    ///
+    /// Thin members have no file data.
+    pub fn is_thin(&self) -> bool {
+        self.offset == 0
+    }
+
     /// Return the file data.
+    ///
+    /// This is an empty slice for thin members.
     #[inline]
     pub fn data<R: ReadRef<'data>>(&self, data: R) -> read::Result<&'data [u8]> {
+        if self.is_thin() {
+            return Ok(&[]);
+        }
         data.read_bytes_at(self.offset, self.size)
             .read_error("Archive member size is too large")
     }
@@ -667,6 +713,14 @@ mod tests {
             \0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0";
         let archive = ArchiveFile::parse(&data[..]).unwrap();
         assert_eq!(archive.kind(), ArchiveKind::AixBig);
+
+        let data = b"\
+            !<thin>\n\
+            /                                               4         `\n\
+            0000";
+        let archive = ArchiveFile::parse(&data[..]).unwrap();
+        assert_eq!(archive.kind(), ArchiveKind::Gnu);
+        assert!(archive.is_thin());
     }
 
     #[test]
@@ -697,6 +751,42 @@ mod tests {
         let member = members.next().unwrap().unwrap();
         assert_eq!(member.name(), b"0123456789abcdef");
         assert_eq!(member.data(data).unwrap(), &b"even"[..]);
+
+        assert!(members.next().is_none());
+    }
+
+    #[test]
+    fn thin_gnu_names() {
+        let data = b"\
+            !<thin>\n\
+            //                                              18        `\n\
+            0123456789abcdef/\n\
+            s p a c e/      0           0     0     644     4         `\n\
+            0123456789abcde/0           0     0     644     3         `\n\
+            /0              0           0     0     644     4         `\n\
+            ";
+        let data = &data[..];
+        let archive = ArchiveFile::parse(data).unwrap();
+        assert_eq!(archive.kind(), ArchiveKind::Gnu);
+        let mut members = archive.members();
+
+        let member = members.next().unwrap().unwrap();
+        assert_eq!(member.name(), b"s p a c e");
+        assert!(member.is_thin());
+        assert_eq!(member.size(), 4);
+        assert_eq!(member.data(data).unwrap(), &[]);
+
+        let member = members.next().unwrap().unwrap();
+        assert_eq!(member.name(), b"0123456789abcde");
+        assert!(member.is_thin());
+        assert_eq!(member.size(), 3);
+        assert_eq!(member.data(data).unwrap(), &[]);
+
+        let member = members.next().unwrap().unwrap();
+        assert_eq!(member.name(), b"0123456789abcdef");
+        assert!(member.is_thin());
+        assert_eq!(member.size(), 4);
+        assert_eq!(member.data(data).unwrap(), &[]);
 
         assert!(members.next().is_none());
     }
