@@ -372,21 +372,17 @@ impl<'data, R: ReadRef<'data>> WasmFile<'data, R> {
 
 impl<'data, R> read::private::Sealed for WasmFile<'data, R> {}
 
-impl<'data, 'file, R: ReadRef<'data>> Object<'data, 'file> for WasmFile<'data, R>
-where
-    'data: 'file,
-    R: 'file,
-{
-    type Segment = WasmSegment<'data, 'file, R>;
-    type SegmentIterator = WasmSegmentIterator<'data, 'file, R>;
-    type Section = WasmSection<'data, 'file, R>;
-    type SectionIterator = WasmSectionIterator<'data, 'file, R>;
-    type Comdat = WasmComdat<'data, 'file, R>;
-    type ComdatIterator = WasmComdatIterator<'data, 'file, R>;
-    type Symbol = WasmSymbol<'data, 'file>;
-    type SymbolIterator = WasmSymbolIterator<'data, 'file>;
-    type SymbolTable = WasmSymbolTable<'data, 'file>;
-    type DynamicRelocationIterator = NoDynamicRelocationIterator;
+impl<'data, R: ReadRef<'data>> Object<'data> for WasmFile<'data, R> {
+    type Segment<'file> = WasmSegment<'data, 'file, R> where Self: 'file, 'data: 'file;
+    type SegmentIterator<'file> = WasmSegmentIterator<'data, 'file, R> where Self: 'file, 'data: 'file;
+    type Section<'file> = WasmSection<'data, 'file, R> where Self: 'file, 'data: 'file;
+    type SectionIterator<'file> = WasmSectionIterator<'data, 'file, R> where Self: 'file, 'data: 'file;
+    type Comdat<'file> = WasmComdat<'data, 'file, R> where Self: 'file, 'data: 'file;
+    type ComdatIterator<'file> = WasmComdatIterator<'data, 'file, R> where Self: 'file, 'data: 'file;
+    type Symbol<'file> = WasmSymbol<'data, 'file> where Self: 'file, 'data: 'file;
+    type SymbolIterator<'file> = WasmSymbolIterator<'data, 'file> where Self: 'file, 'data: 'file;
+    type SymbolTable<'file> = WasmSymbolTable<'data, 'file> where Self: 'file, 'data: 'file;
+    type DynamicRelocationIterator<'file> = NoDynamicRelocationIterator where Self: 'file, 'data: 'file;
 
     #[inline]
     fn architecture(&self) -> Architecture {
@@ -412,11 +408,11 @@ where
         ObjectKind::Unknown
     }
 
-    fn segments(&'file self) -> Self::SegmentIterator {
+    fn segments(&self) -> Self::SegmentIterator<'_> {
         WasmSegmentIterator { file: self }
     }
 
-    fn section_by_name_bytes(
+    fn section_by_name_bytes<'file>(
         &'file self,
         section_name: &[u8],
     ) -> Option<WasmSection<'data, 'file, R>> {
@@ -424,7 +420,7 @@ where
             .find(|section| section.name_bytes() == Ok(section_name))
     }
 
-    fn section_by_index(&'file self, index: SectionIndex) -> Result<WasmSection<'data, 'file, R>> {
+    fn section_by_index(&self, index: SectionIndex) -> Result<WasmSection<'data, '_, R>> {
         // TODO: Missing sections should return an empty section.
         let id_section = self
             .id_sections
@@ -438,19 +434,19 @@ where
         })
     }
 
-    fn sections(&'file self) -> Self::SectionIterator {
+    fn sections(&self) -> Self::SectionIterator<'_> {
         WasmSectionIterator {
             file: self,
             sections: self.sections.iter(),
         }
     }
 
-    fn comdats(&'file self) -> Self::ComdatIterator {
+    fn comdats(&self) -> Self::ComdatIterator<'_> {
         WasmComdatIterator { file: self }
     }
 
     #[inline]
-    fn symbol_by_index(&'file self, index: SymbolIndex) -> Result<WasmSymbol<'data, 'file>> {
+    fn symbol_by_index(&self, index: SymbolIndex) -> Result<WasmSymbol<'data, '_>> {
         let symbol = self
             .symbols
             .get(index.0)
@@ -458,26 +454,26 @@ where
         Ok(WasmSymbol { index, symbol })
     }
 
-    fn symbols(&'file self) -> Self::SymbolIterator {
+    fn symbols(&self) -> Self::SymbolIterator<'_> {
         WasmSymbolIterator {
             symbols: self.symbols.iter().enumerate(),
         }
     }
 
-    fn symbol_table(&'file self) -> Option<WasmSymbolTable<'data, 'file>> {
+    fn symbol_table(&self) -> Option<WasmSymbolTable<'data, '_>> {
         Some(WasmSymbolTable {
             symbols: &self.symbols,
         })
     }
 
-    fn dynamic_symbols(&'file self) -> Self::SymbolIterator {
+    fn dynamic_symbols(&self) -> Self::SymbolIterator<'_> {
         WasmSymbolIterator {
             symbols: [].iter().enumerate(),
         }
     }
 
     #[inline]
-    fn dynamic_symbol_table(&'file self) -> Option<WasmSymbolTable<'data, 'file>> {
+    fn dynamic_symbol_table(&self) -> Option<WasmSymbolTable<'data, '_>> {
         None
     }
 
@@ -505,7 +501,7 @@ where
     }
 
     #[inline]
-    fn entry(&'file self) -> u64 {
+    fn entry(&self) -> u64 {
         self.entry
     }
 

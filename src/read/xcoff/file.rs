@@ -84,22 +84,21 @@ where
 {
 }
 
-impl<'data, 'file, Xcoff, R> Object<'data, 'file> for XcoffFile<'data, Xcoff, R>
+impl<'data, Xcoff, R> Object<'data> for XcoffFile<'data, Xcoff, R>
 where
-    'data: 'file,
     Xcoff: FileHeader,
-    R: 'file + ReadRef<'data>,
+    R: ReadRef<'data>,
 {
-    type Segment = XcoffSegment<'data, 'file, Xcoff, R>;
-    type SegmentIterator = XcoffSegmentIterator<'data, 'file, Xcoff, R>;
-    type Section = XcoffSection<'data, 'file, Xcoff, R>;
-    type SectionIterator = XcoffSectionIterator<'data, 'file, Xcoff, R>;
-    type Comdat = XcoffComdat<'data, 'file, Xcoff, R>;
-    type ComdatIterator = XcoffComdatIterator<'data, 'file, Xcoff, R>;
-    type Symbol = XcoffSymbol<'data, 'file, Xcoff, R>;
-    type SymbolIterator = XcoffSymbolIterator<'data, 'file, Xcoff, R>;
-    type SymbolTable = XcoffSymbolTable<'data, 'file, Xcoff, R>;
-    type DynamicRelocationIterator = NoDynamicRelocationIterator;
+    type Segment<'file> = XcoffSegment<'data, 'file, Xcoff, R> where Self: 'file, 'data: 'file;
+    type SegmentIterator<'file> = XcoffSegmentIterator<'data, 'file, Xcoff, R> where Self: 'file, 'data: 'file;
+    type Section<'file> = XcoffSection<'data, 'file, Xcoff, R> where Self: 'file, 'data: 'file;
+    type SectionIterator<'file> = XcoffSectionIterator<'data, 'file, Xcoff, R> where Self: 'file, 'data: 'file;
+    type Comdat<'file> = XcoffComdat<'data, 'file, Xcoff, R> where Self: 'file, 'data: 'file;
+    type ComdatIterator<'file> = XcoffComdatIterator<'data, 'file, Xcoff, R> where Self: 'file, 'data: 'file;
+    type Symbol<'file> = XcoffSymbol<'data, 'file, Xcoff, R> where Self: 'file, 'data: 'file;
+    type SymbolIterator<'file> = XcoffSymbolIterator<'data, 'file, Xcoff, R> where Self: 'file, 'data: 'file;
+    type SymbolTable<'file> = XcoffSymbolTable<'data, 'file, Xcoff, R> where Self: 'file, 'data: 'file;
+    type DynamicRelocationIterator<'file> = NoDynamicRelocationIterator where Self: 'file, 'data: 'file;
 
     fn architecture(&self) -> Architecture {
         if self.is_64() {
@@ -130,11 +129,11 @@ where
         }
     }
 
-    fn segments(&'file self) -> XcoffSegmentIterator<'data, 'file, Xcoff, R> {
+    fn segments(&self) -> XcoffSegmentIterator<'data, '_, Xcoff, R> {
         XcoffSegmentIterator { file: self }
     }
 
-    fn section_by_name_bytes(
+    fn section_by_name_bytes<'file>(
         &'file self,
         section_name: &[u8],
     ) -> Option<XcoffSection<'data, 'file, Xcoff, R>> {
@@ -142,10 +141,7 @@ where
             .find(|section| section.name_bytes() == Ok(section_name))
     }
 
-    fn section_by_index(
-        &'file self,
-        index: SectionIndex,
-    ) -> Result<XcoffSection<'data, 'file, Xcoff, R>> {
+    fn section_by_index(&self, index: SectionIndex) -> Result<XcoffSection<'data, '_, Xcoff, R>> {
         let section = self.sections.section(index)?;
         Ok(XcoffSection {
             file: self,
@@ -154,18 +150,18 @@ where
         })
     }
 
-    fn sections(&'file self) -> XcoffSectionIterator<'data, 'file, Xcoff, R> {
+    fn sections(&self) -> XcoffSectionIterator<'data, '_, Xcoff, R> {
         XcoffSectionIterator {
             file: self,
             iter: self.sections.iter().enumerate(),
         }
     }
 
-    fn comdats(&'file self) -> XcoffComdatIterator<'data, 'file, Xcoff, R> {
+    fn comdats(&self) -> XcoffComdatIterator<'data, '_, Xcoff, R> {
         XcoffComdatIterator { file: self }
     }
 
-    fn symbol_table(&'file self) -> Option<XcoffSymbolTable<'data, 'file, Xcoff, R>> {
+    fn symbol_table(&self) -> Option<XcoffSymbolTable<'data, '_, Xcoff, R>> {
         if self.symbols.is_empty() {
             return None;
         }
@@ -175,10 +171,7 @@ where
         })
     }
 
-    fn symbol_by_index(
-        &'file self,
-        index: SymbolIndex,
-    ) -> Result<XcoffSymbol<'data, 'file, Xcoff, R>> {
+    fn symbol_by_index(&self, index: SymbolIndex) -> Result<XcoffSymbol<'data, '_, Xcoff, R>> {
         let symbol = self.symbols.symbol(index.0)?;
         Ok(XcoffSymbol {
             symbols: &self.symbols,
@@ -188,18 +181,20 @@ where
         })
     }
 
-    fn symbols(&'file self) -> XcoffSymbolIterator<'data, 'file, Xcoff, R> {
+    fn symbols(&self) -> XcoffSymbolIterator<'data, '_, Xcoff, R> {
         XcoffSymbolIterator {
             file: self,
             symbols: self.symbols.iter(),
         }
     }
 
-    fn dynamic_symbol_table(&'file self) -> Option<XcoffSymbolTable<'data, 'file, Xcoff, R>> {
+    fn dynamic_symbol_table<'file>(
+        &'file self,
+    ) -> Option<XcoffSymbolTable<'data, 'file, Xcoff, R>> {
         None
     }
 
-    fn dynamic_symbols(&'file self) -> XcoffSymbolIterator<'data, 'file, Xcoff, R> {
+    fn dynamic_symbols(&self) -> XcoffSymbolIterator<'data, '_, Xcoff, R> {
         // TODO: return the symbols in the STYP_LOADER section.
         XcoffSymbolIterator {
             file: self,
@@ -207,7 +202,7 @@ where
         }
     }
 
-    fn dynamic_relocations(&'file self) -> Option<Self::DynamicRelocationIterator> {
+    fn dynamic_relocations(&self) -> Option<Self::DynamicRelocationIterator<'_>> {
         // TODO: return the relocations in the STYP_LOADER section.
         None
     }
@@ -226,11 +221,11 @@ where
         self.section_by_name(".debug").is_some() || self.section_by_name(".dwinfo").is_some()
     }
 
-    fn relative_address_base(&'file self) -> u64 {
+    fn relative_address_base(&self) -> u64 {
         0
     }
 
-    fn entry(&'file self) -> u64 {
+    fn entry(&self) -> u64 {
         if let Some(aux_header) = self.aux_header {
             aux_header.o_entry().into()
         } else {
