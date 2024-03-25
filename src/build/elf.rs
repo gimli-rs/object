@@ -179,6 +179,7 @@ impl<'data> Builder<'data> {
                     index,
                     endian,
                     is_mips64el,
+                    section,
                     rels,
                     link,
                     &symbols,
@@ -189,6 +190,7 @@ impl<'data> Builder<'data> {
                     index,
                     endian,
                     is_mips64el,
+                    section,
                     rels,
                     link,
                     &symbols,
@@ -207,9 +209,10 @@ impl<'data> Builder<'data> {
             }
             let data = match section.sh_type(endian) {
                 elf::SHT_NOBITS => SectionData::UninitializedData(section.sh_size(endian).into()),
-                elf::SHT_PROGBITS | elf::SHT_INIT_ARRAY | elf::SHT_FINI_ARRAY => {
-                    SectionData::Data(section.data(endian, data)?.into())
-                }
+                elf::SHT_PROGBITS
+                | elf::SHT_INIT_ARRAY
+                | elf::SHT_FINI_ARRAY
+                | elf::SHT_PREINIT_ARRAY => SectionData::Data(section.data(endian, data)?.into()),
                 elf::SHT_REL | elf::SHT_RELA => relocations,
                 elf::SHT_SYMTAB => {
                     if index == symbols.section().0 {
@@ -272,7 +275,9 @@ impl<'data> Builder<'data> {
                 elf::SHT_GNU_VERNEED => SectionData::GnuVerneed,
                 other => match (builder.header.e_machine, other) {
                     (elf::EM_ARM, elf::SHT_ARM_ATTRIBUTES)
-                    | (elf::EM_AARCH64, elf::SHT_AARCH64_ATTRIBUTES) => {
+                    | (elf::EM_AARCH64, elf::SHT_AARCH64_ATTRIBUTES)
+                    | (elf::EM_CSKY, elf::SHT_CSKY_ATTRIBUTES)
+                    | (elf::EM_RISCV, elf::SHT_RISCV_ATTRIBUTES) => {
                         let attributes = section.attributes(endian, data)?;
                         Self::read_attributes(index, attributes, sections.len(), symbols.len())?
                     }
@@ -282,7 +287,8 @@ impl<'data> Builder<'data> {
                     (elf::EM_ARM, elf::SHT_ARM_EXIDX)
                     | (elf::EM_IA_64, elf::SHT_IA_64_UNWIND)
                     | (elf::EM_MIPS, elf::SHT_MIPS_REGINFO)
-                    | (elf::EM_MIPS, elf::SHT_MIPS_DWARF) => {
+                    | (elf::EM_MIPS, elf::SHT_MIPS_DWARF)
+                    | (elf::EM_X86_64, elf::SHT_X86_64_UNWIND) => {
                         SectionData::Data(section.data(endian, data)?.into())
                     }
                     _ => return Err(Error(format!("Unsupported section type {:x}", other))),
@@ -362,6 +368,7 @@ impl<'data> Builder<'data> {
         index: usize,
         endian: Elf::Endian,
         is_mips64el: bool,
+        section: &'data Elf::SectionHeader,
         rels: &'data [Rel],
         link: read::SectionIndex,
         symbols: &read::elf::SymbolTable<'data, Elf, R>,
@@ -372,7 +379,27 @@ impl<'data> Builder<'data> {
         Rel: Copy + Into<Elf::Rela>,
         R: ReadRef<'data>,
     {
-        if link.0 == 0 {
+        if link == dynamic_symbols.section() {
+            Self::read_relocations_impl::<Elf, Rel, true>(
+                index,
+                endian,
+                is_mips64el,
+                rels,
+                dynamic_symbols.len(),
+            )
+            .map(SectionData::DynamicRelocation)
+        } else if link.0 == 0 || section.sh_flags(endian).into() & u64::from(elf::SHF_ALLOC) != 0 {
+            // If there's no link, then none of the relocations may reference symbols.
+            // Assume that these are dynamic relocations, but don't use the dynamic
+            // symbol table when parsing.
+            //
+            // Additionally, sometimes there is an allocated section that links to
+            // the static symbol table. We don't currently support this case in general,
+            // but if none of the relocation entries reference a symbol then it is
+            // safe to treat it as a dynamic relocation section.
+            //
+            // For both of these cases, if there is a reference to a symbol then
+            // an error will be returned when parsing the relocations.
             Self::read_relocations_impl::<Elf, Rel, true>(index, endian, is_mips64el, rels, 0)
                 .map(SectionData::DynamicRelocation)
         } else if link == symbols.section() {
@@ -384,15 +411,6 @@ impl<'data> Builder<'data> {
                 symbols.len(),
             )
             .map(SectionData::Relocation)
-        } else if link == dynamic_symbols.section() {
-            Self::read_relocations_impl::<Elf, Rel, true>(
-                index,
-                endian,
-                is_mips64el,
-                rels,
-                dynamic_symbols.len(),
-            )
-            .map(SectionData::DynamicRelocation)
         } else {
             return Err(Error(format!(
                 "Invalid sh_link {} in relocation section at index {}",
@@ -862,8 +880,16 @@ impl<'data> Builder<'data> {
 
         // Assign dynamic symbol indices.
         let mut out_dynsyms = Vec::with_capacity(self.dynamic_symbols.len());
-        let mut gnu_hash_symbol_count = 0;
-        for symbol in &self.dynamic_symbols {
+        // Local symbols must come before global.
+        let local_symbols = self
+            .dynamic_symbols
+            .into_iter()
+            .filter(|symbol| symbol.st_bind() == elf::STB_LOCAL);
+        let global_symbols = self
+            .dynamic_symbols
+            .into_iter()
+            .filter(|symbol| symbol.st_bind() != elf::STB_LOCAL);
+        for symbol in local_symbols.chain(global_symbols) {
             let mut name = None;
             let mut hash = None;
             let mut gnu_hash = None;
@@ -872,9 +898,8 @@ impl<'data> Builder<'data> {
                 if hash_id.is_some() {
                     hash = Some(elf::hash(&symbol.name));
                 }
-                if gnu_hash_id.is_some() && symbol.st_shndx != elf::SHN_UNDEF {
+                if gnu_hash_id.is_some() && symbol.section.is_some() {
                     gnu_hash = Some(elf::gnu_hash(&symbol.name));
-                    gnu_hash_symbol_count += 1;
                 }
             }
             out_dynsyms.push(DynamicSymbolOut {
@@ -884,16 +909,26 @@ impl<'data> Builder<'data> {
                 gnu_hash,
             });
         }
+        let num_local_dynamic = out_dynsyms
+            .iter()
+            .take_while(|sym| self.dynamic_symbols.get(sym.id).st_bind() == elf::STB_LOCAL)
+            .count();
         // We must sort for GNU hash before allocating symbol indices.
+        let mut gnu_hash_symbol_count = 0;
         if gnu_hash_id.is_some() {
             if self.gnu_hash_bucket_count == 0 {
                 return Err(Error::new(".gnu.hash bucket count is zero"));
             }
             // TODO: recalculate bucket_count?
-            out_dynsyms.sort_by_key(|sym| match sym.gnu_hash {
+            out_dynsyms[num_local_dynamic..].sort_by_key(|sym| match sym.gnu_hash {
                 None => (0, 0),
                 Some(hash) => (1, hash % self.gnu_hash_bucket_count),
             });
+            gnu_hash_symbol_count = out_dynsyms
+                .iter()
+                .skip(num_local_dynamic)
+                .skip_while(|sym| sym.gnu_hash.is_none())
+                .count() as u32;
         }
         let mut out_dynsyms_index = vec![None; self.dynamic_symbols.len()];
         if dynsym_id.is_some() {
@@ -938,10 +973,10 @@ impl<'data> Builder<'data> {
                 name,
             });
         }
-        let num_local = 1 + out_syms
+        let num_local = out_syms
             .iter()
             .take_while(|sym| self.symbols.get(sym.id).st_bind() == elf::STB_LOCAL)
-            .count() as u32;
+            .count();
         let mut out_syms_index = vec![None; self.symbols.len()];
         if symtab_id.is_some() {
             writer.reserve_null_symbol_index();
@@ -1589,7 +1624,13 @@ impl<'data> Builder<'data> {
                         SectionData::Dynamic(dynamics) => {
                             ((1 + dynamics.len()) * self.class().dyn_size()) as u64
                         }
-                        _ => 0,
+                        SectionData::Attributes(_) => out_section.attributes.len() as u64,
+                        _ => {
+                            return Err(Error(format!(
+                                "Unimplemented size for section type {:x}",
+                                section.sh_type
+                            )))
+                        }
                     };
                     let sh_link = if let Some(id) = section.sh_link_section {
                         if let Some(index) = out_sections_index[id.0] {
@@ -1634,7 +1675,7 @@ impl<'data> Builder<'data> {
                     writer.write_shstrtab_section_header();
                 }
                 SectionData::Symbol => {
-                    writer.write_symtab_section_header(num_local);
+                    writer.write_symtab_section_header(1 + num_local as u32);
                 }
                 SectionData::SymbolSectionIndex => {
                     writer.write_symtab_shndx_section_header();
@@ -1646,7 +1687,8 @@ impl<'data> Builder<'data> {
                     writer.write_dynstr_section_header(section.sh_addr);
                 }
                 SectionData::DynamicSymbol => {
-                    writer.write_dynsym_section_header(section.sh_addr, 1);
+                    writer
+                        .write_dynsym_section_header(section.sh_addr, 1 + num_local_dynamic as u32);
                 }
                 SectionData::Hash => {
                     writer.write_hash_section_header(section.sh_addr);
@@ -3011,7 +3053,7 @@ pub struct AttributesSubsubsection<'data> {
 }
 
 /// The tag for a sub-subsection in an attributes section.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum AttributeTag {
     /// The attributes apply to the whole file.
     ///
