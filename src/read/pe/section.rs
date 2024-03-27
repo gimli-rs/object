@@ -6,7 +6,7 @@ use crate::pe;
 use crate::pe::ImageSectionHeader;
 use crate::read::{
     self, CompressedData, CompressedFileRange, ObjectSection, ObjectSegment, ReadError, ReadRef,
-    Relocation, Result, SectionFlags, SectionIndex, SectionKind, SegmentFlags,
+    Relocation, RelocationMap, Result, SectionFlags, SectionIndex, SectionKind, SegmentFlags,
 };
 
 use super::{ImageNtHeaders, PeFile, SectionTable};
@@ -286,6 +286,10 @@ where
 
     fn relocations(&self) -> PeRelocationIterator<'data, 'file, R> {
         PeRelocationIterator(PhantomData)
+    }
+
+    fn relocation_map(&self) -> read::Result<RelocationMap> {
+        RelocationMap::new(self.file, self)
     }
 
     fn flags(&self) -> SectionFlags {

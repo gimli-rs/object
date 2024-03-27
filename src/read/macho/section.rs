@@ -5,8 +5,8 @@ use crate::endian::{self, Endianness};
 use crate::macho;
 use crate::pod::Pod;
 use crate::read::{
-    self, CompressedData, CompressedFileRange, ObjectSection, ReadError, ReadRef, Result,
-    SectionFlags, SectionIndex, SectionKind,
+    self, CompressedData, CompressedFileRange, ObjectSection, ReadError, ReadRef, RelocationMap,
+    Result, SectionFlags, SectionIndex, SectionKind,
 };
 
 use super::{MachHeader, MachOFile, MachORelocationIterator};
@@ -197,6 +197,10 @@ where
                 .unwrap_or(&[])
                 .iter(),
         }
+    }
+
+    fn relocation_map(&self) -> read::Result<RelocationMap> {
+        RelocationMap::new(self.file, self)
     }
 
     fn flags(&self) -> SectionFlags {

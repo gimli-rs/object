@@ -4,8 +4,8 @@ use core::{iter, result, slice, str};
 use crate::endian::BigEndian as BE;
 use crate::pod::Pod;
 use crate::read::{
-    self, CompressedData, CompressedFileRange, Error, ObjectSection, ReadError, ReadRef, Result,
-    SectionFlags, SectionIndex, SectionKind,
+    self, CompressedData, CompressedFileRange, Error, ObjectSection, ReadError, ReadRef,
+    RelocationMap, Result, SectionFlags, SectionIndex, SectionKind,
 };
 use crate::xcoff;
 
@@ -189,6 +189,10 @@ where
             file: self.file,
             relocations: rel.iter(),
         }
+    }
+
+    fn relocation_map(&self) -> read::Result<RelocationMap> {
+        RelocationMap::new(self.file, self)
     }
 
     fn flags(&self) -> SectionFlags {
