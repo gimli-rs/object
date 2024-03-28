@@ -6,7 +6,7 @@ use crate::pe;
 use crate::read::util::StringTable;
 use crate::read::{
     self, CompressedData, CompressedFileRange, Error, ObjectSection, ObjectSegment, ReadError,
-    ReadRef, Result, SectionFlags, SectionIndex, SectionKind, SegmentFlags,
+    ReadRef, RelocationMap, Result, SectionFlags, SectionIndex, SectionKind, SegmentFlags,
 };
 
 use super::{CoffFile, CoffHeader, CoffRelocationIterator};
@@ -382,6 +382,10 @@ impl<'data, 'file, R: ReadRef<'data>, Coff: CoffHeader> ObjectSection<'data>
             file: self.file,
             iter: relocations.iter(),
         }
+    }
+
+    fn relocation_map(&self) -> read::Result<RelocationMap> {
+        RelocationMap::new(self.file, self)
     }
 
     fn flags(&self) -> SectionFlags {

@@ -6,7 +6,7 @@ use crate::endian::{self, Endianness, U32Bytes};
 use crate::pod::Pod;
 use crate::read::{
     self, Bytes, CompressedData, CompressedFileRange, CompressionFormat, Error, ObjectSection,
-    ReadError, ReadRef, SectionFlags, SectionIndex, SectionKind, StringTable,
+    ReadError, ReadRef, RelocationMap, SectionFlags, SectionIndex, SectionKind, StringTable,
 };
 
 use super::{
@@ -591,6 +591,10 @@ where
             file: self.file,
             relocations: None,
         }
+    }
+
+    fn relocation_map(&self) -> read::Result<RelocationMap> {
+        RelocationMap::new(self.file, self)
     }
 
     fn flags(&self) -> SectionFlags {
