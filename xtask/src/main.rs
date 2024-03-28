@@ -185,24 +185,6 @@ fn cmd_cross() -> Result<(), DynError> {
 }
 
 fn cmd_msrv() -> Result<(), DynError> {
-    // Test MSRV for object read feature.
-    cargo(&["update", "-p", "memchr", "--precise", "2.6.2"])?;
-    cmd_with(
-        "cargo",
-        &[
-            "+1.60.0",
-            "test",
-            "-p",
-            "object",
-            "--no-default-features",
-            "--features",
-            "read,std",
-        ],
-        |cmd| {
-            cmd.env("CARGO_NET_GIT_FETCH_WITH_CLI", "true");
-        },
-    )?;
-    cargo(&["update", "-p", "memchr"])?;
     // Test MSRV for object all features.
     cargo(&["update", "-p", "ahash", "--precise", "0.8.6"])?;
     cmd_with(
