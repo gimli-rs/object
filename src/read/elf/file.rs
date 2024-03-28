@@ -142,22 +142,21 @@ where
 {
 }
 
-impl<'data, 'file, Elf, R> Object<'data, 'file> for ElfFile<'data, Elf, R>
+impl<'data, Elf, R> Object<'data> for ElfFile<'data, Elf, R>
 where
-    'data: 'file,
     Elf: FileHeader,
-    R: 'file + ReadRef<'data>,
+    R: ReadRef<'data>,
 {
-    type Segment = ElfSegment<'data, 'file, Elf, R>;
-    type SegmentIterator = ElfSegmentIterator<'data, 'file, Elf, R>;
-    type Section = ElfSection<'data, 'file, Elf, R>;
-    type SectionIterator = ElfSectionIterator<'data, 'file, Elf, R>;
-    type Comdat = ElfComdat<'data, 'file, Elf, R>;
-    type ComdatIterator = ElfComdatIterator<'data, 'file, Elf, R>;
-    type Symbol = ElfSymbol<'data, 'file, Elf, R>;
-    type SymbolIterator = ElfSymbolIterator<'data, 'file, Elf, R>;
-    type SymbolTable = ElfSymbolTable<'data, 'file, Elf, R>;
-    type DynamicRelocationIterator = ElfDynamicRelocationIterator<'data, 'file, Elf, R>;
+    type Segment<'file> = ElfSegment<'data, 'file, Elf, R> where Self: 'file, 'data: 'file;
+    type SegmentIterator<'file> = ElfSegmentIterator<'data, 'file, Elf, R> where Self: 'file, 'data: 'file;
+    type Section<'file> = ElfSection<'data, 'file, Elf, R> where Self: 'file, 'data: 'file;
+    type SectionIterator<'file> = ElfSectionIterator<'data, 'file, Elf, R> where Self: 'file, 'data: 'file;
+    type Comdat<'file> = ElfComdat<'data, 'file, Elf, R> where Self: 'file, 'data: 'file;
+    type ComdatIterator<'file> = ElfComdatIterator<'data, 'file, Elf, R> where Self: 'file, 'data: 'file;
+    type Symbol<'file> = ElfSymbol<'data, 'file, Elf, R> where Self: 'file, 'data: 'file;
+    type SymbolIterator<'file> = ElfSymbolIterator<'data, 'file, Elf, R> where Self: 'file, 'data: 'file;
+    type SymbolTable<'file> = ElfSymbolTable<'data, 'file, Elf, R> where Self: 'file, 'data: 'file;
+    type DynamicRelocationIterator<'file> = ElfDynamicRelocationIterator<'data, 'file, Elf, R> where Self: 'file, 'data: 'file;
 
     fn architecture(&self) -> Architecture {
         match (
@@ -214,14 +213,14 @@ where
         }
     }
 
-    fn segments(&'file self) -> ElfSegmentIterator<'data, 'file, Elf, R> {
+    fn segments(&self) -> ElfSegmentIterator<'data, '_, Elf, R> {
         ElfSegmentIterator {
             file: self,
             iter: self.segments.iter(),
         }
     }
 
-    fn section_by_name_bytes(
+    fn section_by_name_bytes<'file>(
         &'file self,
         section_name: &[u8],
     ) -> Option<ElfSection<'data, 'file, Elf, R>> {
@@ -229,10 +228,7 @@ where
             .or_else(|| self.zdebug_section_by_name(section_name))
     }
 
-    fn section_by_index(
-        &'file self,
-        index: SectionIndex,
-    ) -> read::Result<ElfSection<'data, 'file, Elf, R>> {
+    fn section_by_index(&self, index: SectionIndex) -> read::Result<ElfSection<'data, '_, Elf, R>> {
         let section = self.sections.section(index)?;
         Ok(ElfSection {
             file: self,
@@ -241,24 +237,21 @@ where
         })
     }
 
-    fn sections(&'file self) -> ElfSectionIterator<'data, 'file, Elf, R> {
+    fn sections(&self) -> ElfSectionIterator<'data, '_, Elf, R> {
         ElfSectionIterator {
             file: self,
             iter: self.sections.iter().enumerate(),
         }
     }
 
-    fn comdats(&'file self) -> ElfComdatIterator<'data, 'file, Elf, R> {
+    fn comdats(&self) -> ElfComdatIterator<'data, '_, Elf, R> {
         ElfComdatIterator {
             file: self,
             iter: self.sections.iter().enumerate(),
         }
     }
 
-    fn symbol_by_index(
-        &'file self,
-        index: SymbolIndex,
-    ) -> read::Result<ElfSymbol<'data, 'file, Elf, R>> {
+    fn symbol_by_index(&self, index: SymbolIndex) -> read::Result<ElfSymbol<'data, '_, Elf, R>> {
         let symbol = self.symbols.symbol(index.0)?;
         Ok(ElfSymbol {
             endian: self.endian,
@@ -268,7 +261,7 @@ where
         })
     }
 
-    fn symbols(&'file self) -> ElfSymbolIterator<'data, 'file, Elf, R> {
+    fn symbols(&self) -> ElfSymbolIterator<'data, '_, Elf, R> {
         ElfSymbolIterator {
             endian: self.endian,
             symbols: &self.symbols,
@@ -276,7 +269,7 @@ where
         }
     }
 
-    fn symbol_table(&'file self) -> Option<ElfSymbolTable<'data, 'file, Elf, R>> {
+    fn symbol_table(&self) -> Option<ElfSymbolTable<'data, '_, Elf, R>> {
         if self.symbols.is_empty() {
             return None;
         }
@@ -286,7 +279,7 @@ where
         })
     }
 
-    fn dynamic_symbols(&'file self) -> ElfSymbolIterator<'data, 'file, Elf, R> {
+    fn dynamic_symbols(&self) -> ElfSymbolIterator<'data, '_, Elf, R> {
         ElfSymbolIterator {
             endian: self.endian,
             symbols: &self.dynamic_symbols,
@@ -294,7 +287,7 @@ where
         }
     }
 
-    fn dynamic_symbol_table(&'file self) -> Option<ElfSymbolTable<'data, 'file, Elf, R>> {
+    fn dynamic_symbol_table(&self) -> Option<ElfSymbolTable<'data, '_, Elf, R>> {
         if self.dynamic_symbols.is_empty() {
             return None;
         }
@@ -304,7 +297,7 @@ where
         })
     }
 
-    fn dynamic_relocations(
+    fn dynamic_relocations<'file>(
         &'file self,
     ) -> Option<ElfDynamicRelocationIterator<'data, 'file, Elf, R>> {
         Some(ElfDynamicRelocationIterator {

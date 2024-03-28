@@ -207,22 +207,21 @@ where
 {
 }
 
-impl<'data, 'file, Mach, R> Object<'data, 'file> for MachOFile<'data, Mach, R>
+impl<'data, Mach, R> Object<'data> for MachOFile<'data, Mach, R>
 where
-    'data: 'file,
     Mach: MachHeader,
-    R: 'file + ReadRef<'data>,
+    R: ReadRef<'data>,
 {
-    type Segment = MachOSegment<'data, 'file, Mach, R>;
-    type SegmentIterator = MachOSegmentIterator<'data, 'file, Mach, R>;
-    type Section = MachOSection<'data, 'file, Mach, R>;
-    type SectionIterator = MachOSectionIterator<'data, 'file, Mach, R>;
-    type Comdat = MachOComdat<'data, 'file, Mach, R>;
-    type ComdatIterator = MachOComdatIterator<'data, 'file, Mach, R>;
-    type Symbol = MachOSymbol<'data, 'file, Mach, R>;
-    type SymbolIterator = MachOSymbolIterator<'data, 'file, Mach, R>;
-    type SymbolTable = MachOSymbolTable<'data, 'file, Mach, R>;
-    type DynamicRelocationIterator = NoDynamicRelocationIterator;
+    type Segment<'file> = MachOSegment<'data, 'file, Mach, R> where Self: 'file, 'data: 'file;
+    type SegmentIterator<'file> = MachOSegmentIterator<'data, 'file, Mach, R> where Self: 'file, 'data: 'file;
+    type Section<'file> = MachOSection<'data, 'file, Mach, R> where Self: 'file, 'data: 'file;
+    type SectionIterator<'file> = MachOSectionIterator<'data, 'file, Mach, R> where Self: 'file, 'data: 'file;
+    type Comdat<'file> = MachOComdat<'data, 'file, Mach, R> where Self: 'file, 'data: 'file;
+    type ComdatIterator<'file> = MachOComdatIterator<'data, 'file, Mach, R> where Self: 'file, 'data: 'file;
+    type Symbol<'file> = MachOSymbol<'data, 'file, Mach, R> where Self: 'file, 'data: 'file;
+    type SymbolIterator<'file> = MachOSymbolIterator<'data, 'file, Mach, R> where Self: 'file, 'data: 'file;
+    type SymbolTable<'file> = MachOSymbolTable<'data, 'file, Mach, R> where Self: 'file, 'data: 'file;
+    type DynamicRelocationIterator<'file> = NoDynamicRelocationIterator where Self: 'file, 'data: 'file;
 
     fn architecture(&self) -> Architecture {
         match self.header.cputype(self.endian) {
@@ -268,14 +267,14 @@ where
         }
     }
 
-    fn segments(&'file self) -> MachOSegmentIterator<'data, 'file, Mach, R> {
+    fn segments(&self) -> MachOSegmentIterator<'data, '_, Mach, R> {
         MachOSegmentIterator {
             file: self,
             iter: self.segments.iter(),
         }
     }
 
-    fn section_by_name_bytes(
+    fn section_by_name_bytes<'file>(
         &'file self,
         section_name: &[u8],
     ) -> Option<MachOSection<'data, 'file, Mach, R>> {
@@ -307,10 +306,7 @@ where
         self.sections().find(cmp_section_name)
     }
 
-    fn section_by_index(
-        &'file self,
-        index: SectionIndex,
-    ) -> Result<MachOSection<'data, 'file, Mach, R>> {
+    fn section_by_index(&self, index: SectionIndex) -> Result<MachOSection<'data, '_, Mach, R>> {
         let internal = *self.section_internal(index)?;
         Ok(MachOSection {
             file: self,
@@ -318,26 +314,23 @@ where
         })
     }
 
-    fn sections(&'file self) -> MachOSectionIterator<'data, 'file, Mach, R> {
+    fn sections(&self) -> MachOSectionIterator<'data, '_, Mach, R> {
         MachOSectionIterator {
             file: self,
             iter: self.sections.iter(),
         }
     }
 
-    fn comdats(&'file self) -> MachOComdatIterator<'data, 'file, Mach, R> {
+    fn comdats(&self) -> MachOComdatIterator<'data, '_, Mach, R> {
         MachOComdatIterator { file: self }
     }
 
-    fn symbol_by_index(
-        &'file self,
-        index: SymbolIndex,
-    ) -> Result<MachOSymbol<'data, 'file, Mach, R>> {
+    fn symbol_by_index(&self, index: SymbolIndex) -> Result<MachOSymbol<'data, '_, Mach, R>> {
         let nlist = self.symbols.symbol(index.0)?;
         MachOSymbol::new(self, index, nlist).read_error("Unsupported Mach-O symbol index")
     }
 
-    fn symbols(&'file self) -> MachOSymbolIterator<'data, 'file, Mach, R> {
+    fn symbols(&self) -> MachOSymbolIterator<'data, '_, Mach, R> {
         MachOSymbolIterator {
             file: self,
             index: 0,
@@ -345,11 +338,11 @@ where
     }
 
     #[inline]
-    fn symbol_table(&'file self) -> Option<MachOSymbolTable<'data, 'file, Mach, R>> {
+    fn symbol_table(&self) -> Option<MachOSymbolTable<'data, '_, Mach, R>> {
         Some(MachOSymbolTable { file: self })
     }
 
-    fn dynamic_symbols(&'file self) -> MachOSymbolIterator<'data, 'file, Mach, R> {
+    fn dynamic_symbols(&self) -> MachOSymbolIterator<'data, '_, Mach, R> {
         MachOSymbolIterator {
             file: self,
             index: self.symbols.len(),
@@ -357,11 +350,11 @@ where
     }
 
     #[inline]
-    fn dynamic_symbol_table(&'file self) -> Option<MachOSymbolTable<'data, 'file, Mach, R>> {
+    fn dynamic_symbol_table(&self) -> Option<MachOSymbolTable<'data, '_, Mach, R>> {
         None
     }
 
-    fn object_map(&'file self) -> ObjectMap<'data> {
+    fn object_map(&self) -> ObjectMap<'data> {
         self.symbols.object_map(self.endian)
     }
 
@@ -440,7 +433,7 @@ where
     }
 
     #[inline]
-    fn dynamic_relocations(&'file self) -> Option<NoDynamicRelocationIterator> {
+    fn dynamic_relocations(&self) -> Option<NoDynamicRelocationIterator> {
         None
     }
 
