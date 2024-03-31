@@ -375,6 +375,9 @@ impl<'data> ArchiveMember<'data> {
             let name_len = memchr::memchr(b' ', &header.name).unwrap_or(header.name.len());
             &header.name[..name_len]
         } else {
+            // Name is terminated by slash or space.
+            // Slash allows embedding spaces in the name, so only look
+            // for space if there is no slash.
             let name_len = memchr::memchr(b'/', &header.name)
                 .or_else(|| memchr::memchr(b' ', &header.name))
                 .unwrap_or(header.name.len());
@@ -571,18 +574,27 @@ fn parse_u64_digits(digits: &[u8], radix: u32) -> Option<u64> {
     Some(result)
 }
 
+/// Digits are a decimal offset into the extended name table.
+/// Name is terminated by "/\n" (for GNU) or a null byte (for COFF).
 fn parse_sysv_extended_name<'data>(digits: &[u8], names: &'data [u8]) -> Result<&'data [u8], ()> {
     let offset = parse_u64_digits(digits, 10).ok_or(())?;
     let offset = offset.try_into().map_err(|_| ())?;
     let name_data = names.get(offset..).ok_or(())?;
-    let name = match memchr::memchr2(b'/', b'\0', name_data) {
-        Some(len) => &name_data[..len],
-        None => name_data,
-    };
-    Ok(name)
+    let len = memchr::memchr2(b'\n', b'\0', name_data).ok_or(())?;
+    if name_data[len] == b'\n' {
+        if len < 1 || name_data[len - 1] != b'/' {
+            Err(())
+        } else {
+            Ok(&name_data[..len - 1])
+        }
+    } else {
+        Ok(&name_data[..len])
+    }
 }
 
-/// Modifies `data` to start after the extended name.
+/// Digits are a decimal length of the extended name, which is contained
+/// in `data` at `offset`.
+/// Modifies `offset` and `size` to start after the extended name.
 fn parse_bsd_extended_name<'data, R: ReadRef<'data>>(
     digits: &[u8],
     data: R,
@@ -760,7 +772,7 @@ mod tests {
         let data = b"\
             !<thin>\n\
             //                                              18        `\n\
-            0123456789abcdef/\n\
+            0123456789/abcde/\n\
             s p a c e/      0           0     0     644     4         `\n\
             0123456789abcde/0           0     0     644     3         `\n\
             /0              0           0     0     644     4         `\n\
@@ -783,7 +795,7 @@ mod tests {
         assert_eq!(member.data(data).unwrap(), &[]);
 
         let member = members.next().unwrap().unwrap();
-        assert_eq!(member.name(), b"0123456789abcdef");
+        assert_eq!(member.name(), b"0123456789/abcde");
         assert!(member.is_thin());
         assert_eq!(member.size(), 4);
         assert_eq!(member.data(data).unwrap(), &[]);
