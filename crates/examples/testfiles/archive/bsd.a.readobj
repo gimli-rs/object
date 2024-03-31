@@ -1,0 +1,1646 @@
+Format: Archive (Bsd)
+
+Member: "one.o"
+Format: ELF 64-bit
+FileHeader {
+    Ident {
+        Magic: [7F, 45, 4C, 46]
+        Class: ELFCLASS64 (0x2)
+        Data: ELFDATA2LSB (0x1)
+        Version: EV_CURRENT (0x1)
+        OsAbi: ELFOSABI_SYSV (0x0)
+        AbiVersion: 0x0
+        Unused: [0, 0, 0, 0, 0, 0, 0]
+    }
+    Type: ET_REL (0x1)
+    Machine: EM_X86_64 (0x3E)
+    Version: EV_CURRENT (0x1)
+    Type: ET_REL (0x1)
+    Entry: 0x0
+    ProgramHeaderOffset: 0x0
+    SectionHeaderOffset: 0x228
+    Flags: 0x0
+    HeaderSize: 0x40
+    ProgramHeaderEntrySize: 0x0
+    ProgramHeaderCount: 0
+    SectionHeaderEntrySize: 0x40
+    SectionHeaderCount: 12
+    SectionHeaderStringTableIndex: 11
+}
+SectionHeader {
+    Index: 0
+    Name: "" (0x0)
+    Type: SHT_NULL (0x0)
+    Flags: 0x0
+    Address: 0x0
+    Offset: 0x0
+    Size: 0x0
+    Link: 0
+    Info: 0
+    AddressAlign: 0x0
+    EntrySize: 0x0
+}
+SectionHeader {
+    Index: 1
+    Name: ".text" (0x1B)
+    Type: SHT_PROGBITS (0x1)
+    Flags: 0x6
+        SHF_ALLOC (0x2)
+        SHF_EXECINSTR (0x4)
+    Address: 0x0
+    Offset: 0x40
+    Size: 0x16
+    Link: 0
+    Info: 0
+    AddressAlign: 0x1
+    EntrySize: 0x0
+}
+SectionHeader {
+    Index: 2
+    Name: ".data" (0x21)
+    Type: SHT_PROGBITS (0x1)
+    Flags: 0x3
+        SHF_WRITE (0x1)
+        SHF_ALLOC (0x2)
+    Address: 0x0
+    Offset: 0x56
+    Size: 0x0
+    Link: 0
+    Info: 0
+    AddressAlign: 0x1
+    EntrySize: 0x0
+}
+SectionHeader {
+    Index: 3
+    Name: ".bss" (0x27)
+    Type: SHT_NOBITS (0x8)
+    Flags: 0x3
+        SHF_WRITE (0x1)
+        SHF_ALLOC (0x2)
+    Address: 0x0
+    Offset: 0x56
+    Size: 0x0
+    Link: 0
+    Info: 0
+    AddressAlign: 0x1
+    EntrySize: 0x0
+}
+SectionHeader {
+    Index: 4
+    Name: ".comment" (0x2C)
+    Type: SHT_PROGBITS (0x1)
+    Flags: 0x30
+        SHF_MERGE (0x10)
+        SHF_STRINGS (0x20)
+    Address: 0x0
+    Offset: 0x56
+    Size: 0x2C
+    Link: 0
+    Info: 0
+    AddressAlign: 0x1
+    EntrySize: 0x1
+}
+SectionHeader {
+    Index: 5
+    Name: ".note.GNU-stack" (0x35)
+    Type: SHT_PROGBITS (0x1)
+    Flags: 0x0
+    Address: 0x0
+    Offset: 0x82
+    Size: 0x0
+    Link: 0
+    Info: 0
+    AddressAlign: 0x1
+    EntrySize: 0x0
+}
+SectionHeader {
+    Index: 6
+    Name: ".note.gnu.property" (0x45)
+    Type: SHT_NOTE (0x7)
+    Flags: 0x2
+        SHF_ALLOC (0x2)
+    Address: 0x0
+    Offset: 0x88
+    Size: 0x20
+    Link: 0
+    Info: 0
+    AddressAlign: 0x8
+    EntrySize: 0x0
+    Note {
+        Name: "GNU" (0x4)
+        Type: NT_GNU_PROPERTY_TYPE_0 (0x5)
+        Property {
+            Type: GNU_PROPERTY_X86_FEATURE_1_AND (0xC0000002)
+            Value: 0x3
+                GNU_PROPERTY_X86_FEATURE_1_IBT (0x1)
+                GNU_PROPERTY_X86_FEATURE_1_SHSTK (0x2)
+        }
+    }
+}
+SectionHeader {
+    Index: 7
+    Name: ".eh_frame" (0x5D)
+    Type: SHT_PROGBITS (0x1)
+    Flags: 0x2
+        SHF_ALLOC (0x2)
+    Address: 0x0
+    Offset: 0xA8
+    Size: 0x58
+    Link: 0
+    Info: 0
+    AddressAlign: 0x8
+    EntrySize: 0x0
+}
+SectionHeader {
+    Index: 8
+    Name: ".rela.eh_frame" (0x58)
+    Type: SHT_RELA (0x4)
+    Flags: 0x40
+        SHF_INFO_LINK (0x40)
+    Address: 0x0
+    Offset: 0x190
+    Size: 0x30
+    Link: 9
+    Info: 7
+    AddressAlign: 0x8
+    EntrySize: 0x18
+    Relocation {
+        Offset: 0x20
+        Type: R_X86_64_PC32 (0x2)
+        Symbol: "" (0x2)
+    }
+    Relocation {
+        Offset: 0x40
+        Type: R_X86_64_PC32 (0x2)
+        Symbol: "" (0x2)
+        Addend: 0xB
+    }
+}
+SectionHeader {
+    Index: 9
+    Name: ".symtab" (0x1)
+    Type: SHT_SYMTAB (0x2)
+    Flags: 0x0
+    Address: 0x0
+    Offset: 0x100
+    Size: 0x78
+    Link: 10
+    Info: 3
+    AddressAlign: 0x8
+    EntrySize: 0x18
+    Symbol {
+        Index: 0
+        Name: 0x0
+        Value: 0x0
+        Size: 0x0
+        Type: STT_NOTYPE (0x0)
+        Bind: STB_LOCAL (0x0)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: SHN_UNDEF (0x0)
+    }
+    Symbol {
+        Index: 1
+        Name: "<stdin>" (0x1)
+        Value: 0x0
+        Size: 0x0
+        Type: STT_FILE (0x4)
+        Bind: STB_LOCAL (0x0)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: SHN_ABS (0xFFF1)
+    }
+    Symbol {
+        Index: 2
+        Name: "" (0x0)
+        Value: 0x0
+        Size: 0x0
+        Type: STT_SECTION (0x3)
+        Bind: STB_LOCAL (0x0)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: 1
+    }
+    Symbol {
+        Index: 3
+        Name: "one_a" (0x9)
+        Value: 0x0
+        Size: 0xB
+        Type: STT_FUNC (0x2)
+        Bind: STB_GLOBAL (0x1)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: 1
+    }
+    Symbol {
+        Index: 4
+        Name: "one_b" (0xF)
+        Value: 0xB
+        Size: 0xB
+        Type: STT_FUNC (0x2)
+        Bind: STB_GLOBAL (0x1)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: 1
+    }
+}
+SectionHeader {
+    Index: 10
+    Name: ".strtab" (0x9)
+    Type: SHT_STRTAB (0x3)
+    Flags: 0x0
+    Address: 0x0
+    Offset: 0x178
+    Size: 0x15
+    Link: 0
+    Info: 0
+    AddressAlign: 0x1
+    EntrySize: 0x0
+}
+SectionHeader {
+    Index: 11
+    Name: ".shstrtab" (0x11)
+    Type: SHT_STRTAB (0x3)
+    Flags: 0x0
+    Address: 0x0
+    Offset: 0x1C0
+    Size: 0x67
+    Link: 0
+    Info: 0
+    AddressAlign: 0x1
+    EntrySize: 0x0
+}
+
+Member: "two.o"
+Format: ELF 64-bit
+FileHeader {
+    Ident {
+        Magic: [7F, 45, 4C, 46]
+        Class: ELFCLASS64 (0x2)
+        Data: ELFDATA2LSB (0x1)
+        Version: EV_CURRENT (0x1)
+        OsAbi: ELFOSABI_SYSV (0x0)
+        AbiVersion: 0x0
+        Unused: [0, 0, 0, 0, 0, 0, 0]
+    }
+    Type: ET_REL (0x1)
+    Machine: EM_X86_64 (0x3E)
+    Version: EV_CURRENT (0x1)
+    Type: ET_REL (0x1)
+    Entry: 0x0
+    ProgramHeaderOffset: 0x0
+    SectionHeaderOffset: 0x228
+    Flags: 0x0
+    HeaderSize: 0x40
+    ProgramHeaderEntrySize: 0x0
+    ProgramHeaderCount: 0
+    SectionHeaderEntrySize: 0x40
+    SectionHeaderCount: 12
+    SectionHeaderStringTableIndex: 11
+}
+SectionHeader {
+    Index: 0
+    Name: "" (0x0)
+    Type: SHT_NULL (0x0)
+    Flags: 0x0
+    Address: 0x0
+    Offset: 0x0
+    Size: 0x0
+    Link: 0
+    Info: 0
+    AddressAlign: 0x0
+    EntrySize: 0x0
+}
+SectionHeader {
+    Index: 1
+    Name: ".text" (0x1B)
+    Type: SHT_PROGBITS (0x1)
+    Flags: 0x6
+        SHF_ALLOC (0x2)
+        SHF_EXECINSTR (0x4)
+    Address: 0x0
+    Offset: 0x40
+    Size: 0x16
+    Link: 0
+    Info: 0
+    AddressAlign: 0x1
+    EntrySize: 0x0
+}
+SectionHeader {
+    Index: 2
+    Name: ".data" (0x21)
+    Type: SHT_PROGBITS (0x1)
+    Flags: 0x3
+        SHF_WRITE (0x1)
+        SHF_ALLOC (0x2)
+    Address: 0x0
+    Offset: 0x56
+    Size: 0x0
+    Link: 0
+    Info: 0
+    AddressAlign: 0x1
+    EntrySize: 0x0
+}
+SectionHeader {
+    Index: 3
+    Name: ".bss" (0x27)
+    Type: SHT_NOBITS (0x8)
+    Flags: 0x3
+        SHF_WRITE (0x1)
+        SHF_ALLOC (0x2)
+    Address: 0x0
+    Offset: 0x56
+    Size: 0x0
+    Link: 0
+    Info: 0
+    AddressAlign: 0x1
+    EntrySize: 0x0
+}
+SectionHeader {
+    Index: 4
+    Name: ".comment" (0x2C)
+    Type: SHT_PROGBITS (0x1)
+    Flags: 0x30
+        SHF_MERGE (0x10)
+        SHF_STRINGS (0x20)
+    Address: 0x0
+    Offset: 0x56
+    Size: 0x2C
+    Link: 0
+    Info: 0
+    AddressAlign: 0x1
+    EntrySize: 0x1
+}
+SectionHeader {
+    Index: 5
+    Name: ".note.GNU-stack" (0x35)
+    Type: SHT_PROGBITS (0x1)
+    Flags: 0x0
+    Address: 0x0
+    Offset: 0x82
+    Size: 0x0
+    Link: 0
+    Info: 0
+    AddressAlign: 0x1
+    EntrySize: 0x0
+}
+SectionHeader {
+    Index: 6
+    Name: ".note.gnu.property" (0x45)
+    Type: SHT_NOTE (0x7)
+    Flags: 0x2
+        SHF_ALLOC (0x2)
+    Address: 0x0
+    Offset: 0x88
+    Size: 0x20
+    Link: 0
+    Info: 0
+    AddressAlign: 0x8
+    EntrySize: 0x0
+    Note {
+        Name: "GNU" (0x4)
+        Type: NT_GNU_PROPERTY_TYPE_0 (0x5)
+        Property {
+            Type: GNU_PROPERTY_X86_FEATURE_1_AND (0xC0000002)
+            Value: 0x3
+                GNU_PROPERTY_X86_FEATURE_1_IBT (0x1)
+                GNU_PROPERTY_X86_FEATURE_1_SHSTK (0x2)
+        }
+    }
+}
+SectionHeader {
+    Index: 7
+    Name: ".eh_frame" (0x5D)
+    Type: SHT_PROGBITS (0x1)
+    Flags: 0x2
+        SHF_ALLOC (0x2)
+    Address: 0x0
+    Offset: 0xA8
+    Size: 0x58
+    Link: 0
+    Info: 0
+    AddressAlign: 0x8
+    EntrySize: 0x0
+}
+SectionHeader {
+    Index: 8
+    Name: ".rela.eh_frame" (0x58)
+    Type: SHT_RELA (0x4)
+    Flags: 0x40
+        SHF_INFO_LINK (0x40)
+    Address: 0x0
+    Offset: 0x190
+    Size: 0x30
+    Link: 9
+    Info: 7
+    AddressAlign: 0x8
+    EntrySize: 0x18
+    Relocation {
+        Offset: 0x20
+        Type: R_X86_64_PC32 (0x2)
+        Symbol: "" (0x2)
+    }
+    Relocation {
+        Offset: 0x40
+        Type: R_X86_64_PC32 (0x2)
+        Symbol: "" (0x2)
+        Addend: 0xB
+    }
+}
+SectionHeader {
+    Index: 9
+    Name: ".symtab" (0x1)
+    Type: SHT_SYMTAB (0x2)
+    Flags: 0x0
+    Address: 0x0
+    Offset: 0x100
+    Size: 0x78
+    Link: 10
+    Info: 3
+    AddressAlign: 0x8
+    EntrySize: 0x18
+    Symbol {
+        Index: 0
+        Name: 0x0
+        Value: 0x0
+        Size: 0x0
+        Type: STT_NOTYPE (0x0)
+        Bind: STB_LOCAL (0x0)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: SHN_UNDEF (0x0)
+    }
+    Symbol {
+        Index: 1
+        Name: "<stdin>" (0x1)
+        Value: 0x0
+        Size: 0x0
+        Type: STT_FILE (0x4)
+        Bind: STB_LOCAL (0x0)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: SHN_ABS (0xFFF1)
+    }
+    Symbol {
+        Index: 2
+        Name: "" (0x0)
+        Value: 0x0
+        Size: 0x0
+        Type: STT_SECTION (0x3)
+        Bind: STB_LOCAL (0x0)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: 1
+    }
+    Symbol {
+        Index: 3
+        Name: "two_a" (0x9)
+        Value: 0x0
+        Size: 0xB
+        Type: STT_FUNC (0x2)
+        Bind: STB_GLOBAL (0x1)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: 1
+    }
+    Symbol {
+        Index: 4
+        Name: "two_b" (0xF)
+        Value: 0xB
+        Size: 0xB
+        Type: STT_FUNC (0x2)
+        Bind: STB_GLOBAL (0x1)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: 1
+    }
+}
+SectionHeader {
+    Index: 10
+    Name: ".strtab" (0x9)
+    Type: SHT_STRTAB (0x3)
+    Flags: 0x0
+    Address: 0x0
+    Offset: 0x178
+    Size: 0x15
+    Link: 0
+    Info: 0
+    AddressAlign: 0x1
+    EntrySize: 0x0
+}
+SectionHeader {
+    Index: 11
+    Name: ".shstrtab" (0x11)
+    Type: SHT_STRTAB (0x3)
+    Flags: 0x0
+    Address: 0x0
+    Offset: 0x1C0
+    Size: 0x67
+    Link: 0
+    Info: 0
+    AddressAlign: 0x1
+    EntrySize: 0x0
+}
+
+Member: "three.o"
+Format: ELF 64-bit
+FileHeader {
+    Ident {
+        Magic: [7F, 45, 4C, 46]
+        Class: ELFCLASS64 (0x2)
+        Data: ELFDATA2LSB (0x1)
+        Version: EV_CURRENT (0x1)
+        OsAbi: ELFOSABI_SYSV (0x0)
+        AbiVersion: 0x0
+        Unused: [0, 0, 0, 0, 0, 0, 0]
+    }
+    Type: ET_REL (0x1)
+    Machine: EM_X86_64 (0x3E)
+    Version: EV_CURRENT (0x1)
+    Type: ET_REL (0x1)
+    Entry: 0x0
+    ProgramHeaderOffset: 0x0
+    SectionHeaderOffset: 0x230
+    Flags: 0x0
+    HeaderSize: 0x40
+    ProgramHeaderEntrySize: 0x0
+    ProgramHeaderCount: 0
+    SectionHeaderEntrySize: 0x40
+    SectionHeaderCount: 12
+    SectionHeaderStringTableIndex: 11
+}
+SectionHeader {
+    Index: 0
+    Name: "" (0x0)
+    Type: SHT_NULL (0x0)
+    Flags: 0x0
+    Address: 0x0
+    Offset: 0x0
+    Size: 0x0
+    Link: 0
+    Info: 0
+    AddressAlign: 0x0
+    EntrySize: 0x0
+}
+SectionHeader {
+    Index: 1
+    Name: ".text" (0x1B)
+    Type: SHT_PROGBITS (0x1)
+    Flags: 0x6
+        SHF_ALLOC (0x2)
+        SHF_EXECINSTR (0x4)
+    Address: 0x0
+    Offset: 0x40
+    Size: 0x16
+    Link: 0
+    Info: 0
+    AddressAlign: 0x1
+    EntrySize: 0x0
+}
+SectionHeader {
+    Index: 2
+    Name: ".data" (0x21)
+    Type: SHT_PROGBITS (0x1)
+    Flags: 0x3
+        SHF_WRITE (0x1)
+        SHF_ALLOC (0x2)
+    Address: 0x0
+    Offset: 0x56
+    Size: 0x0
+    Link: 0
+    Info: 0
+    AddressAlign: 0x1
+    EntrySize: 0x0
+}
+SectionHeader {
+    Index: 3
+    Name: ".bss" (0x27)
+    Type: SHT_NOBITS (0x8)
+    Flags: 0x3
+        SHF_WRITE (0x1)
+        SHF_ALLOC (0x2)
+    Address: 0x0
+    Offset: 0x56
+    Size: 0x0
+    Link: 0
+    Info: 0
+    AddressAlign: 0x1
+    EntrySize: 0x0
+}
+SectionHeader {
+    Index: 4
+    Name: ".comment" (0x2C)
+    Type: SHT_PROGBITS (0x1)
+    Flags: 0x30
+        SHF_MERGE (0x10)
+        SHF_STRINGS (0x20)
+    Address: 0x0
+    Offset: 0x56
+    Size: 0x2C
+    Link: 0
+    Info: 0
+    AddressAlign: 0x1
+    EntrySize: 0x1
+}
+SectionHeader {
+    Index: 5
+    Name: ".note.GNU-stack" (0x35)
+    Type: SHT_PROGBITS (0x1)
+    Flags: 0x0
+    Address: 0x0
+    Offset: 0x82
+    Size: 0x0
+    Link: 0
+    Info: 0
+    AddressAlign: 0x1
+    EntrySize: 0x0
+}
+SectionHeader {
+    Index: 6
+    Name: ".note.gnu.property" (0x45)
+    Type: SHT_NOTE (0x7)
+    Flags: 0x2
+        SHF_ALLOC (0x2)
+    Address: 0x0
+    Offset: 0x88
+    Size: 0x20
+    Link: 0
+    Info: 0
+    AddressAlign: 0x8
+    EntrySize: 0x0
+    Note {
+        Name: "GNU" (0x4)
+        Type: NT_GNU_PROPERTY_TYPE_0 (0x5)
+        Property {
+            Type: GNU_PROPERTY_X86_FEATURE_1_AND (0xC0000002)
+            Value: 0x3
+                GNU_PROPERTY_X86_FEATURE_1_IBT (0x1)
+                GNU_PROPERTY_X86_FEATURE_1_SHSTK (0x2)
+        }
+    }
+}
+SectionHeader {
+    Index: 7
+    Name: ".eh_frame" (0x5D)
+    Type: SHT_PROGBITS (0x1)
+    Flags: 0x2
+        SHF_ALLOC (0x2)
+    Address: 0x0
+    Offset: 0xA8
+    Size: 0x58
+    Link: 0
+    Info: 0
+    AddressAlign: 0x8
+    EntrySize: 0x0
+}
+SectionHeader {
+    Index: 8
+    Name: ".rela.eh_frame" (0x58)
+    Type: SHT_RELA (0x4)
+    Flags: 0x40
+        SHF_INFO_LINK (0x40)
+    Address: 0x0
+    Offset: 0x198
+    Size: 0x30
+    Link: 9
+    Info: 7
+    AddressAlign: 0x8
+    EntrySize: 0x18
+    Relocation {
+        Offset: 0x20
+        Type: R_X86_64_PC32 (0x2)
+        Symbol: "" (0x2)
+    }
+    Relocation {
+        Offset: 0x40
+        Type: R_X86_64_PC32 (0x2)
+        Symbol: "" (0x2)
+        Addend: 0xB
+    }
+}
+SectionHeader {
+    Index: 9
+    Name: ".symtab" (0x1)
+    Type: SHT_SYMTAB (0x2)
+    Flags: 0x0
+    Address: 0x0
+    Offset: 0x100
+    Size: 0x78
+    Link: 10
+    Info: 3
+    AddressAlign: 0x8
+    EntrySize: 0x18
+    Symbol {
+        Index: 0
+        Name: 0x0
+        Value: 0x0
+        Size: 0x0
+        Type: STT_NOTYPE (0x0)
+        Bind: STB_LOCAL (0x0)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: SHN_UNDEF (0x0)
+    }
+    Symbol {
+        Index: 1
+        Name: "<stdin>" (0x1)
+        Value: 0x0
+        Size: 0x0
+        Type: STT_FILE (0x4)
+        Bind: STB_LOCAL (0x0)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: SHN_ABS (0xFFF1)
+    }
+    Symbol {
+        Index: 2
+        Name: "" (0x0)
+        Value: 0x0
+        Size: 0x0
+        Type: STT_SECTION (0x3)
+        Bind: STB_LOCAL (0x0)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: 1
+    }
+    Symbol {
+        Index: 3
+        Name: "three_a" (0x9)
+        Value: 0x0
+        Size: 0xB
+        Type: STT_FUNC (0x2)
+        Bind: STB_GLOBAL (0x1)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: 1
+    }
+    Symbol {
+        Index: 4
+        Name: "three_b" (0x11)
+        Value: 0xB
+        Size: 0xB
+        Type: STT_FUNC (0x2)
+        Bind: STB_GLOBAL (0x1)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: 1
+    }
+}
+SectionHeader {
+    Index: 10
+    Name: ".strtab" (0x9)
+    Type: SHT_STRTAB (0x3)
+    Flags: 0x0
+    Address: 0x0
+    Offset: 0x178
+    Size: 0x19
+    Link: 0
+    Info: 0
+    AddressAlign: 0x1
+    EntrySize: 0x0
+}
+SectionHeader {
+    Index: 11
+    Name: ".shstrtab" (0x11)
+    Type: SHT_STRTAB (0x3)
+    Flags: 0x0
+    Address: 0x0
+    Offset: 0x1C8
+    Size: 0x67
+    Link: 0
+    Info: 0
+    AddressAlign: 0x1
+    EntrySize: 0x0
+}
+
+Member: "a.o"
+Format: ELF 64-bit
+FileHeader {
+    Ident {
+        Magic: [7F, 45, 4C, 46]
+        Class: ELFCLASS64 (0x2)
+        Data: ELFDATA2LSB (0x1)
+        Version: EV_CURRENT (0x1)
+        OsAbi: ELFOSABI_SYSV (0x0)
+        AbiVersion: 0x0
+        Unused: [0, 0, 0, 0, 0, 0, 0]
+    }
+    Type: ET_REL (0x1)
+    Machine: EM_X86_64 (0x3E)
+    Version: EV_CURRENT (0x1)
+    Type: ET_REL (0x1)
+    Entry: 0x0
+    ProgramHeaderOffset: 0x0
+    SectionHeaderOffset: 0x228
+    Flags: 0x0
+    HeaderSize: 0x40
+    ProgramHeaderEntrySize: 0x0
+    ProgramHeaderCount: 0
+    SectionHeaderEntrySize: 0x40
+    SectionHeaderCount: 12
+    SectionHeaderStringTableIndex: 11
+}
+SectionHeader {
+    Index: 0
+    Name: "" (0x0)
+    Type: SHT_NULL (0x0)
+    Flags: 0x0
+    Address: 0x0
+    Offset: 0x0
+    Size: 0x0
+    Link: 0
+    Info: 0
+    AddressAlign: 0x0
+    EntrySize: 0x0
+}
+SectionHeader {
+    Index: 1
+    Name: ".text" (0x1B)
+    Type: SHT_PROGBITS (0x1)
+    Flags: 0x6
+        SHF_ALLOC (0x2)
+        SHF_EXECINSTR (0x4)
+    Address: 0x0
+    Offset: 0x40
+    Size: 0x16
+    Link: 0
+    Info: 0
+    AddressAlign: 0x1
+    EntrySize: 0x0
+}
+SectionHeader {
+    Index: 2
+    Name: ".data" (0x21)
+    Type: SHT_PROGBITS (0x1)
+    Flags: 0x3
+        SHF_WRITE (0x1)
+        SHF_ALLOC (0x2)
+    Address: 0x0
+    Offset: 0x56
+    Size: 0x0
+    Link: 0
+    Info: 0
+    AddressAlign: 0x1
+    EntrySize: 0x0
+}
+SectionHeader {
+    Index: 3
+    Name: ".bss" (0x27)
+    Type: SHT_NOBITS (0x8)
+    Flags: 0x3
+        SHF_WRITE (0x1)
+        SHF_ALLOC (0x2)
+    Address: 0x0
+    Offset: 0x56
+    Size: 0x0
+    Link: 0
+    Info: 0
+    AddressAlign: 0x1
+    EntrySize: 0x0
+}
+SectionHeader {
+    Index: 4
+    Name: ".comment" (0x2C)
+    Type: SHT_PROGBITS (0x1)
+    Flags: 0x30
+        SHF_MERGE (0x10)
+        SHF_STRINGS (0x20)
+    Address: 0x0
+    Offset: 0x56
+    Size: 0x2C
+    Link: 0
+    Info: 0
+    AddressAlign: 0x1
+    EntrySize: 0x1
+}
+SectionHeader {
+    Index: 5
+    Name: ".note.GNU-stack" (0x35)
+    Type: SHT_PROGBITS (0x1)
+    Flags: 0x0
+    Address: 0x0
+    Offset: 0x82
+    Size: 0x0
+    Link: 0
+    Info: 0
+    AddressAlign: 0x1
+    EntrySize: 0x0
+}
+SectionHeader {
+    Index: 6
+    Name: ".note.gnu.property" (0x45)
+    Type: SHT_NOTE (0x7)
+    Flags: 0x2
+        SHF_ALLOC (0x2)
+    Address: 0x0
+    Offset: 0x88
+    Size: 0x20
+    Link: 0
+    Info: 0
+    AddressAlign: 0x8
+    EntrySize: 0x0
+    Note {
+        Name: "GNU" (0x4)
+        Type: NT_GNU_PROPERTY_TYPE_0 (0x5)
+        Property {
+            Type: GNU_PROPERTY_X86_FEATURE_1_AND (0xC0000002)
+            Value: 0x3
+                GNU_PROPERTY_X86_FEATURE_1_IBT (0x1)
+                GNU_PROPERTY_X86_FEATURE_1_SHSTK (0x2)
+        }
+    }
+}
+SectionHeader {
+    Index: 7
+    Name: ".eh_frame" (0x5D)
+    Type: SHT_PROGBITS (0x1)
+    Flags: 0x2
+        SHF_ALLOC (0x2)
+    Address: 0x0
+    Offset: 0xA8
+    Size: 0x58
+    Link: 0
+    Info: 0
+    AddressAlign: 0x8
+    EntrySize: 0x0
+}
+SectionHeader {
+    Index: 8
+    Name: ".rela.eh_frame" (0x58)
+    Type: SHT_RELA (0x4)
+    Flags: 0x40
+        SHF_INFO_LINK (0x40)
+    Address: 0x0
+    Offset: 0x190
+    Size: 0x30
+    Link: 9
+    Info: 7
+    AddressAlign: 0x8
+    EntrySize: 0x18
+    Relocation {
+        Offset: 0x20
+        Type: R_X86_64_PC32 (0x2)
+        Symbol: "" (0x2)
+    }
+    Relocation {
+        Offset: 0x40
+        Type: R_X86_64_PC32 (0x2)
+        Symbol: "" (0x2)
+        Addend: 0xB
+    }
+}
+SectionHeader {
+    Index: 9
+    Name: ".symtab" (0x1)
+    Type: SHT_SYMTAB (0x2)
+    Flags: 0x0
+    Address: 0x0
+    Offset: 0x100
+    Size: 0x78
+    Link: 10
+    Info: 3
+    AddressAlign: 0x8
+    EntrySize: 0x18
+    Symbol {
+        Index: 0
+        Name: 0x0
+        Value: 0x0
+        Size: 0x0
+        Type: STT_NOTYPE (0x0)
+        Bind: STB_LOCAL (0x0)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: SHN_UNDEF (0x0)
+    }
+    Symbol {
+        Index: 1
+        Name: "<stdin>" (0x1)
+        Value: 0x0
+        Size: 0x0
+        Type: STT_FILE (0x4)
+        Bind: STB_LOCAL (0x0)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: SHN_ABS (0xFFF1)
+    }
+    Symbol {
+        Index: 2
+        Name: "" (0x0)
+        Value: 0x0
+        Size: 0x0
+        Type: STT_SECTION (0x3)
+        Bind: STB_LOCAL (0x0)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: 1
+    }
+    Symbol {
+        Index: 3
+        Name: "a_one" (0x9)
+        Value: 0x0
+        Size: 0xB
+        Type: STT_FUNC (0x2)
+        Bind: STB_GLOBAL (0x1)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: 1
+    }
+    Symbol {
+        Index: 4
+        Name: "a_two" (0xF)
+        Value: 0xB
+        Size: 0xB
+        Type: STT_FUNC (0x2)
+        Bind: STB_GLOBAL (0x1)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: 1
+    }
+}
+SectionHeader {
+    Index: 10
+    Name: ".strtab" (0x9)
+    Type: SHT_STRTAB (0x3)
+    Flags: 0x0
+    Address: 0x0
+    Offset: 0x178
+    Size: 0x15
+    Link: 0
+    Info: 0
+    AddressAlign: 0x1
+    EntrySize: 0x0
+}
+SectionHeader {
+    Index: 11
+    Name: ".shstrtab" (0x11)
+    Type: SHT_STRTAB (0x3)
+    Flags: 0x0
+    Address: 0x0
+    Offset: 0x1C0
+    Size: 0x67
+    Link: 0
+    Info: 0
+    AddressAlign: 0x1
+    EntrySize: 0x0
+}
+
+Member: "b.o"
+Format: ELF 64-bit
+FileHeader {
+    Ident {
+        Magic: [7F, 45, 4C, 46]
+        Class: ELFCLASS64 (0x2)
+        Data: ELFDATA2LSB (0x1)
+        Version: EV_CURRENT (0x1)
+        OsAbi: ELFOSABI_SYSV (0x0)
+        AbiVersion: 0x0
+        Unused: [0, 0, 0, 0, 0, 0, 0]
+    }
+    Type: ET_REL (0x1)
+    Machine: EM_X86_64 (0x3E)
+    Version: EV_CURRENT (0x1)
+    Type: ET_REL (0x1)
+    Entry: 0x0
+    ProgramHeaderOffset: 0x0
+    SectionHeaderOffset: 0x228
+    Flags: 0x0
+    HeaderSize: 0x40
+    ProgramHeaderEntrySize: 0x0
+    ProgramHeaderCount: 0
+    SectionHeaderEntrySize: 0x40
+    SectionHeaderCount: 12
+    SectionHeaderStringTableIndex: 11
+}
+SectionHeader {
+    Index: 0
+    Name: "" (0x0)
+    Type: SHT_NULL (0x0)
+    Flags: 0x0
+    Address: 0x0
+    Offset: 0x0
+    Size: 0x0
+    Link: 0
+    Info: 0
+    AddressAlign: 0x0
+    EntrySize: 0x0
+}
+SectionHeader {
+    Index: 1
+    Name: ".text" (0x1B)
+    Type: SHT_PROGBITS (0x1)
+    Flags: 0x6
+        SHF_ALLOC (0x2)
+        SHF_EXECINSTR (0x4)
+    Address: 0x0
+    Offset: 0x40
+    Size: 0x16
+    Link: 0
+    Info: 0
+    AddressAlign: 0x1
+    EntrySize: 0x0
+}
+SectionHeader {
+    Index: 2
+    Name: ".data" (0x21)
+    Type: SHT_PROGBITS (0x1)
+    Flags: 0x3
+        SHF_WRITE (0x1)
+        SHF_ALLOC (0x2)
+    Address: 0x0
+    Offset: 0x56
+    Size: 0x0
+    Link: 0
+    Info: 0
+    AddressAlign: 0x1
+    EntrySize: 0x0
+}
+SectionHeader {
+    Index: 3
+    Name: ".bss" (0x27)
+    Type: SHT_NOBITS (0x8)
+    Flags: 0x3
+        SHF_WRITE (0x1)
+        SHF_ALLOC (0x2)
+    Address: 0x0
+    Offset: 0x56
+    Size: 0x0
+    Link: 0
+    Info: 0
+    AddressAlign: 0x1
+    EntrySize: 0x0
+}
+SectionHeader {
+    Index: 4
+    Name: ".comment" (0x2C)
+    Type: SHT_PROGBITS (0x1)
+    Flags: 0x30
+        SHF_MERGE (0x10)
+        SHF_STRINGS (0x20)
+    Address: 0x0
+    Offset: 0x56
+    Size: 0x2C
+    Link: 0
+    Info: 0
+    AddressAlign: 0x1
+    EntrySize: 0x1
+}
+SectionHeader {
+    Index: 5
+    Name: ".note.GNU-stack" (0x35)
+    Type: SHT_PROGBITS (0x1)
+    Flags: 0x0
+    Address: 0x0
+    Offset: 0x82
+    Size: 0x0
+    Link: 0
+    Info: 0
+    AddressAlign: 0x1
+    EntrySize: 0x0
+}
+SectionHeader {
+    Index: 6
+    Name: ".note.gnu.property" (0x45)
+    Type: SHT_NOTE (0x7)
+    Flags: 0x2
+        SHF_ALLOC (0x2)
+    Address: 0x0
+    Offset: 0x88
+    Size: 0x20
+    Link: 0
+    Info: 0
+    AddressAlign: 0x8
+    EntrySize: 0x0
+    Note {
+        Name: "GNU" (0x4)
+        Type: NT_GNU_PROPERTY_TYPE_0 (0x5)
+        Property {
+            Type: GNU_PROPERTY_X86_FEATURE_1_AND (0xC0000002)
+            Value: 0x3
+                GNU_PROPERTY_X86_FEATURE_1_IBT (0x1)
+                GNU_PROPERTY_X86_FEATURE_1_SHSTK (0x2)
+        }
+    }
+}
+SectionHeader {
+    Index: 7
+    Name: ".eh_frame" (0x5D)
+    Type: SHT_PROGBITS (0x1)
+    Flags: 0x2
+        SHF_ALLOC (0x2)
+    Address: 0x0
+    Offset: 0xA8
+    Size: 0x58
+    Link: 0
+    Info: 0
+    AddressAlign: 0x8
+    EntrySize: 0x0
+}
+SectionHeader {
+    Index: 8
+    Name: ".rela.eh_frame" (0x58)
+    Type: SHT_RELA (0x4)
+    Flags: 0x40
+        SHF_INFO_LINK (0x40)
+    Address: 0x0
+    Offset: 0x190
+    Size: 0x30
+    Link: 9
+    Info: 7
+    AddressAlign: 0x8
+    EntrySize: 0x18
+    Relocation {
+        Offset: 0x20
+        Type: R_X86_64_PC32 (0x2)
+        Symbol: "" (0x2)
+    }
+    Relocation {
+        Offset: 0x40
+        Type: R_X86_64_PC32 (0x2)
+        Symbol: "" (0x2)
+        Addend: 0xB
+    }
+}
+SectionHeader {
+    Index: 9
+    Name: ".symtab" (0x1)
+    Type: SHT_SYMTAB (0x2)
+    Flags: 0x0
+    Address: 0x0
+    Offset: 0x100
+    Size: 0x78
+    Link: 10
+    Info: 3
+    AddressAlign: 0x8
+    EntrySize: 0x18
+    Symbol {
+        Index: 0
+        Name: 0x0
+        Value: 0x0
+        Size: 0x0
+        Type: STT_NOTYPE (0x0)
+        Bind: STB_LOCAL (0x0)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: SHN_UNDEF (0x0)
+    }
+    Symbol {
+        Index: 1
+        Name: "<stdin>" (0x1)
+        Value: 0x0
+        Size: 0x0
+        Type: STT_FILE (0x4)
+        Bind: STB_LOCAL (0x0)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: SHN_ABS (0xFFF1)
+    }
+    Symbol {
+        Index: 2
+        Name: "" (0x0)
+        Value: 0x0
+        Size: 0x0
+        Type: STT_SECTION (0x3)
+        Bind: STB_LOCAL (0x0)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: 1
+    }
+    Symbol {
+        Index: 3
+        Name: "b_one" (0x9)
+        Value: 0x0
+        Size: 0xB
+        Type: STT_FUNC (0x2)
+        Bind: STB_GLOBAL (0x1)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: 1
+    }
+    Symbol {
+        Index: 4
+        Name: "b_two" (0xF)
+        Value: 0xB
+        Size: 0xB
+        Type: STT_FUNC (0x2)
+        Bind: STB_GLOBAL (0x1)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: 1
+    }
+}
+SectionHeader {
+    Index: 10
+    Name: ".strtab" (0x9)
+    Type: SHT_STRTAB (0x3)
+    Flags: 0x0
+    Address: 0x0
+    Offset: 0x178
+    Size: 0x15
+    Link: 0
+    Info: 0
+    AddressAlign: 0x1
+    EntrySize: 0x0
+}
+SectionHeader {
+    Index: 11
+    Name: ".shstrtab" (0x11)
+    Type: SHT_STRTAB (0x3)
+    Flags: 0x0
+    Address: 0x0
+    Offset: 0x1C0
+    Size: 0x67
+    Link: 0
+    Info: 0
+    AddressAlign: 0x1
+    EntrySize: 0x0
+}
+
+Member: "c.o"
+Format: ELF 64-bit
+FileHeader {
+    Ident {
+        Magic: [7F, 45, 4C, 46]
+        Class: ELFCLASS64 (0x2)
+        Data: ELFDATA2LSB (0x1)
+        Version: EV_CURRENT (0x1)
+        OsAbi: ELFOSABI_SYSV (0x0)
+        AbiVersion: 0x0
+        Unused: [0, 0, 0, 0, 0, 0, 0]
+    }
+    Type: ET_REL (0x1)
+    Machine: EM_X86_64 (0x3E)
+    Version: EV_CURRENT (0x1)
+    Type: ET_REL (0x1)
+    Entry: 0x0
+    ProgramHeaderOffset: 0x0
+    SectionHeaderOffset: 0x228
+    Flags: 0x0
+    HeaderSize: 0x40
+    ProgramHeaderEntrySize: 0x0
+    ProgramHeaderCount: 0
+    SectionHeaderEntrySize: 0x40
+    SectionHeaderCount: 12
+    SectionHeaderStringTableIndex: 11
+}
+SectionHeader {
+    Index: 0
+    Name: "" (0x0)
+    Type: SHT_NULL (0x0)
+    Flags: 0x0
+    Address: 0x0
+    Offset: 0x0
+    Size: 0x0
+    Link: 0
+    Info: 0
+    AddressAlign: 0x0
+    EntrySize: 0x0
+}
+SectionHeader {
+    Index: 1
+    Name: ".text" (0x1B)
+    Type: SHT_PROGBITS (0x1)
+    Flags: 0x6
+        SHF_ALLOC (0x2)
+        SHF_EXECINSTR (0x4)
+    Address: 0x0
+    Offset: 0x40
+    Size: 0x16
+    Link: 0
+    Info: 0
+    AddressAlign: 0x1
+    EntrySize: 0x0
+}
+SectionHeader {
+    Index: 2
+    Name: ".data" (0x21)
+    Type: SHT_PROGBITS (0x1)
+    Flags: 0x3
+        SHF_WRITE (0x1)
+        SHF_ALLOC (0x2)
+    Address: 0x0
+    Offset: 0x56
+    Size: 0x0
+    Link: 0
+    Info: 0
+    AddressAlign: 0x1
+    EntrySize: 0x0
+}
+SectionHeader {
+    Index: 3
+    Name: ".bss" (0x27)
+    Type: SHT_NOBITS (0x8)
+    Flags: 0x3
+        SHF_WRITE (0x1)
+        SHF_ALLOC (0x2)
+    Address: 0x0
+    Offset: 0x56
+    Size: 0x0
+    Link: 0
+    Info: 0
+    AddressAlign: 0x1
+    EntrySize: 0x0
+}
+SectionHeader {
+    Index: 4
+    Name: ".comment" (0x2C)
+    Type: SHT_PROGBITS (0x1)
+    Flags: 0x30
+        SHF_MERGE (0x10)
+        SHF_STRINGS (0x20)
+    Address: 0x0
+    Offset: 0x56
+    Size: 0x2C
+    Link: 0
+    Info: 0
+    AddressAlign: 0x1
+    EntrySize: 0x1
+}
+SectionHeader {
+    Index: 5
+    Name: ".note.GNU-stack" (0x35)
+    Type: SHT_PROGBITS (0x1)
+    Flags: 0x0
+    Address: 0x0
+    Offset: 0x82
+    Size: 0x0
+    Link: 0
+    Info: 0
+    AddressAlign: 0x1
+    EntrySize: 0x0
+}
+SectionHeader {
+    Index: 6
+    Name: ".note.gnu.property" (0x45)
+    Type: SHT_NOTE (0x7)
+    Flags: 0x2
+        SHF_ALLOC (0x2)
+    Address: 0x0
+    Offset: 0x88
+    Size: 0x20
+    Link: 0
+    Info: 0
+    AddressAlign: 0x8
+    EntrySize: 0x0
+    Note {
+        Name: "GNU" (0x4)
+        Type: NT_GNU_PROPERTY_TYPE_0 (0x5)
+        Property {
+            Type: GNU_PROPERTY_X86_FEATURE_1_AND (0xC0000002)
+            Value: 0x3
+                GNU_PROPERTY_X86_FEATURE_1_IBT (0x1)
+                GNU_PROPERTY_X86_FEATURE_1_SHSTK (0x2)
+        }
+    }
+}
+SectionHeader {
+    Index: 7
+    Name: ".eh_frame" (0x5D)
+    Type: SHT_PROGBITS (0x1)
+    Flags: 0x2
+        SHF_ALLOC (0x2)
+    Address: 0x0
+    Offset: 0xA8
+    Size: 0x58
+    Link: 0
+    Info: 0
+    AddressAlign: 0x8
+    EntrySize: 0x0
+}
+SectionHeader {
+    Index: 8
+    Name: ".rela.eh_frame" (0x58)
+    Type: SHT_RELA (0x4)
+    Flags: 0x40
+        SHF_INFO_LINK (0x40)
+    Address: 0x0
+    Offset: 0x190
+    Size: 0x30
+    Link: 9
+    Info: 7
+    AddressAlign: 0x8
+    EntrySize: 0x18
+    Relocation {
+        Offset: 0x20
+        Type: R_X86_64_PC32 (0x2)
+        Symbol: "" (0x2)
+    }
+    Relocation {
+        Offset: 0x40
+        Type: R_X86_64_PC32 (0x2)
+        Symbol: "" (0x2)
+        Addend: 0xB
+    }
+}
+SectionHeader {
+    Index: 9
+    Name: ".symtab" (0x1)
+    Type: SHT_SYMTAB (0x2)
+    Flags: 0x0
+    Address: 0x0
+    Offset: 0x100
+    Size: 0x78
+    Link: 10
+    Info: 3
+    AddressAlign: 0x8
+    EntrySize: 0x18
+    Symbol {
+        Index: 0
+        Name: 0x0
+        Value: 0x0
+        Size: 0x0
+        Type: STT_NOTYPE (0x0)
+        Bind: STB_LOCAL (0x0)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: SHN_UNDEF (0x0)
+    }
+    Symbol {
+        Index: 1
+        Name: "<stdin>" (0x1)
+        Value: 0x0
+        Size: 0x0
+        Type: STT_FILE (0x4)
+        Bind: STB_LOCAL (0x0)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: SHN_ABS (0xFFF1)
+    }
+    Symbol {
+        Index: 2
+        Name: "" (0x0)
+        Value: 0x0
+        Size: 0x0
+        Type: STT_SECTION (0x3)
+        Bind: STB_LOCAL (0x0)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: 1
+    }
+    Symbol {
+        Index: 3
+        Name: "c_one" (0x9)
+        Value: 0x0
+        Size: 0xB
+        Type: STT_FUNC (0x2)
+        Bind: STB_GLOBAL (0x1)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: 1
+    }
+    Symbol {
+        Index: 4
+        Name: "c_two" (0xF)
+        Value: 0xB
+        Size: 0xB
+        Type: STT_FUNC (0x2)
+        Bind: STB_GLOBAL (0x1)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: 1
+    }
+}
+SectionHeader {
+    Index: 10
+    Name: ".strtab" (0x9)
+    Type: SHT_STRTAB (0x3)
+    Flags: 0x0
+    Address: 0x0
+    Offset: 0x178
+    Size: 0x15
+    Link: 0
+    Info: 0
+    AddressAlign: 0x1
+    EntrySize: 0x0
+}
+SectionHeader {
+    Index: 11
+    Name: ".shstrtab" (0x11)
+    Type: SHT_STRTAB (0x3)
+    Flags: 0x0
+    Address: 0x0
+    Offset: 0x1C0
+    Size: 0x67
+    Link: 0
+    Info: 0
+    AddressAlign: 0x1
+    EntrySize: 0x0
+}
+
+Symbol {
+    Name: "one_a"
+    Member: "one.o"
+}
+Symbol {
+    Name: "one_b"
+    Member: "one.o"
+}
+Symbol {
+    Name: "two_a"
+    Member: "two.o"
+}
+Symbol {
+    Name: "two_b"
+    Member: "two.o"
+}
+Symbol {
+    Name: "three_a"
+    Member: "three.o"
+}
+Symbol {
+    Name: "three_b"
+    Member: "three.o"
+}
+Symbol {
+    Name: "a_one"
+    Member: "a.o"
+}
+Symbol {
+    Name: "a_two"
+    Member: "a.o"
+}
+Symbol {
+    Name: "b_one"
+    Member: "b.o"
+}
+Symbol {
+    Name: "b_two"
+    Member: "b.o"
+}
+Symbol {
+    Name: "c_one"
+    Member: "c.o"
+}
+Symbol {
+    Name: "c_two"
+    Member: "c.o"
+}

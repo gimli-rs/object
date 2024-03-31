@@ -323,11 +323,25 @@ fn print_archive(p: &mut Printer<'_>, data: &[u8]) {
         for member in archive.members() {
             if let Some(member) = member.print_err(p) {
                 p.blank();
-                p.field("Member", String::from_utf8_lossy(member.name()));
+                p.field_inline_string("Member", member.name());
                 if member.is_thin() {
                     p.field("Size", member.size());
                 } else if let Some(data) = member.data(data).print_err(p) {
                     print_object(p, data);
+                }
+            }
+        }
+        if let Some(symbols) = archive.symbols().print_err(p).flatten() {
+            p.blank();
+            for symbol in symbols {
+                if let Some(symbol) = symbol.print_err(p) {
+                    p.group("Symbol", |p| {
+                        p.field_inline_string("Name", symbol.name());
+                        let offset = symbol.offset();
+                        if let Some(member) = archive.member(offset).print_err(p) {
+                            p.field_inline_string("Member", member.name());
+                        }
+                    });
                 }
             }
         }

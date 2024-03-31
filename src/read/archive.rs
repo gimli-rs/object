@@ -21,8 +21,10 @@
 //! ```
 
 use core::convert::TryInto;
+use core::slice;
 
 use crate::archive;
+use crate::endian::{BigEndian as BE, LittleEndian as LE, U16Bytes, U32Bytes, U64Bytes};
 use crate::read::{self, Bytes, Error, ReadError, ReadRef};
 
 /// The kind of archive format.
@@ -207,6 +209,7 @@ impl<'data, R: ReadRef<'data>> ArchiveFile<'data, R> {
         };
 
         // Read the span of symbol table.
+        // TODO: an archive may have both 32-bit and 64-bit symbol tables.
         let symtbl64 = parse_u64_digits(&file_header.gst64off, 10)
             .read_error("Invalid offset to 64-bit symbol table in AIX big archive")?;
         if symtbl64 > 0 {
@@ -277,6 +280,34 @@ impl<'data, R: ReadRef<'data>> ArchiveFile<'data, R> {
             names: self.names,
             thin: self.thin,
         }
+    }
+
+    /// Return the member at the given offset.
+    pub fn member(&self, member: ArchiveOffset) -> read::Result<ArchiveMember<'data>> {
+        match self.members {
+            Members::Common { offset, end_offset } => {
+                if member.0 < offset || member.0 >= end_offset {
+                    return Err(Error("Invalid archive member offset"));
+                }
+                let mut offset = member.0;
+                ArchiveMember::parse(self.data, &mut offset, self.names, self.thin)
+            }
+            Members::AixBig { .. } => {
+                let offset = member.0;
+                ArchiveMember::parse_aixbig(self.data, offset)
+            }
+        }
+    }
+
+    /// Iterate over the symbols in the archive.
+    pub fn symbols(&self) -> read::Result<Option<ArchiveSymbolIterator<'data>>> {
+        if self.symbols == (0, 0) {
+            return Ok(None);
+        }
+        let (offset, size) = self.symbols;
+        ArchiveSymbolIterator::new(self.kind, self.data, offset, size)
+            .read_error("Invalid archive symbol table")
+            .map(Some)
     }
 }
 
@@ -549,6 +580,240 @@ impl<'data> ArchiveMember<'data> {
         }
         data.read_bytes_at(self.offset, self.size)
             .read_error("Archive member size is too large")
+    }
+}
+
+/// An offset of a member in an archive.
+#[derive(Debug, Clone, Copy)]
+pub struct ArchiveOffset(pub u64);
+
+/// An iterator over the symbols in the archive symbol table.
+#[derive(Debug, Clone)]
+pub struct ArchiveSymbolIterator<'data>(SymbolIteratorInternal<'data>);
+
+#[derive(Debug, Clone)]
+enum SymbolIteratorInternal<'data> {
+    /// There is no symbol table.
+    None,
+    /// A GNU symbol table.
+    ///
+    /// Contains:
+    /// - the number of symbols as a 32-bit big-endian integer
+    /// - the offsets of the member headers as 32-bit big-endian integers
+    /// - the symbol names as null-terminated strings
+    Gnu {
+        offsets: slice::Iter<'data, U32Bytes<BE>>,
+        names: Bytes<'data>,
+    },
+    /// A GNU 64-bit symbol table
+    ///
+    /// Contains:
+    /// - the number of symbols as a 64-bit big-endian integer
+    /// - the offsets of the member headers as 64-bit big-endian integers
+    /// - the symbol names as null-terminated strings
+    Gnu64 {
+        offsets: slice::Iter<'data, U64Bytes<BE>>,
+        names: Bytes<'data>,
+    },
+    /// A BSD symbol table.
+    ///
+    /// Contains:
+    /// - the size in bytes of the offsets array as a 32-bit little-endian integer
+    /// - the offsets array, for which each entry is a pair of 32-bit little-endian integers
+    /// for the offset of the member header and the offset of the symbol name
+    /// - the size in bytes of the symbol names as a 32-bit little-endian integer
+    /// - the symbol names as null-terminated strings
+    Bsd {
+        offsets: slice::Iter<'data, [U32Bytes<LE>; 2]>,
+        names: Bytes<'data>,
+    },
+    /// A BSD 64-bit symbol table.
+    ///
+    /// Contains:
+    /// - the size in bytes of the offsets array as a 64-bit little-endian integer
+    /// - the offsets array, for which each entry is a pair of 64-bit little-endian integers
+    /// for the offset of the member header and the offset of the symbol name
+    /// - the size in bytes of the symbol names as a 64-bit little-endian integer
+    /// - the symbol names as null-terminated strings
+    Bsd64 {
+        offsets: slice::Iter<'data, [U64Bytes<LE>; 2]>,
+        names: Bytes<'data>,
+    },
+    /// A Windows COFF symbol table.
+    ///
+    /// Contains:
+    /// - the number of members as a 32-bit little-endian integer
+    /// - the offsets of the member headers as 32-bit little-endian integers
+    /// - the number of symbols as a 32-bit little-endian integer
+    /// - the member index for each symbol as a 16-bit little-endian integer
+    /// - the symbol names as null-terminated strings in lexical order
+    Coff {
+        members: &'data [U32Bytes<LE>],
+        indices: slice::Iter<'data, U16Bytes<LE>>,
+        names: Bytes<'data>,
+    },
+}
+
+impl<'data> ArchiveSymbolIterator<'data> {
+    fn new<R: ReadRef<'data>>(
+        kind: ArchiveKind,
+        data: R,
+        offset: u64,
+        size: u64,
+    ) -> Result<Self, ()> {
+        let mut data = data.read_bytes_at(offset, size).map(Bytes)?;
+        match kind {
+            ArchiveKind::Unknown => Ok(ArchiveSymbolIterator(SymbolIteratorInternal::None)),
+            ArchiveKind::Gnu => {
+                let offsets_count = data.read::<U32Bytes<BE>>()?.get(BE);
+                let offsets = data.read_slice::<U32Bytes<BE>>(offsets_count as usize)?;
+                Ok(ArchiveSymbolIterator(SymbolIteratorInternal::Gnu {
+                    offsets: offsets.iter(),
+                    names: data,
+                }))
+            }
+            ArchiveKind::Gnu64 => {
+                let offsets_count = data.read::<U64Bytes<BE>>()?.get(BE);
+                let offsets = data.read_slice::<U64Bytes<BE>>(offsets_count as usize)?;
+                Ok(ArchiveSymbolIterator(SymbolIteratorInternal::Gnu64 {
+                    offsets: offsets.iter(),
+                    names: data,
+                }))
+            }
+            ArchiveKind::Bsd => {
+                let offsets_size = data.read::<U32Bytes<LE>>()?.get(LE);
+                let offsets = data.read_slice::<[U32Bytes<LE>; 2]>(offsets_size as usize / 8)?;
+                let names_size = data.read::<U32Bytes<LE>>()?.get(LE);
+                let names = data.read_bytes(names_size as usize)?;
+                Ok(ArchiveSymbolIterator(SymbolIteratorInternal::Bsd {
+                    offsets: offsets.iter(),
+                    names,
+                }))
+            }
+            ArchiveKind::Bsd64 => {
+                let offsets_size = data.read::<U64Bytes<LE>>()?.get(LE);
+                let offsets = data.read_slice::<[U64Bytes<LE>; 2]>(offsets_size as usize / 16)?;
+                let names_size = data.read::<U64Bytes<LE>>()?.get(LE);
+                let names = data.read_bytes(names_size as usize)?;
+                Ok(ArchiveSymbolIterator(SymbolIteratorInternal::Bsd64 {
+                    offsets: offsets.iter(),
+                    names,
+                }))
+            }
+            ArchiveKind::Coff => {
+                let members_count = data.read::<U32Bytes<LE>>()?.get(LE);
+                let members = data.read_slice::<U32Bytes<LE>>(members_count as usize)?;
+                let indices_count = data.read::<U32Bytes<LE>>()?.get(LE);
+                let indices = data.read_slice::<U16Bytes<LE>>(indices_count as usize)?;
+                Ok(ArchiveSymbolIterator(SymbolIteratorInternal::Coff {
+                    members,
+                    indices: indices.iter(),
+                    names: data,
+                }))
+            }
+            // TODO: Implement AIX big archive symbol table.
+            ArchiveKind::AixBig => Ok(ArchiveSymbolIterator(SymbolIteratorInternal::None)),
+        }
+    }
+}
+
+impl<'data> Iterator for ArchiveSymbolIterator<'data> {
+    type Item = read::Result<ArchiveSymbol<'data>>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        match &mut self.0 {
+            SymbolIteratorInternal::None => None,
+            SymbolIteratorInternal::Gnu { offsets, names } => {
+                let offset = offsets.next()?.get(BE);
+                Some(
+                    names
+                        .read_string()
+                        .read_error("Missing archive symbol name")
+                        .map(|name| ArchiveSymbol {
+                            name,
+                            offset: ArchiveOffset(offset.into()),
+                        }),
+                )
+            }
+            SymbolIteratorInternal::Gnu64 { offsets, names } => {
+                let offset = offsets.next()?.get(BE);
+                Some(
+                    names
+                        .read_string()
+                        .read_error("Missing archive symbol name")
+                        .map(|name| ArchiveSymbol {
+                            name,
+                            offset: ArchiveOffset(offset),
+                        }),
+                )
+            }
+            SymbolIteratorInternal::Bsd { offsets, names } => {
+                let entry = offsets.next()?;
+                Some(
+                    names
+                        .read_string_at(entry[0].get(LE) as usize)
+                        .read_error("Invalid archive symbol name offset")
+                        .map(|name| ArchiveSymbol {
+                            name,
+                            offset: ArchiveOffset(entry[1].get(LE).into()),
+                        }),
+                )
+            }
+            SymbolIteratorInternal::Bsd64 { offsets, names } => {
+                let entry = offsets.next()?;
+                Some(
+                    names
+                        .read_string_at(entry[0].get(LE) as usize)
+                        .read_error("Invalid archive symbol name offset")
+                        .map(|name| ArchiveSymbol {
+                            name,
+                            offset: ArchiveOffset(entry[1].get(LE)),
+                        }),
+                )
+            }
+            SymbolIteratorInternal::Coff {
+                members,
+                indices,
+                names,
+            } => {
+                let index = indices.next()?.get(LE).wrapping_sub(1);
+                let member = members
+                    .get(index as usize)
+                    .read_error("Invalid archive symbol member index");
+                let name = names
+                    .read_string()
+                    .read_error("Missing archive symbol name");
+                Some(member.and_then(|member| {
+                    name.map(|name| ArchiveSymbol {
+                        name,
+                        offset: ArchiveOffset(member.get(LE).into()),
+                    })
+                }))
+            }
+        }
+    }
+}
+
+/// A symbol in the archive symbol table.
+///
+/// This is used to find the member containing the symbol.
+#[derive(Debug, Clone, Copy)]
+pub struct ArchiveSymbol<'data> {
+    name: &'data [u8],
+    offset: ArchiveOffset,
+}
+
+impl<'data> ArchiveSymbol<'data> {
+    /// Return the symbol name.
+    #[inline]
+    pub fn name(&self) -> &'data [u8] {
+        self.name
+    }
+
+    /// Return the offset of the header for the member containing the symbol.
+    #[inline]
+    pub fn offset(&self) -> ArchiveOffset {
+        self.offset
     }
 }
 

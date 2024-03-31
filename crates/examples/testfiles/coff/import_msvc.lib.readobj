@@ -1,6 +1,6 @@
 Format: Archive (Coff)
 
-Member: test_x64.dll
+Member: "test_x64.dll"
 Format: COFF import
 ImportObjectHeader {
     Signature1: 0x0
@@ -16,7 +16,7 @@ ImportObjectHeader {
     Dll: "test_x64.dll"
 }
 
-Member: test_x64.dll
+Member: "test_x64.dll"
 Format: COFF import
 ImportObjectHeader {
     Signature1: 0x0
@@ -32,7 +32,7 @@ ImportObjectHeader {
     Dll: "test_x64.dll"
 }
 
-Member: test_x64.dll
+Member: "test_x64.dll"
 Format: COFF import
 ImportObjectHeader {
     Signature1: 0x0
@@ -48,7 +48,7 @@ ImportObjectHeader {
     Dll: "test_x64.dll"
 }
 
-Member: test_x64.dll
+Member: "test_x64.dll"
 Format: COFF import
 ImportObjectHeader {
     Signature1: 0x0
@@ -64,7 +64,7 @@ ImportObjectHeader {
     Dll: "test_x64.dll"
 }
 
-Member: test_x64.dll
+Member: "test_x64.dll"
 Format: COFF
 ImageFileHeader {
     Machine: IMAGE_FILE_MACHINE_AMD64 (0x8664)
@@ -149,7 +149,7 @@ ImageSymbol {
     NumberOfAuxSymbols: 0x0
 }
 
-Member: test_x64.dll
+Member: "test_x64.dll"
 Format: COFF
 ImageFileHeader {
     Machine: IMAGE_FILE_MACHINE_AMD64 (0x8664)
@@ -217,7 +217,7 @@ ImageSymbol {
     NumberOfAuxSymbols: 0x0
 }
 
-Member: test_x64.dll
+Member: "test_x64.dll"
 Format: COFF
 ImageFileHeader {
     Machine: IMAGE_FILE_MACHINE_AMD64 (0x8664)
@@ -383,7 +383,7 @@ ImageSymbol {
     NumberOfAuxSymbols: 0x0
 }
 
-Member: test_x86.dll
+Member: "test_x86.dll"
 Format: COFF import
 ImportObjectHeader {
     Signature1: 0x0
@@ -399,7 +399,7 @@ ImportObjectHeader {
     Dll: "test_x86.dll"
 }
 
-Member: test_x86.dll
+Member: "test_x86.dll"
 Format: COFF
 ImageFileHeader {
     Machine: IMAGE_FILE_MACHINE_I386 (0x14C)
@@ -485,7 +485,7 @@ ImageSymbol {
     NumberOfAuxSymbols: 0x0
 }
 
-Member: test_x86.dll
+Member: "test_x86.dll"
 Format: COFF
 ImageFileHeader {
     Machine: IMAGE_FILE_MACHINE_I386 (0x14C)
@@ -554,7 +554,7 @@ ImageSymbol {
     NumberOfAuxSymbols: 0x0
 }
 
-Member: test_x86.dll
+Member: "test_x86.dll"
 Format: COFF
 ImageFileHeader {
     Machine: IMAGE_FILE_MACHINE_I386 (0x14C)
@@ -721,7 +721,7 @@ ImageSymbol {
     NumberOfAuxSymbols: 0x0
 }
 
-Member: test_arm64ec.dll
+Member: "test_arm64ec.dll"
 Format: COFF import
 ImportObjectHeader {
     Signature1: 0x0
@@ -738,7 +738,7 @@ ImportObjectHeader {
     Export: "foo_arm64ec"
 }
 
-Member: test_arm64ec.dll
+Member: "test_arm64ec.dll"
 Format: COFF
 ImageFileHeader {
     Machine: IMAGE_FILE_MACHINE_ARM64 (0xAA64)
@@ -823,7 +823,7 @@ ImageSymbol {
     NumberOfAuxSymbols: 0x0
 }
 
-Member: test_arm64ec.dll
+Member: "test_arm64ec.dll"
 Format: COFF
 ImageFileHeader {
     Machine: IMAGE_FILE_MACHINE_ARM64 (0xAA64)
@@ -891,7 +891,7 @@ ImageSymbol {
     NumberOfAuxSymbols: 0x0
 }
 
-Member: test_arm64ec.dll
+Member: "test_arm64ec.dll"
 Format: COFF
 ImageFileHeader {
     Machine: IMAGE_FILE_MACHINE_ARM64 (0xAA64)
@@ -1055,4 +1055,77 @@ ImageSymbol {
     DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
     StorageClass: IMAGE_SYM_CLASS_EXTERNAL (0x2)
     NumberOfAuxSymbols: 0x0
+}
+
+Symbol {
+    Name: "BAR_x64"
+    Member: "test_x64.dll"
+}
+Symbol {
+    Name: "__IMPORT_DESCRIPTOR_test_arm64ec"
+    Member: "test_arm64ec.dll"
+}
+Symbol {
+    Name: "__IMPORT_DESCRIPTOR_test_x64"
+    Member: "test_x64.dll"
+}
+Symbol {
+    Name: "__IMPORT_DESCRIPTOR_test_x86"
+    Member: "test_x86.dll"
+}
+Symbol {
+    Name: "__NULL_IMPORT_DESCRIPTOR"
+    Member: "test_x64.dll"
+}
+Symbol {
+    Name: "__imp_BAR_x64"
+    Member: "test_x64.dll"
+}
+Symbol {
+    Name: "__imp_FOO_x64"
+    Member: "test_x64.dll"
+}
+Symbol {
+    Name: "__imp__foo_x86"
+    Member: "test_x86.dll"
+}
+Symbol {
+    Name: "__imp_bar_x64"
+    Member: "test_x64.dll"
+}
+Symbol {
+    Name: "__imp_foo_arm64ec"
+    Member: "test_arm64ec.dll"
+}
+Symbol {
+    Name: "__imp_foo_x64"
+    Member: "test_x64.dll"
+}
+Symbol {
+    Name: "_foo_x86"
+    Member: "test_x86.dll"
+}
+Symbol {
+    Name: "bar_x64"
+    Member: "test_x64.dll"
+}
+Symbol {
+    Name: "foo_arm64ec"
+    Member: "test_arm64ec.dll"
+}
+Symbol {
+    Name: "foo_x64"
+    Member: "test_x64.dll"
+}
+Symbol {
+    Name: "test_arm64ec_NULL_THUNK_DATA"
+    Member: "test_arm64ec.dll"
+}
+Symbol {
+    Name: "test_x64_NULL_THUNK_DATA"
+    Member: "test_x64.dll"
+}
+Symbol {
+    Name: "test_x86_NULL_THUNK_DATA"
+    Member: "test_x86.dll"
 }

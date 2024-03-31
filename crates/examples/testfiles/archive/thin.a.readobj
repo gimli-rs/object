@@ -1,0 +1,35 @@
+Format: Archive (Gnu) (thin)
+
+Member: "a.o"
+Size: 1320
+
+Member: "b.o"
+Size: 1320
+
+Member: "c.o"
+Size: 1320
+
+Symbol {
+    Name: "a_one"
+    Member: "a.o"
+}
+Symbol {
+    Name: "a_two"
+    Member: "a.o"
+}
+Symbol {
+    Name: "b_one"
+    Member: "b.o"
+}
+Symbol {
+    Name: "b_two"
+    Member: "b.o"
+}
+Symbol {
+    Name: "c_one"
+    Member: "c.o"
+}
+Symbol {
+    Name: "c_two"
+    Member: "c.o"
+}

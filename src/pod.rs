@@ -156,6 +156,8 @@ macro_rules! unsafe_impl_pod {
 
 unsafe_impl_pod!(u8, u16, u32, u64);
 
+unsafe impl<const N: usize, T: Pod> Pod for [T; N] {}
+
 #[cfg(test)]
 mod tests {
     use super::*;
