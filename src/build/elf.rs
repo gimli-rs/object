@@ -28,6 +28,13 @@ pub struct Builder<'data> {
     /// Use to set the file class when writing the ELF file.
     pub is_64: bool,
     /// The alignment of [`elf::PT_LOAD`] segments.
+    ///
+    /// This is an informational field and is not used when writing the ELF file.
+    /// It can optionally be used when calling [`Segments::add_load_segment`].
+    ///
+    /// It is determined heuristically when reading the ELF file. Currently,
+    /// if all load segments have the same alignment, that alignment is used,
+    /// otherwise it is set to 1.
     pub load_align: u64,
     /// The file header.
     pub header: Header,
@@ -64,7 +71,7 @@ impl<'data> Builder<'data> {
         Self {
             endian,
             is_64,
-            load_align: 0,
+            load_align: 1,
             header: Header::default(),
             segments: Segments::new(),
             sections: Sections::new(),
@@ -145,10 +152,11 @@ impl<'data> Builder<'data> {
         for segment in segments {
             if segment.p_type(endian) == elf::PT_LOAD {
                 let p_align = segment.p_align(endian).into();
-                if builder.load_align != 0 && builder.load_align != p_align {
-                    return Err(Error::new("Unsupported alignments for PT_LOAD segments"));
+                if builder.load_align == 0 {
+                    builder.load_align = p_align;
+                } else if builder.load_align != p_align {
+                    builder.load_align = 1;
                 }
-                builder.load_align = p_align;
             }
 
             let id = builder.segments.next_id();
@@ -167,9 +175,8 @@ impl<'data> Builder<'data> {
                 marker: PhantomData,
             });
         }
-        if !builder.segments.is_empty() && builder.load_align == 0 {
-            // There should be at least one PT_LOAD segment.
-            return Err(Error::new("Unsupported segments without a PT_LOAD segment"));
+        if builder.load_align == 0 {
+            builder.load_align = 1;
         }
 
         for (index, section) in sections.iter().enumerate().skip(1) {
@@ -2365,6 +2372,8 @@ impl<'data> Segments<'data> {
     /// Add a new `PT_LOAD` segment to the table.
     ///
     /// The file offset and address will be derived from the current maximum for any segment.
+    /// The address will be chosen so that `p_paddr % align == p_offset % align`.
+    /// You may wish to use [`Builder::load_align`] for the alignment.
     pub fn add_load_segment(&mut self, flags: u32, align: u64) -> &mut Segment<'data> {
         let mut max_offset = 0;
         let mut max_addr = 0;
