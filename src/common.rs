@@ -150,6 +150,7 @@ pub enum BinaryFormat {
 }
 
 impl BinaryFormat {
+    #[allow(dead_code)]
     fn get(self) -> BinaryFormat {
         match self {
             BinaryFormat::Host => {
