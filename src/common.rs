@@ -1,3 +1,5 @@
+use std::env;
+
 /// A CPU architecture.
 #[allow(missing_docs)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -31,6 +33,7 @@ pub enum Architecture {
     Wasm32,
     Wasm64,
     Xtensa,
+    Host,
 }
 
 /// A CPU sub-architecture.
@@ -47,6 +50,37 @@ impl Architecture {
     ///
     /// Returns `None` for unknown architectures.
     pub fn address_size(self) -> Option<AddressSize> {
+        if self == Architecture::Host {
+            let arch_str = env::var("TARGET_ARCH").unwrap_or_default();
+            self = match arch_str.as_str() {
+                "aarch64" => Architecture::Aarch64,
+                "aarch64_ilp32" => Architecture::Aarch64_Ilp32,
+                "arm" => Architecture::Arm,
+                "avr" => Architecture::Avr,
+                "bpf" => Architecture::Bpf,
+                "csky" => Architecture::Csky,
+                "i386" => Architecture::I386,
+                "x86_64" => Architecture::X86_64,
+                "x86_64_x32" => Architecture::X86_64_X32,
+                "hexagon" => Architecture::Hexagon,
+                "loongarch64" => Architecture::LoongArch64,
+                "mips" => Architecture::Mips,
+                "mips64" => Architecture::Mips64,
+                "msp430" => Architecture::Msp430,
+                "powerpc" => Architecture::PowerPc,
+                "powerpc64" => Architecture::PowerPc64,
+                "riscv32" => Architecture::Riscv32,
+                "riscv64" => Architecture::Riscv64,
+                "s390x" => Architecture::S390x,
+                "sbf" => Architecture::Sbf,
+                "sharc" => Architecture::Sharc,
+                "sparc64" => Architecture::Sparc64,
+                "wasm32" => Architecture::Wasm32,
+                "wasm64" => Architecture::Wasm64,
+                "xtensa" => Architecture::Xtensa,
+                _ => Architecture::Unknown,
+            }
+        }
         match self {
             Architecture::Unknown => None,
             Architecture::Aarch64 => Some(AddressSize::U64),
@@ -111,6 +145,24 @@ pub enum BinaryFormat {
     Pe,
     Wasm,
     Xcoff,
+    Host,
+}
+
+impl BinaryFormat {
+    fn get(self) -> BinaryFormat {
+        match self {
+            BinaryFormat::Host => {
+                if cfg!(os = "windows") {
+                    BinaryFormat::Coff
+                } else if cfg!(os == "macos") {
+                    BinaryFormat::MachO
+                } else {
+                    BinaryFormat::Elf
+                }
+            },
+            _ => self,
+        }
+    }
 }
 
 /// The kind of a section.
