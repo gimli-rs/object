@@ -49,7 +49,7 @@ impl Architecture {
     /// The size of an address value for this architecture.
     ///
     /// Returns `None` for unknown architectures.
-    pub fn address_size(self) -> Option<AddressSize> {
+    pub fn address_size(mut self) -> Option<AddressSize> {
         if self == Architecture::Host {
             let arch_str = env::var("TARGET_ARCH").unwrap_or_default();
             self = match arch_str.as_str() {
@@ -108,6 +108,7 @@ impl Architecture {
             Architecture::Wasm32 => Some(AddressSize::U32),
             Architecture::Wasm64 => Some(AddressSize::U64),
             Architecture::Xtensa => Some(AddressSize::U32),
+            Architecture::Host => None,
         }
     }
 }
@@ -154,12 +155,12 @@ impl BinaryFormat {
             BinaryFormat::Host => {
                 if cfg!(os = "windows") {
                     BinaryFormat::Coff
-                } else if cfg!(os == "macos") {
+                } else if cfg!(os = "macos") {
                     BinaryFormat::MachO
                 } else {
                     BinaryFormat::Elf
                 }
-            },
+            }
             _ => self,
         }
     }
