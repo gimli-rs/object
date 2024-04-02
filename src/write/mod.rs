@@ -94,7 +94,7 @@ pub struct Object<'a> {
 
 impl<'a> Object<'a> {
     /// Create an empty object file.
-    pub fn new(format: BinaryFormat, architecture: Architecture, endian: Endianness) -> Object<'a> {
+    pub fn new(mut format: BinaryFormat, architecture: Architecture, endian: Endianness) -> Object<'a> {
         if format == BinaryFormat::Host {
             format = format.get();
         }

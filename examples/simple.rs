@@ -4,8 +4,10 @@ use object::{
     SymbolFlags, SymbolKind,
 };
 
+// needs feature `write`
+
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let mut obj = Object::new(BinaryFormat::Host, Architecture::Host, Endianness::Little);
+    let mut obj = Object::new(BinaryFormat::Host, Architecture::X86_64, Endianness::Little);
     obj.add_file_symbol(b"test.c".into());
 
     // External definitions.
