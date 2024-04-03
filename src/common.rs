@@ -121,7 +121,7 @@ impl BinaryFormat {
     pub fn native_object() -> BinaryFormat {
         match self {
             BinaryFormat::Host => {
-                if cfg!(os = "windows") {
+                if cfg!(target_os = "windows") {
                     BinaryFormat::Coff
                 } else if cfg!(os = "macos") {
                     BinaryFormat::MachO
