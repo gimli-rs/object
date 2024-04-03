@@ -117,7 +117,7 @@ impl BinaryFormat {
     /// The target's native binary format for relocatable object files.
     ///
     /// Defaults to `Elf` for unknown platforms.
-    pub fn host() -> BinaryFormat {
+    pub fn native_object() -> BinaryFormat {
         if cfg!(target_os = "windows") {
             BinaryFormat::Coff
         } else if cfg!(target_os = "macos") {

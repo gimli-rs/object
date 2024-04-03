@@ -1,2 +1,0 @@
-# Easy beginner exampels
-
