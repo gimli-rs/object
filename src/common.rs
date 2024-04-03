@@ -115,10 +115,10 @@ pub enum BinaryFormat {
 }
 
 impl BinaryFormat {
-    /// Returns the BinaryFormat of the enum
-    /// Used for unwraping the `Host` option
-    #[allow(dead_code)]
-    pub fn get(self) -> BinaryFormat {
+    /// The target's native binary format for relocatable object files.
+    ///
+    /// Defaults to `Elf` for unknown platforms.
+    pub fn native_object() -> BinaryFormat {
         match self {
             BinaryFormat::Host => {
                 if cfg!(os = "windows") {
