@@ -123,7 +123,7 @@ impl BinaryFormat {
             BinaryFormat::Host => {
                 if cfg!(target_os = "windows") {
                     BinaryFormat::Coff
-                } else if cfg!(os = "macos") {
+                } else if cfg!(target_os = "macos") {
                     BinaryFormat::MachO
                 } else {
                     BinaryFormat::Elf
