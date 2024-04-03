@@ -111,25 +111,19 @@ pub enum BinaryFormat {
     Pe,
     Wasm,
     Xcoff,
-    Host,
 }
 
 impl BinaryFormat {
     /// The target's native binary format for relocatable object files.
     ///
     /// Defaults to `Elf` for unknown platforms.
-    pub fn native_object() -> BinaryFormat {
-        match self {
-            BinaryFormat::Host => {
-                if cfg!(target_os = "windows") {
-                    BinaryFormat::Coff
-                } else if cfg!(target_os = "macos") {
-                    BinaryFormat::MachO
-                } else {
-                    BinaryFormat::Elf
-                }
-            }
-            _ => self,
+    pub fn host() -> BinaryFormat {
+        if cfg!(target_os = "windows") {
+            BinaryFormat::Coff
+        } else if cfg!(target_os = "macos") {
+            BinaryFormat::MachO
+        } else {
+           BinaryFormat::Elf
         }
     }
 }
