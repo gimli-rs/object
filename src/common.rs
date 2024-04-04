@@ -43,6 +43,61 @@ pub enum SubArchitecture {
 }
 
 impl Architecture {
+    /// The target's architecture
+    ///
+    /// Defaults to Unknown for unknown platforms.
+    pub fn native_arch() -> Architecture {
+        if cfg!(target_arch = "aarch64") {
+            Architecture::Aarch64
+        } else if cfg!(target_arch = "arm") {
+            Architecture::Arm
+        } else if cfg!(target_arch = "avr") {
+            Architecture::Avr
+        } else if cfg!(target_arch = "bpf") {
+            Architecture::Bpf
+        } else if cfg!(target_arch = "csky") {
+            Architecture::Csky
+        } else if cfg!(target_arch = "i386") {
+            Architecture::I386
+        } else if cfg!(target_arch = "x86_64") {
+            Architecture::X86_64
+        } else if cfg!(target_arch = "hexagon") {
+            Architecture::Hexagon
+        } else if cfg!(target_arch = "loongarch64") {
+            Architecture::LoongArch64
+        } else if cfg!(target_arch = "mips") {
+            Architecture::Mips
+        } else if cfg!(target_arch = "mips64") {
+            Architecture::Mips64
+        } else if cfg!(target_arch = "msp430") {
+            Architecture::Msp430
+        } else if cfg!(target_arch = "powerpc") {
+            Architecture::PowerPc
+        } else if cfg!(target_arch = "powerpc64") {
+            Architecture::PowerPc64
+        } else if cfg!(target_arch = "riscv32") {
+            Architecture::Riscv32
+        } else if cfg!(target_arch = "riscv64") {
+            Architecture::Riscv64
+        } else if cfg!(target_arch = "s390x") {
+            Architecture::S390x
+        } else if cfg!(target_arch = "sbf") {
+            Architecture::Sbf
+        } else if cfg!(target_arch = "sharc") {
+            Architecture::Sharc
+        } else if cfg!(target_arch = "sparc64") {
+            Architecture::Sparc64
+        } else if cfg!(target_arch = "wasm32") {
+            Architecture::Wasm32
+        } else if cfg!(target_arch = "wasm64") {
+            Architecture::Wasm64
+        } else if cfg!(target_arch = "xtensa") {
+            Architecture::Xtensa
+        } else {
+            Architecture::Unknown
+        }
+    }
+
     /// The size of an address value for this architecture.
     ///
     /// Returns `None` for unknown architectures.
