@@ -113,6 +113,21 @@ pub enum BinaryFormat {
     Xcoff,
 }
 
+impl BinaryFormat {
+    /// The target's native binary format for relocatable object files.
+    ///
+    /// Defaults to `Elf` for unknown platforms.
+    pub fn native_object() -> BinaryFormat {
+        if cfg!(target_os = "windows") {
+            BinaryFormat::Coff
+        } else if cfg!(target_os = "macos") {
+            BinaryFormat::MachO
+        } else {
+            BinaryFormat::Elf
+        }
+    }
+}
+
 /// The kind of a section.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[non_exhaustive]
