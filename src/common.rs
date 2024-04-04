@@ -123,7 +123,7 @@ impl BinaryFormat {
         } else if cfg!(target_os = "macos") {
             BinaryFormat::MachO
         } else {
-           BinaryFormat::Elf
+            BinaryFormat::Elf
         }
     }
 }
