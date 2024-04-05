@@ -42,10 +42,7 @@ See [`crates/examples`](crates/examples) for more examples.
 ## Minimum Supported Rust Version (MSRV)
 
 Changes to MSRV are considered breaking changes. We are conservative about changing the MSRV,
-but sometimes are required to due to dependencies. The MSRV is:
-
-  * 1.60.0 for the `read` feature and its dependencies.
-  * 1.65.0 for other features.
+but sometimes are required to due to dependencies. The MSRV is 1.65.0.
 
 ## License
 

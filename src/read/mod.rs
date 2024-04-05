@@ -748,9 +748,9 @@ impl RelocationMap {
     /// Fails if any relocation cannot be added to the map.
     /// You can manually use `add` if you need different error handling,
     /// such as to list all errors or to ignore them.
-    pub fn new<'data, 'file, T>(file: &'file T, section: &T::Section) -> Result<Self>
+    pub fn new<'data, 'file, T>(file: &'file T, section: &T::Section<'file>) -> Result<Self>
     where
-        T: Object<'data, 'file>,
+        T: Object<'data>,
     {
         let mut map = RelocationMap(Map::new());
         for (offset, relocation) in section.relocations() {
@@ -767,7 +767,7 @@ impl RelocationMap {
         relocation: Relocation,
     ) -> Result<()>
     where
-        T: Object<'data, 'file>,
+        T: Object<'data>,
     {
         let mut entry = RelocationMapEntry {
             implicit_addend: relocation.has_implicit_addend(),
