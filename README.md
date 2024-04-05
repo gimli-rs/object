@@ -11,7 +11,14 @@ For reading files, it provides multiple levels of support:
 * a higher level unified API for accessing common features of object files, such
   as sections and symbols ([example](crates/examples/src/objdump.rs))
 
-Supported file formats: ELF, Mach-O, Windows PE/COFF, Wasm, XCOFF, and Unix archive.
+Supported file formats for reading: ELF, Mach-O, Windows PE/COFF, Wasm, XCOFF, and Unix archive.
+
+For writing files, it provides:
+
+* low level writers for ELF, PE, and COFF
+* higher level builder for ELF ([example](crates/rewrite/src))
+* a unified API for writing relocatable object files (ELF, Mach-O, COFF, XCOFF)
+  ([example](crates/examples/src/bin/simple_write.rs))
 
 ## Example for unified read API
 ```rust

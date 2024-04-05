@@ -55,3 +55,7 @@ required-features = ["object/read_core", "object/write_core", "object/pe", "obje
 [[bin]]
 name = "readobj"
 required-features = ["read"]
+
+[[bin]]
+name = "simple_write"
+required-features = ["write"]
