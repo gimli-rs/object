@@ -2,6 +2,73 @@
 
 --------------------------------------------------------------------------------
 
+## 0.35.0
+
+Released 2024/04/10.
+
+### Breaking changes
+
+* Moved the `'file` lifetime parameter from `read::Object` to its associated types.
+  [#655](https://github.com/gimli-rs/object/pull/655)
+
+### Added
+
+* Added support more section kinds in `build::elf`.
+  [#650](https://github.com/gimli-rs/object/pull/650)
+
+* Added thin archive support to `read::ArchiveFile`.
+  [#651](https://github.com/gimli-rs/object/pull/651)
+
+* Added `read::ReadCacheOps` and changed `read::ReadCache` bound from `Read + Seek` to `ReadCacheOps`.
+  [#652](https://github.com/gimli-rs/object/pull/652)
+
+* Added `read::ObjectSection::relocation_map`
+  [#654](https://github.com/gimli-rs/object/pull/654)
+
+* Added `read::ArchiveFile::symbols`.
+  [#658](https://github.com/gimli-rs/object/pull/658)
+
+* Added `BinaryFormat::native_object`.
+  [#661](https://github.com/gimli-rs/object/pull/661)
+
+### Changed
+
+* The minimum supported rust version for the `read` feature and its dependencies
+  has changed to 1.65.0.
+  [#655](https://github.com/gimli-rs/object/pull/655)
+
+* Fixed `sh_offset` handling for `SHT_NOBITS` sections in `build::elf`.
+  [#645](https://github.com/gimli-rs/object/pull/645)
+
+* Fixed handling of ELF files with dynamic symbols but no dynamic strings.
+  [#646](https://github.com/gimli-rs/object/pull/646)
+
+* Fixed potential panics in `read::WasmFile` due to invalid function indices.
+  [#649](https://github.com/gimli-rs/object/pull/649)
+
+* Fixed handling of Wasm components in `read::WasmFile`.
+  [#649](https://github.com/gimli-rs/object/pull/649)
+
+* Fixed `sh_entsize` for 32-bit hash sections in `write::elf`.
+  [#650](https://github.com/gimli-rs/object/pull/650)
+
+* Fixed `sh_size` for attribute sections in `build::elf`.
+  [#650](https://github.com/gimli-rs/object/pull/650)
+
+* Fixed `sh_info` for `SHT_DYNSYM` sections in `build::elf`.
+  [#650](https://github.com/gimli-rs/object/pull/650)
+
+* Fixed handling of dynamic relocations with invalid `sh_link` in `build::elf`.
+  [#650](https://github.com/gimli-rs/object/pull/650)
+
+* Fixed parsing of member names containing '/' in `read::ArchiveFile`.
+  [#657](https://github.com/gimli-rs/object/pull/657)
+
+* Fixed handling of load segment alignments in `build::elf::Builder::read`.
+  [#659](https://github.com/gimli-rs/object/pull/659)
+
+--------------------------------------------------------------------------------
+
 ## 0.34.0
 
 Released 2024/03/11.
