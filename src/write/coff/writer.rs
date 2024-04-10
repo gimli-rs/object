@@ -74,6 +74,8 @@ impl<'a> Writer<'a> {
     /// Reserve a file range with the given size and starting alignment.
     ///
     /// Returns the aligned offset of the start of the range.
+    ///
+    /// `align_start` must be a power of two.
     pub fn reserve(&mut self, len: usize, align_start: usize) -> u32 {
         if align_start > 1 {
             self.len = util::align(self.len, align_start);
