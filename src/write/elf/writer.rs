@@ -652,7 +652,7 @@ impl<'a> Writer<'a> {
     ///
     /// This range is used for a section named `.strtab`.
     ///
-    /// This function does nothing if no strings or symbols were defined.
+    /// This function does nothing if no strings were defined.
     /// This must be called after [`Self::add_string`].
     pub fn reserve_strtab(&mut self) {
         debug_assert_eq!(self.strtab_offset, 0);
@@ -1010,10 +1010,13 @@ impl<'a> Writer<'a> {
     ///
     /// This range is used for a section named `.dynstr`.
     ///
-    /// This function does nothing if no dynamic strings or symbols were defined.
+    /// This function does nothing if no dynamic strings were defined.
     /// This must be called after [`Self::add_dynamic_string`].
     pub fn reserve_dynstr(&mut self) -> usize {
         debug_assert_eq!(self.dynstr_offset, 0);
+        if !self.need_dynstr {
+            return 0;
+        }
         // Start with null string.
         self.dynstr_data = vec![0];
         self.dynstr.write(1, &mut self.dynstr_data);
