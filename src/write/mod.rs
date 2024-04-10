@@ -184,6 +184,7 @@ impl<'a> Object<'a> {
     /// Set the data for an existing section.
     ///
     /// Must not be called for sections that already have data, or that contain uninitialized data.
+    /// `align` must be a power of two.
     pub fn set_section_data<T>(&mut self, section: SectionId, data: T, align: u64)
     where
         T: Into<Cow<'a, [u8]>>,
@@ -192,11 +193,17 @@ impl<'a> Object<'a> {
     }
 
     /// Append data to an existing section. Returns the section offset of the data.
+    ///
+    /// Must not be called for sections that contain uninitialized data.
+    /// `align` must be a power of two.
     pub fn append_section_data(&mut self, section: SectionId, data: &[u8], align: u64) -> u64 {
         self.sections[section.0].append_data(data, align)
     }
 
     /// Append zero-initialized data to an existing section. Returns the section offset of the data.
+    ///
+    /// Must not be called for sections that contain initialized data.
+    /// `align` must be a power of two.
     pub fn append_section_bss(&mut self, section: SectionId, size: u64, align: u64) -> u64 {
         self.sections[section.0].append_bss(size, align)
     }
@@ -265,6 +272,9 @@ impl<'a> Object<'a> {
     }
 
     /// Add a subsection. Returns the `SectionId` and section offset of the data.
+    ///
+    /// Must not be called for sections that contain uninitialized data.
+    /// `align` must be a power of two.
     pub fn add_subsection(
         &mut self,
         section: StandardSection,
@@ -410,6 +420,8 @@ impl<'a> Object<'a> {
     /// Add a new common symbol and return its `SymbolId`.
     ///
     /// For Mach-O, this appends the symbol to the `__common` section.
+    ///
+    /// `align` must be a power of two.
     pub fn add_common_symbol(&mut self, mut symbol: Symbol, size: u64, align: u64) -> SymbolId {
         if self.has_common() {
             let symbol_id = self.add_symbol(symbol);
@@ -469,6 +481,9 @@ impl<'a> Object<'a> {
     /// symbol will indirectly point to the added data via the `__thread_vars` entry.
     ///
     /// Returns the section offset of the data.
+    ///
+    /// Must not be called for sections that contain uninitialized data.
+    /// `align` must be a power of two.
     pub fn add_symbol_data(
         &mut self,
         symbol_id: SymbolId,
@@ -487,6 +502,9 @@ impl<'a> Object<'a> {
     /// symbol will indirectly point to the added data via the `__thread_vars` entry.
     ///
     /// Returns the section offset of the data.
+    ///
+    /// Must not be called for sections that contain initialized data.
+    /// `align` must be a power of two.
     pub fn add_symbol_bss(
         &mut self,
         symbol_id: SymbolId,
@@ -758,6 +776,7 @@ impl<'a> Section<'a> {
     /// Set the data for a section.
     ///
     /// Must not be called for sections that already have data, or that contain uninitialized data.
+    /// `align` must be a power of two.
     pub fn set_data<T>(&mut self, data: T, align: u64)
     where
         T: Into<Cow<'a, [u8]>>,
@@ -773,6 +792,7 @@ impl<'a> Section<'a> {
     /// Append data to a section.
     ///
     /// Must not be called for sections that contain uninitialized data.
+    /// `align` must be a power of two.
     pub fn append_data(&mut self, append_data: &[u8], align: u64) -> u64 {
         debug_assert!(!self.is_bss());
         debug_assert_eq!(align & (align - 1), 0);
@@ -794,6 +814,7 @@ impl<'a> Section<'a> {
     /// Append uninitialized data to a section.
     ///
     /// Must not be called for sections that contain initialized data.
+    /// `align` must be a power of two.
     pub fn append_bss(&mut self, size: u64, align: u64) -> u64 {
         debug_assert!(self.is_bss());
         debug_assert_eq!(align & (align - 1), 0);
