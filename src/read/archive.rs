@@ -144,6 +144,13 @@ impl<'data, R: ReadRef<'data>> ArchiveFile<'data, R> {
                                 members_offset = tail;
                             }
                         }
+                        if tail < len {
+                            let member = ArchiveMember::parse(data, &mut tail, &file.names, thin)?;
+                            if member.name == b"/<ECSYMBOLS>/" {
+                                // COFF EC Symbol Table.
+                                members_offset = tail;
+                            }
+                        }
                     } else if member.name == b"//" {
                         // GNU names table.
                         file.names = member.data(data)?;
