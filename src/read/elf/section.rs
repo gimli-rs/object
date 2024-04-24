@@ -1,12 +1,12 @@
 use core::fmt::Debug;
-use core::{iter, mem, slice, str};
+use core::{iter, slice, str};
 
 use crate::elf;
 use crate::endian::{self, Endianness, U32Bytes};
-use crate::pod::Pod;
+use crate::pod::{self, Pod};
 use crate::read::{
-    self, Bytes, CompressedData, CompressedFileRange, CompressionFormat, Error, ObjectSection,
-    ReadError, ReadRef, RelocationMap, SectionFlags, SectionIndex, SectionKind, StringTable,
+    self, CompressedData, CompressedFileRange, CompressionFormat, Error, ObjectSection, ReadError,
+    ReadRef, RelocationMap, SectionFlags, SectionIndex, SectionKind, StringTable,
 };
 
 use super::{
@@ -671,8 +671,7 @@ pub trait SectionHeader: Debug + Pod {
         endian: Self::Endian,
         data: R,
     ) -> read::Result<&'data [T]> {
-        let mut data = self.data(endian, data).map(Bytes)?;
-        data.read_slice(data.len() / mem::size_of::<T>())
+        pod::slice_from_all_bytes(self.data(endian, data)?)
             .read_error("Invalid ELF section size or offset")
     }
 
@@ -816,19 +815,11 @@ pub trait SectionHeader: Debug + Pod {
         if self.sh_type(endian) != elf::SHT_GROUP {
             return Ok(None);
         }
-        let mut data = self
-            .data(endian, data)
-            .read_error("Invalid ELF group section offset or size")
-            .map(Bytes)?;
-        let flag = data
-            .read::<U32Bytes<_>>()
-            .read_error("Invalid ELF group section offset or size")?
-            .get(endian);
-        let count = data.len() / mem::size_of::<U32Bytes<Self::Endian>>();
-        let sections = data
-            .read_slice(count)
-            .read_error("Invalid ELF group section offset or size")?;
-        Ok(Some((flag, sections)))
+        let msg = "Invalid ELF group section offset or size";
+        let data = self.data(endian, data).read_error(msg)?;
+        let (flag, data) = pod::from_bytes::<U32Bytes<_>>(data).read_error(msg)?;
+        let sections = pod::slice_from_all_bytes(data).read_error(msg)?;
+        Ok(Some((flag.get(endian), sections)))
     }
 
     /// Return the header of a SysV hash section.
