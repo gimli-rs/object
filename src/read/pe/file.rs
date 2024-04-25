@@ -6,7 +6,7 @@ use core::convert::TryInto;
 
 use crate::endian::{LittleEndian as LE, U32};
 use crate::pe;
-use crate::pod::Pod;
+use crate::pod::{self, Pod};
 use crate::read::coff::{CoffCommon, CoffSymbol, CoffSymbolIterator, CoffSymbolTable, SymbolTable};
 use crate::read::{
     self, Architecture, ByteString, Bytes, CodeView, ComdatKind, Error, Export, FileFlags, Import,
@@ -317,17 +317,8 @@ where
             Some(data_dir) => data_dir,
             None => return Ok(None),
         };
-        let debug_data = data_dir.data(self.data, &self.common.sections).map(Bytes)?;
-        let debug_data_size = data_dir.size.get(LE) as usize;
-
-        let count = debug_data_size / mem::size_of::<pe::ImageDebugDirectory>();
-        let rem = debug_data_size % mem::size_of::<pe::ImageDebugDirectory>();
-        if rem != 0 || count < 1 {
-            return Err(Error("Invalid PE debug dir size"));
-        }
-
-        let debug_dirs = debug_data
-            .read_slice_at::<pe::ImageDebugDirectory>(0, count)
+        let debug_data = data_dir.data(self.data, &self.common.sections)?;
+        let debug_dirs = pod::slice_from_all_bytes::<pe::ImageDebugDirectory>(debug_data)
             .read_error("Invalid PE debug dir size")?;
 
         for debug_dir in debug_dirs {
