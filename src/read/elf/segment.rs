@@ -67,6 +67,16 @@ where
 }
 
 impl<'data, 'file, Elf: FileHeader, R: ReadRef<'data>> ElfSegment<'data, 'file, Elf, R> {
+    /// Get the ELF file containing this segment.
+    pub fn elf_file(&self) -> &'file ElfFile<'data, Elf, R> {
+        self.file
+    }
+
+    /// Get the raw ELF program header for the segment.
+    pub fn elf_program_header(&self) -> &'data Elf::ProgramHeader {
+        self.segment
+    }
+
     fn bytes(&self) -> read::Result<&'data [u8]> {
         self.segment
             .data(self.file.endian, self.file.data)

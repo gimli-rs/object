@@ -380,6 +380,71 @@ where
 }
 
 impl<'data, 'file, Elf: FileHeader, R: ReadRef<'data>> ElfSection<'data, 'file, Elf, R> {
+    /// Get the ELF file containing this section.
+    pub fn elf_file(&self) -> &'file ElfFile<'data, Elf, R> {
+        self.file
+    }
+
+    /// Get the raw ELF section header.
+    pub fn elf_section_header(&self) -> &'data Elf::SectionHeader {
+        self.section
+    }
+
+    /// Get the index of the relocation section that references this section.
+    ///
+    /// Returns `None` if there are no relocations.
+    /// Returns an error if there are multiple relocation sections that reference this section.
+    pub fn elf_relocation_section_index(&self) -> read::Result<Option<SectionIndex>> {
+        let Some(relocation_index) = self.file.relocations.get(self.index) else {
+            return Ok(None);
+        };
+        if self.file.relocations.get(relocation_index).is_some() {
+            return Err(Error(
+                "Unsupported ELF section with multiple relocation sections",
+            ));
+        }
+        Ok(Some(relocation_index))
+    }
+
+    /// Get the relocation section that references this section.
+    ///
+    /// Returns `None` if there are no relocations.
+    /// Returns an error if there are multiple relocation sections that reference this section.
+    pub fn elf_relocation_section(&self) -> read::Result<Option<&'data Elf::SectionHeader>> {
+        let Some(relocation_index) = self.elf_relocation_section_index()? else {
+            return Ok(None);
+        };
+        self.file.sections.section(relocation_index).map(Some)
+    }
+
+    /// Get the `Elf::Rel` entries that apply to this section.
+    ///
+    /// Returns an empty slice if there are no relocations.
+    /// Returns an error if there are multiple relocation sections that reference this section.
+    pub fn elf_linked_rel(&self) -> read::Result<&'data [Elf::Rel]> {
+        let Some(relocation_section) = self.elf_relocation_section()? else {
+            return Ok(&[]);
+        };
+        let Some((rel, _)) = relocation_section.rel(self.file.endian, self.file.data)? else {
+            return Ok(&[]);
+        };
+        Ok(rel)
+    }
+
+    /// Get the `Elf::Rela` entries that apply to this section.
+    ///
+    /// Returns an empty slice if there are no relocations.
+    /// Returns an error if there are multiple relocation sections that reference this section.
+    pub fn elf_linked_rela(&self) -> read::Result<&'data [Elf::Rela]> {
+        let Some(relocation_section) = self.elf_relocation_section()? else {
+            return Ok(&[]);
+        };
+        let Some((rela, _)) = relocation_section.rela(self.file.endian, self.file.data)? else {
+            return Ok(&[]);
+        };
+        Ok(rela)
+    }
+
     fn bytes(&self) -> read::Result<&'data [u8]> {
         self.section
             .data(self.file.endian, self.file.data)

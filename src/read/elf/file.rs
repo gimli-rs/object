@@ -90,13 +90,53 @@ where
     }
 
     /// Returns the raw ELF file header.
+    #[deprecated(note = "Use `elf_header` instead")]
     pub fn raw_header(&self) -> &'data Elf {
         self.header
     }
 
     /// Returns the raw ELF segments.
+    #[deprecated(note = "Use `elf_program_headers` instead")]
     pub fn raw_segments(&self) -> &'data [Elf::ProgramHeader] {
         self.segments
+    }
+
+    /// Get the raw ELF file header.
+    pub fn elf_header(&self) -> &'data Elf {
+        self.header
+    }
+
+    /// Get the raw ELF program headers.
+    ///
+    /// Returns an empty slice if the file has no program headers.
+    pub fn elf_program_headers(&self) -> &'data [Elf::ProgramHeader] {
+        self.segments
+    }
+
+    /// Get the ELF section table.
+    ///
+    /// Returns an empty section table if the file has no section headers.
+    pub fn elf_section_table(&self) -> &SectionTable<'data, Elf, R> {
+        &self.sections
+    }
+
+    /// Get the ELF symbol table.
+    ///
+    /// Returns an empty symbol table if the file has no symbol table.
+    pub fn elf_symbol_table(&self) -> &SymbolTable<'data, Elf, R> {
+        &self.symbols
+    }
+
+    /// Get the ELF dynamic symbol table.
+    ///
+    /// Returns an empty symbol table if the file has no dynamic symbol table.
+    pub fn elf_dynamic_symbol_table(&self) -> &SymbolTable<'data, Elf, R> {
+        &self.dynamic_symbols
+    }
+
+    /// Get a mapping for linked relocation sections.
+    pub fn elf_relocation_sections(&self) -> &RelocationSections {
+        &self.relocations
     }
 
     fn raw_section_by_name<'file>(
