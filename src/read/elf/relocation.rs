@@ -61,8 +61,12 @@ impl RelocationSections {
     ///
     /// This may also be called with a relocation section index, and it will return the
     /// next associated relocation section.
-    pub fn get(&self, index: usize) -> Option<usize> {
-        self.relocations.get(index).cloned().filter(|x| *x != 0)
+    pub fn get(&self, index: SectionIndex) -> Option<SectionIndex> {
+        self.relocations
+            .get(index.0)
+            .cloned()
+            .filter(|x| *x != 0)
+            .map(SectionIndex)
     }
 }
 
@@ -201,7 +205,7 @@ where
                 }
                 self.relocations = None;
             }
-            self.section_index = SectionIndex(self.file.relocations.get(self.section_index.0)?);
+            self.section_index = self.file.relocations.get(self.section_index)?;
             // The construction of RelocationSections ensures section_index is valid.
             let section = self.file.sections.section(self.section_index).unwrap();
             match section.sh_type(endian) {
