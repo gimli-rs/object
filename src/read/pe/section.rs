@@ -64,6 +64,22 @@ where
     section: &'data pe::ImageSectionHeader,
 }
 
+impl<'data, 'file, Pe, R> PeSegment<'data, 'file, Pe, R>
+where
+    Pe: ImageNtHeaders,
+    R: ReadRef<'data>,
+{
+    /// Get the PE file containing this segment.
+    pub fn pe_file(&self) -> &'file PeFile<'data, Pe, R> {
+        self.file
+    }
+
+    /// Get the raw PE section header.
+    pub fn pe_section(&self) -> &'data pe::ImageSectionHeader {
+        self.section
+    }
+}
+
 impl<'data, 'file, Pe, R> read::private::Sealed for PeSegment<'data, 'file, Pe, R>
 where
     Pe: ImageNtHeaders,
@@ -187,6 +203,22 @@ where
     pub(super) file: &'file PeFile<'data, Pe, R>,
     pub(super) index: SectionIndex,
     pub(super) section: &'data pe::ImageSectionHeader,
+}
+
+impl<'data, 'file, Pe, R> PeSection<'data, 'file, Pe, R>
+where
+    Pe: ImageNtHeaders,
+    R: ReadRef<'data>,
+{
+    /// Get the PE file containing this segment.
+    pub fn pe_file(&self) -> &'file PeFile<'data, Pe, R> {
+        self.file
+    }
+
+    /// Get the raw PE section header.
+    pub fn pe_section(&self) -> &'data pe::ImageSectionHeader {
+        self.section
+    }
 }
 
 impl<'data, 'file, Pe, R> read::private::Sealed for PeSection<'data, 'file, Pe, R>
