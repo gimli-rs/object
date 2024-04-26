@@ -172,8 +172,27 @@ where
     }
 
     /// Returns the raw Mach-O file header.
+    #[deprecated(note = "Use `macho_header` instead")]
     pub fn raw_header(&self) -> &'data Mach {
         self.header
+    }
+
+    /// Get the raw Mach-O file header.
+    pub fn macho_header(&self) -> &'data Mach {
+        self.header
+    }
+
+    /// Get the Mach-O load commands.
+    pub fn macho_load_commands(&self) -> Result<LoadCommandIterator<'data, Mach::Endian>> {
+        self.header
+            .load_commands(self.endian, self.data, self.header_offset)
+    }
+
+    /// Get the Mach-O symbol table.
+    ///
+    /// Returns an empty symbol table if the file has no symbol table.
+    pub fn macho_symbol_table(&self) -> &SymbolTable<'data, Mach, R> {
+        &self.symbols
     }
 
     /// Return the `LC_BUILD_VERSION` load command if present.

@@ -79,6 +79,23 @@ where
     Mach: MachHeader,
     R: ReadRef<'data>,
 {
+    /// Get the Mach-O file containing this section.
+    pub fn macho_file(&self) -> &'file MachOFile<'data, Mach, R> {
+        self.file
+    }
+
+    /// Get the raw Mach-O section structure.
+    pub fn macho_section(&self) -> &'data Mach::Section {
+        self.internal.section
+    }
+
+    /// Get the raw Mach-O relocation entries.
+    pub fn macho_relocations(&self) -> Result<&'data [macho::Relocation<Mach::Endian>]> {
+        self.internal
+            .section
+            .relocations(self.file.endian, self.internal.data)
+    }
+
     fn bytes(&self) -> Result<&'data [u8]> {
         self.internal
             .section
@@ -188,12 +205,7 @@ where
     fn relocations(&self) -> MachORelocationIterator<'data, 'file, Mach, R> {
         MachORelocationIterator {
             file: self.file,
-            relocations: self
-                .internal
-                .section
-                .relocations(self.file.endian, self.internal.data)
-                .unwrap_or(&[])
-                .iter(),
+            relocations: self.macho_relocations().unwrap_or(&[]).iter(),
         }
     }
 
