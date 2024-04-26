@@ -12,7 +12,7 @@ use crate::read::{
 use crate::xcoff;
 
 use super::{
-    CsectAux, FileAux, SectionHeader, SectionTable, Symbol, SymbolTable, XcoffComdat,
+    CsectAux, FileAux, Rel, SectionHeader, SectionTable, Symbol, SymbolTable, XcoffComdat,
     XcoffComdatIterator, XcoffSection, XcoffSectionIterator, XcoffSegment, XcoffSegmentIterator,
     XcoffSymbol, XcoffSymbolIterator, XcoffSymbolTable,
 };
@@ -72,8 +72,29 @@ where
     }
 
     /// Returns the raw XCOFF file header.
+    #[deprecated(note = "Use `xcoff_header` instead")]
     pub fn raw_header(&self) -> &'data Xcoff {
         self.header
+    }
+
+    /// Get the raw XCOFF file header.
+    pub fn xcoff_header(&self) -> &'data Xcoff {
+        self.header
+    }
+
+    /// Get the raw XCOFF auxiliary header.
+    pub fn xcoff_aux_header(&self) -> Option<&'data Xcoff::AuxHeader> {
+        self.aux_header
+    }
+
+    /// Get the XCOFF section table.
+    pub fn xcoff_section_table(&self) -> &SectionTable<'data, Xcoff> {
+        &self.sections
+    }
+
+    /// Get the XCOFF symbol table.
+    pub fn xcoff_symbol_table(&self) -> &SymbolTable<'data, Xcoff, R> {
+        &self.symbols
     }
 }
 
@@ -245,10 +266,11 @@ where
 pub trait FileHeader: Debug + Pod {
     type Word: Into<u64>;
     type AuxHeader: AuxHeader<Word = Self::Word>;
-    type SectionHeader: SectionHeader<Word = Self::Word>;
+    type SectionHeader: SectionHeader<Word = Self::Word, Rel = Self::Rel>;
     type Symbol: Symbol<Word = Self::Word>;
     type FileAux: FileAux;
     type CsectAux: CsectAux;
+    type Rel: Rel<Word = Self::Word>;
 
     /// Return true if this type is a 64-bit header.
     fn is_type_64(&self) -> bool;
@@ -331,6 +353,7 @@ impl FileHeader for xcoff::FileHeader32 {
     type Symbol = xcoff::Symbol32;
     type FileAux = xcoff::FileAux32;
     type CsectAux = xcoff::CsectAux32;
+    type Rel = xcoff::Rel32;
 
     fn is_type_64(&self) -> bool {
         false
@@ -372,6 +395,7 @@ impl FileHeader for xcoff::FileHeader64 {
     type Symbol = xcoff::Symbol64;
     type FileAux = xcoff::FileAux64;
     type CsectAux = xcoff::CsectAux64;
+    type Rel = xcoff::Rel64;
 
     fn is_type_64(&self) -> bool {
         true

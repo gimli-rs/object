@@ -67,6 +67,21 @@ where
 }
 
 impl<'data, 'file, Xcoff: FileHeader, R: ReadRef<'data>> XcoffSection<'data, 'file, Xcoff, R> {
+    /// Get the XCOFF file containing this section.
+    pub fn xcoff_file(&self) -> &'file XcoffFile<'data, Xcoff, R> {
+        self.file
+    }
+
+    /// Get the raw XCOFF section header.
+    pub fn xcoff_section(&self) -> &'data Xcoff::SectionHeader {
+        self.section
+    }
+
+    /// Get the raw XCOFF relocation entries for this section.
+    pub fn xcoff_relocations(&self) -> Result<&'data [Xcoff::Rel]> {
+        self.section.relocations(self.file.data)
+    }
+
     fn bytes(&self) -> Result<&'data [u8]> {
         self.section
             .data(self.file.data)
@@ -184,7 +199,7 @@ where
     }
 
     fn relocations(&self) -> Self::RelocationIterator {
-        let rel = self.section.relocations(self.file.data).unwrap_or(&[]);
+        let rel = self.xcoff_relocations().unwrap_or(&[]);
         XcoffRelocationIterator {
             file: self.file,
             relocations: rel.iter(),

@@ -294,6 +294,22 @@ where
     pub(super) symbol: &'data Xcoff::Symbol,
 }
 
+impl<'data, 'file, Xcoff, R> XcoffSymbol<'data, 'file, Xcoff, R>
+where
+    Xcoff: FileHeader,
+    R: ReadRef<'data>,
+{
+    /// Get the XCOFF file containing this symbol.
+    pub fn xcoff_file(&self) -> &'file XcoffFile<'data, Xcoff, R> {
+        self.file
+    }
+
+    /// Get the raw XCOFF symbol structure.
+    pub fn xcoff_symbol(&self) -> &'data Xcoff::Symbol {
+        self.symbol
+    }
+}
+
 impl<'data, 'file, Xcoff: FileHeader, R: ReadRef<'data>> read::private::Sealed
     for XcoffSymbol<'data, 'file, Xcoff, R>
 {
