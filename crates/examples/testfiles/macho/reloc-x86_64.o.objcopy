@@ -28,7 +28,7 @@ SegmentCommand {
     NumberOfSections: 2
     Flags: 0x0
     Section {
-        Index: 0
+        Index: 1
         SectionName: "__text"
         SegmentName: "__TEXT"
         Address: 0x0
@@ -131,7 +131,7 @@ SegmentCommand {
         }
     }
     Section {
-        Index: 1
+        Index: 2
         SectionName: "__data"
         SegmentName: "__DATA"
         Address: 0x53

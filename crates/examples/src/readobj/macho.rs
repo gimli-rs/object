@@ -609,8 +609,8 @@ fn print_segment<S: Segment>(
         }
         if let Some(sections) = segment.sections(endian, section_data).print_err(p) {
             for section in sections {
-                print_section(p, endian, data, section, state);
                 state.section_index += 1;
+                print_section(p, endian, data, section, state);
             }
         }
     });
