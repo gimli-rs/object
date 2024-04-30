@@ -28,7 +28,7 @@ SegmentCommand {
     NumberOfSections: 11
     Flags: 0x0
     Section {
-        Index: 0
+        Index: 1
         SectionName: "__text"
         SegmentName: "__TEXT"
         Address: 0x0
@@ -67,7 +67,7 @@ SegmentCommand {
         }
     }
     Section {
-        Index: 1
+        Index: 2
         SectionName: "__cstring"
         SegmentName: "__TEXT"
         Address: 0x34
@@ -79,7 +79,7 @@ SegmentCommand {
         Flags: S_CSTRING_LITERALS (0x2)
     }
     Section {
-        Index: 2
+        Index: 3
         SectionName: "__debug_abbrev"
         SegmentName: "__DWARF"
         Address: 0x41
@@ -93,7 +93,7 @@ SegmentCommand {
             S_ATTR_DEBUG (0x2000000)
     }
     Section {
-        Index: 3
+        Index: 4
         SectionName: "__debug_info"
         SegmentName: "__DWARF"
         Address: 0x7B
@@ -123,7 +123,7 @@ SegmentCommand {
         }
     }
     Section {
-        Index: 4
+        Index: 5
         SectionName: "__debug_str"
         SegmentName: "__DWARF"
         Address: 0xCE
@@ -137,7 +137,7 @@ SegmentCommand {
             S_ATTR_DEBUG (0x2000000)
     }
     Section {
-        Index: 5
+        Index: 6
         SectionName: "__apple_names"
         SegmentName: "__DWARF"
         Address: 0x199
@@ -151,7 +151,7 @@ SegmentCommand {
             S_ATTR_DEBUG (0x2000000)
     }
     Section {
-        Index: 6
+        Index: 7
         SectionName: "__apple_objc"
         SegmentName: "__DWARF"
         Address: 0x1D5
@@ -165,7 +165,7 @@ SegmentCommand {
             S_ATTR_DEBUG (0x2000000)
     }
     Section {
-        Index: 7
+        Index: 8
         SectionName: "__apple_namespac"
         SegmentName: "__DWARF"
         Address: 0x1F9
@@ -179,7 +179,7 @@ SegmentCommand {
             S_ATTR_DEBUG (0x2000000)
     }
     Section {
-        Index: 8
+        Index: 9
         SectionName: "__apple_types"
         SegmentName: "__DWARF"
         Address: 0x21D
@@ -193,7 +193,7 @@ SegmentCommand {
             S_ATTR_DEBUG (0x2000000)
     }
     Section {
-        Index: 9
+        Index: 10
         SectionName: "__compact_unwind"
         SegmentName: "__LD"
         Address: 0x268
@@ -215,7 +215,7 @@ SegmentCommand {
         }
     }
     Section {
-        Index: 10
+        Index: 11
         SectionName: "__debug_line"
         SegmentName: "__DWARF"
         Address: 0x288

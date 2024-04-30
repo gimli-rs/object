@@ -39,7 +39,7 @@ SegmentCommand {
     NumberOfSections: 4
     Flags: 0x0
     Section {
-        Index: 0
+        Index: 1
         SectionName: "__text"
         SegmentName: "__TEXT"
         Address: 0x100003F68
@@ -54,7 +54,7 @@ SegmentCommand {
             S_ATTR_SOME_INSTRUCTIONS (0x400)
     }
     Section {
-        Index: 1
+        Index: 2
         SectionName: "__stubs"
         SegmentName: "__TEXT"
         Address: 0x100003F9C
@@ -69,7 +69,7 @@ SegmentCommand {
             S_ATTR_SOME_INSTRUCTIONS (0x400)
     }
     Section {
-        Index: 2
+        Index: 3
         SectionName: "__cstring"
         SegmentName: "__TEXT"
         Address: 0x100003FA8
@@ -81,7 +81,7 @@ SegmentCommand {
         Flags: S_CSTRING_LITERALS (0x2)
     }
     Section {
-        Index: 3
+        Index: 4
         SectionName: "__unwind_info"
         SegmentName: "__TEXT"
         Address: 0x100003FB8
@@ -111,7 +111,7 @@ SegmentCommand {
     Flags: 0x10
         SG_READ_ONLY (0x10)
     Section {
-        Index: 4
+        Index: 5
         SectionName: "__got"
         SegmentName: "__DATA_CONST"
         Address: 0x100004000
