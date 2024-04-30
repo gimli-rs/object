@@ -781,6 +781,16 @@ impl RelocationMap {
                         .read_error("Relocation with invalid symbol")?;
                     entry.addend = symbol.address().wrapping_add(entry.addend);
                 }
+                RelocationTarget::Section(section_idx) => {
+                    let section = file
+                        .section_by_index(section_idx)
+                        .read_error("Relocation with invalid section")?;
+                    // DWARF parsers expect references to DWARF sections to be section offsets,
+                    // not addresses. Addresses are useful for everything else.
+                    if section.kind() != SectionKind::Debug {
+                        entry.addend = section.address().wrapping_add(entry.addend);
+                    }
+                }
                 _ => {
                     return Err(Error("Unsupported relocation target"));
                 }
