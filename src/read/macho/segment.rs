@@ -69,7 +69,7 @@ where
     fn bytes(&self) -> Result<&'data [u8]> {
         self.internal
             .segment
-            .data(self.file.endian, self.file.data)
+            .data(self.file.endian, self.internal.data)
             .read_error("Invalid Mach-O segment size or offset")
     }
 }
@@ -149,8 +149,12 @@ where
 
 #[derive(Debug, Clone, Copy)]
 pub(super) struct MachOSegmentInternal<'data, Mach: MachHeader, R: ReadRef<'data>> {
-    pub data: R,
     pub segment: &'data Mach::Segment,
+    /// The data for the file that contains the segment data.
+    ///
+    /// This is required for dyld caches, where this may be a different subcache
+    /// from the file containing the Mach-O load commands.
+    pub data: R,
 }
 
 /// A trait for generic access to [`macho::SegmentCommand32`] and [`macho::SegmentCommand64`].

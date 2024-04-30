@@ -44,7 +44,7 @@ where
     pub(super) header_offset: u64,
     pub(super) header: &'data Mach,
     pub(super) segments: Vec<MachOSegmentInternal<'data, Mach, R>>,
-    pub(super) sections: Vec<MachOSectionInternal<'data, Mach>>,
+    pub(super) sections: Vec<MachOSectionInternal<'data, Mach, R>>,
     pub(super) symbols: SymbolTable<'data, Mach, R>,
 }
 
@@ -65,11 +65,10 @@ where
         if let Ok(mut commands) = header.load_commands(endian, data, 0) {
             while let Ok(Some(command)) = commands.next() {
                 if let Some((segment, section_data)) = Mach::Segment::from_command(command)? {
-                    let segment_index = segments.len();
                     segments.push(MachOSegmentInternal { segment, data });
                     for section in segment.sections(endian, section_data)? {
                         let index = SectionIndex(sections.len() + 1);
-                        sections.push(MachOSectionInternal::parse(index, segment_index, section));
+                        sections.push(MachOSectionInternal::parse(index, section, data));
                     }
                 } else if let Some(symtab) = command.symtab()? {
                     symbols = symtab.symbols(endian, data)?;
@@ -110,6 +109,7 @@ where
                 if let Some((segment, section_data)) = Mach::Segment::from_command(command)? {
                     // Each segment can be stored in a different subcache. Get the segment's
                     // address and look it up in the cache mappings, to find the correct cache data.
+                    // This was observed for the arm64e __LINKEDIT segment in macOS 12.0.1.
                     let addr = segment.vmaddr(endian).into();
                     let (data, _offset) = image
                         .cache
@@ -118,12 +118,11 @@ where
                     if segment.name() == macho::SEG_LINKEDIT.as_bytes() {
                         linkedit_data = Some(data);
                     }
-                    let segment_index = segments.len();
                     segments.push(MachOSegmentInternal { segment, data });
 
                     for section in segment.sections(endian, section_data)? {
                         let index = SectionIndex(sections.len() + 1);
-                        sections.push(MachOSectionInternal::parse(index, segment_index, section));
+                        sections.push(MachOSectionInternal::parse(index, section, data));
                     }
                 } else if let Some(st) = command.symtab()? {
                     symtab = Some(st);
@@ -154,21 +153,12 @@ where
     pub(super) fn section_internal(
         &self,
         index: SectionIndex,
-    ) -> Result<&MachOSectionInternal<'data, Mach>> {
+    ) -> Result<&MachOSectionInternal<'data, Mach, R>> {
         index
             .0
             .checked_sub(1)
             .and_then(|index| self.sections.get(index))
             .read_error("Invalid Mach-O section index")
-    }
-
-    pub(super) fn segment_internal(
-        &self,
-        index: usize,
-    ) -> Result<&MachOSegmentInternal<'data, Mach, R>> {
-        self.segments
-            .get(index)
-            .read_error("Invalid Mach-O segment index")
     }
 
     /// Returns the endianness.
