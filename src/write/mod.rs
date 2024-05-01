@@ -90,6 +90,9 @@ pub struct Object<'a> {
     macho_cpu_subtype: Option<u32>,
     #[cfg(feature = "macho")]
     macho_build_version: Option<MachOBuildVersion>,
+    /// Mach-O MH_SUBSECTIONS_VIA_SYMBOLS flag. Only ever set if format is Mach-O.
+    #[cfg(feature = "macho")]
+    macho_subsections_via_symbols: bool,
 }
 
 impl<'a> Object<'a> {
@@ -115,6 +118,8 @@ impl<'a> Object<'a> {
             macho_cpu_subtype: None,
             #[cfg(feature = "macho")]
             macho_build_version: None,
+            #[cfg(feature = "macho")]
+            macho_subsections_via_symbols: false,
         }
     }
 
@@ -273,41 +278,34 @@ impl<'a> Object<'a> {
 
     /// Add a subsection. Returns the `SectionId` and section offset of the data.
     ///
-    /// Must not be called for sections that contain uninitialized data.
-    /// `align` must be a power of two.
-    pub fn add_subsection(
-        &mut self,
-        section: StandardSection,
-        name: &[u8],
-        data: &[u8],
-        align: u64,
-    ) -> (SectionId, u64) {
-        let section_id = if self.has_subsections_via_symbols() {
-            self.set_subsections_via_symbols();
+    /// For Mach-O, this does not create a subsection, and instead uses the
+    /// section from [`Self::section_id`]. Use [`Self::set_subsections_via_symbols`]
+    /// to enable subsections via symbols.
+    pub fn add_subsection(&mut self, section: StandardSection, name: &[u8]) -> SectionId {
+        if self.has_subsections_via_symbols() {
             self.section_id(section)
         } else {
             let (segment, name, kind, flags) = self.subsection_info(section, name);
             let id = self.add_section(segment.to_vec(), name, kind);
             self.section_mut(id).flags = flags;
             id
-        };
-        let offset = self.append_section_data(section_id, data, align);
-        (section_id, offset)
-    }
-
-    fn has_subsections_via_symbols(&self) -> bool {
-        match self.format {
-            BinaryFormat::Coff | BinaryFormat::Elf | BinaryFormat::Xcoff => false,
-            BinaryFormat::MachO => true,
-            _ => unimplemented!(),
         }
     }
 
-    fn set_subsections_via_symbols(&mut self) {
-        match self.format {
-            #[cfg(feature = "macho")]
-            BinaryFormat::MachO => self.macho_set_subsections_via_symbols(),
-            _ => unimplemented!(),
+    fn has_subsections_via_symbols(&self) -> bool {
+        self.format == BinaryFormat::MachO
+    }
+
+    /// Enable subsections via symbols if supported.
+    ///
+    /// This should be called before adding any subsections or symbols.
+    ///
+    /// For Mach-O, this sets the `MH_SUBSECTIONS_VIA_SYMBOLS` flag.
+    /// For other formats, this does nothing.
+    pub fn set_subsections_via_symbols(&mut self) {
+        #[cfg(feature = "macho")]
+        if self.format == BinaryFormat::MachO {
+            self.macho_subsections_via_symbols = true;
         }
     }
 
@@ -480,6 +478,9 @@ impl<'a> Object<'a> {
     /// For Mach-O, this also creates a `__thread_vars` entry for TLS symbols, and the
     /// symbol will indirectly point to the added data via the `__thread_vars` entry.
     ///
+    /// For Mach-O, if [`Self::set_subsections_via_symbols`] is enabled, this will
+    /// automatically ensure the data size is at least 1.
+    ///
     /// Returns the section offset of the data.
     ///
     /// Must not be called for sections that contain uninitialized data.
@@ -488,9 +489,13 @@ impl<'a> Object<'a> {
         &mut self,
         symbol_id: SymbolId,
         section: SectionId,
-        data: &[u8],
+        mut data: &[u8],
         align: u64,
     ) -> u64 {
+        #[cfg(feature = "macho")]
+        if data.is_empty() && self.macho_subsections_via_symbols {
+            data = &[0];
+        }
         let offset = self.append_section_data(section, data, align);
         self.set_symbol_data(symbol_id, section, offset, data.len() as u64);
         offset
@@ -501,6 +506,9 @@ impl<'a> Object<'a> {
     /// For Mach-O, this also creates a `__thread_vars` entry for TLS symbols, and the
     /// symbol will indirectly point to the added data via the `__thread_vars` entry.
     ///
+    /// For Mach-O, if [`Self::set_subsections_via_symbols`] is enabled, this will
+    /// automatically ensure the data size is at least 1.
+    ///
     /// Returns the section offset of the data.
     ///
     /// Must not be called for sections that contain initialized data.
@@ -509,9 +517,13 @@ impl<'a> Object<'a> {
         &mut self,
         symbol_id: SymbolId,
         section: SectionId,
-        size: u64,
+        mut size: u64,
         align: u64,
     ) -> u64 {
+        #[cfg(feature = "macho")]
+        if size == 0 && self.macho_subsections_via_symbols {
+            size = 1;
+        }
         let offset = self.append_section_bss(section, size, align);
         self.set_symbol_data(symbol_id, section, offset, size);
         offset

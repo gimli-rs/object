@@ -13,8 +13,8 @@ fn symtab_shndx() {
 
     for i in 0..0x10000 {
         let name = format!("func{}", i).into_bytes();
-        let (section, offset) =
-            object.add_subsection(write::StandardSection::Text, &name, &[0xcc], 1);
+        let section = object.add_subsection(write::StandardSection::Text, &name);
+        let offset = object.append_section_data(section, &[0xcc], 1);
         object.add_symbol(write::Symbol {
             name,
             value: offset,
