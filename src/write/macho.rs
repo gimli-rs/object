@@ -66,16 +66,6 @@ impl<'a> Object<'a> {
 
 // Private methods.
 impl<'a> Object<'a> {
-    pub(crate) fn macho_set_subsections_via_symbols(&mut self) {
-        let flags = match self.flags {
-            FileFlags::MachO { flags } => flags,
-            _ => 0,
-        };
-        self.flags = FileFlags::MachO {
-            flags: flags | macho::MH_SUBSECTIONS_VIA_SYMBOLS,
-        };
-    }
-
     pub(crate) fn macho_segment_name(&self, segment: StandardSegment) -> &'static [u8] {
         match segment {
             StandardSegment::Text => &b"__TEXT"[..],
@@ -570,10 +560,13 @@ impl<'a> Object<'a> {
             cpusubtype = cpu_subtype;
         }
 
-        let flags = match self.flags {
+        let mut flags = match self.flags {
             FileFlags::MachO { flags } => flags,
             _ => 0,
         };
+        if self.macho_subsections_via_symbols {
+            flags |= macho::MH_SUBSECTIONS_VIA_SYMBOLS;
+        }
         macho.write_mach_header(
             buffer,
             MachHeader {

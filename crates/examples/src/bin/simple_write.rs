@@ -66,8 +66,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     main_data.extend_from_slice(&[0xc3]);
 
     // Add the main function in its own subsection (equivalent to -ffunction-sections).
-    let (main_section, main_offset) =
-        obj.add_subsection(StandardSection::Text, b"main", &main_data, 1);
+    let main_section = obj.add_subsection(StandardSection::Text, b"main");
+    let main_offset = obj.append_section_data(main_section, &main_data, 1);
     // Add a globally visible symbol for the main function.
     obj.add_symbol(Symbol {
         name: b"main".into(),

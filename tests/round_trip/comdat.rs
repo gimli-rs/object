@@ -13,11 +13,11 @@ fn coff_x86_64_comdat() {
     let mut object =
         write::Object::new(BinaryFormat::Coff, Architecture::X86_64, Endianness::Little);
 
-    let (section1, offset) =
-        object.add_subsection(write::StandardSection::Text, b"s1", &[0, 1, 2, 3], 4);
+    let section1 = object.add_subsection(write::StandardSection::Text, b"s1");
+    let offset = object.append_section_data(section1, &[0, 1, 2, 3], 4);
     object.section_symbol(section1);
-    let (section2, _) =
-        object.add_subsection(write::StandardSection::Data, b"s1", &[0, 1, 2, 3], 4);
+    let section2 = object.add_subsection(write::StandardSection::Data, b"s1");
+    object.append_section_data(section2, &[0, 1, 2, 3], 4);
     object.section_symbol(section2);
 
     let symbol = object.add_symbol(write::Symbol {
@@ -132,10 +132,10 @@ fn elf_x86_64_comdat() {
     let mut object =
         write::Object::new(BinaryFormat::Elf, Architecture::X86_64, Endianness::Little);
 
-    let (section1, offset) =
-        object.add_subsection(write::StandardSection::Text, b"s1", &[0, 1, 2, 3], 4);
-    let (section2, _) =
-        object.add_subsection(write::StandardSection::Data, b"s1", &[0, 1, 2, 3], 4);
+    let section1 = object.add_subsection(write::StandardSection::Text, b"s1");
+    let offset = object.append_section_data(section1, &[0, 1, 2, 3], 4);
+    let section2 = object.add_subsection(write::StandardSection::Data, b"s1");
+    object.append_section_data(section2, &[0, 1, 2, 3], 4);
 
     let symbol = object.add_symbol(write::Symbol {
         name: b"s1".to_vec(),
