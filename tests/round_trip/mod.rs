@@ -203,13 +203,6 @@ fn elf_x86_64() {
 
     let mut sections = object.sections();
 
-    let section = sections.next().unwrap();
-    println!("{:?}", section);
-    assert_eq!(section.name(), Ok(""));
-    assert_eq!(section.kind(), SectionKind::Metadata);
-    assert_eq!(section.address(), 0);
-    assert_eq!(section.size(), 0);
-
     let text = sections.next().unwrap();
     println!("{:?}", text);
     let text_index = text.index();
@@ -221,16 +214,6 @@ fn elf_x86_64() {
     assert_eq!(&text.data().unwrap()[32..62], &[1; 30]);
 
     let mut symbols = object.symbols();
-
-    let symbol = symbols.next().unwrap();
-    println!("{:?}", symbol);
-    assert_eq!(symbol.name(), Ok(""));
-    assert_eq!(symbol.address(), 0);
-    assert_eq!(symbol.kind(), SymbolKind::Null);
-    assert_eq!(symbol.section_index(), None);
-    assert_eq!(symbol.scope(), SymbolScope::Unknown);
-    assert!(!symbol.is_weak());
-    assert!(symbol.is_undefined());
 
     let symbol = symbols.next().unwrap();
     println!("{:?}", symbol);
@@ -349,13 +332,6 @@ fn elf_any() {
         assert_eq!(object.endianness(), endian);
 
         let mut sections = object.sections();
-
-        let section = sections.next().unwrap();
-        println!("{:?}", section);
-        assert_eq!(section.name(), Ok(""));
-        assert_eq!(section.kind(), SectionKind::Metadata);
-        assert_eq!(section.address(), 0);
-        assert_eq!(section.size(), 0);
 
         let data = sections.next().unwrap();
         println!("{:?}", data);

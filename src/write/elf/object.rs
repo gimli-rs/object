@@ -679,7 +679,6 @@ impl<'a> Object<'a> {
                 st_info
             } else {
                 let st_type = match symbol.kind {
-                    SymbolKind::Null => elf::STT_NOTYPE,
                     SymbolKind::Text => {
                         if symbol.is_undefined() {
                             elf::STT_NOTYPE

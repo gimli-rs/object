@@ -278,17 +278,11 @@ where
     }
 
     fn sections(&self) -> ElfSectionIterator<'data, '_, Elf, R> {
-        ElfSectionIterator {
-            file: self,
-            iter: self.sections.iter().enumerate(),
-        }
+        ElfSectionIterator::new(self)
     }
 
     fn comdats(&self) -> ElfComdatIterator<'data, '_, Elf, R> {
-        ElfComdatIterator {
-            file: self,
-            iter: self.sections.iter().enumerate(),
-        }
+        ElfComdatIterator::new(self)
     }
 
     fn symbol_by_index(&self, index: SymbolIndex) -> read::Result<ElfSymbol<'data, '_, Elf, R>> {
@@ -302,11 +296,7 @@ where
     }
 
     fn symbols(&self) -> ElfSymbolIterator<'data, '_, Elf, R> {
-        ElfSymbolIterator {
-            endian: self.endian,
-            symbols: &self.symbols,
-            index: 0,
-        }
+        ElfSymbolIterator::new(self.endian, &self.symbols)
     }
 
     fn symbol_table(&self) -> Option<ElfSymbolTable<'data, '_, Elf, R>> {
@@ -320,11 +310,7 @@ where
     }
 
     fn dynamic_symbols(&self) -> ElfSymbolIterator<'data, '_, Elf, R> {
-        ElfSymbolIterator {
-            endian: self.endian,
-            symbols: &self.dynamic_symbols,
-            index: 0,
-        }
+        ElfSymbolIterator::new(self.endian, &self.dynamic_symbols)
     }
 
     fn dynamic_symbol_table(&self) -> Option<ElfSymbolTable<'data, '_, Elf, R>> {

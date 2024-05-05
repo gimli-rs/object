@@ -21,8 +21,22 @@ where
     Elf: FileHeader,
     R: ReadRef<'data>,
 {
-    pub(super) file: &'file ElfFile<'data, Elf, R>,
-    pub(super) iter: iter::Enumerate<slice::Iter<'data, Elf::SectionHeader>>,
+    file: &'file ElfFile<'data, Elf, R>,
+    iter: iter::Enumerate<slice::Iter<'data, Elf::SectionHeader>>,
+}
+
+impl<'data, 'file, Elf, R> ElfComdatIterator<'data, 'file, Elf, R>
+where
+    Elf: FileHeader,
+    R: ReadRef<'data>,
+{
+    pub(super) fn new(
+        file: &'file ElfFile<'data, Elf, R>,
+    ) -> ElfComdatIterator<'data, 'file, Elf, R> {
+        let mut iter = file.sections.iter().enumerate();
+        iter.next(); // Skip null section.
+        ElfComdatIterator { file, iter }
+    }
 }
 
 impl<'data, 'file, Elf, R> Iterator for ElfComdatIterator<'data, 'file, Elf, R>

@@ -34,7 +34,7 @@ fn symtab_shndx() {
     assert_eq!(object.format(), BinaryFormat::Elf);
     assert_eq!(object.architecture(), Architecture::X86_64);
 
-    for symbol in object.symbols().skip(1) {
+    for symbol in object.symbols() {
         assert_eq!(
             symbol.section(),
             SymbolSection::Section(SectionIndex(symbol.index().0))
@@ -62,7 +62,6 @@ fn aligned_sections() {
     assert_eq!(object.architecture(), Architecture::X86_64);
 
     let mut sections = object.sections();
-    let _ = sections.next().unwrap();
 
     let section = sections.next().unwrap();
     assert_eq!(section.name(), Ok(".text"));
