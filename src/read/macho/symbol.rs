@@ -272,6 +272,16 @@ where
         }
         Some(MachOSymbol { file, index, nlist })
     }
+
+    /// Get the Mach-O file containing this symbol.
+    pub fn macho_file(&self) -> &'file MachOFile<'data, Mach, R> {
+        self.file
+    }
+
+    /// Get the raw Mach-O symbol structure.
+    pub fn macho_symbol(&self) -> &'data Mach::Nlist {
+        self.nlist
+    }
 }
 
 impl<'data, 'file, Mach, R> read::private::Sealed for MachOSymbol<'data, 'file, Mach, R>

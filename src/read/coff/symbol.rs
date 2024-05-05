@@ -296,7 +296,13 @@ where
 impl<'data, 'file, R: ReadRef<'data>, Coff: CoffHeader> CoffSymbol<'data, 'file, R, Coff> {
     #[inline]
     /// Get the raw `ImageSymbol` struct.
+    #[deprecated(note = "Use `coff_symbol` instead")]
     pub fn raw_symbol(&self) -> &'data Coff::ImageSymbol {
+        self.symbol
+    }
+
+    /// Get the raw `ImageSymbol` struct.
+    pub fn coff_symbol(&self) -> &'data Coff::ImageSymbol {
         self.symbol
     }
 }

@@ -82,6 +82,16 @@ where
             sections,
         })
     }
+
+    /// Get the ELF file containing this COMDAT section group.
+    pub fn elf_file(&self) -> &'file ElfFile<'data, Elf, R> {
+        self.file
+    }
+
+    /// Get the raw ELF section header for the COMDAT section group.
+    pub fn elf_section_header(&self) -> &'data Elf::SectionHeader {
+        self.section
+    }
 }
 
 impl<'data, 'file, Elf, R> read::private::Sealed for ElfComdat<'data, 'file, Elf, R>

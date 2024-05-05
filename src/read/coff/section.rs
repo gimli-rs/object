@@ -157,6 +157,16 @@ pub struct CoffSegment<
 }
 
 impl<'data, 'file, R: ReadRef<'data>, Coff: CoffHeader> CoffSegment<'data, 'file, R, Coff> {
+    /// Get the COFF file containing this segment.
+    pub fn coff_file(&self) -> &'file CoffFile<'data, R, Coff> {
+        self.file
+    }
+
+    /// Get the raw COFF section header.
+    pub fn coff_section(&self) -> &'data pe::ImageSectionHeader {
+        self.section
+    }
+
     fn bytes(&self) -> Result<&'data [u8]> {
         self.section
             .coff_data(self.file.data)
@@ -281,6 +291,21 @@ pub struct CoffSection<
 }
 
 impl<'data, 'file, R: ReadRef<'data>, Coff: CoffHeader> CoffSection<'data, 'file, R, Coff> {
+    /// Get the COFF file containing this section.
+    pub fn coff_file(&self) -> &'file CoffFile<'data, R, Coff> {
+        self.file
+    }
+
+    /// Get the raw COFF section header.
+    pub fn coff_section(&self) -> &'data pe::ImageSectionHeader {
+        self.section
+    }
+
+    /// Get the raw COFF relocations for this section.
+    pub fn coff_relocations(&self) -> Result<&'data [pe::ImageRelocation]> {
+        self.section.coff_relocations(self.file.data)
+    }
+
     fn bytes(&self) -> Result<&'data [u8]> {
         self.section
             .coff_data(self.file.data)
@@ -377,7 +402,7 @@ impl<'data, 'file, R: ReadRef<'data>, Coff: CoffHeader> ObjectSection<'data>
     }
 
     fn relocations(&self) -> CoffRelocationIterator<'data, 'file, R, Coff> {
-        let relocations = self.section.coff_relocations(self.file.data).unwrap_or(&[]);
+        let relocations = self.coff_relocations().unwrap_or(&[]);
         CoffRelocationIterator {
             file: self.file,
             iter: relocations.iter(),

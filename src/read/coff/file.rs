@@ -63,6 +63,21 @@ impl<'data, R: ReadRef<'data>, Coff: CoffHeader> CoffFile<'data, R, Coff> {
             data,
         })
     }
+
+    /// Get the raw COFF file header.
+    pub fn coff_header(&self) -> &'data Coff {
+        self.header
+    }
+
+    /// Get the COFF section table.
+    pub fn coff_section_table(&self) -> SectionTable<'data> {
+        self.common.sections
+    }
+
+    /// Get the COFF symbol table.
+    pub fn coff_symbol_table(&self) -> &SymbolTable<'data, R, Coff> {
+        &self.common.symbols
+    }
 }
 
 impl<'data, R: ReadRef<'data>, Coff: CoffHeader> read::private::Sealed

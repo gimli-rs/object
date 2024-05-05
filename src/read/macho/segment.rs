@@ -66,6 +66,16 @@ where
     Mach: MachHeader,
     R: ReadRef<'data>,
 {
+    /// Get the Mach-O file containing this segment.
+    pub fn macho_file(&self) -> &'file MachOFile<'data, Mach, R> {
+        self.file
+    }
+
+    /// Get the raw Mach-O segment structure.
+    pub fn macho_segment(&self) -> &'data Mach::Segment {
+        self.internal.segment
+    }
+
     fn bytes(&self) -> Result<&'data [u8]> {
         self.internal
             .segment
