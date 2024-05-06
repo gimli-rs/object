@@ -7,7 +7,6 @@ Entry Address: 570
 Build ID: [d4, 46, a0, 61, bb, 9a, c2, 7a, b4, 3b, 11, 71, 8f, de, df, 5b, 7f, 3a, f6, f4]
 Segment { address: 0, size: 878 }
 Segment { address: 200da8, size: 270 }
-0: Section { name: "", address: 0, size: 0, align: 0, kind: Metadata, flags: Elf { sh_flags: 0 } }
 1: Section { name: ".interp", address: 238, size: 1c, align: 1, kind: ReadOnlyData, flags: Elf { sh_flags: 2 } }
 2: Section { name: ".note.ABI-tag", address: 254, size: 20, align: 4, kind: Note, flags: Elf { sh_flags: 2 } }
 3: Section { name: ".note.gnu.build-id", address: 274, size: 24, align: 4, kind: Note, flags: Elf { sh_flags: 2 } }
@@ -39,7 +38,6 @@ Segment { address: 200da8, size: 270 }
 29: Section { name: ".shstrtab", address: 0, size: fe, align: 1, kind: Metadata, flags: Elf { sh_flags: 0 } }
 
 Symbols
-0: Symbol { name: "", address: 0, size: 0, kind: Null, section: Undefined, scope: Unknown, weak: false, flags: Elf { st_info: 0, st_other: 0 } }
 1: Symbol { name: "", address: 238, size: 0, kind: Section, section: Section(SectionIndex(1)), scope: Compilation, weak: false, flags: Elf { st_info: 3, st_other: 0 } }
 2: Symbol { name: "", address: 254, size: 0, kind: Section, section: Section(SectionIndex(2)), scope: Compilation, weak: false, flags: Elf { st_info: 3, st_other: 0 } }
 3: Symbol { name: "", address: 274, size: 0, kind: Section, section: Section(SectionIndex(3)), scope: Compilation, weak: false, flags: Elf { st_info: 3, st_other: 0 } }
@@ -105,7 +103,6 @@ Symbols
 63: Symbol { name: "_init", address: 520, size: 0, kind: Text, section: Section(SectionIndex(c)), scope: Dynamic, weak: false, flags: Elf { st_info: 12, st_other: 0 } }
 
 Dynamic symbols
-0: Symbol { name: "", address: 0, size: 0, kind: Null, section: Undefined, scope: Unknown, weak: false, flags: Elf { st_info: 0, st_other: 0 } }
 1: Symbol { name: "_ITM_deregisterTMCloneTable", address: 0, size: 0, kind: Unknown, section: Undefined, scope: Unknown, weak: true, flags: Elf { st_info: 20, st_other: 0 } }
 2: Symbol { name: "printf", address: 0, size: 0, kind: Text, section: Undefined, scope: Unknown, weak: false, flags: Elf { st_info: 12, st_other: 0 } }
 3: Symbol { name: "__libc_start_main", address: 0, size: 0, kind: Text, section: Undefined, scope: Unknown, weak: false, flags: Elf { st_info: 12, st_other: 0 } }

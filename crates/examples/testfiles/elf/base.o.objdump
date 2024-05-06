@@ -4,7 +4,6 @@ Architecture: X86_64
 Flags: Elf { os_abi: 0, abi_version: 0, e_flags: 0 }
 Relative Address Base: 0
 Entry Address: 0
-0: Section { name: "", address: 0, size: 0, align: 0, kind: Metadata, flags: Elf { sh_flags: 0 } }
 1: Section { name: ".text", address: 0, size: 1c, align: 1, kind: Text, flags: Elf { sh_flags: 6 } }
 2: Section { name: ".rela.text", address: 0, size: 30, align: 8, kind: Metadata, flags: Elf { sh_flags: 40 } }
 3: Section { name: ".data", address: 0, size: 0, align: 1, kind: Data, flags: Elf { sh_flags: 3 } }
@@ -19,7 +18,6 @@ Entry Address: 0
 12: Section { name: ".shstrtab", address: 0, size: 61, align: 1, kind: Metadata, flags: Elf { sh_flags: 0 } }
 
 Symbols
-0: Symbol { name: "", address: 0, size: 0, kind: Null, section: Undefined, scope: Unknown, weak: false, flags: Elf { st_info: 0, st_other: 0 } }
 1: Symbol { name: "base.c", address: 0, size: 0, kind: File, section: None, scope: Compilation, weak: false, flags: Elf { st_info: 4, st_other: 0 } }
 2: Symbol { name: "", address: 0, size: 0, kind: Section, section: Section(SectionIndex(1)), scope: Compilation, weak: false, flags: Elf { st_info: 3, st_other: 0 } }
 3: Symbol { name: "", address: 0, size: 0, kind: Section, section: Section(SectionIndex(3)), scope: Compilation, weak: false, flags: Elf { st_info: 3, st_other: 0 } }

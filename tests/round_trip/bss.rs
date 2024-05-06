@@ -125,13 +125,6 @@ fn elf_x86_64_bss() {
 
     let mut sections = object.sections();
 
-    let section = sections.next().unwrap();
-    println!("{:?}", section);
-    assert_eq!(section.name(), Ok(""));
-    assert_eq!(section.kind(), SectionKind::Metadata);
-    assert_eq!(section.address(), 0);
-    assert_eq!(section.size(), 0);
-
     let bss = sections.next().unwrap();
     println!("{:?}", bss);
     let bss_index = bss.index();
@@ -141,10 +134,6 @@ fn elf_x86_64_bss() {
     assert_eq!(bss.data(), Ok(&[][..]));
 
     let mut symbols = object.symbols();
-
-    let symbol = symbols.next().unwrap();
-    println!("{:?}", symbol);
-    assert_eq!(symbol.name(), Ok(""));
 
     let symbol = symbols.next().unwrap();
     println!("{:?}", symbol);

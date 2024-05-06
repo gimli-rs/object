@@ -54,8 +54,13 @@ impl<'data, Elf: FileHeader, R: ReadRef<'data>> SectionTable<'data, Elf, R> {
         self.sections.len()
     }
 
-    /// Return the section header at the given index.
+    /// Get the section header at the given index.
+    ///
+    /// Returns an error for the null section at index 0.
     pub fn section(&self, index: SectionIndex) -> read::Result<&'data Elf::SectionHeader> {
+        if index.0 == 0 {
+            return Err(read::Error("Invalid ELF symbol index"));
+        }
         self.sections
             .get(index.0)
             .read_error("Invalid ELF section index")
@@ -338,8 +343,20 @@ where
     Elf: FileHeader,
     R: ReadRef<'data>,
 {
-    pub(super) file: &'file ElfFile<'data, Elf, R>,
-    pub(super) iter: iter::Enumerate<slice::Iter<'data, Elf::SectionHeader>>,
+    file: &'file ElfFile<'data, Elf, R>,
+    iter: iter::Enumerate<slice::Iter<'data, Elf::SectionHeader>>,
+}
+
+impl<'data, 'file, Elf, R> ElfSectionIterator<'data, 'file, Elf, R>
+where
+    Elf: FileHeader,
+    R: ReadRef<'data>,
+{
+    pub(super) fn new(file: &'file ElfFile<'data, Elf, R>) -> Self {
+        let mut iter = file.sections.iter().enumerate();
+        iter.next(); // Skip null section.
+        ElfSectionIterator { file, iter }
+    }
 }
 
 impl<'data, 'file, Elf, R> Iterator for ElfSectionIterator<'data, 'file, Elf, R>

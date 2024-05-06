@@ -615,7 +615,7 @@ impl<'a> Object<'a> {
                         }
                     }
                 }
-                SymbolKind::Unknown | SymbolKind::Null => {
+                SymbolKind::Unknown => {
                     return Err(Error(format!(
                         "unimplemented symbol `{}` kind {:?}",
                         symbol.name().unwrap_or(""),

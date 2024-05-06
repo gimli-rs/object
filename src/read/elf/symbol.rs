@@ -138,8 +138,13 @@ impl<'data, Elf: FileHeader, R: ReadRef<'data>> SymbolTable<'data, Elf, R> {
         self.symbols.len()
     }
 
-    /// Return the symbol at the given index.
+    /// Get the symbol at the given index.
+    ///
+    /// Returns an error for null entry at index 0.
     pub fn symbol(&self, index: usize) -> read::Result<&'data Elf::Sym> {
+        if index == 0 {
+            return Err(read::Error("Invalid ELF symbol index"));
+        }
         self.symbols
             .get(index)
             .read_error("Invalid ELF symbol index")
@@ -229,11 +234,7 @@ impl<'data, 'file, Elf: FileHeader, R: ReadRef<'data>> ObjectSymbolTable<'data>
     type SymbolIterator = ElfSymbolIterator<'data, 'file, Elf, R>;
 
     fn symbols(&self) -> Self::SymbolIterator {
-        ElfSymbolIterator {
-            endian: self.endian,
-            symbols: self.symbols,
-            index: 0,
-        }
+        ElfSymbolIterator::new(self.endian, self.symbols)
     }
 
     fn symbol_by_index(&self, index: SymbolIndex) -> read::Result<Self::Symbol> {
@@ -260,9 +261,23 @@ where
     Elf: FileHeader,
     R: ReadRef<'data>,
 {
-    pub(super) endian: Elf::Endian,
-    pub(super) symbols: &'file SymbolTable<'data, Elf, R>,
-    pub(super) index: usize,
+    endian: Elf::Endian,
+    symbols: &'file SymbolTable<'data, Elf, R>,
+    index: usize,
+}
+
+impl<'data, 'file, Elf, R> ElfSymbolIterator<'data, 'file, Elf, R>
+where
+    Elf: FileHeader,
+    R: ReadRef<'data>,
+{
+    pub(super) fn new(endian: Elf::Endian, symbols: &'file SymbolTable<'data, Elf, R>) -> Self {
+        ElfSymbolIterator {
+            endian,
+            symbols,
+            index: 1,
+        }
+    }
 }
 
 impl<'data, 'file, Elf: FileHeader, R: ReadRef<'data>> fmt::Debug
@@ -368,7 +383,6 @@ impl<'data, 'file, Elf: FileHeader, R: ReadRef<'data>> ObjectSymbol<'data>
 
     fn kind(&self) -> SymbolKind {
         match self.symbol.st_type() {
-            elf::STT_NOTYPE if self.index.0 == 0 => SymbolKind::Null,
             elf::STT_NOTYPE => SymbolKind::Unknown,
             elf::STT_OBJECT | elf::STT_COMMON => SymbolKind::Data,
             elf::STT_FUNC | elf::STT_GNU_IFUNC => SymbolKind::Text,

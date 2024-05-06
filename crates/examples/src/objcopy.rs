@@ -63,9 +63,6 @@ pub fn copy(in_data: &[u8]) -> Vec<u8> {
 
     let mut out_symbols = HashMap::new();
     for in_symbol in in_object.symbols() {
-        if in_symbol.kind() == SymbolKind::Null {
-            continue;
-        }
         let (section, value) = match in_symbol.section() {
             SymbolSection::None => (write::SymbolSection::None, in_symbol.address()),
             SymbolSection::Undefined => (write::SymbolSection::Undefined, in_symbol.address()),

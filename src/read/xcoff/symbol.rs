@@ -87,6 +87,8 @@ where
     }
 
     /// Iterate over the symbols.
+    ///
+    /// This does not return null symbols.
     #[inline]
     pub fn iter<'table>(&'table self) -> SymbolIterator<'data, 'table, Xcoff, R> {
         SymbolIterator {
@@ -114,9 +116,23 @@ where
         Bytes(bytes).read().read_error("Invalid XCOFF symbol data")
     }
 
-    /// Return the symbol at the given index.
-    pub fn symbol(&self, index: usize) -> Result<&'data Xcoff::Symbol> {
+    /// Get the symbol at the given index.
+    ///
+    /// This does not check if the symbol is null, but does check if the index is in bounds.
+    fn symbol_unchecked(&self, index: usize) -> Result<&'data Xcoff::Symbol> {
         self.get::<Xcoff::Symbol>(index, 0)
+    }
+
+    /// Get the symbol at the given index.
+    ///
+    /// Returns an error for null symbols and out of bounds indices.
+    /// Note that this is unable to check whether the index is an auxiliary symbol.
+    pub fn symbol(&self, index: usize) -> Result<&'data Xcoff::Symbol> {
+        let symbol = self.symbol_unchecked(index)?;
+        if symbol.is_null() {
+            return Err(Error("Invalid XCOFF symbol index"));
+        }
+        Ok(symbol)
     }
 
     /// Return a file auxiliary symbol.
@@ -177,10 +193,14 @@ impl<'data, 'table, Xcoff: FileHeader, R: ReadRef<'data>> Iterator
     type Item = (SymbolIndex, &'data Xcoff::Symbol);
 
     fn next(&mut self) -> Option<Self::Item> {
-        let index = self.index;
-        let symbol = self.symbols.symbol(index).ok()?;
-        self.index += 1 + symbol.n_numaux() as usize;
-        Some((SymbolIndex(index), symbol))
+        loop {
+            let index = self.index;
+            let symbol = self.symbols.symbol_unchecked(index).ok()?;
+            self.index += 1 + symbol.n_numaux() as usize;
+            if !symbol.is_null() {
+                return Some((SymbolIndex(index), symbol));
+            }
+        }
     }
 }
 
@@ -405,7 +425,6 @@ impl<'data, 'file, Xcoff: FileHeader, R: ReadRef<'data>> ObjectSymbol<'data>
             }
         }
         match self.symbol.n_sclass() {
-            xcoff::C_NULL => SymbolKind::Null,
             xcoff::C_FILE => SymbolKind::File,
             _ => SymbolKind::Unknown,
         }
@@ -531,6 +550,12 @@ pub trait Symbol: Debug + Pod {
         &'data self,
         strings: StringTable<'data, R>,
     ) -> Result<&'data [u8]>;
+
+    /// Return true if the symbol is a null placeholder.
+    #[inline]
+    fn is_null(&self) -> bool {
+        self.n_sclass() == xcoff::C_NULL
+    }
 
     /// Return true if the symbol is undefined.
     #[inline]

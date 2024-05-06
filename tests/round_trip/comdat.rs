@@ -166,10 +166,6 @@ fn elf_x86_64_comdat() {
 
     let section = sections.next().unwrap();
     println!("{:?}", section);
-    assert_eq!(section.name(), Ok(""));
-
-    let section = sections.next().unwrap();
-    println!("{:?}", section);
     assert_eq!(section.name(), Ok(".group"));
 
     let section1 = sections.next().unwrap();
@@ -189,10 +185,6 @@ fn elf_x86_64_comdat() {
     assert_eq!(section2.size(), 4);
 
     let mut symbols = object.symbols();
-
-    let symbol = symbols.next().unwrap();
-    println!("{:?}", symbol);
-    assert_eq!(symbol.name(), Ok(""));
 
     let symbol = symbols.next().unwrap();
     let symbol_index = symbol.index();

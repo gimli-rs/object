@@ -194,7 +194,6 @@ impl<'a> Object<'a> {
                 n_sclass
             } else {
                 match symbol.kind {
-                    SymbolKind::Null => xcoff::C_NULL,
                     SymbolKind::File => xcoff::C_FILE,
                     SymbolKind::Text | SymbolKind::Data | SymbolKind::Tls => {
                         if symbol.is_local() {
