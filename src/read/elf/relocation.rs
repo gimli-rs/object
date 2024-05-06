@@ -39,18 +39,25 @@ impl RelocationSections {
                     continue;
                 }
 
-                let sh_info = section.sh_info(endian) as usize;
-                if sh_info == 0 {
+                let sh_info = SectionIndex(section.sh_info(endian) as usize);
+                if sh_info.0 == 0 {
                     // Skip dynamic relocations.
                     continue;
                 }
-                if sh_info >= relocations.len() {
+                if sh_info.0 >= relocations.len() {
                     return Err(Error("Invalid ELF sh_info for relocation section"));
                 }
 
+                // We don't support relocations that apply to other relocation sections
+                // because it interferes with the chaining of relocation sections below.
+                let sh_info_type = sections.section(sh_info)?.sh_type(endian);
+                if sh_info_type == elf::SHT_REL || sh_info_type == elf::SHT_RELA {
+                    return Err(Error("Unsupported ELF sh_info for relocation section"));
+                }
+
                 // Handle multiple relocation sections by chaining them.
-                let next = relocations[sh_info];
-                relocations[sh_info] = index;
+                let next = relocations[sh_info.0];
+                relocations[sh_info.0] = index;
                 relocations[index] = next;
             }
         }
