@@ -84,7 +84,7 @@ impl<'data, Elf: FileHeader, R: ReadRef<'data>> SectionTable<'data, Elf, R> {
     pub fn section_name(
         &self,
         endian: Elf::Endian,
-        section: &'data Elf::SectionHeader,
+        section: &Elf::SectionHeader,
     ) -> read::Result<&'data [u8]> {
         section.name(endian, self.strings)
     }
