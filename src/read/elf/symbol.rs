@@ -162,7 +162,7 @@ impl<'data, Elf: FileHeader, R: ReadRef<'data>> SymbolTable<'data, Elf, R> {
     pub fn symbol_section(
         &self,
         endian: Elf::Endian,
-        symbol: &'data Elf::Sym,
+        symbol: &Elf::Sym,
         index: usize,
     ) -> read::Result<Option<SectionIndex>> {
         match symbol.st_shndx(endian) {
@@ -177,11 +177,7 @@ impl<'data, Elf: FileHeader, R: ReadRef<'data>> SymbolTable<'data, Elf, R> {
     }
 
     /// Return the symbol name for the given symbol.
-    pub fn symbol_name(
-        &self,
-        endian: Elf::Endian,
-        symbol: &'data Elf::Sym,
-    ) -> read::Result<&'data [u8]> {
+    pub fn symbol_name(&self, endian: Elf::Endian, symbol: &Elf::Sym) -> read::Result<&'data [u8]> {
         symbol.name(endian, self.strings)
     }
 
