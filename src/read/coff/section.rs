@@ -38,10 +38,18 @@ impl<'data> SectionTable<'data> {
 
     /// Iterate over the section headers.
     ///
-    /// Warning: sections indices start at 1.
+    /// Warning: section indices start at 1.
     #[inline]
     pub fn iter(&self) -> slice::Iter<'data, pe::ImageSectionHeader> {
         self.sections.iter()
+    }
+
+    /// Iterate over the section headers and their indices.
+    pub fn enumerate(&self) -> impl Iterator<Item = (SectionIndex, &'data pe::ImageSectionHeader)> {
+        self.sections
+            .iter()
+            .enumerate()
+            .map(|(i, section)| (SectionIndex(i + 1), section))
     }
 
     /// Return true if the section table is empty.
@@ -59,9 +67,9 @@ impl<'data> SectionTable<'data> {
     /// Return the section header at the given index.
     ///
     /// The index is 1-based.
-    pub fn section(&self, index: usize) -> read::Result<&'data pe::ImageSectionHeader> {
+    pub fn section(&self, index: SectionIndex) -> read::Result<&'data pe::ImageSectionHeader> {
         self.sections
-            .get(index.wrapping_sub(1))
+            .get(index.0.wrapping_sub(1))
             .read_error("Invalid COFF/PE section index")
     }
 
@@ -74,12 +82,9 @@ impl<'data> SectionTable<'data> {
         &self,
         strings: StringTable<'data, R>,
         name: &[u8],
-    ) -> Option<(usize, &'data pe::ImageSectionHeader)> {
-        self.sections
-            .iter()
-            .enumerate()
+    ) -> Option<(SectionIndex, &'data pe::ImageSectionHeader)> {
+        self.enumerate()
             .find(|(_, section)| section.name(strings) == Ok(name))
-            .map(|(index, section)| (index + 1, section))
     }
 
     /// Compute the maximum file offset used by sections.

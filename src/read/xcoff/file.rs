@@ -193,7 +193,7 @@ where
     }
 
     fn symbol_by_index(&self, index: SymbolIndex) -> Result<XcoffSymbol<'data, '_, Xcoff, R>> {
-        let symbol = self.symbols.symbol(index.0)?;
+        let symbol = self.symbols.symbol(index)?;
         Ok(XcoffSymbol {
             symbols: &self.symbols,
             index,

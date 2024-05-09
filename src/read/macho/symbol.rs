@@ -68,9 +68,9 @@ impl<'data, Mach: MachHeader, R: ReadRef<'data>> SymbolTable<'data, Mach, R> {
     }
 
     /// Return the symbol at the given index.
-    pub fn symbol(&self, index: usize) -> Result<&'data Mach::Nlist> {
+    pub fn symbol(&self, index: SymbolIndex) -> Result<&'data Mach::Nlist> {
         self.symbols
-            .get(index)
+            .get(index.0)
             .read_error("Invalid Mach-O symbol index")
     }
 
@@ -178,14 +178,11 @@ where
     type SymbolIterator = MachOSymbolIterator<'data, 'file, Mach, R>;
 
     fn symbols(&self) -> Self::SymbolIterator {
-        MachOSymbolIterator {
-            file: self.file,
-            index: 0,
-        }
+        MachOSymbolIterator::new(self.file)
     }
 
     fn symbol_by_index(&self, index: SymbolIndex) -> Result<Self::Symbol> {
-        let nlist = self.file.symbols.symbol(index.0)?;
+        let nlist = self.file.symbols.symbol(index)?;
         MachOSymbol::new(self.file, index, nlist).read_error("Unsupported Mach-O symbol index")
     }
 }
@@ -203,8 +200,28 @@ where
     Mach: MachHeader,
     R: ReadRef<'data>,
 {
-    pub(super) file: &'file MachOFile<'data, Mach, R>,
-    pub(super) index: usize,
+    file: &'file MachOFile<'data, Mach, R>,
+    index: SymbolIndex,
+}
+
+impl<'data, 'file, Mach, R> MachOSymbolIterator<'data, 'file, Mach, R>
+where
+    Mach: MachHeader,
+    R: ReadRef<'data>,
+{
+    pub(super) fn new(file: &'file MachOFile<'data, Mach, R>) -> Self {
+        MachOSymbolIterator {
+            file,
+            index: SymbolIndex(0),
+        }
+    }
+
+    pub(super) fn empty(file: &'file MachOFile<'data, Mach, R>) -> Self {
+        MachOSymbolIterator {
+            file,
+            index: SymbolIndex(file.symbols.len()),
+        }
+    }
 }
 
 impl<'data, 'file, Mach, R> fmt::Debug for MachOSymbolIterator<'data, 'file, Mach, R>
@@ -227,9 +244,9 @@ where
     fn next(&mut self) -> Option<Self::Item> {
         loop {
             let index = self.index;
-            let nlist = self.file.symbols.symbols.get(index)?;
-            self.index += 1;
-            if let Some(symbol) = MachOSymbol::new(self.file, SymbolIndex(index), nlist) {
+            let nlist = self.file.symbols.symbols.get(index.0)?;
+            self.index.0 += 1;
+            if let Some(symbol) = MachOSymbol::new(self.file, index, nlist) {
                 return Some(symbol);
             }
         }

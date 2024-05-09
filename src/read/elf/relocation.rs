@@ -34,13 +34,13 @@ impl RelocationSections {
             if sh_type == elf::SHT_REL || sh_type == elf::SHT_RELA {
                 // The symbol indices used in relocations must be for the symbol table
                 // we are expecting to use.
-                let sh_link = SectionIndex(section.sh_link(endian) as usize);
+                let sh_link = section.link(endian);
                 if sh_link != symbol_section {
                     continue;
                 }
 
-                let sh_info = SectionIndex(section.sh_info(endian) as usize);
-                if sh_info.0 == 0 {
+                let sh_info = section.info_link(endian);
+                if sh_info == SectionIndex(0) {
                     // Skip dynamic relocations.
                     continue;
                 }
@@ -143,8 +143,7 @@ where
             let section = self.file.sections.section(self.section_index).ok()?;
             self.section_index.0 += 1;
 
-            let sh_link = SectionIndex(section.sh_link(endian) as usize);
-            if sh_link != self.file.dynamic_symbols.section() {
+            if section.link(endian) != self.file.dynamic_symbols.section() {
                 continue;
             }
 
@@ -481,11 +480,9 @@ fn parse_relocation<Elf: FileHeader>(
         },
         _ => (RelocationKind::Unknown, 0),
     };
-    let sym = reloc.r_sym(endian, is_mips64el) as usize;
-    let target = if sym == 0 {
-        RelocationTarget::Absolute
-    } else {
-        RelocationTarget::Symbol(SymbolIndex(sym))
+    let target = match reloc.symbol(endian, is_mips64el) {
+        None => RelocationTarget::Absolute,
+        Some(symbol) => RelocationTarget::Symbol(symbol),
     };
     Relocation {
         kind,
@@ -509,6 +506,18 @@ pub trait Rel: Debug + Pod + Clone {
     fn r_info(&self, endian: Self::Endian) -> Self::Word;
     fn r_sym(&self, endian: Self::Endian) -> u32;
     fn r_type(&self, endian: Self::Endian) -> u32;
+
+    /// Get the symbol index referenced by the relocation.
+    ///
+    /// Returns `None` for the null symbol index.
+    fn symbol(&self, endian: Self::Endian) -> Option<SymbolIndex> {
+        let sym = self.r_sym(endian);
+        if sym == 0 {
+            None
+        } else {
+            Some(SymbolIndex(sym as usize))
+        }
+    }
 }
 
 impl<Endian: endian::Endian> Rel for elf::Rel32<Endian> {
@@ -575,6 +584,18 @@ pub trait Rela: Debug + Pod + Clone {
     fn r_addend(&self, endian: Self::Endian) -> Self::Sword;
     fn r_sym(&self, endian: Self::Endian, is_mips64el: bool) -> u32;
     fn r_type(&self, endian: Self::Endian, is_mips64el: bool) -> u32;
+
+    /// Get the symbol index referenced by the relocation.
+    ///
+    /// Returns `None` for the null symbol index.
+    fn symbol(&self, endian: Self::Endian, is_mips64el: bool) -> Option<SymbolIndex> {
+        let sym = self.r_sym(endian, is_mips64el);
+        if sym == 0 {
+            None
+        } else {
+            Some(SymbolIndex(sym as usize))
+        }
+    }
 }
 
 impl<Endian: endian::Endian> Rela for elf::Rela32<Endian> {

@@ -1,6 +1,6 @@
 use super::*;
 use object::read::xcoff::*;
-use object::read::SectionIndex;
+use object::read::{SectionIndex, SymbolIndex};
 use object::xcoff::*;
 
 pub(super) fn print_xcoff32(p: &mut Printer<'_>, data: &[u8]) {
@@ -129,7 +129,7 @@ fn print_sections<'data, Xcoff: FileHeader>(
                         let index = relocation.r_symndx();
                         let name = symbols.and_then(|symbols| {
                             symbols
-                                .symbol(index as usize)
+                                .symbol(SymbolIndex(index as usize))
                                 .and_then(|symbol| symbol.name(symbols.strings()))
                                 .print_err(p)
                         });
@@ -188,7 +188,7 @@ fn print_symbols<'data, Xcoff: FileHeader>(
             p.field("NumberOfAuxSymbols", numaux);
             if symbol.has_aux_file() {
                 for i in 1..=numaux {
-                    if let Some(aux_file) = symbols.aux_file(index.0, i).print_err(p) {
+                    if let Some(aux_file) = symbols.aux_file(index, i).print_err(p) {
                         p.group("FileAux", |p| {
                             p.field("Index", index.0 + i);
                             let name = aux_file.fname(symbols.strings());
@@ -206,7 +206,7 @@ fn print_symbols<'data, Xcoff: FileHeader>(
                 }
             }
             if symbol.has_aux_csect() {
-                if let Some(aux_csect) = symbols.aux_csect(index.0, numaux).print_err(p) {
+                if let Some(aux_csect) = symbols.aux_csect(index, numaux).print_err(p) {
                     p.group("CsectAux", |p| {
                         p.field("Index", index.0 + numaux);
                         p.field_hex("SectionLength", aux_csect.x_scnlen());
