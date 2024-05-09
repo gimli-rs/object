@@ -12,7 +12,6 @@ FileHeader {
     Type: ET_DYN (0x3)
     Machine: EM_X86_64 (0x3E)
     Version: EV_CURRENT (0x1)
-    Type: ET_DYN (0x3)
     Entry: 0x570
     ProgramHeaderOffset: 0x40
     SectionHeaderOffset: 0x0

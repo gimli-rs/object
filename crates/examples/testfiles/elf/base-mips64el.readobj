@@ -12,7 +12,6 @@ FileHeader {
     Type: ET_EXEC (0x2)
     Machine: EM_MIPS (0x8)
     Version: EV_CURRENT (0x1)
-    Type: ET_EXEC (0x2)
     Entry: 0x120000900
     ProgramHeaderOffset: 0x40
     SectionHeaderOffset: 0x1C50
