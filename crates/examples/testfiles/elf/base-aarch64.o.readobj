@@ -12,7 +12,6 @@ FileHeader {
     Type: ET_REL (0x1)
     Machine: EM_AARCH64 (0xB7)
     Version: EV_CURRENT (0x1)
-    Type: ET_REL (0x1)
     Entry: 0x0
     ProgramHeaderOffset: 0x0
     SectionHeaderOffset: 0x280

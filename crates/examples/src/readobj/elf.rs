@@ -43,7 +43,6 @@ fn print_file_header<Elf: FileHeader>(p: &mut Printer<'_>, endian: Elf::Endian, 
         } else {
             p.field_hex("Version", version);
         }
-        p.field_enum("Type", elf.e_type(endian), FLAGS_ET);
         p.field_hex("Entry", elf.e_entry(endian).into());
         p.field_hex("ProgramHeaderOffset", elf.e_phoff(endian).into());
         p.field_hex("SectionHeaderOffset", elf.e_shoff(endian).into());

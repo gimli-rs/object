@@ -59,7 +59,7 @@ impl<'data, Elf: FileHeader, R: ReadRef<'data>> SectionTable<'data, Elf, R> {
     /// Returns an error for the null section at index 0.
     pub fn section(&self, index: SectionIndex) -> read::Result<&'data Elf::SectionHeader> {
         if index.0 == 0 {
-            return Err(read::Error("Invalid ELF symbol index"));
+            return Err(read::Error("Invalid ELF section index"));
         }
         self.sections
             .get(index.0)
