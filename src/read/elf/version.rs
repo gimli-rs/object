@@ -1,6 +1,6 @@
 use alloc::vec::Vec;
 
-use crate::read::{Bytes, ReadError, ReadRef, Result, StringTable};
+use crate::read::{Bytes, ReadError, ReadRef, Result, StringTable, SymbolIndex};
 use crate::{elf, endian};
 
 use super::FileHeader;
@@ -161,8 +161,8 @@ impl<'data, Elf: FileHeader> VersionTable<'data, Elf> {
     }
 
     /// Return version index for a given symbol index.
-    pub fn version_index(&self, endian: Elf::Endian, index: usize) -> VersionIndex {
-        let version_index = match self.symbols.get(index) {
+    pub fn version_index(&self, endian: Elf::Endian, index: SymbolIndex) -> VersionIndex {
+        let version_index = match self.symbols.get(index.0) {
             Some(x) => x.0.get(endian),
             // Ideally this would be VER_NDX_LOCAL for undefined symbols,
             // but currently there are no checks that need this distinction.
@@ -191,7 +191,12 @@ impl<'data, Elf: FileHeader> VersionTable<'data, Elf> {
     /// Returns false for any error.
     ///
     /// Note: this function hasn't been fully tested and is likely to be incomplete.
-    pub fn matches(&self, endian: Elf::Endian, index: usize, need: Option<&Version<'_>>) -> bool {
+    pub fn matches(
+        &self,
+        endian: Elf::Endian,
+        index: SymbolIndex,
+        need: Option<&Version<'_>>,
+    ) -> bool {
         let version_index = self.version_index(endian, index);
         let def = match self.version(version_index) {
             Ok(def) => def,

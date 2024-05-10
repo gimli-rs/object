@@ -286,7 +286,7 @@ where
     }
 
     fn symbol_by_index(&self, index: SymbolIndex) -> read::Result<ElfSymbol<'data, '_, Elf, R>> {
-        let symbol = self.symbols.symbol(index.0)?;
+        let symbol = self.symbols.symbol(index)?;
         Ok(ElfSymbol {
             endian: self.endian,
             symbols: &self.symbols,
@@ -702,6 +702,18 @@ pub trait FileHeader: Debug + Pod {
             .read_error("Invalid ELF section header offset/size/alignment")
     }
 
+    /// Get the section index of the section header string table.
+    ///
+    /// Returns `Err` for invalid values (including if the index is 0).
+    fn section_strings_index<'data, R: ReadRef<'data>>(
+        &self,
+        endian: Self::Endian,
+        data: R,
+    ) -> read::Result<SectionIndex> {
+        self.shstrndx(endian, data)
+            .map(|index| SectionIndex(index as usize))
+    }
+
     /// Return the string table for the section headers.
     fn section_strings<'data, R: ReadRef<'data>>(
         &self,
@@ -712,8 +724,8 @@ pub trait FileHeader: Debug + Pod {
         if sections.is_empty() {
             return Ok(StringTable::default());
         }
-        let index = self.shstrndx(endian, data)? as usize;
-        let shstrtab = sections.get(index).read_error("Invalid ELF e_shstrndx")?;
+        let index = self.section_strings_index(endian, data)?;
+        let shstrtab = sections.get(index.0).read_error("Invalid ELF e_shstrndx")?;
         let strings = if let Some((shstrtab_offset, shstrtab_size)) = shstrtab.file_range(endian) {
             let shstrtab_end = shstrtab_offset
                 .checked_add(shstrtab_size)

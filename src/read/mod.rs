@@ -379,9 +379,21 @@ pub enum ObjectKind {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct SectionIndex(pub usize);
 
+impl fmt::Display for SectionIndex {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.0.fmt(f)
+    }
+}
+
 /// The index used to identify a symbol in a symbol table.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct SymbolIndex(pub usize);
+
+impl fmt::Display for SymbolIndex {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.0.fmt(f)
+    }
+}
 
 /// The section where an [`ObjectSymbol`] is defined.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]

@@ -98,11 +98,11 @@ fn copy_file<Pe: ImageNtHeaders>(in_data: &[u8]) -> Result<Vec<u8>, Box<dyn Erro
     // Determine which sections to copy.
     // We ignore any existing ".reloc" section since we recreate it ourselves.
     let mut in_sections_index = Vec::new();
-    for (index, in_section) in in_sections.iter().enumerate() {
+    for (index, in_section) in in_sections.enumerate() {
         if reloc_dir == Some(in_section.pe_address_range()) {
             continue;
         }
-        in_sections_index.push(index + 1);
+        in_sections_index.push(index);
     }
 
     let mut out_sections_len = in_sections_index.len();

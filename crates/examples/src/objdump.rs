@@ -183,13 +183,13 @@ fn dump_parsed_object<W: Write, E: Write>(w: &mut W, e: &mut E, file: &object::F
     }
 
     for section in file.sections() {
-        writeln!(w, "{}: {:x?}", section.index().0, section)?;
+        writeln!(w, "{}: {:x?}", section.index(), section)?;
     }
 
     for comdat in file.comdats() {
         write!(w, "{:?} Sections:", comdat)?;
         for section in comdat.sections() {
-            write!(w, " {}", section.0)?;
+            write!(w, " {}", section)?;
         }
         writeln!(w)?;
     }
@@ -197,7 +197,7 @@ fn dump_parsed_object<W: Write, E: Write>(w: &mut W, e: &mut E, file: &object::F
     writeln!(w)?;
     writeln!(w, "Symbols")?;
     for symbol in file.symbols() {
-        writeln!(w, "{}: {:x?}", symbol.index().0, symbol)?;
+        writeln!(w, "{}: {:x?}", symbol.index(), symbol)?;
     }
 
     for section in file.sections() {
@@ -216,7 +216,7 @@ fn dump_parsed_object<W: Write, E: Write>(w: &mut W, e: &mut E, file: &object::F
     writeln!(w)?;
     writeln!(w, "Dynamic symbols")?;
     for symbol in file.dynamic_symbols() {
-        writeln!(w, "{}: {:x?}", symbol.index().0, symbol)?;
+        writeln!(w, "{}: {:x?}", symbol.index(), symbol)?;
     }
 
     if let Some(relocations) = file.dynamic_relocations() {

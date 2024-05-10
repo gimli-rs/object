@@ -3,6 +3,7 @@ use object::pe::*;
 use object::read::coff::ImageSymbol as _;
 use object::read::coff::*;
 use object::read::pe::*;
+use object::read::{SectionIndex, SymbolIndex};
 use object::LittleEndian as LE;
 use object::{Bytes, U32Bytes, U64Bytes};
 
@@ -643,7 +644,7 @@ fn print_relocations<'data, Coff: CoffHeader>(
                 let index = relocation.symbol_table_index.get(LE);
                 let name = symbols.and_then(|symbols| {
                     symbols
-                        .symbol(index as usize)
+                        .symbol(SymbolIndex(index as usize))
                         .and_then(|symbol| symbol.name(symbols.strings()))
                         .print_err(p)
                 });
@@ -714,7 +715,7 @@ fn print_symbols<'data, Coff: CoffHeader>(
             } else {
                 let section_name = sections.and_then(|sections| {
                     sections
-                        .section(section as usize)
+                        .section(SectionIndex(section as usize))
                         .and_then(|section| section.name(symbols.strings()))
                         .print_err(p)
                 });

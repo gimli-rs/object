@@ -134,7 +134,7 @@ where
 
     fn name_bytes(&self) -> read::Result<&'data [u8]> {
         // FIXME: check sh_link
-        let index = self.section.sh_info(self.file.endian) as usize;
+        let index = self.symbol();
         let symbol = self.file.symbols.symbol(index)?;
         symbol.name(self.file.endian, self.file.symbols.strings())
     }

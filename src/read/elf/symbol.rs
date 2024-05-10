@@ -70,9 +70,7 @@ impl<'data, Elf: FileHeader, R: ReadRef<'data>> SymbolTable<'data, Elf, R> {
         let mut shndx_section = SectionIndex(0);
         let mut shndx = &[][..];
         for (i, s) in sections.iter().enumerate() {
-            if s.sh_type(endian) == elf::SHT_SYMTAB_SHNDX
-                && s.sh_link(endian) as usize == section_index.0
-            {
+            if s.sh_type(endian) == elf::SHT_SYMTAB_SHNDX && s.link(endian) == section_index {
                 shndx_section = SectionIndex(i);
                 shndx = s
                     .data_as_array(endian, data)
@@ -121,9 +119,22 @@ impl<'data, Elf: FileHeader, R: ReadRef<'data>> SymbolTable<'data, Elf, R> {
     }
 
     /// Iterate over the symbols.
+    ///
+    /// This includes the null symbol at index 0, which you will usually need to skip.
     #[inline]
     pub fn iter(&self) -> slice::Iter<'data, Elf::Sym> {
         self.symbols.iter()
+    }
+
+    /// Iterate over the symbols and their indices.
+    ///
+    /// This includes the null symbol at index 0, which you will usually need to skip.
+    #[inline]
+    pub fn enumerate(&self) -> impl Iterator<Item = (SymbolIndex, &'data Elf::Sym)> {
+        self.symbols
+            .iter()
+            .enumerate()
+            .map(|(i, sym)| (SymbolIndex(i), sym))
     }
 
     /// Return true if the symbol table is empty.
@@ -141,19 +152,19 @@ impl<'data, Elf: FileHeader, R: ReadRef<'data>> SymbolTable<'data, Elf, R> {
     /// Get the symbol at the given index.
     ///
     /// Returns an error for null entry at index 0.
-    pub fn symbol(&self, index: usize) -> read::Result<&'data Elf::Sym> {
-        if index == 0 {
+    pub fn symbol(&self, index: SymbolIndex) -> read::Result<&'data Elf::Sym> {
+        if index == SymbolIndex(0) {
             return Err(read::Error("Invalid ELF symbol index"));
         }
         self.symbols
-            .get(index)
+            .get(index.0)
             .read_error("Invalid ELF symbol index")
     }
 
     /// Return the extended section index for the given symbol if present.
     #[inline]
-    pub fn shndx(&self, endian: Elf::Endian, index: usize) -> Option<u32> {
-        self.shndx.get(index).map(|x| x.get(endian))
+    pub fn shndx(&self, endian: Elf::Endian, index: SymbolIndex) -> Option<u32> {
+        self.shndx.get(index.0).map(|x| x.get(endian))
     }
 
     /// Return the section index for the given symbol.
@@ -163,14 +174,20 @@ impl<'data, Elf: FileHeader, R: ReadRef<'data>> SymbolTable<'data, Elf, R> {
         &self,
         endian: Elf::Endian,
         symbol: &Elf::Sym,
-        index: usize,
+        index: SymbolIndex,
     ) -> read::Result<Option<SectionIndex>> {
         match symbol.st_shndx(endian) {
             elf::SHN_UNDEF => Ok(None),
-            elf::SHN_XINDEX => self
-                .shndx(endian, index)
-                .read_error("Missing ELF symbol extended index")
-                .map(|index| Some(SectionIndex(index as usize))),
+            elf::SHN_XINDEX => {
+                let shndx = self
+                    .shndx(endian, index)
+                    .read_error("Missing ELF symbol extended index")?;
+                if shndx == 0 {
+                    Ok(None)
+                } else {
+                    Ok(Some(SectionIndex(shndx as usize)))
+                }
+            }
             shndx if shndx < elf::SHN_LORESERVE => Ok(Some(SectionIndex(shndx.into()))),
             _ => Ok(None),
         }
@@ -234,7 +251,7 @@ impl<'data, 'file, Elf: FileHeader, R: ReadRef<'data>> ObjectSymbolTable<'data>
     }
 
     fn symbol_by_index(&self, index: SymbolIndex) -> read::Result<Self::Symbol> {
-        let symbol = self.symbols.symbol(index.0)?;
+        let symbol = self.symbols.symbol(index)?;
         Ok(ElfSymbol {
             endian: self.endian,
             symbols: self.symbols,
@@ -259,7 +276,7 @@ where
 {
     endian: Elf::Endian,
     symbols: &'file SymbolTable<'data, Elf, R>,
-    index: usize,
+    index: SymbolIndex,
 }
 
 impl<'data, 'file, Elf, R> ElfSymbolIterator<'data, 'file, Elf, R>
@@ -271,7 +288,7 @@ where
         ElfSymbolIterator {
             endian,
             symbols,
-            index: 1,
+            index: SymbolIndex(1),
         }
     }
 }
@@ -291,12 +308,12 @@ impl<'data, 'file, Elf: FileHeader, R: ReadRef<'data>> Iterator
 
     fn next(&mut self) -> Option<Self::Item> {
         let index = self.index;
-        let symbol = self.symbols.symbols.get(index)?;
-        self.index += 1;
+        let symbol = self.symbols.symbols.get(index.0)?;
+        self.index.0 += 1;
         Some(ElfSymbol {
             endian: self.endian,
             symbols: self.symbols,
-            index: SymbolIndex(index),
+            index,
             symbol,
         })
     }
@@ -400,7 +417,8 @@ impl<'data, 'file, Elf: FileHeader, R: ReadRef<'data>> ObjectSymbol<'data>
                 }
             }
             elf::SHN_COMMON => SymbolSection::Common,
-            elf::SHN_XINDEX => match self.symbols.shndx(self.endian, self.index.0) {
+            elf::SHN_XINDEX => match self.symbols.shndx(self.endian, self.index) {
+                Some(0) => SymbolSection::None,
                 Some(index) => SymbolSection::Section(SectionIndex(index as usize)),
                 None => SymbolSection::Unknown,
             },

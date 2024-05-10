@@ -209,13 +209,13 @@ where
             .section_by_name(self.common.symbols.strings(), section_name)
             .map(|(index, section)| PeSection {
                 file: self,
-                index: SectionIndex(index),
+                index,
                 section,
             })
     }
 
     fn section_by_index(&self, index: SectionIndex) -> Result<PeSection<'data, '_, Pe, R>> {
-        let section = self.common.sections.section(index.0)?;
+        let section = self.common.sections.section(index)?;
         Ok(PeSection {
             file: self,
             index,
@@ -235,7 +235,7 @@ where
     }
 
     fn symbol_by_index(&self, index: SymbolIndex) -> Result<CoffSymbol<'data, '_, R>> {
-        let symbol = self.common.symbols.symbol(index.0)?;
+        let symbol = self.common.symbols.symbol(index)?;
         Ok(CoffSymbol {
             file: &self.common,
             index,
@@ -244,10 +244,7 @@ where
     }
 
     fn symbols(&self) -> CoffSymbolIterator<'data, '_, R> {
-        CoffSymbolIterator {
-            file: &self.common,
-            index: 0,
-        }
+        CoffSymbolIterator::new(&self.common)
     }
 
     fn symbol_table(&self) -> Option<CoffSymbolTable<'data, '_, R>> {
@@ -255,11 +252,7 @@ where
     }
 
     fn dynamic_symbols(&self) -> CoffSymbolIterator<'data, '_, R> {
-        CoffSymbolIterator {
-            file: &self.common,
-            // Hack: don't return any.
-            index: self.common.symbols.len(),
-        }
+        CoffSymbolIterator::empty(&self.common)
     }
 
     fn dynamic_symbol_table(&self) -> Option<CoffSymbolTable<'data, '_, R>> {

@@ -116,7 +116,7 @@ impl<'data> Builder<'data> {
         let header = Elf::parse(data)?;
         let endian = header.endian()?;
         let is_mips64el = header.is_mips64el(endian);
-        let shstrndx = header.shstrndx(endian, data)? as usize;
+        let section_strings_index = header.section_strings_index(endian, data)?;
         let segments = header.program_headers(endian, data)?;
         let sections = header.sections(endian, data)?;
         let symbols = sections.symbols(endian, data, elf::SHT_SYMTAB)?;
@@ -179,8 +179,8 @@ impl<'data> Builder<'data> {
             builder.load_align = 1;
         }
 
-        for (index, section) in sections.iter().enumerate().skip(1) {
-            let id = SectionId(index - 1);
+        for (index, section) in sections.enumerate().skip(1) {
+            let id = SectionId(index.0 - 1);
             let relocations = if let Some((rels, link)) = section.rel(endian, data)? {
                 Self::read_relocations(
                     index,
@@ -222,7 +222,7 @@ impl<'data> Builder<'data> {
                 | elf::SHT_PREINIT_ARRAY => SectionData::Data(section.data(endian, data)?.into()),
                 elf::SHT_REL | elf::SHT_RELA => relocations,
                 elf::SHT_SYMTAB => {
-                    if index == symbols.section().0 {
+                    if index == symbols.section() {
                         SectionData::Symbol
                     } else {
                         return Err(Error(format!(
@@ -232,7 +232,7 @@ impl<'data> Builder<'data> {
                     }
                 }
                 elf::SHT_SYMTAB_SHNDX => {
-                    if index == symbols.shndx_section().0 {
+                    if index == symbols.shndx_section() {
                         SectionData::SymbolSectionIndex
                     } else {
                         return Err(Error(format!(
@@ -242,7 +242,7 @@ impl<'data> Builder<'data> {
                     }
                 }
                 elf::SHT_DYNSYM => {
-                    if index == dynamic_symbols.section().0 {
+                    if index == dynamic_symbols.section() {
                         SectionData::DynamicSymbol
                     } else {
                         return Err(Error(format!(
@@ -252,11 +252,11 @@ impl<'data> Builder<'data> {
                     }
                 }
                 elf::SHT_STRTAB => {
-                    if index == symbols.string_section().0 {
+                    if index == symbols.string_section() {
                         SectionData::String
-                    } else if index == dynamic_symbols.string_section().0 {
+                    } else if index == dynamic_symbols.string_section() {
                         SectionData::DynamicString
-                    } else if index == shstrndx {
+                    } else if index == section_strings_index {
                         SectionData::SectionString
                     } else {
                         return Err(Error(format!(
@@ -372,7 +372,7 @@ impl<'data> Builder<'data> {
 
     #[allow(clippy::too_many_arguments)]
     fn read_relocations<Elf, Rel, R>(
-        index: usize,
+        index: read::SectionIndex,
         endian: Elf::Endian,
         is_mips64el: bool,
         section: &'data Elf::SectionHeader,
@@ -427,7 +427,7 @@ impl<'data> Builder<'data> {
     }
 
     fn read_relocations_impl<Elf, Rel, const DYNAMIC: bool>(
-        index: usize,
+        index: read::SectionIndex,
         endian: Elf::Endian,
         is_mips64el: bool,
         rels: &'data [Rel],
@@ -440,17 +440,16 @@ impl<'data> Builder<'data> {
         let mut relocations = Vec::new();
         for rel in rels {
             let rel = (*rel).into();
-            let r_sym = rel.r_sym(endian, is_mips64el);
-            let symbol = if r_sym == 0 {
-                None
-            } else {
-                if r_sym as usize >= symbols_len {
+            let symbol = if let Some(symbol) = rel.symbol(endian, is_mips64el) {
+                if symbol.0 >= symbols_len {
                     return Err(Error(format!(
                         "Invalid symbol index {} in relocation section at index {}",
-                        r_sym, index,
+                        symbol, index,
                     )));
                 }
-                Some(SymbolId(r_sym as usize - 1))
+                Some(SymbolId(symbol.0 - 1))
+            } else {
+                None
             };
             relocations.push(Relocation {
                 r_offset: rel.r_offset(endian).into(),
@@ -523,8 +522,8 @@ impl<'data> Builder<'data> {
         Elf: FileHeader<Endian = Endianness>,
         R: ReadRef<'data>,
     {
-        for (index, symbol) in symbols.iter().enumerate().skip(1) {
-            let id = SymbolId(index - 1);
+        for (index, symbol) in symbols.enumerate().skip(1) {
+            let id = SymbolId(index.0 - 1);
             let section =
                 if let Some(section_index) = symbols.symbol_section(endian, symbol, index)? {
                     let section_id = section_index.0.wrapping_sub(1);
@@ -553,7 +552,7 @@ impl<'data> Builder<'data> {
     }
 
     fn read_attributes<Elf>(
-        index: usize,
+        index: read::SectionIndex,
         attributes: read::elf::AttributesSection<'data, Elf>,
         sections_len: usize,
         symbols_len: usize,

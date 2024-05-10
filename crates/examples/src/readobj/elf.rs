@@ -1,7 +1,7 @@
 use super::*;
 use object::elf::*;
 use object::read::elf::*;
-use object::read::{SectionIndex, StringTable};
+use object::read::{SectionIndex, StringTable, SymbolIndex};
 
 pub(super) fn print_elf32(p: &mut Printer<'_>, data: &[u8]) {
     if let Some(elf) = FileHeader32::<Endianness>::parse(data).print_err(p) {
@@ -239,7 +239,7 @@ fn print_section_headers<Elf: FileHeader>(
     elf: &Elf,
     sections: &SectionTable<Elf>,
 ) {
-    for (index, section) in sections.iter().enumerate() {
+    for (index, section) in sections.enumerate() {
         let sh_type = section.sh_type(endian);
         if !p.options.sections
             && !(p.options.symbols && sh_type == SHT_SYMTAB)
@@ -255,7 +255,6 @@ fn print_section_headers<Elf: FileHeader>(
         {
             continue;
         }
-        let index = SectionIndex(index);
         p.group("SectionHeader", |p| {
             p.field("Index", index.0);
             p.field_string(
@@ -394,10 +393,10 @@ fn print_section_symbols<Elf: FileHeader>(
             EM_PARISC => FLAGS_SHN_PARISC,
             _ => &[],
         };
-        for (index, symbol) in symbols.iter().enumerate() {
+        for (index, symbol) in symbols.enumerate() {
             p.group("Symbol", |p| {
-                p.field("Index", index);
-                if index == 0 {
+                p.field("Index", index.0);
+                if index == SymbolIndex(0) {
                     p.field_hex("Name", symbol.st_name(endian));
                 } else {
                     p.field_string(
@@ -466,7 +465,7 @@ fn print_section_rel<Elf: FileHeader>(
             p.group("Relocation", |p| {
                 p.field_hex("Offset", relocation.r_offset(endian).into());
                 p.field_enum("Type", relocation.r_type(endian), proc);
-                let sym = relocation.r_sym(endian);
+                let sym = relocation.symbol(endian);
                 print_rel_symbol(p, endian, symbols, sym);
             });
         }
@@ -497,7 +496,7 @@ fn print_section_rela<Elf: FileHeader>(
                     relocation.r_type(endian, elf.is_mips64el(endian)),
                     proc,
                 );
-                let sym = relocation.r_sym(endian, elf.is_mips64el(endian));
+                let sym = relocation.symbol(endian, elf.is_mips64el(endian));
                 print_rel_symbol(p, endian, symbols, sym);
                 let addend = relocation.r_addend(endian).into() as u64;
                 if addend != 0 {
@@ -512,19 +511,19 @@ fn print_rel_symbol<Elf: FileHeader>(
     p: &mut Printer<'_>,
     endian: Elf::Endian,
     symbols: Option<SymbolTable<'_, Elf>>,
-    sym: u32,
+    index: Option<SymbolIndex>,
 ) {
-    if sym == 0 {
-        p.field_hex("Symbol", sym);
+    let Some(index) = index else {
+        p.field_hex("Symbol", 0);
         return;
-    }
+    };
     let name = symbols.and_then(|symbols| {
         symbols
-            .symbol(sym as usize)
+            .symbol(index)
             .and_then(|symbol| symbol.name(endian, symbols.strings()))
             .print_err(p)
     });
-    p.field_string_option("Symbol", sym, name);
+    p.field_string_option("Symbol", index.0, name);
 }
 
 fn rel_flag_type<Elf: FileHeader>(endian: Elf::Endian, elf: &Elf) -> &'static [Flag<u32>] {
@@ -760,7 +759,7 @@ fn print_hash<Elf: FileHeader>(
     if let Ok(Some((hash_table, link))) = section.hash(endian, data) {
         if let Ok(symbols) = _sections.symbol_table_by_index(endian, data, link) {
             if let Ok(versions) = _sections.versions(endian, data) {
-                for (index, symbol) in symbols.symbols().iter().enumerate() {
+                for (index, symbol) in symbols.symbols().enumerate() {
                     let name = symbols.symbol_name(endian, symbol).unwrap();
                     if name.is_empty() {
                         continue;
@@ -802,7 +801,6 @@ fn print_gnu_hash<Elf: FileHeader>(
             if let Ok(versions) = _sections.versions(endian, data) {
                 for (index, symbol) in symbols
                     .symbols()
-                    .iter()
                     .enumerate()
                     .skip(hash_table.symbol_base() as usize)
                 {
