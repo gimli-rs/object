@@ -14,7 +14,7 @@ use crate::read::{
 use super::{ElfFile, FileHeader, SectionHeader, SectionTable};
 
 /// A mapping from section index to associated relocation sections.
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct RelocationSections {
     relocations: Vec<usize>,
 }

@@ -69,9 +69,9 @@ impl<'data, Elf: FileHeader, R: ReadRef<'data>> SymbolTable<'data, Elf, R> {
 
         let mut shndx_section = SectionIndex(0);
         let mut shndx = &[][..];
-        for (i, s) in sections.iter().enumerate() {
+        for (i, s) in sections.enumerate() {
             if s.sh_type(endian) == elf::SHT_SYMTAB_SHNDX && s.link(endian) == section_index {
-                shndx_section = SectionIndex(i);
+                shndx_section = i;
                 shndx = s
                     .data_as_array(endian, data)
                     .read_error("Invalid ELF symtab_shndx data")?;
@@ -431,7 +431,7 @@ impl<'data, 'file, Elf: FileHeader, R: ReadRef<'data>> ObjectSymbol<'data>
 
     #[inline]
     fn is_undefined(&self) -> bool {
-        self.symbol.st_shndx(self.endian) == elf::SHN_UNDEF
+        self.symbol.is_undefined(self.endian)
     }
 
     #[inline]
@@ -441,12 +441,12 @@ impl<'data, 'file, Elf: FileHeader, R: ReadRef<'data>> ObjectSymbol<'data>
 
     #[inline]
     fn is_common(&self) -> bool {
-        self.symbol.st_shndx(self.endian) == elf::SHN_COMMON
+        self.symbol.is_common(self.endian)
     }
 
     #[inline]
     fn is_weak(&self) -> bool {
-        self.symbol.st_bind() == elf::STB_WEAK
+        self.symbol.is_weak()
     }
 
     fn scope(&self) -> SymbolScope {
@@ -469,12 +469,12 @@ impl<'data, 'file, Elf: FileHeader, R: ReadRef<'data>> ObjectSymbol<'data>
 
     #[inline]
     fn is_global(&self) -> bool {
-        self.symbol.st_bind() != elf::STB_LOCAL
+        !self.symbol.is_local()
     }
 
     #[inline]
     fn is_local(&self) -> bool {
-        self.symbol.st_bind() == elf::STB_LOCAL
+        self.symbol.is_local()
     }
 
     #[inline]
@@ -513,7 +513,7 @@ pub trait Sym: Debug + Pod {
             .read_error("Invalid ELF symbol name offset")
     }
 
-    /// Return true if the symbol is undefined.
+    /// Return true if the symbol section is `SHN_UNDEF`.
     #[inline]
     fn is_undefined(&self, endian: Self::Endian) -> bool {
         self.st_shndx(endian) == elf::SHN_UNDEF
@@ -530,6 +530,26 @@ pub trait Sym: Debug + Pod {
             elf::STT_FUNC | elf::STT_OBJECT => true,
             _ => false,
         }
+    }
+
+    /// Return true if the symbol section is `SHN_COMMON`.
+    fn is_common(&self, endian: Self::Endian) -> bool {
+        self.st_shndx(endian) == elf::SHN_COMMON
+    }
+
+    /// Return true if the symbol section is `SHN_ABS`.
+    fn is_absolute(&self, endian: Self::Endian) -> bool {
+        self.st_shndx(endian) == elf::SHN_ABS
+    }
+
+    /// Return true if the symbol binding is `STB_LOCAL`.
+    fn is_local(&self) -> bool {
+        self.st_bind() == elf::STB_LOCAL
+    }
+
+    /// Return true if the symbol binding is `STB_WEAK`.
+    fn is_weak(&self) -> bool {
+        self.st_bind() == elf::STB_WEAK
     }
 }
 
