@@ -20,13 +20,22 @@ use super::{
 /// Also includes the string table used for the section names.
 ///
 /// Returned by [`FileHeader::sections`].
-#[derive(Debug, Default, Clone, Copy)]
+#[derive(Debug, Clone, Copy)]
 pub struct SectionTable<'data, Elf: FileHeader, R = &'data [u8]>
 where
     R: ReadRef<'data>,
 {
     sections: &'data [Elf::SectionHeader],
     strings: StringTable<'data, R>,
+}
+
+impl<'data, Elf: FileHeader, R: ReadRef<'data>> Default for SectionTable<'data, Elf, R> {
+    fn default() -> Self {
+        SectionTable {
+            sections: &[],
+            strings: StringTable::default(),
+        }
+    }
 }
 
 impl<'data, Elf: FileHeader, R: ReadRef<'data>> SectionTable<'data, Elf, R> {
@@ -86,10 +95,8 @@ impl<'data, Elf: FileHeader, R: ReadRef<'data>> SectionTable<'data, Elf, R> {
         &self,
         endian: Elf::Endian,
         name: &[u8],
-    ) -> Option<(usize, &'data Elf::SectionHeader)> {
-        self.sections
-            .iter()
-            .enumerate()
+    ) -> Option<(SectionIndex, &'data Elf::SectionHeader)> {
+        self.enumerate()
             .find(|(_, section)| self.section_name(endian, section) == Ok(name))
     }
 
@@ -133,16 +140,12 @@ impl<'data, Elf: FileHeader, R: ReadRef<'data>> SectionTable<'data, Elf, R> {
     ) -> read::Result<SymbolTable<'data, Elf, R>> {
         debug_assert!(sh_type == elf::SHT_DYNSYM || sh_type == elf::SHT_SYMTAB);
 
-        let (index, section) = match self
-            .iter()
-            .enumerate()
-            .find(|s| s.1.sh_type(endian) == sh_type)
-        {
+        let (index, section) = match self.enumerate().find(|s| s.1.sh_type(endian) == sh_type) {
             Some(s) => s,
             None => return Ok(SymbolTable::default()),
         };
 
-        SymbolTable::parse(endian, data, self, SectionIndex(index), section)
+        SymbolTable::parse(endian, data, self, index, section)
     }
 
     /// Return the symbol table at the given section index.

@@ -147,7 +147,7 @@ where
             .section_by_name(self.endian, section_name)
             .map(|(index, section)| ElfSection {
                 file: self,
-                index: SectionIndex(index),
+                index,
                 section,
             })
     }
