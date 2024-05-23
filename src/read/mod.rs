@@ -512,7 +512,7 @@ impl<'data> SymbolMapEntry for SymbolMapName<'data> {
 #[derive(Debug, Default, Clone)]
 pub struct ObjectMap<'data> {
     symbols: SymbolMap<ObjectMapEntry<'data>>,
-    objects: Vec<&'data [u8]>,
+    objects: Vec<ObjectMapFile<'data>>,
 }
 
 impl<'data> ObjectMap<'data> {
@@ -531,12 +531,12 @@ impl<'data> ObjectMap<'data> {
 
     /// Get all objects in the map.
     #[inline]
-    pub fn objects(&self) -> &[&'data [u8]] {
+    pub fn objects(&self) -> &[ObjectMapFile<'data>] {
         &self.objects
     }
 }
 
-/// An [`ObjectMap`] entry.
+/// A symbol in an [`ObjectMap`].
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct ObjectMapEntry<'data> {
     address: u64,
@@ -574,8 +574,8 @@ impl<'data> ObjectMapEntry<'data> {
 
     /// Get the object file name.
     #[inline]
-    pub fn object(&self, map: &ObjectMap<'data>) -> &'data [u8] {
-        map.objects[self.object]
+    pub fn object<'a>(&self, map: &'a ObjectMap<'data>) -> &'a ObjectMapFile<'data> {
+        &map.objects[self.object]
     }
 }
 
@@ -583,6 +583,31 @@ impl<'data> SymbolMapEntry for ObjectMapEntry<'data> {
     #[inline]
     fn address(&self) -> u64 {
         self.address
+    }
+}
+
+/// An object file name in an [`ObjectMap`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct ObjectMapFile<'data> {
+    path: &'data [u8],
+    member: Option<&'data [u8]>,
+}
+
+impl<'data> ObjectMapFile<'data> {
+    fn new(path: &'data [u8], member: Option<&'data [u8]>) -> Self {
+        ObjectMapFile { path, member }
+    }
+
+    /// Get the path to the file containing the object.
+    #[inline]
+    pub fn path(&self) -> &'data [u8] {
+        self.path
+    }
+
+    /// If the file is an archive, get the name of the member containing the object.
+    #[inline]
+    pub fn member(&self) -> Option<&'data [u8]> {
+        self.member
     }
 }
 

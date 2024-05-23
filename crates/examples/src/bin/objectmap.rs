@@ -57,11 +57,16 @@ fn main() {
 }
 
 fn print_symbol(symbol: &object::ObjectMapEntry<'_>, map: &object::ObjectMap<'_>) {
-    println!(
+    let file = symbol.object(map);
+    print!(
         "{:x} {:x} {} {}",
         symbol.address(),
         symbol.size(),
         String::from_utf8_lossy(symbol.name()),
-        String::from_utf8_lossy(symbol.object(map)),
+        String::from_utf8_lossy(file.path()),
     );
+    if let Some(member) = file.member() {
+        print!("({})", String::from_utf8_lossy(member));
+    }
+    println!();
 }

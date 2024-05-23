@@ -7,9 +7,9 @@ use crate::macho;
 use crate::pod::Pod;
 use crate::read::util::StringTable;
 use crate::read::{
-    self, ObjectMap, ObjectMapEntry, ObjectSymbol, ObjectSymbolTable, ReadError, ReadRef, Result,
-    SectionIndex, SectionKind, SymbolFlags, SymbolIndex, SymbolKind, SymbolMap, SymbolMapEntry,
-    SymbolScope, SymbolSection,
+    self, ObjectMap, ObjectMapEntry, ObjectMapFile, ObjectSymbol, ObjectSymbolTable, ReadError,
+    ReadRef, Result, SectionIndex, SectionKind, SymbolFlags, SymbolIndex, SymbolKind, SymbolMap,
+    SymbolMapEntry, SymbolScope, SymbolSection,
 };
 
 use super::{MachHeader, MachOFile};
@@ -115,7 +115,20 @@ impl<'data, Mach: MachHeader, R: ReadRef<'data>> SymbolTable<'data, Mach, R> {
                     if let Ok(name) = nlist.name(endian, self.strings) {
                         if !name.is_empty() {
                             object = Some(objects.len());
-                            objects.push(name);
+                            // `N_OSO` symbol names can be either `/path/to/object.o`
+                            // or `/path/to/archive.a(object.o)`.
+                            let (path, member) = name
+                                .split_last()
+                                .and_then(|(last, head)| {
+                                    if *last != b')' {
+                                        return None;
+                                    }
+                                    let index = head.iter().position(|&x| x == b'(')?;
+                                    let (archive, rest) = head.split_at(index);
+                                    Some((archive, Some(&rest[1..])))
+                                })
+                                .unwrap_or((name, None));
+                            objects.push(ObjectMapFile::new(path, member));
                         }
                     }
                 }
