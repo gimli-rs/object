@@ -1,6 +1,5 @@
 use super::*;
 use object::read::xcoff::*;
-use object::read::{SectionIndex, SymbolIndex};
 use object::xcoff::*;
 
 pub(super) fn print_xcoff32(p: &mut Printer<'_>, data: &[u8]) {
@@ -126,14 +125,14 @@ fn print_sections<'data, Xcoff: FileHeader>(
                 for relocation in relocations {
                     p.group("Relocation", |p| {
                         p.field_hex("VirtualAddress", relocation.r_vaddr().into());
-                        let index = relocation.r_symndx();
+                        let index = relocation.symbol();
                         let name = symbols.and_then(|symbols| {
                             symbols
-                                .symbol(SymbolIndex(index as usize))
+                                .symbol(index)
                                 .and_then(|symbol| symbol.name(symbols.strings()))
                                 .print_err(p)
                         });
-                        p.field_string_option("Symbol", index, name);
+                        p.field_string_option("Symbol", index.0, name);
                         p.field_hex("Size", relocation.r_rsize());
                         p.field_enum("Type", relocation.r_rtype(), FLAGS_R);
                     });
@@ -161,17 +160,16 @@ fn print_symbols<'data, Xcoff: FileHeader>(
                 p.field_inline_string("Name", name);
             }
             p.field_hex("Value", symbol.n_value().into());
-            let section = symbol.n_scnum();
-            if section <= 0 {
-                p.field_enum_display("Section", section, FLAGS_N);
-            } else {
+            if let Some(section_index) = symbol.section() {
                 let section_name = sections.and_then(|sections| {
                     sections
-                        .section(SectionIndex(section as usize))
+                        .section(section_index)
                         .map(|section| section.name())
                         .print_err(p)
                 });
-                p.field_string_option("Section", section, section_name);
+                p.field_string_option("Section", section_index.0, section_name);
+            } else {
+                p.field_enum_display("Section", symbol.n_scnum(), FLAGS_N);
             }
             if symbol.n_sclass() == C_FILE {
                 p.field_hex("SourceLanguage", symbol.n_type() >> 8);

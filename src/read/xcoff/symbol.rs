@@ -552,6 +552,16 @@ pub trait Symbol: Debug + Pod {
         strings: StringTable<'data, R>,
     ) -> Result<&'data [u8]>;
 
+    /// Return the section index for the symbol.
+    fn section(&self) -> Option<SectionIndex> {
+        let index = self.n_scnum();
+        if index > 0 {
+            Some(SectionIndex(index as usize))
+        } else {
+            None
+        }
+    }
+
     /// Return true if the symbol is a null placeholder.
     #[inline]
     fn is_null(&self) -> bool {

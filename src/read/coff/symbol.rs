@@ -357,21 +357,9 @@ impl<'data, 'file, R: ReadRef<'data>, Coff: CoffHeader> ObjectSymbol<'data>
     }
 
     fn address(&self) -> u64 {
-        // Only return an address for storage classes that we know use an address.
-        match self.symbol.storage_class() {
-            pe::IMAGE_SYM_CLASS_STATIC
-            | pe::IMAGE_SYM_CLASS_WEAK_EXTERNAL
-            | pe::IMAGE_SYM_CLASS_LABEL => {}
-            pe::IMAGE_SYM_CLASS_EXTERNAL => {
-                if self.symbol.section_number() == pe::IMAGE_SYM_UNDEFINED {
-                    // Undefined or common data, neither of which have an address.
-                    return 0;
-                }
-            }
-            _ => return 0,
-        }
         self.symbol
             .address(self.file.image_base, &self.file.sections)
+            .unwrap_or(None)
             .unwrap_or(0)
     }
 
@@ -565,13 +553,34 @@ pub trait ImageSymbol: Debug + Pod {
 
     /// Return the symbol address.
     ///
-    /// This takes into account the image base and the section address.
-    fn address(&self, image_base: u64, sections: &SectionTable<'_>) -> Result<u64> {
-        let section_number = SectionIndex(self.section_number() as usize);
-        let section = sections.section(section_number)?;
+    /// This takes into account the image base and the section address,
+    /// and only returns an address for symbols that have an address.
+    fn address(&self, image_base: u64, sections: &SectionTable<'_>) -> Result<Option<u64>> {
+        // Only return an address for storage classes that we know use an address.
+        match self.storage_class() {
+            pe::IMAGE_SYM_CLASS_STATIC
+            | pe::IMAGE_SYM_CLASS_WEAK_EXTERNAL
+            | pe::IMAGE_SYM_CLASS_LABEL
+            | pe::IMAGE_SYM_CLASS_EXTERNAL => {}
+            _ => return Ok(None),
+        }
+        let Some(section_index) = self.section() else {
+            return Ok(None);
+        };
+        let section = sections.section(section_index)?;
         let virtual_address = u64::from(section.virtual_address.get(LE));
         let value = u64::from(self.value());
-        Ok(image_base + virtual_address + value)
+        Ok(Some(image_base + virtual_address + value))
+    }
+
+    /// Return the section index for the symbol.
+    fn section(&self) -> Option<SectionIndex> {
+        let section_number = self.section_number();
+        if section_number > 0 {
+            Some(SectionIndex(section_number as usize))
+        } else {
+            None
+        }
     }
 
     /// Return true if the symbol is a definition of a function or data object.
