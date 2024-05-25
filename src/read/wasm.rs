@@ -325,9 +325,12 @@ impl<'data, R: ReadRef<'data>> WasmFile<'data, R> {
                     range.start = range.end - size;
                     file.add_section(SectionId::Custom, range, name);
                     if name == "name" {
-                        for name in
-                            wp::NameSectionReader::new(section.data(), section.data_offset())
-                        {
+                        let reader = wp::BinaryReader::new(
+                            section.data(),
+                            section.data_offset(),
+                            wp::WasmFeatures::all(),
+                        );
+                        for name in wp::NameSectionReader::new(reader) {
                             // TODO: Right now, ill-formed name subsections
                             // are silently ignored in order to maintain
                             // compatibility with extended name sections, which
