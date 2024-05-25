@@ -15,7 +15,7 @@ include = [
 features = ['doc']
 
 [dependencies]
-object = { version = "0.35.0", default-features = false, features = ["build", "elf"], path = "../.." }
+object = { version = "0.36.0", default-features = false, features = ["build", "elf"], path = "../.." }
 
 # Dependencies for the cli
 anyhow = { version = "1.0.79", optional = true }

@@ -2,6 +2,78 @@
 
 --------------------------------------------------------------------------------
 
+## 0.36.0
+
+Released 2024/05/26.
+
+### Breaking changes
+
+* Deleted `data` and `align` parameters for `write::Object::add_subsection`.
+  Use `add_symbol_data` or `add_symbol_bss` instead.
+  [#676](https://github.com/gimli-rs/object/pull/676)
+
+* Changed methods in the lower level read API to accept or return `SectionIndex`
+  or `SymbolIndex` instead of `usize`.
+  [#677](https://github.com/gimli-rs/object/pull/677)
+  [#684](https://github.com/gimli-rs/object/pull/684)
+  [#685](https://github.com/gimli-rs/object/pull/685)
+
+* Deleted `SymbolKind::Null`. Changed `read::Object::sections` and `read::Object::symbols`
+  to no longer return null entries. This affects ELF and XCOFF.
+  [#679](https://github.com/gimli-rs/object/pull/679)
+
+* Changed `read::ObjectMap::object` to return `ObjectMapFile`. This handles
+  splitting the object file name into path and member.
+  [#686](https://github.com/gimli-rs/object/pull/686)
+
+* Changed `read::coff::ImageSymbol::address` to only return an address for
+  symbols that have an address.
+  [#689](https://github.com/gimli-rs/object/pull/689)
+
+### Added
+
+* Added `pod::slice_from_all_bytes` and `pod::slice_from_all_bytes_mut`.
+  [#672](https://github.com/gimli-rs/object/pull/672)
+
+* Added `write::Object::set_subsections_via_symbols`.
+  Changed `write::Object::add_symbol_data` and `write::Object::add_symbol_bss`
+  to correctly handle zero size symbols when subsections are enabled.
+  [#676](https://github.com/gimli-rs/object/pull/676)
+
+* Added methods in the unified read API to return the lower level API structures.
+  Some existing methods were deprecated so that naming of these methods is more consistent.
+  [#678](https://github.com/gimli-rs/object/pull/678)
+
+* Added methods in the lower level read API to return a `SectionIndex` or `SymbolIndex`.
+  [#684](https://github.com/gimli-rs/object/pull/684)
+  [#689](https://github.com/gimli-rs/object/pull/689)
+
+* Implemented `Display` for `read::SymbolIndex` and `read::SectionIndex`.
+  [#684](https://github.com/gimli-rs/object/pull/684)
+
+* Added `is_common`, `is_absolute`, `is_local`, and `is_weak` to `read::elf::Sym`.
+  [#685](https://github.com/gimli-rs/object/pull/685)
+
+### Changed
+
+* Changed `read::ArchiveFile` to skip the `<ECSYMBOLS>` member.
+  [#669](https://github.com/gimli-rs/object/pull/669)
+
+* Fixed handling of segment data in the dyld shared cache.
+  [#673](https://github.com/gimli-rs/object/pull/673)
+
+* Changed `read::RelocationMap` to handle Mach-O section relocations.
+  [#675](https://github.com/gimli-rs/object/pull/675)
+
+* Changed `read::elf::RelocationSections` to ignore relocations that apply to relocations.
+  [#680](https://github.com/gimli-rs/object/pull/680)
+
+* Removed a lifetime bound from an argument in `read::elf::SectionTable::section_name`,
+  `read::elf::SymbolTable::symbol_name`, and `read::elf::SymbolTable::symbol_section`.
+  [#681](https://github.com/gimli-rs/object/pull/681)
+
+--------------------------------------------------------------------------------
+
 ## 0.35.0
 
 Released 2024/04/10.
