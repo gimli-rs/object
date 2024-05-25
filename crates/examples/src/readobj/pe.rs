@@ -3,7 +3,6 @@ use object::pe::*;
 use object::read::coff::ImageSymbol as _;
 use object::read::coff::*;
 use object::read::pe::*;
-use object::read::{SectionIndex, SymbolIndex};
 use object::LittleEndian as LE;
 use object::{Bytes, U32Bytes, U64Bytes};
 
@@ -641,14 +640,14 @@ fn print_relocations<'data, Coff: CoffHeader>(
         for relocation in relocations {
             p.group("ImageRelocation", |p| {
                 p.field_hex("VirtualAddress", relocation.virtual_address.get(LE));
-                let index = relocation.symbol_table_index.get(LE);
+                let index = relocation.symbol();
                 let name = symbols.and_then(|symbols| {
                     symbols
-                        .symbol(SymbolIndex(index as usize))
+                        .symbol(index)
                         .and_then(|symbol| symbol.name(symbols.strings()))
                         .print_err(p)
                 });
-                p.field_string_option("Symbol", index, name);
+                p.field_string_option("Symbol", index.0, name);
                 let proc = match machine {
                     IMAGE_FILE_MACHINE_I386 => FLAGS_IMAGE_REL_I386,
                     IMAGE_FILE_MACHINE_MIPS16
@@ -709,17 +708,16 @@ fn print_symbols<'data, Coff: CoffHeader>(
                 p.field("Name", format!("{:X?}", symbol.raw_name()));
             }
             p.field_hex("Value", symbol.value());
-            let section = symbol.section_number();
-            if section <= 0 {
-                p.field_enum_display("Section", section, FLAGS_IMAGE_SYM);
-            } else {
+            if let Some(section_index) = symbol.section() {
                 let section_name = sections.and_then(|sections| {
                     sections
-                        .section(SectionIndex(section as usize))
+                        .section(section_index)
                         .and_then(|section| section.name(symbols.strings()))
                         .print_err(p)
                 });
-                p.field_string_option("Section", section, section_name);
+                p.field_string_option("Section", section_index.0, section_name);
+            } else {
+                p.field_enum_display("Section", symbol.section_number(), FLAGS_IMAGE_SYM);
             }
             p.field_hex("Type", symbol.typ());
             p.field_enum("BaseType", symbol.base_type(), FLAGS_IMAGE_SYM_TYPE);

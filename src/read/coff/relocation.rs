@@ -80,9 +80,7 @@ impl<'data, 'file, R: ReadRef<'data>, Coff: CoffHeader> Iterator
                 },
                 _ => (RelocationKind::Unknown, 0, 0),
             };
-            let target = RelocationTarget::Symbol(SymbolIndex(
-                relocation.symbol_table_index.get(LE) as usize,
-            ));
+            let target = RelocationTarget::Symbol(relocation.symbol());
             (
                 u64::from(relocation.virtual_address.get(LE)),
                 Relocation {
@@ -104,5 +102,12 @@ impl<'data, 'file, R: ReadRef<'data>, Coff: CoffHeader> fmt::Debug
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("CoffRelocationIterator").finish()
+    }
+}
+
+impl pe::ImageRelocation {
+    /// Get the index of the symbol referenced by this relocation.
+    pub fn symbol(&self) -> SymbolIndex {
+        SymbolIndex(self.symbol_table_index.get(LE) as usize)
     }
 }

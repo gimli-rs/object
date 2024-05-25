@@ -56,7 +56,7 @@ where
                 _ => (RelocationKind::Unknown, 0),
             };
             let size = (r_rsize & 0x3F) + 1;
-            let target = RelocationTarget::Symbol(SymbolIndex(relocation.r_symndx() as usize));
+            let target = RelocationTarget::Symbol(relocation.symbol());
             (
                 relocation.r_vaddr().into(),
                 Relocation {
@@ -91,6 +91,10 @@ pub trait Rel: Debug + Pod {
     fn r_symndx(&self) -> u32;
     fn r_rsize(&self) -> u8;
     fn r_rtype(&self) -> u8;
+
+    fn symbol(&self) -> SymbolIndex {
+        SymbolIndex(self.r_symndx() as usize)
+    }
 }
 
 impl Rel for xcoff::Rel32 {
