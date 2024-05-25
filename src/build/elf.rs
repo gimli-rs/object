@@ -3,7 +3,10 @@ use alloc::vec::Vec;
 use core::convert::TryInto;
 use core::fmt;
 use core::marker::PhantomData;
+#[cfg(not(feature = "std"))]
 use hashbrown::HashMap;
+#[cfg(feature = "std")]
+use std::collections::HashMap;
 
 use crate::build::{ByteString, Bytes, Error, Id, IdPrivate, Item, Result, Table};
 use crate::elf;

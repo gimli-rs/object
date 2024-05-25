@@ -185,17 +185,23 @@ fn cmd_cross() -> Result<(), DynError> {
 }
 
 fn cmd_msrv() -> Result<(), DynError> {
-    // Test MSRV for object all features.
-    cargo(&["update", "-p", "ahash", "--precise", "0.8.6"])?;
+    cargo(&["update", "-p", "ahash", "--precise", "0.8.7"])?;
     cmd_with(
         "cargo",
-        &["+1.65.0", "test", "-p", "object", "--features", "all"],
+        &["+1.65.0", "test", "-p", "object", "--features", "read,write,build,std,compression"],
         |cmd| {
             cmd.env("CARGO_NET_GIT_FETCH_WITH_CLI", "true");
         },
     )?;
-
     cargo(&["update", "-p", "ahash"])?;
+    // wasmparser needs 1.76.0
+    cmd_with(
+        "cargo",
+        &["+1.76.0", "test", "-p", "object", "--features", "all"],
+        |cmd| {
+            cmd.env("CARGO_NET_GIT_FETCH_WITH_CLI", "true");
+        },
+    )?;
     Ok(())
 }
 

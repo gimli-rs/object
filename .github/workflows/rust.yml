@@ -57,6 +57,7 @@ jobs:
         with:
           submodules: true
       - uses: dtolnay/rust-toolchain@1.65.0
+      - uses: dtolnay/rust-toolchain@1.76.0
       - run: cargo xtask msrv
 
   rustfmt:
