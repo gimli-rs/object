@@ -65,20 +65,20 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // ret
     main_data.extend_from_slice(&[0xc3]);
 
-    // Add the main function in its own subsection (equivalent to -ffunction-sections).
-    let main_section = obj.add_subsection(StandardSection::Text, b"main");
-    let main_offset = obj.append_section_data(main_section, &main_data, 1);
     // Add a globally visible symbol for the main function.
-    obj.add_symbol(Symbol {
+    let main_symbol = obj.add_symbol(Symbol {
         name: b"main".into(),
-        value: main_offset,
-        size: main_data.len() as u64,
+        value: 0,
+        size: 0,
         kind: SymbolKind::Text,
         scope: SymbolScope::Linkage,
         weak: false,
-        section: SymbolSection::Section(main_section),
+        section: SymbolSection::Undefined,
         flags: SymbolFlags::None,
     });
+    // Add the main function in its own subsection (equivalent to -ffunction-sections).
+    let main_section = obj.add_subsection(StandardSection::Text, b"main");
+    let main_offset = obj.add_symbol_data(main_symbol, main_section, &main_data, 1);
 
     // Add a read only string constant for the puts argument.
     // We don't create a symbol for the constant, but instead refer to it by
@@ -91,7 +91,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     obj.add_relocation(
         main_section,
         Relocation {
-            offset: s_reloc_offset as u64,
+            offset: main_offset + s_reloc_offset as u64,
             symbol: rodata_symbol,
             addend: s_offset as i64 + s_reloc_addend,
             flags: s_reloc_flags,
