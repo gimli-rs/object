@@ -272,7 +272,6 @@ name = "object-examples"
 version = "0.0.0"
 dependencies = [
  "clap",
- "glob",
  "memmap2",
  "object",
 ]
