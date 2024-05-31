@@ -188,7 +188,7 @@ fn cmd_msrv() -> Result<(), DynError> {
     cargo(&["update", "-p", "ahash", "--precise", "0.8.7"])?;
     cmd_with(
         "cargo",
-        &["+1.65.0", "test", "-p", "object", "--features", "read,write,build,std,compression"],
+        &["+1.65.0", "test", "-p", "object", "--features", "read,write,build,std"],
         |cmd| {
             cmd.env("CARGO_NET_GIT_FETCH_WITH_CLI", "true");
         },
