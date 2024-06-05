@@ -136,6 +136,7 @@ impl<'a> Object<'a> {
             Architecture::M68k => false,
             Architecture::Mips => false,
             Architecture::Mips64 => true,
+            Architecture::Mips64_N32 => true,
             Architecture::Msp430 => true,
             Architecture::PowerPc => true,
             Architecture::PowerPc64 => true,
@@ -276,12 +277,16 @@ impl<'a> Object<'a> {
                 (RelocationKind::PltRelative, _, 32) => elf::R_68K_PLT32,
                 _ => return unsupported_reloc(),
             },
-            Architecture::Mips | Architecture::Mips64 => match (kind, encoding, size) {
-                (K::Absolute, _, 16) => elf::R_MIPS_16,
-                (K::Absolute, _, 32) => elf::R_MIPS_32,
-                (K::Absolute, _, 64) => elf::R_MIPS_64,
-                _ => return unsupported_reloc(),
-            },
+            Architecture::Mips | Architecture::Mips64 | Architecture::Mips64_N32 => {
+                match (kind, encoding, size) {
+                    (K::Absolute, _, 16) => elf::R_MIPS_16,
+                    (K::Absolute, _, 32) => elf::R_MIPS_32,
+                    (K::Absolute, _, 64) => elf::R_MIPS_64,
+                    _ => {
+                        return Err(Error(format!("unimplemented relocation {:?}", reloc)));
+                    }
+                }
+            }
             Architecture::Msp430 => match (kind, encoding, size) {
                 (K::Absolute, _, 32) => elf::R_MSP430_32,
                 (K::Absolute, _, 16) => elf::R_MSP430_16_BYTE,
@@ -562,6 +567,7 @@ impl<'a> Object<'a> {
             (Architecture::M68k, None) => elf::EM_68K,
             (Architecture::Mips, None) => elf::EM_MIPS,
             (Architecture::Mips64, None) => elf::EM_MIPS,
+            (Architecture::Mips64_N32, None) => elf::EM_MIPS,
             (Architecture::Msp430, None) => elf::EM_MSP430,
             (Architecture::PowerPc, None) => elf::EM_PPC,
             (Architecture::PowerPc64, None) => elf::EM_PPC64,
@@ -581,7 +587,7 @@ impl<'a> Object<'a> {
                 )));
             }
         };
-        let (os_abi, abi_version, e_flags) = if let FileFlags::Elf {
+        let (os_abi, abi_version, mut e_flags) = if let FileFlags::Elf {
             os_abi,
             abi_version,
             e_flags,
@@ -591,6 +597,11 @@ impl<'a> Object<'a> {
         } else {
             (elf::ELFOSABI_NONE, 0, 0)
         };
+
+        if self.architecture == Architecture::Mips64_N32 {
+            e_flags |= elf::EF_MIPS_ABI2;
+        }
+
         writer.write_file_header(&FileHeader {
             os_abi,
             abi_version,
