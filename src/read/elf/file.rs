@@ -334,15 +334,24 @@ where
     }
 
     fn imports(&self) -> read::Result<Vec<Import<'data>>> {
+        let svt = self.sections.versions(self.endian, self.data)?;
         let mut imports = Vec::new();
-        for symbol in self.dynamic_symbols.iter() {
+        for (index, symbol) in self.dynamic_symbols.enumerate() {
             if symbol.is_undefined(self.endian) {
                 let name = symbol.name(self.endian, self.dynamic_symbols.strings())?;
                 if !name.is_empty() {
-                    // TODO: use symbol versioning to determine library
+                    let library = svt.as_ref()
+                        .map(|svt| {
+                            let vi = svt.version_index(self.endian, index);
+                            svt.version(vi)
+                                .ok()
+                                .flatten()
+                                .map(|version| ByteString(version.name())) })
+                        .flatten()
+                        .unwrap_or(ByteString(&[]));
                     imports.push(Import {
                         name: ByteString(name),
-                        library: ByteString(&[]),
+                        library,
                     });
                 }
             }
