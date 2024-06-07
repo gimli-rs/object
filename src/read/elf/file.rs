@@ -15,7 +15,7 @@ use super::{
     CompressionHeader, Dyn, ElfComdat, ElfComdatIterator, ElfDynamicRelocationIterator, ElfSection,
     ElfSectionIterator, ElfSegment, ElfSegmentIterator, ElfSymbol, ElfSymbolIterator,
     ElfSymbolTable, NoteHeader, ProgramHeader, Rel, Rela, RelocationSections, SectionHeader,
-    SectionTable, Sym, SymbolTable,
+    SectionTable, Sym, SymbolTable, VersionIndex,
 };
 
 /// A 32-bit ELF object file.
@@ -172,6 +172,24 @@ where
         _section_name: &[u8],
     ) -> Option<ElfSection<'data, 'file, Elf, R>> {
         None
+    }
+
+    fn elf_verneed_by_version(&self, version: VersionIndex) -> read::Result<Option<(&'data elf::Verneed<Elf::Endian>, SectionIndex)>> {
+        let svt = self.sections.versions(self.endian, self.data)?;
+        if let Some(svt) = svt {
+            if let Some(ver) = svt.version(version)? {
+                if let Some((mut verneed_iter, section_index)) = self.sections.gnu_verneed(self.endian, self.data)? {
+                    while let Some((verneed, mut vernaux_iter)) = verneed_iter.next()? {
+                        while let Some(vernaux) = vernaux_iter.next()? {
+                            if vernaux.vna_hash.get(self.endian) == ver.hash() {
+                                return Ok(Some((verneed, section_index)));
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        Ok(None)
     }
 }
 
@@ -335,20 +353,24 @@ where
 
     fn imports(&self) -> read::Result<Vec<Import<'data>>> {
         let svt = self.sections.versions(self.endian, self.data)?;
+
         let mut imports = Vec::new();
         for (index, symbol) in self.dynamic_symbols.enumerate() {
             if symbol.is_undefined(self.endian) {
                 let name = symbol.name(self.endian, self.dynamic_symbols.strings())?;
                 if !name.is_empty() {
-                    let library = svt.as_ref()
-                        .map(|svt| {
-                            let vi = svt.version_index(self.endian, index);
-                            svt.version(vi)
-                                .ok()
-                                .flatten()
-                                .map(|version| ByteString(version.name())) })
-                        .flatten()
-                        .unwrap_or(ByteString(&[]));
+                    let library = if let Some(svt) = svt.as_ref() {
+                        let vi = svt.version_index(self.endian, index);
+                        let verneed_info = self.elf_verneed_by_version(vi)?;
+                        if let Some((verneed, section_index)) = verneed_info {
+                            let string_table = self.sections.strings(self.endian, self.data, section_index)?;
+                            ByteString(verneed.file(self.endian, string_table)?)
+                        } else {
+                            ByteString(&[])
+                        }
+                    } else {
+                        ByteString(&[])
+                    };
                     imports.push(Import {
                         name: ByteString(name),
                         library,
