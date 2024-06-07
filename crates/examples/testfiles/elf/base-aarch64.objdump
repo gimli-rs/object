@@ -152,12 +152,12 @@ Dynamic relocations
 (10fb8, Relocation { kind: Unknown, encoding: Generic, size: 0, target: Symbol(SymbolIndex(9)), addend: 0, implicit_addend: false, flags: Elf { r_type: 402 } })
 
 Import { library: "", name: "_ITM_deregisterTMCloneTable" }
-Import { library: "", name: "__cxa_finalize" }
-Import { library: "", name: "__libc_start_main" }
+Import { library: "GLIBC_2.17", name: "__cxa_finalize" }
+Import { library: "GLIBC_2.17", name: "__libc_start_main" }
 Import { library: "", name: "__gmon_start__" }
-Import { library: "", name: "abort" }
+Import { library: "GLIBC_2.17", name: "abort" }
 Import { library: "", name: "_ITM_registerTMCloneTable" }
-Import { library: "", name: "printf" }
+Import { library: "GLIBC_2.17", name: "printf" }
 
 Symbol map
 0x598 "_init"
