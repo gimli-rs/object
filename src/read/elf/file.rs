@@ -15,7 +15,7 @@ use super::{
     CompressionHeader, Dyn, ElfComdat, ElfComdatIterator, ElfDynamicRelocationIterator, ElfSection,
     ElfSectionIterator, ElfSegment, ElfSegmentIterator, ElfSymbol, ElfSymbolIterator,
     ElfSymbolTable, NoteHeader, ProgramHeader, Rel, Rela, RelocationSections, SectionHeader,
-    SectionTable, Sym, SymbolTable, VersionIndex,
+    SectionTable, Sym, SymbolTable,
 };
 
 /// A 32-bit ELF object file.
@@ -172,24 +172,6 @@ where
         _section_name: &[u8],
     ) -> Option<ElfSection<'data, 'file, Elf, R>> {
         None
-    }
-
-    fn elf_verneed_by_version(&self, version: VersionIndex) -> read::Result<Option<(&'data elf::Verneed<Elf::Endian>, SectionIndex)>> {
-        let svt = self.sections.versions(self.endian, self.data)?;
-        if let Some(svt) = svt {
-            if let Some(ver) = svt.version(version)? {
-                if let Some((mut verneed_iter, section_index)) = self.sections.gnu_verneed(self.endian, self.data)? {
-                    while let Some((verneed, mut vernaux_iter)) = verneed_iter.next()? {
-                        while let Some(vernaux) = vernaux_iter.next()? {
-                            if vernaux.vna_hash.get(self.endian) == ver.hash() {
-                                return Ok(Some((verneed, section_index)));
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        Ok(None)
     }
 }
 
@@ -361,19 +343,15 @@ where
                 if !name.is_empty() {
                     let library = if let Some(svt) = svt.as_ref() {
                         let vi = svt.version_index(self.endian, index);
-                        let verneed_info = self.elf_verneed_by_version(vi)?;
-                        if let Some((verneed, section_index)) = verneed_info {
-                            let string_table = self.sections.strings(self.endian, self.data, section_index)?;
-                            ByteString(verneed.file(self.endian, string_table)?)
-                        } else {
-                            ByteString(&[])
-                        }
+                        svt.version(vi)?
+                            .map(|v| v.vn_file())
+                            .flatten()
                     } else {
-                        ByteString(&[])
-                    };
+                        None
+                    }.unwrap_or(&[]);
                     imports.push(Import {
                         name: ByteString(name),
-                        library,
+                        library: ByteString(library),
                     });
                 }
             }
