@@ -825,7 +825,9 @@ impl<'a> Object<'a> {
                     SectionKind::ReadOnlyString => {
                         elf::SHF_ALLOC | elf::SHF_STRINGS | elf::SHF_MERGE
                     }
-                    SectionKind::OtherString => elf::SHF_STRINGS | elf::SHF_MERGE,
+                    SectionKind::OtherString | SectionKind::DebugString => {
+                        elf::SHF_STRINGS | elf::SHF_MERGE
+                    }
                     SectionKind::Other
                     | SectionKind::Debug
                     | SectionKind::Metadata
