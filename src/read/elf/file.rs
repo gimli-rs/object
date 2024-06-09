@@ -334,18 +334,17 @@ where
     }
 
     fn imports(&self) -> read::Result<Vec<Import<'data>>> {
-        let svt = self.sections.versions(self.endian, self.data)?;
+        let versions = self.sections.versions(self.endian, self.data)?;
 
         let mut imports = Vec::new();
         for (index, symbol) in self.dynamic_symbols.enumerate() {
             if symbol.is_undefined(self.endian) {
                 let name = symbol.name(self.endian, self.dynamic_symbols.strings())?;
                 if !name.is_empty() {
-                    let library = if let Some(svt) = svt.as_ref() {
+                    let library = if let Some(svt) = versions.as_ref() {
                         let vi = svt.version_index(self.endian, index);
                         svt.version(vi)?
-                            .map(|v| v.vn_file())
-                            .flatten()
+                            .and_then(|v| v.file())
                     } else {
                         None
                     }.unwrap_or(&[]);

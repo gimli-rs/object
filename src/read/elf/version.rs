@@ -40,7 +40,7 @@ pub struct Version<'data> {
     hash: u32,
     // Used to keep track of valid indices in `VersionTable`.
     valid: bool,
-    vn_file: Option<&'data [u8]>,
+    file: Option<&'data [u8]>,
 }
 
 impl<'data> Version<'data> {
@@ -54,10 +54,12 @@ impl<'data> Version<'data> {
         self.hash
     }
 
-    /// Return the `vn_file` field of the associated entry in [`elf::SHT_GNU_VERNEED`].
-    /// Returns `None` if the version info was parsed from a [`elf::SHT_GNU_VERDEF`] section.
-    pub fn vn_file(&self) -> Option<&'data [u8]> {
-        self.vn_file
+    /// Return the filename of the library containing this version.
+    ///
+    /// This is the `vn_file` field of the associated entry in [`elf::SHT_GNU_VERNEED`].
+    /// or `None` if the version info was parsed from a [`elf::SHT_GNU_VERDEF`] section.
+    pub fn file(&self) -> Option<&'data [u8]> {
+        self.file
     }
 }
 
@@ -135,7 +137,7 @@ impl<'data, Elf: FileHeader> VersionTable<'data, Elf> {
                         name: verdaux.name(endian, strings)?,
                         hash: verdef.vd_hash.get(endian),
                         valid: true,
-                        vn_file: None,
+                        file: None,
                     };
                 }
             }
@@ -152,7 +154,7 @@ impl<'data, Elf: FileHeader> VersionTable<'data, Elf> {
                         name: vernaux.name(endian, strings)?,
                         hash: vernaux.vna_hash.get(endian),
                         valid: true,
-                        vn_file: Some(verneed.file(endian, strings)?),
+                        file: Some(verneed.file(endian, strings)?),
                     };
                 }
             }
