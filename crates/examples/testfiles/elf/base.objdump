@@ -122,11 +122,11 @@ Dynamic relocations
 (200fd0, Relocation { kind: Unknown, encoding: Generic, size: 0, target: Symbol(SymbolIndex(2)), addend: 0, implicit_addend: false, flags: Elf { r_type: 7 } })
 
 Import { library: "", name: "_ITM_deregisterTMCloneTable" }
-Import { library: "", name: "printf" }
-Import { library: "", name: "__libc_start_main" }
+Import { library: "libc.so.6", name: "printf" }
+Import { library: "libc.so.6", name: "__libc_start_main" }
 Import { library: "", name: "__gmon_start__" }
 Import { library: "", name: "_ITM_registerTMCloneTable" }
-Import { library: "", name: "__cxa_finalize" }
+Import { library: "libc.so.6", name: "__cxa_finalize" }
 
 Symbol map
 0x520 "_init"
