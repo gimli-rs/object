@@ -343,11 +343,11 @@ where
                 if !name.is_empty() {
                     let library = if let Some(svt) = versions.as_ref() {
                         let vi = svt.version_index(self.endian, index);
-                        svt.version(vi)?
-                            .and_then(|v| v.file())
+                        svt.version(vi)?.and_then(|v| v.file())
                     } else {
                         None
-                    }.unwrap_or(&[]);
+                    }
+                    .unwrap_or(&[]);
                     imports.push(Import {
                         name: ByteString(name),
                         library: ByteString(library),
