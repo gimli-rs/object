@@ -61,6 +61,9 @@ pub use read_cache::*;
 mod util;
 pub use util::*;
 
+#[cfg(any(feature = "elf", feature = "macho"))]
+mod gnu_compression;
+
 #[cfg(any(
     feature = "coff",
     feature = "elf",

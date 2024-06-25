@@ -5,8 +5,8 @@ use crate::endian::{self, Endianness};
 use crate::macho;
 use crate::pod::Pod;
 use crate::read::{
-    self, CompressedData, CompressedFileRange, ObjectSection, ReadError, ReadRef, RelocationMap,
-    Result, SectionFlags, SectionIndex, SectionKind,
+    self, gnu_compression, CompressedData, CompressedFileRange, ObjectSection, ReadError, ReadRef,
+    RelocationMap, Result, SectionFlags, SectionIndex, SectionKind,
 };
 
 use super::{MachHeader, MachOFile, MachORelocationIterator};
@@ -102,6 +102,21 @@ where
             .data(self.file.endian, self.internal.data)
             .read_error("Invalid Mach-O section size or offset")
     }
+
+    // Try GNU-style "ZLIB" header decompression.
+    fn maybe_compressed_gnu(&self) -> Result<Option<CompressedFileRange>> {
+        if !self
+            .name()
+            .map_or(false, |name| name.starts_with("__zdebug_"))
+        {
+            return Ok(None);
+        }
+        let (section_offset, section_size) = self
+            .file_range()
+            .read_error("Invalid ELF GNU compressed section type")?;
+        gnu_compression::compressed_file_range(self.internal.data, section_offset, section_size)
+            .map(Some)
+    }
 }
 
 impl<'data, 'file, Mach, R> read::private::Sealed for MachOSection<'data, 'file, Mach, R>
@@ -162,14 +177,16 @@ where
         ))
     }
 
-    #[inline]
     fn compressed_file_range(&self) -> Result<CompressedFileRange> {
-        Ok(CompressedFileRange::none(self.file_range()))
+        Ok(if let Some(data) = self.maybe_compressed_gnu()? {
+            data
+        } else {
+            CompressedFileRange::none(self.file_range())
+        })
     }
 
-    #[inline]
-    fn compressed_data(&self) -> Result<CompressedData<'data>> {
-        self.data().map(CompressedData::none)
+    fn compressed_data(&self) -> read::Result<CompressedData<'data>> {
+        self.compressed_file_range()?.data(self.file.data)
     }
 
     #[inline]

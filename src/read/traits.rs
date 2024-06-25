@@ -121,16 +121,18 @@ pub trait Object<'data>: read::private::Sealed {
 
     /// Get the section named `section_name`, if such a section exists.
     ///
-    /// If `section_name` starts with a '.' then it is treated as a system section name,
-    /// and is compared using the conventions specific to the object file format. This
-    /// includes:
-    /// - if ".debug_str_offsets" is requested for a Mach-O object file, then the actual
-    /// section name that is searched for is "__debug_str_offs".
+    /// If `section_name` starts with a '.' then it is treated as a system
+    /// section name, and is compared using the conventions specific to the
+    /// object file format. This includes:
+    /// - if ".debug_str_offsets" is requested for a Mach-O object file, then
+    ///   the actual section name that is searched for is "__debug_str_offs".
     /// - if ".debug_info" is requested for an ELF object file, then
-    /// ".zdebug_info" may be returned (and similarly for other debug sections).
+    ///   ".zdebug_info" may be returned (and similarly for other debug
+    ///   sections). Similarly, if ".debug_info" is requested for a Mach-O
+    ///   object file, then "__zdebug_info" may be returned.
     ///
-    /// For some object files, multiple segments may contain sections with the same
-    /// name. In this case, the first matching section will be used.
+    /// For some object files, multiple segments may contain sections with the
+    /// same name. In this case, the first matching section will be used.
     ///
     /// This method skips over sections with invalid names.
     fn section_by_name(&self, section_name: &str) -> Option<Self::Section<'_>> {

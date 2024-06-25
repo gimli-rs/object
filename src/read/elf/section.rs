@@ -5,8 +5,9 @@ use crate::elf;
 use crate::endian::{self, Endianness, U32Bytes};
 use crate::pod::{self, Pod};
 use crate::read::{
-    self, CompressedData, CompressedFileRange, CompressionFormat, Error, ObjectSection, ReadError,
-    ReadRef, RelocationMap, SectionFlags, SectionIndex, SectionKind, StringTable,
+    self, gnu_compression, CompressedData, CompressedFileRange, CompressionFormat, Error,
+    ObjectSection, ReadError, ReadRef, RelocationMap, SectionFlags, SectionIndex, SectionKind,
+    StringTable,
 };
 
 use super::{
@@ -508,46 +509,19 @@ impl<'data, 'file, Elf: FileHeader, R: ReadRef<'data>> ElfSection<'data, 'file, 
         }
     }
 
-    /// Try GNU-style "ZLIB" header decompression.
+    // Try GNU-style "ZLIB" header decompression.
     fn maybe_compressed_gnu(&self) -> read::Result<Option<CompressedFileRange>> {
-        let name = match self.name() {
-            Ok(name) => name,
-            // I think it's ok to ignore this error?
-            Err(_) => return Ok(None),
-        };
-        if !name.starts_with(".zdebug_") {
+        if !self
+            .name()
+            .map_or(false, |name| name.starts_with(".zdebug_"))
+        {
             return Ok(None);
         }
         let (section_offset, section_size) = self
-            .section
-            .file_range(self.file.endian)
+            .file_range()
             .read_error("Invalid ELF GNU compressed section type")?;
-        let mut offset = section_offset;
-        let data = self.file.data;
-        // Assume ZLIB-style uncompressed data is no more than 4GB to avoid accidentally
-        // huge allocations. This also reduces the chance of accidentally matching on a
-        // .debug_str that happens to start with "ZLIB".
-        if data
-            .read_bytes(&mut offset, 8)
-            .read_error("ELF GNU compressed section is too short")?
-            != b"ZLIB\0\0\0\0"
-        {
-            return Err(Error("Invalid ELF GNU compressed section header"));
-        }
-        let uncompressed_size = data
-            .read::<U32Bytes<_>>(&mut offset)
-            .read_error("ELF GNU compressed section is too short")?
-            .get(endian::BigEndian)
-            .into();
-        let compressed_size = section_size
-            .checked_sub(offset - section_offset)
-            .read_error("ELF GNU compressed section is too short")?;
-        Ok(Some(CompressedFileRange {
-            format: CompressionFormat::Zlib,
-            offset,
-            compressed_size,
-            uncompressed_size,
-        }))
+        gnu_compression::compressed_file_range(self.file.data, section_offset, section_size)
+            .map(Some)
     }
 }
 

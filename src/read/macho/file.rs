@@ -287,32 +287,32 @@ where
         &'file self,
         section_name: &[u8],
     ) -> Option<MachOSection<'data, 'file, Mach, R>> {
-        // Translate the "." prefix to the "__" prefix used by OSX/Mach-O, eg
-        // ".debug_info" to "__debug_info", and limit to 16 bytes total.
-        let system_name = if section_name.starts_with(b".") {
-            if section_name.len() > 15 {
-                Some(&section_name[1..15])
-            } else {
-                Some(&section_name[1..])
-            }
-        } else {
-            None
+        // Translate the section_name by stripping the query_prefix to construct
+        // a function that matches names starting with name_prefix, taking into
+        // consideration the maximum section name length.
+        let make_prefix_matcher = |query_prefix: &'static [u8], name_prefix: &'static [u8]| {
+            const MAX_SECTION_NAME_LEN: usize = 16;
+            let suffix = section_name.strip_prefix(query_prefix).map(|suffix| {
+                let max_len = MAX_SECTION_NAME_LEN - name_prefix.len();
+                &suffix[..suffix.len().min(max_len)]
+            });
+            move |name: &[u8]| suffix.is_some() && name.strip_prefix(name_prefix) == suffix
         };
-        let cmp_section_name = |section: &MachOSection<'data, 'file, Mach, R>| {
-            section
-                .name_bytes()
-                .map(|name| {
-                    section_name == name
-                        || system_name
-                            .filter(|system_name| {
-                                name.starts_with(b"__") && name[2..] == **system_name
-                            })
-                            .is_some()
-                })
-                .unwrap_or(false)
-        };
-
-        self.sections().find(cmp_section_name)
+        // Matches "__text" when searching for ".text" and "__debug_str_offs"
+        // when searching for ".debug_str_offsets", as is common in
+        // macOS/Mach-O.
+        let matches_underscores_prefix = make_prefix_matcher(b".", b"__");
+        // Matches "__zdebug_info" when searching for ".debug_info" and
+        // "__zdebug_str_off" when searching for ".debug_str_offsets", as is
+        // used by Go when using GNU-style compression.
+        let matches_zdebug_prefix = make_prefix_matcher(b".debug_", b"__zdebug_");
+        self.sections().find(|section| {
+            section.name_bytes().map_or(false, |name| {
+                name == section_name
+                    || matches_underscores_prefix(name)
+                    || matches_zdebug_prefix(name)
+            })
+        })
     }
 
     fn section_by_index(&self, index: SectionIndex) -> Result<MachOSection<'data, '_, Mach, R>> {
