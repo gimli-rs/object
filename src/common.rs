@@ -203,6 +203,11 @@ pub enum SectionKind {
     ///
     /// Example Mach-O sections: `__DWARF/__debug_info`
     Debug,
+    /// Debug strings.
+    ///
+    /// This is the same as either `Debug` or `OtherString`, depending on the file format.
+    /// This value is only used in the API for writing files. It is never returned when reading files.
+    DebugString,
     /// Information for the linker.
     ///
     /// Example COFF sections: `.drectve`

@@ -633,7 +633,7 @@ impl<'a> Object<'a> {
                     SectionKind::Tls => macho::S_THREAD_LOCAL_REGULAR,
                     SectionKind::UninitializedTls => macho::S_THREAD_LOCAL_ZEROFILL,
                     SectionKind::TlsVariables => macho::S_THREAD_LOCAL_VARIABLES,
-                    SectionKind::Debug => macho::S_ATTR_DEBUG,
+                    SectionKind::Debug | SectionKind::DebugString => macho::S_ATTR_DEBUG,
                     SectionKind::OtherString => macho::S_CSTRING_LITERALS,
                     SectionKind::Other | SectionKind::Linker | SectionKind::Metadata => 0,
                     SectionKind::Note | SectionKind::Unknown | SectionKind::Elf(_) => {

@@ -473,7 +473,10 @@ impl<'a> Object<'a> {
                     | SectionKind::ReadOnlyString => {
                         coff::IMAGE_SCN_CNT_INITIALIZED_DATA | coff::IMAGE_SCN_MEM_READ
                     }
-                    SectionKind::Debug | SectionKind::Other | SectionKind::OtherString => {
+                    SectionKind::Debug
+                    | SectionKind::DebugString
+                    | SectionKind::Other
+                    | SectionKind::OtherString => {
                         coff::IMAGE_SCN_CNT_INITIALIZED_DATA
                             | coff::IMAGE_SCN_MEM_READ
                             | coff::IMAGE_SCN_MEM_DISCARDABLE
