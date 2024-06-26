@@ -226,6 +226,7 @@ where
             (elf::EM_S390, true) => Architecture::S390x,
             (elf::EM_SBF, _) => Architecture::Sbf,
             (elf::EM_SHARC, false) => Architecture::Sharc,
+            (elf::EM_SPARC, false) => Architecture::Sparc,
             (elf::EM_SPARCV9, true) => Architecture::Sparc64,
             (elf::EM_XTENSA, false) => Architecture::Xtensa,
             _ => Architecture::Unknown,
