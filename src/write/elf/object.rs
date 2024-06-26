@@ -142,6 +142,7 @@ impl<'a> Object<'a> {
             Architecture::Sbf => false,
             Architecture::Sharc => true,
             Architecture::Sparc => true,
+            Architecture::Sparc32Plus => true,
             Architecture::Sparc64 => true,
             Architecture::Xtensa => true,
             _ => {
@@ -412,7 +413,7 @@ impl<'a> Object<'a> {
                     return Err(Error(format!("unimplemented relocation {:?}", reloc)));
                 }
             },
-            Architecture::Sparc => match (kind, encoding, size) {
+            Architecture::Sparc | Architecture::Sparc32Plus => match (kind, encoding, size) {
                 // TODO: use R_SPARC_32 if aligned.
                 (RelocationKind::Absolute, _, 32) => elf::R_SPARC_UA32,
                 _ => {
@@ -640,6 +641,7 @@ impl<'a> Object<'a> {
             (Architecture::Sbf, None) => elf::EM_SBF,
             (Architecture::Sharc, None) => elf::EM_SHARC,
             (Architecture::Sparc, None) => elf::EM_SPARC,
+            (Architecture::Sparc32Plus, None) => elf::EM_SPARC32PLUS,
             (Architecture::Sparc64, None) => elf::EM_SPARCV9,
             (Architecture::Xtensa, None) => elf::EM_XTENSA,
             _ => {
