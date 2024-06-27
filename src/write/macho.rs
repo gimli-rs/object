@@ -729,7 +729,10 @@ impl<'a> Object<'a> {
             if !section.relocations.is_empty() {
                 write_align(buffer, pointer_align);
                 debug_assert_eq!(section_offsets[index].reloc_offset, buffer.len());
-                for reloc in &section.relocations {
+                // Relocations are emitted in reverse order add_relocation is called as
+                // otherwise Apple's new linker crashes. This matches LLVM's behavior too:
+                // https://github.com/llvm/llvm-project/blob/e9b8cd0c8/llvm/lib/MC/MachObjectWriter.cpp#L1001-L1002
+                for reloc in section.relocations.iter().rev() {
                     let (r_type, r_pcrel, r_length) = if let RelocationFlags::MachO {
                         r_type,
                         r_pcrel,

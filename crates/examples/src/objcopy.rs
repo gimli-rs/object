@@ -2,8 +2,8 @@ use std::collections::HashMap;
 use std::process;
 
 use object::{
-    write, Object, ObjectComdat, ObjectKind, ObjectSection, ObjectSymbol, RelocationTarget,
-    SectionKind, SymbolFlags, SymbolKind, SymbolSection,
+    write, BinaryFormat, Object, ObjectComdat, ObjectKind, ObjectSection, ObjectSymbol,
+    RelocationTarget, SectionKind, SymbolFlags, SymbolKind, SymbolSection,
 };
 
 /// An example of how to use the read and write APIs of the `object` crate
@@ -133,7 +133,11 @@ pub fn copy(in_data: &[u8]) -> Vec<u8> {
             continue;
         }
         let out_section = *out_sections.get(&in_section.index()).unwrap();
-        for (offset, in_relocation) in in_section.relocations() {
+        let mut relocations = in_section.relocations().collect::<Vec<_>>();
+        if in_object.format() == BinaryFormat::MachO {
+            relocations.reverse();
+        }
+        for (offset, in_relocation) in relocations {
             let symbol = match in_relocation.target() {
                 RelocationTarget::Symbol(symbol) => *out_symbols.get(&symbol).unwrap(),
                 RelocationTarget::Section(section) => {
