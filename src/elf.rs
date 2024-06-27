@@ -5866,6 +5866,14 @@ pub const R_RISCV_SET8: u32 = 54;
 pub const R_RISCV_SET16: u32 = 55;
 pub const R_RISCV_SET32: u32 = 56;
 pub const R_RISCV_32_PCREL: u32 = 57;
+pub const R_RISCV_IRELATIVE: u32 = 58;
+pub const R_RISCV_PLT32: u32 = 59;
+pub const R_RISCV_SET_ULEB128: u32 = 60;
+pub const R_RISCV_SUB_ULEB128: u32 = 61;
+pub const R_RISCV_TLSDESC_HI20: u32 = 62;
+pub const R_RISCV_TLSDESC_LOAD_LO12: u32 = 63;
+pub const R_RISCV_TLSDESC_ADD_LO12: u32 = 64;
+pub const R_RISCV_TLSDESC_CALL: u32 = 65;
 
 // BPF values `Rel*::r_type`.
 /// No reloc
