@@ -280,6 +280,7 @@ fn elf_any() {
         (Architecture::S390x, Endianness::Big),
         (Architecture::Sbf, Endianness::Little),
         (Architecture::Sparc, Endianness::Big),
+        (Architecture::Sparc32Plus, Endianness::Big),
         (Architecture::Sparc64, Endianness::Big),
         (Architecture::Xtensa, Endianness::Little),
     ]
