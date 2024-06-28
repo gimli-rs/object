@@ -260,7 +260,19 @@ fn macho_x86_64_tls() {
 
     let (offset, relocation) = relocations.next().unwrap();
     println!("{:?}", relocation);
-    assert_eq!(offset, 0);
+    assert_eq!(offset, 40);
+    assert_eq!(relocation.kind(), RelocationKind::Absolute);
+    assert_eq!(relocation.encoding(), RelocationEncoding::Generic);
+    assert_eq!(relocation.size(), 64);
+    assert_eq!(
+        relocation.target(),
+        read::RelocationTarget::Symbol(tls2_init_symbol)
+    );
+    assert_eq!(relocation.addend(), 0);
+
+    let (offset, relocation) = relocations.next().unwrap();
+    println!("{:?}", relocation);
+    assert_eq!(offset, 24);
     assert_eq!(relocation.kind(), RelocationKind::Absolute);
     assert_eq!(relocation.encoding(), RelocationEncoding::Generic);
     assert_eq!(relocation.size(), 64);
@@ -284,25 +296,13 @@ fn macho_x86_64_tls() {
 
     let (offset, relocation) = relocations.next().unwrap();
     println!("{:?}", relocation);
-    assert_eq!(offset, 24);
+    assert_eq!(offset, 0);
     assert_eq!(relocation.kind(), RelocationKind::Absolute);
     assert_eq!(relocation.encoding(), RelocationEncoding::Generic);
     assert_eq!(relocation.size(), 64);
     assert_eq!(
         relocation.target(),
         read::RelocationTarget::Symbol(tlv_bootstrap_symbol)
-    );
-    assert_eq!(relocation.addend(), 0);
-
-    let (offset, relocation) = relocations.next().unwrap();
-    println!("{:?}", relocation);
-    assert_eq!(offset, 40);
-    assert_eq!(relocation.kind(), RelocationKind::Absolute);
-    assert_eq!(relocation.encoding(), RelocationEncoding::Generic);
-    assert_eq!(relocation.size(), 64);
-    assert_eq!(
-        relocation.target(),
-        read::RelocationTarget::Symbol(tls2_init_symbol)
     );
     assert_eq!(relocation.addend(), 0);
 }

@@ -729,7 +729,8 @@ impl<'a> Object<'a> {
             if !section.relocations.is_empty() {
                 write_align(buffer, pointer_align);
                 debug_assert_eq!(section_offsets[index].reloc_offset, buffer.len());
-                for reloc in &section.relocations {
+
+                let mut write_reloc = |reloc: &Relocation| {
                     let (r_type, r_pcrel, r_length) = if let RelocationFlags::MachO {
                         r_type,
                         r_pcrel,
@@ -783,6 +784,29 @@ impl<'a> Object<'a> {
                         r_type,
                     };
                     buffer.write(&reloc_info.relocation(endian));
+                    Ok(())
+                };
+
+                // Relocations are emitted in descending order as otherwise Apple's
+                // new linker crashes. This matches LLVM's behavior too:
+                // https://github.com/llvm/llvm-project/blob/e9b8cd0c8/llvm/lib/MC/MachObjectWriter.cpp#L1001-L1002
+                let need_reverse = |relocs: &[Relocation]| {
+                    let Some(first) = relocs.first() else {
+                        return false;
+                    };
+                    let Some(last) = relocs.last() else {
+                        return false;
+                    };
+                    first.offset < last.offset
+                };
+                if need_reverse(&section.relocations) {
+                    for reloc in section.relocations.iter().rev() {
+                        write_reloc(reloc)?;
+                    }
+                } else {
+                    for reloc in &section.relocations {
+                        write_reloc(reloc)?;
+                    }
                 }
             }
         }
