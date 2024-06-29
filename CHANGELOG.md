@@ -2,6 +2,35 @@
 
 --------------------------------------------------------------------------------
 
+## 0.36.1
+
+Released 2024/06/29.
+
+### Added
+
+* Added `SectionKind::DebugString`.
+  [#694](https://github.com/gimli-rs/object/pull/694)
+
+* Added `Architecture::Sparc` and `Architecture::Sparc32Plus`.
+  [#699](https://github.com/gimli-rs/object/pull/699)
+  [#700](https://github.com/gimli-rs/object/pull/700)
+
+* Added more RISC-V ELF relocation constants.
+  [#701](https://github.com/gimli-rs/object/pull/701)
+
+### Changed
+
+* Changed `read::ElfFile::imports` to return the library for versioned symbols.
+  [#693](https://github.com/gimli-rs/object/pull/693)
+
+* Changed `read::MachOFile` to support Go's debug section compression.
+  [#697](https://github.com/gimli-rs/object/pull/697)
+
+* Reversed the order of Mach-O relocations emitted by `write::Object`.
+  [#702](https://github.com/gimli-rs/object/pull/702)
+
+--------------------------------------------------------------------------------
+
 ## 0.36.0
 
 Released 2024/05/26.
