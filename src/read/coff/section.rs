@@ -573,7 +573,7 @@ impl pe::ImageSectionHeader {
     ) -> read::Result<&'data [pe::ImageRelocation]> {
         let mut pointer = self.pointer_to_relocations.get(LE).into();
         let mut number: usize = self.number_of_relocations.get(LE).into();
-        if number == core::u16::MAX.into()
+        if number == u16::MAX.into()
             && self.characteristics.get(LE) & pe::IMAGE_SCN_LNK_NRELOC_OVFL != 0
         {
             // Extended relocations. Read first relocation (which contains extended count) & adjust
