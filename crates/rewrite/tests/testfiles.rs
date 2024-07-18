@@ -23,6 +23,25 @@ fn rewrite_base() {
 }
 
 #[test]
+fn rewrite_base_version() {
+    let print_options = readobj::PrintOptions {
+        string_indices: false,
+        ..readobj::PrintOptions::all()
+    };
+    let mut fail = false;
+
+    let options = object_rewrite::Options::default();
+    fail |= testfile(
+        "elf/libbase.so",
+        "elf/libbase.so.noop",
+        options,
+        &print_options,
+    );
+
+    fail_message(fail);
+}
+
+#[test]
 fn rewrite_symbols() {
     let print_options = readobj::PrintOptions {
         string_indices: false,
