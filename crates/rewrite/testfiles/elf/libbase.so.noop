@@ -331,14 +331,14 @@ SectionHeader {
         SHF_ALLOC (0x2)
     Address: 0x2F0
     Offset: 0x2F0
-    Size: 0x24
+    Size: 0x28
     Link: 4
     Info: 0
     AddressAlign: 0x8
     EntrySize: 0x0
     GnuHash {
         BucketCount: 2
-        SymbolBase: 7
+        SymbolBase: 6
         BloomCount: 1
         BloomShift: 6
     }
@@ -424,17 +424,6 @@ SectionHeader {
     }
     Symbol {
         Index: 6
-        Name: "libbase.so"
-        Version: "libbase.so"
-        Value: 0x0
-        Size: 0x0
-        Type: STT_OBJECT (0x1)
-        Bind: STB_GLOBAL (0x1)
-        Other: STV_DEFAULT (0x0)
-        SectionIndex: SHN_ABS (0xFFF1)
-    }
-    Symbol {
-        Index: 7
         Name: "main"
         Version: "libbase.so"
         Value: 0x1119
@@ -443,6 +432,17 @@ SectionHeader {
         Bind: STB_GLOBAL (0x1)
         Other: STV_DEFAULT (0x0)
         SectionIndex: 15
+    }
+    Symbol {
+        Index: 7
+        Name: "libbase.so"
+        Version: "libbase.so"
+        Value: 0x0
+        Size: 0x0
+        Type: STT_OBJECT (0x1)
+        Bind: STB_GLOBAL (0x1)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: SHN_ABS (0xFFF1)
     }
 }
 SectionHeader {
