@@ -1629,12 +1629,9 @@ impl<'a> Writer<'a> {
                 + verdef.aux_count as u32 * mem::size_of::<elf::Verdaux<Endianness>>() as u32
         };
 
+        debug_assert_ne!(verdef.aux_count, 0);
         self.gnu_verdaux_remaining = verdef.aux_count;
-        let vd_aux = if verdef.aux_count == 0 {
-            0
-        } else {
-            mem::size_of::<elf::Verdef<Endianness>>() as u32
-        };
+        let vd_aux = mem::size_of::<elf::Verdef<Endianness>>() as u32;
 
         self.buffer.write(&elf::Verdef {
             vd_version: U16::new(self.endian, verdef.version),
@@ -1646,6 +1643,31 @@ impl<'a> Writer<'a> {
             vd_next: U32::new(self.endian, vd_next),
         });
         self.write_gnu_verdaux(verdef.name);
+    }
+
+    /// Write a version definition entry that shares the names of the next definition.
+    ///
+    /// This is typically useful when there are only two versions (including the base)
+    /// and they have the same name.
+    pub fn write_gnu_verdef_shared(&mut self, verdef: &Verdef) {
+        debug_assert_ne!(self.gnu_verdef_remaining, 0);
+        self.gnu_verdef_remaining -= 1;
+        debug_assert_ne!(self.gnu_verdef_remaining, 0);
+        let vd_next = mem::size_of::<elf::Verdef<Endianness>>() as u32;
+
+        debug_assert_ne!(verdef.aux_count, 0);
+        self.gnu_verdaux_remaining = 0;
+        let vd_aux = 2 * mem::size_of::<elf::Verdef<Endianness>>() as u32;
+
+        self.buffer.write(&elf::Verdef {
+            vd_version: U16::new(self.endian, verdef.version),
+            vd_flags: U16::new(self.endian, verdef.flags),
+            vd_ndx: U16::new(self.endian, verdef.index),
+            vd_cnt: U16::new(self.endian, verdef.aux_count),
+            vd_hash: U32::new(self.endian, elf::hash(self.dynstr.get_string(verdef.name))),
+            vd_aux: U32::new(self.endian, vd_aux),
+            vd_next: U32::new(self.endian, vd_next),
+        });
     }
 
     /// Write a version definition auxiliary entry.
