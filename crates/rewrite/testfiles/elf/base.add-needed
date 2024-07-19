@@ -303,7 +303,7 @@ SectionHeader {
     Size: 0x30
     Link: 6
     Info: 0
-    AddressAlign: 0x8
+    AddressAlign: 0x4
     EntrySize: 0x4
     Hash {
         BucketCount: 3
@@ -383,7 +383,7 @@ SectionHeader {
     Size: 0x20
     Link: 7
     Info: 1
-    AddressAlign: 0x8
+    AddressAlign: 0x4
     EntrySize: 0x0
 }
 SectionHeader {

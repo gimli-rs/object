@@ -10,6 +10,12 @@ use crate::write::string::{StringId, StringTable};
 use crate::write::util;
 use crate::write::{Error, Result, WritableBuffer};
 
+const ALIGN_SYMTAB_SHNDX: usize = 4;
+const ALIGN_HASH: usize = 4;
+const ALIGN_GNU_VERSYM: usize = 2;
+const ALIGN_GNU_VERDEF: usize = 4;
+const ALIGN_GNU_VERNEED: usize = 4;
+
 /// The index of an ELF section.
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct SectionIndex(pub u32);
@@ -914,7 +920,7 @@ impl<'a> Writer<'a> {
         if !self.need_symtab_shndx {
             return;
         }
-        self.symtab_shndx_offset = self.reserve(self.symtab_num as usize * 4, 4);
+        self.symtab_shndx_offset = self.reserve(self.symtab_num as usize * 4, ALIGN_SYMTAB_SHNDX);
         self.symtab_shndx_data.reserve(self.symtab_num as usize * 4);
     }
 
@@ -925,6 +931,7 @@ impl<'a> Writer<'a> {
         if self.symtab_shndx_offset == 0 {
             return;
         }
+        util::write_align(self.buffer, ALIGN_SYMTAB_SHNDX);
         debug_assert_eq!(self.symtab_shndx_offset, self.buffer.len());
         debug_assert_eq!(self.symtab_num as usize * 4, self.symtab_shndx_data.len());
         self.buffer.write_bytes(&self.symtab_shndx_data);
@@ -973,7 +980,7 @@ impl<'a> Writer<'a> {
             sh_size,
             sh_link: self.symtab_index.0,
             sh_info: 0,
-            sh_addralign: 4,
+            sh_addralign: ALIGN_SYMTAB_SHNDX as u64,
             sh_entsize: 4,
         });
     }
@@ -1337,7 +1344,7 @@ impl<'a> Writer<'a> {
     /// not the total number of symbols.
     pub fn reserve_hash(&mut self, bucket_count: u32, chain_count: u32) -> usize {
         self.hash_size = self.class().hash_size(bucket_count, chain_count);
-        self.hash_offset = self.reserve(self.hash_size, self.elf_align);
+        self.hash_offset = self.reserve(self.hash_size, ALIGN_HASH);
         self.hash_offset
     }
 
@@ -1359,7 +1366,7 @@ impl<'a> Writer<'a> {
             }
         }
 
-        util::write_align(self.buffer, self.elf_align);
+        util::write_align(self.buffer, ALIGN_HASH);
         debug_assert_eq!(self.hash_offset, self.buffer.len());
         self.buffer.write(&elf::HashHeader {
             bucket_count: U32::new(self.endian, bucket_count),
@@ -1397,7 +1404,7 @@ impl<'a> Writer<'a> {
             sh_size: self.hash_size as u64,
             sh_link: self.dynsym_index.0,
             sh_info: 0,
-            sh_addralign: self.elf_align as u64,
+            sh_addralign: ALIGN_HASH as u64,
             sh_entsize: 4,
         });
     }
@@ -1541,7 +1548,7 @@ impl<'a> Writer<'a> {
         if self.dynsym_num == 0 {
             return 0;
         }
-        self.gnu_versym_offset = self.reserve(self.dynsym_num as usize * 2, 2);
+        self.gnu_versym_offset = self.reserve(self.dynsym_num as usize * 2, ALIGN_GNU_VERSYM);
         self.gnu_versym_offset
     }
 
@@ -1553,7 +1560,7 @@ impl<'a> Writer<'a> {
         if self.dynsym_num == 0 {
             return;
         }
-        util::write_align(self.buffer, 2);
+        util::write_align(self.buffer, ALIGN_GNU_VERSYM);
         debug_assert_eq!(self.gnu_versym_offset, self.buffer.len());
         self.write_gnu_versym(0);
     }
@@ -1591,7 +1598,7 @@ impl<'a> Writer<'a> {
             sh_size: self.class().gnu_versym_size(self.dynsym_num as usize) as u64,
             sh_link: self.dynsym_index.0,
             sh_info: 0,
-            sh_addralign: 2,
+            sh_addralign: ALIGN_GNU_VERSYM as u64,
             sh_entsize: 2,
         });
     }
@@ -1603,7 +1610,7 @@ impl<'a> Writer<'a> {
             return 0;
         }
         self.gnu_verdef_size = self.class().gnu_verdef_size(verdef_count, verdaux_count);
-        self.gnu_verdef_offset = self.reserve(self.gnu_verdef_size, self.elf_align);
+        self.gnu_verdef_offset = self.reserve(self.gnu_verdef_size, ALIGN_GNU_VERDEF);
         self.gnu_verdef_count = verdef_count as u16;
         self.gnu_verdef_remaining = self.gnu_verdef_count;
         self.gnu_verdef_offset
@@ -1614,7 +1621,7 @@ impl<'a> Writer<'a> {
         if self.gnu_verdef_offset == 0 {
             return;
         }
-        util::write_align(self.buffer, self.elf_align);
+        util::write_align(self.buffer, ALIGN_GNU_VERDEF);
         debug_assert_eq!(self.gnu_verdef_offset, self.buffer.len());
     }
 
@@ -1691,7 +1698,7 @@ impl<'a> Writer<'a> {
             sh_size: self.gnu_verdef_size as u64,
             sh_link: self.dynstr_index.0,
             sh_info: self.gnu_verdef_count.into(),
-            sh_addralign: self.elf_align as u64,
+            sh_addralign: ALIGN_GNU_VERDEF as u64,
             sh_entsize: 0,
         });
     }
@@ -1703,7 +1710,7 @@ impl<'a> Writer<'a> {
             return 0;
         }
         self.gnu_verneed_size = self.class().gnu_verneed_size(verneed_count, vernaux_count);
-        self.gnu_verneed_offset = self.reserve(self.gnu_verneed_size, self.elf_align);
+        self.gnu_verneed_offset = self.reserve(self.gnu_verneed_size, ALIGN_GNU_VERNEED);
         self.gnu_verneed_count = verneed_count as u16;
         self.gnu_verneed_remaining = self.gnu_verneed_count;
         self.gnu_verneed_offset
@@ -1714,7 +1721,7 @@ impl<'a> Writer<'a> {
         if self.gnu_verneed_offset == 0 {
             return;
         }
-        util::write_align(self.buffer, self.elf_align);
+        util::write_align(self.buffer, ALIGN_GNU_VERNEED);
         debug_assert_eq!(self.gnu_verneed_offset, self.buffer.len());
     }
 
@@ -1791,7 +1798,7 @@ impl<'a> Writer<'a> {
             sh_size: self.gnu_verneed_size as u64,
             sh_link: self.dynstr_index.0,
             sh_info: self.gnu_verneed_count.into(),
-            sh_addralign: self.elf_align as u64,
+            sh_addralign: ALIGN_GNU_VERNEED as u64,
             sh_entsize: 0,
         });
     }
