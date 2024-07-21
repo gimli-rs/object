@@ -907,7 +907,9 @@ impl<'data> Builder<'data> {
                 if hash_id.is_some() {
                     hash = Some(elf::hash(&symbol.name));
                 }
-                if gnu_hash_id.is_some() && symbol.section.is_some() {
+                if gnu_hash_id.is_some()
+                    && (symbol.section.is_some() || symbol.st_shndx != elf::SHN_UNDEF)
+                {
                     gnu_hash = Some(elf::gnu_hash(&symbol.name));
                 }
             }
