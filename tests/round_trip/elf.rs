@@ -43,6 +43,20 @@ fn symtab_shndx() {
 }
 
 #[test]
+fn empty_symtab() {
+    let object = write::Object::new(BinaryFormat::Elf, Architecture::X86_64, Endianness::Little);
+    let bytes = object.write().unwrap();
+
+    let object = read::File::parse(&*bytes).unwrap();
+    assert_eq!(object.format(), BinaryFormat::Elf);
+    assert_eq!(object.architecture(), Architecture::X86_64);
+    let symtab = object.section_by_name(".symtab").unwrap();
+    assert_eq!(symtab.size(), 24);
+    let strtab = object.section_by_name(".strtab").unwrap();
+    assert_eq!(strtab.size(), 1);
+}
+
+#[test]
 fn aligned_sections() {
     let mut object =
         write::Object::new(BinaryFormat::Elf, Architecture::X86_64, Endianness::Little);
