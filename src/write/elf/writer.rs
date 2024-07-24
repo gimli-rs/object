@@ -658,7 +658,7 @@ impl<'a> Writer<'a> {
     ///
     /// This range is used for a section named `.strtab`.
     ///
-    /// This function does nothing if no strings were defined.
+    /// This function does nothing if a string table is not required.
     /// This must be called after [`Self::add_string`].
     pub fn reserve_strtab(&mut self) {
         debug_assert_eq!(self.strtab_offset, 0);
@@ -684,12 +684,18 @@ impl<'a> Writer<'a> {
 
     /// Reserve the section index for the string table.
     ///
+    /// You should check [`Self::strtab_needed`] before calling this
+    /// unless you have other means of knowing if this section is needed.
+    ///
     /// This must be called before [`Self::reserve_section_headers`].
     pub fn reserve_strtab_section_index(&mut self) -> SectionIndex {
         self.reserve_strtab_section_index_with_name(&b".strtab"[..])
     }
 
     /// Reserve the section index for the string table.
+    ///
+    /// You should check [`Self::strtab_needed`] before calling this
+    /// unless you have other means of knowing if this section is needed.
     ///
     /// This must be called before [`Self::reserve_section_headers`].
     pub fn reserve_strtab_section_index_with_name(&mut self, name: &'a [u8]) -> SectionIndex {
@@ -732,6 +738,8 @@ impl<'a> Writer<'a> {
         debug_assert_eq!(self.symtab_offset, 0);
         debug_assert_eq!(self.symtab_num, 0);
         self.symtab_num = 1;
+        // The symtab must link to a strtab.
+        self.need_strtab = true;
         SymbolIndex(0)
     }
 
@@ -752,6 +760,8 @@ impl<'a> Writer<'a> {
         debug_assert_eq!(self.symtab_shndx_offset, 0);
         if self.symtab_num == 0 {
             self.symtab_num = 1;
+            // The symtab must link to a strtab.
+            self.need_strtab = true;
         }
         let index = self.symtab_num;
         self.symtab_num += 1;
@@ -1052,12 +1062,18 @@ impl<'a> Writer<'a> {
 
     /// Reserve the section index for the dynamic string table.
     ///
+    /// You should check [`Self::dynstr_needed`] before calling this
+    /// unless you have other means of knowing if this section is needed.
+    ///
     /// This must be called before [`Self::reserve_section_headers`].
     pub fn reserve_dynstr_section_index(&mut self) -> SectionIndex {
         self.reserve_dynstr_section_index_with_name(&b".dynstr"[..])
     }
 
     /// Reserve the section index for the dynamic string table.
+    ///
+    /// You should check [`Self::dynstr_needed`] before calling this
+    /// unless you have other means of knowing if this section is needed.
     ///
     /// This must be called before [`Self::reserve_section_headers`].
     pub fn reserve_dynstr_section_index_with_name(&mut self, name: &'a [u8]) -> SectionIndex {
