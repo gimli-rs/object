@@ -2,6 +2,27 @@
 
 --------------------------------------------------------------------------------
 
+## 0.36.2
+
+Released 2024/07/24.
+
+### Changed
+
+* Improved writing of GNU symbol versioning in `build::elf::Builder`.
+  [#705](https://github.com/gimli-rs/object/pull/705)
+
+* Fixed alignment of `SHT_HASH`/`SHT_GNU_verdef`/`SHT_GNU_verneed` sections in
+  `write::elf::Writer`.
+  [#706](https://github.com/gimli-rs/object/pull/706)
+
+* Fixed writing of GNU hash for absolute symbols in `build::elf::Builder`.
+  [#707](https://github.com/gimli-rs/object/pull/707)
+
+* Fixed writing of empty ELF string table in `write::Object`.
+  [#710](https://github.com/gimli-rs/object/pull/710)
+
+--------------------------------------------------------------------------------
+
 ## 0.36.1
 
 Released 2024/06/29.
