@@ -87,6 +87,20 @@ where
     }
 }
 
+impl<'data, Elf: FileHeader> Iterator for NoteIterator<'data, Elf> {
+    type Item = read::Result<Note<'data, Elf>>;
+    fn next(&mut self) -> Option<Self::Item> {
+        match self.next() {
+            Err(e) => {
+                self.data = Bytes(&[]);
+                Some(Err(e))
+            }
+            Ok(Some(v)) => Some(Ok(v)),
+            Ok(None) => None,
+        }
+    }
+}
+
 /// A parsed [`NoteHeader`].
 #[derive(Debug)]
 pub struct Note<'data, Elf>
