@@ -29,6 +29,17 @@ impl<'data, E: Endian> LoadCommandIterator<'data, E> {
         if self.ncmds == 0 {
             return Ok(None);
         }
+
+        let result = self.parse().map(Some);
+        if result.is_err() {
+            self.ncmds = 0;
+        } else {
+            self.ncmds -= 1;
+        }
+        result
+    }
+
+    fn parse(&mut self) -> Result<LoadCommandData<'data, E>> {
         let header = self
             .data
             .read_at::<macho::LoadCommand<E>>(0)
@@ -42,12 +53,19 @@ impl<'data, E: Endian> LoadCommandIterator<'data, E> {
             .data
             .read_bytes(cmdsize)
             .read_error("Invalid Mach-O load command size")?;
-        self.ncmds -= 1;
-        Ok(Some(LoadCommandData {
+        Ok(LoadCommandData {
             cmd,
             data,
             marker: Default::default(),
-        }))
+        })
+    }
+}
+
+impl<'data, E: Endian> Iterator for LoadCommandIterator<'data, E> {
+    type Item = Result<LoadCommandData<'data, E>>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.next().transpose()
     }
 }
 
