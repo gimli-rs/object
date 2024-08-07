@@ -2,6 +2,30 @@
 
 --------------------------------------------------------------------------------
 
+## 0.36.3
+
+Released 2024/08/07.
+
+### Added
+
+* Added `Iterator` implementations for various types in the low level read API.
+  [#713](https://github.com/gimli-rs/object/pull/713)
+  [#714](https://github.com/gimli-rs/object/pull/714)
+
+### Changed
+
+* Changed `from_bytes` constructors for integer endian types to `const`.
+  [#712](https://github.com/gimli-rs/object/pull/712)
+
+* Changed `next` methods in the low level read API to fuse after returning an
+  error.
+  [#714](https://github.com/gimli-rs/object/pull/714)
+
+* Updated `wasmparser` dependency.
+  [#715](https://github.com/gimli-rs/object/pull/715)
+
+--------------------------------------------------------------------------------
+
 ## 0.36.2
 
 Released 2024/07/24.
