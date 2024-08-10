@@ -654,7 +654,12 @@ impl<'a> Object<'a> {
                         length: section.size as u32,
                         number_of_relocations: section.relocations.len() as u32,
                         number_of_linenumbers: 0,
-                        check_sum: checksum(section.data()),
+                        check_sum: if section.is_bss() { 
+                            0 
+                        } 
+                        else {
+                            checksum(section.data())
+                        },
                         number: section_offsets[section_index].associative_section,
                         selection: section_offsets[section_index].selection,
                     });
