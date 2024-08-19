@@ -774,12 +774,12 @@ pub const SHF_TLS: u32 = 1 << 10;
 ///
 /// Compressed sections begin with one of the `CompressionHeader*` headers.
 pub const SHF_COMPRESSED: u32 = 1 << 11;
+/// OS-specific section flags.
+pub const SHF_MASKOS: u32 = 0x0ff0_0000;
 /// Section should not be garbage collected by the linker.
 pub const SHF_GNU_RETAIN: u32 = 1 << 21;
 /// Mbind section.
 pub const SHF_GNU_MBIND: u32 = 1 << 24;
-/// OS-specific section flags.
-pub const SHF_MASKOS: u32 = 0x0ff0_0000;
 /// Processor-specific section flags.
 pub const SHF_MASKPROC: u32 = 0xf000_0000;
 /// This section is excluded from the final executable or shared library.

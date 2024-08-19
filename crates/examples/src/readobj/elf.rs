@@ -1443,6 +1443,9 @@ const FLAGS_SHF: &[Flag<u32>] = &flags!(
     SHF_GROUP,
     SHF_TLS,
     SHF_COMPRESSED,
+    SHF_GNU_RETAIN,
+    SHF_GNU_MBIND,
+    SHF_EXCLUDE,
 );
 const FLAGS_SHF_MIPS: &[Flag<u32>] = &flags!(
     SHF_MIPS_GPREL,
