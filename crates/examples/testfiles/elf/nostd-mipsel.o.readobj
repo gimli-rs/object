@@ -203,6 +203,7 @@ SectionHeader {
     Name: ".llvm_addrsig" (0x4B)
     Type: 0x6FFF4C03
     Flags: 0x80000000
+        SHF_EXCLUDE (0x80000000)
         SHF_MIPS_STRINGS (0x80000000)
     Address: 0x0
     Offset: 0x118
