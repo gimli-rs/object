@@ -1005,7 +1005,7 @@ impl<'data> CompressedData<'data> {
                 }
                 if size != decompressed.len() {
                     return Err(Error(
-                        "Uncompressed size does not match the uncompressed size declared in the compression header",
+                        "Uncompressed data size does not match compression header",
                     ));
                 }
 
