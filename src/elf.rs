@@ -1868,6 +1868,7 @@ pub const ELF_NOTE_OS_FREEBSD: u32 = 3;
 /// The descriptor begins with two words:
 /// - word 0: number of entries
 /// - word 1: bitmask of enabled entries
+///
 /// Then follow variable-length entries, one byte followed by a
 /// '\0'-terminated hwcap name string.  The byte gives the bit
 /// number to test if enabled, (1U << bit) & bitmask.  */
