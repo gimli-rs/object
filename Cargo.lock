@@ -3,10 +3,10 @@
 version = 3
 
 [[package]]
-name = "adler"
-version = "1.0.2"
+name = "adler2"
+version = "2.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f26201604c87b1e01bd3d98f8d5d9a8fcbb815e8cedb41ffccbeb4bf593a35fe"
+checksum = "512761e0bb2578dd7380c6baaa0f4ce03e84f95e960231d1dec8bf4d7d6e2627"
 
 [[package]]
 name = "ahash"
@@ -95,18 +95,18 @@ checksum = "baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd"
 
 [[package]]
 name = "clap"
-version = "4.5.13"
+version = "4.5.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0fbb260a053428790f3de475e304ff84cdbc4face759ea7a3e64c1edd938a7fc"
+checksum = "ed6719fffa43d0d87e5fd8caeab59be1554fb028cd30edc88fc4369b17971019"
 dependencies = [
  "clap_builder",
 ]
 
 [[package]]
 name = "clap_builder"
-version = "4.5.13"
+version = "4.5.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "64b17d7ea74e9f833c7dbf2cbe4fb12ff26783eda4782a8975b72f895c9b4d99"
+checksum = "216aec2b177652e3846684cbfe25c9964d18ec45234f0f5da5157b207ed1aab6"
 dependencies = [
  "anstream",
  "anstyle",
@@ -128,9 +128,9 @@ checksum = "d3fd119d74b830634cea2a0f58bbd0d54540518a14397557951e79340abc28c0"
 
 [[package]]
 name = "compiler_builtins"
-version = "0.1.117"
+version = "0.1.123"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a91dae36d82fe12621dfb5b596d7db766187747749b22e33ac068e1bfc356f4a"
+checksum = "b47fcbecb558bdad78c7d3a998523c60a50dd6cd046d5fe74163e309e878fff7"
 
 [[package]]
 name = "crc32fast"
@@ -168,9 +168,9 @@ checksum = "5443807d6dff69373d433ab9ef5378ad8df50ca6298caf15de6e52e24aaf54d5"
 
 [[package]]
 name = "flate2"
-version = "1.0.31"
+version = "1.0.33"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7f211bbe8e69bbd0cfdea405084f128ae8b4aaa6b0b522fc8f2b009084797920"
+checksum = "324a1be68054ef05ad64b861cc9eaf1d623d2d8cb25b4bf2cb9cdd902b4bf253"
 dependencies = [
  "crc32fast",
  "miniz_oxide",
@@ -187,9 +187,9 @@ dependencies = [
 
 [[package]]
 name = "indexmap"
-version = "2.3.0"
+version = "2.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "de3fc2e30ba82dd1b3911c8de1ffc143c74a914a14e99514d7637e3099df5ea0"
+checksum = "93ead53efc7ea8ed3cfb0c79fc8023fbb782a5432b52830b6518941cebe6505c"
 dependencies = [
  "equivalent",
  "hashbrown",
@@ -203,9 +203,9 @@ checksum = "7943c866cc5cd64cbc25b2e01621d07fa8eb2a1a23160ee81ce38704e97b8ecf"
 
 [[package]]
 name = "libc"
-version = "0.2.155"
+version = "0.2.158"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "97b3888a4aecf77e811145cadf6eef5901f4782c53886191b2f693f24761847c"
+checksum = "d8adc4bb1803a324070e64a98ae98f38934d91957a99cfb3a43dcbc01bc56439"
 
 [[package]]
 name = "log"
@@ -234,11 +234,11 @@ dependencies = [
 
 [[package]]
 name = "miniz_oxide"
-version = "0.7.4"
+version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b8a240ddb74feaf34a79a7add65a741f3167852fba007066dcac1ca548d89c08"
+checksum = "e2d80299ef12ff69b16a84bb182e3b9df68b5a91574d3d4fa6e41b65deec4df1"
 dependencies = [
- "adler",
+ "adler2",
 ]
 
 [[package]]
@@ -296,9 +296,9 @@ dependencies = [
 
 [[package]]
 name = "quote"
-version = "1.0.36"
+version = "1.0.37"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0fa76aaf39101c457836aec0ce2316dbdc3ab723cdda1c6bd4e6ad4208acaca7"
+checksum = "b5b9d34b8991d19d98081b46eacdd8eb58c6f2b201139f7c5f643cc155a633af"
 dependencies = [
  "proc-macro2",
 ]
@@ -317,9 +317,9 @@ checksum = "1956f5517128a2b6f23ab2dadf1a976f4f5b27962e7724c2bf3d45e539ec098c"
 
 [[package]]
 name = "ruzstd"
-version = "0.7.0"
+version = "0.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5022b253619b1ba797f243056276bed8ed1a73b0f5a7ce7225d524067644bf8f"
+checksum = "1c8b8f3d26bd9f945e5cbae77f7cdfbf37af9a66956f1115eb4516e45df519f4"
 dependencies = [
  "byteorder",
  "twox-hash",
@@ -339,9 +339,9 @@ checksum = "7da8b5736845d9f2fcb837ea5d9e2628564b3b043a70948a3f0b778838c5fb4f"
 
 [[package]]
 name = "syn"
-version = "2.0.72"
+version = "2.0.76"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dc4b9b9bf2add8093d3f2c0204471e951b2285580335de42f9d2534f3ae7a8af"
+checksum = "578e081a14e0cefc3279b0472138c513f37b41a08d5a3cca9b6e4e8ceb6cd525"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -378,9 +378,9 @@ checksum = "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a"
 
 [[package]]
 name = "wasmparser"
-version = "0.215.0"
+version = "0.216.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "53fbde0881f24199b81cf49b6ff8f9c145ac8eb1b7fc439adb5c099734f7d90e"
+checksum = "bcdee6bea3619d311fb4b299721e89a986c3470f804b6d534340e412589028e3"
 dependencies = [
  "bitflags",
 ]
