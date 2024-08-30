@@ -2,6 +2,30 @@
 
 --------------------------------------------------------------------------------
 
+## 0.36.4
+
+Released 2024/08/30.
+
+### Added
+
+* Added `pe::IMAGE_FILE_MACHINE_ARM64X` and `pe::IMAGE_FILE_MACHINE_CHPE_X86`.
+  [#717](https://github.com/gimli-rs/object/pull/717)
+
+* Added `elf::SHF_GNU_RETAIN` and `elf::SHF_GNU_MBIND`.
+  [#720](https://github.com/gimli-rs/object/pull/720)
+
+### Changed
+
+* Fixed the checksum for COFF BSS section symbols in `write::Object`.
+  [#718](https://github.com/gimli-rs/object/pull/718)
+
+* Changed `read::CompressedData::decompress` to validate the decompressed size.
+  [#723](https://github.com/gimli-rs/object/pull/723)
+
+* Updated `wasmparser` dependency.
+
+--------------------------------------------------------------------------------
+
 ## 0.36.3
 
 Released 2024/08/07.
