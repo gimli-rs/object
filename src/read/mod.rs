@@ -597,6 +597,7 @@ pub struct ObjectMapFile<'data> {
 }
 
 impl<'data> ObjectMapFile<'data> {
+    #[cfg(feature = "macho")]
     fn new(path: &'data [u8], member: Option<&'data [u8]>) -> Self {
         ObjectMapFile { path, member }
     }
