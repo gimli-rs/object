@@ -11,6 +11,8 @@ pub enum Architecture {
     Avr,
     Bpf,
     Csky,
+    E2K32,
+    E2K64,
     I386,
     X86_64,
     #[allow(non_camel_case_types)]
@@ -57,6 +59,8 @@ impl Architecture {
             Architecture::Avr => Some(AddressSize::U8),
             Architecture::Bpf => Some(AddressSize::U64),
             Architecture::Csky => Some(AddressSize::U32),
+            Architecture::E2K32 => Some(AddressSize::U32),
+            Architecture::E2K64 => Some(AddressSize::U64),
             Architecture::I386 => Some(AddressSize::U32),
             Architecture::X86_64 => Some(AddressSize::U64),
             Architecture::X86_64_X32 => Some(AddressSize::U32),
@@ -415,6 +419,18 @@ pub enum RelocationEncoding {
     /// * 16-bit absolute address
     /// * 6-bit relative address
     SharcTypeB,
+
+    /// E2K 64-bit value stored in two LTS
+    ///
+    /// Memory representation:
+    /// ```text
+    /// 0: LTS1 = value[63:32]
+    /// 4: LTS0 = value[31:0]
+    /// ```
+    E2KLit,
+
+    /// E2K 28-bit value stored in CS0
+    E2KDisp,
 }
 
 /// File flags that are specific to each file format.
