@@ -166,6 +166,7 @@ impl<'a> Object<'a> {
             return Ok(());
         };
 
+        let unsupported_reloc = || Err(Error(format!("unimplemented relocation {:?}", reloc)));
         let r_type = match self.architecture {
             Architecture::Aarch64 => match (kind, encoding, size) {
                 (RelocationKind::Absolute, RelocationEncoding::Generic, 64) => elf::R_AARCH64_ABS64,
@@ -184,46 +185,34 @@ impl<'a> Object<'a> {
                 | (RelocationKind::PltRelative, RelocationEncoding::AArch64Call, 26) => {
                     elf::R_AARCH64_CALL26
                 }
-                _ => {
-                    return Err(Error(format!("unimplemented relocation {:?}", reloc)));
-                }
+                _ => return unsupported_reloc(),
             },
             Architecture::Aarch64_Ilp32 => match (kind, encoding, size) {
                 (RelocationKind::Absolute, RelocationEncoding::Generic, 32) => {
                     elf::R_AARCH64_P32_ABS32
                 }
-                _ => {
-                    return Err(Error(format!("unimplemented relocation {:?}", reloc)));
-                }
+                _ => return unsupported_reloc(),
             },
             Architecture::Arm => match (kind, encoding, size) {
                 (RelocationKind::Absolute, _, 32) => elf::R_ARM_ABS32,
-                _ => {
-                    return Err(Error(format!("unimplemented relocation {:?}", reloc)));
-                }
+                _ => return unsupported_reloc(),
             },
             Architecture::Avr => match (kind, encoding, size) {
                 (RelocationKind::Absolute, _, 32) => elf::R_AVR_32,
                 (RelocationKind::Absolute, _, 16) => elf::R_AVR_16,
-                _ => {
-                    return Err(Error(format!("unimplemented relocation {:?}", reloc)));
-                }
+                _ => return unsupported_reloc(),
             },
             Architecture::Bpf => match (kind, encoding, size) {
                 (RelocationKind::Absolute, _, 64) => elf::R_BPF_64_64,
                 (RelocationKind::Absolute, _, 32) => elf::R_BPF_64_32,
-                _ => {
-                    return Err(Error(format!("unimplemented relocation {:?}", reloc)));
-                }
+                _ => return unsupported_reloc(),
             },
             Architecture::Csky => match (kind, encoding, size) {
                 (RelocationKind::Absolute, _, 32) => elf::R_CKCORE_ADDR32,
                 (RelocationKind::Relative, RelocationEncoding::Generic, 32) => {
                     elf::R_CKCORE_PCREL32
                 }
-                _ => {
-                    return Err(Error(format!("unimplemented relocation {:?}", reloc)));
-                }
+                _ => return unsupported_reloc(),
             },
             Architecture::I386 => match (kind, size) {
                 (RelocationKind::Absolute, 32) => elf::R_386_32,
@@ -236,9 +225,7 @@ impl<'a> Object<'a> {
                 (RelocationKind::Relative, 16) => elf::R_386_PC16,
                 (RelocationKind::Absolute, 8) => elf::R_386_8,
                 (RelocationKind::Relative, 8) => elf::R_386_PC8,
-                _ => {
-                    return Err(Error(format!("unimplemented relocation {:?}", reloc)));
-                }
+                _ => return unsupported_reloc(),
             },
             Architecture::X86_64 | Architecture::X86_64_X32 => match (kind, encoding, size) {
                 (RelocationKind::Absolute, RelocationEncoding::Generic, 64) => elf::R_X86_64_64,
@@ -255,15 +242,11 @@ impl<'a> Object<'a> {
                 (RelocationKind::Relative, _, 16) => elf::R_X86_64_PC16,
                 (RelocationKind::Absolute, _, 8) => elf::R_X86_64_8,
                 (RelocationKind::Relative, _, 8) => elf::R_X86_64_PC8,
-                _ => {
-                    return Err(Error(format!("unimplemented relocation {:?}", reloc)));
-                }
+                _ => return unsupported_reloc(),
             },
             Architecture::Hexagon => match (kind, encoding, size) {
                 (RelocationKind::Absolute, _, 32) => elf::R_HEX_32,
-                _ => {
-                    return Err(Error(format!("unimplemented relocation {:?}", reloc)));
-                }
+                _ => return unsupported_reloc(),
             },
             Architecture::LoongArch64 => match (kind, encoding, size) {
                 (RelocationKind::Absolute, _, 32) => elf::R_LARCH_32,
@@ -282,37 +265,27 @@ impl<'a> Object<'a> {
                 | (RelocationKind::PltRelative, RelocationEncoding::LoongArchBranch, 26) => {
                     elf::R_LARCH_B26
                 }
-                _ => {
-                    return Err(Error(format!("unimplemented relocation {:?}", reloc)));
-                }
+                _ => return unsupported_reloc(),
             },
             Architecture::Mips | Architecture::Mips64 => match (kind, encoding, size) {
                 (RelocationKind::Absolute, _, 16) => elf::R_MIPS_16,
                 (RelocationKind::Absolute, _, 32) => elf::R_MIPS_32,
                 (RelocationKind::Absolute, _, 64) => elf::R_MIPS_64,
-                _ => {
-                    return Err(Error(format!("unimplemented relocation {:?}", reloc)));
-                }
+                _ => return unsupported_reloc(),
             },
             Architecture::Msp430 => match (kind, encoding, size) {
                 (RelocationKind::Absolute, _, 32) => elf::R_MSP430_32,
                 (RelocationKind::Absolute, _, 16) => elf::R_MSP430_16_BYTE,
-                _ => {
-                    return Err(Error(format!("unimplemented relocation {:?}", reloc)));
-                }
+                _ => return unsupported_reloc(),
             },
             Architecture::PowerPc => match (kind, encoding, size) {
                 (RelocationKind::Absolute, _, 32) => elf::R_PPC_ADDR32,
-                _ => {
-                    return Err(Error(format!("unimplemented relocation {:?}", reloc)));
-                }
+                _ => return unsupported_reloc(),
             },
             Architecture::PowerPc64 => match (kind, encoding, size) {
                 (RelocationKind::Absolute, _, 32) => elf::R_PPC64_ADDR32,
                 (RelocationKind::Absolute, _, 64) => elf::R_PPC64_ADDR64,
-                _ => {
-                    return Err(Error(format!("unimplemented relocation {:?}", reloc)));
-                }
+                _ => return unsupported_reloc(),
             },
             Architecture::Riscv32 | Architecture::Riscv64 => match (kind, encoding, size) {
                 (RelocationKind::Absolute, _, 32) => elf::R_RISCV_32,
@@ -320,9 +293,7 @@ impl<'a> Object<'a> {
                 (RelocationKind::Relative, RelocationEncoding::Generic, 32) => {
                     elf::R_RISCV_32_PCREL
                 }
-                _ => {
-                    return Err(Error(format!("unimplemented relocation {:?}", reloc)));
-                }
+                _ => return unsupported_reloc(),
             },
             Architecture::S390x => match (kind, encoding, size) {
                 (RelocationKind::Absolute, RelocationEncoding::Generic, 8) => elf::R_390_8,
@@ -361,16 +332,12 @@ impl<'a> Object<'a> {
                 (RelocationKind::GotBaseRelative, RelocationEncoding::S390xDbl, 32) => {
                     elf::R_390_GOTPCDBL
                 }
-                _ => {
-                    return Err(Error(format!("unimplemented relocation {:?}", reloc)));
-                }
+                _ => return unsupported_reloc(),
             },
             Architecture::Sbf => match (kind, encoding, size) {
                 (RelocationKind::Absolute, _, 64) => elf::R_SBF_64_64,
                 (RelocationKind::Absolute, _, 32) => elf::R_SBF_64_32,
-                _ => {
-                    return Err(Error(format!("unimplemented relocation {:?}", reloc)));
-                }
+                _ => return unsupported_reloc(),
             },
             Architecture::Sharc => match (kind, encoding, size) {
                 (RelocationKind::Absolute, RelocationEncoding::SharcTypeA, 32) => {
@@ -409,37 +376,27 @@ impl<'a> Object<'a> {
                 (RelocationKind::Absolute, RelocationEncoding::SharcTypeB, 7) => {
                     elf::R_SHARC_DATA7_VISA_V3
                 }
-                _ => {
-                    return Err(Error(format!("unimplemented relocation {:?}", reloc)));
-                }
+                _ => return unsupported_reloc(),
             },
             Architecture::Sparc | Architecture::Sparc32Plus => match (kind, encoding, size) {
                 // TODO: use R_SPARC_32 if aligned.
                 (RelocationKind::Absolute, _, 32) => elf::R_SPARC_UA32,
-                _ => {
-                    return Err(Error(format!("unimplemented relocation {:?}", reloc)));
-                }
+                _ => return unsupported_reloc(),
             },
             Architecture::Sparc64 => match (kind, encoding, size) {
                 // TODO: use R_SPARC_32/R_SPARC_64 if aligned.
                 (RelocationKind::Absolute, _, 32) => elf::R_SPARC_UA32,
                 (RelocationKind::Absolute, _, 64) => elf::R_SPARC_UA64,
-                _ => {
-                    return Err(Error(format!("unimplemented relocation {:?}", reloc)));
-                }
+                _ => return unsupported_reloc(),
             },
             Architecture::Xtensa => match (kind, encoding, size) {
                 (RelocationKind::Absolute, _, 32) => elf::R_XTENSA_32,
                 (RelocationKind::Relative, RelocationEncoding::Generic, 32) => {
                     elf::R_XTENSA_32_PCREL
                 }
-                _ => {
-                    return Err(Error(format!("unimplemented relocation {:?}", reloc)));
-                }
+                _ => return unsupported_reloc(),
             },
-            _ => {
-                return Err(Error(format!("unimplemented relocation {:?}", reloc)));
-            }
+            _ => return unsupported_reloc(),
         };
         reloc.flags = RelocationFlags::Elf { r_type };
         Ok(())
