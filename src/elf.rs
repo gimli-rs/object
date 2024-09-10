@@ -6270,6 +6270,172 @@ pub const R_XTENSA_NDIFF8: u32 = 60;
 pub const R_XTENSA_NDIFF16: u32 = 61;
 pub const R_XTENSA_NDIFF32: u32 = 62;
 
+// E2K values for `FileHeader*::e_flags`.
+pub const EF_E2K_IPD: u32 = 3;
+pub const EF_E2K_X86APP: u32 = 4;
+pub const EF_E2K_4MB_PAGES: u32 = 8;
+pub const EF_E2K_INCOMPAT: u32 = 16;
+pub const EF_E2K_PM: u32 = 32;
+pub const EF_E2K_PACK_SEGMENTS: u32 = 64;
+
+/// Encode `E_E2K_MACH_*` into `FileHeader*::e_flags`.
+pub const fn ef_e2k_mach_to_flag(e_flags: u32, x: u32) -> u32 {
+    (e_flags & 0xffffff) | (x << 24)
+}
+
+/// Decode `E_E2K_MACH_*` from `FileHeader*::e_flags`.
+pub const fn ef_e2k_flag_to_mach(e_flags: u32) -> u32 {
+    e_flags >> 24
+}
+
+// Codes of supported E2K machines.
+
+/// -march=generic code.
+///
+/// Legacy. Shouldn't be created nowadays.
+pub const E_E2K_MACH_BASE: u32 = 0;
+/// -march=elbrus-v1 code.
+///
+/// Legacy. Shouldn't be created nowadays.
+pub const E_E2K_MACH_EV1: u32 = 1;
+/// -march=elbrus-v2 code.
+pub const E_E2K_MACH_EV2: u32 = 2;
+/// -march=elbrus-v3 code.
+pub const E_E2K_MACH_EV3: u32 = 3;
+/// -march=elbrus-v4 code.
+pub const E_E2K_MACH_EV4: u32 = 4;
+/// -march=elbrus-v5 code.
+pub const E_E2K_MACH_EV5: u32 = 5;
+/// -march=elbrus-v6 code.
+pub const E_E2K_MACH_EV6: u32 = 6;
+/// -march=elbrus-v7 code.
+pub const E_E2K_MACH_EV7: u32 = 7;
+/// -mtune=elbrus-8c code.
+pub const E_E2K_MACH_8C: u32 = 19;
+/// -mtune=elbrus-1c+ code.
+pub const E_E2K_MACH_1CPLUS: u32 = 20;
+/// -mtune=elbrus-12c code.
+pub const E_E2K_MACH_12C: u32 = 21;
+/// -mtune=elbrus-16c code.
+pub const E_E2K_MACH_16C: u32 = 22;
+/// -mtune=elbrus-2c3 code.
+pub const E_E2K_MACH_2C3: u32 = 23;
+/// -mtune=elbrus-48c code.
+pub const E_E2K_MACH_48C: u32 = 24;
+/// -mtune=elbrus-8v7 code.
+pub const E_E2K_MACH_8V7: u32 = 25;
+
+// E2K values `Rel*::r_type`.
+
+/// Direct 32 bit.
+pub const R_E2K_32_ABS: u32 = 0;
+/// PC relative 32 bit.
+pub const R_E2K_32_PC: u32 = 2;
+/// 32-bit offset of AP GOT entry.
+pub const R_E2K_AP_GOT: u32 = 3;
+/// 32-bit offset of PL GOT entry.
+pub const R_E2K_PL_GOT: u32 = 4;
+/// Create PLT entry.
+pub const R_E2K_32_JMP_SLOT: u32 = 8;
+/// Copy relocation, 32-bit case.
+pub const R_E2K_32_COPY: u32 = 9;
+/// Adjust by program base, 32-bit case.
+pub const R_E2K_32_RELATIVE: u32 = 10;
+/// Adjust indirectly by program base, 32-bit case.
+pub const R_E2K_32_IRELATIVE: u32 = 11;
+/// Size of symbol plus 32-bit addend.
+pub const R_E2K_32_SIZE: u32 = 12;
+/// Symbol value if resolved by the definition in the same
+/// compilation unit or NULL otherwise, 32-bit case.
+pub const R_E2K_32_DYNOPT: u32 = 13;
+/// Direct 64 bit.
+pub const R_E2K_64_ABS: u32 = 50;
+/// Direct 64 bit for literal.
+pub const R_E2K_64_ABS_LIT: u32 = 51;
+/// PC relative 64 bit for literal.
+pub const R_E2K_64_PC_LIT: u32 = 54;
+/// Create PLT entry, 64-bit case.
+pub const R_E2K_64_JMP_SLOT: u32 = 63;
+/// Copy relocation, 64-bit case.
+pub const R_E2K_64_COPY: u32 = 64;
+/// Adjust by program base, 64-bit case.
+pub const R_E2K_64_RELATIVE: u32 = 65;
+/// Adjust by program base for literal, 64-bit case.
+pub const R_E2K_64_RELATIVE_LIT: u32 = 66;
+/// Adjust indirectly by program base, 64-bit case.
+pub const R_E2K_64_IRELATIVE: u32 = 67;
+/// Size of symbol plus 64-bit addend.
+pub const R_E2K_64_SIZE: u32 = 68;
+/// 64-bit offset of the symbol from GOT.
+pub const R_E2K_64_GOTOFF: u32 = 69;
+
+/// GOT entry for ID of module containing symbol.
+pub const R_E2K_TLS_GDMOD: u32 = 70;
+/// GOT entry for offset in module TLS block.
+pub const R_E2K_TLS_GDREL: u32 = 71;
+/// Static TLS block offset GOT entry.
+pub const R_E2K_TLS_IE: u32 = 74;
+/// Offset relative to static TLS block, 32-bit case.
+pub const R_E2K_32_TLS_LE: u32 = 75;
+/// Offset relative to static TLS block, 64-bit case.
+pub const R_E2K_64_TLS_LE: u32 = 76;
+/// ID of module containing symbol, 32-bit case.
+pub const R_E2K_TLS_32_DTPMOD: u32 = 80;
+/// Offset in module TLS block, 32-bit case.
+pub const R_E2K_TLS_32_DTPREL: u32 = 81;
+/// ID of module containing symbol, 64-bit case.
+pub const R_E2K_TLS_64_DTPMOD: u32 = 82;
+/// Offset in module TLS block, 64-bit case.
+pub const R_E2K_TLS_64_DTPREL: u32 = 83;
+/// Offset in static TLS block, 32-bit case.
+pub const R_E2K_TLS_32_TPREL: u32 = 84;
+/// Offset in static TLS block, 64-bit case.
+pub const R_E2K_TLS_64_TPREL: u32 = 85;
+
+/// Direct AP.
+pub const R_E2K_AP: u32 = 100;
+/// Direct PL.
+pub const R_E2K_PL: u32 = 101;
+
+/// 32-bit offset of the symbol's entry in GOT.
+pub const R_E2K_GOT: u32 = 108;
+/// 32-bit offset of the symbol from GOT.
+pub const R_E2K_GOTOFF: u32 = 109;
+/// PC relative 28 bit for DISP.
+pub const R_E2K_DISP: u32 = 110;
+/// Prefetch insn line containing the label (symbol).
+pub const R_E2K_PREF: u32 = 111;
+/// No reloc.
+pub const R_E2K_NONE: u32 = 112;
+/// 32-bit offset of the symbol's entry in .got.plt.
+pub const R_E2K_GOTPLT: u32 = 114;
+/// Is symbol resolved locally during the link.
+/// The result is encoded in 5-bit ALS.src1.
+pub const R_E2K_ISLOCAL: u32 = 115;
+/// Is symbol resloved locally during the link.
+/// The result is encoded in a long 32-bit LTS.
+pub const R_E2K_ISLOCAL32: u32 = 118;
+/// The symbol's offset from GOT encoded within a 64-bit literal.
+pub const R_E2K_64_GOTOFF_LIT: u32 = 256;
+/// Symbol value if resolved by the definition in the same
+/// compilation unit or NULL otherwise, 64-bit case.
+pub const R_E2K_64_DYNOPT: u32 = 257;
+/// PC relative 64 bit in data.
+pub const R_E2K_64_PC: u32 = 258;
+
+// E2K values for `Dyn32::d_tag`.
+
+pub const DT_E2K_LAZY: u32 = DT_LOPROC + 1;
+pub const DT_E2K_LAZY_GOT: u32 = DT_LOPROC + 3;
+
+pub const DT_E2K_INIT_GOT: u32 = DT_LOPROC + 0x101c;
+pub const DT_E2K_EXPORT_PL: u32 = DT_LOPROC + 0x101d;
+pub const DT_E2K_EXPORT_PLSZ: u32 = DT_LOPROC + 0x101e;
+pub const DT_E2K_REAL_PLTGOT: u32 = DT_LOPROC + 0x101f;
+pub const DT_E2K_NO_SELFINIT: u32 = DT_LOPROC + 0x1020;
+
+pub const DT_E2K_NUM: u32 = 0x1021;
+
 #[allow(non_upper_case_globals)]
 pub const Tag_File: u8 = 1;
 #[allow(non_upper_case_globals)]

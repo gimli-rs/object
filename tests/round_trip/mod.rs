@@ -265,6 +265,8 @@ fn elf_any() {
         (Architecture::Avr, Endianness::Little),
         (Architecture::Bpf, Endianness::Little),
         (Architecture::Csky, Endianness::Little),
+        (Architecture::E2K32, Endianness::Little),
+        (Architecture::E2K64, Endianness::Little),
         (Architecture::I386, Endianness::Little),
         (Architecture::X86_64, Endianness::Little),
         (Architecture::X86_64_X32, Endianness::Little),
