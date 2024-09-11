@@ -789,6 +789,17 @@ impl<'data, 'file, R: ReadRef<'data>> ObjectSection<'data> for Section<'data, 'f
         }
     }
 
+    fn dynamic_relocations(&self) -> SectionRelocationIterator<'data, 'file, R> {
+        SectionRelocationIterator {
+            inner: map_inner!(
+                self.inner,
+                SectionInternal,
+                SectionRelocationIteratorInternal,
+                |x| x.dynamic_relocations()
+            ),
+        }
+    }
+
     fn relocation_map(&self) -> Result<RelocationMap> {
         with_inner!(self.inner, SectionInternal, |x| x.relocation_map())
     }

@@ -123,6 +123,13 @@ Symbols
 86: Symbol { name: "printf@@GLIBC_2.17", address: 0, size: 0, kind: Text, section: Undefined, scope: Unknown, weak: false, flags: Elf { st_info: 12, st_other: 0 } }
 87: Symbol { name: "_init", address: 598, size: 0, kind: Text, section: Section(SectionIndex(b)), scope: Dynamic, weak: false, flags: Elf { st_info: 12, st_other: 0 } }
 
+.got dynamic relocations
+(10f98, Relocation { kind: Unknown, encoding: Generic, size: 0, target: Symbol(SymbolIndex(4)), addend: 0, implicit_addend: false, flags: Elf { r_type: 402 } })
+(10fa0, Relocation { kind: Unknown, encoding: Generic, size: 0, target: Symbol(SymbolIndex(5)), addend: 0, implicit_addend: false, flags: Elf { r_type: 402 } })
+(10fa8, Relocation { kind: Unknown, encoding: Generic, size: 0, target: Symbol(SymbolIndex(6)), addend: 0, implicit_addend: false, flags: Elf { r_type: 402 } })
+(10fb0, Relocation { kind: Unknown, encoding: Generic, size: 0, target: Symbol(SymbolIndex(7)), addend: 0, implicit_addend: false, flags: Elf { r_type: 402 } })
+(10fb8, Relocation { kind: Unknown, encoding: Generic, size: 0, target: Symbol(SymbolIndex(9)), addend: 0, implicit_addend: false, flags: Elf { r_type: 402 } })
+
 Dynamic symbols
 1: Symbol { name: "", address: 598, size: 0, kind: Section, section: Section(SectionIndex(b)), scope: Compilation, weak: false, flags: Elf { st_info: 3, st_other: 0 } }
 2: Symbol { name: "", address: 11000, size: 0, kind: Section, section: Section(SectionIndex(15)), scope: Compilation, weak: false, flags: Elf { st_info: 3, st_other: 0 } }

@@ -190,6 +190,7 @@ where
     /// The current pointer in the chain of relocation sections.
     pub(super) section_index: SectionIndex,
     pub(super) file: &'file ElfFile<'data, Elf, R>,
+    pub(super) relocation_sections: &'file RelocationSections,
     pub(super) relocations: Option<ElfRelaIterator<'data, Elf>>,
 }
 
@@ -211,7 +212,7 @@ where
                 }
                 self.relocations = None;
             }
-            self.section_index = self.file.relocations.get(self.section_index)?;
+            self.section_index = self.relocation_sections.get(self.section_index)?;
             // The construction of RelocationSections ensures section_index is valid.
             let section = self.file.sections.section(self.section_index).unwrap();
             match section.sh_type(endian) {

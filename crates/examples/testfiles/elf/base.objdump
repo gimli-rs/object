@@ -102,6 +102,9 @@ Symbols
 62: Symbol { name: "__cxa_finalize@@GLIBC_2.2.5", address: 0, size: 0, kind: Text, section: Undefined, scope: Unknown, weak: true, flags: Elf { st_info: 22, st_other: 0 } }
 63: Symbol { name: "_init", address: 520, size: 0, kind: Text, section: Section(SectionIndex(c)), scope: Dynamic, weak: false, flags: Elf { st_info: 12, st_other: 0 } }
 
+.got dynamic relocations
+(200fd0, Relocation { kind: Unknown, encoding: Generic, size: 0, target: Symbol(SymbolIndex(2)), addend: 0, implicit_addend: false, flags: Elf { r_type: 7 } })
+
 Dynamic symbols
 1: Symbol { name: "_ITM_deregisterTMCloneTable", address: 0, size: 0, kind: Unknown, section: Undefined, scope: Unknown, weak: true, flags: Elf { st_info: 20, st_other: 0 } }
 2: Symbol { name: "printf", address: 0, size: 0, kind: Text, section: Undefined, scope: Unknown, weak: false, flags: Elf { st_info: 12, st_other: 0 } }

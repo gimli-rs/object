@@ -663,6 +663,16 @@ where
         ElfSectionRelocationIterator {
             section_index: self.index,
             file: self.file,
+            relocation_sections: &self.file.relocations,
+            relocations: None,
+        }
+    }
+
+    fn dynamic_relocations(&self) -> ElfSectionRelocationIterator<'data, 'file, Elf, R> {
+        ElfSectionRelocationIterator {
+            section_index: self.index,
+            file: self.file,
+            relocation_sections: &self.file.dynamic_relocations,
             relocations: None,
         }
     }

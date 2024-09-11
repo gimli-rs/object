@@ -206,6 +206,13 @@ where
         }
     }
 
+    fn dynamic_relocations(&self) -> Self::RelocationIterator {
+        XcoffRelocationIterator {
+            file: self.file,
+            relocations: [].iter(),
+        }
+    }
+
     fn relocation_map(&self) -> read::Result<RelocationMap> {
         RelocationMap::new(self.file, self)
     }

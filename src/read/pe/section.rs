@@ -320,6 +320,10 @@ where
         PeRelocationIterator(PhantomData)
     }
 
+    fn dynamic_relocations(&self) -> PeRelocationIterator<'data, 'file, R> {
+        PeRelocationIterator(PhantomData)
+    }
+
     fn relocation_map(&self) -> read::Result<RelocationMap> {
         RelocationMap::new(self.file, self)
     }

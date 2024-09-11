@@ -736,6 +736,10 @@ impl<'data, 'file, R: ReadRef<'data>> ObjectSection<'data> for WasmSection<'data
         WasmRelocationIterator(PhantomData)
     }
 
+    fn dynamic_relocations(&self) -> WasmRelocationIterator<'data, 'file, R> {
+        WasmRelocationIterator(PhantomData)
+    }
+
     fn relocation_map(&self) -> read::Result<RelocationMap> {
         RelocationMap::new(self.file, self)
     }

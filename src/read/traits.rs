@@ -454,6 +454,15 @@ pub trait ObjectSection<'data>: read::private::Sealed {
     /// Get the relocations for this section.
     fn relocations(&self) -> Self::RelocationIterator;
 
+    /// Get the dynamic relocations for this section.
+    ///
+    /// Symbol indices in these relocations refer to the dynamic symbol table.
+    ///
+    /// Only ELF has dynamic relocations. This may not return all of the dynamic
+    /// relocations for the section; it can only return relocations from sections
+    /// that have their `sh_info` set to the index of this section.
+    fn dynamic_relocations(&self) -> Self::RelocationIterator;
+
     /// Construct a relocation map for this section.
     fn relocation_map(&self) -> Result<RelocationMap>;
 

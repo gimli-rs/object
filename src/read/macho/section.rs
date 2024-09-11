@@ -226,6 +226,13 @@ where
         }
     }
 
+    fn dynamic_relocations(&self) -> MachORelocationIterator<'data, 'file, Mach, R> {
+        MachORelocationIterator {
+            file: self.file,
+            relocations: [].iter(),
+        }
+    }
+
     fn relocation_map(&self) -> read::Result<RelocationMap> {
         RelocationMap::new(self.file, self)
     }

@@ -414,6 +414,13 @@ impl<'data, 'file, R: ReadRef<'data>, Coff: CoffHeader> ObjectSection<'data>
         }
     }
 
+    fn dynamic_relocations(&self) -> CoffRelocationIterator<'data, 'file, R, Coff> {
+        CoffRelocationIterator {
+            file: self.file,
+            iter: [].iter(),
+        }
+    }
+
     fn relocation_map(&self) -> read::Result<RelocationMap> {
         RelocationMap::new(self.file, self)
     }

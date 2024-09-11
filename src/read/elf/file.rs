@@ -46,6 +46,7 @@ where
     pub(super) segments: &'data [Elf::ProgramHeader],
     pub(super) sections: SectionTable<'data, Elf, R>,
     pub(super) relocations: RelocationSections,
+    pub(super) dynamic_relocations: RelocationSections,
     pub(super) symbols: SymbolTable<'data, Elf, R>,
     pub(super) dynamic_symbols: SymbolTable<'data, Elf, R>,
 }
@@ -66,6 +67,8 @@ where
         let dynamic_symbols = sections.symbols(endian, data, elf::SHT_DYNSYM)?;
         // The API we provide requires a mapping from section to relocations, so build it now.
         let relocations = sections.relocation_sections(endian, symbols.section())?;
+        let dynamic_relocations =
+            sections.relocation_sections(endian, dynamic_symbols.section())?;
 
         Ok(ElfFile {
             endian,
@@ -74,6 +77,7 @@ where
             segments,
             sections,
             relocations,
+            dynamic_relocations,
             symbols,
             dynamic_symbols,
         })

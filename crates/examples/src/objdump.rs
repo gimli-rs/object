@@ -211,6 +211,16 @@ fn dump_parsed_object<W: Write, E: Write>(w: &mut W, e: &mut E, file: &object::F
                 writeln!(w, "{:x?}", relocation)?;
             }
         }
+        if section.dynamic_relocations().next().is_some() {
+            writeln!(
+                w,
+                "\n{} dynamic relocations",
+                section.name().unwrap_or("<invalid name>")
+            )?;
+            for relocation in section.dynamic_relocations() {
+                writeln!(w, "{:x?}", relocation)?;
+            }
+        }
     }
 
     writeln!(w)?;
