@@ -994,13 +994,30 @@ impl<'data> CompressedData<'data> {
                             .read_error("Invalid zlib compressed data")?;
                     }
                     CompressionFormat::Zstandard => {
-                        let mut decoder = ruzstd::StreamingDecoder::new(self.data)
-                            .ok()
-                            .read_error("Invalid zstd compressed data")?;
-                        decoder
-                            .read_to_end(&mut decompressed)
-                            .ok()
-                            .read_error("Invalid zstd compressed data")?;
+                        let mut input = self.data;
+                        while !input.is_empty() {
+                            let mut decoder = match ruzstd::StreamingDecoder::new(&mut input) {
+                                Ok(decoder) => decoder,
+                                Err(
+                                    ruzstd::frame_decoder::FrameDecoderError::ReadFrameHeaderError(
+                                        ruzstd::frame::ReadFrameHeaderError::SkipFrame {
+                                            length,
+                                            ..
+                                        },
+                                    ),
+                                ) => {
+                                    input = &input
+                                        .get(length as usize..)
+                                        .read_error("Invalid zstd compressed data")?;
+                                    continue;
+                                }
+                                x => x.ok().read_error("Invalid zstd compressed data")?,
+                            };
+                            decoder
+                                .read_to_end(&mut decompressed)
+                                .ok()
+                                .read_error("Invalid zstd compressed data")?;
+                        }
                     }
                     _ => unreachable!(),
                 }
