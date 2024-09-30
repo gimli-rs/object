@@ -82,7 +82,7 @@ impl<'a> Object<'a> {
     }
 
     pub(crate) fn coff_translate_relocation(&mut self, reloc: &mut Relocation) -> Result<()> {
-        let (mut kind, _encoding, size) = if let RelocationFlags::Generic {
+        let (mut kind, encoding, size) = if let RelocationFlags::Generic {
             kind,
             encoding,
             size,
@@ -148,13 +148,16 @@ impl<'a> Object<'a> {
                     return Err(Error(format!("unimplemented relocation {:?}", reloc)));
                 }
             },
-            Architecture::Aarch64 => match (kind, size) {
-                (RelocationKind::Absolute, 32) => coff::IMAGE_REL_ARM64_ADDR32,
-                (RelocationKind::ImageOffset, 32) => coff::IMAGE_REL_ARM64_ADDR32NB,
-                (RelocationKind::SectionIndex, 16) => coff::IMAGE_REL_ARM64_SECTION,
-                (RelocationKind::SectionOffset, 32) => coff::IMAGE_REL_ARM64_SECREL,
-                (RelocationKind::Absolute, 64) => coff::IMAGE_REL_ARM64_ADDR64,
-                (RelocationKind::Relative, 32) => coff::IMAGE_REL_ARM64_REL32,
+            Architecture::Aarch64 => match (kind, encoding, size) {
+                (RelocationKind::Absolute, _, 32) => coff::IMAGE_REL_ARM64_ADDR32,
+                (RelocationKind::ImageOffset, _, 32) => coff::IMAGE_REL_ARM64_ADDR32NB,
+                (RelocationKind::SectionIndex, _, 16) => coff::IMAGE_REL_ARM64_SECTION,
+                (RelocationKind::SectionOffset, _, 32) => coff::IMAGE_REL_ARM64_SECREL,
+                (RelocationKind::Absolute, _, 64) => coff::IMAGE_REL_ARM64_ADDR64,
+                (RelocationKind::Relative, _, 32) => coff::IMAGE_REL_ARM64_REL32,
+                (RelocationKind::Relative, RelocationEncoding::AArch64Call, 26) => {
+                    coff::IMAGE_REL_ARM64_BRANCH26
+                }
                 _ => {
                     return Err(Error(format!("unimplemented relocation {:?}", reloc)));
                 }
