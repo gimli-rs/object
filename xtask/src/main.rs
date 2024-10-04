@@ -185,7 +185,6 @@ fn cmd_cross() -> Result<(), DynError> {
 }
 
 fn cmd_msrv() -> Result<(), DynError> {
-    cargo(&["update", "-p", "ahash", "--precise", "0.8.7"])?;
     cmd_with(
         "cargo",
         &["+1.65.0", "test", "-p", "object", "--no-default-features", "--features", "read,write,build,std"],
@@ -193,7 +192,6 @@ fn cmd_msrv() -> Result<(), DynError> {
             cmd.env("CARGO_NET_GIT_FETCH_WITH_CLI", "true");
         },
     )?;
-    cargo(&["update", "-p", "ahash"])?;
     // wasmparser needs 1.76.0 and ruzstd needs 1.73
     cmd_with(
         "cargo",

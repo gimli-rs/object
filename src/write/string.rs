@@ -3,7 +3,7 @@ use alloc::vec::Vec;
 #[cfg(feature = "write_std")]
 type IndexSet<K> = indexmap::IndexSet<K>;
 #[cfg(not(feature = "write_std"))]
-type IndexSet<K> = indexmap::IndexSet<K, hashbrown::hash_map::DefaultHashBuilder>;
+type IndexSet<K> = indexmap::IndexSet<K, hashbrown::DefaultHashBuilder>;
 
 /// An identifier for an entry in a string table.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
