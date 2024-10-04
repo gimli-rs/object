@@ -2,6 +2,25 @@
 
 --------------------------------------------------------------------------------
 
+## 0.36.5
+
+Released 2024/10/04.
+
+### Added
+
+* Added `Architecture::E2K32` and `Architecture::E2K64`.
+  [#727](https://github.com/gimli-rs/object/pull/727)
+
+* Added read and write support for `pe::IMAGE_REL_ARM64_BRANCH26`.
+  [#731](https://github.com/gimli-rs/object/pull/731)
+
+### Changed
+
+* Fixed decompression of multi-frame Zstandard data in `read::CompressedData::decompress`.
+  [#730](https://github.com/gimli-rs/object/pull/730)
+
+--------------------------------------------------------------------------------
+
 ## 0.36.4
 
 Released 2024/08/30.
