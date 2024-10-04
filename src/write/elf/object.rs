@@ -171,7 +171,7 @@ impl<'a> Object<'a> {
             return Ok(());
         };
 
-        let unsupported_reloc = || Err(Error(format!("unimplemented relocation {:?}", reloc)));
+        let unsupported_reloc = || Err(Error(format!("unimplemented ELF relocation {:?}", reloc)));
         let r_type = match self.architecture {
             Architecture::Aarch64 => match (kind, encoding, size) {
                 (K::Absolute, E::Generic, 64) => elf::R_AARCH64_ABS64,
@@ -345,7 +345,12 @@ impl<'a> Object<'a> {
                 (K::Relative, E::Generic, 32) => elf::R_XTENSA_32_PCREL,
                 _ => return unsupported_reloc(),
             },
-            _ => return unsupported_reloc(),
+            _ => {
+                return Err(Error(format!(
+                    "unimplemented architecture {:?}",
+                    self.architecture
+                )));
+            }
         };
         reloc.flags = RelocationFlags::Elf { r_type };
         Ok(())
