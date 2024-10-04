@@ -1006,7 +1006,7 @@ impl<'data> CompressedData<'data> {
                                         },
                                     ),
                                 ) => {
-                                    input = &input
+                                    input = input
                                         .get(length as usize..)
                                         .read_error("Invalid zstd compressed data")?;
                                     continue;
