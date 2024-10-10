@@ -217,6 +217,7 @@ impl<'data> Builder<'data> {
                 builder.gnu_hash_bloom_count = hash.bloom_count.get(endian);
                 builder.gnu_hash_bucket_count = hash.bucket_count.get(endian);
             }
+            let name = sections.section_name(endian, section)?;
             let data = match section.sh_type(endian) {
                 elf::SHT_NOBITS => SectionData::UninitializedData(section.sh_size(endian).into()),
                 elf::SHT_PROGBITS
@@ -261,6 +262,10 @@ impl<'data> Builder<'data> {
                         SectionData::DynamicString
                     } else if index == section_strings_index {
                         SectionData::SectionString
+                    } else if name == b".annobin.notes" {
+                        // Not actually a string table because nothing references the strings.
+                        // We simply need to preserve the data (similar to a .comment section).
+                        SectionData::Data(section.data(endian, data)?.into())
                     } else {
                         return Err(Error(format!(
                             "Unsupported SHT_STRTAB section at index {}",
@@ -341,7 +346,7 @@ impl<'data> Builder<'data> {
             builder.sections.push(Section {
                 id,
                 delete: false,
-                name: sections.section_name(endian, section)?.into(),
+                name: name.into(),
                 sh_type: section.sh_type(endian),
                 sh_flags,
                 sh_addr,
