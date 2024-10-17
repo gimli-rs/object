@@ -712,6 +712,8 @@ pub const SHT_GROUP: u32 = 17;
 pub const SHT_SYMTAB_SHNDX: u32 = 18;
 /// Start of OS-specific section types.
 pub const SHT_LOOS: u32 = 0x6000_0000;
+/// LLVM-style dependent libraries.
+pub const SHT_LLVM_DEPENDENT_LIBRARIES: u32 = 0x6fff4c04;
 /// Object attributes.
 pub const SHT_GNU_ATTRIBUTES: u32 = 0x6fff_fff5;
 /// GNU-style hash table.
