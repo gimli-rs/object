@@ -223,7 +223,10 @@ impl<'data> Builder<'data> {
                 elf::SHT_PROGBITS
                 | elf::SHT_INIT_ARRAY
                 | elf::SHT_FINI_ARRAY
-                | elf::SHT_PREINIT_ARRAY => SectionData::Data(section.data(endian, data)?.into()),
+                | elf::SHT_PREINIT_ARRAY
+                | elf::SHT_LLVM_DEPENDENT_LIBRARIES => {
+                    SectionData::Data(section.data(endian, data)?.into())
+                }
                 elf::SHT_REL | elf::SHT_RELA => relocations,
                 elf::SHT_SYMTAB => {
                     if index == symbols.section() {
