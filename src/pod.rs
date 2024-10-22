@@ -31,7 +31,7 @@ pub fn from_bytes<T: Pod>(data: &[u8]) -> Result<(&T, &[u8])> {
     let size = mem::size_of::<T>();
     let tail = data.get(size..).ok_or(())?;
     let ptr = data.as_ptr();
-    // if (ptr as usize) % 8 != 0 {
+    // if (ptr as usize) % mem::align_of::<T>() != 0 {
     //     return Err(());
     // }
     // Safety:

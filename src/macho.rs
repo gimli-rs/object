@@ -9,7 +9,6 @@
 
 use crate::endian::{BigEndian, Endian, U64Bytes, U16, U32, U64};
 use crate::pod::Pod;
-use bitfield::bitfield;
 use std::fmt::{self, Debug};
 
 // Definitions from "/usr/include/mach/machine.h".
@@ -313,24 +312,6 @@ impl Debug for Ptrauth {
 
 // Definitions from https://opensource.apple.com/source/dyld/dyld-210.2.3/launch-cache/dyld_cache_format.h.auto.html
 
-bitfield! {
-    #[derive(Copy, Clone)]
-    pub struct DyldCacheHeaderFlags(u32);
-    impl Debug;
-
-    /// dyld3::closure::kFormatVersion
-    pub format_version, _: 7, 0;
-    /// dyld should expect the dylib exists on disk and to compare inode/mtime to see if cache is valid
-    pub dylibs_expected_on_disk, _: 8;
-    /// for simulator of specified platform
-    pub simulator, _: 9;
-    /// 0 for B&I built cache, 1 for locally built cache
-    pub locally_built_cache, _: 10;
-    /// some dylib in cache was built using chained fixups, so patch tables must be used for overrides
-    pub built_from_chained_fixups, _: 11;
-    padding, _: 31, 12;
-}
-
 /// The dyld cache header.
 /// Corresponds to struct dyld_cache_header from dyld_cache_format.h.
 /// This header has grown over time. Only the fields up to and including dyld_base_address
@@ -538,50 +519,24 @@ pub struct DyldCacheImageInfo<E: Endian> {
 }
 
 /// Corresponds to struct dyld_cache_slide_pointer5 from dyld_cache_format.h.
-#[derive(Clone, Copy)]
-pub union DyldCacheSlidePointer5 {
-    pub raw: u64,
-    pub regular: DyldChainedPtrArm64eSharedCacheRebase,
-    pub auth: DyldChainedPtrArm64eSharedCacheAuthRebase,
-}
-
-impl Debug for DyldCacheSlidePointer5 {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        unsafe {
-            if self.auth.auth() {
-                f.debug_struct("DyldChainedPtrArm64eSharedCacheAuthRebase")
-                    .field("runtime_offset", &self.auth.runtime_offset())
-                    .field("diversity", &self.auth.diversity())
-                    .field("addr_div", &self.auth.addr_div())
-                    .field("key_is_data", &self.auth.key_is_data())
-                    .field("next", &self.auth.next())
-                    .finish()
-            } else {
-                f.debug_struct("DyldChainedPtrArm64eSharedCacheRebase")
-                    .field("runtime_offset", &self.regular.runtime_offset())
-                    .field("high8", &self.regular.high8())
-                    .field("next", &self.regular.next())
-                    .finish()
-            }
-        }
-    }
+#[derive(Debug, Clone, Copy)]
+pub enum DyldCacheSlidePointer5 {
+    Regular(DyldChainedPtrArm64eSharedCacheRebase),
+    Auth(DyldChainedPtrArm64eSharedCacheAuthRebase),
 }
 
 impl DyldCacheSlidePointer5 {
     pub fn value(&self, value_add: u64) -> u64 {
-        unsafe {
-            if self.auth.auth() {
-                self.auth.value(value_add)
-            } else {
-                self.regular.value(value_add)
-            }
+        match self {
+            Self::Regular(regular) => regular.value(value_add),
+            Self::Auth(auth) => auth.value(value_add),
         }
     }
 
     pub fn auth(&self) -> Option<Ptrauth> {
-        unsafe {
-            if self.auth.auth() {
-                let key = if self.auth.key_is_data() {
+        match self {
+            Self::Auth(auth) => {
+                let key = if auth.key_is_data() {
                     PtrauthKey::DA
                 } else {
                     PtrauthKey::IA
@@ -589,69 +544,79 @@ impl DyldCacheSlidePointer5 {
 
                 Some(Ptrauth {
                     key,
-                    diversity: self.auth.diversity(),
-                    addr_div: self.auth.addr_div(),
+                    diversity: auth.diversity(),
+                    addr_div: auth.addr_div(),
                 })
-            } else {
-                None
             }
+            _ => None,
         }
     }
 
-    pub fn next(&self) -> u64 {
-        unsafe {
-            if self.auth.auth() {
-                self.auth.next()
-            } else {
-                self.regular.next()
-            }
+    pub fn next(&self) -> u16 {
+        match self {
+            Self::Regular(regular) => regular.next(),
+            Self::Auth(auth) => auth.next(),
         }
     }
 }
 
-bitfield! {
-    /// DYLD_CHAINED_PTR_ARM64E_SHARED_CACHE
-    #[derive(Copy, Clone)]
-    pub struct DyldChainedPtrArm64eSharedCacheRebase(u64);
-    impl Debug;
-
-    /// offset from the start of the shared cache
-    pub runtime_offset, _: 33, 0;
-    pub high8, _: 41, 34;
-    unused, _: 51, 42;
-    /// 8-byte stide
-    pub next, _: 62, 52;
-    /// == 0
-    auth, _: 63;
+impl From<u64> for DyldCacheSlidePointer5 {
+    fn from(pointer: u64) -> Self {
+        let auth = (pointer & 0x8000_0000_0000_0000) != 0;
+        match auth {
+            false => Self::Regular(DyldChainedPtrArm64eSharedCacheRebase(pointer)),
+            true => Self::Auth(DyldChainedPtrArm64eSharedCacheAuthRebase(pointer)),
+        }
+    }
 }
+
+/// DYLD_CHAINED_PTR_ARM64E_SHARED_CACHE
+#[derive(Debug, Copy, Clone)]
+pub struct DyldChainedPtrArm64eSharedCacheRebase(u64);
 
 impl DyldChainedPtrArm64eSharedCacheRebase {
+    pub fn runtime_offset(&self) -> u64 {
+        self.0 & 0x3_ffff_ffff
+    }
+
+    pub fn high8(&self) -> u8 {
+        ((self.0 >> 34) & 0xff) as u8
+    }
+
+    pub fn next(&self) -> u16 {
+        ((self.0 >> 52) & 0x7ff) as u16
+    }
+
     pub fn value(&self, value_add: u64) -> u64 {
-        self.high8() << 56 | (self.runtime_offset() + value_add)
+        (self.high8() as u64) << 56 | (self.runtime_offset() + value_add)
     }
 }
 
-bitfield! {
-    /// DYLD_CHAINED_PTR_ARM64E_SHARED_CACHE
-    #[derive(Copy, Clone)]
-    pub struct DyldChainedPtrArm64eSharedCacheAuthRebase(u64);
-    impl Debug;
-
-    /// offset from the start of the shared cache
-    pub runtime_offset, _: 33, 0;
-
-    pub u16, diversity, _: 49, 34;
-
-    pub addr_div, _: 50;
-    /// implicitly always the 'A' key.  0 -> IA.  1 -> DA
-    pub key_is_data, _: 51;
-    /// 8-byte stide
-    pub next, _: 62, 52;
-    /// == 1
-    auth, _: 63;
-}
+/// DYLD_CHAINED_PTR_ARM64E_SHARED_CACHE
+#[derive(Debug, Copy, Clone)]
+pub struct DyldChainedPtrArm64eSharedCacheAuthRebase(u64);
 
 impl DyldChainedPtrArm64eSharedCacheAuthRebase {
+    pub fn runtime_offset(&self) -> u64 {
+        self.0 & 0x3ffffffff
+    }
+
+    pub fn diversity(&self) -> u16 {
+        ((self.0 >> 34) & 0xffff) as u16
+    }
+
+    pub fn addr_div(&self) -> bool {
+        ((self.0 >> 50) & 0x1) != 0
+    }
+
+    pub fn key_is_data(&self) -> bool {
+        ((self.0 >> 51) & 0x1) != 0
+    }
+
+    pub fn next(&self) -> u16 {
+        ((self.0 >> 52) & 0x7ff) as u16
+    }
+
     pub fn value(&self, value_add: u64) -> u64 {
         self.runtime_offset() + value_add
     }

@@ -260,7 +260,7 @@ where
                 page_index,
                 iter,
             } => loop {
-                if let Some(reloc) = iter.as_mut().map(|iter| iter.next()).flatten() {
+                if let Some(reloc) = iter.as_mut().and_then(|iter| iter.next()) {
                     return Some(reloc);
                 }
 
@@ -332,11 +332,10 @@ where
                 page_offset,
             } => {
                 if let Some(offset) = *page_offset {
-                    let pointer = macho::DyldCacheSlidePointer5 {
-                        raw: data.read_at::<U64<E>>(offset).unwrap().get(*endian),
-                    };
+                    let pointer: macho::DyldCacheSlidePointer5 =
+                        data.read_at::<U64<E>>(offset).unwrap().get(*endian).into();
 
-                    let next = pointer.next();
+                    let next = pointer.next() as u64;
                     if next == 0 {
                         *page_offset = None;
                     } else {
@@ -774,7 +773,7 @@ impl<E: Endian> macho::DyldCacheMappingAndSlideInfo<E> {
                     5 => {
                         let slide = data
                             .read_at::<macho::DyldCacheSlideInfo5<E>>(slide_info_file_offset)
-                            .read_error("Invalid dyld cache header size or alignment")?;
+                            .read_error("Invalid dyld cache slide info size or alignment")?;
                         let page_starts_offset = slide_info_file_offset
                             .checked_add(mem::size_of::<macho::DyldCacheSlideInfo5<E>>() as u64)
                             .unwrap();
@@ -783,7 +782,7 @@ impl<E: Endian> macho::DyldCacheMappingAndSlideInfo<E> {
                                 page_starts_offset,
                                 slide.page_starts_count.get(endian) as usize,
                             )
-                            .read_error("Invalid dyld cache header size or alignment")?;
+                            .read_error("Invalid page starts size or alignment")?;
                         Ok(Some(DyldCacheSlideInfoSlice::V5(slide, page_starts)))
                     }
                     _ => todo!("handle other dyld_cache_slide_info versions"),
