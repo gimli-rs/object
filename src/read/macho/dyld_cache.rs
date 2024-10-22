@@ -1,7 +1,7 @@
 use alloc::{boxed::Box, vec::Vec};
+use core::fmt::{self, Debug};
+use core::iter;
 use core::{mem, slice};
-use std::fmt::{self, Debug};
-use std::iter;
 
 use crate::endian::{Endian, Endianness, U16, U32, U64};
 use crate::macho;

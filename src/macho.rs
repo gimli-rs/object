@@ -9,7 +9,7 @@
 
 use crate::endian::{BigEndian, Endian, U64Bytes, U16, U32, U64};
 use crate::pod::Pod;
-use std::fmt::{self, Debug};
+use core::fmt::{self, Debug};
 
 // Definitions from "/usr/include/mach/machine.h".
 
