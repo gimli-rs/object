@@ -423,7 +423,7 @@ pub struct DyldCacheHeader<E: Endian> {
     pub alt_platform: U32<E>,
     /// e.g. 14.0 for iOSMac
     pub alt_os_version: U32<E>,
-    reserved1: u32,
+    reserved1: [u8; 4],
     /// VM offset from cache_header* to Swift optimizations header
     pub swift_opts_offset: U64<E>,
     /// size of Swift optimizations header
@@ -501,7 +501,7 @@ pub struct DyldCacheSlideInfo5<E: Endian> {
     pub version: U32<E>,   // currently 5
     pub page_size: U32<E>, // currently 4096 (may also be 16384)
     pub page_starts_count: U32<E>,
-    reserved1: u32,
+    reserved1: [u8; 4],
     pub value_add: U64<E>,
 }
 
@@ -598,7 +598,7 @@ pub struct DyldChainedPtrArm64eSharedCacheAuthRebase(u64);
 
 impl DyldChainedPtrArm64eSharedCacheAuthRebase {
     pub fn runtime_offset(&self) -> u64 {
-        self.0 & 0x3ffffffff
+        self.0 & 0x3_ffff_ffff
     }
 
     pub fn diversity(&self) -> u16 {
