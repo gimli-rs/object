@@ -208,7 +208,7 @@ where
         /// The mapping slide information
         slide: DyldCacheSlideInfoSlice<'data, E>,
         /// Page starts
-        page_index: u32,
+        page_index: u64,
         /// Page iterator
         iter: Option<DyldCacheRelocationPageIterator<'data, E, R>>,
     },
@@ -266,20 +266,18 @@ where
 
                 match slide {
                     DyldCacheSlideInfoSlice::V5(slide, page_starts) => {
-                        if *page_index < slide.page_starts_count.get(*endian) {
-                            let page_start = page_starts[*page_index as usize].get(*endian);
+                        if *page_index < slide.page_starts_count.get(*endian).into() {
+                            let page_start: u16 =
+                                page_starts[*page_index as usize].get(*endian) as u16;
 
                             if page_start != macho::DYLD_CACHE_SLIDE_V5_PAGE_ATTR_NO_REBASE {
                                 *iter = Some(DyldCacheRelocationPageIterator::V5 {
                                     data: *data,
                                     endian: *endian,
+                                    info: *info,
                                     slide: *slide,
-                                    page_offset: Some(
-                                        info.file_offset.get(*endian)
-                                            + (*page_index as u64
-                                                * slide.page_size.get(*endian) as u64)
-                                            + page_start as u64,
-                                    ),
+                                    page_index: *page_index,
+                                    page_offset: Some(page_start.into()),
                                 });
                             } else {
                                 *iter = None;
@@ -309,8 +307,12 @@ where
         data: R,
         /// Endian
         endian: E,
+        /// The mapping information
+        info: &'data macho::DyldCacheMappingAndSlideInfo<E>,
         /// The mapping slide information
         slide: &'data macho::DyldCacheSlideInfo5<E>,
+        /// Mapping page index
+        page_index: u64,
         /// The current offset into the page
         page_offset: Option<u64>,
     },
@@ -328,12 +330,19 @@ where
             Self::V5 {
                 data,
                 endian,
+                info,
                 slide,
+                page_index,
                 page_offset,
             } => {
                 if let Some(offset) = *page_offset {
-                    let pointer: macho::DyldCacheSlidePointer5 =
-                        data.read_at::<U64<E>>(offset).unwrap().get(*endian).into();
+                    let mapping_offset: u64 = *page_index * slide.page_size.get(*endian) as u64;
+                    let file_offset: u64 = info.file_offset.get(*endian) + mapping_offset + offset;
+                    let pointer: macho::DyldCacheSlidePointer5 = data
+                        .read_at::<U64<E>>(file_offset)
+                        .unwrap()
+                        .get(*endian)
+                        .into();
 
                     let next = pointer.next() as u64;
                     if next == 0 {
@@ -342,11 +351,13 @@ where
                         *page_offset = Some(offset + (next * 8));
                     }
 
+                    let address = info.address.get(*endian) + mapping_offset + offset;
                     let value_add = slide.value_add.get(*endian);
                     let value = pointer.value(value_add);
                     let auth = pointer.auth();
                     Some(DyldRelocation {
-                        offset,
+                        address,
+                        file_offset,
                         value,
                         auth,
                     })
@@ -360,8 +371,10 @@ where
 
 /// A cache mapping relocation.
 pub struct DyldRelocation {
+    /// The address of the relocation
+    pub address: u64,
     /// The offset of the relocation within the mapping
-    pub offset: u64,
+    pub file_offset: u64,
     /// The relocation value
     pub value: u64,
     /// The value auth context
@@ -371,7 +384,8 @@ pub struct DyldRelocation {
 impl Debug for DyldRelocation {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("DyldRelocation")
-            .field("offset", &format_args!("{:#x}", self.offset))
+            .field("address", &format_args!("{:#x}", self.address))
+            .field("file_offset", &format_args!("{:#x}", self.file_offset))
             .field("value", &format_args!("{:#x}", self.value))
             .field("auth", &self.auth)
             .finish()
