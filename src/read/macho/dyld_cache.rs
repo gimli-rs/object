@@ -1,6 +1,5 @@
-use alloc::{boxed::Box, vec::Vec};
+use alloc::vec::Vec;
 use core::fmt::{self, Debug};
-use core::iter;
 use core::{mem, slice};
 
 use crate::endian::{Endian, Endianness, U16, U32, U64};
@@ -174,12 +173,12 @@ where
     }
 
     /// Relocations for the mapping
-    pub fn relocations(&self) -> DyldCacheRelocationMappingIterator<'data, E, R> {
+    pub fn relocations(self) -> DyldCacheRelocationMappingIterator<'data, E, R> {
         match self {
             Self::V1 { .. } => DyldCacheRelocationMappingIterator::empty(),
             Self::V2 { endian, data, info } => {
-                if let Some(slide) = info.slide(*endian, *data).unwrap() {
-                    DyldCacheRelocationMappingIterator::slide(*data, *endian, *info, slide)
+                if let Some(slide) = info.slide(endian, data).unwrap() {
+                    DyldCacheRelocationMappingIterator::slide(data, endian, info, slide)
                 } else {
                     DyldCacheRelocationMappingIterator::empty()
                 }
@@ -659,32 +658,12 @@ where
     /// Return all the mappings in this cache.
     pub fn mappings<'cache>(
         &'cache self,
-    ) -> Box<dyn Iterator<Item = DyldCacheMapping<'data, E, R>> + 'cache> {
-        let mut mappings: Box<dyn Iterator<Item = DyldCacheMapping<'data, E, R>>> =
-            Box::new(self.mappings.iter());
-
-        for subcache in &self.subcaches {
-            mappings = Box::new(mappings.chain(subcache.mappings.iter()));
-        }
-
-        mappings
-    }
-
-    /// Return all the relocations in this cache.
-    pub fn relocations<'cache>(&'cache self) -> Box<dyn Iterator<Item = DyldRelocation> + 'cache> {
-        let mut relocations: Box<dyn Iterator<Item = DyldRelocation>> = Box::new(iter::empty());
-
-        for mapping in self.mappings.iter() {
-            relocations = Box::new(relocations.chain(mapping.relocations()));
-        }
-
-        for subcache in &self.subcaches {
-            for mapping in subcache.mappings.iter() {
-                relocations = Box::new(relocations.chain(mapping.relocations()));
-            }
-        }
-
-        relocations
+    ) -> impl Iterator<Item = DyldCacheMapping<'data, E, R>> + 'cache {
+        self.mappings.iter().chain(
+            self.subcaches
+                .iter()
+                .flat_map(|subcache| subcache.mappings.iter()),
+        )
     }
 
     /// Find the address in a mapping and return the cache or subcache data it was found in,
