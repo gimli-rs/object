@@ -637,7 +637,7 @@ pub trait MachHeader: Debug + Pod {
             .read_at::<Self>(offset)
             .read_error("Invalid Mach-O header size or alignment")?;
         if !header.is_supported() {
-            return Err(Error("Unsupported Mach-O header"));
+            return Err(Error::new("Unsupported Mach-O header"));
         }
         Ok(header)
     }

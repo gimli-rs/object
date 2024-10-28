@@ -389,7 +389,7 @@ impl SectionHeader for xcoff::SectionHeader32 {
         // and an STYP_OVRFLO section header will contain the actual count of relocation entries in
         // the s_paddr field.
         if reloc_num == 65535 {
-            return Err(Error("Overflow section is not supported yet."));
+            return Err(Error::new("Overflow section is not supported yet."));
         }
         data.read_slice_at(self.s_relptr().into(), reloc_num)
             .read_error("Invalid XCOFF relocation offset or number")

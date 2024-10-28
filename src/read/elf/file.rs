@@ -529,7 +529,7 @@ pub trait FileHeader: Debug + Pod {
             .read_at::<Self>(0)
             .read_error("Invalid ELF header size or alignment")?;
         if !header.is_supported() {
-            return Err(Error("Unsupported ELF header"));
+            return Err(Error::new("Unsupported ELF header"));
         }
         // TODO: Check self.e_ehsize?
         Ok(header)
@@ -585,7 +585,7 @@ pub trait FileHeader: Debug + Pod {
         let shentsize = usize::from(self.e_shentsize(endian));
         if shentsize != mem::size_of::<Self::SectionHeader>() {
             // Section header size must match.
-            return Err(Error("Invalid ELF section header entry size"));
+            return Err(Error::new("Invalid ELF section header entry size"));
         }
         data.read_at(shoff)
             .map(Some)
@@ -607,7 +607,9 @@ pub trait FileHeader: Debug + Pod {
             Ok(section_0.sh_info(endian) as usize)
         } else {
             // Section 0 must exist if e_phnum overflows.
-            Err(Error("Missing ELF section headers for e_phnum overflow"))
+            Err(Error::new(
+                "Missing ELF section headers for e_phnum overflow",
+            ))
         }
     }
 
@@ -650,10 +652,12 @@ pub trait FileHeader: Debug + Pod {
             section_0.sh_link(endian)
         } else {
             // Section 0 must exist if we're trying to read e_shstrndx.
-            return Err(Error("Missing ELF section headers for e_shstrndx overflow"));
+            return Err(Error::new(
+                "Missing ELF section headers for e_shstrndx overflow",
+            ));
         };
         if index == 0 {
-            return Err(Error("Missing ELF e_shstrndx"));
+            return Err(Error::new("Missing ELF e_shstrndx"));
         }
         Ok(index)
     }
@@ -680,7 +684,7 @@ pub trait FileHeader: Debug + Pod {
         let phentsize = self.e_phentsize(endian) as usize;
         if phentsize != mem::size_of::<Self::ProgramHeader>() {
             // Program header size must match.
-            return Err(Error("Invalid ELF program header entry size"));
+            return Err(Error::new("Invalid ELF program header entry size"));
         }
         data.read_slice_at(phoff, phnum)
             .read_error("Invalid ELF program header size or alignment")
@@ -708,7 +712,7 @@ pub trait FileHeader: Debug + Pod {
         let shentsize = usize::from(self.e_shentsize(endian));
         if shentsize != mem::size_of::<Self::SectionHeader>() {
             // Section header size must match.
-            return Err(Error("Invalid ELF section header entry size"));
+            return Err(Error::new("Invalid ELF section header entry size"));
         }
         data.read_slice_at(shoff, shnum)
             .read_error("Invalid ELF section header offset/size/alignment")

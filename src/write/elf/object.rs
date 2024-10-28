@@ -148,7 +148,7 @@ impl<'a> Object<'a> {
             Architecture::Sparc64 => true,
             Architecture::Xtensa => true,
             _ => {
-                return Err(Error(format!(
+                return Err(Error::new(format!(
                     "unimplemented architecture {:?}",
                     self.architecture
                 )));
@@ -171,7 +171,12 @@ impl<'a> Object<'a> {
             return Ok(());
         };
 
-        let unsupported_reloc = || Err(Error(format!("unimplemented ELF relocation {:?}", reloc)));
+        let unsupported_reloc = || {
+            Err(Error::new(format!(
+                "unimplemented ELF relocation {:?}",
+                reloc
+            )))
+        };
         let r_type = match self.architecture {
             Architecture::Aarch64 => match (kind, encoding, size) {
                 (K::Absolute, E::Generic, 64) => elf::R_AARCH64_ABS64,
@@ -346,7 +351,7 @@ impl<'a> Object<'a> {
                 _ => return unsupported_reloc(),
             },
             _ => {
-                return Err(Error(format!(
+                return Err(Error::new(format!(
                     "unimplemented architecture {:?}",
                     self.architecture
                 )));
@@ -366,7 +371,7 @@ impl<'a> Object<'a> {
         let r_type = if let RelocationFlags::Elf { r_type } = reloc.flags {
             r_type
         } else {
-            return Err(Error("invalid relocation flags".into()));
+            return Err(Error::new("invalid relocation flags"));
         };
         // This only needs to support architectures that use implicit addends.
         let size = match self.architecture {
@@ -403,13 +408,13 @@ impl<'a> Object<'a> {
                 _ => None,
             },
             _ => {
-                return Err(Error(format!(
+                return Err(Error::new(format!(
                     "unimplemented architecture {:?}",
                     self.architecture
                 )));
             }
         };
-        size.ok_or_else(|| Error(format!("unsupported relocation for size {:?}", reloc)))
+        size.ok_or_else(|| Error::new(format!("unsupported relocation for size {:?}", reloc)))
     }
 
     pub(crate) fn elf_is_64(&self) -> bool {
@@ -449,7 +454,7 @@ impl<'a> Object<'a> {
         let mut comdat_offsets = Vec::with_capacity(self.comdats.len());
         for comdat in &self.comdats {
             if comdat.kind != ComdatKind::Any {
-                return Err(Error(format!(
+                return Err(Error::new(format!(
                     "unsupported COMDAT symbol `{}` kind {:?}",
                     self.symbols[comdat.symbol.0].name().unwrap_or(""),
                     comdat.kind
@@ -558,7 +563,7 @@ impl<'a> Object<'a> {
             (Architecture::Sparc64, None) => elf::EM_SPARCV9,
             (Architecture::Xtensa, None) => elf::EM_XTENSA,
             _ => {
-                return Err(Error(format!(
+                return Err(Error::new(format!(
                     "unimplemented architecture {:?} with sub-architecture {:?}",
                     self.architecture, self.sub_architecture
                 )));
@@ -627,7 +632,7 @@ impl<'a> Object<'a> {
                         if symbol.is_undefined() {
                             elf::STT_NOTYPE
                         } else {
-                            return Err(Error(format!(
+                            return Err(Error::new(format!(
                                 "unimplemented symbol `{}` kind {:?}",
                                 symbol.name().unwrap_or(""),
                                 symbol.kind
@@ -696,7 +701,7 @@ impl<'a> Object<'a> {
                     let r_type = if let RelocationFlags::Elf { r_type } = reloc.flags {
                         r_type
                     } else {
-                        return Err(Error("invalid relocation flags".into()));
+                        return Err(Error::new("invalid relocation flags"));
                     };
                     let r_sym = symbol_offsets[reloc.symbol.0].index.0;
                     writer.write_relocation(
@@ -759,7 +764,7 @@ impl<'a> Object<'a> {
                     | SectionKind::Note
                     | SectionKind::Elf(_) => 0,
                     SectionKind::Unknown | SectionKind::Common | SectionKind::TlsVariables => {
-                        return Err(Error(format!(
+                        return Err(Error::new(format!(
                             "unimplemented section `{}` kind {:?}",
                             section.name().unwrap_or(""),
                             section.kind

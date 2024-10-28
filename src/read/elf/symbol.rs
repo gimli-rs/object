@@ -154,7 +154,7 @@ impl<'data, Elf: FileHeader, R: ReadRef<'data>> SymbolTable<'data, Elf, R> {
     /// Returns an error for null entry at index 0.
     pub fn symbol(&self, index: SymbolIndex) -> read::Result<&'data Elf::Sym> {
         if index == SymbolIndex(0) {
-            return Err(read::Error("Invalid ELF symbol index"));
+            return Err(read::Error::new("Invalid ELF symbol index"));
         }
         self.symbols
             .get(index.0)
