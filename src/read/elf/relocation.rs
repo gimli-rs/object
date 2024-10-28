@@ -45,14 +45,14 @@ impl RelocationSections {
                     continue;
                 }
                 if sh_info.0 >= relocations.len() {
-                    return Err(Error("Invalid ELF sh_info for relocation section"));
+                    return Err(Error::new("Invalid ELF sh_info for relocation section"));
                 }
 
                 // We don't support relocations that apply to other relocation sections
                 // because it interferes with the chaining of relocation sections below.
                 let sh_info_type = sections.section(sh_info)?.sh_type(endian);
                 if sh_info_type == elf::SHT_REL || sh_info_type == elf::SHT_RELA {
-                    return Err(Error("Unsupported ELF sh_info for relocation section"));
+                    return Err(Error::new("Unsupported ELF sh_info for relocation section"));
                 }
 
                 // Handle multiple relocation sections by chaining them.

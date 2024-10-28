@@ -88,7 +88,7 @@ impl<'data, R: ReadRef<'data>> ArchiveFile<'data, R> {
         } else if magic == archive::MAGIC {
             false
         } else {
-            return Err(Error("Unsupported archive identifier"));
+            return Err(Error::new("Unsupported archive identifier"));
         };
 
         let mut members_offset = tail;
@@ -294,7 +294,7 @@ impl<'data, R: ReadRef<'data>> ArchiveFile<'data, R> {
         match self.members {
             Members::Common { offset, end_offset } => {
                 if member.0 < offset || member.0 >= end_offset {
-                    return Err(Error("Invalid archive member offset"));
+                    return Err(Error::new("Invalid archive member offset"));
                 }
                 let mut offset = member.0;
                 ArchiveMember::parse(self.data, &mut offset, self.names, self.thin)
@@ -393,7 +393,7 @@ impl<'data> ArchiveMember<'data> {
             .read::<archive::Header>(offset)
             .read_error("Invalid archive member header")?;
         if header.terminator != archive::TERMINATOR {
-            return Err(Error("Invalid archive terminator"));
+            return Err(Error::new("Invalid archive terminator"));
         }
 
         let header_file_size =
@@ -484,7 +484,7 @@ impl<'data> ArchiveMember<'data> {
             .read_bytes(&mut offset, 2)
             .read_error("Invalid AIX big archive terminator")?;
         if terminator != archive::TERMINATOR {
-            return Err(Error("Invalid AIX big archive terminator"));
+            return Err(Error::new("Invalid AIX big archive terminator"));
         }
 
         let size = parse_u64_digits(&header.size, 10)

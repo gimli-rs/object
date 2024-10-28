@@ -293,7 +293,7 @@ pub trait FileHeader: Debug + Pod {
             .read::<Self>(offset)
             .read_error("Invalid XCOFF header size or alignment")?;
         if !header.is_supported() {
-            return Err(Error("Unsupported XCOFF header"));
+            return Err(Error::new("Unsupported XCOFF header"));
         }
         Ok(header)
     }

@@ -267,9 +267,9 @@ impl<'a> Object<'a> {
             16 => 1,
             32 => 2,
             64 => 3,
-            _ => return Err(Error(format!("unimplemented reloc size {:?}", reloc))),
+            _ => return Err(Error::new(format!("unimplemented reloc size {:?}", reloc))),
         };
-        let unsupported_reloc = || Err(Error(format!("unimplemented relocation {:?}", reloc)));
+        let unsupported_reloc = || Err(Error::new(format!("unimplemented relocation {:?}", reloc)));
         let (r_pcrel, r_type) = match self.architecture {
             Architecture::I386 => match kind {
                 K::Absolute => (false, macho::GENERIC_RELOC_VANILLA),
@@ -291,7 +291,7 @@ impl<'a> Object<'a> {
                 _ => return unsupported_reloc(),
             },
             _ => {
-                return Err(Error(format!(
+                return Err(Error::new(format!(
                     "unimplemented architecture {:?}",
                     self.architecture
                 )));
@@ -312,7 +312,10 @@ impl<'a> Object<'a> {
         {
             (r_type, r_pcrel)
         } else {
-            return Err(Error(format!("invalid relocation flags {:?}", relocation)));
+            return Err(Error::new(format!(
+                "invalid relocation flags {:?}",
+                relocation
+            )));
         };
         if r_pcrel {
             // For PC relative relocations on some architectures, the
@@ -351,7 +354,7 @@ impl<'a> Object<'a> {
         if let RelocationFlags::MachO { r_length, .. } = reloc.flags {
             Ok(8 << r_length)
         } else {
-            Err(Error("invalid relocation flags".into()))
+            Err(Error::new("invalid relocation flags"))
         }
     }
 
@@ -444,7 +447,7 @@ impl<'a> Object<'a> {
                 SymbolKind::Text | SymbolKind::Data | SymbolKind::Tls | SymbolKind::Unknown => {}
                 SymbolKind::File | SymbolKind::Section => continue,
                 SymbolKind::Label => {
-                    return Err(Error(format!(
+                    return Err(Error::new(format!(
                         "unimplemented symbol `{}` kind {:?}",
                         symbol.name().unwrap_or(""),
                         symbol.kind
@@ -511,7 +514,7 @@ impl<'a> Object<'a> {
         // Start writing.
         buffer
             .reserve(offset)
-            .map_err(|_| Error(String::from("Cannot allocate buffer")))?;
+            .map_err(|_| Error::new(String::from("Cannot allocate buffer")))?;
 
         // Write file header.
         let (cputype, mut cpusubtype) = match (self.architecture, self.sub_architecture) {
@@ -532,7 +535,7 @@ impl<'a> Object<'a> {
                 (macho::CPU_TYPE_POWERPC64, macho::CPU_SUBTYPE_POWERPC_ALL)
             }
             _ => {
-                return Err(Error(format!(
+                return Err(Error::new(format!(
                     "unimplemented architecture {:?} with sub-architecture {:?}",
                     self.architecture, self.sub_architecture
                 )));
@@ -586,7 +589,7 @@ impl<'a> Object<'a> {
             sectname
                 .get_mut(..section.name.len())
                 .ok_or_else(|| {
-                    Error(format!(
+                    Error::new(format!(
                         "section name `{}` is too long",
                         section.name().unwrap_or(""),
                     ))
@@ -596,7 +599,7 @@ impl<'a> Object<'a> {
             segname
                 .get_mut(..section.segment.len())
                 .ok_or_else(|| {
-                    Error(format!(
+                    Error::new(format!(
                         "segment name `{}` is too long",
                         section.segment().unwrap_or(""),
                     ))
@@ -620,7 +623,7 @@ impl<'a> Object<'a> {
                     SectionKind::OtherString => macho::S_CSTRING_LITERALS,
                     SectionKind::Other | SectionKind::Linker | SectionKind::Metadata => 0,
                     SectionKind::Note | SectionKind::Unknown | SectionKind::Elf(_) => {
-                        return Err(Error(format!(
+                        return Err(Error::new(format!(
                             "unimplemented section `{}` kind {:?}",
                             section.name().unwrap_or(""),
                             section.kind
@@ -722,7 +725,7 @@ impl<'a> Object<'a> {
                     {
                         (r_type, r_pcrel, r_length)
                     } else {
-                        return Err(Error("invalid relocation flags".into()));
+                        return Err(Error::new("invalid relocation flags"));
                     };
 
                     // Write explicit addend.
@@ -732,7 +735,10 @@ impl<'a> Object<'a> {
                                 macho::ARM64_RELOC_ADDEND
                             }
                             _ => {
-                                return Err(Error(format!("unimplemented relocation {:?}", reloc)))
+                                return Err(Error::new(format!(
+                                    "unimplemented relocation {:?}",
+                                    reloc
+                                )))
                             }
                         };
 
@@ -810,7 +816,7 @@ impl<'a> Object<'a> {
                 SymbolSection::Absolute => (macho::N_ABS, 0),
                 SymbolSection::Section(id) => (macho::N_SECT, id.0 + 1),
                 SymbolSection::None | SymbolSection::Common => {
-                    return Err(Error(format!(
+                    return Err(Error::new(format!(
                         "unimplemented symbol `{}` section {:?}",
                         symbol.name().unwrap_or(""),
                         symbol.section

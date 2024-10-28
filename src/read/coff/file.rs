@@ -372,7 +372,7 @@ impl CoffHeader for pe::AnonObjectHeaderBigobj {
             || header.version.get(LE) < 2
             || header.class_id != pe::ANON_OBJECT_HEADER_BIGOBJ_CLASS_ID
         {
-            return Err(read::Error("Invalid COFF bigobj header values"));
+            return Err(read::Error::new("Invalid COFF bigobj header values"));
         }
 
         // TODO: maybe validate that the machine is known?

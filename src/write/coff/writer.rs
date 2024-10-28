@@ -128,7 +128,7 @@ impl<'a> Writer<'a> {
         // Start writing.
         self.buffer
             .reserve(self.len)
-            .map_err(|_| Error(String::from("Cannot allocate buffer")))?;
+            .map_err(|_| Error::new(String::from("Cannot allocate buffer")))?;
 
         // Write file header.
         let header = pe::ImageFileHeader {

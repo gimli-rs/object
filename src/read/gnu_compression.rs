@@ -17,7 +17,7 @@ pub(super) fn compressed_file_range<'data, R: ReadRef<'data>>(
         .read_bytes(&mut offset, 8)
         .read_error("GNU compressed section is too short")?;
     if header != b"ZLIB\0\0\0\0" {
-        return Err(Error("Invalid GNU compressed section header"));
+        return Err(Error::new("Invalid GNU compressed section header"));
     }
     let uncompressed_size = file_data
         .read::<U32Bytes<_>>(&mut offset)

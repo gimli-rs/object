@@ -131,7 +131,7 @@ where
     pub fn symbol(&self, index: SymbolIndex) -> Result<&'data Xcoff::Symbol> {
         let symbol = self.symbol_unchecked(index)?;
         if symbol.is_null() {
-            return Err(Error("Invalid XCOFF symbol index"));
+            return Err(Error::new("Invalid XCOFF symbol index"));
         }
         Ok(symbol)
     }
@@ -142,7 +142,7 @@ where
         let aux_file = self.get::<Xcoff::FileAux>(index, offset)?;
         if let Some(aux_type) = aux_file.x_auxtype() {
             if aux_type != xcoff::AUX_FILE {
-                return Err(Error("Invalid index for file auxiliary symbol."));
+                return Err(Error::new("Invalid index for file auxiliary symbol."));
             }
         }
         Ok(aux_file)
@@ -154,7 +154,9 @@ where
         let aux_csect = self.get::<Xcoff::CsectAux>(index, offset)?;
         if let Some(aux_type) = aux_csect.x_auxtype() {
             if aux_type != xcoff::AUX_CSECT {
-                return Err(Error("Invalid index/offset for csect auxiliary symbol."));
+                return Err(Error::new(
+                    "Invalid index/offset for csect auxiliary symbol.",
+                ));
             }
         }
         Ok(aux_csect)

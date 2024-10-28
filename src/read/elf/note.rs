@@ -39,7 +39,7 @@ where
         let align = match align.into() {
             0u64..=4 => 4,
             8 => 8,
-            _ => return Err(Error("Invalid ELF note alignment")),
+            _ => return Err(Error::new("Invalid ELF note alignment")),
         };
         // TODO: check data alignment?
         Ok(NoteIterator {

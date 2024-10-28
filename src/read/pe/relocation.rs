@@ -39,7 +39,7 @@ impl<'data> RelocationBlockIterator<'data> {
         let virtual_address = header.virtual_address.get(LE);
         let size = header.size_of_block.get(LE);
         if size <= 8 || size & 3 != 0 {
-            return Err(Error("Invalid PE reloc block size"));
+            return Err(Error::new("Invalid PE reloc block size"));
         }
         let count = (size - 8) / 2;
         let relocs = self

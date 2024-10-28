@@ -194,7 +194,7 @@ impl<'a> Writer<'a> {
         // Start writing.
         self.buffer
             .reserve(self.len as usize)
-            .map_err(|_| Error(String::from("Cannot allocate buffer")))?;
+            .map_err(|_| Error::new(String::from("Cannot allocate buffer")))?;
 
         self.buffer.write(dos_header);
         Ok(())

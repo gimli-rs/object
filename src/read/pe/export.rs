@@ -116,7 +116,7 @@ impl<'data> ExportTable<'data> {
         let address_of_name_ordinals = directory.address_of_name_ordinals.get(LE);
         if address_of_names != 0 {
             if address_of_name_ordinals == 0 {
-                return Err(Error("Missing PE export ordinal table"));
+                return Err(Error::new("Missing PE export ordinal table"));
             }
 
             let number = directory.number_of_names.get(LE) as usize;
@@ -247,7 +247,7 @@ impl<'data> ExportTable<'data> {
                     ExportTarget::ForwardByOrdinal(library, ordinal)
                 }
                 [] => {
-                    return Err(Error("Missing PE forwarded export name"));
+                    return Err(Error::new("Missing PE forwarded export name"));
                 }
                 name => ExportTarget::ForwardByName(library, name),
             }

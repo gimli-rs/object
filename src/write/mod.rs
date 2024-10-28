@@ -10,7 +10,7 @@
 //! and [PE](pe::Writer).
 
 use alloc::borrow::Cow;
-use alloc::string::String;
+use alloc::string::{String, ToString};
 use alloc::vec::Vec;
 use core::{fmt, result, str};
 #[cfg(not(feature = "std"))]
@@ -49,12 +49,31 @@ pub use util::*;
 
 /// The error type used within the write module.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Error(pub(crate) String);
+pub struct Error(#[cfg(feature = "keep-error-msg")] pub(crate) String);
+
+impl Error {
+    #[inline(always)]
+    pub(crate) fn new(#[allow(unused_variables)] message: impl AsRef<str>) -> Self {
+        Self(
+            #[cfg(feature = "keep-error-msg")]
+            message.as_ref().to_string(),
+        )
+    }
+}
 
 impl fmt::Display for Error {
     #[inline]
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str(&self.0)
+        f.write_str({
+            #[cfg(feature = "keep-error-msg")]
+            {
+                &self.0
+            }
+            #[cfg(not(feature = "keep-error-msg"))]
+            {
+                "Error"
+            }
+        })
     }
 }
 
@@ -625,14 +644,14 @@ impl<'a> Object<'a> {
             32 => data.write_at(offset, &U32::new(self.endian, relocation.addend as u32)),
             64 => data.write_at(offset, &U64::new(self.endian, relocation.addend as u64)),
             _ => {
-                return Err(Error(format!(
+                return Err(Error::new(format!(
                     "unimplemented relocation addend {:?}",
                     relocation
                 )));
             }
         }
         .map_err(|_| {
-            Error(format!(
+            Error::new(format!(
                 "invalid relocation offset {}+{} (max {})",
                 relocation.offset,
                 size,

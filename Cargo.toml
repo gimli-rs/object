@@ -82,7 +82,7 @@ xcoff = []
 
 #=======================================
 # By default, support all read features.
-default = ["read", "compression"]
+default = ["read", "compression", "keep-error-msg"]
 
 #=======================================
 # Umbrella feature for enabling all user-facing features of this crate. Does not
@@ -110,6 +110,8 @@ unstable-all = ["all", "unstable"]
 # Internal feature, only used when building as part of libstd, not part of the
 # stable interface of this crate.
 rustc-dep-of-std = ['core', 'compiler_builtins', 'alloc', 'memchr/rustc-dep-of-std']
+
+keep-error-msg = []
 
 [workspace]
 members = ["crates/*"]

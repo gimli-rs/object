@@ -83,7 +83,7 @@ impl<'a> Object<'a> {
             RelocationKind::Relative => xcoff::R_REL,
             RelocationKind::Got => xcoff::R_TOC,
             _ => {
-                return Err(Error(format!("unimplemented relocation {:?}", reloc)));
+                return Err(Error::new(format!("unimplemented relocation {:?}", reloc)));
             }
         };
         let r_rsize = size - 1;
@@ -95,7 +95,10 @@ impl<'a> Object<'a> {
         let r_rtype = if let RelocationFlags::Xcoff { r_rtype, .. } = relocation.flags {
             r_rtype
         } else {
-            return Err(Error(format!("invalid relocation flags {:?}", relocation)));
+            return Err(Error::new(format!(
+                "invalid relocation flags {:?}",
+                relocation
+            )));
         };
         if r_rtype == xcoff::R_REL {
             relocation.addend += 4;
@@ -107,7 +110,7 @@ impl<'a> Object<'a> {
         let r_rsize = if let RelocationFlags::Xcoff { r_rsize, .. } = reloc.flags {
             r_rsize
         } else {
-            return Err(Error(format!("unexpected relocation {:?}", reloc)));
+            return Err(Error::new(format!("unexpected relocation {:?}", reloc)));
         };
         Ok(r_rsize + 1)
     }
@@ -205,7 +208,7 @@ impl<'a> Object<'a> {
                         }
                     }
                     SymbolKind::Section | SymbolKind::Label | SymbolKind::Unknown => {
-                        return Err(Error(format!(
+                        return Err(Error::new(format!(
                             "unimplemented symbol `{}` kind {:?}",
                             symbol.name().unwrap_or(""),
                             symbol.kind
@@ -255,7 +258,7 @@ impl<'a> Object<'a> {
         // Start writing.
         buffer
             .reserve(offset)
-            .map_err(|_| Error(String::from("Cannot allocate buffer")))?;
+            .map_err(|_| Error::new(String::from("Cannot allocate buffer")))?;
 
         // Write file header.
         if is_64 {
@@ -294,7 +297,7 @@ impl<'a> Object<'a> {
             sectname
                 .get_mut(..section.name.len())
                 .ok_or_else(|| {
-                    Error(format!(
+                    Error::new(format!(
                         "section name `{}` is too long",
                         section.name().unwrap_or(""),
                     ))
@@ -321,7 +324,7 @@ impl<'a> Object<'a> {
                     | SectionKind::Unknown
                     | SectionKind::TlsVariables
                     | SectionKind::Elf(_) => {
-                        return Err(Error(format!(
+                        return Err(Error::new(format!(
                             "unimplemented section `{}` kind {:?}",
                             section.name().unwrap_or(""),
                             section.kind
@@ -386,7 +389,7 @@ impl<'a> Object<'a> {
                         if let RelocationFlags::Xcoff { r_rtype, r_rsize } = reloc.flags {
                             (r_rtype, r_rsize)
                         } else {
-                            return Err(Error("invalid relocation flags".into()));
+                            return Err(Error::new("invalid relocation flags"));
                         };
                     if is_64 {
                         let xcoff_rel = xcoff::Rel64 {
@@ -533,7 +536,7 @@ impl<'a> Object<'a> {
                             }
                         }
                         _ => {
-                            return Err(Error(format!(
+                            return Err(Error::new(format!(
                                 "unimplemented symbol `{}` kind {:?}",
                                 symbol.name().unwrap_or(""),
                                 symbol.kind

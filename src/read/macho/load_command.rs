@@ -47,7 +47,7 @@ impl<'data, E: Endian> LoadCommandIterator<'data, E> {
         let cmd = header.cmd.get(self.endian);
         let cmdsize = header.cmdsize.get(self.endian) as usize;
         if cmdsize < mem::size_of::<macho::LoadCommand<E>>() {
-            return Err(Error("Invalid Mach-O load command size"));
+            return Err(Error::new("Invalid Mach-O load command size"));
         }
         let data = self
             .data

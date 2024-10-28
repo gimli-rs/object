@@ -513,7 +513,7 @@ impl pe::ImageDosHeader {
             .read_at::<pe::ImageDosHeader>(0)
             .read_error("Invalid DOS header size or alignment")?;
         if dos_header.e_magic.get(LE) != pe::IMAGE_DOS_SIGNATURE {
-            return Err(Error("Invalid DOS magic"));
+            return Err(Error::new("Invalid DOS magic"));
         }
         Ok(dos_header)
     }
@@ -539,7 +539,7 @@ pub fn optional_header_magic<'data, R: ReadRef<'data>>(data: R) -> Result<u16> {
         .read_at::<pe::ImageNtHeaders32>(offset)
         .read_error("Invalid NT headers offset, size, or alignment")?;
     if nt_headers.signature() != pe::IMAGE_NT_SIGNATURE {
-        return Err(Error("Invalid PE magic"));
+        return Err(Error::new("Invalid PE magic"));
     }
     Ok(nt_headers.optional_header().magic())
 }
@@ -586,10 +586,10 @@ pub trait ImageNtHeaders: Debug + Pod {
             .read::<Self>(offset)
             .read_error("Invalid PE headers offset or size")?;
         if nt_headers.signature() != pe::IMAGE_NT_SIGNATURE {
-            return Err(Error("Invalid PE magic"));
+            return Err(Error::new("Invalid PE magic"));
         }
         if !nt_headers.is_valid_optional_magic() {
-            return Err(Error("Invalid PE optional header magic"));
+            return Err(Error::new("Invalid PE optional header magic"));
         }
 
         // Read the rest of the optional header, and then read the data directories from that.

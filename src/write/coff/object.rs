@@ -108,7 +108,7 @@ impl<'a> Object<'a> {
             kind = K::Relative;
         }
 
-        let unsupported_reloc = || Err(Error(format!("unimplemented relocation {:?}", reloc)));
+        let unsupported_reloc = || Err(Error::new(format!("unimplemented relocation {:?}", reloc)));
         let typ = match self.architecture {
             Architecture::I386 => match (kind, size) {
                 (K::Absolute, 16) => coff::IMAGE_REL_I386_DIR16,
@@ -157,7 +157,7 @@ impl<'a> Object<'a> {
                 _ => return unsupported_reloc(),
             },
             _ => {
-                return Err(Error(format!(
+                return Err(Error::new(format!(
                     "unimplemented architecture {:?}",
                     self.architecture
                 )));
@@ -171,7 +171,10 @@ impl<'a> Object<'a> {
         let typ = if let RelocationFlags::Coff { typ } = relocation.flags {
             typ
         } else {
-            return Err(Error(format!("invalid relocation flags {:?}", relocation)));
+            return Err(Error::new(format!(
+                "invalid relocation flags {:?}",
+                relocation
+            )));
         };
         let offset = match self.architecture {
             Architecture::Arm => {
@@ -204,7 +207,12 @@ impl<'a> Object<'a> {
                 coff::IMAGE_REL_AMD64_REL32_5 => 9,
                 _ => 0,
             },
-            _ => return Err(Error(format!("unimplemented relocation {:?}", relocation))),
+            _ => {
+                return Err(Error::new(format!(
+                    "unimplemented relocation {:?}",
+                    relocation
+                )))
+            }
         };
         relocation.addend += offset;
         Ok(true)
@@ -214,7 +222,10 @@ impl<'a> Object<'a> {
         let typ = if let RelocationFlags::Coff { typ } = reloc.flags {
             typ
         } else {
-            return Err(Error(format!("unexpected relocation for size {:?}", reloc)));
+            return Err(Error::new(format!(
+                "unexpected relocation for size {:?}",
+                reloc
+            )));
         };
         let size = match self.architecture {
             Architecture::I386 => match typ {
@@ -264,7 +275,7 @@ impl<'a> Object<'a> {
             },
             _ => None,
         };
-        size.ok_or_else(|| Error(format!("unsupported relocation for size {:?}", reloc)))
+        size.ok_or_else(|| Error::new(format!("unsupported relocation for size {:?}", reloc)))
     }
 
     fn coff_add_stub_symbol(&mut self, symbol_id: SymbolId) -> Result<SymbolId> {
@@ -351,7 +362,7 @@ impl<'a> Object<'a> {
             let comdat_section = match symbol.section {
                 SymbolSection::Section(id) => id.0,
                 _ => {
-                    return Err(Error(format!(
+                    return Err(Error::new(format!(
                         "unsupported COMDAT symbol `{}` section {:?}",
                         symbol.name().unwrap_or(""),
                         symbol.section
@@ -366,7 +377,7 @@ impl<'a> Object<'a> {
                 ComdatKind::Largest => coff::IMAGE_COMDAT_SELECT_LARGEST,
                 ComdatKind::Newest => coff::IMAGE_COMDAT_SELECT_NEWEST,
                 ComdatKind::Unknown => {
-                    return Err(Error(format!(
+                    return Err(Error::new(format!(
                         "unsupported COMDAT symbol `{}` kind {:?}",
                         symbol.name().unwrap_or(""),
                         comdat.kind
@@ -376,7 +387,7 @@ impl<'a> Object<'a> {
             for id in &comdat.sections {
                 let section = &self.sections[id.0];
                 if section.symbol.is_none() {
-                    return Err(Error(format!(
+                    return Err(Error::new(format!(
                         "missing symbol for COMDAT section `{}`",
                         section.name().unwrap_or(""),
                     )));
@@ -428,7 +439,7 @@ impl<'a> Object<'a> {
                 (Architecture::I386, None) => coff::IMAGE_FILE_MACHINE_I386,
                 (Architecture::X86_64, None) => coff::IMAGE_FILE_MACHINE_AMD64,
                 _ => {
-                    return Err(Error(format!(
+                    return Err(Error::new(format!(
                         "unimplemented architecture {:?} with sub-architecture {:?}",
                         self.architecture, self.sub_architecture
                     )));
@@ -487,7 +498,7 @@ impl<'a> Object<'a> {
                     | SectionKind::Unknown
                     | SectionKind::Metadata
                     | SectionKind::Elf(_) => {
-                        return Err(Error(format!(
+                        return Err(Error::new(format!(
                             "unimplemented section `{}` kind {:?}",
                             section.name().unwrap_or(""),
                             section.kind
@@ -517,7 +528,7 @@ impl<'a> Object<'a> {
                 4096 => coff::IMAGE_SCN_ALIGN_4096BYTES,
                 8192 => coff::IMAGE_SCN_ALIGN_8192BYTES,
                 _ => {
-                    return Err(Error(format!(
+                    return Err(Error::new(format!(
                         "unimplemented section `{}` align {}",
                         section.name().unwrap_or(""),
                         section.align
@@ -547,7 +558,7 @@ impl<'a> Object<'a> {
                     let typ = if let RelocationFlags::Coff { typ } = reloc.flags {
                         typ
                     } else {
-                        return Err(Error("invalid relocation flags".into()));
+                        return Err(Error::new("invalid relocation flags"));
                     };
                     writer.write_relocation(writer::Relocation {
                         virtual_address: reloc.offset as u32,
@@ -588,7 +599,7 @@ impl<'a> Object<'a> {
                 SymbolKind::Text | SymbolKind::Data | SymbolKind::Tls => {
                     match symbol.section {
                         SymbolSection::None => {
-                            return Err(Error(format!(
+                            return Err(Error::new(format!(
                                 "missing section for symbol `{}`",
                                 symbol.name().unwrap_or("")
                             )));
@@ -601,7 +612,7 @@ impl<'a> Object<'a> {
                                 // TODO: does this need aux symbol records too?
                                 _ if symbol.weak => coff::IMAGE_SYM_CLASS_WEAK_EXTERNAL,
                                 SymbolScope::Unknown => {
-                                    return Err(Error(format!(
+                                    return Err(Error::new(format!(
                                         "unimplemented symbol `{}` scope {:?}",
                                         symbol.name().unwrap_or(""),
                                         symbol.scope
@@ -616,7 +627,7 @@ impl<'a> Object<'a> {
                     }
                 }
                 SymbolKind::Unknown => {
-                    return Err(Error(format!(
+                    return Err(Error::new(format!(
                         "unimplemented symbol `{}` kind {:?}",
                         symbol.name().unwrap_or(""),
                         symbol.kind

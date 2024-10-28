@@ -1,4 +1,4 @@
-use alloc::string::String;
+use alloc::string::{String, ToString};
 use core::{fmt, result};
 #[cfg(feature = "std")]
 use std::error;
@@ -7,18 +7,31 @@ use crate::{read, write};
 
 /// The error type used within the build module.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Error(pub(super) String);
+pub struct Error(#[cfg(feature = "keep-error-msg")] pub(crate) String);
 
 impl Error {
-    pub(super) fn new(message: impl Into<String>) -> Self {
-        Error(message.into())
+    #[inline(always)]
+    pub(super) fn new(#[allow(unused_variables)] message: impl Into<String>) -> Self {
+        Self(
+            #[cfg(feature = "keep-error-msg")]
+            message.into(),
+        )
     }
 }
 
 impl fmt::Display for Error {
     #[inline]
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str(&self.0)
+        f.write_str({
+            #[cfg(feature = "keep-error-msg")]
+            {
+                &self.0
+            }
+            #[cfg(not(feature = "keep-error-msg"))]
+            {
+                "Error"
+            }
+        })
     }
 }
 
@@ -27,13 +40,19 @@ impl error::Error for Error {}
 
 impl From<read::Error> for Error {
     fn from(error: read::Error) -> Error {
-        Error(format!("{}", error))
+        Error(
+            #[cfg(feature = "keep-error-msg")]
+            error.0.to_string(),
+        )
     }
 }
 
 impl From<write::Error> for Error {
     fn from(error: write::Error) -> Error {
-        Error(error.0)
+        Error(
+            #[cfg(feature = "keep-error-msg")]
+            error.0,
+        )
     }
 }
 

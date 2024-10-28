@@ -35,7 +35,7 @@ impl<'data, Fat: FatArch> MachOFatFile<'data, Fat> {
             .read::<FatHeader>(&mut offset)
             .read_error("Invalid fat header size or alignment")?;
         if header.magic.get(BigEndian) != Fat::MAGIC {
-            return Err(Error("Invalid fat magic"));
+            return Err(Error::new("Invalid fat magic"));
         }
         let arches = data
             .read_slice::<Fat>(&mut offset, header.nfat_arch.get(BigEndian) as usize)

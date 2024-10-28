@@ -116,7 +116,7 @@ impl<'data, R: ReadRef<'data>> WasmFile<'data, R> {
             match payload {
                 wp::Payload::Version { encoding, .. } => {
                     if encoding != wp::Encoding::Module {
-                        return Err(Error("Unsupported Wasm encoding"));
+                        return Err(Error::new("Unsupported Wasm encoding"));
                     }
                 }
                 wp::Payload::TypeSection(section) => {
