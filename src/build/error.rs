@@ -1,4 +1,6 @@
-use alloc::string::{String, ToString};
+use alloc::string::String;
+#[cfg(feature = "keep-error-msg")]
+use alloc::string::ToString;
 use core::{fmt, result};
 #[cfg(feature = "std")]
 use std::error;
@@ -11,6 +13,7 @@ pub struct Error(#[cfg(feature = "keep-error-msg")] pub(crate) String);
 
 impl Error {
     #[inline(always)]
+    #[allow(dead_code)]
     pub(super) fn new(#[allow(unused_variables)] message: impl Into<String>) -> Self {
         Self(
             #[cfg(feature = "keep-error-msg")]
@@ -39,7 +42,7 @@ impl fmt::Display for Error {
 impl error::Error for Error {}
 
 impl From<read::Error> for Error {
-    fn from(error: read::Error) -> Error {
+    fn from(#[allow(unused_variables)] error: read::Error) -> Error {
         Error(
             #[cfg(feature = "keep-error-msg")]
             error.0.to_string(),
@@ -48,7 +51,7 @@ impl From<read::Error> for Error {
 }
 
 impl From<write::Error> for Error {
-    fn from(error: write::Error) -> Error {
+    fn from(#[allow(unused_variables)] error: write::Error) -> Error {
         Error(
             #[cfg(feature = "keep-error-msg")]
             error.0,

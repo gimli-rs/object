@@ -10,6 +10,7 @@
 //! and [PE](pe::Writer).
 
 use alloc::borrow::Cow;
+#[cfg(feature = "keep-error-msg")]
 use alloc::string::{String, ToString};
 use alloc::vec::Vec;
 use core::{fmt, result, str};
