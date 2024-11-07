@@ -137,6 +137,7 @@ fn cmd_features() -> Result<(), DynError> {
         "std",
         "compression",
         "unaligned",
+        "enable_serde,enable_rkyv",
     ] {
         cargo(&[
             "test",
@@ -187,7 +188,15 @@ fn cmd_cross() -> Result<(), DynError> {
 fn cmd_msrv() -> Result<(), DynError> {
     cmd_with(
         "cargo",
-        &["+1.65.0", "test", "-p", "object", "--no-default-features", "--features", "read,write,build,std"],
+        &[
+            "+1.65.0",
+            "test",
+            "-p",
+            "object",
+            "--no-default-features",
+            "--features",
+            "read,write,build,std",
+        ],
         |cmd| {
             cmd.env("CARGO_NET_GIT_FETCH_WITH_CLI", "true");
         },

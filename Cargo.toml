@@ -122,3 +122,7 @@ rustc-dep-of-std = ['core', 'compiler_builtins', 'alloc', 'memchr/rustc-dep-of-s
 members = ["crates/*"]
 default-members = [".", "crates/examples"]
 resolver = "2"
+
+[dev-dependencies]
+serde = "1.0.214"
+serde_test = "1.0.177"
