@@ -208,6 +208,28 @@ fn rewrite_interpreter() {
     fail_message(fail);
 }
 
+#[test]
+fn rewrite_annobin_strtab() {
+    let print_options = readobj::PrintOptions {
+        string_indices: false,
+        segments: false,
+        sections: true,
+        elf_dynamic: false,
+        ..readobj::PrintOptions::none()
+    };
+    let mut fail = false;
+
+    let options = object_rewrite::Options::default();
+    fail |= testfile(
+        "elf/annobin-strtab",
+        "elf/annobin-strtab",
+        options,
+        &print_options,
+    );
+
+    fail_message(fail);
+}
+
 fn testfile(
     in_path: &str,
     out_path: &str,

@@ -245,6 +245,9 @@ impl<'a> Object<'a> {
     }
 
     pub(crate) fn macho_translate_relocation(&mut self, reloc: &mut Relocation) -> Result<()> {
+        use RelocationEncoding as E;
+        use RelocationKind as K;
+
         let (kind, encoding, mut size) = if let RelocationFlags::Generic {
             kind,
             encoding,
@@ -266,52 +269,32 @@ impl<'a> Object<'a> {
             64 => 3,
             _ => return Err(Error(format!("unimplemented reloc size {:?}", reloc))),
         };
+        let unsupported_reloc = || Err(Error(format!("unimplemented relocation {:?}", reloc)));
         let (r_pcrel, r_type) = match self.architecture {
             Architecture::I386 => match kind {
-                RelocationKind::Absolute => (false, macho::GENERIC_RELOC_VANILLA),
-                _ => {
-                    return Err(Error(format!("unimplemented relocation {:?}", reloc)));
-                }
+                K::Absolute => (false, macho::GENERIC_RELOC_VANILLA),
+                _ => return unsupported_reloc(),
             },
             Architecture::X86_64 => match (kind, encoding) {
-                (RelocationKind::Absolute, RelocationEncoding::Generic) => {
-                    (false, macho::X86_64_RELOC_UNSIGNED)
-                }
-                (RelocationKind::Relative, RelocationEncoding::Generic) => {
-                    (true, macho::X86_64_RELOC_SIGNED)
-                }
-                (RelocationKind::Relative, RelocationEncoding::X86RipRelative) => {
-                    (true, macho::X86_64_RELOC_SIGNED)
-                }
-                (RelocationKind::Relative, RelocationEncoding::X86Branch) => {
-                    (true, macho::X86_64_RELOC_BRANCH)
-                }
-                (RelocationKind::PltRelative, RelocationEncoding::X86Branch) => {
-                    (true, macho::X86_64_RELOC_BRANCH)
-                }
-                (RelocationKind::GotRelative, RelocationEncoding::Generic) => {
-                    (true, macho::X86_64_RELOC_GOT)
-                }
-                (RelocationKind::GotRelative, RelocationEncoding::X86RipRelativeMovq) => {
-                    (true, macho::X86_64_RELOC_GOT_LOAD)
-                }
-                _ => {
-                    return Err(Error(format!("unimplemented relocation {:?}", reloc)));
-                }
+                (K::Absolute, E::Generic) => (false, macho::X86_64_RELOC_UNSIGNED),
+                (K::Relative, E::Generic) => (true, macho::X86_64_RELOC_SIGNED),
+                (K::Relative, E::X86RipRelative) => (true, macho::X86_64_RELOC_SIGNED),
+                (K::Relative, E::X86Branch) => (true, macho::X86_64_RELOC_BRANCH),
+                (K::PltRelative, E::X86Branch) => (true, macho::X86_64_RELOC_BRANCH),
+                (K::GotRelative, E::Generic) => (true, macho::X86_64_RELOC_GOT),
+                (K::GotRelative, E::X86RipRelativeMovq) => (true, macho::X86_64_RELOC_GOT_LOAD),
+                _ => return unsupported_reloc(),
             },
             Architecture::Aarch64 | Architecture::Aarch64_Ilp32 => match (kind, encoding) {
-                (RelocationKind::Absolute, RelocationEncoding::Generic) => {
-                    (false, macho::ARM64_RELOC_UNSIGNED)
-                }
-                (RelocationKind::Relative, RelocationEncoding::AArch64Call) => {
-                    (true, macho::ARM64_RELOC_BRANCH26)
-                }
-                _ => {
-                    return Err(Error(format!("unimplemented relocation {:?}", reloc)));
-                }
+                (K::Absolute, E::Generic) => (false, macho::ARM64_RELOC_UNSIGNED),
+                (K::Relative, E::AArch64Call) => (true, macho::ARM64_RELOC_BRANCH26),
+                _ => return unsupported_reloc(),
             },
             _ => {
-                return Err(Error(format!("unimplemented relocation {:?}", reloc)));
+                return Err(Error(format!(
+                    "unimplemented architecture {:?}",
+                    self.architecture
+                )));
             }
         };
         reloc.flags = RelocationFlags::MachO {

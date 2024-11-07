@@ -249,9 +249,9 @@ fn main() -> Result<()> {
         let mut buf = io::BufReader::new(file);
         let mut line = Vec::new();
         while buf.read_until(b'\n', &mut line)? != 0 {
-            if line.ends_with(&[b'\n']) {
+            if line.ends_with(b"\n") {
                 line.pop();
-                if line.ends_with(&[b'\r']) {
+                if line.ends_with(b"\r") {
                     line.pop();
                 }
             }

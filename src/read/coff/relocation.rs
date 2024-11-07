@@ -31,61 +31,67 @@ impl<'data, 'file, R: ReadRef<'data>, Coff: CoffHeader> Iterator
     type Item = (u64, Relocation);
 
     fn next(&mut self) -> Option<Self::Item> {
+        use RelocationEncoding as E;
+        use RelocationKind as K;
+
         self.iter.next().map(|relocation| {
             let typ = relocation.typ.get(LE);
             let flags = RelocationFlags::Coff { typ };
-            let (kind, size, addend) = match self.file.header.machine() {
+            let g = E::Generic;
+            let unknown = (K::Unknown, E::Generic, 0, 0);
+            let (kind, encoding, size, addend) = match self.file.header.machine() {
                 pe::IMAGE_FILE_MACHINE_ARMNT => match typ {
-                    pe::IMAGE_REL_ARM_ADDR32 => (RelocationKind::Absolute, 32, 0),
-                    pe::IMAGE_REL_ARM_ADDR32NB => (RelocationKind::ImageOffset, 32, 0),
-                    pe::IMAGE_REL_ARM_REL32 => (RelocationKind::Relative, 32, -4),
-                    pe::IMAGE_REL_ARM_SECTION => (RelocationKind::SectionIndex, 16, 0),
-                    pe::IMAGE_REL_ARM_SECREL => (RelocationKind::SectionOffset, 32, 0),
-                    _ => (RelocationKind::Unknown, 0, 0),
+                    pe::IMAGE_REL_ARM_ADDR32 => (K::Absolute, g, 32, 0),
+                    pe::IMAGE_REL_ARM_ADDR32NB => (K::ImageOffset, g, 32, 0),
+                    pe::IMAGE_REL_ARM_REL32 => (K::Relative, g, 32, -4),
+                    pe::IMAGE_REL_ARM_SECTION => (K::SectionIndex, g, 16, 0),
+                    pe::IMAGE_REL_ARM_SECREL => (K::SectionOffset, g, 32, 0),
+                    _ => unknown,
                 },
                 pe::IMAGE_FILE_MACHINE_ARM64 | pe::IMAGE_FILE_MACHINE_ARM64EC => match typ {
-                    pe::IMAGE_REL_ARM64_ADDR32 => (RelocationKind::Absolute, 32, 0),
-                    pe::IMAGE_REL_ARM64_ADDR32NB => (RelocationKind::ImageOffset, 32, 0),
-                    pe::IMAGE_REL_ARM64_SECREL => (RelocationKind::SectionOffset, 32, 0),
-                    pe::IMAGE_REL_ARM64_SECTION => (RelocationKind::SectionIndex, 16, 0),
-                    pe::IMAGE_REL_ARM64_ADDR64 => (RelocationKind::Absolute, 64, 0),
-                    pe::IMAGE_REL_ARM64_REL32 => (RelocationKind::Relative, 32, -4),
-                    _ => (RelocationKind::Unknown, 0, 0),
+                    pe::IMAGE_REL_ARM64_ADDR32 => (K::Absolute, g, 32, 0),
+                    pe::IMAGE_REL_ARM64_ADDR32NB => (K::ImageOffset, g, 32, 0),
+                    pe::IMAGE_REL_ARM64_SECREL => (K::SectionOffset, g, 32, 0),
+                    pe::IMAGE_REL_ARM64_SECTION => (K::SectionIndex, g, 16, 0),
+                    pe::IMAGE_REL_ARM64_ADDR64 => (K::Absolute, g, 64, 0),
+                    pe::IMAGE_REL_ARM64_REL32 => (K::Relative, g, 32, -4),
+                    pe::IMAGE_REL_ARM64_BRANCH26 => (K::Relative, E::AArch64Call, 26, 0),
+                    _ => unknown,
                 },
                 pe::IMAGE_FILE_MACHINE_I386 => match typ {
-                    pe::IMAGE_REL_I386_DIR16 => (RelocationKind::Absolute, 16, 0),
-                    pe::IMAGE_REL_I386_REL16 => (RelocationKind::Relative, 16, 0),
-                    pe::IMAGE_REL_I386_DIR32 => (RelocationKind::Absolute, 32, 0),
-                    pe::IMAGE_REL_I386_DIR32NB => (RelocationKind::ImageOffset, 32, 0),
-                    pe::IMAGE_REL_I386_SECTION => (RelocationKind::SectionIndex, 16, 0),
-                    pe::IMAGE_REL_I386_SECREL => (RelocationKind::SectionOffset, 32, 0),
-                    pe::IMAGE_REL_I386_SECREL7 => (RelocationKind::SectionOffset, 7, 0),
-                    pe::IMAGE_REL_I386_REL32 => (RelocationKind::Relative, 32, -4),
-                    _ => (RelocationKind::Unknown, 0, 0),
+                    pe::IMAGE_REL_I386_DIR16 => (K::Absolute, g, 16, 0),
+                    pe::IMAGE_REL_I386_REL16 => (K::Relative, g, 16, 0),
+                    pe::IMAGE_REL_I386_DIR32 => (K::Absolute, g, 32, 0),
+                    pe::IMAGE_REL_I386_DIR32NB => (K::ImageOffset, g, 32, 0),
+                    pe::IMAGE_REL_I386_SECTION => (K::SectionIndex, g, 16, 0),
+                    pe::IMAGE_REL_I386_SECREL => (K::SectionOffset, g, 32, 0),
+                    pe::IMAGE_REL_I386_SECREL7 => (K::SectionOffset, g, 7, 0),
+                    pe::IMAGE_REL_I386_REL32 => (K::Relative, g, 32, -4),
+                    _ => unknown,
                 },
                 pe::IMAGE_FILE_MACHINE_AMD64 => match typ {
-                    pe::IMAGE_REL_AMD64_ADDR64 => (RelocationKind::Absolute, 64, 0),
-                    pe::IMAGE_REL_AMD64_ADDR32 => (RelocationKind::Absolute, 32, 0),
-                    pe::IMAGE_REL_AMD64_ADDR32NB => (RelocationKind::ImageOffset, 32, 0),
-                    pe::IMAGE_REL_AMD64_REL32 => (RelocationKind::Relative, 32, -4),
-                    pe::IMAGE_REL_AMD64_REL32_1 => (RelocationKind::Relative, 32, -5),
-                    pe::IMAGE_REL_AMD64_REL32_2 => (RelocationKind::Relative, 32, -6),
-                    pe::IMAGE_REL_AMD64_REL32_3 => (RelocationKind::Relative, 32, -7),
-                    pe::IMAGE_REL_AMD64_REL32_4 => (RelocationKind::Relative, 32, -8),
-                    pe::IMAGE_REL_AMD64_REL32_5 => (RelocationKind::Relative, 32, -9),
-                    pe::IMAGE_REL_AMD64_SECTION => (RelocationKind::SectionIndex, 16, 0),
-                    pe::IMAGE_REL_AMD64_SECREL => (RelocationKind::SectionOffset, 32, 0),
-                    pe::IMAGE_REL_AMD64_SECREL7 => (RelocationKind::SectionOffset, 7, 0),
-                    _ => (RelocationKind::Unknown, 0, 0),
+                    pe::IMAGE_REL_AMD64_ADDR64 => (K::Absolute, g, 64, 0),
+                    pe::IMAGE_REL_AMD64_ADDR32 => (K::Absolute, g, 32, 0),
+                    pe::IMAGE_REL_AMD64_ADDR32NB => (K::ImageOffset, g, 32, 0),
+                    pe::IMAGE_REL_AMD64_REL32 => (K::Relative, g, 32, -4),
+                    pe::IMAGE_REL_AMD64_REL32_1 => (K::Relative, g, 32, -5),
+                    pe::IMAGE_REL_AMD64_REL32_2 => (K::Relative, g, 32, -6),
+                    pe::IMAGE_REL_AMD64_REL32_3 => (K::Relative, g, 32, -7),
+                    pe::IMAGE_REL_AMD64_REL32_4 => (K::Relative, g, 32, -8),
+                    pe::IMAGE_REL_AMD64_REL32_5 => (K::Relative, g, 32, -9),
+                    pe::IMAGE_REL_AMD64_SECTION => (K::SectionIndex, g, 16, 0),
+                    pe::IMAGE_REL_AMD64_SECREL => (K::SectionOffset, g, 32, 0),
+                    pe::IMAGE_REL_AMD64_SECREL7 => (K::SectionOffset, g, 7, 0),
+                    _ => unknown,
                 },
-                _ => (RelocationKind::Unknown, 0, 0),
+                _ => unknown,
             };
             let target = RelocationTarget::Symbol(relocation.symbol());
             (
                 u64::from(relocation.virtual_address.get(LE)),
                 Relocation {
                     kind,
-                    encoding: RelocationEncoding::Generic,
+                    encoding,
                     size,
                     target,
                     addend,
