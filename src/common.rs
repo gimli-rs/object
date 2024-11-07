@@ -1,5 +1,5 @@
-// Unfortunately these are necessary, because some of the attributes below aren't copied to the
-// `Archive`'d counterparts of the types below, e.g.
+// Unfortunately these are necessary, because some attributes aren't copied to the `Archive`'d
+// counterparts of the types below, e.g.
 // ```
 //    #[allow(non_camel_case_types)]
 //    Aarch64_Ilp32,
