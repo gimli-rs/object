@@ -133,6 +133,7 @@ impl<'a> Object<'a> {
             Architecture::X86_64_X32 => true,
             Architecture::Hexagon => true,
             Architecture::LoongArch64 => true,
+            Architecture::M68k => false,
             Architecture::Mips => false,
             Architecture::Mips64 => true,
             Architecture::Msp430 => true,
@@ -259,6 +260,16 @@ impl<'a> Object<'a> {
                 (K::Relative, E::LoongArchBranch, 26) => elf::R_LARCH_B26,
                 (K::PltRelative, E::LoongArchBranch, 26) => elf::R_LARCH_B26,
                 _ => return unsupported_reloc(),
+            },
+            Architecture::M68k => match (kind, encoding, size) {
+                (RelocationKind::Absolute, _, 8) => elf::R_68K_8,
+                (RelocationKind::Absolute, _, 16) => elf::R_68K_16,
+                (RelocationKind::Absolute, _, 32) => elf::R_68K_32,
+                (RelocationKind::Relative, _, 16) => elf::R_68K_PC16,
+                (RelocationKind::Relative, _, 32) => elf::R_68K_PC32,
+                _ => {
+                    return Err(Error(format!("unimplemented relocation {:?}", reloc)));
+                }
             },
             Architecture::Mips | Architecture::Mips64 => match (kind, encoding, size) {
                 (K::Absolute, _, 16) => elf::R_MIPS_16,
@@ -543,6 +554,7 @@ impl<'a> Object<'a> {
             (Architecture::X86_64_X32, None) => elf::EM_X86_64,
             (Architecture::Hexagon, None) => elf::EM_HEXAGON,
             (Architecture::LoongArch64, None) => elf::EM_LOONGARCH,
+            (Architecture::M68k, None) => elf::EM_68K,
             (Architecture::Mips, None) => elf::EM_MIPS,
             (Architecture::Mips64, None) => elf::EM_MIPS,
             (Architecture::Msp430, None) => elf::EM_MSP430,
