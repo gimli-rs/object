@@ -1,6 +1,27 @@
+// Unfortunately these are necessary, because some of the attributes below aren't copied to the
+// `Archive`'d counterparts of the types below, e.g.
+// ```
+//    #[allow(non_camel_case_types)]
+//    Aarch64_Ilp32,
+// ```
+// is not copied over, and something like
+// ```
+// #[cfg_attr(feature = "enable_rkyv", rkyv(attr(allow(missing_docs))))]
+// ```
+// does not work for enum variants.
+#![cfg_attr(feature = "enable_rkyv", allow(missing_docs))]
+#![cfg_attr(feature = "enable_rkyv", allow(non_camel_case_types))]
+
 /// A CPU architecture.
 #[allow(missing_docs)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "enable_serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(
+    feature = "enable_rkyv",
+    derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
+)]
+#[cfg_attr(feature = "enable_rkyv", rkyv(compare(PartialEq)))]
+#[cfg_attr(feature = "enable_rkyv", rkyv(attr(allow(missing_docs))))]
 #[non_exhaustive]
 pub enum Architecture {
     Unknown,
@@ -40,6 +61,13 @@ pub enum Architecture {
 /// A CPU sub-architecture.
 #[allow(missing_docs)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "enable_serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(
+    feature = "enable_rkyv",
+    derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
+)]
+#[cfg_attr(feature = "enable_rkyv", rkyv(compare(PartialEq)))]
+#[cfg_attr(feature = "enable_rkyv", rkyv(attr(allow(missing_docs))))]
 #[non_exhaustive]
 pub enum SubArchitecture {
     Arm64E,
@@ -91,6 +119,13 @@ impl Architecture {
 /// This may differ from the address size supported by the file format (such as for COFF).
 #[allow(missing_docs)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "enable_serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(
+    feature = "enable_rkyv",
+    derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
+)]
+#[cfg_attr(feature = "enable_rkyv", rkyv(compare(PartialEq)))]
+#[cfg_attr(feature = "enable_rkyv", rkyv(attr(allow(missing_docs))))]
 #[non_exhaustive]
 #[repr(u8)]
 pub enum AddressSize {
@@ -111,6 +146,13 @@ impl AddressSize {
 /// A binary file format.
 #[allow(missing_docs)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "enable_serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(
+    feature = "enable_rkyv",
+    derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
+)]
+#[cfg_attr(feature = "enable_rkyv", rkyv(compare(PartialEq)))]
+#[cfg_attr(feature = "enable_rkyv", rkyv(attr(allow(missing_docs))))]
 #[non_exhaustive]
 pub enum BinaryFormat {
     Coff,
@@ -138,6 +180,12 @@ impl BinaryFormat {
 
 /// The kind of a section.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "enable_serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(
+    feature = "enable_rkyv",
+    derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
+)]
+#[cfg_attr(feature = "enable_rkyv", rkyv(compare(PartialEq)))]
 #[non_exhaustive]
 pub enum SectionKind {
     /// The section kind is unknown.
@@ -247,6 +295,12 @@ impl SectionKind {
 /// This determines the way in which the linker resolves multiple definitions of the COMDAT
 /// sections.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "enable_serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(
+    feature = "enable_rkyv",
+    derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
+)]
+#[cfg_attr(feature = "enable_rkyv", rkyv(compare(PartialEq)))]
 #[non_exhaustive]
 pub enum ComdatKind {
     /// The selection kind is unknown.
@@ -279,6 +333,12 @@ pub enum ComdatKind {
 
 /// The kind of a symbol.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "enable_serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(
+    feature = "enable_rkyv",
+    derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
+)]
+#[cfg_attr(feature = "enable_rkyv", rkyv(compare(PartialEq)))]
 #[non_exhaustive]
 pub enum SymbolKind {
     /// The symbol kind is unknown.
@@ -299,6 +359,12 @@ pub enum SymbolKind {
 
 /// A symbol scope.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "enable_serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(
+    feature = "enable_rkyv",
+    derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
+)]
+#[cfg_attr(feature = "enable_rkyv", rkyv(compare(PartialEq)))]
 pub enum SymbolScope {
     /// Unknown scope.
     Unknown,
@@ -326,6 +392,12 @@ pub enum SymbolScope {
 ///
 /// 'XxxRelative' means 'Xxx + A - P'.  'XxxOffset' means 'S + A - Xxx'.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "enable_serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(
+    feature = "enable_rkyv",
+    derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
+)]
+#[cfg_attr(feature = "enable_rkyv", rkyv(compare(PartialEq)))]
 #[non_exhaustive]
 pub enum RelocationKind {
     /// The operation is unknown.
@@ -357,6 +429,12 @@ pub enum RelocationKind {
 /// This is usually architecture specific, such as specifying an addressing mode or
 /// a specific instruction.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "enable_serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(
+    feature = "enable_rkyv",
+    derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
+)]
+#[cfg_attr(feature = "enable_rkyv", rkyv(compare(PartialEq)))]
 #[non_exhaustive]
 pub enum RelocationEncoding {
     /// The relocation encoding is unknown.
@@ -435,6 +513,12 @@ pub enum RelocationEncoding {
 
 /// File flags that are specific to each file format.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "enable_serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(
+    feature = "enable_rkyv",
+    derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
+)]
+#[cfg_attr(feature = "enable_rkyv", rkyv(compare(PartialEq)))]
 #[non_exhaustive]
 pub enum FileFlags {
     /// No file flags.
@@ -467,6 +551,12 @@ pub enum FileFlags {
 
 /// Segment flags that are specific to each file format.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "enable_serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(
+    feature = "enable_rkyv",
+    derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
+)]
+#[cfg_attr(feature = "enable_rkyv", rkyv(compare(PartialEq)))]
 #[non_exhaustive]
 pub enum SegmentFlags {
     /// No segment flags.
@@ -494,6 +584,12 @@ pub enum SegmentFlags {
 
 /// Section flags that are specific to each file format.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "enable_serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(
+    feature = "enable_rkyv",
+    derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
+)]
+#[cfg_attr(feature = "enable_rkyv", rkyv(compare(PartialEq)))]
 #[non_exhaustive]
 pub enum SectionFlags {
     /// No section flags.
@@ -522,6 +618,12 @@ pub enum SectionFlags {
 
 /// Symbol flags that are specific to each file format.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "enable_serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(
+    feature = "enable_rkyv",
+    derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
+)]
+#[cfg_attr(feature = "enable_rkyv", rkyv(compare(PartialEq)))]
 #[non_exhaustive]
 pub enum SymbolFlags<Section, Symbol> {
     /// No symbol flags.
@@ -566,6 +668,12 @@ pub enum SymbolFlags<Section, Symbol> {
 
 /// Relocation fields that are specific to each file format and architecture.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "enable_serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(
+    feature = "enable_rkyv",
+    derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
+)]
+#[cfg_attr(feature = "enable_rkyv", rkyv(compare(PartialEq)))]
 #[non_exhaustive]
 pub enum RelocationFlags {
     /// Format independent representation.

@@ -213,9 +213,9 @@ fn print_segment_dynamic<Elf: FileHeader>(
         let mut strsz = 0;
         for d in dynamic {
             let tag = d.d_tag(endian).into();
-            if tag == DT_STRTAB.into() {
+            if tag == <u32 as Into<u64>>::into(DT_STRTAB) {
                 strtab = d.d_val(endian).into();
-            } else if tag == DT_STRSZ.into() {
+            } else if tag == <u32 as Into<u64>>::into(DT_STRSZ) {
                 strsz = d.d_val(endian).into();
             }
         }
@@ -735,7 +735,7 @@ fn print_dynamic<Elf: FileHeader>(
                 p.field_hex("Value", val);
             }
         });
-        if tag == DT_NULL.into() {
+        if tag == <u32 as Into<u64>>::into(DT_NULL) {
             break;
         }
     }
