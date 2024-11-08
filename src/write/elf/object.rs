@@ -265,11 +265,16 @@ impl<'a> Object<'a> {
                 (RelocationKind::Absolute, _, 8) => elf::R_68K_8,
                 (RelocationKind::Absolute, _, 16) => elf::R_68K_16,
                 (RelocationKind::Absolute, _, 32) => elf::R_68K_32,
+                (RelocationKind::Relative, _, 8) => elf::R_68K_PC8,
                 (RelocationKind::Relative, _, 16) => elf::R_68K_PC16,
                 (RelocationKind::Relative, _, 32) => elf::R_68K_PC32,
-                _ => {
-                    return Err(Error(format!("unimplemented relocation {:?}", reloc)));
-                }
+                (RelocationKind::Got, _, 8) => elf::R_68K_GOT8,
+                (RelocationKind::Got, _, 16) => elf::R_68K_GOT16,
+                (RelocationKind::Got, _, 32) => elf::R_68K_GOT32,
+                (RelocationKind::PltRelative, _, 8) => elf::R_68K_PLT8,
+                (RelocationKind::PltRelative, _, 16) => elf::R_68K_PLT16,
+                (RelocationKind::PltRelative, _, 32) => elf::R_68K_PLT32,
+                _ => return unsupported_reloc(),
             },
             Architecture::Mips | Architecture::Mips64 => match (kind, encoding, size) {
                 (K::Absolute, _, 16) => elf::R_MIPS_16,
