@@ -282,9 +282,7 @@ impl<'a> Object<'a> {
                     (K::Absolute, _, 16) => elf::R_MIPS_16,
                     (K::Absolute, _, 32) => elf::R_MIPS_32,
                     (K::Absolute, _, 64) => elf::R_MIPS_64,
-                    _ => {
-                        return Err(Error(format!("unimplemented relocation {:?}", reloc)));
-                    }
+                    _ => return unsupported_reloc(),
                 }
             }
             Architecture::Msp430 => match (kind, encoding, size) {
