@@ -275,6 +275,7 @@ fn elf_any() {
         (Architecture::M68k, Endianness::Big),
         (Architecture::Mips, Endianness::Little),
         (Architecture::Mips64, Endianness::Little),
+        (Architecture::Mips64_N32, Endianness::Little),
         (Architecture::Msp430, Endianness::Little),
         (Architecture::PowerPc, Endianness::Big),
         (Architecture::PowerPc64, Endianness::Big),

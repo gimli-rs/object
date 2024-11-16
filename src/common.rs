@@ -22,6 +22,8 @@ pub enum Architecture {
     M68k,
     Mips,
     Mips64,
+    #[allow(non_camel_case_types)]
+    Mips64_N32,
     Msp430,
     PowerPc,
     PowerPc64,
@@ -70,6 +72,7 @@ impl Architecture {
             Architecture::M68k => Some(AddressSize::U32),
             Architecture::Mips => Some(AddressSize::U32),
             Architecture::Mips64 => Some(AddressSize::U64),
+            Architecture::Mips64_N32 => Some(AddressSize::U32),
             Architecture::Msp430 => Some(AddressSize::U16),
             Architecture::PowerPc => Some(AddressSize::U32),
             Architecture::PowerPc64 => Some(AddressSize::U64),

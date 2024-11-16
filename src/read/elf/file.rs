@@ -217,7 +217,13 @@ where
             (elf::EM_HEXAGON, _) => Architecture::Hexagon,
             (elf::EM_LOONGARCH, true) => Architecture::LoongArch64,
             (elf::EM_68K, false) => Architecture::M68k,
-            (elf::EM_MIPS, false) => Architecture::Mips,
+            (elf::EM_MIPS, false) => {
+                if (self.header.e_flags(self.endian) & elf::EF_MIPS_ABI2) != 0 {
+                    Architecture::Mips64_N32
+                } else {
+                    Architecture::Mips
+                }
+            }
             (elf::EM_MIPS, true) => Architecture::Mips64,
             (elf::EM_MSP430, _) => Architecture::Msp430,
             (elf::EM_PPC, _) => Architecture::PowerPc,
