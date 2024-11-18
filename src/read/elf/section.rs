@@ -654,7 +654,8 @@ where
             | elf::SHT_DYNAMIC
             | elf::SHT_REL
             | elf::SHT_DYNSYM
-            | elf::SHT_GROUP => SectionKind::Metadata,
+            | elf::SHT_GROUP
+            | elf::SHT_RELR => SectionKind::Metadata,
             _ => SectionKind::Elf(sh_type),
         }
     }

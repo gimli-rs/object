@@ -710,6 +710,8 @@ pub const SHT_PREINIT_ARRAY: u32 = 16;
 pub const SHT_GROUP: u32 = 17;
 /// Extended section indices for a symbol table.
 pub const SHT_SYMTAB_SHNDX: u32 = 18;
+/// Relative Relocation entries (https://maskray.me/blog/2021-10-31-relative-relocations-and-relr)
+pub const SHT_RELR: u32 = 19;
 /// Start of OS-specific section types.
 pub const SHT_LOOS: u32 = 0x6000_0000;
 /// LLVM-style dependent libraries.

@@ -227,7 +227,7 @@ impl<'data> Builder<'data> {
                 | elf::SHT_LLVM_DEPENDENT_LIBRARIES => {
                     SectionData::Data(section.data(endian, data)?.into())
                 }
-                elf::SHT_REL | elf::SHT_RELA => relocations,
+                elf::SHT_REL | elf::SHT_RELA | elf::SHT_RELR => relocations,
                 elf::SHT_SYMTAB => {
                     if index == symbols.section() {
                         SectionData::Symbol
