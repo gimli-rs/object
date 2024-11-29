@@ -680,7 +680,7 @@ SectionHeader {
 SectionHeader {
     Index: 12
     Name: ".relr.dyn" (0xA1)
-    Type: 0x13
+    Type: SHT_RELR (0x13)
     Flags: 0x2
         SHF_ALLOC (0x2)
     Address: 0x600
@@ -690,6 +690,9 @@ SectionHeader {
     Info: 0
     AddressAlign: 0x8
     EntrySize: 0x8
+    Offset: 0x3D88
+    Offset: 0x3D90
+    Offset: 0x4008
 }
 SectionHeader {
     Index: 13

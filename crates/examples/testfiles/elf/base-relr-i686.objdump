@@ -19,7 +19,7 @@ Segment { address: 3ec0, size: 14c }
 8: Section { name: ".gnu.version_r", address: 358, size: 50, align: 4, kind: Elf(6ffffffe), flags: Elf { sh_flags: 2 } }
 9: Section { name: ".rel.dyn", address: 3a8, size: 20, align: 4, kind: Metadata, flags: Elf { sh_flags: 2 } }
 10: Section { name: ".rel.plt", address: 3c8, size: 10, align: 4, kind: Metadata, flags: Elf { sh_flags: 42 } }
-11: Section { name: ".relr.dyn", address: 3d8, size: 10, align: 4, kind: Elf(13), flags: Elf { sh_flags: 2 } }
+11: Section { name: ".relr.dyn", address: 3d8, size: 10, align: 4, kind: Metadata, flags: Elf { sh_flags: 2 } }
 12: Section { name: ".init", address: 1000, size: 20, align: 4, kind: Text, flags: Elf { sh_flags: 6 } }
 13: Section { name: ".plt", address: 1020, size: 30, align: 10, kind: Text, flags: Elf { sh_flags: 6 } }
 14: Section { name: ".plt.got", address: 1050, size: 8, align: 8, kind: Text, flags: Elf { sh_flags: 6 } }

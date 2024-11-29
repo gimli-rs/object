@@ -12,8 +12,8 @@ use crate::read::{
 
 use super::{
     AttributesSection, CompressionHeader, ElfFile, ElfSectionRelocationIterator, FileHeader,
-    GnuHashTable, HashTable, NoteIterator, RelocationSections, SymbolTable, VerdefIterator,
-    VerneedIterator, VersionTable,
+    GnuHashTable, HashTable, NoteIterator, RelocationSections, RelrIterator, SymbolTable,
+    VerdefIterator, VerneedIterator, VersionTable,
 };
 
 /// The table of section headers in an ELF file.
@@ -654,7 +654,9 @@ where
             | elf::SHT_DYNAMIC
             | elf::SHT_REL
             | elf::SHT_DYNSYM
-            | elf::SHT_GROUP => SectionKind::Metadata,
+            | elf::SHT_GROUP
+            | elf::SHT_SYMTAB_SHNDX
+            | elf::SHT_RELR => SectionKind::Metadata,
             _ => SectionKind::Elf(sh_type),
         }
     }
@@ -850,6 +852,25 @@ pub trait SectionHeader: Debug + Pod {
             .data_as_array(endian, data)
             .read_error("Invalid ELF relocation section offset or size")?;
         Ok(Some((rela, self.link(endian))))
+    }
+
+    /// Return the `Elf::Relr` entries in the section.
+    ///
+    /// Returns `Ok(None)` if the section does not contain relative relocations.
+    /// Returns `Err` for invalid values.
+    fn relr<'data, R: ReadRef<'data>>(
+        &self,
+        endian: Self::Endian,
+        data: R,
+    ) -> read::Result<Option<RelrIterator<'data, Self::Elf>>> {
+        if self.sh_type(endian) != elf::SHT_RELR {
+            return Ok(None);
+        }
+        let data = self
+            .data_as_array(endian, data)
+            .read_error("Invalid ELF relocation section offset or size")?;
+        let relrs = RelrIterator::new(endian, data);
+        Ok(Some(relrs))
     }
 
     /// Return entries in a dynamic section.
