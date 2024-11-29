@@ -220,10 +220,13 @@ impl<'data> Builder<'data> {
             let name = sections.section_name(endian, section)?;
             let data = match section.sh_type(endian) {
                 elf::SHT_NOBITS => SectionData::UninitializedData(section.sh_size(endian).into()),
+                // Section types that we treat as opaque data. In future, some of these could be
+                // changed to a parsed variant if we need to modify their contents.
                 elf::SHT_PROGBITS
                 | elf::SHT_INIT_ARRAY
                 | elf::SHT_FINI_ARRAY
                 | elf::SHT_PREINIT_ARRAY
+                | elf::SHT_RELR
                 | elf::SHT_LLVM_DEPENDENT_LIBRARIES => {
                     SectionData::Data(section.data(endian, data)?.into())
                 }
@@ -1870,6 +1873,12 @@ impl<'data> Builder<'data> {
         }
         let mut version_file_used = vec![false; self.version_files.len()];
         for version in &mut self.versions {
+            if let VersionData::Need(need) = &version.data {
+                // This is a dummy version that is required if DT_RELR is used.
+                if need.name.as_slice() == b"GLIBC_ABI_DT_RELR" {
+                    version_used[version.id.0] = true;
+                }
+            }
             if !version_used[version.id.0] {
                 version.delete = true;
                 continue;
