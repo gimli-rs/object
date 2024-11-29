@@ -617,3 +617,114 @@ impl<Endian: endian::Endian> Rela for elf::Rela64<Endian> {
         self.r_type(endian, is_mips64el)
     }
 }
+
+/// An iterator over the relative relocations in an ELF `SHT_RELR` section.
+///
+/// Returned by [`SectionHeader::relr`](super::SectionHeader::relr).
+#[derive(Debug)]
+pub struct RelrIterator<'data, Elf: FileHeader> {
+    offset: Elf::Word,
+    bits: Elf::Word,
+    count: u8,
+    iter: slice::Iter<'data, Elf::Relr>,
+    endian: Elf::Endian,
+}
+
+impl<'data, Elf: FileHeader> RelrIterator<'data, Elf> {
+    /// Create a new iterator given the `SHT_RELR` section data.
+    pub fn new(endian: Elf::Endian, data: &'data [Elf::Relr]) -> Self {
+        RelrIterator {
+            offset: Elf::Word::default(),
+            bits: Elf::Word::default(),
+            count: 0,
+            iter: data.iter(),
+            endian,
+        }
+    }
+}
+
+impl<'data, Elf: FileHeader> Iterator for RelrIterator<'data, Elf> {
+    type Item = Elf::Word;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        loop {
+            while self.count > 0 {
+                self.count -= 1;
+                let offset = Elf::Relr::next(&mut self.offset, &mut self.bits);
+                if offset.is_some() {
+                    return offset;
+                }
+            }
+            let next = self.iter.next()?.get(self.endian);
+            if next.into() & 1 == 0 {
+                self.offset = next;
+                return Some(next);
+            }
+            self.bits = next;
+            self.count = Elf::Relr::COUNT;
+        }
+    }
+}
+
+/// A trait for generic access to [`elf::Relr32`] and [`elf::Relr64`].
+#[allow(missing_docs)]
+pub trait Relr: Debug + Pod + Clone {
+    type Word: Into<u64>;
+    type Endian: endian::Endian;
+
+    /// The number of bits in the bit mask, excluding the lowest bit.
+    const COUNT: u8;
+
+    /// Get the relocation entry.
+    ///
+    /// This value is an offset if the lowest bit is clear, or a bit mask if the lowest bit is set.
+    fn get(&self, endian: Self::Endian) -> Self::Word;
+
+    /// Return the offset corresponding to the next bit in the bit mask.
+    ///
+    /// Updates the offset and bit mask. This method should be called 31 times
+    /// for Relr32 and 63 times for Relr64 to iterate over all the bits.
+    ///
+    /// Returns `None` if the bit is not set.
+    fn next(offset: &mut Self::Word, bits: &mut Self::Word) -> Option<Self::Word>;
+}
+
+impl<Endian: endian::Endian> Relr for elf::Relr32<Endian> {
+    type Word = u32;
+    type Endian = Endian;
+    const COUNT: u8 = 31;
+
+    fn get(&self, endian: Self::Endian) -> Self::Word {
+        self.0.get(endian)
+    }
+
+    fn next(offset: &mut Self::Word, bits: &mut Self::Word) -> Option<Self::Word> {
+        *offset += 4;
+        *bits >>= 1;
+        if *bits & 1 != 0 {
+            Some(*offset)
+        } else {
+            None
+        }
+    }
+}
+
+impl<Endian: endian::Endian> Relr for elf::Relr64<Endian> {
+    type Word = u64;
+    type Endian = Endian;
+    const COUNT: u8 = 63;
+
+    fn get(&self, endian: Self::Endian) -> Self::Word {
+        self.0.get(endian)
+    }
+
+    fn next(offset: &mut Self::Word, bits: &mut Self::Word) -> Option<Self::Word> {
+        *offset += 8;
+        *bits >>= 1;
+        if *bits & 1 != 0 {
+            Some(*offset)
+        } else {
+            None
+        }
+    }
+}

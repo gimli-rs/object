@@ -317,6 +317,7 @@ fn print_section_headers<Elf: FileHeader>(
                 }
                 SHT_REL => print_section_rel(p, endian, data, elf, sections, section),
                 SHT_RELA => print_section_rela(p, endian, data, elf, sections, section),
+                SHT_RELR => print_section_relr(p, endian, data, elf, section),
                 SHT_NOTE => print_section_notes(p, endian, data, elf, section),
                 SHT_DYNAMIC => print_section_dynamic(p, endian, data, elf, sections, section),
                 SHT_GROUP => print_section_group(p, endian, data, elf, sections, section),
@@ -557,6 +558,23 @@ fn rel_flag_type<Elf: FileHeader>(endian: Elf::Endian, elf: &Elf) -> &'static [F
         EM_METAG => FLAGS_R_METAG,
         EM_NDS32 => FLAGS_R_NDS32,
         _ => &[],
+    }
+}
+
+fn print_section_relr<Elf: FileHeader>(
+    p: &mut Printer<'_>,
+    endian: Elf::Endian,
+    data: &[u8],
+    _elf: &Elf,
+    section: &Elf::SectionHeader,
+) {
+    if !p.options.relocations {
+        return;
+    }
+    if let Some(Some(relocations)) = section.relr(endian, data).print_err(p) {
+        for relocation in relocations {
+            p.field_hex("Offset", relocation.into());
+        }
     }
 }
 
@@ -1373,6 +1391,7 @@ const FLAGS_SHT: &[Flag<u32>] = &flags!(
     SHT_PREINIT_ARRAY,
     SHT_GROUP,
     SHT_SYMTAB_SHNDX,
+    SHT_RELR,
     SHT_LLVM_DEPENDENT_LIBRARIES,
     SHT_GNU_ATTRIBUTES,
     SHT_GNU_HASH,

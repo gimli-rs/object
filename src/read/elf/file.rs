@@ -14,7 +14,7 @@ use crate::read::{
 use super::{
     CompressionHeader, Dyn, ElfComdat, ElfComdatIterator, ElfDynamicRelocationIterator, ElfSection,
     ElfSectionIterator, ElfSegment, ElfSegmentIterator, ElfSymbol, ElfSymbolIterator,
-    ElfSymbolTable, NoteHeader, ProgramHeader, Rel, Rela, RelocationSections, SectionHeader,
+    ElfSymbolTable, NoteHeader, ProgramHeader, Rel, Rela, RelocationSections, Relr, SectionHeader,
     SectionTable, Sym, SymbolTable,
 };
 
@@ -485,7 +485,7 @@ where
 #[allow(missing_docs)]
 pub trait FileHeader: Debug + Pod {
     // Ideally this would be a `u64: From<Word>`, but can't express that.
-    type Word: Into<u64>;
+    type Word: Into<u64> + Default + Copy;
     type Sword: Into<i64>;
     type Endian: endian::Endian;
     type ProgramHeader: ProgramHeader<Elf = Self, Endian = Self::Endian, Word = Self::Word>;
@@ -496,6 +496,7 @@ pub trait FileHeader: Debug + Pod {
     type Sym: Sym<Endian = Self::Endian, Word = Self::Word>;
     type Rel: Rel<Endian = Self::Endian, Word = Self::Word>;
     type Rela: Rela<Endian = Self::Endian, Word = Self::Word> + From<Self::Rel>;
+    type Relr: Relr<Endian = Self::Endian, Word = Self::Word>;
 
     /// Return true if this type is a 64-bit header.
     ///
@@ -785,6 +786,7 @@ impl<Endian: endian::Endian> FileHeader for elf::FileHeader32<Endian> {
     type Sym = elf::Sym32<Endian>;
     type Rel = elf::Rel32<Endian>;
     type Rela = elf::Rela32<Endian>;
+    type Relr = elf::Relr32<Endian>;
 
     #[inline]
     fn is_type_64(&self) -> bool {
@@ -882,6 +884,7 @@ impl<Endian: endian::Endian> FileHeader for elf::FileHeader64<Endian> {
     type Sym = elf::Sym64<Endian>;
     type Rel = elf::Rel64<Endian>;
     type Rela = elf::Rela64<Endian>;
+    type Relr = elf::Relr64<Endian>;
 
     #[inline]
     fn is_type_64(&self) -> bool {
