@@ -42,6 +42,32 @@ fn rewrite_base_version() {
 }
 
 #[test]
+fn rewrite_base_relr() {
+    let print_options = readobj::PrintOptions {
+        string_indices: false,
+        ..readobj::PrintOptions::all()
+    };
+    let mut fail = false;
+
+    let options = object_rewrite::Options::default();
+    fail |= testfile(
+        "elf/base-relr-i686",
+        "elf/base-relr-i686.noop",
+        options,
+        &print_options,
+    );
+    let options = object_rewrite::Options::default();
+    fail |= testfile(
+        "elf/base-relr-x86_64",
+        "elf/base-relr-x86_64.noop",
+        options,
+        &print_options,
+    );
+
+    fail_message(fail);
+}
+
+#[test]
 fn rewrite_symbols() {
     let print_options = readobj::PrintOptions {
         string_indices: false,
