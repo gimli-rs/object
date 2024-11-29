@@ -1978,6 +1978,30 @@ impl<'a> Writer<'a> {
         });
     }
 
+    /// Write the section header for a relative relocation section.
+    ///
+    /// `offset` is the file offset of the relocations.
+    /// `size` is the size of the section in bytes.
+    pub fn write_relative_relocation_section_header(
+        &mut self,
+        name: StringId,
+        offset: usize,
+        size: usize,
+    ) {
+        self.write_section_header(&SectionHeader {
+            name: Some(name),
+            sh_type: elf::SHT_RELA,
+            sh_flags: 0,
+            sh_addr: 0,
+            sh_offset: offset as u64,
+            sh_size: size as u64,
+            sh_link: 0,
+            sh_info: 0,
+            sh_addralign: self.elf_align as u64,
+            sh_entsize: self.class().relr_size() as u64,
+        });
+    }
+
     /// Reserve a file range for a COMDAT section.
     ///
     /// `count` is the number of sections in the COMDAT group.
@@ -2219,6 +2243,15 @@ impl Class {
             } else {
                 mem::size_of::<elf::Rel32<Endianness>>()
             }
+        }
+    }
+
+    /// Return the size of a relative relocation entry.
+    pub fn relr_size(self) -> usize {
+        if self.is_64 {
+            mem::size_of::<elf::Relr64<Endianness>>()
+        } else {
+            mem::size_of::<elf::Relr32<Endianness>>()
         }
     }
 
