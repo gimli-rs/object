@@ -221,16 +221,56 @@ where
     Mach: MachHeader,
     R: ReadRef<'data>,
 {
-    type Segment<'file> = MachOSegment<'data, 'file, Mach, R> where Self: 'file, 'data: 'file;
-    type SegmentIterator<'file> = MachOSegmentIterator<'data, 'file, Mach, R> where Self: 'file, 'data: 'file;
-    type Section<'file> = MachOSection<'data, 'file, Mach, R> where Self: 'file, 'data: 'file;
-    type SectionIterator<'file> = MachOSectionIterator<'data, 'file, Mach, R> where Self: 'file, 'data: 'file;
-    type Comdat<'file> = MachOComdat<'data, 'file, Mach, R> where Self: 'file, 'data: 'file;
-    type ComdatIterator<'file> = MachOComdatIterator<'data, 'file, Mach, R> where Self: 'file, 'data: 'file;
-    type Symbol<'file> = MachOSymbol<'data, 'file, Mach, R> where Self: 'file, 'data: 'file;
-    type SymbolIterator<'file> = MachOSymbolIterator<'data, 'file, Mach, R> where Self: 'file, 'data: 'file;
-    type SymbolTable<'file> = MachOSymbolTable<'data, 'file, Mach, R> where Self: 'file, 'data: 'file;
-    type DynamicRelocationIterator<'file> = NoDynamicRelocationIterator where Self: 'file, 'data: 'file;
+    type Segment<'file>
+        = MachOSegment<'data, 'file, Mach, R>
+    where
+        Self: 'file,
+        'data: 'file;
+    type SegmentIterator<'file>
+        = MachOSegmentIterator<'data, 'file, Mach, R>
+    where
+        Self: 'file,
+        'data: 'file;
+    type Section<'file>
+        = MachOSection<'data, 'file, Mach, R>
+    where
+        Self: 'file,
+        'data: 'file;
+    type SectionIterator<'file>
+        = MachOSectionIterator<'data, 'file, Mach, R>
+    where
+        Self: 'file,
+        'data: 'file;
+    type Comdat<'file>
+        = MachOComdat<'data, 'file, Mach, R>
+    where
+        Self: 'file,
+        'data: 'file;
+    type ComdatIterator<'file>
+        = MachOComdatIterator<'data, 'file, Mach, R>
+    where
+        Self: 'file,
+        'data: 'file;
+    type Symbol<'file>
+        = MachOSymbol<'data, 'file, Mach, R>
+    where
+        Self: 'file,
+        'data: 'file;
+    type SymbolIterator<'file>
+        = MachOSymbolIterator<'data, 'file, Mach, R>
+    where
+        Self: 'file,
+        'data: 'file;
+    type SymbolTable<'file>
+        = MachOSymbolTable<'data, 'file, Mach, R>
+    where
+        Self: 'file,
+        'data: 'file;
+    type DynamicRelocationIterator<'file>
+        = NoDynamicRelocationIterator
+    where
+        Self: 'file,
+        'data: 'file;
 
     fn architecture(&self) -> Architecture {
         match self.header.cputype(self.endian) {

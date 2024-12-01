@@ -110,16 +110,56 @@ where
     Xcoff: FileHeader,
     R: ReadRef<'data>,
 {
-    type Segment<'file> = XcoffSegment<'data, 'file, Xcoff, R> where Self: 'file, 'data: 'file;
-    type SegmentIterator<'file> = XcoffSegmentIterator<'data, 'file, Xcoff, R> where Self: 'file, 'data: 'file;
-    type Section<'file> = XcoffSection<'data, 'file, Xcoff, R> where Self: 'file, 'data: 'file;
-    type SectionIterator<'file> = XcoffSectionIterator<'data, 'file, Xcoff, R> where Self: 'file, 'data: 'file;
-    type Comdat<'file> = XcoffComdat<'data, 'file, Xcoff, R> where Self: 'file, 'data: 'file;
-    type ComdatIterator<'file> = XcoffComdatIterator<'data, 'file, Xcoff, R> where Self: 'file, 'data: 'file;
-    type Symbol<'file> = XcoffSymbol<'data, 'file, Xcoff, R> where Self: 'file, 'data: 'file;
-    type SymbolIterator<'file> = XcoffSymbolIterator<'data, 'file, Xcoff, R> where Self: 'file, 'data: 'file;
-    type SymbolTable<'file> = XcoffSymbolTable<'data, 'file, Xcoff, R> where Self: 'file, 'data: 'file;
-    type DynamicRelocationIterator<'file> = NoDynamicRelocationIterator where Self: 'file, 'data: 'file;
+    type Segment<'file>
+        = XcoffSegment<'data, 'file, Xcoff, R>
+    where
+        Self: 'file,
+        'data: 'file;
+    type SegmentIterator<'file>
+        = XcoffSegmentIterator<'data, 'file, Xcoff, R>
+    where
+        Self: 'file,
+        'data: 'file;
+    type Section<'file>
+        = XcoffSection<'data, 'file, Xcoff, R>
+    where
+        Self: 'file,
+        'data: 'file;
+    type SectionIterator<'file>
+        = XcoffSectionIterator<'data, 'file, Xcoff, R>
+    where
+        Self: 'file,
+        'data: 'file;
+    type Comdat<'file>
+        = XcoffComdat<'data, 'file, Xcoff, R>
+    where
+        Self: 'file,
+        'data: 'file;
+    type ComdatIterator<'file>
+        = XcoffComdatIterator<'data, 'file, Xcoff, R>
+    where
+        Self: 'file,
+        'data: 'file;
+    type Symbol<'file>
+        = XcoffSymbol<'data, 'file, Xcoff, R>
+    where
+        Self: 'file,
+        'data: 'file;
+    type SymbolIterator<'file>
+        = XcoffSymbolIterator<'data, 'file, Xcoff, R>
+    where
+        Self: 'file,
+        'data: 'file;
+    type SymbolTable<'file>
+        = XcoffSymbolTable<'data, 'file, Xcoff, R>
+    where
+        Self: 'file,
+        'data: 'file;
+    type DynamicRelocationIterator<'file>
+        = NoDynamicRelocationIterator
+    where
+        Self: 'file,
+        'data: 'file;
 
     fn architecture(&self) -> Architecture {
         if self.is_64() {

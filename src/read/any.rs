@@ -307,16 +307,56 @@ impl<'data, R> Object<'data> for File<'data, R>
 where
     R: ReadRef<'data>,
 {
-    type Segment<'file> = Segment<'data, 'file, R> where Self: 'file, 'data: 'file;
-    type SegmentIterator<'file> = SegmentIterator<'data, 'file, R> where Self: 'file, 'data: 'file;
-    type Section<'file> = Section<'data, 'file, R> where Self: 'file, 'data: 'file;
-    type SectionIterator<'file> = SectionIterator<'data, 'file, R> where Self: 'file, 'data: 'file;
-    type Comdat<'file> = Comdat<'data, 'file, R> where Self: 'file, 'data: 'file;
-    type ComdatIterator<'file> = ComdatIterator<'data, 'file, R> where Self: 'file, 'data: 'file;
-    type Symbol<'file> = Symbol<'data, 'file, R> where Self: 'file, 'data: 'file;
-    type SymbolIterator<'file> = SymbolIterator<'data, 'file, R> where Self: 'file, 'data: 'file;
-    type SymbolTable<'file> = SymbolTable<'data, 'file, R> where Self: 'file, 'data: 'file;
-    type DynamicRelocationIterator<'file> = DynamicRelocationIterator<'data, 'file, R> where Self: 'file, 'data: 'file;
+    type Segment<'file>
+        = Segment<'data, 'file, R>
+    where
+        Self: 'file,
+        'data: 'file;
+    type SegmentIterator<'file>
+        = SegmentIterator<'data, 'file, R>
+    where
+        Self: 'file,
+        'data: 'file;
+    type Section<'file>
+        = Section<'data, 'file, R>
+    where
+        Self: 'file,
+        'data: 'file;
+    type SectionIterator<'file>
+        = SectionIterator<'data, 'file, R>
+    where
+        Self: 'file,
+        'data: 'file;
+    type Comdat<'file>
+        = Comdat<'data, 'file, R>
+    where
+        Self: 'file,
+        'data: 'file;
+    type ComdatIterator<'file>
+        = ComdatIterator<'data, 'file, R>
+    where
+        Self: 'file,
+        'data: 'file;
+    type Symbol<'file>
+        = Symbol<'data, 'file, R>
+    where
+        Self: 'file,
+        'data: 'file;
+    type SymbolIterator<'file>
+        = SymbolIterator<'data, 'file, R>
+    where
+        Self: 'file,
+        'data: 'file;
+    type SymbolTable<'file>
+        = SymbolTable<'data, 'file, R>
+    where
+        Self: 'file,
+        'data: 'file;
+    type DynamicRelocationIterator<'file>
+        = DynamicRelocationIterator<'data, 'file, R>
+    where
+        Self: 'file,
+        'data: 'file;
 
     fn architecture(&self) -> Architecture {
         with_inner!(self, File, |x| x.architecture())

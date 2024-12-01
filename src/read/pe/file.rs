@@ -143,16 +143,56 @@ where
     Pe: ImageNtHeaders,
     R: ReadRef<'data>,
 {
-    type Segment<'file> = PeSegment<'data, 'file, Pe, R> where Self: 'file, 'data: 'file;
-    type SegmentIterator<'file> = PeSegmentIterator<'data, 'file, Pe, R> where Self: 'file, 'data: 'file;
-    type Section<'file> = PeSection<'data, 'file, Pe, R> where Self: 'file, 'data: 'file;
-    type SectionIterator<'file> = PeSectionIterator<'data, 'file, Pe, R> where Self: 'file, 'data: 'file;
-    type Comdat<'file> = PeComdat<'data, 'file, Pe, R> where Self: 'file, 'data: 'file;
-    type ComdatIterator<'file> = PeComdatIterator<'data, 'file, Pe, R> where Self: 'file, 'data: 'file;
-    type Symbol<'file> = CoffSymbol<'data, 'file, R> where Self: 'file, 'data: 'file;
-    type SymbolIterator<'file> = CoffSymbolIterator<'data, 'file, R> where Self: 'file, 'data: 'file;
-    type SymbolTable<'file> = CoffSymbolTable<'data, 'file, R> where Self: 'file, 'data: 'file;
-    type DynamicRelocationIterator<'file> = NoDynamicRelocationIterator where Self: 'file, 'data: 'file;
+    type Segment<'file>
+        = PeSegment<'data, 'file, Pe, R>
+    where
+        Self: 'file,
+        'data: 'file;
+    type SegmentIterator<'file>
+        = PeSegmentIterator<'data, 'file, Pe, R>
+    where
+        Self: 'file,
+        'data: 'file;
+    type Section<'file>
+        = PeSection<'data, 'file, Pe, R>
+    where
+        Self: 'file,
+        'data: 'file;
+    type SectionIterator<'file>
+        = PeSectionIterator<'data, 'file, Pe, R>
+    where
+        Self: 'file,
+        'data: 'file;
+    type Comdat<'file>
+        = PeComdat<'data, 'file, Pe, R>
+    where
+        Self: 'file,
+        'data: 'file;
+    type ComdatIterator<'file>
+        = PeComdatIterator<'data, 'file, Pe, R>
+    where
+        Self: 'file,
+        'data: 'file;
+    type Symbol<'file>
+        = CoffSymbol<'data, 'file, R>
+    where
+        Self: 'file,
+        'data: 'file;
+    type SymbolIterator<'file>
+        = CoffSymbolIterator<'data, 'file, R>
+    where
+        Self: 'file,
+        'data: 'file;
+    type SymbolTable<'file>
+        = CoffSymbolTable<'data, 'file, R>
+    where
+        Self: 'file,
+        'data: 'file;
+    type DynamicRelocationIterator<'file>
+        = NoDynamicRelocationIterator
+    where
+        Self: 'file,
+        'data: 'file;
 
     fn architecture(&self) -> Architecture {
         match self.nt_headers.file_header().machine.get(LE) {
