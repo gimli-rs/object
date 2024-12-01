@@ -187,16 +187,56 @@ where
     Elf: FileHeader,
     R: ReadRef<'data>,
 {
-    type Segment<'file> = ElfSegment<'data, 'file, Elf, R> where Self: 'file, 'data: 'file;
-    type SegmentIterator<'file> = ElfSegmentIterator<'data, 'file, Elf, R> where Self: 'file, 'data: 'file;
-    type Section<'file> = ElfSection<'data, 'file, Elf, R> where Self: 'file, 'data: 'file;
-    type SectionIterator<'file> = ElfSectionIterator<'data, 'file, Elf, R> where Self: 'file, 'data: 'file;
-    type Comdat<'file> = ElfComdat<'data, 'file, Elf, R> where Self: 'file, 'data: 'file;
-    type ComdatIterator<'file> = ElfComdatIterator<'data, 'file, Elf, R> where Self: 'file, 'data: 'file;
-    type Symbol<'file> = ElfSymbol<'data, 'file, Elf, R> where Self: 'file, 'data: 'file;
-    type SymbolIterator<'file> = ElfSymbolIterator<'data, 'file, Elf, R> where Self: 'file, 'data: 'file;
-    type SymbolTable<'file> = ElfSymbolTable<'data, 'file, Elf, R> where Self: 'file, 'data: 'file;
-    type DynamicRelocationIterator<'file> = ElfDynamicRelocationIterator<'data, 'file, Elf, R> where Self: 'file, 'data: 'file;
+    type Segment<'file>
+        = ElfSegment<'data, 'file, Elf, R>
+    where
+        Self: 'file,
+        'data: 'file;
+    type SegmentIterator<'file>
+        = ElfSegmentIterator<'data, 'file, Elf, R>
+    where
+        Self: 'file,
+        'data: 'file;
+    type Section<'file>
+        = ElfSection<'data, 'file, Elf, R>
+    where
+        Self: 'file,
+        'data: 'file;
+    type SectionIterator<'file>
+        = ElfSectionIterator<'data, 'file, Elf, R>
+    where
+        Self: 'file,
+        'data: 'file;
+    type Comdat<'file>
+        = ElfComdat<'data, 'file, Elf, R>
+    where
+        Self: 'file,
+        'data: 'file;
+    type ComdatIterator<'file>
+        = ElfComdatIterator<'data, 'file, Elf, R>
+    where
+        Self: 'file,
+        'data: 'file;
+    type Symbol<'file>
+        = ElfSymbol<'data, 'file, Elf, R>
+    where
+        Self: 'file,
+        'data: 'file;
+    type SymbolIterator<'file>
+        = ElfSymbolIterator<'data, 'file, Elf, R>
+    where
+        Self: 'file,
+        'data: 'file;
+    type SymbolTable<'file>
+        = ElfSymbolTable<'data, 'file, Elf, R>
+    where
+        Self: 'file,
+        'data: 'file;
+    type DynamicRelocationIterator<'file>
+        = ElfDynamicRelocationIterator<'data, 'file, Elf, R>
+    where
+        Self: 'file,
+        'data: 'file;
 
     fn architecture(&self) -> Architecture {
         match (
