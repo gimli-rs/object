@@ -5,6 +5,8 @@ edition = "2018"
 keywords = ["object", "elf", "mach-o", "pe", "coff"]
 license = "Apache-2.0 OR MIT"
 repository = "https://github.com/gimli-rs/object"
+# NB: if this number increases to 1.81-or-later delete the `build.rs` script
+# as it's no longer necessary.
 rust-version = "1.65"
 description = "A unified interface for reading and writing object file formats."
 include = [

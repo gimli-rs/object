@@ -24,6 +24,8 @@ impl fmt::Display for Error {
 
 #[cfg(feature = "std")]
 impl error::Error for Error {}
+#[cfg(all(not(feature = "std"), core_error))]
+impl core::error::Error for Error {}
 
 impl From<read::Error> for Error {
     fn from(error: read::Error) -> Error {

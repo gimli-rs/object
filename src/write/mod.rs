@@ -60,6 +60,8 @@ impl fmt::Display for Error {
 
 #[cfg(feature = "std")]
 impl error::Error for Error {}
+#[cfg(all(not(feature = "std"), core_error))]
+impl core::error::Error for Error {}
 
 /// The result type used within the write module.
 pub type Result<T> = result::Result<T, Error>;
