@@ -338,13 +338,13 @@ where
                 if let Some(offset) = *page_offset {
                     let mapping_offset: u64 = *page_index * slide.page_size.get(*endian) as u64;
                     let file_offset: u64 = info.file_offset.get(*endian) + mapping_offset + offset;
-                    let file_offset = match data.read_at::<U64<E>>(file_offset) {
-                        Ok(file_offset) => file_offset.get(*endian),
+                    let pointer = match data.read_at::<U64<E>>(file_offset) {
+                        Ok(pointer) => pointer.get(*endian),
                         Err(_) => {
                             return Some(Err(Error("Failed to read file offset")));
                         }
                     };
-                    let pointer = macho::DyldCacheSlidePointer5(file_offset);
+                    let pointer = macho::DyldCacheSlidePointer5(pointer);
 
                     let next = pointer.next();
                     if next == 0 {
