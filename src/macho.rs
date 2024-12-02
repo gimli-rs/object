@@ -526,105 +526,49 @@ pub struct DyldCacheImageInfo<E: Endian> {
 
 /// Corresponds to struct dyld_cache_slide_pointer5 from dyld_cache_format.h.
 #[derive(Debug, Clone, Copy)]
-pub enum DyldCacheSlidePointer5 {
-    Regular(DyldChainedPtrArm64eSharedCacheRebase),
-    Auth(DyldChainedPtrArm64eSharedCacheAuthRebase),
-}
+pub struct DyldCacheSlidePointer5(pub u64);
 
 impl DyldCacheSlidePointer5 {
+    fn is_auth(&self) -> bool {
+        (self.0 & 0x8000_0000_0000_0000) != 0
+    }
+
     pub fn value(&self, value_add: u64) -> u64 {
-        match self {
-            Self::Regular(regular) => regular.value(value_add),
-            Self::Auth(auth) => auth.value(value_add),
+        let runtime_offset: u64 = self.0 & 0x3_ffff_ffff;
+
+        if self.is_auth() {
+            runtime_offset + value_add
+        } else {
+            let high8: u64 = (self.0 >> 34) & 0xff;
+
+            high8 << 56 | (runtime_offset + value_add)
         }
     }
 
     pub fn auth(&self) -> Option<Ptrauth> {
-        match self {
-            Self::Auth(auth) => {
-                let key = if auth.key_is_data() {
-                    PtrauthKey::DA
-                } else {
-                    PtrauthKey::IA
-                };
+        if self.is_auth() {
+            let diversity: u16 = ((self.0 >> 34) & 0xffff) as u16;
+            let addr_div: bool = ((self.0 >> 50) & 0x1) != 0;
 
-                Some(Ptrauth {
-                    key,
-                    diversity: auth.diversity(),
-                    addr_div: auth.addr_div(),
-                })
-            }
-            _ => None,
+            let key_is_data: bool = ((self.0 >> 51) & 0x1) != 0;
+            let key = if key_is_data {
+                PtrauthKey::DA
+            } else {
+                PtrauthKey::IA
+            };
+
+            Some(Ptrauth {
+                key,
+                diversity,
+                addr_div,
+            })
+        } else {
+            None
         }
     }
 
-    pub fn next(&self) -> u16 {
-        match self {
-            Self::Regular(regular) => regular.next(),
-            Self::Auth(auth) => auth.next(),
-        }
-    }
-}
-
-impl From<u64> for DyldCacheSlidePointer5 {
-    fn from(pointer: u64) -> Self {
-        let auth = (pointer & 0x8000_0000_0000_0000) != 0;
-        match auth {
-            false => Self::Regular(DyldChainedPtrArm64eSharedCacheRebase(pointer)),
-            true => Self::Auth(DyldChainedPtrArm64eSharedCacheAuthRebase(pointer)),
-        }
-    }
-}
-
-/// DYLD_CHAINED_PTR_ARM64E_SHARED_CACHE
-#[derive(Debug, Copy, Clone)]
-pub struct DyldChainedPtrArm64eSharedCacheRebase(u64);
-
-impl DyldChainedPtrArm64eSharedCacheRebase {
-    pub fn runtime_offset(&self) -> u64 {
-        self.0 & 0x3_ffff_ffff
-    }
-
-    pub fn high8(&self) -> u8 {
-        ((self.0 >> 34) & 0xff) as u8
-    }
-
-    pub fn next(&self) -> u16 {
-        ((self.0 >> 52) & 0x7ff) as u16
-    }
-
-    pub fn value(&self, value_add: u64) -> u64 {
-        (self.high8() as u64) << 56 | (self.runtime_offset() + value_add)
-    }
-}
-
-/// DYLD_CHAINED_PTR_ARM64E_SHARED_CACHE
-#[derive(Debug, Copy, Clone)]
-pub struct DyldChainedPtrArm64eSharedCacheAuthRebase(u64);
-
-impl DyldChainedPtrArm64eSharedCacheAuthRebase {
-    pub fn runtime_offset(&self) -> u64 {
-        self.0 & 0x3_ffff_ffff
-    }
-
-    pub fn diversity(&self) -> u16 {
-        ((self.0 >> 34) & 0xffff) as u16
-    }
-
-    pub fn addr_div(&self) -> bool {
-        ((self.0 >> 50) & 0x1) != 0
-    }
-
-    pub fn key_is_data(&self) -> bool {
-        ((self.0 >> 51) & 0x1) != 0
-    }
-
-    pub fn next(&self) -> u16 {
-        ((self.0 >> 52) & 0x7ff) as u16
-    }
-
-    pub fn value(&self, value_add: u64) -> u64 {
-        self.runtime_offset() + value_add
+    pub fn next(&self) -> u64 {
+        (self.0 >> 52) & 0x7ff
     }
 }
 
