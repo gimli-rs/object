@@ -283,14 +283,20 @@ pub const VM_PROT_WRITE: u32 = 0x02;
 /// execute permission
 pub const VM_PROT_EXECUTE: u32 = 0x04;
 
+// Definitions from ptrauth.h
+
+/// ptrauth_key enum
 #[repr(u8)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PtrauthKey {
+    /// ptrauth_key_asia
     IA = 0,
+    /// ptrauth_key_asib
     IB = 1,
+    /// ptrauth_key_asda
     DA = 2,
+    /// ptrauth_key_asdb
     DB = 3,
-    GA = 5,
 }
 
 /// Pointer auth data
