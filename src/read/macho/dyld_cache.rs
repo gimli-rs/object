@@ -161,26 +161,28 @@ where
     }
 
     /// The mapping data
-    pub fn data(&self) -> &'data [u8] {
+    pub fn data(&self) -> Result<&'data [u8]> {
         match self {
             Self::V1 { endian, data, info } => data
                 .read_bytes_at(info.file_offset.get(*endian), info.size.get(*endian))
-                .unwrap(),
+                .read_error("Failed to read bytes for mapping"),
             Self::V2 { endian, data, info } => data
                 .read_bytes_at(info.file_offset.get(*endian), info.size.get(*endian))
-                .unwrap(),
+                .read_error("Failed to read bytes for mapping"),
         }
     }
 
     /// Relocations for the mapping
-    pub fn relocations(self) -> DyldCacheRelocationMappingIterator<'data, E, R> {
+    pub fn relocations(self) -> Result<DyldCacheRelocationMappingIterator<'data, E, R>> {
         match self {
-            Self::V1 { .. } => DyldCacheRelocationMappingIterator::empty(),
+            Self::V1 { .. } => Ok(DyldCacheRelocationMappingIterator::empty()),
             Self::V2 { endian, data, info } => {
-                if let Some(slide) = info.slide(endian, data).unwrap() {
-                    DyldCacheRelocationMappingIterator::slide(data, endian, info, slide)
+                if let Some(slide) = info.slide(endian, data)? {
+                    Ok(DyldCacheRelocationMappingIterator::slide(
+                        data, endian, info, slide,
+                    ))
                 } else {
-                    DyldCacheRelocationMappingIterator::empty()
+                    Ok(DyldCacheRelocationMappingIterator::empty())
                 }
             }
         }
@@ -246,7 +248,7 @@ where
     E: Endian,
     R: ReadRef<'data>,
 {
-    type Item = DyldRelocation;
+    type Item = Result<DyldRelocation>;
 
     fn next(&mut self) -> Option<Self::Item> {
         match self {
@@ -266,8 +268,7 @@ where
                 match slide {
                     DyldCacheSlideInfoSlice::V5(slide, page_starts) => {
                         if *page_index < slide.page_starts_count.get(*endian).into() {
-                            let page_start: u16 =
-                                page_starts[*page_index as usize].get(*endian) as u16;
+                            let page_start: u16 = page_starts[*page_index as usize].get(*endian);
 
                             if page_start != macho::DYLD_CACHE_SLIDE_V5_PAGE_ATTR_NO_REBASE {
                                 *iter = Some(DyldCacheRelocationPageIterator::V5 {
@@ -322,7 +323,7 @@ where
     E: Endian,
     R: ReadRef<'data>,
 {
-    type Item = DyldRelocation;
+    type Item = Result<DyldRelocation>;
 
     fn next(&mut self) -> Option<Self::Item> {
         match self {
@@ -337,13 +338,15 @@ where
                 if let Some(offset) = *page_offset {
                     let mapping_offset: u64 = *page_index * slide.page_size.get(*endian) as u64;
                     let file_offset: u64 = info.file_offset.get(*endian) + mapping_offset + offset;
-                    let pointer: macho::DyldCacheSlidePointer5 = data
-                        .read_at::<U64<E>>(file_offset)
-                        .unwrap()
-                        .get(*endian)
-                        .into();
+                    let file_offset = match data.read_at::<U64<E>>(file_offset) {
+                        Ok(file_offset) => file_offset.get(*endian),
+                        Err(_) => {
+                            return Some(Err(Error("Failed to read file offset")));
+                        }
+                    };
+                    let pointer = macho::DyldCacheSlidePointer5(file_offset);
 
-                    let next = pointer.next() as u64;
+                    let next = pointer.next();
                     if next == 0 {
                         *page_offset = None;
                     } else {
@@ -354,12 +357,12 @@ where
                     let value_add = slide.value_add.get(*endian);
                     let value = pointer.value(value_add);
                     let auth = pointer.auth();
-                    Some(DyldRelocation {
+                    Some(Ok(DyldRelocation {
                         address,
                         file_offset,
                         value,
                         auth,
-                    })
+                    }))
                 } else {
                     None
                 }
@@ -769,7 +772,7 @@ impl<E: Endian> macho::DyldCacheMappingAndSlideInfo<E> {
                             .read_error("Invalid dyld cache slide info size or alignment")?;
                         let page_starts_offset = slide_info_file_offset
                             .checked_add(mem::size_of::<macho::DyldCacheSlideInfo5<E>>() as u64)
-                            .unwrap();
+                            .read_error("Page starts overflow")?;
                         let page_starts = data
                             .read_slice_at::<U16<E>>(
                                 page_starts_offset,
@@ -778,7 +781,7 @@ impl<E: Endian> macho::DyldCacheMappingAndSlideInfo<E> {
                             .read_error("Invalid page starts size or alignment")?;
                         Ok(Some(DyldCacheSlideInfoSlice::V5(slide, page_starts)))
                     }
-                    _ => todo!("handle other dyld_cache_slide_info versions"),
+                    _ => Err(Error("Unsupported dyld_cache_slide_info version")),
                 }
             }
         }
