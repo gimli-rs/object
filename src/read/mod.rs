@@ -113,12 +113,31 @@ mod private {
 
 /// The error type used within the read module.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct Error(pub(crate) &'static str);
+pub struct Error(#[cfg(feature = "keep-error-msg")] pub(crate) &'static str);
+
+impl Error {
+    #[inline(always)]
+    pub(crate) fn new(#[allow(unused_variables)] message: &'static str) -> Self {
+        Self(
+            #[cfg(feature = "keep-error-msg")]
+            message,
+        )
+    }
+}
 
 impl fmt::Display for Error {
     #[inline]
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str(self.0)
+        f.write_str({
+            #[cfg(feature = "keep-error-msg")]
+            {
+                self.0
+            }
+            #[cfg(not(feature = "keep-error-msg"))]
+            {
+                "Error"
+            }
+        })
     }
 }
 
@@ -134,19 +153,19 @@ trait ReadError<T> {
 
 impl<T> ReadError<T> for result::Result<T, ()> {
     fn read_error(self, error: &'static str) -> Result<T> {
-        self.map_err(|()| Error(error))
+        self.map_err(|()| Error::new(error))
     }
 }
 
 impl<T> ReadError<T> for result::Result<T, Error> {
     fn read_error(self, error: &'static str) -> Result<T> {
-        self.map_err(|_| Error(error))
+        self.map_err(|_| Error::new(error))
     }
 }
 
 impl<T> ReadError<T> for Option<T> {
     fn read_error(self, error: &'static str) -> Result<T> {
-        self.ok_or(Error(error))
+        self.ok_or(Error::new(error))
     }
 }
 
@@ -290,7 +309,7 @@ impl FileKind {
             .read_bytes_at(offset, 16)
             .read_error("Could not read file magic")?;
         if magic.len() < 16 {
-            return Err(Error("File too short"));
+            return Err(Error::new("File too short"));
         }
 
         let kind = match [magic[0], magic[1], magic[2], magic[3], magic[4], magic[5], magic[6], magic[7]] {
@@ -325,7 +344,7 @@ impl FileKind {
                     Ok(crate::pe::IMAGE_NT_OPTIONAL_HDR64_MAGIC) => {
                         FileKind::Pe64
                     }
-                    _ => return Err(Error("Unknown MS-DOS file")),
+                    _ => return Err(Error::new("Unknown MS-DOS file")),
                 }
             }
             // TODO: more COFF machines
@@ -347,14 +366,14 @@ impl FileKind {
                 // offset == 0 restriction is because anon_object_class_id only looks at offset 0
                 match coff::anon_object_class_id(data) {
                     Ok(crate::pe::ANON_OBJECT_HEADER_BIGOBJ_CLASS_ID) => FileKind::CoffBig,
-                    _ => return Err(Error("Unknown anon object file")),
+                    _ => return Err(Error::new("Unknown anon object file")),
                 }
             }
             #[cfg(feature = "xcoff")]
             [0x01, 0xdf, ..] => FileKind::Xcoff32,
             #[cfg(feature = "xcoff")]
             [0x01, 0xf7, ..] => FileKind::Xcoff64,
-            _ => return Err(Error("Unknown file magic")),
+            _ => return Err(Error::new("Unknown file magic")),
         };
         Ok(kind)
     }
@@ -833,15 +852,15 @@ impl RelocationMap {
                     }
                 }
                 _ => {
-                    return Err(Error("Unsupported relocation target"));
+                    return Err(Error::new("Unsupported relocation target"));
                 }
             },
             _ => {
-                return Err(Error("Unsupported relocation type"));
+                return Err(Error::new("Unsupported relocation type"));
             }
         }
         if self.0.insert(offset, entry).is_some() {
-            return Err(Error("Multiple relocations for offset"));
+            return Err(Error::new("Multiple relocations for offset"));
         }
         Ok(())
     }
@@ -1022,14 +1041,14 @@ impl<'data> CompressedData<'data> {
                     _ => unreachable!(),
                 }
                 if size != decompressed.len() {
-                    return Err(Error(
+                    return Err(Error::new(
                         "Uncompressed data size does not match compression header",
                     ));
                 }
 
                 Ok(Cow::Owned(decompressed))
             }
-            _ => Err(Error("Unsupported compressed data.")),
+            _ => Err(Error::new("Unsupported compressed data.")),
         }
     }
 }

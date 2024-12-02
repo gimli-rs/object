@@ -46,7 +46,7 @@ impl<'data, Elf: FileHeader> AttributesSection<'data, Elf> {
     pub fn subsections(&self) -> Result<AttributesSubsectionIterator<'data, Elf>> {
         // There is currently only one format version.
         if self.version != b'A' {
-            return Err(Error("Unsupported ELF attributes section version"));
+            return Err(Error::new("Unsupported ELF attributes section version"));
         }
 
         Ok(AttributesSubsectionIterator {
@@ -201,7 +201,9 @@ impl<'data, Elf: FileHeader> AttributesSubsubsectionIterator<'data, Elf> {
         } else if tag == elf::Tag_File {
             Bytes(&[])
         } else {
-            return Err(Error("Unimplemented ELF attributes sub-subsection tag"));
+            return Err(Error::new(
+                "Unimplemented ELF attributes sub-subsection tag",
+            ));
         };
 
         Ok(AttributesSubsubsection {
