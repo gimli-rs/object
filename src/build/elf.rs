@@ -235,7 +235,7 @@ impl<'data> Builder<'data> {
                     if index == symbols.section() {
                         SectionData::Symbol
                     } else {
-                        return Err(Error(format!(
+                        return Err(Error::new(format!(
                             "Unsupported SHT_SYMTAB section at index {}",
                             index
                         )));
@@ -245,7 +245,7 @@ impl<'data> Builder<'data> {
                     if index == symbols.shndx_section() {
                         SectionData::SymbolSectionIndex
                     } else {
-                        return Err(Error(format!(
+                        return Err(Error::new(format!(
                             "Unsupported SHT_SYMTAB_SHNDX section at index {}",
                             index
                         )));
@@ -255,7 +255,7 @@ impl<'data> Builder<'data> {
                     if index == dynamic_symbols.section() {
                         SectionData::DynamicSymbol
                     } else {
-                        return Err(Error(format!(
+                        return Err(Error::new(format!(
                             "Unsupported SHT_DYNSYM section at index {}",
                             index
                         )));
@@ -273,7 +273,7 @@ impl<'data> Builder<'data> {
                         // We simply need to preserve the data (similar to a .comment section).
                         SectionData::Data(section.data(endian, data)?.into())
                     } else {
-                        return Err(Error(format!(
+                        return Err(Error::new(format!(
                             "Unsupported SHT_STRTAB section at index {}",
                             index
                         )));
@@ -312,7 +312,7 @@ impl<'data> Builder<'data> {
                     | (elf::EM_X86_64, elf::SHT_X86_64_UNWIND) => {
                         SectionData::Data(section.data(endian, data)?.into())
                     }
-                    _ => return Err(Error(format!("Unsupported section type {:x}", other))),
+                    _ => return Err(Error::new(format!("Unsupported section type {:x}", other))),
                 },
             };
             let sh_flags = section.sh_flags(endian).into();
@@ -321,7 +321,7 @@ impl<'data> Builder<'data> {
                 None
             } else {
                 if sh_link as usize >= sections.len() {
-                    return Err(Error(format!(
+                    return Err(Error::new(format!(
                         "Invalid sh_link {} in section at index {}",
                         sh_link, index
                     )));
@@ -333,7 +333,7 @@ impl<'data> Builder<'data> {
                 None
             } else {
                 if sh_info as usize >= sections.len() {
-                    return Err(Error(format!(
+                    return Err(Error::new(format!(
                         "Invalid sh_info link {} in section at index {}",
                         sh_info, index
                     )));
@@ -433,7 +433,7 @@ impl<'data> Builder<'data> {
             )
             .map(SectionData::Relocation)
         } else {
-            return Err(Error(format!(
+            return Err(Error::new(format!(
                 "Invalid sh_link {} in relocation section at index {}",
                 link.0, index,
             )));
@@ -456,7 +456,7 @@ impl<'data> Builder<'data> {
             let rel = (*rel).into();
             let symbol = if let Some(symbol) = rel.symbol(endian, is_mips64el) {
                 if symbol.0 >= symbols_len {
-                    return Err(Error(format!(
+                    return Err(Error::new(format!(
                         "Invalid symbol index {} in relocation section at index {}",
                         symbol, index,
                     )));
@@ -487,7 +487,7 @@ impl<'data> Builder<'data> {
         let mut dynamics = Vec::with_capacity(dyns.len());
         for d in dyns {
             let tag = d.d_tag(endian).into().try_into().map_err(|_| {
-                Error(format!(
+                Error::new(format!(
                     "Unsupported dynamic tag 0x{:x}",
                     d.d_tag(endian).into()
                 ))
@@ -497,12 +497,11 @@ impl<'data> Builder<'data> {
             }
             let val = d.d_val(endian).into();
             dynamics.push(if d.is_string(endian) {
-                let val =
-                    strings
-                        .get(val.try_into().map_err(|_| {
-                            Error(format!("Unsupported dynamic string 0x{:x}", val))
-                        })?)
-                        .map_err(|_| Error(format!("Invalid dynamic string 0x{:x}", val)))?;
+                let val = strings
+                    .get(val.try_into().map_err(|_| {
+                        Error::new(format!("Unsupported dynamic string 0x{:x}", val))
+                    })?)
+                    .map_err(|_| Error::new(format!("Invalid dynamic string 0x{:x}", val)))?;
                 Dynamic::String {
                     tag,
                     val: val.into(),
@@ -588,7 +587,7 @@ impl<'data> Builder<'data> {
                         while let Some(index) = indices.next()? {
                             let index = index as usize;
                             if index >= sections_len {
-                                return Err(Error(format!(
+                                return Err(Error::new(format!(
                                     "Invalid section index {} in attribute",
                                     index
                                 )));
@@ -603,7 +602,7 @@ impl<'data> Builder<'data> {
                         while let Some(index) = indices.next()? {
                             let index = index as usize;
                             if index >= symbols_len {
-                                return Err(Error(format!(
+                                return Err(Error::new(format!(
                                     "Invalid symbol index {} in attribute",
                                     index
                                 )));
@@ -613,7 +612,7 @@ impl<'data> Builder<'data> {
                         AttributeTag::Symbol(tag_symbols)
                     }
                     tag => {
-                        return Err(Error(format!(
+                        return Err(Error::new(format!(
                             "Unsupported attribute tag 0x{:x} in section at index {}",
                             tag, index,
                         )))
@@ -671,7 +670,10 @@ impl<'data> Builder<'data> {
                 let index = verdef.vd_ndx.get(endian) & elf::VERSYM_VERSION;
                 let id = self.versions.next_id();
                 if ids.insert(index, id).is_some() {
-                    return Err(Error(format!("Duplicate SHT_GNU_VERDEF index {}", index)));
+                    return Err(Error::new(format!(
+                        "Duplicate SHT_GNU_VERDEF index {}",
+                        index
+                    )));
                 }
 
                 let mut names = Vec::new();
@@ -703,7 +705,10 @@ impl<'data> Builder<'data> {
                     let index = vernaux.vna_other.get(endian) & elf::VERSYM_VERSION;
                     let id = self.versions.next_id();
                     if ids.insert(index, id).is_some() {
-                        return Err(Error(format!("Duplicate SHT_GNU_VERNEED index {}", index)));
+                        return Err(Error::new(format!(
+                            "Duplicate SHT_GNU_VERNEED index {}",
+                            index
+                        )));
                     }
 
                     let data = VersionData::Need(VersionNeed {
@@ -727,9 +732,9 @@ impl<'data> Builder<'data> {
             for (id, versym) in versyms.iter().skip(1).enumerate() {
                 let index = versym.0.get(endian);
                 let symbol = self.dynamic_symbols.get_mut(SymbolId(id));
-                symbol.version = *ids
-                    .get(&(index & elf::VERSYM_VERSION))
-                    .ok_or_else(|| Error(format!("Invalid SHT_GNU_VERSYM index {:x}", index)))?;
+                symbol.version = *ids.get(&(index & elf::VERSYM_VERSION)).ok_or_else(|| {
+                    Error::new(format!("Invalid SHT_GNU_VERSYM index {:x}", index))
+                })?;
                 symbol.version_hidden = index & elf::VERSYM_HIDDEN != 0;
             }
         }
@@ -1137,7 +1142,7 @@ impl<'data> Builder<'data> {
         if !self.segments.is_empty() {
             // TODO: support program headers in other locations.
             if self.header.e_phoff != writer.reserved_len() as u64 {
-                return Err(Error(format!(
+                return Err(Error::new(format!(
                     "Unsupported e_phoff value 0x{:x}",
                     self.header.e_phoff
                 )));
@@ -1179,7 +1184,7 @@ impl<'data> Builder<'data> {
                 }
 
                 if section.sh_offset < writer.reserved_len() as u64 {
-                    return Err(Error(format!(
+                    return Err(Error::new(format!(
                         "Unsupported sh_offset value 0x{:x} for section '{}', expected at least 0x{:x}",
                         section.sh_offset,
                         section.name,
@@ -1232,14 +1237,14 @@ impl<'data> Builder<'data> {
                         writer.reserve_gnu_verneed(verneed_count, vernaux_count)
                     }
                     _ => {
-                        return Err(Error(format!(
+                        return Err(Error::new(format!(
                             "Unsupported alloc section type {:x} for section '{}'",
                             section.sh_type, section.name,
                         )));
                     }
                 };
                 if out_section.offset as u64 != section.sh_offset {
-                    return Err(Error(format!(
+                    return Err(Error::new(format!(
                         "Unaligned sh_offset value 0x{:x} for section '{}', expected 0x{:x}",
                         section.sh_offset, section.name, out_section.offset,
                     )));
@@ -1273,7 +1278,7 @@ impl<'data> Builder<'data> {
                     continue;
                 }
                 _ => {
-                    return Err(Error(format!(
+                    return Err(Error::new(format!(
                         "Unsupported non-alloc section type {:x}",
                         section.sh_type
                     )));
@@ -1394,7 +1399,7 @@ impl<'data> Builder<'data> {
                                         ))?,
                                         elf::DT_VERNEEDNUM => verneed_count as u64,
                                         _ => {
-                                            return Err(Error(format!(
+                                            return Err(Error::new(format!(
                                                 "Cannot generate value for dynamic tag 0x{:x}",
                                                 tag
                                             )))
@@ -1491,7 +1496,10 @@ impl<'data> Builder<'data> {
                             if let VersionData::Def(def) = &version.data {
                                 let mut names = def.names.iter();
                                 let name = names.next().ok_or_else(|| {
-                                    Error(format!("Missing SHT_GNU_VERDEF name {}", version.id.0))
+                                    Error::new(format!(
+                                        "Missing SHT_GNU_VERDEF name {}",
+                                        version.id.0
+                                    ))
                                 })?;
                                 writer.write_gnu_verdef(&write::elf::Verdef {
                                     version: elf::VER_DEF_CURRENT,
@@ -1533,7 +1541,7 @@ impl<'data> Builder<'data> {
                         }
                     }
                     _ => {
-                        return Err(Error(format!(
+                        return Err(Error::new(format!(
                             "Unsupported alloc section type {:x}",
                             section.sh_type
                         )));
@@ -1574,7 +1582,7 @@ impl<'data> Builder<'data> {
                 | SectionData::SymbolSectionIndex
                 | SectionData::String => {}
                 _ => {
-                    return Err(Error(format!(
+                    return Err(Error::new(format!(
                         "Unsupported non-alloc section type {:x}",
                         section.sh_type
                     )));
@@ -1658,7 +1666,7 @@ impl<'data> Builder<'data> {
                         }
                         SectionData::Attributes(_) => out_section.attributes.len() as u64,
                         _ => {
-                            return Err(Error(format!(
+                            return Err(Error::new(format!(
                                 "Unimplemented size for section type {:x}",
                                 section.sh_type
                             )))
@@ -1668,7 +1676,7 @@ impl<'data> Builder<'data> {
                         if let Some(index) = out_sections_index[id.0] {
                             index.0
                         } else {
-                            return Err(Error(format!(
+                            return Err(Error::new(format!(
                                 "Invalid sh_link from section '{}' to deleted section '{}'",
                                 section.name,
                                 self.sections.get(id).name,
@@ -1681,7 +1689,7 @@ impl<'data> Builder<'data> {
                         if let Some(index) = out_sections_index[id.0] {
                             index.0
                         } else {
-                            return Err(Error(format!(
+                            return Err(Error::new(format!(
                                 "Invalid sh_info link from section '{}' to deleted section '{}'",
                                 section.name,
                                 self.sections.get(id).name,

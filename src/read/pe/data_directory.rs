@@ -187,7 +187,7 @@ impl pe::ImageDataDirectory {
             .read_error("Invalid data dir virtual address")?;
         let size = self.size.get(LE);
         if size > section_size {
-            return Err(Error("Invalid data dir size"));
+            return Err(Error::new("Invalid data dir size"));
         }
         Ok((offset, size))
     }
