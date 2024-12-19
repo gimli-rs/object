@@ -54,6 +54,7 @@
 #![allow(clippy::field_reassign_with_default)]
 #![allow(clippy::manual_flatten)]
 #![allow(clippy::match_like_matches_macro)]
+#![allow(clippy::needless_lifetimes)]
 #![allow(clippy::single_match)]
 #![allow(clippy::type_complexity)]
 // Occurs due to fallible iteration.
