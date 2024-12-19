@@ -61,7 +61,7 @@ pub struct ElfOptions {
     pub set_interpreter: Option<Vec<u8>>,
 }
 
-impl<'data> Rewriter<'data> {
+impl Rewriter<'_> {
     /// Delete symbols from the symbol table.
     pub fn elf_delete_symbols(&mut self, names: &HashSet<Vec<u8>>) {
         for symbol in &mut self.builder.dynamic_symbols {
