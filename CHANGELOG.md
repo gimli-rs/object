@@ -2,6 +2,40 @@
 
 --------------------------------------------------------------------------------
 
+## 0.36.6
+
+Released 2024/10/21.
+
+### Added
+
+* Added `Architecuture::M68k`.
+  [#742](https://github.com/gimli-rs/object/pull/742)
+  [#749](https://github.com/gimli-rs/object/pull/749)
+
+* Added `Architecuture::Mips64_N32`.
+  [#743](https://github.com/gimli-rs/object/pull/743)
+
+* Added `elf::SHT_RELR`, `read::elf::SectionHeader::relr`, and
+  `write::elf::Writer::write_relative_relocation_section_header`.
+  [#746](https://github.com/gimli-rs/object/pull/746)
+
+* Added `core::error::Error` implementation for Rust 1.81 onwards.
+  [#747](https://github.com/gimli-rs/object/pull/747)
+
+### Changed
+
+* Changed `build::elf::Builder` to support `.annobin.notes`,
+  `SHT_LLVM_DEPENDENT_LIBRARIES`, and `SHT_RELR` sections.
+  [#735](https://github.com/gimli-rs/object/pull/735)
+  [#737](https://github.com/gimli-rs/object/pull/737)
+  [#746](https://github.com/gimli-rs/object/pull/746)
+
+* Changed `write::Object::add_subsection` to omit the subsection name suffix
+  if the subsection name is empty.
+  [#748](https://github.com/gimli-rs/object/pull/748)
+
+--------------------------------------------------------------------------------
+
 ## 0.36.5
 
 Released 2024/10/04.
