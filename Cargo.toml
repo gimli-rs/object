@@ -1,6 +1,6 @@
 [package]
 name = "object"
-version = "0.36.6"
+version = "0.36.7"
 edition = "2018"
 keywords = ["object", "elf", "mach-o", "pe", "coff"]
 license = "Apache-2.0 OR MIT"
@@ -10,6 +10,7 @@ repository = "https://github.com/gimli-rs/object"
 rust-version = "1.65"
 description = "A unified interface for reading and writing object file formats."
 include = [
+  "/build.rs",
   "/Cargo.toml",
   "/CHANGELOG.md",
   "/README.md",

@@ -231,7 +231,7 @@ dependencies = [
 
 [[package]]
 name = "object"
-version = "0.36.6"
+version = "0.36.7"
 dependencies = [
  "compiler_builtins",
  "crc32fast",
