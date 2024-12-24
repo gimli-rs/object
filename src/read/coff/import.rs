@@ -47,7 +47,7 @@ impl<'data> ImportFile<'data> {
                 pe::IMPORT_OBJECT_CODE => ImportType::Code,
                 pe::IMPORT_OBJECT_DATA => ImportType::Data,
                 pe::IMPORT_OBJECT_CONST => ImportType::Const,
-                _ => return Err(Error("Invalid COFF import library import type")),
+                _ => return Err(Error::new("Invalid COFF import library import type")),
             },
             import: match header.name_type() {
                 pe::IMPORT_OBJECT_ORDINAL => None,
@@ -60,7 +60,7 @@ impl<'data> ImportFile<'data> {
                         .unwrap(),
                 ),
                 pe::IMPORT_OBJECT_NAME_EXPORTAS => data.export(),
-                _ => return Err(Error("Unknown COFF import library name type")),
+                _ => return Err(Error::new("Unknown COFF import library name type")),
             }
             .map(ByteString),
         })
@@ -139,9 +139,9 @@ impl pe::ImportObjectHeader {
             .read::<pe::ImportObjectHeader>(offset)
             .read_error("Invalid COFF import library header size")?;
         if header.sig1.get(LE) != 0 || header.sig2.get(LE) != pe::IMPORT_OBJECT_HDR_SIG2 {
-            Err(Error("Invalid COFF import library header"))
+            Err(Error::new("Invalid COFF import library header"))
         } else if header.version.get(LE) != 0 {
-            Err(Error("Unknown COFF import library header version"))
+            Err(Error::new("Unknown COFF import library header version"))
         } else {
             Ok(header)
         }

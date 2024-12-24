@@ -82,7 +82,7 @@ impl<'data, Elf: FileHeader, R: ReadRef<'data>> SectionTable<'data, Elf, R> {
     /// Returns an error for the null section at index 0.
     pub fn section(&self, index: SectionIndex) -> read::Result<&'data Elf::SectionHeader> {
         if index == SectionIndex(0) {
-            return Err(read::Error("Invalid ELF section index"));
+            return Err(read::Error::new("Invalid ELF section index"));
         }
         self.sections
             .get(index.0)
@@ -162,7 +162,7 @@ impl<'data, Elf: FileHeader, R: ReadRef<'data>> SectionTable<'data, Elf, R> {
         let section = self.section(index)?;
         match section.sh_type(endian) {
             elf::SHT_DYNSYM | elf::SHT_SYMTAB => {}
-            _ => return Err(Error("Invalid ELF symbol table section type")),
+            _ => return Err(Error::new("Invalid ELF symbol table section type")),
         }
         SymbolTable::parse(endian, data, self, index, section)
     }
@@ -433,7 +433,7 @@ impl<'data, 'file, Elf: FileHeader, R: ReadRef<'data>> ElfSection<'data, 'file, 
             return Ok(None);
         };
         if self.file.relocations.get(relocation_index).is_some() {
-            return Err(Error(
+            return Err(Error::new(
                 "Unsupported ELF section with multiple relocation sections",
             ));
         }
@@ -495,7 +495,7 @@ impl<'data, 'file, Elf: FileHeader, R: ReadRef<'data>> ElfSection<'data, 'file, 
             let format = match header.ch_type(endian) {
                 elf::ELFCOMPRESS_ZLIB => CompressionFormat::Zlib,
                 elf::ELFCOMPRESS_ZSTD => CompressionFormat::Zstandard,
-                _ => return Err(Error("Unsupported ELF compression type")),
+                _ => return Err(Error::new("Unsupported ELF compression type")),
             };
             let uncompressed_size = header.ch_size(endian).into();
             Ok(Some(CompressedFileRange {

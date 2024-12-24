@@ -262,7 +262,7 @@ impl<'data, R: ReadRef<'data>> File<'data, R> {
             #[cfg(feature = "xcoff")]
             FileKind::Xcoff64 => File::Xcoff64(xcoff::XcoffFile64::parse(data)?),
             #[allow(unreachable_patterns)]
-            _ => return Err(Error("Unsupported file format")),
+            _ => return Err(Error::new("Unsupported file format")),
         })
     }
 
@@ -278,7 +278,7 @@ impl<'data, R: ReadRef<'data>> File<'data, R> {
             Some(read::AddressSize::U32) => {
                 File::MachO32(macho::MachOFile32::parse_dyld_cache_image(image)?)
             }
-            _ => return Err(Error("Unsupported file format")),
+            _ => return Err(Error::new("Unsupported file format")),
         })
     }
 

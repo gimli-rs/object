@@ -468,7 +468,7 @@ impl pe::ImageSectionHeader {
                     b'0'..=b'9' => byte - b'0' + 52,
                     b'+' => 62,
                     b'/' => 63,
-                    _ => return Err(Error("Invalid COFF section name base-64 offset")),
+                    _ => return Err(Error::new("Invalid COFF section name base-64 offset")),
                 };
                 offset = offset * 64 + digit as u64;
             }
@@ -482,7 +482,7 @@ impl pe::ImageSectionHeader {
                 let digit = match byte {
                     b'0'..=b'9' => byte - b'0',
                     0 => break,
-                    _ => return Err(Error("Invalid COFF section name base-10 offset")),
+                    _ => return Err(Error::new("Invalid COFF section name base-10 offset")),
                 };
                 offset = offset * 10 + digit as u32;
             }
@@ -583,7 +583,7 @@ impl pe::ImageSectionHeader {
                 .read_error("Invalid COFF relocation offset or number")?;
             number = extended_relocation_info.virtual_address.get(LE) as usize;
             if number == 0 {
-                return Err(Error("Invalid COFF relocation number"));
+                return Err(Error::new("Invalid COFF relocation number"));
             }
             pointer += core::mem::size_of::<pe::ImageRelocation>() as u64;
             // Extended relocation info does not contribute to the count of sections.

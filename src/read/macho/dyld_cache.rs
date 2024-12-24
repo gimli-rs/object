@@ -75,7 +75,7 @@ where
             None => 0,
         };
         if subcache_data.len() != subcaches_count + symbols_subcache_uuid.is_some() as usize {
-            return Err(Error("Incorrect number of SubCaches"));
+            return Err(Error::new("Incorrect number of SubCaches"));
         }
 
         // Split out the .symbols subcache data from the other subcaches.
@@ -98,7 +98,7 @@ where
             for (&data, uuid) in subcache_data.iter().zip(uuids) {
                 let sc_header = macho::DyldCacheHeader::<E>::parse(data)?;
                 if &sc_header.uuid != uuid {
-                    return Err(Error("Unexpected SubCache UUID"));
+                    return Err(Error::new("Unexpected SubCache UUID"));
                 }
                 let mappings = sc_header.mappings(endian, data)?;
                 subcaches.push(DyldSubCache { data, mappings });
@@ -111,7 +111,7 @@ where
             Some((data, uuid)) => {
                 let sc_header = macho::DyldCacheHeader::<E>::parse(data)?;
                 if sc_header.uuid != uuid {
-                    return Err(Error("Unexpected .symbols SubCache UUID"));
+                    return Err(Error::new("Unexpected .symbols SubCache UUID"));
                 }
                 let mappings = sc_header.mappings(endian, data)?;
                 Some(DyldSubCache { data, mappings })
@@ -222,7 +222,8 @@ where
     pub fn path(&self) -> Result<&'data str> {
         let path = self.image_info.path(self.cache.endian, self.cache.data)?;
         // The path should always be ascii, so from_utf8 should always succeed.
-        let path = core::str::from_utf8(path).map_err(|_| Error("Path string not valid utf-8"))?;
+        let path =
+            core::str::from_utf8(path).map_err(|_| Error::new("Path string not valid utf-8"))?;
         Ok(path)
     }
 
@@ -232,7 +233,7 @@ where
         let address = self.image_info.address.get(self.cache.endian);
         self.cache
             .data_and_offset_for_address(address)
-            .ok_or(Error("Address not found in any mapping"))
+            .ok_or(Error::new("Address not found in any mapping"))
     }
 
     /// Parse this image into an Object.
@@ -262,7 +263,7 @@ impl<E: Endian> macho::DyldCacheHeader<E> {
             b"dyld_v1  armv7k\0" => (Architecture::Arm, false),
             b"dyld_v1   arm64\0" => (Architecture::Aarch64, false),
             b"dyld_v1  arm64e\0" => (Architecture::Aarch64, false),
-            _ => return Err(Error("Unrecognized dyld cache magic")),
+            _ => return Err(Error::new("Unrecognized dyld cache magic")),
         };
         let endian =
             E::from_big_endian(is_big_endian).read_error("Unsupported dyld cache endian")?;
