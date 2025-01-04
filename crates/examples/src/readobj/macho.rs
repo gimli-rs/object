@@ -9,7 +9,7 @@ pub(super) fn print_dyld_cache(p: &mut Printer<'_>, data: &[u8]) {
             print_dyld_cache_header(p, endian, header);
             let mappings = header.mappings(endian, data).print_err(p);
             if let Some(mappings) = mappings {
-                print_dyld_cache_mappings(p, endian, mappings);
+                print_dyld_cache_mappings(p, mappings);
             }
             if let Some(images) = header.images(endian, data).print_err(p) {
                 print_dyld_cache_images(p, endian, data, mappings, images);
@@ -36,24 +36,60 @@ pub(super) fn print_dyld_cache_header(
     });
 }
 
-pub(super) fn print_dyld_cache_mappings(
-    p: &mut Printer<'_>,
-    endian: Endianness,
-    mappings: &[DyldCacheMappingInfo<Endianness>],
-) {
+pub(super) fn print_dyld_cache_mappings(p: &mut Printer<'_>, mappings: DyldCacheMappingSlice) {
     if !p.options.file {
         return;
     }
-    for mapping in mappings {
-        p.group("DyldCacheMappingInfo", |p| {
-            p.field_hex("Address", mapping.address.get(endian));
-            p.field_hex("Size", mapping.size.get(endian));
-            p.field_hex("FileOffset", mapping.file_offset.get(endian));
-            p.field_hex("MaxProt", mapping.max_prot.get(endian));
-            p.flags(mapping.max_prot.get(endian), 0, FLAGS_VM);
-            p.field_hex("InitProt", mapping.init_prot.get(endian));
-            p.flags(mapping.init_prot.get(endian), 0, FLAGS_VM);
-        });
+
+    match mappings {
+        DyldCacheMappingSlice::V1 {
+            endian,
+            data: _,
+            info,
+        } => {
+            for mapping in info.iter() {
+                p.group("DyldCacheMappingInfo", |p| {
+                    p.field_hex("Address", mapping.address.get(endian));
+                    p.field_hex("Size", mapping.size.get(endian));
+                    p.field_hex("FileOffset", mapping.file_offset.get(endian));
+                    p.field_hex("MaxProt", mapping.max_prot.get(endian));
+                    p.flags(mapping.max_prot.get(endian), 0, FLAGS_VM);
+                    p.field_hex("InitProt", mapping.init_prot.get(endian));
+                    p.flags(mapping.init_prot.get(endian), 0, FLAGS_VM);
+                });
+            }
+        }
+        DyldCacheMappingSlice::V2 {
+            endian,
+            data: _,
+            info,
+        } => {
+            for mapping in info.iter() {
+                p.group("DyldCacheMappingAndSlideInfo", |p| {
+                    p.field_hex("Address", mapping.address.get(endian));
+                    p.field_hex("Size", mapping.size.get(endian));
+                    p.field_hex("FileOffset", mapping.file_offset.get(endian));
+                    p.field_hex(
+                        "SlideInfoFileOffset",
+                        mapping.slide_info_file_offset.get(endian),
+                    );
+                    p.field_hex(
+                        "SlideInfoFileSize",
+                        mapping.slide_info_file_size.get(endian),
+                    );
+                    p.field_hex("Flags", mapping.flags.get(endian));
+                    p.flags(mapping.flags.get(endian), 0, FLAGS_DYLD_CACHE_MAPPING);
+                    p.field_hex("MaxProt", mapping.max_prot.get(endian));
+                    p.flags(mapping.max_prot.get(endian), 0, FLAGS_VM);
+                    p.field_hex("InitProt", mapping.init_prot.get(endian));
+                    p.flags(mapping.init_prot.get(endian), 0, FLAGS_VM);
+                });
+            }
+        }
+        _ => panic!(
+            "If this case is hit, it means that someone added a variant to the (non-exhaustive) \
+            DyldCacheMappingSlice enum and forgot to update this example"
+        ),
     }
 }
 
@@ -61,7 +97,7 @@ pub(super) fn print_dyld_cache_images(
     p: &mut Printer<'_>,
     endian: Endianness,
     data: &[u8],
-    mappings: Option<&[DyldCacheMappingInfo<Endianness>]>,
+    mappings: Option<DyldCacheMappingSlice>,
     images: &[DyldCacheImageInfo<Endianness>],
 ) {
     for image in images {
@@ -78,8 +114,9 @@ pub(super) fn print_dyld_cache_images(
                 p.field_hex("Pad", image.pad.get(endian));
             });
         }
-        if let Some(offset) =
-            mappings.and_then(|mappings| image.file_offset(endian, mappings).print_err(p))
+        if let Some(offset) = mappings
+            .as_ref()
+            .and_then(|mappings| image.file_offset(endian, mappings).print_err(p))
         {
             if p.options.file {
                 p.blank();
@@ -931,6 +968,13 @@ const FLAGS_CPU_SUBTYPE_ARM64: &[Flag<u32>] = &flags!(
 );
 const FLAGS_CPU_SUBTYPE_ARM64_32: &[Flag<u32>] =
     &flags!(CPU_SUBTYPE_ARM64_32_ALL, CPU_SUBTYPE_ARM64_32_V8);
+const FLAGS_DYLD_CACHE_MAPPING: &[Flag<u64>] = &flags!(
+    DYLD_CACHE_MAPPING_AUTH_DATA,
+    DYLD_CACHE_MAPPING_DIRTY_DATA,
+    DYLD_CACHE_MAPPING_CONST_DATA,
+    DYLD_CACHE_MAPPING_TEXT_STUBS,
+    DYLD_CACHE_DYNAMIC_CONFIG_DATA,
+);
 const FLAGS_MH_FILETYPE: &[Flag<u32>] = &flags!(
     MH_OBJECT,
     MH_EXECUTE,
