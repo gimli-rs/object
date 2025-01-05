@@ -500,6 +500,17 @@ pub struct DyldCacheMappingAndSlideInfo<E: Endian> {
     pub init_prot: U32<E>,
 }
 
+/// Corresponds to struct dyld_cache_image_info from dyld_cache_format.h.
+#[derive(Debug, Clone, Copy)]
+#[repr(C)]
+pub struct DyldCacheImageInfo<E: Endian> {
+    pub address: U64<E>,
+    pub mod_time: U64<E>,
+    pub inode: U64<E>,
+    pub path_file_offset: U32<E>,
+    pub pad: U32<E>,
+}
+
 /// Corresponds to struct dyld_cache_slide_info5 from dyld_cache_format.h.
 #[derive(Debug, Clone, Copy)]
 #[repr(C)]
@@ -512,17 +523,6 @@ pub struct DyldCacheSlideInfo5<E: Endian> {
 }
 
 pub const DYLD_CACHE_SLIDE_V5_PAGE_ATTR_NO_REBASE: u16 = 0xFFFF; // page has no rebasing
-
-/// Corresponds to struct dyld_cache_image_info from dyld_cache_format.h.
-#[derive(Debug, Clone, Copy)]
-#[repr(C)]
-pub struct DyldCacheImageInfo<E: Endian> {
-    pub address: U64<E>,
-    pub mod_time: U64<E>,
-    pub inode: U64<E>,
-    pub path_file_offset: U32<E>,
-    pub pad: U32<E>,
-}
 
 /// Corresponds to struct dyld_cache_slide_pointer5 from dyld_cache_format.h.
 #[derive(Debug, Clone, Copy)]
