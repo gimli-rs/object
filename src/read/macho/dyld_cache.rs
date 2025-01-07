@@ -15,15 +15,15 @@ where
 {
     endian: E,
     data: R,
-    subcaches: Vec<DyldSubCache<'data, E, R>>,
-    mappings: DyldCacheMappingSlice<'data, E, R>,
+    /// The first entry is the main cache file, and the rest are subcaches.
+    files: Vec<DyldFile<'data, E, R>>,
     images: &'data [macho::DyldCacheImageInfo<E>],
     arch: Architecture,
 }
 
-/// Information about a subcache.
+/// The data for one file in the cache.
 #[derive(Debug)]
-pub struct DyldSubCache<'data, E = Endianness, R = &'data [u8]>
+struct DyldFile<'data, E = Endianness, R = &'data [u8]>
 where
     E: Endian,
     R: ReadRef<'data>,
@@ -66,7 +66,10 @@ where
     pub fn parse(data: R, subcache_data: &[R]) -> Result<Self> {
         let header = macho::DyldCacheHeader::parse(data)?;
         let (arch, endian) = header.parse_magic()?;
+
+        let mut files = Vec::new();
         let mappings = header.mappings(endian, data)?;
+        files.push(DyldFile { data, mappings });
 
         let symbols_subcache_uuid = header.symbols_subcache_uuid(endian);
         let subcaches_info = header.subcaches(endian, data)?;
@@ -89,7 +92,6 @@ where
             };
 
         // Read the regular SubCaches, if present.
-        let mut subcaches = Vec::new();
         if let Some(subcaches_info) = subcaches_info {
             let (v1, v2) = match subcaches_info {
                 DyldSubCacheSlice::V1(s) => (s, &[][..]),
@@ -102,7 +104,7 @@ where
                     return Err(Error("Unexpected SubCache UUID"));
                 }
                 let mappings = header.mappings(endian, data)?;
-                subcaches.push(DyldSubCache { data, mappings });
+                files.push(DyldFile { data, mappings });
             }
         }
 
@@ -115,7 +117,7 @@ where
                     return Err(Error("Unexpected .symbols SubCache UUID"));
                 }
                 let mappings = header.mappings(endian, data)?;
-                Some(DyldSubCache { data, mappings })
+                Some(DyldFile { data, mappings })
             }
             None => None,
         };
@@ -124,8 +126,7 @@ where
         Ok(DyldCache {
             endian,
             data,
-            subcaches,
-            mappings,
+            files,
             images,
             arch,
         })
@@ -163,22 +164,15 @@ where
     pub fn mappings<'cache>(
         &'cache self,
     ) -> impl Iterator<Item = DyldCacheMapping<'data, E, R>> + 'cache {
-        self.mappings.iter().chain(
-            self.subcaches
-                .iter()
-                .flat_map(|subcache| subcache.mappings.iter()),
-        )
+        self.files.iter().flat_map(|file| file.mappings.iter())
     }
 
     /// Find the address in a mapping and return the cache or subcache data it was found in,
     /// together with the translated file offset.
     pub fn data_and_offset_for_address(&self, address: u64) -> Option<(R, u64)> {
-        if let Some(file_offset) = self.mappings.address_to_file_offset(address) {
-            return Some((self.data, file_offset));
-        }
-        for subcache in &self.subcaches {
-            if let Some(file_offset) = subcache.mappings.address_to_file_offset(address) {
-                return Some((subcache.data, file_offset));
+        for file in &self.files {
+            if let Some(file_offset) = file.mappings.address_to_file_offset(address) {
+                return Some((file.data, file_offset));
             }
         }
         None
