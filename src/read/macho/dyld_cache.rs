@@ -1,3 +1,4 @@
+use alloc::string::{String, ToString};
 use alloc::vec::Vec;
 use core::fmt::{self, Debug};
 use core::{mem, slice};
@@ -44,12 +45,10 @@ pub enum DyldSubCacheSlice<'data, E: Endian> {
     V2(&'data [macho::DyldSubCacheEntryV2<E>]),
 }
 
-// This is the offset of the end of the images_across_all_subcaches_count field.
+// This is the offset of the end of the images_count field.
 const MIN_HEADER_SIZE_SUBCACHES_V1: u32 = 0x1c8;
 
-// This is the offset of the end of the cacheSubType field.
-// This field comes right after the images_across_all_subcaches_count field,
-// and we don't currently have it in our definition of the DyldCacheHeader type.
+// This is the offset of the end of the cache_sub_type field.
 const MIN_HEADER_SIZE_SUBCACHES_V2: u32 = 0x1d0;
 
 impl<'data, E, R> DyldCache<'data, E, R>
@@ -57,12 +56,44 @@ where
     E: Endian,
     R: ReadRef<'data>,
 {
+    /// Return the suffixes of the subcache files given the data of the main cache file.
+    ///
+    /// Each of these should be appended to the path of the main cache file.
+    pub fn subcache_suffixes(data: R) -> Result<Vec<String>> {
+        let header = macho::DyldCacheHeader::<E>::parse(data)?;
+        let (_arch, endian) = header.parse_magic()?;
+        let Some(subcaches_info) = header.subcaches(endian, data)? else {
+            return Ok(Vec::new());
+        };
+        let mut subcache_suffixes: Vec<String> = match subcaches_info {
+            DyldSubCacheSlice::V1(subcaches) => {
+                // macOS 12: Subcaches have the file suffixes .1, .2, .3 etc.
+                (1..subcaches.len() + 1).map(|i| format!(".{i}")).collect()
+            }
+            DyldSubCacheSlice::V2(subcaches) => {
+                // macOS 13+: The subcache file suffix is written down in the header of the main cache.
+                subcaches
+                    .iter()
+                    .map(|s| {
+                        // The suffix is a nul-terminated string in a fixed-size byte array.
+                        let suffix = s.file_suffix;
+                        let len = suffix.iter().position(|&c| c == 0).unwrap_or(suffix.len());
+                        String::from_utf8_lossy(&suffix[..len]).to_string()
+                    })
+                    .collect()
+            }
+        };
+        if header.symbols_subcache_uuid(endian).is_some() {
+            subcache_suffixes.push(".symbols".to_string());
+        }
+        Ok(subcache_suffixes)
+    }
+
     /// Parse the raw dyld shared cache data.
     ///
     /// For shared caches from macOS 12 / iOS 15 and above, the subcache files need to be
-    /// supplied as well, in the correct order, with the `.symbols` subcache last (if present).
-    /// For example, `data` would be the data for `dyld_shared_cache_x86_64`,
-    /// and `subcache_data` would be the data for `[dyld_shared_cache_x86_64.1, dyld_shared_cache_x86_64.2, ...]`.
+    /// supplied as well, in the correct order. Use [`Self::subcache_suffixes`] to obtain
+    /// the suffixes for the path of the files.
     pub fn parse(data: R, subcache_data: &[R]) -> Result<Self> {
         let header = macho::DyldCacheHeader::parse(data)?;
         let (arch, endian) = header.parse_magic()?;
