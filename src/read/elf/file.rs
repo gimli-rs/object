@@ -255,6 +255,7 @@ where
             (elf::EM_X86_64, false) => Architecture::X86_64_X32,
             (elf::EM_X86_64, true) => Architecture::X86_64,
             (elf::EM_HEXAGON, _) => Architecture::Hexagon,
+            (elf::EM_LOONGARCH, false) => Architecture::LoongArch32,
             (elf::EM_LOONGARCH, true) => Architecture::LoongArch64,
             (elf::EM_68K, false) => Architecture::M68k,
             (elf::EM_MIPS, false) => {

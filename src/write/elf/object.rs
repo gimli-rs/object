@@ -134,6 +134,7 @@ impl<'a> Object<'a> {
             Architecture::X86_64 => true,
             Architecture::X86_64_X32 => true,
             Architecture::Hexagon => true,
+            Architecture::LoongArch32 => true,
             Architecture::LoongArch64 => true,
             Architecture::M68k => true,
             Architecture::Mips => false,
@@ -252,7 +253,7 @@ impl<'a> Object<'a> {
                 (K::Absolute, _, 32) => elf::R_HEX_32,
                 _ => return unsupported_reloc(),
             },
-            Architecture::LoongArch64 => match (kind, encoding, size) {
+            Architecture::LoongArch32 | Architecture::LoongArch64 => match (kind, encoding, size) {
                 (K::Absolute, _, 32) => elf::R_LARCH_32,
                 (K::Absolute, _, 64) => elf::R_LARCH_64,
                 (K::Relative, _, 32) => elf::R_LARCH_32_PCREL,
@@ -572,6 +573,7 @@ impl<'a> Object<'a> {
             (Architecture::X86_64, None) => elf::EM_X86_64,
             (Architecture::X86_64_X32, None) => elf::EM_X86_64,
             (Architecture::Hexagon, None) => elf::EM_HEXAGON,
+            (Architecture::LoongArch32, None) => elf::EM_LOONGARCH,
             (Architecture::LoongArch64, None) => elf::EM_LOONGARCH,
             (Architecture::M68k, None) => elf::EM_68K,
             (Architecture::Mips, None) => elf::EM_MIPS,
