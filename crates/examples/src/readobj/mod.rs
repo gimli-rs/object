@@ -83,9 +83,15 @@ impl PrintOptions {
     }
 }
 
-pub fn print(w: &mut dyn Write, e: &mut dyn Write, file: &[u8], options: &PrintOptions) {
+pub fn print(
+    w: &mut dyn Write,
+    e: &mut dyn Write,
+    file: &[u8],
+    extra_files: &[&[u8]],
+    options: &PrintOptions,
+) {
     let mut printer = Printer::new(w, e, options);
-    print_object(&mut printer, file);
+    print_object(&mut printer, file, extra_files);
 }
 
 struct Printer<'a> {
@@ -268,7 +274,7 @@ macro_rules! flags {
     ($($name:ident),+ $(,)?) => ( [ $(Flag { value: $name, name: stringify!($name), }),+ ] )
 }
 
-fn print_object(p: &mut Printer<'_>, data: &[u8]) {
+fn print_object(p: &mut Printer<'_>, data: &[u8], extra_files: &[&[u8]]) {
     let kind = match object::FileKind::parse(data) {
         Ok(file) => file,
         Err(err) => {
@@ -281,7 +287,7 @@ fn print_object(p: &mut Printer<'_>, data: &[u8]) {
         object::FileKind::Coff => pe::print_coff(p, data),
         object::FileKind::CoffBig => pe::print_coff_big(p, data),
         object::FileKind::CoffImport => pe::print_coff_import(p, data),
-        object::FileKind::DyldCache => macho::print_dyld_cache(p, data),
+        object::FileKind::DyldCache => macho::print_dyld_cache(p, data, extra_files),
         object::FileKind::Elf32 => elf::print_elf32(p, data),
         object::FileKind::Elf64 => elf::print_elf64(p, data),
         object::FileKind::MachO32 => macho::print_macho32(p, data, 0),
@@ -327,7 +333,7 @@ fn print_archive(p: &mut Printer<'_>, data: &[u8]) {
                 if member.is_thin() {
                     p.field("Size", member.size());
                 } else if let Some(data) = member.data(data).print_err(p) {
-                    print_object(p, data);
+                    print_object(p, data, &[]);
                 }
             }
         }

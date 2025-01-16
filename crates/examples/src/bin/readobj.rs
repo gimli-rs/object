@@ -1,6 +1,8 @@
 //! Example that uses the lower level read API.
 
 use clap::{Arg, ArgAction, Command};
+use object::read::macho::DyldCache;
+use object::Endianness;
 use object_examples::readobj;
 use std::path::PathBuf;
 use std::{fs, io};
@@ -156,16 +158,51 @@ fn main() {
                 continue;
             }
         };
-        let file = match unsafe { memmap2::Mmap::map(&file) } {
+        let mmap = match unsafe { memmap2::Mmap::map(&file) } {
             Ok(mmap) => mmap,
             Err(err) => {
                 println!("Failed to map file '{}': {}", file_path.display(), err);
                 continue;
             }
         };
+        let data = &*mmap;
 
+        let subcache_suffixes =
+            DyldCache::<Endianness>::subcache_suffixes(data).unwrap_or_default();
+        let Ok(subcache_files) = subcache_suffixes
+            .into_iter()
+            .map(|suffix| {
+                let mut subcache_path = file_path.clone();
+                subcache_path.as_mut_os_string().push(suffix);
+                let file = match fs::File::open(&subcache_path) {
+                    Ok(file) => file,
+                    Err(err) => {
+                        println!("Failed to open file '{}': {}", subcache_path.display(), err);
+                        return Err(());
+                    }
+                };
+                let mmap = match unsafe { memmap2::Mmap::map(&file) } {
+                    Ok(mmap) => mmap,
+                    Err(err) => {
+                        println!("Failed to map file '{}': {}", subcache_path.display(), err);
+                        return Err(());
+                    }
+                };
+                Ok(mmap)
+            })
+            .collect::<Result<Vec<_>, _>>()
+        else {
+            continue;
+        };
+        let subcache_data: Vec<&[u8]> = subcache_files.iter().map(|f| &**f).collect();
         let stdout = io::stdout();
         let stderr = io::stderr();
-        readobj::print(&mut stdout.lock(), &mut stderr.lock(), &file, &options);
+        readobj::print(
+            &mut stdout.lock(),
+            &mut stderr.lock(),
+            data,
+            &subcache_data,
+            &options,
+        );
     }
 }

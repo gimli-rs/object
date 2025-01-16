@@ -3,7 +3,7 @@ use object::macho::*;
 use object::read::macho::*;
 use object::BigEndian;
 
-pub(super) fn print_dyld_cache(p: &mut Printer<'_>, data: &[u8]) {
+pub(super) fn print_dyld_cache(p: &mut Printer<'_>, data: &[u8], subcache_data: &[&[u8]]) {
     if let Some(header) = DyldCacheHeader::<Endianness>::parse(data).print_err(p) {
         if let Some((_, endian)) = header.parse_magic().print_err(p) {
             print_dyld_cache_header(p, endian, header);
@@ -11,10 +11,10 @@ pub(super) fn print_dyld_cache(p: &mut Printer<'_>, data: &[u8]) {
             if let Some(mappings) = mappings {
                 print_dyld_cache_mappings(p, mappings);
             }
-            if let Some(images) = header.images(endian, data).print_err(p) {
-                print_dyld_cache_images(p, endian, data, mappings, images);
-            }
         }
+    }
+    if let Some(cache) = DyldCache::<Endianness>::parse(data, subcache_data).print_err(p) {
+        print_dyld_cache_images(p, &cache);
     }
 }
 
@@ -93,31 +93,25 @@ pub(super) fn print_dyld_cache_mappings(p: &mut Printer<'_>, mappings: DyldCache
     }
 }
 
-pub(super) fn print_dyld_cache_images(
-    p: &mut Printer<'_>,
-    endian: Endianness,
-    data: &[u8],
-    mappings: Option<DyldCacheMappingSlice>,
-    images: &[DyldCacheImageInfo<Endianness>],
-) {
-    for image in images {
+pub(super) fn print_dyld_cache_images(p: &mut Printer<'_>, cache: &DyldCache) {
+    let endian = cache.endianness();
+    let data = cache.data();
+    for image in cache.images() {
         if p.options.file {
+            let info = image.info();
             p.group("DyldCacheImageInfo", |p| {
-                p.field_hex("Address", image.address.get(endian));
-                p.field_hex("ModTime", image.mod_time.get(endian));
-                p.field_hex("Inode", image.inode.get(endian));
+                p.field_hex("Address", info.address.get(endian));
+                p.field_hex("ModTime", info.mod_time.get(endian));
+                p.field_hex("Inode", info.inode.get(endian));
                 p.field_string(
                     "Path",
-                    image.path_file_offset.get(endian),
-                    image.path(endian, data),
+                    info.path_file_offset.get(endian),
+                    info.path(endian, data),
                 );
-                p.field_hex("Pad", image.pad.get(endian));
+                p.field_hex("Pad", info.pad.get(endian));
             });
         }
-        if let Some(offset) = mappings
-            .as_ref()
-            .and_then(|mappings| image.file_offset(endian, mappings).print_err(p))
-        {
+        if let Some((data, offset)) = image.image_data_and_offset().print_err(p) {
             if p.options.file {
                 p.blank();
             }
@@ -137,7 +131,7 @@ pub(super) fn print_macho_fat32(p: &mut Printer<'_>, data: &[u8]) {
         for arch in fat.arches() {
             if let Some(data) = arch.data(data).print_err(p) {
                 p.blank();
-                print_object(p, data);
+                print_object(p, data, &[]);
             }
         }
     }
@@ -153,7 +147,7 @@ pub(super) fn print_macho_fat64(p: &mut Printer<'_>, data: &[u8]) {
         for arch in fat.arches() {
             if let Some(data) = arch.data(data).print_err(p) {
                 p.blank();
-                print_object(p, data);
+                print_object(p, data, &[]);
             }
         }
     }
