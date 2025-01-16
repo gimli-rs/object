@@ -106,14 +106,14 @@ fn testfiles() {
                     }
                 };
                 fail |= testfile(&in_path, &out_path, err_path, |out, err, data| {
-                    readobj::print(out, err, data, &options);
+                    readobj::print(out, err, data, &[], &options);
                 });
             } else if extension == "objcopy" {
                 #[cfg(feature = "write")]
                 {
                     fail |= testfile(&in_path, &out_path, err_path, |out, err, in_data| {
                         let copy_data = objcopy::copy(in_data);
-                        readobj::print(out, err, &copy_data, &readobj::PrintOptions::all());
+                        readobj::print(out, err, &copy_data, &[], &readobj::PrintOptions::all());
                     });
                 }
             } else {

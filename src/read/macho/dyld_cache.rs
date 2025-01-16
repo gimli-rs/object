@@ -178,6 +178,12 @@ where
         }
     }
 
+    /// Get the data of the main cache file.
+    #[inline]
+    pub fn data(&self) -> R {
+        self.data
+    }
+
     /// Return true if the file is little endian, false if it is big endian.
     pub fn is_little_endian(&self) -> bool {
         self.endian.is_little_endian()
@@ -253,6 +259,11 @@ where
     E: Endian,
     R: ReadRef<'data>,
 {
+    /// Return the raw data structure for this image.
+    pub fn info(&self) -> &'data macho::DyldCacheImageInfo<E> {
+        self.image_info
+    }
+
     /// The file system path of this image.
     pub fn path(&self) -> Result<&'data str> {
         let path = self.image_info.path(self.cache.endian, self.cache.data)?;

@@ -281,7 +281,13 @@ fn testfile(
 
     let mut out_data = Vec::new();
     let mut err_data = Vec::new();
-    readobj::print(&mut out_data, &mut err_data, &rewrite_data, print_options);
+    readobj::print(
+        &mut out_data,
+        &mut err_data,
+        &rewrite_data,
+        &[],
+        print_options,
+    );
 
     let update = env::var_os("OBJECT_TESTFILES_UPDATE").is_some();
     let mut fail = false;
