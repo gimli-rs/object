@@ -275,6 +275,10 @@ impl<'a> Object<'a> {
                 K::Absolute => (false, macho::GENERIC_RELOC_VANILLA),
                 _ => return unsupported_reloc(),
             },
+            Architecture::Arm => match kind {
+                K::Absolute => (false, macho::ARM_RELOC_VANILLA),
+                _ => return unsupported_reloc(),
+            },
             Architecture::X86_64 => match (kind, encoding) {
                 (K::Absolute, E::Generic) => (false, macho::X86_64_RELOC_UNSIGNED),
                 (K::Relative, E::Generic) => (true, macho::X86_64_RELOC_SIGNED),
