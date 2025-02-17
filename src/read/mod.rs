@@ -376,6 +376,8 @@ pub enum ObjectKind {
     Executable,
     /// Dynamic shared object.
     Dynamic,
+    /// PIE executable
+    PIE,
     /// Core.
     Core,
 }

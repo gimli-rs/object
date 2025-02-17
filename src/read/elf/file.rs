@@ -1,15 +1,15 @@
-use alloc::vec::Vec;
-use core::convert::TryInto;
-use core::fmt::Debug;
-use core::mem;
-
 use crate::elf;
+use crate::elf::{DF_1_PIE, DT_FLAGS_1};
 use crate::endian::{self, Endian, Endianness, U32};
 use crate::pod::Pod;
 use crate::read::{
     self, util, Architecture, ByteString, Bytes, Error, Export, FileFlags, Import, Object,
     ObjectKind, ReadError, ReadRef, SectionIndex, StringTable, SymbolIndex,
 };
+use alloc::vec::Vec;
+use core::convert::TryInto;
+use core::fmt::Debug;
+use core::mem;
 
 use super::{
     CompressionHeader, Dyn, ElfComdat, ElfComdatIterator, ElfDynamicRelocationIterator, ElfSection,
@@ -298,7 +298,29 @@ where
             elf::ET_REL => ObjectKind::Relocatable,
             elf::ET_EXEC => ObjectKind::Executable,
             // TODO: check for `DF_1_PIE`?
-            elf::ET_DYN => ObjectKind::Dynamic,
+            elf::ET_DYN => {
+                let mut is_pie = false;
+                let table: &SectionTable<'_, Elf, R> = self.elf_section_table();
+                if let Ok(Some(dyn_sec)) = table.dynamic(self.endian(), self.data()) {
+                    for v in dyn_sec.0 {
+                        let tag = v.tag32(self.endian());
+                        let val = v.val32(self.endian());
+                        if let Some(tag) = tag {
+                            if let Some(val) = val {
+                                if tag == DT_FLAGS_1 && val & DF_1_PIE == DF_1_PIE {
+                                    is_pie = true;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if is_pie {
+                    ObjectKind::PIE
+                } else {
+                    ObjectKind::Dynamic
+                }
+            }
             elf::ET_CORE => ObjectKind::Core,
             _ => ObjectKind::Unknown,
         }
