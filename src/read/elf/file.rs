@@ -297,7 +297,6 @@ where
         match self.header.e_type(self.endian) {
             elf::ET_REL => ObjectKind::Relocatable,
             elf::ET_EXEC => ObjectKind::Executable,
-            // TODO: check for `DF_1_PIE`?
             elf::ET_DYN => {
                 let mut is_pie = false;
                 let table: &SectionTable<'_, Elf, R> = self.elf_section_table();
