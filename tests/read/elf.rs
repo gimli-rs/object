@@ -45,3 +45,18 @@ fn get_buildid_less_bad_elf() {
         b"\xf9\xc0\xc6\x05\xd3\x76\xbb\xa5\x7e\x02\xf5\x74\x50\x9d\x16\xcc\xe9\x9c\x1b\xf1"
     );
 }
+
+#[cfg(feature = "std")]
+#[test]
+fn zero_sized_section_works() {
+    use object::{Object as _, ObjectSection as _};
+    let path: PathBuf = ["testfiles", "elf", "base.debug"].iter().collect();
+    let data = std::fs::read(&path).unwrap();
+    let object = object::read::File::parse(&data[..]).unwrap();
+
+    // The unwrap here should not fail, even though the section has an invalid offset, its size is
+    // zero so this should succeed.
+    let section = object.section_by_name(".bss").unwrap();
+    let data = section.data().unwrap();
+    assert_eq!(data.len(), 0);
+}
