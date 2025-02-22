@@ -129,6 +129,10 @@ impl<'a> ReadRef<'a> for &'a [u8] {
     }
 
     fn read_bytes_at(self, offset: u64, size: u64) -> Result<&'a [u8]> {
+        if size == 0 {
+            return Ok(&[]);
+        }
+
         let offset: usize = offset.try_into().map_err(|_| ())?;
         let size: usize = size.try_into().map_err(|_| ())?;
         self.get(offset..).ok_or(())?.get(..size).ok_or(())
