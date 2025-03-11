@@ -806,15 +806,11 @@ impl<'data> Iterator for ArchiveSymbolIterator<'data> {
     fn size_hint(&self) -> (usize, Option<usize>) {
         match &self.0 {
             SymbolIteratorInternal::None => (0, None),
-            SymbolIteratorInternal::Gnu { offsets, names: _ } => offsets.size_hint(),
-            SymbolIteratorInternal::Gnu64 { offsets, names: _ } => offsets.size_hint(),
-            SymbolIteratorInternal::Bsd { offsets, names: _ } => offsets.size_hint(),
-            SymbolIteratorInternal::Bsd64 { offsets, names: _ } => offsets.size_hint(),
-            SymbolIteratorInternal::Coff {
-                members: _,
-                indices,
-                names: _,
-            } => {
+            SymbolIteratorInternal::Gnu { offsets, .. } => offsets.size_hint(),
+            SymbolIteratorInternal::Gnu64 { offsets, .. } => offsets.size_hint(),
+            SymbolIteratorInternal::Bsd { offsets, .. } => offsets.size_hint(),
+            SymbolIteratorInternal::Bsd64 { offsets, .. } => offsets.size_hint(),
+            SymbolIteratorInternal::Coff { indices, .. } => {
                 // The `slice::Iter` is in the indices field for this variant
                 indices.size_hint()
             }
