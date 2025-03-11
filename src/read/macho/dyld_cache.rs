@@ -349,6 +349,9 @@ where
     }
 }
 
+// This is the offset of the end of the mapping_with_slide_count field.
+const MIN_HEADER_SIZE_MAPPINGS_V2: u32 = 0x140;
+
 /// An iterator over all the mappings in a dyld shared cache.
 #[derive(Debug)]
 pub enum DyldCacheMappingIterator<'data, E = Endianness, R = &'data [u8]>
@@ -820,7 +823,8 @@ impl<E: Endian> macho::DyldCacheHeader<E> {
         endian: E,
         data: R,
     ) -> Result<DyldCacheMappingSlice<'data, E, R>> {
-        if self.mapping_with_slide_offset.get(endian) != 0 {
+        let header_size = self.mapping_offset.get(endian);
+        if header_size >= MIN_HEADER_SIZE_MAPPINGS_V2 {
             let info = data
                 .read_slice_at::<macho::DyldCacheMappingAndSlideInfo<E>>(
                     self.mapping_with_slide_offset.get(endian).into(),
