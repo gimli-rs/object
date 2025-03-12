@@ -802,6 +802,20 @@ impl<'data> Iterator for ArchiveSymbolIterator<'data> {
             }
         }
     }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        match &self.0 {
+            SymbolIteratorInternal::None => (0, None),
+            SymbolIteratorInternal::Gnu { offsets, .. } => offsets.size_hint(),
+            SymbolIteratorInternal::Gnu64 { offsets, .. } => offsets.size_hint(),
+            SymbolIteratorInternal::Bsd { offsets, .. } => offsets.size_hint(),
+            SymbolIteratorInternal::Bsd64 { offsets, .. } => offsets.size_hint(),
+            SymbolIteratorInternal::Coff { indices, .. } => {
+                // The `slice::Iter` is in the indices field for this variant
+                indices.size_hint()
+            }
+        }
+    }
 }
 
 /// A symbol in the archive symbol table.
