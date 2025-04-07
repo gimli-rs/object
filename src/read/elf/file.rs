@@ -279,6 +279,7 @@ where
             (elf::EM_SPARC32PLUS, false) => Architecture::Sparc32Plus,
             (elf::EM_SPARCV9, true) => Architecture::Sparc64,
             (elf::EM_XTENSA, false) => Architecture::Xtensa,
+            (elf::EM_SH, false) => Architecture::SuperH,
             _ => Architecture::Unknown,
         }
     }

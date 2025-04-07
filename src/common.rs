@@ -38,6 +38,7 @@ pub enum Architecture {
     Wasm32,
     Wasm64,
     Xtensa,
+    SuperH,
 }
 
 /// A CPU sub-architecture.
@@ -87,6 +88,7 @@ impl Architecture {
             Architecture::Wasm32 => Some(AddressSize::U32),
             Architecture::Wasm64 => Some(AddressSize::U64),
             Architecture::Xtensa => Some(AddressSize::U32),
+            Architecture::SuperH => Some(AddressSize::U32),
         }
     }
 }
