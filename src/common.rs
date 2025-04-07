@@ -39,7 +39,6 @@ pub enum Architecture {
     Wasm32,
     Wasm64,
     Xtensa,
-    SuperH
 }
 
 /// A CPU sub-architecture.
