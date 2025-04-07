@@ -35,10 +35,10 @@ pub enum Architecture {
     Sparc,
     Sparc32Plus,
     Sparc64,
+    SuperH,
     Wasm32,
     Wasm64,
     Xtensa,
-    SuperH,
 }
 
 /// A CPU sub-architecture.

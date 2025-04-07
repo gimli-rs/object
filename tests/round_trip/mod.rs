@@ -286,6 +286,7 @@ fn elf_any() {
         (Architecture::Sparc, Endianness::Big),
         (Architecture::Sparc32Plus, Endianness::Big),
         (Architecture::Sparc64, Endianness::Big),
+        (Architecture::SuperH, Endianness::Big),
         (Architecture::Xtensa, Endianness::Little),
     ]
     .iter()

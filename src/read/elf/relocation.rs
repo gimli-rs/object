@@ -434,6 +434,11 @@ fn parse_relocation<Elf: FileHeader>(
             elf::R_SPARC_64 | elf::R_SPARC_UA64 => (K::Absolute, g, 64),
             _ => unknown,
         },
+        elf::EM_SH => match r_type {
+            elf::R_SH_DIR32 => (K::Absolute, g, 32),
+            elf::R_SH_REL32 => (K::Relative, g, 32),
+            _ => unknown,
+        },
         elf::EM_XTENSA => match r_type {
             elf::R_XTENSA_32 => (K::Absolute, g, 32),
             elf::R_XTENSA_32_PCREL => (K::Relative, g, 32),
