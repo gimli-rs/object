@@ -35,6 +35,7 @@ pub enum Architecture {
     Sparc,
     Sparc32Plus,
     Sparc64,
+    SuperH,
     Wasm32,
     Wasm64,
     Xtensa,
@@ -87,6 +88,7 @@ impl Architecture {
             Architecture::Wasm32 => Some(AddressSize::U32),
             Architecture::Wasm64 => Some(AddressSize::U64),
             Architecture::Xtensa => Some(AddressSize::U32),
+            Architecture::SuperH => Some(AddressSize::U32),
         }
     }
 }

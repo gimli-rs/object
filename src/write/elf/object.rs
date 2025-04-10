@@ -150,6 +150,7 @@ impl<'a> Object<'a> {
             Architecture::Sparc => true,
             Architecture::Sparc32Plus => true,
             Architecture::Sparc64 => true,
+            Architecture::SuperH => false,
             Architecture::Xtensa => true,
             _ => {
                 return Err(Error(format!(
@@ -362,6 +363,11 @@ impl<'a> Object<'a> {
                 // TODO: use R_SPARC_32/R_SPARC_64 if aligned.
                 (K::Absolute, _, 32) => elf::R_SPARC_UA32,
                 (K::Absolute, _, 64) => elf::R_SPARC_UA64,
+                _ => return unsupported_reloc(),
+            },
+            Architecture::SuperH => match (kind, encoding, size) {
+                (K::Absolute, _, 32) => elf::R_SH_DIR32,
+                (K::Relative, _, 32) => elf::R_SH_REL32,
                 _ => return unsupported_reloc(),
             },
             Architecture::Xtensa => match (kind, encoding, size) {
@@ -582,6 +588,7 @@ impl<'a> Object<'a> {
             (Architecture::Sparc, None) => elf::EM_SPARC,
             (Architecture::Sparc32Plus, None) => elf::EM_SPARC32PLUS,
             (Architecture::Sparc64, None) => elf::EM_SPARCV9,
+            (Architecture::SuperH, None) => elf::EM_SH,
             (Architecture::Xtensa, None) => elf::EM_XTENSA,
             _ => {
                 return Err(Error(format!(
