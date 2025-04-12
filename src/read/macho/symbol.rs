@@ -104,7 +104,7 @@ impl<'data, Mach: MachHeader, R: ReadRef<'data>> SymbolTable<'data, Mach, R> {
             if n_type & macho::N_STAB == 0 {
                 continue;
             }
-            // TODO: includes variables too (N_GSYM, N_STSYM). These may need to get their
+            // TODO: includes global symbols too (N_GSYM). These may need to get their
             // address from regular symbols though.
             match n_type {
                 macho::N_SO => {
@@ -145,6 +145,20 @@ impl<'data, Mach: MachHeader, R: ReadRef<'data>> SymbolTable<'data, Mach, R> {
                                     object,
                                 });
                             }
+                        }
+                    }
+                }
+                macho::N_STSYM => {
+                    // Static symbols have a single entry with the address of the symbol
+                    // but no size
+                    if let Ok(name) = nlist.name(endian, self.strings) {
+                        if let Some(object) = object {
+                            symbols.push(ObjectMapEntry {
+                                address: nlist.n_value(endian).into(),
+                                size: 0,
+                                name,
+                                object,
+                            })
                         }
                     }
                 }
