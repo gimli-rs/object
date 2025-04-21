@@ -66,7 +66,6 @@ struct SectionHeader<'data> {
 enum LocalFunctionKind {
     Unknown,
     Exported,
-    Local { symbol_id: u32 },
 }
 
 impl<T> ReadError<T> for wasmparser::Result<T> {
@@ -207,6 +206,12 @@ impl<'data, R: ReadRef<'data>> WasmFile<'data, R> {
             }
         }
 
+        if let Some(entry_func_id) = entry_func_id {
+            if let Some(range) = code_ranges.get(entry_func_id as usize) {
+                file.entry = range.0;
+            }
+        }
+
         let mut imported_funcs_count = 0;
         if let Some(imports) = imports {
             let mut last_module_name = None;
@@ -304,57 +309,37 @@ impl<'data, R: ReadRef<'data>> WasmFile<'data, R> {
                 });
             }
         }
-        if !code_ranges.is_empty() {
+        if let Some(names) = names {
             if let Some(main_file_symbol) = main_file_symbol.take() {
                 file.symbols.push(main_file_symbol);
             }
-            for (i, (address, size)) in code_ranges.into_iter().enumerate() {
-                if entry_func_id == Some(i as u32) {
-                    file.entry = address;
-                }
-                let local_func_kind = local_func_kinds
-                    .get_mut(i)
-                    .read_error("Invalid Wasm code section index")?;
-                match local_func_kind {
-                    LocalFunctionKind::Unknown => {
-                        *local_func_kind = LocalFunctionKind::Local {
-                            symbol_id: file.symbols.len() as u32,
-                        };
-                        file.symbols.push(WasmSymbolInternal {
-                            name: "",
-                            address,
-                            size,
-                            kind: SymbolKind::Text,
-                            section: SymbolSection::Section(SectionIndex(SectionId::Code as usize)),
-                            scope: SymbolScope::Compilation,
-                        });
-                    }
-                    LocalFunctionKind::Exported => {}
-                    _ => unreachable!(),
-                }
-            }
-        }
-        if let Some(names) = names {
             for name in names {
-                // TODO: Right now, ill-formed name subsections
-                // are silently ignored in order to maintain
-                // compatibility with extended name sections, which
-                // are not yet supported by the version of
-                // `wasmparser` currently used.
-                // A better fix would be to update `wasmparser` to
-                // the newest version, but this requires
-                // a major rewrite of this file.
-                if let Ok(wp::Name::Function(name_map)) = name {
-                    for naming in name_map {
-                        let naming = naming.read_error("Couldn't read a function name")?;
-                        if let Some(local_index) = naming.index.checked_sub(imported_funcs_count) {
-                            if let LocalFunctionKind::Local { symbol_id } =
-                                local_func_kinds[local_index as usize]
-                            {
-                                file.symbols[symbol_id as usize].name = naming.name;
-                            }
-                        }
-                    }
+                let name = name.read_error("Invalid wasm name section")?;
+                let wp::Name::Function(name_map) = name else {
+                    continue;
+                };
+                for naming in name_map {
+                    let naming = naming.read_error("Couldn't read a function name")?;
+                    let Some(local_index) = naming.index.checked_sub(imported_funcs_count) else {
+                        continue;
+                    };
+                    let Some(LocalFunctionKind::Unknown) =
+                        local_func_kinds.get(local_index as usize)
+                    else {
+                        continue;
+                    };
+                    let Some((address, size)) = code_ranges.get(local_index as usize).copied()
+                    else {
+                        continue;
+                    };
+                    file.symbols.push(WasmSymbolInternal {
+                        name: naming.name,
+                        address,
+                        size,
+                        kind: SymbolKind::Text,
+                        section: SymbolSection::Section(SectionIndex(SectionId::Code as usize)),
+                        scope: SymbolScope::Compilation,
+                    });
                 }
             }
         }
