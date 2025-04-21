@@ -65,7 +65,7 @@ struct SectionHeader<'data> {
 #[derive(Clone)]
 enum LocalFunctionKind {
     Unknown,
-    Exported { symbol_ids: Vec<u32> },
+    Exported,
     Local { symbol_id: u32 },
 }
 
@@ -265,16 +265,7 @@ impl<'data, R: ReadRef<'data>> WasmFile<'data, R> {
                             let local_func_kind = local_func_kinds
                                 .get_mut(local_func_id as usize)
                                 .read_error("Invalid Wasm export index")?;
-                            if let LocalFunctionKind::Unknown = local_func_kind {
-                                *local_func_kind = LocalFunctionKind::Exported {
-                                    symbol_ids: Vec::new(),
-                                };
-                            }
-                            let symbol_ids = match local_func_kind {
-                                LocalFunctionKind::Exported { symbol_ids } => symbol_ids,
-                                _ => unreachable!(),
-                            };
-                            symbol_ids.push(file.symbols.len() as u32);
+                            *local_func_kind = LocalFunctionKind::Exported;
                         }
                         (SymbolKind::Text, SectionId::Code)
                     }
@@ -288,16 +279,25 @@ impl<'data, R: ReadRef<'data>> WasmFile<'data, R> {
                 // Try to guess the symbol address. Rust and C export a global containing
                 // the address in linear memory of the symbol.
                 let mut address = 0;
+                let mut size = 0;
                 if export.kind == wp::ExternalKind::Global {
                     if let Some(&Some(x)) = global_values.get(export.index as usize) {
                         address = x;
+                    }
+                }
+                if export.kind == wp::ExternalKind::Func {
+                    if let Some(local_func_id) = export.index.checked_sub(imported_funcs_count) {
+                        if let Some(range) = code_ranges.get(local_func_id as usize) {
+                            address = range.0;
+                            size = range.1
+                        }
                     }
                 }
 
                 file.symbols.push(WasmSymbolInternal {
                     name: export.name,
                     address,
-                    size: 0,
+                    size,
                     kind,
                     section: SymbolSection::Section(SectionIndex(section_idx as usize)),
                     scope: SymbolScope::Dynamic,
@@ -329,13 +329,7 @@ impl<'data, R: ReadRef<'data>> WasmFile<'data, R> {
                             scope: SymbolScope::Compilation,
                         });
                     }
-                    LocalFunctionKind::Exported { symbol_ids } => {
-                        for symbol_id in core::mem::take(symbol_ids) {
-                            let export_symbol = &mut file.symbols[symbol_id as usize];
-                            export_symbol.address = address;
-                            export_symbol.size = size;
-                        }
-                    }
+                    LocalFunctionKind::Exported => {}
                     _ => unreachable!(),
                 }
             }
