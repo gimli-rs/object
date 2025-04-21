@@ -102,11 +102,13 @@ impl<'data, R: ReadRef<'data>> WasmFile<'data, R> {
             scope: SymbolScope::Compilation,
         });
 
-        let mut imported_funcs_count = 0;
         let mut local_func_kinds = Vec::new();
         let mut entry_func_id = None;
         let mut code_range_start = 0;
-        let mut code_func_index = 0;
+        let mut code_ranges = Vec::new();
+        let mut imports = None;
+        let mut exports = None;
+        let mut names = None;
         // One-to-one mapping of globals to their value (if the global is a constant integer).
         let mut global_values = Vec::new();
 
@@ -124,46 +126,7 @@ impl<'data, R: ReadRef<'data>> WasmFile<'data, R> {
                 }
                 wp::Payload::ImportSection(section) => {
                     file.add_section(SectionId::Import, section.range(), "");
-                    let mut last_module_name = None;
-
-                    for import in section {
-                        let import = import.read_error("Couldn't read an import item")?;
-                        let module_name = import.module;
-
-                        if last_module_name != Some(module_name) {
-                            file.symbols.push(WasmSymbolInternal {
-                                name: module_name,
-                                address: 0,
-                                size: 0,
-                                kind: SymbolKind::File,
-                                section: SymbolSection::None,
-                                scope: SymbolScope::Dynamic,
-                            });
-                            last_module_name = Some(module_name);
-                        }
-
-                        let kind = match import.ty {
-                            wp::TypeRef::Func(_) => {
-                                imported_funcs_count += 1;
-                                SymbolKind::Text
-                            }
-                            wp::TypeRef::Memory(memory) => {
-                                file.has_memory64 |= memory.memory64;
-                                SymbolKind::Data
-                            }
-                            wp::TypeRef::Table(_) | wp::TypeRef::Global(_) => SymbolKind::Data,
-                            wp::TypeRef::Tag(_) => SymbolKind::Unknown,
-                        };
-
-                        file.symbols.push(WasmSymbolInternal {
-                            name: import.name,
-                            address: 0,
-                            size: 0,
-                            kind,
-                            section: SymbolSection::Undefined,
-                            scope: SymbolScope::Dynamic,
-                        });
-                    }
+                    imports = Some(section);
                 }
                 wp::Payload::FunctionSection(section) => {
                     file.add_section(SectionId::Function, section.range(), "");
@@ -199,59 +162,7 @@ impl<'data, R: ReadRef<'data>> WasmFile<'data, R> {
                 }
                 wp::Payload::ExportSection(section) => {
                     file.add_section(SectionId::Export, section.range(), "");
-                    if let Some(main_file_symbol) = main_file_symbol.take() {
-                        file.symbols.push(main_file_symbol);
-                    }
-
-                    for export in section {
-                        let export = export.read_error("Couldn't read an export item")?;
-
-                        let (kind, section_idx) = match export.kind {
-                            wp::ExternalKind::Func => {
-                                if let Some(local_func_id) =
-                                    export.index.checked_sub(imported_funcs_count)
-                                {
-                                    let local_func_kind = local_func_kinds
-                                        .get_mut(local_func_id as usize)
-                                        .read_error("Invalid Wasm export index")?;
-                                    if let LocalFunctionKind::Unknown = local_func_kind {
-                                        *local_func_kind = LocalFunctionKind::Exported {
-                                            symbol_ids: Vec::new(),
-                                        };
-                                    }
-                                    let symbol_ids = match local_func_kind {
-                                        LocalFunctionKind::Exported { symbol_ids } => symbol_ids,
-                                        _ => unreachable!(),
-                                    };
-                                    symbol_ids.push(file.symbols.len() as u32);
-                                }
-                                (SymbolKind::Text, SectionId::Code)
-                            }
-                            wp::ExternalKind::Table
-                            | wp::ExternalKind::Memory
-                            | wp::ExternalKind::Global => (SymbolKind::Data, SectionId::Data),
-                            // TODO
-                            wp::ExternalKind::Tag => continue,
-                        };
-
-                        // Try to guess the symbol address. Rust and C export a global containing
-                        // the address in linear memory of the symbol.
-                        let mut address = 0;
-                        if export.kind == wp::ExternalKind::Global {
-                            if let Some(&Some(x)) = global_values.get(export.index as usize) {
-                                address = x;
-                            }
-                        }
-
-                        file.symbols.push(WasmSymbolInternal {
-                            name: export.name,
-                            address,
-                            size: 0,
-                            kind,
-                            section: SymbolSection::Section(SectionIndex(section_idx as usize)),
-                            scope: SymbolScope::Dynamic,
-                        });
-                    }
+                    exports = Some(section);
                 }
                 wp::Payload::StartSection { func, range, .. } => {
                     file.add_section(SectionId::Start, range, "");
@@ -263,51 +174,12 @@ impl<'data, R: ReadRef<'data>> WasmFile<'data, R> {
                 wp::Payload::CodeSectionStart { range, .. } => {
                     code_range_start = range.start;
                     file.add_section(SectionId::Code, range, "");
-                    if let Some(main_file_symbol) = main_file_symbol.take() {
-                        file.symbols.push(main_file_symbol);
-                    }
                 }
                 wp::Payload::CodeSectionEntry(body) => {
-                    let i = code_func_index;
-                    code_func_index += 1;
-
                     let range = body.range();
-
                     let address = range.start as u64 - code_range_start as u64;
                     let size = (range.end - range.start) as u64;
-
-                    if entry_func_id == Some(i as u32) {
-                        file.entry = address;
-                    }
-
-                    let local_func_kind = local_func_kinds
-                        .get_mut(i)
-                        .read_error("Invalid Wasm code section index")?;
-                    match local_func_kind {
-                        LocalFunctionKind::Unknown => {
-                            *local_func_kind = LocalFunctionKind::Local {
-                                symbol_id: file.symbols.len() as u32,
-                            };
-                            file.symbols.push(WasmSymbolInternal {
-                                name: "",
-                                address,
-                                size,
-                                kind: SymbolKind::Text,
-                                section: SymbolSection::Section(SectionIndex(
-                                    SectionId::Code as usize,
-                                )),
-                                scope: SymbolScope::Compilation,
-                            });
-                        }
-                        LocalFunctionKind::Exported { symbol_ids } => {
-                            for symbol_id in core::mem::take(symbol_ids) {
-                                let export_symbol = &mut file.symbols[symbol_id as usize];
-                                export_symbol.address = address;
-                                export_symbol.size = size;
-                            }
-                        }
-                        _ => unreachable!(),
-                    }
+                    code_ranges.push((address, size));
                 }
                 wp::Payload::DataSection(section) => {
                     file.add_section(SectionId::Data, section.range(), "");
@@ -326,36 +198,170 @@ impl<'data, R: ReadRef<'data>> WasmFile<'data, R> {
                     file.add_section(SectionId::Custom, range, name);
                     if name == "name" {
                         let reader = wp::BinaryReader::new(section.data(), section.data_offset());
-                        for name in wp::NameSectionReader::new(reader) {
-                            // TODO: Right now, ill-formed name subsections
-                            // are silently ignored in order to maintain
-                            // compatibility with extended name sections, which
-                            // are not yet supported by the version of
-                            // `wasmparser` currently used.
-                            // A better fix would be to update `wasmparser` to
-                            // the newest version, but this requires
-                            // a major rewrite of this file.
-                            if let Ok(wp::Name::Function(name_map)) = name {
-                                for naming in name_map {
-                                    let naming =
-                                        naming.read_error("Couldn't read a function name")?;
-                                    if let Some(local_index) =
-                                        naming.index.checked_sub(imported_funcs_count)
-                                    {
-                                        if let LocalFunctionKind::Local { symbol_id } =
-                                            local_func_kinds[local_index as usize]
-                                        {
-                                            file.symbols[symbol_id as usize].name = naming.name;
-                                        }
-                                    }
-                                }
-                            }
-                        }
+                        names = Some(wp::NameSectionReader::new(reader));
                     } else if name.starts_with(".debug_") {
                         file.has_debug_symbols = true;
                     }
                 }
                 _ => {}
+            }
+        }
+
+        let mut imported_funcs_count = 0;
+        if let Some(imports) = imports {
+            let mut last_module_name = None;
+
+            for import in imports {
+                let import = import.read_error("Couldn't read an import item")?;
+                let module_name = import.module;
+
+                if last_module_name != Some(module_name) {
+                    file.symbols.push(WasmSymbolInternal {
+                        name: module_name,
+                        address: 0,
+                        size: 0,
+                        kind: SymbolKind::File,
+                        section: SymbolSection::None,
+                        scope: SymbolScope::Dynamic,
+                    });
+                    last_module_name = Some(module_name);
+                }
+
+                let kind = match import.ty {
+                    wp::TypeRef::Func(_) => {
+                        imported_funcs_count += 1;
+                        SymbolKind::Text
+                    }
+                    wp::TypeRef::Memory(memory) => {
+                        file.has_memory64 |= memory.memory64;
+                        SymbolKind::Data
+                    }
+                    wp::TypeRef::Table(_) | wp::TypeRef::Global(_) => SymbolKind::Data,
+                    wp::TypeRef::Tag(_) => SymbolKind::Unknown,
+                };
+
+                file.symbols.push(WasmSymbolInternal {
+                    name: import.name,
+                    address: 0,
+                    size: 0,
+                    kind,
+                    section: SymbolSection::Undefined,
+                    scope: SymbolScope::Dynamic,
+                });
+            }
+        }
+        if let Some(exports) = exports {
+            if let Some(main_file_symbol) = main_file_symbol.take() {
+                file.symbols.push(main_file_symbol);
+            }
+
+            for export in exports {
+                let export = export.read_error("Couldn't read an export item")?;
+
+                let (kind, section_idx) = match export.kind {
+                    wp::ExternalKind::Func => {
+                        if let Some(local_func_id) = export.index.checked_sub(imported_funcs_count)
+                        {
+                            let local_func_kind = local_func_kinds
+                                .get_mut(local_func_id as usize)
+                                .read_error("Invalid Wasm export index")?;
+                            if let LocalFunctionKind::Unknown = local_func_kind {
+                                *local_func_kind = LocalFunctionKind::Exported {
+                                    symbol_ids: Vec::new(),
+                                };
+                            }
+                            let symbol_ids = match local_func_kind {
+                                LocalFunctionKind::Exported { symbol_ids } => symbol_ids,
+                                _ => unreachable!(),
+                            };
+                            symbol_ids.push(file.symbols.len() as u32);
+                        }
+                        (SymbolKind::Text, SectionId::Code)
+                    }
+                    wp::ExternalKind::Table
+                    | wp::ExternalKind::Memory
+                    | wp::ExternalKind::Global => (SymbolKind::Data, SectionId::Data),
+                    // TODO
+                    wp::ExternalKind::Tag => continue,
+                };
+
+                // Try to guess the symbol address. Rust and C export a global containing
+                // the address in linear memory of the symbol.
+                let mut address = 0;
+                if export.kind == wp::ExternalKind::Global {
+                    if let Some(&Some(x)) = global_values.get(export.index as usize) {
+                        address = x;
+                    }
+                }
+
+                file.symbols.push(WasmSymbolInternal {
+                    name: export.name,
+                    address,
+                    size: 0,
+                    kind,
+                    section: SymbolSection::Section(SectionIndex(section_idx as usize)),
+                    scope: SymbolScope::Dynamic,
+                });
+            }
+        }
+        if !code_ranges.is_empty() {
+            if let Some(main_file_symbol) = main_file_symbol.take() {
+                file.symbols.push(main_file_symbol);
+            }
+            for (i, (address, size)) in code_ranges.into_iter().enumerate() {
+                if entry_func_id == Some(i as u32) {
+                    file.entry = address;
+                }
+                let local_func_kind = local_func_kinds
+                    .get_mut(i)
+                    .read_error("Invalid Wasm code section index")?;
+                match local_func_kind {
+                    LocalFunctionKind::Unknown => {
+                        *local_func_kind = LocalFunctionKind::Local {
+                            symbol_id: file.symbols.len() as u32,
+                        };
+                        file.symbols.push(WasmSymbolInternal {
+                            name: "",
+                            address,
+                            size,
+                            kind: SymbolKind::Text,
+                            section: SymbolSection::Section(SectionIndex(SectionId::Code as usize)),
+                            scope: SymbolScope::Compilation,
+                        });
+                    }
+                    LocalFunctionKind::Exported { symbol_ids } => {
+                        for symbol_id in core::mem::take(symbol_ids) {
+                            let export_symbol = &mut file.symbols[symbol_id as usize];
+                            export_symbol.address = address;
+                            export_symbol.size = size;
+                        }
+                    }
+                    _ => unreachable!(),
+                }
+            }
+        }
+        if let Some(names) = names {
+            for name in names {
+                // TODO: Right now, ill-formed name subsections
+                // are silently ignored in order to maintain
+                // compatibility with extended name sections, which
+                // are not yet supported by the version of
+                // `wasmparser` currently used.
+                // A better fix would be to update `wasmparser` to
+                // the newest version, but this requires
+                // a major rewrite of this file.
+                if let Ok(wp::Name::Function(name_map)) = name {
+                    for naming in name_map {
+                        let naming = naming.read_error("Couldn't read a function name")?;
+                        if let Some(local_index) = naming.index.checked_sub(imported_funcs_count) {
+                            if let LocalFunctionKind::Local { symbol_id } =
+                                local_func_kinds[local_index as usize]
+                            {
+                                file.symbols[symbol_id as usize].name = naming.name;
+                            }
+                        }
+                    }
+                }
             }
         }
 
