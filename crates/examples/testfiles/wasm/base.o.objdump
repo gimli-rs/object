@@ -1,0 +1,26 @@
+Format: Wasm Little-endian 32-bit
+Kind: Unknown
+Architecture: Wasm32
+Flags: None
+Relative Address Base: 0
+Entry Address: 0
+1: Section { name: "<type>", address: 0, size: b, align: 1, kind: Metadata, flags: None }
+2: Section { name: "<import>", address: 0, size: 5e, align: 1, kind: Linker, flags: None }
+3: Section { name: "<function>", address: 0, size: 3, align: 1, kind: Metadata, flags: None }
+12: Section { name: "<data_count>", address: 0, size: 1, align: 1, kind: UninitializedData, flags: None }
+10: Section { name: "<code>", address: 0, size: 6d, align: 1, kind: Text, flags: None }
+11: Section { name: "<data>", address: 0, size: 13, align: 1, kind: Data, flags: None }
+0: Section { name: "linking", address: 0, size: 5d, align: 1, kind: Linker, flags: None }
+0: Section { name: "reloc.CODE", address: 0, size: 15, align: 1, kind: Other, flags: None }
+0: Section { name: "producers", address: 0, size: 6c, align: 1, kind: Other, flags: None }
+
+Symbols
+0: Symbol { name: "env", address: 0, size: 0, kind: File, section: None, scope: Dynamic, weak: false, flags: None }
+1: Symbol { name: "__linear_memory", address: 0, size: 0, kind: Data, section: Undefined, scope: Dynamic, weak: false, flags: None }
+2: Symbol { name: "__indirect_function_table", address: 0, size: 0, kind: Data, section: Undefined, scope: Dynamic, weak: false, flags: None }
+3: Symbol { name: "__stack_pointer", address: 0, size: 0, kind: Data, section: Undefined, scope: Dynamic, weak: false, flags: None }
+4: Symbol { name: "printf", address: 0, size: 0, kind: Text, section: Undefined, scope: Dynamic, weak: false, flags: None }
+
+Dynamic symbols
+
+Symbol map
