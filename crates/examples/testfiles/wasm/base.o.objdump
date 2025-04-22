@@ -15,12 +15,16 @@ Entry Address: 0
 0: Section { name: "producers", address: 0, size: 6c, align: 1, kind: Other, flags: None }
 
 Symbols
-0: Symbol { name: "env", address: 0, size: 0, kind: File, section: None, scope: Dynamic, weak: false, flags: None }
-1: Symbol { name: "__linear_memory", address: 0, size: 0, kind: Data, section: Undefined, scope: Dynamic, weak: false, flags: None }
-2: Symbol { name: "__indirect_function_table", address: 0, size: 0, kind: Data, section: Undefined, scope: Dynamic, weak: false, flags: None }
-3: Symbol { name: "__stack_pointer", address: 0, size: 0, kind: Data, section: Undefined, scope: Dynamic, weak: false, flags: None }
-4: Symbol { name: "printf", address: 0, size: 0, kind: Text, section: Undefined, scope: Dynamic, weak: false, flags: None }
+0: Symbol { name: "__original_main", address: 2, size: 5b, kind: Text, section: Section(SectionIndex(a)), scope: Linkage, weak: false, flags: None }
+1: Symbol { name: "__stack_pointer", address: 0, size: 0, kind: Data, section: Undefined, scope: Dynamic, weak: false, flags: None }
+2: Symbol { name: ".L.str", address: 0, size: d, kind: Data, section: Unknown, scope: Compilation, weak: false, flags: None }
+3: Symbol { name: "printf", address: 0, size: 0, kind: Text, section: Undefined, scope: Dynamic, weak: false, flags: None }
+4: Symbol { name: "main", address: 5e, size: f, kind: Text, section: Section(SectionIndex(a)), scope: Linkage, weak: false, flags: None }
+5: Symbol { name: "__main_void", address: 2, size: 5b, kind: Text, section: Section(SectionIndex(a)), scope: Dynamic, weak: false, flags: None }
 
 Dynamic symbols
 
 Symbol map
+0x0 ".L.str"
+0x2 "__main_void"
+0x5e "main"
