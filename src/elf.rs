@@ -5868,8 +5868,8 @@ pub const R_RISCV_SUB8: u32 = 37;
 pub const R_RISCV_SUB16: u32 = 38;
 pub const R_RISCV_SUB32: u32 = 39;
 pub const R_RISCV_SUB64: u32 = 40;
-pub const R_RISCV_GNU_VTINHERIT: u32 = 41;
-pub const R_RISCV_GNU_VTENTRY: u32 = 42;
+pub const R_RISCV_GOT32_PCREL: u32 = 41;
+// 42 Reserved was R_RISCV_GNU_VTENTRY
 pub const R_RISCV_ALIGN: u32 = 43;
 pub const R_RISCV_RVC_BRANCH: u32 = 44;
 pub const R_RISCV_RVC_JUMP: u32 = 45;
