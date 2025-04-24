@@ -5843,6 +5843,7 @@ pub const R_RISCV_TLS_DTPREL32: u32 = 8;
 pub const R_RISCV_TLS_DTPREL64: u32 = 9;
 pub const R_RISCV_TLS_TPREL32: u32 = 10;
 pub const R_RISCV_TLS_TPREL64: u32 = 11;
+pub const R_RISCV_TLSDESC: u32 = 12;
 pub const R_RISCV_BRANCH: u32 = 16;
 pub const R_RISCV_JAL: u32 = 17;
 pub const R_RISCV_CALL: u32 = 18;
