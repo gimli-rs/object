@@ -118,6 +118,14 @@ impl<'data, R: ReadRef<'data>, Coff: CoffHeader> SymbolTable<'data, R, Coff> {
         self.get::<pe::ImageAuxSymbolSection>(index, 1)
     }
 
+    /// Return the auxiliary weak external symbol for the symbol table entry at the given index.
+    ///
+    /// Note that the index is of the symbol, not the first auxiliary record.
+    #[inline]
+    pub fn aux_weak_external(&self, index: SymbolIndex) -> Result<&'data pe::ImageAuxSymbolWeak> {
+        self.get::<pe::ImageAuxSymbolWeak>(index, 1)
+    }
+
     /// Return the auxiliary file name for the symbol table entry at the given index.
     ///
     /// Note that the index is of the symbol, not the first auxiliary record.
