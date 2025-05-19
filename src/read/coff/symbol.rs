@@ -612,6 +612,14 @@ pub trait ImageSymbol: Debug + Pod {
             && self.typ() == 0
     }
 
+    /// Return true if the symbol has an auxiliary weak external symbol.
+    fn has_aux_weak_external(&self) -> bool {
+        self.number_of_aux_symbols() > 0
+            && self.storage_class() == pe::IMAGE_SYM_CLASS_WEAK_EXTERNAL
+            && self.section_number() == pe::IMAGE_SYM_UNDEFINED
+            && self.value() == 0
+    }
+
     fn base_type(&self) -> u16 {
         self.typ() & pe::N_BTMASK
     }
