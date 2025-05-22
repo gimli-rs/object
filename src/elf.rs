@@ -6221,6 +6221,40 @@ pub const R_LARCH_64_PCREL: u32 = 109;
 /// 18..=37 bits of `S + A - PC` into the `pcaddu18i` instruction at `PC`,
 /// and 2..=17 bits of `S + A - PC` into the `jirl` instruction at `PC + 4`
 pub const R_LARCH_CALL36: u32 = 110;
+/// 12..=31 bits of 32/64-bit PC-relative offset to TLS DESC GOT entry
+pub const R_LARCH_TLS_DESC_PC_HI20: u32 = 111;
+/// 0..=11 bits of 32/64-bit TLS DESC GOT entry address
+pub const R_LARCH_TLS_DESC_PC_LO12: u32 = 112;
+/// 32..=51 bits of 64-bit PC-relative offset to TLS DESC GOT entry
+pub const R_LARCH_TLS_DESC64_PC_LO20: u32 = 113;
+/// 52..=63 bits of 64-bit PC-relative offset to TLS DESC GOT entry
+pub const R_LARCH_TLS_DESC64_PC_HI12: u32 = 114;
+/// 12..=31 bits of 32/64-bit TLS DESC GOT entry absolute address
+pub const R_LARCH_TLS_DESC_HI20: u32 = 115;
+/// 0..=11 bits of 32/64-bit TLS DESC GOT entry absolute address
+pub const R_LARCH_TLS_DESC_LO12: u32 = 116;
+/// 32..=51 bits of 64-bit TLS DESC GOT entry absolute address
+pub const R_LARCH_TLS_DESC64_LO20: u32 = 117;
+/// 52..=63 bits of 64-bit TLS DESC GOT entry absolute address
+pub const R_LARCH_TLS_DESC64_HI12: u32 = 118;
+/// Used on ld.{w,d} for TLS DESC to get the resolve function address
+/// from GOT entry
+pub const R_LARCH_TLS_DESC_LD: u32 = 119;
+/// Used on jirl for TLS DESC to call the resolve function
+pub const R_LARCH_TLS_DESC_CALL: u32 = 120;
+/// 12..=31 bits of TLS LE 32/64-bit offset from TP register, can be relaxed
+pub const R_LARCH_TLS_LE_HI20_R: u32 = 121;
+/// TLS LE thread pointer usage, can be relaxed
+pub const R_LARCH_TLS_LE_ADD_R: u32 = 122;
+/// 0..=11 bits of TLS LE 32/64-bit offset from TP register, sign-extended,
+/// can be relaxed.
+pub const R_LARCH_TLS_LE_LO12_R: u32 = 123;
+/// 22-bit PC-relative offset to TLS LD GOT entry
+pub const R_LARCH_TLS_LD_PCREL20_S2: u32 = 124;
+/// 22-bit PC-relative offset to TLS GD GOT entry
+pub const R_LARCH_TLS_GD_PCREL20_S2: u32 = 125;
+/// 22-bit PC-relative offset to TLS DESC GOT entry
+pub const R_LARCH_TLS_DESC_PCREL20_S2: u32 = 126;
 
 // Xtensa values Rel*::r_type`.
 pub const R_XTENSA_NONE: u32 = 0;
