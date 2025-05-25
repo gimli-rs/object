@@ -1,0 +1,39 @@
+Format: Coff Little-endian 32-bit
+Kind: Relocatable
+Architecture: X86_64
+Flags: Coff { characteristics: 4 }
+Relative Address Base: 0
+Entry Address: 0
+Segment { name: ".text", address: 0, size: 0 }
+Segment { name: ".data", address: 0, size: 0 }
+Segment { name: ".bss", address: 0, size: 0 }
+Segment { name: ".xdata", address: 0, size: 0 }
+Segment { name: ".pdata", address: 0, size: 0 }
+Segment { name: ".rdata$zzz", address: 0, size: 0 }
+1: Section { name: ".text", address: 0, size: 10, align: 10, kind: Text, flags: Coff { characteristics: 60500020 } }
+2: Section { name: ".data", address: 0, size: 0, align: 10, kind: Data, flags: Coff { characteristics: c0500040 } }
+3: Section { name: ".bss", address: 0, size: 0, align: 10, kind: UninitializedData, flags: Coff { characteristics: c0500080 } }
+4: Section { name: ".xdata", address: 0, size: 8, align: 4, kind: ReadOnlyData, flags: Coff { characteristics: 40300040 } }
+5: Section { name: ".pdata", address: 0, size: c, align: 4, kind: ReadOnlyData, flags: Coff { characteristics: 40300040 } }
+6: Section { name: ".rdata$zzz", address: 0, size: 40, align: 10, kind: ReadOnlyData, flags: Coff { characteristics: 40500040 } }
+
+Symbols
+0: Symbol { name: "weak-extern.c", address: 0, size: 0, kind: File, section: None, scope: Compilation, weak: false, flags: None }
+2: Symbol { name: ".text", address: 0, size: 7, kind: Section, section: Section(SectionIndex(1)), scope: Compilation, weak: false, flags: CoffSection { selection: 0, associative_section: None } }
+4: Symbol { name: ".data", address: 0, size: 0, kind: Section, section: Section(SectionIndex(2)), scope: Compilation, weak: false, flags: CoffSection { selection: 0, associative_section: None } }
+6: Symbol { name: ".bss", address: 0, size: 0, kind: Section, section: Section(SectionIndex(3)), scope: Compilation, weak: false, flags: CoffSection { selection: 0, associative_section: None } }
+8: Symbol { name: ".xdata", address: 0, size: 8, kind: Section, section: Section(SectionIndex(4)), scope: Compilation, weak: false, flags: CoffSection { selection: 0, associative_section: None } }
+10: Symbol { name: ".pdata", address: 0, size: c, kind: Section, section: Section(SectionIndex(5)), scope: Compilation, weak: false, flags: CoffSection { selection: 0, associative_section: None } }
+12: Symbol { name: ".rdata$zzz", address: 0, size: 38, kind: Section, section: Section(SectionIndex(6)), scope: Compilation, weak: false, flags: CoffSection { selection: 0, associative_section: None } }
+14: Symbol { name: ".weak.weak_symbol.", address: 0, size: 0, kind: Data, section: Section(SectionIndex(1)), scope: Linkage, weak: false, flags: None }
+15: Symbol { name: "weak_symbol", address: 0, size: 0, kind: Text, section: Unknown, scope: Linkage, weak: true, flags: None }
+
+.pdata relocations
+(0, Relocation { kind: ImageOffset, encoding: Generic, size: 20, target: Symbol(SymbolIndex(2)), addend: 0, implicit_addend: true, flags: Coff { typ: 3 } })
+(4, Relocation { kind: ImageOffset, encoding: Generic, size: 20, target: Symbol(SymbolIndex(2)), addend: 0, implicit_addend: true, flags: Coff { typ: 3 } })
+(8, Relocation { kind: ImageOffset, encoding: Generic, size: 20, target: Symbol(SymbolIndex(8)), addend: 0, implicit_addend: true, flags: Coff { typ: 3 } })
+
+Dynamic symbols
+
+Symbol map
+0x0 ".weak.weak_symbol."
