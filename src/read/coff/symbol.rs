@@ -610,7 +610,10 @@ pub trait ImageSymbol: Debug + Pod {
 
     /// Return true if the symbol has an auxiliary function symbol.
     fn has_aux_function(&self) -> bool {
-        self.number_of_aux_symbols() > 0 && self.derived_type() == pe::IMAGE_SYM_DTYPE_FUNCTION
+        self.number_of_aux_symbols() > 0
+            && self.derived_type() == pe::IMAGE_SYM_DTYPE_FUNCTION
+            && (self.storage_class() == pe::IMAGE_SYM_CLASS_EXTERNAL
+                || self.storage_class() == pe::IMAGE_SYM_CLASS_STATIC)
     }
 
     /// Return true if the symbol has an auxiliary section symbol.
@@ -681,5 +684,12 @@ impl ImageSymbol for pe::ImageSymbolEx {
     }
     fn number_of_aux_symbols(&self) -> u8 {
         self.number_of_aux_symbols
+    }
+}
+
+impl pe::ImageAuxSymbolWeak {
+    /// Get the symbol index of the default definition.
+    pub fn default_symbol(&self) -> SymbolIndex {
+        SymbolIndex(self.weak_default_sym_index.get(LE) as usize)
     }
 }
