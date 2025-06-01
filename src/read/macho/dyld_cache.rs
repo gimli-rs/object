@@ -470,20 +470,24 @@ where
 
     /// Relocations for the mapping
     pub fn relocations(&self) -> Result<DyldCacheRelocationIterator<'data, E, R>> {
+        let data = self.data;
+        let endian = self.endian;
         let version = match self.info {
             DyldCacheMappingVersion::V1(_) => DyldCacheRelocationIteratorVersion::None,
-            DyldCacheMappingVersion::V2(info) => match info.slide(self.endian, self.data)? {
+            DyldCacheMappingVersion::V2(mapping) => match mapping.slide(self.endian, self.data)? {
                 DyldCacheSlideInfo::None => DyldCacheRelocationIteratorVersion::None,
                 DyldCacheSlideInfo::V5 { slide, page_starts } => {
-                    DyldCacheRelocationIteratorVersion::V5 {
-                        data: self.data,
-                        endian: self.endian,
-                        info,
-                        slide,
+                    DyldCacheRelocationIteratorVersion::V5(DyldCacheRelocationIteratorV5 {
+                        data,
+                        endian,
+                        mapping_file_offset: mapping.file_offset.get(endian),
+                        page_size: slide.page_size.get(endian).into(),
+                        value_add: slide.value_add.get(endian),
                         page_starts,
-                        page_index: 0,
-                        iter: None,
-                    }
+                        state: RelocationStateV5::Start,
+                        start_index: 0,
+                        offset: 0,
+                    })
                 }
             },
         };
@@ -521,7 +525,11 @@ where
     type Item = Result<DyldRelocation>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.version.next()
+        match &mut self.version {
+            DyldCacheRelocationIteratorVersion::None => Ok(None),
+            DyldCacheRelocationIteratorVersion::V5(iter) => iter.next(),
+        }
+        .transpose()
     }
 }
 
@@ -532,126 +540,75 @@ where
     R: ReadRef<'data>,
 {
     None,
-    V5 {
-        data: R,
-        endian: E,
-        info: &'data macho::DyldCacheMappingAndSlideInfo<E>,
-        slide: &'data macho::DyldCacheSlideInfo5<E>,
-        page_starts: &'data [U16<E>],
-        page_index: u64,
-        iter: Option<DyldCacheRelocationPageIterator<'data, E, R>>,
-    },
+    V5(DyldCacheRelocationIteratorV5<'data, E, R>),
 }
 
-impl<'data, E, R> Iterator for DyldCacheRelocationIteratorVersion<'data, E, R>
-where
-    E: Endian,
-    R: ReadRef<'data>,
-{
-    type Item = Result<DyldRelocation>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        match self {
-            Self::None => None,
-            Self::V5 {
-                data,
-                endian,
-                info,
-                slide,
-                page_starts,
-                page_index,
-                iter,
-            } => loop {
-                if let Some(reloc) = iter.as_mut().and_then(|iter| iter.next()) {
-                    return Some(reloc);
-                }
-
-                if *page_index < slide.page_starts_count.get(*endian).into() {
-                    let page_start: u16 = page_starts[*page_index as usize].get(*endian);
-
-                    if page_start != macho::DYLD_CACHE_SLIDE_V5_PAGE_ATTR_NO_REBASE {
-                        *iter = Some(DyldCacheRelocationPageIterator::V5 {
-                            data: *data,
-                            endian: *endian,
-                            info: *info,
-                            slide: *slide,
-                            page_index: *page_index,
-                            page_offset: Some(page_start.into()),
-                        });
-                    } else {
-                        *iter = None;
-                    }
-
-                    *page_index += 1;
-                } else {
-                    return None;
-                }
-            },
-        }
-    }
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+enum RelocationStateV5 {
+    Start,
+    Page,
 }
 
-/// A versioned iterator over relocations in a page
 #[derive(Debug)]
-pub enum DyldCacheRelocationPageIterator<'data, E = Endianness, R = &'data [u8]>
+struct DyldCacheRelocationIteratorV5<'data, E = Endianness, R = &'data [u8]>
 where
     E: Endian,
     R: ReadRef<'data>,
 {
-    /// Corresponds to struct dyld_cache_slide_info5 from dyld_cache_format.h.
-    V5 {
-        /// The mapping data
-        data: R,
-        /// Endian
-        endian: E,
-        /// The mapping information
-        info: &'data macho::DyldCacheMappingAndSlideInfo<E>,
-        /// The mapping slide information
-        slide: &'data macho::DyldCacheSlideInfo5<E>,
-        /// Mapping page index
-        page_index: u64,
-        /// The current offset into the page
-        page_offset: Option<u64>,
-    },
+    data: R,
+    endian: E,
+    mapping_file_offset: u64,
+    page_size: u64,
+    value_add: u64,
+    page_starts: &'data [U16<E>],
+
+    state: RelocationStateV5,
+    /// The next index within page_starts.
+    start_index: usize,
+    /// The current offset within the mapping.
+    offset: u64,
 }
 
-impl<'data, E, R> Iterator for DyldCacheRelocationPageIterator<'data, E, R>
+impl<'data, E, R> DyldCacheRelocationIteratorV5<'data, E, R>
 where
     E: Endian,
     R: ReadRef<'data>,
 {
-    type Item = Result<DyldRelocation>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        match self {
-            Self::V5 {
-                data,
-                endian,
-                info,
-                slide,
-                page_index,
-                page_offset,
-            } => {
-                if let Some(offset) = *page_offset {
-                    let mapping_offset: u64 = *page_index * slide.page_size.get(*endian) as u64;
-                    let file_offset: u64 = info.file_offset.get(*endian) + mapping_offset + offset;
-                    let pointer = match data.read_at::<U64<E>>(file_offset) {
-                        Ok(pointer) => pointer.get(*endian),
-                        Err(_) => {
-                            return Some(Err(Error("Failed to read file offset")));
-                        }
+    fn next(&mut self) -> Result<Option<DyldRelocation>> {
+        loop {
+            match self.state {
+                RelocationStateV5::Start => {
+                    let Some(page_start) = self.page_starts.get(self.start_index) else {
+                        return Ok(None);
                     };
+                    let page_offset = self.start_index as u64 * self.page_size;
+                    self.start_index += 1;
+
+                    let page_start = page_start.get(self.endian);
+                    if page_start == macho::DYLD_CACHE_SLIDE_V5_PAGE_ATTR_NO_REBASE {
+                        self.state = RelocationStateV5::Start;
+                    } else {
+                        self.state = RelocationStateV5::Page;
+                        self.offset = page_offset + u64::from(page_start);
+                    }
+                }
+                RelocationStateV5::Page => {
+                    let offset = self.offset;
+                    let pointer = self
+                        .data
+                        .read_at::<U64<E>>(self.mapping_file_offset + offset)
+                        .read_error("Invalid dyld cache slide pointer offset")?
+                        .get(self.endian);
                     let pointer = macho::DyldCacheSlidePointer5(pointer);
 
                     let next = pointer.next();
                     if next == 0 {
-                        *page_offset = None;
+                        self.state = RelocationStateV5::Start;
                     } else {
-                        *page_offset = Some(offset + (next * 8));
+                        self.offset = offset + next * 8;
                     }
 
-                    let value_add = slide.value_add.get(*endian);
-                    let mut value = pointer.runtime_offset() + value_add;
+                    let mut value = pointer.runtime_offset() + self.value_add;
                     let auth = if pointer.is_auth() {
                         let key = if pointer.key_is_data() {
                             macho::PtrauthKey::DA
@@ -667,13 +624,11 @@ where
                         value |= pointer.high8() << 56;
                         None
                     };
-                    Some(Ok(DyldRelocation {
-                        offset: mapping_offset + offset,
+                    return Ok(Some(DyldRelocation {
+                        offset,
                         value,
                         auth,
-                    }))
-                } else {
-                    None
+                    }));
                 }
             }
         }
