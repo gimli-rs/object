@@ -98,6 +98,26 @@ pub(super) fn print_dyld_cache_mapping_and_slide_info(
 
     if let Some(slide) = mapping.slide(endian, data).print_err(p) {
         match slide {
+            DyldCacheSlideInfo::V2 { slide, .. } => {
+                p.group("DyldCacheSlideInfo2", |p| {
+                    p.field("Version", slide.version.get(endian));
+                    p.field("PageSize", slide.page_size.get(endian));
+                    p.field_hex("PageStartsOffset", slide.page_starts_offset.get(endian));
+                    p.field_hex("PageStartsCount", slide.page_starts_count.get(endian));
+                    p.field_hex("PageExtrasOffset", slide.page_extras_offset.get(endian));
+                    p.field_hex("PageExtrasCount", slide.page_extras_count.get(endian));
+                    p.field_hex("DeltaMask", slide.delta_mask.get(endian));
+                    p.field_hex("ValueAdd", slide.value_add.get(endian));
+                });
+            }
+            DyldCacheSlideInfo::V3 { slide, .. } => {
+                p.group("DyldCacheSlideInfo3", |p| {
+                    p.field("Version", slide.version.get(endian));
+                    p.field("PageSize", slide.page_size.get(endian));
+                    p.field_hex("PageStartsCount", slide.page_starts_count.get(endian));
+                    p.field_hex("AuthValueAdd", slide.auth_value_add.get(endian));
+                });
+            }
             DyldCacheSlideInfo::V5 { slide, .. } => {
                 p.group("DyldCacheSlideInfo5", |p| {
                     p.field("Version", slide.version.get(endian));

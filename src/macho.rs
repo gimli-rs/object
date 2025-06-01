@@ -496,6 +496,102 @@ pub struct DyldCacheImageInfo<E: Endian> {
     pub pad: U32<E>,
 }
 
+/// Corresponds to struct dyld_cache_slide_info2 from dyld_cache_format.h.
+#[derive(Debug, Clone, Copy)]
+#[repr(C)]
+pub struct DyldCacheSlideInfo2<E: Endian> {
+    pub version: U32<E>,   // currently 2
+    pub page_size: U32<E>, // currently 4096 (may also be 16384)
+    pub page_starts_offset: U32<E>,
+    pub page_starts_count: U32<E>,
+    pub page_extras_offset: U32<E>,
+    pub page_extras_count: U32<E>,
+    pub delta_mask: U64<E>, // which (contiguous) set of bits contains the delta to the next rebase location
+    pub value_add: U64<E>,
+}
+
+pub const DYLD_CACHE_SLIDE_PAGE_ATTRS: u16 = 0xC000;
+// Index is into extras array (not starts array).
+pub const DYLD_CACHE_SLIDE_PAGE_ATTR_EXTRA: u16 = 0x8000;
+// Page has no rebasing.
+pub const DYLD_CACHE_SLIDE_PAGE_ATTR_NO_REBASE: u16 = 0x4000;
+// Last chain entry for page.
+pub const DYLD_CACHE_SLIDE_PAGE_ATTR_END: u16 = 0x8000;
+
+/// Corresponds to struct dyld_cache_slide_info3 from dyld_cache_format.h.
+#[derive(Debug, Clone, Copy)]
+#[repr(C)]
+pub struct DyldCacheSlideInfo3<E: Endian> {
+    pub version: U32<E>,   // currently 3
+    pub page_size: U32<E>, // currently 4096 (may also be 16384)
+    pub page_starts_count: U32<E>,
+    reserved1: [u8; 4],
+    pub auth_value_add: U64<E>,
+}
+
+/// Page has no rebasing.
+pub const DYLD_CACHE_SLIDE_V3_PAGE_ATTR_NO_REBASE: u16 = 0xFFFF;
+
+/// Corresponds to union dyld_cache_slide_pointer3 from dyld_cache_format.h.
+#[derive(Debug, Clone, Copy)]
+pub struct DyldCacheSlidePointer3(pub u64);
+
+impl DyldCacheSlidePointer3 {
+    /// Whether the pointer is authenticated.
+    pub fn is_auth(&self) -> bool {
+        ((self.0 >> 63) & 1) != 0
+    }
+
+    /// The target of the pointer.
+    ///
+    /// Only valid if `is_auth` is false.
+    pub fn target(&self) -> u64 {
+        self.0 & ((1 << 43) - 1)
+    }
+
+    /// The high 8 bits of the pointer.
+    ///
+    /// Only valid if `is_auth` is false.
+    pub fn high8(&self) -> u64 {
+        (self.0 >> 43) & 0xff
+    }
+
+    /// The target of the pointer as an offset from the start of the shared cache.
+    ///
+    /// Only valid if `is_auth` is true.
+    pub fn runtime_offset(&self) -> u64 {
+        self.0 & ((1 << 32) - 1)
+    }
+
+    /// The diversity value for authentication.
+    ///
+    /// Only valid if `is_auth` is true.
+    pub fn diversity(&self) -> u16 {
+        ((self.0 >> 32) & 0xffff) as u16
+    }
+
+    /// Whether to use address diversity for authentication.
+    ///
+    /// Only valid if `is_auth` is true.
+    pub fn addr_div(&self) -> bool {
+        ((self.0 >> 48) & 1) != 0
+    }
+
+    /// The key for authentication.
+    ///
+    /// Only valid if `is_auth` is true.
+    pub fn key(&self) -> u8 {
+        ((self.0 >> 49) & 3) as u8
+    }
+
+    /// The offset to the next slide pointer in 8-byte units.
+    ///
+    /// 0 if no next slide pointer.
+    pub fn next(&self) -> u64 {
+        (self.0 >> 51) & ((1 << 11) - 1)
+    }
+}
+
 /// Corresponds to struct dyld_cache_slide_info5 from dyld_cache_format.h.
 #[derive(Debug, Clone, Copy)]
 #[repr(C)]
@@ -3450,6 +3546,8 @@ unsafe_impl_endian_pod!(
     DyldCacheMappingInfo,
     DyldCacheMappingAndSlideInfo,
     DyldCacheImageInfo,
+    DyldCacheSlideInfo2,
+    DyldCacheSlideInfo3,
     DyldCacheSlideInfo5,
     DyldSubCacheEntryV1,
     DyldSubCacheEntryV2,
