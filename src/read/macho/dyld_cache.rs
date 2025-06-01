@@ -22,19 +22,9 @@ where
     arch: Architecture,
 }
 
-/// The data for one file in the cache.
-#[derive(Debug)]
-struct DyldFile<'data, E = Endianness, R = &'data [u8]>
-where
-    E: Endian,
-    R: ReadRef<'data>,
-{
-    data: R,
-    mappings: DyldCacheMappingSlice<'data, E, R>,
-}
-
-/// A slice of structs describing each subcache. The struct gained
-/// an additional field (the file suffix) in dyld-1042.1 (macOS 13 / iOS 16),
+/// A slice of structs describing each subcache.
+///
+/// The struct gained an additional field (the file suffix) in dyld-1042.1 (macOS 13 / iOS 16),
 /// so this is an enum of the two possible slice types.
 #[derive(Debug, Clone, Copy)]
 #[non_exhaustive]
@@ -201,15 +191,63 @@ where
     pub fn mappings<'cache>(
         &'cache self,
     ) -> impl Iterator<Item = DyldCacheMapping<'data, E, R>> + 'cache {
-        self.files.iter().flat_map(|file| file.mappings.iter())
+        let endian = self.endian;
+        self.files
+            .iter()
+            .flat_map(move |file| file.mappings(endian))
     }
 
     /// Find the address in a mapping and return the cache or subcache data it was found in,
     /// together with the translated file offset.
     pub fn data_and_offset_for_address(&self, address: u64) -> Option<(R, u64)> {
         for file in &self.files {
-            if let Some(file_offset) = file.mappings.address_to_file_offset(address) {
+            if let Some(file_offset) = file.address_to_file_offset(self.endian, address) {
                 return Some((file.data, file_offset));
+            }
+        }
+        None
+    }
+}
+
+/// The data for one file in the cache.
+#[derive(Debug)]
+struct DyldFile<'data, E = Endianness, R = &'data [u8]>
+where
+    E: Endian,
+    R: ReadRef<'data>,
+{
+    data: R,
+    mappings: DyldCacheMappingSlice<'data, E>,
+}
+
+impl<'data, E, R> DyldFile<'data, E, R>
+where
+    E: Endian,
+    R: ReadRef<'data>,
+{
+    /// Return an iterator for the mappings.
+    fn mappings(&self, endian: E) -> DyldCacheMappingIterator<'data, E, R> {
+        match self.mappings {
+            DyldCacheMappingSlice::V1(info) => DyldCacheMappingIterator::V1 {
+                endian,
+                data: self.data,
+                iter: info.iter(),
+            },
+            DyldCacheMappingSlice::V2(info) => DyldCacheMappingIterator::V2 {
+                endian,
+                data: self.data,
+                iter: info.iter(),
+            },
+        }
+    }
+
+    /// Find the file offset an address in the mappings.
+    fn address_to_file_offset(&self, endian: E, address: u64) -> Option<u64> {
+        for mapping in self.mappings(endian) {
+            let mapping_address = mapping.address();
+            if address >= mapping_address && address < mapping_address.wrapping_add(mapping.size())
+            {
+                return Some(address - mapping_address + mapping.file_offset());
             }
         }
         None
@@ -287,66 +325,17 @@ where
     }
 }
 
-/// An enum of arrays containing dyld cache mappings
+/// The array of mappings for a single dyld cache file.
+///
+/// The mappings gained slide info in dyld-832.7 (macOS 11)
+/// so this is an enum of the two possible slice types.
 #[derive(Debug, Clone, Copy)]
 #[non_exhaustive]
-pub enum DyldCacheMappingSlice<'data, E = Endianness, R = &'data [u8]>
-where
-    E: Endian,
-    R: ReadRef<'data>,
-{
-    /// Corresponds to an array of struct dyld_cache_mapping_info
-    V1 {
-        /// The mapping endianness
-        endian: E,
-        /// The mapping data
-        data: R,
-        /// The slice of mapping info
-        info: &'data [macho::DyldCacheMappingInfo<E>],
-    },
-    /// Corresponds to an array of struct dyld_cache_mapping_and_slide_info
-    V2 {
-        /// The mapping endianness
-        endian: E,
-        /// The mapping data
-        data: R,
-        /// The slice of mapping info
-        info: &'data [macho::DyldCacheMappingAndSlideInfo<E>],
-    },
-}
-
-impl<'data, E, R> DyldCacheMappingSlice<'data, E, R>
-where
-    E: Endian,
-    R: ReadRef<'data>,
-{
-    /// Return a slice iterator
-    pub fn iter(self) -> DyldCacheMappingIterator<'data, E, R> {
-        match self {
-            Self::V1 { endian, data, info } => DyldCacheMappingIterator::V1 {
-                endian,
-                data,
-                iter: info.iter(),
-            },
-            Self::V2 { endian, data, info } => DyldCacheMappingIterator::V2 {
-                endian,
-                data,
-                iter: info.iter(),
-            },
-        }
-    }
-
-    /// Find the file offset of the image by looking up its address in the mappings.
-    pub fn address_to_file_offset(&self, address: u64) -> Option<u64> {
-        for mapping in self.iter() {
-            let mapping_address = mapping.address();
-            if address >= mapping_address && address < mapping_address.wrapping_add(mapping.size())
-            {
-                return Some(address - mapping_address + mapping.file_offset());
-            }
-        }
-        None
-    }
+pub enum DyldCacheMappingSlice<'data, E: Endian = Endianness> {
+    /// V1, used before dyld-832.7.
+    V1(&'data [macho::DyldCacheMappingInfo<E>]),
+    /// V2, used since dyld-832.7.
+    V2(&'data [macho::DyldCacheMappingAndSlideInfo<E>]),
 }
 
 // This is the offset of the end of the mapping_with_slide_count field.
@@ -822,7 +811,7 @@ impl<E: Endian> macho::DyldCacheHeader<E> {
         &self,
         endian: E,
         data: R,
-    ) -> Result<DyldCacheMappingSlice<'data, E, R>> {
+    ) -> Result<DyldCacheMappingSlice<'data, E>> {
         let header_size = self.mapping_offset.get(endian);
         if header_size >= MIN_HEADER_SIZE_MAPPINGS_V2 {
             let info = data
@@ -831,7 +820,7 @@ impl<E: Endian> macho::DyldCacheHeader<E> {
                     self.mapping_with_slide_count.get(endian) as usize,
                 )
                 .read_error("Invalid dyld cache mapping size or alignment")?;
-            Ok(DyldCacheMappingSlice::V2 { endian, data, info })
+            Ok(DyldCacheMappingSlice::V2(info))
         } else {
             let info = data
                 .read_slice_at::<macho::DyldCacheMappingInfo<E>>(
@@ -839,7 +828,7 @@ impl<E: Endian> macho::DyldCacheHeader<E> {
                     self.mapping_count.get(endian) as usize,
                 )
                 .read_error("Invalid dyld cache mapping size or alignment")?;
-            Ok(DyldCacheMappingSlice::V1 { endian, data, info })
+            Ok(DyldCacheMappingSlice::V1(info))
         }
     }
 

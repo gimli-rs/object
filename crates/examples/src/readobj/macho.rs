@@ -9,7 +9,7 @@ pub(super) fn print_dyld_cache(p: &mut Printer<'_>, data: &[u8], subcache_data: 
             print_dyld_cache_header(p, endian, header);
             let mappings = header.mappings(endian, data).print_err(p);
             if let Some(mappings) = mappings {
-                print_dyld_cache_mappings(p, mappings);
+                print_dyld_cache_mappings(p, endian, mappings);
             }
         }
     }
@@ -36,17 +36,17 @@ pub(super) fn print_dyld_cache_header(
     });
 }
 
-pub(super) fn print_dyld_cache_mappings(p: &mut Printer<'_>, mappings: DyldCacheMappingSlice) {
+pub(super) fn print_dyld_cache_mappings(
+    p: &mut Printer<'_>,
+    endian: Endianness,
+    mappings: DyldCacheMappingSlice,
+) {
     if !p.options.file {
         return;
     }
 
     match mappings {
-        DyldCacheMappingSlice::V1 {
-            endian,
-            data: _,
-            info,
-        } => {
+        DyldCacheMappingSlice::V1(info) => {
             for mapping in info.iter() {
                 p.group("DyldCacheMappingInfo", |p| {
                     p.field_hex("Address", mapping.address.get(endian));
@@ -59,11 +59,7 @@ pub(super) fn print_dyld_cache_mappings(p: &mut Printer<'_>, mappings: DyldCache
                 });
             }
         }
-        DyldCacheMappingSlice::V2 {
-            endian,
-            data: _,
-            info,
-        } => {
+        DyldCacheMappingSlice::V2(info) => {
             for mapping in info.iter() {
                 p.group("DyldCacheMappingAndSlideInfo", |p| {
                     p.field_hex("Address", mapping.address.get(endian));
