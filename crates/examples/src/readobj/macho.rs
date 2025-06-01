@@ -96,14 +96,14 @@ pub(super) fn print_dyld_cache_mapping_and_slide_info(
         p.flags(mapping.init_prot.get(endian), 0, FLAGS_VM);
     });
 
-    if let Some(Some(slide)) = mapping.slide(endian, data).print_err(p) {
+    if let Some(slide) = mapping.slide(endian, data).print_err(p) {
         match slide {
-            DyldCacheSlideInfoSlice::V5(info, _data) => {
+            DyldCacheSlideInfo::V5 { slide, .. } => {
                 p.group("DyldCacheSlideInfo5", |p| {
-                    p.field("Version", info.version.get(endian));
-                    p.field("PageSize", info.page_size.get(endian));
-                    p.field_hex("PageStartsCount", info.page_starts_count.get(endian));
-                    p.field_hex("ValueAdd", info.value_add.get(endian));
+                    p.field("Version", slide.version.get(endian));
+                    p.field("PageSize", slide.page_size.get(endian));
+                    p.field_hex("PageStartsCount", slide.page_starts_count.get(endian));
+                    p.field_hex("ValueAdd", slide.value_add.get(endian));
                 });
             }
             _ => {}

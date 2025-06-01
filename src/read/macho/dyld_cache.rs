@@ -469,23 +469,38 @@ where
     }
 
     /// Relocations for the mapping
-    pub fn relocations(self) -> Result<DyldCacheRelocationIterator<'data, E, R>> {
-        match self.info {
-            DyldCacheMappingVersion::V1(_) => Ok(DyldCacheRelocationIterator::none()),
-            DyldCacheMappingVersion::V2(info) => {
-                if let Some(slide) = info.slide(self.endian, self.data)? {
-                    Ok(DyldCacheRelocationIterator::slide(
-                        self.data,
-                        self.endian,
+    pub fn relocations(&self) -> Result<DyldCacheRelocationIterator<'data, E, R>> {
+        let version = match self.info {
+            DyldCacheMappingVersion::V1(_) => DyldCacheRelocationIteratorVersion::None,
+            DyldCacheMappingVersion::V2(info) => match info.slide(self.endian, self.data)? {
+                DyldCacheSlideInfo::None => DyldCacheRelocationIteratorVersion::None,
+                DyldCacheSlideInfo::V5 { slide, page_starts } => {
+                    DyldCacheRelocationIteratorVersion::V5 {
+                        data: self.data,
+                        endian: self.endian,
                         info,
                         slide,
-                    ))
-                } else {
-                    Ok(DyldCacheRelocationIterator::none())
+                        page_starts,
+                        page_index: 0,
+                        iter: None,
+                    }
                 }
-            }
-        }
+            },
+        };
+        Ok(DyldCacheRelocationIterator { version })
     }
+}
+
+/// The slide info for a dyld cache mapping, including variable length arrays.
+#[derive(Debug, Clone, Copy)]
+#[non_exhaustive]
+#[allow(missing_docs)]
+pub enum DyldCacheSlideInfo<'data, E: Endian> {
+    None,
+    V5 {
+        slide: &'data macho::DyldCacheSlideInfo5<E>,
+        page_starts: &'data [U16<E>],
+    },
 }
 
 /// An iterator over relocations in a mapping
@@ -496,40 +511,6 @@ where
     R: ReadRef<'data>,
 {
     version: DyldCacheRelocationIteratorVersion<'data, E, R>,
-}
-
-impl<'data, E, R> DyldCacheRelocationIterator<'data, E, R>
-where
-    E: Endian,
-    R: ReadRef<'data>,
-{
-    fn slide(
-        data: R,
-        endian: E,
-        info: &'data macho::DyldCacheMappingAndSlideInfo<E>,
-        slide: DyldCacheSlideInfoSlice<'data, E>,
-    ) -> Self {
-        let version = match slide {
-            DyldCacheSlideInfoSlice::V5(slide, page_starts) => {
-                DyldCacheRelocationIteratorVersion::V5 {
-                    data,
-                    endian,
-                    info,
-                    slide,
-                    page_starts,
-                    page_index: 0,
-                    iter: None,
-                }
-            }
-        };
-        Self { version }
-    }
-
-    fn none() -> Self {
-        Self {
-            version: DyldCacheRelocationIteratorVersion::None,
-        }
-    }
 }
 
 impl<'data, E, R> Iterator for DyldCacheRelocationIterator<'data, E, R>
@@ -606,25 +587,6 @@ where
                     return None;
                 }
             },
-        }
-    }
-}
-
-/// An enum of arrays containing dyld cache mappings
-#[derive(Clone, Copy)]
-#[non_exhaustive]
-pub enum DyldCacheSlideInfoSlice<'data, E: Endian> {
-    /// Corresponds to struct dyld_cache_slide_info5 from dyld_cache_format.h.
-    V5(&'data macho::DyldCacheSlideInfo5<E>, &'data [U16<E>]),
-}
-
-impl<E: Endian> Debug for DyldCacheSlideInfoSlice<'_, E> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::V5(info, _) => f
-                .debug_struct("DyldCacheSlideInfoSlice::V5")
-                .field("info", info)
-                .finish(),
         }
     }
 }
@@ -898,34 +860,34 @@ impl<E: Endian> macho::DyldCacheMappingAndSlideInfo<E> {
         &self,
         endian: E,
         data: R,
-    ) -> Result<Option<DyldCacheSlideInfoSlice<'data, E>>> {
-        match self.slide_info_file_size.get(endian) {
-            0 => Ok(None),
-            _ => {
-                let slide_info_file_offset = self.slide_info_file_offset.get(endian);
-                let version = data
-                    .read_at::<U32<E>>(slide_info_file_offset)
-                    .read_error("Invalid slide info file offset size or alignment")?
-                    .get(endian);
-                match version {
-                    5 => {
-                        let slide = data
-                            .read_at::<macho::DyldCacheSlideInfo5<E>>(slide_info_file_offset)
-                            .read_error("Invalid dyld cache slide info size or alignment")?;
-                        let page_starts_offset = slide_info_file_offset
-                            .checked_add(mem::size_of::<macho::DyldCacheSlideInfo5<E>>() as u64)
-                            .read_error("Page starts overflow")?;
-                        let page_starts = data
-                            .read_slice_at::<U16<E>>(
-                                page_starts_offset,
-                                slide.page_starts_count.get(endian) as usize,
-                            )
-                            .read_error("Invalid page starts size or alignment")?;
-                        Ok(Some(DyldCacheSlideInfoSlice::V5(slide, page_starts)))
-                    }
-                    _ => Err(Error("Unsupported dyld_cache_slide_info version")),
-                }
+    ) -> Result<DyldCacheSlideInfo<'data, E>> {
+        // TODO: limit further reads to this size?
+        if self.slide_info_file_size.get(endian) == 0 {
+            return Ok(DyldCacheSlideInfo::None);
+        }
+
+        let slide_info_file_offset = self.slide_info_file_offset.get(endian);
+        let version = data
+            .read_at::<U32<E>>(slide_info_file_offset)
+            .read_error("Invalid slide info file offset size or alignment")?
+            .get(endian);
+        match version {
+            5 => {
+                let slide = data
+                    .read_at::<macho::DyldCacheSlideInfo5<E>>(slide_info_file_offset)
+                    .read_error("Invalid dyld cache slide info offset or alignment")?;
+                let page_starts_offset = slide_info_file_offset
+                    .checked_add(mem::size_of::<macho::DyldCacheSlideInfo5<E>>() as u64)
+                    .read_error("Invalid dyld cache page starts offset")?;
+                let page_starts = data
+                    .read_slice_at::<U16<E>>(
+                        page_starts_offset,
+                        slide.page_starts_count.get(endian) as usize,
+                    )
+                    .read_error("Invalid dyld cache page starts size or alignment")?;
+                Ok(DyldCacheSlideInfo::V5 { slide, page_starts })
             }
+            _ => Err(Error("Unsupported dyld cache slide info version")),
         }
     }
 }
