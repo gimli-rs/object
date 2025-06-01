@@ -469,19 +469,19 @@ where
     }
 
     /// Relocations for the mapping
-    pub fn relocations(self) -> Result<DyldCacheRelocationMappingIterator<'data, E, R>> {
+    pub fn relocations(self) -> Result<DyldCacheRelocationIterator<'data, E, R>> {
         match self.info {
-            DyldCacheMappingVersion::V1(_) => Ok(DyldCacheRelocationMappingIterator::empty()),
+            DyldCacheMappingVersion::V1(_) => Ok(DyldCacheRelocationIterator::none()),
             DyldCacheMappingVersion::V2(info) => {
                 if let Some(slide) = info.slide(self.endian, self.data)? {
-                    Ok(DyldCacheRelocationMappingIterator::slide(
+                    Ok(DyldCacheRelocationIterator::slide(
                         self.data,
                         self.endian,
                         info,
                         slide,
                     ))
                 } else {
-                    Ok(DyldCacheRelocationMappingIterator::empty())
+                    Ok(DyldCacheRelocationIterator::none())
                 }
             }
         }
@@ -490,59 +490,79 @@ where
 
 /// An iterator over relocations in a mapping
 #[derive(Debug)]
-pub enum DyldCacheRelocationMappingIterator<'data, E = Endianness, R = &'data [u8]>
+pub struct DyldCacheRelocationIterator<'data, E = Endianness, R = &'data [u8]>
 where
     E: Endian,
     R: ReadRef<'data>,
 {
-    /// Empty
-    Empty,
-    /// Slide
-    Slide {
-        /// The mapping data
-        data: R,
-        /// Endian
-        endian: E,
-        /// The mapping information
-        info: &'data macho::DyldCacheMappingAndSlideInfo<E>,
-        /// The mapping slide information
-        slide: DyldCacheSlideInfoSlice<'data, E>,
-        /// Page starts
-        page_index: u64,
-        /// Page iterator
-        iter: Option<DyldCacheRelocationPageIterator<'data, E, R>>,
-    },
+    version: DyldCacheRelocationIteratorVersion<'data, E, R>,
 }
 
-impl<'data, E, R> DyldCacheRelocationMappingIterator<'data, E, R>
+impl<'data, E, R> DyldCacheRelocationIterator<'data, E, R>
 where
     E: Endian,
     R: ReadRef<'data>,
 {
-    /// Slide iterator
-    pub fn slide(
+    fn slide(
         data: R,
         endian: E,
         info: &'data macho::DyldCacheMappingAndSlideInfo<E>,
         slide: DyldCacheSlideInfoSlice<'data, E>,
     ) -> Self {
-        Self::Slide {
-            data,
-            endian,
-            info,
-            slide,
-            page_index: 0,
-            iter: None,
-        }
+        let version = match slide {
+            DyldCacheSlideInfoSlice::V5(slide, page_starts) => {
+                DyldCacheRelocationIteratorVersion::V5 {
+                    data,
+                    endian,
+                    info,
+                    slide,
+                    page_starts,
+                    page_index: 0,
+                    iter: None,
+                }
+            }
+        };
+        Self { version }
     }
 
-    /// Empty iterator
-    pub fn empty() -> Self {
-        Self::Empty
+    fn none() -> Self {
+        Self {
+            version: DyldCacheRelocationIteratorVersion::None,
+        }
     }
 }
 
-impl<'data, E, R> Iterator for DyldCacheRelocationMappingIterator<'data, E, R>
+impl<'data, E, R> Iterator for DyldCacheRelocationIterator<'data, E, R>
+where
+    E: Endian,
+    R: ReadRef<'data>,
+{
+    type Item = Result<DyldRelocation>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.version.next()
+    }
+}
+
+#[derive(Debug)]
+enum DyldCacheRelocationIteratorVersion<'data, E = Endianness, R = &'data [u8]>
+where
+    E: Endian,
+    R: ReadRef<'data>,
+{
+    None,
+    V5 {
+        data: R,
+        endian: E,
+        info: &'data macho::DyldCacheMappingAndSlideInfo<E>,
+        slide: &'data macho::DyldCacheSlideInfo5<E>,
+        page_starts: &'data [U16<E>],
+        page_index: u64,
+        iter: Option<DyldCacheRelocationPageIterator<'data, E, R>>,
+    },
+}
+
+impl<'data, E, R> Iterator for DyldCacheRelocationIteratorVersion<'data, E, R>
 where
     E: Endian,
     R: ReadRef<'data>,
@@ -551,12 +571,13 @@ where
 
     fn next(&mut self) -> Option<Self::Item> {
         match self {
-            Self::Empty => None,
-            Self::Slide {
+            Self::None => None,
+            Self::V5 {
                 data,
                 endian,
                 info,
                 slide,
+                page_starts,
                 page_index,
                 iter,
             } => loop {
@@ -564,29 +585,25 @@ where
                     return Some(reloc);
                 }
 
-                match slide {
-                    DyldCacheSlideInfoSlice::V5(slide, page_starts) => {
-                        if *page_index < slide.page_starts_count.get(*endian).into() {
-                            let page_start: u16 = page_starts[*page_index as usize].get(*endian);
+                if *page_index < slide.page_starts_count.get(*endian).into() {
+                    let page_start: u16 = page_starts[*page_index as usize].get(*endian);
 
-                            if page_start != macho::DYLD_CACHE_SLIDE_V5_PAGE_ATTR_NO_REBASE {
-                                *iter = Some(DyldCacheRelocationPageIterator::V5 {
-                                    data: *data,
-                                    endian: *endian,
-                                    info: *info,
-                                    slide: *slide,
-                                    page_index: *page_index,
-                                    page_offset: Some(page_start.into()),
-                                });
-                            } else {
-                                *iter = None;
-                            }
-
-                            *page_index += 1;
-                        } else {
-                            return None;
-                        }
+                    if page_start != macho::DYLD_CACHE_SLIDE_V5_PAGE_ATTR_NO_REBASE {
+                        *iter = Some(DyldCacheRelocationPageIterator::V5 {
+                            data: *data,
+                            endian: *endian,
+                            info: *info,
+                            slide: *slide,
+                            page_index: *page_index,
+                            page_offset: Some(page_start.into()),
+                        });
+                    } else {
+                        *iter = None;
                     }
+
+                    *page_index += 1;
+                } else {
+                    return None;
                 }
             },
         }
