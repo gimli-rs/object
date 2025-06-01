@@ -9,7 +9,6 @@
 
 use crate::endian::{BigEndian, Endian, U64Bytes, U16, U32, U64};
 use crate::pod::Pod;
-use core::fmt::{self, Debug};
 
 // Definitions from "/usr/include/mach/machine.h".
 
@@ -285,35 +284,21 @@ pub const VM_PROT_EXECUTE: u32 = 0x04;
 
 // Definitions from ptrauth.h
 
-/// ptrauth_key enum
+/// The key used to sign a pointer for authentication.
+///
+/// The variant values correspond to the values used in the
+/// `ptrauth_key` enum in `ptrauth.h`.
 #[repr(u8)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PtrauthKey {
-    /// ptrauth_key_asia
+    /// Instruction key A.
     IA = 0,
-    /// ptrauth_key_asib
+    /// Instruction key B.
     IB = 1,
-    /// ptrauth_key_asda
+    /// Data key A.
     DA = 2,
-    /// ptrauth_key_asdb
+    /// Data key B.
     DB = 3,
-}
-
-/// Pointer auth data
-pub struct Ptrauth {
-    pub key: PtrauthKey,
-    pub diversity: u16,
-    pub addr_div: bool,
-}
-
-impl Debug for Ptrauth {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("Ptrauth")
-            .field("key", &self.key)
-            .field("diversity", &format_args!("{:#x}", self.diversity))
-            .field("addr_div", &self.addr_div)
-            .finish()
-    }
 }
 
 // Definitions from https://opensource.apple.com/source/dyld/dyld-210.2.3/launch-cache/dyld_cache_format.h.auto.html
@@ -522,51 +507,55 @@ pub struct DyldCacheSlideInfo5<E: Endian> {
     pub value_add: U64<E>,
 }
 
-pub const DYLD_CACHE_SLIDE_V5_PAGE_ATTR_NO_REBASE: u16 = 0xFFFF; // page has no rebasing
+/// Page has no rebasing.
+pub const DYLD_CACHE_SLIDE_V5_PAGE_ATTR_NO_REBASE: u16 = 0xFFFF;
 
 /// Corresponds to struct dyld_cache_slide_pointer5 from dyld_cache_format.h.
 #[derive(Debug, Clone, Copy)]
 pub struct DyldCacheSlidePointer5(pub u64);
 
 impl DyldCacheSlidePointer5 {
-    fn is_auth(&self) -> bool {
-        (self.0 & 0x8000_0000_0000_0000) != 0
+    /// Whether the pointer is authenticated.
+    pub fn is_auth(&self) -> bool {
+        ((self.0 >> 63) & 1) != 0
     }
 
-    pub fn value(&self, value_add: u64) -> u64 {
-        let runtime_offset: u64 = self.0 & 0x3_ffff_ffff;
-
-        if self.is_auth() {
-            runtime_offset + value_add
-        } else {
-            let high8: u64 = (self.0 >> 34) & 0xff;
-
-            high8 << 56 | (runtime_offset + value_add)
-        }
+    /// The target of the pointer as an offset from the start of the shared cache.
+    pub fn runtime_offset(&self) -> u64 {
+        self.0 & 0x3_ffff_ffff
     }
 
-    pub fn auth(&self) -> Option<Ptrauth> {
-        if self.is_auth() {
-            let diversity: u16 = ((self.0 >> 34) & 0xffff) as u16;
-            let addr_div: bool = ((self.0 >> 50) & 0x1) != 0;
-
-            let key_is_data: bool = ((self.0 >> 51) & 0x1) != 0;
-            let key = if key_is_data {
-                PtrauthKey::DA
-            } else {
-                PtrauthKey::IA
-            };
-
-            Some(Ptrauth {
-                key,
-                diversity,
-                addr_div,
-            })
-        } else {
-            None
-        }
+    /// The high 8 bits of the pointer.
+    ///
+    /// Only valid if `is_auth` is false.
+    pub fn high8(&self) -> u64 {
+        (self.0 >> 34) & 0xff
     }
 
+    /// The diversity value for authentication.
+    ///
+    /// Only valid if `is_auth` is true.
+    pub fn diversity(&self) -> u16 {
+        ((self.0 >> 34) & 0xffff) as u16
+    }
+
+    /// Whether to use address diversity for authentication.
+    ///
+    /// Only valid if `is_auth` is true.
+    pub fn addr_div(&self) -> bool {
+        ((self.0 >> 50) & 1) != 0
+    }
+
+    /// Whether the key is IA or DA.
+    ///
+    /// Only valid if `is_auth` is true.
+    pub fn key_is_data(&self) -> bool {
+        ((self.0 >> 51) & 1) != 0
+    }
+
+    /// The offset to the next slide pointer in 8-byte units.
+    ///
+    /// 0 if no next slide pointer.
     pub fn next(&self) -> u64 {
         (self.0 >> 52) & 0x7ff
     }

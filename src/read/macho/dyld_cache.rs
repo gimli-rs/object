@@ -672,8 +672,22 @@ where
                     }
 
                     let value_add = slide.value_add.get(*endian);
-                    let value = pointer.value(value_add);
-                    let auth = pointer.auth();
+                    let mut value = pointer.runtime_offset() + value_add;
+                    let auth = if pointer.is_auth() {
+                        let key = if pointer.key_is_data() {
+                            macho::PtrauthKey::DA
+                        } else {
+                            macho::PtrauthKey::IA
+                        };
+                        Some(DyldRelocationAuth {
+                            key,
+                            diversity: pointer.diversity(),
+                            addr_div: pointer.addr_div(),
+                        })
+                    } else {
+                        value |= pointer.high8() << 56;
+                        None
+                    };
                     Some(Ok(DyldRelocation {
                         offset: mapping_offset + offset,
                         value,
@@ -697,7 +711,7 @@ pub struct DyldRelocation {
     /// The value to be relocated.
     pub value: u64,
     /// The pointer authentication data, if present.
-    pub auth: Option<macho::Ptrauth>,
+    pub auth: Option<DyldRelocationAuth>,
 }
 
 impl Debug for DyldRelocation {
@@ -706,6 +720,28 @@ impl Debug for DyldRelocation {
             .field("offset", &format_args!("{:#x}", self.offset))
             .field("value", &format_args!("{:#x}", self.value))
             .field("auth", &self.auth)
+            .finish()
+    }
+}
+
+/// Pointer authentication data.
+///
+/// This is used for signing pointers for the arm64e ABI.
+pub struct DyldRelocationAuth {
+    /// The key used to generate the signed value.
+    pub key: macho::PtrauthKey,
+    /// The integer diversity value.
+    pub diversity: u16,
+    /// Whether the address should be blended with the diversity value.
+    pub addr_div: bool,
+}
+
+impl Debug for DyldRelocationAuth {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Ptrauth")
+            .field("key", &self.key)
+            .field("diversity", &format_args!("{:#x}", self.diversity))
+            .field("addr_div", &self.addr_div)
             .finish()
     }
 }
