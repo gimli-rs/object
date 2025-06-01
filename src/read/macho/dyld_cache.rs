@@ -671,13 +671,11 @@ where
                         *page_offset = Some(offset + (next * 8));
                     }
 
-                    let address = info.address.get(*endian) + mapping_offset + offset;
                     let value_add = slide.value_add.get(*endian);
                     let value = pointer.value(value_add);
                     let auth = pointer.auth();
                     Some(Ok(DyldRelocation {
-                        address,
-                        file_offset,
+                        offset: mapping_offset + offset,
                         value,
                         auth,
                     }))
@@ -691,21 +689,21 @@ where
 
 /// A cache mapping relocation.
 pub struct DyldRelocation {
-    /// The address of the relocation
-    pub address: u64,
-    /// The offset of the relocation within the mapping
-    pub file_offset: u64,
-    /// The relocation value
+    /// The offset of the relocation within the mapping.
+    ///
+    /// This can be added to either the mapping file offset or the
+    /// mapping address.
+    pub offset: u64,
+    /// The value to be relocated.
     pub value: u64,
-    /// The value auth context
+    /// The pointer authentication data, if present.
     pub auth: Option<macho::Ptrauth>,
 }
 
 impl Debug for DyldRelocation {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("DyldRelocation")
-            .field("address", &format_args!("{:#x}", self.address))
-            .field("file_offset", &format_args!("{:#x}", self.file_offset))
+            .field("offset", &format_args!("{:#x}", self.offset))
             .field("value", &format_args!("{:#x}", self.value))
             .field("auth", &self.auth)
             .finish()
