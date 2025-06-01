@@ -227,17 +227,14 @@ where
 {
     /// Return an iterator for the mappings.
     fn mappings(&self, endian: E) -> DyldCacheMappingIterator<'data, E, R> {
-        match self.mappings {
-            DyldCacheMappingSlice::V1(info) => DyldCacheMappingIterator::V1 {
-                endian,
-                data: self.data,
-                iter: info.iter(),
-            },
-            DyldCacheMappingSlice::V2(info) => DyldCacheMappingIterator::V2 {
-                endian,
-                data: self.data,
-                iter: info.iter(),
-            },
+        let iter = match self.mappings {
+            DyldCacheMappingSlice::V1(info) => DyldCacheMappingVersionIterator::V1(info.iter()),
+            DyldCacheMappingSlice::V2(info) => DyldCacheMappingVersionIterator::V2(info.iter()),
+        };
+        DyldCacheMappingIterator {
+            endian,
+            data: self.data,
+            iter,
         }
     }
 
@@ -341,31 +338,25 @@ pub enum DyldCacheMappingSlice<'data, E: Endian = Endianness> {
 // This is the offset of the end of the mapping_with_slide_count field.
 const MIN_HEADER_SIZE_MAPPINGS_V2: u32 = 0x140;
 
-/// An iterator over all the mappings in a dyld shared cache.
+/// An iterator over all the mappings for one subcache in a dyld shared cache.
 #[derive(Debug)]
-pub enum DyldCacheMappingIterator<'data, E = Endianness, R = &'data [u8]>
+pub struct DyldCacheMappingIterator<'data, E = Endianness, R = &'data [u8]>
 where
     E: Endian,
     R: ReadRef<'data>,
 {
-    /// Corresponds to struct dyld_cache_mapping_info from dyld_cache_format.h.
-    V1 {
-        /// The mapping endianness
-        endian: E,
-        /// The mapping data
-        data: R,
-        /// The mapping info iterator
-        iter: slice::Iter<'data, macho::DyldCacheMappingInfo<E>>,
-    },
-    /// Corresponds to struct dyld_cache_mapping_and_slide_info from dyld_cache_format.h.
-    V2 {
-        /// The mapping endianness
-        endian: E,
-        /// The mapping data
-        data: R,
-        /// The mapping info iterator
-        iter: slice::Iter<'data, macho::DyldCacheMappingAndSlideInfo<E>>,
-    },
+    endian: E,
+    data: R,
+    iter: DyldCacheMappingVersionIterator<'data, E>,
+}
+
+#[derive(Debug)]
+enum DyldCacheMappingVersionIterator<'data, E = Endianness>
+where
+    E: Endian,
+{
+    V1(slice::Iter<'data, macho::DyldCacheMappingInfo<E>>),
+    V2(slice::Iter<'data, macho::DyldCacheMappingAndSlideInfo<E>>),
 }
 
 impl<'data, E, R> Iterator for DyldCacheMappingIterator<'data, E, R>
@@ -376,52 +367,37 @@ where
     type Item = DyldCacheMapping<'data, E, R>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        match self {
-            Self::V1 { endian, data, iter } => {
-                let info = iter.next()?;
-                Some(DyldCacheMapping::V1 {
-                    endian: *endian,
-                    data: *data,
-                    info,
-                })
-            }
-            Self::V2 { endian, data, iter } => {
-                let info = iter.next()?;
-                Some(DyldCacheMapping::V2 {
-                    endian: *endian,
-                    data: *data,
-                    info,
-                })
-            }
-        }
+        let info = match &mut self.iter {
+            DyldCacheMappingVersionIterator::V1(iter) => DyldCacheMappingVersion::V1(iter.next()?),
+            DyldCacheMappingVersionIterator::V2(iter) => DyldCacheMappingVersion::V2(iter.next()?),
+        };
+        Some(DyldCacheMapping {
+            endian: self.endian,
+            data: self.data,
+            info,
+        })
     }
 }
 
 /// Information about a mapping.
 #[derive(Clone, Copy)]
-pub enum DyldCacheMapping<'data, E = Endianness, R = &'data [u8]>
+pub struct DyldCacheMapping<'data, E = Endianness, R = &'data [u8]>
 where
     E: Endian,
     R: ReadRef<'data>,
 {
-    /// Corresponds to struct dyld_cache_mapping_info from dyld_cache_format.h.
-    V1 {
-        /// The mapping endianness
-        endian: E,
-        /// The mapping data
-        data: R,
-        /// The mapping information
-        info: &'data macho::DyldCacheMappingInfo<E>,
-    },
-    /// Corresponds to struct dyld_cache_mapping_and_slide_info from dyld_cache_format.h.
-    V2 {
-        /// The mapping endianness
-        endian: E,
-        /// The mapping data
-        data: R,
-        /// The mapping information
-        info: &'data macho::DyldCacheMappingAndSlideInfo<E>,
-    },
+    endian: E,
+    data: R,
+    info: DyldCacheMappingVersion<'data, E>,
+}
+
+#[derive(Clone, Copy)]
+enum DyldCacheMappingVersion<'data, E = Endianness>
+where
+    E: Endian,
+{
+    V1(&'data macho::DyldCacheMappingInfo<E>),
+    V2(&'data macho::DyldCacheMappingAndSlideInfo<E>),
 }
 
 impl<'data, E, R> Debug for DyldCacheMapping<'data, E, R>
@@ -447,104 +423,62 @@ where
 {
     /// The mapping address
     pub fn address(&self) -> u64 {
-        match self {
-            Self::V1 {
-                endian,
-                data: _,
-                info,
-            } => info.address.get(*endian),
-            Self::V2 {
-                endian,
-                data: _,
-                info,
-            } => info.address.get(*endian),
+        match self.info {
+            DyldCacheMappingVersion::V1(info) => info.address.get(self.endian),
+            DyldCacheMappingVersion::V2(info) => info.address.get(self.endian),
         }
     }
 
     /// The mapping size
     pub fn size(&self) -> u64 {
-        match self {
-            Self::V1 {
-                endian,
-                data: _,
-                info,
-            } => info.size.get(*endian),
-            Self::V2 {
-                endian,
-                data: _,
-                info,
-            } => info.size.get(*endian),
+        match self.info {
+            DyldCacheMappingVersion::V1(info) => info.size.get(self.endian),
+            DyldCacheMappingVersion::V2(info) => info.size.get(self.endian),
         }
     }
 
     /// The mapping file offset
     pub fn file_offset(&self) -> u64 {
-        match self {
-            Self::V1 {
-                endian,
-                data: _,
-                info,
-            } => info.file_offset.get(*endian),
-            Self::V2 {
-                endian,
-                data: _,
-                info,
-            } => info.file_offset.get(*endian),
+        match self.info {
+            DyldCacheMappingVersion::V1(info) => info.file_offset.get(self.endian),
+            DyldCacheMappingVersion::V2(info) => info.file_offset.get(self.endian),
         }
     }
 
     /// The mapping maximum protection
     pub fn max_prot(&self) -> u32 {
-        match self {
-            Self::V1 {
-                endian,
-                data: _,
-                info,
-            } => info.max_prot.get(*endian),
-            Self::V2 {
-                endian,
-                data: _,
-                info,
-            } => info.max_prot.get(*endian),
+        match self.info {
+            DyldCacheMappingVersion::V1(info) => info.max_prot.get(self.endian),
+            DyldCacheMappingVersion::V2(info) => info.max_prot.get(self.endian),
         }
     }
 
     /// The mapping initial protection
     pub fn init_prot(&self) -> u32 {
-        match self {
-            Self::V1 {
-                endian,
-                data: _,
-                info,
-            } => info.init_prot.get(*endian),
-            Self::V2 {
-                endian,
-                data: _,
-                info,
-            } => info.init_prot.get(*endian),
+        match self.info {
+            DyldCacheMappingVersion::V1(info) => info.init_prot.get(self.endian),
+            DyldCacheMappingVersion::V2(info) => info.init_prot.get(self.endian),
         }
     }
 
     /// The mapping data
     pub fn data(&self) -> Result<&'data [u8]> {
-        match self {
-            Self::V1 { endian, data, info } => data
-                .read_bytes_at(info.file_offset.get(*endian), info.size.get(*endian))
-                .read_error("Failed to read bytes for mapping"),
-            Self::V2 { endian, data, info } => data
-                .read_bytes_at(info.file_offset.get(*endian), info.size.get(*endian))
-                .read_error("Failed to read bytes for mapping"),
-        }
+        self.data
+            .read_bytes_at(self.file_offset(), self.size())
+            .read_error("Failed to read bytes for mapping")
     }
 
     /// Relocations for the mapping
     pub fn relocations(self) -> Result<DyldCacheRelocationMappingIterator<'data, E, R>> {
-        match self {
-            Self::V1 { .. } => Ok(DyldCacheRelocationMappingIterator::empty()),
-            Self::V2 { endian, data, info } => {
-                if let Some(slide) = info.slide(endian, data)? {
+        match self.info {
+            DyldCacheMappingVersion::V1(_) => Ok(DyldCacheRelocationMappingIterator::empty()),
+            DyldCacheMappingVersion::V2(info) => {
+                if let Some(slide) = info.slide(self.endian, self.data)? {
                     Ok(DyldCacheRelocationMappingIterator::slide(
-                        data, endian, info, slide,
+                        self.data,
+                        self.endian,
+                        info,
+                        slide,
                     ))
                 } else {
                     Ok(DyldCacheRelocationMappingIterator::empty())
