@@ -195,8 +195,6 @@ impl<'data, E: Endian> LoadCommandData<'data, E> {
     }
 
     /// Try to parse this command as a [`macho::SymtabCommand`].
-    ///
-    /// Returns the segment command and the data containing the sections.
     pub fn symtab(self) -> Result<Option<&'data macho::SymtabCommand<E>>> {
         if self.cmd == macho::LC_SYMTAB {
             Some(self.data()).transpose()

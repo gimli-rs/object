@@ -112,12 +112,20 @@ pub(super) fn print_dyld_cache_images(p: &mut Printer<'_>, cache: &DyldCache) {
             });
         }
         if let Some((data, offset)) = image.image_data_and_offset().print_err(p) {
-            if p.options.file {
-                p.blank();
-            }
-            print_object_at(p, data, offset);
+            print_dyld_cache_image(p, data, offset, cache);
             p.blank();
         }
+    }
+}
+
+fn print_dyld_cache_image(p: &mut Printer<'_>, data: &[u8], offset: u64, cache: &DyldCache) {
+    let Some(kind) = object::FileKind::parse_at(data, offset).print_err(p) else {
+        return;
+    };
+    match kind {
+        object::FileKind::MachO32 => macho::print_macho32(p, data, offset, Some(cache)),
+        object::FileKind::MachO64 => macho::print_macho64(p, data, offset, Some(cache)),
+        _ => writeln!(p.w(), "Format: {:?}", kind).unwrap(),
     }
 }
 
@@ -175,23 +183,34 @@ pub(super) fn print_fat_arch<Arch: FatArch>(p: &mut Printer<'_>, arch: &Arch) {
     });
 }
 
-pub(super) fn print_macho32(p: &mut Printer<'_>, data: &[u8], offset: u64) {
+pub(super) fn print_macho32(
+    p: &mut Printer<'_>,
+    data: &[u8],
+    offset: u64,
+    cache: Option<&DyldCache>,
+) {
     if let Some(header) = MachHeader32::parse(data, offset).print_err(p) {
         writeln!(p.w(), "Format: Mach-O 32-bit").unwrap();
-        print_macho(p, header, data, offset);
+        print_macho(p, header, data, offset, cache);
     }
 }
 
-pub(super) fn print_macho64(p: &mut Printer<'_>, data: &[u8], offset: u64) {
+pub(super) fn print_macho64(
+    p: &mut Printer<'_>,
+    data: &[u8],
+    offset: u64,
+    cache: Option<&DyldCache>,
+) {
     if let Some(header) = MachHeader64::parse(data, offset).print_err(p) {
         writeln!(p.w(), "Format: Mach-O 64-bit").unwrap();
-        print_macho(p, header, data, offset);
+        print_macho(p, header, data, offset, cache);
     }
 }
 
 #[derive(Default)]
 struct MachState<'a> {
     cputype: u32,
+    linkedit_data: &'a [u8],
     symbols: Vec<Option<&'a [u8]>>,
     sections: Vec<Vec<u8>>,
     section_index: usize,
@@ -202,16 +221,33 @@ fn print_macho<Mach: MachHeader<Endian = Endianness>>(
     header: &Mach,
     data: &[u8],
     offset: u64,
+    cache: Option<&DyldCache>,
 ) {
     if let Some(endian) = header.endian().print_err(p) {
         let mut state = MachState {
             cputype: header.cputype(endian),
+            linkedit_data: data,
+            // Dummy first entry because section index starts at 1.
             sections: vec![vec![]],
             ..MachState::default()
         };
-        if let Ok(mut commands) = header.load_commands(endian, data, 0) {
+        // Scan the load commands for info that we need to reference during parsing.
+        if let Ok(mut commands) = header.load_commands(endian, data, offset) {
+            let mut symtab_command = None;
             while let Ok(Some(command)) = commands.next() {
                 if let Ok(Some((segment, section_data))) = Mach::Segment::from_command(command) {
+                    if let Some(cache) = cache {
+                        // The symbol table will be in the linkedit segment, but that may be in a
+                        // different subcache, so we need to remember the data for that subcache.
+                        // TODO: this logic should be in the object crate somehow. It already
+                        // exists there for MachOFile but we're not using that here.
+                        if segment.name() == macho::SEG_LINKEDIT.as_bytes() {
+                            let addr = segment.vmaddr(endian).into();
+                            if let Some((data, _offset)) = cache.data_and_offset_for_address(addr) {
+                                state.linkedit_data = data;
+                            }
+                        }
+                    }
                     if let Ok(segment_sections) = segment.sections(endian, section_data) {
                         state
                             .sections
@@ -224,13 +260,16 @@ fn print_macho<Mach: MachHeader<Endian = Endianness>>(
                             }));
                     }
                 } else if let Ok(Some(command)) = command.symtab() {
-                    if let Ok(symtab) = command.symbols::<Mach, _>(endian, data) {
-                        state.symbols.extend(
-                            symtab
-                                .iter()
-                                .map(|symbol| symbol.name(endian, symtab.strings()).ok()),
-                        );
-                    }
+                    symtab_command = Some(command);
+                }
+            }
+            if let Some(symtab_command) = symtab_command {
+                if let Ok(symtab) = symtab_command.symbols::<Mach, _>(endian, state.linkedit_data) {
+                    state.symbols.extend(
+                        symtab
+                            .iter()
+                            .map(|symbol| symbol.name(endian, symtab.strings()).ok()),
+                    );
                 }
             }
         }
@@ -286,7 +325,7 @@ fn print_load_command<Mach: MachHeader>(
                 print_segment(p, endian, data, segment, section_data, state);
             }
             LoadCommandVariant::Symtab(symtab) => {
-                print_symtab::<Mach>(p, endian, data, symtab, state);
+                print_symtab::<Mach>(p, endian, state.linkedit_data, symtab, state);
             }
             _ => {}
         }
