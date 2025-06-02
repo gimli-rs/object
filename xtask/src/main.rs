@@ -192,10 +192,10 @@ fn cmd_msrv() -> Result<(), DynError> {
             cmd.env("CARGO_NET_GIT_FETCH_WITH_CLI", "true");
         },
     )?;
-    // wasmparser needs 1.76.0 and ruzstd needs 1.73
+    // wasmparser needs 1.76.0 and ruzstd needs 1.81
     cmd_with(
         "cargo",
-        &["+1.76.0", "test", "-p", "object", "--features", "all"],
+        &["+1.81.0", "test", "-p", "object", "--features", "all"],
         |cmd| {
             cmd.env("CARGO_NET_GIT_FETCH_WITH_CLI", "true");
         },
