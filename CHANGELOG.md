@@ -2,6 +2,67 @@
 
 --------------------------------------------------------------------------------
 
+## 0.37.0
+
+Released 2025/06/02.
+
+### Breaking changes
+
+* Changed dyld cache definitions and API to support iterating mapping and slide information.
+  [#738](https://github.com/gimli-rs/object/pull/738)
+  [#753](https://github.com/gimli-rs/object/pull/753)
+  [#754](https://github.com/gimli-rs/object/pull/754)
+  [#775](https://github.com/gimli-rs/object/pull/775)
+
+* Removed `elf::R_RISCV_GNU_VTINHERIT` and `elf::R_RISCV_GNU_VTENTRY`.
+  [#767](https://github.com/gimli-rs/object/pull/767)
+
+* Changed the type of `pe::IMAGE_WEAK_EXTERN_*` constants.
+  [#770](https://github.com/gimli-rs/object/pull/770)
+
+### Added
+
+* Added support for generating `ARM_RELOC_VANILLA` in `write::Object`.
+  [#757](https://github.com/gimli-rs/object/pull/757)
+
+* Added `size_hint` for `read::archive::ArchiveSymbolIterator`.
+  [#759](https://github.com/gimli-rs/object/pull/759)
+
+* Added `Architecture::SuperH`.
+  [#762](https://github.com/gimli-rs/object/pull/762)
+
+* Added `Architecture::LoongArch32`.
+  [#765](https://github.com/gimli-rs/object/pull/765)
+
+* Added support for Wasm object files to `read::WasmFile`.
+  [#766](https://github.com/gimli-rs/object/pull/766)
+
+* Added `elf::R_RISCV_TLSDESC` and `elf::R_RISCV_GOT32_PCREL`.
+  [#767](https://github.com/gimli-rs/object/pull/767)
+  [#768](https://github.com/gimli-rs/object/pull/768)
+
+* Added `read::pe::SymbolTable::aux_weak_external` and `read::pe::SymbolTable::has_aux_weak_external`.
+  [#770](https://github.com/gimli-rs/object/pull/770)
+
+* Added ELF relocations for LoongArch ABI v2.30.
+  [#773](https://github.com/gimli-rs/object/pull/773)
+
+### Changed
+
+* Changed `ReadRef::read_bytes_at` to allow zero size reads at any offset.
+  This allows reading of empty sections in stripped ELF files.
+  [#758](https://github.com/gimli-rs/object/pull/758)
+
+* Changed `read::MachOFile::object_map` to include static symbols.
+  [#764](https://github.com/gimli-rs/object/pull/764)
+
+* Fixed `read::pe::SymbolTable::has_aux_function` to exclude weak externals.
+  [#772](https://github.com/gimli-rs/object/pull/772)
+
+* Updated `wasmparser` and `ruzstd` dependencies.
+
+--------------------------------------------------------------------------------
+
 ## 0.36.7
 
 Released 2024/12/21.
