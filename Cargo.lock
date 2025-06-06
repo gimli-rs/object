@@ -234,7 +234,6 @@ dependencies = [
 name = "object"
 version = "0.37.0"
 dependencies = [
- "compiler_builtins",
  "crc32fast",
  "flate2",
  "hashbrown",
