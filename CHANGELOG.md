@@ -2,6 +2,19 @@
 
 --------------------------------------------------------------------------------
 
+## 0.37.1
+
+Released 2025/06/11.
+
+### Changed
+
+* Removed `compiler-builtins` from `rustc-dep-of-std` dependencies.
+  [#777](https://github.com/gimli-rs/object/pull/777)
+
+* Updated `wasmparser` dependency.
+
+--------------------------------------------------------------------------------
+
 ## 0.37.0
 
 Released 2025/06/02.
