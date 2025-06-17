@@ -5825,6 +5825,7 @@ pub const EF_RISCV_FLOAT_ABI_DOUBLE: u32 = 0x0004;
 pub const EF_RISCV_FLOAT_ABI_QUAD: u32 = 0x0006;
 pub const EF_RISCV_RVE: u32 = 0x0008;
 pub const EF_RISCV_TSO: u32 = 0x0010;
+pub const EF_RISCV_RV64ILP32: u32 = 0x0020;
 
 // RISC-V values for `SectionHeader*::sh_type`.
 /// RISC-V attributes section.
