@@ -1305,7 +1305,8 @@ const FLAGS_EF_SH_MACH: &[Flag<u32>] = &flags!(
     EF_SH2A_SH3E,
 );
 const FLAGS_EF_S390: &[Flag<u32>] = &flags!(EF_S390_HIGH_GPRS);
-const FLAGS_EF_RISCV: &[Flag<u32>] = &flags!(EF_RISCV_RVC, EF_RISCV_RVE, EF_RISCV_TSO);
+const FLAGS_EF_RISCV: &[Flag<u32>] =
+    &flags!(EF_RISCV_RVC, EF_RISCV_RVE, EF_RISCV_TSO, EF_RISCV_RV64ILP32);
 const FLAGS_EF_RISCV_FLOAT_ABI: &[Flag<u32>] = &flags!(
     EF_RISCV_FLOAT_ABI_SOFT,
     EF_RISCV_FLOAT_ABI_SINGLE,
