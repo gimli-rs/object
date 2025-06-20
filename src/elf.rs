@@ -5896,6 +5896,11 @@ pub const R_RISCV_TLSDESC_LOAD_LO12: u32 = 63;
 pub const R_RISCV_TLSDESC_ADD_LO12: u32 = 64;
 pub const R_RISCV_TLSDESC_CALL: u32 = 65;
 
+// Misc RISC-V values
+
+/// Dynamic thread vector pointers point 0x800 past the start of each TLS block.
+pub const RISCV_TLS_DTV_OFFSET: u32 = 0x800;
+
 // BPF values `Rel*::r_type`.
 /// No reloc
 pub const R_BPF_NONE: u32 = 0;
