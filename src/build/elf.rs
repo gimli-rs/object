@@ -227,6 +227,7 @@ impl<'data> Builder<'data> {
                 | elf::SHT_FINI_ARRAY
                 | elf::SHT_PREINIT_ARRAY
                 | elf::SHT_RELR
+                | elf::SHT_CREL
                 | elf::SHT_LLVM_DEPENDENT_LIBRARIES => {
                     SectionData::Data(section.data(endian, data)?.into())
                 }

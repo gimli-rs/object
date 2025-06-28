@@ -3,13 +3,13 @@ use alloc::vec::Vec;
 use core::fmt::Debug;
 use core::slice;
 
-use crate::elf;
 use crate::endian::{self, Endianness};
 use crate::pod::Pod;
 use crate::read::{
     self, Error, ReadRef, Relocation, RelocationEncoding, RelocationFlags, RelocationKind,
     RelocationTarget, SectionIndex, SymbolIndex,
 };
+use crate::{elf, Bytes};
 
 use super::{ElfFile, FileHeader, SectionHeader, SectionTable};
 
@@ -31,7 +31,7 @@ impl RelocationSections {
         let mut relocations = vec![0; sections.len()];
         for (index, section) in sections.iter().enumerate().rev() {
             let sh_type = section.sh_type(endian);
-            if sh_type == elf::SHT_REL || sh_type == elf::SHT_RELA {
+            if sh_type == elf::SHT_REL || sh_type == elf::SHT_RELA || sh_type == elf::SHT_CREL {
                 // The symbol indices used in relocations must be for the symbol table
                 // we are expecting to use.
                 let sh_link = section.link(endian);
@@ -51,7 +51,10 @@ impl RelocationSections {
                 // We don't support relocations that apply to other relocation sections
                 // because it interferes with the chaining of relocation sections below.
                 let sh_info_type = sections.section(sh_info)?.sh_type(endian);
-                if sh_info_type == elf::SHT_REL || sh_info_type == elf::SHT_RELA {
+                if sh_info_type == elf::SHT_REL
+                    || sh_info_type == elf::SHT_RELA
+                    || sh_info_type == elf::SHT_CREL
+                {
                     return Err(Error("Unsupported ELF sh_info for relocation section"));
                 }
 
@@ -734,5 +737,133 @@ impl<Endian: endian::Endian> Relr for elf::Relr64<Endian> {
         } else {
             None
         }
+    }
+}
+
+/// Compact relocation
+///
+/// The specification has been submited here: https://groups.google.com/g/generic-abi/c/ppkaxtLb0P0/m/awgqZ_1CBAAJ.
+#[derive(Debug)]
+#[allow(dead_code)]
+pub struct Crel {
+    r_offset: u64,
+    r_sym: i64,
+    r_type: i64,
+    r_addend: i64,
+}
+
+#[derive(Debug)]
+struct CrelIteratorHeader {
+    /// The number of encoded relocations.
+    count: u64,
+    /// The number of flag bits each relocation uses.
+    flag_bits: u64,
+    /// Shift of the relocation value.
+    shift: u64,
+    /// True if the relocation format encodes addend.
+    is_rela: bool,
+}
+
+#[derive(Default, Debug)]
+struct CrelIteratorState {
+    /// Index of the current relocation.
+    index: u64,
+    /// Offset of the latest relocation.
+    offset: u64,
+    /// Addend of the latest relocation.
+    addend: i64,
+    /// Symbol index of the latest relocation.
+    symidx: i64,
+    /// Type of the latest relocation.
+    typ: i64,
+}
+
+/// Compare relocation iterator.
+#[derive(Debug)]
+pub struct CrelIterator<'data> {
+    /// Input stream reader.
+    data: Bytes<'data>,
+    /// Parsed header information.
+    header: CrelIteratorHeader,
+    /// State of the iterator.
+    state: CrelIteratorState,
+}
+
+impl<'data> CrelIterator<'data> {
+    /// Create a new CREL relocation iterator.
+    pub fn new(data: &'data [u8]) -> Result<Self, Error> {
+        const HEADER_ADDEND_BIT_MASK: u64 = 1 << 2;
+        const HEADER_SHIFT_MASK: u64 = 0x3;
+
+        let mut data = Bytes(data);
+        let header = data
+            .read_uleb128()
+            .map_err(|_| Error("Corrupted header of CREL"))?;
+        let count = header >> 3;
+        let flag_bits = if header & HEADER_ADDEND_BIT_MASK != 0 {
+            3
+        } else {
+            2
+        };
+        let shift = header & HEADER_SHIFT_MASK;
+        let is_rela = header & HEADER_ADDEND_BIT_MASK != 0;
+
+        Ok(CrelIterator {
+            data,
+            header: CrelIteratorHeader {
+                count,
+                flag_bits,
+                shift,
+                is_rela,
+            },
+            state: Default::default(),
+        })
+    }
+}
+
+impl<'data> Iterator for CrelIterator<'data> {
+    type Item = Result<Crel, Error>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        const DELTA_SYMBOL_INDEX_MASK: u64 = 1 << 0;
+        const DELTA_TYPE_MASK: u64 = 1 << 1;
+        const DELTA_ADDEND_MASK: u64 = 1 << 2;
+        const DELTA_ALL_MASK: u64 = DELTA_SYMBOL_INDEX_MASK | DELTA_TYPE_MASK | DELTA_ADDEND_MASK;
+
+        if self.state.index >= self.header.count {
+            return None;
+        }
+
+        let Ok(value) = self.data.read_uleb128() else {
+            return Some(Err(Error("Cannot read value of CREL relocation")));
+        };
+        self.state.offset += value >> self.header.flag_bits;
+
+        let flags = value & DELTA_ALL_MASK;
+        if flags & DELTA_SYMBOL_INDEX_MASK != 0 {
+            let Ok(symidx) = self.data.read_sleb128() else {
+                return Some(Err(Error("Cannot read symidx of CREL relocation")));
+            };
+            self.state.symidx += symidx;
+        }
+        if flags & DELTA_TYPE_MASK != 0 {
+            let Ok(typ) = self.data.read_sleb128() else {
+                return Some(Err(Error("Cannot read type of CREL relocation")));
+            };
+            self.state.typ += typ;
+        }
+        if self.header.is_rela && flags & DELTA_ADDEND_MASK != 0 {
+            let Ok(addend) = self.data.read_sleb128() else {
+                return Some(Err(Error("Cannot read addend of CREL relocation")));
+            };
+            self.state.addend += addend;
+        }
+        self.state.index += 1;
+        Some(Ok(Crel {
+            r_offset: self.state.offset << self.header.shift,
+            r_sym: self.state.symidx,
+            r_type: self.state.typ,
+            r_addend: self.state.addend,
+        }))
     }
 }
