@@ -742,7 +742,7 @@ impl<Endian: endian::Endian> Relr for elf::Relr64<Endian> {
 
 /// Compact relocation
 ///
-/// The specification has been submited here: https://groups.google.com/g/generic-abi/c/ppkaxtLb0P0/m/awgqZ_1CBAAJ.
+/// The specification has been submited here: <https://groups.google.com/g/generic-abi/c/ppkaxtLb0P0/m/awgqZ_1CBAAJ>.
 #[derive(Debug)]
 #[allow(dead_code)]
 pub struct Crel {
