@@ -7,8 +7,8 @@ use crate::elf;
 use crate::endian::{self, Endian, Endianness, U32};
 use crate::pod::Pod;
 use crate::read::{
-    self, util, Architecture, ByteString, Bytes, Error, Export, FileFlags, Import, Object,
-    ObjectKind, ReadError, ReadRef, SectionIndex, StringTable, SymbolIndex,
+    self, elf::Crel, util, Architecture, ByteString, Bytes, Error, Export, FileFlags, Import,
+    Object, ObjectKind, ReadError, ReadRef, SectionIndex, StringTable, SymbolIndex,
 };
 
 use super::{
@@ -537,7 +537,7 @@ pub trait FileHeader: Debug + Pod {
     type Dyn: Dyn<Endian = Self::Endian, Word = Self::Word>;
     type Sym: Sym<Endian = Self::Endian, Word = Self::Word>;
     type Rel: Rel<Endian = Self::Endian, Word = Self::Word>;
-    type Rela: Rela<Endian = Self::Endian, Word = Self::Word> + From<Self::Rel>;
+    type Rela: Rela<Endian = Self::Endian, Word = Self::Word> + From<Self::Rel> + From<Crel>;
     type Relr: Relr<Endian = Self::Endian, Word = Self::Word>;
 
     /// Return true if this type is a 64-bit header.

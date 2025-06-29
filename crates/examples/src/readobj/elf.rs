@@ -245,6 +245,7 @@ fn print_section_headers<Elf: FileHeader>(
             && !(p.options.symbols && sh_type == SHT_SYMTAB)
             && !(p.options.relocations && sh_type == SHT_REL)
             && !(p.options.relocations && sh_type == SHT_RELA)
+            && !(p.options.relocations && sh_type == SHT_CREL)
             && !(p.options.elf_dynamic && sh_type == SHT_DYNAMIC)
             && !(p.options.elf_dynamic_symbols && sh_type == SHT_DYNSYM)
             && !(p.options.elf_notes && sh_type == SHT_NOTE)
@@ -318,6 +319,7 @@ fn print_section_headers<Elf: FileHeader>(
                 SHT_REL => print_section_rel(p, endian, data, elf, sections, section),
                 SHT_RELA => print_section_rela(p, endian, data, elf, sections, section),
                 SHT_RELR => print_section_relr(p, endian, data, elf, section),
+                SHT_CREL => print_section_crel(p, endian, data, elf, sections, section),
                 SHT_NOTE => print_section_notes(p, endian, data, elf, section),
                 SHT_DYNAMIC => print_section_dynamic(p, endian, data, elf, sections, section),
                 SHT_GROUP => print_section_group(p, endian, data, elf, sections, section),
@@ -574,6 +576,50 @@ fn print_section_relr<Elf: FileHeader>(
     if let Some(Some(relocations)) = section.relr(endian, data).print_err(p) {
         for relocation in relocations {
             p.field_hex("Offset", relocation.into());
+        }
+    }
+}
+
+fn print_section_crel<Elf: FileHeader>(
+    p: &mut Printer<'_>,
+    endian: Elf::Endian,
+    data: &[u8],
+    elf: &Elf,
+    sections: &SectionTable<Elf>,
+    section: &Elf::SectionHeader,
+) {
+    if !p.options.relocations {
+        return;
+    }
+
+    if let Some(Some((relocations, link))) = section.crel(endian, data).print_err(p) {
+        let symbols = sections
+            .symbol_table_by_index(endian, data, link)
+            .print_err(p);
+        let proc = rel_flag_type(endian, elf);
+        for relocation_result in relocations {
+            let relocation: object::read::elf::Crel = match relocation_result {
+                Ok(relocation) => relocation,
+                Err(_) => {
+                    relocation_result.print_err(p);
+                    return;
+                }
+            };
+
+            p.group("Relocation", |p| {
+                p.field_hex("Offset", relocation.r_offset);
+                p.field_enum("Type", relocation.r_type as u32, proc);
+                print_rel_symbol(
+                    p,
+                    endian,
+                    symbols,
+                    Some(SymbolIndex(relocation.r_sym as usize)),
+                );
+                let addend = relocation.r_addend;
+                if addend != 0 {
+                    p.field_hex("Addend", addend);
+                }
+            });
         }
     }
 }

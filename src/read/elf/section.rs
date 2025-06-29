@@ -883,7 +883,7 @@ pub trait SectionHeader: Debug + Pod {
         &self,
         endian: Self::Endian,
         data: R,
-    ) -> read::Result<Option<CrelIterator<'data>>> {
+    ) -> read::Result<Option<(CrelIterator<'data>, SectionIndex)>> {
         if self.sh_type(endian) != elf::SHT_CREL {
             return Ok(None);
         }
@@ -891,7 +891,7 @@ pub trait SectionHeader: Debug + Pod {
             .data_as_array(endian, data)
             .read_error("Invalid ELF relocation section offset or size")?;
         let relrs = CrelIterator::new(data);
-        Ok(Some(relrs?))
+        Ok(Some((relrs?, self.link(endian))))
     }
 
     /// Return entries in a dynamic section.

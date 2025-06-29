@@ -9,7 +9,7 @@ use crate::read::{
     self, Error, ReadRef, Relocation, RelocationEncoding, RelocationFlags, RelocationKind,
     RelocationTarget, SectionIndex, SymbolIndex,
 };
-use crate::{elf, Bytes};
+use crate::{elf, Bytes, Endian, I32, I64, U32, U64};
 
 use super::{ElfFile, FileHeader, SectionHeader, SectionTable};
 
@@ -83,6 +83,7 @@ impl RelocationSections {
 pub(super) enum ElfRelaIterator<'data, Elf: FileHeader> {
     Rel(slice::Iter<'data, Elf::Rel>),
     Rela(slice::Iter<'data, Elf::Rela>),
+    Crel(CrelIterator<'data>),
 }
 
 impl<'data, Elf: FileHeader> ElfRelaIterator<'data, Elf> {
@@ -90,6 +91,7 @@ impl<'data, Elf: FileHeader> ElfRelaIterator<'data, Elf> {
         match self {
             ElfRelaIterator::Rel(_) => true,
             ElfRelaIterator::Rela(_) => false,
+            ElfRelaIterator::Crel(iterator) => !iterator.is_rela(),
         }
     }
 }
@@ -101,6 +103,9 @@ impl<'data, Elf: FileHeader> Iterator for ElfRelaIterator<'data, Elf> {
         match self {
             ElfRelaIterator::Rel(ref mut i) => i.next().cloned().map(Self::Item::from),
             ElfRelaIterator::Rela(ref mut i) => i.next().cloned(),
+            ElfRelaIterator::Crel(ref mut i) => {
+                i.next().and_then(|crel| crel.ok()).map(Self::Item::from)
+            }
         }
     }
 }
@@ -159,6 +164,13 @@ where
                 elf::SHT_RELA => {
                     if let Ok(relocations) = section.data_as_array(endian, self.file.data) {
                         self.relocations = Some(ElfRelaIterator::Rela(relocations.iter()));
+                    }
+                }
+                elf::SHT_CREL => {
+                    if let Ok(data) = section.data(endian, self.file.data) {
+                        if let Ok(relocations) = CrelIterator::new(data) {
+                            self.relocations = Some(ElfRelaIterator::Crel(relocations));
+                        }
                     }
                 }
                 _ => {}
@@ -226,6 +238,13 @@ where
                 elf::SHT_RELA => {
                     if let Ok(relocations) = section.data_as_array(endian, self.file.data) {
                         self.relocations = Some(ElfRelaIterator::Rela(relocations.iter()));
+                    }
+                }
+                elf::SHT_CREL => {
+                    if let Ok(data) = section.data(endian, self.file.data) {
+                        if let Ok(relocations) = CrelIterator::new(data) {
+                            self.relocations = Some(ElfRelaIterator::Crel(relocations));
+                        }
                     }
                 }
                 _ => {}
@@ -743,13 +762,42 @@ impl<Endian: endian::Endian> Relr for elf::Relr64<Endian> {
 /// Compact relocation
 ///
 /// The specification has been submited here: <https://groups.google.com/g/generic-abi/c/ppkaxtLb0P0/m/awgqZ_1CBAAJ>.
-#[derive(Debug)]
-#[allow(dead_code)]
+#[derive(Debug, Clone, Copy)]
 pub struct Crel {
-    r_offset: u64,
-    r_sym: i64,
-    r_type: i64,
-    r_addend: i64,
+    /// Relocation offset.
+    pub r_offset: u64,
+    /// Relocation symbolindex.
+    pub r_sym: i64,
+    /// Relocation type.
+    pub r_type: i64,
+    /// Relocation addend.
+    pub r_addend: i64,
+}
+
+impl<E: Endian> From<Crel> for elf::Rela64<E> {
+    fn from(crel: Crel) -> Self {
+        elf::Rela64 {
+            r_offset: U64::new(E::default(), crel.r_offset),
+            r_info: U64::new(
+                E::default(),
+                ((crel.r_sym as u64) << 32) | (crel.r_type as u64),
+            ),
+            r_addend: I64::new(E::default(), crel.r_addend),
+        }
+    }
+}
+
+impl<E: Endian> From<Crel> for elf::Rela32<E> {
+    fn from(crel: Crel) -> Self {
+        elf::Rela32 {
+            r_offset: U32::new(E::default(), crel.r_offset as u32),
+            r_info: U32::new(
+                E::default(),
+                (((crel.r_sym as u64) << 8) | ((crel.r_type as u64) & 0xff)) as u32,
+            ),
+            r_addend: I32::new(E::default(), crel.r_addend as i32),
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -818,6 +866,11 @@ impl<'data> CrelIterator<'data> {
             },
             state: Default::default(),
         })
+    }
+
+    /// True if the encoded relocations have addend.
+    pub fn is_rela(&self) -> bool {
+        self.header.is_rela
     }
 }
 
