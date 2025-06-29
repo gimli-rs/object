@@ -337,6 +337,8 @@ pub const IMAGE_FILE_MACHINE_AM33: u16 = 0x01d3;
 /// IBM PowerPC Little-Endian
 pub const IMAGE_FILE_MACHINE_POWERPC: u16 = 0x01F0;
 pub const IMAGE_FILE_MACHINE_POWERPCFP: u16 = 0x01f1;
+/// IBM PowerPC Big-Endian
+pub const IMAGE_FILE_MACHINE_POWERPCBE: u16 = 0x01f2;
 /// Intel 64
 pub const IMAGE_FILE_MACHINE_IA64: u16 = 0x0200;
 /// MIPS

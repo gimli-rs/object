@@ -147,6 +147,9 @@ where
             pe::IMAGE_FILE_MACHINE_ARM64 | pe::IMAGE_FILE_MACHINE_ARM64EC => Architecture::Aarch64,
             pe::IMAGE_FILE_MACHINE_I386 => Architecture::I386,
             pe::IMAGE_FILE_MACHINE_AMD64 => Architecture::X86_64,
+            pe::IMAGE_FILE_MACHINE_POWERPC
+            | pe::IMAGE_FILE_MACHINE_POWERPCFP
+            | pe::IMAGE_FILE_MACHINE_POWERPCBE => Architecture::PowerPc,
             _ => Architecture::Unknown,
         }
     }
@@ -160,7 +163,10 @@ where
 
     #[inline]
     fn is_little_endian(&self) -> bool {
-        true
+        match self.header.machine() {
+            pe::IMAGE_FILE_MACHINE_POWERPCBE => false,
+            _ => true,
+        }
     }
 
     #[inline]
