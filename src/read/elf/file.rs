@@ -7,13 +7,13 @@ use crate::elf;
 use crate::endian::{self, Endian, Endianness, U32};
 use crate::pod::Pod;
 use crate::read::{
-    self, elf::Crel, util, Architecture, ByteString, Bytes, Error, Export, FileFlags, Import,
-    Object, ObjectKind, ReadError, ReadRef, SectionIndex, StringTable, SymbolIndex,
+    self, util, Architecture, ByteString, Bytes, Error, Export, FileFlags, Import, Object,
+    ObjectKind, ReadError, ReadRef, SectionIndex, StringTable, SymbolIndex,
 };
 
 use super::{
-    CompressionHeader, Dyn, ElfComdat, ElfComdatIterator, ElfDynamicRelocationIterator, ElfSection,
-    ElfSectionIterator, ElfSegment, ElfSegmentIterator, ElfSymbol, ElfSymbolIterator,
+    CompressionHeader, Crel, Dyn, ElfComdat, ElfComdatIterator, ElfDynamicRelocationIterator,
+    ElfSection, ElfSectionIterator, ElfSegment, ElfSegmentIterator, ElfSymbol, ElfSymbolIterator,
     ElfSymbolTable, NoteHeader, ProgramHeader, Rel, Rela, RelocationSections, Relr, SectionHeader,
     SectionTable, Sym, SymbolTable,
 };

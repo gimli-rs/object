@@ -3,13 +3,14 @@ use alloc::vec::Vec;
 use core::fmt::Debug;
 use core::slice;
 
+use crate::elf;
 use crate::endian::{self, Endianness};
+use crate::endian::{Endian, I32, I64, U32, U64};
 use crate::pod::Pod;
 use crate::read::{
-    self, Error, ReadRef, Relocation, RelocationEncoding, RelocationFlags, RelocationKind,
+    self, Bytes, Error, ReadRef, Relocation, RelocationEncoding, RelocationFlags, RelocationKind,
     RelocationTarget, SectionIndex, SymbolIndex,
 };
-use crate::{elf, Bytes, Endian, I32, I64, U32, U64};
 
 use super::{ElfFile, FileHeader, SectionHeader, SectionTable};
 
@@ -103,9 +104,7 @@ impl<'data, Elf: FileHeader> Iterator for ElfRelaIterator<'data, Elf> {
         match self {
             ElfRelaIterator::Rel(ref mut i) => i.next().cloned().map(Self::Item::from),
             ElfRelaIterator::Rela(ref mut i) => i.next().cloned(),
-            ElfRelaIterator::Crel(ref mut i) => {
-                i.next().and_then(Result::ok).map(Self::Item::from)
-            }
+            ElfRelaIterator::Crel(ref mut i) => i.next().and_then(Result::ok).map(Self::Item::from),
         }
     }
 }
