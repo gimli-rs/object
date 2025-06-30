@@ -654,9 +654,9 @@ fn print_relocations<'data, Coff: CoffHeader>(
                     | IMAGE_FILE_MACHINE_MIPSFPU
                     | IMAGE_FILE_MACHINE_MIPSFPU16 => FLAGS_IMAGE_REL_MIPS,
                     IMAGE_FILE_MACHINE_ALPHA | IMAGE_FILE_MACHINE_ALPHA64 => FLAGS_IMAGE_REL_ALPHA,
-                    IMAGE_FILE_MACHINE_POWERPC | IMAGE_FILE_MACHINE_POWERPCFP => {
-                        FLAGS_IMAGE_REL_PPC
-                    }
+                    IMAGE_FILE_MACHINE_POWERPC
+                    | IMAGE_FILE_MACHINE_POWERPCFP
+                    | IMAGE_FILE_MACHINE_POWERPCBE => FLAGS_IMAGE_REL_PPC,
                     IMAGE_FILE_MACHINE_SH3
                     | IMAGE_FILE_MACHINE_SH3DSP
                     | IMAGE_FILE_MACHINE_SH3E
@@ -676,9 +676,9 @@ fn print_relocations<'data, Coff: CoffHeader>(
                 let typ = relocation.typ.get(LE);
                 p.field_enum("Type", typ, proc);
                 match machine {
-                    IMAGE_FILE_MACHINE_POWERPC | IMAGE_FILE_MACHINE_POWERPCFP => {
-                        p.flags(typ, 0, FLAGS_IMAGE_REL_PPC_BITS)
-                    }
+                    IMAGE_FILE_MACHINE_POWERPC
+                    | IMAGE_FILE_MACHINE_POWERPCFP
+                    | IMAGE_FILE_MACHINE_POWERPCBE => p.flags(typ, 0, FLAGS_IMAGE_REL_PPC_BITS),
                     IMAGE_FILE_MACHINE_SH3
                     | IMAGE_FILE_MACHINE_SH3DSP
                     | IMAGE_FILE_MACHINE_SH3E
