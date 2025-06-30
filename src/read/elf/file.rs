@@ -12,8 +12,8 @@ use crate::read::{
 };
 
 use super::{
-    CompressionHeader, Dyn, ElfComdat, ElfComdatIterator, ElfDynamicRelocationIterator, ElfSection,
-    ElfSectionIterator, ElfSegment, ElfSegmentIterator, ElfSymbol, ElfSymbolIterator,
+    CompressionHeader, Crel, Dyn, ElfComdat, ElfComdatIterator, ElfDynamicRelocationIterator,
+    ElfSection, ElfSectionIterator, ElfSegment, ElfSegmentIterator, ElfSymbol, ElfSymbolIterator,
     ElfSymbolTable, NoteHeader, ProgramHeader, Rel, Rela, RelocationSections, Relr, SectionHeader,
     SectionTable, Sym, SymbolTable,
 };
@@ -537,7 +537,7 @@ pub trait FileHeader: Debug + Pod {
     type Dyn: Dyn<Endian = Self::Endian, Word = Self::Word>;
     type Sym: Sym<Endian = Self::Endian, Word = Self::Word>;
     type Rel: Rel<Endian = Self::Endian, Word = Self::Word>;
-    type Rela: Rela<Endian = Self::Endian, Word = Self::Word> + From<Self::Rel>;
+    type Rela: Rela<Endian = Self::Endian, Word = Self::Word> + From<Self::Rel> + From<Crel>;
     type Relr: Relr<Endian = Self::Endian, Word = Self::Word>;
 
     /// Return true if this type is a 64-bit header.

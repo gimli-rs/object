@@ -4,6 +4,7 @@ use core::{iter, slice, str};
 use crate::elf;
 use crate::endian::{self, Endianness, U32Bytes};
 use crate::pod::{self, Pod};
+use crate::read::elf::CrelIterator;
 use crate::read::{
     self, gnu_compression, CompressedData, CompressedFileRange, CompressionFormat, Error,
     ObjectSection, ReadError, ReadRef, RelocationMap, SectionFlags, SectionIndex, SectionKind,
@@ -656,7 +657,8 @@ where
             | elf::SHT_DYNSYM
             | elf::SHT_GROUP
             | elf::SHT_SYMTAB_SHNDX
-            | elf::SHT_RELR => SectionKind::Metadata,
+            | elf::SHT_RELR
+            | elf::SHT_CREL => SectionKind::Metadata,
             _ => SectionKind::Elf(sh_type),
         }
     }
@@ -871,6 +873,25 @@ pub trait SectionHeader: Debug + Pod {
             .read_error("Invalid ELF relocation section offset or size")?;
         let relrs = RelrIterator::new(endian, data);
         Ok(Some(relrs))
+    }
+
+    /// Return the `Elf::Crel` entries in the section.
+    ///
+    /// Returns `Ok(None)` if the section does not contain relative relocations.
+    /// Returns `Err` for invalid values.
+    fn crel<'data, R: ReadRef<'data>>(
+        &self,
+        endian: Self::Endian,
+        data: R,
+    ) -> read::Result<Option<(CrelIterator<'data>, SectionIndex)>> {
+        if self.sh_type(endian) != elf::SHT_CREL {
+            return Ok(None);
+        }
+        let data = self
+            .data(endian, data)
+            .read_error("Invalid ELF relocation section offset or size")?;
+        let relrs = CrelIterator::new(data);
+        Ok(Some((relrs?, self.link(endian))))
     }
 
     /// Return entries in a dynamic section.

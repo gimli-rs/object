@@ -712,6 +712,9 @@ pub const SHT_GROUP: u32 = 17;
 pub const SHT_SYMTAB_SHNDX: u32 = 18;
 /// Relocation entries; only offsets.
 pub const SHT_RELR: u32 = 19;
+/// Experimental CREL relocations. LLVM will change the value and
+/// break compatibility in the future.
+pub const SHT_CREL: u32 = 0x40000014;
 /// Start of OS-specific section types.
 pub const SHT_LOOS: u32 = 0x6000_0000;
 /// LLVM-style dependent libraries.
