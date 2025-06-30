@@ -598,12 +598,8 @@ fn print_section_crel<Elf: FileHeader>(
             .print_err(p);
         let proc = rel_flag_type(endian, elf);
         for relocation_result in relocations {
-            let relocation: object::read::elf::Crel = match relocation_result {
-                Ok(relocation) => relocation,
-                Err(_) => {
-                    relocation_result.print_err(p);
-                    return;
-                }
+            let Some(relocation) = relocation_result.print_err(p) else {
+                return;
             };
 
             p.group("Relocation", |p| {

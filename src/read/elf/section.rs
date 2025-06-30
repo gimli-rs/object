@@ -888,7 +888,7 @@ pub trait SectionHeader: Debug + Pod {
             return Ok(None);
         }
         let data = self
-            .data_as_array(endian, data)
+            .data(endian, data)
             .read_error("Invalid ELF relocation section offset or size")?;
         let relrs = CrelIterator::new(data);
         Ok(Some((relrs?, self.link(endian))))

@@ -104,7 +104,7 @@ impl<'data, Elf: FileHeader> Iterator for ElfRelaIterator<'data, Elf> {
             ElfRelaIterator::Rel(ref mut i) => i.next().cloned().map(Self::Item::from),
             ElfRelaIterator::Rela(ref mut i) => i.next().cloned(),
             ElfRelaIterator::Crel(ref mut i) => {
-                i.next().and_then(|crel| crel.ok()).map(Self::Item::from)
+                i.next().and_then(Result::ok).map(Self::Item::from)
             }
         }
     }
