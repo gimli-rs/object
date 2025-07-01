@@ -4,7 +4,6 @@ use core::{iter, slice, str};
 use crate::elf;
 use crate::endian::{self, Endianness, U32Bytes};
 use crate::pod::{self, Pod};
-use crate::read::elf::CrelIterator;
 use crate::read::{
     self, gnu_compression, CompressedData, CompressedFileRange, CompressionFormat, Error,
     ObjectSection, ReadError, ReadRef, RelocationMap, SectionFlags, SectionIndex, SectionKind,
@@ -12,9 +11,9 @@ use crate::read::{
 };
 
 use super::{
-    AttributesSection, CompressionHeader, ElfFile, ElfSectionRelocationIterator, FileHeader,
-    GnuHashTable, HashTable, NoteIterator, RelocationSections, RelrIterator, SymbolTable,
-    VerdefIterator, VerneedIterator, VersionTable,
+    AttributesSection, CompressionHeader, CrelIterator, ElfFile, ElfSectionRelocationIterator,
+    FileHeader, GnuHashTable, HashTable, NoteIterator, RelocationSections, RelrIterator,
+    SymbolTable, VerdefIterator, VerneedIterator, VersionTable,
 };
 
 /// The table of section headers in an ELF file.

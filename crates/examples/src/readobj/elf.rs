@@ -501,7 +501,7 @@ fn print_section_rela<Elf: FileHeader>(
                 );
                 let sym = relocation.symbol(endian, elf.is_mips64el(endian));
                 print_rel_symbol(p, endian, symbols, sym);
-                let addend = relocation.r_addend(endian).into() as u64;
+                let addend = relocation.r_addend(endian).into();
                 if addend != 0 {
                     p.field_hex("Addend", addend);
                 }
@@ -604,13 +604,8 @@ fn print_section_crel<Elf: FileHeader>(
 
             p.group("Relocation", |p| {
                 p.field_hex("Offset", relocation.r_offset);
-                p.field_enum("Type", relocation.r_type as u32, proc);
-                print_rel_symbol(
-                    p,
-                    endian,
-                    symbols,
-                    Some(SymbolIndex(relocation.r_sym as usize)),
-                );
+                p.field_enum("Type", relocation.r_type, proc);
+                print_rel_symbol(p, endian, symbols, relocation.symbol());
                 let addend = relocation.r_addend;
                 if addend != 0 {
                     p.field_hex("Addend", addend);
