@@ -102,12 +102,12 @@ impl<'data, Elf: FileHeader> Iterator for ElfRelocationIterator<'data, Elf> {
     fn next(&mut self) -> Option<Self::Item> {
         match self {
             ElfRelocationIterator::Rel(ref mut i, endian) => {
-                i.next().cloned().map(|rel| rel.into_crel(*endian))
+                i.next().cloned().map(|r| Crel::from_rel(r, *endian))
             }
             ElfRelocationIterator::Rela(ref mut i, endian, is_mips64el) => i
                 .next()
                 .cloned()
-                .map(|rel| rel.into_crel(*endian, *is_mips64el)),
+                .map(|r| Crel::from_rela(r, *endian, *is_mips64el)),
             ElfRelocationIterator::Crel(ref mut i) => i.next().and_then(Result::ok),
         }
     }
@@ -518,8 +518,6 @@ pub trait Rel: Debug + Pod + Clone {
             Some(SymbolIndex(sym as usize))
         }
     }
-
-    fn into_crel(self, endian: Self::Endian) -> Crel;
 }
 
 impl<Endian: endian::Endian> Rel for elf::Rel32<Endian> {
@@ -545,15 +543,6 @@ impl<Endian: endian::Endian> Rel for elf::Rel32<Endian> {
     #[inline]
     fn r_type(&self, endian: Self::Endian) -> u32 {
         self.r_type(endian)
-    }
-
-    fn into_crel(self, endian: Self::Endian) -> Crel {
-        Crel {
-            r_offset: self.r_offset(endian).into(),
-            r_sym: self.r_sym(endian),
-            r_type: self.r_type(endian),
-            r_addend: 0,
-        }
     }
 }
 
@@ -581,15 +570,6 @@ impl<Endian: endian::Endian> Rel for elf::Rel64<Endian> {
     fn r_type(&self, endian: Self::Endian) -> u32 {
         self.r_type(endian)
     }
-
-    fn into_crel(self, endian: Self::Endian) -> Crel {
-        Crel {
-            r_offset: self.r_offset(endian),
-            r_sym: self.r_sym(endian),
-            r_type: self.r_type(endian),
-            r_addend: 0,
-        }
-    }
 }
 
 /// A trait for generic access to [`elf::Rela32`] and [`elf::Rela64`].
@@ -616,8 +596,6 @@ pub trait Rela: Debug + Pod + Clone {
             Some(SymbolIndex(sym as usize))
         }
     }
-
-    fn into_crel(self, endian: Self::Endian, is_mips64el: bool) -> Crel;
 }
 
 impl<Endian: endian::Endian> Rela for elf::Rela32<Endian> {
@@ -649,15 +627,6 @@ impl<Endian: endian::Endian> Rela for elf::Rela32<Endian> {
     fn r_type(&self, endian: Self::Endian, _is_mips64el: bool) -> u32 {
         self.r_type(endian)
     }
-
-    fn into_crel(self, endian: Self::Endian, _is_mips64el: bool) -> Crel {
-        Crel {
-            r_offset: self.r_offset(endian).into(),
-            r_sym: self.r_sym(endian),
-            r_type: self.r_type(endian),
-            r_addend: self.r_addend(endian).into(),
-        }
-    }
 }
 
 impl<Endian: endian::Endian> Rela for elf::Rela64<Endian> {
@@ -688,15 +657,6 @@ impl<Endian: endian::Endian> Rela for elf::Rela64<Endian> {
     #[inline]
     fn r_type(&self, endian: Self::Endian, is_mips64el: bool) -> u32 {
         self.r_type(endian, is_mips64el)
-    }
-
-    fn into_crel(self, endian: Self::Endian, is_mips64el: bool) -> Crel {
-        Crel {
-            r_offset: self.r_offset(endian),
-            r_sym: self.r_sym(endian, is_mips64el),
-            r_type: self.r_type(endian, is_mips64el),
-            r_addend: self.r_addend(endian),
-        }
     }
 }
 
@@ -839,6 +799,24 @@ impl Crel {
             Some(SymbolIndex(self.r_sym as usize))
         }
     }
+
+    fn from_rel<R: Rel>(r: R, endian: R::Endian) -> Crel {
+        Crel {
+            r_offset: r.r_offset(endian).into(),
+            r_sym: r.r_sym(endian),
+            r_type: r.r_type(endian),
+            r_addend: 0,
+        }
+    }
+
+    fn from_rela<R: Rela>(r: R, endian: R::Endian, is_mips64el: bool) -> Crel {
+        Crel {
+            r_offset: r.r_offset(endian).into(),
+            r_sym: r.r_sym(endian, is_mips64el),
+            r_type: r.r_type(endian, is_mips64el),
+            r_addend: r.r_addend(endian).into(),
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -867,7 +845,7 @@ struct CrelIteratorState {
     typ: u32,
 }
 
-/// Compare relocation iterator.
+/// Compact relocation iterator.
 #[derive(Debug)]
 pub struct CrelIterator<'data> {
     /// Input stream reader.

@@ -874,9 +874,9 @@ pub trait SectionHeader: Debug + Pod {
         Ok(Some(relrs))
     }
 
-    /// Return the `Elf::Crel` entries in the section.
+    /// Return the `Crel` entries in the section.
     ///
-    /// Returns `Ok(None)` if the section does not contain relative relocations.
+    /// Returns `Ok(None)` if the section does not contain compact relocations.
     /// Returns `Err` for invalid values.
     fn crel<'data, R: ReadRef<'data>>(
         &self,
