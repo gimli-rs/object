@@ -104,10 +104,9 @@ impl<'data, Elf: FileHeader> Iterator for ElfRelocationIterator<'data, Elf> {
             ElfRelocationIterator::Rel(ref mut i, endian) => {
                 i.next().map(|r| Crel::from_rel(r, *endian))
             }
-            ElfRelocationIterator::Rela(ref mut i, endian, is_mips64el) => i
-                .next()
-                .cloned()
-                .map(|r| Crel::from_rela(&r, *endian, *is_mips64el)),
+            ElfRelocationIterator::Rela(ref mut i, endian, is_mips64el) => {
+                i.next().map(|r| Crel::from_rela(r, *endian, *is_mips64el))
+            }
             ElfRelocationIterator::Crel(ref mut i) => i.next().and_then(Result::ok),
         }
     }
