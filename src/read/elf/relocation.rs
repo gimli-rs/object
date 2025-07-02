@@ -102,12 +102,12 @@ impl<'data, Elf: FileHeader> Iterator for ElfRelocationIterator<'data, Elf> {
     fn next(&mut self) -> Option<Self::Item> {
         match self {
             ElfRelocationIterator::Rel(ref mut i, endian) => {
-                i.next().cloned().map(|r| Crel::from_rel(r, *endian))
+                i.next().cloned().map(|r| Crel::from_rel(&r, *endian))
             }
             ElfRelocationIterator::Rela(ref mut i, endian, is_mips64el) => i
                 .next()
                 .cloned()
-                .map(|r| Crel::from_rela(r, *endian, *is_mips64el)),
+                .map(|r| Crel::from_rela(&r, *endian, *is_mips64el)),
             ElfRelocationIterator::Crel(ref mut i) => i.next().and_then(Result::ok),
         }
     }
@@ -800,7 +800,8 @@ impl Crel {
         }
     }
 
-    fn from_rel<R: Rel>(r: R, endian: R::Endian) -> Crel {
+    /// Build Crel type from Rel.
+    pub fn from_rel<R: Rel>(r: &R, endian: R::Endian) -> Crel {
         Crel {
             r_offset: r.r_offset(endian).into(),
             r_sym: r.r_sym(endian),
@@ -809,7 +810,8 @@ impl Crel {
         }
     }
 
-    fn from_rela<R: Rela>(r: R, endian: R::Endian, is_mips64el: bool) -> Crel {
+    /// Build Crel type from Rela.
+    pub fn from_rela<R: Rela>(r: &R, endian: R::Endian, is_mips64el: bool) -> Crel {
         Crel {
             r_offset: r.r_offset(endian).into(),
             r_sym: r.r_sym(endian, is_mips64el),
