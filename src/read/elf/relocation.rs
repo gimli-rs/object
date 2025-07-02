@@ -102,7 +102,7 @@ impl<'data, Elf: FileHeader> Iterator for ElfRelocationIterator<'data, Elf> {
     fn next(&mut self) -> Option<Self::Item> {
         match self {
             ElfRelocationIterator::Rel(ref mut i, endian) => {
-                i.next().cloned().map(|r| Crel::from_rel(&r, *endian))
+                i.next().map(|r| Crel::from_rel(r, *endian))
             }
             ElfRelocationIterator::Rela(ref mut i, endian, is_mips64el) => i
                 .next()
