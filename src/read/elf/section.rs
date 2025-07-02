@@ -4,7 +4,6 @@ use core::{iter, slice, str};
 use crate::elf;
 use crate::endian::{self, Endianness, U32Bytes};
 use crate::pod::{self, Pod};
-use crate::read::elf::CrelIterator;
 use crate::read::{
     self, gnu_compression, CompressedData, CompressedFileRange, CompressionFormat, Error,
     ObjectSection, ReadError, ReadRef, RelocationMap, SectionFlags, SectionIndex, SectionKind,
@@ -12,9 +11,9 @@ use crate::read::{
 };
 
 use super::{
-    AttributesSection, CompressionHeader, ElfFile, ElfSectionRelocationIterator, FileHeader,
-    GnuHashTable, HashTable, NoteIterator, RelocationSections, RelrIterator, SymbolTable,
-    VerdefIterator, VerneedIterator, VersionTable,
+    AttributesSection, CompressionHeader, CrelIterator, ElfFile, ElfSectionRelocationIterator,
+    FileHeader, GnuHashTable, HashTable, NoteIterator, RelocationSections, RelrIterator,
+    SymbolTable, VerdefIterator, VerneedIterator, VersionTable,
 };
 
 /// The table of section headers in an ELF file.
@@ -875,9 +874,9 @@ pub trait SectionHeader: Debug + Pod {
         Ok(Some(relrs))
     }
 
-    /// Return the `Elf::Crel` entries in the section.
+    /// Return the `Crel` entries in the section.
     ///
-    /// Returns `Ok(None)` if the section does not contain relative relocations.
+    /// Returns `Ok(None)` if the section does not contain compact relocations.
     /// Returns `Err` for invalid values.
     fn crel<'data, R: ReadRef<'data>>(
         &self,

@@ -1,0 +1,256 @@
+Format: ELF 64-bit
+FileHeader {
+    Ident {
+        Magic: [7F, 45, 4C, 46]
+        Class: ELFCLASS64 (0x2)
+        Data: ELFDATA2LSB (0x1)
+        Version: EV_CURRENT (0x1)
+        OsAbi: ELFOSABI_SYSV (0x0)
+        AbiVersion: 0x0
+        Unused: [0, 0, 0, 0, 0, 0, 0]
+    }
+    Type: ET_REL (0x1)
+    Machine: EM_X86_64 (0x3E)
+    Version: EV_CURRENT (0x1)
+    Entry: 0x0
+    ProgramHeaderOffset: 0x0
+    SectionHeaderOffset: 0x228
+    Flags: 0x0
+    HeaderSize: 0x40
+    ProgramHeaderEntrySize: 0x0
+    ProgramHeaderCount: 0
+    SectionHeaderEntrySize: 0x40
+    SectionHeaderCount: 11
+    SectionHeaderStringTableIndex: 1
+}
+SectionHeader {
+    Index: 0
+    Name: "" (0x0)
+    Type: SHT_NULL (0x0)
+    Flags: 0x0
+    Address: 0x0
+    Offset: 0x0
+    Size: 0x0
+    Link: 0
+    Info: 0
+    AddressAlign: 0x0
+    EntrySize: 0x0
+}
+SectionHeader {
+    Index: 1
+    Name: ".strtab" (0x5C)
+    Type: SHT_STRTAB (0x3)
+    Flags: 0x0
+    Address: 0x0
+    Offset: 0x1A6
+    Size: 0x7B
+    Link: 0
+    Info: 0
+    AddressAlign: 0x1
+    EntrySize: 0x0
+}
+SectionHeader {
+    Index: 2
+    Name: ".text" (0x6)
+    Type: SHT_PROGBITS (0x1)
+    Flags: 0x6
+        SHF_ALLOC (0x2)
+        SHF_EXECINSTR (0x4)
+    Address: 0x0
+    Offset: 0x40
+    Size: 0x25
+    Link: 0
+    Info: 0
+    AddressAlign: 0x10
+    EntrySize: 0x0
+}
+SectionHeader {
+    Index: 3
+    Name: ".crel.text" (0x1)
+    Type: 0x40000014
+    Flags: 0x40
+        SHF_INFO_LINK (0x40)
+    Address: 0x0
+    Offset: 0x198
+    Size: 0x9
+    Link: 10
+    Info: 2
+    AddressAlign: 0x1
+    EntrySize: 0x1
+    Relocation {
+        Offset: 0x12
+        Type: R_X86_64_PC32 (0x2)
+        Symbol: ".L.str" (0x3)
+        Addend: 0xFFFFFFFFFFFFFFFC
+    }
+    Relocation {
+        Offset: 0x19
+        Type: R_X86_64_PLT32 (0x4)
+        Symbol: "printf" (0x5)
+        Addend: 0xFFFFFFFFFFFFFFFC
+    }
+}
+SectionHeader {
+    Index: 4
+    Name: ".rodata.str1.1" (0x6C)
+    Type: SHT_PROGBITS (0x1)
+    Flags: 0x32
+        SHF_ALLOC (0x2)
+        SHF_MERGE (0x10)
+        SHF_STRINGS (0x20)
+    Address: 0x0
+    Offset: 0x65
+    Size: 0xD
+    Link: 0
+    Info: 0
+    AddressAlign: 0x1
+    EntrySize: 0x1
+}
+SectionHeader {
+    Index: 5
+    Name: ".comment" (0xC)
+    Type: SHT_PROGBITS (0x1)
+    Flags: 0x30
+        SHF_MERGE (0x10)
+        SHF_STRINGS (0x20)
+    Address: 0x0
+    Offset: 0x72
+    Size: 0x57
+    Link: 0
+    Info: 0
+    AddressAlign: 0x1
+    EntrySize: 0x1
+}
+SectionHeader {
+    Index: 6
+    Name: ".note.GNU-stack" (0x21)
+    Type: SHT_PROGBITS (0x1)
+    Flags: 0x0
+    Address: 0x0
+    Offset: 0xC9
+    Size: 0x0
+    Link: 0
+    Info: 0
+    AddressAlign: 0x1
+    EntrySize: 0x0
+}
+SectionHeader {
+    Index: 7
+    Name: ".eh_frame" (0x4B)
+    Type: SHT_X86_64_UNWIND (0x70000001)
+    Flags: 0x2
+        SHF_ALLOC (0x2)
+    Address: 0x0
+    Offset: 0xD0
+    Size: 0x38
+    Link: 0
+    Info: 0
+    AddressAlign: 0x8
+    EntrySize: 0x0
+}
+SectionHeader {
+    Index: 8
+    Name: ".crel.eh_frame" (0x46)
+    Type: 0x40000014
+    Flags: 0x40
+        SHF_INFO_LINK (0x40)
+    Address: 0x0
+    Offset: 0x1A1
+    Size: 0x4
+    Link: 10
+    Info: 7
+    AddressAlign: 0x1
+    EntrySize: 0x1
+    Relocation {
+        Offset: 0x20
+        Type: R_X86_64_PC32 (0x2)
+        Symbol: "" (0x2)
+    }
+}
+SectionHeader {
+    Index: 9
+    Name: ".llvm_addrsig" (0x31)
+    Type: 0x6FFF4C03
+    Flags: 0x80000000
+        SHF_EXCLUDE (0x80000000)
+    Address: 0x0
+    Offset: 0x1A5
+    Size: 0x1
+    Link: 10
+    Info: 0
+    AddressAlign: 0x1
+    EntrySize: 0x0
+}
+SectionHeader {
+    Index: 10
+    Name: ".symtab" (0x64)
+    Type: SHT_SYMTAB (0x2)
+    Flags: 0x0
+    Address: 0x0
+    Offset: 0x108
+    Size: 0x90
+    Link: 1
+    Info: 4
+    AddressAlign: 0x8
+    EntrySize: 0x18
+    Symbol {
+        Index: 0
+        Name: 0x0
+        Value: 0x0
+        Size: 0x0
+        Type: STT_NOTYPE (0x0)
+        Bind: STB_LOCAL (0x0)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: SHN_UNDEF (0x0)
+    }
+    Symbol {
+        Index: 1
+        Name: "base.c" (0x55)
+        Value: 0x0
+        Size: 0x0
+        Type: STT_FILE (0x4)
+        Bind: STB_LOCAL (0x0)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: SHN_ABS (0xFFF1)
+    }
+    Symbol {
+        Index: 2
+        Name: "" (0x0)
+        Value: 0x0
+        Size: 0x0
+        Type: STT_SECTION (0x3)
+        Bind: STB_LOCAL (0x0)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: 2
+    }
+    Symbol {
+        Index: 3
+        Name: ".L.str" (0x15)
+        Value: 0x0
+        Size: 0xD
+        Type: STT_OBJECT (0x1)
+        Bind: STB_LOCAL (0x0)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: 4
+    }
+    Symbol {
+        Index: 4
+        Name: "main" (0x1C)
+        Value: 0x0
+        Size: 0x25
+        Type: STT_FUNC (0x2)
+        Bind: STB_GLOBAL (0x1)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: 2
+    }
+    Symbol {
+        Index: 5
+        Name: "printf" (0x3F)
+        Value: 0x0
+        Size: 0x0
+        Type: STT_NOTYPE (0x0)
+        Bind: STB_GLOBAL (0x1)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: SHN_UNDEF (0x0)
+    }
+}
