@@ -823,7 +823,7 @@ impl Crel {
 #[derive(Debug)]
 struct CrelIteratorHeader {
     /// The number of encoded relocations.
-    count: u64,
+    count: usize,
     /// The number of flag bits each relocation uses.
     flag_bits: u64,
     /// Shift of the relocation value.
@@ -835,7 +835,7 @@ struct CrelIteratorHeader {
 #[derive(Default, Debug)]
 struct CrelIteratorState {
     /// Index of the current relocation.
-    index: u64,
+    index: usize,
     /// Offset of the latest relocation.
     offset: u64,
     /// Addend of the latest relocation.
@@ -877,7 +877,7 @@ impl<'data> CrelIterator<'data> {
         Ok(CrelIterator {
             data,
             header: CrelIteratorHeader {
-                count,
+                count: count as usize,
                 flag_bits,
                 shift,
                 is_rela,
@@ -889,6 +889,11 @@ impl<'data> CrelIterator<'data> {
     /// True if the encoded relocations have addend.
     pub fn is_rela(&self) -> bool {
         self.header.is_rela
+    }
+
+    /// Return the number of encoded relocations.
+    pub fn len(&self) -> usize {
+        self.header.count
     }
 
     fn parse(&mut self) -> read::Result<Crel> {
@@ -958,5 +963,9 @@ impl<'data> Iterator for CrelIterator<'data> {
             self.state.index = self.header.count;
         }
         Some(result)
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        (self.len(), Some(self.len()))
     }
 }
