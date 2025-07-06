@@ -820,7 +820,7 @@ impl Crel {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct CrelIteratorHeader {
     /// The number of encoded relocations.
     count: usize,
@@ -832,7 +832,7 @@ struct CrelIteratorHeader {
     is_rela: bool,
 }
 
-#[derive(Default, Debug)]
+#[derive(Default, Debug, Clone)]
 struct CrelIteratorState {
     /// Index of the current relocation.
     index: usize,
@@ -847,7 +847,7 @@ struct CrelIteratorState {
 }
 
 /// Compact relocation iterator.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct CrelIterator<'data> {
     /// Input stream reader.
     data: Bytes<'data>,
