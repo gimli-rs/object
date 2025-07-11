@@ -893,7 +893,7 @@ impl<'data> CrelIterator<'data> {
 
     /// Return the number of encoded relocations.
     pub fn len(&self) -> usize {
-        self.header.count
+        self.header.count - self.state.index
     }
 
     fn parse(&mut self) -> read::Result<Crel> {
