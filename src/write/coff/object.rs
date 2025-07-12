@@ -83,6 +83,49 @@ impl<'a> Object<'a> {
         name
     }
 
+    pub(crate) fn coff_section_flags(&self, section: &Section<'_>) -> SectionFlags {
+        let characteristics = match section.kind {
+            SectionKind::Text => {
+                coff::IMAGE_SCN_CNT_CODE | coff::IMAGE_SCN_MEM_EXECUTE | coff::IMAGE_SCN_MEM_READ
+            }
+            SectionKind::Data => {
+                coff::IMAGE_SCN_CNT_INITIALIZED_DATA
+                    | coff::IMAGE_SCN_MEM_READ
+                    | coff::IMAGE_SCN_MEM_WRITE
+            }
+            SectionKind::UninitializedData => {
+                coff::IMAGE_SCN_CNT_UNINITIALIZED_DATA
+                    | coff::IMAGE_SCN_MEM_READ
+                    | coff::IMAGE_SCN_MEM_WRITE
+            }
+            SectionKind::ReadOnlyData
+            | SectionKind::ReadOnlyDataWithRel
+            | SectionKind::ReadOnlyString => {
+                coff::IMAGE_SCN_CNT_INITIALIZED_DATA | coff::IMAGE_SCN_MEM_READ
+            }
+            SectionKind::Debug
+            | SectionKind::DebugString
+            | SectionKind::Other
+            | SectionKind::OtherString => {
+                coff::IMAGE_SCN_CNT_INITIALIZED_DATA
+                    | coff::IMAGE_SCN_MEM_READ
+                    | coff::IMAGE_SCN_MEM_DISCARDABLE
+            }
+            SectionKind::Linker => coff::IMAGE_SCN_LNK_INFO | coff::IMAGE_SCN_LNK_REMOVE,
+            SectionKind::Common
+            | SectionKind::Tls
+            | SectionKind::UninitializedTls
+            | SectionKind::TlsVariables
+            | SectionKind::Note
+            | SectionKind::Unknown
+            | SectionKind::Metadata
+            | SectionKind::Elf(_) => {
+                return SectionFlags::None;
+            }
+        };
+        SectionFlags::Coff { characteristics }
+    }
+
     pub(crate) fn coff_symbol_flags(&self, _symbol: &Symbol) -> SymbolFlags<SectionId, SymbolId> {
         // TODO: Need SymbolFlags::Coff for COFF-specific flags (type and storage class).
         SymbolFlags::None
@@ -450,57 +493,16 @@ impl<'a> Object<'a> {
 
         // Write section headers.
         for (index, section) in self.sections.iter().enumerate() {
-            let mut characteristics = if let SectionFlags::Coff {
-                characteristics, ..
-            } = section.flags
-            {
-                characteristics
-            } else {
-                match section.kind {
-                    SectionKind::Text => {
-                        coff::IMAGE_SCN_CNT_CODE
-                            | coff::IMAGE_SCN_MEM_EXECUTE
-                            | coff::IMAGE_SCN_MEM_READ
-                    }
-                    SectionKind::Data => {
-                        coff::IMAGE_SCN_CNT_INITIALIZED_DATA
-                            | coff::IMAGE_SCN_MEM_READ
-                            | coff::IMAGE_SCN_MEM_WRITE
-                    }
-                    SectionKind::UninitializedData => {
-                        coff::IMAGE_SCN_CNT_UNINITIALIZED_DATA
-                            | coff::IMAGE_SCN_MEM_READ
-                            | coff::IMAGE_SCN_MEM_WRITE
-                    }
-                    SectionKind::ReadOnlyData
-                    | SectionKind::ReadOnlyDataWithRel
-                    | SectionKind::ReadOnlyString => {
-                        coff::IMAGE_SCN_CNT_INITIALIZED_DATA | coff::IMAGE_SCN_MEM_READ
-                    }
-                    SectionKind::Debug
-                    | SectionKind::DebugString
-                    | SectionKind::Other
-                    | SectionKind::OtherString => {
-                        coff::IMAGE_SCN_CNT_INITIALIZED_DATA
-                            | coff::IMAGE_SCN_MEM_READ
-                            | coff::IMAGE_SCN_MEM_DISCARDABLE
-                    }
-                    SectionKind::Linker => coff::IMAGE_SCN_LNK_INFO | coff::IMAGE_SCN_LNK_REMOVE,
-                    SectionKind::Common
-                    | SectionKind::Tls
-                    | SectionKind::UninitializedTls
-                    | SectionKind::TlsVariables
-                    | SectionKind::Note
-                    | SectionKind::Unknown
-                    | SectionKind::Metadata
-                    | SectionKind::Elf(_) => {
-                        return Err(Error(format!(
-                            "unimplemented section `{}` kind {:?}",
-                            section.name().unwrap_or(""),
-                            section.kind
-                        )));
-                    }
-                }
+            let SectionFlags::Coff {
+                mut characteristics,
+                ..
+            } = self.section_flags(section)
+            else {
+                return Err(Error(format!(
+                    "unimplemented section `{}` kind {:?}",
+                    section.name().unwrap_or(""),
+                    section.kind
+                )));
             };
             if section_offsets[index].selection != 0 {
                 characteristics |= coff::IMAGE_SCN_LNK_COMDAT;

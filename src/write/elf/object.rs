@@ -120,6 +120,32 @@ impl<'a> Object<'a> {
         name
     }
 
+    pub(crate) fn elf_section_flags(&self, section: &Section<'_>) -> SectionFlags {
+        let sh_flags = match section.kind {
+            SectionKind::Text => elf::SHF_ALLOC | elf::SHF_EXECINSTR,
+            SectionKind::Data | SectionKind::ReadOnlyDataWithRel => elf::SHF_ALLOC | elf::SHF_WRITE,
+            SectionKind::Tls => elf::SHF_ALLOC | elf::SHF_WRITE | elf::SHF_TLS,
+            SectionKind::UninitializedData => elf::SHF_ALLOC | elf::SHF_WRITE,
+            SectionKind::UninitializedTls => elf::SHF_ALLOC | elf::SHF_WRITE | elf::SHF_TLS,
+            SectionKind::ReadOnlyData => elf::SHF_ALLOC,
+            SectionKind::ReadOnlyString => elf::SHF_ALLOC | elf::SHF_STRINGS | elf::SHF_MERGE,
+            SectionKind::OtherString | SectionKind::DebugString => {
+                elf::SHF_STRINGS | elf::SHF_MERGE
+            }
+            SectionKind::Other
+            | SectionKind::Debug
+            | SectionKind::Metadata
+            | SectionKind::Linker
+            | SectionKind::Note
+            | SectionKind::Elf(_) => 0,
+            SectionKind::Unknown | SectionKind::Common | SectionKind::TlsVariables => {
+                return SectionFlags::None;
+            }
+        }
+        .into();
+        SectionFlags::Elf { sh_flags }
+    }
+
     pub(crate) fn elf_symbol_flags(&self, symbol: &Symbol) -> SymbolFlags<SectionId, SymbolId> {
         let st_type = match symbol.kind {
             SymbolKind::Text => {
@@ -775,39 +801,12 @@ impl<'a> Object<'a> {
                 SectionKind::Elf(sh_type) => sh_type,
                 _ => elf::SHT_PROGBITS,
             };
-            let sh_flags = if let SectionFlags::Elf { sh_flags } = section.flags {
-                sh_flags
-            } else {
-                match section.kind {
-                    SectionKind::Text => elf::SHF_ALLOC | elf::SHF_EXECINSTR,
-                    SectionKind::Data | SectionKind::ReadOnlyDataWithRel => {
-                        elf::SHF_ALLOC | elf::SHF_WRITE
-                    }
-                    SectionKind::Tls => elf::SHF_ALLOC | elf::SHF_WRITE | elf::SHF_TLS,
-                    SectionKind::UninitializedData => elf::SHF_ALLOC | elf::SHF_WRITE,
-                    SectionKind::UninitializedTls => elf::SHF_ALLOC | elf::SHF_WRITE | elf::SHF_TLS,
-                    SectionKind::ReadOnlyData => elf::SHF_ALLOC,
-                    SectionKind::ReadOnlyString => {
-                        elf::SHF_ALLOC | elf::SHF_STRINGS | elf::SHF_MERGE
-                    }
-                    SectionKind::OtherString | SectionKind::DebugString => {
-                        elf::SHF_STRINGS | elf::SHF_MERGE
-                    }
-                    SectionKind::Other
-                    | SectionKind::Debug
-                    | SectionKind::Metadata
-                    | SectionKind::Linker
-                    | SectionKind::Note
-                    | SectionKind::Elf(_) => 0,
-                    SectionKind::Unknown | SectionKind::Common | SectionKind::TlsVariables => {
-                        return Err(Error(format!(
-                            "unimplemented section `{}` kind {:?}",
-                            section.name().unwrap_or(""),
-                            section.kind
-                        )));
-                    }
-                }
-                .into()
+            let SectionFlags::Elf { sh_flags } = self.section_flags(section) else {
+                return Err(Error(format!(
+                    "unimplemented section `{}` kind {:?}",
+                    section.name().unwrap_or(""),
+                    section.kind
+                )));
             };
             // TODO: not sure if this is correct, maybe user should determine this
             let sh_entsize = match section.kind {

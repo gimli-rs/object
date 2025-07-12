@@ -69,6 +69,32 @@ impl<'a> Object<'a> {
         }
     }
 
+    pub(crate) fn xcoff_section_flags(&self, section: &Section<'_>) -> SectionFlags {
+        let s_flags = match section.kind {
+            SectionKind::Text
+            | SectionKind::ReadOnlyData
+            | SectionKind::ReadOnlyString
+            | SectionKind::ReadOnlyDataWithRel => xcoff::STYP_TEXT,
+            SectionKind::Data => xcoff::STYP_DATA,
+            SectionKind::UninitializedData => xcoff::STYP_BSS,
+            SectionKind::Tls => xcoff::STYP_TDATA,
+            SectionKind::UninitializedTls => xcoff::STYP_TBSS,
+            SectionKind::OtherString => xcoff::STYP_INFO,
+            SectionKind::Debug | SectionKind::DebugString => xcoff::STYP_DEBUG,
+            SectionKind::Other | SectionKind::Metadata => 0,
+            SectionKind::Note
+            | SectionKind::Linker
+            | SectionKind::Common
+            | SectionKind::Unknown
+            | SectionKind::TlsVariables
+            | SectionKind::Elf(_) => {
+                return SectionFlags::None;
+            }
+        }
+        .into();
+        SectionFlags::Xcoff { s_flags }
+    }
+
     pub(crate) fn xcoff_symbol_flags(&self, symbol: &Symbol) -> SymbolFlags<SectionId, SymbolId> {
         let n_sclass = match symbol.kind {
             SymbolKind::File => xcoff::C_FILE,
@@ -354,35 +380,12 @@ impl<'a> Object<'a> {
                     ))
                 })?
                 .copy_from_slice(&section.name);
-            let flags = if let SectionFlags::Xcoff { s_flags } = section.flags {
-                s_flags
-            } else {
-                match section.kind {
-                    SectionKind::Text
-                    | SectionKind::ReadOnlyData
-                    | SectionKind::ReadOnlyString
-                    | SectionKind::ReadOnlyDataWithRel => xcoff::STYP_TEXT,
-                    SectionKind::Data => xcoff::STYP_DATA,
-                    SectionKind::UninitializedData => xcoff::STYP_BSS,
-                    SectionKind::Tls => xcoff::STYP_TDATA,
-                    SectionKind::UninitializedTls => xcoff::STYP_TBSS,
-                    SectionKind::OtherString => xcoff::STYP_INFO,
-                    SectionKind::Debug | SectionKind::DebugString => xcoff::STYP_DEBUG,
-                    SectionKind::Other | SectionKind::Metadata => 0,
-                    SectionKind::Note
-                    | SectionKind::Linker
-                    | SectionKind::Common
-                    | SectionKind::Unknown
-                    | SectionKind::TlsVariables
-                    | SectionKind::Elf(_) => {
-                        return Err(Error(format!(
-                            "unimplemented section `{}` kind {:?}",
-                            section.name().unwrap_or(""),
-                            section.kind
-                        )));
-                    }
-                }
-                .into()
+            let SectionFlags::Xcoff { s_flags } = self.section_flags(section) else {
+                return Err(Error(format!(
+                    "unimplemented section `{}` kind {:?}",
+                    section.name().unwrap_or(""),
+                    section.kind
+                )));
             };
             if is_64 {
                 let section_header = xcoff::SectionHeader64 {
@@ -396,7 +399,7 @@ impl<'a> Object<'a> {
                     s_lnnoptr: U64::new(BE, 0),
                     s_nreloc: U32::new(BE, section.relocations.len() as u32),
                     s_nlnno: U32::new(BE, 0),
-                    s_flags: U32::new(BE, flags),
+                    s_flags: U32::new(BE, s_flags),
                     s_reserve: U32::new(BE, 0),
                 };
                 buffer.write(&section_header);
@@ -415,7 +418,7 @@ impl<'a> Object<'a> {
                     // the actual count of relocation entries in the s_paddr field.
                     s_nreloc: U16::new(BE, section.relocations.len() as u16),
                     s_nlnno: U16::new(BE, 0),
-                    s_flags: U32::new(BE, flags),
+                    s_flags: U32::new(BE, s_flags),
                 };
                 buffer.write(&section_header);
             }

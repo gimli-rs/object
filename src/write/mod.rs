@@ -333,6 +333,42 @@ impl<'a> Object<'a> {
         }
     }
 
+    /// Return the default flags for a section.
+    ///
+    /// The default flags are the section flags that will be written if
+    /// the section flags are set to `SectionFlags::None`.
+    /// These flags are determined by the file format and fields in the section
+    /// such as the section kind.
+    ///
+    /// This may return `SectionFlags::None` if the file format does not support
+    /// the section kind.
+    pub fn default_section_flags(&self, section: &Section<'_>) -> SectionFlags {
+        match self.format {
+            #[cfg(feature = "coff")]
+            BinaryFormat::Coff => self.coff_section_flags(section),
+            #[cfg(feature = "elf")]
+            BinaryFormat::Elf => self.elf_section_flags(section),
+            #[cfg(feature = "macho")]
+            BinaryFormat::MachO => self.macho_section_flags(section),
+            #[cfg(feature = "xcoff")]
+            BinaryFormat::Xcoff => self.xcoff_section_flags(section),
+            _ => SectionFlags::None,
+        }
+    }
+
+    /// Return the flags for a section.
+    ///
+    /// If `section.flags` is `SectionFlags::None`, then returns
+    /// [`Self::default_section_flags`].
+    /// Otherwise, `section.flags` is returned as is.
+    pub fn section_flags(&self, section: &Section<'_>) -> SectionFlags {
+        if section.flags != SectionFlags::None {
+            section.flags
+        } else {
+            self.default_section_flags(section)
+        }
+    }
+
     /// Get the COMDAT section group with the given `ComdatId`.
     #[inline]
     pub fn comdat(&self, comdat: ComdatId) -> &Comdat {
