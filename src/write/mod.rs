@@ -333,6 +333,42 @@ impl<'a> Object<'a> {
         }
     }
 
+    /// Return the default flags for a section.
+    ///
+    /// The default flags are the section flags that will be written if
+    /// the section flags are set to `SectionFlags::None`.
+    /// These flags are determined by the file format and fields in the section
+    /// such as the section kind.
+    ///
+    /// This may return `SectionFlags::None` if the file format does not support
+    /// the section kind.
+    pub fn default_section_flags(&self, section: &Section<'_>) -> SectionFlags {
+        match self.format {
+            #[cfg(feature = "coff")]
+            BinaryFormat::Coff => self.coff_section_flags(section),
+            #[cfg(feature = "elf")]
+            BinaryFormat::Elf => self.elf_section_flags(section),
+            #[cfg(feature = "macho")]
+            BinaryFormat::MachO => self.macho_section_flags(section),
+            #[cfg(feature = "xcoff")]
+            BinaryFormat::Xcoff => self.xcoff_section_flags(section),
+            _ => SectionFlags::None,
+        }
+    }
+
+    /// Return the flags for a section.
+    ///
+    /// If `section.flags` is `SectionFlags::None`, then returns
+    /// [`Self::default_section_flags`].
+    /// Otherwise, `section.flags` is returned as is.
+    pub fn section_flags(&self, section: &Section<'_>) -> SectionFlags {
+        if section.flags != SectionFlags::None {
+            section.flags
+        } else {
+            self.default_section_flags(section)
+        }
+    }
+
     /// Get the COMDAT section group with the given `ComdatId`.
     #[inline]
     pub fn comdat(&self, comdat: ComdatId) -> &Comdat {
@@ -370,6 +406,13 @@ impl<'a> Object<'a> {
     }
 
     /// Add a new symbol and return its `SymbolId`.
+    ///
+    /// If the symbol is a section symbol that is already defined,
+    /// it will update the flags of the existing section symbol
+    /// instead of creating adding a new symbol.
+    ///
+    /// The symbol name will be modified to include the global prefix
+    /// if the mangling scheme has one.
     pub fn add_symbol(&mut self, mut symbol: Symbol) -> SymbolId {
         // Defined symbols must have a scope.
         debug_assert!(symbol.is_undefined() || symbol.scope != SymbolScope::Unknown);
@@ -403,6 +446,42 @@ impl<'a> Object<'a> {
         let symbol_id = SymbolId(self.symbols.len());
         self.symbols.push(symbol);
         symbol_id
+    }
+
+    /// Return the default flags for a symbol.
+    ///
+    /// The default flags are the symbol flags that will be written
+    /// if the symbol flags are set to `SymbolFlags::None`.
+    /// These flags are determined by the file format and fields in
+    /// the symbol such as the symbol kind and scope.
+    ///
+    /// This may return `SymbolFlags::None` if the file format does not
+    /// support symbol flags, or does not support the symbol kind or scope.
+    pub fn default_symbol_flags(&self, symbol: &Symbol) -> SymbolFlags<SectionId, SymbolId> {
+        match self.format {
+            #[cfg(feature = "coff")]
+            BinaryFormat::Coff => self.coff_symbol_flags(symbol),
+            #[cfg(feature = "elf")]
+            BinaryFormat::Elf => self.elf_symbol_flags(symbol),
+            #[cfg(feature = "macho")]
+            BinaryFormat::MachO => self.macho_symbol_flags(symbol),
+            #[cfg(feature = "xcoff")]
+            BinaryFormat::Xcoff => self.xcoff_symbol_flags(symbol),
+            _ => SymbolFlags::None,
+        }
+    }
+
+    /// Return the flags for a symbol.
+    ///
+    /// If `symbol.flags` is `SymbolFlags::None`, then returns
+    /// [`Self::default_symbol_flags`].
+    /// Otherwise, `symbol.flags` is returned as is.
+    pub fn symbol_flags(&self, symbol: &Symbol) -> SymbolFlags<SectionId, SymbolId> {
+        if symbol.flags != SymbolFlags::None {
+            symbol.flags
+        } else {
+            self.default_symbol_flags(symbol)
+        }
     }
 
     /// Return true if the file format supports `StandardSection::UninitializedTls`.
