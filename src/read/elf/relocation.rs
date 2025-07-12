@@ -896,6 +896,11 @@ impl<'data> CrelIterator<'data> {
         self.header.count - self.state.index
     }
 
+    /// Return true if there are no more relocations to parse.
+    pub fn is_empty(&self) -> bool {
+        self.header.count == self.state.index
+    }
+
     fn parse(&mut self) -> read::Result<Crel> {
         const DELTA_SYMBOL_INDEX_MASK: u8 = 1 << 0;
         const DELTA_TYPE_MASK: u8 = 1 << 1;
