@@ -102,12 +102,11 @@ impl<'data, Elf: FileHeader> Iterator for ElfRelocationIterator<'data, Elf> {
     fn next(&mut self) -> Option<Self::Item> {
         match self {
             ElfRelocationIterator::Rel(ref mut i, endian) => {
-                i.next().cloned().map(|r| Crel::from_rel(r, *endian))
+                i.next().map(|r| Crel::from_rel(r, *endian))
             }
-            ElfRelocationIterator::Rela(ref mut i, endian, is_mips64el) => i
-                .next()
-                .cloned()
-                .map(|r| Crel::from_rela(r, *endian, *is_mips64el)),
+            ElfRelocationIterator::Rela(ref mut i, endian, is_mips64el) => {
+                i.next().map(|r| Crel::from_rela(r, *endian, *is_mips64el))
+            }
             ElfRelocationIterator::Crel(ref mut i) => i.next().and_then(Result::ok),
         }
     }
@@ -800,7 +799,8 @@ impl Crel {
         }
     }
 
-    fn from_rel<R: Rel>(r: R, endian: R::Endian) -> Crel {
+    /// Build Crel type from Rel.
+    pub fn from_rel<R: Rel>(r: &R, endian: R::Endian) -> Crel {
         Crel {
             r_offset: r.r_offset(endian).into(),
             r_sym: r.r_sym(endian),
@@ -809,7 +809,8 @@ impl Crel {
         }
     }
 
-    fn from_rela<R: Rela>(r: R, endian: R::Endian, is_mips64el: bool) -> Crel {
+    /// Build Crel type from Rela.
+    pub fn from_rela<R: Rela>(r: &R, endian: R::Endian, is_mips64el: bool) -> Crel {
         Crel {
             r_offset: r.r_offset(endian).into(),
             r_sym: r.r_sym(endian, is_mips64el),
@@ -819,10 +820,10 @@ impl Crel {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct CrelIteratorHeader {
     /// The number of encoded relocations.
-    count: u64,
+    count: usize,
     /// The number of flag bits each relocation uses.
     flag_bits: u64,
     /// Shift of the relocation value.
@@ -831,10 +832,10 @@ struct CrelIteratorHeader {
     is_rela: bool,
 }
 
-#[derive(Default, Debug)]
+#[derive(Default, Debug, Clone)]
 struct CrelIteratorState {
     /// Index of the current relocation.
-    index: u64,
+    index: usize,
     /// Offset of the latest relocation.
     offset: u64,
     /// Addend of the latest relocation.
@@ -846,7 +847,7 @@ struct CrelIteratorState {
 }
 
 /// Compact relocation iterator.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct CrelIterator<'data> {
     /// Input stream reader.
     data: Bytes<'data>,
@@ -876,7 +877,7 @@ impl<'data> CrelIterator<'data> {
         Ok(CrelIterator {
             data,
             header: CrelIteratorHeader {
-                count,
+                count: count as usize,
                 flag_bits,
                 shift,
                 is_rela,
@@ -888,6 +889,11 @@ impl<'data> CrelIterator<'data> {
     /// True if the encoded relocations have addend.
     pub fn is_rela(&self) -> bool {
         self.header.is_rela
+    }
+
+    /// Return the number of encoded relocations.
+    pub fn len(&self) -> usize {
+        self.header.count - self.state.index
     }
 
     fn parse(&mut self) -> read::Result<Crel> {
@@ -957,5 +963,9 @@ impl<'data> Iterator for CrelIterator<'data> {
             self.state.index = self.header.count;
         }
         Some(result)
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        (self.len(), Some(self.len()))
     }
 }
