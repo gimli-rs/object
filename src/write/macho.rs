@@ -146,6 +146,26 @@ impl<'a> Object<'a> {
         }
     }
 
+    pub(crate) fn macho_section_flags(&self, section: &Section<'_>) -> SectionFlags {
+        let flags = match section.kind {
+            SectionKind::Text => macho::S_ATTR_PURE_INSTRUCTIONS | macho::S_ATTR_SOME_INSTRUCTIONS,
+            SectionKind::Data => 0,
+            SectionKind::ReadOnlyData | SectionKind::ReadOnlyDataWithRel => 0,
+            SectionKind::ReadOnlyString => macho::S_CSTRING_LITERALS,
+            SectionKind::UninitializedData | SectionKind::Common => macho::S_ZEROFILL,
+            SectionKind::Tls => macho::S_THREAD_LOCAL_REGULAR,
+            SectionKind::UninitializedTls => macho::S_THREAD_LOCAL_ZEROFILL,
+            SectionKind::TlsVariables => macho::S_THREAD_LOCAL_VARIABLES,
+            SectionKind::Debug | SectionKind::DebugString => macho::S_ATTR_DEBUG,
+            SectionKind::OtherString => macho::S_CSTRING_LITERALS,
+            SectionKind::Other | SectionKind::Linker | SectionKind::Metadata => 0,
+            SectionKind::Note | SectionKind::Unknown | SectionKind::Elf(_) => {
+                return SectionFlags::None;
+            }
+        };
+        SectionFlags::MachO { flags }
+    }
+
     pub(crate) fn macho_symbol_flags(&self, symbol: &Symbol) -> SymbolFlags<SectionId, SymbolId> {
         let mut n_desc = 0;
         if symbol.weak {
@@ -619,31 +639,12 @@ impl<'a> Object<'a> {
                     ))
                 })?
                 .copy_from_slice(&section.segment);
-            let flags = if let SectionFlags::MachO { flags } = section.flags {
-                flags
-            } else {
-                match section.kind {
-                    SectionKind::Text => {
-                        macho::S_ATTR_PURE_INSTRUCTIONS | macho::S_ATTR_SOME_INSTRUCTIONS
-                    }
-                    SectionKind::Data => 0,
-                    SectionKind::ReadOnlyData | SectionKind::ReadOnlyDataWithRel => 0,
-                    SectionKind::ReadOnlyString => macho::S_CSTRING_LITERALS,
-                    SectionKind::UninitializedData | SectionKind::Common => macho::S_ZEROFILL,
-                    SectionKind::Tls => macho::S_THREAD_LOCAL_REGULAR,
-                    SectionKind::UninitializedTls => macho::S_THREAD_LOCAL_ZEROFILL,
-                    SectionKind::TlsVariables => macho::S_THREAD_LOCAL_VARIABLES,
-                    SectionKind::Debug | SectionKind::DebugString => macho::S_ATTR_DEBUG,
-                    SectionKind::OtherString => macho::S_CSTRING_LITERALS,
-                    SectionKind::Other | SectionKind::Linker | SectionKind::Metadata => 0,
-                    SectionKind::Note | SectionKind::Unknown | SectionKind::Elf(_) => {
-                        return Err(Error(format!(
-                            "unimplemented section `{}` kind {:?}",
-                            section.name().unwrap_or(""),
-                            section.kind
-                        )));
-                    }
-                }
+            let SectionFlags::MachO { flags } = self.section_flags(section) else {
+                return Err(Error(format!(
+                    "unimplemented section `{}` kind {:?}",
+                    section.name().unwrap_or(""),
+                    section.kind
+                )));
             };
             macho.write_section(
                 buffer,
