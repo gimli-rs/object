@@ -20,6 +20,9 @@ struct SymbolOffsets {
     str_id: Option<StringId>,
     aux_count: u8,
     storage_class: u8,
+    x_smtyp: u8,
+    x_smclas: u8,
+    containing_csect: Option<SymbolId>,
 }
 
 impl<'a> Object<'a> {
@@ -63,6 +66,64 @@ impl<'a> Object<'a> {
                 // Unsupported section.
                 (&[], &[], SectionKind::Note, SectionFlags::None)
             }
+        }
+    }
+
+    pub(crate) fn xcoff_symbol_flags(&self, symbol: &Symbol) -> SymbolFlags<SectionId, SymbolId> {
+        let n_sclass = match symbol.kind {
+            SymbolKind::File => xcoff::C_FILE,
+            SymbolKind::Text | SymbolKind::Data | SymbolKind::Tls => {
+                if symbol.is_local() {
+                    xcoff::C_STAT
+                } else if symbol.weak {
+                    xcoff::C_WEAKEXT
+                } else {
+                    xcoff::C_EXT
+                }
+            }
+            SymbolKind::Section | SymbolKind::Label | SymbolKind::Unknown => {
+                return SymbolFlags::None;
+            }
+        };
+        let (x_smtyp, x_smclas) = if n_sclass == xcoff::C_EXT
+            || n_sclass == xcoff::C_WEAKEXT
+            || n_sclass == xcoff::C_HIDEXT
+        {
+            let section_kind = if let SymbolSection::Section(id) = symbol.section {
+                self.sections[id.0].kind
+            } else {
+                SectionKind::Unknown
+            };
+            match symbol.kind {
+                SymbolKind::Text => (xcoff::XTY_SD, xcoff::XMC_PR),
+                SymbolKind::Data => {
+                    if section_kind == SectionKind::UninitializedData {
+                        (xcoff::XTY_CM, xcoff::XMC_BS)
+                    } else if section_kind == SectionKind::ReadOnlyData {
+                        (xcoff::XTY_SD, xcoff::XMC_RO)
+                    } else {
+                        (xcoff::XTY_SD, xcoff::XMC_RW)
+                    }
+                }
+                SymbolKind::Tls => {
+                    if section_kind == SectionKind::UninitializedTls {
+                        (xcoff::XTY_CM, xcoff::XMC_UL)
+                    } else {
+                        (xcoff::XTY_SD, xcoff::XMC_TL)
+                    }
+                }
+                _ => {
+                    return SymbolFlags::None;
+                }
+            }
+        } else {
+            (0, 0)
+        };
+        SymbolFlags::Xcoff {
+            n_sclass,
+            x_smtyp,
+            x_smclas,
+            containing_csect: None,
         }
     }
 
@@ -190,32 +251,25 @@ impl<'a> Object<'a> {
             symbol_offsets[index].index = symtab_count;
             symtab_count += 1;
 
-            let storage_class = if let SymbolFlags::Xcoff { n_sclass, .. } = symbol.flags {
-                n_sclass
-            } else {
-                match symbol.kind {
-                    SymbolKind::File => xcoff::C_FILE,
-                    SymbolKind::Text | SymbolKind::Data | SymbolKind::Tls => {
-                        if symbol.is_local() {
-                            xcoff::C_STAT
-                        } else if symbol.weak {
-                            xcoff::C_WEAKEXT
-                        } else {
-                            xcoff::C_EXT
-                        }
-                    }
-                    SymbolKind::Section | SymbolKind::Label | SymbolKind::Unknown => {
-                        return Err(Error(format!(
-                            "unimplemented symbol `{}` kind {:?}",
-                            symbol.name().unwrap_or(""),
-                            symbol.kind
-                        )));
-                    }
-                }
+            let SymbolFlags::Xcoff {
+                n_sclass,
+                x_smtyp,
+                x_smclas,
+                containing_csect,
+            } = self.symbol_flags(symbol)
+            else {
+                return Err(Error(format!(
+                    "unimplemented symbol `{}` kind {:?}",
+                    symbol.name().unwrap_or(""),
+                    symbol.kind
+                )));
             };
-            symbol_offsets[index].storage_class = storage_class;
+            symbol_offsets[index].storage_class = n_sclass;
+            symbol_offsets[index].x_smtyp = x_smtyp;
+            symbol_offsets[index].x_smclas = x_smclas;
+            symbol_offsets[index].containing_csect = containing_csect;
 
-            if storage_class == xcoff::C_FILE {
+            if n_sclass == xcoff::C_FILE {
                 if is_64 && file_str_id.is_none() {
                     file_str_id = Some(strtab.add(b".file"));
                 }
@@ -227,7 +281,7 @@ impl<'a> Object<'a> {
             }
 
             symbol_offsets[index].aux_count = 0;
-            match storage_class {
+            match n_sclass {
                 xcoff::C_FILE => {
                     symbol_offsets[index].aux_count = 1;
                     symtab_count += 1;
@@ -412,13 +466,10 @@ impl<'a> Object<'a> {
         // Write symbols.
         debug_assert_eq!(symtab_offset, buffer.len());
         for (index, symbol) in self.symbols.iter().enumerate() {
-            let (n_value, section_kind) = if let SymbolSection::Section(id) = symbol.section {
-                (
-                    section_offsets[id.0].address + symbol.value,
-                    self.sections[id.0].kind,
-                )
+            let n_value = if let SymbolSection::Section(id) = symbol.section {
+                section_offsets[id.0].address + symbol.value
             } else {
-                (symbol.value, SectionKind::Unknown)
+                symbol.value
             };
             let n_scnum = match symbol.section {
                 SymbolSection::None => {
@@ -508,43 +559,9 @@ impl<'a> Object<'a> {
                 || n_sclass == xcoff::C_HIDEXT
             {
                 debug_assert_eq!(n_numaux, 1);
-                let (x_smtyp, x_smclas) = if let SymbolFlags::Xcoff {
-                    x_smtyp, x_smclas, ..
-                } = symbol.flags
-                {
-                    (x_smtyp, x_smclas)
-                } else {
-                    match symbol.kind {
-                        SymbolKind::Text => (xcoff::XTY_SD, xcoff::XMC_PR),
-                        SymbolKind::Data => {
-                            if section_kind == SectionKind::UninitializedData {
-                                (xcoff::XTY_CM, xcoff::XMC_BS)
-                            } else if section_kind == SectionKind::ReadOnlyData {
-                                (xcoff::XTY_SD, xcoff::XMC_RO)
-                            } else {
-                                (xcoff::XTY_SD, xcoff::XMC_RW)
-                            }
-                        }
-                        SymbolKind::Tls => {
-                            if section_kind == SectionKind::UninitializedTls {
-                                (xcoff::XTY_CM, xcoff::XMC_UL)
-                            } else {
-                                (xcoff::XTY_SD, xcoff::XMC_TL)
-                            }
-                        }
-                        _ => {
-                            return Err(Error(format!(
-                                "unimplemented symbol `{}` kind {:?}",
-                                symbol.name().unwrap_or(""),
-                                symbol.kind
-                            )));
-                        }
-                    }
-                };
-                let scnlen = if let SymbolFlags::Xcoff {
-                    containing_csect: Some(containing_csect),
-                    ..
-                } = symbol.flags
+                let x_smtyp = symbol_offsets[index].x_smtyp;
+                let x_smclas = symbol_offsets[index].x_smclas;
+                let scnlen = if let Some(containing_csect) = symbol_offsets[index].containing_csect
                 {
                     symbol_offsets[containing_csect.0].index as u64
                 } else {

@@ -83,6 +83,11 @@ impl<'a> Object<'a> {
         name
     }
 
+    pub(crate) fn coff_symbol_flags(&self, _symbol: &Symbol) -> SymbolFlags<SectionId, SymbolId> {
+        // TODO: Need SymbolFlags::Coff for COFF-specific flags (type and storage class).
+        SymbolFlags::None
+    }
+
     pub(crate) fn coff_translate_relocation(&mut self, reloc: &mut Relocation) -> Result<()> {
         use RelocationEncoding as E;
         use RelocationKind as K;
@@ -562,6 +567,13 @@ impl<'a> Object<'a> {
 
         // Write symbols.
         for (index, symbol) in self.symbols.iter().enumerate() {
+            let SymbolFlags::None = symbol.flags else {
+                return Err(Error(format!(
+                    "unimplemented symbol `{}` kind {:?}",
+                    symbol.name().unwrap_or(""),
+                    symbol.kind
+                )));
+            };
             let section_number = match symbol.section {
                 SymbolSection::None => {
                     debug_assert_eq!(symbol.kind, SymbolKind::File);
