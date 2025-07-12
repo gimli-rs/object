@@ -146,6 +146,19 @@ impl<'a> Object<'a> {
         }
     }
 
+    pub(crate) fn macho_symbol_flags(&self, symbol: &Symbol) -> SymbolFlags<SectionId, SymbolId> {
+        let mut n_desc = 0;
+        if symbol.weak {
+            if symbol.is_undefined() {
+                n_desc |= macho::N_WEAK_REF;
+            } else {
+                n_desc |= macho::N_WEAK_DEF;
+            }
+        }
+        // TODO: include n_type
+        SymbolFlags::MachO { n_desc }
+    }
+
     fn macho_tlv_bootstrap(&mut self) -> SymbolId {
         match self.tlv_bootstrap {
             Some(id) => id,
@@ -831,18 +844,12 @@ impl<'a> Object<'a> {
                 }
             }
 
-            let n_desc = if let SymbolFlags::MachO { n_desc } = symbol.flags {
-                n_desc
-            } else {
-                let mut n_desc = 0;
-                if symbol.weak {
-                    if symbol.is_undefined() {
-                        n_desc |= macho::N_WEAK_REF;
-                    } else {
-                        n_desc |= macho::N_WEAK_DEF;
-                    }
-                }
-                n_desc
+            let SymbolFlags::MachO { n_desc } = self.symbol_flags(symbol) else {
+                return Err(Error(format!(
+                    "unimplemented symbol `{}` kind {:?}",
+                    symbol.name().unwrap_or(""),
+                    symbol.kind
+                )));
             };
 
             let n_value = match symbol.section.id() {
