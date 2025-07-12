@@ -120,6 +120,54 @@ impl<'a> Object<'a> {
         name
     }
 
+    pub(crate) fn elf_symbol_flags(&self, symbol: &Symbol) -> SymbolFlags<SectionId, SymbolId> {
+        let st_type = match symbol.kind {
+            SymbolKind::Text => {
+                if symbol.is_undefined() {
+                    elf::STT_NOTYPE
+                } else {
+                    elf::STT_FUNC
+                }
+            }
+            SymbolKind::Data => {
+                if symbol.is_undefined() {
+                    elf::STT_NOTYPE
+                } else if symbol.is_common() {
+                    elf::STT_COMMON
+                } else {
+                    elf::STT_OBJECT
+                }
+            }
+            SymbolKind::Section => elf::STT_SECTION,
+            SymbolKind::File => elf::STT_FILE,
+            SymbolKind::Tls => elf::STT_TLS,
+            SymbolKind::Label => elf::STT_NOTYPE,
+            SymbolKind::Unknown => {
+                if symbol.is_undefined() {
+                    elf::STT_NOTYPE
+                } else {
+                    return SymbolFlags::None;
+                }
+            }
+        };
+        let st_bind = if symbol.weak {
+            elf::STB_WEAK
+        } else if symbol.is_undefined() {
+            elf::STB_GLOBAL
+        } else if symbol.is_local() {
+            elf::STB_LOCAL
+        } else {
+            elf::STB_GLOBAL
+        };
+        let st_info = (st_bind << 4) + st_type;
+        let st_other = if symbol.scope == SymbolScope::Linkage {
+            elf::STV_HIDDEN
+        } else {
+            elf::STV_DEFAULT
+        };
+        SymbolFlags::Elf { st_info, st_other }
+    }
+
     fn elf_has_relocation_addend(&self) -> Result<bool> {
         Ok(match self.architecture {
             Architecture::Aarch64 => true,
@@ -639,59 +687,12 @@ impl<'a> Object<'a> {
         // Write symbols.
         writer.write_null_symbol();
         let mut write_symbol = |index: usize, symbol: &Symbol| -> Result<()> {
-            let st_info = if let SymbolFlags::Elf { st_info, .. } = symbol.flags {
-                st_info
-            } else {
-                let st_type = match symbol.kind {
-                    SymbolKind::Text => {
-                        if symbol.is_undefined() {
-                            elf::STT_NOTYPE
-                        } else {
-                            elf::STT_FUNC
-                        }
-                    }
-                    SymbolKind::Data => {
-                        if symbol.is_undefined() {
-                            elf::STT_NOTYPE
-                        } else if symbol.is_common() {
-                            elf::STT_COMMON
-                        } else {
-                            elf::STT_OBJECT
-                        }
-                    }
-                    SymbolKind::Section => elf::STT_SECTION,
-                    SymbolKind::File => elf::STT_FILE,
-                    SymbolKind::Tls => elf::STT_TLS,
-                    SymbolKind::Label => elf::STT_NOTYPE,
-                    SymbolKind::Unknown => {
-                        if symbol.is_undefined() {
-                            elf::STT_NOTYPE
-                        } else {
-                            return Err(Error(format!(
-                                "unimplemented symbol `{}` kind {:?}",
-                                symbol.name().unwrap_or(""),
-                                symbol.kind
-                            )));
-                        }
-                    }
-                };
-                let st_bind = if symbol.weak {
-                    elf::STB_WEAK
-                } else if symbol.is_undefined() {
-                    elf::STB_GLOBAL
-                } else if symbol.is_local() {
-                    elf::STB_LOCAL
-                } else {
-                    elf::STB_GLOBAL
-                };
-                (st_bind << 4) + st_type
-            };
-            let st_other = if let SymbolFlags::Elf { st_other, .. } = symbol.flags {
-                st_other
-            } else if symbol.scope == SymbolScope::Linkage {
-                elf::STV_HIDDEN
-            } else {
-                elf::STV_DEFAULT
+            let SymbolFlags::Elf { st_info, st_other } = self.symbol_flags(symbol) else {
+                return Err(Error(format!(
+                    "unimplemented symbol `{}` kind {:?}",
+                    symbol.name().unwrap_or(""),
+                    symbol.kind
+                )));
             };
             let (st_shndx, section) = match symbol.section {
                 SymbolSection::None => {
