@@ -478,10 +478,10 @@ impl<'a> Object<'a> {
                 }
                 (Architecture::I386, None, _) => coff::IMAGE_FILE_MACHINE_I386,
                 (Architecture::X86_64, None, _) => coff::IMAGE_FILE_MACHINE_AMD64,
-                (Architecture::PowerPc | Architecture::PowerPc64, None, Endian::Little) => {
+                (Architecture::PowerPc | Architecture::PowerPc64, None, Endianness::Little) => {
                     coff::IMAGE_FILE_MACHINE_POWERPC
                 },
-                (Architecture::PowerPc | Architecture::PowerPc64, None, Endian::Big) => {
+                (Architecture::PowerPc | Architecture::PowerPc64, None, Endianness::Big) => {
                     coff::IMAGE_FILE_MACHINE_POWERPCBE   
                 },
                 _ => {
