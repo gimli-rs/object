@@ -1,5 +1,6 @@
 use alloc::vec::Vec;
 
+use crate::endian::*;
 use crate::pe as coff;
 use crate::write::coff::writer;
 use crate::write::util::*;
