@@ -255,6 +255,7 @@ impl<'a> Object<'a> {
                 coff::IMAGE_REL_AMD64_REL32_5 => 9,
                 _ => 0,
             },
+            Architecture::PowerPc | Architecture::PowerPc64 => 0,
             _ => return Err(Error(format!("unimplemented relocation {:?}", relocation))),
         };
         relocation.addend += offset;
