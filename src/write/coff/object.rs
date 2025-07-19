@@ -646,8 +646,8 @@ impl<'a> Object<'a> {
                             "unimplemented symbol `{}` kind {:?}",
                             symbol.name().unwrap_or(""),
                             symbol.kind
-                        )))
-                    };
+                        )));
+                    }
                 }
             };
             let number_of_aux_symbols = symbol_offsets[index].aux_count;
