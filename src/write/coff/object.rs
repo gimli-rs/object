@@ -640,11 +640,14 @@ impl<'a> Object<'a> {
                     }
                 }
                 SymbolKind::Unknown => {
-                    return Err(Error(format!(
-                        "unimplemented symbol `{}` kind {:?}",
-                        symbol.name().unwrap_or(""),
-                        symbol.kind
-                    )));
+                    match symbol.section {
+                        SymbolSection::Undefined => coff::IMAGE_SYM_CLASS_EXTERNAL,
+                        _ => return Err(Error(format!(
+                            "unimplemented symbol `{}` kind {:?}",
+                            symbol.name().unwrap_or(""),
+                            symbol.kind
+                        )))
+                    };
                 }
             };
             let number_of_aux_symbols = symbol_offsets[index].aux_count;
