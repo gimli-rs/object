@@ -646,7 +646,7 @@ impl<'a> Object<'a> {
                             "unimplemented symbol `{}` kind {:?}",
                             symbol.name().unwrap_or(""),
                             symbol.kind
-                        )));
+                        )))
                     }
                 }
             };
