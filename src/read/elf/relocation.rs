@@ -308,6 +308,16 @@ fn parse_relocation<Elf: FileHeader>(
                 }
             }
         }
+        elf::EM_ALPHA => match r_type {
+            // Absolute
+            elf::R_ALPHA_REFLONG => (K::Absolute, g, 32),
+            elf::R_ALPHA_REFQUAD => (K::Absolute, g, 64),
+            // Relative to the PC
+            elf::R_ALPHA_SREL16 => (K::Relative, g, 16),
+            elf::R_ALPHA_SREL32 => (K::Relative, g, 32),
+            elf::R_ALPHA_SREL64 => (K::Relative, g, 64),
+            _ => unknown,
+        },
         elf::EM_ARM => match r_type {
             elf::R_ARM_ABS32 => (K::Absolute, g, 32),
             _ => unknown,
