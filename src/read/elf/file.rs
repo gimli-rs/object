@@ -245,6 +245,7 @@ where
         ) {
             (elf::EM_AARCH64, true) => Architecture::Aarch64,
             (elf::EM_AARCH64, false) => Architecture::Aarch64_Ilp32,
+            (elf::EM_ALPHA, true) => Architecture::Alpha,
             (elf::EM_ARM, _) => Architecture::Arm,
             (elf::EM_AVR, _) => Architecture::Avr,
             (elf::EM_BPF, _) => Architecture::Bpf,
