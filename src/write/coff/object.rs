@@ -358,6 +358,73 @@ impl<'a> Object<'a> {
         Ok(stub_id)
     }
 
+    pub(crate) fn coff_add_weak_external(&mut self, mut symbol: Symbol) -> SymbolId {
+        let mut name = b".weak.".to_vec();
+        name.extend(symbol.name.iter());
+
+        // find a defined, non-COMDAT external symbol for deriving the weak
+        // default symbol name. This matches what LLVM and MinGW GCC do
+        for unique_symbol in self.symbols.iter() {
+            if unique_symbol.weak
+                || !(unique_symbol.scope == SymbolScope::Linkage
+                    || unique_symbol.scope == SymbolScope::Dynamic)
+            {
+                continue;
+            }
+
+            match unique_symbol.section {
+                SymbolSection::Absolute => (),
+                SymbolSection::Section(section_id) => {
+                    if self
+                        .comdats
+                        .iter()
+                        .any(|comdat| comdat.sections.contains(&section_id))
+                    {
+                        continue;
+                    }
+                }
+                _ => continue,
+            }
+
+            name.push(b'.');
+            name.extend(unique_symbol.name.iter());
+
+            break;
+        }
+
+        let mut value = symbol.value;
+        let mut section = symbol.section;
+
+        // the default symbol for undefined weak externals are absolute symbols
+        // with the value set to 0
+        if symbol.section == SymbolSection::Undefined {
+            section = SymbolSection::Absolute;
+            value = 0;
+        }
+
+        let weak_default_id = self.add_raw_symbol(Symbol {
+            name,
+            value,
+            size: symbol.size,
+            // the default symbol has a base type of `IMAGE_SYM_TYPE_NULL`.
+            kind: SymbolKind::Data,
+            scope: SymbolScope::Linkage,
+            weak: false,
+            section,
+            flags: SymbolFlags::None,
+        });
+
+        // the weak symbol should be undefined, externally scoped and have a
+        // value of 0
+        symbol.section = SymbolSection::Undefined;
+        symbol.scope = SymbolScope::Linkage;
+        symbol.value = 0;
+
+        let symbol_id = self.add_raw_symbol(symbol);
+        self.weak_default_symbols.insert(symbol_id, weak_default_id);
+        symbol_id
+    }
+
     /// Appends linker directives to the `.drectve` section to tell the linker
     /// to export all symbols with `SymbolScope::Dynamic`.
     ///
@@ -451,6 +518,9 @@ impl<'a> Object<'a> {
                 }
                 SymbolKind::Section if symbol.section.id().is_some() => {
                     symbol_offsets[index].aux_count = writer.reserve_aux_section();
+                }
+                _ if symbol.weak => {
+                    symbol_offsets[index].aux_count = writer.reserve_aux_weak_external();
                 }
                 _ => {}
             };
@@ -601,36 +671,31 @@ impl<'a> Object<'a> {
                     }
                 }
                 SymbolKind::Label => coff::IMAGE_SYM_CLASS_LABEL,
-                SymbolKind::Text | SymbolKind::Data | SymbolKind::Tls => {
-                    match symbol.section {
-                        SymbolSection::None => {
+                SymbolKind::Text | SymbolKind::Data | SymbolKind::Tls => match symbol.section {
+                    SymbolSection::None => {
+                        return Err(Error(format!(
+                            "missing section for symbol `{}`",
+                            symbol.name().unwrap_or("")
+                        )));
+                    }
+                    SymbolSection::Undefined if symbol.weak => coff::IMAGE_SYM_CLASS_WEAK_EXTERNAL,
+                    SymbolSection::Undefined | SymbolSection::Common => {
+                        coff::IMAGE_SYM_CLASS_EXTERNAL
+                    }
+                    SymbolSection::Absolute | SymbolSection::Section(_) => match symbol.scope {
+                        SymbolScope::Unknown => {
                             return Err(Error(format!(
-                                "missing section for symbol `{}`",
-                                symbol.name().unwrap_or("")
+                                "unimplemented symbol `{}` scope {:?}",
+                                symbol.name().unwrap_or(""),
+                                symbol.scope
                             )));
                         }
-                        SymbolSection::Undefined | SymbolSection::Common => {
+                        SymbolScope::Compilation => coff::IMAGE_SYM_CLASS_STATIC,
+                        SymbolScope::Linkage | SymbolScope::Dynamic => {
                             coff::IMAGE_SYM_CLASS_EXTERNAL
                         }
-                        SymbolSection::Absolute | SymbolSection::Section(_) => {
-                            match symbol.scope {
-                                // TODO: does this need aux symbol records too?
-                                _ if symbol.weak => coff::IMAGE_SYM_CLASS_WEAK_EXTERNAL,
-                                SymbolScope::Unknown => {
-                                    return Err(Error(format!(
-                                        "unimplemented symbol `{}` scope {:?}",
-                                        symbol.name().unwrap_or(""),
-                                        symbol.scope
-                                    )));
-                                }
-                                SymbolScope::Compilation => coff::IMAGE_SYM_CLASS_STATIC,
-                                SymbolScope::Linkage | SymbolScope::Dynamic => {
-                                    coff::IMAGE_SYM_CLASS_EXTERNAL
-                                }
-                            }
-                        }
-                    }
-                }
+                    },
+                },
                 SymbolKind::Unknown => {
                     return Err(Error(format!(
                         "unimplemented symbol `{}` kind {:?}",
@@ -674,6 +739,23 @@ impl<'a> Object<'a> {
                         },
                         number: section_offsets[section_index].associative_section,
                         selection: section_offsets[section_index].selection,
+                    });
+                }
+                _ if symbol.weak => {
+                    let default_symbol_id = self
+                        .weak_default_symbols
+                        .get(&SymbolId(index))
+                        .copied()
+                        .unwrap_or_else(|| {
+                            unreachable!(
+                                "weak external symbol should have an associated default symbol",
+                            );
+                        });
+
+                    let weak_default_sym_index = symbol_offsets[default_symbol_id.0].index;
+                    writer.write_aux_weak_external(writer::AuxSymbolWeak {
+                        weak_default_sym_index,
+                        weak_search_type: coff::IMAGE_WEAK_EXTERN_SEARCH_NOLIBRARY,
                     });
                 }
                 _ => {
