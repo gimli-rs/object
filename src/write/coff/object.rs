@@ -358,73 +358,6 @@ impl<'a> Object<'a> {
         Ok(stub_id)
     }
 
-    pub(crate) fn coff_add_weak_external(&mut self, mut symbol: Symbol) -> SymbolId {
-        let mut name = b".weak.".to_vec();
-        name.extend(symbol.name.iter());
-
-        // find a defined, non-COMDAT external symbol for deriving the weak
-        // default symbol name. This matches what LLVM and MinGW GCC do
-        for unique_symbol in self.symbols.iter() {
-            if unique_symbol.weak
-                || !(unique_symbol.scope == SymbolScope::Linkage
-                    || unique_symbol.scope == SymbolScope::Dynamic)
-            {
-                continue;
-            }
-
-            match unique_symbol.section {
-                SymbolSection::Absolute => (),
-                SymbolSection::Section(section_id) => {
-                    if self
-                        .comdats
-                        .iter()
-                        .any(|comdat| comdat.sections.contains(&section_id))
-                    {
-                        continue;
-                    }
-                }
-                _ => continue,
-            }
-
-            name.push(b'.');
-            name.extend(unique_symbol.name.iter());
-
-            break;
-        }
-
-        let mut value = symbol.value;
-        let mut section = symbol.section;
-
-        // the default symbol for undefined weak externals are absolute symbols
-        // with the value set to 0
-        if symbol.section == SymbolSection::Undefined {
-            section = SymbolSection::Absolute;
-            value = 0;
-        }
-
-        let weak_default_id = self.add_raw_symbol(Symbol {
-            name,
-            value,
-            size: symbol.size,
-            // the default symbol has a base type of `IMAGE_SYM_TYPE_NULL`.
-            kind: SymbolKind::Data,
-            scope: SymbolScope::Linkage,
-            weak: false,
-            section,
-            flags: SymbolFlags::None,
-        });
-
-        // the weak symbol should be undefined, externally scoped and have a
-        // value of 0
-        symbol.section = SymbolSection::Undefined;
-        symbol.scope = SymbolScope::Linkage;
-        symbol.value = 0;
-
-        let symbol_id = self.add_raw_symbol(symbol);
-        self.weak_default_symbols.insert(symbol_id, weak_default_id);
-        symbol_id
-    }
-
     /// Appends linker directives to the `.drectve` section to tell the linker
     /// to export all symbols with `SymbolScope::Dynamic`.
     ///
@@ -505,9 +438,90 @@ impl<'a> Object<'a> {
             }
         }
 
+        // Prepare creation of weak default symbols
+        let weak_symbol_count = self.symbols.iter().filter(|symbol| symbol.weak).count();
+        let mut weak_default_names = HashMap::new();
+        let mut weak_default_offsets = HashMap::new();
+
+        if weak_symbol_count > 0 {
+            weak_default_names.reserve(weak_symbol_count);
+            weak_default_offsets.reserve(weak_symbol_count);
+
+            let defined_external_symbol = |symbol: &&Symbol| -> bool {
+                !symbol.weak
+                    && (symbol.scope == SymbolScope::Linkage
+                        || symbol.scope == SymbolScope::Dynamic)
+                    && (matches!(symbol.section, SymbolSection::Section(_))
+                        || matches!(symbol.section, SymbolSection::Absolute))
+            };
+
+            let mut weak_default_unique_name = Default::default();
+
+            // search for an external symbol defined in a non-COMDAT section to
+            // use for the weak default names
+            for symbol in self.symbols.iter().filter(defined_external_symbol) {
+                let SymbolSection::Section(section_id) = symbol.section else {
+                    weak_default_unique_name = &*symbol.name;
+                    break;
+                };
+
+                if !self
+                    .comdats
+                    .iter()
+                    .flat_map(|comdat| comdat.sections.iter())
+                    .any(|comdat_section| *comdat_section == section_id)
+                {
+                    weak_default_unique_name = &*symbol.name;
+                    break;
+                }
+            }
+
+            // fallback to also include COMDAT defined symbols
+            if weak_default_unique_name.is_empty() {
+                for symbol in self.symbols.iter().filter(defined_external_symbol) {
+                    if matches!(symbol.section, SymbolSection::Section(_)) {
+                        weak_default_unique_name = &*symbol.name;
+                        break;
+                    }
+                }
+            }
+
+            // create and store the names for the weak default symbols
+            for (index, symbol) in self
+                .symbols
+                .iter()
+                .enumerate()
+                .filter(|(_, symbol)| symbol.weak)
+            {
+                let mut weak_default_name = [b".weak.", symbol.name.as_slice()].concat();
+                if !weak_default_unique_name.is_empty() {
+                    weak_default_name.push(b'.');
+                    weak_default_name.extend(weak_default_unique_name);
+                }
+
+                weak_default_names.insert(index, weak_default_name);
+            }
+        }
+
         // Reserve symbol indices and add symbol strings to strtab.
         let mut symbol_offsets = vec![SymbolOffsets::default(); self.symbols.len()];
         for (index, symbol) in self.symbols.iter().enumerate() {
+            if symbol.weak {
+                // Reserve the weak default symbol
+                let weak_default_name = weak_default_names.get(&index).unwrap_or_else(|| {
+                    unreachable!("weak default symbol name should have been created")
+                });
+
+                weak_default_offsets.insert(
+                    index,
+                    SymbolOffsets {
+                        name: writer.add_name(weak_default_name.as_slice()),
+                        index: writer.reserve_symbol_index(),
+                        aux_count: 0,
+                    },
+                );
+            }
+
             symbol_offsets[index].index = writer.reserve_symbol_index();
             let mut name = &*symbol.name;
             match symbol.kind {
@@ -651,6 +665,8 @@ impl<'a> Object<'a> {
                     debug_assert_eq!(symbol.kind, SymbolKind::File);
                     coff::IMAGE_SYM_DEBUG as u16
                 }
+                // weak symbols are always undefined
+                _ if symbol.weak => coff::IMAGE_SYM_UNDEFINED as u16,
                 SymbolSection::Undefined => coff::IMAGE_SYM_UNDEFINED as u16,
                 SymbolSection::Absolute => coff::IMAGE_SYM_ABSOLUTE as u16,
                 SymbolSection::Common => coff::IMAGE_SYM_UNDEFINED as u16,
@@ -678,7 +694,7 @@ impl<'a> Object<'a> {
                             symbol.name().unwrap_or("")
                         )));
                     }
-                    SymbolSection::Undefined if symbol.weak => coff::IMAGE_SYM_CLASS_WEAK_EXTERNAL,
+                    _ if symbol.weak => coff::IMAGE_SYM_CLASS_WEAK_EXTERNAL,
                     SymbolSection::Undefined | SymbolSection::Common => {
                         coff::IMAGE_SYM_CLASS_EXTERNAL
                     }
@@ -705,11 +721,40 @@ impl<'a> Object<'a> {
                 }
             };
             let number_of_aux_symbols = symbol_offsets[index].aux_count;
-            let value = if symbol.section == SymbolSection::Common {
+            let value = if symbol.weak {
+                // weak symbols should have a value of 0
+                0
+            } else if symbol.section == SymbolSection::Common {
                 symbol.size as u32
             } else {
                 symbol.value as u32
             };
+
+            // write the weak default symbol before the weak symbol
+            if symbol.weak {
+                let weak_default_symbol = weak_default_offsets.get(&index).unwrap_or_else(|| {
+                    unreachable!("weak symbol should have a weak default offset")
+                });
+
+                writer.write_symbol(writer::Symbol {
+                    name: weak_default_symbol.name,
+                    value: symbol.value as u32,
+                    section_number: match symbol.section {
+                        SymbolSection::Section(id) => id.0 as u16 + 1,
+                        SymbolSection::Undefined => coff::IMAGE_SYM_ABSOLUTE as u16,
+                        o => {
+                            return Err(Error(format!(
+                                "invalid symbol section for weak external `{}` section {o:?}",
+                                symbol.name().unwrap_or("")
+                            )));
+                        }
+                    },
+                    number_of_aux_symbols: 0,
+                    typ: 0,
+                    storage_class: coff::IMAGE_SYM_CLASS_EXTERNAL,
+                });
+            }
+
             writer.write_symbol(writer::Symbol {
                 name: symbol_offsets[index].name,
                 value,
@@ -742,17 +787,12 @@ impl<'a> Object<'a> {
                     });
                 }
                 _ if symbol.weak => {
-                    let default_symbol_id = self
-                        .weak_default_symbols
-                        .get(&SymbolId(index))
-                        .copied()
-                        .unwrap_or_else(|| {
-                            unreachable!(
-                                "weak external symbol should have an associated default symbol",
-                            );
+                    let weak_default_offset =
+                        weak_default_offsets.get(&index).unwrap_or_else(|| {
+                            unreachable!("weak symbol should have a weak default offset")
                         });
 
-                    let weak_default_sym_index = symbol_offsets[default_symbol_id.0].index;
+                    let weak_default_sym_index = weak_default_offset.index;
                     writer.write_aux_weak_external(writer::AuxSymbolWeak {
                         weak_default_sym_index,
                         weak_search_type: coff::IMAGE_WEAK_EXTERN_SEARCH_NOLIBRARY,

@@ -84,8 +84,6 @@ pub struct Object<'a> {
     pub mangling: Mangling,
     #[cfg(feature = "coff")]
     stub_symbols: HashMap<SymbolId, SymbolId>,
-    #[cfg(feature = "coff")]
-    weak_default_symbols: HashMap<SymbolId, SymbolId>,
     /// Mach-O "_tlv_bootstrap" symbol.
     #[cfg(feature = "macho")]
     tlv_bootstrap: Option<SymbolId>,
@@ -116,8 +114,6 @@ impl<'a> Object<'a> {
             mangling: Mangling::default(format, architecture),
             #[cfg(feature = "coff")]
             stub_symbols: HashMap::new(),
-            #[cfg(feature = "coff")]
-            weak_default_symbols: HashMap::new(),
             #[cfg(feature = "macho")]
             tlv_bootstrap: None,
             #[cfg(feature = "macho")]
@@ -438,24 +434,10 @@ impl<'a> Object<'a> {
             if let Some(prefix) = self.mangling.global_prefix() {
                 symbol.name.insert(0, prefix);
             }
-            #[cfg(feature = "coff")]
-            let symbol_id = if self.format == BinaryFormat::Coff && symbol.weak {
-                self.coff_add_weak_external(symbol)
-            } else {
-                self.add_raw_symbol(symbol)
-            };
-
-            #[cfg(not(feature = "coff"))]
             let symbol_id = self.add_raw_symbol(symbol);
-
             self.symbol_map.insert(unmangled_name, symbol_id);
             symbol_id
         } else {
-            #[cfg(feature = "coff")]
-            if self.format == BinaryFormat::Coff && symbol.weak {
-                return self.coff_add_weak_external(symbol);
-            }
-
             self.add_raw_symbol(symbol)
         }
     }
