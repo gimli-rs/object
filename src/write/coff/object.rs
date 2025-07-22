@@ -661,12 +661,12 @@ impl<'a> Object<'a> {
                 )));
             };
             let section_number = match symbol.section {
+                // weak symbols are always undefined
+                _ if symbol.weak => coff::IMAGE_SYM_UNDEFINED as u16,
                 SymbolSection::None => {
                     debug_assert_eq!(symbol.kind, SymbolKind::File);
                     coff::IMAGE_SYM_DEBUG as u16
                 }
-                // weak symbols are always undefined
-                _ if symbol.weak => coff::IMAGE_SYM_UNDEFINED as u16,
                 SymbolSection::Undefined => coff::IMAGE_SYM_UNDEFINED as u16,
                 SymbolSection::Absolute => coff::IMAGE_SYM_ABSOLUTE as u16,
                 SymbolSection::Common => coff::IMAGE_SYM_UNDEFINED as u16,
@@ -678,6 +678,7 @@ impl<'a> Object<'a> {
                 coff::IMAGE_SYM_TYPE_NULL
             };
             let storage_class = match symbol.kind {
+                _ if symbol.weak => coff::IMAGE_SYM_CLASS_WEAK_EXTERNAL,
                 SymbolKind::File => coff::IMAGE_SYM_CLASS_FILE,
                 SymbolKind::Section => {
                     if symbol.section.id().is_some() {
@@ -694,7 +695,6 @@ impl<'a> Object<'a> {
                             symbol.name().unwrap_or("")
                         )));
                     }
-                    _ if symbol.weak => coff::IMAGE_SYM_CLASS_WEAK_EXTERNAL,
                     SymbolSection::Undefined | SymbolSection::Common => {
                         coff::IMAGE_SYM_CLASS_EXTERNAL
                     }
@@ -766,6 +766,18 @@ impl<'a> Object<'a> {
 
             // Write auxiliary symbols.
             match symbol.kind {
+                _ if symbol.weak => {
+                    let weak_default_offset =
+                        weak_default_offsets.get(&index).unwrap_or_else(|| {
+                            unreachable!("weak symbol should have a weak default offset")
+                        });
+
+                    let weak_default_sym_index = weak_default_offset.index;
+                    writer.write_aux_weak_external(writer::AuxSymbolWeak {
+                        weak_default_sym_index,
+                        weak_search_type: coff::IMAGE_WEAK_EXTERN_SEARCH_NOLIBRARY,
+                    });
+                }
                 SymbolKind::File => {
                     writer.write_aux_file_name(&symbol.name, number_of_aux_symbols);
                 }
@@ -784,18 +796,6 @@ impl<'a> Object<'a> {
                         },
                         number: section_offsets[section_index].associative_section,
                         selection: section_offsets[section_index].selection,
-                    });
-                }
-                _ if symbol.weak => {
-                    let weak_default_offset =
-                        weak_default_offsets.get(&index).unwrap_or_else(|| {
-                            unreachable!("weak symbol should have a weak default offset")
-                        });
-
-                    let weak_default_sym_index = weak_default_offset.index;
-                    writer.write_aux_weak_external(writer::AuxSymbolWeak {
-                        weak_default_sym_index,
-                        weak_search_type: coff::IMAGE_WEAK_EXTERN_SEARCH_NOLIBRARY,
                     });
                 }
                 _ => {
