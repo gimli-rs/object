@@ -438,12 +438,96 @@ impl<'a> Object<'a> {
             }
         }
 
+        // Prepare creation of weak default symbols
+        let weak_symbol_count = self.symbols.iter().filter(|symbol| symbol.weak).count();
+        let mut weak_default_names = HashMap::new();
+        let mut weak_default_offsets = HashMap::new();
+
+        if weak_symbol_count > 0 {
+            weak_default_names.reserve(weak_symbol_count);
+            weak_default_offsets.reserve(weak_symbol_count);
+
+            let defined_external_symbol = |symbol: &&Symbol| -> bool {
+                !symbol.weak
+                    && (symbol.scope == SymbolScope::Linkage
+                        || symbol.scope == SymbolScope::Dynamic)
+                    && (matches!(symbol.section, SymbolSection::Section(_))
+                        || matches!(symbol.section, SymbolSection::Absolute))
+            };
+
+            let mut weak_default_unique_name = Default::default();
+
+            // search for an external symbol defined in a non-COMDAT section to
+            // use for the weak default names
+            for symbol in self.symbols.iter().filter(defined_external_symbol) {
+                let SymbolSection::Section(section_id) = symbol.section else {
+                    weak_default_unique_name = &*symbol.name;
+                    break;
+                };
+
+                if !self
+                    .comdats
+                    .iter()
+                    .flat_map(|comdat| comdat.sections.iter())
+                    .any(|comdat_section| *comdat_section == section_id)
+                {
+                    weak_default_unique_name = &*symbol.name;
+                    break;
+                }
+            }
+
+            // fallback to also include COMDAT defined symbols
+            if weak_default_unique_name.is_empty() {
+                for symbol in self.symbols.iter().filter(defined_external_symbol) {
+                    if matches!(symbol.section, SymbolSection::Section(_)) {
+                        weak_default_unique_name = &*symbol.name;
+                        break;
+                    }
+                }
+            }
+
+            // create and store the names for the weak default symbols
+            for (index, symbol) in self
+                .symbols
+                .iter()
+                .enumerate()
+                .filter(|(_, symbol)| symbol.weak)
+            {
+                let mut weak_default_name = [b".weak.", symbol.name.as_slice()].concat();
+                if !weak_default_unique_name.is_empty() {
+                    weak_default_name.push(b'.');
+                    weak_default_name.extend(weak_default_unique_name);
+                }
+
+                weak_default_names.insert(index, weak_default_name);
+            }
+        }
+
         // Reserve symbol indices and add symbol strings to strtab.
         let mut symbol_offsets = vec![SymbolOffsets::default(); self.symbols.len()];
         for (index, symbol) in self.symbols.iter().enumerate() {
+            if symbol.weak {
+                // Reserve the weak default symbol
+                let weak_default_name = weak_default_names.get(&index).unwrap_or_else(|| {
+                    unreachable!("weak default symbol name should have been created")
+                });
+
+                weak_default_offsets.insert(
+                    index,
+                    SymbolOffsets {
+                        name: writer.add_name(weak_default_name.as_slice()),
+                        index: writer.reserve_symbol_index(),
+                        aux_count: 0,
+                    },
+                );
+            }
+
             symbol_offsets[index].index = writer.reserve_symbol_index();
             let mut name = &*symbol.name;
             match symbol.kind {
+                _ if symbol.weak => {
+                    symbol_offsets[index].aux_count = writer.reserve_aux_weak_external();
+                }
                 SymbolKind::File => {
                     // Name goes in auxiliary symbol records.
                     symbol_offsets[index].aux_count = writer.reserve_aux_file_name(&symbol.name);
@@ -577,6 +661,8 @@ impl<'a> Object<'a> {
                 )));
             };
             let section_number = match symbol.section {
+                // weak symbols are always undefined
+                _ if symbol.weak => coff::IMAGE_SYM_UNDEFINED as u16,
                 SymbolSection::None => {
                     debug_assert_eq!(symbol.kind, SymbolKind::File);
                     coff::IMAGE_SYM_DEBUG as u16
@@ -592,6 +678,7 @@ impl<'a> Object<'a> {
                 coff::IMAGE_SYM_TYPE_NULL
             };
             let storage_class = match symbol.kind {
+                _ if symbol.weak => coff::IMAGE_SYM_CLASS_WEAK_EXTERNAL,
                 SymbolKind::File => coff::IMAGE_SYM_CLASS_FILE,
                 SymbolKind::Section => {
                     if symbol.section.id().is_some() {
@@ -601,36 +688,30 @@ impl<'a> Object<'a> {
                     }
                 }
                 SymbolKind::Label => coff::IMAGE_SYM_CLASS_LABEL,
-                SymbolKind::Text | SymbolKind::Data | SymbolKind::Tls => {
-                    match symbol.section {
-                        SymbolSection::None => {
+                SymbolKind::Text | SymbolKind::Data | SymbolKind::Tls => match symbol.section {
+                    SymbolSection::None => {
+                        return Err(Error(format!(
+                            "missing section for symbol `{}`",
+                            symbol.name().unwrap_or("")
+                        )));
+                    }
+                    SymbolSection::Undefined | SymbolSection::Common => {
+                        coff::IMAGE_SYM_CLASS_EXTERNAL
+                    }
+                    SymbolSection::Absolute | SymbolSection::Section(_) => match symbol.scope {
+                        SymbolScope::Unknown => {
                             return Err(Error(format!(
-                                "missing section for symbol `{}`",
-                                symbol.name().unwrap_or("")
+                                "unimplemented symbol `{}` scope {:?}",
+                                symbol.name().unwrap_or(""),
+                                symbol.scope
                             )));
                         }
-                        SymbolSection::Undefined | SymbolSection::Common => {
+                        SymbolScope::Compilation => coff::IMAGE_SYM_CLASS_STATIC,
+                        SymbolScope::Linkage | SymbolScope::Dynamic => {
                             coff::IMAGE_SYM_CLASS_EXTERNAL
                         }
-                        SymbolSection::Absolute | SymbolSection::Section(_) => {
-                            match symbol.scope {
-                                // TODO: does this need aux symbol records too?
-                                _ if symbol.weak => coff::IMAGE_SYM_CLASS_WEAK_EXTERNAL,
-                                SymbolScope::Unknown => {
-                                    return Err(Error(format!(
-                                        "unimplemented symbol `{}` scope {:?}",
-                                        symbol.name().unwrap_or(""),
-                                        symbol.scope
-                                    )));
-                                }
-                                SymbolScope::Compilation => coff::IMAGE_SYM_CLASS_STATIC,
-                                SymbolScope::Linkage | SymbolScope::Dynamic => {
-                                    coff::IMAGE_SYM_CLASS_EXTERNAL
-                                }
-                            }
-                        }
-                    }
-                }
+                    },
+                },
                 SymbolKind::Unknown => {
                     return Err(Error(format!(
                         "unimplemented symbol `{}` kind {:?}",
@@ -640,11 +721,40 @@ impl<'a> Object<'a> {
                 }
             };
             let number_of_aux_symbols = symbol_offsets[index].aux_count;
-            let value = if symbol.section == SymbolSection::Common {
+            let value = if symbol.weak {
+                // weak symbols should have a value of 0
+                0
+            } else if symbol.section == SymbolSection::Common {
                 symbol.size as u32
             } else {
                 symbol.value as u32
             };
+
+            // write the weak default symbol before the weak symbol
+            if symbol.weak {
+                let weak_default_symbol = weak_default_offsets.get(&index).unwrap_or_else(|| {
+                    unreachable!("weak symbol should have a weak default offset")
+                });
+
+                writer.write_symbol(writer::Symbol {
+                    name: weak_default_symbol.name,
+                    value: symbol.value as u32,
+                    section_number: match symbol.section {
+                        SymbolSection::Section(id) => id.0 as u16 + 1,
+                        SymbolSection::Undefined => coff::IMAGE_SYM_ABSOLUTE as u16,
+                        o => {
+                            return Err(Error(format!(
+                                "invalid symbol section for weak external `{}` section {o:?}",
+                                symbol.name().unwrap_or("")
+                            )));
+                        }
+                    },
+                    number_of_aux_symbols: 0,
+                    typ: 0,
+                    storage_class: coff::IMAGE_SYM_CLASS_EXTERNAL,
+                });
+            }
+
             writer.write_symbol(writer::Symbol {
                 name: symbol_offsets[index].name,
                 value,
@@ -656,6 +766,18 @@ impl<'a> Object<'a> {
 
             // Write auxiliary symbols.
             match symbol.kind {
+                _ if symbol.weak => {
+                    let weak_default_offset =
+                        weak_default_offsets.get(&index).unwrap_or_else(|| {
+                            unreachable!("weak symbol should have a weak default offset")
+                        });
+
+                    let weak_default_sym_index = weak_default_offset.index;
+                    writer.write_aux_weak_external(writer::AuxSymbolWeak {
+                        weak_default_sym_index,
+                        weak_search_type: coff::IMAGE_WEAK_EXTERN_SEARCH_NOLIBRARY,
+                    });
+                }
                 SymbolKind::File => {
                     writer.write_aux_file_name(&symbol.name, number_of_aux_symbols);
                 }
