@@ -525,6 +525,9 @@ impl<'a> Object<'a> {
             symbol_offsets[index].index = writer.reserve_symbol_index();
             let mut name = &*symbol.name;
             match symbol.kind {
+                _ if symbol.weak => {
+                    symbol_offsets[index].aux_count = writer.reserve_aux_weak_external();
+                }
                 SymbolKind::File => {
                     // Name goes in auxiliary symbol records.
                     symbol_offsets[index].aux_count = writer.reserve_aux_file_name(&symbol.name);
@@ -532,9 +535,6 @@ impl<'a> Object<'a> {
                 }
                 SymbolKind::Section if symbol.section.id().is_some() => {
                     symbol_offsets[index].aux_count = writer.reserve_aux_section();
-                }
-                _ if symbol.weak => {
-                    symbol_offsets[index].aux_count = writer.reserve_aux_weak_external();
                 }
                 _ => {}
             };
