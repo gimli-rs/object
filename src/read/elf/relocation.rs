@@ -415,6 +415,11 @@ fn parse_relocation<Elf: FileHeader>(
             elf::R_MSP430_16_BYTE => (K::Absolute, g, 16),
             _ => unknown,
         },
+        elf::EM_PARISC => match r_type {
+            elf::R_PARISC_DIR32 => (K::Absolute, g, 32),
+            elf::R_PARISC_PCREL32 => (K::Relative, g, 32),
+            _ => unknown,
+        },
         elf::EM_PPC => match r_type {
             elf::R_PPC_ADDR32 => (K::Absolute, g, 32),
             _ => unknown,

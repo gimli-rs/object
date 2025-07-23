@@ -268,6 +268,7 @@ where
             }
             (elf::EM_MIPS, true) => Architecture::Mips64,
             (elf::EM_MSP430, _) => Architecture::Msp430,
+            (elf::EM_PARISC, _) => Architecture::Hppa,
             (elf::EM_PPC, _) => Architecture::PowerPc,
             (elf::EM_PPC64, _) => Architecture::PowerPc64,
             (elf::EM_RISCV, false) => Architecture::Riscv32,

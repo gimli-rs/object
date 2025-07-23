@@ -208,6 +208,7 @@ impl<'a> Object<'a> {
             Architecture::I386 => false,
             Architecture::X86_64 => true,
             Architecture::X86_64_X32 => true,
+            Architecture::Hppa => false,
             Architecture::Hexagon => true,
             Architecture::LoongArch32 => true,
             Architecture::LoongArch64 => true,
@@ -332,6 +333,11 @@ impl<'a> Object<'a> {
                 (K::Relative, _, 16) => elf::R_X86_64_PC16,
                 (K::Absolute, _, 8) => elf::R_X86_64_8,
                 (K::Relative, _, 8) => elf::R_X86_64_PC8,
+                _ => return unsupported_reloc(),
+            },
+            Architecture::Hppa => match (kind, encoding, size) {
+                (K::Absolute, _, 32) => elf::R_PARISC_DIR32,
+                (K::Relative, _, 32) => elf::R_PARISC_PCREL32,
                 _ => return unsupported_reloc(),
             },
             Architecture::Hexagon => match (kind, encoding, size) {
@@ -658,6 +664,7 @@ impl<'a> Object<'a> {
             (Architecture::I386, None) => elf::EM_386,
             (Architecture::X86_64, None) => elf::EM_X86_64,
             (Architecture::X86_64_X32, None) => elf::EM_X86_64,
+            (Architecture::Hppa, None) => elf::EM_PARISC,
             (Architecture::Hexagon, None) => elf::EM_HEXAGON,
             (Architecture::LoongArch32, None) => elf::EM_LOONGARCH,
             (Architecture::LoongArch64, None) => elf::EM_LOONGARCH,
