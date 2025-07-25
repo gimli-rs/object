@@ -37,7 +37,7 @@ enum SectionId {
 // Update this constant when adding new section id:
 const MAX_SECTION_ID: usize = SectionId::Tag as usize;
 
-/// A WebAssembly object file.
+/// A WebAssembly module.
 #[derive(Debug)]
 pub struct WasmFile<'data, R = &'data [u8]> {
     data: &'data [u8],
@@ -75,12 +75,65 @@ impl<T> ReadError<T> for wasmparser::Result<T> {
 }
 
 impl<'data, R: ReadRef<'data>> WasmFile<'data, R> {
+    /// Parse the modules in a Wasm component model file.
+    pub fn parse_component_file(data: R) -> Result<Vec<WasmFile<'data, R>>> {
+        let len = data.len().read_error("Unknown Wasm file size")?;
+        let data = data.read_bytes_at(0, len).read_error("Wasm read failed")?;
+        let mut modules = Vec::new();
+        let mut parser_data = data;
+        Self::parse_component(data, &mut modules, wp::Parser::new(0), &mut parser_data)?;
+        Ok(modules)
+    }
+
+    fn parse_component(
+        data: &'data [u8],
+        modules: &mut Vec<WasmFile<'data, R>>,
+        mut parser: wp::Parser,
+        parser_data: &mut &'data [u8],
+    ) -> Result<()> {
+        loop {
+            let payload = match parser
+                .parse(parser_data, true)
+                .read_error("Invalid Wasm section header")?
+            {
+                wp::Chunk::NeedMoreData(_) => unreachable!(),
+                wp::Chunk::Parsed { payload, consumed } => {
+                    *parser_data = &parser_data[consumed..];
+                    payload
+                }
+            };
+
+            match payload {
+                wp::Payload::Version { encoding, .. } => {
+                    if encoding != wp::Encoding::Component {
+                        return Err(Error("Unsupported Wasm component encoding"));
+                    }
+                }
+                wp::Payload::ComponentSection { parser, .. } => {
+                    Self::parse_component(data, modules, parser, parser_data)?;
+                }
+                wp::Payload::ModuleSection { parser, .. } => {
+                    modules.push(Self::parse_module(data, parser, parser_data)?);
+                }
+                wp::Payload::End(_) => return Ok(()),
+                _ => {}
+            }
+        }
+    }
+
     /// Parse the raw wasm data.
     pub fn parse(data: R) -> Result<Self> {
         let len = data.len().read_error("Unknown Wasm file size")?;
         let data = data.read_bytes_at(0, len).read_error("Wasm read failed")?;
-        let parser = wp::Parser::new(0).parse_all(data);
+        let mut parser_data = data;
+        Self::parse_module(data, wp::Parser::new(0), &mut parser_data)
+    }
 
+    fn parse_module(
+        data: &'data [u8],
+        mut parser: wp::Parser,
+        parser_data: &mut &'data [u8],
+    ) -> Result<Self> {
         let mut file = WasmFile {
             data,
             has_memory64: false,
@@ -113,8 +166,17 @@ impl<'data, R: ReadRef<'data>> WasmFile<'data, R> {
         // One-to-one mapping of globals to their value (if the global is a constant integer).
         let mut global_values = Vec::new();
 
-        for payload in parser {
-            let payload = payload.read_error("Invalid Wasm section header")?;
+        loop {
+            let payload = match parser
+                .parse(parser_data, true)
+                .read_error("Invalid Wasm section header")?
+            {
+                wp::Chunk::NeedMoreData(_) => unreachable!(),
+                wp::Chunk::Parsed { payload, consumed } => {
+                    *parser_data = &parser_data[consumed..];
+                    payload
+                }
+            };
 
             match payload {
                 wp::Payload::Version { encoding, .. } => {
@@ -216,6 +278,7 @@ impl<'data, R: ReadRef<'data>> WasmFile<'data, R> {
                         file.has_debug_symbols = true;
                     }
                 }
+                wp::Payload::End(_) => break,
                 _ => {}
             }
         }

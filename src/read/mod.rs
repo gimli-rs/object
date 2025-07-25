@@ -268,6 +268,11 @@ pub enum FileKind {
     /// See [`wasm::WasmFile`].
     #[cfg(feature = "wasm")]
     Wasm,
+    /// A Wasm component file.
+    ///
+    /// See [`wasm::WasmFile::parse_component_file`].
+    #[cfg(feature = "wasm")]
+    WasmComponent,
     /// A 32-bit XCOFF file.
     ///
     /// See [`xcoff::XcoffFile32`].
@@ -317,6 +322,8 @@ impl FileKind {
             [0xca, 0xfe, 0xba, 0xbf, ..] => FileKind::MachOFat64,
             #[cfg(feature = "wasm")]
             [0x00, b'a', b's', b'm', _, _, 0x00, 0x00] => FileKind::Wasm,
+            #[cfg(feature = "wasm")]
+            [0x00, b'a', b's', b'm', _, _, 0x01, 0x00] => FileKind::WasmComponent,
             #[cfg(feature = "pe")]
             [b'M', b'Z', ..] if offset == 0 => {
                 // offset == 0 restriction is because optional_header_magic only looks at offset 0

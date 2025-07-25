@@ -78,6 +78,7 @@ pub fn print<W: Write, E: Write>(
             };
             dump_parsed_object(w, e, &file)?;
         }
+    } else if dump_wasm_component(w, e, file)? {
     } else {
         dump_object(w, e, file)?;
     }
@@ -101,6 +102,26 @@ fn find_member(member_names: &mut [(String, bool)], name: &[u8]) -> bool {
         }
         None => false,
     }
+}
+
+#[allow(unused_variables)]
+fn dump_wasm_component<W: Write, E: Write>(w: &mut W, e: &mut E, data: &[u8]) -> Result<bool> {
+    #[cfg(feature = "wasm")]
+    if FileKind::parse(data) == Ok(FileKind::WasmComponent) {
+        writeln!(w, "Format: Wasm component model")?;
+        match object::read::wasm::WasmFile::parse_component_file(data) {
+            Ok(modules) => {
+                for module in modules {
+                    writeln!(w)?;
+                    writeln!(w, "Wasm module")?;
+                    dump_parsed_object(w, e, &object::File::Wasm(module))?;
+                }
+            }
+            Err(err) => writeln!(e, "Failed to parse file: {}", err)?,
+        }
+        return Ok(true);
+    }
+    Ok(false)
 }
 
 fn dump_object<W: Write, E: Write>(w: &mut W, e: &mut E, data: &[u8]) -> Result<()> {
