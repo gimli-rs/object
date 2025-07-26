@@ -1,5 +1,6 @@
 use alloc::vec::Vec;
 
+use crate::endian::*;
 use crate::pe as coff;
 use crate::write::coff::writer;
 use crate::write::util::*;
@@ -254,6 +255,7 @@ impl<'a> Object<'a> {
                 coff::IMAGE_REL_AMD64_REL32_5 => 9,
                 _ => 0,
             },
+            Architecture::PowerPc | Architecture::PowerPc64 => 0,
             _ => return Err(Error(format!("unimplemented relocation {:?}", relocation))),
         };
         relocation.addend += offset;
@@ -553,14 +555,20 @@ impl<'a> Object<'a> {
 
         // Start writing.
         writer.write_file_header(writer::FileHeader {
-            machine: match (self.architecture, self.sub_architecture) {
-                (Architecture::Arm, None) => coff::IMAGE_FILE_MACHINE_ARMNT,
-                (Architecture::Aarch64, None) => coff::IMAGE_FILE_MACHINE_ARM64,
-                (Architecture::Aarch64, Some(SubArchitecture::Arm64EC)) => {
+            machine: match (self.architecture, self.sub_architecture, self.endian) {
+                (Architecture::Arm, None, _) => coff::IMAGE_FILE_MACHINE_ARMNT,
+                (Architecture::Aarch64, None, _) => coff::IMAGE_FILE_MACHINE_ARM64,
+                (Architecture::Aarch64, Some(SubArchitecture::Arm64EC), _) => {
                     coff::IMAGE_FILE_MACHINE_ARM64EC
                 }
-                (Architecture::I386, None) => coff::IMAGE_FILE_MACHINE_I386,
-                (Architecture::X86_64, None) => coff::IMAGE_FILE_MACHINE_AMD64,
+                (Architecture::I386, None, _) => coff::IMAGE_FILE_MACHINE_I386,
+                (Architecture::X86_64, None, _) => coff::IMAGE_FILE_MACHINE_AMD64,
+                (Architecture::PowerPc | Architecture::PowerPc64, None, Endianness::Little) => {
+                    coff::IMAGE_FILE_MACHINE_POWERPC
+                }
+                (Architecture::PowerPc | Architecture::PowerPc64, None, Endianness::Big) => {
+                    coff::IMAGE_FILE_MACHINE_POWERPCBE
+                }
                 _ => {
                     return Err(Error(format!(
                         "unimplemented architecture {:?} with sub-architecture {:?}",
@@ -687,7 +695,10 @@ impl<'a> Object<'a> {
                         coff::IMAGE_SYM_CLASS_SECTION
                     }
                 }
-                SymbolKind::Label => coff::IMAGE_SYM_CLASS_LABEL,
+                SymbolKind::Label => match symbol.section {
+                    SymbolSection::Undefined => coff::IMAGE_SYM_CLASS_EXTERNAL,
+                    _ => coff::IMAGE_SYM_CLASS_LABEL,
+                },
                 SymbolKind::Text | SymbolKind::Data | SymbolKind::Tls => match symbol.section {
                     SymbolSection::None => {
                         return Err(Error(format!(
