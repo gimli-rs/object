@@ -198,6 +198,7 @@ impl<'a> Object<'a> {
         Ok(match self.architecture {
             Architecture::Aarch64 => true,
             Architecture::Aarch64_Ilp32 => true,
+            Architecture::Alpha => true,
             Architecture::Arm => false,
             Architecture::Avr => true,
             Architecture::Bpf => false,
@@ -207,6 +208,7 @@ impl<'a> Object<'a> {
             Architecture::I386 => false,
             Architecture::X86_64 => true,
             Architecture::X86_64_X32 => true,
+            Architecture::Hppa => false,
             Architecture::Hexagon => true,
             Architecture::LoongArch32 => true,
             Architecture::LoongArch64 => true,
@@ -268,6 +270,16 @@ impl<'a> Object<'a> {
                 (K::Absolute, E::Generic, 32) => elf::R_AARCH64_P32_ABS32,
                 _ => return unsupported_reloc(),
             },
+            Architecture::Alpha => match (kind, encoding, size) {
+                // Absolute
+                (K::Absolute, _, 32) => elf::R_ALPHA_REFLONG,
+                (K::Absolute, _, 64) => elf::R_ALPHA_REFQUAD,
+                // Relative to the PC
+                (K::Relative, _, 16) => elf::R_ALPHA_SREL16,
+                (K::Relative, _, 32) => elf::R_ALPHA_SREL32,
+                (K::Relative, _, 64) => elf::R_ALPHA_SREL64,
+                _ => return unsupported_reloc(),
+            },
             Architecture::Arm => match (kind, encoding, size) {
                 (K::Absolute, _, 32) => elf::R_ARM_ABS32,
                 _ => return unsupported_reloc(),
@@ -321,6 +333,11 @@ impl<'a> Object<'a> {
                 (K::Relative, _, 16) => elf::R_X86_64_PC16,
                 (K::Absolute, _, 8) => elf::R_X86_64_8,
                 (K::Relative, _, 8) => elf::R_X86_64_PC8,
+                _ => return unsupported_reloc(),
+            },
+            Architecture::Hppa => match (kind, encoding, size) {
+                (K::Absolute, _, 32) => elf::R_PARISC_DIR32,
+                (K::Relative, _, 32) => elf::R_PARISC_PCREL32,
                 _ => return unsupported_reloc(),
             },
             Architecture::Hexagon => match (kind, encoding, size) {
@@ -637,6 +654,7 @@ impl<'a> Object<'a> {
         let e_machine = match (self.architecture, self.sub_architecture) {
             (Architecture::Aarch64, None) => elf::EM_AARCH64,
             (Architecture::Aarch64_Ilp32, None) => elf::EM_AARCH64,
+            (Architecture::Alpha, None) => elf::EM_ALPHA,
             (Architecture::Arm, None) => elf::EM_ARM,
             (Architecture::Avr, None) => elf::EM_AVR,
             (Architecture::Bpf, None) => elf::EM_BPF,
@@ -646,6 +664,7 @@ impl<'a> Object<'a> {
             (Architecture::I386, None) => elf::EM_386,
             (Architecture::X86_64, None) => elf::EM_X86_64,
             (Architecture::X86_64_X32, None) => elf::EM_X86_64,
+            (Architecture::Hppa, None) => elf::EM_PARISC,
             (Architecture::Hexagon, None) => elf::EM_HEXAGON,
             (Architecture::LoongArch32, None) => elf::EM_LOONGARCH,
             (Architecture::LoongArch64, None) => elf::EM_LOONGARCH,

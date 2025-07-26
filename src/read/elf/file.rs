@@ -245,6 +245,7 @@ where
         ) {
             (elf::EM_AARCH64, true) => Architecture::Aarch64,
             (elf::EM_AARCH64, false) => Architecture::Aarch64_Ilp32,
+            (elf::EM_ALPHA, true) => Architecture::Alpha,
             (elf::EM_ARM, _) => Architecture::Arm,
             (elf::EM_AVR, _) => Architecture::Avr,
             (elf::EM_BPF, _) => Architecture::Bpf,
@@ -267,6 +268,7 @@ where
             }
             (elf::EM_MIPS, true) => Architecture::Mips64,
             (elf::EM_MSP430, _) => Architecture::Msp430,
+            (elf::EM_PARISC, _) => Architecture::Hppa,
             (elf::EM_PPC, _) => Architecture::PowerPc,
             (elf::EM_PPC64, _) => Architecture::PowerPc64,
             (elf::EM_RISCV, false) => Architecture::Riscv32,

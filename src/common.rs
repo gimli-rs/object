@@ -7,6 +7,7 @@ pub enum Architecture {
     Aarch64,
     #[allow(non_camel_case_types)]
     Aarch64_Ilp32,
+    Alpha,
     Arm,
     Avr,
     Bpf,
@@ -18,6 +19,7 @@ pub enum Architecture {
     #[allow(non_camel_case_types)]
     X86_64_X32,
     Hexagon,
+    Hppa,
     LoongArch32,
     LoongArch64,
     M68k,
@@ -60,6 +62,7 @@ impl Architecture {
             Architecture::Unknown => None,
             Architecture::Aarch64 => Some(AddressSize::U64),
             Architecture::Aarch64_Ilp32 => Some(AddressSize::U32),
+            Architecture::Alpha => Some(AddressSize::U64),
             Architecture::Arm => Some(AddressSize::U32),
             Architecture::Avr => Some(AddressSize::U8),
             Architecture::Bpf => Some(AddressSize::U64),
@@ -70,6 +73,7 @@ impl Architecture {
             Architecture::X86_64 => Some(AddressSize::U64),
             Architecture::X86_64_X32 => Some(AddressSize::U32),
             Architecture::Hexagon => Some(AddressSize::U32),
+            Architecture::Hppa => Some(AddressSize::U32),
             Architecture::LoongArch32 => Some(AddressSize::U32),
             Architecture::LoongArch64 => Some(AddressSize::U64),
             Architecture::M68k => Some(AddressSize::U32),
