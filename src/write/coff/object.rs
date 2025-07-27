@@ -695,6 +695,7 @@ impl<'a> Object<'a> {
                         coff::IMAGE_SYM_CLASS_SECTION
                     }
                 }
+                SymbolKind::Label => coff::IMAGE_SYM_CLASS_LABEL,
                 SymbolKind::Label => match symbol.section {
                     SymbolSection::Undefined => coff::IMAGE_SYM_CLASS_EXTERNAL,
                     _ => coff::IMAGE_SYM_CLASS_LABEL,
@@ -723,13 +724,16 @@ impl<'a> Object<'a> {
                         }
                     },
                 },
-                SymbolKind::Unknown => {
-                    return Err(Error(format!(
-                        "unimplemented symbol `{}` kind {:?}",
-                        symbol.name().unwrap_or(""),
-                        symbol.kind
-                    )));
-                }
+                SymbolKind::Unknown => match symbol.section {
+                    SymbolSection::Undefined => coff::IMAGE_SYM_CLASS_EXTERNAL,
+                    _ => {
+                        return Err(Error(format!(
+                            "unimplemented symbol `{}` kind {:?}",
+                            symbol.name().unwrap_or(""),
+                            symbol.kind
+                        )))
+                    }
+                },
             };
             let number_of_aux_symbols = symbol_offsets[index].aux_count;
             let value = if symbol.weak {
