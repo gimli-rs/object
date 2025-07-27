@@ -696,10 +696,6 @@ impl<'a> Object<'a> {
                     }
                 }
                 SymbolKind::Label => coff::IMAGE_SYM_CLASS_LABEL,
-                SymbolKind::Label => match symbol.section {
-                    SymbolSection::Undefined => coff::IMAGE_SYM_CLASS_EXTERNAL,
-                    _ => coff::IMAGE_SYM_CLASS_LABEL,
-                },
                 SymbolKind::Text | SymbolKind::Data | SymbolKind::Tls => match symbol.section {
                     SymbolSection::None => {
                         return Err(Error(format!(
