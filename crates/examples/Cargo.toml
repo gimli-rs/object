@@ -56,3 +56,8 @@ required-features = ["read"]
 [[bin]]
 name = "simple_write"
 required-features = ["write"]
+
+[lints.clippy]
+nonminimal_bool = "allow"
+single_match = "allow"
+uninlined_format_args = "allow"
