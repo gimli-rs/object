@@ -39,3 +39,6 @@ doc = []
 name = "object-rewrite"
 path = "src/main.rs"
 required-features = ["cli"]
+
+[lints.clippy]
+uninlined_format_args = "allow"

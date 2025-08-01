@@ -113,6 +113,24 @@ unstable-all = ["all", "unstable"]
 # stable interface of this crate.
 rustc-dep-of-std = ['core', 'alloc', 'memchr/rustc-dep-of-std']
 
+[lints.clippy]
+# Style.
+collapsible_else_if = "allow"
+collapsible_if = "allow"
+collapsible_match = "allow"
+comparison_chain = "allow"
+field_reassign_with_default = "allow"
+manual_flatten = "allow"
+match_like_matches_macro = "allow"
+needless_lifetimes = "allow"
+single_match = "allow"
+type_complexity = "allow"
+uninlined_format_args = "allow"
+# Occurs due to fallible iteration.
+should_implement_trait = "allow"
+# Unit errors are converted to other types by callers.
+result_unit_err = "allow"
+
 [workspace]
 members = ["crates/*"]
 default-members = [".", "crates/examples"]
