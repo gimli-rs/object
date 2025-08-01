@@ -2,6 +2,49 @@
 
 --------------------------------------------------------------------------------
 
+## 0.37.2
+
+Released 2025/08/01.
+
+### Added
+
+* Added `elf::EF_RISCV_RV64ILP32`.
+  [#779](https://github.com/gimli-rs/object/pull/779)
+
+* Added `pe::IMAGE_FILE_MACHINE_POWERPCBE` and associated read support.
+  [#783](https://github.com/gimli-rs/object/pull/783)
+
+* Added PowerPC support to `write::coff`.
+  [#795](https://github.com/gimli-rs/object/pull/795)
+
+* Added support for COFF auxiliary weak external symbols to `write::Object` and
+  `write::coff::Writer`.
+  [#791](https://github.com/gimli-rs/object/pull/791)
+
+* Added methods to `write::Object` to obtain default section and symbol flags.
+  [#789](https://github.com/gimli-rs/object/pull/789)
+
+* Added compact relocation support to `read::elf`.
+  [#782](https://github.com/gimli-rs/object/pull/782)
+  [#784](https://github.com/gimli-rs/object/pull/784)
+  [#785](https://github.com/gimli-rs/object/pull/785)
+  [#788](https://github.com/gimli-rs/object/pull/788)
+
+* Added `Architecture::Alpha`.
+  [#790](https://github.com/gimli-rs/object/pull/790)
+
+* Added `Architecture::Hppa`.
+  [#793](https://github.com/gimli-rs/object/pull/793)
+
+### Changed
+
+* Updated `wasmparser` dependency.
+
+* Changed `write::Object` to accept undefined symbols of unknown kind for COFF.
+  [#795](https://github.com/gimli-rs/object/pull/795)
+
+--------------------------------------------------------------------------------
+
 ## 0.37.1
 
 Released 2025/06/11.
