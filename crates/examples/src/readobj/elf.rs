@@ -1370,6 +1370,7 @@ const FLAGS_PT: &[Flag<u32>] = &flags!(
     PT_GNU_STACK,
     PT_GNU_RELRO,
     PT_GNU_PROPERTY,
+    PT_GNU_SFRAME
 );
 const FLAGS_PT_HP: &[Flag<u32>] = &flags!(
     PT_HP_TLS,
@@ -1431,6 +1432,7 @@ const FLAGS_SHT: &[Flag<u32>] = &flags!(
     SHT_SYMTAB_SHNDX,
     SHT_RELR,
     SHT_LLVM_DEPENDENT_LIBRARIES,
+    SHT_GNU_SFRAME,
     SHT_GNU_ATTRIBUTES,
     SHT_GNU_HASH,
     SHT_GNU_LIBLIST,
