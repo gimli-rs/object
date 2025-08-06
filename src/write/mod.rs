@@ -369,6 +369,22 @@ impl<'a> Object<'a> {
         }
     }
 
+    /// Mutably get the flags for a section.
+    ///
+    /// If `section.flags` is `SectionFlags::None`, then replace it with
+    /// [`Self::default_section_flags`] first.
+    /// Otherwise, `&mut section.flags` is returned as is.
+    pub fn section_flags_mut(&mut self, section_id: SectionId) -> &mut SectionFlags {
+        if self.section(section_id).flags != SectionFlags::None {
+            &mut self.section_mut(section_id).flags
+        } else {
+            let flags = self.default_section_flags(self.section(section_id));
+            let section = self.section_mut(section_id);
+            section.flags = flags;
+            &mut section.flags
+        }
+    }
+
     /// Get the COMDAT section group with the given `ComdatId`.
     #[inline]
     pub fn comdat(&self, comdat: ComdatId) -> &Comdat {
@@ -482,6 +498,25 @@ impl<'a> Object<'a> {
             symbol.flags
         } else {
             self.default_symbol_flags(symbol)
+        }
+    }
+
+    /// Mutably get the flags for a symbol.
+    ///
+    /// If `symbol.flags` is `SymbolFlags::None`, then replace it with
+    /// [`Self::default_symbol_flags`].
+    /// Otherwise, `&mut symbol.flags` is returned as is.
+    pub fn symbol_flags_mut(
+        &mut self,
+        symbol_id: SymbolId,
+    ) -> &mut SymbolFlags<SectionId, SymbolId> {
+        if self.symbol(symbol_id).flags != SymbolFlags::None {
+            &mut self.symbol_mut(symbol_id).flags
+        } else {
+            let flags = self.default_symbol_flags(self.symbol(symbol_id));
+            let symbol = self.symbol_mut(symbol_id);
+            symbol.flags = flags;
+            &mut symbol.flags
         }
     }
 
