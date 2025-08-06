@@ -460,9 +460,13 @@ fn print_section_rel<Elf: FileHeader>(
         return;
     }
     if let Some(Some((relocations, link))) = section.rel(endian, data).print_err(p) {
-        let symbols = sections
-            .symbol_table_by_index(endian, data, link)
-            .print_err(p);
+        let symbols = if link.0 != 0 {
+            sections
+                .symbol_table_by_index(endian, data, link)
+                .print_err(p)
+        } else {
+            None
+        };
         let proc = rel_flag_type(endian, elf);
         for relocation in relocations {
             p.group("Relocation", |p| {
@@ -487,9 +491,13 @@ fn print_section_rela<Elf: FileHeader>(
         return;
     }
     if let Some(Some((relocations, link))) = section.rela(endian, data).print_err(p) {
-        let symbols = sections
-            .symbol_table_by_index(endian, data, link)
-            .print_err(p);
+        let symbols = if link.0 != 0 {
+            sections
+                .symbol_table_by_index(endian, data, link)
+                .print_err(p)
+        } else {
+            None
+        };
         let proc = rel_flag_type(endian, elf);
         for relocation in relocations {
             p.group("Relocation", |p| {
@@ -593,9 +601,13 @@ fn print_section_crel<Elf: FileHeader>(
     }
 
     if let Some(Some((relocations, link))) = section.crel(endian, data).print_err(p) {
-        let symbols = sections
-            .symbol_table_by_index(endian, data, link)
-            .print_err(p);
+        let symbols = if link.0 != 0 {
+            sections
+                .symbol_table_by_index(endian, data, link)
+                .print_err(p)
+        } else {
+            None
+        };
         let proc = rel_flag_type(endian, elf);
         for relocation_result in relocations {
             let Some(relocation) = relocation_result.print_err(p) else {
