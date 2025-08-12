@@ -786,7 +786,7 @@ impl<'a> Object<'a> {
                     let weak_default_sym_index = weak_default_offset.index;
                     writer.write_aux_weak_external(writer::AuxSymbolWeak {
                         weak_default_sym_index,
-                        weak_search_type: coff::IMAGE_WEAK_EXTERN_SEARCH_NOLIBRARY,
+                        weak_search_type: coff::IMAGE_WEAK_EXTERN_SEARCH_ALIAS,
                     });
                 }
                 SymbolKind::File => {
