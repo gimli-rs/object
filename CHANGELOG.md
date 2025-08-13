@@ -2,6 +2,26 @@
 
 --------------------------------------------------------------------------------
 
+## 0.37.3
+
+Released 2025/08/13.
+
+### Changed
+
+* Fixed MSVC weak extern symbol support in `write::Object` by using
+  `IMAGE_WEAK_EXTERN_SEARCH_ALIAS`.
+  [#803](https://github.com/gimli-rs/object/pull/803)
+
+### Added
+
+* Added `elf::SHT_GNU_SFRAME` and `elf::PT_GNU_SFRAME`.
+  [#799](https://github.com/gimli-rs/object/pull/799)
+
+* Added `section_flags_mut` and `symbol_flags_mut` to `write::Object`.
+  [#801](https://github.com/gimli-rs/object/pull/801)
+
+--------------------------------------------------------------------------------
+
 ## 0.37.2
 
 Released 2025/08/01.
