@@ -34,8 +34,6 @@ pub struct OmfFile<'data, R: ReadRef<'data> = &'data [u8]> {
     externals: Vec<OmfSymbol<'data>>,
     /// Communal symbols from COMDEF
     communals: Vec<OmfSymbol<'data>>,
-    /// Weak externals from WKEXT comment records
-    weak_externals: Vec<OmfWeakExtern<'data>>,
     /// COMDAT sections
     comdats: Vec<OmfComdatData<'data>>,
     /// Name table (LNAMES/LLNAMES)
@@ -88,6 +86,8 @@ pub struct OmfSymbol<'data> {
     pub group_index: u16,
     /// Segment index (0 if external)
     pub segment_index: u16,
+    /// Frame number (for absolute symbols when segment_index == 0)
+    pub frame_number: u16,
     /// Offset within segment
     pub offset: u32,
     /// Type index (usually 0)
@@ -213,7 +213,6 @@ impl<'data, R: ReadRef<'data>> OmfFile<'data, R> {
             publics: Vec::new(),
             externals: Vec::new(),
             communals: Vec::new(),
-            weak_externals: Vec::new(),
             comdats: Vec::new(),
             names: Vec::new(),
             groups: Vec::new(),
@@ -637,10 +636,17 @@ impl<'data, R: ReadRef<'data>> OmfFile<'data, R> {
             omf::read_index(&data[offset..]).ok_or(Error("Invalid segment index"))?;
         offset += size;
 
-        // Skip frame number if segment index is 0
-        if segment_index == 0 {
+        // Read frame number if segment index is 0 (for absolute symbols)
+        let frame_number = if segment_index == 0 {
+            if offset + 2 > data.len() {
+                return Err(Error("Invalid frame number in PUBDEF"));
+            }
+            let frame = u16::from_le_bytes([data[offset], data[offset + 1]]);
             offset += 2;
-        }
+            frame
+        } else {
+            0
+        };
 
         // Parse public definitions
         while offset < data.len() {
@@ -682,6 +688,7 @@ impl<'data, R: ReadRef<'data>> OmfFile<'data, R> {
                 name,
                 group_index,
                 segment_index,
+                frame_number,
                 offset: pub_offset,
                 type_index,
                 kind: read::SymbolKind::Unknown, // Will be computed later
@@ -711,6 +718,7 @@ impl<'data, R: ReadRef<'data>> OmfFile<'data, R> {
                 name,
                 group_index: 0,
                 segment_index: 0,
+                frame_number: 0,
                 offset: 0,
                 type_index,
                 kind: read::SymbolKind::Unknown,
@@ -771,6 +779,7 @@ impl<'data, R: ReadRef<'data>> OmfFile<'data, R> {
                 name,
                 group_index: 0,
                 segment_index: 0,
+                frame_number: 0,
                 offset: communal_length, // Store size in offset field
                 type_index,
                 kind: read::SymbolKind::Data,
@@ -904,47 +913,7 @@ impl<'data, R: ReadRef<'data>> OmfFile<'data, R> {
         }
 
         let _comment_type = data[0]; // Usually 0x00 for non-purge, 0x40 for purge
-        let comment_class = data[1];
-
-        // Check for WKEXT (Weak Extern) comment class 0xA8
-        if comment_class == 0xA8 && data.len() > 2 {
-            self.parse_wkext(&data[2..])?;
-        }
-
-        Ok(())
-    }
-
-    fn parse_wkext(&mut self, data: &'data [u8]) -> Result<()> {
-        let mut offset = 0;
-
-        while offset + 2 <= data.len() {
-            // Parse weak extern index (index into EXTDEF)
-            let (weak_index, size) =
-                omf::read_index(&data[offset..]).ok_or(Error("Invalid WKEXT weak index"))?;
-            offset += size;
-
-            // Parse default resolution index
-            let (default_index, size) =
-                omf::read_index(&data[offset..]).ok_or(Error("Invalid WKEXT default index"))?;
-            offset += size;
-
-            // Look up names if indices are valid
-            let weak_name = weak_index
-                .checked_sub(1)
-                .and_then(|idx| self.externals.get(idx as usize).map(|s| s.name))
-                .unwrap_or(b"");
-            let default_name = default_index
-                .checked_sub(1)
-                .and_then(|idx| self.externals.get(idx as usize).map(|s| s.name))
-                .unwrap_or(b"");
-
-            self.weak_externals.push(OmfWeakExtern {
-                weak_symbol_index: weak_index,
-                default_symbol_index: default_index,
-                weak_name,
-                default_name,
-            });
-        }
+        let _comment_class = data[1];
 
         Ok(())
     }
