@@ -26,7 +26,13 @@ impl<'data> ObjectSymbol<'data> for OmfSymbol<'data> {
     }
 
     fn address(&self) -> u64 {
-        self.offset as u64
+        if self.segment_index == 0 && self.frame_number != 0 {
+            // For absolute symbols, compute the linear address from frame:offset
+            // Frame number is in paragraphs (16-byte units)
+            ((self.frame_number as u64) << 4) + (self.offset as u64)
+        } else {
+            self.offset as u64
+        }
     }
 
     fn size(&self) -> u64 {
@@ -39,30 +45,32 @@ impl<'data> ObjectSymbol<'data> for OmfSymbol<'data> {
 
     fn section(&self) -> SymbolSection {
         if self.segment_index == 0 {
-            SymbolSection::Undefined
+            if self.frame_number != 0 {
+                SymbolSection::Absolute
+            } else {
+                SymbolSection::Undefined
+            }
         } else {
             SymbolSection::Section(SectionIndex(self.segment_index as usize))
         }
     }
 
     fn is_undefined(&self) -> bool {
-        self.segment_index == 0
+        self.segment_index == 0 && self.frame_number == 0
     }
 
     fn is_definition(&self) -> bool {
-        self.segment_index != 0
+        self.segment_index != 0 || self.frame_number != 0
     }
 
     fn is_common(&self) -> bool {
-        // Communal symbols have segment_index == 0 but are not externals
-        // We identify them by checking if this is a communal symbol
-        // (communals are stored after externals in our symbol table)
-        self.segment_index == 0 && self.offset != 0
+        // Communal symbols have segment_index == 0, frame_number == 0, but offset != 0
+        // The offset field stores the size of the communal symbol
+        // This excludes both externals (offset == 0) and absolute symbols (frame_number != 0)
+        self.segment_index == 0 && self.frame_number == 0 && self.offset != 0
     }
 
     fn is_weak(&self) -> bool {
-        // Weak symbols would be marked via WKEXT comment records
-        // For now, we don't have a direct way to check this from the symbol alone
         false
     }
 

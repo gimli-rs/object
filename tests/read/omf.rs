@@ -65,7 +65,8 @@ fn test_lidata() {
     // With LIDATA support, we should have expanded data for the arrays
     assert!(
         total_data_size >= 200,
-        "Section data should be expanded from LIDATA, got {} bytes", total_data_size
+        "Section data should be expanded from LIDATA, got {} bytes",
+        total_data_size
     );
 }
 
