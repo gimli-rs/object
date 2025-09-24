@@ -92,6 +92,8 @@ pub mod archive;
 pub mod elf;
 #[cfg(feature = "macho")]
 pub mod macho;
+#[cfg(feature = "omf")]
+pub mod omf;
 #[cfg(any(feature = "coff", feature = "pe"))]
 pub mod pe;
 #[cfg(feature = "xcoff")]
