@@ -132,6 +132,7 @@ pub enum BinaryFormat {
     Pe,
     Wasm,
     Xcoff,
+    Omf,
 }
 
 impl BinaryFormat {

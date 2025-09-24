@@ -10,6 +10,8 @@ use crate::read::coff;
 use crate::read::elf;
 #[cfg(feature = "macho")]
 use crate::read::macho;
+#[cfg(feature = "omf")]
+use crate::read::omf;
 #[cfg(feature = "pe")]
 use crate::read::pe;
 #[cfg(feature = "wasm")]
@@ -52,6 +54,8 @@ macro_rules! with_inner {
             $enum::Xcoff32(ref $var) => $body,
             #[cfg(feature = "xcoff")]
             $enum::Xcoff64(ref $var) => $body,
+            #[cfg(feature = "omf")]
+            $enum::Omf(ref $var) => $body,
         }
     };
 }
@@ -81,6 +85,8 @@ macro_rules! with_inner_mut {
             $enum::Xcoff32(ref mut $var) => $body,
             #[cfg(feature = "xcoff")]
             $enum::Xcoff64(ref mut $var) => $body,
+            #[cfg(feature = "omf")]
+            $enum::Omf(ref mut $var) => $body,
         }
     };
 }
@@ -111,6 +117,8 @@ macro_rules! map_inner {
             $from::Xcoff32(ref $var) => $to::Xcoff32($body),
             #[cfg(feature = "xcoff")]
             $from::Xcoff64(ref $var) => $to::Xcoff64($body),
+            #[cfg(feature = "omf")]
+            $from::Omf(ref $var) => $to::Omf($body),
         }
     };
 }
@@ -141,6 +149,8 @@ macro_rules! map_inner_option {
             $from::Xcoff32(ref $var) => $body.map($to::Xcoff32),
             #[cfg(feature = "xcoff")]
             $from::Xcoff64(ref $var) => $body.map($to::Xcoff64),
+            #[cfg(feature = "omf")]
+            $from::Omf(ref $var) => $body.map($to::Omf),
         }
     };
 }
@@ -170,6 +180,8 @@ macro_rules! map_inner_option_mut {
             $from::Xcoff32(ref mut $var) => $body.map($to::Xcoff32),
             #[cfg(feature = "xcoff")]
             $from::Xcoff64(ref mut $var) => $body.map($to::Xcoff64),
+            #[cfg(feature = "omf")]
+            $from::Omf(ref mut $var) => $body.map($to::Omf),
         }
     };
 }
@@ -200,6 +212,8 @@ macro_rules! next_inner {
             $from::Xcoff32(ref mut iter) => iter.next().map($to::Xcoff32),
             #[cfg(feature = "xcoff")]
             $from::Xcoff64(ref mut iter) => iter.next().map($to::Xcoff64),
+            #[cfg(feature = "omf")]
+            $from::Omf(ref mut iter) => iter.next().map($to::Omf),
         }
     };
 }
@@ -233,6 +247,8 @@ pub enum File<'data, R: ReadRef<'data> = &'data [u8]> {
     Xcoff32(xcoff::XcoffFile32<'data, R>),
     #[cfg(feature = "xcoff")]
     Xcoff64(xcoff::XcoffFile64<'data, R>),
+    #[cfg(feature = "omf")]
+    Omf(omf::OmfFile<'data, R>),
 }
 
 impl<'data, R: ReadRef<'data>> File<'data, R> {
@@ -261,6 +277,8 @@ impl<'data, R: ReadRef<'data>> File<'data, R> {
             FileKind::Xcoff32 => File::Xcoff32(xcoff::XcoffFile32::parse(data)?),
             #[cfg(feature = "xcoff")]
             FileKind::Xcoff64 => File::Xcoff64(xcoff::XcoffFile64::parse(data)?),
+            #[cfg(feature = "omf")]
+            FileKind::Omf => File::Omf(omf::OmfFile::parse(data)?),
             #[allow(unreachable_patterns)]
             _ => return Err(Error("Unsupported file format")),
         })
@@ -297,6 +315,8 @@ impl<'data, R: ReadRef<'data>> File<'data, R> {
             File::Wasm(_) => BinaryFormat::Wasm,
             #[cfg(feature = "xcoff")]
             File::Xcoff32(_) | File::Xcoff64(_) => BinaryFormat::Xcoff,
+            #[cfg(feature = "omf")]
+            File::Omf(_) => BinaryFormat::Omf,
         }
     }
 }
@@ -557,6 +577,8 @@ enum SegmentIteratorInternal<'data, 'file, R: ReadRef<'data>> {
     Xcoff32(xcoff::XcoffSegmentIterator32<'data, 'file, R>),
     #[cfg(feature = "xcoff")]
     Xcoff64(xcoff::XcoffSegmentIterator64<'data, 'file, R>),
+    #[cfg(feature = "omf")]
+    Omf(omf::OmfSegmentIterator<'data, 'file, R>),
 }
 
 impl<'data, 'file, R: ReadRef<'data>> Iterator for SegmentIterator<'data, 'file, R> {
@@ -599,6 +621,8 @@ enum SegmentInternal<'data, 'file, R: ReadRef<'data>> {
     Xcoff32(xcoff::XcoffSegment32<'data, 'file, R>),
     #[cfg(feature = "xcoff")]
     Xcoff64(xcoff::XcoffSegment64<'data, 'file, R>),
+    #[cfg(feature = "omf")]
+    Omf(omf::OmfSegmentRef<'data, 'file, R>),
 }
 
 impl<'data, 'file, R: ReadRef<'data>> fmt::Debug for Segment<'data, 'file, R> {
@@ -691,6 +715,8 @@ enum SectionIteratorInternal<'data, 'file, R: ReadRef<'data>> {
     Xcoff32(xcoff::XcoffSectionIterator32<'data, 'file, R>),
     #[cfg(feature = "xcoff")]
     Xcoff64(xcoff::XcoffSectionIterator64<'data, 'file, R>),
+    #[cfg(feature = "omf")]
+    Omf(omf::OmfSectionIterator<'data, 'file, R>),
 }
 
 impl<'data, 'file, R: ReadRef<'data>> Iterator for SectionIterator<'data, 'file, R> {
@@ -732,6 +758,8 @@ enum SectionInternal<'data, 'file, R: ReadRef<'data>> {
     Xcoff32(xcoff::XcoffSection32<'data, 'file, R>),
     #[cfg(feature = "xcoff")]
     Xcoff64(xcoff::XcoffSection64<'data, 'file, R>),
+    #[cfg(feature = "omf")]
+    Omf(omf::OmfSection<'data, 'file, R>),
 }
 
 impl<'data, 'file, R: ReadRef<'data>> fmt::Debug for Section<'data, 'file, R> {
@@ -796,6 +824,10 @@ impl<'data, 'file, R: ReadRef<'data>> ObjectSection<'data> for Section<'data, 'f
 
     fn compressed_data(&self) -> Result<CompressedData<'data>> {
         with_inner!(self.inner, SectionInternal, |x| x.compressed_data())
+    }
+
+    fn uncompressed_data(&self) -> Result<alloc::borrow::Cow<'data, [u8]>> {
+        with_inner!(self.inner, SectionInternal, |x| x.uncompressed_data())
     }
 
     fn name_bytes(&self) -> Result<&'data [u8]> {
@@ -868,6 +900,8 @@ enum ComdatIteratorInternal<'data, 'file, R: ReadRef<'data>> {
     Xcoff32(xcoff::XcoffComdatIterator32<'data, 'file, R>),
     #[cfg(feature = "xcoff")]
     Xcoff64(xcoff::XcoffComdatIterator64<'data, 'file, R>),
+    #[cfg(feature = "omf")]
+    Omf(omf::OmfComdatIterator<'data, 'file, R>),
 }
 
 impl<'data, 'file, R: ReadRef<'data>> Iterator for ComdatIterator<'data, 'file, R> {
@@ -909,6 +943,8 @@ enum ComdatInternal<'data, 'file, R: ReadRef<'data>> {
     Xcoff32(xcoff::XcoffComdat32<'data, 'file, R>),
     #[cfg(feature = "xcoff")]
     Xcoff64(xcoff::XcoffComdat64<'data, 'file, R>),
+    #[cfg(feature = "omf")]
+    Omf(omf::OmfComdat<'data, 'file, R>),
 }
 
 impl<'data, 'file, R: ReadRef<'data>> fmt::Debug for Comdat<'data, 'file, R> {
@@ -984,6 +1020,8 @@ enum ComdatSectionIteratorInternal<'data, 'file, R: ReadRef<'data>> {
     Xcoff32(xcoff::XcoffComdatSectionIterator32<'data, 'file, R>),
     #[cfg(feature = "xcoff")]
     Xcoff64(xcoff::XcoffComdatSectionIterator64<'data, 'file, R>),
+    #[cfg(feature = "omf")]
+    Omf(omf::OmfComdatSectionIterator<'data, 'file, R>),
 }
 
 impl<'data, 'file, R: ReadRef<'data>> Iterator for ComdatSectionIterator<'data, 'file, R> {
@@ -1052,6 +1090,8 @@ where
     Xcoff32((xcoff::XcoffSymbolTable32<'data, 'file, R>, PhantomData<R>)),
     #[cfg(feature = "xcoff")]
     Xcoff64((xcoff::XcoffSymbolTable64<'data, 'file, R>, PhantomData<R>)),
+    #[cfg(feature = "omf")]
+    Omf((omf::OmfSymbolTable<'data, 'file, R>, PhantomData<R>)),
 }
 
 impl<'data, 'file, R: ReadRef<'data>> read::private::Sealed for SymbolTable<'data, 'file, R> {}
@@ -1146,6 +1186,8 @@ where
             PhantomData<R>,
         ),
     ),
+    #[cfg(feature = "omf")]
+    Omf((omf::OmfSymbolIterator<'data, 'file>, PhantomData<R>)),
 }
 
 impl<'data, 'file, R: ReadRef<'data>> Iterator for SymbolIterator<'data, 'file, R> {
@@ -1215,6 +1257,8 @@ where
     Xcoff32((xcoff::XcoffSymbol32<'data, 'file, R>, PhantomData<R>)),
     #[cfg(feature = "xcoff")]
     Xcoff64((xcoff::XcoffSymbol64<'data, 'file, R>, PhantomData<R>)),
+    #[cfg(feature = "omf")]
+    Omf((omf::OmfSymbol<'data>, PhantomData<R>)),
 }
 
 impl<'data, 'file, R: ReadRef<'data>> fmt::Debug for Symbol<'data, 'file, R> {
@@ -1363,6 +1407,8 @@ enum SectionRelocationIteratorInternal<'data, 'file, R: ReadRef<'data>> {
     Xcoff32(xcoff::XcoffRelocationIterator32<'data, 'file, R>),
     #[cfg(feature = "xcoff")]
     Xcoff64(xcoff::XcoffRelocationIterator64<'data, 'file, R>),
+    #[cfg(feature = "omf")]
+    Omf(omf::OmfRelocationIterator<'data, 'file, R>),
 }
 
 impl<'data, 'file, R: ReadRef<'data>> Iterator for SectionRelocationIterator<'data, 'file, R> {
