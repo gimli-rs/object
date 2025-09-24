@@ -9,14 +9,36 @@ use crate::read::{self, Error, ReadRef, Result};
 mod file;
 pub use file::*;
 
+mod relocation;
+pub use relocation::*;
+
 mod section;
 pub use section::*;
+
+mod segment;
+pub use segment::*;
 
 mod symbol;
 pub use symbol::*;
 
-mod relocation;
-pub use relocation::*;
+/// Symbol class for OMF symbols
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum OmfSymbolClass {
+    /// Public symbol (PUBDEF)
+    Public,
+    /// Local public symbol (LPUBDEF)
+    LocalPublic,
+    /// External symbol (EXTDEF)
+    External,
+    /// Local external symbol (LEXTDEF)
+    LocalExternal,
+    /// Communal symbol (COMDEF)
+    Communal,
+    /// Local communal symbol (LCOMDEF)
+    LocalCommunal,
+    /// COMDAT external symbol (CEXTDEF)
+    ComdatExternal,
+}
 
 /// An OMF object file.
 ///
@@ -28,12 +50,10 @@ pub struct OmfFile<'data, R: ReadRef<'data> = &'data [u8]> {
     module_name: Option<&'data str>,
     /// Segment definitions
     segments: Vec<OmfSegment<'data>>,
-    /// Public symbols
-    publics: Vec<OmfSymbol<'data>>,
-    /// External symbols
-    externals: Vec<OmfSymbol<'data>>,
-    /// Communal symbols from COMDEF
-    communals: Vec<OmfSymbol<'data>>,
+    /// All symbols (publics, externals, communals, locals) in occurrence order
+    symbols: Vec<OmfSymbol<'data>>,
+    /// Maps external-name table index (1-based) to SymbolIndex
+    external_order: Vec<read::SymbolIndex>,
     /// COMDAT sections
     comdats: Vec<OmfComdatData<'data>>,
     /// Name table (LNAMES/LLNAMES)
@@ -75,13 +95,15 @@ pub struct OmfSegment<'data> {
     pub relocations: Vec<OmfRelocation>,
 }
 
-/// An OMF symbol (public or external)
+/// An OMF symbol
 #[derive(Debug, Clone)]
 pub struct OmfSymbol<'data> {
     /// Symbol table index
     pub symbol_index: usize,
     /// Symbol name
     pub name: &'data [u8],
+    /// Symbol class (Public, External, etc.)
+    pub class: OmfSymbolClass,
     /// Group index (0 if none)
     pub group_index: u16,
     /// Segment index (0 if external)
@@ -154,19 +176,6 @@ pub enum OmfComdatSelection {
     ExactMatch = 3,
 }
 
-/// A weak extern definition
-#[derive(Debug, Clone)]
-pub struct OmfWeakExtern<'data> {
-    /// Weak symbol index (external symbol)
-    pub weak_symbol_index: u16,
-    /// Default resolution symbol index
-    pub default_symbol_index: u16,
-    /// Weak symbol name
-    pub weak_name: &'data [u8],
-    /// Default symbol name
-    pub default_name: &'data [u8],
-}
-
 /// Thread definition for FIXUPP parsing
 #[derive(Debug, Clone, Copy)]
 struct ThreadDef {
@@ -210,56 +219,42 @@ impl<'data, R: ReadRef<'data>> OmfFile<'data, R> {
             data,
             module_name: None,
             segments: Vec::new(),
-            publics: Vec::new(),
-            externals: Vec::new(),
-            communals: Vec::new(),
+            symbols: Vec::new(),
+            external_order: Vec::new(),
             comdats: Vec::new(),
             names: Vec::new(),
             groups: Vec::new(),
         };
 
         file.parse_records()?;
-        file.assign_symbol_indices();
+        file.assign_symbol_kinds();
         Ok(file)
     }
 
-    fn assign_symbol_indices(&mut self) {
-        let mut index = 0;
-
-        // First, compute kinds for public symbols based on their segments
-        let public_kinds = self
-            .publics
+    fn assign_symbol_kinds(&mut self) {
+        // Compute kinds for symbols based on their segments
+        let kinds: Vec<read::SymbolKind> = self
+            .symbols
             .iter()
-            .map(|sym| {
-                if sym.segment_index > 0 && (sym.segment_index as usize) <= self.segments.len() {
-                    let segment_idx = (sym.segment_index - 1) as usize;
-                    let section_kind = self.segment_section_kind(segment_idx);
-                    Self::symbol_kind_from_section_kind(section_kind)
-                } else {
-                    read::SymbolKind::Unknown
+            .map(|sym| match sym.class {
+                OmfSymbolClass::Public | OmfSymbolClass::LocalPublic => {
+                    if sym.segment_index > 0 && (sym.segment_index as usize) <= self.segments.len()
+                    {
+                        let segment_idx = (sym.segment_index - 1) as usize;
+                        let section_kind = self.segment_section_kind(segment_idx);
+                        Self::symbol_kind_from_section_kind(section_kind)
+                    } else {
+                        read::SymbolKind::Unknown
+                    }
                 }
+                OmfSymbolClass::Communal | OmfSymbolClass::LocalCommunal => read::SymbolKind::Data,
+                _ => read::SymbolKind::Unknown,
             })
-            .collect::<Vec<_>>();
+            .collect();
 
-        // Assign indices to public symbols and their pre-computed kinds
-        for (sym, kind) in self.publics.iter_mut().zip(public_kinds) {
-            sym.symbol_index = index;
+        // Apply computed kinds
+        for (sym, kind) in self.symbols.iter_mut().zip(kinds) {
             sym.kind = kind;
-            index += 1;
-        }
-
-        // Assign indices to external symbols
-        for sym in self.externals.iter_mut() {
-            sym.symbol_index = index;
-            sym.kind = read::SymbolKind::Unknown;
-            index += 1;
-        }
-
-        // Assign indices to communal symbols
-        for sym in self.communals.iter_mut() {
-            sym.symbol_index = index;
-            sym.kind = read::SymbolKind::Data;
-            index += 1;
         }
     }
 
@@ -273,7 +268,7 @@ impl<'data, R: ReadRef<'data>> OmfFile<'data, R> {
     }
 
     /// Get the section kind for a segment (reusing logic from OmfSection)
-    pub fn segment_section_kind(&self, segment_index: usize) -> read::SectionKind {
+    fn segment_section_kind(&self, segment_index: usize) -> read::SectionKind {
         if segment_index >= self.segments.len() {
             return read::SectionKind::Unknown;
         }
@@ -305,8 +300,11 @@ impl<'data, R: ReadRef<'data>> OmfFile<'data, R> {
                 return read::SectionKind::Text;
             } else if name_upper == b"_DATA" || name_upper == b"DATA" || name_upper == b".DATA" {
                 return read::SectionKind::Data;
-            } else if name_upper == b"_BSS" || name_upper == b"BSS" || name_upper == b".BSS"
-                || name_upper == b"STACK" {
+            } else if name_upper == b"_BSS"
+                || name_upper == b"BSS"
+                || name_upper == b".BSS"
+                || name_upper == b"STACK"
+            {
                 return read::SectionKind::UninitializedData;
             }
         }
@@ -431,13 +429,33 @@ impl<'data, R: ReadRef<'data>> OmfFile<'data, R> {
                     self.parse_grpdef(record_data)?;
                 }
                 omf::record_type::PUBDEF | omf::record_type::PUBDEF32 => {
-                    self.parse_pubdef(record_data, record_type == omf::record_type::PUBDEF32)?;
+                    self.parse_pubdef(
+                        record_data,
+                        record_type == omf::record_type::PUBDEF32,
+                        OmfSymbolClass::Public,
+                    )?;
+                }
+                omf::record_type::LPUBDEF | omf::record_type::LPUBDEF32 => {
+                    self.parse_pubdef(
+                        record_data,
+                        record_type == omf::record_type::LPUBDEF32,
+                        OmfSymbolClass::LocalPublic,
+                    )?;
                 }
                 omf::record_type::EXTDEF => {
-                    self.parse_extdef(record_data)?;
+                    self.parse_extdef(record_data, OmfSymbolClass::External)?;
+                }
+                omf::record_type::LEXTDEF | omf::record_type::LEXTDEF32 => {
+                    self.parse_extdef(record_data, OmfSymbolClass::LocalExternal)?;
+                }
+                omf::record_type::CEXTDEF => {
+                    self.parse_extdef(record_data, OmfSymbolClass::ComdatExternal)?;
                 }
                 omf::record_type::COMDEF => {
-                    self.parse_comdef(record_data)?;
+                    self.parse_comdef(record_data, OmfSymbolClass::Communal)?;
+                }
+                omf::record_type::LCOMDEF => {
+                    self.parse_comdef(record_data, OmfSymbolClass::LocalCommunal)?;
                 }
                 omf::record_type::COMDAT | omf::record_type::COMDAT32 => {
                     self.parse_comdat(record_data, record_type == omf::record_type::COMDAT32)?;
@@ -624,7 +642,12 @@ impl<'data, R: ReadRef<'data>> OmfFile<'data, R> {
         Ok(())
     }
 
-    fn parse_pubdef(&mut self, data: &'data [u8], is_32bit: bool) -> Result<()> {
+    fn parse_pubdef(
+        &mut self,
+        data: &'data [u8],
+        is_32bit: bool,
+        class: OmfSymbolClass,
+    ) -> Result<()> {
         let mut offset = 0;
 
         // Parse group index
@@ -680,12 +703,13 @@ impl<'data, R: ReadRef<'data>> OmfFile<'data, R> {
 
             // Parse type index
             let (type_index, size) = omf::read_index(&data[offset..])
-                .ok_or(Error("Invalid type index in EXTDEF record"))?;
+                .ok_or(Error("Invalid type index in PUBDEF/LPUBDEF record"))?;
             offset += size;
 
-            self.publics.push(OmfSymbol {
-                symbol_index: 0, // Will be assigned later
+            self.symbols.push(OmfSymbol {
+                symbol_index: self.symbols.len(),
                 name,
+                class,
                 group_index,
                 segment_index,
                 frame_number,
@@ -698,7 +722,7 @@ impl<'data, R: ReadRef<'data>> OmfFile<'data, R> {
         Ok(())
     }
 
-    fn parse_extdef(&mut self, data: &'data [u8]) -> Result<()> {
+    fn parse_extdef(&mut self, data: &'data [u8], class: OmfSymbolClass) -> Result<()> {
         let mut offset = 0;
 
         while offset < data.len() {
@@ -710,12 +734,14 @@ impl<'data, R: ReadRef<'data>> OmfFile<'data, R> {
 
             // Parse type index
             let (type_index, size) = omf::read_index(&data[offset..])
-                .ok_or(Error("Invalid type index in EXTDEF record"))?;
+                .ok_or(Error("Invalid type index in EXTDEF/LEXTDEF/CEXTDEF record"))?;
             offset += size;
 
-            self.externals.push(OmfSymbol {
-                symbol_index: 0, // Will be assigned later
+            let sym_idx = self.symbols.len();
+            self.symbols.push(OmfSymbol {
+                symbol_index: sym_idx,
                 name,
+                class,
                 group_index: 0,
                 segment_index: 0,
                 frame_number: 0,
@@ -723,12 +749,15 @@ impl<'data, R: ReadRef<'data>> OmfFile<'data, R> {
                 type_index,
                 kind: read::SymbolKind::Unknown,
             });
+
+            // Add to external_order for symbols that contribute to external-name table
+            self.external_order.push(read::SymbolIndex(sym_idx));
         }
 
         Ok(())
     }
 
-    fn parse_comdef(&mut self, data: &'data [u8]) -> Result<()> {
+    fn parse_comdef(&mut self, data: &'data [u8], class: OmfSymbolClass) -> Result<()> {
         let mut offset = 0;
 
         while offset < data.len() {
@@ -740,7 +769,7 @@ impl<'data, R: ReadRef<'data>> OmfFile<'data, R> {
 
             // Parse type index
             let (type_index, size) = omf::read_index(&data[offset..])
-                .ok_or(Error("Invalid type index in COMDEF record"))?;
+                .ok_or(Error("Invalid type index in COMDEF/LCOMDEF record"))?;
             offset += size;
 
             // Parse data type and communal length
@@ -774,9 +803,11 @@ impl<'data, R: ReadRef<'data>> OmfFile<'data, R> {
                 }
             };
 
-            self.communals.push(OmfSymbol {
-                symbol_index: 0, // Will be assigned later
+            let sym_idx = self.symbols.len();
+            self.symbols.push(OmfSymbol {
+                symbol_index: sym_idx,
                 name,
+                class,
                 group_index: 0,
                 segment_index: 0,
                 frame_number: 0,
@@ -784,6 +815,9 @@ impl<'data, R: ReadRef<'data>> OmfFile<'data, R> {
                 type_index,
                 kind: read::SymbolKind::Data,
             });
+
+            // Add to external_order for symbols that contribute to external-name table
+            self.external_order.push(read::SymbolIndex(sym_idx));
         }
 
         Ok(())
@@ -1238,7 +1272,7 @@ impl<'data, R: ReadRef<'data>> OmfFile<'data, R> {
     }
 
     /// Expand a LIDATA block into its uncompressed form
-    pub fn expand_lidata_block(&self, data: &[u8]) -> Result<Vec<u8>> {
+    fn expand_lidata_block(&self, data: &[u8]) -> Result<Vec<u8>> {
         let mut offset = 0;
         let mut result = Vec::new();
 
@@ -1278,7 +1312,7 @@ impl<'data, R: ReadRef<'data>> OmfFile<'data, R> {
             // Nested blocks: recurse for each block
             for _ in 0..block_count {
                 let block_data = self.expand_lidata_block(&data[offset..])?;
-                let block_size = self.lidata_block_size(&data[offset..])?;
+                let block_size = lidata_block_size(&data[offset..])?;
                 offset += block_size;
 
                 // Repeat the expanded block
@@ -1291,10 +1325,6 @@ impl<'data, R: ReadRef<'data>> OmfFile<'data, R> {
         Ok(result)
     }
 
-    fn lidata_block_size(&self, data: &[u8]) -> Result<usize> {
-        lidata_block_size_impl(data)
-    }
-
     /// Get the module name
     pub fn module_name(&self) -> Option<&'data str> {
         self.module_name
@@ -1305,46 +1335,23 @@ impl<'data, R: ReadRef<'data>> OmfFile<'data, R> {
         &self.segments
     }
 
-    /// Get the public symbols
-    pub fn publics(&self) -> &[OmfSymbol<'data>] {
-        &self.publics
-    }
-
-    /// Get the external symbols
-    pub fn externals(&self) -> &[OmfSymbol<'data>] {
-        &self.externals
+    /// Get symbol by external-name index (1-based, as used in FIXUPP records)
+    pub fn external_symbol(&self, external_index: u16) -> Option<&OmfSymbol<'data>> {
+        let symbol_index = self
+            .external_order
+            .get(external_index.checked_sub(1)? as usize)?;
+        self.symbols.get(symbol_index.0)
     }
 
     /// Get a name by index (1-based)
     pub fn get_name(&self, index: u16) -> Option<&'data [u8]> {
-        if index > 0 && (index as usize) <= self.names.len() {
-            Some(self.names[(index - 1) as usize])
-        } else {
-            None
-        }
+        let name_index = index.checked_sub(1)?;
+        self.names.get(name_index as usize).copied()
     }
 
-    /// Get a symbol by index
-    pub fn symbol_by_index(&self, index: read::SymbolIndex) -> Result<OmfSymbol<'data>> {
-        let idx = index.0;
-        let total_publics = self.publics.len();
-        let total_externals = self.externals.len();
-        let total_before_communals = total_publics + total_externals;
-        let total = total_before_communals + self.communals.len();
-
-        if idx >= total {
-            return Err(Error("Invalid symbol index"));
-        }
-
-        let symbol = if idx < total_publics {
-            self.publics[idx].clone()
-        } else if idx < total_before_communals {
-            self.externals[idx - total_publics].clone()
-        } else {
-            self.communals[idx - total_before_communals].clone()
-        };
-
-        Ok(symbol)
+    /// Get all symbols (for iteration)
+    pub fn all_symbols(&self) -> &[OmfSymbol<'data>] {
+        &self.symbols
     }
 
     /// Verify the checksum of an OMF record
@@ -1375,7 +1382,7 @@ impl<'data, R: ReadRef<'data>> OmfFile<'data, R> {
 }
 
 /// Helper function to calculate LIDATA block size
-fn lidata_block_size_impl(data: &[u8]) -> Result<usize> {
+fn lidata_block_size(data: &[u8]) -> Result<usize> {
     let mut offset = 0;
 
     // Read repeat count
@@ -1398,8 +1405,7 @@ fn lidata_block_size_impl(data: &[u8]) -> Result<usize> {
     } else {
         // Nested blocks
         for _ in 0..block_count {
-            let nested_size = lidata_block_size_impl(&data[offset..])?;
-            offset += nested_size;
+            offset += lidata_block_size(&data[offset..])?;
         }
     }
 

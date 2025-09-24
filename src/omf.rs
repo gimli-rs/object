@@ -92,7 +92,7 @@ pub mod record_type {
     pub const VENDEXT: u8 = 0xCE;
 }
 
-/// OMF record header - common to all record types
+/// OMF record header
 #[derive(Debug, Clone, Copy)]
 #[repr(C)]
 pub struct RecordHeader {
@@ -195,7 +195,7 @@ pub enum FrameMethod {
 }
 
 /// Check if a byte is a valid OMF record type
-pub fn is_omf_record_type(byte: u8) -> bool {
+pub(crate) fn is_omf_record_type(byte: u8) -> bool {
     use record_type::*;
     matches!(
         byte,
@@ -242,13 +242,8 @@ pub fn is_omf_record_type(byte: u8) -> bool {
     )
 }
 
-/// Check if a record type uses 32-bit fields
-pub fn is_32bit_record(record_type: u8) -> bool {
-    record_type & 0x01 != 0
-}
-
 /// Helper to read an OMF index (1 or 2 bytes)
-pub fn read_index(data: &[u8]) -> Option<(u16, usize)> {
+pub(crate) fn read_index(data: &[u8]) -> Option<(u16, usize)> {
     if data.is_empty() {
         return None;
     }
@@ -268,7 +263,7 @@ pub fn read_index(data: &[u8]) -> Option<(u16, usize)> {
 }
 
 /// Helper to read a counted string (length byte followed by string)
-pub fn read_counted_string(data: &[u8]) -> Option<(&[u8], usize)> {
+pub(crate) fn read_counted_string(data: &[u8]) -> Option<(&[u8], usize)> {
     if data.is_empty() {
         return None;
     }
@@ -283,7 +278,7 @@ pub fn read_counted_string(data: &[u8]) -> Option<(&[u8], usize)> {
 
 /// Read an encoded value (used in LIDATA for repeat counts and block counts)
 /// Returns the value and number of bytes consumed
-pub fn read_encoded_value(data: &[u8]) -> Option<(u32, usize)> {
+pub(crate) fn read_encoded_value(data: &[u8]) -> Option<(u32, usize)> {
     if data.is_empty() {
         return None;
     }

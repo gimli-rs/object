@@ -1187,7 +1187,7 @@ where
         ),
     ),
     #[cfg(feature = "omf")]
-    Omf((omf::OmfSymbolIterator<'data, 'file>, PhantomData<R>)),
+    Omf((omf::OmfSymbolIterator<'data, 'file, R>, PhantomData<R>)),
 }
 
 impl<'data, 'file, R: ReadRef<'data>> Iterator for SymbolIterator<'data, 'file, R> {

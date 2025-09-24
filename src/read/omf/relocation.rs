@@ -15,11 +15,7 @@ impl<'data, 'file, R: read::ReadRef<'data>> Iterator for OmfRelocationIterator<'
 
     fn next(&mut self) -> Option<Self::Item> {
         let relocations = &self.file.segments[self.segment_index].relocations;
-        if self.index >= relocations.len() {
-            return None;
-        }
-
-        let reloc = &relocations[self.index];
+        let reloc = relocations.get(self.index)?;
         self.index += 1;
 
         // Convert OMF relocation to generic relocation
@@ -58,13 +54,9 @@ impl<'data, 'file, R: read::ReadRef<'data>> Iterator for OmfRelocationIterator<'
                     read::RelocationTarget::Section(SectionIndex(reloc.target_index as usize))
                 }
                 omf::TargetMethod::ExternalIndex => {
-                    // External indices in OMF are 1-based indices into the EXTDEF table
-                    // Our symbol table has publics first, then externals
-                    // So we need to adjust: symbol_index = publics.len() + (external_idx - 1)
-                    if reloc.target_index > 0 {
-                        let symbol_idx =
-                            self.file.publics.len() + (reloc.target_index as usize - 1);
-                        read::RelocationTarget::Symbol(read::SymbolIndex(symbol_idx))
+                    // External indices in OMF are 1-based indices into the external-name table
+                    if let Some(symbol) = self.file.external_symbol(reloc.target_index) {
+                        read::RelocationTarget::Symbol(read::SymbolIndex(symbol.symbol_index))
                     } else {
                         // Invalid external index
                         read::RelocationTarget::Absolute
