@@ -64,10 +64,10 @@ impl<'data> ObjectSymbol<'data> for OmfSymbol<'data> {
     }
 
     fn is_common(&self) -> bool {
-        // Communal symbols have segment_index == 0, frame_number == 0, but offset != 0
-        // The offset field stores the size of the communal symbol
-        // This excludes both externals (offset == 0) and absolute symbols (frame_number != 0)
-        self.segment_index == 0 && self.frame_number == 0 && self.offset != 0
+        matches!(
+            self.class,
+            super::OmfSymbolClass::Communal | super::OmfSymbolClass::LocalCommunal
+        )
     }
 
     fn is_weak(&self) -> bool {
@@ -75,19 +75,34 @@ impl<'data> ObjectSymbol<'data> for OmfSymbol<'data> {
     }
 
     fn scope(&self) -> SymbolScope {
-        if self.segment_index == 0 {
-            SymbolScope::Unknown
-        } else {
-            SymbolScope::Linkage
+        match self.class {
+            super::OmfSymbolClass::LocalPublic
+            | super::OmfSymbolClass::LocalExternal
+            | super::OmfSymbolClass::LocalCommunal => SymbolScope::Compilation,
+            super::OmfSymbolClass::Public
+            | super::OmfSymbolClass::External
+            | super::OmfSymbolClass::Communal
+            | super::OmfSymbolClass::ComdatExternal => {
+                if self.segment_index == 0 {
+                    SymbolScope::Unknown
+                } else {
+                    SymbolScope::Linkage
+                }
+            }
         }
     }
 
     fn is_global(&self) -> bool {
-        true
+        !self.is_local()
     }
 
     fn is_local(&self) -> bool {
-        false
+        matches!(
+            self.class,
+            super::OmfSymbolClass::LocalPublic
+                | super::OmfSymbolClass::LocalExternal
+                | super::OmfSymbolClass::LocalCommunal
+        )
     }
 
     fn flags(&self) -> SymbolFlags<SectionIndex, SymbolIndex> {
@@ -97,34 +112,16 @@ impl<'data> ObjectSymbol<'data> for OmfSymbol<'data> {
 
 /// An iterator over OMF symbols.
 #[derive(Debug)]
-pub struct OmfSymbolIterator<'data, 'file> {
-    pub(super) publics: &'file [OmfSymbol<'data>],
-    pub(super) externals: &'file [OmfSymbol<'data>],
-    pub(super) communals: &'file [OmfSymbol<'data>],
+pub struct OmfSymbolIterator<'data, 'file, R: ReadRef<'data> = &'data [u8]> {
+    pub(super) file: &'file OmfFile<'data, R>,
     pub(super) index: usize,
 }
 
-impl<'data, 'file> Iterator for OmfSymbolIterator<'data, 'file> {
+impl<'data, 'file, R: ReadRef<'data>> Iterator for OmfSymbolIterator<'data, 'file, R> {
     type Item = OmfSymbol<'data>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let total_publics = self.publics.len();
-        let total_externals = self.externals.len();
-        let total_before_communals = total_publics + total_externals;
-        let total = total_before_communals + self.communals.len();
-
-        if self.index >= total {
-            return None;
-        }
-
-        let symbol = if self.index < total_publics {
-            self.publics[self.index].clone()
-        } else if self.index < total_before_communals {
-            self.externals[self.index - total_publics].clone()
-        } else {
-            self.communals[self.index - total_before_communals].clone()
-        };
-
+        let symbol = self.file.symbols.get(self.index)?.clone();
         self.index += 1;
         Some(symbol)
     }
@@ -140,18 +137,20 @@ impl<'data, 'file, R: ReadRef<'data>> read::private::Sealed for OmfSymbolTable<'
 
 impl<'data, 'file, R: ReadRef<'data>> ObjectSymbolTable<'data> for OmfSymbolTable<'data, 'file, R> {
     type Symbol = OmfSymbol<'data>;
-    type SymbolIterator = OmfSymbolIterator<'data, 'file>;
+    type SymbolIterator = OmfSymbolIterator<'data, 'file, R>;
 
     fn symbols(&self) -> Self::SymbolIterator {
         OmfSymbolIterator {
-            publics: &self.file.publics,
-            externals: &self.file.externals,
-            communals: &self.file.communals,
+            file: self.file,
             index: 0,
         }
     }
 
     fn symbol_by_index(&self, index: SymbolIndex) -> Result<Self::Symbol> {
-        self.file.symbol_by_index(index)
+        self.file
+            .symbols
+            .get(index.0)
+            .cloned()
+            .ok_or(Error("Symbol index out of bounds"))
     }
 }

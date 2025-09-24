@@ -4,9 +4,12 @@ use alloc::borrow::Cow;
 use alloc::vec;
 use core::str;
 
-use crate::read::{
-    self, CompressedData, CompressedFileRange, Error, ObjectSection, ReadRef, RelocationMap,
-    Result, SectionFlags, SectionIndex, SectionKind,
+use crate::{
+    read::{
+        self, CompressedData, CompressedFileRange, Error, ObjectSection, ReadRef, RelocationMap,
+        Result, SectionFlags, SectionIndex, SectionKind,
+    },
+    ComdatKind, ObjectComdat, SymbolIndex,
 };
 
 use super::{relocation::OmfRelocationIterator, OmfDataChunk, OmfFile, OmfSegment};
@@ -71,8 +74,9 @@ impl<'data, 'file, R: ReadRef<'data>> ObjectSection<'data> for OmfSection<'data,
         }
 
         // For multiple chunks, LIDATA, or non-contiguous data, we can't return a reference
-        // Users should use uncompressed_data() instead for these cases
-        Err(Error("OMF segment data is not contiguous; use uncompressed_data() instead"))
+        Err(Error(
+            "OMF segment data is not contiguous; use uncompressed_data() instead",
+        ))
     }
 
     fn data_range(&self, address: u64, size: u64) -> Result<Option<&'data [u8]>> {
@@ -139,7 +143,7 @@ impl<'data, 'file, R: ReadRef<'data>> ObjectSection<'data> for OmfSection<'data,
 
             match chunk {
                 OmfDataChunk::Direct(data) => {
-                    // Direct data - just copy it
+                    // Direct data
                     let end = start + data.len();
                     if end <= result.len() {
                         result[start..end].copy_from_slice(data);
@@ -215,5 +219,123 @@ impl<'data, 'file, R: ReadRef<'data>> ObjectSection<'data> for OmfSection<'data,
         }
 
         flags
+    }
+}
+
+/// An iterator over OMF sections.
+#[derive(Debug)]
+pub struct OmfSectionIterator<'data, 'file, R: ReadRef<'data>> {
+    pub(super) file: &'file OmfFile<'data, R>,
+    pub(super) index: usize,
+}
+
+impl<'data, 'file, R: ReadRef<'data>> Iterator for OmfSectionIterator<'data, 'file, R> {
+    type Item = OmfSection<'data, 'file, R>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.index < self.file.segments.len() {
+            let section = OmfSection {
+                file: self.file,
+                index: self.index,
+            };
+            self.index += 1;
+            Some(section)
+        } else {
+            None
+        }
+    }
+}
+
+/// A COMDAT section in an OMF file.
+#[derive(Debug)]
+pub struct OmfComdat<'data, 'file, R: ReadRef<'data>> {
+    file: &'file OmfFile<'data, R>,
+    index: usize,
+    _phantom: core::marker::PhantomData<&'data ()>,
+}
+
+impl<'data, 'file, R: ReadRef<'data>> read::private::Sealed for OmfComdat<'data, 'file, R> {}
+
+impl<'data, 'file, R: ReadRef<'data>> ObjectComdat<'data> for OmfComdat<'data, 'file, R> {
+    type SectionIterator = OmfComdatSectionIterator<'data, 'file, R>;
+
+    fn kind(&self) -> ComdatKind {
+        let comdat = &self.file.comdats[self.index];
+        match comdat.selection {
+            super::OmfComdatSelection::Explicit => ComdatKind::NoDuplicates,
+            super::OmfComdatSelection::UseAny => ComdatKind::Any,
+            super::OmfComdatSelection::SameSize => ComdatKind::SameSize,
+            super::OmfComdatSelection::ExactMatch => ComdatKind::ExactMatch,
+        }
+    }
+
+    fn symbol(&self) -> SymbolIndex {
+        // COMDAT symbols don't have a direct symbol index in OMF
+        SymbolIndex(usize::MAX)
+    }
+
+    fn name_bytes(&self) -> Result<&'data [u8]> {
+        let comdat = &self.file.comdats[self.index];
+        Ok(comdat.name)
+    }
+
+    fn name(&self) -> Result<&'data str> {
+        let comdat = &self.file.comdats[self.index];
+        core::str::from_utf8(comdat.name).map_err(|_| Error("Invalid UTF-8 in COMDAT name"))
+    }
+
+    fn sections(&self) -> Self::SectionIterator {
+        let comdat = &self.file.comdats[self.index];
+        OmfComdatSectionIterator {
+            segment_index: (comdat.segment_index as usize).checked_sub(1),
+            returned: false,
+            _phantom: core::marker::PhantomData,
+        }
+    }
+}
+
+/// An iterator over COMDAT sections.
+#[derive(Debug)]
+pub struct OmfComdatIterator<'data, 'file, R: ReadRef<'data>> {
+    pub(super) file: &'file OmfFile<'data, R>,
+    pub(super) index: usize,
+}
+
+impl<'data, 'file, R: ReadRef<'data>> Iterator for OmfComdatIterator<'data, 'file, R> {
+    type Item = OmfComdat<'data, 'file, R>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.index < self.file.comdats.len() {
+            let comdat = OmfComdat {
+                file: self.file,
+                index: self.index,
+                _phantom: core::marker::PhantomData,
+            };
+            self.index += 1;
+            Some(comdat)
+        } else {
+            None
+        }
+    }
+}
+
+/// An iterator over sections in a COMDAT.
+#[derive(Debug)]
+pub struct OmfComdatSectionIterator<'data, 'file, R: ReadRef<'data>> {
+    segment_index: Option<usize>,
+    returned: bool,
+    _phantom: core::marker::PhantomData<(&'data (), &'file (), R)>,
+}
+
+impl<'data, 'file, R: ReadRef<'data>> Iterator for OmfComdatSectionIterator<'data, 'file, R> {
+    type Item = SectionIndex;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if !self.returned {
+            self.returned = true;
+            self.segment_index.map(|idx| SectionIndex(idx + 1))
+        } else {
+            None
+        }
     }
 }
