@@ -1,6 +1,69 @@
-use crate::{read, ObjectSegment, ReadRef, Result, SegmentFlags};
+use alloc::vec::Vec;
 
-use super::OmfFile;
+use crate::read::{self, ObjectSegment, ReadRef, Result};
+use crate::{omf, SegmentFlags};
+
+use super::{OmfFile, OmfFixup};
+
+/// An OMF segment definition
+#[derive(Debug, Clone)]
+pub struct OmfSegment<'data> {
+    /// Segment name index (into names table)
+    pub(super) name_index: u16,
+    /// Class name index (into names table)
+    pub(super) class_index: u16,
+    /// Overlay name index (into names table)
+    #[allow(unused)] // TODO
+    pub(super) overlay_index: u16,
+    /// Segment alignment
+    pub(super) alignment: omf::SegmentAlignment,
+    /// Segment combination
+    pub(super) combination: omf::SegmentCombination,
+    /// Whether this is a 32-bit segment
+    #[allow(unused)] // TODO
+    pub(super) use32: bool,
+    /// Segment length
+    pub(super) length: u32,
+    /// Segment data chunks (offset, data)
+    /// Multiple LEDATA/LIDATA records can contribute to a single segment
+    pub(super) data_chunks: Vec<(u32, OmfDataChunk<'data>)>,
+    /// Relocations for this segment
+    pub(super) relocations: Vec<OmfFixup>,
+}
+
+/// Data chunk for a segment
+#[derive(Debug, Clone)]
+pub(super) enum OmfDataChunk<'data> {
+    /// Direct data from LEDATA record
+    Direct(&'data [u8]),
+    /// Compressed/iterated data from LIDATA record (needs expansion)
+    Iterated(&'data [u8]),
+}
+
+impl<'data> OmfSegment<'data> {
+    /// Get the raw data of the segment if it's a single contiguous chunk
+    pub fn get_single_chunk(&self) -> Option<&'data [u8]> {
+        if self.data_chunks.len() == 1 {
+            let (offset, chunk) = &self.data_chunks[0];
+            if *offset == 0 {
+                match chunk {
+                    OmfDataChunk::Direct(data) if data.len() == self.length as usize => {
+                        return Some(data);
+                    }
+                    _ => {}
+                }
+            }
+        }
+        None
+    }
+
+    /// Check if any data chunk needs expansion (LIDATA)
+    pub fn has_iterated_data(&self) -> bool {
+        self.data_chunks
+            .iter()
+            .any(|(_, chunk)| matches!(chunk, OmfDataChunk::Iterated(_)))
+    }
+}
 
 /// An OMF segment reference.
 #[derive(Debug)]
