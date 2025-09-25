@@ -1418,28 +1418,43 @@ pub(super) enum FrameMethod {
 
 /// Expand a LIDATA block into its uncompressed form
 pub(super) fn expand_lidata_block(data: &[u8]) -> Result<Vec<u8>> {
-    let mut offset = 0;
-    let mut result = Vec::new();
+    let (consumed, expanded_size) = lidata_block_expanded_size(data)?;
+    let mut result = vec![0u8; expanded_size];
+    let mut write_offset = 0usize;
+    let consumed_by_expand = expand_lidata_block_into(data, &mut result, &mut write_offset)?;
 
-    // Read repeat count
+    debug_assert_eq!(write_offset, expanded_size);
+    debug_assert_eq!(consumed_by_expand, consumed);
+
+    Ok(result)
+}
+
+fn expand_lidata_block_into(
+    data: &[u8],
+    output: &mut [u8],
+    write_offset: &mut usize,
+) -> Result<usize> {
+    let mut offset = 0;
+
     let (repeat_count, size) =
         read_encoded_value(&data[offset..]).ok_or(Error("Invalid repeat count in LIDATA block"))?;
     offset += size;
 
     if repeat_count == 0 {
-        return Ok(result);
+        return lidata_block_size(data);
     }
 
-    // Read block count
+    let repeat_count = repeat_count as usize;
+
     let (block_count, size) =
         read_encoded_value(&data[offset..]).ok_or(Error("Invalid block count in LIDATA block"))?;
     offset += size;
 
     if block_count == 0 {
-        // Leaf block: contains actual data
         if offset >= data.len() {
-            return Ok(result);
+            return Ok(offset);
         }
+
         let data_length = data[offset] as usize;
         offset += 1;
 
@@ -1448,28 +1463,118 @@ pub(super) fn expand_lidata_block(data: &[u8]) -> Result<Vec<u8>> {
         }
 
         let block_data = &data[offset..offset + data_length];
+        offset += data_length;
 
-        // Repeat the data block
         for _ in 0..repeat_count {
-            result.extend_from_slice(block_data);
+            let end = write_offset
+                .checked_add(data_length)
+                .ok_or(Error("LIDATA expanded size overflow"))?;
+            if end > output.len() {
+                return Err(Error("LIDATA expanded size mismatch"));
+            }
+            output[*write_offset..end].copy_from_slice(block_data);
+            *write_offset = end;
         }
     } else {
-        // Nested blocks: recurse for each block
-        for _ in 0..block_count {
-            // TODO this is bad, we should instead start by recursively calculating the size,
-            // allocating the buffer up front, then writing directly into it (e.g. expand_lidata_block_into(&[u8], &mut [u8]))
-            let block_data = expand_lidata_block(&data[offset..])?;
-            let block_size = lidata_block_size(&data[offset..])?;
-            offset += block_size;
+        let mut block_offset = offset;
+        let iteration_start = *write_offset;
 
-            // Repeat the expanded block
-            for _ in 0..repeat_count {
-                result.extend_from_slice(&block_data);
+        for _ in 0..block_count {
+            let block_size = lidata_block_size(&data[block_offset..])?;
+            let block_consumed =
+                expand_lidata_block_into(&data[block_offset..], output, write_offset)?;
+
+            debug_assert_eq!(block_size, block_consumed);
+            block_offset = block_offset
+                .checked_add(block_size)
+                .ok_or(Error("LIDATA block size overflow"))?;
+            if block_offset > data.len() {
+                return Err(Error("Truncated LIDATA block"));
             }
         }
+
+        let iteration_len = *write_offset - iteration_start;
+
+        for _ in 1..repeat_count {
+            let dest_start = *write_offset;
+            let dest_end = dest_start
+                .checked_add(iteration_len)
+                .ok_or(Error("LIDATA expanded size overflow"))?;
+            if dest_end > output.len() {
+                return Err(Error("LIDATA expanded size mismatch"));
+            }
+            if iteration_len != 0 {
+                output.copy_within(iteration_start..iteration_start + iteration_len, dest_start);
+            }
+            *write_offset = dest_end;
+        }
+
+        offset = block_offset;
     }
 
-    Ok(result)
+    Ok(offset)
+}
+
+fn lidata_block_expanded_size(data: &[u8]) -> Result<(usize, usize)> {
+    let mut offset = 0;
+
+    let (repeat_count, size) =
+        read_encoded_value(&data[offset..]).ok_or(Error("Invalid repeat count in LIDATA block"))?;
+    offset += size;
+
+    if repeat_count == 0 {
+        let consumed = lidata_block_size(data)?;
+        if consumed > data.len() {
+            return Err(Error("Truncated LIDATA block"));
+        }
+        return Ok((consumed, 0));
+    }
+
+    let (block_count, size) =
+        read_encoded_value(&data[offset..]).ok_or(Error("Invalid block count in LIDATA block"))?;
+    offset += size;
+
+    if block_count == 0 {
+        if offset >= data.len() {
+            return Ok((offset, 0));
+        }
+
+        let data_length = data[offset] as usize;
+        offset += 1;
+
+        if offset + data_length > data.len() {
+            return Err(Error("Truncated LIDATA block"));
+        }
+
+        offset += data_length;
+
+        let expanded = data_length
+            .checked_mul(repeat_count as usize)
+            .ok_or(Error("LIDATA expanded size overflow"))?;
+        Ok((offset, expanded))
+    } else {
+        let mut block_offset = offset;
+        let mut single_iteration = 0usize;
+
+        for _ in 0..block_count {
+            let (consumed, expanded) = lidata_block_expanded_size(&data[block_offset..])?;
+            block_offset = block_offset
+                .checked_add(consumed)
+                .ok_or(Error("LIDATA block size overflow"))?;
+            if block_offset > data.len() {
+                return Err(Error("Truncated LIDATA block"));
+            }
+            single_iteration = single_iteration
+                .checked_add(expanded)
+                .ok_or(Error("LIDATA expanded size overflow"))?;
+        }
+
+        let expanded = single_iteration
+            .checked_mul(repeat_count as usize)
+            .ok_or(Error("LIDATA expanded size overflow"))?;
+
+        Ok((block_offset, expanded))
+    }
 }
 
 /// Helper function to calculate LIDATA block size
