@@ -61,13 +61,7 @@ fn test_lidata() {
             total_data_size += data.len();
         }
     }
-
-    // With LIDATA support, we should have expanded data for the arrays
-    assert!(
-        total_data_size >= 200,
-        "Section data should be expanded from LIDATA, got {} bytes",
-        total_data_size
-    );
+    assert_eq!(total_data_size, 401);
 }
 
 #[cfg(feature = "std")]
@@ -89,8 +83,6 @@ fn test_relocations() {
             }
         }
     }
-
-    // With M-bit support, we should see both types
     assert!(has_relative, "Should have Relative relocations (M=0)");
     assert!(has_absolute, "Should have Absolute relocations (M=1)");
 }
