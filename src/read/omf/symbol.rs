@@ -1,14 +1,53 @@
-//! OMF symbol implementation.
-
 use core::str;
 
 use crate::read::{
-    self, ObjectSymbol, ObjectSymbolTable, ReadRef, Result, SectionIndex, SymbolFlags, SymbolIndex,
-    SymbolKind, SymbolScope, SymbolSection,
+    self, Error, ObjectSymbol, ObjectSymbolTable, ReadRef, Result, SectionIndex, SymbolFlags,
+    SymbolIndex, SymbolKind, SymbolScope, SymbolSection,
 };
-use crate::Error;
 
-use super::{OmfFile, OmfSymbol};
+use super::OmfFile;
+
+/// An OMF symbol
+#[derive(Debug, Clone)]
+pub struct OmfSymbol<'data> {
+    /// Symbol table index
+    pub symbol_index: usize,
+    /// Symbol name
+    pub name: &'data [u8],
+    /// Symbol class (Public, External, etc.)
+    pub class: OmfSymbolClass,
+    /// Group index (0 if none)
+    pub group_index: u16,
+    /// Segment index (0 if external)
+    pub segment_index: u16,
+    /// Frame number (for absolute symbols when segment_index == 0)
+    pub frame_number: u16,
+    /// Offset within segment
+    pub offset: u32,
+    /// Type index (usually 0)
+    pub type_index: u16,
+    /// Pre-computed symbol kind
+    pub kind: SymbolKind,
+}
+
+/// Symbol class for OMF symbols
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum OmfSymbolClass {
+    /// Public symbol (PUBDEF)
+    Public,
+    /// Local public symbol (LPUBDEF)
+    LocalPublic,
+    /// External symbol (EXTDEF)
+    External,
+    /// Local external symbol (LEXTDEF)
+    LocalExternal,
+    /// Communal symbol (COMDEF)
+    Communal,
+    /// Local communal symbol (LCOMDEF)
+    LocalCommunal,
+    /// COMDAT external symbol (CEXTDEF)
+    ComdatExternal,
+}
 
 impl<'data> read::private::Sealed for OmfSymbol<'data> {}
 

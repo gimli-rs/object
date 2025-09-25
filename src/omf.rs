@@ -92,6 +92,94 @@ pub mod record_type {
     pub const VENDEXT: u8 = 0xCE;
 }
 
+/// Check if a byte is a valid OMF record type
+pub fn is_omf_record_type(byte: u8) -> bool {
+    use crate::omf::record_type::*;
+    matches!(
+        byte,
+        THEADR
+            | LHEADR
+            | COMENT
+            | MODEND
+            | MODEND32
+            | EXTDEF
+            | TYPDEF
+            | PUBDEF
+            | PUBDEF32
+            | LINNUM
+            | LINNUM32
+            | LNAMES
+            | SEGDEF
+            | SEGDEF32
+            | GRPDEF
+            | FIXUPP
+            | FIXUPP32
+            | LEDATA
+            | LEDATA32
+            | LIDATA
+            | LIDATA32
+            | COMDEF
+            | BAKPAT
+            | BAKPAT32
+            | LEXTDEF
+            | LEXTDEF32
+            | LPUBDEF
+            | LPUBDEF32
+            | LCOMDEF
+            | CEXTDEF
+            | COMDAT
+            | COMDAT32
+            | LINSYM
+            | LINSYM32
+            | ALIAS
+            | NBKPAT
+            | NBKPAT32
+            | LLNAMES
+            | VERNUM
+            | VENDEXT
+    )
+}
+
+/// The addressing mode for an OMF relocation.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[repr(u8)]
+pub enum FixupMode {
+    /// Segment-relative relocation (`M = 1`).
+    SegmentRelative = 0,
+    /// Self-relative relocation (`M = 0`).
+    SelfRelative = 1,
+}
+
+/// Frame datum variants as defined by the OMF specification.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum FixupFrame {
+    /// Segment frame datum referencing a 1-based segment index.
+    Segment(u16),
+    /// Group frame datum referencing a 1-based group index.
+    Group(u16),
+    /// External frame datum referencing a 1-based entry in the external-name table.
+    External(u16),
+    /// Explicit frame number datum.
+    FrameNumber(u16),
+    /// Use the location of the fixup as the frame datum.
+    Location,
+    /// Use the target's frame datum.
+    Target,
+}
+
+/// Target datum variants as defined by the OMF specification.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum FixupTarget {
+    /// Segment target datum referencing a 1-based segment index.
+    Segment(u16),
+    /// Group target datum referencing a 1-based group index.
+    Group(u16),
+    /// External target datum referencing a 1-based entry in the external-name table.
+    External(u16),
+    /// Explicit frame number datum.
+    FrameNumber(u16),
+}
+
 /// OMF record header
 #[derive(Debug, Clone, Copy)]
 #[repr(C)]
@@ -139,7 +227,7 @@ pub enum SegmentCombination {
 }
 
 /// Fixup location types
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[repr(u8)]
 pub enum FixupLocation {
     /// Low-order byte
@@ -160,159 +248,4 @@ pub enum FixupLocation {
     Pointer48 = 11,
     /// 32-bit loader-resolved offset
     LoaderOffset32 = 13,
-}
-
-/// Target method types for fixups
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[repr(u8)]
-pub enum TargetMethod {
-    /// Segment index
-    SegmentIndex = 0,
-    /// Group index
-    GroupIndex = 1,
-    /// External index
-    ExternalIndex = 2,
-    /// Frame number (absolute)
-    FrameNumber = 3,
-}
-
-/// Frame method types for fixups
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[repr(u8)]
-pub enum FrameMethod {
-    /// Segment index
-    SegmentIndex = 0,
-    /// Group index
-    GroupIndex = 1,
-    /// External index
-    ExternalIndex = 2,
-    /// Frame number (absolute)
-    FrameNumber = 3,
-    /// Location (use fixup location)
-    Location = 4,
-    /// Target (use target's frame)
-    Target = 5,
-}
-
-/// Check if a byte is a valid OMF record type
-pub(crate) fn is_omf_record_type(byte: u8) -> bool {
-    use record_type::*;
-    matches!(
-        byte,
-        THEADR
-            | LHEADR
-            | COMENT
-            | MODEND
-            | MODEND32
-            | EXTDEF
-            | TYPDEF
-            | PUBDEF
-            | PUBDEF32
-            | LINNUM
-            | LINNUM32
-            | LNAMES
-            | SEGDEF
-            | SEGDEF32
-            | GRPDEF
-            | FIXUPP
-            | FIXUPP32
-            | LEDATA
-            | LEDATA32
-            | LIDATA
-            | LIDATA32
-            | COMDEF
-            | BAKPAT
-            | BAKPAT32
-            | LEXTDEF
-            | LEXTDEF32
-            | LPUBDEF
-            | LPUBDEF32
-            | LCOMDEF
-            | CEXTDEF
-            | COMDAT
-            | COMDAT32
-            | LINSYM
-            | LINSYM32
-            | ALIAS
-            | NBKPAT
-            | NBKPAT32
-            | LLNAMES
-            | VERNUM
-            | VENDEXT
-    )
-}
-
-/// Helper to read an OMF index (1 or 2 bytes)
-pub(crate) fn read_index(data: &[u8]) -> Option<(u16, usize)> {
-    if data.is_empty() {
-        return None;
-    }
-
-    let first_byte = data[0];
-    if first_byte & 0x80 == 0 {
-        // 1-byte index
-        Some((first_byte as u16, 1))
-    } else if data.len() >= 2 {
-        // 2-byte index
-        let high = (first_byte & 0x7F) as u16;
-        let low = data[1] as u16;
-        Some((high << 8 | low, 2))
-    } else {
-        None
-    }
-}
-
-/// Helper to read a counted string (length byte followed by string)
-pub(crate) fn read_counted_string(data: &[u8]) -> Option<(&[u8], usize)> {
-    if data.is_empty() {
-        return None;
-    }
-
-    let length = data[0] as usize;
-    if data.len() > length {
-        Some((&data[1..1 + length], 1 + length))
-    } else {
-        None
-    }
-}
-
-/// Read an encoded value (used in LIDATA for repeat counts and block counts)
-/// Returns the value and number of bytes consumed
-pub(crate) fn read_encoded_value(data: &[u8]) -> Option<(u32, usize)> {
-    if data.is_empty() {
-        return None;
-    }
-
-    let first_byte = data[0];
-    if first_byte < 0x80 {
-        // Single byte value (0-127)
-        Some((first_byte as u32, 1))
-    } else if first_byte == 0x81 {
-        // Two byte value: 0x81 followed by 16-bit little-endian value
-        if data.len() >= 3 {
-            let value = u16::from_le_bytes([data[1], data[2]]) as u32;
-            Some((value, 3))
-        } else {
-            None
-        }
-    } else if first_byte == 0x84 {
-        // Three byte value: 0x84 followed by 24-bit little-endian value
-        if data.len() >= 4 {
-            let value = u32::from_le_bytes([data[1], data[2], data[3], 0]);
-            Some((value, 4))
-        } else {
-            None
-        }
-    } else if first_byte == 0x88 {
-        // Four byte value: 0x88 followed by 32-bit little-endian value
-        if data.len() >= 5 {
-            let value = u32::from_le_bytes([data[1], data[2], data[3], data[4]]);
-            Some((value, 5))
-        } else {
-            None
-        }
-    } else {
-        // Unknown encoding
-        None
-    }
 }
