@@ -487,6 +487,10 @@ impl<'data, R: ReadRef<'data>> OmfFile<'data, R> {
                             &mut frame_threads,
                             &mut target_threads,
                         )?;
+                    } else {
+                        return Err(Error(
+                            "FIXUPP/FIXUPP32 record encountered without preceding LEDATA/LIDATA",
+                        ));
                     }
                 }
                 omf::record_type::MODEND | omf::record_type::MODEND32 => {
