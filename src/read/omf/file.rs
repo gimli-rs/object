@@ -94,123 +94,43 @@ impl<'data, R: ReadRef<'data>> OmfFile<'data, R> {
         }
     }
 
-    /// Get the section kind for a segment (reusing logic from OmfSection)
+    /// Get the section kind for a segment
     pub(super) fn segment_section_kind(&self, segment_index: usize) -> read::SectionKind {
-        if segment_index >= self.segments.len() {
+        let Some(segment) = self.segments.get(segment_index) else {
             return read::SectionKind::Unknown;
+        };
+
+        let segment_name = self.get_name(segment.name_index).unwrap_or_default();
+        let class_name = self.get_name(segment.class_index).unwrap_or_default();
+
+        // Reserved names for debug sections
+        if segment_name.starts_with(b"$$") {
+            return read::SectionKind::Debug;
         }
 
-        let segment = &self.segments[segment_index];
-
-        // Check segment name first for special cases
-        if let Some(seg_name) = self.get_name(segment.name_index) {
-            // Segments named CONST are always read-only regardless of class
-            match seg_name {
-                b"CONST" | b"_CONST" | b"CONST2" | b"RDATA" | b"_RDATA" => {
-                    return read::SectionKind::ReadOnlyData;
-                }
-                _ => {}
-            }
-
-            // Check for debug sections by name
-            if seg_name.starts_with(b"$$") {
-                // Watcom-style debug sections
-                return read::SectionKind::Debug;
-            }
-            if seg_name == b".drectve" || seg_name == b".DRECTVE" {
-                return read::SectionKind::Linker;
-            }
-
-            // Check other common names
-            let name_upper = seg_name.to_ascii_uppercase();
-            if name_upper == b"_TEXT" || name_upper == b"CODE" || name_upper == b".TEXT" {
-                return read::SectionKind::Text;
-            } else if name_upper == b"_DATA" || name_upper == b"DATA" || name_upper == b".DATA" {
-                return read::SectionKind::Data;
-            } else if name_upper == b"_BSS"
-                || name_upper == b"BSS"
-                || name_upper == b".BSS"
-                || name_upper == b"STACK"
-            {
-                return read::SectionKind::UninitializedData;
-            }
-        }
-
-        // Determine kind from class name
-        if let Some(class_name) = self.get_name(segment.class_index) {
-            // Check for exact matches first (most common case)
-            match class_name {
-                b"CODE" | b"_TEXT" | b"TEXT" => return read::SectionKind::Text,
-                b"CONST" | b"_CONST" | b"CONST2" | b"RDATA" | b"_RDATA" => {
-                    return read::SectionKind::ReadOnlyData;
-                }
-                b"BSS" | b"_BSS" => return read::SectionKind::UninitializedData,
-                b"STACK" | b"_STACK" => return read::SectionKind::UninitializedData,
-                b"DEBUG" | b"_DEBUG" | b"DEBSYM" | b"DEBTYP" => return read::SectionKind::Debug,
-                b"DATA" | b"_DATA" => {
-                    // DATA sections with no actual data are treated as uninitialized
-                    if segment.data_chunks.is_empty() {
-                        return read::SectionKind::UninitializedData;
-                    } else {
-                        return read::SectionKind::Data;
-                    }
-                }
-                _ => {}
-            }
-
-            // Check for case-insensitive substring matches for less common variations
-            let class_upper = class_name.to_ascii_uppercase();
-            if class_upper.windows(4).any(|w| w == b"CODE") {
-                return read::SectionKind::Text;
-            } else if class_upper.windows(5).any(|w| w == b"CONST") {
+        // Substring matches for common class names
+        if class_name.windows(4).any(|w| w == b"CODE") {
+            return read::SectionKind::Text;
+        } else if class_name.windows(4).any(|w| w == b"DATA") {
+            if segment_name.windows(5).any(|w| w == b"CONST") {
                 return read::SectionKind::ReadOnlyData;
-            } else if class_upper.windows(3).any(|w| w == b"BSS")
-                || class_upper.windows(5).any(|w| w == b"STACK")
-            {
-                return read::SectionKind::UninitializedData;
-            } else if class_upper.windows(5).any(|w| w == b"DEBUG") {
-                return read::SectionKind::Debug;
-            } else if class_upper.windows(4).any(|w| w == b"DATA") {
-                // DATA sections with no actual data are treated as uninitialized
-                if segment.data_chunks.is_empty() {
-                    return read::SectionKind::UninitializedData;
-                } else {
-                    return read::SectionKind::Data;
-                }
+            } else {
+                return read::SectionKind::Data;
             }
+        } else if class_name.windows(3).any(|w| w == b"BSS")
+            || class_name.windows(5).any(|w| w == b"STACK")
+        {
+            return read::SectionKind::UninitializedData;
+        } else if class_name.starts_with(b"DEB") {
+            return read::SectionKind::Debug;
+        } else if class_name == b"COMMON" {
+            return read::SectionKind::Common;
         }
 
-        // Final fallback based on whether segment has data
-        if segment.data_chunks.is_empty() {
-            read::SectionKind::UninitializedData
-        } else {
-            read::SectionKind::Unknown
-        }
+        read::SectionKind::Unknown
     }
 
     fn parse_records(&mut self) -> Result<()> {
-        let len = self
-            .data
-            .len()
-            .map_err(|_| Error("Failed to get data length"))?;
-        let data = self
-            .data
-            .read_bytes_at(0, len)
-            .map_err(|_| Error("Failed to read OMF data"))?;
-        let mut offset = 0;
-
-        // First record must be THEADR or LHEADR
-        if data.is_empty() {
-            return Err(Error("Empty OMF file"));
-        }
-
-        let first_type = data[0];
-        if first_type != omf::record_type::THEADR && first_type != omf::record_type::LHEADR {
-            return Err(Error(
-                "Invalid OMF file: first record must be THEADR or LHEADR",
-            ));
-        }
-
         let mut current_segment: Option<usize> = None;
         let mut current_data_offset: Option<u32> = None;
 
@@ -218,87 +138,92 @@ impl<'data, R: ReadRef<'data>> OmfFile<'data, R> {
         let mut frame_threads: [Option<ThreadDef>; 4] = [None; 4];
         let mut target_threads: [Option<ThreadDef>; 4] = [None; 4];
 
-        while offset < data.len() {
-            // Read record header
-            if offset + 3 > data.len() {
-                break;
+        let mut offset = 0;
+        while let Ok(record_header) = self.data.read_at::<omf::RecordHeader>(offset) {
+            let record_type = record_header.record_type;
+            let record_length = record_header.length.get(crate::endian::LittleEndian);
+            let record_data = self
+                .data
+                .read_bytes_at(offset, record_length as u64 + 3)
+                .map_err(|_| Error("Truncated OMF record data"))?;
+
+            if offset == 0
+                && !matches!(
+                    record_type,
+                    omf::record_type::THEADR | omf::record_type::LHEADR
+                )
+            {
+                return Err(Error(
+                    "Invalid OMF file: first record must be THEADR or LHEADR",
+                ));
             }
-
-            let record_type = data[offset];
-            let length = u16::from_le_bytes([data[offset + 1], data[offset + 2]]) as usize;
-
-            // Length includes the checksum byte at the end
-            if offset + 3 + length > data.len() {
-                return Err(Error("Truncated OMF record"));
-            }
-
-            // Record data excludes the checksum
-            let record_data = &data[offset + 3..offset + 3 + length - 1];
-            let checksum = data[offset + 3 + length - 1];
 
             // Verify checksum
-            if !Self::verify_checksum(record_type, length, record_data, checksum) {
+            if !omf::verify_checksum(record_data) {
                 return Err(Error("Invalid OMF record checksum"));
             }
+
+            // Exclude the header and checksum
+            let inner_data = &record_data[3..2 + record_length as usize];
 
             // Process record based on type
             match record_type {
                 omf::record_type::THEADR | omf::record_type::LHEADR => {
-                    self.parse_header(record_data)?;
+                    self.parse_header(inner_data)?;
                 }
                 omf::record_type::LNAMES | omf::record_type::LLNAMES => {
-                    self.parse_names(record_data)?;
+                    self.parse_names(inner_data)?;
                 }
                 omf::record_type::SEGDEF | omf::record_type::SEGDEF32 => {
-                    self.parse_segdef(record_data, record_type == omf::record_type::SEGDEF32)?;
+                    self.parse_segdef(inner_data, record_type == omf::record_type::SEGDEF32)?;
                 }
                 omf::record_type::GRPDEF => {
-                    self.parse_grpdef(record_data)?;
+                    self.parse_grpdef(inner_data)?;
                 }
                 omf::record_type::PUBDEF | omf::record_type::PUBDEF32 => {
                     self.parse_pubdef(
-                        record_data,
+                        inner_data,
                         record_type == omf::record_type::PUBDEF32,
                         OmfSymbolClass::Public,
                     )?;
                 }
                 omf::record_type::LPUBDEF | omf::record_type::LPUBDEF32 => {
                     self.parse_pubdef(
-                        record_data,
+                        inner_data,
                         record_type == omf::record_type::LPUBDEF32,
                         OmfSymbolClass::LocalPublic,
                     )?;
                 }
                 omf::record_type::EXTDEF => {
-                    self.parse_extdef(record_data, OmfSymbolClass::External)?;
+                    self.parse_extdef(inner_data, OmfSymbolClass::External)?;
                 }
                 omf::record_type::LEXTDEF | omf::record_type::LEXTDEF32 => {
-                    self.parse_extdef(record_data, OmfSymbolClass::LocalExternal)?;
+                    self.parse_extdef(inner_data, OmfSymbolClass::LocalExternal)?;
                 }
                 omf::record_type::CEXTDEF => {
-                    self.parse_extdef(record_data, OmfSymbolClass::ComdatExternal)?;
+                    self.parse_extdef(inner_data, OmfSymbolClass::ComdatExternal)?;
                 }
                 omf::record_type::COMDEF => {
-                    self.parse_comdef(record_data, OmfSymbolClass::Communal)?;
+                    self.parse_comdef(inner_data, OmfSymbolClass::Communal)?;
                 }
                 omf::record_type::LCOMDEF => {
-                    self.parse_comdef(record_data, OmfSymbolClass::LocalCommunal)?;
+                    self.parse_comdef(inner_data, OmfSymbolClass::LocalCommunal)?;
                 }
                 omf::record_type::COMDAT | omf::record_type::COMDAT32 => {
-                    self.parse_comdat(record_data, record_type == omf::record_type::COMDAT32)?;
+                    self.parse_comdat(inner_data, record_type == omf::record_type::COMDAT32)?;
                 }
                 omf::record_type::COMENT => {
-                    self.parse_comment(record_data)?;
+                    self.parse_comment(inner_data)?;
                 }
                 omf::record_type::LEDATA | omf::record_type::LEDATA32 => {
                     let (seg_idx, offset) =
-                        self.parse_ledata(record_data, record_type == omf::record_type::LEDATA32)?;
+                        self.parse_ledata(inner_data, record_type == omf::record_type::LEDATA32)?;
                     current_segment = Some(seg_idx);
                     current_data_offset = Some(offset);
                 }
                 omf::record_type::LIDATA | omf::record_type::LIDATA32 => {
                     let (seg_idx, offset) =
-                        self.parse_lidata(record_data, record_type == omf::record_type::LIDATA32)?;
+                        self.parse_lidata(inner_data, record_type == omf::record_type::LIDATA32)?;
                     current_segment = Some(seg_idx);
                     current_data_offset = Some(offset);
                 }
@@ -307,7 +232,7 @@ impl<'data, R: ReadRef<'data>> OmfFile<'data, R> {
                         (current_segment, current_data_offset)
                     {
                         self.parse_fixupp(
-                            record_data,
+                            inner_data,
                             record_type == omf::record_type::FIXUPP32,
                             seg_idx,
                             data_offset,
@@ -329,7 +254,11 @@ impl<'data, R: ReadRef<'data>> OmfFile<'data, R> {
                 }
             }
 
-            offset += 3 + length; // header + data (which includes checksum)
+            offset += record_length as u64 + 3;
+        }
+
+        if offset == 0 {
+            return Err(Error("No OMF records found"));
         }
 
         Ok(())
@@ -629,8 +558,7 @@ impl<'data, R: ReadRef<'data>> OmfFile<'data, R> {
                     size_val
                 }
                 _ => {
-                    // Unknown data type, skip
-                    continue;
+                    return Err(Error("Invalid data type in COMDEF/LCOMDEF record"));
                 }
             };
 
@@ -1109,7 +1037,7 @@ impl<'data, R: ReadRef<'data>> OmfFile<'data, R> {
     }
 
     /// Get the segments as a slice
-    pub fn segments_slice(&self) -> &[OmfSegment<'data>] {
+    pub fn raw_segments(&self) -> &[OmfSegment<'data>] {
         &self.segments
     }
 
@@ -1128,34 +1056,8 @@ impl<'data, R: ReadRef<'data>> OmfFile<'data, R> {
     }
 
     /// Get all symbols (for iteration)
-    pub fn all_symbols(&self) -> &[OmfSymbol<'data>] {
+    pub fn raw_symbols(&self) -> &[OmfSymbol<'data>] {
         &self.symbols
-    }
-
-    /// Verify the checksum of an OMF record
-    ///
-    /// The checksum is calculated so that the sum of all bytes in the record,
-    /// including the checksum byte itself, equals 0 (modulo 256).
-    fn verify_checksum(record_type: u8, length: usize, body: &[u8], checksum: u8) -> bool {
-        // Some compilers write a 0 byte rather than computing the checksum,
-        // so we accept that as valid
-        if checksum == 0 {
-            return true;
-        }
-
-        let mut sum = u32::from(record_type);
-        // Add length bytes (little-endian)
-        sum = sum.wrapping_add((length & 0xff) as u32);
-        sum = sum.wrapping_add((length >> 8) as u32);
-        // Add all body bytes
-        for &byte in body {
-            sum = sum.wrapping_add(u32::from(byte));
-        }
-        // Add checksum byte
-        sum = sum.wrapping_add(u32::from(checksum));
-
-        // The sum should be 0 (modulo 256)
-        (sum & 0xff) == 0
     }
 }
 
@@ -1311,7 +1213,7 @@ impl<'data, R: ReadRef<'data>> Object<'data> for OmfFile<'data, R> {
 
     fn imports(&self) -> Result<Vec<Import<'data>>> {
         Ok(self
-            .all_symbols()
+            .raw_symbols()
             .iter()
             .filter(|sym| {
                 matches!(
@@ -1328,7 +1230,7 @@ impl<'data, R: ReadRef<'data>> Object<'data> for OmfFile<'data, R> {
 
     fn exports(&self) -> Result<Vec<Export<'data>>> {
         Ok(self
-            .all_symbols()
+            .raw_symbols()
             .iter()
             .filter(|sym| sym.class == OmfSymbolClass::Public)
             .map(|pub_sym| Export {
@@ -1416,15 +1318,15 @@ pub(super) enum FrameMethod {
     Target = 5,
 }
 
-/// Expand a LIDATA block into its uncompressed form
+/// Expand a LIDATA block into a newly allocated buffer
 pub(super) fn expand_lidata_block(data: &[u8]) -> Result<Vec<u8>> {
-    let (consumed, expanded_size) = lidata_block_expanded_size(data)?;
+    let (orig_size, expanded_size) = lidata_block_expanded_size(data)?;
     let mut result = vec![0u8; expanded_size];
     let mut write_offset = 0usize;
-    let consumed_by_expand = expand_lidata_block_into(data, &mut result, &mut write_offset)?;
+    let consumed = expand_lidata_block_into(data, &mut result, &mut write_offset)?;
 
     debug_assert_eq!(write_offset, expanded_size);
-    debug_assert_eq!(consumed_by_expand, consumed);
+    debug_assert_eq!(consumed, orig_size);
 
     Ok(result)
 }

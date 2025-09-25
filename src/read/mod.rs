@@ -369,15 +369,9 @@ impl FileKind {
             #[cfg(feature = "xcoff")]
             [0x01, 0xf7, ..] => FileKind::Xcoff64,
             #[cfg(feature = "omf")]
-            [0x80, ..] | [0x82, ..] => {
-                // Check if it's a valid OMF record type
-                // TODO this is tautological, 0x80 and 0x82 are valid OMF record types
-                // how can we check better?
-                if crate::omf::is_omf_record_type(magic[0]) {
-                    FileKind::Omf
-                } else {
-                    return Err(Error("Unknown file magic"));
-                }
+            [crate::omf::record_type::THEADR, ..] | [crate::omf::record_type::LHEADR, ..]
+            if crate::omf::is_omf(data, offset) => {
+                FileKind::Omf
             }
             _ => return Err(Error("Unknown file magic")),
         };

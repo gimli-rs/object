@@ -90,64 +90,63 @@ pub mod record_type {
     pub const VERNUM: u8 = 0xCC;
     /// Vendor-specific OMF Extension Record
     pub const VENDEXT: u8 = 0xCE;
-}
 
-/// Check if a byte is a valid OMF record type
-pub fn is_omf_record_type(byte: u8) -> bool {
-    use crate::omf::record_type::*;
-    matches!(
-        byte,
-        THEADR
-            | LHEADR
-            | COMENT
-            | MODEND
-            | MODEND32
-            | EXTDEF
-            | TYPDEF
-            | PUBDEF
-            | PUBDEF32
-            | LINNUM
-            | LINNUM32
-            | LNAMES
-            | SEGDEF
-            | SEGDEF32
-            | GRPDEF
-            | FIXUPP
-            | FIXUPP32
-            | LEDATA
-            | LEDATA32
-            | LIDATA
-            | LIDATA32
-            | COMDEF
-            | BAKPAT
-            | BAKPAT32
-            | LEXTDEF
-            | LEXTDEF32
-            | LPUBDEF
-            | LPUBDEF32
-            | LCOMDEF
-            | CEXTDEF
-            | COMDAT
-            | COMDAT32
-            | LINSYM
-            | LINSYM32
-            | ALIAS
-            | NBKPAT
-            | NBKPAT32
-            | LLNAMES
-            | VERNUM
-            | VENDEXT
-    )
+    /// Return true if the record type is valid
+    pub fn is_valid(record_type: u8) -> bool {
+        matches!(
+            record_type,
+            THEADR
+                | LHEADR
+                | COMENT
+                | MODEND
+                | MODEND32
+                | EXTDEF
+                | TYPDEF
+                | PUBDEF
+                | PUBDEF32
+                | LINNUM
+                | LINNUM32
+                | LNAMES
+                | SEGDEF
+                | SEGDEF32
+                | GRPDEF
+                | FIXUPP
+                | FIXUPP32
+                | LEDATA
+                | LEDATA32
+                | LIDATA
+                | LIDATA32
+                | COMDEF
+                | BAKPAT
+                | BAKPAT32
+                | LEXTDEF
+                | LEXTDEF32
+                | LPUBDEF
+                | LPUBDEF32
+                | LCOMDEF
+                | CEXTDEF
+                | COMDAT
+                | COMDAT32
+                | LINSYM
+                | LINSYM32
+                | ALIAS
+                | NBKPAT
+                | NBKPAT32
+                | LLNAMES
+                | VERNUM
+                | VENDEXT
+        )
+    }
 }
 
 /// The addressing mode for an OMF relocation.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[repr(u8)]
 pub enum FixupMode {
-    /// Segment-relative relocation (`M = 1`).
-    SegmentRelative = 0,
     /// Self-relative relocation (`M = 0`).
-    SelfRelative = 1,
+    SelfRelative = 0,
+    /// Segment-relative relocation (`M = 1`).
+    SegmentRelative = 1,
 }
 
 /// Frame datum variants as defined by the OMF specification.
@@ -248,4 +247,49 @@ pub enum FixupLocation {
     Pointer48 = 11,
     /// 32-bit loader-resolved offset
     LoaderOffset32 = 13,
+}
+
+/// Return true if the data looks like an OMF file.
+pub(crate) fn is_omf<'data, R: crate::ReadRef<'data>>(data: R, offset: u64) -> bool {
+    let Ok(header) = data.read_at::<RecordHeader>(offset) else {
+        return false;
+    };
+    if !matches!(
+        header.record_type,
+        record_type::THEADR | record_type::LHEADR
+    ) {
+        return false;
+    }
+    let length = header.length.get(crate::endian::LittleEndian) as usize;
+    if length < 1 {
+        return false;
+    }
+    // Read the full record including the checksum byte
+    let Ok(record) = data.read_bytes_at(offset, (3 + length) as u64) else {
+        return false;
+    };
+    // Verify the record checksum
+    if !verify_checksum(record) {
+        return false;
+    }
+    // Check that the translator or module name string fits in the record
+    if length > 1 {
+        let name_len = record[3] as usize;
+        if name_len > length - 1 {
+            return false;
+        }
+    }
+    true
+}
+
+/// Verify the checksum of an OMF record
+///
+/// The checksum is calculated so that the sum of all bytes in the record,
+/// including the checksum byte itself, equals 0 (modulo 256).
+///
+/// Some compilers write 0 rather than computing the checksum,
+/// so we accept that as valid.
+pub(crate) fn verify_checksum(record: &[u8]) -> bool {
+    let checksum = record.last().copied().unwrap_or(0);
+    checksum == 0 || record.iter().copied().fold(0u8, u8::wrapping_add) == 0
 }

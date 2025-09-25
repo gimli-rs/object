@@ -617,6 +617,7 @@ pub enum RelocationFlags {
         /// `r_rsize` field in the XCOFF relocation.
         r_rsize: u8,
     },
+    #[cfg(feature = "omf")]
     /// OMF relocation metadata.
     Omf {
         /// The location field describing what bytes are being fixed up.
