@@ -5834,9 +5834,21 @@ pub const EF_RISCV_RVE: u32 = 0x0008;
 pub const EF_RISCV_TSO: u32 = 0x0010;
 pub const EF_RISCV_RV64ILP32: u32 = 0x0020;
 
+// RISC-V values for `Sym64::st_other`.
+/// Function uses variant calling convention.
+pub const STO_RISCV_VARIANT_CC: u8 = 0x80;
+
 // RISC-V values for `SectionHeader*::sh_type`.
 /// RISC-V attributes section.
 pub const SHT_RISCV_ATTRIBUTES: u32 = SHT_LOPROC + 3;
+
+// RISC-V values for `ProgramHeader*::p_type`.
+
+pub const PT_RISCV_ATTRIBUTES: u32 = PT_LOPROC + 3;
+
+// RISC-V values for `Dyn64::d_tag`.
+
+pub const DT_RISCV_VARIANT_CC: u32 = DT_LOPROC + 1;
 
 // RISC-V values `Rel*::r_type`.
 pub const R_RISCV_NONE: u32 = 0;
