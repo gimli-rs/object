@@ -4,7 +4,7 @@ use core::fmt::Debug;
 use crate::elf;
 use crate::endian;
 use crate::pod::Pod;
-use crate::read::{ReadError, Result, StringTable};
+use crate::read::{ReadError, ReadRef, Result, StringTable};
 
 /// A trait for generic access to [`elf::Dyn32`] and [`elf::Dyn64`].
 #[allow(missing_docs)]
@@ -45,10 +45,10 @@ pub trait Dyn: Debug + Pod {
     /// Use the value to get a string in a string table.
     ///
     /// Does not check for an appropriate tag.
-    fn string<'data>(
+    fn string<'data, R: ReadRef<'data>>(
         &self,
         endian: Self::Endian,
-        strings: StringTable<'data>,
+        strings: StringTable<'data, R>,
     ) -> Result<&'data [u8]> {
         self.val32(endian)
             .and_then(|val| strings.get(val).ok())
