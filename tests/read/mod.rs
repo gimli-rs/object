@@ -3,3 +3,4 @@
 mod coff;
 mod elf;
 mod macho;
+mod omf;

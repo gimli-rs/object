@@ -434,10 +434,10 @@ impl<'data> Builder<'data> {
             )
             .map(SectionData::Relocation)
         } else {
-            return Err(Error(format!(
+            Err(Error(format!(
                 "Invalid sh_link {} in relocation section at index {}",
                 link.0, index,
-            )));
+            )))
         }
     }
 
