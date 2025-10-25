@@ -3,6 +3,19 @@ use object::macho::*;
 use object::read::macho::*;
 use object::BigEndian;
 
+trait PrinterMachoExt {
+    fn field_version(&mut self, name: &str, value: u32);
+}
+
+impl<'a> PrinterMachoExt for Printer<'a> {
+    fn field_version(&mut self, name: &str, value: u32) {
+        let major = (value >> 16) & 0xFFFF;
+        let minor = (value >> 8) & 0xFF;
+        let update = value & 0xFF;
+        self.field(name, format!("{}.{}.{}", major, minor, update));
+    }
+}
+
 pub(super) fn print_dyld_cache(p: &mut Printer<'_>, data: &[u8], subcache_data: &[&[u8]]) {
     print_dyld_subcache(p, data);
     for subcache in subcache_data {
@@ -417,8 +430,8 @@ fn print_load_command<Mach: MachHeader>(
                             command.string(endian, x.dylib.name),
                         );
                         p.field("Timestamp", x.dylib.timestamp.get(endian));
-                        p.field_hex("CurrentVersion", x.dylib.current_version.get(endian));
-                        p.field_hex(
+                        p.field_version("CurrentVersion", x.dylib.current_version.get(endian));
+                        p.field_version(
                             "CompatibilityVersion",
                             x.dylib.compatibility_version.get(endian),
                         );
@@ -606,8 +619,8 @@ fn print_load_command<Mach: MachHeader>(
                 p.group("VersionMinCommand", |p| {
                     p.field_enum("Cmd", x.cmd.get(endian), FLAGS_LC);
                     p.field_hex("CmdSize", x.cmdsize.get(endian));
-                    p.field_hex("Version", x.version.get(endian));
-                    p.field_hex("Sdk", x.sdk.get(endian));
+                    p.field_version("Version", x.version.get(endian));
+                    p.field_version("Sdk", x.sdk.get(endian));
                 });
             }
             LoadCommandVariant::EntryPoint(x) => {
@@ -648,8 +661,8 @@ fn print_load_command<Mach: MachHeader>(
                     p.field_enum("Cmd", x.cmd.get(endian), FLAGS_LC);
                     p.field_hex("CmdSize", x.cmdsize.get(endian));
                     p.field_enum("Platform", x.platform.get(endian), FLAGS_PLATFORM);
-                    p.field_hex("MinOs", x.minos.get(endian));
-                    p.field_hex("Sdk", x.sdk.get(endian));
+                    p.field_version("MinOs", x.minos.get(endian));
+                    p.field_version("Sdk", x.sdk.get(endian));
                     p.field_hex("NumberOfTools", x.ntools.get(endian));
                     // TODO: dump tools
                 });
