@@ -105,8 +105,8 @@ BuildVersionCommand {
     Cmd: LC_BUILD_VERSION (0x32)
     CmdSize: 0x18
     Platform: PLATFORM_MACOS (0x1)
-    MinOs: 0xD0000
-    Sdk: 0xD0300
+    MinOs: 13.0.0
+    Sdk: 13.3.0
     NumberOfTools: 0x0
 }
 SymtabCommand {
