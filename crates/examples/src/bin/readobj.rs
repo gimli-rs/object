@@ -83,6 +83,12 @@ fn main() {
                 .help("Print the Mach-O load commands"),
         )
         .arg(
+            Arg::new("macho-function-starts")
+                .long("macho-function-starts")
+                .action(ArgAction::SetTrue)
+                .help("Print the Mach-O function start addresses"),
+        )
+        .arg(
             Arg::new("pe-rich")
                 .long("pe-rich")
                 .action(ArgAction::SetTrue)
@@ -130,6 +136,7 @@ fn main() {
         elf_notes: matches.get_flag("elf-notes"),
         elf_versions: matches.get_flag("elf-version-info"),
         elf_attributes: matches.get_flag("elf-attributes"),
+        macho_function_starts: matches.get_flag("macho-function-starts"),
         macho_load_commands: matches.get_flag("macho-load-commands"),
         pe_rich: matches.get_flag("pe-rich"),
         pe_base_relocs: matches.get_flag("pe-base-relocs"),

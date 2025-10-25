@@ -4,7 +4,7 @@ use core::mem;
 use crate::endian::Endian;
 use crate::macho;
 use crate::pod::Pod;
-use crate::read::macho::{MachHeader, SymbolTable};
+use crate::read::macho::{FunctionStartsIterator, MachHeader, SymbolTable};
 use crate::read::{Bytes, Error, ReadError, ReadRef, Result, StringTable};
 
 /// An iterator for the load commands from a [`MachHeader`].
@@ -381,6 +381,32 @@ impl<E: Endian> macho::SymtabCommand<E> {
     }
 }
 
+impl<E: Endian> macho::LinkeditDataCommand<E> {
+    /// Return an iterator over the function start addresses.
+    ///
+    /// Only works if the command is a `LC_FUNCTION_STARTS` command.
+    ///
+    /// # Arguments
+    /// * `text_segment_addr` - The VM address of the __TEXT segment.
+    pub fn function_starts<'data, R: ReadRef<'data>>(
+        &self,
+        endian: E,
+        data: R,
+        text_segment_addr: u64,
+    ) -> Result<FunctionStartsIterator<'data>> {
+        if self.cmd.get(endian) != macho::LC_FUNCTION_STARTS {
+            return Err(Error("Not a function starts command"));
+        }
+        let data = data
+            .read_bytes_at(
+                self.dataoff.get(endian).into(),
+                self.datasize.get(endian).into(),
+            )
+            .read_error("Invalid function starts offset or size")?;
+        Ok(FunctionStartsIterator::new(data, text_segment_addr))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -398,5 +424,28 @@ mod tests {
         let mut commands =
             LoadCommandIterator::new(LittleEndian, &Align([0, 0, 0, 0, 8, 0, 0, 0, 0]).0, 10);
         assert!(commands.next().is_ok());
+    }
+
+    #[test]
+    fn function_starts_invalid_uleb128() {
+        use crate::endian::U32;
+        use crate::macho;
+
+        // Invalid ULEB128: continuation bit set but no following byte
+        let data = [0x80];
+
+        let cmd = macho::LinkeditDataCommand {
+            cmd: U32::new(LittleEndian, macho::LC_FUNCTION_STARTS),
+            cmdsize: U32::new(LittleEndian, 16),
+            dataoff: U32::new(LittleEndian, 0),
+            datasize: U32::new(LittleEndian, data.len() as u32),
+        };
+
+        let mut iter = cmd.function_starts(LittleEndian, &data[..], 0).unwrap();
+
+        // First call returns error
+        assert!(iter.next().unwrap().is_err());
+        // Second call returns None (iterator exhausted)
+        assert!(iter.next().is_none());
     }
 }
