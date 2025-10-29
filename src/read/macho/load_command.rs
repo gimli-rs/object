@@ -444,8 +444,8 @@ mod tests {
         let mut iter = cmd.function_starts(LittleEndian, &data[..], 0).unwrap();
 
         // First call returns error
-        assert!(iter.next().unwrap().is_err());
+        assert!(iter.next().is_err());
         // Second call returns None (iterator exhausted)
-        assert!(iter.next().is_none());
+        assert!(iter.next().transpose().is_none());
     }
 }

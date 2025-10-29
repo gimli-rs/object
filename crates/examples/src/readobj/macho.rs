@@ -382,6 +382,9 @@ fn print_load_command<Mach: MachHeader>(
             LoadCommandVariant::Symtab(symtab) => {
                 print_symtab::<Mach>(p, endian, state.linkedit_data, symtab, state);
             }
+            LoadCommandVariant::LinkeditData(linkedit) => {
+                print_linkedit_data::<Mach>(p, endian, linkedit, state);
+            }
             _ => {}
         }
         if !p.options.macho_load_commands {
@@ -390,7 +393,8 @@ fn print_load_command<Mach: MachHeader>(
         match variant {
             LoadCommandVariant::Segment32(..)
             | LoadCommandVariant::Segment64(..)
-            | LoadCommandVariant::Symtab(..) => {}
+            | LoadCommandVariant::Symtab(..)
+            | LoadCommandVariant::LinkeditData(..) => {}
             LoadCommandVariant::Thread(x, _thread_data) => {
                 p.group("ThreadCommand", |p| {
                     p.field_enum("Cmd", x.cmd.get(endian), FLAGS_LC);
@@ -573,15 +577,6 @@ fn print_load_command<Mach: MachHeader>(
                         x.path.offset.get(endian),
                         command.string(endian, x.path),
                     );
-                });
-            }
-            LoadCommandVariant::LinkeditData(x) => {
-                p.group("LinkeditDataCommand", |p| {
-                    p.field_enum("Cmd", x.cmd.get(endian), FLAGS_LC);
-                    p.field_hex("CmdSize", x.cmdsize.get(endian));
-                    p.field_hex("DataOffset", x.dataoff.get(endian));
-                    p.field_hex("DataSize", x.datasize.get(endian));
-                    print_function_starts::<Mach>(p, endian, state, x);
                 });
             }
             LoadCommandVariant::EncryptionInfo32(x) => {
@@ -899,6 +894,47 @@ fn print_symtab_symbols<Mach: MachHeader>(
             });
         }
     }
+}
+
+fn print_linkedit_data<Mach: MachHeader>(
+    p: &mut Printer<'_>,
+    endian: Mach::Endian,
+    linkedit: &LinkeditDataCommand<Mach::Endian>,
+    state: &MachState,
+) {
+    let cmd = linkedit.cmd.get(endian);
+    let function_starts = p.options.macho_function_starts && cmd == macho::LC_FUNCTION_STARTS;
+    if !p.options.macho_load_commands && !function_starts {
+        return;
+    }
+    p.group("LinkeditDataCommand", |p| {
+        p.field_enum("Cmd", cmd, FLAGS_LC);
+        p.field_hex("CmdSize", linkedit.cmdsize.get(endian));
+        p.field_hex("DataOffset", linkedit.dataoff.get(endian));
+        p.field_hex("DataSize", linkedit.datasize.get(endian));
+        if function_starts {
+            print_function_starts::<Mach>(p, endian, linkedit, state);
+        }
+    });
+}
+
+fn print_function_starts<Mach: MachHeader>(
+    p: &mut Printer<'_>,
+    endian: Mach::Endian,
+    linkedit: &LinkeditDataCommand<Mach::Endian>,
+    state: &MachState,
+) {
+    let Some(function_starts) = linkedit
+        .function_starts(endian, state.linkedit_data, state.text_segment_addr)
+        .print_err(p)
+    else {
+        return;
+    };
+    p.group("FunctionStarts", |p| {
+        for addr in function_starts {
+            addr.print_err(p).map(|addr| p.field_hex("Address", addr));
+        }
+    });
 }
 
 fn print_cputype(p: &mut Printer<'_>, cputype: u32, cpusubtype: u32) {
@@ -1314,25 +1350,3 @@ const FLAGS_X86_64_RELOC: &[Flag<u8>] = &flags!(
     X86_64_RELOC_SIGNED_4,
     X86_64_RELOC_TLV,
 );
-
-fn print_function_starts<Mach: MachHeader>(
-    p: &mut Printer<'_>,
-    endian: Mach::Endian,
-    state: &MachState,
-    linkedit: &LinkeditDataCommand<Mach::Endian>,
-) {
-    if !p.options.macho_function_starts || linkedit.cmd.get(endian) != macho::LC_FUNCTION_STARTS {
-        return;
-    }
-    let Some(function_starts) = linkedit
-        .function_starts(endian, state.linkedit_data, state.text_segment_addr)
-        .print_err(p)
-    else {
-        return;
-    };
-    p.group("FunctionStarts", |p| {
-        for addr in function_starts {
-            addr.print_err(p).map(|addr| p.field_hex("Address", addr));
-        }
-    });
-}
