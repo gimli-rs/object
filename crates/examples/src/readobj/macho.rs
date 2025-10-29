@@ -265,6 +265,7 @@ struct MachState<'a> {
     symbols: Vec<Option<&'a [u8]>>,
     sections: Vec<Vec<u8>>,
     section_index: usize,
+    text_segment_addr: u64,
 }
 
 fn print_macho<Mach: MachHeader<Endian = Endianness>>(
@@ -287,6 +288,9 @@ fn print_macho<Mach: MachHeader<Endian = Endianness>>(
             let mut symtab_command = None;
             while let Ok(Some(command)) = commands.next() {
                 if let Ok(Some((segment, section_data))) = Mach::Segment::from_command(command) {
+                    if segment.name() == macho::SEG_TEXT.as_bytes() {
+                        state.text_segment_addr = segment.vmaddr(endian).into();
+                    }
                     if let Some(cache) = cache {
                         // The symbol table will be in the linkedit segment, but that may be in a
                         // different subcache, so we need to remember the data for that subcache.
@@ -577,6 +581,7 @@ fn print_load_command<Mach: MachHeader>(
                     p.field_hex("CmdSize", x.cmdsize.get(endian));
                     p.field_hex("DataOffset", x.dataoff.get(endian));
                     p.field_hex("DataSize", x.datasize.get(endian));
+                    print_function_starts::<Mach>(p, endian, state, x);
                 });
             }
             LoadCommandVariant::EncryptionInfo32(x) => {
@@ -1309,3 +1314,25 @@ const FLAGS_X86_64_RELOC: &[Flag<u8>] = &flags!(
     X86_64_RELOC_SIGNED_4,
     X86_64_RELOC_TLV,
 );
+
+fn print_function_starts<Mach: MachHeader>(
+    p: &mut Printer<'_>,
+    endian: Mach::Endian,
+    state: &MachState,
+    linkedit: &LinkeditDataCommand<Mach::Endian>,
+) {
+    if !p.options.macho_function_starts || linkedit.cmd.get(endian) != macho::LC_FUNCTION_STARTS {
+        return;
+    }
+    let Some(function_starts) = linkedit
+        .function_starts(endian, state.linkedit_data, state.text_segment_addr)
+        .print_err(p)
+    else {
+        return;
+    };
+    p.group("FunctionStarts", |p| {
+        for addr in function_starts {
+            addr.print_err(p).map(|addr| p.field_hex("Address", addr));
+        }
+    });
+}

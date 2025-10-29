@@ -257,6 +257,9 @@ LinkeditDataCommand {
     CmdSize: 0x10
     DataOffset: 0x8090
     DataSize: 0x8
+    FunctionStarts {
+        Address: 0x100003F68
+    }
 }
 LinkeditDataCommand {
     Cmd: LC_DATA_IN_CODE (0x29)
