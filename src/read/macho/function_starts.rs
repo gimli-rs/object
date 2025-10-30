@@ -1,4 +1,4 @@
-use crate::read::{Bytes, Error, Result};
+use crate::read::{Bytes, ReadError, Result};
 
 /// Iterator over the function starts in a `LC_FUNCTION_STARTS` load command.
 #[derive(Debug, Default, Clone, Copy)]
@@ -16,31 +16,42 @@ impl<'data> FunctionStartsIterator<'data> {
     }
 }
 
+impl<'data> FunctionStartsIterator<'data> {
+    /// Returns the next function start address.
+    pub fn next(&mut self) -> Result<Option<u64>> {
+        if self.data.is_empty() {
+            return Ok(None);
+        }
+
+        let result = self.parse();
+        if result.is_err() {
+            self.data = Bytes(&[]);
+        }
+        result
+    }
+
+    fn parse(&mut self) -> Result<Option<u64>> {
+        let delta = self
+            .data
+            .read_uleb128()
+            .read_error("Invalid ULEB128 in LC_FUNCTION_STARTS")?;
+        if delta == 0 {
+            self.data = Bytes(&[]);
+            return Ok(None);
+        }
+
+        self.addr = self
+            .addr
+            .checked_add(delta)
+            .read_error("Address overflow in LC_FUNCTION_STARTS")?;
+        Ok(Some(self.addr))
+    }
+}
+
 impl<'data> Iterator for FunctionStartsIterator<'data> {
     type Item = Result<u64>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.data.is_empty() {
-            return None;
-        }
-
-        let delta = match self.data.read_uleb128() {
-            Ok(0) => return None,
-            Ok(delta) => delta,
-            Err(()) => {
-                self.data = Bytes(&[]);
-                return Some(Err(Error("Invalid ULEB128 in LC_FUNCTION_STARTS")));
-            }
-        };
-
-        self.addr = match self.addr.checked_add(delta) {
-            Some(addr) => addr,
-            None => {
-                self.data = Bytes(&[]);
-                return Some(Err(Error("Address overflow in LC_FUNCTION_STARTS")));
-            }
-        };
-
-        Some(Ok(self.addr))
+        self.next().transpose()
     }
 }
