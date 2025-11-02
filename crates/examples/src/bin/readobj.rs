@@ -89,6 +89,12 @@ fn main() {
                 .help("Print the Mach-O function start addresses"),
         )
         .arg(
+            Arg::new("macho-exports-trie")
+                .long("macho-exports-trie")
+                .action(ArgAction::SetTrue)
+                .help("Print the Mach-O exports trie symbols"),
+        )
+        .arg(
             Arg::new("pe-rich")
                 .long("pe-rich")
                 .action(ArgAction::SetTrue)
@@ -138,6 +144,7 @@ fn main() {
         elf_attributes: matches.get_flag("elf-attributes"),
         macho_function_starts: matches.get_flag("macho-function-starts"),
         macho_load_commands: matches.get_flag("macho-load-commands"),
+        macho_exports_trie: matches.get_flag("macho-exports-trie"),
         pe_rich: matches.get_flag("pe-rich"),
         pe_base_relocs: matches.get_flag("pe-base-relocs"),
         pe_imports: matches.get_flag("pe-imports"),

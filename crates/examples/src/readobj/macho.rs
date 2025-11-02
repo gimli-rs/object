@@ -904,7 +904,8 @@ fn print_linkedit_data<Mach: MachHeader>(
 ) {
     let cmd = linkedit.cmd.get(endian);
     let function_starts = p.options.macho_function_starts && cmd == macho::LC_FUNCTION_STARTS;
-    if !p.options.macho_load_commands && !function_starts {
+    let exports_trie = p.options.macho_exports_trie && cmd == macho::LC_DYLD_EXPORTS_TRIE;
+    if !p.options.macho_load_commands && !function_starts && !exports_trie {
         return;
     }
     p.group("LinkeditDataCommand", |p| {
@@ -914,6 +915,9 @@ fn print_linkedit_data<Mach: MachHeader>(
         p.field_hex("DataSize", linkedit.datasize.get(endian));
         if function_starts {
             print_function_starts::<Mach>(p, endian, linkedit, state);
+        }
+        if exports_trie {
+            print_exports_trie::<Mach>(p, endian, linkedit, state);
         }
     });
 }
@@ -935,6 +939,51 @@ fn print_function_starts<Mach: MachHeader>(
             addr.print_err(p).map(|addr| p.field_hex("Address", addr));
         }
     });
+}
+
+fn print_exports_trie<Mach: MachHeader>(
+    p: &mut Printer<'_>,
+    endian: Mach::Endian,
+    linkedit: &LinkeditDataCommand<Mach::Endian>,
+    state: &MachState,
+) {
+    let Some(exports_trie) = linkedit
+        .exports_trie(endian, state.linkedit_data)
+        .print_err(p)
+    else {
+        return;
+    };
+    for export_info in exports_trie {
+        export_info.print_err(p).map(|export_symbol| {
+            p.group("ExportSymbol", |p| {
+                p.field_inline_string("Name", export_symbol.name());
+                p.field_hex("Flags", export_symbol.flags());
+                p.flags(export_symbol.flags(), 0, FLAGS_EXPORT_SYMBOL);
+                p.flags(
+                    export_symbol.flags(),
+                    EXPORT_SYMBOL_FLAGS_KIND_MASK,
+                    FLAGS_EXPORT_SYMBOL_KIND,
+                );
+                match export_symbol.data() {
+                    ExportData::Regular { address } => p.field_hex("Address", address),
+                    ExportData::Reexport {
+                        dylib_ordinal,
+                        import_name,
+                    } => {
+                        p.field_hex("DylibOrdinal", dylib_ordinal);
+                        p.field_inline_string("ImportName", import_name);
+                    }
+                    ExportData::StubAndResolver {
+                        stub_address,
+                        resolver_address,
+                    } => {
+                        p.field_hex("StubAddress", stub_address);
+                        p.field_hex("ResolverAddress", resolver_address);
+                    }
+                }
+            });
+        });
+    }
 }
 
 fn print_cputype(p: &mut Printer<'_>, cputype: u32, cpusubtype: u32) {
@@ -1349,4 +1398,14 @@ const FLAGS_X86_64_RELOC: &[Flag<u8>] = &flags!(
     X86_64_RELOC_SIGNED_2,
     X86_64_RELOC_SIGNED_4,
     X86_64_RELOC_TLV,
+);
+const FLAGS_EXPORT_SYMBOL: &[Flag<u8>] = &flags!(
+    EXPORT_SYMBOL_FLAGS_WEAK_DEFINITION,
+    EXPORT_SYMBOL_FLAGS_REEXPORT,
+    EXPORT_SYMBOL_FLAGS_STUB_AND_RESOLVER,
+);
+const FLAGS_EXPORT_SYMBOL_KIND: &[Flag<u8>] = &flags!(
+    EXPORT_SYMBOL_FLAGS_KIND_REGULAR,
+    EXPORT_SYMBOL_FLAGS_KIND_THREAD_LOCAL,
+    EXPORT_SYMBOL_FLAGS_KIND_ABSOLUTE,
 );

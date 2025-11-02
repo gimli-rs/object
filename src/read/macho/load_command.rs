@@ -4,7 +4,7 @@ use core::mem;
 use crate::endian::Endian;
 use crate::macho;
 use crate::pod::Pod;
-use crate::read::macho::{FunctionStartsIterator, MachHeader, SymbolTable};
+use crate::read::macho::{ExportsTrieIterator, FunctionStartsIterator, MachHeader, SymbolTable};
 use crate::read::{Bytes, Error, ReadError, ReadRef, Result, StringTable};
 
 /// An iterator for the load commands from a [`MachHeader`].
@@ -404,6 +404,26 @@ impl<E: Endian> macho::LinkeditDataCommand<E> {
             )
             .read_error("Invalid function starts offset or size")?;
         Ok(FunctionStartsIterator::new(data, text_segment_addr))
+    }
+
+    /// Return an iterator over the exports trie.
+    ///
+    /// Only works if the command is a `LC_DYLD_EXPORTS_TRIE` command.
+    pub fn exports_trie<'data, R: ReadRef<'data>>(
+        &self,
+        endian: E,
+        data: R,
+    ) -> Result<ExportsTrieIterator<'data>> {
+        if self.cmd.get(endian) != macho::LC_DYLD_EXPORTS_TRIE {
+            return Err(Error("Not an exports trie command"));
+        }
+        let data = data
+            .read_bytes_at(
+                self.dataoff.get(endian).into(),
+                self.datasize.get(endian).into(),
+            )
+            .read_error("Invalid exports trie offset or size")?;
+        Ok(ExportsTrieIterator::new(data))
     }
 }
 
