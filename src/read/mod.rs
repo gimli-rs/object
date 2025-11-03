@@ -104,6 +104,9 @@ pub mod wasm;
 #[cfg(feature = "xcoff")]
 pub mod xcoff;
 
+#[cfg(feature = "omf")]
+pub mod omf;
+
 mod traits;
 pub use traits::*;
 
@@ -278,6 +281,11 @@ pub enum FileKind {
     /// See [`xcoff::XcoffFile64`].
     #[cfg(feature = "xcoff")]
     Xcoff64,
+    /// An OMF object file.
+    ///
+    /// See [`omf::OmfFile`].
+    #[cfg(feature = "omf")]
+    Omf,
 }
 
 impl FileKind {
@@ -360,6 +368,11 @@ impl FileKind {
             [0x01, 0xdf, ..] => FileKind::Xcoff32,
             #[cfg(feature = "xcoff")]
             [0x01, 0xf7, ..] => FileKind::Xcoff64,
+            #[cfg(feature = "omf")]
+            [crate::omf::record_type::THEADR, ..] | [crate::omf::record_type::LHEADR, ..]
+            if crate::omf::is_omf(data, offset) => {
+                FileKind::Omf
+            }
             _ => return Err(Error("Unknown file magic")),
         };
         Ok(kind)
