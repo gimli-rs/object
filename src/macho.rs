@@ -2460,13 +2460,13 @@ pub const BIND_SUBOPCODE_THREADED_APPLY: u8 = 0x01;
  * The following are used on the flags byte of a terminal node
  * in the export information.
  */
-pub const EXPORT_SYMBOL_FLAGS_KIND_MASK: u32 = 0x03;
-pub const EXPORT_SYMBOL_FLAGS_KIND_REGULAR: u32 = 0x00;
-pub const EXPORT_SYMBOL_FLAGS_KIND_THREAD_LOCAL: u32 = 0x01;
-pub const EXPORT_SYMBOL_FLAGS_KIND_ABSOLUTE: u32 = 0x02;
-pub const EXPORT_SYMBOL_FLAGS_WEAK_DEFINITION: u32 = 0x04;
-pub const EXPORT_SYMBOL_FLAGS_REEXPORT: u32 = 0x08;
-pub const EXPORT_SYMBOL_FLAGS_STUB_AND_RESOLVER: u32 = 0x10;
+pub const EXPORT_SYMBOL_FLAGS_KIND_MASK: u8 = 0x03;
+pub const EXPORT_SYMBOL_FLAGS_KIND_REGULAR: u8 = 0x00;
+pub const EXPORT_SYMBOL_FLAGS_KIND_THREAD_LOCAL: u8 = 0x01;
+pub const EXPORT_SYMBOL_FLAGS_KIND_ABSOLUTE: u8 = 0x02;
+pub const EXPORT_SYMBOL_FLAGS_WEAK_DEFINITION: u8 = 0x04;
+pub const EXPORT_SYMBOL_FLAGS_REEXPORT: u8 = 0x08;
+pub const EXPORT_SYMBOL_FLAGS_STUB_AND_RESOLVER: u8 = 0x10;
 
 /*
  * The LinkerOptionCommand contains linker options embedded in object files.
