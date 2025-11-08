@@ -3856,6 +3856,15 @@ pub const SHT_ARM_ATTRIBUTES: u32 = SHT_LOPROC + 3;
 /// AArch64 attributes section.
 pub const SHT_AARCH64_ATTRIBUTES: u32 = SHT_LOPROC + 3;
 
+// AArch64 values for `Sym64::st_other`.
+pub const STO_AARCH64_VARIANT_PCS: u8 = 0x80;
+
+// AArch64 values for `Dyn64::d_tag`.
+pub const DT_AARCH64_BTI_PLT: u32 = DT_LOPROC + 1;
+pub const DT_AARCH64_PAC_PLT: u32 = DT_LOPROC + 3;
+pub const DT_AARCH64_VARIANT_PCS: u32 = DT_LOPROC + 5;
+pub const DT_AARCH64_NUM: u32 = 6;
+
 // AArch64 values for `Rel*::r_type`.
 
 /// No relocation.
