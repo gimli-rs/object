@@ -428,6 +428,7 @@ fn print_section_symbols<Elf: FileHeader>(
                     match elf.e_machine(endian) {
                         EM_MIPS => p.flags(other, 0, FLAGS_STO_MIPS),
                         EM_ALPHA => p.flags(other, 0, FLAGS_STO_ALPHA),
+                        EM_AARCH64 => p.flags(other, 0, FLAGS_STO_AARCH64),
                         EM_RISCV => p.flags(other, 0, FLAGS_STO_RISCV),
                         EM_PPC64 => p.field_hex(
                             "Local",
@@ -781,6 +782,7 @@ fn print_dynamic<Elf: FileHeader>(
         EM_PPC => FLAGS_DT_PPC,
         EM_PPC64 => FLAGS_DT_PPC64,
         EM_IA_64 => FLAGS_DT_IA_64,
+        EM_AARCH64 => FLAGS_DT_AARCH64,
         EM_ALTERA_NIOS2 => FLAGS_DT_NIOS2,
         EM_RISCV => FLAGS_DT_RISCV,
         _ => &[],
@@ -1560,6 +1562,7 @@ const FLAGS_STB_MIPS: &[Flag<u8>] = &flags!(STB_MIPS_SPLIT_COMMON);
 const FLAGS_STV: &[Flag<u8>] = &flags!(STV_DEFAULT, STV_INTERNAL, STV_HIDDEN, STV_PROTECTED);
 const FLAGS_STO_MIPS: &[Flag<u8>] = &flags!(STO_MIPS_PLT);
 const FLAGS_STO_ALPHA: &[Flag<u8>] = &flags!(STO_ALPHA_NOPV, STO_ALPHA_STD_GPLOAD);
+const FLAGS_STO_AARCH64: &[Flag<u8>] = &flags!(STO_AARCH64_VARIANT_PCS);
 const FLAGS_STO_RISCV: &[Flag<u8>] = &flags!(STO_RISCV_VARIANT_CC);
 const FLAGS_SHN: &[Flag<u16>] = &flags!(SHN_UNDEF, SHN_ABS, SHN_COMMON, SHN_XINDEX);
 const FLAGS_SHN_MIPS: &[Flag<u16>] = &flags!(
@@ -3589,6 +3592,11 @@ const FLAGS_DT_PPC: &[Flag<u32>] = &flags!(DT_PPC_GOT, DT_PPC_OPT);
 const FLAGS_DT_PPC64: &[Flag<u32>] =
     &flags!(DT_PPC64_GLINK, DT_PPC64_OPD, DT_PPC64_OPDSZ, DT_PPC64_OPT);
 const FLAGS_DT_IA_64: &[Flag<u32>] = &flags!(DT_IA_64_PLT_RESERVE);
+const FLAGS_DT_AARCH64: &[Flag<u32>] = &flags!(
+    DT_AARCH64_BTI_PLT,
+    DT_AARCH64_PAC_PLT,
+    DT_AARCH64_VARIANT_PCS
+);
 const FLAGS_DT_NIOS2: &[Flag<u32>] = &flags!(DT_NIOS2_GP);
 const FLAGS_DT_RISCV: &[Flag<u32>] = &flags!(DT_RISCV_VARIANT_CC);
 const FLAGS_DF: &[Flag<u32>] = &flags!(
