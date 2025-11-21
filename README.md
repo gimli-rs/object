@@ -41,8 +41,8 @@ See [`crates/examples`](crates/examples) for more examples.
 
 ## Minimum Supported Rust Version (MSRV)
 
-Changes to MSRV are considered breaking changes. We are conservative about changing the MSRV,
-but sometimes are required to due to dependencies. The MSRV with all features enabled is 1.81.0.
+Changes to MSRV are not considered changes. We are conservative about changing the MSRV,
+but sometimes are required to due to dependencies. The MSRV with all features enabled is 1.87.0.
 The MSRV with some features disabled is 1.65.0.
 
 ## License
