@@ -55,7 +55,7 @@ impl<'data> ExportsTrieIterator<'data> {
     /// Returns the next exported symbol, if any.
     // All the heavy lifting is done by NodeIterator. This just skips over the internal nodes
     // with no terminal data.
-    fn next(&mut self) -> Result<Option<ExportSymbol<'data>>> {
+    pub fn next(&mut self) -> Result<Option<ExportSymbol<'data>>> {
         for node in &mut self.node_iter {
             if let Some(export_symbol) = node? {
                 return Ok(Some(export_symbol));
@@ -127,8 +127,7 @@ impl<'data> NodeIterator<'data> {
 
     fn push_node(&mut self) -> Result<Option<ExportSymbol<'data>>> {
         let mut data = Bytes(
-            &self
-                .data
+            self.data
                 .get(self.offset..)
                 .read_error("Invalid exports trie offset")?,
         );
