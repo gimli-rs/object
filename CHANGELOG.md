@@ -2,6 +2,43 @@
 
 --------------------------------------------------------------------------------
 
+## 0.38.0
+
+Released 2025/11/21.
+
+### Breaking changes
+
+* Changed the type of `macho::EXPORT_SYMBOL_FLAGS` constants to `u8`.
+  [#817](https://github.com/gimli-rs/object/pull/817)
+
+* Fixed the type of the `StringTable` parameter for `read::elf::Dyn::string`.
+  [#812](https://github.com/gimli-rs/object/pull/812)
+
+### Changed
+
+* Updated `hashbrown` and `wasmparser` dependencies.
+  [#806](https://github.com/gimli-rs/object/pull/806)
+
+* The minimum supported rust version with all features enabled has changed to 1.87.0.
+  Changes to the minimum supported rust version are not considered breaking changes.
+
+### Added
+
+* Added more RISC-V constants for ELF.
+  [#809](https://github.com/gimli-rs/object/pull/809)
+
+* Added more AArch64 constants for ELF.
+  [#819](https://github.com/gimli-rs/object/pull/819)
+
+* Added `macho::LinkeditDataCommand::function_starts` and associated parser.
+  [#814](https://github.com/gimli-rs/object/pull/814)
+  [#816](https://github.com/gimli-rs/object/pull/816)
+
+* Added `macho::LinkeditDataCommand::exports_trie` and associated parser.
+  [#817](https://github.com/gimli-rs/object/pull/817)
+
+--------------------------------------------------------------------------------
+
 ## 0.37.3
 
 Released 2025/08/13.
