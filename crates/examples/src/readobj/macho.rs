@@ -928,15 +928,15 @@ fn print_function_starts<Mach: MachHeader>(
     linkedit: &LinkeditDataCommand<Mach::Endian>,
     state: &MachState,
 ) {
-    let Some(function_starts) = linkedit
+    let Some(mut function_starts) = linkedit
         .function_starts(endian, state.linkedit_data, state.text_segment_addr)
         .print_err(p)
     else {
         return;
     };
     p.group("FunctionStarts", |p| {
-        for addr in function_starts {
-            addr.print_err(p).map(|addr| p.field_hex("Address", addr));
+        while let Some(Some(addr)) = function_starts.next().print_err(p) {
+            p.field_hex("Address", addr);
         }
     });
 }
@@ -947,14 +947,11 @@ fn print_exports_trie<Mach: MachHeader>(
     linkedit: &LinkeditDataCommand<Mach::Endian>,
     state: &MachState,
 ) {
-    let Some(exports_trie) = linkedit
+    if let Some(mut exports_trie) = linkedit
         .exports_trie(endian, state.linkedit_data)
         .print_err(p)
-    else {
-        return;
-    };
-    for export_info in exports_trie {
-        export_info.print_err(p).map(|export_symbol| {
+    {
+        while let Some(Some(export_symbol)) = exports_trie.next().print_err(p) {
             p.group("ExportSymbol", |p| {
                 p.field_inline_string("Name", export_symbol.name());
                 p.field_hex("Flags", export_symbol.flags());
@@ -982,7 +979,7 @@ fn print_exports_trie<Mach: MachHeader>(
                     }
                 }
             });
-        });
+        }
     }
 }
 
