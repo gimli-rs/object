@@ -501,15 +501,11 @@ fn macho_any() {
             Endianness::Little,
         ),
         (Architecture::Aarch64_Ilp32, None, Endianness::Little),
-        /* TODO:
         (Architecture::Arm, None, Endianness::Little),
-        */
         (Architecture::I386, None, Endianness::Little),
         (Architecture::X86_64, None, Endianness::Little),
-        /* TODO:
         (Architecture::PowerPc, None, Endianness::Big),
         (Architecture::PowerPc64, None, Endianness::Big),
-        */
     ]
     .iter()
     .copied()

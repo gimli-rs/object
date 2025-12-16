@@ -327,6 +327,10 @@ impl<'a> Object<'a> {
                 (K::Relative, E::AArch64Call) => (true, macho::ARM64_RELOC_BRANCH26),
                 _ => return unsupported_reloc(),
             },
+            Architecture::PowerPc | Architecture::PowerPc64 => match kind {
+                K::Absolute => (false, macho::PPC_RELOC_VANILLA),
+                _ => return unsupported_reloc(),
+            },
             _ => {
                 return Err(Error(format!(
                     "unimplemented architecture {:?}",
