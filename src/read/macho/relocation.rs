@@ -84,6 +84,12 @@ where
                     (macho::X86_64_RELOC_GOT_LOAD, true) => (K::GotRelative, E::X86RipRelativeMovq),
                     _ => unknown,
                 },
+                macho::CPU_TYPE_POWERPC | macho::CPU_TYPE_POWERPC64 => {
+                    match (reloc.r_type, reloc.r_pcrel) {
+                        (macho::PPC_RELOC_VANILLA, false) => (K::Absolute, g),
+                        _ => unknown,
+                    }
+                }
                 _ => unknown,
             };
             let size = 8 << reloc.r_length;
