@@ -6284,6 +6284,62 @@ pub const R_LARCH_TLS_LD_PCREL20_S2: u32 = 124;
 pub const R_LARCH_TLS_GD_PCREL20_S2: u32 = 125;
 /// 22-bit PC-relative offset to TLS DESC GOT entry
 pub const R_LARCH_TLS_DESC_PCREL20_S2: u32 = 126;
+/// 12..=31 bits of `S + A - PC` into the `pcaddu12i` instruction at `PC`,
+/// and 2..=11 bits of `S + A - PC` into the `jirl` instruction at `PC + 4`
+pub const R_LARCH_CALL30: u32 = 127;
+/// The signed 32-bit offset `offs` from `PC` to `(S + A + 0x800) & 0xfffff000`.
+///
+/// We define the *PC relative anchor* for `S + A` as `PC + offs` (`offs`
+/// is sign-extended to VA bits).
+pub const R_LARCH_PCADD_HI20: u32 = 128;
+/// 0..=11 bits of the 32-bit offset from the
+/// [PC relative anchor][R_LARCH_PCADD_HI20].
+pub const R_LARCH_PCADD_LO12: u32 = 129;
+/// The signed 32-bit offset `offs` from `PC` to
+/// `(GP + G + 0x800) & 0xfffff000`.
+///
+/// We define the *PC relative anchor* for the GOT entry at `GP + G` as
+/// `PC + offs` (`offs` is sign-extended to VA bits).
+pub const R_LARCH_GOT_PCADD_HI20: u32 = 130;
+/// 0..=11 bits of the 32-bit offset from the
+/// [PC relative anchor][R_LARCH_GOT_PCADD_HI20] to the GOT entry.
+pub const R_LARCH_GOT_PCADD_LO12: u32 = 131;
+/// The signed 32-bit offset `offs` from `PC` to
+/// `(GP + IE + 0x800) & 0xfffff000`.
+///
+/// We define the *PC relative anchor* for the TLS IE GOT entry at
+/// `GP + IE` as `PC + offs` (`offs` is sign-extended to VA bits).
+pub const R_LARCH_TLS_IE_PCADD_HI20: u32 = 132;
+/// 0..=11 bits of the 32-bit offset from the
+/// [PC-relative anchor][R_LARCH_TLS_IE_PCADD_HI20] to the TLS IE GOT entry.
+pub const R_LARCH_TLS_IE_PCADD_LO12: u32 = 133;
+/// The signed 32-bit offset `offs` from `PC` to
+/// `(GP + GD + 0x800) & 0xfffff000`.
+///
+/// We define the *PC relative anchor* for the TLS LD GOT entry at
+/// `GP + GD` as `PC + offs` (`offs` is sign-extended to VA bits).
+pub const R_LARCH_TLS_LD_PCADD_HI20: u32 = 134;
+/// 0..=11 bits of the 32-bit offset from the
+/// [PC-relative anchor][R_LARCH_TLS_LD_PCADD_HI20] to the TLS LD GOT entry.
+pub const R_LARCH_TLS_LD_PCADD_LO12: u32 = 135;
+/// The signed 32-bit offset `offs` from `PC` to
+/// `(GP + GD + 0x800) & 0xfffff000`.
+///
+/// We define the *PC relative anchor* for the TLS GD GOT entry at
+/// `GP + GD` as `PC + offs` (`offs` is sign-extended to VA bits).
+pub const R_LARCH_TLS_GD_PCADD_HI20: u32 = 136;
+/// 0..=11 bits of the 32-bit offset from the
+/// [PC-relative anchor][R_LARCH_TLS_GD_PCADD_HI20] to the TLS GD GOT entry.
+pub const R_LARCH_TLS_GD_PCADD_LO12: u32 = 137;
+/// The signed 32-bit offset `offs` from `PC` to
+/// `(GP + GD + 0x800) & 0xfffff000`.
+///
+/// We define the *PC relative anchor* for the TLS DESC GOT entry at
+/// `GP + GD` as `PC + offs` (`offs` is sign-extended to VA bits).
+pub const R_LARCH_TLS_DESC_PCADD_HI20: u32 = 138;
+/// 0..=11 bits of the 32-bit offset from the
+/// [PC-relative anchor][R_LARCH_TLS_DESC_PCADD_HI20] to the TLS DESC GOT entry.
+pub const R_LARCH_TLS_DESC_PCADD_LO12: u32 = 139;
 
 // Xtensa values Rel*::r_type`.
 pub const R_XTENSA_NONE: u32 = 0;
