@@ -292,6 +292,7 @@ fn parse_relocation<Elf: FileHeader>(
         elf::EM_AARCH64 => {
             if header.is_type_64() {
                 match r_type {
+                    elf::R_AARCH64_NONE => (K::None, g, 0),
                     elf::R_AARCH64_ABS64 => (K::Absolute, g, 64),
                     elf::R_AARCH64_ABS32 => (K::Absolute, g, 32),
                     elf::R_AARCH64_ABS16 => (K::Absolute, g, 16),
@@ -303,12 +304,14 @@ fn parse_relocation<Elf: FileHeader>(
                 }
             } else {
                 match r_type {
+                    elf::R_AARCH64_NONE => (K::None, g, 0),
                     elf::R_AARCH64_P32_ABS32 => (K::Absolute, g, 32),
                     _ => unknown,
                 }
             }
         }
         elf::EM_ALPHA => match r_type {
+            elf::R_ALPHA_NONE => (K::None, g, 0),
             // Absolute
             elf::R_ALPHA_REFLONG => (K::Absolute, g, 32),
             elf::R_ALPHA_REFQUAD => (K::Absolute, g, 64),
@@ -319,25 +322,30 @@ fn parse_relocation<Elf: FileHeader>(
             _ => unknown,
         },
         elf::EM_ARM => match r_type {
+            elf::R_ARM_NONE => (K::None, g, 0),
             elf::R_ARM_ABS32 => (K::Absolute, g, 32),
             _ => unknown,
         },
         elf::EM_AVR => match r_type {
+            elf::R_AVR_NONE => (K::None, g, 0),
             elf::R_AVR_32 => (K::Absolute, g, 32),
             elf::R_AVR_16 => (K::Absolute, g, 16),
             _ => unknown,
         },
         elf::EM_BPF => match r_type {
+            elf::R_BPF_NONE => (K::None, g, 0),
             elf::R_BPF_64_64 => (K::Absolute, g, 64),
             elf::R_BPF_64_32 => (K::Absolute, g, 32),
             _ => unknown,
         },
         elf::EM_CSKY => match r_type {
+            elf::R_CKCORE_NONE => (K::None, g, 0),
             elf::R_CKCORE_ADDR32 => (K::Absolute, g, 32),
             elf::R_CKCORE_PCREL32 => (K::Relative, g, 32),
             _ => unknown,
         },
         elf::EM_MCST_ELBRUS => match r_type {
+            elf::R_E2K_NONE => (K::None, g, 0),
             elf::R_E2K_32_ABS => (K::Absolute, g, 32),
             elf::R_E2K_64_ABS => (K::Absolute, g, 64),
             elf::R_E2K_64_ABS_LIT => (K::Absolute, E::E2KLit, 64),
@@ -346,6 +354,7 @@ fn parse_relocation<Elf: FileHeader>(
             _ => unknown,
         },
         elf::EM_386 => match r_type {
+            elf::R_386_NONE => (K::None, g, 0),
             elf::R_386_32 => (K::Absolute, g, 32),
             elf::R_386_PC32 => (K::Relative, g, 32),
             elf::R_386_GOT32 => (K::Got, g, 32),
@@ -359,6 +368,7 @@ fn parse_relocation<Elf: FileHeader>(
             _ => unknown,
         },
         elf::EM_X86_64 => match r_type {
+            elf::R_X86_64_NONE => (K::None, g, 0),
             elf::R_X86_64_64 => (K::Absolute, g, 64),
             elf::R_X86_64_PC32 => (K::Relative, g, 32),
             elf::R_X86_64_GOT32 => (K::Got, g, 32),
@@ -373,10 +383,12 @@ fn parse_relocation<Elf: FileHeader>(
             _ => unknown,
         },
         elf::EM_HEXAGON => match r_type {
+            elf::R_HEX_NONE => (K::None, g, 0),
             elf::R_HEX_32 => (K::Absolute, g, 32),
             _ => unknown,
         },
         elf::EM_LOONGARCH => match r_type {
+            elf::R_LARCH_NONE => (K::None, g, 0),
             elf::R_LARCH_32 => (K::Absolute, g, 32),
             elf::R_LARCH_64 => (K::Absolute, g, 64),
             elf::R_LARCH_32_PCREL => (K::Relative, g, 32),
@@ -387,6 +399,7 @@ fn parse_relocation<Elf: FileHeader>(
             _ => unknown,
         },
         elf::EM_68K => match r_type {
+            elf::R_68K_NONE => (K::None, g, 0),
             elf::R_68K_32 => (K::Absolute, g, 32),
             elf::R_68K_16 => (K::Absolute, g, 16),
             elf::R_68K_8 => (K::Absolute, g, 8),
@@ -405,36 +418,43 @@ fn parse_relocation<Elf: FileHeader>(
             _ => unknown,
         },
         elf::EM_MIPS => match r_type {
+            elf::R_MIPS_NONE => (K::None, g, 0),
             elf::R_MIPS_16 => (K::Absolute, g, 16),
             elf::R_MIPS_32 => (K::Absolute, g, 32),
             elf::R_MIPS_64 => (K::Absolute, g, 64),
             _ => unknown,
         },
         elf::EM_MSP430 => match r_type {
+            elf::R_MSP430_NONE => (K::None, g, 0),
             elf::R_MSP430_32 => (K::Absolute, g, 32),
             elf::R_MSP430_16_BYTE => (K::Absolute, g, 16),
             _ => unknown,
         },
         elf::EM_PARISC => match r_type {
+            elf::R_PARISC_NONE => (K::None, g, 0),
             elf::R_PARISC_DIR32 => (K::Absolute, g, 32),
             elf::R_PARISC_PCREL32 => (K::Relative, g, 32),
             _ => unknown,
         },
         elf::EM_PPC => match r_type {
+            elf::R_PPC_NONE => (K::None, g, 0),
             elf::R_PPC_ADDR32 => (K::Absolute, g, 32),
             _ => unknown,
         },
         elf::EM_PPC64 => match r_type {
+            elf::R_PPC64_NONE => (K::None, g, 0),
             elf::R_PPC64_ADDR32 => (K::Absolute, g, 32),
             elf::R_PPC64_ADDR64 => (K::Absolute, g, 64),
             _ => unknown,
         },
         elf::EM_RISCV => match r_type {
+            elf::R_RISCV_NONE => (K::None, g, 0),
             elf::R_RISCV_32 => (K::Absolute, g, 32),
             elf::R_RISCV_64 => (K::Absolute, g, 64),
             _ => unknown,
         },
         elf::EM_S390 => match r_type {
+            elf::R_390_NONE => (K::None, g, 0),
             elf::R_390_8 => (K::Absolute, g, 8),
             elf::R_390_16 => (K::Absolute, g, 16),
             elf::R_390_32 => (K::Absolute, g, 32),
@@ -458,6 +478,7 @@ fn parse_relocation<Elf: FileHeader>(
             _ => unknown,
         },
         elf::EM_SBF => match r_type {
+            elf::R_SBF_NONE => (K::None, g, 0),
             elf::R_SBF_64_64 => (K::Absolute, g, 64),
             elf::R_SBF_64_32 => (K::Absolute, g, 32),
             _ => unknown,
@@ -478,16 +499,19 @@ fn parse_relocation<Elf: FileHeader>(
             _ => unknown,
         },
         elf::EM_SPARC | elf::EM_SPARC32PLUS | elf::EM_SPARCV9 => match r_type {
+            elf::R_SPARC_NONE => (K::None, g, 0),
             elf::R_SPARC_32 | elf::R_SPARC_UA32 => (K::Absolute, g, 32),
             elf::R_SPARC_64 | elf::R_SPARC_UA64 => (K::Absolute, g, 64),
             _ => unknown,
         },
         elf::EM_SH => match r_type {
+            elf::R_SH_NONE => (K::None, g, 0),
             elf::R_SH_DIR32 => (K::Absolute, g, 32),
             elf::R_SH_REL32 => (K::Relative, g, 32),
             _ => unknown,
         },
         elf::EM_XTENSA => match r_type {
+            elf::R_XTENSA_NONE => (K::None, g, 0),
             elf::R_XTENSA_32 => (K::Absolute, g, 32),
             elf::R_XTENSA_32_PCREL => (K::Relative, g, 32),
             _ => unknown,
