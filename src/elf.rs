@@ -6049,6 +6049,10 @@ pub const R_LARCH_TLS_TPREL32: u32 = 10;
 pub const R_LARCH_TLS_TPREL64: u32 = 11;
 /// Runtime local indirect function resolving
 pub const R_LARCH_IRELATIVE: u32 = 12;
+/// Runtime relocation for TLS descriptors
+pub const R_LARCH_TLS_DESC32: u32 = 13;
+/// Runtime relocation for TLS descriptors
+pub const R_LARCH_TLS_DESC64: u32 = 14;
 /// Mark la.abs: load absolute address for static link.
 pub const R_LARCH_MARK_LA: u32 = 20;
 /// Mark external label branch: access PC relative address for static link.
