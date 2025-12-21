@@ -4210,6 +4210,8 @@ pub const R_AVR_32_PCREL: u32 = 36;
 
 // MSP430 values for `Rel*::r_type`.
 
+/// No reloc
+pub const R_MSP430_NONE: u32 = 0;
 /// Direct 32 bit
 pub const R_MSP430_32: u32 = 1;
 /// Direct 16 bit
@@ -4217,6 +4219,8 @@ pub const R_MSP430_16_BYTE: u32 = 5;
 
 // Hexagon values for `Rel*::r_type`.
 
+/// No reloc
+pub const R_HEX_NONE: u32 = 0;
 /// Direct 32 bit
 pub const R_HEX_32: u32 = 6;
 

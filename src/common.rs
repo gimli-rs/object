@@ -343,6 +343,8 @@ pub enum SymbolScope {
 pub enum RelocationKind {
     /// The operation is unknown.
     Unknown,
+    /// No relocation.
+    None,
     /// S + A
     Absolute,
     /// S + A - P

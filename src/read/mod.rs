@@ -821,6 +821,7 @@ impl RelocationMap {
             addend: relocation.addend() as u64,
         };
         match relocation.kind() {
+            RelocationKind::None => {}
             RelocationKind::Absolute => match relocation.target() {
                 RelocationTarget::Symbol(symbol_idx) => {
                     let symbol = file
