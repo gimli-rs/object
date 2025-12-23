@@ -5,9 +5,7 @@ edition = "2018"
 keywords = ["object", "elf", "mach-o", "pe", "coff"]
 license = "Apache-2.0 OR MIT"
 repository = "https://github.com/gimli-rs/object"
-# NB: if this number increases to 1.81-or-later delete the `build.rs` script
-# as it's no longer necessary.
-rust-version = "1.65"
+rust-version = "1.89.0"
 description = "A unified interface for reading and writing object file formats."
 include = [
   "/build.rs",
@@ -24,7 +22,7 @@ include = [
 features = ['doc']
 
 [dependencies]
-crc32fast = { version = "1.2", default-features = false, optional = true }
+crc-fast = { version = "1.9", default-features = false, optional = true }
 flate2 = { version = "1", optional = true }
 indexmap = { version = "2.0", default-features = false, optional = true }
 wasmparser = { version = "0.241.2", default-features = false, optional = true }
@@ -46,9 +44,9 @@ read_core = []
 # Read support for most file formats (including unaligned files).
 read = ["read_core", "archive", "coff", "elf", "macho", "pe", "xcoff", "unaligned"]
 # Core write support. You will need to enable some file formats too.
-write_core = ["dep:crc32fast", "dep:indexmap", "dep:hashbrown"]
+write_core = ["dep:crc-fast", "dep:indexmap", "dep:hashbrown"]
 # Core write support with libstd features. You will need to enable some file formats too.
-write_std = ["write_core", "std", "indexmap?/std", "crc32fast?/std"]
+write_std = ["write_core", "std", "indexmap?/std", "crc-fast?/std"]
 # Write support for all file formats, including libstd features.
 write = ["write_std", "coff", "elf", "macho", "pe", "xcoff"]
 # Core builder support. You will need to enable some file formats too.
