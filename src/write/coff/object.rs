@@ -6,6 +6,8 @@ use crate::write::coff::writer;
 use crate::write::util::*;
 use crate::write::*;
 
+use crc_fast;
+
 #[derive(Default, Clone, Copy)]
 struct SectionOffsets {
     name: writer::Name,
@@ -825,7 +827,5 @@ impl<'a> Object<'a> {
 
 // JamCRC
 fn checksum(data: &[u8]) -> u32 {
-    let mut hasher = crc32fast::Hasher::new_with_initial(0xffff_ffff);
-    hasher.update(data);
-    !hasher.finalize()
+    crc_fast::crc32_iso_hdlc(data)
 }
