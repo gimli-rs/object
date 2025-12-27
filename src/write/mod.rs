@@ -775,8 +775,7 @@ impl<'a> Object<'a> {
     pub fn write_stream<W: io::Write>(&self, w: W) -> result::Result<(), Box<dyn error::Error>> {
         let mut stream = StreamingBuffer::new(w);
         self.emit(&mut stream)?;
-        stream.result()?;
-        stream.into_inner().flush()?;
+        stream.flush()?;
         Ok(())
     }
 
