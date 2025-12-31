@@ -6,7 +6,7 @@ use crate::read::{
     self, Architecture, CodeView, ComdatKind, CompressedData, CompressedFileRange, Export,
     FileFlags, Import, ObjectKind, ObjectMap, Relocation, RelocationMap, Result, SectionFlags,
     SectionIndex, SectionKind, SegmentFlags, SubArchitecture, SymbolFlags, SymbolIndex, SymbolKind,
-    SymbolMap, SymbolMapName, SymbolScope, SymbolSection,
+    SymbolMap, SymbolMapName, SymbolScope, SymbolSection, SymbolVisibility,
 };
 
 /// An object file.
@@ -562,6 +562,14 @@ pub trait ObjectSymbol<'data>: read::private::Sealed {
 
     /// Returns the symbol scope.
     fn scope(&self) -> SymbolScope;
+
+    /// Returns the symbol visibility.
+    ///
+    /// For ELF, this corresponds to the lower 2 bits of the `st_other` field.
+    /// For other formats, this returns [`SymbolVisibility::Default`].
+    fn visibility(&self) -> SymbolVisibility {
+        SymbolVisibility::Default
+    }
 
     /// Return true if the symbol visible outside of the compilation unit.
     ///
