@@ -2,6 +2,31 @@
 
 --------------------------------------------------------------------------------
 
+## 0.38.1
+
+Released 2026/01/02.
+
+### Changed
+
+* Updated `wasmparser` dependency.
+
+### Added
+
+* Added basic PowerPC relocation support for Mach-O.
+  [#825](https://github.com/gimli-rs/object/pull/825)
+
+* Added more ELF relocations for LoongArch.
+  [#826](https://github.com/gimli-rs/object/pull/826)
+  [#827](https://github.com/gimli-rs/object/pull/827)
+
+* Added `RelocationKind::None`.
+  [#828](https://github.com/gimli-rs/object/pull/828)
+
+* Added `write::StreamingBuffer::flush`.
+  [#829](https://github.com/gimli-rs/object/pull/829)
+
+--------------------------------------------------------------------------------
+
 ## 0.38.0
 
 Released 2025/11/21.
