@@ -234,7 +234,7 @@ impl<'data, R: ReadRef<'data>> WasmFile<'data, R> {
             for import in imports {
                 let import = import.read_error("Couldn't read an import item")?;
                 let kind = match import.ty {
-                    wp::TypeRef::Func(_) => {
+                    wp::TypeRef::Func(_) | wp::TypeRef::FuncExact(_) => {
                         import_func_names.push(import.name);
                         SymbolKind::Text
                     }
@@ -399,7 +399,7 @@ impl<'data, R: ReadRef<'data>> WasmFile<'data, R> {
                 let export = export.read_error("Couldn't read an export item")?;
 
                 let (kind, section_idx) = match export.kind {
-                    wp::ExternalKind::Func => {
+                    wp::ExternalKind::Func | wp::ExternalKind::FuncExact => {
                         if let Some(local_func_id) =
                             export.index.checked_sub(import_func_names.len() as u32)
                         {
