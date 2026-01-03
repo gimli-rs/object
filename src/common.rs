@@ -556,6 +556,12 @@ impl Permissions {
     pub fn executable(&self) -> bool {
         self.bits & Self::X != 0
     }
+
+    /// Returns true if the segment is readable but not writable.
+    #[inline]
+    pub fn readonly(&self) -> bool {
+        self.readable() && !self.writable()
+    }
 }
 
 /// Section flags that are specific to each file format.
