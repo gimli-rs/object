@@ -507,6 +507,71 @@ pub enum SegmentFlags {
     },
 }
 
+impl SegmentFlags {
+    /// Returns true if the segment is readable.
+    pub fn readable(&self) -> bool {
+        match *self {
+            SegmentFlags::None => false,
+            #[cfg(feature = "elf")]
+            SegmentFlags::Elf { p_flags } => p_flags & crate::elf::PF_R != 0,
+            #[cfg(not(feature = "elf"))]
+            SegmentFlags::Elf { .. } => false,
+            #[cfg(feature = "macho")]
+            SegmentFlags::MachO { maxprot, .. } => maxprot & crate::macho::VM_PROT_READ != 0,
+            #[cfg(not(feature = "macho"))]
+            SegmentFlags::MachO { .. } => false,
+            #[cfg(any(feature = "coff", feature = "pe"))]
+            SegmentFlags::Coff { characteristics } => {
+                characteristics & crate::pe::IMAGE_SCN_MEM_READ != 0
+            }
+            #[cfg(not(any(feature = "coff", feature = "pe")))]
+            SegmentFlags::Coff { .. } => false,
+        }
+    }
+
+    /// Returns true if the segment is writable.
+    pub fn writable(&self) -> bool {
+        match *self {
+            SegmentFlags::None => false,
+            #[cfg(feature = "elf")]
+            SegmentFlags::Elf { p_flags } => p_flags & crate::elf::PF_W != 0,
+            #[cfg(not(feature = "elf"))]
+            SegmentFlags::Elf { .. } => false,
+            #[cfg(feature = "macho")]
+            SegmentFlags::MachO { maxprot, .. } => maxprot & crate::macho::VM_PROT_WRITE != 0,
+            #[cfg(not(feature = "macho"))]
+            SegmentFlags::MachO { .. } => false,
+            #[cfg(any(feature = "coff", feature = "pe"))]
+            SegmentFlags::Coff { characteristics } => {
+                characteristics & crate::pe::IMAGE_SCN_MEM_WRITE != 0
+            }
+            #[cfg(not(any(feature = "coff", feature = "pe")))]
+            SegmentFlags::Coff { .. } => false,
+        }
+    }
+
+    /// Returns true if the segment is executable.
+    pub fn executable(&self) -> bool {
+        match *self {
+            SegmentFlags::None => false,
+            #[cfg(feature = "elf")]
+            SegmentFlags::Elf { p_flags } => p_flags & crate::elf::PF_X != 0,
+            #[cfg(not(feature = "elf"))]
+            SegmentFlags::Elf { .. } => false,
+            #[cfg(feature = "macho")]
+            SegmentFlags::MachO { maxprot, .. } => maxprot & crate::macho::VM_PROT_EXECUTE != 0,
+            #[cfg(not(feature = "macho"))]
+            SegmentFlags::MachO { .. } => false,
+            #[cfg(any(feature = "coff", feature = "pe"))]
+            SegmentFlags::Coff { characteristics } => {
+                characteristics & crate::pe::IMAGE_SCN_MEM_EXECUTE != 0
+            }
+            #[cfg(not(any(feature = "coff", feature = "pe")))]
+            SegmentFlags::Coff { .. } => false,
+        }
+    }
+}
+
 /// Section flags that are specific to each file format.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[non_exhaustive]
@@ -618,4 +683,107 @@ pub enum RelocationFlags {
         /// `r_rsize` field in the XCOFF relocation.
         r_rsize: u8,
     },
+}
+
+#[cfg(test)]
+mod tests {
+    use super::SegmentFlags;
+
+    #[test]
+    fn segment_flags_none() {
+        let flags = SegmentFlags::None;
+        assert!(!flags.readable());
+        assert!(!flags.writable());
+        assert!(!flags.executable());
+    }
+
+    #[test]
+    #[cfg(feature = "elf")]
+    fn segment_flags_elf() {
+        use crate::elf::{PF_R, PF_W, PF_X};
+
+        let flags = SegmentFlags::Elf {
+            p_flags: PF_R | PF_X,
+        };
+        assert!(flags.readable());
+        assert!(!flags.writable());
+        assert!(flags.executable());
+
+        let flags = SegmentFlags::Elf {
+            p_flags: PF_R | PF_W,
+        };
+        assert!(flags.readable());
+        assert!(flags.writable());
+        assert!(!flags.executable());
+
+        let flags = SegmentFlags::Elf {
+            p_flags: PF_R | PF_W | PF_X,
+        };
+        assert!(flags.readable());
+        assert!(flags.writable());
+        assert!(flags.executable());
+    }
+
+    #[test]
+    #[cfg(feature = "macho")]
+    fn segment_flags_macho() {
+        use crate::macho::{VM_PROT_EXECUTE, VM_PROT_READ, VM_PROT_WRITE};
+
+        let prot = VM_PROT_READ | VM_PROT_EXECUTE;
+        let flags = SegmentFlags::MachO {
+            flags: 0,
+            maxprot: prot,
+            initprot: prot,
+        };
+        assert!(flags.readable());
+        assert!(!flags.writable());
+        assert!(flags.executable());
+
+        let prot = VM_PROT_READ | VM_PROT_WRITE;
+        let flags = SegmentFlags::MachO {
+            flags: 0,
+            maxprot: prot,
+            initprot: prot,
+        };
+        assert!(flags.readable());
+        assert!(flags.writable());
+        assert!(!flags.executable());
+
+        let prot = VM_PROT_READ | VM_PROT_WRITE | VM_PROT_EXECUTE;
+        let flags = SegmentFlags::MachO {
+            flags: 0,
+            maxprot: prot,
+            initprot: prot,
+        };
+        assert!(flags.readable());
+        assert!(flags.writable());
+        assert!(flags.executable());
+    }
+
+    #[test]
+    #[cfg(any(feature = "coff", feature = "pe"))]
+    fn segment_flags_coff() {
+        use crate::pe::{IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ, IMAGE_SCN_MEM_WRITE};
+
+        let flags = SegmentFlags::Coff {
+            characteristics: IMAGE_SCN_MEM_READ | IMAGE_SCN_MEM_EXECUTE,
+        };
+        assert!(flags.readable());
+        assert!(!flags.writable());
+        assert!(flags.executable());
+
+        let flags = SegmentFlags::Coff {
+            characteristics: IMAGE_SCN_MEM_READ | IMAGE_SCN_MEM_WRITE,
+        };
+        assert!(flags.readable());
+        assert!(flags.writable());
+        assert!(!flags.executable());
+
+        let flags = SegmentFlags::Coff {
+            characteristics: IMAGE_SCN_MEM_READ | IMAGE_SCN_MEM_WRITE | IMAGE_SCN_MEM_EXECUTE,
+        };
+        assert!(flags.readable());
+        assert!(flags.writable());
+        assert!(flags.executable());
+    }
 }

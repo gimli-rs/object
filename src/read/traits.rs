@@ -371,6 +371,21 @@ pub trait ObjectSegment<'data>: read::private::Sealed {
 
     /// Return the flags of segment.
     fn flags(&self) -> SegmentFlags;
+
+    /// Returns true if the segment is readable.
+    fn readable(&self) -> bool {
+        self.flags().readable()
+    }
+
+    /// Returns true if the segment is writable.
+    fn writable(&self) -> bool {
+        self.flags().writable()
+    }
+
+    /// Returns true if the segment is executable.
+    fn executable(&self) -> bool {
+        self.flags().executable()
+    }
 }
 
 /// A section in an [`Object`].
