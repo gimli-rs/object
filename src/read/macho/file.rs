@@ -501,7 +501,7 @@ where
                 if let Ok(Some(command)) = command.entry_point() {
                     return command.entryoff.get(self.endian);
                 }
-                if let Ok(Some((_, thread_data))) = command.thread() {
+                if let Ok(Some((_, thread_data))) = command.unix_thread() {
                     // Extract entry point from LC_UNIXTHREAD based on CPU type.
                     // Thread data layout: flavor (u32), count (u32), then register state.
                     if self.header.cputype(self.endian) == macho::CPU_TYPE_X86_64 {
