@@ -5,8 +5,9 @@ use crate::endian::LittleEndian as LE;
 use crate::pe;
 use crate::pe::ImageSectionHeader;
 use crate::read::{
-    self, CompressedData, CompressedFileRange, ObjectSection, ObjectSegment, ReadError, ReadRef,
-    Relocation, RelocationMap, Result, SectionFlags, SectionIndex, SectionKind, SegmentFlags,
+    self, CompressedData, CompressedFileRange, ObjectSection, ObjectSegment, Permissions,
+    ReadError, ReadRef, Relocation, RelocationMap, Result, SectionFlags, SectionIndex, SectionKind,
+    SegmentFlags,
 };
 
 use super::{ImageNtHeaders, PeFile, SectionTable};
@@ -147,6 +148,16 @@ where
     fn flags(&self) -> SegmentFlags {
         let characteristics = self.section.characteristics.get(LE);
         SegmentFlags::Coff { characteristics }
+    }
+
+    #[inline]
+    fn permissions(&self) -> Permissions {
+        let characteristics = self.section.characteristics.get(LE);
+        Permissions::new(
+            characteristics & pe::IMAGE_SCN_MEM_READ != 0,
+            characteristics & pe::IMAGE_SCN_MEM_WRITE != 0,
+            characteristics & pe::IMAGE_SCN_MEM_EXECUTE != 0,
+        )
     }
 }
 

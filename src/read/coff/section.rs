@@ -5,8 +5,9 @@ use crate::endian::LittleEndian as LE;
 use crate::pe;
 use crate::read::util::StringTable;
 use crate::read::{
-    self, CompressedData, CompressedFileRange, Error, ObjectSection, ObjectSegment, ReadError,
-    ReadRef, RelocationMap, Result, SectionFlags, SectionIndex, SectionKind, SegmentFlags,
+    self, CompressedData, CompressedFileRange, Error, ObjectSection, ObjectSegment, Permissions,
+    ReadError, ReadRef, RelocationMap, Result, SectionFlags, SectionIndex, SectionKind,
+    SegmentFlags,
 };
 
 use super::{CoffFile, CoffHeader, CoffRelocationIterator};
@@ -241,6 +242,16 @@ impl<'data, 'file, R: ReadRef<'data>, Coff: CoffHeader> ObjectSegment<'data>
     fn flags(&self) -> SegmentFlags {
         let characteristics = self.section.characteristics.get(LE);
         SegmentFlags::Coff { characteristics }
+    }
+
+    #[inline]
+    fn permissions(&self) -> Permissions {
+        let characteristics = self.section.characteristics.get(LE);
+        Permissions::new(
+            characteristics & pe::IMAGE_SCN_MEM_READ != 0,
+            characteristics & pe::IMAGE_SCN_MEM_WRITE != 0,
+            characteristics & pe::IMAGE_SCN_MEM_EXECUTE != 0,
+        )
     }
 }
 
