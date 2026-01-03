@@ -5,8 +5,8 @@ Flags: Elf { os_abi: 0, abi_version: 0, e_flags: 0 }
 Relative Address Base: 0
 Entry Address: 570
 Build ID: [d4, 46, a0, 61, bb, 9a, c2, 7a, b4, 3b, 11, 71, 8f, de, df, 5b, 7f, 3a, f6, f4]
-Segment { address: 0, size: 878 }
-Segment { address: 200da8, size: 270 }
+Segment { address: 0, size: 878, permissions: R-X }
+Segment { address: 200da8, size: 270, permissions: RW- }
 
 Symbols
 

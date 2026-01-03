@@ -4,14 +4,14 @@ Architecture: I386
 Flags: Coff { characteristics: 0 }
 Relative Address Base: 0
 Entry Address: 0
-Segment { name: ".drectve", address: 0, size: 0 }
-Segment { name: ".debug$S", address: 0, size: 0 }
-Segment { name: ".text$mn", address: 0, size: 0 }
-Segment { name: ".text$mn", address: 0, size: 0 }
-Segment { name: ".text$mn", address: 0, size: 0 }
-Segment { name: ".text$mn", address: 0, size: 0 }
-Segment { name: ".data", address: 0, size: 0 }
-Segment { name: ".chks64", address: 0, size: 0 }
+Segment { name: ".drectve", address: 0, size: 0, permissions: --- }
+Segment { name: ".debug$S", address: 0, size: 0, permissions: R-- }
+Segment { name: ".text$mn", address: 0, size: 0, permissions: R-X }
+Segment { name: ".text$mn", address: 0, size: 0, permissions: R-X }
+Segment { name: ".text$mn", address: 0, size: 0, permissions: R-X }
+Segment { name: ".text$mn", address: 0, size: 0, permissions: R-X }
+Segment { name: ".data", address: 0, size: 0, permissions: RW- }
+Segment { name: ".chks64", address: 0, size: 0, permissions: --- }
 1: Section { name: ".drectve", address: 0, size: 2f, align: 1, kind: Linker, flags: Coff { characteristics: 100a00 } }
 2: Section { name: ".debug$S", address: 0, size: 7c, align: 1, kind: Other, flags: Coff { characteristics: 42100040 } }
 3: Section { name: ".text$mn", address: 0, size: 14, align: 10, kind: Text, flags: Coff { characteristics: 60500020 } }

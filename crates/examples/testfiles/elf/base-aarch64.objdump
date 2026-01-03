@@ -5,8 +5,8 @@ Flags: Elf { os_abi: 0, abi_version: 0, e_flags: 0 }
 Relative Address Base: 0
 Entry Address: 620
 Build ID: [f7, 5e, 1f, d9, 4, 9a, 3f, cb, 21, dc, 15, f2, 7b, 5, 32, d8, 61, cf, 16, 2]
-Segment { address: 0, size: 7fc }
-Segment { address: 10d80, size: 298 }
+Segment { address: 0, size: 7fc, permissions: R-X }
+Segment { address: 10d80, size: 298, permissions: RW- }
 1: Section { name: ".interp", address: 200, size: 1b, align: 1, kind: ReadOnlyData, flags: Elf { sh_flags: 2 } }
 2: Section { name: ".note.ABI-tag", address: 21c, size: 20, align: 4, kind: Note, flags: Elf { sh_flags: 2 } }
 3: Section { name: ".note.gnu.build-id", address: 23c, size: 24, align: 4, kind: Note, flags: Elf { sh_flags: 2 } }

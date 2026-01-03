@@ -4,25 +4,25 @@ Architecture: X86_64
 Flags: Coff { characteristics: 26 }
 Relative Address Base: 140000000
 Entry Address: 1400014d0
-Segment { name: ".text", address: 140001000, size: 6bf8 }
-Segment { name: ".data", address: 140008000, size: f0 }
-Segment { name: ".rdata", address: 140009000, size: 1000 }
-Segment { name: ".pdata", address: 14000a000, size: 474 }
-Segment { name: ".xdata", address: 14000b000, size: 428 }
-Segment { name: ".bss", address: 14000c000, size: b80 }
-Segment { name: ".idata", address: 14000d000, size: 710 }
-Segment { name: ".CRT", address: 14000e000, size: 60 }
-Segment { name: ".tls", address: 14000f000, size: 10 }
-Segment { name: ".rsrc", address: 140010000, size: 4e8 }
-Segment { name: ".reloc", address: 140011000, size: 84 }
-Segment { name: ".debug_aranges", address: 140012000, size: 6a0 }
-Segment { name: ".debug_info", address: 140013000, size: 12b4c }
-Segment { name: ".debug_abbrev", address: 140026000, size: 3035 }
-Segment { name: ".debug_line", address: 14002a000, size: 7c26 }
-Segment { name: ".debug_frame", address: 140032000, size: 2198 }
-Segment { name: ".debug_str", address: 140035000, size: 87d }
-Segment { name: ".debug_loc", address: 140036000, size: 121dc }
-Segment { name: ".debug_ranges", address: 140049000, size: 14f0 }
+Segment { name: ".text", address: 140001000, size: 6bf8, permissions: R-X }
+Segment { name: ".data", address: 140008000, size: f0, permissions: RW- }
+Segment { name: ".rdata", address: 140009000, size: 1000, permissions: R-- }
+Segment { name: ".pdata", address: 14000a000, size: 474, permissions: R-- }
+Segment { name: ".xdata", address: 14000b000, size: 428, permissions: R-- }
+Segment { name: ".bss", address: 14000c000, size: b80, permissions: RW- }
+Segment { name: ".idata", address: 14000d000, size: 710, permissions: RW- }
+Segment { name: ".CRT", address: 14000e000, size: 60, permissions: RW- }
+Segment { name: ".tls", address: 14000f000, size: 10, permissions: RW- }
+Segment { name: ".rsrc", address: 140010000, size: 4e8, permissions: RW- }
+Segment { name: ".reloc", address: 140011000, size: 84, permissions: R-- }
+Segment { name: ".debug_aranges", address: 140012000, size: 6a0, permissions: R-- }
+Segment { name: ".debug_info", address: 140013000, size: 12b4c, permissions: R-- }
+Segment { name: ".debug_abbrev", address: 140026000, size: 3035, permissions: R-- }
+Segment { name: ".debug_line", address: 14002a000, size: 7c26, permissions: R-- }
+Segment { name: ".debug_frame", address: 140032000, size: 2198, permissions: R-- }
+Segment { name: ".debug_str", address: 140035000, size: 87d, permissions: R-- }
+Segment { name: ".debug_loc", address: 140036000, size: 121dc, permissions: R-- }
+Segment { name: ".debug_ranges", address: 140049000, size: 14f0, permissions: R-- }
 1: Section { name: ".text", address: 140001000, size: 6bf8, align: 1000, kind: Text, flags: Coff { characteristics: 60500060 } }
 2: Section { name: ".data", address: 140008000, size: f0, align: 1000, kind: Data, flags: Coff { characteristics: c0500040 } }
 3: Section { name: ".rdata", address: 140009000, size: 1000, align: 1000, kind: ReadOnlyData, flags: Coff { characteristics: 40600040 } }

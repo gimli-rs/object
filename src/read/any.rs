@@ -617,6 +617,7 @@ impl<'data, 'file, R: ReadRef<'data>> fmt::Debug for Segment<'data, 'file, R> {
         }
         s.field("address", &self.address())
             .field("size", &self.size())
+            .field("permissions", &self.permissions())
             .finish()
     }
 }
