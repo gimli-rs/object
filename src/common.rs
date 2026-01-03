@@ -511,9 +511,21 @@ pub enum SegmentFlags {
 ///
 /// This is a simplified representation of segment permissions that abstracts
 /// over format-specific flags.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Default)]
 pub struct Permissions {
     bits: u8,
+}
+
+impl core::fmt::Debug for Permissions {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(
+            f,
+            "{}{}{}",
+            if self.readable() { 'R' } else { '-' },
+            if self.writable() { 'W' } else { '-' },
+            if self.executable() { 'X' } else { '-' },
+        )
+    }
 }
 
 impl Permissions {
