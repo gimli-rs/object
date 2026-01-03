@@ -501,6 +501,19 @@ where
                 if let Ok(Some(command)) = command.entry_point() {
                     return command.entryoff.get(self.endian);
                 }
+                if let Ok(Some((_, thread_data))) = command.thread() {
+                    // Extract entry point from LC_UNIXTHREAD based on CPU type.
+                    // Thread data layout: flavor (u32), count (u32), then register state.
+                    if self.header.cputype(self.endian) == macho::CPU_TYPE_X86_64 {
+                        // x86_thread_state64: 16 u64 regs (rax-r15), then rip at offset 128.
+                        // Total offset: 8 (flavor+count) + 128 = 136.
+                        if let Some(rip_bytes) = thread_data.get(136..144) {
+                            let mut bytes = [0u8; 8];
+                            bytes.copy_from_slice(rip_bytes);
+                            return self.endian.read_u64_bytes(bytes);
+                        }
+                    }
+                }
             }
         }
         0
