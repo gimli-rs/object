@@ -323,6 +323,31 @@ pub enum SymbolScope {
     Dynamic,
 }
 
+/// A symbol visibility.
+///
+/// This corresponds to the ELF visibility, and is derived from the
+/// lower 2 bits of the `st_other` field for ELF.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[non_exhaustive]
+pub enum SymbolVisibility {
+    /// Default visibility.
+    ///
+    /// For ELF, this is `STV_DEFAULT`.
+    Default,
+    /// Hidden visibility.
+    ///
+    /// For ELF, this is `STV_HIDDEN`.
+    Hidden,
+    /// Protected visibility.
+    ///
+    /// For ELF, this is `STV_PROTECTED`.
+    Protected,
+    /// Internal visibility.
+    ///
+    /// For ELF, this is `STV_INTERNAL`.
+    Internal,
+}
+
 /// The operation used to calculate the result of the relocation.
 ///
 /// The relocation descriptions use the following definitions. Note that
@@ -446,6 +471,16 @@ pub enum RelocationEncoding {
 
     /// E2K 28-bit value stored in CS0
     E2KDisp,
+
+    /// x86-64 relaxable GOT-relative addressing.
+    ///
+    /// Used with `RelocationKind::GotRelative`. May be relaxed by the linker.
+    X86Gotpcrelx,
+
+    /// x86-64 relaxable GOT-relative addressing with REX prefix.
+    ///
+    /// Used with `RelocationKind::GotRelative`. May be relaxed by the linker.
+    X86RexGotpcrelx,
 }
 
 /// File flags that are specific to each file format.

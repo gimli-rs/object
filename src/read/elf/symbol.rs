@@ -11,6 +11,7 @@ use crate::read::util::StringTable;
 use crate::read::{
     self, ObjectSymbol, ObjectSymbolTable, ReadError, ReadRef, SectionIndex, SymbolFlags,
     SymbolIndex, SymbolKind, SymbolMap, SymbolMapEntry, SymbolScope, SymbolSection,
+    SymbolVisibility,
 };
 
 use super::{FileHeader, SectionHeader, SectionTable};
@@ -464,6 +465,17 @@ impl<'data, 'file, Elf: FileHeader, R: ReadRef<'data>> ObjectSymbol<'data>
                 }
                 _ => SymbolScope::Unknown,
             }
+        }
+    }
+
+    #[inline]
+    fn visibility(&self) -> SymbolVisibility {
+        match self.symbol.st_visibility() {
+            elf::STV_DEFAULT => SymbolVisibility::Default,
+            elf::STV_HIDDEN => SymbolVisibility::Hidden,
+            elf::STV_PROTECTED => SymbolVisibility::Protected,
+            elf::STV_INTERNAL => SymbolVisibility::Internal,
+            _ => SymbolVisibility::Default,
         }
     }
 
