@@ -4,13 +4,13 @@ Architecture: X86_64
 Flags: Coff { characteristics: 4 }
 Relative Address Base: 0
 Entry Address: 0
-Segment { name: ".text", address: 0, size: 0 }
-Segment { name: ".data", address: 0, size: 0 }
-Segment { name: ".bss", address: 0, size: 0 }
-Segment { name: ".xdata", address: 0, size: 0 }
-Segment { name: ".pdata", address: 0, size: 0 }
-Segment { name: ".rdata", address: 0, size: 0 }
-Segment { name: ".rdata$zzz", address: 0, size: 0 }
+Segment { name: ".text", address: 0, size: 0, permissions: R-X }
+Segment { name: ".data", address: 0, size: 0, permissions: RW- }
+Segment { name: ".bss", address: 0, size: 0, permissions: RW- }
+Segment { name: ".xdata", address: 0, size: 0, permissions: R-- }
+Segment { name: ".pdata", address: 0, size: 0, permissions: R-- }
+Segment { name: ".rdata", address: 0, size: 0, permissions: R-- }
+Segment { name: ".rdata$zzz", address: 0, size: 0, permissions: R-- }
 1: Section { name: ".text", address: 0, size: 80, align: 10, kind: Text, flags: Coff { characteristics: 60500020 } }
 2: Section { name: ".data", address: 0, size: 0, align: 10, kind: Data, flags: Coff { characteristics: c0500040 } }
 3: Section { name: ".bss", address: 0, size: 0, align: 10, kind: UninitializedData, flags: Coff { characteristics: c0500080 } }

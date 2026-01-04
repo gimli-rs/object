@@ -4,9 +4,9 @@ use alloc::vec::Vec;
 use crate::endian::Endianness;
 use crate::read::{
     self, Architecture, CodeView, ComdatKind, CompressedData, CompressedFileRange, Export,
-    FileFlags, Import, ObjectKind, ObjectMap, Relocation, RelocationMap, Result, SectionFlags,
-    SectionIndex, SectionKind, SegmentFlags, SubArchitecture, SymbolFlags, SymbolIndex, SymbolKind,
-    SymbolMap, SymbolMapName, SymbolScope, SymbolSection,
+    FileFlags, Import, ObjectKind, ObjectMap, Permissions, Relocation, RelocationMap, Result,
+    SectionFlags, SectionIndex, SectionKind, SegmentFlags, SubArchitecture, SymbolFlags,
+    SymbolIndex, SymbolKind, SymbolMap, SymbolMapName, SymbolScope, SymbolSection,
 };
 
 /// An object file.
@@ -371,6 +371,9 @@ pub trait ObjectSegment<'data>: read::private::Sealed {
 
     /// Return the flags of segment.
     fn flags(&self) -> SegmentFlags;
+
+    /// Return the permissions of the segment.
+    fn permissions(&self) -> Permissions;
 }
 
 /// A section in an [`Object`].

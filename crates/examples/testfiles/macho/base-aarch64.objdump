@@ -5,10 +5,10 @@ Flags: MachO { flags: 200085 }
 Relative Address Base: 0
 Entry Address: 3f68
 Mach UUID: [46, dd, c8, b7, f0, 47, 38, 6b, b2, 75, 9a, ec, a4, dc, de, 6f]
-Segment { name: "__PAGEZERO", address: 0, size: 100000000 }
-Segment { name: "__TEXT", address: 100000000, size: 4000 }
-Segment { name: "__DATA_CONST", address: 100004000, size: 4000 }
-Segment { name: "__LINKEDIT", address: 100008000, size: 4000 }
+Segment { name: "__PAGEZERO", address: 0, size: 100000000, permissions: --- }
+Segment { name: "__TEXT", address: 100000000, size: 4000, permissions: R-X }
+Segment { name: "__DATA_CONST", address: 100004000, size: 4000, permissions: RW- }
+Segment { name: "__LINKEDIT", address: 100008000, size: 4000, permissions: R-- }
 1: Section { segment: "__TEXT", name: "__text", address: 100003f68, size: 34, align: 4, kind: Text, flags: MachO { flags: 80000400 } }
 2: Section { segment: "__TEXT", name: "__stubs", address: 100003f9c, size: c, align: 4, kind: Unknown, flags: MachO { flags: 80000408 } }
 3: Section { segment: "__TEXT", name: "__cstring", address: 100003fa8, size: d, align: 1, kind: ReadOnlyString, flags: MachO { flags: 2 } }

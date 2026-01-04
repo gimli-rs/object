@@ -4,7 +4,7 @@ Architecture: X86_64
 Flags: MachO { flags: 2000 }
 Relative Address Base: 0
 Entry Address: 0
-Segment { name: "", address: 0, size: 2f6 }
+Segment { name: "", address: 0, size: 2f6, permissions: RWX }
 1: Section { segment: "__TEXT", name: "__text", address: 0, size: 25, align: 10, kind: Text, flags: MachO { flags: 80000400 } }
 2: Section { segment: "__TEXT", name: "__cstring", address: 25, size: d, align: 1, kind: ReadOnlyString, flags: MachO { flags: 2 } }
 3: Section { segment: "__DWARF", name: "__debug_abbrev", address: 32, size: 3a, align: 1, kind: Debug, flags: MachO { flags: 2000000 } }

@@ -5,10 +5,10 @@ Flags: Elf { os_abi: 0, abi_version: 0, e_flags: 0 }
 Relative Address Base: 0
 Entry Address: 1060
 Build ID: [1f, 9b, 45, 6b, d0, 2a, 5, f3, 6b, 88, 90, ba, b6, bc, fb, 39, e9, 39, cd, 99]
-Segment { address: 0, size: 618 }
-Segment { address: 1000, size: 179 }
-Segment { address: 2000, size: f4 }
-Segment { address: 3d88, size: 290 }
+Segment { address: 0, size: 618, permissions: R-- }
+Segment { address: 1000, size: 179, permissions: R-X }
+Segment { address: 2000, size: f4, permissions: R-- }
+Segment { address: 3d88, size: 290, permissions: RW- }
 1: Section { name: ".interp", address: 318, size: 1c, align: 1, kind: ReadOnlyData, flags: Elf { sh_flags: 2 } }
 2: Section { name: ".note.gnu.property", address: 338, size: 30, align: 8, kind: Note, flags: Elf { sh_flags: 2 } }
 3: Section { name: ".note.gnu.build-id", address: 368, size: 24, align: 4, kind: Note, flags: Elf { sh_flags: 2 } }

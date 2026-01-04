@@ -11,9 +11,9 @@ use wasmparser as wp;
 use crate::read::{
     self, Architecture, ComdatKind, CompressedData, CompressedFileRange, Error, Export, FileFlags,
     Import, NoDynamicRelocationIterator, Object, ObjectComdat, ObjectKind, ObjectSection,
-    ObjectSegment, ObjectSymbol, ObjectSymbolTable, ReadError, ReadRef, Relocation, RelocationMap,
-    Result, SectionFlags, SectionIndex, SectionKind, SegmentFlags, SymbolFlags, SymbolIndex,
-    SymbolKind, SymbolScope, SymbolSection,
+    ObjectSegment, ObjectSymbol, ObjectSymbolTable, Permissions, ReadError, ReadRef, Relocation,
+    RelocationMap, Result, SectionFlags, SectionIndex, SectionKind, SegmentFlags, SymbolFlags,
+    SymbolIndex, SymbolKind, SymbolScope, SymbolSection,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -747,6 +747,11 @@ impl<'data, 'file, R> ObjectSegment<'data> for WasmSegment<'data, 'file, R> {
 
     #[inline]
     fn flags(&self) -> SegmentFlags {
+        unreachable!()
+    }
+
+    #[inline]
+    fn permissions(&self) -> Permissions {
         unreachable!()
     }
 }

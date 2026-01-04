@@ -4,7 +4,7 @@ Architecture: X86_64
 Flags: MachO { flags: 0 }
 Relative Address Base: 0
 Entry Address: 0
-Segment { name: "", address: 0, size: 6b }
+Segment { name: "", address: 0, size: 6b, permissions: RWX }
 1: Section { segment: "__TEXT", name: "__text", address: 0, size: 53, align: 1, kind: Text, flags: MachO { flags: 80000400 } }
 2: Section { segment: "__DATA", name: "__data", address: 53, size: 18, align: 1, kind: Data, flags: MachO { flags: 0 } }
 

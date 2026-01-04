@@ -507,6 +507,75 @@ pub enum SegmentFlags {
     },
 }
 
+/// Memory permissions for a segment.
+///
+/// This is a simplified representation of segment permissions that abstracts
+/// over format-specific flags.
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Default)]
+pub struct Permissions {
+    bits: u8,
+}
+
+impl core::fmt::Debug for Permissions {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(
+            f,
+            "{}{}{}",
+            if self.readable() { 'R' } else { '-' },
+            if self.writable() { 'W' } else { '-' },
+            if self.executable() { 'X' } else { '-' },
+        )
+    }
+}
+
+impl Permissions {
+    /// Permission bit for readable.
+    const R: u8 = 1 << 0;
+    /// Permission bit for writable.
+    const W: u8 = 1 << 1;
+    /// Permission bit for executable.
+    const X: u8 = 1 << 2;
+
+    /// Creates a new `Permissions` with the given flags.
+    pub fn new(readable: bool, writable: bool, executable: bool) -> Self {
+        let mut bits = 0;
+        if readable {
+            bits |= Self::R;
+        }
+        if writable {
+            bits |= Self::W;
+        }
+        if executable {
+            bits |= Self::X;
+        }
+        Permissions { bits }
+    }
+
+    /// Returns true if the segment is readable.
+    #[inline]
+    pub fn readable(&self) -> bool {
+        self.bits & Self::R != 0
+    }
+
+    /// Returns true if the segment is writable.
+    #[inline]
+    pub fn writable(&self) -> bool {
+        self.bits & Self::W != 0
+    }
+
+    /// Returns true if the segment is executable.
+    #[inline]
+    pub fn executable(&self) -> bool {
+        self.bits & Self::X != 0
+    }
+
+    /// Returns true if the segment is readable but not writable.
+    #[inline]
+    pub fn readonly(&self) -> bool {
+        self.readable() && !self.writable()
+    }
+}
+
 /// Section flags that are specific to each file format.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[non_exhaustive]

@@ -4,10 +4,10 @@ Architecture: I386
 Flags: Coff { characteristics: 102 }
 Relative Address Base: 400000
 Entry Address: 4012e1
-Segment { name: ".text", address: 401000, size: 104d3 }
-Segment { name: ".rdata", address: 412000, size: 6808 }
-Segment { name: ".data", address: 419000, size: 12f4 }
-Segment { name: ".reloc", address: 41b000, size: ec8 }
+Segment { name: ".text", address: 401000, size: 104d3, permissions: R-X }
+Segment { name: ".rdata", address: 412000, size: 6808, permissions: R-- }
+Segment { name: ".data", address: 419000, size: 12f4, permissions: RW- }
+Segment { name: ".reloc", address: 41b000, size: ec8, permissions: R-- }
 1: Section { name: ".text", address: 401000, size: 104d3, align: 1000, kind: Text, flags: Coff { characteristics: 60000020 } }
 2: Section { name: ".rdata", address: 412000, size: 6808, align: 1000, kind: ReadOnlyData, flags: Coff { characteristics: 40000040 } }
 3: Section { name: ".data", address: 419000, size: 12f4, align: 1000, kind: Data, flags: Coff { characteristics: c0000040 } }
