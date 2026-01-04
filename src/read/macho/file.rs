@@ -501,6 +501,37 @@ where
                 if let Ok(Some(command)) = command.entry_point() {
                     return command.entryoff.get(self.endian);
                 }
+                if let Ok(Some((_, thread_data))) = command.unix_thread() {
+                    // Extract entry point from LC_UNIXTHREAD based on CPU type.
+                    // Thread data layout: flavor (u32), count (u32), then register state.
+                    let cputype = self.header.cputype(self.endian);
+                    // Offset and size of the program counter in the thread state.
+                    // Offsets include 8 bytes for flavor and count fields.
+                    let (pc_offset, pc_size) = match cputype {
+                        // x86_thread_state64: 16 u64 regs (rax-r15), then rip.
+                        macho::CPU_TYPE_X86_64 => (8 + 16 * 8, 8),
+                        // arm_thread_state64: 29 u64 regs (x0-x28), fp, lr, sp, then pc.
+                        macho::CPU_TYPE_ARM64 => (8 + 32 * 8, 8),
+                        // x86_thread_state32: 10 u32 regs, then eip.
+                        macho::CPU_TYPE_X86 => (8 + 10 * 4, 4),
+                        // arm_thread_state32: 15 u32 regs (r0-r12, sp, lr), then pc.
+                        macho::CPU_TYPE_ARM => (8 + 15 * 4, 4),
+                        _ => (0, 0),
+                    };
+                    if pc_size == 8 {
+                        if let Some(pc_bytes) = thread_data.get(pc_offset..pc_offset + 8) {
+                            let mut bytes = [0u8; 8];
+                            bytes.copy_from_slice(pc_bytes);
+                            return self.endian.read_u64_bytes(bytes);
+                        }
+                    } else if pc_size == 4 {
+                        if let Some(pc_bytes) = thread_data.get(pc_offset..pc_offset + 4) {
+                            let mut bytes = [0u8; 4];
+                            bytes.copy_from_slice(pc_bytes);
+                            return u64::from(self.endian.read_u32_bytes(bytes));
+                        }
+                    }
+                }
             }
         }
         0

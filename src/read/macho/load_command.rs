@@ -264,6 +264,19 @@ impl<'data, E: Endian> LoadCommandData<'data, E> {
         }
     }
 
+    /// Try to parse this command as an `LC_UNIXTHREAD` [`macho::ThreadCommand`].
+    ///
+    /// Returns the thread command and the thread state data that follows it.
+    pub fn unix_thread(self) -> Result<Option<(&'data macho::ThreadCommand<E>, &'data [u8])>> {
+        if self.cmd == macho::LC_UNIXTHREAD {
+            let mut data = self.data;
+            let thread = data.read().read_error("Invalid Mach-O command size")?;
+            Ok(Some((thread, data.0)))
+        } else {
+            Ok(None)
+        }
+    }
+
     /// Try to parse this command as a [`macho::BuildVersionCommand`].
     pub fn build_version(self) -> Result<Option<&'data macho::BuildVersionCommand<E>>> {
         if self.cmd == macho::LC_BUILD_VERSION {
