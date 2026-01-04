@@ -5045,6 +5045,24 @@ pub const R_X86_64_RELATIVE64: u32 = 38;
 pub const R_X86_64_GOTPCRELX: u32 = 41;
 /// Load from 32 bit signed pc relative offset to GOT entry with REX prefix, relaxable.
 pub const R_X86_64_REX_GOTPCRELX: u32 = 42;
+/// 32 bit signed PC relative offset to GOT if the instruction starts at 4 bytes before the relocation offset, relaxable.
+pub const R_X86_64_CODE_4_GOTPCRELX: u32 = 43;
+/// 32 bit signed PC relative offset to GOT entry for IE symbol if the instruction starts at 4 bytes before the relocation offset.
+pub const R_X86_64_CODE_4_GOTTPOFF: u32 = 44;
+/// 32-bit PC relative to TLS descriptor in GOT if the instruction starts at 4 bytes before the relocation offset.
+pub const R_X86_64_CODE_4_GOTPC32_TLSDESC: u32 = 45;
+/// 32 bit signed PC relative offset to GOT if the instruction starts at 5 bytes before the relocation offset, relaxable.
+pub const R_X86_64_CODE_5_GOTPCRELX: u32 = 46;
+/// 32 bit signed PC relative offset to GOT entry for IE symbol if the instruction starts at 5 bytes before the relocation offset.
+pub const R_X86_64_CODE_5_GOTTPOFF: u32 = 47;
+/// 32-bit PC relative to TLS descriptor in GOT if the instruction starts at 5 bytes before the relocation offset.
+pub const R_X86_64_CODE_5_GOTPC32_TLSDESC: u32 = 48;
+/// 32 bit signed PC relative offset to GOT if the instruction starts at 6 bytes before the relocation offset, relaxable.
+pub const R_X86_64_CODE_6_GOTPCRELX: u32 = 49;
+/// 32 bit signed PC relative offset to GOT entry for IE symbol if the instruction starts at 6 bytes before the relocation offset.
+pub const R_X86_64_CODE_6_GOTTPOFF: u32 = 50;
+/// 32-bit PC relative to TLS descriptor in GOT if the instruction starts at 6 bytes before the relocation offset.
+pub const R_X86_64_CODE_6_GOTPC32_TLSDESC: u32 = 51;
 
 // AMD x86-64 values `SectionHeader*::sh_type`.
 /// Unwind information.
