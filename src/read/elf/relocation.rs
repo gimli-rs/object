@@ -864,9 +864,9 @@ struct CrelIteratorHeader {
     /// The number of encoded relocations.
     count: usize,
     /// The number of flag bits each relocation uses.
-    flag_bits: u64,
+    flag_bits: u8,
     /// Shift of the relocation value.
-    shift: u64,
+    shift: u8,
     /// True if the relocation format encodes addend.
     is_rela: bool,
 }
@@ -910,7 +910,7 @@ impl<'data> CrelIterator<'data> {
         } else {
             2
         };
-        let shift = header & HEADER_SHIFT_MASK;
+        let shift = (header & HEADER_SHIFT_MASK) as u8;
         let is_rela = header & HEADER_ADDEND_BIT_MASK != 0;
 
         Ok(CrelIterator {
