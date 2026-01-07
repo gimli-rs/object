@@ -947,7 +947,7 @@ impl<'data> CrelIterator<'data> {
                 .read_error("Cannot read offset and flags of CREL relocation")?
                 << (7 - self.header.flag_bits);
         }
-        self.state.r_offset = self.state.r_offset.wrapping_add(delta_offset);
+        self.state.r_offset = self.state.r_offset.wrapping_add(delta_offset) << self.header.shift;
 
         if flags & DELTA_SYMBOL_INDEX_MASK != 0 {
             let delta_symidx = self
@@ -971,12 +971,7 @@ impl<'data> CrelIterator<'data> {
             self.state.r_addend = self.state.r_addend.wrapping_add(delta_addend);
         }
         self.header.count -= 1;
-        Ok(Crel {
-            r_offset: self.state.r_offset << self.header.shift,
-            r_sym: self.state.r_sym,
-            r_type: self.state.r_type,
-            r_addend: self.state.r_addend,
-        })
+        Ok(self.state)
     }
 }
 
