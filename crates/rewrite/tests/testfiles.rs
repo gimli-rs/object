@@ -256,6 +256,29 @@ fn rewrite_annobin_strtab() {
     fail_message(fail);
 }
 
+#[test]
+fn rewrite_nobits_offset_0() {
+    let print_options = readobj::PrintOptions {
+        string_indices: false,
+        segments: true,
+        sections: true,
+        elf_dynamic: true,
+        ..readobj::PrintOptions::none()
+    };
+    let mut fail = false;
+
+    let mut options = object_rewrite::Options::default();
+    options.elf.add_runpath = vec![b"/foo".to_vec(), b"/bar".to_vec()];
+    fail |= testfile(
+        "elf/base-mold-2.2",
+        "elf/base-mold-2.2.add-runpath",
+        options,
+        &print_options,
+    );
+
+    fail_message(fail);
+}
+
 fn testfile(
     in_path: &str,
     out_path: &str,
