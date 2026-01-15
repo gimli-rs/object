@@ -51,6 +51,42 @@ impl<'data> Rewriter<'data> {
         })
     }
 
+    /// Returns a reference to the underlying ELF builder.
+    ///
+    /// This can be used for read-only access to the ELF structure
+    /// for operations not directly supported by the `Rewriter` API.
+    pub fn builder(&self) -> &build::elf::Builder<'data> {
+        &self.builder
+    }
+
+    /// Returns a mutable reference to the underlying ELF builder.
+    ///
+    /// This can be used to perform modifications not directly supported
+    /// by the `Rewriter` API. After making modifications through the builder,
+    /// the file can be written using [`Rewriter::write`].
+    ///
+    /// Note: Modifications made through the builder will not automatically
+    /// set the internal `modified` flag. If you need the rewriter to track
+    /// modifications, use [`Rewriter::set_modified`].
+    pub fn builder_mut(&mut self) -> &mut build::elf::Builder<'data> {
+        &mut self.builder
+    }
+
+    /// Marks the file as modified.
+    ///
+    /// This is useful when making changes directly through [`Rewriter::builder_mut`],
+    /// as those changes don't automatically set the modified flag.
+    /// The modified flag affects the behavior of [`Rewriter::write`], which
+    /// will perform section layout optimization when the file has been modified.
+    pub fn set_modified(&mut self) {
+        self.modified = true;
+    }
+
+    /// Returns whether the file has been modified.
+    pub fn is_modified(&self) -> bool {
+        self.modified
+    }
+
     /// Write the file to an output stream.
     pub fn write<W: std::io::Write>(mut self, w: W) -> Result<()> {
         self.elf_finalize()?;
