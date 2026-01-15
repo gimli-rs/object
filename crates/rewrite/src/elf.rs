@@ -602,7 +602,9 @@ fn move_sections(builder: &mut build::elf::Builder) -> Result<()> {
         added_p_flags.clear();
         for id in &move_sections {
             let section = builder.sections.get_mut(*id);
-            // Flag the section as needing to move.
+            // Flag the section as needing to move. This only works for sections that
+            // must have non-zero offsets.
+            debug_assert_ne!(section.sh_type, elf::SHT_NOBITS);
             section.sh_offset = 0;
             // We need one PT_LOAD segment for each unique combination of p_flags.
             let p_flags = section.p_flags();
@@ -808,7 +810,9 @@ fn find_move_sections(
         if !section.is_alloc() {
             continue;
         }
-        if section.sh_offset == 0 {
+        // Note that it is allowed for SHT_NOBITS sections to have sh_offset == 0,
+        // but we never move them, so we must be careful to skip them here.
+        if section.sh_offset == 0 && section.sh_type != elf::SHT_NOBITS {
             // Newly added section that needs to be assigned to a segment,
             // or a section that has already been flagged for moving.
             move_sections.push(section.id());
