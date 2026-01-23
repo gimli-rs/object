@@ -295,6 +295,8 @@ pub trait Section: Debug + Pod {
     fn reloff(&self, endian: Self::Endian) -> u32;
     fn nreloc(&self, endian: Self::Endian) -> u32;
     fn flags(&self, endian: Self::Endian) -> u32;
+    fn reserved1(&self, endian: Self::Endian) -> u32;
+    fn reserved2(&self, endian: Self::Endian) -> u32;
 
     /// Return the `sectname` bytes up until the null terminator.
     fn name(&self) -> &[u8] {
@@ -384,6 +386,12 @@ impl<Endian: endian::Endian> Section for macho::Section32<Endian> {
     fn flags(&self, endian: Self::Endian) -> u32 {
         self.flags.get(endian)
     }
+    fn reserved1(&self, endian: Self::Endian) -> u32 {
+        self.reserved1.get(endian)
+    }
+    fn reserved2(&self, endian: Self::Endian) -> u32 {
+        self.reserved2.get(endian)
+    }
 }
 
 impl<Endian: endian::Endian> Section for macho::Section64<Endian> {
@@ -416,5 +424,11 @@ impl<Endian: endian::Endian> Section for macho::Section64<Endian> {
     }
     fn flags(&self, endian: Self::Endian) -> u32 {
         self.flags.get(endian)
+    }
+    fn reserved1(&self, endian: Self::Endian) -> u32 {
+        self.reserved1.get(endian)
+    }
+    fn reserved2(&self, endian: Self::Endian) -> u32 {
+        self.reserved2.get(endian)
     }
 }
