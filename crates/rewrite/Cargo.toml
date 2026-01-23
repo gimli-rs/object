@@ -9,6 +9,8 @@ include = [
   "/Cargo.lock",
   "/Cargo.toml",
   "/src",
+  "/LICENSE-APACHE",
+  "/LICENSE-MIT",
 ]
 
 [package.metadata.docs.rs]
