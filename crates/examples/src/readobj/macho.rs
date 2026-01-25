@@ -766,6 +766,8 @@ fn print_section<S: Section>(
                 p.flags(flags, SECTION_TYPE, FLAGS_S_TYPE);
                 p.flags(flags, 0, FLAGS_S_ATTR);
             }
+            p.field_hex("Reserved1", section.reserved1(endian));
+            p.field_hex("Reserved2", section.reserved2(endian));
         }
         print_section_relocations(p, endian, data, section, state);
     });

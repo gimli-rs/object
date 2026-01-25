@@ -41,6 +41,8 @@ SegmentCommand {
             S_REGULAR (0x0)
             S_ATTR_PURE_INSTRUCTIONS (0x80000000)
             S_ATTR_SOME_INSTRUCTIONS (0x400)
+        Reserved1: 0x0
+        Reserved2: 0x0
         RelocationInfo {
             Address: 0x24
             Extern: yes
@@ -157,6 +159,8 @@ SegmentCommand {
         RelocationOffset: 0x220
         NumberOfRelocations: 0x7
         Flags: S_REGULAR (0x0)
+        Reserved1: 0x0
+        Reserved2: 0x0
         RelocationInfo {
             Address: 0x1C
             Extern: yes

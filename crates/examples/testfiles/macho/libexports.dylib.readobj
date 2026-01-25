@@ -39,6 +39,8 @@ SegmentCommand {
             S_REGULAR (0x0)
             S_ATTR_PURE_INSTRUCTIONS (0x80000000)
             S_ATTR_SOME_INSTRUCTIONS (0x400)
+        Reserved1: 0x0
+        Reserved2: 0x0
     }
     Section {
         Index: 2
@@ -54,6 +56,8 @@ SegmentCommand {
             S_SYMBOL_STUBS (0x8)
             S_ATTR_PURE_INSTRUCTIONS (0x80000000)
             S_ATTR_SOME_INSTRUCTIONS (0x400)
+        Reserved1: 0x0
+        Reserved2: 0xC
     }
     Section {
         Index: 3
@@ -69,6 +73,8 @@ SegmentCommand {
             S_REGULAR (0x0)
             S_ATTR_PURE_INSTRUCTIONS (0x80000000)
             S_ATTR_SOME_INSTRUCTIONS (0x400)
+        Reserved1: 0x0
+        Reserved2: 0x0
     }
 }
 SegmentCommand {
@@ -98,6 +104,8 @@ SegmentCommand {
         RelocationOffset: 0x0
         NumberOfRelocations: 0x0
         Flags: S_LAZY_SYMBOL_POINTERS (0x7)
+        Reserved1: 0x1
+        Reserved2: 0x0
     }
 }
 SegmentCommand {
