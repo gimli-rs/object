@@ -273,6 +273,12 @@ pub trait Endian: Debug + Default + Clone + Copy + PartialEq + Eq + 'static {
     }
 }
 
+/// An endianness specification that has a fixed value.
+pub trait FixedEndian: Endian {
+    /// The fixed value.
+    const FIXED: Self;
+}
+
 /// An endianness that is selectable at run-time.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Endianness {
@@ -339,6 +345,10 @@ impl Endian for LittleEndian {
     }
 }
 
+impl FixedEndian for LittleEndian {
+    const FIXED: Self = LittleEndian;
+}
+
 /// Compile-time big endian byte order.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct BigEndian;
@@ -364,6 +374,10 @@ impl Endian for BigEndian {
     fn is_big_endian(self) -> bool {
         true
     }
+}
+
+impl FixedEndian for BigEndian {
+    const FIXED: Self = BigEndian;
 }
 
 /// The native endianness for the target platform.
@@ -394,7 +408,7 @@ macro_rules! unsafe_impl_endian_pod {
 
 #[cfg(not(feature = "unaligned"))]
 mod aligned {
-    use super::{fmt, Endian, PhantomData, Pod};
+    use super::{fmt, Endian, FixedEndian, PhantomData, Pod};
 
     /// A `u16` value with an externally specified endianness of type `E`.
     #[derive(Default, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -581,6 +595,78 @@ mod aligned {
     impl<E: Endian> fmt::Debug for I64<E> {
         fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
             write!(f, "I64({:x})", self.0)
+        }
+    }
+
+    impl<E: FixedEndian> From<u16> for U16<E> {
+        fn from(val: u16) -> Self {
+            Self::new(E::FIXED, val)
+        }
+    }
+
+    impl<E: FixedEndian> From<U16<E>> for u16 {
+        fn from(val: U16<E>) -> Self {
+            val.get(E::FIXED)
+        }
+    }
+
+    impl<E: FixedEndian> From<u32> for U32<E> {
+        fn from(val: u32) -> Self {
+            Self::new(E::FIXED, val)
+        }
+    }
+
+    impl<E: FixedEndian> From<U32<E>> for u32 {
+        fn from(val: U32<E>) -> Self {
+            val.get(E::FIXED)
+        }
+    }
+
+    impl<E: FixedEndian> From<u64> for U64<E> {
+        fn from(val: u64) -> Self {
+            Self::new(E::FIXED, val)
+        }
+    }
+
+    impl<E: FixedEndian> From<U64<E>> for u64 {
+        fn from(val: U64<E>) -> Self {
+            val.get(E::FIXED)
+        }
+    }
+
+    impl<E: FixedEndian> From<i16> for I16<E> {
+        fn from(val: i16) -> Self {
+            Self::new(E::FIXED, val)
+        }
+    }
+
+    impl<E: FixedEndian> From<I16<E>> for i16 {
+        fn from(val: I16<E>) -> Self {
+            val.get(E::FIXED)
+        }
+    }
+
+    impl<E: FixedEndian> From<i32> for I32<E> {
+        fn from(val: i32) -> Self {
+            Self::new(E::FIXED, val)
+        }
+    }
+
+    impl<E: FixedEndian> From<I32<E>> for i32 {
+        fn from(val: I32<E>) -> Self {
+            val.get(E::FIXED)
+        }
+    }
+
+    impl<E: FixedEndian> From<i64> for I64<E> {
+        fn from(val: i64) -> Self {
+            Self::new(E::FIXED, val)
+        }
+    }
+
+    impl<E: FixedEndian> From<I64<E>> for i64 {
+        fn from(val: I64<E>) -> Self {
+            val.get(E::FIXED)
         }
     }
 
@@ -825,6 +911,78 @@ impl<E: Endian> fmt::Debug for I64Bytes<E> {
             "I64({:x}, {:x}, {:x}, {:x}, {:x}, {:x}, {:x}, {:x})",
             self.0[0], self.0[1], self.0[2], self.0[3], self.0[4], self.0[5], self.0[6], self.0[7],
         )
+    }
+}
+
+impl<E: FixedEndian> From<u16> for U16Bytes<E> {
+    fn from(val: u16) -> Self {
+        Self::new(E::FIXED, val)
+    }
+}
+
+impl<E: FixedEndian> From<U16Bytes<E>> for u16 {
+    fn from(val: U16Bytes<E>) -> Self {
+        val.get(E::FIXED)
+    }
+}
+
+impl<E: FixedEndian> From<u32> for U32Bytes<E> {
+    fn from(val: u32) -> Self {
+        Self::new(E::FIXED, val)
+    }
+}
+
+impl<E: FixedEndian> From<U32Bytes<E>> for u32 {
+    fn from(val: U32Bytes<E>) -> Self {
+        val.get(E::FIXED)
+    }
+}
+
+impl<E: FixedEndian> From<u64> for U64Bytes<E> {
+    fn from(val: u64) -> Self {
+        Self::new(E::FIXED, val)
+    }
+}
+
+impl<E: FixedEndian> From<U64Bytes<E>> for u64 {
+    fn from(val: U64Bytes<E>) -> Self {
+        val.get(E::FIXED)
+    }
+}
+
+impl<E: FixedEndian> From<i16> for I16Bytes<E> {
+    fn from(val: i16) -> Self {
+        Self::new(E::FIXED, val)
+    }
+}
+
+impl<E: FixedEndian> From<I16Bytes<E>> for i16 {
+    fn from(val: I16Bytes<E>) -> Self {
+        val.get(E::FIXED)
+    }
+}
+
+impl<E: FixedEndian> From<i32> for I32Bytes<E> {
+    fn from(val: i32) -> Self {
+        Self::new(E::FIXED, val)
+    }
+}
+
+impl<E: FixedEndian> From<I32Bytes<E>> for i32 {
+    fn from(val: I32Bytes<E>) -> Self {
+        val.get(E::FIXED)
+    }
+}
+
+impl<E: FixedEndian> From<i64> for I64Bytes<E> {
+    fn from(val: i64) -> Self {
+        Self::new(E::FIXED, val)
+    }
+}
+
+impl<E: FixedEndian> From<I64Bytes<E>> for i64 {
+    fn from(val: I64Bytes<E>) -> Self {
+        val.get(E::FIXED)
     }
 }
 
