@@ -461,17 +461,16 @@ mod tests {
 
     #[test]
     fn function_starts_invalid_uleb128() {
-        use crate::endian::U32;
         use crate::macho;
 
         // Invalid ULEB128: continuation bit set but no following byte
         let data = [0x80];
 
         let cmd = macho::LinkeditDataCommand {
-            cmd: U32::new(LittleEndian, macho::LC_FUNCTION_STARTS),
-            cmdsize: U32::new(LittleEndian, 16),
-            dataoff: U32::new(LittleEndian, 0),
-            datasize: U32::new(LittleEndian, data.len() as u32),
+            cmd: macho::LC_FUNCTION_STARTS.into(),
+            cmdsize: 16.into(),
+            dataoff: 0.into(),
+            datasize: (data.len() as u32).into(),
         };
 
         let mut iter = cmd.function_starts(LittleEndian, &data[..], 0).unwrap();
