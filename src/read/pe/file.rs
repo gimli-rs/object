@@ -24,11 +24,20 @@ use super::{
 /// This is a file that starts with [`pe::ImageNtHeaders32`], and corresponds
 /// to [`crate::FileKind::Pe32`].
 pub type PeFile32<'data, R = &'data [u8]> = PeFile<'data, pe::ImageNtHeaders32, R>;
+
 /// A PE32+ (64-bit) image file.
 ///
 /// This is a file that starts with [`pe::ImageNtHeaders64`], and corresponds
 /// to [`crate::FileKind::Pe64`].
 pub type PeFile64<'data, R = &'data [u8]> = PeFile<'data, pe::ImageNtHeaders64, R>;
+
+/// The PE file format that matches the pointer width of the target platform.
+#[cfg(target_pointer_width = "32")]
+pub type NativePeFile<'data, R = &'data [u8]> = PeFile32<'data, R>;
+
+/// The PE file format that matches the pointer width of the target platform.
+#[cfg(target_pointer_width = "64")]
+pub type NativePeFile<'data, R = &'data [u8]> = PeFile64<'data, R>;
 
 /// A PE image file.
 ///

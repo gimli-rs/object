@@ -2,7 +2,7 @@ use alloc::vec::Vec;
 use core::fmt::Debug;
 use core::{mem, str};
 
-use crate::endian::{self, BigEndian, Endian, Endianness};
+use crate::endian::{self, BigEndian, Endian, Endianness, NativeEndian};
 use crate::macho;
 use crate::pod::Pod;
 use crate::read::{
@@ -23,12 +23,21 @@ use super::{
 /// to [`crate::FileKind::MachO32`].
 pub type MachOFile32<'data, Endian = Endianness, R = &'data [u8]> =
     MachOFile<'data, macho::MachHeader32<Endian>, R>;
+
 /// A 64-bit Mach-O object file.
 ///
 /// This is a file that starts with [`macho::MachHeader64`], and corresponds
 /// to [`crate::FileKind::MachO64`].
 pub type MachOFile64<'data, Endian = Endianness, R = &'data [u8]> =
     MachOFile<'data, macho::MachHeader64<Endian>, R>;
+
+/// The Mach-O file format that matches the pointer width and endianness of the target platform.
+#[cfg(target_pointer_width = "32")]
+pub type NativeMachOFile<'data, R = &'data [u8]> = MachOFile32<'data, NativeEndian, R>;
+
+/// The Mach-O file format that matches the pointer width and endianness of the target platform.
+#[cfg(target_pointer_width = "64")]
+pub type NativeMachOFile<'data, R = &'data [u8]> = MachOFile64<'data, NativeEndian, R>;
 
 /// A partially parsed Mach-O file.
 ///
