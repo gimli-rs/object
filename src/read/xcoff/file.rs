@@ -22,11 +22,20 @@ use super::{
 /// This is a file that starts with [`xcoff::FileHeader32`], and corresponds
 /// to [`crate::FileKind::Xcoff32`].
 pub type XcoffFile32<'data, R = &'data [u8]> = XcoffFile<'data, xcoff::FileHeader32, R>;
+
 /// A 64-bit XCOFF object file.
 ///
 /// This is a file that starts with [`xcoff::FileHeader64`], and corresponds
 /// to [`crate::FileKind::Xcoff64`].
 pub type XcoffFile64<'data, R = &'data [u8]> = XcoffFile<'data, xcoff::FileHeader64, R>;
+
+/// The XCOFF file format that matches the pointer width of the target platform.
+#[cfg(target_pointer_width = "32")]
+pub type NativeXcoffFile<'data, R = &'data [u8]> = XcoffFile32<'data, R>;
+
+/// The XCOFF file format that matches the pointer width of the target platform.
+#[cfg(target_pointer_width = "64")]
+pub type NativeXcoffFile<'data, R = &'data [u8]> = XcoffFile64<'data, R>;
 
 /// A partially parsed XCOFF file.
 ///

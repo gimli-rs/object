@@ -4,7 +4,7 @@ use core::fmt::Debug;
 use core::mem;
 
 use crate::elf;
-use crate::endian::{self, Endian, Endianness, U32};
+use crate::endian::{self, Endian, Endianness, NativeEndian, U32};
 use crate::pod::Pod;
 use crate::read::{
     self, util, Architecture, ByteString, Bytes, Error, Export, FileFlags, Import, Object,
@@ -24,12 +24,21 @@ use super::{
 /// to [`crate::FileKind::Elf32`].
 pub type ElfFile32<'data, Endian = Endianness, R = &'data [u8]> =
     ElfFile<'data, elf::FileHeader32<Endian>, R>;
+
 /// A 64-bit ELF object file.
 ///
 /// This is a file that starts with [`elf::FileHeader64`], and corresponds
 /// to [`crate::FileKind::Elf64`].
 pub type ElfFile64<'data, Endian = Endianness, R = &'data [u8]> =
     ElfFile<'data, elf::FileHeader64<Endian>, R>;
+
+/// The ELF file format that matches the pointer width and endianness of the target platform.
+#[cfg(target_pointer_width = "32")]
+pub type NativeElfFile<'data, R = &'data [u8]> = ElfFile32<'data, NativeEndian, R>;
+
+/// The ELF file format that matches the pointer width and endianness of the target platform.
+#[cfg(target_pointer_width = "64")]
+pub type NativeElfFile<'data, R = &'data [u8]> = ElfFile64<'data, NativeEndian, R>;
 
 /// A partially parsed ELF file.
 ///
