@@ -214,9 +214,9 @@ fn print_segment_dynamic<Elf: FileHeader>(
         let mut strsz = 0;
         for d in dynamic {
             let tag = d.d_tag(endian).into();
-            if tag == DT_STRTAB.into() {
+            if tag == DT_STRTAB {
                 strtab = d.d_val(endian).into();
-            } else if tag == DT_STRSZ.into() {
+            } else if tag == DT_STRSZ {
                 strsz = d.d_val(endian).into();
             }
         }
@@ -791,24 +791,19 @@ fn print_dynamic<Elf: FileHeader>(
         let tag = d.d_tag(endian).into();
         let val = d.d_val(endian).into();
         p.group("Dynamic", |p| {
-            if let Some(tag) = d.tag32(endian) {
-                p.field_enums("Tag", tag, &[FLAGS_DT, proc]);
-                if d.is_string(endian) {
-                    p.field_string("Value", val, d.string(endian, dynstr));
-                } else {
-                    p.field_hex("Value", val);
-                    if tag == DT_FLAGS {
-                        p.flags(val, 0, FLAGS_DF);
-                    } else if tag == DT_FLAGS_1 {
-                        p.flags(val, 0, FLAGS_DF_1);
-                    }
-                }
+            p.field_enums("Tag", tag, &[FLAGS_DT, proc]);
+            if d.is_string(endian) {
+                p.field_string("Value", val, d.string(endian, dynstr));
             } else {
-                p.field_hex("Tag", tag);
                 p.field_hex("Value", val);
+                if tag == DT_FLAGS {
+                    p.flags(val, 0, FLAGS_DF);
+                } else if tag == DT_FLAGS_1 {
+                    p.flags(val, 0, FLAGS_DF_1);
+                }
             }
         });
-        if tag == DT_NULL.into() {
+        if tag == DT_NULL {
             break;
         }
     }
@@ -3494,7 +3489,7 @@ const FLAGS_GNU_PROPERTY_X86_FEATURE_1: &[Flag<u32>] = &flags!(
     GNU_PROPERTY_X86_FEATURE_1_SHSTK,
 );
 const FLAGS_GRP: &[Flag<u32>] = &flags!(GRP_COMDAT);
-const FLAGS_DT: &[Flag<u32>] = &flags!(
+const FLAGS_DT: &[Flag<i64>] = &flags!(
     DT_NULL,
     DT_NEEDED,
     DT_PLTRELSZ,
@@ -3562,8 +3557,8 @@ const FLAGS_DT: &[Flag<u32>] = &flags!(
     DT_AUXILIARY,
     DT_FILTER,
 );
-const FLAGS_DT_SPARC: &[Flag<u32>] = &flags!(DT_SPARC_REGISTER);
-const FLAGS_DT_MIPS: &[Flag<u32>] = &flags!(
+const FLAGS_DT_SPARC: &[Flag<i64>] = &flags!(DT_SPARC_REGISTER);
+const FLAGS_DT_MIPS: &[Flag<i64>] = &flags!(
     DT_MIPS_RLD_VERSION,
     DT_MIPS_TIME_STAMP,
     DT_MIPS_ICHECKSUM,
@@ -3611,18 +3606,18 @@ const FLAGS_DT_MIPS: &[Flag<u32>] = &flags!(
     DT_MIPS_RWPLT,
     DT_MIPS_RLD_MAP_REL,
 );
-const FLAGS_DT_ALPHA: &[Flag<u32>] = &flags!(DT_ALPHA_PLTRO);
-const FLAGS_DT_PPC: &[Flag<u32>] = &flags!(DT_PPC_GOT, DT_PPC_OPT);
-const FLAGS_DT_PPC64: &[Flag<u32>] =
+const FLAGS_DT_ALPHA: &[Flag<i64>] = &flags!(DT_ALPHA_PLTRO);
+const FLAGS_DT_PPC: &[Flag<i64>] = &flags!(DT_PPC_GOT, DT_PPC_OPT);
+const FLAGS_DT_PPC64: &[Flag<i64>] =
     &flags!(DT_PPC64_GLINK, DT_PPC64_OPD, DT_PPC64_OPDSZ, DT_PPC64_OPT);
-const FLAGS_DT_IA_64: &[Flag<u32>] = &flags!(DT_IA_64_PLT_RESERVE);
-const FLAGS_DT_AARCH64: &[Flag<u32>] = &flags!(
+const FLAGS_DT_IA_64: &[Flag<i64>] = &flags!(DT_IA_64_PLT_RESERVE);
+const FLAGS_DT_AARCH64: &[Flag<i64>] = &flags!(
     DT_AARCH64_BTI_PLT,
     DT_AARCH64_PAC_PLT,
     DT_AARCH64_VARIANT_PCS
 );
-const FLAGS_DT_NIOS2: &[Flag<u32>] = &flags!(DT_NIOS2_GP);
-const FLAGS_DT_RISCV: &[Flag<u32>] = &flags!(DT_RISCV_VARIANT_CC);
+const FLAGS_DT_NIOS2: &[Flag<i64>] = &flags!(DT_NIOS2_GP);
+const FLAGS_DT_RISCV: &[Flag<i64>] = &flags!(DT_RISCV_VARIANT_CC);
 const FLAGS_DF: &[Flag<u32>] = &flags!(
     DF_ORIGIN,
     DF_SYMBOLIC,
