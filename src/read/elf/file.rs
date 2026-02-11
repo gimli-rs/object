@@ -3,13 +3,13 @@ use core::convert::TryInto;
 use core::fmt::Debug;
 use core::mem;
 
-use crate::elf;
 use crate::endian::{self, Endian, Endianness, NativeEndian, U32};
 use crate::pod::Pod;
 use crate::read::{
     self, util, Architecture, ByteString, Bytes, Error, Export, FileFlags, Import, Object,
     ObjectKind, ReadError, ReadRef, SectionIndex, StringTable, SymbolIndex,
 };
+use crate::{elf, SkipDebugList};
 
 use super::{
     CompressionHeader, Dyn, ElfComdat, ElfComdatIterator, ElfDynamicRelocationIterator, ElfSection,
@@ -50,7 +50,7 @@ where
     R: ReadRef<'data>,
 {
     pub(super) endian: Elf::Endian,
-    pub(super) data: R,
+    pub(super) data: SkipDebugList<R>,
     pub(super) header: &'data Elf,
     pub(super) segments: &'data [Elf::ProgramHeader],
     pub(super) sections: SectionTable<'data, Elf, R>,
@@ -78,7 +78,7 @@ where
 
         Ok(ElfFile {
             endian,
-            data,
+            data: SkipDebugList(data),
             header,
             segments,
             sections,
@@ -95,7 +95,7 @@ where
 
     /// Returns the raw data.
     pub fn data(&self) -> R {
-        self.data
+        self.data.0
     }
 
     /// Returns the raw ELF file header.
@@ -398,7 +398,7 @@ where
     }
 
     fn imports(&self) -> read::Result<Vec<Import<'data>>> {
-        let versions = self.sections.versions(self.endian, self.data)?;
+        let versions = self.sections.versions(self.endian, self.data.0)?;
 
         let mut imports = Vec::new();
         for (index, symbol) in self.dynamic_symbols.enumerate() {
@@ -453,7 +453,7 @@ where
         // Use section headers if present, otherwise use program headers.
         if !self.sections.is_empty() {
             for section in self.sections.iter() {
-                if let Some(mut notes) = section.notes(endian, self.data)? {
+                if let Some(mut notes) = section.notes(endian, self.data.0)? {
                     while let Some(note) = notes.next()? {
                         if note.name() == elf::ELF_NOTE_GNU
                             && note.n_type(endian) == elf::NT_GNU_BUILD_ID
@@ -465,7 +465,7 @@ where
             }
         } else {
             for segment in self.segments {
-                if let Some(mut notes) = segment.notes(endian, self.data)? {
+                if let Some(mut notes) = segment.notes(endian, self.data.0)? {
                     while let Some(note) = notes.next()? {
                         if note.name() == elf::ELF_NOTE_GNU
                             && note.n_type(endian) == elf::NT_GNU_BUILD_ID
@@ -486,7 +486,7 @@ where
         };
         let data = section
             .section
-            .data(self.endian, self.data)
+            .data(self.endian, self.data.0)
             .read_error("Invalid ELF .gnu_debuglink section offset or size")
             .map(Bytes)?;
         let filename = data
@@ -507,7 +507,7 @@ where
         };
         let mut data = section
             .section
-            .data(self.endian, self.data)
+            .data(self.endian, self.data.0)
             .read_error("Invalid ELF .gnu_debugaltlink section offset or size")
             .map(Bytes)?;
         let filename = data

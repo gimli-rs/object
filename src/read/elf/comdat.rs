@@ -86,7 +86,7 @@ where
         file: &'file ElfFile<'data, Elf, R>,
         section: &'data Elf::SectionHeader,
     ) -> Option<ElfComdat<'data, 'file, Elf, R>> {
-        let (flag, sections) = section.group(file.endian, file.data).ok()??;
+        let (flag, sections) = section.group(file.endian, file.data.0).ok()??;
         if flag != elf::GRP_COMDAT {
             return None;
         }

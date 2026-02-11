@@ -186,7 +186,7 @@ where
     }
 
     fn compressed_data(&self) -> read::Result<CompressedData<'data>> {
-        self.compressed_file_range()?.data(self.file.data)
+        self.compressed_file_range()?.data(self.file.data.0)
     }
 
     #[inline]

@@ -115,7 +115,7 @@ where
     }
 
     fn data(&self) -> Result<&'data [u8]> {
-        self.section.pe_data(self.file.data)
+        self.section.pe_data(self.file.data.0)
     }
 
     fn data_range(&self, address: u64, size: u64) -> Result<Option<&'data [u8]>> {
@@ -277,7 +277,7 @@ where
     }
 
     fn data(&self) -> Result<&'data [u8]> {
-        self.section.pe_data(self.file.data)
+        self.section.pe_data(self.file.data.0)
     }
 
     fn data_range(&self, address: u64, size: u64) -> Result<Option<&'data [u8]>> {

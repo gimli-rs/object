@@ -159,13 +159,13 @@ where
 
             match section.sh_type(endian) {
                 elf::SHT_REL => {
-                    if let Ok(relocations) = section.data_as_array(endian, self.file.data) {
+                    if let Ok(relocations) = section.data_as_array(endian, self.file.data.0) {
                         self.relocations =
                             Some(ElfRelocationIterator::Rel(relocations.iter(), endian));
                     }
                 }
                 elf::SHT_RELA => {
-                    if let Ok(relocations) = section.data_as_array(endian, self.file.data) {
+                    if let Ok(relocations) = section.data_as_array(endian, self.file.data.0) {
                         self.relocations = Some(ElfRelocationIterator::Rela(
                             relocations.iter(),
                             endian,
@@ -174,7 +174,7 @@ where
                     }
                 }
                 elf::SHT_CREL => {
-                    if let Ok(data) = section.data(endian, self.file.data) {
+                    if let Ok(data) = section.data(endian, self.file.data.0) {
                         if let Ok(relocations) = CrelIterator::new(data) {
                             self.relocations = Some(ElfRelocationIterator::Crel(relocations));
                         }
@@ -238,13 +238,13 @@ where
             let section = self.file.sections.section(self.section_index).unwrap();
             match section.sh_type(endian) {
                 elf::SHT_REL => {
-                    if let Ok(relocations) = section.data_as_array(endian, self.file.data) {
+                    if let Ok(relocations) = section.data_as_array(endian, self.file.data.0) {
                         self.relocations =
                             Some(ElfRelocationIterator::Rel(relocations.iter(), endian));
                     }
                 }
                 elf::SHT_RELA => {
-                    if let Ok(relocations) = section.data_as_array(endian, self.file.data) {
+                    if let Ok(relocations) = section.data_as_array(endian, self.file.data.0) {
                         self.relocations = Some(ElfRelocationIterator::Rela(
                             relocations.iter(),
                             endian,
@@ -253,7 +253,7 @@ where
                     }
                 }
                 elf::SHT_CREL => {
-                    if let Ok(data) = section.data(endian, self.file.data) {
+                    if let Ok(data) = section.data(endian, self.file.data.0) {
                         if let Ok(relocations) = CrelIterator::new(data) {
                             self.relocations = Some(ElfRelocationIterator::Crel(relocations));
                         }

@@ -1,6 +1,7 @@
 //! Support for reading Wasm files.
 //!
 //! [`WasmFile`] implements the [`Object`] trait for Wasm files.
+use crate::SkipDebugList;
 use alloc::boxed::Box;
 use alloc::vec::Vec;
 use core::marker::PhantomData;
@@ -40,7 +41,7 @@ const MAX_SECTION_ID: usize = SectionId::Tag as usize;
 /// A WebAssembly object file.
 #[derive(Debug)]
 pub struct WasmFile<'data, R = &'data [u8]> {
-    data: &'data [u8],
+    data: SkipDebugList<&'data [u8]>,
     has_memory64: bool,
     // All sections, including custom sections.
     sections: Vec<SectionHeader<'data>>,
@@ -82,7 +83,7 @@ impl<'data, R: ReadRef<'data>> WasmFile<'data, R> {
         let parser = wp::Parser::new(0).parse_all(data);
 
         let mut file = WasmFile {
-            data,
+            data: SkipDebugList(data),
             has_memory64: false,
             sections: Vec::new(),
             id_sections: Default::default(),
