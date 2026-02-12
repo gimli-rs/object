@@ -460,7 +460,7 @@ impl<'data, 'file, Elf: FileHeader, R: ReadRef<'data>> ElfSection<'data, 'file, 
             return Ok(&[]);
         };
         // The linked symbol table was already checked when self.file.relocations was created.
-        let Some((rel, _)) = relocation_section.rel(self.file.endian, self.file.data)? else {
+        let Some((rel, _)) = relocation_section.rel(self.file.endian, self.file.data.0)? else {
             return Ok(&[]);
         };
         Ok(rel)
@@ -475,7 +475,7 @@ impl<'data, 'file, Elf: FileHeader, R: ReadRef<'data>> ElfSection<'data, 'file, 
             return Ok(&[]);
         };
         // The linked symbol table was already checked when self.file.relocations was created.
-        let Some((rela, _)) = relocation_section.rela(self.file.endian, self.file.data)? else {
+        let Some((rela, _)) = relocation_section.rela(self.file.endian, self.file.data.0)? else {
             return Ok(&[]);
         };
         Ok(rela)
@@ -483,14 +483,14 @@ impl<'data, 'file, Elf: FileHeader, R: ReadRef<'data>> ElfSection<'data, 'file, 
 
     fn bytes(&self) -> read::Result<&'data [u8]> {
         self.section
-            .data(self.file.endian, self.file.data)
+            .data(self.file.endian, self.file.data.0)
             .read_error("Invalid ELF section size or offset")
     }
 
     fn maybe_compressed(&self) -> read::Result<Option<CompressedFileRange>> {
         let endian = self.file.endian;
         if let Some((header, offset, compressed_size)) =
-            self.section.compression(endian, self.file.data)?
+            self.section.compression(endian, self.file.data.0)?
         {
             let format = match header.ch_type(endian) {
                 elf::ELFCOMPRESS_ZLIB => CompressionFormat::Zlib,
@@ -520,7 +520,7 @@ impl<'data, 'file, Elf: FileHeader, R: ReadRef<'data>> ElfSection<'data, 'file, 
         let (section_offset, section_size) = self
             .file_range()
             .read_error("Invalid ELF GNU compressed section type")?;
-        gnu_compression::compressed_file_range(self.file.data, section_offset, section_size)
+        gnu_compression::compressed_file_range(self.file.data.0, section_offset, section_size)
             .map(Some)
     }
 }
@@ -589,7 +589,7 @@ where
     }
 
     fn compressed_data(&self) -> read::Result<CompressedData<'data>> {
-        self.compressed_file_range()?.data(self.file.data)
+        self.compressed_file_range()?.data(self.file.data.0)
     }
 
     fn name_bytes(&self) -> read::Result<&'data [u8]> {

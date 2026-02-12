@@ -1,3 +1,8 @@
+use core::{
+    fmt,
+    ops::{Deref, DerefMut},
+};
+
 /// A CPU architecture.
 #[allow(missing_docs)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -687,4 +692,29 @@ pub enum RelocationFlags {
         /// `r_rsize` field in the XCOFF relocation.
         r_rsize: u8,
     },
+}
+
+/// Wrapper to print as `[..]` without a manual `Debug` implementation, rather than dumping an
+/// entire byte array.
+#[derive(Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord)]
+pub(crate) struct SkipDebugList<T>(pub T);
+
+impl<T> fmt::Debug for SkipDebugList<T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "[..]")
+    }
+}
+
+impl<T> Deref for SkipDebugList<T> {
+    type Target = T;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl<T> DerefMut for SkipDebugList<T> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
 }

@@ -23,9 +23,9 @@
 use core::convert::TryInto;
 use core::slice;
 
-use crate::archive;
 use crate::endian::{BigEndian as BE, LittleEndian as LE, U16Bytes, U32Bytes, U64Bytes};
 use crate::read::{self, Bytes, Error, ReadError, ReadRef};
+use crate::{archive, SkipDebugList};
 
 /// The kind of archive format.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -64,7 +64,7 @@ enum Members<'data> {
 /// A partially parsed archive file.
 #[derive(Debug, Clone, Copy)]
 pub struct ArchiveFile<'data, R: ReadRef<'data> = &'data [u8]> {
-    data: R,
+    data: SkipDebugList<R>,
     kind: ArchiveKind,
     members: Members<'data>,
     symbols: (u64, u64),
@@ -95,7 +95,7 @@ impl<'data, R: ReadRef<'data>> ArchiveFile<'data, R> {
         let members_end_offset = len;
 
         let mut file = ArchiveFile {
-            data,
+            data: SkipDebugList(data),
             kind: ArchiveKind::Unknown,
             members: Members::Common {
                 offset: 0,
@@ -207,7 +207,7 @@ impl<'data, R: ReadRef<'data>> ArchiveFile<'data, R> {
         debug_assert_eq!(file_header.magic, archive::AIX_BIG_MAGIC);
 
         let mut file = ArchiveFile {
-            data,
+            data: SkipDebugList(data),
             kind: ArchiveKind::AixBig,
             members: Members::AixBig { index: &[] },
             symbols: (0, 0),
@@ -282,7 +282,7 @@ impl<'data, R: ReadRef<'data>> ArchiveFile<'data, R> {
     #[inline]
     pub fn members(&self) -> ArchiveMemberIterator<'data, R> {
         ArchiveMemberIterator {
-            data: self.data,
+            data: self.data.0,
             members: self.members,
             names: self.names,
             thin: self.thin,
@@ -297,11 +297,11 @@ impl<'data, R: ReadRef<'data>> ArchiveFile<'data, R> {
                     return Err(Error("Invalid archive member offset"));
                 }
                 let mut offset = member.0;
-                ArchiveMember::parse(self.data, &mut offset, self.names, self.thin)
+                ArchiveMember::parse(self.data.0, &mut offset, self.names, self.thin)
             }
             Members::AixBig { .. } => {
                 let offset = member.0;
-                ArchiveMember::parse_aixbig(self.data, offset)
+                ArchiveMember::parse_aixbig(self.data.0, offset)
             }
         }
     }
@@ -312,7 +312,7 @@ impl<'data, R: ReadRef<'data>> ArchiveFile<'data, R> {
             return Ok(None);
         }
         let (offset, size) = self.symbols;
-        ArchiveSymbolIterator::new(self.kind, self.data, offset, size)
+        ArchiveSymbolIterator::new(self.kind, self.data.0, offset, size)
             .read_error("Invalid archive symbol table")
             .map(Some)
     }

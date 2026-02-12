@@ -3,13 +3,13 @@ use core::fmt::Debug;
 use core::{mem, str};
 
 use crate::endian::{self, BigEndian, Endian, Endianness, NativeEndian};
-use crate::macho;
 use crate::pod::Pod;
 use crate::read::{
     self, Architecture, ByteString, ComdatKind, Error, Export, FileFlags, Import,
     NoDynamicRelocationIterator, Object, ObjectComdat, ObjectKind, ObjectMap, ObjectSection,
     ReadError, ReadRef, Result, SectionIndex, SubArchitecture, SymbolIndex,
 };
+use crate::{macho, SkipDebugList};
 
 use super::{
     DyldCacheImage, LoadCommandIterator, MachOSection, MachOSectionInternal, MachOSectionIterator,
@@ -49,7 +49,7 @@ where
     R: ReadRef<'data>,
 {
     pub(super) endian: Mach::Endian,
-    pub(super) data: R,
+    pub(super) data: SkipDebugList<R>,
     pub(super) header_offset: u64,
     pub(super) header: &'data Mach,
     pub(super) segments: Vec<MachOSegmentInternal<'data, Mach, R>>,
@@ -87,7 +87,7 @@ where
 
         Ok(MachOFile {
             endian,
-            data,
+            data: SkipDebugList(data),
             header_offset: 0,
             header,
             segments,
@@ -148,7 +148,7 @@ where
 
         Ok(MachOFile {
             endian,
-            data,
+            data: SkipDebugList(data),
             header_offset,
             header,
             segments,
@@ -177,7 +177,7 @@ where
 
     /// Returns the raw data.
     pub fn data(&self) -> R {
-        self.data
+        self.data.0
     }
 
     /// Returns the raw Mach-O file header.
@@ -194,7 +194,7 @@ where
     /// Get the Mach-O load commands.
     pub fn macho_load_commands(&self) -> Result<LoadCommandIterator<'data, Mach::Endian>> {
         self.header
-            .load_commands(self.endian, self.data, self.header_offset)
+            .load_commands(self.endian, self.data.0, self.header_offset)
     }
 
     /// Get the Mach-O symbol table.
@@ -206,9 +206,9 @@ where
 
     /// Return the `LC_BUILD_VERSION` load command if present.
     pub fn build_version(&self) -> Result<Option<&'data macho::BuildVersionCommand<Mach::Endian>>> {
-        let mut commands = self
-            .header
-            .load_commands(self.endian, self.data, self.header_offset)?;
+        let mut commands =
+            self.header
+                .load_commands(self.endian, self.data.0, self.header_offset)?;
         while let Some(command) = commands.next()? {
             if let Some(build_version) = command.build_version()? {
                 return Ok(Some(build_version));
@@ -417,9 +417,9 @@ where
         if twolevel {
             libraries.push(&[][..]);
         }
-        let mut commands = self
-            .header
-            .load_commands(self.endian, self.data, self.header_offset)?;
+        let mut commands =
+            self.header
+                .load_commands(self.endian, self.data.0, self.header_offset)?;
         while let Some(command) = commands.next()? {
             if let Some(command) = command.dysymtab()? {
                 dysymtab = Some(command);
@@ -457,9 +457,9 @@ where
 
     fn exports(&self) -> Result<Vec<Export<'data>>> {
         let mut dysymtab = None;
-        let mut commands = self
-            .header
-            .load_commands(self.endian, self.data, self.header_offset)?;
+        let mut commands =
+            self.header
+                .load_commands(self.endian, self.data.0, self.header_offset)?;
         while let Some(command) = commands.next()? {
             if let Some(command) = command.dysymtab()? {
                 dysymtab = Some(command);
@@ -494,7 +494,8 @@ where
     }
 
     fn mach_uuid(&self) -> Result<Option<[u8; 16]>> {
-        self.header.uuid(self.endian, self.data, self.header_offset)
+        self.header
+            .uuid(self.endian, self.data.0, self.header_offset)
     }
 
     fn relative_address_base(&self) -> u64 {
@@ -504,7 +505,7 @@ where
     fn entry(&self) -> u64 {
         if let Ok(mut commands) =
             self.header
-                .load_commands(self.endian, self.data, self.header_offset)
+                .load_commands(self.endian, self.data.0, self.header_offset)
         {
             while let Ok(Some(command)) = commands.next() {
                 if let Ok(Some(command)) = command.entry_point() {

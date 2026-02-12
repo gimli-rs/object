@@ -79,7 +79,7 @@ impl<'data, 'file, Elf: FileHeader, R: ReadRef<'data>> ElfSegment<'data, 'file, 
 
     fn bytes(&self) -> read::Result<&'data [u8]> {
         self.segment
-            .data(self.file.endian, self.file.data)
+            .data(self.file.endian, self.file.data.0)
             .read_error("Invalid ELF segment size or offset")
     }
 }

@@ -175,7 +175,7 @@ impl<'data, 'file, R: ReadRef<'data>, Coff: CoffHeader> CoffSegment<'data, 'file
 
     fn bytes(&self) -> Result<&'data [u8]> {
         self.section
-            .coff_data(self.file.data)
+            .coff_data(self.file.data.0)
             .read_error("Invalid COFF section offset or size")
     }
 }
@@ -319,12 +319,12 @@ impl<'data, 'file, R: ReadRef<'data>, Coff: CoffHeader> CoffSection<'data, 'file
 
     /// Get the raw COFF relocations for this section.
     pub fn coff_relocations(&self) -> Result<&'data [pe::ImageRelocation]> {
-        self.section.coff_relocations(self.file.data)
+        self.section.coff_relocations(self.file.data.0)
     }
 
     fn bytes(&self) -> Result<&'data [u8]> {
         self.section
-            .coff_data(self.file.data)
+            .coff_data(self.file.data.0)
             .read_error("Invalid COFF section offset or size")
     }
 }

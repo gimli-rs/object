@@ -5,7 +5,6 @@ use core::{mem, str};
 use core::convert::TryInto;
 
 use crate::endian::{LittleEndian as LE, U32};
-use crate::pe;
 use crate::pod::{self, Pod};
 use crate::read::coff::{CoffCommon, CoffSymbol, CoffSymbolIterator, CoffSymbolTable, SymbolTable};
 use crate::read::{
@@ -13,6 +12,7 @@ use crate::read::{
     NoDynamicRelocationIterator, Object, ObjectComdat, ObjectKind, ReadError, ReadRef, Result,
     SectionIndex, SubArchitecture, SymbolIndex,
 };
+use crate::{pe, SkipDebugList};
 
 use super::{
     DataDirectories, ExportTable, ImageThunkData, ImportTable, PeSection, PeSectionIterator,
@@ -52,7 +52,7 @@ where
     pub(super) nt_headers: &'data Pe,
     pub(super) data_directories: DataDirectories<'data>,
     pub(super) common: CoffCommon<'data, R>,
-    pub(super) data: R,
+    pub(super) data: SkipDebugList<R>,
 }
 
 impl<'data, Pe, R> PeFile<'data, Pe, R>
@@ -80,13 +80,13 @@ where
                 symbols: coff_symbols.unwrap_or_default(),
                 image_base,
             },
-            data,
+            data: SkipDebugList(data),
         })
     }
 
     /// Returns this binary data.
     pub fn data(&self) -> R {
-        self.data
+        self.data.0
     }
 
     /// Return the DOS header of this file.
@@ -101,7 +101,7 @@ where
 
     /// Returns information about the rich header of this file (if any).
     pub fn rich_header_info(&self) -> Option<RichHeaderInfo<'_>> {
-        RichHeaderInfo::parse(self.data, self.dos_header.nt_headers_offset().into())
+        RichHeaderInfo::parse(self.data.0, self.dos_header.nt_headers_offset().into())
     }
 
     /// Returns the section table of this binary.
@@ -124,7 +124,7 @@ where
     /// The export table is located using the data directory.
     pub fn export_table(&self) -> Result<Option<ExportTable<'data>>> {
         self.data_directories
-            .export_table(self.data, &self.common.sections)
+            .export_table(self.data.0, &self.common.sections)
     }
 
     /// Returns the import table of this file.
@@ -132,7 +132,7 @@ where
     /// The import table is located using the data directory.
     pub fn import_table(&self) -> Result<Option<ImportTable<'data>>> {
         self.data_directories
-            .import_table(self.data, &self.common.sections)
+            .import_table(self.data.0, &self.common.sections)
     }
 
     pub(super) fn section_alignment(&self) -> u64 {
@@ -359,7 +359,7 @@ where
             Some(data_dir) => data_dir,
             None => return Ok(None),
         };
-        let debug_data = data_dir.data(self.data, &self.common.sections)?;
+        let debug_data = data_dir.data(self.data.0, &self.common.sections)?;
         let debug_dirs = pod::slice_from_all_bytes::<pe::ImageDebugDirectory>(debug_data)
             .read_error("Invalid PE debug dir size")?;
 
