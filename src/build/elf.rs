@@ -487,12 +487,7 @@ impl<'data> Builder<'data> {
     {
         let mut dynamics = Vec::with_capacity(dyns.len());
         for d in dyns {
-            let tag = d.d_tag(endian).into().try_into().map_err(|_| {
-                Error(format!(
-                    "Unsupported dynamic tag 0x{:x}",
-                    d.d_tag(endian).into()
-                ))
-            })?;
+            let tag = d.d_tag(endian).into();
             if tag == elf::DT_NULL {
                 break;
             }
@@ -1401,18 +1396,18 @@ impl<'data> Builder<'data> {
                                             )))
                                         }
                                     };
-                                    writer.write_dynamic(tag, val);
+                                    writer.write_dynamic(tag, val)?;
                                 }
                                 Dynamic::Integer { tag, val } => {
-                                    writer.write_dynamic(tag, val);
+                                    writer.write_dynamic(tag, val)?;
                                 }
                                 Dynamic::String { tag, ref val } => {
                                     let val = writer.get_dynamic_string(val);
-                                    writer.write_dynamic_string(tag, val);
+                                    writer.write_dynamic_string(tag, val)?;
                                 }
                             }
                         }
-                        writer.write_dynamic(elf::DT_NULL, 0);
+                        writer.write_dynamic(elf::DT_NULL, 0)?;
                     }
                     SectionData::DynamicSymbol => {
                         writer.write_null_dynamic_symbol();
@@ -2832,14 +2827,14 @@ pub enum Dynamic<'data> {
         /// The `d_tag` field in the dynamic entry.
         ///
         /// One of the `DT_*` values.
-        tag: u32,
+        tag: i64,
     },
     /// The value is an integer.
     Integer {
         /// The `d_tag` field in the dynamic entry.
         ///
         /// One of the `DT_*` values.
-        tag: u32,
+        tag: i64,
         /// The `d_val` field in the dynamic entry.
         val: u64,
     },
@@ -2848,7 +2843,7 @@ pub enum Dynamic<'data> {
         /// The `d_tag` field in the dynamic entry.
         ///
         /// One of the `DT_*` values.
-        tag: u32,
+        tag: i64,
         /// The string value.
         ///
         /// This will be stored in the dynamic string section.
@@ -2860,7 +2855,7 @@ impl<'data> Dynamic<'data> {
     /// The `d_tag` field in the dynamic entry.
     ///
     /// One of the `DT_*` values.
-    pub fn tag(&self) -> u32 {
+    pub fn tag(&self) -> i64 {
         match self {
             Dynamic::Auto { tag } => *tag,
             Dynamic::Integer { tag, .. } => *tag,
