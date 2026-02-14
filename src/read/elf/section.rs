@@ -11,9 +11,9 @@ use crate::read::{
 };
 
 use super::{
-    AttributesSection, CompressionHeader, CrelIterator, ElfFile, ElfSectionRelocationIterator,
-    FileHeader, GnuHashTable, HashTable, NoteIterator, RelocationSections, RelrIterator,
-    SymbolTable, VerdefIterator, VerneedIterator, VersionTable,
+    AttributesSection, CompressionHeader, CrelIterator, DynamicTable, ElfFile,
+    ElfSectionRelocationIterator, FileHeader, GnuHashTable, HashTable, NoteIterator,
+    RelocationSections, RelrIterator, SymbolTable, VerdefIterator, VerneedIterator, VersionTable,
 };
 
 /// The table of section headers in an ELF file.
@@ -175,6 +175,21 @@ impl<'data, Elf: FileHeader, R: ReadRef<'data>> SectionTable<'data, Elf, R> {
         symbol_section: SectionIndex,
     ) -> read::Result<RelocationSections> {
         RelocationSections::parse(endian, self, symbol_section)
+    }
+
+    /// Return the contents of the first `SHT_DYNAMIC` section.
+    ///
+    /// Returns an empty dynamic table if there is no `SHT_DYNAMIC` section.
+    pub fn dynamic_table(
+        &self,
+        endian: Elf::Endian,
+        data: R,
+    ) -> read::Result<DynamicTable<'data, Elf, R>> {
+        let section = match self.iter().find(|s| s.sh_type(endian) == elf::SHT_DYNAMIC) {
+            Some(s) => s,
+            None => return Ok(DynamicTable::default()),
+        };
+        DynamicTable::parse(endian, data, self, section)
     }
 
     /// Return the contents of a dynamic section.
@@ -893,7 +908,25 @@ pub trait SectionHeader: Debug + Pod {
         Ok(Some((relrs?, self.link(endian))))
     }
 
-    /// Return entries in a dynamic section.
+    /// Return the contents of a dynamic section.
+    ///
+    /// Also finds the linked string table in `sections`.
+    ///
+    /// Returns `Ok(None)` if the section type is not `SHT_DYNAMIC`.
+    /// Returns `Err` for invalid values.
+    fn dynamic_table<'data, R: ReadRef<'data>>(
+        &self,
+        endian: Self::Endian,
+        data: R,
+        sections: &SectionTable<'data, Self::Elf, R>,
+    ) -> read::Result<Option<DynamicTable<'data, Self::Elf, R>>> {
+        if self.sh_type(endian) != elf::SHT_DYNAMIC {
+            return Ok(None);
+        }
+        DynamicTable::parse(endian, data, sections, self).map(Some)
+    }
+
+    /// Return the slice of entries in a dynamic section.
     ///
     /// Also returns the linked string table index.
     ///

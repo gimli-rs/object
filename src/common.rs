@@ -696,6 +696,7 @@ pub enum RelocationFlags {
 
 /// Wrapper to print as `[..]` without a manual `Debug` implementation, rather than dumping an
 /// entire byte array.
+#[allow(unused)]
 #[derive(Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub(crate) struct SkipDebugList<T>(pub T);
 

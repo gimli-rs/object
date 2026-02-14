@@ -12,10 +12,10 @@ use crate::read::{
 use crate::{elf, SkipDebugList};
 
 use super::{
-    CompressionHeader, Dyn, ElfComdat, ElfComdatIterator, ElfDynamicRelocationIterator, ElfSection,
-    ElfSectionIterator, ElfSegment, ElfSegmentIterator, ElfSymbol, ElfSymbolIterator,
-    ElfSymbolTable, NoteHeader, ProgramHeader, Rel, Rela, RelocationSections, Relr, SectionHeader,
-    SectionTable, Sym, SymbolTable,
+    CompressionHeader, Dyn, DynamicTable, ElfComdat, ElfComdatIterator,
+    ElfDynamicRelocationIterator, ElfSection, ElfSectionIterator, ElfSegment, ElfSegmentIterator,
+    ElfSymbol, ElfSymbolIterator, ElfSymbolTable, NoteHeader, ProgramHeader, Rel, Rela,
+    RelocationSections, Relr, SectionHeader, SectionTable, Sym, SymbolTable,
 };
 
 /// A 32-bit ELF object file.
@@ -146,6 +146,13 @@ where
     /// Get a mapping for linked relocation sections.
     pub fn elf_relocation_sections(&self) -> &RelocationSections {
         &self.relocations
+    }
+
+    /// Get the first `SHT_DYNAMIC` section.
+    ///
+    /// Returns an empty dynamic table if there is no `SHT_DYNAMIC` section.
+    pub fn elf_dynamic_table(&self) -> read::Result<DynamicTable<'data, Elf, R>> {
+        self.sections.dynamic_table(self.endian, self.data.0)
     }
 
     fn raw_section_by_name<'file>(
