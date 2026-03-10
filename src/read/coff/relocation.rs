@@ -94,6 +94,7 @@ impl<'data, 'file, R: ReadRef<'data>, Coff: CoffHeader> Iterator
                     encoding,
                     size,
                     target,
+                    subtractor: None,
                     addend,
                     implicit_addend: true,
                     flags,

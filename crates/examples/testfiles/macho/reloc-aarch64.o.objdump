@@ -30,10 +30,8 @@ __text relocations
 __data relocations
 (1c, Relocation { kind: Unknown, encoding: Generic, size: 20, target: Symbol(SymbolIndex(3)), addend: 0, implicit_addend: true, flags: MachO { r_type: 7, r_pcrel: true, r_length: 2 } })
 (14, Relocation { kind: Unknown, encoding: Generic, size: 40, target: Symbol(SymbolIndex(3)), addend: 0, implicit_addend: true, flags: MachO { r_type: 7, r_pcrel: false, r_length: 3 } })
-(10, Relocation { kind: Unknown, encoding: Generic, size: 20, target: Symbol(SymbolIndex(4)), addend: 0, implicit_addend: true, flags: MachO { r_type: 1, r_pcrel: false, r_length: 2 } })
-(10, Relocation { kind: Absolute, encoding: Generic, size: 20, target: Symbol(SymbolIndex(3)), addend: 0, implicit_addend: true, flags: MachO { r_type: 0, r_pcrel: false, r_length: 2 } })
-(8, Relocation { kind: Unknown, encoding: Generic, size: 40, target: Symbol(SymbolIndex(4)), addend: 0, implicit_addend: true, flags: MachO { r_type: 1, r_pcrel: false, r_length: 3 } })
-(8, Relocation { kind: Absolute, encoding: Generic, size: 40, target: Symbol(SymbolIndex(3)), addend: 0, implicit_addend: true, flags: MachO { r_type: 0, r_pcrel: false, r_length: 3 } })
+(10, Relocation { kind: Absolute, encoding: Generic, size: 20, target: Symbol(SymbolIndex(3)), subtractor: SymbolIndex(4), addend: 0, implicit_addend: true, flags: MachO { r_type: 0, r_pcrel: false, r_length: 2 } })
+(8, Relocation { kind: Absolute, encoding: Generic, size: 40, target: Symbol(SymbolIndex(3)), subtractor: SymbolIndex(4), addend: 0, implicit_addend: true, flags: MachO { r_type: 0, r_pcrel: false, r_length: 3 } })
 (0, Relocation { kind: Absolute, encoding: Generic, size: 40, target: Symbol(SymbolIndex(3)), addend: 0, implicit_addend: true, flags: MachO { r_type: 0, r_pcrel: false, r_length: 3 } })
 
 Dynamic symbols

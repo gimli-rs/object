@@ -692,14 +692,53 @@ impl<'a> Object<'a> {
     ///
     /// Relocations must only be added after the referenced symbols have been added
     /// and defined (if applicable).
-    pub fn add_relocation(&mut self, section: SectionId, mut relocation: Relocation) -> Result<()> {
+    pub fn add_relocation(&mut self, section: SectionId, relocation: Relocation) -> Result<()> {
+        self.add_relocation_internal(section, relocation.into())
+    }
+
+    /// Add a relocation with a subtractor to a section.
+    ///
+    /// Relocations must only be added after the referenced symbols have been added
+    /// and defined (if applicable).
+    ///
+    /// This is like [`Self::add_relocation`], but the relocation operation
+    /// calculates the difference of two symbols. Currently, only some Mach-O
+    /// targets support this.
+    pub fn add_relocation_with_subtractor(
+        &mut self,
+        section: SectionId,
+        relocation: Relocation,
+        subtractor: Option<SymbolId>,
+    ) -> Result<()> {
+        if let Some(subtractor) = subtractor {
+            if self.format != BinaryFormat::MachO {
+                return Err(Error(format!(
+                    "unsupported relocation subtractor {:?} for {:?}",
+                    subtractor, relocation,
+                )));
+            }
+        }
+        self.add_relocation_internal(
+            section,
+            RelocationInternal {
+                subtractor,
+                ..relocation.into()
+            },
+        )
+    }
+
+    fn add_relocation_internal(
+        &mut self,
+        section: SectionId,
+        mut relocation: RelocationInternal,
+    ) -> Result<()> {
         match self.format {
             #[cfg(feature = "coff")]
             BinaryFormat::Coff => self.coff_translate_relocation(&mut relocation)?,
             #[cfg(feature = "elf")]
             BinaryFormat::Elf => self.elf_translate_relocation(&mut relocation)?,
             #[cfg(feature = "macho")]
-            BinaryFormat::MachO => self.macho_translate_relocation(&mut relocation)?,
+            BinaryFormat::MachO => self.macho_translate_relocation(section, &mut relocation)?,
             #[cfg(feature = "xcoff")]
             BinaryFormat::Xcoff => self.xcoff_translate_relocation(&mut relocation)?,
             _ => unimplemented!(),
@@ -726,7 +765,7 @@ impl<'a> Object<'a> {
     fn write_relocation_addend(
         &mut self,
         section: SectionId,
-        relocation: &Relocation,
+        relocation: &RelocationInternal,
     ) -> Result<()> {
         let size = match self.format {
             #[cfg(feature = "coff")]
@@ -879,7 +918,7 @@ pub struct Section<'a> {
     size: u64,
     align: u64,
     data: Cow<'a, [u8]>,
-    relocations: Vec<Relocation>,
+    relocations: Vec<RelocationInternal>,
     symbol: Option<SymbolId>,
     /// Section flags that are specific to each file format.
     pub flags: SectionFlags,
@@ -1078,6 +1117,27 @@ pub struct Relocation {
     pub addend: i64,
     /// The fields that define the relocation type.
     pub flags: RelocationFlags,
+}
+
+#[derive(Debug)]
+pub(crate) struct RelocationInternal {
+    offset: u64,
+    symbol: SymbolId,
+    subtractor: Option<SymbolId>,
+    addend: i64,
+    flags: RelocationFlags,
+}
+
+impl From<Relocation> for RelocationInternal {
+    fn from(value: Relocation) -> Self {
+        RelocationInternal {
+            offset: value.offset,
+            symbol: value.symbol,
+            subtractor: None,
+            addend: value.addend,
+            flags: value.flags,
+        }
+    }
 }
 
 /// An identifier used to reference a COMDAT section group.
