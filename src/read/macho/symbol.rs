@@ -12,7 +12,7 @@ use crate::read::{
     SymbolMapEntry, SymbolScope, SymbolSection,
 };
 
-use super::{MachHeader, MachOFile};
+use super::{MachHeader, MachOFile, Section};
 
 /// A table of symbol entries in a Mach-O file.
 ///
@@ -370,17 +370,30 @@ where
         self.section()
             .index()
             .and_then(|index| self.file.section_internal(index).ok())
-            .map(|section| match section.kind {
-                SectionKind::Text => SymbolKind::Text,
-                SectionKind::Data
-                | SectionKind::ReadOnlyData
-                | SectionKind::ReadOnlyString
-                | SectionKind::UninitializedData
-                | SectionKind::Common => SymbolKind::Data,
-                SectionKind::Tls | SectionKind::UninitializedTls | SectionKind::TlsVariables => {
-                    SymbolKind::Tls
+            .map(|section| {
+                if let Ok(name) = self.name_bytes() {
+                    // Heuristic to match LLVM's convention for section symbols; may misclassify.
+                    if self.is_local()
+                        && name.len() > 4
+                        && name.starts_with(b"ltmp")
+                        && name[4..].iter().all(|b| b.is_ascii_digit())
+                        && self.address() == section.section.addr(self.file.endian).into()
+                    {
+                        return SymbolKind::Section;
+                    }
                 }
-                _ => SymbolKind::Unknown,
+                match section.kind {
+                    SectionKind::Text => SymbolKind::Text,
+                    SectionKind::Data
+                    | SectionKind::ReadOnlyData
+                    | SectionKind::ReadOnlyString
+                    | SectionKind::UninitializedData
+                    | SectionKind::Common => SymbolKind::Data,
+                    SectionKind::Tls
+                    | SectionKind::UninitializedTls
+                    | SectionKind::TlsVariables => SymbolKind::Tls,
+                    _ => SymbolKind::Unknown,
+                }
             })
             .unwrap_or(SymbolKind::Unknown)
     }

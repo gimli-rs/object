@@ -483,7 +483,13 @@ impl<'a> Object<'a> {
             // Since we don't actually emit the symbol kind, we validate it here too.
             match symbol.kind {
                 SymbolKind::Text | SymbolKind::Data | SymbolKind::Tls | SymbolKind::Unknown => {}
-                SymbolKind::File | SymbolKind::Section => continue,
+                SymbolKind::Section => {
+                    // AArch64 needs temporary section symbols for relative relocations.
+                    if self.architecture != Architecture::Aarch64 {
+                        continue;
+                    }
+                }
+                SymbolKind::File => continue,
                 SymbolKind::Label => {
                     return Err(Error(format!(
                         "unimplemented symbol `{}` kind {:?}",
