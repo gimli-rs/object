@@ -572,6 +572,9 @@ impl<'a> Object<'a> {
         }
         let name = if self.format == BinaryFormat::Coff {
             section.name.clone()
+        } else if self.format == BinaryFormat::MachO {
+            // Use LLVM's convention for section symbols.
+            format!("ltmp{}", section_id.0).into_bytes()
         } else {
             Vec::new()
         };

@@ -18,10 +18,10 @@ Segment { name: "", address: 0, size: 2ca, permissions: RWX }
 11: Section { segment: "__DWARF", name: "__debug_line", address: 288, size: 42, align: 1, kind: Debug, flags: MachO { flags: 2000000 } }
 
 Symbols
-0: Symbol { name: "ltmp0", address: 0, size: 0, kind: Text, section: Section(SectionIndex(1)), scope: Compilation, weak: false, flags: MachO { n_desc: 0 } }
+0: Symbol { name: "ltmp0", address: 0, size: 0, kind: Section, section: Section(SectionIndex(1)), scope: Compilation, weak: false, flags: MachO { n_desc: 0 } }
 1: Symbol { name: "l_.str", address: 34, size: 0, kind: Data, section: Section(SectionIndex(2)), scope: Compilation, weak: false, flags: MachO { n_desc: 0 } }
-2: Symbol { name: "ltmp1", address: 34, size: 0, kind: Data, section: Section(SectionIndex(2)), scope: Compilation, weak: false, flags: MachO { n_desc: 0 } }
-3: Symbol { name: "ltmp2", address: 268, size: 0, kind: Unknown, section: Section(SectionIndex(a)), scope: Compilation, weak: false, flags: MachO { n_desc: 0 } }
+2: Symbol { name: "ltmp1", address: 34, size: 0, kind: Section, section: Section(SectionIndex(2)), scope: Compilation, weak: false, flags: MachO { n_desc: 0 } }
+3: Symbol { name: "ltmp2", address: 268, size: 0, kind: Section, section: Section(SectionIndex(a)), scope: Compilation, weak: false, flags: MachO { n_desc: 0 } }
 4: Symbol { name: "_main", address: 0, size: 0, kind: Text, section: Section(SectionIndex(1)), scope: Dynamic, weak: false, flags: MachO { n_desc: 0 } }
 5: Symbol { name: "_printf", address: 0, size: 0, kind: Unknown, section: Undefined, scope: Unknown, weak: false, flags: MachO { n_desc: 0 } }
 
@@ -48,5 +48,4 @@ Export { name: "_main", address: 0 }
 
 Symbol map
 0x0 "_main"
-0x34 "ltmp1"
-0x268 "ltmp2"
+0x34 "l_.str"
