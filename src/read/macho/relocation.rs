@@ -38,6 +38,7 @@ where
         use RelocationKind as K;
 
         let mut paired_addend = 0;
+        let mut subtractor = None;
         loop {
             let reloc = self.relocations.next()?;
             let endian = self.file.endian;
@@ -67,6 +68,10 @@ where
                             paired_addend = i64::from(reloc.r_symbolnum)
                                 .wrapping_shl(64 - 24)
                                 .wrapping_shr(64 - 24);
+                            continue;
+                        }
+                        (macho::ARM64_RELOC_SUBTRACTOR, _) => {
+                            subtractor = Some(SymbolIndex(reloc.r_symbolnum as usize));
                             continue;
                         }
                         _ => unknown,
@@ -130,6 +135,7 @@ where
                     encoding,
                     size,
                     target,
+                    subtractor,
                     addend,
                     implicit_addend,
                     flags,

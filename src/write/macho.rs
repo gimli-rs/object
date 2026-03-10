@@ -277,7 +277,11 @@ impl<'a> Object<'a> {
         init_symbol_id
     }
 
-    pub(crate) fn macho_translate_relocation(&mut self, reloc: &mut Relocation) -> Result<()> {
+    pub(crate) fn macho_translate_relocation(
+        &mut self,
+        section: SectionId,
+        reloc: &mut RelocationInternal,
+    ) -> Result<()> {
         use RelocationEncoding as E;
         use RelocationKind as K;
 
@@ -324,6 +328,14 @@ impl<'a> Object<'a> {
             },
             Architecture::Aarch64 | Architecture::Aarch64_Ilp32 => match (kind, encoding) {
                 (K::Absolute, E::Generic) => (false, macho::ARM64_RELOC_UNSIGNED),
+                (K::Relative, E::Generic) => {
+                    // arm64 doesn't have PC relative relocations for data,
+                    // use ARM64_RELOC_SUBTRACTOR instead.
+                    reloc.subtractor = Some(self.section_symbol(section));
+                    // S - (section + offset) + A = S - section + (A - offset)
+                    reloc.addend -= reloc.offset as i64;
+                    (false, macho::ARM64_RELOC_UNSIGNED)
+                }
                 (K::Relative, E::AArch64Call) => (true, macho::ARM64_RELOC_BRANCH26),
                 _ => return unsupported_reloc(),
             },
@@ -346,7 +358,10 @@ impl<'a> Object<'a> {
         Ok(())
     }
 
-    pub(crate) fn macho_adjust_addend(&mut self, relocation: &mut Relocation) -> Result<bool> {
+    pub(crate) fn macho_adjust_addend(
+        &mut self,
+        relocation: &mut RelocationInternal,
+    ) -> Result<bool> {
         let (r_type, r_pcrel) = if let RelocationFlags::MachO {
             r_type, r_pcrel, ..
         } = relocation.flags
@@ -388,7 +403,7 @@ impl<'a> Object<'a> {
         Ok(implicit)
     }
 
-    pub(crate) fn macho_relocation_size(&self, reloc: &Relocation) -> Result<u8> {
+    pub(crate) fn macho_relocation_size(&self, reloc: &RelocationInternal) -> Result<u8> {
         if let RelocationFlags::MachO { r_length, .. } = reloc.flags {
             Ok(8 << r_length)
         } else {
@@ -485,7 +500,10 @@ impl<'a> Object<'a> {
                 SymbolKind::Text | SymbolKind::Data | SymbolKind::Tls | SymbolKind::Unknown => {}
                 SymbolKind::Section => {
                     // AArch64 needs temporary section symbols for relative relocations.
-                    if self.architecture != Architecture::Aarch64 {
+                    if !matches!(
+                        self.architecture,
+                        Architecture::Aarch64 | Architecture::Aarch64_Ilp32
+                    ) {
                         continue;
                     }
                 }
@@ -530,7 +548,9 @@ impl<'a> Object<'a> {
             let count: usize = section
                 .relocations
                 .iter()
-                .map(|reloc| 1 + usize::from(reloc.addend != 0))
+                .map(|reloc| {
+                    1 + usize::from(reloc.addend != 0) + usize::from(reloc.subtractor.is_some())
+                })
                 .sum();
             if count != 0 {
                 offset = align(offset, pointer_align);
@@ -741,7 +761,7 @@ impl<'a> Object<'a> {
                 write_align(buffer, pointer_align);
                 debug_assert_eq!(section_offsets[index].reloc_offset, buffer.len());
 
-                let mut write_reloc = |reloc: &Relocation| {
+                let mut write_reloc = |reloc: &RelocationInternal| {
                     let (r_type, r_pcrel, r_length) = if let RelocationFlags::MachO {
                         r_type,
                         r_pcrel,
@@ -752,6 +772,26 @@ impl<'a> Object<'a> {
                     } else {
                         return Err(Error("invalid relocation flags".into()));
                     };
+
+                    if let Some(subtractor) = reloc.subtractor {
+                        let r_type = match self.architecture {
+                            Architecture::Aarch64 | Architecture::Aarch64_Ilp32 => {
+                                macho::ARM64_RELOC_SUBTRACTOR
+                            }
+                            _ => {
+                                return Err(Error(format!("unimplemented relocation {:?}", reloc)))
+                            }
+                        };
+                        let reloc_info = macho::RelocationInfo {
+                            r_address: reloc.offset as u32,
+                            r_symbolnum: symbol_offsets[subtractor.0].index as u32,
+                            r_pcrel: false,
+                            r_length,
+                            r_extern: true,
+                            r_type,
+                        };
+                        buffer.write(&reloc_info.relocation(endian));
+                    }
 
                     // Write explicit addend.
                     if reloc.addend != 0 {
@@ -801,7 +841,7 @@ impl<'a> Object<'a> {
                 // Relocations are emitted in descending order as otherwise Apple's
                 // new linker crashes. This matches LLVM's behavior too:
                 // https://github.com/llvm/llvm-project/blob/e9b8cd0c8/llvm/lib/MC/MachObjectWriter.cpp#L1001-L1002
-                let need_reverse = |relocs: &[Relocation]| {
+                let need_reverse = |relocs: &[RelocationInternal]| {
                     let Some(first) = relocs.first() else {
                         return false;
                     };

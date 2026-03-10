@@ -697,15 +697,32 @@ pub enum RelocationTarget {
 /// A relocation entry.
 ///
 /// Returned by [`Object::dynamic_relocations`] or [`ObjectSection::relocations`].
-#[derive(Debug)]
 pub struct Relocation {
     kind: RelocationKind,
     encoding: RelocationEncoding,
     size: u8,
     target: RelocationTarget,
+    subtractor: Option<SymbolIndex>,
     addend: i64,
     implicit_addend: bool,
     flags: RelocationFlags,
+}
+
+impl fmt::Debug for Relocation {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let mut s = f.debug_struct("Relocation");
+        s.field("kind", &self.kind)
+            .field("encoding", &self.encoding)
+            .field("size", &self.size)
+            .field("target", &self.target);
+        if let Some(subtractor) = self.subtractor {
+            s.field("subtractor", &subtractor);
+        }
+        s.field("addend", &self.addend)
+            .field("implicit_addend", &self.implicit_addend)
+            .field("flags", &self.flags)
+            .finish()
+    }
 }
 
 impl Relocation {
@@ -733,6 +750,14 @@ impl Relocation {
     #[inline]
     pub fn target(&self) -> RelocationTarget {
         self.target
+    }
+
+    /// A subtractor symbol.
+    ///
+    /// The relocation calculation subtracts the value of this symbol, if any.
+    #[inline]
+    pub fn subtractor(&self) -> Option<SymbolIndex> {
+        self.subtractor
     }
 
     /// The addend to use in the relocation calculation.

@@ -147,8 +147,11 @@ pub fn copy(in_data: &[u8]) -> Vec<u8> {
                 addend: in_relocation.addend(),
                 flags: in_relocation.flags(),
             };
+            let subtractor = in_relocation
+                .subtractor()
+                .map(|subtractor| *out_symbols.get(&subtractor).unwrap());
             out_object
-                .add_relocation(out_section, out_relocation)
+                .add_relocation_with_subtractor(out_section, out_relocation, subtractor)
                 .unwrap();
         }
     }
