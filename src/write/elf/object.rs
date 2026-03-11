@@ -108,6 +108,19 @@ impl<'a> Object<'a> {
                     sh_flags: u64::from(elf::SHF_ALLOC),
                 },
             ),
+            StandardSection::EhFrame => (
+                &[],
+                &b".eh_frame"[..],
+                if matches!(
+                    self.architecture(),
+                    Architecture::X86_64 | Architecture::X86_64_X32
+                ) {
+                    SectionKind::Elf(elf::SHT_X86_64_UNWIND)
+                } else {
+                    SectionKind::ReadOnlyData
+                },
+                SectionFlags::None,
+            ),
         }
     }
 

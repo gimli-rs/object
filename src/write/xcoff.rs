@@ -55,15 +55,19 @@ impl<'a> Object<'a> {
             ),
             StandardSection::TlsVariables => {
                 // Unsupported section.
-                (&[], &[], SectionKind::TlsVariables, SectionFlags::None)
+                (&[], &[], SectionKind::Unknown, SectionFlags::None)
             }
             StandardSection::Common => {
                 // Unsupported section.
-                (&[], &[], SectionKind::Common, SectionFlags::None)
+                (&[], &[], SectionKind::Unknown, SectionFlags::None)
             }
             StandardSection::GnuProperty => {
                 // Unsupported section.
-                (&[], &[], SectionKind::Note, SectionFlags::None)
+                (&[], &[], SectionKind::Unknown, SectionFlags::None)
+            }
+            StandardSection::EhFrame => {
+                // Unsupported section.
+                (&[], &[], SectionKind::Unknown, SectionFlags::None)
             }
         }
     }

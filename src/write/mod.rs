@@ -867,6 +867,7 @@ pub enum StandardSection {
     Common,
     /// Notes for GNU properties. Only supported for ELF.
     GnuProperty,
+    EhFrame,
 }
 
 impl StandardSection {
@@ -884,6 +885,7 @@ impl StandardSection {
             StandardSection::TlsVariables => SectionKind::TlsVariables,
             StandardSection::Common => SectionKind::Common,
             StandardSection::GnuProperty => SectionKind::Note,
+            StandardSection::EhFrame => SectionKind::ReadOnlyData,
         }
     }
 
@@ -901,6 +903,7 @@ impl StandardSection {
             StandardSection::TlsVariables,
             StandardSection::Common,
             StandardSection::GnuProperty,
+            StandardSection::EhFrame,
         ]
     }
 }
