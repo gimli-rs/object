@@ -72,6 +72,12 @@ impl<'a> Object<'a> {
                 // Unsupported section.
                 (&[], &[], SectionKind::Note, SectionFlags::None)
             }
+            StandardSection::EhFrame => (
+                &[],
+                &b".eh_frame"[..],
+                SectionKind::ReadOnlyData,
+                SectionFlags::None,
+            ),
         }
     }
 

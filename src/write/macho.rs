@@ -143,6 +143,17 @@ impl<'a> Object<'a> {
                 // Unsupported section.
                 (&[], &[], SectionKind::Note, SectionFlags::None)
             }
+            StandardSection::EhFrame => (
+                &b"__TEXT"[..],
+                &b"__eh_frame"[..],
+                SectionKind::ReadOnlyData,
+                SectionFlags::MachO {
+                    flags: macho::S_COALESCED
+                        | macho::S_ATTR_LIVE_SUPPORT
+                        | macho::S_ATTR_NO_TOC
+                        | macho::S_ATTR_STRIP_STATIC_SYMS,
+                },
+            ),
         }
     }
 
