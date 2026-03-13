@@ -55,7 +55,7 @@ where
                 r_length: reloc.r_length,
             };
             let g = E::Generic;
-            let unknown = (K::Unknown, E::Generic);
+            let unknown = (K::Unknown, E::Unknown);
             let (kind, encoding) = match cputype {
                 macho::CPU_TYPE_ARM => match (reloc.r_type, reloc.r_pcrel) {
                     (macho::ARM_RELOC_VANILLA, false) => (K::Absolute, g),

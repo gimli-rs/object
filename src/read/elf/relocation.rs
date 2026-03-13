@@ -287,7 +287,7 @@ fn parse_relocation<Elf: FileHeader>(
     let r_type = reloc.r_type;
     let flags = RelocationFlags::Elf { r_type };
     let g = E::Generic;
-    let unknown = (K::Unknown, E::Generic, 0);
+    let unknown = (K::Unknown, E::Unknown, 0);
     let (kind, encoding, size) = match header.e_machine(endian) {
         elf::EM_AARCH64 => {
             if header.is_type_64() {

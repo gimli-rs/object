@@ -90,12 +90,12 @@ Dynamic symbols
 7: Symbol { name: "_IO_stdin_used", address: 2004, size: 4, kind: Data, section: Section(SectionIndex(11)), scope: Dynamic, weak: false, flags: Elf { st_info: 11, st_other: 0 } }
 
 Dynamic relocations
-(3fec, Relocation { kind: Unknown, encoding: Generic, size: 0, target: Symbol(SymbolIndex(2)), addend: 0, implicit_addend: true, flags: Elf { r_type: 6 } })
-(3ff0, Relocation { kind: Unknown, encoding: Generic, size: 0, target: Symbol(SymbolIndex(4)), addend: 0, implicit_addend: true, flags: Elf { r_type: 6 } })
-(3ff4, Relocation { kind: Unknown, encoding: Generic, size: 0, target: Symbol(SymbolIndex(5)), addend: 0, implicit_addend: true, flags: Elf { r_type: 6 } })
-(3ffc, Relocation { kind: Unknown, encoding: Generic, size: 0, target: Symbol(SymbolIndex(6)), addend: 0, implicit_addend: true, flags: Elf { r_type: 6 } })
-(3fe4, Relocation { kind: Unknown, encoding: Generic, size: 0, target: Symbol(SymbolIndex(1)), addend: 0, implicit_addend: true, flags: Elf { r_type: 7 } })
-(3fe8, Relocation { kind: Unknown, encoding: Generic, size: 0, target: Symbol(SymbolIndex(3)), addend: 0, implicit_addend: true, flags: Elf { r_type: 7 } })
+(3fec, Relocation { kind: Unknown, encoding: Unknown, size: 0, target: Symbol(SymbolIndex(2)), addend: 0, implicit_addend: true, flags: Elf { r_type: 6 } })
+(3ff0, Relocation { kind: Unknown, encoding: Unknown, size: 0, target: Symbol(SymbolIndex(4)), addend: 0, implicit_addend: true, flags: Elf { r_type: 6 } })
+(3ff4, Relocation { kind: Unknown, encoding: Unknown, size: 0, target: Symbol(SymbolIndex(5)), addend: 0, implicit_addend: true, flags: Elf { r_type: 6 } })
+(3ffc, Relocation { kind: Unknown, encoding: Unknown, size: 0, target: Symbol(SymbolIndex(6)), addend: 0, implicit_addend: true, flags: Elf { r_type: 6 } })
+(3fe4, Relocation { kind: Unknown, encoding: Unknown, size: 0, target: Symbol(SymbolIndex(1)), addend: 0, implicit_addend: true, flags: Elf { r_type: 7 } })
+(3fe8, Relocation { kind: Unknown, encoding: Unknown, size: 0, target: Symbol(SymbolIndex(3)), addend: 0, implicit_addend: true, flags: Elf { r_type: 7 } })
 
 Import { library: "libc.so.6", name: "__libc_start_main" }
 Import { library: "", name: "_ITM_deregisterTMCloneTable" }

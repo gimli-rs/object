@@ -87,12 +87,12 @@ Dynamic symbols
 6: Symbol { name: "__cxa_finalize", address: 0, size: 0, kind: Text, section: Undefined, scope: Unknown, weak: true, flags: Elf { st_info: 22, st_other: 0 } }
 
 Dynamic relocations
-(3fd8, Relocation { kind: Unknown, encoding: Generic, size: 0, target: Symbol(SymbolIndex(1)), addend: 0, implicit_addend: false, flags: Elf { r_type: 6 } })
-(3fe0, Relocation { kind: Unknown, encoding: Generic, size: 0, target: Symbol(SymbolIndex(2)), addend: 0, implicit_addend: false, flags: Elf { r_type: 6 } })
-(3fe8, Relocation { kind: Unknown, encoding: Generic, size: 0, target: Symbol(SymbolIndex(4)), addend: 0, implicit_addend: false, flags: Elf { r_type: 6 } })
-(3ff0, Relocation { kind: Unknown, encoding: Generic, size: 0, target: Symbol(SymbolIndex(5)), addend: 0, implicit_addend: false, flags: Elf { r_type: 6 } })
-(3ff8, Relocation { kind: Unknown, encoding: Generic, size: 0, target: Symbol(SymbolIndex(6)), addend: 0, implicit_addend: false, flags: Elf { r_type: 6 } })
-(3fd0, Relocation { kind: Unknown, encoding: Generic, size: 0, target: Symbol(SymbolIndex(3)), addend: 0, implicit_addend: false, flags: Elf { r_type: 7 } })
+(3fd8, Relocation { kind: Unknown, encoding: Unknown, size: 0, target: Symbol(SymbolIndex(1)), addend: 0, implicit_addend: false, flags: Elf { r_type: 6 } })
+(3fe0, Relocation { kind: Unknown, encoding: Unknown, size: 0, target: Symbol(SymbolIndex(2)), addend: 0, implicit_addend: false, flags: Elf { r_type: 6 } })
+(3fe8, Relocation { kind: Unknown, encoding: Unknown, size: 0, target: Symbol(SymbolIndex(4)), addend: 0, implicit_addend: false, flags: Elf { r_type: 6 } })
+(3ff0, Relocation { kind: Unknown, encoding: Unknown, size: 0, target: Symbol(SymbolIndex(5)), addend: 0, implicit_addend: false, flags: Elf { r_type: 6 } })
+(3ff8, Relocation { kind: Unknown, encoding: Unknown, size: 0, target: Symbol(SymbolIndex(6)), addend: 0, implicit_addend: false, flags: Elf { r_type: 6 } })
+(3fd0, Relocation { kind: Unknown, encoding: Unknown, size: 0, target: Symbol(SymbolIndex(3)), addend: 0, implicit_addend: false, flags: Elf { r_type: 7 } })
 
 Import { library: "libc.so.6", name: "__libc_start_main" }
 Import { library: "", name: "_ITM_deregisterTMCloneTable" }
