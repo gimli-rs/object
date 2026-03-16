@@ -831,7 +831,7 @@ impl RelocationMap {
             addend: relocation.addend() as u64,
         };
         match relocation.kind() {
-            RelocationKind::None => {}
+            RelocationKind::None => return Ok(()),
             RelocationKind::Absolute => match relocation.target() {
                 RelocationTarget::Symbol(symbol_idx) => {
                     let symbol = file
@@ -856,6 +856,9 @@ impl RelocationMap {
             _ => {
                 return Err(Error("Unsupported relocation type"));
             }
+        }
+        if relocation.encoding() != RelocationEncoding::Generic {
+            return Err(Error("Unsupported relocation encoding"));
         }
         if self.0.insert(offset, entry).is_some() {
             return Err(Error("Multiple relocations for offset"));
