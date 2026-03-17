@@ -653,6 +653,19 @@ pub enum SymbolFlags<Section, Symbol> {
     },
 }
 
+impl<Section, Symbol> SymbolFlags<Section, Symbol> {
+    /// Returns the ELF symbol visibility.
+    ///
+    /// This corresponds to the lower 2 bits of the `st_other` field,
+    /// and will be a value such as `elf::STV_DEFAULT`.
+    pub fn elf_visibility(&self) -> Option<u8> {
+        match self {
+            SymbolFlags::Elf { st_other, .. } => Some(st_other & 0x3),
+            _ => None,
+        }
+    }
+}
+
 /// Relocation fields that are specific to each file format and architecture.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[non_exhaustive]
