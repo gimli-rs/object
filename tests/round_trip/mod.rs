@@ -13,6 +13,7 @@ mod comdat;
 mod common;
 mod elf;
 mod macho;
+mod reloc;
 mod section_flags;
 mod tls;
 
