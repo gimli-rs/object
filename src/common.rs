@@ -349,26 +349,48 @@ pub enum RelocationKind {
     /// The operation is unknown.
     Unknown,
     /// No relocation.
+    ///
+    /// Example: `elf::R_X86_64_NONE`
     None,
     /// S + A
+    ///
+    /// Example: `elf::R_X86_64_64`
     Absolute,
     /// S + A - P
+    ///
+    /// Example: `elf::R_X86_64_PC32`
     Relative,
     /// G + A - GotBase
+    ///
+    /// Example: `elf::R_X86_64_GOT32`
     Got,
     /// G + A - P
+    ///
+    /// Example: `elf::R_X86_64_GOTPCREL`
     GotRelative,
     /// GotBase + A - P
+    ///
+    /// Example: `elf::R_386_GOTPC`
     GotBaseRelative,
     /// S + A - GotBase
+    ///
+    /// Example: `elf::R_386_GOTOFF`
     GotBaseOffset,
     /// L + A - P
+    ///
+    /// Example: `elf::R_X86_64_PLT32`
     PltRelative,
     /// S + A - Image
+    ///
+    /// Example: `pe::IMAGE_REL_AMD64_ADDR32NB`
     ImageOffset,
     /// S + A - Section
+    ///
+    /// Example: `pe::IMAGE_REL_AMD64_SECREL`
     SectionOffset,
     /// The index of the section containing the symbol.
+    ///
+    /// Example: `pe::IMAGE_REL_AMD64_SECTION`
     SectionIndex,
 }
 
