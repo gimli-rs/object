@@ -24,8 +24,8 @@ __text relocations
 (10, Relocation { kind: Unknown, encoding: Unknown, size: 20, target: Symbol(SymbolIndex(3)), addend: 14, implicit_addend: false, flags: MachO { r_type: 3, r_pcrel: true, r_length: 2 } })
 (c, Relocation { kind: Unknown, encoding: Unknown, size: 20, target: Symbol(SymbolIndex(3)), addend: 0, implicit_addend: true, flags: MachO { r_type: 4, r_pcrel: false, r_length: 2 } })
 (8, Relocation { kind: Unknown, encoding: Unknown, size: 20, target: Symbol(SymbolIndex(3)), addend: 0, implicit_addend: true, flags: MachO { r_type: 3, r_pcrel: true, r_length: 2 } })
-(4, Relocation { kind: Unknown, encoding: Unknown, size: 20, target: Symbol(SymbolIndex(3)), addend: 14, implicit_addend: false, flags: MachO { r_type: 2, r_pcrel: true, r_length: 2 } })
-(0, Relocation { kind: Unknown, encoding: Unknown, size: 20, target: Symbol(SymbolIndex(3)), addend: 0, implicit_addend: true, flags: MachO { r_type: 2, r_pcrel: true, r_length: 2 } })
+(4, Relocation { kind: PltRelative, encoding: AArch64Call, size: 1a, target: Symbol(SymbolIndex(3)), addend: 14, implicit_addend: false, flags: MachO { r_type: 2, r_pcrel: true, r_length: 2 } })
+(0, Relocation { kind: PltRelative, encoding: AArch64Call, size: 1a, target: Symbol(SymbolIndex(3)), addend: 0, implicit_addend: true, flags: MachO { r_type: 2, r_pcrel: true, r_length: 2 } })
 
 __data relocations
 (1c, Relocation { kind: Unknown, encoding: Unknown, size: 20, target: Symbol(SymbolIndex(3)), addend: 0, implicit_addend: true, flags: MachO { r_type: 7, r_pcrel: true, r_length: 2 } })
