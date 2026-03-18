@@ -87,6 +87,10 @@ where
                     (macho::X86_64_RELOC_BRANCH, true) => (K::PltRelative, E::X86Branch),
                     (macho::X86_64_RELOC_GOT, true) => (K::GotRelative, g),
                     (macho::X86_64_RELOC_GOT_LOAD, true) => (K::GotRelative, E::X86RipRelativeMovq),
+                    (macho::X86_64_RELOC_SUBTRACTOR, _) => {
+                        subtractor = Some(SymbolIndex(reloc.r_symbolnum as usize));
+                        continue;
+                    }
                     _ => unknown,
                 },
                 macho::CPU_TYPE_POWERPC | macho::CPU_TYPE_POWERPC64 => {

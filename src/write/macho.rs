@@ -329,8 +329,8 @@ impl<'a> Object<'a> {
             },
             Architecture::X86_64 => match (kind, encoding) {
                 (K::Absolute, E::Generic) => (false, macho::X86_64_RELOC_UNSIGNED),
-                (K::Relative, E::Generic) => (true, macho::X86_64_RELOC_SIGNED),
-                (K::Relative, E::X86RipRelative) => (true, macho::X86_64_RELOC_SIGNED),
+                // TODO: E::Generic might need to use unsigned with a subtractor instead
+                (K::Relative, E::Generic | E::X86RipRelative) => (true, macho::X86_64_RELOC_SIGNED),
                 (K::Relative, E::X86Branch) => (true, macho::X86_64_RELOC_BRANCH),
                 (K::PltRelative, E::Generic | E::X86Branch) => (true, macho::X86_64_RELOC_BRANCH),
                 (K::GotRelative, E::Generic) => (true, macho::X86_64_RELOC_GOT),
@@ -789,6 +789,7 @@ impl<'a> Object<'a> {
                             Architecture::Aarch64 | Architecture::Aarch64_Ilp32 => {
                                 macho::ARM64_RELOC_SUBTRACTOR
                             }
+                            Architecture::X86_64 => macho::X86_64_RELOC_SUBTRACTOR,
                             _ => {
                                 return Err(Error(format!("unimplemented relocation {:?}", reloc)))
                             }
