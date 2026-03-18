@@ -229,6 +229,8 @@ fn reloc_round_trip() {
                 elf_r(A::X86_64, elf::R_X86_64_PLT32),
                 // Canonical: E::X86Branch
                 macho_r(A::X86_64, macho::X86_64_RELOC_BRANCH, true, 2),
+                // Canonical: E::AArch64Call
+                macho_r(A::Aarch64, macho::ARM64_RELOC_BRANCH26, true, 2),
                 // Canonical: K::Relative
                 coff_r(A::I386, pe::IMAGE_REL_I386_REL32),
                 coff_r(A::X86_64, pe::IMAGE_REL_AMD64_REL32),
@@ -290,7 +292,10 @@ fn reloc_round_trip() {
         // AArch64 PLT branch or call.
         (
             (K::PltRelative, E::AArch64Call, 26),
-            vec![elf_r(A::Aarch64, elf::R_AARCH64_CALL26)],
+            vec![
+                elf_r(A::Aarch64, elf::R_AARCH64_CALL26),
+                macho_r(A::Aarch64, macho::ARM64_RELOC_BRANCH26, true, 2),
+            ],
             vec![
                 // Canonical: K::Relative
                 coff_r(A::Aarch64, pe::IMAGE_REL_ARM64_BRANCH26),

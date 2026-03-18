@@ -54,6 +54,7 @@ where
                 r_pcrel: reloc.r_pcrel,
                 r_length: reloc.r_length,
             };
+            let mut size = 8 << reloc.r_length;
             let g = E::Generic;
             let unknown = (K::Unknown, E::Unknown);
             let (kind, encoding) = match cputype {
@@ -64,6 +65,10 @@ where
                 macho::CPU_TYPE_ARM64 | macho::CPU_TYPE_ARM64_32 => {
                     match (reloc.r_type, reloc.r_pcrel) {
                         (macho::ARM64_RELOC_UNSIGNED, false) => (K::Absolute, g),
+                        (macho::ARM64_RELOC_BRANCH26, true) => {
+                            size = 26;
+                            (K::PltRelative, E::AArch64Call)
+                        }
                         (macho::ARM64_RELOC_ADDEND, _) => {
                             paired_addend = i64::from(reloc.r_symbolnum)
                                 .wrapping_shl(64 - 24)
@@ -101,7 +106,6 @@ where
                 }
                 _ => unknown,
             };
-            let size = 8 << reloc.r_length;
             let target = if reloc.r_extern {
                 RelocationTarget::Symbol(SymbolIndex(reloc.r_symbolnum as usize))
             } else {
