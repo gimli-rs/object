@@ -26,8 +26,7 @@ __text relocations
 (1, Relocation { kind: PltRelative, encoding: X86Branch, size: 20, target: Symbol(SymbolIndex(1)), addend: fffffffffffffffc, implicit_addend: true, flags: MachO { r_type: 2, r_pcrel: true, r_length: 2 } })
 
 __data relocations
-(10, Relocation { kind: Unknown, encoding: Unknown, size: 40, target: Symbol(SymbolIndex(1)), addend: 0, implicit_addend: true, flags: MachO { r_type: 5, r_pcrel: false, r_length: 3 } })
-(10, Relocation { kind: Absolute, encoding: Generic, size: 40, target: Symbol(SymbolIndex(0)), addend: 0, implicit_addend: true, flags: MachO { r_type: 0, r_pcrel: false, r_length: 3 } })
+(10, Relocation { kind: Absolute, encoding: Generic, size: 40, target: Symbol(SymbolIndex(0)), subtractor: SymbolIndex(1), addend: 0, implicit_addend: true, flags: MachO { r_type: 0, r_pcrel: false, r_length: 3 } })
 (8, Relocation { kind: Absolute, encoding: Generic, size: 40, target: Section(SectionIndex(2)), addend: 0, implicit_addend: true, flags: MachO { r_type: 0, r_pcrel: false, r_length: 3 } })
 (0, Relocation { kind: Absolute, encoding: Generic, size: 40, target: Symbol(SymbolIndex(0)), addend: 0, implicit_addend: true, flags: MachO { r_type: 0, r_pcrel: false, r_length: 3 } })
 
