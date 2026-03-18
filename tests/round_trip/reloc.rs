@@ -227,6 +227,8 @@ fn reloc_round_trip() {
             vec![
                 // Canonical: E::X86Branch
                 elf_r(A::X86_64, elf::R_X86_64_PLT32),
+                // Canonical: E::X86Branch
+                macho_r(A::X86_64, macho::X86_64_RELOC_BRANCH, true, 2),
                 // Canonical: K::Relative
                 coff_r(A::I386, pe::IMAGE_REL_I386_REL32),
                 coff_r(A::X86_64, pe::IMAGE_REL_AMD64_REL32),
@@ -250,10 +252,12 @@ fn reloc_round_trip() {
         // cranelift: Reloc::X86CallPCRel4
         (
             (K::Relative, E::X86Branch, 32),
-            vec![macho_r(A::X86_64, macho::X86_64_RELOC_BRANCH, true, 2)],
+            vec![],
             vec![
                 // Canonical: K::PltRelative
                 elf_r(A::X86_64, elf::R_X86_64_PLT32),
+                // Canonical: K::PltRelative
+                macho_r(A::X86_64, macho::X86_64_RELOC_BRANCH, true, 2),
                 // Canonical: E::Generic
                 coff_r(A::X86_64, pe::IMAGE_REL_AMD64_REL32),
             ],
@@ -262,12 +266,11 @@ fn reloc_round_trip() {
         // cranelift: Reloc::X86CallPLTRel4
         (
             (K::PltRelative, E::X86Branch, 32),
-            vec![],
             vec![
-                // Canonical: E::Generic
                 elf_r(A::X86_64, elf::R_X86_64_PLT32),
-                // Canonical: K::Relative
                 macho_r(A::X86_64, macho::X86_64_RELOC_BRANCH, true, 2),
+            ],
+            vec![
                 // Canonical: K::Relative, E::Generic
                 coff_r(A::X86_64, pe::IMAGE_REL_AMD64_REL32),
             ],

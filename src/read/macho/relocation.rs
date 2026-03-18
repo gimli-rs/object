@@ -84,7 +84,7 @@ where
                 macho::CPU_TYPE_X86_64 => match (reloc.r_type, reloc.r_pcrel) {
                     (macho::X86_64_RELOC_UNSIGNED, false) => (K::Absolute, g),
                     (macho::X86_64_RELOC_SIGNED, true) => (K::Relative, E::X86RipRelative),
-                    (macho::X86_64_RELOC_BRANCH, true) => (K::Relative, E::X86Branch),
+                    (macho::X86_64_RELOC_BRANCH, true) => (K::PltRelative, E::X86Branch),
                     (macho::X86_64_RELOC_GOT, true) => (K::GotRelative, g),
                     (macho::X86_64_RELOC_GOT_LOAD, true) => (K::GotRelative, E::X86RipRelativeMovq),
                     _ => unknown,

@@ -24,7 +24,7 @@ Symbols
 
 .text relocations
 (12, Relocation { kind: Relative, encoding: Generic, size: 20, target: Symbol(SymbolIndex(3)), addend: fffffffffffffffc, implicit_addend: false, flags: Elf { r_type: 2 } })
-(19, Relocation { kind: PltRelative, encoding: Generic, size: 20, target: Symbol(SymbolIndex(5)), addend: fffffffffffffffc, implicit_addend: false, flags: Elf { r_type: 4 } })
+(19, Relocation { kind: PltRelative, encoding: X86Branch, size: 20, target: Symbol(SymbolIndex(5)), addend: fffffffffffffffc, implicit_addend: false, flags: Elf { r_type: 4 } })
 
 .eh_frame relocations
 (20, Relocation { kind: Relative, encoding: Generic, size: 20, target: Symbol(SymbolIndex(2)), addend: 0, implicit_addend: false, flags: Elf { r_type: 2 } })

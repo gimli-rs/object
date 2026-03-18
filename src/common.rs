@@ -396,9 +396,10 @@ pub enum RelocationEncoding {
     ///
     /// The `RelocationKind` must be PC relative.
     X86RipRelativeMovq,
-    /// x86 branch instruction.
+    /// x86 call target.
     ///
     /// The `RelocationKind` must be PC relative.
+    // This name matches Mach-O, but might have been better named `X86Call`.
     X86Branch,
 
     /// s390x PC-relative offset shifted right by one bit.
