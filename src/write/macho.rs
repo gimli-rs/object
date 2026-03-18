@@ -332,7 +332,7 @@ impl<'a> Object<'a> {
                 (K::Relative, E::Generic) => (true, macho::X86_64_RELOC_SIGNED),
                 (K::Relative, E::X86RipRelative) => (true, macho::X86_64_RELOC_SIGNED),
                 (K::Relative, E::X86Branch) => (true, macho::X86_64_RELOC_BRANCH),
-                (K::PltRelative, E::X86Branch) => (true, macho::X86_64_RELOC_BRANCH),
+                (K::PltRelative, E::Generic | E::X86Branch) => (true, macho::X86_64_RELOC_BRANCH),
                 (K::GotRelative, E::Generic) => (true, macho::X86_64_RELOC_GOT),
                 (K::GotRelative, E::X86RipRelativeMovq) => (true, macho::X86_64_RELOC_GOT_LOAD),
                 _ => return unsupported_reloc(),

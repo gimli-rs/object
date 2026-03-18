@@ -372,7 +372,7 @@ fn parse_relocation<Elf: FileHeader>(
             elf::R_X86_64_64 => (K::Absolute, g, 64),
             elf::R_X86_64_PC32 => (K::Relative, g, 32),
             elf::R_X86_64_GOT32 => (K::Got, g, 32),
-            elf::R_X86_64_PLT32 => (K::PltRelative, g, 32),
+            elf::R_X86_64_PLT32 => (K::PltRelative, E::X86Branch, 32),
             elf::R_X86_64_GOTPCREL => (K::GotRelative, g, 32),
             elf::R_X86_64_32 => (K::Absolute, g, 32),
             elf::R_X86_64_32S => (K::Absolute, E::X86Signed, 32),
