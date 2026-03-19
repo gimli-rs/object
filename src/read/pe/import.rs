@@ -1,7 +1,7 @@
 use core::fmt::Debug;
 use core::mem;
 
-use crate::endian::{LittleEndian as LE, U16Bytes};
+use crate::endian::{LittleEndian as LE, U16};
 use crate::pe;
 use crate::pod::Pod;
 use crate::read::{Bytes, ReadError, Result};
@@ -87,7 +87,7 @@ impl<'data> ImportTable<'data> {
         data.skip(offset as usize)
             .read_error("Invalid PE import thunk address")?;
         let hint = data
-            .read::<U16Bytes<LE>>()
+            .read::<U16<LE>>()
             .read_error("Missing PE import thunk hint")?
             .get(LE);
         let name = data
@@ -326,7 +326,7 @@ impl<'data> DelayLoadImportTable<'data> {
         data.skip(offset as usize)
             .read_error("Invalid PE delay load import thunk address")?;
         let hint = data
-            .read::<U16Bytes<LE>>()
+            .read::<U16<LE>>()
             .read_error("Missing PE delay load import thunk hint")?
             .get(LE);
         let name = data

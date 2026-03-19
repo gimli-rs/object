@@ -136,7 +136,6 @@ fn cmd_features() -> Result<(), DynError> {
         // Test miscellaneous features individually.
         "std",
         "compression",
-        "unaligned",
     ] {
         cargo(&[
             "test",

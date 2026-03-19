@@ -2,7 +2,7 @@ use core::fmt::Debug;
 use core::{iter, slice, str};
 
 use crate::elf;
-use crate::endian::{Endianness, U32Bytes};
+use crate::endian::{Endianness, U32};
 use crate::read::{self, ComdatKind, ObjectComdat, ReadError, ReadRef, SectionIndex, SymbolIndex};
 
 use super::{ElfFile, FileHeader, SectionHeader, Sym};
@@ -74,7 +74,7 @@ where
 {
     file: &'file ElfFile<'data, Elf, R>,
     section: &'data Elf::SectionHeader,
-    sections: &'data [U32Bytes<Elf::Endian>],
+    sections: &'data [U32<Elf::Endian>],
 }
 
 impl<'data, 'file, Elf, R> ElfComdat<'data, 'file, Elf, R>
@@ -169,7 +169,7 @@ where
     R: ReadRef<'data>,
 {
     file: &'file ElfFile<'data, Elf, R>,
-    sections: slice::Iter<'data, U32Bytes<Elf::Endian>>,
+    sections: slice::Iter<'data, U32<Elf::Endian>>,
 }
 
 impl<'data, 'file, Elf, R> Iterator for ElfComdatSectionIterator<'data, 'file, Elf, R>

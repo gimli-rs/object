@@ -2,7 +2,7 @@ use core::fmt::Debug;
 use core::{iter, slice, str};
 
 use crate::elf;
-use crate::endian::{self, Endianness, U32Bytes};
+use crate::endian::{self, Endianness, U32};
 use crate::pod::{self, Pod};
 use crate::read::{
     self, gnu_compression, CompressedData, CompressedFileRange, CompressionFormat, Error,
@@ -976,13 +976,13 @@ pub trait SectionHeader: Debug + Pod {
         &self,
         endian: Self::Endian,
         data: R,
-    ) -> read::Result<Option<(u32, &'data [U32Bytes<Self::Endian>])>> {
+    ) -> read::Result<Option<(u32, &'data [U32<Self::Endian>])>> {
         if self.sh_type(endian) != elf::SHT_GROUP {
             return Ok(None);
         }
         let msg = "Invalid ELF group section offset or size";
         let data = self.data(endian, data).read_error(msg)?;
-        let (flag, data) = pod::from_bytes::<U32Bytes<_>>(data).read_error(msg)?;
+        let (flag, data) = pod::from_bytes::<U32<_>>(data).read_error(msg)?;
         let sections = pod::slice_from_all_bytes(data).read_error(msg)?;
         Ok(Some((flag.get(endian), sections)))
     }

@@ -532,13 +532,13 @@ where
                         if let Some(pc_bytes) = thread_data.get(pc_offset..pc_offset + 8) {
                             let mut bytes = [0u8; 8];
                             bytes.copy_from_slice(pc_bytes);
-                            return self.endian.read_u64_bytes(bytes);
+                            return self.endian.read_u64(bytes);
                         }
                     } else if pc_size == 4 {
                         if let Some(pc_bytes) = thread_data.get(pc_offset..pc_offset + 4) {
                             let mut bytes = [0u8; 4];
                             bytes.copy_from_slice(pc_bytes);
-                            return u64::from(self.endian.read_u32_bytes(bytes));
+                            return u64::from(self.endian.read_u32(bytes));
                         }
                     }
                 }

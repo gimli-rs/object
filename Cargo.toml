@@ -43,8 +43,8 @@ alloc = { version = '1.0.0', optional = true, package = 'rustc-std-workspace-all
 
 # Core read support. You will need to enable some file formats too.
 read_core = []
-# Read support for most file formats (including unaligned files).
-read = ["read_core", "archive", "coff", "elf", "macho", "pe", "xcoff", "unaligned"]
+# Read support for most file formats.
+read = ["read_core", "archive", "coff", "elf", "macho", "pe", "xcoff"]
 # Core write support. You will need to enable some file formats too.
 write_core = ["dep:crc32fast", "dep:indexmap", "dep:hashbrown"]
 # Core write support with libstd features. You will need to enable some file formats too.
@@ -65,12 +65,6 @@ std = ["memchr/std"]
 # Enable decompression of compressed sections.
 # This feature is not required if you want to do your own decompression.
 compression = ["dep:flate2", "dep:ruzstd", "std"]
-# Treat all types as unaligned.
-# Normally types use the alignment required by the specifications, but
-# sometimes files do not strictly follow the specifications.
-# This may be useful to enable when processing files for architectures
-# that have no alignment constraints.
-unaligned = []
 
 #=======================================
 # File format features.
@@ -96,12 +90,11 @@ all = ["read", "write", "build", "std", "compression", "wasm"]
 cargo-all = []
 
 #=======================================
-# Documentation should be generated with everything in "all" except for "unaligned".
-doc = [
-  "read_core", "write_std", "build_core",
-  "std", "compression",
-  "archive", "coff", "elf", "macho", "pe", "wasm", "xcoff",
-]
+doc = ["all"]
+
+#=======================================
+# Deprecated features.
+unaligned = []
 
 #=======================================
 # Unstable features. Breaking changes in these features will not affect versioning.

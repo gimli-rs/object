@@ -236,7 +236,7 @@ fn copy_file<Elf: FileHeader<Endian = Endianness>>(
                                 // This relocation is paired with a R_RISCV_PCREL_LO12_I.
                                 let info_offset = u64::from(r_offset).wrapping_sub(info_addr);
                                 let instruction = info_data
-                                    .read_at::<object::U32Bytes<Elf::Endian>>(info_offset)
+                                    .read_at::<object::U32<Elf::Endian>>(info_offset)
                                     .unwrap()
                                     .get(endian);
                                 // auipc
@@ -249,7 +249,7 @@ fn copy_file<Elf: FileHeader<Endian = Endianness>>(
                                 if let Some(mut got_address) = got_address.take() {
                                     let info_offset = u64::from(r_offset).wrapping_sub(info_addr);
                                     let instruction = info_data
-                                        .read_at::<object::U32Bytes<Elf::Endian>>(info_offset)
+                                        .read_at::<object::U32<Elf::Endian>>(info_offset)
                                         .unwrap()
                                         .get(endian);
                                     // ld
