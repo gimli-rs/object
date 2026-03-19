@@ -71,6 +71,10 @@ SegmentCommand {
             S_ATTR_SOME_INSTRUCTIONS (0x400)
         Reserved1: 0x0
         Reserved2: 0x6
+        IndirectSymbol {
+            Index: 0
+            Symbol: "_printf" (0x3)
+        }
     }
     Section {
         Index: 3
@@ -148,6 +152,10 @@ SegmentCommand {
         Flags: S_NON_LAZY_SYMBOL_POINTERS (0x6)
         Reserved1: 0x1
         Reserved2: 0x0
+        IndirectSymbol {
+            Index: 0
+            Symbol: "dyld_stub_binder" (0x4)
+        }
     }
 }
 SegmentCommand {
@@ -179,6 +187,10 @@ SegmentCommand {
         Flags: S_LAZY_SYMBOL_POINTERS (0x7)
         Reserved1: 0x2
         Reserved2: 0x0
+        IndirectSymbol {
+            Index: 0
+            Symbol: "_printf" (0x3)
+        }
     }
     Section {
         Index: 8
