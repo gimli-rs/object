@@ -254,7 +254,13 @@ fn dump_parsed_object<W: Write, E: Write>(w: &mut W, e: &mut E, file: &object::F
     writeln!(w)?;
     writeln!(w, "Symbol map")?;
     for symbol in file.symbol_map().symbols() {
-        writeln!(w, "0x{:x} \"{}\"", symbol.address(), symbol.name())?;
+        writeln!(
+            w,
+            "0x{:x}-0x{:x} \"{}\"",
+            symbol.address(),
+            symbol.address() + symbol.size(),
+            symbol.name()
+        )?;
     }
 
     Ok(())

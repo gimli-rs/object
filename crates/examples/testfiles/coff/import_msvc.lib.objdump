@@ -53,7 +53,7 @@ Symbols
 Dynamic symbols
 
 Symbol map
-0x0 "test_x64_NULL_THUNK_DATA"
+0x0-0x0 "test_x64_NULL_THUNK_DATA"
 
 test_x64.dll:
 Format: Coff Little-endian 32-bit
@@ -74,7 +74,7 @@ Symbols
 Dynamic symbols
 
 Symbol map
-0x0 "__NULL_IMPORT_DESCRIPTOR"
+0x0-0x0 "__NULL_IMPORT_DESCRIPTOR"
 
 test_x64.dll:
 Format: Coff Little-endian 32-bit
@@ -108,7 +108,7 @@ Symbols
 Dynamic symbols
 
 Symbol map
-0x0 "__IMPORT_DESCRIPTOR_test_x64"
+0x0-0x0 "__IMPORT_DESCRIPTOR_test_x64"
 
 test_x86.dll:
 Format: Short Import File
@@ -139,7 +139,7 @@ Symbols
 Dynamic symbols
 
 Symbol map
-0x0 "test_x86_NULL_THUNK_DATA"
+0x0-0x0 "test_x86_NULL_THUNK_DATA"
 
 test_x86.dll:
 Format: Coff Little-endian 32-bit
@@ -160,7 +160,7 @@ Symbols
 Dynamic symbols
 
 Symbol map
-0x0 "__NULL_IMPORT_DESCRIPTOR"
+0x0-0x0 "__NULL_IMPORT_DESCRIPTOR"
 
 test_x86.dll:
 Format: Coff Little-endian 32-bit
@@ -194,7 +194,7 @@ Symbols
 Dynamic symbols
 
 Symbol map
-0x0 "__IMPORT_DESCRIPTOR_test_x86"
+0x0-0x0 "__IMPORT_DESCRIPTOR_test_x86"
 
 test_arm64ec.dll:
 Format: Short Import File
@@ -226,7 +226,7 @@ Symbols
 Dynamic symbols
 
 Symbol map
-0x0 "test_arm64ec_NULL_THUNK_DATA"
+0x0-0x0 "test_arm64ec_NULL_THUNK_DATA"
 
 test_arm64ec.dll:
 Format: Coff Little-endian 32-bit
@@ -247,7 +247,7 @@ Symbols
 Dynamic symbols
 
 Symbol map
-0x0 "__NULL_IMPORT_DESCRIPTOR"
+0x0-0x0 "__NULL_IMPORT_DESCRIPTOR"
 
 test_arm64ec.dll:
 Format: Coff Little-endian 32-bit
@@ -281,4 +281,4 @@ Symbols
 Dynamic symbols
 
 Symbol map
-0x0 "__IMPORT_DESCRIPTOR_test_arm64ec"
+0x0-0x0 "__IMPORT_DESCRIPTOR_test_arm64ec"

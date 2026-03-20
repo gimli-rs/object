@@ -7,6 +7,14 @@ use crate::{SymbolKind, SymbolScope};
 pub trait SymbolMapEntry {
     /// The symbol address.
     fn address(&self) -> u64;
+
+    /// The symbol size.
+    ///
+    /// 0 means the symbol continues to the next entry in the symbol map,
+    /// or to the end of the address space if it is the last entry.
+    fn size(&self) -> u64 {
+        0
+    }
 }
 
 /// A map from addresses to symbol information.
@@ -29,7 +37,13 @@ impl<T: SymbolMapEntry> SymbolMap<T> {
     }
 
     /// Get the symbol before the given address.
+    #[deprecated = "use before or containing"]
     pub fn get(&self, address: u64) -> Option<&T> {
+        self.before(address)
+    }
+
+    /// Get the symbol at or before the given address.
+    pub fn before(&self, address: u64) -> Option<&T> {
         let index = match self
             .symbols
             .binary_search_by_key(&address, |symbol| symbol.address())
@@ -38,6 +52,13 @@ impl<T: SymbolMapEntry> SymbolMap<T> {
             Err(index) => index.checked_sub(1)?,
         };
         self.symbols.get(index)
+    }
+
+    /// Get the symbol containing the given address.
+    pub fn containing(&self, address: u64) -> Option<&T> {
+        self.before(address).filter(|entry| {
+            entry.size() == 0 || address.wrapping_sub(entry.address()) < entry.size()
+        })
     }
 
     /// Get all symbols in the map.
@@ -51,19 +72,30 @@ impl<T: SymbolMapEntry> SymbolMap<T> {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct SymbolMapName<'data> {
     address: u64,
+    size: u64,
     name: &'data str,
 }
 
 impl<'data> SymbolMapName<'data> {
     /// Construct a `SymbolMapName`.
-    pub fn new(address: u64, name: &'data str) -> Self {
-        SymbolMapName { address, name }
+    pub fn new(address: u64, size: u64, name: &'data str) -> Self {
+        SymbolMapName {
+            address,
+            size,
+            name,
+        }
     }
 
     /// The symbol address.
     #[inline]
     pub fn address(&self) -> u64 {
         self.address
+    }
+
+    /// The symbol size.
+    #[inline]
+    pub fn size(&self) -> u64 {
+        self.size
     }
 
     /// The symbol name.
@@ -77,6 +109,11 @@ impl<'data> SymbolMapEntry for SymbolMapName<'data> {
     #[inline]
     fn address(&self) -> u64 {
         self.address
+    }
+
+    #[inline]
+    fn size(&self) -> u64 {
+        self.size
     }
 }
 
@@ -105,9 +142,7 @@ impl<'data> ObjectMap<'data> {
 
     /// Get the entry containing the given address.
     pub fn get(&self, address: u64) -> Option<&ObjectMapEntry<'data>> {
-        self.symbols
-            .get(address)
-            .filter(|entry| entry.size == 0 || address.wrapping_sub(entry.address) < entry.size)
+        self.symbols.containing(address)
     }
 
     /// Get all symbols in the map.
@@ -180,6 +215,11 @@ impl<'data> SymbolMapEntry for ObjectMapEntry<'data> {
     #[inline]
     fn address(&self) -> u64 {
         self.address
+    }
+
+    #[inline]
+    fn size(&self) -> u64 {
+        self.size
     }
 }
 
@@ -281,9 +321,16 @@ impl SymbolMapBuilder {
             let mut previous_address = !0;
             for (address, _priority, _index, name) in all_symbols {
                 if address != previous_address {
-                    symbols.push(SymbolMapName::new(address, name));
+                    symbols.push(SymbolMapName::new(address, 0, name));
                     previous_address = address;
                 }
+            }
+
+            let mut symbol_iter = symbols.iter_mut().rev();
+            let mut previous_address = symbol_iter.next().map(|s| s.address).unwrap_or(0);
+            for symbol in symbol_iter {
+                symbol.size = previous_address.saturating_sub(symbol.address);
+                previous_address = symbol.address;
             }
         }
         SymbolMap::new(symbols)
