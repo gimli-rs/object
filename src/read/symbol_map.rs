@@ -264,6 +264,11 @@ impl SymbolMapBuilder {
     }
 
     /// Read the symbols from an object file to create a symbol map.
+    ///
+    /// The map will only contain defined text and data symbols.
+    /// The dynamic symbol table will only be used if there are no debugging symbols.
+    ///
+    /// If symbol sizes are unknown then we guess the size based on the next symbol.
     pub fn build<'data, O>(self, object: &O) -> SymbolMap<SymbolMapName<'data>>
     where
         O: Object<'data> + ?Sized,
@@ -309,27 +314,35 @@ impl SymbolMapBuilder {
                 };
                 priority *= 4;
 
+                // Prefer symbols that have a size.
+                let size = symbol.size();
+                priority += (size == 0) as u32;
+                priority *= 2;
+
                 // Prefer later entries (earlier symbol is likely to be less specific).
                 let index = !0 - symbol.index().0;
 
                 // Tuple is ordered for sort.
-                all_symbols.push((symbol.address(), priority, index, name));
+                all_symbols.push((symbol.address(), priority, index, size, name));
             }
             // Unstable sort is okay because tuple includes index.
             all_symbols.sort_unstable();
 
             let mut previous_address = !0;
-            for (address, _priority, _index, name) in all_symbols {
+            for (address, _priority, _index, size, name) in all_symbols {
                 if address != previous_address {
-                    symbols.push(SymbolMapName::new(address, 0, name));
+                    symbols.push(SymbolMapName::new(address, size, name));
                     previous_address = address;
                 }
             }
 
+            // Guess size for symbols with zero size.
             let mut symbol_iter = symbols.iter_mut().rev();
             let mut previous_address = symbol_iter.next().map(|s| s.address).unwrap_or(0);
             for symbol in symbol_iter {
-                symbol.size = previous_address.saturating_sub(symbol.address);
+                if symbol.size == 0 {
+                    symbol.size = previous_address.saturating_sub(symbol.address);
+                }
                 previous_address = symbol.address;
             }
         }

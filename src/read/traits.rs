@@ -213,8 +213,7 @@ pub trait Object<'data>: read::private::Sealed {
 
     /// Construct a map from addresses to symbol names.
     ///
-    /// The map will only contain defined text and data symbols.
-    /// The dynamic symbol table will only be used if there are no debugging symbols.
+    /// See [`SymbolMapBuilder::build`] for details of the map contents.
     fn symbol_map(&self) -> SymbolMap<SymbolMapName<'data>> {
         SymbolMapBuilder::new().build(self)
     }

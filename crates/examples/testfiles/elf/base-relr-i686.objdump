@@ -107,10 +107,10 @@ Import { library: "", name: "_ITM_registerTMCloneTable" }
 Export { name: "_IO_stdin_used", address: 2004 }
 
 Symbol map
-0x1cc-0x1000 "__abi_tag"
+0x1cc-0x1ec "__abi_tag"
 0x1000-0x1060 "_init"
-0x1060-0x1090 "_start"
-0x1090-0x10a0 "__x86.get_pc_thunk.bx"
+0x1060-0x108c "_start"
+0x1090-0x1094 "__x86.get_pc_thunk.bx"
 0x10a0-0x10e0 "deregister_tm_clones"
 0x10e0-0x1130 "register_tm_clones"
 0x1130-0x1180 "__do_global_dtors_aux"
@@ -120,7 +120,7 @@ Symbol map
 0x11cd-0x11d4 "__x86.get_pc_thunk.ax"
 0x11d4-0x2000 "_fini"
 0x2000-0x2004 "_fp_hw"
-0x2004-0x2110 "_IO_stdin_used"
+0x2004-0x2008 "_IO_stdin_used"
 0x2110-0x3ec0 "__FRAME_END__"
 0x3ec0-0x3ec4 "__frame_dummy_init_array_entry"
 0x3ec4-0x3ec8 "__do_global_dtors_aux_fini_array_entry"
