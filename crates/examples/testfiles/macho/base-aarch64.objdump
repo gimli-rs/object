@@ -29,4 +29,4 @@ Export { name: "_main", address: 100003f68 }
 
 Symbol map
 0x100000000-0x100003f68 "__mh_execute_header"
-0x100003f68-0x100003f68 "_main"
+0x100003f68-0x100003f9c "_main"

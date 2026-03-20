@@ -1,6 +1,6 @@
 use alloc::vec::Vec;
 
-use crate::read::{Object, ObjectSymbol, ObjectSymbolTable};
+use crate::read::{Object, ObjectSection, ObjectSymbol, ObjectSymbolTable};
 use crate::{SymbolKind, SymbolScope};
 
 /// An entry in a [`SymbolMap`].
@@ -268,7 +268,14 @@ impl SymbolMapBuilder {
     /// The map will only contain defined text and data symbols.
     /// The dynamic symbol table will only be used if there are no debugging symbols.
     ///
-    /// If symbol sizes are unknown then we guess the size based on the next symbol.
+    /// If symbol sizes are unknown then we guess the size based on the next symbol
+    /// or end of section.
+    ///
+    /// This does not work well if multiple sections use the same base address, which is
+    /// common for relocatable object files. The symbols will be overlapping, and the
+    /// symbol returned by lookups may be indeterministic. Additionally, if the symbol
+    /// size is unknown then we may use a symbol or section end address from a different
+    /// section to guess its size.
     pub fn build<'data, O>(self, object: &O) -> SymbolMap<SymbolMapName<'data>>
     where
         O: Object<'data> + ?Sized,
@@ -324,6 +331,13 @@ impl SymbolMapBuilder {
                 // Tuple is ordered for sort.
                 all_symbols.push((symbol.address(), priority, index, size, name));
             }
+
+            // Add end of sections to improve guesses for unknown sizes.
+            for section in object.sections() {
+                let address = section.address().saturating_add(section.size());
+                all_symbols.push((address, !0, !0, !0, ""));
+            }
+
             // Unstable sort is okay because tuple includes index.
             all_symbols.sort_unstable();
 
@@ -344,6 +358,9 @@ impl SymbolMapBuilder {
                 }
                 previous_address = symbol.address;
             }
+
+            // Remove the entries for sections.
+            symbols.retain(|x| !x.name.is_empty());
         }
         SymbolMap::new(symbols)
     }
