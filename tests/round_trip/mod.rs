@@ -151,10 +151,10 @@ fn coff_any() {
         assert_eq!(relocation.addend(), 0);
 
         let map = object.symbol_map();
-        let symbol = map.get(func1_offset + 1).unwrap();
+        let symbol = map.containing(func1_offset + 1).unwrap();
         assert_eq!(symbol.address(), func1_offset);
         assert_eq!(symbol.name(), decorated_name("func1"));
-        assert_eq!(map.get(func1_offset - 1), None);
+        assert_eq!(map.containing(func1_offset - 1), None);
     }
 }
 
@@ -251,10 +251,10 @@ fn elf_x86_64() {
     assert_eq!(relocation.addend(), 0);
 
     let map = object.symbol_map();
-    let symbol = map.get(func1_offset + 1).unwrap();
+    let symbol = map.containing(func1_offset + 1).unwrap();
     assert_eq!(symbol.address(), func1_offset);
     assert_eq!(symbol.name(), "func1");
-    assert_eq!(map.get(func1_offset - 1), None);
+    assert_eq!(map.containing(func1_offset - 1), None);
 }
 
 #[test]
@@ -509,10 +509,10 @@ fn macho_x86_64() {
     assert_eq!(relocation.addend(), 0);
 
     let map = object.symbol_map();
-    let symbol = map.get(func1_offset + 1).unwrap();
+    let symbol = map.containing(func1_offset + 1).unwrap();
     assert_eq!(symbol.address(), func1_offset);
     assert_eq!(symbol.name(), "_func1");
-    assert_eq!(map.get(func1_offset - 1), None);
+    assert_eq!(map.containing(func1_offset - 1), None);
 }
 
 #[test]
