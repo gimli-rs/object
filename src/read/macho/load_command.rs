@@ -1,7 +1,7 @@
 use core::marker::PhantomData;
 use core::mem;
 
-use crate::endian::Endian;
+use crate::endian::{Endian, U32};
 use crate::macho;
 use crate::pod::Pod;
 use crate::read::macho::{ExportsTrieIterator, FunctionStartsIterator, MachHeader, SymbolTable};
@@ -391,6 +391,26 @@ impl<E: Endian> macho::SymtabCommand<E> {
             .read_error("Invalid Mach-O string table length")?;
         let strings = StringTable::new(data, str_start, str_end);
         Ok(SymbolTable::new(symbols, strings))
+    }
+}
+
+impl<E: Endian> macho::DysymtabCommand<E> {
+    /// Return the table of indirect symbol indexes.
+    ///
+    /// Entries in this table are referenced by the `reserved1` field
+    /// in sections that contain symbol pointers or stubs.
+    ///
+    /// Each entry is an index into the symbol table.
+    pub fn indirect_symbols<'data, R: ReadRef<'data>>(
+        &self,
+        endian: E,
+        data: R,
+    ) -> Result<&'data [U32<E>]> {
+        data.read_slice_at(
+            self.indirectsymoff.get(endian).into(),
+            self.nindirectsyms.get(endian) as usize,
+        )
+        .read_error("Invalid Mach-O indirect symbol offset or count")
     }
 }
 

@@ -1,7 +1,7 @@
 use super::*;
 use object::macho::*;
 use object::read::macho::*;
-use object::BigEndian;
+use object::{BigEndian, Endian, U32};
 
 trait PrinterMachoExt {
     fn field_version(&mut self, name: &str, value: u32);
@@ -259,10 +259,11 @@ pub(super) fn print_macho64(
 }
 
 #[derive(Default)]
-struct MachState<'a> {
+struct MachState<'a, E: Endian> {
     cputype: u32,
     linkedit_data: &'a [u8],
     symbols: Vec<Option<&'a [u8]>>,
+    indirect_symbols: &'a [U32<E>],
     sections: Vec<Vec<u8>>,
     section_index: usize,
     text_segment_addr: u64,
@@ -286,6 +287,7 @@ fn print_macho<Mach: MachHeader<Endian = Endianness>>(
         // Scan the load commands for info that we need to reference during parsing.
         if let Ok(mut commands) = header.load_commands(endian, data, offset) {
             let mut symtab_command = None;
+            let mut dysymtab_command = None;
             while let Ok(Some(command)) = commands.next() {
                 if let Ok(Some((segment, section_data))) = Mach::Segment::from_command(command) {
                     if segment.name() == macho::SEG_TEXT.as_bytes() {
@@ -316,6 +318,8 @@ fn print_macho<Mach: MachHeader<Endian = Endianness>>(
                     }
                 } else if let Ok(Some(command)) = command.symtab() {
                     symtab_command = Some(command);
+                } else if let Ok(Some(command)) = command.dysymtab() {
+                    dysymtab_command = Some(command);
                 }
             }
             if let Some(symtab_command) = symtab_command {
@@ -326,6 +330,11 @@ fn print_macho<Mach: MachHeader<Endian = Endianness>>(
                             .map(|symbol| symbol.name(endian, symtab.strings()).ok()),
                     );
                 }
+            }
+            if let Some(dysymtab) = dysymtab_command {
+                state.indirect_symbols = dysymtab
+                    .indirect_symbols(endian, state.linkedit_data)
+                    .unwrap_or(&[]);
             }
         }
 
@@ -354,7 +363,7 @@ fn print_load_commands<Mach: MachHeader>(
     data: &[u8],
     offset: u64,
     header: &Mach,
-    state: &mut MachState,
+    state: &mut MachState<Mach::Endian>,
 ) {
     if let Some(mut commands) = header.load_commands(endian, data, offset).print_err(p) {
         while let Some(Some(command)) = commands.next().print_err(p) {
@@ -369,7 +378,7 @@ fn print_load_command<Mach: MachHeader>(
     data: &[u8],
     _header: &Mach,
     command: LoadCommandData<Mach::Endian>,
-    state: &mut MachState,
+    state: &mut MachState<Mach::Endian>,
 ) {
     if let Some(variant) = command.variant().print_err(p) {
         match variant {
@@ -702,7 +711,7 @@ fn print_segment<S: Segment>(
     data: &[u8],
     segment: &S,
     section_data: &[u8],
-    state: &mut MachState,
+    state: &mut MachState<S::Endian>,
 ) {
     if !p.options.macho_load_commands
         && !p.options.segments
@@ -742,7 +751,7 @@ fn print_section<S: Section>(
     endian: S::Endian,
     data: &[u8],
     section: &S,
-    state: &mut MachState,
+    state: &mut MachState<S::Endian>,
 ) {
     if !p.options.sections && !(p.options.relocations && section.nreloc(endian) != 0) {
         return;
@@ -768,6 +777,23 @@ fn print_section<S: Section>(
             }
             p.field_hex("Reserved1", section.reserved1(endian));
             p.field_hex("Reserved2", section.reserved2(endian));
+            if let Some(indirect_symbols) = section
+                .indirect_symbols(endian, state.indirect_symbols)
+                .print_err(p)
+            {
+                for (index, val) in indirect_symbols.iter().enumerate() {
+                    p.group("IndirectSymbol", |p| {
+                        p.field("Index", index);
+                        let symbolnum = val.get(endian);
+                        if let Some(name) = state.symbols.get(symbolnum as usize).copied() {
+                            p.field_string_option("Symbol", symbolnum, name);
+                        } else {
+                            p.field_hex("Symbol", symbolnum);
+                            p.flags(symbolnum, 0, FLAGS_INDIRECT_SYMBOL);
+                        }
+                    });
+                }
+            }
         }
         print_section_relocations(p, endian, data, section, state);
     });
@@ -778,7 +804,7 @@ fn print_section_relocations<S: Section>(
     endian: S::Endian,
     data: &[u8],
     section: &S,
-    state: &MachState,
+    state: &MachState<S::Endian>,
 ) {
     if !p.options.relocations {
         return;
@@ -835,7 +861,7 @@ fn print_symtab<Mach: MachHeader>(
     endian: Mach::Endian,
     data: &[u8],
     symtab: &SymtabCommand<Mach::Endian>,
-    state: &MachState,
+    state: &MachState<Mach::Endian>,
 ) {
     if !p.options.macho_load_commands && !p.options.symbols {
         return;
@@ -856,7 +882,7 @@ fn print_symtab_symbols<Mach: MachHeader>(
     endian: Mach::Endian,
     data: &[u8],
     symtab: &SymtabCommand<Mach::Endian>,
-    state: &MachState,
+    state: &MachState<Mach::Endian>,
 ) {
     if !p.options.symbols {
         return;
@@ -902,7 +928,7 @@ fn print_linkedit_data<Mach: MachHeader>(
     p: &mut Printer<'_>,
     endian: Mach::Endian,
     linkedit: &LinkeditDataCommand<Mach::Endian>,
-    state: &MachState,
+    state: &MachState<Mach::Endian>,
 ) {
     let cmd = linkedit.cmd.get(endian);
     let function_starts = p.options.macho_function_starts && cmd == macho::LC_FUNCTION_STARTS;
@@ -928,7 +954,7 @@ fn print_function_starts<Mach: MachHeader>(
     p: &mut Printer<'_>,
     endian: Mach::Endian,
     linkedit: &LinkeditDataCommand<Mach::Endian>,
-    state: &MachState,
+    state: &MachState<Mach::Endian>,
 ) {
     let Some(mut function_starts) = linkedit
         .function_starts(endian, state.linkedit_data, state.text_segment_addr)
@@ -947,7 +973,7 @@ fn print_exports_trie<Mach: MachHeader>(
     p: &mut Printer<'_>,
     endian: Mach::Endian,
     linkedit: &LinkeditDataCommand<Mach::Endian>,
-    state: &MachState,
+    state: &MachState<Mach::Endian>,
 ) {
     if let Some(mut exports_trie) = linkedit
         .exports_trie(endian, state.linkedit_data)
@@ -1408,3 +1434,4 @@ const FLAGS_EXPORT_SYMBOL_KIND: &[Flag<u8>] = &flags!(
     EXPORT_SYMBOL_FLAGS_KIND_THREAD_LOCAL,
     EXPORT_SYMBOL_FLAGS_KIND_ABSOLUTE,
 );
+const FLAGS_INDIRECT_SYMBOL: &[Flag<u32>] = &flags!(INDIRECT_SYMBOL_LOCAL, INDIRECT_SYMBOL_ABS,);
