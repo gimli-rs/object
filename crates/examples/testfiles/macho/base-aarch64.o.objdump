@@ -32,5 +32,5 @@ Import { library: "", name: "_printf" }
 Export { name: "_main", address: 0 }
 
 Symbol map
-0x0 "_main"
-0x34 "l_.str"
+0x0-0x34 "_main"
+0x34-0x34 "l_.str"

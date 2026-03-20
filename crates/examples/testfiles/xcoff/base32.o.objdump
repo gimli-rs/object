@@ -30,7 +30,7 @@ Symbols
 Dynamic symbols
 
 Symbol map
-0x0 ".main"
-0x5c ".rodata.str1.1L...str"
-0x6c "main"
-0x78 ".rodata.str1.1L...str"
+0x0-0x5c ".main"
+0x5c-0x6c ".rodata.str1.1L...str"
+0x6c-0x78 "main"
+0x78-0x78 ".rodata.str1.1L...str"
