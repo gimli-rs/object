@@ -7,7 +7,7 @@
 
 #![allow(missing_docs)]
 
-use crate::endian::{BigEndian, Endian, U64Bytes, U16, U32, U64};
+use crate::endian::{BigEndian, Endian, U16, U32, U64};
 use crate::pod::Pod;
 
 // Definitions from "/usr/include/mach/machine.h".
@@ -2660,8 +2660,7 @@ pub struct Nlist64<E: Endian> {
     /// see <mach-o/stab.h>
     pub n_desc: U16<E>,
     /// value of this symbol (or stab offset)
-    // Note: 4 byte alignment has been observed in practice.
-    pub n_value: U64Bytes<E>,
+    pub n_value: U64<E>,
 }
 
 /*

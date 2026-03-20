@@ -8,7 +8,7 @@
 #![allow(missing_docs)]
 #![allow(clippy::identity_op)]
 
-use crate::endian::{Endian, U32Bytes, U64Bytes, I32, I64, U16, U32, U64};
+use crate::endian::{Endian, I32, I64, U16, U32, U64};
 use crate::pod::Pod;
 
 /// The header at the start of every 32-bit ELF file.
@@ -804,11 +804,11 @@ pub const SHF_EXCLUDE: u32 = 0x8000_0000;
 #[repr(C)]
 pub struct CompressionHeader32<E: Endian> {
     /// Compression format. One of the `ELFCOMPRESS_*` values.
-    pub ch_type: U32Bytes<E>,
+    pub ch_type: U32<E>,
     /// Uncompressed data size.
-    pub ch_size: U32Bytes<E>,
+    pub ch_size: U32<E>,
     /// Uncompressed data alignment.
-    pub ch_addralign: U32Bytes<E>,
+    pub ch_addralign: U32<E>,
 }
 
 /// Section compression header.
@@ -821,13 +821,13 @@ pub struct CompressionHeader32<E: Endian> {
 #[repr(C)]
 pub struct CompressionHeader64<E: Endian> {
     /// Compression format. One of the `ELFCOMPRESS_*` values.
-    pub ch_type: U32Bytes<E>,
+    pub ch_type: U32<E>,
     /// Reserved.
-    pub ch_reserved: U32Bytes<E>,
+    pub ch_reserved: U32<E>,
     /// Uncompressed data size.
-    pub ch_size: U64Bytes<E>,
+    pub ch_size: U64<E>,
     /// Uncompressed data alignment.
-    pub ch_addralign: U64Bytes<E>,
+    pub ch_addralign: U64<E>,
 }
 
 /// ZLIB/DEFLATE algorithm.

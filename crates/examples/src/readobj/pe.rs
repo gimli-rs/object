@@ -4,7 +4,7 @@ use object::read::coff::ImageSymbol as _;
 use object::read::coff::*;
 use object::read::pe::*;
 use object::LittleEndian as LE;
-use object::{Bytes, U32Bytes, U64Bytes};
+use object::{Bytes, U32, U64};
 
 pub(super) fn print_coff(p: &mut Printer<'_>, data: &[u8]) {
     let mut offset = 0;
@@ -822,10 +822,10 @@ fn print_reloc_dir(
                 let offset = (reloc.virtual_address - block_address) as usize;
                 if let Some(addend) = match reloc.typ {
                     IMAGE_REL_BASED_HIGHLOW => block_data
-                        .and_then(|data| data.read_at::<U32Bytes<LE>>(offset).ok())
+                        .and_then(|data| data.read_at::<U32<LE>>(offset).ok())
                         .map(|addend| u64::from(addend.get(LE))),
                     IMAGE_REL_BASED_DIR64 => block_data
-                        .and_then(|data| data.read_at::<U64Bytes<LE>>(offset).ok())
+                        .and_then(|data| data.read_at::<U64<LE>>(offset).ok())
                         .map(|addend| addend.get(LE)),
                     _ => None,
                 } {
