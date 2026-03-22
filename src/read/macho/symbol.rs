@@ -138,12 +138,12 @@ impl<'data, Mach: MachHeader, R: ReadRef<'data>> SymbolTable<'data, Mach, R> {
                             current_function = Some((name, nlist.n_value(endian).into()))
                         } else if let Some((name, address)) = current_function.take() {
                             if let Some(object) = object {
-                                symbols.push(ObjectMapEntry {
+                                symbols.push(ObjectMapEntry::new(
                                     address,
-                                    size: nlist.n_value(endian).into(),
+                                    nlist.n_value(endian).into(),
                                     name,
                                     object,
-                                });
+                                ));
                             }
                         }
                     }
@@ -153,22 +153,19 @@ impl<'data, Mach: MachHeader, R: ReadRef<'data>> SymbolTable<'data, Mach, R> {
                     // but no size
                     if let Ok(name) = nlist.name(endian, self.strings) {
                         if let Some(object) = object {
-                            symbols.push(ObjectMapEntry {
-                                address: nlist.n_value(endian).into(),
-                                size: 0,
+                            symbols.push(ObjectMapEntry::new(
+                                nlist.n_value(endian).into(),
+                                0,
                                 name,
                                 object,
-                            })
+                            ));
                         }
                     }
                 }
                 _ => {}
             }
         }
-        ObjectMap {
-            symbols: SymbolMap::new(symbols),
-            objects,
-        }
+        ObjectMap::new(symbols, objects)
     }
 }
 
