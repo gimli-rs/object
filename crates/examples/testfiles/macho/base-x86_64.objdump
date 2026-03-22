@@ -35,6 +35,6 @@ Export { name: "__mh_execute_header", address: 100000000 }
 Export { name: "_main", address: 100003f60 }
 
 Symbol map
-0x100000000 "__mh_execute_header"
-0x100003f60 "_main"
-0x100008008 "__dyld_private"
+0x100000000-0x100003f60 "__mh_execute_header"
+0x100003f60-0x100003f85 "_main"
+0x100008008-0x100008010 "__dyld_private"

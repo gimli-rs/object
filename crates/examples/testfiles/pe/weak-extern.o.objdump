@@ -36,4 +36,4 @@ Symbols
 Dynamic symbols
 
 Symbol map
-0x0 ".weak.weak_symbol."
+0x0-0x8 ".weak.weak_symbol."

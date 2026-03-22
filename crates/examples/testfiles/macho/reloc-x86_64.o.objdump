@@ -33,5 +33,5 @@ __data relocations
 Dynamic symbols
 
 Symbol map
-0x0 "_g1"
-0x5 "_g2"
+0x0-0x5 "_g1"
+0x5-0x53 "_g2"

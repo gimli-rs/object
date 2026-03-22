@@ -40,4 +40,4 @@ Import { library: "", name: "_g0" }
 Import { library: "", name: "_g1" }
 
 Symbol map
-0x28 "_data"
+0x28-0x48 "_data"
