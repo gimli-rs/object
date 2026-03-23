@@ -207,15 +207,15 @@ ProgramHeader {
         Value: 0x346
     }
     Dynamic {
-        Tag: 0x24
+        Tag: DT_RELR (0x24)
         Value: 0x3D8
     }
     Dynamic {
-        Tag: 0x23
+        Tag: DT_RELRSZ (0x23)
         Value: 0x10
     }
     Dynamic {
-        Tag: 0x25
+        Tag: DT_RELRENT (0x25)
         Value: 0x4
     }
     Dynamic {
@@ -916,15 +916,15 @@ SectionHeader {
         Value: 0x346
     }
     Dynamic {
-        Tag: 0x24
+        Tag: DT_RELR (0x24)
         Value: 0x3D8
     }
     Dynamic {
-        Tag: 0x23
+        Tag: DT_RELRSZ (0x23)
         Value: 0x10
     }
     Dynamic {
-        Tag: 0x25
+        Tag: DT_RELRENT (0x25)
         Value: 0x4
     }
     Dynamic {
