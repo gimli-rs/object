@@ -1568,6 +1568,12 @@ pub const DT_PREINIT_ARRAY: i64 = 32;
 pub const DT_PREINIT_ARRAYSZ: i64 = 33;
 /// Address of SYMTAB_SHNDX section
 pub const DT_SYMTAB_SHNDX: i64 = 34;
+/// Address of Relr relocs
+pub const DT_RELR: i64 = 36;
+/// Total size of Relr relocs
+pub const DT_RELRSZ: i64 = 35;
+/// Size of one Relr reloc
+pub const DT_RELRENT: i64 = 37;
 /// Start of OS-specific
 pub const DT_LOOS: i64 = 0x6000_000d;
 /// End of OS-specific
