@@ -3911,6 +3911,8 @@ pub const R_AARCH64_PREL64: u32 = 260;
 pub const R_AARCH64_PREL32: u32 = 261;
 /// PC-relative 16-bit.
 pub const R_AARCH64_PREL16: u32 = 262;
+/// PC-relative 32-bit.
+pub const R_AARCH64_PLT32: u32 = 314;
 /// Dir. MOVZ imm. from bits 15:0.
 pub const R_AARCH64_MOVW_UABS_G0: u32 = 263;
 /// Likewise for MOVK; no check.
