@@ -3911,10 +3911,6 @@ pub const R_AARCH64_PREL64: u32 = 260;
 pub const R_AARCH64_PREL32: u32 = 261;
 /// PC-relative 16-bit.
 pub const R_AARCH64_PREL16: u32 = 262;
-/// PC-relative 32-bit.
-pub const R_AARCH64_PLT32: u32 = 314;
-/// GOT-relative PC-relative.
-pub const R_AARCH64_GOTPCREL32: u32 = 315;
 /// Dir. MOVZ imm. from bits 15:0.
 pub const R_AARCH64_MOVW_UABS_G0: u32 = 263;
 /// Likewise for MOVK; no check.
@@ -4005,6 +4001,10 @@ pub const R_AARCH64_ADR_GOT_PAGE: u32 = 311;
 pub const R_AARCH64_LD64_GOT_LO12_NC: u32 = 312;
 /// GOT-page-rel. GOT off. LD/ST 14:3
 pub const R_AARCH64_LD64_GOTPAGE_LO15: u32 = 313;
+/// PC-relative 32-bit.
+pub const R_AARCH64_PLT32: u32 = 314;
+/// GOT-relative PC-relative.
+pub const R_AARCH64_GOTPCREL32: u32 = 315;
 /// PC-relative ADR imm. 20:0.
 pub const R_AARCH64_TLSGD_ADR_PREL21: u32 = 512;
 /// page-rel. ADRP imm. 32:12.
