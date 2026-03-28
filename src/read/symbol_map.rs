@@ -258,16 +258,15 @@ impl SymbolMapBuilder {
                     SymbolKind::Unknown => priority += 1,
                     _ => continue,
                 }
-                priority *= 2;
 
                 // Prefer global visibility.
+                priority *= 4;
                 priority += match symbol.scope() {
                     SymbolScope::Unknown => 3,
                     SymbolScope::Compilation => 2,
                     SymbolScope::Linkage => 1,
                     SymbolScope::Dynamic => 0,
                 };
-                priority *= 4;
 
                 // Prefer later entries (earlier symbol is likely to be less specific).
                 let index = !0 - symbol.index().0;
