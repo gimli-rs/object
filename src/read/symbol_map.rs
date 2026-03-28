@@ -300,6 +300,8 @@ impl SymbolMapBuilder {
                 if name.is_empty() {
                     continue;
                 }
+                let address = symbol.address();
+                let size = symbol.size();
 
                 // Lower is better.
                 let mut priority = 0u32;
@@ -311,8 +313,19 @@ impl SymbolMapBuilder {
                     _ => continue,
                 }
 
+                // Prefer XCOFF labels over csects.
+                // This special case is needed because labels don't have sizes.
+                priority *= 2;
+                #[cfg(feature = "xcoff")]
+                if let crate::SymbolFlags::Xcoff { x_smtyp, .. } = symbol.flags() {
+                    priority += (x_smtyp != crate::xcoff::XTY_LD) as u32;
+                    if size != 0 {
+                        // Add end of sized symbols (typically csects) to bound label sizes.
+                        all_symbols.push((address.saturating_add(size), !0, !0, !0, ""));
+                    }
+                }
+
                 // Prefer symbols that have a size.
-                let size = symbol.size();
                 priority *= 2;
                 priority += (size == 0) as u32;
 
@@ -329,7 +342,7 @@ impl SymbolMapBuilder {
                 let index = !0 - symbol.index().0;
 
                 // Tuple is ordered for sort.
-                all_symbols.push((symbol.address(), priority, index, size, name));
+                all_symbols.push((address, priority, index, size, name));
             }
 
             // Add end of sections to improve guesses for unknown sizes.
@@ -359,7 +372,7 @@ impl SymbolMapBuilder {
                 previous_address = symbol.address;
             }
 
-            // Remove the entries for sections.
+            // Remove the entries for end of symbol/section.
             symbols.retain(|x| !x.name.is_empty());
         }
         SymbolMap::new(symbols)
