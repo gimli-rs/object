@@ -42,7 +42,6 @@
 //! ```
 
 use alloc::borrow::Cow;
-use alloc::vec::Vec;
 use core::{fmt, result};
 
 #[cfg(not(feature = "std"))]
@@ -806,6 +805,7 @@ impl<'data> CompressedData<'data> {
             CompressionFormat::None => Ok(Cow::Borrowed(self.data)),
             #[cfg(feature = "compression")]
             CompressionFormat::Zlib | CompressionFormat::Zstandard => {
+                use alloc::vec::Vec;
                 use core::convert::TryInto;
                 use std::io::Read;
                 let size = self
