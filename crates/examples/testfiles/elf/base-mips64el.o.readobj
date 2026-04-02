@@ -134,8 +134,8 @@ SectionHeader {
     Name: ".MIPS.options" (0x31)
     Type: SHT_MIPS_OPTIONS (0x7000000D)
     Flags: 0x8000002
-        SHF_ALLOC (0x2)
         SHF_MIPS_NOSTRIP (0x8000000)
+        SHF_ALLOC (0x2)
     Address: 0x0
     Offset: 0xA0
     Size: 0x28
