@@ -315,6 +315,7 @@ where
     fn imports(&self) -> Result<Vec<Import<'data>>> {
         let mut imports = Vec::new();
         if let Some(import_table) = self.import_table()? {
+            import_table.validate::<Pe>()?;
             let mut import_descs = import_table.descriptors()?;
             while let Some(import_desc) = import_descs.next()? {
                 let library = import_table.name(import_desc.name.get(LE))?;

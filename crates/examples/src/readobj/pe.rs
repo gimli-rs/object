@@ -372,6 +372,7 @@ fn print_import_dir<Pe: ImageNtHeaders>(
     let import_table = data_directories
         .import_table(data, sections)
         .print_err(p)??;
+    let valid = import_table.validate::<Pe>().print_err(p).is_some();
     let mut import_descs = import_table.descriptors().print_err(p)?;
     p.group("ImageImportDirectory", |p| {
         while let Some(Some(import_desc)) = import_descs.next().print_err(p) {
@@ -382,6 +383,10 @@ fn print_import_dir<Pe: ImageNtHeaders>(
                 let name = import_desc.name.get(LE);
                 p.field_string("Name", name, import_table.name(name));
                 p.field_hex("AddressTable", import_desc.first_thunk.get(LE));
+                if !valid {
+                    // Don't try to print invalid thunks, or we may have quadratic runtime.
+                    return;
+                }
 
                 let mut address_thunks = import_table
                     .thunks(import_desc.first_thunk.get(LE))
@@ -443,6 +448,7 @@ fn print_delay_load_dir<Pe: ImageNtHeaders>(
     let import_table = data_directories
         .delay_load_import_table(data, sections)
         .print_err(p)??;
+    let valid = import_table.validate::<Pe>().print_err(p).is_some();
     let mut import_descs = import_table.descriptors().print_err(p)?;
     p.group("ImageDelayLoadDirectory", |p| {
         while let Some(Some(import_desc)) = import_descs.next().print_err(p) {
@@ -465,6 +471,10 @@ fn print_delay_load_dir<Pe: ImageNtHeaders>(
                     import_desc.unload_information_table_rva.get(LE),
                 );
                 p.field_hex("TimeDateStamp", import_desc.time_date_stamp.get(LE));
+                if !valid {
+                    // Don't try to print invalid thunks, or we may have quadratic runtime.
+                    return;
+                }
 
                 let mut name_thunks = import_table
                     .thunks(import_desc.import_name_table_rva.get(LE))

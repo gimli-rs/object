@@ -1,3 +1,4 @@
+use alloc::collections::BTreeMap;
 use core::fmt::Debug;
 use core::mem;
 
@@ -34,6 +35,34 @@ impl<'data> ImportTable<'data> {
             section_address,
             import_address,
         }
+    }
+
+    /// Validate that import table structures do not overlap.
+    ///
+    /// Checks that descriptors, thunk tables (IAT), and lookup tables (ILT) occupy
+    /// non-overlapping address ranges.
+    pub fn validate<Pe: ImageNtHeaders>(&self) -> Result<()> {
+        let mut ranges = Ranges::new(self.descriptors()?.address_range(self.import_address)?);
+
+        let mut import_descs = self.descriptors()?;
+        while let Some(import_desc) = import_descs.next()? {
+            let first_thunk = import_desc.first_thunk.get(LE);
+            let thunk_range = self.thunks(first_thunk)?.address_range::<Pe>(first_thunk)?;
+            ranges
+                .add(thunk_range)
+                .read_error("Overlapping PE import address table")?;
+
+            let original_first_thunk = import_desc.original_first_thunk.get(LE);
+            if original_first_thunk != 0 && original_first_thunk != first_thunk {
+                let thunk_range = self
+                    .thunks(original_first_thunk)?
+                    .address_range::<Pe>(original_first_thunk)?;
+                ranges
+                    .add(thunk_range)
+                    .read_error("Overlapping PE import lookup table")?;
+            }
+        }
+        Ok(())
     }
 
     /// Return an iterator for the import descriptors.
@@ -92,6 +121,8 @@ impl<'data> ImportTable<'data> {
             .get(LE);
         let name = data
             .read_string()
+            .ok()
+            .filter(|s| !s.is_empty())
             .read_error("Missing PE import thunk name")?;
         Ok((hint, name))
     }
@@ -105,6 +136,15 @@ pub struct ImportDescriptorIterator<'data> {
 }
 
 impl<'data> ImportDescriptorIterator<'data> {
+    fn address_range(mut self, base_address: u32) -> Result<(u32, u32)> {
+        let start_len = self.data.len();
+        while self.next()?.is_some() {}
+        Ok((
+            base_address,
+            base_address + (start_len - self.data.len()) as u32,
+        ))
+    }
+
     /// Return the next descriptor.
     ///
     /// Returns `Ok(None)` when a null descriptor is found.
@@ -150,6 +190,15 @@ pub struct ImportThunkList<'data> {
 }
 
 impl<'data> ImportThunkList<'data> {
+    fn address_range<Pe: ImageNtHeaders>(mut self, base_address: u32) -> Result<(u32, u32)> {
+        let start_len = self.data.len();
+        while self.next::<Pe>()?.is_some() {}
+        Ok((
+            base_address,
+            base_address + (start_len - self.data.len()) as u32,
+        ))
+    }
+
     /// Get the thunk at the given index.
     pub fn get<Pe: ImageNtHeaders>(&self, index: usize) -> Result<Pe::ImageThunkData> {
         let thunk = self
@@ -271,6 +320,51 @@ impl<'data> DelayLoadImportTable<'data> {
         }
     }
 
+    /// Validate that import table structures do not overlap.
+    ///
+    /// Checks that descriptors and thunk tables occupy non-overlapping address ranges.
+    pub fn validate<Pe: ImageNtHeaders>(&self) -> Result<()> {
+        let mut ranges = Ranges::new(self.descriptors()?.address_range(self.import_address)?);
+
+        let mut import_descs = self.descriptors()?;
+        while let Some(import_desc) = import_descs.next()? {
+            let address_table = import_desc.import_address_table_rva.get(LE);
+            if address_table != 0 {
+                let thunk_range = self
+                    .thunks(address_table)?
+                    .address_range::<Pe>(address_table)?;
+                ranges
+                    .add(thunk_range)
+                    .read_error("Overlapping PE delay load import address table")?;
+            }
+
+            let name_table = import_desc.import_name_table_rva.get(LE);
+            let thunk_range = self.thunks(name_table)?.address_range::<Pe>(name_table)?;
+            ranges
+                .add(thunk_range)
+                .read_error("Overlapping PE delay load import name table")?;
+
+            let bound_table = import_desc.bound_import_address_table_rva.get(LE);
+            if bound_table != 0 {
+                let thunk_range = self.thunks(bound_table)?.address_range::<Pe>(bound_table)?;
+                ranges
+                    .add(thunk_range)
+                    .read_error("Overlapping PE delay load bound import address table")?;
+            }
+
+            let unload_table = import_desc.unload_information_table_rva.get(LE);
+            if unload_table != 0 && unload_table != name_table {
+                let thunk_range = self
+                    .thunks(unload_table)?
+                    .address_range::<Pe>(unload_table)?;
+                ranges
+                    .add(thunk_range)
+                    .read_error("Overlapping PE delay load unload information table")?;
+            }
+        }
+        Ok(())
+    }
+
     /// Return an iterator for the import descriptors.
     pub fn descriptors(&self) -> Result<DelayLoadDescriptorIterator<'data>> {
         let offset = self.import_address.wrapping_sub(self.section_address);
@@ -331,6 +425,8 @@ impl<'data> DelayLoadImportTable<'data> {
             .get(LE);
         let name = data
             .read_string()
+            .ok()
+            .filter(|s| !s.is_empty())
             .read_error("Missing PE delay load import thunk name")?;
         Ok((hint, name))
     }
@@ -344,6 +440,15 @@ pub struct DelayLoadDescriptorIterator<'data> {
 }
 
 impl<'data> DelayLoadDescriptorIterator<'data> {
+    fn address_range(mut self, base_address: u32) -> Result<(u32, u32)> {
+        let start_len = self.data.len();
+        while self.next()?.is_some() {}
+        Ok((
+            base_address,
+            base_address + (start_len - self.data.len()) as u32,
+        ))
+    }
+
     /// Return the next descriptor.
     ///
     /// Returns `Ok(None)` when a null descriptor is found.
@@ -377,5 +482,30 @@ impl<'data> Iterator for DelayLoadDescriptorIterator<'data> {
 
     fn next(&mut self) -> Option<Self::Item> {
         self.next().transpose()
+    }
+}
+
+struct Ranges(BTreeMap<u32, u32>);
+
+impl Ranges {
+    fn new((start, end): (u32, u32)) -> Self {
+        let mut ranges = BTreeMap::new();
+        ranges.insert(start, end);
+        Ranges(ranges)
+    }
+
+    fn add(&mut self, (start, end): (u32, u32)) -> Option<()> {
+        if let Some((_, &prev_end)) = self.0.range(..start).next_back() {
+            if prev_end > start {
+                return None;
+            }
+        }
+        if let Some((&next_start, _)) = self.0.range(start..).next() {
+            if end > next_start {
+                return None;
+            }
+        }
+        self.0.insert(start, end);
+        Some(())
     }
 }
