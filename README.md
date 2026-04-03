@@ -43,6 +43,28 @@ fn main() -> Result<(), Box<dyn Error>> {
 
 See [`crates/examples`](crates/examples) for more examples.
 
+## Security
+
+This crate is intended to be used with trusted inputs. For example, it is
+suitable for use as part of a compiler toolchain, but not for malware analysis
+or a service exposed to arbitrary inputs.
+
+The crate aims to be reliable: it provides memory safety (with some use of
+`unsafe` for performance), and malformed input is expected to result in an
+error rather than a panic or incorrect parsing.
+
+However, there are significant limitations:
+
+* There is little effort to mitigate denial of service attacks (such as
+  algorithmic complexity attacks due to overlapping structures).
+
+* The crate does not aim to replicate the behaviour of platform loaders such as
+  the Windows loader or dynamic linkers. Data returned by the parser may not
+  match the data used by a loader.
+
+Non-intrusive fixes (low complexity or overhead) for these are welcome, but it
+is not a focus of development.
+
 ## Minimum supported Rust version (MSRV)
 
 Changes to MSRV are not considered breaking changes. We are conservative about
