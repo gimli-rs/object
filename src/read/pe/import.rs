@@ -92,6 +92,8 @@ impl<'data> ImportTable<'data> {
             .get(LE);
         let name = data
             .read_string()
+            .ok()
+            .filter(|s| !s.is_empty())
             .read_error("Missing PE import thunk name")?;
         Ok((hint, name))
     }
@@ -331,6 +333,8 @@ impl<'data> DelayLoadImportTable<'data> {
             .get(LE);
         let name = data
             .read_string()
+            .ok()
+            .filter(|s| !s.is_empty())
             .read_error("Missing PE delay load import thunk name")?;
         Ok((hint, name))
     }
