@@ -3,7 +3,7 @@ use std::{fmt, str};
 
 use object::read::archive::ArchiveFile;
 use object::read::macho::{FatArch, FatHeader};
-use object::Endianness;
+use object::{ConstantNames, Endianness, FlagNames};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct PrintOptions {
@@ -242,6 +242,82 @@ impl<'a> Printer<'a> {
             }
         }
         self.field_hex(name, value);
+    }
+
+    fn field_consts<T: PartialEq + Copy + fmt::UpperHex>(
+        &mut self,
+        name: &str,
+        value: T,
+        consts: &'static ConstantNames<T>,
+    ) {
+        if let Some(flag_name) = consts.name(value) {
+            self.field_name(name);
+            writeln!(self.w, "{} (0x{:X})", flag_name, value).unwrap();
+        } else {
+            self.field_hex(name, value);
+        }
+    }
+
+    fn field_flags<T: Into<u64>, U: Copy + Into<u64>>(
+        &mut self,
+        name: &str,
+        value: T,
+        flags: &'static FlagNames<U>,
+    ) {
+        let value = value.into();
+
+        // If only a single masked field is set, then display on one line.
+        let mut count = 0;
+        let mut flag_name = None;
+        for (bit, name) in flags.bits_iter() {
+            let bit = bit.into();
+            if value & bit == bit {
+                count += 2; // Force multiline
+                flag_name = Some(name);
+            }
+        }
+        for (mask, values) in flags.groups_iter() {
+            let mask = mask.into();
+            let masked = value & mask;
+            if let Some((_, name)) = values.iter().find(|(v, _)| (*v).into() == masked) {
+                count += 1;
+                flag_name = Some(name);
+            }
+        }
+        if count != 1 {
+            flag_name = None;
+        }
+        if let Some(flag_name) = flag_name {
+            self.field_name(name);
+            writeln!(self.w, "{} (0x{:X})", flag_name, value).unwrap();
+            return;
+        }
+
+        self.field_hex(name, value);
+        self.indent(|p| {
+            let mut unknown = value;
+            for (bit, name) in flags.bits_iter() {
+                let bit = bit.into();
+                if value & bit == bit {
+                    p.print_indent();
+                    writeln!(p.w, "{} (0x{:X})", name, bit).unwrap();
+                    unknown &= !bit;
+                }
+            }
+            for (mask, values) in flags.groups_iter() {
+                let mask = mask.into();
+                let masked = value & mask;
+                if let Some((_, name)) = values.iter().find(|(v, _)| (*v).into() == masked) {
+                    p.print_indent();
+                    writeln!(p.w, "{} (0x{:X})", name, masked).unwrap();
+                    unknown &= !mask;
+                }
+            }
+            if unknown != 0 {
+                p.print_indent();
+                writeln!(p.w, "<unknown> (0x{:X})", unknown).unwrap();
+            }
+        });
     }
 
     fn flags<T: Into<u64>, U: Copy + Into<u64>>(&mut self, value: T, mask: U, flags: &[Flag<U>]) {
