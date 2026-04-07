@@ -717,8 +717,14 @@ pub const SHT_RELR: u32 = 19;
 pub const SHT_CREL: u32 = 0x40000014;
 /// Start of OS-specific section types.
 pub const SHT_LOOS: u32 = 0x6000_0000;
+/// Android-specific compressed version of `SHT_REL`.
+pub const SHT_ANDROID_REL: u32 = 0x60000001;
+/// Android-specific compressed version of `SHT_RELA`.
+pub const SHT_ANDROID_RELA: u32 = 0x60000002;
 /// LLVM-style dependent libraries.
 pub const SHT_LLVM_DEPENDENT_LIBRARIES: u32 = 0x6fff4c04;
+/// Android-specific precursor of `SHT_RELR`; differs only by constants and required API level.
+pub const SHT_ANDROID_RELR: u32 = 0x6fff_ff00;
 /// GNU SFrame stack trace format.
 pub const SHT_GNU_SFRAME: u32 = 0x6fff_fff4;
 /// Object attributes.
@@ -1576,6 +1582,20 @@ pub const DT_RELRSZ: i64 = 35;
 pub const DT_RELRENT: i64 = 37;
 /// Start of OS-specific
 pub const DT_LOOS: i64 = 0x6000_000d;
+/// Address of Android-specific compressed Rel relocs
+pub const DT_ANDROID_REL: i64 = 0x6000000f;
+/// Total size of Android-specific compressed Rel relocs
+pub const DT_ANDROID_RELSZ: i64 = 0x60000010;
+/// Address of Android-specific compressed Rela relocs
+pub const DT_ANDROID_RELA: i64 = 0x60000011;
+/// Total size of Android-specific compressed Rela relocs
+pub const DT_ANDROID_RELASZ: i64 = 0x60000012;
+/// Address of Android-specific Relr relocs
+pub const DT_ANDROID_RELR: i64 = 0x6fff_e000;
+/// Total size of Android-specific Relr relocs
+pub const DT_ANDROID_RELRSZ: i64 = 0x6fff_e001;
+/// Size of one Android-specific Relr reloc
+pub const DT_ANDROID_RELRENT: i64 = 0x6fff_e003;
 /// End of OS-specific
 pub const DT_HIOS: i64 = 0x6fff_f000;
 /// Start of processor-specific
