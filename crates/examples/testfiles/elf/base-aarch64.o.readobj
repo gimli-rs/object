@@ -55,8 +55,7 @@ SectionHeader {
     Index: 2
     Name: ".rela.text" (0x1B)
     Type: SHT_RELA (0x4)
-    Flags: 0x40
-        SHF_INFO_LINK (0x40)
+    Flags: SHF_INFO_LINK (0x40)
     Address: 0x0
     Offset: 0x1E0
     Size: 0x48
@@ -114,8 +113,7 @@ SectionHeader {
     Index: 5
     Name: ".rodata" (0x31)
     Type: SHT_PROGBITS (0x1)
-    Flags: 0x2
-        SHF_ALLOC (0x2)
+    Flags: SHF_ALLOC (0x2)
     Address: 0x0
     Offset: 0x60
     Size: 0xD

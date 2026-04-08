@@ -16,10 +16,10 @@ FileHeader {
     ProgramHeaderOffset: 0x40
     SectionHeaderOffset: 0x1C50
     Flags: 0x80000007
+        EF_MIPS_ARCH_64R2 (0x80000000)
         EF_MIPS_NOREORDER (0x1)
         EF_MIPS_PIC (0x2)
         EF_MIPS_CPIC (0x4)
-        EF_MIPS_ARCH_64R2 (0x80000000)
     HeaderSize: 0x40
     ProgramHeaderEntrySize: 0x38
     ProgramHeaderCount: 10
@@ -34,8 +34,7 @@ ProgramHeader {
     PhysicalAddress: 0x120000040
     FileSize: 0x230
     MemorySize: 0x230
-    Flags: 0x4
-        PF_R (0x4)
+    Flags: PF_R (0x4)
     Align: 0x8
 }
 ProgramHeader {
@@ -45,8 +44,7 @@ ProgramHeader {
     PhysicalAddress: 0x120000D00
     FileSize: 0xF
     MemorySize: 0xF
-    Flags: 0x4
-        PF_R (0x4)
+    Flags: PF_R (0x4)
     Align: 0x1
     Interpreter: "/lib64/ld.so.1"
 }
@@ -57,8 +55,7 @@ ProgramHeader {
     PhysicalAddress: 0x120000270
     FileSize: 0x18
     MemorySize: 0x18
-    Flags: 0x4
-        PF_R (0x4)
+    Flags: PF_R (0x4)
     Align: 0x8
 }
 ProgramHeader {
@@ -92,8 +89,7 @@ ProgramHeader {
     PhysicalAddress: 0x120000440
     FileSize: 0x1C0
     MemorySize: 0x1C0
-    Flags: 0x4
-        PF_R (0x4)
+    Flags: PF_R (0x4)
     Align: 0x8
     Dynamic {
         Tag: DT_NEEDED (0x1)
@@ -195,8 +191,7 @@ ProgramHeader {
     PhysicalAddress: 0x120000418
     FileSize: 0x24
     MemorySize: 0x24
-    Flags: 0x4
-        PF_R (0x4)
+    Flags: PF_R (0x4)
     Align: 0x4
     Note {
         Name: "GNU" (0x4)
@@ -211,8 +206,7 @@ ProgramHeader {
     PhysicalAddress: 0x120000D14
     FileSize: 0x20
     MemorySize: 0x20
-    Flags: 0x4
-        PF_R (0x4)
+    Flags: PF_R (0x4)
     Align: 0x4
     Note {
         Name: "GNU" (0x4)
@@ -227,8 +221,7 @@ ProgramHeader {
     PhysicalAddress: 0x120010FE0
     FileSize: 0x20
     MemorySize: 0x20
-    Flags: 0x4
-        PF_R (0x4)
+    Flags: PF_R (0x4)
     Align: 0x1
 }
 ProgramHeader {
@@ -258,8 +251,7 @@ SectionHeader {
     Index: 1
     Name: ".MIPS.abiflags" (0x1B)
     Type: 0x7000002A
-    Flags: 0x2
-        SHF_ALLOC (0x2)
+    Flags: SHF_ALLOC (0x2)
     Address: 0x120000270
     Offset: 0x270
     Size: 0x18
@@ -273,8 +265,8 @@ SectionHeader {
     Name: ".MIPS.options" (0x2A)
     Type: SHT_MIPS_OPTIONS (0x7000000D)
     Flags: 0x8000002
-        SHF_ALLOC (0x2)
         SHF_MIPS_NOSTRIP (0x8000000)
+        SHF_ALLOC (0x2)
     Address: 0x120000288
     Offset: 0x288
     Size: 0x190
@@ -287,8 +279,7 @@ SectionHeader {
     Index: 3
     Name: ".note.gnu.build-id" (0x38)
     Type: SHT_NOTE (0x7)
-    Flags: 0x2
-        SHF_ALLOC (0x2)
+    Flags: SHF_ALLOC (0x2)
     Address: 0x120000418
     Offset: 0x418
     Size: 0x24
@@ -306,8 +297,7 @@ SectionHeader {
     Index: 4
     Name: ".dynamic" (0x4B)
     Type: SHT_DYNAMIC (0x6)
-    Flags: 0x2
-        SHF_ALLOC (0x2)
+    Flags: SHF_ALLOC (0x2)
     Address: 0x120000440
     Offset: 0x440
     Size: 0x1C0
@@ -412,8 +402,7 @@ SectionHeader {
     Index: 5
     Name: ".hash" (0x54)
     Type: SHT_HASH (0x5)
-    Flags: 0x2
-        SHF_ALLOC (0x2)
+    Flags: SHF_ALLOC (0x2)
     Address: 0x120000600
     Offset: 0x600
     Size: 0x48
@@ -430,8 +419,7 @@ SectionHeader {
     Index: 6
     Name: ".dynsym" (0x5A)
     Type: SHT_DYNSYM (0xB)
-    Flags: 0x2
-        SHF_ALLOC (0x2)
+    Flags: SHF_ALLOC (0x2)
     Address: 0x120000648
     Offset: 0x648
     Size: 0x138
@@ -587,8 +575,7 @@ SectionHeader {
     Index: 7
     Name: ".dynstr" (0x62)
     Type: SHT_STRTAB (0x3)
-    Flags: 0x2
-        SHF_ALLOC (0x2)
+    Flags: SHF_ALLOC (0x2)
     Address: 0x120000780
     Offset: 0x780
     Size: 0xBD
@@ -601,8 +588,7 @@ SectionHeader {
     Index: 8
     Name: ".gnu.version" (0x6A)
     Type: SHT_GNU_VERSYM (0x6FFFFFFF)
-    Flags: 0x2
-        SHF_ALLOC (0x2)
+    Flags: SHF_ALLOC (0x2)
     Address: 0x12000083E
     Offset: 0x83E
     Size: 0x1A
@@ -667,8 +653,7 @@ SectionHeader {
     Index: 9
     Name: ".gnu.version_r" (0x77)
     Type: SHT_GNU_VERNEED (0x6FFFFFFE)
-    Flags: 0x2
-        SHF_ALLOC (0x2)
+    Flags: SHF_ALLOC (0x2)
     Address: 0x120000858
     Offset: 0x858
     Size: 0x20
@@ -755,8 +740,7 @@ SectionHeader {
     Index: 14
     Name: ".rodata" (0xA4)
     Type: SHT_PROGBITS (0x1)
-    Flags: 0x2
-        SHF_ALLOC (0x2)
+    Flags: SHF_ALLOC (0x2)
     Address: 0x120000CE0
     Offset: 0xCE0
     Size: 0x20
@@ -769,8 +753,7 @@ SectionHeader {
     Index: 15
     Name: ".interp" (0xAC)
     Type: SHT_PROGBITS (0x1)
-    Flags: 0x2
-        SHF_ALLOC (0x2)
+    Flags: SHF_ALLOC (0x2)
     Address: 0x120000D00
     Offset: 0xD00
     Size: 0xF
@@ -783,8 +766,7 @@ SectionHeader {
     Index: 16
     Name: ".eh_frame" (0xB4)
     Type: SHT_PROGBITS (0x1)
-    Flags: 0x2
-        SHF_ALLOC (0x2)
+    Flags: SHF_ALLOC (0x2)
     Address: 0x120000D10
     Offset: 0xD10
     Size: 0x4
@@ -797,8 +779,7 @@ SectionHeader {
     Index: 17
     Name: ".note.ABI-tag" (0xBE)
     Type: SHT_NOTE (0x7)
-    Flags: 0x2
-        SHF_ALLOC (0x2)
+    Flags: SHF_ALLOC (0x2)
     Address: 0x120000D14
     Offset: 0xD14
     Size: 0x20
@@ -877,9 +858,9 @@ SectionHeader {
     Name: ".got" (0xE9)
     Type: SHT_PROGBITS (0x1)
     Flags: 0x10000003
+        SHF_MIPS_GPREL (0x10000000)
         SHF_WRITE (0x1)
         SHF_ALLOC (0x2)
-        SHF_MIPS_GPREL (0x10000000)
     Address: 0x120011020
     Offset: 0x1020
     Size: 0xB8
@@ -893,9 +874,9 @@ SectionHeader {
     Name: ".sdata" (0xEE)
     Type: SHT_PROGBITS (0x1)
     Flags: 0x10000003
+        SHF_MIPS_GPREL (0x10000000)
         SHF_WRITE (0x1)
         SHF_ALLOC (0x2)
-        SHF_MIPS_GPREL (0x10000000)
     Address: 0x1200110D8
     Offset: 0x10D8
     Size: 0x8

@@ -30,8 +30,7 @@ ProgramHeader {
     PhysicalAddress: 0x34
     FileSize: 0x160
     MemorySize: 0x160
-    Flags: 0x4
-        PF_R (0x4)
+    Flags: PF_R (0x4)
     Align: 0x4
 }
 ProgramHeader {
@@ -41,8 +40,7 @@ ProgramHeader {
     PhysicalAddress: 0x194
     FileSize: 0x13
     MemorySize: 0x13
-    Flags: 0x4
-        PF_R (0x4)
+    Flags: PF_R (0x4)
     Align: 0x1
     Interpreter: "/lib/ld-linux.so.2"
 }
@@ -53,8 +51,7 @@ ProgramHeader {
     PhysicalAddress: 0x0
     FileSize: 0x3E8
     MemorySize: 0x3E8
-    Flags: 0x4
-        PF_R (0x4)
+    Flags: PF_R (0x4)
     Align: 0x1000
 }
 ProgramHeader {
@@ -76,8 +73,7 @@ ProgramHeader {
     PhysicalAddress: 0x2000
     FileSize: 0x114
     MemorySize: 0x114
-    Flags: 0x4
-        PF_R (0x4)
+    Flags: PF_R (0x4)
     Align: 0x1000
 }
 ProgramHeader {
@@ -230,8 +226,7 @@ ProgramHeader {
     PhysicalAddress: 0x1A8
     FileSize: 0x44
     MemorySize: 0x44
-    Flags: 0x4
-        PF_R (0x4)
+    Flags: PF_R (0x4)
     Align: 0x4
     Note {
         Name: "GNU" (0x4)
@@ -251,8 +246,7 @@ ProgramHeader {
     PhysicalAddress: 0x2018
     FileSize: 0x34
     MemorySize: 0x34
-    Flags: 0x4
-        PF_R (0x4)
+    Flags: PF_R (0x4)
     Align: 0x4
 }
 ProgramHeader {
@@ -274,8 +268,7 @@ ProgramHeader {
     PhysicalAddress: 0x3EC0
     FileSize: 0x140
     MemorySize: 0x140
-    Flags: 0x4
-        PF_R (0x4)
+    Flags: PF_R (0x4)
     Align: 0x1
 }
 SectionHeader {
@@ -295,8 +288,7 @@ SectionHeader {
     Index: 1
     Name: ".interp" (0x1B)
     Type: SHT_PROGBITS (0x1)
-    Flags: 0x2
-        SHF_ALLOC (0x2)
+    Flags: SHF_ALLOC (0x2)
     Address: 0x194
     Offset: 0x194
     Size: 0x13
@@ -309,8 +301,7 @@ SectionHeader {
     Index: 2
     Name: ".note.gnu.build-id" (0x23)
     Type: SHT_NOTE (0x7)
-    Flags: 0x2
-        SHF_ALLOC (0x2)
+    Flags: SHF_ALLOC (0x2)
     Address: 0x1A8
     Offset: 0x1A8
     Size: 0x24
@@ -328,8 +319,7 @@ SectionHeader {
     Index: 3
     Name: ".note.ABI-tag" (0x36)
     Type: SHT_NOTE (0x7)
-    Flags: 0x2
-        SHF_ALLOC (0x2)
+    Flags: SHF_ALLOC (0x2)
     Address: 0x1CC
     Offset: 0x1CC
     Size: 0x20
@@ -347,8 +337,7 @@ SectionHeader {
     Index: 4
     Name: ".gnu.hash" (0x44)
     Type: SHT_GNU_HASH (0x6FFFFFF6)
-    Flags: 0x2
-        SHF_ALLOC (0x2)
+    Flags: SHF_ALLOC (0x2)
     Address: 0x1EC
     Offset: 0x1EC
     Size: 0x20
@@ -367,8 +356,7 @@ SectionHeader {
     Index: 5
     Name: ".dynsym" (0x4E)
     Type: SHT_DYNSYM (0xB)
-    Flags: 0x2
-        SHF_ALLOC (0x2)
+    Flags: SHF_ALLOC (0x2)
     Address: 0x20C
     Offset: 0x20C
     Size: 0x80
@@ -469,8 +457,7 @@ SectionHeader {
     Index: 6
     Name: ".dynstr" (0x56)
     Type: SHT_STRTAB (0x3)
-    Flags: 0x2
-        SHF_ALLOC (0x2)
+    Flags: SHF_ALLOC (0x2)
     Address: 0x28C
     Offset: 0x28C
     Size: 0xBA
@@ -483,8 +470,7 @@ SectionHeader {
     Index: 7
     Name: ".gnu.version" (0x5E)
     Type: SHT_GNU_VERSYM (0x6FFFFFFF)
-    Flags: 0x2
-        SHF_ALLOC (0x2)
+    Flags: SHF_ALLOC (0x2)
     Address: 0x346
     Offset: 0x346
     Size: 0x10
@@ -529,8 +515,7 @@ SectionHeader {
     Index: 8
     Name: ".gnu.version_r" (0x6B)
     Type: SHT_GNU_VERNEED (0x6FFFFFFE)
-    Flags: 0x2
-        SHF_ALLOC (0x2)
+    Flags: SHF_ALLOC (0x2)
     Address: 0x358
     Offset: 0x358
     Size: 0x50
@@ -578,8 +563,7 @@ SectionHeader {
     Index: 9
     Name: ".rel.dyn" (0x7A)
     Type: SHT_REL (0x9)
-    Flags: 0x2
-        SHF_ALLOC (0x2)
+    Flags: SHF_ALLOC (0x2)
     Address: 0x3A8
     Offset: 0x3A8
     Size: 0x20
@@ -637,8 +621,7 @@ SectionHeader {
     Index: 11
     Name: ".relr.dyn" (0x8C)
     Type: SHT_RELR (0x13)
-    Flags: 0x2
-        SHF_ALLOC (0x2)
+    Flags: SHF_ALLOC (0x2)
     Address: 0x3D8
     Offset: 0x3D8
     Size: 0x10
@@ -730,8 +713,7 @@ SectionHeader {
     Index: 17
     Name: ".rodata" (0xB1)
     Type: SHT_PROGBITS (0x1)
-    Flags: 0x2
-        SHF_ALLOC (0x2)
+    Flags: SHF_ALLOC (0x2)
     Address: 0x2000
     Offset: 0x2000
     Size: 0x15
@@ -744,8 +726,7 @@ SectionHeader {
     Index: 18
     Name: ".eh_frame_hdr" (0xB9)
     Type: SHT_PROGBITS (0x1)
-    Flags: 0x2
-        SHF_ALLOC (0x2)
+    Flags: SHF_ALLOC (0x2)
     Address: 0x2018
     Offset: 0x2018
     Size: 0x34
@@ -758,8 +739,7 @@ SectionHeader {
     Index: 19
     Name: ".eh_frame" (0xC7)
     Type: SHT_PROGBITS (0x1)
-    Flags: 0x2
-        SHF_ALLOC (0x2)
+    Flags: SHF_ALLOC (0x2)
     Address: 0x204C
     Offset: 0x204C
     Size: 0xC8

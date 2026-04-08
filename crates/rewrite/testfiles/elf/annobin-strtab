@@ -16,8 +16,7 @@ SectionHeader {
     Index: 1
     Name: ".interp"
     Type: SHT_PROGBITS (0x1)
-    Flags: 0x2
-        SHF_ALLOC (0x2)
+    Flags: SHF_ALLOC (0x2)
     Address: 0x318
     Offset: 0x318
     Size: 0x1C
@@ -30,8 +29,7 @@ SectionHeader {
     Index: 2
     Name: ".note.gnu.property"
     Type: SHT_NOTE (0x7)
-    Flags: 0x2
-        SHF_ALLOC (0x2)
+    Flags: SHF_ALLOC (0x2)
     Address: 0x338
     Offset: 0x338
     Size: 0x30
@@ -44,8 +42,7 @@ SectionHeader {
     Index: 3
     Name: ".note.gnu.build-id"
     Type: SHT_NOTE (0x7)
-    Flags: 0x2
-        SHF_ALLOC (0x2)
+    Flags: SHF_ALLOC (0x2)
     Address: 0x368
     Offset: 0x368
     Size: 0x24
@@ -58,8 +55,7 @@ SectionHeader {
     Index: 4
     Name: ".note.ABI-tag"
     Type: SHT_NOTE (0x7)
-    Flags: 0x2
-        SHF_ALLOC (0x2)
+    Flags: SHF_ALLOC (0x2)
     Address: 0x38C
     Offset: 0x38C
     Size: 0x20
@@ -72,8 +68,7 @@ SectionHeader {
     Index: 5
     Name: ".gnu.hash"
     Type: SHT_GNU_HASH (0x6FFFFFF6)
-    Flags: 0x2
-        SHF_ALLOC (0x2)
+    Flags: SHF_ALLOC (0x2)
     Address: 0x3B0
     Offset: 0x3B0
     Size: 0x20
@@ -92,8 +87,7 @@ SectionHeader {
     Index: 6
     Name: ".dynsym"
     Type: SHT_DYNSYM (0xB)
-    Flags: 0x2
-        SHF_ALLOC (0x2)
+    Flags: SHF_ALLOC (0x2)
     Address: 0x3D8
     Offset: 0x3D8
     Size: 0xA8
@@ -106,8 +100,7 @@ SectionHeader {
     Index: 7
     Name: ".dynstr"
     Type: SHT_STRTAB (0x3)
-    Flags: 0x2
-        SHF_ALLOC (0x2)
+    Flags: SHF_ALLOC (0x2)
     Address: 0x480
     Offset: 0x480
     Size: 0x8F
@@ -120,8 +113,7 @@ SectionHeader {
     Index: 8
     Name: ".gnu.version"
     Type: SHT_GNU_VERSYM (0x6FFFFFFF)
-    Flags: 0x2
-        SHF_ALLOC (0x2)
+    Flags: SHF_ALLOC (0x2)
     Address: 0x510
     Offset: 0x510
     Size: 0xE
@@ -134,8 +126,7 @@ SectionHeader {
     Index: 9
     Name: ".gnu.version_r"
     Type: SHT_GNU_VERNEED (0x6FFFFFFE)
-    Flags: 0x2
-        SHF_ALLOC (0x2)
+    Flags: SHF_ALLOC (0x2)
     Address: 0x520
     Offset: 0x520
     Size: 0x30
@@ -148,8 +139,7 @@ SectionHeader {
     Index: 10
     Name: ".rela.dyn"
     Type: SHT_RELA (0x4)
-    Flags: 0x2
-        SHF_ALLOC (0x2)
+    Flags: SHF_ALLOC (0x2)
     Address: 0x550
     Offset: 0x550
     Size: 0xC0
@@ -267,8 +257,7 @@ SectionHeader {
     Index: 18
     Name: ".rodata"
     Type: SHT_PROGBITS (0x1)
-    Flags: 0x2
-        SHF_ALLOC (0x2)
+    Flags: SHF_ALLOC (0x2)
     Address: 0x2000
     Offset: 0x2000
     Size: 0x11
@@ -281,8 +270,7 @@ SectionHeader {
     Index: 19
     Name: ".eh_frame_hdr"
     Type: SHT_PROGBITS (0x1)
-    Flags: 0x2
-        SHF_ALLOC (0x2)
+    Flags: SHF_ALLOC (0x2)
     Address: 0x2014
     Offset: 0x2014
     Size: 0x34
@@ -295,8 +283,7 @@ SectionHeader {
     Index: 20
     Name: ".eh_frame"
     Type: SHT_PROGBITS (0x1)
-    Flags: 0x2
-        SHF_ALLOC (0x2)
+    Flags: SHF_ALLOC (0x2)
     Address: 0x2048
     Offset: 0x2048
     Size: 0xAC

@@ -30,8 +30,7 @@ ProgramHeader {
     PhysicalAddress: 0x0
     FileSize: 0x580
     MemorySize: 0x580
-    Flags: 0x4
-        PF_R (0x4)
+    Flags: PF_R (0x4)
     Align: 0x1000
 }
 ProgramHeader {
@@ -53,8 +52,7 @@ ProgramHeader {
     PhysicalAddress: 0x2000
     FileSize: 0xD4
     MemorySize: 0xD4
-    Flags: 0x4
-        PF_R (0x4)
+    Flags: PF_R (0x4)
     Align: 0x1000
 }
 ProgramHeader {
@@ -192,8 +190,7 @@ ProgramHeader {
     PhysicalAddress: 0x2A8
     FileSize: 0x20
     MemorySize: 0x20
-    Flags: 0x4
-        PF_R (0x4)
+    Flags: PF_R (0x4)
     Align: 0x8
     Note {
         Name: "GNU"
@@ -213,8 +210,7 @@ ProgramHeader {
     PhysicalAddress: 0x2C8
     FileSize: 0x24
     MemorySize: 0x24
-    Flags: 0x4
-        PF_R (0x4)
+    Flags: PF_R (0x4)
     Align: 0x4
     Note {
         Name: "GNU"
@@ -229,8 +225,7 @@ ProgramHeader {
     PhysicalAddress: 0x2A8
     FileSize: 0x20
     MemorySize: 0x20
-    Flags: 0x4
-        PF_R (0x4)
+    Flags: PF_R (0x4)
     Align: 0x8
 }
 ProgramHeader {
@@ -240,8 +235,7 @@ ProgramHeader {
     PhysicalAddress: 0x2010
     FileSize: 0x2C
     MemorySize: 0x2C
-    Flags: 0x4
-        PF_R (0x4)
+    Flags: PF_R (0x4)
     Align: 0x4
 }
 ProgramHeader {
@@ -263,8 +257,7 @@ ProgramHeader {
     PhysicalAddress: 0x3DF0
     FileSize: 0x210
     MemorySize: 0x210
-    Flags: 0x4
-        PF_R (0x4)
+    Flags: PF_R (0x4)
     Align: 0x1
 }
 SectionHeader {
@@ -284,8 +277,7 @@ SectionHeader {
     Index: 1
     Name: ".note.gnu.property"
     Type: SHT_NOTE (0x7)
-    Flags: 0x2
-        SHF_ALLOC (0x2)
+    Flags: SHF_ALLOC (0x2)
     Address: 0x2A8
     Offset: 0x2A8
     Size: 0x20
@@ -308,8 +300,7 @@ SectionHeader {
     Index: 2
     Name: ".note.gnu.build-id"
     Type: SHT_NOTE (0x7)
-    Flags: 0x2
-        SHF_ALLOC (0x2)
+    Flags: SHF_ALLOC (0x2)
     Address: 0x2C8
     Offset: 0x2C8
     Size: 0x24
@@ -327,8 +318,7 @@ SectionHeader {
     Index: 3
     Name: ".gnu.hash"
     Type: SHT_GNU_HASH (0x6FFFFFF6)
-    Flags: 0x2
-        SHF_ALLOC (0x2)
+    Flags: SHF_ALLOC (0x2)
     Address: 0x2F0
     Offset: 0x2F0
     Size: 0x28
@@ -347,8 +337,7 @@ SectionHeader {
     Index: 4
     Name: ".dynsym"
     Type: SHT_DYNSYM (0xB)
-    Flags: 0x2
-        SHF_ALLOC (0x2)
+    Flags: SHF_ALLOC (0x2)
     Address: 0x318
     Offset: 0x318
     Size: 0xC0
@@ -449,8 +438,7 @@ SectionHeader {
     Index: 5
     Name: ".dynstr"
     Type: SHT_STRTAB (0x3)
-    Flags: 0x2
-        SHF_ALLOC (0x2)
+    Flags: SHF_ALLOC (0x2)
     Address: 0x3D8
     Offset: 0x3D8
     Size: 0x82
@@ -463,8 +451,7 @@ SectionHeader {
     Index: 6
     Name: ".gnu.version"
     Type: SHT_GNU_VERSYM (0x6FFFFFFF)
-    Flags: 0x2
-        SHF_ALLOC (0x2)
+    Flags: SHF_ALLOC (0x2)
     Address: 0x45A
     Offset: 0x45A
     Size: 0x10
@@ -509,8 +496,7 @@ SectionHeader {
     Index: 7
     Name: ".gnu.version_d"
     Type: SHT_GNU_VERDEF (0x6FFFFFFD)
-    Flags: 0x2
-        SHF_ALLOC (0x2)
+    Flags: SHF_ALLOC (0x2)
     Address: 0x470
     Offset: 0x470
     Size: 0x30
@@ -550,8 +536,7 @@ SectionHeader {
     Index: 8
     Name: ".gnu.version_r"
     Type: SHT_GNU_VERNEED (0x6FFFFFFE)
-    Flags: 0x2
-        SHF_ALLOC (0x2)
+    Flags: SHF_ALLOC (0x2)
     Address: 0x4A0
     Offset: 0x4A0
     Size: 0x20
@@ -578,8 +563,7 @@ SectionHeader {
     Index: 9
     Name: ".rela.dyn"
     Type: SHT_RELA (0x4)
-    Flags: 0x2
-        SHF_ALLOC (0x2)
+    Flags: SHF_ALLOC (0x2)
     Address: 0x4C0
     Offset: 0x4C0
     Size: 0xA8
@@ -740,8 +724,7 @@ SectionHeader {
     Index: 17
     Name: ".rodata"
     Type: SHT_PROGBITS (0x1)
-    Flags: 0x2
-        SHF_ALLOC (0x2)
+    Flags: SHF_ALLOC (0x2)
     Address: 0x2000
     Offset: 0x2000
     Size: 0xD
@@ -754,8 +737,7 @@ SectionHeader {
     Index: 18
     Name: ".eh_frame_hdr"
     Type: SHT_PROGBITS (0x1)
-    Flags: 0x2
-        SHF_ALLOC (0x2)
+    Flags: SHF_ALLOC (0x2)
     Address: 0x2010
     Offset: 0x2010
     Size: 0x2C
@@ -768,8 +750,7 @@ SectionHeader {
     Index: 19
     Name: ".eh_frame"
     Type: SHT_PROGBITS (0x1)
-    Flags: 0x2
-        SHF_ALLOC (0x2)
+    Flags: SHF_ALLOC (0x2)
     Address: 0x2040
     Offset: 0x2040
     Size: 0x94

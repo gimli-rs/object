@@ -16,10 +16,10 @@ FileHeader {
     ProgramHeaderOffset: 0x0
     SectionHeaderOffset: 0x3E8
     Flags: 0x80000007
+        EF_MIPS_ARCH_64R2 (0x80000000)
         EF_MIPS_NOREORDER (0x1)
         EF_MIPS_PIC (0x2)
         EF_MIPS_CPIC (0x4)
-        EF_MIPS_ARCH_64R2 (0x80000000)
     HeaderSize: 0x40
     ProgramHeaderEntrySize: 0x0
     ProgramHeaderCount: 0
@@ -59,8 +59,7 @@ SectionHeader {
     Index: 2
     Name: ".rela.text" (0x1B)
     Type: SHT_RELA (0x4)
-    Flags: 0x40
-        SHF_INFO_LINK (0x40)
+    Flags: SHF_INFO_LINK (0x40)
     Address: 0x0
     Offset: 0x2B8
     Size: 0x90
@@ -134,8 +133,8 @@ SectionHeader {
     Name: ".MIPS.options" (0x31)
     Type: SHT_MIPS_OPTIONS (0x7000000D)
     Flags: 0x8000002
-        SHF_ALLOC (0x2)
         SHF_MIPS_NOSTRIP (0x8000000)
+        SHF_ALLOC (0x2)
     Address: 0x0
     Offset: 0xA0
     Size: 0x28
@@ -148,8 +147,7 @@ SectionHeader {
     Index: 6
     Name: ".MIPS.abiflags" (0x3F)
     Type: 0x7000002A
-    Flags: 0x2
-        SHF_ALLOC (0x2)
+    Flags: SHF_ALLOC (0x2)
     Address: 0x0
     Offset: 0xC8
     Size: 0x18
@@ -175,8 +173,7 @@ SectionHeader {
     Index: 8
     Name: ".rela.pdr" (0x4E)
     Type: SHT_RELA (0x4)
-    Flags: 0x40
-        SHF_INFO_LINK (0x40)
+    Flags: SHF_INFO_LINK (0x40)
     Address: 0x0
     Offset: 0x348
     Size: 0x18
@@ -207,8 +204,7 @@ SectionHeader {
     Index: 10
     Name: ".rodata" (0x66)
     Type: SHT_PROGBITS (0x1)
-    Flags: 0x2
-        SHF_ALLOC (0x2)
+    Flags: SHF_ALLOC (0x2)
     Address: 0x0
     Offset: 0x100
     Size: 0x10

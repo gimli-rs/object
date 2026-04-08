@@ -65,6 +65,8 @@ std = ["memchr/std"]
 # Enable decompression of compressed sections.
 # This feature is not required if you want to do your own decompression.
 compression = ["dep:flate2", "dep:ruzstd", "std"]
+# Enable name lookup for constants (e.g. for pretty-printing).
+names = []
 
 #=======================================
 # File format features.
@@ -83,7 +85,7 @@ default = ["read", "compression"]
 #=======================================
 # Umbrella feature for enabling all user-facing features of this crate. Does not
 # enable internal features like `rustc-dep-of-std`.
-all = ["read", "write", "build", "std", "compression", "wasm"]
+all = ["read", "write", "build", "std", "compression", "names", "wasm"]
 
 # Use of --all-features is not supported.
 # This is a dummy feature to detect when --all-features is used.

@@ -27,7 +27,7 @@ log = { version = "0.4.20", optional = true }
 memmap2 = { version = "0.9.4", optional = true }
 
 [dev-dependencies]
-object-examples = { path = "../examples" }
+object-examples = { path = "../examples", features = ["read", "names"] }
 
 [features]
 logging = ["dep:log"]

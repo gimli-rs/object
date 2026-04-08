@@ -67,9 +67,8 @@ SectionHeader {
 SectionHeader {
     Index: 3
     Name: ".crel.text" (0x1)
-    Type: 0x40000014
-    Flags: 0x40
-        SHF_INFO_LINK (0x40)
+    Type: SHT_CREL (0x40000014)
+    Flags: SHF_INFO_LINK (0x40)
     Address: 0x0
     Offset: 0x198
     Size: 0x9
@@ -138,8 +137,7 @@ SectionHeader {
     Index: 7
     Name: ".eh_frame" (0x4B)
     Type: SHT_X86_64_UNWIND (0x70000001)
-    Flags: 0x2
-        SHF_ALLOC (0x2)
+    Flags: SHF_ALLOC (0x2)
     Address: 0x0
     Offset: 0xD0
     Size: 0x38
@@ -151,9 +149,8 @@ SectionHeader {
 SectionHeader {
     Index: 8
     Name: ".crel.eh_frame" (0x46)
-    Type: 0x40000014
-    Flags: 0x40
-        SHF_INFO_LINK (0x40)
+    Type: SHT_CREL (0x40000014)
+    Flags: SHF_INFO_LINK (0x40)
     Address: 0x0
     Offset: 0x1A1
     Size: 0x4
@@ -171,8 +168,7 @@ SectionHeader {
     Index: 9
     Name: ".llvm_addrsig" (0x31)
     Type: 0x6FFF4C03
-    Flags: 0x80000000
-        SHF_EXCLUDE (0x80000000)
+    Flags: SHF_EXCLUDE (0x80000000)
     Address: 0x0
     Offset: 0x1A5
     Size: 0x1
