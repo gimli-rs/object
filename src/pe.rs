@@ -9,8 +9,71 @@
 
 use core::convert::TryInto;
 
+use crate::constants::constants;
+#[cfg(feature = "names")]
+use crate::constants::{ConstantNames, FlagNames};
 use crate::endian::{LittleEndian as LE, I32, U16, U32, U64};
 use crate::pod::Pod;
+
+/// Platform-specific constants for a PE/COFF file.
+///
+/// Returned by [`constants`] and [`machine_constants`].
+#[cfg(feature = "names")]
+#[derive(Debug)]
+#[non_exhaustive]
+pub struct Constants {
+    /// Values for `ImageRelocation::typ`.
+    pub rel: &'static FlagNames<u16>,
+    /// Values for the type in an `ImageBaseRelocation` block.
+    pub rel_based: &'static ConstantNames<u16>,
+}
+
+/// Return the platform independent constants.
+#[cfg(feature = "names")]
+pub const fn constants() -> &'static Constants {
+    Base::constants()
+}
+
+/// Return the platform specific constants.
+///
+/// Note that these also include the values returned by [`constants`].
+#[cfg(feature = "names")]
+pub const fn machine_constants(machine: u16) -> &'static Constants {
+    match machine {
+        IMAGE_FILE_MACHINE_I386 => I386::constants(),
+        IMAGE_FILE_MACHINE_MIPS16 | IMAGE_FILE_MACHINE_MIPSFPU | IMAGE_FILE_MACHINE_MIPSFPU16 => {
+            Mips::constants()
+        }
+        IMAGE_FILE_MACHINE_ALPHA | IMAGE_FILE_MACHINE_ALPHA64 => Alpha::constants(),
+        IMAGE_FILE_MACHINE_POWERPC
+        | IMAGE_FILE_MACHINE_POWERPCFP
+        | IMAGE_FILE_MACHINE_POWERPCBE => Ppc::constants(),
+        IMAGE_FILE_MACHINE_SH3
+        | IMAGE_FILE_MACHINE_SH3DSP
+        | IMAGE_FILE_MACHINE_SH3E
+        | IMAGE_FILE_MACHINE_SH4
+        | IMAGE_FILE_MACHINE_SH5 => Sh::constants(),
+        IMAGE_FILE_MACHINE_ARM => Arm::constants(),
+        IMAGE_FILE_MACHINE_AM33 => Am::constants(),
+        IMAGE_FILE_MACHINE_ARM64 => Arm64::constants(),
+        IMAGE_FILE_MACHINE_AMD64 => Amd64::constants(),
+        IMAGE_FILE_MACHINE_IA64 => Ia64::constants(),
+        IMAGE_FILE_MACHINE_CEF => Cef::constants(),
+        IMAGE_FILE_MACHINE_CEE => Cee::constants(),
+        IMAGE_FILE_MACHINE_M32R => M32r::constants(),
+        IMAGE_FILE_MACHINE_EBC => Ebc::constants(),
+        IMAGE_FILE_MACHINE_RISCV32 | IMAGE_FILE_MACHINE_RISCV64 | IMAGE_FILE_MACHINE_RISCV128 => {
+            Riscv::constants()
+        }
+        _ => Base::constants(),
+    }
+}
+
+constants! {
+    struct Base;
+    flags rel: u16 = None;
+    consts rel_based: u16 = rel_based_names;
+}
 
 /// MZ
 pub const IMAGE_DOS_SIGNATURE: u16 = 0x5A4D;
@@ -1064,476 +1127,587 @@ pub struct ImageRelocation {
 //
 // I386 relocation types.
 //
-/// Reference is absolute, no relocation is necessary
-pub const IMAGE_REL_I386_ABSOLUTE: u16 = 0x0000;
-/// Direct 16-bit reference to the symbols virtual address
-pub const IMAGE_REL_I386_DIR16: u16 = 0x0001;
-/// PC-relative 16-bit reference to the symbols virtual address
-pub const IMAGE_REL_I386_REL16: u16 = 0x0002;
-/// Direct 32-bit reference to the symbols virtual address
-pub const IMAGE_REL_I386_DIR32: u16 = 0x0006;
-/// Direct 32-bit reference to the symbols virtual address, base not included
-pub const IMAGE_REL_I386_DIR32NB: u16 = 0x0007;
-/// Direct 16-bit reference to the segment-selector bits of a 32-bit virtual address
-pub const IMAGE_REL_I386_SEG12: u16 = 0x0009;
-pub const IMAGE_REL_I386_SECTION: u16 = 0x000A;
-pub const IMAGE_REL_I386_SECREL: u16 = 0x000B;
-/// clr token
-pub const IMAGE_REL_I386_TOKEN: u16 = 0x000C;
-/// 7 bit offset from base of section containing target
-pub const IMAGE_REL_I386_SECREL7: u16 = 0x000D;
-/// PC-relative 32-bit reference to the symbols virtual address
-pub const IMAGE_REL_I386_REL32: u16 = 0x0014;
+constants! {
+    struct I386(Base);
+    flags rel: u16 {
+        !0 => {
+            /// Reference is absolute, no relocation is necessary
+            IMAGE_REL_I386_ABSOLUTE = 0x0000,
+            /// Direct 16-bit reference to the symbols virtual address
+            IMAGE_REL_I386_DIR16 = 0x0001,
+            /// PC-relative 16-bit reference to the symbols virtual address
+            IMAGE_REL_I386_REL16 = 0x0002,
+            /// Direct 32-bit reference to the symbols virtual address
+            IMAGE_REL_I386_DIR32 = 0x0006,
+            /// Direct 32-bit reference to the symbols virtual address, base not included
+            IMAGE_REL_I386_DIR32NB = 0x0007,
+            /// Direct 16-bit reference to the segment-selector bits of a 32-bit virtual address
+            IMAGE_REL_I386_SEG12 = 0x0009,
+            IMAGE_REL_I386_SECTION = 0x000A,
+            IMAGE_REL_I386_SECREL = 0x000B,
+            /// clr token
+            IMAGE_REL_I386_TOKEN = 0x000C,
+            /// 7 bit offset from base of section containing target
+            IMAGE_REL_I386_SECREL7 = 0x000D,
+            /// PC-relative 32-bit reference to the symbols virtual address
+            IMAGE_REL_I386_REL32 = 0x0014,
+        },
+    }
+    consts rel_based: u16 {
+        IMAGE_REL_BASED_MIPS_JMPADDR = 5,
+        IMAGE_REL_BASED_MIPS_JMPADDR16 = 9,
+    }
+}
 
 //
 // MIPS relocation types.
 //
-/// Reference is absolute, no relocation is necessary
-pub const IMAGE_REL_MIPS_ABSOLUTE: u16 = 0x0000;
-pub const IMAGE_REL_MIPS_REFHALF: u16 = 0x0001;
-pub const IMAGE_REL_MIPS_REFWORD: u16 = 0x0002;
-pub const IMAGE_REL_MIPS_JMPADDR: u16 = 0x0003;
-pub const IMAGE_REL_MIPS_REFHI: u16 = 0x0004;
-pub const IMAGE_REL_MIPS_REFLO: u16 = 0x0005;
-pub const IMAGE_REL_MIPS_GPREL: u16 = 0x0006;
-pub const IMAGE_REL_MIPS_LITERAL: u16 = 0x0007;
-pub const IMAGE_REL_MIPS_SECTION: u16 = 0x000A;
-pub const IMAGE_REL_MIPS_SECREL: u16 = 0x000B;
-/// Low 16-bit section relative reference (used for >32k TLS)
-pub const IMAGE_REL_MIPS_SECRELLO: u16 = 0x000C;
-/// High 16-bit section relative reference (used for >32k TLS)
-pub const IMAGE_REL_MIPS_SECRELHI: u16 = 0x000D;
-/// clr token
-pub const IMAGE_REL_MIPS_TOKEN: u16 = 0x000E;
-pub const IMAGE_REL_MIPS_JMPADDR16: u16 = 0x0010;
-pub const IMAGE_REL_MIPS_REFWORDNB: u16 = 0x0022;
-pub const IMAGE_REL_MIPS_PAIR: u16 = 0x0025;
+constants! {
+    struct Mips(Base);
+    flags rel: u16 {
+        !0 => {
+            /// Reference is absolute, no relocation is necessary
+            IMAGE_REL_MIPS_ABSOLUTE = 0x0000,
+            IMAGE_REL_MIPS_REFHALF = 0x0001,
+            IMAGE_REL_MIPS_REFWORD = 0x0002,
+            IMAGE_REL_MIPS_JMPADDR = 0x0003,
+            IMAGE_REL_MIPS_REFHI = 0x0004,
+            IMAGE_REL_MIPS_REFLO = 0x0005,
+            IMAGE_REL_MIPS_GPREL = 0x0006,
+            IMAGE_REL_MIPS_LITERAL = 0x0007,
+            IMAGE_REL_MIPS_SECTION = 0x000A,
+            IMAGE_REL_MIPS_SECREL = 0x000B,
+            /// Low 16-bit section relative reference (used for >32k TLS)
+            IMAGE_REL_MIPS_SECRELLO = 0x000C,
+            /// High 16-bit section relative reference (used for >32k TLS)
+            IMAGE_REL_MIPS_SECRELHI = 0x000D,
+            /// clr token
+            IMAGE_REL_MIPS_TOKEN = 0x000E,
+            IMAGE_REL_MIPS_JMPADDR16 = 0x0010,
+            IMAGE_REL_MIPS_REFWORDNB = 0x0022,
+            IMAGE_REL_MIPS_PAIR = 0x0025,
+        },
+    }
+}
 
 //
 // Alpha Relocation types.
 //
-pub const IMAGE_REL_ALPHA_ABSOLUTE: u16 = 0x0000;
-pub const IMAGE_REL_ALPHA_REFLONG: u16 = 0x0001;
-pub const IMAGE_REL_ALPHA_REFQUAD: u16 = 0x0002;
-pub const IMAGE_REL_ALPHA_GPREL32: u16 = 0x0003;
-pub const IMAGE_REL_ALPHA_LITERAL: u16 = 0x0004;
-pub const IMAGE_REL_ALPHA_LITUSE: u16 = 0x0005;
-pub const IMAGE_REL_ALPHA_GPDISP: u16 = 0x0006;
-pub const IMAGE_REL_ALPHA_BRADDR: u16 = 0x0007;
-pub const IMAGE_REL_ALPHA_HINT: u16 = 0x0008;
-pub const IMAGE_REL_ALPHA_INLINE_REFLONG: u16 = 0x0009;
-pub const IMAGE_REL_ALPHA_REFHI: u16 = 0x000A;
-pub const IMAGE_REL_ALPHA_REFLO: u16 = 0x000B;
-pub const IMAGE_REL_ALPHA_PAIR: u16 = 0x000C;
-pub const IMAGE_REL_ALPHA_MATCH: u16 = 0x000D;
-pub const IMAGE_REL_ALPHA_SECTION: u16 = 0x000E;
-pub const IMAGE_REL_ALPHA_SECREL: u16 = 0x000F;
-pub const IMAGE_REL_ALPHA_REFLONGNB: u16 = 0x0010;
-/// Low 16-bit section relative reference
-pub const IMAGE_REL_ALPHA_SECRELLO: u16 = 0x0011;
-/// High 16-bit section relative reference
-pub const IMAGE_REL_ALPHA_SECRELHI: u16 = 0x0012;
-/// High 16 bits of 48 bit reference
-pub const IMAGE_REL_ALPHA_REFQ3: u16 = 0x0013;
-/// Middle 16 bits of 48 bit reference
-pub const IMAGE_REL_ALPHA_REFQ2: u16 = 0x0014;
-/// Low 16 bits of 48 bit reference
-pub const IMAGE_REL_ALPHA_REFQ1: u16 = 0x0015;
-/// Low 16-bit GP relative reference
-pub const IMAGE_REL_ALPHA_GPRELLO: u16 = 0x0016;
-/// High 16-bit GP relative reference
-pub const IMAGE_REL_ALPHA_GPRELHI: u16 = 0x0017;
+constants! {
+    struct Alpha(Base);
+    flags rel: u16 {
+        !0 => {
+            IMAGE_REL_ALPHA_ABSOLUTE = 0x0000,
+            IMAGE_REL_ALPHA_REFLONG = 0x0001,
+            IMAGE_REL_ALPHA_REFQUAD = 0x0002,
+            IMAGE_REL_ALPHA_GPREL32 = 0x0003,
+            IMAGE_REL_ALPHA_LITERAL = 0x0004,
+            IMAGE_REL_ALPHA_LITUSE = 0x0005,
+            IMAGE_REL_ALPHA_GPDISP = 0x0006,
+            IMAGE_REL_ALPHA_BRADDR = 0x0007,
+            IMAGE_REL_ALPHA_HINT = 0x0008,
+            IMAGE_REL_ALPHA_INLINE_REFLONG = 0x0009,
+            IMAGE_REL_ALPHA_REFHI = 0x000A,
+            IMAGE_REL_ALPHA_REFLO = 0x000B,
+            IMAGE_REL_ALPHA_PAIR = 0x000C,
+            IMAGE_REL_ALPHA_MATCH = 0x000D,
+            IMAGE_REL_ALPHA_SECTION = 0x000E,
+            IMAGE_REL_ALPHA_SECREL = 0x000F,
+            IMAGE_REL_ALPHA_REFLONGNB = 0x0010,
+            /// Low 16-bit section relative reference
+            IMAGE_REL_ALPHA_SECRELLO = 0x0011,
+            /// High 16-bit section relative reference
+            IMAGE_REL_ALPHA_SECRELHI = 0x0012,
+            /// High 16 bits of 48 bit reference
+            IMAGE_REL_ALPHA_REFQ3 = 0x0013,
+            /// Middle 16 bits of 48 bit reference
+            IMAGE_REL_ALPHA_REFQ2 = 0x0014,
+            /// Low 16 bits of 48 bit reference
+            IMAGE_REL_ALPHA_REFQ1 = 0x0015,
+            /// Low 16-bit GP relative reference
+            IMAGE_REL_ALPHA_GPRELLO = 0x0016,
+            /// High 16-bit GP relative reference
+            IMAGE_REL_ALPHA_GPRELHI = 0x0017,
+        },
+    }
+}
 
 //
 // IBM PowerPC relocation types.
 //
-/// NOP
-pub const IMAGE_REL_PPC_ABSOLUTE: u16 = 0x0000;
-/// 64-bit address
-pub const IMAGE_REL_PPC_ADDR64: u16 = 0x0001;
-/// 32-bit address
-pub const IMAGE_REL_PPC_ADDR32: u16 = 0x0002;
-/// 26-bit address, shifted left 2 (branch absolute)
-pub const IMAGE_REL_PPC_ADDR24: u16 = 0x0003;
-/// 16-bit address
-pub const IMAGE_REL_PPC_ADDR16: u16 = 0x0004;
-/// 16-bit address, shifted left 2 (load doubleword)
-pub const IMAGE_REL_PPC_ADDR14: u16 = 0x0005;
-/// 26-bit PC-relative offset, shifted left 2 (branch relative)
-pub const IMAGE_REL_PPC_REL24: u16 = 0x0006;
-/// 16-bit PC-relative offset, shifted left 2 (br cond relative)
-pub const IMAGE_REL_PPC_REL14: u16 = 0x0007;
-/// 16-bit offset from TOC base
-pub const IMAGE_REL_PPC_TOCREL16: u16 = 0x0008;
-/// 16-bit offset from TOC base, shifted left 2 (load doubleword)
-pub const IMAGE_REL_PPC_TOCREL14: u16 = 0x0009;
+constants! {
+    struct Ppc(Base);
+    flags rel: u16 {
+        IMAGE_REL_PPC_TYPEMASK = 0x00FF => {
+            /// NOP
+            IMAGE_REL_PPC_ABSOLUTE = 0x0000,
+            /// 64-bit address
+            IMAGE_REL_PPC_ADDR64 = 0x0001,
+            /// 32-bit address
+            IMAGE_REL_PPC_ADDR32 = 0x0002,
+            /// 26-bit address, shifted left 2 (branch absolute)
+            IMAGE_REL_PPC_ADDR24 = 0x0003,
+            /// 16-bit address
+            IMAGE_REL_PPC_ADDR16 = 0x0004,
+            /// 16-bit address, shifted left 2 (load doubleword)
+            IMAGE_REL_PPC_ADDR14 = 0x0005,
+            /// 26-bit PC-relative offset, shifted left 2 (branch relative)
+            IMAGE_REL_PPC_REL24 = 0x0006,
+            /// 16-bit PC-relative offset, shifted left 2 (br cond relative)
+            IMAGE_REL_PPC_REL14 = 0x0007,
+            /// 16-bit offset from TOC base
+            IMAGE_REL_PPC_TOCREL16 = 0x0008,
+            /// 16-bit offset from TOC base, shifted left 2 (load doubleword)
+            IMAGE_REL_PPC_TOCREL14 = 0x0009,
 
-/// 32-bit addr w/o image base
-pub const IMAGE_REL_PPC_ADDR32NB: u16 = 0x000A;
-/// va of containing section (as in an image sectionhdr)
-pub const IMAGE_REL_PPC_SECREL: u16 = 0x000B;
-/// sectionheader number
-pub const IMAGE_REL_PPC_SECTION: u16 = 0x000C;
-/// substitute TOC restore instruction iff symbol is glue code
-pub const IMAGE_REL_PPC_IFGLUE: u16 = 0x000D;
-/// symbol is glue code; virtual address is TOC restore instruction
-pub const IMAGE_REL_PPC_IMGLUE: u16 = 0x000E;
-/// va of containing section (limited to 16 bits)
-pub const IMAGE_REL_PPC_SECREL16: u16 = 0x000F;
-pub const IMAGE_REL_PPC_REFHI: u16 = 0x0010;
-pub const IMAGE_REL_PPC_REFLO: u16 = 0x0011;
-pub const IMAGE_REL_PPC_PAIR: u16 = 0x0012;
-/// Low 16-bit section relative reference (used for >32k TLS)
-pub const IMAGE_REL_PPC_SECRELLO: u16 = 0x0013;
-/// High 16-bit section relative reference (used for >32k TLS)
-pub const IMAGE_REL_PPC_SECRELHI: u16 = 0x0014;
-pub const IMAGE_REL_PPC_GPREL: u16 = 0x0015;
-/// clr token
-pub const IMAGE_REL_PPC_TOKEN: u16 = 0x0016;
-
-/// mask to isolate above values in IMAGE_RELOCATION.Type
-pub const IMAGE_REL_PPC_TYPEMASK: u16 = 0x00FF;
-
-// Flag bits in `ImageRelocation::typ`.
-
-/// subtract reloc value rather than adding it
-pub const IMAGE_REL_PPC_NEG: u16 = 0x0100;
-/// fix branch prediction bit to predict branch taken
-pub const IMAGE_REL_PPC_BRTAKEN: u16 = 0x0200;
-/// fix branch prediction bit to predict branch not taken
-pub const IMAGE_REL_PPC_BRNTAKEN: u16 = 0x0400;
-/// toc slot defined in file (or, data in toc)
-pub const IMAGE_REL_PPC_TOCDEFN: u16 = 0x0800;
+            /// 32-bit addr w/o image base
+            IMAGE_REL_PPC_ADDR32NB = 0x000A,
+            /// va of containing section (as in an image sectionhdr)
+            IMAGE_REL_PPC_SECREL = 0x000B,
+            /// sectionheader number
+            IMAGE_REL_PPC_SECTION = 0x000C,
+            /// substitute TOC restore instruction iff symbol is glue code
+            IMAGE_REL_PPC_IFGLUE = 0x000D,
+            /// symbol is glue code; virtual address is TOC restore instruction
+            IMAGE_REL_PPC_IMGLUE = 0x000E,
+            /// va of containing section (limited to 16 bits)
+            IMAGE_REL_PPC_SECREL16 = 0x000F,
+            IMAGE_REL_PPC_REFHI = 0x0010,
+            IMAGE_REL_PPC_REFLO = 0x0011,
+            IMAGE_REL_PPC_PAIR = 0x0012,
+            /// Low 16-bit section relative reference (used for >32k TLS)
+            IMAGE_REL_PPC_SECRELLO = 0x0013,
+            /// High 16-bit section relative reference (used for >32k TLS)
+            IMAGE_REL_PPC_SECRELHI = 0x0014,
+            IMAGE_REL_PPC_GPREL = 0x0015,
+            /// clr token
+            IMAGE_REL_PPC_TOKEN = 0x0016,
+        },
+        /// subtract reloc value rather than adding it
+        IMAGE_REL_PPC_NEG = 0x0100,
+        /// fix branch prediction bit to predict branch taken
+        IMAGE_REL_PPC_BRTAKEN = 0x0200,
+        /// fix branch prediction bit to predict branch not taken
+        IMAGE_REL_PPC_BRNTAKEN = 0x0400,
+        /// toc slot defined in file (or, data in toc)
+        IMAGE_REL_PPC_TOCDEFN = 0x0800,
+    }
+}
 
 //
 // Hitachi SH3 relocation types.
 //
-/// No relocation
-pub const IMAGE_REL_SH3_ABSOLUTE: u16 = 0x0000;
-/// 16 bit direct
-pub const IMAGE_REL_SH3_DIRECT16: u16 = 0x0001;
-/// 32 bit direct
-pub const IMAGE_REL_SH3_DIRECT32: u16 = 0x0002;
-/// 8 bit direct, -128..255
-pub const IMAGE_REL_SH3_DIRECT8: u16 = 0x0003;
-/// 8 bit direct .W (0 ext.)
-pub const IMAGE_REL_SH3_DIRECT8_WORD: u16 = 0x0004;
-/// 8 bit direct .L (0 ext.)
-pub const IMAGE_REL_SH3_DIRECT8_LONG: u16 = 0x0005;
-/// 4 bit direct (0 ext.)
-pub const IMAGE_REL_SH3_DIRECT4: u16 = 0x0006;
-/// 4 bit direct .W (0 ext.)
-pub const IMAGE_REL_SH3_DIRECT4_WORD: u16 = 0x0007;
-/// 4 bit direct .L (0 ext.)
-pub const IMAGE_REL_SH3_DIRECT4_LONG: u16 = 0x0008;
-/// 8 bit PC relative .W
-pub const IMAGE_REL_SH3_PCREL8_WORD: u16 = 0x0009;
-/// 8 bit PC relative .L
-pub const IMAGE_REL_SH3_PCREL8_LONG: u16 = 0x000A;
-/// 12 LSB PC relative .W
-pub const IMAGE_REL_SH3_PCREL12_WORD: u16 = 0x000B;
-/// Start of EXE section
-pub const IMAGE_REL_SH3_STARTOF_SECTION: u16 = 0x000C;
-/// Size of EXE section
-pub const IMAGE_REL_SH3_SIZEOF_SECTION: u16 = 0x000D;
-/// Section table index
-pub const IMAGE_REL_SH3_SECTION: u16 = 0x000E;
-/// Offset within section
-pub const IMAGE_REL_SH3_SECREL: u16 = 0x000F;
-/// 32 bit direct not based
-pub const IMAGE_REL_SH3_DIRECT32_NB: u16 = 0x0010;
-/// GP-relative addressing
-pub const IMAGE_REL_SH3_GPREL4_LONG: u16 = 0x0011;
-/// clr token
-pub const IMAGE_REL_SH3_TOKEN: u16 = 0x0012;
-/// Offset from current instruction in longwords
-/// if not NOMODE, insert the inverse of the low bit at bit 32 to select PTA/PTB
-pub const IMAGE_REL_SHM_PCRELPT: u16 = 0x0013;
-/// Low bits of 32-bit address
-pub const IMAGE_REL_SHM_REFLO: u16 = 0x0014;
-/// High bits of 32-bit address
-pub const IMAGE_REL_SHM_REFHALF: u16 = 0x0015;
-/// Low bits of relative reference
-pub const IMAGE_REL_SHM_RELLO: u16 = 0x0016;
-/// High bits of relative reference
-pub const IMAGE_REL_SHM_RELHALF: u16 = 0x0017;
-/// offset operand for relocation
-pub const IMAGE_REL_SHM_PAIR: u16 = 0x0018;
+constants! {
+    struct Sh(Base);
+    flags rel: u16 {
+        !IMAGE_REL_SH_NOMODE => {
+            /// No relocation
+            IMAGE_REL_SH3_ABSOLUTE = 0x0000,
+            /// 16 bit direct
+            IMAGE_REL_SH3_DIRECT16 = 0x0001,
+            /// 32 bit direct
+            IMAGE_REL_SH3_DIRECT32 = 0x0002,
+            /// 8 bit direct, -128..255
+            IMAGE_REL_SH3_DIRECT8 = 0x0003,
+            /// 8 bit direct .W (0 ext.)
+            IMAGE_REL_SH3_DIRECT8_WORD = 0x0004,
+            /// 8 bit direct .L (0 ext.)
+            IMAGE_REL_SH3_DIRECT8_LONG = 0x0005,
+            /// 4 bit direct (0 ext.)
+            IMAGE_REL_SH3_DIRECT4 = 0x0006,
+            /// 4 bit direct .W (0 ext.)
+            IMAGE_REL_SH3_DIRECT4_WORD = 0x0007,
+            /// 4 bit direct .L (0 ext.)
+            IMAGE_REL_SH3_DIRECT4_LONG = 0x0008,
+            /// 8 bit PC relative .W
+            IMAGE_REL_SH3_PCREL8_WORD = 0x0009,
+            /// 8 bit PC relative .L
+            IMAGE_REL_SH3_PCREL8_LONG = 0x000A,
+            /// 12 LSB PC relative .W
+            IMAGE_REL_SH3_PCREL12_WORD = 0x000B,
+            /// Start of EXE section
+            IMAGE_REL_SH3_STARTOF_SECTION = 0x000C,
+            /// Size of EXE section
+            IMAGE_REL_SH3_SIZEOF_SECTION = 0x000D,
+            /// Section table index
+            IMAGE_REL_SH3_SECTION = 0x000E,
+            /// Offset within section
+            IMAGE_REL_SH3_SECREL = 0x000F,
+            /// 32 bit direct not based
+            IMAGE_REL_SH3_DIRECT32_NB = 0x0010,
+            /// GP-relative addressing
+            IMAGE_REL_SH3_GPREL4_LONG = 0x0011,
+            /// clr token
+            IMAGE_REL_SH3_TOKEN = 0x0012,
+            /// Offset from current instruction in longwords
+            /// if not NOMODE, insert the inverse of the low bit at bit 32 to select PTA/PTB
+            IMAGE_REL_SHM_PCRELPT = 0x0013,
+            /// Low bits of 32-bit address
+            IMAGE_REL_SHM_REFLO = 0x0014,
+            /// High bits of 32-bit address
+            IMAGE_REL_SHM_REFHALF = 0x0015,
+            /// Low bits of relative reference
+            IMAGE_REL_SHM_RELLO = 0x0016,
+            /// High bits of relative reference
+            IMAGE_REL_SHM_RELHALF = 0x0017,
+            /// offset operand for relocation
+            IMAGE_REL_SHM_PAIR = 0x0018,
+        },
+        /// relocation ignores section mode
+        IMAGE_REL_SH_NOMODE = 0x8000,
+    }
+    consts rel_based: u16 {
+        IMAGE_REL_BASED_ARM_MOV32 = 5,
+        IMAGE_REL_BASED_THUMB_MOV32 = 7,
+    }
+}
 
-/// relocation ignores section mode
-pub const IMAGE_REL_SH_NOMODE: u16 = 0x8000;
+constants! {
+    struct Arm(Base);
+    flags rel: u16 {
+        !0 => {
+            /// No relocation required
+            IMAGE_REL_ARM_ABSOLUTE = 0x0000,
+            /// 32 bit address
+            IMAGE_REL_ARM_ADDR32 = 0x0001,
+            /// 32 bit address w/o image base
+            IMAGE_REL_ARM_ADDR32NB = 0x0002,
+            /// 24 bit offset << 2 & sign ext.
+            IMAGE_REL_ARM_BRANCH24 = 0x0003,
+            /// Thumb: 2 11 bit offsets
+            IMAGE_REL_ARM_BRANCH11 = 0x0004,
+            /// clr token
+            IMAGE_REL_ARM_TOKEN = 0x0005,
+            /// GP-relative addressing (ARM)
+            IMAGE_REL_ARM_GPREL12 = 0x0006,
+            /// GP-relative addressing (Thumb)
+            IMAGE_REL_ARM_GPREL7 = 0x0007,
+            IMAGE_REL_ARM_BLX24 = 0x0008,
+            IMAGE_REL_ARM_BLX11 = 0x0009,
+            /// 32-bit relative address from byte following reloc
+            IMAGE_REL_ARM_REL32 = 0x000A,
+            /// Section table index
+            IMAGE_REL_ARM_SECTION = 0x000E,
+            /// Offset within section
+            IMAGE_REL_ARM_SECREL = 0x000F,
+            /// ARM: MOVW/MOVT
+            IMAGE_REL_ARM_MOV32A = 0x0010,
+            /// ARM: MOVW/MOVT (deprecated)
+            IMAGE_REL_ARM_MOV32 = 0x0010,
+            /// Thumb: MOVW/MOVT
+            IMAGE_REL_ARM_MOV32T = 0x0011,
+            /// Thumb: MOVW/MOVT (deprecated)
+            IMAGE_REL_THUMB_MOV32 = 0x0011,
+            /// Thumb: 32-bit conditional B
+            IMAGE_REL_ARM_BRANCH20T = 0x0012,
+            /// Thumb: 32-bit conditional B (deprecated)
+            IMAGE_REL_THUMB_BRANCH20 = 0x0012,
+            /// Thumb: 32-bit B or BL
+            IMAGE_REL_ARM_BRANCH24T = 0x0014,
+            /// Thumb: 32-bit B or BL (deprecated)
+            IMAGE_REL_THUMB_BRANCH24 = 0x0014,
+            /// Thumb: BLX immediate
+            IMAGE_REL_ARM_BLX23T = 0x0015,
+            /// Thumb: BLX immediate (deprecated)
+            IMAGE_REL_THUMB_BLX23 = 0x0015,
+        },
+    }
+}
 
-/// No relocation required
-pub const IMAGE_REL_ARM_ABSOLUTE: u16 = 0x0000;
-/// 32 bit address
-pub const IMAGE_REL_ARM_ADDR32: u16 = 0x0001;
-/// 32 bit address w/o image base
-pub const IMAGE_REL_ARM_ADDR32NB: u16 = 0x0002;
-/// 24 bit offset << 2 & sign ext.
-pub const IMAGE_REL_ARM_BRANCH24: u16 = 0x0003;
-/// Thumb: 2 11 bit offsets
-pub const IMAGE_REL_ARM_BRANCH11: u16 = 0x0004;
-/// clr token
-pub const IMAGE_REL_ARM_TOKEN: u16 = 0x0005;
-/// GP-relative addressing (ARM)
-pub const IMAGE_REL_ARM_GPREL12: u16 = 0x0006;
-/// GP-relative addressing (Thumb)
-pub const IMAGE_REL_ARM_GPREL7: u16 = 0x0007;
-pub const IMAGE_REL_ARM_BLX24: u16 = 0x0008;
-pub const IMAGE_REL_ARM_BLX11: u16 = 0x0009;
-/// 32-bit relative address from byte following reloc
-pub const IMAGE_REL_ARM_REL32: u16 = 0x000A;
-/// Section table index
-pub const IMAGE_REL_ARM_SECTION: u16 = 0x000E;
-/// Offset within section
-pub const IMAGE_REL_ARM_SECREL: u16 = 0x000F;
-/// ARM: MOVW/MOVT
-pub const IMAGE_REL_ARM_MOV32A: u16 = 0x0010;
-/// ARM: MOVW/MOVT (deprecated)
-pub const IMAGE_REL_ARM_MOV32: u16 = 0x0010;
-/// Thumb: MOVW/MOVT
-pub const IMAGE_REL_ARM_MOV32T: u16 = 0x0011;
-/// Thumb: MOVW/MOVT (deprecated)
-pub const IMAGE_REL_THUMB_MOV32: u16 = 0x0011;
-/// Thumb: 32-bit conditional B
-pub const IMAGE_REL_ARM_BRANCH20T: u16 = 0x0012;
-/// Thumb: 32-bit conditional B (deprecated)
-pub const IMAGE_REL_THUMB_BRANCH20: u16 = 0x0012;
-/// Thumb: 32-bit B or BL
-pub const IMAGE_REL_ARM_BRANCH24T: u16 = 0x0014;
-/// Thumb: 32-bit B or BL (deprecated)
-pub const IMAGE_REL_THUMB_BRANCH24: u16 = 0x0014;
-/// Thumb: BLX immediate
-pub const IMAGE_REL_ARM_BLX23T: u16 = 0x0015;
-/// Thumb: BLX immediate (deprecated)
-pub const IMAGE_REL_THUMB_BLX23: u16 = 0x0015;
-
-pub const IMAGE_REL_AM_ABSOLUTE: u16 = 0x0000;
-pub const IMAGE_REL_AM_ADDR32: u16 = 0x0001;
-pub const IMAGE_REL_AM_ADDR32NB: u16 = 0x0002;
-pub const IMAGE_REL_AM_CALL32: u16 = 0x0003;
-pub const IMAGE_REL_AM_FUNCINFO: u16 = 0x0004;
-pub const IMAGE_REL_AM_REL32_1: u16 = 0x0005;
-pub const IMAGE_REL_AM_REL32_2: u16 = 0x0006;
-pub const IMAGE_REL_AM_SECREL: u16 = 0x0007;
-pub const IMAGE_REL_AM_SECTION: u16 = 0x0008;
-pub const IMAGE_REL_AM_TOKEN: u16 = 0x0009;
+constants! {
+    struct Am(Base);
+    flags rel: u16 {
+        !0 => {
+            IMAGE_REL_AM_ABSOLUTE = 0x0000,
+            IMAGE_REL_AM_ADDR32 = 0x0001,
+            IMAGE_REL_AM_ADDR32NB = 0x0002,
+            IMAGE_REL_AM_CALL32 = 0x0003,
+            IMAGE_REL_AM_FUNCINFO = 0x0004,
+            IMAGE_REL_AM_REL32_1 = 0x0005,
+            IMAGE_REL_AM_REL32_2 = 0x0006,
+            IMAGE_REL_AM_SECREL = 0x0007,
+            IMAGE_REL_AM_SECTION = 0x0008,
+            IMAGE_REL_AM_TOKEN = 0x0009,
+        },
+    }
+}
 
 //
 // ARM64 relocations types.
 //
 
-/// No relocation required
-pub const IMAGE_REL_ARM64_ABSOLUTE: u16 = 0x0000;
-/// 32 bit address. Review! do we need it?
-pub const IMAGE_REL_ARM64_ADDR32: u16 = 0x0001;
-/// 32 bit address w/o image base (RVA: for Data/PData/XData)
-pub const IMAGE_REL_ARM64_ADDR32NB: u16 = 0x0002;
-/// 26 bit offset << 2 & sign ext. for B & BL
-pub const IMAGE_REL_ARM64_BRANCH26: u16 = 0x0003;
-/// ADRP
-pub const IMAGE_REL_ARM64_PAGEBASE_REL21: u16 = 0x0004;
-/// ADR
-pub const IMAGE_REL_ARM64_REL21: u16 = 0x0005;
-/// ADD/ADDS (immediate) with zero shift, for page offset
-pub const IMAGE_REL_ARM64_PAGEOFFSET_12A: u16 = 0x0006;
-/// LDR (indexed, unsigned immediate), for page offset
-pub const IMAGE_REL_ARM64_PAGEOFFSET_12L: u16 = 0x0007;
-/// Offset within section
-pub const IMAGE_REL_ARM64_SECREL: u16 = 0x0008;
-/// ADD/ADDS (immediate) with zero shift, for bit 0:11 of section offset
-pub const IMAGE_REL_ARM64_SECREL_LOW12A: u16 = 0x0009;
-/// ADD/ADDS (immediate) with zero shift, for bit 12:23 of section offset
-pub const IMAGE_REL_ARM64_SECREL_HIGH12A: u16 = 0x000A;
-/// LDR (indexed, unsigned immediate), for bit 0:11 of section offset
-pub const IMAGE_REL_ARM64_SECREL_LOW12L: u16 = 0x000B;
-pub const IMAGE_REL_ARM64_TOKEN: u16 = 0x000C;
-/// Section table index
-pub const IMAGE_REL_ARM64_SECTION: u16 = 0x000D;
-/// 64 bit address
-pub const IMAGE_REL_ARM64_ADDR64: u16 = 0x000E;
-/// 19 bit offset << 2 & sign ext. for conditional B
-pub const IMAGE_REL_ARM64_BRANCH19: u16 = 0x000F;
-/// TBZ/TBNZ
-pub const IMAGE_REL_ARM64_BRANCH14: u16 = 0x0010;
-/// 32-bit relative address from byte following reloc
-pub const IMAGE_REL_ARM64_REL32: u16 = 0x0011;
+constants! {
+    struct Arm64(Base);
+    flags rel: u16 {
+        !0 => {
+            /// No relocation required
+            IMAGE_REL_ARM64_ABSOLUTE = 0x0000,
+            /// 32 bit address. Review! do we need it?
+            IMAGE_REL_ARM64_ADDR32 = 0x0001,
+            /// 32 bit address w/o image base (RVA: for Data/PData/XData)
+            IMAGE_REL_ARM64_ADDR32NB = 0x0002,
+            /// 26 bit offset << 2 & sign ext. for B & BL
+            IMAGE_REL_ARM64_BRANCH26 = 0x0003,
+            /// ADRP
+            IMAGE_REL_ARM64_PAGEBASE_REL21 = 0x0004,
+            /// ADR
+            IMAGE_REL_ARM64_REL21 = 0x0005,
+            /// ADD/ADDS (immediate) with zero shift, for page offset
+            IMAGE_REL_ARM64_PAGEOFFSET_12A = 0x0006,
+            /// LDR (indexed, unsigned immediate), for page offset
+            IMAGE_REL_ARM64_PAGEOFFSET_12L = 0x0007,
+            /// Offset within section
+            IMAGE_REL_ARM64_SECREL = 0x0008,
+            /// ADD/ADDS (immediate) with zero shift, for bit 0:11 of section offset
+            IMAGE_REL_ARM64_SECREL_LOW12A = 0x0009,
+            /// ADD/ADDS (immediate) with zero shift, for bit 12:23 of section offset
+            IMAGE_REL_ARM64_SECREL_HIGH12A = 0x000A,
+            /// LDR (indexed, unsigned immediate), for bit 0:11 of section offset
+            IMAGE_REL_ARM64_SECREL_LOW12L = 0x000B,
+            IMAGE_REL_ARM64_TOKEN = 0x000C,
+            /// Section table index
+            IMAGE_REL_ARM64_SECTION = 0x000D,
+            /// 64 bit address
+            IMAGE_REL_ARM64_ADDR64 = 0x000E,
+            /// 19 bit offset << 2 & sign ext. for conditional B
+            IMAGE_REL_ARM64_BRANCH19 = 0x000F,
+            /// TBZ/TBNZ
+            IMAGE_REL_ARM64_BRANCH14 = 0x0010,
+            /// 32-bit relative address from byte following reloc
+            IMAGE_REL_ARM64_REL32 = 0x0011,
+        },
+    }
+}
 
 //
 // x64 relocations
 //
-/// Reference is absolute, no relocation is necessary
-pub const IMAGE_REL_AMD64_ABSOLUTE: u16 = 0x0000;
-/// 64-bit address (VA).
-pub const IMAGE_REL_AMD64_ADDR64: u16 = 0x0001;
-/// 32-bit address (VA).
-pub const IMAGE_REL_AMD64_ADDR32: u16 = 0x0002;
-/// 32-bit address w/o image base (RVA).
-pub const IMAGE_REL_AMD64_ADDR32NB: u16 = 0x0003;
-/// 32-bit relative address from byte following reloc
-pub const IMAGE_REL_AMD64_REL32: u16 = 0x0004;
-/// 32-bit relative address from byte distance 1 from reloc
-pub const IMAGE_REL_AMD64_REL32_1: u16 = 0x0005;
-/// 32-bit relative address from byte distance 2 from reloc
-pub const IMAGE_REL_AMD64_REL32_2: u16 = 0x0006;
-/// 32-bit relative address from byte distance 3 from reloc
-pub const IMAGE_REL_AMD64_REL32_3: u16 = 0x0007;
-/// 32-bit relative address from byte distance 4 from reloc
-pub const IMAGE_REL_AMD64_REL32_4: u16 = 0x0008;
-/// 32-bit relative address from byte distance 5 from reloc
-pub const IMAGE_REL_AMD64_REL32_5: u16 = 0x0009;
-/// Section index
-pub const IMAGE_REL_AMD64_SECTION: u16 = 0x000A;
-/// 32 bit offset from base of section containing target
-pub const IMAGE_REL_AMD64_SECREL: u16 = 0x000B;
-/// 7 bit unsigned offset from base of section containing target
-pub const IMAGE_REL_AMD64_SECREL7: u16 = 0x000C;
-/// 32 bit metadata token
-pub const IMAGE_REL_AMD64_TOKEN: u16 = 0x000D;
-/// 32 bit signed span-dependent value emitted into object
-pub const IMAGE_REL_AMD64_SREL32: u16 = 0x000E;
-pub const IMAGE_REL_AMD64_PAIR: u16 = 0x000F;
-/// 32 bit signed span-dependent value applied at link time
-pub const IMAGE_REL_AMD64_SSPAN32: u16 = 0x0010;
-pub const IMAGE_REL_AMD64_EHANDLER: u16 = 0x0011;
-/// Indirect branch to an import
-pub const IMAGE_REL_AMD64_IMPORT_BR: u16 = 0x0012;
-/// Indirect call to an import
-pub const IMAGE_REL_AMD64_IMPORT_CALL: u16 = 0x0013;
-/// Indirect branch to a CFG check
-pub const IMAGE_REL_AMD64_CFG_BR: u16 = 0x0014;
-/// Indirect branch to a CFG check, with REX.W prefix
-pub const IMAGE_REL_AMD64_CFG_BR_REX: u16 = 0x0015;
-/// Indirect call to a CFG check
-pub const IMAGE_REL_AMD64_CFG_CALL: u16 = 0x0016;
-/// Indirect branch to a target in RAX (no CFG)
-pub const IMAGE_REL_AMD64_INDIR_BR: u16 = 0x0017;
-/// Indirect branch to a target in RAX, with REX.W prefix (no CFG)
-pub const IMAGE_REL_AMD64_INDIR_BR_REX: u16 = 0x0018;
-/// Indirect call to a target in RAX (no CFG)
-pub const IMAGE_REL_AMD64_INDIR_CALL: u16 = 0x0019;
-/// Indirect branch for a switch table using Reg 0 (RAX)
-pub const IMAGE_REL_AMD64_INDIR_BR_SWITCHTABLE_FIRST: u16 = 0x0020;
-/// Indirect branch for a switch table using Reg 15 (R15)
-pub const IMAGE_REL_AMD64_INDIR_BR_SWITCHTABLE_LAST: u16 = 0x002F;
+constants! {
+    struct Amd64(Base);
+    flags rel: u16 {
+        !0 => {
+            /// Reference is absolute, no relocation is necessary
+            IMAGE_REL_AMD64_ABSOLUTE = 0x0000,
+            /// 64-bit address (VA).
+            IMAGE_REL_AMD64_ADDR64 = 0x0001,
+            /// 32-bit address (VA).
+            IMAGE_REL_AMD64_ADDR32 = 0x0002,
+            /// 32-bit address w/o image base (RVA).
+            IMAGE_REL_AMD64_ADDR32NB = 0x0003,
+            /// 32-bit relative address from byte following reloc
+            IMAGE_REL_AMD64_REL32 = 0x0004,
+            /// 32-bit relative address from byte distance 1 from reloc
+            IMAGE_REL_AMD64_REL32_1 = 0x0005,
+            /// 32-bit relative address from byte distance 2 from reloc
+            IMAGE_REL_AMD64_REL32_2 = 0x0006,
+            /// 32-bit relative address from byte distance 3 from reloc
+            IMAGE_REL_AMD64_REL32_3 = 0x0007,
+            /// 32-bit relative address from byte distance 4 from reloc
+            IMAGE_REL_AMD64_REL32_4 = 0x0008,
+            /// 32-bit relative address from byte distance 5 from reloc
+            IMAGE_REL_AMD64_REL32_5 = 0x0009,
+            /// Section index
+            IMAGE_REL_AMD64_SECTION = 0x000A,
+            /// 32 bit offset from base of section containing target
+            IMAGE_REL_AMD64_SECREL = 0x000B,
+            /// 7 bit unsigned offset from base of section containing target
+            IMAGE_REL_AMD64_SECREL7 = 0x000C,
+            /// 32 bit metadata token
+            IMAGE_REL_AMD64_TOKEN = 0x000D,
+            /// 32 bit signed span-dependent value emitted into object
+            IMAGE_REL_AMD64_SREL32 = 0x000E,
+            IMAGE_REL_AMD64_PAIR = 0x000F,
+            /// 32 bit signed span-dependent value applied at link time
+            IMAGE_REL_AMD64_SSPAN32 = 0x0010,
+            IMAGE_REL_AMD64_EHANDLER = 0x0011,
+            /// Indirect branch to an import
+            IMAGE_REL_AMD64_IMPORT_BR = 0x0012,
+            /// Indirect call to an import
+            IMAGE_REL_AMD64_IMPORT_CALL = 0x0013,
+            /// Indirect branch to a CFG check
+            IMAGE_REL_AMD64_CFG_BR = 0x0014,
+            /// Indirect branch to a CFG check, with REX.W prefix
+            IMAGE_REL_AMD64_CFG_BR_REX = 0x0015,
+            /// Indirect call to a CFG check
+            IMAGE_REL_AMD64_CFG_CALL = 0x0016,
+            /// Indirect branch to a target in RAX (no CFG)
+            IMAGE_REL_AMD64_INDIR_BR = 0x0017,
+            /// Indirect branch to a target in RAX, with REX.W prefix (no CFG)
+            IMAGE_REL_AMD64_INDIR_BR_REX = 0x0018,
+            /// Indirect call to a target in RAX (no CFG)
+            IMAGE_REL_AMD64_INDIR_CALL = 0x0019,
+            /// Indirect branch for a switch table using Reg 0 (RAX)
+            IMAGE_REL_AMD64_INDIR_BR_SWITCHTABLE_FIRST = 0x0020,
+            /// Indirect branch for a switch table using Reg 15 (R15)
+            IMAGE_REL_AMD64_INDIR_BR_SWITCHTABLE_LAST = 0x002F,
+        },
+    }
+    consts rel_based: u16 {
+        IMAGE_REL_BASED_IA64_IMM64 = 9,
+    }
+}
 
 //
 // IA64 relocation types.
 //
-pub const IMAGE_REL_IA64_ABSOLUTE: u16 = 0x0000;
-pub const IMAGE_REL_IA64_IMM14: u16 = 0x0001;
-pub const IMAGE_REL_IA64_IMM22: u16 = 0x0002;
-pub const IMAGE_REL_IA64_IMM64: u16 = 0x0003;
-pub const IMAGE_REL_IA64_DIR32: u16 = 0x0004;
-pub const IMAGE_REL_IA64_DIR64: u16 = 0x0005;
-pub const IMAGE_REL_IA64_PCREL21B: u16 = 0x0006;
-pub const IMAGE_REL_IA64_PCREL21M: u16 = 0x0007;
-pub const IMAGE_REL_IA64_PCREL21F: u16 = 0x0008;
-pub const IMAGE_REL_IA64_GPREL22: u16 = 0x0009;
-pub const IMAGE_REL_IA64_LTOFF22: u16 = 0x000A;
-pub const IMAGE_REL_IA64_SECTION: u16 = 0x000B;
-pub const IMAGE_REL_IA64_SECREL22: u16 = 0x000C;
-pub const IMAGE_REL_IA64_SECREL64I: u16 = 0x000D;
-pub const IMAGE_REL_IA64_SECREL32: u16 = 0x000E;
-//
-pub const IMAGE_REL_IA64_DIR32NB: u16 = 0x0010;
-pub const IMAGE_REL_IA64_SREL14: u16 = 0x0011;
-pub const IMAGE_REL_IA64_SREL22: u16 = 0x0012;
-pub const IMAGE_REL_IA64_SREL32: u16 = 0x0013;
-pub const IMAGE_REL_IA64_UREL32: u16 = 0x0014;
-/// This is always a BRL and never converted
-pub const IMAGE_REL_IA64_PCREL60X: u16 = 0x0015;
-/// If possible, convert to MBB bundle with NOP.B in slot 1
-pub const IMAGE_REL_IA64_PCREL60B: u16 = 0x0016;
-/// If possible, convert to MFB bundle with NOP.F in slot 1
-pub const IMAGE_REL_IA64_PCREL60F: u16 = 0x0017;
-/// If possible, convert to MIB bundle with NOP.I in slot 1
-pub const IMAGE_REL_IA64_PCREL60I: u16 = 0x0018;
-/// If possible, convert to MMB bundle with NOP.M in slot 1
-pub const IMAGE_REL_IA64_PCREL60M: u16 = 0x0019;
-pub const IMAGE_REL_IA64_IMMGPREL64: u16 = 0x001A;
-/// clr token
-pub const IMAGE_REL_IA64_TOKEN: u16 = 0x001B;
-pub const IMAGE_REL_IA64_GPREL32: u16 = 0x001C;
-pub const IMAGE_REL_IA64_ADDEND: u16 = 0x001F;
+constants! {
+    struct Ia64(Base);
+    flags rel: u16 {
+        !0 => {
+            IMAGE_REL_IA64_ABSOLUTE = 0x0000,
+            IMAGE_REL_IA64_IMM14 = 0x0001,
+            IMAGE_REL_IA64_IMM22 = 0x0002,
+            IMAGE_REL_IA64_IMM64 = 0x0003,
+            IMAGE_REL_IA64_DIR32 = 0x0004,
+            IMAGE_REL_IA64_DIR64 = 0x0005,
+            IMAGE_REL_IA64_PCREL21B = 0x0006,
+            IMAGE_REL_IA64_PCREL21M = 0x0007,
+            IMAGE_REL_IA64_PCREL21F = 0x0008,
+            IMAGE_REL_IA64_GPREL22 = 0x0009,
+            IMAGE_REL_IA64_LTOFF22 = 0x000A,
+            IMAGE_REL_IA64_SECTION = 0x000B,
+            IMAGE_REL_IA64_SECREL22 = 0x000C,
+            IMAGE_REL_IA64_SECREL64I = 0x000D,
+            IMAGE_REL_IA64_SECREL32 = 0x000E,
+            //
+            IMAGE_REL_IA64_DIR32NB = 0x0010,
+            IMAGE_REL_IA64_SREL14 = 0x0011,
+            IMAGE_REL_IA64_SREL22 = 0x0012,
+            IMAGE_REL_IA64_SREL32 = 0x0013,
+            IMAGE_REL_IA64_UREL32 = 0x0014,
+            /// This is always a BRL and never converted
+            IMAGE_REL_IA64_PCREL60X = 0x0015,
+            /// If possible, convert to MBB bundle with NOP.B in slot 1
+            IMAGE_REL_IA64_PCREL60B = 0x0016,
+            /// If possible, convert to MFB bundle with NOP.F in slot 1
+            IMAGE_REL_IA64_PCREL60F = 0x0017,
+            /// If possible, convert to MIB bundle with NOP.I in slot 1
+            IMAGE_REL_IA64_PCREL60I = 0x0018,
+            /// If possible, convert to MMB bundle with NOP.M in slot 1
+            IMAGE_REL_IA64_PCREL60M = 0x0019,
+            IMAGE_REL_IA64_IMMGPREL64 = 0x001A,
+            /// clr token
+            IMAGE_REL_IA64_TOKEN = 0x001B,
+            IMAGE_REL_IA64_GPREL32 = 0x001C,
+            IMAGE_REL_IA64_ADDEND = 0x001F,
+        },
+    }
+}
 
 //
 // CEF relocation types.
 //
-/// Reference is absolute, no relocation is necessary
-pub const IMAGE_REL_CEF_ABSOLUTE: u16 = 0x0000;
-/// 32-bit address (VA).
-pub const IMAGE_REL_CEF_ADDR32: u16 = 0x0001;
-/// 64-bit address (VA).
-pub const IMAGE_REL_CEF_ADDR64: u16 = 0x0002;
-/// 32-bit address w/o image base (RVA).
-pub const IMAGE_REL_CEF_ADDR32NB: u16 = 0x0003;
-/// Section index
-pub const IMAGE_REL_CEF_SECTION: u16 = 0x0004;
-/// 32 bit offset from base of section containing target
-pub const IMAGE_REL_CEF_SECREL: u16 = 0x0005;
-/// 32 bit metadata token
-pub const IMAGE_REL_CEF_TOKEN: u16 = 0x0006;
+constants! {
+    struct Cef(Base);
+    flags rel: u16 {
+        !0 => {
+            /// Reference is absolute, no relocation is necessary
+            IMAGE_REL_CEF_ABSOLUTE = 0x0000,
+            /// 32-bit address (VA).
+            IMAGE_REL_CEF_ADDR32 = 0x0001,
+            /// 64-bit address (VA).
+            IMAGE_REL_CEF_ADDR64 = 0x0002,
+            /// 32-bit address w/o image base (RVA).
+            IMAGE_REL_CEF_ADDR32NB = 0x0003,
+            /// Section index
+            IMAGE_REL_CEF_SECTION = 0x0004,
+            /// 32 bit offset from base of section containing target
+            IMAGE_REL_CEF_SECREL = 0x0005,
+            /// 32 bit metadata token
+            IMAGE_REL_CEF_TOKEN = 0x0006,
+        },
+    }
+}
 
 //
 // clr relocation types.
 //
-/// Reference is absolute, no relocation is necessary
-pub const IMAGE_REL_CEE_ABSOLUTE: u16 = 0x0000;
-/// 32-bit address (VA).
-pub const IMAGE_REL_CEE_ADDR32: u16 = 0x0001;
-/// 64-bit address (VA).
-pub const IMAGE_REL_CEE_ADDR64: u16 = 0x0002;
-/// 32-bit address w/o image base (RVA).
-pub const IMAGE_REL_CEE_ADDR32NB: u16 = 0x0003;
-/// Section index
-pub const IMAGE_REL_CEE_SECTION: u16 = 0x0004;
-/// 32 bit offset from base of section containing target
-pub const IMAGE_REL_CEE_SECREL: u16 = 0x0005;
-/// 32 bit metadata token
-pub const IMAGE_REL_CEE_TOKEN: u16 = 0x0006;
+constants! {
+    struct Cee(Base);
+    flags rel: u16 {
+        !0 => {
+            /// Reference is absolute, no relocation is necessary
+            IMAGE_REL_CEE_ABSOLUTE = 0x0000,
+            /// 32-bit address (VA).
+            IMAGE_REL_CEE_ADDR32 = 0x0001,
+            /// 64-bit address (VA).
+            IMAGE_REL_CEE_ADDR64 = 0x0002,
+            /// 32-bit address w/o image base (RVA).
+            IMAGE_REL_CEE_ADDR32NB = 0x0003,
+            /// Section index
+            IMAGE_REL_CEE_SECTION = 0x0004,
+            /// 32 bit offset from base of section containing target
+            IMAGE_REL_CEE_SECREL = 0x0005,
+            /// 32 bit metadata token
+            IMAGE_REL_CEE_TOKEN = 0x0006,
+        },
+    }
+}
 
-/// No relocation required
-pub const IMAGE_REL_M32R_ABSOLUTE: u16 = 0x0000;
-/// 32 bit address
-pub const IMAGE_REL_M32R_ADDR32: u16 = 0x0001;
-/// 32 bit address w/o image base
-pub const IMAGE_REL_M32R_ADDR32NB: u16 = 0x0002;
-/// 24 bit address
-pub const IMAGE_REL_M32R_ADDR24: u16 = 0x0003;
-/// GP relative addressing
-pub const IMAGE_REL_M32R_GPREL16: u16 = 0x0004;
-/// 24 bit offset << 2 & sign ext.
-pub const IMAGE_REL_M32R_PCREL24: u16 = 0x0005;
-/// 16 bit offset << 2 & sign ext.
-pub const IMAGE_REL_M32R_PCREL16: u16 = 0x0006;
-/// 8 bit offset << 2 & sign ext.
-pub const IMAGE_REL_M32R_PCREL8: u16 = 0x0007;
-/// 16 MSBs
-pub const IMAGE_REL_M32R_REFHALF: u16 = 0x0008;
-/// 16 MSBs; adj for LSB sign ext.
-pub const IMAGE_REL_M32R_REFHI: u16 = 0x0009;
-/// 16 LSBs
-pub const IMAGE_REL_M32R_REFLO: u16 = 0x000A;
-/// Link HI and LO
-pub const IMAGE_REL_M32R_PAIR: u16 = 0x000B;
-/// Section table index
-pub const IMAGE_REL_M32R_SECTION: u16 = 0x000C;
-/// 32 bit section relative reference
-pub const IMAGE_REL_M32R_SECREL32: u16 = 0x000D;
-/// clr token
-pub const IMAGE_REL_M32R_TOKEN: u16 = 0x000E;
+constants! {
+    struct M32r(Base);
+    flags rel: u16 {
+        !0 => {
+            /// No relocation required
+            IMAGE_REL_M32R_ABSOLUTE = 0x0000,
+            /// 32 bit address
+            IMAGE_REL_M32R_ADDR32 = 0x0001,
+            /// 32 bit address w/o image base
+            IMAGE_REL_M32R_ADDR32NB = 0x0002,
+            /// 24 bit address
+            IMAGE_REL_M32R_ADDR24 = 0x0003,
+            /// GP relative addressing
+            IMAGE_REL_M32R_GPREL16 = 0x0004,
+            /// 24 bit offset << 2 & sign ext.
+            IMAGE_REL_M32R_PCREL24 = 0x0005,
+            /// 16 bit offset << 2 & sign ext.
+            IMAGE_REL_M32R_PCREL16 = 0x0006,
+            /// 8 bit offset << 2 & sign ext.
+            IMAGE_REL_M32R_PCREL8 = 0x0007,
+            /// 16 MSBs
+            IMAGE_REL_M32R_REFHALF = 0x0008,
+            /// 16 MSBs; adj for LSB sign ext.
+            IMAGE_REL_M32R_REFHI = 0x0009,
+            /// 16 LSBs
+            IMAGE_REL_M32R_REFLO = 0x000A,
+            /// Link HI and LO
+            IMAGE_REL_M32R_PAIR = 0x000B,
+            /// Section table index
+            IMAGE_REL_M32R_SECTION = 0x000C,
+            /// 32 bit section relative reference
+            IMAGE_REL_M32R_SECREL32 = 0x000D,
+            /// clr token
+            IMAGE_REL_M32R_TOKEN = 0x000E,
+        },
+    }
+}
 
-/// No relocation required
-pub const IMAGE_REL_EBC_ABSOLUTE: u16 = 0x0000;
-/// 32 bit address w/o image base
-pub const IMAGE_REL_EBC_ADDR32NB: u16 = 0x0001;
-/// 32-bit relative address from byte following reloc
-pub const IMAGE_REL_EBC_REL32: u16 = 0x0002;
-/// Section table index
-pub const IMAGE_REL_EBC_SECTION: u16 = 0x0003;
-/// Offset within section
-pub const IMAGE_REL_EBC_SECREL: u16 = 0x0004;
+constants! {
+    struct Ebc(Base);
+    flags rel: u16 {
+        !0 => {
+            /// No relocation required
+            IMAGE_REL_EBC_ABSOLUTE = 0x0000,
+            /// 32 bit address w/o image base
+            IMAGE_REL_EBC_ADDR32NB = 0x0001,
+            /// 32-bit relative address from byte following reloc
+            IMAGE_REL_EBC_REL32 = 0x0002,
+            /// Section table index
+            IMAGE_REL_EBC_SECTION = 0x0003,
+            /// Offset within section
+            IMAGE_REL_EBC_SECREL = 0x0004,
+        },
+    }
+}
+
+constants! {
+    struct Riscv(Base);
+    consts rel_based: u16 {
+        IMAGE_REL_BASED_RISCV_HIGH20 = 5,
+        IMAGE_REL_BASED_RISCV_LOW12I = 7,
+        IMAGE_REL_BASED_RISCV_LOW12S = 8,
+    }
+}
 
 /*
 // TODO?
@@ -1738,33 +1912,21 @@ pub struct ImageBaseRelocation {
 // Based relocation types.
 //
 
-pub const IMAGE_REL_BASED_ABSOLUTE: u16 = 0;
-pub const IMAGE_REL_BASED_HIGH: u16 = 1;
-pub const IMAGE_REL_BASED_LOW: u16 = 2;
-pub const IMAGE_REL_BASED_HIGHLOW: u16 = 3;
-pub const IMAGE_REL_BASED_HIGHADJ: u16 = 4;
-pub const IMAGE_REL_BASED_MACHINE_SPECIFIC_5: u16 = 5;
-pub const IMAGE_REL_BASED_RESERVED: u16 = 6;
-pub const IMAGE_REL_BASED_MACHINE_SPECIFIC_7: u16 = 7;
-pub const IMAGE_REL_BASED_MACHINE_SPECIFIC_8: u16 = 8;
-pub const IMAGE_REL_BASED_MACHINE_SPECIFIC_9: u16 = 9;
-pub const IMAGE_REL_BASED_DIR64: u16 = 10;
-
-//
-// Platform-specific based relocation types.
-//
-
-pub const IMAGE_REL_BASED_IA64_IMM64: u16 = 9;
-
-pub const IMAGE_REL_BASED_MIPS_JMPADDR: u16 = 5;
-pub const IMAGE_REL_BASED_MIPS_JMPADDR16: u16 = 9;
-
-pub const IMAGE_REL_BASED_ARM_MOV32: u16 = 5;
-pub const IMAGE_REL_BASED_THUMB_MOV32: u16 = 7;
-
-pub const IMAGE_REL_BASED_RISCV_HIGH20: u16 = 5;
-pub const IMAGE_REL_BASED_RISCV_LOW12I: u16 = 7;
-pub const IMAGE_REL_BASED_RISCV_LOW12S: u16 = 8;
+constants! {
+    consts rel_based_names: u16 {
+        IMAGE_REL_BASED_ABSOLUTE = 0,
+        IMAGE_REL_BASED_HIGH = 1,
+        IMAGE_REL_BASED_LOW = 2,
+        IMAGE_REL_BASED_HIGHLOW = 3,
+        IMAGE_REL_BASED_HIGHADJ = 4,
+        IMAGE_REL_BASED_MACHINE_SPECIFIC_5 = 5,
+        IMAGE_REL_BASED_RESERVED = 6,
+        IMAGE_REL_BASED_MACHINE_SPECIFIC_7 = 7,
+        IMAGE_REL_BASED_MACHINE_SPECIFIC_8 = 8,
+        IMAGE_REL_BASED_MACHINE_SPECIFIC_9 = 9,
+        IMAGE_REL_BASED_DIR64 = 10,
+    }
+}
 
 //
 // Archive format.
