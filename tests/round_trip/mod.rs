@@ -4,7 +4,7 @@ use object::read::{Object, ObjectSection, ObjectSymbol};
 use object::{read, write, SectionIndex, SubArchitecture};
 use object::{
     Architecture, BinaryFormat, Endianness, RelocationEncoding, RelocationFlags, RelocationKind,
-    SectionKind, SymbolFlags, SymbolKind, SymbolScope, SymbolSection,
+    SectionFlags, SectionKind, SymbolFlags, SymbolKind, SymbolScope, SymbolSection,
 };
 
 mod bss;
@@ -196,6 +196,9 @@ fn elf_x86_64() {
         )
         .unwrap();
 
+    let eh_frame = object.section_id(write::StandardSection::EhFrame);
+    object.append_section_data(eh_frame, &[1; 30], 4);
+
     let bytes = object.write().unwrap();
     let object = read::File::parse(&*bytes).unwrap();
     assert_eq!(object.format(), BinaryFormat::Elf);
@@ -211,8 +214,33 @@ fn elf_x86_64() {
     assert_eq!(text.kind(), SectionKind::Text);
     assert_eq!(text.address(), 0);
     assert_eq!(text.size(), 62);
+    assert_eq!(
+        text.flags(),
+        SectionFlags::Elf {
+            sh_flags: (object::elf::SHF_ALLOC | object::elf::SHF_EXECINSTR).into()
+        }
+    );
     assert_eq!(&text.data().unwrap()[..30], &[1; 30]);
     assert_eq!(&text.data().unwrap()[32..62], &[1; 30]);
+
+    let section = sections.next().unwrap();
+    println!("{:?}", section);
+    assert_eq!(section.name(), Ok(".rela.text"));
+    assert_eq!(section.kind(), SectionKind::Metadata);
+
+    let section = sections.next().unwrap();
+    println!("{:?}", section);
+    assert_eq!(section.name(), Ok(".eh_frame"));
+    assert_eq!(
+        section.kind(),
+        SectionKind::Elf(object::elf::SHT_X86_64_UNWIND)
+    );
+    assert_eq!(
+        section.flags(),
+        SectionFlags::Elf {
+            sh_flags: object::elf::SHF_ALLOC.into()
+        }
+    );
 
     let mut symbols = object.symbols();
 
