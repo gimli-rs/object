@@ -328,7 +328,7 @@ impl<'data> Builder<'data> {
                 Some(SectionId(sh_link as usize - 1))
             };
             let sh_info = section.sh_info(endian);
-            let sh_info_section = if sh_info == 0 || sh_flags & u64::from(elf::SHF_INFO_LINK) == 0 {
+            let sh_info_section = if sh_info == 0 || sh_flags & elf::SHF_INFO_LINK == 0 {
                 None
             } else {
                 if sh_info as usize >= sections.len() {
@@ -341,7 +341,7 @@ impl<'data> Builder<'data> {
             };
             let sh_flags = section.sh_flags(endian).into();
             let sh_addr = section.sh_addr(endian).into();
-            if sh_flags & u64::from(elf::SHF_ALLOC) != 0 {
+            if sh_flags & elf::SHF_ALLOC != 0 {
                 for segment in &mut builder.segments {
                     if segment.contains_address(sh_addr) {
                         segment.sections.push(id);
@@ -408,7 +408,7 @@ impl<'data> Builder<'data> {
                 dynamic_symbols.len(),
             )
             .map(SectionData::DynamicRelocation)
-        } else if link.0 == 0 || section.sh_flags(endian).into() & u64::from(elf::SHF_ALLOC) != 0 {
+        } else if link.0 == 0 || section.sh_flags(endian).into() & elf::SHF_ALLOC != 0 {
             // If there's no link, then none of the relocations may reference symbols.
             // Assume that these are dynamic relocations, but don't use the dynamic
             // symbol table when parsing.
@@ -2537,16 +2537,16 @@ impl<'data> Section<'data> {
 
     /// Returns true if the section flags include `SHF_ALLOC`.
     pub fn is_alloc(&self) -> bool {
-        self.sh_flags & u64::from(elf::SHF_ALLOC) != 0
+        self.sh_flags & elf::SHF_ALLOC != 0
     }
 
     /// Return the segment permission flags that are equivalent to the section flags.
     pub fn p_flags(&self) -> u32 {
         let mut p_flags = elf::PF_R;
-        if self.sh_flags & u64::from(elf::SHF_WRITE) != 0 {
+        if self.sh_flags & elf::SHF_WRITE != 0 {
             p_flags |= elf::PF_W;
         }
-        if self.sh_flags & u64::from(elf::SHF_EXECINSTR) != 0 {
+        if self.sh_flags & elf::SHF_EXECINSTR != 0 {
             p_flags |= elf::PF_X;
         }
         p_flags

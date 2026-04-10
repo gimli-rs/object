@@ -30,7 +30,7 @@ pub struct Constants {
     /// Values for `Shdr*::sh_type`.
     pub sht: &'static ConstantNames<u32>,
     /// Values for `Shdr*::sh_flags`.
-    pub shf: &'static FlagNames<u32>,
+    pub shf: &'static FlagNames<u64>,
     /// Values for `st_bind` component of `Sym*::st_info`.
     pub stb: &'static ConstantNames<u8>,
     /// Values for `st_type` component of `Sym*::st_info`.
@@ -53,7 +53,7 @@ constants! {
     flags ef: u32 = None;
     consts shn: u16 = shn_names;
     consts sht: u32 = sht_names;
-    flags shf: u32 = shf_names;
+    flags shf: u64 = shf_names;
     consts stb: u8 = stb_names;
     consts stt: u8 = stt_names;
     flags sto: u8 = sto_names;
@@ -883,7 +883,7 @@ pub const SHT_HIUSER: u32 = 0x8fff_ffff;
 
 // Values for `Shdr*::sh_flags`.
 constants! {
-    flags shf_names: u32 {
+    flags shf_names: u64 {
         /// Section is writable.
         SHF_WRITE = 1 << 0,
         /// Section occupies memory during execution.
@@ -2867,7 +2867,7 @@ constants! {
         SHT_MIPS_XLATE_OLD = 0x7000_0028,
         SHT_MIPS_PDR_EXCEPTION = 0x7000_0029,
     }
-    flags shf: u32 {
+    flags shf: u64 {
         /// Must be in global data area.
         SHF_MIPS_GPREL = 0x1000_0000,
         SHF_MIPS_MERGE = 0x2000_0000,
@@ -3221,7 +3221,7 @@ constants! {
         /// Debug info for optimized code.
         SHT_PARISC_DOC = 0x7000_0002,
     }
-    flags shf: u32 {
+    flags shf: u64 {
         /// Section with short addressing.
         SHF_PARISC_SHORT = 0x2000_0000,
         /// Section far from gp.
@@ -3495,7 +3495,7 @@ constants! {
         SHT_ALPHA_DEBUG = 0x7000_0001,
         SHT_ALPHA_REGINFO = 0x7000_0002,
     }
-    flags shf: u32 {
+    flags shf: u64 {
         SHF_ALPHA_GPREL = 0x1000_0000,
     }
     flags sto: u8 {
@@ -4043,7 +4043,7 @@ constants! {
         /// A Thumb label.
         STT_ARM_16BIT = STT_HIPROC,
     }
-    flags shf: u32 {
+    flags shf: u64 {
         /// Section contains an entry point
         SHF_ARM_ENTRYSECT = 0x1000_0000,
         /// Section may be multiply defined in the input to a link step.
@@ -4849,7 +4849,7 @@ constants! {
         /// unwind bits
         SHT_IA_64_UNWIND = SHT_LOPROC + 1,
     }
-    flags shf: u32 {
+    flags shf: u64 {
         /// section near gp
         SHF_IA_64_SHORT = 0x1000_0000,
         /// spec insns w/o recovery

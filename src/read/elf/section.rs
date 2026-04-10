@@ -635,26 +635,26 @@ where
         let sh_type = self.section.sh_type(self.file.endian);
         match sh_type {
             elf::SHT_PROGBITS => {
-                if flags & u64::from(elf::SHF_ALLOC) != 0 {
-                    if flags & u64::from(elf::SHF_EXECINSTR) != 0 {
+                if flags & elf::SHF_ALLOC != 0 {
+                    if flags & elf::SHF_EXECINSTR != 0 {
                         SectionKind::Text
-                    } else if flags & u64::from(elf::SHF_TLS) != 0 {
+                    } else if flags & elf::SHF_TLS != 0 {
                         SectionKind::Tls
-                    } else if flags & u64::from(elf::SHF_WRITE) != 0 {
+                    } else if flags & elf::SHF_WRITE != 0 {
                         SectionKind::Data
-                    } else if flags & u64::from(elf::SHF_STRINGS) != 0 {
+                    } else if flags & elf::SHF_STRINGS != 0 {
                         SectionKind::ReadOnlyString
                     } else {
                         SectionKind::ReadOnlyData
                     }
-                } else if flags & u64::from(elf::SHF_STRINGS) != 0 {
+                } else if flags & elf::SHF_STRINGS != 0 {
                     SectionKind::OtherString
                 } else {
                     SectionKind::Other
                 }
             }
             elf::SHT_NOBITS => {
-                if flags & u64::from(elf::SHF_TLS) != 0 {
+                if flags & elf::SHF_TLS != 0 {
                     SectionKind::UninitializedTls
                 } else {
                     SectionKind::UninitializedData
@@ -735,7 +735,7 @@ pub trait SectionHeader: Debug + Pod {
 
     /// Return true if the `SHF_INFO_LINK` flag is set.
     fn has_info_link(&self, endian: Self::Endian) -> bool {
-        self.sh_flags(endian).into() & u64::from(elf::SHF_INFO_LINK) != 0
+        self.sh_flags(endian).into() & elf::SHF_INFO_LINK != 0
     }
 
     /// Get the `sh_info` field as a section index.
@@ -1186,7 +1186,7 @@ pub trait SectionHeader: Debug + Pod {
             u64,
         )>,
     > {
-        if (self.sh_flags(endian).into() & u64::from(elf::SHF_COMPRESSED)) == 0 {
+        if (self.sh_flags(endian).into() & elf::SHF_COMPRESSED) == 0 {
             return Ok(None);
         }
         let (section_offset, section_size) = self
