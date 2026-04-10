@@ -119,7 +119,9 @@ impl<'a> Object<'a> {
                 } else {
                     SectionKind::ReadOnlyData
                 },
-                SectionFlags::None,
+                SectionFlags::Elf {
+                    sh_flags: u64::from(elf::SHF_ALLOC),
+                },
             ),
         }
     }
