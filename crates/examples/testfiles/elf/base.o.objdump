@@ -4,18 +4,18 @@ Architecture: X86_64
 Flags: Elf { os_abi: 0, abi_version: 0, e_flags: 0 }
 Relative Address Base: 0
 Entry Address: 0
-1: Section { name: ".text", address: 0, size: 1c, align: 1, kind: Text, flags: Elf { sh_type: 1, sh_flags: 6 } }
-2: Section { name: ".rela.text", address: 0, size: 30, align: 8, kind: Metadata, flags: Elf { sh_type: 4, sh_flags: 40 } }
-3: Section { name: ".data", address: 0, size: 0, align: 1, kind: Data, flags: Elf { sh_type: 1, sh_flags: 3 } }
-4: Section { name: ".bss", address: 0, size: 0, align: 1, kind: UninitializedData, flags: Elf { sh_type: 8, sh_flags: 3 } }
-5: Section { name: ".rodata", address: 0, size: d, align: 1, kind: ReadOnlyData, flags: Elf { sh_type: 1, sh_flags: 2 } }
-6: Section { name: ".comment", address: 0, size: 2a, align: 1, kind: OtherString, flags: Elf { sh_type: 1, sh_flags: 30 } }
-7: Section { name: ".note.GNU-stack", address: 0, size: 0, align: 1, kind: Other, flags: Elf { sh_type: 1, sh_flags: 0 } }
-8: Section { name: ".eh_frame", address: 0, size: 38, align: 8, kind: ReadOnlyData, flags: Elf { sh_type: 1, sh_flags: 2 } }
-9: Section { name: ".rela.eh_frame", address: 0, size: 18, align: 8, kind: Metadata, flags: Elf { sh_type: 4, sh_flags: 40 } }
-10: Section { name: ".symtab", address: 0, size: 120, align: 8, kind: Metadata, flags: Elf { sh_type: 2, sh_flags: 0 } }
-11: Section { name: ".strtab", address: 0, size: 2a, align: 1, kind: Metadata, flags: Elf { sh_type: 3, sh_flags: 0 } }
-12: Section { name: ".shstrtab", address: 0, size: 61, align: 1, kind: Metadata, flags: Elf { sh_type: 3, sh_flags: 0 } }
+1: Section { name: ".text", address: 0, size: 1c, align: 1, kind: Text, flags: Elf { sh_type: SHT_PROGBITS, sh_flags: 6 } }
+2: Section { name: ".rela.text", address: 0, size: 30, align: 8, kind: Metadata, flags: Elf { sh_type: SHT_RELA, sh_flags: 40 } }
+3: Section { name: ".data", address: 0, size: 0, align: 1, kind: Data, flags: Elf { sh_type: SHT_PROGBITS, sh_flags: 3 } }
+4: Section { name: ".bss", address: 0, size: 0, align: 1, kind: UninitializedData, flags: Elf { sh_type: SHT_NOBITS, sh_flags: 3 } }
+5: Section { name: ".rodata", address: 0, size: d, align: 1, kind: ReadOnlyData, flags: Elf { sh_type: SHT_PROGBITS, sh_flags: 2 } }
+6: Section { name: ".comment", address: 0, size: 2a, align: 1, kind: OtherString, flags: Elf { sh_type: SHT_PROGBITS, sh_flags: 30 } }
+7: Section { name: ".note.GNU-stack", address: 0, size: 0, align: 1, kind: Other, flags: Elf { sh_type: SHT_PROGBITS, sh_flags: 0 } }
+8: Section { name: ".eh_frame", address: 0, size: 38, align: 8, kind: ReadOnlyData, flags: Elf { sh_type: SHT_PROGBITS, sh_flags: 2 } }
+9: Section { name: ".rela.eh_frame", address: 0, size: 18, align: 8, kind: Metadata, flags: Elf { sh_type: SHT_RELA, sh_flags: 40 } }
+10: Section { name: ".symtab", address: 0, size: 120, align: 8, kind: Metadata, flags: Elf { sh_type: SHT_SYMTAB, sh_flags: 0 } }
+11: Section { name: ".strtab", address: 0, size: 2a, align: 1, kind: Metadata, flags: Elf { sh_type: SHT_STRTAB, sh_flags: 0 } }
+12: Section { name: ".shstrtab", address: 0, size: 61, align: 1, kind: Metadata, flags: Elf { sh_type: SHT_STRTAB, sh_flags: 0 } }
 
 Symbols
 1: Symbol { name: "base.c", address: 0, size: 0, kind: File, section: None, scope: Compilation, weak: false, flags: Elf { st_info: 4, st_other: 0 } }

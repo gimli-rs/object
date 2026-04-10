@@ -27,7 +27,7 @@ pub struct Constants {
     /// Special values for section indices.
     pub shn: &'static ConstantNames<u16>,
     /// Values for `SectionHeader*::sh_type`.
-    pub sht: &'static ConstantNames<u32>,
+    pub sht: &'static ConstantNames<SectionType>,
     /// Values for `SectionHeader*::sh_flags`.
     pub shf: &'static FlagNames<u32>,
     /// Values for `st_bind` field of `Sym*::st_info`.
@@ -51,7 +51,7 @@ constants! {
     consts et: u16 = NAMES_ET;
     flags ef: u32 = {};
     consts shn: u16 = NAMES_SHN;
-    consts sht: u32 = NAMES_SHT;
+    consts sht: SectionType = NAMES_SHT;
     flags shf: u32 = NAMES_SHF;
     consts stb: u8 = NAMES_STB;
     consts stt: u8 = NAMES_STT;
@@ -705,7 +705,7 @@ pub struct SectionHeader32<E: Endian> {
     /// This is an offset into the section header string table.
     pub sh_name: U32<E>,
     /// Section type. One of the `SHT_*` constants.
-    pub sh_type: U32<E>,
+    pub sh_type: U32<E, SectionType>,
     /// Section flags. A combination of the `SHF_*` constants.
     pub sh_flags: U32<E>,
     /// Section virtual address at execution.
@@ -737,7 +737,7 @@ pub struct SectionHeader64<E: Endian> {
     /// This is an offset into the section header string table.
     pub sh_name: U32<E>,
     /// Section type. One of the `SHT_*` constants.
-    pub sh_type: U32<E>,
+    pub sh_type: U32<E, SectionType>,
     /// Section flags. A combination of the `SHF_*` constants.
     pub sh_flags: U64<E>,
     /// Section virtual address at execution.
@@ -785,8 +785,31 @@ pub const SHN_HIOS: u16 = 0xff3f;
 /// End of reserved section indices.
 pub const SHN_HIRESERVE: u16 = 0xffff;
 
-// Values for `SectionHeader*::sh_type`.
-constant_names!(NAMES_SHT: u32 = {
+newtype!(
+    /// Values for `SectionHeader*::sh_type`.
+    struct SectionType(u32);
+);
+
+impl SectionType {
+    /// Return true if the type is in the OS-specific range.
+    pub fn is_os(self) -> bool {
+        self.0 >= SHT_LOOS && self.0 <= SHT_HIOS
+    }
+    /// Return true if the type is in the Sun-specific range.
+    pub fn is_sun(self) -> bool {
+        self.0 >= SHT_LOSUNW && self.0 <= SHT_HISUNW
+    }
+    /// Return true if the type is in the processor-specific range.
+    pub fn is_proc(self) -> bool {
+        self.0 >= SHT_LOPROC && self.0 <= SHT_HIPROC
+    }
+    /// Return true if the type is in the application-specific range.
+    pub fn is_user(self) -> bool {
+        self.0 >= SHT_LOUSER && self.0 <= SHT_HIUSER
+    }
+}
+
+newtype_constant_names!(NAMES_SHT: SectionType(u32) = {
     /// Section header table entry is unused.
     SHT_NULL = 0,
     /// Program data.
@@ -2525,7 +2548,7 @@ constants! {
         R_SHARC_CALC_PUSH_LEN = 0xec,
         R_SHARC_CALC_NOT = 0xf6,
     };
-    consts sht: u32 = {
+    consts sht: SectionType(u32) = {
         /// .adi.attributes
         SHT_SHARC_ADI_ATTRIBUTES = SHT_LOPROC + 0x2,
     };
@@ -2760,7 +2783,7 @@ constants! {
         /// Small undefined symbols.
         SHN_MIPS_SUNDEFINED = 0xff04,
     };
-    consts sht: u32 = {
+    consts sht: SectionType(u32) = {
         /// Shared objects used in link.
         SHT_MIPS_LIBLIST = 0x7000_0000,
         SHT_MIPS_MSYM = 0x7000_0001,
@@ -3185,7 +3208,7 @@ constants! {
         /// Common blocks in huge model.
         SHN_PARISC_HUGE_COMMON = 0xff01,
     };
-    consts sht: u32 = {
+    consts sht: SectionType(u32) = {
         /// Contains product specific ext.
         SHT_PARISC_EXT = 0x7000_0000,
         /// Unwind information.
@@ -3471,7 +3494,7 @@ constants! {
         /// Relocations for relaxing exist.
         EF_ALPHA_CANRELAX = 2,
     };
-    consts sht: u32 = {
+    consts sht: SectionType(u32) = {
         // These two are primarily concerned with ECOFF debugging info.
         SHT_ALPHA_DEBUG = 0x7000_0001,
         SHT_ALPHA_REGINFO = 0x7000_0002,
@@ -4031,7 +4054,7 @@ constants! {
         /// ARM unwind segment.
         PT_ARM_EXIDX = PT_LOPROC + 1,
     };
-    consts sht: u32 = {
+    consts sht: SectionType(u32) = {
         /// ARM unwind section.
         SHT_ARM_EXIDX = SHT_LOPROC + 1,
         /// Preemption details.
@@ -4293,7 +4316,7 @@ pub const EF_ARM_MAPSYMSFIRST: u32 = 0x10;
 
 constants! {
     struct Aarch64(Base);
-    consts sht: u32 = {
+    consts sht: SectionType(u32) = {
         /// AArch64 attributes section.
         SHT_AARCH64_ATTRIBUTES = SHT_LOPROC + 3,
     };
@@ -4792,7 +4815,7 @@ constants! {
     flags ef: u32 = {
         _ = EF_CSKY_ABIMASK => NAMES_EF_CSKY_ABI,
     };
-    consts sht: u32 = {
+    consts sht: SectionType(u32) = {
         /// C-SKY attributes section.
         SHT_CSKY_ATTRIBUTES = SHT_LOPROC + 1,
     };
@@ -4828,7 +4851,7 @@ constants! {
         /// spec insns w/o recovery
         PF_IA_64_NORECOV = 0x8000_0000,
     };
-    consts sht: u32 = {
+    consts sht: SectionType(u32) = {
         /// extension bits
         SHT_IA_64_EXT = SHT_LOPROC + 0,
         /// unwind bits
@@ -5354,7 +5377,7 @@ constants! {
         /// 32-bit PC relative to TLS descriptor in GOT if the instruction starts at 6 bytes before the relocation offset.
         R_X86_64_CODE_6_GOTPC32_TLSDESC = 51,
     };
-    consts sht: u32 = {
+    consts sht: SectionType(u32) = {
         /// Unwind information.
         SHT_X86_64_UNWIND = 0x7000_0001,
     };
@@ -6151,7 +6174,7 @@ constants! {
         /// Function uses variant calling convention.
         STO_RISCV_VARIANT_CC = 0x80,
     };
-    consts sht: u32 = {
+    consts sht: SectionType(u32) = {
         /// RISC-V attributes section.
         SHT_RISCV_ATTRIBUTES = SHT_LOPROC + 3,
     };
