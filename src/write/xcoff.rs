@@ -89,8 +89,7 @@ impl<'a> Object<'a> {
             | SectionKind::Linker
             | SectionKind::Common
             | SectionKind::Unknown
-            | SectionKind::TlsVariables
-            | SectionKind::Elf(_) => {
+            | SectionKind::TlsVariables => {
                 return SectionFlags::None;
             }
         }

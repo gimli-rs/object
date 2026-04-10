@@ -125,8 +125,7 @@ impl<'a> Object<'a> {
             | SectionKind::TlsVariables
             | SectionKind::Note
             | SectionKind::Unknown
-            | SectionKind::Metadata
-            | SectionKind::Elf(_) => {
+            | SectionKind::Metadata => {
                 return SectionFlags::None;
             }
         };
