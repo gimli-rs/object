@@ -334,16 +334,16 @@ impl<T: 'static + Copy> FlagGroup<T> {
 macro_rules! constants {
     // Struct form where methods defines constants.
     ($(#[$meta:meta])* struct $struct:ident$(($parent:ident))?;
-        $($kind:ident $method:ident: $type:ident {
+        $($kind:ident $method:ident: $outer:ident$(($inner:ident))? {
             $($body:tt)*
         })*
     ) => {
         constants! { @struct $(#[$meta])* $struct }
         // This converts $parent into a tt so that the method repetition can use it.
         constants! { @impl_struct $struct ($($parent)?)
-            $($kind $method $type { $($body)* })*
+            $($kind $method ($outer $($inner)?) { $($body)* })*
         }
-        $(constants! { @consts $kind $type $($body)* })*
+        $(constants! { @consts $kind ($outer $($inner)?) $($body)* })*
     };
 
     // Struct form where methods reference freestanding functions.
@@ -357,10 +357,10 @@ macro_rules! constants {
     };
 
     // Freestanding functions.
-    ($($kind:ident $fn_name:ident: $type:ident { $($body:tt)* })*) => {
+    ($($kind:ident $fn_name:ident: $outer:ident$(($inner:ident))? { $($body:tt)* })*) => {
         #[cfg(feature = "names")]
-        $(constants! { @impl_method $kind $fn_name $type () { $($body)* }})*
-        $(constants! { @consts $kind $type $($body)* })*
+        $(constants! { @impl_method $kind $fn_name ($outer $($inner)?) () { $($body)* }})*
+        $(constants! { @consts $kind ($outer $($inner)?) $($body)* })*
     };
 
     (@struct $(#[$meta:meta])* $struct:ident) => {
@@ -372,7 +372,7 @@ macro_rules! constants {
 
     // Emit impl block of the struct.
     (@impl_struct $struct:ident $parent:tt
-        $($kind:ident $method:ident $type:ident {
+        $($kind:ident $method:ident $type:tt {
             $($body:tt)*
         })*
     ) => {
@@ -462,25 +462,30 @@ macro_rules! constants {
     (@impl_next $method:ident ()) => { None };
     (@impl_next $method:ident ($parent:ident)) => { Some($parent::$method()) };
 
+    (@type ($outer:ident $inner:ident)) => { $outer };
+    (@type ($type:ident)) => { $type };
+    (@value ($outer:ident $inner:ident) $value:expr) => { $outer($value) };
+    (@value ($type:ident) $value:expr) => { $value };
+
     // Emit ConstantNames static for a `consts` block
-    (@impl_method consts $method:ident $type:ident $parent:tt {
+    (@impl_method consts $method:ident $type:tt $parent:tt {
         $($(#[$const_meta:meta])* $name:ident = $value:expr),* $(,)?
     }) => {
-        const fn $method() -> &'static crate::constants::ConstantNames<$type> {
-            static NAMES: crate::constants::ConstantNames<$type> = crate::constants::ConstantNames {
+        const fn $method() -> &'static crate::constants::ConstantNames<constants!(@type $type)> {
+            static NAMES: crate::constants::ConstantNames<constants!(@type $type)> = crate::constants::ConstantNames {
                 next: constants!(@impl_next $method $parent),
-                entries: &[$(($value, stringify!($name)),)*],
+                entries: &[$((constants!(@value $type $value), stringify!($name)),)*],
             };
             &NAMES
         }
     };
 
     // Emit FlagNames static for a `flags` block (via tt-munching)
-    (@impl_method flags $method:ident $type:ident $parent:tt {
+    (@impl_method flags $method:ident $type:tt $parent:tt {
         $($body:tt)*
     }) => {
-        const fn $method() -> &'static crate::constants::FlagNames<$type> {
-            constants! { @flags_static ($method $type $parent) [] [] $($body)* }
+        const fn $method() -> &'static crate::constants::FlagNames<constants!(@type $type)> {
+            constants! { @flags_static $method $type $parent [] [] $($body)* }
             &FLAG_NAMES
         }
     };
@@ -489,8 +494,8 @@ macro_rules! constants {
     // Accumulators: [bits...] [groups...]
 
     // Terminal: emit the static
-    (@flags_static ($method:ident $type:ident $parent:tt) [$($bits:tt)*] [$($groups:tt)*]) => {
-        static FLAG_NAMES: crate::constants::FlagNames<$type> = crate::constants::FlagNames {
+    (@flags_static $method:ident $type:tt $parent:tt [$($bits:tt)*] [$($groups:tt)*]) => {
+        static FLAG_NAMES: crate::constants::FlagNames<constants!(@type $type)> = crate::constants::FlagNames {
             next: constants!(@impl_next $method $parent),
             bits: &[$($bits)*],
             groups: &[$($groups)*],
@@ -498,102 +503,102 @@ macro_rules! constants {
     };
 
     // Bit entry (NAME = VAL,)
-    (@flags_static $args:tt [$($bits:tt)*] [$($groups:tt)*]
+    (@flags_static $method:ident $type:tt $parent:tt [$($bits:tt)*] [$($groups:tt)*]
         $(#[$_meta:meta])* $name:ident = $value:expr,
         $($rest:tt)*
     ) => {
         constants! {
-            @flags_static $args
-            [$($bits)* ($value, stringify!($name)),]
+            @flags_static $method $type $parent
+            [$($bits)* (constants!(@value $type $value), stringify!($name)),]
             [$($groups)*]
             $($rest)*
         }
     };
 
     // Group entry (NAME = MASK => { ... },)
-    (@flags_static $args:tt [$($bits:tt)*] [$($groups:tt)*]
+    (@flags_static $method:ident $type:tt $parent:tt [$($bits:tt)*] [$($groups:tt)*]
         $(#[$_meta:meta])* $name:ident = $value:expr => {
             $($(#[$_smeta:meta])* $sub_name:ident = $sub_value:expr),* $(,)?
         },
         $($rest:tt)*
     ) => {
         constants! {
-            @flags_static $args
+            @flags_static $method $type $parent
             [$($bits)*]
             [$($groups)* (crate::constants::FlagGroup {
-                mask: $value,
+                mask: constants!(@value $type $value),
                 mask_name: Some(stringify!($name)),
-                entries: &[$( ($sub_value, stringify!($sub_name)), )*],
+                entries: &[$( (constants!(@value $type $sub_value), stringify!($sub_name)), )*],
             }),]
             $($rest)*
         }
     };
 
     // Nameless group entry (MASK => { ... },)
-    (@flags_static $args:tt [$($bits:tt)*] [$($groups:tt)*]
+    (@flags_static $method:ident $type:tt $parent:tt [$($bits:tt)*] [$($groups:tt)*]
         $value:expr => {
             $($(#[$_smeta:meta])* $sub_name:ident = $sub_value:expr),* $(,)?
         },
         $($rest:tt)*
     ) => {
         constants! {
-            @flags_static $args
+            @flags_static $method $type $parent
             [$($bits)*]
             [$($groups)* (crate::constants::FlagGroup {
-                mask: $value,
+                mask: constants!(@value $type $value),
                 mask_name: None,
-                entries: &[$( ($sub_value, stringify!($sub_name)), )*],
+                entries: &[$( (constants!(@value $type $sub_value), stringify!($sub_name)), )*],
             }),]
             $($rest)*
         }
     };
 
     // Emit pub consts for a `consts` block.
-    (@consts consts $type:ident
+    (@consts consts $type:tt
         $($(#[$meta:meta])* $name:ident = $value:expr),* $(,)?
     ) => {
-        $($(#[$meta])* pub const $name: $type = $value;)*
+        $($(#[$meta])* pub const $name: constants!(@type $type) = constants!(@value $type $value);)*
     };
 
     // Emit pub consts for a `flags` block (via tt-munching, to handle nameless groups).
-    (@consts flags $type:ident $($body:tt)*) => {
+    (@consts flags $type:tt $($body:tt)*) => {
         constants! { @flags_consts $type $($body)* }
     };
 
     // tt-muncher: emit pub consts for a `flags` block
 
     // Terminal
-    (@flags_consts $type:ident) => {};
+    (@flags_consts $type:tt) => {};
 
     // Bit entry (NAME = VAL,)
-    (@flags_consts $type:ident
+    (@flags_consts $type:tt
         $(#[$meta:meta])* $name:ident = $value:expr,
         $($rest:tt)*
     ) => {
-        $(#[$meta])* pub const $name: $type = $value;
+        $(#[$meta])* pub const $name: constants!(@type $type) = constants!(@value $type $value);
         constants! { @flags_consts $type $($rest)* }
     };
 
     // Named group entry (NAME = MASK => { ... },)
-    (@flags_consts $type:ident
+    (@flags_consts $type:tt
         $(#[$meta:meta])* $name:ident = $value:expr => {
             $($(#[$smeta:meta])* $sub_name:ident = $sub_value:expr),* $(,)?
         },
         $($rest:tt)*
     ) => {
-        $(#[$meta])* pub const $name: $type = $value;
-        $($(#[$smeta])* pub const $sub_name: $type = $sub_value;)*
+        $(#[$meta])* pub const $name: constants!(@type $type) = constants!(@value $type $value);
+        $($(#[$smeta])* pub const $sub_name: constants!(@type $type) = constants!(@value $type $sub_value);)*
         constants! { @flags_consts $type $($rest)* }
     };
 
     // Nameless group entry (MASK => { ... },)
-    (@flags_consts $type:ident
+    (@flags_consts $type:tt
         $value:expr => {
             $($(#[$smeta:meta])* $sub_name:ident = $sub_value:expr),* $(,)?
         },
         $($rest:tt)*
     ) => {
-        $($(#[$smeta])* pub const $sub_name: $type = $sub_value;)*
+        $($(#[$smeta])* pub const $sub_name: constants!(@type $type) = constants!(@value $type $sub_value);)*
         constants! { @flags_consts $type $($rest)* }
     };
 }
