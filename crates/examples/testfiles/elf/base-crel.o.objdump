@@ -5,14 +5,14 @@ Flags: Elf { os_abi: 0, abi_version: 0, e_flags: 0 }
 Relative Address Base: 0
 Entry Address: 0
 1: Section { name: ".strtab", address: 0, size: 7b, align: 1, kind: Metadata, flags: Elf { sh_type: SHT_STRTAB, sh_flags: 0 } }
-2: Section { name: ".text", address: 0, size: 25, align: 10, kind: Text, flags: Elf { sh_type: SHT_PROGBITS, sh_flags: 6 } }
-3: Section { name: ".crel.text", address: 0, size: 9, align: 1, kind: Metadata, flags: Elf { sh_type: SHT_CREL, sh_flags: 40 } }
-4: Section { name: ".rodata.str1.1", address: 0, size: d, align: 1, kind: ReadOnlyString, flags: Elf { sh_type: SHT_PROGBITS, sh_flags: 32 } }
-5: Section { name: ".comment", address: 0, size: 57, align: 1, kind: OtherString, flags: Elf { sh_type: SHT_PROGBITS, sh_flags: 30 } }
+2: Section { name: ".text", address: 0, size: 25, align: 10, kind: Text, flags: Elf { sh_type: SHT_PROGBITS, sh_flags: SHF_ALLOC | SHF_EXECINSTR } }
+3: Section { name: ".crel.text", address: 0, size: 9, align: 1, kind: Metadata, flags: Elf { sh_type: SHT_CREL, sh_flags: SHF_INFO_LINK } }
+4: Section { name: ".rodata.str1.1", address: 0, size: d, align: 1, kind: ReadOnlyString, flags: Elf { sh_type: SHT_PROGBITS, sh_flags: SHF_ALLOC | SHF_MERGE | SHF_STRINGS } }
+5: Section { name: ".comment", address: 0, size: 57, align: 1, kind: OtherString, flags: Elf { sh_type: SHT_PROGBITS, sh_flags: SHF_MERGE | SHF_STRINGS } }
 6: Section { name: ".note.GNU-stack", address: 0, size: 0, align: 1, kind: Other, flags: Elf { sh_type: SHT_PROGBITS, sh_flags: 0 } }
-7: Section { name: ".eh_frame", address: 0, size: 38, align: 8, kind: Unknown, flags: Elf { sh_type: 70000001, sh_flags: 2 } }
-8: Section { name: ".crel.eh_frame", address: 0, size: 4, align: 1, kind: Metadata, flags: Elf { sh_type: SHT_CREL, sh_flags: 40 } }
-9: Section { name: ".llvm_addrsig", address: 0, size: 1, align: 1, kind: Unknown, flags: Elf { sh_type: 6fff4c03, sh_flags: 80000000 } }
+7: Section { name: ".eh_frame", address: 0, size: 38, align: 8, kind: Unknown, flags: Elf { sh_type: 70000001, sh_flags: SHF_ALLOC } }
+8: Section { name: ".crel.eh_frame", address: 0, size: 4, align: 1, kind: Metadata, flags: Elf { sh_type: SHT_CREL, sh_flags: SHF_INFO_LINK } }
+9: Section { name: ".llvm_addrsig", address: 0, size: 1, align: 1, kind: Unknown, flags: Elf { sh_type: 6fff4c03, sh_flags: SHF_EXCLUDE } }
 10: Section { name: ".symtab", address: 0, size: 90, align: 8, kind: Metadata, flags: Elf { sh_type: SHT_SYMTAB, sh_flags: 0 } }
 
 Symbols

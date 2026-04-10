@@ -496,7 +496,7 @@ impl<'a> Writer<'a> {
         self.write_section_header(&SectionHeader {
             name: None,
             sh_type: elf::SHT_NULL,
-            sh_flags: 0,
+            sh_flags: elf::SectionFlags(0),
             sh_addr: 0,
             sh_offset: 0,
             sh_size: if self.section_num >= elf::SHN_LORESERVE.into() {
@@ -542,7 +542,7 @@ impl<'a> Writer<'a> {
             let section = elf::SectionHeader32 {
                 sh_name: U32::new(endian, sh_name),
                 sh_type: U32::new(endian, section.sh_type),
-                sh_flags: U32::new(endian, section.sh_flags as u32),
+                sh_flags: U32::new_u64(endian, section.sh_flags).unwrap(),
                 sh_addr: U32::new(endian, section.sh_addr as u32),
                 sh_offset: U32::new(endian, section.sh_offset as u32),
                 sh_size: U32::new(endian, section.sh_size as u32),
@@ -623,7 +623,7 @@ impl<'a> Writer<'a> {
         self.write_section_header(&SectionHeader {
             name: self.shstrtab_str_id,
             sh_type: elf::SHT_STRTAB,
-            sh_flags: 0,
+            sh_flags: elf::SectionFlags(0),
             sh_addr: 0,
             sh_offset: self.shstrtab_offset as u64,
             sh_size: self.shstrtab_data.len() as u64,
@@ -716,7 +716,7 @@ impl<'a> Writer<'a> {
         self.write_section_header(&SectionHeader {
             name: self.strtab_str_id,
             sh_type: elf::SHT_STRTAB,
-            sh_flags: 0,
+            sh_flags: elf::SectionFlags(0),
             sh_addr: 0,
             sh_offset: self.strtab_offset as u64,
             sh_size: self.strtab_data.len() as u64,
@@ -898,7 +898,7 @@ impl<'a> Writer<'a> {
         self.write_section_header(&SectionHeader {
             name: self.symtab_str_id,
             sh_type: elf::SHT_SYMTAB,
-            sh_flags: 0,
+            sh_flags: elf::SectionFlags(0),
             sh_addr: 0,
             sh_offset: self.symtab_offset as u64,
             sh_size: self.symtab_num as u64 * self.class().sym_size() as u64,
@@ -986,7 +986,7 @@ impl<'a> Writer<'a> {
         self.write_section_header(&SectionHeader {
             name: self.symtab_shndx_str_id,
             sh_type: elf::SHT_SYMTAB_SHNDX,
-            sh_flags: 0,
+            sh_flags: elf::SectionFlags(0),
             sh_addr: 0,
             sh_offset: self.symtab_shndx_offset as u64,
             sh_size,
@@ -1886,7 +1886,7 @@ impl<'a> Writer<'a> {
         self.write_section_header(&SectionHeader {
             name: self.gnu_attributes_str_id,
             sh_type: elf::SHT_GNU_ATTRIBUTES,
-            sh_flags: 0,
+            sh_flags: elf::SectionFlags(0),
             sh_addr: 0,
             sh_offset: self.gnu_attributes_offset as u64,
             sh_size: self.gnu_attributes_size as u64,
@@ -2000,7 +2000,7 @@ impl<'a> Writer<'a> {
         self.write_section_header(&SectionHeader {
             name: Some(name),
             sh_type: elf::SHT_RELA,
-            sh_flags: 0,
+            sh_flags: elf::SectionFlags(0),
             sh_addr: 0,
             sh_offset: offset as u64,
             sh_size: size as u64,
@@ -2043,7 +2043,7 @@ impl<'a> Writer<'a> {
         self.write_section_header(&SectionHeader {
             name: Some(name),
             sh_type: elf::SHT_GROUP,
-            sh_flags: 0,
+            sh_flags: elf::SectionFlags(0),
             sh_addr: 0,
             sh_offset: offset as u64,
             sh_size: ((count + 1) * 4) as u64,
@@ -2335,7 +2335,7 @@ pub struct ProgramHeader {
 pub struct SectionHeader {
     pub name: Option<StringId>,
     pub sh_type: elf::SectionType,
-    pub sh_flags: u64,
+    pub sh_flags: elf::SectionFlags,
     pub sh_addr: u64,
     pub sh_offset: u64,
     pub sh_size: u64,

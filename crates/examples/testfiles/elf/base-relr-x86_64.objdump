@@ -9,34 +9,34 @@ Segment { address: 0, size: 618, permissions: R-- }
 Segment { address: 1000, size: 179, permissions: R-X }
 Segment { address: 2000, size: f4, permissions: R-- }
 Segment { address: 3d88, size: 290, permissions: RW- }
-1: Section { name: ".interp", address: 318, size: 1c, align: 1, kind: ReadOnlyData, flags: Elf { sh_type: SHT_PROGBITS, sh_flags: 2 } }
-2: Section { name: ".note.gnu.property", address: 338, size: 30, align: 8, kind: Note, flags: Elf { sh_type: SHT_NOTE, sh_flags: 2 } }
-3: Section { name: ".note.gnu.build-id", address: 368, size: 24, align: 4, kind: Note, flags: Elf { sh_type: SHT_NOTE, sh_flags: 2 } }
-4: Section { name: ".note.ABI-tag", address: 38c, size: 20, align: 4, kind: Note, flags: Elf { sh_type: SHT_NOTE, sh_flags: 2 } }
-5: Section { name: ".gnu.hash", address: 3b0, size: 24, align: 8, kind: Unknown, flags: Elf { sh_type: SHT_GNU_HASH, sh_flags: 2 } }
-6: Section { name: ".dynsym", address: 3d8, size: a8, align: 8, kind: Metadata, flags: Elf { sh_type: SHT_DYNSYM, sh_flags: 2 } }
-7: Section { name: ".dynstr", address: 480, size: a1, align: 1, kind: Metadata, flags: Elf { sh_type: SHT_STRTAB, sh_flags: 2 } }
-8: Section { name: ".gnu.version", address: 522, size: e, align: 2, kind: Unknown, flags: Elf { sh_type: SHT_GNU_VERSYM, sh_flags: 2 } }
-9: Section { name: ".gnu.version_r", address: 530, size: 40, align: 8, kind: Unknown, flags: Elf { sh_type: SHT_GNU_VERNEED, sh_flags: 2 } }
-10: Section { name: ".rela.dyn", address: 570, size: 78, align: 8, kind: Metadata, flags: Elf { sh_type: SHT_RELA, sh_flags: 2 } }
-11: Section { name: ".rela.plt", address: 5e8, size: 18, align: 8, kind: Metadata, flags: Elf { sh_type: SHT_RELA, sh_flags: 42 } }
-12: Section { name: ".relr.dyn", address: 600, size: 18, align: 8, kind: Metadata, flags: Elf { sh_type: SHT_RELR, sh_flags: 2 } }
-13: Section { name: ".init", address: 1000, size: 1b, align: 4, kind: Text, flags: Elf { sh_type: SHT_PROGBITS, sh_flags: 6 } }
-14: Section { name: ".plt", address: 1020, size: 20, align: 10, kind: Text, flags: Elf { sh_type: SHT_PROGBITS, sh_flags: 6 } }
-15: Section { name: ".plt.got", address: 1040, size: 10, align: 10, kind: Text, flags: Elf { sh_type: SHT_PROGBITS, sh_flags: 6 } }
-16: Section { name: ".plt.sec", address: 1050, size: 10, align: 10, kind: Text, flags: Elf { sh_type: SHT_PROGBITS, sh_flags: 6 } }
-17: Section { name: ".text", address: 1060, size: 10c, align: 10, kind: Text, flags: Elf { sh_type: SHT_PROGBITS, sh_flags: 6 } }
-18: Section { name: ".fini", address: 116c, size: d, align: 4, kind: Text, flags: Elf { sh_type: SHT_PROGBITS, sh_flags: 6 } }
-19: Section { name: ".rodata", address: 2000, size: 11, align: 4, kind: ReadOnlyData, flags: Elf { sh_type: SHT_PROGBITS, sh_flags: 2 } }
-20: Section { name: ".eh_frame_hdr", address: 2014, size: 34, align: 4, kind: ReadOnlyData, flags: Elf { sh_type: SHT_PROGBITS, sh_flags: 2 } }
-21: Section { name: ".eh_frame", address: 2048, size: ac, align: 8, kind: ReadOnlyData, flags: Elf { sh_type: SHT_PROGBITS, sh_flags: 2 } }
-22: Section { name: ".init_array", address: 3d88, size: 8, align: 8, kind: Unknown, flags: Elf { sh_type: SHT_INIT_ARRAY, sh_flags: 3 } }
-23: Section { name: ".fini_array", address: 3d90, size: 8, align: 8, kind: Unknown, flags: Elf { sh_type: SHT_FINI_ARRAY, sh_flags: 3 } }
-24: Section { name: ".dynamic", address: 3d98, size: 220, align: 8, kind: Metadata, flags: Elf { sh_type: SHT_DYNAMIC, sh_flags: 3 } }
-25: Section { name: ".got", address: 3fb8, size: 48, align: 8, kind: Data, flags: Elf { sh_type: SHT_PROGBITS, sh_flags: 3 } }
-26: Section { name: ".data", address: 4000, size: 10, align: 8, kind: Data, flags: Elf { sh_type: SHT_PROGBITS, sh_flags: 3 } }
-27: Section { name: ".bss", address: 4010, size: 8, align: 1, kind: UninitializedData, flags: Elf { sh_type: SHT_NOBITS, sh_flags: 3 } }
-28: Section { name: ".comment", address: 0, size: 26, align: 1, kind: OtherString, flags: Elf { sh_type: SHT_PROGBITS, sh_flags: 30 } }
+1: Section { name: ".interp", address: 318, size: 1c, align: 1, kind: ReadOnlyData, flags: Elf { sh_type: SHT_PROGBITS, sh_flags: SHF_ALLOC } }
+2: Section { name: ".note.gnu.property", address: 338, size: 30, align: 8, kind: Note, flags: Elf { sh_type: SHT_NOTE, sh_flags: SHF_ALLOC } }
+3: Section { name: ".note.gnu.build-id", address: 368, size: 24, align: 4, kind: Note, flags: Elf { sh_type: SHT_NOTE, sh_flags: SHF_ALLOC } }
+4: Section { name: ".note.ABI-tag", address: 38c, size: 20, align: 4, kind: Note, flags: Elf { sh_type: SHT_NOTE, sh_flags: SHF_ALLOC } }
+5: Section { name: ".gnu.hash", address: 3b0, size: 24, align: 8, kind: Unknown, flags: Elf { sh_type: SHT_GNU_HASH, sh_flags: SHF_ALLOC } }
+6: Section { name: ".dynsym", address: 3d8, size: a8, align: 8, kind: Metadata, flags: Elf { sh_type: SHT_DYNSYM, sh_flags: SHF_ALLOC } }
+7: Section { name: ".dynstr", address: 480, size: a1, align: 1, kind: Metadata, flags: Elf { sh_type: SHT_STRTAB, sh_flags: SHF_ALLOC } }
+8: Section { name: ".gnu.version", address: 522, size: e, align: 2, kind: Unknown, flags: Elf { sh_type: SHT_GNU_VERSYM, sh_flags: SHF_ALLOC } }
+9: Section { name: ".gnu.version_r", address: 530, size: 40, align: 8, kind: Unknown, flags: Elf { sh_type: SHT_GNU_VERNEED, sh_flags: SHF_ALLOC } }
+10: Section { name: ".rela.dyn", address: 570, size: 78, align: 8, kind: Metadata, flags: Elf { sh_type: SHT_RELA, sh_flags: SHF_ALLOC } }
+11: Section { name: ".rela.plt", address: 5e8, size: 18, align: 8, kind: Metadata, flags: Elf { sh_type: SHT_RELA, sh_flags: SHF_ALLOC | SHF_INFO_LINK } }
+12: Section { name: ".relr.dyn", address: 600, size: 18, align: 8, kind: Metadata, flags: Elf { sh_type: SHT_RELR, sh_flags: SHF_ALLOC } }
+13: Section { name: ".init", address: 1000, size: 1b, align: 4, kind: Text, flags: Elf { sh_type: SHT_PROGBITS, sh_flags: SHF_ALLOC | SHF_EXECINSTR } }
+14: Section { name: ".plt", address: 1020, size: 20, align: 10, kind: Text, flags: Elf { sh_type: SHT_PROGBITS, sh_flags: SHF_ALLOC | SHF_EXECINSTR } }
+15: Section { name: ".plt.got", address: 1040, size: 10, align: 10, kind: Text, flags: Elf { sh_type: SHT_PROGBITS, sh_flags: SHF_ALLOC | SHF_EXECINSTR } }
+16: Section { name: ".plt.sec", address: 1050, size: 10, align: 10, kind: Text, flags: Elf { sh_type: SHT_PROGBITS, sh_flags: SHF_ALLOC | SHF_EXECINSTR } }
+17: Section { name: ".text", address: 1060, size: 10c, align: 10, kind: Text, flags: Elf { sh_type: SHT_PROGBITS, sh_flags: SHF_ALLOC | SHF_EXECINSTR } }
+18: Section { name: ".fini", address: 116c, size: d, align: 4, kind: Text, flags: Elf { sh_type: SHT_PROGBITS, sh_flags: SHF_ALLOC | SHF_EXECINSTR } }
+19: Section { name: ".rodata", address: 2000, size: 11, align: 4, kind: ReadOnlyData, flags: Elf { sh_type: SHT_PROGBITS, sh_flags: SHF_ALLOC } }
+20: Section { name: ".eh_frame_hdr", address: 2014, size: 34, align: 4, kind: ReadOnlyData, flags: Elf { sh_type: SHT_PROGBITS, sh_flags: SHF_ALLOC } }
+21: Section { name: ".eh_frame", address: 2048, size: ac, align: 8, kind: ReadOnlyData, flags: Elf { sh_type: SHT_PROGBITS, sh_flags: SHF_ALLOC } }
+22: Section { name: ".init_array", address: 3d88, size: 8, align: 8, kind: Unknown, flags: Elf { sh_type: SHT_INIT_ARRAY, sh_flags: SHF_WRITE | SHF_ALLOC } }
+23: Section { name: ".fini_array", address: 3d90, size: 8, align: 8, kind: Unknown, flags: Elf { sh_type: SHT_FINI_ARRAY, sh_flags: SHF_WRITE | SHF_ALLOC } }
+24: Section { name: ".dynamic", address: 3d98, size: 220, align: 8, kind: Metadata, flags: Elf { sh_type: SHT_DYNAMIC, sh_flags: SHF_WRITE | SHF_ALLOC } }
+25: Section { name: ".got", address: 3fb8, size: 48, align: 8, kind: Data, flags: Elf { sh_type: SHT_PROGBITS, sh_flags: SHF_WRITE | SHF_ALLOC } }
+26: Section { name: ".data", address: 4000, size: 10, align: 8, kind: Data, flags: Elf { sh_type: SHT_PROGBITS, sh_flags: SHF_WRITE | SHF_ALLOC } }
+27: Section { name: ".bss", address: 4010, size: 8, align: 1, kind: UninitializedData, flags: Elf { sh_type: SHT_NOBITS, sh_flags: SHF_WRITE | SHF_ALLOC } }
+28: Section { name: ".comment", address: 0, size: 26, align: 1, kind: OtherString, flags: Elf { sh_type: SHT_PROGBITS, sh_flags: SHF_MERGE | SHF_STRINGS } }
 29: Section { name: ".symtab", address: 0, size: 360, align: 8, kind: Metadata, flags: Elf { sh_type: SHT_SYMTAB, sh_flags: 0 } }
 30: Section { name: ".strtab", address: 0, size: 1dc, align: 1, kind: Metadata, flags: Elf { sh_type: SHT_STRTAB, sh_flags: 0 } }
 31: Section { name: ".shstrtab", address: 0, size: 124, align: 1, kind: Metadata, flags: Elf { sh_type: SHT_STRTAB, sh_flags: 0 } }

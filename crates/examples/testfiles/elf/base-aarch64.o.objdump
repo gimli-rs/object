@@ -4,12 +4,12 @@ Architecture: Aarch64
 Flags: Elf { os_abi: 0, abi_version: 0, e_flags: 0 }
 Relative Address Base: 0
 Entry Address: 0
-1: Section { name: ".text", address: 0, size: 20, align: 4, kind: Text, flags: Elf { sh_type: SHT_PROGBITS, sh_flags: 6 } }
-2: Section { name: ".rela.text", address: 0, size: 48, align: 8, kind: Metadata, flags: Elf { sh_type: SHT_RELA, sh_flags: 40 } }
-3: Section { name: ".data", address: 0, size: 0, align: 1, kind: Data, flags: Elf { sh_type: SHT_PROGBITS, sh_flags: 3 } }
-4: Section { name: ".bss", address: 0, size: 0, align: 1, kind: UninitializedData, flags: Elf { sh_type: SHT_NOBITS, sh_flags: 3 } }
-5: Section { name: ".rodata", address: 0, size: d, align: 8, kind: ReadOnlyData, flags: Elf { sh_type: SHT_PROGBITS, sh_flags: 2 } }
-6: Section { name: ".comment", address: 0, size: 31, align: 1, kind: OtherString, flags: Elf { sh_type: SHT_PROGBITS, sh_flags: 30 } }
+1: Section { name: ".text", address: 0, size: 20, align: 4, kind: Text, flags: Elf { sh_type: SHT_PROGBITS, sh_flags: SHF_ALLOC | SHF_EXECINSTR } }
+2: Section { name: ".rela.text", address: 0, size: 48, align: 8, kind: Metadata, flags: Elf { sh_type: SHT_RELA, sh_flags: SHF_INFO_LINK } }
+3: Section { name: ".data", address: 0, size: 0, align: 1, kind: Data, flags: Elf { sh_type: SHT_PROGBITS, sh_flags: SHF_WRITE | SHF_ALLOC } }
+4: Section { name: ".bss", address: 0, size: 0, align: 1, kind: UninitializedData, flags: Elf { sh_type: SHT_NOBITS, sh_flags: SHF_WRITE | SHF_ALLOC } }
+5: Section { name: ".rodata", address: 0, size: d, align: 8, kind: ReadOnlyData, flags: Elf { sh_type: SHT_PROGBITS, sh_flags: SHF_ALLOC } }
+6: Section { name: ".comment", address: 0, size: 31, align: 1, kind: OtherString, flags: Elf { sh_type: SHT_PROGBITS, sh_flags: SHF_MERGE | SHF_STRINGS } }
 7: Section { name: ".note.GNU-stack", address: 0, size: 0, align: 1, kind: Other, flags: Elf { sh_type: SHT_PROGBITS, sh_flags: 0 } }
 8: Section { name: ".symtab", address: 0, size: 120, align: 8, kind: Metadata, flags: Elf { sh_type: SHT_SYMTAB, sh_flags: 0 } }
 9: Section { name: ".strtab", address: 0, size: 1a, align: 1, kind: Metadata, flags: Elf { sh_type: SHT_STRTAB, sh_flags: 0 } }

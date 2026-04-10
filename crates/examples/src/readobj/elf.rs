@@ -199,7 +199,7 @@ fn print_section_headers<Elf: FileHeader>(
             );
 
             p.field_consts("Type", section.sh_type(endian), constants.sht);
-            p.field_flags("Flags", section.sh_flags(endian).into(), constants.shf);
+            p.field_flags("Flags", section.sh_flags(endian), constants.shf);
             p.field_hex("Address", section.sh_addr(endian).into());
             p.field_hex("Offset", section.sh_offset(endian).into());
             p.field_hex("Size", section.sh_size(endian).into());
