@@ -606,9 +606,10 @@ pub enum SectionFlags {
     /// No section flags.
     None,
     /// ELF section flags.
+    #[cfg(feature = "elf")]
     Elf {
         /// `sh_type` field in the section header.
-        sh_type: u32,
+        sh_type: crate::elf::ShdrType,
         /// `sh_flags` field in the section header.
         sh_flags: u64,
     },

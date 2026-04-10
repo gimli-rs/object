@@ -495,7 +495,7 @@ impl<'a> Writer<'a> {
         debug_assert_eq!(self.section_offset, self.buffer.len());
         self.write_section_header(&SectionHeader {
             name: None,
-            sh_type: 0,
+            sh_type: elf::SHT_NULL,
             sh_flags: 0,
             sh_addr: 0,
             sh_offset: 0,
@@ -527,7 +527,7 @@ impl<'a> Writer<'a> {
         if self.is_64 {
             let section = elf::Shdr64 {
                 sh_name: U32::new(endian, sh_name),
-                sh_type: U32::new(endian, section.sh_type),
+                sh_type: U32::new(endian, section.sh_type.0),
                 sh_flags: U64::new(endian, section.sh_flags),
                 sh_addr: U64::new(endian, section.sh_addr),
                 sh_offset: U64::new(endian, section.sh_offset),
@@ -541,7 +541,7 @@ impl<'a> Writer<'a> {
         } else {
             let section = elf::Shdr32 {
                 sh_name: U32::new(endian, sh_name),
-                sh_type: U32::new(endian, section.sh_type),
+                sh_type: U32::new(endian, section.sh_type.0),
                 sh_flags: U32::new(endian, section.sh_flags as u32),
                 sh_addr: U32::new(endian, section.sh_addr as u32),
                 sh_offset: U32::new(endian, section.sh_offset as u32),
@@ -2337,7 +2337,7 @@ pub struct ProgramHeader {
 #[derive(Debug, Clone)]
 pub struct SectionHeader {
     pub name: Option<StringId>,
-    pub sh_type: u32,
+    pub sh_type: elf::ShdrType,
     pub sh_flags: u64,
     pub sh_addr: u64,
     pub sh_offset: u64,

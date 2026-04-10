@@ -137,7 +137,7 @@ impl<'data, Elf: FileHeader, R: ReadRef<'data>> SectionTable<'data, Elf, R> {
         &self,
         endian: Elf::Endian,
         data: R,
-        sh_type: u32,
+        sh_type: elf::ShdrType,
     ) -> read::Result<SymbolTable<'data, Elf, R>> {
         debug_assert!(sh_type == elf::SHT_DYNSYM || sh_type == elf::SHT_SYMTAB);
 
@@ -705,7 +705,7 @@ pub trait SectionHeader: Debug + Pod {
     type Endian: endian::Endian;
 
     fn sh_name(&self, endian: Self::Endian) -> u32;
-    fn sh_type(&self, endian: Self::Endian) -> u32;
+    fn sh_type(&self, endian: Self::Endian) -> elf::ShdrType;
     fn sh_flags(&self, endian: Self::Endian) -> Self::Word;
     fn sh_addr(&self, endian: Self::Endian) -> Self::Word;
     fn sh_offset(&self, endian: Self::Endian) -> Self::Word;
@@ -1214,8 +1214,8 @@ impl<Endian: endian::Endian> SectionHeader for elf::Shdr32<Endian> {
     }
 
     #[inline]
-    fn sh_type(&self, endian: Self::Endian) -> u32 {
-        self.sh_type.get(endian)
+    fn sh_type(&self, endian: Self::Endian) -> elf::ShdrType {
+        elf::ShdrType(self.sh_type.get(endian))
     }
 
     #[inline]
@@ -1270,8 +1270,8 @@ impl<Endian: endian::Endian> SectionHeader for elf::Shdr64<Endian> {
     }
 
     #[inline]
-    fn sh_type(&self, endian: Self::Endian) -> u32 {
-        self.sh_type.get(endian)
+    fn sh_type(&self, endian: Self::Endian) -> elf::ShdrType {
+        elf::ShdrType(self.sh_type.get(endian))
     }
 
     #[inline]

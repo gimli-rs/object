@@ -2484,7 +2484,7 @@ pub struct Section<'data> {
     /// The `sh_type` field in the ELF section header.
     ///
     /// One of the `SHT_*` constants.
-    pub sh_type: u32,
+    pub sh_type: elf::ShdrType,
     /// The `sh_flags` field in the ELF section header.
     ///
     /// A combination of the `SHF_*` constants.
@@ -2608,7 +2608,7 @@ impl<'data> Sections<'data> {
             id,
             delete: false,
             name: ByteString::default(),
-            sh_type: 0,
+            sh_type: elf::SHT_NULL,
             sh_flags: 0,
             sh_addr: 0,
             sh_offset: 0,
