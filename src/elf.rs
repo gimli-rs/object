@@ -21,15 +21,15 @@ use crate::pod::Pod;
 #[derive(Debug)]
 #[non_exhaustive]
 pub struct Constants {
-    /// Values for `FileHeader*::e_type`.
+    /// Values for `Ehdr*::e_type`.
     pub et: &'static ConstantNames<u16>,
-    /// Values for `FileHeader*::e_flags`.
+    /// Values for `Ehdr*::e_flags`.
     pub ef: &'static FlagNames<u32>,
     /// Special values for section indices.
     pub shn: &'static ConstantNames<u16>,
-    /// Values for `SectionHeader*::sh_type`.
+    /// Values for `Shdr*::sh_type`.
     pub sht: &'static ConstantNames<u32>,
-    /// Values for `SectionHeader*::sh_flags`.
+    /// Values for `Shdr*::sh_flags`.
     pub shf: &'static FlagNames<u32>,
     /// Values for `st_bind` component of `Sym*::st_info`.
     pub stb: &'static ConstantNames<u8>,
@@ -37,9 +37,9 @@ pub struct Constants {
     pub stt: &'static ConstantNames<u8>,
     /// Values for `Sym*::st_other`.
     pub sto: &'static FlagNames<u8>,
-    /// Values for `ProgramHeader*::p_type`.
+    /// Values for `Phdr*::p_type`.
     pub pt: &'static ConstantNames<u32>,
-    /// Values for `ProgramHeader*::p_flags`.
+    /// Values for `Phdr*::p_flags`.
     pub pf: &'static FlagNames<u32>,
     /// Values for `Dyn*::d_tag`.
     pub dt: &'static ConstantNames<i64>,
@@ -73,7 +73,7 @@ pub const fn constants() -> &'static Constants {
 ///
 /// Note that these also include the values returned by [`constants`].
 ///
-/// `machine` corresponds to the `FileHeader*::e_machine` field.
+/// `machine` corresponds to the `Ehdr*::e_machine` field.
 #[cfg(feature = "names")]
 pub const fn machine_constants(machine: u16) -> &'static Constants {
     match machine {
@@ -120,7 +120,7 @@ pub const fn machine_constants(machine: u16) -> &'static Constants {
 /// The header at the start of every 32-bit ELF file.
 #[derive(Debug, Clone, Copy)]
 #[repr(C)]
-pub struct FileHeader32<E: Endian> {
+pub struct Ehdr32<E: Endian> {
     /// Magic number and other information.
     pub e_ident: Ident,
     /// Object file type. One of the `ET_*` constants.
@@ -166,7 +166,7 @@ pub struct FileHeader32<E: Endian> {
 /// The header at the start of every 64-bit ELF file.
 #[derive(Debug, Clone, Copy)]
 #[repr(C)]
-pub struct FileHeader64<E: Endian> {
+pub struct Ehdr64<E: Endian> {
     /// Magic number and other information.
     pub e_ident: Ident,
     /// Object file type. One of the `ET_*` constants.
@@ -302,7 +302,7 @@ pub const ELFOSABI_ARM: u8 = 97;
 /// Standalone (embedded) application.
 pub const ELFOSABI_STANDALONE: u8 = 255;
 
-// Values for `FileHeader*::e_type`.
+// Values for `Ehdr*::e_type`.
 constants! {
     consts et_names: u16 {
         /// No file type.
@@ -327,7 +327,7 @@ pub const ET_LOPROC: u16 = 0xff00;
 /// Processor-specific range end.
 pub const ET_HIPROC: u16 = 0xffff;
 
-// Values for `FileHeader*::e_machine`.
+// Values for `Ehdr*::e_machine`.
 /// No machine
 pub const EM_NONE: u16 = 0;
 /// AT&T WE 32100
@@ -693,7 +693,7 @@ pub const EM_SBF: u16 = 263;
 /// Digital Alpha
 pub const EM_ALPHA: u16 = 0x9026;
 
-// Values for `FileHeader*::e_version` and `Ident::version`.
+// Values for `Ehdr*::e_version` and `Ident::version`.
 /// Invalid ELF version.
 pub const EV_NONE: u8 = 0;
 /// Current ELF version.
@@ -702,7 +702,7 @@ pub const EV_CURRENT: u8 = 1;
 /// Section header.
 #[derive(Debug, Clone, Copy)]
 #[repr(C)]
-pub struct SectionHeader32<E: Endian> {
+pub struct Shdr32<E: Endian> {
     /// Section name.
     ///
     /// This is an offset into the section header string table.
@@ -734,7 +734,7 @@ pub struct SectionHeader32<E: Endian> {
 /// Section header.
 #[derive(Debug, Clone, Copy)]
 #[repr(C)]
-pub struct SectionHeader64<E: Endian> {
+pub struct Shdr64<E: Endian> {
     /// Section name.
     ///
     /// This is an offset into the section header string table.
@@ -790,7 +790,7 @@ pub const SHN_HIOS: u16 = 0xff3f;
 /// End of reserved section indices.
 pub const SHN_HIRESERVE: u16 = 0xffff;
 
-// Values for `SectionHeader*::sh_type`.
+// Values for `Shdr*::sh_type`.
 constants! {
     consts sht_names: u32 {
         /// Section header table entry is unused.
@@ -881,7 +881,7 @@ pub const SHT_LOUSER: u32 = 0x8000_0000;
 /// End of application-specific section types.
 pub const SHT_HIUSER: u32 = 0x8fff_ffff;
 
-// Values for `SectionHeader*::sh_flags`.
+// Values for `Shdr*::sh_flags`.
 constants! {
     flags shf_names: u32 {
         /// Section is writable.
@@ -906,7 +906,7 @@ constants! {
         SHF_TLS = 1 << 10,
         /// Section is compressed.
         ///
-        /// Compressed sections begin with one of the `CompressionHeader*` headers.
+        /// Compressed sections begin with one of the `Chdr*` headers.
         SHF_COMPRESSED = 1 << 11,
         /// Section should not be garbage collected by the linker.
         SHF_GNU_RETAIN = 1 << 21,
@@ -930,7 +930,7 @@ pub const SHF_MASKPROC: u32 = 0xf000_0000;
 /// changed in a future version.
 #[derive(Debug, Default, Clone, Copy)]
 #[repr(C)]
-pub struct CompressionHeader32<E: Endian> {
+pub struct Chdr32<E: Endian> {
     /// Compression format. One of the `ELFCOMPRESS_*` values.
     pub ch_type: U32<E>,
     /// Uncompressed data size.
@@ -947,7 +947,7 @@ pub struct CompressionHeader32<E: Endian> {
 /// changed in a future version.
 #[derive(Debug, Default, Clone, Copy)]
 #[repr(C)]
-pub struct CompressionHeader64<E: Endian> {
+pub struct Chdr64<E: Endian> {
     /// Compression format. One of the `ELFCOMPRESS_*` values.
     pub ch_type: U32<E>,
     /// Reserved.
@@ -1381,7 +1381,7 @@ pub struct Relr64<E: Endian>(pub U64<E>);
 /// Program segment header.
 #[derive(Debug, Clone, Copy)]
 #[repr(C)]
-pub struct ProgramHeader32<E: Endian> {
+pub struct Phdr32<E: Endian> {
     /// Segment type. One of the `PT_*` constants.
     pub p_type: U32<E>,
     /// Segment file offset.
@@ -1403,7 +1403,7 @@ pub struct ProgramHeader32<E: Endian> {
 /// Program segment header.
 #[derive(Debug, Clone, Copy)]
 #[repr(C)]
-pub struct ProgramHeader64<E: Endian> {
+pub struct Phdr64<E: Endian> {
     /// Segment type. One of the `PT_*` constants.
     pub p_type: U32<E>,
     /// Segment flags. A combination of the `PF_*` constants.
@@ -1422,7 +1422,7 @@ pub struct ProgramHeader64<E: Endian> {
     pub p_align: U64<E>,
 }
 
-/// Special value for `FileHeader*::e_phnum`.
+/// Special value for `Ehdr*::e_phnum`.
 ///
 /// This indicates that the real number of program headers is too large to fit into e_phnum.
 /// Instead the real value is in the field `sh_info` of section 0.
@@ -1493,7 +1493,7 @@ pub const ELF_NOTE_CORE: &[u8] = b"CORE";
 /// Notes in linux core files may also use `ELF_NOTE_CORE`.
 pub const ELF_NOTE_LINUX: &[u8] = b"LINUX";
 
-// Values for `NoteHeader*::n_type` in core files.
+// Values for `Nhdr*::n_type` in core files.
 constants! {
     consts nt_names_core: u32 {
         /// Contains copy of prstatus struct.
@@ -1999,7 +1999,7 @@ pub struct Vernaux<E: Endian> {
 /// A note consists of a header followed by a variable length name and descriptor.
 #[derive(Debug, Clone, Copy)]
 #[repr(C)]
-pub struct NoteHeader32<E: Endian> {
+pub struct Nhdr32<E: Endian> {
     /// Length of the note's name.
     ///
     /// Some known names are defined by the `ELF_NOTE_*` constants.
@@ -2018,7 +2018,7 @@ pub struct NoteHeader32<E: Endian> {
 /// Note section entry header.
 #[derive(Debug, Clone, Copy)]
 #[repr(C)]
-pub struct NoteHeader64<E: Endian> {
+pub struct Nhdr64<E: Endian> {
     /// Length of the note's name.
     ///
     /// Some known names are defined by the `ELF_NOTE_*` constants.
@@ -2034,9 +2034,9 @@ pub struct NoteHeader64<E: Endian> {
     pub n_type: U32<E>,
 }
 
-/// Get `NT_*` constants for `NoteHeader*::n_type`.
+/// Get `NT_*` constants for `Nhdr*::n_type`.
 ///
-/// `name` is the note name (as indicated by `NoteHeader*::n_namesz`).
+/// `name` is the note name (as indicated by `Nhdr*::n_namesz`).
 #[cfg(feature = "names")]
 pub fn nt_names(name: &[u8]) -> &'static ConstantNames<u32> {
     match name {
@@ -6875,12 +6875,12 @@ constants! {
     }
 }
 
-/// Encode `E_E2K_MACH_*` into `FileHeader*::e_flags`.
+/// Encode `E_E2K_MACH_*` into `Ehdr*::e_flags`.
 pub const fn ef_e2k_mach_to_flag(e_flags: u32, x: u32) -> u32 {
     (e_flags & 0xffffff) | (x << 24)
 }
 
-/// Decode `E_E2K_MACH_*` from `FileHeader*::e_flags`.
+/// Decode `E_E2K_MACH_*` from `Ehdr*::e_flags`.
 pub const fn ef_e2k_flag_to_mach(e_flags: u32) -> u32 {
     e_flags >> 24
 }
@@ -6931,13 +6931,25 @@ pub const Tag_Section: u8 = 2;
 #[allow(non_upper_case_globals)]
 pub const Tag_Symbol: u8 = 3;
 
+// These types were renamed, but it doesn't hurt to keep the old names.
+pub type FileHeader32<E> = Ehdr32<E>;
+pub type FileHeader64<E> = Ehdr64<E>;
+pub type SectionHeader32<E> = Shdr32<E>;
+pub type SectionHeader64<E> = Shdr64<E>;
+pub type CompressionHeader32<E> = Chdr32<E>;
+pub type CompressionHeader64<E> = Chdr64<E>;
+pub type ProgramHeader32<E> = Phdr32<E>;
+pub type ProgramHeader64<E> = Phdr64<E>;
+pub type NoteHeader32<E> = Nhdr32<E>;
+pub type NoteHeader64<E> = Nhdr64<E>;
+
 unsafe_impl_endian_pod!(
-    FileHeader32,
-    FileHeader64,
-    SectionHeader32,
-    SectionHeader64,
-    CompressionHeader32,
-    CompressionHeader64,
+    Ehdr32,
+    Ehdr64,
+    Shdr32,
+    Shdr64,
+    Chdr32,
+    Chdr64,
     Sym32,
     Sym64,
     Syminfo32,
@@ -6948,8 +6960,8 @@ unsafe_impl_endian_pod!(
     Rela64,
     Relr32,
     Relr64,
-    ProgramHeader32,
-    ProgramHeader64,
+    Phdr32,
+    Phdr64,
     Dyn32,
     Dyn64,
     Versym,
@@ -6957,8 +6969,8 @@ unsafe_impl_endian_pod!(
     Verdaux,
     Verneed,
     Vernaux,
-    NoteHeader32,
-    NoteHeader64,
+    Nhdr32,
+    Nhdr64,
     HashHeader,
     GnuHashHeader,
 );

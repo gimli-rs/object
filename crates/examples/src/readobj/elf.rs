@@ -4,14 +4,14 @@ use object::read::elf::*;
 use object::read::{SectionIndex, StringTable, SymbolIndex};
 
 pub(super) fn print_elf32(p: &mut Printer<'_>, data: &[u8]) {
-    if let Some(elf) = FileHeader32::<Endianness>::parse(data).print_err(p) {
+    if let Some(elf) = Ehdr32::<Endianness>::parse(data).print_err(p) {
         writeln!(p.w(), "Format: ELF 32-bit").unwrap();
         print_elf(p, elf, data);
     }
 }
 
 pub(super) fn print_elf64(p: &mut Printer<'_>, data: &[u8]) {
-    if let Some(elf) = FileHeader64::<Endianness>::parse(data).print_err(p) {
+    if let Some(elf) = Ehdr64::<Endianness>::parse(data).print_err(p) {
         writeln!(p.w(), "Format: ELF 64-bit").unwrap();
         print_elf(p, elf, data);
     }

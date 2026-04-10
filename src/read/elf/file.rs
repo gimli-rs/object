@@ -20,17 +20,17 @@ use super::{
 
 /// A 32-bit ELF object file.
 ///
-/// This is a file that starts with [`elf::FileHeader32`], and corresponds
+/// This is a file that starts with [`elf::Ehdr32`], and corresponds
 /// to [`crate::FileKind::Elf32`].
 pub type ElfFile32<'data, Endian = Endianness, R = &'data [u8]> =
-    ElfFile<'data, elf::FileHeader32<Endian>, R>;
+    ElfFile<'data, elf::Ehdr32<Endian>, R>;
 
 /// A 64-bit ELF object file.
 ///
-/// This is a file that starts with [`elf::FileHeader64`], and corresponds
+/// This is a file that starts with [`elf::Ehdr64`], and corresponds
 /// to [`crate::FileKind::Elf64`].
 pub type ElfFile64<'data, Endian = Endianness, R = &'data [u8]> =
-    ElfFile<'data, elf::FileHeader64<Endian>, R>;
+    ElfFile<'data, elf::Ehdr64<Endian>, R>;
 
 /// The ELF file format that matches the pointer width and endianness of the target platform.
 #[cfg(target_pointer_width = "32")]
@@ -541,7 +541,7 @@ where
     }
 }
 
-/// A trait for generic access to [`elf::FileHeader32`] and [`elf::FileHeader64`].
+/// A trait for generic access to [`elf::Ehdr32`] and [`elf::Ehdr64`].
 #[allow(missing_docs)]
 pub trait FileHeader: Debug + Pod {
     // Ideally this would be a `u64: From<Word>`, but can't express that.
@@ -834,14 +834,14 @@ pub trait FileHeader: Debug + Pod {
     }
 }
 
-impl<Endian: endian::Endian> FileHeader for elf::FileHeader32<Endian> {
+impl<Endian: endian::Endian> FileHeader for elf::Ehdr32<Endian> {
     type Word = u32;
     type Sword = i32;
     type Endian = Endian;
-    type ProgramHeader = elf::ProgramHeader32<Endian>;
-    type SectionHeader = elf::SectionHeader32<Endian>;
-    type CompressionHeader = elf::CompressionHeader32<Endian>;
-    type NoteHeader = elf::NoteHeader32<Endian>;
+    type ProgramHeader = elf::Phdr32<Endian>;
+    type SectionHeader = elf::Shdr32<Endian>;
+    type CompressionHeader = elf::Chdr32<Endian>;
+    type NoteHeader = elf::Nhdr32<Endian>;
     type Dyn = elf::Dyn32<Endian>;
     type Sym = elf::Sym32<Endian>;
     type Rel = elf::Rel32<Endian>;
@@ -932,14 +932,14 @@ impl<Endian: endian::Endian> FileHeader for elf::FileHeader32<Endian> {
     }
 }
 
-impl<Endian: endian::Endian> FileHeader for elf::FileHeader64<Endian> {
+impl<Endian: endian::Endian> FileHeader for elf::Ehdr64<Endian> {
     type Word = u64;
     type Sword = i64;
     type Endian = Endian;
-    type ProgramHeader = elf::ProgramHeader64<Endian>;
-    type SectionHeader = elf::SectionHeader64<Endian>;
-    type CompressionHeader = elf::CompressionHeader64<Endian>;
-    type NoteHeader = elf::NoteHeader32<Endian>;
+    type ProgramHeader = elf::Phdr64<Endian>;
+    type SectionHeader = elf::Shdr64<Endian>;
+    type CompressionHeader = elf::Chdr64<Endian>;
+    type NoteHeader = elf::Nhdr32<Endian>;
     type Dyn = elf::Dyn64<Endian>;
     type Sym = elf::Sym64<Endian>;
     type Rel = elf::Rel64<Endian>;

@@ -39,7 +39,7 @@ impl<'a> Object<'a> {
         let align = if self.elf_is_64() { 8 } else { 4 };
         let mut data = Vec::with_capacity(32);
         let n_name = b"GNU\0";
-        data.extend_from_slice(pod::bytes_of(&elf::NoteHeader32 {
+        data.extend_from_slice(pod::bytes_of(&elf::Nhdr32 {
             n_namesz: U32::new(self.endian, n_name.len() as u32),
             n_descsz: U32::new(self.endian, util::align(3 * 4, align) as u32),
             n_type: U32::new(self.endian, elf::NT_GNU_PROPERTY_TYPE_0),

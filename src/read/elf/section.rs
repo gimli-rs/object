@@ -363,10 +363,10 @@ impl<'data, Elf: FileHeader, R: ReadRef<'data>> SectionTable<'data, Elf, R> {
 
 /// An iterator for the sections in an [`ElfFile32`](super::ElfFile32).
 pub type ElfSectionIterator32<'data, 'file, Endian = Endianness, R = &'data [u8]> =
-    ElfSectionIterator<'data, 'file, elf::FileHeader32<Endian>, R>;
+    ElfSectionIterator<'data, 'file, elf::Ehdr32<Endian>, R>;
 /// An iterator for the sections in an [`ElfFile64`](super::ElfFile64).
 pub type ElfSectionIterator64<'data, 'file, Endian = Endianness, R = &'data [u8]> =
-    ElfSectionIterator<'data, 'file, elf::FileHeader64<Endian>, R>;
+    ElfSectionIterator<'data, 'file, elf::Ehdr64<Endian>, R>;
 
 /// An iterator for the sections in an [`ElfFile`].
 #[derive(Debug)]
@@ -409,10 +409,10 @@ where
 
 /// A section in an [`ElfFile32`](super::ElfFile32).
 pub type ElfSection32<'data, 'file, Endian = Endianness, R = &'data [u8]> =
-    ElfSection<'data, 'file, elf::FileHeader32<Endian>, R>;
+    ElfSection<'data, 'file, elf::Ehdr32<Endian>, R>;
 /// A section in an [`ElfFile64`](super::ElfFile64).
 pub type ElfSection64<'data, 'file, Endian = Endianness, R = &'data [u8]> =
-    ElfSection<'data, 'file, elf::FileHeader64<Endian>, R>;
+    ElfSection<'data, 'file, elf::Ehdr64<Endian>, R>;
 
 /// A section in an [`ElfFile`].
 ///
@@ -696,7 +696,7 @@ where
     }
 }
 
-/// A trait for generic access to [`elf::SectionHeader32`] and [`elf::SectionHeader64`].
+/// A trait for generic access to [`elf::Shdr32`] and [`elf::Shdr64`].
 #[allow(missing_docs)]
 pub trait SectionHeader: Debug + Pod {
     type Elf: FileHeader<SectionHeader = Self, Endian = Self::Endian, Word = Self::Word>;
@@ -1202,8 +1202,8 @@ pub trait SectionHeader: Debug + Pod {
     }
 }
 
-impl<Endian: endian::Endian> SectionHeader for elf::SectionHeader32<Endian> {
-    type Elf = elf::FileHeader32<Endian>;
+impl<Endian: endian::Endian> SectionHeader for elf::Shdr32<Endian> {
+    type Elf = elf::Ehdr32<Endian>;
     type Word = u32;
     type Endian = Endian;
 
@@ -1258,10 +1258,10 @@ impl<Endian: endian::Endian> SectionHeader for elf::SectionHeader32<Endian> {
     }
 }
 
-impl<Endian: endian::Endian> SectionHeader for elf::SectionHeader64<Endian> {
+impl<Endian: endian::Endian> SectionHeader for elf::Shdr64<Endian> {
     type Word = u64;
     type Endian = Endian;
-    type Elf = elf::FileHeader64<Endian>;
+    type Elf = elf::Ehdr64<Endian>;
 
     #[inline]
     fn sh_name(&self, endian: Self::Endian) -> u32 {

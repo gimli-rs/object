@@ -102,12 +102,12 @@ impl<'data> Builder<'data> {
 
     /// Read a 32-bit ELF file from file data.
     pub fn read32<R: ReadRef<'data>>(data: R) -> Result<Self> {
-        Self::read_file::<elf::FileHeader32<Endianness>, R>(data)
+        Self::read_file::<elf::Ehdr32<Endianness>, R>(data)
     }
 
     /// Read a 64-bit ELF file from file data.
     pub fn read64<R: ReadRef<'data>>(data: R) -> Result<Self> {
-        Self::read_file::<elf::FileHeader64<Endianness>, R>(data)
+        Self::read_file::<elf::Ehdr64<Endianness>, R>(data)
     }
 
     fn read_file<Elf, R>(data: R) -> Result<Self>
@@ -2140,7 +2140,7 @@ impl<'data> Builder<'data> {
 
 /// ELF file header.
 ///
-/// This corresponds to fields in [`elf::FileHeader32`] or [`elf::FileHeader64`].
+/// This corresponds to fields in [`elf::Ehdr32`] or [`elf::Ehdr64`].
 /// This only contains the ELF file header fields that can be modified.
 /// The other fields are automatically calculated.
 #[derive(Debug, Default)]
@@ -2197,7 +2197,7 @@ impl IdPrivate for SegmentId {
 
 /// A segment in [`Segments`].
 ///
-/// This corresponds to [`elf::ProgramHeader32`] or [`elf::ProgramHeader64`].
+/// This corresponds to [`elf::Phdr32`] or [`elf::Phdr64`].
 #[derive(Debug)]
 pub struct Segment<'data> {
     id: SegmentId,
@@ -2469,7 +2469,7 @@ impl IdPrivate for SectionId {
 
 /// A section in [`Sections`].
 ///
-/// This corresponds to [`elf::SectionHeader32`] or [`elf::SectionHeader64`].
+/// This corresponds to [`elf::Shdr32`] or [`elf::Shdr64`].
 #[derive(Debug)]
 pub struct Section<'data> {
     id: SectionId,

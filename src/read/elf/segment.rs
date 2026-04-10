@@ -10,10 +10,10 @@ use super::{ElfFile, FileHeader, NoteIterator};
 
 /// An iterator for the segments in an [`ElfFile32`](super::ElfFile32).
 pub type ElfSegmentIterator32<'data, 'file, Endian = Endianness, R = &'data [u8]> =
-    ElfSegmentIterator<'data, 'file, elf::FileHeader32<Endian>, R>;
+    ElfSegmentIterator<'data, 'file, elf::Ehdr32<Endian>, R>;
 /// An iterator for the segments in an [`ElfFile64`](super::ElfFile64).
 pub type ElfSegmentIterator64<'data, 'file, Endian = Endianness, R = &'data [u8]> =
-    ElfSegmentIterator<'data, 'file, elf::FileHeader64<Endian>, R>;
+    ElfSegmentIterator<'data, 'file, elf::Ehdr64<Endian>, R>;
 
 /// An iterator for the segments in an [`ElfFile`].
 #[derive(Debug)]
@@ -48,10 +48,10 @@ where
 
 /// A segment in an [`ElfFile32`](super::ElfFile32).
 pub type ElfSegment32<'data, 'file, Endian = Endianness, R = &'data [u8]> =
-    ElfSegment<'data, 'file, elf::FileHeader32<Endian>, R>;
+    ElfSegment<'data, 'file, elf::Ehdr32<Endian>, R>;
 /// A segment in an [`ElfFile64`](super::ElfFile64).
 pub type ElfSegment64<'data, 'file, Endian = Endianness, R = &'data [u8]> =
-    ElfSegment<'data, 'file, elf::FileHeader64<Endian>, R>;
+    ElfSegment<'data, 'file, elf::Ehdr64<Endian>, R>;
 
 /// A segment in an [`ElfFile`].
 ///
@@ -157,7 +157,7 @@ where
     }
 }
 
-/// A trait for generic access to [`elf::ProgramHeader32`] and [`elf::ProgramHeader64`].
+/// A trait for generic access to [`elf::Phdr32`] and [`elf::Phdr64`].
 #[allow(missing_docs)]
 pub trait ProgramHeader: Debug + Pod {
     type Elf: FileHeader<ProgramHeader = Self, Endian = Self::Endian, Word = Self::Word>;
@@ -282,10 +282,10 @@ pub trait ProgramHeader: Debug + Pod {
     }
 }
 
-impl<Endian: endian::Endian> ProgramHeader for elf::ProgramHeader32<Endian> {
+impl<Endian: endian::Endian> ProgramHeader for elf::Phdr32<Endian> {
     type Word = u32;
     type Endian = Endian;
-    type Elf = elf::FileHeader32<Endian>;
+    type Elf = elf::Ehdr32<Endian>;
 
     #[inline]
     fn p_type(&self, endian: Self::Endian) -> u32 {
@@ -328,10 +328,10 @@ impl<Endian: endian::Endian> ProgramHeader for elf::ProgramHeader32<Endian> {
     }
 }
 
-impl<Endian: endian::Endian> ProgramHeader for elf::ProgramHeader64<Endian> {
+impl<Endian: endian::Endian> ProgramHeader for elf::Phdr64<Endian> {
     type Word = u64;
     type Endian = Endian;
-    type Elf = elf::FileHeader64<Endian>;
+    type Elf = elf::Ehdr64<Endian>;
 
     #[inline]
     fn p_type(&self, endian: Self::Endian) -> u32 {

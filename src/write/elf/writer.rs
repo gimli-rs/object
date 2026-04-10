@@ -346,7 +346,7 @@ impl<'a> Writer<'a> {
 
         let endian = self.endian;
         if self.is_64 {
-            let file = elf::FileHeader64 {
+            let file = elf::Ehdr64 {
                 e_ident,
                 e_type: U16::new(endian, header.e_type),
                 e_machine: U16::new(endian, header.e_machine),
@@ -364,7 +364,7 @@ impl<'a> Writer<'a> {
             };
             self.buffer.write(&file)
         } else {
-            let file = elf::FileHeader32 {
+            let file = elf::Ehdr32 {
                 e_ident,
                 e_type: U16::new(endian, header.e_type),
                 e_machine: U16::new(endian, header.e_machine),
@@ -412,7 +412,7 @@ impl<'a> Writer<'a> {
     pub fn write_program_header(&mut self, header: &ProgramHeader) {
         let endian = self.endian;
         if self.is_64 {
-            let header = elf::ProgramHeader64 {
+            let header = elf::Phdr64 {
                 p_type: U32::new(endian, header.p_type),
                 p_flags: U32::new(endian, header.p_flags),
                 p_offset: U64::new(endian, header.p_offset),
@@ -424,7 +424,7 @@ impl<'a> Writer<'a> {
             };
             self.buffer.write(&header);
         } else {
-            let header = elf::ProgramHeader32 {
+            let header = elf::Phdr32 {
                 p_type: U32::new(endian, header.p_type),
                 p_offset: U32::new(endian, header.p_offset as u32),
                 p_vaddr: U32::new(endian, header.p_vaddr as u32),
@@ -525,7 +525,7 @@ impl<'a> Writer<'a> {
         };
         let endian = self.endian;
         if self.is_64 {
-            let section = elf::SectionHeader64 {
+            let section = elf::Shdr64 {
                 sh_name: U32::new(endian, sh_name),
                 sh_type: U32::new(endian, section.sh_type),
                 sh_flags: U64::new(endian, section.sh_flags),
@@ -539,7 +539,7 @@ impl<'a> Writer<'a> {
             };
             self.buffer.write(&section);
         } else {
-            let section = elf::SectionHeader32 {
+            let section = elf::Shdr32 {
                 sh_name: U32::new(endian, sh_name),
                 sh_type: U32::new(endian, section.sh_type),
                 sh_flags: U32::new(endian, section.sh_flags as u32),
@@ -2204,27 +2204,27 @@ impl Class {
     /// Return the size of the file header.
     pub fn file_header_size(self) -> usize {
         if self.is_64 {
-            mem::size_of::<elf::FileHeader64<Endianness>>()
+            mem::size_of::<elf::Ehdr64<Endianness>>()
         } else {
-            mem::size_of::<elf::FileHeader32<Endianness>>()
+            mem::size_of::<elf::Ehdr32<Endianness>>()
         }
     }
 
     /// Return the size of a program header.
     pub fn program_header_size(self) -> usize {
         if self.is_64 {
-            mem::size_of::<elf::ProgramHeader64<Endianness>>()
+            mem::size_of::<elf::Phdr64<Endianness>>()
         } else {
-            mem::size_of::<elf::ProgramHeader32<Endianness>>()
+            mem::size_of::<elf::Phdr32<Endianness>>()
         }
     }
 
     /// Return the size of a section header.
     pub fn section_header_size(self) -> usize {
         if self.is_64 {
-            mem::size_of::<elf::SectionHeader64<Endianness>>()
+            mem::size_of::<elf::Shdr64<Endianness>>()
         } else {
-            mem::size_of::<elf::SectionHeader32<Endianness>>()
+            mem::size_of::<elf::Shdr32<Endianness>>()
         }
     }
 
@@ -2306,7 +2306,7 @@ impl Class {
     }
 }
 
-/// Native endian version of [`elf::FileHeader64`].
+/// Native endian version of [`elf::Ehdr64`].
 #[allow(missing_docs)]
 #[derive(Debug, Clone)]
 pub struct FileHeader {
@@ -2318,7 +2318,7 @@ pub struct FileHeader {
     pub e_flags: u32,
 }
 
-/// Native endian version of [`elf::ProgramHeader64`].
+/// Native endian version of [`elf::Phdr64`].
 #[allow(missing_docs)]
 #[derive(Debug, Clone)]
 pub struct ProgramHeader {
@@ -2332,7 +2332,7 @@ pub struct ProgramHeader {
     pub p_align: u64,
 }
 
-/// Native endian version of [`elf::SectionHeader64`].
+/// Native endian version of [`elf::Shdr64`].
 #[allow(missing_docs)]
 #[derive(Debug, Clone)]
 pub struct SectionHeader {

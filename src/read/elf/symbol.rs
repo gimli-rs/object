@@ -219,10 +219,10 @@ impl<'data, Elf: FileHeader, R: ReadRef<'data>> SymbolTable<'data, Elf, R> {
 
 /// A symbol table in an [`ElfFile32`](super::ElfFile32).
 pub type ElfSymbolTable32<'data, 'file, Endian = Endianness, R = &'data [u8]> =
-    ElfSymbolTable<'data, 'file, elf::FileHeader32<Endian>, R>;
+    ElfSymbolTable<'data, 'file, elf::Ehdr32<Endian>, R>;
 /// A symbol table in an [`ElfFile32`](super::ElfFile32).
 pub type ElfSymbolTable64<'data, 'file, Endian = Endianness, R = &'data [u8]> =
-    ElfSymbolTable<'data, 'file, elf::FileHeader64<Endian>, R>;
+    ElfSymbolTable<'data, 'file, elf::Ehdr64<Endian>, R>;
 
 /// A symbol table in an [`ElfFile`](super::ElfFile).
 #[derive(Debug, Clone, Copy)]
@@ -263,10 +263,10 @@ impl<'data, 'file, Elf: FileHeader, R: ReadRef<'data>> ObjectSymbolTable<'data>
 
 /// An iterator for the symbols in an [`ElfFile32`](super::ElfFile32).
 pub type ElfSymbolIterator32<'data, 'file, Endian = Endianness, R = &'data [u8]> =
-    ElfSymbolIterator<'data, 'file, elf::FileHeader32<Endian>, R>;
+    ElfSymbolIterator<'data, 'file, elf::Ehdr32<Endian>, R>;
 /// An iterator for the symbols in an [`ElfFile64`](super::ElfFile64).
 pub type ElfSymbolIterator64<'data, 'file, Endian = Endianness, R = &'data [u8]> =
-    ElfSymbolIterator<'data, 'file, elf::FileHeader64<Endian>, R>;
+    ElfSymbolIterator<'data, 'file, elf::Ehdr64<Endian>, R>;
 
 /// An iterator for the symbols in an [`ElfFile`](super::ElfFile).
 pub struct ElfSymbolIterator<'data, 'file, Elf, R = &'data [u8]>
@@ -321,10 +321,10 @@ impl<'data, 'file, Elf: FileHeader, R: ReadRef<'data>> Iterator
 
 /// A symbol in an [`ElfFile32`](super::ElfFile32).
 pub type ElfSymbol32<'data, 'file, Endian = Endianness, R = &'data [u8]> =
-    ElfSymbol<'data, 'file, elf::FileHeader32<Endian>, R>;
+    ElfSymbol<'data, 'file, elf::Ehdr32<Endian>, R>;
 /// A symbol in an [`ElfFile64`](super::ElfFile64).
 pub type ElfSymbol64<'data, 'file, Endian = Endianness, R = &'data [u8]> =
-    ElfSymbol<'data, 'file, elf::FileHeader64<Endian>, R>;
+    ElfSymbol<'data, 'file, elf::Ehdr64<Endian>, R>;
 
 /// A symbol in an [`ElfFile`](super::ElfFile).
 ///

@@ -4,7 +4,7 @@ use crate::elf;
 use crate::endian;
 use crate::pod::Pod;
 
-/// A trait for generic access to [`elf::CompressionHeader32`] and [`elf::CompressionHeader64`].
+/// A trait for generic access to [`elf::Chdr32`] and [`elf::Chdr64`].
 #[allow(missing_docs)]
 pub trait CompressionHeader: Debug + Pod {
     type Word: Into<u64>;
@@ -15,7 +15,7 @@ pub trait CompressionHeader: Debug + Pod {
     fn ch_addralign(&self, endian: Self::Endian) -> Self::Word;
 }
 
-impl<Endian: endian::Endian> CompressionHeader for elf::CompressionHeader32<Endian> {
+impl<Endian: endian::Endian> CompressionHeader for elf::Chdr32<Endian> {
     type Word = u32;
     type Endian = Endian;
 
@@ -35,7 +35,7 @@ impl<Endian: endian::Endian> CompressionHeader for elf::CompressionHeader32<Endi
     }
 }
 
-impl<Endian: endian::Endian> CompressionHeader for elf::CompressionHeader64<Endian> {
+impl<Endian: endian::Endian> CompressionHeader for elf::Chdr64<Endian> {
     type Word = u64;
     type Endian = Endian;
 

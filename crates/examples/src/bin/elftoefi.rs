@@ -40,8 +40,8 @@ fn main() {
         }
     };
     let out_data = match kind {
-        object::FileKind::Elf32 => copy_file::<elf::FileHeader32<Endianness>>(in_data).unwrap(),
-        object::FileKind::Elf64 => copy_file::<elf::FileHeader64<Endianness>>(in_data).unwrap(),
+        object::FileKind::Elf32 => copy_file::<elf::Ehdr32<Endianness>>(in_data).unwrap(),
+        object::FileKind::Elf64 => copy_file::<elf::Ehdr64<Endianness>>(in_data).unwrap(),
         _ => {
             eprintln!("Not an ELF file");
             process::exit(1);
