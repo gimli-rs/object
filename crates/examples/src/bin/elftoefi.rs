@@ -378,17 +378,19 @@ fn copy_file<Elf: FileHeader<Endian = Endianness>>(
 
 // Include both code and read only data in the text section.
 fn is_text<S: SectionHeader>(s: &S, endian: S::Endian) -> bool {
-    let flags = s.sh_flags(endian).into();
-    flags & elf::SHF_ALLOC != 0 && (flags & elf::SHF_EXECINSTR != 0 || flags & elf::SHF_WRITE == 0)
+    let flags = s.sh_flags(endian);
+    flags.contains(elf::SHF_ALLOC)
+        && (flags.contains(elf::SHF_EXECINSTR) || !flags.contains(elf::SHF_WRITE))
 }
 
 // Anything that is alloc but not text.
 fn is_data<S: SectionHeader>(s: &S, endian: S::Endian) -> bool {
-    let flags = s.sh_flags(endian).into();
-    flags & elf::SHF_ALLOC != 0 && flags & elf::SHF_EXECINSTR == 0 && flags & elf::SHF_WRITE != 0
+    let flags = s.sh_flags(endian);
+    flags.contains(elf::SHF_ALLOC)
+        && !flags.contains(elf::SHF_EXECINSTR)
+        && flags.contains(elf::SHF_WRITE)
 }
 
 fn is_alloc<S: SectionHeader>(s: &S, endian: S::Endian) -> bool {
-    let flags = s.sh_flags(endian).into();
-    flags & elf::SHF_ALLOC != 0
+    s.sh_flags(endian).contains(elf::SHF_ALLOC)
 }

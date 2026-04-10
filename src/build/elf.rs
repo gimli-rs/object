@@ -314,7 +314,7 @@ impl<'data> Builder<'data> {
                     _ => return Err(Error(format!("Unsupported section type {:x}", other))),
                 },
             };
-            let sh_flags = section.sh_flags(endian).into();
+            let sh_flags = section.sh_flags(endian);
             let sh_link = section.sh_link(endian);
             let sh_link_section = if sh_link == 0 {
                 None
@@ -328,7 +328,7 @@ impl<'data> Builder<'data> {
                 Some(SectionId(sh_link as usize - 1))
             };
             let sh_info = section.sh_info(endian);
-            let sh_info_section = if sh_info == 0 || sh_flags & elf::SHF_INFO_LINK == 0 {
+            let sh_info_section = if sh_info == 0 || !sh_flags.contains(elf::SHF_INFO_LINK) {
                 None
             } else {
                 if sh_info as usize >= sections.len() {
@@ -339,9 +339,9 @@ impl<'data> Builder<'data> {
                 }
                 Some(SectionId(sh_info as usize - 1))
             };
-            let sh_flags = section.sh_flags(endian).into();
+            let sh_flags = section.sh_flags(endian);
             let sh_addr = section.sh_addr(endian).into();
-            if sh_flags & elf::SHF_ALLOC != 0 {
+            if sh_flags.contains(elf::SHF_ALLOC) {
                 for segment in &mut builder.segments {
                     if segment.contains_address(sh_addr) {
                         segment.sections.push(id);
@@ -408,7 +408,7 @@ impl<'data> Builder<'data> {
                 dynamic_symbols.len(),
             )
             .map(SectionData::DynamicRelocation)
-        } else if link.0 == 0 || section.sh_flags(endian).into() & elf::SHF_ALLOC != 0 {
+        } else if link.0 == 0 || section.sh_flags(endian).contains(elf::SHF_ALLOC) {
             // If there's no link, then none of the relocations may reference symbols.
             // Assume that these are dynamic relocations, but don't use the dynamic
             // symbol table when parsing.
@@ -2488,7 +2488,7 @@ pub struct Section<'data> {
     /// The `sh_flags` field in the ELF section header.
     ///
     /// A combination of the `SHF_*` constants.
-    pub sh_flags: u64,
+    pub sh_flags: elf::ShdrFlags,
     /// The `sh_addr` field in the ELF section header.
     pub sh_addr: u64,
     /// The `sh_offset` field in the ELF section header.
@@ -2537,16 +2537,16 @@ impl<'data> Section<'data> {
 
     /// Returns true if the section flags include `SHF_ALLOC`.
     pub fn is_alloc(&self) -> bool {
-        self.sh_flags & elf::SHF_ALLOC != 0
+        self.sh_flags.contains(elf::SHF_ALLOC)
     }
 
     /// Return the segment permission flags that are equivalent to the section flags.
     pub fn p_flags(&self) -> u32 {
         let mut p_flags = elf::PF_R;
-        if self.sh_flags & elf::SHF_WRITE != 0 {
+        if self.sh_flags.contains(elf::SHF_WRITE) {
             p_flags |= elf::PF_W;
         }
-        if self.sh_flags & elf::SHF_EXECINSTR != 0 {
+        if self.sh_flags.contains(elf::SHF_EXECINSTR) {
             p_flags |= elf::PF_X;
         }
         p_flags
@@ -2609,7 +2609,7 @@ impl<'data> Sections<'data> {
             delete: false,
             name: ByteString::default(),
             sh_type: elf::SHT_NULL,
-            sh_flags: 0,
+            sh_flags: elf::ShdrFlags(0),
             sh_addr: 0,
             sh_offset: 0,
             sh_size: 0,

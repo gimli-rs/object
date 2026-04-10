@@ -158,7 +158,7 @@ impl<'a> Object<'a> {
             SectionKind::OtherString | SectionKind::DebugString => {
                 elf::SHF_STRINGS | elf::SHF_MERGE
             }
-            _ => 0,
+            _ => elf::ShdrFlags(0),
         };
         SectionFlags::Elf { sh_type, sh_flags }
     }

@@ -30,7 +30,7 @@ pub struct Constants {
     /// Values for `Shdr*::sh_type`.
     pub sht: &'static ConstantNames<ShdrType>,
     /// Values for `Shdr*::sh_flags`.
-    pub shf: &'static FlagNames<u64>,
+    pub shf: &'static FlagNames<ShdrFlags>,
     /// Values for `st_bind` component of `Sym*::st_info`.
     pub stb: &'static ConstantNames<u8>,
     /// Values for `st_type` component of `Sym*::st_info`.
@@ -53,7 +53,7 @@ constants! {
     flags ef: u32 = None;
     consts shn: u16 = shn_names;
     consts sht: ShdrType = sht_names;
-    flags shf: u64 = shf_names;
+    flags shf: ShdrFlags = shf_names;
     consts stb: u8 = stb_names;
     consts stt: u8 = stt_names;
     flags sto: u8 = sto_names;
@@ -907,9 +907,132 @@ pub const SHT_LOUSER: u32 = 0x8000_0000;
 /// End of application-specific section types.
 pub const SHT_HIUSER: u32 = 0x8fff_ffff;
 
+/// Section flags (`sh_flags`).
+#[derive(Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct ShdrFlags(pub u64);
+
+impl ShdrFlags {
+    /// Returns true if all bits set in `other` are set in `self`.
+    pub fn contains(self, other: ShdrFlags) -> bool {
+        (self & other) == other
+    }
+
+    /// Returns self with the specified flags set.
+    pub const fn with(self, other: ShdrFlags) -> Self {
+        Self(self.0 | other.0)
+    }
+
+    /// Returns self with the specified flags cleared.
+    pub const fn without(self, other: ShdrFlags) -> Self {
+        Self(self.0 & !other.0)
+    }
+}
+
+impl core::fmt::Debug for ShdrFlags {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        #[cfg(feature = "names")]
+        {
+            let mut unknown = self.0;
+            let mut first = true;
+            for (bit, name) in shf_names().bits_iter() {
+                let bit = bit.0;
+                if self.0 & bit == bit {
+                    if !first {
+                        f.write_str(" | ")?;
+                    }
+                    f.write_str(name)?;
+                    unknown &= !bit;
+                    first = false;
+                }
+            }
+            if unknown != 0 {
+                if !first {
+                    f.write_str(" | ")?;
+                }
+                write!(f, "0x{:x}", unknown)?;
+                first = false;
+            }
+            if !first {
+                return Ok(());
+            }
+        }
+        core::fmt::Debug::fmt(&self.0, f)
+    }
+}
+
+impl core::fmt::LowerHex for ShdrFlags {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        core::fmt::LowerHex::fmt(&self.0, f)
+    }
+}
+
+impl core::fmt::UpperHex for ShdrFlags {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        core::fmt::UpperHex::fmt(&self.0, f)
+    }
+}
+
+impl core::ops::BitOr for ShdrFlags {
+    type Output = ShdrFlags;
+    fn bitor(self, rhs: ShdrFlags) -> ShdrFlags {
+        ShdrFlags(self.0 | rhs.0)
+    }
+}
+
+impl core::ops::BitOrAssign for ShdrFlags {
+    fn bitor_assign(&mut self, rhs: ShdrFlags) {
+        self.0 |= rhs.0;
+    }
+}
+
+impl core::ops::BitAnd for ShdrFlags {
+    type Output = ShdrFlags;
+    fn bitand(self, rhs: ShdrFlags) -> ShdrFlags {
+        ShdrFlags(self.0 & rhs.0)
+    }
+}
+
+impl core::ops::BitAndAssign for ShdrFlags {
+    fn bitand_assign(&mut self, rhs: ShdrFlags) {
+        self.0 &= rhs.0;
+    }
+}
+
+impl core::ops::BitXor for ShdrFlags {
+    type Output = ShdrFlags;
+    fn bitxor(self, rhs: ShdrFlags) -> ShdrFlags {
+        ShdrFlags(self.0 ^ rhs.0)
+    }
+}
+
+impl core::ops::BitXorAssign for ShdrFlags {
+    fn bitxor_assign(&mut self, rhs: ShdrFlags) {
+        self.0 ^= rhs.0;
+    }
+}
+
+impl core::ops::Not for ShdrFlags {
+    type Output = ShdrFlags;
+    fn not(self) -> ShdrFlags {
+        ShdrFlags(!self.0)
+    }
+}
+
+impl From<u64> for ShdrFlags {
+    fn from(v: u64) -> ShdrFlags {
+        ShdrFlags(v)
+    }
+}
+
+impl From<ShdrFlags> for u64 {
+    fn from(v: ShdrFlags) -> u64 {
+        v.0
+    }
+}
+
 // Values for `Shdr*::sh_flags`.
 constants! {
-    flags shf_names: u64 {
+    flags shf_names: ShdrFlags(u64) {
         /// Section is writable.
         SHF_WRITE = 1 << 0,
         /// Section occupies memory during execution.
@@ -944,9 +1067,9 @@ constants! {
 }
 
 /// OS-specific section flags.
-pub const SHF_MASKOS: u32 = 0x0ff0_0000;
+pub const SHF_MASKOS: ShdrFlags = ShdrFlags(0x0ff0_0000);
 /// Processor-specific section flags.
-pub const SHF_MASKPROC: u32 = 0xf000_0000;
+pub const SHF_MASKPROC: ShdrFlags = ShdrFlags(0xf000_0000);
 
 /// Section compression header.
 ///
@@ -2893,7 +3016,7 @@ constants! {
         SHT_MIPS_XLATE_OLD = 0x7000_0028,
         SHT_MIPS_PDR_EXCEPTION = 0x7000_0029,
     }
-    flags shf: u64 {
+    flags shf: ShdrFlags(u64) {
         /// Must be in global data area.
         SHF_MIPS_GPREL = 0x1000_0000,
         SHF_MIPS_MERGE = 0x2000_0000,
@@ -3247,7 +3370,7 @@ constants! {
         /// Debug info for optimized code.
         SHT_PARISC_DOC = 0x7000_0002,
     }
-    flags shf: u64 {
+    flags shf: ShdrFlags(u64) {
         /// Section with short addressing.
         SHF_PARISC_SHORT = 0x2000_0000,
         /// Section far from gp.
@@ -3521,7 +3644,7 @@ constants! {
         SHT_ALPHA_DEBUG = 0x7000_0001,
         SHT_ALPHA_REGINFO = 0x7000_0002,
     }
-    flags shf: u64 {
+    flags shf: ShdrFlags(u64) {
         SHF_ALPHA_GPREL = 0x1000_0000,
     }
     flags sto: u8 {
@@ -4069,7 +4192,7 @@ constants! {
         /// A Thumb label.
         STT_ARM_16BIT = STT_HIPROC,
     }
-    flags shf: u64 {
+    flags shf: ShdrFlags(u64) {
         /// Section contains an entry point
         SHF_ARM_ENTRYSECT = 0x1000_0000,
         /// Section may be multiply defined in the input to a link step.
@@ -4875,7 +4998,7 @@ constants! {
         /// unwind bits
         SHT_IA_64_UNWIND = SHT_LOPROC + 1,
     }
-    flags shf: u64 {
+    flags shf: ShdrFlags(u64) {
         /// section near gp
         SHF_IA_64_SHORT = 0x1000_0000,
         /// spec insns w/o recovery

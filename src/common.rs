@@ -611,7 +611,7 @@ pub enum SectionFlags {
         /// `sh_type` field in the section header.
         sh_type: crate::elf::ShdrType,
         /// `sh_flags` field in the section header.
-        sh_flags: u64,
+        sh_flags: crate::elf::ShdrFlags,
     },
     /// Mach-O section flags.
     MachO {
