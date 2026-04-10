@@ -1100,7 +1100,7 @@ impl<'a> Writer<'a> {
         self.write_section_header(&SectionHeader {
             name: self.dynstr_str_id,
             sh_type: elf::SHT_STRTAB,
-            sh_flags: elf::SHF_ALLOC.into(),
+            sh_flags: elf::SHF_ALLOC,
             sh_addr,
             sh_offset: self.dynstr_offset as u64,
             sh_size: self.dynstr_data.len() as u64,
@@ -1263,7 +1263,7 @@ impl<'a> Writer<'a> {
         self.write_section_header(&SectionHeader {
             name: self.dynsym_str_id,
             sh_type: elf::SHT_DYNSYM,
-            sh_flags: elf::SHF_ALLOC.into(),
+            sh_flags: elf::SHF_ALLOC,
             sh_addr,
             sh_offset: self.dynsym_offset as u64,
             sh_size: self.dynsym_num as u64 * self.class().sym_size() as u64,
@@ -1352,7 +1352,7 @@ impl<'a> Writer<'a> {
         self.write_section_header(&SectionHeader {
             name: self.dynamic_str_id,
             sh_type: elf::SHT_DYNAMIC,
-            sh_flags: (elf::SHF_WRITE | elf::SHF_ALLOC).into(),
+            sh_flags: elf::SHF_WRITE | elf::SHF_ALLOC,
             sh_addr,
             sh_offset: self.dynamic_offset as u64,
             sh_size: (self.dynamic_num * self.class().dyn_size()) as u64,
@@ -1423,7 +1423,7 @@ impl<'a> Writer<'a> {
         self.write_section_header(&SectionHeader {
             name: self.hash_str_id,
             sh_type: elf::SHT_HASH,
-            sh_flags: elf::SHF_ALLOC.into(),
+            sh_flags: elf::SHF_ALLOC,
             sh_addr,
             sh_offset: self.hash_offset as u64,
             sh_size: self.hash_size as u64,
@@ -1554,7 +1554,7 @@ impl<'a> Writer<'a> {
         self.write_section_header(&SectionHeader {
             name: self.gnu_hash_str_id,
             sh_type: elf::SHT_GNU_HASH,
-            sh_flags: elf::SHF_ALLOC.into(),
+            sh_flags: elf::SHF_ALLOC,
             sh_addr,
             sh_offset: self.gnu_hash_offset as u64,
             sh_size: self.gnu_hash_size as u64,
@@ -1617,7 +1617,7 @@ impl<'a> Writer<'a> {
         self.write_section_header(&SectionHeader {
             name: self.gnu_versym_str_id,
             sh_type: elf::SHT_GNU_VERSYM,
-            sh_flags: elf::SHF_ALLOC.into(),
+            sh_flags: elf::SHF_ALLOC,
             sh_addr,
             sh_offset: self.gnu_versym_offset as u64,
             sh_size: self.class().gnu_versym_size(self.dynsym_num as usize) as u64,
@@ -1739,7 +1739,7 @@ impl<'a> Writer<'a> {
         self.write_section_header(&SectionHeader {
             name: self.gnu_verdef_str_id,
             sh_type: elf::SHT_GNU_VERDEF,
-            sh_flags: elf::SHF_ALLOC.into(),
+            sh_flags: elf::SHF_ALLOC,
             sh_addr,
             sh_offset: self.gnu_verdef_offset as u64,
             sh_size: self.gnu_verdef_size as u64,
@@ -1839,7 +1839,7 @@ impl<'a> Writer<'a> {
         self.write_section_header(&SectionHeader {
             name: self.gnu_verneed_str_id,
             sh_type: elf::SHT_GNU_VERNEED,
-            sh_flags: elf::SHF_ALLOC.into(),
+            sh_flags: elf::SHF_ALLOC,
             sh_addr,
             sh_offset: self.gnu_verneed_offset as u64,
             sh_size: self.gnu_verneed_size as u64,
@@ -1976,7 +1976,7 @@ impl<'a> Writer<'a> {
         self.write_section_header(&SectionHeader {
             name: Some(name),
             sh_type: if is_rela { elf::SHT_RELA } else { elf::SHT_REL },
-            sh_flags: elf::SHF_INFO_LINK.into(),
+            sh_flags: elf::SHF_INFO_LINK,
             sh_addr: 0,
             sh_offset: offset as u64,
             sh_size: (count * self.class().rel_size(is_rela)) as u64,

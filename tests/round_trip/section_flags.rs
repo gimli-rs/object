@@ -40,7 +40,7 @@ fn elf_x86_64_section_flags() {
     let SectionFlags::Elf { sh_flags, .. } = object.section_flags_mut(section) else {
         unreachable!();
     };
-    *sh_flags = object::elf::SHF_WRITE.into();
+    *sh_flags = object::elf::SHF_WRITE;
 
     let bytes = object.write().unwrap();
 
@@ -55,7 +55,7 @@ fn elf_x86_64_section_flags() {
         section.flags(),
         SectionFlags::Elf {
             sh_type: object::elf::SHT_PROGBITS,
-            sh_flags: object::elf::SHF_WRITE.into(),
+            sh_flags: object::elf::SHF_WRITE,
         }
     );
 }

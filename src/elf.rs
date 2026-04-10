@@ -29,7 +29,7 @@ pub struct Constants {
     /// Values for `SectionHeader*::sh_type`.
     pub sht: &'static ConstantNames<SectionType>,
     /// Values for `SectionHeader*::sh_flags`.
-    pub shf: &'static FlagNames<u32>,
+    pub shf: &'static FlagNames<u64>,
     /// Values for `st_bind` field of `Sym*::st_info`.
     pub stb: &'static ConstantNames<u8>,
     /// Values for `st_type` field of `Sym*::st_info`.
@@ -52,7 +52,7 @@ constants! {
     flags ef: u32 = {};
     consts shn: u16 = NAMES_SHN;
     consts sht: SectionType = NAMES_SHT;
-    flags shf: u32 = NAMES_SHF;
+    flags shf: u64 = NAMES_SHF;
     consts stb: u8 = NAMES_STB;
     consts stt: u8 = NAMES_STT;
     flags sto: u8 = NAMES_STO;
@@ -898,7 +898,7 @@ pub const SHT_LOUSER: u32 = 0x8000_0000;
 pub const SHT_HIUSER: u32 = 0x8fff_ffff;
 
 // Values for `SectionHeader*::sh_flags`.
-flag_names!(NAMES_SHF: u32 = {
+flag_names!(NAMES_SHF: u64 = {
     /// Section is writable.
     SHF_WRITE = 1 << 0,
     /// Section occupies memory during execution.
@@ -932,9 +932,9 @@ flag_names!(NAMES_SHF: u32 = {
 });
 
 /// OS-specific section flags.
-pub const SHF_MASKOS: u32 = 0x0ff0_0000;
+pub const SHF_MASKOS: u64 = 0x0ff0_0000;
 /// Processor-specific section flags.
-pub const SHF_MASKPROC: u32 = 0xf000_0000;
+pub const SHF_MASKPROC: u64 = 0xf000_0000;
 
 /// Section compression header.
 ///
@@ -2833,7 +2833,7 @@ constants! {
         SHT_MIPS_XLATE_OLD = 0x7000_0028,
         SHT_MIPS_PDR_EXCEPTION = 0x7000_0029,
     };
-    flags shf: u32 = {
+    flags shf: u64 = {
         /// Must be in global data area.
         SHF_MIPS_GPREL = 0x1000_0000,
         SHF_MIPS_MERGE = 0x2000_0000,
@@ -3216,7 +3216,7 @@ constants! {
         /// Debug info for optimized code.
         SHT_PARISC_DOC = 0x7000_0002,
     };
-    flags shf: u32 = {
+    flags shf: u64 = {
         /// Section with short addressing.
         SHF_PARISC_SHORT = 0x2000_0000,
         /// Section far from gp.
@@ -3499,7 +3499,7 @@ constants! {
         SHT_ALPHA_DEBUG = 0x7000_0001,
         SHT_ALPHA_REGINFO = 0x7000_0002,
     };
-    flags shf: u32 = {
+    flags shf: u64 = {
         SHF_ALPHA_GPREL = 0x1000_0000,
     };
     flags sto: u8 = {
@@ -4036,7 +4036,7 @@ constants! {
         /// A Thumb label.
         STT_ARM_16BIT = STT_HIPROC,
     };
-    flags shf: u32 = {
+    flags shf: u64 = {
         /// Section contains an entry point
         SHF_ARM_ENTRYSECT = 0x1000_0000,
         /// Section may be multiply defined in the input to a link step.
@@ -4857,7 +4857,7 @@ constants! {
         /// unwind bits
         SHT_IA_64_UNWIND = SHT_LOPROC + 1,
     };
-    flags shf: u32 = {
+    flags shf: u64 = {
         /// section near gp
         SHF_IA_64_SHORT = 0x1000_0000,
         /// spec insns w/o recovery

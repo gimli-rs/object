@@ -117,7 +117,7 @@ fn compression_zlib() {
     let object::SectionFlags::Elf { sh_flags, .. } = object.section_flags_mut(section) else {
         unreachable!();
     };
-    *sh_flags = object::elf::SHF_COMPRESSED.into();
+    *sh_flags = object::elf::SHF_COMPRESSED;
 
     let bytes = object.write().unwrap();
 
@@ -289,7 +289,7 @@ fn gnu_property_inner<Elf: FileHeader<Endian = Endianness>>(architecture: Archit
         sections.section_name(endian, section).unwrap(),
         b".note.gnu.property"
     );
-    assert_eq!(section.sh_flags(endian).into(), u64::from(elf::SHF_ALLOC));
+    assert_eq!(section.sh_flags(endian).into(), elf::SHF_ALLOC);
     let mut notes = section.notes(endian, bytes).unwrap().unwrap();
     let note = notes.next().unwrap().unwrap();
     let mut props = note.gnu_properties(endian).unwrap();

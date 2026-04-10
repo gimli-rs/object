@@ -106,7 +106,7 @@ impl<'a> Object<'a> {
                 SectionKind::Note,
                 SectionFlags::Elf {
                     sh_type: elf::SHT_NOTE,
-                    sh_flags: u64::from(elf::SHF_ALLOC),
+                    sh_flags: elf::SHF_ALLOC,
                 },
             ),
             StandardSection::EhFrame => (
@@ -122,7 +122,7 @@ impl<'a> Object<'a> {
                     } else {
                         elf::SHT_PROGBITS
                     },
-                    sh_flags: u64::from(elf::SHF_ALLOC),
+                    sh_flags: elf::SHF_ALLOC,
                 },
             ),
         }
@@ -159,8 +159,7 @@ impl<'a> Object<'a> {
                 elf::SHF_STRINGS | elf::SHF_MERGE
             }
             _ => 0,
-        }
-        .into();
+        };
         SectionFlags::Elf { sh_type, sh_flags }
     }
 
