@@ -164,7 +164,7 @@ pub trait ProgramHeader: Debug + Pod {
     type Word: Into<u64>;
     type Endian: endian::Endian;
 
-    fn p_type(&self, endian: Self::Endian) -> u32;
+    fn p_type(&self, endian: Self::Endian) -> elf::PhdrType;
     fn p_flags(&self, endian: Self::Endian) -> u32;
     fn p_offset(&self, endian: Self::Endian) -> Self::Word;
     fn p_vaddr(&self, endian: Self::Endian) -> Self::Word;
@@ -288,8 +288,8 @@ impl<Endian: endian::Endian> ProgramHeader for elf::Phdr32<Endian> {
     type Elf = elf::Ehdr32<Endian>;
 
     #[inline]
-    fn p_type(&self, endian: Self::Endian) -> u32 {
-        self.p_type.get(endian)
+    fn p_type(&self, endian: Self::Endian) -> elf::PhdrType {
+        elf::PhdrType(self.p_type.get(endian))
     }
 
     #[inline]
@@ -334,8 +334,8 @@ impl<Endian: endian::Endian> ProgramHeader for elf::Phdr64<Endian> {
     type Elf = elf::Ehdr64<Endian>;
 
     #[inline]
-    fn p_type(&self, endian: Self::Endian) -> u32 {
-        self.p_type.get(endian)
+    fn p_type(&self, endian: Self::Endian) -> elf::PhdrType {
+        elf::PhdrType(self.p_type.get(endian))
     }
 
     #[inline]

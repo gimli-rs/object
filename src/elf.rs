@@ -38,7 +38,7 @@ pub struct Constants {
     /// Values for `Sym*::st_other`.
     pub sto: &'static FlagNames<u8>,
     /// Values for `Phdr*::p_type`.
-    pub pt: &'static ConstantNames<u32>,
+    pub pt: &'static ConstantNames<PhdrType>,
     /// Values for `Phdr*::p_flags`.
     pub pf: &'static FlagNames<u32>,
     /// Values for `Dyn*::d_tag`.
@@ -57,7 +57,7 @@ constants! {
     consts stb: u8 = stb_names;
     consts stt: u8 = stt_names;
     flags sto: u8 = sto_names;
-    consts pt: u32 = pt_names;
+    consts pt: PhdrType = pt_names;
     flags pf: u32 = pf_names;
     consts dt: i64 = dt_names;
     consts r: u32 = None;
@@ -1577,9 +1577,35 @@ pub struct Phdr64<E: Endian> {
 /// Instead the real value is in the field `sh_info` of section 0.
 pub const PN_XNUM: u16 = 0xffff;
 
+/// Segment type (`p_type`).
+#[derive(Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct PhdrType(pub u32);
+
+impl core::fmt::Debug for PhdrType {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        #[cfg(feature = "names")]
+        if let Some(name) = pt_names().name(*self) {
+            return f.write_str(name);
+        }
+        core::fmt::Debug::fmt(&self.0, f)
+    }
+}
+
+impl core::fmt::LowerHex for PhdrType {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        core::fmt::LowerHex::fmt(&self.0, f)
+    }
+}
+
+impl core::fmt::UpperHex for PhdrType {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        core::fmt::UpperHex::fmt(&self.0, f)
+    }
+}
+
 // Values for `ProgramHeader*::p_type`.
 constants! {
-    consts pt_names: u32 {
+    consts pt_names: PhdrType(u32) {
         /// Program header table entry is unused.
         PT_NULL = 0,
         /// Loadable program segment.
@@ -3113,7 +3139,7 @@ constants! {
         R_MIPS_COPY = 126,
         R_MIPS_JUMP_SLOT = 127,
     }
-    consts pt: u32 {
+    consts pt: PhdrType(u32) {
         /// Register usage information.
         PT_MIPS_REGINFO = 0x7000_0000,
         /// Runtime procedure table.
@@ -3596,7 +3622,7 @@ constants! {
         R_PARISC_TLS_TPREL64 = R_PARISC_TPREL64,
         R_PARISC_HIRESERVE = 255,
     }
-    consts pt: u32 {
+    consts pt: PhdrType(u32) {
         PT_HP_TLS = PT_LOOS + 0x0,
         PT_HP_CORE_NONE = PT_LOOS + 0x1,
         PT_HP_CORE_VERSION = PT_LOOS + 0x2,
@@ -4206,7 +4232,7 @@ constants! {
         /// Absolute segment.
         PF_ARM_ABS = 0x4000_0000,
     }
-    consts pt: u32 {
+    consts pt: PhdrType(u32) {
         /// ARM unwind segment.
         PT_ARM_EXIDX = PT_LOPROC + 1,
     }
@@ -4979,7 +5005,7 @@ constants! {
         /// 64-bit ABI
         EF_IA_64_ABI64 = 0x0000_0010,
     }
-    consts pt: u32 {
+    consts pt: PhdrType(u32) {
         /// arch extension bits
         PT_IA_64_ARCHEXT = PT_LOPROC + 0,
         /// ia64 unwind bits
@@ -6322,7 +6348,7 @@ constants! {
         /// RISC-V attributes section.
         SHT_RISCV_ATTRIBUTES = SHT_LOPROC + 3,
     }
-    consts pt: u32 {
+    consts pt: PhdrType(u32) {
         PT_RISCV_ATTRIBUTES = PT_LOPROC + 3,
     }
     consts dt: i64 {

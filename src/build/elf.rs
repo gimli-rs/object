@@ -1301,7 +1301,7 @@ impl<'data> Builder<'data> {
             writer.write_align_program_headers();
             for segment in &self.segments {
                 writer.write_program_header(&write::elf::ProgramHeader {
-                    p_type: segment.p_type,
+                    p_type: segment.p_type.0,
                     p_flags: segment.p_flags,
                     p_offset: segment.p_offset,
                     p_vaddr: segment.p_vaddr,
@@ -2206,7 +2206,7 @@ pub struct Segment<'data> {
     /// The `p_type` field in the ELF program header.
     ///
     /// One of the `PT_*` constants.
-    pub p_type: u32,
+    pub p_type: elf::PhdrType,
     /// The `p_flags` field in the ELF program header.
     ///
     /// A combination of the `PF_*` constants.
@@ -2368,7 +2368,7 @@ impl<'data> Segments<'data> {
         self.push(Segment {
             id,
             delete: false,
-            p_type: 0,
+            p_type: elf::PT_NULL,
             p_flags: 0,
             p_offset: 0,
             p_vaddr: 0,
