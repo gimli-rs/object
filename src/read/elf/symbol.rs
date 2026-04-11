@@ -494,9 +494,9 @@ pub trait Sym: Debug + Pod {
     type Endian: endian::Endian;
 
     fn st_name(&self, endian: Self::Endian) -> u32;
-    fn st_info(&self) -> u8;
-    fn st_bind(&self) -> u8;
-    fn st_type(&self) -> u8;
+    fn st_info(&self) -> elf::SymInfo;
+    fn st_bind(&self) -> elf::SymBind;
+    fn st_type(&self) -> elf::SymType;
     fn st_other(&self) -> u8;
     fn st_visibility(&self) -> u8;
     fn st_shndx(&self, endian: Self::Endian) -> u16;
@@ -576,17 +576,17 @@ impl<Endian: endian::Endian> Sym for elf::Sym32<Endian> {
     }
 
     #[inline]
-    fn st_info(&self) -> u8 {
-        self.st_info
+    fn st_info(&self) -> elf::SymInfo {
+        elf::SymInfo(self.st_info)
     }
 
     #[inline]
-    fn st_bind(&self) -> u8 {
+    fn st_bind(&self) -> elf::SymBind {
         self.st_bind()
     }
 
     #[inline]
-    fn st_type(&self) -> u8 {
+    fn st_type(&self) -> elf::SymType {
         self.st_type()
     }
 
@@ -626,17 +626,17 @@ impl<Endian: endian::Endian> Sym for elf::Sym64<Endian> {
     }
 
     #[inline]
-    fn st_info(&self) -> u8 {
-        self.st_info
+    fn st_info(&self) -> elf::SymInfo {
+        elf::SymInfo(self.st_info)
     }
 
     #[inline]
-    fn st_bind(&self) -> u8 {
+    fn st_bind(&self) -> elf::SymBind {
         self.st_bind()
     }
 
     #[inline]
-    fn st_type(&self) -> u8 {
+    fn st_type(&self) -> elf::SymType {
         self.st_type()
     }
 

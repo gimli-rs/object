@@ -839,7 +839,7 @@ impl<'a> Writer<'a> {
         if self.is_64 {
             let sym = elf::Sym64 {
                 st_name: U32::new(endian, st_name),
-                st_info: sym.st_info,
+                st_info: sym.st_info.0,
                 st_other: sym.st_other,
                 st_shndx: U16::new(endian, st_shndx),
                 st_value: U64::new(endian, sym.st_value),
@@ -849,7 +849,7 @@ impl<'a> Writer<'a> {
         } else {
             let sym = elf::Sym32 {
                 st_name: U32::new(endian, st_name),
-                st_info: sym.st_info,
+                st_info: sym.st_info.0,
                 st_other: sym.st_other,
                 st_shndx: U16::new(endian, st_shndx),
                 st_value: U32::new(endian, sym.st_value as u32),
@@ -1210,7 +1210,7 @@ impl<'a> Writer<'a> {
         if self.is_64 {
             let sym = elf::Sym64 {
                 st_name: U32::new(endian, st_name),
-                st_info: sym.st_info,
+                st_info: sym.st_info.0,
                 st_other: sym.st_other,
                 st_shndx: U16::new(endian, st_shndx),
                 st_value: U64::new(endian, sym.st_value),
@@ -1220,7 +1220,7 @@ impl<'a> Writer<'a> {
         } else {
             let sym = elf::Sym32 {
                 st_name: U32::new(endian, st_name),
-                st_info: sym.st_info,
+                st_info: sym.st_info.0,
                 st_other: sym.st_other,
                 st_shndx: U16::new(endian, st_shndx),
                 st_value: U32::new(endian, sym.st_value as u32),
@@ -2354,7 +2354,7 @@ pub struct SectionHeader {
 pub struct Sym {
     pub name: Option<StringId>,
     pub section: Option<SectionIndex>,
-    pub st_info: u8,
+    pub st_info: elf::SymInfo,
     pub st_other: u8,
     pub st_shndx: u16,
     pub st_value: u64,

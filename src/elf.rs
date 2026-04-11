@@ -32,9 +32,9 @@ pub struct Constants {
     /// Values for `Shdr*::sh_flags`.
     pub shf: &'static FlagNames<ShdrFlags>,
     /// Values for `st_bind` component of `Sym*::st_info`.
-    pub stb: &'static ConstantNames<u8>,
+    pub stb: &'static ConstantNames<SymBind>,
     /// Values for `st_type` component of `Sym*::st_info`.
-    pub stt: &'static ConstantNames<u8>,
+    pub stt: &'static ConstantNames<SymType>,
     /// Values for `Sym*::st_other`.
     pub sto: &'static FlagNames<u8>,
     /// Values for `Phdr*::p_type`.
@@ -54,8 +54,8 @@ constants! {
     consts shn: u16 = shn_names;
     consts sht: ShdrType = sht_names;
     flags shf: ShdrFlags = shf_names;
-    consts stb: u8 = stb_names;
-    consts stt: u8 = stt_names;
+    consts stb: SymBind = stb_names;
+    consts stt: SymType = stt_names;
     flags sto: u8 = sto_names;
     consts pt: PhdrType = pt_names;
     flags pf: u32 = pf_names;
@@ -1151,20 +1151,20 @@ pub struct Sym32<E: Endian> {
 impl<E: Endian> Sym32<E> {
     /// Get the `st_bind` component of the `st_info` field.
     #[inline]
-    pub fn st_bind(&self) -> u8 {
-        self.st_info >> 4
+    pub fn st_bind(&self) -> SymBind {
+        SymInfo(self.st_info).st_bind()
     }
 
     /// Get the `st_type` component of the `st_info` field.
     #[inline]
-    pub fn st_type(&self) -> u8 {
-        self.st_info & 0xf
+    pub fn st_type(&self) -> SymType {
+        SymInfo(self.st_info).st_type()
     }
 
     /// Set the `st_info` field given the `st_bind` and `st_type` components.
     #[inline]
-    pub fn set_st_info(&mut self, st_bind: u8, st_type: u8) {
-        self.st_info = (st_bind << 4) + (st_type & 0xf);
+    pub fn set_st_info(&mut self, st_bind: SymBind, st_type: SymType) {
+        self.st_info = SymInfo::new(st_bind, st_type).0
     }
 
     /// Get the `st_visibility` component of the `st_info` field.
@@ -1201,23 +1201,23 @@ pub struct Sym64<E: Endian> {
 impl<E: Endian> Sym64<E> {
     /// Get the `st_bind` component of the `st_info` field.
     #[inline]
-    pub fn st_bind(&self) -> u8 {
-        self.st_info >> 4
+    pub fn st_bind(&self) -> SymBind {
+        SymInfo(self.st_info).st_bind()
     }
 
     /// Get the `st_type` component of the `st_info` field.
     #[inline]
-    pub fn st_type(&self) -> u8 {
-        self.st_info & 0xf
+    pub fn st_type(&self) -> SymType {
+        SymInfo(self.st_info).st_type()
     }
 
     /// Set the `st_info` field given the `st_bind` and `st_type` components.
     #[inline]
-    pub fn set_st_info(&mut self, st_bind: u8, st_type: u8) {
-        self.st_info = (st_bind << 4) + (st_type & 0xf);
+    pub fn set_st_info(&mut self, st_bind: SymBind, st_type: SymType) {
+        self.st_info = SymInfo::new(st_bind, st_type).0
     }
 
-    /// Get the `st_visibility` component of the `st_info` field.
+    /// Get the `st_visibility` component of the `st_other` field.
     #[inline]
     pub fn st_visibility(&self) -> u8 {
         self.st_other & 0x3
@@ -1267,9 +1267,75 @@ pub const SYMINFO_NONE: u16 = 0;
 pub const SYMINFO_CURRENT: u16 = 1;
 pub const SYMINFO_NUM: u16 = 2;
 
+/// Symbol info (`st_info`).
+#[derive(Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct SymInfo(pub u8);
+
+impl core::fmt::Debug for SymInfo {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        // TODO: print component names?
+        core::fmt::Debug::fmt(&self.0, f)
+    }
+}
+
+impl core::fmt::LowerHex for SymInfo {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        core::fmt::LowerHex::fmt(&self.0, f)
+    }
+}
+
+impl core::fmt::UpperHex for SymInfo {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        core::fmt::UpperHex::fmt(&self.0, f)
+    }
+}
+
+impl SymInfo {
+    /// Construct a value for the `st_info` field given the `st_bind` and `st_type` components.
+    pub fn new(st_bind: SymBind, st_type: SymType) -> Self {
+        SymInfo((st_bind.0 << 4) + (st_type.0 & 0xf))
+    }
+
+    /// Get the `st_bind` component of the `st_info` field.
+    pub fn st_bind(self) -> SymBind {
+        SymBind(self.0 >> 4)
+    }
+
+    /// Get the `st_type` component of the `st_info` field.
+    pub fn st_type(self) -> SymType {
+        SymType(self.0 & 0xf)
+    }
+}
+
+/// Symbol binding (`st_bind`).
+#[derive(Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct SymBind(pub u8);
+
+impl core::fmt::Debug for SymBind {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        #[cfg(feature = "names")]
+        if let Some(name) = stb_names().name(*self) {
+            return f.write_str(name);
+        }
+        core::fmt::Debug::fmt(&self.0, f)
+    }
+}
+
+impl core::fmt::LowerHex for SymBind {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        core::fmt::LowerHex::fmt(&self.0, f)
+    }
+}
+
+impl core::fmt::UpperHex for SymBind {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        core::fmt::UpperHex::fmt(&self.0, f)
+    }
+}
+
 // Values for `st_bind` component of `Sym*::st_info`.
 constants! {
-    consts stb_names: u8 {
+    consts stb_names: SymBind(u8) {
         /// Local symbol.
         STB_LOCAL = 0,
         /// Global symbol.
@@ -1290,9 +1356,35 @@ pub const STB_LOPROC: u8 = 13;
 /// End of processor-specific symbol binding.
 pub const STB_HIPROC: u8 = 15;
 
+/// Symbol type (`st_type`).
+#[derive(Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct SymType(pub u8);
+
+impl core::fmt::Debug for SymType {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        #[cfg(feature = "names")]
+        if let Some(name) = stt_names().name(*self) {
+            return f.write_str(name);
+        }
+        core::fmt::Debug::fmt(&self.0, f)
+    }
+}
+
+impl core::fmt::LowerHex for SymType {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        core::fmt::LowerHex::fmt(&self.0, f)
+    }
+}
+
+impl core::fmt::UpperHex for SymType {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        core::fmt::UpperHex::fmt(&self.0, f)
+    }
+}
+
 // Values for `st_type` component of `Sym*::st_info`.
 constants! {
-    consts stt_names: u8 {
+    consts stt_names: SymType(u8) {
         /// Symbol type is unspecified.
         STT_NOTYPE = 0,
         /// Symbol is a data object.
@@ -2737,7 +2829,7 @@ constants! {
 
 constants! {
     struct Sparc(Base);
-    consts stt: u8 {
+    consts stt: SymType(u8) {
         /// Global register reserved to app.
         STT_SPARC_REGISTER = 13,
     }
@@ -3056,7 +3148,7 @@ constants! {
     flags sto: u8 {
         STO_MIPS_PLT = 0x8,
     }
-    consts stb: u8 {
+    consts stb: SymBind(u8) {
         STB_MIPS_SPLIT_COMMON = 13,
     }
     consts r: u32 {
@@ -3404,7 +3496,7 @@ constants! {
         /// Static branch prediction code.
         SHF_PARISC_SBP = 0x8000_0000,
     }
-    consts stt: u8 {
+    consts stt: SymType(u8) {
         /// Millicode function entry point.
         STT_PARISC_MILLICODE = 13,
         STT_HP_OPAQUE = STT_LOOS + 0x1,
@@ -4212,7 +4304,7 @@ constants! {
             EF_ARM_EABI_VER5 = 0x0500_0000,
         },
     }
-    consts stt: u8 {
+    consts stt: SymType(u8) {
         /// A Thumb function.
         STT_ARM_TFUNC = STT_LOPROC,
         /// A Thumb label.

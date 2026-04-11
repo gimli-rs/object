@@ -2696,7 +2696,7 @@ pub struct Symbol<'data, const DYNAMIC: bool = false> {
     /// Used to set the `st_shndx` field in the ELF symbol.
     pub section: Option<SectionId>,
     /// The `st_info` field in the ELF symbol.
-    pub st_info: u8,
+    pub st_info: elf::SymInfo,
     /// The `st_other` field in the ELF symbol.
     pub st_other: u8,
     /// The `st_shndx` field in the ELF symbol.
@@ -2729,20 +2729,20 @@ impl<'data, const DYNAMIC: bool> Symbol<'data, DYNAMIC> {
 
     /// Get the `st_bind` component of the `st_info` field.
     #[inline]
-    pub fn st_bind(&self) -> u8 {
-        self.st_info >> 4
+    pub fn st_bind(&self) -> elf::SymBind {
+        self.st_info.st_bind()
     }
 
     /// Get the `st_type` component of the `st_info` field.
     #[inline]
-    pub fn st_type(&self) -> u8 {
-        self.st_info & 0xf
+    pub fn st_type(&self) -> elf::SymType {
+        self.st_info.st_type()
     }
 
     /// Set the `st_info` field given the `st_bind` and `st_type` components.
     #[inline]
-    pub fn set_st_info(&mut self, st_bind: u8, st_type: u8) {
-        self.st_info = (st_bind << 4) + (st_type & 0xf);
+    pub fn set_st_info(&mut self, st_bind: elf::SymBind, st_type: elf::SymType) {
+        self.st_info = elf::SymInfo::new(st_bind, st_type)
     }
 }
 
@@ -2765,7 +2765,7 @@ impl<'data, const DYNAMIC: bool> Symbols<'data, DYNAMIC> {
             delete: false,
             name: ByteString::default(),
             section: None,
-            st_info: 0,
+            st_info: Default::default(),
             st_other: 0,
             st_shndx: 0,
             st_value: 0,

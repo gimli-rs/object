@@ -202,7 +202,7 @@ impl<'a> Object<'a> {
         } else {
             elf::STB_GLOBAL
         };
-        let st_info = (st_bind << 4) + st_type;
+        let st_info = elf::SymInfo::new(st_bind, st_type);
         let st_other = if symbol.scope == SymbolScope::Linkage {
             elf::STV_HIDDEN
         } else {
