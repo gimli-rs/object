@@ -2206,7 +2206,7 @@ pub struct Segment<'data> {
     /// The `p_type` field in the ELF program header.
     ///
     /// One of the `PT_*` constants.
-    pub p_type: u32,
+    pub p_type: elf::ProgramType,
     /// The `p_flags` field in the ELF program header.
     ///
     /// A combination of the `PF_*` constants.
@@ -2368,7 +2368,7 @@ impl<'data> Segments<'data> {
         self.push(Segment {
             id,
             delete: false,
-            p_type: 0,
+            p_type: elf::PT_NULL,
             p_flags: 0,
             p_offset: 0,
             p_vaddr: 0,

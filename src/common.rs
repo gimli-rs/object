@@ -515,7 +515,7 @@ pub enum SegmentFlags {
     #[cfg(feature = "elf")]
     Elf {
         /// `p_type` field in the segment header.
-        p_type: u32,
+        p_type: crate::elf::ProgramType,
         /// `p_flags` field in the segment header.
         p_flags: u32,
     },

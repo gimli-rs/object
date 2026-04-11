@@ -37,7 +37,7 @@ pub struct Constants {
     /// Values for `Sym*::st_other`.
     pub sto: &'static FlagNames<u8>,
     /// Values for `ProgramHeader*::p_type`.
-    pub pt: &'static ConstantNames<u32>,
+    pub pt: &'static ConstantNames<ProgramType>,
     /// Values for `ProgramHeader*::p_flags`.
     pub pf: &'static FlagNames<u32>,
     /// Values for `Dyn*::d_tag`.
@@ -56,7 +56,7 @@ constants! {
     consts stb: u8 = NAMES_STB;
     consts stt: u8 = NAMES_STT;
     flags sto: u8 = NAMES_STO;
-    consts pt: u32 = NAMES_PT;
+    consts pt: ProgramType = NAMES_PT;
     flags pf: u32 = NAMES_PF;
     consts dt: i64 = NAMES_DT;
     consts r: u32 = {};
@@ -1409,7 +1409,7 @@ pub struct Relr64<E: Endian>(pub U64<E>);
 #[repr(C)]
 pub struct ProgramHeader32<E: Endian> {
     /// Segment type. One of the `PT_*` constants.
-    pub p_type: U32<E>,
+    pub p_type: U32<E, ProgramType>,
     /// Segment file offset.
     pub p_offset: U32<E>,
     /// Segment virtual address.
@@ -1431,7 +1431,7 @@ pub struct ProgramHeader32<E: Endian> {
 #[repr(C)]
 pub struct ProgramHeader64<E: Endian> {
     /// Segment type. One of the `PT_*` constants.
-    pub p_type: U32<E>,
+    pub p_type: U32<E, ProgramType>,
     /// Segment flags. A combination of the `PF_*` constants.
     pub p_flags: U32<E>,
     /// Segment file offset.
@@ -1454,8 +1454,23 @@ pub struct ProgramHeader64<E: Endian> {
 /// Instead the real value is in the field `sh_info` of section 0.
 pub const PN_XNUM: u16 = 0xffff;
 
-// Values for `ProgramHeader*::p_type`.
-constant_names!(NAMES_PT: u32 = {
+newtype!(
+    /// Values for `ProgramHeader*::p_type`.
+    struct ProgramType(u32);
+);
+
+impl ProgramType {
+    /// Return true if the type is in the OS-specific range.
+    pub fn is_os(self) -> bool {
+        self.0 >= PT_LOOS && self.0 <= PT_HIOS
+    }
+    /// Return true if the type is in the processor-specific range.
+    pub fn is_proc(self) -> bool {
+        self.0 >= PT_LOPROC && self.0 <= PT_HIPROC
+    }
+}
+
+newtype_constant_names!(NAMES_PT: ProgramType(u32) = {
     /// Program header table entry is unused.
     PT_NULL = 0,
     /// Loadable program segment.
@@ -2946,7 +2961,7 @@ constants! {
         R_MIPS_COPY = 126,
         R_MIPS_JUMP_SLOT = 127,
     };
-    consts pt: u32 = {
+    consts pt: ProgramType(u32) = {
         /// Register usage information.
         PT_MIPS_REGINFO = 0x7000_0000,
         /// Runtime procedure table.
@@ -3458,7 +3473,7 @@ constants! {
         R_PARISC_TLS_TPREL64 = R_PARISC_TPREL64,
         R_PARISC_HIRESERVE = 255,
     };
-    consts pt: u32 = {
+    consts pt: ProgramType(u32) = {
         PT_HP_TLS = PT_LOOS + 0x0,
         PT_HP_CORE_NONE = PT_LOOS + 0x1,
         PT_HP_CORE_VERSION = PT_LOOS + 0x2,
@@ -4066,7 +4081,7 @@ constants! {
         /// Absolute segment.
         PF_ARM_ABS = 0x4000_0000,
     };
-    consts pt: u32 = {
+    consts pt: ProgramType(u32) = {
         /// ARM unwind segment.
         PT_ARM_EXIDX = PT_LOPROC + 1,
     };
@@ -4854,7 +4869,7 @@ constants! {
         /// 64-bit ABI
         EF_IA_64_ABI64 = 0x0000_0010,
     };
-    consts pt: u32 = {
+    consts pt: ProgramType(u32) = {
         /// arch extension bits
         PT_IA_64_ARCHEXT = PT_LOPROC + 0,
         /// ia64 unwind bits
@@ -6194,7 +6209,7 @@ constants! {
         /// RISC-V attributes section.
         SHT_RISCV_ATTRIBUTES = SHT_LOPROC + 3,
     };
-    consts pt: u32 = {
+    consts pt: ProgramType(u32) = {
         PT_RISCV_ATTRIBUTES = PT_LOPROC + 3,
     };
     consts dt: i64 = {
