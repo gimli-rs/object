@@ -16,11 +16,11 @@ Entry Address: 0
 10: Section { name: ".symtab", address: 0, size: 90, align: 8, kind: Metadata, flags: Elf { sh_type: SHT_SYMTAB, sh_flags: 0 } }
 
 Symbols
-1: Symbol { name: "base.c", address: 0, size: 0, kind: File, section: None, scope: Compilation, weak: false, flags: Elf { st_info: 4, st_other: 0 } }
-2: Symbol { name: "", address: 0, size: 0, kind: Section, section: Section(SectionIndex(2)), scope: Compilation, weak: false, flags: Elf { st_info: 3, st_other: 0 } }
-3: Symbol { name: ".L.str", address: 0, size: d, kind: Data, section: Section(SectionIndex(4)), scope: Compilation, weak: false, flags: Elf { st_info: 1, st_other: 0 } }
-4: Symbol { name: "main", address: 0, size: 25, kind: Text, section: Section(SectionIndex(2)), scope: Dynamic, weak: false, flags: Elf { st_info: 12, st_other: 0 } }
-5: Symbol { name: "printf", address: 0, size: 0, kind: Unknown, section: Undefined, scope: Unknown, weak: false, flags: Elf { st_info: 10, st_other: 0 } }
+1: Symbol { name: "base.c", address: 0, size: 0, kind: File, section: None, scope: Compilation, weak: false, flags: Elf { st_info: STB_LOCAL | STT_FILE, st_other: 0 } }
+2: Symbol { name: "", address: 0, size: 0, kind: Section, section: Section(SectionIndex(2)), scope: Compilation, weak: false, flags: Elf { st_info: STB_LOCAL | STT_SECTION, st_other: 0 } }
+3: Symbol { name: ".L.str", address: 0, size: d, kind: Data, section: Section(SectionIndex(4)), scope: Compilation, weak: false, flags: Elf { st_info: STB_LOCAL | STT_OBJECT, st_other: 0 } }
+4: Symbol { name: "main", address: 0, size: 25, kind: Text, section: Section(SectionIndex(2)), scope: Dynamic, weak: false, flags: Elf { st_info: STB_GLOBAL | STT_FUNC, st_other: 0 } }
+5: Symbol { name: "printf", address: 0, size: 0, kind: Unknown, section: Undefined, scope: Unknown, weak: false, flags: Elf { st_info: STB_GLOBAL | STT_NOTYPE, st_other: 0 } }
 
 .text relocations
 (12, Relocation { kind: Relative, encoding: Generic, size: 20, target: Symbol(SymbolIndex(3)), addend: fffffffffffffffc, implicit_addend: false, flags: Elf { r_type: 2 } })

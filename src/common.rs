@@ -650,7 +650,7 @@ pub enum SymbolFlags<Section, Symbol> {
     #[cfg(feature = "elf")]
     Elf {
         /// `st_info` field in the ELF symbol.
-        st_info: u8,
+        st_info: crate::elf::SymbolInfo,
         /// `st_other` field in the ELF symbol.
         st_other: u8,
     },

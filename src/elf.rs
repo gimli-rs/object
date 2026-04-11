@@ -31,9 +31,9 @@ pub struct Constants {
     /// Values for `SectionHeader*::sh_flags`.
     pub shf: &'static FlagNames<SectionFlags>,
     /// Values for `st_bind` field of `Sym*::st_info`.
-    pub stb: &'static ConstantNames<u8>,
+    pub stb: &'static ConstantNames<SymbolBind>,
     /// Values for `st_type` field of `Sym*::st_info`.
-    pub stt: &'static ConstantNames<u8>,
+    pub stt: &'static ConstantNames<SymbolType>,
     /// Values for `Sym*::st_other`.
     pub sto: &'static FlagNames<u8>,
     /// Values for `ProgramHeader*::p_type`.
@@ -53,8 +53,8 @@ constants! {
     consts shn: u16 = NAMES_SHN;
     consts sht: SectionType = NAMES_SHT;
     flags shf: SectionFlags = NAMES_SHF;
-    consts stb: u8 = NAMES_STB;
-    consts stt: u8 = NAMES_STT;
+    consts stb: SymbolBind = NAMES_STB;
+    consts stt: SymbolType = NAMES_STT;
     flags sto: u8 = NAMES_STO;
     consts pt: ProgramType = NAMES_PT;
     flags pf: u32 = NAMES_PF;
@@ -1020,7 +1020,7 @@ pub struct Sym32<E: Endian> {
     /// Symbol type and binding.
     ///
     /// Use the `st_type` and `st_bind` methods to access this value.
-    pub st_info: u8,
+    pub st_info: SymbolInfo,
     /// Symbol visibility.
     ///
     /// Use the `st_visibility` method to access this value.
@@ -1032,20 +1032,20 @@ pub struct Sym32<E: Endian> {
 impl<E: Endian> Sym32<E> {
     /// Get the `st_bind` component of the `st_info` field.
     #[inline]
-    pub fn st_bind(&self) -> u8 {
-        self.st_info >> 4
+    pub fn st_bind(&self) -> SymbolBind {
+        self.st_info.st_bind()
     }
 
     /// Get the `st_type` component of the `st_info` field.
     #[inline]
-    pub fn st_type(&self) -> u8 {
-        self.st_info & 0xf
+    pub fn st_type(&self) -> SymbolType {
+        self.st_info.st_type()
     }
 
     /// Set the `st_info` field given the `st_bind` and `st_type` components.
     #[inline]
-    pub fn set_st_info(&mut self, st_bind: u8, st_type: u8) {
-        self.st_info = (st_bind << 4) + (st_type & 0xf);
+    pub fn set_st_info(&mut self, st_bind: SymbolBind, st_type: SymbolType) {
+        self.st_info = SymbolInfo::new(st_bind, st_type);
     }
 
     /// Get the `st_visibility` component of the `st_info` field.
@@ -1066,7 +1066,7 @@ pub struct Sym64<E: Endian> {
     /// Symbol type and binding.
     ///
     /// Use the `st_bind` and `st_type` methods to access this value.
-    pub st_info: u8,
+    pub st_info: SymbolInfo,
     /// Symbol visibility.
     ///
     /// Use the `st_visibility` method to access this value.
@@ -1082,23 +1082,23 @@ pub struct Sym64<E: Endian> {
 impl<E: Endian> Sym64<E> {
     /// Get the `st_bind` component of the `st_info` field.
     #[inline]
-    pub fn st_bind(&self) -> u8 {
-        self.st_info >> 4
+    pub fn st_bind(&self) -> SymbolBind {
+        self.st_info.st_bind()
     }
 
     /// Get the `st_type` component of the `st_info` field.
     #[inline]
-    pub fn st_type(&self) -> u8 {
-        self.st_info & 0xf
+    pub fn st_type(&self) -> SymbolType {
+        self.st_info.st_type()
     }
 
     /// Set the `st_info` field given the `st_bind` and `st_type` components.
     #[inline]
-    pub fn set_st_info(&mut self, st_bind: u8, st_type: u8) {
-        self.st_info = (st_bind << 4) + (st_type & 0xf);
+    pub fn set_st_info(&mut self, st_bind: SymbolBind, st_type: SymbolType) {
+        self.st_info = SymbolInfo::new(st_bind, st_type);
     }
 
-    /// Get the `st_visibility` component of the `st_info` field.
+    /// Get the `st_visibility` component of the `st_other` field.
     #[inline]
     pub fn st_visibility(&self) -> u8 {
         self.st_other & 0x3
@@ -1148,8 +1148,66 @@ pub const SYMINFO_NONE: u16 = 0;
 pub const SYMINFO_CURRENT: u16 = 1;
 pub const SYMINFO_NUM: u16 = 2;
 
-// Values for `st_bind` field of `Sym*::st_info`.
-constant_names!(NAMES_STB: u8 = {
+newtype!(
+    /// Values for `Sym*::st_info`.
+    #[repr(transparent)]
+    struct SymbolInfo(u8);
+);
+
+impl core::fmt::Debug for SymbolInfo {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(f, "{:?} | {:?}", self.st_bind(), self.st_type())
+    }
+}
+
+impl SymbolInfo {
+    /// Construct a value for the `st_info` field given the `st_bind` and `st_type` fields.
+    pub fn new(st_bind: SymbolBind, st_type: SymbolType) -> Self {
+        SymbolInfo((st_bind.0 << 4) | (st_type.0 & 0xf))
+    }
+
+    /// Get the `st_bind` field.
+    pub fn st_bind(self) -> SymbolBind {
+        SymbolBind(self.0 >> 4)
+    }
+
+    /// Get the `st_type` field.
+    pub fn st_type(self) -> SymbolType {
+        SymbolType(self.0 & 0xf)
+    }
+}
+
+impl core::ops::BitOr<SymbolBind> for SymbolType {
+    type Output = SymbolInfo;
+    fn bitor(self, st_bind: SymbolBind) -> Self::Output {
+        SymbolInfo::new(st_bind, self)
+    }
+}
+
+impl core::ops::BitOr<SymbolType> for SymbolBind {
+    type Output = SymbolInfo;
+    fn bitor(self, st_type: SymbolType) -> Self::Output {
+        SymbolInfo::new(self, st_type)
+    }
+}
+
+newtype!(
+    /// Values for `st_bind` field of `Sym*::st_info`.
+    struct SymbolBind(u8);
+);
+
+impl SymbolBind {
+    /// Return true if the binding is in the OS-specific range.
+    pub fn is_os(self) -> bool {
+        self.0 >= STB_LOOS && self.0 <= STB_HIOS
+    }
+    /// Return true if the binding is in the processor-specific range.
+    pub fn is_proc(self) -> bool {
+        self.0 >= STB_LOPROC && self.0 <= STB_HIPROC
+    }
+}
+
+newtype_constant_names!(NAMES_STB: SymbolBind(u8) = {
     /// Local symbol.
     STB_LOCAL = 0,
     /// Global symbol.
@@ -1169,8 +1227,23 @@ pub const STB_LOPROC: u8 = 13;
 /// End of processor-specific symbol binding.
 pub const STB_HIPROC: u8 = 15;
 
-// Values for `st_type` field of `Sym*::st_info`.
-constant_names!(NAMES_STT: u8 = {
+newtype!(
+    /// Values for `st_type` field of `Sym*::st_info`.
+    struct SymbolType(u8);
+);
+
+impl SymbolType {
+    /// Return true if the type is in the OS-specific range.
+    pub fn is_os(self) -> bool {
+        self.0 >= STT_LOOS && self.0 <= STT_HIOS
+    }
+    /// Return true if the type is in the processor-specific range.
+    pub fn is_proc(self) -> bool {
+        self.0 >= STT_LOPROC && self.0 <= STT_HIPROC
+    }
+}
+
+newtype_constant_names!(NAMES_STT: SymbolType(u8) = {
     /// Symbol type is unspecified.
     STT_NOTYPE = 0,
     /// Symbol is a data object.
@@ -2589,7 +2662,7 @@ constants! {
 
 constants! {
     struct Sparc(Base);
-    consts stt: u8 = {
+    consts stt: SymbolType(u8) = {
         /// Global register reserved to app.
         STT_SPARC_REGISTER = 13,
     };
@@ -2878,7 +2951,7 @@ constants! {
     flags sto: u8 = {
         STO_MIPS_PLT = 0x8,
     };
-    consts stb: u8 = {
+    consts stb: SymbolBind(u8) = {
         STB_MIPS_SPLIT_COMMON = 13,
     };
     consts r: u32 = {
@@ -3255,7 +3328,7 @@ constants! {
         /// Static branch prediction code.
         SHF_PARISC_SBP = 0x8000_0000,
     };
-    consts stt: u8 = {
+    consts stt: SymbolType(u8) = {
         /// Millicode function entry point.
         STT_PARISC_MILLICODE = 13,
         STT_HP_OPAQUE = STT_LOOS + 0x1,
@@ -4061,7 +4134,7 @@ constants! {
 
         EF_ARM_EABIMASK = 0xff00_0000 => NAMES_EF_ARM_EABI,
     };
-    consts stt: u8 = {
+    consts stt: SymbolType(u8) = {
         /// A Thumb function.
         STT_ARM_TFUNC = STT_LOPROC,
         /// A Thumb label.
