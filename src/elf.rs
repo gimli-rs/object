@@ -21,7 +21,7 @@ use crate::pod::Pod;
 #[non_exhaustive]
 pub struct Constants {
     /// Values for `FileHeader*::e_type`.
-    pub et: &'static ConstantNames<u16>,
+    pub et: &'static ConstantNames<FileType>,
     /// Values for `FileHeader*::e_flags`.
     pub ef: &'static FlagNames<u32>,
     /// Special values for section indices.
@@ -48,7 +48,7 @@ pub struct Constants {
 
 constants! {
     struct Base;
-    consts et: u16 = NAMES_ET;
+    consts et: FileType = NAMES_ET;
     flags ef: u32 = {};
     consts shn: u16 = NAMES_SHN;
     consts sht: SectionType = NAMES_SHT;
@@ -123,7 +123,7 @@ pub struct FileHeader32<E: Endian> {
     /// Magic number and other information.
     pub e_ident: Ident,
     /// Object file type. One of the `ET_*` constants.
-    pub e_type: U16<E>,
+    pub e_type: U16<E, FileType>,
     /// Architecture. One of the `EM_*` constants.
     pub e_machine: U16<E>,
     /// Object file version. Must be `EV_CURRENT`.
@@ -169,7 +169,7 @@ pub struct FileHeader64<E: Endian> {
     /// Magic number and other information.
     pub e_ident: Ident,
     /// Object file type. One of the `ET_*` constants.
-    pub e_type: U16<E>,
+    pub e_type: U16<E, FileType>,
     /// Architecture. One of the `EM_*` constants.
     pub e_machine: U16<E>,
     /// Object file version. Must be `EV_CURRENT`.
@@ -301,8 +301,24 @@ pub const ELFOSABI_ARM: u8 = 97;
 /// Standalone (embedded) application.
 pub const ELFOSABI_STANDALONE: u8 = 255;
 
-// Values for `FileHeader*::e_type`.
-constant_names!(NAMES_ET: u16 = {
+newtype!(
+    /// Values for `FileHeader*::e_type`.
+    struct FileType(u16);
+);
+
+impl FileType {
+    /// Return true if the type is in the OS-specific range.
+    pub fn is_os(self) -> bool {
+        self.0 >= ET_LOOS && self.0 <= ET_HIOS
+    }
+    /// Return true if the type is in the processor-specific range.
+    pub fn is_proc(self) -> bool {
+        debug_assert_eq!(ET_HIPROC, !0);
+        self.0 >= ET_LOPROC
+    }
+}
+
+newtype_constant_names!(NAMES_ET: FileType(u16) = {
     /// No file type.
     ET_NONE = 0,
     /// Relocatable file.

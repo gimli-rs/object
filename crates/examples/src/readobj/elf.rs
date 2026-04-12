@@ -35,7 +35,7 @@ fn print_file_header<Elf: FileHeader>(p: &mut Printer<'_>, endian: Elf::Endian, 
     }
     p.group("FileHeader", |p| {
         p.group("Ident", |p| print_ident(p, elf.e_ident()));
-        p.field_enum("Type", elf.e_type(endian), FLAGS_ET);
+        p.field_consts("Type", elf.e_type(endian), FileType::NAMES);
         p.field_enum("Machine", elf.e_machine(endian), FLAGS_EM);
         let version = elf.e_version(endian);
         if version < 256 {
@@ -884,7 +884,6 @@ const FLAGS_EI_OSABI: &[Flag<u8>] = &flags!(
     ELFOSABI_ARM,
     ELFOSABI_STANDALONE,
 );
-const FLAGS_ET: &[Flag<u16>] = &flags!(ET_NONE, ET_REL, ET_EXEC, ET_DYN, ET_CORE);
 const FLAGS_EM: &[Flag<u16>] = &flags!(
     EM_NONE,
     EM_M32,

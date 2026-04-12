@@ -2156,7 +2156,7 @@ pub struct Header {
     /// The object file type in the file header.
     ///
     /// One of the `ET_*` constants.
-    pub e_type: u16,
+    pub e_type: elf::FileType,
     /// The architecture in the file header.
     ///
     /// One of the `EM_*` constants.
