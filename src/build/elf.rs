@@ -2160,7 +2160,7 @@ pub struct Header {
     /// The architecture in the file header.
     ///
     /// One of the `EM_*` constants.
-    pub e_machine: u16,
+    pub e_machine: elf::Machine,
     /// Entry point virtual address in the file header.
     pub e_entry: u64,
     /// The processor-specific flags in the file header.

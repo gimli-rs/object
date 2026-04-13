@@ -574,7 +574,7 @@ pub trait FileHeader: Debug + Pod {
 
     fn e_ident(&self) -> &elf::Ident;
     fn e_type(&self, endian: Self::Endian) -> elf::FileType;
-    fn e_machine(&self, endian: Self::Endian) -> u16;
+    fn e_machine(&self, endian: Self::Endian) -> elf::Machine;
     fn e_version(&self, endian: Self::Endian) -> u32;
     fn e_entry(&self, endian: Self::Endian) -> Self::Word;
     fn e_phoff(&self, endian: Self::Endian) -> Self::Word;
@@ -872,7 +872,7 @@ impl<Endian: endian::Endian> FileHeader for elf::FileHeader32<Endian> {
     }
 
     #[inline]
-    fn e_machine(&self, endian: Self::Endian) -> u16 {
+    fn e_machine(&self, endian: Self::Endian) -> elf::Machine {
         self.e_machine.get(endian)
     }
 
@@ -970,7 +970,7 @@ impl<Endian: endian::Endian> FileHeader for elf::FileHeader64<Endian> {
     }
 
     #[inline]
-    fn e_machine(&self, endian: Self::Endian) -> u16 {
+    fn e_machine(&self, endian: Self::Endian) -> elf::Machine {
         self.e_machine.get(endian)
     }
 
