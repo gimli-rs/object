@@ -1,7 +1,7 @@
 Format: Elf Little-endian 64-bit
 Kind: Dynamic
 Architecture: Aarch64
-Flags: Elf { os_abi: 0, abi_version: 0, e_flags: 0 }
+Flags: Elf { os_abi: ELFOSABI_SYSV, abi_version: 0, e_flags: 0 }
 Relative Address Base: 0
 Entry Address: 620
 Build ID: [f7, 5e, 1f, d9, 4, 9a, 3f, cb, 21, dc, 15, f2, 7b, 5, 32, d8, 61, cf, 16, 2]

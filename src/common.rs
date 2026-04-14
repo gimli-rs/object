@@ -479,11 +479,11 @@ pub enum FileFlags {
     #[cfg(feature = "elf")]
     Elf {
         /// `os_abi` field in the ELF file header.
-        os_abi: u8,
+        os_abi: crate::elf::OsAbi,
         /// `abi_version` field in the ELF file header.
         abi_version: u8,
         /// `e_flags` field in the ELF file header.
-        e_flags: u32,
+        e_flags: crate::elf::FileFlags,
     },
     /// Mach-O file flags.
     #[cfg(feature = "macho")]

@@ -748,7 +748,7 @@ impl<'a> Object<'a> {
         {
             (os_abi, abi_version, e_flags)
         } else {
-            (elf::ELFOSABI_NONE, 0, 0)
+            (elf::ELFOSABI_NONE, 0, elf::FileFlags(0))
         };
 
         if self.architecture == Architecture::Mips64_N32 {

@@ -1,7 +1,7 @@
 Format: Elf Little-endian 64-bit
 Kind: Relocatable
 Architecture: X86_64
-Flags: Elf { os_abi: 0, abi_version: 0, e_flags: 0 }
+Flags: Elf { os_abi: ELFOSABI_SYSV, abi_version: 0, e_flags: 0 }
 Relative Address Base: 0
 Entry Address: 0
 1: Section { name: ".text", address: 0, size: 1c, align: 1, kind: Text, flags: Elf { sh_type: SHT_PROGBITS, sh_flags: SHF_ALLOC | SHF_EXECINSTR } }

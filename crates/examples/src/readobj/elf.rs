@@ -39,7 +39,7 @@ fn print_file_header<Elf: FileHeader>(p: &mut Printer<'_>, endian: Elf::Endian, 
         p.field_consts("Machine", elf.e_machine(endian), Machine::NAMES);
         let version = elf.e_version(endian);
         if version < 256 {
-            p.field_enum("Version", version as u8, FLAGS_EV);
+            p.field_consts("Version", FileVersion(version as u8), FileVersion::NAMES);
         } else {
             p.field_hex("Version", version);
         }
@@ -58,10 +58,10 @@ fn print_file_header<Elf: FileHeader>(p: &mut Printer<'_>, endian: Elf::Endian, 
 
 fn print_ident(p: &mut Printer<'_>, ident: &Ident) {
     p.field("Magic", format!("{:X?}", ident.magic));
-    p.field_enum("Class", ident.class, FLAGS_EI_CLASS);
-    p.field_enum("Data", ident.data, FLAGS_EI_DATA);
-    p.field_enum("Version", ident.version, FLAGS_EV);
-    p.field_enum("OsAbi", ident.os_abi, FLAGS_EI_OSABI);
+    p.field_consts("Class", ident.class, FileClass::NAMES);
+    p.field_consts("Data", ident.data, DataEncoding::NAMES);
+    p.field_consts("Version", ident.version, FileVersion::NAMES);
+    p.field_consts("OsAbi", ident.os_abi, OsAbi::NAMES);
     p.field_hex("AbiVersion", ident.abi_version);
     p.field("Unused", format!("{:X?}", ident.padding));
 }
@@ -859,31 +859,6 @@ fn constants<Elf: FileHeader>(endian: Elf::Endian, elf: &Elf) -> &'static Consta
     machine_constants(elf.e_machine(endian))
 }
 
-const FLAGS_EI_CLASS: &[Flag<u8>] = &flags!(ELFCLASSNONE, ELFCLASS32, ELFCLASS64);
-const FLAGS_EI_DATA: &[Flag<u8>] = &flags!(ELFDATANONE, ELFDATA2LSB, ELFDATA2MSB);
-const FLAGS_EV: &[Flag<u8>] = &flags!(EV_NONE, EV_CURRENT);
-const FLAGS_EI_OSABI: &[Flag<u8>] = &flags!(
-    ELFOSABI_SYSV,
-    ELFOSABI_HPUX,
-    ELFOSABI_NETBSD,
-    ELFOSABI_GNU,
-    ELFOSABI_HURD,
-    ELFOSABI_SOLARIS,
-    ELFOSABI_AIX,
-    ELFOSABI_IRIX,
-    ELFOSABI_FREEBSD,
-    ELFOSABI_TRU64,
-    ELFOSABI_MODESTO,
-    ELFOSABI_OPENBSD,
-    ELFOSABI_OPENVMS,
-    ELFOSABI_NSK,
-    ELFOSABI_AROS,
-    ELFOSABI_FENIXOS,
-    ELFOSABI_CLOUDABI,
-    ELFOSABI_ARM_AEABI,
-    ELFOSABI_ARM,
-    ELFOSABI_STANDALONE,
-);
 const FLAGS_ELFCOMPRESS: &[Flag<u32>] = &flags!(ELFCOMPRESS_ZLIB, ELFCOMPRESS_ZSTD);
 const FLAGS_GNU_PROPERTY: &[Flag<u32>] = &flags!(
     GNU_PROPERTY_STACK_SIZE,

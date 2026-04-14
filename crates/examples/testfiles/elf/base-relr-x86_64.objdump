@@ -1,7 +1,7 @@
 Format: Elf Little-endian 64-bit
 Kind: Dynamic
 Architecture: X86_64
-Flags: Elf { os_abi: 0, abi_version: 0, e_flags: 0 }
+Flags: Elf { os_abi: ELFOSABI_SYSV, abi_version: 0, e_flags: 0 }
 Relative Address Base: 0
 Entry Address: 1060
 Build ID: [1f, 9b, 45, 6b, d0, 2a, 5, f3, 6b, 88, 90, ba, b6, bc, fb, 39, e9, 39, cd, 99]

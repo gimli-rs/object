@@ -1,7 +1,7 @@
 Format: Elf Little-endian 32-bit
 Kind: Dynamic
 Architecture: I386
-Flags: Elf { os_abi: 0, abi_version: 0, e_flags: 0 }
+Flags: Elf { os_abi: ELFOSABI_SYSV, abi_version: 0, e_flags: 0 }
 Relative Address Base: 0
 Entry Address: 1060
 Build ID: [20, f1, cf, 5c, 28, a0, 2e, 84, 7f, 7d, 64, 9b, 89, ed, 5e, 93, 3e, 47, 4b, 98]

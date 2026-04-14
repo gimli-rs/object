@@ -2148,7 +2148,7 @@ pub struct Header {
     /// The OS ABI field in the file header.
     ///
     /// One of the `ELFOSABI*` constants.
-    pub os_abi: u8,
+    pub os_abi: elf::OsAbi,
     /// The ABI version field in the file header.
     ///
     /// The meaning of this field depends on the `os_abi` value.
@@ -2166,7 +2166,7 @@ pub struct Header {
     /// The processor-specific flags in the file header.
     ///
     /// A combination of the `EF_*` constants.
-    pub e_flags: u32,
+    pub e_flags: elf::FileFlags,
     /// The file offset of the program header table.
     ///
     /// Writing will fail if the program header table cannot be placed at this offset.

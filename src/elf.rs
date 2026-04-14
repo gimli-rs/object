@@ -23,7 +23,7 @@ pub struct Constants {
     /// Values for `FileHeader*::e_type`.
     pub et: &'static ConstantNames<FileType>,
     /// Values for `FileHeader*::e_flags`.
-    pub ef: &'static FlagNames<u32>,
+    pub ef: &'static FlagNames<FileFlags>,
     /// Special values for section indices.
     pub shn: &'static ConstantNames<u16>,
     /// Values for `SectionHeader*::sh_type`.
@@ -49,7 +49,7 @@ pub struct Constants {
 constants! {
     struct Base;
     consts et: FileType = NAMES_ET;
-    flags ef: u32 = {};
+    flags ef: FileFlags(u32) = {};
     consts shn: u16 = NAMES_SHN;
     consts sht: SectionType = NAMES_SHT;
     flags shf: SectionFlags = NAMES_SHF;
@@ -137,7 +137,7 @@ pub struct FileHeader32<E: Endian> {
     /// Processor-specific flags.
     ///
     /// A combination of the `EF_*` constants.
-    pub e_flags: U32<E>,
+    pub e_flags: U32<E, FileFlags>,
     /// Size in bytes of this header.
     pub e_ehsize: U16<E>,
     /// Program header table entry size.
@@ -183,7 +183,7 @@ pub struct FileHeader64<E: Endian> {
     /// Processor-specific flags.
     ///
     /// A combination of the `EF_*` constants.
-    pub e_flags: U32<E>,
+    pub e_flags: U32<E, FileFlags>,
     /// Size in bytes of this header.
     pub e_ehsize: U16<E>,
     /// Program header table entry size.
@@ -217,13 +217,13 @@ pub struct Ident {
     /// Magic number. Must be `ELFMAG`.
     pub magic: [u8; 4],
     /// File class. One of the `ELFCLASS*` constants.
-    pub class: u8,
+    pub class: FileClass,
     /// Data encoding. One of the `ELFDATA*` constants.
-    pub data: u8,
+    pub data: DataEncoding,
     /// ELF version. Must be `EV_CURRENT`.
-    pub version: u8,
+    pub version: FileVersion,
     /// OS ABI identification. One of the `ELFOSABI*` constants.
-    pub os_abi: u8,
+    pub os_abi: OsAbi,
     /// ABI version.
     ///
     /// The meaning of this field depends on the `os_abi` value.
@@ -235,71 +235,92 @@ pub struct Ident {
 /// File identification bytes stored in `Ident::magic`.
 pub const ELFMAG: [u8; 4] = [0x7f, b'E', b'L', b'F'];
 
-// Values for `Ident::class`.
-/// Invalid class.
-pub const ELFCLASSNONE: u8 = 0;
-/// 32-bit object.
-pub const ELFCLASS32: u8 = 1;
-/// 64-bit object.
-pub const ELFCLASS64: u8 = 2;
+newtype!(
+    /// Values for `Ident::class`.
+    #[repr(transparent)]
+    struct FileClass(u8);
+);
 
-// Values for `Ident::data`.
-/// Invalid data encoding.
-pub const ELFDATANONE: u8 = 0;
-/// 2's complement, little endian.
-pub const ELFDATA2LSB: u8 = 1;
-/// 2's complement, big endian.
-pub const ELFDATA2MSB: u8 = 2;
+newtype_constant_names!(NAMES_CLASS: FileClass(u8) = {
+    /// Invalid class.
+    ELFCLASSNONE = 0,
+    /// 32-bit object.
+    ELFCLASS32 = 1,
+    /// 64-bit object.
+    ELFCLASS64 = 2,
+});
 
-// Values for `Ident::os_abi`.
-/// UNIX System V ABI.
-pub const ELFOSABI_NONE: u8 = 0;
-/// UNIX System V ABI.
-///
-/// Alias.
-pub const ELFOSABI_SYSV: u8 = 0;
-/// HP-UX.
-pub const ELFOSABI_HPUX: u8 = 1;
-/// NetBSD.
-pub const ELFOSABI_NETBSD: u8 = 2;
-/// Object uses GNU ELF extensions.
-pub const ELFOSABI_GNU: u8 = 3;
-/// Object uses GNU ELF extensions.
-///
-/// Compatibility alias.
-pub const ELFOSABI_LINUX: u8 = ELFOSABI_GNU;
-/// GNU/Hurd.
-pub const ELFOSABI_HURD: u8 = 4;
-/// Sun Solaris.
-pub const ELFOSABI_SOLARIS: u8 = 6;
-/// IBM AIX.
-pub const ELFOSABI_AIX: u8 = 7;
-/// SGI Irix.
-pub const ELFOSABI_IRIX: u8 = 8;
-/// FreeBSD.
-pub const ELFOSABI_FREEBSD: u8 = 9;
-/// Compaq TRU64 UNIX.
-pub const ELFOSABI_TRU64: u8 = 10;
-/// Novell Modesto.
-pub const ELFOSABI_MODESTO: u8 = 11;
-/// OpenBSD.
-pub const ELFOSABI_OPENBSD: u8 = 12;
-/// OpenVMS.
-pub const ELFOSABI_OPENVMS: u8 = 13;
-/// Hewlett-Packard Non-Stop Kernel.
-pub const ELFOSABI_NSK: u8 = 14;
-/// AROS
-pub const ELFOSABI_AROS: u8 = 15;
-/// FenixOS
-pub const ELFOSABI_FENIXOS: u8 = 16;
-/// Nuxi CloudABI
-pub const ELFOSABI_CLOUDABI: u8 = 17;
-/// ARM EABI.
-pub const ELFOSABI_ARM_AEABI: u8 = 64;
-/// ARM.
-pub const ELFOSABI_ARM: u8 = 97;
-/// Standalone (embedded) application.
-pub const ELFOSABI_STANDALONE: u8 = 255;
+newtype!(
+    /// Values for `Ident::data`.
+    #[repr(transparent)]
+    struct DataEncoding(u8);
+);
+
+newtype_constant_names!(NAMES_DATA: DataEncoding(u8) = {
+    /// Invalid data encoding.
+    ELFDATANONE = 0,
+    /// 2's complement, little endian.
+    ELFDATA2LSB = 1,
+    /// 2's complement, big endian.
+    ELFDATA2MSB = 2,
+});
+
+newtype!(
+    /// Values for `Ident::os_abi`.
+    #[repr(transparent)]
+    struct OsAbi(u8);
+);
+
+newtype_constant_names!(NAMES_ELFOSABI: OsAbi(u8) = {
+    /// UNIX System V ABI.
+    ELFOSABI_SYSV = 0,
+    /// UNIX System V ABI.
+    ///
+    /// Alias.
+    ELFOSABI_NONE = 0,
+    /// HP-UX.
+    ELFOSABI_HPUX = 1,
+    /// NetBSD.
+    ELFOSABI_NETBSD = 2,
+    /// Object uses GNU ELF extensions.
+    ELFOSABI_GNU = 3,
+    /// Object uses GNU ELF extensions.
+    ///
+    /// Compatibility alias.
+    ELFOSABI_LINUX = ELFOSABI_GNU.0,
+    /// GNU/Hurd.
+    ELFOSABI_HURD = 4,
+    /// Sun Solaris.
+    ELFOSABI_SOLARIS = 6,
+    /// IBM AIX.
+    ELFOSABI_AIX = 7,
+    /// SGI Irix.
+    ELFOSABI_IRIX = 8,
+    /// FreeBSD.
+    ELFOSABI_FREEBSD = 9,
+    /// Compaq TRU64 UNIX.
+    ELFOSABI_TRU64 = 10,
+    /// Novell Modesto.
+    ELFOSABI_MODESTO = 11,
+    /// OpenBSD.
+    ELFOSABI_OPENBSD = 12,
+    /// OpenVMS.
+    ELFOSABI_OPENVMS = 13,
+    /// Hewlett-Packard Non-Stop Kernel.
+    ELFOSABI_NSK = 14,
+    /// AROS
+    ELFOSABI_AROS = 15,
+    /// FenixOS
+    ELFOSABI_FENIXOS = 16,
+    /// Nuxi CloudABI
+    ELFOSABI_CLOUDABI = 17,
+    /// ARM EABI.
+    ELFOSABI_ARM_AEABI = 64,
+    /// ARM.
+    ELFOSABI_ARM = 97,
+    /// Standalone (embedded) application.
+    ELFOSABI_STANDALONE = 255,
+});
 
 newtype!(
     /// Values for `FileHeader*::e_type`.
@@ -712,11 +733,153 @@ newtype_constant_names!(NAMES_EM: Machine(u16) = {
     EM_ALPHA = 0x9026,
 });
 
-// Values for `FileHeader*::e_version` and `Ident::version`.
-/// Invalid ELF version.
-pub const EV_NONE: u8 = 0;
-/// Current ELF version.
-pub const EV_CURRENT: u8 = 1;
+newtype!(
+    /// Values for `FileHeader*::e_version` and `Ident::version`.
+    #[repr(transparent)]
+    struct FileVersion(u8);
+);
+
+newtype_constant_names!(NAMES_VERSION: FileVersion(u8) = {
+    /// Invalid ELF version.
+    EV_NONE = 0,
+    /// Current ELF version.
+    EV_CURRENT = 1,
+});
+
+newtype!(
+    /// Values for `FileHeader*::e_flags`.
+    struct FileFlags(u32);
+);
+
+newtype_flag_names!(NAMES_EF: FileFlags(u32) = {});
+
+impl FileFlags {
+    /// Get the MIPS ABI field.
+    ///
+    /// One of the `EF_MIPS_ABI_*` constants.
+    pub fn mips_abi(self) -> FileFlags {
+        FileFlags(self.0 & EF_MIPS_ABI)
+    }
+
+    /// Set the MIPS ABI field.
+    ///
+    /// One of the `EF_MIPS_ABI_*` constants.
+    pub fn with_mips_abi(self, abi: FileFlags) -> FileFlags {
+        FileFlags(self.0 & !EF_MIPS_ABI | abi.0 & EF_MIPS_ABI)
+    }
+
+    /// Get the MIPS architecture field.
+    ///
+    /// One of the `EF_MIPS_ARCH_*` constants.
+    pub fn mips_arch(self) -> FileFlags {
+        FileFlags(self.0 & EF_MIPS_ARCH)
+    }
+
+    /// Set the MIPS architecture field.
+    ///
+    /// One of the `EF_MIPS_ARCH_*` constants.
+    pub fn with_mips_arch(self, arch: FileFlags) -> FileFlags {
+        FileFlags(self.0 & !EF_MIPS_ARCH | arch.0 & EF_MIPS_ARCH)
+    }
+
+    /// Get the PA-RISC architecture field.
+    ///
+    /// One of the `EFA_PARISC_*` constants.
+    pub fn parisc_arch(self) -> FileFlags {
+        FileFlags(self.0 & EF_PARISC_ARCH)
+    }
+
+    /// Set the PA-RISC architecture field.
+    ///
+    /// One of the `EFA_PARISC_*` constants.
+    pub fn with_parisc_arch(self, arch: FileFlags) -> FileFlags {
+        FileFlags(self.0 & !EF_PARISC_ARCH | arch.0 & EF_PARISC_ARCH)
+    }
+
+    /// Get the PPC64 ABI field.
+    ///
+    /// See [`EF_PPC64_ABI`] for values.
+    pub fn ppc64_abi(self) -> u32 {
+        self.0 & EF_PPC64_ABI
+    }
+
+    /// Set the PPC64 ABI field.
+    ///
+    /// See [`EF_PPC64_ABI`] for values.
+    pub fn with_ppc64_abi(self, abi: u32) -> FileFlags {
+        FileFlags(self.0 & !EF_PPC64_ABI | abi & EF_PPC64_ABI)
+    }
+
+    /// Get the ARM EABI field.
+    ///
+    /// One of the `EF_ARM_EABI_*` values.
+    pub fn arm_eabi(self) -> FileFlags {
+        FileFlags(self.0 & EF_ARM_EABIMASK)
+    }
+
+    /// Set the ARM EABI field.
+    ///
+    /// One of the `EF_ARM_EABI_*` values.
+    pub fn with_arm_eabi(self, eabi: FileFlags) -> FileFlags {
+        FileFlags(self.0 & !EF_ARM_EABIMASK | eabi.0 & EF_ARM_EABIMASK)
+    }
+
+    /// Get the AVR architecture field.
+    ///
+    /// One of the `EF_AVR_ARCH_*` values.
+    pub fn avr_arch(self) -> FileFlags {
+        FileFlags(self.0 & EF_AVR_ARCH)
+    }
+
+    /// Set the AVR architecture field.
+    ///
+    /// One of the `EF_AVR_ARCH_*` values.
+    pub fn with_avr_arch(self, arch: FileFlags) -> FileFlags {
+        FileFlags(self.0 & !EF_AVR_ARCH | arch.0 & EF_AVR_ARCH)
+    }
+
+    /// Get the SH machine field.
+    ///
+    /// One of the `EF_SH*` values.
+    pub fn sh_mach(self) -> FileFlags {
+        FileFlags(self.0 & EF_SH_MACH_MASK)
+    }
+
+    /// Set the SH machine field.
+    ///
+    /// One of the `EF_SH*` values.
+    pub fn with_sh_mach(self, mach: FileFlags) -> FileFlags {
+        FileFlags(self.0 & !EF_SH_MACH_MASK | mach.0 & EF_SH_MACH_MASK)
+    }
+
+    /// Get the RISC-V float ABI field.
+    ///
+    /// One of the `EF_RISCV_FLOAT_ABI_*` values.
+    pub fn riscv_float_abi(self) -> FileFlags {
+        FileFlags(self.0 & EF_RISCV_FLOAT_ABI)
+    }
+
+    /// Set the RISC-V float ABI field.
+    ///
+    /// One of the `EF_RISCV_FLOAT_ABI_*` values.
+    pub fn with_riscv_float_abi(self, float_abi: FileFlags) -> FileFlags {
+        FileFlags(self.0 & !EF_RISCV_FLOAT_ABI | float_abi.0 & EF_RISCV_FLOAT_ABI)
+    }
+
+    /// Get the LoongArch ABI modifier field.
+    ///
+    /// One of the `EF_LARCH_ABI_* ` values.
+    pub fn larch_abi_modifier(self) -> FileFlags {
+        FileFlags(self.0 & EF_LARCH_ABI_MODIFIER_MASK)
+    }
+
+    /// Set the LoongArch ABI modifier field.
+    ///
+    /// One of the `EF_LARCH_ABI_* ` values.
+    pub fn with_larch_abi_modifier(self, modifier: FileFlags) -> FileFlags {
+        FileFlags(self.0 & !EF_LARCH_ABI_MODIFIER_MASK | modifier.0 & EF_LARCH_ABI_MODIFIER_MASK)
+    }
+}
 
 /// Section header.
 #[derive(Debug, Clone, Copy)]
@@ -2688,7 +2851,7 @@ constants! {
         /// Global register reserved to app.
         STT_SPARC_REGISTER = 13,
     };
-    flags ef: u32 = {
+    flags ef: FileFlags(u32) = {
         /// little endian data
         EF_SPARC_LEDATA = 0x80_0000,
         /// generic V8+ features
@@ -2862,12 +3025,12 @@ pub const EF_SPARC_EXT_MASK: u32 = 0xFF_FF00;
 
 constants! {
     struct SparcV9(Sparc);
-    flags ef: u32 = {
+    flags ef: FileFlags(u32) = {
         EF_SPARCV9_MM = 3 => NAMES_EF_SPARC_MM,
     };
 }
 
-constant_names!(NAMES_EF_SPARC_MM: u32 = {
+constant_names!(NAMES_EF_SPARC_MM: FileFlags(u32) = {
     EF_SPARCV9_TSO = 0,
     EF_SPARCV9_PSO = 1,
     EF_SPARCV9_RMO = 2,
@@ -2877,7 +3040,7 @@ constant_names!(NAMES_EF_SPARC_MM: u32 = {
 
 constants! {
     struct Mips(Base);
-    flags ef: u32 = {
+    flags ef: FileFlags(u32) = {
         /// A .noreorder directive was used.
         EF_MIPS_NOREORDER = 1,
         /// Contains PIC code.
@@ -3156,7 +3319,7 @@ constants! {
     };
 }
 
-constant_names!(NAMES_EF_MIPS_ABI: u32 = {
+constant_names!(NAMES_EF_MIPS_ABI: FileFlags(u32) = {
     /// The first MIPS 32 bit ABI
     EF_MIPS_ABI_O32 = 0x0000_1000,
     /// O32 ABI extended for 64-bit architectures
@@ -3167,7 +3330,7 @@ constant_names!(NAMES_EF_MIPS_ABI: u32 = {
     EF_MIPS_ABI_EABI64 = 0x0000_4000,
 });
 
-constant_names!(NAMES_EF_MIPS_ARCH: u32 = {
+constant_names!(NAMES_EF_MIPS_ARCH: FileFlags(u32) = {
     /// -mips1 code.
     EF_MIPS_ARCH_1 = 0x0000_0000,
     /// -mips2 code.
@@ -3312,7 +3475,7 @@ pub const LL_DELTA: u32 = 1 << 5;
 
 constants! {
     struct Parisc(Base);
-    flags ef: u32 = {
+    flags ef: FileFlags(u32) = {
         /// Trap nil pointer dereference.
         EF_PARISC_TRAPNIL = 0x0001_0000,
         /// Program uses arch. extensions.
@@ -3601,7 +3764,7 @@ constants! {
     };
 }
 
-constant_names!(NAMES_EFA_PARISC: u32 = {
+constant_names!(NAMES_EFA_PARISC: FileFlags(u32) = {
     /// PA-RISC 1.0 big-endian.
     EFA_PARISC_1_0 = 0x020b,
     /// PA-RISC 1.1 big-endian.
@@ -3614,7 +3777,7 @@ constant_names!(NAMES_EFA_PARISC: u32 = {
 
 constants! {
     struct Alpha(Base);
-    flags ef: u32 = {
+    flags ef: FileFlags(u32) = {
         /// All addresses must be < 2GB.
         EF_ALPHA_32BIT = 1,
         /// Relocations for relaxing exist.
@@ -3705,7 +3868,7 @@ pub const LITUSE_ALPHA_TLS_LDM: u32 = 5;
 
 constants! {
     struct Ppc(Base);
-    flags ef: u32 = {
+    flags ef: FileFlags(u32) = {
         /// PowerPC embedded flag
         EF_PPC_EMB = 0x8000_0000,
 
@@ -4135,7 +4298,7 @@ pub const STO_PPC64_LOCAL_MASK: u8 = 7 << STO_PPC64_LOCAL_BIT;
 
 constants! {
     struct Arm(Base);
-    flags ef: u32 = {
+    flags ef: FileFlags(u32) = {
         EF_ARM_RELEXEC = 0x01,
         EF_ARM_HASENTRY = 0x02,
         EF_ARM_INTERWORK = 0x04,
@@ -4420,7 +4583,7 @@ constants! {
     };
 }
 
-constant_names!(NAMES_EF_ARM_EABI: u32 = {
+constant_names!(NAMES_EF_ARM_EABI: FileFlags(u32) = {
     EF_ARM_EABI_UNKNOWN = 0x0000_0000,
     EF_ARM_EABI_VER1 = 0x0100_0000,
     EF_ARM_EABI_VER2 = 0x0200_0000,
@@ -4737,7 +4900,7 @@ pub const DT_AARCH64_NUM: i64 = 6;
 
 constants! {
     struct Avr(Base);
-    flags ef: u32 = {
+    flags ef: FileFlags(u32) = {
         /// If set, it is assumed that the elf file uses local symbols as reference
         /// for the relocations so that linker relaxation is possible.
         EF_AVR_LINKRELAX_PREPARED = 0x80,
@@ -4788,7 +4951,7 @@ constants! {
     };
 }
 
-constant_names!(NAMES_EF_AVR_ARCH: u32 = {
+constant_names!(NAMES_EF_AVR_ARCH: FileFlags(u32) = {
     EF_AVR_ARCH_AVR1 = 1,
     EF_AVR_ARCH_AVR2 = 2,
     EF_AVR_ARCH_AVR25 = 25,
@@ -4938,7 +5101,7 @@ constants! {
         R_CKCORE_TLS_DTPOFF32 = 57,
         R_CKCORE_TLS_TPOFF32 = 58,
     };
-    flags ef: u32 = {
+    flags ef: FileFlags(u32) = {
         _ = EF_CSKY_ABIMASK => NAMES_EF_CSKY_ABI,
     };
     consts sht: SectionType(u32) = {
@@ -4951,7 +5114,7 @@ pub const EF_CSKY_ABIMASK: u32 = 0xF000_0000;
 pub const EF_CSKY_OTHER: u32 = 0x0FFF_0000;
 pub const EF_CSKY_PROCESSOR: u32 = 0x0000_FFFF;
 
-constant_names!(NAMES_EF_CSKY_ABI: u32 = {
+constant_names!(NAMES_EF_CSKY_ABI: FileFlags(u32) = {
     EF_CSKY_ABIV1 = 0x1000_0000,
     EF_CSKY_ABIV2 = 0x2000_0000,
 });
@@ -4960,7 +5123,7 @@ constant_names!(NAMES_EF_CSKY_ABI: u32 = {
 
 constants! {
     struct Ia64(Base);
-    flags ef: u32 = {
+    flags ef: FileFlags(u32) = {
         /// 64-bit ABI
         EF_IA_64_ABI64 = 0x0000_0010,
     };
@@ -5167,7 +5330,7 @@ pub const EF_IA_64_ARCH: u32 = 0xff00_0000;
 
 constants! {
     struct Sh(Base);
-    flags ef: u32 = {
+    flags ef: FileFlags(u32) = {
         EF_SH_MACH_MASK = 0x1f => NAMES_EF_SH_MACH,
     };
     consts r: u32 = {
@@ -5215,7 +5378,7 @@ constants! {
 
 constants! {
     struct S390(Base);
-    flags ef: u32 = {
+    flags ef: FileFlags(u32) = {
         /// High GPRs kernel facility needed.
         EF_S390_HIGH_GPRS = 0x0000_0001,
     };
@@ -5347,7 +5510,7 @@ constants! {
     };
 }
 
-constant_names!(NAMES_EF_SH_MACH: u32 = {
+constant_names!(NAMES_EF_SH_MACH: FileFlags(u32) = {
     EF_SH_UNKNOWN = 0x0,
     EF_SH1 = 0x1,
     EF_SH2 = 0x2,
@@ -6289,7 +6452,7 @@ constants! {
 
 constants! {
     struct Riscv(Base);
-    flags ef: u32 = {
+    flags ef: FileFlags(u32) = {
         EF_RISCV_RVC = 0x0001,
         EF_RISCV_FLOAT_ABI = 0x0006 => NAMES_EF_RISCV_FLOAT_ABI,
         EF_RISCV_RVE = 0x0008,
@@ -6377,7 +6540,7 @@ constants! {
     };
 }
 
-constant_names!(NAMES_EF_RISCV_FLOAT_ABI: u32 = {
+constant_names!(NAMES_EF_RISCV_FLOAT_ABI: FileFlags(u32) = {
     EF_RISCV_FLOAT_ABI_SOFT = 0x0000,
     EF_RISCV_FLOAT_ABI_SINGLE = 0x0002,
     EF_RISCV_FLOAT_ABI_DOUBLE = 0x0004,
@@ -6488,7 +6651,7 @@ constants! {
 
 constants! {
     struct Larch(Base);
-    flags ef: u32 = {
+    flags ef: FileFlags(u32) = {
         /// Additional properties of the base ABI type, including the FP calling
         /// convention.
         EF_LARCH_ABI_MODIFIER_MASK = 0x7 => NAMES_EF_LARCH_ABI,
@@ -6820,7 +6983,7 @@ constants! {
     };
 }
 
-constant_names!(NAMES_EF_LARCH_ABI: u32 = {
+constant_names!(NAMES_EF_LARCH_ABI: FileFlags(u32) = {
     /// Uses GPRs and the stack for parameter passing
     EF_LARCH_ABI_SOFT_FLOAT = 0x1,
     /// Uses GPRs, 32-bit FPRs and the stack for parameter passing
@@ -6945,7 +7108,7 @@ pub const E_E2K_MACH_8V7: u32 = 25;
 
 constants! {
     struct E2k(Base);
-    flags ef: u32 = {
+    flags ef: FileFlags(u32) = {
         EF_E2K_IPD = 3,
         EF_E2K_X86APP = 4,
         EF_E2K_4MB_PAGES = 8,

@@ -350,7 +350,7 @@ impl<'a> Writer<'a> {
                 e_ident,
                 e_type: U16::new(endian, header.e_type),
                 e_machine: U16::new(endian, header.e_machine),
-                e_version: U32::new(endian, elf::EV_CURRENT.into()),
+                e_version: U32::new(endian, elf::EV_CURRENT.0.into()),
                 e_entry: U64::new(endian, header.e_entry),
                 e_phoff: U64::new(endian, e_phoff),
                 e_shoff: U64::new(endian, e_shoff),
@@ -368,7 +368,7 @@ impl<'a> Writer<'a> {
                 e_ident,
                 e_type: U16::new(endian, header.e_type),
                 e_machine: U16::new(endian, header.e_machine),
-                e_version: U32::new(endian, elf::EV_CURRENT.into()),
+                e_version: U32::new(endian, elf::EV_CURRENT.0.into()),
                 e_entry: U32::new(endian, header.e_entry as u32),
                 e_phoff: U32::new(endian, e_phoff as u32),
                 e_shoff: U32::new(endian, e_shoff as u32),
@@ -2307,12 +2307,12 @@ impl Class {
 #[allow(missing_docs)]
 #[derive(Debug, Clone)]
 pub struct FileHeader {
-    pub os_abi: u8,
+    pub os_abi: elf::OsAbi,
     pub abi_version: u8,
     pub e_type: elf::FileType,
     pub e_machine: elf::Machine,
     pub e_entry: u64,
-    pub e_flags: u32,
+    pub e_flags: elf::FileFlags,
 }
 
 /// Native endian version of [`elf::ProgramHeader64`].

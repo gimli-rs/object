@@ -276,7 +276,7 @@ where
             (elf::EM_LOONGARCH, true) => Architecture::LoongArch64,
             (elf::EM_68K, false) => Architecture::M68k,
             (elf::EM_MIPS, false) => {
-                if (self.header.e_flags(self.endian) & elf::EF_MIPS_ABI2) != 0 {
+                if self.header.e_flags(self.endian).contains(elf::EF_MIPS_ABI2) {
                     Architecture::Mips64_N32
                 } else {
                     Architecture::Mips
@@ -579,7 +579,7 @@ pub trait FileHeader: Debug + Pod {
     fn e_entry(&self, endian: Self::Endian) -> Self::Word;
     fn e_phoff(&self, endian: Self::Endian) -> Self::Word;
     fn e_shoff(&self, endian: Self::Endian) -> Self::Word;
-    fn e_flags(&self, endian: Self::Endian) -> u32;
+    fn e_flags(&self, endian: Self::Endian) -> elf::FileFlags;
     fn e_ehsize(&self, endian: Self::Endian) -> u16;
     fn e_phentsize(&self, endian: Self::Endian) -> u16;
     fn e_phnum(&self, endian: Self::Endian) -> u16;
@@ -897,7 +897,7 @@ impl<Endian: endian::Endian> FileHeader for elf::FileHeader32<Endian> {
     }
 
     #[inline]
-    fn e_flags(&self, endian: Self::Endian) -> u32 {
+    fn e_flags(&self, endian: Self::Endian) -> elf::FileFlags {
         self.e_flags.get(endian)
     }
 
@@ -995,7 +995,7 @@ impl<Endian: endian::Endian> FileHeader for elf::FileHeader64<Endian> {
     }
 
     #[inline]
-    fn e_flags(&self, endian: Self::Endian) -> u32 {
+    fn e_flags(&self, endian: Self::Endian) -> elf::FileFlags {
         self.e_flags.get(endian)
     }
 
