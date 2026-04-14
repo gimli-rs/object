@@ -1342,9 +1342,9 @@ impl<E: Endian> Sym64<E> {
 #[repr(C)]
 pub struct Syminfo32<E: Endian> {
     /// Direct bindings, symbol bound to.
-    pub si_boundto: U16<E>,
+    pub si_boundto: U16<E, SyminfoBoundto>,
     /// Per symbol flags.
-    pub si_flags: U16<E>,
+    pub si_flags: U16<E, SyminfoFlags>,
 }
 
 /// Additional information about a `Sym64`.
@@ -1352,33 +1352,69 @@ pub struct Syminfo32<E: Endian> {
 #[repr(C)]
 pub struct Syminfo64<E: Endian> {
     /// Direct bindings, symbol bound to.
-    pub si_boundto: U16<E>,
+    pub si_boundto: U16<E, SyminfoBoundto>,
     /// Per symbol flags.
-    pub si_flags: U16<E>,
+    pub si_flags: U16<E, SyminfoFlags>,
 }
 
-// Values for `Syminfo*::si_boundto`.
-/// Symbol bound to self
-pub const SYMINFO_BT_SELF: u16 = 0xffff;
-/// Symbol bound to parent
-pub const SYMINFO_BT_PARENT: u16 = 0xfffe;
+newtype!(
+    /// Values for `Syminfo*::si_boundto`.
+    struct SyminfoBoundto(u16);
+);
+
+impl SyminfoBoundto {
+    /// Return true if the value is in the reserved range.
+    pub fn is_reserved(self) -> bool {
+        self.0 >= SYMINFO_BT_LOWRESERVE
+    }
+
+    /// Return the symbol index, or `None` if it is a reserved value.
+    pub fn index(self) -> Option<u16> {
+        if self.is_reserved() {
+            None
+        } else {
+            Some(self.0)
+        }
+    }
+
+    /// Values for `Syminfo*::si_boundto` for the first entry.
+    #[cfg(feature = "names")]
+    pub fn version_names() -> &'static ConstantNames<SyminfoBoundto> {
+        &NAMES_SYMINFO_VERSION
+    }
+}
+
+newtype_constant_names!(NAMES_SYMINFO_BT: SyminfoBoundto(u16) = {
+    /// Symbol bound to self
+    SYMINFO_BT_SELF = 0xffff,
+    /// Symbol bound to parent
+    SYMINFO_BT_PARENT = 0xfffe,
+});
+
 /// Beginning of reserved entries
 pub const SYMINFO_BT_LOWRESERVE: u16 = 0xff00;
 
-// Values for `Syminfo*::si_flags`.
-/// Direct bound symbol
-pub const SYMINFO_FLG_DIRECT: u16 = 0x0001;
-/// Pass-thru symbol for translator
-pub const SYMINFO_FLG_PASSTHRU: u16 = 0x0002;
-/// Symbol is a copy-reloc
-pub const SYMINFO_FLG_COPY: u16 = 0x0004;
-/// Symbol bound to object to be lazy loaded
-pub const SYMINFO_FLG_LAZYLOAD: u16 = 0x0008;
+newtype!(
+    /// Values for `Syminfo*::si_flags`.
+    struct SyminfoFlags(u16);
+);
 
-// Syminfo version values.
-pub const SYMINFO_NONE: u16 = 0;
-pub const SYMINFO_CURRENT: u16 = 1;
-pub const SYMINFO_NUM: u16 = 2;
+newtype_flag_names!(NAMES_SYMINFO_FLG: SyminfoFlags(u16) = {
+    /// Direct bound symbol
+    SYMINFO_FLG_DIRECT = 0x0001,
+    /// Pass-thru symbol for translator
+    SYMINFO_FLG_PASSTHRU = 0x0002,
+    /// Symbol is a copy-reloc
+    SYMINFO_FLG_COPY = 0x0004,
+    /// Symbol bound to object to be lazy loaded
+    SYMINFO_FLG_LAZYLOAD = 0x0008,
+});
+
+constant_names!(NAMES_SYMINFO_VERSION: SyminfoBoundto(u16) = {
+    SYMINFO_NONE = 0,
+    SYMINFO_CURRENT = 1,
+    SYMINFO_NUM = 2,
+});
 
 newtype!(
     /// Values for `Sym*::st_info`.
