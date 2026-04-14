@@ -3106,7 +3106,7 @@ pub enum AttributeTag {
 
 impl AttributeTag {
     /// Return the corresponding `elf::Tag_*` value for this tag.
-    pub fn tag(&self) -> u8 {
+    pub fn tag(&self) -> elf::AttributeTag {
         match self {
             AttributeTag::File => elf::Tag_File,
             AttributeTag::Section(_) => elf::Tag_Section,

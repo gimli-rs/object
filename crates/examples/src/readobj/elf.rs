@@ -792,7 +792,7 @@ fn print_attributes<Elf: FileHeader>(
                         let mut subsubsections = subsection.subsubsections();
                         while let Some(Some(subsubsection)) = subsubsections.next().print_err(p) {
                             p.group("Subsubsection", |p| {
-                                p.field_enum("Tag", subsubsection.tag(), FLAGS_TAG);
+                                p.field_consts("Tag", subsubsection.tag(), AttributeTag::NAMES);
                                 let mut indices = subsubsection.indices();
                                 while let Some(Some(index)) = indices.next().print_err(p) {
                                     p.field("Index", index);
@@ -828,4 +828,3 @@ fn constants<Elf: FileHeader>(endian: Elf::Endian, elf: &Elf) -> &'static Consta
 const FLAGS_VER_FLG: &[Flag<u16>] = &flags!(VER_FLG_BASE, VER_FLG_WEAK);
 const FLAGS_VER_NDX: &[Flag<u16>] = &flags!(VER_NDX_LOCAL, VER_NDX_GLOBAL);
 const FLAGS_VERSYM: &[Flag<u16>] = &flags!(VERSYM_HIDDEN);
-const FLAGS_TAG: &[Flag<u8>] = &flags!(Tag_File, Tag_Section, Tag_Symbol);

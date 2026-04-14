@@ -2106,11 +2106,11 @@ impl AttributesWriter {
     }
 
     /// Start a new sub-subsection with the given tag.
-    pub fn start_subsubsection(&mut self, tag: u8) {
+    pub fn start_subsubsection(&mut self, tag: elf::AttributeTag) {
         debug_assert_ne!(self.subsection_offset, 0);
         debug_assert_eq!(self.subsubsection_offset, 0);
         self.subsubsection_offset = self.data.len();
-        self.data.push(tag);
+        self.data.push(tag.0);
         self.data.extend_from_slice(&[0; 4]);
     }
 

@@ -7443,12 +7443,19 @@ constants! {
 
 pub const DT_E2K_NUM: i64 = 0x1021;
 
-#[allow(non_upper_case_globals)]
-pub const Tag_File: u8 = 1;
-#[allow(non_upper_case_globals)]
-pub const Tag_Section: u8 = 2;
-#[allow(non_upper_case_globals)]
-pub const Tag_Symbol: u8 = 3;
+newtype!(
+    /// Value for the subsubsection tag in an attributes section.
+    struct AttributeTag(u8);
+);
+
+newtype_constant_names!(NAMES_TAG: AttributeTag(u8) = {
+    #[allow(non_upper_case_globals)]
+    Tag_File = 1,
+    #[allow(non_upper_case_globals)]
+    Tag_Section = 2,
+    #[allow(non_upper_case_globals)]
+    Tag_Symbol = 3,
+});
 
 unsafe_impl_endian_pod!(
     FileHeader32,
