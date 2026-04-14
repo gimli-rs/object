@@ -341,7 +341,7 @@ impl<'a> Writer<'a> {
         let e_shstrndx = if self.shstrtab_index.0 >= elf::SHN_LORESERVE.into() {
             elf::SHN_XINDEX
         } else {
-            self.shstrtab_index.0 as u16
+            elf::SectionIndex(self.shstrtab_index.0 as u16)
         };
 
         let endian = self.endian;
@@ -830,7 +830,7 @@ impl<'a> Writer<'a> {
             if section.0 >= elf::SHN_LORESERVE as u32 {
                 elf::SHN_XINDEX
             } else {
-                section.0 as u16
+                elf::SectionIndex(section.0 as u16)
             }
         } else {
             sym.st_shndx
@@ -1201,7 +1201,7 @@ impl<'a> Writer<'a> {
                 // This is unlikely to be needed though.
                 elf::SHN_XINDEX
             } else {
-                section.0 as u16
+                elf::SectionIndex(section.0 as u16)
             }
         } else {
             sym.st_shndx
@@ -2353,7 +2353,7 @@ pub struct Sym {
     pub section: Option<SectionIndex>,
     pub st_info: elf::SymbolInfo,
     pub st_other: u8,
-    pub st_shndx: u16,
+    pub st_shndx: elf::SectionIndex,
     pub st_value: u64,
     pub st_size: u64,
 }

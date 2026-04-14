@@ -795,7 +795,9 @@ impl<'a> Object<'a> {
                 SymbolSection::Undefined => (elf::SHN_UNDEF, None),
                 SymbolSection::Absolute => (elf::SHN_ABS, None),
                 SymbolSection::Common => (elf::SHN_COMMON, None),
-                SymbolSection::Section(id) => (0, Some(section_offsets[id.0].index)),
+                SymbolSection::Section(id) => {
+                    (elf::SectionIndex(0), Some(section_offsets[id.0].index))
+                }
             };
             writer.write_symbol(&Sym {
                 name: symbol_offsets[index].str_id,

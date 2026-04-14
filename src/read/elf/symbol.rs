@@ -190,7 +190,7 @@ impl<'data, Elf: FileHeader, R: ReadRef<'data>> SymbolTable<'data, Elf, R> {
                     Ok(Some(SectionIndex(shndx as usize)))
                 }
             }
-            shndx if shndx < elf::SHN_LORESERVE => Ok(Some(SectionIndex(shndx.into()))),
+            shndx if !shndx.is_reserved() => Ok(Some(SectionIndex(shndx.0.into()))),
             _ => Ok(None),
         }
     }
@@ -424,9 +424,7 @@ impl<'data, 'file, Elf: FileHeader, R: ReadRef<'data>> ObjectSymbol<'data>
                 Some(index) => SymbolSection::Section(SectionIndex(index as usize)),
                 None => SymbolSection::Unknown,
             },
-            index if index < elf::SHN_LORESERVE => {
-                SymbolSection::Section(SectionIndex(index as usize))
-            }
+            index if !index.is_reserved() => SymbolSection::Section(SectionIndex(index.0 as usize)),
             _ => SymbolSection::Unknown,
         }
     }
@@ -501,7 +499,7 @@ pub trait Sym: Debug + Pod {
     fn st_type(&self) -> elf::SymbolType;
     fn st_other(&self) -> u8;
     fn st_visibility(&self) -> u8;
-    fn st_shndx(&self, endian: Self::Endian) -> u16;
+    fn st_shndx(&self, endian: Self::Endian) -> elf::SectionIndex;
     fn st_value(&self, endian: Self::Endian) -> Self::Word;
     fn st_size(&self, endian: Self::Endian) -> Self::Word;
 
@@ -529,7 +527,7 @@ pub trait Sym: Debug + Pod {
         strings: StringTable<'data, R>,
     ) -> bool {
         let shndx = self.st_shndx(endian);
-        if shndx == elf::SHN_UNDEF || (shndx >= elf::SHN_LORESERVE && shndx != elf::SHN_XINDEX) {
+        if shndx == elf::SHN_UNDEF || (shndx.is_reserved() && shndx != elf::SHN_XINDEX) {
             return false;
         }
         match self.st_type() {
@@ -603,7 +601,7 @@ impl<Endian: endian::Endian> Sym for elf::Sym32<Endian> {
     }
 
     #[inline]
-    fn st_shndx(&self, endian: Self::Endian) -> u16 {
+    fn st_shndx(&self, endian: Self::Endian) -> elf::SectionIndex {
         self.st_shndx.get(endian)
     }
 
@@ -653,7 +651,7 @@ impl<Endian: endian::Endian> Sym for elf::Sym64<Endian> {
     }
 
     #[inline]
-    fn st_shndx(&self, endian: Self::Endian) -> u16 {
+    fn st_shndx(&self, endian: Self::Endian) -> elf::SectionIndex {
         self.st_shndx.get(endian)
     }
 

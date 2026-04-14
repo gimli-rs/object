@@ -25,7 +25,7 @@ pub struct Constants {
     /// Values for `FileHeader*::e_flags`.
     pub ef: &'static FlagNames<FileFlags>,
     /// Special values for section indices.
-    pub shn: &'static ConstantNames<u16>,
+    pub shn: &'static ConstantNames<SectionIndex>,
     /// Values for `SectionHeader*::sh_type`.
     pub sht: &'static ConstantNames<SectionType>,
     /// Values for `SectionHeader*::sh_flags`.
@@ -50,7 +50,7 @@ constants! {
     struct Base;
     consts et: FileType = NAMES_ET;
     flags ef: FileFlags(u32) = {};
-    consts shn: u16 = NAMES_SHN;
+    consts shn: SectionIndex = NAMES_SHN;
     consts sht: SectionType = NAMES_SHT;
     flags shf: SectionFlags = NAMES_SHF;
     consts stb: SymbolBind = NAMES_STB;
@@ -159,7 +159,7 @@ pub struct FileHeader32<E: Endian> {
     ///
     /// If the index is greater than or equal to `SHN_LORESERVE` then this field is set to
     /// `SHN_XINDEX` and the index is stored in the `sh_link` field of section 0.
-    pub e_shstrndx: U16<E>,
+    pub e_shstrndx: U16<E, SectionIndex>,
 }
 
 /// The header at the start of every 64-bit ELF file.
@@ -205,7 +205,7 @@ pub struct FileHeader64<E: Endian> {
     ///
     /// If the index is greater than or equal to `SHN_LORESERVE` then this field is set to
     /// `SHN_XINDEX` and the index is stored in the `sh_link` field of section 0.
-    pub e_shstrndx: U16<E>,
+    pub e_shstrndx: U16<E, SectionIndex>,
 }
 
 /// Magic number and other information.
@@ -945,8 +945,30 @@ pub struct SectionHeader64<E: Endian> {
     pub sh_entsize: U64<E>,
 }
 
-// Special values for section indices.
-constant_names!(NAMES_SHN: u16 = {
+newtype!(
+    /// Section header index.
+    ///
+    /// May be a reserved value with special meaning.
+    struct SectionIndex(u16);
+);
+
+impl SectionIndex {
+    /// Return true if the number is in the reserved range.
+    pub fn is_reserved(self) -> bool {
+        debug_assert_eq!(SHN_HIRESERVE, !0);
+        self.0 >= SHN_LORESERVE
+    }
+    /// Return true if the number is in the OS-specific range.
+    pub fn is_os(self) -> bool {
+        self.0 >= SHN_LOOS && self.0 <= SHN_HIOS
+    }
+    /// Return true if the number is in the processor-specific range.
+    pub fn is_proc(self) -> bool {
+        self.0 >= SHN_LOPROC && self.0 <= SHN_HIPROC
+    }
+}
+
+newtype_constant_names!(NAMES_SHN: SectionIndex(u16) = {
     /// Undefined section.
     SHN_UNDEF = 0,
     /// Associated symbol is absolute.
@@ -1211,7 +1233,7 @@ pub struct Sym32<E: Endian> {
     /// Use the `st_visibility` method to access this value.
     pub st_other: u8,
     /// Section index or one of the `SHN_*` values.
-    pub st_shndx: U16<E>,
+    pub st_shndx: U16<E, SectionIndex>,
 }
 
 impl<E: Endian> Sym32<E> {
@@ -1257,7 +1279,7 @@ pub struct Sym64<E: Endian> {
     /// Use the `st_visibility` method to access this value.
     pub st_other: u8,
     /// Section index or one of the `SHN_*` values.
-    pub st_shndx: U16<E>,
+    pub st_shndx: U16<E, SectionIndex>,
     /// Symbol value.
     pub st_value: U64<E>,
     /// Symbol size.
@@ -3060,7 +3082,7 @@ constants! {
         /// MIPS architecture level.
         EF_MIPS_ARCH = 0xf000_0000 => NAMES_EF_MIPS_ARCH,
     };
-    consts shn: u16 = {
+    consts shn: SectionIndex(u16) = {
         /// Allocated common symbols.
         SHN_MIPS_ACOMMON = 0xff00,
         /// Allocated test symbols.
@@ -3491,7 +3513,7 @@ constants! {
         /// Architecture version.
         EF_PARISC_ARCH = 0x0000_ffff => NAMES_EFA_PARISC,
     };
-    consts shn: u16 = {
+    consts shn: SectionIndex(u16) = {
         /// Section for tentatively declared symbols in ANSI C.
         SHN_PARISC_ANSI_COMMON = 0xff00,
         /// Common blocks in huge model.

@@ -2702,7 +2702,7 @@ pub struct Symbol<'data, const DYNAMIC: bool = false> {
     /// The `st_shndx` field in the ELF symbol.
     ///
     /// Only used if `Self::section` is `None`.
-    pub st_shndx: u16,
+    pub st_shndx: elf::SectionIndex,
     /// The `st_value` field in the ELF symbol.
     pub st_value: u64,
     /// The `st_size` field in the ELF symbol.
@@ -2767,7 +2767,7 @@ impl<'data, const DYNAMIC: bool> Symbols<'data, DYNAMIC> {
             section: None,
             st_info: elf::SymbolInfo(0),
             st_other: 0,
-            st_shndx: 0,
+            st_shndx: elf::SHN_UNDEF,
             st_value: 0,
             st_size: 0,
             version: VersionId::local(),

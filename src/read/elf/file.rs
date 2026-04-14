@@ -585,7 +585,7 @@ pub trait FileHeader: Debug + Pod {
     fn e_phnum(&self, endian: Self::Endian) -> u16;
     fn e_shentsize(&self, endian: Self::Endian) -> u16;
     fn e_shnum(&self, endian: Self::Endian) -> u16;
-    fn e_shstrndx(&self, endian: Self::Endian) -> u16;
+    fn e_shstrndx(&self, endian: Self::Endian) -> elf::SectionIndex;
 
     // Provided methods.
 
@@ -713,7 +713,7 @@ pub trait FileHeader: Debug + Pod {
     ) -> read::Result<u32> {
         let e_shstrndx = self.e_shstrndx(endian);
         let index = if e_shstrndx != elf::SHN_XINDEX {
-            e_shstrndx.into()
+            e_shstrndx.0.into()
         } else if let Some(section_0) = self.section_0(endian, data)? {
             section_0.sh_link(endian)
         } else {
@@ -927,7 +927,7 @@ impl<Endian: endian::Endian> FileHeader for elf::FileHeader32<Endian> {
     }
 
     #[inline]
-    fn e_shstrndx(&self, endian: Self::Endian) -> u16 {
+    fn e_shstrndx(&self, endian: Self::Endian) -> elf::SectionIndex {
         self.e_shstrndx.get(endian)
     }
 }
@@ -1025,7 +1025,7 @@ impl<Endian: endian::Endian> FileHeader for elf::FileHeader64<Endian> {
     }
 
     #[inline]
-    fn e_shstrndx(&self, endian: Self::Endian) -> u16 {
+    fn e_shstrndx(&self, endian: Self::Endian) -> elf::SectionIndex {
         self.e_shstrndx.get(endian)
     }
 }
