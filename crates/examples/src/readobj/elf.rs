@@ -211,7 +211,7 @@ fn print_section_headers<Elf: FileHeader>(
             if let Some(Some((compression, _, _))) = section.compression(endian, data).print_err(p)
             {
                 p.group("CompressionHeader", |p| {
-                    p.field_enum("Type", compression.ch_type(endian), FLAGS_ELFCOMPRESS);
+                    p.field_consts("Type", compression.ch_type(endian), CompressionType::NAMES);
                     p.field_hex("Size", compression.ch_size(endian).into());
                     p.field_hex("AddressAlign", compression.ch_addralign(endian).into());
                 });
@@ -507,7 +507,7 @@ fn print_section_group<Elf: FileHeader>(
     section: &Elf::SectionHeader,
 ) {
     if let Some(Some((flag, members))) = section.group(endian, data).print_err(p) {
-        p.field_enum("GroupFlag", flag, FLAGS_GRP);
+        p.field_flags("GroupFlag", flag, GroupFlags::NAMES);
         p.group("GroupSections", |p| {
             for member in members {
                 let index = member.get(endian);
@@ -859,7 +859,6 @@ fn constants<Elf: FileHeader>(endian: Elf::Endian, elf: &Elf) -> &'static Consta
     machine_constants(elf.e_machine(endian))
 }
 
-const FLAGS_ELFCOMPRESS: &[Flag<u32>] = &flags!(ELFCOMPRESS_ZLIB, ELFCOMPRESS_ZSTD);
 const FLAGS_GNU_PROPERTY: &[Flag<u32>] = &flags!(
     GNU_PROPERTY_STACK_SIZE,
     GNU_PROPERTY_NO_COPY_ON_PROTECTED,
@@ -890,7 +889,6 @@ const FLAGS_GNU_PROPERTY_X86_FEATURE_1: &[Flag<u32>] = &flags!(
     GNU_PROPERTY_X86_FEATURE_1_IBT,
     GNU_PROPERTY_X86_FEATURE_1_SHSTK,
 );
-const FLAGS_GRP: &[Flag<u32>] = &flags!(GRP_COMDAT);
 const FLAGS_DF: &[Flag<u32>] = &flags!(
     DF_ORIGIN,
     DF_SYMBOLIC,

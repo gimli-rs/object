@@ -975,13 +975,13 @@ pub trait SectionHeader: Debug + Pod {
         &self,
         endian: Self::Endian,
         data: R,
-    ) -> read::Result<Option<(u32, &'data [U32<Self::Endian>])>> {
+    ) -> read::Result<Option<(elf::GroupFlags, &'data [U32<Self::Endian>])>> {
         if self.sh_type(endian) != elf::SHT_GROUP {
             return Ok(None);
         }
         let msg = "Invalid ELF group section offset or size";
         let data = self.data(endian, data).read_error(msg)?;
-        let (flag, data) = pod::from_bytes::<U32<_>>(data).read_error(msg)?;
+        let (flag, data) = pod::from_bytes::<U32<_, _>>(data).read_error(msg)?;
         let sections = pod::slice_from_all_bytes(data).read_error(msg)?;
         Ok(Some((flag.get(endian), sections)))
     }

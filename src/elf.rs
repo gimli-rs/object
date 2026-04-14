@@ -1169,7 +1169,7 @@ pub const SHF_MASKPROC: u64 = 0xf000_0000;
 #[repr(C)]
 pub struct CompressionHeader32<E: Endian> {
     /// Compression format. One of the `ELFCOMPRESS_*` values.
-    pub ch_type: U32<E>,
+    pub ch_type: U32<E, CompressionType>,
     /// Uncompressed data size.
     pub ch_size: U32<E>,
     /// Uncompressed data alignment.
@@ -1186,7 +1186,7 @@ pub struct CompressionHeader32<E: Endian> {
 #[repr(C)]
 pub struct CompressionHeader64<E: Endian> {
     /// Compression format. One of the `ELFCOMPRESS_*` values.
-    pub ch_type: U32<E>,
+    pub ch_type: U32<E, CompressionType>,
     /// Reserved.
     pub ch_reserved: U32<E>,
     /// Uncompressed data size.
@@ -1195,10 +1195,29 @@ pub struct CompressionHeader64<E: Endian> {
     pub ch_addralign: U64<E>,
 }
 
-/// ZLIB/DEFLATE algorithm.
-pub const ELFCOMPRESS_ZLIB: u32 = 1;
-/// Zstandard algorithm.
-pub const ELFCOMPRESS_ZSTD: u32 = 2;
+newtype!(
+    /// Values for `CompressionHeader*::ch_type`.
+    struct CompressionType(u32);
+);
+
+impl CompressionType {
+    /// Return true if the type is in the OS-specific range.
+    pub fn is_os(self) -> bool {
+        self.0 >= ELFCOMPRESS_LOOS && self.0 <= ELFCOMPRESS_HIOS
+    }
+    /// Return true if the type is in the processor-specific range.
+    pub fn is_proc(self) -> bool {
+        self.0 >= ELFCOMPRESS_LOPROC && self.0 <= ELFCOMPRESS_HIPROC
+    }
+}
+
+newtype_constant_names!(NAMES_COMPRESS: CompressionType(u32) = {
+    /// ZLIB/DEFLATE algorithm.
+    ELFCOMPRESS_ZLIB = 1,
+    /// Zstandard algorithm.
+    ELFCOMPRESS_ZSTD = 2,
+});
+
 /// Start of OS-specific compression types.
 pub const ELFCOMPRESS_LOOS: u32 = 0x6000_0000;
 /// End of OS-specific compression types.
@@ -1208,9 +1227,15 @@ pub const ELFCOMPRESS_LOPROC: u32 = 0x7000_0000;
 /// End of processor-specific compression types.
 pub const ELFCOMPRESS_HIPROC: u32 = 0x7fff_ffff;
 
-// Values for the flag entry for section groups.
-/// Mark group as COMDAT.
-pub const GRP_COMDAT: u32 = 1;
+newtype!(
+    /// Values for the flag entry for section groups.
+    struct GroupFlags(u32);
+);
+
+newtype_flag_names!(NAMES_GRP: GroupFlags(u32) = {
+    /// Mark group as COMDAT.
+    GRP_COMDAT = 1,
+});
 
 /// Symbol table entry.
 #[derive(Debug, Default, Clone, Copy)]
