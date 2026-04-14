@@ -2817,14 +2817,14 @@ pub enum Dynamic<'data> {
         /// The `d_tag` field in the dynamic entry.
         ///
         /// One of the `DT_*` values.
-        tag: i64,
+        tag: elf::DynamicTag,
     },
     /// The value is an integer.
     Integer {
         /// The `d_tag` field in the dynamic entry.
         ///
         /// One of the `DT_*` values.
-        tag: i64,
+        tag: elf::DynamicTag,
         /// The `d_val` field in the dynamic entry.
         val: u64,
     },
@@ -2833,7 +2833,7 @@ pub enum Dynamic<'data> {
         /// The `d_tag` field in the dynamic entry.
         ///
         /// One of the `DT_*` values.
-        tag: i64,
+        tag: elf::DynamicTag,
         /// The string value.
         ///
         /// This will be stored in the dynamic string section.
@@ -2845,7 +2845,7 @@ impl<'data> Dynamic<'data> {
     /// The `d_tag` field in the dynamic entry.
     ///
     /// One of the `DT_*` values.
-    pub fn tag(&self) -> i64 {
+    pub fn tag(&self) -> elf::DynamicTag {
         match self {
             Dynamic::Auto { tag } => *tag,
             Dynamic::Integer { tag, .. } => *tag,

@@ -145,7 +145,7 @@ fn print_segment_dynamic<Elf: FileHeader>(
         let mut strtab = 0;
         let mut strsz = 0;
         for d in dynamic {
-            let tag = d.d_tag(endian).into();
+            let tag = d.d_tag(endian);
             if tag == DT_STRTAB {
                 strtab = d.d_val(endian).into();
             } else if tag == DT_STRSZ {
@@ -602,18 +602,19 @@ fn print_dynamic<Elf: FileHeader>(
 ) {
     let constants = constants(endian, elf);
     for d in dynamic {
-        let tag = d.d_tag(endian).into();
+        let tag = d.d_tag(endian);
         let val = d.d_val(endian).into();
         p.group("Dynamic", |p| {
             p.field_consts("Tag", tag, constants.dt);
             if d.is_string(endian) {
                 p.field_string("Value", val, d.string(endian, dynstr));
             } else {
-                p.field_hex("Value", val);
                 if tag == DT_FLAGS {
-                    p.flags(val, 0, FLAGS_DF);
+                    p.field_flags("Value", DynamicFlags(val), DynamicFlags::NAMES);
                 } else if tag == DT_FLAGS_1 {
-                    p.flags(val, 0, FLAGS_DF_1);
+                    p.field_flags("Value", DynamicFlags1(val), DynamicFlags1::NAMES);
+                } else {
+                    p.field_hex("Value", val);
                 }
             }
         });
@@ -888,43 +889,6 @@ const FLAGS_GNU_PROPERTY_X86_ISA_1: &[Flag<u32>] = &flags!(
 const FLAGS_GNU_PROPERTY_X86_FEATURE_1: &[Flag<u32>] = &flags!(
     GNU_PROPERTY_X86_FEATURE_1_IBT,
     GNU_PROPERTY_X86_FEATURE_1_SHSTK,
-);
-const FLAGS_DF: &[Flag<u32>] = &flags!(
-    DF_ORIGIN,
-    DF_SYMBOLIC,
-    DF_TEXTREL,
-    DF_BIND_NOW,
-    DF_STATIC_TLS,
-);
-const FLAGS_DF_1: &[Flag<u32>] = &flags!(
-    DF_1_NOW,
-    DF_1_GLOBAL,
-    DF_1_GROUP,
-    DF_1_NODELETE,
-    DF_1_LOADFLTR,
-    DF_1_INITFIRST,
-    DF_1_NOOPEN,
-    DF_1_ORIGIN,
-    DF_1_DIRECT,
-    DF_1_TRANS,
-    DF_1_INTERPOSE,
-    DF_1_NODEFLIB,
-    DF_1_NODUMP,
-    DF_1_CONFALT,
-    DF_1_ENDFILTEE,
-    DF_1_DISPRELDNE,
-    DF_1_DISPRELPND,
-    DF_1_NODIRECT,
-    DF_1_IGNMULDEF,
-    DF_1_NOKSYMS,
-    DF_1_NOHDR,
-    DF_1_EDITED,
-    DF_1_NORELOC,
-    DF_1_SYMINTPOSE,
-    DF_1_GLOBAUDIT,
-    DF_1_SINGLETON,
-    DF_1_STUB,
-    DF_1_PIE,
 );
 const FLAGS_VER_FLG: &[Flag<u16>] = &flags!(VER_FLG_BASE, VER_FLG_WEAK);
 const FLAGS_VER_NDX: &[Flag<u16>] = &flags!(VER_NDX_LOCAL, VER_NDX_GLOBAL);

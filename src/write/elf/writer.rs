@@ -1306,12 +1306,12 @@ impl<'a> Writer<'a> {
     }
 
     /// Write a dynamic string entry.
-    pub fn write_dynamic_string(&mut self, tag: i64, id: StringId) -> Result<()> {
+    pub fn write_dynamic_string(&mut self, tag: elf::DynamicTag, id: StringId) -> Result<()> {
         self.write_dynamic(tag, self.dynstr.get_offset(id) as u64)
     }
 
     /// Write a dynamic value entry.
-    pub fn write_dynamic(&mut self, d_tag: i64, d_val: u64) -> Result<()> {
+    pub fn write_dynamic(&mut self, d_tag: elf::DynamicTag, d_val: u64) -> Result<()> {
         let endian = self.endian;
         if self.is_64 {
             let d = elf::Dyn64 {
@@ -1320,14 +1320,13 @@ impl<'a> Writer<'a> {
             };
             self.buffer.write(&d);
         } else {
-            let d_tag = d_tag
-                .try_into()
+            let d_tag = I32::new_i64(endian, d_tag)
                 .map_err(|_| Error(format!("d_tag overflow: 0x{:x}", d_tag)))?;
             let d_val = d_val
                 .try_into()
                 .map_err(|_| Error(format!("d_val overflow: 0x{:x}", d_val)))?;
             let d = elf::Dyn32 {
-                d_tag: I32::new(endian, d_tag),
+                d_tag,
                 d_val: U32::new(endian, d_val),
             };
             self.buffer.write(&d);

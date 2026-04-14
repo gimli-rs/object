@@ -41,7 +41,7 @@ pub struct Constants {
     /// Values for `ProgramHeader*::p_flags`.
     pub pf: &'static FlagNames<u32>,
     /// Values for `Dyn*::d_tag`.
-    pub dt: &'static ConstantNames<i64>,
+    pub dt: &'static ConstantNames<DynamicTag>,
     /// Values for `r_type` field of `Rel*::r_info`.
     pub r: &'static ConstantNames<u32>,
 }
@@ -58,7 +58,7 @@ constants! {
     flags sto: u8 = NAMES_STO;
     consts pt: ProgramType = NAMES_PT;
     flags pf: u32 = NAMES_PF;
-    consts dt: i64 = NAMES_DT;
+    consts dt: DynamicTag = NAMES_DT;
     consts r: u32 = {};
 }
 
@@ -2014,7 +2014,7 @@ pub const NT_VERSION: u32 = 1;
 #[repr(C)]
 pub struct Dyn32<E: Endian> {
     /// Dynamic entry type.
-    pub d_tag: I32<E>,
+    pub d_tag: I32<E, DynamicTag>,
     /// Value (integer or address).
     pub d_val: U32<E>,
 }
@@ -2024,13 +2024,40 @@ pub struct Dyn32<E: Endian> {
 #[repr(C)]
 pub struct Dyn64<E: Endian> {
     /// Dynamic entry type.
-    pub d_tag: I64<E>,
+    pub d_tag: I64<E, DynamicTag>,
     /// Value (integer or address).
     pub d_val: U64<E>,
 }
 
-// Values for `Dyn*::d_tag`.
-constant_names!(NAMES_DT: i64 = {
+newtype!(
+    /// Values for `Dyn*::d_tag`.
+    struct DynamicTag(i64);
+);
+
+impl DynamicTag {
+    /// Return true if the tag is in the range for values.
+    ///
+    /// Note that some tags outside of this range are also used for values.
+    pub fn is_value(self) -> bool {
+        self.0 >= DT_VALRNGLO && self.0 <= DT_VALRNGHI
+    }
+    /// Return true if the tag is in the range for addresses.
+    ///
+    /// Note that some tags outside of this range are also used for addresses.
+    pub fn is_address(self) -> bool {
+        self.0 >= DT_ADDRRNGLO && self.0 <= DT_ADDRRNGHI
+    }
+    /// Return true if the tag is in the OS-specific range.
+    pub fn is_os(self) -> bool {
+        self.0 >= DT_LOOS && self.0 <= DT_HIOS
+    }
+    /// Return true if the tag is in the processor-specific range.
+    pub fn is_proc(self) -> bool {
+        self.0 >= DT_LOPROC && self.0 <= DT_HIPROC
+    }
+}
+
+newtype_constant_names!(NAMES_DT: DynamicTag(i64) = {
     /// Marks end of dynamic section
     DT_NULL = 0,
     /// Name of needed library
@@ -2206,68 +2233,80 @@ pub const DT_VALRNGHI: i64 = 0x6fff_fdff;
 pub const DT_ADDRRNGLO: i64 = 0x6fff_fe00;
 pub const DT_ADDRRNGHI: i64 = 0x6fff_feff;
 
-// Values of `Dyn*::d_val` in the `DT_FLAGS` entry.
-/// Object may use DF_ORIGIN
-pub const DF_ORIGIN: u32 = 0x0000_0001;
-/// Symbol resolutions starts here
-pub const DF_SYMBOLIC: u32 = 0x0000_0002;
-/// Object contains text relocations
-pub const DF_TEXTREL: u32 = 0x0000_0004;
-/// No lazy binding for this object
-pub const DF_BIND_NOW: u32 = 0x0000_0008;
-/// Module uses the static TLS model
-pub const DF_STATIC_TLS: u32 = 0x0000_0010;
+newtype!(
+    /// Values of `Dyn*::d_val` in the `DT_FLAGS` entry.
+    struct DynamicFlags(u64);
+);
 
-// Values of `Dyn*::d_val` in the `DT_FLAGS_1` entry.
-/// Set RTLD_NOW for this object.
-pub const DF_1_NOW: u32 = 0x0000_0001;
-/// Set RTLD_GLOBAL for this object.
-pub const DF_1_GLOBAL: u32 = 0x0000_0002;
-/// Set RTLD_GROUP for this object.
-pub const DF_1_GROUP: u32 = 0x0000_0004;
-/// Set RTLD_NODELETE for this object.
-pub const DF_1_NODELETE: u32 = 0x0000_0008;
-/// Trigger filtee loading at runtime.
-pub const DF_1_LOADFLTR: u32 = 0x0000_0010;
-/// Set RTLD_INITFIRST for this object.
-pub const DF_1_INITFIRST: u32 = 0x0000_0020;
-/// Set RTLD_NOOPEN for this object.
-pub const DF_1_NOOPEN: u32 = 0x0000_0040;
-/// $ORIGIN must be handled.
-pub const DF_1_ORIGIN: u32 = 0x0000_0080;
-/// Direct binding enabled.
-pub const DF_1_DIRECT: u32 = 0x0000_0100;
-pub const DF_1_TRANS: u32 = 0x0000_0200;
-/// Object is used to interpose.
-pub const DF_1_INTERPOSE: u32 = 0x0000_0400;
-/// Ignore default lib search path.
-pub const DF_1_NODEFLIB: u32 = 0x0000_0800;
-/// Object can't be dldump'ed.
-pub const DF_1_NODUMP: u32 = 0x0000_1000;
-/// Configuration alternative created.
-pub const DF_1_CONFALT: u32 = 0x0000_2000;
-/// Filtee terminates filters search.
-pub const DF_1_ENDFILTEE: u32 = 0x0000_4000;
-/// Disp reloc applied at build time.
-pub const DF_1_DISPRELDNE: u32 = 0x0000_8000;
-/// Disp reloc applied at run-time.
-pub const DF_1_DISPRELPND: u32 = 0x0001_0000;
-/// Object has no-direct binding.
-pub const DF_1_NODIRECT: u32 = 0x0002_0000;
-pub const DF_1_IGNMULDEF: u32 = 0x0004_0000;
-pub const DF_1_NOKSYMS: u32 = 0x0008_0000;
-pub const DF_1_NOHDR: u32 = 0x0010_0000;
-/// Object is modified after built.
-pub const DF_1_EDITED: u32 = 0x0020_0000;
-pub const DF_1_NORELOC: u32 = 0x0040_0000;
-/// Object has individual interposers.
-pub const DF_1_SYMINTPOSE: u32 = 0x0080_0000;
-/// Global auditing required.
-pub const DF_1_GLOBAUDIT: u32 = 0x0100_0000;
-/// Singleton symbols are used.
-pub const DF_1_SINGLETON: u32 = 0x0200_0000;
-pub const DF_1_STUB: u32 = 0x0400_0000;
-pub const DF_1_PIE: u32 = 0x0800_0000;
+newtype_flag_names!(NAMES_DF: DynamicFlags(u64) = {
+    /// Object may use DF_ORIGIN
+    DF_ORIGIN = 0x0000_0001,
+    /// Symbol resolutions starts here
+    DF_SYMBOLIC = 0x0000_0002,
+    /// Object contains text relocations
+    DF_TEXTREL = 0x0000_0004,
+    /// No lazy binding for this object
+    DF_BIND_NOW = 0x0000_0008,
+    /// Module uses the static TLS model
+    DF_STATIC_TLS = 0x0000_0010,
+});
+
+newtype!(
+    /// Values of `Dyn*::d_val` in the `DT_FLAGS_1` entry.
+    struct DynamicFlags1(u64);
+);
+
+newtype_flag_names!(NAMES_DF_1: DynamicFlags1(u64) = {
+    /// Set RTLD_NOW for this object.
+    DF_1_NOW = 0x0000_0001,
+    /// Set RTLD_GLOBAL for this object.
+    DF_1_GLOBAL = 0x0000_0002,
+    /// Set RTLD_GROUP for this object.
+    DF_1_GROUP = 0x0000_0004,
+    /// Set RTLD_NODELETE for this object.
+    DF_1_NODELETE = 0x0000_0008,
+    /// Trigger filtee loading at runtime.
+    DF_1_LOADFLTR = 0x0000_0010,
+    /// Set RTLD_INITFIRST for this object.
+    DF_1_INITFIRST = 0x0000_0020,
+    /// Set RTLD_NOOPEN for this object.
+    DF_1_NOOPEN = 0x0000_0040,
+    /// $ORIGIN must be handled.
+    DF_1_ORIGIN = 0x0000_0080,
+    /// Direct binding enabled.
+    DF_1_DIRECT = 0x0000_0100,
+    DF_1_TRANS = 0x0000_0200,
+    /// Object is used to interpose.
+    DF_1_INTERPOSE = 0x0000_0400,
+    /// Ignore default lib search path.
+    DF_1_NODEFLIB = 0x0000_0800,
+    /// Object can't be dldump'ed.
+    DF_1_NODUMP = 0x0000_1000,
+    /// Configuration alternative created.
+    DF_1_CONFALT = 0x0000_2000,
+    /// Filtee terminates filters search.
+    DF_1_ENDFILTEE = 0x0000_4000,
+    /// Disp reloc applied at build time.
+    DF_1_DISPRELDNE = 0x0000_8000,
+    /// Disp reloc applied at run-time.
+    DF_1_DISPRELPND = 0x0001_0000,
+    /// Object has no-direct binding.
+    DF_1_NODIRECT = 0x0002_0000,
+    DF_1_IGNMULDEF = 0x0004_0000,
+    DF_1_NOKSYMS = 0x0008_0000,
+    DF_1_NOHDR = 0x0010_0000,
+    /// Object is modified after built.
+    DF_1_EDITED = 0x0020_0000,
+    DF_1_NORELOC = 0x0040_0000,
+    /// Object has individual interposers.
+    DF_1_SYMINTPOSE = 0x0080_0000,
+    /// Global auditing required.
+    DF_1_GLOBAUDIT = 0x0100_0000,
+    /// Singleton symbols are used.
+    DF_1_SINGLETON = 0x0200_0000,
+    DF_1_STUB = 0x0400_0000,
+    DF_1_PIE = 0x0800_0000,
+});
 
 /// Version symbol information
 #[derive(Debug, Clone, Copy)]
@@ -3099,7 +3138,7 @@ constants! {
         R_SPARC_GNU_VTENTRY = 251,
         R_SPARC_REV32 = 252,
     };
-    consts dt: i64 = {
+    consts dt: DynamicTag(i64) = {
         DT_SPARC_REGISTER = 0x7000_0001,
     };
 }
@@ -3314,7 +3353,7 @@ constants! {
     flags pf: u32 = {
         PF_MIPS_LOCAL = 0x1000_0000,
     };
-    consts dt: i64 = {
+    consts dt: DynamicTag(i64) = {
         /// Runtime linker interface version
         DT_MIPS_RLD_VERSION = 0x7000_0001,
         /// Timestamp
@@ -3934,7 +3973,7 @@ constants! {
         R_ALPHA_TPRELLO = 40,
         R_ALPHA_TPREL16 = 41,
     };
-    consts dt: i64 = {
+    consts dt: DynamicTag(i64) = {
         DT_ALPHA_PLTRO = DT_LOPROC + 0,
     };
 }
@@ -4123,7 +4162,7 @@ constants! {
         /// still be in object files.
         R_PPC_TOC16 = 255,
     };
-    consts dt: i64 = {
+    consts dt: DynamicTag(i64) = {
         DT_PPC_GOT = DT_LOPROC + 0,
         DT_PPC_OPT = DT_LOPROC + 1,
     };
@@ -4353,7 +4392,7 @@ constants! {
         /// half16   (sym+add-.)@ha
         R_PPC64_REL16_HA = 252,
     };
-    consts dt: i64 = {
+    consts dt: DynamicTag(i64) = {
         DT_PPC64_GLINK = DT_LOPROC + 0,
         DT_PPC64_OPD = DT_LOPROC + 1,
         DT_PPC64_OPDSZ = DT_LOPROC + 2,
@@ -4696,7 +4735,7 @@ constants! {
         // AArch64 values for `Sym64::st_other`.
         STO_AARCH64_VARIANT_PCS = 0x80,
     };
-    consts dt: i64 = {
+    consts dt: DynamicTag(i64) = {
         DT_AARCH64_BTI_PLT = DT_LOPROC + 1,
         DT_AARCH64_PAC_PLT = DT_LOPROC + 3,
         DT_AARCH64_VARIANT_PCS = DT_LOPROC + 5,
@@ -5235,7 +5274,7 @@ constants! {
         /// spec insns w/o recovery
         SHF_IA_64_NORECOV = 0x2000_0000,
     };
-    consts dt: i64 = {
+    consts dt: DynamicTag(i64) = {
         DT_IA_64_PLT_RESERVE = DT_LOPROC + 0,
     };
     consts r: u32 = {
@@ -5992,7 +6031,7 @@ constants! {
 // Nios II
 constants! {
     struct Nios2(Base);
-    consts dt: i64 = {
+    consts dt: DynamicTag(i64) = {
         /// Address of _gp.
         DT_NIOS2_GP = 0x7000_0002,
     };
@@ -6553,7 +6592,7 @@ constants! {
     consts pt: ProgramType(u32) = {
         PT_RISCV_ATTRIBUTES = PT_LOPROC + 3,
     };
-    consts dt: i64 = {
+    consts dt: DynamicTag(i64) = {
         DT_RISCV_VARIANT_CC = DT_LOPROC + 1,
     };
     consts r: u32 = {
@@ -7296,7 +7335,7 @@ constants! {
         /// PC relative 64 bit in data.
         R_E2K_64_PC = 258,
     };
-    consts dt: i64 = {
+    consts dt: DynamicTag(i64) = {
         DT_E2K_LAZY = DT_LOPROC + 1,
         DT_E2K_LAZY_GOT = DT_LOPROC + 3,
 
