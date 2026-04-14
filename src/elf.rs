@@ -2519,12 +2519,104 @@ pub const ELF_NOTE_OS_SOLARIS2: u32 = 2;
 /// OS descriptor for `NT_GNU_ABI_TAG`.
 pub const ELF_NOTE_OS_FREEBSD: u32 = 3;
 
-// Values used in GNU .note.gnu.property notes (NT_GNU_PROPERTY_TYPE_0).
+newtype!(
+    /// Values used in GNU .note.gnu.property notes (NT_GNU_PROPERTY_TYPE_0).
+    struct GnuPropertyType(u32);
+);
 
-/// Stack size.
-pub const GNU_PROPERTY_STACK_SIZE: u32 = 1;
-/// No copy relocation on protected data symbol.
-pub const GNU_PROPERTY_NO_COPY_ON_PROTECTED: u32 = 2;
+impl GnuPropertyType {
+    /// A 4-byte unsigned integer property: A bit is set if it is set in all
+    /// relocatable inputs.
+    pub fn is_uint32_and(self) -> bool {
+        self.0 >= GNU_PROPERTY_UINT32_AND_LO && self.0 <= GNU_PROPERTY_UINT32_AND_HI
+    }
+    /// A 4-byte unsigned integer property: A bit is set if it is set in any
+    /// relocatable inputs.
+    pub fn is_uint32_or(self) -> bool {
+        self.0 >= GNU_PROPERTY_UINT32_OR_LO && self.0 <= GNU_PROPERTY_UINT32_OR_HI
+    }
+    /// Return true if the property is in the processor-specific range.
+    pub fn is_proc(self) -> bool {
+        self.0 >= GNU_PROPERTY_LOPROC && self.0 <= GNU_PROPERTY_HIPROC
+    }
+    /// Return true if the property is in the application-specific range.
+    pub fn is_user(self) -> bool {
+        debug_assert_eq!(GNU_PROPERTY_HIUSER, !0);
+        self.0 >= GNU_PROPERTY_LOUSER
+    }
+    /// A 4-byte unsigned integer property: A bit is set if it is set in all
+    /// relocatable inputs.
+    pub fn is_x86_uint32_and(self) -> bool {
+        self.0 >= GNU_PROPERTY_X86_UINT32_AND_LO && self.0 <= GNU_PROPERTY_X86_UINT32_AND_HI
+    }
+    /// A 4-byte unsigned integer property: A bit is set if it is set in any
+    /// relocatable inputs.
+    pub fn is_x86_uint32_or(self) -> bool {
+        self.0 >= GNU_PROPERTY_X86_UINT32_OR_LO && self.0 <= GNU_PROPERTY_X86_UINT32_OR_HI
+    }
+    /// A 4-byte unsigned integer property: A bit is set if it is set in any
+    /// relocatable inputs and the property is present in all relocatable
+    /// inputs.
+    pub fn is_x86_uint32_or_and(self) -> bool {
+        self.0 >= GNU_PROPERTY_X86_UINT32_OR_AND_LO && self.0 <= GNU_PROPERTY_X86_UINT32_OR_AND_HI
+    }
+
+    /// Return the property type names for the given machine.
+    #[cfg(feature = "names")]
+    pub fn type_names(machine: Machine) -> &'static ConstantNames<Self> {
+        match machine {
+            EM_386 | EM_X86_64 => &NAMES_GNU_PROPERTY_X86,
+            EM_AARCH64 => &NAMES_GNU_PROPERTY_AARCH64,
+            _ => &NAMES_GNU_PROPERTY,
+        }
+    }
+
+    /// Return the property values names for the given machine if the property
+    /// data is a u32.
+    #[cfg(feature = "names")]
+    pub fn u32_value_names(self, machine: Machine) -> Option<&'static FlagNames<u32>> {
+        match self {
+            GNU_PROPERTY_1_NEEDED => {
+                return Some(&NAMES_GNU_PROPERTY_1_NEEDED);
+            }
+            _ => {}
+        }
+        match machine {
+            EM_386 | EM_X86_64 => match self {
+                GNU_PROPERTY_X86_ISA_1_USED | GNU_PROPERTY_X86_ISA_1_NEEDED => {
+                    return Some(&NAMES_GNU_PROPERTY_X86_ISA_1);
+                }
+                GNU_PROPERTY_X86_FEATURE_1_AND => {
+                    return Some(&NAMES_GNU_PROPERTY_X86_FEATURE_1);
+                }
+                _ => {}
+            },
+            EM_AARCH64 => match self {
+                GNU_PROPERTY_AARCH64_FEATURE_1_AND => {
+                    return Some(&NAMES_GNU_PROPERTY_AARCH64_FEATURE_1);
+                }
+                _ => {}
+            },
+            _ => {}
+        }
+        None
+    }
+}
+
+newtype_constant_names!(NAMES_GNU_PROPERTY: GnuPropertyType(u32) = {
+    /// Stack size.
+    GNU_PROPERTY_STACK_SIZE = 1,
+    /// No copy relocation on protected data symbol.
+    GNU_PROPERTY_NO_COPY_ON_PROTECTED = 2,
+    /// The needed properties by the object file.  */
+    GNU_PROPERTY_1_NEEDED = GNU_PROPERTY_UINT32_OR_LO,
+});
+
+flag_names!(NAMES_GNU_PROPERTY_1_NEEDED: u32 = {
+    /// Set if the object file requires canonical function pointers and
+    /// cannot be used with copy relocation.
+    GNU_PROPERTY_1_NEEDED_INDIRECT_EXTERN_ACCESS = 1 << 0,
+});
 
 // A 4-byte unsigned integer property: A bit is set if it is set in all
 // relocatable inputs.
@@ -2536,13 +2628,6 @@ pub const GNU_PROPERTY_UINT32_AND_HI: u32 = 0xb0007fff;
 pub const GNU_PROPERTY_UINT32_OR_LO: u32 = 0xb0008000;
 pub const GNU_PROPERTY_UINT32_OR_HI: u32 = 0xb000ffff;
 
-/// The needed properties by the object file.  */
-pub const GNU_PROPERTY_1_NEEDED: u32 = GNU_PROPERTY_UINT32_OR_LO;
-
-/// Set if the object file requires canonical function pointers and
-/// cannot be used with copy relocation.
-pub const GNU_PROPERTY_1_NEEDED_INDIRECT_EXTERN_ACCESS: u32 = 1 << 0;
-
 /// Processor-specific semantics, lo
 pub const GNU_PROPERTY_LOPROC: u32 = 0xc0000000;
 /// Processor-specific semantics, hi
@@ -2552,12 +2637,15 @@ pub const GNU_PROPERTY_LOUSER: u32 = 0xe0000000;
 /// Application-specific semantics, hi
 pub const GNU_PROPERTY_HIUSER: u32 = 0xffffffff;
 
-/// AArch64 specific GNU properties.
-pub const GNU_PROPERTY_AARCH64_FEATURE_1_AND: u32 = 0xc0000000;
-pub const GNU_PROPERTY_AARCH64_FEATURE_PAUTH: u32 = 0xc0000001;
+constant_names!(NAMES_GNU_PROPERTY_AARCH64: GnuPropertyType(u32) = NAMES_GNU_PROPERTY + {
+    GNU_PROPERTY_AARCH64_FEATURE_1_AND = 0xc0000000,
+    GNU_PROPERTY_AARCH64_FEATURE_PAUTH = 0xc0000001,
+});
 
-pub const GNU_PROPERTY_AARCH64_FEATURE_1_BTI: u32 = 1 << 0;
-pub const GNU_PROPERTY_AARCH64_FEATURE_1_PAC: u32 = 1 << 1;
+flag_names!(NAMES_GNU_PROPERTY_AARCH64_FEATURE_1: u32 = {
+    GNU_PROPERTY_AARCH64_FEATURE_1_BTI = 1 << 0,
+    GNU_PROPERTY_AARCH64_FEATURE_1_PAC = 1 << 1,
+});
 
 // A 4-byte unsigned integer property: A bit is set if it is set in all
 // relocatable inputs.
@@ -2575,33 +2663,39 @@ pub const GNU_PROPERTY_X86_UINT32_OR_HI: u32 = 0xc000ffff;
 pub const GNU_PROPERTY_X86_UINT32_OR_AND_LO: u32 = 0xc0010000;
 pub const GNU_PROPERTY_X86_UINT32_OR_AND_HI: u32 = 0xc0017fff;
 
-/// The x86 instruction sets indicated by the corresponding bits are
-/// used in program.  Their support in the hardware is optional.
-pub const GNU_PROPERTY_X86_ISA_1_USED: u32 = 0xc0010002;
-/// The x86 instruction sets indicated by the corresponding bits are
-/// used in program and they must be supported by the hardware.
-pub const GNU_PROPERTY_X86_ISA_1_NEEDED: u32 = 0xc0008002;
-/// X86 processor-specific features used in program.
-pub const GNU_PROPERTY_X86_FEATURE_1_AND: u32 = 0xc0000002;
+constant_names!(NAMES_GNU_PROPERTY_X86: GnuPropertyType(u32) = NAMES_GNU_PROPERTY + {
+    /// The x86 instruction sets indicated by the corresponding bits are
+    /// used in program.  Their support in the hardware is optional.
+    GNU_PROPERTY_X86_ISA_1_USED = 0xc0010002,
+    /// The x86 instruction sets indicated by the corresponding bits are
+    /// used in program and they must be supported by the hardware.
+    GNU_PROPERTY_X86_ISA_1_NEEDED = 0xc0008002,
+    /// X86 processor-specific features used in program.
+    GNU_PROPERTY_X86_FEATURE_1_AND = 0xc0000002,
+});
 
-/// GNU_PROPERTY_X86_ISA_1_BASELINE: CMOV, CX8 (cmpxchg8b), FPU (fld),
-/// MMX, OSFXSR (fxsave), SCE (syscall), SSE and SSE2.
-pub const GNU_PROPERTY_X86_ISA_1_BASELINE: u32 = 1 << 0;
-/// GNU_PROPERTY_X86_ISA_1_V2: GNU_PROPERTY_X86_ISA_1_BASELINE,
-/// CMPXCHG16B (cmpxchg16b), LAHF-SAHF (lahf), POPCNT (popcnt), SSE3,
-/// SSSE3, SSE4.1 and SSE4.2.
-pub const GNU_PROPERTY_X86_ISA_1_V2: u32 = 1 << 1;
-/// GNU_PROPERTY_X86_ISA_1_V3: GNU_PROPERTY_X86_ISA_1_V2, AVX, AVX2, BMI1,
-/// BMI2, F16C, FMA, LZCNT, MOVBE, XSAVE.
-pub const GNU_PROPERTY_X86_ISA_1_V3: u32 = 1 << 2;
-/// GNU_PROPERTY_X86_ISA_1_V4: GNU_PROPERTY_X86_ISA_1_V3, AVX512F,
-/// AVX512BW, AVX512CD, AVX512DQ and AVX512VL.
-pub const GNU_PROPERTY_X86_ISA_1_V4: u32 = 1 << 3;
+flag_names!(NAMES_GNU_PROPERTY_X86_ISA_1: u32 = {
+    /// GNU_PROPERTY_X86_ISA_1_BASELINE: CMOV, CX8 (cmpxchg8b), FPU (fld),
+    /// MMX, OSFXSR (fxsave), SCE (syscall), SSE and SSE2.
+    GNU_PROPERTY_X86_ISA_1_BASELINE = 1 << 0,
+    /// GNU_PROPERTY_X86_ISA_1_V2: GNU_PROPERTY_X86_ISA_1_BASELINE,
+    /// CMPXCHG16B (cmpxchg16b), LAHF-SAHF (lahf), POPCNT (popcnt), SSE3,
+    /// SSSE3, SSE4.1 and SSE4.2.
+    GNU_PROPERTY_X86_ISA_1_V2 = 1 << 1,
+    /// GNU_PROPERTY_X86_ISA_1_V3: GNU_PROPERTY_X86_ISA_1_V2, AVX, AVX2, BMI1,
+    /// BMI2, F16C, FMA, LZCNT, MOVBE, XSAVE.
+    GNU_PROPERTY_X86_ISA_1_V3 = 1 << 2,
+    /// GNU_PROPERTY_X86_ISA_1_V4: GNU_PROPERTY_X86_ISA_1_V3, AVX512F,
+    /// AVX512BW, AVX512CD, AVX512DQ and AVX512VL.
+    GNU_PROPERTY_X86_ISA_1_V4 = 1 << 3,
+});
 
-/// This indicates that all executable sections are compatible with IBT.
-pub const GNU_PROPERTY_X86_FEATURE_1_IBT: u32 = 1 << 0;
-/// This indicates that all executable sections are compatible with SHSTK.
-pub const GNU_PROPERTY_X86_FEATURE_1_SHSTK: u32 = 1 << 1;
+flag_names!(NAMES_GNU_PROPERTY_X86_FEATURE_1: u32 = {
+    /// This indicates that all executable sections are compatible with IBT.
+    GNU_PROPERTY_X86_FEATURE_1_IBT = 1 << 0,
+    /// This indicates that all executable sections are compatible with SHSTK.
+    GNU_PROPERTY_X86_FEATURE_1_SHSTK = 1 << 1,
+});
 
 // Note types for `ELF_NOTE_GO`.
 constant_names!(NAMES_NT_GO: u32 = {

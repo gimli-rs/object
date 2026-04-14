@@ -533,6 +533,7 @@ fn print_notes<Elf: FileHeader>(
     elf: &Elf,
     mut notes: NoteIterator<Elf>,
 ) {
+    let machine = elf.e_machine(endian);
     while let Some(Some(note)) = notes.next().print_err(p) {
         p.group("Note", |p| {
             let name = note.name();
@@ -542,47 +543,11 @@ fn print_notes<Elf: FileHeader>(
                 while let Some(Some(property)) = properties.next().print_err(p) {
                     p.group("Property", |p| {
                         let pr_type = property.pr_type();
-                        let proc = match elf.e_machine(endian) {
-                            EM_386 | EM_X86_64 => FLAGS_GNU_PROPERTY_X86,
-                            EM_AARCH64 => FLAGS_GNU_PROPERTY_AARCH64,
-                            _ => &[],
-                        };
-                        p.field_enums("Type", pr_type, &[FLAGS_GNU_PROPERTY, proc]);
-                        match pr_type {
-                            GNU_PROPERTY_1_NEEDED => {
-                                if let Some(val) = property.data_u32(endian).print_err(p) {
-                                    p.field_hex("Value", val);
-                                    p.flags(val, 0, FLAGS_GNU_PROPERTY_1_NEEDED);
-                                }
-                            }
-                            _ => {}
-                        }
-                        match elf.e_machine(endian) {
-                            EM_386 | EM_X86_64 => match pr_type {
-                                GNU_PROPERTY_X86_ISA_1_USED | GNU_PROPERTY_X86_ISA_1_NEEDED => {
-                                    if let Some(val) = property.data_u32(endian).print_err(p) {
-                                        p.field_hex("Value", val);
-                                        p.flags(val, 0, FLAGS_GNU_PROPERTY_X86_ISA_1);
-                                    }
-                                }
-                                GNU_PROPERTY_X86_FEATURE_1_AND => {
-                                    if let Some(val) = property.data_u32(endian).print_err(p) {
-                                        p.field_hex("Value", val);
-                                        p.flags(val, 0, FLAGS_GNU_PROPERTY_X86_FEATURE_1);
-                                    }
-                                }
-                                _ => {}
-                            },
-                            EM_AARCH64 => match pr_type {
-                                GNU_PROPERTY_AARCH64_FEATURE_1_AND => {
-                                    if let Some(val) = property.data_u32(endian).print_err(p) {
-                                        p.field_hex("Value", val);
-                                        p.flags(val, 0, FLAGS_GNU_PROPERTY_AARCH64_FEATURE_1);
-                                    }
-                                }
-                                _ => {}
-                            },
-                            _ => {}
+                        p.field_consts("Type", pr_type, GnuPropertyType::type_names(machine));
+                        if let Some(names) = pr_type.u32_value_names(machine)
+                            && let Some(val) = property.data_u32(endian).print_err(p)
+                        {
+                            p.field_flags("Value", val, names);
                         }
                     });
                 }
@@ -860,36 +825,6 @@ fn constants<Elf: FileHeader>(endian: Elf::Endian, elf: &Elf) -> &'static Consta
     machine_constants(elf.e_machine(endian))
 }
 
-const FLAGS_GNU_PROPERTY: &[Flag<u32>] = &flags!(
-    GNU_PROPERTY_STACK_SIZE,
-    GNU_PROPERTY_NO_COPY_ON_PROTECTED,
-    GNU_PROPERTY_1_NEEDED,
-);
-const FLAGS_GNU_PROPERTY_1_NEEDED: &[Flag<u32>] =
-    &flags!(GNU_PROPERTY_1_NEEDED_INDIRECT_EXTERN_ACCESS);
-const FLAGS_GNU_PROPERTY_AARCH64: &[Flag<u32>] = &flags!(
-    GNU_PROPERTY_AARCH64_FEATURE_1_AND,
-    GNU_PROPERTY_AARCH64_FEATURE_PAUTH,
-);
-const FLAGS_GNU_PROPERTY_AARCH64_FEATURE_1: &[Flag<u32>] = &flags!(
-    GNU_PROPERTY_AARCH64_FEATURE_1_BTI,
-    GNU_PROPERTY_AARCH64_FEATURE_1_PAC,
-);
-const FLAGS_GNU_PROPERTY_X86: &[Flag<u32>] = &flags!(
-    GNU_PROPERTY_X86_ISA_1_USED,
-    GNU_PROPERTY_X86_ISA_1_NEEDED,
-    GNU_PROPERTY_X86_FEATURE_1_AND,
-);
-const FLAGS_GNU_PROPERTY_X86_ISA_1: &[Flag<u32>] = &flags!(
-    GNU_PROPERTY_X86_ISA_1_BASELINE,
-    GNU_PROPERTY_X86_ISA_1_V2,
-    GNU_PROPERTY_X86_ISA_1_V3,
-    GNU_PROPERTY_X86_ISA_1_V4,
-);
-const FLAGS_GNU_PROPERTY_X86_FEATURE_1: &[Flag<u32>] = &flags!(
-    GNU_PROPERTY_X86_FEATURE_1_IBT,
-    GNU_PROPERTY_X86_FEATURE_1_SHSTK,
-);
 const FLAGS_VER_FLG: &[Flag<u16>] = &flags!(VER_FLG_BASE, VER_FLG_WEAK);
 const FLAGS_VER_NDX: &[Flag<u16>] = &flags!(VER_NDX_LOCAL, VER_NDX_GLOBAL);
 const FLAGS_VERSYM: &[Flag<u16>] = &flags!(VERSYM_HIDDEN);

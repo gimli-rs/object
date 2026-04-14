@@ -31,7 +31,7 @@ impl<'a> Object<'a> {
     /// Add a property with a u32 value to the ELF ".note.gnu.property" section.
     ///
     /// Requires `feature = "elf"`.
-    pub fn add_elf_gnu_property_u32(&mut self, property: u32, value: u32) {
+    pub fn add_elf_gnu_property_u32(&mut self, property: elf::GnuPropertyType, value: u32) {
         if self.format != BinaryFormat::Elf {
             return;
         }

@@ -254,7 +254,7 @@ impl<'data, Endian: endian::Endian> GnuPropertyIterator<'data, Endian> {
 
     fn parse(&mut self) -> read::Result<GnuProperty<'data>> {
         (|| -> Result<_, ()> {
-            let pr_type = self.data.read_at::<U32<Endian>>(0)?.get(self.endian);
+            let pr_type = self.data.read_at::<U32<Endian, _>>(0)?.get(self.endian);
             let pr_datasz = self.data.read_at::<U32<Endian>>(4)?.get(self.endian) as usize;
             let pr_data = self.data.read_bytes_at(8, pr_datasz)?.0;
             self.data.skip(util::align(8 + pr_datasz, self.align))?;
@@ -275,7 +275,7 @@ impl<'data, Endian: endian::Endian> Iterator for GnuPropertyIterator<'data, Endi
 /// A property in a [`elf::NT_GNU_PROPERTY_TYPE_0`] note.
 #[derive(Debug)]
 pub struct GnuProperty<'data> {
-    pr_type: u32,
+    pr_type: elf::GnuPropertyType,
     pr_data: &'data [u8],
 }
 
@@ -283,7 +283,7 @@ impl<'data> GnuProperty<'data> {
     /// Return the property type.
     ///
     /// This is one of the `GNU_PROPERTY_*` constants.
-    pub fn pr_type(&self) -> u32 {
+    pub fn pr_type(&self) -> elf::GnuPropertyType {
         self.pr_type
     }
 

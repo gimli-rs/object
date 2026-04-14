@@ -238,8 +238,7 @@ ProgramHeader {
         }
         Property {
             Type: GNU_PROPERTY_X86_ISA_1_NEEDED (0xC0008002)
-            Value: 0x1
-                GNU_PROPERTY_X86_ISA_1_BASELINE (0x1)
+            Value: GNU_PROPERTY_X86_ISA_1_BASELINE (0x1)
         }
     }
 }
@@ -354,8 +353,7 @@ SectionHeader {
         }
         Property {
             Type: GNU_PROPERTY_X86_ISA_1_NEEDED (0xC0008002)
-            Value: 0x1
-                GNU_PROPERTY_X86_ISA_1_BASELINE (0x1)
+            Value: GNU_PROPERTY_X86_ISA_1_BASELINE (0x1)
         }
     }
 }
