@@ -35,7 +35,7 @@ pub struct Constants {
     /// Values for `st_type` field of `Sym*::st_info`.
     pub stt: &'static ConstantNames<SymbolType>,
     /// Values for `Sym*::st_other`.
-    pub sto: &'static FlagNames<u8>,
+    pub sto: &'static FlagNames<SymbolOther>,
     /// Values for `ProgramHeader*::p_type`.
     pub pt: &'static ConstantNames<ProgramType>,
     /// Values for `ProgramHeader*::p_flags`.
@@ -55,7 +55,7 @@ constants! {
     flags shf: SectionFlags = NAMES_SHF;
     consts stb: SymbolBind = NAMES_STB;
     consts stt: SymbolType = NAMES_STT;
-    flags sto: u8 = NAMES_STO;
+    flags sto: SymbolFlags = NAMES_STO;
     consts pt: ProgramType = NAMES_PT;
     flags pf: ProgramFlags = NAMES_PF;
     consts dt: DynamicTag = NAMES_DT;
@@ -1256,34 +1256,34 @@ pub struct Sym32<E: Endian> {
     /// Symbol visibility.
     ///
     /// Use the `st_visibility` method to access this value.
-    pub st_other: u8,
+    pub st_other: SymbolOther,
     /// Section index or one of the `SHN_*` values.
     pub st_shndx: U16<E, SectionIndex>,
 }
 
 impl<E: Endian> Sym32<E> {
-    /// Get the `st_bind` component of the `st_info` field.
+    /// Get the `st_bind` subfield of the `st_info` field.
     #[inline]
     pub fn st_bind(&self) -> SymbolBind {
         self.st_info.st_bind()
     }
 
-    /// Get the `st_type` component of the `st_info` field.
+    /// Get the `st_type` subfield of the `st_info` field.
     #[inline]
     pub fn st_type(&self) -> SymbolType {
         self.st_info.st_type()
     }
 
-    /// Set the `st_info` field given the `st_bind` and `st_type` components.
+    /// Set the `st_info` field given the `st_bind` and `st_type` subfields.
     #[inline]
     pub fn set_st_info(&mut self, st_bind: SymbolBind, st_type: SymbolType) {
         self.st_info = SymbolInfo::new(st_bind, st_type);
     }
 
-    /// Get the `st_visibility` component of the `st_info` field.
+    /// Get the `st_visibility` subfield of the `st_other` field.
     #[inline]
-    pub fn st_visibility(&self) -> u8 {
-        self.st_other & 0x3
+    pub fn st_visibility(&self) -> SymbolVisibility {
+        self.st_other.visibility()
     }
 }
 
@@ -1302,7 +1302,7 @@ pub struct Sym64<E: Endian> {
     /// Symbol visibility.
     ///
     /// Use the `st_visibility` method to access this value.
-    pub st_other: u8,
+    pub st_other: SymbolOther,
     /// Section index or one of the `SHN_*` values.
     pub st_shndx: U16<E, SectionIndex>,
     /// Symbol value.
@@ -1312,28 +1312,28 @@ pub struct Sym64<E: Endian> {
 }
 
 impl<E: Endian> Sym64<E> {
-    /// Get the `st_bind` component of the `st_info` field.
+    /// Get the `st_bind` subfield of the `st_info` field.
     #[inline]
     pub fn st_bind(&self) -> SymbolBind {
         self.st_info.st_bind()
     }
 
-    /// Get the `st_type` component of the `st_info` field.
+    /// Get the `st_type` subfield of the `st_info` field.
     #[inline]
     pub fn st_type(&self) -> SymbolType {
         self.st_info.st_type()
     }
 
-    /// Set the `st_info` field given the `st_bind` and `st_type` components.
+    /// Set the `st_info` field given the `st_bind` and `st_type` subfields.
     #[inline]
     pub fn set_st_info(&mut self, st_bind: SymbolBind, st_type: SymbolType) {
         self.st_info = SymbolInfo::new(st_bind, st_type);
     }
 
-    /// Get the `st_visibility` component of the `st_other` field.
+    /// Get the `st_visibility` subfield of the `st_other` field.
     #[inline]
-    pub fn st_visibility(&self) -> u8 {
-        self.st_other & 0x3
+    pub fn st_visibility(&self) -> SymbolVisibility {
+        self.st_other.visibility()
     }
 }
 
@@ -1539,12 +1539,57 @@ pub const STT_LOPROC: u8 = 13;
 /// End of processor-specific symbol types.
 pub const STT_HIPROC: u8 = 15;
 
-// Values for `Sym*::st_other`.
-flag_names!(NAMES_STO: u8 = {
+newtype!(
+    /// Values for `Sym*::st_other`.
+    #[repr(transparent)]
+    struct SymbolOther(u8);
+);
+
+impl SymbolOther {
+    /// Get the `st_visibility` field.
+    pub fn visibility(self) -> SymbolVisibility {
+        SymbolVisibility(self.0 & STV_MASK)
+    }
+
+    /// Set the `st_visibility` field.
+    pub fn with_visibility(self, vis: SymbolVisibility) -> Self {
+        SymbolOther(self.0 & !STV_MASK | vis.0 & STV_MASK)
+    }
+
+    /// Get the PPC64 `local` field.
+    pub fn ppc64_local(self) -> u8 {
+        (self.0 & STO_PPC64_LOCAL_MASK) >> STO_PPC64_LOCAL_BIT
+    }
+
+    /// Set the PPC64 `local` field.
+    pub fn ppc64_with_local(self, local: u8) -> Self {
+        SymbolOther(
+            self.0 & !STO_PPC64_LOCAL_MASK | (local << STO_PPC64_LOCAL_BIT) & STO_PPC64_LOCAL_MASK,
+        )
+    }
+}
+
+newtype_flag_names!(NAMES_STO: SymbolOther(u8) = {
     STV_MASK = 3 => NAMES_STV,
 });
 
-constant_names!(NAMES_STV: u8 = {
+newtype!(
+    struct SymbolVisibility(u8);
+);
+
+impl From<SymbolVisibility> for SymbolOther {
+    fn from(value: SymbolVisibility) -> Self {
+        SymbolOther(value.0 & STV_MASK)
+    }
+}
+
+impl From<SymbolOther> for SymbolVisibility {
+    fn from(value: SymbolOther) -> Self {
+        value.visibility()
+    }
+}
+
+newtype_constant_names!(NAMES_STV: SymbolVisibility(u8) = {
     /// Default symbol visibility rules.
     STV_DEFAULT = 0,
     /// Processor specific hidden class.
@@ -1566,24 +1611,24 @@ pub struct Rel32<E: Endian> {
 }
 
 impl<E: Endian> Rel32<E> {
-    /// Get the `r_sym` component of the `r_info` field.
+    /// Get the `r_sym` subfield of the `r_info` field.
     #[inline]
     pub fn r_sym(&self, endian: E) -> u32 {
         self.r_info.get(endian) >> 8
     }
 
-    /// Get the `r_type` component of the `r_info` field.
+    /// Get the `r_type` subfield of the `r_info` field.
     #[inline]
     pub fn r_type(&self, endian: E) -> u32 {
         self.r_info.get(endian) & 0xff
     }
 
-    /// Calculate the `r_info` field given the `r_sym` and `r_type` components.
+    /// Calculate the `r_info` field given the `r_sym` and `r_type` subfields.
     pub fn r_info(endian: E, r_sym: u32, r_type: u8) -> U32<E> {
         U32::new(endian, (r_sym << 8) | u32::from(r_type))
     }
 
-    /// Set the `r_info` field given the `r_sym` and `r_type` components.
+    /// Set the `r_info` field given the `r_sym` and `r_type` subfields.
     pub fn set_r_info(&mut self, endian: E, r_sym: u32, r_type: u8) {
         self.r_info = Self::r_info(endian, r_sym, r_type)
     }
@@ -1602,24 +1647,24 @@ pub struct Rela32<E: Endian> {
 }
 
 impl<E: Endian> Rela32<E> {
-    /// Get the `r_sym` component of the `r_info` field.
+    /// Get the `r_sym` subfield of the `r_info` field.
     #[inline]
     pub fn r_sym(&self, endian: E) -> u32 {
         self.r_info.get(endian) >> 8
     }
 
-    /// Get the `r_type` component of the `r_info` field.
+    /// Get the `r_type` subfield of the `r_info` field.
     #[inline]
     pub fn r_type(&self, endian: E) -> u32 {
         self.r_info.get(endian) & 0xff
     }
 
-    /// Calculate the `r_info` field given the `r_sym` and `r_type` components.
+    /// Calculate the `r_info` field given the `r_sym` and `r_type` subfields.
     pub fn r_info(endian: E, r_sym: u32, r_type: u8) -> U32<E> {
         U32::new(endian, (r_sym << 8) | u32::from(r_type))
     }
 
-    /// Set the `r_info` field given the `r_sym` and `r_type` components.
+    /// Set the `r_info` field given the `r_sym` and `r_type` subfields.
     pub fn set_r_info(&mut self, endian: E, r_sym: u32, r_type: u8) {
         self.r_info = Self::r_info(endian, r_sym, r_type)
     }
@@ -1646,24 +1691,24 @@ pub struct Rel64<E: Endian> {
 }
 
 impl<E: Endian> Rel64<E> {
-    /// Get the `r_sym` component of the `r_info` field.
+    /// Get the `r_sym` subfield of the `r_info` field.
     #[inline]
     pub fn r_sym(&self, endian: E) -> u32 {
         (self.r_info.get(endian) >> 32) as u32
     }
 
-    /// Get the `r_type` component of the `r_info` field.
+    /// Get the `r_type` subfield of the `r_info` field.
     #[inline]
     pub fn r_type(&self, endian: E) -> u32 {
         (self.r_info.get(endian) & 0xffff_ffff) as u32
     }
 
-    /// Calculate the `r_info` field given the `r_sym` and `r_type` components.
+    /// Calculate the `r_info` field given the `r_sym` and `r_type` subfields.
     pub fn r_info(endian: E, r_sym: u32, r_type: u32) -> U64<E> {
         U64::new(endian, (u64::from(r_sym) << 32) | u64::from(r_type))
     }
 
-    /// Set the `r_info` field given the `r_sym` and `r_type` components.
+    /// Set the `r_info` field given the `r_sym` and `r_type` subfields.
     pub fn set_r_info(&mut self, endian: E, r_sym: u32, r_type: u32) {
         self.r_info = Self::r_info(endian, r_sym, r_type)
     }
@@ -1704,19 +1749,19 @@ impl<E: Endian> Rela64<E> {
         t
     }
 
-    /// Get the `r_sym` component of the `r_info` field.
+    /// Get the `r_sym` subfield of the `r_info` field.
     #[inline]
     pub fn r_sym(&self, endian: E, is_mips64el: bool) -> u32 {
         (self.get_r_info(endian, is_mips64el) >> 32) as u32
     }
 
-    /// Get the `r_type` component of the `r_info` field.
+    /// Get the `r_type` subfield of the `r_info` field.
     #[inline]
     pub fn r_type(&self, endian: E, is_mips64el: bool) -> u32 {
         (self.get_r_info(endian, is_mips64el) & 0xffff_ffff) as u32
     }
 
-    /// Calculate the `r_info` field given the `r_sym` and `r_type` components.
+    /// Calculate the `r_info` field given the `r_sym` and `r_type` subfields.
     pub fn r_info(endian: E, is_mips64el: bool, r_sym: u32, r_type: u32) -> U64<E> {
         let mut t = (u64::from(r_sym) << 32) | u64::from(r_type);
         if is_mips64el {
@@ -1729,7 +1774,7 @@ impl<E: Endian> Rela64<E> {
         U64::new(endian, t)
     }
 
-    /// Set the `r_info` field given the `r_sym` and `r_type` components.
+    /// Set the `r_info` field given the `r_sym` and `r_type` subfields.
     pub fn set_r_info(&mut self, endian: E, is_mips64el: bool, r_sym: u32, r_type: u32) {
         self.r_info = Self::r_info(endian, is_mips64el, r_sym, r_type);
     }
@@ -3438,7 +3483,7 @@ constants! {
         SHF_MIPS_NAMES = 0x0200_0000,
         SHF_MIPS_NODUPE = 0x0100_0000,
     };
-    flags sto: u8 = {
+    flags sto: SymbolOther(u8) = {
         STO_MIPS_PLT = 0x8,
     };
     consts stb: SymbolBind(u8) = {
@@ -4096,7 +4141,7 @@ constants! {
     flags shf: SectionFlags(u64) = {
         SHF_ALPHA_GPREL = 0x1000_0000,
     };
-    flags sto: u8 = {
+    flags sto: SymbolOther(u8) = {
         /// No PV required.
         STO_ALPHA_NOPV = 0x80,
         /// PV only used for initial ldgp.
@@ -4914,7 +4959,7 @@ constants! {
         /// AArch64 attributes section.
         SHT_AARCH64_ATTRIBUTES = SHT_LOPROC + 3,
     };
-    flags sto: u8 = {
+    flags sto: SymbolOther(u8) = {
         // AArch64 values for `Sym64::st_other`.
         STO_AARCH64_VARIANT_PCS = 0x80,
     };
@@ -6764,7 +6809,7 @@ constants! {
         EF_RISCV_TSO = 0x0010,
         EF_RISCV_RV64ILP32 = 0x0020,
     };
-    flags sto: u8 = {
+    flags sto: SymbolOther(u8) = {
         /// Function uses variant calling convention.
         STO_RISCV_VARIANT_CC = 0x80,
     };

@@ -2351,7 +2351,7 @@ pub struct Sym {
     pub name: Option<StringId>,
     pub section: Option<SectionIndex>,
     pub st_info: elf::SymbolInfo,
-    pub st_other: u8,
+    pub st_other: elf::SymbolOther,
     pub st_shndx: elf::SectionIndex,
     pub st_value: u64,
     pub st_size: u64,

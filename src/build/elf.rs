@@ -2705,7 +2705,7 @@ pub struct Symbol<'data, const DYNAMIC: bool = false> {
     /// The `st_info` field in the ELF symbol.
     pub st_info: elf::SymbolInfo,
     /// The `st_other` field in the ELF symbol.
-    pub st_other: u8,
+    pub st_other: elf::SymbolOther,
     /// The `st_shndx` field in the ELF symbol.
     ///
     /// Only used if `Self::section` is `None`.
@@ -2773,7 +2773,7 @@ impl<'data, const DYNAMIC: bool> Symbols<'data, DYNAMIC> {
             name: ByteString::default(),
             section: None,
             st_info: elf::SymbolInfo(0),
-            st_other: 0,
+            st_other: elf::SymbolOther(0),
             st_shndx: elf::SHN_UNDEF,
             st_value: 0,
             st_size: 0,

@@ -652,7 +652,7 @@ pub enum SymbolFlags<Section, Symbol> {
         /// `st_info` field in the ELF symbol.
         st_info: crate::elf::SymbolInfo,
         /// `st_other` field in the ELF symbol.
-        st_other: u8,
+        st_other: crate::elf::SymbolOther,
     },
     /// Mach-O symbol flags.
     #[cfg(feature = "macho")]
@@ -713,9 +713,9 @@ impl<Section, Symbol> SymbolFlags<Section, Symbol> {
     /// This corresponds to the lower 2 bits of the `st_other` field,
     /// and will be a value such as `elf::STV_DEFAULT`.
     #[cfg(feature = "elf")]
-    pub fn elf_visibility(&self) -> Option<u8> {
+    pub fn elf_visibility(&self) -> Option<crate::elf::SymbolVisibility> {
         match self {
-            SymbolFlags::Elf { st_other, .. } => Some(st_other & 0x3),
+            SymbolFlags::Elf { st_other, .. } => Some(st_other.visibility()),
             _ => None,
         }
     }

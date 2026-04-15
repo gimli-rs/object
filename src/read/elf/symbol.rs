@@ -497,8 +497,8 @@ pub trait Sym: Debug + Pod {
     fn st_info(&self) -> elf::SymbolInfo;
     fn st_bind(&self) -> elf::SymbolBind;
     fn st_type(&self) -> elf::SymbolType;
-    fn st_other(&self) -> u8;
-    fn st_visibility(&self) -> u8;
+    fn st_other(&self) -> elf::SymbolOther;
+    fn st_visibility(&self) -> elf::SymbolVisibility;
     fn st_shndx(&self, endian: Self::Endian) -> elf::SectionIndex;
     fn st_value(&self, endian: Self::Endian) -> Self::Word;
     fn st_size(&self, endian: Self::Endian) -> Self::Word;
@@ -591,12 +591,12 @@ impl<Endian: endian::Endian> Sym for elf::Sym32<Endian> {
     }
 
     #[inline]
-    fn st_other(&self) -> u8 {
+    fn st_other(&self) -> elf::SymbolOther {
         self.st_other
     }
 
     #[inline]
-    fn st_visibility(&self) -> u8 {
+    fn st_visibility(&self) -> elf::SymbolVisibility {
         self.st_visibility()
     }
 
@@ -641,12 +641,12 @@ impl<Endian: endian::Endian> Sym for elf::Sym64<Endian> {
     }
 
     #[inline]
-    fn st_other(&self) -> u8 {
+    fn st_other(&self) -> elf::SymbolOther {
         self.st_other
     }
 
     #[inline]
-    fn st_visibility(&self) -> u8 {
+    fn st_visibility(&self) -> elf::SymbolVisibility {
         self.st_visibility()
     }
 

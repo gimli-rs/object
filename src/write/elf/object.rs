@@ -203,12 +203,15 @@ impl<'a> Object<'a> {
             elf::STB_GLOBAL
         };
         let st_info = st_bind | st_type;
-        let st_other = if symbol.scope == SymbolScope::Linkage {
+        let vis = if symbol.scope == SymbolScope::Linkage {
             elf::STV_HIDDEN
         } else {
             elf::STV_DEFAULT
         };
-        SymbolFlags::Elf { st_info, st_other }
+        SymbolFlags::Elf {
+            st_info,
+            st_other: vis.into(),
+        }
     }
 
     fn elf_has_relocation_addend(&self) -> Result<bool> {
