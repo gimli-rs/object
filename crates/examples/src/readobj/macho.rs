@@ -810,14 +810,7 @@ fn print_section_relocations<S: Section>(
         return;
     }
     if let Some(relocations) = section.relocations(endian, data).print_err(p) {
-        let proc = match state.cputype {
-            CPU_TYPE_X86 => FLAGS_GENERIC_RELOC,
-            CPU_TYPE_X86_64 => FLAGS_X86_64_RELOC,
-            CPU_TYPE_ARM => FLAGS_ARM_RELOC,
-            CPU_TYPE_ARM64 | CPU_TYPE_ARM64_32 => FLAGS_ARM64_RELOC,
-            CPU_TYPE_POWERPC | CPU_TYPE_POWERPC64 => FLAGS_PPC_RELOC,
-            _ => &[],
-        };
+        let constants = macho::machine_constants(state.cputype);
         for relocation in relocations {
             if relocation.r_scattered(endian, state.cputype) {
                 let info = relocation.scattered_info(endian);
@@ -825,7 +818,7 @@ fn print_section_relocations<S: Section>(
                     p.field_hex("Address", info.r_address);
                     p.field("PcRel", if info.r_pcrel { "yes" } else { "no" });
                     p.field("Length", info.r_length);
-                    p.field_enum("Type", info.r_type, proc);
+                    p.field_consts("Type", info.r_type, constants.reloc);
                     p.field_hex("Value", info.r_value);
                 });
             } else {
@@ -849,7 +842,7 @@ fn print_section_relocations<S: Section>(
                     }
                     p.field("PcRel", if info.r_pcrel { "yes" } else { "no" });
                     p.field("Length", info.r_length);
-                    p.field_enum("Type", info.r_type, proc);
+                    p.field_consts("Type", info.r_type, constants.reloc);
                 });
             }
         }
@@ -1359,70 +1352,6 @@ const FLAGS_N_DESC: &[Flag<u16>] = &flags!(
     N_ARM_THUMB_DEF,
     N_SYMBOL_RESOLVER,
     N_ALT_ENTRY,
-);
-const FLAGS_GENERIC_RELOC: &[Flag<u8>] = &flags!(
-    GENERIC_RELOC_VANILLA,
-    GENERIC_RELOC_PAIR,
-    GENERIC_RELOC_SECTDIFF,
-    GENERIC_RELOC_PB_LA_PTR,
-    GENERIC_RELOC_LOCAL_SECTDIFF,
-    GENERIC_RELOC_TLV,
-);
-const FLAGS_ARM_RELOC: &[Flag<u8>] = &flags!(
-    ARM_RELOC_VANILLA,
-    ARM_RELOC_PAIR,
-    ARM_RELOC_SECTDIFF,
-    ARM_RELOC_LOCAL_SECTDIFF,
-    ARM_RELOC_PB_LA_PTR,
-    ARM_RELOC_BR24,
-    ARM_THUMB_RELOC_BR22,
-    ARM_THUMB_32BIT_BRANCH,
-    ARM_RELOC_HALF,
-    ARM_RELOC_HALF_SECTDIFF,
-);
-const FLAGS_ARM64_RELOC: &[Flag<u8>] = &flags!(
-    ARM64_RELOC_UNSIGNED,
-    ARM64_RELOC_SUBTRACTOR,
-    ARM64_RELOC_BRANCH26,
-    ARM64_RELOC_PAGE21,
-    ARM64_RELOC_PAGEOFF12,
-    ARM64_RELOC_GOT_LOAD_PAGE21,
-    ARM64_RELOC_GOT_LOAD_PAGEOFF12,
-    ARM64_RELOC_POINTER_TO_GOT,
-    ARM64_RELOC_TLVP_LOAD_PAGE21,
-    ARM64_RELOC_TLVP_LOAD_PAGEOFF12,
-    ARM64_RELOC_ADDEND,
-    ARM64_RELOC_AUTHENTICATED_POINTER,
-);
-const FLAGS_PPC_RELOC: &[Flag<u8>] = &flags!(
-    PPC_RELOC_VANILLA,
-    PPC_RELOC_PAIR,
-    PPC_RELOC_BR14,
-    PPC_RELOC_BR24,
-    PPC_RELOC_HI16,
-    PPC_RELOC_LO16,
-    PPC_RELOC_HA16,
-    PPC_RELOC_LO14,
-    PPC_RELOC_SECTDIFF,
-    PPC_RELOC_PB_LA_PTR,
-    PPC_RELOC_HI16_SECTDIFF,
-    PPC_RELOC_LO16_SECTDIFF,
-    PPC_RELOC_HA16_SECTDIFF,
-    PPC_RELOC_JBSR,
-    PPC_RELOC_LO14_SECTDIFF,
-    PPC_RELOC_LOCAL_SECTDIFF,
-);
-const FLAGS_X86_64_RELOC: &[Flag<u8>] = &flags!(
-    X86_64_RELOC_UNSIGNED,
-    X86_64_RELOC_SIGNED,
-    X86_64_RELOC_BRANCH,
-    X86_64_RELOC_GOT_LOAD,
-    X86_64_RELOC_GOT,
-    X86_64_RELOC_SUBTRACTOR,
-    X86_64_RELOC_SIGNED_1,
-    X86_64_RELOC_SIGNED_2,
-    X86_64_RELOC_SIGNED_4,
-    X86_64_RELOC_TLV,
 );
 const FLAGS_EXPORT_SYMBOL: &[Flag<u8>] = &flags!(
     EXPORT_SYMBOL_FLAGS_WEAK_DEFINITION,

@@ -3,7 +3,7 @@ use std::{fmt, str};
 
 use object::read::archive::ArchiveFile;
 use object::read::macho::{FatArch, FatHeader};
-use object::Endianness;
+use object::{ConstantNames, Endianness, FlagNames};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct PrintOptions {
@@ -242,6 +242,94 @@ impl<'a> Printer<'a> {
             }
         }
         self.field_hex(name, value);
+    }
+
+    fn field_consts<T: PartialEq + Copy + fmt::UpperHex>(
+        &mut self,
+        name: &str,
+        value: T,
+        consts: &'static ConstantNames<T>,
+    ) {
+        if let Some(flag_name) = consts.name(value) {
+            self.field_name(name);
+            writeln!(self.w, "{} (0x{:X})", flag_name, value).unwrap();
+        } else {
+            self.field_hex(name, value);
+        }
+    }
+
+    fn field_flags<T: Into<u64>, U: Copy + Into<u64>>(
+        &mut self,
+        name: &str,
+        value: T,
+        flags: &'static FlagNames<U>,
+    ) {
+        let value = value.into();
+
+        fn group_find<U: Copy + Into<u64>>(
+            group: &object::FlagGroup<U>,
+            value: u64,
+        ) -> Option<&'static str> {
+            if let Some(name) = group.name(value) {
+                Some(name)
+            } else if value & group.mask().into() != 0 {
+                group.mask_name()
+            } else {
+                None
+            }
+        }
+
+        // If only one group is set, then display on one line. This handles the case where
+        // a field is usually one group, with other bits rarely set.
+        let mut count = 0;
+        let mut flag_name = None;
+        for (bit, name) in flags.bits_iter() {
+            let bit = bit.into();
+            if value & bit == bit {
+                count += 2; // Force multiline
+                flag_name = Some(name);
+            }
+        }
+        for group in flags.groups_iter() {
+            if let Some(name) = group_find(group, value) {
+                count += 1;
+                flag_name = Some(name);
+            }
+        }
+        if count != 1 {
+            flag_name = None;
+        }
+        if let Some(flag_name) = flag_name {
+            self.field_name(name);
+            writeln!(self.w, "{} (0x{:X})", flag_name, value).unwrap();
+            return;
+        }
+
+        self.field_hex(name, value);
+        self.indent(|p| {
+            let mut unknown = value;
+            for (bit, name) in flags.bits_iter() {
+                let bit = bit.into();
+                if value & bit == bit {
+                    p.print_indent();
+                    writeln!(p.w, "{} (0x{:X})", name, bit).unwrap();
+                    unknown &= !bit;
+                }
+            }
+            for group in flags.groups_iter() {
+                let mask = group.mask().into();
+                let masked = value & mask;
+                if let Some(name) = group_find(group, value) {
+                    p.print_indent();
+                    writeln!(p.w, "{} (0x{:X})", name, masked).unwrap();
+                    unknown &= !mask;
+                }
+            }
+            if unknown != 0 {
+                p.print_indent();
+                writeln!(p.w, "<unknown> (0x{:X})", unknown).unwrap();
+            }
+        });
     }
 
     fn flags<T: Into<u64>, U: Copy + Into<u64>>(&mut self, value: T, mask: U, flags: &[Flag<U>]) {
