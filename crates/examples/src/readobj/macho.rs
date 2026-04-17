@@ -455,6 +455,17 @@ fn print_load_command<Mach: MachHeader>(
                     });
                 });
             }
+            LoadCommandVariant::DylibUse(x) => {
+                p.group("DylibUseCommand", |p| {
+                    p.field_enum("Cmd", x.cmd.get(endian), FLAGS_LC);
+                    p.field_hex("CmdSize", x.cmdsize.get(endian));
+                    p.field_hex("Nameoff", x.nameoff.get(endian));
+                    p.field_hex("Marker", x.marker.get(endian));
+                    p.field_version("CurrentVersion", x.current_version.get(endian));
+                    p.field_version("CompatVersion", x.compat_version.get(endian));
+                    p.field_version("Flags", x.flags.get(endian));
+                });
+            }
             LoadCommandVariant::LoadDylinker(x)
             | LoadCommandVariant::IdDylinker(x)
             | LoadCommandVariant::DyldEnvironment(x) => {
@@ -585,6 +596,17 @@ fn print_load_command<Mach: MachHeader>(
                         "Path",
                         x.path.offset.get(endian),
                         command.string(endian, x.path),
+                    );
+                });
+            }
+            LoadCommandVariant::TargetTriple(x) => {
+                p.group("TargetTripleCommand", |p| {
+                    p.field_enum("Cmd", x.cmd.get(endian), FLAGS_LC);
+                    p.field_hex("CmdSize", x.cmdsize.get(endian));
+                    p.field_string(
+                        "Triple",
+                        x.triple.offset.get(endian),
+                        command.string(endian, x.triple),
                     );
                 });
             }
@@ -1159,6 +1181,9 @@ const FLAGS_CPU_SUBTYPE_ARM: &[Flag<u32>] = &flags!(
     CPU_SUBTYPE_ARM_V7M,
     CPU_SUBTYPE_ARM_V7EM,
     CPU_SUBTYPE_ARM_V8M,
+    CPU_SUBTYPE_ARM_V8M_MAIN,
+    CPU_SUBTYPE_ARM_V8M_BASE,
+    CPU_SUBTYPE_ARM_V8_1M_MAIN,
 );
 const FLAGS_CPU_SUBTYPE_ARM64: &[Flag<u32>] = &flags!(
     CPU_SUBTYPE_ARM64_ALL,
@@ -1187,6 +1212,8 @@ const FLAGS_MH_FILETYPE: &[Flag<u32>] = &flags!(
     MH_DSYM,
     MH_KEXT_BUNDLE,
     MH_FILESET,
+    MH_GPU_EXECUTE,
+    MH_GPU_DYLIB,
 );
 const FLAGS_MH: &[Flag<u32>] = &flags!(
     MH_NOUNDEFS,
@@ -1217,6 +1244,7 @@ const FLAGS_MH: &[Flag<u32>] = &flags!(
     MH_APP_EXTENSION_SAFE,
     MH_NLIST_OUTOFSYNC_WITH_DYLDINFO,
     MH_SIM_SUPPORT,
+    MH_IMPLICIT_PAGEZERO,
     MH_DYLIB_IN_CACHE,
 );
 const FLAGS_LC: &[Flag<u32>] = &flags!(
@@ -1274,6 +1302,10 @@ const FLAGS_LC: &[Flag<u32>] = &flags!(
     LC_DYLD_EXPORTS_TRIE,
     LC_DYLD_CHAINED_FIXUPS,
     LC_FILESET_ENTRY,
+    LC_ATOM_INFO,
+    LC_FUNCTION_VARIANTS,
+    LC_FUNCTION_VARIANT_FIXUPS,
+    LC_TARGET_TRIPLE,
 );
 const FLAGS_VM: &[Flag<u32>] = &flags!(VM_PROT_READ, VM_PROT_WRITE, VM_PROT_EXECUTE);
 const FLAGS_SG: &[Flag<u32>] = &flags!(
@@ -1321,6 +1353,7 @@ const FLAGS_S_ATTR: &[Flag<u32>] = &flags!(
     S_ATTR_LOC_RELOC,
 );
 const FLAGS_PLATFORM: &[Flag<u32>] = &flags!(
+    PLATFORM_UNKNOWN,
     PLATFORM_MACOS,
     PLATFORM_IOS,
     PLATFORM_TVOS,
@@ -1331,15 +1364,27 @@ const FLAGS_PLATFORM: &[Flag<u32>] = &flags!(
     PLATFORM_TVOSSIMULATOR,
     PLATFORM_WATCHOSSIMULATOR,
     PLATFORM_DRIVERKIT,
-    PLATFORM_XROS,
-    PLATFORM_XROSSIMULATOR
+    PLATFORM_VISIONOS,
+    PLATFORM_VISIONOSSIMULATOR,
+    PLATFORM_FIRMWARE,
+    PLATFORM_SEPOS,
+    PLATFORM_MACOS_EXCLAVECORE,
+    PLATFORM_MACOS_EXCLAVEKIT,
+    PLATFORM_IOS_EXCLAVECORE,
+    PLATFORM_IOS_EXCLAVEKIT,
+    PLATFORM_TVOS_EXCLAVECORE,
+    PLATFORM_TVOS_EXCLAVEKIT,
+    PLATFORM_WATCHOS_EXCLAVECORE,
+    PLATFORM_WATCHOS_EXCLAVEKIT,
+    PLATFORM_VISIONOS_EXCLAVECORE,
+    PLATFORM_VISIONOS_EXCLAVEKIT,
 );
 const FLAGS_N_EXT: &[Flag<u8>] = &flags!(N_PEXT, N_EXT);
 const FLAGS_N_TYPE: &[Flag<u8>] = &flags!(N_UNDF, N_ABS, N_SECT, N_PBUD, N_INDR);
 const FLAGS_N_STAB: &[Flag<u8>] = &flags!(
     N_GSYM, N_FNAME, N_FUN, N_STSYM, N_LCSYM, N_BNSYM, N_AST, N_OPT, N_RSYM, N_SLINE, N_ENSYM,
-    N_SSYM, N_SO, N_OSO, N_LSYM, N_BINCL, N_SOL, N_PARAMS, N_VERSION, N_OLEVEL, N_PSYM, N_EINCL,
-    N_ENTRY, N_LBRAC, N_EXCL, N_RBRAC, N_BCOMM, N_ECOMM, N_ECOML, N_LENG, N_PC,
+    N_SSYM, N_SO, N_OSO, N_LIB, N_LSYM, N_BINCL, N_SOL, N_PARAMS, N_VERSION, N_OLEVEL, N_PSYM,
+    N_EINCL, N_ENTRY, N_LBRAC, N_EXCL, N_RBRAC, N_BCOMM, N_ECOMM, N_ECOML, N_LENG, N_PC,
 );
 const FLAGS_REFERENCE: &[Flag<u16>] = &flags!(
     REFERENCE_FLAG_UNDEFINED_NON_LAZY,
@@ -1359,6 +1404,7 @@ const FLAGS_N_DESC: &[Flag<u16>] = &flags!(
     N_ARM_THUMB_DEF,
     N_SYMBOL_RESOLVER,
     N_ALT_ENTRY,
+    N_COLD_FUNC,
 );
 const FLAGS_GENERIC_RELOC: &[Flag<u8>] = &flags!(
     GENERIC_RELOC_VANILLA,
@@ -1428,6 +1474,7 @@ const FLAGS_EXPORT_SYMBOL: &[Flag<u8>] = &flags!(
     EXPORT_SYMBOL_FLAGS_WEAK_DEFINITION,
     EXPORT_SYMBOL_FLAGS_REEXPORT,
     EXPORT_SYMBOL_FLAGS_STUB_AND_RESOLVER,
+    EXPORT_SYMBOL_FLAGS_STATIC_RESOLVER,
 );
 const FLAGS_EXPORT_SYMBOL_KIND: &[Flag<u8>] = &flags!(
     EXPORT_SYMBOL_FLAGS_KIND_REGULAR,

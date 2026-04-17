@@ -3,7 +3,7 @@
 //! These definitions are independent of read/write support, although we do implement
 //! some traits useful for those.
 //!
-//! This module is based heavily on header files from MacOSX11.1.sdk.
+//! This module is based heavily on header files from `MacOSX26.2.sdk`.
 
 #![allow(missing_docs)]
 
@@ -259,6 +259,12 @@ pub const CPU_SUBTYPE_ARM_V7M: u32 = 15;
 pub const CPU_SUBTYPE_ARM_V7EM: u32 = 16;
 /// Not meant to be run under xnu
 pub const CPU_SUBTYPE_ARM_V8M: u32 = 17;
+/// Not meant to be run under xnu
+pub const CPU_SUBTYPE_ARM_V8M_MAIN: u32 = CPU_SUBTYPE_ARM_V8M;
+/// Not meant to be run under xnu
+pub const CPU_SUBTYPE_ARM_V8M_BASE: u32 = 18;
+/// Not meant to be run under xnu
+pub const CPU_SUBTYPE_ARM_V8_1M_MAIN: u32 = 19;
 
 /*
  *  ARM64 subtypes
@@ -266,6 +272,13 @@ pub const CPU_SUBTYPE_ARM_V8M: u32 = 17;
 pub const CPU_SUBTYPE_ARM64_ALL: u32 = 0;
 pub const CPU_SUBTYPE_ARM64_V8: u32 = 1;
 pub const CPU_SUBTYPE_ARM64E: u32 = 2;
+
+/* CPU subtype feature flags for ptrauth on arm64e platforms */
+pub const CPU_SUBTYPE_ARM64_PTR_AUTH_MASK: u32 = 0x0f000000;
+#[inline]
+pub const fn cpu_subtype_arm64_ptr_auth_version(x: u32) -> u32 {
+    (x & CPU_SUBTYPE_ARM64_PTR_AUTH_MASK) >> 24
+}
 
 /*
  *  ARM64_32 subtypes
@@ -282,7 +295,7 @@ pub const VM_PROT_WRITE: u32 = 0x02;
 /// execute permission
 pub const VM_PROT_EXECUTE: u32 = 0x04;
 
-// Definitions from ptrauth.h
+// Definitions from https://github.com/llvm/llvm-project/blob/llvmorg-22.1.3/clang/lib/Headers/ptrauth.h
 
 /// The key used to sign a pointer for authentication.
 ///
@@ -682,7 +695,7 @@ pub struct DyldSubCacheEntryV2<E: Endian> {
     pub file_suffix: [u8; 32],
 }
 
-// Definitions from "/usr/include/mach-o/loader.h".
+// Definitions from "/usr/include/mach-o/fat.h".
 
 /*
  * This header file describes the structures of the file format for "fat"
@@ -860,8 +873,12 @@ pub const MH_DYLIB_STUB: u32 = 0x9;
 pub const MH_DSYM: u32 = 0xa;
 /// x86_64 kexts
 pub const MH_KEXT_BUNDLE: u32 = 0xb;
-/// set of mach-o's
+/// a file composed of other Mach-Os to be run in the same userspace sharing a single linkedit.
 pub const MH_FILESET: u32 = 0xc;
+/// gpu program
+pub const MH_GPU_EXECUTE: u32 = 0xd;
+/// gpu support functions
+pub const MH_GPU_DYLIB: u32 = 0xe;
 
 // Values for `MachHeader*::flags`.
 /// the object file has no undefined references
@@ -921,6 +938,8 @@ pub const MH_NLIST_OUTOFSYNC_WITH_DYLDINFO: u32 = 0x0400_0000;
 /// Allow LC_MIN_VERSION_MACOS and LC_BUILD_VERSION load commands with
 /// the platforms macOS, iOSMac, iOSSimulator, tvOSSimulator and watchOSSimulator.
 pub const MH_SIM_SUPPORT: u32 = 0x0800_0000;
+/// main executable has no __PAGEZERO segment.  Instead, loader (xnu) will load program high and block out all memory below it.
+pub const MH_IMPLICIT_PAGEZERO: u32 = 0x1000_0000;
 /// Only for use on dylibs. When this bit is set, the dylib is part of the dyld
 /// shared cache, rather than loose in the filesystem.
 pub const MH_DYLIB_IN_CACHE: u32 = 0x8000_0000;
@@ -1074,6 +1093,14 @@ pub const LC_DYLD_EXPORTS_TRIE: u32 = 0x33 | LC_REQ_DYLD;
 pub const LC_DYLD_CHAINED_FIXUPS: u32 = 0x34 | LC_REQ_DYLD;
 /// used with `FilesetEntryCommand`
 pub const LC_FILESET_ENTRY: u32 = 0x35 | LC_REQ_DYLD;
+/// used with linkedit_data_command
+pub const LC_ATOM_INFO: u32 = 0x36;
+/// used with linkedit_data_command
+pub const LC_FUNCTION_VARIANTS: u32 = 0x37;
+/// used with linkedit_data_command
+pub const LC_FUNCTION_VARIANT_FIXUPS: u32 = 0x38;
+/// target triple used to compile
+pub const LC_TARGET_TRIPLE: u32 = 0x39;
 
 /// A variable length string in a load command.
 ///
@@ -1511,6 +1538,37 @@ pub struct DylibCommand<E: Endian> {
     /// the library identification
     pub dylib: Dylib<E>,
 }
+
+/*
+ * An alternate encoding for: LC_LOAD_DYLIB.
+ * The flags field contains independent flags DYLIB_USE_*
+ * First supported in macOS 15, iOS 18.
+ */
+#[derive(Debug, Clone, Copy)]
+#[repr(C)]
+pub struct DylibUseCommand<E: Endian> {
+    /// LC_LOAD_DYLIB or LC_LOAD_WEAK_DYLIB
+    pub cmd: U32<E>,
+    /// overall size, including path
+    pub cmdsize: U32<E>,
+    /// == 28, dylibs's path offset
+    pub nameoff: U32<E>,
+    /// == DYLIB_USE_MARKER
+    pub marker: U32<E>,
+    /// dylib's current version number
+    pub current_version: U32<E>,
+    /// dylib's compatibility version number
+    pub compat_version: U32<E>,
+    /// DYLIB_USE_... flags
+    pub flags: U32<E>,
+}
+
+pub const DYLIB_USE_WEAK_LINK: u32 = 0x01;
+pub const DYLIB_USE_REEXPORT: u32 = 0x02;
+pub const DYLIB_USE_UPWARD: u32 = 0x04;
+pub const DYLIB_USE_DELAYED_INIT: u32 = 0x08;
+
+pub const DYLIB_USE_MARKER: u32 = 0x1a741800;
 
 /*
  * A dynamically linked shared library may be a subframework of an umbrella
@@ -2136,6 +2194,21 @@ pub struct RpathCommand<E: Endian> {
 }
 
 /*
+ * The target_triple_command contains a string which specifies the
+ * target triple (e.g. "arm64e-apple-macosx15.0.0") used to compile the code.
+ */
+#[derive(Debug, Clone, Copy)]
+#[repr(C)]
+pub struct TargetTripleCommand<E: Endian> {
+    /// LC_TARGET_TRIPLE
+    pub cmd: U32<E>,
+    /// including string
+    pub cmdsize: U32<E>,
+    /// target triple string
+    pub triple: LcStr<E>,
+}
+
+/*
  * The LinkeditDataCommand contains the offsets and sizes of a blob
  * of data in the __LINKEDIT segment.
  */
@@ -2152,23 +2225,6 @@ pub struct LinkeditDataCommand<E: Endian> {
     pub dataoff: U32<E>,
     /// file size of data in __LINKEDIT segment
     pub datasize: U32<E>,
-}
-
-#[derive(Debug, Clone, Copy)]
-#[repr(C)]
-pub struct FilesetEntryCommand<E: Endian> {
-    // LC_FILESET_ENTRY
-    pub cmd: U32<E>,
-    /// includes id string
-    pub cmdsize: U32<E>,
-    /// memory address of the dylib
-    pub vmaddr: U64<E>,
-    /// file offset of the dylib
-    pub fileoff: U64<E>,
-    /// contained entry id
-    pub entry_id: LcStr<E>,
-    /// entry_id is 32-bits long, so this is the reserved padding
-    pub reserved: U32<E>,
 }
 
 /*
@@ -2260,6 +2316,8 @@ pub struct BuildToolVersion<E: Endian> {
 }
 
 /* Known values for the platform field above. */
+pub const PLATFORM_UNKNOWN: u32 = 0;
+pub const PLATFORM_ANY: u32 = 0xFFFFFFFF;
 pub const PLATFORM_MACOS: u32 = 1;
 pub const PLATFORM_IOS: u32 = 2;
 pub const PLATFORM_TVOS: u32 = 3;
@@ -2270,13 +2328,40 @@ pub const PLATFORM_IOSSIMULATOR: u32 = 7;
 pub const PLATFORM_TVOSSIMULATOR: u32 = 8;
 pub const PLATFORM_WATCHOSSIMULATOR: u32 = 9;
 pub const PLATFORM_DRIVERKIT: u32 = 10;
-pub const PLATFORM_XROS: u32 = 11;
-pub const PLATFORM_XROSSIMULATOR: u32 = 12;
+pub const PLATFORM_VISIONOS: u32 = 11;
+pub const PLATFORM_VISIONOSSIMULATOR: u32 = 12;
+/// Compatibility alias for [`PLATFORM_VISIONOS`].
+pub const PLATFORM_XROS: u32 = PLATFORM_VISIONOS;
+/// Compatibility alias for [`PLATFORM_VISIONOSSIMULATOR`].
+pub const PLATFORM_XROSSIMULATOR: u32 = PLATFORM_VISIONOSSIMULATOR;
+
+pub const PLATFORM_FIRMWARE: u32 = 13;
+pub const PLATFORM_SEPOS: u32 = 14;
+
+pub const PLATFORM_MACOS_EXCLAVECORE: u32 = 15;
+pub const PLATFORM_MACOS_EXCLAVEKIT: u32 = 16;
+pub const PLATFORM_IOS_EXCLAVECORE: u32 = 17;
+pub const PLATFORM_IOS_EXCLAVEKIT: u32 = 18;
+pub const PLATFORM_TVOS_EXCLAVECORE: u32 = 19;
+pub const PLATFORM_TVOS_EXCLAVEKIT: u32 = 20;
+pub const PLATFORM_WATCHOS_EXCLAVECORE: u32 = 21;
+pub const PLATFORM_WATCHOS_EXCLAVEKIT: u32 = 22;
+pub const PLATFORM_VISIONOS_EXCLAVECORE: u32 = 23;
+pub const PLATFORM_VISIONOS_EXCLAVEKIT: u32 = 24;
 
 /* Known values for the tool field above. */
 pub const TOOL_CLANG: u32 = 1;
 pub const TOOL_SWIFT: u32 = 2;
 pub const TOOL_LD: u32 = 3;
+
+/* values for gpu tools (1024 to 1048) */
+pub const TOOL_METAL: u32 = 1024;
+pub const TOOL_AIRLLD: u32 = 1025;
+pub const TOOL_AIRNT: u32 = 1026;
+pub const TOOL_AIRNT_PLUGIN: u32 = 1027;
+pub const TOOL_AIRPACK: u32 = 1028;
+pub const TOOL_GPUARCHIVER: u32 = 1031;
+pub const TOOL_METAL_FRAMEWORK: u32 = 1032;
 
 /*
  * The DyldInfoCommand contains the file offsets and sizes of
@@ -2467,6 +2552,7 @@ pub const EXPORT_SYMBOL_FLAGS_KIND_ABSOLUTE: u8 = 0x02;
 pub const EXPORT_SYMBOL_FLAGS_WEAK_DEFINITION: u8 = 0x04;
 pub const EXPORT_SYMBOL_FLAGS_REEXPORT: u8 = 0x08;
 pub const EXPORT_SYMBOL_FLAGS_STUB_AND_RESOLVER: u8 = 0x10;
+pub const EXPORT_SYMBOL_FLAGS_STATIC_RESOLVER: u8 = 0x20;
 
 /*
  * The LinkerOptionCommand contains linker options embedded in object files.
@@ -2626,6 +2712,29 @@ pub struct NoteCommand<E: Endian> {
     pub offset: U64<E>,
     /// length of data region
     pub size: U64<E>,
+}
+
+/*
+ * LC_FILESET_ENTRY commands describe constituent Mach-O files that are part
+ * of a fileset. In one implementation, entries are dylibs with individual
+ * mach headers and repositionable text and data segments. Each entry is
+ * further described by its own mach header.
+ */
+#[derive(Debug, Clone, Copy)]
+#[repr(C)]
+pub struct FilesetEntryCommand<E: Endian> {
+    // LC_FILESET_ENTRY
+    pub cmd: U32<E>,
+    /// includes id string
+    pub cmdsize: U32<E>,
+    /// memory address of the dylib
+    pub vmaddr: U64<E>,
+    /// file offset of the dylib
+    pub fileoff: U64<E>,
+    /// contained entry id
+    pub entry_id: LcStr<E>,
+    /// entry_id is 32-bits long, so this is the reserved padding
+    pub reserved: U32<E>,
 }
 
 // Definitions from "/usr/include/mach-o/nlist.h".
@@ -2887,6 +2996,12 @@ pub const N_SYMBOL_RESOLVER: u16 = 0x0100;
  */
 pub const N_ALT_ENTRY: u16 = 0x0200;
 
+/*
+ * The N_COLD_FUNC bit of the n_desc field indicates that the symbol is used
+ * infrequently and the linker should order it towards the end of the section.
+ */
+pub const N_COLD_FUNC: u16 = 0x0400;
+
 // Definitions from "/usr/include/mach-o/stab.h".
 
 /*
@@ -2941,7 +3056,13 @@ pub const N_SSYM: u8 = 0x60;
 /// source file name: name,,n_sect,0,address
 pub const N_SO: u8 = 0x64;
 /// object file name: name,,0,0,st_mtime
+///
+/// historically N_OSO set n_sect to 0. The N_OSO
+/// n_sect may instead hold the low byte of the
+/// cpusubtype value from the Mach-O header.
 pub const N_OSO: u8 = 0x66;
+/// dynamic library file name: name,,NO_SECT,0,0
+pub const N_LIB: u8 = 0x68;
 /// local sym: name,,NO_SECT,type,offset
 pub const N_LSYM: u8 = 0x80;
 /// include file beginning: name,,NO_SECT,0,sum
@@ -3562,6 +3683,7 @@ unsafe_impl_endian_pod!(
     FvmlibCommand,
     Dylib,
     DylibCommand,
+    DylibUseCommand,
     SubFrameworkCommand,
     SubClientCommand,
     SubUmbrellaCommand,
@@ -3582,8 +3704,8 @@ unsafe_impl_endian_pod!(
     PrebindCksumCommand,
     UuidCommand,
     RpathCommand,
+    TargetTripleCommand,
     LinkeditDataCommand,
-    FilesetEntryCommand,
     EncryptionInfoCommand32,
     EncryptionInfoCommand64,
     VersionMinCommand,
@@ -3599,6 +3721,7 @@ unsafe_impl_endian_pod!(
     DataInCodeEntry,
     //TlvDescriptor,
     NoteCommand,
+    FilesetEntryCommand,
     Nlist32,
     Nlist64,
     Relocation,
