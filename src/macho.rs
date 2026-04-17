@@ -32,6 +32,8 @@ pub const CPU_TYPE_ANY: u32 = !0;
 pub const CPU_TYPE_VAX: u32 = 1;
 pub const CPU_TYPE_MC680X0: u32 = 6;
 pub const CPU_TYPE_X86: u32 = 7;
+/// Compatibility alias of [`CPU_TYPE_X86`].
+pub const CPU_TYPE_I386: u32 = CPU_TYPE_X86;
 pub const CPU_TYPE_X86_64: u32 = CPU_TYPE_X86 | CPU_ARCH_ABI64;
 pub const CPU_TYPE_MIPS: u32 = 8;
 pub const CPU_TYPE_MC98000: u32 = 10;
@@ -198,6 +200,8 @@ pub const CPU_SUBTYPE_MC98601: u32 = 1;
  */
 
 pub const CPU_SUBTYPE_HPPA_ALL: u32 = 0;
+/// Compatibility alias of [`CPU_SUBTYPE_HPPA_ALL`].
+pub const CPU_SUBTYPE_HPPA_7100: u32 = 0;
 pub const CPU_SUBTYPE_HPPA_7100LC: u32 = 1;
 
 /*
