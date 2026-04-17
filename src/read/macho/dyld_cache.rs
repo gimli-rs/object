@@ -453,7 +453,7 @@ where
     }
 
     /// The mapping maximum protection
-    pub fn max_prot(&self) -> u32 {
+    pub fn max_prot(&self) -> macho::VmProt {
         match self.info {
             DyldCacheMappingVersion::V1(info) => info.max_prot.get(self.endian),
             DyldCacheMappingVersion::V2(info) => info.max_prot.get(self.endian),
@@ -461,7 +461,7 @@ where
     }
 
     /// The mapping initial protection
-    pub fn init_prot(&self) -> u32 {
+    pub fn init_prot(&self) -> macho::VmProt {
         match self.info {
             DyldCacheMappingVersion::V1(info) => info.init_prot.get(self.endian),
             DyldCacheMappingVersion::V2(info) => info.init_prot.get(self.endian),

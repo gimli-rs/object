@@ -76,10 +76,8 @@ pub(super) fn print_dyld_cache_mapping_info(
         p.field_hex("Address", mapping.address.get(endian));
         p.field_hex("Size", mapping.size.get(endian));
         p.field_hex("FileOffset", mapping.file_offset.get(endian));
-        p.field_hex("MaxProt", mapping.max_prot.get(endian));
-        p.flags(mapping.max_prot.get(endian), 0, FLAGS_VM);
-        p.field_hex("InitProt", mapping.init_prot.get(endian));
-        p.flags(mapping.init_prot.get(endian), 0, FLAGS_VM);
+        p.field_flags("MaxProt", mapping.max_prot.get(endian), VmProt::NAMES);
+        p.field_flags("InitProt", mapping.init_prot.get(endian), VmProt::NAMES);
     });
 }
 
@@ -103,10 +101,8 @@ pub(super) fn print_dyld_cache_mapping_and_slide_info(
         );
         p.field_hex("Flags", mapping.flags.get(endian));
         p.flags(mapping.flags.get(endian), 0, FLAGS_DYLD_CACHE_MAPPING);
-        p.field_hex("MaxProt", mapping.max_prot.get(endian));
-        p.flags(mapping.max_prot.get(endian), 0, FLAGS_VM);
-        p.field_hex("InitProt", mapping.init_prot.get(endian));
-        p.flags(mapping.init_prot.get(endian), 0, FLAGS_VM);
+        p.field_flags("MaxProt", mapping.max_prot.get(endian), VmProt::NAMES);
+        p.field_flags("InitProt", mapping.init_prot.get(endian), VmProt::NAMES);
     });
 
     if let Some(slide) = mapping.slide(endian, data).print_err(p) {
@@ -748,10 +744,8 @@ fn print_segment<S: Segment>(
             p.field_hex("VmSize", segment.vmsize(endian).into());
             p.field_hex("FileOffset", segment.fileoff(endian).into());
             p.field_hex("FileSize", segment.filesize(endian).into());
-            p.field_hex("MaxProt", segment.maxprot(endian));
-            p.flags(segment.maxprot(endian), 0, FLAGS_VM);
-            p.field_hex("InitProt", segment.initprot(endian));
-            p.flags(segment.initprot(endian), 0, FLAGS_VM);
+            p.field_flags("MaxProt", segment.maxprot(endian), VmProt::NAMES);
+            p.field_flags("InitProt", segment.initprot(endian), VmProt::NAMES);
             p.field("NumberOfSections", segment.nsects(endian));
             p.field_hex("Flags", segment.flags(endian));
             p.flags(segment.flags(endian), 0, FLAGS_SG);
@@ -1144,7 +1138,6 @@ const FLAGS_LC: &[Flag<u32>] = &flags!(
     LC_FUNCTION_VARIANT_FIXUPS,
     LC_TARGET_TRIPLE,
 );
-const FLAGS_VM: &[Flag<u32>] = &flags!(VM_PROT_READ, VM_PROT_WRITE, VM_PROT_EXECUTE);
 const FLAGS_SG: &[Flag<u32>] = &flags!(
     SG_HIGHVM,
     SG_FVMLIB,

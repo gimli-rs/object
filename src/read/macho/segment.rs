@@ -160,9 +160,9 @@ where
     fn permissions(&self) -> Permissions {
         let maxprot = self.internal.segment.maxprot(self.file.endian);
         Permissions::new(
-            maxprot & macho::VM_PROT_READ != 0,
-            maxprot & macho::VM_PROT_WRITE != 0,
-            maxprot & macho::VM_PROT_EXECUTE != 0,
+            maxprot.contains(macho::VM_PROT_READ),
+            maxprot.contains(macho::VM_PROT_WRITE),
+            maxprot.contains(macho::VM_PROT_EXECUTE),
         )
     }
 }
@@ -193,8 +193,8 @@ pub trait Segment: Debug + Pod {
     fn vmsize(&self, endian: Self::Endian) -> Self::Word;
     fn fileoff(&self, endian: Self::Endian) -> Self::Word;
     fn filesize(&self, endian: Self::Endian) -> Self::Word;
-    fn maxprot(&self, endian: Self::Endian) -> u32;
-    fn initprot(&self, endian: Self::Endian) -> u32;
+    fn maxprot(&self, endian: Self::Endian) -> macho::VmProt;
+    fn initprot(&self, endian: Self::Endian) -> macho::VmProt;
     fn nsects(&self, endian: Self::Endian) -> u32;
     fn flags(&self, endian: Self::Endian) -> u32;
 
@@ -268,10 +268,10 @@ impl<Endian: endian::Endian> Segment for macho::SegmentCommand32<Endian> {
     fn filesize(&self, endian: Self::Endian) -> Self::Word {
         self.filesize.get(endian)
     }
-    fn maxprot(&self, endian: Self::Endian) -> u32 {
+    fn maxprot(&self, endian: Self::Endian) -> macho::VmProt {
         self.maxprot.get(endian)
     }
-    fn initprot(&self, endian: Self::Endian) -> u32 {
+    fn initprot(&self, endian: Self::Endian) -> macho::VmProt {
         self.initprot.get(endian)
     }
     fn nsects(&self, endian: Self::Endian) -> u32 {
@@ -312,10 +312,10 @@ impl<Endian: endian::Endian> Segment for macho::SegmentCommand64<Endian> {
     fn filesize(&self, endian: Self::Endian) -> Self::Word {
         self.filesize.get(endian)
     }
-    fn maxprot(&self, endian: Self::Endian) -> u32 {
+    fn maxprot(&self, endian: Self::Endian) -> macho::VmProt {
         self.maxprot.get(endian)
     }
-    fn initprot(&self, endian: Self::Endian) -> u32 {
+    fn initprot(&self, endian: Self::Endian) -> macho::VmProt {
         self.initprot.get(endian)
     }
     fn nsects(&self, endian: Self::Endian) -> u32 {

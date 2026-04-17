@@ -525,9 +525,9 @@ pub enum SegmentFlags {
         /// `flags` field in the segment header.
         flags: u32,
         /// `maxprot` field in the segment header.
-        maxprot: u32,
+        maxprot: crate::macho::VmProt,
         /// `initprot` field in the segment header.
-        initprot: u32,
+        initprot: crate::macho::VmProt,
     },
     /// COFF segment flags.
     #[cfg(feature = "coff")]

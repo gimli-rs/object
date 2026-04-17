@@ -478,12 +478,18 @@ constant_names!(NAMES_CPU_SUBTYPE_ID_ARM64_32: CpuSubtypeId(u32) = {
 
 // Definitions from "/usr/include/mach/vm_prot.h".
 
-/// read permission
-pub const VM_PROT_READ: u32 = 0x01;
-/// write permission
-pub const VM_PROT_WRITE: u32 = 0x02;
-/// execute permission
-pub const VM_PROT_EXECUTE: u32 = 0x04;
+newtype!(
+    struct VmProt(u32);
+);
+
+newtype_flag_names!(NAMES_VM_PROT: VmProt(u32) = {
+    /// read permission
+    VM_PROT_READ = 0x01,
+    /// write permission
+    VM_PROT_WRITE = 0x02,
+    /// execute permission
+    VM_PROT_EXECUTE = 0x04,
+});
 
 // Definitions from https://github.com/llvm/llvm-project/blob/llvmorg-22.1.3/clang/lib/Headers/ptrauth.h
 
@@ -687,8 +693,8 @@ pub struct DyldCacheMappingInfo<E: Endian> {
     pub address: U64<E>,
     pub size: U64<E>,
     pub file_offset: U64<E>,
-    pub max_prot: U32<E>,
-    pub init_prot: U32<E>,
+    pub max_prot: U32<E, VmProt>,
+    pub init_prot: U32<E, VmProt>,
 }
 
 // Contains the flags for the dyld_cache_mapping_and_slide_info flags field
@@ -710,8 +716,8 @@ pub struct DyldCacheMappingAndSlideInfo<E: Endian> {
     pub slide_info_file_offset: U64<E>,
     pub slide_info_file_size: U64<E>,
     pub flags: U64<E>,
-    pub max_prot: U32<E>,
-    pub init_prot: U32<E>,
+    pub max_prot: U32<E, VmProt>,
+    pub init_prot: U32<E, VmProt>,
 }
 
 /// Corresponds to struct dyld_cache_tpro_mapping_info from dyld_cache_format.h.
@@ -1392,9 +1398,9 @@ pub struct SegmentCommand32<E: Endian> {
     /// amount to map from the file
     pub filesize: U32<E>,
     /// maximum VM protection
-    pub maxprot: U32<E>,
+    pub maxprot: U32<E, VmProt>,
     /// initial VM protection
-    pub initprot: U32<E>,
+    pub initprot: U32<E, VmProt>,
     /// number of sections in segment
     pub nsects: U32<E>,
     /// flags
@@ -1425,9 +1431,9 @@ pub struct SegmentCommand64<E: Endian> {
     /// amount to map from the file
     pub filesize: U64<E>,
     /// maximum VM protection
-    pub maxprot: U32<E>,
+    pub maxprot: U32<E, VmProt>,
     /// initial VM protection
-    pub initprot: U32<E>,
+    pub initprot: U32<E, VmProt>,
     /// number of sections in segment
     pub nsects: U32<E>,
     /// flags

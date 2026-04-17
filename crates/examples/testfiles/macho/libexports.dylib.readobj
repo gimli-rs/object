@@ -123,10 +123,8 @@ SegmentCommand {
     VmSize: 0x4000
     FileOffset: 0x8000
     FileSize: 0x300
-    MaxProt: 0x1
-        VM_PROT_READ (0x1)
-    InitProt: 0x1
-        VM_PROT_READ (0x1)
+    MaxProt: VM_PROT_READ (0x1)
+    InitProt: VM_PROT_READ (0x1)
     NumberOfSections: 0
     Flags: 0x0
 }

@@ -962,8 +962,8 @@ struct SegmentCommand {
     vmsize: u64,
     fileoff: u64,
     filesize: u64,
-    maxprot: u32,
-    initprot: u32,
+    maxprot: macho::VmProt,
+    initprot: macho::VmProt,
     nsects: u32,
     flags: u32,
 }
