@@ -60,8 +60,8 @@ pub trait FatArch: Pod {
     type Word: Into<u64>;
     const MAGIC: u32;
 
-    fn cputype(&self) -> u32;
-    fn cpusubtype(&self) -> u32;
+    fn cputype(&self) -> macho::CpuType;
+    fn cpusubtype(&self) -> macho::CpuSubtype;
     fn offset(&self) -> Self::Word;
     fn size(&self) -> Self::Word;
     fn align(&self) -> u32;
@@ -93,11 +93,11 @@ impl FatArch for FatArch32 {
     type Word = u32;
     const MAGIC: u32 = macho::FAT_MAGIC;
 
-    fn cputype(&self) -> u32 {
+    fn cputype(&self) -> macho::CpuType {
         self.cputype.get(BigEndian)
     }
 
-    fn cpusubtype(&self) -> u32 {
+    fn cpusubtype(&self) -> macho::CpuSubtype {
         self.cpusubtype.get(BigEndian)
     }
 
@@ -118,11 +118,11 @@ impl FatArch for FatArch64 {
     type Word = u64;
     const MAGIC: u32 = macho::FAT_MAGIC_64;
 
-    fn cputype(&self) -> u32 {
+    fn cputype(&self) -> macho::CpuType {
         self.cputype.get(BigEndian)
     }
 
-    fn cpusubtype(&self) -> u32 {
+    fn cpusubtype(&self) -> macho::CpuSubtype {
         self.cpusubtype.get(BigEndian)
     }
 

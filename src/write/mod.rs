@@ -87,7 +87,7 @@ pub struct Object<'a> {
     tlv_bootstrap: Option<SymbolId>,
     /// Mach-O CPU subtype.
     #[cfg(feature = "macho")]
-    macho_cpu_subtype: Option<u32>,
+    macho_cpu_subtype: Option<crate::macho::CpuSubtype>,
     #[cfg(feature = "macho")]
     macho_build_version: Option<MachOBuildVersion>,
     /// Mach-O MH_SUBSECTIONS_VIA_SYMBOLS flag. Only ever set if format is Mach-O.

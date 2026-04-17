@@ -51,7 +51,7 @@ impl<'a> Object<'a> {
     ///
     /// Requires `feature = "macho"`.
     #[inline]
-    pub fn set_macho_cpu_subtype(&mut self, cpu_subtype: u32) {
+    pub fn set_macho_cpu_subtype(&mut self, cpu_subtype: macho::CpuSubtype) {
         self.macho_cpu_subtype = Some(cpu_subtype);
     }
 
@@ -608,7 +608,7 @@ impl<'a> Object<'a> {
             .map_err(|_| Error(String::from("Cannot allocate buffer")))?;
 
         // Write file header.
-        let (cputype, mut cpusubtype) = match (self.architecture, self.sub_architecture) {
+        let (cputype, cpusubtype_id) = match (self.architecture, self.sub_architecture) {
             (Architecture::Arm, None) => (macho::CPU_TYPE_ARM, macho::CPU_SUBTYPE_ARM_ALL),
             (Architecture::Aarch64, None) => (macho::CPU_TYPE_ARM64, macho::CPU_SUBTYPE_ARM64_ALL),
             (Architecture::Aarch64, Some(SubArchitecture::Arm64E)) => {
@@ -632,6 +632,7 @@ impl<'a> Object<'a> {
                 )));
             }
         };
+        let mut cpusubtype: macho::CpuSubtype = cpusubtype_id.into();
 
         if let Some(cpu_subtype) = self.macho_cpu_subtype {
             cpusubtype = cpu_subtype;
@@ -946,8 +947,8 @@ impl<'a> Object<'a> {
 }
 
 struct MachHeader {
-    cputype: u32,
-    cpusubtype: u32,
+    cputype: macho::CpuType,
+    cpusubtype: macho::CpuSubtype,
     filetype: u32,
     ncmds: u32,
     sizeofcmds: u32,

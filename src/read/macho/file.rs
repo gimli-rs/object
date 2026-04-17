@@ -296,10 +296,8 @@ where
     }
 
     fn sub_architecture(&self) -> Option<SubArchitecture> {
-        match (
-            self.header.cputype(self.endian),
-            self.header.cpusubtype(self.endian),
-        ) {
+        let subtype = self.header.cpusubtype(self.endian).id();
+        match (self.header.cputype(self.endian), subtype) {
             (macho::CPU_TYPE_ARM64, macho::CPU_SUBTYPE_ARM64E) => Some(SubArchitecture::Arm64E),
             _ => None,
         }
@@ -701,8 +699,8 @@ pub trait MachHeader: Debug + Pod {
     fn is_little_endian(&self) -> bool;
 
     fn magic(&self) -> u32;
-    fn cputype(&self, endian: Self::Endian) -> u32;
-    fn cpusubtype(&self, endian: Self::Endian) -> u32;
+    fn cputype(&self, endian: Self::Endian) -> macho::CpuType;
+    fn cpusubtype(&self, endian: Self::Endian) -> macho::CpuSubtype;
     fn filetype(&self, endian: Self::Endian) -> u32;
     fn ncmds(&self, endian: Self::Endian) -> u32;
     fn sizeofcmds(&self, endian: Self::Endian) -> u32;
@@ -786,11 +784,11 @@ impl<Endian: endian::Endian> MachHeader for macho::MachHeader32<Endian> {
         self.magic.get(BigEndian)
     }
 
-    fn cputype(&self, endian: Self::Endian) -> u32 {
+    fn cputype(&self, endian: Self::Endian) -> macho::CpuType {
         self.cputype.get(endian)
     }
 
-    fn cpusubtype(&self, endian: Self::Endian) -> u32 {
+    fn cpusubtype(&self, endian: Self::Endian) -> macho::CpuSubtype {
         self.cpusubtype.get(endian)
     }
 
@@ -834,11 +832,11 @@ impl<Endian: endian::Endian> MachHeader for macho::MachHeader64<Endian> {
         self.magic.get(BigEndian)
     }
 
-    fn cputype(&self, endian: Self::Endian) -> u32 {
+    fn cputype(&self, endian: Self::Endian) -> macho::CpuType {
         self.cputype.get(endian)
     }
 
-    fn cpusubtype(&self, endian: Self::Endian) -> u32 {
+    fn cpusubtype(&self, endian: Self::Endian) -> macho::CpuSubtype {
         self.cpusubtype.get(endian)
     }
 

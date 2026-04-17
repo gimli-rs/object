@@ -8,7 +8,7 @@
 #![allow(missing_docs)]
 
 #[cfg(feature = "names")]
-use crate::constants::ConstantNames;
+use crate::constants::{ConstantNames, FlagNames};
 use crate::endian::{BigEndian, Endian, U16, U32, U64};
 use crate::pod::Pod;
 
@@ -19,6 +19,8 @@ use crate::pod::Pod;
 #[derive(Debug)]
 #[non_exhaustive]
 pub struct Constants {
+    /// Values for `cpusubtype` fields.
+    pub cpusubtype: &'static FlagNames<CpuSubtype>,
     /// Values for `r_type` field of `Rel*::r_info`.
     pub reloc: &'static ConstantNames<u8>,
 }
@@ -33,12 +35,13 @@ pub const fn constants() -> &'static Constants {
 ///
 /// Note that these also include the values returned by [`constants`].
 #[cfg(feature = "names")]
-pub const fn machine_constants(cputype: u32) -> &'static Constants {
+pub const fn machine_constants(cputype: CpuType) -> &'static Constants {
     match cputype {
         CPU_TYPE_X86 => X86::constants(),
         CPU_TYPE_X86_64 => X86_64::constants(),
         CPU_TYPE_ARM => Arm::constants(),
-        CPU_TYPE_ARM64 | CPU_TYPE_ARM64_32 => Arm64::constants(),
+        CPU_TYPE_ARM64 => Arm64::constants(),
+        CPU_TYPE_ARM64_32 => Arm64_32::constants(),
         CPU_TYPE_POWERPC | CPU_TYPE_POWERPC64 => Ppc::constants(),
         _ => Base::constants(),
     }
@@ -46,31 +49,43 @@ pub const fn machine_constants(cputype: u32) -> &'static Constants {
 
 constants! {
     struct Base;
+    flags cpusubtype: CpuSubtype = NAMES_CPU_SUBTYPE;
     consts reloc: u8 = {};
 }
 
 constants! {
     struct X86(Base);
+    flags cpusubtype: CpuSubtype = NAMES_CPU_SUBTYPE_X86;
     consts reloc: u8 = NAMES_GENERIC_RELOC;
 }
 
 constants! {
     struct X86_64(Base);
+    flags cpusubtype: CpuSubtype = NAMES_CPU_SUBTYPE_X86_64;
     consts reloc: u8 = NAMES_X86_64_RELOC;
 }
 
 constants! {
     struct Arm(Base);
+    flags cpusubtype: CpuSubtype = NAMES_CPU_SUBTYPE_ARM;
     consts reloc: u8 = NAMES_ARM_RELOC;
 }
 
 constants! {
     struct Arm64(Base);
+    flags cpusubtype: CpuSubtype = NAMES_CPU_SUBTYPE_ARM64;
+    consts reloc: u8 = NAMES_ARM64_RELOC;
+}
+
+constants! {
+    struct Arm64_32(Base);
+    flags cpusubtype: CpuSubtype = NAMES_CPU_SUBTYPE_ARM64_32;
     consts reloc: u8 = NAMES_ARM64_RELOC;
 }
 
 constants! {
     struct Ppc(Base);
+    flags cpusubtype: CpuSubtype = NAMES_CPU_SUBTYPE_POWERPC;
     consts reloc: u8 = NAMES_PPC_RELOC;
 }
 
@@ -87,45 +102,87 @@ pub const CPU_ARCH_ABI64: u32 = 0x0100_0000;
 /// ABI for 64-bit hardware with 32-bit types; LP32
 pub const CPU_ARCH_ABI64_32: u32 = 0x0200_0000;
 
-/*
- *	Machine types known by all.
- */
+newtype!(
+    struct CpuType(u32);
+);
 
-pub const CPU_TYPE_ANY: u32 = !0;
+newtype_constant_names!(NAMES_CPU_TYPE: CpuType(u32) = {
+    CPU_TYPE_ANY = !0,
 
-pub const CPU_TYPE_VAX: u32 = 1;
-pub const CPU_TYPE_MC680X0: u32 = 6;
-pub const CPU_TYPE_X86: u32 = 7;
-/// Compatibility alias of [`CPU_TYPE_X86`].
-pub const CPU_TYPE_I386: u32 = CPU_TYPE_X86;
-pub const CPU_TYPE_X86_64: u32 = CPU_TYPE_X86 | CPU_ARCH_ABI64;
-pub const CPU_TYPE_MIPS: u32 = 8;
-pub const CPU_TYPE_MC98000: u32 = 10;
-pub const CPU_TYPE_HPPA: u32 = 11;
-pub const CPU_TYPE_ARM: u32 = 12;
-pub const CPU_TYPE_ARM64: u32 = CPU_TYPE_ARM | CPU_ARCH_ABI64;
-pub const CPU_TYPE_ARM64_32: u32 = CPU_TYPE_ARM | CPU_ARCH_ABI64_32;
-pub const CPU_TYPE_MC88000: u32 = 13;
-pub const CPU_TYPE_SPARC: u32 = 14;
-pub const CPU_TYPE_I860: u32 = 15;
-pub const CPU_TYPE_ALPHA: u32 = 16;
-pub const CPU_TYPE_POWERPC: u32 = 18;
-pub const CPU_TYPE_POWERPC64: u32 = CPU_TYPE_POWERPC | CPU_ARCH_ABI64;
+    CPU_TYPE_VAX = 1,
+    CPU_TYPE_MC680X0 = 6,
+    CPU_TYPE_X86 = 7,
+    /// Compatibility alias of [`CPU_TYPE_X86`].
+    CPU_TYPE_I386 = CPU_TYPE_X86.0,
+    CPU_TYPE_X86_64 = CPU_TYPE_X86.0 | CPU_ARCH_ABI64,
+    CPU_TYPE_MIPS = 8,
+    CPU_TYPE_MC98000 = 10,
+    CPU_TYPE_HPPA = 11,
+    CPU_TYPE_ARM = 12,
+    CPU_TYPE_ARM64 = CPU_TYPE_ARM.0 | CPU_ARCH_ABI64,
+    CPU_TYPE_ARM64_32 = CPU_TYPE_ARM.0 | CPU_ARCH_ABI64_32,
+    CPU_TYPE_MC88000 = 13,
+    CPU_TYPE_SPARC = 14,
+    CPU_TYPE_I860 = 15,
+    CPU_TYPE_ALPHA = 16,
+    CPU_TYPE_POWERPC = 18,
+    CPU_TYPE_POWERPC64 = CPU_TYPE_POWERPC.0 | CPU_ARCH_ABI64,
+});
+
+newtype!(
+    /// The subtype identity field of [`CpuSubtype`].
+    struct CpuSubtypeId(u32);
+);
+
+impl core::fmt::Debug for CpuSubtypeId {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(f, "{:#x}", self)
+    }
+}
+
+newtype!(
+    /// Values for `cpusubtype` fields.
+    struct CpuSubtype(u32);
+);
+
+impl CpuSubtype {
+    /// Get the subtype identity field.
+    pub fn id(self) -> CpuSubtypeId {
+        CpuSubtypeId(self.0 & !CPU_SUBTYPE_MASK)
+    }
+
+    /// Set the subtype identity field.
+    pub fn with_id(self, id: CpuSubtypeId) -> CpuSubtype {
+        CpuSubtype(self.0 & CPU_SUBTYPE_MASK | id.0 & !CPU_SUBTYPE_MASK)
+    }
+}
+
+impl From<CpuSubtypeId> for CpuSubtype {
+    fn from(s: CpuSubtypeId) -> Self {
+        CpuSubtype(s.0)
+    }
+}
+
+impl From<CpuSubtype> for CpuSubtypeId {
+    fn from(value: CpuSubtype) -> Self {
+        value.id()
+    }
+}
 
 /*
  * Capability bits used in the definition of cpu_subtype.
  */
 /// mask for feature flags
 pub const CPU_SUBTYPE_MASK: u32 = 0xff00_0000;
-/// 64 bit libraries
-pub const CPU_SUBTYPE_LIB64: u32 = 0x8000_0000;
-/// pointer authentication with versioned ABI
-pub const CPU_SUBTYPE_PTRAUTH_ABI: u32 = 0x8000_0000;
+newtype_flag_names!(NAMES_CPU_SUBTYPE: CpuSubtype(u32) = {
+    /// 64 bit libraries
+    CPU_SUBTYPE_LIB64 = 0x8000_0000,
+});
 
 /// When selecting a slice, ANY will pick the slice with the best
 /// grading for the selected cpu_type_t, unlike the "ALL" subtypes,
 /// which are the slices that can run on any hardware for that cpu type.
-pub const CPU_SUBTYPE_ANY: u32 = !0;
+pub const CPU_SUBTYPE_ANY: CpuSubtype = CpuSubtype(!0);
 
 /*
  *	Object files that are hand-crafted to run on any
@@ -138,28 +195,32 @@ pub const CPU_SUBTYPE_ANY: u32 = !0;
  *	It is the responsibility of the implementor to make sure the
  *	software handles unsupported implementations elegantly.
  */
-pub const CPU_SUBTYPE_MULTIPLE: u32 = !0;
-pub const CPU_SUBTYPE_LITTLE_ENDIAN: u32 = 0;
-pub const CPU_SUBTYPE_BIG_ENDIAN: u32 = 1;
+pub const CPU_SUBTYPE_MULTIPLE: CpuSubtype = CpuSubtype(!0);
+newtype_consts!(CpuSubtypeId = {
+    CPU_SUBTYPE_LITTLE_ENDIAN = 0,
+    CPU_SUBTYPE_BIG_ENDIAN = 1,
+});
 
 /*
  *	VAX subtypes (these do *not* necessary conform to the actual cpu
  *	ID assigned by DEC available via the SID register).
  */
 
-pub const CPU_SUBTYPE_VAX_ALL: u32 = 0;
-pub const CPU_SUBTYPE_VAX780: u32 = 1;
-pub const CPU_SUBTYPE_VAX785: u32 = 2;
-pub const CPU_SUBTYPE_VAX750: u32 = 3;
-pub const CPU_SUBTYPE_VAX730: u32 = 4;
-pub const CPU_SUBTYPE_UVAXI: u32 = 5;
-pub const CPU_SUBTYPE_UVAXII: u32 = 6;
-pub const CPU_SUBTYPE_VAX8200: u32 = 7;
-pub const CPU_SUBTYPE_VAX8500: u32 = 8;
-pub const CPU_SUBTYPE_VAX8600: u32 = 9;
-pub const CPU_SUBTYPE_VAX8650: u32 = 10;
-pub const CPU_SUBTYPE_VAX8800: u32 = 11;
-pub const CPU_SUBTYPE_UVAXIII: u32 = 12;
+newtype_consts!(CpuSubtypeId = {
+    CPU_SUBTYPE_VAX_ALL = 0,
+    CPU_SUBTYPE_VAX780 = 1,
+    CPU_SUBTYPE_VAX785 = 2,
+    CPU_SUBTYPE_VAX750 = 3,
+    CPU_SUBTYPE_VAX730 = 4,
+    CPU_SUBTYPE_UVAXI = 5,
+    CPU_SUBTYPE_UVAXII = 6,
+    CPU_SUBTYPE_VAX8200 = 7,
+    CPU_SUBTYPE_VAX8500 = 8,
+    CPU_SUBTYPE_VAX8600 = 9,
+    CPU_SUBTYPE_VAX8650 = 10,
+    CPU_SUBTYPE_VAX8800 = 11,
+    CPU_SUBTYPE_UVAXIII = 12,
+});
 
 /*
  *      680x0 subtypes
@@ -178,11 +239,13 @@ pub const CPU_SUBTYPE_UVAXIII: u32 = 12;
  *	files to be tagged as containing 68030-specific instructions.
  */
 
-pub const CPU_SUBTYPE_MC680X0_ALL: u32 = 1;
-// compat
-pub const CPU_SUBTYPE_MC68030: u32 = 1;
-pub const CPU_SUBTYPE_MC68040: u32 = 2;
-pub const CPU_SUBTYPE_MC68030_ONLY: u32 = 3;
+newtype_consts!(CpuSubtypeId = {
+    CPU_SUBTYPE_MC680X0_ALL = 1,
+    // compat
+    CPU_SUBTYPE_MC68030 = 1,
+    CPU_SUBTYPE_MC68040 = 2,
+    CPU_SUBTYPE_MC68030_ONLY = 3,
+});
 
 /*
  *	I386 subtypes
@@ -193,166 +256,225 @@ pub const fn cpu_subtype_intel(f: u32, m: u32) -> u32 {
     f + (m << 4)
 }
 
-pub const CPU_SUBTYPE_I386_ALL: u32 = cpu_subtype_intel(3, 0);
-pub const CPU_SUBTYPE_386: u32 = cpu_subtype_intel(3, 0);
-pub const CPU_SUBTYPE_486: u32 = cpu_subtype_intel(4, 0);
-pub const CPU_SUBTYPE_486SX: u32 = cpu_subtype_intel(4, 8);
-pub const CPU_SUBTYPE_586: u32 = cpu_subtype_intel(5, 0);
-pub const CPU_SUBTYPE_PENT: u32 = cpu_subtype_intel(5, 0);
-pub const CPU_SUBTYPE_PENTPRO: u32 = cpu_subtype_intel(6, 1);
-pub const CPU_SUBTYPE_PENTII_M3: u32 = cpu_subtype_intel(6, 3);
-pub const CPU_SUBTYPE_PENTII_M5: u32 = cpu_subtype_intel(6, 5);
-pub const CPU_SUBTYPE_CELERON: u32 = cpu_subtype_intel(7, 6);
-pub const CPU_SUBTYPE_CELERON_MOBILE: u32 = cpu_subtype_intel(7, 7);
-pub const CPU_SUBTYPE_PENTIUM_3: u32 = cpu_subtype_intel(8, 0);
-pub const CPU_SUBTYPE_PENTIUM_3_M: u32 = cpu_subtype_intel(8, 1);
-pub const CPU_SUBTYPE_PENTIUM_3_XEON: u32 = cpu_subtype_intel(8, 2);
-pub const CPU_SUBTYPE_PENTIUM_M: u32 = cpu_subtype_intel(9, 0);
-pub const CPU_SUBTYPE_PENTIUM_4: u32 = cpu_subtype_intel(10, 0);
-pub const CPU_SUBTYPE_PENTIUM_4_M: u32 = cpu_subtype_intel(10, 1);
-pub const CPU_SUBTYPE_ITANIUM: u32 = cpu_subtype_intel(11, 0);
-pub const CPU_SUBTYPE_ITANIUM_2: u32 = cpu_subtype_intel(11, 1);
-pub const CPU_SUBTYPE_XEON: u32 = cpu_subtype_intel(12, 0);
-pub const CPU_SUBTYPE_XEON_MP: u32 = cpu_subtype_intel(12, 1);
+newtype_consts!(CpuSubtypeId = {
+    CPU_SUBTYPE_I386_ALL = cpu_subtype_intel(3, 0),
+    CPU_SUBTYPE_386 = cpu_subtype_intel(3, 0),
+    CPU_SUBTYPE_486 = cpu_subtype_intel(4, 0),
+    CPU_SUBTYPE_486SX = cpu_subtype_intel(4, 8),
+    CPU_SUBTYPE_586 = cpu_subtype_intel(5, 0),
+    CPU_SUBTYPE_PENT = cpu_subtype_intel(5, 0),
+    CPU_SUBTYPE_PENTPRO = cpu_subtype_intel(6, 1),
+    CPU_SUBTYPE_PENTII_M3 = cpu_subtype_intel(6, 3),
+    CPU_SUBTYPE_PENTII_M5 = cpu_subtype_intel(6, 5),
+    CPU_SUBTYPE_CELERON = cpu_subtype_intel(7, 6),
+    CPU_SUBTYPE_CELERON_MOBILE = cpu_subtype_intel(7, 7),
+    CPU_SUBTYPE_PENTIUM_3 = cpu_subtype_intel(8, 0),
+    CPU_SUBTYPE_PENTIUM_3_M = cpu_subtype_intel(8, 1),
+    CPU_SUBTYPE_PENTIUM_3_XEON = cpu_subtype_intel(8, 2),
+    CPU_SUBTYPE_PENTIUM_M = cpu_subtype_intel(9, 0),
+    CPU_SUBTYPE_PENTIUM_4 = cpu_subtype_intel(10, 0),
+    CPU_SUBTYPE_PENTIUM_4_M = cpu_subtype_intel(10, 1),
+    CPU_SUBTYPE_ITANIUM = cpu_subtype_intel(11, 0),
+    CPU_SUBTYPE_ITANIUM_2 = cpu_subtype_intel(11, 1),
+    CPU_SUBTYPE_XEON = cpu_subtype_intel(12, 0),
+    CPU_SUBTYPE_XEON_MP = cpu_subtype_intel(12, 1),
+});
 
 #[inline]
-pub const fn cpu_subtype_intel_family(x: u32) -> u32 {
-    x & 15
+pub const fn cpu_subtype_intel_family(x: CpuSubtypeId) -> u32 {
+    x.0 & 15
 }
 pub const CPU_SUBTYPE_INTEL_FAMILY_MAX: u32 = 15;
 
 #[inline]
-pub const fn cpu_subtype_intel_model(x: u32) -> u32 {
-    x >> 4
+pub const fn cpu_subtype_intel_model(x: CpuSubtypeId) -> u32 {
+    x.0 >> 4
 }
 pub const CPU_SUBTYPE_INTEL_MODEL_ALL: u32 = 0;
 
 /*
- *	X86 subtypes.
+ *     X86 subtypes.
  */
 
-pub const CPU_SUBTYPE_X86_ALL: u32 = 3;
-pub const CPU_SUBTYPE_X86_64_ALL: u32 = 3;
-pub const CPU_SUBTYPE_X86_ARCH1: u32 = 4;
-/// Haswell feature subset
-pub const CPU_SUBTYPE_X86_64_H: u32 = 8;
+flag_names!(NAMES_CPU_SUBTYPE_X86: CpuSubtype(u32) = NAMES_CPU_SUBTYPE + {
+    _ = !CPU_SUBTYPE_MASK => NAMES_CPU_SUBTYPE_ID_X86,
+});
+constant_names!(NAMES_CPU_SUBTYPE_ID_X86: CpuSubtypeId(u32) = {
+    CPU_SUBTYPE_X86_ALL = 3,
+    CPU_SUBTYPE_X86_ARCH1 = 4,
+});
+
+flag_names!(NAMES_CPU_SUBTYPE_X86_64: CpuSubtype(u32) = NAMES_CPU_SUBTYPE + {
+    _ = !CPU_SUBTYPE_MASK => NAMES_CPU_SUBTYPE_ID_X86_64,
+});
+constant_names!(NAMES_CPU_SUBTYPE_ID_X86_64: CpuSubtypeId(u32) = {
+    CPU_SUBTYPE_X86_64_ALL = 3,
+    CPU_SUBTYPE_X86_64_H = 8,
+});
 
 /*
  *	Mips subtypes.
  */
 
-pub const CPU_SUBTYPE_MIPS_ALL: u32 = 0;
-pub const CPU_SUBTYPE_MIPS_R2300: u32 = 1;
-pub const CPU_SUBTYPE_MIPS_R2600: u32 = 2;
-pub const CPU_SUBTYPE_MIPS_R2800: u32 = 3;
-/// pmax
-pub const CPU_SUBTYPE_MIPS_R2000A: u32 = 4;
-pub const CPU_SUBTYPE_MIPS_R2000: u32 = 5;
-/// 3max
-pub const CPU_SUBTYPE_MIPS_R3000A: u32 = 6;
-pub const CPU_SUBTYPE_MIPS_R3000: u32 = 7;
+newtype_consts!(CpuSubtypeId = {
+    CPU_SUBTYPE_MIPS_ALL = 0,
+    CPU_SUBTYPE_MIPS_R2300 = 1,
+    CPU_SUBTYPE_MIPS_R2600 = 2,
+    CPU_SUBTYPE_MIPS_R2800 = 3,
+    /// pmax
+    CPU_SUBTYPE_MIPS_R2000A = 4,
+    CPU_SUBTYPE_MIPS_R2000 = 5,
+    /// 3max
+    CPU_SUBTYPE_MIPS_R3000A = 6,
+    CPU_SUBTYPE_MIPS_R3000 = 7,
+});
 
 /*
  *	MC98000 (PowerPC) subtypes
  */
-pub const CPU_SUBTYPE_MC98000_ALL: u32 = 0;
-pub const CPU_SUBTYPE_MC98601: u32 = 1;
+newtype_consts!(CpuSubtypeId = {
+    CPU_SUBTYPE_MC98000_ALL = 0,
+    CPU_SUBTYPE_MC98601 = 1,
+});
 
 /*
  *	HPPA subtypes for Hewlett-Packard HP-PA family of
  *	risc processors. Port by NeXT to 700 series.
  */
 
-pub const CPU_SUBTYPE_HPPA_ALL: u32 = 0;
-/// Compatibility alias of [`CPU_SUBTYPE_HPPA_ALL`].
-pub const CPU_SUBTYPE_HPPA_7100: u32 = 0;
-pub const CPU_SUBTYPE_HPPA_7100LC: u32 = 1;
+newtype_consts!(CpuSubtypeId = {
+    CPU_SUBTYPE_HPPA_ALL = 0,
+    /// Compatibility alias of [`CPU_SUBTYPE_HPPA_ALL`].
+    CPU_SUBTYPE_HPPA_7100 = 0,
+    CPU_SUBTYPE_HPPA_7100LC = 1,
+});
 
 /*
  *	MC88000 subtypes.
  */
-pub const CPU_SUBTYPE_MC88000_ALL: u32 = 0;
-pub const CPU_SUBTYPE_MC88100: u32 = 1;
-pub const CPU_SUBTYPE_MC88110: u32 = 2;
+newtype_consts!(CpuSubtypeId = {
+    CPU_SUBTYPE_MC88000_ALL = 0,
+    CPU_SUBTYPE_MC88100 = 1,
+    CPU_SUBTYPE_MC88110 = 2,
+});
 
 /*
  *	SPARC subtypes
  */
-pub const CPU_SUBTYPE_SPARC_ALL: u32 = 0;
+newtype_consts!(CpuSubtypeId = {
+    CPU_SUBTYPE_SPARC_ALL = 0,
+});
 
 /*
  *	I860 subtypes
  */
-pub const CPU_SUBTYPE_I860_ALL: u32 = 0;
-pub const CPU_SUBTYPE_I860_860: u32 = 1;
+newtype_consts!(CpuSubtypeId = {
+    CPU_SUBTYPE_I860_ALL = 0,
+    CPU_SUBTYPE_I860_860 = 1,
+});
 
 /*
- *	PowerPC subtypes
+ *     PowerPC subtypes
  */
-pub const CPU_SUBTYPE_POWERPC_ALL: u32 = 0;
-pub const CPU_SUBTYPE_POWERPC_601: u32 = 1;
-pub const CPU_SUBTYPE_POWERPC_602: u32 = 2;
-pub const CPU_SUBTYPE_POWERPC_603: u32 = 3;
-pub const CPU_SUBTYPE_POWERPC_603E: u32 = 4;
-pub const CPU_SUBTYPE_POWERPC_603EV: u32 = 5;
-pub const CPU_SUBTYPE_POWERPC_604: u32 = 6;
-pub const CPU_SUBTYPE_POWERPC_604E: u32 = 7;
-pub const CPU_SUBTYPE_POWERPC_620: u32 = 8;
-pub const CPU_SUBTYPE_POWERPC_750: u32 = 9;
-pub const CPU_SUBTYPE_POWERPC_7400: u32 = 10;
-pub const CPU_SUBTYPE_POWERPC_7450: u32 = 11;
-pub const CPU_SUBTYPE_POWERPC_970: u32 = 100;
+flag_names!(NAMES_CPU_SUBTYPE_POWERPC: CpuSubtype(u32) = NAMES_CPU_SUBTYPE + {
+    _ = !CPU_SUBTYPE_MASK => NAMES_CPU_SUBTYPE_ID_POWERPC,
+});
+constant_names!(NAMES_CPU_SUBTYPE_ID_POWERPC: CpuSubtypeId(u32) = {
+    CPU_SUBTYPE_POWERPC_ALL = 0,
+    CPU_SUBTYPE_POWERPC_601 = 1,
+    CPU_SUBTYPE_POWERPC_602 = 2,
+    CPU_SUBTYPE_POWERPC_603 = 3,
+    CPU_SUBTYPE_POWERPC_603E = 4,
+    CPU_SUBTYPE_POWERPC_603EV = 5,
+    CPU_SUBTYPE_POWERPC_604 = 6,
+    CPU_SUBTYPE_POWERPC_604E = 7,
+    CPU_SUBTYPE_POWERPC_620 = 8,
+    CPU_SUBTYPE_POWERPC_750 = 9,
+    CPU_SUBTYPE_POWERPC_7400 = 10,
+    CPU_SUBTYPE_POWERPC_7450 = 11,
+    CPU_SUBTYPE_POWERPC_970 = 100,
+});
 
 /*
- *	ARM subtypes
+ *     ARM subtypes
  */
-pub const CPU_SUBTYPE_ARM_ALL: u32 = 0;
-pub const CPU_SUBTYPE_ARM_V4T: u32 = 5;
-pub const CPU_SUBTYPE_ARM_V6: u32 = 6;
-pub const CPU_SUBTYPE_ARM_V5TEJ: u32 = 7;
-pub const CPU_SUBTYPE_ARM_XSCALE: u32 = 8;
-/// ARMv7-A and ARMv7-R
-pub const CPU_SUBTYPE_ARM_V7: u32 = 9;
-/// Cortex A9
-pub const CPU_SUBTYPE_ARM_V7F: u32 = 10;
-/// Swift
-pub const CPU_SUBTYPE_ARM_V7S: u32 = 11;
-pub const CPU_SUBTYPE_ARM_V7K: u32 = 12;
-pub const CPU_SUBTYPE_ARM_V8: u32 = 13;
-/// Not meant to be run under xnu
-pub const CPU_SUBTYPE_ARM_V6M: u32 = 14;
-/// Not meant to be run under xnu
-pub const CPU_SUBTYPE_ARM_V7M: u32 = 15;
-/// Not meant to be run under xnu
-pub const CPU_SUBTYPE_ARM_V7EM: u32 = 16;
-/// Not meant to be run under xnu
-pub const CPU_SUBTYPE_ARM_V8M: u32 = 17;
-/// Not meant to be run under xnu
-pub const CPU_SUBTYPE_ARM_V8M_MAIN: u32 = CPU_SUBTYPE_ARM_V8M;
-/// Not meant to be run under xnu
-pub const CPU_SUBTYPE_ARM_V8M_BASE: u32 = 18;
-/// Not meant to be run under xnu
-pub const CPU_SUBTYPE_ARM_V8_1M_MAIN: u32 = 19;
+flag_names!(NAMES_CPU_SUBTYPE_ARM: CpuSubtype(u32) = NAMES_CPU_SUBTYPE + {
+    _ = !CPU_SUBTYPE_MASK => NAMES_CPU_SUBTYPE_ID_ARM,
+});
+constant_names!(NAMES_CPU_SUBTYPE_ID_ARM: CpuSubtypeId(u32) = {
+    CPU_SUBTYPE_ARM_ALL = 0,
+    CPU_SUBTYPE_ARM_V4T = 5,
+    CPU_SUBTYPE_ARM_V6 = 6,
+    CPU_SUBTYPE_ARM_V5TEJ = 7,
+    CPU_SUBTYPE_ARM_XSCALE = 8,
+    /// ARMv7-A and ARMv7-R
+    CPU_SUBTYPE_ARM_V7 = 9,
+    /// Cortex A9
+    CPU_SUBTYPE_ARM_V7F = 10,
+    /// Swift
+    CPU_SUBTYPE_ARM_V7S = 11,
+    CPU_SUBTYPE_ARM_V7K = 12,
+    CPU_SUBTYPE_ARM_V8 = 13,
+    /// Not meant to be run under xnu
+    CPU_SUBTYPE_ARM_V6M = 14,
+    /// Not meant to be run under xnu
+    CPU_SUBTYPE_ARM_V7M = 15,
+    /// Not meant to be run under xnu
+    CPU_SUBTYPE_ARM_V7EM = 16,
+    /// Not meant to be run under xnu
+    CPU_SUBTYPE_ARM_V8M = 17,
+    /// Not meant to be run under xnu
+    CPU_SUBTYPE_ARM_V8M_MAIN = CPU_SUBTYPE_ARM_V8M.0,
+    /// Not meant to be run under xnu
+    CPU_SUBTYPE_ARM_V8M_BASE = 18,
+    /// Not meant to be run under xnu
+    CPU_SUBTYPE_ARM_V8_1M_MAIN = 19,
+});
 
 /*
  *  ARM64 subtypes
  */
-pub const CPU_SUBTYPE_ARM64_ALL: u32 = 0;
-pub const CPU_SUBTYPE_ARM64_V8: u32 = 1;
-pub const CPU_SUBTYPE_ARM64E: u32 = 2;
+flag_names!(NAMES_CPU_SUBTYPE_ARM64: CpuSubtype(u32) = {
+    /// pointer authentication with versioned ABI
+    CPU_SUBTYPE_PTRAUTH_ABI = 0x8000_0000,
+    _ = !CPU_SUBTYPE_MASK => NAMES_CPU_SUBTYPE_ID_ARM64,
+});
+constant_names!(NAMES_CPU_SUBTYPE_ID_ARM64: CpuSubtypeId(u32) = {
+    CPU_SUBTYPE_ARM64_ALL = 0,
+    CPU_SUBTYPE_ARM64_V8 = 1,
+    CPU_SUBTYPE_ARM64E = 2,
+});
 
 /* CPU subtype feature flags for ptrauth on arm64e platforms */
 pub const CPU_SUBTYPE_ARM64_PTR_AUTH_MASK: u32 = 0x0f000000;
-#[inline]
-pub const fn cpu_subtype_arm64_ptr_auth_version(x: u32) -> u32 {
-    (x & CPU_SUBTYPE_ARM64_PTR_AUTH_MASK) >> 24
+
+impl CpuSubtype {
+    /// Get the arm64 ptrauth version field.
+    #[inline]
+    pub const fn arm64_ptr_auth_version(self) -> u32 {
+        (self.0 & CPU_SUBTYPE_ARM64_PTR_AUTH_MASK) >> 24
+    }
+
+    /// Set the arm64 ptrauth version field.
+    #[inline]
+    pub const fn with_arm64_ptr_auth_version(self, version: u32) -> CpuSubtype {
+        CpuSubtype(
+            self.0 & !CPU_SUBTYPE_ARM64_PTR_AUTH_MASK
+                | (version << 24) & CPU_SUBTYPE_ARM64_PTR_AUTH_MASK,
+        )
+    }
 }
 
 /*
  *  ARM64_32 subtypes
  */
-pub const CPU_SUBTYPE_ARM64_32_ALL: u32 = 0;
-pub const CPU_SUBTYPE_ARM64_32_V8: u32 = 1;
+flag_names!(NAMES_CPU_SUBTYPE_ARM64_32: CpuSubtype(u32) = NAMES_CPU_SUBTYPE + {
+    _ = !CPU_SUBTYPE_MASK => NAMES_CPU_SUBTYPE_ID_ARM64_32,
+});
+constant_names!(NAMES_CPU_SUBTYPE_ID_ARM64_32: CpuSubtypeId(u32) = {
+    CPU_SUBTYPE_ARM64_32_ALL = 0,
+    CPU_SUBTYPE_ARM64_32_V8 = 1,
+});
 
 // Definitions from "/usr/include/mach/vm_prot.h".
 
@@ -853,9 +975,9 @@ pub struct FatHeader {
 #[repr(C)]
 pub struct FatArch32 {
     /// cpu specifier (int)
-    pub cputype: U32<BigEndian>,
+    pub cputype: U32<BigEndian, CpuType>,
     /// machine specifier (int)
-    pub cpusubtype: U32<BigEndian>,
+    pub cpusubtype: U32<BigEndian, CpuSubtype>,
     /// file offset to this object file
     pub offset: U32<BigEndian>,
     /// size of this object file
@@ -879,9 +1001,9 @@ pub const FAT_CIGAM_64: u32 = 0xbfba_feca;
 #[repr(C)]
 pub struct FatArch64 {
     /// cpu specifier (int)
-    pub cputype: U32<BigEndian>,
+    pub cputype: U32<BigEndian, CpuType>,
     /// machine specifier (int)
-    pub cpusubtype: U32<BigEndian>,
+    pub cpusubtype: U32<BigEndian, CpuSubtype>,
     /// file offset to this object file
     pub offset: U64<BigEndian>,
     /// size of this object file
@@ -903,9 +1025,9 @@ pub struct MachHeader32<E: Endian> {
     /// mach magic number identifier
     pub magic: U32<BigEndian>,
     /// cpu specifier
-    pub cputype: U32<E>,
+    pub cputype: U32<E, CpuType>,
     /// machine specifier
-    pub cpusubtype: U32<E>,
+    pub cpusubtype: U32<E, CpuSubtype>,
     /// type of file
     pub filetype: U32<E>,
     /// number of load commands
@@ -931,9 +1053,9 @@ pub struct MachHeader64<E: Endian> {
     /// mach magic number identifier
     pub magic: U32<BigEndian>,
     /// cpu specifier
-    pub cputype: U32<E>,
+    pub cputype: U32<E, CpuType>,
     /// machine specifier
-    pub cpusubtype: U32<E>,
+    pub cpusubtype: U32<E, CpuSubtype>,
     /// type of file
     pub filetype: U32<E>,
     /// number of load commands
@@ -3245,7 +3367,7 @@ pub struct Relocation<E: Endian> {
 impl<E: Endian> Relocation<E> {
     /// Determine whether this is a scattered relocation.
     #[inline]
-    pub fn r_scattered(self, endian: E, cputype: u32) -> bool {
+    pub fn r_scattered(self, endian: E, cputype: CpuType) -> bool {
         if cputype == CPU_TYPE_X86_64 {
             false
         } else {

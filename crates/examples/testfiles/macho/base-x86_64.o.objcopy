@@ -2,8 +2,7 @@ Format: Mach-O 64-bit
 MachHeader {
     Magic: 0xCFFAEDFE
     CpuType: CPU_TYPE_X86_64 (0x1000007)
-    CpuSubtype: 0x3
-        CPU_SUBTYPE_X86_64_ALL (0x3)
+    CpuSubtype: CPU_SUBTYPE_X86_64_ALL (0x3)
     FileType: MH_OBJECT (0x1)
     NumberOfCmds: 4
     SizeOfCmds: 0x208
