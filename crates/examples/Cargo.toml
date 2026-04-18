@@ -58,6 +58,8 @@ name = "simple_write"
 required-features = ["write"]
 
 [lints.clippy]
+# Style.
+collapsible_match = "allow"
 nonminimal_bool = "allow"
 single_match = "allow"
 uninlined_format_args = "allow"
