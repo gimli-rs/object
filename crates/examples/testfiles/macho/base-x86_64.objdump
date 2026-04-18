@@ -1,7 +1,7 @@
 Format: MachO Little-endian 64-bit
 Kind: Executable
 Architecture: X86_64
-Flags: MachO { flags: 200085 }
+Flags: MachO { flags: MH_NOUNDEFS | MH_DYLDLINK | MH_TWOLEVEL | MH_PIE }
 Relative Address Base: 0
 Entry Address: 3f60
 Mach UUID: [ab, a4, a9, 90, 5c, 28, 30, b4, 84, b3, 89, 8e, 5d, 67, 4, be]

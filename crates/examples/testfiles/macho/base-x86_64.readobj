@@ -7,6 +7,10 @@ MachHeader {
     NumberOfCmds: 16
     SizeOfCmds: 0x558
     Flags: 0x200085
+        MH_NOUNDEFS (0x1)
+        MH_DYLDLINK (0x4)
+        MH_TWOLEVEL (0x80)
+        MH_PIE (0x200000)
 }
 SegmentCommand {
     Cmd: LC_SEGMENT_64 (0x19)

@@ -411,7 +411,7 @@ where
     fn imports(&self) -> Result<Vec<Import<'data>>> {
         let mut dysymtab = None;
         let mut libraries = Vec::new();
-        let twolevel = self.header.flags(self.endian) & macho::MH_TWOLEVEL != 0;
+        let twolevel = self.header.flags(self.endian).contains(macho::MH_TWOLEVEL);
         if twolevel {
             libraries.push(&[][..]);
         }
@@ -701,10 +701,10 @@ pub trait MachHeader: Debug + Pod {
     fn magic(&self) -> u32;
     fn cputype(&self, endian: Self::Endian) -> macho::CpuType;
     fn cpusubtype(&self, endian: Self::Endian) -> macho::CpuSubtype;
-    fn filetype(&self, endian: Self::Endian) -> u32;
+    fn filetype(&self, endian: Self::Endian) -> macho::FileType;
     fn ncmds(&self, endian: Self::Endian) -> u32;
     fn sizeofcmds(&self, endian: Self::Endian) -> u32;
-    fn flags(&self, endian: Self::Endian) -> u32;
+    fn flags(&self, endian: Self::Endian) -> macho::FileFlags;
 
     // Provided methods.
 
@@ -792,7 +792,7 @@ impl<Endian: endian::Endian> MachHeader for macho::MachHeader32<Endian> {
         self.cpusubtype.get(endian)
     }
 
-    fn filetype(&self, endian: Self::Endian) -> u32 {
+    fn filetype(&self, endian: Self::Endian) -> macho::FileType {
         self.filetype.get(endian)
     }
 
@@ -804,7 +804,7 @@ impl<Endian: endian::Endian> MachHeader for macho::MachHeader32<Endian> {
         self.sizeofcmds.get(endian)
     }
 
-    fn flags(&self, endian: Self::Endian) -> u32 {
+    fn flags(&self, endian: Self::Endian) -> macho::FileFlags {
         self.flags.get(endian)
     }
 }
@@ -840,7 +840,7 @@ impl<Endian: endian::Endian> MachHeader for macho::MachHeader64<Endian> {
         self.cpusubtype.get(endian)
     }
 
-    fn filetype(&self, endian: Self::Endian) -> u32 {
+    fn filetype(&self, endian: Self::Endian) -> macho::FileType {
         self.filetype.get(endian)
     }
 
@@ -852,7 +852,7 @@ impl<Endian: endian::Endian> MachHeader for macho::MachHeader64<Endian> {
         self.sizeofcmds.get(endian)
     }
 
-    fn flags(&self, endian: Self::Endian) -> u32 {
+    fn flags(&self, endian: Self::Endian) -> macho::FileFlags {
         self.flags.get(endian)
     }
 }

@@ -489,7 +489,7 @@ pub enum FileFlags {
     #[cfg(feature = "macho")]
     MachO {
         /// `flags` field in the Mach-O file header.
-        flags: u32,
+        flags: crate::macho::FileFlags,
     },
     /// COFF file flags.
     #[cfg(feature = "coff")]

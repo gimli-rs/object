@@ -640,7 +640,7 @@ impl<'a> Object<'a> {
 
         let mut flags = match self.flags {
             FileFlags::MachO { flags } => flags,
-            _ => 0,
+            _ => macho::FileFlags(0),
         };
         if self.macho_subsections_via_symbols {
             flags |= macho::MH_SUBSECTIONS_VIA_SYMBOLS;
@@ -949,10 +949,10 @@ impl<'a> Object<'a> {
 struct MachHeader {
     cputype: macho::CpuType,
     cpusubtype: macho::CpuSubtype,
-    filetype: u32,
+    filetype: macho::FileType,
     ncmds: u32,
     sizeofcmds: u32,
-    flags: u32,
+    flags: macho::FileFlags,
 }
 
 struct SegmentCommand {

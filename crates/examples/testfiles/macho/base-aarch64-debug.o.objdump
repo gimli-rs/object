@@ -1,7 +1,7 @@
 Format: MachO Little-endian 64-bit
 Kind: Relocatable
 Architecture: Aarch64
-Flags: MachO { flags: 2000 }
+Flags: MachO { flags: MH_SUBSECTIONS_VIA_SYMBOLS }
 Relative Address Base: 0
 Entry Address: 0
 Segment { name: "", address: 0, size: 2ca, permissions: RWX }

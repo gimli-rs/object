@@ -346,10 +346,10 @@ fn print_mach_header<Mach: MachHeader>(p: &mut Printer<'_>, endian: Mach::Endian
     p.group("MachHeader", |p| {
         p.field_hex("Magic", header.magic());
         print_cputype(p, header.cputype(endian), header.cpusubtype(endian));
-        p.field_enum("FileType", header.filetype(endian), FLAGS_MH_FILETYPE);
+        p.field_consts("FileType", header.filetype(endian), FileType::NAMES);
         p.field("NumberOfCmds", header.ncmds(endian));
         p.field_hex("SizeOfCmds", header.sizeofcmds(endian));
-        p.field_enum("Flags", header.flags(endian), FLAGS_MH);
+        p.field_flags("Flags", header.flags(endian), FileFlags::NAMES);
     });
 }
 
@@ -1029,54 +1029,6 @@ const FLAGS_DYLD_CACHE_MAPPING: &[Flag<u64>] = &flags!(
     DYLD_CACHE_MAPPING_CONST_DATA,
     DYLD_CACHE_MAPPING_TEXT_STUBS,
     DYLD_CACHE_DYNAMIC_CONFIG_DATA,
-);
-const FLAGS_MH_FILETYPE: &[Flag<u32>] = &flags!(
-    MH_OBJECT,
-    MH_EXECUTE,
-    MH_FVMLIB,
-    MH_CORE,
-    MH_PRELOAD,
-    MH_DYLIB,
-    MH_DYLINKER,
-    MH_BUNDLE,
-    MH_DYLIB_STUB,
-    MH_DSYM,
-    MH_KEXT_BUNDLE,
-    MH_FILESET,
-    MH_GPU_EXECUTE,
-    MH_GPU_DYLIB,
-);
-const FLAGS_MH: &[Flag<u32>] = &flags!(
-    MH_NOUNDEFS,
-    MH_INCRLINK,
-    MH_DYLDLINK,
-    MH_BINDATLOAD,
-    MH_PREBOUND,
-    MH_SPLIT_SEGS,
-    MH_LAZY_INIT,
-    MH_TWOLEVEL,
-    MH_FORCE_FLAT,
-    MH_NOMULTIDEFS,
-    MH_NOFIXPREBINDING,
-    MH_PREBINDABLE,
-    MH_ALLMODSBOUND,
-    MH_SUBSECTIONS_VIA_SYMBOLS,
-    MH_CANONICAL,
-    MH_WEAK_DEFINES,
-    MH_BINDS_TO_WEAK,
-    MH_ALLOW_STACK_EXECUTION,
-    MH_ROOT_SAFE,
-    MH_SETUID_SAFE,
-    MH_NO_REEXPORTED_DYLIBS,
-    MH_PIE,
-    MH_DEAD_STRIPPABLE_DYLIB,
-    MH_HAS_TLV_DESCRIPTORS,
-    MH_NO_HEAP_EXECUTION,
-    MH_APP_EXTENSION_SAFE,
-    MH_NLIST_OUTOFSYNC_WITH_DYLDINFO,
-    MH_SIM_SUPPORT,
-    MH_IMPLICIT_PAGEZERO,
-    MH_DYLIB_IN_CACHE,
 );
 const FLAGS_LC: &[Flag<u32>] = &flags!(
     LC_SEGMENT,
