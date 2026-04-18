@@ -186,7 +186,7 @@ pub trait Segment: Debug + Pod {
 
     fn from_command(command: LoadCommandData<'_, Self::Endian>) -> Result<Option<(&Self, &[u8])>>;
 
-    fn cmd(&self, endian: Self::Endian) -> u32;
+    fn cmd(&self, endian: Self::Endian) -> macho::LoadCommandType;
     fn cmdsize(&self, endian: Self::Endian) -> u32;
     fn segname(&self) -> &[u8; 16];
     fn vmaddr(&self, endian: Self::Endian) -> Self::Word;
@@ -247,7 +247,7 @@ impl<Endian: endian::Endian> Segment for macho::SegmentCommand32<Endian> {
         command.segment_32()
     }
 
-    fn cmd(&self, endian: Self::Endian) -> u32 {
+    fn cmd(&self, endian: Self::Endian) -> macho::LoadCommandType {
         self.cmd.get(endian)
     }
     fn cmdsize(&self, endian: Self::Endian) -> u32 {
@@ -291,7 +291,7 @@ impl<Endian: endian::Endian> Segment for macho::SegmentCommand64<Endian> {
         command.segment_64()
     }
 
-    fn cmd(&self, endian: Self::Endian) -> u32 {
+    fn cmd(&self, endian: Self::Endian) -> macho::LoadCommandType {
         self.cmd.get(endian)
     }
     fn cmdsize(&self, endian: Self::Endian) -> u32 {

@@ -1231,7 +1231,7 @@ pub struct LoadCommand<E: Endian> {
     /// Type of load command.
     ///
     /// One of the `LC_*` constants.
-    pub cmd: U32<E>,
+    pub cmd: U32<E, LoadCommandType>,
     /// Total size of command in bytes.
     pub cmdsize: U32<E>,
 }
@@ -1247,124 +1247,130 @@ pub struct LoadCommand<E: Endian> {
  */
 pub const LC_REQ_DYLD: u32 = 0x8000_0000;
 
-/* Constants for the cmd field of all load commands, the type */
-/// segment of this file to be mapped
-pub const LC_SEGMENT: u32 = 0x1;
-/// link-edit stab symbol table info
-pub const LC_SYMTAB: u32 = 0x2;
-/// link-edit gdb symbol table info (obsolete)
-pub const LC_SYMSEG: u32 = 0x3;
-/// thread
-pub const LC_THREAD: u32 = 0x4;
-/// unix thread (includes a stack)
-pub const LC_UNIXTHREAD: u32 = 0x5;
-/// load a specified fixed VM shared library
-pub const LC_LOADFVMLIB: u32 = 0x6;
-/// fixed VM shared library identification
-pub const LC_IDFVMLIB: u32 = 0x7;
-/// object identification info (obsolete)
-pub const LC_IDENT: u32 = 0x8;
-/// fixed VM file inclusion (internal use)
-pub const LC_FVMFILE: u32 = 0x9;
-/// prepage command (internal use)
-pub const LC_PREPAGE: u32 = 0xa;
-/// dynamic link-edit symbol table info
-pub const LC_DYSYMTAB: u32 = 0xb;
-/// load a dynamically linked shared library
-pub const LC_LOAD_DYLIB: u32 = 0xc;
-/// dynamically linked shared lib ident
-pub const LC_ID_DYLIB: u32 = 0xd;
-/// load a dynamic linker
-pub const LC_LOAD_DYLINKER: u32 = 0xe;
-/// dynamic linker identification
-pub const LC_ID_DYLINKER: u32 = 0xf;
-/// modules prebound for a dynamically linked shared library
-pub const LC_PREBOUND_DYLIB: u32 = 0x10;
-/// image routines
-pub const LC_ROUTINES: u32 = 0x11;
-/// sub framework
-pub const LC_SUB_FRAMEWORK: u32 = 0x12;
-/// sub umbrella
-pub const LC_SUB_UMBRELLA: u32 = 0x13;
-/// sub client
-pub const LC_SUB_CLIENT: u32 = 0x14;
-/// sub library
-pub const LC_SUB_LIBRARY: u32 = 0x15;
-/// two-level namespace lookup hints
-pub const LC_TWOLEVEL_HINTS: u32 = 0x16;
-/// prebind checksum
-pub const LC_PREBIND_CKSUM: u32 = 0x17;
-/// load a dynamically linked shared library that is allowed to be missing
-/// (all symbols are weak imported).
-pub const LC_LOAD_WEAK_DYLIB: u32 = 0x18 | LC_REQ_DYLD;
-/// 64-bit segment of this file to be mapped
-pub const LC_SEGMENT_64: u32 = 0x19;
-/// 64-bit image routines
-pub const LC_ROUTINES_64: u32 = 0x1a;
-/// the uuid
-pub const LC_UUID: u32 = 0x1b;
-/// runpath additions
-pub const LC_RPATH: u32 = 0x1c | LC_REQ_DYLD;
-/// local of code signature
-pub const LC_CODE_SIGNATURE: u32 = 0x1d;
-/// local of info to split segments
-pub const LC_SEGMENT_SPLIT_INFO: u32 = 0x1e;
-/// load and re-export dylib
-pub const LC_REEXPORT_DYLIB: u32 = 0x1f | LC_REQ_DYLD;
-/// delay load of dylib until first use
-pub const LC_LAZY_LOAD_DYLIB: u32 = 0x20;
-/// encrypted segment information
-pub const LC_ENCRYPTION_INFO: u32 = 0x21;
-/// compressed dyld information
-pub const LC_DYLD_INFO: u32 = 0x22;
-/// compressed dyld information only
-pub const LC_DYLD_INFO_ONLY: u32 = 0x22 | LC_REQ_DYLD;
-/// load upward dylib
-pub const LC_LOAD_UPWARD_DYLIB: u32 = 0x23 | LC_REQ_DYLD;
-/// build for MacOSX min OS version
-pub const LC_VERSION_MIN_MACOSX: u32 = 0x24;
-/// build for iPhoneOS min OS version
-pub const LC_VERSION_MIN_IPHONEOS: u32 = 0x25;
-/// compressed table of function start addresses
-pub const LC_FUNCTION_STARTS: u32 = 0x26;
-/// string for dyld to treat like environment variable
-pub const LC_DYLD_ENVIRONMENT: u32 = 0x27;
-/// replacement for LC_UNIXTHREAD
-pub const LC_MAIN: u32 = 0x28 | LC_REQ_DYLD;
-/// table of non-instructions in __text
-pub const LC_DATA_IN_CODE: u32 = 0x29;
-/// source version used to build binary
-pub const LC_SOURCE_VERSION: u32 = 0x2A;
-/// Code signing DRs copied from linked dylibs
-pub const LC_DYLIB_CODE_SIGN_DRS: u32 = 0x2B;
-/// 64-bit encrypted segment information
-pub const LC_ENCRYPTION_INFO_64: u32 = 0x2C;
-/// linker options in MH_OBJECT files
-pub const LC_LINKER_OPTION: u32 = 0x2D;
-/// optimization hints in MH_OBJECT files
-pub const LC_LINKER_OPTIMIZATION_HINT: u32 = 0x2E;
-/// build for AppleTV min OS version
-pub const LC_VERSION_MIN_TVOS: u32 = 0x2F;
-/// build for Watch min OS version
-pub const LC_VERSION_MIN_WATCHOS: u32 = 0x30;
-/// arbitrary data included within a Mach-O file
-pub const LC_NOTE: u32 = 0x31;
-/// build for platform min OS version
-pub const LC_BUILD_VERSION: u32 = 0x32;
-/// used with `LinkeditDataCommand`, payload is trie
-pub const LC_DYLD_EXPORTS_TRIE: u32 = 0x33 | LC_REQ_DYLD;
-/// used with `LinkeditDataCommand`
-pub const LC_DYLD_CHAINED_FIXUPS: u32 = 0x34 | LC_REQ_DYLD;
-/// used with `FilesetEntryCommand`
-pub const LC_FILESET_ENTRY: u32 = 0x35 | LC_REQ_DYLD;
-/// used with linkedit_data_command
-pub const LC_ATOM_INFO: u32 = 0x36;
-/// used with linkedit_data_command
-pub const LC_FUNCTION_VARIANTS: u32 = 0x37;
-/// used with linkedit_data_command
-pub const LC_FUNCTION_VARIANT_FIXUPS: u32 = 0x38;
-/// target triple used to compile
-pub const LC_TARGET_TRIPLE: u32 = 0x39;
+newtype!(
+    /// Values for `LoadCommand*::cmd`.
+    struct LoadCommandType(u32);
+);
+
+newtype_constant_names!(NAMES_LC_TYPE: LoadCommandType(u32) = {
+    /// segment of this file to be mapped
+    LC_SEGMENT = 0x1,
+    /// link-edit stab symbol table info
+    LC_SYMTAB = 0x2,
+    /// link-edit gdb symbol table info (obsolete)
+    LC_SYMSEG = 0x3,
+    /// thread
+    LC_THREAD = 0x4,
+    /// unix thread (includes a stack)
+    LC_UNIXTHREAD = 0x5,
+    /// load a specified fixed VM shared library
+    LC_LOADFVMLIB = 0x6,
+    /// fixed VM shared library identification
+    LC_IDFVMLIB = 0x7,
+    /// object identification info (obsolete)
+    LC_IDENT = 0x8,
+    /// fixed VM file inclusion (internal use)
+    LC_FVMFILE = 0x9,
+    /// prepage command (internal use)
+    LC_PREPAGE = 0xa,
+    /// dynamic link-edit symbol table info
+    LC_DYSYMTAB = 0xb,
+    /// load a dynamically linked shared library
+    LC_LOAD_DYLIB = 0xc,
+    /// dynamically linked shared lib ident
+    LC_ID_DYLIB = 0xd,
+    /// load a dynamic linker
+    LC_LOAD_DYLINKER = 0xe,
+    /// dynamic linker identification
+    LC_ID_DYLINKER = 0xf,
+    /// modules prebound for a dynamically linked shared library
+    LC_PREBOUND_DYLIB = 0x10,
+    /// image routines
+    LC_ROUTINES = 0x11,
+    /// sub framework
+    LC_SUB_FRAMEWORK = 0x12,
+    /// sub umbrella
+    LC_SUB_UMBRELLA = 0x13,
+    /// sub client
+    LC_SUB_CLIENT = 0x14,
+    /// sub library
+    LC_SUB_LIBRARY = 0x15,
+    /// two-level namespace lookup hints
+    LC_TWOLEVEL_HINTS = 0x16,
+    /// prebind checksum
+    LC_PREBIND_CKSUM = 0x17,
+    /// load a dynamically linked shared library that is allowed to be missing
+    /// (all symbols are weak imported).
+    LC_LOAD_WEAK_DYLIB = 0x18 | LC_REQ_DYLD,
+    /// 64-bit segment of this file to be mapped
+    LC_SEGMENT_64 = 0x19,
+    /// 64-bit image routines
+    LC_ROUTINES_64 = 0x1a,
+    /// the uuid
+    LC_UUID = 0x1b,
+    /// runpath additions
+    LC_RPATH = 0x1c | LC_REQ_DYLD,
+    /// local of code signature
+    LC_CODE_SIGNATURE = 0x1d,
+    /// local of info to split segments
+    LC_SEGMENT_SPLIT_INFO = 0x1e,
+    /// load and re-export dylib
+    LC_REEXPORT_DYLIB = 0x1f | LC_REQ_DYLD,
+    /// delay load of dylib until first use
+    LC_LAZY_LOAD_DYLIB = 0x20,
+    /// encrypted segment information
+    LC_ENCRYPTION_INFO = 0x21,
+    /// compressed dyld information
+    LC_DYLD_INFO = 0x22,
+    /// compressed dyld information only
+    LC_DYLD_INFO_ONLY = 0x22 | LC_REQ_DYLD,
+    /// load upward dylib
+    LC_LOAD_UPWARD_DYLIB = 0x23 | LC_REQ_DYLD,
+    /// build for MacOSX min OS version
+    LC_VERSION_MIN_MACOSX = 0x24,
+    /// build for iPhoneOS min OS version
+    LC_VERSION_MIN_IPHONEOS = 0x25,
+    /// compressed table of function start addresses
+    LC_FUNCTION_STARTS = 0x26,
+    /// string for dyld to treat like environment variable
+    LC_DYLD_ENVIRONMENT = 0x27,
+    /// replacement for LC_UNIXTHREAD
+    LC_MAIN = 0x28 | LC_REQ_DYLD,
+    /// table of non-instructions in __text
+    LC_DATA_IN_CODE = 0x29,
+    /// source version used to build binary
+    LC_SOURCE_VERSION = 0x2A,
+    /// Code signing DRs copied from linked dylibs
+    LC_DYLIB_CODE_SIGN_DRS = 0x2B,
+    /// 64-bit encrypted segment information
+    LC_ENCRYPTION_INFO_64 = 0x2C,
+    /// linker options in MH_OBJECT files
+    LC_LINKER_OPTION = 0x2D,
+    /// optimization hints in MH_OBJECT files
+    LC_LINKER_OPTIMIZATION_HINT = 0x2E,
+    /// build for AppleTV min OS version
+    LC_VERSION_MIN_TVOS = 0x2F,
+    /// build for Watch min OS version
+    LC_VERSION_MIN_WATCHOS = 0x30,
+    /// arbitrary data included within a Mach-O file
+    LC_NOTE = 0x31,
+    /// build for platform min OS version
+    LC_BUILD_VERSION = 0x32,
+    /// used with `LinkeditDataCommand`, payload is trie
+    LC_DYLD_EXPORTS_TRIE = 0x33 | LC_REQ_DYLD,
+    /// used with `LinkeditDataCommand`
+    LC_DYLD_CHAINED_FIXUPS = 0x34 | LC_REQ_DYLD,
+    /// used with `FilesetEntryCommand`
+    LC_FILESET_ENTRY = 0x35 | LC_REQ_DYLD,
+    /// used with linkedit_data_command
+    LC_ATOM_INFO = 0x36,
+    /// used with linkedit_data_command
+    LC_FUNCTION_VARIANTS = 0x37,
+    /// used with linkedit_data_command
+    LC_FUNCTION_VARIANT_FIXUPS = 0x38,
+    /// target triple used to compile
+    LC_TARGET_TRIPLE = 0x39,
+});
 
 /// A variable length string in a load command.
 ///
@@ -1396,7 +1402,7 @@ pub struct LcStr<E: Endian> {
 #[repr(C)]
 pub struct SegmentCommand32<E: Endian> {
     /// LC_SEGMENT
-    pub cmd: U32<E>,
+    pub cmd: U32<E, LoadCommandType>,
     /// includes sizeof section structs
     pub cmdsize: U32<E>,
     /// segment name
@@ -1429,7 +1435,7 @@ pub struct SegmentCommand32<E: Endian> {
 #[repr(C)]
 pub struct SegmentCommand64<E: Endian> {
     /// LC_SEGMENT_64
-    pub cmd: U32<E>,
+    pub cmd: U32<E, LoadCommandType>,
     /// includes sizeof section_64 structs
     pub cmdsize: U32<E>,
     /// segment name
@@ -1756,7 +1762,7 @@ pub struct Fvmlib<E: Endian> {
 #[repr(C)]
 pub struct FvmlibCommand<E: Endian> {
     /// LC_IDFVMLIB or LC_LOADFVMLIB
-    pub cmd: U32<E>,
+    pub cmd: U32<E, LoadCommandType>,
     /// includes pathname string
     pub cmdsize: U32<E>,
     /// the library identification
@@ -1796,7 +1802,7 @@ pub struct Dylib<E: Endian> {
 #[repr(C)]
 pub struct DylibCommand<E: Endian> {
     /// LC_ID_DYLIB, LC_LOAD_{,WEAK_}DYLIB, LC_REEXPORT_DYLIB
-    pub cmd: U32<E>,
+    pub cmd: U32<E, LoadCommandType>,
     /// includes pathname string
     pub cmdsize: U32<E>,
     /// the library identification
@@ -1812,7 +1818,7 @@ pub struct DylibCommand<E: Endian> {
 #[repr(C)]
 pub struct DylibUseCommand<E: Endian> {
     /// LC_LOAD_DYLIB or LC_LOAD_WEAK_DYLIB
-    pub cmd: U32<E>,
+    pub cmd: U32<E, LoadCommandType>,
     /// overall size, including path
     pub cmdsize: U32<E>,
     /// == 28, dylibs's path offset
@@ -1848,7 +1854,7 @@ pub const DYLIB_USE_MARKER: u32 = 0x1a741800;
 #[repr(C)]
 pub struct SubFrameworkCommand<E: Endian> {
     /// LC_SUB_FRAMEWORK
-    pub cmd: U32<E>,
+    pub cmd: U32<E, LoadCommandType>,
     /// includes umbrella string
     pub cmdsize: U32<E>,
     /// the umbrella framework name
@@ -1868,7 +1874,7 @@ pub struct SubFrameworkCommand<E: Endian> {
 #[repr(C)]
 pub struct SubClientCommand<E: Endian> {
     /// LC_SUB_CLIENT
-    pub cmd: U32<E>,
+    pub cmd: U32<E, LoadCommandType>,
     /// includes client string
     pub cmdsize: U32<E>,
     /// the client name
@@ -1892,7 +1898,7 @@ pub struct SubClientCommand<E: Endian> {
 #[repr(C)]
 pub struct SubUmbrellaCommand<E: Endian> {
     /// LC_SUB_UMBRELLA
-    pub cmd: U32<E>,
+    pub cmd: U32<E, LoadCommandType>,
     /// includes sub_umbrella string
     pub cmdsize: U32<E>,
     /// the sub_umbrella framework name
@@ -1918,7 +1924,7 @@ pub struct SubUmbrellaCommand<E: Endian> {
 #[repr(C)]
 pub struct SubLibraryCommand<E: Endian> {
     /// LC_SUB_LIBRARY
-    pub cmd: U32<E>,
+    pub cmd: U32<E, LoadCommandType>,
     /// includes sub_library string
     pub cmdsize: U32<E>,
     /// the sub_library name
@@ -1938,7 +1944,7 @@ pub struct SubLibraryCommand<E: Endian> {
 #[repr(C)]
 pub struct PreboundDylibCommand<E: Endian> {
     /// LC_PREBOUND_DYLIB
-    pub cmd: U32<E>,
+    pub cmd: U32<E, LoadCommandType>,
     /// includes strings
     pub cmdsize: U32<E>,
     /// library's path name
@@ -1961,7 +1967,7 @@ pub struct PreboundDylibCommand<E: Endian> {
 #[repr(C)]
 pub struct DylinkerCommand<E: Endian> {
     /// LC_ID_DYLINKER, LC_LOAD_DYLINKER or LC_DYLD_ENVIRONMENT
-    pub cmd: U32<E>,
+    pub cmd: U32<E, LoadCommandType>,
     /// includes pathname string
     pub cmdsize: U32<E>,
     /// dynamic linker's path name
@@ -1993,7 +1999,7 @@ pub struct DylinkerCommand<E: Endian> {
 #[repr(C)]
 pub struct ThreadCommand<E: Endian> {
     /// LC_THREAD or  LC_UNIXTHREAD
-    pub cmd: U32<E>,
+    pub cmd: U32<E, LoadCommandType>,
     /// total size of this command
     pub cmdsize: U32<E>,
     /* uint32_t flavor		   flavor of thread state */
@@ -2015,7 +2021,7 @@ pub struct ThreadCommand<E: Endian> {
 pub struct RoutinesCommand32<E: Endian> {
     /* for 32-bit architectures */
     /// LC_ROUTINES
-    pub cmd: U32<E>,
+    pub cmd: U32<E, LoadCommandType>,
     /// total size of this command
     pub cmdsize: U32<E>,
     /// address of initialization routine
@@ -2038,7 +2044,7 @@ pub struct RoutinesCommand32<E: Endian> {
 pub struct RoutinesCommand64<E: Endian> {
     /* for 64-bit architectures */
     /// LC_ROUTINES_64
-    pub cmd: U32<E>,
+    pub cmd: U32<E, LoadCommandType>,
     /// total size of this command
     pub cmdsize: U32<E>,
     /// address of initialization routine
@@ -2062,7 +2068,7 @@ pub struct RoutinesCommand64<E: Endian> {
 #[repr(C)]
 pub struct SymtabCommand<E: Endian> {
     /// LC_SYMTAB
-    pub cmd: U32<E>,
+    pub cmd: U32<E, LoadCommandType>,
     /// sizeof(struct SymtabCommand)
     pub cmdsize: U32<E>,
     /// symbol table offset
@@ -2119,7 +2125,7 @@ pub struct SymtabCommand<E: Endian> {
 #[repr(C)]
 pub struct DysymtabCommand<E: Endian> {
     /// LC_DYSYMTAB
-    pub cmd: U32<E>,
+    pub cmd: U32<E, LoadCommandType>,
     /// sizeof(struct DysymtabCommand)
     pub cmdsize: U32<E>,
 
@@ -2370,7 +2376,7 @@ pub struct DylibReference<E: Endian> {
 #[repr(C)]
 pub struct TwolevelHintsCommand<E: Endian> {
     /// LC_TWOLEVEL_HINTS
-    pub cmd: U32<E>,
+    pub cmd: U32<E, LoadCommandType>,
     /// sizeof(struct TwolevelHintsCommand)
     pub cmdsize: U32<E>,
     /// offset to the hint table
@@ -2420,7 +2426,7 @@ pub struct TwolevelHint<E: Endian> {
 #[repr(C)]
 pub struct PrebindCksumCommand<E: Endian> {
     /// LC_PREBIND_CKSUM
-    pub cmd: U32<E>,
+    pub cmd: U32<E, LoadCommandType>,
     /// sizeof(struct PrebindCksumCommand)
     pub cmdsize: U32<E>,
     /// the check sum or zero
@@ -2435,7 +2441,7 @@ pub struct PrebindCksumCommand<E: Endian> {
 #[repr(C)]
 pub struct UuidCommand<E: Endian> {
     /// LC_UUID
-    pub cmd: U32<E>,
+    pub cmd: U32<E, LoadCommandType>,
     /// sizeof(struct UuidCommand)
     pub cmdsize: U32<E>,
     /// the 128-bit uuid
@@ -2450,7 +2456,7 @@ pub struct UuidCommand<E: Endian> {
 #[repr(C)]
 pub struct RpathCommand<E: Endian> {
     /// LC_RPATH
-    pub cmd: U32<E>,
+    pub cmd: U32<E, LoadCommandType>,
     /// includes string
     pub cmdsize: U32<E>,
     /// path to add to run path
@@ -2465,7 +2471,7 @@ pub struct RpathCommand<E: Endian> {
 #[repr(C)]
 pub struct TargetTripleCommand<E: Endian> {
     /// LC_TARGET_TRIPLE
-    pub cmd: U32<E>,
+    pub cmd: U32<E, LoadCommandType>,
     /// including string
     pub cmdsize: U32<E>,
     /// target triple string
@@ -2482,7 +2488,7 @@ pub struct LinkeditDataCommand<E: Endian> {
     /// `LC_CODE_SIGNATURE`, `LC_SEGMENT_SPLIT_INFO`, `LC_FUNCTION_STARTS`,
     /// `LC_DATA_IN_CODE`, `LC_DYLIB_CODE_SIGN_DRS`, `LC_LINKER_OPTIMIZATION_HINT`,
     /// `LC_DYLD_EXPORTS_TRIE`, or `LC_DYLD_CHAINED_FIXUPS`.
-    pub cmd: U32<E>,
+    pub cmd: U32<E, LoadCommandType>,
     /// sizeof(struct LinkeditDataCommand)
     pub cmdsize: U32<E>,
     /// file offset of data in __LINKEDIT segment
@@ -2499,7 +2505,7 @@ pub struct LinkeditDataCommand<E: Endian> {
 #[repr(C)]
 pub struct EncryptionInfoCommand32<E: Endian> {
     /// LC_ENCRYPTION_INFO
-    pub cmd: U32<E>,
+    pub cmd: U32<E, LoadCommandType>,
     /// sizeof(struct EncryptionInfoCommand32)
     pub cmdsize: U32<E>,
     /// file offset of encrypted range
@@ -2518,7 +2524,7 @@ pub struct EncryptionInfoCommand32<E: Endian> {
 #[repr(C)]
 pub struct EncryptionInfoCommand64<E: Endian> {
     /// LC_ENCRYPTION_INFO_64
-    pub cmd: U32<E>,
+    pub cmd: U32<E, LoadCommandType>,
     /// sizeof(struct EncryptionInfoCommand64)
     pub cmdsize: U32<E>,
     /// file offset of encrypted range
@@ -2539,7 +2545,7 @@ pub struct EncryptionInfoCommand64<E: Endian> {
 #[repr(C)]
 pub struct VersionMinCommand<E: Endian> {
     /// LC_VERSION_MIN_MACOSX or LC_VERSION_MIN_IPHONEOS or LC_VERSION_MIN_WATCHOS or LC_VERSION_MIN_TVOS
-    pub cmd: U32<E>,
+    pub cmd: U32<E, LoadCommandType>,
     /// sizeof(struct VersionMinCommand)
     pub cmdsize: U32<E>,
     /// X.Y.Z is encoded in nibbles xxxx.yy.zz
@@ -2557,7 +2563,7 @@ pub struct VersionMinCommand<E: Endian> {
 #[repr(C)]
 pub struct BuildVersionCommand<E: Endian> {
     /// LC_BUILD_VERSION
-    pub cmd: U32<E>,
+    pub cmd: U32<E, LoadCommandType>,
     /// sizeof(struct BuildVersionCommand) plus ntools * sizeof(struct BuildToolVersion)
     pub cmdsize: U32<E>,
     /// platform
@@ -2639,7 +2645,7 @@ pub const TOOL_METAL_FRAMEWORK: u32 = 1032;
 #[repr(C)]
 pub struct DyldInfoCommand<E: Endian> {
     /// LC_DYLD_INFO or LC_DYLD_INFO_ONLY
-    pub cmd: U32<E>,
+    pub cmd: U32<E, LoadCommandType>,
     /// sizeof(struct DyldInfoCommand)
     pub cmdsize: U32<E>,
 
@@ -2825,7 +2831,7 @@ pub const EXPORT_SYMBOL_FLAGS_STATIC_RESOLVER: u8 = 0x20;
 #[repr(C)]
 pub struct LinkerOptionCommand<E: Endian> {
     /// LC_LINKER_OPTION only used in MH_OBJECT filetypes
-    pub cmd: U32<E>,
+    pub cmd: U32<E, LoadCommandType>,
     pub cmdsize: U32<E>,
     /// number of strings
     pub count: U32<E>,
@@ -2846,7 +2852,7 @@ pub struct LinkerOptionCommand<E: Endian> {
 #[repr(C)]
 pub struct SymsegCommand<E: Endian> {
     /// LC_SYMSEG
-    pub cmd: U32<E>,
+    pub cmd: U32<E, LoadCommandType>,
     /// sizeof(struct SymsegCommand)
     pub cmdsize: U32<E>,
     /// symbol segment offset
@@ -2865,7 +2871,7 @@ pub struct SymsegCommand<E: Endian> {
 #[repr(C)]
 pub struct IdentCommand<E: Endian> {
     /// LC_IDENT
-    pub cmd: U32<E>,
+    pub cmd: U32<E, LoadCommandType>,
     /// strings that follow this command
     pub cmdsize: U32<E>,
 }
@@ -2880,7 +2886,7 @@ pub struct IdentCommand<E: Endian> {
 #[repr(C)]
 pub struct FvmfileCommand<E: Endian> {
     /// LC_FVMFILE
-    pub cmd: U32<E>,
+    pub cmd: U32<E, LoadCommandType>,
     /// includes pathname string
     pub cmdsize: U32<E>,
     /// files pathname
@@ -2899,7 +2905,7 @@ pub struct FvmfileCommand<E: Endian> {
 #[repr(C)]
 pub struct EntryPointCommand<E: Endian> {
     /// LC_MAIN only used in MH_EXECUTE filetypes
-    pub cmd: U32<E>,
+    pub cmd: U32<E, LoadCommandType>,
     /// 24
     pub cmdsize: U32<E>,
     /// file (__TEXT) offset of main()
@@ -2916,7 +2922,7 @@ pub struct EntryPointCommand<E: Endian> {
 #[repr(C)]
 pub struct SourceVersionCommand<E: Endian> {
     /// LC_SOURCE_VERSION
-    pub cmd: U32<E>,
+    pub cmd: U32<E, LoadCommandType>,
     /// 16
     pub cmdsize: U32<E>,
     /// A.B.C.D.E packed as a24.b10.c10.d10.e10
@@ -2967,7 +2973,7 @@ pub struct TlvDescriptor<E: Endian>
 #[repr(C)]
 pub struct NoteCommand<E: Endian> {
     /// LC_NOTE
-    pub cmd: U32<E>,
+    pub cmd: U32<E, LoadCommandType>,
     /// sizeof(struct NoteCommand)
     pub cmdsize: U32<E>,
     /// owner name for this LC_NOTE
@@ -2988,7 +2994,7 @@ pub struct NoteCommand<E: Endian> {
 #[repr(C)]
 pub struct FilesetEntryCommand<E: Endian> {
     // LC_FILESET_ENTRY
-    pub cmd: U32<E>,
+    pub cmd: U32<E, LoadCommandType>,
     /// includes id string
     pub cmdsize: U32<E>,
     /// memory address of the dylib

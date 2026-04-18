@@ -72,7 +72,7 @@ impl<'data, E: Endian> Iterator for LoadCommandIterator<'data, E> {
 /// The data for a [`macho::LoadCommand`].
 #[derive(Debug, Clone, Copy)]
 pub struct LoadCommandData<'data, E: Endian> {
-    cmd: u32,
+    cmd: macho::LoadCommandType,
     // Includes the header.
     data: Bytes<'data>,
     marker: PhantomData<E>,
@@ -82,7 +82,7 @@ impl<'data, E: Endian> LoadCommandData<'data, E> {
     /// Return the `cmd` field of the [`macho::LoadCommand`].
     ///
     /// This is one of the `LC_` constants.
-    pub fn cmd(&self) -> u32 {
+    pub fn cmd(&self) -> macho::LoadCommandType {
         self.cmd
     }
 

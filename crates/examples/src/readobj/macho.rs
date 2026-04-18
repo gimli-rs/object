@@ -402,14 +402,14 @@ fn print_load_command<Mach: MachHeader>(
             | LoadCommandVariant::LinkeditData(..) => {}
             LoadCommandVariant::Thread(x, _thread_data) => {
                 p.group("ThreadCommand", |p| {
-                    p.field_enum("Cmd", x.cmd.get(endian), FLAGS_LC);
+                    p.field_consts("Cmd", x.cmd.get(endian), LoadCommandType::NAMES);
                     p.field_hex("CmdSize", x.cmdsize.get(endian));
                     // TODO: thread_data
                 });
             }
             LoadCommandVariant::Dysymtab(x) => {
                 p.group("DysymtabCommand", |p| {
-                    p.field_enum("Cmd", x.cmd.get(endian), FLAGS_LC);
+                    p.field_consts("Cmd", x.cmd.get(endian), LoadCommandType::NAMES);
                     p.field_hex("CmdSize", x.cmdsize.get(endian));
                     // TODO: dump the tables these are all pointing to
                     p.field("IndexOfLocalSymbols", x.ilocalsym.get(endian));
@@ -434,7 +434,7 @@ fn print_load_command<Mach: MachHeader>(
             }
             LoadCommandVariant::Dylib(x) | LoadCommandVariant::IdDylib(x) => {
                 p.group("DylibCommand", |p| {
-                    p.field_enum("Cmd", x.cmd.get(endian), FLAGS_LC);
+                    p.field_consts("Cmd", x.cmd.get(endian), LoadCommandType::NAMES);
                     p.field_hex("CmdSize", x.cmdsize.get(endian));
                     p.group("Dylib", |p| {
                         p.field_string(
@@ -463,7 +463,7 @@ fn print_load_command<Mach: MachHeader>(
             | LoadCommandVariant::IdDylinker(x)
             | LoadCommandVariant::DyldEnvironment(x) => {
                 p.group("DylinkerCommand", |p| {
-                    p.field_enum("Cmd", x.cmd.get(endian), FLAGS_LC);
+                    p.field_consts("Cmd", x.cmd.get(endian), LoadCommandType::NAMES);
                     p.field_hex("CmdSize", x.cmdsize.get(endian));
                     p.field_string(
                         "Name",
@@ -474,7 +474,7 @@ fn print_load_command<Mach: MachHeader>(
             }
             LoadCommandVariant::PreboundDylib(x) => {
                 p.group("PreboundDylibCommand", |p| {
-                    p.field_enum("Cmd", x.cmd.get(endian), FLAGS_LC);
+                    p.field_consts("Cmd", x.cmd.get(endian), LoadCommandType::NAMES);
                     p.field_hex("CmdSize", x.cmdsize.get(endian));
                     p.field_string(
                         "Name",
@@ -488,7 +488,7 @@ fn print_load_command<Mach: MachHeader>(
             }
             LoadCommandVariant::Routines32(x) => {
                 p.group("RoutinesCommand32", |p| {
-                    p.field_enum("Cmd", x.cmd.get(endian), FLAGS_LC);
+                    p.field_consts("Cmd", x.cmd.get(endian), LoadCommandType::NAMES);
                     p.field_hex("CmdSize", x.cmdsize.get(endian));
                     p.field_hex("InitAddress", x.init_address.get(endian));
                     p.field_hex("InitModule", x.init_module.get(endian));
@@ -502,7 +502,7 @@ fn print_load_command<Mach: MachHeader>(
             }
             LoadCommandVariant::Routines64(x) => {
                 p.group("RoutinesCommand64", |p| {
-                    p.field_enum("Cmd", x.cmd.get(endian), FLAGS_LC);
+                    p.field_consts("Cmd", x.cmd.get(endian), LoadCommandType::NAMES);
                     p.field_hex("CmdSize", x.cmdsize.get(endian));
                     p.field_hex("InitAddress", x.init_address.get(endian));
                     p.field_hex("InitModule", x.init_module.get(endian));
@@ -516,7 +516,7 @@ fn print_load_command<Mach: MachHeader>(
             }
             LoadCommandVariant::SubFramework(x) => {
                 p.group("SubFrameworkCommand", |p| {
-                    p.field_enum("Cmd", x.cmd.get(endian), FLAGS_LC);
+                    p.field_consts("Cmd", x.cmd.get(endian), LoadCommandType::NAMES);
                     p.field_hex("CmdSize", x.cmdsize.get(endian));
                     p.field_string(
                         "Umbrella",
@@ -527,7 +527,7 @@ fn print_load_command<Mach: MachHeader>(
             }
             LoadCommandVariant::SubUmbrella(x) => {
                 p.group("SubUmbrellaCommand", |p| {
-                    p.field_enum("Cmd", x.cmd.get(endian), FLAGS_LC);
+                    p.field_consts("Cmd", x.cmd.get(endian), LoadCommandType::NAMES);
                     p.field_hex("CmdSize", x.cmdsize.get(endian));
                     p.field_string(
                         "SubUmbrella",
@@ -538,7 +538,7 @@ fn print_load_command<Mach: MachHeader>(
             }
             LoadCommandVariant::SubClient(x) => {
                 p.group("SubClientCommand", |p| {
-                    p.field_enum("Cmd", x.cmd.get(endian), FLAGS_LC);
+                    p.field_consts("Cmd", x.cmd.get(endian), LoadCommandType::NAMES);
                     p.field_hex("CmdSize", x.cmdsize.get(endian));
                     p.field_string(
                         "Client",
@@ -549,7 +549,7 @@ fn print_load_command<Mach: MachHeader>(
             }
             LoadCommandVariant::SubLibrary(x) => {
                 p.group("SubLibraryCommand", |p| {
-                    p.field_enum("Cmd", x.cmd.get(endian), FLAGS_LC);
+                    p.field_consts("Cmd", x.cmd.get(endian), LoadCommandType::NAMES);
                     p.field_hex("CmdSize", x.cmdsize.get(endian));
                     p.field_string(
                         "SubLibrary",
@@ -560,7 +560,7 @@ fn print_load_command<Mach: MachHeader>(
             }
             LoadCommandVariant::TwolevelHints(x) => {
                 p.group("TwolevelHintsCommand", |p| {
-                    p.field_enum("Cmd", x.cmd.get(endian), FLAGS_LC);
+                    p.field_consts("Cmd", x.cmd.get(endian), LoadCommandType::NAMES);
                     p.field_hex("CmdSize", x.cmdsize.get(endian));
                     p.field_hex("Offset", x.offset.get(endian));
                     p.field_hex("NumberOfHints", x.nhints.get(endian));
@@ -569,21 +569,21 @@ fn print_load_command<Mach: MachHeader>(
             }
             LoadCommandVariant::PrebindCksum(x) => {
                 p.group("PrebindCksumCommand", |p| {
-                    p.field_enum("Cmd", x.cmd.get(endian), FLAGS_LC);
+                    p.field_consts("Cmd", x.cmd.get(endian), LoadCommandType::NAMES);
                     p.field_hex("CmdSize", x.cmdsize.get(endian));
                     p.field_hex("Cksum", x.cksum.get(endian));
                 });
             }
             LoadCommandVariant::Uuid(x) => {
                 p.group("UuidCommand", |p| {
-                    p.field_enum("Cmd", x.cmd.get(endian), FLAGS_LC);
+                    p.field_consts("Cmd", x.cmd.get(endian), LoadCommandType::NAMES);
                     p.field_hex("CmdSize", x.cmdsize.get(endian));
                     p.field("Uuid", format!("{:X?}", x.uuid));
                 });
             }
             LoadCommandVariant::Rpath(x) => {
                 p.group("RpathCommand", |p| {
-                    p.field_enum("Cmd", x.cmd.get(endian), FLAGS_LC);
+                    p.field_consts("Cmd", x.cmd.get(endian), LoadCommandType::NAMES);
                     p.field_hex("CmdSize", x.cmdsize.get(endian));
                     p.field_string(
                         "Path",
@@ -594,7 +594,7 @@ fn print_load_command<Mach: MachHeader>(
             }
             LoadCommandVariant::TargetTriple(x) => {
                 p.group("TargetTripleCommand", |p| {
-                    p.field_enum("Cmd", x.cmd.get(endian), FLAGS_LC);
+                    p.field_consts("Cmd", x.cmd.get(endian), LoadCommandType::NAMES);
                     p.field_hex("CmdSize", x.cmdsize.get(endian));
                     p.field_string(
                         "Triple",
@@ -605,7 +605,7 @@ fn print_load_command<Mach: MachHeader>(
             }
             LoadCommandVariant::EncryptionInfo32(x) => {
                 p.group("EncryptionInfoCommand32", |p| {
-                    p.field_enum("Cmd", x.cmd.get(endian), FLAGS_LC);
+                    p.field_consts("Cmd", x.cmd.get(endian), LoadCommandType::NAMES);
                     p.field_hex("CmdSize", x.cmdsize.get(endian));
                     p.field_hex("CryptOffset", x.cryptoff.get(endian));
                     p.field_hex("CryptSize", x.cryptsize.get(endian));
@@ -614,7 +614,7 @@ fn print_load_command<Mach: MachHeader>(
             }
             LoadCommandVariant::EncryptionInfo64(x) => {
                 p.group("EncryptionInfoCommand64", |p| {
-                    p.field_enum("Cmd", x.cmd.get(endian), FLAGS_LC);
+                    p.field_consts("Cmd", x.cmd.get(endian), LoadCommandType::NAMES);
                     p.field_hex("CmdSize", x.cmdsize.get(endian));
                     p.field_hex("CryptOffset", x.cryptoff.get(endian));
                     p.field_hex("CryptSize", x.cryptsize.get(endian));
@@ -624,7 +624,7 @@ fn print_load_command<Mach: MachHeader>(
             }
             LoadCommandVariant::DyldInfo(x) => {
                 p.group("DyldInfoCommand", |p| {
-                    p.field_enum("Cmd", x.cmd.get(endian), FLAGS_LC);
+                    p.field_consts("Cmd", x.cmd.get(endian), LoadCommandType::NAMES);
                     p.field_hex("CmdSize", x.cmdsize.get(endian));
                     // TODO: dump the tables these are all pointing to
                     p.field_hex("RebaseOffset", x.rebase_off.get(endian));
@@ -641,7 +641,7 @@ fn print_load_command<Mach: MachHeader>(
             }
             LoadCommandVariant::VersionMin(x) => {
                 p.group("VersionMinCommand", |p| {
-                    p.field_enum("Cmd", x.cmd.get(endian), FLAGS_LC);
+                    p.field_consts("Cmd", x.cmd.get(endian), LoadCommandType::NAMES);
                     p.field_hex("CmdSize", x.cmdsize.get(endian));
                     p.field_version("Version", x.version.get(endian));
                     p.field_version("Sdk", x.sdk.get(endian));
@@ -649,7 +649,7 @@ fn print_load_command<Mach: MachHeader>(
             }
             LoadCommandVariant::EntryPoint(x) => {
                 p.group("EntryPointCommand", |p| {
-                    p.field_enum("Cmd", x.cmd.get(endian), FLAGS_LC);
+                    p.field_consts("Cmd", x.cmd.get(endian), LoadCommandType::NAMES);
                     p.field_hex("CmdSize", x.cmdsize.get(endian));
                     p.field_hex("EntryOffset", x.entryoff.get(endian));
                     p.field_hex("StackSize", x.stacksize.get(endian));
@@ -657,14 +657,14 @@ fn print_load_command<Mach: MachHeader>(
             }
             LoadCommandVariant::SourceVersion(x) => {
                 p.group("SourceVersionCommand", |p| {
-                    p.field_enum("Cmd", x.cmd.get(endian), FLAGS_LC);
+                    p.field_consts("Cmd", x.cmd.get(endian), LoadCommandType::NAMES);
                     p.field_hex("CmdSize", x.cmdsize.get(endian));
                     p.field_hex("Version", x.version.get(endian));
                 });
             }
             LoadCommandVariant::LinkerOption(x) => {
                 p.group("LinkerOptionCommand", |p| {
-                    p.field_enum("Cmd", x.cmd.get(endian), FLAGS_LC);
+                    p.field_consts("Cmd", x.cmd.get(endian), LoadCommandType::NAMES);
                     p.field_hex("CmdSize", x.cmdsize.get(endian));
                     p.field_hex("Count", x.count.get(endian));
                     // TODO: dump strings
@@ -672,7 +672,7 @@ fn print_load_command<Mach: MachHeader>(
             }
             LoadCommandVariant::Note(x) => {
                 p.group("NoteCommand", |p| {
-                    p.field_enum("Cmd", x.cmd.get(endian), FLAGS_LC);
+                    p.field_consts("Cmd", x.cmd.get(endian), LoadCommandType::NAMES);
                     p.field_hex("CmdSize", x.cmdsize.get(endian));
                     // TODO: string?
                     p.field("DataOwner", format!("{:X?}", x.data_owner));
@@ -682,7 +682,7 @@ fn print_load_command<Mach: MachHeader>(
             }
             LoadCommandVariant::BuildVersion(x) => {
                 p.group("BuildVersionCommand", |p| {
-                    p.field_enum("Cmd", x.cmd.get(endian), FLAGS_LC);
+                    p.field_consts("Cmd", x.cmd.get(endian), LoadCommandType::NAMES);
                     p.field_hex("CmdSize", x.cmdsize.get(endian));
                     p.field_enum("Platform", x.platform.get(endian), FLAGS_PLATFORM);
                     p.field_version("MinOs", x.minos.get(endian));
@@ -693,7 +693,7 @@ fn print_load_command<Mach: MachHeader>(
             }
             LoadCommandVariant::FilesetEntry(x) => {
                 p.group("FilesetEntryCommand", |p| {
-                    p.field_enum("Cmd", x.cmd.get(endian), FLAGS_LC);
+                    p.field_consts("Cmd", x.cmd.get(endian), LoadCommandType::NAMES);
                     p.field_hex("CmdSize", x.cmdsize.get(endian));
                     p.field_hex("VmAddress", x.vmaddr.get(endian));
                     p.field_hex("FileOffset", x.fileoff.get(endian));
@@ -707,14 +707,14 @@ fn print_load_command<Mach: MachHeader>(
             }
             _ => {
                 p.group("LoadCommand", |p| {
-                    p.field_enum("Cmd", command.cmd(), FLAGS_LC);
+                    p.field_consts("Cmd", command.cmd(), LoadCommandType::NAMES);
                     p.field_hex("CmdSize", command.cmdsize());
                 });
             }
         }
     } else {
         p.group("LoadCommand", |p| {
-            p.field_enum("Cmd", command.cmd(), FLAGS_LC);
+            p.field_consts("Cmd", command.cmd(), LoadCommandType::NAMES);
             p.field_hex("CmdSize", command.cmdsize());
         });
     }
@@ -736,7 +736,7 @@ fn print_segment<S: Segment>(
         return;
     }
     p.group("SegmentCommand", |p| {
-        p.field_enum("Cmd", segment.cmd(endian), FLAGS_LC);
+        p.field_consts("Cmd", segment.cmd(endian), LoadCommandType::NAMES);
         p.field_hex("CmdSize", segment.cmdsize(endian));
         p.field_inline_string("SegmentName", segment.name());
         if p.options.macho_load_commands || p.options.segments {
@@ -873,7 +873,7 @@ fn print_symtab<Mach: MachHeader>(
         return;
     }
     p.group("SymtabCommand", |p| {
-        p.field_enum("Cmd", symtab.cmd.get(endian), FLAGS_LC);
+        p.field_consts("Cmd", symtab.cmd.get(endian), LoadCommandType::NAMES);
         p.field_hex("CmdSize", symtab.cmdsize.get(endian));
         p.field_hex("SymbolOffset", symtab.symoff.get(endian));
         p.field_hex("NumberOfSymbols", symtab.nsyms.get(endian));
@@ -937,13 +937,13 @@ fn print_linkedit_data<Mach: MachHeader>(
     state: &MachState<Mach::Endian>,
 ) {
     let cmd = linkedit.cmd.get(endian);
-    let function_starts = p.options.macho_function_starts && cmd == macho::LC_FUNCTION_STARTS;
-    let exports_trie = p.options.macho_exports_trie && cmd == macho::LC_DYLD_EXPORTS_TRIE;
+    let function_starts = p.options.macho_function_starts && cmd == LC_FUNCTION_STARTS;
+    let exports_trie = p.options.macho_exports_trie && cmd == LC_DYLD_EXPORTS_TRIE;
     if !p.options.macho_load_commands && !function_starts && !exports_trie {
         return;
     }
     p.group("LinkeditDataCommand", |p| {
-        p.field_enum("Cmd", cmd, FLAGS_LC);
+        p.field_consts("Cmd", cmd, LoadCommandType::NAMES);
         p.field_hex("CmdSize", linkedit.cmdsize.get(endian));
         p.field_hex("DataOffset", linkedit.dataoff.get(endian));
         p.field_hex("DataSize", linkedit.datasize.get(endian));
@@ -1029,66 +1029,6 @@ const FLAGS_DYLD_CACHE_MAPPING: &[Flag<u64>] = &flags!(
     DYLD_CACHE_MAPPING_CONST_DATA,
     DYLD_CACHE_MAPPING_TEXT_STUBS,
     DYLD_CACHE_DYNAMIC_CONFIG_DATA,
-);
-const FLAGS_LC: &[Flag<u32>] = &flags!(
-    LC_SEGMENT,
-    LC_SYMTAB,
-    LC_SYMSEG,
-    LC_THREAD,
-    LC_UNIXTHREAD,
-    LC_LOADFVMLIB,
-    LC_IDFVMLIB,
-    LC_IDENT,
-    LC_FVMFILE,
-    LC_PREPAGE,
-    LC_DYSYMTAB,
-    LC_LOAD_DYLIB,
-    LC_ID_DYLIB,
-    LC_LOAD_DYLINKER,
-    LC_ID_DYLINKER,
-    LC_PREBOUND_DYLIB,
-    LC_ROUTINES,
-    LC_SUB_FRAMEWORK,
-    LC_SUB_UMBRELLA,
-    LC_SUB_CLIENT,
-    LC_SUB_LIBRARY,
-    LC_TWOLEVEL_HINTS,
-    LC_PREBIND_CKSUM,
-    LC_LOAD_WEAK_DYLIB,
-    LC_SEGMENT_64,
-    LC_ROUTINES_64,
-    LC_UUID,
-    LC_RPATH,
-    LC_CODE_SIGNATURE,
-    LC_SEGMENT_SPLIT_INFO,
-    LC_REEXPORT_DYLIB,
-    LC_LAZY_LOAD_DYLIB,
-    LC_ENCRYPTION_INFO,
-    LC_DYLD_INFO,
-    LC_DYLD_INFO_ONLY,
-    LC_LOAD_UPWARD_DYLIB,
-    LC_VERSION_MIN_MACOSX,
-    LC_VERSION_MIN_IPHONEOS,
-    LC_FUNCTION_STARTS,
-    LC_DYLD_ENVIRONMENT,
-    LC_MAIN,
-    LC_DATA_IN_CODE,
-    LC_SOURCE_VERSION,
-    LC_DYLIB_CODE_SIGN_DRS,
-    LC_ENCRYPTION_INFO_64,
-    LC_LINKER_OPTION,
-    LC_LINKER_OPTIMIZATION_HINT,
-    LC_VERSION_MIN_TVOS,
-    LC_VERSION_MIN_WATCHOS,
-    LC_NOTE,
-    LC_BUILD_VERSION,
-    LC_DYLD_EXPORTS_TRIE,
-    LC_DYLD_CHAINED_FIXUPS,
-    LC_FILESET_ENTRY,
-    LC_ATOM_INFO,
-    LC_FUNCTION_VARIANTS,
-    LC_FUNCTION_VARIANT_FIXUPS,
-    LC_TARGET_TRIPLE,
 );
 const FLAGS_SG: &[Flag<u32>] = &flags!(
     SG_HIGHVM,
