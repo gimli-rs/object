@@ -301,7 +301,7 @@ pub enum PtrauthKey {
     DB = 3,
 }
 
-// Definitions from https://opensource.apple.com/source/dyld/dyld-210.2.3/launch-cache/dyld_cache_format.h.auto.html
+// Definitions from https://github.com/apple-oss-distributions/dyld/blob/dyld-1340/include/mach-o/dyld_cache_format.h
 
 /// The dyld cache header.
 /// Corresponds to struct dyld_cache_header from dyld_cache_format.h.
@@ -370,7 +370,18 @@ pub struct DyldCacheHeader<E: Endian> {
     pub prog_closures_trie_size: U64<E>,
     /// platform number (macOS=1, etc)
     pub platform: U32<E>,
-    // bitfield of values
+    /// bitfield of values:
+    /// - 8: `formatVersion`, dyld3::closure::kFormatVersion
+    /// - 1: `dylibsExpectedOnDisk`, dyld should expect the dylib exists on
+    ///      disk and to compare inode/mtime to see if cache is valid
+    /// - 1: `simulator`, for simulator of specified platform
+    /// - 1: `locallyBuiltCache`, 0 for B&I built cache, 1 for locally built
+    ///      cache
+    /// - 1: `builtFromChainedFixups`, some dylib in cache was built using
+    ///      chained fixups, so patch tables must be used for overrides
+    /// - 1: `newFormatTLVs`, TLVs have been set by cache builder as new
+    ///      format (not needing runtime side table)
+    /// - 19: `padding`, TBD
     pub flags: U32<E>,
     /// base load address of cache if not slid
     pub shared_region_start: U64<E>,
@@ -408,13 +419,13 @@ pub struct DyldCacheHeader<E: Endian> {
     pub programs_pbl_set_pool_size: U64<E>,
     /// (unslid) address of trie mapping program path to PrebuiltLoaderSet
     pub program_trie_addr: U64<E>,
+    pub program_trie_size: U32<E>,
     /// OS Version of dylibs in this cache for the main platform
     pub os_version: U32<E>,
     /// e.g. iOSMac on macOS
     pub alt_platform: U32<E>,
     /// e.g. 14.0 for iOSMac
     pub alt_os_version: U32<E>,
-    reserved1: [u8; 4],
     /// VM offset from cache_header* to Swift optimizations header
     pub swift_opts_offset: U64<E>,
     /// size of Swift optimizations header
@@ -439,6 +450,7 @@ pub struct DyldCacheHeader<E: Endian> {
     pub images_count: U32<E>,
     /// 0 for development, 1 for production, when cacheType is multi-cache(2)
     pub cache_sub_type: U32<E>,
+    padding1: [u8; 4],
     /// VM offset from cache_header* to ObjC optimizations header
     pub objc_opts_offset: U64<E>,
     /// size of ObjC optimizations header
@@ -451,6 +463,18 @@ pub struct DyldCacheHeader<E: Endian> {
     pub dynamic_data_offset: U64<E>,
     /// maximum size of space reserved from dynamic data
     pub dynamic_data_max_size: U64<E>,
+    /// file offset to first dyld_cache_tpro_mapping_info
+    pub tpro_mappings_offset: U32<E>,
+    /// number of dyld_cache_tpro_mapping_info entries
+    pub tpro_mappings_count: U32<E>,
+    /// (unslid) address of dyld_cache_function_variant_info
+    pub function_variant_info_addr: U64<E>,
+    /// Size of all of the variant information pointed to via the dyld_cache_function_variant_info
+    pub function_variant_info_size: U64<E>,
+    /// file offset to dyld_prewarming_header
+    pub prewarming_data_offset: U64<E>,
+    /// byte size of prewarming data
+    pub prewarming_data_size: U64<E>,
 }
 
 /// Corresponds to struct dyld_cache_mapping_info from dyld_cache_format.h.
@@ -470,6 +494,8 @@ pub const DYLD_CACHE_MAPPING_DIRTY_DATA: u64 = 1 << 1;
 pub const DYLD_CACHE_MAPPING_CONST_DATA: u64 = 1 << 2;
 pub const DYLD_CACHE_MAPPING_TEXT_STUBS: u64 = 1 << 3;
 pub const DYLD_CACHE_DYNAMIC_CONFIG_DATA: u64 = 1 << 4;
+pub const DYLD_CACHE_READ_ONLY_DATA: u64 = 1 << 5;
+pub const DYLD_CACHE_MAPPING_CONST_TPRO_DATA: u64 = 1 << 6;
 
 /// Corresponds to struct dyld_cache_mapping_and_slide_info from dyld_cache_format.h.
 #[derive(Debug, Clone, Copy)]
@@ -485,6 +511,14 @@ pub struct DyldCacheMappingAndSlideInfo<E: Endian> {
     pub init_prot: U32<E>,
 }
 
+/// Corresponds to struct dyld_cache_tpro_mapping_info from dyld_cache_format.h.
+#[derive(Debug, Clone, Copy)]
+#[repr(C)]
+pub struct DyldCacheTproMappingInfo<E: Endian> {
+    pub unslid_address: U64<E>,
+    pub size: U64<E>,
+}
+
 /// Corresponds to struct dyld_cache_image_info from dyld_cache_format.h.
 #[derive(Debug, Clone, Copy)]
 #[repr(C)]
@@ -495,6 +529,15 @@ pub struct DyldCacheImageInfo<E: Endian> {
     pub path_file_offset: U32<E>,
     pub pad: U32<E>,
 }
+
+// Missing:
+// dyld_cache_image_info_extra
+// dyld_cache_accelerator_info
+// dyld_cache_accelerator_initializer
+// dyld_cache_range_entry
+// dyld_cache_accelerator_dof
+// dyld_cache_image_text_info
+// dyld_cache_slide_info
 
 /// Corresponds to struct dyld_cache_slide_info2 from dyld_cache_format.h.
 #[derive(Debug, Clone, Copy)]
@@ -592,6 +635,8 @@ impl DyldCacheSlidePointer3 {
     }
 }
 
+// Missing: dyld_cache_slide_info4
+
 /// Corresponds to struct dyld_cache_slide_info5 from dyld_cache_format.h.
 #[derive(Debug, Clone, Copy)]
 #[repr(C)]
@@ -657,6 +702,11 @@ impl DyldCacheSlidePointer5 {
     }
 }
 
+// Missing:
+// dyld_cache_local_symbols_info
+// dyld_cache_local_symbols_entry
+// dyld_cache_local_symbols_entry_64
+
 /// Added in dyld-940, which shipped with macOS 12 / iOS 15.
 /// Originally called `dyld_subcache_entry`, renamed to `dyld_subcache_entry_v1`
 /// in dyld-1042.1.
@@ -681,6 +731,12 @@ pub struct DyldSubCacheEntryV2<E: Endian> {
     /// The file name suffix of the subCache file, e.g. ".25.data" or ".03.development".
     pub file_suffix: [u8; 32],
 }
+
+// Missing:
+// dyld_cache_function_variant_entry
+// dyld_cache_function_variant_info
+// dyld_prewarming_entry
+// dyld_prewarming_header
 
 // Definitions from "/usr/include/mach-o/loader.h".
 
@@ -3544,6 +3600,7 @@ unsafe_impl_endian_pod!(
     DyldCacheHeader,
     DyldCacheMappingInfo,
     DyldCacheMappingAndSlideInfo,
+    DyldCacheTproMappingInfo,
     DyldCacheImageInfo,
     DyldCacheSlideInfo2,
     DyldCacheSlideInfo3,
