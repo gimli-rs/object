@@ -972,7 +972,7 @@ struct SegmentCommand {
     flags: u32,
 }
 
-pub struct SectionHeader {
+struct SectionHeader {
     sectname: [u8; 16],
     segname: [u8; 16],
     addr: u64,

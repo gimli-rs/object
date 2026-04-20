@@ -20,7 +20,7 @@ impl<'a> StringTable<'a> {
     ///
     /// Panics if the string table has already been written, or
     /// if the string contains a null byte.
-    pub fn add(&mut self, string: &'a [u8]) -> StringId {
+    pub(crate) fn add(&mut self, string: &'a [u8]) -> StringId {
         assert!(self.offsets.is_empty());
         assert!(!string.contains(&0));
         let id = self.strings.insert_full(string).0;
@@ -31,7 +31,7 @@ impl<'a> StringTable<'a> {
     ///
     /// Panics if the string is not in the string table.
     #[allow(dead_code)]
-    pub fn get_id(&self, string: &[u8]) -> StringId {
+    pub(crate) fn get_id(&self, string: &[u8]) -> StringId {
         let id = self.strings.get_index_of(string).unwrap();
         StringId(id)
     }
@@ -40,7 +40,7 @@ impl<'a> StringTable<'a> {
     ///
     /// Panics if the string is not in the string table.
     #[allow(dead_code)]
-    pub fn get_string(&self, id: StringId) -> &'a [u8] {
+    pub(crate) fn get_string(&self, id: StringId) -> &'a [u8] {
         self.strings.get_index(id.0).unwrap()
     }
 
@@ -48,7 +48,7 @@ impl<'a> StringTable<'a> {
     ///
     /// Panics if the string table has not been written, or
     /// if the string is not in the string table.
-    pub fn get_offset(&self, id: StringId) -> usize {
+    pub(crate) fn get_offset(&self, id: StringId) -> usize {
         self.offsets[id.0]
     }
 
@@ -60,7 +60,7 @@ impl<'a> StringTable<'a> {
     /// null byte (which must have been written by the caller).
     ///
     /// Panics if the string table has already been written.
-    pub fn write(&mut self, base: usize, w: &mut Vec<u8>) {
+    pub(crate) fn write(&mut self, base: usize, w: &mut Vec<u8>) {
         assert!(self.offsets.is_empty());
 
         let mut ids: Vec<_> = (0..self.strings.len()).collect();
@@ -89,7 +89,7 @@ impl<'a> StringTable<'a> {
     /// this should be 1 for ELF, to account for the initial
     /// null byte.
     #[allow(dead_code)]
-    pub fn size(&self, base: usize) -> usize {
+    pub(crate) fn size(&self, base: usize) -> usize {
         // TODO: cache this result?
         let mut ids: Vec<_> = (0..self.strings.len()).collect();
         sort(&mut ids, 1, &self.strings);
