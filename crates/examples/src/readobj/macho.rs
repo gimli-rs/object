@@ -446,24 +446,21 @@ fn print_load_command<Mach: MachHeader>(
                             x.dylib.name.offset.get(endian),
                             command.string(endian, x.dylib.name),
                         );
-                        p.field("Timestamp", x.dylib.timestamp.get(endian));
+                        let flags = command.dylib_use_flags(endian, x).print_err(p).flatten();
+                        if flags.is_some() {
+                            p.field_hex("Marker", x.dylib.timestamp.get(endian));
+                        } else {
+                            p.field("Timestamp", x.dylib.timestamp.get(endian));
+                        }
                         p.field_version("CurrentVersion", x.dylib.current_version.get(endian));
                         p.field_version(
                             "CompatibilityVersion",
                             x.dylib.compatibility_version.get(endian),
                         );
+                        if let Some(flags) = flags {
+                            p.field_hex("Flags", flags);
+                        }
                     });
-                });
-            }
-            LoadCommandVariant::DylibUse(x) => {
-                p.group("DylibUseCommand", |p| {
-                    p.field_enum("Cmd", x.cmd.get(endian), FLAGS_LC);
-                    p.field_hex("CmdSize", x.cmdsize.get(endian));
-                    p.field_hex("Nameoff", x.nameoff.get(endian));
-                    p.field_hex("Marker", x.marker.get(endian));
-                    p.field_version("CurrentVersion", x.current_version.get(endian));
-                    p.field_version("CompatVersion", x.compat_version.get(endian));
-                    p.field_version("Flags", x.flags.get(endian));
                 });
             }
             LoadCommandVariant::LoadDylinker(x)

@@ -129,9 +129,6 @@ impl<'data, E: Endian> LoadCommandData<'data, E> {
                 LoadCommandVariant::Thread(thread, data.0)
             }
             macho::LC_DYSYMTAB => LoadCommandVariant::Dysymtab(self.data()?),
-            // TODO: Parse as LoadCommandVariant::DylibUse when
-            // data.marker == DYLIB_USE_MARKER
-            // && data.nameoff == size_of::<DylibUseCommand>()
             macho::LC_LOAD_DYLIB
             | macho::LC_LOAD_WEAK_DYLIB
             | macho::LC_REEXPORT_DYLIB
@@ -217,6 +214,8 @@ impl<'data, E: Endian> LoadCommandData<'data, E> {
     }
 
     /// Try to parse this command as a [`macho::DylibCommand`].
+    ///
+    /// See also [`Self::dylib_use_flags`] to read the optional flags field.
     pub fn dylib(self) -> Result<Option<&'data macho::DylibCommand<E>>> {
         if self.cmd == macho::LC_LOAD_DYLIB
             || self.cmd == macho::LC_LOAD_WEAK_DYLIB
@@ -228,6 +227,29 @@ impl<'data, E: Endian> LoadCommandData<'data, E> {
         } else {
             Ok(None)
         }
+    }
+
+    /// Parse the optional flags field for a dylib load command.
+    ///
+    /// [`macho::DylibCommand`] traditionally uses the load command type to distinguish
+    /// between dylib kinds. [`macho::DylibUseCommand`] replaces this by encoding the
+    /// kinds in a bitfield appended after the standard `DylibCommand` fields. Its
+    /// presence is signalled using sentinel values in some `DylibCommand` fields.
+    ///
+    /// Returns `None` if the sentinels are absent. If `Some` is returned, the value of
+    /// [`macho::Dylib::timestamp`] should be ignored.
+    pub fn dylib_use_flags(self, endian: E, dylib: &macho::DylibCommand<E>) -> Result<Option<u32>> {
+        if dylib.dylib.name.offset.get(endian) != 28 // size of DylibUseCommand
+            || dylib.dylib.timestamp.get(endian) != macho::DYLIB_USE_MARKER
+        {
+            return Ok(None);
+        }
+        Ok(Some(
+            self.data
+                .read_at::<U32<_>>(24) // offset of DylibUseCommand::flags
+                .read_error("Invalid dylib load command size")?
+                .get(endian),
+        ))
     }
 
     /// Try to parse this command as a [`macho::UuidCommand`].
@@ -314,11 +336,11 @@ pub enum LoadCommandVariant<'data, E: Endian> {
     Dysymtab(&'data macho::DysymtabCommand<E>),
     /// `LC_LOAD_DYLIB`, `LC_LOAD_WEAK_DYLIB`, `LC_REEXPORT_DYLIB`,
     /// `LC_LAZY_LOAD_DYLIB`, or `LC_LOAD_UPWARD_DYLIB`
+    ///
+    /// See also [`LoadCommandData::dylib_use_flags`] to read the optional flags field.
     Dylib(&'data macho::DylibCommand<E>),
     /// `LC_ID_DYLIB`
     IdDylib(&'data macho::DylibCommand<E>),
-    /// `LC_LOAD_DYLIB` or `LC_LOAD_WEAK_DYLIB`
-    DylibUse(&'data macho::DylibUseCommand<E>),
     /// `LC_LOAD_DYLINKER`
     LoadDylinker(&'data macho::DylinkerCommand<E>),
     /// `LC_ID_DYLINKER`
