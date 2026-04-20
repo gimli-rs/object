@@ -317,8 +317,6 @@ pub enum LoadCommandVariant<'data, E: Endian> {
     Dylib(&'data macho::DylibCommand<E>),
     /// `LC_ID_DYLIB`
     IdDylib(&'data macho::DylibCommand<E>),
-    /// `LC_LOAD_DYLIB` or `LC_LOAD_WEAK_DYLIB`
-    DylibUse(&'data macho::DylibUseCommand<E>),
     /// `LC_LOAD_DYLINKER`
     LoadDylinker(&'data macho::DylinkerCommand<E>),
     /// `LC_ID_DYLINKER`

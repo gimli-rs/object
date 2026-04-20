@@ -455,17 +455,6 @@ fn print_load_command<Mach: MachHeader>(
                     });
                 });
             }
-            LoadCommandVariant::DylibUse(x) => {
-                p.group("DylibUseCommand", |p| {
-                    p.field_enum("Cmd", x.cmd.get(endian), FLAGS_LC);
-                    p.field_hex("CmdSize", x.cmdsize.get(endian));
-                    p.field_hex("Nameoff", x.nameoff.get(endian));
-                    p.field_hex("Marker", x.marker.get(endian));
-                    p.field_version("CurrentVersion", x.current_version.get(endian));
-                    p.field_version("CompatVersion", x.compat_version.get(endian));
-                    p.field_version("Flags", x.flags.get(endian));
-                });
-            }
             LoadCommandVariant::LoadDylinker(x)
             | LoadCommandVariant::IdDylinker(x)
             | LoadCommandVariant::DyldEnvironment(x) => {
