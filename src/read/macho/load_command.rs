@@ -129,6 +129,9 @@ impl<'data, E: Endian> LoadCommandData<'data, E> {
                 LoadCommandVariant::Thread(thread, data.0)
             }
             macho::LC_DYSYMTAB => LoadCommandVariant::Dysymtab(self.data()?),
+            // TODO: Parse as LoadCommandVariant::DylibUse when
+            // data.marker == DYLIB_USE_MARKER
+            // && data.nameoff == size_of::<DylibUseCommand>()
             macho::LC_LOAD_DYLIB
             | macho::LC_LOAD_WEAK_DYLIB
             | macho::LC_REEXPORT_DYLIB
@@ -153,6 +156,7 @@ impl<'data, E: Endian> LoadCommandData<'data, E> {
             macho::LC_ROUTINES_64 => LoadCommandVariant::Routines64(self.data()?),
             macho::LC_UUID => LoadCommandVariant::Uuid(self.data()?),
             macho::LC_RPATH => LoadCommandVariant::Rpath(self.data()?),
+            macho::LC_TARGET_TRIPLE => LoadCommandVariant::TargetTriple(self.data()?),
             macho::LC_CODE_SIGNATURE
             | macho::LC_SEGMENT_SPLIT_INFO
             | macho::LC_FUNCTION_STARTS
@@ -313,6 +317,8 @@ pub enum LoadCommandVariant<'data, E: Endian> {
     Dylib(&'data macho::DylibCommand<E>),
     /// `LC_ID_DYLIB`
     IdDylib(&'data macho::DylibCommand<E>),
+    /// `LC_LOAD_DYLIB` or `LC_LOAD_WEAK_DYLIB`
+    DylibUse(&'data macho::DylibUseCommand<E>),
     /// `LC_LOAD_DYLINKER`
     LoadDylinker(&'data macho::DylinkerCommand<E>),
     /// `LC_ID_DYLINKER`
@@ -341,6 +347,8 @@ pub enum LoadCommandVariant<'data, E: Endian> {
     Uuid(&'data macho::UuidCommand<E>),
     /// `LC_RPATH`
     Rpath(&'data macho::RpathCommand<E>),
+    /// `LC_TARGET_TRIPLE`
+    TargetTriple(&'data macho::TargetTripleCommand<E>),
     /// `LC_CODE_SIGNATURE`, `LC_SEGMENT_SPLIT_INFO`, `LC_FUNCTION_STARTS`,
     /// `LC_DATA_IN_CODE`, `LC_DYLIB_CODE_SIGN_DRS`, `LC_LINKER_OPTIMIZATION_HINT`,
     /// `LC_DYLD_EXPORTS_TRIE`, or `LC_DYLD_CHAINED_FIXUPS`.
