@@ -217,6 +217,8 @@ impl<'data, E: Endian> LoadCommandData<'data, E> {
     }
 
     /// Try to parse this command as a [`macho::DylibCommand`].
+    ///
+    /// See also [`Self::dylib_use_flags`] for read the optional flags field.
     pub fn dylib(self) -> Result<Option<&'data macho::DylibCommand<E>>> {
         if self.cmd == macho::LC_LOAD_DYLIB
             || self.cmd == macho::LC_LOAD_WEAK_DYLIB
@@ -228,6 +230,28 @@ impl<'data, E: Endian> LoadCommandData<'data, E> {
         } else {
             Ok(None)
         }
+    }
+
+    /// Parse the flags field from a [`macho::DylibUseCommand`].
+    ///
+    /// The prefix of [`macho::DylibUseCommand`] has the same layout as
+    /// [`macho::DylibCommand`] (but with the timestamp field being used as a marker).
+    /// This function determines if the given command is actually a `DylibUseCommand`, and
+    /// if it is then it reads the flags field. Note that if the flags are present then
+    /// you should also ignore the value of [`macho::Dylib::timestamp`].
+    pub fn dylib_use_flags(self, endian: E, dylib: &macho::DylibCommand<E>) -> Result<Option<u32>> {
+        let has_use_flags = (self.cmd == macho::LC_LOAD_DYLIB || self.cmd == macho::LC_LOAD_WEAK_DYLIB)
+            && dylib.dylib.name.offset.get(endian) == 28 // size of DylibUseCommand
+            && dylib.dylib.timestamp.get(endian) == macho::DYLIB_USE_MARKER;
+        if !has_use_flags {
+            return Ok(None);
+        }
+        Ok(Some(
+            self.data
+                .read_at::<U32<_>>(24) // offset of DylibUseCommand::flags
+                .read_error("Invalid dylib load command size")?
+                .get(endian),
+        ))
     }
 
     /// Try to parse this command as a [`macho::UuidCommand`].
@@ -314,6 +338,9 @@ pub enum LoadCommandVariant<'data, E: Endian> {
     Dysymtab(&'data macho::DysymtabCommand<E>),
     /// `LC_LOAD_DYLIB`, `LC_LOAD_WEAK_DYLIB`, `LC_REEXPORT_DYLIB`,
     /// `LC_LAZY_LOAD_DYLIB`, or `LC_LOAD_UPWARD_DYLIB`
+    ///
+    /// This may really be a [`macho::DylibUseCommand`]. Check with
+    /// [`LoadCommandData::dylib_use_flags`].
     Dylib(&'data macho::DylibCommand<E>),
     /// `LC_ID_DYLIB`
     IdDylib(&'data macho::DylibCommand<E>),
