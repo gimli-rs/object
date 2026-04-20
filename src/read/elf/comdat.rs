@@ -9,10 +9,10 @@ use super::{ElfFile, FileHeader, SectionHeader, Sym};
 
 /// An iterator for the COMDAT section groups in an [`ElfFile32`](super::ElfFile32).
 pub type ElfComdatIterator32<'data, 'file, Endian = Endianness, R = &'data [u8]> =
-    ElfComdatIterator<'data, 'file, elf::FileHeader32<Endian>, R>;
+    ElfComdatIterator<'data, 'file, elf::Ehdr32<Endian>, R>;
 /// An iterator for the COMDAT section groups in an [`ElfFile64`](super::ElfFile64).
 pub type ElfComdatIterator64<'data, 'file, Endian = Endianness, R = &'data [u8]> =
-    ElfComdatIterator<'data, 'file, elf::FileHeader64<Endian>, R>;
+    ElfComdatIterator<'data, 'file, elf::Ehdr64<Endian>, R>;
 
 /// An iterator for the COMDAT section groups in an [`ElfFile`].
 #[derive(Debug)]
@@ -58,10 +58,10 @@ where
 
 /// A COMDAT section group in an [`ElfFile32`](super::ElfFile32).
 pub type ElfComdat32<'data, 'file, Endian = Endianness, R = &'data [u8]> =
-    ElfComdat<'data, 'file, elf::FileHeader32<Endian>, R>;
+    ElfComdat<'data, 'file, elf::Ehdr32<Endian>, R>;
 /// A COMDAT section group in an [`ElfFile64`](super::ElfFile64).
 pub type ElfComdat64<'data, 'file, Endian = Endianness, R = &'data [u8]> =
-    ElfComdat<'data, 'file, elf::FileHeader64<Endian>, R>;
+    ElfComdat<'data, 'file, elf::Ehdr64<Endian>, R>;
 
 /// A COMDAT section group in an [`ElfFile`].
 ///
@@ -156,10 +156,10 @@ where
 
 /// An iterator for the sections in a COMDAT section group in an [`ElfFile32`](super::ElfFile32).
 pub type ElfComdatSectionIterator32<'data, 'file, Endian = Endianness, R = &'data [u8]> =
-    ElfComdatSectionIterator<'data, 'file, elf::FileHeader32<Endian>, R>;
+    ElfComdatSectionIterator<'data, 'file, elf::Ehdr32<Endian>, R>;
 /// An iterator for the sections in a COMDAT section group in an [`ElfFile64`](super::ElfFile64).
 pub type ElfComdatSectionIterator64<'data, 'file, Endian = Endianness, R = &'data [u8]> =
-    ElfComdatSectionIterator<'data, 'file, elf::FileHeader64<Endian>, R>;
+    ElfComdatSectionIterator<'data, 'file, elf::Ehdr64<Endian>, R>;
 
 /// An iterator for the sections in a COMDAT section group in an [`ElfFile`].
 #[derive(Debug)]

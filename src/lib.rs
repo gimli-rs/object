@@ -63,6 +63,10 @@ extern crate std;
 mod common;
 pub use common::*;
 
+mod constants;
+#[cfg(feature = "names")]
+pub use constants::*;
+
 #[macro_use]
 pub mod endian;
 pub use endian::*;

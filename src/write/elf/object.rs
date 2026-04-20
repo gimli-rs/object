@@ -39,7 +39,7 @@ impl<'a> Object<'a> {
         let align = if self.elf_is_64() { 8 } else { 4 };
         let mut data = Vec::with_capacity(32);
         let n_name = b"GNU\0";
-        data.extend_from_slice(pod::bytes_of(&elf::NoteHeader32 {
+        data.extend_from_slice(pod::bytes_of(&elf::Nhdr32 {
             n_namesz: U32::new(self.endian, n_name.len() as u32),
             n_descsz: U32::new(self.endian, util::align(3 * 4, align) as u32),
             n_type: U32::new(self.endian, elf::NT_GNU_PROPERTY_TYPE_0),
@@ -105,22 +105,24 @@ impl<'a> Object<'a> {
                 &b".note.gnu.property"[..],
                 SectionKind::Note,
                 SectionFlags::Elf {
-                    sh_flags: u64::from(elf::SHF_ALLOC),
+                    sh_type: elf::SHT_NOTE,
+                    sh_flags: elf::SHF_ALLOC,
                 },
             ),
             StandardSection::EhFrame => (
                 &[],
                 &b".eh_frame"[..],
-                if matches!(
-                    self.architecture(),
-                    Architecture::X86_64 | Architecture::X86_64_X32
-                ) {
-                    SectionKind::Elf(elf::SHT_X86_64_UNWIND)
-                } else {
-                    SectionKind::ReadOnlyData
-                },
+                SectionKind::ReadOnlyData,
                 SectionFlags::Elf {
-                    sh_flags: u64::from(elf::SHF_ALLOC),
+                    sh_type: if matches!(
+                        self.architecture(),
+                        Architecture::X86_64 | Architecture::X86_64_X32
+                    ) {
+                        elf::SHT_X86_64_UNWIND
+                    } else {
+                        elf::SHT_PROGBITS
+                    },
+                    sh_flags: elf::SHF_ALLOC,
                 },
             ),
         }
@@ -136,6 +138,15 @@ impl<'a> Object<'a> {
     }
 
     pub(crate) fn elf_section_flags(&self, section: &Section<'_>) -> SectionFlags {
+        let sh_type = match section.kind {
+            SectionKind::Unknown | SectionKind::Common | SectionKind::TlsVariables => {
+                // Unsupported sections.
+                return SectionFlags::None;
+            }
+            SectionKind::UninitializedData | SectionKind::UninitializedTls => elf::SHT_NOBITS,
+            SectionKind::Note => elf::SHT_NOTE,
+            _ => elf::SHT_PROGBITS,
+        };
         let sh_flags = match section.kind {
             SectionKind::Text => elf::SHF_ALLOC | elf::SHF_EXECINSTR,
             SectionKind::Data | SectionKind::ReadOnlyDataWithRel => elf::SHF_ALLOC | elf::SHF_WRITE,
@@ -147,18 +158,9 @@ impl<'a> Object<'a> {
             SectionKind::OtherString | SectionKind::DebugString => {
                 elf::SHF_STRINGS | elf::SHF_MERGE
             }
-            SectionKind::Other
-            | SectionKind::Debug
-            | SectionKind::Metadata
-            | SectionKind::Linker
-            | SectionKind::Note
-            | SectionKind::Elf(_) => 0,
-            SectionKind::Unknown | SectionKind::Common | SectionKind::TlsVariables => {
-                return SectionFlags::None;
-            }
-        }
-        .into();
-        SectionFlags::Elf { sh_flags }
+            _ => elf::ShdrFlags(0),
+        };
+        SectionFlags::Elf { sh_type, sh_flags }
     }
 
     pub(crate) fn elf_symbol_flags(&self, symbol: &Symbol) -> SymbolFlags<SectionId, SymbolId> {
@@ -200,7 +202,7 @@ impl<'a> Object<'a> {
         } else {
             elf::STB_GLOBAL
         };
-        let st_info = (st_bind << 4) + st_type;
+        let st_info = elf::SymInfo::new(st_bind, st_type);
         let st_other = if symbol.scope == SymbolScope::Linkage {
             elf::STV_HIDDEN
         } else {
@@ -860,13 +862,7 @@ impl<'a> Object<'a> {
             );
         }
         for (index, section) in self.sections.iter().enumerate() {
-            let sh_type = match section.kind {
-                SectionKind::UninitializedData | SectionKind::UninitializedTls => elf::SHT_NOBITS,
-                SectionKind::Note => elf::SHT_NOTE,
-                SectionKind::Elf(sh_type) => sh_type,
-                _ => elf::SHT_PROGBITS,
-            };
-            let SectionFlags::Elf { sh_flags } = self.section_flags(section) else {
+            let SectionFlags::Elf { sh_type, sh_flags } = self.section_flags(section) else {
                 return Err(Error(format!(
                     "unimplemented section `{}` kind {:?}",
                     section.name().unwrap_or(""),

@@ -244,11 +244,6 @@ pub enum SectionKind {
     ///
     /// Example ELF sections: `.symtab`, `.strtab`, `.group`
     Metadata,
-    /// Some other ELF section type.
-    ///
-    /// This is the `sh_type` field in the section header.
-    /// The meaning may be dependent on the architecture.
-    Elf(u32),
 }
 
 impl SectionKind {
@@ -611,9 +606,12 @@ pub enum SectionFlags {
     /// No section flags.
     None,
     /// ELF section flags.
+    #[cfg(feature = "elf")]
     Elf {
+        /// `sh_type` field in the section header.
+        sh_type: crate::elf::ShdrType,
         /// `sh_flags` field in the section header.
-        sh_flags: u64,
+        sh_flags: crate::elf::ShdrFlags,
     },
     /// Mach-O section flags.
     MachO {
@@ -639,9 +637,10 @@ pub enum SymbolFlags<Section, Symbol> {
     /// No symbol flags.
     None,
     /// ELF symbol flags.
+    #[cfg(feature = "elf")]
     Elf {
         /// `st_info` field in the ELF symbol.
-        st_info: u8,
+        st_info: crate::elf::SymInfo,
         /// `st_other` field in the ELF symbol.
         st_other: u8,
     },
@@ -681,6 +680,7 @@ impl<Section, Symbol> SymbolFlags<Section, Symbol> {
     ///
     /// This corresponds to the lower 2 bits of the `st_other` field,
     /// and will be a value such as `elf::STV_DEFAULT`.
+    #[cfg(feature = "elf")]
     pub fn elf_visibility(&self) -> Option<u8> {
         match self {
             SymbolFlags::Elf { st_other, .. } => Some(st_other & 0x3),

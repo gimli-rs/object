@@ -95,7 +95,7 @@ fn compression_zlib() {
     let data = b"test data data data";
     let len = data.len() as u64;
 
-    let mut ch = object::elf::CompressionHeader64::<LE>::default();
+    let mut ch = object::elf::Chdr64::<LE>::default();
     ch.ch_type.set(LE, object::elf::ELFCOMPRESS_ZLIB);
     ch.ch_size.set(LE, len);
     ch.ch_addralign.set(LE, 1);
@@ -114,9 +114,10 @@ fn compression_zlib() {
         object::SectionKind::Other,
     );
     object.section_mut(section).set_data(compressed, 1);
-    object.section_mut(section).flags = object::SectionFlags::Elf {
-        sh_flags: object::elf::SHF_COMPRESSED.into(),
-    };
+    if let object::SectionFlags::Elf { sh_flags, .. } = object.section_flags_mut(section) {
+        *sh_flags = object::elf::SHF_COMPRESSED;
+    }
+
     let bytes = object.write().unwrap();
 
     //std::fs::write(&"compression.o", &bytes).unwrap();
@@ -176,7 +177,7 @@ fn note() {
     let mut buffer = Vec::new();
 
     buffer
-        .write_all(object::bytes_of(&elf::NoteHeader32 {
+        .write_all(object::bytes_of(&elf::Nhdr32 {
             n_namesz: U32::new(endian, 6),
             n_descsz: U32::new(endian, 11),
             n_type: U32::new(endian, 1),
@@ -186,7 +187,7 @@ fn note() {
     buffer.write_all(b"descriptor\0\0").unwrap();
 
     buffer
-        .write_all(object::bytes_of(&elf::NoteHeader32 {
+        .write_all(object::bytes_of(&elf::Nhdr32 {
             n_namesz: U32::new(endian, 6),
             n_descsz: U32::new(endian, 11),
             n_type: U32::new(endian, 2),
@@ -202,7 +203,7 @@ fn note() {
     let mut buffer = Vec::new();
 
     buffer
-        .write_all(object::bytes_of(&elf::NoteHeader32 {
+        .write_all(object::bytes_of(&elf::Nhdr32 {
             n_namesz: U32::new(endian, 6),
             n_descsz: U32::new(endian, 11),
             n_type: U32::new(endian, 1),
@@ -212,7 +213,7 @@ fn note() {
     buffer.write_all(b"descriptor\0\0\0\0\0\0").unwrap();
 
     buffer
-        .write_all(object::bytes_of(&elf::NoteHeader32 {
+        .write_all(object::bytes_of(&elf::Nhdr32 {
             n_namesz: U32::new(endian, 4),
             n_descsz: U32::new(endian, 11),
             n_type: U32::new(endian, 2),
@@ -228,7 +229,7 @@ fn note() {
 
     //std::fs::write(&"note.o", &bytes).unwrap();
 
-    let header = elf::FileHeader64::parse(bytes).unwrap();
+    let header = elf::Ehdr64::parse(bytes).unwrap();
     let endian: LittleEndian = header.endian().unwrap();
     let sections = header.sections(endian, bytes).unwrap();
 
@@ -263,8 +264,8 @@ fn note() {
 
 #[test]
 fn gnu_property() {
-    gnu_property_inner::<elf::FileHeader32<Endianness>>(Architecture::I386);
-    gnu_property_inner::<elf::FileHeader64<Endianness>>(Architecture::X86_64);
+    gnu_property_inner::<elf::Ehdr32<Endianness>>(Architecture::I386);
+    gnu_property_inner::<elf::Ehdr64<Endianness>>(Architecture::X86_64);
 }
 
 fn gnu_property_inner<Elf: FileHeader<Endian = Endianness>>(architecture: Architecture) {
@@ -287,7 +288,7 @@ fn gnu_property_inner<Elf: FileHeader<Endian = Endianness>>(architecture: Archit
         sections.section_name(endian, section).unwrap(),
         b".note.gnu.property"
     );
-    assert_eq!(section.sh_flags(endian).into(), u64::from(elf::SHF_ALLOC));
+    assert_eq!(section.sh_flags(endian), elf::SHF_ALLOC);
     let mut notes = section.notes(endian, bytes).unwrap().unwrap();
     let note = notes.next().unwrap().unwrap();
     let mut props = note.gnu_properties(endian).unwrap();

@@ -137,7 +137,7 @@ impl<'data, Elf: FileHeader, R: ReadRef<'data>> SectionTable<'data, Elf, R> {
         &self,
         endian: Elf::Endian,
         data: R,
-        sh_type: u32,
+        sh_type: elf::ShdrType,
     ) -> read::Result<SymbolTable<'data, Elf, R>> {
         debug_assert!(sh_type == elf::SHT_DYNSYM || sh_type == elf::SHT_SYMTAB);
 
@@ -363,10 +363,10 @@ impl<'data, Elf: FileHeader, R: ReadRef<'data>> SectionTable<'data, Elf, R> {
 
 /// An iterator for the sections in an [`ElfFile32`](super::ElfFile32).
 pub type ElfSectionIterator32<'data, 'file, Endian = Endianness, R = &'data [u8]> =
-    ElfSectionIterator<'data, 'file, elf::FileHeader32<Endian>, R>;
+    ElfSectionIterator<'data, 'file, elf::Ehdr32<Endian>, R>;
 /// An iterator for the sections in an [`ElfFile64`](super::ElfFile64).
 pub type ElfSectionIterator64<'data, 'file, Endian = Endianness, R = &'data [u8]> =
-    ElfSectionIterator<'data, 'file, elf::FileHeader64<Endian>, R>;
+    ElfSectionIterator<'data, 'file, elf::Ehdr64<Endian>, R>;
 
 /// An iterator for the sections in an [`ElfFile`].
 #[derive(Debug)]
@@ -409,10 +409,10 @@ where
 
 /// A section in an [`ElfFile32`](super::ElfFile32).
 pub type ElfSection32<'data, 'file, Endian = Endianness, R = &'data [u8]> =
-    ElfSection<'data, 'file, elf::FileHeader32<Endian>, R>;
+    ElfSection<'data, 'file, elf::Ehdr32<Endian>, R>;
 /// A section in an [`ElfFile64`](super::ElfFile64).
 pub type ElfSection64<'data, 'file, Endian = Endianness, R = &'data [u8]> =
-    ElfSection<'data, 'file, elf::FileHeader64<Endian>, R>;
+    ElfSection<'data, 'file, elf::Ehdr64<Endian>, R>;
 
 /// A section in an [`ElfFile`].
 ///
@@ -631,30 +631,30 @@ where
     }
 
     fn kind(&self) -> SectionKind {
-        let flags = self.section.sh_flags(self.file.endian).into();
+        let flags = self.section.sh_flags(self.file.endian);
         let sh_type = self.section.sh_type(self.file.endian);
         match sh_type {
             elf::SHT_PROGBITS => {
-                if flags & u64::from(elf::SHF_ALLOC) != 0 {
-                    if flags & u64::from(elf::SHF_EXECINSTR) != 0 {
+                if flags.contains(elf::SHF_ALLOC) {
+                    if flags.contains(elf::SHF_EXECINSTR) {
                         SectionKind::Text
-                    } else if flags & u64::from(elf::SHF_TLS) != 0 {
+                    } else if flags.contains(elf::SHF_TLS) {
                         SectionKind::Tls
-                    } else if flags & u64::from(elf::SHF_WRITE) != 0 {
+                    } else if flags.contains(elf::SHF_WRITE) {
                         SectionKind::Data
-                    } else if flags & u64::from(elf::SHF_STRINGS) != 0 {
+                    } else if flags.contains(elf::SHF_STRINGS) {
                         SectionKind::ReadOnlyString
                     } else {
                         SectionKind::ReadOnlyData
                     }
-                } else if flags & u64::from(elf::SHF_STRINGS) != 0 {
+                } else if flags.contains(elf::SHF_STRINGS) {
                     SectionKind::OtherString
                 } else {
                     SectionKind::Other
                 }
             }
             elf::SHT_NOBITS => {
-                if flags & u64::from(elf::SHF_TLS) != 0 {
+                if flags.contains(elf::SHF_TLS) {
                     SectionKind::UninitializedTls
                 } else {
                     SectionKind::UninitializedData
@@ -673,7 +673,7 @@ where
             | elf::SHT_SYMTAB_SHNDX
             | elf::SHT_RELR
             | elf::SHT_CREL => SectionKind::Metadata,
-            _ => SectionKind::Elf(sh_type),
+            _ => SectionKind::Unknown,
         }
     }
 
@@ -691,12 +691,13 @@ where
 
     fn flags(&self) -> SectionFlags {
         SectionFlags::Elf {
-            sh_flags: self.section.sh_flags(self.file.endian).into(),
+            sh_type: self.section.sh_type(self.file.endian),
+            sh_flags: self.section.sh_flags(self.file.endian),
         }
     }
 }
 
-/// A trait for generic access to [`elf::SectionHeader32`] and [`elf::SectionHeader64`].
+/// A trait for generic access to [`elf::Shdr32`] and [`elf::Shdr64`].
 #[allow(missing_docs)]
 pub trait SectionHeader: Debug + Pod {
     type Elf: FileHeader<SectionHeader = Self, Endian = Self::Endian, Word = Self::Word>;
@@ -704,8 +705,8 @@ pub trait SectionHeader: Debug + Pod {
     type Endian: endian::Endian;
 
     fn sh_name(&self, endian: Self::Endian) -> u32;
-    fn sh_type(&self, endian: Self::Endian) -> u32;
-    fn sh_flags(&self, endian: Self::Endian) -> Self::Word;
+    fn sh_type(&self, endian: Self::Endian) -> elf::ShdrType;
+    fn sh_flags(&self, endian: Self::Endian) -> elf::ShdrFlags;
     fn sh_addr(&self, endian: Self::Endian) -> Self::Word;
     fn sh_offset(&self, endian: Self::Endian) -> Self::Word;
     fn sh_size(&self, endian: Self::Endian) -> Self::Word;
@@ -734,7 +735,7 @@ pub trait SectionHeader: Debug + Pod {
 
     /// Return true if the `SHF_INFO_LINK` flag is set.
     fn has_info_link(&self, endian: Self::Endian) -> bool {
-        self.sh_flags(endian).into() & u64::from(elf::SHF_INFO_LINK) != 0
+        self.sh_flags(endian).contains(elf::SHF_INFO_LINK)
     }
 
     /// Get the `sh_info` field as a section index.
@@ -1185,7 +1186,7 @@ pub trait SectionHeader: Debug + Pod {
             u64,
         )>,
     > {
-        if (self.sh_flags(endian).into() & u64::from(elf::SHF_COMPRESSED)) == 0 {
+        if !self.sh_flags(endian).contains(elf::SHF_COMPRESSED) {
             return Ok(None);
         }
         let (section_offset, section_size) = self
@@ -1202,8 +1203,8 @@ pub trait SectionHeader: Debug + Pod {
     }
 }
 
-impl<Endian: endian::Endian> SectionHeader for elf::SectionHeader32<Endian> {
-    type Elf = elf::FileHeader32<Endian>;
+impl<Endian: endian::Endian> SectionHeader for elf::Shdr32<Endian> {
+    type Elf = elf::Ehdr32<Endian>;
     type Word = u32;
     type Endian = Endian;
 
@@ -1213,13 +1214,13 @@ impl<Endian: endian::Endian> SectionHeader for elf::SectionHeader32<Endian> {
     }
 
     #[inline]
-    fn sh_type(&self, endian: Self::Endian) -> u32 {
-        self.sh_type.get(endian)
+    fn sh_type(&self, endian: Self::Endian) -> elf::ShdrType {
+        elf::ShdrType(self.sh_type.get(endian))
     }
 
     #[inline]
-    fn sh_flags(&self, endian: Self::Endian) -> Self::Word {
-        self.sh_flags.get(endian)
+    fn sh_flags(&self, endian: Self::Endian) -> elf::ShdrFlags {
+        elf::ShdrFlags(self.sh_flags.get(endian).into())
     }
 
     #[inline]
@@ -1258,10 +1259,10 @@ impl<Endian: endian::Endian> SectionHeader for elf::SectionHeader32<Endian> {
     }
 }
 
-impl<Endian: endian::Endian> SectionHeader for elf::SectionHeader64<Endian> {
+impl<Endian: endian::Endian> SectionHeader for elf::Shdr64<Endian> {
     type Word = u64;
     type Endian = Endian;
-    type Elf = elf::FileHeader64<Endian>;
+    type Elf = elf::Ehdr64<Endian>;
 
     #[inline]
     fn sh_name(&self, endian: Self::Endian) -> u32 {
@@ -1269,13 +1270,13 @@ impl<Endian: endian::Endian> SectionHeader for elf::SectionHeader64<Endian> {
     }
 
     #[inline]
-    fn sh_type(&self, endian: Self::Endian) -> u32 {
-        self.sh_type.get(endian)
+    fn sh_type(&self, endian: Self::Endian) -> elf::ShdrType {
+        elf::ShdrType(self.sh_type.get(endian))
     }
 
     #[inline]
-    fn sh_flags(&self, endian: Self::Endian) -> Self::Word {
-        self.sh_flags.get(endian)
+    fn sh_flags(&self, endian: Self::Endian) -> elf::ShdrFlags {
+        elf::ShdrFlags(self.sh_flags.get(endian))
     }
 
     #[inline]

@@ -180,7 +180,7 @@ impl<'data, Elf: FileHeader> Note<'data, Elf> {
     }
 }
 
-/// A trait for generic access to [`elf::NoteHeader32`] and [`elf::NoteHeader64`].
+/// A trait for generic access to [`elf::Nhdr32`] and [`elf::Nhdr64`].
 #[allow(missing_docs)]
 pub trait NoteHeader: Debug + Pod {
     type Endian: endian::Endian;
@@ -190,7 +190,7 @@ pub trait NoteHeader: Debug + Pod {
     fn n_type(&self, endian: Self::Endian) -> u32;
 }
 
-impl<Endian: endian::Endian> NoteHeader for elf::NoteHeader32<Endian> {
+impl<Endian: endian::Endian> NoteHeader for elf::Nhdr32<Endian> {
     type Endian = Endian;
 
     #[inline]
@@ -209,7 +209,7 @@ impl<Endian: endian::Endian> NoteHeader for elf::NoteHeader32<Endian> {
     }
 }
 
-impl<Endian: endian::Endian> NoteHeader for elf::NoteHeader64<Endian> {
+impl<Endian: endian::Endian> NoteHeader for elf::Nhdr64<Endian> {
     type Endian = Endian;
 
     #[inline]

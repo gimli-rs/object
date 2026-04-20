@@ -37,9 +37,9 @@ fn elf_x86_64_section_flags() {
         write::Object::new(BinaryFormat::Elf, Architecture::X86_64, Endianness::Little);
 
     let section = object.add_section(Vec::new(), b".text".to_vec(), SectionKind::Text);
-    object.section_mut(section).flags = SectionFlags::Elf {
-        sh_flags: object::elf::SHF_WRITE.into(),
-    };
+    if let SectionFlags::Elf { sh_flags, .. } = object.section_flags_mut(section) {
+        *sh_flags = object::elf::SHF_WRITE;
+    }
 
     let bytes = object.write().unwrap();
 
@@ -53,7 +53,8 @@ fn elf_x86_64_section_flags() {
     assert_eq!(
         section.flags(),
         SectionFlags::Elf {
-            sh_flags: object::elf::SHF_WRITE.into(),
+            sh_type: object::elf::SHT_PROGBITS,
+            sh_flags: object::elf::SHF_WRITE,
         }
     );
 }

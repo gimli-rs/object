@@ -102,12 +102,12 @@ impl<'data> Builder<'data> {
 
     /// Read a 32-bit ELF file from file data.
     pub fn read32<R: ReadRef<'data>>(data: R) -> Result<Self> {
-        Self::read_file::<elf::FileHeader32<Endianness>, R>(data)
+        Self::read_file::<elf::Ehdr32<Endianness>, R>(data)
     }
 
     /// Read a 64-bit ELF file from file data.
     pub fn read64<R: ReadRef<'data>>(data: R) -> Result<Self> {
-        Self::read_file::<elf::FileHeader64<Endianness>, R>(data)
+        Self::read_file::<elf::Ehdr64<Endianness>, R>(data)
     }
 
     fn read_file<Elf, R>(data: R) -> Result<Self>
@@ -314,7 +314,7 @@ impl<'data> Builder<'data> {
                     _ => return Err(Error(format!("Unsupported section type {:x}", other))),
                 },
             };
-            let sh_flags = section.sh_flags(endian).into();
+            let sh_flags = section.sh_flags(endian);
             let sh_link = section.sh_link(endian);
             let sh_link_section = if sh_link == 0 {
                 None
@@ -328,7 +328,7 @@ impl<'data> Builder<'data> {
                 Some(SectionId(sh_link as usize - 1))
             };
             let sh_info = section.sh_info(endian);
-            let sh_info_section = if sh_info == 0 || sh_flags & u64::from(elf::SHF_INFO_LINK) == 0 {
+            let sh_info_section = if sh_info == 0 || !sh_flags.contains(elf::SHF_INFO_LINK) {
                 None
             } else {
                 if sh_info as usize >= sections.len() {
@@ -339,9 +339,9 @@ impl<'data> Builder<'data> {
                 }
                 Some(SectionId(sh_info as usize - 1))
             };
-            let sh_flags = section.sh_flags(endian).into();
+            let sh_flags = section.sh_flags(endian);
             let sh_addr = section.sh_addr(endian).into();
-            if sh_flags & u64::from(elf::SHF_ALLOC) != 0 {
+            if sh_flags.contains(elf::SHF_ALLOC) {
                 for segment in &mut builder.segments {
                     if segment.contains_address(sh_addr) {
                         segment.sections.push(id);
@@ -408,7 +408,7 @@ impl<'data> Builder<'data> {
                 dynamic_symbols.len(),
             )
             .map(SectionData::DynamicRelocation)
-        } else if link.0 == 0 || section.sh_flags(endian).into() & u64::from(elf::SHF_ALLOC) != 0 {
+        } else if link.0 == 0 || section.sh_flags(endian).contains(elf::SHF_ALLOC) {
             // If there's no link, then none of the relocations may reference symbols.
             // Assume that these are dynamic relocations, but don't use the dynamic
             // symbol table when parsing.
@@ -1301,7 +1301,7 @@ impl<'data> Builder<'data> {
             writer.write_align_program_headers();
             for segment in &self.segments {
                 writer.write_program_header(&write::elf::ProgramHeader {
-                    p_type: segment.p_type,
+                    p_type: segment.p_type.0,
                     p_flags: segment.p_flags,
                     p_offset: segment.p_offset,
                     p_vaddr: segment.p_vaddr,
@@ -2140,7 +2140,7 @@ impl<'data> Builder<'data> {
 
 /// ELF file header.
 ///
-/// This corresponds to fields in [`elf::FileHeader32`] or [`elf::FileHeader64`].
+/// This corresponds to fields in [`elf::Ehdr32`] or [`elf::Ehdr64`].
 /// This only contains the ELF file header fields that can be modified.
 /// The other fields are automatically calculated.
 #[derive(Debug, Default)]
@@ -2197,7 +2197,7 @@ impl IdPrivate for SegmentId {
 
 /// A segment in [`Segments`].
 ///
-/// This corresponds to [`elf::ProgramHeader32`] or [`elf::ProgramHeader64`].
+/// This corresponds to [`elf::Phdr32`] or [`elf::Phdr64`].
 #[derive(Debug)]
 pub struct Segment<'data> {
     id: SegmentId,
@@ -2206,7 +2206,7 @@ pub struct Segment<'data> {
     /// The `p_type` field in the ELF program header.
     ///
     /// One of the `PT_*` constants.
-    pub p_type: u32,
+    pub p_type: elf::PhdrType,
     /// The `p_flags` field in the ELF program header.
     ///
     /// A combination of the `PF_*` constants.
@@ -2368,7 +2368,7 @@ impl<'data> Segments<'data> {
         self.push(Segment {
             id,
             delete: false,
-            p_type: 0,
+            p_type: elf::PT_NULL,
             p_flags: 0,
             p_offset: 0,
             p_vaddr: 0,
@@ -2469,7 +2469,7 @@ impl IdPrivate for SectionId {
 
 /// A section in [`Sections`].
 ///
-/// This corresponds to [`elf::SectionHeader32`] or [`elf::SectionHeader64`].
+/// This corresponds to [`elf::Shdr32`] or [`elf::Shdr64`].
 #[derive(Debug)]
 pub struct Section<'data> {
     id: SectionId,
@@ -2484,11 +2484,11 @@ pub struct Section<'data> {
     /// The `sh_type` field in the ELF section header.
     ///
     /// One of the `SHT_*` constants.
-    pub sh_type: u32,
+    pub sh_type: elf::ShdrType,
     /// The `sh_flags` field in the ELF section header.
     ///
     /// A combination of the `SHF_*` constants.
-    pub sh_flags: u64,
+    pub sh_flags: elf::ShdrFlags,
     /// The `sh_addr` field in the ELF section header.
     pub sh_addr: u64,
     /// The `sh_offset` field in the ELF section header.
@@ -2537,16 +2537,16 @@ impl<'data> Section<'data> {
 
     /// Returns true if the section flags include `SHF_ALLOC`.
     pub fn is_alloc(&self) -> bool {
-        self.sh_flags & u64::from(elf::SHF_ALLOC) != 0
+        self.sh_flags.contains(elf::SHF_ALLOC)
     }
 
     /// Return the segment permission flags that are equivalent to the section flags.
     pub fn p_flags(&self) -> u32 {
         let mut p_flags = elf::PF_R;
-        if self.sh_flags & u64::from(elf::SHF_WRITE) != 0 {
+        if self.sh_flags.contains(elf::SHF_WRITE) {
             p_flags |= elf::PF_W;
         }
-        if self.sh_flags & u64::from(elf::SHF_EXECINSTR) != 0 {
+        if self.sh_flags.contains(elf::SHF_EXECINSTR) {
             p_flags |= elf::PF_X;
         }
         p_flags
@@ -2608,8 +2608,8 @@ impl<'data> Sections<'data> {
             id,
             delete: false,
             name: ByteString::default(),
-            sh_type: 0,
-            sh_flags: 0,
+            sh_type: elf::SHT_NULL,
+            sh_flags: elf::ShdrFlags(0),
             sh_addr: 0,
             sh_offset: 0,
             sh_size: 0,
@@ -2696,7 +2696,7 @@ pub struct Symbol<'data, const DYNAMIC: bool = false> {
     /// Used to set the `st_shndx` field in the ELF symbol.
     pub section: Option<SectionId>,
     /// The `st_info` field in the ELF symbol.
-    pub st_info: u8,
+    pub st_info: elf::SymInfo,
     /// The `st_other` field in the ELF symbol.
     pub st_other: u8,
     /// The `st_shndx` field in the ELF symbol.
@@ -2729,20 +2729,20 @@ impl<'data, const DYNAMIC: bool> Symbol<'data, DYNAMIC> {
 
     /// Get the `st_bind` component of the `st_info` field.
     #[inline]
-    pub fn st_bind(&self) -> u8 {
-        self.st_info >> 4
+    pub fn st_bind(&self) -> elf::SymBind {
+        self.st_info.st_bind()
     }
 
     /// Get the `st_type` component of the `st_info` field.
     #[inline]
-    pub fn st_type(&self) -> u8 {
-        self.st_info & 0xf
+    pub fn st_type(&self) -> elf::SymType {
+        self.st_info.st_type()
     }
 
     /// Set the `st_info` field given the `st_bind` and `st_type` components.
     #[inline]
-    pub fn set_st_info(&mut self, st_bind: u8, st_type: u8) {
-        self.st_info = (st_bind << 4) + (st_type & 0xf);
+    pub fn set_st_info(&mut self, st_bind: elf::SymBind, st_type: elf::SymType) {
+        self.st_info = elf::SymInfo::new(st_bind, st_type)
     }
 }
 
@@ -2765,7 +2765,7 @@ impl<'data, const DYNAMIC: bool> Symbols<'data, DYNAMIC> {
             delete: false,
             name: ByteString::default(),
             section: None,
-            st_info: 0,
+            st_info: Default::default(),
             st_other: 0,
             st_shndx: 0,
             st_value: 0,

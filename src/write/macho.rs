@@ -170,7 +170,7 @@ impl<'a> Object<'a> {
             SectionKind::Debug | SectionKind::DebugString => macho::S_ATTR_DEBUG,
             SectionKind::OtherString => macho::S_CSTRING_LITERALS,
             SectionKind::Other | SectionKind::Linker | SectionKind::Metadata => 0,
-            SectionKind::Note | SectionKind::Unknown | SectionKind::Elf(_) => {
+            SectionKind::Note | SectionKind::Unknown => {
                 return SectionFlags::None;
             }
         };
