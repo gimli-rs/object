@@ -2,6 +2,37 @@
 
 --------------------------------------------------------------------------------
 
+## 0.39.1
+
+Released 2026/04/21.
+
+### Changed
+
+* Changed `read::PeFile::imports` to return an error for empty import names.
+  [#873](https://github.com/gimli-rs/object/pull/873)
+
+* Fixed `read::PeFile::imports` to handle import names in a different section.
+  [#881](https://github.com/gimli-rs/object/pull/881)
+
+* Fixed the ELF section flags for `write::StandardSection::EhFrame`.
+  [#877](https://github.com/gimli-rs/object/pull/877)
+
+* Updated `hashbrown`, `indexmap`, and `wasmparser` dependencies.
+  [#879](https://github.com/gimli-rs/object/pull/879)
+
+### Added
+
+* Added Android definitions for ELF.
+  [#875](https://github.com/gimli-rs/object/pull/875)
+
+* Updated Mach-O definitions.
+  [#883](https://github.com/gimli-rs/object/pull/883)
+
+* Added `read::macho::LoadCommandData::dylib_use_flags`.
+  [#887](https://github.com/gimli-rs/object/pull/887)
+
+--------------------------------------------------------------------------------
+
 ## 0.39.0
 
 Released 2026/03/29.
