@@ -1126,6 +1126,7 @@ pub struct Relocation {
 pub(crate) struct RelocationInternal {
     offset: u64,
     symbol: SymbolId,
+    #[cfg_attr(not(feature = "macho"), allow(unused))]
     subtractor: Option<SymbolId>,
     addend: i64,
     flags: RelocationFlags,
