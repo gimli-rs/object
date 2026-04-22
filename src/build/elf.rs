@@ -2210,7 +2210,7 @@ pub struct Segment<'data> {
     /// The `p_flags` field in the ELF program header.
     ///
     /// A combination of the `PF_*` constants.
-    pub p_flags: u32,
+    pub p_flags: elf::ProgramFlags,
     /// The `p_offset` field in the ELF program header.
     ///
     /// This is the file offset of the data in the segment. This should
@@ -2369,7 +2369,7 @@ impl<'data> Segments<'data> {
             id,
             delete: false,
             p_type: elf::PT_NULL,
-            p_flags: 0,
+            p_flags: elf::ProgramFlags(0),
             p_offset: 0,
             p_vaddr: 0,
             p_paddr: 0,
@@ -2393,7 +2393,11 @@ impl<'data> Segments<'data> {
     /// The file offset and address will be derived from the current maximum for any segment.
     /// The address will be chosen so that `p_paddr % align == p_offset % align`.
     /// You may wish to use [`Builder::load_align`] for the alignment.
-    pub fn add_load_segment(&mut self, flags: u32, align: u64) -> &mut Segment<'data> {
+    pub fn add_load_segment(
+        &mut self,
+        flags: elf::ProgramFlags,
+        align: u64,
+    ) -> &mut Segment<'data> {
         let mut max_offset = 0;
         let mut max_addr = 0;
         for segment in &*self {
@@ -2541,7 +2545,7 @@ impl<'data> Section<'data> {
     }
 
     /// Return the segment permission flags that are equivalent to the section flags.
-    pub fn p_flags(&self) -> u32 {
+    pub fn p_flags(&self) -> elf::ProgramFlags {
         let mut p_flags = elf::PF_R;
         if self.sh_flags.contains(elf::SHF_WRITE) {
             p_flags |= elf::PF_W;

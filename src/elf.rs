@@ -39,7 +39,7 @@ pub struct Constants {
     /// Values for `ProgramHeader*::p_type`.
     pub pt: &'static ConstantNames<ProgramType>,
     /// Values for `ProgramHeader*::p_flags`.
-    pub pf: &'static FlagNames<u32>,
+    pub pf: &'static FlagNames<ProgramFlags>,
     /// Values for `Dyn*::d_tag`.
     pub dt: &'static ConstantNames<DynamicTag>,
     /// Values for `r_type` field of `Rel*::r_info`.
@@ -57,7 +57,7 @@ constants! {
     consts stt: SymbolType = NAMES_STT;
     flags sto: u8 = NAMES_STO;
     consts pt: ProgramType = NAMES_PT;
-    flags pf: u32 = NAMES_PF;
+    flags pf: ProgramFlags = NAMES_PF;
     consts dt: DynamicTag = NAMES_DT;
     consts r: u32 = {};
 }
@@ -1762,7 +1762,7 @@ pub struct ProgramHeader32<E: Endian> {
     /// Segment size in memory.
     pub p_memsz: U32<E>,
     /// Segment flags. A combination of the `PF_*` constants.
-    pub p_flags: U32<E>,
+    pub p_flags: U32<E, ProgramFlags>,
     /// Segment alignment.
     pub p_align: U32<E>,
 }
@@ -1774,7 +1774,7 @@ pub struct ProgramHeader64<E: Endian> {
     /// Segment type. One of the `PT_*` constants.
     pub p_type: U32<E, ProgramType>,
     /// Segment flags. A combination of the `PF_*` constants.
-    pub p_flags: U32<E>,
+    pub p_flags: U32<E, ProgramFlags>,
     /// Segment file offset.
     pub p_offset: U64<E>,
     /// Segment virtual address.
@@ -1849,8 +1849,12 @@ pub const PT_LOPROC: u32 = 0x7000_0000;
 /// End of processor-specific segment types.
 pub const PT_HIPROC: u32 = 0x7fff_ffff;
 
-// Values for `ProgramHeader*::p_flags`.
-flag_names!(NAMES_PF: u32 = {
+newtype!(
+    /// Values for `ProgramHeader*::p_flags`.
+    struct ProgramFlags(u32);
+);
+
+newtype_flag_names!(NAMES_PF: ProgramFlags(u32) = {
     /// Segment is executable.
     PF_X = 1 << 0,
     /// Segment is writable.
@@ -3444,7 +3448,7 @@ constants! {
         /// FP mode requirement.
         PT_MIPS_ABIFLAGS = 0x7000_0003,
     };
-    flags pf: u32 = {
+    flags pf: ProgramFlags(u32) = {
         PF_MIPS_LOCAL = 0x1000_0000,
     };
     consts dt: DynamicTag(i64) = {
@@ -3967,7 +3971,7 @@ constants! {
         PT_PARISC_ARCHEXT = 0x7000_0000,
         PT_PARISC_UNWIND = 0x7000_0001,
     };
-    flags pf: u32 = {
+    flags pf: ProgramFlags(u32) = {
         PF_PARISC_SBP = 0x0800_0000,
 
         PF_HP_PAGE_SIZE = 0x0010_0000,
@@ -4547,7 +4551,7 @@ constants! {
         /// Section may be multiply defined in the input to a link step.
         SHF_ARM_COMDEF = 0x8000_0000,
     };
-    flags pf: u32 = {
+    flags pf: ProgramFlags(u32) = {
         /// Segment contains the location addressed by the static base.
         PF_ARM_SB = 0x1000_0000,
         /// Position-independent segment.
@@ -5352,7 +5356,7 @@ constants! {
         PT_IA_64_HP_HSL_ANOT = PT_LOOS + 0x13,
         PT_IA_64_HP_STACK = PT_LOOS + 0x14,
     };
-    flags pf: u32 = {
+    flags pf: ProgramFlags(u32) = {
         /// spec insns w/o recovery
         PF_IA_64_NORECOV = 0x8000_0000,
     };

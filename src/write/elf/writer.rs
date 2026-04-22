@@ -2319,7 +2319,7 @@ pub struct FileHeader {
 #[derive(Debug, Clone)]
 pub struct ProgramHeader {
     pub p_type: elf::ProgramType,
-    pub p_flags: u32,
+    pub p_flags: elf::ProgramFlags,
     pub p_offset: u64,
     pub p_vaddr: u64,
     pub p_paddr: u64,

@@ -517,7 +517,7 @@ pub enum SegmentFlags {
         /// `p_type` field in the segment header.
         p_type: crate::elf::ProgramType,
         /// `p_flags` field in the segment header.
-        p_flags: u32,
+        p_flags: crate::elf::ProgramFlags,
     },
     /// Mach-O segment flags.
     #[cfg(feature = "macho")]
