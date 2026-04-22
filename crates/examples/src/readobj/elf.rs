@@ -684,9 +684,8 @@ fn print_gnu_verdef<Elf: FileHeader>(
         while let Some(Some((verdef, mut verdauxs))) = verdefs.next().print_err(p) {
             p.group("VersionDefinition", |p| {
                 p.field("Version", verdef.vd_version.get(endian));
-                p.field_hex("Flags", verdef.vd_flags.get(endian));
-                p.flags(verdef.vd_flags.get(endian), 0, FLAGS_VER_FLG);
-                p.field("Index", verdef.vd_ndx.get(endian));
+                p.field_flags("Flags", verdef.vd_flags.get(endian), VersionFlags::NAMES);
+                p.field_consts_display("Index", verdef.vd_ndx.get(endian), VersionIndex::NAMES);
                 p.field("AuxCount", verdef.vd_cnt.get(endian));
                 p.field_hex("Hash", verdef.vd_hash.get(endian));
                 p.field("AuxOffset", verdef.vd_aux.get(endian));
@@ -733,9 +732,12 @@ fn print_gnu_verneed<Elf: FileHeader>(
                 while let Some(Some(vernaux)) = vernauxs.next().print_err(p) {
                     p.group("Aux", |p| {
                         p.field_hex("Hash", vernaux.vna_hash.get(endian));
-                        p.field_hex("Flags", vernaux.vna_flags.get(endian));
-                        p.flags(vernaux.vna_flags.get(endian), 0, FLAGS_VER_FLG);
-                        p.field("Index", vernaux.vna_other.get(endian));
+                        p.field_flags("Flags", vernaux.vna_flags.get(endian), VersionFlags::NAMES);
+                        p.field_consts_display(
+                            "Index",
+                            vernaux.vna_other.get(endian),
+                            VersionIndex::NAMES,
+                        );
                         p.field_string(
                             "Name",
                             vernaux.vna_name.get(endian),
@@ -763,7 +765,7 @@ fn print_gnu_versym<Elf: FileHeader>(
     if let Some(Some((syms, _link))) = section.gnu_versym(endian, data).print_err(p) {
         let versions = sections.versions(endian, data).print_err(p).flatten();
         for (index, sym) in syms.iter().enumerate() {
-            let version_index = VersionIndex(sym.0.get(endian));
+            let version_index = sym.0.get(endian);
             p.group("VersionSymbol", |p| {
                 p.field("Index", index);
                 print_version(p, versions.as_ref(), version_index);
@@ -810,21 +812,20 @@ fn print_attributes<Elf: FileHeader>(
 fn print_version<Elf: FileHeader>(
     p: &mut Printer<'_>,
     versions: Option<&VersionTable<Elf>>,
-    version_index: VersionIndex,
+    version_index: VersymIndex,
 ) {
     match versions.and_then(|versions| versions.version(version_index).print_err(p)) {
         Some(Some(version)) => {
-            p.field_string_option("Version", version_index.0, Some(version.name()))
+            p.field_string_option("Version", version_index, Some(version.name()));
+            p.flag_bits(
+                VersymIndex(version_index.0 & VERSYM_HIDDEN.0),
+                VersymIndex::NAMES,
+            );
         }
-        _ => p.field_enum("Version", version_index.0, FLAGS_VER_NDX),
+        _ => p.field_flags("Version", version_index, VersymIndex::NAMES),
     }
-    p.flags(version_index.0, 0, FLAGS_VERSYM);
 }
 
 fn constants<Elf: FileHeader>(endian: Elf::Endian, elf: &Elf) -> &'static Constants {
     machine_constants(elf.e_machine(endian))
 }
-
-const FLAGS_VER_FLG: &[Flag<u16>] = &flags!(VER_FLG_BASE, VER_FLG_WEAK);
-const FLAGS_VER_NDX: &[Flag<u16>] = &flags!(VER_NDX_LOCAL, VER_NDX_GLOBAL);
-const FLAGS_VERSYM: &[Flag<u16>] = &flags!(VERSYM_HIDDEN);

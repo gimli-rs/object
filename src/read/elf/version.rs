@@ -5,32 +5,6 @@ use crate::{elf, endian};
 
 use super::FileHeader;
 
-/// A version index.
-#[derive(Debug, Default, Clone, Copy)]
-pub struct VersionIndex(pub u16);
-
-impl VersionIndex {
-    /// Return the version index.
-    pub fn index(&self) -> u16 {
-        self.0 & elf::VERSYM_VERSION
-    }
-
-    /// Return true if it is the local index.
-    pub fn is_local(&self) -> bool {
-        self.index() == elf::VER_NDX_LOCAL
-    }
-
-    /// Return true if it is the global index.
-    pub fn is_global(&self) -> bool {
-        self.index() == elf::VER_NDX_GLOBAL
-    }
-
-    /// Return the hidden flag.
-    pub fn is_hidden(&self) -> bool {
-        self.0 & elf::VERSYM_HIDDEN != 0
-    }
-}
-
 /// A version definition or requirement.
 ///
 /// This is derived from entries in the [`elf::SHT_GNU_VERDEF`] and [`elf::SHT_GNU_VERNEED`] sections.
@@ -98,21 +72,21 @@ impl<'data, Elf: FileHeader> VersionTable<'data, Elf> {
         let mut max_index = 0;
         if let Some(mut verdefs) = verdefs.clone() {
             while let Some((verdef, _)) = verdefs.next()? {
-                if verdef.vd_flags.get(endian) & elf::VER_FLG_BASE != 0 {
+                if verdef.vd_flags.get(endian).contains(elf::VER_FLG_BASE) {
                     continue;
                 }
-                let index = verdef.vd_ndx.get(endian) & elf::VERSYM_VERSION;
-                if max_index < index {
-                    max_index = index;
+                let index = verdef.vd_ndx.get(endian);
+                if max_index < index.0 {
+                    max_index = index.0;
                 }
             }
         }
         if let Some(mut verneeds) = verneeds.clone() {
             while let Some((_, mut vernauxs)) = verneeds.next()? {
                 while let Some(vernaux) = vernauxs.next()? {
-                    let index = vernaux.vna_other.get(endian) & elf::VERSYM_VERSION;
-                    if max_index < index {
-                        max_index = index;
+                    let index = vernaux.vna_other.get(endian);
+                    if max_index < index.0 {
+                        max_index = index.0;
                     }
                 }
             }
@@ -124,16 +98,16 @@ impl<'data, Elf: FileHeader> VersionTable<'data, Elf> {
 
         if let Some(mut verdefs) = verdefs {
             while let Some((verdef, mut verdauxs)) = verdefs.next()? {
-                if verdef.vd_flags.get(endian) & elf::VER_FLG_BASE != 0 {
+                if verdef.vd_flags.get(endian).contains(elf::VER_FLG_BASE) {
                     continue;
                 }
-                let index = verdef.vd_ndx.get(endian) & elf::VERSYM_VERSION;
-                if index <= elf::VER_NDX_GLOBAL {
+                let index = verdef.vd_ndx.get(endian);
+                if index.is_special() {
                     // TODO: return error?
                     continue;
                 }
                 if let Some(verdaux) = verdauxs.next()? {
-                    versions[usize::from(index)] = Version {
+                    versions[usize::from(index.0)] = Version {
                         name: verdaux.name(endian, strings)?,
                         hash: verdef.vd_hash.get(endian),
                         valid: true,
@@ -145,12 +119,12 @@ impl<'data, Elf: FileHeader> VersionTable<'data, Elf> {
         if let Some(mut verneeds) = verneeds {
             while let Some((verneed, mut vernauxs)) = verneeds.next()? {
                 while let Some(vernaux) = vernauxs.next()? {
-                    let index = vernaux.vna_other.get(endian) & elf::VERSYM_VERSION;
-                    if index <= elf::VER_NDX_GLOBAL {
+                    let index = vernaux.vna_other.get(endian);
+                    if index.is_special() {
                         // TODO: return error?
                         continue;
                     }
-                    versions[usize::from(index)] = Version {
+                    versions[usize::from(index.0)] = Version {
                         name: vernaux.name(endian, strings)?,
                         hash: vernaux.vna_hash.get(endian),
                         valid: true,
@@ -172,26 +146,26 @@ impl<'data, Elf: FileHeader> VersionTable<'data, Elf> {
     }
 
     /// Return version index for a given symbol index.
-    pub fn version_index(&self, endian: Elf::Endian, index: SymbolIndex) -> VersionIndex {
-        let version_index = match self.symbols.get(index.0) {
-            Some(x) => x.0.get(endian),
+    pub fn version_index(&self, endian: Elf::Endian, index: SymbolIndex) -> elf::VersymIndex {
+        match self.symbols.get(index.0) {
+            Some(versym) => versym.0.get(endian),
             // Ideally this would be VER_NDX_LOCAL for undefined symbols,
             // but currently there are no checks that need this distinction.
-            None => elf::VER_NDX_GLOBAL,
-        };
-        VersionIndex(version_index)
+            None => elf::VER_NDX_GLOBAL.into(),
+        }
     }
 
     /// Return version information for a given symbol version index.
     ///
     /// Returns `Ok(None)` for local and global versions.
     /// Returns `Err(_)` if index is invalid.
-    pub fn version(&self, index: VersionIndex) -> Result<Option<&Version<'data>>> {
-        if index.index() <= elf::VER_NDX_GLOBAL {
+    pub fn version(&self, index: elf::VersymIndex) -> Result<Option<&Version<'data>>> {
+        let index = index.index();
+        if index.is_special() {
             return Ok(None);
         }
         self.versions
-            .get(usize::from(index.index()))
+            .get(usize::from(index.0))
             .filter(|version| version.valid)
             .read_error("Invalid ELF symbol version index")
             .map(Some)

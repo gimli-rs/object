@@ -1586,11 +1586,11 @@ impl<'a> Writer<'a> {
         }
         util::write_align(self.buffer, ALIGN_GNU_VERSYM);
         debug_assert_eq!(self.gnu_versym_offset, self.buffer.len());
-        self.write_gnu_versym(0);
+        self.write_gnu_versym(elf::VER_NDX_LOCAL.into());
     }
 
     /// Write a symbol version entry.
-    pub fn write_gnu_versym(&mut self, versym: u16) {
+    pub fn write_gnu_versym(&mut self, versym: elf::VersymIndex) {
         self.buffer.write(&U16::new(self.endian, versym));
     }
 
@@ -2372,8 +2372,8 @@ pub struct Rel {
 #[derive(Debug, Clone)]
 pub struct Verdef {
     pub version: u16,
-    pub flags: u16,
-    pub index: u16,
+    pub flags: elf::VersionFlags,
+    pub index: elf::VersionIndex,
     pub aux_count: u16,
     /// The name for the first [`elf::Verdaux`] entry.
     pub name: StringId,
@@ -2392,7 +2392,7 @@ pub struct Verneed {
 #[allow(missing_docs)]
 #[derive(Debug, Clone)]
 pub struct Vernaux {
-    pub flags: u16,
-    pub index: u16,
+    pub flags: elf::VersionFlags,
+    pub index: elf::VersionIndex,
     pub name: StringId,
 }

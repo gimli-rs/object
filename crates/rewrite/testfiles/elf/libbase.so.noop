@@ -506,9 +506,8 @@ SectionHeader {
     EntrySize: 0x0
     VersionDefinition {
         Version: 1
-        Flags: 0x1
-            VER_FLG_BASE (0x1)
-        Index: 1
+        Flags: VER_FLG_BASE (0x1)
+        Index: VER_NDX_GLOBAL (1)
         AuxCount: 1
         Hash: 0x88E6A1F
         AuxOffset: 40

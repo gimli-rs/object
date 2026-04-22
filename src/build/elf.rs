@@ -628,8 +628,8 @@ impl<'data> Builder<'data> {
     {
         let strings = dynamic_symbols.strings();
         let mut ids = HashMap::new();
-        ids.insert(0, VersionId::local());
-        ids.insert(1, VersionId::global());
+        ids.insert(elf::VER_NDX_LOCAL, VersionId::local());
+        ids.insert(elf::VER_NDX_GLOBAL, VersionId::global());
 
         if let Some((mut verdefs, link)) = sections.gnu_verdef(endian, data)? {
             if link != dynamic_symbols.string_section() {
@@ -637,9 +637,9 @@ impl<'data> Builder<'data> {
             }
             while let Some((verdef, mut verdauxs)) = verdefs.next()? {
                 let flags = verdef.vd_flags.get(endian);
-                if flags & elf::VER_FLG_BASE != 0 {
+                if flags.contains(elf::VER_FLG_BASE) {
                     if flags != elf::VER_FLG_BASE
-                        || verdef.vd_ndx.get(endian) != 1
+                        || verdef.vd_ndx.get(endian) != elf::VER_NDX_GLOBAL
                         || verdef.vd_cnt.get(endian) != 1
                     {
                         return Err(Error::new("Unsupported VER_FLG_BASE in SHT_GNU_VERDEF"));
@@ -654,10 +654,10 @@ impl<'data> Builder<'data> {
                     continue;
                 }
 
-                let index = verdef.vd_ndx.get(endian) & elf::VERSYM_VERSION;
+                let index = verdef.vd_ndx.get(endian);
                 let id = self.versions.next_id();
                 if ids.insert(index, id).is_some() {
-                    return Err(Error(format!("Duplicate SHT_GNU_VERDEF index {}", index)));
+                    return Err(Error(format!("Duplicate SHT_GNU_VERDEF index {}", index.0)));
                 }
 
                 let mut names = Vec::new();
@@ -686,10 +686,13 @@ impl<'data> Builder<'data> {
                     name: verneed.file(endian, strings)?.into(),
                 });
                 while let Some(vernaux) = vernauxs.next()? {
-                    let index = vernaux.vna_other.get(endian) & elf::VERSYM_VERSION;
+                    let index = vernaux.vna_other.get(endian);
                     let id = self.versions.next_id();
                     if ids.insert(index, id).is_some() {
-                        return Err(Error(format!("Duplicate SHT_GNU_VERNEED index {}", index)));
+                        return Err(Error(format!(
+                            "Duplicate SHT_GNU_VERNEED index {}",
+                            index.0
+                        )));
                     }
 
                     let data = VersionData::Need(VersionNeed {
@@ -714,9 +717,9 @@ impl<'data> Builder<'data> {
                 let index = versym.0.get(endian);
                 let symbol = self.dynamic_symbols.get_mut(SymbolId(id));
                 symbol.version = *ids
-                    .get(&(index & elf::VERSYM_VERSION))
+                    .get(&index.index())
                     .ok_or_else(|| Error(format!("Invalid SHT_GNU_VERSYM index {:x}", index)))?;
-                symbol.version_hidden = index & elf::VERSYM_HIDDEN != 0;
+                symbol.version_hidden = index.is_hidden();
             }
         }
         Ok(())
@@ -1450,10 +1453,10 @@ impl<'data> Builder<'data> {
                         writer.write_null_gnu_versym();
                         for out_dynsym in &out_dynsyms {
                             let symbol = self.dynamic_symbols.get(out_dynsym.id);
-                            let mut index = symbol.version.0 as u16;
-                            if symbol.version_hidden {
-                                index |= elf::VERSYM_HIDDEN;
-                            }
+                            let index = elf::VersymIndex::new(
+                                symbol.version.index(),
+                                symbol.version_hidden,
+                            );
                             writer.write_gnu_versym(index);
                         }
                     }
@@ -1463,7 +1466,7 @@ impl<'data> Builder<'data> {
                             let verdef = write::elf::Verdef {
                                 version: elf::VER_DEF_CURRENT,
                                 flags: elf::VER_FLG_BASE,
-                                index: 1,
+                                index: elf::VER_NDX_GLOBAL,
                                 aux_count: 1,
                                 name: writer.get_dynamic_string(version_base),
                             };
@@ -1482,7 +1485,7 @@ impl<'data> Builder<'data> {
                                 writer.write_gnu_verdef(&write::elf::Verdef {
                                     version: elf::VER_DEF_CURRENT,
                                     flags: def.flags,
-                                    index: version.id.0 as u16,
+                                    index: elf::VersionIndex(version.id.0 as u16),
                                     aux_count: def.names.len() as u16,
                                     name: writer.get_dynamic_string(name),
                                 });
@@ -1511,7 +1514,7 @@ impl<'data> Builder<'data> {
                                     debug_assert_eq!(*id, version.id);
                                     writer.write_gnu_vernaux(&write::elf::Vernaux {
                                         flags: need.flags,
-                                        index: version.id.0 as u16,
+                                        index: elf::VersionIndex(version.id.0 as u16),
                                         name: writer.get_dynamic_string(&need.name),
                                     });
                                 }
@@ -2955,12 +2958,17 @@ impl VersionId {
 
     /// Return the ID for a version index of [`elf::VER_NDX_LOCAL`].
     pub fn local() -> Self {
-        VersionId(elf::VER_NDX_LOCAL as usize)
+        VersionId(elf::VER_NDX_LOCAL.0 as usize)
     }
 
     /// Return the ID for a version index of [`elf::VER_NDX_GLOBAL`].
     pub fn global() -> Self {
-        VersionId(elf::VER_NDX_GLOBAL as usize)
+        VersionId(elf::VER_NDX_GLOBAL.0 as usize)
+    }
+
+    /// Convert to `elf::VersionIndex`.
+    pub fn index(self) -> elf::VersionIndex {
+        elf::VersionIndex(self.0 as u16)
     }
 }
 
@@ -3010,7 +3018,7 @@ pub struct VersionDef<'data> {
     /// The version flags.
     ///
     /// A combination of the `VER_FLG_*` constants.
-    pub flags: u16,
+    pub flags: elf::VersionFlags,
 }
 
 impl<'data> VersionDef<'data> {
@@ -3030,7 +3038,7 @@ pub struct VersionNeed<'data> {
     /// The version flags.
     ///
     /// A combination of the `VER_FLG_*` constants.
-    pub flags: u16,
+    pub flags: elf::VersionFlags,
 }
 
 /// A table of versions that are referenced by symbols.

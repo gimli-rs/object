@@ -2315,12 +2315,64 @@ newtype_flag_names!(NAMES_DF_1: DynamicFlags1(u64) = {
 /// Version symbol information
 #[derive(Debug, Clone, Copy)]
 #[repr(C)]
-pub struct Versym<E: Endian>(pub U16<E>);
+pub struct Versym<E: Endian>(pub U16<E, VersymIndex>);
 
-/// Symbol is hidden.
-pub const VERSYM_HIDDEN: u16 = 0x8000;
-/// Symbol version index.
-pub const VERSYM_VERSION: u16 = 0x7fff;
+newtype!(
+    /// Version index for a symbol.
+    ///
+    /// This is a `VersionIndex` plus the `VERSYM_HIDDEN` flag.
+    struct VersymIndex(u16);
+);
+
+impl VersymIndex {
+    /// Construct a `VersymIndex` from an index and a hidden flag.
+    pub fn new(index: VersionIndex, hidden: bool) -> Self {
+        if hidden {
+            Self(index.0).with(VERSYM_HIDDEN)
+        } else {
+            Self(index.0)
+        }
+    }
+
+    /// Return the version index.
+    pub fn index(&self) -> VersionIndex {
+        VersionIndex(self.0 & VERSYM_VERSION)
+    }
+
+    /// Return true if it is the local index.
+    pub fn is_local(&self) -> bool {
+        self.index() == VER_NDX_LOCAL
+    }
+
+    /// Return true if it is the global index.
+    pub fn is_global(&self) -> bool {
+        self.index() == VER_NDX_GLOBAL
+    }
+
+    /// Return the hidden flag.
+    pub fn is_hidden(&self) -> bool {
+        self.contains(VERSYM_HIDDEN)
+    }
+}
+
+impl From<VersionIndex> for VersymIndex {
+    fn from(value: VersionIndex) -> Self {
+        VersymIndex(value.0)
+    }
+}
+
+impl From<VersymIndex> for VersionIndex {
+    fn from(value: VersymIndex) -> Self {
+        value.index()
+    }
+}
+
+newtype_flag_names!(NAMES_VERSYM: VersymIndex(u16) = {
+    /// Symbol is hidden.
+    VERSYM_HIDDEN = 0x8000,
+    /// Symbol version index.
+    VERSYM_VERSION = 0x7fff => NAMES_VER_NDX,
+});
 
 /// Version definition sections
 #[derive(Debug, Clone, Copy)]
@@ -2329,9 +2381,9 @@ pub struct Verdef<E: Endian> {
     /// Version revision
     pub vd_version: U16<E>,
     /// Version information
-    pub vd_flags: U16<E>,
+    pub vd_flags: U16<E, VersionFlags>,
     /// Version Index
-    pub vd_ndx: U16<E>,
+    pub vd_ndx: U16<E, VersionIndex>,
     /// Number of associated aux entries
     pub vd_cnt: U16<E>,
     /// Version name hash value
@@ -2348,18 +2400,51 @@ pub const VER_DEF_NONE: u16 = 0;
 /// Current version
 pub const VER_DEF_CURRENT: u16 = 1;
 
-// Legal values for vd_flags (version information flags).
-/// Version definition of file itself
-pub const VER_FLG_BASE: u16 = 0x1;
-// Legal values for vd_flags and vna_flags (version information flags).
-/// Weak version identifier
-pub const VER_FLG_WEAK: u16 = 0x2;
+newtype!(
+    /// Legal values for vd_flags and vna_flags (version information flags).
+    struct VersionFlags(u16);
+);
 
-// Versym symbol index values.
-/// Symbol is local.
-pub const VER_NDX_LOCAL: u16 = 0;
-/// Symbol is global.
-pub const VER_NDX_GLOBAL: u16 = 1;
+newtype_flag_names!(NAMES_VER_FLG: VersionFlags(u16) = {
+    // Legal values for vd_flags (version information flags).
+    /// Version definition of file itself
+    VER_FLG_BASE = 0x1,
+    // Legal values for vd_flags and vna_flags (version information flags).
+    /// Weak version identifier
+    VER_FLG_WEAK = 0x2,
+});
+
+newtype!(
+    /// Version index.
+    ///
+    /// This is the index value stored in [`VersymIndex`], [`Verdef::vd_ndx`] or
+    /// [`Vernaux::vna_other`].
+    struct VersionIndex(u16);
+);
+
+impl VersionIndex {
+    /// Return true if it is the local index.
+    pub fn is_local(&self) -> bool {
+        *self == VER_NDX_LOCAL
+    }
+
+    /// Return true if it is the global index.
+    pub fn is_global(&self) -> bool {
+        *self == VER_NDX_GLOBAL
+    }
+
+    /// Return true if it is the local or global index.
+    pub fn is_special(&self) -> bool {
+        self.0 <= VER_NDX_GLOBAL.0
+    }
+}
+
+newtype_constant_names!(NAMES_VER_NDX: VersionIndex(u16) = {
+    /// Symbol is local.
+    VER_NDX_LOCAL = 0,
+    /// Symbol is global.
+    VER_NDX_GLOBAL = 1,
+});
 
 /// Auxiliary version information.
 #[derive(Debug, Clone, Copy)]
@@ -2400,9 +2485,9 @@ pub struct Vernaux<E: Endian> {
     /// Hash value of dependency name
     pub vna_hash: U32<E>,
     /// Dependency specific information
-    pub vna_flags: U16<E>,
+    pub vna_flags: U16<E, VersionFlags>,
     /// Version Index
-    pub vna_other: U16<E>,
+    pub vna_other: U16<E, VersionIndex>,
     /// Dependency name string offset
     pub vna_name: U32<E>,
     /// Offset in bytes to next vernaux entry
