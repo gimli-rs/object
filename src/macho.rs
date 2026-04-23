@@ -1428,7 +1428,7 @@ pub struct SegmentCommand32<E: Endian> {
     /// number of sections in segment
     pub nsects: U32<E>,
     /// flags
-    pub flags: U32<E>,
+    pub flags: U32<E, SegmentFlags>,
 }
 
 /// 64-bit segment load command.
@@ -1461,20 +1461,26 @@ pub struct SegmentCommand64<E: Endian> {
     /// number of sections in segment
     pub nsects: U32<E>,
     /// flags
-    pub flags: U32<E>,
+    pub flags: U32<E, SegmentFlags>,
 }
 
-// Values for `SegmentCommand*::flags`.
-/// the file contents for this segment is for the high part of the VM space, the low part is zero filled (for stacks in core files)
-pub const SG_HIGHVM: u32 = 0x1;
-/// this segment is the VM that is allocated by a fixed VM library, for overlap checking in the link editor
-pub const SG_FVMLIB: u32 = 0x2;
-/// this segment has nothing that was relocated in it and nothing relocated to it, that is it maybe safely replaced without relocation
-pub const SG_NORELOC: u32 = 0x4;
-/// This segment is protected.  If the segment starts at file offset 0, the first page of the segment is not protected.  All other pages of the segment are protected.
-pub const SG_PROTECTED_VERSION_1: u32 = 0x8;
-/// This segment is made read-only after fixups
-pub const SG_READ_ONLY: u32 = 0x10;
+newtype!(
+    /// Values for `SegmentCommand*::flags`.
+    struct SegmentFlags(u32);
+);
+
+newtype_flag_names!(NAMES_SG: SegmentFlags(u32) = {
+    /// the file contents for this segment is for the high part of the VM space, the low part is zero filled (for stacks in core files)
+    SG_HIGHVM = 0x1,
+    /// this segment is the VM that is allocated by a fixed VM library, for overlap checking in the link editor
+    SG_FVMLIB = 0x2,
+    /// this segment has nothing that was relocated in it and nothing relocated to it, that is it maybe safely replaced without relocation
+    SG_NORELOC = 0x4,
+    /// This segment is protected.  If the segment starts at file offset 0, the first page of the segment is not protected.  All other pages of the segment are protected.
+    SG_PROTECTED_VERSION_1 = 0x8,
+    /// This segment is made read-only after fixups
+    SG_READ_ONLY = 0x10,
+});
 
 /*
  * A segment is made up of zero or more sections.  Non-MH_OBJECT files have
@@ -1524,7 +1530,7 @@ pub struct Section32<E: Endian> {
     /// number of relocation entries
     pub nreloc: U32<E>,
     /// flags (section type and attributes)
-    pub flags: U32<E>,
+    pub flags: U32<E, SectionFlags>,
     /// reserved (for offset or index)
     pub reserved1: U32<E>,
     /// reserved (for count or sizeof)
@@ -1552,7 +1558,7 @@ pub struct Section64<E: Endian> {
     /// number of relocation entries
     pub nreloc: U32<E>,
     /// flags (section type and attributes)
-    pub flags: U32<E>,
+    pub flags: U32<E, SectionFlags>,
     /// reserved (for offset or index)
     pub reserved1: U32<E>,
     /// reserved (for count or sizeof)
@@ -1572,106 +1578,152 @@ pub const SECTION_TYPE: u32 = 0x0000_00ff;
 /// 24 section attributes
 pub const SECTION_ATTRIBUTES: u32 = 0xffff_ff00;
 
-/* Constants for the type of a section */
-/// regular section
-pub const S_REGULAR: u32 = 0x0;
-/// zero fill on demand section
-pub const S_ZEROFILL: u32 = 0x1;
-/// section with only literal C strings
-pub const S_CSTRING_LITERALS: u32 = 0x2;
-/// section with only 4 byte literals
-pub const S_4BYTE_LITERALS: u32 = 0x3;
-/// section with only 8 byte literals
-pub const S_8BYTE_LITERALS: u32 = 0x4;
-/// section with only pointers to literals
-pub const S_LITERAL_POINTERS: u32 = 0x5;
-/*
- * For the two types of symbol pointers sections and the symbol stubs section
- * they have indirect symbol table entries.  For each of the entries in the
- * section the indirect symbol table entries, in corresponding order in the
- * indirect symbol table, start at the index stored in the reserved1 field
- * of the section structure.  Since the indirect symbol table entries
- * correspond to the entries in the section the number of indirect symbol table
- * entries is inferred from the size of the section divided by the size of the
- * entries in the section.  For symbol pointers sections the size of the entries
- * in the section is 4 bytes and for symbol stubs sections the byte size of the
- * stubs is stored in the reserved2 field of the section structure.
- */
-/// section with only non-lazy symbol pointers
-pub const S_NON_LAZY_SYMBOL_POINTERS: u32 = 0x6;
-/// section with only lazy symbol pointers
-pub const S_LAZY_SYMBOL_POINTERS: u32 = 0x7;
-/// section with only symbol stubs, byte size of stub in the reserved2 field
-pub const S_SYMBOL_STUBS: u32 = 0x8;
-/// section with only function pointers for initialization
-pub const S_MOD_INIT_FUNC_POINTERS: u32 = 0x9;
-/// section with only function pointers for termination
-pub const S_MOD_TERM_FUNC_POINTERS: u32 = 0xa;
-/// section contains symbols that are to be coalesced
-pub const S_COALESCED: u32 = 0xb;
-/// zero fill on demand section (that can be larger than 4 gigabytes)
-pub const S_GB_ZEROFILL: u32 = 0xc;
-/// section with only pairs of function pointers for interposing
-pub const S_INTERPOSING: u32 = 0xd;
-/// section with only 16 byte literals
-pub const S_16BYTE_LITERALS: u32 = 0xe;
-/// section contains DTrace Object Format
-pub const S_DTRACE_DOF: u32 = 0xf;
-/// section with only lazy symbol pointers to lazy loaded dylibs
-pub const S_LAZY_DYLIB_SYMBOL_POINTERS: u32 = 0x10;
-/*
- * Section types to support thread local variables
- */
-/// template of initial values for TLVs
-pub const S_THREAD_LOCAL_REGULAR: u32 = 0x11;
-/// template of initial values for TLVs
-pub const S_THREAD_LOCAL_ZEROFILL: u32 = 0x12;
-/// TLV descriptors
-pub const S_THREAD_LOCAL_VARIABLES: u32 = 0x13;
-/// pointers to TLV descriptors
-pub const S_THREAD_LOCAL_VARIABLE_POINTERS: u32 = 0x14;
-/// functions to call to initialize TLV values
-pub const S_THREAD_LOCAL_INIT_FUNCTION_POINTERS: u32 = 0x15;
-/// 32-bit offsets to initializers
-pub const S_INIT_FUNC_OFFSETS: u32 = 0x16;
+newtype!(
+    /// Values for `Section*::flags`.
+    struct SectionFlags(u32);
+);
+
+impl SectionFlags {
+    /// Get the section type field.
+    pub fn typ(self) -> SectionType {
+        SectionType((self.0 & SECTION_TYPE) as u8)
+    }
+
+    /// Set the section type field.
+    pub fn with_type(self, typ: SectionType) -> SectionFlags {
+        SectionFlags(self.0 & !SECTION_TYPE | u32::from(typ.0))
+    }
+}
+
+newtype!(
+    /// Constants for the type of a section
+    struct SectionType(u8);
+);
+
+impl From<SectionType> for SectionFlags {
+    fn from(typ: SectionType) -> Self {
+        SectionFlags(u32::from(typ.0))
+    }
+}
+
+impl From<SectionFlags> for SectionType {
+    fn from(flags: SectionFlags) -> Self {
+        flags.typ()
+    }
+}
+
+impl core::ops::BitOr<SectionFlags> for SectionType {
+    type Output = SectionFlags;
+    fn bitor(self, attrs: SectionFlags) -> SectionFlags {
+        attrs.with_type(self)
+    }
+}
+
+newtype_constant_names!(NAMES_S_TYPE: SectionType(u8) = {
+    /// regular section
+    S_REGULAR = 0x0,
+    /// zero fill on demand section
+    S_ZEROFILL = 0x1,
+    /// section with only literal C strings
+    S_CSTRING_LITERALS = 0x2,
+    /// section with only 4 byte literals
+    S_4BYTE_LITERALS = 0x3,
+    /// section with only 8 byte literals
+    S_8BYTE_LITERALS = 0x4,
+    /// section with only pointers to literals
+    S_LITERAL_POINTERS = 0x5,
+    /*
+     * For the two types of symbol pointers sections and the symbol stubs section
+     * they have indirect symbol table entries.  For each of the entries in the
+     * section the indirect symbol table entries, in corresponding order in the
+     * indirect symbol table, start at the index stored in the reserved1 field
+     * of the section structure.  Since the indirect symbol table entries
+     * correspond to the entries in the section the number of indirect symbol table
+     * entries is inferred from the size of the section divided by the size of the
+     * entries in the section.  For symbol pointers sections the size of the entries
+     * in the section is 4 bytes and for symbol stubs sections the byte size of the
+     * stubs is stored in the reserved2 field of the section structure.
+     */
+    /// section with only non-lazy symbol pointers
+    S_NON_LAZY_SYMBOL_POINTERS = 0x6,
+    /// section with only lazy symbol pointers
+    S_LAZY_SYMBOL_POINTERS = 0x7,
+    /// section with only symbol stubs, byte size of stub in the reserved2 field
+    S_SYMBOL_STUBS = 0x8,
+    /// section with only function pointers for initialization
+    S_MOD_INIT_FUNC_POINTERS = 0x9,
+    /// section with only function pointers for termination
+    S_MOD_TERM_FUNC_POINTERS = 0xa,
+    /// section contains symbols that are to be coalesced
+    S_COALESCED = 0xb,
+    /// zero fill on demand section (that can be larger than 4 gigabytes)
+    S_GB_ZEROFILL = 0xc,
+    /// section with only pairs of function pointers for interposing
+    S_INTERPOSING = 0xd,
+    /// section with only 16 byte literals
+    S_16BYTE_LITERALS = 0xe,
+    /// section contains DTrace Object Format
+    S_DTRACE_DOF = 0xf,
+    /// section with only lazy symbol pointers to lazy loaded dylibs
+    S_LAZY_DYLIB_SYMBOL_POINTERS = 0x10,
+    /*
+     * Section types to support thread local variables
+     */
+    /// template of initial values for TLVs
+    S_THREAD_LOCAL_REGULAR = 0x11,
+    /// template of initial values for TLVs
+    S_THREAD_LOCAL_ZEROFILL = 0x12,
+    /// TLV descriptors
+    S_THREAD_LOCAL_VARIABLES = 0x13,
+    /// pointers to TLV descriptors
+    S_THREAD_LOCAL_VARIABLE_POINTERS = 0x14,
+    /// functions to call to initialize TLV values
+    S_THREAD_LOCAL_INIT_FUNCTION_POINTERS = 0x15,
+    /// 32-bit offsets to initializers
+    S_INIT_FUNC_OFFSETS = 0x16,
+});
 
 /*
  * Constants for the section attributes part of the flags field of a section
  * structure.
  */
+newtype_flag_names!(NAMES_S: SectionFlags(u32) = {
+    _ = SECTION_TYPE => NAMES_S_TYPE,
+    /// section contains only true machine instructions
+    S_ATTR_PURE_INSTRUCTIONS = 0x8000_0000,
+    /// section contains coalesced symbols that are not to be in a ranlib table of contents
+    S_ATTR_NO_TOC = 0x4000_0000,
+    /// ok to strip static symbols in this section in files with the MH_DYLDLINK flag
+    S_ATTR_STRIP_STATIC_SYMS = 0x2000_0000,
+    /// no dead stripping
+    S_ATTR_NO_DEAD_STRIP = 0x1000_0000,
+    /// blocks are live if they reference live blocks
+    S_ATTR_LIVE_SUPPORT = 0x0800_0000,
+    /// Used with i386 code stubs written on by dyld
+    S_ATTR_SELF_MODIFYING_CODE = 0x0400_0000,
+    /*
+     * If a segment contains any sections marked with S_ATTR_DEBUG then all
+     * sections in that segment must have this attribute.  No section other than
+     * a section marked with this attribute may reference the contents of this
+     * section.  A section with this attribute may contain no symbols and must have
+     * a section type S_REGULAR.  The static linker will not copy section contents
+     * from sections with this attribute into its output file.  These sections
+     * generally contain DWARF debugging info.
+     */
+    /// a debug section
+    S_ATTR_DEBUG = 0x0200_0000,
+    /// section contains some machine instructions
+    S_ATTR_SOME_INSTRUCTIONS = 0x0000_0400,
+    /// section has external relocation entries
+    S_ATTR_EXT_RELOC = 0x0000_0200,
+    /// section has local relocation entries
+    S_ATTR_LOC_RELOC = 0x0000_0100,
+});
+
 /// User setable attributes
 pub const SECTION_ATTRIBUTES_USR: u32 = 0xff00_0000;
-/// section contains only true machine instructions
-pub const S_ATTR_PURE_INSTRUCTIONS: u32 = 0x8000_0000;
-/// section contains coalesced symbols that are not to be in a ranlib table of contents
-pub const S_ATTR_NO_TOC: u32 = 0x4000_0000;
-/// ok to strip static symbols in this section in files with the MH_DYLDLINK flag
-pub const S_ATTR_STRIP_STATIC_SYMS: u32 = 0x2000_0000;
-/// no dead stripping
-pub const S_ATTR_NO_DEAD_STRIP: u32 = 0x1000_0000;
-/// blocks are live if they reference live blocks
-pub const S_ATTR_LIVE_SUPPORT: u32 = 0x0800_0000;
-/// Used with i386 code stubs written on by dyld
-pub const S_ATTR_SELF_MODIFYING_CODE: u32 = 0x0400_0000;
-/*
- * If a segment contains any sections marked with S_ATTR_DEBUG then all
- * sections in that segment must have this attribute.  No section other than
- * a section marked with this attribute may reference the contents of this
- * section.  A section with this attribute may contain no symbols and must have
- * a section type S_REGULAR.  The static linker will not copy section contents
- * from sections with this attribute into its output file.  These sections
- * generally contain DWARF debugging info.
- */
-/// a debug section
-pub const S_ATTR_DEBUG: u32 = 0x0200_0000;
 /// system setable attributes
 pub const SECTION_ATTRIBUTES_SYS: u32 = 0x00ff_ff00;
-/// section contains some machine instructions
-pub const S_ATTR_SOME_INSTRUCTIONS: u32 = 0x0000_0400;
-/// section has external relocation entries
-pub const S_ATTR_EXT_RELOC: u32 = 0x0000_0200;
-/// section has local relocation entries
-pub const S_ATTR_LOC_RELOC: u32 = 0x0000_0100;
 
 /*
  * The names of segments and sections in them are mostly meaningless to the

@@ -750,8 +750,7 @@ fn print_segment<S: Segment>(
             p.field_flags("MaxProt", segment.maxprot(endian), VmProt::NAMES);
             p.field_flags("InitProt", segment.initprot(endian), VmProt::NAMES);
             p.field("NumberOfSections", segment.nsects(endian));
-            p.field_hex("Flags", segment.flags(endian));
-            p.flags(segment.flags(endian), 0, FLAGS_SG);
+            p.field_flags("Flags", segment.flags(endian), SegmentFlags::NAMES);
         }
         if let Some(sections) = segment.sections(endian, section_data).print_err(p) {
             for section in sections {
@@ -783,14 +782,7 @@ fn print_section<S: Section>(
             p.field_hex("Align", section.align(endian));
             p.field_hex("RelocationOffset", section.reloff(endian));
             p.field_hex("NumberOfRelocations", section.nreloc(endian));
-            let flags = section.flags(endian);
-            if flags & SECTION_TYPE == flags {
-                p.field_enum("Flags", flags, FLAGS_S_TYPE);
-            } else {
-                p.field_hex("Flags", section.flags(endian));
-                p.flags(flags, SECTION_TYPE, FLAGS_S_TYPE);
-                p.flags(flags, 0, FLAGS_S_ATTR);
-            }
+            p.field_flags("Flags", section.flags(endian), SectionFlags::NAMES);
             p.field_hex("Reserved1", section.reserved1(endian));
             p.field_hex("Reserved2", section.reserved2(endian));
             if let Some(indirect_symbols) = section
@@ -1026,50 +1018,6 @@ fn print_cputype(p: &mut Printer<'_>, cputype: CpuType, cpusubtype: CpuSubtype) 
     p.field_flags("CpuSubtype", cpusubtype, constants.cpusubtype);
 }
 
-const FLAGS_SG: &[Flag<u32>] = &flags!(
-    SG_HIGHVM,
-    SG_FVMLIB,
-    SG_NORELOC,
-    SG_PROTECTED_VERSION_1,
-    SG_READ_ONLY,
-);
-const FLAGS_S_TYPE: &[Flag<u32>] = &flags!(
-    S_REGULAR,
-    S_ZEROFILL,
-    S_CSTRING_LITERALS,
-    S_4BYTE_LITERALS,
-    S_8BYTE_LITERALS,
-    S_LITERAL_POINTERS,
-    S_NON_LAZY_SYMBOL_POINTERS,
-    S_LAZY_SYMBOL_POINTERS,
-    S_SYMBOL_STUBS,
-    S_MOD_INIT_FUNC_POINTERS,
-    S_MOD_TERM_FUNC_POINTERS,
-    S_COALESCED,
-    S_GB_ZEROFILL,
-    S_INTERPOSING,
-    S_16BYTE_LITERALS,
-    S_DTRACE_DOF,
-    S_LAZY_DYLIB_SYMBOL_POINTERS,
-    S_THREAD_LOCAL_REGULAR,
-    S_THREAD_LOCAL_ZEROFILL,
-    S_THREAD_LOCAL_VARIABLES,
-    S_THREAD_LOCAL_VARIABLE_POINTERS,
-    S_THREAD_LOCAL_INIT_FUNCTION_POINTERS,
-    S_INIT_FUNC_OFFSETS,
-);
-const FLAGS_S_ATTR: &[Flag<u32>] = &flags!(
-    S_ATTR_PURE_INSTRUCTIONS,
-    S_ATTR_NO_TOC,
-    S_ATTR_STRIP_STATIC_SYMS,
-    S_ATTR_NO_DEAD_STRIP,
-    S_ATTR_LIVE_SUPPORT,
-    S_ATTR_SELF_MODIFYING_CODE,
-    S_ATTR_DEBUG,
-    S_ATTR_SOME_INSTRUCTIONS,
-    S_ATTR_EXT_RELOC,
-    S_ATTR_LOC_RELOC,
-);
 const FLAGS_PLATFORM: &[Flag<u32>] = &flags!(
     PLATFORM_UNKNOWN,
     PLATFORM_MACOS,

@@ -523,7 +523,7 @@ pub enum SegmentFlags {
     #[cfg(feature = "macho")]
     MachO {
         /// `flags` field in the segment header.
-        flags: u32,
+        flags: crate::macho::SegmentFlags,
         /// `maxprot` field in the segment header.
         maxprot: crate::macho::VmProt,
         /// `initprot` field in the segment header.
@@ -624,7 +624,7 @@ pub enum SectionFlags {
     #[cfg(feature = "macho")]
     MachO {
         /// `flags` field in the section header.
-        flags: u32,
+        flags: crate::macho::SectionFlags,
     },
     /// COFF section flags.
     #[cfg(feature = "coff")]

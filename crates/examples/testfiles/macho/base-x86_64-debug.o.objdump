@@ -5,18 +5,18 @@ Flags: MachO { flags: MH_SUBSECTIONS_VIA_SYMBOLS }
 Relative Address Base: 0
 Entry Address: 0
 Segment { name: "", address: 0, size: 2f6, permissions: RWX }
-1: Section { segment: "__TEXT", name: "__text", address: 0, size: 25, align: 10, kind: Text, flags: MachO { flags: 80000400 } }
-2: Section { segment: "__TEXT", name: "__cstring", address: 25, size: d, align: 1, kind: ReadOnlyString, flags: MachO { flags: 2 } }
-3: Section { segment: "__DWARF", name: "__debug_abbrev", address: 32, size: 3a, align: 1, kind: Debug, flags: MachO { flags: 2000000 } }
-4: Section { segment: "__DWARF", name: "__debug_info", address: 6c, size: 53, align: 1, kind: Debug, flags: MachO { flags: 2000000 } }
-5: Section { segment: "__DWARF", name: "__debug_str", address: bf, size: c8, align: 1, kind: Debug, flags: MachO { flags: 2000000 } }
-6: Section { segment: "__DWARF", name: "__apple_names", address: 187, size: 3c, align: 1, kind: Debug, flags: MachO { flags: 2000000 } }
-7: Section { segment: "__DWARF", name: "__apple_objc", address: 1c3, size: 24, align: 1, kind: Debug, flags: MachO { flags: 2000000 } }
-8: Section { segment: "__DWARF", name: "__apple_namespac", address: 1e7, size: 24, align: 1, kind: Debug, flags: MachO { flags: 2000000 } }
-9: Section { segment: "__DWARF", name: "__apple_types", address: 20b, size: 47, align: 1, kind: Debug, flags: MachO { flags: 2000000 } }
-10: Section { segment: "__LD", name: "__compact_unwind", address: 258, size: 20, align: 8, kind: Unknown, flags: MachO { flags: 2000000 } }
-11: Section { segment: "__TEXT", name: "__eh_frame", address: 278, size: 40, align: 8, kind: ReadOnlyData, flags: MachO { flags: 6800000b } }
-12: Section { segment: "__DWARF", name: "__debug_line", address: 2b8, size: 3e, align: 1, kind: Debug, flags: MachO { flags: 2000000 } }
+1: Section { segment: "__TEXT", name: "__text", address: 0, size: 25, align: 10, kind: Text, flags: MachO { flags: S_REGULAR | S_ATTR_PURE_INSTRUCTIONS | S_ATTR_SOME_INSTRUCTIONS } }
+2: Section { segment: "__TEXT", name: "__cstring", address: 25, size: d, align: 1, kind: ReadOnlyString, flags: MachO { flags: S_CSTRING_LITERALS } }
+3: Section { segment: "__DWARF", name: "__debug_abbrev", address: 32, size: 3a, align: 1, kind: Debug, flags: MachO { flags: S_REGULAR | S_ATTR_DEBUG } }
+4: Section { segment: "__DWARF", name: "__debug_info", address: 6c, size: 53, align: 1, kind: Debug, flags: MachO { flags: S_REGULAR | S_ATTR_DEBUG } }
+5: Section { segment: "__DWARF", name: "__debug_str", address: bf, size: c8, align: 1, kind: Debug, flags: MachO { flags: S_REGULAR | S_ATTR_DEBUG } }
+6: Section { segment: "__DWARF", name: "__apple_names", address: 187, size: 3c, align: 1, kind: Debug, flags: MachO { flags: S_REGULAR | S_ATTR_DEBUG } }
+7: Section { segment: "__DWARF", name: "__apple_objc", address: 1c3, size: 24, align: 1, kind: Debug, flags: MachO { flags: S_REGULAR | S_ATTR_DEBUG } }
+8: Section { segment: "__DWARF", name: "__apple_namespac", address: 1e7, size: 24, align: 1, kind: Debug, flags: MachO { flags: S_REGULAR | S_ATTR_DEBUG } }
+9: Section { segment: "__DWARF", name: "__apple_types", address: 20b, size: 47, align: 1, kind: Debug, flags: MachO { flags: S_REGULAR | S_ATTR_DEBUG } }
+10: Section { segment: "__LD", name: "__compact_unwind", address: 258, size: 20, align: 8, kind: Unknown, flags: MachO { flags: S_REGULAR | S_ATTR_DEBUG } }
+11: Section { segment: "__TEXT", name: "__eh_frame", address: 278, size: 40, align: 8, kind: ReadOnlyData, flags: MachO { flags: S_COALESCED | S_ATTR_NO_TOC | S_ATTR_STRIP_STATIC_SYMS | S_ATTR_LIVE_SUPPORT } }
+12: Section { segment: "__DWARF", name: "__debug_line", address: 2b8, size: 3e, align: 1, kind: Debug, flags: MachO { flags: S_REGULAR | S_ATTR_DEBUG } }
 
 Symbols
 0: Symbol { name: "_main", address: 0, size: 0, kind: Text, section: Section(SectionIndex(1)), scope: Dynamic, weak: false, flags: MachO { n_type: f, n_desc: 0 } }

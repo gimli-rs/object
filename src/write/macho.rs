@@ -159,17 +159,22 @@ impl<'a> Object<'a> {
 
     pub(crate) fn macho_section_flags(&self, section: &Section<'_>) -> SectionFlags {
         let flags = match section.kind {
-            SectionKind::Text => macho::S_ATTR_PURE_INSTRUCTIONS | macho::S_ATTR_SOME_INSTRUCTIONS,
-            SectionKind::Data => 0,
-            SectionKind::ReadOnlyData | SectionKind::ReadOnlyDataWithRel => 0,
-            SectionKind::ReadOnlyString => macho::S_CSTRING_LITERALS,
-            SectionKind::UninitializedData | SectionKind::Common => macho::S_ZEROFILL,
-            SectionKind::Tls => macho::S_THREAD_LOCAL_REGULAR,
-            SectionKind::UninitializedTls => macho::S_THREAD_LOCAL_ZEROFILL,
-            SectionKind::TlsVariables => macho::S_THREAD_LOCAL_VARIABLES,
-            SectionKind::Debug | SectionKind::DebugString => macho::S_ATTR_DEBUG,
-            SectionKind::OtherString => macho::S_CSTRING_LITERALS,
-            SectionKind::Other | SectionKind::Linker | SectionKind::Metadata => 0,
+            SectionKind::Text => {
+                macho::S_REGULAR | macho::S_ATTR_PURE_INSTRUCTIONS | macho::S_ATTR_SOME_INSTRUCTIONS
+            }
+            SectionKind::Data | SectionKind::ReadOnlyData | SectionKind::ReadOnlyDataWithRel => {
+                macho::S_REGULAR.into()
+            }
+            SectionKind::ReadOnlyString => macho::S_CSTRING_LITERALS.into(),
+            SectionKind::UninitializedData | SectionKind::Common => macho::S_ZEROFILL.into(),
+            SectionKind::Tls => macho::S_THREAD_LOCAL_REGULAR.into(),
+            SectionKind::UninitializedTls => macho::S_THREAD_LOCAL_ZEROFILL.into(),
+            SectionKind::TlsVariables => macho::S_THREAD_LOCAL_VARIABLES.into(),
+            SectionKind::Debug | SectionKind::DebugString => macho::S_REGULAR | macho::S_ATTR_DEBUG,
+            SectionKind::OtherString => macho::S_CSTRING_LITERALS.into(),
+            SectionKind::Other | SectionKind::Linker | SectionKind::Metadata => {
+                macho::S_REGULAR.into()
+            }
             SectionKind::Note | SectionKind::Unknown => {
                 return SectionFlags::None;
             }
@@ -671,7 +676,7 @@ impl<'a> Object<'a> {
                 maxprot: macho::VM_PROT_READ | macho::VM_PROT_WRITE | macho::VM_PROT_EXECUTE,
                 initprot: macho::VM_PROT_READ | macho::VM_PROT_WRITE | macho::VM_PROT_EXECUTE,
                 nsects: self.sections.len() as u32,
-                flags: 0,
+                flags: macho::SegmentFlags(0),
             },
         );
 
@@ -965,7 +970,7 @@ struct SegmentCommand {
     maxprot: macho::VmProt,
     initprot: macho::VmProt,
     nsects: u32,
-    flags: u32,
+    flags: macho::SegmentFlags,
 }
 
 struct SectionHeader {
@@ -977,7 +982,7 @@ struct SectionHeader {
     align: u32,
     reloff: u32,
     nreloc: u32,
-    flags: u32,
+    flags: macho::SectionFlags,
 }
 
 struct Nlist {

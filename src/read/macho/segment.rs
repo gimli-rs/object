@@ -196,7 +196,7 @@ pub trait Segment: Debug + Pod {
     fn maxprot(&self, endian: Self::Endian) -> macho::VmProt;
     fn initprot(&self, endian: Self::Endian) -> macho::VmProt;
     fn nsects(&self, endian: Self::Endian) -> u32;
-    fn flags(&self, endian: Self::Endian) -> u32;
+    fn flags(&self, endian: Self::Endian) -> macho::SegmentFlags;
 
     /// Return the `segname` bytes up until the null terminator.
     fn name(&self) -> &[u8] {
@@ -277,7 +277,7 @@ impl<Endian: endian::Endian> Segment for macho::SegmentCommand32<Endian> {
     fn nsects(&self, endian: Self::Endian) -> u32 {
         self.nsects.get(endian)
     }
-    fn flags(&self, endian: Self::Endian) -> u32 {
+    fn flags(&self, endian: Self::Endian) -> macho::SegmentFlags {
         self.flags.get(endian)
     }
 }
@@ -321,7 +321,7 @@ impl<Endian: endian::Endian> Segment for macho::SegmentCommand64<Endian> {
     fn nsects(&self, endian: Self::Endian) -> u32 {
         self.nsects.get(endian)
     }
-    fn flags(&self, endian: Self::Endian) -> u32 {
+    fn flags(&self, endian: Self::Endian) -> macho::SegmentFlags {
         self.flags.get(endian)
     }
 }
