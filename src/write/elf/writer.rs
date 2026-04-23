@@ -346,7 +346,7 @@ impl<'a> Writer<'a> {
 
         let endian = self.endian;
         if self.is_64 {
-            let file = elf::FileHeader64 {
+            let file = elf::Ehdr64 {
                 e_ident,
                 e_type: U16::new(endian, header.e_type),
                 e_machine: U16::new(endian, header.e_machine),
@@ -364,7 +364,7 @@ impl<'a> Writer<'a> {
             };
             self.buffer.write(&file)
         } else {
-            let file = elf::FileHeader32 {
+            let file = elf::Ehdr32 {
                 e_ident,
                 e_type: U16::new(endian, header.e_type),
                 e_machine: U16::new(endian, header.e_machine),
@@ -412,7 +412,7 @@ impl<'a> Writer<'a> {
     pub fn write_program_header(&mut self, header: &ProgramHeader) {
         let endian = self.endian;
         if self.is_64 {
-            let header = elf::ProgramHeader64 {
+            let header = elf::Phdr64 {
                 p_type: U32::new(endian, header.p_type),
                 p_flags: U32::new(endian, header.p_flags),
                 p_offset: U64::new(endian, header.p_offset),
@@ -424,7 +424,7 @@ impl<'a> Writer<'a> {
             };
             self.buffer.write(&header);
         } else {
-            let header = elf::ProgramHeader32 {
+            let header = elf::Phdr32 {
                 p_type: U32::new(endian, header.p_type),
                 p_offset: U32::new(endian, header.p_offset as u32),
                 p_vaddr: U32::new(endian, header.p_vaddr as u32),
@@ -495,8 +495,8 @@ impl<'a> Writer<'a> {
         debug_assert_eq!(self.section_offset, self.buffer.len());
         self.write_section_header(&SectionHeader {
             name: None,
-            sh_type: 0,
-            sh_flags: 0,
+            sh_type: elf::SHT_NULL,
+            sh_flags: elf::ShdrFlags(0),
             sh_addr: 0,
             sh_offset: 0,
             sh_size: if self.section_num >= elf::SHN_LORESERVE.into() {
@@ -525,10 +525,10 @@ impl<'a> Writer<'a> {
         };
         let endian = self.endian;
         if self.is_64 {
-            let section = elf::SectionHeader64 {
+            let section = elf::Shdr64 {
                 sh_name: U32::new(endian, sh_name),
-                sh_type: U32::new(endian, section.sh_type),
-                sh_flags: U64::new(endian, section.sh_flags),
+                sh_type: U32::new(endian, section.sh_type.0),
+                sh_flags: U64::new(endian, section.sh_flags.0),
                 sh_addr: U64::new(endian, section.sh_addr),
                 sh_offset: U64::new(endian, section.sh_offset),
                 sh_size: U64::new(endian, section.sh_size),
@@ -539,10 +539,10 @@ impl<'a> Writer<'a> {
             };
             self.buffer.write(&section);
         } else {
-            let section = elf::SectionHeader32 {
+            let section = elf::Shdr32 {
                 sh_name: U32::new(endian, sh_name),
-                sh_type: U32::new(endian, section.sh_type),
-                sh_flags: U32::new(endian, section.sh_flags as u32),
+                sh_type: U32::new(endian, section.sh_type.0),
+                sh_flags: U32::new(endian, section.sh_flags.0 as u32),
                 sh_addr: U32::new(endian, section.sh_addr as u32),
                 sh_offset: U32::new(endian, section.sh_offset as u32),
                 sh_size: U32::new(endian, section.sh_size as u32),
@@ -623,7 +623,7 @@ impl<'a> Writer<'a> {
         self.write_section_header(&SectionHeader {
             name: self.shstrtab_str_id,
             sh_type: elf::SHT_STRTAB,
-            sh_flags: 0,
+            sh_flags: elf::ShdrFlags(0),
             sh_addr: 0,
             sh_offset: self.shstrtab_offset as u64,
             sh_size: self.shstrtab_data.len() as u64,
@@ -716,7 +716,7 @@ impl<'a> Writer<'a> {
         self.write_section_header(&SectionHeader {
             name: self.strtab_str_id,
             sh_type: elf::SHT_STRTAB,
-            sh_flags: 0,
+            sh_flags: elf::ShdrFlags(0),
             sh_addr: 0,
             sh_offset: self.strtab_offset as u64,
             sh_size: self.strtab_data.len() as u64,
@@ -839,7 +839,7 @@ impl<'a> Writer<'a> {
         if self.is_64 {
             let sym = elf::Sym64 {
                 st_name: U32::new(endian, st_name),
-                st_info: sym.st_info,
+                st_info: sym.st_info.0,
                 st_other: sym.st_other,
                 st_shndx: U16::new(endian, st_shndx),
                 st_value: U64::new(endian, sym.st_value),
@@ -849,7 +849,7 @@ impl<'a> Writer<'a> {
         } else {
             let sym = elf::Sym32 {
                 st_name: U32::new(endian, st_name),
-                st_info: sym.st_info,
+                st_info: sym.st_info.0,
                 st_other: sym.st_other,
                 st_shndx: U16::new(endian, st_shndx),
                 st_value: U32::new(endian, sym.st_value as u32),
@@ -897,7 +897,7 @@ impl<'a> Writer<'a> {
         self.write_section_header(&SectionHeader {
             name: self.symtab_str_id,
             sh_type: elf::SHT_SYMTAB,
-            sh_flags: 0,
+            sh_flags: elf::ShdrFlags(0),
             sh_addr: 0,
             sh_offset: self.symtab_offset as u64,
             sh_size: self.symtab_num as u64 * self.class().sym_size() as u64,
@@ -985,7 +985,7 @@ impl<'a> Writer<'a> {
         self.write_section_header(&SectionHeader {
             name: self.symtab_shndx_str_id,
             sh_type: elf::SHT_SYMTAB_SHNDX,
-            sh_flags: 0,
+            sh_flags: elf::ShdrFlags(0),
             sh_addr: 0,
             sh_offset: self.symtab_shndx_offset as u64,
             sh_size,
@@ -1099,7 +1099,7 @@ impl<'a> Writer<'a> {
         self.write_section_header(&SectionHeader {
             name: self.dynstr_str_id,
             sh_type: elf::SHT_STRTAB,
-            sh_flags: elf::SHF_ALLOC.into(),
+            sh_flags: elf::SHF_ALLOC,
             sh_addr,
             sh_offset: self.dynstr_offset as u64,
             sh_size: self.dynstr_data.len() as u64,
@@ -1210,7 +1210,7 @@ impl<'a> Writer<'a> {
         if self.is_64 {
             let sym = elf::Sym64 {
                 st_name: U32::new(endian, st_name),
-                st_info: sym.st_info,
+                st_info: sym.st_info.0,
                 st_other: sym.st_other,
                 st_shndx: U16::new(endian, st_shndx),
                 st_value: U64::new(endian, sym.st_value),
@@ -1220,7 +1220,7 @@ impl<'a> Writer<'a> {
         } else {
             let sym = elf::Sym32 {
                 st_name: U32::new(endian, st_name),
-                st_info: sym.st_info,
+                st_info: sym.st_info.0,
                 st_other: sym.st_other,
                 st_shndx: U16::new(endian, st_shndx),
                 st_value: U32::new(endian, sym.st_value as u32),
@@ -1262,7 +1262,7 @@ impl<'a> Writer<'a> {
         self.write_section_header(&SectionHeader {
             name: self.dynsym_str_id,
             sh_type: elf::SHT_DYNSYM,
-            sh_flags: elf::SHF_ALLOC.into(),
+            sh_flags: elf::SHF_ALLOC,
             sh_addr,
             sh_offset: self.dynsym_offset as u64,
             sh_size: self.dynsym_num as u64 * self.class().sym_size() as u64,
@@ -1351,7 +1351,7 @@ impl<'a> Writer<'a> {
         self.write_section_header(&SectionHeader {
             name: self.dynamic_str_id,
             sh_type: elf::SHT_DYNAMIC,
-            sh_flags: (elf::SHF_WRITE | elf::SHF_ALLOC).into(),
+            sh_flags: elf::SHF_WRITE | elf::SHF_ALLOC,
             sh_addr,
             sh_offset: self.dynamic_offset as u64,
             sh_size: (self.dynamic_num * self.class().dyn_size()) as u64,
@@ -1422,7 +1422,7 @@ impl<'a> Writer<'a> {
         self.write_section_header(&SectionHeader {
             name: self.hash_str_id,
             sh_type: elf::SHT_HASH,
-            sh_flags: elf::SHF_ALLOC.into(),
+            sh_flags: elf::SHF_ALLOC,
             sh_addr,
             sh_offset: self.hash_offset as u64,
             sh_size: self.hash_size as u64,
@@ -1553,7 +1553,7 @@ impl<'a> Writer<'a> {
         self.write_section_header(&SectionHeader {
             name: self.gnu_hash_str_id,
             sh_type: elf::SHT_GNU_HASH,
-            sh_flags: elf::SHF_ALLOC.into(),
+            sh_flags: elf::SHF_ALLOC,
             sh_addr,
             sh_offset: self.gnu_hash_offset as u64,
             sh_size: self.gnu_hash_size as u64,
@@ -1616,7 +1616,7 @@ impl<'a> Writer<'a> {
         self.write_section_header(&SectionHeader {
             name: self.gnu_versym_str_id,
             sh_type: elf::SHT_GNU_VERSYM,
-            sh_flags: elf::SHF_ALLOC.into(),
+            sh_flags: elf::SHF_ALLOC,
             sh_addr,
             sh_offset: self.gnu_versym_offset as u64,
             sh_size: self.class().gnu_versym_size(self.dynsym_num as usize) as u64,
@@ -1738,7 +1738,7 @@ impl<'a> Writer<'a> {
         self.write_section_header(&SectionHeader {
             name: self.gnu_verdef_str_id,
             sh_type: elf::SHT_GNU_VERDEF,
-            sh_flags: elf::SHF_ALLOC.into(),
+            sh_flags: elf::SHF_ALLOC,
             sh_addr,
             sh_offset: self.gnu_verdef_offset as u64,
             sh_size: self.gnu_verdef_size as u64,
@@ -1838,7 +1838,7 @@ impl<'a> Writer<'a> {
         self.write_section_header(&SectionHeader {
             name: self.gnu_verneed_str_id,
             sh_type: elf::SHT_GNU_VERNEED,
-            sh_flags: elf::SHF_ALLOC.into(),
+            sh_flags: elf::SHF_ALLOC,
             sh_addr,
             sh_offset: self.gnu_verneed_offset as u64,
             sh_size: self.gnu_verneed_size as u64,
@@ -1885,7 +1885,7 @@ impl<'a> Writer<'a> {
         self.write_section_header(&SectionHeader {
             name: self.gnu_attributes_str_id,
             sh_type: elf::SHT_GNU_ATTRIBUTES,
-            sh_flags: 0,
+            sh_flags: elf::ShdrFlags(0),
             sh_addr: 0,
             sh_offset: self.gnu_attributes_offset as u64,
             sh_size: self.gnu_attributes_size as u64,
@@ -1975,7 +1975,7 @@ impl<'a> Writer<'a> {
         self.write_section_header(&SectionHeader {
             name: Some(name),
             sh_type: if is_rela { elf::SHT_RELA } else { elf::SHT_REL },
-            sh_flags: elf::SHF_INFO_LINK.into(),
+            sh_flags: elf::SHF_INFO_LINK,
             sh_addr: 0,
             sh_offset: offset as u64,
             sh_size: (count * self.class().rel_size(is_rela)) as u64,
@@ -1999,7 +1999,7 @@ impl<'a> Writer<'a> {
         self.write_section_header(&SectionHeader {
             name: Some(name),
             sh_type: elf::SHT_RELA,
-            sh_flags: 0,
+            sh_flags: elf::ShdrFlags(0),
             sh_addr: 0,
             sh_offset: offset as u64,
             sh_size: size as u64,
@@ -2042,7 +2042,7 @@ impl<'a> Writer<'a> {
         self.write_section_header(&SectionHeader {
             name: Some(name),
             sh_type: elf::SHT_GROUP,
-            sh_flags: 0,
+            sh_flags: elf::ShdrFlags(0),
             sh_addr: 0,
             sh_offset: offset as u64,
             sh_size: ((count + 1) * 4) as u64,
@@ -2204,27 +2204,27 @@ impl Class {
     /// Return the size of the file header.
     pub fn file_header_size(self) -> usize {
         if self.is_64 {
-            mem::size_of::<elf::FileHeader64<Endianness>>()
+            mem::size_of::<elf::Ehdr64<Endianness>>()
         } else {
-            mem::size_of::<elf::FileHeader32<Endianness>>()
+            mem::size_of::<elf::Ehdr32<Endianness>>()
         }
     }
 
     /// Return the size of a program header.
     pub fn program_header_size(self) -> usize {
         if self.is_64 {
-            mem::size_of::<elf::ProgramHeader64<Endianness>>()
+            mem::size_of::<elf::Phdr64<Endianness>>()
         } else {
-            mem::size_of::<elf::ProgramHeader32<Endianness>>()
+            mem::size_of::<elf::Phdr32<Endianness>>()
         }
     }
 
     /// Return the size of a section header.
     pub fn section_header_size(self) -> usize {
         if self.is_64 {
-            mem::size_of::<elf::SectionHeader64<Endianness>>()
+            mem::size_of::<elf::Shdr64<Endianness>>()
         } else {
-            mem::size_of::<elf::SectionHeader32<Endianness>>()
+            mem::size_of::<elf::Shdr32<Endianness>>()
         }
     }
 
@@ -2306,7 +2306,7 @@ impl Class {
     }
 }
 
-/// Native endian version of [`elf::FileHeader64`].
+/// Native endian version of [`elf::Ehdr64`].
 #[allow(missing_docs)]
 #[derive(Debug, Clone)]
 pub struct FileHeader {
@@ -2318,7 +2318,7 @@ pub struct FileHeader {
     pub e_flags: u32,
 }
 
-/// Native endian version of [`elf::ProgramHeader64`].
+/// Native endian version of [`elf::Phdr64`].
 #[allow(missing_docs)]
 #[derive(Debug, Clone)]
 pub struct ProgramHeader {
@@ -2332,13 +2332,13 @@ pub struct ProgramHeader {
     pub p_align: u64,
 }
 
-/// Native endian version of [`elf::SectionHeader64`].
+/// Native endian version of [`elf::Shdr64`].
 #[allow(missing_docs)]
 #[derive(Debug, Clone)]
 pub struct SectionHeader {
     pub name: Option<StringId>,
-    pub sh_type: u32,
-    pub sh_flags: u64,
+    pub sh_type: elf::ShdrType,
+    pub sh_flags: elf::ShdrFlags,
     pub sh_addr: u64,
     pub sh_offset: u64,
     pub sh_size: u64,
@@ -2354,7 +2354,7 @@ pub struct SectionHeader {
 pub struct Sym {
     pub name: Option<StringId>,
     pub section: Option<SectionIndex>,
-    pub st_info: u8,
+    pub st_info: elf::SymInfo,
     pub st_other: u8,
     pub st_shndx: u16,
     pub st_value: u64,

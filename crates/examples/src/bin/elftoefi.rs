@@ -40,8 +40,8 @@ fn main() {
         }
     };
     let out_data = match kind {
-        object::FileKind::Elf32 => copy_file::<elf::FileHeader32<Endianness>>(in_data).unwrap(),
-        object::FileKind::Elf64 => copy_file::<elf::FileHeader64<Endianness>>(in_data).unwrap(),
+        object::FileKind::Elf32 => copy_file::<elf::Ehdr32<Endianness>>(in_data).unwrap(),
+        object::FileKind::Elf64 => copy_file::<elf::Ehdr64<Endianness>>(in_data).unwrap(),
         _ => {
             eprintln!("Not an ELF file");
             process::exit(1);
@@ -378,17 +378,19 @@ fn copy_file<Elf: FileHeader<Endian = Endianness>>(
 
 // Include both code and read only data in the text section.
 fn is_text<S: SectionHeader>(s: &S, endian: S::Endian) -> bool {
-    let flags = s.sh_flags(endian).into() as u32;
-    flags & elf::SHF_ALLOC != 0 && (flags & elf::SHF_EXECINSTR != 0 || flags & elf::SHF_WRITE == 0)
+    let flags = s.sh_flags(endian);
+    flags.contains(elf::SHF_ALLOC)
+        && (flags.contains(elf::SHF_EXECINSTR) || !flags.contains(elf::SHF_WRITE))
 }
 
 // Anything that is alloc but not text.
 fn is_data<S: SectionHeader>(s: &S, endian: S::Endian) -> bool {
-    let flags = s.sh_flags(endian).into() as u32;
-    flags & elf::SHF_ALLOC != 0 && flags & elf::SHF_EXECINSTR == 0 && flags & elf::SHF_WRITE != 0
+    let flags = s.sh_flags(endian);
+    flags.contains(elf::SHF_ALLOC)
+        && !flags.contains(elf::SHF_EXECINSTR)
+        && flags.contains(elf::SHF_WRITE)
 }
 
 fn is_alloc<S: SectionHeader>(s: &S, endian: S::Endian) -> bool {
-    let flags = s.sh_flags(endian).into() as u32;
-    flags & elf::SHF_ALLOC != 0
+    s.sh_flags(endian).contains(elf::SHF_ALLOC)
 }

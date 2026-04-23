@@ -7,8 +7,48 @@
 
 #![allow(missing_docs)]
 
+use crate::constants::constants;
+#[cfg(feature = "names")]
+use crate::constants::ConstantNames;
 use crate::endian::{BigEndian, Endian, U16, U32, U64};
 use crate::pod::Pod;
+
+/// Platform-specific constants for a Mach-O file.
+///
+/// Returned by [`constants`] and [`machine_constants`].
+#[cfg(feature = "names")]
+#[derive(Debug)]
+#[non_exhaustive]
+pub struct Constants {
+    /// Values for `r_type` component of `Rel*::r_info`.
+    pub reloc: &'static ConstantNames<u8>,
+}
+
+/// Return the platform independent constants.
+#[cfg(feature = "names")]
+pub const fn constants() -> &'static Constants {
+    Base::constants()
+}
+
+/// Return the platform specific constants.
+///
+/// Note that these also include the values returned by [`constants`].
+#[cfg(feature = "names")]
+pub const fn machine_constants(cputype: u32) -> &'static Constants {
+    match cputype {
+        CPU_TYPE_X86 => Generic::constants(),
+        CPU_TYPE_X86_64 => X86_64::constants(),
+        CPU_TYPE_ARM => Arm::constants(),
+        CPU_TYPE_ARM64 | CPU_TYPE_ARM64_32 => Arm64::constants(),
+        CPU_TYPE_POWERPC | CPU_TYPE_POWERPC64 => Ppc::constants(),
+        _ => Base::constants(),
+    }
+}
+
+constants! {
+    struct Base;
+    consts reloc: u8 = None;
+}
 
 // Definitions from "/usr/include/mach/machine.h".
 
@@ -3338,16 +3378,21 @@ impl ScatteredRelocationInfo {
  * using the GENERIC_RELOC_PB_LA_PTR r_type.  This is a scattered relocation
  * entry where the r_value feild is the value of the lazy pointer not prebound.
  */
-/// generic relocation as described above
-pub const GENERIC_RELOC_VANILLA: u8 = 0;
-/// Only follows a GENERIC_RELOC_SECTDIFF
-pub const GENERIC_RELOC_PAIR: u8 = 1;
-pub const GENERIC_RELOC_SECTDIFF: u8 = 2;
-/// prebound lazy pointer
-pub const GENERIC_RELOC_PB_LA_PTR: u8 = 3;
-pub const GENERIC_RELOC_LOCAL_SECTDIFF: u8 = 4;
-/// thread local variables
-pub const GENERIC_RELOC_TLV: u8 = 5;
+constants! {
+    struct Generic(Base);
+    consts reloc: u8 {
+        /// generic relocation as described above
+        GENERIC_RELOC_VANILLA = 0,
+        /// Only follows a GENERIC_RELOC_SECTDIFF
+        GENERIC_RELOC_PAIR = 1,
+        GENERIC_RELOC_SECTDIFF = 2,
+        /// prebound lazy pointer
+        GENERIC_RELOC_PB_LA_PTR = 3,
+        GENERIC_RELOC_LOCAL_SECTDIFF = 4,
+        /// thread local variables
+        GENERIC_RELOC_TLV = 5,
+    }
+}
 
 // Definitions from "/usr/include/mach-o/arm/reloc.h".
 
@@ -3359,87 +3404,97 @@ pub const GENERIC_RELOC_TLV: u8 = 5;
  * for instructions.  Since they are for instructions the r_address field
  * indicates the 32 bit instruction that the relocation is to be performed on.
  */
-/// generic relocation as described above
-pub const ARM_RELOC_VANILLA: u8 = 0;
-/// the second relocation entry of a pair
-pub const ARM_RELOC_PAIR: u8 = 1;
-/// a PAIR follows with subtract symbol value
-pub const ARM_RELOC_SECTDIFF: u8 = 2;
-/// like ARM_RELOC_SECTDIFF, but the symbol referenced was local.
-pub const ARM_RELOC_LOCAL_SECTDIFF: u8 = 3;
-/// prebound lazy pointer
-pub const ARM_RELOC_PB_LA_PTR: u8 = 4;
-/// 24 bit branch displacement (to a word address)
-pub const ARM_RELOC_BR24: u8 = 5;
-/// 22 bit branch displacement (to a half-word address)
-pub const ARM_THUMB_RELOC_BR22: u8 = 6;
-/// obsolete - a thumb 32-bit branch instruction possibly needing page-spanning branch workaround
-pub const ARM_THUMB_32BIT_BRANCH: u8 = 7;
+constants! {
+    struct Arm(Base);
+    consts reloc: u8 {
+        /// generic relocation as described above
+        ARM_RELOC_VANILLA = 0,
+        /// the second relocation entry of a pair
+        ARM_RELOC_PAIR = 1,
+        /// a PAIR follows with subtract symbol value
+        ARM_RELOC_SECTDIFF = 2,
+        /// like ARM_RELOC_SECTDIFF, but the symbol referenced was local.
+        ARM_RELOC_LOCAL_SECTDIFF = 3,
+        /// prebound lazy pointer
+        ARM_RELOC_PB_LA_PTR = 4,
+        /// 24 bit branch displacement (to a word address)
+        ARM_RELOC_BR24 = 5,
+        /// 22 bit branch displacement (to a half-word address)
+        ARM_THUMB_RELOC_BR22 = 6,
+        /// obsolete - a thumb 32-bit branch instruction possibly needing page-spanning branch workaround
+        ARM_THUMB_32BIT_BRANCH = 7,
 
-/*
- * For these two r_type relocations they always have a pair following them
- * and the r_length bits are used differently.  The encoding of the
- * r_length is as follows:
- * low bit of r_length:
- *  0 - :lower16: for movw instructions
- *  1 - :upper16: for movt instructions
- * high bit of r_length:
- *  0 - arm instructions
- *  1 - thumb instructions
- * the other half of the relocated expression is in the following pair
- * relocation entry in the the low 16 bits of r_address field.
- */
-pub const ARM_RELOC_HALF: u8 = 8;
-pub const ARM_RELOC_HALF_SECTDIFF: u8 = 9;
+        /*
+         * For these two r_type relocations they always have a pair following them
+         * and the r_length bits are used differently.  The encoding of the
+         * r_length is as follows:
+         * low bit of r_length:
+         *  0 - :lower16: for movw instructions
+         *  1 - :upper16: for movt instructions
+         * high bit of r_length:
+         *  0 - arm instructions
+         *  1 - thumb instructions
+         * the other half of the relocated expression is in the following pair
+         * relocation entry in the the low 16 bits of r_address field.
+         */
+        ARM_RELOC_HALF = 8,
+        ARM_RELOC_HALF_SECTDIFF = 9,
+    }
+}
 
 // Definitions from "/usr/include/mach-o/arm64/reloc.h".
 
 /*
  * Relocation types used in the arm64 implementation.
  */
-/// for pointers
-pub const ARM64_RELOC_UNSIGNED: u8 = 0;
-/// must be followed by a ARM64_RELOC_UNSIGNED
-pub const ARM64_RELOC_SUBTRACTOR: u8 = 1;
-/// a B/BL instruction with 26-bit displacement
-pub const ARM64_RELOC_BRANCH26: u8 = 2;
-/// pc-rel distance to page of target
-pub const ARM64_RELOC_PAGE21: u8 = 3;
-/// offset within page, scaled by r_length
-pub const ARM64_RELOC_PAGEOFF12: u8 = 4;
-/// pc-rel distance to page of GOT slot
-pub const ARM64_RELOC_GOT_LOAD_PAGE21: u8 = 5;
-/// offset within page of GOT slot, scaled by r_length
-pub const ARM64_RELOC_GOT_LOAD_PAGEOFF12: u8 = 6;
-/// for pointers to GOT slots
-pub const ARM64_RELOC_POINTER_TO_GOT: u8 = 7;
-/// pc-rel distance to page of TLVP slot
-pub const ARM64_RELOC_TLVP_LOAD_PAGE21: u8 = 8;
-/// offset within page of TLVP slot, scaled by r_length
-pub const ARM64_RELOC_TLVP_LOAD_PAGEOFF12: u8 = 9;
-/// must be followed by PAGE21 or PAGEOFF12
-pub const ARM64_RELOC_ADDEND: u8 = 10;
+constants! {
+    struct Arm64(Base);
+    consts reloc: u8 {
+        /// for pointers
+        ARM64_RELOC_UNSIGNED = 0,
+        /// must be followed by a ARM64_RELOC_UNSIGNED
+        ARM64_RELOC_SUBTRACTOR = 1,
+        /// a B/BL instruction with 26-bit displacement
+        ARM64_RELOC_BRANCH26 = 2,
+        /// pc-rel distance to page of target
+        ARM64_RELOC_PAGE21 = 3,
+        /// offset within page, scaled by r_length
+        ARM64_RELOC_PAGEOFF12 = 4,
+        /// pc-rel distance to page of GOT slot
+        ARM64_RELOC_GOT_LOAD_PAGE21 = 5,
+        /// offset within page of GOT slot, scaled by r_length
+        ARM64_RELOC_GOT_LOAD_PAGEOFF12 = 6,
+        /// for pointers to GOT slots
+        ARM64_RELOC_POINTER_TO_GOT = 7,
+        /// pc-rel distance to page of TLVP slot
+        ARM64_RELOC_TLVP_LOAD_PAGE21 = 8,
+        /// offset within page of TLVP slot, scaled by r_length
+        ARM64_RELOC_TLVP_LOAD_PAGEOFF12 = 9,
+        /// must be followed by PAGE21 or PAGEOFF12
+        ARM64_RELOC_ADDEND = 10,
 
-// An arm64e authenticated pointer.
-//
-// Represents a pointer to a symbol (like ARM64_RELOC_UNSIGNED).
-// Additionally, the resulting pointer is signed.  The signature is
-// specified in the target location: the addend is restricted to the lower
-// 32 bits (instead of the full 64 bits for ARM64_RELOC_UNSIGNED):
-//
-//   |63|62|61-51|50-49|  48  |47     -     32|31  -  0|
-//   | 1| 0|  0  | key | addr | discriminator | addend |
-//
-// The key is one of:
-//   IA: 00 IB: 01
-//   DA: 10 DB: 11
-//
-// The discriminator field is used as extra signature diversification.
-//
-// The addr field indicates whether the target address should be blended
-// into the discriminator.
-//
-pub const ARM64_RELOC_AUTHENTICATED_POINTER: u8 = 11;
+        // An arm64e authenticated pointer.
+        //
+        // Represents a pointer to a symbol (like ARM64_RELOC_UNSIGNED).
+        // Additionally, the resulting pointer is signed.  The signature is
+        // specified in the target location: the addend is restricted to the lower
+        // 32 bits (instead of the full 64 bits for ARM64_RELOC_UNSIGNED):
+        //
+        //   |63|62|61-51|50-49|  48  |47     -     32|31  -  0|
+        //   | 1| 0|  0  | key | addr | discriminator | addend |
+        //
+        // The key is one of:
+        //   IA: 00 IB: 01
+        //   DA: 10 DB: 11
+        //
+        // The discriminator field is used as extra signature diversification.
+        //
+        // The addr field indicates whether the target address should be blended
+        // into the discriminator.
+        //
+        ARM64_RELOC_AUTHENTICATED_POINTER = 11,
+    }
+}
 
 // Definitions from "/usr/include/mach-o/ppc/reloc.h".
 
@@ -3458,38 +3513,43 @@ pub const ARM64_RELOC_AUTHENTICATED_POINTER: u8 = 11;
  * the value of the Y-bit if the sign of the displacement changes for non-branch
  * always conditions.
  */
-/// generic relocation as described above
-pub const PPC_RELOC_VANILLA: u8 = 0;
-/// the second relocation entry of a pair
-pub const PPC_RELOC_PAIR: u8 = 1;
-/// 14 bit branch displacement (to a word address)
-pub const PPC_RELOC_BR14: u8 = 2;
-/// 24 bit branch displacement (to a word address)
-pub const PPC_RELOC_BR24: u8 = 3;
-/// a PAIR follows with the low half
-pub const PPC_RELOC_HI16: u8 = 4;
-/// a PAIR follows with the high half
-pub const PPC_RELOC_LO16: u8 = 5;
-/// Same as the RELOC_HI16 except the low 16 bits and the high 16 bits are added together
-/// with the low 16 bits sign extended first.  This means if bit 15 of the low 16 bits is
-/// set the high 16 bits stored in the instruction will be adjusted.
-pub const PPC_RELOC_HA16: u8 = 6;
-/// Same as the LO16 except that the low 2 bits are not stored in the instruction and are
-/// always zero.  This is used in double word load/store instructions.
-pub const PPC_RELOC_LO14: u8 = 7;
-/// a PAIR follows with subtract symbol value
-pub const PPC_RELOC_SECTDIFF: u8 = 8;
-/// prebound lazy pointer
-pub const PPC_RELOC_PB_LA_PTR: u8 = 9;
-/// section difference forms of above.  a PAIR
-pub const PPC_RELOC_HI16_SECTDIFF: u8 = 10;
-/// follows these with subtract symbol value
-pub const PPC_RELOC_LO16_SECTDIFF: u8 = 11;
-pub const PPC_RELOC_HA16_SECTDIFF: u8 = 12;
-pub const PPC_RELOC_JBSR: u8 = 13;
-pub const PPC_RELOC_LO14_SECTDIFF: u8 = 14;
-/// like PPC_RELOC_SECTDIFF, but the symbol referenced was local.
-pub const PPC_RELOC_LOCAL_SECTDIFF: u8 = 15;
+constants! {
+    struct Ppc(Base);
+    consts reloc: u8 {
+        /// generic relocation as described above
+        PPC_RELOC_VANILLA = 0,
+        /// the second relocation entry of a pair
+        PPC_RELOC_PAIR = 1,
+        /// 14 bit branch displacement (to a word address)
+        PPC_RELOC_BR14 = 2,
+        /// 24 bit branch displacement (to a word address)
+        PPC_RELOC_BR24 = 3,
+        /// a PAIR follows with the low half
+        PPC_RELOC_HI16 = 4,
+        /// a PAIR follows with the high half
+        PPC_RELOC_LO16 = 5,
+        /// Same as the RELOC_HI16 except the low 16 bits and the high 16 bits are added together
+        /// with the low 16 bits sign extended first.  This means if bit 15 of the low 16 bits is
+        /// set the high 16 bits stored in the instruction will be adjusted.
+        PPC_RELOC_HA16 = 6,
+        /// Same as the LO16 except that the low 2 bits are not stored in the instruction and are
+        /// always zero.  This is used in double word load/store instructions.
+        PPC_RELOC_LO14 = 7,
+        /// a PAIR follows with subtract symbol value
+        PPC_RELOC_SECTDIFF = 8,
+        /// prebound lazy pointer
+        PPC_RELOC_PB_LA_PTR = 9,
+        /// section difference forms of above.  a PAIR
+        PPC_RELOC_HI16_SECTDIFF = 10,
+        /// follows these with subtract symbol value
+        PPC_RELOC_LO16_SECTDIFF = 11,
+        PPC_RELOC_HA16_SECTDIFF = 12,
+        PPC_RELOC_JBSR = 13,
+        PPC_RELOC_LO14_SECTDIFF = 14,
+        /// like PPC_RELOC_SECTDIFF, but the symbol referenced was local.
+        PPC_RELOC_LOCAL_SECTDIFF = 15,
+    }
+}
 
 // Definitions from "/usr/include/mach-o/x86_64/reloc.h".
 
@@ -3643,26 +3703,31 @@ pub const PPC_RELOC_LOCAL_SECTDIFF: u8 = 15;
  * the containing image was loaded from its base address (e.g. slide).
  *
  */
-/// for absolute addresses
-pub const X86_64_RELOC_UNSIGNED: u8 = 0;
-/// for signed 32-bit displacement
-pub const X86_64_RELOC_SIGNED: u8 = 1;
-/// a CALL/JMP instruction with 32-bit displacement
-pub const X86_64_RELOC_BRANCH: u8 = 2;
-/// a MOVQ load of a GOT entry
-pub const X86_64_RELOC_GOT_LOAD: u8 = 3;
-/// other GOT references
-pub const X86_64_RELOC_GOT: u8 = 4;
-/// must be followed by a X86_64_RELOC_UNSIGNED
-pub const X86_64_RELOC_SUBTRACTOR: u8 = 5;
-/// for signed 32-bit displacement with a -1 addend
-pub const X86_64_RELOC_SIGNED_1: u8 = 6;
-/// for signed 32-bit displacement with a -2 addend
-pub const X86_64_RELOC_SIGNED_2: u8 = 7;
-/// for signed 32-bit displacement with a -4 addend
-pub const X86_64_RELOC_SIGNED_4: u8 = 8;
-/// for thread local variables
-pub const X86_64_RELOC_TLV: u8 = 9;
+constants! {
+    struct X86_64(Base);
+    consts reloc: u8 {
+        /// for absolute addresses
+        X86_64_RELOC_UNSIGNED = 0,
+        /// for signed 32-bit displacement
+        X86_64_RELOC_SIGNED = 1,
+        /// a CALL/JMP instruction with 32-bit displacement
+        X86_64_RELOC_BRANCH = 2,
+        /// a MOVQ load of a GOT entry
+        X86_64_RELOC_GOT_LOAD = 3,
+        /// other GOT references
+        X86_64_RELOC_GOT = 4,
+        /// must be followed by a X86_64_RELOC_UNSIGNED
+        X86_64_RELOC_SUBTRACTOR = 5,
+        /// for signed 32-bit displacement with a -1 addend
+        X86_64_RELOC_SIGNED_1 = 6,
+        /// for signed 32-bit displacement with a -2 addend
+        X86_64_RELOC_SIGNED_2 = 7,
+        /// for signed 32-bit displacement with a -4 addend
+        X86_64_RELOC_SIGNED_4 = 8,
+        /// for thread local variables
+        X86_64_RELOC_TLV = 9,
+    }
+}
 
 unsafe_impl_pod!(FatHeader, FatArch32, FatArch64,);
 unsafe_impl_endian_pod!(

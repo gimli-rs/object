@@ -12,8 +12,8 @@
 //!
 //! ## Low level API
 //!
-//! The [`FileHeader`] trait can be directly used to parse both [`elf::FileHeader32`]
-//! and [`elf::FileHeader64`].
+//! The [`FileHeader`] trait can be directly used to parse both [`elf::Ehdr32`]
+//! and [`elf::Ehdr64`].
 //!
 //! ### Example for low level API
 //!  ```no_run
@@ -26,7 +26,7 @@
 //! fn main() -> Result<(), Box<dyn Error>> {
 //! #   #[cfg(feature = "std")] {
 //!     let data = fs::read("path/to/binary")?;
-//!     let elf = elf::FileHeader64::<object::Endianness>::parse(&*data)?;
+//!     let elf = elf::Ehdr64::<object::Endianness>::parse(&*data)?;
 //!     let endian = elf.endian()?;
 //!     let sections = elf.sections(endian, &*data)?;
 //!     let symbols = sections.symbols(endian, &*data, elf::SHT_SYMTAB)?;

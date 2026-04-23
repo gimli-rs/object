@@ -818,7 +818,7 @@ fn find_move_sections(
             move_sections.push(section.id());
             continue;
         }
-        if section.sh_type == elf::SHT_NOBITS && section.sh_flags & u64::from(elf::SHF_TLS) != 0 {
+        if section.sh_type == elf::SHT_NOBITS && section.sh_flags.contains(elf::SHF_TLS) {
             // Uninitialized TLS sections are not part of the address space.
             continue;
         }

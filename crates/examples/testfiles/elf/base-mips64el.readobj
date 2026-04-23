@@ -273,8 +273,8 @@ SectionHeader {
     Name: ".MIPS.options" (0x2A)
     Type: SHT_MIPS_OPTIONS (0x7000000D)
     Flags: 0x8000002
-        SHF_ALLOC (0x2)
         SHF_MIPS_NOSTRIP (0x8000000)
+        SHF_ALLOC (0x2)
     Address: 0x120000288
     Offset: 0x288
     Size: 0x190
@@ -877,9 +877,9 @@ SectionHeader {
     Name: ".got" (0xE9)
     Type: SHT_PROGBITS (0x1)
     Flags: 0x10000003
+        SHF_MIPS_GPREL (0x10000000)
         SHF_WRITE (0x1)
         SHF_ALLOC (0x2)
-        SHF_MIPS_GPREL (0x10000000)
     Address: 0x120011020
     Offset: 0x1020
     Size: 0xB8
@@ -893,9 +893,9 @@ SectionHeader {
     Name: ".sdata" (0xEE)
     Type: SHT_PROGBITS (0x1)
     Flags: 0x10000003
+        SHF_MIPS_GPREL (0x10000000)
         SHF_WRITE (0x1)
         SHF_ALLOC (0x2)
-        SHF_MIPS_GPREL (0x10000000)
     Address: 0x1200110D8
     Offset: 0x10D8
     Size: 0x8

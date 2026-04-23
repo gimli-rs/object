@@ -114,10 +114,10 @@ impl<'data, Elf: FileHeader> Iterator for ElfRelocationIterator<'data, Elf> {
 
 /// An iterator for the dynamic relocations in an [`ElfFile32`](super::ElfFile32).
 pub type ElfDynamicRelocationIterator32<'data, 'file, Endian = Endianness, R = &'data [u8]> =
-    ElfDynamicRelocationIterator<'data, 'file, elf::FileHeader32<Endian>, R>;
+    ElfDynamicRelocationIterator<'data, 'file, elf::Ehdr32<Endian>, R>;
 /// An iterator for the dynamic relocations in an [`ElfFile64`](super::ElfFile64).
 pub type ElfDynamicRelocationIterator64<'data, 'file, Endian = Endianness, R = &'data [u8]> =
-    ElfDynamicRelocationIterator<'data, 'file, elf::FileHeader64<Endian>, R>;
+    ElfDynamicRelocationIterator<'data, 'file, elf::Ehdr64<Endian>, R>;
 
 /// An iterator for the dynamic relocations in an [`ElfFile`].
 pub struct ElfDynamicRelocationIterator<'data, 'file, Elf, R = &'data [u8]>
@@ -198,10 +198,10 @@ where
 
 /// An iterator for the relocations for an [`ElfSection32`](super::ElfSection32).
 pub type ElfSectionRelocationIterator32<'data, 'file, Endian = Endianness, R = &'data [u8]> =
-    ElfSectionRelocationIterator<'data, 'file, elf::FileHeader32<Endian>, R>;
+    ElfSectionRelocationIterator<'data, 'file, elf::Ehdr32<Endian>, R>;
 /// An iterator for the relocations for an [`ElfSection64`](super::ElfSection64).
 pub type ElfSectionRelocationIterator64<'data, 'file, Endian = Endianness, R = &'data [u8]> =
-    ElfSectionRelocationIterator<'data, 'file, elf::FileHeader64<Endian>, R>;
+    ElfSectionRelocationIterator<'data, 'file, elf::Ehdr64<Endian>, R>;
 
 /// An iterator for the relocations for an [`ElfSection`](super::ElfSection).
 pub struct ElfSectionRelocationIterator<'data, 'file, Elf, R = &'data [u8]>

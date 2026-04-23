@@ -13,7 +13,8 @@ read = ["object/read"]
 write = ["object/write"]
 wasm = ["object/wasm"]
 xcoff = ["object/xcoff"]
-all = ["read", "write", "wasm", "xcoff"]
+names = ["object/names"]
+all = ["read", "write", "wasm", "xcoff", "names"]
 unstable-all = ["all"]
 default = ["read"]
 
@@ -51,7 +52,7 @@ required-features = ["object/read_core", "object/write_core", "object/pe", "obje
 
 [[bin]]
 name = "readobj"
-required-features = ["read"]
+required-features = ["read", "names"]
 
 [[bin]]
 name = "simple_write"
