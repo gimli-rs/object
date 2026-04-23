@@ -99,8 +99,11 @@ pub(super) fn print_dyld_cache_mapping_and_slide_info(
             "SlideInfoFileSize",
             mapping.slide_info_file_size.get(endian),
         );
-        p.field_hex("Flags", mapping.flags.get(endian));
-        p.flags(mapping.flags.get(endian), 0, FLAGS_DYLD_CACHE_MAPPING);
+        p.field_flags(
+            "Flags",
+            mapping.flags.get(endian),
+            DyldCacheMappingFlags::NAMES,
+        );
         p.field_flags("MaxProt", mapping.max_prot.get(endian), VmProt::NAMES);
         p.field_flags("InitProt", mapping.init_prot.get(endian), VmProt::NAMES);
     });
@@ -1023,13 +1026,6 @@ fn print_cputype(p: &mut Printer<'_>, cputype: CpuType, cpusubtype: CpuSubtype) 
     p.field_flags("CpuSubtype", cpusubtype, constants.cpusubtype);
 }
 
-const FLAGS_DYLD_CACHE_MAPPING: &[Flag<u64>] = &flags!(
-    DYLD_CACHE_MAPPING_AUTH_DATA,
-    DYLD_CACHE_MAPPING_DIRTY_DATA,
-    DYLD_CACHE_MAPPING_CONST_DATA,
-    DYLD_CACHE_MAPPING_TEXT_STUBS,
-    DYLD_CACHE_DYNAMIC_CONFIG_DATA,
-);
 const FLAGS_SG: &[Flag<u32>] = &flags!(
     SG_HIGHVM,
     SG_FVMLIB,

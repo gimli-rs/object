@@ -697,14 +697,20 @@ pub struct DyldCacheMappingInfo<E: Endian> {
     pub init_prot: U32<E, VmProt>,
 }
 
-// Contains the flags for the dyld_cache_mapping_and_slide_info flags field
-pub const DYLD_CACHE_MAPPING_AUTH_DATA: u64 = 1 << 0;
-pub const DYLD_CACHE_MAPPING_DIRTY_DATA: u64 = 1 << 1;
-pub const DYLD_CACHE_MAPPING_CONST_DATA: u64 = 1 << 2;
-pub const DYLD_CACHE_MAPPING_TEXT_STUBS: u64 = 1 << 3;
-pub const DYLD_CACHE_DYNAMIC_CONFIG_DATA: u64 = 1 << 4;
-pub const DYLD_CACHE_READ_ONLY_DATA: u64 = 1 << 5;
-pub const DYLD_CACHE_MAPPING_CONST_TPRO_DATA: u64 = 1 << 6;
+newtype!(
+    /// Values for `DyldCacheMappingAndSlideInfo::flags`.
+    struct DyldCacheMappingFlags(u64);
+);
+
+newtype_flag_names!(NAMES_DYLD_CACHE_MAPPING: DyldCacheMappingFlags(u64) = {
+    DYLD_CACHE_MAPPING_AUTH_DATA = 1 << 0,
+    DYLD_CACHE_MAPPING_DIRTY_DATA = 1 << 1,
+    DYLD_CACHE_MAPPING_CONST_DATA = 1 << 2,
+    DYLD_CACHE_MAPPING_TEXT_STUBS = 1 << 3,
+    DYLD_CACHE_DYNAMIC_CONFIG_DATA = 1 << 4,
+    DYLD_CACHE_READ_ONLY_DATA = 1 << 5,
+    DYLD_CACHE_MAPPING_CONST_TPRO_DATA = 1 << 6,
+});
 
 /// Corresponds to struct dyld_cache_mapping_and_slide_info from dyld_cache_format.h.
 #[derive(Debug, Clone, Copy)]
@@ -715,7 +721,7 @@ pub struct DyldCacheMappingAndSlideInfo<E: Endian> {
     pub file_offset: U64<E>,
     pub slide_info_file_offset: U64<E>,
     pub slide_info_file_size: U64<E>,
-    pub flags: U64<E>,
+    pub flags: U64<E, DyldCacheMappingFlags>,
     pub max_prot: U32<E, VmProt>,
     pub init_prot: U32<E, VmProt>,
 }
