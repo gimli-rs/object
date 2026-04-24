@@ -67,7 +67,7 @@ SectionHeader {
 SectionHeader {
     Index: 3
     Name: ".crel.text" (0x1)
-    Type: 0x40000014
+    Type: SHT_CREL (0x40000014)
     Flags: 0x40
         SHF_INFO_LINK (0x40)
     Address: 0x0
@@ -151,7 +151,7 @@ SectionHeader {
 SectionHeader {
     Index: 8
     Name: ".crel.eh_frame" (0x46)
-    Type: 0x40000014
+    Type: SHT_CREL (0x40000014)
     Flags: 0x40
         SHF_INFO_LINK (0x40)
     Address: 0x0
