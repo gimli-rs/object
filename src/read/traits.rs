@@ -136,7 +136,7 @@ pub trait Object<'data>: read::private::Sealed {
     /// same name. In this case, the first matching section will be used.
     ///
     /// This method skips over sections with invalid names.
-    fn section_by_name(&self, section_name: &str) -> Option<Self::Section<'_>> {
+    fn section_by_name<'file>(&'file self, section_name: &str) -> Option<Self::Section<'file>> {
         self.section_by_name_bytes(section_name.as_bytes())
     }
 
