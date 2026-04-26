@@ -457,7 +457,7 @@ fn print_load_command<Mach: MachHeader>(
                             x.dylib.compatibility_version.get(endian),
                         );
                         if let Some(flags) = flags {
-                            p.field_hex("Flags", flags);
+                            p.field_flags("Flags", flags, macho::DylibUseFlags::NAMES);
                         }
                     });
                 });

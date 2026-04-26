@@ -1888,13 +1888,20 @@ pub struct DylibUseCommand<E: Endian> {
     /// dylib's compatibility version number
     pub compat_version: U32<E>,
     /// DYLIB_USE_... flags
-    pub flags: U32<E>,
+    pub flags: U32<E, DylibUseFlags>,
 }
 
-pub const DYLIB_USE_WEAK_LINK: u32 = 0x01;
-pub const DYLIB_USE_REEXPORT: u32 = 0x02;
-pub const DYLIB_USE_UPWARD: u32 = 0x04;
-pub const DYLIB_USE_DELAYED_INIT: u32 = 0x08;
+newtype!(
+    /// Values for `DylibUseCommand::flags`.
+    struct DylibUseFlags(u32);
+);
+
+newtype_flag_names!(NAMES_DYLIB_USE: DylibUseFlags(u32) = {
+    DYLIB_USE_WEAK_LINK = 0x01,
+    DYLIB_USE_REEXPORT = 0x02,
+    DYLIB_USE_UPWARD = 0x04,
+    DYLIB_USE_DELAYED_INIT = 0x08,
+});
 
 pub const DYLIB_USE_MARKER: u32 = 0x1a741800;
 

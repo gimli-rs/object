@@ -238,7 +238,11 @@ impl<'data, E: Endian> LoadCommandData<'data, E> {
     ///
     /// Returns `None` if the sentinels are absent. If `Some` is returned, the value of
     /// [`macho::Dylib::timestamp`] should be ignored.
-    pub fn dylib_use_flags(self, endian: E, dylib: &macho::DylibCommand<E>) -> Result<Option<u32>> {
+    pub fn dylib_use_flags(
+        self,
+        endian: E,
+        dylib: &macho::DylibCommand<E>,
+    ) -> Result<Option<macho::DylibUseFlags>> {
         if dylib.dylib.name.offset.get(endian) != 28 // size of DylibUseCommand
             || dylib.dylib.timestamp.get(endian) != macho::DYLIB_USE_MARKER
         {
@@ -246,7 +250,7 @@ impl<'data, E: Endian> LoadCommandData<'data, E> {
         }
         Ok(Some(
             self.data
-                .read_at::<U32<_>>(24) // offset of DylibUseCommand::flags
+                .read_at::<U32<_, _>>(24) // offset of DylibUseCommand::flags
                 .read_error("Invalid dylib load command size")?
                 .get(endian),
         ))
