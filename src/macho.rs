@@ -1844,9 +1844,9 @@ pub struct Dylib<E: Endian> {
     /// library's build time stamp
     pub timestamp: U32<E>,
     /// library's current version number
-    pub current_version: U32<E>,
+    pub current_version: U32<E, Version>,
     /// library's compatibility vers number
-    pub compatibility_version: U32<E>,
+    pub compatibility_version: U32<E, Version>,
 }
 
 /*
@@ -1884,9 +1884,9 @@ pub struct DylibUseCommand<E: Endian> {
     /// == DYLIB_USE_MARKER
     pub marker: U32<E>,
     /// dylib's current version number
-    pub current_version: U32<E>,
+    pub current_version: U32<E, Version>,
     /// dylib's compatibility version number
-    pub compat_version: U32<E>,
+    pub compat_version: U32<E, Version>,
     /// DYLIB_USE_... flags
     pub flags: U32<E, DylibUseFlags>,
 }
@@ -2614,9 +2614,9 @@ pub struct VersionMinCommand<E: Endian> {
     /// sizeof(struct VersionMinCommand)
     pub cmdsize: U32<E>,
     /// X.Y.Z is encoded in nibbles xxxx.yy.zz
-    pub version: U32<E>,
+    pub version: U32<E, Version>,
     /// X.Y.Z is encoded in nibbles xxxx.yy.zz
-    pub sdk: U32<E>,
+    pub sdk: U32<E, Version>,
 }
 
 /*
@@ -2632,11 +2632,11 @@ pub struct BuildVersionCommand<E: Endian> {
     /// sizeof(struct BuildVersionCommand) plus ntools * sizeof(struct BuildToolVersion)
     pub cmdsize: U32<E>,
     /// platform
-    pub platform: U32<E>,
+    pub platform: U32<E, Platform>,
     /// X.Y.Z is encoded in nibbles xxxx.yy.zz
-    pub minos: U32<E>,
+    pub minos: U32<E, Version>,
     /// X.Y.Z is encoded in nibbles xxxx.yy.zz
-    pub sdk: U32<E>,
+    pub sdk: U32<E, Version>,
     /// number of tool entries following this
     pub ntools: U32<E>,
 }
@@ -2645,58 +2645,104 @@ pub struct BuildVersionCommand<E: Endian> {
 #[repr(C)]
 pub struct BuildToolVersion<E: Endian> {
     /// enum for the tool
-    pub tool: U32<E>,
+    pub tool: U32<E, Tool>,
     /// version number of the tool
-    pub version: U32<E>,
+    pub version: U32<E, Version>,
 }
 
-/* Known values for the platform field above. */
-pub const PLATFORM_UNKNOWN: u32 = 0;
-pub const PLATFORM_ANY: u32 = 0xFFFFFFFF;
-pub const PLATFORM_MACOS: u32 = 1;
-pub const PLATFORM_IOS: u32 = 2;
-pub const PLATFORM_TVOS: u32 = 3;
-pub const PLATFORM_WATCHOS: u32 = 4;
-pub const PLATFORM_BRIDGEOS: u32 = 5;
-pub const PLATFORM_MACCATALYST: u32 = 6;
-pub const PLATFORM_IOSSIMULATOR: u32 = 7;
-pub const PLATFORM_TVOSSIMULATOR: u32 = 8;
-pub const PLATFORM_WATCHOSSIMULATOR: u32 = 9;
-pub const PLATFORM_DRIVERKIT: u32 = 10;
-pub const PLATFORM_VISIONOS: u32 = 11;
-pub const PLATFORM_VISIONOSSIMULATOR: u32 = 12;
-/// Compatibility alias for [`PLATFORM_VISIONOS`].
-pub const PLATFORM_XROS: u32 = PLATFORM_VISIONOS;
-/// Compatibility alias for [`PLATFORM_VISIONOSSIMULATOR`].
-pub const PLATFORM_XROSSIMULATOR: u32 = PLATFORM_VISIONOSSIMULATOR;
+newtype!(
+    struct Version(u32);
+);
 
-pub const PLATFORM_FIRMWARE: u32 = 13;
-pub const PLATFORM_SEPOS: u32 = 14;
+impl Version {
+    pub fn new(major: u16, minor: u8, update: u8) -> Self {
+        Version(u32::from(major) << 16 | u32::from(minor) << 8 | u32::from(update))
+    }
 
-pub const PLATFORM_MACOS_EXCLAVECORE: u32 = 15;
-pub const PLATFORM_MACOS_EXCLAVEKIT: u32 = 16;
-pub const PLATFORM_IOS_EXCLAVECORE: u32 = 17;
-pub const PLATFORM_IOS_EXCLAVEKIT: u32 = 18;
-pub const PLATFORM_TVOS_EXCLAVECORE: u32 = 19;
-pub const PLATFORM_TVOS_EXCLAVEKIT: u32 = 20;
-pub const PLATFORM_WATCHOS_EXCLAVECORE: u32 = 21;
-pub const PLATFORM_WATCHOS_EXCLAVEKIT: u32 = 22;
-pub const PLATFORM_VISIONOS_EXCLAVECORE: u32 = 23;
-pub const PLATFORM_VISIONOS_EXCLAVEKIT: u32 = 24;
+    pub fn major(self) -> u16 {
+        (self.0 >> 16) as u16
+    }
 
-/* Known values for the tool field above. */
-pub const TOOL_CLANG: u32 = 1;
-pub const TOOL_SWIFT: u32 = 2;
-pub const TOOL_LD: u32 = 3;
+    pub fn minor(self) -> u8 {
+        (self.0 >> 8) as u8
+    }
 
-/* values for gpu tools (1024 to 1048) */
-pub const TOOL_METAL: u32 = 1024;
-pub const TOOL_AIRLLD: u32 = 1025;
-pub const TOOL_AIRNT: u32 = 1026;
-pub const TOOL_AIRNT_PLUGIN: u32 = 1027;
-pub const TOOL_AIRPACK: u32 = 1028;
-pub const TOOL_GPUARCHIVER: u32 = 1031;
-pub const TOOL_METAL_FRAMEWORK: u32 = 1032;
+    pub fn update(self) -> u8 {
+        self.0 as u8
+    }
+}
+
+impl core::fmt::Debug for Version {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(f, "{}.{}.{}", self.major(), self.minor(), self.update())
+    }
+}
+
+impl core::fmt::Display for Version {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(f, "{}.{}.{}", self.major(), self.minor(), self.update())
+    }
+}
+
+newtype!(
+    /// Value for `BuildVersionCommand::platform`.
+    struct Platform(u32);
+);
+
+newtype_constant_names!(NAMES_PLATFORM: Platform(u32) = {
+    PLATFORM_UNKNOWN = 0,
+    PLATFORM_ANY = 0xFFFFFFFF,
+    PLATFORM_MACOS = 1,
+    PLATFORM_IOS = 2,
+    PLATFORM_TVOS = 3,
+    PLATFORM_WATCHOS = 4,
+    PLATFORM_BRIDGEOS = 5,
+    PLATFORM_MACCATALYST = 6,
+    PLATFORM_IOSSIMULATOR = 7,
+    PLATFORM_TVOSSIMULATOR = 8,
+    PLATFORM_WATCHOSSIMULATOR = 9,
+    PLATFORM_DRIVERKIT = 10,
+    PLATFORM_VISIONOS = 11,
+    PLATFORM_VISIONOSSIMULATOR = 12,
+    /// Compatibility alias for [`PLATFORM_VISIONOS`].
+    PLATFORM_XROS = PLATFORM_VISIONOS.0,
+    /// Compatibility alias for [`PLATFORM_VISIONOSSIMULATOR`].
+    PLATFORM_XROSSIMULATOR = PLATFORM_VISIONOSSIMULATOR.0,
+
+    PLATFORM_FIRMWARE = 13,
+    PLATFORM_SEPOS = 14,
+
+    PLATFORM_MACOS_EXCLAVECORE = 15,
+    PLATFORM_MACOS_EXCLAVEKIT = 16,
+    PLATFORM_IOS_EXCLAVECORE = 17,
+    PLATFORM_IOS_EXCLAVEKIT = 18,
+    PLATFORM_TVOS_EXCLAVECORE = 19,
+    PLATFORM_TVOS_EXCLAVEKIT = 20,
+    PLATFORM_WATCHOS_EXCLAVECORE = 21,
+    PLATFORM_WATCHOS_EXCLAVEKIT = 22,
+    PLATFORM_VISIONOS_EXCLAVECORE = 23,
+    PLATFORM_VISIONOS_EXCLAVEKIT = 24,
+});
+
+newtype!(
+    /// Value for `BuildToolVersion::tool`.
+    struct Tool(u32);
+);
+
+newtype_constant_names!(NAMES_TOOL: Tool(u32) = {
+    TOOL_CLANG = 1,
+    TOOL_SWIFT = 2,
+    TOOL_LD = 3,
+
+    /* values for gpu tools (1024 to 1048) */
+    TOOL_METAL = 1024,
+    TOOL_AIRLLD = 1025,
+    TOOL_AIRNT = 1026,
+    TOOL_AIRNT_PLUGIN = 1027,
+    TOOL_AIRPACK = 1028,
+    TOOL_GPUARCHIVER = 1031,
+    TOOL_METAL_FRAMEWORK = 1032,
+});
 
 /*
  * The DyldInfoCommand contains the file offsets and sizes of

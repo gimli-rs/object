@@ -27,13 +27,13 @@ struct SymbolOffsets {
 pub struct MachOBuildVersion {
     /// One of the `PLATFORM_` constants (for example,
     /// [`object::macho::PLATFORM_MACOS`](macho::PLATFORM_MACOS)).
-    pub platform: u32,
+    pub platform: macho::Platform,
     /// The minimum OS version, where `X.Y.Z` is encoded in nibbles as
     /// `xxxx.yy.zz`.
-    pub minos: u32,
+    pub minos: macho::Version,
     /// The SDK version as `X.Y.Z`, where `X.Y.Z` is encoded in nibbles as
     /// `xxxx.yy.zz`.
-    pub sdk: u32,
+    pub sdk: macho::Version,
 }
 
 impl MachOBuildVersion {

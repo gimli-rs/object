@@ -3,19 +3,6 @@ use object::macho::*;
 use object::read::macho::*;
 use object::{BigEndian, Endian, U32};
 
-trait PrinterMachoExt {
-    fn field_version(&mut self, name: &str, value: u32);
-}
-
-impl<'a> PrinterMachoExt for Printer<'a> {
-    fn field_version(&mut self, name: &str, value: u32) {
-        let major = (value >> 16) & 0xFFFF;
-        let minor = (value >> 8) & 0xFF;
-        let update = value & 0xFF;
-        self.field(name, format!("{}.{}.{}", major, minor, update));
-    }
-}
-
 pub(super) fn print_dyld_cache(p: &mut Printer<'_>, data: &[u8], subcache_data: &[&[u8]]) {
     print_dyld_subcache(p, data);
     for subcache in subcache_data {
@@ -451,8 +438,8 @@ fn print_load_command<Mach: MachHeader>(
                         } else {
                             p.field("Timestamp", x.dylib.timestamp.get(endian));
                         }
-                        p.field_version("CurrentVersion", x.dylib.current_version.get(endian));
-                        p.field_version(
+                        p.field("CurrentVersion", x.dylib.current_version.get(endian));
+                        p.field(
                             "CompatibilityVersion",
                             x.dylib.compatibility_version.get(endian),
                         );
@@ -646,8 +633,8 @@ fn print_load_command<Mach: MachHeader>(
                 p.group("VersionMinCommand", |p| {
                     p.field_consts("Cmd", x.cmd.get(endian), LoadCommandType::NAMES);
                     p.field_hex("CmdSize", x.cmdsize.get(endian));
-                    p.field_version("Version", x.version.get(endian));
-                    p.field_version("Sdk", x.sdk.get(endian));
+                    p.field("Version", x.version.get(endian));
+                    p.field("Sdk", x.sdk.get(endian));
                 });
             }
             LoadCommandVariant::EntryPoint(x) => {
@@ -687,9 +674,9 @@ fn print_load_command<Mach: MachHeader>(
                 p.group("BuildVersionCommand", |p| {
                     p.field_consts("Cmd", x.cmd.get(endian), LoadCommandType::NAMES);
                     p.field_hex("CmdSize", x.cmdsize.get(endian));
-                    p.field_enum("Platform", x.platform.get(endian), FLAGS_PLATFORM);
-                    p.field_version("MinOs", x.minos.get(endian));
-                    p.field_version("Sdk", x.sdk.get(endian));
+                    p.field_consts("Platform", x.platform.get(endian), Platform::NAMES);
+                    p.field("MinOs", x.minos.get(endian));
+                    p.field("Sdk", x.sdk.get(endian));
                     p.field_hex("NumberOfTools", x.ntools.get(endian));
                     // TODO: dump tools
                 });
@@ -1018,33 +1005,6 @@ fn print_cputype(p: &mut Printer<'_>, cputype: CpuType, cpusubtype: CpuSubtype) 
     p.field_flags("CpuSubtype", cpusubtype, constants.cpusubtype);
 }
 
-const FLAGS_PLATFORM: &[Flag<u32>] = &flags!(
-    PLATFORM_UNKNOWN,
-    PLATFORM_MACOS,
-    PLATFORM_IOS,
-    PLATFORM_TVOS,
-    PLATFORM_WATCHOS,
-    PLATFORM_BRIDGEOS,
-    PLATFORM_MACCATALYST,
-    PLATFORM_IOSSIMULATOR,
-    PLATFORM_TVOSSIMULATOR,
-    PLATFORM_WATCHOSSIMULATOR,
-    PLATFORM_DRIVERKIT,
-    PLATFORM_VISIONOS,
-    PLATFORM_VISIONOSSIMULATOR,
-    PLATFORM_FIRMWARE,
-    PLATFORM_SEPOS,
-    PLATFORM_MACOS_EXCLAVECORE,
-    PLATFORM_MACOS_EXCLAVEKIT,
-    PLATFORM_IOS_EXCLAVECORE,
-    PLATFORM_IOS_EXCLAVEKIT,
-    PLATFORM_TVOS_EXCLAVECORE,
-    PLATFORM_TVOS_EXCLAVEKIT,
-    PLATFORM_WATCHOS_EXCLAVECORE,
-    PLATFORM_WATCHOS_EXCLAVEKIT,
-    PLATFORM_VISIONOS_EXCLAVECORE,
-    PLATFORM_VISIONOS_EXCLAVEKIT,
-);
 const FLAGS_N_EXT: &[Flag<u8>] = &flags!(N_PEXT, N_EXT);
 const FLAGS_N_TYPE: &[Flag<u8>] = &flags!(N_UNDF, N_ABS, N_SECT, N_PBUD, N_INDR);
 const FLAGS_N_STAB: &[Flag<u8>] = &flags!(
