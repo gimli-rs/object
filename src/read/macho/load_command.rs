@@ -439,7 +439,7 @@ impl<E: Endian> macho::DysymtabCommand<E> {
         &self,
         endian: E,
         data: R,
-    ) -> Result<&'data [U32<E>]> {
+    ) -> Result<&'data [U32<E, macho::IndirectSymbol>]> {
         data.read_slice_at(
             self.indirectsymoff.get(endian).into(),
             self.nindirectsyms.get(endian) as usize,

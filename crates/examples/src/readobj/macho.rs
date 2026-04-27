@@ -251,7 +251,7 @@ struct MachState<'a, E: Endian> {
     twolevel: bool,
     linkedit_data: &'a [u8],
     symbols: Vec<Option<&'a [u8]>>,
-    indirect_symbols: &'a [U32<E>],
+    indirect_symbols: &'a [U32<E, macho::IndirectSymbol>],
     sections: Vec<Vec<u8>>,
     section_index: usize,
     text_segment_addr: u64,
@@ -783,12 +783,15 @@ fn print_section<S: Section>(
                 for (index, val) in indirect_symbols.iter().enumerate() {
                     p.group("IndirectSymbol", |p| {
                         p.field("Index", index);
-                        let symbolnum = val.get(endian);
-                        if let Some(name) = state.symbols.get(symbolnum as usize).copied() {
-                            p.field_string_option("Symbol", symbolnum, name);
+                        let indirect = val.get(endian);
+                        if let Some(index) = indirect.index() {
+                            if let Some(name) = state.symbols.get(index as usize).copied() {
+                                p.field_string_option("Symbol", index, name);
+                            } else {
+                                p.field_hex("Symbol", index);
+                            }
                         } else {
-                            p.field_hex("Symbol", symbolnum);
-                            p.flags(symbolnum, 0, FLAGS_INDIRECT_SYMBOL);
+                            p.field_flags("Symbol", indirect, IndirectSymbol::NAMES);
                         }
                     });
                 }
@@ -1012,5 +1015,3 @@ fn print_cputype(p: &mut Printer<'_>, cputype: CpuType, cpusubtype: CpuSubtype) 
     p.field_consts("CpuType", cputype, macho::CpuType::NAMES);
     p.field_flags("CpuSubtype", cpusubtype, constants.cpusubtype);
 }
-
-const FLAGS_INDIRECT_SYMBOL: &[Flag<u32>] = &flags!(INDIRECT_SYMBOL_LOCAL, INDIRECT_SYMBOL_ABS,);

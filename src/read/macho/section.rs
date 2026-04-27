@@ -369,8 +369,8 @@ pub trait Section: Debug + Pod {
     fn indirect_symbols<'data>(
         &self,
         endian: Self::Endian,
-        indirect_symbols: &'data [U32<Self::Endian>],
-    ) -> Result<&'data [U32<Self::Endian>]> {
+        indirect_symbols: &'data [U32<Self::Endian, macho::IndirectSymbol>],
+    ) -> Result<&'data [U32<Self::Endian, macho::IndirectSymbol>]> {
         let entry_size = match self.section_type(endian) {
             macho::S_NON_LAZY_SYMBOL_POINTERS
             | macho::S_LAZY_SYMBOL_POINTERS

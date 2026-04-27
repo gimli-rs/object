@@ -2330,8 +2330,38 @@ pub struct DysymtabCommand<E: Endian> {
  * removed.  In which case it has the value INDIRECT_SYMBOL_LOCAL.  If the
  * symbol was also absolute INDIRECT_SYMBOL_ABS is or'ed with that.
  */
-pub const INDIRECT_SYMBOL_LOCAL: u32 = 0x8000_0000;
-pub const INDIRECT_SYMBOL_ABS: u32 = 0x4000_0000;
+newtype!(
+    /// An entry in the indirect symbol table.
+    ///
+    /// Either a symbol table index or a sentinel with the LOCAL/ABS flags set.
+    struct IndirectSymbol(u32);
+);
+
+newtype_flag_names!(NAMES_INDIRECT_SYMBOL: IndirectSymbol(u32) = {
+    INDIRECT_SYMBOL_LOCAL = 0x8000_0000,
+    INDIRECT_SYMBOL_ABS = 0x4000_0000,
+});
+
+impl IndirectSymbol {
+    /// Whether this is a local symbol.
+    pub fn is_local(self) -> bool {
+        self.contains(INDIRECT_SYMBOL_LOCAL)
+    }
+
+    /// Whether this is an absolute symbol.
+    pub fn is_abs(self) -> bool {
+        self.contains(INDIRECT_SYMBOL_ABS)
+    }
+
+    /// Returns the symbol table index, or `None` if the symbol is local or absolute.
+    pub fn index(self) -> Option<u32> {
+        if self.intersects(INDIRECT_SYMBOL_LOCAL | INDIRECT_SYMBOL_ABS) {
+            None
+        } else {
+            Some(self.0)
+        }
+    }
+}
 
 /* a table of contents entry */
 #[derive(Debug, Clone, Copy)]
