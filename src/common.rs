@@ -495,7 +495,7 @@ pub enum FileFlags {
     #[cfg(feature = "coff")]
     Coff {
         /// `Characteristics` field in the COFF file header.
-        characteristics: u16,
+        characteristics: crate::pe::FileFlags,
     },
     /// XCOFF file flags.
     #[cfg(feature = "xcoff")]

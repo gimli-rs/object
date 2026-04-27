@@ -622,7 +622,7 @@ impl<'a> Object<'a> {
             time_date_stamp: 0,
             characteristics: match self.flags {
                 FileFlags::Coff { characteristics } => characteristics,
-                _ => 0,
+                _ => coff::FileFlags(0),
             },
         })?;
 

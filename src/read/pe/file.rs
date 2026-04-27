@@ -233,9 +233,9 @@ where
 
     fn kind(&self) -> ObjectKind {
         let characteristics = self.nt_headers.file_header().characteristics.get(LE);
-        if characteristics & pe::IMAGE_FILE_DLL != 0 {
+        if characteristics.contains(pe::IMAGE_FILE_DLL) {
             ObjectKind::Dynamic
-        } else if characteristics & pe::IMAGE_FILE_SYSTEM != 0 {
+        } else if characteristics.contains(pe::IMAGE_FILE_SYSTEM) {
             ObjectKind::Unknown
         } else {
             ObjectKind::Executable

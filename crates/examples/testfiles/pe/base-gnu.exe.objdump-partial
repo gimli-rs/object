@@ -1,7 +1,7 @@
 Format: Pe Little-endian 64-bit
 Kind: Executable
 Architecture: X86_64
-Flags: Coff { characteristics: 26 }
+Flags: Coff { characteristics: IMAGE_FILE_EXECUTABLE_IMAGE | IMAGE_FILE_LINE_NUMS_STRIPPED | IMAGE_FILE_LARGE_ADDRESS_AWARE }
 Relative Address Base: 140000000
 Entry Address: 1400014d0
 Segment { name: ".text", address: 140001000, size: 6bf8, permissions: R-X }

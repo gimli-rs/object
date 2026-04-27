@@ -6,8 +6,7 @@ ImageFileHeader {
     PointerToSymbolTable: 0x280
     NumberOfSymbols: 22
     SizeOfOptionalHeader: 0x0
-    Characteristics: 0x4
-        IMAGE_FILE_LINE_NUMS_STRIPPED (0x4)
+    Characteristics: IMAGE_FILE_LINE_NUMS_STRIPPED (0x4)
 }
 ImageSectionHeader {
     Index: 1

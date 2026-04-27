@@ -122,7 +122,7 @@ test_x86.dll:
 Format: Coff Little-endian 32-bit
 Kind: Relocatable
 Architecture: I386
-Flags: Coff { characteristics: 100 }
+Flags: Coff { characteristics: IMAGE_FILE_32BIT_MACHINE }
 Relative Address Base: 0
 Entry Address: 0
 Segment { name: ".debug$S", address: 0, size: 0, permissions: R-- }
@@ -145,7 +145,7 @@ test_x86.dll:
 Format: Coff Little-endian 32-bit
 Kind: Relocatable
 Architecture: I386
-Flags: Coff { characteristics: 100 }
+Flags: Coff { characteristics: IMAGE_FILE_32BIT_MACHINE }
 Relative Address Base: 0
 Entry Address: 0
 Segment { name: ".debug$S", address: 0, size: 0, permissions: R-- }
@@ -166,7 +166,7 @@ test_x86.dll:
 Format: Coff Little-endian 32-bit
 Kind: Relocatable
 Architecture: I386
-Flags: Coff { characteristics: 100 }
+Flags: Coff { characteristics: IMAGE_FILE_32BIT_MACHINE }
 Relative Address Base: 0
 Entry Address: 0
 Segment { name: ".debug$S", address: 0, size: 0, permissions: R-- }

@@ -329,41 +329,48 @@ pub struct ImageFileHeader {
     pub pointer_to_symbol_table: U32<LE>,
     pub number_of_symbols: U32<LE>,
     pub size_of_optional_header: U16<LE>,
-    pub characteristics: U16<LE>,
+    pub characteristics: U16<LE, FileFlags>,
 }
 
 pub const IMAGE_SIZEOF_FILE_HEADER: usize = 20;
 
-/// Relocation info stripped from file.
-pub const IMAGE_FILE_RELOCS_STRIPPED: u16 = 0x0001;
-/// File is executable  (i.e. no unresolved external references).
-pub const IMAGE_FILE_EXECUTABLE_IMAGE: u16 = 0x0002;
-/// Line numbers stripped from file.
-pub const IMAGE_FILE_LINE_NUMS_STRIPPED: u16 = 0x0004;
-/// Local symbols stripped from file.
-pub const IMAGE_FILE_LOCAL_SYMS_STRIPPED: u16 = 0x0008;
-/// Aggressively trim working set
-pub const IMAGE_FILE_AGGRESIVE_WS_TRIM: u16 = 0x0010;
-/// App can handle >2gb addresses
-pub const IMAGE_FILE_LARGE_ADDRESS_AWARE: u16 = 0x0020;
-/// Bytes of machine word are reversed.
-pub const IMAGE_FILE_BYTES_REVERSED_LO: u16 = 0x0080;
-/// 32 bit word machine.
-pub const IMAGE_FILE_32BIT_MACHINE: u16 = 0x0100;
-/// Debugging info stripped from file in .DBG file
-pub const IMAGE_FILE_DEBUG_STRIPPED: u16 = 0x0200;
-/// If Image is on removable media, copy and run from the swap file.
-pub const IMAGE_FILE_REMOVABLE_RUN_FROM_SWAP: u16 = 0x0400;
-/// If Image is on Net, copy and run from the swap file.
-pub const IMAGE_FILE_NET_RUN_FROM_SWAP: u16 = 0x0800;
-/// System File.
-pub const IMAGE_FILE_SYSTEM: u16 = 0x1000;
-/// File is a DLL.
-pub const IMAGE_FILE_DLL: u16 = 0x2000;
-/// File should only be run on a UP machine
-pub const IMAGE_FILE_UP_SYSTEM_ONLY: u16 = 0x4000;
-/// Bytes of machine word are reversed.
-pub const IMAGE_FILE_BYTES_REVERSED_HI: u16 = 0x8000;
+newtype!(
+    /// Values for `ImageFileHeader::characteristics`.
+    struct FileFlags(u16);
+);
+
+newtype_flag_names!(NAMES_FILE_FLAGS: FileFlags(u16) = {
+    /// Relocation info stripped from file.
+    IMAGE_FILE_RELOCS_STRIPPED = 0x0001,
+    /// File is executable  (i.e. no unresolved external references).
+    IMAGE_FILE_EXECUTABLE_IMAGE = 0x0002,
+    /// Line numbers stripped from file.
+    IMAGE_FILE_LINE_NUMS_STRIPPED = 0x0004,
+    /// Local symbols stripped from file.
+    IMAGE_FILE_LOCAL_SYMS_STRIPPED = 0x0008,
+    /// Aggressively trim working set
+    IMAGE_FILE_AGGRESIVE_WS_TRIM = 0x0010,
+    /// App can handle >2gb addresses
+    IMAGE_FILE_LARGE_ADDRESS_AWARE = 0x0020,
+    /// Bytes of machine word are reversed.
+    IMAGE_FILE_BYTES_REVERSED_LO = 0x0080,
+    /// 32 bit word machine.
+    IMAGE_FILE_32BIT_MACHINE = 0x0100,
+    /// Debugging info stripped from file in .DBG file
+    IMAGE_FILE_DEBUG_STRIPPED = 0x0200,
+    /// If Image is on removable media, copy and run from the swap file.
+    IMAGE_FILE_REMOVABLE_RUN_FROM_SWAP = 0x0400,
+    /// If Image is on Net, copy and run from the swap file.
+    IMAGE_FILE_NET_RUN_FROM_SWAP = 0x0800,
+    /// System File.
+    IMAGE_FILE_SYSTEM = 0x1000,
+    /// File is a DLL.
+    IMAGE_FILE_DLL = 0x2000,
+    /// File should only be run on a UP machine
+    IMAGE_FILE_UP_SYSTEM_ONLY = 0x4000,
+    /// Bytes of machine word are reversed.
+    IMAGE_FILE_BYTES_REVERSED_HI = 0x8000,
+});
 
 newtype!(
     /// Values for the `machine` field in file headers.

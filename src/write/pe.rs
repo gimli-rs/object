@@ -792,7 +792,7 @@ pub struct NtHeaders {
     // ImageFileHeader
     pub machine: pe::Machine,
     pub time_date_stamp: u32,
-    pub characteristics: u16,
+    pub characteristics: pe::FileFlags,
     // ImageOptionalHeader
     pub major_linker_version: u8,
     pub minor_linker_version: u8,

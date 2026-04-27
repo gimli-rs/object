@@ -1,7 +1,7 @@
 Format: Coff Little-endian 32-bit
 Kind: Relocatable
 Architecture: X86_64
-Flags: Coff { characteristics: 4 }
+Flags: Coff { characteristics: IMAGE_FILE_LINE_NUMS_STRIPPED }
 Relative Address Base: 0
 Entry Address: 0
 Segment { name: ".text", address: 0, size: 0, permissions: R-X }

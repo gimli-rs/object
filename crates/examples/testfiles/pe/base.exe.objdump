@@ -1,7 +1,7 @@
 Format: Pe Little-endian 32-bit
 Kind: Executable
 Architecture: I386
-Flags: Coff { characteristics: 102 }
+Flags: Coff { characteristics: IMAGE_FILE_EXECUTABLE_IMAGE | IMAGE_FILE_32BIT_MACHINE }
 Relative Address Base: 400000
 Entry Address: 4012e1
 Segment { name: ".text", address: 401000, size: 104d3, permissions: R-X }

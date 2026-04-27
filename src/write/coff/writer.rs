@@ -466,7 +466,7 @@ impl<'a> Writer<'a> {
 pub struct FileHeader {
     pub machine: pe::Machine,
     pub time_date_stamp: u32,
-    pub characteristics: u16,
+    pub characteristics: pe::FileFlags,
 }
 
 /// A section or symbol name.

@@ -172,8 +172,11 @@ fn print_file(p: &mut Printer<'_>, header: &ImageFileHeader) {
             "SizeOfOptionalHeader",
             header.size_of_optional_header.get(LE),
         );
-        p.field_hex("Characteristics", header.characteristics.get(LE));
-        p.flags(header.characteristics.get(LE), 0, FLAGS_IMAGE_FILE);
+        p.field_flags(
+            "Characteristics",
+            header.characteristics.get(LE),
+            FileFlags::NAMES,
+        );
     });
 }
 
@@ -791,23 +794,6 @@ fn print_reloc_dir(
     Some(())
 }
 
-const FLAGS_IMAGE_FILE: &[Flag<u16>] = &flags!(
-    IMAGE_FILE_RELOCS_STRIPPED,
-    IMAGE_FILE_EXECUTABLE_IMAGE,
-    IMAGE_FILE_LINE_NUMS_STRIPPED,
-    IMAGE_FILE_LOCAL_SYMS_STRIPPED,
-    IMAGE_FILE_AGGRESIVE_WS_TRIM,
-    IMAGE_FILE_LARGE_ADDRESS_AWARE,
-    IMAGE_FILE_BYTES_REVERSED_LO,
-    IMAGE_FILE_32BIT_MACHINE,
-    IMAGE_FILE_DEBUG_STRIPPED,
-    IMAGE_FILE_REMOVABLE_RUN_FROM_SWAP,
-    IMAGE_FILE_NET_RUN_FROM_SWAP,
-    IMAGE_FILE_SYSTEM,
-    IMAGE_FILE_DLL,
-    IMAGE_FILE_UP_SYSTEM_ONLY,
-    IMAGE_FILE_BYTES_REVERSED_HI,
-);
 const FLAGS_IMAGE_SCN: &[Flag<u32>] = &flags!(
     IMAGE_SCN_TYPE_NO_PAD,
     IMAGE_SCN_CNT_CODE,

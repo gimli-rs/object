@@ -408,8 +408,7 @@ ImageFileHeader {
     PointerToSymbolTable: 0xD6
     NumberOfSymbols: 2
     SizeOfOptionalHeader: 0x0
-    Characteristics: 0x100
-        IMAGE_FILE_32BIT_MACHINE (0x100)
+    Characteristics: IMAGE_FILE_32BIT_MACHINE (0x100)
 }
 ImageSectionHeader {
     Index: 1
@@ -494,8 +493,7 @@ ImageFileHeader {
     PointerToSymbolTable: 0xBA
     NumberOfSymbols: 2
     SizeOfOptionalHeader: 0x0
-    Characteristics: 0x100
-        IMAGE_FILE_32BIT_MACHINE (0x100)
+    Characteristics: IMAGE_FILE_32BIT_MACHINE (0x100)
 }
 ImageSectionHeader {
     Index: 1
@@ -563,8 +561,7 @@ ImageFileHeader {
     PointerToSymbolTable: 0x10E
     NumberOfSymbols: 8
     SizeOfOptionalHeader: 0x0
-    Characteristics: 0x100
-        IMAGE_FILE_32BIT_MACHINE (0x100)
+    Characteristics: IMAGE_FILE_32BIT_MACHINE (0x100)
 }
 ImageSectionHeader {
     Index: 1
