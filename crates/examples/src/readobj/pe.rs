@@ -216,11 +216,10 @@ fn print_optional(p: &mut Printer<'_>, header: &impl ImageOptionalHeader) {
         p.field_hex("SizeOfHeaders", header.size_of_headers());
         p.field_hex("CheckSum", header.check_sum());
         p.field_consts("Subsystem", header.subsystem(), Subsystem::NAMES);
-        p.field_hex("DllCharacteristics", header.dll_characteristics());
-        p.flags(
+        p.field_flags(
+            "DllCharacteristics",
             header.dll_characteristics(),
-            0,
-            FLAGS_IMAGE_DLLCHARACTERISTICS,
+            DllFlags::NAMES,
         );
         p.field_hex("SizeOfStackReserve", header.size_of_stack_reserve());
         p.field_hex("SizeOfStackCommit", header.size_of_stack_commit());
@@ -906,19 +905,6 @@ const FLAGS_IMAGE_WEAK_EXTERN: &[Flag<u32>] = &flags!(
     IMAGE_WEAK_EXTERN_SEARCH_LIBRARY,
     IMAGE_WEAK_EXTERN_SEARCH_ALIAS,
     IMAGE_WEAK_EXTERN_ANTI_DEPENDENCY,
-);
-const FLAGS_IMAGE_DLLCHARACTERISTICS: &[Flag<u16>] = &flags!(
-    IMAGE_DLLCHARACTERISTICS_HIGH_ENTROPY_VA,
-    IMAGE_DLLCHARACTERISTICS_DYNAMIC_BASE,
-    IMAGE_DLLCHARACTERISTICS_FORCE_INTEGRITY,
-    IMAGE_DLLCHARACTERISTICS_NX_COMPAT,
-    IMAGE_DLLCHARACTERISTICS_NO_ISOLATION,
-    IMAGE_DLLCHARACTERISTICS_NO_SEH,
-    IMAGE_DLLCHARACTERISTICS_NO_BIND,
-    IMAGE_DLLCHARACTERISTICS_APPCONTAINER,
-    IMAGE_DLLCHARACTERISTICS_WDM_DRIVER,
-    IMAGE_DLLCHARACTERISTICS_GUARD_CF,
-    IMAGE_DLLCHARACTERISTICS_TERMINAL_SERVER_AWARE,
 );
 const FLAGS_IMAGE_DIRECTORY_ENTRY: &[Flag<usize>] = &flags!(
     IMAGE_DIRECTORY_ENTRY_EXPORT,

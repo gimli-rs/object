@@ -497,7 +497,7 @@ pub struct ImageOptionalHeader32 {
     pub size_of_headers: U32<LE>,
     pub check_sum: U32<LE>,
     pub subsystem: U16<LE, Subsystem>,
-    pub dll_characteristics: U16<LE>,
+    pub dll_characteristics: U16<LE, DllFlags>,
     pub size_of_stack_reserve: U32<LE>,
     pub size_of_stack_commit: U32<LE>,
     pub size_of_heap_reserve: U32<LE>,
@@ -550,7 +550,7 @@ pub struct ImageOptionalHeader64 {
     pub size_of_headers: U32<LE>,
     pub check_sum: U32<LE>,
     pub subsystem: U16<LE, Subsystem>,
-    pub dll_characteristics: U16<LE>,
+    pub dll_characteristics: U16<LE, DllFlags>,
     pub size_of_stack_reserve: U64<LE>,
     pub size_of_stack_commit: U64<LE>,
     pub size_of_heap_reserve: U64<LE>,
@@ -618,33 +618,38 @@ newtype_constant_names!(NAMES_SUBSYSTEM: Subsystem(u16) = {
     IMAGE_SUBSYSTEM_XBOX_CODE_CATALOG = 17,
 });
 
-// Values for `ImageOptionalHeader*::dll_characteristics`.
+newtype!(
+    /// Values for `ImageOptionalHeader*::dll_characteristics`.
+    struct DllFlags(u16);
+);
 
-//      IMAGE_LIBRARY_PROCESS_INIT            0x0001     // Reserved.
-//      IMAGE_LIBRARY_PROCESS_TERM            0x0002     // Reserved.
-//      IMAGE_LIBRARY_THREAD_INIT             0x0004     // Reserved.
-//      IMAGE_LIBRARY_THREAD_TERM             0x0008     // Reserved.
-/// Image can handle a high entropy 64-bit virtual address space.
-pub const IMAGE_DLLCHARACTERISTICS_HIGH_ENTROPY_VA: u16 = 0x0020;
-/// DLL can move.
-pub const IMAGE_DLLCHARACTERISTICS_DYNAMIC_BASE: u16 = 0x0040;
-/// Code Integrity Image
-pub const IMAGE_DLLCHARACTERISTICS_FORCE_INTEGRITY: u16 = 0x0080;
-/// Image is NX compatible
-pub const IMAGE_DLLCHARACTERISTICS_NX_COMPAT: u16 = 0x0100;
-/// Image understands isolation and doesn't want it
-pub const IMAGE_DLLCHARACTERISTICS_NO_ISOLATION: u16 = 0x0200;
-/// Image does not use SEH.  No SE handler may reside in this image
-pub const IMAGE_DLLCHARACTERISTICS_NO_SEH: u16 = 0x0400;
-/// Do not bind this image.
-pub const IMAGE_DLLCHARACTERISTICS_NO_BIND: u16 = 0x0800;
-/// Image should execute in an AppContainer
-pub const IMAGE_DLLCHARACTERISTICS_APPCONTAINER: u16 = 0x1000;
-/// Driver uses WDM model
-pub const IMAGE_DLLCHARACTERISTICS_WDM_DRIVER: u16 = 0x2000;
-/// Image supports Control Flow Guard.
-pub const IMAGE_DLLCHARACTERISTICS_GUARD_CF: u16 = 0x4000;
-pub const IMAGE_DLLCHARACTERISTICS_TERMINAL_SERVER_AWARE: u16 = 0x8000;
+newtype_flag_names!(NAMES_DLL_FLAGS: DllFlags(u16) = {
+    //      IMAGE_LIBRARY_PROCESS_INIT            0x0001     // Reserved.
+    //      IMAGE_LIBRARY_PROCESS_TERM            0x0002     // Reserved.
+    //      IMAGE_LIBRARY_THREAD_INIT             0x0004     // Reserved.
+    //      IMAGE_LIBRARY_THREAD_TERM             0x0008     // Reserved.
+    /// Image can handle a high entropy 64-bit virtual address space.
+    IMAGE_DLLCHARACTERISTICS_HIGH_ENTROPY_VA = 0x0020,
+    /// DLL can move.
+    IMAGE_DLLCHARACTERISTICS_DYNAMIC_BASE = 0x0040,
+    /// Code Integrity Image
+    IMAGE_DLLCHARACTERISTICS_FORCE_INTEGRITY = 0x0080,
+    /// Image is NX compatible
+    IMAGE_DLLCHARACTERISTICS_NX_COMPAT = 0x0100,
+    /// Image understands isolation and doesn't want it
+    IMAGE_DLLCHARACTERISTICS_NO_ISOLATION = 0x0200,
+    /// Image does not use SEH.  No SE handler may reside in this image
+    IMAGE_DLLCHARACTERISTICS_NO_SEH = 0x0400,
+    /// Do not bind this image.
+    IMAGE_DLLCHARACTERISTICS_NO_BIND = 0x0800,
+    /// Image should execute in an AppContainer
+    IMAGE_DLLCHARACTERISTICS_APPCONTAINER = 0x1000,
+    /// Driver uses WDM model
+    IMAGE_DLLCHARACTERISTICS_WDM_DRIVER = 0x2000,
+    /// Image supports Control Flow Guard.
+    IMAGE_DLLCHARACTERISTICS_GUARD_CF = 0x4000,
+    IMAGE_DLLCHARACTERISTICS_TERMINAL_SERVER_AWARE = 0x8000,
+});
 
 // Indices for `ImageOptionalHeader*::data_directory`.
 
