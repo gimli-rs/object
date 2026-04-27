@@ -323,7 +323,6 @@ SymtabCommand {
             N_EXT (0x1)
         Section: "" (0x0)
         Desc: 0x0
-            REFERENCE_FLAG_UNDEFINED_NON_LAZY (0x0)
         Value: 0x0
     }
 }

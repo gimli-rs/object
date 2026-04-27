@@ -203,7 +203,7 @@ impl<'a> Object<'a> {
                 macho::N_WEAK_DEF
             }
         } else {
-            0
+            macho::SymbolDesc(0)
         };
         SymbolFlags::MachO { n_type, n_desc }
     }
@@ -989,7 +989,7 @@ struct Nlist {
     n_strx: u32,
     n_type: macho::SymbolFlags,
     n_sect: u8,
-    n_desc: u16,
+    n_desc: macho::SymbolDesc,
     n_value: u64,
 }
 

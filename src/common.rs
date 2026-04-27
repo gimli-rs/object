@@ -660,7 +660,7 @@ pub enum SymbolFlags<Section, Symbol> {
         /// `n_type` field in the Mach-O symbol.
         n_type: crate::macho::SymbolFlags,
         /// `n_desc` field in the Mach-O symbol.
-        n_desc: u16,
+        n_desc: crate::macho::SymbolDesc,
     },
     /// COFF flags for a symbol.
     #[cfg(feature = "coff")]

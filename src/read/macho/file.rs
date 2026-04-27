@@ -437,11 +437,17 @@ where
                 let symbol = self.symbols.symbol(SymbolIndex(i))?;
                 let name = symbol.name(self.endian, self.symbols.strings())?;
                 let library = if twolevel {
-                    libraries
-                        .get(symbol.library_ordinal(self.endian) as usize)
-                        .copied()
-                        .read_error("Invalid Mach-O symbol library ordinal")?
+                    if let Some(index) = symbol.library_ordinal(self.endian).index() {
+                        libraries
+                            .get(index as usize)
+                            .copied()
+                            .read_error("Invalid Mach-O symbol library ordinal")?
+                    } else {
+                        // Don't currently distinguish between self/executable/flat.
+                        &[]
+                    }
                 } else {
+                    // Flat namespace.
                     &[]
                 };
                 imports.push(Import {

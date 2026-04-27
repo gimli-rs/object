@@ -247,6 +247,8 @@ pub(super) fn print_macho64(
 #[derive(Default)]
 struct MachState<'a, E: Endian> {
     cputype: CpuType,
+    filetype: FileType,
+    twolevel: bool,
     linkedit_data: &'a [u8],
     symbols: Vec<Option<&'a [u8]>>,
     indirect_symbols: &'a [U32<E>],
@@ -265,6 +267,8 @@ fn print_macho<Mach: MachHeader<Endian = Endianness>>(
     if let Some(endian) = header.endian().print_err(p) {
         let mut state = MachState {
             cputype: header.cputype(endian),
+            filetype: header.filetype(endian),
+            twolevel: header.flags(endian).contains(MH_TWOLEVEL),
             linkedit_data: data,
             // Dummy first entry because section index starts at 1.
             sections: vec![vec![]],
@@ -894,12 +898,27 @@ fn print_symtab_symbols<Mach: MachHeader>(
                 let name = state.sections.get(n_sect as usize).map(|name| &name[..]);
                 p.field_string_option("Section", n_sect, name);
                 let n_desc = nlist.n_desc(endian);
-                p.field_hex("Desc", n_desc);
-                if nlist.is_undefined() {
-                    p.flags(n_desc, REFERENCE_TYPE, FLAGS_REFERENCE);
-                }
-                if !nlist.is_stab() {
-                    p.flags(n_desc, 0, FLAGS_N_DESC);
+                if nlist.is_stab() {
+                    p.field_hex("Desc", n_desc);
+                } else if nlist.is_undefined() {
+                    if state.filetype == MH_OBJECT {
+                        p.field_flags("Desc", n_desc, SymbolDesc::NAMES_UNDEFINED);
+                        // TODO: alignment for common symbols
+                    } else {
+                        let mut n_desc_bits = n_desc.with_reference(SymbolReference(0));
+                        if state.twolevel {
+                            n_desc_bits = n_desc_bits.with_library(SymbolLibrary(0));
+                        }
+                        p.field_hex("Desc", n_desc);
+                        p.flag_const::<SymbolDesc, _>(n_desc.reference(), SymbolReference::NAMES);
+                        p.flag_bits(n_desc_bits, SymbolDesc::NAMES_UNDEFINED);
+                        if state.twolevel {
+                            // TODO: display library name
+                            p.field_consts("DylibOrdinal", n_desc.library(), SymbolLibrary::NAMES);
+                        }
+                    }
+                } else {
+                    p.field_flags("Desc", n_desc, SymbolDesc::NAMES_DEFINED);
                 }
                 p.field_hex("Value", nlist.n_value(endian).into());
             });
@@ -1000,26 +1019,6 @@ fn print_cputype(p: &mut Printer<'_>, cputype: CpuType, cpusubtype: CpuSubtype) 
     p.field_flags("CpuSubtype", cpusubtype, constants.cpusubtype);
 }
 
-const FLAGS_REFERENCE: &[Flag<u16>] = &flags!(
-    REFERENCE_FLAG_UNDEFINED_NON_LAZY,
-    REFERENCE_FLAG_UNDEFINED_LAZY,
-    REFERENCE_FLAG_DEFINED,
-    REFERENCE_FLAG_PRIVATE_DEFINED,
-    REFERENCE_FLAG_PRIVATE_UNDEFINED_NON_LAZY,
-    REFERENCE_FLAG_PRIVATE_UNDEFINED_LAZY,
-);
-const FLAGS_N_DESC: &[Flag<u16>] = &flags!(
-    REFERENCED_DYNAMICALLY,
-    N_NO_DEAD_STRIP,
-    N_DESC_DISCARDED,
-    N_WEAK_REF,
-    N_WEAK_DEF,
-    N_REF_TO_WEAK,
-    N_ARM_THUMB_DEF,
-    N_SYMBOL_RESOLVER,
-    N_ALT_ENTRY,
-    N_COLD_FUNC,
-);
 const FLAGS_EXPORT_SYMBOL: &[Flag<u8>] = &flags!(
     EXPORT_SYMBOL_FLAGS_WEAK_DEFINITION,
     EXPORT_SYMBOL_FLAGS_REEXPORT,

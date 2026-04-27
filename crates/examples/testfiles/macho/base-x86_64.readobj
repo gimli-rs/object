@@ -258,8 +258,7 @@ SymtabCommand {
             N_SECT (0xE)
             N_EXT (0x1)
         Section: "__TEXT,__text" (0x1)
-        Desc: 0x10
-            REFERENCED_DYNAMICALLY (0x10)
+        Desc: REFERENCED_DYNAMICALLY (0x10)
         Value: 0x100000000
     }
     Nlist {
@@ -281,7 +280,7 @@ SymtabCommand {
         Section: "" (0x0)
         Desc: 0x100
             REFERENCE_FLAG_UNDEFINED_NON_LAZY (0x0)
-            N_SYMBOL_RESOLVER (0x100)
+        DylibOrdinal: 0x1
         Value: 0x0
     }
     Nlist {
@@ -293,7 +292,7 @@ SymtabCommand {
         Section: "" (0x0)
         Desc: 0x100
             REFERENCE_FLAG_UNDEFINED_NON_LAZY (0x0)
-            N_SYMBOL_RESOLVER (0x100)
+        DylibOrdinal: 0x1
         Value: 0x0
     }
 }

@@ -428,7 +428,8 @@ where
 
     #[inline]
     fn is_weak(&self) -> bool {
-        self.nlist.n_desc(self.file.endian) & (macho::N_WEAK_REF | macho::N_WEAK_DEF) != 0
+        let n_desc = self.nlist.n_desc(self.file.endian);
+        n_desc.intersects(macho::N_WEAK_REF | macho::N_WEAK_DEF)
     }
 
     fn scope(&self) -> SymbolScope {
@@ -471,7 +472,7 @@ pub trait Nlist: Debug + Pod {
     fn n_strx(&self, endian: Self::Endian) -> u32;
     fn n_type(&self) -> macho::SymbolFlags;
     fn n_sect(&self) -> u8;
-    fn n_desc(&self, endian: Self::Endian) -> u16;
+    fn n_desc(&self, endian: Self::Endian) -> macho::SymbolDesc;
     fn n_value(&self, endian: Self::Endian) -> Self::Word;
 
     fn name<'data, R: ReadRef<'data>>(
@@ -513,8 +514,8 @@ pub trait Nlist: Debug + Pod {
     /// This is either a 1-based index into the dylib load commands,
     /// or a special ordinal.
     #[inline]
-    fn library_ordinal(&self, endian: Self::Endian) -> u8 {
-        (self.n_desc(endian) >> 8) as u8
+    fn library_ordinal(&self, endian: Self::Endian) -> macho::SymbolLibrary {
+        self.n_desc(endian).library()
     }
 }
 
@@ -531,7 +532,7 @@ impl<Endian: endian::Endian> Nlist for macho::Nlist32<Endian> {
     fn n_sect(&self) -> u8 {
         self.n_sect
     }
-    fn n_desc(&self, endian: Self::Endian) -> u16 {
+    fn n_desc(&self, endian: Self::Endian) -> macho::SymbolDesc {
         self.n_desc.get(endian)
     }
     fn n_value(&self, endian: Self::Endian) -> Self::Word {
@@ -552,7 +553,7 @@ impl<Endian: endian::Endian> Nlist for macho::Nlist64<Endian> {
     fn n_sect(&self) -> u8 {
         self.n_sect
     }
-    fn n_desc(&self, endian: Self::Endian) -> u16 {
+    fn n_desc(&self, endian: Self::Endian) -> macho::SymbolDesc {
         self.n_desc.get(endian)
     }
     fn n_value(&self, endian: Self::Endian) -> Self::Word {

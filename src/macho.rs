@@ -3130,7 +3130,7 @@ pub struct Nlist32<E: Endian> {
     /// section number or NO_SECT
     pub n_sect: u8,
     /// see <mach-o/stab.h>
-    pub n_desc: U16<E>,
+    pub n_desc: U16<E, SymbolDesc>,
     /// value of this symbol (or stab offset)
     pub n_value: U32<E>,
 }
@@ -3148,7 +3148,7 @@ pub struct Nlist64<E: Endian> {
     /// section number or NO_SECT
     pub n_sect: u8,
     /// see <mach-o/stab.h>
-    pub n_desc: U16<E>,
+    pub n_desc: U16<E, SymbolDesc>,
     /// value of this symbol (or stab offset)
     pub n_value: U64<E>,
 }
@@ -3298,6 +3298,75 @@ pub const NO_SECT: u8 = 0;
 /// 1 thru 255 inclusive
 pub const MAX_SECT: u8 = 255;
 
+newtype!(
+    /// Value for the `Nlist*::n_desc`.
+    struct SymbolDesc(u16);
+);
+
+// Names are context-dependent.
+newtype_flag_names!(NAMES_N_DESC: SymbolDesc(u16) = {});
+
+impl SymbolDesc {
+    /// All possible flag value names for defined symbols.
+    #[cfg(feature = "names")]
+    pub const NAMES_DEFINED: &'static FlagNames<SymbolDesc> = &NAMES_N_DESC_DEFINED;
+
+    /// All possible flag value names for undefined symbols.
+    #[cfg(feature = "names")]
+    pub const NAMES_UNDEFINED: &'static FlagNames<SymbolDesc> = &NAMES_N_DESC_UNDEFINED;
+
+    /// Get the reference type subfield.
+    ///
+    /// Valid for undefined symbols.
+    pub fn reference(self) -> SymbolReference {
+        SymbolReference((self.0 & REFERENCE_TYPE) as u8)
+    }
+
+    /// Set the reference type subfield.
+    ///
+    /// Valid for undefined symbols.
+    pub fn with_reference(self, reference: SymbolReference) -> SymbolDesc {
+        SymbolDesc((self.0 & !REFERENCE_TYPE) | (u16::from(reference.0)))
+    }
+
+    /// Get the library ordinal subfield.
+    ///
+    /// Valid for undefined symbols in a file using `MH_TWOLEVEL`.
+    ///
+    /// This overlaps with the common alignment subfield and some `MH_OBJECT` flags.
+    pub fn library(self) -> SymbolLibrary {
+        SymbolLibrary((self.0 >> 8) as u8)
+    }
+
+    /// Set the library ordinal subfield.
+    ///
+    /// See [`Self::library`].
+    pub fn with_library(self, ordinal: SymbolLibrary) -> SymbolDesc {
+        SymbolDesc((self.0 & 0x00ff) | (u16::from(ordinal.0) << 8))
+    }
+
+    /// Get the alignment for common symbols.
+    ///
+    /// This is a power of 2 from 1 to 15. A value of 0 mean that the natural
+    /// alignment based on the size is used.
+    ///
+    /// Common symbols are represented by undefined (`N_UNDF`) external (`N_EXT`) symbols
+    /// whose values (`n_value`) are non-zero.
+    ///
+    /// This overlaps with the library ordinal subfield and some `MH_OBJECT` flags.
+    pub fn common_alignment(self) -> u8 {
+        ((self.0 >> 8) & 0x0f) as u8
+    }
+
+    /// Set the alignment for common symbols.
+    ///
+    /// See [`Self::common_alignment`].
+    pub fn with_common_alignment(self, alignment: u8) -> SymbolDesc {
+        debug_assert_eq!(alignment & !0xf, 0);
+        SymbolDesc((self.0 & 0xf0ff) | (u16::from(alignment & 0xf) << 8))
+    }
+}
+
 /*
  * Common symbols are represented by undefined (N_UNDF) external (N_EXT) types
  * who's values (n_value) are non-zero.  In which case the value of the n_value
@@ -3306,11 +3375,6 @@ pub const MAX_SECT: u8 = 255;
  * between 2^1 and 2^15 as part of the n_desc field using the macros below. If
  * the alignment is not set (a value of zero) then natural alignment based on
  * the size is used.
- */
-/* TODO:
-#define GET_COMM_ALIGN(n_desc) (((n_desc) >> 8) & 0x0f)
-#define SET_COMM_ALIGN(n_desc,align) \
-    (n_desc) = (((n_desc) & 0xf0ff) | (((align) & 0x0f) << 8))
  */
 
 /*
@@ -3332,23 +3396,27 @@ pub const MAX_SECT: u8 = 255;
  * in a shared library file.  In that case the constant for a defined symbol,
  * REFERENCE_FLAG_DEFINED, is also used.
  */
-/* Reference type bits of the n_desc field of undefined symbols */
+newtype!(
+    /// Reference type bits of the n_desc field of undefined symbols.
+    struct SymbolReference(u8);
+);
+
+impl From<SymbolReference> for SymbolDesc {
+    fn from(value: SymbolReference) -> Self {
+        SymbolDesc(u16::from(value.0))
+    }
+}
+
 pub const REFERENCE_TYPE: u16 = 0x7;
 /* types of references */
-pub const REFERENCE_FLAG_UNDEFINED_NON_LAZY: u16 = 0;
-pub const REFERENCE_FLAG_UNDEFINED_LAZY: u16 = 1;
-pub const REFERENCE_FLAG_DEFINED: u16 = 2;
-pub const REFERENCE_FLAG_PRIVATE_DEFINED: u16 = 3;
-pub const REFERENCE_FLAG_PRIVATE_UNDEFINED_NON_LAZY: u16 = 4;
-pub const REFERENCE_FLAG_PRIVATE_UNDEFINED_LAZY: u16 = 5;
-
-/*
- * To simplify stripping of objects that use are used with the dynamic link
- * editor, the static link editor marks the symbols defined an object that are
- * referenced by a dynamically bound object (dynamic shared libraries, bundles).
- * With this marking strip knows not to strip these symbols.
- */
-pub const REFERENCED_DYNAMICALLY: u16 = 0x0010;
+newtype_constant_names!(NAMES_REFERENCE: SymbolReference(u8) = {
+    REFERENCE_FLAG_UNDEFINED_NON_LAZY = 0,
+    REFERENCE_FLAG_UNDEFINED_LAZY = 1,
+    REFERENCE_FLAG_DEFINED = 2,
+    REFERENCE_FLAG_PRIVATE_DEFINED = 3,
+    REFERENCE_FLAG_PRIVATE_UNDEFINED_NON_LAZY = 4,
+    REFERENCE_FLAG_PRIVATE_UNDEFINED_LAZY = 5,
+});
 
 /*
  * For images created by the static link editor with the -twolevel_namespace
@@ -3377,87 +3445,130 @@ pub const REFERENCED_DYNAMICALLY: u16 = 0x0010;
  * this case the ordinal value 0xfe (254) must be treated as a library ordinal
  * for compatibility.
  */
-/* TODO:
-#define GET_LIBRARY_ORDINAL(n_desc) (((n_desc) >> 8) & 0xff)
-#define SET_LIBRARY_ORDINAL(n_desc,ordinal) \
-    (n_desc) = (((n_desc) & 0x00ff) | (((ordinal) & 0xff) << 8))
- */
-pub const SELF_LIBRARY_ORDINAL: u8 = 0x0;
+newtype!(
+    /// Library ordinal bits of the n_desc field of undefined symbols.
+    ///
+    /// May be a 1-based index of the libraries listed in the load commands,
+    /// or a reserved constant.
+    struct SymbolLibrary(u8);
+);
+
+impl SymbolLibrary {
+    /// Whether this is a reserved constant, rather than an index into the
+    /// libraries in the load commands.
+    pub fn is_reserved(self) -> bool {
+        self == SELF_LIBRARY_ORDINAL || self.0 > MAX_LIBRARY_ORDINAL
+    }
+
+    /// Get the index of the library in the load commands.
+    ///
+    /// Returns `None` for reserved constants.
+    pub fn index(self) -> Option<u8> {
+        if self.is_reserved() {
+            None
+        } else {
+            Some(self.0)
+        }
+    }
+}
+
+impl From<SymbolLibrary> for SymbolDesc {
+    fn from(value: SymbolLibrary) -> Self {
+        SymbolDesc(u16::from(value.0) << 8)
+    }
+}
+
 pub const MAX_LIBRARY_ORDINAL: u8 = 0xfd;
-pub const DYNAMIC_LOOKUP_ORDINAL: u8 = 0xfe;
-pub const EXECUTABLE_ORDINAL: u8 = 0xff;
 
-/*
- * The bit 0x0020 of the n_desc field is used for two non-overlapping purposes
- * and has two different symbolic names, N_NO_DEAD_STRIP and N_DESC_DISCARDED.
- */
+newtype_constant_names!(NAMES_ORDINAL: SymbolLibrary(u8) = {
+    SELF_LIBRARY_ORDINAL = 0x0,
+    DYNAMIC_LOOKUP_ORDINAL = 0xfe,
+    EXECUTABLE_ORDINAL = 0xff,
+});
 
-/*
- * The N_NO_DEAD_STRIP bit of the n_desc field only ever appears in a
- * relocatable .o file (MH_OBJECT filetype). And is used to indicate to the
- * static link editor it is never to dead strip the symbol.
- */
-/// symbol is not to be dead stripped
-pub const N_NO_DEAD_STRIP: u16 = 0x0020;
+flag_names!(NAMES_N_DESC_DEFINED: SymbolDesc(u16) = {
+    /*
+     * The N_ARM_THUMB_DEF bit of the n_desc field indicates that the symbol is
+     * a definition of a Thumb function.
+     */
+    /// symbol is a Thumb function (ARM)
+    N_ARM_THUMB_DEF = 0x0008,
 
-/*
- * The N_DESC_DISCARDED bit of the n_desc field never appears in linked image.
- * But is used in very rare cases by the dynamic link editor to mark an in
- * memory symbol as discared and longer used for linking.
- */
-/// symbol is discarded
-pub const N_DESC_DISCARDED: u16 = 0x0020;
+    /*
+     * To simplify stripping of objects that use are used with the dynamic link
+     * editor, the static link editor marks the symbols defined an object that are
+     * referenced by a dynamically bound object (dynamic shared libraries, bundles).
+     * With this marking strip knows not to strip these symbols.
+     */
+    REFERENCED_DYNAMICALLY = 0x0010,
 
-/*
- * The N_WEAK_REF bit of the n_desc field indicates to the dynamic linker that
- * the undefined symbol is allowed to be missing and is to have the address of
- * zero when missing.
- */
-/// symbol is weak referenced
-pub const N_WEAK_REF: u16 = 0x0040;
+    /*
+     * The bit 0x0020 of the n_desc field is used for two non-overlapping purposes
+     * and has two different symbolic names, N_NO_DEAD_STRIP and N_DESC_DISCARDED.
+     */
 
-/*
- * The N_WEAK_DEF bit of the n_desc field indicates to the static and dynamic
- * linkers that the symbol definition is weak, allowing a non-weak symbol to
- * also be used which causes the weak definition to be discared.  Currently this
- * is only supported for symbols in coalesced sections.
- */
-/// coalesced symbol is a weak definition
-pub const N_WEAK_DEF: u16 = 0x0080;
+    /*
+     * The N_NO_DEAD_STRIP bit of the n_desc field only ever appears in a
+     * relocatable .o file (MH_OBJECT filetype). And is used to indicate to the
+     * static link editor it is never to dead strip the symbol.
+     */
+    /// symbol is not to be dead stripped
+    N_NO_DEAD_STRIP = 0x0020,
 
-/*
- * The N_REF_TO_WEAK bit of the n_desc field indicates to the dynamic linker
- * that the undefined symbol should be resolved using flat namespace searching.
- */
-/// reference to a weak symbol
-pub const N_REF_TO_WEAK: u16 = 0x0080;
+    /*
+     * The N_DESC_DISCARDED bit of the n_desc field never appears in linked image.
+     * But is used in very rare cases by the dynamic link editor to mark an in
+     * memory symbol as discared and longer used for linking.
+     */
+    /// symbol is discarded
+    N_DESC_DISCARDED = 0x0020,
 
-/*
- * The N_ARM_THUMB_DEF bit of the n_desc field indicates that the symbol is
- * a definition of a Thumb function.
- */
-/// symbol is a Thumb function (ARM)
-pub const N_ARM_THUMB_DEF: u16 = 0x0008;
+    /*
+     * The N_WEAK_DEF bit of the n_desc field indicates to the static and dynamic
+     * linkers that the symbol definition is weak, allowing a non-weak symbol to
+     * also be used which causes the weak definition to be discared.  Currently this
+     * is only supported for symbols in coalesced sections.
+     */
+    /// coalesced symbol is a weak definition
+    N_WEAK_DEF = 0x0080,
 
-/*
- * The N_SYMBOL_RESOLVER bit of the n_desc field indicates that the
- * that the function is actually a resolver function and should
- * be called to get the address of the real function to use.
- * This bit is only available in .o files (MH_OBJECT filetype)
- */
-pub const N_SYMBOL_RESOLVER: u16 = 0x0100;
+    /*
+     * The N_SYMBOL_RESOLVER bit of the n_desc field indicates that the
+     * that the function is actually a resolver function and should
+     * be called to get the address of the real function to use.
+     * This bit is only available in .o files (MH_OBJECT filetype)
+     */
+    N_SYMBOL_RESOLVER = 0x0100,
 
-/*
- * The N_ALT_ENTRY bit of the n_desc field indicates that the
- * symbol is pinned to the previous content.
- */
-pub const N_ALT_ENTRY: u16 = 0x0200;
+    /*
+     * The N_ALT_ENTRY bit of the n_desc field indicates that the
+     * symbol is pinned to the previous content.
+     */
+    N_ALT_ENTRY = 0x0200,
 
-/*
- * The N_COLD_FUNC bit of the n_desc field indicates that the symbol is used
- * infrequently and the linker should order it towards the end of the section.
- */
-pub const N_COLD_FUNC: u16 = 0x0400;
+    /*
+     * The N_COLD_FUNC bit of the n_desc field indicates that the symbol is used
+     * infrequently and the linker should order it towards the end of the section.
+     */
+    N_COLD_FUNC = 0x0400,
+});
+
+flag_names!(NAMES_N_DESC_UNDEFINED: SymbolDesc(u16) = {
+    /*
+     * The N_WEAK_REF bit of the n_desc field indicates to the dynamic linker that
+     * the undefined symbol is allowed to be missing and is to have the address of
+     * zero when missing.
+     */
+    /// symbol is weak referenced
+    N_WEAK_REF = 0x0040,
+
+    /*
+     * The N_REF_TO_WEAK bit of the n_desc field indicates to the dynamic linker
+     * that the undefined symbol should be resolved using flat namespace searching.
+     */
+    /// reference to a weak symbol
+    N_REF_TO_WEAK = 0x0080,
+});
 
 // Definitions from "/usr/include/mach-o/stab.h".
 
