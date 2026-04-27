@@ -3053,13 +3053,20 @@ pub struct DataInCodeEntry<E: Endian> {
     /// number of bytes in data range
     pub length: U16<E>,
     /// a DICE_KIND_* value
-    pub kind: U16<E>,
+    pub kind: U16<E, DiceKind>,
 }
-pub const DICE_KIND_DATA: u32 = 0x0001;
-pub const DICE_KIND_JUMP_TABLE8: u32 = 0x0002;
-pub const DICE_KIND_JUMP_TABLE16: u32 = 0x0003;
-pub const DICE_KIND_JUMP_TABLE32: u32 = 0x0004;
-pub const DICE_KIND_ABS_JUMP_TABLE32: u32 = 0x0005;
+
+newtype!(
+    struct DiceKind(u16);
+);
+
+newtype_constant_names!(NAMES_DICE_KIND: DiceKind(u16) = {
+    DICE_KIND_DATA = 0x0001,
+    DICE_KIND_JUMP_TABLE8 = 0x0002,
+    DICE_KIND_JUMP_TABLE16 = 0x0003,
+    DICE_KIND_JUMP_TABLE32 = 0x0004,
+    DICE_KIND_ABS_JUMP_TABLE32 = 0x0005,
+});
 
 /*
  * Sections of type S_THREAD_LOCAL_VARIABLES contain an array
