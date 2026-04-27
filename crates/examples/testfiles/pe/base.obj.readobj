@@ -20,9 +20,9 @@ ImageSectionHeader {
     NumberOfRelocations: 0
     NumberOfLinenumbers: 0
     Characteristics: 0x100A00
+        IMAGE_SCN_ALIGN_1BYTES (0x100000)
         IMAGE_SCN_LNK_INFO (0x200)
         IMAGE_SCN_LNK_REMOVE (0x800)
-        IMAGE_SCN_ALIGN_1BYTES (0x100000)
 }
 ImageSectionHeader {
     Index: 2
@@ -36,10 +36,10 @@ ImageSectionHeader {
     NumberOfRelocations: 0
     NumberOfLinenumbers: 0
     Characteristics: 0x42100040
+        IMAGE_SCN_ALIGN_1BYTES (0x100000)
         IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
         IMAGE_SCN_MEM_DISCARDABLE (0x2000000)
         IMAGE_SCN_MEM_READ (0x40000000)
-        IMAGE_SCN_ALIGN_1BYTES (0x100000)
 }
 ImageSectionHeader {
     Index: 3
@@ -53,10 +53,10 @@ ImageSectionHeader {
     NumberOfRelocations: 2
     NumberOfLinenumbers: 0
     Characteristics: 0x60500020
+        IMAGE_SCN_ALIGN_16BYTES (0x500000)
         IMAGE_SCN_CNT_CODE (0x20)
         IMAGE_SCN_MEM_EXECUTE (0x20000000)
         IMAGE_SCN_MEM_READ (0x40000000)
-        IMAGE_SCN_ALIGN_16BYTES (0x500000)
     ImageRelocation {
         VirtualAddress: 0x4
         Symbol: "$SG9248" (0x17)
@@ -80,11 +80,11 @@ ImageSectionHeader {
     NumberOfRelocations: 1
     NumberOfLinenumbers: 0
     Characteristics: 0x60501020
+        IMAGE_SCN_ALIGN_16BYTES (0x500000)
         IMAGE_SCN_CNT_CODE (0x20)
         IMAGE_SCN_LNK_COMDAT (0x1000)
         IMAGE_SCN_MEM_EXECUTE (0x20000000)
         IMAGE_SCN_MEM_READ (0x40000000)
-        IMAGE_SCN_ALIGN_16BYTES (0x500000)
     ImageRelocation {
         VirtualAddress: 0x4
         Symbol: "?_OptionsStorage@?1??__local_stdio_printf_options@@9@9" (0x14)
@@ -103,11 +103,11 @@ ImageSectionHeader {
     NumberOfRelocations: 2
     NumberOfLinenumbers: 0
     Characteristics: 0x60501020
+        IMAGE_SCN_ALIGN_16BYTES (0x500000)
         IMAGE_SCN_CNT_CODE (0x20)
         IMAGE_SCN_LNK_COMDAT (0x1000)
         IMAGE_SCN_MEM_EXECUTE (0x20000000)
         IMAGE_SCN_MEM_READ (0x40000000)
-        IMAGE_SCN_ALIGN_16BYTES (0x500000)
     ImageRelocation {
         VirtualAddress: 0x14
         Symbol: "___local_stdio_printf_options" (0xE)
@@ -131,11 +131,11 @@ ImageSectionHeader {
     NumberOfRelocations: 2
     NumberOfLinenumbers: 0
     Characteristics: 0x60501020
+        IMAGE_SCN_ALIGN_16BYTES (0x500000)
         IMAGE_SCN_CNT_CODE (0x20)
         IMAGE_SCN_LNK_COMDAT (0x1000)
         IMAGE_SCN_MEM_EXECUTE (0x20000000)
         IMAGE_SCN_MEM_READ (0x40000000)
-        IMAGE_SCN_ALIGN_16BYTES (0x500000)
     ImageRelocation {
         VirtualAddress: 0x19
         Symbol: "___acrt_iob_func" (0xF)
@@ -159,10 +159,10 @@ ImageSectionHeader {
     NumberOfRelocations: 0
     NumberOfLinenumbers: 0
     Characteristics: 0xC0300040
+        IMAGE_SCN_ALIGN_4BYTES (0x300000)
         IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
         IMAGE_SCN_MEM_READ (0x40000000)
         IMAGE_SCN_MEM_WRITE (0x80000000)
-        IMAGE_SCN_ALIGN_4BYTES (0x300000)
 }
 ImageSectionHeader {
     Index: 8

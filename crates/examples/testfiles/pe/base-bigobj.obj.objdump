@@ -12,14 +12,14 @@ Segment { name: ".text$mn", address: 0, size: 0, permissions: R-X }
 Segment { name: ".text$mn", address: 0, size: 0, permissions: R-X }
 Segment { name: ".data", address: 0, size: 0, permissions: RW- }
 Segment { name: ".chks64", address: 0, size: 0, permissions: --- }
-1: Section { name: ".drectve", address: 0, size: 2f, align: 1, kind: Linker, flags: Coff { characteristics: 100a00 } }
-2: Section { name: ".debug$S", address: 0, size: 7c, align: 1, kind: Other, flags: Coff { characteristics: 42100040 } }
-3: Section { name: ".text$mn", address: 0, size: 14, align: 10, kind: Text, flags: Coff { characteristics: 60500020 } }
-4: Section { name: ".text$mn", address: 0, size: a, align: 10, kind: Text, flags: Coff { characteristics: 60501020 } }
-5: Section { name: ".text$mn", address: 0, size: 29, align: 10, kind: Text, flags: Coff { characteristics: 60501020 } }
-6: Section { name: ".text$mn", address: 0, size: 3a, align: 10, kind: Text, flags: Coff { characteristics: 60501020 } }
-7: Section { name: ".data", address: 0, size: d, align: 4, kind: Data, flags: Coff { characteristics: c0300040 } }
-8: Section { name: ".chks64", address: 0, size: 40, align: 10, kind: Linker, flags: Coff { characteristics: a00 } }
+1: Section { name: ".drectve", address: 0, size: 2f, align: 1, kind: Linker, flags: Coff { characteristics: IMAGE_SCN_ALIGN_1BYTES | IMAGE_SCN_LNK_INFO | IMAGE_SCN_LNK_REMOVE } }
+2: Section { name: ".debug$S", address: 0, size: 7c, align: 1, kind: Other, flags: Coff { characteristics: IMAGE_SCN_ALIGN_1BYTES | IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_DISCARDABLE | IMAGE_SCN_MEM_READ } }
+3: Section { name: ".text$mn", address: 0, size: 14, align: 10, kind: Text, flags: Coff { characteristics: IMAGE_SCN_ALIGN_16BYTES | IMAGE_SCN_CNT_CODE | IMAGE_SCN_MEM_EXECUTE | IMAGE_SCN_MEM_READ } }
+4: Section { name: ".text$mn", address: 0, size: a, align: 10, kind: Text, flags: Coff { characteristics: IMAGE_SCN_ALIGN_16BYTES | IMAGE_SCN_CNT_CODE | IMAGE_SCN_LNK_COMDAT | IMAGE_SCN_MEM_EXECUTE | IMAGE_SCN_MEM_READ } }
+5: Section { name: ".text$mn", address: 0, size: 29, align: 10, kind: Text, flags: Coff { characteristics: IMAGE_SCN_ALIGN_16BYTES | IMAGE_SCN_CNT_CODE | IMAGE_SCN_LNK_COMDAT | IMAGE_SCN_MEM_EXECUTE | IMAGE_SCN_MEM_READ } }
+6: Section { name: ".text$mn", address: 0, size: 3a, align: 10, kind: Text, flags: Coff { characteristics: IMAGE_SCN_ALIGN_16BYTES | IMAGE_SCN_CNT_CODE | IMAGE_SCN_LNK_COMDAT | IMAGE_SCN_MEM_EXECUTE | IMAGE_SCN_MEM_READ } }
+7: Section { name: ".data", address: 0, size: d, align: 4, kind: Data, flags: Coff { characteristics: IMAGE_SCN_ALIGN_4BYTES | IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_READ | IMAGE_SCN_MEM_WRITE } }
+8: Section { name: ".chks64", address: 0, size: 40, align: 10, kind: Linker, flags: Coff { characteristics: IMAGE_SCN_LNK_INFO | IMAGE_SCN_LNK_REMOVE } }
 Comdat { symbol: SymbolIndex(14), name: "___local_stdio_printf_options", kind: Any } Sections: 4
 Comdat { symbol: SymbolIndex(17), name: "__vfprintf_l", kind: Any } Sections: 5
 Comdat { symbol: SymbolIndex(18), name: "_printf", kind: Any } Sections: 6

@@ -504,7 +504,7 @@ pub struct SectionHeader {
     /// This will automatically be clamped if there are more than 0xffff.
     pub number_of_relocations: u32,
     pub number_of_linenumbers: u16,
-    pub characteristics: u32,
+    pub characteristics: pe::SectionFlags,
 }
 
 /// Native endian version of [`pe::ImageSymbol`].

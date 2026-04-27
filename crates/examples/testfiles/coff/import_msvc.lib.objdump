@@ -42,9 +42,9 @@ Entry Address: 0
 Segment { name: ".debug$S", address: 0, size: 0, permissions: R-- }
 Segment { name: ".idata$5", address: 0, size: 0, permissions: RW- }
 Segment { name: ".idata$4", address: 0, size: 0, permissions: RW- }
-1: Section { name: ".debug$S", address: 0, size: 42, align: 1, kind: Other, flags: Coff { characteristics: 42100040 } }
-2: Section { name: ".idata$5", address: 0, size: 8, align: 8, kind: Data, flags: Coff { characteristics: c0400040 } }
-3: Section { name: ".idata$4", address: 0, size: 8, align: 8, kind: Data, flags: Coff { characteristics: c0400040 } }
+1: Section { name: ".debug$S", address: 0, size: 42, align: 1, kind: Other, flags: Coff { characteristics: IMAGE_SCN_ALIGN_1BYTES | IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_DISCARDABLE | IMAGE_SCN_MEM_READ } }
+2: Section { name: ".idata$5", address: 0, size: 8, align: 8, kind: Data, flags: Coff { characteristics: IMAGE_SCN_ALIGN_8BYTES | IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_READ | IMAGE_SCN_MEM_WRITE } }
+3: Section { name: ".idata$4", address: 0, size: 8, align: 8, kind: Data, flags: Coff { characteristics: IMAGE_SCN_ALIGN_8BYTES | IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_READ | IMAGE_SCN_MEM_WRITE } }
 
 Symbols
 0: Symbol { name: "@comp.id", address: 0, size: 0, kind: Data, section: Absolute, scope: Compilation, weak: false, flags: Coff { typ: 0, storage_class: 3 } }
@@ -64,8 +64,8 @@ Relative Address Base: 0
 Entry Address: 0
 Segment { name: ".debug$S", address: 0, size: 0, permissions: R-- }
 Segment { name: ".idata$3", address: 0, size: 0, permissions: RW- }
-1: Section { name: ".debug$S", address: 0, size: 42, align: 1, kind: Other, flags: Coff { characteristics: 42100040 } }
-2: Section { name: ".idata$3", address: 0, size: 14, align: 4, kind: Data, flags: Coff { characteristics: c0300040 } }
+1: Section { name: ".debug$S", address: 0, size: 42, align: 1, kind: Other, flags: Coff { characteristics: IMAGE_SCN_ALIGN_1BYTES | IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_DISCARDABLE | IMAGE_SCN_MEM_READ } }
+2: Section { name: ".idata$3", address: 0, size: 14, align: 4, kind: Data, flags: Coff { characteristics: IMAGE_SCN_ALIGN_4BYTES | IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_READ | IMAGE_SCN_MEM_WRITE } }
 
 Symbols
 0: Symbol { name: "@comp.id", address: 0, size: 0, kind: Data, section: Absolute, scope: Compilation, weak: false, flags: Coff { typ: 0, storage_class: 3 } }
@@ -86,9 +86,9 @@ Entry Address: 0
 Segment { name: ".debug$S", address: 0, size: 0, permissions: R-- }
 Segment { name: ".idata$2", address: 0, size: 0, permissions: RW- }
 Segment { name: ".idata$6", address: 0, size: 0, permissions: RW- }
-1: Section { name: ".debug$S", address: 0, size: 42, align: 1, kind: Other, flags: Coff { characteristics: 42100040 } }
-2: Section { name: ".idata$2", address: 0, size: 14, align: 4, kind: Data, flags: Coff { characteristics: c0300040 } }
-3: Section { name: ".idata$6", address: 0, size: e, align: 2, kind: Data, flags: Coff { characteristics: c0200040 } }
+1: Section { name: ".debug$S", address: 0, size: 42, align: 1, kind: Other, flags: Coff { characteristics: IMAGE_SCN_ALIGN_1BYTES | IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_DISCARDABLE | IMAGE_SCN_MEM_READ } }
+2: Section { name: ".idata$2", address: 0, size: 14, align: 4, kind: Data, flags: Coff { characteristics: IMAGE_SCN_ALIGN_4BYTES | IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_READ | IMAGE_SCN_MEM_WRITE } }
+3: Section { name: ".idata$6", address: 0, size: e, align: 2, kind: Data, flags: Coff { characteristics: IMAGE_SCN_ALIGN_2BYTES | IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_READ | IMAGE_SCN_MEM_WRITE } }
 
 Symbols
 0: Symbol { name: "@comp.id", address: 0, size: 0, kind: Data, section: Absolute, scope: Compilation, weak: false, flags: Coff { typ: 0, storage_class: 3 } }
@@ -128,9 +128,9 @@ Entry Address: 0
 Segment { name: ".debug$S", address: 0, size: 0, permissions: R-- }
 Segment { name: ".idata$5", address: 0, size: 0, permissions: RW- }
 Segment { name: ".idata$4", address: 0, size: 0, permissions: RW- }
-1: Section { name: ".debug$S", address: 0, size: 42, align: 1, kind: Other, flags: Coff { characteristics: 42100040 } }
-2: Section { name: ".idata$5", address: 0, size: 4, align: 4, kind: Data, flags: Coff { characteristics: c0300040 } }
-3: Section { name: ".idata$4", address: 0, size: 4, align: 4, kind: Data, flags: Coff { characteristics: c0300040 } }
+1: Section { name: ".debug$S", address: 0, size: 42, align: 1, kind: Other, flags: Coff { characteristics: IMAGE_SCN_ALIGN_1BYTES | IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_DISCARDABLE | IMAGE_SCN_MEM_READ } }
+2: Section { name: ".idata$5", address: 0, size: 4, align: 4, kind: Data, flags: Coff { characteristics: IMAGE_SCN_ALIGN_4BYTES | IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_READ | IMAGE_SCN_MEM_WRITE } }
+3: Section { name: ".idata$4", address: 0, size: 4, align: 4, kind: Data, flags: Coff { characteristics: IMAGE_SCN_ALIGN_4BYTES | IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_READ | IMAGE_SCN_MEM_WRITE } }
 
 Symbols
 0: Symbol { name: "@comp.id", address: 0, size: 0, kind: Data, section: Absolute, scope: Compilation, weak: false, flags: Coff { typ: 0, storage_class: 3 } }
@@ -150,8 +150,8 @@ Relative Address Base: 0
 Entry Address: 0
 Segment { name: ".debug$S", address: 0, size: 0, permissions: R-- }
 Segment { name: ".idata$3", address: 0, size: 0, permissions: RW- }
-1: Section { name: ".debug$S", address: 0, size: 42, align: 1, kind: Other, flags: Coff { characteristics: 42100040 } }
-2: Section { name: ".idata$3", address: 0, size: 14, align: 4, kind: Data, flags: Coff { characteristics: c0300040 } }
+1: Section { name: ".debug$S", address: 0, size: 42, align: 1, kind: Other, flags: Coff { characteristics: IMAGE_SCN_ALIGN_1BYTES | IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_DISCARDABLE | IMAGE_SCN_MEM_READ } }
+2: Section { name: ".idata$3", address: 0, size: 14, align: 4, kind: Data, flags: Coff { characteristics: IMAGE_SCN_ALIGN_4BYTES | IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_READ | IMAGE_SCN_MEM_WRITE } }
 
 Symbols
 0: Symbol { name: "@comp.id", address: 0, size: 0, kind: Data, section: Absolute, scope: Compilation, weak: false, flags: Coff { typ: 0, storage_class: 3 } }
@@ -172,9 +172,9 @@ Entry Address: 0
 Segment { name: ".debug$S", address: 0, size: 0, permissions: R-- }
 Segment { name: ".idata$2", address: 0, size: 0, permissions: RW- }
 Segment { name: ".idata$6", address: 0, size: 0, permissions: RW- }
-1: Section { name: ".debug$S", address: 0, size: 42, align: 1, kind: Other, flags: Coff { characteristics: 42100040 } }
-2: Section { name: ".idata$2", address: 0, size: 14, align: 4, kind: Data, flags: Coff { characteristics: c0300040 } }
-3: Section { name: ".idata$6", address: 0, size: e, align: 2, kind: Data, flags: Coff { characteristics: c0200040 } }
+1: Section { name: ".debug$S", address: 0, size: 42, align: 1, kind: Other, flags: Coff { characteristics: IMAGE_SCN_ALIGN_1BYTES | IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_DISCARDABLE | IMAGE_SCN_MEM_READ } }
+2: Section { name: ".idata$2", address: 0, size: 14, align: 4, kind: Data, flags: Coff { characteristics: IMAGE_SCN_ALIGN_4BYTES | IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_READ | IMAGE_SCN_MEM_WRITE } }
+3: Section { name: ".idata$6", address: 0, size: e, align: 2, kind: Data, flags: Coff { characteristics: IMAGE_SCN_ALIGN_2BYTES | IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_READ | IMAGE_SCN_MEM_WRITE } }
 
 Symbols
 0: Symbol { name: "@comp.id", address: 0, size: 0, kind: Data, section: Absolute, scope: Compilation, weak: false, flags: Coff { typ: 0, storage_class: 3 } }
@@ -215,9 +215,9 @@ Entry Address: 0
 Segment { name: ".debug$S", address: 0, size: 0, permissions: R-- }
 Segment { name: ".idata$5", address: 0, size: 0, permissions: RW- }
 Segment { name: ".idata$4", address: 0, size: 0, permissions: RW- }
-1: Section { name: ".debug$S", address: 0, size: 46, align: 1, kind: Other, flags: Coff { characteristics: 42100040 } }
-2: Section { name: ".idata$5", address: 0, size: 8, align: 8, kind: Data, flags: Coff { characteristics: c0400040 } }
-3: Section { name: ".idata$4", address: 0, size: 8, align: 8, kind: Data, flags: Coff { characteristics: c0400040 } }
+1: Section { name: ".debug$S", address: 0, size: 46, align: 1, kind: Other, flags: Coff { characteristics: IMAGE_SCN_ALIGN_1BYTES | IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_DISCARDABLE | IMAGE_SCN_MEM_READ } }
+2: Section { name: ".idata$5", address: 0, size: 8, align: 8, kind: Data, flags: Coff { characteristics: IMAGE_SCN_ALIGN_8BYTES | IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_READ | IMAGE_SCN_MEM_WRITE } }
+3: Section { name: ".idata$4", address: 0, size: 8, align: 8, kind: Data, flags: Coff { characteristics: IMAGE_SCN_ALIGN_8BYTES | IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_READ | IMAGE_SCN_MEM_WRITE } }
 
 Symbols
 0: Symbol { name: "@comp.id", address: 0, size: 0, kind: Data, section: Absolute, scope: Compilation, weak: false, flags: Coff { typ: 0, storage_class: 3 } }
@@ -237,8 +237,8 @@ Relative Address Base: 0
 Entry Address: 0
 Segment { name: ".debug$S", address: 0, size: 0, permissions: R-- }
 Segment { name: ".idata$3", address: 0, size: 0, permissions: RW- }
-1: Section { name: ".debug$S", address: 0, size: 46, align: 1, kind: Other, flags: Coff { characteristics: 42100040 } }
-2: Section { name: ".idata$3", address: 0, size: 14, align: 4, kind: Data, flags: Coff { characteristics: c0300040 } }
+1: Section { name: ".debug$S", address: 0, size: 46, align: 1, kind: Other, flags: Coff { characteristics: IMAGE_SCN_ALIGN_1BYTES | IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_DISCARDABLE | IMAGE_SCN_MEM_READ } }
+2: Section { name: ".idata$3", address: 0, size: 14, align: 4, kind: Data, flags: Coff { characteristics: IMAGE_SCN_ALIGN_4BYTES | IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_READ | IMAGE_SCN_MEM_WRITE } }
 
 Symbols
 0: Symbol { name: "@comp.id", address: 0, size: 0, kind: Data, section: Absolute, scope: Compilation, weak: false, flags: Coff { typ: 0, storage_class: 3 } }
@@ -259,9 +259,9 @@ Entry Address: 0
 Segment { name: ".debug$S", address: 0, size: 0, permissions: R-- }
 Segment { name: ".idata$2", address: 0, size: 0, permissions: RW- }
 Segment { name: ".idata$6", address: 0, size: 0, permissions: RW- }
-1: Section { name: ".debug$S", address: 0, size: 46, align: 1, kind: Other, flags: Coff { characteristics: 42100040 } }
-2: Section { name: ".idata$2", address: 0, size: 14, align: 4, kind: Data, flags: Coff { characteristics: c0300040 } }
-3: Section { name: ".idata$6", address: 0, size: 12, align: 2, kind: Data, flags: Coff { characteristics: c0200040 } }
+1: Section { name: ".debug$S", address: 0, size: 46, align: 1, kind: Other, flags: Coff { characteristics: IMAGE_SCN_ALIGN_1BYTES | IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_DISCARDABLE | IMAGE_SCN_MEM_READ } }
+2: Section { name: ".idata$2", address: 0, size: 14, align: 4, kind: Data, flags: Coff { characteristics: IMAGE_SCN_ALIGN_4BYTES | IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_READ | IMAGE_SCN_MEM_WRITE } }
+3: Section { name: ".idata$6", address: 0, size: 12, align: 2, kind: Data, flags: Coff { characteristics: IMAGE_SCN_ALIGN_2BYTES | IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_READ | IMAGE_SCN_MEM_WRITE } }
 
 Symbols
 0: Symbol { name: "@comp.id", address: 0, size: 0, kind: Data, section: Absolute, scope: Compilation, weak: false, flags: Coff { typ: 0, storage_class: 3 } }

@@ -11,13 +11,13 @@ Segment { name: ".xdata", address: 0, size: 0, permissions: R-- }
 Segment { name: ".pdata", address: 0, size: 0, permissions: R-- }
 Segment { name: ".rdata", address: 0, size: 0, permissions: R-- }
 Segment { name: ".rdata$zzz", address: 0, size: 0, permissions: R-- }
-1: Section { name: ".text", address: 0, size: 80, align: 10, kind: Text, flags: Coff { characteristics: 60500020 } }
-2: Section { name: ".data", address: 0, size: 0, align: 10, kind: Data, flags: Coff { characteristics: c0500040 } }
-3: Section { name: ".bss", address: 0, size: 0, align: 10, kind: UninitializedData, flags: Coff { characteristics: c0500080 } }
-4: Section { name: ".xdata", address: 0, size: 18, align: 4, kind: ReadOnlyData, flags: Coff { characteristics: 40300040 } }
-5: Section { name: ".pdata", address: 0, size: 18, align: 4, kind: ReadOnlyData, flags: Coff { characteristics: 40300040 } }
-6: Section { name: ".rdata", address: 0, size: 10, align: 10, kind: ReadOnlyData, flags: Coff { characteristics: 40500040 } }
-7: Section { name: ".rdata$zzz", address: 0, size: 30, align: 10, kind: ReadOnlyData, flags: Coff { characteristics: 40500040 } }
+1: Section { name: ".text", address: 0, size: 80, align: 10, kind: Text, flags: Coff { characteristics: IMAGE_SCN_ALIGN_16BYTES | IMAGE_SCN_CNT_CODE | IMAGE_SCN_MEM_EXECUTE | IMAGE_SCN_MEM_READ } }
+2: Section { name: ".data", address: 0, size: 0, align: 10, kind: Data, flags: Coff { characteristics: IMAGE_SCN_ALIGN_16BYTES | IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_READ | IMAGE_SCN_MEM_WRITE } }
+3: Section { name: ".bss", address: 0, size: 0, align: 10, kind: UninitializedData, flags: Coff { characteristics: IMAGE_SCN_ALIGN_16BYTES | IMAGE_SCN_CNT_UNINITIALIZED_DATA | IMAGE_SCN_MEM_READ | IMAGE_SCN_MEM_WRITE } }
+4: Section { name: ".xdata", address: 0, size: 18, align: 4, kind: ReadOnlyData, flags: Coff { characteristics: IMAGE_SCN_ALIGN_4BYTES | IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_READ } }
+5: Section { name: ".pdata", address: 0, size: 18, align: 4, kind: ReadOnlyData, flags: Coff { characteristics: IMAGE_SCN_ALIGN_4BYTES | IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_READ } }
+6: Section { name: ".rdata", address: 0, size: 10, align: 10, kind: ReadOnlyData, flags: Coff { characteristics: IMAGE_SCN_ALIGN_16BYTES | IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_READ } }
+7: Section { name: ".rdata$zzz", address: 0, size: 30, align: 10, kind: ReadOnlyData, flags: Coff { characteristics: IMAGE_SCN_ALIGN_16BYTES | IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_READ } }
 
 Symbols
 0: Symbol { name: "base.c", address: 0, size: 0, kind: File, section: None, scope: Compilation, weak: false, flags: Coff { typ: 0, storage_class: 67 } }

@@ -14,7 +14,7 @@ fn coff_extended_relocations() {
         .expect("Could not find .text section in relocs_overflow.o");
     match code_section.flags() {
         object::SectionFlags::Coff { characteristics } => {
-            assert!(characteristics & pe::IMAGE_SCN_LNK_NRELOC_OVFL != 0)
+            assert!(characteristics.contains(pe::IMAGE_SCN_LNK_NRELOC_OVFL))
         }
         _ => panic!("Invalid section flags flavour."),
     };

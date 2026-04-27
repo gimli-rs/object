@@ -645,7 +645,7 @@ impl<'a> Object<'a> {
             if section.relocations.len() > 0xffff {
                 characteristics |= coff::IMAGE_SCN_LNK_NRELOC_OVFL;
             }
-            characteristics |= match section.align {
+            characteristics = characteristics.with_align(match section.align {
                 1 => coff::IMAGE_SCN_ALIGN_1BYTES,
                 2 => coff::IMAGE_SCN_ALIGN_2BYTES,
                 4 => coff::IMAGE_SCN_ALIGN_4BYTES,
@@ -667,7 +667,7 @@ impl<'a> Object<'a> {
                         section.align
                     )));
                 }
-            };
+            });
             writer.write_section_header(writer::SectionHeader {
                 name: section_offsets[index].name,
                 size_of_raw_data: section.size as u32,

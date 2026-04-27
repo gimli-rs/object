@@ -154,9 +154,9 @@ where
     fn permissions(&self) -> Permissions {
         let characteristics = self.section.characteristics.get(LE);
         Permissions::new(
-            characteristics & pe::IMAGE_SCN_MEM_READ != 0,
-            characteristics & pe::IMAGE_SCN_MEM_WRITE != 0,
-            characteristics & pe::IMAGE_SCN_MEM_EXECUTE != 0,
+            characteristics.contains(pe::IMAGE_SCN_MEM_READ),
+            characteristics.contains(pe::IMAGE_SCN_MEM_WRITE),
+            characteristics.contains(pe::IMAGE_SCN_MEM_EXECUTE),
         )
     }
 }

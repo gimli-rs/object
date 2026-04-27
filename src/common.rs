@@ -533,7 +533,7 @@ pub enum SegmentFlags {
     #[cfg(feature = "coff")]
     Coff {
         /// `Characteristics` field in the segment header.
-        characteristics: u32,
+        characteristics: crate::pe::SectionFlags,
     },
 }
 
@@ -630,7 +630,7 @@ pub enum SectionFlags {
     #[cfg(feature = "coff")]
     Coff {
         /// `Characteristics` field in the section header.
-        characteristics: u32,
+        characteristics: crate::pe::SectionFlags,
     },
     /// XCOFF section flags.
     #[cfg(feature = "xcoff")]

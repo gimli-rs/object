@@ -808,84 +808,104 @@ pub struct ImageSectionHeader {
     pub pointer_to_linenumbers: U32<LE>,
     pub number_of_relocations: U16<LE>,
     pub number_of_linenumbers: U16<LE>,
-    pub characteristics: U32<LE>,
+    pub characteristics: U32<LE, SectionFlags>,
 }
 
 pub const IMAGE_SIZEOF_SECTION_HEADER: usize = 40;
 
-// Values for `ImageSectionHeader::characteristics`.
+newtype!(
+    /// Values for `ImageSectionHeader::characteristics`.
+    struct SectionFlags(u32);
+);
 
-//      IMAGE_SCN_TYPE_REG                   0x00000000  // Reserved.
-//      IMAGE_SCN_TYPE_DSECT                 0x00000001  // Reserved.
-//      IMAGE_SCN_TYPE_NOLOAD                0x00000002  // Reserved.
-//      IMAGE_SCN_TYPE_GROUP                 0x00000004  // Reserved.
-/// Reserved.
-pub const IMAGE_SCN_TYPE_NO_PAD: u32 = 0x0000_0008;
-//      IMAGE_SCN_TYPE_COPY                  0x00000010  // Reserved.
+impl SectionFlags {
+    /// Return the alignment.
+    pub fn align(self) -> SectionFlags {
+        SectionFlags(self.0 & IMAGE_SCN_ALIGN_MASK)
+    }
 
-/// Section contains code.
-pub const IMAGE_SCN_CNT_CODE: u32 = 0x0000_0020;
-/// Section contains initialized data.
-pub const IMAGE_SCN_CNT_INITIALIZED_DATA: u32 = 0x0000_0040;
-/// Section contains uninitialized data.
-pub const IMAGE_SCN_CNT_UNINITIALIZED_DATA: u32 = 0x0000_0080;
+    /// Replace the alignment.
+    pub fn with_align(self, align: SectionFlags) -> SectionFlags {
+        SectionFlags(self.0 & !IMAGE_SCN_ALIGN_MASK | align.0 & IMAGE_SCN_ALIGN_MASK)
+    }
+}
 
-/// Reserved.
-pub const IMAGE_SCN_LNK_OTHER: u32 = 0x0000_0100;
-/// Section contains comments or some other type of information.
-pub const IMAGE_SCN_LNK_INFO: u32 = 0x0000_0200;
-//      IMAGE_SCN_TYPE_OVER                  0x00000400  // Reserved.
-/// Section contents will not become part of image.
-pub const IMAGE_SCN_LNK_REMOVE: u32 = 0x0000_0800;
-/// Section contents comdat.
-pub const IMAGE_SCN_LNK_COMDAT: u32 = 0x0000_1000;
-//                                           0x00002000  // Reserved.
-//      IMAGE_SCN_MEM_PROTECTED - Obsolete   0x00004000
-/// Reset speculative exceptions handling bits in the TLB entries for this section.
-pub const IMAGE_SCN_NO_DEFER_SPEC_EXC: u32 = 0x0000_4000;
-/// Section content can be accessed relative to GP
-pub const IMAGE_SCN_GPREL: u32 = 0x0000_8000;
-pub const IMAGE_SCN_MEM_FARDATA: u32 = 0x0000_8000;
-//      IMAGE_SCN_MEM_SYSHEAP  - Obsolete    0x00010000
-pub const IMAGE_SCN_MEM_PURGEABLE: u32 = 0x0002_0000;
-pub const IMAGE_SCN_MEM_16BIT: u32 = 0x0002_0000;
-pub const IMAGE_SCN_MEM_LOCKED: u32 = 0x0004_0000;
-pub const IMAGE_SCN_MEM_PRELOAD: u32 = 0x0008_0000;
+newtype_flag_names!(NAMES_SCN_FLAGS: SectionFlags(u32) = {
+    //      IMAGE_SCN_TYPE_REG                   0x00000000  // Reserved.
+    //      IMAGE_SCN_TYPE_DSECT                 0x00000001  // Reserved.
+    //      IMAGE_SCN_TYPE_NOLOAD                0x00000002  // Reserved.
+    //      IMAGE_SCN_TYPE_GROUP                 0x00000004  // Reserved.
+    /// Reserved.
+    IMAGE_SCN_TYPE_NO_PAD = 0x0000_0008,
+    //      IMAGE_SCN_TYPE_COPY                  0x00000010  // Reserved.
 
-pub const IMAGE_SCN_ALIGN_1BYTES: u32 = 0x0010_0000;
-pub const IMAGE_SCN_ALIGN_2BYTES: u32 = 0x0020_0000;
-pub const IMAGE_SCN_ALIGN_4BYTES: u32 = 0x0030_0000;
-pub const IMAGE_SCN_ALIGN_8BYTES: u32 = 0x0040_0000;
-/// Default alignment if no others are specified.
-pub const IMAGE_SCN_ALIGN_16BYTES: u32 = 0x0050_0000;
-pub const IMAGE_SCN_ALIGN_32BYTES: u32 = 0x0060_0000;
-pub const IMAGE_SCN_ALIGN_64BYTES: u32 = 0x0070_0000;
-pub const IMAGE_SCN_ALIGN_128BYTES: u32 = 0x0080_0000;
-pub const IMAGE_SCN_ALIGN_256BYTES: u32 = 0x0090_0000;
-pub const IMAGE_SCN_ALIGN_512BYTES: u32 = 0x00A0_0000;
-pub const IMAGE_SCN_ALIGN_1024BYTES: u32 = 0x00B0_0000;
-pub const IMAGE_SCN_ALIGN_2048BYTES: u32 = 0x00C0_0000;
-pub const IMAGE_SCN_ALIGN_4096BYTES: u32 = 0x00D0_0000;
-pub const IMAGE_SCN_ALIGN_8192BYTES: u32 = 0x00E0_0000;
-// Unused                                    0x00F0_0000
-pub const IMAGE_SCN_ALIGN_MASK: u32 = 0x00F0_0000;
+    /// Section contains code.
+    IMAGE_SCN_CNT_CODE = 0x0000_0020,
+    /// Section contains initialized data.
+    IMAGE_SCN_CNT_INITIALIZED_DATA = 0x0000_0040,
+    /// Section contains uninitialized data.
+    IMAGE_SCN_CNT_UNINITIALIZED_DATA = 0x0000_0080,
 
-/// Section contains extended relocations.
-pub const IMAGE_SCN_LNK_NRELOC_OVFL: u32 = 0x0100_0000;
-/// Section can be discarded.
-pub const IMAGE_SCN_MEM_DISCARDABLE: u32 = 0x0200_0000;
-/// Section is not cacheable.
-pub const IMAGE_SCN_MEM_NOT_CACHED: u32 = 0x0400_0000;
-/// Section is not pageable.
-pub const IMAGE_SCN_MEM_NOT_PAGED: u32 = 0x0800_0000;
-/// Section is shareable.
-pub const IMAGE_SCN_MEM_SHARED: u32 = 0x1000_0000;
-/// Section is executable.
-pub const IMAGE_SCN_MEM_EXECUTE: u32 = 0x2000_0000;
-/// Section is readable.
-pub const IMAGE_SCN_MEM_READ: u32 = 0x4000_0000;
-/// Section is writeable.
-pub const IMAGE_SCN_MEM_WRITE: u32 = 0x8000_0000;
+    /// Reserved.
+    IMAGE_SCN_LNK_OTHER = 0x0000_0100,
+    /// Section contains comments or some other type of information.
+    IMAGE_SCN_LNK_INFO = 0x0000_0200,
+    //      IMAGE_SCN_TYPE_OVER                  0x00000400  // Reserved.
+    /// Section contents will not become part of image.
+    IMAGE_SCN_LNK_REMOVE = 0x0000_0800,
+    /// Section contents comdat.
+    IMAGE_SCN_LNK_COMDAT = 0x0000_1000,
+    //                                           0x00002000  // Reserved.
+    //      IMAGE_SCN_MEM_PROTECTED - Obsolete   0x00004000
+    /// Reset speculative exceptions handling bits in the TLB entries for this section.
+    IMAGE_SCN_NO_DEFER_SPEC_EXC = 0x0000_4000,
+    /// Section content can be accessed relative to GP
+    IMAGE_SCN_GPREL = 0x0000_8000,
+    IMAGE_SCN_MEM_FARDATA = 0x0000_8000,
+    //      IMAGE_SCN_MEM_SYSHEAP  - Obsolete    0x00010000
+    IMAGE_SCN_MEM_PURGEABLE = 0x0002_0000,
+    IMAGE_SCN_MEM_16BIT = 0x0002_0000,
+    IMAGE_SCN_MEM_LOCKED = 0x0004_0000,
+    IMAGE_SCN_MEM_PRELOAD = 0x0008_0000,
+
+    IMAGE_SCN_ALIGN_MASK = 0x00F0_0000 => NAMES_SCN_ALIGN,
+
+    /// Section contains extended relocations.
+    IMAGE_SCN_LNK_NRELOC_OVFL = 0x0100_0000,
+    /// Section can be discarded.
+    IMAGE_SCN_MEM_DISCARDABLE = 0x0200_0000,
+    /// Section is not cacheable.
+    IMAGE_SCN_MEM_NOT_CACHED = 0x0400_0000,
+    /// Section is not pageable.
+    IMAGE_SCN_MEM_NOT_PAGED = 0x0800_0000,
+    /// Section is shareable.
+    IMAGE_SCN_MEM_SHARED = 0x1000_0000,
+    /// Section is executable.
+    IMAGE_SCN_MEM_EXECUTE = 0x2000_0000,
+    /// Section is readable.
+    IMAGE_SCN_MEM_READ = 0x4000_0000,
+    /// Section is writeable.
+    IMAGE_SCN_MEM_WRITE = 0x8000_0000,
+});
+
+constant_names!(NAMES_SCN_ALIGN: SectionFlags(u32) = {
+    IMAGE_SCN_ALIGN_1BYTES = 0x0010_0000,
+    IMAGE_SCN_ALIGN_2BYTES = 0x0020_0000,
+    IMAGE_SCN_ALIGN_4BYTES = 0x0030_0000,
+    IMAGE_SCN_ALIGN_8BYTES = 0x0040_0000,
+    /// Default alignment if no others are specified.
+    IMAGE_SCN_ALIGN_16BYTES = 0x0050_0000,
+    IMAGE_SCN_ALIGN_32BYTES = 0x0060_0000,
+    IMAGE_SCN_ALIGN_64BYTES = 0x0070_0000,
+    IMAGE_SCN_ALIGN_128BYTES = 0x0080_0000,
+    IMAGE_SCN_ALIGN_256BYTES = 0x0090_0000,
+    IMAGE_SCN_ALIGN_512BYTES = 0x00A0_0000,
+    IMAGE_SCN_ALIGN_1024BYTES = 0x00B0_0000,
+    IMAGE_SCN_ALIGN_2048BYTES = 0x00C0_0000,
+    IMAGE_SCN_ALIGN_4096BYTES = 0x00D0_0000,
+    IMAGE_SCN_ALIGN_8192BYTES = 0x00E0_0000,
+    // Unused                                    0x00F0_0000
+});
 
 //
 // TLS Characteristic Flags

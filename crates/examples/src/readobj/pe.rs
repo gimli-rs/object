@@ -612,16 +612,11 @@ fn print_sections<'data, Coff: CoffHeader>(
                 );
                 p.field("NumberOfRelocations", section.number_of_relocations.get(LE));
                 p.field("NumberOfLinenumbers", section.number_of_linenumbers.get(LE));
-                p.field_hex("Characteristics", section.characteristics.get(LE));
-                p.flags(section.characteristics.get(LE), 0, FLAGS_IMAGE_SCN);
-                // 0 means no alignment flag.
-                if section.characteristics.get(LE) & IMAGE_SCN_ALIGN_MASK != 0 {
-                    p.flags(
-                        section.characteristics.get(LE),
-                        IMAGE_SCN_ALIGN_MASK,
-                        FLAGS_IMAGE_SCN_ALIGN,
-                    );
-                }
+                p.field_flags(
+                    "Characteristics",
+                    section.characteristics.get(LE),
+                    SectionFlags::NAMES,
+                );
             }
             print_relocations(p, data, machine, symbols, section);
         });
@@ -793,47 +788,6 @@ fn print_reloc_dir(
     Some(())
 }
 
-const FLAGS_IMAGE_SCN: &[Flag<u32>] = &flags!(
-    IMAGE_SCN_TYPE_NO_PAD,
-    IMAGE_SCN_CNT_CODE,
-    IMAGE_SCN_CNT_INITIALIZED_DATA,
-    IMAGE_SCN_CNT_UNINITIALIZED_DATA,
-    IMAGE_SCN_LNK_OTHER,
-    IMAGE_SCN_LNK_INFO,
-    IMAGE_SCN_LNK_REMOVE,
-    IMAGE_SCN_LNK_COMDAT,
-    IMAGE_SCN_NO_DEFER_SPEC_EXC,
-    IMAGE_SCN_GPREL,
-    IMAGE_SCN_MEM_FARDATA,
-    IMAGE_SCN_MEM_PURGEABLE,
-    IMAGE_SCN_MEM_16BIT,
-    IMAGE_SCN_MEM_LOCKED,
-    IMAGE_SCN_MEM_PRELOAD,
-    IMAGE_SCN_LNK_NRELOC_OVFL,
-    IMAGE_SCN_MEM_DISCARDABLE,
-    IMAGE_SCN_MEM_NOT_CACHED,
-    IMAGE_SCN_MEM_NOT_PAGED,
-    IMAGE_SCN_MEM_SHARED,
-    IMAGE_SCN_MEM_EXECUTE,
-    IMAGE_SCN_MEM_READ,
-    IMAGE_SCN_MEM_WRITE,
-);
-const FLAGS_IMAGE_SCN_ALIGN: &[Flag<u32>] = &flags!(
-    IMAGE_SCN_ALIGN_1BYTES,
-    IMAGE_SCN_ALIGN_2BYTES,
-    IMAGE_SCN_ALIGN_4BYTES,
-    IMAGE_SCN_ALIGN_8BYTES,
-    IMAGE_SCN_ALIGN_16BYTES,
-    IMAGE_SCN_ALIGN_32BYTES,
-    IMAGE_SCN_ALIGN_64BYTES,
-    IMAGE_SCN_ALIGN_128BYTES,
-    IMAGE_SCN_ALIGN_256BYTES,
-    IMAGE_SCN_ALIGN_512BYTES,
-    IMAGE_SCN_ALIGN_1024BYTES,
-    IMAGE_SCN_ALIGN_2048BYTES,
-    IMAGE_SCN_ALIGN_4096BYTES,
-    IMAGE_SCN_ALIGN_8192BYTES,
-);
 const FLAGS_IMAGE_SYM: &[Flag<i32>] =
     &flags!(IMAGE_SYM_UNDEFINED, IMAGE_SYM_ABSOLUTE, IMAGE_SYM_DEBUG,);
 const FLAGS_IMAGE_SYM_TYPE: &[Flag<u16>] = &flags!(

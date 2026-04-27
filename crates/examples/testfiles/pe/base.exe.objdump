@@ -8,10 +8,10 @@ Segment { name: ".text", address: 401000, size: 104d3, permissions: R-X }
 Segment { name: ".rdata", address: 412000, size: 6808, permissions: R-- }
 Segment { name: ".data", address: 419000, size: 12f4, permissions: RW- }
 Segment { name: ".reloc", address: 41b000, size: ec8, permissions: R-- }
-1: Section { name: ".text", address: 401000, size: 104d3, align: 1000, kind: Text, flags: Coff { characteristics: 60000020 } }
-2: Section { name: ".rdata", address: 412000, size: 6808, align: 1000, kind: ReadOnlyData, flags: Coff { characteristics: 40000040 } }
-3: Section { name: ".data", address: 419000, size: 12f4, align: 1000, kind: Data, flags: Coff { characteristics: c0000040 } }
-4: Section { name: ".reloc", address: 41b000, size: ec8, align: 1000, kind: Other, flags: Coff { characteristics: 42000040 } }
+1: Section { name: ".text", address: 401000, size: 104d3, align: 1000, kind: Text, flags: Coff { characteristics: IMAGE_SCN_CNT_CODE | IMAGE_SCN_MEM_EXECUTE | IMAGE_SCN_MEM_READ } }
+2: Section { name: ".rdata", address: 412000, size: 6808, align: 1000, kind: ReadOnlyData, flags: Coff { characteristics: IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_READ } }
+3: Section { name: ".data", address: 419000, size: 12f4, align: 1000, kind: Data, flags: Coff { characteristics: IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_READ | IMAGE_SCN_MEM_WRITE } }
+4: Section { name: ".reloc", address: 41b000, size: ec8, align: 1000, kind: Other, flags: Coff { characteristics: IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_DISCARDABLE | IMAGE_SCN_MEM_READ } }
 
 Symbols
 

@@ -250,9 +250,9 @@ impl<'data, 'file, R: ReadRef<'data>, Coff: CoffHeader> ObjectSegment<'data>
     fn permissions(&self) -> Permissions {
         let characteristics = self.section.characteristics.get(LE);
         Permissions::new(
-            characteristics & pe::IMAGE_SCN_MEM_READ != 0,
-            characteristics & pe::IMAGE_SCN_MEM_WRITE != 0,
-            characteristics & pe::IMAGE_SCN_MEM_EXECUTE != 0,
+            characteristics.contains(pe::IMAGE_SCN_MEM_READ),
+            characteristics.contains(pe::IMAGE_SCN_MEM_WRITE),
+            characteristics.contains(pe::IMAGE_SCN_MEM_EXECUTE),
         )
     }
 }
@@ -441,19 +441,19 @@ impl<'data, 'file, R: ReadRef<'data>, Coff: CoffHeader> ObjectSection<'data>
 impl pe::ImageSectionHeader {
     pub(crate) fn kind(&self) -> SectionKind {
         let characteristics = self.characteristics.get(LE);
-        if characteristics & (pe::IMAGE_SCN_CNT_CODE | pe::IMAGE_SCN_MEM_EXECUTE) != 0 {
+        if characteristics.intersects(pe::IMAGE_SCN_CNT_CODE | pe::IMAGE_SCN_MEM_EXECUTE) {
             SectionKind::Text
-        } else if characteristics & pe::IMAGE_SCN_CNT_INITIALIZED_DATA != 0 {
-            if characteristics & pe::IMAGE_SCN_MEM_DISCARDABLE != 0 {
+        } else if characteristics.contains(pe::IMAGE_SCN_CNT_INITIALIZED_DATA) {
+            if characteristics.contains(pe::IMAGE_SCN_MEM_DISCARDABLE) {
                 SectionKind::Other
-            } else if characteristics & pe::IMAGE_SCN_MEM_WRITE != 0 {
+            } else if characteristics.contains(pe::IMAGE_SCN_MEM_WRITE) {
                 SectionKind::Data
             } else {
                 SectionKind::ReadOnlyData
             }
-        } else if characteristics & pe::IMAGE_SCN_CNT_UNINITIALIZED_DATA != 0 {
+        } else if characteristics.contains(pe::IMAGE_SCN_CNT_UNINITIALIZED_DATA) {
             SectionKind::UninitializedData
-        } else if characteristics & pe::IMAGE_SCN_LNK_INFO != 0 {
+        } else if characteristics.contains(pe::IMAGE_SCN_LNK_INFO) {
             SectionKind::Linker
         } else {
             SectionKind::Unknown
@@ -532,7 +532,11 @@ impl pe::ImageSectionHeader {
     ///
     /// Returns `None` for sections that have no data in the file.
     pub fn coff_file_range(&self) -> Option<(u32, u32)> {
-        if self.characteristics.get(LE) & pe::IMAGE_SCN_CNT_UNINITIALIZED_DATA != 0 {
+        if self
+            .characteristics
+            .get(LE)
+            .contains(pe::IMAGE_SCN_CNT_UNINITIALIZED_DATA)
+        {
             None
         } else {
             let offset = self.pointer_to_raw_data.get(LE);
@@ -558,7 +562,7 @@ impl pe::ImageSectionHeader {
     ///
     /// This is only valid for sections in a COFF file.
     pub fn coff_alignment(&self) -> u64 {
-        match self.characteristics.get(LE) & pe::IMAGE_SCN_ALIGN_MASK {
+        match self.characteristics.get(LE).align() {
             pe::IMAGE_SCN_ALIGN_1BYTES => 1,
             pe::IMAGE_SCN_ALIGN_2BYTES => 2,
             pe::IMAGE_SCN_ALIGN_4BYTES => 4,
@@ -587,7 +591,10 @@ impl pe::ImageSectionHeader {
         let mut pointer = self.pointer_to_relocations.get(LE).into();
         let mut number: usize = self.number_of_relocations.get(LE).into();
         if number == u16::MAX.into()
-            && self.characteristics.get(LE) & pe::IMAGE_SCN_LNK_NRELOC_OVFL != 0
+            && self
+                .characteristics
+                .get(LE)
+                .contains(pe::IMAGE_SCN_LNK_NRELOC_OVFL)
         {
             // Extended relocations. Read first relocation (which contains extended count) & adjust
             // relocations pointer.

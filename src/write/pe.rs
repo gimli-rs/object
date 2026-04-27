@@ -469,7 +469,7 @@ impl<'a> Writer<'a> {
     pub fn reserve_section(
         &mut self,
         name: [u8; 8],
-        characteristics: u32,
+        characteristics: pe::SectionFlags,
         virtual_size: u32,
         data_size: u32,
     ) -> SectionRange {
@@ -485,17 +485,17 @@ impl<'a> Writer<'a> {
 
         // Sizes in optional header use the virtual size with the file alignment.
         let aligned_virtual_size = util::align_u32(virtual_size, self.file_alignment);
-        if characteristics & pe::IMAGE_SCN_CNT_CODE != 0 {
+        if characteristics.contains(pe::IMAGE_SCN_CNT_CODE) {
             if self.code_address == 0 {
                 self.code_address = virtual_address;
             }
             self.code_len += aligned_virtual_size;
-        } else if characteristics & pe::IMAGE_SCN_CNT_INITIALIZED_DATA != 0 {
+        } else if characteristics.contains(pe::IMAGE_SCN_CNT_INITIALIZED_DATA) {
             if self.data_address == 0 {
                 self.data_address = virtual_address;
             }
             self.data_len += aligned_virtual_size;
-        } else if characteristics & pe::IMAGE_SCN_CNT_UNINITIALIZED_DATA != 0 {
+        } else if characteristics.contains(pe::IMAGE_SCN_CNT_UNINITIALIZED_DATA) {
             if self.data_address == 0 {
                 self.data_address = virtual_address;
             }
@@ -823,7 +823,7 @@ struct DataDirectory {
 #[derive(Debug, Clone)]
 pub struct Section {
     pub name: [u8; pe::IMAGE_SIZEOF_SHORT_NAME],
-    pub characteristics: u32,
+    pub characteristics: pe::SectionFlags,
     pub range: SectionRange,
 }
 

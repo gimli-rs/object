@@ -26,10 +26,10 @@ ImageSectionHeader {
     NumberOfRelocations: 4
     NumberOfLinenumbers: 0
     Characteristics: 0x60500020
+        IMAGE_SCN_ALIGN_16BYTES (0x500000)
         IMAGE_SCN_CNT_CODE (0x20)
         IMAGE_SCN_MEM_EXECUTE (0x20000000)
         IMAGE_SCN_MEM_READ (0x40000000)
-        IMAGE_SCN_ALIGN_16BYTES (0x500000)
     ImageRelocation {
         VirtualAddress: 0x2F
         Symbol: "__imp___acrt_iob_func" (0x13)
@@ -63,10 +63,10 @@ ImageSectionHeader {
     NumberOfRelocations: 0
     NumberOfLinenumbers: 0
     Characteristics: 0xC0500040
+        IMAGE_SCN_ALIGN_16BYTES (0x500000)
         IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
         IMAGE_SCN_MEM_READ (0x40000000)
         IMAGE_SCN_MEM_WRITE (0x80000000)
-        IMAGE_SCN_ALIGN_16BYTES (0x500000)
 }
 ImageSectionHeader {
     Index: 3
@@ -80,10 +80,10 @@ ImageSectionHeader {
     NumberOfRelocations: 0
     NumberOfLinenumbers: 0
     Characteristics: 0xC0500080
+        IMAGE_SCN_ALIGN_16BYTES (0x500000)
         IMAGE_SCN_CNT_UNINITIALIZED_DATA (0x80)
         IMAGE_SCN_MEM_READ (0x40000000)
         IMAGE_SCN_MEM_WRITE (0x80000000)
-        IMAGE_SCN_ALIGN_16BYTES (0x500000)
 }
 ImageSectionHeader {
     Index: 4
@@ -97,9 +97,9 @@ ImageSectionHeader {
     NumberOfRelocations: 0
     NumberOfLinenumbers: 0
     Characteristics: 0x40300040
+        IMAGE_SCN_ALIGN_4BYTES (0x300000)
         IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
         IMAGE_SCN_MEM_READ (0x40000000)
-        IMAGE_SCN_ALIGN_4BYTES (0x300000)
 }
 ImageSectionHeader {
     Index: 5
@@ -113,9 +113,9 @@ ImageSectionHeader {
     NumberOfRelocations: 6
     NumberOfLinenumbers: 0
     Characteristics: 0x40300040
+        IMAGE_SCN_ALIGN_4BYTES (0x300000)
         IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
         IMAGE_SCN_MEM_READ (0x40000000)
-        IMAGE_SCN_ALIGN_4BYTES (0x300000)
     ImageRelocation {
         VirtualAddress: 0x0
         Symbol: ".text" (0x5)
@@ -159,9 +159,9 @@ ImageSectionHeader {
     NumberOfRelocations: 0
     NumberOfLinenumbers: 0
     Characteristics: 0x40500040
+        IMAGE_SCN_ALIGN_16BYTES (0x500000)
         IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
         IMAGE_SCN_MEM_READ (0x40000000)
-        IMAGE_SCN_ALIGN_16BYTES (0x500000)
 }
 ImageSectionHeader {
     Index: 7
@@ -175,9 +175,9 @@ ImageSectionHeader {
     NumberOfRelocations: 0
     NumberOfLinenumbers: 0
     Characteristics: 0x40500040
+        IMAGE_SCN_ALIGN_16BYTES (0x500000)
         IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
         IMAGE_SCN_MEM_READ (0x40000000)
-        IMAGE_SCN_ALIGN_16BYTES (0x500000)
 }
 ImageSymbol {
     Index: 0
