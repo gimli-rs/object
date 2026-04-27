@@ -49,7 +49,7 @@ pub(super) fn print_coff_import(p: &mut Printer<'_>, data: &[u8]) {
             p.field_hex("Signature1", header.sig1.get(LE));
             p.field_hex("Signature2", header.sig2.get(LE));
             p.field("Version", header.version.get(LE));
-            p.field_enum("Machine", header.machine.get(LE), FLAGS_IMAGE_FILE_MACHINE);
+            p.field_consts("Machine", header.machine.get(LE), Machine::NAMES);
             p.field("TimeDateStamp", header.time_date_stamp.get(LE));
             p.field_hex("SizeOfData", header.size_of_data.get(LE));
             p.field("OrdinalOrHint", header.ordinal_or_hint.get(LE));
@@ -160,7 +160,7 @@ fn print_file(p: &mut Printer<'_>, header: &ImageFileHeader) {
         return;
     }
     p.group("ImageFileHeader", |p| {
-        p.field_enum("Machine", header.machine.get(LE), FLAGS_IMAGE_FILE_MACHINE);
+        p.field_consts("Machine", header.machine.get(LE), Machine::NAMES);
         p.field("NumberOfSections", header.number_of_sections.get(LE));
         p.field("TimeDateStamp", header.time_date_stamp.get(LE));
         p.field_hex(
@@ -249,7 +249,7 @@ fn print_bigobj(p: &mut Printer<'_>, header: &AnonObjectHeaderBigobj) {
         p.field_hex("Signature1", header.sig1.get(LE));
         p.field_hex("Signature2", header.sig2.get(LE));
         p.field("Version", header.version.get(LE));
-        p.field_enum("Machine", header.machine.get(LE), FLAGS_IMAGE_FILE_MACHINE);
+        p.field_consts("Machine", header.machine.get(LE), Machine::NAMES);
         p.field("TimeDateStamp", header.time_date_stamp.get(LE));
         p.field(
             "ClassId",
@@ -573,7 +573,7 @@ fn print_resource_table(
 fn print_sections<'data, Coff: CoffHeader>(
     p: &mut Printer<'_>,
     data: &[u8],
-    machine: u16,
+    machine: pe::Machine,
     symbols: Option<&SymbolTable<'data, &'data [u8], Coff>>,
     sections: &SectionTable,
 ) {
@@ -629,7 +629,7 @@ fn print_sections<'data, Coff: CoffHeader>(
 fn print_relocations<'data, Coff: CoffHeader>(
     p: &mut Printer<'_>,
     data: &[u8],
-    machine: u16,
+    machine: pe::Machine,
     symbols: Option<&SymbolTable<'data, &'data [u8], Coff>>,
     section: &ImageSectionHeader,
 ) {
@@ -755,7 +755,7 @@ fn print_symbols<'data, Coff: CoffHeader>(
 fn print_reloc_dir(
     p: &mut Printer<'_>,
     data: &[u8],
-    machine: u16,
+    machine: pe::Machine,
     sections: &SectionTable,
     data_directories: &DataDirectories,
 ) -> Option<()> {
@@ -807,44 +807,6 @@ const FLAGS_IMAGE_FILE: &[Flag<u16>] = &flags!(
     IMAGE_FILE_DLL,
     IMAGE_FILE_UP_SYSTEM_ONLY,
     IMAGE_FILE_BYTES_REVERSED_HI,
-);
-const FLAGS_IMAGE_FILE_MACHINE: &[Flag<u16>] = &flags!(
-    IMAGE_FILE_MACHINE_UNKNOWN,
-    IMAGE_FILE_MACHINE_TARGET_HOST,
-    IMAGE_FILE_MACHINE_I386,
-    IMAGE_FILE_MACHINE_R3000,
-    IMAGE_FILE_MACHINE_R4000,
-    IMAGE_FILE_MACHINE_R10000,
-    IMAGE_FILE_MACHINE_WCEMIPSV2,
-    IMAGE_FILE_MACHINE_ALPHA,
-    IMAGE_FILE_MACHINE_SH3,
-    IMAGE_FILE_MACHINE_SH3DSP,
-    IMAGE_FILE_MACHINE_SH3E,
-    IMAGE_FILE_MACHINE_SH4,
-    IMAGE_FILE_MACHINE_SH5,
-    IMAGE_FILE_MACHINE_ARM,
-    IMAGE_FILE_MACHINE_THUMB,
-    IMAGE_FILE_MACHINE_ARMNT,
-    IMAGE_FILE_MACHINE_AM33,
-    IMAGE_FILE_MACHINE_POWERPC,
-    IMAGE_FILE_MACHINE_POWERPCFP,
-    IMAGE_FILE_MACHINE_IA64,
-    IMAGE_FILE_MACHINE_MIPS16,
-    IMAGE_FILE_MACHINE_ALPHA64,
-    IMAGE_FILE_MACHINE_MIPSFPU,
-    IMAGE_FILE_MACHINE_MIPSFPU16,
-    IMAGE_FILE_MACHINE_AXP64,
-    IMAGE_FILE_MACHINE_TRICORE,
-    IMAGE_FILE_MACHINE_CEF,
-    IMAGE_FILE_MACHINE_EBC,
-    IMAGE_FILE_MACHINE_AMD64,
-    IMAGE_FILE_MACHINE_M32R,
-    IMAGE_FILE_MACHINE_ARM64,
-    IMAGE_FILE_MACHINE_ARM64EC,
-    IMAGE_FILE_MACHINE_CEE,
-    IMAGE_FILE_MACHINE_RISCV32,
-    IMAGE_FILE_MACHINE_RISCV64,
-    IMAGE_FILE_MACHINE_RISCV128,
 );
 const FLAGS_IMAGE_SCN: &[Flag<u32>] = &flags!(
     IMAGE_SCN_TYPE_NO_PAD,

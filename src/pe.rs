@@ -37,7 +37,7 @@ pub const fn constants() -> &'static Constants {
 ///
 /// Note that these also include the values returned by [`constants`].
 #[cfg(feature = "names")]
-pub const fn machine_constants(machine: u16) -> &'static Constants {
+pub const fn machine_constants(machine: Machine) -> &'static Constants {
     match machine {
         IMAGE_FILE_MACHINE_I386 => I386::constants(),
         IMAGE_FILE_MACHINE_MIPS16 | IMAGE_FILE_MACHINE_MIPSFPU | IMAGE_FILE_MACHINE_MIPSFPU16 => {
@@ -323,7 +323,7 @@ pub struct MaskedRichHeaderEntry {
 #[derive(Debug, Clone, Copy)]
 #[repr(C)]
 pub struct ImageFileHeader {
-    pub machine: U16<LE>,
+    pub machine: U16<LE, Machine>,
     pub number_of_sections: U16<LE>,
     pub time_date_stamp: U32<LE>,
     pub pointer_to_symbol_table: U32<LE>,
@@ -365,77 +365,84 @@ pub const IMAGE_FILE_UP_SYSTEM_ONLY: u16 = 0x4000;
 /// Bytes of machine word are reversed.
 pub const IMAGE_FILE_BYTES_REVERSED_HI: u16 = 0x8000;
 
-pub const IMAGE_FILE_MACHINE_UNKNOWN: u16 = 0;
-/// Useful for indicating we want to interact with the host and not a WoW guest.
-pub const IMAGE_FILE_MACHINE_TARGET_HOST: u16 = 0x0001;
-/// Intel 386.
-pub const IMAGE_FILE_MACHINE_I386: u16 = 0x014c;
-/// MIPS little-endian, 0x160 big-endian
-pub const IMAGE_FILE_MACHINE_R3000: u16 = 0x0162;
-/// MIPS little-endian
-pub const IMAGE_FILE_MACHINE_R4000: u16 = 0x0166;
-/// MIPS little-endian
-pub const IMAGE_FILE_MACHINE_R10000: u16 = 0x0168;
-/// MIPS little-endian WCE v2
-pub const IMAGE_FILE_MACHINE_WCEMIPSV2: u16 = 0x0169;
-/// Alpha_AXP
-pub const IMAGE_FILE_MACHINE_ALPHA: u16 = 0x0184;
-/// SH3 little-endian
-pub const IMAGE_FILE_MACHINE_SH3: u16 = 0x01a2;
-pub const IMAGE_FILE_MACHINE_SH3DSP: u16 = 0x01a3;
-/// SH3E little-endian
-pub const IMAGE_FILE_MACHINE_SH3E: u16 = 0x01a4;
-/// SH4 little-endian
-pub const IMAGE_FILE_MACHINE_SH4: u16 = 0x01a6;
-/// SH5
-pub const IMAGE_FILE_MACHINE_SH5: u16 = 0x01a8;
-/// ARM Little-Endian
-pub const IMAGE_FILE_MACHINE_ARM: u16 = 0x01c0;
-/// ARM Thumb/Thumb-2 Little-Endian
-pub const IMAGE_FILE_MACHINE_THUMB: u16 = 0x01c2;
-/// ARM Thumb-2 Little-Endian
-pub const IMAGE_FILE_MACHINE_ARMNT: u16 = 0x01c4;
-pub const IMAGE_FILE_MACHINE_AM33: u16 = 0x01d3;
-/// IBM PowerPC Little-Endian
-pub const IMAGE_FILE_MACHINE_POWERPC: u16 = 0x01F0;
-pub const IMAGE_FILE_MACHINE_POWERPCFP: u16 = 0x01f1;
-/// IBM PowerPC Big-Endian
-pub const IMAGE_FILE_MACHINE_POWERPCBE: u16 = 0x01f2;
-/// Intel 64
-pub const IMAGE_FILE_MACHINE_IA64: u16 = 0x0200;
-/// MIPS
-pub const IMAGE_FILE_MACHINE_MIPS16: u16 = 0x0266;
-/// ALPHA64
-pub const IMAGE_FILE_MACHINE_ALPHA64: u16 = 0x0284;
-/// MIPS
-pub const IMAGE_FILE_MACHINE_MIPSFPU: u16 = 0x0366;
-/// MIPS
-pub const IMAGE_FILE_MACHINE_MIPSFPU16: u16 = 0x0466;
-pub const IMAGE_FILE_MACHINE_AXP64: u16 = IMAGE_FILE_MACHINE_ALPHA64;
-/// Infineon
-pub const IMAGE_FILE_MACHINE_TRICORE: u16 = 0x0520;
-pub const IMAGE_FILE_MACHINE_CEF: u16 = 0x0CEF;
-/// EFI Byte Code
-pub const IMAGE_FILE_MACHINE_EBC: u16 = 0x0EBC;
-/// AMD64 (K8)
-pub const IMAGE_FILE_MACHINE_AMD64: u16 = 0x8664;
-/// M32R little-endian
-pub const IMAGE_FILE_MACHINE_M32R: u16 = 0x9041;
-/// ARM64 Little-Endian
-pub const IMAGE_FILE_MACHINE_ARM64: u16 = 0xAA64;
-/// ARM64EC ("Emulation Compatible")
-pub const IMAGE_FILE_MACHINE_ARM64EC: u16 = 0xA641;
-pub const IMAGE_FILE_MACHINE_CEE: u16 = 0xC0EE;
-/// RISCV32
-pub const IMAGE_FILE_MACHINE_RISCV32: u16 = 0x5032;
-/// RISCV64
-pub const IMAGE_FILE_MACHINE_RISCV64: u16 = 0x5064;
-/// RISCV128
-pub const IMAGE_FILE_MACHINE_RISCV128: u16 = 0x5128;
-/// ARM64X (Mixed ARM64 and ARM64EC)
-pub const IMAGE_FILE_MACHINE_ARM64X: u16 = 0xA64E;
-/// CHPE x86 ("Compiled Hybrid Portable Executable")
-pub const IMAGE_FILE_MACHINE_CHPE_X86: u16 = 0x3A64;
+newtype!(
+    /// Values for the `machine` field in file headers.
+    struct Machine(u16);
+);
+
+newtype_constant_names!(NAMES_MACHINE: Machine(u16) = {
+    IMAGE_FILE_MACHINE_UNKNOWN = 0,
+    /// Useful for indicating we want to interact with the host and not a WoW guest.
+    IMAGE_FILE_MACHINE_TARGET_HOST = 0x0001,
+    /// Intel 386.
+    IMAGE_FILE_MACHINE_I386 = 0x014c,
+    /// MIPS little-endian, 0x160 big-endian
+    IMAGE_FILE_MACHINE_R3000 = 0x0162,
+    /// MIPS little-endian
+    IMAGE_FILE_MACHINE_R4000 = 0x0166,
+    /// MIPS little-endian
+    IMAGE_FILE_MACHINE_R10000 = 0x0168,
+    /// MIPS little-endian WCE v2
+    IMAGE_FILE_MACHINE_WCEMIPSV2 = 0x0169,
+    /// Alpha_AXP
+    IMAGE_FILE_MACHINE_ALPHA = 0x0184,
+    /// SH3 little-endian
+    IMAGE_FILE_MACHINE_SH3 = 0x01a2,
+    IMAGE_FILE_MACHINE_SH3DSP = 0x01a3,
+    /// SH3E little-endian
+    IMAGE_FILE_MACHINE_SH3E = 0x01a4,
+    /// SH4 little-endian
+    IMAGE_FILE_MACHINE_SH4 = 0x01a6,
+    /// SH5
+    IMAGE_FILE_MACHINE_SH5 = 0x01a8,
+    /// ARM Little-Endian
+    IMAGE_FILE_MACHINE_ARM = 0x01c0,
+    /// ARM Thumb/Thumb-2 Little-Endian
+    IMAGE_FILE_MACHINE_THUMB = 0x01c2,
+    /// ARM Thumb-2 Little-Endian
+    IMAGE_FILE_MACHINE_ARMNT = 0x01c4,
+    IMAGE_FILE_MACHINE_AM33 = 0x01d3,
+    /// IBM PowerPC Little-Endian
+    IMAGE_FILE_MACHINE_POWERPC = 0x01F0,
+    IMAGE_FILE_MACHINE_POWERPCFP = 0x01f1,
+    /// IBM PowerPC Big-Endian
+    IMAGE_FILE_MACHINE_POWERPCBE = 0x01f2,
+    /// Intel 64
+    IMAGE_FILE_MACHINE_IA64 = 0x0200,
+    /// MIPS
+    IMAGE_FILE_MACHINE_MIPS16 = 0x0266,
+    /// ALPHA64
+    IMAGE_FILE_MACHINE_ALPHA64 = 0x0284,
+    /// MIPS
+    IMAGE_FILE_MACHINE_MIPSFPU = 0x0366,
+    /// MIPS
+    IMAGE_FILE_MACHINE_MIPSFPU16 = 0x0466,
+    IMAGE_FILE_MACHINE_AXP64 = IMAGE_FILE_MACHINE_ALPHA64.0,
+    /// Infineon
+    IMAGE_FILE_MACHINE_TRICORE = 0x0520,
+    IMAGE_FILE_MACHINE_CEF = 0x0CEF,
+    /// EFI Byte Code
+    IMAGE_FILE_MACHINE_EBC = 0x0EBC,
+    /// AMD64 (K8)
+    IMAGE_FILE_MACHINE_AMD64 = 0x8664,
+    /// M32R little-endian
+    IMAGE_FILE_MACHINE_M32R = 0x9041,
+    /// ARM64 Little-Endian
+    IMAGE_FILE_MACHINE_ARM64 = 0xAA64,
+    /// ARM64EC ("Emulation Compatible")
+    IMAGE_FILE_MACHINE_ARM64EC = 0xA641,
+    IMAGE_FILE_MACHINE_CEE = 0xC0EE,
+    /// RISCV32
+    IMAGE_FILE_MACHINE_RISCV32 = 0x5032,
+    /// RISCV64
+    IMAGE_FILE_MACHINE_RISCV64 = 0x5064,
+    /// RISCV128
+    IMAGE_FILE_MACHINE_RISCV128 = 0x5128,
+    /// ARM64X (Mixed ARM64 and ARM64EC)
+    IMAGE_FILE_MACHINE_ARM64X = 0xA64E,
+    /// CHPE x86 ("Compiled Hybrid Portable Executable")
+    IMAGE_FILE_MACHINE_CHPE_X86 = 0x3A64,
+});
 
 //
 // Directory format.
@@ -694,12 +701,12 @@ pub use Guid as ClsId;
 #[repr(C)]
 pub struct AnonObjectHeader {
     /// Must be IMAGE_FILE_MACHINE_UNKNOWN
-    pub sig1: U16<LE>,
+    pub sig1: U16<LE, Machine>,
     /// Must be 0xffff
     pub sig2: U16<LE>,
     /// >= 1 (implies the ClsId field is present)
     pub version: U16<LE>,
-    pub machine: U16<LE>,
+    pub machine: U16<LE, Machine>,
     pub time_date_stamp: U32<LE>,
     /// Used to invoke CoCreateInstance
     pub class_id: ClsId,
@@ -711,12 +718,12 @@ pub struct AnonObjectHeader {
 #[repr(C)]
 pub struct AnonObjectHeaderV2 {
     /// Must be IMAGE_FILE_MACHINE_UNKNOWN
-    pub sig1: U16<LE>,
+    pub sig1: U16<LE, Machine>,
     /// Must be 0xffff
     pub sig2: U16<LE>,
     /// >= 2 (implies the Flags field is present - otherwise V1)
     pub version: U16<LE>,
-    pub machine: U16<LE>,
+    pub machine: U16<LE, Machine>,
     pub time_date_stamp: U32<LE>,
     /// Used to invoke CoCreateInstance
     pub class_id: ClsId,
@@ -740,13 +747,13 @@ pub const ANON_OBJECT_HEADER_BIGOBJ_CLASS_ID: ClsId = ClsId([
 pub struct AnonObjectHeaderBigobj {
     /* same as ANON_OBJECT_HEADER_V2 */
     /// Must be IMAGE_FILE_MACHINE_UNKNOWN
-    pub sig1: U16<LE>,
+    pub sig1: U16<LE, Machine>,
     /// Must be 0xffff
     pub sig2: U16<LE>,
     /// >= 2 (implies the Flags field is present)
     pub version: U16<LE>,
     /// Actual machine - IMAGE_FILE_MACHINE_xxx
-    pub machine: U16<LE>,
+    pub machine: U16<LE, Machine>,
     pub time_date_stamp: U32<LE>,
     /// Must be `ANON_OBJECT_HEADER_BIGOBJ_CLASS_ID`.
     pub class_id: ClsId,
@@ -2974,7 +2981,7 @@ pub struct ImageFunctionEntry64 {
 pub struct ImageSeparateDebugHeader {
     pub signature: U16<LE>,
     pub flags: U16<LE>,
-    pub machine: U16<LE>,
+    pub machine: U16<LE, Machine>,
     pub characteristics: U16<LE>,
     pub time_date_stamp: U32<LE>,
     pub check_sum: U32<LE>,
@@ -2993,7 +3000,7 @@ pub struct NonPagedDebugInfo {
     pub signature: U16<LE>,
     pub flags: U16<LE>,
     pub size: U32<LE>,
-    pub machine: U16<LE>,
+    pub machine: U16<LE, Machine>,
     pub characteristics: U16<LE>,
     pub time_date_stamp: U32<LE>,
     pub check_sum: U32<LE>,
@@ -3057,11 +3064,11 @@ pub const IMPORT_OBJECT_HDR_SIG2: u16 = 0xffff;
 #[repr(C)]
 pub struct ImportObjectHeader {
     /// Must be IMAGE_FILE_MACHINE_UNKNOWN
-    pub sig1: U16<LE>,
+    pub sig1: U16<LE, Machine>,
     /// Must be IMPORT_OBJECT_HDR_SIG2.
     pub sig2: U16<LE>,
     pub version: U16<LE>,
-    pub machine: U16<LE>,
+    pub machine: U16<LE, Machine>,
     /// Time/date stamp
     pub time_date_stamp: U32<LE>,
     /// particularly useful for incremental links

@@ -790,7 +790,7 @@ impl<'a> Writer<'a> {
 #[derive(Debug, Clone)]
 pub struct NtHeaders {
     // ImageFileHeader
-    pub machine: u16,
+    pub machine: pe::Machine,
     pub time_date_stamp: u32,
     pub characteristics: u16,
     // ImageOptionalHeader

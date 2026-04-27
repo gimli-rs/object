@@ -464,7 +464,7 @@ impl<'a> Writer<'a> {
 #[allow(missing_docs)]
 #[derive(Debug, Default, Clone)]
 pub struct FileHeader {
-    pub machine: u16,
+    pub machine: pe::Machine,
     pub time_date_stamp: u32,
     pub characteristics: u16,
 }

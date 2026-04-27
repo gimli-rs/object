@@ -299,7 +299,7 @@ pub trait CoffHeader: Debug + Pod {
     /// This is a property of the type, not a value in the header data.
     fn is_type_bigobj() -> bool;
 
-    fn machine(&self) -> u16;
+    fn machine(&self) -> pe::Machine;
     fn number_of_sections(&self) -> u32;
     fn pointer_to_symbol_table(&self) -> u32;
     fn number_of_symbols(&self) -> u32;
@@ -345,7 +345,7 @@ impl CoffHeader for pe::ImageFileHeader {
         false
     }
 
-    fn machine(&self) -> u16 {
+    fn machine(&self) -> pe::Machine {
         self.machine.get(LE)
     }
 
@@ -388,7 +388,7 @@ impl CoffHeader for pe::AnonObjectHeaderBigobj {
         true
     }
 
-    fn machine(&self) -> u16 {
+    fn machine(&self) -> pe::Machine {
         self.machine.get(LE)
     }
 

@@ -138,7 +138,9 @@ impl pe::ImportObjectHeader {
         let header = data
             .read::<pe::ImportObjectHeader>(offset)
             .read_error("Invalid COFF import library header size")?;
-        if header.sig1.get(LE) != 0 || header.sig2.get(LE) != pe::IMPORT_OBJECT_HDR_SIG2 {
+        if header.sig1.get(LE) != pe::IMAGE_FILE_MACHINE_UNKNOWN
+            || header.sig2.get(LE) != pe::IMPORT_OBJECT_HDR_SIG2
+        {
             Err(Error("Invalid COFF import library header"))
         } else if header.version.get(LE) != 0 {
             Err(Error("Unknown COFF import library header version"))
