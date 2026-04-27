@@ -2926,14 +2926,66 @@ pub const BIND_SUBOPCODE_THREADED_APPLY: u8 = 0x01;
  * The following are used on the flags byte of a terminal node
  * in the export information.
  */
-pub const EXPORT_SYMBOL_FLAGS_KIND_MASK: u8 = 0x03;
-pub const EXPORT_SYMBOL_FLAGS_KIND_REGULAR: u8 = 0x00;
-pub const EXPORT_SYMBOL_FLAGS_KIND_THREAD_LOCAL: u8 = 0x01;
-pub const EXPORT_SYMBOL_FLAGS_KIND_ABSOLUTE: u8 = 0x02;
-pub const EXPORT_SYMBOL_FLAGS_WEAK_DEFINITION: u8 = 0x04;
-pub const EXPORT_SYMBOL_FLAGS_REEXPORT: u8 = 0x08;
-pub const EXPORT_SYMBOL_FLAGS_STUB_AND_RESOLVER: u8 = 0x10;
-pub const EXPORT_SYMBOL_FLAGS_STATIC_RESOLVER: u8 = 0x20;
+newtype!(
+    struct ExportSymbolKind(u8);
+);
+
+newtype_constant_names!(NAMES_EXPORT_SYMBOL_KIND: ExportSymbolKind(u8) = {
+    EXPORT_SYMBOL_FLAGS_KIND_REGULAR = 0x00,
+    EXPORT_SYMBOL_FLAGS_KIND_THREAD_LOCAL = 0x01,
+    EXPORT_SYMBOL_FLAGS_KIND_ABSOLUTE = 0x02,
+});
+
+newtype!(
+    struct ExportSymbolFlags(u64);
+);
+
+newtype_flag_names!(NAMES_EXPORT_SYMBOL_FLAGS: ExportSymbolFlags(u64) = {
+    EXPORT_SYMBOL_FLAGS_KIND_MASK = 0x03 => NAMES_EXPORT_SYMBOL_KIND,
+    EXPORT_SYMBOL_FLAGS_WEAK_DEFINITION = 0x04,
+    EXPORT_SYMBOL_FLAGS_REEXPORT = 0x08,
+    EXPORT_SYMBOL_FLAGS_STUB_AND_RESOLVER = 0x10,
+    EXPORT_SYMBOL_FLAGS_STATIC_RESOLVER = 0x20,
+});
+
+impl ExportSymbolFlags {
+    /// Whether any unknown bits are set in the flags.
+    pub fn has_unknown_bits(self) -> bool {
+        self.0 & !0x3f != 0
+    }
+
+    /// Get the kind subfield.
+    pub fn kind(self) -> ExportSymbolKind {
+        ExportSymbolKind((self.0 & EXPORT_SYMBOL_FLAGS_KIND_MASK) as u8)
+    }
+
+    /// Set the kind subfield.
+    pub fn with_kind(self, kind: ExportSymbolKind) -> ExportSymbolFlags {
+        ExportSymbolFlags(
+            self.0 & !EXPORT_SYMBOL_FLAGS_KIND_MASK
+                | u64::from(kind.0) & EXPORT_SYMBOL_FLAGS_KIND_MASK,
+        )
+    }
+}
+
+impl From<ExportSymbolKind> for ExportSymbolFlags {
+    fn from(value: ExportSymbolKind) -> Self {
+        ExportSymbolFlags(u64::from(value.0))
+    }
+}
+
+impl From<ExportSymbolFlags> for ExportSymbolKind {
+    fn from(value: ExportSymbolFlags) -> Self {
+        value.kind()
+    }
+}
+
+impl core::ops::BitOr<ExportSymbolFlags> for ExportSymbolKind {
+    type Output = ExportSymbolFlags;
+    fn bitor(self, flags: ExportSymbolFlags) -> ExportSymbolFlags {
+        flags.with_kind(self)
+    }
+}
 
 /*
  * The LinkerOptionCommand contains linker options embedded in object files.

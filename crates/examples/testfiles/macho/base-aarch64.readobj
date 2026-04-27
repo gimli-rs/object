@@ -169,14 +169,12 @@ LinkeditDataCommand {
     DataSize: 0x30
     ExportSymbol {
         Name: "__mh_execute_header"
-        Flags: 0x0
-            EXPORT_SYMBOL_FLAGS_KIND_REGULAR (0x0)
+        Flags: EXPORT_SYMBOL_FLAGS_KIND_REGULAR (0x0)
         Address: 0x0
     }
     ExportSymbol {
         Name: "_main"
-        Flags: 0x0
-            EXPORT_SYMBOL_FLAGS_KIND_REGULAR (0x0)
+        Flags: EXPORT_SYMBOL_FLAGS_KIND_REGULAR (0x0)
         Address: 0x3F68
     }
 }

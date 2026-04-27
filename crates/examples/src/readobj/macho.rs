@@ -984,13 +984,7 @@ fn print_exports_trie<Mach: MachHeader>(
         while let Some(Some(export_symbol)) = exports_trie.next().print_err(p) {
             p.group("ExportSymbol", |p| {
                 p.field_inline_string("Name", export_symbol.name());
-                p.field_hex("Flags", export_symbol.flags());
-                p.flags(export_symbol.flags(), 0, FLAGS_EXPORT_SYMBOL);
-                p.flags(
-                    export_symbol.flags(),
-                    EXPORT_SYMBOL_FLAGS_KIND_MASK,
-                    FLAGS_EXPORT_SYMBOL_KIND,
-                );
+                p.field_flags("Flags", export_symbol.flags(), ExportSymbolFlags::NAMES);
                 match export_symbol.data() {
                     ExportData::Regular { address } => p.field_hex("Address", address),
                     ExportData::Reexport {
@@ -1019,15 +1013,4 @@ fn print_cputype(p: &mut Printer<'_>, cputype: CpuType, cpusubtype: CpuSubtype) 
     p.field_flags("CpuSubtype", cpusubtype, constants.cpusubtype);
 }
 
-const FLAGS_EXPORT_SYMBOL: &[Flag<u8>] = &flags!(
-    EXPORT_SYMBOL_FLAGS_WEAK_DEFINITION,
-    EXPORT_SYMBOL_FLAGS_REEXPORT,
-    EXPORT_SYMBOL_FLAGS_STUB_AND_RESOLVER,
-    EXPORT_SYMBOL_FLAGS_STATIC_RESOLVER,
-);
-const FLAGS_EXPORT_SYMBOL_KIND: &[Flag<u8>] = &flags!(
-    EXPORT_SYMBOL_FLAGS_KIND_REGULAR,
-    EXPORT_SYMBOL_FLAGS_KIND_THREAD_LOCAL,
-    EXPORT_SYMBOL_FLAGS_KIND_ABSOLUTE,
-);
 const FLAGS_INDIRECT_SYMBOL: &[Flag<u32>] = &flags!(INDIRECT_SYMBOL_LOCAL, INDIRECT_SYMBOL_ABS,);

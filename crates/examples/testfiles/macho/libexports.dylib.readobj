@@ -155,29 +155,27 @@ LinkeditDataCommand {
     DataSize: 0x60
     ExportSymbol {
         Name: "_abs"
-        Flags: 0x2
-            EXPORT_SYMBOL_FLAGS_KIND_ABSOLUTE (0x2)
+        Flags: EXPORT_SYMBOL_FLAGS_KIND_ABSOLUTE (0x2)
         Address: 0xFFFFF
     }
     ExportSymbol {
         Name: "_foo"
         Flags: 0x10
-            EXPORT_SYMBOL_FLAGS_STUB_AND_RESOLVER (0x10)
             EXPORT_SYMBOL_FLAGS_KIND_REGULAR (0x0)
+            EXPORT_SYMBOL_FLAGS_STUB_AND_RESOLVER (0x10)
         StubAddress: 0x3C8
         ResolverAddress: 0x3C0
     }
     ExportSymbol {
         Name: "_foo_resolver"
-        Flags: 0x0
-            EXPORT_SYMBOL_FLAGS_KIND_REGULAR (0x0)
+        Flags: EXPORT_SYMBOL_FLAGS_KIND_REGULAR (0x0)
         Address: 0x3C4
     }
     ExportSymbol {
         Name: "my_stub_binder"
         Flags: 0x8
-            EXPORT_SYMBOL_FLAGS_REEXPORT (0x8)
             EXPORT_SYMBOL_FLAGS_KIND_REGULAR (0x0)
+            EXPORT_SYMBOL_FLAGS_REEXPORT (0x8)
         DylibOrdinal: 0x1
         ImportName: "dyld_stub_binder"
     }
