@@ -658,7 +658,7 @@ pub enum SymbolFlags<Section, Symbol> {
     #[cfg(feature = "macho")]
     MachO {
         /// `n_type` field in the Mach-O symbol.
-        n_type: u8,
+        n_type: crate::macho::SymbolFlags,
         /// `n_desc` field in the Mach-O symbol.
         n_desc: u16,
     },

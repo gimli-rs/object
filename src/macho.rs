@@ -3125,8 +3125,8 @@ pub struct FilesetEntryCommand<E: Endian> {
 pub struct Nlist32<E: Endian> {
     /// index into the string table
     pub n_strx: U32<E>,
-    /// type flag, see below
-    pub n_type: u8,
+    /// type flag
+    pub n_type: SymbolFlags,
     /// section number or NO_SECT
     pub n_sect: u8,
     /// see <mach-o/stab.h>
@@ -3143,8 +3143,8 @@ pub struct Nlist32<E: Endian> {
 pub struct Nlist64<E: Endian> {
     /// index into the string table
     pub n_strx: U32<E>,
-    /// type flag, see below
-    pub n_type: u8,
+    /// type flag
+    pub n_type: SymbolFlags,
     /// section number or NO_SECT
     pub n_sect: u8,
     /// see <mach-o/stab.h>
@@ -3168,14 +3168,67 @@ pub struct Nlist64<E: Endian> {
  *		      N_EXT:1;
  * which are used via the following masks.
  */
+newtype!(
+    /// Values for `Nlist*::n_type`.
+    #[repr(transparent)]
+    struct SymbolFlags(u8);
+);
+
+impl SymbolFlags {
+    /// Whether this is a symbolic debugging entry.
+    pub fn is_stab(self) -> bool {
+        self.0 & N_STAB != 0
+    }
+
+    /// The symbol debugging entry type.
+    pub fn stab(self) -> Option<SymbolStab> {
+        if self.is_stab() {
+            Some(SymbolStab(self.0))
+        } else {
+            None
+        }
+    }
+
+    /// Get the N_TYPE subfield.
+    ///
+    /// This method is only valid if `Self::is_stab` is false.
+    pub fn typ(self) -> SymbolType {
+        SymbolType(self.0 & N_TYPE)
+    }
+
+    /// Set the N_TYPE subfield.
+    pub fn with_type(self, typ: SymbolType) -> SymbolFlags {
+        SymbolFlags(self.0 & !N_TYPE | typ.0 & N_TYPE)
+    }
+
+    /// Whether this is an external symbol.
+    ///
+    /// This method is only valid if `Self::is_stab` is false.
+    pub fn is_ext(self) -> bool {
+        self.contains(N_EXT)
+    }
+
+    /// Whether this is a private external symbol.
+    ///
+    /// This checks that both `N_EXT` and `N_PEXT` are set.
+    ///
+    /// This method is only valid if `Self::is_stab` is false.
+    pub fn is_pext(self) -> bool {
+        self.contains(N_EXT | N_PEXT)
+    }
+}
+
 /// if any of these bits set, a symbolic debugging entry
 pub const N_STAB: u8 = 0xe0;
-/// private external symbol bit
-pub const N_PEXT: u8 = 0x10;
-/// mask for the type bits
-pub const N_TYPE: u8 = 0x0e;
-/// external symbol bit, set for external symbols
-pub const N_EXT: u8 = 0x01;
+
+newtype_flag_names!(NAMES_N: SymbolFlags(u8) = {
+    /// private external symbol bit
+    N_PEXT = 0x10,
+    /// mask for the type bits
+    N_TYPE = 0x0e => NAMES_N_TYPE,
+    /// external symbol bit, set for external symbols
+    N_EXT = 0x01,
+});
 
 /*
  * Only symbolic debugging entries have some of the N_STAB bits set and if any
@@ -3184,19 +3237,42 @@ pub const N_EXT: u8 = 0x01;
  * in <mach-o/stab.h>
  */
 
-/*
- * Values for N_TYPE bits of the n_type field.
- */
-/// undefined, n_sect == NO_SECT
-pub const N_UNDF: u8 = 0x0;
-/// absolute, n_sect == NO_SECT
-pub const N_ABS: u8 = 0x2;
-/// defined in section number n_sect
-pub const N_SECT: u8 = 0xe;
-/// prebound undefined (defined in a dylib)
-pub const N_PBUD: u8 = 0xc;
-/// indirect
-pub const N_INDR: u8 = 0xa;
+newtype!(
+    /// Values for `N_TYPE` bits of `Nlist*::n_type`.
+    struct SymbolType(u8);
+);
+
+impl From<SymbolType> for SymbolFlags {
+    fn from(value: SymbolType) -> Self {
+        SymbolFlags(value.0)
+    }
+}
+
+impl From<SymbolFlags> for SymbolType {
+    fn from(value: SymbolFlags) -> Self {
+        value.typ()
+    }
+}
+
+impl core::ops::BitOr<SymbolFlags> for SymbolType {
+    type Output = SymbolFlags;
+    fn bitor(self, flags: SymbolFlags) -> SymbolFlags {
+        flags.with_type(self)
+    }
+}
+
+newtype_constant_names!(NAMES_N_TYPE: SymbolType(u8) = {
+    /// undefined, n_sect == NO_SECT
+    N_UNDF = 0x0,
+    /// absolute, n_sect == NO_SECT
+    N_ABS = 0x2,
+    /// defined in section number n_sect
+    N_SECT = 0xe,
+    /// prebound undefined (defined in a dylib)
+    N_PBUD = 0xc,
+    /// indirect
+    N_INDR = 0xa,
+});
 
 /*
  * If the type is N_INDR then the symbol is defined to be the same as another
@@ -3401,6 +3477,11 @@ pub const N_COLD_FUNC: u16 = 0x0400;
  * relocatated the n_sect field must be NO_SECT.
  */
 
+newtype!(
+    /// Values for `Nlist*::n_type` when any bits in `N_STAB` are set.
+    struct SymbolStab(u8);
+);
+
 /*
  * Symbolic debugger symbols.  The comments give the conventional use for
  *
@@ -3410,78 +3491,80 @@ pub const N_COLD_FUNC: u16 = 0x0400;
  * fields not listed are zero. n_sect is the section ordinal the entry is
  * referring to.
  */
-/// global symbol: name,,NO_SECT,type,0
-pub const N_GSYM: u8 = 0x20;
-/// procedure name (f77 kludge): name,,NO_SECT,0,0
-pub const N_FNAME: u8 = 0x22;
-/// procedure: name,,n_sect,linenumber,address
-pub const N_FUN: u8 = 0x24;
-/// static symbol: name,,n_sect,type,address
-pub const N_STSYM: u8 = 0x26;
-/// .lcomm symbol: name,,n_sect,type,address
-pub const N_LCSYM: u8 = 0x28;
-/// begin nsect sym: 0,,n_sect,0,address
-pub const N_BNSYM: u8 = 0x2e;
-/// AST file path: name,,NO_SECT,0,0
-pub const N_AST: u8 = 0x32;
-/// emitted with gcc2_compiled and in gcc source
-pub const N_OPT: u8 = 0x3c;
-/// register sym: name,,NO_SECT,type,register
-pub const N_RSYM: u8 = 0x40;
-/// src line: 0,,n_sect,linenumber,address
-pub const N_SLINE: u8 = 0x44;
-/// end nsect sym: 0,,n_sect,0,address
-pub const N_ENSYM: u8 = 0x4e;
-/// structure elt: name,,NO_SECT,type,struct_offset
-pub const N_SSYM: u8 = 0x60;
-/// source file name: name,,n_sect,0,address
-pub const N_SO: u8 = 0x64;
-/// object file name: name,,0,0,st_mtime
-///
-/// historically N_OSO set n_sect to 0. The N_OSO
-/// n_sect may instead hold the low byte of the
-/// cpusubtype value from the Mach-O header.
-pub const N_OSO: u8 = 0x66;
-/// dynamic library file name: name,,NO_SECT,0,0
-pub const N_LIB: u8 = 0x68;
-/// local sym: name,,NO_SECT,type,offset
-pub const N_LSYM: u8 = 0x80;
-/// include file beginning: name,,NO_SECT,0,sum
-pub const N_BINCL: u8 = 0x82;
-/// #included file name: name,,n_sect,0,address
-pub const N_SOL: u8 = 0x84;
-/// compiler parameters: name,,NO_SECT,0,0
-pub const N_PARAMS: u8 = 0x86;
-/// compiler version: name,,NO_SECT,0,0
-pub const N_VERSION: u8 = 0x88;
-/// compiler -O level: name,,NO_SECT,0,0
-pub const N_OLEVEL: u8 = 0x8A;
-/// parameter: name,,NO_SECT,type,offset
-pub const N_PSYM: u8 = 0xa0;
-/// include file end: name,,NO_SECT,0,0
-pub const N_EINCL: u8 = 0xa2;
-/// alternate entry: name,,n_sect,linenumber,address
-pub const N_ENTRY: u8 = 0xa4;
-/// left bracket: 0,,NO_SECT,nesting level,address
-pub const N_LBRAC: u8 = 0xc0;
-/// deleted include file: name,,NO_SECT,0,sum
-pub const N_EXCL: u8 = 0xc2;
-/// right bracket: 0,,NO_SECT,nesting level,address
-pub const N_RBRAC: u8 = 0xe0;
-/// begin common: name,,NO_SECT,0,0
-pub const N_BCOMM: u8 = 0xe2;
-/// end common: name,,n_sect,0,0
-pub const N_ECOMM: u8 = 0xe4;
-/// end common (local name): 0,,n_sect,0,address
-pub const N_ECOML: u8 = 0xe8;
-/// second stab entry with length information
-pub const N_LENG: u8 = 0xfe;
+newtype_constant_names!(NAMES_N_STAB: SymbolStab(u8) = {
+    /// global symbol: name,,NO_SECT,type,0
+    N_GSYM = 0x20,
+    /// procedure name (f77 kludge): name,,NO_SECT,0,0
+    N_FNAME = 0x22,
+    /// procedure: name,,n_sect,linenumber,address
+    N_FUN = 0x24,
+    /// static symbol: name,,n_sect,type,address
+    N_STSYM = 0x26,
+    /// .lcomm symbol: name,,n_sect,type,address
+    N_LCSYM = 0x28,
+    /// begin nsect sym: 0,,n_sect,0,address
+    N_BNSYM = 0x2e,
+    /// AST file path: name,,NO_SECT,0,0
+    N_AST = 0x32,
+    /// emitted with gcc2_compiled and in gcc source
+    N_OPT = 0x3c,
+    /// register sym: name,,NO_SECT,type,register
+    N_RSYM = 0x40,
+    /// src line: 0,,n_sect,linenumber,address
+    N_SLINE = 0x44,
+    /// end nsect sym: 0,,n_sect,0,address
+    N_ENSYM = 0x4e,
+    /// structure elt: name,,NO_SECT,type,struct_offset
+    N_SSYM = 0x60,
+    /// source file name: name,,n_sect,0,address
+    N_SO = 0x64,
+    /// object file name: name,,0,0,st_mtime
+    ///
+    /// historically N_OSO set n_sect to 0. The N_OSO
+    /// n_sect may instead hold the low byte of the
+    /// cpusubtype value from the Mach-O header.
+    N_OSO = 0x66,
+    /// dynamic library file name: name,,NO_SECT,0,0
+    N_LIB = 0x68,
+    /// local sym: name,,NO_SECT,type,offset
+    N_LSYM = 0x80,
+    /// include file beginning: name,,NO_SECT,0,sum
+    N_BINCL = 0x82,
+    /// #included file name: name,,n_sect,0,address
+    N_SOL = 0x84,
+    /// compiler parameters: name,,NO_SECT,0,0
+    N_PARAMS = 0x86,
+    /// compiler version: name,,NO_SECT,0,0
+    N_VERSION = 0x88,
+    /// compiler -O level: name,,NO_SECT,0,0
+    N_OLEVEL = 0x8A,
+    /// parameter: name,,NO_SECT,type,offset
+    N_PSYM = 0xa0,
+    /// include file end: name,,NO_SECT,0,0
+    N_EINCL = 0xa2,
+    /// alternate entry: name,,n_sect,linenumber,address
+    N_ENTRY = 0xa4,
+    /// left bracket: 0,,NO_SECT,nesting level,address
+    N_LBRAC = 0xc0,
+    /// deleted include file: name,,NO_SECT,0,sum
+    N_EXCL = 0xc2,
+    /// right bracket: 0,,NO_SECT,nesting level,address
+    N_RBRAC = 0xe0,
+    /// begin common: name,,NO_SECT,0,0
+    N_BCOMM = 0xe2,
+    /// end common: name,,n_sect,0,0
+    N_ECOMM = 0xe4,
+    /// end common (local name): 0,,n_sect,0,address
+    N_ECOML = 0xe8,
+    /// second stab entry with length information
+    N_LENG = 0xfe,
 
-/*
- * for the berkeley pascal compiler, pc(1):
- */
-/// global pascal symbol: name,,NO_SECT,subtype,line
-pub const N_PC: u8 = 0x30;
+    /*
+     * for the berkeley pascal compiler, pc(1):
+     */
+    /// global pascal symbol: name,,NO_SECT,subtype,line
+    N_PC = 0x30,
+});
 
 // Definitions from "/usr/include/mach-o/reloc.h".
 

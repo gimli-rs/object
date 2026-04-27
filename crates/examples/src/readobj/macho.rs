@@ -885,15 +885,10 @@ fn print_symtab_symbols<Mach: MachHeader>(
                     nlist.name(endian, symbols.strings()),
                 );
                 let n_type = nlist.n_type();
-                if nlist.is_stab() {
-                    p.field_enum("Type", n_type, FLAGS_N_STAB);
-                } else if n_type & N_TYPE == n_type {
-                    // Avoid an extra line if no flags.
-                    p.field_enum("Type", n_type, FLAGS_N_TYPE);
+                if let Some(stab) = nlist.stab() {
+                    p.field_consts("Type", stab, SymbolStab::NAMES);
                 } else {
-                    p.field_hex("Type", n_type);
-                    p.flags(n_type, N_TYPE, FLAGS_N_TYPE);
-                    p.flags(n_type, 0, FLAGS_N_EXT);
+                    p.field_flags("Type", n_type, SymbolFlags::NAMES);
                 }
                 let n_sect = nlist.n_sect();
                 let name = state.sections.get(n_sect as usize).map(|name| &name[..]);
@@ -1005,13 +1000,6 @@ fn print_cputype(p: &mut Printer<'_>, cputype: CpuType, cpusubtype: CpuSubtype) 
     p.field_flags("CpuSubtype", cpusubtype, constants.cpusubtype);
 }
 
-const FLAGS_N_EXT: &[Flag<u8>] = &flags!(N_PEXT, N_EXT);
-const FLAGS_N_TYPE: &[Flag<u8>] = &flags!(N_UNDF, N_ABS, N_SECT, N_PBUD, N_INDR);
-const FLAGS_N_STAB: &[Flag<u8>] = &flags!(
-    N_GSYM, N_FNAME, N_FUN, N_STSYM, N_LCSYM, N_BNSYM, N_AST, N_OPT, N_RSYM, N_SLINE, N_ENSYM,
-    N_SSYM, N_SO, N_OSO, N_LIB, N_LSYM, N_BINCL, N_SOL, N_PARAMS, N_VERSION, N_OLEVEL, N_PSYM,
-    N_EINCL, N_ENTRY, N_LBRAC, N_EXCL, N_RBRAC, N_BCOMM, N_ECOMM, N_ECOML, N_LENG, N_PC,
-);
 const FLAGS_REFERENCE: &[Flag<u16>] = &flags!(
     REFERENCE_FLAG_UNDEFINED_NON_LAZY,
     REFERENCE_FLAG_UNDEFINED_LAZY,

@@ -186,13 +186,13 @@ impl<'a> Object<'a> {
         // TODO: N_STAB
         let n_type = match symbol.section {
             SymbolSection::Undefined => macho::N_UNDF | macho::N_EXT,
-            SymbolSection::Absolute => macho::N_ABS,
-            SymbolSection::Section(_) => macho::N_SECT,
+            SymbolSection::Absolute => macho::N_ABS.into(),
+            SymbolSection::Section(_) => macho::N_SECT.into(),
             SymbolSection::None | SymbolSection::Common => {
                 return SymbolFlags::None;
             }
         } | match symbol.scope {
-            SymbolScope::Unknown | SymbolScope::Compilation => 0,
+            SymbolScope::Unknown | SymbolScope::Compilation => macho::SymbolFlags(0),
             SymbolScope::Linkage => macho::N_EXT | macho::N_PEXT,
             SymbolScope::Dynamic => macho::N_EXT,
         };
@@ -987,7 +987,7 @@ struct SectionHeader {
 
 struct Nlist {
     n_strx: u32,
-    n_type: u8,
+    n_type: macho::SymbolFlags,
     n_sect: u8,
     n_desc: u16,
     n_value: u64,

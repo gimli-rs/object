@@ -100,10 +100,9 @@ impl<'data, Mach: MachHeader, R: ReadRef<'data>> SymbolTable<'data, Mach, R> {
         // Each module starts with one or two N_SO symbols (path, or directory + filename)
         // and one N_OSO symbol. The module is terminated by an empty N_SO symbol.
         for nlist in self.symbols {
-            let n_type = nlist.n_type();
-            if n_type & macho::N_STAB == 0 {
+            let Some(n_type) = nlist.n_type().stab() else {
                 continue;
-            }
+            };
             // TODO: includes global symbols too (N_GSYM). These may need to get their
             // address from regular symbols though.
             match n_type {
@@ -308,7 +307,7 @@ where
         index: SymbolIndex,
         nlist: &'data Mach::Nlist,
     ) -> Option<Self> {
-        if nlist.n_type() & macho::N_STAB != 0 {
+        if nlist.n_type().is_stab() {
             return None;
         }
         Some(MachOSymbol { file, index, nlist })
@@ -396,7 +395,7 @@ where
     }
 
     fn section(&self) -> SymbolSection {
-        match self.nlist.n_type() & macho::N_TYPE {
+        match self.nlist.n_type().typ() {
             macho::N_UNDF => SymbolSection::Undefined,
             macho::N_ABS => SymbolSection::Absolute,
             macho::N_SECT => {
@@ -413,7 +412,7 @@ where
 
     #[inline]
     fn is_undefined(&self) -> bool {
-        self.nlist.n_type() & macho::N_TYPE == macho::N_UNDF
+        self.nlist.n_type().typ() == macho::N_UNDF
     }
 
     #[inline]
@@ -434,11 +433,11 @@ where
 
     fn scope(&self) -> SymbolScope {
         let n_type = self.nlist.n_type();
-        if n_type & macho::N_TYPE == macho::N_UNDF {
+        if n_type.typ() == macho::N_UNDF {
             SymbolScope::Unknown
-        } else if n_type & macho::N_EXT == 0 {
+        } else if !n_type.is_ext() {
             SymbolScope::Compilation
-        } else if n_type & macho::N_PEXT != 0 {
+        } else if n_type.is_pext() {
             SymbolScope::Linkage
         } else {
             SymbolScope::Dynamic
@@ -470,7 +469,7 @@ pub trait Nlist: Debug + Pod {
     type Endian: endian::Endian;
 
     fn n_strx(&self, endian: Self::Endian) -> u32;
-    fn n_type(&self) -> u8;
+    fn n_type(&self) -> macho::SymbolFlags;
     fn n_sect(&self) -> u8;
     fn n_desc(&self, endian: Self::Endian) -> u16;
     fn n_value(&self, endian: Self::Endian) -> Self::Word;
@@ -489,19 +488,24 @@ pub trait Nlist: Debug + Pod {
     ///
     /// This determines the meaning of the `n_type` field.
     fn is_stab(&self) -> bool {
-        self.n_type() & macho::N_STAB != 0
+        self.n_type().is_stab()
+    }
+
+    /// Return the STAB symbol type.
+    fn stab(&self) -> Option<macho::SymbolStab> {
+        self.n_type().stab()
     }
 
     /// Return true if this is an undefined symbol.
     fn is_undefined(&self) -> bool {
         let n_type = self.n_type();
-        n_type & macho::N_STAB == 0 && n_type & macho::N_TYPE == macho::N_UNDF
+        !n_type.is_stab() && n_type.typ() == macho::N_UNDF
     }
 
     /// Return true if the symbol is a definition of a function or data object.
     fn is_definition(&self) -> bool {
         let n_type = self.n_type();
-        n_type & macho::N_STAB == 0 && n_type & macho::N_TYPE == macho::N_SECT
+        !n_type.is_stab() && n_type.typ() == macho::N_SECT
     }
 
     /// Return the library ordinal.
@@ -521,7 +525,7 @@ impl<Endian: endian::Endian> Nlist for macho::Nlist32<Endian> {
     fn n_strx(&self, endian: Self::Endian) -> u32 {
         self.n_strx.get(endian)
     }
-    fn n_type(&self) -> u8 {
+    fn n_type(&self) -> macho::SymbolFlags {
         self.n_type
     }
     fn n_sect(&self) -> u8 {
@@ -542,7 +546,7 @@ impl<Endian: endian::Endian> Nlist for macho::Nlist64<Endian> {
     fn n_strx(&self, endian: Self::Endian) -> u32 {
         self.n_strx.get(endian)
     }
-    fn n_type(&self) -> u8 {
+    fn n_type(&self) -> macho::SymbolFlags {
         self.n_type
     }
     fn n_sect(&self) -> u8 {
