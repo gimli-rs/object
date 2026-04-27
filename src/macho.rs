@@ -3341,8 +3341,8 @@ impl RelocationInfo {
     }
 }
 
-/// absolute relocation type for Mach-O files
-pub const R_ABS: u8 = 0;
+/// Value for `RelocationInfo::r_symbolnum` for absolute symbols.
+pub const R_ABS: u32 = 0;
 
 /*
  * The r_address is not really the address as it's name indicates but an offset.
