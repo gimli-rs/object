@@ -804,7 +804,7 @@ pub struct NtHeaders {
     pub minor_image_version: u16,
     pub major_subsystem_version: u16,
     pub minor_subsystem_version: u16,
-    pub subsystem: u16,
+    pub subsystem: pe::Subsystem,
     pub dll_characteristics: u16,
     pub size_of_stack_reserve: u64,
     pub size_of_stack_commit: u64,

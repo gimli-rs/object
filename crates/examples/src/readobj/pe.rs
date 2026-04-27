@@ -215,7 +215,7 @@ fn print_optional(p: &mut Printer<'_>, header: &impl ImageOptionalHeader) {
         p.field_hex("SizeOfImage", header.size_of_image());
         p.field_hex("SizeOfHeaders", header.size_of_headers());
         p.field_hex("CheckSum", header.check_sum());
-        p.field_enum("Subsystem", header.subsystem(), FLAGS_IMAGE_SUBSYSTEM);
+        p.field_consts("Subsystem", header.subsystem(), Subsystem::NAMES);
         p.field_hex("DllCharacteristics", header.dll_characteristics());
         p.flags(
             header.dll_characteristics(),
@@ -906,23 +906,6 @@ const FLAGS_IMAGE_WEAK_EXTERN: &[Flag<u32>] = &flags!(
     IMAGE_WEAK_EXTERN_SEARCH_LIBRARY,
     IMAGE_WEAK_EXTERN_SEARCH_ALIAS,
     IMAGE_WEAK_EXTERN_ANTI_DEPENDENCY,
-);
-const FLAGS_IMAGE_SUBSYSTEM: &[Flag<u16>] = &flags!(
-    IMAGE_SUBSYSTEM_UNKNOWN,
-    IMAGE_SUBSYSTEM_NATIVE,
-    IMAGE_SUBSYSTEM_WINDOWS_GUI,
-    IMAGE_SUBSYSTEM_WINDOWS_CUI,
-    IMAGE_SUBSYSTEM_OS2_CUI,
-    IMAGE_SUBSYSTEM_POSIX_CUI,
-    IMAGE_SUBSYSTEM_NATIVE_WINDOWS,
-    IMAGE_SUBSYSTEM_WINDOWS_CE_GUI,
-    IMAGE_SUBSYSTEM_EFI_APPLICATION,
-    IMAGE_SUBSYSTEM_EFI_BOOT_SERVICE_DRIVER,
-    IMAGE_SUBSYSTEM_EFI_RUNTIME_DRIVER,
-    IMAGE_SUBSYSTEM_EFI_ROM,
-    IMAGE_SUBSYSTEM_XBOX,
-    IMAGE_SUBSYSTEM_WINDOWS_BOOT_APPLICATION,
-    IMAGE_SUBSYSTEM_XBOX_CODE_CATALOG,
 );
 const FLAGS_IMAGE_DLLCHARACTERISTICS: &[Flag<u16>] = &flags!(
     IMAGE_DLLCHARACTERISTICS_HIGH_ENTROPY_VA,

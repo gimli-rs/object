@@ -707,7 +707,7 @@ pub trait ImageOptionalHeader: Debug + Pod {
     fn size_of_image(&self) -> u32;
     fn size_of_headers(&self) -> u32;
     fn check_sum(&self) -> u32;
-    fn subsystem(&self) -> u16;
+    fn subsystem(&self) -> pe::Subsystem;
     fn dll_characteristics(&self) -> u16;
     fn size_of_stack_reserve(&self) -> u64;
     fn size_of_stack_commit(&self) -> u64;
@@ -859,7 +859,7 @@ impl ImageOptionalHeader for pe::ImageOptionalHeader32 {
     }
 
     #[inline]
-    fn subsystem(&self) -> u16 {
+    fn subsystem(&self) -> pe::Subsystem {
         self.subsystem.get(LE)
     }
 
@@ -1041,7 +1041,7 @@ impl ImageOptionalHeader for pe::ImageOptionalHeader64 {
     }
 
     #[inline]
-    fn subsystem(&self) -> u16 {
+    fn subsystem(&self) -> pe::Subsystem {
         self.subsystem.get(LE)
     }
 

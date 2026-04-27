@@ -496,7 +496,7 @@ pub struct ImageOptionalHeader32 {
     pub size_of_image: U32<LE>,
     pub size_of_headers: U32<LE>,
     pub check_sum: U32<LE>,
-    pub subsystem: U16<LE>,
+    pub subsystem: U16<LE, Subsystem>,
     pub dll_characteristics: U16<LE>,
     pub size_of_stack_reserve: U32<LE>,
     pub size_of_stack_commit: U32<LE>,
@@ -549,7 +549,7 @@ pub struct ImageOptionalHeader64 {
     pub size_of_image: U32<LE>,
     pub size_of_headers: U32<LE>,
     pub check_sum: U32<LE>,
-    pub subsystem: U16<LE>,
+    pub subsystem: U16<LE, Subsystem>,
     pub dll_characteristics: U16<LE>,
     pub size_of_stack_reserve: U64<LE>,
     pub size_of_stack_commit: U64<LE>,
@@ -587,31 +587,36 @@ pub struct ImageRomHeaders {
     pub optional_header: ImageRomOptionalHeader,
 }
 
-// Values for `ImageOptionalHeader*::subsystem`.
+newtype!(
+    /// Values for `ImageOptionalHeader*::subsystem`.
+    struct Subsystem(u16);
+);
 
-/// Unknown subsystem.
-pub const IMAGE_SUBSYSTEM_UNKNOWN: u16 = 0;
-/// Image doesn't require a subsystem.
-pub const IMAGE_SUBSYSTEM_NATIVE: u16 = 1;
-/// Image runs in the Windows GUI subsystem.
-pub const IMAGE_SUBSYSTEM_WINDOWS_GUI: u16 = 2;
-/// Image runs in the Windows character subsystem.
-pub const IMAGE_SUBSYSTEM_WINDOWS_CUI: u16 = 3;
-/// image runs in the OS/2 character subsystem.
-pub const IMAGE_SUBSYSTEM_OS2_CUI: u16 = 5;
-/// image runs in the Posix character subsystem.
-pub const IMAGE_SUBSYSTEM_POSIX_CUI: u16 = 7;
-/// image is a native Win9x driver.
-pub const IMAGE_SUBSYSTEM_NATIVE_WINDOWS: u16 = 8;
-/// Image runs in the Windows CE subsystem.
-pub const IMAGE_SUBSYSTEM_WINDOWS_CE_GUI: u16 = 9;
-pub const IMAGE_SUBSYSTEM_EFI_APPLICATION: u16 = 10;
-pub const IMAGE_SUBSYSTEM_EFI_BOOT_SERVICE_DRIVER: u16 = 11;
-pub const IMAGE_SUBSYSTEM_EFI_RUNTIME_DRIVER: u16 = 12;
-pub const IMAGE_SUBSYSTEM_EFI_ROM: u16 = 13;
-pub const IMAGE_SUBSYSTEM_XBOX: u16 = 14;
-pub const IMAGE_SUBSYSTEM_WINDOWS_BOOT_APPLICATION: u16 = 16;
-pub const IMAGE_SUBSYSTEM_XBOX_CODE_CATALOG: u16 = 17;
+newtype_constant_names!(NAMES_SUBSYSTEM: Subsystem(u16) = {
+    /// Unknown subsystem.
+    IMAGE_SUBSYSTEM_UNKNOWN = 0,
+    /// Image doesn't require a subsystem.
+    IMAGE_SUBSYSTEM_NATIVE = 1,
+    /// Image runs in the Windows GUI subsystem.
+    IMAGE_SUBSYSTEM_WINDOWS_GUI = 2,
+    /// Image runs in the Windows character subsystem.
+    IMAGE_SUBSYSTEM_WINDOWS_CUI = 3,
+    /// image runs in the OS/2 character subsystem.
+    IMAGE_SUBSYSTEM_OS2_CUI = 5,
+    /// image runs in the Posix character subsystem.
+    IMAGE_SUBSYSTEM_POSIX_CUI = 7,
+    /// image is a native Win9x driver.
+    IMAGE_SUBSYSTEM_NATIVE_WINDOWS = 8,
+    /// Image runs in the Windows CE subsystem.
+    IMAGE_SUBSYSTEM_WINDOWS_CE_GUI = 9,
+    IMAGE_SUBSYSTEM_EFI_APPLICATION = 10,
+    IMAGE_SUBSYSTEM_EFI_BOOT_SERVICE_DRIVER = 11,
+    IMAGE_SUBSYSTEM_EFI_RUNTIME_DRIVER = 12,
+    IMAGE_SUBSYSTEM_EFI_ROM = 13,
+    IMAGE_SUBSYSTEM_XBOX = 14,
+    IMAGE_SUBSYSTEM_WINDOWS_BOOT_APPLICATION = 16,
+    IMAGE_SUBSYSTEM_XBOX_CODE_CATALOG = 17,
+});
 
 // Values for `ImageOptionalHeader*::dll_characteristics`.
 
