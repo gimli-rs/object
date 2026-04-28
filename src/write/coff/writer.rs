@@ -529,7 +529,7 @@ pub struct AuxSymbolSection {
     pub number_of_linenumbers: u16,
     pub check_sum: u32,
     pub number: u32,
-    pub selection: u8,
+    pub selection: pe::ComdatSelection,
 }
 
 /// Native endian version of [`pe::ImageAuxSymbolWeak`].
@@ -537,7 +537,7 @@ pub struct AuxSymbolSection {
 #[derive(Debug, Default, Clone)]
 pub struct AuxSymbolWeak {
     pub weak_default_sym_index: u32,
-    pub weak_search_type: u32,
+    pub weak_search_type: pe::WeakExternSearch,
 }
 
 /// Native endian version of [`pe::ImageRelocation`].

@@ -1192,7 +1192,7 @@ pub struct ImageAuxSymbolFunctionBeginEnd {
 pub struct ImageAuxSymbolWeak {
     /// the weak extern default symbol index
     pub weak_default_sym_index: U32<LE>,
-    pub weak_search_type: U32<LE>,
+    pub weak_search_type: U32<LE, WeakExternSearch>,
 }
 
 /// Auxiliary symbol format 5: sections.
@@ -1213,7 +1213,7 @@ pub struct ImageAuxSymbolSection {
     /// section number to associate with
     pub number: U16<LE>,
     /// communal selection type
-    pub selection: u8,
+    pub selection: ComdatSelection,
     pub reserved: u8,
     /// high bits of the section number
     pub high_number: U16<LE>,
@@ -1231,18 +1231,33 @@ pub struct ImageAuxSymbolCrc {
 // Communal selection types.
 //
 
-pub const IMAGE_COMDAT_SELECT_NODUPLICATES: u8 = 1;
-pub const IMAGE_COMDAT_SELECT_ANY: u8 = 2;
-pub const IMAGE_COMDAT_SELECT_SAME_SIZE: u8 = 3;
-pub const IMAGE_COMDAT_SELECT_EXACT_MATCH: u8 = 4;
-pub const IMAGE_COMDAT_SELECT_ASSOCIATIVE: u8 = 5;
-pub const IMAGE_COMDAT_SELECT_LARGEST: u8 = 6;
-pub const IMAGE_COMDAT_SELECT_NEWEST: u8 = 7;
+newtype!(
+    /// Values for `ImageAuxSymbolSection::selection`.
+    #[repr(transparent)]
+    struct ComdatSelection(u8);
+);
 
-pub const IMAGE_WEAK_EXTERN_SEARCH_NOLIBRARY: u32 = 1;
-pub const IMAGE_WEAK_EXTERN_SEARCH_LIBRARY: u32 = 2;
-pub const IMAGE_WEAK_EXTERN_SEARCH_ALIAS: u32 = 3;
-pub const IMAGE_WEAK_EXTERN_ANTI_DEPENDENCY: u32 = 4;
+newtype_constant_names!(NAMES_IMAGE_COMDAT_SELECT: ComdatSelection(u8) = {
+    IMAGE_COMDAT_SELECT_NODUPLICATES = 1,
+    IMAGE_COMDAT_SELECT_ANY = 2,
+    IMAGE_COMDAT_SELECT_SAME_SIZE = 3,
+    IMAGE_COMDAT_SELECT_EXACT_MATCH = 4,
+    IMAGE_COMDAT_SELECT_ASSOCIATIVE = 5,
+    IMAGE_COMDAT_SELECT_LARGEST = 6,
+    IMAGE_COMDAT_SELECT_NEWEST = 7,
+});
+
+newtype!(
+    /// Values for `ImageAuxSymbolWeak::weak_search_type`.
+    struct WeakExternSearch(u32);
+);
+
+newtype_constant_names!(NAMES_IMAGE_WEAK_EXTERN: WeakExternSearch(u32) = {
+    IMAGE_WEAK_EXTERN_SEARCH_NOLIBRARY = 1,
+    IMAGE_WEAK_EXTERN_SEARCH_LIBRARY = 2,
+    IMAGE_WEAK_EXTERN_SEARCH_ALIAS = 3,
+    IMAGE_WEAK_EXTERN_ANTI_DEPENDENCY = 4,
+});
 
 //
 // Relocation format.

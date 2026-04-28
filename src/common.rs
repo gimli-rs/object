@@ -678,7 +678,7 @@ pub enum SymbolFlags<Section, Symbol> {
         /// `StorageClass` field in the COFF symbol.
         storage_class: crate::pe::SymbolClass,
         /// `Selection` field in the auxiliary symbol for the section.
-        selection: u8,
+        selection: crate::pe::ComdatSelection,
         /// `Number` field in the auxiliary symbol for the section.
         associative_section: Option<Section>,
     },

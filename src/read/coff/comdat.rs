@@ -70,7 +70,7 @@ pub struct CoffComdat<
     symbol_index: SymbolIndex,
     symbol: &'data Coff::ImageSymbol,
     section_index: u32,
-    selection: u8,
+    selection: pe::ComdatSelection,
 }
 
 impl<'data, 'file, R: ReadRef<'data>, Coff: CoffHeader> CoffComdat<'data, 'file, R, Coff> {
@@ -90,7 +90,7 @@ impl<'data, 'file, R: ReadRef<'data>, Coff: CoffHeader> CoffComdat<'data, 'file,
         // Auxiliary record must have a non-associative selection.
         let aux = file.common.symbols.aux_section(index).ok()?;
         let selection = aux.selection;
-        if selection == 0 || selection == pe::IMAGE_COMDAT_SELECT_ASSOCIATIVE {
+        if selection == pe::ComdatSelection(0) || selection == pe::IMAGE_COMDAT_SELECT_ASSOCIATIVE {
             return None;
         }
 
@@ -216,7 +216,7 @@ impl<'data, 'file, R: ReadRef<'data>, Coff: CoffHeader> Iterator
                 if number == self.section_index {
                     return Some(SectionIndex(section_index as usize));
                 }
-            } else if aux.selection != 0 {
+            } else if aux.selection != pe::ComdatSelection(0) {
                 if section_index == self.section_index {
                     return Some(SectionIndex(section_index as usize));
                 }

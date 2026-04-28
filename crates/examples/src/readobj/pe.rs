@@ -724,7 +724,7 @@ fn print_symbols<'data, Coff: CoffHeader>(
                     p.field("NumberOfLinenumbers", aux.number_of_linenumbers.get(LE));
                     p.field_hex("CheckSum", aux.check_sum.get(LE));
                     p.field("Number", aux.number.get(LE));
-                    p.field_enum("Selection", aux.selection, FLAGS_IMAGE_COMDAT_SELECT);
+                    p.field_consts("Selection", aux.selection, pe::ComdatSelection::NAMES);
                     p.field_hex("Reserved", aux.reserved);
                     p.field("HighNumber", aux.high_number.get(LE));
                 });
@@ -739,10 +739,10 @@ fn print_symbols<'data, Coff: CoffHeader>(
                         .and_then(|symbol| symbol.name(symbols.strings()))
                         .print_err(p);
                     p.field_string_option("DefaultSymbol", index.0, name);
-                    p.field_enum(
+                    p.field_consts(
                         "SearchType",
                         aux.weak_search_type.get(LE),
-                        FLAGS_IMAGE_WEAK_EXTERN,
+                        pe::WeakExternSearch::NAMES,
                     );
                 });
             }
@@ -790,21 +790,6 @@ fn print_reloc_dir(
     Some(())
 }
 
-const FLAGS_IMAGE_COMDAT_SELECT: &[Flag<u8>] = &flags!(
-    IMAGE_COMDAT_SELECT_NODUPLICATES,
-    IMAGE_COMDAT_SELECT_ANY,
-    IMAGE_COMDAT_SELECT_SAME_SIZE,
-    IMAGE_COMDAT_SELECT_EXACT_MATCH,
-    IMAGE_COMDAT_SELECT_ASSOCIATIVE,
-    IMAGE_COMDAT_SELECT_LARGEST,
-    IMAGE_COMDAT_SELECT_NEWEST,
-);
-const FLAGS_IMAGE_WEAK_EXTERN: &[Flag<u32>] = &flags!(
-    IMAGE_WEAK_EXTERN_SEARCH_NOLIBRARY,
-    IMAGE_WEAK_EXTERN_SEARCH_LIBRARY,
-    IMAGE_WEAK_EXTERN_SEARCH_ALIAS,
-    IMAGE_WEAK_EXTERN_ANTI_DEPENDENCY,
-);
 const FLAGS_IMAGE_DIRECTORY_ENTRY: &[Flag<usize>] = &flags!(
     IMAGE_DIRECTORY_ENTRY_EXPORT,
     IMAGE_DIRECTORY_ENTRY_IMPORT,

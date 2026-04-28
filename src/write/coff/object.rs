@@ -11,7 +11,7 @@ struct SectionOffsets {
     name: writer::Name,
     offset: u32,
     reloc_offset: u32,
-    selection: u8,
+    selection: coff::ComdatSelection,
     associative_section: u32,
 }
 
@@ -639,7 +639,7 @@ impl<'a> Object<'a> {
                     section.kind
                 )));
             };
-            if section_offsets[index].selection != 0 {
+            if section_offsets[index].selection.0 != 0 {
                 characteristics |= coff::IMAGE_SCN_LNK_COMDAT;
             };
             if section.relocations.len() > 0xffff {
