@@ -713,15 +713,15 @@ impl<'a> Object<'a> {
             };
             let section_number = match symbol.section {
                 // weak symbols are always undefined
-                _ if symbol.weak => coff::IMAGE_SYM_UNDEFINED as u16,
+                _ if symbol.weak => coff::IMAGE_SYM_UNDEFINED,
                 SymbolSection::None => {
                     debug_assert_eq!(symbol.kind, SymbolKind::File);
-                    coff::IMAGE_SYM_DEBUG as u16
+                    coff::IMAGE_SYM_DEBUG
                 }
-                SymbolSection::Undefined => coff::IMAGE_SYM_UNDEFINED as u16,
-                SymbolSection::Absolute => coff::IMAGE_SYM_ABSOLUTE as u16,
-                SymbolSection::Common => coff::IMAGE_SYM_UNDEFINED as u16,
-                SymbolSection::Section(id) => id.0 as u16 + 1,
+                SymbolSection::Undefined => coff::IMAGE_SYM_UNDEFINED,
+                SymbolSection::Absolute => coff::IMAGE_SYM_ABSOLUTE,
+                SymbolSection::Common => coff::IMAGE_SYM_UNDEFINED,
+                SymbolSection::Section(id) => coff::SymbolSection(id.0 as i32 + 1),
             };
             let number_of_aux_symbols = symbol_offsets[index].aux_count;
             let value = if symbol.weak {
@@ -743,8 +743,8 @@ impl<'a> Object<'a> {
                     name: weak_default_symbol.name,
                     value: symbol.value as u32,
                     section_number: match symbol.section {
-                        SymbolSection::Section(id) => id.0 as u16 + 1,
-                        SymbolSection::Undefined => coff::IMAGE_SYM_ABSOLUTE as u16,
+                        SymbolSection::Section(id) => coff::SymbolSection(id.0 as i32 + 1),
+                        SymbolSection::Undefined => coff::IMAGE_SYM_ABSOLUTE,
                         o => {
                             return Err(Error(format!(
                                 "invalid symbol section for weak external `{}` section {o:?}",

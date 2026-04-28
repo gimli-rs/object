@@ -451,8 +451,10 @@ impl<'data, 'file, R: ReadRef<'data>, Coff: CoffHeader> ObjectSymbol<'data>
                     SymbolSection::Unknown
                 }
             }
-            index if index > 0 => SymbolSection::Section(SectionIndex(index as usize)),
-            _ => SymbolSection::Unknown,
+            n => match n.index() {
+                Some(i) => SymbolSection::Section(SectionIndex(i as usize)),
+                None => SymbolSection::Unknown,
+            },
         }
     }
 
@@ -536,7 +538,7 @@ impl<'data, 'file, R: ReadRef<'data>, Coff: CoffHeader> ObjectSymbol<'data>
 pub trait ImageSymbol: Debug + Pod {
     fn raw_name(&self) -> &[u8; 8];
     fn value(&self) -> u32;
-    fn section_number(&self) -> i32;
+    fn section_number(&self) -> pe::SymbolSection;
     fn typ(&self) -> u16;
     fn storage_class(&self) -> u8;
     fn number_of_aux_symbols(&self) -> u8;
@@ -588,17 +590,14 @@ pub trait ImageSymbol: Debug + Pod {
 
     /// Return the section index for the symbol.
     fn section(&self) -> Option<SectionIndex> {
-        let section_number = self.section_number();
-        if section_number > 0 {
-            Some(SectionIndex(section_number as usize))
-        } else {
-            None
-        }
+        self.section_number()
+            .index()
+            .map(|i| SectionIndex(i as usize))
     }
 
     /// Return true if the symbol is a definition of a function or data object.
     fn is_definition(&self) -> bool {
-        if self.section_number() <= 0 {
+        if self.section_number().is_reserved() {
             return false;
         }
         match self.storage_class() {
@@ -652,12 +651,12 @@ impl ImageSymbol for pe::ImageSymbol {
     fn value(&self) -> u32 {
         self.value.get(LE)
     }
-    fn section_number(&self) -> i32 {
+    fn section_number(&self) -> pe::SymbolSection {
         let section_number = self.section_number.get(LE);
-        if section_number >= pe::IMAGE_SYM_SECTION_MAX {
-            (section_number as i16) as i32
+        if section_number > pe::IMAGE_SYM_SECTION_MAX {
+            pe::SymbolSection((section_number as i16) as i32)
         } else {
-            section_number as i32
+            pe::SymbolSection(section_number as i32)
         }
     }
     fn typ(&self) -> u16 {
@@ -678,7 +677,7 @@ impl ImageSymbol for pe::ImageSymbolEx {
     fn value(&self) -> u32 {
         self.value.get(LE)
     }
-    fn section_number(&self) -> i32 {
+    fn section_number(&self) -> pe::SymbolSection {
         self.section_number.get(LE)
     }
     fn typ(&self) -> u16 {

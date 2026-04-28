@@ -321,7 +321,7 @@ impl<'a> Writer<'a> {
         let mut coff_symbol = pe::ImageSymbol {
             name: [0; 8],
             value: symbol.value.into(),
-            section_number: symbol.section_number.into(),
+            section_number: (symbol.section_number.0 as u16).into(),
             typ: symbol.typ.into(),
             storage_class: symbol.storage_class,
             number_of_aux_symbols: symbol.number_of_aux_symbols,
@@ -513,7 +513,7 @@ pub struct SectionHeader {
 pub struct Symbol {
     pub name: Name,
     pub value: u32,
-    pub section_number: u16,
+    pub section_number: pe::SymbolSection,
     pub typ: u16,
     pub storage_class: u8,
     pub number_of_aux_symbols: u8,

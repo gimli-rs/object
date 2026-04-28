@@ -941,7 +941,7 @@ pub struct ImageSymbolEx {
     /// If first 4 bytes are 0, then second 4 bytes are offset into string table.
     pub name: [u8; 8],
     pub value: U32<LE>,
-    pub section_number: I32<LE>,
+    pub section_number: I32<LE, SymbolSection>,
     pub typ: U16<LE>,
     pub storage_class: u8,
     pub number_of_aux_symbols: u8,
@@ -953,17 +953,38 @@ pub const IMAGE_SIZEOF_SYMBOL_EX: usize = 20;
 #[repr(C)]
 pub struct ImageSymbolExBytes(pub [u8; IMAGE_SIZEOF_SYMBOL_EX]);
 
-// Values for `ImageSymbol::section_number`.
-//
+newtype!(
+    /// Values for `ImageSymbol::section_number` and `ImageSymbolEx::section_number`.
+    struct SymbolSection(i32);
+);
+
+impl SymbolSection {
+    /// Return true if this is a reserved value.
+    pub fn is_reserved(self) -> bool {
+        self.0 <= 0
+    }
+
+    /// Return the 1-based section index, or `None` if this is a reserved value.
+    pub fn index(self) -> Option<u32> {
+        if self.0 > 0 {
+            Some(self.0 as u32)
+        } else {
+            None
+        }
+    }
+}
+
 // Symbols have a section number of the section in which they are
 // defined. Otherwise, section numbers have the following meanings:
+newtype_constant_names!(NAMES_IMAGE_SYM: SymbolSection(i32) = {
+    /// Symbol is undefined or is common.
+    IMAGE_SYM_UNDEFINED = 0,
+    /// Symbol is an absolute value.
+    IMAGE_SYM_ABSOLUTE = -1,
+    /// Symbol is a special debug item.
+    IMAGE_SYM_DEBUG = -2,
+});
 
-/// Symbol is undefined or is common.
-pub const IMAGE_SYM_UNDEFINED: i32 = 0;
-/// Symbol is an absolute value.
-pub const IMAGE_SYM_ABSOLUTE: i32 = -1;
-/// Symbol is a special debug item.
-pub const IMAGE_SYM_DEBUG: i32 = -2;
 /// Values 0xFF00-0xFFFF are special
 pub const IMAGE_SYM_SECTION_MAX: u16 = 0xFEFF;
 pub const IMAGE_SYM_SECTION_MAX_EX: u32 = 0x7fff_ffff;

@@ -679,7 +679,11 @@ fn print_symbols<'data, Coff: CoffHeader>(
                 });
                 p.field_string_option("Section", section_index.0, section_name);
             } else {
-                p.field_enum_display("Section", symbol.section_number(), FLAGS_IMAGE_SYM);
+                p.field_consts_display(
+                    "Section",
+                    symbol.section_number(),
+                    pe::SymbolSection::NAMES,
+                );
             }
             p.field_hex("Type", symbol.typ());
             p.field_enum("BaseType", symbol.base_type(), FLAGS_IMAGE_SYM_TYPE);
@@ -788,8 +792,6 @@ fn print_reloc_dir(
     Some(())
 }
 
-const FLAGS_IMAGE_SYM: &[Flag<i32>] =
-    &flags!(IMAGE_SYM_UNDEFINED, IMAGE_SYM_ABSOLUTE, IMAGE_SYM_DEBUG,);
 const FLAGS_IMAGE_SYM_TYPE: &[Flag<u16>] = &flags!(
     IMAGE_SYM_TYPE_NULL,
     IMAGE_SYM_TYPE_VOID,
