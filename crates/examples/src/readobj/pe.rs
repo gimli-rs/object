@@ -53,8 +53,16 @@ pub(super) fn print_coff_import(p: &mut Printer<'_>, data: &[u8]) {
             p.field("TimeDateStamp", header.time_date_stamp.get(LE));
             p.field_hex("SizeOfData", header.size_of_data.get(LE));
             p.field("OrdinalOrHint", header.ordinal_or_hint.get(LE));
-            p.field_enum("ImportType", header.import_type(), FLAGS_IMAGE_OBJECT_TYPE);
-            p.field_enum("NameType", header.name_type(), FLAGS_IMAGE_OBJECT_NAME);
+            p.field_consts(
+                "ImportType",
+                header.import_type(),
+                pe::ImportObjectType::NAMES,
+            );
+            p.field_consts(
+                "NameType",
+                header.name_type(),
+                pe::ImportObjectNameType::NAMES,
+            );
             if let Some(data) = header.parse_data(data, &mut offset).print_err(p) {
                 p.field_inline_string("Symbol", data.symbol());
                 p.field_inline_string("Dll", data.dll());
@@ -829,13 +837,4 @@ const FLAGS_RT: &[Flag<u16>] = &flags!(
     RT_ANIICON,
     RT_HTML,
     RT_MANIFEST,
-);
-const FLAGS_IMAGE_OBJECT_TYPE: &[Flag<u16>] =
-    &flags!(IMPORT_OBJECT_CODE, IMPORT_OBJECT_DATA, IMPORT_OBJECT_CONST);
-const FLAGS_IMAGE_OBJECT_NAME: &[Flag<u16>] = &flags!(
-    IMPORT_OBJECT_ORDINAL,
-    IMPORT_OBJECT_NAME,
-    IMPORT_OBJECT_NAME_NO_PREFIX,
-    IMPORT_OBJECT_NAME_UNDECORATE,
-    IMPORT_OBJECT_NAME_EXPORTAS,
 );

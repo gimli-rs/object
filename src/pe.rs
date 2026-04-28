@@ -3223,27 +3223,96 @@ pub struct ImportObjectHeader {
     // WORD    Type : 2;
     // WORD    NameType : 3;
     // WORD    Reserved : 11;
-    pub name_type: U16<LE>,
+    pub name_type: U16<LE, ImportObjectFlags>,
+}
+
+newtype!(
+    /// Values for `ImportObjectHeader::name_type`.
+    struct ImportObjectFlags(u16);
+);
+
+newtype_flag_names!(NAMES_IMPORT_OBJECT: ImportObjectFlags(u16) = {
+    _ = IMPORT_OBJECT_TYPE_MASK << IMPORT_OBJECT_TYPE_SHIFT => NAMES_IMPORT_OBJECT_TYPE,
+    _ = IMPORT_OBJECT_NAME_MASK << IMPORT_OBJECT_NAME_SHIFT => NAMES_IMPORT_OBJECT_NAME,
+});
+
+impl ImportObjectFlags {
+    /// Construct the flags from its subfields.
+    pub fn new(import_type: ImportObjectType, name_type: ImportObjectNameType) -> Self {
+        ImportObjectFlags(
+            ImportObjectFlags::from(import_type).0 | ImportObjectFlags::from(name_type).0,
+        )
+    }
+
+    /// Return the import type field.
+    pub fn import_type(self) -> ImportObjectType {
+        ImportObjectType(self.0 & IMPORT_OBJECT_TYPE_MASK)
+    }
+
+    /// Return the name type field.
+    pub fn name_type(self) -> ImportObjectNameType {
+        ImportObjectNameType((self.0 >> IMPORT_OBJECT_NAME_SHIFT) & IMPORT_OBJECT_NAME_MASK)
+    }
+}
+
+newtype!(
+    /// Values for the import type subfield of `ImportObjectHeader::name_type`.
+    struct ImportObjectType(u16);
+);
+
+impl From<ImportObjectType> for ImportObjectFlags {
+    fn from(import_type: ImportObjectType) -> Self {
+        ImportObjectFlags(import_type.0 & IMPORT_OBJECT_TYPE_MASK)
+    }
+}
+
+impl From<ImportObjectFlags> for ImportObjectType {
+    fn from(value: ImportObjectFlags) -> Self {
+        value.import_type()
+    }
 }
 
 pub const IMPORT_OBJECT_TYPE_MASK: u16 = 0b11;
 pub const IMPORT_OBJECT_TYPE_SHIFT: u16 = 0;
-pub const IMPORT_OBJECT_CODE: u16 = 0;
-pub const IMPORT_OBJECT_DATA: u16 = 1;
-pub const IMPORT_OBJECT_CONST: u16 = 2;
+
+newtype_constant_names!(NAMES_IMPORT_OBJECT_TYPE: ImportObjectType(u16) = {
+    IMPORT_OBJECT_CODE = 0,
+    IMPORT_OBJECT_DATA = 1,
+    IMPORT_OBJECT_CONST = 2,
+});
+
+newtype!(
+    /// Values for the name type subfield of `ImportObjectHeader::name_type`.
+    struct ImportObjectNameType(u16);
+);
+
+impl From<ImportObjectNameType> for ImportObjectFlags {
+    fn from(name_type: ImportObjectNameType) -> Self {
+        ImportObjectFlags((name_type.0 & IMPORT_OBJECT_NAME_MASK) << IMPORT_OBJECT_NAME_SHIFT)
+    }
+}
+
+impl From<ImportObjectFlags> for ImportObjectNameType {
+    fn from(value: ImportObjectFlags) -> Self {
+        value.name_type()
+    }
+}
 
 pub const IMPORT_OBJECT_NAME_MASK: u16 = 0b111;
 pub const IMPORT_OBJECT_NAME_SHIFT: u16 = 2;
-/// Import by ordinal
-pub const IMPORT_OBJECT_ORDINAL: u16 = 0;
-/// Import name == public symbol name.
-pub const IMPORT_OBJECT_NAME: u16 = 1;
-/// Import name == public symbol name skipping leading ?, @, or optionally _.
-pub const IMPORT_OBJECT_NAME_NO_PREFIX: u16 = 2;
-/// Import name == public symbol name skipping leading ?, @, or optionally _ and truncating at first @.
-pub const IMPORT_OBJECT_NAME_UNDECORATE: u16 = 3;
-/// Import name == a name is explicitly provided after the DLL name.
-pub const IMPORT_OBJECT_NAME_EXPORTAS: u16 = 4;
+
+newtype_constant_names!(NAMES_IMPORT_OBJECT_NAME: ImportObjectNameType(u16) = {
+    /// Import by ordinal
+    IMPORT_OBJECT_ORDINAL = 0,
+    /// Import name == public symbol name.
+    IMPORT_OBJECT_NAME = 1,
+    /// Import name == public symbol name skipping leading ?, @, or optionally _.
+    IMPORT_OBJECT_NAME_NO_PREFIX = 2,
+    /// Import name == public symbol name skipping leading ?, @, or optionally _ and truncating at first @.
+    IMPORT_OBJECT_NAME_UNDECORATE = 3,
+    /// Import name == a name is explicitly provided after the DLL name.
+    IMPORT_OBJECT_NAME_EXPORTAS = 4,
+});
 
 // COM+ Header entry point flags.
 pub const COMIMAGE_FLAGS_ILONLY: u32 = 0x0000_0001;

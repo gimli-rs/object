@@ -183,17 +183,13 @@ impl pe::ImportObjectHeader {
     }
 
     /// The type of import.
-    ///
-    /// This is one of the `IMPORT_OBJECT_*` constants.
-    pub fn import_type(&self) -> u16 {
-        self.name_type.get(LE) & pe::IMPORT_OBJECT_TYPE_MASK
+    pub fn import_type(&self) -> pe::ImportObjectType {
+        self.name_type.get(LE).import_type()
     }
 
     /// The type of import name.
-    ///
-    /// This is one of the `IMPORT_OBJECT_*` constants.
-    pub fn name_type(&self) -> u16 {
-        (self.name_type.get(LE) >> pe::IMPORT_OBJECT_NAME_SHIFT) & pe::IMPORT_OBJECT_NAME_MASK
+    pub fn name_type(&self) -> pe::ImportObjectNameType {
+        self.name_type.get(LE).name_type()
     }
 }
 
