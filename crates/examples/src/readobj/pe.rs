@@ -685,13 +685,11 @@ fn print_symbols<'data, Coff: CoffHeader>(
                     pe::SymbolSection::NAMES,
                 );
             }
-            p.field_hex("Type", symbol.typ());
-            p.field_enum("BaseType", symbol.base_type(), FLAGS_IMAGE_SYM_TYPE);
-            p.field_enum("DerivedType", symbol.derived_type(), FLAGS_IMAGE_SYM_DTYPE);
-            p.field_enum(
+            p.field_flags("Type", symbol.typ(), pe::SymbolType::NAMES);
+            p.field_consts(
                 "StorageClass",
                 symbol.storage_class(),
-                FLAGS_IMAGE_SYM_CLASS,
+                pe::SymbolClass::NAMES,
             );
             p.field_hex("NumberOfAuxSymbols", symbol.number_of_aux_symbols());
             if symbol.has_aux_file_name()
@@ -792,61 +790,6 @@ fn print_reloc_dir(
     Some(())
 }
 
-const FLAGS_IMAGE_SYM_TYPE: &[Flag<u16>] = &flags!(
-    IMAGE_SYM_TYPE_NULL,
-    IMAGE_SYM_TYPE_VOID,
-    IMAGE_SYM_TYPE_CHAR,
-    IMAGE_SYM_TYPE_SHORT,
-    IMAGE_SYM_TYPE_INT,
-    IMAGE_SYM_TYPE_LONG,
-    IMAGE_SYM_TYPE_FLOAT,
-    IMAGE_SYM_TYPE_DOUBLE,
-    IMAGE_SYM_TYPE_STRUCT,
-    IMAGE_SYM_TYPE_UNION,
-    IMAGE_SYM_TYPE_ENUM,
-    IMAGE_SYM_TYPE_MOE,
-    IMAGE_SYM_TYPE_BYTE,
-    IMAGE_SYM_TYPE_WORD,
-    IMAGE_SYM_TYPE_UINT,
-    IMAGE_SYM_TYPE_DWORD,
-    IMAGE_SYM_TYPE_PCODE,
-);
-const FLAGS_IMAGE_SYM_DTYPE: &[Flag<u16>] = &flags!(
-    IMAGE_SYM_DTYPE_NULL,
-    IMAGE_SYM_DTYPE_POINTER,
-    IMAGE_SYM_DTYPE_FUNCTION,
-    IMAGE_SYM_DTYPE_ARRAY,
-);
-const FLAGS_IMAGE_SYM_CLASS: &[Flag<u8>] = &flags!(
-    IMAGE_SYM_CLASS_END_OF_FUNCTION,
-    IMAGE_SYM_CLASS_NULL,
-    IMAGE_SYM_CLASS_AUTOMATIC,
-    IMAGE_SYM_CLASS_EXTERNAL,
-    IMAGE_SYM_CLASS_STATIC,
-    IMAGE_SYM_CLASS_REGISTER,
-    IMAGE_SYM_CLASS_EXTERNAL_DEF,
-    IMAGE_SYM_CLASS_LABEL,
-    IMAGE_SYM_CLASS_UNDEFINED_LABEL,
-    IMAGE_SYM_CLASS_MEMBER_OF_STRUCT,
-    IMAGE_SYM_CLASS_ARGUMENT,
-    IMAGE_SYM_CLASS_STRUCT_TAG,
-    IMAGE_SYM_CLASS_MEMBER_OF_UNION,
-    IMAGE_SYM_CLASS_UNION_TAG,
-    IMAGE_SYM_CLASS_TYPE_DEFINITION,
-    IMAGE_SYM_CLASS_UNDEFINED_STATIC,
-    IMAGE_SYM_CLASS_ENUM_TAG,
-    IMAGE_SYM_CLASS_MEMBER_OF_ENUM,
-    IMAGE_SYM_CLASS_REGISTER_PARAM,
-    IMAGE_SYM_CLASS_BIT_FIELD,
-    IMAGE_SYM_CLASS_FAR_EXTERNAL,
-    IMAGE_SYM_CLASS_BLOCK,
-    IMAGE_SYM_CLASS_FUNCTION,
-    IMAGE_SYM_CLASS_END_OF_STRUCT,
-    IMAGE_SYM_CLASS_FILE,
-    IMAGE_SYM_CLASS_SECTION,
-    IMAGE_SYM_CLASS_WEAK_EXTERNAL,
-    IMAGE_SYM_CLASS_CLR_TOKEN,
-);
 const FLAGS_IMAGE_COMDAT_SELECT: &[Flag<u8>] = &flags!(
     IMAGE_COMDAT_SELECT_NODUPLICATES,
     IMAGE_COMDAT_SELECT_ANY,

@@ -514,8 +514,8 @@ pub struct Symbol {
     pub name: Name,
     pub value: u32,
     pub section_number: pe::SymbolSection,
-    pub typ: u16,
-    pub storage_class: u8,
+    pub typ: pe::SymbolType,
+    pub storage_class: pe::SymbolClass,
     pub number_of_aux_symbols: u8,
 }
 

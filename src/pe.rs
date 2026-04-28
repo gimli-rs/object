@@ -924,8 +924,8 @@ pub struct ImageSymbol {
     pub name: [u8; 8],
     pub value: U32<LE>,
     pub section_number: U16<LE>,
-    pub typ: U16<LE>,
-    pub storage_class: u8,
+    pub typ: U16<LE, SymbolType>,
+    pub storage_class: SymbolClass,
     pub number_of_aux_symbols: u8,
 }
 
@@ -942,8 +942,8 @@ pub struct ImageSymbolEx {
     pub name: [u8; 8],
     pub value: U32<LE>,
     pub section_number: I32<LE, SymbolSection>,
-    pub typ: U16<LE>,
-    pub storage_class: u8,
+    pub typ: U16<LE, SymbolType>,
+    pub storage_class: SymbolClass,
     pub number_of_aux_symbols: u8,
 }
 
@@ -989,75 +989,145 @@ newtype_constant_names!(NAMES_IMAGE_SYM: SymbolSection(i32) = {
 pub const IMAGE_SYM_SECTION_MAX: u16 = 0xFEFF;
 pub const IMAGE_SYM_SECTION_MAX_EX: u32 = 0x7fff_ffff;
 
-// Values for `ImageSymbol::typ` (basic component).
+newtype!(
+    /// Values for `ImageSymbol::typ`.
+    struct SymbolType(u16);
+);
+
+impl SymbolType {
+    /// Construct a symbol type from base and derived types.
+    ///
+    /// You should generally never need to call this. In practice, only
+    /// a couple of symbol types are used. Instead, use `SymbolType(0)`
+    /// or `IMAGE_SYM_DTYPE_FUNCTION.into()`.
+    pub fn new(base_type: SymbolBaseType, derived_type: SymbolDerivedType) -> Self {
+        SymbolType(SymbolType::from(base_type).0 | SymbolType::from(derived_type).0)
+    }
+
+    /// Return the base type component.
+    pub fn base_type(self) -> SymbolBaseType {
+        SymbolBaseType(self.0 & N_BTMASK)
+    }
+
+    /// Return the derived type component.
+    pub fn derived_type(self) -> SymbolDerivedType {
+        SymbolDerivedType((self.0 & N_TMASK) >> N_BTSHFT)
+    }
+}
+
+newtype_flag_names!(NAMES_SYMBOL_TYPE: SymbolType(u16) = {
+    _ = N_BTMASK => NAMES_IMAGE_SYM_TYPE,
+    _ = N_TMASK => NAMES_IMAGE_SYM_DTYPE,
+    IMAGE_SYM_TYPE_PCODE = 0x8000,
+});
+
+newtype!(
+    /// Values for `ImageSymbol::typ` (basic component).
+    struct SymbolBaseType(u16);
+);
+
+impl From<SymbolBaseType> for SymbolType {
+    fn from(base: SymbolBaseType) -> Self {
+        SymbolType(base.0 & N_BTMASK)
+    }
+}
+
+impl From<SymbolType> for SymbolBaseType {
+    fn from(value: SymbolType) -> Self {
+        value.base_type()
+    }
+}
 
 /// no type.
-pub const IMAGE_SYM_TYPE_NULL: u16 = 0x0000;
-pub const IMAGE_SYM_TYPE_VOID: u16 = 0x0001;
-/// type character.
-pub const IMAGE_SYM_TYPE_CHAR: u16 = 0x0002;
-/// type short integer.
-pub const IMAGE_SYM_TYPE_SHORT: u16 = 0x0003;
-pub const IMAGE_SYM_TYPE_INT: u16 = 0x0004;
-pub const IMAGE_SYM_TYPE_LONG: u16 = 0x0005;
-pub const IMAGE_SYM_TYPE_FLOAT: u16 = 0x0006;
-pub const IMAGE_SYM_TYPE_DOUBLE: u16 = 0x0007;
-pub const IMAGE_SYM_TYPE_STRUCT: u16 = 0x0008;
-pub const IMAGE_SYM_TYPE_UNION: u16 = 0x0009;
-/// enumeration.
-pub const IMAGE_SYM_TYPE_ENUM: u16 = 0x000A;
-/// member of enumeration.
-pub const IMAGE_SYM_TYPE_MOE: u16 = 0x000B;
-pub const IMAGE_SYM_TYPE_BYTE: u16 = 0x000C;
-pub const IMAGE_SYM_TYPE_WORD: u16 = 0x000D;
-pub const IMAGE_SYM_TYPE_UINT: u16 = 0x000E;
-pub const IMAGE_SYM_TYPE_DWORD: u16 = 0x000F;
-pub const IMAGE_SYM_TYPE_PCODE: u16 = 0x8000;
+pub const IMAGE_SYM_TYPE_NULL: SymbolBaseType = SymbolBaseType(0);
 
-// Values for `ImageSymbol::typ` (derived component).
+newtype_constant_names!(NAMES_IMAGE_SYM_TYPE: SymbolBaseType(u16) = {
+    IMAGE_SYM_TYPE_VOID = 0x0001,
+    /// type character.
+    IMAGE_SYM_TYPE_CHAR = 0x0002,
+    /// type short integer.
+    IMAGE_SYM_TYPE_SHORT = 0x0003,
+    IMAGE_SYM_TYPE_INT = 0x0004,
+    IMAGE_SYM_TYPE_LONG = 0x0005,
+    IMAGE_SYM_TYPE_FLOAT = 0x0006,
+    IMAGE_SYM_TYPE_DOUBLE = 0x0007,
+    IMAGE_SYM_TYPE_STRUCT = 0x0008,
+    IMAGE_SYM_TYPE_UNION = 0x0009,
+    /// enumeration.
+    IMAGE_SYM_TYPE_ENUM = 0x000A,
+    /// member of enumeration.
+    IMAGE_SYM_TYPE_MOE = 0x000B,
+    IMAGE_SYM_TYPE_BYTE = 0x000C,
+    IMAGE_SYM_TYPE_WORD = 0x000D,
+    IMAGE_SYM_TYPE_UINT = 0x000E,
+    IMAGE_SYM_TYPE_DWORD = 0x000F,
+});
+
+newtype!(
+    /// Values for `ImageSymbol::typ` (derived component).
+    struct SymbolDerivedType(u16);
+);
+
+impl From<SymbolDerivedType> for SymbolType {
+    fn from(derived: SymbolDerivedType) -> Self {
+        SymbolType((derived.0 << N_BTSHFT) & N_TMASK)
+    }
+}
+
+impl From<SymbolType> for SymbolDerivedType {
+    fn from(value: SymbolType) -> Self {
+        value.derived_type()
+    }
+}
 
 /// no derived type.
-pub const IMAGE_SYM_DTYPE_NULL: u16 = 0;
-/// pointer.
-pub const IMAGE_SYM_DTYPE_POINTER: u16 = 1;
-/// function.
-pub const IMAGE_SYM_DTYPE_FUNCTION: u16 = 2;
-/// array.
-pub const IMAGE_SYM_DTYPE_ARRAY: u16 = 3;
+pub const IMAGE_SYM_DTYPE_NULL: SymbolDerivedType = SymbolDerivedType(0);
 
-// Values for `ImageSymbol::storage_class`.
-pub const IMAGE_SYM_CLASS_END_OF_FUNCTION: u8 = 0xff;
-pub const IMAGE_SYM_CLASS_NULL: u8 = 0x00;
-pub const IMAGE_SYM_CLASS_AUTOMATIC: u8 = 0x01;
-pub const IMAGE_SYM_CLASS_EXTERNAL: u8 = 0x02;
-pub const IMAGE_SYM_CLASS_STATIC: u8 = 0x03;
-pub const IMAGE_SYM_CLASS_REGISTER: u8 = 0x04;
-pub const IMAGE_SYM_CLASS_EXTERNAL_DEF: u8 = 0x05;
-pub const IMAGE_SYM_CLASS_LABEL: u8 = 0x06;
-pub const IMAGE_SYM_CLASS_UNDEFINED_LABEL: u8 = 0x07;
-pub const IMAGE_SYM_CLASS_MEMBER_OF_STRUCT: u8 = 0x08;
-pub const IMAGE_SYM_CLASS_ARGUMENT: u8 = 0x09;
-pub const IMAGE_SYM_CLASS_STRUCT_TAG: u8 = 0x0A;
-pub const IMAGE_SYM_CLASS_MEMBER_OF_UNION: u8 = 0x0B;
-pub const IMAGE_SYM_CLASS_UNION_TAG: u8 = 0x0C;
-pub const IMAGE_SYM_CLASS_TYPE_DEFINITION: u8 = 0x0D;
-pub const IMAGE_SYM_CLASS_UNDEFINED_STATIC: u8 = 0x0E;
-pub const IMAGE_SYM_CLASS_ENUM_TAG: u8 = 0x0F;
-pub const IMAGE_SYM_CLASS_MEMBER_OF_ENUM: u8 = 0x10;
-pub const IMAGE_SYM_CLASS_REGISTER_PARAM: u8 = 0x11;
-pub const IMAGE_SYM_CLASS_BIT_FIELD: u8 = 0x12;
+newtype_constant_names!(NAMES_IMAGE_SYM_DTYPE: SymbolDerivedType(u16) = {
+    /// pointer.
+    IMAGE_SYM_DTYPE_POINTER = 1,
+    /// function.
+    IMAGE_SYM_DTYPE_FUNCTION = 2,
+    /// array.
+    IMAGE_SYM_DTYPE_ARRAY = 3,
+});
 
-pub const IMAGE_SYM_CLASS_FAR_EXTERNAL: u8 = 0x44;
+newtype!(
+    /// Values for `ImageSymbol::storage_class`.
+    #[repr(transparent)]
+    struct SymbolClass(u8);
+);
 
-pub const IMAGE_SYM_CLASS_BLOCK: u8 = 0x64;
-pub const IMAGE_SYM_CLASS_FUNCTION: u8 = 0x65;
-pub const IMAGE_SYM_CLASS_END_OF_STRUCT: u8 = 0x66;
-pub const IMAGE_SYM_CLASS_FILE: u8 = 0x67;
-// new
-pub const IMAGE_SYM_CLASS_SECTION: u8 = 0x68;
-pub const IMAGE_SYM_CLASS_WEAK_EXTERNAL: u8 = 0x69;
-
-pub const IMAGE_SYM_CLASS_CLR_TOKEN: u8 = 0x6B;
+newtype_constant_names!(NAMES_IMAGE_SYM_CLASS: SymbolClass(u8) = {
+    IMAGE_SYM_CLASS_END_OF_FUNCTION = 0xff,
+    IMAGE_SYM_CLASS_NULL = 0x00,
+    IMAGE_SYM_CLASS_AUTOMATIC = 0x01,
+    IMAGE_SYM_CLASS_EXTERNAL = 0x02,
+    IMAGE_SYM_CLASS_STATIC = 0x03,
+    IMAGE_SYM_CLASS_REGISTER = 0x04,
+    IMAGE_SYM_CLASS_EXTERNAL_DEF = 0x05,
+    IMAGE_SYM_CLASS_LABEL = 0x06,
+    IMAGE_SYM_CLASS_UNDEFINED_LABEL = 0x07,
+    IMAGE_SYM_CLASS_MEMBER_OF_STRUCT = 0x08,
+    IMAGE_SYM_CLASS_ARGUMENT = 0x09,
+    IMAGE_SYM_CLASS_STRUCT_TAG = 0x0A,
+    IMAGE_SYM_CLASS_MEMBER_OF_UNION = 0x0B,
+    IMAGE_SYM_CLASS_UNION_TAG = 0x0C,
+    IMAGE_SYM_CLASS_TYPE_DEFINITION = 0x0D,
+    IMAGE_SYM_CLASS_UNDEFINED_STATIC = 0x0E,
+    IMAGE_SYM_CLASS_ENUM_TAG = 0x0F,
+    IMAGE_SYM_CLASS_MEMBER_OF_ENUM = 0x10,
+    IMAGE_SYM_CLASS_REGISTER_PARAM = 0x11,
+    IMAGE_SYM_CLASS_BIT_FIELD = 0x12,
+    IMAGE_SYM_CLASS_FAR_EXTERNAL = 0x44,
+    IMAGE_SYM_CLASS_BLOCK = 0x64,
+    IMAGE_SYM_CLASS_FUNCTION = 0x65,
+    IMAGE_SYM_CLASS_END_OF_STRUCT = 0x66,
+    IMAGE_SYM_CLASS_FILE = 0x67,
+    IMAGE_SYM_CLASS_SECTION = 0x68,
+    IMAGE_SYM_CLASS_WEAK_EXTERNAL = 0x69,
+    IMAGE_SYM_CLASS_CLR_TOKEN = 0x6B,
+});
 
 // type packing constants
 

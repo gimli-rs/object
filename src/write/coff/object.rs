@@ -134,9 +134,9 @@ impl<'a> Object<'a> {
 
     pub(crate) fn coff_symbol_flags(&self, symbol: &Symbol) -> SymbolFlags<SectionId, SymbolId> {
         let typ = if symbol.kind == SymbolKind::Text {
-            coff::IMAGE_SYM_DTYPE_FUNCTION << coff::IMAGE_SYM_DTYPE_SHIFT
+            coff::IMAGE_SYM_DTYPE_FUNCTION.into()
         } else {
-            coff::IMAGE_SYM_TYPE_NULL
+            coff::SymbolType(0)
         };
         let storage_class = match symbol.kind {
             _ if symbol.weak => coff::IMAGE_SYM_CLASS_WEAK_EXTERNAL,
@@ -753,7 +753,7 @@ impl<'a> Object<'a> {
                         }
                     },
                     number_of_aux_symbols: 0,
-                    typ: 0,
+                    typ: coff::SymbolType(0),
                     storage_class: coff::IMAGE_SYM_CLASS_EXTERNAL,
                 });
             }

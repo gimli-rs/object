@@ -666,17 +666,17 @@ pub enum SymbolFlags<Section, Symbol> {
     #[cfg(feature = "coff")]
     Coff {
         /// `Type` field in the COFF symbol.
-        typ: u16,
+        typ: crate::pe::SymbolType,
         /// `StorageClass` field in the COFF symbol.
-        storage_class: u8,
+        storage_class: crate::pe::SymbolClass,
     },
     /// COFF flags for a section symbol with an auxiliary symbol.
     #[cfg(feature = "coff")]
     CoffSection {
         /// `Type` field in the COFF symbol.
-        typ: u16,
+        typ: crate::pe::SymbolType,
         /// `StorageClass` field in the COFF symbol.
-        storage_class: u8,
+        storage_class: crate::pe::SymbolClass,
         /// `Selection` field in the auxiliary symbol for the section.
         selection: u8,
         /// `Number` field in the auxiliary symbol for the section.

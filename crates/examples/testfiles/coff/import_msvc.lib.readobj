@@ -132,8 +132,6 @@ ImageSymbol {
     Value: 0x1017DD9
     Section: IMAGE_SYM_ABSOLUTE (-1)
     Type: 0x0
-    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
-    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
     StorageClass: IMAGE_SYM_CLASS_STATIC (0x3)
     NumberOfAuxSymbols: 0x0
 }
@@ -143,8 +141,6 @@ ImageSymbol {
     Value: 0x0
     Section: ".idata$5" (0x2)
     Type: 0x0
-    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
-    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
     StorageClass: IMAGE_SYM_CLASS_EXTERNAL (0x2)
     NumberOfAuxSymbols: 0x0
 }
@@ -200,8 +196,6 @@ ImageSymbol {
     Value: 0x1017DD9
     Section: IMAGE_SYM_ABSOLUTE (-1)
     Type: 0x0
-    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
-    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
     StorageClass: IMAGE_SYM_CLASS_STATIC (0x3)
     NumberOfAuxSymbols: 0x0
 }
@@ -211,8 +205,6 @@ ImageSymbol {
     Value: 0x0
     Section: ".idata$3" (0x2)
     Type: 0x0
-    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
-    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
     StorageClass: IMAGE_SYM_CLASS_EXTERNAL (0x2)
     NumberOfAuxSymbols: 0x0
 }
@@ -300,8 +292,6 @@ ImageSymbol {
     Value: 0x1017DD9
     Section: IMAGE_SYM_ABSOLUTE (-1)
     Type: 0x0
-    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
-    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
     StorageClass: IMAGE_SYM_CLASS_STATIC (0x3)
     NumberOfAuxSymbols: 0x0
 }
@@ -311,8 +301,6 @@ ImageSymbol {
     Value: 0x0
     Section: ".idata$2" (0x2)
     Type: 0x0
-    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
-    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
     StorageClass: IMAGE_SYM_CLASS_EXTERNAL (0x2)
     NumberOfAuxSymbols: 0x0
 }
@@ -322,8 +310,6 @@ ImageSymbol {
     Value: 0xC0000040
     Section: ".idata$2" (0x2)
     Type: 0x0
-    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
-    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
     StorageClass: IMAGE_SYM_CLASS_SECTION (0x68)
     NumberOfAuxSymbols: 0x0
 }
@@ -333,8 +319,6 @@ ImageSymbol {
     Value: 0x0
     Section: ".idata$6" (0x3)
     Type: 0x0
-    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
-    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
     StorageClass: IMAGE_SYM_CLASS_STATIC (0x3)
     NumberOfAuxSymbols: 0x0
 }
@@ -344,8 +328,6 @@ ImageSymbol {
     Value: 0xC0000040
     Section: IMAGE_SYM_UNDEFINED (0)
     Type: 0x0
-    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
-    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
     StorageClass: IMAGE_SYM_CLASS_SECTION (0x68)
     NumberOfAuxSymbols: 0x0
 }
@@ -355,8 +337,6 @@ ImageSymbol {
     Value: 0xC0000040
     Section: IMAGE_SYM_UNDEFINED (0)
     Type: 0x0
-    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
-    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
     StorageClass: IMAGE_SYM_CLASS_SECTION (0x68)
     NumberOfAuxSymbols: 0x0
 }
@@ -366,8 +346,6 @@ ImageSymbol {
     Value: 0x0
     Section: IMAGE_SYM_UNDEFINED (0)
     Type: 0x0
-    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
-    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
     StorageClass: IMAGE_SYM_CLASS_EXTERNAL (0x2)
     NumberOfAuxSymbols: 0x0
 }
@@ -377,8 +355,6 @@ ImageSymbol {
     Value: 0x0
     Section: IMAGE_SYM_UNDEFINED (0)
     Type: 0x0
-    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
-    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
     StorageClass: IMAGE_SYM_CLASS_EXTERNAL (0x2)
     NumberOfAuxSymbols: 0x0
 }
@@ -467,8 +443,6 @@ ImageSymbol {
     Value: 0x1017DD9
     Section: IMAGE_SYM_ABSOLUTE (-1)
     Type: 0x0
-    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
-    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
     StorageClass: IMAGE_SYM_CLASS_STATIC (0x3)
     NumberOfAuxSymbols: 0x0
 }
@@ -478,8 +452,6 @@ ImageSymbol {
     Value: 0x0
     Section: ".idata$5" (0x2)
     Type: 0x0
-    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
-    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
     StorageClass: IMAGE_SYM_CLASS_EXTERNAL (0x2)
     NumberOfAuxSymbols: 0x0
 }
@@ -535,8 +507,6 @@ ImageSymbol {
     Value: 0x1017DD9
     Section: IMAGE_SYM_ABSOLUTE (-1)
     Type: 0x0
-    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
-    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
     StorageClass: IMAGE_SYM_CLASS_STATIC (0x3)
     NumberOfAuxSymbols: 0x0
 }
@@ -546,8 +516,6 @@ ImageSymbol {
     Value: 0x0
     Section: ".idata$3" (0x2)
     Type: 0x0
-    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
-    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
     StorageClass: IMAGE_SYM_CLASS_EXTERNAL (0x2)
     NumberOfAuxSymbols: 0x0
 }
@@ -635,8 +603,6 @@ ImageSymbol {
     Value: 0x1017DD9
     Section: IMAGE_SYM_ABSOLUTE (-1)
     Type: 0x0
-    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
-    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
     StorageClass: IMAGE_SYM_CLASS_STATIC (0x3)
     NumberOfAuxSymbols: 0x0
 }
@@ -646,8 +612,6 @@ ImageSymbol {
     Value: 0x0
     Section: ".idata$2" (0x2)
     Type: 0x0
-    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
-    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
     StorageClass: IMAGE_SYM_CLASS_EXTERNAL (0x2)
     NumberOfAuxSymbols: 0x0
 }
@@ -657,8 +621,6 @@ ImageSymbol {
     Value: 0xC0000040
     Section: ".idata$2" (0x2)
     Type: 0x0
-    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
-    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
     StorageClass: IMAGE_SYM_CLASS_SECTION (0x68)
     NumberOfAuxSymbols: 0x0
 }
@@ -668,8 +630,6 @@ ImageSymbol {
     Value: 0x0
     Section: ".idata$6" (0x3)
     Type: 0x0
-    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
-    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
     StorageClass: IMAGE_SYM_CLASS_STATIC (0x3)
     NumberOfAuxSymbols: 0x0
 }
@@ -679,8 +639,6 @@ ImageSymbol {
     Value: 0xC0000040
     Section: IMAGE_SYM_UNDEFINED (0)
     Type: 0x0
-    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
-    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
     StorageClass: IMAGE_SYM_CLASS_SECTION (0x68)
     NumberOfAuxSymbols: 0x0
 }
@@ -690,8 +648,6 @@ ImageSymbol {
     Value: 0xC0000040
     Section: IMAGE_SYM_UNDEFINED (0)
     Type: 0x0
-    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
-    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
     StorageClass: IMAGE_SYM_CLASS_SECTION (0x68)
     NumberOfAuxSymbols: 0x0
 }
@@ -701,8 +657,6 @@ ImageSymbol {
     Value: 0x0
     Section: IMAGE_SYM_UNDEFINED (0)
     Type: 0x0
-    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
-    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
     StorageClass: IMAGE_SYM_CLASS_EXTERNAL (0x2)
     NumberOfAuxSymbols: 0x0
 }
@@ -712,8 +666,6 @@ ImageSymbol {
     Value: 0x0
     Section: IMAGE_SYM_UNDEFINED (0)
     Type: 0x0
-    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
-    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
     StorageClass: IMAGE_SYM_CLASS_EXTERNAL (0x2)
     NumberOfAuxSymbols: 0x0
 }
@@ -803,8 +755,6 @@ ImageSymbol {
     Value: 0x1017DD9
     Section: IMAGE_SYM_ABSOLUTE (-1)
     Type: 0x0
-    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
-    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
     StorageClass: IMAGE_SYM_CLASS_STATIC (0x3)
     NumberOfAuxSymbols: 0x0
 }
@@ -814,8 +764,6 @@ ImageSymbol {
     Value: 0x0
     Section: ".idata$5" (0x2)
     Type: 0x0
-    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
-    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
     StorageClass: IMAGE_SYM_CLASS_EXTERNAL (0x2)
     NumberOfAuxSymbols: 0x0
 }
@@ -871,8 +819,6 @@ ImageSymbol {
     Value: 0x1017DD9
     Section: IMAGE_SYM_ABSOLUTE (-1)
     Type: 0x0
-    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
-    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
     StorageClass: IMAGE_SYM_CLASS_STATIC (0x3)
     NumberOfAuxSymbols: 0x0
 }
@@ -882,8 +828,6 @@ ImageSymbol {
     Value: 0x0
     Section: ".idata$3" (0x2)
     Type: 0x0
-    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
-    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
     StorageClass: IMAGE_SYM_CLASS_EXTERNAL (0x2)
     NumberOfAuxSymbols: 0x0
 }
@@ -971,8 +915,6 @@ ImageSymbol {
     Value: 0x1017DD9
     Section: IMAGE_SYM_ABSOLUTE (-1)
     Type: 0x0
-    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
-    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
     StorageClass: IMAGE_SYM_CLASS_STATIC (0x3)
     NumberOfAuxSymbols: 0x0
 }
@@ -982,8 +924,6 @@ ImageSymbol {
     Value: 0x0
     Section: ".idata$2" (0x2)
     Type: 0x0
-    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
-    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
     StorageClass: IMAGE_SYM_CLASS_EXTERNAL (0x2)
     NumberOfAuxSymbols: 0x0
 }
@@ -993,8 +933,6 @@ ImageSymbol {
     Value: 0xC0000040
     Section: ".idata$2" (0x2)
     Type: 0x0
-    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
-    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
     StorageClass: IMAGE_SYM_CLASS_SECTION (0x68)
     NumberOfAuxSymbols: 0x0
 }
@@ -1004,8 +942,6 @@ ImageSymbol {
     Value: 0x0
     Section: ".idata$6" (0x3)
     Type: 0x0
-    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
-    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
     StorageClass: IMAGE_SYM_CLASS_STATIC (0x3)
     NumberOfAuxSymbols: 0x0
 }
@@ -1015,8 +951,6 @@ ImageSymbol {
     Value: 0xC0000040
     Section: IMAGE_SYM_UNDEFINED (0)
     Type: 0x0
-    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
-    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
     StorageClass: IMAGE_SYM_CLASS_SECTION (0x68)
     NumberOfAuxSymbols: 0x0
 }
@@ -1026,8 +960,6 @@ ImageSymbol {
     Value: 0xC0000040
     Section: IMAGE_SYM_UNDEFINED (0)
     Type: 0x0
-    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
-    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
     StorageClass: IMAGE_SYM_CLASS_SECTION (0x68)
     NumberOfAuxSymbols: 0x0
 }
@@ -1037,8 +969,6 @@ ImageSymbol {
     Value: 0x0
     Section: IMAGE_SYM_UNDEFINED (0)
     Type: 0x0
-    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
-    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
     StorageClass: IMAGE_SYM_CLASS_EXTERNAL (0x2)
     NumberOfAuxSymbols: 0x0
 }
@@ -1048,8 +978,6 @@ ImageSymbol {
     Value: 0x0
     Section: IMAGE_SYM_UNDEFINED (0)
     Type: 0x0
-    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
-    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
     StorageClass: IMAGE_SYM_CLASS_EXTERNAL (0x2)
     NumberOfAuxSymbols: 0x0
 }

@@ -539,8 +539,8 @@ pub trait ImageSymbol: Debug + Pod {
     fn raw_name(&self) -> &[u8; 8];
     fn value(&self) -> u32;
     fn section_number(&self) -> pe::SymbolSection;
-    fn typ(&self) -> u16;
-    fn storage_class(&self) -> u8;
+    fn typ(&self) -> pe::SymbolType;
+    fn storage_class(&self) -> pe::SymbolClass;
     fn number_of_aux_symbols(&self) -> u8;
 
     /// Parse a COFF symbol name.
@@ -624,7 +624,7 @@ pub trait ImageSymbol: Debug + Pod {
     fn has_aux_section(&self) -> bool {
         self.number_of_aux_symbols() > 0
             && self.storage_class() == pe::IMAGE_SYM_CLASS_STATIC
-            && self.typ() == 0
+            && self.typ().0 == 0
     }
 
     /// Return true if the symbol has an auxiliary weak external symbol.
@@ -635,12 +635,12 @@ pub trait ImageSymbol: Debug + Pod {
             && self.value() == 0
     }
 
-    fn base_type(&self) -> u16 {
-        self.typ() & pe::N_BTMASK
+    fn base_type(&self) -> pe::SymbolBaseType {
+        self.typ().base_type()
     }
 
-    fn derived_type(&self) -> u16 {
-        (self.typ() & pe::N_TMASK) >> pe::N_BTSHFT
+    fn derived_type(&self) -> pe::SymbolDerivedType {
+        self.typ().derived_type()
     }
 }
 
@@ -659,10 +659,10 @@ impl ImageSymbol for pe::ImageSymbol {
             pe::SymbolSection(section_number as i32)
         }
     }
-    fn typ(&self) -> u16 {
+    fn typ(&self) -> pe::SymbolType {
         self.typ.get(LE)
     }
-    fn storage_class(&self) -> u8 {
+    fn storage_class(&self) -> pe::SymbolClass {
         self.storage_class
     }
     fn number_of_aux_symbols(&self) -> u8 {
@@ -680,10 +680,10 @@ impl ImageSymbol for pe::ImageSymbolEx {
     fn section_number(&self) -> pe::SymbolSection {
         self.section_number.get(LE)
     }
-    fn typ(&self) -> u16 {
+    fn typ(&self) -> pe::SymbolType {
         self.typ.get(LE)
     }
-    fn storage_class(&self) -> u8 {
+    fn storage_class(&self) -> pe::SymbolClass {
         self.storage_class
     }
     fn number_of_aux_symbols(&self) -> u8 {

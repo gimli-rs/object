@@ -185,8 +185,6 @@ ImageSymbol {
     Value: 0x1047556
     Section: IMAGE_SYM_ABSOLUTE (-1)
     Type: 0x0
-    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
-    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
     StorageClass: IMAGE_SYM_CLASS_STATIC (0x3)
     NumberOfAuxSymbols: 0x0
 }
@@ -196,8 +194,6 @@ ImageSymbol {
     Value: 0x80010191
     Section: IMAGE_SYM_ABSOLUTE (-1)
     Type: 0x0
-    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
-    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
     StorageClass: IMAGE_SYM_CLASS_STATIC (0x3)
     NumberOfAuxSymbols: 0x0
 }
@@ -207,8 +203,6 @@ ImageSymbol {
     Value: 0x0
     Section: ".drectve" (0x1)
     Type: 0x0
-    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
-    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
     StorageClass: IMAGE_SYM_CLASS_STATIC (0x3)
     NumberOfAuxSymbols: 0x1
     ImageAuxSymbolSection {
@@ -228,8 +222,6 @@ ImageSymbol {
     Value: 0x0
     Section: ".debug$S" (0x2)
     Type: 0x0
-    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
-    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
     StorageClass: IMAGE_SYM_CLASS_STATIC (0x3)
     NumberOfAuxSymbols: 0x1
     ImageAuxSymbolSection {
@@ -249,8 +241,6 @@ ImageSymbol {
     Value: 0x0
     Section: ".text$mn" (0x3)
     Type: 0x0
-    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
-    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
     StorageClass: IMAGE_SYM_CLASS_STATIC (0x3)
     NumberOfAuxSymbols: 0x1
     ImageAuxSymbolSection {
@@ -270,8 +260,6 @@ ImageSymbol {
     Value: 0x0
     Section: ".text$mn" (0x4)
     Type: 0x0
-    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
-    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
     StorageClass: IMAGE_SYM_CLASS_STATIC (0x3)
     NumberOfAuxSymbols: 0x1
     ImageAuxSymbolSection {
@@ -291,8 +279,6 @@ ImageSymbol {
     Value: 0x0
     Section: ".text$mn" (0x5)
     Type: 0x0
-    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
-    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
     StorageClass: IMAGE_SYM_CLASS_STATIC (0x3)
     NumberOfAuxSymbols: 0x1
     ImageAuxSymbolSection {
@@ -312,8 +298,6 @@ ImageSymbol {
     Value: 0x0
     Section: ".text$mn" (0x6)
     Type: 0x0
-    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
-    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
     StorageClass: IMAGE_SYM_CLASS_STATIC (0x3)
     NumberOfAuxSymbols: 0x1
     ImageAuxSymbolSection {
@@ -332,9 +316,7 @@ ImageSymbol {
     Name: "___local_stdio_printf_options"
     Value: 0x0
     Section: ".text$mn" (0x4)
-    Type: 0x20
-    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
-    DerivedType: IMAGE_SYM_DTYPE_FUNCTION (0x2)
+    Type: IMAGE_SYM_DTYPE_FUNCTION (0x20)
     StorageClass: IMAGE_SYM_CLASS_EXTERNAL (0x2)
     NumberOfAuxSymbols: 0x0
 }
@@ -343,9 +325,7 @@ ImageSymbol {
     Name: "___acrt_iob_func"
     Value: 0x0
     Section: IMAGE_SYM_UNDEFINED (0)
-    Type: 0x20
-    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
-    DerivedType: IMAGE_SYM_DTYPE_FUNCTION (0x2)
+    Type: IMAGE_SYM_DTYPE_FUNCTION (0x20)
     StorageClass: IMAGE_SYM_CLASS_EXTERNAL (0x2)
     NumberOfAuxSymbols: 0x0
 }
@@ -354,9 +334,7 @@ ImageSymbol {
     Name: "___stdio_common_vfprintf"
     Value: 0x0
     Section: IMAGE_SYM_UNDEFINED (0)
-    Type: 0x20
-    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
-    DerivedType: IMAGE_SYM_DTYPE_FUNCTION (0x2)
+    Type: IMAGE_SYM_DTYPE_FUNCTION (0x20)
     StorageClass: IMAGE_SYM_CLASS_EXTERNAL (0x2)
     NumberOfAuxSymbols: 0x0
 }
@@ -365,9 +343,7 @@ ImageSymbol {
     Name: "__vfprintf_l"
     Value: 0x0
     Section: ".text$mn" (0x5)
-    Type: 0x20
-    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
-    DerivedType: IMAGE_SYM_DTYPE_FUNCTION (0x2)
+    Type: IMAGE_SYM_DTYPE_FUNCTION (0x20)
     StorageClass: IMAGE_SYM_CLASS_EXTERNAL (0x2)
     NumberOfAuxSymbols: 0x0
 }
@@ -376,9 +352,7 @@ ImageSymbol {
     Name: "_printf"
     Value: 0x0
     Section: ".text$mn" (0x6)
-    Type: 0x20
-    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
-    DerivedType: IMAGE_SYM_DTYPE_FUNCTION (0x2)
+    Type: IMAGE_SYM_DTYPE_FUNCTION (0x20)
     StorageClass: IMAGE_SYM_CLASS_EXTERNAL (0x2)
     NumberOfAuxSymbols: 0x0
 }
@@ -387,9 +361,7 @@ ImageSymbol {
     Name: "_main"
     Value: 0x0
     Section: ".text$mn" (0x3)
-    Type: 0x20
-    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
-    DerivedType: IMAGE_SYM_DTYPE_FUNCTION (0x2)
+    Type: IMAGE_SYM_DTYPE_FUNCTION (0x20)
     StorageClass: IMAGE_SYM_CLASS_EXTERNAL (0x2)
     NumberOfAuxSymbols: 0x0
 }
@@ -399,8 +371,6 @@ ImageSymbol {
     Value: 0x8
     Section: IMAGE_SYM_UNDEFINED (0)
     Type: 0x0
-    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
-    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
     StorageClass: IMAGE_SYM_CLASS_EXTERNAL (0x2)
     NumberOfAuxSymbols: 0x0
 }
@@ -410,8 +380,6 @@ ImageSymbol {
     Value: 0x0
     Section: ".data" (0x7)
     Type: 0x0
-    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
-    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
     StorageClass: IMAGE_SYM_CLASS_STATIC (0x3)
     NumberOfAuxSymbols: 0x1
     ImageAuxSymbolSection {
@@ -431,8 +399,6 @@ ImageSymbol {
     Value: 0x0
     Section: ".data" (0x7)
     Type: 0x0
-    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
-    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
     StorageClass: IMAGE_SYM_CLASS_STATIC (0x3)
     NumberOfAuxSymbols: 0x0
 }
@@ -442,8 +408,6 @@ ImageSymbol {
     Value: 0x0
     Section: ".chks64" (0x8)
     Type: 0x0
-    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
-    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
     StorageClass: IMAGE_SYM_CLASS_STATIC (0x3)
     NumberOfAuxSymbols: 0x1
     ImageAuxSymbolSection {
