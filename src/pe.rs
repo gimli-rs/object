@@ -2534,7 +2534,7 @@ pub struct ImageDynamicRelocationTable {
 #[derive(Debug, Clone, Copy)]
 #[repr(C)]
 pub struct ImageDynamicRelocation32 {
-    pub symbol: U32<LE>,
+    pub symbol: U32<LE, DynamicRelocationSymbol>,
     pub base_reloc_size: U32<LE>,
     // BaseRelocations: [ImageBaseRelocation; 0],
 }
@@ -2542,7 +2542,7 @@ pub struct ImageDynamicRelocation32 {
 #[derive(Debug, Clone, Copy)]
 #[repr(C)]
 pub struct ImageDynamicRelocation64 {
-    pub symbol: U64<LE>,
+    pub symbol: U64<LE, DynamicRelocationSymbol>,
     pub base_reloc_size: U32<LE>,
     // BaseRelocations: [ImageBaseRelocation; 0],
 }
@@ -2552,7 +2552,7 @@ pub struct ImageDynamicRelocation64 {
 pub struct ImageDynamicRelocation32V2 {
     pub header_size: U32<LE>,
     pub fixup_info_size: U32<LE>,
-    pub symbol: U32<LE>,
+    pub symbol: U32<LE, DynamicRelocationSymbol>,
     pub symbol_group: U32<LE>,
     pub flags: U32<LE>,
     // ...     variable length header fields
@@ -2564,7 +2564,7 @@ pub struct ImageDynamicRelocation32V2 {
 pub struct ImageDynamicRelocation64V2 {
     pub header_size: U32<LE>,
     pub fixup_info_size: U32<LE>,
-    pub symbol: U64<LE>,
+    pub symbol: U64<LE, DynamicRelocationSymbol>,
     pub symbol_group: U32<LE>,
     pub flags: U32<LE>,
     // ...     variable length header fields
@@ -2574,12 +2574,20 @@ pub struct ImageDynamicRelocation64V2 {
 //
 // Defined symbolic dynamic relocation entries.
 //
+newtype!(
+    /// Values for `ImageDynamicRelocation*::symbol`.
+    ///
+    /// Small values have special meaning. Other values are RVAs.
+    struct DynamicRelocationSymbol(u64);
+);
 
-pub const IMAGE_DYNAMIC_RELOCATION_GUARD_RF_PROLOGUE: u32 = 0x0000_0001;
-pub const IMAGE_DYNAMIC_RELOCATION_GUARD_RF_EPILOGUE: u32 = 0x0000_0002;
-pub const IMAGE_DYNAMIC_RELOCATION_GUARD_IMPORT_CONTROL_TRANSFER: u32 = 0x0000_0003;
-pub const IMAGE_DYNAMIC_RELOCATION_GUARD_INDIR_CONTROL_TRANSFER: u32 = 0x0000_0004;
-pub const IMAGE_DYNAMIC_RELOCATION_GUARD_SWITCHTABLE_BRANCH: u32 = 0x0000_0005;
+newtype_constant_names!(NAMES_DYNAMIC_RELOCATION: DynamicRelocationSymbol(u64) = {
+    IMAGE_DYNAMIC_RELOCATION_GUARD_RF_PROLOGUE = 0x0000_0001,
+    IMAGE_DYNAMIC_RELOCATION_GUARD_RF_EPILOGUE = 0x0000_0002,
+    IMAGE_DYNAMIC_RELOCATION_GUARD_IMPORT_CONTROL_TRANSFER = 0x0000_0003,
+    IMAGE_DYNAMIC_RELOCATION_GUARD_INDIR_CONTROL_TRANSFER = 0x0000_0004,
+    IMAGE_DYNAMIC_RELOCATION_GUARD_SWITCHTABLE_BRANCH = 0x0000_0005,
+});
 
 // This struct has alignment 1.
 #[derive(Debug, Clone, Copy)]
@@ -2670,7 +2678,7 @@ pub struct ImageLoadConfigDirectory32 {
     /// VA
     pub guard_cf_function_table: U32<LE>,
     pub guard_cf_function_count: U32<LE>,
-    pub guard_flags: U32<LE>,
+    pub guard_flags: U32<LE, GuardFlags>,
     pub code_integrity: ImageLoadConfigCodeIntegrity,
     /// VA
     pub guard_address_taken_iat_entry_table: U32<LE>,
@@ -2732,7 +2740,7 @@ pub struct ImageLoadConfigDirectory64 {
     /// VA
     pub guard_cf_function_table: U64<LE>,
     pub guard_cf_function_count: U64<LE>,
-    pub guard_flags: U32<LE>,
+    pub guard_flags: U32<LE, GuardFlags>,
     pub code_integrity: ImageLoadConfigCodeIntegrity,
     /// VA
     pub guard_address_taken_iat_entry_table: U64<LE>,
@@ -2779,7 +2787,7 @@ pub struct ImageHotPatchInfo {
 #[repr(C)]
 pub struct ImageHotPatchBase {
     pub sequence_number: U32<LE>,
-    pub flags: U32<LE>,
+    pub flags: U32<LE, HotPatchBaseFlags>,
     pub original_time_date_stamp: U32<LE>,
     pub original_check_sum: U32<LE>,
     pub code_integrity_info: U32<LE>,
@@ -2796,54 +2804,80 @@ pub struct ImageHotPatchHashes {
     pub sha1: [u8; 20],
 }
 
-pub const IMAGE_HOT_PATCH_BASE_OBLIGATORY: u32 = 0x0000_0001;
-pub const IMAGE_HOT_PATCH_BASE_CAN_ROLL_BACK: u32 = 0x0000_0002;
+newtype!(
+    /// Values for `ImageHotPatchBase::flags`.
+    struct HotPatchBaseFlags(u32);
+);
 
-pub const IMAGE_HOT_PATCH_CHUNK_INVERSE: u32 = 0x8000_0000;
-pub const IMAGE_HOT_PATCH_CHUNK_OBLIGATORY: u32 = 0x4000_0000;
+newtype_flag_names!(NAMES_HOT_PATCH_BASE: HotPatchBaseFlags(u32) = {
+    IMAGE_HOT_PATCH_BASE_OBLIGATORY = 0x0000_0001,
+    IMAGE_HOT_PATCH_BASE_CAN_ROLL_BACK = 0x0000_0002,
+});
+
+newtype!(
+    struct HotPatchChunkFlags(u32);
+);
+
+// TODO: convenience methods for subfields
+
+newtype_flag_names!(NAMES_HOT_PATCH_CHUNK: HotPatchChunkFlags(u32) = {
+    IMAGE_HOT_PATCH_CHUNK_INVERSE = 0x8000_0000,
+    IMAGE_HOT_PATCH_CHUNK_OBLIGATORY = 0x4000_0000,
+    _ = IMAGE_HOT_PATCH_CHUNK_TYPE => NAMES_HOT_PATCH_CHUNK_TYPE,
+});
+
 pub const IMAGE_HOT_PATCH_CHUNK_RESERVED: u32 = 0x3FF0_3000;
 pub const IMAGE_HOT_PATCH_CHUNK_TYPE: u32 = 0x000F_C000;
 pub const IMAGE_HOT_PATCH_CHUNK_SOURCE_RVA: u32 = 0x0000_8000;
 pub const IMAGE_HOT_PATCH_CHUNK_TARGET_RVA: u32 = 0x0000_4000;
 pub const IMAGE_HOT_PATCH_CHUNK_SIZE: u32 = 0x0000_0FFF;
 
-pub const IMAGE_HOT_PATCH_NONE: u32 = 0x0000_0000;
-pub const IMAGE_HOT_PATCH_FUNCTION: u32 = 0x0001_C000;
-pub const IMAGE_HOT_PATCH_ABSOLUTE: u32 = 0x0002_C000;
-pub const IMAGE_HOT_PATCH_REL32: u32 = 0x0003_C000;
-pub const IMAGE_HOT_PATCH_CALL_TARGET: u32 = 0x0004_4000;
-pub const IMAGE_HOT_PATCH_INDIRECT: u32 = 0x0005_C000;
-pub const IMAGE_HOT_PATCH_NO_CALL_TARGET: u32 = 0x0006_4000;
-pub const IMAGE_HOT_PATCH_DYNAMIC_VALUE: u32 = 0x0007_8000;
+constant_names!(NAMES_HOT_PATCH_CHUNK_TYPE: HotPatchChunkFlags(u32) = {
+    IMAGE_HOT_PATCH_NONE = 0x0000_0000,
+    IMAGE_HOT_PATCH_FUNCTION = 0x0001_C000,
+    IMAGE_HOT_PATCH_ABSOLUTE = 0x0002_C000,
+    IMAGE_HOT_PATCH_REL32 = 0x0003_C000,
+    IMAGE_HOT_PATCH_CALL_TARGET = 0x0004_4000,
+    IMAGE_HOT_PATCH_INDIRECT = 0x0005_C000,
+    IMAGE_HOT_PATCH_NO_CALL_TARGET = 0x0006_4000,
+    IMAGE_HOT_PATCH_DYNAMIC_VALUE = 0x0007_8000,
+});
 
-/// Module performs control flow integrity checks using system-supplied support
-pub const IMAGE_GUARD_CF_INSTRUMENTED: u32 = 0x0000_0100;
-/// Module performs control flow and write integrity checks
-pub const IMAGE_GUARD_CFW_INSTRUMENTED: u32 = 0x0000_0200;
-/// Module contains valid control flow target metadata
-pub const IMAGE_GUARD_CF_FUNCTION_TABLE_PRESENT: u32 = 0x0000_0400;
-/// Module does not make use of the /GS security cookie
-pub const IMAGE_GUARD_SECURITY_COOKIE_UNUSED: u32 = 0x0000_0800;
-/// Module supports read only delay load IAT
-pub const IMAGE_GUARD_PROTECT_DELAYLOAD_IAT: u32 = 0x0000_1000;
-/// Delayload import table in its own .didat section (with nothing else in it) that can be freely reprotected
-pub const IMAGE_GUARD_DELAYLOAD_IAT_IN_ITS_OWN_SECTION: u32 = 0x0000_2000;
-/// Module contains suppressed export information.
-///
-/// This also infers that the address taken taken IAT table is also present in the load config.
-pub const IMAGE_GUARD_CF_EXPORT_SUPPRESSION_INFO_PRESENT: u32 = 0x0000_4000;
-/// Module enables suppression of exports
-pub const IMAGE_GUARD_CF_ENABLE_EXPORT_SUPPRESSION: u32 = 0x0000_8000;
-/// Module contains longjmp target information
-pub const IMAGE_GUARD_CF_LONGJUMP_TABLE_PRESENT: u32 = 0x0001_0000;
-/// Module contains return flow instrumentation and metadata
-pub const IMAGE_GUARD_RF_INSTRUMENTED: u32 = 0x0002_0000;
-/// Module requests that the OS enable return flow protection
-pub const IMAGE_GUARD_RF_ENABLE: u32 = 0x0004_0000;
-/// Module requests that the OS enable return flow protection in strict mode
-pub const IMAGE_GUARD_RF_STRICT: u32 = 0x0008_0000;
-/// Module was built with retpoline support
-pub const IMAGE_GUARD_RETPOLINE_PRESENT: u32 = 0x0010_0000;
+newtype!(
+    /// Values for `ImageLoadConfigDirectory*::guard_flags`.
+    struct GuardFlags(u32);
+);
+
+newtype_flag_names!(NAMES_GUARD: GuardFlags(u32) = {
+    /// Module performs control flow integrity checks using system-supplied support
+    IMAGE_GUARD_CF_INSTRUMENTED = 0x0000_0100,
+    /// Module performs control flow and write integrity checks
+    IMAGE_GUARD_CFW_INSTRUMENTED = 0x0000_0200,
+    /// Module contains valid control flow target metadata
+    IMAGE_GUARD_CF_FUNCTION_TABLE_PRESENT = 0x0000_0400,
+    /// Module does not make use of the /GS security cookie
+    IMAGE_GUARD_SECURITY_COOKIE_UNUSED = 0x0000_0800,
+    /// Module supports read only delay load IAT
+    IMAGE_GUARD_PROTECT_DELAYLOAD_IAT = 0x0000_1000,
+    /// Delayload import table in its own .didat section (with nothing else in it) that can be freely reprotected
+    IMAGE_GUARD_DELAYLOAD_IAT_IN_ITS_OWN_SECTION = 0x0000_2000,
+    /// Module contains suppressed export information.
+    ///
+    /// This also infers that the address taken taken IAT table is also present in the load config.
+    IMAGE_GUARD_CF_EXPORT_SUPPRESSION_INFO_PRESENT = 0x0000_4000,
+    /// Module enables suppression of exports
+    IMAGE_GUARD_CF_ENABLE_EXPORT_SUPPRESSION = 0x0000_8000,
+    /// Module contains longjmp target information
+    IMAGE_GUARD_CF_LONGJUMP_TABLE_PRESENT = 0x0001_0000,
+    /// Module contains return flow instrumentation and metadata
+    IMAGE_GUARD_RF_INSTRUMENTED = 0x0002_0000,
+    /// Module requests that the OS enable return flow protection
+    IMAGE_GUARD_RF_ENABLE = 0x0004_0000,
+    /// Module requests that the OS enable return flow protection in strict mode
+    IMAGE_GUARD_RF_STRICT = 0x0008_0000,
+    /// Module was built with retpoline support
+    IMAGE_GUARD_RETPOLINE_PRESENT = 0x0010_0000,
+});
 
 /// Stride of Guard CF function table encoded in these bits (additional count of bytes per element)
 pub const IMAGE_GUARD_CF_FUNCTION_TABLE_SIZE_MASK: u32 = 0xF000_0000;
@@ -2854,10 +2888,17 @@ pub const IMAGE_GUARD_CF_FUNCTION_TABLE_SIZE_SHIFT: u32 = 28;
 // GFIDS table entry flags.
 //
 
-/// The containing GFID entry is suppressed
-pub const IMAGE_GUARD_FLAG_FID_SUPPRESSED: u16 = 0x01;
-/// The containing GFID entry is export suppressed
-pub const IMAGE_GUARD_FLAG_EXPORT_SUPPRESSED: u16 = 0x02;
+newtype!(
+    /// Values for flags in the Guard CF function table entries.
+    struct GuardFunctionFlags(u16);
+);
+
+newtype_flag_names!(NAMES_GUARD_FLAG: GuardFunctionFlags(u16) = {
+    /// The containing GFID entry is suppressed
+    IMAGE_GUARD_FLAG_FID_SUPPRESSED = 0x01,
+    /// The containing GFID entry is export suppressed
+    IMAGE_GUARD_FLAG_EXPORT_SUPPRESSED = 0x02,
+});
 
 //
 // WIN CE Exception table format
@@ -2935,7 +2976,7 @@ pub const IMAGE_ENCLAVE_SHORT_ID_LENGTH: usize = 16;
 pub struct ImageEnclaveConfig32 {
     pub size: U32<LE>,
     pub minimum_required_config_size: U32<LE>,
-    pub policy_flags: U32<LE>,
+    pub policy_flags: U32<LE, EnclavePolicyFlags>,
     pub number_of_imports: U32<LE>,
     pub import_list: U32<LE>,
     pub import_entry_size: U32<LE>,
@@ -2945,7 +2986,7 @@ pub struct ImageEnclaveConfig32 {
     pub security_version: U32<LE>,
     pub enclave_size: U32<LE>,
     pub number_of_threads: U32<LE>,
-    pub enclave_flags: U32<LE>,
+    pub enclave_flags: U32<LE, EnclaveFlags>,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -2953,7 +2994,7 @@ pub struct ImageEnclaveConfig32 {
 pub struct ImageEnclaveConfig64 {
     pub size: U32<LE>,
     pub minimum_required_config_size: U32<LE>,
-    pub policy_flags: U32<LE>,
+    pub policy_flags: U32<LE, EnclavePolicyFlags>,
     pub number_of_imports: U32<LE>,
     pub import_list: U32<LE>,
     pub import_entry_size: U32<LE>,
@@ -2963,19 +3004,29 @@ pub struct ImageEnclaveConfig64 {
     pub security_version: U32<LE>,
     pub enclave_size: U64<LE>,
     pub number_of_threads: U32<LE>,
-    pub enclave_flags: U32<LE>,
+    pub enclave_flags: U32<LE, EnclaveFlags>,
 }
 
 //pub const IMAGE_ENCLAVE_MINIMUM_CONFIG_SIZE: usize = FIELD_OFFSET(IMAGE_ENCLAVE_CONFIG, EnclaveFlags);
 
-pub const IMAGE_ENCLAVE_POLICY_DEBUGGABLE: u32 = 0x0000_0001;
+newtype!(
+    struct EnclavePolicyFlags(u32);
+);
+newtype_flag_names!(NAMES_IMAGE_ENCLAVE_POLICY: EnclavePolicyFlags(u32) = {
+    IMAGE_ENCLAVE_POLICY_DEBUGGABLE = 0x0000_0001,
+});
 
-pub const IMAGE_ENCLAVE_FLAG_PRIMARY_IMAGE: u32 = 0x0000_0001;
+newtype!(
+    struct EnclaveFlags(u32);
+);
+newtype_flag_names!(NAMES_IMAGE_ENCLAVE_FLAG: EnclaveFlags(u32) = {
+    IMAGE_ENCLAVE_FLAG_PRIMARY_IMAGE = 0x0000_0001,
+});
 
 #[derive(Debug, Clone, Copy)]
 #[repr(C)]
 pub struct ImageEnclaveImport {
-    pub match_type: U32<LE>,
+    pub match_type: U32<LE, EnclaveImportMatchType>,
     pub minimum_security_version: U32<LE>,
     pub unique_or_author_id: [u8; IMAGE_ENCLAVE_LONG_ID_LENGTH],
     pub family_id: [u8; IMAGE_ENCLAVE_SHORT_ID_LENGTH],
@@ -2984,11 +3035,17 @@ pub struct ImageEnclaveImport {
     pub reserved: U32<LE>,
 }
 
-pub const IMAGE_ENCLAVE_IMPORT_MATCH_NONE: u32 = 0x0000_0000;
-pub const IMAGE_ENCLAVE_IMPORT_MATCH_UNIQUE_ID: u32 = 0x0000_0001;
-pub const IMAGE_ENCLAVE_IMPORT_MATCH_AUTHOR_ID: u32 = 0x0000_0002;
-pub const IMAGE_ENCLAVE_IMPORT_MATCH_FAMILY_ID: u32 = 0x0000_0003;
-pub const IMAGE_ENCLAVE_IMPORT_MATCH_IMAGE_ID: u32 = 0x0000_0004;
+newtype!(
+    /// Values for `ImageEnclaveImport::match_type`.
+    struct EnclaveImportMatchType(u32);
+);
+newtype_constant_names!(NAMES_ENCLAVE_IMPORT_MATCH: EnclaveImportMatchType(u32) = {
+    IMAGE_ENCLAVE_IMPORT_MATCH_NONE = 0x0000_0000,
+    IMAGE_ENCLAVE_IMPORT_MATCH_UNIQUE_ID = 0x0000_0001,
+    IMAGE_ENCLAVE_IMPORT_MATCH_AUTHOR_ID = 0x0000_0002,
+    IMAGE_ENCLAVE_IMPORT_MATCH_FAMILY_ID = 0x0000_0003,
+    IMAGE_ENCLAVE_IMPORT_MATCH_IMAGE_ID = 0x0000_0004,
+});
 
 //
 // Debug Format
@@ -3045,10 +3102,16 @@ pub struct ImageCoffSymbolsHeader {
     pub rva_to_last_byte_of_data: U32<LE>,
 }
 
-pub const FRAME_FPO: u16 = 0;
-pub const FRAME_TRAP: u16 = 1;
-pub const FRAME_TSS: u16 = 2;
-pub const FRAME_NONFPO: u16 = 3;
+newtype!(
+    /// Values for `FpoData::cbFrame`.
+    struct FrameType(u8);
+);
+newtype_constant_names!(NAMES_FRAME: FrameType(u8) = {
+    FRAME_FPO = 0,
+    FRAME_TRAP = 1,
+    FRAME_TSS = 2,
+    FRAME_NONFPO = 3,
+});
 
 /*
 // TODO? bitfields
@@ -3332,14 +3395,19 @@ newtype_constant_names!(NAMES_IMPORT_OBJECT_NAME: ImportObjectNameType(u16) = {
     IMPORT_OBJECT_NAME_EXPORTAS = 4,
 });
 
-// COM+ Header entry point flags.
-pub const COMIMAGE_FLAGS_ILONLY: u32 = 0x0000_0001;
-pub const COMIMAGE_FLAGS_32BITREQUIRED: u32 = 0x0000_0002;
-pub const COMIMAGE_FLAGS_IL_LIBRARY: u32 = 0x0000_0004;
-pub const COMIMAGE_FLAGS_STRONGNAMESIGNED: u32 = 0x0000_0008;
-pub const COMIMAGE_FLAGS_NATIVE_ENTRYPOINT: u32 = 0x0000_0010;
-pub const COMIMAGE_FLAGS_TRACKDEBUGDATA: u32 = 0x0001_0000;
-pub const COMIMAGE_FLAGS_32BITPREFERRED: u32 = 0x0002_0000;
+newtype!(
+    /// Values for `ImageCor20Header::flags`.
+    struct CorFlags(u32);
+);
+newtype_flag_names!(NAMES_COMIMAGE_FLAGS: CorFlags(u32) = {
+    COMIMAGE_FLAGS_ILONLY = 0x0000_0001,
+    COMIMAGE_FLAGS_32BITREQUIRED = 0x0000_0002,
+    COMIMAGE_FLAGS_IL_LIBRARY = 0x0000_0004,
+    COMIMAGE_FLAGS_STRONGNAMESIGNED = 0x0000_0008,
+    COMIMAGE_FLAGS_NATIVE_ENTRYPOINT = 0x0000_0010,
+    COMIMAGE_FLAGS_TRACKDEBUGDATA = 0x0001_0000,
+    COMIMAGE_FLAGS_32BITPREFERRED = 0x0002_0000,
+});
 
 // Version flags for image.
 pub const COR_VERSION_MAJOR_V2: u16 = 2;
@@ -3358,16 +3426,21 @@ pub const IMAGE_COR_MIH_EHRVA: u16 = 0x02;
 pub const IMAGE_COR_MIH_BASICBLOCK: u16 = 0x08;
 
 // V-table constants
-/// V-table slots are 32-bits in size.
-pub const COR_VTABLE_32BIT: u16 = 0x01;
-/// V-table slots are 64-bits in size.
-pub const COR_VTABLE_64BIT: u16 = 0x02;
-/// If set, transition from unmanaged.
-pub const COR_VTABLE_FROM_UNMANAGED: u16 = 0x04;
-/// If set, transition from unmanaged with keeping the current appdomain.
-pub const COR_VTABLE_FROM_UNMANAGED_RETAIN_APPDOMAIN: u16 = 0x08;
-/// Call most derived method described by
-pub const COR_VTABLE_CALL_MOST_DERIVED: u16 = 0x10;
+newtype!(
+    struct CorVtableFlags(u16);
+);
+newtype_flag_names!(NAMES_COR_VTABLE: CorVtableFlags(u16) = {
+    /// V-table slots are 32-bits in size.
+    COR_VTABLE_32BIT = 0x01,
+    /// V-table slots are 64-bits in size.
+    COR_VTABLE_64BIT = 0x02,
+    /// If set, transition from unmanaged.
+    COR_VTABLE_FROM_UNMANAGED = 0x04,
+    /// If set, transition from unmanaged with keeping the current appdomain.
+    COR_VTABLE_FROM_UNMANAGED_RETAIN_APPDOMAIN = 0x08,
+    /// Call most derived method described by
+    COR_VTABLE_CALL_MOST_DERIVED = 0x10,
+});
 
 // EATJ constants
 /// Size of a jump thunk reserved range.
@@ -3388,7 +3461,7 @@ pub struct ImageCor20Header {
 
     // Symbol table and startup information
     pub meta_data: ImageDataDirectory,
-    pub flags: U32<LE>,
+    pub flags: U32<LE, CorFlags>,
 
     // If COMIMAGE_FLAGS_NATIVE_ENTRYPOINT is not set, EntryPointToken represents a managed entrypoint.
     // If COMIMAGE_FLAGS_NATIVE_ENTRYPOINT is set, EntryPointRVA represents an RVA to a native entrypoint.
