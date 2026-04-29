@@ -651,39 +651,42 @@ newtype_flag_names!(NAMES_DLL_FLAGS: DllFlags(u16) = {
     IMAGE_DLLCHARACTERISTICS_TERMINAL_SERVER_AWARE = 0x8000,
 });
 
-// Indices for `ImageOptionalHeader*::data_directory`.
+/// Indices for `ImageOptionalHeader*::data_directory`.
+#[cfg(feature = "names")]
+pub const NAMES_DIRECTORY_ENTRY: &ConstantNames<usize> = &_NAMES_DIRECTORY_ENTRY;
 
-/// Export Directory
-pub const IMAGE_DIRECTORY_ENTRY_EXPORT: usize = 0;
-/// Import Directory
-pub const IMAGE_DIRECTORY_ENTRY_IMPORT: usize = 1;
-/// Resource Directory
-pub const IMAGE_DIRECTORY_ENTRY_RESOURCE: usize = 2;
-/// Exception Directory
-pub const IMAGE_DIRECTORY_ENTRY_EXCEPTION: usize = 3;
-/// Security Directory
-pub const IMAGE_DIRECTORY_ENTRY_SECURITY: usize = 4;
-/// Base Relocation Table
-pub const IMAGE_DIRECTORY_ENTRY_BASERELOC: usize = 5;
-/// Debug Directory
-pub const IMAGE_DIRECTORY_ENTRY_DEBUG: usize = 6;
-//      IMAGE_DIRECTORY_ENTRY_COPYRIGHT       7   // (X86 usage)
-/// Architecture Specific Data
-pub const IMAGE_DIRECTORY_ENTRY_ARCHITECTURE: usize = 7;
-/// RVA of GP
-pub const IMAGE_DIRECTORY_ENTRY_GLOBALPTR: usize = 8;
-/// TLS Directory
-pub const IMAGE_DIRECTORY_ENTRY_TLS: usize = 9;
-/// Load Configuration Directory
-pub const IMAGE_DIRECTORY_ENTRY_LOAD_CONFIG: usize = 10;
-/// Bound Import Directory in headers
-pub const IMAGE_DIRECTORY_ENTRY_BOUND_IMPORT: usize = 11;
-/// Import Address Table
-pub const IMAGE_DIRECTORY_ENTRY_IAT: usize = 12;
-/// Delay Load Import Descriptors
-pub const IMAGE_DIRECTORY_ENTRY_DELAY_IMPORT: usize = 13;
-/// COM Runtime descriptor
-pub const IMAGE_DIRECTORY_ENTRY_COM_DESCRIPTOR: usize = 14;
+constant_names!(_NAMES_DIRECTORY_ENTRY: usize = {
+    /// Export Directory
+    IMAGE_DIRECTORY_ENTRY_EXPORT = 0,
+    /// Import Directory
+    IMAGE_DIRECTORY_ENTRY_IMPORT = 1,
+    /// Resource Directory
+    IMAGE_DIRECTORY_ENTRY_RESOURCE = 2,
+    /// Exception Directory
+    IMAGE_DIRECTORY_ENTRY_EXCEPTION = 3,
+    /// Security Directory
+    IMAGE_DIRECTORY_ENTRY_SECURITY = 4,
+    /// Base Relocation Table
+    IMAGE_DIRECTORY_ENTRY_BASERELOC = 5,
+    /// Debug Directory
+    IMAGE_DIRECTORY_ENTRY_DEBUG = 6,
+    /// Architecture Specific Data
+    IMAGE_DIRECTORY_ENTRY_ARCHITECTURE = 7,
+    /// RVA of GP
+    IMAGE_DIRECTORY_ENTRY_GLOBALPTR = 8,
+    /// TLS Directory
+    IMAGE_DIRECTORY_ENTRY_TLS = 9,
+    /// Load Configuration Directory
+    IMAGE_DIRECTORY_ENTRY_LOAD_CONFIG = 10,
+    /// Bound Import Directory in headers
+    IMAGE_DIRECTORY_ENTRY_BOUND_IMPORT = 11,
+    /// Import Address Table
+    IMAGE_DIRECTORY_ENTRY_IAT = 12,
+    /// Delay Load Import Descriptors
+    IMAGE_DIRECTORY_ENTRY_DELAY_IMPORT = 13,
+    /// COM Runtime descriptor
+    IMAGE_DIRECTORY_ENTRY_COM_DESCRIPTOR = 14,
+});
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(C)]

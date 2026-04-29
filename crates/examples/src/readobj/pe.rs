@@ -244,7 +244,7 @@ fn print_data_directories(p: &mut Printer<'_>, data_directories: &DataDirectorie
     }
     for (index, dir) in data_directories.iter().enumerate() {
         p.group("ImageDataDirectory", |p| {
-            p.field_enum("Index", index, FLAGS_IMAGE_DIRECTORY_ENTRY);
+            p.field_consts("Index", index, NAMES_DIRECTORY_ENTRY);
             p.field_hex("VirtualAddress", dir.virtual_address.get(LE));
             p.field_hex("Size", dir.size.get(LE));
         });
@@ -798,23 +798,6 @@ fn print_reloc_dir(
     Some(())
 }
 
-const FLAGS_IMAGE_DIRECTORY_ENTRY: &[Flag<usize>] = &flags!(
-    IMAGE_DIRECTORY_ENTRY_EXPORT,
-    IMAGE_DIRECTORY_ENTRY_IMPORT,
-    IMAGE_DIRECTORY_ENTRY_RESOURCE,
-    IMAGE_DIRECTORY_ENTRY_EXCEPTION,
-    IMAGE_DIRECTORY_ENTRY_SECURITY,
-    IMAGE_DIRECTORY_ENTRY_BASERELOC,
-    IMAGE_DIRECTORY_ENTRY_DEBUG,
-    IMAGE_DIRECTORY_ENTRY_ARCHITECTURE,
-    IMAGE_DIRECTORY_ENTRY_GLOBALPTR,
-    IMAGE_DIRECTORY_ENTRY_TLS,
-    IMAGE_DIRECTORY_ENTRY_LOAD_CONFIG,
-    IMAGE_DIRECTORY_ENTRY_BOUND_IMPORT,
-    IMAGE_DIRECTORY_ENTRY_IAT,
-    IMAGE_DIRECTORY_ENTRY_DELAY_IMPORT,
-    IMAGE_DIRECTORY_ENTRY_COM_DESCRIPTOR,
-);
 const FLAGS_RT: &[Flag<u16>] = &flags!(
     RT_CURSOR,
     RT_BITMAP,
