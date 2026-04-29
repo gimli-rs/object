@@ -2448,48 +2448,56 @@ pub struct ImageResourceDataEntry {
 
 // Resource type: https://docs.microsoft.com/en-us/windows/win32/menurc/resource-types
 
-/// ID for: Hardware-dependent cursor resource.
-pub const RT_CURSOR: u16 = 1;
-/// ID for: Bitmap resource.
-pub const RT_BITMAP: u16 = 2;
-/// ID for: Hardware-dependent icon resource.
-pub const RT_ICON: u16 = 3;
-/// ID for: Menu resource.
-pub const RT_MENU: u16 = 4;
-/// ID for: Dialog box.
-pub const RT_DIALOG: u16 = 5;
-/// ID for: String-table entry.
-pub const RT_STRING: u16 = 6;
-/// ID for: Font directory resource.
-pub const RT_FONTDIR: u16 = 7;
-/// ID for: Font resource.
-pub const RT_FONT: u16 = 8;
-/// ID for: Accelerator table.
-pub const RT_ACCELERATOR: u16 = 9;
-/// ID for: Application-defined resource (raw data).
-pub const RT_RCDATA: u16 = 10;
-/// ID for: Message-table entry.
-pub const RT_MESSAGETABLE: u16 = 11;
-/// ID for: Hardware-independent cursor resource.
-pub const RT_GROUP_CURSOR: u16 = 12;
-/// ID for: Hardware-independent icon resource.
-pub const RT_GROUP_ICON: u16 = 14;
-/// ID for: Version resource.
-pub const RT_VERSION: u16 = 16;
-/// ID for: Allows a resource editing tool to associate a string with an .rc file.
-pub const RT_DLGINCLUDE: u16 = 17;
-/// ID for: Plug and Play resource.
-pub const RT_PLUGPLAY: u16 = 19;
-/// ID for: VXD.
-pub const RT_VXD: u16 = 20;
-/// ID for: Animated cursor.
-pub const RT_ANICURSOR: u16 = 21;
-/// ID for: Animated icon.
-pub const RT_ANIICON: u16 = 22;
-/// ID for: HTML resource.
-pub const RT_HTML: u16 = 23;
-/// ID for: Side-by-Side Assembly Manifest.
-pub const RT_MANIFEST: u16 = 24;
+/// Values for resource types.
+///
+/// These are used in `ImageResourceDirectoryEntry::name_or_id` at level 0 of the tree.
+#[cfg(feature = "names")]
+pub const NAMES_RT: &ConstantNames<u16> = &_NAMES_RT;
+
+constant_names!(_NAMES_RT: u16 = {
+    /// ID for: Hardware-dependent cursor resource.
+    RT_CURSOR = 1,
+    /// ID for: Bitmap resource.
+    RT_BITMAP = 2,
+    /// ID for: Hardware-dependent icon resource.
+    RT_ICON = 3,
+    /// ID for: Menu resource.
+    RT_MENU = 4,
+    /// ID for: Dialog box.
+    RT_DIALOG = 5,
+    /// ID for: String-table entry.
+    RT_STRING = 6,
+    /// ID for: Font directory resource.
+    RT_FONTDIR = 7,
+    /// ID for: Font resource.
+    RT_FONT = 8,
+    /// ID for: Accelerator table.
+    RT_ACCELERATOR = 9,
+    /// ID for: Application-defined resource (raw data).
+    RT_RCDATA = 10,
+    /// ID for: Message-table entry.
+    RT_MESSAGETABLE = 11,
+    /// ID for: Hardware-independent cursor resource.
+    RT_GROUP_CURSOR = 12,
+    /// ID for: Hardware-independent icon resource.
+    RT_GROUP_ICON = 14,
+    /// ID for: Version resource.
+    RT_VERSION = 16,
+    /// ID for: Allows a resource editing tool to associate a string with an .rc file.
+    RT_DLGINCLUDE = 17,
+    /// ID for: Plug and Play resource.
+    RT_PLUGPLAY = 19,
+    /// ID for: VXD.
+    RT_VXD = 20,
+    /// ID for: Animated cursor.
+    RT_ANICURSOR = 21,
+    /// ID for: Animated icon.
+    RT_ANIICON = 22,
+    /// ID for: HTML resource.
+    RT_HTML = 23,
+    /// ID for: Side-by-Side Assembly Manifest.
+    RT_MANIFEST = 24,
+});
 
 //
 // Code Integrity in loadconfig (CI)

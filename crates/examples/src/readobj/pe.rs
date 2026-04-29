@@ -550,7 +550,7 @@ fn print_resource_table(
                     }
                     ResourceNameOrId::Id(id) => {
                         if level == 0 {
-                            p.field_enum("NameOrId", id, FLAGS_RT);
+                            p.field_consts("NameOrId", id, NAMES_RT);
                         } else {
                             p.field("NameOrId", id);
                         }
@@ -797,27 +797,3 @@ fn print_reloc_dir(
     }
     Some(())
 }
-
-const FLAGS_RT: &[Flag<u16>] = &flags!(
-    RT_CURSOR,
-    RT_BITMAP,
-    RT_ICON,
-    RT_MENU,
-    RT_DIALOG,
-    RT_STRING,
-    RT_FONTDIR,
-    RT_FONT,
-    RT_ACCELERATOR,
-    RT_RCDATA,
-    RT_MESSAGETABLE,
-    RT_GROUP_CURSOR,
-    RT_GROUP_ICON,
-    RT_VERSION,
-    RT_DLGINCLUDE,
-    RT_PLUGPLAY,
-    RT_VXD,
-    RT_ANICURSOR,
-    RT_ANIICON,
-    RT_HTML,
-    RT_MANIFEST,
-);
