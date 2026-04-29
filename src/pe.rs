@@ -3001,29 +3001,36 @@ pub struct ImageDebugDirectory {
     pub time_date_stamp: U32<LE>,
     pub major_version: U16<LE>,
     pub minor_version: U16<LE>,
-    pub typ: U32<LE>,
+    pub typ: U32<LE, DebugType>,
     pub size_of_data: U32<LE>,
     pub address_of_raw_data: U32<LE>,
     pub pointer_to_raw_data: U32<LE>,
 }
 
-pub const IMAGE_DEBUG_TYPE_UNKNOWN: u32 = 0;
-pub const IMAGE_DEBUG_TYPE_COFF: u32 = 1;
-pub const IMAGE_DEBUG_TYPE_CODEVIEW: u32 = 2;
-pub const IMAGE_DEBUG_TYPE_FPO: u32 = 3;
-pub const IMAGE_DEBUG_TYPE_MISC: u32 = 4;
-pub const IMAGE_DEBUG_TYPE_EXCEPTION: u32 = 5;
-pub const IMAGE_DEBUG_TYPE_FIXUP: u32 = 6;
-pub const IMAGE_DEBUG_TYPE_OMAP_TO_SRC: u32 = 7;
-pub const IMAGE_DEBUG_TYPE_OMAP_FROM_SRC: u32 = 8;
-pub const IMAGE_DEBUG_TYPE_BORLAND: u32 = 9;
-pub const IMAGE_DEBUG_TYPE_RESERVED10: u32 = 10;
-pub const IMAGE_DEBUG_TYPE_CLSID: u32 = 11;
-pub const IMAGE_DEBUG_TYPE_VC_FEATURE: u32 = 12;
-pub const IMAGE_DEBUG_TYPE_POGO: u32 = 13;
-pub const IMAGE_DEBUG_TYPE_ILTCG: u32 = 14;
-pub const IMAGE_DEBUG_TYPE_MPX: u32 = 15;
-pub const IMAGE_DEBUG_TYPE_REPRO: u32 = 16;
+newtype!(
+    /// Values for `ImageDebugDirectory::typ`.
+    struct DebugType(u32);
+);
+
+newtype_constant_names!(NAMES_DEBUG_TYPE: DebugType(u32) = {
+    IMAGE_DEBUG_TYPE_UNKNOWN = 0,
+    IMAGE_DEBUG_TYPE_COFF = 1,
+    IMAGE_DEBUG_TYPE_CODEVIEW = 2,
+    IMAGE_DEBUG_TYPE_FPO = 3,
+    IMAGE_DEBUG_TYPE_MISC = 4,
+    IMAGE_DEBUG_TYPE_EXCEPTION = 5,
+    IMAGE_DEBUG_TYPE_FIXUP = 6,
+    IMAGE_DEBUG_TYPE_OMAP_TO_SRC = 7,
+    IMAGE_DEBUG_TYPE_OMAP_FROM_SRC = 8,
+    IMAGE_DEBUG_TYPE_BORLAND = 9,
+    IMAGE_DEBUG_TYPE_RESERVED10 = 10,
+    IMAGE_DEBUG_TYPE_CLSID = 11,
+    IMAGE_DEBUG_TYPE_VC_FEATURE = 12,
+    IMAGE_DEBUG_TYPE_POGO = 13,
+    IMAGE_DEBUG_TYPE_ILTCG = 14,
+    IMAGE_DEBUG_TYPE_MPX = 15,
+    IMAGE_DEBUG_TYPE_REPRO = 16,
+});
 
 #[derive(Debug, Clone, Copy)]
 #[repr(C)]
