@@ -85,7 +85,7 @@ impl<'a> Object<'a> {
             SectionKind::UninitializedTls => xcoff::STYP_TBSS,
             SectionKind::OtherString => xcoff::STYP_INFO,
             SectionKind::Debug | SectionKind::DebugString => xcoff::STYP_DEBUG,
-            SectionKind::Other | SectionKind::Metadata => 0,
+            SectionKind::Other | SectionKind::Metadata => xcoff::STYP_REG,
             SectionKind::Note
             | SectionKind::Linker
             | SectionKind::Common

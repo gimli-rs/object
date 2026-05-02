@@ -7,6 +7,8 @@
 
 #![allow(missing_docs)]
 
+#[cfg(feature = "names")]
+use crate::constants::ConstantNames;
 use crate::endian::{BigEndian as BE, I16, U16, U32, U64};
 use crate::pod::Pod;
 
@@ -256,7 +258,7 @@ pub struct SectionHeader32 {
     /// Number of line number entries.
     pub s_nlnno: U16<BE>,
     /// Flags to define the section type.
-    pub s_flags: U32<BE>,
+    pub s_flags: U32<BE, SectionFlags>,
 }
 
 /// Section header.
@@ -282,71 +284,140 @@ pub struct SectionHeader64 {
     /// Number of line number entries.
     pub s_nlnno: U32<BE>,
     /// Flags to define the section type.
-    pub s_flags: U32<BE>,
+    pub s_flags: U32<BE, SectionFlags>,
     /// Reserved.
     pub s_reserve: U32<BE>,
 }
 
-// Values for `s_flags`.
-//
-/// "regular" section
-pub const STYP_REG: u16 = 0x00;
-/// Specifies a pad section. A section of this type is used to provide alignment
-/// padding between sections within an XCOFF executable object file. This section
-/// header type is obsolete since padding is allowed in an XCOFF file without a
-/// corresponding pad section header.
-pub const STYP_PAD: u16 = 0x08;
-/// Specifies a DWARF debugging section, which provide source file and symbol
-/// information for the symbolic debugger.
-pub const STYP_DWARF: u16 = 0x10;
-/// Specifies an executable text (code) section. A section of this type contains
-/// the executable instructions of a program.
-pub const STYP_TEXT: u16 = 0x20;
-/// Specifies an initialized data section. A section of this type contains the
-/// initialized data and the TOC of a program.
-pub const STYP_DATA: u16 = 0x40;
-/// Specifies an uninitialized data section. A section header of this type
-/// defines the uninitialized data of a program.
-pub const STYP_BSS: u16 = 0x80;
-/// Specifies an exception section. A section of this type provides information
-/// to identify the reason that a trap or exception occurred within an executable
-/// object program.
-pub const STYP_EXCEPT: u16 = 0x0100;
-/// Specifies a comment section. A section of this type provides comments or data
-/// to special processing utility programs.
-pub const STYP_INFO: u16 = 0x0200;
-/// Specifies an initialized thread-local data section.
-pub const STYP_TDATA: u16 = 0x0400;
-/// Specifies an uninitialized thread-local data section.
-pub const STYP_TBSS: u16 = 0x0800;
-/// Specifies a loader section. A section of this type contains object file
-/// information for the system loader to load an XCOFF executable. The information
-/// includes imported symbols, exported symbols, relocation data, type-check
-/// information, and shared object names.
-pub const STYP_LOADER: u16 = 0x1000;
-/// Specifies a debug section. A section of this type contains stabstring
-/// information used by the symbolic debugger.
-pub const STYP_DEBUG: u16 = 0x2000;
-/// Specifies a type-check section. A section of this type contains
-/// parameter/argument type-check strings used by the binder.
-pub const STYP_TYPCHK: u16 = 0x4000;
-/// Specifies a relocation or line-number field overflow section. A section
-/// header of this type contains the count of relocation entries and line
-/// number entries for some other section. This section header is required
-/// when either of the counts exceeds 65,534.
-pub const STYP_OVRFLO: u16 = 0x8000;
+newtype!(
+    /// Values for `SectionHeader*::s_flags`.
+    struct SectionFlags(u32);
+);
 
-pub const SSUBTYP_DWINFO: u32 = 0x10000;
-pub const SSUBTYP_DWLINE: u32 = 0x20000;
-pub const SSUBTYP_DWPBNMS: u32 = 0x30000;
-pub const SSUBTYP_DWPBTYP: u32 = 0x40000;
-pub const SSUBTYP_DWARNGE: u32 = 0x50000;
-pub const SSUBTYP_DWABREV: u32 = 0x60000;
-pub const SSUBTYP_DWSTR: u32 = 0x70000;
-pub const SSUBTYP_DWRNGES: u32 = 0x80000;
-pub const SSUBTYP_DWLOC: u32 = 0x90000;
-pub const SSUBTYP_DWFRAME: u32 = 0xA0000;
-pub const SSUBTYP_DWMAC: u32 = 0xB0000;
+const SFLAGS_TYPE_MASK: u32 = 0x0000_ffff;
+const SFLAGS_SUBTYPE_MASK: u32 = 0xffff_0000;
+
+impl core::fmt::Debug for SectionFlags {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        self.typ().fmt(f)?;
+        let subtype = self.subtype();
+        if subtype.0 != 0 {
+            #[cfg(feature = "names")]
+            if self.typ() == STYP_DWARF {
+                if let Some(name) = SectionFlags::NAMES_DWARF.name(subtype) {
+                    return write!(f, " | {}", name);
+                }
+            }
+            write!(f, " | {:x}", subtype.0)?;
+        }
+        Ok(())
+    }
+}
+
+impl SectionFlags {
+    /// Values for the DWARF subtype field of `SectionHeader*::s_flags`.
+    #[cfg(feature = "names")]
+    pub const NAMES_DWARF: &ConstantNames<SectionFlags> = &NAMES_SSUBTYP_DWARF;
+
+    /// Get the type field.
+    pub fn typ(self) -> SectionType {
+        SectionType(self.0 as u16)
+    }
+
+    /// Set the type field.
+    pub fn with_type(self, typ: SectionType) -> SectionFlags {
+        SectionFlags(self.0 & !SFLAGS_TYPE_MASK | u32::from(typ.0))
+    }
+
+    /// Get the subtype field.
+    pub fn subtype(self) -> SectionFlags {
+        SectionFlags(self.0 & SFLAGS_SUBTYPE_MASK)
+    }
+
+    /// Set the subtype field.
+    pub fn with_subtype(self, subtype: SectionFlags) -> SectionFlags {
+        SectionFlags(self.0 & !SFLAGS_SUBTYPE_MASK | subtype.0 & SFLAGS_SUBTYPE_MASK)
+    }
+}
+
+impl From<SectionType> for SectionFlags {
+    fn from(value: SectionType) -> Self {
+        SectionFlags(u32::from(value.0))
+    }
+}
+
+newtype!(
+    /// Values for the type field of `SectionHeader*::s_flags`.
+    ///
+    /// There is a bit flag for each type, but only one bit will be set.
+    struct SectionType(u16);
+);
+
+/// "regular" section
+///
+/// Unlike other `STYP_*` constants, this is not a bit flag.
+pub const STYP_REG: SectionType = SectionType(0x00);
+
+newtype_flag_names!(NAMES_STYP: SectionType(u16) = {
+    /// Specifies a pad section. A section of this type is used to provide alignment
+    /// padding between sections within an XCOFF executable object file. This section
+    /// header type is obsolete since padding is allowed in an XCOFF file without a
+    /// corresponding pad section header.
+    STYP_PAD = 0x08,
+    /// Specifies a DWARF debugging section, which provide source file and symbol
+    /// information for the symbolic debugger.
+    STYP_DWARF = 0x10,
+    /// Specifies an executable text (code) section. A section of this type contains
+    /// the executable instructions of a program.
+    STYP_TEXT = 0x20,
+    /// Specifies an initialized data section. A section of this type contains the
+    /// initialized data and the TOC of a program.
+    STYP_DATA = 0x40,
+    /// Specifies an uninitialized data section. A section header of this type
+    /// defines the uninitialized data of a program.
+    STYP_BSS = 0x80,
+    /// Specifies an exception section. A section of this type provides information
+    /// to identify the reason that a trap or exception occurred within an executable
+    /// object program.
+    STYP_EXCEPT = 0x0100,
+    /// Specifies a comment section. A section of this type provides comments or data
+    /// to special processing utility programs.
+    STYP_INFO = 0x0200,
+    /// Specifies an initialized thread-local data section.
+    STYP_TDATA = 0x0400,
+    /// Specifies an uninitialized thread-local data section.
+    STYP_TBSS = 0x0800,
+    /// Specifies a loader section. A section of this type contains object file
+    /// information for the system loader to load an XCOFF executable. The information
+    /// includes imported symbols, exported symbols, relocation data, type-check
+    /// information, and shared object names.
+    STYP_LOADER = 0x1000,
+    /// Specifies a debug section. A section of this type contains stabstring
+    /// information used by the symbolic debugger.
+    STYP_DEBUG = 0x2000,
+    /// Specifies a type-check section. A section of this type contains
+    /// parameter/argument type-check strings used by the binder.
+    STYP_TYPCHK = 0x4000,
+    /// Specifies a relocation or line-number field overflow section. A section
+    /// header of this type contains the count of relocation entries and line
+    /// number entries for some other section. This section header is required
+    /// when either of the counts exceeds 65,534.
+    STYP_OVRFLO = 0x8000,
+});
+
+constant_names!(NAMES_SSUBTYP_DWARF: SectionFlags(u32) = {
+    SSUBTYP_DWINFO = 0x10000,
+    SSUBTYP_DWLINE = 0x20000,
+    SSUBTYP_DWPBNMS = 0x30000,
+    SSUBTYP_DWPBTYP = 0x40000,
+    SSUBTYP_DWARNGE = 0x50000,
+    SSUBTYP_DWABREV = 0x60000,
+    SSUBTYP_DWSTR = 0x70000,
+    SSUBTYP_DWRNGES = 0x80000,
+    SSUBTYP_DWLOC = 0x90000,
+    SSUBTYP_DWFRAME = 0xA0000,
+    SSUBTYP_DWMAC = 0xB0000,
+});
 
 pub const SIZEOF_SYMBOL: usize = 18;
 

@@ -636,7 +636,7 @@ pub enum SectionFlags {
     #[cfg(feature = "xcoff")]
     Xcoff {
         /// `s_flags` field in the section header.
-        s_flags: u32,
+        s_flags: crate::xcoff::SectionFlags,
     },
 }
 

@@ -116,9 +116,9 @@ fn print_sections<'data, Xcoff: FileHeader>(
             p.field("NumberOfRelocations", section.s_nreloc().into());
             p.field("NumberOfLineNumbers", section.s_nlnno().into());
             let flags = section.s_flags();
-            p.field_enum("Type", flags as u16, FLAGS_STYP);
-            if flags as u16 == STYP_DWARF {
-                p.field_enum("SubType", flags & 0xffff_0000, FLAGS_SSUBTYP);
+            p.field_flags("Type", flags.typ(), SectionType::NAMES);
+            if flags.typ() == STYP_DWARF {
+                p.field_consts("SubType", flags.subtype(), SectionFlags::NAMES_DWARF);
             }
             if let Some(relocations) = section.relocations(data).print_err(p) {
                 for relocation in relocations {
@@ -228,35 +228,6 @@ fn print_symbols<'data, Xcoff: FileHeader>(
     }
 }
 
-const FLAGS_STYP: &[Flag<u16>] = &flags!(
-    STYP_REG,
-    STYP_PAD,
-    STYP_DWARF,
-    STYP_TEXT,
-    STYP_DATA,
-    STYP_BSS,
-    STYP_EXCEPT,
-    STYP_INFO,
-    STYP_TDATA,
-    STYP_TBSS,
-    STYP_LOADER,
-    STYP_DEBUG,
-    STYP_TYPCHK,
-    STYP_OVRFLO,
-);
-const FLAGS_SSUBTYP: &[Flag<u32>] = &flags!(
-    SSUBTYP_DWINFO,
-    SSUBTYP_DWLINE,
-    SSUBTYP_DWPBNMS,
-    SSUBTYP_DWPBTYP,
-    SSUBTYP_DWARNGE,
-    SSUBTYP_DWABREV,
-    SSUBTYP_DWSTR,
-    SSUBTYP_DWRNGES,
-    SSUBTYP_DWLOC,
-    SSUBTYP_DWFRAME,
-    SSUBTYP_DWMAC,
-);
 const FLAGS_N: &[Flag<i16>] = &flags!(N_DEBUG, N_ABS, N_UNDEF,);
 const FLAGS_SYM_V: &[Flag<u16>] = &flags!(
     SYM_V_INTERNAL,
