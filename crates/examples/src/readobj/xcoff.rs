@@ -211,8 +211,12 @@ fn print_symbols<'data, Xcoff: FileHeader>(
                     p.field_hex("ParameterHashOffset", aux_csect.x_parmhash());
                     p.field("ParameterHashSectionNumber", aux_csect.x_snhash());
                     p.field_hex("Alignment", aux_csect.alignment());
-                    p.field_enum("Type", aux_csect.sym_type(), FLAGS_XTY);
-                    p.field_enum("StorageMappingClass", aux_csect.x_smclas(), FLAGS_XMC);
+                    p.field_consts("Type", aux_csect.sym_type(), CsectAuxType::NAMES);
+                    p.field_consts(
+                        "StorageMappingClass",
+                        aux_csect.x_smclas(),
+                        CsectAuxClass::NAMES,
+                    );
                     if let Some(stab) = aux_csect.x_stab() {
                         p.field_hex("StabOffset", stab);
                     }
@@ -229,11 +233,6 @@ fn print_symbols<'data, Xcoff: FileHeader>(
 }
 
 const FLAGS_XFT: &[Flag<u8>] = &flags!(XFT_FN, XFT_CT, XFT_CV, XFT_CD,);
-const FLAGS_XTY: &[Flag<u8>] = &flags!(XTY_ER, XTY_SD, XTY_LD, XTY_CM,);
-const FLAGS_XMC: &[Flag<u8>] = &flags!(
-    XMC_PR, XMC_RO, XMC_DB, XMC_GL, XMC_XO, XMC_SV, XMC_SV64, XMC_SV3264, XMC_TI, XMC_TB, XMC_RW,
-    XMC_TC0, XMC_TC, XMC_TD, XMC_DS, XMC_UA, XMC_BS, XMC_UC, XMC_TL, XMC_UL, XMC_TE,
-);
 const FLAGS_AUX: &[Flag<u8>] =
     &flags!(AUX_EXCEPT, AUX_FCN, AUX_SYM, AUX_FILE, AUX_CSECT, AUX_SECT,);
 const FLAGS_R: &[Flag<u8>] = &flags!(

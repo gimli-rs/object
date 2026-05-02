@@ -20,8 +20,8 @@ struct SymbolOffsets {
     aux_count: u8,
     n_type: xcoff::SymbolType,
     n_sclass: xcoff::SymbolClass,
-    x_smtyp: u8,
-    x_smclas: u8,
+    x_smtyp: xcoff::CsectAuxSmtyp,
+    x_smclas: xcoff::CsectAuxClass,
     containing_csect: Option<SymbolId>,
 }
 
@@ -155,12 +155,12 @@ impl<'a> Object<'a> {
                 }
             }
         } else {
-            (0, 0)
+            (xcoff::CsectAuxType(0), xcoff::CsectAuxClass(0))
         };
         SymbolFlags::Xcoff {
             n_type,
             n_sclass,
-            x_smtyp,
+            x_smtyp: x_smtyp.into(),
             x_smclas,
             containing_csect: None,
         }

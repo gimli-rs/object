@@ -735,9 +735,9 @@ pub struct CsectAux32 {
     /// .typchk section number.
     pub x_snhash: U16<BE>,
     /// Symbol alignment and type.
-    pub x_smtyp: u8,
+    pub x_smtyp: CsectAuxSmtyp,
     /// Storage mapping class.
-    pub x_smclas: u8,
+    pub x_smclas: CsectAuxClass,
     /// Reserved.
     pub x_stab: U32<BE>,
     /// x_snstab.
@@ -755,9 +755,9 @@ pub struct CsectAux64 {
     /// .typchk section number.
     pub x_snhash: U16<BE>,
     /// Symbol alignment and type.
-    pub x_smtyp: u8,
+    pub x_smtyp: CsectAuxSmtyp,
     /// Storage mapping class.
-    pub x_smclas: u8,
+    pub x_smclas: CsectAuxClass,
     /// High 4 bytes of section length.
     pub x_scnlen_hi: U32<BE>,
     /// Reserved.
@@ -766,66 +766,118 @@ pub struct CsectAux64 {
     pub x_auxtype: u8,
 }
 
-// Values for `x_smtyp`.
-//
-/// External reference.
-pub const XTY_ER: u8 = 0;
-/// Csect definition for initialized storage.
-pub const XTY_SD: u8 = 1;
-/// Defines an entry point to an initialized csect.
-pub const XTY_LD: u8 = 2;
-/// Common csect definition. For uninitialized storage.
-pub const XTY_CM: u8 = 3;
+newtype!(
+    /// Values for `CsectAux*::x_smtyp`.
+    #[repr(transparent)]
+    struct CsectAuxSmtyp(u8);
+);
 
-// Values for `x_smclas`.
-//
-// READ ONLY CLASSES
-//
-/// Program Code
-pub const XMC_PR: u8 = 0;
-/// Read Only Constant
-pub const XMC_RO: u8 = 1;
-/// Debug Dictionary Table
-pub const XMC_DB: u8 = 2;
-/// Global Linkage (Interfile Interface Code)
-pub const XMC_GL: u8 = 6;
-/// Extended Operation (Pseudo Machine Instruction)
-pub const XMC_XO: u8 = 7;
-/// Supervisor Call (32-bit process only)
-pub const XMC_SV: u8 = 8;
-/// Supervisor Call for 64-bit process
-pub const XMC_SV64: u8 = 17;
-/// Supervisor Call for both 32- and 64-bit processes
-pub const XMC_SV3264: u8 = 18;
-/// Traceback Index csect
-pub const XMC_TI: u8 = 12;
-/// Traceback Table csect
-pub const XMC_TB: u8 = 13;
-//
-// READ WRITE CLASSES
-//
-/// Read Write Data
-pub const XMC_RW: u8 = 5;
-/// TOC Anchor for TOC Addressability
-pub const XMC_TC0: u8 = 15;
-/// General TOC item
-pub const XMC_TC: u8 = 3;
-/// Scalar data item in the TOC
-pub const XMC_TD: u8 = 16;
-/// Descriptor csect
-pub const XMC_DS: u8 = 10;
-/// Unclassified - Treated as Read Write
-pub const XMC_UA: u8 = 4;
-/// BSS class (uninitialized static internal)
-pub const XMC_BS: u8 = 9;
-/// Un-named Fortran Common
-pub const XMC_UC: u8 = 11;
-/// Initialized thread-local variable
-pub const XMC_TL: u8 = 20;
-/// Uninitialized thread-local variable
-pub const XMC_UL: u8 = 21;
-/// Symbol mapped at the end of TOC
-pub const XMC_TE: u8 = 22;
+impl core::fmt::Debug for CsectAuxSmtyp {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        self.typ().fmt(f)?;
+        let alignment = self.alignment();
+        if alignment != 0 {
+            write!(f, " | {}", alignment)?;
+        }
+        Ok(())
+    }
+}
+
+impl CsectAuxSmtyp {
+    /// Construct `CsectAuxSmtype` from its subfields.
+    pub fn new(typ: CsectAuxType, alignment: u8) -> Self {
+        CsectAuxSmtyp(typ.0 & 0x7 | alignment << 3)
+    }
+
+    /// Get the alignment field.
+    pub fn alignment(self) -> u8 {
+        self.0 >> 3
+    }
+
+    /// Get the typ field.
+    pub fn typ(self) -> CsectAuxType {
+        CsectAuxType(self.0 & 0x7)
+    }
+}
+
+impl From<CsectAuxType> for CsectAuxSmtyp {
+    fn from(value: CsectAuxType) -> Self {
+        CsectAuxSmtyp(value.0 & 0x7)
+    }
+}
+
+newtype!(
+    /// Values for type field of `CsectAux*::x_smtyp`.
+    struct CsectAuxType(u8);
+);
+
+newtype_constant_names!(NAMES_XTY: CsectAuxType(u8) = {
+    /// External reference.
+    XTY_ER = 0,
+    /// Csect definition for initialized storage.
+    XTY_SD = 1,
+    /// Defines an entry point to an initialized csect.
+    XTY_LD = 2,
+    /// Common csect definition. For uninitialized storage.
+    XTY_CM = 3,
+});
+
+newtype!(
+    /// Values for `CsectAux*::x_smclas`.
+    #[repr(transparent)]
+    struct CsectAuxClass(u8);
+);
+
+newtype_constant_names!(NAMES_XMC: CsectAuxClass(u8) = {
+    //
+    // READ ONLY CLASSES
+    //
+    /// Program Code
+    XMC_PR = 0,
+    /// Read Only Constant
+    XMC_RO = 1,
+    /// Debug Dictionary Table
+    XMC_DB = 2,
+    /// Global Linkage (Interfile Interface Code)
+    XMC_GL = 6,
+    /// Extended Operation (Pseudo Machine Instruction)
+    XMC_XO = 7,
+    /// Supervisor Call (32-bit process only)
+    XMC_SV = 8,
+    /// Supervisor Call for 64-bit process
+    XMC_SV64 = 17,
+    /// Supervisor Call for both 32- and 64-bit processes
+    XMC_SV3264 = 18,
+    /// Traceback Index csect
+    XMC_TI = 12,
+    /// Traceback Table csect
+    XMC_TB = 13,
+    //
+    // READ WRITE CLASSES
+    //
+    /// Read Write Data
+    XMC_RW = 5,
+    /// TOC Anchor for TOC Addressability
+    XMC_TC0 = 15,
+    /// General TOC item
+    XMC_TC = 3,
+    /// Scalar data item in the TOC
+    XMC_TD = 16,
+    /// Descriptor csect
+    XMC_DS = 10,
+    /// Unclassified - Treated as Read Write
+    XMC_UA = 4,
+    /// BSS class (uninitialized static internal)
+    XMC_BS = 9,
+    /// Un-named Fortran Common
+    XMC_UC = 11,
+    /// Initialized thread-local variable
+    XMC_TL = 20,
+    /// Uninitialized thread-local variable
+    XMC_UL = 21,
+    /// Symbol mapped at the end of TOC
+    XMC_TE = 22,
+});
 
 /// Function auxiliary entry.
 #[derive(Debug, Clone, Copy)]

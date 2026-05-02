@@ -335,32 +335,6 @@ impl<'a> Printer<'a> {
             });
         }
     }
-
-    fn flags<T: Into<u64>, U: Copy + Into<u64>>(&mut self, value: T, mask: U, flags: &[Flag<U>]) {
-        let value = value.into();
-        let mask = mask.into();
-        self.indent(|p| {
-            if mask != 0 {
-                for flag in flags {
-                    if value & mask == flag.value.into() {
-                        p.print_indent();
-                        writeln!(p.w, "{} (0x{:X})", flag.name, flag.value.into()).unwrap();
-                        return;
-                    }
-                }
-                p.print_indent();
-                writeln!(p.w, "<unknown> (0x{:X})", value & mask).unwrap();
-            } else {
-                for flag in flags {
-                    if value & flag.value.into() == flag.value.into() {
-                        p.print_indent();
-                        writeln!(p.w, "{} (0x{:X})", flag.name, flag.value.into()).unwrap();
-                    }
-                }
-                // TODO: display unknown flags (need to display all flags at once for this)
-            }
-        });
-    }
 }
 
 struct Flag<T> {

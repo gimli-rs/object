@@ -692,11 +692,11 @@ pub enum SymbolFlags<Section, Symbol> {
         /// `x_smtyp` field in the CSECT auxiliary symbol.
         ///
         /// Only valid if `n_sclass` is `C_EXT`, `C_WEAKEXT`, or `C_HIDEXT`.
-        x_smtyp: u8,
+        x_smtyp: crate::xcoff::CsectAuxSmtyp,
         /// `x_smclas` field in the CSECT auxiliary symbol.
         ///
         /// Only valid if `n_sclass` is `C_EXT`, `C_WEAKEXT`, or `C_HIDEXT`.
-        x_smclas: u8,
+        x_smclas: crate::xcoff::CsectAuxClass,
         /// The containing csect for the symbol.
         ///
         /// Only valid if `x_smtyp` is `XTY_LD`.
