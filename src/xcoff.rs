@@ -8,7 +8,7 @@
 #![allow(missing_docs)]
 
 #[cfg(feature = "names")]
-use crate::constants::ConstantNames;
+use crate::constants::{ConstantNames, FlagNames};
 use crate::endian::{BigEndian as BE, I16, U16, U32, U64};
 use crate::pod::Pod;
 
@@ -436,11 +436,11 @@ pub struct Symbol32 {
     /// Symbol value; storage class-dependent.
     pub n_value: U32<BE>,
     /// Section number of symbol.
-    pub n_scnum: I16<BE>,
+    pub n_scnum: I16<BE, SymbolSection>,
     /// Basic and derived type specification.
-    pub n_type: U16<BE>,
+    pub n_type: U16<BE, SymbolType>,
     /// Storage class of symbol.
-    pub n_sclass: u8,
+    pub n_sclass: SymbolClass,
     /// Number of auxiliary entries.
     pub n_numaux: u8,
 }
@@ -454,149 +454,230 @@ pub struct Symbol64 {
     /// Offset of the name in string table or .debug section.
     pub n_offset: U32<BE>,
     /// Section number of symbol.
-    pub n_scnum: I16<BE>,
+    pub n_scnum: I16<BE, SymbolSection>,
     /// Basic and derived type specification.
-    pub n_type: U16<BE>,
+    pub n_type: U16<BE, SymbolType>,
     /// Storage class of symbol.
-    pub n_sclass: u8,
+    pub n_sclass: SymbolClass,
     /// Number of auxiliary entries.
     pub n_numaux: u8,
 }
 
-// Values for `n_scnum`.
-//
-/// A special symbolic debugging symbol.
-pub const N_DEBUG: i16 = -2;
-/// An absolute symbol. The symbol has a value but is not relocatable.
-pub const N_ABS: i16 = -1;
-/// An undefined external symbol.
-pub const N_UNDEF: i16 = 0;
+newtype!(
+    /// Values for `Symbol*::n_scnum`.
+    struct SymbolSection(i16);
+);
 
-// Values for `n_type`.
-//
-/// Values for visibility as they would appear when encoded in the high 4 bits
-/// of the 16-bit unsigned n_type field of symbol table entries. Valid for
-/// 32-bit XCOFF only when the o_vstamp in the auxiliary header is greater than 1.
+impl SymbolSection {
+    /// Return true if this is a reserved value.
+    pub fn is_reserved(self) -> bool {
+        self.0 <= 0
+    }
+
+    /// Return the 1-based section index, or `None` if this is a reserved value.
+    pub fn index(self) -> Option<u16> {
+        if self.0 > 0 {
+            Some(self.0 as u16)
+        } else {
+            None
+        }
+    }
+}
+
+newtype_constant_names!(NAMES_N: SymbolSection(i16) = {
+    /// A special symbolic debugging symbol.
+    N_DEBUG = -2,
+    /// An absolute symbol. The symbol has a value but is not relocatable.
+    N_ABS = -1,
+    /// An undefined external symbol.
+    N_UNDEF = 0,
+});
+
+newtype!(
+    /// Values for `Symbol*::n_type`.
+    struct SymbolType(u16);
+);
+
+newtype_flag_names!(NAMES_SYM_T: SymbolType(u16) = {});
+
+flag_names!(NAMES_SYM_T_EXT: SymbolType(u16) = {
+    _ = SYM_V_MASK => NAMES_SYM_V,
+    SYM_DT_FCN = DT_FCN << N_BTSHFT,
+});
+
+const DT_FCN: u16 = 2;
+const N_BTSHFT: usize = 4;
+
+impl SymbolType {
+    /// Value names for C_EXT, C_HIDEXT, and C_WEAKEXT symbols.
+    #[cfg(feature = "names")]
+    pub const NAMES_EXT: &FlagNames<SymbolType> = &NAMES_SYM_T_EXT;
+
+    /// Get the visibility field.
+    ///
+    /// Valid for C_EXT, C_HIDEXT, and C_WEAKEXT symbols.
+    /// Valid in XCOFF32 only when `o_vstamp` is greater than 1.
+    pub fn visibility(self) -> SymbolVisibility {
+        SymbolVisibility(self.0 & SYM_V_MASK)
+    }
+
+    /// Whether the symbol has `SYM_DT_FCN` set.
+    ///
+    /// Valid only for C_EXT, C_HIDEXT, and C_WEAKEXT symbols in XCOFF32 when
+    /// `o_vstamp` is 0 or 1.
+    pub fn is_function(self) -> bool {
+        self.contains(SYM_DT_FCN)
+    }
+}
+
+newtype!(
+    /// Values for the visibility field of `Symbol*::n_type`.
+    ///
+    /// Valid for 32-bit XCOFF only when the o_vstamp in the auxiliary header is greater than 1.
+    struct SymbolVisibility(u16);
+);
+
 pub const SYM_V_MASK: u16 = 0xF000;
-pub const SYM_V_INTERNAL: u16 = 0x1000;
-pub const SYM_V_HIDDEN: u16 = 0x2000;
-pub const SYM_V_PROTECTED: u16 = 0x3000;
-pub const SYM_V_EXPORTED: u16 = 0x4000;
 
-// Values for `n_sclass`.
-//
-// Storage classes used for symbolic debugging symbols.
-//
-/// Source file name and compiler information.
-pub const C_FILE: u8 = 103;
-/// Beginning of include file.
-pub const C_BINCL: u8 = 108;
-/// Ending of include file.
-pub const C_EINCL: u8 = 109;
-/// Global variable.
-pub const C_GSYM: u8 = 128;
-/// Statically allocated symbol.
-pub const C_STSYM: u8 = 133;
-/// Beginning of common block.
-pub const C_BCOMM: u8 = 135;
-/// End of common block.
-pub const C_ECOMM: u8 = 137;
-/// Alternate entry.
-pub const C_ENTRY: u8 = 141;
-/// Beginning of static block.
-pub const C_BSTAT: u8 = 143;
-/// End of static block.
-pub const C_ESTAT: u8 = 144;
-/// Global thread-local variable.
-pub const C_GTLS: u8 = 145;
-/// Static thread-local variable.
-pub const C_STTLS: u8 = 146;
-/// DWARF section symbol.
-pub const C_DWARF: u8 = 112;
-//
-// Storage classes used for absolute symbols.
-//
-/// Automatic variable allocated on stack.
-pub const C_LSYM: u8 = 129;
-/// Argument to subroutine allocated on stack.
-pub const C_PSYM: u8 = 130;
-/// Register variable.
-pub const C_RSYM: u8 = 131;
-/// Argument to function or procedure stored in register.
-pub const C_RPSYM: u8 = 132;
-/// Local member of common block.
-pub const C_ECOML: u8 = 136;
-/// Function or procedure.
-pub const C_FUN: u8 = 142;
-//
-// Storage classes used for undefined external symbols or symbols of general sections.
-//
-/// External symbol.
-pub const C_EXT: u8 = 2;
-/// Weak external symbol.
-pub const C_WEAKEXT: u8 = 111;
-//
-// Storage classes used for symbols of general sections.
-//
-/// Symbol table entry marked for deletion.
-pub const C_NULL: u8 = 0;
-/// Static.
-pub const C_STAT: u8 = 3;
-/// Beginning or end of inner block.
-pub const C_BLOCK: u8 = 100;
-/// Beginning or end of function.
-pub const C_FCN: u8 = 101;
-/// Un-named external symbol.
-pub const C_HIDEXT: u8 = 107;
-/// Comment string in .info section.
-pub const C_INFO: u8 = 110;
-/// Declaration of object (type).
-pub const C_DECL: u8 = 140;
-//
-// Storage classes - Obsolete/Undocumented.
-//
-/// Automatic variable.
-pub const C_AUTO: u8 = 1;
-/// Register variable.
-pub const C_REG: u8 = 4;
-/// External definition.
-pub const C_EXTDEF: u8 = 5;
-/// Label.
-pub const C_LABEL: u8 = 6;
-/// Undefined label.
-pub const C_ULABEL: u8 = 7;
-/// Member of structure.
-pub const C_MOS: u8 = 8;
-/// Function argument.
-pub const C_ARG: u8 = 9;
-/// Structure tag.
-pub const C_STRTAG: u8 = 10;
-/// Member of union.
-pub const C_MOU: u8 = 11;
-/// Union tag.
-pub const C_UNTAG: u8 = 12;
-/// Type definition.
-pub const C_TPDEF: u8 = 13;
-/// Undefined static.
-pub const C_USTATIC: u8 = 14;
-/// Enumeration tag.
-pub const C_ENTAG: u8 = 15;
-/// Member of enumeration.
-pub const C_MOE: u8 = 16;
-/// Register parameter.
-pub const C_REGPARM: u8 = 17;
-/// Bit field.
-pub const C_FIELD: u8 = 18;
-/// End of structure.
-pub const C_EOS: u8 = 102;
-/// Duplicate tag.
-pub const C_ALIAS: u8 = 105;
-/// Special storage class for external.
-pub const C_HIDDEN: u8 = 106;
-/// Physical end of function.
-pub const C_EFCN: u8 = 255;
-/// Reserved.
-pub const C_TCSYM: u8 = 134;
+newtype_constant_names!(NAMES_SYM_V: SymbolVisibility(u16) = {
+    SYM_V_INTERNAL = 0x1000,
+    SYM_V_HIDDEN = 0x2000,
+    SYM_V_PROTECTED = 0x3000,
+    SYM_V_EXPORTED = 0x4000,
+});
+
+impl From<SymbolVisibility> for SymbolType {
+    fn from(value: SymbolVisibility) -> Self {
+        SymbolType(value.0 & SYM_V_MASK)
+    }
+}
+
+impl From<SymbolType> for SymbolVisibility {
+    fn from(value: SymbolType) -> Self {
+        value.visibility()
+    }
+}
+
+newtype!(
+    /// Storage classes used for symbolic debugging symbols.
+    ///
+    /// Values for `Symbol*::n_sclass`.
+    #[repr(transparent)]
+    struct SymbolClass(u8);
+);
+
+newtype_constant_names!(NAMES_C: SymbolClass(u8) = {
+    /// Source file name and compiler information.
+    C_FILE = 103,
+    /// Beginning of include file.
+    C_BINCL = 108,
+    /// Ending of include file.
+    C_EINCL = 109,
+    /// Global variable.
+    C_GSYM = 128,
+    /// Statically allocated symbol.
+    C_STSYM = 133,
+    /// Beginning of common block.
+    C_BCOMM = 135,
+    /// End of common block.
+    C_ECOMM = 137,
+    /// Alternate entry.
+    C_ENTRY = 141,
+    /// Beginning of static block.
+    C_BSTAT = 143,
+    /// End of static block.
+    C_ESTAT = 144,
+    /// Global thread-local variable.
+    C_GTLS = 145,
+    /// Static thread-local variable.
+    C_STTLS = 146,
+    /// DWARF section symbol.
+    C_DWARF = 112,
+    //
+    // Storage classes used for absolute symbols.
+    //
+    /// Automatic variable allocated on stack.
+    C_LSYM = 129,
+    /// Argument to subroutine allocated on stack.
+    C_PSYM = 130,
+    /// Register variable.
+    C_RSYM = 131,
+    /// Argument to function or procedure stored in register.
+    C_RPSYM = 132,
+    /// Local member of common block.
+    C_ECOML = 136,
+    /// Function or procedure.
+    C_FUN = 142,
+    //
+    // Storage classes used for undefined external symbols or symbols of general sections.
+    //
+    /// External symbol.
+    C_EXT = 2,
+    /// Weak external symbol.
+    C_WEAKEXT = 111,
+    //
+    // Storage classes used for symbols of general sections.
+    //
+    /// Symbol table entry marked for deletion.
+    C_NULL = 0,
+    /// Static.
+    C_STAT = 3,
+    /// Beginning or end of inner block.
+    C_BLOCK = 100,
+    /// Beginning or end of function.
+    C_FCN = 101,
+    /// Un-named external symbol.
+    C_HIDEXT = 107,
+    /// Comment string in .info section.
+    C_INFO = 110,
+    /// Declaration of object (type).
+    C_DECL = 140,
+    //
+    // Storage classes - Obsolete/Undocumented.
+    //
+    /// Automatic variable.
+    C_AUTO = 1,
+    /// Register variable.
+    C_REG = 4,
+    /// External definition.
+    C_EXTDEF = 5,
+    /// Label.
+    C_LABEL = 6,
+    /// Undefined label.
+    C_ULABEL = 7,
+    /// Member of structure.
+    C_MOS = 8,
+    /// Function argument.
+    C_ARG = 9,
+    /// Structure tag.
+    C_STRTAG = 10,
+    /// Member of union.
+    C_MOU = 11,
+    /// Union tag.
+    C_UNTAG = 12,
+    /// Type definition.
+    C_TPDEF = 13,
+    /// Undefined static.
+    C_USTATIC = 14,
+    /// Enumeration tag.
+    C_ENTAG = 15,
+    /// Member of enumeration.
+    C_MOE = 16,
+    /// Register parameter.
+    C_REGPARM = 17,
+    /// Bit field.
+    C_FIELD = 18,
+    /// End of structure.
+    C_EOS = 102,
+    /// Duplicate tag.
+    C_ALIAS = 105,
+    /// Special storage class for external.
+    C_HIDDEN = 106,
+    /// Physical end of function.
+    C_EFCN = 255,
+    /// Reserved.
+    C_TCSYM = 134,
+});
 
 /// File Auxiliary Entry for C_FILE Symbols.
 #[derive(Debug, Clone, Copy)]

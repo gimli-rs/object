@@ -168,19 +168,19 @@ fn print_symbols<'data, Xcoff: FileHeader>(
                 });
                 p.field_string_option("Section", section_index.0, section_name);
             } else {
-                p.field_enum_display("Section", symbol.n_scnum(), FLAGS_N);
+                p.field_consts_display("Section", symbol.n_scnum(), SymbolSection::NAMES);
             }
-            if symbol.n_sclass() == C_FILE {
-                p.field_hex("SourceLanguage", symbol.n_type() >> 8);
-                p.field_hex("CpuVersion", symbol.n_type() & 0xff);
-            } else {
-                let n_type = symbol.n_type();
-                p.field_hex("Type", symbol.n_type());
-                if n_type & SYM_V_MASK != 0 {
-                    p.flags(symbol.n_type(), SYM_V_MASK, FLAGS_SYM_V);
+            match symbol.n_sclass() {
+                C_FILE => {
+                    p.field_hex("SourceLanguage", symbol.n_type().0 >> 8);
+                    p.field_hex("CpuVersion", symbol.n_type().0 & 0xff);
                 }
+                C_EXT | C_HIDEXT | C_WEAKEXT => {
+                    p.field_flags("Type", symbol.n_type(), SymbolType::NAMES_EXT);
+                }
+                _ => p.field_hex("Type", symbol.n_type().0),
             }
-            p.field_enum("StorageClass", symbol.n_sclass(), FLAGS_C);
+            p.field_consts("StorageClass", symbol.n_sclass(), SymbolClass::NAMES);
             let numaux = symbol.n_numaux() as usize;
             p.field("NumberOfAuxSymbols", numaux);
             if symbol.has_aux_file() {
@@ -228,20 +228,6 @@ fn print_symbols<'data, Xcoff: FileHeader>(
     }
 }
 
-const FLAGS_N: &[Flag<i16>] = &flags!(N_DEBUG, N_ABS, N_UNDEF,);
-const FLAGS_SYM_V: &[Flag<u16>] = &flags!(
-    SYM_V_INTERNAL,
-    SYM_V_HIDDEN,
-    SYM_V_PROTECTED,
-    SYM_V_EXPORTED,
-);
-const FLAGS_C: &[Flag<u8>] = &flags!(
-    C_FILE, C_BINCL, C_EINCL, C_GSYM, C_STSYM, C_BCOMM, C_ECOMM, C_ENTRY, C_BSTAT, C_ESTAT, C_GTLS,
-    C_STTLS, C_DWARF, C_LSYM, C_PSYM, C_RSYM, C_RPSYM, C_ECOML, C_FUN, C_EXT, C_WEAKEXT, C_NULL,
-    C_STAT, C_BLOCK, C_FCN, C_HIDEXT, C_INFO, C_DECL, C_AUTO, C_REG, C_EXTDEF, C_LABEL, C_ULABEL,
-    C_MOS, C_ARG, C_STRTAG, C_MOU, C_UNTAG, C_TPDEF, C_USTATIC, C_ENTAG, C_MOE, C_REGPARM, C_FIELD,
-    C_EOS, C_ALIAS, C_HIDDEN, C_EFCN, C_TCSYM,
-);
 const FLAGS_XFT: &[Flag<u8>] = &flags!(XFT_FN, XFT_CT, XFT_CV, XFT_CD,);
 const FLAGS_XTY: &[Flag<u8>] = &flags!(XTY_ER, XTY_SD, XTY_LD, XTY_CM,);
 const FLAGS_XMC: &[Flag<u8>] = &flags!(

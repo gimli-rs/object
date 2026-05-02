@@ -220,22 +220,6 @@ impl<'a> Printer<'a> {
         self.field_hex(name, value);
     }
 
-    fn field_enum_display<T: Eq + fmt::Display>(
-        &mut self,
-        name: &str,
-        value: T,
-        flags: &[Flag<T>],
-    ) {
-        for flag in flags {
-            if value == flag.value {
-                self.field_name(name);
-                writeln!(self.w, "{} ({})", flag.name, value).unwrap();
-                return;
-            }
-        }
-        self.field(name, value);
-    }
-
     fn field_consts<T>(&mut self, name: &str, value: T, consts: &ConstantNames<T>)
     where
         T: Wrap + Copy,

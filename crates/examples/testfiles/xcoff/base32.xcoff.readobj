@@ -1206,7 +1206,7 @@ Symbol {
     Name: ".__threads_init" (0x129)
     Value: 0x100001E0
     Section: ".text" (0x1)
-    Type: 0x20
+    Type: SYM_DT_FCN (0x20)
     StorageClass: C_EXT (0x2)
     NumberOfAuxSymbols: 1
     CsectAux {
@@ -1226,7 +1226,7 @@ Symbol {
     Name: ".__threads_init@AF2_1" (0x139)
     Value: 0x10000220
     Section: ".text" (0x1)
-    Type: 0x20
+    Type: SYM_DT_FCN (0x20)
     StorageClass: C_HIDEXT (0x6B)
     NumberOfAuxSymbols: 1
     CsectAux {
@@ -1431,7 +1431,7 @@ Symbol {
     Name: ".__User_sinit_begin" (0x232)
     Value: 0x10000340
     Section: ".text" (0x1)
-    Type: 0x20
+    Type: SYM_DT_FCN (0x20)
     StorageClass: C_EXT (0x2)
     NumberOfAuxSymbols: 1
     CsectAux {
@@ -1451,7 +1451,7 @@ Symbol {
     Name: ".__C_runtime_termination" (0x246)
     Value: 0x10000368
     Section: ".text" (0x1)
-    Type: 0x20
+    Type: SYM_DT_FCN (0x20)
     StorageClass: C_EXT (0x2)
     NumberOfAuxSymbols: 1
     CsectAux {
@@ -1471,7 +1471,7 @@ Symbol {
     Name: ".__C_runtime_startup" (0x25F)
     Value: 0x100003B8
     Section: ".text" (0x1)
-    Type: 0x20
+    Type: SYM_DT_FCN (0x20)
     StorageClass: C_EXT (0x2)
     NumberOfAuxSymbols: 1
     CsectAux {
@@ -1491,7 +1491,7 @@ Symbol {
     Name: ".__dftdt__L304e4b28c42_5CatchFv" (0x274)
     Value: 0x10000440
     Section: ".text" (0x1)
-    Type: 0x20
+    Type: SYM_DT_FCN (0x20)
     StorageClass: C_HIDEXT (0x6B)
     NumberOfAuxSymbols: 1
     CsectAux {

@@ -686,9 +686,9 @@ pub enum SymbolFlags<Section, Symbol> {
     #[cfg(feature = "xcoff")]
     Xcoff {
         /// `n_type` field in the XCOFF symbol.
-        n_type: u16,
+        n_type: crate::xcoff::SymbolType,
         /// `n_sclass` field in the XCOFF symbol.
-        n_sclass: u8,
+        n_sclass: crate::xcoff::SymbolClass,
         /// `x_smtyp` field in the CSECT auxiliary symbol.
         ///
         /// Only valid if `n_sclass` is `C_EXT`, `C_WEAKEXT`, or `C_HIDEXT`.

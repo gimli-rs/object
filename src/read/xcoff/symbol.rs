@@ -436,8 +436,13 @@ impl<'data, 'file, Xcoff: FileHeader, R: ReadRef<'data>> ObjectSymbol<'data>
             xcoff::N_ABS => SymbolSection::Absolute,
             xcoff::N_UNDEF => SymbolSection::Undefined,
             xcoff::N_DEBUG => SymbolSection::None,
-            index if index > 0 => SymbolSection::Section(SectionIndex(index as usize)),
-            _ => SymbolSection::Unknown,
+            scnum => {
+                if let Some(index) = scnum.index() {
+                    SymbolSection::Section(SectionIndex(index as usize))
+                } else {
+                    SymbolSection::Unknown
+                }
+            }
         }
     }
 
@@ -449,7 +454,7 @@ impl<'data, 'file, Xcoff: FileHeader, R: ReadRef<'data>> ObjectSymbol<'data>
     /// Return true if the symbol is a definition of a function or data object.
     #[inline]
     fn is_definition(&self) -> bool {
-        if self.symbol.n_scnum() <= 0 {
+        if self.symbol.n_scnum().is_reserved() {
             return false;
         }
         if self.symbol.has_aux_csect() {
@@ -483,8 +488,7 @@ impl<'data, 'file, Xcoff: FileHeader, R: ReadRef<'data>> ObjectSymbol<'data>
         } else {
             match self.symbol.n_sclass() {
                 xcoff::C_EXT | xcoff::C_WEAKEXT => {
-                    let visibility = self.symbol.n_type() & xcoff::SYM_V_MASK;
-                    if visibility == xcoff::SYM_V_HIDDEN {
+                    if self.symbol.n_type().visibility() == xcoff::SYM_V_HIDDEN {
                         SymbolScope::Linkage
                     } else {
                         SymbolScope::Dynamic
@@ -542,9 +546,9 @@ pub trait Symbol: Debug + Pod {
     type Word: Into<u64>;
 
     fn n_value(&self) -> Self::Word;
-    fn n_scnum(&self) -> i16;
-    fn n_type(&self) -> u16;
-    fn n_sclass(&self) -> u8;
+    fn n_scnum(&self) -> xcoff::SymbolSection;
+    fn n_type(&self) -> xcoff::SymbolType;
+    fn n_sclass(&self) -> xcoff::SymbolClass;
     fn n_numaux(&self) -> u8;
 
     fn name_offset(&self) -> Option<u32>;
@@ -555,12 +559,9 @@ pub trait Symbol: Debug + Pod {
 
     /// Return the section index for the symbol.
     fn section(&self) -> Option<SectionIndex> {
-        let index = self.n_scnum();
-        if index > 0 {
-            Some(SectionIndex(index as usize))
-        } else {
-            None
-        }
+        self.n_scnum()
+            .index()
+            .map(|index| SectionIndex(index as usize))
     }
 
     /// Return true if the symbol is a null placeholder.
@@ -600,15 +601,15 @@ impl Symbol for xcoff::Symbol64 {
         self.n_value.get(BE)
     }
 
-    fn n_scnum(&self) -> i16 {
+    fn n_scnum(&self) -> xcoff::SymbolSection {
         self.n_scnum.get(BE)
     }
 
-    fn n_type(&self) -> u16 {
+    fn n_type(&self) -> xcoff::SymbolType {
         self.n_type.get(BE)
     }
 
-    fn n_sclass(&self) -> u8 {
+    fn n_sclass(&self) -> xcoff::SymbolClass {
         self.n_sclass
     }
 
@@ -638,15 +639,15 @@ impl Symbol for xcoff::Symbol32 {
         self.n_value.get(BE)
     }
 
-    fn n_scnum(&self) -> i16 {
+    fn n_scnum(&self) -> xcoff::SymbolSection {
         self.n_scnum.get(BE)
     }
 
-    fn n_type(&self) -> u16 {
+    fn n_type(&self) -> xcoff::SymbolType {
         self.n_type.get(BE)
     }
 
-    fn n_sclass(&self) -> u8 {
+    fn n_sclass(&self) -> xcoff::SymbolClass {
         self.n_sclass
     }
 

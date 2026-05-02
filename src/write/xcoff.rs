@@ -18,8 +18,8 @@ struct SymbolOffsets {
     index: usize,
     str_id: Option<StringId>,
     aux_count: u8,
-    n_type: u16,
-    n_sclass: u8,
+    n_type: xcoff::SymbolType,
+    n_sclass: xcoff::SymbolClass,
     x_smtyp: u8,
     x_smclas: u8,
     containing_csect: Option<SymbolId>,
@@ -119,9 +119,9 @@ impl<'a> Object<'a> {
                 || n_sclass == xcoff::C_WEAKEXT
                 || n_sclass == xcoff::C_HIDEXT)
         {
-            xcoff::SYM_V_HIDDEN
+            xcoff::SYM_V_HIDDEN.into()
         } else {
-            0
+            xcoff::SymbolType(0)
         };
         let (x_smtyp, x_smclas) = if n_sclass == xcoff::C_EXT
             || n_sclass == xcoff::C_WEAKEXT
@@ -500,7 +500,7 @@ impl<'a> Object<'a> {
                 }
                 SymbolSection::Undefined | SymbolSection::Common => xcoff::N_UNDEF,
                 SymbolSection::Absolute => xcoff::N_ABS,
-                SymbolSection::Section(id) => id.0 as i16 + 1,
+                SymbolSection::Section(id) => xcoff::SymbolSection(id.0 as i16 + 1),
             };
             let n_type = symbol_offsets[index].n_type;
             let n_sclass = symbol_offsets[index].n_sclass;
