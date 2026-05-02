@@ -209,17 +209,6 @@ impl<'a> Printer<'a> {
         writeln!(self.w).unwrap();
     }
 
-    fn field_enum<T: Eq + fmt::UpperHex>(&mut self, name: &str, value: T, flags: &[Flag<T>]) {
-        for flag in flags {
-            if value == flag.value {
-                self.field_name(name);
-                writeln!(self.w, "{} (0x{:X})", flag.name, value).unwrap();
-                return;
-            }
-        }
-        self.field_hex(name, value);
-    }
-
     fn field_consts<T>(&mut self, name: &str, value: T, consts: &ConstantNames<T>)
     where
         T: Wrap + Copy,
@@ -335,15 +324,6 @@ impl<'a> Printer<'a> {
             });
         }
     }
-}
-
-struct Flag<T> {
-    value: T,
-    name: &'static str,
-}
-
-macro_rules! flags {
-    ($($name:ident),+ $(,)?) => ( [ $(Flag { value: $name, name: stringify!($name), }),+ ] )
 }
 
 fn print_object(p: &mut Printer<'_>, data: &[u8], extra_files: &[&[u8]]) {

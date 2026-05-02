@@ -690,7 +690,7 @@ pub struct FileAux32 {
     /// Pad size for file name.
     pub x_fpad: [u8; 6],
     /// The source-file string type.
-    pub x_ftype: u8,
+    pub x_ftype: FileAuxType,
     /// Reserved.
     pub x_freserve: [u8; 3],
 }
@@ -706,23 +706,29 @@ pub struct FileAux64 {
     /// Pad size for file name.
     pub x_fpad: [u8; 6],
     /// The source-file string type.
-    pub x_ftype: u8,
+    pub x_ftype: FileAuxType,
     /// Reserved.
     pub x_freserve: [u8; 2],
-    /// Specifies the type of auxiliary entry. Contains _AUX_FILE for this auxiliary entry.
-    pub x_auxtype: u8,
+    /// Specifies the type of auxiliary entry. Contains `AUX_FILE` for this auxiliary entry.
+    pub x_auxtype: AuxType,
 }
 
-// Values for `x_ftype`.
-//
-/// Specifies the source-file name.
-pub const XFT_FN: u8 = 0;
-/// Specifies the compiler time stamp.
-pub const XFT_CT: u8 = 1;
-/// Specifies the compiler version number.
-pub const XFT_CV: u8 = 2;
-/// Specifies compiler-defined information.
-pub const XFT_CD: u8 = 128;
+newtype!(
+    /// Values for `FileAux*::x_ftype`.
+    #[repr(transparent)]
+    struct FileAuxType(u8);
+);
+
+newtype_constant_names!(NAMES_XFT: FileAuxType(u8) = {
+    /// Specifies the source-file name.
+    XFT_FN = 0,
+    /// Specifies the compiler time stamp.
+    XFT_CT = 1,
+    /// Specifies the compiler version number.
+    XFT_CV = 2,
+    /// Specifies compiler-defined information.
+    XFT_CD = 128,
+});
 
 /// Csect auxiliary entry for C_EXT, C_WEAKEXT, and C_HIDEXT symbols.
 #[derive(Debug, Clone, Copy)]
@@ -762,8 +768,8 @@ pub struct CsectAux64 {
     pub x_scnlen_hi: U32<BE>,
     /// Reserved.
     pub pad: u8,
-    /// Contains _AUX_CSECT; indicates type of auxiliary entry.
-    pub x_auxtype: u8,
+    /// Contains `AUX_CSECT`; indicates type of auxiliary entry.
+    pub x_auxtype: AuxType,
 }
 
 newtype!(
@@ -907,8 +913,8 @@ pub struct FunAux64 {
     pub x_endndx: U32<BE>,
     /// Pad
     pub pad: u8,
-    /// Contains _AUX_FCN; Type of auxiliary entry.
-    pub x_auxtype: u8,
+    /// Contains `AUX_FCN`; Type of auxiliary entry.
+    pub x_auxtype: AuxType,
 }
 
 /// Exception auxiliary entry. (XCOFF64 only)
@@ -923,8 +929,8 @@ pub struct ExpAux {
     pub x_endndx: U32<BE>,
     /// Pad
     pub pad: u8,
-    /// Contains _AUX_EXCEPT; Type of auxiliary entry
-    pub x_auxtype: u8,
+    /// Contains `AUX_EXCEPT`; Type of auxiliary entry
+    pub x_auxtype: AuxType,
 }
 
 /// Block auxiliary entry for the C_BLOCK and C_FCN Symbols.
@@ -949,8 +955,8 @@ pub struct BlockAux64 {
     pub x_lnno: U32<BE>,
     /// Reserved.
     pub pad: [u8; 13],
-    /// Contains _AUX_SYM; Type of auxiliary entry.
-    pub x_auxtype: u8,
+    /// Contains `AUX_SYM`; Type of auxiliary entry.
+    pub x_auxtype: AuxType,
 }
 
 /// Section auxiliary entry for the C_STAT Symbol. (XCOFF32 Only)
@@ -991,24 +997,30 @@ pub struct DwarfAux64 {
     pub x_nreloc: U64<BE>,
     /// Reserved.
     pub pad: u8,
-    /// Contains _AUX_SECT; Type of Auxiliary entry.
-    pub x_auxtype: u8,
+    /// Contains `AUX_SECT`; Type of Auxiliary entry.
+    pub x_auxtype: AuxType,
 }
 
-// Values for `x_auxtype`
-//
-/// Identifies an exception auxiliary entry.
-pub const AUX_EXCEPT: u8 = 255;
-/// Identifies a function auxiliary entry.
-pub const AUX_FCN: u8 = 254;
-/// Identifies a symbol auxiliary entry.
-pub const AUX_SYM: u8 = 253;
-/// Identifies a file auxiliary entry.
-pub const AUX_FILE: u8 = 252;
-/// Identifies a csect auxiliary entry.
-pub const AUX_CSECT: u8 = 251;
-/// Identifies a SECT auxiliary entry.
-pub const AUX_SECT: u8 = 250;
+newtype!(
+    /// Values for `x_auxtype` field in auxiliary entries.
+    #[repr(transparent)]
+    struct AuxType(u8);
+);
+
+newtype_constant_names!(NAMES_AUX: AuxType(u8) = {
+    /// Identifies an exception auxiliary entry.
+    AUX_EXCEPT = 255,
+    /// Identifies a function auxiliary entry.
+    AUX_FCN = 254,
+    /// Identifies a symbol auxiliary entry.
+    AUX_SYM = 253,
+    /// Identifies a file auxiliary entry.
+    AUX_FILE = 252,
+    /// Identifies a csect auxiliary entry.
+    AUX_CSECT = 251,
+    /// Identifies a SECT auxiliary entry.
+    AUX_SECT = 250,
+});
 
 /// Relocation table entry
 #[derive(Debug, Clone, Copy)]
@@ -1038,54 +1050,58 @@ pub struct Rel64 {
     pub r_rtype: u8,
 }
 
-// Values for `r_rtype`.
-//
-/// Positive relocation.
-pub const R_POS: u8 = 0x00;
-/// Positive indirect load relocation.
-pub const R_RL: u8 = 0x0c;
-/// Positive load address relocation. Modifiable instruction.
-pub const R_RLA: u8 = 0x0d;
-/// Negative relocation.
-pub const R_NEG: u8 = 0x01;
-/// Relative to self relocation.
-pub const R_REL: u8 = 0x02;
-/// Relative to the TOC relocation.
-pub const R_TOC: u8 = 0x03;
-/// TOC relative indirect load relocation.
-pub const R_TRL: u8 = 0x12;
-/// Relative to the TOC or to the thread-local storage base relocation.
-pub const R_TRLA: u8 = 0x13;
-/// Global linkage-external TOC address relocation.
-pub const R_GL: u8 = 0x05;
-/// Local object TOC address relocation.
-pub const R_TCL: u8 = 0x06;
-/// A non-relocating relocation.
-pub const R_REF: u8 = 0x0f;
-/// Branch absolute relocation. References a non-modifiable instruction.
-pub const R_BA: u8 = 0x08;
-/// Branch relative to self relocation. References a non-modifiable instruction.
-pub const R_BR: u8 = 0x0a;
-/// Branch absolute relocation. References a modifiable instruction.
-pub const R_RBA: u8 = 0x18;
-/// Branch relative to self relocation. References a modifiable instruction.
-pub const R_RBR: u8 = 0x1a;
-/// General-dynamic reference to TLS symbol.
-pub const R_TLS: u8 = 0x20;
-/// Initial-exec reference to TLS symbol.
-pub const R_TLS_IE: u8 = 0x21;
-/// Local-dynamic reference to TLS symbol.
-pub const R_TLS_LD: u8 = 0x22;
-/// Local-exec reference to TLS symbol.
-pub const R_TLS_LE: u8 = 0x23;
-/// Module reference to TLS.
-pub const R_TLSM: u8 = 0x24;
-/// Module reference to the local TLS storage.
-pub const R_TLSML: u8 = 0x25;
-/// Relative to TOC upper.
-pub const R_TOCU: u8 = 0x30;
-/// Relative to TOC lower.
-pub const R_TOCL: u8 = 0x31;
+/// Values for `Rel*::r_rtype`.
+#[cfg(feature = "names")]
+pub const NAMES_REL_TYPE: &ConstantNames<u8> = &NAMES_R;
+
+constant_names!(NAMES_R: u8 = {
+    /// Positive relocation.
+    R_POS = 0x00,
+    /// Positive indirect load relocation.
+    R_RL = 0x0c,
+    /// Positive load address relocation. Modifiable instruction.
+    R_RLA = 0x0d,
+    /// Negative relocation.
+    R_NEG = 0x01,
+    /// Relative to self relocation.
+    R_REL = 0x02,
+    /// Relative to the TOC relocation.
+    R_TOC = 0x03,
+    /// TOC relative indirect load relocation.
+    R_TRL = 0x12,
+    /// Relative to the TOC or to the thread-local storage base relocation.
+    R_TRLA = 0x13,
+    /// Global linkage-external TOC address relocation.
+    R_GL = 0x05,
+    /// Local object TOC address relocation.
+    R_TCL = 0x06,
+    /// A non-relocating relocation.
+    R_REF = 0x0f,
+    /// Branch absolute relocation. References a non-modifiable instruction.
+    R_BA = 0x08,
+    /// Branch relative to self relocation. References a non-modifiable instruction.
+    R_BR = 0x0a,
+    /// Branch absolute relocation. References a modifiable instruction.
+    R_RBA = 0x18,
+    /// Branch relative to self relocation. References a modifiable instruction.
+    R_RBR = 0x1a,
+    /// General-dynamic reference to TLS symbol.
+    R_TLS = 0x20,
+    /// Initial-exec reference to TLS symbol.
+    R_TLS_IE = 0x21,
+    /// Local-dynamic reference to TLS symbol.
+    R_TLS_LD = 0x22,
+    /// Local-exec reference to TLS symbol.
+    R_TLS_LE = 0x23,
+    /// Module reference to TLS.
+    R_TLSM = 0x24,
+    /// Module reference to the local TLS storage.
+    R_TLSML = 0x25,
+    /// Relative to TOC upper.
+    R_TOCU = 0x30,
+    /// Relative to TOC lower.
+    R_TOCL = 0x31,
+});
 
 unsafe_impl_pod!(
     FileHeader32,

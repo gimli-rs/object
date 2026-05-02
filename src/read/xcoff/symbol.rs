@@ -688,8 +688,8 @@ impl Symbol for xcoff::Symbol32 {
 #[allow(missing_docs)]
 pub trait FileAux: Debug + Pod {
     fn x_fname(&self) -> &[u8; 8];
-    fn x_ftype(&self) -> u8;
-    fn x_auxtype(&self) -> Option<u8>;
+    fn x_ftype(&self) -> xcoff::FileAuxType;
+    fn x_auxtype(&self) -> Option<xcoff::AuxType>;
 
     fn name_offset(&self) -> Option<u32> {
         let x_fname = self.x_fname();
@@ -726,11 +726,11 @@ impl FileAux for xcoff::FileAux64 {
         &self.x_fname
     }
 
-    fn x_ftype(&self) -> u8 {
+    fn x_ftype(&self) -> xcoff::FileAuxType {
         self.x_ftype
     }
 
-    fn x_auxtype(&self) -> Option<u8> {
+    fn x_auxtype(&self) -> Option<xcoff::AuxType> {
         Some(self.x_auxtype)
     }
 }
@@ -740,11 +740,11 @@ impl FileAux for xcoff::FileAux32 {
         &self.x_fname
     }
 
-    fn x_ftype(&self) -> u8 {
+    fn x_ftype(&self) -> xcoff::FileAuxType {
         self.x_ftype
     }
 
-    fn x_auxtype(&self) -> Option<u8> {
+    fn x_auxtype(&self) -> Option<xcoff::AuxType> {
         None
     }
 }
@@ -759,7 +759,7 @@ pub trait CsectAux: Debug + Pod {
     fn x_smclas(&self) -> xcoff::CsectAuxClass;
     fn x_stab(&self) -> Option<u32>;
     fn x_snstab(&self) -> Option<u16>;
-    fn x_auxtype(&self) -> Option<u8>;
+    fn x_auxtype(&self) -> Option<xcoff::AuxType>;
 
     fn alignment(&self) -> u8 {
         self.x_smtyp().alignment()
@@ -798,7 +798,7 @@ impl CsectAux for xcoff::CsectAux64 {
         None
     }
 
-    fn x_auxtype(&self) -> Option<u8> {
+    fn x_auxtype(&self) -> Option<xcoff::AuxType> {
         Some(self.x_auxtype)
     }
 }
@@ -832,7 +832,7 @@ impl CsectAux for xcoff::CsectAux32 {
         Some(self.x_snstab.get(BE))
     }
 
-    fn x_auxtype(&self) -> Option<u8> {
+    fn x_auxtype(&self) -> Option<xcoff::AuxType> {
         None
     }
 }

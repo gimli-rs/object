@@ -133,7 +133,7 @@ fn print_sections<'data, Xcoff: FileHeader>(
                         });
                         p.field_string_option("Symbol", index.0, name);
                         p.field_hex("Size", relocation.r_rsize());
-                        p.field_enum("Type", relocation.r_rtype(), FLAGS_R);
+                        p.field_consts("Type", relocation.r_rtype(), NAMES_REL_TYPE);
                     });
                 }
             }
@@ -194,9 +194,9 @@ fn print_symbols<'data, Xcoff: FileHeader>(
                             } else if let Ok(name) = name {
                                 p.field_inline_string("Name", name);
                             }
-                            p.field_enum("Type", aux_file.x_ftype(), FLAGS_XFT);
+                            p.field_consts("Type", aux_file.x_ftype(), FileAuxType::NAMES);
                             if let Some(auxtype) = aux_file.x_auxtype() {
-                                p.field_enum("AuxiliaryType", auxtype, FLAGS_AUX);
+                                p.field_consts("AuxiliaryType", auxtype, AuxType::NAMES);
                             }
                         });
                     }
@@ -224,18 +224,10 @@ fn print_symbols<'data, Xcoff: FileHeader>(
                         p.field("StabSectionNumber", snstab);
                     }
                     if let Some(auxtype) = aux_csect.x_auxtype() {
-                        p.field_enum("AuxiliaryType", auxtype, FLAGS_AUX);
+                        p.field_consts("AuxiliaryType", auxtype, AuxType::NAMES);
                     }
                 });
             }
         });
     }
 }
-
-const FLAGS_XFT: &[Flag<u8>] = &flags!(XFT_FN, XFT_CT, XFT_CV, XFT_CD,);
-const FLAGS_AUX: &[Flag<u8>] =
-    &flags!(AUX_EXCEPT, AUX_FCN, AUX_SYM, AUX_FILE, AUX_CSECT, AUX_SECT,);
-const FLAGS_R: &[Flag<u8>] = &flags!(
-    R_POS, R_RL, R_RLA, R_NEG, R_REL, R_TOC, R_TRL, R_TRLA, R_GL, R_TCL, R_REF, R_BA, R_BR, R_RBA,
-    R_RBR, R_TLS, R_TLS_IE, R_TLS_LD, R_TLS_LE, R_TLSM, R_TLSML, R_TOCU, R_TOCL,
-);
