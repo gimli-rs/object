@@ -359,6 +359,10 @@ impl<'a> Object<'a> {
             .map_err(|_| Error(String::from("Cannot allocate buffer")))?;
 
         // Write file header.
+        let f_flags = match self.flags {
+            FileFlags::Xcoff { f_flags } => f_flags,
+            _ => xcoff::FileFlags(0),
+        };
         if is_64 {
             let header = xcoff::FileHeader64 {
                 f_magic: xcoff::MAGIC_64.into(),
@@ -367,10 +371,7 @@ impl<'a> Object<'a> {
                 f_symptr: (symtab_offset as u64).into(),
                 f_nsyms: (symtab_count as u32).into(),
                 f_opthdr: 0.into(),
-                f_flags: match self.flags {
-                    FileFlags::Xcoff { f_flags } => f_flags.into(),
-                    _ => 0.into(),
-                },
+                f_flags: f_flags.into(),
             };
             buffer.write(&header);
         } else {
@@ -381,10 +382,7 @@ impl<'a> Object<'a> {
                 f_symptr: (symtab_offset as u32).into(),
                 f_nsyms: (symtab_count as u32).into(),
                 f_opthdr: 0.into(),
-                f_flags: match self.flags {
-                    FileFlags::Xcoff { f_flags } => f_flags.into(),
-                    _ => 0.into(),
-                },
+                f_flags: f_flags.into(),
             };
             buffer.write(&header);
         }

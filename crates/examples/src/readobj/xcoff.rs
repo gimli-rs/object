@@ -51,8 +51,7 @@ fn print_file_header<Xcoff: FileHeader>(p: &mut Printer<'_>, header: &Xcoff) {
         p.field_hex("SymbolPointer", header.f_symptr().into());
         p.field("NumberOfSymbols", header.f_nsyms());
         p.field_hex("SizeOfOptionalHeader", header.f_opthdr());
-        p.field_hex("Flags", header.f_flags());
-        p.flags(header.f_flags(), 0, FLAGS_F);
+        p.field_flags("Flags", header.f_flags(), FileFlags::NAMES);
     });
 }
 
@@ -229,18 +228,6 @@ fn print_symbols<'data, Xcoff: FileHeader>(
     }
 }
 
-const FLAGS_F: &[Flag<u16>] = &flags!(
-    F_RELFLG,
-    F_EXEC,
-    F_LNNO,
-    F_FDPR_PROF,
-    F_FDPR_OPTI,
-    F_DSA,
-    F_VARPG,
-    F_DYNLOAD,
-    F_SHROBJ,
-    F_LOADONLY,
-);
 const FLAGS_STYP: &[Flag<u16>] = &flags!(
     STYP_REG,
     STYP_PAD,

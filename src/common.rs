@@ -501,7 +501,7 @@ pub enum FileFlags {
     #[cfg(feature = "xcoff")]
     Xcoff {
         /// `f_flags` field in the XCOFF file header.
-        f_flags: u16,
+        f_flags: crate::xcoff::FileFlags,
     },
 }
 

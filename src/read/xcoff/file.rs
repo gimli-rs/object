@@ -188,11 +188,11 @@ where
 
     fn kind(&self) -> ObjectKind {
         let flags = self.header.f_flags();
-        if flags & xcoff::F_EXEC != 0 {
+        if flags.contains(xcoff::F_EXEC) {
             ObjectKind::Executable
-        } else if flags & xcoff::F_SHROBJ != 0 {
+        } else if flags.contains(xcoff::F_SHROBJ) {
             ObjectKind::Dynamic
-        } else if flags & xcoff::F_RELFLG == 0 {
+        } else if !flags.contains(xcoff::F_RELFLG) {
             ObjectKind::Relocatable
         } else {
             ObjectKind::Unknown
@@ -330,7 +330,7 @@ pub trait FileHeader: Debug + Pod {
     fn f_symptr(&self) -> Self::Word;
     fn f_nsyms(&self) -> u32;
     fn f_opthdr(&self) -> u16;
-    fn f_flags(&self) -> u16;
+    fn f_flags(&self) -> xcoff::FileFlags;
 
     // Provided methods.
 
@@ -359,7 +359,7 @@ pub trait FileHeader: Debug + Pod {
         offset: &mut u64,
     ) -> Result<Option<&'data Self::AuxHeader>> {
         let aux_header_size = self.f_opthdr();
-        if self.f_flags() & xcoff::F_EXEC == 0 {
+        if !self.f_flags().contains(xcoff::F_EXEC) {
             // No auxiliary header is required for an object file that is not an executable.
             // TODO: Some AIX programs generate auxiliary headers for 32-bit object files
             // that end after the data_start field.
@@ -432,7 +432,7 @@ impl FileHeader for xcoff::FileHeader32 {
         self.f_opthdr.get(BE)
     }
 
-    fn f_flags(&self) -> u16 {
+    fn f_flags(&self) -> xcoff::FileFlags {
         self.f_flags.get(BE)
     }
 }
@@ -474,7 +474,7 @@ impl FileHeader for xcoff::FileHeader64 {
         self.f_opthdr.get(BE)
     }
 
-    fn f_flags(&self) -> u16 {
+    fn f_flags(&self) -> xcoff::FileFlags {
         self.f_flags.get(BE)
     }
 }

@@ -1,7 +1,7 @@
 Format: Xcoff Big-endian 64-bit
 Kind: Executable
 Architecture: PowerPc64
-Flags: Xcoff { f_flags: 1002 }
+Flags: Xcoff { f_flags: F_EXEC | F_DYNLOAD }
 Relative Address Base: 0
 Entry Address: 110000848
 1: Section { name: ".text", address: 1000001f8, size: 4d5, align: 5, kind: Text, flags: Xcoff { s_flags: 20 } }

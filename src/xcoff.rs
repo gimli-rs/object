@@ -27,7 +27,7 @@ pub struct FileHeader32 {
     /// Number of bytes in optional header
     pub f_opthdr: U16<BE>,
     /// Extra flags.
-    pub f_flags: U16<BE>,
+    pub f_flags: U16<BE, FileFlags>,
 }
 
 /// The header at the start of every 64-bit XCOFF file.
@@ -45,7 +45,7 @@ pub struct FileHeader64 {
     /// Number of bytes in optional header
     pub f_opthdr: U16<BE>,
     /// Extra flags.
-    pub f_flags: U16<BE>,
+    pub f_flags: U16<BE, FileFlags>,
     /// Number of entries in symbol table.
     pub f_nsyms: U32<BE>,
 }
@@ -57,36 +57,41 @@ pub const MAGIC_64: u16 = 0x01F7;
 /// the 32-bit mach magic number
 pub const MAGIC_32: u16 = 0x01DF;
 
-// Values for `f_flags`.
-//
-/// Indicates that the relocation information for binding has been removed from
-/// the file.
-pub const F_RELFLG: u16 = 0x0001;
-/// Indicates that the file is executable. No unresolved external references exist.
-pub const F_EXEC: u16 = 0x0002;
-/// Indicates that line numbers have been stripped from the file by a utility program.
-pub const F_LNNO: u16 = 0x0004;
-/// Indicates that the file was profiled with the fdpr command.
-pub const F_FDPR_PROF: u16 = 0x0010;
-/// Indicates that the file was reordered with the fdpr command.
-pub const F_FDPR_OPTI: u16 = 0x0020;
-/// Indicates that the file uses Very Large Program Support.
-pub const F_DSA: u16 = 0x0040;
-/// Indicates that one of the members of the auxiliary header specifying the
-/// medium page sizes is non-zero.
-pub const F_VARPG: u16 = 0x0100;
-/// Indicates the file is dynamically loadable and executable. External references
-/// are resolved by way of imports, and the file might contain exports and loader
-/// relocation.
-pub const F_DYNLOAD: u16 = 0x1000;
-/// Indicates the file is a shared object (shared library). The file is separately
-/// loadable. That is, it is not normally bound with other objects, and its loader
-/// exports symbols are used as automatic import symbols for other object files.
-pub const F_SHROBJ: u16 = 0x2000;
-/// If the object file is a member of an archive, it can be loaded by the system
-/// loader, but the member is ignored by the binder. If the object file is not in
-/// an archive, this flag has no effect.
-pub const F_LOADONLY: u16 = 0x4000;
+newtype!(
+    /// Values for `FileHeader*::f_flags`.
+    struct FileFlags(u16);
+);
+
+newtype_flag_names!(NAMES_F: FileFlags(u16) = {
+    /// Indicates that the relocation information for binding has been removed from
+    /// the file.
+    F_RELFLG = 0x0001,
+    /// Indicates that the file is executable. No unresolved external references exist.
+    F_EXEC = 0x0002,
+    /// Indicates that line numbers have been stripped from the file by a utility program.
+    F_LNNO = 0x0004,
+    /// Indicates that the file was profiled with the fdpr command.
+    F_FDPR_PROF = 0x0010,
+    /// Indicates that the file was reordered with the fdpr command.
+    F_FDPR_OPTI = 0x0020,
+    /// Indicates that the file uses Very Large Program Support.
+    F_DSA = 0x0040,
+    /// Indicates that one of the members of the auxiliary header specifying the
+    /// medium page sizes is non-zero.
+    F_VARPG = 0x0100,
+    /// Indicates the file is dynamically loadable and executable. External references
+    /// are resolved by way of imports, and the file might contain exports and loader
+    /// relocation.
+    F_DYNLOAD = 0x1000,
+    /// Indicates the file is a shared object (shared library). The file is separately
+    /// loadable. That is, it is not normally bound with other objects, and its loader
+    /// exports symbols are used as automatic import symbols for other object files.
+    F_SHROBJ = 0x2000,
+    /// If the object file is a member of an archive, it can be loaded by the system
+    /// loader, but the member is ignored by the binder. If the object file is not in
+    /// an archive, this flag has no effect.
+    F_LOADONLY = 0x4000,
+});
 
 /// The auxiliary header immediately following file header. If the value of the
 /// f_opthdr field in the file header is 0, the auxiliary header does not exist.
