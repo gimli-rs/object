@@ -5,7 +5,7 @@
 #![cfg_attr(not(feature = "read"), allow(unused_macros))]
 
 #[cfg(feature = "names")]
-use core::slice;
+use core::ops::{BitAnd, Not};
 
 /// The names and values for a set of constants with a given type.
 #[cfg(feature = "names")]
@@ -17,54 +17,32 @@ pub struct ConstantNames<T: 'static> {
 
 #[cfg(feature = "names")]
 impl<T: 'static> ConstantNames<T> {
-    /// Get the entry at the given index.
-    pub fn entry(&self, index: usize) -> Option<(T, &'static str)>
-    where
-        T: Copy,
-    {
-        match self.entries.get(index) {
-            Some(entry) => Some(*entry),
-            None => self.next?.entry(index - self.entries.len()),
-        }
-    }
-
     /// Get the name of the first constant with the given value.
     pub fn name(&self, value: T) -> Option<&'static str>
     where
         T: Copy + PartialEq,
     {
-        self.iter().find(|x| x.0 == value).map(|x| x.1)
-    }
-
-    /// Iterate over the names and values for all constants in the set.
-    pub fn iter(&self) -> ConstantNameIter<T> {
-        ConstantNameIter {
-            next: self.next,
-            entries: self.entries.iter(),
+        let mut next = Some(self);
+        while let Some(names) = next {
+            for entry in names.entries {
+                if entry.0 == value {
+                    return Some(entry.1);
+                }
+            }
+            next = names.next;
         }
+        None
     }
 }
 
-/// An iterator for the values and names in a [`ConstantNames`].
+/// A masked group of entries in a [`FlagNames`].
+///
+/// An entry is set when `(value & mask) == sub_value`
 #[cfg(feature = "names")]
 #[derive(Debug)]
-pub struct ConstantNameIter<T: 'static> {
-    pub(crate) next: Option<&'static ConstantNames<T>>,
-    pub(crate) entries: slice::Iter<'static, (T, &'static str)>,
-}
-
-#[cfg(feature = "names")]
-impl<T: 'static + Copy> Iterator for ConstantNameIter<T> {
-    type Item = (T, &'static str);
-
-    fn next(&mut self) -> Option<Self::Item> {
-        loop {
-            if let Some(item) = self.entries.next().copied() {
-                return Some(item);
-            }
-            *self = self.next?.iter();
-        }
-    }
+pub(crate) struct FlagGroup<T: 'static> {
+    pub(crate) mask: T,
+    pub(crate) names: &'static ConstantNames<T>,
 }
 
 /// The names and values for flags in a bitfield.
@@ -84,134 +62,95 @@ pub struct FlagNames<T: 'static> {
 
 #[cfg(feature = "names")]
 impl<T: 'static> FlagNames<T> {
-    /// Iterate over all bit entries.
-    pub fn bits_iter(&self) -> FlagBitsIter<T> {
-        FlagBitsIter {
-            next: self.next,
-            bits: self.bits.iter(),
-        }
-    }
-
-    /// Iterate over all group entries.
-    pub fn groups_iter(&self) -> FlagGroupsIter<T> {
-        FlagGroupsIter {
-            next: self.next,
-            groups: self.groups.iter(),
-        }
-    }
-}
-
-/// An iterator for the bit entries in a [`FlagNames`].
-#[cfg(feature = "names")]
-#[derive(Debug)]
-pub struct FlagBitsIter<T: 'static> {
-    next: Option<&'static FlagNames<T>>,
-    bits: slice::Iter<'static, (T, &'static str)>,
-}
-
-#[cfg(feature = "names")]
-impl<T: 'static + Copy> Iterator for FlagBitsIter<T> {
-    type Item = (T, &'static str);
-
-    fn next(&mut self) -> Option<Self::Item> {
-        loop {
-            if let Some(item) = self.bits.next().copied() {
-                return Some(item);
-            }
-            *self = self.next?.bits_iter();
-        }
-    }
-}
-
-/// An iterator for the group entries in a [`FlagNames`].
-#[cfg(feature = "names")]
-#[derive(Debug)]
-pub struct FlagGroupsIter<T: 'static> {
-    next: Option<&'static FlagNames<T>>,
-    groups: slice::Iter<'static, FlagGroup<T>>,
-}
-
-#[cfg(feature = "names")]
-impl<T: 'static + Copy> Iterator for FlagGroupsIter<T> {
-    type Item = &'static FlagGroup<T>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        loop {
-            if let Some(item) = self.groups.next() {
-                return Some(item);
-            }
-            *self = self.next?.groups_iter();
-        }
-    }
-}
-
-/// A masked group of entries in a [`FlagNames`].
-///
-/// An entry is set when `(value & mask) == sub_value`
-#[cfg(feature = "names")]
-#[derive(Debug)]
-pub struct FlagGroup<T: 'static> {
-    pub(crate) mask: T,
-    pub(crate) names: &'static ConstantNames<T>,
-}
-
-#[cfg(feature = "names")]
-impl<T: 'static> FlagGroup<T> {
-    /// The mask to apply to a value before comparing to entries.
-    pub fn mask(&self) -> T
-    where
-        T: Copy,
-    {
-        self.mask
-    }
-
-    /// Get the entry at the given index.
-    pub fn entry(&self, index: usize) -> Option<(T, &'static str)>
-    where
-        T: Copy,
-    {
-        self.names.entry(index)
-    }
-
-    /// Get the name of the first entry with the given value.
+    /// Calls `f` for each named group or bit that matches `value`.
     ///
-    /// The group mask will be applied to the value before comparison.
-    pub fn name<U>(&self, value: U) -> Option<&'static str>
+    /// Returns the remaining unmatched bits.
+    pub fn try_names<F, E>(&self, value: T, mut f: F) -> Result<T, E>
     where
-        T: Copy + Into<U>,
-        U: PartialEq + core::ops::BitAnd<Output = U>,
+        F: FnMut(T, &'static str) -> Result<(), E>,
+        T: Copy + PartialEq + BitAnd<Output = T> + Not<Output = T>,
     {
-        let masked = value & self.mask.into();
-        self.iter()
-            .find(|(v, _)| (*v).into() == masked)
-            .map(|(_, n)| n)
-    }
-
-    /// Iterate over all `(value, name)` pairs in this group.
-    pub fn iter(&self) -> FlagGroupIter<T> {
-        FlagGroupIter {
-            names: self.names,
-            index: 0,
+        let mut unmatched = value;
+        let mut next = Some(self);
+        while let Some(names) = next {
+            for group in names.groups {
+                let masked = unmatched & group.mask;
+                if let Some(name) = group.names.name(masked) {
+                    f(masked, name)?;
+                    unmatched = unmatched & !group.mask;
+                }
+            }
+            next = names.next;
         }
+        self.try_bit_names(unmatched, f)
+    }
+
+    /// Calls `f` for each bit that matches `value`.
+    ///
+    /// Returns the remaining unmatched bits.
+    pub fn try_bit_names<F, E>(&self, value: T, mut f: F) -> Result<T, E>
+    where
+        F: FnMut(T, &'static str) -> Result<(), E>,
+        T: Copy + PartialEq + BitAnd<Output = T> + Not<Output = T>,
+    {
+        let mut unmatched = value;
+        let mut next = Some(self);
+        while let Some(names) = next {
+            for &(bit, name) in names.bits {
+                if unmatched & bit == bit {
+                    f(bit, name)?;
+                    unmatched = unmatched & !bit;
+                }
+            }
+            next = names.next;
+        }
+        Ok(unmatched)
+    }
+
+    /// Calls `f` for each named group or bit that matches `value`.
+    ///
+    /// Returns the remaining unmatched bits.
+    pub fn names<F>(&self, value: T, mut f: F) -> T
+    where
+        F: FnMut(T, &'static str),
+        T: Copy + PartialEq + BitAnd<Output = T> + Not<Output = T>,
+    {
+        unwrap_infallible(self.try_names(value, |v, n| {
+            f(v, n);
+            Ok(())
+        }))
+    }
+
+    /// Calls `f` for each named group or bit that matches `value`.
+    ///
+    /// Returns the remaining unmatched bits.
+    pub fn bit_names<F>(&self, value: T, mut f: F) -> T
+    where
+        F: FnMut(T, &'static str),
+        T: Copy + PartialEq + BitAnd<Output = T> + Not<Output = T>,
+    {
+        unwrap_infallible(self.try_bit_names(value, |v, n| {
+            f(v, n);
+            Ok(())
+        }))
+    }
+
+    /// Find the first name that matches part of `value`.
+    ///
+    /// Returns the matched bits and the name.
+    pub fn name(&self, value: T) -> Option<(T, &'static str)>
+    where
+        T: Copy + PartialEq + BitAnd<Output = T> + Not<Output = T>,
+    {
+        self.try_names(value, |v, n| Err((v, n))).err()
     }
 }
 
-/// An iterator over the entries of a [`FlagGroup`].
 #[cfg(feature = "names")]
-#[derive(Debug, Clone)]
-pub struct FlagGroupIter<T: 'static> {
-    names: &'static ConstantNames<T>,
-    index: usize,
-}
-
-#[cfg(feature = "names")]
-impl<T: Copy + 'static> Iterator for FlagGroupIter<T> {
-    type Item = (T, &'static str);
-
-    fn next(&mut self) -> Option<Self::Item> {
-        let entry = self.names.entry(self.index)?;
-        self.index += 1;
-        Some(entry)
+fn unwrap_infallible<T>(r: Result<T, core::convert::Infallible>) -> T {
+    match r {
+        Ok(v) => v,
+        Err(e) => match e {},
     }
 }
 
@@ -539,35 +478,12 @@ mod tests {
             let constants = Arch::constants();
             assert_eq!(constants.foo.name(FOO_A), Some("FOO_A"));
             assert_eq!(constants.foo.name(FOO_ARCH_A), Some("FOO_ARCH_A"));
-            assert_eq!(
-                constants.bar.bits_iter().find(|(v, _)| *v == BIT_1),
-                Some((BIT_1, "BIT_1")),
-            );
-            assert_eq!(
-                constants.bar.bits_iter().find(|(v, _)| *v == BIT_4),
-                Some((BIT_4, "BIT_4")),
-            );
-            assert_eq!(
-                constants
-                    .bar
-                    .groups_iter()
-                    .find_map(|group| group.name(BAR_B)),
-                Some("BAR_B"),
-            );
-            assert_eq!(
-                constants
-                    .bar
-                    .groups_iter()
-                    .find_map(|group| group.name(BAR_D)),
-                Some("BAR_D"),
-            );
-            assert_eq!(
-                constants
-                    .bar
-                    .groups_iter()
-                    .find_map(|group| group.name(BAZ_B)),
-                Some("BAZ_B"),
-            );
+            assert_eq!(constants.bar.name(BIT_1), Some((BIT_1, "BIT_1")));
+            assert_eq!(constants.bar.name(BIT_4), Some((BIT_4, "BIT_4")));
+            assert_eq!(constants.bar.name(BIT_1 | BIT_4), Some((BIT_4, "BIT_4")));
+            assert_eq!(constants.bar.name(BAR_B), Some((BAR_B, "BAR_B")));
+            assert_eq!(constants.bar.name(BAR_D), Some((BAR_D, "BAR_D")));
+            assert_eq!(constants.bar.name(BAZ_B), Some((BAZ_B, "BAZ_B")));
         }
     }
 }

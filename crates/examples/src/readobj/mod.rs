@@ -1,4 +1,5 @@
 use std::io::Write;
+use std::ops::{BitAnd, Not};
 use std::{fmt, str};
 
 use object::read::archive::ArchiveFile;
@@ -244,12 +245,10 @@ impl<'a> Printer<'a> {
         self.field_hex(name, value);
     }
 
-    fn field_consts<T: PartialEq + Copy + fmt::UpperHex>(
-        &mut self,
-        name: &str,
-        value: T,
-        consts: &ConstantNames<T>,
-    ) {
+    fn field_consts<T>(&mut self, name: &str, value: T, consts: &ConstantNames<T>)
+    where
+        T: PartialEq + Copy + fmt::UpperHex,
+    {
         if let Some(flag_name) = consts.name(value) {
             self.field_name(name);
             writeln!(self.w, "{} (0x{:X})", flag_name, value).unwrap();
@@ -258,14 +257,10 @@ impl<'a> Printer<'a> {
         }
     }
 
-    fn field_flags<T: Into<u64>, U: Copy + Into<u64>>(
-        &mut self,
-        name: &str,
-        value: T,
-        flags: &FlagNames<U>,
-    ) {
-        let value = value.into();
-
+    fn field_flags<T>(&mut self, name: &str, value: T, flags: &FlagNames<T>)
+    where
+        T: Copy + Default + PartialEq + BitAnd<Output = T> + Not<Output = T> + fmt::UpperHex,
+    {
         // If only one flag is set, then display on one line. This handles the case where
         // a field is usually one group, with other bits rarely set.
         let mut first_entry = None;
@@ -289,29 +284,17 @@ impl<'a> Printer<'a> {
         };
 
         let mut count = 0;
-        let mut unknown = value;
-        for group in flags.groups_iter() {
-            if let Some(name) = group.name(unknown) {
-                write_entry(count, name, unknown & group.mask().into());
-                count += 1;
-                unknown &= !group.mask().into();
-            }
-        }
-        for (bit, name) in flags.bits_iter() {
-            let bit = bit.into();
-            if unknown & bit == bit {
-                write_entry(count, name, bit);
-                count += 1;
-                unknown &= !bit;
-            }
-        }
+        let unmatched = flags.names(value, |subvalue, subname| {
+            write_entry(count, subname, subvalue);
+            count += 1;
+        });
 
         if count == 0 {
             // No entries.
-            self.field_hex(name, unknown);
-        } else if unknown != 0 {
-            // At least one entry + unknown entry.
-            write_entry(count, "<unknown>", unknown);
+            self.field_hex(name, unmatched);
+        } else if unmatched != T::default() {
+            // At least one entry + unmatched entry.
+            write_entry(count, "<other>", unmatched);
         } else if let Some((subname, subvalue)) = first_entry {
             // Single entry on one line.
             self.field_name(name);

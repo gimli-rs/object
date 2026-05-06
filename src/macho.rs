@@ -454,14 +454,14 @@ pub struct DyldCacheHeader<E: Endian> {
     /// bitfield of values:
     /// - 8: `formatVersion`, dyld3::closure::kFormatVersion
     /// - 1: `dylibsExpectedOnDisk`, dyld should expect the dylib exists on
-    ///      disk and to compare inode/mtime to see if cache is valid
+    ///   disk and to compare inode/mtime to see if cache is valid
     /// - 1: `simulator`, for simulator of specified platform
     /// - 1: `locallyBuiltCache`, 0 for B&I built cache, 1 for locally built
-    ///      cache
+    ///   cache
     /// - 1: `builtFromChainedFixups`, some dylib in cache was built using
-    ///      chained fixups, so patch tables must be used for overrides
+    ///   chained fixups, so patch tables must be used for overrides
     /// - 1: `newFormatTLVs`, TLVs have been set by cache builder as new
-    ///      format (not needing runtime side table)
+    ///   format (not needing runtime side table)
     /// - 19: `padding`, TBD
     pub flags: U32<E>,
     /// base load address of cache if not slid
