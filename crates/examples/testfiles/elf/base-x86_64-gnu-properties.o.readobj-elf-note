@@ -3,8 +3,7 @@ SectionHeader {
     Index: 8
     Name: ".note.gnu.property" (0x52)
     Type: SHT_NOTE (0x7)
-    Flags: 0x2
-        SHF_ALLOC (0x2)
+    Flags: SHF_ALLOC (0x2)
     Address: 0x0
     Offset: 0xA0
     Size: 0x20

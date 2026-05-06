@@ -4,5 +4,5 @@ pub mod objcopy;
 #[cfg(feature = "read")]
 pub mod objdump;
 
-#[cfg(feature = "read")]
+#[cfg(all(feature = "read", feature = "names"))]
 pub mod readobj;

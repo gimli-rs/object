@@ -31,8 +31,7 @@ SectionHeader {
     Index: 2
     Name: ".rela.text" (0x1B)
     Type: SHT_RELA (0x4)
-    Flags: 0x40
-        SHF_INFO_LINK (0x40)
+    Flags: SHF_INFO_LINK (0x40)
     Address: 0x0
     Offset: 0x4B8
     Size: 0x30
@@ -75,8 +74,7 @@ SectionHeader {
     Index: 5
     Name: ".rodata" (0x31)
     Type: SHT_PROGBITS (0x1)
-    Flags: 0x2
-        SHF_ALLOC (0x2)
+    Flags: SHF_ALLOC (0x2)
     Address: 0x0
     Offset: 0x63
     Size: 0xD
@@ -89,8 +87,7 @@ SectionHeader {
     Index: 6
     Name: ".debug_info" (0x3E)
     Type: SHT_PROGBITS (0x1)
-    Flags: 0x800
-        SHF_COMPRESSED (0x800)
+    Flags: SHF_COMPRESSED (0x800)
     Address: 0x0
     Offset: 0x70
     Size: 0x84
@@ -108,8 +105,7 @@ SectionHeader {
     Index: 7
     Name: ".rela.debug_info" (0x39)
     Type: SHT_RELA (0x4)
-    Flags: 0x40
-        SHF_INFO_LINK (0x40)
+    Flags: SHF_INFO_LINK (0x40)
     Address: 0x0
     Offset: 0x4E8
     Size: 0x198
@@ -148,8 +144,7 @@ SectionHeader {
     Index: 10
     Name: ".rela.debug_aranges" (0x58)
     Type: SHT_RELA (0x4)
-    Flags: 0x40
-        SHF_INFO_LINK (0x40)
+    Flags: SHF_INFO_LINK (0x40)
     Address: 0x0
     Offset: 0x680
     Size: 0x30
@@ -175,8 +170,7 @@ SectionHeader {
     Index: 12
     Name: ".rela.debug_line" (0x6C)
     Type: SHT_RELA (0x4)
-    Flags: 0x40
-        SHF_INFO_LINK (0x40)
+    Flags: SHF_INFO_LINK (0x40)
     Address: 0x0
     Offset: 0x6B0
     Size: 0x90
@@ -253,8 +247,7 @@ SectionHeader {
     Index: 17
     Name: ".note.gnu.property" (0xB1)
     Type: SHT_NOTE (0x7)
-    Flags: 0x2
-        SHF_ALLOC (0x2)
+    Flags: SHF_ALLOC (0x2)
     Address: 0x0
     Offset: 0x340
     Size: 0x20
@@ -267,8 +260,7 @@ SectionHeader {
     Index: 18
     Name: ".eh_frame" (0xC9)
     Type: SHT_PROGBITS (0x1)
-    Flags: 0x2
-        SHF_ALLOC (0x2)
+    Flags: SHF_ALLOC (0x2)
     Address: 0x0
     Offset: 0x360
     Size: 0x38
@@ -281,8 +273,7 @@ SectionHeader {
     Index: 19
     Name: ".rela.eh_frame" (0xC4)
     Type: SHT_RELA (0x4)
-    Flags: 0x40
-        SHF_INFO_LINK (0x40)
+    Flags: SHF_INFO_LINK (0x40)
     Address: 0x0
     Offset: 0x740
     Size: 0x18

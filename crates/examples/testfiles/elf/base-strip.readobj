@@ -30,8 +30,7 @@ ProgramHeader {
     PhysicalAddress: 0x40
     FileSize: 0x1F8
     MemorySize: 0x1F8
-    Flags: 0x4
-        PF_R (0x4)
+    Flags: PF_R (0x4)
     Align: 0x8
 }
 ProgramHeader {
@@ -41,8 +40,7 @@ ProgramHeader {
     PhysicalAddress: 0x238
     FileSize: 0x1C
     MemorySize: 0x1C
-    Flags: 0x4
-        PF_R (0x4)
+    Flags: PF_R (0x4)
     Align: 0x1
     Interpreter: "/lib64/ld-linux-x86-64.so.2"
 }
@@ -204,8 +202,7 @@ ProgramHeader {
     PhysicalAddress: 0x254
     FileSize: 0x44
     MemorySize: 0x44
-    Flags: 0x4
-        PF_R (0x4)
+    Flags: PF_R (0x4)
     Align: 0x4
     Note {
         Name: "GNU" (0x4)
@@ -225,8 +222,7 @@ ProgramHeader {
     PhysicalAddress: 0x734
     FileSize: 0x3C
     MemorySize: 0x3C
-    Flags: 0x4
-        PF_R (0x4)
+    Flags: PF_R (0x4)
     Align: 0x4
 }
 ProgramHeader {
@@ -248,7 +244,6 @@ ProgramHeader {
     PhysicalAddress: 0x200DA8
     FileSize: 0x258
     MemorySize: 0x258
-    Flags: 0x4
-        PF_R (0x4)
+    Flags: PF_R (0x4)
     Align: 0x1
 }

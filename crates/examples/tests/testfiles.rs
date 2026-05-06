@@ -1,4 +1,4 @@
-#![cfg(feature = "read")]
+#![cfg(all(feature = "read", feature = "names"))]
 
 #[cfg(feature = "write")]
 use object_examples::objcopy;
