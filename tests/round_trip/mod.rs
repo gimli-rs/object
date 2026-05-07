@@ -217,6 +217,7 @@ fn elf_x86_64() {
     assert_eq!(
         text.flags(),
         SectionFlags::Elf {
+            sh_type: object::elf::SHT_PROGBITS,
             sh_flags: (object::elf::SHF_ALLOC | object::elf::SHF_EXECINSTR).into()
         }
     );
@@ -231,13 +232,11 @@ fn elf_x86_64() {
     let section = sections.next().unwrap();
     println!("{:?}", section);
     assert_eq!(section.name(), Ok(".eh_frame"));
-    assert_eq!(
-        section.kind(),
-        SectionKind::Elf(object::elf::SHT_X86_64_UNWIND)
-    );
+    assert_eq!(section.kind(), SectionKind::Unknown);
     assert_eq!(
         section.flags(),
         SectionFlags::Elf {
+            sh_type: object::elf::SHT_X86_64_UNWIND,
             sh_flags: object::elf::SHF_ALLOC.into()
         }
     );
