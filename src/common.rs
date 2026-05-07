@@ -1,7 +1,5 @@
-use core::{
-    fmt,
-    ops::{Deref, DerefMut},
-};
+use core::fmt;
+use core::ops::{Deref, DerefMut};
 
 /// A CPU architecture.
 #[allow(missing_docs)]
@@ -478,6 +476,7 @@ pub enum FileFlags {
     /// No file flags.
     None,
     /// ELF file flags.
+    #[cfg(feature = "elf")]
     Elf {
         /// `os_abi` field in the ELF file header.
         os_abi: u8,
@@ -487,16 +486,19 @@ pub enum FileFlags {
         e_flags: u32,
     },
     /// Mach-O file flags.
+    #[cfg(feature = "macho")]
     MachO {
         /// `flags` field in the Mach-O file header.
         flags: u32,
     },
     /// COFF file flags.
+    #[cfg(feature = "coff")]
     Coff {
         /// `Characteristics` field in the COFF file header.
         characteristics: u16,
     },
     /// XCOFF file flags.
+    #[cfg(feature = "xcoff")]
     Xcoff {
         /// `f_flags` field in the XCOFF file header.
         f_flags: u16,
@@ -510,11 +512,13 @@ pub enum SegmentFlags {
     /// No segment flags.
     None,
     /// ELF segment flags.
+    #[cfg(feature = "elf")]
     Elf {
         /// `p_flags` field in the segment header.
         p_flags: u32,
     },
     /// Mach-O segment flags.
+    #[cfg(feature = "macho")]
     MachO {
         /// `flags` field in the segment header.
         flags: u32,
@@ -524,6 +528,7 @@ pub enum SegmentFlags {
         initprot: u32,
     },
     /// COFF segment flags.
+    #[cfg(feature = "coff")]
     Coff {
         /// `Characteristics` field in the segment header.
         characteristics: u32,
@@ -606,6 +611,7 @@ pub enum SectionFlags {
     /// No section flags.
     None,
     /// ELF section flags.
+    #[cfg(feature = "elf")]
     Elf {
         /// `sh_type` field in the section header.
         sh_type: u32,
@@ -613,16 +619,19 @@ pub enum SectionFlags {
         sh_flags: u64,
     },
     /// Mach-O section flags.
+    #[cfg(feature = "macho")]
     MachO {
         /// `flags` field in the section header.
         flags: u32,
     },
     /// COFF section flags.
+    #[cfg(feature = "coff")]
     Coff {
         /// `Characteristics` field in the section header.
         characteristics: u32,
     },
     /// XCOFF section flags.
+    #[cfg(feature = "xcoff")]
     Xcoff {
         /// `s_flags` field in the section header.
         s_flags: u32,
@@ -636,6 +645,7 @@ pub enum SymbolFlags<Section, Symbol> {
     /// No symbol flags.
     None,
     /// ELF symbol flags.
+    #[cfg(feature = "elf")]
     Elf {
         /// `st_info` field in the ELF symbol.
         st_info: u8,
@@ -643,11 +653,13 @@ pub enum SymbolFlags<Section, Symbol> {
         st_other: u8,
     },
     /// Mach-O symbol flags.
+    #[cfg(feature = "macho")]
     MachO {
         /// `n_desc` field in the Mach-O symbol.
         n_desc: u16,
     },
     /// COFF flags for a section symbol.
+    #[cfg(feature = "coff")]
     CoffSection {
         /// `Selection` field in the auxiliary symbol for the section.
         selection: u8,
@@ -655,6 +667,7 @@ pub enum SymbolFlags<Section, Symbol> {
         associative_section: Option<Section>,
     },
     /// XCOFF symbol flags.
+    #[cfg(feature = "xcoff")]
     Xcoff {
         /// `n_sclass` field in the XCOFF symbol.
         n_sclass: u8,
@@ -671,6 +684,9 @@ pub enum SymbolFlags<Section, Symbol> {
         /// Only valid if `x_smtyp` is `XTY_LD`.
         containing_csect: Option<Symbol>,
     },
+    #[doc(hidden)]
+    #[cfg(not(all(feature = "coff", feature = "xcoff")))]
+    _Phantom(core::marker::PhantomData<(Section, Symbol)>),
 }
 
 impl<Section, Symbol> SymbolFlags<Section, Symbol> {
@@ -678,6 +694,7 @@ impl<Section, Symbol> SymbolFlags<Section, Symbol> {
     ///
     /// This corresponds to the lower 2 bits of the `st_other` field,
     /// and will be a value such as `elf::STV_DEFAULT`.
+    #[cfg(feature = "elf")]
     pub fn elf_visibility(&self) -> Option<u8> {
         match self {
             SymbolFlags::Elf { st_other, .. } => Some(st_other & 0x3),
@@ -700,11 +717,13 @@ pub enum RelocationFlags {
         size: u8,
     },
     /// ELF relocation fields.
+    #[cfg(feature = "elf")]
     Elf {
         /// `r_type` field in the ELF relocation.
         r_type: u32,
     },
     /// Mach-O relocation fields.
+    #[cfg(feature = "macho")]
     MachO {
         /// `r_type` field in the Mach-O relocation.
         r_type: u8,
@@ -714,11 +733,13 @@ pub enum RelocationFlags {
         r_length: u8,
     },
     /// COFF relocation fields.
+    #[cfg(feature = "coff")]
     Coff {
         /// `typ` field in the COFF relocation.
         typ: u16,
     },
     /// XCOFF relocation fields.
+    #[cfg(feature = "xcoff")]
     Xcoff {
         /// `r_rtype` field in the XCOFF relocation.
         r_rtype: u8,
