@@ -9,8 +9,8 @@ Segment { name: "", address: 0, size: 6b, permissions: RWX }
 2: Section { segment: "__DATA", name: "__data", address: 53, size: 18, align: 1, kind: Data, flags: MachO { flags: 0 } }
 
 Symbols
-0: Symbol { name: "_g1", address: 0, size: 0, kind: Text, section: Section(SectionIndex(1)), scope: Compilation, weak: false, flags: MachO { n_desc: 0 } }
-1: Symbol { name: "_g2", address: 5, size: 0, kind: Text, section: Section(SectionIndex(1)), scope: Compilation, weak: false, flags: MachO { n_desc: 0 } }
+0: Symbol { name: "_g1", address: 0, size: 0, kind: Text, section: Section(SectionIndex(1)), scope: Compilation, weak: false, flags: MachO { n_type: e, n_desc: 0 } }
+1: Symbol { name: "_g2", address: 5, size: 0, kind: Text, section: Section(SectionIndex(1)), scope: Compilation, weak: false, flags: MachO { n_type: e, n_desc: 0 } }
 
 __text relocations
 (4f, Relocation { kind: Unknown, encoding: Unknown, size: 20, target: Symbol(SymbolIndex(0)), addend: fffffffffffffffc, implicit_addend: true, flags: MachO { r_type: 9, r_pcrel: true, r_length: 2 } })

@@ -25,24 +25,24 @@ Comdat { symbol: SymbolIndex(17), name: "__vfprintf_l", kind: Any } Sections: 5
 Comdat { symbol: SymbolIndex(18), name: "_printf", kind: Any } Sections: 6
 
 Symbols
-0: Symbol { name: "@comp.id", address: 0, size: 0, kind: Data, section: Absolute, scope: Compilation, weak: false, flags: None }
-1: Symbol { name: "@feat.00", address: 0, size: 0, kind: Data, section: Absolute, scope: Compilation, weak: false, flags: None }
-2: Symbol { name: ".drectve", address: 0, size: 2f, kind: Section, section: Section(SectionIndex(1)), scope: Compilation, weak: false, flags: CoffSection { selection: 0, associative_section: None } }
-4: Symbol { name: ".debug$S", address: 0, size: 7c, kind: Section, section: Section(SectionIndex(2)), scope: Compilation, weak: false, flags: CoffSection { selection: 0, associative_section: None } }
-6: Symbol { name: ".text$mn", address: 0, size: 14, kind: Section, section: Section(SectionIndex(3)), scope: Compilation, weak: false, flags: CoffSection { selection: 0, associative_section: None } }
-8: Symbol { name: ".text$mn", address: 0, size: a, kind: Section, section: Section(SectionIndex(4)), scope: Compilation, weak: false, flags: CoffSection { selection: 2, associative_section: None } }
-10: Symbol { name: ".text$mn", address: 0, size: 29, kind: Section, section: Section(SectionIndex(5)), scope: Compilation, weak: false, flags: CoffSection { selection: 2, associative_section: None } }
-12: Symbol { name: ".text$mn", address: 0, size: 3a, kind: Section, section: Section(SectionIndex(6)), scope: Compilation, weak: false, flags: CoffSection { selection: 2, associative_section: None } }
-14: Symbol { name: "___local_stdio_printf_options", address: 0, size: 0, kind: Text, section: Section(SectionIndex(4)), scope: Linkage, weak: false, flags: None }
-15: Symbol { name: "___acrt_iob_func", address: 0, size: 0, kind: Text, section: Undefined, scope: Linkage, weak: false, flags: None }
-16: Symbol { name: "___stdio_common_vfprintf", address: 0, size: 0, kind: Text, section: Undefined, scope: Linkage, weak: false, flags: None }
-17: Symbol { name: "__vfprintf_l", address: 0, size: 0, kind: Text, section: Section(SectionIndex(5)), scope: Linkage, weak: false, flags: None }
-18: Symbol { name: "_printf", address: 0, size: 0, kind: Text, section: Section(SectionIndex(6)), scope: Linkage, weak: false, flags: None }
-19: Symbol { name: "_main", address: 0, size: 0, kind: Text, section: Section(SectionIndex(3)), scope: Linkage, weak: false, flags: None }
-20: Symbol { name: "?_OptionsStorage@?1??__local_stdio_printf_options@@9@9", address: 0, size: 8, kind: Data, section: Common, scope: Linkage, weak: false, flags: None }
-21: Symbol { name: ".data", address: 0, size: d, kind: Section, section: Section(SectionIndex(7)), scope: Compilation, weak: false, flags: CoffSection { selection: 0, associative_section: None } }
-23: Symbol { name: "$SG9248", address: 0, size: 0, kind: Data, section: Section(SectionIndex(7)), scope: Compilation, weak: false, flags: None }
-24: Symbol { name: ".chks64", address: 0, size: 40, kind: Section, section: Section(SectionIndex(8)), scope: Compilation, weak: false, flags: CoffSection { selection: 0, associative_section: None } }
+0: Symbol { name: "@comp.id", address: 0, size: 0, kind: Data, section: Absolute, scope: Compilation, weak: false, flags: Coff { typ: 0, storage_class: 3 } }
+1: Symbol { name: "@feat.00", address: 0, size: 0, kind: Data, section: Absolute, scope: Compilation, weak: false, flags: Coff { typ: 0, storage_class: 3 } }
+2: Symbol { name: ".drectve", address: 0, size: 2f, kind: Section, section: Section(SectionIndex(1)), scope: Compilation, weak: false, flags: CoffSection { typ: 0, storage_class: 3, selection: 0, associative_section: None } }
+4: Symbol { name: ".debug$S", address: 0, size: 7c, kind: Section, section: Section(SectionIndex(2)), scope: Compilation, weak: false, flags: CoffSection { typ: 0, storage_class: 3, selection: 0, associative_section: None } }
+6: Symbol { name: ".text$mn", address: 0, size: 14, kind: Section, section: Section(SectionIndex(3)), scope: Compilation, weak: false, flags: CoffSection { typ: 0, storage_class: 3, selection: 0, associative_section: None } }
+8: Symbol { name: ".text$mn", address: 0, size: a, kind: Section, section: Section(SectionIndex(4)), scope: Compilation, weak: false, flags: CoffSection { typ: 0, storage_class: 3, selection: 2, associative_section: None } }
+10: Symbol { name: ".text$mn", address: 0, size: 29, kind: Section, section: Section(SectionIndex(5)), scope: Compilation, weak: false, flags: CoffSection { typ: 0, storage_class: 3, selection: 2, associative_section: None } }
+12: Symbol { name: ".text$mn", address: 0, size: 3a, kind: Section, section: Section(SectionIndex(6)), scope: Compilation, weak: false, flags: CoffSection { typ: 0, storage_class: 3, selection: 2, associative_section: None } }
+14: Symbol { name: "___local_stdio_printf_options", address: 0, size: 0, kind: Text, section: Section(SectionIndex(4)), scope: Linkage, weak: false, flags: Coff { typ: 20, storage_class: 2 } }
+15: Symbol { name: "___acrt_iob_func", address: 0, size: 0, kind: Text, section: Undefined, scope: Linkage, weak: false, flags: Coff { typ: 20, storage_class: 2 } }
+16: Symbol { name: "___stdio_common_vfprintf", address: 0, size: 0, kind: Text, section: Undefined, scope: Linkage, weak: false, flags: Coff { typ: 20, storage_class: 2 } }
+17: Symbol { name: "__vfprintf_l", address: 0, size: 0, kind: Text, section: Section(SectionIndex(5)), scope: Linkage, weak: false, flags: Coff { typ: 20, storage_class: 2 } }
+18: Symbol { name: "_printf", address: 0, size: 0, kind: Text, section: Section(SectionIndex(6)), scope: Linkage, weak: false, flags: Coff { typ: 20, storage_class: 2 } }
+19: Symbol { name: "_main", address: 0, size: 0, kind: Text, section: Section(SectionIndex(3)), scope: Linkage, weak: false, flags: Coff { typ: 20, storage_class: 2 } }
+20: Symbol { name: "?_OptionsStorage@?1??__local_stdio_printf_options@@9@9", address: 0, size: 8, kind: Data, section: Common, scope: Linkage, weak: false, flags: Coff { typ: 0, storage_class: 2 } }
+21: Symbol { name: ".data", address: 0, size: d, kind: Section, section: Section(SectionIndex(7)), scope: Compilation, weak: false, flags: CoffSection { typ: 0, storage_class: 3, selection: 0, associative_section: None } }
+23: Symbol { name: "$SG9248", address: 0, size: 0, kind: Data, section: Section(SectionIndex(7)), scope: Compilation, weak: false, flags: Coff { typ: 0, storage_class: 3 } }
+24: Symbol { name: ".chks64", address: 0, size: 40, kind: Section, section: Section(SectionIndex(8)), scope: Compilation, weak: false, flags: CoffSection { typ: 0, storage_class: 3, selection: 0, associative_section: None } }
 
 .text$mn relocations
 (4, Relocation { kind: Absolute, encoding: Generic, size: 20, target: Symbol(SymbolIndex(17)), addend: 0, implicit_addend: true, flags: Coff { typ: 6 } })

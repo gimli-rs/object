@@ -142,8 +142,9 @@ where
 
     #[inline]
     fn flags(&self) -> SegmentFlags {
+        let p_type = self.segment.p_type(self.file.endian);
         let p_flags = self.segment.p_flags(self.file.endian);
-        SegmentFlags::Elf { p_flags }
+        SegmentFlags::Elf { p_type, p_flags }
     }
 
     #[inline]

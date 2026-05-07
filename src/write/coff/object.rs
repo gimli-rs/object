@@ -132,9 +132,44 @@ impl<'a> Object<'a> {
         SectionFlags::Coff { characteristics }
     }
 
-    pub(crate) fn coff_symbol_flags(&self, _symbol: &Symbol) -> SymbolFlags<SectionId, SymbolId> {
-        // TODO: Need SymbolFlags::Coff for COFF-specific flags (type and storage class).
-        SymbolFlags::None
+    pub(crate) fn coff_symbol_flags(&self, symbol: &Symbol) -> SymbolFlags<SectionId, SymbolId> {
+        let typ = if symbol.kind == SymbolKind::Text {
+            coff::IMAGE_SYM_DTYPE_FUNCTION << coff::IMAGE_SYM_DTYPE_SHIFT
+        } else {
+            coff::IMAGE_SYM_TYPE_NULL
+        };
+        let storage_class = match symbol.kind {
+            _ if symbol.weak => coff::IMAGE_SYM_CLASS_WEAK_EXTERNAL,
+            SymbolKind::File => coff::IMAGE_SYM_CLASS_FILE,
+            SymbolKind::Section => {
+                if symbol.section.id().is_some() {
+                    coff::IMAGE_SYM_CLASS_STATIC
+                } else {
+                    coff::IMAGE_SYM_CLASS_SECTION
+                }
+            }
+            SymbolKind::Label => coff::IMAGE_SYM_CLASS_LABEL,
+            SymbolKind::Text | SymbolKind::Data | SymbolKind::Tls => match symbol.section {
+                SymbolSection::None => {
+                    return SymbolFlags::None;
+                }
+                SymbolSection::Undefined | SymbolSection::Common => coff::IMAGE_SYM_CLASS_EXTERNAL,
+                SymbolSection::Absolute | SymbolSection::Section(_) => match symbol.scope {
+                    SymbolScope::Unknown => {
+                        return SymbolFlags::None;
+                    }
+                    SymbolScope::Compilation => coff::IMAGE_SYM_CLASS_STATIC,
+                    SymbolScope::Linkage | SymbolScope::Dynamic => coff::IMAGE_SYM_CLASS_EXTERNAL,
+                },
+            },
+            SymbolKind::Unknown => match symbol.section {
+                SymbolSection::Undefined => coff::IMAGE_SYM_CLASS_EXTERNAL,
+                _ => {
+                    return SymbolFlags::None;
+                }
+            },
+        };
+        SymbolFlags::Coff { typ, storage_class }
     }
 
     pub(crate) fn coff_translate_relocation(
@@ -669,7 +704,7 @@ impl<'a> Object<'a> {
 
         // Write symbols.
         for (index, symbol) in self.symbols.iter().enumerate() {
-            let SymbolFlags::None = symbol.flags else {
+            let SymbolFlags::Coff { typ, storage_class } = self.symbol_flags(symbol) else {
                 return Err(Error(format!(
                     "unimplemented symbol `{}` kind {:?}",
                     symbol.name().unwrap_or(""),
@@ -687,57 +722,6 @@ impl<'a> Object<'a> {
                 SymbolSection::Absolute => coff::IMAGE_SYM_ABSOLUTE as u16,
                 SymbolSection::Common => coff::IMAGE_SYM_UNDEFINED as u16,
                 SymbolSection::Section(id) => id.0 as u16 + 1,
-            };
-            let typ = if symbol.kind == SymbolKind::Text {
-                coff::IMAGE_SYM_DTYPE_FUNCTION << coff::IMAGE_SYM_DTYPE_SHIFT
-            } else {
-                coff::IMAGE_SYM_TYPE_NULL
-            };
-            let storage_class = match symbol.kind {
-                _ if symbol.weak => coff::IMAGE_SYM_CLASS_WEAK_EXTERNAL,
-                SymbolKind::File => coff::IMAGE_SYM_CLASS_FILE,
-                SymbolKind::Section => {
-                    if symbol.section.id().is_some() {
-                        coff::IMAGE_SYM_CLASS_STATIC
-                    } else {
-                        coff::IMAGE_SYM_CLASS_SECTION
-                    }
-                }
-                SymbolKind::Label => coff::IMAGE_SYM_CLASS_LABEL,
-                SymbolKind::Text | SymbolKind::Data | SymbolKind::Tls => match symbol.section {
-                    SymbolSection::None => {
-                        return Err(Error(format!(
-                            "missing section for symbol `{}`",
-                            symbol.name().unwrap_or("")
-                        )));
-                    }
-                    SymbolSection::Undefined | SymbolSection::Common => {
-                        coff::IMAGE_SYM_CLASS_EXTERNAL
-                    }
-                    SymbolSection::Absolute | SymbolSection::Section(_) => match symbol.scope {
-                        SymbolScope::Unknown => {
-                            return Err(Error(format!(
-                                "unimplemented symbol `{}` scope {:?}",
-                                symbol.name().unwrap_or(""),
-                                symbol.scope
-                            )));
-                        }
-                        SymbolScope::Compilation => coff::IMAGE_SYM_CLASS_STATIC,
-                        SymbolScope::Linkage | SymbolScope::Dynamic => {
-                            coff::IMAGE_SYM_CLASS_EXTERNAL
-                        }
-                    },
-                },
-                SymbolKind::Unknown => match symbol.section {
-                    SymbolSection::Undefined => coff::IMAGE_SYM_CLASS_EXTERNAL,
-                    _ => {
-                        return Err(Error(format!(
-                            "unimplemented symbol `{}` kind {:?}",
-                            symbol.name().unwrap_or(""),
-                            symbol.kind
-                        )))
-                    }
-                },
             };
             let number_of_aux_symbols = symbol_offsets[index].aux_count;
             let value = if symbol.weak {

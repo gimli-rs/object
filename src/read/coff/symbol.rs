@@ -513,6 +513,8 @@ impl<'data, 'file, R: ReadRef<'data>, Coff: CoffHeader> ObjectSymbol<'data>
                     u32::from(aux.number.get(LE))
                 };
                 return SymbolFlags::CoffSection {
+                    typ: self.symbol.typ(),
+                    storage_class: self.symbol.storage_class(),
                     selection: aux.selection,
                     associative_section: if number == 0 {
                         None
@@ -522,7 +524,10 @@ impl<'data, 'file, R: ReadRef<'data>, Coff: CoffHeader> ObjectSymbol<'data>
                 };
             }
         }
-        SymbolFlags::None
+        SymbolFlags::Coff {
+            typ: self.symbol.typ(),
+            storage_class: self.symbol.storage_class(),
+        }
     }
 }
 
