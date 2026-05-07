@@ -457,8 +457,9 @@ where
 
     #[inline]
     fn flags(&self) -> SymbolFlags<SectionIndex, SymbolIndex> {
+        let n_type = self.nlist.n_type();
         let n_desc = self.nlist.n_desc(self.file.endian);
-        SymbolFlags::MachO { n_desc }
+        SymbolFlags::MachO { n_type, n_desc }
     }
 }
 

@@ -178,16 +178,29 @@ impl<'a> Object<'a> {
     }
 
     pub(crate) fn macho_symbol_flags(&self, symbol: &Symbol) -> SymbolFlags<SectionId, SymbolId> {
-        let mut n_desc = 0;
-        if symbol.weak {
-            if symbol.is_undefined() {
-                n_desc |= macho::N_WEAK_REF;
-            } else {
-                n_desc |= macho::N_WEAK_DEF;
+        // TODO: N_STAB
+        let n_type = match symbol.section {
+            SymbolSection::Undefined => macho::N_UNDF | macho::N_EXT,
+            SymbolSection::Absolute => macho::N_ABS,
+            SymbolSection::Section(_) => macho::N_SECT,
+            SymbolSection::None | SymbolSection::Common => {
+                return SymbolFlags::None;
             }
-        }
-        // TODO: include n_type
-        SymbolFlags::MachO { n_desc }
+        } | match symbol.scope {
+            SymbolScope::Unknown | SymbolScope::Compilation => 0,
+            SymbolScope::Linkage => macho::N_EXT | macho::N_PEXT,
+            SymbolScope::Dynamic => macho::N_EXT,
+        };
+        let n_desc = if symbol.weak {
+            if symbol.is_undefined() {
+                macho::N_WEAK_REF
+            } else {
+                macho::N_WEAK_DEF
+            }
+        } else {
+            0
+        };
+        SymbolFlags::MachO { n_type, n_desc }
     }
 
     fn macho_tlv_bootstrap(&mut self) -> SymbolId {
@@ -887,35 +900,17 @@ impl<'a> Object<'a> {
             .chain(undefined_symbols.iter().copied())
         {
             let symbol = &self.symbols[index];
-            // TODO: N_STAB
-            let (mut n_type, n_sect) = match symbol.section {
-                SymbolSection::Undefined => (macho::N_UNDF | macho::N_EXT, 0),
-                SymbolSection::Absolute => (macho::N_ABS, 0),
-                SymbolSection::Section(id) => (macho::N_SECT, id.0 + 1),
-                SymbolSection::None | SymbolSection::Common => {
-                    return Err(Error(format!(
-                        "unimplemented symbol `{}` section {:?}",
-                        symbol.name().unwrap_or(""),
-                        symbol.section
-                    )));
-                }
-            };
-            match symbol.scope {
-                SymbolScope::Unknown | SymbolScope::Compilation => {}
-                SymbolScope::Linkage => {
-                    n_type |= macho::N_EXT | macho::N_PEXT;
-                }
-                SymbolScope::Dynamic => {
-                    n_type |= macho::N_EXT;
-                }
-            }
-
-            let SymbolFlags::MachO { n_desc } = self.symbol_flags(symbol) else {
+            let SymbolFlags::MachO { n_type, n_desc } = self.symbol_flags(symbol) else {
                 return Err(Error(format!(
                     "unimplemented symbol `{}` kind {:?}",
                     symbol.name().unwrap_or(""),
                     symbol.kind
                 )));
+            };
+
+            let n_sect = match symbol.section {
+                SymbolSection::Section(id) => id.0 + 1,
+                _ => 0,
             };
 
             let n_value = match symbol.section.id() {

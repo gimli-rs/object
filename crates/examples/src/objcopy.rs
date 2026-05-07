@@ -85,19 +85,17 @@ pub fn copy(in_data: &[u8]) -> Vec<u8> {
         let flags = match in_symbol.flags() {
             SymbolFlags::None => SymbolFlags::None,
             SymbolFlags::Elf { st_info, st_other } => SymbolFlags::Elf { st_info, st_other },
-            SymbolFlags::MachO { n_desc } => SymbolFlags::MachO { n_desc },
-            SymbolFlags::CoffSection {
-                selection,
-                associative_section,
+            SymbolFlags::MachO { n_type, n_desc } => SymbolFlags::MachO { n_type, n_desc },
+            SymbolFlags::Coff { typ, storage_class }
+            | SymbolFlags::CoffSection {
+                typ, storage_class, ..
             } => {
-                let associative_section =
-                    associative_section.map(|index| *out_sections.get(&index).unwrap());
-                SymbolFlags::CoffSection {
-                    selection,
-                    associative_section,
-                }
+                // The write module doesn't support SymbolFlags::CoffSection;
+                // those section flags are handled via the comdat support instead.
+                SymbolFlags::Coff { typ, storage_class }
             }
             SymbolFlags::Xcoff {
+                n_type,
                 n_sclass,
                 x_smtyp,
                 x_smclas,
@@ -106,6 +104,7 @@ pub fn copy(in_data: &[u8]) -> Vec<u8> {
                 let containing_csect =
                     containing_csect.map(|index| *out_symbols.get(&index).unwrap());
                 SymbolFlags::Xcoff {
+                    n_type,
                     n_sclass,
                     x_smtyp,
                     x_smclas,

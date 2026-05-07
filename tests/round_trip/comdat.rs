@@ -76,6 +76,8 @@ fn coff_x86_64_comdat() {
     assert_eq!(
         symbol.flags(),
         SymbolFlags::CoffSection {
+            typ: 0,
+            storage_class: pe::IMAGE_SYM_CLASS_STATIC,
             selection: pe::IMAGE_COMDAT_SELECT_NODUPLICATES,
             associative_section: None
         }
@@ -92,6 +94,8 @@ fn coff_x86_64_comdat() {
     assert_eq!(
         symbol.flags(),
         SymbolFlags::CoffSection {
+            typ: 0,
+            storage_class: pe::IMAGE_SYM_CLASS_STATIC,
             selection: pe::IMAGE_COMDAT_SELECT_ASSOCIATIVE,
             associative_section: Some(section1_index)
         }

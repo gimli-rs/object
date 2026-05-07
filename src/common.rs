@@ -514,6 +514,8 @@ pub enum SegmentFlags {
     /// ELF segment flags.
     #[cfg(feature = "elf")]
     Elf {
+        /// `p_type` field in the segment header.
+        p_type: u32,
         /// `p_flags` field in the segment header.
         p_flags: u32,
     },
@@ -655,12 +657,26 @@ pub enum SymbolFlags<Section, Symbol> {
     /// Mach-O symbol flags.
     #[cfg(feature = "macho")]
     MachO {
+        /// `n_type` field in the Mach-O symbol.
+        n_type: u8,
         /// `n_desc` field in the Mach-O symbol.
         n_desc: u16,
     },
-    /// COFF flags for a section symbol.
+    /// COFF flags for a symbol.
+    #[cfg(feature = "coff")]
+    Coff {
+        /// `Type` field in the COFF symbol.
+        typ: u16,
+        /// `StorageClass` field in the COFF symbol.
+        storage_class: u8,
+    },
+    /// COFF flags for a section symbol with an auxiliary symbol.
     #[cfg(feature = "coff")]
     CoffSection {
+        /// `Type` field in the COFF symbol.
+        typ: u16,
+        /// `StorageClass` field in the COFF symbol.
+        storage_class: u8,
         /// `Selection` field in the auxiliary symbol for the section.
         selection: u8,
         /// `Number` field in the auxiliary symbol for the section.
@@ -669,6 +685,8 @@ pub enum SymbolFlags<Section, Symbol> {
     /// XCOFF symbol flags.
     #[cfg(feature = "xcoff")]
     Xcoff {
+        /// `n_type` field in the XCOFF symbol.
+        n_type: u16,
         /// `n_sclass` field in the XCOFF symbol.
         n_sclass: u8,
         /// `x_smtyp` field in the CSECT auxiliary symbol.

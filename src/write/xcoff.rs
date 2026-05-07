@@ -18,7 +18,8 @@ struct SymbolOffsets {
     index: usize,
     str_id: Option<StringId>,
     aux_count: u8,
-    storage_class: u8,
+    n_type: u16,
+    n_sclass: u8,
     x_smtyp: u8,
     x_smclas: u8,
     containing_csect: Option<SymbolId>,
@@ -113,6 +114,15 @@ impl<'a> Object<'a> {
                 return SymbolFlags::None;
             }
         };
+        let n_type = if (symbol.scope == SymbolScope::Linkage)
+            && (n_sclass == xcoff::C_EXT
+                || n_sclass == xcoff::C_WEAKEXT
+                || n_sclass == xcoff::C_HIDEXT)
+        {
+            xcoff::SYM_V_HIDDEN
+        } else {
+            0
+        };
         let (x_smtyp, x_smclas) = if n_sclass == xcoff::C_EXT
             || n_sclass == xcoff::C_WEAKEXT
             || n_sclass == xcoff::C_HIDEXT
@@ -148,6 +158,7 @@ impl<'a> Object<'a> {
             (0, 0)
         };
         SymbolFlags::Xcoff {
+            n_type,
             n_sclass,
             x_smtyp,
             x_smclas,
@@ -286,6 +297,7 @@ impl<'a> Object<'a> {
             symtab_count += 1;
 
             let SymbolFlags::Xcoff {
+                n_type,
                 n_sclass,
                 x_smtyp,
                 x_smclas,
@@ -298,7 +310,8 @@ impl<'a> Object<'a> {
                     symbol.kind
                 )));
             };
-            symbol_offsets[index].storage_class = n_sclass;
+            symbol_offsets[index].n_type = n_type;
+            symbol_offsets[index].n_sclass = n_sclass;
             symbol_offsets[index].x_smtyp = x_smtyp;
             symbol_offsets[index].x_smclas = x_smclas;
             symbol_offsets[index].containing_csect = containing_csect;
@@ -491,16 +504,8 @@ impl<'a> Object<'a> {
                 SymbolSection::Absolute => xcoff::N_ABS,
                 SymbolSection::Section(id) => id.0 as i16 + 1,
             };
-            let n_sclass = symbol_offsets[index].storage_class;
-            let n_type = if (symbol.scope == SymbolScope::Linkage)
-                && (n_sclass == xcoff::C_EXT
-                    || n_sclass == xcoff::C_WEAKEXT
-                    || n_sclass == xcoff::C_HIDEXT)
-            {
-                xcoff::SYM_V_HIDDEN
-            } else {
-                0
-            };
+            let n_type = symbol_offsets[index].n_type;
+            let n_sclass = symbol_offsets[index].n_sclass;
             let n_numaux = symbol_offsets[index].aux_count;
             if is_64 {
                 let str_id = if n_sclass == xcoff::C_FILE {

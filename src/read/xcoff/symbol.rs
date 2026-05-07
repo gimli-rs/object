@@ -527,6 +527,7 @@ impl<'data, 'file, Xcoff: FileHeader, R: ReadRef<'data>> ObjectSymbol<'data>
             }
         }
         SymbolFlags::Xcoff {
+            n_type: self.symbol.n_type(),
             n_sclass: self.symbol.n_sclass(),
             x_smtyp,
             x_smclas,
