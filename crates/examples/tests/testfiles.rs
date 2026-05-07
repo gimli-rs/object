@@ -77,10 +77,35 @@ fn testfiles() {
                     objdump::print(out, err, data, &[], vec![]).unwrap();
                     *out = filter_lines(&*out, |line| line.starts_with("Comdat "));
                 });
+            } else if extension == "objdump-partial" {
+                // Partial output for large files.
+                // For now we only limit symbols, but could extend this.
+                fail |= testfile(&in_path, &out_path, err_path, |out, err, data| {
+                    objdump::print(out, err, data, &[], vec![]).unwrap();
+                    let mut in_symbol_map = false;
+                    let mut count = 0;
+                    *out = filter_lines(&*out, |line| {
+                        if line == "Symbol map" {
+                            in_symbol_map = true;
+                            count = 0;
+                        }
+                        if in_symbol_map || line.contains(": Symbol {") {
+                            count += 1;
+                            count < 20
+                        } else {
+                            true
+                        }
+                    });
+                });
             } else if extension.starts_with("readobj") {
                 let options = match extension {
                     "readobj" => readobj::PrintOptions {
                         pe_base_relocs: false, // Too many
+                        ..readobj::PrintOptions::all()
+                    },
+                    "readobj-partial" => readobj::PrintOptions {
+                        pe_base_relocs: false, // Too many
+                        limit: 20,
                         ..readobj::PrintOptions::all()
                     },
                     "readobj-section" => readobj::PrintOptions {

@@ -664,7 +664,7 @@ fn print_symbols<'data, Coff: CoffHeader>(
     if !p.options.symbols {
         return;
     }
-    for (index, symbol) in symbols.iter() {
+    for (index, symbol) in symbols.iter().take(p.options.limit) {
         p.group("ImageSymbol", |p| {
             p.field("Index", index);
             if let Some(name) = symbol.name(symbols.strings()).print_err(p) {
