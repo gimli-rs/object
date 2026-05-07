@@ -36,6 +36,8 @@ pub struct PrintOptions {
 
     // Modifiers
     pub string_indices: bool,
+    // Only implemented for PE symbols currently; add others as needed.
+    pub limit: usize,
 }
 
 impl PrintOptions {
@@ -61,6 +63,7 @@ impl PrintOptions {
             pe_exports: true,
             pe_resources: true,
             string_indices: true,
+            limit: usize::MAX,
         }
     }
 
@@ -86,6 +89,7 @@ impl PrintOptions {
             pe_exports: false,
             pe_resources: false,
             string_indices: true,
+            limit: usize::MAX,
         }
     }
 }

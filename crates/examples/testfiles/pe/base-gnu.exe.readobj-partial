@@ -1,0 +1,1152 @@
+Format: PE 64-bit
+ImageDosHeader {
+    Magic: 0x5A4D
+    CountBytesLastPage: 0x90
+    CountPages: 0x3
+    CountRelocations: 0x0
+    CountHeaderParagraphs: 0x4
+    MinAllocParagraphs: 0x0
+    MaxAllocParagraphs: 0xFFFF
+    StackSegment: 0x0
+    StackPointer: 0xB8
+    Checksum: 0x0
+    InstructionPointer: 0x0
+    CodeSegment: 0x0
+    AddressOfRelocations: 0x40
+    OverlayNumber: 0x0
+    OemId: 0x0
+    OemInfo: 0x0
+    AddressOfNewHeader: 0x80
+}
+ImageNtHeaders {
+    Signature: 0x4550
+}
+ImageFileHeader {
+    Machine: IMAGE_FILE_MACHINE_AMD64 (0x8664)
+    NumberOfSections: 19
+    TimeDateStamp: 1629804176
+    PointerToSymbolTable: 0x3EC00
+    NumberOfSymbols: 1898
+    SizeOfOptionalHeader: 0xF0
+    Characteristics: 0x26
+        IMAGE_FILE_EXECUTABLE_IMAGE (0x2)
+        IMAGE_FILE_LINE_NUMS_STRIPPED (0x4)
+        IMAGE_FILE_LARGE_ADDRESS_AWARE (0x20)
+}
+ImageOptionalHeader {
+    Magic: 0x20B
+    MajorLinkerVersion: 2
+    MinorLinkerVersion: 36
+    SizeOfCode: 0x6C00
+    SizeOfInitializedData: 0x9E00
+    SizeOfUninitializedData: 0xC00
+    AddressOfEntryPoint: 0x14D0
+    BaseOfCode: 0x1000
+    ImageBase: 0x140000000
+    SectionAlignment: 0x1000
+    FileAlignment: 0x200
+    MajorOperatingSystemVersion: 4
+    MinorOperatingSystemVersion: 0
+    MajorImageVersion: 0
+    MinorImageVersion: 0
+    MajorSubsystemVersion: 5
+    MinorSubsystemVersion: 2
+    Win32VersionValue: 0
+    SizeOfImage: 0x4B000
+    SizeOfHeaders: 0x600
+    CheckSum: 0x4C8A0
+    Subsystem: IMAGE_SUBSYSTEM_WINDOWS_CUI (0x3)
+    DllCharacteristics: 0x160
+        IMAGE_DLLCHARACTERISTICS_HIGH_ENTROPY_VA (0x20)
+        IMAGE_DLLCHARACTERISTICS_DYNAMIC_BASE (0x40)
+        IMAGE_DLLCHARACTERISTICS_NX_COMPAT (0x100)
+    SizeOfStackReserve: 0x200000
+    SizeOfStackCommit: 0x1000
+    SizeOfHeapReserve: 0x100000
+    SizeOfHeapCommit: 0x1000
+    LoaderFlags: 0x0
+    NumberOfRvaAndSizes: 0x10
+}
+ImageDataDirectory {
+    Index: IMAGE_DIRECTORY_ENTRY_EXPORT (0x0)
+    VirtualAddress: 0x0
+    Size: 0x0
+}
+ImageDataDirectory {
+    Index: IMAGE_DIRECTORY_ENTRY_IMPORT (0x1)
+    VirtualAddress: 0xD000
+    Size: 0x710
+}
+ImageDataDirectory {
+    Index: IMAGE_DIRECTORY_ENTRY_RESOURCE (0x2)
+    VirtualAddress: 0x10000
+    Size: 0x4E8
+}
+ImageDataDirectory {
+    Index: IMAGE_DIRECTORY_ENTRY_EXCEPTION (0x3)
+    VirtualAddress: 0xA000
+    Size: 0x474
+}
+ImageDataDirectory {
+    Index: IMAGE_DIRECTORY_ENTRY_SECURITY (0x4)
+    VirtualAddress: 0x0
+    Size: 0x0
+}
+ImageDataDirectory {
+    Index: IMAGE_DIRECTORY_ENTRY_BASERELOC (0x5)
+    VirtualAddress: 0x11000
+    Size: 0x84
+}
+ImageDataDirectory {
+    Index: IMAGE_DIRECTORY_ENTRY_DEBUG (0x6)
+    VirtualAddress: 0x0
+    Size: 0x0
+}
+ImageDataDirectory {
+    Index: IMAGE_DIRECTORY_ENTRY_ARCHITECTURE (0x7)
+    VirtualAddress: 0x0
+    Size: 0x0
+}
+ImageDataDirectory {
+    Index: IMAGE_DIRECTORY_ENTRY_GLOBALPTR (0x8)
+    VirtualAddress: 0x0
+    Size: 0x0
+}
+ImageDataDirectory {
+    Index: IMAGE_DIRECTORY_ENTRY_TLS (0x9)
+    VirtualAddress: 0x9040
+    Size: 0x28
+}
+ImageDataDirectory {
+    Index: IMAGE_DIRECTORY_ENTRY_LOAD_CONFIG (0xA)
+    VirtualAddress: 0x0
+    Size: 0x0
+}
+ImageDataDirectory {
+    Index: IMAGE_DIRECTORY_ENTRY_BOUND_IMPORT (0xB)
+    VirtualAddress: 0x0
+    Size: 0x0
+}
+ImageDataDirectory {
+    Index: IMAGE_DIRECTORY_ENTRY_IAT (0xC)
+    VirtualAddress: 0xD1D4
+    Size: 0x198
+}
+ImageDataDirectory {
+    Index: IMAGE_DIRECTORY_ENTRY_DELAY_IMPORT (0xD)
+    VirtualAddress: 0x0
+    Size: 0x0
+}
+ImageDataDirectory {
+    Index: IMAGE_DIRECTORY_ENTRY_COM_DESCRIPTOR (0xE)
+    VirtualAddress: 0x0
+    Size: 0x0
+}
+ImageDataDirectory {
+    Index: 0xF
+    VirtualAddress: 0x0
+    Size: 0x0
+}
+ImageSectionHeader {
+    Index: 1
+    Name: ".text"
+    VirtualSize: 0x6BF8
+    VirtualAddress: 0x1000
+    SizeOfRawData: 0x6C00
+    PointerToRawData: 0x600
+    PointerToRelocations: 0x0
+    PointerToLinenumbers: 0x0
+    NumberOfRelocations: 0
+    NumberOfLinenumbers: 0
+    Characteristics: 0x60500060
+        IMAGE_SCN_CNT_CODE (0x20)
+        IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
+        IMAGE_SCN_MEM_EXECUTE (0x20000000)
+        IMAGE_SCN_MEM_READ (0x40000000)
+        IMAGE_SCN_ALIGN_16BYTES (0x500000)
+}
+ImageSectionHeader {
+    Index: 2
+    Name: ".data"
+    VirtualSize: 0xF0
+    VirtualAddress: 0x8000
+    SizeOfRawData: 0x200
+    PointerToRawData: 0x7200
+    PointerToRelocations: 0x0
+    PointerToLinenumbers: 0x0
+    NumberOfRelocations: 0
+    NumberOfLinenumbers: 0
+    Characteristics: 0xC0500040
+        IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
+        IMAGE_SCN_MEM_READ (0x40000000)
+        IMAGE_SCN_MEM_WRITE (0x80000000)
+        IMAGE_SCN_ALIGN_16BYTES (0x500000)
+}
+ImageSectionHeader {
+    Index: 3
+    Name: ".rdata"
+    VirtualSize: 0x1000
+    VirtualAddress: 0x9000
+    SizeOfRawData: 0x1000
+    PointerToRawData: 0x7400
+    PointerToRelocations: 0x0
+    PointerToLinenumbers: 0x0
+    NumberOfRelocations: 0
+    NumberOfLinenumbers: 0
+    Characteristics: 0x40600040
+        IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
+        IMAGE_SCN_MEM_READ (0x40000000)
+        IMAGE_SCN_ALIGN_32BYTES (0x600000)
+}
+ImageSectionHeader {
+    Index: 4
+    Name: ".pdata"
+    VirtualSize: 0x474
+    VirtualAddress: 0xA000
+    SizeOfRawData: 0x600
+    PointerToRawData: 0x8400
+    PointerToRelocations: 0x0
+    PointerToLinenumbers: 0x0
+    NumberOfRelocations: 0
+    NumberOfLinenumbers: 0
+    Characteristics: 0x40300040
+        IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
+        IMAGE_SCN_MEM_READ (0x40000000)
+        IMAGE_SCN_ALIGN_4BYTES (0x300000)
+}
+ImageSectionHeader {
+    Index: 5
+    Name: ".xdata"
+    VirtualSize: 0x428
+    VirtualAddress: 0xB000
+    SizeOfRawData: 0x600
+    PointerToRawData: 0x8A00
+    PointerToRelocations: 0x0
+    PointerToLinenumbers: 0x0
+    NumberOfRelocations: 0
+    NumberOfLinenumbers: 0
+    Characteristics: 0x40300040
+        IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
+        IMAGE_SCN_MEM_READ (0x40000000)
+        IMAGE_SCN_ALIGN_4BYTES (0x300000)
+}
+ImageSectionHeader {
+    Index: 6
+    Name: ".bss"
+    VirtualSize: 0xB80
+    VirtualAddress: 0xC000
+    SizeOfRawData: 0x0
+    PointerToRawData: 0x0
+    PointerToRelocations: 0x0
+    PointerToLinenumbers: 0x0
+    NumberOfRelocations: 0
+    NumberOfLinenumbers: 0
+    Characteristics: 0xC0600080
+        IMAGE_SCN_CNT_UNINITIALIZED_DATA (0x80)
+        IMAGE_SCN_MEM_READ (0x40000000)
+        IMAGE_SCN_MEM_WRITE (0x80000000)
+        IMAGE_SCN_ALIGN_32BYTES (0x600000)
+}
+ImageSectionHeader {
+    Index: 7
+    Name: ".idata"
+    VirtualSize: 0x710
+    VirtualAddress: 0xD000
+    SizeOfRawData: 0x800
+    PointerToRawData: 0x9000
+    PointerToRelocations: 0x0
+    PointerToLinenumbers: 0x0
+    NumberOfRelocations: 0
+    NumberOfLinenumbers: 0
+    Characteristics: 0xC0300040
+        IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
+        IMAGE_SCN_MEM_READ (0x40000000)
+        IMAGE_SCN_MEM_WRITE (0x80000000)
+        IMAGE_SCN_ALIGN_4BYTES (0x300000)
+}
+ImageSectionHeader {
+    Index: 8
+    Name: ".CRT"
+    VirtualSize: 0x60
+    VirtualAddress: 0xE000
+    SizeOfRawData: 0x200
+    PointerToRawData: 0x9800
+    PointerToRelocations: 0x0
+    PointerToLinenumbers: 0x0
+    NumberOfRelocations: 0
+    NumberOfLinenumbers: 0
+    Characteristics: 0xC0400040
+        IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
+        IMAGE_SCN_MEM_READ (0x40000000)
+        IMAGE_SCN_MEM_WRITE (0x80000000)
+        IMAGE_SCN_ALIGN_8BYTES (0x400000)
+}
+ImageSectionHeader {
+    Index: 9
+    Name: ".tls"
+    VirtualSize: 0x10
+    VirtualAddress: 0xF000
+    SizeOfRawData: 0x200
+    PointerToRawData: 0x9A00
+    PointerToRelocations: 0x0
+    PointerToLinenumbers: 0x0
+    NumberOfRelocations: 0
+    NumberOfLinenumbers: 0
+    Characteristics: 0xC0400040
+        IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
+        IMAGE_SCN_MEM_READ (0x40000000)
+        IMAGE_SCN_MEM_WRITE (0x80000000)
+        IMAGE_SCN_ALIGN_8BYTES (0x400000)
+}
+ImageSectionHeader {
+    Index: 10
+    Name: ".rsrc"
+    VirtualSize: 0x4E8
+    VirtualAddress: 0x10000
+    SizeOfRawData: 0x600
+    PointerToRawData: 0x9C00
+    PointerToRelocations: 0x0
+    PointerToLinenumbers: 0x0
+    NumberOfRelocations: 0
+    NumberOfLinenumbers: 0
+    Characteristics: 0xC0300040
+        IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
+        IMAGE_SCN_MEM_READ (0x40000000)
+        IMAGE_SCN_MEM_WRITE (0x80000000)
+        IMAGE_SCN_ALIGN_4BYTES (0x300000)
+}
+ImageSectionHeader {
+    Index: 11
+    Name: ".reloc"
+    VirtualSize: 0x84
+    VirtualAddress: 0x11000
+    SizeOfRawData: 0x200
+    PointerToRawData: 0xA200
+    PointerToRelocations: 0x0
+    PointerToLinenumbers: 0x0
+    NumberOfRelocations: 0
+    NumberOfLinenumbers: 0
+    Characteristics: 0x42300040
+        IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
+        IMAGE_SCN_MEM_DISCARDABLE (0x2000000)
+        IMAGE_SCN_MEM_READ (0x40000000)
+        IMAGE_SCN_ALIGN_4BYTES (0x300000)
+}
+ImageSectionHeader {
+    Index: 12
+    Name: ".debug_aranges"
+    VirtualSize: 0x6A0
+    VirtualAddress: 0x12000
+    SizeOfRawData: 0x800
+    PointerToRawData: 0xA400
+    PointerToRelocations: 0x0
+    PointerToLinenumbers: 0x0
+    NumberOfRelocations: 0
+    NumberOfLinenumbers: 0
+    Characteristics: 0x42500040
+        IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
+        IMAGE_SCN_MEM_DISCARDABLE (0x2000000)
+        IMAGE_SCN_MEM_READ (0x40000000)
+        IMAGE_SCN_ALIGN_16BYTES (0x500000)
+}
+ImageSectionHeader {
+    Index: 13
+    Name: ".debug_info"
+    VirtualSize: 0x12B4C
+    VirtualAddress: 0x13000
+    SizeOfRawData: 0x12C00
+    PointerToRawData: 0xAC00
+    PointerToRelocations: 0x0
+    PointerToLinenumbers: 0x0
+    NumberOfRelocations: 0
+    NumberOfLinenumbers: 0
+    Characteristics: 0x42100040
+        IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
+        IMAGE_SCN_MEM_DISCARDABLE (0x2000000)
+        IMAGE_SCN_MEM_READ (0x40000000)
+        IMAGE_SCN_ALIGN_1BYTES (0x100000)
+}
+ImageSectionHeader {
+    Index: 14
+    Name: ".debug_abbrev"
+    VirtualSize: 0x3035
+    VirtualAddress: 0x26000
+    SizeOfRawData: 0x3200
+    PointerToRawData: 0x1D800
+    PointerToRelocations: 0x0
+    PointerToLinenumbers: 0x0
+    NumberOfRelocations: 0
+    NumberOfLinenumbers: 0
+    Characteristics: 0x42100040
+        IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
+        IMAGE_SCN_MEM_DISCARDABLE (0x2000000)
+        IMAGE_SCN_MEM_READ (0x40000000)
+        IMAGE_SCN_ALIGN_1BYTES (0x100000)
+}
+ImageSectionHeader {
+    Index: 15
+    Name: ".debug_line"
+    VirtualSize: 0x7C26
+    VirtualAddress: 0x2A000
+    SizeOfRawData: 0x7E00
+    PointerToRawData: 0x20A00
+    PointerToRelocations: 0x0
+    PointerToLinenumbers: 0x0
+    NumberOfRelocations: 0
+    NumberOfLinenumbers: 0
+    Characteristics: 0x42100040
+        IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
+        IMAGE_SCN_MEM_DISCARDABLE (0x2000000)
+        IMAGE_SCN_MEM_READ (0x40000000)
+        IMAGE_SCN_ALIGN_1BYTES (0x100000)
+}
+ImageSectionHeader {
+    Index: 16
+    Name: ".debug_frame"
+    VirtualSize: 0x2198
+    VirtualAddress: 0x32000
+    SizeOfRawData: 0x2200
+    PointerToRawData: 0x28800
+    PointerToRelocations: 0x0
+    PointerToLinenumbers: 0x0
+    NumberOfRelocations: 0
+    NumberOfLinenumbers: 0
+    Characteristics: 0x42400040
+        IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
+        IMAGE_SCN_MEM_DISCARDABLE (0x2000000)
+        IMAGE_SCN_MEM_READ (0x40000000)
+        IMAGE_SCN_ALIGN_8BYTES (0x400000)
+}
+ImageSectionHeader {
+    Index: 17
+    Name: ".debug_str"
+    VirtualSize: 0x87D
+    VirtualAddress: 0x35000
+    SizeOfRawData: 0xA00
+    PointerToRawData: 0x2AA00
+    PointerToRelocations: 0x0
+    PointerToLinenumbers: 0x0
+    NumberOfRelocations: 0
+    NumberOfLinenumbers: 0
+    Characteristics: 0x42100040
+        IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
+        IMAGE_SCN_MEM_DISCARDABLE (0x2000000)
+        IMAGE_SCN_MEM_READ (0x40000000)
+        IMAGE_SCN_ALIGN_1BYTES (0x100000)
+}
+ImageSectionHeader {
+    Index: 18
+    Name: ".debug_loc"
+    VirtualSize: 0x121DC
+    VirtualAddress: 0x36000
+    SizeOfRawData: 0x12200
+    PointerToRawData: 0x2B400
+    PointerToRelocations: 0x0
+    PointerToLinenumbers: 0x0
+    NumberOfRelocations: 0
+    NumberOfLinenumbers: 0
+    Characteristics: 0x42100040
+        IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
+        IMAGE_SCN_MEM_DISCARDABLE (0x2000000)
+        IMAGE_SCN_MEM_READ (0x40000000)
+        IMAGE_SCN_ALIGN_1BYTES (0x100000)
+}
+ImageSectionHeader {
+    Index: 19
+    Name: ".debug_ranges"
+    VirtualSize: 0x14F0
+    VirtualAddress: 0x49000
+    SizeOfRawData: 0x1600
+    PointerToRawData: 0x3D600
+    PointerToRelocations: 0x0
+    PointerToLinenumbers: 0x0
+    NumberOfRelocations: 0
+    NumberOfLinenumbers: 0
+    Characteristics: 0x42100040
+        IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
+        IMAGE_SCN_MEM_DISCARDABLE (0x2000000)
+        IMAGE_SCN_MEM_READ (0x40000000)
+        IMAGE_SCN_ALIGN_1BYTES (0x100000)
+}
+ImageSymbol {
+    Index: 0
+    Name: ".file"
+    Value: 0x5F
+    Section: IMAGE_SYM_DEBUG (-2)
+    Type: 0x0
+    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
+    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
+    StorageClass: IMAGE_SYM_CLASS_FILE (0x67)
+    NumberOfAuxSymbols: 0x1
+    ImageAuxSymbolFile {
+        Name: "crtexe.c"
+    }
+}
+ImageSymbol {
+    Index: 2
+    Name: "__mingw_invalidParameterHandler"
+    Value: 0x0
+    Section: ".text" (0x1)
+    Type: 0x20
+    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
+    DerivedType: IMAGE_SYM_DTYPE_FUNCTION (0x2)
+    StorageClass: IMAGE_SYM_CLASS_STATIC (0x3)
+    NumberOfAuxSymbols: 0x1
+    ImageAuxSymbolFunction {
+        TagIndex: 0
+        TotalSize: 0
+        PointerToLinenumber: 0x0
+        PointerToNextFunction: 0
+        Unused: [0, 0]
+    }
+}
+ImageSymbol {
+    Index: 4
+    Name: "pre_c_init"
+    Value: 0x10
+    Section: ".text" (0x1)
+    Type: 0x20
+    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
+    DerivedType: IMAGE_SYM_DTYPE_FUNCTION (0x2)
+    StorageClass: IMAGE_SYM_CLASS_STATIC (0x3)
+    NumberOfAuxSymbols: 0x0
+}
+ImageSymbol {
+    Index: 5
+    Name: ".rdata$.refptr.__mingw_initltsdrot_force"
+    Value: 0x740
+    Section: ".rdata" (0x3)
+    Type: 0x0
+    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
+    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
+    StorageClass: IMAGE_SYM_CLASS_STATIC (0x3)
+    NumberOfAuxSymbols: 0x1
+    ImageAuxSymbolSection {
+        Length: 0x8
+        NumberOfRelocations: 1
+        NumberOfLinenumbers: 0
+        CheckSum: 0x0
+        Number: 0
+        Selection: IMAGE_COMDAT_SELECT_ANY (0x2)
+        Reserved: 0x0
+        HighNumber: 0
+    }
+}
+ImageSymbol {
+    Index: 7
+    Name: ".rdata$.refptr.__mingw_initltsdyn_force"
+    Value: 0x750
+    Section: ".rdata" (0x3)
+    Type: 0x0
+    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
+    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
+    StorageClass: IMAGE_SYM_CLASS_STATIC (0x3)
+    NumberOfAuxSymbols: 0x1
+    ImageAuxSymbolSection {
+        Length: 0x8
+        NumberOfRelocations: 1
+        NumberOfLinenumbers: 0
+        CheckSum: 0x0
+        Number: 0
+        Selection: IMAGE_COMDAT_SELECT_ANY (0x2)
+        Reserved: 0x0
+        HighNumber: 0
+    }
+}
+ImageSymbol {
+    Index: 9
+    Name: ".rdata$.refptr.__mingw_initltssuo_force"
+    Value: 0x760
+    Section: ".rdata" (0x3)
+    Type: 0x0
+    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
+    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
+    StorageClass: IMAGE_SYM_CLASS_STATIC (0x3)
+    NumberOfAuxSymbols: 0x1
+    ImageAuxSymbolSection {
+        Length: 0x8
+        NumberOfRelocations: 1
+        NumberOfLinenumbers: 0
+        CheckSum: 0x0
+        Number: 0
+        Selection: IMAGE_COMDAT_SELECT_ANY (0x2)
+        Reserved: 0x0
+        HighNumber: 0
+    }
+}
+ImageSymbol {
+    Index: 11
+    Name: ".rdata$.refptr.__image_base__"
+    Value: 0x6E0
+    Section: ".rdata" (0x3)
+    Type: 0x0
+    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
+    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
+    StorageClass: IMAGE_SYM_CLASS_STATIC (0x3)
+    NumberOfAuxSymbols: 0x1
+    ImageAuxSymbolSection {
+        Length: 0x8
+        NumberOfRelocations: 1
+        NumberOfLinenumbers: 0
+        CheckSum: 0x0
+        Number: 0
+        Selection: IMAGE_COMDAT_SELECT_ANY (0x2)
+        Reserved: 0x0
+        HighNumber: 0
+    }
+}
+ImageSymbol {
+    Index: 13
+    Name: ".rdata$.refptr.__mingw_app_type"
+    Value: 0x730
+    Section: ".rdata" (0x3)
+    Type: 0x0
+    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
+    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
+    StorageClass: IMAGE_SYM_CLASS_STATIC (0x3)
+    NumberOfAuxSymbols: 0x1
+    ImageAuxSymbolSection {
+        Length: 0x8
+        NumberOfRelocations: 1
+        NumberOfLinenumbers: 0
+        CheckSum: 0x0
+        Number: 0
+        Selection: IMAGE_COMDAT_SELECT_ANY (0x2)
+        Reserved: 0x0
+        HighNumber: 0
+    }
+}
+ImageSymbol {
+    Index: 15
+    Name: "managedapp"
+    Value: 0x20
+    Section: ".bss" (0x6)
+    Type: 0x0
+    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
+    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
+    StorageClass: IMAGE_SYM_CLASS_STATIC (0x3)
+    NumberOfAuxSymbols: 0x0
+}
+ImageSymbol {
+    Index: 16
+    Name: ".rdata$.refptr._fmode"
+    Value: 0x810
+    Section: ".rdata" (0x3)
+    Type: 0x0
+    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
+    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
+    StorageClass: IMAGE_SYM_CLASS_STATIC (0x3)
+    NumberOfAuxSymbols: 0x1
+    ImageAuxSymbolSection {
+        Length: 0x8
+        NumberOfRelocations: 1
+        NumberOfLinenumbers: 0
+        CheckSum: 0x0
+        Number: 0
+        Selection: IMAGE_COMDAT_SELECT_ANY (0x2)
+        Reserved: 0x0
+        HighNumber: 0
+    }
+}
+ImageSymbol {
+    Index: 18
+    Name: ".rdata$.refptr._commode"
+    Value: 0x7F0
+    Section: ".rdata" (0x3)
+    Type: 0x0
+    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
+    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
+    StorageClass: IMAGE_SYM_CLASS_STATIC (0x3)
+    NumberOfAuxSymbols: 0x1
+    ImageAuxSymbolSection {
+        Length: 0x8
+        NumberOfRelocations: 1
+        NumberOfLinenumbers: 0
+        CheckSum: 0x0
+        Number: 0
+        Selection: IMAGE_COMDAT_SELECT_ANY (0x2)
+        Reserved: 0x0
+        HighNumber: 0
+    }
+}
+ImageSymbol {
+    Index: 20
+    Name: ".rdata$.refptr._MINGW_INSTALL_DEBUG_MATHERR"
+    Value: 0x690
+    Section: ".rdata" (0x3)
+    Type: 0x0
+    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
+    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
+    StorageClass: IMAGE_SYM_CLASS_STATIC (0x3)
+    NumberOfAuxSymbols: 0x1
+    ImageAuxSymbolSection {
+        Length: 0x8
+        NumberOfRelocations: 1
+        NumberOfLinenumbers: 0
+        CheckSum: 0x0
+        Number: 0
+        Selection: IMAGE_COMDAT_SELECT_ANY (0x2)
+        Reserved: 0x0
+        HighNumber: 0
+    }
+}
+ImageSymbol {
+    Index: 22
+    Name: "pre_cpp_init"
+    Value: 0x130
+    Section: ".text" (0x1)
+    Type: 0x20
+    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
+    DerivedType: IMAGE_SYM_DTYPE_FUNCTION (0x2)
+    StorageClass: IMAGE_SYM_CLASS_STATIC (0x3)
+    NumberOfAuxSymbols: 0x0
+}
+ImageSymbol {
+    Index: 23
+    Name: ".rdata$.refptr._newmode"
+    Value: 0x840
+    Section: ".rdata" (0x3)
+    Type: 0x0
+    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
+    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
+    StorageClass: IMAGE_SYM_CLASS_STATIC (0x3)
+    NumberOfAuxSymbols: 0x1
+    ImageAuxSymbolSection {
+        Length: 0x8
+        NumberOfRelocations: 1
+        NumberOfLinenumbers: 0
+        CheckSum: 0x0
+        Number: 0
+        Selection: IMAGE_COMDAT_SELECT_ANY (0x2)
+        Reserved: 0x0
+        HighNumber: 0
+    }
+}
+ImageSymbol {
+    Index: 25
+    Name: "envp"
+    Value: 0x28
+    Section: ".bss" (0x6)
+    Type: 0x0
+    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
+    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
+    StorageClass: IMAGE_SYM_CLASS_STATIC (0x3)
+    NumberOfAuxSymbols: 0x0
+}
+ImageSymbol {
+    Index: 26
+    Name: "argv"
+    Value: 0x30
+    Section: ".bss" (0x6)
+    Type: 0x0
+    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
+    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
+    StorageClass: IMAGE_SYM_CLASS_STATIC (0x3)
+    NumberOfAuxSymbols: 0x0
+}
+ImageSymbol {
+    Index: 27
+    Name: "argc"
+    Value: 0x38
+    Section: ".bss" (0x6)
+    Type: 0x0
+    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
+    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
+    StorageClass: IMAGE_SYM_CLASS_STATIC (0x3)
+    NumberOfAuxSymbols: 0x0
+}
+ImageSymbol {
+    Index: 28
+    Name: "startinfo"
+    Value: 0x18
+    Section: ".bss" (0x6)
+    Type: 0x0
+    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
+    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
+    StorageClass: IMAGE_SYM_CLASS_STATIC (0x3)
+    NumberOfAuxSymbols: 0x0
+}
+ImageSymbol {
+    Index: 29
+    Name: ".rdata$.refptr._dowildcard"
+    Value: 0x800
+    Section: ".rdata" (0x3)
+    Type: 0x0
+    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
+    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
+    StorageClass: IMAGE_SYM_CLASS_STATIC (0x3)
+    NumberOfAuxSymbols: 0x1
+    ImageAuxSymbolSection {
+        Length: 0x8
+        NumberOfRelocations: 1
+        NumberOfLinenumbers: 0
+        CheckSum: 0x0
+        Number: 0
+        Selection: IMAGE_COMDAT_SELECT_ANY (0x2)
+        Reserved: 0x0
+        HighNumber: 0
+    }
+}
+ImageSymbol {
+    Index: 31
+    Name: "__tmainCRTStartup"
+    Value: 0x180
+    Section: ".text" (0x1)
+    Type: 0x20
+    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
+    DerivedType: IMAGE_SYM_DTYPE_FUNCTION (0x2)
+    StorageClass: IMAGE_SYM_CLASS_STATIC (0x3)
+    NumberOfAuxSymbols: 0x0
+}
+ImageImportDirectory {
+    ImageImportDescriptor {
+        LookupTable: 0xD03C
+        TimeDataStamp: 0x0
+        ForwarderChain: 0x0
+        Name: "KERNEL32.dll" (0xD668)
+        AddressTable: 0xD1D4
+        Thunk {
+            Lookup: 0xD36C
+            Address: 0xD36C
+            Hint: 283
+            Name: "DeleteCriticalSection"
+        }
+        Thunk {
+            Lookup: 0xD384
+            Address: 0xD384
+            Hint: 319
+            Name: "EnterCriticalSection"
+        }
+        Thunk {
+            Lookup: 0xD39C
+            Address: 0xD39C
+            Hint: 630
+            Name: "GetLastError"
+        }
+        Thunk {
+            Lookup: 0xD3AC
+            Address: 0xD3AC
+            Hint: 743
+            Name: "GetStartupInfoA"
+        }
+        Thunk {
+            Lookup: 0xD3BE
+            Address: 0xD3BE
+            Hint: 892
+            Name: "InitializeCriticalSection"
+        }
+        Thunk {
+            Lookup: 0xD3DA
+            Address: 0xD3DA
+            Hint: 919
+            Name: "IsDBCSLeadByteEx"
+        }
+        Thunk {
+            Lookup: 0xD3EE
+            Address: 0xD3EE
+            Hint: 984
+            Name: "LeaveCriticalSection"
+        }
+        Thunk {
+            Lookup: 0xD406
+            Address: 0xD406
+            Hint: 1036
+            Name: "MultiByteToWideChar"
+        }
+        Thunk {
+            Lookup: 0xD41C
+            Address: 0xD41C
+            Hint: 1394
+            Name: "SetUnhandledExceptionFilter"
+        }
+        Thunk {
+            Lookup: 0xD43A
+            Address: 0xD43A
+            Hint: 1410
+            Name: "Sleep"
+        }
+        Thunk {
+            Lookup: 0xD442
+            Address: 0xD442
+            Hint: 1445
+            Name: "TlsGetValue"
+        }
+        Thunk {
+            Lookup: 0xD450
+            Address: 0xD450
+            Hint: 1492
+            Name: "VirtualProtect"
+        }
+        Thunk {
+            Lookup: 0xD462
+            Address: 0xD462
+            Hint: 1494
+            Name: "VirtualQuery"
+        }
+        Thunk {
+            Lookup: 0xD472
+            Address: 0xD472
+            Hint: 1547
+            Name: "WideCharToMultiByte"
+        }
+    }
+    ImageImportDescriptor {
+        LookupTable: 0xD0B4
+        TimeDataStamp: 0x0
+        ForwarderChain: 0x0
+        Name: "msvcrt.dll" (0xD704)
+        AddressTable: 0xD24C
+        Thunk {
+            Lookup: 0xD488
+            Address: 0xD488
+            Hint: 56
+            Name: "__C_specific_handler"
+        }
+        Thunk {
+            Lookup: 0xD4A0
+            Address: 0xD4A0
+            Hint: 64
+            Name: "___lc_codepage_func"
+        }
+        Thunk {
+            Lookup: 0xD4B6
+            Address: 0xD4B6
+            Hint: 67
+            Name: "___mb_cur_max_func"
+        }
+        Thunk {
+            Lookup: 0xD4CC
+            Address: 0xD4CC
+            Hint: 82
+            Name: "__getmainargs"
+        }
+        Thunk {
+            Lookup: 0xD4DC
+            Address: 0xD4DC
+            Hint: 83
+            Name: "__initenv"
+        }
+        Thunk {
+            Lookup: 0xD4E8
+            Address: 0xD4E8
+            Hint: 84
+            Name: "__iob_func"
+        }
+        Thunk {
+            Lookup: 0xD4F6
+            Address: 0xD4F6
+            Hint: 98
+            Name: "__set_app_type"
+        }
+        Thunk {
+            Lookup: 0xD508
+            Address: 0xD508
+            Hint: 100
+            Name: "__setusermatherr"
+        }
+        Thunk {
+            Lookup: 0xD51C
+            Address: 0xD51C
+            Hint: 116
+            Name: "_acmdln"
+        }
+        Thunk {
+            Lookup: 0xD526
+            Address: 0xD526
+            Hint: 124
+            Name: "_amsg_exit"
+        }
+        Thunk {
+            Lookup: 0xD534
+            Address: 0xD534
+            Hint: 142
+            Name: "_cexit"
+        }
+        Thunk {
+            Lookup: 0xD53E
+            Address: 0xD53E
+            Hint: 158
+            Name: "_commode"
+        }
+        Thunk {
+            Lookup: 0xD54A
+            Address: 0xD54A
+            Hint: 203
+            Name: "_errno"
+        }
+        Thunk {
+            Lookup: 0xD554
+            Address: 0xD554
+            Hint: 255
+            Name: "_fmode"
+        }
+        Thunk {
+            Lookup: 0xD55E
+            Address: 0xD55E
+            Hint: 331
+            Name: "_initterm"
+        }
+        Thunk {
+            Lookup: 0xD56A
+            Address: 0xD56A
+            Hint: 443
+            Name: "_lock"
+        }
+        Thunk {
+            Lookup: 0xD572
+            Address: 0xD572
+            Hint: 615
+            Name: "_onexit"
+        }
+        Thunk {
+            Lookup: 0xD57C
+            Address: 0xD57C
+            Hint: 820
+            Name: "_unlock"
+        }
+        Thunk {
+            Lookup: 0xD586
+            Address: 0xD586
+            Hint: 1055
+            Name: "abort"
+        }
+        Thunk {
+            Lookup: 0xD58E
+            Address: 0xD58E
+            Hint: 1057
+            Name: "calloc"
+        }
+        Thunk {
+            Lookup: 0xD598
+            Address: 0xD598
+            Hint: 1070
+            Name: "exit"
+        }
+        Thunk {
+            Lookup: 0xD5A0
+            Address: 0xD5A0
+            Hint: 1090
+            Name: "fprintf"
+        }
+        Thunk {
+            Lookup: 0xD5AA
+            Address: 0xD5AA
+            Hint: 1092
+            Name: "fputc"
+        }
+        Thunk {
+            Lookup: 0xD5B2
+            Address: 0xD5B2
+            Hint: 1097
+            Name: "free"
+        }
+        Thunk {
+            Lookup: 0xD5BA
+            Address: 0xD5BA
+            Hint: 1110
+            Name: "fwrite"
+        }
+        Thunk {
+            Lookup: 0xD5C4
+            Address: 0xD5C4
+            Hint: 1151
+            Name: "localeconv"
+        }
+        Thunk {
+            Lookup: 0xD5D2
+            Address: 0xD5D2
+            Hint: 1158
+            Name: "malloc"
+        }
+        Thunk {
+            Lookup: 0xD5DC
+            Address: 0xD5DC
+            Hint: 1166
+            Name: "memcpy"
+        }
+        Thunk {
+            Lookup: 0xD5E6
+            Address: 0xD5E6
+            Hint: 1168
+            Name: "memset"
+        }
+        Thunk {
+            Lookup: 0xD5F0
+            Address: 0xD5F0
+            Hint: 1198
+            Name: "signal"
+        }
+        Thunk {
+            Lookup: 0xD5FA
+            Address: 0xD5FA
+            Hint: 1219
+            Name: "strerror"
+        }
+        Thunk {
+            Lookup: 0xD606
+            Address: 0xD606
+            Hint: 1221
+            Name: "strlen"
+        }
+        Thunk {
+            Lookup: 0xD610
+            Address: 0xD610
+            Hint: 1224
+            Name: "strncmp"
+        }
+        Thunk {
+            Lookup: 0xD61A
+            Address: 0xD61A
+            Hint: 1260
+            Name: "vfprintf"
+        }
+        Thunk {
+            Lookup: 0xD626
+            Address: 0xD626
+            Hint: 1285
+            Name: "wcslen"
+        }
+    }
+}
+ImageResourceDirectory {
+    Characteristics: 0
+    TimeDateStamp: 0
+    MajorVersion: 0
+    MinorVersion: 0
+    NumberOfNamedEntries: 0
+    NumberOfIdEntries: 1
+    ImageResourceDirectoryEntry {
+        NameOrId: RT_MANIFEST (0x18)
+        OffsetToDataOrDirectory: 0x80000018
+        ImageResourceDirectory {
+            Characteristics: 0
+            TimeDateStamp: 0
+            MajorVersion: 0
+            MinorVersion: 0
+            NumberOfNamedEntries: 0
+            NumberOfIdEntries: 1
+            ImageResourceDirectoryEntry {
+                NameOrId: 1
+                OffsetToDataOrDirectory: 0x80000030
+                ImageResourceDirectory {
+                    Characteristics: 0
+                    TimeDateStamp: 0
+                    MajorVersion: 0
+                    MinorVersion: 0
+                    NumberOfNamedEntries: 0
+                    NumberOfIdEntries: 1
+                    ImageResourceDirectoryEntry {
+                        NameOrId: 0
+                        OffsetToDataOrDirectory: 0x48
+                        ImageResourceDataEntry {
+                            VirtualAddress: 0x10058
+                            Size: 1167
+                            CodePage: 0
+                            Reserved: 0x0
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
