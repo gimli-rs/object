@@ -673,7 +673,7 @@ where
             | elf::SHT_SYMTAB_SHNDX
             | elf::SHT_RELR
             | elf::SHT_CREL => SectionKind::Metadata,
-            _ => SectionKind::Elf(sh_type),
+            _ => SectionKind::Unknown,
         }
     }
 
@@ -691,6 +691,7 @@ where
 
     fn flags(&self) -> SectionFlags {
         SectionFlags::Elf {
+            sh_type: self.section.sh_type(self.file.endian),
             sh_flags: self.section.sh_flags(self.file.endian).into(),
         }
     }

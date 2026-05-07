@@ -114,9 +114,11 @@ fn compression_zlib() {
         object::SectionKind::Other,
     );
     object.section_mut(section).set_data(compressed, 1);
-    object.section_mut(section).flags = object::SectionFlags::Elf {
-        sh_flags: object::elf::SHF_COMPRESSED.into(),
+    let object::SectionFlags::Elf { sh_flags, .. } = object.section_flags_mut(section) else {
+        unreachable!();
     };
+    *sh_flags = object::elf::SHF_COMPRESSED.into();
+
     let bytes = object.write().unwrap();
 
     //std::fs::write(&"compression.o", &bytes).unwrap();
