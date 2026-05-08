@@ -130,7 +130,9 @@ impl<'data, Elf: FileHeader, R: ReadRef<'data>> SymbolTable<'data, Elf, R> {
     ///
     /// This includes the null symbol at index 0, which you will usually need to skip.
     #[inline]
-    pub fn enumerate(&self) -> impl Iterator<Item = (SymbolIndex, &'data Elf::Sym)> {
+    pub fn enumerate(
+        &self,
+    ) -> impl Iterator<Item = (SymbolIndex, &'data Elf::Sym)> + use<'data, Elf, R> {
         self.symbols
             .iter()
             .enumerate()

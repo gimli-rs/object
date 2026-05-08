@@ -4,7 +4,7 @@ use core::convert::TryInto;
 use core::ops::Range;
 use core::{mem, result};
 
-use crate::pod::{from_bytes, slice_from_bytes, Pod};
+use crate::pod::{Pod, from_bytes, slice_from_bytes};
 
 type Result<T> = result::Result<T, ()>;
 

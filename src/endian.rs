@@ -212,11 +212,7 @@ impl Default for LittleEndian {
 impl Endian for LittleEndian {
     #[inline]
     fn from_big_endian(big_endian: bool) -> Option<Self> {
-        if big_endian {
-            None
-        } else {
-            Some(LittleEndian)
-        }
+        if big_endian { None } else { Some(LittleEndian) }
     }
 
     #[inline]
@@ -243,11 +239,7 @@ impl Default for BigEndian {
 impl Endian for BigEndian {
     #[inline]
     fn from_big_endian(big_endian: bool) -> Option<Self> {
-        if big_endian {
-            Some(BigEndian)
-        } else {
-            None
-        }
+        if big_endian { Some(BigEndian) } else { None }
     }
 
     #[inline]

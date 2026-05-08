@@ -7,7 +7,7 @@ use core::str;
 use super::{CoffCommon, CoffHeader, SectionTable};
 use crate::endian::{LittleEndian as LE, U32};
 use crate::pe;
-use crate::pod::{bytes_of, bytes_of_slice, Pod};
+use crate::pod::{Pod, bytes_of, bytes_of_slice};
 use crate::read::util::StringTable;
 use crate::read::{
     self, Bytes, ObjectSymbol, ObjectSymbolTable, ReadError, ReadRef, Result, SectionIndex,

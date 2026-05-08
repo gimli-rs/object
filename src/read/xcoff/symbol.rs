@@ -5,7 +5,7 @@ use core::marker::PhantomData;
 use core::str;
 
 use crate::endian::{BigEndian as BE, U32};
-use crate::pod::{bytes_of, Pod};
+use crate::pod::{Pod, bytes_of};
 use crate::read::{
     self, Bytes, Error, ObjectSymbol, ObjectSymbolTable, ReadError, ReadRef, Result, SectionIndex,
     StringTable, SymbolFlags, SymbolIndex, SymbolKind, SymbolScope, SymbolSection,

@@ -1,8 +1,8 @@
 use object::read::elf::{FileHeader, SectionHeader};
 use object::read::{Object, ObjectSection, ObjectSymbol};
 use object::{
-    elf, read, write, Architecture, BinaryFormat, Endianness, LittleEndian, SectionIndex,
-    SectionKind, SymbolFlags, SymbolKind, SymbolScope, SymbolSection, U32,
+    Architecture, BinaryFormat, Endianness, LittleEndian, SectionIndex, SectionKind, SymbolFlags,
+    SymbolKind, SymbolScope, SymbolSection, U32, elf, read, write,
 };
 use std::io::Write;
 
@@ -89,8 +89,8 @@ fn aligned_sections() {
 #[cfg(feature = "compression")]
 #[test]
 fn compression_zlib() {
-    use object::read::ObjectSection;
     use object::LittleEndian as LE;
+    use object::read::ObjectSection;
 
     let data = b"test data data data";
     let len = data.len() as u64;

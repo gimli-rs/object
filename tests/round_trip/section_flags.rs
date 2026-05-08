@@ -1,8 +1,8 @@
 #![cfg(all(feature = "read", feature = "write"))]
 
 use object::read::{Object, ObjectSection};
-use object::{read, write};
 use object::{Architecture, BinaryFormat, Endianness, SectionFlags, SectionKind};
+use object::{read, write};
 
 #[test]
 fn coff_x86_64_section_flags() {

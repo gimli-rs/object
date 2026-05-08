@@ -2,8 +2,8 @@ use std::collections::HashMap;
 use std::process;
 
 use object::{
-    write, Object, ObjectComdat, ObjectKind, ObjectSection, ObjectSymbol, RelocationTarget,
-    SectionKind, SymbolFlags, SymbolKind, SymbolSection,
+    Object, ObjectComdat, ObjectKind, ObjectSection, ObjectSymbol, RelocationTarget, SectionKind,
+    SymbolFlags, SymbolKind, SymbolSection, write,
 };
 
 /// An example of how to use the read and write APIs of the `object` crate

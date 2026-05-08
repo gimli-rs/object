@@ -378,10 +378,10 @@ impl Rewriter<'_> {
     pub fn elf_needed(&self) -> impl Iterator<Item = &[u8]> {
         let dynamic = self.builder.dynamic_data().unwrap_or(&[]);
         dynamic.iter().filter_map(|entry| {
-            if let build::elf::Dynamic::String { tag, val } = entry {
-                if *tag == elf::DT_NEEDED {
-                    return Some(val.as_slice());
-                }
+            if let build::elf::Dynamic::String { tag, val } = entry
+                && *tag == elf::DT_NEEDED
+            {
+                return Some(val.as_slice());
             }
             None
         })

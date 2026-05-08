@@ -11,7 +11,7 @@ use core::convert::TryInto;
 
 #[cfg(feature = "names")]
 use crate::constants::{ConstantNames, FlagNames};
-use crate::endian::{LittleEndian as LE, I32, U16, U32, U64};
+use crate::endian::{I32, LittleEndian as LE, U16, U32, U64};
 use crate::pod::Pod;
 
 /// Platform-specific constants for a PE/COFF file.

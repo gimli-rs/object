@@ -101,13 +101,11 @@ impl<'data, Elf: FileHeader> Iterator for ElfRelocationIterator<'data, Elf> {
 
     fn next(&mut self) -> Option<Self::Item> {
         match self {
-            ElfRelocationIterator::Rel(ref mut i, endian) => {
-                i.next().map(|r| Crel::from_rel(r, *endian))
-            }
-            ElfRelocationIterator::Rela(ref mut i, endian, is_mips64el) => {
+            ElfRelocationIterator::Rel(i, endian) => i.next().map(|r| Crel::from_rel(r, *endian)),
+            ElfRelocationIterator::Rela(i, endian, is_mips64el) => {
                 i.next().map(|r| Crel::from_rela(r, *endian, *is_mips64el))
             }
-            ElfRelocationIterator::Crel(ref mut i) => i.next().and_then(Result::ok),
+            ElfRelocationIterator::Crel(i) => i.next().and_then(Result::ok),
         }
     }
 }
@@ -784,11 +782,7 @@ impl<Endian: endian::Endian> Relr for elf::Relr32<Endian> {
     fn next(offset: &mut Self::Word, bits: &mut Self::Word) -> Option<Self::Word> {
         *offset += 4;
         *bits >>= 1;
-        if *bits & 1 != 0 {
-            Some(*offset)
-        } else {
-            None
-        }
+        if *bits & 1 != 0 { Some(*offset) } else { None }
     }
 }
 
@@ -804,11 +798,7 @@ impl<Endian: endian::Endian> Relr for elf::Relr64<Endian> {
     fn next(offset: &mut Self::Word, bits: &mut Self::Word) -> Option<Self::Word> {
         *offset += 8;
         *bits >>= 1;
-        if *bits & 1 != 0 {
-            Some(*offset)
-        } else {
-            None
-        }
+        if *bits & 1 != 0 { Some(*offset) } else { None }
     }
 }
 

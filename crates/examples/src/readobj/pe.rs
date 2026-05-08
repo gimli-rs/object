@@ -1,9 +1,9 @@
 use super::*;
+use object::LittleEndian as LE;
 use object::pe::*;
 use object::read::coff::ImageSymbol as _;
 use object::read::coff::*;
 use object::read::pe::*;
-use object::LittleEndian as LE;
 use object::{Bytes, U32, U64};
 
 pub(super) fn print_coff(p: &mut Printer<'_>, data: &[u8]) {
@@ -693,60 +693,59 @@ fn print_symbols<'data, Coff: CoffHeader>(
                 FLAGS_IMAGE_SYM_CLASS,
             );
             p.field_hex("NumberOfAuxSymbols", symbol.number_of_aux_symbols());
-            if symbol.has_aux_file_name() {
-                if let Some(name) = symbols
+            if symbol.has_aux_file_name()
+                && let Some(name) = symbols
                     .aux_file_name(index, symbol.number_of_aux_symbols())
                     .print_err(p)
-                {
-                    p.group("ImageAuxSymbolFile", |p| {
-                        p.field_inline_string("Name", name);
-                    });
-                }
+            {
+                p.group("ImageAuxSymbolFile", |p| {
+                    p.field_inline_string("Name", name);
+                });
             }
-            if symbol.has_aux_function() {
-                if let Some(aux) = symbols.aux_function(index).print_err(p) {
-                    p.group("ImageAuxSymbolFunction", |p| {
-                        p.field("TagIndex", aux.tag_index.get(LE));
-                        p.field("TotalSize", aux.total_size.get(LE));
-                        p.field_hex("PointerToLinenumber", aux.pointer_to_linenumber.get(LE));
-                        p.field(
-                            "PointerToNextFunction",
-                            aux.pointer_to_next_function.get(LE),
-                        );
-                        p.field("Unused", format!("{:X?}", aux.unused));
-                    });
-                }
+            if symbol.has_aux_function()
+                && let Some(aux) = symbols.aux_function(index).print_err(p)
+            {
+                p.group("ImageAuxSymbolFunction", |p| {
+                    p.field("TagIndex", aux.tag_index.get(LE));
+                    p.field("TotalSize", aux.total_size.get(LE));
+                    p.field_hex("PointerToLinenumber", aux.pointer_to_linenumber.get(LE));
+                    p.field(
+                        "PointerToNextFunction",
+                        aux.pointer_to_next_function.get(LE),
+                    );
+                    p.field("Unused", format!("{:X?}", aux.unused));
+                });
             }
-            if symbol.has_aux_section() {
-                if let Some(aux) = symbols.aux_section(index).print_err(p) {
-                    p.group("ImageAuxSymbolSection", |p| {
-                        p.field_hex("Length", aux.length.get(LE));
-                        p.field("NumberOfRelocations", aux.number_of_relocations.get(LE));
-                        p.field("NumberOfLinenumbers", aux.number_of_linenumbers.get(LE));
-                        p.field_hex("CheckSum", aux.check_sum.get(LE));
-                        p.field("Number", aux.number.get(LE));
-                        p.field_enum("Selection", aux.selection, FLAGS_IMAGE_COMDAT_SELECT);
-                        p.field_hex("Reserved", aux.reserved);
-                        p.field("HighNumber", aux.high_number.get(LE));
-                    });
-                }
+            if symbol.has_aux_section()
+                && let Some(aux) = symbols.aux_section(index).print_err(p)
+            {
+                p.group("ImageAuxSymbolSection", |p| {
+                    p.field_hex("Length", aux.length.get(LE));
+                    p.field("NumberOfRelocations", aux.number_of_relocations.get(LE));
+                    p.field("NumberOfLinenumbers", aux.number_of_linenumbers.get(LE));
+                    p.field_hex("CheckSum", aux.check_sum.get(LE));
+                    p.field("Number", aux.number.get(LE));
+                    p.field_enum("Selection", aux.selection, FLAGS_IMAGE_COMDAT_SELECT);
+                    p.field_hex("Reserved", aux.reserved);
+                    p.field("HighNumber", aux.high_number.get(LE));
+                });
             }
-            if symbol.has_aux_weak_external() {
-                if let Some(aux) = symbols.aux_weak_external(index).print_err(p) {
-                    p.group("ImageAuxWeak", |p| {
-                        let index = aux.default_symbol();
-                        let name = symbols
-                            .symbol(index)
-                            .and_then(|symbol| symbol.name(symbols.strings()))
-                            .print_err(p);
-                        p.field_string_option("DefaultSymbol", index.0, name);
-                        p.field_enum(
-                            "SearchType",
-                            aux.weak_search_type.get(LE),
-                            FLAGS_IMAGE_WEAK_EXTERN,
-                        );
-                    });
-                }
+            if symbol.has_aux_weak_external()
+                && let Some(aux) = symbols.aux_weak_external(index).print_err(p)
+            {
+                p.group("ImageAuxWeak", |p| {
+                    let index = aux.default_symbol();
+                    let name = symbols
+                        .symbol(index)
+                        .and_then(|symbol| symbol.name(symbols.strings()))
+                        .print_err(p);
+                    p.field_string_option("DefaultSymbol", index.0, name);
+                    p.field_enum(
+                        "SearchType",
+                        aux.weak_search_type.get(LE),
+                        FLAGS_IMAGE_WEAK_EXTERN,
+                    );
+                });
             }
             // TODO: ImageAuxSymbolFunctionBeginEnd
         });

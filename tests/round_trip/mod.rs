@@ -1,11 +1,11 @@
 #![cfg(all(feature = "read", feature = "write"))]
 
 use object::read::{Object, ObjectSection, ObjectSymbol};
-use object::{read, write, SectionIndex, SubArchitecture};
 use object::{
     Architecture, BinaryFormat, Endianness, RelocationEncoding, RelocationFlags, RelocationKind,
     SectionFlags, SectionKind, SymbolFlags, SymbolKind, SymbolScope, SymbolSection,
 };
+use object::{SectionIndex, SubArchitecture, read, write};
 
 mod bss;
 mod coff;

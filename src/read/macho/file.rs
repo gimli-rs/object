@@ -9,7 +9,7 @@ use crate::read::{
     NoDynamicRelocationIterator, Object, ObjectComdat, ObjectKind, ObjectMap, ObjectSection,
     ReadError, ReadRef, Result, SectionIndex, SubArchitecture, SymbolIndex,
 };
-use crate::{macho, SkipDebugList};
+use crate::{SkipDebugList, macho};
 
 use super::{
     DyldCacheImage, LoadCommandIterator, MachOSection, MachOSectionInternal, MachOSectionIterator,

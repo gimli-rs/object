@@ -7,12 +7,12 @@ use hashbrown::HashMap;
 #[cfg(feature = "std")]
 use std::collections::HashMap;
 
+use crate::Endianness;
 use crate::build::{ByteString, Bytes, Error, Id, IdPrivate, Item, Result, Table};
 use crate::elf;
 use crate::read::elf::{FileHeader, ProgramHeader, Rela, SectionHeader, Sym};
 use crate::read::{self, FileKind, ReadRef};
 use crate::write;
-use crate::Endianness;
 
 /// A builder for reading, modifying, and then writing ELF files.
 ///
@@ -602,7 +602,7 @@ impl<'data> Builder<'data> {
                         return Err(Error(format!(
                             "Unsupported attribute tag 0x{:x} in section at index {}",
                             tag, index,
-                        )))
+                        )));
                     }
                 };
                 let data = subsubsection.attributes_data().into();
@@ -1383,7 +1383,7 @@ impl<'data> Builder<'data> {
                                             return Err(Error(format!(
                                                 "Cannot generate value for dynamic tag 0x{:x}",
                                                 tag
-                                            )))
+                                            )));
                                         }
                                     };
                                     writer.write_dynamic(tag, val)?;
@@ -1647,7 +1647,7 @@ impl<'data> Builder<'data> {
                             return Err(Error(format!(
                                 "Unimplemented size for section type {:x}",
                                 section.sh_type
-                            )))
+                            )));
                         }
                     };
                     let sh_link = if let Some(id) = section.sh_link_section {

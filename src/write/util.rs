@@ -2,7 +2,7 @@ use alloc::vec::Vec;
 #[cfg(feature = "std")]
 use std::{io, mem};
 
-use crate::pod::{bytes_of, bytes_of_slice, Pod};
+use crate::pod::{Pod, bytes_of, bytes_of_slice};
 
 /// Trait for writable buffer.
 #[allow(clippy::len_without_is_empty)]

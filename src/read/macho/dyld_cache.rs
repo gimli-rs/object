@@ -5,7 +5,7 @@ use core::{mem, slice};
 
 use crate::endian::{Endian, Endianness, U16, U32, U64};
 use crate::read::{Architecture, Error, File, ReadError, ReadRef, Result};
-use crate::{macho, SkipDebugList};
+use crate::{SkipDebugList, macho};
 
 /// A parsed representation of the dyld shared cache.
 #[derive(Debug)]
@@ -197,9 +197,7 @@ where
     }
 
     /// Return all the mappings in this cache.
-    pub fn mappings<'cache>(
-        &'cache self,
-    ) -> impl Iterator<Item = DyldCacheMapping<'data, E, R>> + 'cache {
+    pub fn mappings(&self) -> impl Iterator<Item = DyldCacheMapping<'data, E, R>> {
         let endian = self.endian;
         self.files
             .iter()

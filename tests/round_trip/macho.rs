@@ -1,6 +1,6 @@
 use object::read::macho::MachHeader;
 use object::read::{Object, ObjectSection};
-use object::{macho, read, write, Architecture, BinaryFormat, Endianness};
+use object::{Architecture, BinaryFormat, Endianness, macho, read, write};
 
 // Test that segment size is valid when the first section needs alignment.
 #[test]

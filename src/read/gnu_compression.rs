@@ -1,5 +1,5 @@
 use crate::read::{self, Error, ReadError as _};
-use crate::{endian, CompressedFileRange, CompressionFormat, ReadRef, U32};
+use crate::{CompressedFileRange, CompressionFormat, ReadRef, U32, endian};
 
 // Attempt to parse the the CompressedFileRange for a section using the GNU-style
 // inline compression header format. This is used by the Go compiler in Mach-O files

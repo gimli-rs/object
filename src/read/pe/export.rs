@@ -191,7 +191,7 @@ impl<'data> ExportTable<'data> {
     ///
     /// An ordinal table entry is a 0-based index into the address table.
     /// See [`Self::address_by_index`] and [`Self::target_by_index`].
-    pub fn name_iter(&self) -> impl Iterator<Item = (u32, u16)> + 'data {
+    pub fn name_iter(&self) -> impl Iterator<Item = (u32, u16)> + use<'data> {
         self.names
             .iter()
             .map(|x| x.get(LE))

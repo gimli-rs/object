@@ -9,7 +9,7 @@ use crate::read::{
     self, Architecture, Error, Export, FileFlags, Import, NoDynamicRelocationIterator, Object,
     ObjectKind, ObjectSection, ReadError, ReadRef, Result, SectionIndex, SymbolIndex,
 };
-use crate::{xcoff, SkipDebugList};
+use crate::{SkipDebugList, xcoff};
 
 use super::{
     CsectAux, FileAux, Rel, SectionHeader, SectionTable, Symbol, SymbolTable, XcoffComdat,

@@ -1,10 +1,10 @@
 use object::read::{Object, ObjectSection};
-use object::{elf, macho, pe, xcoff};
-use object::{read, write};
 use object::{
     Architecture, BinaryFormat, Endianness, RelocationEncoding, RelocationFlags, RelocationKind,
     SymbolFlags, SymbolKind, SymbolScope,
 };
+use object::{elf, macho, pe, xcoff};
+use object::{read, write};
 
 fn check_reloc(
     format: BinaryFormat,
