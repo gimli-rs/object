@@ -50,10 +50,8 @@ fn testfiles() {
             if extension == "err" {
                 continue;
             }
-            // TODO: use err_path.as_mut_os_string().push(".err") when MSRV is >= 1.70.
-            let mut err_path = out_path.clone().into_os_string();
-            err_path.push(".err");
-            let err_path = PathBuf::from(err_path);
+            let mut err_path = out_path.clone();
+            err_path.as_mut_os_string().push(".err");
             let err_path = if err_path.is_file() {
                 Some(&*err_path)
             } else {

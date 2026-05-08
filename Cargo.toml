@@ -5,12 +5,9 @@ edition = "2018"
 keywords = ["object", "elf", "mach-o", "pe", "coff"]
 license = "Apache-2.0 OR MIT"
 repository = "https://github.com/gimli-rs/object"
-# NB: if this number increases to 1.81-or-later delete the `build.rs` script
-# as it's no longer necessary.
-rust-version = "1.65"
+rust-version = "1.85"
 description = "A unified interface for reading and writing object file formats."
 include = [
-  "/build.rs",
   "/Cargo.toml",
   "/CHANGELOG.md",
   "/README.md",
@@ -60,7 +57,6 @@ build = ["build_core", "write_std", "elf"]
 # Misc features.
 
 # Enable things that require libstd.
-# Currently, this provides an `Error` implementation.
 std = ["memchr/std"]
 # Enable decompression of compressed sections.
 # This feature is not required if you want to do your own decompression.
