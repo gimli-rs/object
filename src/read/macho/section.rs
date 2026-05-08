@@ -105,10 +105,7 @@ where
 
     // Try GNU-style "ZLIB" header decompression.
     fn maybe_compressed_gnu(&self) -> Result<Option<CompressedFileRange>> {
-        if !self
-            .name()
-            .map_or(false, |name| name.starts_with("__zdebug_"))
-        {
+        if !self.name().is_ok_and(|name| name.starts_with("__zdebug_")) {
             return Ok(None);
         }
         let (section_offset, section_size) = self

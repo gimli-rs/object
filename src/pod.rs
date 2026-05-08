@@ -119,14 +119,14 @@ pub fn slice_from_bytes_mut<T: Pod>(
 ///
 /// Returns an error if the size of the byte slice is not an exact multiple
 /// of the type size, or the alignment is invalid.
+///
+/// `T` must not be a zero-sized type; calling with a ZST is a compile error:
+/// ```compile_fail
+/// object::pod::slice_from_all_bytes::<[u8; 0]>(&[]).ok();
+/// ```
 #[inline]
 pub fn slice_from_all_bytes<T: Pod>(data: &[u8]) -> Result<&[T]> {
-    // TODO: change to compile time assert when MSRV allows.
-    let size = mem::size_of::<T>();
-    if size == 0 {
-        return Err(());
-    }
-    let count = data.len() / size;
+    let count = data.len() / const { size_of_nonzero::<T>() };
     let (slice, tail) = slice_from_bytes(data, count)?;
     if !tail.is_empty() {
         return Err(());
@@ -140,19 +140,25 @@ pub fn slice_from_all_bytes<T: Pod>(data: &[u8]) -> Result<&[T]> {
 ///
 /// Returns an error if the size of the byte slice is not an exact multiple
 /// of the type size, or the alignment is invalid.
+///
+/// `T` must not be a zero-sized type; calling with a ZST is a compile error:
+/// ```compile_fail
+/// object::pod::slice_from_all_bytes_mut::<[u8; 0]>(&mut []).ok();
+/// ```
 #[inline]
 pub fn slice_from_all_bytes_mut<T: Pod>(data: &mut [u8]) -> Result<&mut [T]> {
-    // TODO: change to compile time assert when MSRV allows.
-    let size = mem::size_of::<T>();
-    if size == 0 {
-        return Err(());
-    }
-    let count = data.len() / size;
+    let count = data.len() / const { size_of_nonzero::<T>() };
     let (slice, tail) = slice_from_bytes_mut(data, count)?;
     if !tail.is_empty() {
         return Err(());
     }
     Ok(slice)
+}
+
+const fn size_of_nonzero<T>() -> usize {
+    let size = mem::size_of::<T>();
+    assert!(size != 0, "T must not be a zero-sized type");
+    size
 }
 
 /// Cast a `Pod` type to a byte slice.
@@ -290,11 +296,5 @@ mod tests {
         assert_eq!(slice_from_bytes_mut::<u16>(bytes_mut, 5), Err(()));
         assert_eq!(slice_from_bytes_mut::<u16>(&mut bytes_mut[2..], 4), Err(()));
         assert_eq!(slice_from_bytes_mut::<u16>(&mut bytes_mut[1..], 2), Err(()));
-    }
-
-    #[test]
-    fn slice_zero() {
-        assert_eq!(slice_from_all_bytes::<[u8; 0]>(&[]), Err(()));
-        assert_eq!(slice_from_all_bytes_mut::<[u8; 0]>(&mut []), Err(()));
     }
 }

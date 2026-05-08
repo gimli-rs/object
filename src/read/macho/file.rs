@@ -356,7 +356,7 @@ where
         // used by Go when using GNU-style compression.
         let matches_zdebug_prefix = make_prefix_matcher(b".debug_", b"__zdebug_");
         self.sections().find(|section| {
-            section.name_bytes().map_or(false, |name| {
+            section.name_bytes().is_ok_and(|name| {
                 name == section_name
                     || matches_underscores_prefix(name)
                     || matches_zdebug_prefix(name)

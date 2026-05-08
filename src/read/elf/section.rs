@@ -526,10 +526,7 @@ impl<'data, 'file, Elf: FileHeader, R: ReadRef<'data>> ElfSection<'data, 'file, 
 
     // Try GNU-style "ZLIB" header decompression.
     fn maybe_compressed_gnu(&self) -> read::Result<Option<CompressedFileRange>> {
-        if !self
-            .name()
-            .map_or(false, |name| name.starts_with(".zdebug_"))
-        {
+        if !self.name().is_ok_and(|name| name.starts_with(".zdebug_")) {
             return Ok(None);
         }
         let (section_offset, section_size) = self

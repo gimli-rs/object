@@ -70,7 +70,7 @@ is not a focus of development.
 Changes to MSRV are not considered breaking changes. We are conservative about
 changing the MSRV, but sometimes are required to due to dependencies. The MSRV
 with all features enabled is 1.87.0. The MSRV with some features disabled is
-1.65.0.
+1.85.0.
 
 ## License
 

@@ -343,7 +343,7 @@ impl<'a> Writer<'a> {
     /// This must be called before [`Self::reserve_symtab_strtab`].
     pub fn reserve_aux_file_name(&mut self, name: &[u8]) -> u8 {
         debug_assert_eq!(self.symtab_offset, 0);
-        let aux_count = (name.len() + pe::IMAGE_SIZEOF_SYMBOL - 1) / pe::IMAGE_SIZEOF_SYMBOL;
+        let aux_count = name.len().div_ceil(pe::IMAGE_SIZEOF_SYMBOL);
         self.symtab_num += aux_count as u32;
         aux_count as u8
     }

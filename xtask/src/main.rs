@@ -185,20 +185,14 @@ fn cmd_cross() -> Result<(), DynError> {
 }
 
 fn cmd_msrv() -> Result<(), DynError> {
-    cmd_with(
+    cmd(
         "cargo",
-        &["+1.65.0", "test", "-p", "object", "--no-default-features", "--features", "read,std"],
-        |cmd| {
-            cmd.env("CARGO_NET_GIT_FETCH_WITH_CLI", "true");
-        },
+        &["+1.85.0", "test", "-p", "object", "--no-default-features", "--features", "read,write,std"],
     )?;
-    // wasmparser needs 1.76.0, ruzstd needs 1.87.0, hashbrown and indexmap need 1.85.0
-    cmd_with(
+    // ruzstd needs 1.87.0
+    cmd(
         "cargo",
         &["+1.87.0", "test", "-p", "object", "--features", "all"],
-        |cmd| {
-            cmd.env("CARGO_NET_GIT_FETCH_WITH_CLI", "true");
-        },
     )?;
     Ok(())
 }
