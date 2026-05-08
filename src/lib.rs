@@ -65,7 +65,6 @@ mod common;
 pub use common::*;
 
 mod constants;
-#[cfg(feature = "names")]
 pub use constants::*;
 
 #[macro_use]
