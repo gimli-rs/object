@@ -807,7 +807,7 @@ impl<'a> Object<'a> {
                             }
                             Architecture::X86_64 => macho::X86_64_RELOC_SUBTRACTOR,
                             _ => {
-                                return Err(Error(format!("unimplemented relocation {:?}", reloc)))
+                                return Err(Error(format!("unimplemented relocation {:?}", reloc)));
                             }
                         };
                         let reloc_info = macho::RelocationInfo {
@@ -828,7 +828,7 @@ impl<'a> Object<'a> {
                                 macho::ARM64_RELOC_ADDEND
                             }
                             _ => {
-                                return Err(Error(format!("unimplemented relocation {:?}", reloc)))
+                                return Err(Error(format!("unimplemented relocation {:?}", reloc)));
                             }
                         };
 

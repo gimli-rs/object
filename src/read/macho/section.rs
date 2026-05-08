@@ -5,8 +5,8 @@ use crate::endian::{self, Endianness, U32};
 use crate::macho;
 use crate::pod::Pod;
 use crate::read::{
-    self, gnu_compression, CompressedData, CompressedFileRange, Error, ObjectSection, ReadError,
-    ReadRef, RelocationMap, Result, SectionFlags, SectionIndex, SectionKind,
+    self, CompressedData, CompressedFileRange, Error, ObjectSection, ReadError, ReadRef,
+    RelocationMap, Result, SectionFlags, SectionIndex, SectionKind, gnu_compression,
 };
 
 use super::{MachHeader, MachOFile, MachORelocationIterator};
@@ -148,11 +148,7 @@ where
     #[inline]
     fn align(&self) -> u64 {
         let align = self.internal.section.align(self.file.endian);
-        if align < 64 {
-            1 << align
-        } else {
-            0
-        }
+        if align < 64 { 1 << align } else { 0 }
     }
 
     #[inline]

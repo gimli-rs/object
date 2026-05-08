@@ -322,14 +322,14 @@ fn print_macho<Mach: MachHeader<Endian = Endianness>>(
                     dysymtab_command = Some(command);
                 }
             }
-            if let Some(symtab_command) = symtab_command {
-                if let Ok(symtab) = symtab_command.symbols::<Mach, _>(endian, state.linkedit_data) {
-                    state.symbols.extend(
-                        symtab
-                            .iter()
-                            .map(|symbol| symbol.name(endian, symtab.strings()).ok()),
-                    );
-                }
+            if let Some(symtab_command) = symtab_command
+                && let Ok(symtab) = symtab_command.symbols::<Mach, _>(endian, state.linkedit_data)
+            {
+                state.symbols.extend(
+                    symtab
+                        .iter()
+                        .map(|symbol| symbol.name(endian, symtab.strings()).ok()),
+                );
             }
             if let Some(dysymtab) = dysymtab_command {
                 state.indirect_symbols = dysymtab

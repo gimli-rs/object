@@ -2,11 +2,11 @@
 
 use object::pe;
 use object::read::{Object, ObjectComdat, ObjectSection, ObjectSymbol};
-use object::{read, write};
 use object::{
     Architecture, BinaryFormat, ComdatKind, Endianness, SectionKind, SymbolFlags, SymbolKind,
     SymbolScope,
 };
+use object::{read, write};
 
 #[test]
 fn coff_x86_64_comdat() {

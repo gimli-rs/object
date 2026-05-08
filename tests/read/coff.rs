@@ -1,4 +1,4 @@
-use object::{pe, read, Object, ObjectSection};
+use object::{Object, ObjectSection, pe, read};
 use std::fs;
 use std::path::PathBuf;
 

@@ -12,7 +12,7 @@ use crate::read::{
     NoDynamicRelocationIterator, Object, ObjectComdat, ObjectKind, ReadError, ReadRef, Result,
     SectionIndex, SubArchitecture, SymbolIndex,
 };
-use crate::{pe, SkipDebugList};
+use crate::{SkipDebugList, pe};
 
 use super::{
     DataDirectories, ExportTable, ImageThunkData, ImportTable, PeSection, PeSectionIterator,

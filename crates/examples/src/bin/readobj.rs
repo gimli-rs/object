@@ -1,8 +1,8 @@
 //! Example that uses the lower level read API.
 
 use clap::{Arg, ArgAction, Command};
-use object::read::macho::DyldCache;
 use object::Endianness;
+use object::read::macho::DyldCache;
 use object_examples::readobj;
 use std::path::PathBuf;
 use std::{fs, io};

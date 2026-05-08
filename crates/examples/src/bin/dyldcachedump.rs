@@ -1,5 +1,5 @@
-use object::read::macho::DyldCache;
 use object::Endianness;
+use object::read::macho::DyldCache;
 use std::{env, fs, process};
 
 fn main() {

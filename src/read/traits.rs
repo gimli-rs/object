@@ -64,10 +64,10 @@ pub trait Object<'data>: read::private::Sealed {
 
     /// A symbol table in the object file.
     type SymbolTable<'file>: ObjectSymbolTable<
-        'data,
-        Symbol = Self::Symbol<'file>,
-        SymbolIterator = Self::SymbolIterator<'file>,
-    >
+            'data,
+            Symbol = Self::Symbol<'file>,
+            SymbolIterator = Self::SymbolIterator<'file>,
+        >
     where
         Self: 'file,
         'data: 'file;

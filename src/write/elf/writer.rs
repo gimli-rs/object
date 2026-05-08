@@ -2194,11 +2194,7 @@ pub struct Class {
 impl Class {
     /// Return the alignment size.
     pub fn align(self) -> usize {
-        if self.is_64 {
-            8
-        } else {
-            4
-        }
+        if self.is_64 { 8 } else { 4 }
     }
 
     /// Return the size of the file header.

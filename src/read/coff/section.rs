@@ -46,7 +46,9 @@ impl<'data> SectionTable<'data> {
     }
 
     /// Iterate over the section headers and their indices.
-    pub fn enumerate(&self) -> impl Iterator<Item = (SectionIndex, &'data pe::ImageSectionHeader)> {
+    pub fn enumerate(
+        &self,
+    ) -> impl Iterator<Item = (SectionIndex, &'data pe::ImageSectionHeader)> + use<'data> {
         self.sections
             .iter()
             .enumerate()

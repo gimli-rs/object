@@ -1,10 +1,10 @@
 use std::error::Error;
 use std::{env, fs, process};
 
+use object::LittleEndian as LE;
 use object::pe;
 use object::read::coff::CoffHeader;
 use object::read::pe::{ImageNtHeaders, ImageOptionalHeader};
-use object::LittleEndian as LE;
 
 fn main() {
     let mut args = env::args();

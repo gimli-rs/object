@@ -3,9 +3,9 @@ use core::convert::TryInto;
 use core::fmt;
 use core::marker::PhantomData;
 
-use crate::pod::{from_bytes, slice_from_bytes, Pod};
-use crate::read::ReadRef;
 use crate::SkipDebugList;
+use crate::pod::{Pod, from_bytes, slice_from_bytes};
+use crate::read::ReadRef;
 
 /// A newtype for byte slices.
 ///

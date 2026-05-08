@@ -5,9 +5,8 @@ use crate::elf;
 use crate::endian::{self, Endianness, U32};
 use crate::pod::{self, Pod};
 use crate::read::{
-    self, gnu_compression, CompressedData, CompressedFileRange, CompressionFormat, Error,
-    ObjectSection, ReadError, ReadRef, RelocationMap, SectionFlags, SectionIndex, SectionKind,
-    StringTable,
+    self, CompressedData, CompressedFileRange, CompressionFormat, Error, ObjectSection, ReadError,
+    ReadRef, RelocationMap, SectionFlags, SectionIndex, SectionKind, StringTable, gnu_compression,
 };
 
 use super::{
@@ -58,7 +57,9 @@ impl<'data, Elf: FileHeader, R: ReadRef<'data>> SectionTable<'data, Elf, R> {
     ///
     /// This includes the null section at index 0, which you will usually need to skip.
     #[inline]
-    pub fn enumerate(&self) -> impl Iterator<Item = (SectionIndex, &'data Elf::SectionHeader)> {
+    pub fn enumerate(
+        &self,
+    ) -> impl Iterator<Item = (SectionIndex, &'data Elf::SectionHeader)> + use<'data, Elf, R> {
         self.sections
             .iter()
             .enumerate()

@@ -203,27 +203,27 @@ fn print_symbols<'data, Xcoff: FileHeader>(
                     }
                 }
             }
-            if symbol.has_aux_csect() {
-                if let Some(aux_csect) = symbols.aux_csect(index, numaux).print_err(p) {
-                    p.group("CsectAux", |p| {
-                        p.field("Index", index.0 + numaux);
-                        p.field_hex("SectionLength", aux_csect.x_scnlen());
-                        p.field_hex("ParameterHashOffset", aux_csect.x_parmhash());
-                        p.field("ParameterHashSectionNumber", aux_csect.x_snhash());
-                        p.field_hex("Alignment", aux_csect.alignment());
-                        p.field_enum("Type", aux_csect.sym_type(), FLAGS_XTY);
-                        p.field_enum("StorageMappingClass", aux_csect.x_smclas(), FLAGS_XMC);
-                        if let Some(stab) = aux_csect.x_stab() {
-                            p.field_hex("StabOffset", stab);
-                        }
-                        if let Some(snstab) = aux_csect.x_snstab() {
-                            p.field("StabSectionNumber", snstab);
-                        }
-                        if let Some(auxtype) = aux_csect.x_auxtype() {
-                            p.field_enum("AuxiliaryType", auxtype, FLAGS_AUX);
-                        }
-                    });
-                }
+            if symbol.has_aux_csect()
+                && let Some(aux_csect) = symbols.aux_csect(index, numaux).print_err(p)
+            {
+                p.group("CsectAux", |p| {
+                    p.field("Index", index.0 + numaux);
+                    p.field_hex("SectionLength", aux_csect.x_scnlen());
+                    p.field_hex("ParameterHashOffset", aux_csect.x_parmhash());
+                    p.field("ParameterHashSectionNumber", aux_csect.x_snhash());
+                    p.field_hex("Alignment", aux_csect.alignment());
+                    p.field_enum("Type", aux_csect.sym_type(), FLAGS_XTY);
+                    p.field_enum("StorageMappingClass", aux_csect.x_smclas(), FLAGS_XMC);
+                    if let Some(stab) = aux_csect.x_stab() {
+                        p.field_hex("StabOffset", stab);
+                    }
+                    if let Some(snstab) = aux_csect.x_snstab() {
+                        p.field("StabSectionNumber", snstab);
+                    }
+                    if let Some(auxtype) = aux_csect.x_auxtype() {
+                        p.field_enum("AuxiliaryType", auxtype, FLAGS_AUX);
+                    }
+                });
             }
         });
     }

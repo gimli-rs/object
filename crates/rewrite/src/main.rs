@@ -2,8 +2,8 @@ use std::fs;
 use std::io::{self, BufRead};
 use std::path::{Path, PathBuf};
 
-use anyhow::{anyhow, Context, Result};
-use clap::{command, Arg, ArgAction, ArgGroup};
+use anyhow::{Context, Result, anyhow};
+use clap::{Arg, ArgAction, ArgGroup, command};
 use log::info;
 use object_rewrite as rewrite;
 
@@ -192,25 +192,25 @@ fn main() -> Result<()> {
     let mut rewriter = rewrite::Rewriter::read(in_data)
         .with_context(|| format!("Failed to parse input file '{}'", in_path.display()))?;
 
-    if matches.get_flag("elf-print-runpath") {
-        if let Some(runpath) = rewriter.elf_runpath() {
-            println!("{}", String::from_utf8_lossy(runpath));
-        }
+    if matches.get_flag("elf-print-runpath")
+        && let Some(runpath) = rewriter.elf_runpath()
+    {
+        println!("{}", String::from_utf8_lossy(runpath));
     }
     if matches.get_flag("elf-print-needed") {
         for needed in rewriter.elf_needed() {
             println!("{}", String::from_utf8_lossy(needed));
         }
     }
-    if matches.get_flag("elf-print-soname") {
-        if let Some(soname) = rewriter.elf_soname() {
-            println!("{}", String::from_utf8_lossy(soname));
-        }
+    if matches.get_flag("elf-print-soname")
+        && let Some(soname) = rewriter.elf_soname()
+    {
+        println!("{}", String::from_utf8_lossy(soname));
     }
-    if matches.get_flag("elf-print-interpreter") {
-        if let Some(interp) = rewriter.elf_interpreter() {
-            println!("{}", String::from_utf8_lossy(interp));
-        }
+    if matches.get_flag("elf-print-interpreter")
+        && let Some(interp) = rewriter.elf_interpreter()
+    {
+        println!("{}", String::from_utf8_lossy(interp));
     }
 
     // TODO: allow replacing input file
@@ -231,9 +231,10 @@ fn main() -> Result<()> {
     {
         let names: Vec<&[u8]> = arg.as_bytes().splitn(2, |byte| *byte == b'=').collect();
         if names.len() != 2 {
-            return Err(
-                anyhow!("Invalid rename symbol: `{}`. --rename-symbol expects argument of the form: <old>=<new>", arg)
-            );
+            return Err(anyhow!(
+                "Invalid rename symbol: `{}`. --rename-symbol expects argument of the form: <old>=<new>",
+                arg
+            ));
         }
         options
             .rename_symbols
@@ -257,10 +258,10 @@ fn main() -> Result<()> {
             }
             let names: Vec<&[u8]> = line.splitn(2, |byte| *byte == b' ').collect();
             if names.len() != 2 {
-                return Err(
-                    anyhow!(
-                    "Invalid rename symbol file entry: `{}`. --rename-symbols expects lines  of the form: <old> <new>", String::from_utf8_lossy(&line))
-                );
+                return Err(anyhow!(
+                    "Invalid rename symbol file entry: `{}`. --rename-symbols expects lines of the form: <old> <new>",
+                    String::from_utf8_lossy(&line)
+                ));
             }
             options
                 .rename_symbols
@@ -279,10 +280,10 @@ fn main() -> Result<()> {
     {
         let names: Vec<&[u8]> = arg.as_bytes().splitn(2, |byte| *byte == b'=').collect();
         if names.len() != 2 {
-            return Err(
-                anyhow!(
-                "Invalid rename section: `{}`. --rename-section expects argument  of the form: <old>=<new>", arg)
-            );
+            return Err(anyhow!(
+                "Invalid rename section: `{}`. --rename-section expects argument of the form: <old>=<new>",
+                arg
+            ));
         }
         options
             .rename_sections
@@ -311,10 +312,10 @@ fn main() -> Result<()> {
     {
         let names: Vec<&[u8]> = arg.as_bytes().splitn(2, |byte| *byte == b'=').collect();
         if names.len() != 2 {
-            return Err(
-                anyhow!(
-                "Invalid replace needed: `{}`. --elf-replace-needed expects argument of the form: <old>=<new>", arg)
-            );
+            return Err(anyhow!(
+                "Invalid replace needed: `{}`. --elf-replace-needed expects argument of the form: <old>=<new>",
+                arg
+            ));
         }
         options
             .elf
@@ -361,12 +362,12 @@ fn main() -> Result<()> {
         .with_context(|| format!("Failed to create output file '{}'", out_path.display()))?;
     let out_metadata = out_file.metadata();
     rewriter.write(out_file).with_context(|| {
-        if let Ok(out_metadata) = out_metadata {
-            if out_metadata.is_file() {
-                // This is a regular file that we either created or truncated,
-                // so we can safely remove it.
-                fs::remove_file(out_path).ok();
-            }
+        if let Ok(out_metadata) = out_metadata
+            && out_metadata.is_file()
+        {
+            // This is a regular file that we either created or truncated,
+            // so we can safely remove it.
+            fs::remove_file(out_path).ok();
         }
         format!(
             "Failed to write output file '{}' from input '{}'",

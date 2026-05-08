@@ -25,7 +25,7 @@ use core::slice;
 
 use crate::endian::{BigEndian as BE, LittleEndian as LE, U16, U32, U64};
 use crate::read::{self, Bytes, Error, ReadError, ReadRef};
-use crate::{archive, SkipDebugList};
+use crate::{SkipDebugList, archive};
 
 /// The kind of archive format.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -332,10 +332,7 @@ impl<'data, R: ReadRef<'data>> Iterator for ArchiveMemberIterator<'data, R> {
 
     fn next(&mut self) -> Option<Self::Item> {
         match &mut self.members {
-            Members::Common {
-                ref mut offset,
-                ref mut end_offset,
-            } => {
+            Members::Common { offset, end_offset } => {
                 if *offset >= *end_offset {
                     return None;
                 }
@@ -345,7 +342,7 @@ impl<'data, R: ReadRef<'data>> Iterator for ArchiveMemberIterator<'data, R> {
                 }
                 Some(member)
             }
-            Members::AixBig { ref mut index } => match **index {
+            Members::AixBig { index } => match **index {
                 [] => None,
                 [ref first, ref rest @ ..] => {
                     *index = rest;

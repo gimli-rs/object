@@ -7,7 +7,7 @@ use crate::read::{
     self, Architecture, Export, FileFlags, Import, NoDynamicRelocationIterator, Object, ObjectKind,
     ObjectSection, ReadError, ReadRef, Result, SectionIndex, SubArchitecture, SymbolIndex,
 };
-use crate::{pe, SkipDebugList};
+use crate::{SkipDebugList, pe};
 
 use super::{
     CoffComdat, CoffComdatIterator, CoffSection, CoffSectionIterator, CoffSegment,

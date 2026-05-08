@@ -1,7 +1,7 @@
 [package]
 name = "object-rewrite"
 version = "0.1.1"
-edition = "2021"
+edition = "2024"
 license = "Apache-2.0 OR MIT"
 repository = "https://github.com/gimli-rs/object/tree/main/crates/rewrite"
 description = "Rewrite object files with modifications"

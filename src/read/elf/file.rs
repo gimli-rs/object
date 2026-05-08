@@ -6,10 +6,10 @@ use core::mem;
 use crate::endian::{self, Endian, Endianness, NativeEndian, U32};
 use crate::pod::Pod;
 use crate::read::{
-    self, util, Architecture, ByteString, Bytes, Error, Export, FileFlags, Import, Object,
-    ObjectKind, ReadError, ReadRef, SectionIndex, StringTable, SymbolIndex,
+    self, Architecture, ByteString, Bytes, Error, Export, FileFlags, Import, Object, ObjectKind,
+    ReadError, ReadRef, SectionIndex, StringTable, SymbolIndex, util,
 };
-use crate::{elf, SkipDebugList};
+use crate::{SkipDebugList, elf};
 
 use super::{
     CompressionHeader, Dyn, DynamicTable, ElfComdat, ElfComdatIterator,

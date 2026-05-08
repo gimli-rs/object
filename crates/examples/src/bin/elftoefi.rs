@@ -1,9 +1,9 @@
 use std::error::Error;
 use std::{env, fs, process};
 
-use object::read::elf::{FileHeader, Rel, Rela, SectionHeader};
 use object::Endianness;
-use object::{elf, pe, ReadRef, SectionIndex};
+use object::read::elf::{FileHeader, Rel, Rela, SectionHeader};
+use object::{ReadRef, SectionIndex, elf, pe};
 
 fn main() {
     let mut args = env::args();
