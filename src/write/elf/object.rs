@@ -49,7 +49,7 @@ impl<'a> Object<'a> {
         debug_assert_eq!(util::align(data.len(), align), data.len());
         data.extend_from_slice(pod::bytes_of(&U32::new(self.endian, property)));
         // Value size
-        data.extend_from_slice(pod::bytes_of(&U32::new(self.endian, 4)));
+        data.extend_from_slice(pod::bytes_of(&U32::new(self.endian, 4u32)));
         data.extend_from_slice(pod::bytes_of(&U32::new(self.endian, value)));
         util::write_align(&mut data, align);
 

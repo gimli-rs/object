@@ -4,7 +4,7 @@ use std::{fmt, str};
 
 use object::read::archive::ArchiveFile;
 use object::read::macho::{FatArch, FatHeader};
-use object::{ConstantNames, Endianness, FlagNames};
+use object::{ConstantNames, Endianness, FlagNames, Wrap};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct PrintOptions {
@@ -251,19 +251,39 @@ impl<'a> Printer<'a> {
 
     fn field_consts<T>(&mut self, name: &str, value: T, consts: &ConstantNames<T>)
     where
-        T: PartialEq + Copy + fmt::UpperHex,
+        T: Wrap + Copy,
+        T::Inner: fmt::UpperHex + PartialEq,
     {
         if let Some(flag_name) = consts.name(value) {
             self.field_name(name);
-            writeln!(self.w, "{} (0x{:X})", flag_name, value).unwrap();
+            writeln!(self.w, "{} (0x{:X})", flag_name, value.into_inner()).unwrap();
         } else {
-            self.field_hex(name, value);
+            self.field_hex(name, value.into_inner());
+        }
+    }
+
+    fn field_consts_display<T>(&mut self, name: &str, value: T, consts: &ConstantNames<T>)
+    where
+        T: Wrap + Copy,
+        T::Inner: fmt::Display + PartialEq,
+    {
+        if let Some(flag_name) = consts.name(value) {
+            self.field_name(name);
+            writeln!(self.w, "{} ({})", flag_name, value.into_inner()).unwrap();
+        } else {
+            self.field(name, value.into_inner());
         }
     }
 
     fn field_flags<T>(&mut self, name: &str, value: T, flags: &FlagNames<T>)
     where
-        T: Copy + Default + PartialEq + BitAnd<Output = T> + Not<Output = T> + fmt::UpperHex,
+        T: Wrap + Copy,
+        T::Inner: fmt::UpperHex
+            + Default
+            + Copy
+            + PartialEq
+            + BitAnd<Output = T::Inner>
+            + Not<Output = T::Inner>,
     {
         // If only one flag is set, then display on one line. This handles the case where
         // a field is usually one group, with other bits rarely set.
@@ -274,7 +294,7 @@ impl<'a> Printer<'a> {
                 return;
             }
             if let Some((first_name, first_value)) = first_entry {
-                self.field_hex(name, value);
+                self.field_hex(name, value.into_inner());
                 self.indent(|p| {
                     p.print_indent();
                     writeln!(p.w, "{} (0x{:X})", first_name, first_value).unwrap();
@@ -295,8 +315,8 @@ impl<'a> Printer<'a> {
 
         if count == 0 {
             // No entries.
-            self.field_hex(name, unmatched);
-        } else if unmatched != T::default() {
+            self.field_hex(name, value.into_inner());
+        } else if unmatched != T::Inner::default() {
             // At least one entry + unmatched entry.
             write_entry(count, "<other>", unmatched);
         } else if let Some((subname, subvalue)) = first_entry {
@@ -305,6 +325,43 @@ impl<'a> Printer<'a> {
             writeln!(self.w, "{} (0x{:X})", subname, subvalue).unwrap();
         } else {
             // Entries already written.
+        }
+    }
+
+    fn flag_bits<T>(&mut self, value: T, flags: &FlagNames<T>)
+    where
+        T: Wrap,
+        T::Inner: fmt::UpperHex
+            + Default
+            + Copy
+            + PartialEq
+            + BitAnd<Output = T::Inner>
+            + Not<Output = T::Inner>,
+    {
+        self.indent(|p| {
+            let unmatched = flags.bit_names(value, |bit, name| {
+                p.print_indent();
+                writeln!(p.w, "{} (0x{:X})", name, bit).unwrap();
+            });
+            if unmatched != T::Inner::default() {
+                p.print_indent();
+                writeln!(p.w, "<other> (0x{:X})", unmatched).unwrap();
+            }
+        });
+    }
+
+    fn flag_const<T, U>(&mut self, value: U, consts: &ConstantNames<U>)
+    where
+        T: Wrap,
+        T::Inner: fmt::UpperHex,
+        U: Wrap + Into<T> + Copy,
+        U::Inner: PartialEq,
+    {
+        if let Some(name) = consts.name(value) {
+            self.indent(|p| {
+                p.print_indent();
+                writeln!(p.w, "{} (0x{:X})", name, value.into().into_inner()).unwrap();
+            });
         }
     }
 

@@ -814,7 +814,8 @@ impl<'a> Writer<'a> {
         }
 
         if self.need_symtab_shndx {
-            self.symtab_shndx_data.write_pod(&U32::new(self.endian, 0));
+            self.symtab_shndx_data
+                .write_pod(&U32::new(self.endian, 0u32));
         }
     }
 
@@ -1478,7 +1479,7 @@ impl<'a> Writer<'a> {
 
         // Calculate and write bloom filter.
         if self.is_64 {
-            let mut bloom_filters = vec![0; bloom_count as usize];
+            let mut bloom_filters = vec![0u64; bloom_count as usize];
             for i in 0..symbol_count {
                 let h = hash(i);
                 bloom_filters[((h / 64) & (bloom_count - 1)) as usize] |=
@@ -1488,7 +1489,7 @@ impl<'a> Writer<'a> {
                 self.buffer.write(&U64::new(self.endian, bloom_filter));
             }
         } else {
-            let mut bloom_filters = vec![0; bloom_count as usize];
+            let mut bloom_filters = vec![0u32; bloom_count as usize];
             for i in 0..symbol_count {
                 let h = hash(i);
                 bloom_filters[((h / 32) & (bloom_count - 1)) as usize] |=
@@ -1506,7 +1507,7 @@ impl<'a> Writer<'a> {
         for i in 0..symbol_count {
             let symbol_bucket = hash(i) % bucket_count;
             while bucket < symbol_bucket {
-                self.buffer.write(&U32::new(self.endian, 0));
+                self.buffer.write(&U32::new(self.endian, 0u32));
                 bucket += 1;
             }
             if bucket == symbol_bucket {
@@ -1515,7 +1516,7 @@ impl<'a> Writer<'a> {
             }
         }
         while bucket < bucket_count {
-            self.buffer.write(&U32::new(self.endian, 0));
+            self.buffer.write(&U32::new(self.endian, 0u32));
             bucket += 1;
         }
 
