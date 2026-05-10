@@ -585,7 +585,7 @@ pub trait FileHeader: Debug + Pod {
     fn e_phnum(&self, endian: Self::Endian) -> u16;
     fn e_shentsize(&self, endian: Self::Endian) -> u16;
     fn e_shnum(&self, endian: Self::Endian) -> u16;
-    fn e_shstrndx(&self, endian: Self::Endian) -> elf::SectionIndex;
+    fn e_shstrndx(&self, endian: Self::Endian) -> elf::SymbolSection;
 
     // Provided methods.
 
@@ -712,18 +712,20 @@ pub trait FileHeader: Debug + Pod {
         data: R,
     ) -> read::Result<u32> {
         let e_shstrndx = self.e_shstrndx(endian);
-        let index = if e_shstrndx != elf::SHN_XINDEX {
-            e_shstrndx.0.into()
-        } else if let Some(section_0) = self.section_0(endian, data)? {
-            section_0.sh_link(endian)
-        } else {
+        if let Some(index) = e_shstrndx.index() {
+            Ok(u32::from(index))
+        } else if e_shstrndx == elf::SHN_XINDEX {
             // Section 0 must exist if we're trying to read e_shstrndx.
-            return Err(Error("Missing ELF section headers for e_shstrndx overflow"));
-        };
-        if index == 0 {
-            return Err(Error("Missing ELF e_shstrndx"));
+            let section_0 = self
+                .section_0(endian, data)?
+                .read_error("Missing ELF section headers for e_shstrndx overflow")?;
+            Ok(section_0.sh_link(endian))
+        } else if e_shstrndx == elf::SHN_UNDEF {
+            // Valid, but we're only called if we expect a section index.
+            Err(Error("Missing ELF e_shstrndx"))
+        } else {
+            Err(Error("Invalid ELF e_shstrndx"))
         }
-        Ok(index)
     }
 
     /// Return the slice of program headers.
@@ -927,7 +929,7 @@ impl<Endian: endian::Endian> FileHeader for elf::FileHeader32<Endian> {
     }
 
     #[inline]
-    fn e_shstrndx(&self, endian: Self::Endian) -> elf::SectionIndex {
+    fn e_shstrndx(&self, endian: Self::Endian) -> elf::SymbolSection {
         self.e_shstrndx.get(endian)
     }
 }
@@ -1025,7 +1027,7 @@ impl<Endian: endian::Endian> FileHeader for elf::FileHeader64<Endian> {
     }
 
     #[inline]
-    fn e_shstrndx(&self, endian: Self::Endian) -> elf::SectionIndex {
+    fn e_shstrndx(&self, endian: Self::Endian) -> elf::SymbolSection {
         self.e_shstrndx.get(endian)
     }
 }

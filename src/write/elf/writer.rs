@@ -338,11 +338,7 @@ impl<'a> Writer<'a> {
         } else {
             self.section_num as u16
         };
-        let e_shstrndx = if self.shstrtab_index.0 >= elf::SHN_LORESERVE.into() {
-            elf::SHN_XINDEX
-        } else {
-            elf::SectionIndex(self.shstrtab_index.0 as u16)
-        };
+        let e_shstrndx = elf::SymbolSection::new(self.shstrtab_index.0);
 
         let endian = self.endian;
         if self.is_64 {
@@ -827,11 +823,7 @@ impl<'a> Writer<'a> {
             0
         };
         let st_shndx = if let Some(section) = sym.section {
-            if section.0 >= elf::SHN_LORESERVE as u32 {
-                elf::SHN_XINDEX
-            } else {
-                elf::SectionIndex(section.0 as u16)
-            }
+            elf::SymbolSection::new(section.0)
         } else {
             sym.st_shndx
         };
@@ -1196,13 +1188,9 @@ impl<'a> Writer<'a> {
         };
 
         let st_shndx = if let Some(section) = sym.section {
-            if section.0 >= elf::SHN_LORESERVE as u32 {
-                // TODO: we don't actually write out .dynsym_shndx yet.
-                // This is unlikely to be needed though.
-                elf::SHN_XINDEX
-            } else {
-                elf::SectionIndex(section.0 as u16)
-            }
+            // TODO: we don't write out .dynsym_shndx yet.
+            // This is unlikely to be needed though.
+            elf::SymbolSection::new(section.0)
         } else {
             sym.st_shndx
         };
@@ -2352,7 +2340,7 @@ pub struct Sym {
     pub section: Option<SectionIndex>,
     pub st_info: elf::SymbolInfo,
     pub st_other: elf::SymbolOther,
-    pub st_shndx: elf::SectionIndex,
+    pub st_shndx: elf::SymbolSection,
     pub st_value: u64,
     pub st_size: u64,
 }

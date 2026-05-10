@@ -52,7 +52,16 @@ fn print_file_header<Elf: FileHeader>(p: &mut Printer<'_>, endian: Elf::Endian, 
         p.field("ProgramHeaderCount", elf.e_phnum(endian));
         p.field_hex("SectionHeaderEntrySize", elf.e_shentsize(endian));
         p.field("SectionHeaderCount", elf.e_shnum(endian));
-        p.field("SectionHeaderStringTableIndex", elf.e_shstrndx(endian).0);
+        let shstrndx = elf.e_shstrndx(endian);
+        if let Some(index) = shstrndx.index() {
+            p.field("SectionHeaderStringTableIndex", index);
+        } else {
+            p.field_consts(
+                "SectionHeaderStringTableIndex",
+                shstrndx,
+                SymbolSection::NAMES,
+            );
+        }
     });
 }
 
@@ -308,10 +317,10 @@ fn print_section_symbols<Elf: FileHeader>(
                 p.field_flags("Other", symbol.st_other(), constants.sto);
 
                 let shndx = symbol.st_shndx(endian);
-                if shndx == SHN_UNDEF || shndx.is_reserved() {
-                    p.field_consts("SectionIndex", shndx, constants.shn);
+                if let Some(index) = shndx.index() {
+                    p.field("SectionIndex", index);
                 } else {
-                    p.field("SectionIndex", shndx.0);
+                    p.field_consts("SectionIndex", shndx, constants.shn);
                 }
                 if let Some(shndx) = symbols.shndx(endian, index) {
                     p.field("ExtendedSectionIndex", shndx);

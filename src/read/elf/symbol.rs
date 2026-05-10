@@ -178,20 +178,20 @@ impl<'data, Elf: FileHeader, R: ReadRef<'data>> SymbolTable<'data, Elf, R> {
         symbol: &Elf::Sym,
         index: SymbolIndex,
     ) -> read::Result<Option<SectionIndex>> {
-        match symbol.st_shndx(endian) {
-            elf::SHN_UNDEF => Ok(None),
-            elf::SHN_XINDEX => {
-                let shndx = self
-                    .shndx(endian, index)
-                    .read_error("Missing ELF symbol extended index")?;
-                if shndx == 0 {
-                    Ok(None)
-                } else {
-                    Ok(Some(SectionIndex(shndx as usize)))
-                }
+        let shndx = symbol.st_shndx(endian);
+        if let Some(index) = shndx.index() {
+            Ok(Some(SectionIndex(index.into())))
+        } else if shndx == elf::SHN_XINDEX {
+            let shndx = self
+                .shndx(endian, index)
+                .read_error("Missing ELF symbol extended index")?;
+            if shndx == 0 {
+                Ok(None)
+            } else {
+                Ok(Some(SectionIndex(shndx as usize)))
             }
-            shndx if !shndx.is_reserved() => Ok(Some(SectionIndex(shndx.0.into()))),
-            _ => Ok(None),
+        } else {
+            Ok(None)
         }
     }
 
@@ -424,8 +424,13 @@ impl<'data, 'file, Elf: FileHeader, R: ReadRef<'data>> ObjectSymbol<'data>
                 Some(index) => SymbolSection::Section(SectionIndex(index as usize)),
                 None => SymbolSection::Unknown,
             },
-            index if !index.is_reserved() => SymbolSection::Section(SectionIndex(index.0 as usize)),
-            _ => SymbolSection::Unknown,
+            shndx => {
+                if let Some(index) = shndx.index() {
+                    SymbolSection::Section(SectionIndex(index.into()))
+                } else {
+                    SymbolSection::Unknown
+                }
+            }
         }
     }
 
@@ -499,7 +504,7 @@ pub trait Sym: Debug + Pod {
     fn st_type(&self) -> elf::SymbolType;
     fn st_other(&self) -> elf::SymbolOther;
     fn st_visibility(&self) -> elf::SymbolVisibility;
-    fn st_shndx(&self, endian: Self::Endian) -> elf::SectionIndex;
+    fn st_shndx(&self, endian: Self::Endian) -> elf::SymbolSection;
     fn st_value(&self, endian: Self::Endian) -> Self::Word;
     fn st_size(&self, endian: Self::Endian) -> Self::Word;
 
@@ -527,7 +532,7 @@ pub trait Sym: Debug + Pod {
         strings: StringTable<'data, R>,
     ) -> bool {
         let shndx = self.st_shndx(endian);
-        if shndx == elf::SHN_UNDEF || (shndx.is_reserved() && shndx != elf::SHN_XINDEX) {
+        if shndx.is_special() && shndx != elf::SHN_XINDEX {
             return false;
         }
         match self.st_type() {
@@ -601,7 +606,7 @@ impl<Endian: endian::Endian> Sym for elf::Sym32<Endian> {
     }
 
     #[inline]
-    fn st_shndx(&self, endian: Self::Endian) -> elf::SectionIndex {
+    fn st_shndx(&self, endian: Self::Endian) -> elf::SymbolSection {
         self.st_shndx.get(endian)
     }
 
@@ -651,7 +656,7 @@ impl<Endian: endian::Endian> Sym for elf::Sym64<Endian> {
     }
 
     #[inline]
-    fn st_shndx(&self, endian: Self::Endian) -> elf::SectionIndex {
+    fn st_shndx(&self, endian: Self::Endian) -> elf::SymbolSection {
         self.st_shndx.get(endian)
     }
 

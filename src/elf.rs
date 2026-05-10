@@ -24,8 +24,8 @@ pub struct Constants {
     pub et: &'static ConstantNames<FileType>,
     /// Values for `FileHeader*::e_flags`.
     pub ef: &'static FlagNames<FileFlags>,
-    /// Special values for section indices.
-    pub shn: &'static ConstantNames<SectionIndex>,
+    /// Special values for `Sym*::st_shndx` and `FileHeader*::e_shstrndx`.
+    pub shn: &'static ConstantNames<SymbolSection>,
     /// Values for `SectionHeader*::sh_type`.
     pub sht: &'static ConstantNames<SectionType>,
     /// Values for `SectionHeader*::sh_flags`.
@@ -50,7 +50,7 @@ constants! {
     struct Base;
     consts et: FileType = NAMES_ET;
     flags ef: FileFlags(u32) = {};
-    consts shn: SectionIndex = NAMES_SHN;
+    consts shn: SymbolSection = NAMES_SHN;
     consts sht: SectionType = NAMES_SHT;
     flags shf: SectionFlags = NAMES_SHF;
     consts stb: SymbolBind = NAMES_STB;
@@ -159,7 +159,7 @@ pub struct FileHeader32<E: Endian> {
     ///
     /// If the index is greater than or equal to `SHN_LORESERVE` then this field is set to
     /// `SHN_XINDEX` and the index is stored in the `sh_link` field of section 0.
-    pub e_shstrndx: U16<E, SectionIndex>,
+    pub e_shstrndx: U16<E, SymbolSection>,
 }
 
 /// The header at the start of every 64-bit ELF file.
@@ -205,7 +205,7 @@ pub struct FileHeader64<E: Endian> {
     ///
     /// If the index is greater than or equal to `SHN_LORESERVE` then this field is set to
     /// `SHN_XINDEX` and the index is stored in the `sh_link` field of section 0.
-    pub e_shstrndx: U16<E, SectionIndex>,
+    pub e_shstrndx: U16<E, SymbolSection>,
 }
 
 /// Magic number and other information.
@@ -949,10 +949,39 @@ newtype!(
     /// Section header index.
     ///
     /// May be a reserved value with special meaning.
-    struct SectionIndex(u16);
+    ///
+    /// This is primarily used for `Sym*::st_shndx`.
+    /// However, `FileHeader*::e_shstrndx` may be set to `SHN_UNDEF`, `SHN_XINDEX`, or an index.
+    struct SymbolSection(u16);
 );
 
-impl SectionIndex {
+impl SymbolSection {
+    /// Construct a `SymbolSection` from a `u32` section index.
+    ///
+    /// Returns `SHN_XINDEX` if the index is >= `SHN_LORESERVE`. The caller must write the
+    /// extended index separately.
+    pub fn new(index: u32) -> Self {
+        if index >= u32::from(SHN_LORESERVE) {
+            SHN_XINDEX
+        } else {
+            SymbolSection(index as u16)
+        }
+    }
+
+    /// Return the section index, or `None` if this is `SHN_UNDEF` or in the reserved range.
+    pub fn index(self) -> Option<u16> {
+        if self.is_special() {
+            None
+        } else {
+            Some(self.0)
+        }
+    }
+
+    /// Return true if the number is `SHN_UNDEF` or in the reserved range.
+    pub fn is_special(self) -> bool {
+        self == SHN_UNDEF || self.is_reserved()
+    }
+
     /// Return true if the number is in the reserved range.
     pub fn is_reserved(self) -> bool {
         debug_assert_eq!(SHN_HIRESERVE, !0);
@@ -968,7 +997,7 @@ impl SectionIndex {
     }
 }
 
-newtype_constant_names!(NAMES_SHN: SectionIndex(u16) = {
+newtype_constant_names!(NAMES_SHN: SymbolSection(u16) = {
     /// Undefined section.
     SHN_UNDEF = 0,
     /// Associated symbol is absolute.
@@ -1258,7 +1287,7 @@ pub struct Sym32<E: Endian> {
     /// Use the `st_visibility` method to access this value.
     pub st_other: SymbolOther,
     /// Section index or one of the `SHN_*` values.
-    pub st_shndx: U16<E, SectionIndex>,
+    pub st_shndx: U16<E, SymbolSection>,
 }
 
 impl<E: Endian> Sym32<E> {
@@ -1304,7 +1333,7 @@ pub struct Sym64<E: Endian> {
     /// Use the `st_visibility` method to access this value.
     pub st_other: SymbolOther,
     /// Section index or one of the `SHN_*` values.
-    pub st_shndx: U16<E, SectionIndex>,
+    pub st_shndx: U16<E, SymbolSection>,
     /// Symbol value.
     pub st_value: U64<E>,
     /// Symbol size.
@@ -3410,7 +3439,7 @@ constants! {
         /// MIPS architecture level.
         EF_MIPS_ARCH = 0xf000_0000 => NAMES_EF_MIPS_ARCH,
     };
-    consts shn: SectionIndex(u16) = {
+    consts shn: SymbolSection(u16) = {
         /// Allocated common symbols.
         SHN_MIPS_ACOMMON = 0xff00,
         /// Allocated test symbols.
@@ -3841,7 +3870,7 @@ constants! {
         /// Architecture version.
         EF_PARISC_ARCH = 0x0000_ffff => NAMES_EFA_PARISC,
     };
-    consts shn: SectionIndex(u16) = {
+    consts shn: SymbolSection(u16) = {
         /// Section for tentatively declared symbols in ANSI C.
         SHN_PARISC_ANSI_COMMON = 0xff00,
         /// Common blocks in huge model.
