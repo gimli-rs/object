@@ -121,7 +121,7 @@ fn test_attribute() {
             vendor: b"GNU"[..].into(),
             subsubsections: vec![
                 (build::elf::AttributesSubsubsection {
-                    tag: build::elf::AttributeTag::File,
+                    scope: build::elf::AttributeScope::File,
                     data: b"123"[..].into(),
                 }),
             ],
@@ -144,8 +144,8 @@ fn test_attribute() {
             assert_eq!(attributes.subsections[0].vendor.as_slice(), b"GNU");
             assert_eq!(attributes.subsections[0].subsubsections.len(), 1);
             assert_eq!(
-                attributes.subsections[0].subsubsections[0].tag,
-                build::elf::AttributeTag::File
+                attributes.subsections[0].subsubsections[0].scope,
+                build::elf::AttributeScope::File
             );
             assert_eq!(
                 attributes.subsections[0].subsubsections[0].data.as_slice(),

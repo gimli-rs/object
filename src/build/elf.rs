@@ -566,8 +566,8 @@ impl<'data> Builder<'data> {
             let mut builder_subsection = AttributesSubsection::new(subsection.vendor().into());
             let mut subsubsections = subsection.subsubsections();
             while let Some(subsubsection) = subsubsections.next()? {
-                let tag = match subsubsection.tag() {
-                    elf::Tag_File => AttributeTag::File,
+                let scope = match subsubsection.tag() {
+                    elf::Tag_File => AttributeScope::File,
                     elf::Tag_Section => {
                         let mut tag_sections = Vec::new();
                         let mut indices = subsubsection.indices();
@@ -581,7 +581,7 @@ impl<'data> Builder<'data> {
                             }
                             tag_sections.push(SectionId(index - 1));
                         }
-                        AttributeTag::Section(tag_sections)
+                        AttributeScope::Section(tag_sections)
                     }
                     elf::Tag_Symbol => {
                         let mut tag_symbols = Vec::new();
@@ -596,7 +596,7 @@ impl<'data> Builder<'data> {
                             }
                             tag_symbols.push(SymbolId(index - 1));
                         }
-                        AttributeTag::Symbol(tag_symbols)
+                        AttributeScope::Symbol(tag_symbols)
                     }
                     tag => {
                         return Err(Error(format!(
@@ -608,7 +608,7 @@ impl<'data> Builder<'data> {
                 let data = subsubsection.attributes_data().into();
                 builder_subsection
                     .subsubsections
-                    .push(AttributesSubsubsection { tag, data });
+                    .push(AttributesSubsubsection { scope, data });
             }
             builder_attributes.subsections.push(builder_subsection);
         }
@@ -1046,10 +1046,10 @@ impl<'data> Builder<'data> {
             for subsection in &attributes.subsections {
                 writer.start_subsection(&subsection.vendor);
                 for subsubsection in &subsection.subsubsections {
-                    writer.start_subsubsection(subsubsection.tag.tag());
-                    match &subsubsection.tag {
-                        AttributeTag::File => {}
-                        AttributeTag::Section(sections) => {
+                    writer.start_subsubsection(subsubsection.scope.tag());
+                    match &subsubsection.scope {
+                        AttributeScope::File => {}
+                        AttributeScope::Section(sections) => {
                             for id in sections {
                                 if let Some(index) = out_sections_index[id.0] {
                                     writer.write_subsubsection_index(index.0);
@@ -1057,7 +1057,7 @@ impl<'data> Builder<'data> {
                             }
                             writer.write_subsubsection_index(0);
                         }
-                        AttributeTag::Symbol(symbols) => {
+                        AttributeScope::Symbol(symbols) => {
                             for id in symbols {
                                 if let Some(index) = out_syms_index[id.0] {
                                     writer.write_subsubsection_index(index.0);
@@ -3093,36 +3093,36 @@ impl<'data> AttributesSubsection<'data> {
 /// A sub-subsection in an attributes section.
 #[derive(Debug, Clone)]
 pub struct AttributesSubsubsection<'data> {
-    /// The sub-subsection tag.
-    pub tag: AttributeTag,
+    /// The sub-subsection scope.
+    pub scope: AttributeScope,
     /// The data containing the attributes.
     pub data: Bytes<'data>,
 }
 
-/// The tag for a sub-subsection in an attributes section.
+/// The scope that the attributes in a sub-subsection apply to.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum AttributeTag {
+pub enum AttributeScope {
     /// The attributes apply to the whole file.
     ///
-    /// Correspeonds to [`elf::Tag_File`].
+    /// Corresponds to [`elf::Tag_File`].
     File,
     /// The attributes apply to the given sections.
     ///
-    /// Correspeonds to [`elf::Tag_Section`].
+    /// Corresponds to [`elf::Tag_Section`].
     Section(Vec<SectionId>),
     /// The attributes apply to the given symbols.
     ///
-    /// Correspeonds to [`elf::Tag_Symbol`].
+    /// Corresponds to [`elf::Tag_Symbol`].
     Symbol(Vec<SymbolId>),
 }
 
-impl AttributeTag {
-    /// Return the corresponding `elf::Tag_*` value for this tag.
+impl AttributeScope {
+    /// Return the corresponding `elf::Tag_*` value for this scope.
     pub fn tag(&self) -> elf::AttributeTag {
         match self {
-            AttributeTag::File => elf::Tag_File,
-            AttributeTag::Section(_) => elf::Tag_Section,
-            AttributeTag::Symbol(_) => elf::Tag_Symbol,
+            AttributeScope::File => elf::Tag_File,
+            AttributeScope::Section(_) => elf::Tag_Section,
+            AttributeScope::Symbol(_) => elf::Tag_Symbol,
         }
     }
 }
