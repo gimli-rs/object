@@ -11,7 +11,7 @@ Entry Address: 0
 10: Section { name: "<code>", address: 0, size: 6d, align: 1, kind: Text, flags: None }
 11: Section { name: "<data>", address: 0, size: 13, align: 1, kind: Data, flags: None }
 0: Section { name: "linking", address: 0, size: 5d, align: 1, kind: Linker, flags: None }
-0: Section { name: "reloc.CODE", address: 0, size: 15, align: 1, kind: Other, flags: None }
+0: Section { name: "reloc.CODE", address: 0, size: 15, align: 1, kind: Linker, flags: None }
 0: Section { name: "producers", address: 0, size: 6c, align: 1, kind: Other, flags: None }
 
 Symbols
