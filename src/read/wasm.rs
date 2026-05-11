@@ -16,6 +16,7 @@ use crate::read::{
     RelocationMap, Result, SectionFlags, SectionIndex, SectionKind, SegmentFlags, SymbolFlags,
     SymbolIndex, SymbolKind, SymbolScope, SymbolSection,
 };
+use crate::{RelocationEncoding, RelocationFlags, RelocationKind, RelocationTarget};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(usize)]
@@ -47,6 +48,8 @@ pub struct WasmFile<'data, R = &'data [u8]> {
     sections: Vec<SectionHeader<'data>>,
     // Indices into `sections` of sections with a non-zero id.
     id_sections: Box<[Option<usize>; MAX_SECTION_ID + 1]>,
+    // Parsed `reloc.*` custom sections, keyed by the binary index of the target section.
+    relocations: Vec<RelocSection>,
     // Whether the file has DWARF information.
     has_debug_symbols: bool,
     // Symbols collected from imports, exports, code and name sections.
@@ -57,10 +60,17 @@ pub struct WasmFile<'data, R = &'data [u8]> {
 }
 
 #[derive(Debug)]
+struct RelocSection {
+    target: u32,
+    entries: Vec<wp::RelocationEntry>,
+}
+
+#[derive(Debug)]
 struct SectionHeader<'data> {
     id: SectionId,
     range: Range<usize>,
     name: &'data str,
+    binary_index: u32,
 }
 
 #[derive(Clone)]
@@ -87,6 +97,7 @@ impl<'data, R: ReadRef<'data>> WasmFile<'data, R> {
             has_memory64: false,
             sections: Vec::new(),
             id_sections: Default::default(),
+            relocations: Vec::new(),
             has_debug_symbols: false,
             symbols: Vec::new(),
             entry: 0,
@@ -213,6 +224,18 @@ impl<'data, R: ReadRef<'data>> WasmFile<'data, R> {
                                 symbols = Some(s);
                             }
                         }
+                    } else if name.strip_prefix("reloc.").is_some() {
+                        // https://github.com/WebAssembly/tool-conventions/blob/main/Linking.md#relocation-sections
+                        let reader = wp::BinaryReader::new(section.data(), section.data_offset());
+                        let reloc = wp::RelocSectionReader::new(reader)
+                            .read_error("Invalid Wasm reloc section")?;
+                        let target = reloc.section_index();
+                        let mut entries = Vec::new();
+                        for entry in reloc.entries() {
+                            let entry = entry.read_error("Invalid Wasm reloc entry")?;
+                            entries.push(entry);
+                        }
+                        file.relocations.push(RelocSection { target, entries });
                     } else if name.starts_with(".debug_") {
                         file.has_debug_symbols = true;
                     }
@@ -509,7 +532,13 @@ impl<'data, R: ReadRef<'data>> WasmFile<'data, R> {
     }
 
     fn add_section(&mut self, id: SectionId, range: Range<usize>, name: &'data str) {
-        let section = SectionHeader { id, range, name };
+        let binary_index = self.sections.len() as u32;
+        let section = SectionHeader {
+            id,
+            range,
+            name,
+            binary_index,
+        };
         self.id_sections[id as usize] = Some(self.sections.len());
         self.sections.push(section);
     }
@@ -920,7 +949,12 @@ impl<'data, 'file, R: ReadRef<'data>> ObjectSection<'data> for WasmSection<'data
 
     #[inline]
     fn relocations(&self) -> WasmRelocationIterator<'data, 'file, R> {
-        WasmRelocationIterator(PhantomData)
+        WasmRelocationIterator {
+            target: self.section.binary_index,
+            sections: self.file.relocations.iter(),
+            entries: [].iter(),
+            marker: PhantomData,
+        }
     }
 
     fn relocation_map(&self) -> read::Result<RelocationMap> {
@@ -1154,18 +1188,54 @@ impl<'data, 'file> ObjectSymbol<'data> for WasmSymbol<'data, 'file> {
 }
 
 /// An iterator for the relocations for a [`WasmSection`].
-///
-/// This is a stub that doesn't implement any functionality.
 #[derive(Debug)]
-pub struct WasmRelocationIterator<'data, 'file, R = &'data [u8]>(
-    PhantomData<(&'data (), &'file (), R)>,
-);
+pub struct WasmRelocationIterator<'data, 'file, R = &'data [u8]> {
+    /// Binary index of the wasm section we are iterating relocations for.
+    target: u32,
+    /// Remaining `reloc.*` sections that may target this section.
+    sections: slice::Iter<'file, RelocSection>,
+    /// Remaining entries from the current matching `reloc.*` section.
+    entries: slice::Iter<'file, wp::RelocationEntry>,
+    marker: PhantomData<(&'data (), R)>,
+}
 
 impl<'data, 'file, R> Iterator for WasmRelocationIterator<'data, 'file, R> {
     type Item = (u64, Relocation);
 
-    #[inline]
     fn next(&mut self) -> Option<Self::Item> {
-        None
+        let entry = loop {
+            if let Some(entry) = self.entries.next() {
+                break *entry;
+            }
+            let next = self.sections.find(|r| r.target == self.target)?;
+            self.entries = next.entries.iter();
+        };
+        let r_type = entry.ty as u8;
+        // Number of bits the relocation patches in the target section.
+        let size = (entry.ty.extent() * 8) as u8;
+        // For `R_WASM_TYPE_INDEX_LEB`, the `index` field refers to the type section, not the symbol table.
+        let (target, addend) = if entry.ty == wp::RelocationType::TypeIndexLeb {
+            (
+                RelocationTarget::Section(SectionIndex(SectionId::Type as usize)),
+                entry.index as i64,
+            )
+        } else {
+            (
+                RelocationTarget::Symbol(SymbolIndex(entry.index as usize)),
+                entry.addend,
+            )
+        };
+        let relocation = Relocation {
+            kind: RelocationKind::Unknown,
+            encoding: RelocationEncoding::Generic,
+            size,
+            target,
+            subtractor: None,
+            // Wasm relocation entries always carry an explicit addend.
+            implicit_addend: false,
+            addend,
+            flags: RelocationFlags::Wasm { r_type },
+        };
+        Some((entry.offset as u64, relocation))
     }
 }

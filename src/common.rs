@@ -764,6 +764,12 @@ pub enum RelocationFlags {
         /// `r_rsize` field in the XCOFF relocation.
         r_rsize: u8,
     },
+    /// Wasm relocation fields.
+    #[cfg(feature = "wasm")]
+    Wasm {
+        /// Relocation type (the `R_WASM_*` constant).
+        r_type: u8,
+    },
 }
 
 /// Wrapper to print as `[..]` without a manual `Debug` implementation, rather than dumping an

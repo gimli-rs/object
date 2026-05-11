@@ -22,6 +22,14 @@ Symbols
 4: Symbol { name: "main", address: 5e, size: f, kind: Text, section: Section(SectionIndex(a)), scope: Linkage, weak: false, flags: None }
 5: Symbol { name: "__main_void", address: 2, size: 5b, kind: Text, section: Section(SectionIndex(a)), scope: Dynamic, weak: false, flags: None }
 
+<code> relocations
+(6, Relocation { kind: Unknown, encoding: Generic, size: 28, target: Symbol(SymbolIndex(1)), addend: 0, implicit_addend: false, flags: Wasm { r_type: 7 } })
+(1b, Relocation { kind: Unknown, encoding: Generic, size: 28, target: Symbol(SymbolIndex(1)), addend: 0, implicit_addend: false, flags: Wasm { r_type: 7 } })
+(2c, Relocation { kind: Unknown, encoding: Generic, size: 28, target: Symbol(SymbolIndex(2)), addend: 0, implicit_addend: false, flags: Wasm { r_type: 4 } })
+(3c, Relocation { kind: Unknown, encoding: Generic, size: 28, target: Symbol(SymbolIndex(3)), addend: 0, implicit_addend: false, flags: Wasm { r_type: 0 } })
+(54, Relocation { kind: Unknown, encoding: Generic, size: 28, target: Symbol(SymbolIndex(1)), addend: 0, implicit_addend: false, flags: Wasm { r_type: 7 } })
+(62, Relocation { kind: Unknown, encoding: Generic, size: 28, target: Symbol(SymbolIndex(0)), addend: 0, implicit_addend: false, flags: Wasm { r_type: 0 } })
+
 Dynamic symbols
 
 Symbol map
