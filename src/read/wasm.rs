@@ -928,7 +928,8 @@ impl<'data, 'file, R: ReadRef<'data>> ObjectSection<'data> for WasmSection<'data
     fn kind(&self) -> SectionKind {
         match self.section.id {
             SectionId::Custom => match self.section.name {
-                "reloc." | "linking" => SectionKind::Linker,
+                "linking" => SectionKind::Linker,
+                name if name.starts_with("reloc.") => SectionKind::Linker,
                 _ => SectionKind::Other,
             },
             SectionId::Type => SectionKind::Metadata,
