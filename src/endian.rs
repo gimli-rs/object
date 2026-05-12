@@ -370,6 +370,11 @@ impl<E: Endian, T: Wrap<Inner = u64>> U32<E, T> {
         Ok(Self(e.write_u32(n.into_inner().try_into()?), PhantomData))
     }
 
+    /// Construct a new value given a native endian `u64` value, truncating to `u32`.
+    pub fn new_u64_truncate(e: E, n: T) -> Self {
+        Self(e.write_u32(n.into_inner() as u32), PhantomData)
+    }
+
     /// Return the value as a native endian `u64` value.
     pub fn get_u64(self, e: E) -> T {
         T::from_inner(u64::from(e.read_u32(self.0)))
@@ -379,6 +384,11 @@ impl<E: Endian, T: Wrap<Inner = u64>> U32<E, T> {
     pub fn set_u64(&mut self, e: E, n: T) -> Result<(), TryFromIntError> {
         self.0 = e.write_u32(n.into_inner().try_into()?);
         Ok(())
+    }
+
+    /// Set the value given a native endian `u64` value, truncating to `u32`.
+    pub fn set_u64_truncate(&mut self, e: E, n: T) {
+        self.0 = e.write_u32(n.into_inner() as u32);
     }
 }
 
@@ -475,6 +485,11 @@ impl<E: Endian, T: Wrap<Inner = i64>> I32<E, T> {
         Ok(Self(e.write_i32(n.into_inner().try_into()?), PhantomData))
     }
 
+    /// Construct a new value given a native endian `i64` value, truncating to `i32`.
+    pub fn new_i64_truncate(e: E, n: T) -> Self {
+        Self(e.write_i32(n.into_inner() as i32), PhantomData)
+    }
+
     /// Return the value as a native endian `i64` value.
     pub fn get_i64(self, e: E) -> T {
         T::from_inner(i64::from(e.read_i32(self.0)))
@@ -484,6 +499,11 @@ impl<E: Endian, T: Wrap<Inner = i64>> I32<E, T> {
     pub fn set_i64(&mut self, e: E, n: T) -> Result<(), TryFromIntError> {
         self.0 = e.write_i32(n.into_inner().try_into()?);
         Ok(())
+    }
+
+    /// Set the value given a native endian `i64` value, truncating to `i32`.
+    pub fn set_i64_truncate(&mut self, e: E, n: T) {
+        self.0 = e.write_i32(n.into_inner() as i32);
     }
 }
 

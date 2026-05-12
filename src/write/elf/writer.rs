@@ -538,7 +538,7 @@ impl<'a> Writer<'a> {
             let section = elf::SectionHeader32 {
                 sh_name: U32::new(endian, sh_name),
                 sh_type: U32::new(endian, section.sh_type),
-                sh_flags: U32::new_u64(endian, section.sh_flags).unwrap(),
+                sh_flags: U32::new_u64_truncate(endian, section.sh_flags),
                 sh_addr: U32::new(endian, section.sh_addr as u32),
                 sh_offset: U32::new(endian, section.sh_offset as u32),
                 sh_size: U32::new(endian, section.sh_size as u32),
