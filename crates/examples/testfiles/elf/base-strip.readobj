@@ -21,7 +21,7 @@ FileHeader {
     ProgramHeaderCount: 9
     SectionHeaderEntrySize: 0x40
     SectionHeaderCount: 0
-    SectionHeaderStringTableIndex: 0
+    SectionHeaderStringTableIndex: SHN_UNDEF (0x0)
 }
 ProgramHeader {
     Type: PT_PHDR (0x6)
@@ -165,8 +165,7 @@ ProgramHeader {
     }
     Dynamic {
         Tag: DT_FLAGS (0x1E)
-        Value: 0x8
-            DF_BIND_NOW (0x8)
+        Value: DF_BIND_NOW (0x8)
     }
     Dynamic {
         Tag: DT_FLAGS_1 (0x6FFFFFFB)

@@ -21,44 +21,44 @@ use crate::pod::Pod;
 #[non_exhaustive]
 pub struct Constants {
     /// Values for `FileHeader*::e_type`.
-    pub et: &'static ConstantNames<u16>,
+    pub et: &'static ConstantNames<FileType>,
     /// Values for `FileHeader*::e_flags`.
-    pub ef: &'static FlagNames<u32>,
-    /// Special values for section indices.
-    pub shn: &'static ConstantNames<u16>,
+    pub ef: &'static FlagNames<FileFlags>,
+    /// Special values for `Sym*::st_shndx` and `FileHeader*::e_shstrndx`.
+    pub shn: &'static ConstantNames<SymbolSection>,
     /// Values for `SectionHeader*::sh_type`.
-    pub sht: &'static ConstantNames<u32>,
+    pub sht: &'static ConstantNames<SectionType>,
     /// Values for `SectionHeader*::sh_flags`.
-    pub shf: &'static FlagNames<u32>,
+    pub shf: &'static FlagNames<SectionFlags>,
     /// Values for `st_bind` field of `Sym*::st_info`.
-    pub stb: &'static ConstantNames<u8>,
+    pub stb: &'static ConstantNames<SymbolBind>,
     /// Values for `st_type` field of `Sym*::st_info`.
-    pub stt: &'static ConstantNames<u8>,
+    pub stt: &'static ConstantNames<SymbolType>,
     /// Values for `Sym*::st_other`.
-    pub sto: &'static FlagNames<u8>,
+    pub sto: &'static FlagNames<SymbolOther>,
     /// Values for `ProgramHeader*::p_type`.
-    pub pt: &'static ConstantNames<u32>,
+    pub pt: &'static ConstantNames<ProgramType>,
     /// Values for `ProgramHeader*::p_flags`.
-    pub pf: &'static FlagNames<u32>,
+    pub pf: &'static FlagNames<ProgramFlags>,
     /// Values for `Dyn*::d_tag`.
-    pub dt: &'static ConstantNames<i64>,
+    pub dt: &'static ConstantNames<DynamicTag>,
     /// Values for `r_type` field of `Rel*::r_info`.
     pub r: &'static ConstantNames<u32>,
 }
 
 constants! {
     struct Base;
-    consts et: u16 = NAMES_ET;
-    flags ef: u32 = {};
-    consts shn: u16 = NAMES_SHN;
-    consts sht: u32 = NAMES_SHT;
-    flags shf: u32 = NAMES_SHF;
-    consts stb: u8 = NAMES_STB;
-    consts stt: u8 = NAMES_STT;
-    flags sto: u8 = NAMES_STO;
-    consts pt: u32 = NAMES_PT;
-    flags pf: u32 = NAMES_PF;
-    consts dt: i64 = NAMES_DT;
+    consts et: FileType = NAMES_ET;
+    flags ef: FileFlags(u32) = {};
+    consts shn: SymbolSection = NAMES_SHN;
+    consts sht: SectionType = NAMES_SHT;
+    flags shf: SectionFlags = NAMES_SHF;
+    consts stb: SymbolBind = NAMES_STB;
+    consts stt: SymbolType = NAMES_STT;
+    flags sto: SymbolFlags = NAMES_STO;
+    consts pt: ProgramType = NAMES_PT;
+    flags pf: ProgramFlags = NAMES_PF;
+    consts dt: DynamicTag = NAMES_DT;
     consts r: u32 = {};
 }
 
@@ -74,7 +74,7 @@ pub const fn constants() -> &'static Constants {
 ///
 /// `machine` corresponds to the `FileHeader*::e_machine` field.
 #[cfg(feature = "names")]
-pub const fn machine_constants(machine: u16) -> &'static Constants {
+pub const fn machine_constants(machine: Machine) -> &'static Constants {
     match machine {
         EM_386 => I386::constants(),
         EM_68K => M68k::constants(),
@@ -123,9 +123,9 @@ pub struct FileHeader32<E: Endian> {
     /// Magic number and other information.
     pub e_ident: Ident,
     /// Object file type. One of the `ET_*` constants.
-    pub e_type: U16<E>,
+    pub e_type: U16<E, FileType>,
     /// Architecture. One of the `EM_*` constants.
-    pub e_machine: U16<E>,
+    pub e_machine: U16<E, Machine>,
     /// Object file version. Must be `EV_CURRENT`.
     pub e_version: U32<E>,
     /// Entry point virtual address.
@@ -137,7 +137,7 @@ pub struct FileHeader32<E: Endian> {
     /// Processor-specific flags.
     ///
     /// A combination of the `EF_*` constants.
-    pub e_flags: U32<E>,
+    pub e_flags: U32<E, FileFlags>,
     /// Size in bytes of this header.
     pub e_ehsize: U16<E>,
     /// Program header table entry size.
@@ -159,7 +159,7 @@ pub struct FileHeader32<E: Endian> {
     ///
     /// If the index is greater than or equal to `SHN_LORESERVE` then this field is set to
     /// `SHN_XINDEX` and the index is stored in the `sh_link` field of section 0.
-    pub e_shstrndx: U16<E>,
+    pub e_shstrndx: U16<E, SymbolSection>,
 }
 
 /// The header at the start of every 64-bit ELF file.
@@ -169,9 +169,9 @@ pub struct FileHeader64<E: Endian> {
     /// Magic number and other information.
     pub e_ident: Ident,
     /// Object file type. One of the `ET_*` constants.
-    pub e_type: U16<E>,
+    pub e_type: U16<E, FileType>,
     /// Architecture. One of the `EM_*` constants.
-    pub e_machine: U16<E>,
+    pub e_machine: U16<E, Machine>,
     /// Object file version. Must be `EV_CURRENT`.
     pub e_version: U32<E>,
     /// Entry point virtual address.
@@ -183,7 +183,7 @@ pub struct FileHeader64<E: Endian> {
     /// Processor-specific flags.
     ///
     /// A combination of the `EF_*` constants.
-    pub e_flags: U32<E>,
+    pub e_flags: U32<E, FileFlags>,
     /// Size in bytes of this header.
     pub e_ehsize: U16<E>,
     /// Program header table entry size.
@@ -205,7 +205,7 @@ pub struct FileHeader64<E: Endian> {
     ///
     /// If the index is greater than or equal to `SHN_LORESERVE` then this field is set to
     /// `SHN_XINDEX` and the index is stored in the `sh_link` field of section 0.
-    pub e_shstrndx: U16<E>,
+    pub e_shstrndx: U16<E, SymbolSection>,
 }
 
 /// Magic number and other information.
@@ -217,13 +217,13 @@ pub struct Ident {
     /// Magic number. Must be `ELFMAG`.
     pub magic: [u8; 4],
     /// File class. One of the `ELFCLASS*` constants.
-    pub class: u8,
+    pub class: FileClass,
     /// Data encoding. One of the `ELFDATA*` constants.
-    pub data: u8,
+    pub data: DataEncoding,
     /// ELF version. Must be `EV_CURRENT`.
-    pub version: u8,
+    pub version: FileVersion,
     /// OS ABI identification. One of the `ELFOSABI*` constants.
-    pub os_abi: u8,
+    pub os_abi: OsAbi,
     /// ABI version.
     ///
     /// The meaning of this field depends on the `os_abi` value.
@@ -235,74 +235,111 @@ pub struct Ident {
 /// File identification bytes stored in `Ident::magic`.
 pub const ELFMAG: [u8; 4] = [0x7f, b'E', b'L', b'F'];
 
-// Values for `Ident::class`.
-/// Invalid class.
-pub const ELFCLASSNONE: u8 = 0;
-/// 32-bit object.
-pub const ELFCLASS32: u8 = 1;
-/// 64-bit object.
-pub const ELFCLASS64: u8 = 2;
+newtype!(
+    /// Values for `Ident::class`.
+    #[repr(transparent)]
+    struct FileClass(u8);
+);
 
-// Values for `Ident::data`.
-/// Invalid data encoding.
-pub const ELFDATANONE: u8 = 0;
-/// 2's complement, little endian.
-pub const ELFDATA2LSB: u8 = 1;
-/// 2's complement, big endian.
-pub const ELFDATA2MSB: u8 = 2;
+newtype_constant_names!(NAMES_CLASS: FileClass(u8) = {
+    /// Invalid class.
+    ELFCLASSNONE = 0,
+    /// 32-bit object.
+    ELFCLASS32 = 1,
+    /// 64-bit object.
+    ELFCLASS64 = 2,
+});
 
-// Values for `Ident::os_abi`.
-/// UNIX System V ABI.
-pub const ELFOSABI_NONE: u8 = 0;
-/// UNIX System V ABI.
-///
-/// Alias.
-pub const ELFOSABI_SYSV: u8 = 0;
-/// HP-UX.
-pub const ELFOSABI_HPUX: u8 = 1;
-/// NetBSD.
-pub const ELFOSABI_NETBSD: u8 = 2;
-/// Object uses GNU ELF extensions.
-pub const ELFOSABI_GNU: u8 = 3;
-/// Object uses GNU ELF extensions.
-///
-/// Compatibility alias.
-pub const ELFOSABI_LINUX: u8 = ELFOSABI_GNU;
-/// GNU/Hurd.
-pub const ELFOSABI_HURD: u8 = 4;
-/// Sun Solaris.
-pub const ELFOSABI_SOLARIS: u8 = 6;
-/// IBM AIX.
-pub const ELFOSABI_AIX: u8 = 7;
-/// SGI Irix.
-pub const ELFOSABI_IRIX: u8 = 8;
-/// FreeBSD.
-pub const ELFOSABI_FREEBSD: u8 = 9;
-/// Compaq TRU64 UNIX.
-pub const ELFOSABI_TRU64: u8 = 10;
-/// Novell Modesto.
-pub const ELFOSABI_MODESTO: u8 = 11;
-/// OpenBSD.
-pub const ELFOSABI_OPENBSD: u8 = 12;
-/// OpenVMS.
-pub const ELFOSABI_OPENVMS: u8 = 13;
-/// Hewlett-Packard Non-Stop Kernel.
-pub const ELFOSABI_NSK: u8 = 14;
-/// AROS
-pub const ELFOSABI_AROS: u8 = 15;
-/// FenixOS
-pub const ELFOSABI_FENIXOS: u8 = 16;
-/// Nuxi CloudABI
-pub const ELFOSABI_CLOUDABI: u8 = 17;
-/// ARM EABI.
-pub const ELFOSABI_ARM_AEABI: u8 = 64;
-/// ARM.
-pub const ELFOSABI_ARM: u8 = 97;
-/// Standalone (embedded) application.
-pub const ELFOSABI_STANDALONE: u8 = 255;
+newtype!(
+    /// Values for `Ident::data`.
+    #[repr(transparent)]
+    struct DataEncoding(u8);
+);
 
-// Values for `FileHeader*::e_type`.
-constant_names!(NAMES_ET: u16 = {
+newtype_constant_names!(NAMES_DATA: DataEncoding(u8) = {
+    /// Invalid data encoding.
+    ELFDATANONE = 0,
+    /// 2's complement, little endian.
+    ELFDATA2LSB = 1,
+    /// 2's complement, big endian.
+    ELFDATA2MSB = 2,
+});
+
+newtype!(
+    /// Values for `Ident::os_abi`.
+    #[repr(transparent)]
+    struct OsAbi(u8);
+);
+
+newtype_constant_names!(NAMES_ELFOSABI: OsAbi(u8) = {
+    /// UNIX System V ABI.
+    ELFOSABI_SYSV = 0,
+    /// UNIX System V ABI.
+    ///
+    /// Alias.
+    ELFOSABI_NONE = 0,
+    /// HP-UX.
+    ELFOSABI_HPUX = 1,
+    /// NetBSD.
+    ELFOSABI_NETBSD = 2,
+    /// Object uses GNU ELF extensions.
+    ELFOSABI_GNU = 3,
+    /// Object uses GNU ELF extensions.
+    ///
+    /// Compatibility alias.
+    ELFOSABI_LINUX = ELFOSABI_GNU.0,
+    /// GNU/Hurd.
+    ELFOSABI_HURD = 4,
+    /// Sun Solaris.
+    ELFOSABI_SOLARIS = 6,
+    /// IBM AIX.
+    ELFOSABI_AIX = 7,
+    /// SGI Irix.
+    ELFOSABI_IRIX = 8,
+    /// FreeBSD.
+    ELFOSABI_FREEBSD = 9,
+    /// Compaq TRU64 UNIX.
+    ELFOSABI_TRU64 = 10,
+    /// Novell Modesto.
+    ELFOSABI_MODESTO = 11,
+    /// OpenBSD.
+    ELFOSABI_OPENBSD = 12,
+    /// OpenVMS.
+    ELFOSABI_OPENVMS = 13,
+    /// Hewlett-Packard Non-Stop Kernel.
+    ELFOSABI_NSK = 14,
+    /// AROS
+    ELFOSABI_AROS = 15,
+    /// FenixOS
+    ELFOSABI_FENIXOS = 16,
+    /// Nuxi CloudABI
+    ELFOSABI_CLOUDABI = 17,
+    /// ARM EABI.
+    ELFOSABI_ARM_AEABI = 64,
+    /// ARM.
+    ELFOSABI_ARM = 97,
+    /// Standalone (embedded) application.
+    ELFOSABI_STANDALONE = 255,
+});
+
+newtype!(
+    /// Values for `FileHeader*::e_type`.
+    struct FileType(u16);
+);
+
+impl FileType {
+    /// Return true if the type is in the OS-specific range.
+    pub fn is_os(self) -> bool {
+        self.0 >= ET_LOOS && self.0 <= ET_HIOS
+    }
+    /// Return true if the type is in the processor-specific range.
+    pub fn is_proc(self) -> bool {
+        debug_assert_eq!(ET_HIPROC, !0);
+        self.0 >= ET_LOPROC
+    }
+}
+
+newtype_constant_names!(NAMES_ET: FileType(u16) = {
     /// No file type.
     ET_NONE = 0,
     /// Relocatable file.
@@ -324,377 +361,525 @@ pub const ET_LOPROC: u16 = 0xff00;
 /// Processor-specific range end.
 pub const ET_HIPROC: u16 = 0xffff;
 
-// Values for `FileHeader*::e_machine`.
-/// No machine
-pub const EM_NONE: u16 = 0;
-/// AT&T WE 32100
-pub const EM_M32: u16 = 1;
-/// SUN SPARC
-pub const EM_SPARC: u16 = 2;
-/// Intel 80386
-pub const EM_386: u16 = 3;
-/// Motorola m68k family
-pub const EM_68K: u16 = 4;
-/// Motorola m88k family
-pub const EM_88K: u16 = 5;
-/// Intel MCU
-pub const EM_IAMCU: u16 = 6;
-/// Intel 80860
-pub const EM_860: u16 = 7;
-/// MIPS R3000 big-endian
-pub const EM_MIPS: u16 = 8;
-/// IBM System/370
-pub const EM_S370: u16 = 9;
-/// MIPS R3000 little-endian
-pub const EM_MIPS_RS3_LE: u16 = 10;
-/// HPPA
-pub const EM_PARISC: u16 = 15;
-/// Fujitsu VPP500
-pub const EM_VPP500: u16 = 17;
-/// Sun's "v8plus"
-pub const EM_SPARC32PLUS: u16 = 18;
-/// Intel 80960
-pub const EM_960: u16 = 19;
-/// PowerPC
-pub const EM_PPC: u16 = 20;
-/// PowerPC 64-bit
-pub const EM_PPC64: u16 = 21;
-/// IBM S390
-pub const EM_S390: u16 = 22;
-/// IBM SPU/SPC
-pub const EM_SPU: u16 = 23;
-/// NEC V800 series
-pub const EM_V800: u16 = 36;
-/// Fujitsu FR20
-pub const EM_FR20: u16 = 37;
-/// TRW RH-32
-pub const EM_RH32: u16 = 38;
-/// Motorola RCE
-pub const EM_RCE: u16 = 39;
-/// ARM
-pub const EM_ARM: u16 = 40;
-/// Digital Alpha
-pub const EM_FAKE_ALPHA: u16 = 41;
-/// Hitachi SH
-pub const EM_SH: u16 = 42;
-/// SPARC v9 64-bit
-pub const EM_SPARCV9: u16 = 43;
-/// Siemens Tricore
-pub const EM_TRICORE: u16 = 44;
-/// Argonaut RISC Core
-pub const EM_ARC: u16 = 45;
-/// Hitachi H8/300
-pub const EM_H8_300: u16 = 46;
-/// Hitachi H8/300H
-pub const EM_H8_300H: u16 = 47;
-/// Hitachi H8S
-pub const EM_H8S: u16 = 48;
-/// Hitachi H8/500
-pub const EM_H8_500: u16 = 49;
-/// Intel Merced
-pub const EM_IA_64: u16 = 50;
-/// Stanford MIPS-X
-pub const EM_MIPS_X: u16 = 51;
-/// Motorola Coldfire
-pub const EM_COLDFIRE: u16 = 52;
-/// Motorola M68HC12
-pub const EM_68HC12: u16 = 53;
-/// Fujitsu MMA Multimedia Accelerator
-pub const EM_MMA: u16 = 54;
-/// Siemens PCP
-pub const EM_PCP: u16 = 55;
-/// Sony nCPU embeeded RISC
-pub const EM_NCPU: u16 = 56;
-/// Denso NDR1 microprocessor
-pub const EM_NDR1: u16 = 57;
-/// Motorola Start*Core processor
-pub const EM_STARCORE: u16 = 58;
-/// Toyota ME16 processor
-pub const EM_ME16: u16 = 59;
-/// STMicroelectronic ST100 processor
-pub const EM_ST100: u16 = 60;
-/// Advanced Logic Corp. Tinyj emb.fam
-pub const EM_TINYJ: u16 = 61;
-/// AMD x86-64 architecture
-pub const EM_X86_64: u16 = 62;
-/// Sony DSP Processor
-pub const EM_PDSP: u16 = 63;
-/// Digital PDP-10
-pub const EM_PDP10: u16 = 64;
-/// Digital PDP-11
-pub const EM_PDP11: u16 = 65;
-/// Siemens FX66 microcontroller
-pub const EM_FX66: u16 = 66;
-/// STMicroelectronics ST9+ 8/16 mc
-pub const EM_ST9PLUS: u16 = 67;
-/// STmicroelectronics ST7 8 bit mc
-pub const EM_ST7: u16 = 68;
-/// Motorola MC68HC16 microcontroller
-pub const EM_68HC16: u16 = 69;
-/// Motorola MC68HC11 microcontroller
-pub const EM_68HC11: u16 = 70;
-/// Motorola MC68HC08 microcontroller
-pub const EM_68HC08: u16 = 71;
-/// Motorola MC68HC05 microcontroller
-pub const EM_68HC05: u16 = 72;
-/// Silicon Graphics SVx
-pub const EM_SVX: u16 = 73;
-/// STMicroelectronics ST19 8 bit mc
-pub const EM_ST19: u16 = 74;
-/// Digital VAX
-pub const EM_VAX: u16 = 75;
-/// Axis Communications 32-bit emb.proc
-pub const EM_CRIS: u16 = 76;
-/// Infineon Technologies 32-bit emb.proc
-pub const EM_JAVELIN: u16 = 77;
-/// Element 14 64-bit DSP Processor
-pub const EM_FIREPATH: u16 = 78;
-/// LSI Logic 16-bit DSP Processor
-pub const EM_ZSP: u16 = 79;
-/// Donald Knuth's educational 64-bit proc
-pub const EM_MMIX: u16 = 80;
-/// Harvard University machine-independent object files
-pub const EM_HUANY: u16 = 81;
-/// SiTera Prism
-pub const EM_PRISM: u16 = 82;
-/// Atmel AVR 8-bit microcontroller
-pub const EM_AVR: u16 = 83;
-/// Fujitsu FR30
-pub const EM_FR30: u16 = 84;
-/// Mitsubishi D10V
-pub const EM_D10V: u16 = 85;
-/// Mitsubishi D30V
-pub const EM_D30V: u16 = 86;
-/// NEC v850
-pub const EM_V850: u16 = 87;
-/// Mitsubishi M32R
-pub const EM_M32R: u16 = 88;
-/// Matsushita MN10300
-pub const EM_MN10300: u16 = 89;
-/// Matsushita MN10200
-pub const EM_MN10200: u16 = 90;
-/// picoJava
-pub const EM_PJ: u16 = 91;
-/// OpenRISC 32-bit embedded processor
-pub const EM_OPENRISC: u16 = 92;
-/// ARC International ARCompact
-pub const EM_ARC_COMPACT: u16 = 93;
-/// Tensilica Xtensa Architecture
-pub const EM_XTENSA: u16 = 94;
-/// Alphamosaic VideoCore
-pub const EM_VIDEOCORE: u16 = 95;
-/// Thompson Multimedia General Purpose Proc
-pub const EM_TMM_GPP: u16 = 96;
-/// National Semi. 32000
-pub const EM_NS32K: u16 = 97;
-/// Tenor Network TPC
-pub const EM_TPC: u16 = 98;
-/// Trebia SNP 1000
-pub const EM_SNP1K: u16 = 99;
-/// STMicroelectronics ST200
-pub const EM_ST200: u16 = 100;
-/// Ubicom IP2xxx
-pub const EM_IP2K: u16 = 101;
-/// MAX processor
-pub const EM_MAX: u16 = 102;
-/// National Semi. CompactRISC
-pub const EM_CR: u16 = 103;
-/// Fujitsu F2MC16
-pub const EM_F2MC16: u16 = 104;
-/// Texas Instruments msp430
-pub const EM_MSP430: u16 = 105;
-/// Analog Devices Blackfin DSP
-pub const EM_BLACKFIN: u16 = 106;
-/// Seiko Epson S1C33 family
-pub const EM_SE_C33: u16 = 107;
-/// Sharp embedded microprocessor
-pub const EM_SEP: u16 = 108;
-/// Arca RISC
-pub const EM_ARCA: u16 = 109;
-/// PKU-Unity & MPRC Peking Uni. mc series
-pub const EM_UNICORE: u16 = 110;
-/// eXcess configurable cpu
-pub const EM_EXCESS: u16 = 111;
-/// Icera Semi. Deep Execution Processor
-pub const EM_DXP: u16 = 112;
-/// Altera Nios II
-pub const EM_ALTERA_NIOS2: u16 = 113;
-/// National Semi. CompactRISC CRX
-pub const EM_CRX: u16 = 114;
-/// Motorola XGATE
-pub const EM_XGATE: u16 = 115;
-/// Infineon C16x/XC16x
-pub const EM_C166: u16 = 116;
-/// Renesas M16C
-pub const EM_M16C: u16 = 117;
-/// Microchip Technology dsPIC30F
-pub const EM_DSPIC30F: u16 = 118;
-/// Freescale Communication Engine RISC
-pub const EM_CE: u16 = 119;
-/// Renesas M32C
-pub const EM_M32C: u16 = 120;
-/// Altium TSK3000
-pub const EM_TSK3000: u16 = 131;
-/// Freescale RS08
-pub const EM_RS08: u16 = 132;
-/// Analog Devices SHARC family
-pub const EM_SHARC: u16 = 133;
-/// Cyan Technology eCOG2
-pub const EM_ECOG2: u16 = 134;
-/// Sunplus S+core7 RISC
-pub const EM_SCORE7: u16 = 135;
-/// New Japan Radio (NJR) 24-bit DSP
-pub const EM_DSP24: u16 = 136;
-/// Broadcom VideoCore III
-pub const EM_VIDEOCORE3: u16 = 137;
-/// RISC for Lattice FPGA
-pub const EM_LATTICEMICO32: u16 = 138;
-/// Seiko Epson C17
-pub const EM_SE_C17: u16 = 139;
-/// Texas Instruments TMS320C6000 DSP
-pub const EM_TI_C6000: u16 = 140;
-/// Texas Instruments TMS320C2000 DSP
-pub const EM_TI_C2000: u16 = 141;
-/// Texas Instruments TMS320C55x DSP
-pub const EM_TI_C5500: u16 = 142;
-/// Texas Instruments App. Specific RISC
-pub const EM_TI_ARP32: u16 = 143;
-/// Texas Instruments Prog. Realtime Unit
-pub const EM_TI_PRU: u16 = 144;
-/// STMicroelectronics 64bit VLIW DSP
-pub const EM_MMDSP_PLUS: u16 = 160;
-/// Cypress M8C
-pub const EM_CYPRESS_M8C: u16 = 161;
-/// Renesas R32C
-pub const EM_R32C: u16 = 162;
-/// NXP Semi. TriMedia
-pub const EM_TRIMEDIA: u16 = 163;
-/// QUALCOMM Hexagon
-pub const EM_HEXAGON: u16 = 164;
-/// Intel 8051 and variants
-pub const EM_8051: u16 = 165;
-/// STMicroelectronics STxP7x
-pub const EM_STXP7X: u16 = 166;
-/// Andes Tech. compact code emb. RISC
-pub const EM_NDS32: u16 = 167;
-/// Cyan Technology eCOG1X
-pub const EM_ECOG1X: u16 = 168;
-/// Dallas Semi. MAXQ30 mc
-pub const EM_MAXQ30: u16 = 169;
-/// New Japan Radio (NJR) 16-bit DSP
-pub const EM_XIMO16: u16 = 170;
-/// M2000 Reconfigurable RISC
-pub const EM_MANIK: u16 = 171;
-/// Cray NV2 vector architecture
-pub const EM_CRAYNV2: u16 = 172;
-/// Renesas RX
-pub const EM_RX: u16 = 173;
-/// Imagination Tech. META
-pub const EM_METAG: u16 = 174;
-/// MCST Elbrus
-pub const EM_MCST_ELBRUS: u16 = 175;
-/// Cyan Technology eCOG16
-pub const EM_ECOG16: u16 = 176;
-/// National Semi. CompactRISC CR16
-pub const EM_CR16: u16 = 177;
-/// Freescale Extended Time Processing Unit
-pub const EM_ETPU: u16 = 178;
-/// Infineon Tech. SLE9X
-pub const EM_SLE9X: u16 = 179;
-/// Intel L10M
-pub const EM_L10M: u16 = 180;
-/// Intel K10M
-pub const EM_K10M: u16 = 181;
-/// ARM AARCH64
-pub const EM_AARCH64: u16 = 183;
-/// Amtel 32-bit microprocessor
-pub const EM_AVR32: u16 = 185;
-/// STMicroelectronics STM8
-pub const EM_STM8: u16 = 186;
-/// Tileta TILE64
-pub const EM_TILE64: u16 = 187;
-/// Tilera TILEPro
-pub const EM_TILEPRO: u16 = 188;
-/// Xilinx MicroBlaze
-pub const EM_MICROBLAZE: u16 = 189;
-/// NVIDIA CUDA
-pub const EM_CUDA: u16 = 190;
-/// Tilera TILE-Gx
-pub const EM_TILEGX: u16 = 191;
-/// CloudShield
-pub const EM_CLOUDSHIELD: u16 = 192;
-/// KIPO-KAIST Core-A 1st gen.
-pub const EM_COREA_1ST: u16 = 193;
-/// KIPO-KAIST Core-A 2nd gen.
-pub const EM_COREA_2ND: u16 = 194;
-/// Synopsys ARCompact V2
-pub const EM_ARC_COMPACT2: u16 = 195;
-/// Open8 RISC
-pub const EM_OPEN8: u16 = 196;
-/// Renesas RL78
-pub const EM_RL78: u16 = 197;
-/// Broadcom VideoCore V
-pub const EM_VIDEOCORE5: u16 = 198;
-/// Renesas 78KOR
-pub const EM_78KOR: u16 = 199;
-/// Freescale 56800EX DSC
-pub const EM_56800EX: u16 = 200;
-/// Beyond BA1
-pub const EM_BA1: u16 = 201;
-/// Beyond BA2
-pub const EM_BA2: u16 = 202;
-/// XMOS xCORE
-pub const EM_XCORE: u16 = 203;
-/// Microchip 8-bit PIC(r)
-pub const EM_MCHP_PIC: u16 = 204;
-/// KM211 KM32
-pub const EM_KM32: u16 = 210;
-/// KM211 KMX32
-pub const EM_KMX32: u16 = 211;
-/// KM211 KMX16
-pub const EM_EMX16: u16 = 212;
-/// KM211 KMX8
-pub const EM_EMX8: u16 = 213;
-/// KM211 KVARC
-pub const EM_KVARC: u16 = 214;
-/// Paneve CDP
-pub const EM_CDP: u16 = 215;
-/// Cognitive Smart Memory Processor
-pub const EM_COGE: u16 = 216;
-/// Bluechip CoolEngine
-pub const EM_COOL: u16 = 217;
-/// Nanoradio Optimized RISC
-pub const EM_NORC: u16 = 218;
-/// CSR Kalimba
-pub const EM_CSR_KALIMBA: u16 = 219;
-/// Zilog Z80
-pub const EM_Z80: u16 = 220;
-/// Controls and Data Services VISIUMcore
-pub const EM_VISIUM: u16 = 221;
-/// FTDI Chip FT32
-pub const EM_FT32: u16 = 222;
-/// Moxie processor
-pub const EM_MOXIE: u16 = 223;
-/// AMD GPU
-pub const EM_AMDGPU: u16 = 224;
-/// RISC-V
-pub const EM_RISCV: u16 = 243;
-/// Linux BPF -- in-kernel virtual machine
-pub const EM_BPF: u16 = 247;
-/// C-SKY
-pub const EM_CSKY: u16 = 252;
-/// Loongson LoongArch
-pub const EM_LOONGARCH: u16 = 258;
-/// Solana Binary Format
-pub const EM_SBF: u16 = 263;
-/// Digital Alpha
-pub const EM_ALPHA: u16 = 0x9026;
+newtype!(
+    /// Values for `FileHeader*::e_machine`.
+    struct Machine(u16);
+);
 
-// Values for `FileHeader*::e_version` and `Ident::version`.
-/// Invalid ELF version.
-pub const EV_NONE: u8 = 0;
-/// Current ELF version.
-pub const EV_CURRENT: u8 = 1;
+newtype_constant_names!(NAMES_EM: Machine(u16) = {
+    /// No machine
+    EM_NONE = 0,
+    /// AT&T WE 32100
+    EM_M32 = 1,
+    /// SUN SPARC
+    EM_SPARC = 2,
+    /// Intel 80386
+    EM_386 = 3,
+    /// Motorola m68k family
+    EM_68K = 4,
+    /// Motorola m88k family
+    EM_88K = 5,
+    /// Intel MCU
+    EM_IAMCU = 6,
+    /// Intel 80860
+    EM_860 = 7,
+    /// MIPS R3000 big-endian
+    EM_MIPS = 8,
+    /// IBM System/370
+    EM_S370 = 9,
+    /// MIPS R3000 little-endian
+    EM_MIPS_RS3_LE = 10,
+    /// HPPA
+    EM_PARISC = 15,
+    /// Fujitsu VPP500
+    EM_VPP500 = 17,
+    /// Sun's "v8plus"
+    EM_SPARC32PLUS = 18,
+    /// Intel 80960
+    EM_960 = 19,
+    /// PowerPC
+    EM_PPC = 20,
+    /// PowerPC 64-bit
+    EM_PPC64 = 21,
+    /// IBM S390
+    EM_S390 = 22,
+    /// IBM SPU/SPC
+    EM_SPU = 23,
+    /// NEC V800 series
+    EM_V800 = 36,
+    /// Fujitsu FR20
+    EM_FR20 = 37,
+    /// TRW RH-32
+    EM_RH32 = 38,
+    /// Motorola RCE
+    EM_RCE = 39,
+    /// ARM
+    EM_ARM = 40,
+    /// Digital Alpha
+    EM_FAKE_ALPHA = 41,
+    /// Hitachi SH
+    EM_SH = 42,
+    /// SPARC v9 64-bit
+    EM_SPARCV9 = 43,
+    /// Siemens Tricore
+    EM_TRICORE = 44,
+    /// Argonaut RISC Core
+    EM_ARC = 45,
+    /// Hitachi H8/300
+    EM_H8_300 = 46,
+    /// Hitachi H8/300H
+    EM_H8_300H = 47,
+    /// Hitachi H8S
+    EM_H8S = 48,
+    /// Hitachi H8/500
+    EM_H8_500 = 49,
+    /// Intel Merced
+    EM_IA_64 = 50,
+    /// Stanford MIPS-X
+    EM_MIPS_X = 51,
+    /// Motorola Coldfire
+    EM_COLDFIRE = 52,
+    /// Motorola M68HC12
+    EM_68HC12 = 53,
+    /// Fujitsu MMA Multimedia Accelerator
+    EM_MMA = 54,
+    /// Siemens PCP
+    EM_PCP = 55,
+    /// Sony nCPU embeeded RISC
+    EM_NCPU = 56,
+    /// Denso NDR1 microprocessor
+    EM_NDR1 = 57,
+    /// Motorola Start*Core processor
+    EM_STARCORE = 58,
+    /// Toyota ME16 processor
+    EM_ME16 = 59,
+    /// STMicroelectronic ST100 processor
+    EM_ST100 = 60,
+    /// Advanced Logic Corp. Tinyj emb.fam
+    EM_TINYJ = 61,
+    /// AMD x86-64 architecture
+    EM_X86_64 = 62,
+    /// Sony DSP Processor
+    EM_PDSP = 63,
+    /// Digital PDP-10
+    EM_PDP10 = 64,
+    /// Digital PDP-11
+    EM_PDP11 = 65,
+    /// Siemens FX66 microcontroller
+    EM_FX66 = 66,
+    /// STMicroelectronics ST9+ 8/16 mc
+    EM_ST9PLUS = 67,
+    /// STmicroelectronics ST7 8 bit mc
+    EM_ST7 = 68,
+    /// Motorola MC68HC16 microcontroller
+    EM_68HC16 = 69,
+    /// Motorola MC68HC11 microcontroller
+    EM_68HC11 = 70,
+    /// Motorola MC68HC08 microcontroller
+    EM_68HC08 = 71,
+    /// Motorola MC68HC05 microcontroller
+    EM_68HC05 = 72,
+    /// Silicon Graphics SVx
+    EM_SVX = 73,
+    /// STMicroelectronics ST19 8 bit mc
+    EM_ST19 = 74,
+    /// Digital VAX
+    EM_VAX = 75,
+    /// Axis Communications 32-bit emb.proc
+    EM_CRIS = 76,
+    /// Infineon Technologies 32-bit emb.proc
+    EM_JAVELIN = 77,
+    /// Element 14 64-bit DSP Processor
+    EM_FIREPATH = 78,
+    /// LSI Logic 16-bit DSP Processor
+    EM_ZSP = 79,
+    /// Donald Knuth's educational 64-bit proc
+    EM_MMIX = 80,
+    /// Harvard University machine-independent object files
+    EM_HUANY = 81,
+    /// SiTera Prism
+    EM_PRISM = 82,
+    /// Atmel AVR 8-bit microcontroller
+    EM_AVR = 83,
+    /// Fujitsu FR30
+    EM_FR30 = 84,
+    /// Mitsubishi D10V
+    EM_D10V = 85,
+    /// Mitsubishi D30V
+    EM_D30V = 86,
+    /// NEC v850
+    EM_V850 = 87,
+    /// Mitsubishi M32R
+    EM_M32R = 88,
+    /// Matsushita MN10300
+    EM_MN10300 = 89,
+    /// Matsushita MN10200
+    EM_MN10200 = 90,
+    /// picoJava
+    EM_PJ = 91,
+    /// OpenRISC 32-bit embedded processor
+    EM_OPENRISC = 92,
+    /// ARC International ARCompact
+    EM_ARC_COMPACT = 93,
+    /// Tensilica Xtensa Architecture
+    EM_XTENSA = 94,
+    /// Alphamosaic VideoCore
+    EM_VIDEOCORE = 95,
+    /// Thompson Multimedia General Purpose Proc
+    EM_TMM_GPP = 96,
+    /// National Semi. 32000
+    EM_NS32K = 97,
+    /// Tenor Network TPC
+    EM_TPC = 98,
+    /// Trebia SNP 1000
+    EM_SNP1K = 99,
+    /// STMicroelectronics ST200
+    EM_ST200 = 100,
+    /// Ubicom IP2xxx
+    EM_IP2K = 101,
+    /// MAX processor
+    EM_MAX = 102,
+    /// National Semi. CompactRISC
+    EM_CR = 103,
+    /// Fujitsu F2MC16
+    EM_F2MC16 = 104,
+    /// Texas Instruments msp430
+    EM_MSP430 = 105,
+    /// Analog Devices Blackfin DSP
+    EM_BLACKFIN = 106,
+    /// Seiko Epson S1C33 family
+    EM_SE_C33 = 107,
+    /// Sharp embedded microprocessor
+    EM_SEP = 108,
+    /// Arca RISC
+    EM_ARCA = 109,
+    /// PKU-Unity & MPRC Peking Uni. mc series
+    EM_UNICORE = 110,
+    /// eXcess configurable cpu
+    EM_EXCESS = 111,
+    /// Icera Semi. Deep Execution Processor
+    EM_DXP = 112,
+    /// Altera Nios II
+    EM_ALTERA_NIOS2 = 113,
+    /// National Semi. CompactRISC CRX
+    EM_CRX = 114,
+    /// Motorola XGATE
+    EM_XGATE = 115,
+    /// Infineon C16x/XC16x
+    EM_C166 = 116,
+    /// Renesas M16C
+    EM_M16C = 117,
+    /// Microchip Technology dsPIC30F
+    EM_DSPIC30F = 118,
+    /// Freescale Communication Engine RISC
+    EM_CE = 119,
+    /// Renesas M32C
+    EM_M32C = 120,
+    /// Altium TSK3000
+    EM_TSK3000 = 131,
+    /// Freescale RS08
+    EM_RS08 = 132,
+    /// Analog Devices SHARC family
+    EM_SHARC = 133,
+    /// Cyan Technology eCOG2
+    EM_ECOG2 = 134,
+    /// Sunplus S+core7 RISC
+    EM_SCORE7 = 135,
+    /// New Japan Radio (NJR) 24-bit DSP
+    EM_DSP24 = 136,
+    /// Broadcom VideoCore III
+    EM_VIDEOCORE3 = 137,
+    /// RISC for Lattice FPGA
+    EM_LATTICEMICO32 = 138,
+    /// Seiko Epson C17
+    EM_SE_C17 = 139,
+    /// Texas Instruments TMS320C6000 DSP
+    EM_TI_C6000 = 140,
+    /// Texas Instruments TMS320C2000 DSP
+    EM_TI_C2000 = 141,
+    /// Texas Instruments TMS320C55x DSP
+    EM_TI_C5500 = 142,
+    /// Texas Instruments App. Specific RISC
+    EM_TI_ARP32 = 143,
+    /// Texas Instruments Prog. Realtime Unit
+    EM_TI_PRU = 144,
+    /// STMicroelectronics 64bit VLIW DSP
+    EM_MMDSP_PLUS = 160,
+    /// Cypress M8C
+    EM_CYPRESS_M8C = 161,
+    /// Renesas R32C
+    EM_R32C = 162,
+    /// NXP Semi. TriMedia
+    EM_TRIMEDIA = 163,
+    /// QUALCOMM Hexagon
+    EM_HEXAGON = 164,
+    /// Intel 8051 and variants
+    EM_8051 = 165,
+    /// STMicroelectronics STxP7x
+    EM_STXP7X = 166,
+    /// Andes Tech. compact code emb. RISC
+    EM_NDS32 = 167,
+    /// Cyan Technology eCOG1X
+    EM_ECOG1X = 168,
+    /// Dallas Semi. MAXQ30 mc
+    EM_MAXQ30 = 169,
+    /// New Japan Radio (NJR) 16-bit DSP
+    EM_XIMO16 = 170,
+    /// M2000 Reconfigurable RISC
+    EM_MANIK = 171,
+    /// Cray NV2 vector architecture
+    EM_CRAYNV2 = 172,
+    /// Renesas RX
+    EM_RX = 173,
+    /// Imagination Tech. META
+    EM_METAG = 174,
+    /// MCST Elbrus
+    EM_MCST_ELBRUS = 175,
+    /// Cyan Technology eCOG16
+    EM_ECOG16 = 176,
+    /// National Semi. CompactRISC CR16
+    EM_CR16 = 177,
+    /// Freescale Extended Time Processing Unit
+    EM_ETPU = 178,
+    /// Infineon Tech. SLE9X
+    EM_SLE9X = 179,
+    /// Intel L10M
+    EM_L10M = 180,
+    /// Intel K10M
+    EM_K10M = 181,
+    /// ARM AARCH64
+    EM_AARCH64 = 183,
+    /// Amtel 32-bit microprocessor
+    EM_AVR32 = 185,
+    /// STMicroelectronics STM8
+    EM_STM8 = 186,
+    /// Tileta TILE64
+    EM_TILE64 = 187,
+    /// Tilera TILEPro
+    EM_TILEPRO = 188,
+    /// Xilinx MicroBlaze
+    EM_MICROBLAZE = 189,
+    /// NVIDIA CUDA
+    EM_CUDA = 190,
+    /// Tilera TILE-Gx
+    EM_TILEGX = 191,
+    /// CloudShield
+    EM_CLOUDSHIELD = 192,
+    /// KIPO-KAIST Core-A 1st gen.
+    EM_COREA_1ST = 193,
+    /// KIPO-KAIST Core-A 2nd gen.
+    EM_COREA_2ND = 194,
+    /// Synopsys ARCompact V2
+    EM_ARC_COMPACT2 = 195,
+    /// Open8 RISC
+    EM_OPEN8 = 196,
+    /// Renesas RL78
+    EM_RL78 = 197,
+    /// Broadcom VideoCore V
+    EM_VIDEOCORE5 = 198,
+    /// Renesas 78KOR
+    EM_78KOR = 199,
+    /// Freescale 56800EX DSC
+    EM_56800EX = 200,
+    /// Beyond BA1
+    EM_BA1 = 201,
+    /// Beyond BA2
+    EM_BA2 = 202,
+    /// XMOS xCORE
+    EM_XCORE = 203,
+    /// Microchip 8-bit PIC(r)
+    EM_MCHP_PIC = 204,
+    /// KM211 KM32
+    EM_KM32 = 210,
+    /// KM211 KMX32
+    EM_KMX32 = 211,
+    /// KM211 KMX16
+    EM_EMX16 = 212,
+    /// KM211 KMX8
+    EM_EMX8 = 213,
+    /// KM211 KVARC
+    EM_KVARC = 214,
+    /// Paneve CDP
+    EM_CDP = 215,
+    /// Cognitive Smart Memory Processor
+    EM_COGE = 216,
+    /// Bluechip CoolEngine
+    EM_COOL = 217,
+    /// Nanoradio Optimized RISC
+    EM_NORC = 218,
+    /// CSR Kalimba
+    EM_CSR_KALIMBA = 219,
+    /// Zilog Z80
+    EM_Z80 = 220,
+    /// Controls and Data Services VISIUMcore
+    EM_VISIUM = 221,
+    /// FTDI Chip FT32
+    EM_FT32 = 222,
+    /// Moxie processor
+    EM_MOXIE = 223,
+    /// AMD GPU
+    EM_AMDGPU = 224,
+    /// RISC-V
+    EM_RISCV = 243,
+    /// Linux BPF -- in-kernel virtual machine
+    EM_BPF = 247,
+    /// C-SKY
+    EM_CSKY = 252,
+    /// Loongson LoongArch
+    EM_LOONGARCH = 258,
+    /// Solana Binary Format
+    EM_SBF = 263,
+    /// Digital Alpha
+    EM_ALPHA = 0x9026,
+});
+
+newtype!(
+    /// Values for `FileHeader*::e_version` and `Ident::version`.
+    #[repr(transparent)]
+    struct FileVersion(u8);
+);
+
+newtype_constant_names!(NAMES_VERSION: FileVersion(u8) = {
+    /// Invalid ELF version.
+    EV_NONE = 0,
+    /// Current ELF version.
+    EV_CURRENT = 1,
+});
+
+newtype!(
+    /// Values for `FileHeader*::e_flags`.
+    struct FileFlags(u32);
+);
+
+newtype_flag_names!(NAMES_EF: FileFlags(u32) = {});
+
+impl FileFlags {
+    /// Get the MIPS ABI field.
+    ///
+    /// One of the `EF_MIPS_ABI_*` constants.
+    pub fn mips_abi(self) -> FileFlags {
+        FileFlags(self.0 & EF_MIPS_ABI)
+    }
+
+    /// Set the MIPS ABI field.
+    ///
+    /// One of the `EF_MIPS_ABI_*` constants.
+    pub fn with_mips_abi(self, abi: FileFlags) -> FileFlags {
+        FileFlags(self.0 & !EF_MIPS_ABI | abi.0 & EF_MIPS_ABI)
+    }
+
+    /// Get the MIPS architecture field.
+    ///
+    /// One of the `EF_MIPS_ARCH_*` constants.
+    pub fn mips_arch(self) -> FileFlags {
+        FileFlags(self.0 & EF_MIPS_ARCH)
+    }
+
+    /// Set the MIPS architecture field.
+    ///
+    /// One of the `EF_MIPS_ARCH_*` constants.
+    pub fn with_mips_arch(self, arch: FileFlags) -> FileFlags {
+        FileFlags(self.0 & !EF_MIPS_ARCH | arch.0 & EF_MIPS_ARCH)
+    }
+
+    /// Get the PA-RISC architecture field.
+    ///
+    /// One of the `EFA_PARISC_*` constants.
+    pub fn parisc_arch(self) -> FileFlags {
+        FileFlags(self.0 & EF_PARISC_ARCH)
+    }
+
+    /// Set the PA-RISC architecture field.
+    ///
+    /// One of the `EFA_PARISC_*` constants.
+    pub fn with_parisc_arch(self, arch: FileFlags) -> FileFlags {
+        FileFlags(self.0 & !EF_PARISC_ARCH | arch.0 & EF_PARISC_ARCH)
+    }
+
+    /// Get the PPC64 ABI field.
+    ///
+    /// See [`EF_PPC64_ABI`] for values.
+    pub fn ppc64_abi(self) -> u32 {
+        self.0 & EF_PPC64_ABI
+    }
+
+    /// Set the PPC64 ABI field.
+    ///
+    /// See [`EF_PPC64_ABI`] for values.
+    pub fn with_ppc64_abi(self, abi: u32) -> FileFlags {
+        FileFlags(self.0 & !EF_PPC64_ABI | abi & EF_PPC64_ABI)
+    }
+
+    /// Get the ARM EABI field.
+    ///
+    /// One of the `EF_ARM_EABI_*` values.
+    pub fn arm_eabi(self) -> FileFlags {
+        FileFlags(self.0 & EF_ARM_EABIMASK)
+    }
+
+    /// Set the ARM EABI field.
+    ///
+    /// One of the `EF_ARM_EABI_*` values.
+    pub fn with_arm_eabi(self, eabi: FileFlags) -> FileFlags {
+        FileFlags(self.0 & !EF_ARM_EABIMASK | eabi.0 & EF_ARM_EABIMASK)
+    }
+
+    /// Get the AVR architecture field.
+    ///
+    /// One of the `EF_AVR_ARCH_*` values.
+    pub fn avr_arch(self) -> FileFlags {
+        FileFlags(self.0 & EF_AVR_ARCH)
+    }
+
+    /// Set the AVR architecture field.
+    ///
+    /// One of the `EF_AVR_ARCH_*` values.
+    pub fn with_avr_arch(self, arch: FileFlags) -> FileFlags {
+        FileFlags(self.0 & !EF_AVR_ARCH | arch.0 & EF_AVR_ARCH)
+    }
+
+    /// Get the SH machine field.
+    ///
+    /// One of the `EF_SH*` values.
+    pub fn sh_mach(self) -> FileFlags {
+        FileFlags(self.0 & EF_SH_MACH_MASK)
+    }
+
+    /// Set the SH machine field.
+    ///
+    /// One of the `EF_SH*` values.
+    pub fn with_sh_mach(self, mach: FileFlags) -> FileFlags {
+        FileFlags(self.0 & !EF_SH_MACH_MASK | mach.0 & EF_SH_MACH_MASK)
+    }
+
+    /// Get the RISC-V float ABI field.
+    ///
+    /// One of the `EF_RISCV_FLOAT_ABI_*` values.
+    pub fn riscv_float_abi(self) -> FileFlags {
+        FileFlags(self.0 & EF_RISCV_FLOAT_ABI)
+    }
+
+    /// Set the RISC-V float ABI field.
+    ///
+    /// One of the `EF_RISCV_FLOAT_ABI_*` values.
+    pub fn with_riscv_float_abi(self, float_abi: FileFlags) -> FileFlags {
+        FileFlags(self.0 & !EF_RISCV_FLOAT_ABI | float_abi.0 & EF_RISCV_FLOAT_ABI)
+    }
+
+    /// Get the LoongArch ABI modifier field.
+    ///
+    /// One of the `EF_LARCH_ABI_* ` values.
+    pub fn larch_abi_modifier(self) -> FileFlags {
+        FileFlags(self.0 & EF_LARCH_ABI_MODIFIER_MASK)
+    }
+
+    /// Set the LoongArch ABI modifier field.
+    ///
+    /// One of the `EF_LARCH_ABI_* ` values.
+    pub fn with_larch_abi_modifier(self, modifier: FileFlags) -> FileFlags {
+        FileFlags(self.0 & !EF_LARCH_ABI_MODIFIER_MASK | modifier.0 & EF_LARCH_ABI_MODIFIER_MASK)
+    }
+}
 
 /// Section header.
 #[derive(Debug, Clone, Copy)]
@@ -705,9 +890,9 @@ pub struct SectionHeader32<E: Endian> {
     /// This is an offset into the section header string table.
     pub sh_name: U32<E>,
     /// Section type. One of the `SHT_*` constants.
-    pub sh_type: U32<E>,
+    pub sh_type: U32<E, SectionType>,
     /// Section flags. A combination of the `SHF_*` constants.
-    pub sh_flags: U32<E>,
+    pub sh_flags: U32<E, SectionFlags>,
     /// Section virtual address at execution.
     pub sh_addr: U32<E>,
     /// Section file offset.
@@ -737,9 +922,9 @@ pub struct SectionHeader64<E: Endian> {
     /// This is an offset into the section header string table.
     pub sh_name: U32<E>,
     /// Section type. One of the `SHT_*` constants.
-    pub sh_type: U32<E>,
+    pub sh_type: U32<E, SectionType>,
     /// Section flags. A combination of the `SHF_*` constants.
-    pub sh_flags: U64<E>,
+    pub sh_flags: U64<E, SectionFlags>,
     /// Section virtual address at execution.
     pub sh_addr: U64<E>,
     /// Section file offset.
@@ -760,8 +945,59 @@ pub struct SectionHeader64<E: Endian> {
     pub sh_entsize: U64<E>,
 }
 
-// Special values for section indices.
-constant_names!(NAMES_SHN: u16 = {
+newtype!(
+    /// Section header index.
+    ///
+    /// May be a reserved value with special meaning.
+    ///
+    /// This is primarily used for `Sym*::st_shndx`.
+    /// However, `FileHeader*::e_shstrndx` may be set to `SHN_UNDEF`, `SHN_XINDEX`, or an index.
+    struct SymbolSection(u16);
+);
+
+impl SymbolSection {
+    /// Construct a `SymbolSection` from a `u32` section index.
+    ///
+    /// Returns `SHN_XINDEX` if the index is >= `SHN_LORESERVE`. The caller must write the
+    /// extended index separately.
+    pub fn new(index: u32) -> Self {
+        if index >= u32::from(SHN_LORESERVE) {
+            SHN_XINDEX
+        } else {
+            SymbolSection(index as u16)
+        }
+    }
+
+    /// Return the section index, or `None` if this is `SHN_UNDEF` or in the reserved range.
+    pub fn index(self) -> Option<u16> {
+        if self.is_special() {
+            None
+        } else {
+            Some(self.0)
+        }
+    }
+
+    /// Return true if the number is `SHN_UNDEF` or in the reserved range.
+    pub fn is_special(self) -> bool {
+        self == SHN_UNDEF || self.is_reserved()
+    }
+
+    /// Return true if the number is in the reserved range.
+    pub fn is_reserved(self) -> bool {
+        debug_assert_eq!(SHN_HIRESERVE, !0);
+        self.0 >= SHN_LORESERVE
+    }
+    /// Return true if the number is in the OS-specific range.
+    pub fn is_os(self) -> bool {
+        self.0 >= SHN_LOOS && self.0 <= SHN_HIOS
+    }
+    /// Return true if the number is in the processor-specific range.
+    pub fn is_proc(self) -> bool {
+        self.0 >= SHN_LOPROC && self.0 <= SHN_HIPROC
+    }
+}
+
+newtype_constant_names!(NAMES_SHN: SymbolSection(u16) = {
     /// Undefined section.
     SHN_UNDEF = 0,
     /// Associated symbol is absolute.
@@ -785,8 +1021,31 @@ pub const SHN_HIOS: u16 = 0xff3f;
 /// End of reserved section indices.
 pub const SHN_HIRESERVE: u16 = 0xffff;
 
-// Values for `SectionHeader*::sh_type`.
-constant_names!(NAMES_SHT: u32 = {
+newtype!(
+    /// Values for `SectionHeader*::sh_type`.
+    struct SectionType(u32);
+);
+
+impl SectionType {
+    /// Return true if the type is in the OS-specific range.
+    pub fn is_os(self) -> bool {
+        self.0 >= SHT_LOOS && self.0 <= SHT_HIOS
+    }
+    /// Return true if the type is in the Sun-specific range.
+    pub fn is_sun(self) -> bool {
+        self.0 >= SHT_LOSUNW && self.0 <= SHT_HISUNW
+    }
+    /// Return true if the type is in the processor-specific range.
+    pub fn is_proc(self) -> bool {
+        self.0 >= SHT_LOPROC && self.0 <= SHT_HIPROC
+    }
+    /// Return true if the type is in the application-specific range.
+    pub fn is_user(self) -> bool {
+        self.0 >= SHT_LOUSER && self.0 <= SHT_HIUSER
+    }
+}
+
+newtype_constant_names!(NAMES_SHT: SectionType(u32) = {
     /// Section header table entry is unused.
     SHT_NULL = 0,
     /// Program data.
@@ -874,8 +1133,24 @@ pub const SHT_LOUSER: u32 = 0x8000_0000;
 /// End of application-specific section types.
 pub const SHT_HIUSER: u32 = 0x8fff_ffff;
 
-// Values for `SectionHeader*::sh_flags`.
-flag_names!(NAMES_SHF: u32 = {
+newtype!(
+    /// Values for `SectionHeader*::sh_flags`.
+    struct SectionFlags(u64);
+);
+
+impl SectionFlags {
+    /// Returns OS-specific flags.
+    pub fn os_bits(self) -> Self {
+        SectionFlags(self.0 & SHF_MASKOS)
+    }
+
+    /// Returns processor-specific flags.
+    pub fn proc_bits(self) -> Self {
+        SectionFlags(self.0 & SHF_MASKPROC)
+    }
+}
+
+newtype_flag_names!(NAMES_SHF: SectionFlags(u64) = {
     /// Section is writable.
     SHF_WRITE = 1 << 0,
     /// Section occupies memory during execution.
@@ -909,9 +1184,9 @@ flag_names!(NAMES_SHF: u32 = {
 });
 
 /// OS-specific section flags.
-pub const SHF_MASKOS: u32 = 0x0ff0_0000;
+pub const SHF_MASKOS: u64 = 0x0ff0_0000;
 /// Processor-specific section flags.
-pub const SHF_MASKPROC: u32 = 0xf000_0000;
+pub const SHF_MASKPROC: u64 = 0xf000_0000;
 
 /// Section compression header.
 ///
@@ -923,7 +1198,7 @@ pub const SHF_MASKPROC: u32 = 0xf000_0000;
 #[repr(C)]
 pub struct CompressionHeader32<E: Endian> {
     /// Compression format. One of the `ELFCOMPRESS_*` values.
-    pub ch_type: U32<E>,
+    pub ch_type: U32<E, CompressionType>,
     /// Uncompressed data size.
     pub ch_size: U32<E>,
     /// Uncompressed data alignment.
@@ -940,7 +1215,7 @@ pub struct CompressionHeader32<E: Endian> {
 #[repr(C)]
 pub struct CompressionHeader64<E: Endian> {
     /// Compression format. One of the `ELFCOMPRESS_*` values.
-    pub ch_type: U32<E>,
+    pub ch_type: U32<E, CompressionType>,
     /// Reserved.
     pub ch_reserved: U32<E>,
     /// Uncompressed data size.
@@ -949,10 +1224,29 @@ pub struct CompressionHeader64<E: Endian> {
     pub ch_addralign: U64<E>,
 }
 
-/// ZLIB/DEFLATE algorithm.
-pub const ELFCOMPRESS_ZLIB: u32 = 1;
-/// Zstandard algorithm.
-pub const ELFCOMPRESS_ZSTD: u32 = 2;
+newtype!(
+    /// Values for `CompressionHeader*::ch_type`.
+    struct CompressionType(u32);
+);
+
+impl CompressionType {
+    /// Return true if the type is in the OS-specific range.
+    pub fn is_os(self) -> bool {
+        self.0 >= ELFCOMPRESS_LOOS && self.0 <= ELFCOMPRESS_HIOS
+    }
+    /// Return true if the type is in the processor-specific range.
+    pub fn is_proc(self) -> bool {
+        self.0 >= ELFCOMPRESS_LOPROC && self.0 <= ELFCOMPRESS_HIPROC
+    }
+}
+
+newtype_constant_names!(NAMES_COMPRESS: CompressionType(u32) = {
+    /// ZLIB/DEFLATE algorithm.
+    ELFCOMPRESS_ZLIB = 1,
+    /// Zstandard algorithm.
+    ELFCOMPRESS_ZSTD = 2,
+});
+
 /// Start of OS-specific compression types.
 pub const ELFCOMPRESS_LOOS: u32 = 0x6000_0000;
 /// End of OS-specific compression types.
@@ -962,9 +1256,15 @@ pub const ELFCOMPRESS_LOPROC: u32 = 0x7000_0000;
 /// End of processor-specific compression types.
 pub const ELFCOMPRESS_HIPROC: u32 = 0x7fff_ffff;
 
-// Values for the flag entry for section groups.
-/// Mark group as COMDAT.
-pub const GRP_COMDAT: u32 = 1;
+newtype!(
+    /// Values for the flag entry for section groups.
+    struct GroupFlags(u32);
+);
+
+newtype_flag_names!(NAMES_GRP: GroupFlags(u32) = {
+    /// Mark group as COMDAT.
+    GRP_COMDAT = 1,
+});
 
 /// Symbol table entry.
 #[derive(Debug, Default, Clone, Copy)]
@@ -981,38 +1281,38 @@ pub struct Sym32<E: Endian> {
     /// Symbol type and binding.
     ///
     /// Use the `st_type` and `st_bind` methods to access this value.
-    pub st_info: u8,
+    pub st_info: SymbolInfo,
     /// Symbol visibility.
     ///
     /// Use the `st_visibility` method to access this value.
-    pub st_other: u8,
+    pub st_other: SymbolOther,
     /// Section index or one of the `SHN_*` values.
-    pub st_shndx: U16<E>,
+    pub st_shndx: U16<E, SymbolSection>,
 }
 
 impl<E: Endian> Sym32<E> {
-    /// Get the `st_bind` component of the `st_info` field.
+    /// Get the `st_bind` subfield of the `st_info` field.
     #[inline]
-    pub fn st_bind(&self) -> u8 {
-        self.st_info >> 4
+    pub fn st_bind(&self) -> SymbolBind {
+        self.st_info.st_bind()
     }
 
-    /// Get the `st_type` component of the `st_info` field.
+    /// Get the `st_type` subfield of the `st_info` field.
     #[inline]
-    pub fn st_type(&self) -> u8 {
-        self.st_info & 0xf
+    pub fn st_type(&self) -> SymbolType {
+        self.st_info.st_type()
     }
 
-    /// Set the `st_info` field given the `st_bind` and `st_type` components.
+    /// Set the `st_info` field given the `st_bind` and `st_type` subfields.
     #[inline]
-    pub fn set_st_info(&mut self, st_bind: u8, st_type: u8) {
-        self.st_info = (st_bind << 4) + (st_type & 0xf);
+    pub fn set_st_info(&mut self, st_bind: SymbolBind, st_type: SymbolType) {
+        self.st_info = SymbolInfo::new(st_bind, st_type);
     }
 
-    /// Get the `st_visibility` component of the `st_info` field.
+    /// Get the `st_visibility` subfield of the `st_other` field.
     #[inline]
-    pub fn st_visibility(&self) -> u8 {
-        self.st_other & 0x3
+    pub fn st_visibility(&self) -> SymbolVisibility {
+        self.st_other.visibility()
     }
 }
 
@@ -1027,13 +1327,13 @@ pub struct Sym64<E: Endian> {
     /// Symbol type and binding.
     ///
     /// Use the `st_bind` and `st_type` methods to access this value.
-    pub st_info: u8,
+    pub st_info: SymbolInfo,
     /// Symbol visibility.
     ///
     /// Use the `st_visibility` method to access this value.
-    pub st_other: u8,
+    pub st_other: SymbolOther,
     /// Section index or one of the `SHN_*` values.
-    pub st_shndx: U16<E>,
+    pub st_shndx: U16<E, SymbolSection>,
     /// Symbol value.
     pub st_value: U64<E>,
     /// Symbol size.
@@ -1041,28 +1341,28 @@ pub struct Sym64<E: Endian> {
 }
 
 impl<E: Endian> Sym64<E> {
-    /// Get the `st_bind` component of the `st_info` field.
+    /// Get the `st_bind` subfield of the `st_info` field.
     #[inline]
-    pub fn st_bind(&self) -> u8 {
-        self.st_info >> 4
+    pub fn st_bind(&self) -> SymbolBind {
+        self.st_info.st_bind()
     }
 
-    /// Get the `st_type` component of the `st_info` field.
+    /// Get the `st_type` subfield of the `st_info` field.
     #[inline]
-    pub fn st_type(&self) -> u8 {
-        self.st_info & 0xf
+    pub fn st_type(&self) -> SymbolType {
+        self.st_info.st_type()
     }
 
-    /// Set the `st_info` field given the `st_bind` and `st_type` components.
+    /// Set the `st_info` field given the `st_bind` and `st_type` subfields.
     #[inline]
-    pub fn set_st_info(&mut self, st_bind: u8, st_type: u8) {
-        self.st_info = (st_bind << 4) + (st_type & 0xf);
+    pub fn set_st_info(&mut self, st_bind: SymbolBind, st_type: SymbolType) {
+        self.st_info = SymbolInfo::new(st_bind, st_type);
     }
 
-    /// Get the `st_visibility` component of the `st_info` field.
+    /// Get the `st_visibility` subfield of the `st_other` field.
     #[inline]
-    pub fn st_visibility(&self) -> u8 {
-        self.st_other & 0x3
+    pub fn st_visibility(&self) -> SymbolVisibility {
+        self.st_other.visibility()
     }
 }
 
@@ -1071,9 +1371,9 @@ impl<E: Endian> Sym64<E> {
 #[repr(C)]
 pub struct Syminfo32<E: Endian> {
     /// Direct bindings, symbol bound to.
-    pub si_boundto: U16<E>,
+    pub si_boundto: U16<E, SyminfoBoundto>,
     /// Per symbol flags.
-    pub si_flags: U16<E>,
+    pub si_flags: U16<E, SyminfoFlags>,
 }
 
 /// Additional information about a `Sym64`.
@@ -1081,36 +1381,130 @@ pub struct Syminfo32<E: Endian> {
 #[repr(C)]
 pub struct Syminfo64<E: Endian> {
     /// Direct bindings, symbol bound to.
-    pub si_boundto: U16<E>,
+    pub si_boundto: U16<E, SyminfoBoundto>,
     /// Per symbol flags.
-    pub si_flags: U16<E>,
+    pub si_flags: U16<E, SyminfoFlags>,
 }
 
-// Values for `Syminfo*::si_boundto`.
-/// Symbol bound to self
-pub const SYMINFO_BT_SELF: u16 = 0xffff;
-/// Symbol bound to parent
-pub const SYMINFO_BT_PARENT: u16 = 0xfffe;
+newtype!(
+    /// Values for `Syminfo*::si_boundto`.
+    struct SyminfoBoundto(u16);
+);
+
+impl SyminfoBoundto {
+    /// Return true if the value is in the reserved range.
+    pub fn is_reserved(self) -> bool {
+        self.0 >= SYMINFO_BT_LOWRESERVE
+    }
+
+    /// Return the symbol index, or `None` if it is a reserved value.
+    pub fn index(self) -> Option<u16> {
+        if self.is_reserved() {
+            None
+        } else {
+            Some(self.0)
+        }
+    }
+
+    /// Values for `Syminfo*::si_boundto` for the first entry.
+    #[cfg(feature = "names")]
+    pub fn version_names() -> &'static ConstantNames<SyminfoBoundto> {
+        &NAMES_SYMINFO_VERSION
+    }
+}
+
+newtype_constant_names!(NAMES_SYMINFO_BT: SyminfoBoundto(u16) = {
+    /// Symbol bound to self
+    SYMINFO_BT_SELF = 0xffff,
+    /// Symbol bound to parent
+    SYMINFO_BT_PARENT = 0xfffe,
+});
+
 /// Beginning of reserved entries
 pub const SYMINFO_BT_LOWRESERVE: u16 = 0xff00;
 
-// Values for `Syminfo*::si_flags`.
-/// Direct bound symbol
-pub const SYMINFO_FLG_DIRECT: u16 = 0x0001;
-/// Pass-thru symbol for translator
-pub const SYMINFO_FLG_PASSTHRU: u16 = 0x0002;
-/// Symbol is a copy-reloc
-pub const SYMINFO_FLG_COPY: u16 = 0x0004;
-/// Symbol bound to object to be lazy loaded
-pub const SYMINFO_FLG_LAZYLOAD: u16 = 0x0008;
+newtype!(
+    /// Values for `Syminfo*::si_flags`.
+    struct SyminfoFlags(u16);
+);
 
-// Syminfo version values.
-pub const SYMINFO_NONE: u16 = 0;
-pub const SYMINFO_CURRENT: u16 = 1;
-pub const SYMINFO_NUM: u16 = 2;
+newtype_flag_names!(NAMES_SYMINFO_FLG: SyminfoFlags(u16) = {
+    /// Direct bound symbol
+    SYMINFO_FLG_DIRECT = 0x0001,
+    /// Pass-thru symbol for translator
+    SYMINFO_FLG_PASSTHRU = 0x0002,
+    /// Symbol is a copy-reloc
+    SYMINFO_FLG_COPY = 0x0004,
+    /// Symbol bound to object to be lazy loaded
+    SYMINFO_FLG_LAZYLOAD = 0x0008,
+});
 
-// Values for `st_bind` field of `Sym*::st_info`.
-constant_names!(NAMES_STB: u8 = {
+constant_names!(NAMES_SYMINFO_VERSION: SyminfoBoundto(u16) = {
+    SYMINFO_NONE = 0,
+    SYMINFO_CURRENT = 1,
+    SYMINFO_NUM = 2,
+});
+
+newtype!(
+    /// Values for `Sym*::st_info`.
+    #[repr(transparent)]
+    struct SymbolInfo(u8);
+);
+
+impl core::fmt::Debug for SymbolInfo {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(f, "{:?} | {:?}", self.st_bind(), self.st_type())
+    }
+}
+
+impl SymbolInfo {
+    /// Construct a value for the `st_info` field given the `st_bind` and `st_type` fields.
+    pub fn new(st_bind: SymbolBind, st_type: SymbolType) -> Self {
+        SymbolInfo((st_bind.0 << 4) | (st_type.0 & 0xf))
+    }
+
+    /// Get the `st_bind` field.
+    pub fn st_bind(self) -> SymbolBind {
+        SymbolBind(self.0 >> 4)
+    }
+
+    /// Get the `st_type` field.
+    pub fn st_type(self) -> SymbolType {
+        SymbolType(self.0 & 0xf)
+    }
+}
+
+impl core::ops::BitOr<SymbolBind> for SymbolType {
+    type Output = SymbolInfo;
+    fn bitor(self, st_bind: SymbolBind) -> Self::Output {
+        SymbolInfo::new(st_bind, self)
+    }
+}
+
+impl core::ops::BitOr<SymbolType> for SymbolBind {
+    type Output = SymbolInfo;
+    fn bitor(self, st_type: SymbolType) -> Self::Output {
+        SymbolInfo::new(self, st_type)
+    }
+}
+
+newtype!(
+    /// Values for `st_bind` field of `Sym*::st_info`.
+    struct SymbolBind(u8);
+);
+
+impl SymbolBind {
+    /// Return true if the binding is in the OS-specific range.
+    pub fn is_os(self) -> bool {
+        self.0 >= STB_LOOS && self.0 <= STB_HIOS
+    }
+    /// Return true if the binding is in the processor-specific range.
+    pub fn is_proc(self) -> bool {
+        self.0 >= STB_LOPROC && self.0 <= STB_HIPROC
+    }
+}
+
+newtype_constant_names!(NAMES_STB: SymbolBind(u8) = {
     /// Local symbol.
     STB_LOCAL = 0,
     /// Global symbol.
@@ -1130,8 +1524,23 @@ pub const STB_LOPROC: u8 = 13;
 /// End of processor-specific symbol binding.
 pub const STB_HIPROC: u8 = 15;
 
-// Values for `st_type` field of `Sym*::st_info`.
-constant_names!(NAMES_STT: u8 = {
+newtype!(
+    /// Values for `st_type` field of `Sym*::st_info`.
+    struct SymbolType(u8);
+);
+
+impl SymbolType {
+    /// Return true if the type is in the OS-specific range.
+    pub fn is_os(self) -> bool {
+        self.0 >= STT_LOOS && self.0 <= STT_HIOS
+    }
+    /// Return true if the type is in the processor-specific range.
+    pub fn is_proc(self) -> bool {
+        self.0 >= STT_LOPROC && self.0 <= STT_HIPROC
+    }
+}
+
+newtype_constant_names!(NAMES_STT: SymbolType(u8) = {
     /// Symbol type is unspecified.
     STT_NOTYPE = 0,
     /// Symbol is a data object.
@@ -1159,12 +1568,57 @@ pub const STT_LOPROC: u8 = 13;
 /// End of processor-specific symbol types.
 pub const STT_HIPROC: u8 = 15;
 
-// Values for `Sym*::st_other`.
-flag_names!(NAMES_STO: u8 = {
+newtype!(
+    /// Values for `Sym*::st_other`.
+    #[repr(transparent)]
+    struct SymbolOther(u8);
+);
+
+impl SymbolOther {
+    /// Get the `st_visibility` field.
+    pub fn visibility(self) -> SymbolVisibility {
+        SymbolVisibility(self.0 & STV_MASK)
+    }
+
+    /// Set the `st_visibility` field.
+    pub fn with_visibility(self, vis: SymbolVisibility) -> Self {
+        SymbolOther(self.0 & !STV_MASK | vis.0 & STV_MASK)
+    }
+
+    /// Get the PPC64 `local` field.
+    pub fn ppc64_local(self) -> u8 {
+        (self.0 & STO_PPC64_LOCAL_MASK) >> STO_PPC64_LOCAL_BIT
+    }
+
+    /// Set the PPC64 `local` field.
+    pub fn ppc64_with_local(self, local: u8) -> Self {
+        SymbolOther(
+            self.0 & !STO_PPC64_LOCAL_MASK | (local << STO_PPC64_LOCAL_BIT) & STO_PPC64_LOCAL_MASK,
+        )
+    }
+}
+
+newtype_flag_names!(NAMES_STO: SymbolOther(u8) = {
     STV_MASK = 3 => NAMES_STV,
 });
 
-constant_names!(NAMES_STV: u8 = {
+newtype!(
+    struct SymbolVisibility(u8);
+);
+
+impl From<SymbolVisibility> for SymbolOther {
+    fn from(value: SymbolVisibility) -> Self {
+        SymbolOther(value.0 & STV_MASK)
+    }
+}
+
+impl From<SymbolOther> for SymbolVisibility {
+    fn from(value: SymbolOther) -> Self {
+        value.visibility()
+    }
+}
+
+newtype_constant_names!(NAMES_STV: SymbolVisibility(u8) = {
     /// Default symbol visibility rules.
     STV_DEFAULT = 0,
     /// Processor specific hidden class.
@@ -1186,24 +1640,24 @@ pub struct Rel32<E: Endian> {
 }
 
 impl<E: Endian> Rel32<E> {
-    /// Get the `r_sym` component of the `r_info` field.
+    /// Get the `r_sym` subfield of the `r_info` field.
     #[inline]
     pub fn r_sym(&self, endian: E) -> u32 {
         self.r_info.get(endian) >> 8
     }
 
-    /// Get the `r_type` component of the `r_info` field.
+    /// Get the `r_type` subfield of the `r_info` field.
     #[inline]
     pub fn r_type(&self, endian: E) -> u32 {
         self.r_info.get(endian) & 0xff
     }
 
-    /// Calculate the `r_info` field given the `r_sym` and `r_type` components.
+    /// Calculate the `r_info` field given the `r_sym` and `r_type` subfields.
     pub fn r_info(endian: E, r_sym: u32, r_type: u8) -> U32<E> {
         U32::new(endian, (r_sym << 8) | u32::from(r_type))
     }
 
-    /// Set the `r_info` field given the `r_sym` and `r_type` components.
+    /// Set the `r_info` field given the `r_sym` and `r_type` subfields.
     pub fn set_r_info(&mut self, endian: E, r_sym: u32, r_type: u8) {
         self.r_info = Self::r_info(endian, r_sym, r_type)
     }
@@ -1222,24 +1676,24 @@ pub struct Rela32<E: Endian> {
 }
 
 impl<E: Endian> Rela32<E> {
-    /// Get the `r_sym` component of the `r_info` field.
+    /// Get the `r_sym` subfield of the `r_info` field.
     #[inline]
     pub fn r_sym(&self, endian: E) -> u32 {
         self.r_info.get(endian) >> 8
     }
 
-    /// Get the `r_type` component of the `r_info` field.
+    /// Get the `r_type` subfield of the `r_info` field.
     #[inline]
     pub fn r_type(&self, endian: E) -> u32 {
         self.r_info.get(endian) & 0xff
     }
 
-    /// Calculate the `r_info` field given the `r_sym` and `r_type` components.
+    /// Calculate the `r_info` field given the `r_sym` and `r_type` subfields.
     pub fn r_info(endian: E, r_sym: u32, r_type: u8) -> U32<E> {
         U32::new(endian, (r_sym << 8) | u32::from(r_type))
     }
 
-    /// Set the `r_info` field given the `r_sym` and `r_type` components.
+    /// Set the `r_info` field given the `r_sym` and `r_type` subfields.
     pub fn set_r_info(&mut self, endian: E, r_sym: u32, r_type: u8) {
         self.r_info = Self::r_info(endian, r_sym, r_type)
     }
@@ -1266,24 +1720,24 @@ pub struct Rel64<E: Endian> {
 }
 
 impl<E: Endian> Rel64<E> {
-    /// Get the `r_sym` component of the `r_info` field.
+    /// Get the `r_sym` subfield of the `r_info` field.
     #[inline]
     pub fn r_sym(&self, endian: E) -> u32 {
         (self.r_info.get(endian) >> 32) as u32
     }
 
-    /// Get the `r_type` component of the `r_info` field.
+    /// Get the `r_type` subfield of the `r_info` field.
     #[inline]
     pub fn r_type(&self, endian: E) -> u32 {
         (self.r_info.get(endian) & 0xffff_ffff) as u32
     }
 
-    /// Calculate the `r_info` field given the `r_sym` and `r_type` components.
+    /// Calculate the `r_info` field given the `r_sym` and `r_type` subfields.
     pub fn r_info(endian: E, r_sym: u32, r_type: u32) -> U64<E> {
         U64::new(endian, (u64::from(r_sym) << 32) | u64::from(r_type))
     }
 
-    /// Set the `r_info` field given the `r_sym` and `r_type` components.
+    /// Set the `r_info` field given the `r_sym` and `r_type` subfields.
     pub fn set_r_info(&mut self, endian: E, r_sym: u32, r_type: u32) {
         self.r_info = Self::r_info(endian, r_sym, r_type)
     }
@@ -1324,19 +1778,19 @@ impl<E: Endian> Rela64<E> {
         t
     }
 
-    /// Get the `r_sym` component of the `r_info` field.
+    /// Get the `r_sym` subfield of the `r_info` field.
     #[inline]
     pub fn r_sym(&self, endian: E, is_mips64el: bool) -> u32 {
         (self.get_r_info(endian, is_mips64el) >> 32) as u32
     }
 
-    /// Get the `r_type` component of the `r_info` field.
+    /// Get the `r_type` subfield of the `r_info` field.
     #[inline]
     pub fn r_type(&self, endian: E, is_mips64el: bool) -> u32 {
         (self.get_r_info(endian, is_mips64el) & 0xffff_ffff) as u32
     }
 
-    /// Calculate the `r_info` field given the `r_sym` and `r_type` components.
+    /// Calculate the `r_info` field given the `r_sym` and `r_type` subfields.
     pub fn r_info(endian: E, is_mips64el: bool, r_sym: u32, r_type: u32) -> U64<E> {
         let mut t = (u64::from(r_sym) << 32) | u64::from(r_type);
         if is_mips64el {
@@ -1349,7 +1803,7 @@ impl<E: Endian> Rela64<E> {
         U64::new(endian, t)
     }
 
-    /// Set the `r_info` field given the `r_sym` and `r_type` components.
+    /// Set the `r_info` field given the `r_sym` and `r_type` subfields.
     pub fn set_r_info(&mut self, endian: E, is_mips64el: bool, r_sym: u32, r_type: u32) {
         self.r_info = Self::r_info(endian, is_mips64el, r_sym, r_type);
     }
@@ -1370,7 +1824,7 @@ pub struct Relr64<E: Endian>(pub U64<E>);
 #[repr(C)]
 pub struct ProgramHeader32<E: Endian> {
     /// Segment type. One of the `PT_*` constants.
-    pub p_type: U32<E>,
+    pub p_type: U32<E, ProgramType>,
     /// Segment file offset.
     pub p_offset: U32<E>,
     /// Segment virtual address.
@@ -1382,7 +1836,7 @@ pub struct ProgramHeader32<E: Endian> {
     /// Segment size in memory.
     pub p_memsz: U32<E>,
     /// Segment flags. A combination of the `PF_*` constants.
-    pub p_flags: U32<E>,
+    pub p_flags: U32<E, ProgramFlags>,
     /// Segment alignment.
     pub p_align: U32<E>,
 }
@@ -1392,9 +1846,9 @@ pub struct ProgramHeader32<E: Endian> {
 #[repr(C)]
 pub struct ProgramHeader64<E: Endian> {
     /// Segment type. One of the `PT_*` constants.
-    pub p_type: U32<E>,
+    pub p_type: U32<E, ProgramType>,
     /// Segment flags. A combination of the `PF_*` constants.
-    pub p_flags: U32<E>,
+    pub p_flags: U32<E, ProgramFlags>,
     /// Segment file offset.
     pub p_offset: U64<E>,
     /// Segment virtual address.
@@ -1415,8 +1869,23 @@ pub struct ProgramHeader64<E: Endian> {
 /// Instead the real value is in the field `sh_info` of section 0.
 pub const PN_XNUM: u16 = 0xffff;
 
-// Values for `ProgramHeader*::p_type`.
-constant_names!(NAMES_PT: u32 = {
+newtype!(
+    /// Values for `ProgramHeader*::p_type`.
+    struct ProgramType(u32);
+);
+
+impl ProgramType {
+    /// Return true if the type is in the OS-specific range.
+    pub fn is_os(self) -> bool {
+        self.0 >= PT_LOOS && self.0 <= PT_HIOS
+    }
+    /// Return true if the type is in the processor-specific range.
+    pub fn is_proc(self) -> bool {
+        self.0 >= PT_LOPROC && self.0 <= PT_HIPROC
+    }
+}
+
+newtype_constant_names!(NAMES_PT: ProgramType(u32) = {
     /// Program header table entry is unused.
     PT_NULL = 0,
     /// Loadable program segment.
@@ -1454,8 +1923,12 @@ pub const PT_LOPROC: u32 = 0x7000_0000;
 /// End of processor-specific segment types.
 pub const PT_HIPROC: u32 = 0x7fff_ffff;
 
-// Values for `ProgramHeader*::p_flags`.
-flag_names!(NAMES_PF: u32 = {
+newtype!(
+    /// Values for `ProgramHeader*::p_flags`.
+    struct ProgramFlags(u32);
+);
+
+newtype_flag_names!(NAMES_PF: ProgramFlags(u32) = {
     /// Segment is executable.
     PF_X = 1 << 0,
     /// Segment is writable.
@@ -1619,7 +2092,7 @@ pub const NT_VERSION: u32 = 1;
 #[repr(C)]
 pub struct Dyn32<E: Endian> {
     /// Dynamic entry type.
-    pub d_tag: I32<E>,
+    pub d_tag: I32<E, DynamicTag>,
     /// Value (integer or address).
     pub d_val: U32<E>,
 }
@@ -1629,13 +2102,40 @@ pub struct Dyn32<E: Endian> {
 #[repr(C)]
 pub struct Dyn64<E: Endian> {
     /// Dynamic entry type.
-    pub d_tag: I64<E>,
+    pub d_tag: I64<E, DynamicTag>,
     /// Value (integer or address).
     pub d_val: U64<E>,
 }
 
-// Values for `Dyn*::d_tag`.
-constant_names!(NAMES_DT: i64 = {
+newtype!(
+    /// Values for `Dyn*::d_tag`.
+    struct DynamicTag(i64);
+);
+
+impl DynamicTag {
+    /// Return true if the tag is in the range for values.
+    ///
+    /// Note that some tags outside of this range are also used for values.
+    pub fn is_value(self) -> bool {
+        self.0 >= DT_VALRNGLO && self.0 <= DT_VALRNGHI
+    }
+    /// Return true if the tag is in the range for addresses.
+    ///
+    /// Note that some tags outside of this range are also used for addresses.
+    pub fn is_address(self) -> bool {
+        self.0 >= DT_ADDRRNGLO && self.0 <= DT_ADDRRNGHI
+    }
+    /// Return true if the tag is in the OS-specific range.
+    pub fn is_os(self) -> bool {
+        self.0 >= DT_LOOS && self.0 <= DT_HIOS
+    }
+    /// Return true if the tag is in the processor-specific range.
+    pub fn is_proc(self) -> bool {
+        self.0 >= DT_LOPROC && self.0 <= DT_HIPROC
+    }
+}
+
+newtype_constant_names!(NAMES_DT: DynamicTag(i64) = {
     /// Marks end of dynamic section
     DT_NULL = 0,
     /// Name of needed library
@@ -1811,78 +2311,142 @@ pub const DT_VALRNGHI: i64 = 0x6fff_fdff;
 pub const DT_ADDRRNGLO: i64 = 0x6fff_fe00;
 pub const DT_ADDRRNGHI: i64 = 0x6fff_feff;
 
-// Values of `Dyn*::d_val` in the `DT_FLAGS` entry.
-/// Object may use DF_ORIGIN
-pub const DF_ORIGIN: u32 = 0x0000_0001;
-/// Symbol resolutions starts here
-pub const DF_SYMBOLIC: u32 = 0x0000_0002;
-/// Object contains text relocations
-pub const DF_TEXTREL: u32 = 0x0000_0004;
-/// No lazy binding for this object
-pub const DF_BIND_NOW: u32 = 0x0000_0008;
-/// Module uses the static TLS model
-pub const DF_STATIC_TLS: u32 = 0x0000_0010;
+newtype!(
+    /// Values of `Dyn*::d_val` in the `DT_FLAGS` entry.
+    struct DynamicFlags(u64);
+);
 
-// Values of `Dyn*::d_val` in the `DT_FLAGS_1` entry.
-/// Set RTLD_NOW for this object.
-pub const DF_1_NOW: u32 = 0x0000_0001;
-/// Set RTLD_GLOBAL for this object.
-pub const DF_1_GLOBAL: u32 = 0x0000_0002;
-/// Set RTLD_GROUP for this object.
-pub const DF_1_GROUP: u32 = 0x0000_0004;
-/// Set RTLD_NODELETE for this object.
-pub const DF_1_NODELETE: u32 = 0x0000_0008;
-/// Trigger filtee loading at runtime.
-pub const DF_1_LOADFLTR: u32 = 0x0000_0010;
-/// Set RTLD_INITFIRST for this object.
-pub const DF_1_INITFIRST: u32 = 0x0000_0020;
-/// Set RTLD_NOOPEN for this object.
-pub const DF_1_NOOPEN: u32 = 0x0000_0040;
-/// $ORIGIN must be handled.
-pub const DF_1_ORIGIN: u32 = 0x0000_0080;
-/// Direct binding enabled.
-pub const DF_1_DIRECT: u32 = 0x0000_0100;
-pub const DF_1_TRANS: u32 = 0x0000_0200;
-/// Object is used to interpose.
-pub const DF_1_INTERPOSE: u32 = 0x0000_0400;
-/// Ignore default lib search path.
-pub const DF_1_NODEFLIB: u32 = 0x0000_0800;
-/// Object can't be dldump'ed.
-pub const DF_1_NODUMP: u32 = 0x0000_1000;
-/// Configuration alternative created.
-pub const DF_1_CONFALT: u32 = 0x0000_2000;
-/// Filtee terminates filters search.
-pub const DF_1_ENDFILTEE: u32 = 0x0000_4000;
-/// Disp reloc applied at build time.
-pub const DF_1_DISPRELDNE: u32 = 0x0000_8000;
-/// Disp reloc applied at run-time.
-pub const DF_1_DISPRELPND: u32 = 0x0001_0000;
-/// Object has no-direct binding.
-pub const DF_1_NODIRECT: u32 = 0x0002_0000;
-pub const DF_1_IGNMULDEF: u32 = 0x0004_0000;
-pub const DF_1_NOKSYMS: u32 = 0x0008_0000;
-pub const DF_1_NOHDR: u32 = 0x0010_0000;
-/// Object is modified after built.
-pub const DF_1_EDITED: u32 = 0x0020_0000;
-pub const DF_1_NORELOC: u32 = 0x0040_0000;
-/// Object has individual interposers.
-pub const DF_1_SYMINTPOSE: u32 = 0x0080_0000;
-/// Global auditing required.
-pub const DF_1_GLOBAUDIT: u32 = 0x0100_0000;
-/// Singleton symbols are used.
-pub const DF_1_SINGLETON: u32 = 0x0200_0000;
-pub const DF_1_STUB: u32 = 0x0400_0000;
-pub const DF_1_PIE: u32 = 0x0800_0000;
+newtype_flag_names!(NAMES_DF: DynamicFlags(u64) = {
+    /// Object may use DF_ORIGIN
+    DF_ORIGIN = 0x0000_0001,
+    /// Symbol resolutions starts here
+    DF_SYMBOLIC = 0x0000_0002,
+    /// Object contains text relocations
+    DF_TEXTREL = 0x0000_0004,
+    /// No lazy binding for this object
+    DF_BIND_NOW = 0x0000_0008,
+    /// Module uses the static TLS model
+    DF_STATIC_TLS = 0x0000_0010,
+});
+
+newtype!(
+    /// Values of `Dyn*::d_val` in the `DT_FLAGS_1` entry.
+    struct DynamicFlags1(u64);
+);
+
+newtype_flag_names!(NAMES_DF_1: DynamicFlags1(u64) = {
+    /// Set RTLD_NOW for this object.
+    DF_1_NOW = 0x0000_0001,
+    /// Set RTLD_GLOBAL for this object.
+    DF_1_GLOBAL = 0x0000_0002,
+    /// Set RTLD_GROUP for this object.
+    DF_1_GROUP = 0x0000_0004,
+    /// Set RTLD_NODELETE for this object.
+    DF_1_NODELETE = 0x0000_0008,
+    /// Trigger filtee loading at runtime.
+    DF_1_LOADFLTR = 0x0000_0010,
+    /// Set RTLD_INITFIRST for this object.
+    DF_1_INITFIRST = 0x0000_0020,
+    /// Set RTLD_NOOPEN for this object.
+    DF_1_NOOPEN = 0x0000_0040,
+    /// $ORIGIN must be handled.
+    DF_1_ORIGIN = 0x0000_0080,
+    /// Direct binding enabled.
+    DF_1_DIRECT = 0x0000_0100,
+    DF_1_TRANS = 0x0000_0200,
+    /// Object is used to interpose.
+    DF_1_INTERPOSE = 0x0000_0400,
+    /// Ignore default lib search path.
+    DF_1_NODEFLIB = 0x0000_0800,
+    /// Object can't be dldump'ed.
+    DF_1_NODUMP = 0x0000_1000,
+    /// Configuration alternative created.
+    DF_1_CONFALT = 0x0000_2000,
+    /// Filtee terminates filters search.
+    DF_1_ENDFILTEE = 0x0000_4000,
+    /// Disp reloc applied at build time.
+    DF_1_DISPRELDNE = 0x0000_8000,
+    /// Disp reloc applied at run-time.
+    DF_1_DISPRELPND = 0x0001_0000,
+    /// Object has no-direct binding.
+    DF_1_NODIRECT = 0x0002_0000,
+    DF_1_IGNMULDEF = 0x0004_0000,
+    DF_1_NOKSYMS = 0x0008_0000,
+    DF_1_NOHDR = 0x0010_0000,
+    /// Object is modified after built.
+    DF_1_EDITED = 0x0020_0000,
+    DF_1_NORELOC = 0x0040_0000,
+    /// Object has individual interposers.
+    DF_1_SYMINTPOSE = 0x0080_0000,
+    /// Global auditing required.
+    DF_1_GLOBAUDIT = 0x0100_0000,
+    /// Singleton symbols are used.
+    DF_1_SINGLETON = 0x0200_0000,
+    DF_1_STUB = 0x0400_0000,
+    DF_1_PIE = 0x0800_0000,
+});
 
 /// Version symbol information
 #[derive(Debug, Clone, Copy)]
 #[repr(C)]
-pub struct Versym<E: Endian>(pub U16<E>);
+pub struct Versym<E: Endian>(pub U16<E, VersymIndex>);
 
-/// Symbol is hidden.
-pub const VERSYM_HIDDEN: u16 = 0x8000;
-/// Symbol version index.
-pub const VERSYM_VERSION: u16 = 0x7fff;
+newtype!(
+    /// Version index for a symbol.
+    ///
+    /// This is a `VersionIndex` plus the `VERSYM_HIDDEN` flag.
+    struct VersymIndex(u16);
+);
+
+impl VersymIndex {
+    /// Construct a `VersymIndex` from an index and a hidden flag.
+    pub fn new(index: VersionIndex, hidden: bool) -> Self {
+        if hidden {
+            Self(index.0).with(VERSYM_HIDDEN)
+        } else {
+            Self(index.0)
+        }
+    }
+
+    /// Return the version index.
+    pub fn index(&self) -> VersionIndex {
+        VersionIndex(self.0 & VERSYM_VERSION)
+    }
+
+    /// Return true if it is the local index.
+    pub fn is_local(&self) -> bool {
+        self.index() == VER_NDX_LOCAL
+    }
+
+    /// Return true if it is the global index.
+    pub fn is_global(&self) -> bool {
+        self.index() == VER_NDX_GLOBAL
+    }
+
+    /// Return the hidden flag.
+    pub fn is_hidden(&self) -> bool {
+        self.contains(VERSYM_HIDDEN)
+    }
+}
+
+impl From<VersionIndex> for VersymIndex {
+    fn from(value: VersionIndex) -> Self {
+        VersymIndex(value.0)
+    }
+}
+
+impl From<VersymIndex> for VersionIndex {
+    fn from(value: VersymIndex) -> Self {
+        value.index()
+    }
+}
+
+newtype_flag_names!(NAMES_VERSYM: VersymIndex(u16) = {
+    /// Symbol is hidden.
+    VERSYM_HIDDEN = 0x8000,
+    /// Symbol version index.
+    VERSYM_VERSION = 0x7fff => NAMES_VER_NDX,
+});
 
 /// Version definition sections
 #[derive(Debug, Clone, Copy)]
@@ -1891,9 +2455,9 @@ pub struct Verdef<E: Endian> {
     /// Version revision
     pub vd_version: U16<E>,
     /// Version information
-    pub vd_flags: U16<E>,
+    pub vd_flags: U16<E, VersionFlags>,
     /// Version Index
-    pub vd_ndx: U16<E>,
+    pub vd_ndx: U16<E, VersionIndex>,
     /// Number of associated aux entries
     pub vd_cnt: U16<E>,
     /// Version name hash value
@@ -1910,18 +2474,51 @@ pub const VER_DEF_NONE: u16 = 0;
 /// Current version
 pub const VER_DEF_CURRENT: u16 = 1;
 
-// Legal values for vd_flags (version information flags).
-/// Version definition of file itself
-pub const VER_FLG_BASE: u16 = 0x1;
-// Legal values for vd_flags and vna_flags (version information flags).
-/// Weak version identifier
-pub const VER_FLG_WEAK: u16 = 0x2;
+newtype!(
+    /// Legal values for vd_flags and vna_flags (version information flags).
+    struct VersionFlags(u16);
+);
 
-// Versym symbol index values.
-/// Symbol is local.
-pub const VER_NDX_LOCAL: u16 = 0;
-/// Symbol is global.
-pub const VER_NDX_GLOBAL: u16 = 1;
+newtype_flag_names!(NAMES_VER_FLG: VersionFlags(u16) = {
+    // Legal values for vd_flags (version information flags).
+    /// Version definition of file itself
+    VER_FLG_BASE = 0x1,
+    // Legal values for vd_flags and vna_flags (version information flags).
+    /// Weak version identifier
+    VER_FLG_WEAK = 0x2,
+});
+
+newtype!(
+    /// Version index.
+    ///
+    /// This is the index value stored in [`VersymIndex`], [`Verdef::vd_ndx`] or
+    /// [`Vernaux::vna_other`].
+    struct VersionIndex(u16);
+);
+
+impl VersionIndex {
+    /// Return true if it is the local index.
+    pub fn is_local(&self) -> bool {
+        *self == VER_NDX_LOCAL
+    }
+
+    /// Return true if it is the global index.
+    pub fn is_global(&self) -> bool {
+        *self == VER_NDX_GLOBAL
+    }
+
+    /// Return true if it is the local or global index.
+    pub fn is_special(&self) -> bool {
+        self.0 <= VER_NDX_GLOBAL.0
+    }
+}
+
+newtype_constant_names!(NAMES_VER_NDX: VersionIndex(u16) = {
+    /// Symbol is local.
+    VER_NDX_LOCAL = 0,
+    /// Symbol is global.
+    VER_NDX_GLOBAL = 1,
+});
 
 /// Auxiliary version information.
 #[derive(Debug, Clone, Copy)]
@@ -1962,9 +2559,9 @@ pub struct Vernaux<E: Endian> {
     /// Hash value of dependency name
     pub vna_hash: U32<E>,
     /// Dependency specific information
-    pub vna_flags: U16<E>,
+    pub vna_flags: U16<E, VersionFlags>,
     /// Version Index
-    pub vna_other: U16<E>,
+    pub vna_other: U16<E, VersionIndex>,
     /// Dependency name string offset
     pub vna_name: U32<E>,
     /// Offset in bytes to next vernaux entry
@@ -2085,12 +2682,104 @@ pub const ELF_NOTE_OS_SOLARIS2: u32 = 2;
 /// OS descriptor for `NT_GNU_ABI_TAG`.
 pub const ELF_NOTE_OS_FREEBSD: u32 = 3;
 
-// Values used in GNU .note.gnu.property notes (NT_GNU_PROPERTY_TYPE_0).
+newtype!(
+    /// Values used in GNU .note.gnu.property notes (NT_GNU_PROPERTY_TYPE_0).
+    struct GnuPropertyType(u32);
+);
 
-/// Stack size.
-pub const GNU_PROPERTY_STACK_SIZE: u32 = 1;
-/// No copy relocation on protected data symbol.
-pub const GNU_PROPERTY_NO_COPY_ON_PROTECTED: u32 = 2;
+impl GnuPropertyType {
+    /// A 4-byte unsigned integer property: A bit is set if it is set in all
+    /// relocatable inputs.
+    pub fn is_uint32_and(self) -> bool {
+        self.0 >= GNU_PROPERTY_UINT32_AND_LO && self.0 <= GNU_PROPERTY_UINT32_AND_HI
+    }
+    /// A 4-byte unsigned integer property: A bit is set if it is set in any
+    /// relocatable inputs.
+    pub fn is_uint32_or(self) -> bool {
+        self.0 >= GNU_PROPERTY_UINT32_OR_LO && self.0 <= GNU_PROPERTY_UINT32_OR_HI
+    }
+    /// Return true if the property is in the processor-specific range.
+    pub fn is_proc(self) -> bool {
+        self.0 >= GNU_PROPERTY_LOPROC && self.0 <= GNU_PROPERTY_HIPROC
+    }
+    /// Return true if the property is in the application-specific range.
+    pub fn is_user(self) -> bool {
+        debug_assert_eq!(GNU_PROPERTY_HIUSER, !0);
+        self.0 >= GNU_PROPERTY_LOUSER
+    }
+    /// A 4-byte unsigned integer property: A bit is set if it is set in all
+    /// relocatable inputs.
+    pub fn is_x86_uint32_and(self) -> bool {
+        self.0 >= GNU_PROPERTY_X86_UINT32_AND_LO && self.0 <= GNU_PROPERTY_X86_UINT32_AND_HI
+    }
+    /// A 4-byte unsigned integer property: A bit is set if it is set in any
+    /// relocatable inputs.
+    pub fn is_x86_uint32_or(self) -> bool {
+        self.0 >= GNU_PROPERTY_X86_UINT32_OR_LO && self.0 <= GNU_PROPERTY_X86_UINT32_OR_HI
+    }
+    /// A 4-byte unsigned integer property: A bit is set if it is set in any
+    /// relocatable inputs and the property is present in all relocatable
+    /// inputs.
+    pub fn is_x86_uint32_or_and(self) -> bool {
+        self.0 >= GNU_PROPERTY_X86_UINT32_OR_AND_LO && self.0 <= GNU_PROPERTY_X86_UINT32_OR_AND_HI
+    }
+
+    /// Return the property type names for the given machine.
+    #[cfg(feature = "names")]
+    pub fn type_names(machine: Machine) -> &'static ConstantNames<Self> {
+        match machine {
+            EM_386 | EM_X86_64 => &NAMES_GNU_PROPERTY_X86,
+            EM_AARCH64 => &NAMES_GNU_PROPERTY_AARCH64,
+            _ => &NAMES_GNU_PROPERTY,
+        }
+    }
+
+    /// Return the property values names for the given machine if the property
+    /// data is a u32.
+    #[cfg(feature = "names")]
+    pub fn u32_value_names(self, machine: Machine) -> Option<&'static FlagNames<u32>> {
+        match self {
+            GNU_PROPERTY_1_NEEDED => {
+                return Some(&NAMES_GNU_PROPERTY_1_NEEDED);
+            }
+            _ => {}
+        }
+        match machine {
+            EM_386 | EM_X86_64 => match self {
+                GNU_PROPERTY_X86_ISA_1_USED | GNU_PROPERTY_X86_ISA_1_NEEDED => {
+                    return Some(&NAMES_GNU_PROPERTY_X86_ISA_1);
+                }
+                GNU_PROPERTY_X86_FEATURE_1_AND => {
+                    return Some(&NAMES_GNU_PROPERTY_X86_FEATURE_1);
+                }
+                _ => {}
+            },
+            EM_AARCH64 => match self {
+                GNU_PROPERTY_AARCH64_FEATURE_1_AND => {
+                    return Some(&NAMES_GNU_PROPERTY_AARCH64_FEATURE_1);
+                }
+                _ => {}
+            },
+            _ => {}
+        }
+        None
+    }
+}
+
+newtype_constant_names!(NAMES_GNU_PROPERTY: GnuPropertyType(u32) = {
+    /// Stack size.
+    GNU_PROPERTY_STACK_SIZE = 1,
+    /// No copy relocation on protected data symbol.
+    GNU_PROPERTY_NO_COPY_ON_PROTECTED = 2,
+    /// The needed properties by the object file.  */
+    GNU_PROPERTY_1_NEEDED = GNU_PROPERTY_UINT32_OR_LO,
+});
+
+flag_names!(NAMES_GNU_PROPERTY_1_NEEDED: u32 = {
+    /// Set if the object file requires canonical function pointers and
+    /// cannot be used with copy relocation.
+    GNU_PROPERTY_1_NEEDED_INDIRECT_EXTERN_ACCESS = 1 << 0,
+});
 
 // A 4-byte unsigned integer property: A bit is set if it is set in all
 // relocatable inputs.
@@ -2102,13 +2791,6 @@ pub const GNU_PROPERTY_UINT32_AND_HI: u32 = 0xb0007fff;
 pub const GNU_PROPERTY_UINT32_OR_LO: u32 = 0xb0008000;
 pub const GNU_PROPERTY_UINT32_OR_HI: u32 = 0xb000ffff;
 
-/// The needed properties by the object file.  */
-pub const GNU_PROPERTY_1_NEEDED: u32 = GNU_PROPERTY_UINT32_OR_LO;
-
-/// Set if the object file requires canonical function pointers and
-/// cannot be used with copy relocation.
-pub const GNU_PROPERTY_1_NEEDED_INDIRECT_EXTERN_ACCESS: u32 = 1 << 0;
-
 /// Processor-specific semantics, lo
 pub const GNU_PROPERTY_LOPROC: u32 = 0xc0000000;
 /// Processor-specific semantics, hi
@@ -2118,12 +2800,15 @@ pub const GNU_PROPERTY_LOUSER: u32 = 0xe0000000;
 /// Application-specific semantics, hi
 pub const GNU_PROPERTY_HIUSER: u32 = 0xffffffff;
 
-/// AArch64 specific GNU properties.
-pub const GNU_PROPERTY_AARCH64_FEATURE_1_AND: u32 = 0xc0000000;
-pub const GNU_PROPERTY_AARCH64_FEATURE_PAUTH: u32 = 0xc0000001;
+constant_names!(NAMES_GNU_PROPERTY_AARCH64: GnuPropertyType(u32) = NAMES_GNU_PROPERTY + {
+    GNU_PROPERTY_AARCH64_FEATURE_1_AND = 0xc0000000,
+    GNU_PROPERTY_AARCH64_FEATURE_PAUTH = 0xc0000001,
+});
 
-pub const GNU_PROPERTY_AARCH64_FEATURE_1_BTI: u32 = 1 << 0;
-pub const GNU_PROPERTY_AARCH64_FEATURE_1_PAC: u32 = 1 << 1;
+flag_names!(NAMES_GNU_PROPERTY_AARCH64_FEATURE_1: u32 = {
+    GNU_PROPERTY_AARCH64_FEATURE_1_BTI = 1 << 0,
+    GNU_PROPERTY_AARCH64_FEATURE_1_PAC = 1 << 1,
+});
 
 // A 4-byte unsigned integer property: A bit is set if it is set in all
 // relocatable inputs.
@@ -2141,33 +2826,39 @@ pub const GNU_PROPERTY_X86_UINT32_OR_HI: u32 = 0xc000ffff;
 pub const GNU_PROPERTY_X86_UINT32_OR_AND_LO: u32 = 0xc0010000;
 pub const GNU_PROPERTY_X86_UINT32_OR_AND_HI: u32 = 0xc0017fff;
 
-/// The x86 instruction sets indicated by the corresponding bits are
-/// used in program.  Their support in the hardware is optional.
-pub const GNU_PROPERTY_X86_ISA_1_USED: u32 = 0xc0010002;
-/// The x86 instruction sets indicated by the corresponding bits are
-/// used in program and they must be supported by the hardware.
-pub const GNU_PROPERTY_X86_ISA_1_NEEDED: u32 = 0xc0008002;
-/// X86 processor-specific features used in program.
-pub const GNU_PROPERTY_X86_FEATURE_1_AND: u32 = 0xc0000002;
+constant_names!(NAMES_GNU_PROPERTY_X86: GnuPropertyType(u32) = NAMES_GNU_PROPERTY + {
+    /// The x86 instruction sets indicated by the corresponding bits are
+    /// used in program.  Their support in the hardware is optional.
+    GNU_PROPERTY_X86_ISA_1_USED = 0xc0010002,
+    /// The x86 instruction sets indicated by the corresponding bits are
+    /// used in program and they must be supported by the hardware.
+    GNU_PROPERTY_X86_ISA_1_NEEDED = 0xc0008002,
+    /// X86 processor-specific features used in program.
+    GNU_PROPERTY_X86_FEATURE_1_AND = 0xc0000002,
+});
 
-/// GNU_PROPERTY_X86_ISA_1_BASELINE: CMOV, CX8 (cmpxchg8b), FPU (fld),
-/// MMX, OSFXSR (fxsave), SCE (syscall), SSE and SSE2.
-pub const GNU_PROPERTY_X86_ISA_1_BASELINE: u32 = 1 << 0;
-/// GNU_PROPERTY_X86_ISA_1_V2: GNU_PROPERTY_X86_ISA_1_BASELINE,
-/// CMPXCHG16B (cmpxchg16b), LAHF-SAHF (lahf), POPCNT (popcnt), SSE3,
-/// SSSE3, SSE4.1 and SSE4.2.
-pub const GNU_PROPERTY_X86_ISA_1_V2: u32 = 1 << 1;
-/// GNU_PROPERTY_X86_ISA_1_V3: GNU_PROPERTY_X86_ISA_1_V2, AVX, AVX2, BMI1,
-/// BMI2, F16C, FMA, LZCNT, MOVBE, XSAVE.
-pub const GNU_PROPERTY_X86_ISA_1_V3: u32 = 1 << 2;
-/// GNU_PROPERTY_X86_ISA_1_V4: GNU_PROPERTY_X86_ISA_1_V3, AVX512F,
-/// AVX512BW, AVX512CD, AVX512DQ and AVX512VL.
-pub const GNU_PROPERTY_X86_ISA_1_V4: u32 = 1 << 3;
+flag_names!(NAMES_GNU_PROPERTY_X86_ISA_1: u32 = {
+    /// GNU_PROPERTY_X86_ISA_1_BASELINE: CMOV, CX8 (cmpxchg8b), FPU (fld),
+    /// MMX, OSFXSR (fxsave), SCE (syscall), SSE and SSE2.
+    GNU_PROPERTY_X86_ISA_1_BASELINE = 1 << 0,
+    /// GNU_PROPERTY_X86_ISA_1_V2: GNU_PROPERTY_X86_ISA_1_BASELINE,
+    /// CMPXCHG16B (cmpxchg16b), LAHF-SAHF (lahf), POPCNT (popcnt), SSE3,
+    /// SSSE3, SSE4.1 and SSE4.2.
+    GNU_PROPERTY_X86_ISA_1_V2 = 1 << 1,
+    /// GNU_PROPERTY_X86_ISA_1_V3: GNU_PROPERTY_X86_ISA_1_V2, AVX, AVX2, BMI1,
+    /// BMI2, F16C, FMA, LZCNT, MOVBE, XSAVE.
+    GNU_PROPERTY_X86_ISA_1_V3 = 1 << 2,
+    /// GNU_PROPERTY_X86_ISA_1_V4: GNU_PROPERTY_X86_ISA_1_V3, AVX512F,
+    /// AVX512BW, AVX512CD, AVX512DQ and AVX512VL.
+    GNU_PROPERTY_X86_ISA_1_V4 = 1 << 3,
+});
 
-/// This indicates that all executable sections are compatible with IBT.
-pub const GNU_PROPERTY_X86_FEATURE_1_IBT: u32 = 1 << 0;
-/// This indicates that all executable sections are compatible with SHSTK.
-pub const GNU_PROPERTY_X86_FEATURE_1_SHSTK: u32 = 1 << 1;
+flag_names!(NAMES_GNU_PROPERTY_X86_FEATURE_1: u32 = {
+    /// This indicates that all executable sections are compatible with IBT.
+    GNU_PROPERTY_X86_FEATURE_1_IBT = 1 << 0,
+    /// This indicates that all executable sections are compatible with SHSTK.
+    GNU_PROPERTY_X86_FEATURE_1_SHSTK = 1 << 1,
+});
 
 // Note types for `ELF_NOTE_GO`.
 constant_names!(NAMES_NT_GO: u32 = {
@@ -2525,7 +3216,7 @@ constants! {
         R_SHARC_CALC_PUSH_LEN = 0xec,
         R_SHARC_CALC_NOT = 0xf6,
     };
-    consts sht: u32 = {
+    consts sht: SectionType(u32) = {
         /// .adi.attributes
         SHT_SHARC_ADI_ATTRIBUTES = SHT_LOPROC + 0x2,
     };
@@ -2535,11 +3226,11 @@ constants! {
 
 constants! {
     struct Sparc(Base);
-    consts stt: u8 = {
+    consts stt: SymbolType(u8) = {
         /// Global register reserved to app.
         STT_SPARC_REGISTER = 13,
     };
-    flags ef: u32 = {
+    flags ef: FileFlags(u32) = {
         /// little endian data
         EF_SPARC_LEDATA = 0x80_0000,
         /// generic V8+ features
@@ -2704,7 +3395,7 @@ constants! {
         R_SPARC_GNU_VTENTRY = 251,
         R_SPARC_REV32 = 252,
     };
-    consts dt: i64 = {
+    consts dt: DynamicTag(i64) = {
         DT_SPARC_REGISTER = 0x7000_0001,
     };
 }
@@ -2713,12 +3404,12 @@ pub const EF_SPARC_EXT_MASK: u32 = 0xFF_FF00;
 
 constants! {
     struct SparcV9(Sparc);
-    flags ef: u32 = {
+    flags ef: FileFlags(u32) = {
         EF_SPARCV9_MM = 3 => NAMES_EF_SPARC_MM,
     };
 }
 
-constant_names!(NAMES_EF_SPARC_MM: u32 = {
+constant_names!(NAMES_EF_SPARC_MM: FileFlags(u32) = {
     EF_SPARCV9_TSO = 0,
     EF_SPARCV9_PSO = 1,
     EF_SPARCV9_RMO = 2,
@@ -2728,7 +3419,7 @@ constant_names!(NAMES_EF_SPARC_MM: u32 = {
 
 constants! {
     struct Mips(Base);
-    flags ef: u32 = {
+    flags ef: FileFlags(u32) = {
         /// A .noreorder directive was used.
         EF_MIPS_NOREORDER = 1,
         /// Contains PIC code.
@@ -2748,7 +3439,7 @@ constants! {
         /// MIPS architecture level.
         EF_MIPS_ARCH = 0xf000_0000 => NAMES_EF_MIPS_ARCH,
     };
-    consts shn: u16 = {
+    consts shn: SymbolSection(u16) = {
         /// Allocated common symbols.
         SHN_MIPS_ACOMMON = 0xff00,
         /// Allocated test symbols.
@@ -2760,7 +3451,7 @@ constants! {
         /// Small undefined symbols.
         SHN_MIPS_SUNDEFINED = 0xff04,
     };
-    consts sht: u32 = {
+    consts sht: SectionType(u32) = {
         /// Shared objects used in link.
         SHT_MIPS_LIBLIST = 0x7000_0000,
         SHT_MIPS_MSYM = 0x7000_0001,
@@ -2810,7 +3501,7 @@ constants! {
         SHT_MIPS_XLATE_OLD = 0x7000_0028,
         SHT_MIPS_PDR_EXCEPTION = 0x7000_0029,
     };
-    flags shf: u32 = {
+    flags shf: SectionFlags(u64) = {
         /// Must be in global data area.
         SHF_MIPS_GPREL = 0x1000_0000,
         SHF_MIPS_MERGE = 0x2000_0000,
@@ -2821,10 +3512,10 @@ constants! {
         SHF_MIPS_NAMES = 0x0200_0000,
         SHF_MIPS_NODUPE = 0x0100_0000,
     };
-    flags sto: u8 = {
+    flags sto: SymbolOther(u8) = {
         STO_MIPS_PLT = 0x8,
     };
-    consts stb: u8 = {
+    consts stb: SymbolBind(u8) = {
         STB_MIPS_SPLIT_COMMON = 13,
     };
     consts r: u32 = {
@@ -2907,7 +3598,7 @@ constants! {
         R_MIPS_COPY = 126,
         R_MIPS_JUMP_SLOT = 127,
     };
-    consts pt: u32 = {
+    consts pt: ProgramType(u32) = {
         /// Register usage information.
         PT_MIPS_REGINFO = 0x7000_0000,
         /// Runtime procedure table.
@@ -2916,10 +3607,10 @@ constants! {
         /// FP mode requirement.
         PT_MIPS_ABIFLAGS = 0x7000_0003,
     };
-    flags pf: u32 = {
+    flags pf: ProgramFlags(u32) = {
         PF_MIPS_LOCAL = 0x1000_0000,
     };
-    consts dt: i64 = {
+    consts dt: DynamicTag(i64) = {
         /// Runtime linker interface version
         DT_MIPS_RLD_VERSION = 0x7000_0001,
         /// Timestamp
@@ -3007,7 +3698,7 @@ constants! {
     };
 }
 
-constant_names!(NAMES_EF_MIPS_ABI: u32 = {
+constant_names!(NAMES_EF_MIPS_ABI: FileFlags(u32) = {
     /// The first MIPS 32 bit ABI
     EF_MIPS_ABI_O32 = 0x0000_1000,
     /// O32 ABI extended for 64-bit architectures
@@ -3018,7 +3709,7 @@ constant_names!(NAMES_EF_MIPS_ABI: u32 = {
     EF_MIPS_ABI_EABI64 = 0x0000_4000,
 });
 
-constant_names!(NAMES_EF_MIPS_ARCH: u32 = {
+constant_names!(NAMES_EF_MIPS_ARCH: FileFlags(u32) = {
     /// -mips1 code.
     EF_MIPS_ARCH_1 = 0x0000_0000,
     /// -mips2 code.
@@ -3163,7 +3854,7 @@ pub const LL_DELTA: u32 = 1 << 5;
 
 constants! {
     struct Parisc(Base);
-    flags ef: u32 = {
+    flags ef: FileFlags(u32) = {
         /// Trap nil pointer dereference.
         EF_PARISC_TRAPNIL = 0x0001_0000,
         /// Program uses arch. extensions.
@@ -3179,13 +3870,13 @@ constants! {
         /// Architecture version.
         EF_PARISC_ARCH = 0x0000_ffff => NAMES_EFA_PARISC,
     };
-    consts shn: u16 = {
+    consts shn: SymbolSection(u16) = {
         /// Section for tentatively declared symbols in ANSI C.
         SHN_PARISC_ANSI_COMMON = 0xff00,
         /// Common blocks in huge model.
         SHN_PARISC_HUGE_COMMON = 0xff01,
     };
-    consts sht: u32 = {
+    consts sht: SectionType(u32) = {
         /// Contains product specific ext.
         SHT_PARISC_EXT = 0x7000_0000,
         /// Unwind information.
@@ -3193,7 +3884,7 @@ constants! {
         /// Debug info for optimized code.
         SHT_PARISC_DOC = 0x7000_0002,
     };
-    flags shf: u32 = {
+    flags shf: SectionFlags(u64) = {
         /// Section with short addressing.
         SHF_PARISC_SHORT = 0x2000_0000,
         /// Section far from gp.
@@ -3201,7 +3892,7 @@ constants! {
         /// Static branch prediction code.
         SHF_PARISC_SBP = 0x8000_0000,
     };
-    consts stt: u8 = {
+    consts stt: SymbolType(u8) = {
         /// Millicode function entry point.
         STT_PARISC_MILLICODE = 13,
         STT_HP_OPAQUE = STT_LOOS + 0x1,
@@ -3419,7 +4110,7 @@ constants! {
         R_PARISC_TLS_TPREL64 = R_PARISC_TPREL64,
         R_PARISC_HIRESERVE = 255,
     };
-    consts pt: u32 = {
+    consts pt: ProgramType(u32) = {
         PT_HP_TLS = PT_LOOS + 0x0,
         PT_HP_CORE_NONE = PT_LOOS + 0x1,
         PT_HP_CORE_VERSION = PT_LOOS + 0x2,
@@ -3439,7 +4130,7 @@ constants! {
         PT_PARISC_ARCHEXT = 0x7000_0000,
         PT_PARISC_UNWIND = 0x7000_0001,
     };
-    flags pf: u32 = {
+    flags pf: ProgramFlags(u32) = {
         PF_PARISC_SBP = 0x0800_0000,
 
         PF_HP_PAGE_SIZE = 0x0010_0000,
@@ -3452,7 +4143,7 @@ constants! {
     };
 }
 
-constant_names!(NAMES_EFA_PARISC: u32 = {
+constant_names!(NAMES_EFA_PARISC: FileFlags(u32) = {
     /// PA-RISC 1.0 big-endian.
     EFA_PARISC_1_0 = 0x020b,
     /// PA-RISC 1.1 big-endian.
@@ -3465,21 +4156,21 @@ constant_names!(NAMES_EFA_PARISC: u32 = {
 
 constants! {
     struct Alpha(Base);
-    flags ef: u32 = {
+    flags ef: FileFlags(u32) = {
         /// All addresses must be < 2GB.
         EF_ALPHA_32BIT = 1,
         /// Relocations for relaxing exist.
         EF_ALPHA_CANRELAX = 2,
     };
-    consts sht: u32 = {
+    consts sht: SectionType(u32) = {
         // These two are primarily concerned with ECOFF debugging info.
         SHT_ALPHA_DEBUG = 0x7000_0001,
         SHT_ALPHA_REGINFO = 0x7000_0002,
     };
-    flags shf: u32 = {
+    flags shf: SectionFlags(u64) = {
         SHF_ALPHA_GPREL = 0x1000_0000,
     };
-    flags sto: u8 = {
+    flags sto: SymbolOther(u8) = {
         /// No PV required.
         STO_ALPHA_NOPV = 0x80,
         /// PV only used for initial ldgp.
@@ -3539,7 +4230,7 @@ constants! {
         R_ALPHA_TPRELLO = 40,
         R_ALPHA_TPREL16 = 41,
     };
-    consts dt: i64 = {
+    consts dt: DynamicTag(i64) = {
         DT_ALPHA_PLTRO = DT_LOPROC + 0,
     };
 }
@@ -3556,7 +4247,7 @@ pub const LITUSE_ALPHA_TLS_LDM: u32 = 5;
 
 constants! {
     struct Ppc(Base);
-    flags ef: u32 = {
+    flags ef: FileFlags(u32) = {
         /// PowerPC embedded flag
         EF_PPC_EMB = 0x8000_0000,
 
@@ -3728,7 +4419,7 @@ constants! {
         /// still be in object files.
         R_PPC_TOC16 = 255,
     };
-    consts dt: i64 = {
+    consts dt: DynamicTag(i64) = {
         DT_PPC_GOT = DT_LOPROC + 0,
         DT_PPC_OPT = DT_LOPROC + 1,
     };
@@ -3958,7 +4649,7 @@ constants! {
         /// half16   (sym+add-.)@ha
         R_PPC64_REL16_HA = 252,
     };
-    consts dt: i64 = {
+    consts dt: DynamicTag(i64) = {
         DT_PPC64_GLINK = DT_LOPROC + 0,
         DT_PPC64_OPD = DT_LOPROC + 1,
         DT_PPC64_OPDSZ = DT_LOPROC + 2,
@@ -3986,7 +4677,7 @@ pub const STO_PPC64_LOCAL_MASK: u8 = 7 << STO_PPC64_LOCAL_BIT;
 
 constants! {
     struct Arm(Base);
-    flags ef: u32 = {
+    flags ef: FileFlags(u32) = {
         EF_ARM_RELEXEC = 0x01,
         EF_ARM_HASENTRY = 0x02,
         EF_ARM_INTERWORK = 0x04,
@@ -4007,19 +4698,19 @@ constants! {
 
         EF_ARM_EABIMASK = 0xff00_0000 => NAMES_EF_ARM_EABI,
     };
-    consts stt: u8 = {
+    consts stt: SymbolType(u8) = {
         /// A Thumb function.
         STT_ARM_TFUNC = STT_LOPROC,
         /// A Thumb label.
         STT_ARM_16BIT = STT_HIPROC,
     };
-    flags shf: u32 = {
+    flags shf: SectionFlags(u64) = {
         /// Section contains an entry point
         SHF_ARM_ENTRYSECT = 0x1000_0000,
         /// Section may be multiply defined in the input to a link step.
         SHF_ARM_COMDEF = 0x8000_0000,
     };
-    flags pf: u32 = {
+    flags pf: ProgramFlags(u32) = {
         /// Segment contains the location addressed by the static base.
         PF_ARM_SB = 0x1000_0000,
         /// Position-independent segment.
@@ -4027,11 +4718,11 @@ constants! {
         /// Absolute segment.
         PF_ARM_ABS = 0x4000_0000,
     };
-    consts pt: u32 = {
+    consts pt: ProgramType(u32) = {
         /// ARM unwind segment.
         PT_ARM_EXIDX = PT_LOPROC + 1,
     };
-    consts sht: u32 = {
+    consts sht: SectionType(u32) = {
         /// ARM unwind section.
         SHT_ARM_EXIDX = SHT_LOPROC + 1,
         /// Preemption details.
@@ -4271,7 +4962,7 @@ constants! {
     };
 }
 
-constant_names!(NAMES_EF_ARM_EABI: u32 = {
+constant_names!(NAMES_EF_ARM_EABI: FileFlags(u32) = {
     EF_ARM_EABI_UNKNOWN = 0x0000_0000,
     EF_ARM_EABI_VER1 = 0x0100_0000,
     EF_ARM_EABI_VER2 = 0x0200_0000,
@@ -4293,15 +4984,15 @@ pub const EF_ARM_MAPSYMSFIRST: u32 = 0x10;
 
 constants! {
     struct Aarch64(Base);
-    consts sht: u32 = {
+    consts sht: SectionType(u32) = {
         /// AArch64 attributes section.
         SHT_AARCH64_ATTRIBUTES = SHT_LOPROC + 3,
     };
-    flags sto: u8 = {
+    flags sto: SymbolOther(u8) = {
         // AArch64 values for `Sym64::st_other`.
         STO_AARCH64_VARIANT_PCS = 0x80,
     };
-    consts dt: i64 = {
+    consts dt: DynamicTag(i64) = {
         DT_AARCH64_BTI_PLT = DT_LOPROC + 1,
         DT_AARCH64_PAC_PLT = DT_LOPROC + 3,
         DT_AARCH64_VARIANT_PCS = DT_LOPROC + 5,
@@ -4588,7 +5279,7 @@ pub const DT_AARCH64_NUM: i64 = 6;
 
 constants! {
     struct Avr(Base);
-    flags ef: u32 = {
+    flags ef: FileFlags(u32) = {
         /// If set, it is assumed that the elf file uses local symbols as reference
         /// for the relocations so that linker relaxation is possible.
         EF_AVR_LINKRELAX_PREPARED = 0x80,
@@ -4639,7 +5330,7 @@ constants! {
     };
 }
 
-constant_names!(NAMES_EF_AVR_ARCH: u32 = {
+constant_names!(NAMES_EF_AVR_ARCH: FileFlags(u32) = {
     EF_AVR_ARCH_AVR1 = 1,
     EF_AVR_ARCH_AVR2 = 2,
     EF_AVR_ARCH_AVR25 = 25,
@@ -4789,10 +5480,10 @@ constants! {
         R_CKCORE_TLS_DTPOFF32 = 57,
         R_CKCORE_TLS_TPOFF32 = 58,
     };
-    flags ef: u32 = {
+    flags ef: FileFlags(u32) = {
         _ = EF_CSKY_ABIMASK => NAMES_EF_CSKY_ABI,
     };
-    consts sht: u32 = {
+    consts sht: SectionType(u32) = {
         /// C-SKY attributes section.
         SHT_CSKY_ATTRIBUTES = SHT_LOPROC + 1,
     };
@@ -4802,7 +5493,7 @@ pub const EF_CSKY_ABIMASK: u32 = 0xF000_0000;
 pub const EF_CSKY_OTHER: u32 = 0x0FFF_0000;
 pub const EF_CSKY_PROCESSOR: u32 = 0x0000_FFFF;
 
-constant_names!(NAMES_EF_CSKY_ABI: u32 = {
+constant_names!(NAMES_EF_CSKY_ABI: FileFlags(u32) = {
     EF_CSKY_ABIV1 = 0x1000_0000,
     EF_CSKY_ABIV2 = 0x2000_0000,
 });
@@ -4811,11 +5502,11 @@ constant_names!(NAMES_EF_CSKY_ABI: u32 = {
 
 constants! {
     struct Ia64(Base);
-    flags ef: u32 = {
+    flags ef: FileFlags(u32) = {
         /// 64-bit ABI
         EF_IA_64_ABI64 = 0x0000_0010,
     };
-    consts pt: u32 = {
+    consts pt: ProgramType(u32) = {
         /// arch extension bits
         PT_IA_64_ARCHEXT = PT_LOPROC + 0,
         /// ia64 unwind bits
@@ -4824,23 +5515,23 @@ constants! {
         PT_IA_64_HP_HSL_ANOT = PT_LOOS + 0x13,
         PT_IA_64_HP_STACK = PT_LOOS + 0x14,
     };
-    flags pf: u32 = {
+    flags pf: ProgramFlags(u32) = {
         /// spec insns w/o recovery
         PF_IA_64_NORECOV = 0x8000_0000,
     };
-    consts sht: u32 = {
+    consts sht: SectionType(u32) = {
         /// extension bits
         SHT_IA_64_EXT = SHT_LOPROC + 0,
         /// unwind bits
         SHT_IA_64_UNWIND = SHT_LOPROC + 1,
     };
-    flags shf: u32 = {
+    flags shf: SectionFlags(u64) = {
         /// section near gp
         SHF_IA_64_SHORT = 0x1000_0000,
         /// spec insns w/o recovery
         SHF_IA_64_NORECOV = 0x2000_0000,
     };
-    consts dt: i64 = {
+    consts dt: DynamicTag(i64) = {
         DT_IA_64_PLT_RESERVE = DT_LOPROC + 0,
     };
     consts r: u32 = {
@@ -5018,7 +5709,7 @@ pub const EF_IA_64_ARCH: u32 = 0xff00_0000;
 
 constants! {
     struct Sh(Base);
-    flags ef: u32 = {
+    flags ef: FileFlags(u32) = {
         EF_SH_MACH_MASK = 0x1f => NAMES_EF_SH_MACH,
     };
     consts r: u32 = {
@@ -5066,7 +5757,7 @@ constants! {
 
 constants! {
     struct S390(Base);
-    flags ef: u32 = {
+    flags ef: FileFlags(u32) = {
         /// High GPRs kernel facility needed.
         EF_S390_HIGH_GPRS = 0x0000_0001,
     };
@@ -5198,7 +5889,7 @@ constants! {
     };
 }
 
-constant_names!(NAMES_EF_SH_MACH: u32 = {
+constant_names!(NAMES_EF_SH_MACH: FileFlags(u32) = {
     EF_SH_UNKNOWN = 0x0,
     EF_SH1 = 0x1,
     EF_SH2 = 0x2,
@@ -5354,7 +6045,7 @@ constants! {
         /// 32-bit PC relative to TLS descriptor in GOT if the instruction starts at 6 bytes before the relocation offset.
         R_X86_64_CODE_6_GOTPC32_TLSDESC = 51,
     };
-    consts sht: u32 = {
+    consts sht: SectionType(u32) = {
         /// Unwind information.
         SHT_X86_64_UNWIND = 0x7000_0001,
     };
@@ -5597,7 +6288,7 @@ constants! {
 // Nios II
 constants! {
     struct Nios2(Base);
-    consts dt: i64 = {
+    consts dt: DynamicTag(i64) = {
         /// Address of _gp.
         DT_NIOS2_GP = 0x7000_0002,
     };
@@ -6140,25 +6831,25 @@ constants! {
 
 constants! {
     struct Riscv(Base);
-    flags ef: u32 = {
+    flags ef: FileFlags(u32) = {
         EF_RISCV_RVC = 0x0001,
         EF_RISCV_FLOAT_ABI = 0x0006 => NAMES_EF_RISCV_FLOAT_ABI,
         EF_RISCV_RVE = 0x0008,
         EF_RISCV_TSO = 0x0010,
         EF_RISCV_RV64ILP32 = 0x0020,
     };
-    flags sto: u8 = {
+    flags sto: SymbolOther(u8) = {
         /// Function uses variant calling convention.
         STO_RISCV_VARIANT_CC = 0x80,
     };
-    consts sht: u32 = {
+    consts sht: SectionType(u32) = {
         /// RISC-V attributes section.
         SHT_RISCV_ATTRIBUTES = SHT_LOPROC + 3,
     };
-    consts pt: u32 = {
+    consts pt: ProgramType(u32) = {
         PT_RISCV_ATTRIBUTES = PT_LOPROC + 3,
     };
-    consts dt: i64 = {
+    consts dt: DynamicTag(i64) = {
         DT_RISCV_VARIANT_CC = DT_LOPROC + 1,
     };
     consts r: u32 = {
@@ -6228,7 +6919,7 @@ constants! {
     };
 }
 
-constant_names!(NAMES_EF_RISCV_FLOAT_ABI: u32 = {
+constant_names!(NAMES_EF_RISCV_FLOAT_ABI: FileFlags(u32) = {
     EF_RISCV_FLOAT_ABI_SOFT = 0x0000,
     EF_RISCV_FLOAT_ABI_SINGLE = 0x0002,
     EF_RISCV_FLOAT_ABI_DOUBLE = 0x0004,
@@ -6339,7 +7030,7 @@ constants! {
 
 constants! {
     struct Larch(Base);
-    flags ef: u32 = {
+    flags ef: FileFlags(u32) = {
         /// Additional properties of the base ABI type, including the FP calling
         /// convention.
         EF_LARCH_ABI_MODIFIER_MASK = 0x7 => NAMES_EF_LARCH_ABI,
@@ -6671,7 +7362,7 @@ constants! {
     };
 }
 
-constant_names!(NAMES_EF_LARCH_ABI: u32 = {
+constant_names!(NAMES_EF_LARCH_ABI: FileFlags(u32) = {
     /// Uses GPRs and the stack for parameter passing
     EF_LARCH_ABI_SOFT_FLOAT = 0x1,
     /// Uses GPRs, 32-bit FPRs and the stack for parameter passing
@@ -6796,7 +7487,7 @@ pub const E_E2K_MACH_8V7: u32 = 25;
 
 constants! {
     struct E2k(Base);
-    flags ef: u32 = {
+    flags ef: FileFlags(u32) = {
         EF_E2K_IPD = 3,
         EF_E2K_X86APP = 4,
         EF_E2K_4MB_PAGES = 8,
@@ -6901,7 +7592,7 @@ constants! {
         /// PC relative 64 bit in data.
         R_E2K_64_PC = 258,
     };
-    consts dt: i64 = {
+    consts dt: DynamicTag(i64) = {
         DT_E2K_LAZY = DT_LOPROC + 1,
         DT_E2K_LAZY_GOT = DT_LOPROC + 3,
 
@@ -6915,12 +7606,19 @@ constants! {
 
 pub const DT_E2K_NUM: i64 = 0x1021;
 
-#[allow(non_upper_case_globals)]
-pub const Tag_File: u8 = 1;
-#[allow(non_upper_case_globals)]
-pub const Tag_Section: u8 = 2;
-#[allow(non_upper_case_globals)]
-pub const Tag_Symbol: u8 = 3;
+newtype!(
+    /// Value for the subsubsection tag in an attributes section.
+    struct AttributeTag(u8);
+);
+
+newtype_constant_names!(NAMES_TAG: AttributeTag(u8) = {
+    #[allow(non_upper_case_globals)]
+    Tag_File = 1,
+    #[allow(non_upper_case_globals)]
+    Tag_Section = 2,
+    #[allow(non_upper_case_globals)]
+    Tag_Symbol = 3,
+});
 
 unsafe_impl_endian_pod!(
     FileHeader32,

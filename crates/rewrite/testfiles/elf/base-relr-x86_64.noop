@@ -181,8 +181,7 @@ ProgramHeader {
     }
     Dynamic {
         Tag: DT_FLAGS (0x1E)
-        Value: 0x8
-            DF_BIND_NOW (0x8)
+        Value: DF_BIND_NOW (0x8)
     }
     Dynamic {
         Tag: DT_FLAGS_1 (0x6FFFFFFB)
@@ -239,8 +238,7 @@ ProgramHeader {
         }
         Property {
             Type: GNU_PROPERTY_X86_ISA_1_NEEDED (0xC0008002)
-            Value: 0x1
-                GNU_PROPERTY_X86_ISA_1_BASELINE (0x1)
+            Value: GNU_PROPERTY_X86_ISA_1_BASELINE (0x1)
         }
     }
 }
@@ -355,8 +353,7 @@ SectionHeader {
         }
         Property {
             Type: GNU_PROPERTY_X86_ISA_1_NEEDED (0xC0008002)
-            Value: 0x1
-                GNU_PROPERTY_X86_ISA_1_BASELINE (0x1)
+            Value: GNU_PROPERTY_X86_ISA_1_BASELINE (0x1)
         }
     }
 }
@@ -929,8 +926,7 @@ SectionHeader {
     }
     Dynamic {
         Tag: DT_FLAGS (0x1E)
-        Value: 0x8
-            DF_BIND_NOW (0x8)
+        Value: DF_BIND_NOW (0x8)
     }
     Dynamic {
         Tag: DT_FLAGS_1 (0x6FFFFFFB)

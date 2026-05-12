@@ -137,8 +137,7 @@ ProgramHeader {
     }
     Dynamic {
         Tag: DT_FLAGS (0x1E)
-        Value: 0x8
-            DF_BIND_NOW (0x8)
+        Value: DF_BIND_NOW (0x8)
     }
     Dynamic {
         Tag: DT_FLAGS_1 (0x6FFFFFFB)
@@ -617,8 +616,7 @@ SectionHeader {
     }
     Dynamic {
         Tag: DT_FLAGS (0x1E)
-        Value: 0x8
-            DF_BIND_NOW (0x8)
+        Value: DF_BIND_NOW (0x8)
     }
     Dynamic {
         Tag: DT_FLAGS_1 (0x6FFFFFFB)

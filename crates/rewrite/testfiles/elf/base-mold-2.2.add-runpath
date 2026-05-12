@@ -181,8 +181,7 @@ ProgramHeader {
     }
     Dynamic {
         Tag: DT_FLAGS_1 (0x6FFFFFFB)
-        Value: 0x8000000
-            DF_1_PIE (0x8000000)
+        Value: DF_1_PIE (0x8000000)
     }
     Dynamic {
         Tag: DT_DEBUG (0x15)
@@ -655,8 +654,7 @@ SectionHeader {
     }
     Dynamic {
         Tag: DT_FLAGS_1 (0x6FFFFFFB)
-        Value: 0x8000000
-            DF_1_PIE (0x8000000)
+        Value: DF_1_PIE (0x8000000)
     }
     Dynamic {
         Tag: DT_DEBUG (0x15)

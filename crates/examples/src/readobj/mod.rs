@@ -236,19 +236,6 @@ impl<'a> Printer<'a> {
         self.field(name, value);
     }
 
-    fn field_enums<T: Eq + fmt::UpperHex>(&mut self, name: &str, value: T, enums: &[&[Flag<T>]]) {
-        for flags in enums {
-            for flag in *flags {
-                if value == flag.value {
-                    self.field_name(name);
-                    writeln!(self.w, "{} (0x{:X})", flag.name, value).unwrap();
-                    return;
-                }
-            }
-        }
-        self.field_hex(name, value);
-    }
-
     fn field_consts<T>(&mut self, name: &str, value: T, consts: &ConstantNames<T>)
     where
         T: Wrap + Copy,

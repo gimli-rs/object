@@ -151,9 +151,9 @@ where
     fn permissions(&self) -> Permissions {
         let p_flags = self.segment.p_flags(self.file.endian);
         Permissions::new(
-            p_flags & elf::PF_R != 0,
-            p_flags & elf::PF_W != 0,
-            p_flags & elf::PF_X != 0,
+            p_flags.contains(elf::PF_R),
+            p_flags.contains(elf::PF_W),
+            p_flags.contains(elf::PF_X),
         )
     }
 }
@@ -165,8 +165,8 @@ pub trait ProgramHeader: Debug + Pod {
     type Word: Into<u64>;
     type Endian: endian::Endian;
 
-    fn p_type(&self, endian: Self::Endian) -> u32;
-    fn p_flags(&self, endian: Self::Endian) -> u32;
+    fn p_type(&self, endian: Self::Endian) -> elf::ProgramType;
+    fn p_flags(&self, endian: Self::Endian) -> elf::ProgramFlags;
     fn p_offset(&self, endian: Self::Endian) -> Self::Word;
     fn p_vaddr(&self, endian: Self::Endian) -> Self::Word;
     fn p_paddr(&self, endian: Self::Endian) -> Self::Word;
@@ -289,12 +289,12 @@ impl<Endian: endian::Endian> ProgramHeader for elf::ProgramHeader32<Endian> {
     type Elf = elf::FileHeader32<Endian>;
 
     #[inline]
-    fn p_type(&self, endian: Self::Endian) -> u32 {
+    fn p_type(&self, endian: Self::Endian) -> elf::ProgramType {
         self.p_type.get(endian)
     }
 
     #[inline]
-    fn p_flags(&self, endian: Self::Endian) -> u32 {
+    fn p_flags(&self, endian: Self::Endian) -> elf::ProgramFlags {
         self.p_flags.get(endian)
     }
 
@@ -335,12 +335,12 @@ impl<Endian: endian::Endian> ProgramHeader for elf::ProgramHeader64<Endian> {
     type Elf = elf::FileHeader64<Endian>;
 
     #[inline]
-    fn p_type(&self, endian: Self::Endian) -> u32 {
+    fn p_type(&self, endian: Self::Endian) -> elf::ProgramType {
         self.p_type.get(endian)
     }
 
     #[inline]
-    fn p_flags(&self, endian: Self::Endian) -> u32 {
+    fn p_flags(&self, endian: Self::Endian) -> elf::ProgramFlags {
         self.p_flags.get(endian)
     }
 

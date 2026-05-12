@@ -218,7 +218,7 @@ fn elf_x86_64() {
         text.flags(),
         SectionFlags::Elf {
             sh_type: object::elf::SHT_PROGBITS,
-            sh_flags: (object::elf::SHF_ALLOC | object::elf::SHF_EXECINSTR).into()
+            sh_flags: object::elf::SHF_ALLOC | object::elf::SHF_EXECINSTR,
         }
     );
     assert_eq!(&text.data().unwrap()[..30], &[1; 30]);
@@ -237,7 +237,7 @@ fn elf_x86_64() {
         section.flags(),
         SectionFlags::Elf {
             sh_type: object::elf::SHT_X86_64_UNWIND,
-            sh_flags: object::elf::SHF_ALLOC.into()
+            sh_flags: object::elf::SHF_ALLOC,
         }
     );
 

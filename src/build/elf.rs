@@ -314,7 +314,7 @@ impl<'data> Builder<'data> {
                     _ => return Err(Error(format!("Unsupported section type {:x}", other))),
                 },
             };
-            let sh_flags = section.sh_flags(endian).into();
+            let sh_flags = section.sh_flags(endian);
             let sh_link = section.sh_link(endian);
             let sh_link_section = if sh_link == 0 {
                 None
@@ -328,7 +328,7 @@ impl<'data> Builder<'data> {
                 Some(SectionId(sh_link as usize - 1))
             };
             let sh_info = section.sh_info(endian);
-            let sh_info_section = if sh_info == 0 || sh_flags & u64::from(elf::SHF_INFO_LINK) == 0 {
+            let sh_info_section = if sh_info == 0 || !sh_flags.contains(elf::SHF_INFO_LINK) {
                 None
             } else {
                 if sh_info as usize >= sections.len() {
@@ -339,9 +339,9 @@ impl<'data> Builder<'data> {
                 }
                 Some(SectionId(sh_info as usize - 1))
             };
-            let sh_flags = section.sh_flags(endian).into();
+            let sh_flags = section.sh_flags(endian);
             let sh_addr = section.sh_addr(endian).into();
-            if sh_flags & u64::from(elf::SHF_ALLOC) != 0 {
+            if sh_flags.contains(elf::SHF_ALLOC) {
                 for segment in &mut builder.segments {
                     if segment.contains_address(sh_addr) {
                         segment.sections.push(id);
@@ -408,7 +408,7 @@ impl<'data> Builder<'data> {
                 dynamic_symbols.len(),
             )
             .map(SectionData::DynamicRelocation)
-        } else if link.0 == 0 || section.sh_flags(endian).into() & u64::from(elf::SHF_ALLOC) != 0 {
+        } else if link.0 == 0 || section.sh_flags(endian).contains(elf::SHF_ALLOC) {
             // If there's no link, then none of the relocations may reference symbols.
             // Assume that these are dynamic relocations, but don't use the dynamic
             // symbol table when parsing.
@@ -566,8 +566,8 @@ impl<'data> Builder<'data> {
             let mut builder_subsection = AttributesSubsection::new(subsection.vendor().into());
             let mut subsubsections = subsection.subsubsections();
             while let Some(subsubsection) = subsubsections.next()? {
-                let tag = match subsubsection.tag() {
-                    elf::Tag_File => AttributeTag::File,
+                let scope = match subsubsection.tag() {
+                    elf::Tag_File => AttributeScope::File,
                     elf::Tag_Section => {
                         let mut tag_sections = Vec::new();
                         let mut indices = subsubsection.indices();
@@ -581,7 +581,7 @@ impl<'data> Builder<'data> {
                             }
                             tag_sections.push(SectionId(index - 1));
                         }
-                        AttributeTag::Section(tag_sections)
+                        AttributeScope::Section(tag_sections)
                     }
                     elf::Tag_Symbol => {
                         let mut tag_symbols = Vec::new();
@@ -596,7 +596,7 @@ impl<'data> Builder<'data> {
                             }
                             tag_symbols.push(SymbolId(index - 1));
                         }
-                        AttributeTag::Symbol(tag_symbols)
+                        AttributeScope::Symbol(tag_symbols)
                     }
                     tag => {
                         return Err(Error(format!(
@@ -608,7 +608,7 @@ impl<'data> Builder<'data> {
                 let data = subsubsection.attributes_data().into();
                 builder_subsection
                     .subsubsections
-                    .push(AttributesSubsubsection { tag, data });
+                    .push(AttributesSubsubsection { scope, data });
             }
             builder_attributes.subsections.push(builder_subsection);
         }
@@ -628,8 +628,8 @@ impl<'data> Builder<'data> {
     {
         let strings = dynamic_symbols.strings();
         let mut ids = HashMap::new();
-        ids.insert(0, VersionId::local());
-        ids.insert(1, VersionId::global());
+        ids.insert(elf::VER_NDX_LOCAL, VersionId::local());
+        ids.insert(elf::VER_NDX_GLOBAL, VersionId::global());
 
         if let Some((mut verdefs, link)) = sections.gnu_verdef(endian, data)? {
             if link != dynamic_symbols.string_section() {
@@ -637,9 +637,9 @@ impl<'data> Builder<'data> {
             }
             while let Some((verdef, mut verdauxs)) = verdefs.next()? {
                 let flags = verdef.vd_flags.get(endian);
-                if flags & elf::VER_FLG_BASE != 0 {
+                if flags.contains(elf::VER_FLG_BASE) {
                     if flags != elf::VER_FLG_BASE
-                        || verdef.vd_ndx.get(endian) != 1
+                        || verdef.vd_ndx.get(endian) != elf::VER_NDX_GLOBAL
                         || verdef.vd_cnt.get(endian) != 1
                     {
                         return Err(Error::new("Unsupported VER_FLG_BASE in SHT_GNU_VERDEF"));
@@ -654,10 +654,10 @@ impl<'data> Builder<'data> {
                     continue;
                 }
 
-                let index = verdef.vd_ndx.get(endian) & elf::VERSYM_VERSION;
+                let index = verdef.vd_ndx.get(endian);
                 let id = self.versions.next_id();
                 if ids.insert(index, id).is_some() {
-                    return Err(Error(format!("Duplicate SHT_GNU_VERDEF index {}", index)));
+                    return Err(Error(format!("Duplicate SHT_GNU_VERDEF index {}", index.0)));
                 }
 
                 let mut names = Vec::new();
@@ -686,10 +686,13 @@ impl<'data> Builder<'data> {
                     name: verneed.file(endian, strings)?.into(),
                 });
                 while let Some(vernaux) = vernauxs.next()? {
-                    let index = vernaux.vna_other.get(endian) & elf::VERSYM_VERSION;
+                    let index = vernaux.vna_other.get(endian);
                     let id = self.versions.next_id();
                     if ids.insert(index, id).is_some() {
-                        return Err(Error(format!("Duplicate SHT_GNU_VERNEED index {}", index)));
+                        return Err(Error(format!(
+                            "Duplicate SHT_GNU_VERNEED index {}",
+                            index.0
+                        )));
                     }
 
                     let data = VersionData::Need(VersionNeed {
@@ -714,9 +717,9 @@ impl<'data> Builder<'data> {
                 let index = versym.0.get(endian);
                 let symbol = self.dynamic_symbols.get_mut(SymbolId(id));
                 symbol.version = *ids
-                    .get(&(index & elf::VERSYM_VERSION))
+                    .get(&index.index())
                     .ok_or_else(|| Error(format!("Invalid SHT_GNU_VERSYM index {:x}", index)))?;
-                symbol.version_hidden = index & elf::VERSYM_HIDDEN != 0;
+                symbol.version_hidden = index.is_hidden();
             }
         }
         Ok(())
@@ -1043,10 +1046,10 @@ impl<'data> Builder<'data> {
             for subsection in &attributes.subsections {
                 writer.start_subsection(&subsection.vendor);
                 for subsubsection in &subsection.subsubsections {
-                    writer.start_subsubsection(subsubsection.tag.tag());
-                    match &subsubsection.tag {
-                        AttributeTag::File => {}
-                        AttributeTag::Section(sections) => {
+                    writer.start_subsubsection(subsubsection.scope.tag());
+                    match &subsubsection.scope {
+                        AttributeScope::File => {}
+                        AttributeScope::Section(sections) => {
                             for id in sections {
                                 if let Some(index) = out_sections_index[id.0] {
                                     writer.write_subsubsection_index(index.0);
@@ -1054,7 +1057,7 @@ impl<'data> Builder<'data> {
                             }
                             writer.write_subsubsection_index(0);
                         }
-                        AttributeTag::Symbol(symbols) => {
+                        AttributeScope::Symbol(symbols) => {
                             for id in symbols {
                                 if let Some(index) = out_syms_index[id.0] {
                                     writer.write_subsubsection_index(index.0);
@@ -1450,10 +1453,10 @@ impl<'data> Builder<'data> {
                         writer.write_null_gnu_versym();
                         for out_dynsym in &out_dynsyms {
                             let symbol = self.dynamic_symbols.get(out_dynsym.id);
-                            let mut index = symbol.version.0 as u16;
-                            if symbol.version_hidden {
-                                index |= elf::VERSYM_HIDDEN;
-                            }
+                            let index = elf::VersymIndex::new(
+                                symbol.version.index(),
+                                symbol.version_hidden,
+                            );
                             writer.write_gnu_versym(index);
                         }
                     }
@@ -1463,7 +1466,7 @@ impl<'data> Builder<'data> {
                             let verdef = write::elf::Verdef {
                                 version: elf::VER_DEF_CURRENT,
                                 flags: elf::VER_FLG_BASE,
-                                index: 1,
+                                index: elf::VER_NDX_GLOBAL,
                                 aux_count: 1,
                                 name: writer.get_dynamic_string(version_base),
                             };
@@ -1482,7 +1485,7 @@ impl<'data> Builder<'data> {
                                 writer.write_gnu_verdef(&write::elf::Verdef {
                                     version: elf::VER_DEF_CURRENT,
                                     flags: def.flags,
-                                    index: version.id.0 as u16,
+                                    index: elf::VersionIndex(version.id.0 as u16),
                                     aux_count: def.names.len() as u16,
                                     name: writer.get_dynamic_string(name),
                                 });
@@ -1511,7 +1514,7 @@ impl<'data> Builder<'data> {
                                     debug_assert_eq!(*id, version.id);
                                     writer.write_gnu_vernaux(&write::elf::Vernaux {
                                         flags: need.flags,
-                                        index: version.id.0 as u16,
+                                        index: elf::VersionIndex(version.id.0 as u16),
                                         name: writer.get_dynamic_string(&need.name),
                                     });
                                 }
@@ -2148,7 +2151,7 @@ pub struct Header {
     /// The OS ABI field in the file header.
     ///
     /// One of the `ELFOSABI*` constants.
-    pub os_abi: u8,
+    pub os_abi: elf::OsAbi,
     /// The ABI version field in the file header.
     ///
     /// The meaning of this field depends on the `os_abi` value.
@@ -2156,17 +2159,17 @@ pub struct Header {
     /// The object file type in the file header.
     ///
     /// One of the `ET_*` constants.
-    pub e_type: u16,
+    pub e_type: elf::FileType,
     /// The architecture in the file header.
     ///
     /// One of the `EM_*` constants.
-    pub e_machine: u16,
+    pub e_machine: elf::Machine,
     /// Entry point virtual address in the file header.
     pub e_entry: u64,
     /// The processor-specific flags in the file header.
     ///
     /// A combination of the `EF_*` constants.
-    pub e_flags: u32,
+    pub e_flags: elf::FileFlags,
     /// The file offset of the program header table.
     ///
     /// Writing will fail if the program header table cannot be placed at this offset.
@@ -2206,11 +2209,11 @@ pub struct Segment<'data> {
     /// The `p_type` field in the ELF program header.
     ///
     /// One of the `PT_*` constants.
-    pub p_type: u32,
+    pub p_type: elf::ProgramType,
     /// The `p_flags` field in the ELF program header.
     ///
     /// A combination of the `PF_*` constants.
-    pub p_flags: u32,
+    pub p_flags: elf::ProgramFlags,
     /// The `p_offset` field in the ELF program header.
     ///
     /// This is the file offset of the data in the segment. This should
@@ -2368,8 +2371,8 @@ impl<'data> Segments<'data> {
         self.push(Segment {
             id,
             delete: false,
-            p_type: 0,
-            p_flags: 0,
+            p_type: elf::PT_NULL,
+            p_flags: elf::ProgramFlags(0),
             p_offset: 0,
             p_vaddr: 0,
             p_paddr: 0,
@@ -2393,7 +2396,11 @@ impl<'data> Segments<'data> {
     /// The file offset and address will be derived from the current maximum for any segment.
     /// The address will be chosen so that `p_paddr % align == p_offset % align`.
     /// You may wish to use [`Builder::load_align`] for the alignment.
-    pub fn add_load_segment(&mut self, flags: u32, align: u64) -> &mut Segment<'data> {
+    pub fn add_load_segment(
+        &mut self,
+        flags: elf::ProgramFlags,
+        align: u64,
+    ) -> &mut Segment<'data> {
         let mut max_offset = 0;
         let mut max_addr = 0;
         for segment in &*self {
@@ -2484,11 +2491,11 @@ pub struct Section<'data> {
     /// The `sh_type` field in the ELF section header.
     ///
     /// One of the `SHT_*` constants.
-    pub sh_type: u32,
+    pub sh_type: elf::SectionType,
     /// The `sh_flags` field in the ELF section header.
     ///
     /// A combination of the `SHF_*` constants.
-    pub sh_flags: u64,
+    pub sh_flags: elf::SectionFlags,
     /// The `sh_addr` field in the ELF section header.
     pub sh_addr: u64,
     /// The `sh_offset` field in the ELF section header.
@@ -2537,16 +2544,16 @@ impl<'data> Section<'data> {
 
     /// Returns true if the section flags include `SHF_ALLOC`.
     pub fn is_alloc(&self) -> bool {
-        self.sh_flags & u64::from(elf::SHF_ALLOC) != 0
+        self.sh_flags.contains(elf::SHF_ALLOC)
     }
 
     /// Return the segment permission flags that are equivalent to the section flags.
-    pub fn p_flags(&self) -> u32 {
+    pub fn p_flags(&self) -> elf::ProgramFlags {
         let mut p_flags = elf::PF_R;
-        if self.sh_flags & u64::from(elf::SHF_WRITE) != 0 {
+        if self.sh_flags.contains(elf::SHF_WRITE) {
             p_flags |= elf::PF_W;
         }
-        if self.sh_flags & u64::from(elf::SHF_EXECINSTR) != 0 {
+        if self.sh_flags.contains(elf::SHF_EXECINSTR) {
             p_flags |= elf::PF_X;
         }
         p_flags
@@ -2608,8 +2615,8 @@ impl<'data> Sections<'data> {
             id,
             delete: false,
             name: ByteString::default(),
-            sh_type: 0,
-            sh_flags: 0,
+            sh_type: elf::SHT_NULL,
+            sh_flags: elf::SectionFlags(0),
             sh_addr: 0,
             sh_offset: 0,
             sh_size: 0,
@@ -2696,13 +2703,13 @@ pub struct Symbol<'data, const DYNAMIC: bool = false> {
     /// Used to set the `st_shndx` field in the ELF symbol.
     pub section: Option<SectionId>,
     /// The `st_info` field in the ELF symbol.
-    pub st_info: u8,
+    pub st_info: elf::SymbolInfo,
     /// The `st_other` field in the ELF symbol.
-    pub st_other: u8,
+    pub st_other: elf::SymbolOther,
     /// The `st_shndx` field in the ELF symbol.
     ///
     /// Only used if `Self::section` is `None`.
-    pub st_shndx: u16,
+    pub st_shndx: elf::SymbolSection,
     /// The `st_value` field in the ELF symbol.
     pub st_value: u64,
     /// The `st_size` field in the ELF symbol.
@@ -2729,20 +2736,20 @@ impl<'data, const DYNAMIC: bool> Symbol<'data, DYNAMIC> {
 
     /// Get the `st_bind` component of the `st_info` field.
     #[inline]
-    pub fn st_bind(&self) -> u8 {
-        self.st_info >> 4
+    pub fn st_bind(&self) -> elf::SymbolBind {
+        self.st_info.st_bind()
     }
 
     /// Get the `st_type` component of the `st_info` field.
     #[inline]
-    pub fn st_type(&self) -> u8 {
-        self.st_info & 0xf
+    pub fn st_type(&self) -> elf::SymbolType {
+        self.st_info.st_type()
     }
 
     /// Set the `st_info` field given the `st_bind` and `st_type` components.
     #[inline]
-    pub fn set_st_info(&mut self, st_bind: u8, st_type: u8) {
-        self.st_info = (st_bind << 4) + (st_type & 0xf);
+    pub fn set_st_info(&mut self, st_bind: elf::SymbolBind, st_type: elf::SymbolType) {
+        self.st_info = st_bind | st_type;
     }
 }
 
@@ -2765,9 +2772,9 @@ impl<'data, const DYNAMIC: bool> Symbols<'data, DYNAMIC> {
             delete: false,
             name: ByteString::default(),
             section: None,
-            st_info: 0,
-            st_other: 0,
-            st_shndx: 0,
+            st_info: elf::SymbolInfo(0),
+            st_other: elf::SymbolOther(0),
+            st_shndx: elf::SHN_UNDEF,
             st_value: 0,
             st_size: 0,
             version: VersionId::local(),
@@ -2817,14 +2824,14 @@ pub enum Dynamic<'data> {
         /// The `d_tag` field in the dynamic entry.
         ///
         /// One of the `DT_*` values.
-        tag: i64,
+        tag: elf::DynamicTag,
     },
     /// The value is an integer.
     Integer {
         /// The `d_tag` field in the dynamic entry.
         ///
         /// One of the `DT_*` values.
-        tag: i64,
+        tag: elf::DynamicTag,
         /// The `d_val` field in the dynamic entry.
         val: u64,
     },
@@ -2833,7 +2840,7 @@ pub enum Dynamic<'data> {
         /// The `d_tag` field in the dynamic entry.
         ///
         /// One of the `DT_*` values.
-        tag: i64,
+        tag: elf::DynamicTag,
         /// The string value.
         ///
         /// This will be stored in the dynamic string section.
@@ -2845,7 +2852,7 @@ impl<'data> Dynamic<'data> {
     /// The `d_tag` field in the dynamic entry.
     ///
     /// One of the `DT_*` values.
-    pub fn tag(&self) -> i64 {
+    pub fn tag(&self) -> elf::DynamicTag {
         match self {
             Dynamic::Auto { tag } => *tag,
             Dynamic::Integer { tag, .. } => *tag,
@@ -2951,12 +2958,17 @@ impl VersionId {
 
     /// Return the ID for a version index of [`elf::VER_NDX_LOCAL`].
     pub fn local() -> Self {
-        VersionId(elf::VER_NDX_LOCAL as usize)
+        VersionId(elf::VER_NDX_LOCAL.0 as usize)
     }
 
     /// Return the ID for a version index of [`elf::VER_NDX_GLOBAL`].
     pub fn global() -> Self {
-        VersionId(elf::VER_NDX_GLOBAL as usize)
+        VersionId(elf::VER_NDX_GLOBAL.0 as usize)
+    }
+
+    /// Convert to `elf::VersionIndex`.
+    pub fn index(self) -> elf::VersionIndex {
+        elf::VersionIndex(self.0 as u16)
     }
 }
 
@@ -3006,7 +3018,7 @@ pub struct VersionDef<'data> {
     /// The version flags.
     ///
     /// A combination of the `VER_FLG_*` constants.
-    pub flags: u16,
+    pub flags: elf::VersionFlags,
 }
 
 impl<'data> VersionDef<'data> {
@@ -3026,7 +3038,7 @@ pub struct VersionNeed<'data> {
     /// The version flags.
     ///
     /// A combination of the `VER_FLG_*` constants.
-    pub flags: u16,
+    pub flags: elf::VersionFlags,
 }
 
 /// A table of versions that are referenced by symbols.
@@ -3081,36 +3093,36 @@ impl<'data> AttributesSubsection<'data> {
 /// A sub-subsection in an attributes section.
 #[derive(Debug, Clone)]
 pub struct AttributesSubsubsection<'data> {
-    /// The sub-subsection tag.
-    pub tag: AttributeTag,
+    /// The sub-subsection scope.
+    pub scope: AttributeScope,
     /// The data containing the attributes.
     pub data: Bytes<'data>,
 }
 
-/// The tag for a sub-subsection in an attributes section.
+/// The scope that the attributes in a sub-subsection apply to.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum AttributeTag {
+pub enum AttributeScope {
     /// The attributes apply to the whole file.
     ///
-    /// Correspeonds to [`elf::Tag_File`].
+    /// Corresponds to [`elf::Tag_File`].
     File,
     /// The attributes apply to the given sections.
     ///
-    /// Correspeonds to [`elf::Tag_Section`].
+    /// Corresponds to [`elf::Tag_Section`].
     Section(Vec<SectionId>),
     /// The attributes apply to the given symbols.
     ///
-    /// Correspeonds to [`elf::Tag_Symbol`].
+    /// Corresponds to [`elf::Tag_Symbol`].
     Symbol(Vec<SymbolId>),
 }
 
-impl AttributeTag {
-    /// Return the corresponding `elf::Tag_*` value for this tag.
-    pub fn tag(&self) -> u8 {
+impl AttributeScope {
+    /// Return the corresponding `elf::Tag_*` value for this scope.
+    pub fn tag(&self) -> elf::AttributeTag {
         match self {
-            AttributeTag::File => elf::Tag_File,
-            AttributeTag::Section(_) => elf::Tag_Section,
-            AttributeTag::Symbol(_) => elf::Tag_Symbol,
+            AttributeScope::File => elf::Tag_File,
+            AttributeScope::Section(_) => elf::Tag_Section,
+            AttributeScope::Symbol(_) => elf::Tag_Symbol,
         }
     }
 }

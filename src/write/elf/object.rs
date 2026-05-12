@@ -31,7 +31,7 @@ impl<'a> Object<'a> {
     /// Add a property with a u32 value to the ELF ".note.gnu.property" section.
     ///
     /// Requires `feature = "elf"`.
-    pub fn add_elf_gnu_property_u32(&mut self, property: u32, value: u32) {
+    pub fn add_elf_gnu_property_u32(&mut self, property: elf::GnuPropertyType, value: u32) {
         if self.format != BinaryFormat::Elf {
             return;
         }
@@ -106,7 +106,7 @@ impl<'a> Object<'a> {
                 SectionKind::Note,
                 SectionFlags::Elf {
                     sh_type: elf::SHT_NOTE,
-                    sh_flags: u64::from(elf::SHF_ALLOC),
+                    sh_flags: elf::SHF_ALLOC,
                 },
             ),
             StandardSection::EhFrame => (
@@ -122,7 +122,7 @@ impl<'a> Object<'a> {
                     } else {
                         elf::SHT_PROGBITS
                     },
-                    sh_flags: u64::from(elf::SHF_ALLOC),
+                    sh_flags: elf::SHF_ALLOC,
                 },
             ),
         }
@@ -158,9 +158,8 @@ impl<'a> Object<'a> {
             SectionKind::OtherString | SectionKind::DebugString => {
                 elf::SHF_STRINGS | elf::SHF_MERGE
             }
-            _ => 0,
-        }
-        .into();
+            _ => elf::SectionFlags(0),
+        };
         SectionFlags::Elf { sh_type, sh_flags }
     }
 
@@ -203,13 +202,16 @@ impl<'a> Object<'a> {
         } else {
             elf::STB_GLOBAL
         };
-        let st_info = (st_bind << 4) + st_type;
-        let st_other = if symbol.scope == SymbolScope::Linkage {
+        let st_info = st_bind | st_type;
+        let vis = if symbol.scope == SymbolScope::Linkage {
             elf::STV_HIDDEN
         } else {
             elf::STV_DEFAULT
         };
-        SymbolFlags::Elf { st_info, st_other }
+        SymbolFlags::Elf {
+            st_info,
+            st_other: vis.into(),
+        }
     }
 
     fn elf_has_relocation_addend(&self) -> Result<bool> {
@@ -749,7 +751,7 @@ impl<'a> Object<'a> {
         {
             (os_abi, abi_version, e_flags)
         } else {
-            (elf::ELFOSABI_NONE, 0, 0)
+            (elf::ELFOSABI_NONE, 0, elf::FileFlags(0))
         };
 
         if self.architecture == Architecture::Mips64_N32 {
@@ -796,7 +798,9 @@ impl<'a> Object<'a> {
                 SymbolSection::Undefined => (elf::SHN_UNDEF, None),
                 SymbolSection::Absolute => (elf::SHN_ABS, None),
                 SymbolSection::Common => (elf::SHN_COMMON, None),
-                SymbolSection::Section(id) => (0, Some(section_offsets[id.0].index)),
+                SymbolSection::Section(id) => {
+                    (elf::SymbolSection(0), Some(section_offsets[id.0].index))
+                }
             };
             writer.write_symbol(&Sym {
                 name: symbol_offsets[index].str_id,

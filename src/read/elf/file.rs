@@ -276,7 +276,7 @@ where
             (elf::EM_LOONGARCH, true) => Architecture::LoongArch64,
             (elf::EM_68K, false) => Architecture::M68k,
             (elf::EM_MIPS, false) => {
-                if (self.header.e_flags(self.endian) & elf::EF_MIPS_ABI2) != 0 {
+                if self.header.e_flags(self.endian).contains(elf::EF_MIPS_ABI2) {
                     Architecture::Mips64_N32
                 } else {
                     Architecture::Mips
@@ -573,19 +573,19 @@ pub trait FileHeader: Debug + Pod {
         Self: Sized;
 
     fn e_ident(&self) -> &elf::Ident;
-    fn e_type(&self, endian: Self::Endian) -> u16;
-    fn e_machine(&self, endian: Self::Endian) -> u16;
+    fn e_type(&self, endian: Self::Endian) -> elf::FileType;
+    fn e_machine(&self, endian: Self::Endian) -> elf::Machine;
     fn e_version(&self, endian: Self::Endian) -> u32;
     fn e_entry(&self, endian: Self::Endian) -> Self::Word;
     fn e_phoff(&self, endian: Self::Endian) -> Self::Word;
     fn e_shoff(&self, endian: Self::Endian) -> Self::Word;
-    fn e_flags(&self, endian: Self::Endian) -> u32;
+    fn e_flags(&self, endian: Self::Endian) -> elf::FileFlags;
     fn e_ehsize(&self, endian: Self::Endian) -> u16;
     fn e_phentsize(&self, endian: Self::Endian) -> u16;
     fn e_phnum(&self, endian: Self::Endian) -> u16;
     fn e_shentsize(&self, endian: Self::Endian) -> u16;
     fn e_shnum(&self, endian: Self::Endian) -> u16;
-    fn e_shstrndx(&self, endian: Self::Endian) -> u16;
+    fn e_shstrndx(&self, endian: Self::Endian) -> elf::SymbolSection;
 
     // Provided methods.
 
@@ -712,18 +712,20 @@ pub trait FileHeader: Debug + Pod {
         data: R,
     ) -> read::Result<u32> {
         let e_shstrndx = self.e_shstrndx(endian);
-        let index = if e_shstrndx != elf::SHN_XINDEX {
-            e_shstrndx.into()
-        } else if let Some(section_0) = self.section_0(endian, data)? {
-            section_0.sh_link(endian)
-        } else {
+        if let Some(index) = e_shstrndx.index() {
+            Ok(u32::from(index))
+        } else if e_shstrndx == elf::SHN_XINDEX {
             // Section 0 must exist if we're trying to read e_shstrndx.
-            return Err(Error("Missing ELF section headers for e_shstrndx overflow"));
-        };
-        if index == 0 {
-            return Err(Error("Missing ELF e_shstrndx"));
+            let section_0 = self
+                .section_0(endian, data)?
+                .read_error("Missing ELF section headers for e_shstrndx overflow")?;
+            Ok(section_0.sh_link(endian))
+        } else if e_shstrndx == elf::SHN_UNDEF {
+            // Valid, but we're only called if we expect a section index.
+            Err(Error("Missing ELF e_shstrndx"))
+        } else {
+            Err(Error("Invalid ELF e_shstrndx"))
         }
-        Ok(index)
     }
 
     /// Return the slice of program headers.
@@ -867,12 +869,12 @@ impl<Endian: endian::Endian> FileHeader for elf::FileHeader32<Endian> {
     }
 
     #[inline]
-    fn e_type(&self, endian: Self::Endian) -> u16 {
+    fn e_type(&self, endian: Self::Endian) -> elf::FileType {
         self.e_type.get(endian)
     }
 
     #[inline]
-    fn e_machine(&self, endian: Self::Endian) -> u16 {
+    fn e_machine(&self, endian: Self::Endian) -> elf::Machine {
         self.e_machine.get(endian)
     }
 
@@ -897,7 +899,7 @@ impl<Endian: endian::Endian> FileHeader for elf::FileHeader32<Endian> {
     }
 
     #[inline]
-    fn e_flags(&self, endian: Self::Endian) -> u32 {
+    fn e_flags(&self, endian: Self::Endian) -> elf::FileFlags {
         self.e_flags.get(endian)
     }
 
@@ -927,7 +929,7 @@ impl<Endian: endian::Endian> FileHeader for elf::FileHeader32<Endian> {
     }
 
     #[inline]
-    fn e_shstrndx(&self, endian: Self::Endian) -> u16 {
+    fn e_shstrndx(&self, endian: Self::Endian) -> elf::SymbolSection {
         self.e_shstrndx.get(endian)
     }
 }
@@ -965,12 +967,12 @@ impl<Endian: endian::Endian> FileHeader for elf::FileHeader64<Endian> {
     }
 
     #[inline]
-    fn e_type(&self, endian: Self::Endian) -> u16 {
+    fn e_type(&self, endian: Self::Endian) -> elf::FileType {
         self.e_type.get(endian)
     }
 
     #[inline]
-    fn e_machine(&self, endian: Self::Endian) -> u16 {
+    fn e_machine(&self, endian: Self::Endian) -> elf::Machine {
         self.e_machine.get(endian)
     }
 
@@ -995,7 +997,7 @@ impl<Endian: endian::Endian> FileHeader for elf::FileHeader64<Endian> {
     }
 
     #[inline]
-    fn e_flags(&self, endian: Self::Endian) -> u32 {
+    fn e_flags(&self, endian: Self::Endian) -> elf::FileFlags {
         self.e_flags.get(endian)
     }
 
@@ -1025,7 +1027,7 @@ impl<Endian: endian::Endian> FileHeader for elf::FileHeader64<Endian> {
     }
 
     #[inline]
-    fn e_shstrndx(&self, endian: Self::Endian) -> u16 {
+    fn e_shstrndx(&self, endian: Self::Endian) -> elf::SymbolSection {
         self.e_shstrndx.get(endian)
     }
 }

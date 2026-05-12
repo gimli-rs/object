@@ -479,11 +479,11 @@ pub enum FileFlags {
     #[cfg(feature = "elf")]
     Elf {
         /// `os_abi` field in the ELF file header.
-        os_abi: u8,
+        os_abi: crate::elf::OsAbi,
         /// `abi_version` field in the ELF file header.
         abi_version: u8,
         /// `e_flags` field in the ELF file header.
-        e_flags: u32,
+        e_flags: crate::elf::FileFlags,
     },
     /// Mach-O file flags.
     #[cfg(feature = "macho")]
@@ -515,9 +515,9 @@ pub enum SegmentFlags {
     #[cfg(feature = "elf")]
     Elf {
         /// `p_type` field in the segment header.
-        p_type: u32,
+        p_type: crate::elf::ProgramType,
         /// `p_flags` field in the segment header.
-        p_flags: u32,
+        p_flags: crate::elf::ProgramFlags,
     },
     /// Mach-O segment flags.
     #[cfg(feature = "macho")]
@@ -616,9 +616,9 @@ pub enum SectionFlags {
     #[cfg(feature = "elf")]
     Elf {
         /// `sh_type` field in the section header.
-        sh_type: u32,
+        sh_type: crate::elf::SectionType,
         /// `sh_flags` field in the section header.
-        sh_flags: u64,
+        sh_flags: crate::elf::SectionFlags,
     },
     /// Mach-O section flags.
     #[cfg(feature = "macho")]
@@ -650,9 +650,9 @@ pub enum SymbolFlags<Section, Symbol> {
     #[cfg(feature = "elf")]
     Elf {
         /// `st_info` field in the ELF symbol.
-        st_info: u8,
+        st_info: crate::elf::SymbolInfo,
         /// `st_other` field in the ELF symbol.
-        st_other: u8,
+        st_other: crate::elf::SymbolOther,
     },
     /// Mach-O symbol flags.
     #[cfg(feature = "macho")]
@@ -713,9 +713,9 @@ impl<Section, Symbol> SymbolFlags<Section, Symbol> {
     /// This corresponds to the lower 2 bits of the `st_other` field,
     /// and will be a value such as `elf::STV_DEFAULT`.
     #[cfg(feature = "elf")]
-    pub fn elf_visibility(&self) -> Option<u8> {
+    pub fn elf_visibility(&self) -> Option<crate::elf::SymbolVisibility> {
         match self {
-            SymbolFlags::Elf { st_other, .. } => Some(st_other & 0x3),
+            SymbolFlags::Elf { st_other, .. } => Some(st_other.visibility()),
             _ => None,
         }
     }

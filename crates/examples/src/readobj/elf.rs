@@ -35,11 +35,11 @@ fn print_file_header<Elf: FileHeader>(p: &mut Printer<'_>, endian: Elf::Endian, 
     }
     p.group("FileHeader", |p| {
         p.group("Ident", |p| print_ident(p, elf.e_ident()));
-        p.field_enum("Type", elf.e_type(endian), FLAGS_ET);
-        p.field_enum("Machine", elf.e_machine(endian), FLAGS_EM);
+        p.field_consts("Type", elf.e_type(endian), FileType::NAMES);
+        p.field_consts("Machine", elf.e_machine(endian), Machine::NAMES);
         let version = elf.e_version(endian);
         if version < 256 {
-            p.field_enum("Version", version as u8, FLAGS_EV);
+            p.field_consts("Version", FileVersion(version as u8), FileVersion::NAMES);
         } else {
             p.field_hex("Version", version);
         }
@@ -52,16 +52,25 @@ fn print_file_header<Elf: FileHeader>(p: &mut Printer<'_>, endian: Elf::Endian, 
         p.field("ProgramHeaderCount", elf.e_phnum(endian));
         p.field_hex("SectionHeaderEntrySize", elf.e_shentsize(endian));
         p.field("SectionHeaderCount", elf.e_shnum(endian));
-        p.field("SectionHeaderStringTableIndex", elf.e_shstrndx(endian));
+        let shstrndx = elf.e_shstrndx(endian);
+        if let Some(index) = shstrndx.index() {
+            p.field("SectionHeaderStringTableIndex", index);
+        } else {
+            p.field_consts(
+                "SectionHeaderStringTableIndex",
+                shstrndx,
+                SymbolSection::NAMES,
+            );
+        }
     });
 }
 
 fn print_ident(p: &mut Printer<'_>, ident: &Ident) {
     p.field("Magic", format!("{:X?}", ident.magic));
-    p.field_enum("Class", ident.class, FLAGS_EI_CLASS);
-    p.field_enum("Data", ident.data, FLAGS_EI_DATA);
-    p.field_enum("Version", ident.version, FLAGS_EV);
-    p.field_enum("OsAbi", ident.os_abi, FLAGS_EI_OSABI);
+    p.field_consts("Class", ident.class, FileClass::NAMES);
+    p.field_consts("Data", ident.data, DataEncoding::NAMES);
+    p.field_consts("Version", ident.version, FileVersion::NAMES);
+    p.field_consts("OsAbi", ident.os_abi, OsAbi::NAMES);
     p.field_hex("AbiVersion", ident.abi_version);
     p.field("Unused", format!("{:X?}", ident.padding));
 }
@@ -145,7 +154,7 @@ fn print_segment_dynamic<Elf: FileHeader>(
         let mut strtab = 0;
         let mut strsz = 0;
         for d in dynamic {
-            let tag = d.d_tag(endian).into();
+            let tag = d.d_tag(endian);
             if tag == DT_STRTAB {
                 strtab = d.d_val(endian).into();
             } else if tag == DT_STRSZ {
@@ -199,12 +208,7 @@ fn print_section_headers<Elf: FileHeader>(
             );
 
             p.field_consts("Type", section.sh_type(endian), constants.sht);
-            // TODO: handle flag overflow
-            p.field_flags(
-                "Flags",
-                section.sh_flags(endian).into() as u32,
-                constants.shf,
-            );
+            p.field_flags("Flags", section.sh_flags(endian), constants.shf);
             p.field_hex("Address", section.sh_addr(endian).into());
             p.field_hex("Offset", section.sh_offset(endian).into());
             p.field_hex("Size", section.sh_size(endian).into());
@@ -216,7 +220,7 @@ fn print_section_headers<Elf: FileHeader>(
             if let Some(Some((compression, _, _))) = section.compression(endian, data).print_err(p)
             {
                 p.group("CompressionHeader", |p| {
-                    p.field_enum("Type", compression.ch_type(endian), FLAGS_ELFCOMPRESS);
+                    p.field_consts("Type", compression.ch_type(endian), CompressionType::NAMES);
                     p.field_hex("Size", compression.ch_size(endian).into());
                     p.field_hex("AddressAlign", compression.ch_addralign(endian).into());
                 });
@@ -313,10 +317,10 @@ fn print_section_symbols<Elf: FileHeader>(
                 p.field_flags("Other", symbol.st_other(), constants.sto);
 
                 let shndx = symbol.st_shndx(endian);
-                if shndx == SHN_UNDEF || shndx >= SHN_LORESERVE {
-                    p.field_consts("SectionIndex", shndx, constants.shn);
+                if let Some(index) = shndx.index() {
+                    p.field("SectionIndex", index);
                 } else {
-                    p.field("SectionIndex", shndx);
+                    p.field_consts("SectionIndex", shndx, constants.shn);
                 }
                 if let Some(shndx) = symbols.shndx(endian, index) {
                     p.field("ExtendedSectionIndex", shndx);
@@ -512,7 +516,7 @@ fn print_section_group<Elf: FileHeader>(
     section: &Elf::SectionHeader,
 ) {
     if let Some(Some((flag, members))) = section.group(endian, data).print_err(p) {
-        p.field_enum("GroupFlag", flag, FLAGS_GRP);
+        p.field_flags("GroupFlag", flag, GroupFlags::NAMES);
         p.group("GroupSections", |p| {
             for member in members {
                 let index = member.get(endian);
@@ -538,6 +542,7 @@ fn print_notes<Elf: FileHeader>(
     elf: &Elf,
     mut notes: NoteIterator<Elf>,
 ) {
+    let machine = elf.e_machine(endian);
     while let Some(Some(note)) = notes.next().print_err(p) {
         p.group("Note", |p| {
             let name = note.name();
@@ -547,47 +552,11 @@ fn print_notes<Elf: FileHeader>(
                 while let Some(Some(property)) = properties.next().print_err(p) {
                     p.group("Property", |p| {
                         let pr_type = property.pr_type();
-                        let proc = match elf.e_machine(endian) {
-                            EM_386 | EM_X86_64 => FLAGS_GNU_PROPERTY_X86,
-                            EM_AARCH64 => FLAGS_GNU_PROPERTY_AARCH64,
-                            _ => &[],
-                        };
-                        p.field_enums("Type", pr_type, &[FLAGS_GNU_PROPERTY, proc]);
-                        match pr_type {
-                            GNU_PROPERTY_1_NEEDED => {
-                                if let Some(val) = property.data_u32(endian).print_err(p) {
-                                    p.field_hex("Value", val);
-                                    p.flags(val, 0, FLAGS_GNU_PROPERTY_1_NEEDED);
-                                }
-                            }
-                            _ => {}
-                        }
-                        match elf.e_machine(endian) {
-                            EM_386 | EM_X86_64 => match pr_type {
-                                GNU_PROPERTY_X86_ISA_1_USED | GNU_PROPERTY_X86_ISA_1_NEEDED => {
-                                    if let Some(val) = property.data_u32(endian).print_err(p) {
-                                        p.field_hex("Value", val);
-                                        p.flags(val, 0, FLAGS_GNU_PROPERTY_X86_ISA_1);
-                                    }
-                                }
-                                GNU_PROPERTY_X86_FEATURE_1_AND => {
-                                    if let Some(val) = property.data_u32(endian).print_err(p) {
-                                        p.field_hex("Value", val);
-                                        p.flags(val, 0, FLAGS_GNU_PROPERTY_X86_FEATURE_1);
-                                    }
-                                }
-                                _ => {}
-                            },
-                            EM_AARCH64 => match pr_type {
-                                GNU_PROPERTY_AARCH64_FEATURE_1_AND => {
-                                    if let Some(val) = property.data_u32(endian).print_err(p) {
-                                        p.field_hex("Value", val);
-                                        p.flags(val, 0, FLAGS_GNU_PROPERTY_AARCH64_FEATURE_1);
-                                    }
-                                }
-                                _ => {}
-                            },
-                            _ => {}
+                        p.field_consts("Type", pr_type, GnuPropertyType::type_names(machine));
+                        if let Some(names) = pr_type.u32_value_names(machine)
+                            && let Some(val) = property.data_u32(endian).print_err(p)
+                        {
+                            p.field_flags("Value", val, names);
                         }
                     });
                 }
@@ -607,18 +576,19 @@ fn print_dynamic<Elf: FileHeader>(
 ) {
     let constants = constants(endian, elf);
     for d in dynamic {
-        let tag = d.d_tag(endian).into();
+        let tag = d.d_tag(endian);
         let val = d.d_val(endian).into();
         p.group("Dynamic", |p| {
             p.field_consts("Tag", tag, constants.dt);
             if d.is_string(endian) {
                 p.field_string("Value", val, d.string(endian, dynstr));
             } else {
-                p.field_hex("Value", val);
                 if tag == DT_FLAGS {
-                    p.flags(val, 0, FLAGS_DF);
+                    p.field_flags("Value", DynamicFlags(val), DynamicFlags::NAMES);
                 } else if tag == DT_FLAGS_1 {
-                    p.flags(val, 0, FLAGS_DF_1);
+                    p.field_flags("Value", DynamicFlags1(val), DynamicFlags1::NAMES);
+                } else {
+                    p.field_hex("Value", val);
                 }
             }
         });
@@ -723,9 +693,8 @@ fn print_gnu_verdef<Elf: FileHeader>(
         while let Some(Some((verdef, mut verdauxs))) = verdefs.next().print_err(p) {
             p.group("VersionDefinition", |p| {
                 p.field("Version", verdef.vd_version.get(endian));
-                p.field_hex("Flags", verdef.vd_flags.get(endian));
-                p.flags(verdef.vd_flags.get(endian), 0, FLAGS_VER_FLG);
-                p.field("Index", verdef.vd_ndx.get(endian));
+                p.field_flags("Flags", verdef.vd_flags.get(endian), VersionFlags::NAMES);
+                p.field_consts_display("Index", verdef.vd_ndx.get(endian), VersionIndex::NAMES);
                 p.field("AuxCount", verdef.vd_cnt.get(endian));
                 p.field_hex("Hash", verdef.vd_hash.get(endian));
                 p.field("AuxOffset", verdef.vd_aux.get(endian));
@@ -772,9 +741,12 @@ fn print_gnu_verneed<Elf: FileHeader>(
                 while let Some(Some(vernaux)) = vernauxs.next().print_err(p) {
                     p.group("Aux", |p| {
                         p.field_hex("Hash", vernaux.vna_hash.get(endian));
-                        p.field_hex("Flags", vernaux.vna_flags.get(endian));
-                        p.flags(vernaux.vna_flags.get(endian), 0, FLAGS_VER_FLG);
-                        p.field("Index", vernaux.vna_other.get(endian));
+                        p.field_flags("Flags", vernaux.vna_flags.get(endian), VersionFlags::NAMES);
+                        p.field_consts_display(
+                            "Index",
+                            vernaux.vna_other.get(endian),
+                            VersionIndex::NAMES,
+                        );
                         p.field_string(
                             "Name",
                             vernaux.vna_name.get(endian),
@@ -802,7 +774,7 @@ fn print_gnu_versym<Elf: FileHeader>(
     if let Some(Some((syms, _link))) = section.gnu_versym(endian, data).print_err(p) {
         let versions = sections.versions(endian, data).print_err(p).flatten();
         for (index, sym) in syms.iter().enumerate() {
-            let version_index = VersionIndex(sym.0.get(endian));
+            let version_index = sym.0.get(endian);
             p.group("VersionSymbol", |p| {
                 p.field("Index", index);
                 print_version(p, versions.as_ref(), version_index);
@@ -831,7 +803,7 @@ fn print_attributes<Elf: FileHeader>(
                         let mut subsubsections = subsection.subsubsections();
                         while let Some(Some(subsubsection)) = subsubsections.next().print_err(p) {
                             p.group("Subsubsection", |p| {
-                                p.field_enum("Tag", subsubsection.tag(), FLAGS_TAG);
+                                p.field_consts("Tag", subsubsection.tag(), AttributeTag::NAMES);
                                 let mut indices = subsubsection.indices();
                                 while let Some(Some(index)) = indices.next().print_err(p) {
                                     p.field("Index", index);
@@ -849,301 +821,20 @@ fn print_attributes<Elf: FileHeader>(
 fn print_version<Elf: FileHeader>(
     p: &mut Printer<'_>,
     versions: Option<&VersionTable<Elf>>,
-    version_index: VersionIndex,
+    version_index: VersymIndex,
 ) {
     match versions.and_then(|versions| versions.version(version_index).print_err(p)) {
         Some(Some(version)) => {
-            p.field_string_option("Version", version_index.0, Some(version.name()))
+            p.field_string_option("Version", version_index, Some(version.name()));
+            p.flag_bits(
+                VersymIndex(version_index.0 & VERSYM_HIDDEN.0),
+                VersymIndex::NAMES,
+            );
         }
-        _ => p.field_enum("Version", version_index.0, FLAGS_VER_NDX),
+        _ => p.field_flags("Version", version_index, VersymIndex::NAMES),
     }
-    p.flags(version_index.0, 0, FLAGS_VERSYM);
 }
 
 fn constants<Elf: FileHeader>(endian: Elf::Endian, elf: &Elf) -> &'static Constants {
     machine_constants(elf.e_machine(endian))
 }
-
-const FLAGS_EI_CLASS: &[Flag<u8>] = &flags!(ELFCLASSNONE, ELFCLASS32, ELFCLASS64);
-const FLAGS_EI_DATA: &[Flag<u8>] = &flags!(ELFDATANONE, ELFDATA2LSB, ELFDATA2MSB);
-const FLAGS_EV: &[Flag<u8>] = &flags!(EV_NONE, EV_CURRENT);
-const FLAGS_EI_OSABI: &[Flag<u8>] = &flags!(
-    ELFOSABI_SYSV,
-    ELFOSABI_HPUX,
-    ELFOSABI_NETBSD,
-    ELFOSABI_GNU,
-    ELFOSABI_HURD,
-    ELFOSABI_SOLARIS,
-    ELFOSABI_AIX,
-    ELFOSABI_IRIX,
-    ELFOSABI_FREEBSD,
-    ELFOSABI_TRU64,
-    ELFOSABI_MODESTO,
-    ELFOSABI_OPENBSD,
-    ELFOSABI_OPENVMS,
-    ELFOSABI_NSK,
-    ELFOSABI_AROS,
-    ELFOSABI_FENIXOS,
-    ELFOSABI_CLOUDABI,
-    ELFOSABI_ARM_AEABI,
-    ELFOSABI_ARM,
-    ELFOSABI_STANDALONE,
-);
-const FLAGS_ET: &[Flag<u16>] = &flags!(ET_NONE, ET_REL, ET_EXEC, ET_DYN, ET_CORE);
-const FLAGS_EM: &[Flag<u16>] = &flags!(
-    EM_NONE,
-    EM_M32,
-    EM_SPARC,
-    EM_386,
-    EM_68K,
-    EM_88K,
-    EM_IAMCU,
-    EM_860,
-    EM_MIPS,
-    EM_S370,
-    EM_MIPS_RS3_LE,
-    EM_PARISC,
-    EM_VPP500,
-    EM_SPARC32PLUS,
-    EM_960,
-    EM_PPC,
-    EM_PPC64,
-    EM_S390,
-    EM_SPU,
-    EM_V800,
-    EM_FR20,
-    EM_RH32,
-    EM_RCE,
-    EM_ARM,
-    EM_FAKE_ALPHA,
-    EM_SH,
-    EM_SPARCV9,
-    EM_TRICORE,
-    EM_ARC,
-    EM_H8_300,
-    EM_H8_300H,
-    EM_H8S,
-    EM_H8_500,
-    EM_IA_64,
-    EM_MIPS_X,
-    EM_COLDFIRE,
-    EM_68HC12,
-    EM_MMA,
-    EM_PCP,
-    EM_NCPU,
-    EM_NDR1,
-    EM_STARCORE,
-    EM_ME16,
-    EM_ST100,
-    EM_TINYJ,
-    EM_X86_64,
-    EM_PDSP,
-    EM_PDP10,
-    EM_PDP11,
-    EM_FX66,
-    EM_ST9PLUS,
-    EM_ST7,
-    EM_68HC16,
-    EM_68HC11,
-    EM_68HC08,
-    EM_68HC05,
-    EM_SVX,
-    EM_ST19,
-    EM_VAX,
-    EM_CRIS,
-    EM_JAVELIN,
-    EM_FIREPATH,
-    EM_ZSP,
-    EM_MMIX,
-    EM_HUANY,
-    EM_PRISM,
-    EM_AVR,
-    EM_FR30,
-    EM_D10V,
-    EM_D30V,
-    EM_V850,
-    EM_M32R,
-    EM_MN10300,
-    EM_MN10200,
-    EM_PJ,
-    EM_OPENRISC,
-    EM_ARC_COMPACT,
-    EM_XTENSA,
-    EM_VIDEOCORE,
-    EM_TMM_GPP,
-    EM_NS32K,
-    EM_TPC,
-    EM_SNP1K,
-    EM_ST200,
-    EM_IP2K,
-    EM_MAX,
-    EM_CR,
-    EM_F2MC16,
-    EM_MSP430,
-    EM_BLACKFIN,
-    EM_SE_C33,
-    EM_SEP,
-    EM_ARCA,
-    EM_UNICORE,
-    EM_EXCESS,
-    EM_DXP,
-    EM_ALTERA_NIOS2,
-    EM_CRX,
-    EM_XGATE,
-    EM_C166,
-    EM_M16C,
-    EM_DSPIC30F,
-    EM_CE,
-    EM_M32C,
-    EM_TSK3000,
-    EM_RS08,
-    EM_SHARC,
-    EM_ECOG2,
-    EM_SCORE7,
-    EM_DSP24,
-    EM_VIDEOCORE3,
-    EM_LATTICEMICO32,
-    EM_SE_C17,
-    EM_TI_C6000,
-    EM_TI_C2000,
-    EM_TI_C5500,
-    EM_TI_ARP32,
-    EM_TI_PRU,
-    EM_MMDSP_PLUS,
-    EM_CYPRESS_M8C,
-    EM_R32C,
-    EM_TRIMEDIA,
-    EM_HEXAGON,
-    EM_8051,
-    EM_STXP7X,
-    EM_NDS32,
-    EM_ECOG1X,
-    EM_MAXQ30,
-    EM_XIMO16,
-    EM_MANIK,
-    EM_CRAYNV2,
-    EM_RX,
-    EM_METAG,
-    EM_MCST_ELBRUS,
-    EM_ECOG16,
-    EM_CR16,
-    EM_ETPU,
-    EM_SLE9X,
-    EM_L10M,
-    EM_K10M,
-    EM_AARCH64,
-    EM_AVR32,
-    EM_STM8,
-    EM_TILE64,
-    EM_TILEPRO,
-    EM_MICROBLAZE,
-    EM_CUDA,
-    EM_TILEGX,
-    EM_CLOUDSHIELD,
-    EM_COREA_1ST,
-    EM_COREA_2ND,
-    EM_ARC_COMPACT2,
-    EM_OPEN8,
-    EM_RL78,
-    EM_VIDEOCORE5,
-    EM_78KOR,
-    EM_56800EX,
-    EM_BA1,
-    EM_BA2,
-    EM_XCORE,
-    EM_MCHP_PIC,
-    EM_KM32,
-    EM_KMX32,
-    EM_EMX16,
-    EM_EMX8,
-    EM_KVARC,
-    EM_CDP,
-    EM_COGE,
-    EM_COOL,
-    EM_NORC,
-    EM_CSR_KALIMBA,
-    EM_Z80,
-    EM_VISIUM,
-    EM_FT32,
-    EM_MOXIE,
-    EM_AMDGPU,
-    EM_RISCV,
-    EM_BPF,
-    EM_SBF,
-    EM_CSKY,
-    EM_ALPHA,
-    EM_LOONGARCH,
-);
-const FLAGS_ELFCOMPRESS: &[Flag<u32>] = &flags!(ELFCOMPRESS_ZLIB, ELFCOMPRESS_ZSTD);
-const FLAGS_GNU_PROPERTY: &[Flag<u32>] = &flags!(
-    GNU_PROPERTY_STACK_SIZE,
-    GNU_PROPERTY_NO_COPY_ON_PROTECTED,
-    GNU_PROPERTY_1_NEEDED,
-);
-const FLAGS_GNU_PROPERTY_1_NEEDED: &[Flag<u32>] =
-    &flags!(GNU_PROPERTY_1_NEEDED_INDIRECT_EXTERN_ACCESS);
-const FLAGS_GNU_PROPERTY_AARCH64: &[Flag<u32>] = &flags!(
-    GNU_PROPERTY_AARCH64_FEATURE_1_AND,
-    GNU_PROPERTY_AARCH64_FEATURE_PAUTH,
-);
-const FLAGS_GNU_PROPERTY_AARCH64_FEATURE_1: &[Flag<u32>] = &flags!(
-    GNU_PROPERTY_AARCH64_FEATURE_1_BTI,
-    GNU_PROPERTY_AARCH64_FEATURE_1_PAC,
-);
-const FLAGS_GNU_PROPERTY_X86: &[Flag<u32>] = &flags!(
-    GNU_PROPERTY_X86_ISA_1_USED,
-    GNU_PROPERTY_X86_ISA_1_NEEDED,
-    GNU_PROPERTY_X86_FEATURE_1_AND,
-);
-const FLAGS_GNU_PROPERTY_X86_ISA_1: &[Flag<u32>] = &flags!(
-    GNU_PROPERTY_X86_ISA_1_BASELINE,
-    GNU_PROPERTY_X86_ISA_1_V2,
-    GNU_PROPERTY_X86_ISA_1_V3,
-    GNU_PROPERTY_X86_ISA_1_V4,
-);
-const FLAGS_GNU_PROPERTY_X86_FEATURE_1: &[Flag<u32>] = &flags!(
-    GNU_PROPERTY_X86_FEATURE_1_IBT,
-    GNU_PROPERTY_X86_FEATURE_1_SHSTK,
-);
-const FLAGS_GRP: &[Flag<u32>] = &flags!(GRP_COMDAT);
-const FLAGS_DF: &[Flag<u32>] = &flags!(
-    DF_ORIGIN,
-    DF_SYMBOLIC,
-    DF_TEXTREL,
-    DF_BIND_NOW,
-    DF_STATIC_TLS,
-);
-const FLAGS_DF_1: &[Flag<u32>] = &flags!(
-    DF_1_NOW,
-    DF_1_GLOBAL,
-    DF_1_GROUP,
-    DF_1_NODELETE,
-    DF_1_LOADFLTR,
-    DF_1_INITFIRST,
-    DF_1_NOOPEN,
-    DF_1_ORIGIN,
-    DF_1_DIRECT,
-    DF_1_TRANS,
-    DF_1_INTERPOSE,
-    DF_1_NODEFLIB,
-    DF_1_NODUMP,
-    DF_1_CONFALT,
-    DF_1_ENDFILTEE,
-    DF_1_DISPRELDNE,
-    DF_1_DISPRELPND,
-    DF_1_NODIRECT,
-    DF_1_IGNMULDEF,
-    DF_1_NOKSYMS,
-    DF_1_NOHDR,
-    DF_1_EDITED,
-    DF_1_NORELOC,
-    DF_1_SYMINTPOSE,
-    DF_1_GLOBAUDIT,
-    DF_1_SINGLETON,
-    DF_1_STUB,
-    DF_1_PIE,
-);
-const FLAGS_VER_FLG: &[Flag<u16>] = &flags!(VER_FLG_BASE, VER_FLG_WEAK);
-const FLAGS_VER_NDX: &[Flag<u16>] = &flags!(VER_NDX_LOCAL, VER_NDX_GLOBAL);
-const FLAGS_VERSYM: &[Flag<u16>] = &flags!(VERSYM_HIDDEN);
-const FLAGS_TAG: &[Flag<u8>] = &flags!(Tag_File, Tag_Section, Tag_Symbol);
