@@ -209,33 +209,6 @@ impl<'a> Printer<'a> {
         writeln!(self.w).unwrap();
     }
 
-    fn field_enum<T: Eq + fmt::UpperHex>(&mut self, name: &str, value: T, flags: &[Flag<T>]) {
-        for flag in flags {
-            if value == flag.value {
-                self.field_name(name);
-                writeln!(self.w, "{} (0x{:X})", flag.name, value).unwrap();
-                return;
-            }
-        }
-        self.field_hex(name, value);
-    }
-
-    fn field_enum_display<T: Eq + fmt::Display>(
-        &mut self,
-        name: &str,
-        value: T,
-        flags: &[Flag<T>],
-    ) {
-        for flag in flags {
-            if value == flag.value {
-                self.field_name(name);
-                writeln!(self.w, "{} ({})", flag.name, value).unwrap();
-                return;
-            }
-        }
-        self.field(name, value);
-    }
-
     fn field_consts<T>(&mut self, name: &str, value: T, consts: &ConstantNames<T>)
     where
         T: Wrap + Copy,
@@ -351,41 +324,6 @@ impl<'a> Printer<'a> {
             });
         }
     }
-
-    fn flags<T: Into<u64>, U: Copy + Into<u64>>(&mut self, value: T, mask: U, flags: &[Flag<U>]) {
-        let value = value.into();
-        let mask = mask.into();
-        self.indent(|p| {
-            if mask != 0 {
-                for flag in flags {
-                    if value & mask == flag.value.into() {
-                        p.print_indent();
-                        writeln!(p.w, "{} (0x{:X})", flag.name, flag.value.into()).unwrap();
-                        return;
-                    }
-                }
-                p.print_indent();
-                writeln!(p.w, "<unknown> (0x{:X})", value & mask).unwrap();
-            } else {
-                for flag in flags {
-                    if value & flag.value.into() == flag.value.into() {
-                        p.print_indent();
-                        writeln!(p.w, "{} (0x{:X})", flag.name, flag.value.into()).unwrap();
-                    }
-                }
-                // TODO: display unknown flags (need to display all flags at once for this)
-            }
-        });
-    }
-}
-
-struct Flag<T> {
-    value: T,
-    name: &'static str,
-}
-
-macro_rules! flags {
-    ($($name:ident),+ $(,)?) => ( [ $(Flag { value: $name, name: stringify!($name), }),+ ] )
 }
 
 fn print_object(p: &mut Printer<'_>, data: &[u8], extra_files: &[&[u8]]) {

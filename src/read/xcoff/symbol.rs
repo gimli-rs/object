@@ -436,8 +436,13 @@ impl<'data, 'file, Xcoff: FileHeader, R: ReadRef<'data>> ObjectSymbol<'data>
             xcoff::N_ABS => SymbolSection::Absolute,
             xcoff::N_UNDEF => SymbolSection::Undefined,
             xcoff::N_DEBUG => SymbolSection::None,
-            index if index > 0 => SymbolSection::Section(SectionIndex(index as usize)),
-            _ => SymbolSection::Unknown,
+            scnum => {
+                if let Some(index) = scnum.index() {
+                    SymbolSection::Section(SectionIndex(index as usize))
+                } else {
+                    SymbolSection::Unknown
+                }
+            }
         }
     }
 
@@ -449,7 +454,7 @@ impl<'data, 'file, Xcoff: FileHeader, R: ReadRef<'data>> ObjectSymbol<'data>
     /// Return true if the symbol is a definition of a function or data object.
     #[inline]
     fn is_definition(&self) -> bool {
-        if self.symbol.n_scnum() <= 0 {
+        if self.symbol.n_scnum().is_reserved() {
             return false;
         }
         if self.symbol.has_aux_csect() {
@@ -483,8 +488,7 @@ impl<'data, 'file, Xcoff: FileHeader, R: ReadRef<'data>> ObjectSymbol<'data>
         } else {
             match self.symbol.n_sclass() {
                 xcoff::C_EXT | xcoff::C_WEAKEXT => {
-                    let visibility = self.symbol.n_type() & xcoff::SYM_V_MASK;
-                    if visibility == xcoff::SYM_V_HIDDEN {
+                    if self.symbol.n_type().visibility() == xcoff::SYM_V_HIDDEN {
                         SymbolScope::Linkage
                     } else {
                         SymbolScope::Dynamic
@@ -510,8 +514,8 @@ impl<'data, 'file, Xcoff: FileHeader, R: ReadRef<'data>> ObjectSymbol<'data>
 
     #[inline]
     fn flags(&self) -> SymbolFlags<SectionIndex, SymbolIndex> {
-        let mut x_smtyp = 0;
-        let mut x_smclas = 0;
+        let mut x_smtyp = xcoff::CsectAuxSmtyp(0);
+        let mut x_smclas = xcoff::CsectAuxClass(0);
         let mut containing_csect = None;
         if self.symbol.has_aux_csect() {
             if let Ok(aux_csect) = self
@@ -542,9 +546,9 @@ pub trait Symbol: Debug + Pod {
     type Word: Into<u64>;
 
     fn n_value(&self) -> Self::Word;
-    fn n_scnum(&self) -> i16;
-    fn n_type(&self) -> u16;
-    fn n_sclass(&self) -> u8;
+    fn n_scnum(&self) -> xcoff::SymbolSection;
+    fn n_type(&self) -> xcoff::SymbolType;
+    fn n_sclass(&self) -> xcoff::SymbolClass;
     fn n_numaux(&self) -> u8;
 
     fn name_offset(&self) -> Option<u32>;
@@ -555,12 +559,9 @@ pub trait Symbol: Debug + Pod {
 
     /// Return the section index for the symbol.
     fn section(&self) -> Option<SectionIndex> {
-        let index = self.n_scnum();
-        if index > 0 {
-            Some(SectionIndex(index as usize))
-        } else {
-            None
-        }
+        self.n_scnum()
+            .index()
+            .map(|index| SectionIndex(index as usize))
     }
 
     /// Return true if the symbol is a null placeholder.
@@ -600,15 +601,15 @@ impl Symbol for xcoff::Symbol64 {
         self.n_value.get(BE)
     }
 
-    fn n_scnum(&self) -> i16 {
+    fn n_scnum(&self) -> xcoff::SymbolSection {
         self.n_scnum.get(BE)
     }
 
-    fn n_type(&self) -> u16 {
+    fn n_type(&self) -> xcoff::SymbolType {
         self.n_type.get(BE)
     }
 
-    fn n_sclass(&self) -> u8 {
+    fn n_sclass(&self) -> xcoff::SymbolClass {
         self.n_sclass
     }
 
@@ -638,15 +639,15 @@ impl Symbol for xcoff::Symbol32 {
         self.n_value.get(BE)
     }
 
-    fn n_scnum(&self) -> i16 {
+    fn n_scnum(&self) -> xcoff::SymbolSection {
         self.n_scnum.get(BE)
     }
 
-    fn n_type(&self) -> u16 {
+    fn n_type(&self) -> xcoff::SymbolType {
         self.n_type.get(BE)
     }
 
-    fn n_sclass(&self) -> u8 {
+    fn n_sclass(&self) -> xcoff::SymbolClass {
         self.n_sclass
     }
 
@@ -687,8 +688,8 @@ impl Symbol for xcoff::Symbol32 {
 #[allow(missing_docs)]
 pub trait FileAux: Debug + Pod {
     fn x_fname(&self) -> &[u8; 8];
-    fn x_ftype(&self) -> u8;
-    fn x_auxtype(&self) -> Option<u8>;
+    fn x_ftype(&self) -> xcoff::FileAuxType;
+    fn x_auxtype(&self) -> Option<xcoff::AuxType>;
 
     fn name_offset(&self) -> Option<u32> {
         let x_fname = self.x_fname();
@@ -725,11 +726,11 @@ impl FileAux for xcoff::FileAux64 {
         &self.x_fname
     }
 
-    fn x_ftype(&self) -> u8 {
+    fn x_ftype(&self) -> xcoff::FileAuxType {
         self.x_ftype
     }
 
-    fn x_auxtype(&self) -> Option<u8> {
+    fn x_auxtype(&self) -> Option<xcoff::AuxType> {
         Some(self.x_auxtype)
     }
 }
@@ -739,11 +740,11 @@ impl FileAux for xcoff::FileAux32 {
         &self.x_fname
     }
 
-    fn x_ftype(&self) -> u8 {
+    fn x_ftype(&self) -> xcoff::FileAuxType {
         self.x_ftype
     }
 
-    fn x_auxtype(&self) -> Option<u8> {
+    fn x_auxtype(&self) -> Option<xcoff::AuxType> {
         None
     }
 }
@@ -754,17 +755,17 @@ pub trait CsectAux: Debug + Pod {
     fn x_scnlen(&self) -> u64;
     fn x_parmhash(&self) -> u32;
     fn x_snhash(&self) -> u16;
-    fn x_smtyp(&self) -> u8;
-    fn x_smclas(&self) -> u8;
+    fn x_smtyp(&self) -> xcoff::CsectAuxSmtyp;
+    fn x_smclas(&self) -> xcoff::CsectAuxClass;
     fn x_stab(&self) -> Option<u32>;
     fn x_snstab(&self) -> Option<u16>;
-    fn x_auxtype(&self) -> Option<u8>;
+    fn x_auxtype(&self) -> Option<xcoff::AuxType>;
 
     fn alignment(&self) -> u8 {
-        self.x_smtyp() >> 3
+        self.x_smtyp().alignment()
     }
-    fn sym_type(&self) -> u8 {
-        self.x_smtyp() & 0x07
+    fn sym_type(&self) -> xcoff::CsectAuxType {
+        self.x_smtyp().typ()
     }
 }
 
@@ -781,11 +782,11 @@ impl CsectAux for xcoff::CsectAux64 {
         self.x_snhash.get(BE)
     }
 
-    fn x_smtyp(&self) -> u8 {
+    fn x_smtyp(&self) -> xcoff::CsectAuxSmtyp {
         self.x_smtyp
     }
 
-    fn x_smclas(&self) -> u8 {
+    fn x_smclas(&self) -> xcoff::CsectAuxClass {
         self.x_smclas
     }
 
@@ -797,7 +798,7 @@ impl CsectAux for xcoff::CsectAux64 {
         None
     }
 
-    fn x_auxtype(&self) -> Option<u8> {
+    fn x_auxtype(&self) -> Option<xcoff::AuxType> {
         Some(self.x_auxtype)
     }
 }
@@ -815,11 +816,11 @@ impl CsectAux for xcoff::CsectAux32 {
         self.x_snhash.get(BE)
     }
 
-    fn x_smtyp(&self) -> u8 {
+    fn x_smtyp(&self) -> xcoff::CsectAuxSmtyp {
         self.x_smtyp
     }
 
-    fn x_smclas(&self) -> u8 {
+    fn x_smclas(&self) -> xcoff::CsectAuxClass {
         self.x_smclas
     }
 
@@ -831,7 +832,7 @@ impl CsectAux for xcoff::CsectAux32 {
         Some(self.x_snstab.get(BE))
     }
 
-    fn x_auxtype(&self) -> Option<u8> {
+    fn x_auxtype(&self) -> Option<xcoff::AuxType> {
         None
     }
 }

@@ -318,7 +318,7 @@ impl SymbolMapBuilder {
                 priority *= 2;
                 #[cfg(feature = "xcoff")]
                 if let crate::SymbolFlags::Xcoff { x_smtyp, .. } = symbol.flags() {
-                    priority += (x_smtyp != crate::xcoff::XTY_LD) as u32;
+                    priority += (x_smtyp.typ() != crate::xcoff::XTY_LD) as u32;
                     if size != 0 {
                         // Add end of sized symbols (typically csects) to bound label sizes.
                         all_symbols.push((address.saturating_add(size), !0, !0, !0, ""));

@@ -18,10 +18,10 @@ struct SymbolOffsets {
     index: usize,
     str_id: Option<StringId>,
     aux_count: u8,
-    n_type: u16,
-    n_sclass: u8,
-    x_smtyp: u8,
-    x_smclas: u8,
+    n_type: xcoff::SymbolType,
+    n_sclass: xcoff::SymbolClass,
+    x_smtyp: xcoff::CsectAuxSmtyp,
+    x_smclas: xcoff::CsectAuxClass,
     containing_csect: Option<SymbolId>,
 }
 
@@ -85,7 +85,7 @@ impl<'a> Object<'a> {
             SectionKind::UninitializedTls => xcoff::STYP_TBSS,
             SectionKind::OtherString => xcoff::STYP_INFO,
             SectionKind::Debug | SectionKind::DebugString => xcoff::STYP_DEBUG,
-            SectionKind::Other | SectionKind::Metadata => 0,
+            SectionKind::Other | SectionKind::Metadata => xcoff::STYP_REG,
             SectionKind::Note
             | SectionKind::Linker
             | SectionKind::Common
@@ -119,9 +119,9 @@ impl<'a> Object<'a> {
                 || n_sclass == xcoff::C_WEAKEXT
                 || n_sclass == xcoff::C_HIDEXT)
         {
-            xcoff::SYM_V_HIDDEN
+            xcoff::SYM_V_HIDDEN.into()
         } else {
-            0
+            xcoff::SymbolType(0)
         };
         let (x_smtyp, x_smclas) = if n_sclass == xcoff::C_EXT
             || n_sclass == xcoff::C_WEAKEXT
@@ -155,12 +155,12 @@ impl<'a> Object<'a> {
                 }
             }
         } else {
-            (0, 0)
+            (xcoff::CsectAuxType(0), xcoff::CsectAuxClass(0))
         };
         SymbolFlags::Xcoff {
             n_type,
             n_sclass,
-            x_smtyp,
+            x_smtyp: x_smtyp.into(),
             x_smclas,
             containing_csect: None,
         }
@@ -359,6 +359,10 @@ impl<'a> Object<'a> {
             .map_err(|_| Error(String::from("Cannot allocate buffer")))?;
 
         // Write file header.
+        let f_flags = match self.flags {
+            FileFlags::Xcoff { f_flags } => f_flags,
+            _ => xcoff::FileFlags(0),
+        };
         if is_64 {
             let header = xcoff::FileHeader64 {
                 f_magic: xcoff::MAGIC_64.into(),
@@ -367,10 +371,7 @@ impl<'a> Object<'a> {
                 f_symptr: (symtab_offset as u64).into(),
                 f_nsyms: (symtab_count as u32).into(),
                 f_opthdr: 0.into(),
-                f_flags: match self.flags {
-                    FileFlags::Xcoff { f_flags } => f_flags.into(),
-                    _ => 0.into(),
-                },
+                f_flags: f_flags.into(),
             };
             buffer.write(&header);
         } else {
@@ -381,10 +382,7 @@ impl<'a> Object<'a> {
                 f_symptr: (symtab_offset as u32).into(),
                 f_nsyms: (symtab_count as u32).into(),
                 f_opthdr: 0.into(),
-                f_flags: match self.flags {
-                    FileFlags::Xcoff { f_flags } => f_flags.into(),
-                    _ => 0.into(),
-                },
+                f_flags: f_flags.into(),
             };
             buffer.write(&header);
         }
@@ -502,7 +500,7 @@ impl<'a> Object<'a> {
                 }
                 SymbolSection::Undefined | SymbolSection::Common => xcoff::N_UNDEF,
                 SymbolSection::Absolute => xcoff::N_ABS,
-                SymbolSection::Section(id) => id.0 as i16 + 1,
+                SymbolSection::Section(id) => xcoff::SymbolSection(id.0 as i16 + 1),
             };
             let n_type = symbol_offsets[index].n_type;
             let n_sclass = symbol_offsets[index].n_sclass;

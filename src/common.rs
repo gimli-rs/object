@@ -501,7 +501,7 @@ pub enum FileFlags {
     #[cfg(feature = "xcoff")]
     Xcoff {
         /// `f_flags` field in the XCOFF file header.
-        f_flags: u16,
+        f_flags: crate::xcoff::FileFlags,
     },
 }
 
@@ -636,7 +636,7 @@ pub enum SectionFlags {
     #[cfg(feature = "xcoff")]
     Xcoff {
         /// `s_flags` field in the section header.
-        s_flags: u32,
+        s_flags: crate::xcoff::SectionFlags,
     },
 }
 
@@ -686,17 +686,17 @@ pub enum SymbolFlags<Section, Symbol> {
     #[cfg(feature = "xcoff")]
     Xcoff {
         /// `n_type` field in the XCOFF symbol.
-        n_type: u16,
+        n_type: crate::xcoff::SymbolType,
         /// `n_sclass` field in the XCOFF symbol.
-        n_sclass: u8,
+        n_sclass: crate::xcoff::SymbolClass,
         /// `x_smtyp` field in the CSECT auxiliary symbol.
         ///
         /// Only valid if `n_sclass` is `C_EXT`, `C_WEAKEXT`, or `C_HIDEXT`.
-        x_smtyp: u8,
+        x_smtyp: crate::xcoff::CsectAuxSmtyp,
         /// `x_smclas` field in the CSECT auxiliary symbol.
         ///
         /// Only valid if `n_sclass` is `C_EXT`, `C_WEAKEXT`, or `C_HIDEXT`.
-        x_smclas: u8,
+        x_smclas: crate::xcoff::CsectAuxClass,
         /// The containing csect for the symbol.
         ///
         /// Only valid if `x_smtyp` is `XTY_LD`.
