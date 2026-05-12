@@ -296,10 +296,8 @@ where
     }
 
     fn sub_architecture(&self) -> Option<SubArchitecture> {
-        match (
-            self.header.cputype(self.endian),
-            self.header.cpusubtype(self.endian),
-        ) {
+        let subtype = self.header.cpusubtype(self.endian).id();
+        match (self.header.cputype(self.endian), subtype) {
             (macho::CPU_TYPE_ARM64, macho::CPU_SUBTYPE_ARM64E) => Some(SubArchitecture::Arm64E),
             _ => None,
         }
@@ -413,7 +411,7 @@ where
     fn imports(&self) -> Result<Vec<Import<'data>>> {
         let mut dysymtab = None;
         let mut libraries = Vec::new();
-        let twolevel = self.header.flags(self.endian) & macho::MH_TWOLEVEL != 0;
+        let twolevel = self.header.flags(self.endian).contains(macho::MH_TWOLEVEL);
         if twolevel {
             libraries.push(&[][..]);
         }
@@ -439,11 +437,17 @@ where
                 let symbol = self.symbols.symbol(SymbolIndex(i))?;
                 let name = symbol.name(self.endian, self.symbols.strings())?;
                 let library = if twolevel {
-                    libraries
-                        .get(symbol.library_ordinal(self.endian) as usize)
-                        .copied()
-                        .read_error("Invalid Mach-O symbol library ordinal")?
+                    if let Some(index) = symbol.library_ordinal(self.endian).index() {
+                        libraries
+                            .get(index as usize)
+                            .copied()
+                            .read_error("Invalid Mach-O symbol library ordinal")?
+                    } else {
+                        // Don't currently distinguish between self/executable/flat.
+                        &[]
+                    }
                 } else {
+                    // Flat namespace.
                     &[]
                 };
                 imports.push(Import {
@@ -701,12 +705,12 @@ pub trait MachHeader: Debug + Pod {
     fn is_little_endian(&self) -> bool;
 
     fn magic(&self) -> u32;
-    fn cputype(&self, endian: Self::Endian) -> u32;
-    fn cpusubtype(&self, endian: Self::Endian) -> u32;
-    fn filetype(&self, endian: Self::Endian) -> u32;
+    fn cputype(&self, endian: Self::Endian) -> macho::CpuType;
+    fn cpusubtype(&self, endian: Self::Endian) -> macho::CpuSubtype;
+    fn filetype(&self, endian: Self::Endian) -> macho::FileType;
     fn ncmds(&self, endian: Self::Endian) -> u32;
     fn sizeofcmds(&self, endian: Self::Endian) -> u32;
-    fn flags(&self, endian: Self::Endian) -> u32;
+    fn flags(&self, endian: Self::Endian) -> macho::FileFlags;
 
     // Provided methods.
 
@@ -786,15 +790,15 @@ impl<Endian: endian::Endian> MachHeader for macho::MachHeader32<Endian> {
         self.magic.get(BigEndian)
     }
 
-    fn cputype(&self, endian: Self::Endian) -> u32 {
+    fn cputype(&self, endian: Self::Endian) -> macho::CpuType {
         self.cputype.get(endian)
     }
 
-    fn cpusubtype(&self, endian: Self::Endian) -> u32 {
+    fn cpusubtype(&self, endian: Self::Endian) -> macho::CpuSubtype {
         self.cpusubtype.get(endian)
     }
 
-    fn filetype(&self, endian: Self::Endian) -> u32 {
+    fn filetype(&self, endian: Self::Endian) -> macho::FileType {
         self.filetype.get(endian)
     }
 
@@ -806,7 +810,7 @@ impl<Endian: endian::Endian> MachHeader for macho::MachHeader32<Endian> {
         self.sizeofcmds.get(endian)
     }
 
-    fn flags(&self, endian: Self::Endian) -> u32 {
+    fn flags(&self, endian: Self::Endian) -> macho::FileFlags {
         self.flags.get(endian)
     }
 }
@@ -834,15 +838,15 @@ impl<Endian: endian::Endian> MachHeader for macho::MachHeader64<Endian> {
         self.magic.get(BigEndian)
     }
 
-    fn cputype(&self, endian: Self::Endian) -> u32 {
+    fn cputype(&self, endian: Self::Endian) -> macho::CpuType {
         self.cputype.get(endian)
     }
 
-    fn cpusubtype(&self, endian: Self::Endian) -> u32 {
+    fn cpusubtype(&self, endian: Self::Endian) -> macho::CpuSubtype {
         self.cpusubtype.get(endian)
     }
 
-    fn filetype(&self, endian: Self::Endian) -> u32 {
+    fn filetype(&self, endian: Self::Endian) -> macho::FileType {
         self.filetype.get(endian)
     }
 
@@ -854,7 +858,7 @@ impl<Endian: endian::Endian> MachHeader for macho::MachHeader64<Endian> {
         self.sizeofcmds.get(endian)
     }
 
-    fn flags(&self, endian: Self::Endian) -> u32 {
+    fn flags(&self, endian: Self::Endian) -> macho::FileFlags {
         self.flags.get(endian)
     }
 }

@@ -287,7 +287,7 @@ pub trait Section: Debug + Pod {
     fn align(&self, endian: Self::Endian) -> u32;
     fn reloff(&self, endian: Self::Endian) -> u32;
     fn nreloc(&self, endian: Self::Endian) -> u32;
-    fn flags(&self, endian: Self::Endian) -> u32;
+    fn flags(&self, endian: Self::Endian) -> macho::SectionFlags;
     fn reserved1(&self, endian: Self::Endian) -> u32;
     fn reserved2(&self, endian: Self::Endian) -> u32;
 
@@ -310,8 +310,8 @@ pub trait Section: Debug + Pod {
     }
 
     /// Return the section type from the flags field.
-    fn section_type(&self, endian: Self::Endian) -> u32 {
-        self.flags(endian) & macho::SECTION_TYPE
+    fn section_type(&self, endian: Self::Endian) -> macho::SectionType {
+        self.flags(endian).typ()
     }
 
     /// Return the offset and size of the section in the file.
@@ -369,8 +369,8 @@ pub trait Section: Debug + Pod {
     fn indirect_symbols<'data>(
         &self,
         endian: Self::Endian,
-        indirect_symbols: &'data [U32<Self::Endian>],
-    ) -> Result<&'data [U32<Self::Endian>]> {
+        indirect_symbols: &'data [U32<Self::Endian, macho::IndirectSymbol>],
+    ) -> Result<&'data [U32<Self::Endian, macho::IndirectSymbol>]> {
         let entry_size = match self.section_type(endian) {
             macho::S_NON_LAZY_SYMBOL_POINTERS
             | macho::S_LAZY_SYMBOL_POINTERS
@@ -422,7 +422,7 @@ impl<Endian: endian::Endian> Section for macho::Section32<Endian> {
     fn nreloc(&self, endian: Self::Endian) -> u32 {
         self.nreloc.get(endian)
     }
-    fn flags(&self, endian: Self::Endian) -> u32 {
+    fn flags(&self, endian: Self::Endian) -> macho::SectionFlags {
         self.flags.get(endian)
     }
     fn reserved1(&self, endian: Self::Endian) -> u32 {
@@ -461,7 +461,7 @@ impl<Endian: endian::Endian> Section for macho::Section64<Endian> {
     fn nreloc(&self, endian: Self::Endian) -> u32 {
         self.nreloc.get(endian)
     }
-    fn flags(&self, endian: Self::Endian) -> u32 {
+    fn flags(&self, endian: Self::Endian) -> macho::SectionFlags {
         self.flags.get(endian)
     }
     fn reserved1(&self, endian: Self::Endian) -> u32 {

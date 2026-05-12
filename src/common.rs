@@ -489,7 +489,7 @@ pub enum FileFlags {
     #[cfg(feature = "macho")]
     MachO {
         /// `flags` field in the Mach-O file header.
-        flags: u32,
+        flags: crate::macho::FileFlags,
     },
     /// COFF file flags.
     #[cfg(feature = "coff")]
@@ -523,11 +523,11 @@ pub enum SegmentFlags {
     #[cfg(feature = "macho")]
     MachO {
         /// `flags` field in the segment header.
-        flags: u32,
+        flags: crate::macho::SegmentFlags,
         /// `maxprot` field in the segment header.
-        maxprot: u32,
+        maxprot: crate::macho::VmProt,
         /// `initprot` field in the segment header.
-        initprot: u32,
+        initprot: crate::macho::VmProt,
     },
     /// COFF segment flags.
     #[cfg(feature = "coff")]
@@ -624,7 +624,7 @@ pub enum SectionFlags {
     #[cfg(feature = "macho")]
     MachO {
         /// `flags` field in the section header.
-        flags: u32,
+        flags: crate::macho::SectionFlags,
     },
     /// COFF section flags.
     #[cfg(feature = "coff")]
@@ -658,9 +658,9 @@ pub enum SymbolFlags<Section, Symbol> {
     #[cfg(feature = "macho")]
     MachO {
         /// `n_type` field in the Mach-O symbol.
-        n_type: u8,
+        n_type: crate::macho::SymbolFlags,
         /// `n_desc` field in the Mach-O symbol.
-        n_desc: u16,
+        n_desc: crate::macho::SymbolDesc,
     },
     /// COFF flags for a symbol.
     #[cfg(feature = "coff")]

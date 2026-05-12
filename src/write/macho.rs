@@ -27,13 +27,13 @@ struct SymbolOffsets {
 pub struct MachOBuildVersion {
     /// One of the `PLATFORM_` constants (for example,
     /// [`object::macho::PLATFORM_MACOS`](macho::PLATFORM_MACOS)).
-    pub platform: u32,
+    pub platform: macho::Platform,
     /// The minimum OS version, where `X.Y.Z` is encoded in nibbles as
     /// `xxxx.yy.zz`.
-    pub minos: u32,
+    pub minos: macho::Version,
     /// The SDK version as `X.Y.Z`, where `X.Y.Z` is encoded in nibbles as
     /// `xxxx.yy.zz`.
-    pub sdk: u32,
+    pub sdk: macho::Version,
 }
 
 impl MachOBuildVersion {
@@ -51,7 +51,7 @@ impl<'a> Object<'a> {
     ///
     /// Requires `feature = "macho"`.
     #[inline]
-    pub fn set_macho_cpu_subtype(&mut self, cpu_subtype: u32) {
+    pub fn set_macho_cpu_subtype(&mut self, cpu_subtype: macho::CpuSubtype) {
         self.macho_cpu_subtype = Some(cpu_subtype);
     }
 
@@ -159,17 +159,22 @@ impl<'a> Object<'a> {
 
     pub(crate) fn macho_section_flags(&self, section: &Section<'_>) -> SectionFlags {
         let flags = match section.kind {
-            SectionKind::Text => macho::S_ATTR_PURE_INSTRUCTIONS | macho::S_ATTR_SOME_INSTRUCTIONS,
-            SectionKind::Data => 0,
-            SectionKind::ReadOnlyData | SectionKind::ReadOnlyDataWithRel => 0,
-            SectionKind::ReadOnlyString => macho::S_CSTRING_LITERALS,
-            SectionKind::UninitializedData | SectionKind::Common => macho::S_ZEROFILL,
-            SectionKind::Tls => macho::S_THREAD_LOCAL_REGULAR,
-            SectionKind::UninitializedTls => macho::S_THREAD_LOCAL_ZEROFILL,
-            SectionKind::TlsVariables => macho::S_THREAD_LOCAL_VARIABLES,
-            SectionKind::Debug | SectionKind::DebugString => macho::S_ATTR_DEBUG,
-            SectionKind::OtherString => macho::S_CSTRING_LITERALS,
-            SectionKind::Other | SectionKind::Linker | SectionKind::Metadata => 0,
+            SectionKind::Text => {
+                macho::S_REGULAR | macho::S_ATTR_PURE_INSTRUCTIONS | macho::S_ATTR_SOME_INSTRUCTIONS
+            }
+            SectionKind::Data | SectionKind::ReadOnlyData | SectionKind::ReadOnlyDataWithRel => {
+                macho::S_REGULAR.into()
+            }
+            SectionKind::ReadOnlyString => macho::S_CSTRING_LITERALS.into(),
+            SectionKind::UninitializedData | SectionKind::Common => macho::S_ZEROFILL.into(),
+            SectionKind::Tls => macho::S_THREAD_LOCAL_REGULAR.into(),
+            SectionKind::UninitializedTls => macho::S_THREAD_LOCAL_ZEROFILL.into(),
+            SectionKind::TlsVariables => macho::S_THREAD_LOCAL_VARIABLES.into(),
+            SectionKind::Debug | SectionKind::DebugString => macho::S_REGULAR | macho::S_ATTR_DEBUG,
+            SectionKind::OtherString => macho::S_CSTRING_LITERALS.into(),
+            SectionKind::Other | SectionKind::Linker | SectionKind::Metadata => {
+                macho::S_REGULAR.into()
+            }
             SectionKind::Note | SectionKind::Unknown => {
                 return SectionFlags::None;
             }
@@ -181,13 +186,13 @@ impl<'a> Object<'a> {
         // TODO: N_STAB
         let n_type = match symbol.section {
             SymbolSection::Undefined => macho::N_UNDF | macho::N_EXT,
-            SymbolSection::Absolute => macho::N_ABS,
-            SymbolSection::Section(_) => macho::N_SECT,
+            SymbolSection::Absolute => macho::N_ABS.into(),
+            SymbolSection::Section(_) => macho::N_SECT.into(),
             SymbolSection::None | SymbolSection::Common => {
                 return SymbolFlags::None;
             }
         } | match symbol.scope {
-            SymbolScope::Unknown | SymbolScope::Compilation => 0,
+            SymbolScope::Unknown | SymbolScope::Compilation => macho::SymbolFlags(0),
             SymbolScope::Linkage => macho::N_EXT | macho::N_PEXT,
             SymbolScope::Dynamic => macho::N_EXT,
         };
@@ -198,7 +203,7 @@ impl<'a> Object<'a> {
                 macho::N_WEAK_DEF
             }
         } else {
-            0
+            macho::SymbolDesc(0)
         };
         SymbolFlags::MachO { n_type, n_desc }
     }
@@ -608,7 +613,7 @@ impl<'a> Object<'a> {
             .map_err(|_| Error(String::from("Cannot allocate buffer")))?;
 
         // Write file header.
-        let (cputype, mut cpusubtype) = match (self.architecture, self.sub_architecture) {
+        let (cputype, cpusubtype_id) = match (self.architecture, self.sub_architecture) {
             (Architecture::Arm, None) => (macho::CPU_TYPE_ARM, macho::CPU_SUBTYPE_ARM_ALL),
             (Architecture::Aarch64, None) => (macho::CPU_TYPE_ARM64, macho::CPU_SUBTYPE_ARM64_ALL),
             (Architecture::Aarch64, Some(SubArchitecture::Arm64E)) => {
@@ -632,6 +637,7 @@ impl<'a> Object<'a> {
                 )));
             }
         };
+        let mut cpusubtype: macho::CpuSubtype = cpusubtype_id.into();
 
         if let Some(cpu_subtype) = self.macho_cpu_subtype {
             cpusubtype = cpu_subtype;
@@ -639,7 +645,7 @@ impl<'a> Object<'a> {
 
         let mut flags = match self.flags {
             FileFlags::MachO { flags } => flags,
-            _ => 0,
+            _ => macho::FileFlags(0),
         };
         if self.macho_subsections_via_symbols {
             flags |= macho::MH_SUBSECTIONS_VIA_SYMBOLS;
@@ -670,7 +676,7 @@ impl<'a> Object<'a> {
                 maxprot: macho::VM_PROT_READ | macho::VM_PROT_WRITE | macho::VM_PROT_EXECUTE,
                 initprot: macho::VM_PROT_READ | macho::VM_PROT_WRITE | macho::VM_PROT_EXECUTE,
                 nsects: self.sections.len() as u32,
-                flags: 0,
+                flags: macho::SegmentFlags(0),
             },
         );
 
@@ -946,12 +952,12 @@ impl<'a> Object<'a> {
 }
 
 struct MachHeader {
-    cputype: u32,
-    cpusubtype: u32,
-    filetype: u32,
+    cputype: macho::CpuType,
+    cpusubtype: macho::CpuSubtype,
+    filetype: macho::FileType,
     ncmds: u32,
     sizeofcmds: u32,
-    flags: u32,
+    flags: macho::FileFlags,
 }
 
 struct SegmentCommand {
@@ -961,10 +967,10 @@ struct SegmentCommand {
     vmsize: u64,
     fileoff: u64,
     filesize: u64,
-    maxprot: u32,
-    initprot: u32,
+    maxprot: macho::VmProt,
+    initprot: macho::VmProt,
     nsects: u32,
-    flags: u32,
+    flags: macho::SegmentFlags,
 }
 
 struct SectionHeader {
@@ -976,14 +982,14 @@ struct SectionHeader {
     align: u32,
     reloff: u32,
     nreloc: u32,
-    flags: u32,
+    flags: macho::SectionFlags,
 }
 
 struct Nlist {
     n_strx: u32,
-    n_type: u8,
+    n_type: macho::SymbolFlags,
     n_sect: u8,
-    n_desc: u16,
+    n_desc: macho::SymbolDesc,
     n_value: u64,
 }
 

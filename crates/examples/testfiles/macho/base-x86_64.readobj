@@ -2,12 +2,15 @@ Format: Mach-O 64-bit
 MachHeader {
     Magic: 0xCFFAEDFE
     CpuType: CPU_TYPE_X86_64 (0x1000007)
-    CpuSubtype: 0x3
-        CPU_SUBTYPE_X86_64_ALL (0x3)
+    CpuSubtype: CPU_SUBTYPE_X86_64_ALL (0x3)
     FileType: MH_EXECUTE (0x2)
     NumberOfCmds: 16
     SizeOfCmds: 0x558
     Flags: 0x200085
+        MH_NOUNDEFS (0x1)
+        MH_DYLDLINK (0x4)
+        MH_TWOLEVEL (0x80)
+        MH_PIE (0x200000)
 }
 SegmentCommand {
     Cmd: LC_SEGMENT_64 (0x19)
@@ -137,8 +140,7 @@ SegmentCommand {
         VM_PROT_READ (0x1)
         VM_PROT_WRITE (0x2)
     NumberOfSections: 1
-    Flags: 0x10
-        SG_READ_ONLY (0x10)
+    Flags: SG_READ_ONLY (0x10)
     Section {
         Index: 6
         SectionName: "__got"
@@ -215,10 +217,8 @@ SegmentCommand {
     VmSize: 0x4000
     FileOffset: 0xC000
     FileSize: 0x110
-    MaxProt: 0x1
-        VM_PROT_READ (0x1)
-    InitProt: 0x1
-        VM_PROT_READ (0x1)
+    MaxProt: VM_PROT_READ (0x1)
+    InitProt: VM_PROT_READ (0x1)
     NumberOfSections: 0
     Flags: 0x0
 }
@@ -258,8 +258,7 @@ SymtabCommand {
             N_SECT (0xE)
             N_EXT (0x1)
         Section: "__TEXT,__text" (0x1)
-        Desc: 0x10
-            REFERENCED_DYNAMICALLY (0x10)
+        Desc: REFERENCED_DYNAMICALLY (0x10)
         Value: 0x100000000
     }
     Nlist {
@@ -281,7 +280,7 @@ SymtabCommand {
         Section: "" (0x0)
         Desc: 0x100
             REFERENCE_FLAG_UNDEFINED_NON_LAZY (0x0)
-            N_SYMBOL_RESOLVER (0x100)
+        DylibOrdinal: 0x1
         Value: 0x0
     }
     Nlist {
@@ -293,7 +292,7 @@ SymtabCommand {
         Section: "" (0x0)
         Desc: 0x100
             REFERENCE_FLAG_UNDEFINED_NON_LAZY (0x0)
-            N_SYMBOL_RESOLVER (0x100)
+        DylibOrdinal: 0x1
         Value: 0x0
     }
 }

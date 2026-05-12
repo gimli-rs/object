@@ -1,8 +1,7 @@
-use crate::macho::{EXPORT_SYMBOL_FLAGS_REEXPORT, EXPORT_SYMBOL_FLAGS_STUB_AND_RESOLVER};
-use crate::read::{Bytes, ReadError, Result};
+use crate::macho;
+use crate::read::{Bytes, Error, ReadError, Result};
 use alloc::boxed::Box;
 use alloc::vec::Vec;
-use core::convert::TryInto;
 
 // The exports trie is a serialized trie with the following structure:
 //
@@ -77,7 +76,7 @@ impl<'data> Iterator for ExportsTrieIterator<'data> {
 #[derive(Debug)]
 pub struct ExportSymbol<'data> {
     name: Box<[u8]>,
-    flags: u8,
+    flags: macho::ExportSymbolFlags,
     data: ExportData<'data>,
 }
 
@@ -88,7 +87,7 @@ impl<'data> ExportSymbol<'data> {
     }
 
     /// The flags for the exported symbol.
-    pub fn flags(&self) -> u8 {
+    pub fn flags(&self) -> macho::ExportSymbolFlags {
         self.flags
     }
 
@@ -224,15 +223,15 @@ pub enum ExportData<'data> {
 }
 
 impl<'data> ExportData<'data> {
-    pub(super) fn parse(mut data: Bytes<'data>) -> Result<(u8, Self)> {
+    pub(super) fn parse(mut data: Bytes<'data>) -> Result<(macho::ExportSymbolFlags, Self)> {
         let flags = data
             .read_uleb128()
+            .map(macho::ExportSymbolFlags)
             .read_error("Invalid exports trie flags")?;
-        let flags: u8 = flags
-            .try_into()
-            .map_err(|_| ())
-            .read_error("Exports trie flags too large")?;
-        if flags & EXPORT_SYMBOL_FLAGS_REEXPORT != 0 {
+        if flags.has_unknown_bits() {
+            return Err(Error("Exports trie flags too large"));
+        }
+        if flags.contains(macho::EXPORT_SYMBOL_FLAGS_REEXPORT) {
             let dylib_ordinal = data
                 .read_uleb128()
                 .read_error("Invalid exports trie dylib ordinal")?;
@@ -247,7 +246,7 @@ impl<'data> ExportData<'data> {
                 },
             ));
         }
-        if flags & EXPORT_SYMBOL_FLAGS_STUB_AND_RESOLVER != 0 {
+        if flags.contains(macho::EXPORT_SYMBOL_FLAGS_STUB_AND_RESOLVER) {
             let stub_address = data
                 .read_uleb128()
                 .read_error("Invalid exports trie stub address")?;

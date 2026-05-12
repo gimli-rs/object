@@ -8,7 +8,7 @@
 #![allow(missing_docs)]
 
 #[cfg(feature = "names")]
-use crate::constants::ConstantNames;
+use crate::constants::{ConstantNames, FlagNames};
 use crate::endian::{BigEndian, Endian, U16, U32, U64};
 use crate::pod::Pod;
 
@@ -19,6 +19,8 @@ use crate::pod::Pod;
 #[derive(Debug)]
 #[non_exhaustive]
 pub struct Constants {
+    /// Values for `cpusubtype` fields.
+    pub cpusubtype: &'static FlagNames<CpuSubtype>,
     /// Values for `r_type` field of `Rel*::r_info`.
     pub reloc: &'static ConstantNames<u8>,
 }
@@ -33,12 +35,13 @@ pub const fn constants() -> &'static Constants {
 ///
 /// Note that these also include the values returned by [`constants`].
 #[cfg(feature = "names")]
-pub const fn machine_constants(cputype: u32) -> &'static Constants {
+pub const fn machine_constants(cputype: CpuType) -> &'static Constants {
     match cputype {
         CPU_TYPE_X86 => X86::constants(),
         CPU_TYPE_X86_64 => X86_64::constants(),
         CPU_TYPE_ARM => Arm::constants(),
-        CPU_TYPE_ARM64 | CPU_TYPE_ARM64_32 => Arm64::constants(),
+        CPU_TYPE_ARM64 => Arm64::constants(),
+        CPU_TYPE_ARM64_32 => Arm64_32::constants(),
         CPU_TYPE_POWERPC | CPU_TYPE_POWERPC64 => Ppc::constants(),
         _ => Base::constants(),
     }
@@ -46,31 +49,43 @@ pub const fn machine_constants(cputype: u32) -> &'static Constants {
 
 constants! {
     struct Base;
+    flags cpusubtype: CpuSubtype = NAMES_CPU_SUBTYPE;
     consts reloc: u8 = {};
 }
 
 constants! {
     struct X86(Base);
+    flags cpusubtype: CpuSubtype = NAMES_CPU_SUBTYPE_X86;
     consts reloc: u8 = NAMES_GENERIC_RELOC;
 }
 
 constants! {
     struct X86_64(Base);
+    flags cpusubtype: CpuSubtype = NAMES_CPU_SUBTYPE_X86_64;
     consts reloc: u8 = NAMES_X86_64_RELOC;
 }
 
 constants! {
     struct Arm(Base);
+    flags cpusubtype: CpuSubtype = NAMES_CPU_SUBTYPE_ARM;
     consts reloc: u8 = NAMES_ARM_RELOC;
 }
 
 constants! {
     struct Arm64(Base);
+    flags cpusubtype: CpuSubtype = NAMES_CPU_SUBTYPE_ARM64;
+    consts reloc: u8 = NAMES_ARM64_RELOC;
+}
+
+constants! {
+    struct Arm64_32(Base);
+    flags cpusubtype: CpuSubtype = NAMES_CPU_SUBTYPE_ARM64_32;
     consts reloc: u8 = NAMES_ARM64_RELOC;
 }
 
 constants! {
     struct Ppc(Base);
+    flags cpusubtype: CpuSubtype = NAMES_CPU_SUBTYPE_POWERPC;
     consts reloc: u8 = NAMES_PPC_RELOC;
 }
 
@@ -87,45 +102,87 @@ pub const CPU_ARCH_ABI64: u32 = 0x0100_0000;
 /// ABI for 64-bit hardware with 32-bit types; LP32
 pub const CPU_ARCH_ABI64_32: u32 = 0x0200_0000;
 
-/*
- *	Machine types known by all.
- */
+newtype!(
+    struct CpuType(u32);
+);
 
-pub const CPU_TYPE_ANY: u32 = !0;
+newtype_constant_names!(NAMES_CPU_TYPE: CpuType(u32) = {
+    CPU_TYPE_ANY = !0,
 
-pub const CPU_TYPE_VAX: u32 = 1;
-pub const CPU_TYPE_MC680X0: u32 = 6;
-pub const CPU_TYPE_X86: u32 = 7;
-/// Compatibility alias of [`CPU_TYPE_X86`].
-pub const CPU_TYPE_I386: u32 = CPU_TYPE_X86;
-pub const CPU_TYPE_X86_64: u32 = CPU_TYPE_X86 | CPU_ARCH_ABI64;
-pub const CPU_TYPE_MIPS: u32 = 8;
-pub const CPU_TYPE_MC98000: u32 = 10;
-pub const CPU_TYPE_HPPA: u32 = 11;
-pub const CPU_TYPE_ARM: u32 = 12;
-pub const CPU_TYPE_ARM64: u32 = CPU_TYPE_ARM | CPU_ARCH_ABI64;
-pub const CPU_TYPE_ARM64_32: u32 = CPU_TYPE_ARM | CPU_ARCH_ABI64_32;
-pub const CPU_TYPE_MC88000: u32 = 13;
-pub const CPU_TYPE_SPARC: u32 = 14;
-pub const CPU_TYPE_I860: u32 = 15;
-pub const CPU_TYPE_ALPHA: u32 = 16;
-pub const CPU_TYPE_POWERPC: u32 = 18;
-pub const CPU_TYPE_POWERPC64: u32 = CPU_TYPE_POWERPC | CPU_ARCH_ABI64;
+    CPU_TYPE_VAX = 1,
+    CPU_TYPE_MC680X0 = 6,
+    CPU_TYPE_X86 = 7,
+    /// Compatibility alias of [`CPU_TYPE_X86`].
+    CPU_TYPE_I386 = CPU_TYPE_X86.0,
+    CPU_TYPE_X86_64 = CPU_TYPE_X86.0 | CPU_ARCH_ABI64,
+    CPU_TYPE_MIPS = 8,
+    CPU_TYPE_MC98000 = 10,
+    CPU_TYPE_HPPA = 11,
+    CPU_TYPE_ARM = 12,
+    CPU_TYPE_ARM64 = CPU_TYPE_ARM.0 | CPU_ARCH_ABI64,
+    CPU_TYPE_ARM64_32 = CPU_TYPE_ARM.0 | CPU_ARCH_ABI64_32,
+    CPU_TYPE_MC88000 = 13,
+    CPU_TYPE_SPARC = 14,
+    CPU_TYPE_I860 = 15,
+    CPU_TYPE_ALPHA = 16,
+    CPU_TYPE_POWERPC = 18,
+    CPU_TYPE_POWERPC64 = CPU_TYPE_POWERPC.0 | CPU_ARCH_ABI64,
+});
+
+newtype!(
+    /// The subtype identity field of [`CpuSubtype`].
+    struct CpuSubtypeId(u32);
+);
+
+impl core::fmt::Debug for CpuSubtypeId {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(f, "{:#x}", self)
+    }
+}
+
+newtype!(
+    /// Values for `cpusubtype` fields.
+    struct CpuSubtype(u32);
+);
+
+impl CpuSubtype {
+    /// Get the subtype identity field.
+    pub fn id(self) -> CpuSubtypeId {
+        CpuSubtypeId(self.0 & !CPU_SUBTYPE_MASK)
+    }
+
+    /// Set the subtype identity field.
+    pub fn with_id(self, id: CpuSubtypeId) -> CpuSubtype {
+        CpuSubtype(self.0 & CPU_SUBTYPE_MASK | id.0 & !CPU_SUBTYPE_MASK)
+    }
+}
+
+impl From<CpuSubtypeId> for CpuSubtype {
+    fn from(s: CpuSubtypeId) -> Self {
+        CpuSubtype(s.0)
+    }
+}
+
+impl From<CpuSubtype> for CpuSubtypeId {
+    fn from(value: CpuSubtype) -> Self {
+        value.id()
+    }
+}
 
 /*
  * Capability bits used in the definition of cpu_subtype.
  */
 /// mask for feature flags
 pub const CPU_SUBTYPE_MASK: u32 = 0xff00_0000;
-/// 64 bit libraries
-pub const CPU_SUBTYPE_LIB64: u32 = 0x8000_0000;
-/// pointer authentication with versioned ABI
-pub const CPU_SUBTYPE_PTRAUTH_ABI: u32 = 0x8000_0000;
+newtype_flag_names!(NAMES_CPU_SUBTYPE: CpuSubtype(u32) = {
+    /// 64 bit libraries
+    CPU_SUBTYPE_LIB64 = 0x8000_0000,
+});
 
 /// When selecting a slice, ANY will pick the slice with the best
 /// grading for the selected cpu_type_t, unlike the "ALL" subtypes,
 /// which are the slices that can run on any hardware for that cpu type.
-pub const CPU_SUBTYPE_ANY: u32 = !0;
+pub const CPU_SUBTYPE_ANY: CpuSubtype = CpuSubtype(!0);
 
 /*
  *	Object files that are hand-crafted to run on any
@@ -138,28 +195,32 @@ pub const CPU_SUBTYPE_ANY: u32 = !0;
  *	It is the responsibility of the implementor to make sure the
  *	software handles unsupported implementations elegantly.
  */
-pub const CPU_SUBTYPE_MULTIPLE: u32 = !0;
-pub const CPU_SUBTYPE_LITTLE_ENDIAN: u32 = 0;
-pub const CPU_SUBTYPE_BIG_ENDIAN: u32 = 1;
+pub const CPU_SUBTYPE_MULTIPLE: CpuSubtype = CpuSubtype(!0);
+newtype_consts!(CpuSubtypeId = {
+    CPU_SUBTYPE_LITTLE_ENDIAN = 0,
+    CPU_SUBTYPE_BIG_ENDIAN = 1,
+});
 
 /*
  *	VAX subtypes (these do *not* necessary conform to the actual cpu
  *	ID assigned by DEC available via the SID register).
  */
 
-pub const CPU_SUBTYPE_VAX_ALL: u32 = 0;
-pub const CPU_SUBTYPE_VAX780: u32 = 1;
-pub const CPU_SUBTYPE_VAX785: u32 = 2;
-pub const CPU_SUBTYPE_VAX750: u32 = 3;
-pub const CPU_SUBTYPE_VAX730: u32 = 4;
-pub const CPU_SUBTYPE_UVAXI: u32 = 5;
-pub const CPU_SUBTYPE_UVAXII: u32 = 6;
-pub const CPU_SUBTYPE_VAX8200: u32 = 7;
-pub const CPU_SUBTYPE_VAX8500: u32 = 8;
-pub const CPU_SUBTYPE_VAX8600: u32 = 9;
-pub const CPU_SUBTYPE_VAX8650: u32 = 10;
-pub const CPU_SUBTYPE_VAX8800: u32 = 11;
-pub const CPU_SUBTYPE_UVAXIII: u32 = 12;
+newtype_consts!(CpuSubtypeId = {
+    CPU_SUBTYPE_VAX_ALL = 0,
+    CPU_SUBTYPE_VAX780 = 1,
+    CPU_SUBTYPE_VAX785 = 2,
+    CPU_SUBTYPE_VAX750 = 3,
+    CPU_SUBTYPE_VAX730 = 4,
+    CPU_SUBTYPE_UVAXI = 5,
+    CPU_SUBTYPE_UVAXII = 6,
+    CPU_SUBTYPE_VAX8200 = 7,
+    CPU_SUBTYPE_VAX8500 = 8,
+    CPU_SUBTYPE_VAX8600 = 9,
+    CPU_SUBTYPE_VAX8650 = 10,
+    CPU_SUBTYPE_VAX8800 = 11,
+    CPU_SUBTYPE_UVAXIII = 12,
+});
 
 /*
  *      680x0 subtypes
@@ -178,11 +239,13 @@ pub const CPU_SUBTYPE_UVAXIII: u32 = 12;
  *	files to be tagged as containing 68030-specific instructions.
  */
 
-pub const CPU_SUBTYPE_MC680X0_ALL: u32 = 1;
-// compat
-pub const CPU_SUBTYPE_MC68030: u32 = 1;
-pub const CPU_SUBTYPE_MC68040: u32 = 2;
-pub const CPU_SUBTYPE_MC68030_ONLY: u32 = 3;
+newtype_consts!(CpuSubtypeId = {
+    CPU_SUBTYPE_MC680X0_ALL = 1,
+    // compat
+    CPU_SUBTYPE_MC68030 = 1,
+    CPU_SUBTYPE_MC68040 = 2,
+    CPU_SUBTYPE_MC68030_ONLY = 3,
+});
 
 /*
  *	I386 subtypes
@@ -193,175 +256,240 @@ pub const fn cpu_subtype_intel(f: u32, m: u32) -> u32 {
     f + (m << 4)
 }
 
-pub const CPU_SUBTYPE_I386_ALL: u32 = cpu_subtype_intel(3, 0);
-pub const CPU_SUBTYPE_386: u32 = cpu_subtype_intel(3, 0);
-pub const CPU_SUBTYPE_486: u32 = cpu_subtype_intel(4, 0);
-pub const CPU_SUBTYPE_486SX: u32 = cpu_subtype_intel(4, 8);
-pub const CPU_SUBTYPE_586: u32 = cpu_subtype_intel(5, 0);
-pub const CPU_SUBTYPE_PENT: u32 = cpu_subtype_intel(5, 0);
-pub const CPU_SUBTYPE_PENTPRO: u32 = cpu_subtype_intel(6, 1);
-pub const CPU_SUBTYPE_PENTII_M3: u32 = cpu_subtype_intel(6, 3);
-pub const CPU_SUBTYPE_PENTII_M5: u32 = cpu_subtype_intel(6, 5);
-pub const CPU_SUBTYPE_CELERON: u32 = cpu_subtype_intel(7, 6);
-pub const CPU_SUBTYPE_CELERON_MOBILE: u32 = cpu_subtype_intel(7, 7);
-pub const CPU_SUBTYPE_PENTIUM_3: u32 = cpu_subtype_intel(8, 0);
-pub const CPU_SUBTYPE_PENTIUM_3_M: u32 = cpu_subtype_intel(8, 1);
-pub const CPU_SUBTYPE_PENTIUM_3_XEON: u32 = cpu_subtype_intel(8, 2);
-pub const CPU_SUBTYPE_PENTIUM_M: u32 = cpu_subtype_intel(9, 0);
-pub const CPU_SUBTYPE_PENTIUM_4: u32 = cpu_subtype_intel(10, 0);
-pub const CPU_SUBTYPE_PENTIUM_4_M: u32 = cpu_subtype_intel(10, 1);
-pub const CPU_SUBTYPE_ITANIUM: u32 = cpu_subtype_intel(11, 0);
-pub const CPU_SUBTYPE_ITANIUM_2: u32 = cpu_subtype_intel(11, 1);
-pub const CPU_SUBTYPE_XEON: u32 = cpu_subtype_intel(12, 0);
-pub const CPU_SUBTYPE_XEON_MP: u32 = cpu_subtype_intel(12, 1);
+newtype_consts!(CpuSubtypeId = {
+    CPU_SUBTYPE_I386_ALL = cpu_subtype_intel(3, 0),
+    CPU_SUBTYPE_386 = cpu_subtype_intel(3, 0),
+    CPU_SUBTYPE_486 = cpu_subtype_intel(4, 0),
+    CPU_SUBTYPE_486SX = cpu_subtype_intel(4, 8),
+    CPU_SUBTYPE_586 = cpu_subtype_intel(5, 0),
+    CPU_SUBTYPE_PENT = cpu_subtype_intel(5, 0),
+    CPU_SUBTYPE_PENTPRO = cpu_subtype_intel(6, 1),
+    CPU_SUBTYPE_PENTII_M3 = cpu_subtype_intel(6, 3),
+    CPU_SUBTYPE_PENTII_M5 = cpu_subtype_intel(6, 5),
+    CPU_SUBTYPE_CELERON = cpu_subtype_intel(7, 6),
+    CPU_SUBTYPE_CELERON_MOBILE = cpu_subtype_intel(7, 7),
+    CPU_SUBTYPE_PENTIUM_3 = cpu_subtype_intel(8, 0),
+    CPU_SUBTYPE_PENTIUM_3_M = cpu_subtype_intel(8, 1),
+    CPU_SUBTYPE_PENTIUM_3_XEON = cpu_subtype_intel(8, 2),
+    CPU_SUBTYPE_PENTIUM_M = cpu_subtype_intel(9, 0),
+    CPU_SUBTYPE_PENTIUM_4 = cpu_subtype_intel(10, 0),
+    CPU_SUBTYPE_PENTIUM_4_M = cpu_subtype_intel(10, 1),
+    CPU_SUBTYPE_ITANIUM = cpu_subtype_intel(11, 0),
+    CPU_SUBTYPE_ITANIUM_2 = cpu_subtype_intel(11, 1),
+    CPU_SUBTYPE_XEON = cpu_subtype_intel(12, 0),
+    CPU_SUBTYPE_XEON_MP = cpu_subtype_intel(12, 1),
+});
 
 #[inline]
-pub const fn cpu_subtype_intel_family(x: u32) -> u32 {
-    x & 15
+pub const fn cpu_subtype_intel_family(x: CpuSubtypeId) -> u32 {
+    x.0 & 15
 }
 pub const CPU_SUBTYPE_INTEL_FAMILY_MAX: u32 = 15;
 
 #[inline]
-pub const fn cpu_subtype_intel_model(x: u32) -> u32 {
-    x >> 4
+pub const fn cpu_subtype_intel_model(x: CpuSubtypeId) -> u32 {
+    x.0 >> 4
 }
 pub const CPU_SUBTYPE_INTEL_MODEL_ALL: u32 = 0;
 
 /*
- *	X86 subtypes.
+ *     X86 subtypes.
  */
 
-pub const CPU_SUBTYPE_X86_ALL: u32 = 3;
-pub const CPU_SUBTYPE_X86_64_ALL: u32 = 3;
-pub const CPU_SUBTYPE_X86_ARCH1: u32 = 4;
-/// Haswell feature subset
-pub const CPU_SUBTYPE_X86_64_H: u32 = 8;
+flag_names!(NAMES_CPU_SUBTYPE_X86: CpuSubtype(u32) = NAMES_CPU_SUBTYPE + {
+    _ = !CPU_SUBTYPE_MASK => NAMES_CPU_SUBTYPE_ID_X86,
+});
+constant_names!(NAMES_CPU_SUBTYPE_ID_X86: CpuSubtypeId(u32) = {
+    CPU_SUBTYPE_X86_ALL = 3,
+    CPU_SUBTYPE_X86_ARCH1 = 4,
+});
+
+flag_names!(NAMES_CPU_SUBTYPE_X86_64: CpuSubtype(u32) = NAMES_CPU_SUBTYPE + {
+    _ = !CPU_SUBTYPE_MASK => NAMES_CPU_SUBTYPE_ID_X86_64,
+});
+constant_names!(NAMES_CPU_SUBTYPE_ID_X86_64: CpuSubtypeId(u32) = {
+    CPU_SUBTYPE_X86_64_ALL = 3,
+    CPU_SUBTYPE_X86_64_H = 8,
+});
 
 /*
  *	Mips subtypes.
  */
 
-pub const CPU_SUBTYPE_MIPS_ALL: u32 = 0;
-pub const CPU_SUBTYPE_MIPS_R2300: u32 = 1;
-pub const CPU_SUBTYPE_MIPS_R2600: u32 = 2;
-pub const CPU_SUBTYPE_MIPS_R2800: u32 = 3;
-/// pmax
-pub const CPU_SUBTYPE_MIPS_R2000A: u32 = 4;
-pub const CPU_SUBTYPE_MIPS_R2000: u32 = 5;
-/// 3max
-pub const CPU_SUBTYPE_MIPS_R3000A: u32 = 6;
-pub const CPU_SUBTYPE_MIPS_R3000: u32 = 7;
+newtype_consts!(CpuSubtypeId = {
+    CPU_SUBTYPE_MIPS_ALL = 0,
+    CPU_SUBTYPE_MIPS_R2300 = 1,
+    CPU_SUBTYPE_MIPS_R2600 = 2,
+    CPU_SUBTYPE_MIPS_R2800 = 3,
+    /// pmax
+    CPU_SUBTYPE_MIPS_R2000A = 4,
+    CPU_SUBTYPE_MIPS_R2000 = 5,
+    /// 3max
+    CPU_SUBTYPE_MIPS_R3000A = 6,
+    CPU_SUBTYPE_MIPS_R3000 = 7,
+});
 
 /*
  *	MC98000 (PowerPC) subtypes
  */
-pub const CPU_SUBTYPE_MC98000_ALL: u32 = 0;
-pub const CPU_SUBTYPE_MC98601: u32 = 1;
+newtype_consts!(CpuSubtypeId = {
+    CPU_SUBTYPE_MC98000_ALL = 0,
+    CPU_SUBTYPE_MC98601 = 1,
+});
 
 /*
  *	HPPA subtypes for Hewlett-Packard HP-PA family of
  *	risc processors. Port by NeXT to 700 series.
  */
 
-pub const CPU_SUBTYPE_HPPA_ALL: u32 = 0;
-/// Compatibility alias of [`CPU_SUBTYPE_HPPA_ALL`].
-pub const CPU_SUBTYPE_HPPA_7100: u32 = 0;
-pub const CPU_SUBTYPE_HPPA_7100LC: u32 = 1;
+newtype_consts!(CpuSubtypeId = {
+    CPU_SUBTYPE_HPPA_ALL = 0,
+    /// Compatibility alias of [`CPU_SUBTYPE_HPPA_ALL`].
+    CPU_SUBTYPE_HPPA_7100 = 0,
+    CPU_SUBTYPE_HPPA_7100LC = 1,
+});
 
 /*
  *	MC88000 subtypes.
  */
-pub const CPU_SUBTYPE_MC88000_ALL: u32 = 0;
-pub const CPU_SUBTYPE_MC88100: u32 = 1;
-pub const CPU_SUBTYPE_MC88110: u32 = 2;
+newtype_consts!(CpuSubtypeId = {
+    CPU_SUBTYPE_MC88000_ALL = 0,
+    CPU_SUBTYPE_MC88100 = 1,
+    CPU_SUBTYPE_MC88110 = 2,
+});
 
 /*
  *	SPARC subtypes
  */
-pub const CPU_SUBTYPE_SPARC_ALL: u32 = 0;
+newtype_consts!(CpuSubtypeId = {
+    CPU_SUBTYPE_SPARC_ALL = 0,
+});
 
 /*
  *	I860 subtypes
  */
-pub const CPU_SUBTYPE_I860_ALL: u32 = 0;
-pub const CPU_SUBTYPE_I860_860: u32 = 1;
+newtype_consts!(CpuSubtypeId = {
+    CPU_SUBTYPE_I860_ALL = 0,
+    CPU_SUBTYPE_I860_860 = 1,
+});
 
 /*
- *	PowerPC subtypes
+ *     PowerPC subtypes
  */
-pub const CPU_SUBTYPE_POWERPC_ALL: u32 = 0;
-pub const CPU_SUBTYPE_POWERPC_601: u32 = 1;
-pub const CPU_SUBTYPE_POWERPC_602: u32 = 2;
-pub const CPU_SUBTYPE_POWERPC_603: u32 = 3;
-pub const CPU_SUBTYPE_POWERPC_603E: u32 = 4;
-pub const CPU_SUBTYPE_POWERPC_603EV: u32 = 5;
-pub const CPU_SUBTYPE_POWERPC_604: u32 = 6;
-pub const CPU_SUBTYPE_POWERPC_604E: u32 = 7;
-pub const CPU_SUBTYPE_POWERPC_620: u32 = 8;
-pub const CPU_SUBTYPE_POWERPC_750: u32 = 9;
-pub const CPU_SUBTYPE_POWERPC_7400: u32 = 10;
-pub const CPU_SUBTYPE_POWERPC_7450: u32 = 11;
-pub const CPU_SUBTYPE_POWERPC_970: u32 = 100;
+flag_names!(NAMES_CPU_SUBTYPE_POWERPC: CpuSubtype(u32) = NAMES_CPU_SUBTYPE + {
+    _ = !CPU_SUBTYPE_MASK => NAMES_CPU_SUBTYPE_ID_POWERPC,
+});
+constant_names!(NAMES_CPU_SUBTYPE_ID_POWERPC: CpuSubtypeId(u32) = {
+    CPU_SUBTYPE_POWERPC_ALL = 0,
+    CPU_SUBTYPE_POWERPC_601 = 1,
+    CPU_SUBTYPE_POWERPC_602 = 2,
+    CPU_SUBTYPE_POWERPC_603 = 3,
+    CPU_SUBTYPE_POWERPC_603E = 4,
+    CPU_SUBTYPE_POWERPC_603EV = 5,
+    CPU_SUBTYPE_POWERPC_604 = 6,
+    CPU_SUBTYPE_POWERPC_604E = 7,
+    CPU_SUBTYPE_POWERPC_620 = 8,
+    CPU_SUBTYPE_POWERPC_750 = 9,
+    CPU_SUBTYPE_POWERPC_7400 = 10,
+    CPU_SUBTYPE_POWERPC_7450 = 11,
+    CPU_SUBTYPE_POWERPC_970 = 100,
+});
 
 /*
- *	ARM subtypes
+ *     ARM subtypes
  */
-pub const CPU_SUBTYPE_ARM_ALL: u32 = 0;
-pub const CPU_SUBTYPE_ARM_V4T: u32 = 5;
-pub const CPU_SUBTYPE_ARM_V6: u32 = 6;
-pub const CPU_SUBTYPE_ARM_V5TEJ: u32 = 7;
-pub const CPU_SUBTYPE_ARM_XSCALE: u32 = 8;
-/// ARMv7-A and ARMv7-R
-pub const CPU_SUBTYPE_ARM_V7: u32 = 9;
-/// Cortex A9
-pub const CPU_SUBTYPE_ARM_V7F: u32 = 10;
-/// Swift
-pub const CPU_SUBTYPE_ARM_V7S: u32 = 11;
-pub const CPU_SUBTYPE_ARM_V7K: u32 = 12;
-pub const CPU_SUBTYPE_ARM_V8: u32 = 13;
-/// Not meant to be run under xnu
-pub const CPU_SUBTYPE_ARM_V6M: u32 = 14;
-/// Not meant to be run under xnu
-pub const CPU_SUBTYPE_ARM_V7M: u32 = 15;
-/// Not meant to be run under xnu
-pub const CPU_SUBTYPE_ARM_V7EM: u32 = 16;
-/// Not meant to be run under xnu
-pub const CPU_SUBTYPE_ARM_V8M: u32 = 17;
-/// Not meant to be run under xnu
-pub const CPU_SUBTYPE_ARM_V8M_MAIN: u32 = CPU_SUBTYPE_ARM_V8M;
-/// Not meant to be run under xnu
-pub const CPU_SUBTYPE_ARM_V8M_BASE: u32 = 18;
-/// Not meant to be run under xnu
-pub const CPU_SUBTYPE_ARM_V8_1M_MAIN: u32 = 19;
+flag_names!(NAMES_CPU_SUBTYPE_ARM: CpuSubtype(u32) = NAMES_CPU_SUBTYPE + {
+    _ = !CPU_SUBTYPE_MASK => NAMES_CPU_SUBTYPE_ID_ARM,
+});
+constant_names!(NAMES_CPU_SUBTYPE_ID_ARM: CpuSubtypeId(u32) = {
+    CPU_SUBTYPE_ARM_ALL = 0,
+    CPU_SUBTYPE_ARM_V4T = 5,
+    CPU_SUBTYPE_ARM_V6 = 6,
+    CPU_SUBTYPE_ARM_V5TEJ = 7,
+    CPU_SUBTYPE_ARM_XSCALE = 8,
+    /// ARMv7-A and ARMv7-R
+    CPU_SUBTYPE_ARM_V7 = 9,
+    /// Cortex A9
+    CPU_SUBTYPE_ARM_V7F = 10,
+    /// Swift
+    CPU_SUBTYPE_ARM_V7S = 11,
+    CPU_SUBTYPE_ARM_V7K = 12,
+    CPU_SUBTYPE_ARM_V8 = 13,
+    /// Not meant to be run under xnu
+    CPU_SUBTYPE_ARM_V6M = 14,
+    /// Not meant to be run under xnu
+    CPU_SUBTYPE_ARM_V7M = 15,
+    /// Not meant to be run under xnu
+    CPU_SUBTYPE_ARM_V7EM = 16,
+    /// Not meant to be run under xnu
+    CPU_SUBTYPE_ARM_V8M = 17,
+    /// Not meant to be run under xnu
+    CPU_SUBTYPE_ARM_V8M_MAIN = CPU_SUBTYPE_ARM_V8M.0,
+    /// Not meant to be run under xnu
+    CPU_SUBTYPE_ARM_V8M_BASE = 18,
+    /// Not meant to be run under xnu
+    CPU_SUBTYPE_ARM_V8_1M_MAIN = 19,
+});
 
 /*
  *  ARM64 subtypes
  */
-pub const CPU_SUBTYPE_ARM64_ALL: u32 = 0;
-pub const CPU_SUBTYPE_ARM64_V8: u32 = 1;
-pub const CPU_SUBTYPE_ARM64E: u32 = 2;
+flag_names!(NAMES_CPU_SUBTYPE_ARM64: CpuSubtype(u32) = {
+    /// pointer authentication with versioned ABI
+    CPU_SUBTYPE_PTRAUTH_ABI = 0x8000_0000,
+    _ = !CPU_SUBTYPE_MASK => NAMES_CPU_SUBTYPE_ID_ARM64,
+});
+constant_names!(NAMES_CPU_SUBTYPE_ID_ARM64: CpuSubtypeId(u32) = {
+    CPU_SUBTYPE_ARM64_ALL = 0,
+    CPU_SUBTYPE_ARM64_V8 = 1,
+    CPU_SUBTYPE_ARM64E = 2,
+});
 
 /* CPU subtype feature flags for ptrauth on arm64e platforms */
 pub const CPU_SUBTYPE_ARM64_PTR_AUTH_MASK: u32 = 0x0f000000;
-#[inline]
-pub const fn cpu_subtype_arm64_ptr_auth_version(x: u32) -> u32 {
-    (x & CPU_SUBTYPE_ARM64_PTR_AUTH_MASK) >> 24
+
+impl CpuSubtype {
+    /// Get the arm64 ptrauth version field.
+    #[inline]
+    pub const fn arm64_ptr_auth_version(self) -> u32 {
+        (self.0 & CPU_SUBTYPE_ARM64_PTR_AUTH_MASK) >> 24
+    }
+
+    /// Set the arm64 ptrauth version field.
+    #[inline]
+    pub const fn with_arm64_ptr_auth_version(self, version: u32) -> CpuSubtype {
+        CpuSubtype(
+            self.0 & !CPU_SUBTYPE_ARM64_PTR_AUTH_MASK
+                | (version << 24) & CPU_SUBTYPE_ARM64_PTR_AUTH_MASK,
+        )
+    }
 }
 
 /*
  *  ARM64_32 subtypes
  */
-pub const CPU_SUBTYPE_ARM64_32_ALL: u32 = 0;
-pub const CPU_SUBTYPE_ARM64_32_V8: u32 = 1;
+flag_names!(NAMES_CPU_SUBTYPE_ARM64_32: CpuSubtype(u32) = NAMES_CPU_SUBTYPE + {
+    _ = !CPU_SUBTYPE_MASK => NAMES_CPU_SUBTYPE_ID_ARM64_32,
+});
+constant_names!(NAMES_CPU_SUBTYPE_ID_ARM64_32: CpuSubtypeId(u32) = {
+    CPU_SUBTYPE_ARM64_32_ALL = 0,
+    CPU_SUBTYPE_ARM64_32_V8 = 1,
+});
 
 // Definitions from "/usr/include/mach/vm_prot.h".
 
-/// read permission
-pub const VM_PROT_READ: u32 = 0x01;
-/// write permission
-pub const VM_PROT_WRITE: u32 = 0x02;
-/// execute permission
-pub const VM_PROT_EXECUTE: u32 = 0x04;
+newtype!(
+    struct VmProt(u32);
+);
+
+newtype_flag_names!(NAMES_VM_PROT: VmProt(u32) = {
+    /// read permission
+    VM_PROT_READ = 0x01,
+    /// write permission
+    VM_PROT_WRITE = 0x02,
+    /// execute permission
+    VM_PROT_EXECUTE = 0x04,
+});
 
 // Definitions from https://github.com/llvm/llvm-project/blob/llvmorg-22.1.3/clang/lib/Headers/ptrauth.h
 
@@ -565,18 +693,24 @@ pub struct DyldCacheMappingInfo<E: Endian> {
     pub address: U64<E>,
     pub size: U64<E>,
     pub file_offset: U64<E>,
-    pub max_prot: U32<E>,
-    pub init_prot: U32<E>,
+    pub max_prot: U32<E, VmProt>,
+    pub init_prot: U32<E, VmProt>,
 }
 
-// Contains the flags for the dyld_cache_mapping_and_slide_info flags field
-pub const DYLD_CACHE_MAPPING_AUTH_DATA: u64 = 1 << 0;
-pub const DYLD_CACHE_MAPPING_DIRTY_DATA: u64 = 1 << 1;
-pub const DYLD_CACHE_MAPPING_CONST_DATA: u64 = 1 << 2;
-pub const DYLD_CACHE_MAPPING_TEXT_STUBS: u64 = 1 << 3;
-pub const DYLD_CACHE_DYNAMIC_CONFIG_DATA: u64 = 1 << 4;
-pub const DYLD_CACHE_READ_ONLY_DATA: u64 = 1 << 5;
-pub const DYLD_CACHE_MAPPING_CONST_TPRO_DATA: u64 = 1 << 6;
+newtype!(
+    /// Values for `DyldCacheMappingAndSlideInfo::flags`.
+    struct DyldCacheMappingFlags(u64);
+);
+
+newtype_flag_names!(NAMES_DYLD_CACHE_MAPPING: DyldCacheMappingFlags(u64) = {
+    DYLD_CACHE_MAPPING_AUTH_DATA = 1 << 0,
+    DYLD_CACHE_MAPPING_DIRTY_DATA = 1 << 1,
+    DYLD_CACHE_MAPPING_CONST_DATA = 1 << 2,
+    DYLD_CACHE_MAPPING_TEXT_STUBS = 1 << 3,
+    DYLD_CACHE_DYNAMIC_CONFIG_DATA = 1 << 4,
+    DYLD_CACHE_READ_ONLY_DATA = 1 << 5,
+    DYLD_CACHE_MAPPING_CONST_TPRO_DATA = 1 << 6,
+});
 
 /// Corresponds to struct dyld_cache_mapping_and_slide_info from dyld_cache_format.h.
 #[derive(Debug, Clone, Copy)]
@@ -587,9 +721,9 @@ pub struct DyldCacheMappingAndSlideInfo<E: Endian> {
     pub file_offset: U64<E>,
     pub slide_info_file_offset: U64<E>,
     pub slide_info_file_size: U64<E>,
-    pub flags: U64<E>,
-    pub max_prot: U32<E>,
-    pub init_prot: U32<E>,
+    pub flags: U64<E, DyldCacheMappingFlags>,
+    pub max_prot: U32<E, VmProt>,
+    pub init_prot: U32<E, VmProt>,
 }
 
 /// Corresponds to struct dyld_cache_tpro_mapping_info from dyld_cache_format.h.
@@ -853,9 +987,9 @@ pub struct FatHeader {
 #[repr(C)]
 pub struct FatArch32 {
     /// cpu specifier (int)
-    pub cputype: U32<BigEndian>,
+    pub cputype: U32<BigEndian, CpuType>,
     /// machine specifier (int)
-    pub cpusubtype: U32<BigEndian>,
+    pub cpusubtype: U32<BigEndian, CpuSubtype>,
     /// file offset to this object file
     pub offset: U32<BigEndian>,
     /// size of this object file
@@ -879,9 +1013,9 @@ pub const FAT_CIGAM_64: u32 = 0xbfba_feca;
 #[repr(C)]
 pub struct FatArch64 {
     /// cpu specifier (int)
-    pub cputype: U32<BigEndian>,
+    pub cputype: U32<BigEndian, CpuType>,
     /// machine specifier (int)
-    pub cpusubtype: U32<BigEndian>,
+    pub cpusubtype: U32<BigEndian, CpuSubtype>,
     /// file offset to this object file
     pub offset: U64<BigEndian>,
     /// size of this object file
@@ -903,17 +1037,17 @@ pub struct MachHeader32<E: Endian> {
     /// mach magic number identifier
     pub magic: U32<BigEndian>,
     /// cpu specifier
-    pub cputype: U32<E>,
+    pub cputype: U32<E, CpuType>,
     /// machine specifier
-    pub cpusubtype: U32<E>,
+    pub cpusubtype: U32<E, CpuSubtype>,
     /// type of file
-    pub filetype: U32<E>,
+    pub filetype: U32<E, FileType>,
     /// number of load commands
     pub ncmds: U32<E>,
     /// the size of all the load commands
     pub sizeofcmds: U32<E>,
     /// flags
-    pub flags: U32<E>,
+    pub flags: U32<E, FileFlags>,
 }
 
 // Values for `MachHeader32::magic`.
@@ -931,17 +1065,17 @@ pub struct MachHeader64<E: Endian> {
     /// mach magic number identifier
     pub magic: U32<BigEndian>,
     /// cpu specifier
-    pub cputype: U32<E>,
+    pub cputype: U32<E, CpuType>,
     /// machine specifier
-    pub cpusubtype: U32<E>,
+    pub cpusubtype: U32<E, CpuSubtype>,
     /// type of file
-    pub filetype: U32<E>,
+    pub filetype: U32<E, FileType>,
     /// number of load commands
     pub ncmds: U32<E>,
     /// the size of all the load commands
     pub sizeofcmds: U32<E>,
     /// flags
-    pub flags: U32<E>,
+    pub flags: U32<E, FileFlags>,
     /// reserved
     pub reserved: U32<E>,
 }
@@ -974,99 +1108,111 @@ pub const MH_CIGAM_64: u32 = 0xcffa_edfe;
  * Mach-O file.
  */
 
-// Values for `MachHeader*::filetype`.
-/// relocatable object file
-pub const MH_OBJECT: u32 = 0x1;
-/// demand paged executable file
-pub const MH_EXECUTE: u32 = 0x2;
-/// fixed VM shared library file
-pub const MH_FVMLIB: u32 = 0x3;
-/// core file
-pub const MH_CORE: u32 = 0x4;
-/// preloaded executable file
-pub const MH_PRELOAD: u32 = 0x5;
-/// dynamically bound shared library
-pub const MH_DYLIB: u32 = 0x6;
-/// dynamic link editor
-pub const MH_DYLINKER: u32 = 0x7;
-/// dynamically bound bundle file
-pub const MH_BUNDLE: u32 = 0x8;
-/// shared library stub for static linking only, no section contents
-pub const MH_DYLIB_STUB: u32 = 0x9;
-/// companion file with only debug sections
-pub const MH_DSYM: u32 = 0xa;
-/// x86_64 kexts
-pub const MH_KEXT_BUNDLE: u32 = 0xb;
-/// a file composed of other Mach-Os to be run in the same userspace sharing a single linkedit.
-pub const MH_FILESET: u32 = 0xc;
-/// gpu program
-pub const MH_GPU_EXECUTE: u32 = 0xd;
-/// gpu support functions
-pub const MH_GPU_DYLIB: u32 = 0xe;
+newtype!(
+    /// Values for `MachHeader*::filetype`.
+    struct FileType(u32);
+);
 
-// Values for `MachHeader*::flags`.
-/// the object file has no undefined references
-pub const MH_NOUNDEFS: u32 = 0x1;
-/// the object file is the output of an incremental link against a base file and can't be link edited again
-pub const MH_INCRLINK: u32 = 0x2;
-/// the object file is input for the dynamic linker and can't be statically link edited again
-pub const MH_DYLDLINK: u32 = 0x4;
-/// the object file's undefined references are bound by the dynamic linker when loaded.
-pub const MH_BINDATLOAD: u32 = 0x8;
-/// the file has its dynamic undefined references prebound.
-pub const MH_PREBOUND: u32 = 0x10;
-/// the file has its read-only and read-write segments split
-pub const MH_SPLIT_SEGS: u32 = 0x20;
-/// the shared library init routine is to be run lazily via catching memory faults to its writeable segments (obsolete)
-pub const MH_LAZY_INIT: u32 = 0x40;
-/// the image is using two-level name space bindings
-pub const MH_TWOLEVEL: u32 = 0x80;
-/// the executable is forcing all images to use flat name space bindings
-pub const MH_FORCE_FLAT: u32 = 0x100;
-/// this umbrella guarantees no multiple definitions of symbols in its sub-images so the two-level namespace hints can always be used.
-pub const MH_NOMULTIDEFS: u32 = 0x200;
-/// do not have dyld notify the prebinding agent about this executable
-pub const MH_NOFIXPREBINDING: u32 = 0x400;
-/// the binary is not prebound but can have its prebinding redone. only used when MH_PREBOUND is not set.
-pub const MH_PREBINDABLE: u32 = 0x800;
-/// indicates that this binary binds to all two-level namespace modules of its dependent libraries. only used when MH_PREBINDABLE and MH_TWOLEVEL are both set.
-pub const MH_ALLMODSBOUND: u32 = 0x1000;
-/// safe to divide up the sections into sub-sections via symbols for dead code stripping
-pub const MH_SUBSECTIONS_VIA_SYMBOLS: u32 = 0x2000;
-/// the binary has been canonicalized via the unprebind operation
-pub const MH_CANONICAL: u32 = 0x4000;
-/// the final linked image contains external weak symbols
-pub const MH_WEAK_DEFINES: u32 = 0x8000;
-/// the final linked image uses weak symbols
-pub const MH_BINDS_TO_WEAK: u32 = 0x10000;
-/// When this bit is set, all stacks in the task will be given stack execution privilege.  Only used in MH_EXECUTE filetypes.
-pub const MH_ALLOW_STACK_EXECUTION: u32 = 0x20000;
-/// When this bit is set, the binary declares it is safe for use in processes with uid zero
-pub const MH_ROOT_SAFE: u32 = 0x40000;
-/// When this bit is set, the binary declares it is safe for use in processes when issetugid() is true
-pub const MH_SETUID_SAFE: u32 = 0x80000;
-/// When this bit is set on a dylib, the static linker does not need to examine dependent dylibs to see if any are re-exported
-pub const MH_NO_REEXPORTED_DYLIBS: u32 = 0x10_0000;
-/// When this bit is set, the OS will load the main executable at a random address.  Only used in MH_EXECUTE filetypes.
-pub const MH_PIE: u32 = 0x20_0000;
-/// Only for use on dylibs.  When linking against a dylib that has this bit set, the static linker will automatically not create a LC_LOAD_DYLIB load command to the dylib if no symbols are being referenced from the dylib.
-pub const MH_DEAD_STRIPPABLE_DYLIB: u32 = 0x40_0000;
-/// Contains a section of type S_THREAD_LOCAL_VARIABLES
-pub const MH_HAS_TLV_DESCRIPTORS: u32 = 0x80_0000;
-/// When this bit is set, the OS will run the main executable with a non-executable heap even on platforms (e.g. i386) that don't require it. Only used in MH_EXECUTE filetypes.
-pub const MH_NO_HEAP_EXECUTION: u32 = 0x100_0000;
-/// The code was linked for use in an application extension.
-pub const MH_APP_EXTENSION_SAFE: u32 = 0x0200_0000;
-/// The external symbols listed in the nlist symbol table do not include all the symbols listed in the dyld info.
-pub const MH_NLIST_OUTOFSYNC_WITH_DYLDINFO: u32 = 0x0400_0000;
-/// Allow LC_MIN_VERSION_MACOS and LC_BUILD_VERSION load commands with
-/// the platforms macOS, iOSMac, iOSSimulator, tvOSSimulator and watchOSSimulator.
-pub const MH_SIM_SUPPORT: u32 = 0x0800_0000;
-/// main executable has no __PAGEZERO segment.  Instead, loader (xnu) will load program high and block out all memory below it.
-pub const MH_IMPLICIT_PAGEZERO: u32 = 0x1000_0000;
-/// Only for use on dylibs. When this bit is set, the dylib is part of the dyld
-/// shared cache, rather than loose in the filesystem.
-pub const MH_DYLIB_IN_CACHE: u32 = 0x8000_0000;
+newtype_constant_names!(NAMES_MH_TYPE: FileType(u32) = {
+    /// relocatable object file
+    MH_OBJECT = 0x1,
+    /// demand paged executable file
+    MH_EXECUTE = 0x2,
+    /// fixed VM shared library file
+    MH_FVMLIB = 0x3,
+    /// core file
+    MH_CORE = 0x4,
+    /// preloaded executable file
+    MH_PRELOAD = 0x5,
+    /// dynamically bound shared library
+    MH_DYLIB = 0x6,
+    /// dynamic link editor
+    MH_DYLINKER = 0x7,
+    /// dynamically bound bundle file
+    MH_BUNDLE = 0x8,
+    /// shared library stub for static linking only, no section contents
+    MH_DYLIB_STUB = 0x9,
+    /// companion file with only debug sections
+    MH_DSYM = 0xa,
+    /// x86_64 kexts
+    MH_KEXT_BUNDLE = 0xb,
+    /// a file composed of other Mach-Os to be run in the same userspace sharing a single linkedit.
+    MH_FILESET = 0xc,
+    /// gpu program
+    MH_GPU_EXECUTE = 0xd,
+    /// gpu support functions
+    MH_GPU_DYLIB = 0xe,
+});
+
+newtype!(
+    /// Values for `MachHeader*::flags`.
+    struct FileFlags(u32);
+);
+
+newtype_flag_names!(NAMES_MH_FLAGS: FileFlags(u32) = {
+    /// the object file has no undefined references
+    MH_NOUNDEFS = 0x1,
+    /// the object file is the output of an incremental link against a base file and can't be link edited again
+    MH_INCRLINK = 0x2,
+    /// the object file is input for the dynamic linker and can't be statically link edited again
+    MH_DYLDLINK = 0x4,
+    /// the object file's undefined references are bound by the dynamic linker when loaded.
+    MH_BINDATLOAD = 0x8,
+    /// the file has its dynamic undefined references prebound.
+    MH_PREBOUND = 0x10,
+    /// the file has its read-only and read-write segments split
+    MH_SPLIT_SEGS = 0x20,
+    /// the shared library init routine is to be run lazily via catching memory faults to its writeable segments (obsolete)
+    MH_LAZY_INIT = 0x40,
+    /// the image is using two-level name space bindings
+    MH_TWOLEVEL = 0x80,
+    /// the executable is forcing all images to use flat name space bindings
+    MH_FORCE_FLAT = 0x100,
+    /// this umbrella guarantees no multiple definitions of symbols in its sub-images so the two-level namespace hints can always be used.
+    MH_NOMULTIDEFS = 0x200,
+    /// do not have dyld notify the prebinding agent about this executable
+    MH_NOFIXPREBINDING = 0x400,
+    /// the binary is not prebound but can have its prebinding redone. only used when MH_PREBOUND is not set.
+    MH_PREBINDABLE = 0x800,
+    /// indicates that this binary binds to all two-level namespace modules of its dependent libraries. only used when MH_PREBINDABLE and MH_TWOLEVEL are both set.
+    MH_ALLMODSBOUND = 0x1000,
+    /// safe to divide up the sections into sub-sections via symbols for dead code stripping
+    MH_SUBSECTIONS_VIA_SYMBOLS = 0x2000,
+    /// the binary has been canonicalized via the unprebind operation
+    MH_CANONICAL = 0x4000,
+    /// the final linked image contains external weak symbols
+    MH_WEAK_DEFINES = 0x8000,
+    /// the final linked image uses weak symbols
+    MH_BINDS_TO_WEAK = 0x10000,
+    /// When this bit is set, all stacks in the task will be given stack execution privilege.  Only used in MH_EXECUTE filetypes.
+    MH_ALLOW_STACK_EXECUTION = 0x20000,
+    /// When this bit is set, the binary declares it is safe for use in processes with uid zero
+    MH_ROOT_SAFE = 0x40000,
+    /// When this bit is set, the binary declares it is safe for use in processes when issetugid() is true
+    MH_SETUID_SAFE = 0x80000,
+    /// When this bit is set on a dylib, the static linker does not need to examine dependent dylibs to see if any are re-exported
+    MH_NO_REEXPORTED_DYLIBS = 0x10_0000,
+    /// When this bit is set, the OS will load the main executable at a random address.  Only used in MH_EXECUTE filetypes.
+    MH_PIE = 0x20_0000,
+    /// Only for use on dylibs.  When linking against a dylib that has this bit set, the static linker will automatically not create a LC_LOAD_DYLIB load command to the dylib if no symbols are being referenced from the dylib.
+    MH_DEAD_STRIPPABLE_DYLIB = 0x40_0000,
+    /// Contains a section of type S_THREAD_LOCAL_VARIABLES
+    MH_HAS_TLV_DESCRIPTORS = 0x80_0000,
+    /// When this bit is set, the OS will run the main executable with a non-executable heap even on platforms (e.g. i386) that don't require it. Only used in MH_EXECUTE filetypes.
+    MH_NO_HEAP_EXECUTION = 0x100_0000,
+    /// The code was linked for use in an application extension.
+    MH_APP_EXTENSION_SAFE = 0x0200_0000,
+    /// The external symbols listed in the nlist symbol table do not include all the symbols listed in the dyld info.
+    MH_NLIST_OUTOFSYNC_WITH_DYLDINFO = 0x0400_0000,
+    /// Allow LC_MIN_VERSION_MACOS and LC_BUILD_VERSION load commands with
+    /// the platforms macOS, iOSMac, iOSSimulator, tvOSSimulator and watchOSSimulator.
+    MH_SIM_SUPPORT = 0x0800_0000,
+    /// main executable has no __PAGEZERO segment.  Instead, loader (xnu) will load program high and block out all memory below it.
+    MH_IMPLICIT_PAGEZERO = 0x1000_0000,
+    /// Only for use on dylibs. When this bit is set, the dylib is part of the dyld
+    /// shared cache, rather than loose in the filesystem.
+    MH_DYLIB_IN_CACHE = 0x8000_0000,
+});
 
 /// Common fields at the start of every load command.
 ///
@@ -1091,7 +1237,7 @@ pub struct LoadCommand<E: Endian> {
     /// Type of load command.
     ///
     /// One of the `LC_*` constants.
-    pub cmd: U32<E>,
+    pub cmd: U32<E, LoadCommandType>,
     /// Total size of command in bytes.
     pub cmdsize: U32<E>,
 }
@@ -1107,124 +1253,130 @@ pub struct LoadCommand<E: Endian> {
  */
 pub const LC_REQ_DYLD: u32 = 0x8000_0000;
 
-/* Constants for the cmd field of all load commands, the type */
-/// segment of this file to be mapped
-pub const LC_SEGMENT: u32 = 0x1;
-/// link-edit stab symbol table info
-pub const LC_SYMTAB: u32 = 0x2;
-/// link-edit gdb symbol table info (obsolete)
-pub const LC_SYMSEG: u32 = 0x3;
-/// thread
-pub const LC_THREAD: u32 = 0x4;
-/// unix thread (includes a stack)
-pub const LC_UNIXTHREAD: u32 = 0x5;
-/// load a specified fixed VM shared library
-pub const LC_LOADFVMLIB: u32 = 0x6;
-/// fixed VM shared library identification
-pub const LC_IDFVMLIB: u32 = 0x7;
-/// object identification info (obsolete)
-pub const LC_IDENT: u32 = 0x8;
-/// fixed VM file inclusion (internal use)
-pub const LC_FVMFILE: u32 = 0x9;
-/// prepage command (internal use)
-pub const LC_PREPAGE: u32 = 0xa;
-/// dynamic link-edit symbol table info
-pub const LC_DYSYMTAB: u32 = 0xb;
-/// load a dynamically linked shared library
-pub const LC_LOAD_DYLIB: u32 = 0xc;
-/// dynamically linked shared lib ident
-pub const LC_ID_DYLIB: u32 = 0xd;
-/// load a dynamic linker
-pub const LC_LOAD_DYLINKER: u32 = 0xe;
-/// dynamic linker identification
-pub const LC_ID_DYLINKER: u32 = 0xf;
-/// modules prebound for a dynamically linked shared library
-pub const LC_PREBOUND_DYLIB: u32 = 0x10;
-/// image routines
-pub const LC_ROUTINES: u32 = 0x11;
-/// sub framework
-pub const LC_SUB_FRAMEWORK: u32 = 0x12;
-/// sub umbrella
-pub const LC_SUB_UMBRELLA: u32 = 0x13;
-/// sub client
-pub const LC_SUB_CLIENT: u32 = 0x14;
-/// sub library
-pub const LC_SUB_LIBRARY: u32 = 0x15;
-/// two-level namespace lookup hints
-pub const LC_TWOLEVEL_HINTS: u32 = 0x16;
-/// prebind checksum
-pub const LC_PREBIND_CKSUM: u32 = 0x17;
-/// load a dynamically linked shared library that is allowed to be missing
-/// (all symbols are weak imported).
-pub const LC_LOAD_WEAK_DYLIB: u32 = 0x18 | LC_REQ_DYLD;
-/// 64-bit segment of this file to be mapped
-pub const LC_SEGMENT_64: u32 = 0x19;
-/// 64-bit image routines
-pub const LC_ROUTINES_64: u32 = 0x1a;
-/// the uuid
-pub const LC_UUID: u32 = 0x1b;
-/// runpath additions
-pub const LC_RPATH: u32 = 0x1c | LC_REQ_DYLD;
-/// local of code signature
-pub const LC_CODE_SIGNATURE: u32 = 0x1d;
-/// local of info to split segments
-pub const LC_SEGMENT_SPLIT_INFO: u32 = 0x1e;
-/// load and re-export dylib
-pub const LC_REEXPORT_DYLIB: u32 = 0x1f | LC_REQ_DYLD;
-/// delay load of dylib until first use
-pub const LC_LAZY_LOAD_DYLIB: u32 = 0x20;
-/// encrypted segment information
-pub const LC_ENCRYPTION_INFO: u32 = 0x21;
-/// compressed dyld information
-pub const LC_DYLD_INFO: u32 = 0x22;
-/// compressed dyld information only
-pub const LC_DYLD_INFO_ONLY: u32 = 0x22 | LC_REQ_DYLD;
-/// load upward dylib
-pub const LC_LOAD_UPWARD_DYLIB: u32 = 0x23 | LC_REQ_DYLD;
-/// build for MacOSX min OS version
-pub const LC_VERSION_MIN_MACOSX: u32 = 0x24;
-/// build for iPhoneOS min OS version
-pub const LC_VERSION_MIN_IPHONEOS: u32 = 0x25;
-/// compressed table of function start addresses
-pub const LC_FUNCTION_STARTS: u32 = 0x26;
-/// string for dyld to treat like environment variable
-pub const LC_DYLD_ENVIRONMENT: u32 = 0x27;
-/// replacement for LC_UNIXTHREAD
-pub const LC_MAIN: u32 = 0x28 | LC_REQ_DYLD;
-/// table of non-instructions in __text
-pub const LC_DATA_IN_CODE: u32 = 0x29;
-/// source version used to build binary
-pub const LC_SOURCE_VERSION: u32 = 0x2A;
-/// Code signing DRs copied from linked dylibs
-pub const LC_DYLIB_CODE_SIGN_DRS: u32 = 0x2B;
-/// 64-bit encrypted segment information
-pub const LC_ENCRYPTION_INFO_64: u32 = 0x2C;
-/// linker options in MH_OBJECT files
-pub const LC_LINKER_OPTION: u32 = 0x2D;
-/// optimization hints in MH_OBJECT files
-pub const LC_LINKER_OPTIMIZATION_HINT: u32 = 0x2E;
-/// build for AppleTV min OS version
-pub const LC_VERSION_MIN_TVOS: u32 = 0x2F;
-/// build for Watch min OS version
-pub const LC_VERSION_MIN_WATCHOS: u32 = 0x30;
-/// arbitrary data included within a Mach-O file
-pub const LC_NOTE: u32 = 0x31;
-/// build for platform min OS version
-pub const LC_BUILD_VERSION: u32 = 0x32;
-/// used with `LinkeditDataCommand`, payload is trie
-pub const LC_DYLD_EXPORTS_TRIE: u32 = 0x33 | LC_REQ_DYLD;
-/// used with `LinkeditDataCommand`
-pub const LC_DYLD_CHAINED_FIXUPS: u32 = 0x34 | LC_REQ_DYLD;
-/// used with `FilesetEntryCommand`
-pub const LC_FILESET_ENTRY: u32 = 0x35 | LC_REQ_DYLD;
-/// used with linkedit_data_command
-pub const LC_ATOM_INFO: u32 = 0x36;
-/// used with linkedit_data_command
-pub const LC_FUNCTION_VARIANTS: u32 = 0x37;
-/// used with linkedit_data_command
-pub const LC_FUNCTION_VARIANT_FIXUPS: u32 = 0x38;
-/// target triple used to compile
-pub const LC_TARGET_TRIPLE: u32 = 0x39;
+newtype!(
+    /// Values for `LoadCommand*::cmd`.
+    struct LoadCommandType(u32);
+);
+
+newtype_constant_names!(NAMES_LC_TYPE: LoadCommandType(u32) = {
+    /// segment of this file to be mapped
+    LC_SEGMENT = 0x1,
+    /// link-edit stab symbol table info
+    LC_SYMTAB = 0x2,
+    /// link-edit gdb symbol table info (obsolete)
+    LC_SYMSEG = 0x3,
+    /// thread
+    LC_THREAD = 0x4,
+    /// unix thread (includes a stack)
+    LC_UNIXTHREAD = 0x5,
+    /// load a specified fixed VM shared library
+    LC_LOADFVMLIB = 0x6,
+    /// fixed VM shared library identification
+    LC_IDFVMLIB = 0x7,
+    /// object identification info (obsolete)
+    LC_IDENT = 0x8,
+    /// fixed VM file inclusion (internal use)
+    LC_FVMFILE = 0x9,
+    /// prepage command (internal use)
+    LC_PREPAGE = 0xa,
+    /// dynamic link-edit symbol table info
+    LC_DYSYMTAB = 0xb,
+    /// load a dynamically linked shared library
+    LC_LOAD_DYLIB = 0xc,
+    /// dynamically linked shared lib ident
+    LC_ID_DYLIB = 0xd,
+    /// load a dynamic linker
+    LC_LOAD_DYLINKER = 0xe,
+    /// dynamic linker identification
+    LC_ID_DYLINKER = 0xf,
+    /// modules prebound for a dynamically linked shared library
+    LC_PREBOUND_DYLIB = 0x10,
+    /// image routines
+    LC_ROUTINES = 0x11,
+    /// sub framework
+    LC_SUB_FRAMEWORK = 0x12,
+    /// sub umbrella
+    LC_SUB_UMBRELLA = 0x13,
+    /// sub client
+    LC_SUB_CLIENT = 0x14,
+    /// sub library
+    LC_SUB_LIBRARY = 0x15,
+    /// two-level namespace lookup hints
+    LC_TWOLEVEL_HINTS = 0x16,
+    /// prebind checksum
+    LC_PREBIND_CKSUM = 0x17,
+    /// load a dynamically linked shared library that is allowed to be missing
+    /// (all symbols are weak imported).
+    LC_LOAD_WEAK_DYLIB = 0x18 | LC_REQ_DYLD,
+    /// 64-bit segment of this file to be mapped
+    LC_SEGMENT_64 = 0x19,
+    /// 64-bit image routines
+    LC_ROUTINES_64 = 0x1a,
+    /// the uuid
+    LC_UUID = 0x1b,
+    /// runpath additions
+    LC_RPATH = 0x1c | LC_REQ_DYLD,
+    /// local of code signature
+    LC_CODE_SIGNATURE = 0x1d,
+    /// local of info to split segments
+    LC_SEGMENT_SPLIT_INFO = 0x1e,
+    /// load and re-export dylib
+    LC_REEXPORT_DYLIB = 0x1f | LC_REQ_DYLD,
+    /// delay load of dylib until first use
+    LC_LAZY_LOAD_DYLIB = 0x20,
+    /// encrypted segment information
+    LC_ENCRYPTION_INFO = 0x21,
+    /// compressed dyld information
+    LC_DYLD_INFO = 0x22,
+    /// compressed dyld information only
+    LC_DYLD_INFO_ONLY = 0x22 | LC_REQ_DYLD,
+    /// load upward dylib
+    LC_LOAD_UPWARD_DYLIB = 0x23 | LC_REQ_DYLD,
+    /// build for MacOSX min OS version
+    LC_VERSION_MIN_MACOSX = 0x24,
+    /// build for iPhoneOS min OS version
+    LC_VERSION_MIN_IPHONEOS = 0x25,
+    /// compressed table of function start addresses
+    LC_FUNCTION_STARTS = 0x26,
+    /// string for dyld to treat like environment variable
+    LC_DYLD_ENVIRONMENT = 0x27,
+    /// replacement for LC_UNIXTHREAD
+    LC_MAIN = 0x28 | LC_REQ_DYLD,
+    /// table of non-instructions in __text
+    LC_DATA_IN_CODE = 0x29,
+    /// source version used to build binary
+    LC_SOURCE_VERSION = 0x2A,
+    /// Code signing DRs copied from linked dylibs
+    LC_DYLIB_CODE_SIGN_DRS = 0x2B,
+    /// 64-bit encrypted segment information
+    LC_ENCRYPTION_INFO_64 = 0x2C,
+    /// linker options in MH_OBJECT files
+    LC_LINKER_OPTION = 0x2D,
+    /// optimization hints in MH_OBJECT files
+    LC_LINKER_OPTIMIZATION_HINT = 0x2E,
+    /// build for AppleTV min OS version
+    LC_VERSION_MIN_TVOS = 0x2F,
+    /// build for Watch min OS version
+    LC_VERSION_MIN_WATCHOS = 0x30,
+    /// arbitrary data included within a Mach-O file
+    LC_NOTE = 0x31,
+    /// build for platform min OS version
+    LC_BUILD_VERSION = 0x32,
+    /// used with `LinkeditDataCommand`, payload is trie
+    LC_DYLD_EXPORTS_TRIE = 0x33 | LC_REQ_DYLD,
+    /// used with `LinkeditDataCommand`
+    LC_DYLD_CHAINED_FIXUPS = 0x34 | LC_REQ_DYLD,
+    /// used with `FilesetEntryCommand`
+    LC_FILESET_ENTRY = 0x35 | LC_REQ_DYLD,
+    /// used with linkedit_data_command
+    LC_ATOM_INFO = 0x36,
+    /// used with linkedit_data_command
+    LC_FUNCTION_VARIANTS = 0x37,
+    /// used with linkedit_data_command
+    LC_FUNCTION_VARIANT_FIXUPS = 0x38,
+    /// target triple used to compile
+    LC_TARGET_TRIPLE = 0x39,
+});
 
 /// A variable length string in a load command.
 ///
@@ -1256,7 +1408,7 @@ pub struct LcStr<E: Endian> {
 #[repr(C)]
 pub struct SegmentCommand32<E: Endian> {
     /// LC_SEGMENT
-    pub cmd: U32<E>,
+    pub cmd: U32<E, LoadCommandType>,
     /// includes sizeof section structs
     pub cmdsize: U32<E>,
     /// segment name
@@ -1270,13 +1422,13 @@ pub struct SegmentCommand32<E: Endian> {
     /// amount to map from the file
     pub filesize: U32<E>,
     /// maximum VM protection
-    pub maxprot: U32<E>,
+    pub maxprot: U32<E, VmProt>,
     /// initial VM protection
-    pub initprot: U32<E>,
+    pub initprot: U32<E, VmProt>,
     /// number of sections in segment
     pub nsects: U32<E>,
     /// flags
-    pub flags: U32<E>,
+    pub flags: U32<E, SegmentFlags>,
 }
 
 /// 64-bit segment load command.
@@ -1289,7 +1441,7 @@ pub struct SegmentCommand32<E: Endian> {
 #[repr(C)]
 pub struct SegmentCommand64<E: Endian> {
     /// LC_SEGMENT_64
-    pub cmd: U32<E>,
+    pub cmd: U32<E, LoadCommandType>,
     /// includes sizeof section_64 structs
     pub cmdsize: U32<E>,
     /// segment name
@@ -1303,26 +1455,32 @@ pub struct SegmentCommand64<E: Endian> {
     /// amount to map from the file
     pub filesize: U64<E>,
     /// maximum VM protection
-    pub maxprot: U32<E>,
+    pub maxprot: U32<E, VmProt>,
     /// initial VM protection
-    pub initprot: U32<E>,
+    pub initprot: U32<E, VmProt>,
     /// number of sections in segment
     pub nsects: U32<E>,
     /// flags
-    pub flags: U32<E>,
+    pub flags: U32<E, SegmentFlags>,
 }
 
-// Values for `SegmentCommand*::flags`.
-/// the file contents for this segment is for the high part of the VM space, the low part is zero filled (for stacks in core files)
-pub const SG_HIGHVM: u32 = 0x1;
-/// this segment is the VM that is allocated by a fixed VM library, for overlap checking in the link editor
-pub const SG_FVMLIB: u32 = 0x2;
-/// this segment has nothing that was relocated in it and nothing relocated to it, that is it maybe safely replaced without relocation
-pub const SG_NORELOC: u32 = 0x4;
-/// This segment is protected.  If the segment starts at file offset 0, the first page of the segment is not protected.  All other pages of the segment are protected.
-pub const SG_PROTECTED_VERSION_1: u32 = 0x8;
-/// This segment is made read-only after fixups
-pub const SG_READ_ONLY: u32 = 0x10;
+newtype!(
+    /// Values for `SegmentCommand*::flags`.
+    struct SegmentFlags(u32);
+);
+
+newtype_flag_names!(NAMES_SG: SegmentFlags(u32) = {
+    /// the file contents for this segment is for the high part of the VM space, the low part is zero filled (for stacks in core files)
+    SG_HIGHVM = 0x1,
+    /// this segment is the VM that is allocated by a fixed VM library, for overlap checking in the link editor
+    SG_FVMLIB = 0x2,
+    /// this segment has nothing that was relocated in it and nothing relocated to it, that is it maybe safely replaced without relocation
+    SG_NORELOC = 0x4,
+    /// This segment is protected.  If the segment starts at file offset 0, the first page of the segment is not protected.  All other pages of the segment are protected.
+    SG_PROTECTED_VERSION_1 = 0x8,
+    /// This segment is made read-only after fixups
+    SG_READ_ONLY = 0x10,
+});
 
 /*
  * A segment is made up of zero or more sections.  Non-MH_OBJECT files have
@@ -1372,7 +1530,7 @@ pub struct Section32<E: Endian> {
     /// number of relocation entries
     pub nreloc: U32<E>,
     /// flags (section type and attributes)
-    pub flags: U32<E>,
+    pub flags: U32<E, SectionFlags>,
     /// reserved (for offset or index)
     pub reserved1: U32<E>,
     /// reserved (for count or sizeof)
@@ -1400,7 +1558,7 @@ pub struct Section64<E: Endian> {
     /// number of relocation entries
     pub nreloc: U32<E>,
     /// flags (section type and attributes)
-    pub flags: U32<E>,
+    pub flags: U32<E, SectionFlags>,
     /// reserved (for offset or index)
     pub reserved1: U32<E>,
     /// reserved (for count or sizeof)
@@ -1420,106 +1578,152 @@ pub const SECTION_TYPE: u32 = 0x0000_00ff;
 /// 24 section attributes
 pub const SECTION_ATTRIBUTES: u32 = 0xffff_ff00;
 
-/* Constants for the type of a section */
-/// regular section
-pub const S_REGULAR: u32 = 0x0;
-/// zero fill on demand section
-pub const S_ZEROFILL: u32 = 0x1;
-/// section with only literal C strings
-pub const S_CSTRING_LITERALS: u32 = 0x2;
-/// section with only 4 byte literals
-pub const S_4BYTE_LITERALS: u32 = 0x3;
-/// section with only 8 byte literals
-pub const S_8BYTE_LITERALS: u32 = 0x4;
-/// section with only pointers to literals
-pub const S_LITERAL_POINTERS: u32 = 0x5;
-/*
- * For the two types of symbol pointers sections and the symbol stubs section
- * they have indirect symbol table entries.  For each of the entries in the
- * section the indirect symbol table entries, in corresponding order in the
- * indirect symbol table, start at the index stored in the reserved1 field
- * of the section structure.  Since the indirect symbol table entries
- * correspond to the entries in the section the number of indirect symbol table
- * entries is inferred from the size of the section divided by the size of the
- * entries in the section.  For symbol pointers sections the size of the entries
- * in the section is 4 bytes and for symbol stubs sections the byte size of the
- * stubs is stored in the reserved2 field of the section structure.
- */
-/// section with only non-lazy symbol pointers
-pub const S_NON_LAZY_SYMBOL_POINTERS: u32 = 0x6;
-/// section with only lazy symbol pointers
-pub const S_LAZY_SYMBOL_POINTERS: u32 = 0x7;
-/// section with only symbol stubs, byte size of stub in the reserved2 field
-pub const S_SYMBOL_STUBS: u32 = 0x8;
-/// section with only function pointers for initialization
-pub const S_MOD_INIT_FUNC_POINTERS: u32 = 0x9;
-/// section with only function pointers for termination
-pub const S_MOD_TERM_FUNC_POINTERS: u32 = 0xa;
-/// section contains symbols that are to be coalesced
-pub const S_COALESCED: u32 = 0xb;
-/// zero fill on demand section (that can be larger than 4 gigabytes)
-pub const S_GB_ZEROFILL: u32 = 0xc;
-/// section with only pairs of function pointers for interposing
-pub const S_INTERPOSING: u32 = 0xd;
-/// section with only 16 byte literals
-pub const S_16BYTE_LITERALS: u32 = 0xe;
-/// section contains DTrace Object Format
-pub const S_DTRACE_DOF: u32 = 0xf;
-/// section with only lazy symbol pointers to lazy loaded dylibs
-pub const S_LAZY_DYLIB_SYMBOL_POINTERS: u32 = 0x10;
-/*
- * Section types to support thread local variables
- */
-/// template of initial values for TLVs
-pub const S_THREAD_LOCAL_REGULAR: u32 = 0x11;
-/// template of initial values for TLVs
-pub const S_THREAD_LOCAL_ZEROFILL: u32 = 0x12;
-/// TLV descriptors
-pub const S_THREAD_LOCAL_VARIABLES: u32 = 0x13;
-/// pointers to TLV descriptors
-pub const S_THREAD_LOCAL_VARIABLE_POINTERS: u32 = 0x14;
-/// functions to call to initialize TLV values
-pub const S_THREAD_LOCAL_INIT_FUNCTION_POINTERS: u32 = 0x15;
-/// 32-bit offsets to initializers
-pub const S_INIT_FUNC_OFFSETS: u32 = 0x16;
+newtype!(
+    /// Values for `Section*::flags`.
+    struct SectionFlags(u32);
+);
+
+impl SectionFlags {
+    /// Get the section type field.
+    pub fn typ(self) -> SectionType {
+        SectionType((self.0 & SECTION_TYPE) as u8)
+    }
+
+    /// Set the section type field.
+    pub fn with_type(self, typ: SectionType) -> SectionFlags {
+        SectionFlags(self.0 & !SECTION_TYPE | u32::from(typ.0))
+    }
+}
+
+newtype!(
+    /// Constants for the type of a section
+    struct SectionType(u8);
+);
+
+impl From<SectionType> for SectionFlags {
+    fn from(typ: SectionType) -> Self {
+        SectionFlags(u32::from(typ.0))
+    }
+}
+
+impl From<SectionFlags> for SectionType {
+    fn from(flags: SectionFlags) -> Self {
+        flags.typ()
+    }
+}
+
+impl core::ops::BitOr<SectionFlags> for SectionType {
+    type Output = SectionFlags;
+    fn bitor(self, attrs: SectionFlags) -> SectionFlags {
+        attrs.with_type(self)
+    }
+}
+
+newtype_constant_names!(NAMES_S_TYPE: SectionType(u8) = {
+    /// regular section
+    S_REGULAR = 0x0,
+    /// zero fill on demand section
+    S_ZEROFILL = 0x1,
+    /// section with only literal C strings
+    S_CSTRING_LITERALS = 0x2,
+    /// section with only 4 byte literals
+    S_4BYTE_LITERALS = 0x3,
+    /// section with only 8 byte literals
+    S_8BYTE_LITERALS = 0x4,
+    /// section with only pointers to literals
+    S_LITERAL_POINTERS = 0x5,
+    /*
+     * For the two types of symbol pointers sections and the symbol stubs section
+     * they have indirect symbol table entries.  For each of the entries in the
+     * section the indirect symbol table entries, in corresponding order in the
+     * indirect symbol table, start at the index stored in the reserved1 field
+     * of the section structure.  Since the indirect symbol table entries
+     * correspond to the entries in the section the number of indirect symbol table
+     * entries is inferred from the size of the section divided by the size of the
+     * entries in the section.  For symbol pointers sections the size of the entries
+     * in the section is 4 bytes and for symbol stubs sections the byte size of the
+     * stubs is stored in the reserved2 field of the section structure.
+     */
+    /// section with only non-lazy symbol pointers
+    S_NON_LAZY_SYMBOL_POINTERS = 0x6,
+    /// section with only lazy symbol pointers
+    S_LAZY_SYMBOL_POINTERS = 0x7,
+    /// section with only symbol stubs, byte size of stub in the reserved2 field
+    S_SYMBOL_STUBS = 0x8,
+    /// section with only function pointers for initialization
+    S_MOD_INIT_FUNC_POINTERS = 0x9,
+    /// section with only function pointers for termination
+    S_MOD_TERM_FUNC_POINTERS = 0xa,
+    /// section contains symbols that are to be coalesced
+    S_COALESCED = 0xb,
+    /// zero fill on demand section (that can be larger than 4 gigabytes)
+    S_GB_ZEROFILL = 0xc,
+    /// section with only pairs of function pointers for interposing
+    S_INTERPOSING = 0xd,
+    /// section with only 16 byte literals
+    S_16BYTE_LITERALS = 0xe,
+    /// section contains DTrace Object Format
+    S_DTRACE_DOF = 0xf,
+    /// section with only lazy symbol pointers to lazy loaded dylibs
+    S_LAZY_DYLIB_SYMBOL_POINTERS = 0x10,
+    /*
+     * Section types to support thread local variables
+     */
+    /// template of initial values for TLVs
+    S_THREAD_LOCAL_REGULAR = 0x11,
+    /// template of initial values for TLVs
+    S_THREAD_LOCAL_ZEROFILL = 0x12,
+    /// TLV descriptors
+    S_THREAD_LOCAL_VARIABLES = 0x13,
+    /// pointers to TLV descriptors
+    S_THREAD_LOCAL_VARIABLE_POINTERS = 0x14,
+    /// functions to call to initialize TLV values
+    S_THREAD_LOCAL_INIT_FUNCTION_POINTERS = 0x15,
+    /// 32-bit offsets to initializers
+    S_INIT_FUNC_OFFSETS = 0x16,
+});
 
 /*
  * Constants for the section attributes part of the flags field of a section
  * structure.
  */
+newtype_flag_names!(NAMES_S: SectionFlags(u32) = {
+    _ = SECTION_TYPE => NAMES_S_TYPE,
+    /// section contains only true machine instructions
+    S_ATTR_PURE_INSTRUCTIONS = 0x8000_0000,
+    /// section contains coalesced symbols that are not to be in a ranlib table of contents
+    S_ATTR_NO_TOC = 0x4000_0000,
+    /// ok to strip static symbols in this section in files with the MH_DYLDLINK flag
+    S_ATTR_STRIP_STATIC_SYMS = 0x2000_0000,
+    /// no dead stripping
+    S_ATTR_NO_DEAD_STRIP = 0x1000_0000,
+    /// blocks are live if they reference live blocks
+    S_ATTR_LIVE_SUPPORT = 0x0800_0000,
+    /// Used with i386 code stubs written on by dyld
+    S_ATTR_SELF_MODIFYING_CODE = 0x0400_0000,
+    /*
+     * If a segment contains any sections marked with S_ATTR_DEBUG then all
+     * sections in that segment must have this attribute.  No section other than
+     * a section marked with this attribute may reference the contents of this
+     * section.  A section with this attribute may contain no symbols and must have
+     * a section type S_REGULAR.  The static linker will not copy section contents
+     * from sections with this attribute into its output file.  These sections
+     * generally contain DWARF debugging info.
+     */
+    /// a debug section
+    S_ATTR_DEBUG = 0x0200_0000,
+    /// section contains some machine instructions
+    S_ATTR_SOME_INSTRUCTIONS = 0x0000_0400,
+    /// section has external relocation entries
+    S_ATTR_EXT_RELOC = 0x0000_0200,
+    /// section has local relocation entries
+    S_ATTR_LOC_RELOC = 0x0000_0100,
+});
+
 /// User setable attributes
 pub const SECTION_ATTRIBUTES_USR: u32 = 0xff00_0000;
-/// section contains only true machine instructions
-pub const S_ATTR_PURE_INSTRUCTIONS: u32 = 0x8000_0000;
-/// section contains coalesced symbols that are not to be in a ranlib table of contents
-pub const S_ATTR_NO_TOC: u32 = 0x4000_0000;
-/// ok to strip static symbols in this section in files with the MH_DYLDLINK flag
-pub const S_ATTR_STRIP_STATIC_SYMS: u32 = 0x2000_0000;
-/// no dead stripping
-pub const S_ATTR_NO_DEAD_STRIP: u32 = 0x1000_0000;
-/// blocks are live if they reference live blocks
-pub const S_ATTR_LIVE_SUPPORT: u32 = 0x0800_0000;
-/// Used with i386 code stubs written on by dyld
-pub const S_ATTR_SELF_MODIFYING_CODE: u32 = 0x0400_0000;
-/*
- * If a segment contains any sections marked with S_ATTR_DEBUG then all
- * sections in that segment must have this attribute.  No section other than
- * a section marked with this attribute may reference the contents of this
- * section.  A section with this attribute may contain no symbols and must have
- * a section type S_REGULAR.  The static linker will not copy section contents
- * from sections with this attribute into its output file.  These sections
- * generally contain DWARF debugging info.
- */
-/// a debug section
-pub const S_ATTR_DEBUG: u32 = 0x0200_0000;
 /// system setable attributes
 pub const SECTION_ATTRIBUTES_SYS: u32 = 0x00ff_ff00;
-/// section contains some machine instructions
-pub const S_ATTR_SOME_INSTRUCTIONS: u32 = 0x0000_0400;
-/// section has external relocation entries
-pub const S_ATTR_EXT_RELOC: u32 = 0x0000_0200;
-/// section has local relocation entries
-pub const S_ATTR_LOC_RELOC: u32 = 0x0000_0100;
 
 /*
  * The names of segments and sections in them are mostly meaningless to the
@@ -1616,7 +1820,7 @@ pub struct Fvmlib<E: Endian> {
 #[repr(C)]
 pub struct FvmlibCommand<E: Endian> {
     /// LC_IDFVMLIB or LC_LOADFVMLIB
-    pub cmd: U32<E>,
+    pub cmd: U32<E, LoadCommandType>,
     /// includes pathname string
     pub cmdsize: U32<E>,
     /// the library identification
@@ -1640,9 +1844,9 @@ pub struct Dylib<E: Endian> {
     /// library's build time stamp
     pub timestamp: U32<E>,
     /// library's current version number
-    pub current_version: U32<E>,
+    pub current_version: U32<E, Version>,
     /// library's compatibility vers number
-    pub compatibility_version: U32<E>,
+    pub compatibility_version: U32<E, Version>,
 }
 
 /*
@@ -1656,7 +1860,7 @@ pub struct Dylib<E: Endian> {
 #[repr(C)]
 pub struct DylibCommand<E: Endian> {
     /// LC_ID_DYLIB, LC_LOAD_{,WEAK_}DYLIB, LC_REEXPORT_DYLIB
-    pub cmd: U32<E>,
+    pub cmd: U32<E, LoadCommandType>,
     /// includes pathname string
     pub cmdsize: U32<E>,
     /// the library identification
@@ -1672,7 +1876,7 @@ pub struct DylibCommand<E: Endian> {
 #[repr(C)]
 pub struct DylibUseCommand<E: Endian> {
     /// LC_LOAD_DYLIB or LC_LOAD_WEAK_DYLIB
-    pub cmd: U32<E>,
+    pub cmd: U32<E, LoadCommandType>,
     /// overall size, including path
     pub cmdsize: U32<E>,
     /// == 28, dylibs's path offset
@@ -1680,17 +1884,24 @@ pub struct DylibUseCommand<E: Endian> {
     /// == DYLIB_USE_MARKER
     pub marker: U32<E>,
     /// dylib's current version number
-    pub current_version: U32<E>,
+    pub current_version: U32<E, Version>,
     /// dylib's compatibility version number
-    pub compat_version: U32<E>,
+    pub compat_version: U32<E, Version>,
     /// DYLIB_USE_... flags
-    pub flags: U32<E>,
+    pub flags: U32<E, DylibUseFlags>,
 }
 
-pub const DYLIB_USE_WEAK_LINK: u32 = 0x01;
-pub const DYLIB_USE_REEXPORT: u32 = 0x02;
-pub const DYLIB_USE_UPWARD: u32 = 0x04;
-pub const DYLIB_USE_DELAYED_INIT: u32 = 0x08;
+newtype!(
+    /// Values for `DylibUseCommand::flags`.
+    struct DylibUseFlags(u32);
+);
+
+newtype_flag_names!(NAMES_DYLIB_USE: DylibUseFlags(u32) = {
+    DYLIB_USE_WEAK_LINK = 0x01,
+    DYLIB_USE_REEXPORT = 0x02,
+    DYLIB_USE_UPWARD = 0x04,
+    DYLIB_USE_DELAYED_INIT = 0x08,
+});
 
 pub const DYLIB_USE_MARKER: u32 = 0x1a741800;
 
@@ -1708,7 +1919,7 @@ pub const DYLIB_USE_MARKER: u32 = 0x1a741800;
 #[repr(C)]
 pub struct SubFrameworkCommand<E: Endian> {
     /// LC_SUB_FRAMEWORK
-    pub cmd: U32<E>,
+    pub cmd: U32<E, LoadCommandType>,
     /// includes umbrella string
     pub cmdsize: U32<E>,
     /// the umbrella framework name
@@ -1728,7 +1939,7 @@ pub struct SubFrameworkCommand<E: Endian> {
 #[repr(C)]
 pub struct SubClientCommand<E: Endian> {
     /// LC_SUB_CLIENT
-    pub cmd: U32<E>,
+    pub cmd: U32<E, LoadCommandType>,
     /// includes client string
     pub cmdsize: U32<E>,
     /// the client name
@@ -1752,7 +1963,7 @@ pub struct SubClientCommand<E: Endian> {
 #[repr(C)]
 pub struct SubUmbrellaCommand<E: Endian> {
     /// LC_SUB_UMBRELLA
-    pub cmd: U32<E>,
+    pub cmd: U32<E, LoadCommandType>,
     /// includes sub_umbrella string
     pub cmdsize: U32<E>,
     /// the sub_umbrella framework name
@@ -1778,7 +1989,7 @@ pub struct SubUmbrellaCommand<E: Endian> {
 #[repr(C)]
 pub struct SubLibraryCommand<E: Endian> {
     /// LC_SUB_LIBRARY
-    pub cmd: U32<E>,
+    pub cmd: U32<E, LoadCommandType>,
     /// includes sub_library string
     pub cmdsize: U32<E>,
     /// the sub_library name
@@ -1798,7 +2009,7 @@ pub struct SubLibraryCommand<E: Endian> {
 #[repr(C)]
 pub struct PreboundDylibCommand<E: Endian> {
     /// LC_PREBOUND_DYLIB
-    pub cmd: U32<E>,
+    pub cmd: U32<E, LoadCommandType>,
     /// includes strings
     pub cmdsize: U32<E>,
     /// library's path name
@@ -1821,7 +2032,7 @@ pub struct PreboundDylibCommand<E: Endian> {
 #[repr(C)]
 pub struct DylinkerCommand<E: Endian> {
     /// LC_ID_DYLINKER, LC_LOAD_DYLINKER or LC_DYLD_ENVIRONMENT
-    pub cmd: U32<E>,
+    pub cmd: U32<E, LoadCommandType>,
     /// includes pathname string
     pub cmdsize: U32<E>,
     /// dynamic linker's path name
@@ -1853,7 +2064,7 @@ pub struct DylinkerCommand<E: Endian> {
 #[repr(C)]
 pub struct ThreadCommand<E: Endian> {
     /// LC_THREAD or  LC_UNIXTHREAD
-    pub cmd: U32<E>,
+    pub cmd: U32<E, LoadCommandType>,
     /// total size of this command
     pub cmdsize: U32<E>,
     /* uint32_t flavor		   flavor of thread state */
@@ -1875,7 +2086,7 @@ pub struct ThreadCommand<E: Endian> {
 pub struct RoutinesCommand32<E: Endian> {
     /* for 32-bit architectures */
     /// LC_ROUTINES
-    pub cmd: U32<E>,
+    pub cmd: U32<E, LoadCommandType>,
     /// total size of this command
     pub cmdsize: U32<E>,
     /// address of initialization routine
@@ -1898,7 +2109,7 @@ pub struct RoutinesCommand32<E: Endian> {
 pub struct RoutinesCommand64<E: Endian> {
     /* for 64-bit architectures */
     /// LC_ROUTINES_64
-    pub cmd: U32<E>,
+    pub cmd: U32<E, LoadCommandType>,
     /// total size of this command
     pub cmdsize: U32<E>,
     /// address of initialization routine
@@ -1922,7 +2133,7 @@ pub struct RoutinesCommand64<E: Endian> {
 #[repr(C)]
 pub struct SymtabCommand<E: Endian> {
     /// LC_SYMTAB
-    pub cmd: U32<E>,
+    pub cmd: U32<E, LoadCommandType>,
     /// sizeof(struct SymtabCommand)
     pub cmdsize: U32<E>,
     /// symbol table offset
@@ -1979,7 +2190,7 @@ pub struct SymtabCommand<E: Endian> {
 #[repr(C)]
 pub struct DysymtabCommand<E: Endian> {
     /// LC_DYSYMTAB
-    pub cmd: U32<E>,
+    pub cmd: U32<E, LoadCommandType>,
     /// sizeof(struct DysymtabCommand)
     pub cmdsize: U32<E>,
 
@@ -2119,8 +2330,38 @@ pub struct DysymtabCommand<E: Endian> {
  * removed.  In which case it has the value INDIRECT_SYMBOL_LOCAL.  If the
  * symbol was also absolute INDIRECT_SYMBOL_ABS is or'ed with that.
  */
-pub const INDIRECT_SYMBOL_LOCAL: u32 = 0x8000_0000;
-pub const INDIRECT_SYMBOL_ABS: u32 = 0x4000_0000;
+newtype!(
+    /// An entry in the indirect symbol table.
+    ///
+    /// Either a symbol table index or a sentinel with the LOCAL/ABS flags set.
+    struct IndirectSymbol(u32);
+);
+
+newtype_flag_names!(NAMES_INDIRECT_SYMBOL: IndirectSymbol(u32) = {
+    INDIRECT_SYMBOL_LOCAL = 0x8000_0000,
+    INDIRECT_SYMBOL_ABS = 0x4000_0000,
+});
+
+impl IndirectSymbol {
+    /// Whether this is a local symbol.
+    pub fn is_local(self) -> bool {
+        self.contains(INDIRECT_SYMBOL_LOCAL)
+    }
+
+    /// Whether this is an absolute symbol.
+    pub fn is_abs(self) -> bool {
+        self.contains(INDIRECT_SYMBOL_ABS)
+    }
+
+    /// Returns the symbol table index, or `None` if the symbol is local or absolute.
+    pub fn index(self) -> Option<u32> {
+        if self.intersects(INDIRECT_SYMBOL_LOCAL | INDIRECT_SYMBOL_ABS) {
+            None
+        } else {
+            Some(self.0)
+        }
+    }
+}
 
 /* a table of contents entry */
 #[derive(Debug, Clone, Copy)]
@@ -2230,7 +2471,7 @@ pub struct DylibReference<E: Endian> {
 #[repr(C)]
 pub struct TwolevelHintsCommand<E: Endian> {
     /// LC_TWOLEVEL_HINTS
-    pub cmd: U32<E>,
+    pub cmd: U32<E, LoadCommandType>,
     /// sizeof(struct TwolevelHintsCommand)
     pub cmdsize: U32<E>,
     /// offset to the hint table
@@ -2280,7 +2521,7 @@ pub struct TwolevelHint<E: Endian> {
 #[repr(C)]
 pub struct PrebindCksumCommand<E: Endian> {
     /// LC_PREBIND_CKSUM
-    pub cmd: U32<E>,
+    pub cmd: U32<E, LoadCommandType>,
     /// sizeof(struct PrebindCksumCommand)
     pub cmdsize: U32<E>,
     /// the check sum or zero
@@ -2295,7 +2536,7 @@ pub struct PrebindCksumCommand<E: Endian> {
 #[repr(C)]
 pub struct UuidCommand<E: Endian> {
     /// LC_UUID
-    pub cmd: U32<E>,
+    pub cmd: U32<E, LoadCommandType>,
     /// sizeof(struct UuidCommand)
     pub cmdsize: U32<E>,
     /// the 128-bit uuid
@@ -2310,7 +2551,7 @@ pub struct UuidCommand<E: Endian> {
 #[repr(C)]
 pub struct RpathCommand<E: Endian> {
     /// LC_RPATH
-    pub cmd: U32<E>,
+    pub cmd: U32<E, LoadCommandType>,
     /// includes string
     pub cmdsize: U32<E>,
     /// path to add to run path
@@ -2325,7 +2566,7 @@ pub struct RpathCommand<E: Endian> {
 #[repr(C)]
 pub struct TargetTripleCommand<E: Endian> {
     /// LC_TARGET_TRIPLE
-    pub cmd: U32<E>,
+    pub cmd: U32<E, LoadCommandType>,
     /// including string
     pub cmdsize: U32<E>,
     /// target triple string
@@ -2342,7 +2583,7 @@ pub struct LinkeditDataCommand<E: Endian> {
     /// `LC_CODE_SIGNATURE`, `LC_SEGMENT_SPLIT_INFO`, `LC_FUNCTION_STARTS`,
     /// `LC_DATA_IN_CODE`, `LC_DYLIB_CODE_SIGN_DRS`, `LC_LINKER_OPTIMIZATION_HINT`,
     /// `LC_DYLD_EXPORTS_TRIE`, or `LC_DYLD_CHAINED_FIXUPS`.
-    pub cmd: U32<E>,
+    pub cmd: U32<E, LoadCommandType>,
     /// sizeof(struct LinkeditDataCommand)
     pub cmdsize: U32<E>,
     /// file offset of data in __LINKEDIT segment
@@ -2359,7 +2600,7 @@ pub struct LinkeditDataCommand<E: Endian> {
 #[repr(C)]
 pub struct EncryptionInfoCommand32<E: Endian> {
     /// LC_ENCRYPTION_INFO
-    pub cmd: U32<E>,
+    pub cmd: U32<E, LoadCommandType>,
     /// sizeof(struct EncryptionInfoCommand32)
     pub cmdsize: U32<E>,
     /// file offset of encrypted range
@@ -2378,7 +2619,7 @@ pub struct EncryptionInfoCommand32<E: Endian> {
 #[repr(C)]
 pub struct EncryptionInfoCommand64<E: Endian> {
     /// LC_ENCRYPTION_INFO_64
-    pub cmd: U32<E>,
+    pub cmd: U32<E, LoadCommandType>,
     /// sizeof(struct EncryptionInfoCommand64)
     pub cmdsize: U32<E>,
     /// file offset of encrypted range
@@ -2399,13 +2640,13 @@ pub struct EncryptionInfoCommand64<E: Endian> {
 #[repr(C)]
 pub struct VersionMinCommand<E: Endian> {
     /// LC_VERSION_MIN_MACOSX or LC_VERSION_MIN_IPHONEOS or LC_VERSION_MIN_WATCHOS or LC_VERSION_MIN_TVOS
-    pub cmd: U32<E>,
+    pub cmd: U32<E, LoadCommandType>,
     /// sizeof(struct VersionMinCommand)
     pub cmdsize: U32<E>,
     /// X.Y.Z is encoded in nibbles xxxx.yy.zz
-    pub version: U32<E>,
+    pub version: U32<E, Version>,
     /// X.Y.Z is encoded in nibbles xxxx.yy.zz
-    pub sdk: U32<E>,
+    pub sdk: U32<E, Version>,
 }
 
 /*
@@ -2417,15 +2658,15 @@ pub struct VersionMinCommand<E: Endian> {
 #[repr(C)]
 pub struct BuildVersionCommand<E: Endian> {
     /// LC_BUILD_VERSION
-    pub cmd: U32<E>,
+    pub cmd: U32<E, LoadCommandType>,
     /// sizeof(struct BuildVersionCommand) plus ntools * sizeof(struct BuildToolVersion)
     pub cmdsize: U32<E>,
     /// platform
-    pub platform: U32<E>,
+    pub platform: U32<E, Platform>,
     /// X.Y.Z is encoded in nibbles xxxx.yy.zz
-    pub minos: U32<E>,
+    pub minos: U32<E, Version>,
     /// X.Y.Z is encoded in nibbles xxxx.yy.zz
-    pub sdk: U32<E>,
+    pub sdk: U32<E, Version>,
     /// number of tool entries following this
     pub ntools: U32<E>,
 }
@@ -2434,58 +2675,104 @@ pub struct BuildVersionCommand<E: Endian> {
 #[repr(C)]
 pub struct BuildToolVersion<E: Endian> {
     /// enum for the tool
-    pub tool: U32<E>,
+    pub tool: U32<E, Tool>,
     /// version number of the tool
-    pub version: U32<E>,
+    pub version: U32<E, Version>,
 }
 
-/* Known values for the platform field above. */
-pub const PLATFORM_UNKNOWN: u32 = 0;
-pub const PLATFORM_ANY: u32 = 0xFFFFFFFF;
-pub const PLATFORM_MACOS: u32 = 1;
-pub const PLATFORM_IOS: u32 = 2;
-pub const PLATFORM_TVOS: u32 = 3;
-pub const PLATFORM_WATCHOS: u32 = 4;
-pub const PLATFORM_BRIDGEOS: u32 = 5;
-pub const PLATFORM_MACCATALYST: u32 = 6;
-pub const PLATFORM_IOSSIMULATOR: u32 = 7;
-pub const PLATFORM_TVOSSIMULATOR: u32 = 8;
-pub const PLATFORM_WATCHOSSIMULATOR: u32 = 9;
-pub const PLATFORM_DRIVERKIT: u32 = 10;
-pub const PLATFORM_VISIONOS: u32 = 11;
-pub const PLATFORM_VISIONOSSIMULATOR: u32 = 12;
-/// Compatibility alias for [`PLATFORM_VISIONOS`].
-pub const PLATFORM_XROS: u32 = PLATFORM_VISIONOS;
-/// Compatibility alias for [`PLATFORM_VISIONOSSIMULATOR`].
-pub const PLATFORM_XROSSIMULATOR: u32 = PLATFORM_VISIONOSSIMULATOR;
+newtype!(
+    struct Version(u32);
+);
 
-pub const PLATFORM_FIRMWARE: u32 = 13;
-pub const PLATFORM_SEPOS: u32 = 14;
+impl Version {
+    pub fn new(major: u16, minor: u8, update: u8) -> Self {
+        Version(u32::from(major) << 16 | u32::from(minor) << 8 | u32::from(update))
+    }
 
-pub const PLATFORM_MACOS_EXCLAVECORE: u32 = 15;
-pub const PLATFORM_MACOS_EXCLAVEKIT: u32 = 16;
-pub const PLATFORM_IOS_EXCLAVECORE: u32 = 17;
-pub const PLATFORM_IOS_EXCLAVEKIT: u32 = 18;
-pub const PLATFORM_TVOS_EXCLAVECORE: u32 = 19;
-pub const PLATFORM_TVOS_EXCLAVEKIT: u32 = 20;
-pub const PLATFORM_WATCHOS_EXCLAVECORE: u32 = 21;
-pub const PLATFORM_WATCHOS_EXCLAVEKIT: u32 = 22;
-pub const PLATFORM_VISIONOS_EXCLAVECORE: u32 = 23;
-pub const PLATFORM_VISIONOS_EXCLAVEKIT: u32 = 24;
+    pub fn major(self) -> u16 {
+        (self.0 >> 16) as u16
+    }
 
-/* Known values for the tool field above. */
-pub const TOOL_CLANG: u32 = 1;
-pub const TOOL_SWIFT: u32 = 2;
-pub const TOOL_LD: u32 = 3;
+    pub fn minor(self) -> u8 {
+        (self.0 >> 8) as u8
+    }
 
-/* values for gpu tools (1024 to 1048) */
-pub const TOOL_METAL: u32 = 1024;
-pub const TOOL_AIRLLD: u32 = 1025;
-pub const TOOL_AIRNT: u32 = 1026;
-pub const TOOL_AIRNT_PLUGIN: u32 = 1027;
-pub const TOOL_AIRPACK: u32 = 1028;
-pub const TOOL_GPUARCHIVER: u32 = 1031;
-pub const TOOL_METAL_FRAMEWORK: u32 = 1032;
+    pub fn update(self) -> u8 {
+        self.0 as u8
+    }
+}
+
+impl core::fmt::Debug for Version {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(f, "{}.{}.{}", self.major(), self.minor(), self.update())
+    }
+}
+
+impl core::fmt::Display for Version {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(f, "{}.{}.{}", self.major(), self.minor(), self.update())
+    }
+}
+
+newtype!(
+    /// Value for `BuildVersionCommand::platform`.
+    struct Platform(u32);
+);
+
+newtype_constant_names!(NAMES_PLATFORM: Platform(u32) = {
+    PLATFORM_UNKNOWN = 0,
+    PLATFORM_ANY = 0xFFFFFFFF,
+    PLATFORM_MACOS = 1,
+    PLATFORM_IOS = 2,
+    PLATFORM_TVOS = 3,
+    PLATFORM_WATCHOS = 4,
+    PLATFORM_BRIDGEOS = 5,
+    PLATFORM_MACCATALYST = 6,
+    PLATFORM_IOSSIMULATOR = 7,
+    PLATFORM_TVOSSIMULATOR = 8,
+    PLATFORM_WATCHOSSIMULATOR = 9,
+    PLATFORM_DRIVERKIT = 10,
+    PLATFORM_VISIONOS = 11,
+    PLATFORM_VISIONOSSIMULATOR = 12,
+    /// Compatibility alias for [`PLATFORM_VISIONOS`].
+    PLATFORM_XROS = PLATFORM_VISIONOS.0,
+    /// Compatibility alias for [`PLATFORM_VISIONOSSIMULATOR`].
+    PLATFORM_XROSSIMULATOR = PLATFORM_VISIONOSSIMULATOR.0,
+
+    PLATFORM_FIRMWARE = 13,
+    PLATFORM_SEPOS = 14,
+
+    PLATFORM_MACOS_EXCLAVECORE = 15,
+    PLATFORM_MACOS_EXCLAVEKIT = 16,
+    PLATFORM_IOS_EXCLAVECORE = 17,
+    PLATFORM_IOS_EXCLAVEKIT = 18,
+    PLATFORM_TVOS_EXCLAVECORE = 19,
+    PLATFORM_TVOS_EXCLAVEKIT = 20,
+    PLATFORM_WATCHOS_EXCLAVECORE = 21,
+    PLATFORM_WATCHOS_EXCLAVEKIT = 22,
+    PLATFORM_VISIONOS_EXCLAVECORE = 23,
+    PLATFORM_VISIONOS_EXCLAVEKIT = 24,
+});
+
+newtype!(
+    /// Value for `BuildToolVersion::tool`.
+    struct Tool(u32);
+);
+
+newtype_constant_names!(NAMES_TOOL: Tool(u32) = {
+    TOOL_CLANG = 1,
+    TOOL_SWIFT = 2,
+    TOOL_LD = 3,
+
+    /* values for gpu tools (1024 to 1048) */
+    TOOL_METAL = 1024,
+    TOOL_AIRLLD = 1025,
+    TOOL_AIRNT = 1026,
+    TOOL_AIRNT_PLUGIN = 1027,
+    TOOL_AIRPACK = 1028,
+    TOOL_GPUARCHIVER = 1031,
+    TOOL_METAL_FRAMEWORK = 1032,
+});
 
 /*
  * The DyldInfoCommand contains the file offsets and sizes of
@@ -2499,7 +2786,7 @@ pub const TOOL_METAL_FRAMEWORK: u32 = 1032;
 #[repr(C)]
 pub struct DyldInfoCommand<E: Endian> {
     /// LC_DYLD_INFO or LC_DYLD_INFO_ONLY
-    pub cmd: U32<E>,
+    pub cmd: U32<E, LoadCommandType>,
     /// sizeof(struct DyldInfoCommand)
     pub cmdsize: U32<E>,
 
@@ -2669,14 +2956,66 @@ pub const BIND_SUBOPCODE_THREADED_APPLY: u8 = 0x01;
  * The following are used on the flags byte of a terminal node
  * in the export information.
  */
-pub const EXPORT_SYMBOL_FLAGS_KIND_MASK: u8 = 0x03;
-pub const EXPORT_SYMBOL_FLAGS_KIND_REGULAR: u8 = 0x00;
-pub const EXPORT_SYMBOL_FLAGS_KIND_THREAD_LOCAL: u8 = 0x01;
-pub const EXPORT_SYMBOL_FLAGS_KIND_ABSOLUTE: u8 = 0x02;
-pub const EXPORT_SYMBOL_FLAGS_WEAK_DEFINITION: u8 = 0x04;
-pub const EXPORT_SYMBOL_FLAGS_REEXPORT: u8 = 0x08;
-pub const EXPORT_SYMBOL_FLAGS_STUB_AND_RESOLVER: u8 = 0x10;
-pub const EXPORT_SYMBOL_FLAGS_STATIC_RESOLVER: u8 = 0x20;
+newtype!(
+    struct ExportSymbolKind(u8);
+);
+
+newtype_constant_names!(NAMES_EXPORT_SYMBOL_KIND: ExportSymbolKind(u8) = {
+    EXPORT_SYMBOL_FLAGS_KIND_REGULAR = 0x00,
+    EXPORT_SYMBOL_FLAGS_KIND_THREAD_LOCAL = 0x01,
+    EXPORT_SYMBOL_FLAGS_KIND_ABSOLUTE = 0x02,
+});
+
+newtype!(
+    struct ExportSymbolFlags(u64);
+);
+
+newtype_flag_names!(NAMES_EXPORT_SYMBOL_FLAGS: ExportSymbolFlags(u64) = {
+    EXPORT_SYMBOL_FLAGS_KIND_MASK = 0x03 => NAMES_EXPORT_SYMBOL_KIND,
+    EXPORT_SYMBOL_FLAGS_WEAK_DEFINITION = 0x04,
+    EXPORT_SYMBOL_FLAGS_REEXPORT = 0x08,
+    EXPORT_SYMBOL_FLAGS_STUB_AND_RESOLVER = 0x10,
+    EXPORT_SYMBOL_FLAGS_STATIC_RESOLVER = 0x20,
+});
+
+impl ExportSymbolFlags {
+    /// Whether any unknown bits are set in the flags.
+    pub fn has_unknown_bits(self) -> bool {
+        self.0 & !0x3f != 0
+    }
+
+    /// Get the kind subfield.
+    pub fn kind(self) -> ExportSymbolKind {
+        ExportSymbolKind((self.0 & EXPORT_SYMBOL_FLAGS_KIND_MASK) as u8)
+    }
+
+    /// Set the kind subfield.
+    pub fn with_kind(self, kind: ExportSymbolKind) -> ExportSymbolFlags {
+        ExportSymbolFlags(
+            self.0 & !EXPORT_SYMBOL_FLAGS_KIND_MASK
+                | u64::from(kind.0) & EXPORT_SYMBOL_FLAGS_KIND_MASK,
+        )
+    }
+}
+
+impl From<ExportSymbolKind> for ExportSymbolFlags {
+    fn from(value: ExportSymbolKind) -> Self {
+        ExportSymbolFlags(u64::from(value.0))
+    }
+}
+
+impl From<ExportSymbolFlags> for ExportSymbolKind {
+    fn from(value: ExportSymbolFlags) -> Self {
+        value.kind()
+    }
+}
+
+impl core::ops::BitOr<ExportSymbolFlags> for ExportSymbolKind {
+    type Output = ExportSymbolFlags;
+    fn bitor(self, flags: ExportSymbolFlags) -> ExportSymbolFlags {
+        flags.with_kind(self)
+    }
+}
 
 /*
  * The LinkerOptionCommand contains linker options embedded in object files.
@@ -2685,7 +3024,7 @@ pub const EXPORT_SYMBOL_FLAGS_STATIC_RESOLVER: u8 = 0x20;
 #[repr(C)]
 pub struct LinkerOptionCommand<E: Endian> {
     /// LC_LINKER_OPTION only used in MH_OBJECT filetypes
-    pub cmd: U32<E>,
+    pub cmd: U32<E, LoadCommandType>,
     pub cmdsize: U32<E>,
     /// number of strings
     pub count: U32<E>,
@@ -2706,7 +3045,7 @@ pub struct LinkerOptionCommand<E: Endian> {
 #[repr(C)]
 pub struct SymsegCommand<E: Endian> {
     /// LC_SYMSEG
-    pub cmd: U32<E>,
+    pub cmd: U32<E, LoadCommandType>,
     /// sizeof(struct SymsegCommand)
     pub cmdsize: U32<E>,
     /// symbol segment offset
@@ -2725,7 +3064,7 @@ pub struct SymsegCommand<E: Endian> {
 #[repr(C)]
 pub struct IdentCommand<E: Endian> {
     /// LC_IDENT
-    pub cmd: U32<E>,
+    pub cmd: U32<E, LoadCommandType>,
     /// strings that follow this command
     pub cmdsize: U32<E>,
 }
@@ -2740,7 +3079,7 @@ pub struct IdentCommand<E: Endian> {
 #[repr(C)]
 pub struct FvmfileCommand<E: Endian> {
     /// LC_FVMFILE
-    pub cmd: U32<E>,
+    pub cmd: U32<E, LoadCommandType>,
     /// includes pathname string
     pub cmdsize: U32<E>,
     /// files pathname
@@ -2759,7 +3098,7 @@ pub struct FvmfileCommand<E: Endian> {
 #[repr(C)]
 pub struct EntryPointCommand<E: Endian> {
     /// LC_MAIN only used in MH_EXECUTE filetypes
-    pub cmd: U32<E>,
+    pub cmd: U32<E, LoadCommandType>,
     /// 24
     pub cmdsize: U32<E>,
     /// file (__TEXT) offset of main()
@@ -2776,7 +3115,7 @@ pub struct EntryPointCommand<E: Endian> {
 #[repr(C)]
 pub struct SourceVersionCommand<E: Endian> {
     /// LC_SOURCE_VERSION
-    pub cmd: U32<E>,
+    pub cmd: U32<E, LoadCommandType>,
     /// 16
     pub cmdsize: U32<E>,
     /// A.B.C.D.E packed as a24.b10.c10.d10.e10
@@ -2796,13 +3135,20 @@ pub struct DataInCodeEntry<E: Endian> {
     /// number of bytes in data range
     pub length: U16<E>,
     /// a DICE_KIND_* value
-    pub kind: U16<E>,
+    pub kind: U16<E, DiceKind>,
 }
-pub const DICE_KIND_DATA: u32 = 0x0001;
-pub const DICE_KIND_JUMP_TABLE8: u32 = 0x0002;
-pub const DICE_KIND_JUMP_TABLE16: u32 = 0x0003;
-pub const DICE_KIND_JUMP_TABLE32: u32 = 0x0004;
-pub const DICE_KIND_ABS_JUMP_TABLE32: u32 = 0x0005;
+
+newtype!(
+    struct DiceKind(u16);
+);
+
+newtype_constant_names!(NAMES_DICE_KIND: DiceKind(u16) = {
+    DICE_KIND_DATA = 0x0001,
+    DICE_KIND_JUMP_TABLE8 = 0x0002,
+    DICE_KIND_JUMP_TABLE16 = 0x0003,
+    DICE_KIND_JUMP_TABLE32 = 0x0004,
+    DICE_KIND_ABS_JUMP_TABLE32 = 0x0005,
+});
 
 /*
  * Sections of type S_THREAD_LOCAL_VARIABLES contain an array
@@ -2827,7 +3173,7 @@ pub struct TlvDescriptor<E: Endian>
 #[repr(C)]
 pub struct NoteCommand<E: Endian> {
     /// LC_NOTE
-    pub cmd: U32<E>,
+    pub cmd: U32<E, LoadCommandType>,
     /// sizeof(struct NoteCommand)
     pub cmdsize: U32<E>,
     /// owner name for this LC_NOTE
@@ -2848,7 +3194,7 @@ pub struct NoteCommand<E: Endian> {
 #[repr(C)]
 pub struct FilesetEntryCommand<E: Endian> {
     // LC_FILESET_ENTRY
-    pub cmd: U32<E>,
+    pub cmd: U32<E, LoadCommandType>,
     /// includes id string
     pub cmdsize: U32<E>,
     /// memory address of the dylib
@@ -2868,12 +3214,12 @@ pub struct FilesetEntryCommand<E: Endian> {
 pub struct Nlist32<E: Endian> {
     /// index into the string table
     pub n_strx: U32<E>,
-    /// type flag, see below
-    pub n_type: u8,
+    /// type flag
+    pub n_type: SymbolFlags,
     /// section number or NO_SECT
     pub n_sect: u8,
     /// see <mach-o/stab.h>
-    pub n_desc: U16<E>,
+    pub n_desc: U16<E, SymbolDesc>,
     /// value of this symbol (or stab offset)
     pub n_value: U32<E>,
 }
@@ -2886,12 +3232,12 @@ pub struct Nlist32<E: Endian> {
 pub struct Nlist64<E: Endian> {
     /// index into the string table
     pub n_strx: U32<E>,
-    /// type flag, see below
-    pub n_type: u8,
+    /// type flag
+    pub n_type: SymbolFlags,
     /// section number or NO_SECT
     pub n_sect: u8,
     /// see <mach-o/stab.h>
-    pub n_desc: U16<E>,
+    pub n_desc: U16<E, SymbolDesc>,
     /// value of this symbol (or stab offset)
     pub n_value: U64<E>,
 }
@@ -2911,14 +3257,67 @@ pub struct Nlist64<E: Endian> {
  *		      N_EXT:1;
  * which are used via the following masks.
  */
+newtype!(
+    /// Values for `Nlist*::n_type`.
+    #[repr(transparent)]
+    struct SymbolFlags(u8);
+);
+
+impl SymbolFlags {
+    /// Whether this is a symbolic debugging entry.
+    pub fn is_stab(self) -> bool {
+        self.0 & N_STAB != 0
+    }
+
+    /// The symbol debugging entry type.
+    pub fn stab(self) -> Option<SymbolStab> {
+        if self.is_stab() {
+            Some(SymbolStab(self.0))
+        } else {
+            None
+        }
+    }
+
+    /// Get the N_TYPE subfield.
+    ///
+    /// This method is only valid if `Self::is_stab` is false.
+    pub fn typ(self) -> SymbolType {
+        SymbolType(self.0 & N_TYPE)
+    }
+
+    /// Set the N_TYPE subfield.
+    pub fn with_type(self, typ: SymbolType) -> SymbolFlags {
+        SymbolFlags(self.0 & !N_TYPE | typ.0 & N_TYPE)
+    }
+
+    /// Whether this is an external symbol.
+    ///
+    /// This method is only valid if `Self::is_stab` is false.
+    pub fn is_ext(self) -> bool {
+        self.contains(N_EXT)
+    }
+
+    /// Whether this is a private external symbol.
+    ///
+    /// This checks that both `N_EXT` and `N_PEXT` are set.
+    ///
+    /// This method is only valid if `Self::is_stab` is false.
+    pub fn is_pext(self) -> bool {
+        self.contains(N_EXT | N_PEXT)
+    }
+}
+
 /// if any of these bits set, a symbolic debugging entry
 pub const N_STAB: u8 = 0xe0;
-/// private external symbol bit
-pub const N_PEXT: u8 = 0x10;
-/// mask for the type bits
-pub const N_TYPE: u8 = 0x0e;
-/// external symbol bit, set for external symbols
-pub const N_EXT: u8 = 0x01;
+
+newtype_flag_names!(NAMES_N: SymbolFlags(u8) = {
+    /// private external symbol bit
+    N_PEXT = 0x10,
+    /// mask for the type bits
+    N_TYPE = 0x0e => NAMES_N_TYPE,
+    /// external symbol bit, set for external symbols
+    N_EXT = 0x01,
+});
 
 /*
  * Only symbolic debugging entries have some of the N_STAB bits set and if any
@@ -2927,19 +3326,42 @@ pub const N_EXT: u8 = 0x01;
  * in <mach-o/stab.h>
  */
 
-/*
- * Values for N_TYPE bits of the n_type field.
- */
-/// undefined, n_sect == NO_SECT
-pub const N_UNDF: u8 = 0x0;
-/// absolute, n_sect == NO_SECT
-pub const N_ABS: u8 = 0x2;
-/// defined in section number n_sect
-pub const N_SECT: u8 = 0xe;
-/// prebound undefined (defined in a dylib)
-pub const N_PBUD: u8 = 0xc;
-/// indirect
-pub const N_INDR: u8 = 0xa;
+newtype!(
+    /// Values for `N_TYPE` bits of `Nlist*::n_type`.
+    struct SymbolType(u8);
+);
+
+impl From<SymbolType> for SymbolFlags {
+    fn from(value: SymbolType) -> Self {
+        SymbolFlags(value.0)
+    }
+}
+
+impl From<SymbolFlags> for SymbolType {
+    fn from(value: SymbolFlags) -> Self {
+        value.typ()
+    }
+}
+
+impl core::ops::BitOr<SymbolFlags> for SymbolType {
+    type Output = SymbolFlags;
+    fn bitor(self, flags: SymbolFlags) -> SymbolFlags {
+        flags.with_type(self)
+    }
+}
+
+newtype_constant_names!(NAMES_N_TYPE: SymbolType(u8) = {
+    /// undefined, n_sect == NO_SECT
+    N_UNDF = 0x0,
+    /// absolute, n_sect == NO_SECT
+    N_ABS = 0x2,
+    /// defined in section number n_sect
+    N_SECT = 0xe,
+    /// prebound undefined (defined in a dylib)
+    N_PBUD = 0xc,
+    /// indirect
+    N_INDR = 0xa,
+});
 
 /*
  * If the type is N_INDR then the symbol is defined to be the same as another
@@ -2965,6 +3387,75 @@ pub const NO_SECT: u8 = 0;
 /// 1 thru 255 inclusive
 pub const MAX_SECT: u8 = 255;
 
+newtype!(
+    /// Value for the `Nlist*::n_desc`.
+    struct SymbolDesc(u16);
+);
+
+// Names are context-dependent.
+newtype_flag_names!(NAMES_N_DESC: SymbolDesc(u16) = {});
+
+impl SymbolDesc {
+    /// All possible flag value names for defined symbols.
+    #[cfg(feature = "names")]
+    pub const NAMES_DEFINED: &'static FlagNames<SymbolDesc> = &NAMES_N_DESC_DEFINED;
+
+    /// All possible flag value names for undefined symbols.
+    #[cfg(feature = "names")]
+    pub const NAMES_UNDEFINED: &'static FlagNames<SymbolDesc> = &NAMES_N_DESC_UNDEFINED;
+
+    /// Get the reference type subfield.
+    ///
+    /// Valid for undefined symbols.
+    pub fn reference(self) -> SymbolReference {
+        SymbolReference((self.0 & REFERENCE_TYPE) as u8)
+    }
+
+    /// Set the reference type subfield.
+    ///
+    /// Valid for undefined symbols.
+    pub fn with_reference(self, reference: SymbolReference) -> SymbolDesc {
+        SymbolDesc((self.0 & !REFERENCE_TYPE) | (u16::from(reference.0)))
+    }
+
+    /// Get the library ordinal subfield.
+    ///
+    /// Valid for undefined symbols in a file using `MH_TWOLEVEL`.
+    ///
+    /// This overlaps with the common alignment subfield and some `MH_OBJECT` flags.
+    pub fn library(self) -> SymbolLibrary {
+        SymbolLibrary((self.0 >> 8) as u8)
+    }
+
+    /// Set the library ordinal subfield.
+    ///
+    /// See [`Self::library`].
+    pub fn with_library(self, ordinal: SymbolLibrary) -> SymbolDesc {
+        SymbolDesc((self.0 & 0x00ff) | (u16::from(ordinal.0) << 8))
+    }
+
+    /// Get the alignment for common symbols.
+    ///
+    /// This is a power of 2 from 1 to 15. A value of 0 mean that the natural
+    /// alignment based on the size is used.
+    ///
+    /// Common symbols are represented by undefined (`N_UNDF`) external (`N_EXT`) symbols
+    /// whose values (`n_value`) are non-zero.
+    ///
+    /// This overlaps with the library ordinal subfield and some `MH_OBJECT` flags.
+    pub fn common_alignment(self) -> u8 {
+        ((self.0 >> 8) & 0x0f) as u8
+    }
+
+    /// Set the alignment for common symbols.
+    ///
+    /// See [`Self::common_alignment`].
+    pub fn with_common_alignment(self, alignment: u8) -> SymbolDesc {
+        debug_assert_eq!(alignment & !0xf, 0);
+        SymbolDesc((self.0 & 0xf0ff) | (u16::from(alignment & 0xf) << 8))
+    }
+}
+
 /*
  * Common symbols are represented by undefined (N_UNDF) external (N_EXT) types
  * who's values (n_value) are non-zero.  In which case the value of the n_value
@@ -2973,11 +3464,6 @@ pub const MAX_SECT: u8 = 255;
  * between 2^1 and 2^15 as part of the n_desc field using the macros below. If
  * the alignment is not set (a value of zero) then natural alignment based on
  * the size is used.
- */
-/* TODO:
-#define GET_COMM_ALIGN(n_desc) (((n_desc) >> 8) & 0x0f)
-#define SET_COMM_ALIGN(n_desc,align) \
-    (n_desc) = (((n_desc) & 0xf0ff) | (((align) & 0x0f) << 8))
  */
 
 /*
@@ -2999,23 +3485,27 @@ pub const MAX_SECT: u8 = 255;
  * in a shared library file.  In that case the constant for a defined symbol,
  * REFERENCE_FLAG_DEFINED, is also used.
  */
-/* Reference type bits of the n_desc field of undefined symbols */
+newtype!(
+    /// Reference type bits of the n_desc field of undefined symbols.
+    struct SymbolReference(u8);
+);
+
+impl From<SymbolReference> for SymbolDesc {
+    fn from(value: SymbolReference) -> Self {
+        SymbolDesc(u16::from(value.0))
+    }
+}
+
 pub const REFERENCE_TYPE: u16 = 0x7;
 /* types of references */
-pub const REFERENCE_FLAG_UNDEFINED_NON_LAZY: u16 = 0;
-pub const REFERENCE_FLAG_UNDEFINED_LAZY: u16 = 1;
-pub const REFERENCE_FLAG_DEFINED: u16 = 2;
-pub const REFERENCE_FLAG_PRIVATE_DEFINED: u16 = 3;
-pub const REFERENCE_FLAG_PRIVATE_UNDEFINED_NON_LAZY: u16 = 4;
-pub const REFERENCE_FLAG_PRIVATE_UNDEFINED_LAZY: u16 = 5;
-
-/*
- * To simplify stripping of objects that use are used with the dynamic link
- * editor, the static link editor marks the symbols defined an object that are
- * referenced by a dynamically bound object (dynamic shared libraries, bundles).
- * With this marking strip knows not to strip these symbols.
- */
-pub const REFERENCED_DYNAMICALLY: u16 = 0x0010;
+newtype_constant_names!(NAMES_REFERENCE: SymbolReference(u8) = {
+    REFERENCE_FLAG_UNDEFINED_NON_LAZY = 0,
+    REFERENCE_FLAG_UNDEFINED_LAZY = 1,
+    REFERENCE_FLAG_DEFINED = 2,
+    REFERENCE_FLAG_PRIVATE_DEFINED = 3,
+    REFERENCE_FLAG_PRIVATE_UNDEFINED_NON_LAZY = 4,
+    REFERENCE_FLAG_PRIVATE_UNDEFINED_LAZY = 5,
+});
 
 /*
  * For images created by the static link editor with the -twolevel_namespace
@@ -3044,87 +3534,130 @@ pub const REFERENCED_DYNAMICALLY: u16 = 0x0010;
  * this case the ordinal value 0xfe (254) must be treated as a library ordinal
  * for compatibility.
  */
-/* TODO:
-#define GET_LIBRARY_ORDINAL(n_desc) (((n_desc) >> 8) & 0xff)
-#define SET_LIBRARY_ORDINAL(n_desc,ordinal) \
-    (n_desc) = (((n_desc) & 0x00ff) | (((ordinal) & 0xff) << 8))
- */
-pub const SELF_LIBRARY_ORDINAL: u8 = 0x0;
+newtype!(
+    /// Library ordinal bits of the n_desc field of undefined symbols.
+    ///
+    /// May be a 1-based index of the libraries listed in the load commands,
+    /// or a reserved constant.
+    struct SymbolLibrary(u8);
+);
+
+impl SymbolLibrary {
+    /// Whether this is a reserved constant, rather than an index into the
+    /// libraries in the load commands.
+    pub fn is_reserved(self) -> bool {
+        self == SELF_LIBRARY_ORDINAL || self.0 > MAX_LIBRARY_ORDINAL
+    }
+
+    /// Get the index of the library in the load commands.
+    ///
+    /// Returns `None` for reserved constants.
+    pub fn index(self) -> Option<u8> {
+        if self.is_reserved() {
+            None
+        } else {
+            Some(self.0)
+        }
+    }
+}
+
+impl From<SymbolLibrary> for SymbolDesc {
+    fn from(value: SymbolLibrary) -> Self {
+        SymbolDesc(u16::from(value.0) << 8)
+    }
+}
+
 pub const MAX_LIBRARY_ORDINAL: u8 = 0xfd;
-pub const DYNAMIC_LOOKUP_ORDINAL: u8 = 0xfe;
-pub const EXECUTABLE_ORDINAL: u8 = 0xff;
 
-/*
- * The bit 0x0020 of the n_desc field is used for two non-overlapping purposes
- * and has two different symbolic names, N_NO_DEAD_STRIP and N_DESC_DISCARDED.
- */
+newtype_constant_names!(NAMES_ORDINAL: SymbolLibrary(u8) = {
+    SELF_LIBRARY_ORDINAL = 0x0,
+    DYNAMIC_LOOKUP_ORDINAL = 0xfe,
+    EXECUTABLE_ORDINAL = 0xff,
+});
 
-/*
- * The N_NO_DEAD_STRIP bit of the n_desc field only ever appears in a
- * relocatable .o file (MH_OBJECT filetype). And is used to indicate to the
- * static link editor it is never to dead strip the symbol.
- */
-/// symbol is not to be dead stripped
-pub const N_NO_DEAD_STRIP: u16 = 0x0020;
+flag_names!(NAMES_N_DESC_DEFINED: SymbolDesc(u16) = {
+    /*
+     * The N_ARM_THUMB_DEF bit of the n_desc field indicates that the symbol is
+     * a definition of a Thumb function.
+     */
+    /// symbol is a Thumb function (ARM)
+    N_ARM_THUMB_DEF = 0x0008,
 
-/*
- * The N_DESC_DISCARDED bit of the n_desc field never appears in linked image.
- * But is used in very rare cases by the dynamic link editor to mark an in
- * memory symbol as discared and longer used for linking.
- */
-/// symbol is discarded
-pub const N_DESC_DISCARDED: u16 = 0x0020;
+    /*
+     * To simplify stripping of objects that use are used with the dynamic link
+     * editor, the static link editor marks the symbols defined an object that are
+     * referenced by a dynamically bound object (dynamic shared libraries, bundles).
+     * With this marking strip knows not to strip these symbols.
+     */
+    REFERENCED_DYNAMICALLY = 0x0010,
 
-/*
- * The N_WEAK_REF bit of the n_desc field indicates to the dynamic linker that
- * the undefined symbol is allowed to be missing and is to have the address of
- * zero when missing.
- */
-/// symbol is weak referenced
-pub const N_WEAK_REF: u16 = 0x0040;
+    /*
+     * The bit 0x0020 of the n_desc field is used for two non-overlapping purposes
+     * and has two different symbolic names, N_NO_DEAD_STRIP and N_DESC_DISCARDED.
+     */
 
-/*
- * The N_WEAK_DEF bit of the n_desc field indicates to the static and dynamic
- * linkers that the symbol definition is weak, allowing a non-weak symbol to
- * also be used which causes the weak definition to be discared.  Currently this
- * is only supported for symbols in coalesced sections.
- */
-/// coalesced symbol is a weak definition
-pub const N_WEAK_DEF: u16 = 0x0080;
+    /*
+     * The N_NO_DEAD_STRIP bit of the n_desc field only ever appears in a
+     * relocatable .o file (MH_OBJECT filetype). And is used to indicate to the
+     * static link editor it is never to dead strip the symbol.
+     */
+    /// symbol is not to be dead stripped
+    N_NO_DEAD_STRIP = 0x0020,
 
-/*
- * The N_REF_TO_WEAK bit of the n_desc field indicates to the dynamic linker
- * that the undefined symbol should be resolved using flat namespace searching.
- */
-/// reference to a weak symbol
-pub const N_REF_TO_WEAK: u16 = 0x0080;
+    /*
+     * The N_DESC_DISCARDED bit of the n_desc field never appears in linked image.
+     * But is used in very rare cases by the dynamic link editor to mark an in
+     * memory symbol as discared and longer used for linking.
+     */
+    /// symbol is discarded
+    N_DESC_DISCARDED = 0x0020,
 
-/*
- * The N_ARM_THUMB_DEF bit of the n_desc field indicates that the symbol is
- * a definition of a Thumb function.
- */
-/// symbol is a Thumb function (ARM)
-pub const N_ARM_THUMB_DEF: u16 = 0x0008;
+    /*
+     * The N_WEAK_DEF bit of the n_desc field indicates to the static and dynamic
+     * linkers that the symbol definition is weak, allowing a non-weak symbol to
+     * also be used which causes the weak definition to be discared.  Currently this
+     * is only supported for symbols in coalesced sections.
+     */
+    /// coalesced symbol is a weak definition
+    N_WEAK_DEF = 0x0080,
 
-/*
- * The N_SYMBOL_RESOLVER bit of the n_desc field indicates that the
- * that the function is actually a resolver function and should
- * be called to get the address of the real function to use.
- * This bit is only available in .o files (MH_OBJECT filetype)
- */
-pub const N_SYMBOL_RESOLVER: u16 = 0x0100;
+    /*
+     * The N_SYMBOL_RESOLVER bit of the n_desc field indicates that the
+     * that the function is actually a resolver function and should
+     * be called to get the address of the real function to use.
+     * This bit is only available in .o files (MH_OBJECT filetype)
+     */
+    N_SYMBOL_RESOLVER = 0x0100,
 
-/*
- * The N_ALT_ENTRY bit of the n_desc field indicates that the
- * symbol is pinned to the previous content.
- */
-pub const N_ALT_ENTRY: u16 = 0x0200;
+    /*
+     * The N_ALT_ENTRY bit of the n_desc field indicates that the
+     * symbol is pinned to the previous content.
+     */
+    N_ALT_ENTRY = 0x0200,
 
-/*
- * The N_COLD_FUNC bit of the n_desc field indicates that the symbol is used
- * infrequently and the linker should order it towards the end of the section.
- */
-pub const N_COLD_FUNC: u16 = 0x0400;
+    /*
+     * The N_COLD_FUNC bit of the n_desc field indicates that the symbol is used
+     * infrequently and the linker should order it towards the end of the section.
+     */
+    N_COLD_FUNC = 0x0400,
+});
+
+flag_names!(NAMES_N_DESC_UNDEFINED: SymbolDesc(u16) = {
+    /*
+     * The N_WEAK_REF bit of the n_desc field indicates to the dynamic linker that
+     * the undefined symbol is allowed to be missing and is to have the address of
+     * zero when missing.
+     */
+    /// symbol is weak referenced
+    N_WEAK_REF = 0x0040,
+
+    /*
+     * The N_REF_TO_WEAK bit of the n_desc field indicates to the dynamic linker
+     * that the undefined symbol should be resolved using flat namespace searching.
+     */
+    /// reference to a weak symbol
+    N_REF_TO_WEAK = 0x0080,
+});
 
 // Definitions from "/usr/include/mach-o/stab.h".
 
@@ -3144,6 +3677,11 @@ pub const N_COLD_FUNC: u16 = 0x0400;
  * relocatated the n_sect field must be NO_SECT.
  */
 
+newtype!(
+    /// Values for `Nlist*::n_type` when any bits in `N_STAB` are set.
+    struct SymbolStab(u8);
+);
+
 /*
  * Symbolic debugger symbols.  The comments give the conventional use for
  *
@@ -3153,78 +3691,80 @@ pub const N_COLD_FUNC: u16 = 0x0400;
  * fields not listed are zero. n_sect is the section ordinal the entry is
  * referring to.
  */
-/// global symbol: name,,NO_SECT,type,0
-pub const N_GSYM: u8 = 0x20;
-/// procedure name (f77 kludge): name,,NO_SECT,0,0
-pub const N_FNAME: u8 = 0x22;
-/// procedure: name,,n_sect,linenumber,address
-pub const N_FUN: u8 = 0x24;
-/// static symbol: name,,n_sect,type,address
-pub const N_STSYM: u8 = 0x26;
-/// .lcomm symbol: name,,n_sect,type,address
-pub const N_LCSYM: u8 = 0x28;
-/// begin nsect sym: 0,,n_sect,0,address
-pub const N_BNSYM: u8 = 0x2e;
-/// AST file path: name,,NO_SECT,0,0
-pub const N_AST: u8 = 0x32;
-/// emitted with gcc2_compiled and in gcc source
-pub const N_OPT: u8 = 0x3c;
-/// register sym: name,,NO_SECT,type,register
-pub const N_RSYM: u8 = 0x40;
-/// src line: 0,,n_sect,linenumber,address
-pub const N_SLINE: u8 = 0x44;
-/// end nsect sym: 0,,n_sect,0,address
-pub const N_ENSYM: u8 = 0x4e;
-/// structure elt: name,,NO_SECT,type,struct_offset
-pub const N_SSYM: u8 = 0x60;
-/// source file name: name,,n_sect,0,address
-pub const N_SO: u8 = 0x64;
-/// object file name: name,,0,0,st_mtime
-///
-/// historically N_OSO set n_sect to 0. The N_OSO
-/// n_sect may instead hold the low byte of the
-/// cpusubtype value from the Mach-O header.
-pub const N_OSO: u8 = 0x66;
-/// dynamic library file name: name,,NO_SECT,0,0
-pub const N_LIB: u8 = 0x68;
-/// local sym: name,,NO_SECT,type,offset
-pub const N_LSYM: u8 = 0x80;
-/// include file beginning: name,,NO_SECT,0,sum
-pub const N_BINCL: u8 = 0x82;
-/// #included file name: name,,n_sect,0,address
-pub const N_SOL: u8 = 0x84;
-/// compiler parameters: name,,NO_SECT,0,0
-pub const N_PARAMS: u8 = 0x86;
-/// compiler version: name,,NO_SECT,0,0
-pub const N_VERSION: u8 = 0x88;
-/// compiler -O level: name,,NO_SECT,0,0
-pub const N_OLEVEL: u8 = 0x8A;
-/// parameter: name,,NO_SECT,type,offset
-pub const N_PSYM: u8 = 0xa0;
-/// include file end: name,,NO_SECT,0,0
-pub const N_EINCL: u8 = 0xa2;
-/// alternate entry: name,,n_sect,linenumber,address
-pub const N_ENTRY: u8 = 0xa4;
-/// left bracket: 0,,NO_SECT,nesting level,address
-pub const N_LBRAC: u8 = 0xc0;
-/// deleted include file: name,,NO_SECT,0,sum
-pub const N_EXCL: u8 = 0xc2;
-/// right bracket: 0,,NO_SECT,nesting level,address
-pub const N_RBRAC: u8 = 0xe0;
-/// begin common: name,,NO_SECT,0,0
-pub const N_BCOMM: u8 = 0xe2;
-/// end common: name,,n_sect,0,0
-pub const N_ECOMM: u8 = 0xe4;
-/// end common (local name): 0,,n_sect,0,address
-pub const N_ECOML: u8 = 0xe8;
-/// second stab entry with length information
-pub const N_LENG: u8 = 0xfe;
+newtype_constant_names!(NAMES_N_STAB: SymbolStab(u8) = {
+    /// global symbol: name,,NO_SECT,type,0
+    N_GSYM = 0x20,
+    /// procedure name (f77 kludge): name,,NO_SECT,0,0
+    N_FNAME = 0x22,
+    /// procedure: name,,n_sect,linenumber,address
+    N_FUN = 0x24,
+    /// static symbol: name,,n_sect,type,address
+    N_STSYM = 0x26,
+    /// .lcomm symbol: name,,n_sect,type,address
+    N_LCSYM = 0x28,
+    /// begin nsect sym: 0,,n_sect,0,address
+    N_BNSYM = 0x2e,
+    /// AST file path: name,,NO_SECT,0,0
+    N_AST = 0x32,
+    /// emitted with gcc2_compiled and in gcc source
+    N_OPT = 0x3c,
+    /// register sym: name,,NO_SECT,type,register
+    N_RSYM = 0x40,
+    /// src line: 0,,n_sect,linenumber,address
+    N_SLINE = 0x44,
+    /// end nsect sym: 0,,n_sect,0,address
+    N_ENSYM = 0x4e,
+    /// structure elt: name,,NO_SECT,type,struct_offset
+    N_SSYM = 0x60,
+    /// source file name: name,,n_sect,0,address
+    N_SO = 0x64,
+    /// object file name: name,,0,0,st_mtime
+    ///
+    /// historically N_OSO set n_sect to 0. The N_OSO
+    /// n_sect may instead hold the low byte of the
+    /// cpusubtype value from the Mach-O header.
+    N_OSO = 0x66,
+    /// dynamic library file name: name,,NO_SECT,0,0
+    N_LIB = 0x68,
+    /// local sym: name,,NO_SECT,type,offset
+    N_LSYM = 0x80,
+    /// include file beginning: name,,NO_SECT,0,sum
+    N_BINCL = 0x82,
+    /// #included file name: name,,n_sect,0,address
+    N_SOL = 0x84,
+    /// compiler parameters: name,,NO_SECT,0,0
+    N_PARAMS = 0x86,
+    /// compiler version: name,,NO_SECT,0,0
+    N_VERSION = 0x88,
+    /// compiler -O level: name,,NO_SECT,0,0
+    N_OLEVEL = 0x8A,
+    /// parameter: name,,NO_SECT,type,offset
+    N_PSYM = 0xa0,
+    /// include file end: name,,NO_SECT,0,0
+    N_EINCL = 0xa2,
+    /// alternate entry: name,,n_sect,linenumber,address
+    N_ENTRY = 0xa4,
+    /// left bracket: 0,,NO_SECT,nesting level,address
+    N_LBRAC = 0xc0,
+    /// deleted include file: name,,NO_SECT,0,sum
+    N_EXCL = 0xc2,
+    /// right bracket: 0,,NO_SECT,nesting level,address
+    N_RBRAC = 0xe0,
+    /// begin common: name,,NO_SECT,0,0
+    N_BCOMM = 0xe2,
+    /// end common: name,,n_sect,0,0
+    N_ECOMM = 0xe4,
+    /// end common (local name): 0,,n_sect,0,address
+    N_ECOML = 0xe8,
+    /// second stab entry with length information
+    N_LENG = 0xfe,
 
-/*
- * for the berkeley pascal compiler, pc(1):
- */
-/// global pascal symbol: name,,NO_SECT,subtype,line
-pub const N_PC: u8 = 0x30;
+    /*
+     * for the berkeley pascal compiler, pc(1):
+     */
+    /// global pascal symbol: name,,NO_SECT,subtype,line
+    N_PC = 0x30,
+});
 
 // Definitions from "/usr/include/mach-o/reloc.h".
 
@@ -3245,7 +3785,7 @@ pub struct Relocation<E: Endian> {
 impl<E: Endian> Relocation<E> {
     /// Determine whether this is a scattered relocation.
     #[inline]
-    pub fn r_scattered(self, endian: E, cputype: u32) -> bool {
+    pub fn r_scattered(self, endian: E, cputype: CpuType) -> bool {
         if cputype == CPU_TYPE_X86_64 {
             false
         } else {
@@ -3341,8 +3881,8 @@ impl RelocationInfo {
     }
 }
 
-/// absolute relocation type for Mach-O files
-pub const R_ABS: u8 = 0;
+/// Value for `RelocationInfo::r_symbolnum` for absolute symbols.
+pub const R_ABS: u32 = 0;
 
 /*
  * The r_address is not really the address as it's name indicates but an offset.

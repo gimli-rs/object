@@ -3,19 +3,6 @@ use object::macho::*;
 use object::read::macho::*;
 use object::{BigEndian, Endian, U32};
 
-trait PrinterMachoExt {
-    fn field_version(&mut self, name: &str, value: u32);
-}
-
-impl<'a> PrinterMachoExt for Printer<'a> {
-    fn field_version(&mut self, name: &str, value: u32) {
-        let major = (value >> 16) & 0xFFFF;
-        let minor = (value >> 8) & 0xFF;
-        let update = value & 0xFF;
-        self.field(name, format!("{}.{}.{}", major, minor, update));
-    }
-}
-
 pub(super) fn print_dyld_cache(p: &mut Printer<'_>, data: &[u8], subcache_data: &[&[u8]]) {
     print_dyld_subcache(p, data);
     for subcache in subcache_data {
@@ -76,10 +63,8 @@ pub(super) fn print_dyld_cache_mapping_info(
         p.field_hex("Address", mapping.address.get(endian));
         p.field_hex("Size", mapping.size.get(endian));
         p.field_hex("FileOffset", mapping.file_offset.get(endian));
-        p.field_hex("MaxProt", mapping.max_prot.get(endian));
-        p.flags(mapping.max_prot.get(endian), 0, FLAGS_VM);
-        p.field_hex("InitProt", mapping.init_prot.get(endian));
-        p.flags(mapping.init_prot.get(endian), 0, FLAGS_VM);
+        p.field_flags("MaxProt", mapping.max_prot.get(endian), VmProt::NAMES);
+        p.field_flags("InitProt", mapping.init_prot.get(endian), VmProt::NAMES);
     });
 }
 
@@ -101,12 +86,13 @@ pub(super) fn print_dyld_cache_mapping_and_slide_info(
             "SlideInfoFileSize",
             mapping.slide_info_file_size.get(endian),
         );
-        p.field_hex("Flags", mapping.flags.get(endian));
-        p.flags(mapping.flags.get(endian), 0, FLAGS_DYLD_CACHE_MAPPING);
-        p.field_hex("MaxProt", mapping.max_prot.get(endian));
-        p.flags(mapping.max_prot.get(endian), 0, FLAGS_VM);
-        p.field_hex("InitProt", mapping.init_prot.get(endian));
-        p.flags(mapping.init_prot.get(endian), 0, FLAGS_VM);
+        p.field_flags(
+            "Flags",
+            mapping.flags.get(endian),
+            DyldCacheMappingFlags::NAMES,
+        );
+        p.field_flags("MaxProt", mapping.max_prot.get(endian), VmProt::NAMES);
+        p.field_flags("InitProt", mapping.init_prot.get(endian), VmProt::NAMES);
     });
 
     if let Some(slide) = mapping.slide(endian, data).print_err(p) {
@@ -260,10 +246,12 @@ pub(super) fn print_macho64(
 
 #[derive(Default)]
 struct MachState<'a, E: Endian> {
-    cputype: u32,
+    cputype: CpuType,
+    filetype: FileType,
+    twolevel: bool,
     linkedit_data: &'a [u8],
     symbols: Vec<Option<&'a [u8]>>,
-    indirect_symbols: &'a [U32<E>],
+    indirect_symbols: &'a [U32<E, macho::IndirectSymbol>],
     sections: Vec<Vec<u8>>,
     section_index: usize,
     text_segment_addr: u64,
@@ -279,6 +267,8 @@ fn print_macho<Mach: MachHeader<Endian = Endianness>>(
     if let Some(endian) = header.endian().print_err(p) {
         let mut state = MachState {
             cputype: header.cputype(endian),
+            filetype: header.filetype(endian),
+            twolevel: header.flags(endian).contains(MH_TWOLEVEL),
             linkedit_data: data,
             // Dummy first entry because section index starts at 1.
             sections: vec![vec![]],
@@ -350,10 +340,10 @@ fn print_mach_header<Mach: MachHeader>(p: &mut Printer<'_>, endian: Mach::Endian
     p.group("MachHeader", |p| {
         p.field_hex("Magic", header.magic());
         print_cputype(p, header.cputype(endian), header.cpusubtype(endian));
-        p.field_enum("FileType", header.filetype(endian), FLAGS_MH_FILETYPE);
+        p.field_consts("FileType", header.filetype(endian), FileType::NAMES);
         p.field("NumberOfCmds", header.ncmds(endian));
         p.field_hex("SizeOfCmds", header.sizeofcmds(endian));
-        p.field_enum("Flags", header.flags(endian), FLAGS_MH);
+        p.field_flags("Flags", header.flags(endian), FileFlags::NAMES);
     });
 }
 
@@ -406,14 +396,14 @@ fn print_load_command<Mach: MachHeader>(
             | LoadCommandVariant::LinkeditData(..) => {}
             LoadCommandVariant::Thread(x, _thread_data) => {
                 p.group("ThreadCommand", |p| {
-                    p.field_enum("Cmd", x.cmd.get(endian), FLAGS_LC);
+                    p.field_consts("Cmd", x.cmd.get(endian), LoadCommandType::NAMES);
                     p.field_hex("CmdSize", x.cmdsize.get(endian));
                     // TODO: thread_data
                 });
             }
             LoadCommandVariant::Dysymtab(x) => {
                 p.group("DysymtabCommand", |p| {
-                    p.field_enum("Cmd", x.cmd.get(endian), FLAGS_LC);
+                    p.field_consts("Cmd", x.cmd.get(endian), LoadCommandType::NAMES);
                     p.field_hex("CmdSize", x.cmdsize.get(endian));
                     // TODO: dump the tables these are all pointing to
                     p.field("IndexOfLocalSymbols", x.ilocalsym.get(endian));
@@ -438,7 +428,7 @@ fn print_load_command<Mach: MachHeader>(
             }
             LoadCommandVariant::Dylib(x) | LoadCommandVariant::IdDylib(x) => {
                 p.group("DylibCommand", |p| {
-                    p.field_enum("Cmd", x.cmd.get(endian), FLAGS_LC);
+                    p.field_consts("Cmd", x.cmd.get(endian), LoadCommandType::NAMES);
                     p.field_hex("CmdSize", x.cmdsize.get(endian));
                     p.group("Dylib", |p| {
                         p.field_string(
@@ -452,13 +442,13 @@ fn print_load_command<Mach: MachHeader>(
                         } else {
                             p.field("Timestamp", x.dylib.timestamp.get(endian));
                         }
-                        p.field_version("CurrentVersion", x.dylib.current_version.get(endian));
-                        p.field_version(
+                        p.field("CurrentVersion", x.dylib.current_version.get(endian));
+                        p.field(
                             "CompatibilityVersion",
                             x.dylib.compatibility_version.get(endian),
                         );
                         if let Some(flags) = flags {
-                            p.field_hex("Flags", flags);
+                            p.field_flags("Flags", flags, macho::DylibUseFlags::NAMES);
                         }
                     });
                 });
@@ -467,7 +457,7 @@ fn print_load_command<Mach: MachHeader>(
             | LoadCommandVariant::IdDylinker(x)
             | LoadCommandVariant::DyldEnvironment(x) => {
                 p.group("DylinkerCommand", |p| {
-                    p.field_enum("Cmd", x.cmd.get(endian), FLAGS_LC);
+                    p.field_consts("Cmd", x.cmd.get(endian), LoadCommandType::NAMES);
                     p.field_hex("CmdSize", x.cmdsize.get(endian));
                     p.field_string(
                         "Name",
@@ -478,7 +468,7 @@ fn print_load_command<Mach: MachHeader>(
             }
             LoadCommandVariant::PreboundDylib(x) => {
                 p.group("PreboundDylibCommand", |p| {
-                    p.field_enum("Cmd", x.cmd.get(endian), FLAGS_LC);
+                    p.field_consts("Cmd", x.cmd.get(endian), LoadCommandType::NAMES);
                     p.field_hex("CmdSize", x.cmdsize.get(endian));
                     p.field_string(
                         "Name",
@@ -492,7 +482,7 @@ fn print_load_command<Mach: MachHeader>(
             }
             LoadCommandVariant::Routines32(x) => {
                 p.group("RoutinesCommand32", |p| {
-                    p.field_enum("Cmd", x.cmd.get(endian), FLAGS_LC);
+                    p.field_consts("Cmd", x.cmd.get(endian), LoadCommandType::NAMES);
                     p.field_hex("CmdSize", x.cmdsize.get(endian));
                     p.field_hex("InitAddress", x.init_address.get(endian));
                     p.field_hex("InitModule", x.init_module.get(endian));
@@ -506,7 +496,7 @@ fn print_load_command<Mach: MachHeader>(
             }
             LoadCommandVariant::Routines64(x) => {
                 p.group("RoutinesCommand64", |p| {
-                    p.field_enum("Cmd", x.cmd.get(endian), FLAGS_LC);
+                    p.field_consts("Cmd", x.cmd.get(endian), LoadCommandType::NAMES);
                     p.field_hex("CmdSize", x.cmdsize.get(endian));
                     p.field_hex("InitAddress", x.init_address.get(endian));
                     p.field_hex("InitModule", x.init_module.get(endian));
@@ -520,7 +510,7 @@ fn print_load_command<Mach: MachHeader>(
             }
             LoadCommandVariant::SubFramework(x) => {
                 p.group("SubFrameworkCommand", |p| {
-                    p.field_enum("Cmd", x.cmd.get(endian), FLAGS_LC);
+                    p.field_consts("Cmd", x.cmd.get(endian), LoadCommandType::NAMES);
                     p.field_hex("CmdSize", x.cmdsize.get(endian));
                     p.field_string(
                         "Umbrella",
@@ -531,7 +521,7 @@ fn print_load_command<Mach: MachHeader>(
             }
             LoadCommandVariant::SubUmbrella(x) => {
                 p.group("SubUmbrellaCommand", |p| {
-                    p.field_enum("Cmd", x.cmd.get(endian), FLAGS_LC);
+                    p.field_consts("Cmd", x.cmd.get(endian), LoadCommandType::NAMES);
                     p.field_hex("CmdSize", x.cmdsize.get(endian));
                     p.field_string(
                         "SubUmbrella",
@@ -542,7 +532,7 @@ fn print_load_command<Mach: MachHeader>(
             }
             LoadCommandVariant::SubClient(x) => {
                 p.group("SubClientCommand", |p| {
-                    p.field_enum("Cmd", x.cmd.get(endian), FLAGS_LC);
+                    p.field_consts("Cmd", x.cmd.get(endian), LoadCommandType::NAMES);
                     p.field_hex("CmdSize", x.cmdsize.get(endian));
                     p.field_string(
                         "Client",
@@ -553,7 +543,7 @@ fn print_load_command<Mach: MachHeader>(
             }
             LoadCommandVariant::SubLibrary(x) => {
                 p.group("SubLibraryCommand", |p| {
-                    p.field_enum("Cmd", x.cmd.get(endian), FLAGS_LC);
+                    p.field_consts("Cmd", x.cmd.get(endian), LoadCommandType::NAMES);
                     p.field_hex("CmdSize", x.cmdsize.get(endian));
                     p.field_string(
                         "SubLibrary",
@@ -564,7 +554,7 @@ fn print_load_command<Mach: MachHeader>(
             }
             LoadCommandVariant::TwolevelHints(x) => {
                 p.group("TwolevelHintsCommand", |p| {
-                    p.field_enum("Cmd", x.cmd.get(endian), FLAGS_LC);
+                    p.field_consts("Cmd", x.cmd.get(endian), LoadCommandType::NAMES);
                     p.field_hex("CmdSize", x.cmdsize.get(endian));
                     p.field_hex("Offset", x.offset.get(endian));
                     p.field_hex("NumberOfHints", x.nhints.get(endian));
@@ -573,21 +563,21 @@ fn print_load_command<Mach: MachHeader>(
             }
             LoadCommandVariant::PrebindCksum(x) => {
                 p.group("PrebindCksumCommand", |p| {
-                    p.field_enum("Cmd", x.cmd.get(endian), FLAGS_LC);
+                    p.field_consts("Cmd", x.cmd.get(endian), LoadCommandType::NAMES);
                     p.field_hex("CmdSize", x.cmdsize.get(endian));
                     p.field_hex("Cksum", x.cksum.get(endian));
                 });
             }
             LoadCommandVariant::Uuid(x) => {
                 p.group("UuidCommand", |p| {
-                    p.field_enum("Cmd", x.cmd.get(endian), FLAGS_LC);
+                    p.field_consts("Cmd", x.cmd.get(endian), LoadCommandType::NAMES);
                     p.field_hex("CmdSize", x.cmdsize.get(endian));
                     p.field("Uuid", format!("{:X?}", x.uuid));
                 });
             }
             LoadCommandVariant::Rpath(x) => {
                 p.group("RpathCommand", |p| {
-                    p.field_enum("Cmd", x.cmd.get(endian), FLAGS_LC);
+                    p.field_consts("Cmd", x.cmd.get(endian), LoadCommandType::NAMES);
                     p.field_hex("CmdSize", x.cmdsize.get(endian));
                     p.field_string(
                         "Path",
@@ -598,7 +588,7 @@ fn print_load_command<Mach: MachHeader>(
             }
             LoadCommandVariant::TargetTriple(x) => {
                 p.group("TargetTripleCommand", |p| {
-                    p.field_enum("Cmd", x.cmd.get(endian), FLAGS_LC);
+                    p.field_consts("Cmd", x.cmd.get(endian), LoadCommandType::NAMES);
                     p.field_hex("CmdSize", x.cmdsize.get(endian));
                     p.field_string(
                         "Triple",
@@ -609,7 +599,7 @@ fn print_load_command<Mach: MachHeader>(
             }
             LoadCommandVariant::EncryptionInfo32(x) => {
                 p.group("EncryptionInfoCommand32", |p| {
-                    p.field_enum("Cmd", x.cmd.get(endian), FLAGS_LC);
+                    p.field_consts("Cmd", x.cmd.get(endian), LoadCommandType::NAMES);
                     p.field_hex("CmdSize", x.cmdsize.get(endian));
                     p.field_hex("CryptOffset", x.cryptoff.get(endian));
                     p.field_hex("CryptSize", x.cryptsize.get(endian));
@@ -618,7 +608,7 @@ fn print_load_command<Mach: MachHeader>(
             }
             LoadCommandVariant::EncryptionInfo64(x) => {
                 p.group("EncryptionInfoCommand64", |p| {
-                    p.field_enum("Cmd", x.cmd.get(endian), FLAGS_LC);
+                    p.field_consts("Cmd", x.cmd.get(endian), LoadCommandType::NAMES);
                     p.field_hex("CmdSize", x.cmdsize.get(endian));
                     p.field_hex("CryptOffset", x.cryptoff.get(endian));
                     p.field_hex("CryptSize", x.cryptsize.get(endian));
@@ -628,7 +618,7 @@ fn print_load_command<Mach: MachHeader>(
             }
             LoadCommandVariant::DyldInfo(x) => {
                 p.group("DyldInfoCommand", |p| {
-                    p.field_enum("Cmd", x.cmd.get(endian), FLAGS_LC);
+                    p.field_consts("Cmd", x.cmd.get(endian), LoadCommandType::NAMES);
                     p.field_hex("CmdSize", x.cmdsize.get(endian));
                     // TODO: dump the tables these are all pointing to
                     p.field_hex("RebaseOffset", x.rebase_off.get(endian));
@@ -645,15 +635,15 @@ fn print_load_command<Mach: MachHeader>(
             }
             LoadCommandVariant::VersionMin(x) => {
                 p.group("VersionMinCommand", |p| {
-                    p.field_enum("Cmd", x.cmd.get(endian), FLAGS_LC);
+                    p.field_consts("Cmd", x.cmd.get(endian), LoadCommandType::NAMES);
                     p.field_hex("CmdSize", x.cmdsize.get(endian));
-                    p.field_version("Version", x.version.get(endian));
-                    p.field_version("Sdk", x.sdk.get(endian));
+                    p.field("Version", x.version.get(endian));
+                    p.field("Sdk", x.sdk.get(endian));
                 });
             }
             LoadCommandVariant::EntryPoint(x) => {
                 p.group("EntryPointCommand", |p| {
-                    p.field_enum("Cmd", x.cmd.get(endian), FLAGS_LC);
+                    p.field_consts("Cmd", x.cmd.get(endian), LoadCommandType::NAMES);
                     p.field_hex("CmdSize", x.cmdsize.get(endian));
                     p.field_hex("EntryOffset", x.entryoff.get(endian));
                     p.field_hex("StackSize", x.stacksize.get(endian));
@@ -661,14 +651,14 @@ fn print_load_command<Mach: MachHeader>(
             }
             LoadCommandVariant::SourceVersion(x) => {
                 p.group("SourceVersionCommand", |p| {
-                    p.field_enum("Cmd", x.cmd.get(endian), FLAGS_LC);
+                    p.field_consts("Cmd", x.cmd.get(endian), LoadCommandType::NAMES);
                     p.field_hex("CmdSize", x.cmdsize.get(endian));
                     p.field_hex("Version", x.version.get(endian));
                 });
             }
             LoadCommandVariant::LinkerOption(x) => {
                 p.group("LinkerOptionCommand", |p| {
-                    p.field_enum("Cmd", x.cmd.get(endian), FLAGS_LC);
+                    p.field_consts("Cmd", x.cmd.get(endian), LoadCommandType::NAMES);
                     p.field_hex("CmdSize", x.cmdsize.get(endian));
                     p.field_hex("Count", x.count.get(endian));
                     // TODO: dump strings
@@ -676,7 +666,7 @@ fn print_load_command<Mach: MachHeader>(
             }
             LoadCommandVariant::Note(x) => {
                 p.group("NoteCommand", |p| {
-                    p.field_enum("Cmd", x.cmd.get(endian), FLAGS_LC);
+                    p.field_consts("Cmd", x.cmd.get(endian), LoadCommandType::NAMES);
                     p.field_hex("CmdSize", x.cmdsize.get(endian));
                     // TODO: string?
                     p.field("DataOwner", format!("{:X?}", x.data_owner));
@@ -686,18 +676,18 @@ fn print_load_command<Mach: MachHeader>(
             }
             LoadCommandVariant::BuildVersion(x) => {
                 p.group("BuildVersionCommand", |p| {
-                    p.field_enum("Cmd", x.cmd.get(endian), FLAGS_LC);
+                    p.field_consts("Cmd", x.cmd.get(endian), LoadCommandType::NAMES);
                     p.field_hex("CmdSize", x.cmdsize.get(endian));
-                    p.field_enum("Platform", x.platform.get(endian), FLAGS_PLATFORM);
-                    p.field_version("MinOs", x.minos.get(endian));
-                    p.field_version("Sdk", x.sdk.get(endian));
+                    p.field_consts("Platform", x.platform.get(endian), Platform::NAMES);
+                    p.field("MinOs", x.minos.get(endian));
+                    p.field("Sdk", x.sdk.get(endian));
                     p.field_hex("NumberOfTools", x.ntools.get(endian));
                     // TODO: dump tools
                 });
             }
             LoadCommandVariant::FilesetEntry(x) => {
                 p.group("FilesetEntryCommand", |p| {
-                    p.field_enum("Cmd", x.cmd.get(endian), FLAGS_LC);
+                    p.field_consts("Cmd", x.cmd.get(endian), LoadCommandType::NAMES);
                     p.field_hex("CmdSize", x.cmdsize.get(endian));
                     p.field_hex("VmAddress", x.vmaddr.get(endian));
                     p.field_hex("FileOffset", x.fileoff.get(endian));
@@ -711,14 +701,14 @@ fn print_load_command<Mach: MachHeader>(
             }
             _ => {
                 p.group("LoadCommand", |p| {
-                    p.field_enum("Cmd", command.cmd(), FLAGS_LC);
+                    p.field_consts("Cmd", command.cmd(), LoadCommandType::NAMES);
                     p.field_hex("CmdSize", command.cmdsize());
                 });
             }
         }
     } else {
         p.group("LoadCommand", |p| {
-            p.field_enum("Cmd", command.cmd(), FLAGS_LC);
+            p.field_consts("Cmd", command.cmd(), LoadCommandType::NAMES);
             p.field_hex("CmdSize", command.cmdsize());
         });
     }
@@ -740,7 +730,7 @@ fn print_segment<S: Segment>(
         return;
     }
     p.group("SegmentCommand", |p| {
-        p.field_enum("Cmd", segment.cmd(endian), FLAGS_LC);
+        p.field_consts("Cmd", segment.cmd(endian), LoadCommandType::NAMES);
         p.field_hex("CmdSize", segment.cmdsize(endian));
         p.field_inline_string("SegmentName", segment.name());
         if p.options.macho_load_commands || p.options.segments {
@@ -748,13 +738,10 @@ fn print_segment<S: Segment>(
             p.field_hex("VmSize", segment.vmsize(endian).into());
             p.field_hex("FileOffset", segment.fileoff(endian).into());
             p.field_hex("FileSize", segment.filesize(endian).into());
-            p.field_hex("MaxProt", segment.maxprot(endian));
-            p.flags(segment.maxprot(endian), 0, FLAGS_VM);
-            p.field_hex("InitProt", segment.initprot(endian));
-            p.flags(segment.initprot(endian), 0, FLAGS_VM);
+            p.field_flags("MaxProt", segment.maxprot(endian), VmProt::NAMES);
+            p.field_flags("InitProt", segment.initprot(endian), VmProt::NAMES);
             p.field("NumberOfSections", segment.nsects(endian));
-            p.field_hex("Flags", segment.flags(endian));
-            p.flags(segment.flags(endian), 0, FLAGS_SG);
+            p.field_flags("Flags", segment.flags(endian), SegmentFlags::NAMES);
         }
         if let Some(sections) = segment.sections(endian, section_data).print_err(p) {
             for section in sections {
@@ -786,14 +773,7 @@ fn print_section<S: Section>(
             p.field_hex("Align", section.align(endian));
             p.field_hex("RelocationOffset", section.reloff(endian));
             p.field_hex("NumberOfRelocations", section.nreloc(endian));
-            let flags = section.flags(endian);
-            if flags & SECTION_TYPE == flags {
-                p.field_enum("Flags", flags, FLAGS_S_TYPE);
-            } else {
-                p.field_hex("Flags", section.flags(endian));
-                p.flags(flags, SECTION_TYPE, FLAGS_S_TYPE);
-                p.flags(flags, 0, FLAGS_S_ATTR);
-            }
+            p.field_flags("Flags", section.flags(endian), SectionFlags::NAMES);
             p.field_hex("Reserved1", section.reserved1(endian));
             p.field_hex("Reserved2", section.reserved2(endian));
             if let Some(indirect_symbols) = section
@@ -803,12 +783,15 @@ fn print_section<S: Section>(
                 for (index, val) in indirect_symbols.iter().enumerate() {
                     p.group("IndirectSymbol", |p| {
                         p.field("Index", index);
-                        let symbolnum = val.get(endian);
-                        if let Some(name) = state.symbols.get(symbolnum as usize).copied() {
-                            p.field_string_option("Symbol", symbolnum, name);
+                        let indirect = val.get(endian);
+                        if let Some(index) = indirect.index() {
+                            if let Some(name) = state.symbols.get(index as usize).copied() {
+                                p.field_string_option("Symbol", index, name);
+                            } else {
+                                p.field_hex("Symbol", index);
+                            }
                         } else {
-                            p.field_hex("Symbol", symbolnum);
-                            p.flags(symbolnum, 0, FLAGS_INDIRECT_SYMBOL);
+                            p.field_flags("Symbol", indirect, IndirectSymbol::NAMES);
                         }
                     });
                 }
@@ -879,7 +862,7 @@ fn print_symtab<Mach: MachHeader>(
         return;
     }
     p.group("SymtabCommand", |p| {
-        p.field_enum("Cmd", symtab.cmd.get(endian), FLAGS_LC);
+        p.field_consts("Cmd", symtab.cmd.get(endian), LoadCommandType::NAMES);
         p.field_hex("CmdSize", symtab.cmdsize.get(endian));
         p.field_hex("SymbolOffset", symtab.symoff.get(endian));
         p.field_hex("NumberOfSymbols", symtab.nsyms.get(endian));
@@ -909,26 +892,36 @@ fn print_symtab_symbols<Mach: MachHeader>(
                     nlist.name(endian, symbols.strings()),
                 );
                 let n_type = nlist.n_type();
-                if nlist.is_stab() {
-                    p.field_enum("Type", n_type, FLAGS_N_STAB);
-                } else if n_type & N_TYPE == n_type {
-                    // Avoid an extra line if no flags.
-                    p.field_enum("Type", n_type, FLAGS_N_TYPE);
+                if let Some(stab) = nlist.stab() {
+                    p.field_consts("Type", stab, SymbolStab::NAMES);
                 } else {
-                    p.field_hex("Type", n_type);
-                    p.flags(n_type, N_TYPE, FLAGS_N_TYPE);
-                    p.flags(n_type, 0, FLAGS_N_EXT);
+                    p.field_flags("Type", n_type, SymbolFlags::NAMES);
                 }
                 let n_sect = nlist.n_sect();
                 let name = state.sections.get(n_sect as usize).map(|name| &name[..]);
                 p.field_string_option("Section", n_sect, name);
                 let n_desc = nlist.n_desc(endian);
-                p.field_hex("Desc", n_desc);
-                if nlist.is_undefined() {
-                    p.flags(n_desc, REFERENCE_TYPE, FLAGS_REFERENCE);
-                }
-                if !nlist.is_stab() {
-                    p.flags(n_desc, 0, FLAGS_N_DESC);
+                if nlist.is_stab() {
+                    p.field_hex("Desc", n_desc);
+                } else if nlist.is_undefined() {
+                    if state.filetype == MH_OBJECT {
+                        p.field_flags("Desc", n_desc, SymbolDesc::NAMES_UNDEFINED);
+                        // TODO: alignment for common symbols
+                    } else {
+                        let mut n_desc_bits = n_desc.with_reference(SymbolReference(0));
+                        if state.twolevel {
+                            n_desc_bits = n_desc_bits.with_library(SymbolLibrary(0));
+                        }
+                        p.field_hex("Desc", n_desc);
+                        p.flag_const::<SymbolDesc, _>(n_desc.reference(), SymbolReference::NAMES);
+                        p.flag_bits(n_desc_bits, SymbolDesc::NAMES_UNDEFINED);
+                        if state.twolevel {
+                            // TODO: display library name
+                            p.field_consts("DylibOrdinal", n_desc.library(), SymbolLibrary::NAMES);
+                        }
+                    }
+                } else {
+                    p.field_flags("Desc", n_desc, SymbolDesc::NAMES_DEFINED);
                 }
                 p.field_hex("Value", nlist.n_value(endian).into());
             });
@@ -943,13 +936,13 @@ fn print_linkedit_data<Mach: MachHeader>(
     state: &MachState<Mach::Endian>,
 ) {
     let cmd = linkedit.cmd.get(endian);
-    let function_starts = p.options.macho_function_starts && cmd == macho::LC_FUNCTION_STARTS;
-    let exports_trie = p.options.macho_exports_trie && cmd == macho::LC_DYLD_EXPORTS_TRIE;
+    let function_starts = p.options.macho_function_starts && cmd == LC_FUNCTION_STARTS;
+    let exports_trie = p.options.macho_exports_trie && cmd == LC_DYLD_EXPORTS_TRIE;
     if !p.options.macho_load_commands && !function_starts && !exports_trie {
         return;
     }
     p.group("LinkeditDataCommand", |p| {
-        p.field_enum("Cmd", cmd, FLAGS_LC);
+        p.field_consts("Cmd", cmd, LoadCommandType::NAMES);
         p.field_hex("CmdSize", linkedit.cmdsize.get(endian));
         p.field_hex("DataOffset", linkedit.dataoff.get(endian));
         p.field_hex("DataSize", linkedit.datasize.get(endian));
@@ -994,13 +987,7 @@ fn print_exports_trie<Mach: MachHeader>(
         while let Some(Some(export_symbol)) = exports_trie.next().print_err(p) {
             p.group("ExportSymbol", |p| {
                 p.field_inline_string("Name", export_symbol.name());
-                p.field_hex("Flags", export_symbol.flags());
-                p.flags(export_symbol.flags(), 0, FLAGS_EXPORT_SYMBOL);
-                p.flags(
-                    export_symbol.flags(),
-                    EXPORT_SYMBOL_FLAGS_KIND_MASK,
-                    FLAGS_EXPORT_SYMBOL_KIND,
-                );
+                p.field_flags("Flags", export_symbol.flags(), ExportSymbolFlags::NAMES);
                 match export_symbol.data() {
                     ExportData::Regular { address } => p.field_hex("Address", address),
                     ExportData::Reexport {
@@ -1023,388 +1010,8 @@ fn print_exports_trie<Mach: MachHeader>(
     }
 }
 
-fn print_cputype(p: &mut Printer<'_>, cputype: u32, cpusubtype: u32) {
-    let proc = match cputype {
-        CPU_TYPE_ANY => FLAGS_CPU_SUBTYPE_ANY,
-        CPU_TYPE_VAX => FLAGS_CPU_SUBTYPE_VAX,
-        CPU_TYPE_MC680X0 => FLAGS_CPU_SUBTYPE_MC680X0,
-        CPU_TYPE_X86 => FLAGS_CPU_SUBTYPE_X86,
-        CPU_TYPE_X86_64 => FLAGS_CPU_SUBTYPE_X86_64,
-        CPU_TYPE_MIPS => FLAGS_CPU_SUBTYPE_MIPS,
-        CPU_TYPE_MC98000 => FLAGS_CPU_SUBTYPE_MC98000,
-        CPU_TYPE_HPPA => FLAGS_CPU_SUBTYPE_HPPA,
-        CPU_TYPE_ARM => FLAGS_CPU_SUBTYPE_ARM,
-        CPU_TYPE_ARM64 => FLAGS_CPU_SUBTYPE_ARM64,
-        CPU_TYPE_ARM64_32 => FLAGS_CPU_SUBTYPE_ARM64_32,
-        CPU_TYPE_MC88000 => FLAGS_CPU_SUBTYPE_MC88000,
-        CPU_TYPE_SPARC => FLAGS_CPU_SUBTYPE_SPARC,
-        CPU_TYPE_I860 => FLAGS_CPU_SUBTYPE_I860,
-        CPU_TYPE_POWERPC | CPU_TYPE_POWERPC64 => FLAGS_CPU_SUBTYPE_POWERPC,
-        _ => &[],
-    };
-    p.field_enum("CpuType", cputype, FLAGS_CPU_TYPE);
-    p.field_hex("CpuSubtype", cpusubtype);
-    p.flags(cpusubtype, !CPU_SUBTYPE_MASK, proc);
-    p.flags(cpusubtype, 0, FLAGS_CPU_SUBTYPE);
+fn print_cputype(p: &mut Printer<'_>, cputype: CpuType, cpusubtype: CpuSubtype) {
+    let constants = macho::machine_constants(cputype);
+    p.field_consts("CpuType", cputype, macho::CpuType::NAMES);
+    p.field_flags("CpuSubtype", cpusubtype, constants.cpusubtype);
 }
-
-const FLAGS_CPU_TYPE: &[Flag<u32>] = &flags!(
-    CPU_TYPE_ANY,
-    CPU_TYPE_VAX,
-    CPU_TYPE_MC680X0,
-    CPU_TYPE_X86,
-    CPU_TYPE_X86_64,
-    CPU_TYPE_MIPS,
-    CPU_TYPE_MC98000,
-    CPU_TYPE_HPPA,
-    CPU_TYPE_ARM,
-    CPU_TYPE_ARM64,
-    CPU_TYPE_ARM64_32,
-    CPU_TYPE_MC88000,
-    CPU_TYPE_SPARC,
-    CPU_TYPE_I860,
-    CPU_TYPE_ALPHA,
-    CPU_TYPE_POWERPC,
-    CPU_TYPE_POWERPC64,
-);
-const FLAGS_CPU_SUBTYPE: &[Flag<u32>] = &flags!(CPU_SUBTYPE_LIB64);
-const FLAGS_CPU_SUBTYPE_ANY: &[Flag<u32>] = &flags!(
-    CPU_SUBTYPE_MULTIPLE,
-    CPU_SUBTYPE_LITTLE_ENDIAN,
-    CPU_SUBTYPE_BIG_ENDIAN,
-);
-const FLAGS_CPU_SUBTYPE_VAX: &[Flag<u32>] = &flags!(
-    CPU_SUBTYPE_VAX_ALL,
-    CPU_SUBTYPE_VAX780,
-    CPU_SUBTYPE_VAX785,
-    CPU_SUBTYPE_VAX750,
-    CPU_SUBTYPE_VAX730,
-    CPU_SUBTYPE_UVAXI,
-    CPU_SUBTYPE_UVAXII,
-    CPU_SUBTYPE_VAX8200,
-    CPU_SUBTYPE_VAX8500,
-    CPU_SUBTYPE_VAX8600,
-    CPU_SUBTYPE_VAX8650,
-    CPU_SUBTYPE_VAX8800,
-    CPU_SUBTYPE_UVAXIII,
-);
-const FLAGS_CPU_SUBTYPE_MC680X0: &[Flag<u32>] = &flags!(
-    CPU_SUBTYPE_MC680X0_ALL,
-    CPU_SUBTYPE_MC68040,
-    CPU_SUBTYPE_MC68030_ONLY,
-);
-const FLAGS_CPU_SUBTYPE_X86: &[Flag<u32>] = &flags!(
-    CPU_SUBTYPE_I386_ALL,
-    CPU_SUBTYPE_386,
-    CPU_SUBTYPE_486,
-    CPU_SUBTYPE_486SX,
-    CPU_SUBTYPE_586,
-    CPU_SUBTYPE_PENT,
-    CPU_SUBTYPE_PENTPRO,
-    CPU_SUBTYPE_PENTII_M3,
-    CPU_SUBTYPE_PENTII_M5,
-    CPU_SUBTYPE_CELERON,
-    CPU_SUBTYPE_CELERON_MOBILE,
-    CPU_SUBTYPE_PENTIUM_3,
-    CPU_SUBTYPE_PENTIUM_3_M,
-    CPU_SUBTYPE_PENTIUM_3_XEON,
-    CPU_SUBTYPE_PENTIUM_M,
-    CPU_SUBTYPE_PENTIUM_4,
-    CPU_SUBTYPE_PENTIUM_4_M,
-    CPU_SUBTYPE_ITANIUM,
-    CPU_SUBTYPE_ITANIUM_2,
-    CPU_SUBTYPE_XEON,
-    CPU_SUBTYPE_XEON_MP,
-);
-const FLAGS_CPU_SUBTYPE_X86_64: &[Flag<u32>] = &flags!(
-    CPU_SUBTYPE_X86_64_ALL,
-    CPU_SUBTYPE_X86_ARCH1,
-    CPU_SUBTYPE_X86_64_H,
-);
-const FLAGS_CPU_SUBTYPE_MIPS: &[Flag<u32>] = &flags!(
-    CPU_SUBTYPE_MIPS_ALL,
-    CPU_SUBTYPE_MIPS_R2300,
-    CPU_SUBTYPE_MIPS_R2600,
-    CPU_SUBTYPE_MIPS_R2800,
-    CPU_SUBTYPE_MIPS_R2000A,
-    CPU_SUBTYPE_MIPS_R2000,
-    CPU_SUBTYPE_MIPS_R3000A,
-    CPU_SUBTYPE_MIPS_R3000,
-);
-const FLAGS_CPU_SUBTYPE_MC98000: &[Flag<u32>] =
-    &flags!(CPU_SUBTYPE_MC98000_ALL, CPU_SUBTYPE_MC98601);
-const FLAGS_CPU_SUBTYPE_HPPA: &[Flag<u32>] = &flags!(CPU_SUBTYPE_HPPA_ALL, CPU_SUBTYPE_HPPA_7100LC);
-const FLAGS_CPU_SUBTYPE_MC88000: &[Flag<u32>] = &flags!(
-    CPU_SUBTYPE_MC88000_ALL,
-    CPU_SUBTYPE_MC88100,
-    CPU_SUBTYPE_MC88110,
-);
-const FLAGS_CPU_SUBTYPE_SPARC: &[Flag<u32>] = &flags!(CPU_SUBTYPE_SPARC_ALL);
-const FLAGS_CPU_SUBTYPE_I860: &[Flag<u32>] = &flags!(CPU_SUBTYPE_I860_ALL, CPU_SUBTYPE_I860_860);
-const FLAGS_CPU_SUBTYPE_POWERPC: &[Flag<u32>] = &flags!(
-    CPU_SUBTYPE_POWERPC_ALL,
-    CPU_SUBTYPE_POWERPC_601,
-    CPU_SUBTYPE_POWERPC_602,
-    CPU_SUBTYPE_POWERPC_603,
-    CPU_SUBTYPE_POWERPC_603E,
-    CPU_SUBTYPE_POWERPC_603EV,
-    CPU_SUBTYPE_POWERPC_604,
-    CPU_SUBTYPE_POWERPC_604E,
-    CPU_SUBTYPE_POWERPC_620,
-    CPU_SUBTYPE_POWERPC_750,
-    CPU_SUBTYPE_POWERPC_7400,
-    CPU_SUBTYPE_POWERPC_7450,
-    CPU_SUBTYPE_POWERPC_970,
-);
-const FLAGS_CPU_SUBTYPE_ARM: &[Flag<u32>] = &flags!(
-    CPU_SUBTYPE_ARM_ALL,
-    CPU_SUBTYPE_ARM_V4T,
-    CPU_SUBTYPE_ARM_V6,
-    CPU_SUBTYPE_ARM_V5TEJ,
-    CPU_SUBTYPE_ARM_XSCALE,
-    CPU_SUBTYPE_ARM_V7,
-    CPU_SUBTYPE_ARM_V7F,
-    CPU_SUBTYPE_ARM_V7S,
-    CPU_SUBTYPE_ARM_V7K,
-    CPU_SUBTYPE_ARM_V8,
-    CPU_SUBTYPE_ARM_V6M,
-    CPU_SUBTYPE_ARM_V7M,
-    CPU_SUBTYPE_ARM_V7EM,
-    CPU_SUBTYPE_ARM_V8M,
-    CPU_SUBTYPE_ARM_V8M_MAIN,
-    CPU_SUBTYPE_ARM_V8M_BASE,
-    CPU_SUBTYPE_ARM_V8_1M_MAIN,
-);
-const FLAGS_CPU_SUBTYPE_ARM64: &[Flag<u32>] = &flags!(
-    CPU_SUBTYPE_ARM64_ALL,
-    CPU_SUBTYPE_ARM64_V8,
-    CPU_SUBTYPE_ARM64E,
-);
-const FLAGS_CPU_SUBTYPE_ARM64_32: &[Flag<u32>] =
-    &flags!(CPU_SUBTYPE_ARM64_32_ALL, CPU_SUBTYPE_ARM64_32_V8);
-const FLAGS_DYLD_CACHE_MAPPING: &[Flag<u64>] = &flags!(
-    DYLD_CACHE_MAPPING_AUTH_DATA,
-    DYLD_CACHE_MAPPING_DIRTY_DATA,
-    DYLD_CACHE_MAPPING_CONST_DATA,
-    DYLD_CACHE_MAPPING_TEXT_STUBS,
-    DYLD_CACHE_DYNAMIC_CONFIG_DATA,
-);
-const FLAGS_MH_FILETYPE: &[Flag<u32>] = &flags!(
-    MH_OBJECT,
-    MH_EXECUTE,
-    MH_FVMLIB,
-    MH_CORE,
-    MH_PRELOAD,
-    MH_DYLIB,
-    MH_DYLINKER,
-    MH_BUNDLE,
-    MH_DYLIB_STUB,
-    MH_DSYM,
-    MH_KEXT_BUNDLE,
-    MH_FILESET,
-    MH_GPU_EXECUTE,
-    MH_GPU_DYLIB,
-);
-const FLAGS_MH: &[Flag<u32>] = &flags!(
-    MH_NOUNDEFS,
-    MH_INCRLINK,
-    MH_DYLDLINK,
-    MH_BINDATLOAD,
-    MH_PREBOUND,
-    MH_SPLIT_SEGS,
-    MH_LAZY_INIT,
-    MH_TWOLEVEL,
-    MH_FORCE_FLAT,
-    MH_NOMULTIDEFS,
-    MH_NOFIXPREBINDING,
-    MH_PREBINDABLE,
-    MH_ALLMODSBOUND,
-    MH_SUBSECTIONS_VIA_SYMBOLS,
-    MH_CANONICAL,
-    MH_WEAK_DEFINES,
-    MH_BINDS_TO_WEAK,
-    MH_ALLOW_STACK_EXECUTION,
-    MH_ROOT_SAFE,
-    MH_SETUID_SAFE,
-    MH_NO_REEXPORTED_DYLIBS,
-    MH_PIE,
-    MH_DEAD_STRIPPABLE_DYLIB,
-    MH_HAS_TLV_DESCRIPTORS,
-    MH_NO_HEAP_EXECUTION,
-    MH_APP_EXTENSION_SAFE,
-    MH_NLIST_OUTOFSYNC_WITH_DYLDINFO,
-    MH_SIM_SUPPORT,
-    MH_IMPLICIT_PAGEZERO,
-    MH_DYLIB_IN_CACHE,
-);
-const FLAGS_LC: &[Flag<u32>] = &flags!(
-    LC_SEGMENT,
-    LC_SYMTAB,
-    LC_SYMSEG,
-    LC_THREAD,
-    LC_UNIXTHREAD,
-    LC_LOADFVMLIB,
-    LC_IDFVMLIB,
-    LC_IDENT,
-    LC_FVMFILE,
-    LC_PREPAGE,
-    LC_DYSYMTAB,
-    LC_LOAD_DYLIB,
-    LC_ID_DYLIB,
-    LC_LOAD_DYLINKER,
-    LC_ID_DYLINKER,
-    LC_PREBOUND_DYLIB,
-    LC_ROUTINES,
-    LC_SUB_FRAMEWORK,
-    LC_SUB_UMBRELLA,
-    LC_SUB_CLIENT,
-    LC_SUB_LIBRARY,
-    LC_TWOLEVEL_HINTS,
-    LC_PREBIND_CKSUM,
-    LC_LOAD_WEAK_DYLIB,
-    LC_SEGMENT_64,
-    LC_ROUTINES_64,
-    LC_UUID,
-    LC_RPATH,
-    LC_CODE_SIGNATURE,
-    LC_SEGMENT_SPLIT_INFO,
-    LC_REEXPORT_DYLIB,
-    LC_LAZY_LOAD_DYLIB,
-    LC_ENCRYPTION_INFO,
-    LC_DYLD_INFO,
-    LC_DYLD_INFO_ONLY,
-    LC_LOAD_UPWARD_DYLIB,
-    LC_VERSION_MIN_MACOSX,
-    LC_VERSION_MIN_IPHONEOS,
-    LC_FUNCTION_STARTS,
-    LC_DYLD_ENVIRONMENT,
-    LC_MAIN,
-    LC_DATA_IN_CODE,
-    LC_SOURCE_VERSION,
-    LC_DYLIB_CODE_SIGN_DRS,
-    LC_ENCRYPTION_INFO_64,
-    LC_LINKER_OPTION,
-    LC_LINKER_OPTIMIZATION_HINT,
-    LC_VERSION_MIN_TVOS,
-    LC_VERSION_MIN_WATCHOS,
-    LC_NOTE,
-    LC_BUILD_VERSION,
-    LC_DYLD_EXPORTS_TRIE,
-    LC_DYLD_CHAINED_FIXUPS,
-    LC_FILESET_ENTRY,
-    LC_ATOM_INFO,
-    LC_FUNCTION_VARIANTS,
-    LC_FUNCTION_VARIANT_FIXUPS,
-    LC_TARGET_TRIPLE,
-);
-const FLAGS_VM: &[Flag<u32>] = &flags!(VM_PROT_READ, VM_PROT_WRITE, VM_PROT_EXECUTE);
-const FLAGS_SG: &[Flag<u32>] = &flags!(
-    SG_HIGHVM,
-    SG_FVMLIB,
-    SG_NORELOC,
-    SG_PROTECTED_VERSION_1,
-    SG_READ_ONLY,
-);
-const FLAGS_S_TYPE: &[Flag<u32>] = &flags!(
-    S_REGULAR,
-    S_ZEROFILL,
-    S_CSTRING_LITERALS,
-    S_4BYTE_LITERALS,
-    S_8BYTE_LITERALS,
-    S_LITERAL_POINTERS,
-    S_NON_LAZY_SYMBOL_POINTERS,
-    S_LAZY_SYMBOL_POINTERS,
-    S_SYMBOL_STUBS,
-    S_MOD_INIT_FUNC_POINTERS,
-    S_MOD_TERM_FUNC_POINTERS,
-    S_COALESCED,
-    S_GB_ZEROFILL,
-    S_INTERPOSING,
-    S_16BYTE_LITERALS,
-    S_DTRACE_DOF,
-    S_LAZY_DYLIB_SYMBOL_POINTERS,
-    S_THREAD_LOCAL_REGULAR,
-    S_THREAD_LOCAL_ZEROFILL,
-    S_THREAD_LOCAL_VARIABLES,
-    S_THREAD_LOCAL_VARIABLE_POINTERS,
-    S_THREAD_LOCAL_INIT_FUNCTION_POINTERS,
-    S_INIT_FUNC_OFFSETS,
-);
-const FLAGS_S_ATTR: &[Flag<u32>] = &flags!(
-    S_ATTR_PURE_INSTRUCTIONS,
-    S_ATTR_NO_TOC,
-    S_ATTR_STRIP_STATIC_SYMS,
-    S_ATTR_NO_DEAD_STRIP,
-    S_ATTR_LIVE_SUPPORT,
-    S_ATTR_SELF_MODIFYING_CODE,
-    S_ATTR_DEBUG,
-    S_ATTR_SOME_INSTRUCTIONS,
-    S_ATTR_EXT_RELOC,
-    S_ATTR_LOC_RELOC,
-);
-const FLAGS_PLATFORM: &[Flag<u32>] = &flags!(
-    PLATFORM_UNKNOWN,
-    PLATFORM_MACOS,
-    PLATFORM_IOS,
-    PLATFORM_TVOS,
-    PLATFORM_WATCHOS,
-    PLATFORM_BRIDGEOS,
-    PLATFORM_MACCATALYST,
-    PLATFORM_IOSSIMULATOR,
-    PLATFORM_TVOSSIMULATOR,
-    PLATFORM_WATCHOSSIMULATOR,
-    PLATFORM_DRIVERKIT,
-    PLATFORM_VISIONOS,
-    PLATFORM_VISIONOSSIMULATOR,
-    PLATFORM_FIRMWARE,
-    PLATFORM_SEPOS,
-    PLATFORM_MACOS_EXCLAVECORE,
-    PLATFORM_MACOS_EXCLAVEKIT,
-    PLATFORM_IOS_EXCLAVECORE,
-    PLATFORM_IOS_EXCLAVEKIT,
-    PLATFORM_TVOS_EXCLAVECORE,
-    PLATFORM_TVOS_EXCLAVEKIT,
-    PLATFORM_WATCHOS_EXCLAVECORE,
-    PLATFORM_WATCHOS_EXCLAVEKIT,
-    PLATFORM_VISIONOS_EXCLAVECORE,
-    PLATFORM_VISIONOS_EXCLAVEKIT,
-);
-const FLAGS_N_EXT: &[Flag<u8>] = &flags!(N_PEXT, N_EXT);
-const FLAGS_N_TYPE: &[Flag<u8>] = &flags!(N_UNDF, N_ABS, N_SECT, N_PBUD, N_INDR);
-const FLAGS_N_STAB: &[Flag<u8>] = &flags!(
-    N_GSYM, N_FNAME, N_FUN, N_STSYM, N_LCSYM, N_BNSYM, N_AST, N_OPT, N_RSYM, N_SLINE, N_ENSYM,
-    N_SSYM, N_SO, N_OSO, N_LIB, N_LSYM, N_BINCL, N_SOL, N_PARAMS, N_VERSION, N_OLEVEL, N_PSYM,
-    N_EINCL, N_ENTRY, N_LBRAC, N_EXCL, N_RBRAC, N_BCOMM, N_ECOMM, N_ECOML, N_LENG, N_PC,
-);
-const FLAGS_REFERENCE: &[Flag<u16>] = &flags!(
-    REFERENCE_FLAG_UNDEFINED_NON_LAZY,
-    REFERENCE_FLAG_UNDEFINED_LAZY,
-    REFERENCE_FLAG_DEFINED,
-    REFERENCE_FLAG_PRIVATE_DEFINED,
-    REFERENCE_FLAG_PRIVATE_UNDEFINED_NON_LAZY,
-    REFERENCE_FLAG_PRIVATE_UNDEFINED_LAZY,
-);
-const FLAGS_N_DESC: &[Flag<u16>] = &flags!(
-    REFERENCED_DYNAMICALLY,
-    N_NO_DEAD_STRIP,
-    N_DESC_DISCARDED,
-    N_WEAK_REF,
-    N_WEAK_DEF,
-    N_REF_TO_WEAK,
-    N_ARM_THUMB_DEF,
-    N_SYMBOL_RESOLVER,
-    N_ALT_ENTRY,
-    N_COLD_FUNC,
-);
-const FLAGS_EXPORT_SYMBOL: &[Flag<u8>] = &flags!(
-    EXPORT_SYMBOL_FLAGS_WEAK_DEFINITION,
-    EXPORT_SYMBOL_FLAGS_REEXPORT,
-    EXPORT_SYMBOL_FLAGS_STUB_AND_RESOLVER,
-    EXPORT_SYMBOL_FLAGS_STATIC_RESOLVER,
-);
-const FLAGS_EXPORT_SYMBOL_KIND: &[Flag<u8>] = &flags!(
-    EXPORT_SYMBOL_FLAGS_KIND_REGULAR,
-    EXPORT_SYMBOL_FLAGS_KIND_THREAD_LOCAL,
-    EXPORT_SYMBOL_FLAGS_KIND_ABSOLUTE,
-);
-const FLAGS_INDIRECT_SYMBOL: &[Flag<u32>] = &flags!(INDIRECT_SYMBOL_LOCAL, INDIRECT_SYMBOL_ABS,);

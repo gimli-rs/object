@@ -68,10 +68,10 @@ fn macho_x86_64_section_flags() {
         Endianness::Little,
     );
 
+    let flags = object::macho::S_REGULAR | object::macho::S_ATTR_SELF_MODIFYING_CODE;
+
     let section = object.add_section(Vec::new(), b".text".to_vec(), SectionKind::Text);
-    object.section_mut(section).flags = SectionFlags::MachO {
-        flags: object::macho::S_ATTR_SELF_MODIFYING_CODE,
-    };
+    object.section_mut(section).flags = SectionFlags::MachO { flags };
 
     let bytes = object.write().unwrap();
 
@@ -82,10 +82,5 @@ fn macho_x86_64_section_flags() {
     let mut sections = object.sections();
     let section = sections.next().unwrap();
     assert_eq!(section.name(), Ok(".text"));
-    assert_eq!(
-        section.flags(),
-        SectionFlags::MachO {
-            flags: object::macho::S_ATTR_SELF_MODIFYING_CODE,
-        }
-    );
+    assert_eq!(section.flags(), SectionFlags::MachO { flags });
 }
