@@ -469,7 +469,7 @@ impl<'a> Writer<'a> {
     pub fn reserve_section(
         &mut self,
         name: [u8; 8],
-        characteristics: u32,
+        characteristics: pe::SectionFlags,
         virtual_size: u32,
         data_size: u32,
     ) -> SectionRange {
@@ -485,17 +485,17 @@ impl<'a> Writer<'a> {
 
         // Sizes in optional header use the virtual size with the file alignment.
         let aligned_virtual_size = util::align_u32(virtual_size, self.file_alignment);
-        if characteristics & pe::IMAGE_SCN_CNT_CODE != 0 {
+        if characteristics.contains(pe::IMAGE_SCN_CNT_CODE) {
             if self.code_address == 0 {
                 self.code_address = virtual_address;
             }
             self.code_len += aligned_virtual_size;
-        } else if characteristics & pe::IMAGE_SCN_CNT_INITIALIZED_DATA != 0 {
+        } else if characteristics.contains(pe::IMAGE_SCN_CNT_INITIALIZED_DATA) {
             if self.data_address == 0 {
                 self.data_address = virtual_address;
             }
             self.data_len += aligned_virtual_size;
-        } else if characteristics & pe::IMAGE_SCN_CNT_UNINITIALIZED_DATA != 0 {
+        } else if characteristics.contains(pe::IMAGE_SCN_CNT_UNINITIALIZED_DATA) {
             if self.data_address == 0 {
                 self.data_address = virtual_address;
             }
@@ -790,9 +790,9 @@ impl<'a> Writer<'a> {
 #[derive(Debug, Clone)]
 pub struct NtHeaders {
     // ImageFileHeader
-    pub machine: u16,
+    pub machine: pe::Machine,
     pub time_date_stamp: u32,
-    pub characteristics: u16,
+    pub characteristics: pe::FileFlags,
     // ImageOptionalHeader
     pub major_linker_version: u8,
     pub minor_linker_version: u8,
@@ -804,8 +804,8 @@ pub struct NtHeaders {
     pub minor_image_version: u16,
     pub major_subsystem_version: u16,
     pub minor_subsystem_version: u16,
-    pub subsystem: u16,
-    pub dll_characteristics: u16,
+    pub subsystem: pe::Subsystem,
+    pub dll_characteristics: pe::DllFlags,
     pub size_of_stack_reserve: u64,
     pub size_of_stack_commit: u64,
     pub size_of_heap_reserve: u64,
@@ -823,7 +823,7 @@ struct DataDirectory {
 #[derive(Debug, Clone)]
 pub struct Section {
     pub name: [u8; pe::IMAGE_SIZEOF_SHORT_NAME],
-    pub characteristics: u32,
+    pub characteristics: pe::SectionFlags,
     pub range: SectionRange,
 }
 

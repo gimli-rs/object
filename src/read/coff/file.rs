@@ -299,11 +299,11 @@ pub trait CoffHeader: Debug + Pod {
     /// This is a property of the type, not a value in the header data.
     fn is_type_bigobj() -> bool;
 
-    fn machine(&self) -> u16;
+    fn machine(&self) -> pe::Machine;
     fn number_of_sections(&self) -> u32;
     fn pointer_to_symbol_table(&self) -> u32;
     fn number_of_symbols(&self) -> u32;
-    fn characteristics(&self) -> u16;
+    fn characteristics(&self) -> pe::FileFlags;
 
     /// Read the file header.
     ///
@@ -345,7 +345,7 @@ impl CoffHeader for pe::ImageFileHeader {
         false
     }
 
-    fn machine(&self) -> u16 {
+    fn machine(&self) -> pe::Machine {
         self.machine.get(LE)
     }
 
@@ -361,7 +361,7 @@ impl CoffHeader for pe::ImageFileHeader {
         self.number_of_symbols.get(LE)
     }
 
-    fn characteristics(&self) -> u16 {
+    fn characteristics(&self) -> pe::FileFlags {
         self.characteristics.get(LE)
     }
 
@@ -388,7 +388,7 @@ impl CoffHeader for pe::AnonObjectHeaderBigobj {
         true
     }
 
-    fn machine(&self) -> u16 {
+    fn machine(&self) -> pe::Machine {
         self.machine.get(LE)
     }
 
@@ -404,8 +404,8 @@ impl CoffHeader for pe::AnonObjectHeaderBigobj {
         self.number_of_symbols.get(LE)
     }
 
-    fn characteristics(&self) -> u16 {
-        0
+    fn characteristics(&self) -> pe::FileFlags {
+        pe::FileFlags(0)
     }
 
     fn parse<'data, R: ReadRef<'data>>(data: R, offset: &mut u64) -> read::Result<&'data Self> {

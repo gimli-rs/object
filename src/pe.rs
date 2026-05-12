@@ -37,7 +37,7 @@ pub const fn constants() -> &'static Constants {
 ///
 /// Note that these also include the values returned by [`constants`].
 #[cfg(feature = "names")]
-pub const fn machine_constants(machine: u16) -> &'static Constants {
+pub const fn machine_constants(machine: Machine) -> &'static Constants {
     match machine {
         IMAGE_FILE_MACHINE_I386 => I386::constants(),
         IMAGE_FILE_MACHINE_MIPS16 | IMAGE_FILE_MACHINE_MIPSFPU | IMAGE_FILE_MACHINE_MIPSFPU16 => {
@@ -323,119 +323,133 @@ pub struct MaskedRichHeaderEntry {
 #[derive(Debug, Clone, Copy)]
 #[repr(C)]
 pub struct ImageFileHeader {
-    pub machine: U16<LE>,
+    pub machine: U16<LE, Machine>,
     pub number_of_sections: U16<LE>,
     pub time_date_stamp: U32<LE>,
     pub pointer_to_symbol_table: U32<LE>,
     pub number_of_symbols: U32<LE>,
     pub size_of_optional_header: U16<LE>,
-    pub characteristics: U16<LE>,
+    pub characteristics: U16<LE, FileFlags>,
 }
 
 pub const IMAGE_SIZEOF_FILE_HEADER: usize = 20;
 
-/// Relocation info stripped from file.
-pub const IMAGE_FILE_RELOCS_STRIPPED: u16 = 0x0001;
-/// File is executable  (i.e. no unresolved external references).
-pub const IMAGE_FILE_EXECUTABLE_IMAGE: u16 = 0x0002;
-/// Line numbers stripped from file.
-pub const IMAGE_FILE_LINE_NUMS_STRIPPED: u16 = 0x0004;
-/// Local symbols stripped from file.
-pub const IMAGE_FILE_LOCAL_SYMS_STRIPPED: u16 = 0x0008;
-/// Aggressively trim working set
-pub const IMAGE_FILE_AGGRESIVE_WS_TRIM: u16 = 0x0010;
-/// App can handle >2gb addresses
-pub const IMAGE_FILE_LARGE_ADDRESS_AWARE: u16 = 0x0020;
-/// Bytes of machine word are reversed.
-pub const IMAGE_FILE_BYTES_REVERSED_LO: u16 = 0x0080;
-/// 32 bit word machine.
-pub const IMAGE_FILE_32BIT_MACHINE: u16 = 0x0100;
-/// Debugging info stripped from file in .DBG file
-pub const IMAGE_FILE_DEBUG_STRIPPED: u16 = 0x0200;
-/// If Image is on removable media, copy and run from the swap file.
-pub const IMAGE_FILE_REMOVABLE_RUN_FROM_SWAP: u16 = 0x0400;
-/// If Image is on Net, copy and run from the swap file.
-pub const IMAGE_FILE_NET_RUN_FROM_SWAP: u16 = 0x0800;
-/// System File.
-pub const IMAGE_FILE_SYSTEM: u16 = 0x1000;
-/// File is a DLL.
-pub const IMAGE_FILE_DLL: u16 = 0x2000;
-/// File should only be run on a UP machine
-pub const IMAGE_FILE_UP_SYSTEM_ONLY: u16 = 0x4000;
-/// Bytes of machine word are reversed.
-pub const IMAGE_FILE_BYTES_REVERSED_HI: u16 = 0x8000;
+newtype!(
+    /// Values for `ImageFileHeader::characteristics`.
+    struct FileFlags(u16);
+);
 
-pub const IMAGE_FILE_MACHINE_UNKNOWN: u16 = 0;
-/// Useful for indicating we want to interact with the host and not a WoW guest.
-pub const IMAGE_FILE_MACHINE_TARGET_HOST: u16 = 0x0001;
-/// Intel 386.
-pub const IMAGE_FILE_MACHINE_I386: u16 = 0x014c;
-/// MIPS little-endian, 0x160 big-endian
-pub const IMAGE_FILE_MACHINE_R3000: u16 = 0x0162;
-/// MIPS little-endian
-pub const IMAGE_FILE_MACHINE_R4000: u16 = 0x0166;
-/// MIPS little-endian
-pub const IMAGE_FILE_MACHINE_R10000: u16 = 0x0168;
-/// MIPS little-endian WCE v2
-pub const IMAGE_FILE_MACHINE_WCEMIPSV2: u16 = 0x0169;
-/// Alpha_AXP
-pub const IMAGE_FILE_MACHINE_ALPHA: u16 = 0x0184;
-/// SH3 little-endian
-pub const IMAGE_FILE_MACHINE_SH3: u16 = 0x01a2;
-pub const IMAGE_FILE_MACHINE_SH3DSP: u16 = 0x01a3;
-/// SH3E little-endian
-pub const IMAGE_FILE_MACHINE_SH3E: u16 = 0x01a4;
-/// SH4 little-endian
-pub const IMAGE_FILE_MACHINE_SH4: u16 = 0x01a6;
-/// SH5
-pub const IMAGE_FILE_MACHINE_SH5: u16 = 0x01a8;
-/// ARM Little-Endian
-pub const IMAGE_FILE_MACHINE_ARM: u16 = 0x01c0;
-/// ARM Thumb/Thumb-2 Little-Endian
-pub const IMAGE_FILE_MACHINE_THUMB: u16 = 0x01c2;
-/// ARM Thumb-2 Little-Endian
-pub const IMAGE_FILE_MACHINE_ARMNT: u16 = 0x01c4;
-pub const IMAGE_FILE_MACHINE_AM33: u16 = 0x01d3;
-/// IBM PowerPC Little-Endian
-pub const IMAGE_FILE_MACHINE_POWERPC: u16 = 0x01F0;
-pub const IMAGE_FILE_MACHINE_POWERPCFP: u16 = 0x01f1;
-/// IBM PowerPC Big-Endian
-pub const IMAGE_FILE_MACHINE_POWERPCBE: u16 = 0x01f2;
-/// Intel 64
-pub const IMAGE_FILE_MACHINE_IA64: u16 = 0x0200;
-/// MIPS
-pub const IMAGE_FILE_MACHINE_MIPS16: u16 = 0x0266;
-/// ALPHA64
-pub const IMAGE_FILE_MACHINE_ALPHA64: u16 = 0x0284;
-/// MIPS
-pub const IMAGE_FILE_MACHINE_MIPSFPU: u16 = 0x0366;
-/// MIPS
-pub const IMAGE_FILE_MACHINE_MIPSFPU16: u16 = 0x0466;
-pub const IMAGE_FILE_MACHINE_AXP64: u16 = IMAGE_FILE_MACHINE_ALPHA64;
-/// Infineon
-pub const IMAGE_FILE_MACHINE_TRICORE: u16 = 0x0520;
-pub const IMAGE_FILE_MACHINE_CEF: u16 = 0x0CEF;
-/// EFI Byte Code
-pub const IMAGE_FILE_MACHINE_EBC: u16 = 0x0EBC;
-/// AMD64 (K8)
-pub const IMAGE_FILE_MACHINE_AMD64: u16 = 0x8664;
-/// M32R little-endian
-pub const IMAGE_FILE_MACHINE_M32R: u16 = 0x9041;
-/// ARM64 Little-Endian
-pub const IMAGE_FILE_MACHINE_ARM64: u16 = 0xAA64;
-/// ARM64EC ("Emulation Compatible")
-pub const IMAGE_FILE_MACHINE_ARM64EC: u16 = 0xA641;
-pub const IMAGE_FILE_MACHINE_CEE: u16 = 0xC0EE;
-/// RISCV32
-pub const IMAGE_FILE_MACHINE_RISCV32: u16 = 0x5032;
-/// RISCV64
-pub const IMAGE_FILE_MACHINE_RISCV64: u16 = 0x5064;
-/// RISCV128
-pub const IMAGE_FILE_MACHINE_RISCV128: u16 = 0x5128;
-/// ARM64X (Mixed ARM64 and ARM64EC)
-pub const IMAGE_FILE_MACHINE_ARM64X: u16 = 0xA64E;
-/// CHPE x86 ("Compiled Hybrid Portable Executable")
-pub const IMAGE_FILE_MACHINE_CHPE_X86: u16 = 0x3A64;
+newtype_flag_names!(NAMES_FILE_FLAGS: FileFlags(u16) = {
+    /// Relocation info stripped from file.
+    IMAGE_FILE_RELOCS_STRIPPED = 0x0001,
+    /// File is executable  (i.e. no unresolved external references).
+    IMAGE_FILE_EXECUTABLE_IMAGE = 0x0002,
+    /// Line numbers stripped from file.
+    IMAGE_FILE_LINE_NUMS_STRIPPED = 0x0004,
+    /// Local symbols stripped from file.
+    IMAGE_FILE_LOCAL_SYMS_STRIPPED = 0x0008,
+    /// Aggressively trim working set
+    IMAGE_FILE_AGGRESIVE_WS_TRIM = 0x0010,
+    /// App can handle >2gb addresses
+    IMAGE_FILE_LARGE_ADDRESS_AWARE = 0x0020,
+    /// Bytes of machine word are reversed.
+    IMAGE_FILE_BYTES_REVERSED_LO = 0x0080,
+    /// 32 bit word machine.
+    IMAGE_FILE_32BIT_MACHINE = 0x0100,
+    /// Debugging info stripped from file in .DBG file
+    IMAGE_FILE_DEBUG_STRIPPED = 0x0200,
+    /// If Image is on removable media, copy and run from the swap file.
+    IMAGE_FILE_REMOVABLE_RUN_FROM_SWAP = 0x0400,
+    /// If Image is on Net, copy and run from the swap file.
+    IMAGE_FILE_NET_RUN_FROM_SWAP = 0x0800,
+    /// System File.
+    IMAGE_FILE_SYSTEM = 0x1000,
+    /// File is a DLL.
+    IMAGE_FILE_DLL = 0x2000,
+    /// File should only be run on a UP machine
+    IMAGE_FILE_UP_SYSTEM_ONLY = 0x4000,
+    /// Bytes of machine word are reversed.
+    IMAGE_FILE_BYTES_REVERSED_HI = 0x8000,
+});
+
+newtype!(
+    /// Values for the `machine` field in file headers.
+    struct Machine(u16);
+);
+
+newtype_constant_names!(NAMES_MACHINE: Machine(u16) = {
+    IMAGE_FILE_MACHINE_UNKNOWN = 0,
+    /// Useful for indicating we want to interact with the host and not a WoW guest.
+    IMAGE_FILE_MACHINE_TARGET_HOST = 0x0001,
+    /// Intel 386.
+    IMAGE_FILE_MACHINE_I386 = 0x014c,
+    /// MIPS little-endian, 0x160 big-endian
+    IMAGE_FILE_MACHINE_R3000 = 0x0162,
+    /// MIPS little-endian
+    IMAGE_FILE_MACHINE_R4000 = 0x0166,
+    /// MIPS little-endian
+    IMAGE_FILE_MACHINE_R10000 = 0x0168,
+    /// MIPS little-endian WCE v2
+    IMAGE_FILE_MACHINE_WCEMIPSV2 = 0x0169,
+    /// Alpha_AXP
+    IMAGE_FILE_MACHINE_ALPHA = 0x0184,
+    /// SH3 little-endian
+    IMAGE_FILE_MACHINE_SH3 = 0x01a2,
+    IMAGE_FILE_MACHINE_SH3DSP = 0x01a3,
+    /// SH3E little-endian
+    IMAGE_FILE_MACHINE_SH3E = 0x01a4,
+    /// SH4 little-endian
+    IMAGE_FILE_MACHINE_SH4 = 0x01a6,
+    /// SH5
+    IMAGE_FILE_MACHINE_SH5 = 0x01a8,
+    /// ARM Little-Endian
+    IMAGE_FILE_MACHINE_ARM = 0x01c0,
+    /// ARM Thumb/Thumb-2 Little-Endian
+    IMAGE_FILE_MACHINE_THUMB = 0x01c2,
+    /// ARM Thumb-2 Little-Endian
+    IMAGE_FILE_MACHINE_ARMNT = 0x01c4,
+    IMAGE_FILE_MACHINE_AM33 = 0x01d3,
+    /// IBM PowerPC Little-Endian
+    IMAGE_FILE_MACHINE_POWERPC = 0x01F0,
+    IMAGE_FILE_MACHINE_POWERPCFP = 0x01f1,
+    /// IBM PowerPC Big-Endian
+    IMAGE_FILE_MACHINE_POWERPCBE = 0x01f2,
+    /// Intel 64
+    IMAGE_FILE_MACHINE_IA64 = 0x0200,
+    /// MIPS
+    IMAGE_FILE_MACHINE_MIPS16 = 0x0266,
+    /// ALPHA64
+    IMAGE_FILE_MACHINE_ALPHA64 = 0x0284,
+    /// MIPS
+    IMAGE_FILE_MACHINE_MIPSFPU = 0x0366,
+    /// MIPS
+    IMAGE_FILE_MACHINE_MIPSFPU16 = 0x0466,
+    IMAGE_FILE_MACHINE_AXP64 = IMAGE_FILE_MACHINE_ALPHA64.0,
+    /// Infineon
+    IMAGE_FILE_MACHINE_TRICORE = 0x0520,
+    IMAGE_FILE_MACHINE_CEF = 0x0CEF,
+    /// EFI Byte Code
+    IMAGE_FILE_MACHINE_EBC = 0x0EBC,
+    /// AMD64 (K8)
+    IMAGE_FILE_MACHINE_AMD64 = 0x8664,
+    /// M32R little-endian
+    IMAGE_FILE_MACHINE_M32R = 0x9041,
+    /// ARM64 Little-Endian
+    IMAGE_FILE_MACHINE_ARM64 = 0xAA64,
+    /// ARM64EC ("Emulation Compatible")
+    IMAGE_FILE_MACHINE_ARM64EC = 0xA641,
+    IMAGE_FILE_MACHINE_CEE = 0xC0EE,
+    /// RISCV32
+    IMAGE_FILE_MACHINE_RISCV32 = 0x5032,
+    /// RISCV64
+    IMAGE_FILE_MACHINE_RISCV64 = 0x5064,
+    /// RISCV128
+    IMAGE_FILE_MACHINE_RISCV128 = 0x5128,
+    /// ARM64X (Mixed ARM64 and ARM64EC)
+    IMAGE_FILE_MACHINE_ARM64X = 0xA64E,
+    /// CHPE x86 ("Compiled Hybrid Portable Executable")
+    IMAGE_FILE_MACHINE_CHPE_X86 = 0x3A64,
+});
 
 //
 // Directory format.
@@ -482,8 +496,8 @@ pub struct ImageOptionalHeader32 {
     pub size_of_image: U32<LE>,
     pub size_of_headers: U32<LE>,
     pub check_sum: U32<LE>,
-    pub subsystem: U16<LE>,
-    pub dll_characteristics: U16<LE>,
+    pub subsystem: U16<LE, Subsystem>,
+    pub dll_characteristics: U16<LE, DllFlags>,
     pub size_of_stack_reserve: U32<LE>,
     pub size_of_stack_commit: U32<LE>,
     pub size_of_heap_reserve: U32<LE>,
@@ -535,8 +549,8 @@ pub struct ImageOptionalHeader64 {
     pub size_of_image: U32<LE>,
     pub size_of_headers: U32<LE>,
     pub check_sum: U32<LE>,
-    pub subsystem: U16<LE>,
-    pub dll_characteristics: U16<LE>,
+    pub subsystem: U16<LE, Subsystem>,
+    pub dll_characteristics: U16<LE, DllFlags>,
     pub size_of_stack_reserve: U64<LE>,
     pub size_of_stack_commit: U64<LE>,
     pub size_of_heap_reserve: U64<LE>,
@@ -573,93 +587,106 @@ pub struct ImageRomHeaders {
     pub optional_header: ImageRomOptionalHeader,
 }
 
-// Values for `ImageOptionalHeader*::subsystem`.
+newtype!(
+    /// Values for `ImageOptionalHeader*::subsystem`.
+    struct Subsystem(u16);
+);
 
-/// Unknown subsystem.
-pub const IMAGE_SUBSYSTEM_UNKNOWN: u16 = 0;
-/// Image doesn't require a subsystem.
-pub const IMAGE_SUBSYSTEM_NATIVE: u16 = 1;
-/// Image runs in the Windows GUI subsystem.
-pub const IMAGE_SUBSYSTEM_WINDOWS_GUI: u16 = 2;
-/// Image runs in the Windows character subsystem.
-pub const IMAGE_SUBSYSTEM_WINDOWS_CUI: u16 = 3;
-/// image runs in the OS/2 character subsystem.
-pub const IMAGE_SUBSYSTEM_OS2_CUI: u16 = 5;
-/// image runs in the Posix character subsystem.
-pub const IMAGE_SUBSYSTEM_POSIX_CUI: u16 = 7;
-/// image is a native Win9x driver.
-pub const IMAGE_SUBSYSTEM_NATIVE_WINDOWS: u16 = 8;
-/// Image runs in the Windows CE subsystem.
-pub const IMAGE_SUBSYSTEM_WINDOWS_CE_GUI: u16 = 9;
-pub const IMAGE_SUBSYSTEM_EFI_APPLICATION: u16 = 10;
-pub const IMAGE_SUBSYSTEM_EFI_BOOT_SERVICE_DRIVER: u16 = 11;
-pub const IMAGE_SUBSYSTEM_EFI_RUNTIME_DRIVER: u16 = 12;
-pub const IMAGE_SUBSYSTEM_EFI_ROM: u16 = 13;
-pub const IMAGE_SUBSYSTEM_XBOX: u16 = 14;
-pub const IMAGE_SUBSYSTEM_WINDOWS_BOOT_APPLICATION: u16 = 16;
-pub const IMAGE_SUBSYSTEM_XBOX_CODE_CATALOG: u16 = 17;
+newtype_constant_names!(NAMES_SUBSYSTEM: Subsystem(u16) = {
+    /// Unknown subsystem.
+    IMAGE_SUBSYSTEM_UNKNOWN = 0,
+    /// Image doesn't require a subsystem.
+    IMAGE_SUBSYSTEM_NATIVE = 1,
+    /// Image runs in the Windows GUI subsystem.
+    IMAGE_SUBSYSTEM_WINDOWS_GUI = 2,
+    /// Image runs in the Windows character subsystem.
+    IMAGE_SUBSYSTEM_WINDOWS_CUI = 3,
+    /// image runs in the OS/2 character subsystem.
+    IMAGE_SUBSYSTEM_OS2_CUI = 5,
+    /// image runs in the Posix character subsystem.
+    IMAGE_SUBSYSTEM_POSIX_CUI = 7,
+    /// image is a native Win9x driver.
+    IMAGE_SUBSYSTEM_NATIVE_WINDOWS = 8,
+    /// Image runs in the Windows CE subsystem.
+    IMAGE_SUBSYSTEM_WINDOWS_CE_GUI = 9,
+    IMAGE_SUBSYSTEM_EFI_APPLICATION = 10,
+    IMAGE_SUBSYSTEM_EFI_BOOT_SERVICE_DRIVER = 11,
+    IMAGE_SUBSYSTEM_EFI_RUNTIME_DRIVER = 12,
+    IMAGE_SUBSYSTEM_EFI_ROM = 13,
+    IMAGE_SUBSYSTEM_XBOX = 14,
+    IMAGE_SUBSYSTEM_WINDOWS_BOOT_APPLICATION = 16,
+    IMAGE_SUBSYSTEM_XBOX_CODE_CATALOG = 17,
+});
 
-// Values for `ImageOptionalHeader*::dll_characteristics`.
+newtype!(
+    /// Values for `ImageOptionalHeader*::dll_characteristics`.
+    struct DllFlags(u16);
+);
 
-//      IMAGE_LIBRARY_PROCESS_INIT            0x0001     // Reserved.
-//      IMAGE_LIBRARY_PROCESS_TERM            0x0002     // Reserved.
-//      IMAGE_LIBRARY_THREAD_INIT             0x0004     // Reserved.
-//      IMAGE_LIBRARY_THREAD_TERM             0x0008     // Reserved.
-/// Image can handle a high entropy 64-bit virtual address space.
-pub const IMAGE_DLLCHARACTERISTICS_HIGH_ENTROPY_VA: u16 = 0x0020;
-/// DLL can move.
-pub const IMAGE_DLLCHARACTERISTICS_DYNAMIC_BASE: u16 = 0x0040;
-/// Code Integrity Image
-pub const IMAGE_DLLCHARACTERISTICS_FORCE_INTEGRITY: u16 = 0x0080;
-/// Image is NX compatible
-pub const IMAGE_DLLCHARACTERISTICS_NX_COMPAT: u16 = 0x0100;
-/// Image understands isolation and doesn't want it
-pub const IMAGE_DLLCHARACTERISTICS_NO_ISOLATION: u16 = 0x0200;
-/// Image does not use SEH.  No SE handler may reside in this image
-pub const IMAGE_DLLCHARACTERISTICS_NO_SEH: u16 = 0x0400;
-/// Do not bind this image.
-pub const IMAGE_DLLCHARACTERISTICS_NO_BIND: u16 = 0x0800;
-/// Image should execute in an AppContainer
-pub const IMAGE_DLLCHARACTERISTICS_APPCONTAINER: u16 = 0x1000;
-/// Driver uses WDM model
-pub const IMAGE_DLLCHARACTERISTICS_WDM_DRIVER: u16 = 0x2000;
-/// Image supports Control Flow Guard.
-pub const IMAGE_DLLCHARACTERISTICS_GUARD_CF: u16 = 0x4000;
-pub const IMAGE_DLLCHARACTERISTICS_TERMINAL_SERVER_AWARE: u16 = 0x8000;
+newtype_flag_names!(NAMES_DLL_FLAGS: DllFlags(u16) = {
+    //      IMAGE_LIBRARY_PROCESS_INIT            0x0001     // Reserved.
+    //      IMAGE_LIBRARY_PROCESS_TERM            0x0002     // Reserved.
+    //      IMAGE_LIBRARY_THREAD_INIT             0x0004     // Reserved.
+    //      IMAGE_LIBRARY_THREAD_TERM             0x0008     // Reserved.
+    /// Image can handle a high entropy 64-bit virtual address space.
+    IMAGE_DLLCHARACTERISTICS_HIGH_ENTROPY_VA = 0x0020,
+    /// DLL can move.
+    IMAGE_DLLCHARACTERISTICS_DYNAMIC_BASE = 0x0040,
+    /// Code Integrity Image
+    IMAGE_DLLCHARACTERISTICS_FORCE_INTEGRITY = 0x0080,
+    /// Image is NX compatible
+    IMAGE_DLLCHARACTERISTICS_NX_COMPAT = 0x0100,
+    /// Image understands isolation and doesn't want it
+    IMAGE_DLLCHARACTERISTICS_NO_ISOLATION = 0x0200,
+    /// Image does not use SEH.  No SE handler may reside in this image
+    IMAGE_DLLCHARACTERISTICS_NO_SEH = 0x0400,
+    /// Do not bind this image.
+    IMAGE_DLLCHARACTERISTICS_NO_BIND = 0x0800,
+    /// Image should execute in an AppContainer
+    IMAGE_DLLCHARACTERISTICS_APPCONTAINER = 0x1000,
+    /// Driver uses WDM model
+    IMAGE_DLLCHARACTERISTICS_WDM_DRIVER = 0x2000,
+    /// Image supports Control Flow Guard.
+    IMAGE_DLLCHARACTERISTICS_GUARD_CF = 0x4000,
+    IMAGE_DLLCHARACTERISTICS_TERMINAL_SERVER_AWARE = 0x8000,
+});
 
-// Indices for `ImageOptionalHeader*::data_directory`.
+/// Indices for `ImageOptionalHeader*::data_directory`.
+#[cfg(feature = "names")]
+pub const NAMES_DIRECTORY_ENTRY: &ConstantNames<usize> = &_NAMES_DIRECTORY_ENTRY;
 
-/// Export Directory
-pub const IMAGE_DIRECTORY_ENTRY_EXPORT: usize = 0;
-/// Import Directory
-pub const IMAGE_DIRECTORY_ENTRY_IMPORT: usize = 1;
-/// Resource Directory
-pub const IMAGE_DIRECTORY_ENTRY_RESOURCE: usize = 2;
-/// Exception Directory
-pub const IMAGE_DIRECTORY_ENTRY_EXCEPTION: usize = 3;
-/// Security Directory
-pub const IMAGE_DIRECTORY_ENTRY_SECURITY: usize = 4;
-/// Base Relocation Table
-pub const IMAGE_DIRECTORY_ENTRY_BASERELOC: usize = 5;
-/// Debug Directory
-pub const IMAGE_DIRECTORY_ENTRY_DEBUG: usize = 6;
-//      IMAGE_DIRECTORY_ENTRY_COPYRIGHT       7   // (X86 usage)
-/// Architecture Specific Data
-pub const IMAGE_DIRECTORY_ENTRY_ARCHITECTURE: usize = 7;
-/// RVA of GP
-pub const IMAGE_DIRECTORY_ENTRY_GLOBALPTR: usize = 8;
-/// TLS Directory
-pub const IMAGE_DIRECTORY_ENTRY_TLS: usize = 9;
-/// Load Configuration Directory
-pub const IMAGE_DIRECTORY_ENTRY_LOAD_CONFIG: usize = 10;
-/// Bound Import Directory in headers
-pub const IMAGE_DIRECTORY_ENTRY_BOUND_IMPORT: usize = 11;
-/// Import Address Table
-pub const IMAGE_DIRECTORY_ENTRY_IAT: usize = 12;
-/// Delay Load Import Descriptors
-pub const IMAGE_DIRECTORY_ENTRY_DELAY_IMPORT: usize = 13;
-/// COM Runtime descriptor
-pub const IMAGE_DIRECTORY_ENTRY_COM_DESCRIPTOR: usize = 14;
+constant_names!(_NAMES_DIRECTORY_ENTRY: usize = {
+    /// Export Directory
+    IMAGE_DIRECTORY_ENTRY_EXPORT = 0,
+    /// Import Directory
+    IMAGE_DIRECTORY_ENTRY_IMPORT = 1,
+    /// Resource Directory
+    IMAGE_DIRECTORY_ENTRY_RESOURCE = 2,
+    /// Exception Directory
+    IMAGE_DIRECTORY_ENTRY_EXCEPTION = 3,
+    /// Security Directory
+    IMAGE_DIRECTORY_ENTRY_SECURITY = 4,
+    /// Base Relocation Table
+    IMAGE_DIRECTORY_ENTRY_BASERELOC = 5,
+    /// Debug Directory
+    IMAGE_DIRECTORY_ENTRY_DEBUG = 6,
+    /// Architecture Specific Data
+    IMAGE_DIRECTORY_ENTRY_ARCHITECTURE = 7,
+    /// RVA of GP
+    IMAGE_DIRECTORY_ENTRY_GLOBALPTR = 8,
+    /// TLS Directory
+    IMAGE_DIRECTORY_ENTRY_TLS = 9,
+    /// Load Configuration Directory
+    IMAGE_DIRECTORY_ENTRY_LOAD_CONFIG = 10,
+    /// Bound Import Directory in headers
+    IMAGE_DIRECTORY_ENTRY_BOUND_IMPORT = 11,
+    /// Import Address Table
+    IMAGE_DIRECTORY_ENTRY_IAT = 12,
+    /// Delay Load Import Descriptors
+    IMAGE_DIRECTORY_ENTRY_DELAY_IMPORT = 13,
+    /// COM Runtime descriptor
+    IMAGE_DIRECTORY_ENTRY_COM_DESCRIPTOR = 14,
+});
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(C)]
@@ -694,12 +721,12 @@ pub use Guid as ClsId;
 #[repr(C)]
 pub struct AnonObjectHeader {
     /// Must be IMAGE_FILE_MACHINE_UNKNOWN
-    pub sig1: U16<LE>,
+    pub sig1: U16<LE, Machine>,
     /// Must be 0xffff
     pub sig2: U16<LE>,
     /// >= 1 (implies the ClsId field is present)
     pub version: U16<LE>,
-    pub machine: U16<LE>,
+    pub machine: U16<LE, Machine>,
     pub time_date_stamp: U32<LE>,
     /// Used to invoke CoCreateInstance
     pub class_id: ClsId,
@@ -711,12 +738,12 @@ pub struct AnonObjectHeader {
 #[repr(C)]
 pub struct AnonObjectHeaderV2 {
     /// Must be IMAGE_FILE_MACHINE_UNKNOWN
-    pub sig1: U16<LE>,
+    pub sig1: U16<LE, Machine>,
     /// Must be 0xffff
     pub sig2: U16<LE>,
     /// >= 2 (implies the Flags field is present - otherwise V1)
     pub version: U16<LE>,
-    pub machine: U16<LE>,
+    pub machine: U16<LE, Machine>,
     pub time_date_stamp: U32<LE>,
     /// Used to invoke CoCreateInstance
     pub class_id: ClsId,
@@ -740,13 +767,13 @@ pub const ANON_OBJECT_HEADER_BIGOBJ_CLASS_ID: ClsId = ClsId([
 pub struct AnonObjectHeaderBigobj {
     /* same as ANON_OBJECT_HEADER_V2 */
     /// Must be IMAGE_FILE_MACHINE_UNKNOWN
-    pub sig1: U16<LE>,
+    pub sig1: U16<LE, Machine>,
     /// Must be 0xffff
     pub sig2: U16<LE>,
     /// >= 2 (implies the Flags field is present)
     pub version: U16<LE>,
     /// Actual machine - IMAGE_FILE_MACHINE_xxx
-    pub machine: U16<LE>,
+    pub machine: U16<LE, Machine>,
     pub time_date_stamp: U32<LE>,
     /// Must be `ANON_OBJECT_HEADER_BIGOBJ_CLASS_ID`.
     pub class_id: ClsId,
@@ -784,84 +811,104 @@ pub struct ImageSectionHeader {
     pub pointer_to_linenumbers: U32<LE>,
     pub number_of_relocations: U16<LE>,
     pub number_of_linenumbers: U16<LE>,
-    pub characteristics: U32<LE>,
+    pub characteristics: U32<LE, SectionFlags>,
 }
 
 pub const IMAGE_SIZEOF_SECTION_HEADER: usize = 40;
 
-// Values for `ImageSectionHeader::characteristics`.
+newtype!(
+    /// Values for `ImageSectionHeader::characteristics`.
+    struct SectionFlags(u32);
+);
 
-//      IMAGE_SCN_TYPE_REG                   0x00000000  // Reserved.
-//      IMAGE_SCN_TYPE_DSECT                 0x00000001  // Reserved.
-//      IMAGE_SCN_TYPE_NOLOAD                0x00000002  // Reserved.
-//      IMAGE_SCN_TYPE_GROUP                 0x00000004  // Reserved.
-/// Reserved.
-pub const IMAGE_SCN_TYPE_NO_PAD: u32 = 0x0000_0008;
-//      IMAGE_SCN_TYPE_COPY                  0x00000010  // Reserved.
+impl SectionFlags {
+    /// Return the alignment.
+    pub fn align(self) -> SectionFlags {
+        SectionFlags(self.0 & IMAGE_SCN_ALIGN_MASK)
+    }
 
-/// Section contains code.
-pub const IMAGE_SCN_CNT_CODE: u32 = 0x0000_0020;
-/// Section contains initialized data.
-pub const IMAGE_SCN_CNT_INITIALIZED_DATA: u32 = 0x0000_0040;
-/// Section contains uninitialized data.
-pub const IMAGE_SCN_CNT_UNINITIALIZED_DATA: u32 = 0x0000_0080;
+    /// Replace the alignment.
+    pub fn with_align(self, align: SectionFlags) -> SectionFlags {
+        SectionFlags(self.0 & !IMAGE_SCN_ALIGN_MASK | align.0 & IMAGE_SCN_ALIGN_MASK)
+    }
+}
 
-/// Reserved.
-pub const IMAGE_SCN_LNK_OTHER: u32 = 0x0000_0100;
-/// Section contains comments or some other type of information.
-pub const IMAGE_SCN_LNK_INFO: u32 = 0x0000_0200;
-//      IMAGE_SCN_TYPE_OVER                  0x00000400  // Reserved.
-/// Section contents will not become part of image.
-pub const IMAGE_SCN_LNK_REMOVE: u32 = 0x0000_0800;
-/// Section contents comdat.
-pub const IMAGE_SCN_LNK_COMDAT: u32 = 0x0000_1000;
-//                                           0x00002000  // Reserved.
-//      IMAGE_SCN_MEM_PROTECTED - Obsolete   0x00004000
-/// Reset speculative exceptions handling bits in the TLB entries for this section.
-pub const IMAGE_SCN_NO_DEFER_SPEC_EXC: u32 = 0x0000_4000;
-/// Section content can be accessed relative to GP
-pub const IMAGE_SCN_GPREL: u32 = 0x0000_8000;
-pub const IMAGE_SCN_MEM_FARDATA: u32 = 0x0000_8000;
-//      IMAGE_SCN_MEM_SYSHEAP  - Obsolete    0x00010000
-pub const IMAGE_SCN_MEM_PURGEABLE: u32 = 0x0002_0000;
-pub const IMAGE_SCN_MEM_16BIT: u32 = 0x0002_0000;
-pub const IMAGE_SCN_MEM_LOCKED: u32 = 0x0004_0000;
-pub const IMAGE_SCN_MEM_PRELOAD: u32 = 0x0008_0000;
+newtype_flag_names!(NAMES_SCN_FLAGS: SectionFlags(u32) = {
+    //      IMAGE_SCN_TYPE_REG                   0x00000000  // Reserved.
+    //      IMAGE_SCN_TYPE_DSECT                 0x00000001  // Reserved.
+    //      IMAGE_SCN_TYPE_NOLOAD                0x00000002  // Reserved.
+    //      IMAGE_SCN_TYPE_GROUP                 0x00000004  // Reserved.
+    /// Reserved.
+    IMAGE_SCN_TYPE_NO_PAD = 0x0000_0008,
+    //      IMAGE_SCN_TYPE_COPY                  0x00000010  // Reserved.
 
-pub const IMAGE_SCN_ALIGN_1BYTES: u32 = 0x0010_0000;
-pub const IMAGE_SCN_ALIGN_2BYTES: u32 = 0x0020_0000;
-pub const IMAGE_SCN_ALIGN_4BYTES: u32 = 0x0030_0000;
-pub const IMAGE_SCN_ALIGN_8BYTES: u32 = 0x0040_0000;
-/// Default alignment if no others are specified.
-pub const IMAGE_SCN_ALIGN_16BYTES: u32 = 0x0050_0000;
-pub const IMAGE_SCN_ALIGN_32BYTES: u32 = 0x0060_0000;
-pub const IMAGE_SCN_ALIGN_64BYTES: u32 = 0x0070_0000;
-pub const IMAGE_SCN_ALIGN_128BYTES: u32 = 0x0080_0000;
-pub const IMAGE_SCN_ALIGN_256BYTES: u32 = 0x0090_0000;
-pub const IMAGE_SCN_ALIGN_512BYTES: u32 = 0x00A0_0000;
-pub const IMAGE_SCN_ALIGN_1024BYTES: u32 = 0x00B0_0000;
-pub const IMAGE_SCN_ALIGN_2048BYTES: u32 = 0x00C0_0000;
-pub const IMAGE_SCN_ALIGN_4096BYTES: u32 = 0x00D0_0000;
-pub const IMAGE_SCN_ALIGN_8192BYTES: u32 = 0x00E0_0000;
-// Unused                                    0x00F0_0000
-pub const IMAGE_SCN_ALIGN_MASK: u32 = 0x00F0_0000;
+    /// Section contains code.
+    IMAGE_SCN_CNT_CODE = 0x0000_0020,
+    /// Section contains initialized data.
+    IMAGE_SCN_CNT_INITIALIZED_DATA = 0x0000_0040,
+    /// Section contains uninitialized data.
+    IMAGE_SCN_CNT_UNINITIALIZED_DATA = 0x0000_0080,
 
-/// Section contains extended relocations.
-pub const IMAGE_SCN_LNK_NRELOC_OVFL: u32 = 0x0100_0000;
-/// Section can be discarded.
-pub const IMAGE_SCN_MEM_DISCARDABLE: u32 = 0x0200_0000;
-/// Section is not cacheable.
-pub const IMAGE_SCN_MEM_NOT_CACHED: u32 = 0x0400_0000;
-/// Section is not pageable.
-pub const IMAGE_SCN_MEM_NOT_PAGED: u32 = 0x0800_0000;
-/// Section is shareable.
-pub const IMAGE_SCN_MEM_SHARED: u32 = 0x1000_0000;
-/// Section is executable.
-pub const IMAGE_SCN_MEM_EXECUTE: u32 = 0x2000_0000;
-/// Section is readable.
-pub const IMAGE_SCN_MEM_READ: u32 = 0x4000_0000;
-/// Section is writeable.
-pub const IMAGE_SCN_MEM_WRITE: u32 = 0x8000_0000;
+    /// Reserved.
+    IMAGE_SCN_LNK_OTHER = 0x0000_0100,
+    /// Section contains comments or some other type of information.
+    IMAGE_SCN_LNK_INFO = 0x0000_0200,
+    //      IMAGE_SCN_TYPE_OVER                  0x00000400  // Reserved.
+    /// Section contents will not become part of image.
+    IMAGE_SCN_LNK_REMOVE = 0x0000_0800,
+    /// Section contents comdat.
+    IMAGE_SCN_LNK_COMDAT = 0x0000_1000,
+    //                                           0x00002000  // Reserved.
+    //      IMAGE_SCN_MEM_PROTECTED - Obsolete   0x00004000
+    /// Reset speculative exceptions handling bits in the TLB entries for this section.
+    IMAGE_SCN_NO_DEFER_SPEC_EXC = 0x0000_4000,
+    /// Section content can be accessed relative to GP
+    IMAGE_SCN_GPREL = 0x0000_8000,
+    IMAGE_SCN_MEM_FARDATA = 0x0000_8000,
+    //      IMAGE_SCN_MEM_SYSHEAP  - Obsolete    0x00010000
+    IMAGE_SCN_MEM_PURGEABLE = 0x0002_0000,
+    IMAGE_SCN_MEM_16BIT = 0x0002_0000,
+    IMAGE_SCN_MEM_LOCKED = 0x0004_0000,
+    IMAGE_SCN_MEM_PRELOAD = 0x0008_0000,
+
+    IMAGE_SCN_ALIGN_MASK = 0x00F0_0000 => NAMES_SCN_ALIGN,
+
+    /// Section contains extended relocations.
+    IMAGE_SCN_LNK_NRELOC_OVFL = 0x0100_0000,
+    /// Section can be discarded.
+    IMAGE_SCN_MEM_DISCARDABLE = 0x0200_0000,
+    /// Section is not cacheable.
+    IMAGE_SCN_MEM_NOT_CACHED = 0x0400_0000,
+    /// Section is not pageable.
+    IMAGE_SCN_MEM_NOT_PAGED = 0x0800_0000,
+    /// Section is shareable.
+    IMAGE_SCN_MEM_SHARED = 0x1000_0000,
+    /// Section is executable.
+    IMAGE_SCN_MEM_EXECUTE = 0x2000_0000,
+    /// Section is readable.
+    IMAGE_SCN_MEM_READ = 0x4000_0000,
+    /// Section is writeable.
+    IMAGE_SCN_MEM_WRITE = 0x8000_0000,
+});
+
+constant_names!(NAMES_SCN_ALIGN: SectionFlags(u32) = {
+    IMAGE_SCN_ALIGN_1BYTES = 0x0010_0000,
+    IMAGE_SCN_ALIGN_2BYTES = 0x0020_0000,
+    IMAGE_SCN_ALIGN_4BYTES = 0x0030_0000,
+    IMAGE_SCN_ALIGN_8BYTES = 0x0040_0000,
+    /// Default alignment if no others are specified.
+    IMAGE_SCN_ALIGN_16BYTES = 0x0050_0000,
+    IMAGE_SCN_ALIGN_32BYTES = 0x0060_0000,
+    IMAGE_SCN_ALIGN_64BYTES = 0x0070_0000,
+    IMAGE_SCN_ALIGN_128BYTES = 0x0080_0000,
+    IMAGE_SCN_ALIGN_256BYTES = 0x0090_0000,
+    IMAGE_SCN_ALIGN_512BYTES = 0x00A0_0000,
+    IMAGE_SCN_ALIGN_1024BYTES = 0x00B0_0000,
+    IMAGE_SCN_ALIGN_2048BYTES = 0x00C0_0000,
+    IMAGE_SCN_ALIGN_4096BYTES = 0x00D0_0000,
+    IMAGE_SCN_ALIGN_8192BYTES = 0x00E0_0000,
+    // Unused                                    0x00F0_0000
+});
 
 //
 // TLS Characteristic Flags
@@ -880,8 +927,8 @@ pub struct ImageSymbol {
     pub name: [u8; 8],
     pub value: U32<LE>,
     pub section_number: U16<LE>,
-    pub typ: U16<LE>,
-    pub storage_class: u8,
+    pub typ: U16<LE, SymbolType>,
+    pub storage_class: SymbolClass,
     pub number_of_aux_symbols: u8,
 }
 
@@ -897,9 +944,9 @@ pub struct ImageSymbolEx {
     /// If first 4 bytes are 0, then second 4 bytes are offset into string table.
     pub name: [u8; 8],
     pub value: U32<LE>,
-    pub section_number: I32<LE>,
-    pub typ: U16<LE>,
-    pub storage_class: u8,
+    pub section_number: I32<LE, SymbolSection>,
+    pub typ: U16<LE, SymbolType>,
+    pub storage_class: SymbolClass,
     pub number_of_aux_symbols: u8,
 }
 
@@ -909,90 +956,181 @@ pub const IMAGE_SIZEOF_SYMBOL_EX: usize = 20;
 #[repr(C)]
 pub struct ImageSymbolExBytes(pub [u8; IMAGE_SIZEOF_SYMBOL_EX]);
 
-// Values for `ImageSymbol::section_number`.
-//
+newtype!(
+    /// Values for `ImageSymbol::section_number` and `ImageSymbolEx::section_number`.
+    struct SymbolSection(i32);
+);
+
+impl SymbolSection {
+    /// Return true if this is a reserved value.
+    pub fn is_reserved(self) -> bool {
+        self.0 <= 0
+    }
+
+    /// Return the 1-based section index, or `None` if this is a reserved value.
+    pub fn index(self) -> Option<u32> {
+        if self.0 > 0 {
+            Some(self.0 as u32)
+        } else {
+            None
+        }
+    }
+}
+
 // Symbols have a section number of the section in which they are
 // defined. Otherwise, section numbers have the following meanings:
+newtype_constant_names!(NAMES_IMAGE_SYM: SymbolSection(i32) = {
+    /// Symbol is undefined or is common.
+    IMAGE_SYM_UNDEFINED = 0,
+    /// Symbol is an absolute value.
+    IMAGE_SYM_ABSOLUTE = -1,
+    /// Symbol is a special debug item.
+    IMAGE_SYM_DEBUG = -2,
+});
 
-/// Symbol is undefined or is common.
-pub const IMAGE_SYM_UNDEFINED: i32 = 0;
-/// Symbol is an absolute value.
-pub const IMAGE_SYM_ABSOLUTE: i32 = -1;
-/// Symbol is a special debug item.
-pub const IMAGE_SYM_DEBUG: i32 = -2;
 /// Values 0xFF00-0xFFFF are special
 pub const IMAGE_SYM_SECTION_MAX: u16 = 0xFEFF;
 pub const IMAGE_SYM_SECTION_MAX_EX: u32 = 0x7fff_ffff;
 
-// Values for `ImageSymbol::typ` (basic component).
+newtype!(
+    /// Values for `ImageSymbol::typ`.
+    struct SymbolType(u16);
+);
+
+impl SymbolType {
+    /// Construct a symbol type from base and derived types.
+    ///
+    /// You should generally never need to call this. In practice, only
+    /// a couple of symbol types are used. Instead, use `SymbolType(0)`
+    /// or `IMAGE_SYM_DTYPE_FUNCTION.into()`.
+    pub fn new(base_type: SymbolBaseType, derived_type: SymbolDerivedType) -> Self {
+        SymbolType(SymbolType::from(base_type).0 | SymbolType::from(derived_type).0)
+    }
+
+    /// Return the base type component.
+    pub fn base_type(self) -> SymbolBaseType {
+        SymbolBaseType(self.0 & N_BTMASK)
+    }
+
+    /// Return the derived type component.
+    pub fn derived_type(self) -> SymbolDerivedType {
+        SymbolDerivedType((self.0 & N_TMASK) >> N_BTSHFT)
+    }
+}
+
+newtype_flag_names!(NAMES_SYMBOL_TYPE: SymbolType(u16) = {
+    _ = N_BTMASK => NAMES_IMAGE_SYM_TYPE,
+    _ = N_TMASK => NAMES_IMAGE_SYM_DTYPE,
+    IMAGE_SYM_TYPE_PCODE = 0x8000,
+});
+
+newtype!(
+    /// Values for `ImageSymbol::typ` (basic component).
+    struct SymbolBaseType(u16);
+);
+
+impl From<SymbolBaseType> for SymbolType {
+    fn from(base: SymbolBaseType) -> Self {
+        SymbolType(base.0 & N_BTMASK)
+    }
+}
+
+impl From<SymbolType> for SymbolBaseType {
+    fn from(value: SymbolType) -> Self {
+        value.base_type()
+    }
+}
 
 /// no type.
-pub const IMAGE_SYM_TYPE_NULL: u16 = 0x0000;
-pub const IMAGE_SYM_TYPE_VOID: u16 = 0x0001;
-/// type character.
-pub const IMAGE_SYM_TYPE_CHAR: u16 = 0x0002;
-/// type short integer.
-pub const IMAGE_SYM_TYPE_SHORT: u16 = 0x0003;
-pub const IMAGE_SYM_TYPE_INT: u16 = 0x0004;
-pub const IMAGE_SYM_TYPE_LONG: u16 = 0x0005;
-pub const IMAGE_SYM_TYPE_FLOAT: u16 = 0x0006;
-pub const IMAGE_SYM_TYPE_DOUBLE: u16 = 0x0007;
-pub const IMAGE_SYM_TYPE_STRUCT: u16 = 0x0008;
-pub const IMAGE_SYM_TYPE_UNION: u16 = 0x0009;
-/// enumeration.
-pub const IMAGE_SYM_TYPE_ENUM: u16 = 0x000A;
-/// member of enumeration.
-pub const IMAGE_SYM_TYPE_MOE: u16 = 0x000B;
-pub const IMAGE_SYM_TYPE_BYTE: u16 = 0x000C;
-pub const IMAGE_SYM_TYPE_WORD: u16 = 0x000D;
-pub const IMAGE_SYM_TYPE_UINT: u16 = 0x000E;
-pub const IMAGE_SYM_TYPE_DWORD: u16 = 0x000F;
-pub const IMAGE_SYM_TYPE_PCODE: u16 = 0x8000;
+pub const IMAGE_SYM_TYPE_NULL: SymbolBaseType = SymbolBaseType(0);
 
-// Values for `ImageSymbol::typ` (derived component).
+newtype_constant_names!(NAMES_IMAGE_SYM_TYPE: SymbolBaseType(u16) = {
+    IMAGE_SYM_TYPE_VOID = 0x0001,
+    /// type character.
+    IMAGE_SYM_TYPE_CHAR = 0x0002,
+    /// type short integer.
+    IMAGE_SYM_TYPE_SHORT = 0x0003,
+    IMAGE_SYM_TYPE_INT = 0x0004,
+    IMAGE_SYM_TYPE_LONG = 0x0005,
+    IMAGE_SYM_TYPE_FLOAT = 0x0006,
+    IMAGE_SYM_TYPE_DOUBLE = 0x0007,
+    IMAGE_SYM_TYPE_STRUCT = 0x0008,
+    IMAGE_SYM_TYPE_UNION = 0x0009,
+    /// enumeration.
+    IMAGE_SYM_TYPE_ENUM = 0x000A,
+    /// member of enumeration.
+    IMAGE_SYM_TYPE_MOE = 0x000B,
+    IMAGE_SYM_TYPE_BYTE = 0x000C,
+    IMAGE_SYM_TYPE_WORD = 0x000D,
+    IMAGE_SYM_TYPE_UINT = 0x000E,
+    IMAGE_SYM_TYPE_DWORD = 0x000F,
+});
+
+newtype!(
+    /// Values for `ImageSymbol::typ` (derived component).
+    struct SymbolDerivedType(u16);
+);
+
+impl From<SymbolDerivedType> for SymbolType {
+    fn from(derived: SymbolDerivedType) -> Self {
+        SymbolType((derived.0 << N_BTSHFT) & N_TMASK)
+    }
+}
+
+impl From<SymbolType> for SymbolDerivedType {
+    fn from(value: SymbolType) -> Self {
+        value.derived_type()
+    }
+}
 
 /// no derived type.
-pub const IMAGE_SYM_DTYPE_NULL: u16 = 0;
-/// pointer.
-pub const IMAGE_SYM_DTYPE_POINTER: u16 = 1;
-/// function.
-pub const IMAGE_SYM_DTYPE_FUNCTION: u16 = 2;
-/// array.
-pub const IMAGE_SYM_DTYPE_ARRAY: u16 = 3;
+pub const IMAGE_SYM_DTYPE_NULL: SymbolDerivedType = SymbolDerivedType(0);
 
-// Values for `ImageSymbol::storage_class`.
-pub const IMAGE_SYM_CLASS_END_OF_FUNCTION: u8 = 0xff;
-pub const IMAGE_SYM_CLASS_NULL: u8 = 0x00;
-pub const IMAGE_SYM_CLASS_AUTOMATIC: u8 = 0x01;
-pub const IMAGE_SYM_CLASS_EXTERNAL: u8 = 0x02;
-pub const IMAGE_SYM_CLASS_STATIC: u8 = 0x03;
-pub const IMAGE_SYM_CLASS_REGISTER: u8 = 0x04;
-pub const IMAGE_SYM_CLASS_EXTERNAL_DEF: u8 = 0x05;
-pub const IMAGE_SYM_CLASS_LABEL: u8 = 0x06;
-pub const IMAGE_SYM_CLASS_UNDEFINED_LABEL: u8 = 0x07;
-pub const IMAGE_SYM_CLASS_MEMBER_OF_STRUCT: u8 = 0x08;
-pub const IMAGE_SYM_CLASS_ARGUMENT: u8 = 0x09;
-pub const IMAGE_SYM_CLASS_STRUCT_TAG: u8 = 0x0A;
-pub const IMAGE_SYM_CLASS_MEMBER_OF_UNION: u8 = 0x0B;
-pub const IMAGE_SYM_CLASS_UNION_TAG: u8 = 0x0C;
-pub const IMAGE_SYM_CLASS_TYPE_DEFINITION: u8 = 0x0D;
-pub const IMAGE_SYM_CLASS_UNDEFINED_STATIC: u8 = 0x0E;
-pub const IMAGE_SYM_CLASS_ENUM_TAG: u8 = 0x0F;
-pub const IMAGE_SYM_CLASS_MEMBER_OF_ENUM: u8 = 0x10;
-pub const IMAGE_SYM_CLASS_REGISTER_PARAM: u8 = 0x11;
-pub const IMAGE_SYM_CLASS_BIT_FIELD: u8 = 0x12;
+newtype_constant_names!(NAMES_IMAGE_SYM_DTYPE: SymbolDerivedType(u16) = {
+    /// pointer.
+    IMAGE_SYM_DTYPE_POINTER = 1,
+    /// function.
+    IMAGE_SYM_DTYPE_FUNCTION = 2,
+    /// array.
+    IMAGE_SYM_DTYPE_ARRAY = 3,
+});
 
-pub const IMAGE_SYM_CLASS_FAR_EXTERNAL: u8 = 0x44;
+newtype!(
+    /// Values for `ImageSymbol::storage_class`.
+    #[repr(transparent)]
+    struct SymbolClass(u8);
+);
 
-pub const IMAGE_SYM_CLASS_BLOCK: u8 = 0x64;
-pub const IMAGE_SYM_CLASS_FUNCTION: u8 = 0x65;
-pub const IMAGE_SYM_CLASS_END_OF_STRUCT: u8 = 0x66;
-pub const IMAGE_SYM_CLASS_FILE: u8 = 0x67;
-// new
-pub const IMAGE_SYM_CLASS_SECTION: u8 = 0x68;
-pub const IMAGE_SYM_CLASS_WEAK_EXTERNAL: u8 = 0x69;
-
-pub const IMAGE_SYM_CLASS_CLR_TOKEN: u8 = 0x6B;
+newtype_constant_names!(NAMES_IMAGE_SYM_CLASS: SymbolClass(u8) = {
+    IMAGE_SYM_CLASS_END_OF_FUNCTION = 0xff,
+    IMAGE_SYM_CLASS_NULL = 0x00,
+    IMAGE_SYM_CLASS_AUTOMATIC = 0x01,
+    IMAGE_SYM_CLASS_EXTERNAL = 0x02,
+    IMAGE_SYM_CLASS_STATIC = 0x03,
+    IMAGE_SYM_CLASS_REGISTER = 0x04,
+    IMAGE_SYM_CLASS_EXTERNAL_DEF = 0x05,
+    IMAGE_SYM_CLASS_LABEL = 0x06,
+    IMAGE_SYM_CLASS_UNDEFINED_LABEL = 0x07,
+    IMAGE_SYM_CLASS_MEMBER_OF_STRUCT = 0x08,
+    IMAGE_SYM_CLASS_ARGUMENT = 0x09,
+    IMAGE_SYM_CLASS_STRUCT_TAG = 0x0A,
+    IMAGE_SYM_CLASS_MEMBER_OF_UNION = 0x0B,
+    IMAGE_SYM_CLASS_UNION_TAG = 0x0C,
+    IMAGE_SYM_CLASS_TYPE_DEFINITION = 0x0D,
+    IMAGE_SYM_CLASS_UNDEFINED_STATIC = 0x0E,
+    IMAGE_SYM_CLASS_ENUM_TAG = 0x0F,
+    IMAGE_SYM_CLASS_MEMBER_OF_ENUM = 0x10,
+    IMAGE_SYM_CLASS_REGISTER_PARAM = 0x11,
+    IMAGE_SYM_CLASS_BIT_FIELD = 0x12,
+    IMAGE_SYM_CLASS_FAR_EXTERNAL = 0x44,
+    IMAGE_SYM_CLASS_BLOCK = 0x64,
+    IMAGE_SYM_CLASS_FUNCTION = 0x65,
+    IMAGE_SYM_CLASS_END_OF_STRUCT = 0x66,
+    IMAGE_SYM_CLASS_FILE = 0x67,
+    IMAGE_SYM_CLASS_SECTION = 0x68,
+    IMAGE_SYM_CLASS_WEAK_EXTERNAL = 0x69,
+    IMAGE_SYM_CLASS_CLR_TOKEN = 0x6B,
+});
 
 // type packing constants
 
@@ -1057,7 +1195,7 @@ pub struct ImageAuxSymbolFunctionBeginEnd {
 pub struct ImageAuxSymbolWeak {
     /// the weak extern default symbol index
     pub weak_default_sym_index: U32<LE>,
-    pub weak_search_type: U32<LE>,
+    pub weak_search_type: U32<LE, WeakExternSearch>,
 }
 
 /// Auxiliary symbol format 5: sections.
@@ -1078,7 +1216,7 @@ pub struct ImageAuxSymbolSection {
     /// section number to associate with
     pub number: U16<LE>,
     /// communal selection type
-    pub selection: u8,
+    pub selection: ComdatSelection,
     pub reserved: u8,
     /// high bits of the section number
     pub high_number: U16<LE>,
@@ -1096,18 +1234,33 @@ pub struct ImageAuxSymbolCrc {
 // Communal selection types.
 //
 
-pub const IMAGE_COMDAT_SELECT_NODUPLICATES: u8 = 1;
-pub const IMAGE_COMDAT_SELECT_ANY: u8 = 2;
-pub const IMAGE_COMDAT_SELECT_SAME_SIZE: u8 = 3;
-pub const IMAGE_COMDAT_SELECT_EXACT_MATCH: u8 = 4;
-pub const IMAGE_COMDAT_SELECT_ASSOCIATIVE: u8 = 5;
-pub const IMAGE_COMDAT_SELECT_LARGEST: u8 = 6;
-pub const IMAGE_COMDAT_SELECT_NEWEST: u8 = 7;
+newtype!(
+    /// Values for `ImageAuxSymbolSection::selection`.
+    #[repr(transparent)]
+    struct ComdatSelection(u8);
+);
 
-pub const IMAGE_WEAK_EXTERN_SEARCH_NOLIBRARY: u32 = 1;
-pub const IMAGE_WEAK_EXTERN_SEARCH_LIBRARY: u32 = 2;
-pub const IMAGE_WEAK_EXTERN_SEARCH_ALIAS: u32 = 3;
-pub const IMAGE_WEAK_EXTERN_ANTI_DEPENDENCY: u32 = 4;
+newtype_constant_names!(NAMES_IMAGE_COMDAT_SELECT: ComdatSelection(u8) = {
+    IMAGE_COMDAT_SELECT_NODUPLICATES = 1,
+    IMAGE_COMDAT_SELECT_ANY = 2,
+    IMAGE_COMDAT_SELECT_SAME_SIZE = 3,
+    IMAGE_COMDAT_SELECT_EXACT_MATCH = 4,
+    IMAGE_COMDAT_SELECT_ASSOCIATIVE = 5,
+    IMAGE_COMDAT_SELECT_LARGEST = 6,
+    IMAGE_COMDAT_SELECT_NEWEST = 7,
+});
+
+newtype!(
+    /// Values for `ImageAuxSymbolWeak::weak_search_type`.
+    struct WeakExternSearch(u32);
+);
+
+newtype_constant_names!(NAMES_IMAGE_WEAK_EXTERN: WeakExternSearch(u32) = {
+    IMAGE_WEAK_EXTERN_SEARCH_NOLIBRARY = 1,
+    IMAGE_WEAK_EXTERN_SEARCH_LIBRARY = 2,
+    IMAGE_WEAK_EXTERN_SEARCH_ALIAS = 3,
+    IMAGE_WEAK_EXTERN_ANTI_DEPENDENCY = 4,
+});
 
 //
 // Relocation format.
@@ -2295,48 +2448,56 @@ pub struct ImageResourceDataEntry {
 
 // Resource type: https://docs.microsoft.com/en-us/windows/win32/menurc/resource-types
 
-/// ID for: Hardware-dependent cursor resource.
-pub const RT_CURSOR: u16 = 1;
-/// ID for: Bitmap resource.
-pub const RT_BITMAP: u16 = 2;
-/// ID for: Hardware-dependent icon resource.
-pub const RT_ICON: u16 = 3;
-/// ID for: Menu resource.
-pub const RT_MENU: u16 = 4;
-/// ID for: Dialog box.
-pub const RT_DIALOG: u16 = 5;
-/// ID for: String-table entry.
-pub const RT_STRING: u16 = 6;
-/// ID for: Font directory resource.
-pub const RT_FONTDIR: u16 = 7;
-/// ID for: Font resource.
-pub const RT_FONT: u16 = 8;
-/// ID for: Accelerator table.
-pub const RT_ACCELERATOR: u16 = 9;
-/// ID for: Application-defined resource (raw data).
-pub const RT_RCDATA: u16 = 10;
-/// ID for: Message-table entry.
-pub const RT_MESSAGETABLE: u16 = 11;
-/// ID for: Hardware-independent cursor resource.
-pub const RT_GROUP_CURSOR: u16 = 12;
-/// ID for: Hardware-independent icon resource.
-pub const RT_GROUP_ICON: u16 = 14;
-/// ID for: Version resource.
-pub const RT_VERSION: u16 = 16;
-/// ID for: Allows a resource editing tool to associate a string with an .rc file.
-pub const RT_DLGINCLUDE: u16 = 17;
-/// ID for: Plug and Play resource.
-pub const RT_PLUGPLAY: u16 = 19;
-/// ID for: VXD.
-pub const RT_VXD: u16 = 20;
-/// ID for: Animated cursor.
-pub const RT_ANICURSOR: u16 = 21;
-/// ID for: Animated icon.
-pub const RT_ANIICON: u16 = 22;
-/// ID for: HTML resource.
-pub const RT_HTML: u16 = 23;
-/// ID for: Side-by-Side Assembly Manifest.
-pub const RT_MANIFEST: u16 = 24;
+/// Values for resource types.
+///
+/// These are used in `ImageResourceDirectoryEntry::name_or_id` at level 0 of the tree.
+#[cfg(feature = "names")]
+pub const NAMES_RT: &ConstantNames<u16> = &_NAMES_RT;
+
+constant_names!(_NAMES_RT: u16 = {
+    /// ID for: Hardware-dependent cursor resource.
+    RT_CURSOR = 1,
+    /// ID for: Bitmap resource.
+    RT_BITMAP = 2,
+    /// ID for: Hardware-dependent icon resource.
+    RT_ICON = 3,
+    /// ID for: Menu resource.
+    RT_MENU = 4,
+    /// ID for: Dialog box.
+    RT_DIALOG = 5,
+    /// ID for: String-table entry.
+    RT_STRING = 6,
+    /// ID for: Font directory resource.
+    RT_FONTDIR = 7,
+    /// ID for: Font resource.
+    RT_FONT = 8,
+    /// ID for: Accelerator table.
+    RT_ACCELERATOR = 9,
+    /// ID for: Application-defined resource (raw data).
+    RT_RCDATA = 10,
+    /// ID for: Message-table entry.
+    RT_MESSAGETABLE = 11,
+    /// ID for: Hardware-independent cursor resource.
+    RT_GROUP_CURSOR = 12,
+    /// ID for: Hardware-independent icon resource.
+    RT_GROUP_ICON = 14,
+    /// ID for: Version resource.
+    RT_VERSION = 16,
+    /// ID for: Allows a resource editing tool to associate a string with an .rc file.
+    RT_DLGINCLUDE = 17,
+    /// ID for: Plug and Play resource.
+    RT_PLUGPLAY = 19,
+    /// ID for: VXD.
+    RT_VXD = 20,
+    /// ID for: Animated cursor.
+    RT_ANICURSOR = 21,
+    /// ID for: Animated icon.
+    RT_ANIICON = 22,
+    /// ID for: HTML resource.
+    RT_HTML = 23,
+    /// ID for: Side-by-Side Assembly Manifest.
+    RT_MANIFEST = 24,
+});
 
 //
 // Code Integrity in loadconfig (CI)
@@ -2373,7 +2534,7 @@ pub struct ImageDynamicRelocationTable {
 #[derive(Debug, Clone, Copy)]
 #[repr(C)]
 pub struct ImageDynamicRelocation32 {
-    pub symbol: U32<LE>,
+    pub symbol: U32<LE, DynamicRelocationSymbol>,
     pub base_reloc_size: U32<LE>,
     // BaseRelocations: [ImageBaseRelocation; 0],
 }
@@ -2381,7 +2542,7 @@ pub struct ImageDynamicRelocation32 {
 #[derive(Debug, Clone, Copy)]
 #[repr(C)]
 pub struct ImageDynamicRelocation64 {
-    pub symbol: U64<LE>,
+    pub symbol: U64<LE, DynamicRelocationSymbol>,
     pub base_reloc_size: U32<LE>,
     // BaseRelocations: [ImageBaseRelocation; 0],
 }
@@ -2391,7 +2552,7 @@ pub struct ImageDynamicRelocation64 {
 pub struct ImageDynamicRelocation32V2 {
     pub header_size: U32<LE>,
     pub fixup_info_size: U32<LE>,
-    pub symbol: U32<LE>,
+    pub symbol: U32<LE, DynamicRelocationSymbol>,
     pub symbol_group: U32<LE>,
     pub flags: U32<LE>,
     // ...     variable length header fields
@@ -2403,7 +2564,7 @@ pub struct ImageDynamicRelocation32V2 {
 pub struct ImageDynamicRelocation64V2 {
     pub header_size: U32<LE>,
     pub fixup_info_size: U32<LE>,
-    pub symbol: U64<LE>,
+    pub symbol: U64<LE, DynamicRelocationSymbol>,
     pub symbol_group: U32<LE>,
     pub flags: U32<LE>,
     // ...     variable length header fields
@@ -2413,12 +2574,20 @@ pub struct ImageDynamicRelocation64V2 {
 //
 // Defined symbolic dynamic relocation entries.
 //
+newtype!(
+    /// Values for `ImageDynamicRelocation*::symbol`.
+    ///
+    /// Small values have special meaning. Other values are RVAs.
+    struct DynamicRelocationSymbol(u64);
+);
 
-pub const IMAGE_DYNAMIC_RELOCATION_GUARD_RF_PROLOGUE: u32 = 0x0000_0001;
-pub const IMAGE_DYNAMIC_RELOCATION_GUARD_RF_EPILOGUE: u32 = 0x0000_0002;
-pub const IMAGE_DYNAMIC_RELOCATION_GUARD_IMPORT_CONTROL_TRANSFER: u32 = 0x0000_0003;
-pub const IMAGE_DYNAMIC_RELOCATION_GUARD_INDIR_CONTROL_TRANSFER: u32 = 0x0000_0004;
-pub const IMAGE_DYNAMIC_RELOCATION_GUARD_SWITCHTABLE_BRANCH: u32 = 0x0000_0005;
+newtype_constant_names!(NAMES_DYNAMIC_RELOCATION: DynamicRelocationSymbol(u64) = {
+    IMAGE_DYNAMIC_RELOCATION_GUARD_RF_PROLOGUE = 0x0000_0001,
+    IMAGE_DYNAMIC_RELOCATION_GUARD_RF_EPILOGUE = 0x0000_0002,
+    IMAGE_DYNAMIC_RELOCATION_GUARD_IMPORT_CONTROL_TRANSFER = 0x0000_0003,
+    IMAGE_DYNAMIC_RELOCATION_GUARD_INDIR_CONTROL_TRANSFER = 0x0000_0004,
+    IMAGE_DYNAMIC_RELOCATION_GUARD_SWITCHTABLE_BRANCH = 0x0000_0005,
+});
 
 // This struct has alignment 1.
 #[derive(Debug, Clone, Copy)]
@@ -2509,7 +2678,7 @@ pub struct ImageLoadConfigDirectory32 {
     /// VA
     pub guard_cf_function_table: U32<LE>,
     pub guard_cf_function_count: U32<LE>,
-    pub guard_flags: U32<LE>,
+    pub guard_flags: U32<LE, GuardFlags>,
     pub code_integrity: ImageLoadConfigCodeIntegrity,
     /// VA
     pub guard_address_taken_iat_entry_table: U32<LE>,
@@ -2571,7 +2740,7 @@ pub struct ImageLoadConfigDirectory64 {
     /// VA
     pub guard_cf_function_table: U64<LE>,
     pub guard_cf_function_count: U64<LE>,
-    pub guard_flags: U32<LE>,
+    pub guard_flags: U32<LE, GuardFlags>,
     pub code_integrity: ImageLoadConfigCodeIntegrity,
     /// VA
     pub guard_address_taken_iat_entry_table: U64<LE>,
@@ -2618,7 +2787,7 @@ pub struct ImageHotPatchInfo {
 #[repr(C)]
 pub struct ImageHotPatchBase {
     pub sequence_number: U32<LE>,
-    pub flags: U32<LE>,
+    pub flags: U32<LE, HotPatchBaseFlags>,
     pub original_time_date_stamp: U32<LE>,
     pub original_check_sum: U32<LE>,
     pub code_integrity_info: U32<LE>,
@@ -2635,54 +2804,80 @@ pub struct ImageHotPatchHashes {
     pub sha1: [u8; 20],
 }
 
-pub const IMAGE_HOT_PATCH_BASE_OBLIGATORY: u32 = 0x0000_0001;
-pub const IMAGE_HOT_PATCH_BASE_CAN_ROLL_BACK: u32 = 0x0000_0002;
+newtype!(
+    /// Values for `ImageHotPatchBase::flags`.
+    struct HotPatchBaseFlags(u32);
+);
 
-pub const IMAGE_HOT_PATCH_CHUNK_INVERSE: u32 = 0x8000_0000;
-pub const IMAGE_HOT_PATCH_CHUNK_OBLIGATORY: u32 = 0x4000_0000;
+newtype_flag_names!(NAMES_HOT_PATCH_BASE: HotPatchBaseFlags(u32) = {
+    IMAGE_HOT_PATCH_BASE_OBLIGATORY = 0x0000_0001,
+    IMAGE_HOT_PATCH_BASE_CAN_ROLL_BACK = 0x0000_0002,
+});
+
+newtype!(
+    struct HotPatchChunkFlags(u32);
+);
+
+// TODO: convenience methods for subfields
+
+newtype_flag_names!(NAMES_HOT_PATCH_CHUNK: HotPatchChunkFlags(u32) = {
+    IMAGE_HOT_PATCH_CHUNK_INVERSE = 0x8000_0000,
+    IMAGE_HOT_PATCH_CHUNK_OBLIGATORY = 0x4000_0000,
+    _ = IMAGE_HOT_PATCH_CHUNK_TYPE => NAMES_HOT_PATCH_CHUNK_TYPE,
+});
+
 pub const IMAGE_HOT_PATCH_CHUNK_RESERVED: u32 = 0x3FF0_3000;
 pub const IMAGE_HOT_PATCH_CHUNK_TYPE: u32 = 0x000F_C000;
 pub const IMAGE_HOT_PATCH_CHUNK_SOURCE_RVA: u32 = 0x0000_8000;
 pub const IMAGE_HOT_PATCH_CHUNK_TARGET_RVA: u32 = 0x0000_4000;
 pub const IMAGE_HOT_PATCH_CHUNK_SIZE: u32 = 0x0000_0FFF;
 
-pub const IMAGE_HOT_PATCH_NONE: u32 = 0x0000_0000;
-pub const IMAGE_HOT_PATCH_FUNCTION: u32 = 0x0001_C000;
-pub const IMAGE_HOT_PATCH_ABSOLUTE: u32 = 0x0002_C000;
-pub const IMAGE_HOT_PATCH_REL32: u32 = 0x0003_C000;
-pub const IMAGE_HOT_PATCH_CALL_TARGET: u32 = 0x0004_4000;
-pub const IMAGE_HOT_PATCH_INDIRECT: u32 = 0x0005_C000;
-pub const IMAGE_HOT_PATCH_NO_CALL_TARGET: u32 = 0x0006_4000;
-pub const IMAGE_HOT_PATCH_DYNAMIC_VALUE: u32 = 0x0007_8000;
+constant_names!(NAMES_HOT_PATCH_CHUNK_TYPE: HotPatchChunkFlags(u32) = {
+    IMAGE_HOT_PATCH_NONE = 0x0000_0000,
+    IMAGE_HOT_PATCH_FUNCTION = 0x0001_C000,
+    IMAGE_HOT_PATCH_ABSOLUTE = 0x0002_C000,
+    IMAGE_HOT_PATCH_REL32 = 0x0003_C000,
+    IMAGE_HOT_PATCH_CALL_TARGET = 0x0004_4000,
+    IMAGE_HOT_PATCH_INDIRECT = 0x0005_C000,
+    IMAGE_HOT_PATCH_NO_CALL_TARGET = 0x0006_4000,
+    IMAGE_HOT_PATCH_DYNAMIC_VALUE = 0x0007_8000,
+});
 
-/// Module performs control flow integrity checks using system-supplied support
-pub const IMAGE_GUARD_CF_INSTRUMENTED: u32 = 0x0000_0100;
-/// Module performs control flow and write integrity checks
-pub const IMAGE_GUARD_CFW_INSTRUMENTED: u32 = 0x0000_0200;
-/// Module contains valid control flow target metadata
-pub const IMAGE_GUARD_CF_FUNCTION_TABLE_PRESENT: u32 = 0x0000_0400;
-/// Module does not make use of the /GS security cookie
-pub const IMAGE_GUARD_SECURITY_COOKIE_UNUSED: u32 = 0x0000_0800;
-/// Module supports read only delay load IAT
-pub const IMAGE_GUARD_PROTECT_DELAYLOAD_IAT: u32 = 0x0000_1000;
-/// Delayload import table in its own .didat section (with nothing else in it) that can be freely reprotected
-pub const IMAGE_GUARD_DELAYLOAD_IAT_IN_ITS_OWN_SECTION: u32 = 0x0000_2000;
-/// Module contains suppressed export information.
-///
-/// This also infers that the address taken taken IAT table is also present in the load config.
-pub const IMAGE_GUARD_CF_EXPORT_SUPPRESSION_INFO_PRESENT: u32 = 0x0000_4000;
-/// Module enables suppression of exports
-pub const IMAGE_GUARD_CF_ENABLE_EXPORT_SUPPRESSION: u32 = 0x0000_8000;
-/// Module contains longjmp target information
-pub const IMAGE_GUARD_CF_LONGJUMP_TABLE_PRESENT: u32 = 0x0001_0000;
-/// Module contains return flow instrumentation and metadata
-pub const IMAGE_GUARD_RF_INSTRUMENTED: u32 = 0x0002_0000;
-/// Module requests that the OS enable return flow protection
-pub const IMAGE_GUARD_RF_ENABLE: u32 = 0x0004_0000;
-/// Module requests that the OS enable return flow protection in strict mode
-pub const IMAGE_GUARD_RF_STRICT: u32 = 0x0008_0000;
-/// Module was built with retpoline support
-pub const IMAGE_GUARD_RETPOLINE_PRESENT: u32 = 0x0010_0000;
+newtype!(
+    /// Values for `ImageLoadConfigDirectory*::guard_flags`.
+    struct GuardFlags(u32);
+);
+
+newtype_flag_names!(NAMES_GUARD: GuardFlags(u32) = {
+    /// Module performs control flow integrity checks using system-supplied support
+    IMAGE_GUARD_CF_INSTRUMENTED = 0x0000_0100,
+    /// Module performs control flow and write integrity checks
+    IMAGE_GUARD_CFW_INSTRUMENTED = 0x0000_0200,
+    /// Module contains valid control flow target metadata
+    IMAGE_GUARD_CF_FUNCTION_TABLE_PRESENT = 0x0000_0400,
+    /// Module does not make use of the /GS security cookie
+    IMAGE_GUARD_SECURITY_COOKIE_UNUSED = 0x0000_0800,
+    /// Module supports read only delay load IAT
+    IMAGE_GUARD_PROTECT_DELAYLOAD_IAT = 0x0000_1000,
+    /// Delayload import table in its own .didat section (with nothing else in it) that can be freely reprotected
+    IMAGE_GUARD_DELAYLOAD_IAT_IN_ITS_OWN_SECTION = 0x0000_2000,
+    /// Module contains suppressed export information.
+    ///
+    /// This also infers that the address taken taken IAT table is also present in the load config.
+    IMAGE_GUARD_CF_EXPORT_SUPPRESSION_INFO_PRESENT = 0x0000_4000,
+    /// Module enables suppression of exports
+    IMAGE_GUARD_CF_ENABLE_EXPORT_SUPPRESSION = 0x0000_8000,
+    /// Module contains longjmp target information
+    IMAGE_GUARD_CF_LONGJUMP_TABLE_PRESENT = 0x0001_0000,
+    /// Module contains return flow instrumentation and metadata
+    IMAGE_GUARD_RF_INSTRUMENTED = 0x0002_0000,
+    /// Module requests that the OS enable return flow protection
+    IMAGE_GUARD_RF_ENABLE = 0x0004_0000,
+    /// Module requests that the OS enable return flow protection in strict mode
+    IMAGE_GUARD_RF_STRICT = 0x0008_0000,
+    /// Module was built with retpoline support
+    IMAGE_GUARD_RETPOLINE_PRESENT = 0x0010_0000,
+});
 
 /// Stride of Guard CF function table encoded in these bits (additional count of bytes per element)
 pub const IMAGE_GUARD_CF_FUNCTION_TABLE_SIZE_MASK: u32 = 0xF000_0000;
@@ -2693,10 +2888,17 @@ pub const IMAGE_GUARD_CF_FUNCTION_TABLE_SIZE_SHIFT: u32 = 28;
 // GFIDS table entry flags.
 //
 
-/// The containing GFID entry is suppressed
-pub const IMAGE_GUARD_FLAG_FID_SUPPRESSED: u16 = 0x01;
-/// The containing GFID entry is export suppressed
-pub const IMAGE_GUARD_FLAG_EXPORT_SUPPRESSED: u16 = 0x02;
+newtype!(
+    /// Values for flags in the Guard CF function table entries.
+    struct GuardFunctionFlags(u16);
+);
+
+newtype_flag_names!(NAMES_GUARD_FLAG: GuardFunctionFlags(u16) = {
+    /// The containing GFID entry is suppressed
+    IMAGE_GUARD_FLAG_FID_SUPPRESSED = 0x01,
+    /// The containing GFID entry is export suppressed
+    IMAGE_GUARD_FLAG_EXPORT_SUPPRESSED = 0x02,
+});
 
 //
 // WIN CE Exception table format
@@ -2774,7 +2976,7 @@ pub const IMAGE_ENCLAVE_SHORT_ID_LENGTH: usize = 16;
 pub struct ImageEnclaveConfig32 {
     pub size: U32<LE>,
     pub minimum_required_config_size: U32<LE>,
-    pub policy_flags: U32<LE>,
+    pub policy_flags: U32<LE, EnclavePolicyFlags>,
     pub number_of_imports: U32<LE>,
     pub import_list: U32<LE>,
     pub import_entry_size: U32<LE>,
@@ -2784,7 +2986,7 @@ pub struct ImageEnclaveConfig32 {
     pub security_version: U32<LE>,
     pub enclave_size: U32<LE>,
     pub number_of_threads: U32<LE>,
-    pub enclave_flags: U32<LE>,
+    pub enclave_flags: U32<LE, EnclaveFlags>,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -2792,7 +2994,7 @@ pub struct ImageEnclaveConfig32 {
 pub struct ImageEnclaveConfig64 {
     pub size: U32<LE>,
     pub minimum_required_config_size: U32<LE>,
-    pub policy_flags: U32<LE>,
+    pub policy_flags: U32<LE, EnclavePolicyFlags>,
     pub number_of_imports: U32<LE>,
     pub import_list: U32<LE>,
     pub import_entry_size: U32<LE>,
@@ -2802,19 +3004,29 @@ pub struct ImageEnclaveConfig64 {
     pub security_version: U32<LE>,
     pub enclave_size: U64<LE>,
     pub number_of_threads: U32<LE>,
-    pub enclave_flags: U32<LE>,
+    pub enclave_flags: U32<LE, EnclaveFlags>,
 }
 
 //pub const IMAGE_ENCLAVE_MINIMUM_CONFIG_SIZE: usize = FIELD_OFFSET(IMAGE_ENCLAVE_CONFIG, EnclaveFlags);
 
-pub const IMAGE_ENCLAVE_POLICY_DEBUGGABLE: u32 = 0x0000_0001;
+newtype!(
+    struct EnclavePolicyFlags(u32);
+);
+newtype_flag_names!(NAMES_IMAGE_ENCLAVE_POLICY: EnclavePolicyFlags(u32) = {
+    IMAGE_ENCLAVE_POLICY_DEBUGGABLE = 0x0000_0001,
+});
 
-pub const IMAGE_ENCLAVE_FLAG_PRIMARY_IMAGE: u32 = 0x0000_0001;
+newtype!(
+    struct EnclaveFlags(u32);
+);
+newtype_flag_names!(NAMES_IMAGE_ENCLAVE_FLAG: EnclaveFlags(u32) = {
+    IMAGE_ENCLAVE_FLAG_PRIMARY_IMAGE = 0x0000_0001,
+});
 
 #[derive(Debug, Clone, Copy)]
 #[repr(C)]
 pub struct ImageEnclaveImport {
-    pub match_type: U32<LE>,
+    pub match_type: U32<LE, EnclaveImportMatchType>,
     pub minimum_security_version: U32<LE>,
     pub unique_or_author_id: [u8; IMAGE_ENCLAVE_LONG_ID_LENGTH],
     pub family_id: [u8; IMAGE_ENCLAVE_SHORT_ID_LENGTH],
@@ -2823,11 +3035,17 @@ pub struct ImageEnclaveImport {
     pub reserved: U32<LE>,
 }
 
-pub const IMAGE_ENCLAVE_IMPORT_MATCH_NONE: u32 = 0x0000_0000;
-pub const IMAGE_ENCLAVE_IMPORT_MATCH_UNIQUE_ID: u32 = 0x0000_0001;
-pub const IMAGE_ENCLAVE_IMPORT_MATCH_AUTHOR_ID: u32 = 0x0000_0002;
-pub const IMAGE_ENCLAVE_IMPORT_MATCH_FAMILY_ID: u32 = 0x0000_0003;
-pub const IMAGE_ENCLAVE_IMPORT_MATCH_IMAGE_ID: u32 = 0x0000_0004;
+newtype!(
+    /// Values for `ImageEnclaveImport::match_type`.
+    struct EnclaveImportMatchType(u32);
+);
+newtype_constant_names!(NAMES_ENCLAVE_IMPORT_MATCH: EnclaveImportMatchType(u32) = {
+    IMAGE_ENCLAVE_IMPORT_MATCH_NONE = 0x0000_0000,
+    IMAGE_ENCLAVE_IMPORT_MATCH_UNIQUE_ID = 0x0000_0001,
+    IMAGE_ENCLAVE_IMPORT_MATCH_AUTHOR_ID = 0x0000_0002,
+    IMAGE_ENCLAVE_IMPORT_MATCH_FAMILY_ID = 0x0000_0003,
+    IMAGE_ENCLAVE_IMPORT_MATCH_IMAGE_ID = 0x0000_0004,
+});
 
 //
 // Debug Format
@@ -2840,29 +3058,36 @@ pub struct ImageDebugDirectory {
     pub time_date_stamp: U32<LE>,
     pub major_version: U16<LE>,
     pub minor_version: U16<LE>,
-    pub typ: U32<LE>,
+    pub typ: U32<LE, DebugType>,
     pub size_of_data: U32<LE>,
     pub address_of_raw_data: U32<LE>,
     pub pointer_to_raw_data: U32<LE>,
 }
 
-pub const IMAGE_DEBUG_TYPE_UNKNOWN: u32 = 0;
-pub const IMAGE_DEBUG_TYPE_COFF: u32 = 1;
-pub const IMAGE_DEBUG_TYPE_CODEVIEW: u32 = 2;
-pub const IMAGE_DEBUG_TYPE_FPO: u32 = 3;
-pub const IMAGE_DEBUG_TYPE_MISC: u32 = 4;
-pub const IMAGE_DEBUG_TYPE_EXCEPTION: u32 = 5;
-pub const IMAGE_DEBUG_TYPE_FIXUP: u32 = 6;
-pub const IMAGE_DEBUG_TYPE_OMAP_TO_SRC: u32 = 7;
-pub const IMAGE_DEBUG_TYPE_OMAP_FROM_SRC: u32 = 8;
-pub const IMAGE_DEBUG_TYPE_BORLAND: u32 = 9;
-pub const IMAGE_DEBUG_TYPE_RESERVED10: u32 = 10;
-pub const IMAGE_DEBUG_TYPE_CLSID: u32 = 11;
-pub const IMAGE_DEBUG_TYPE_VC_FEATURE: u32 = 12;
-pub const IMAGE_DEBUG_TYPE_POGO: u32 = 13;
-pub const IMAGE_DEBUG_TYPE_ILTCG: u32 = 14;
-pub const IMAGE_DEBUG_TYPE_MPX: u32 = 15;
-pub const IMAGE_DEBUG_TYPE_REPRO: u32 = 16;
+newtype!(
+    /// Values for `ImageDebugDirectory::typ`.
+    struct DebugType(u32);
+);
+
+newtype_constant_names!(NAMES_DEBUG_TYPE: DebugType(u32) = {
+    IMAGE_DEBUG_TYPE_UNKNOWN = 0,
+    IMAGE_DEBUG_TYPE_COFF = 1,
+    IMAGE_DEBUG_TYPE_CODEVIEW = 2,
+    IMAGE_DEBUG_TYPE_FPO = 3,
+    IMAGE_DEBUG_TYPE_MISC = 4,
+    IMAGE_DEBUG_TYPE_EXCEPTION = 5,
+    IMAGE_DEBUG_TYPE_FIXUP = 6,
+    IMAGE_DEBUG_TYPE_OMAP_TO_SRC = 7,
+    IMAGE_DEBUG_TYPE_OMAP_FROM_SRC = 8,
+    IMAGE_DEBUG_TYPE_BORLAND = 9,
+    IMAGE_DEBUG_TYPE_RESERVED10 = 10,
+    IMAGE_DEBUG_TYPE_CLSID = 11,
+    IMAGE_DEBUG_TYPE_VC_FEATURE = 12,
+    IMAGE_DEBUG_TYPE_POGO = 13,
+    IMAGE_DEBUG_TYPE_ILTCG = 14,
+    IMAGE_DEBUG_TYPE_MPX = 15,
+    IMAGE_DEBUG_TYPE_REPRO = 16,
+});
 
 #[derive(Debug, Clone, Copy)]
 #[repr(C)]
@@ -2877,10 +3102,16 @@ pub struct ImageCoffSymbolsHeader {
     pub rva_to_last_byte_of_data: U32<LE>,
 }
 
-pub const FRAME_FPO: u16 = 0;
-pub const FRAME_TRAP: u16 = 1;
-pub const FRAME_TSS: u16 = 2;
-pub const FRAME_NONFPO: u16 = 3;
+newtype!(
+    /// Values for `FpoData::cbFrame`.
+    struct FrameType(u8);
+);
+newtype_constant_names!(NAMES_FRAME: FrameType(u8) = {
+    FRAME_FPO = 0,
+    FRAME_TRAP = 1,
+    FRAME_TSS = 2,
+    FRAME_NONFPO = 3,
+});
 
 /*
 // TODO? bitfields
@@ -2974,7 +3205,7 @@ pub struct ImageFunctionEntry64 {
 pub struct ImageSeparateDebugHeader {
     pub signature: U16<LE>,
     pub flags: U16<LE>,
-    pub machine: U16<LE>,
+    pub machine: U16<LE, Machine>,
     pub characteristics: U16<LE>,
     pub time_date_stamp: U32<LE>,
     pub check_sum: U32<LE>,
@@ -2993,7 +3224,7 @@ pub struct NonPagedDebugInfo {
     pub signature: U16<LE>,
     pub flags: U16<LE>,
     pub size: U32<LE>,
-    pub machine: U16<LE>,
+    pub machine: U16<LE, Machine>,
     pub characteristics: U16<LE>,
     pub time_date_stamp: U32<LE>,
     pub check_sum: U32<LE>,
@@ -3057,11 +3288,11 @@ pub const IMPORT_OBJECT_HDR_SIG2: u16 = 0xffff;
 #[repr(C)]
 pub struct ImportObjectHeader {
     /// Must be IMAGE_FILE_MACHINE_UNKNOWN
-    pub sig1: U16<LE>,
+    pub sig1: U16<LE, Machine>,
     /// Must be IMPORT_OBJECT_HDR_SIG2.
     pub sig2: U16<LE>,
     pub version: U16<LE>,
-    pub machine: U16<LE>,
+    pub machine: U16<LE, Machine>,
     /// Time/date stamp
     pub time_date_stamp: U32<LE>,
     /// particularly useful for incremental links
@@ -3073,36 +3304,110 @@ pub struct ImportObjectHeader {
     // WORD    Type : 2;
     // WORD    NameType : 3;
     // WORD    Reserved : 11;
-    pub name_type: U16<LE>,
+    pub name_type: U16<LE, ImportObjectFlags>,
+}
+
+newtype!(
+    /// Values for `ImportObjectHeader::name_type`.
+    struct ImportObjectFlags(u16);
+);
+
+newtype_flag_names!(NAMES_IMPORT_OBJECT: ImportObjectFlags(u16) = {
+    _ = IMPORT_OBJECT_TYPE_MASK << IMPORT_OBJECT_TYPE_SHIFT => NAMES_IMPORT_OBJECT_TYPE,
+    _ = IMPORT_OBJECT_NAME_MASK << IMPORT_OBJECT_NAME_SHIFT => NAMES_IMPORT_OBJECT_NAME,
+});
+
+impl ImportObjectFlags {
+    /// Construct the flags from its subfields.
+    pub fn new(import_type: ImportObjectType, name_type: ImportObjectNameType) -> Self {
+        ImportObjectFlags(
+            ImportObjectFlags::from(import_type).0 | ImportObjectFlags::from(name_type).0,
+        )
+    }
+
+    /// Return the import type field.
+    pub fn import_type(self) -> ImportObjectType {
+        ImportObjectType(self.0 & IMPORT_OBJECT_TYPE_MASK)
+    }
+
+    /// Return the name type field.
+    pub fn name_type(self) -> ImportObjectNameType {
+        ImportObjectNameType((self.0 >> IMPORT_OBJECT_NAME_SHIFT) & IMPORT_OBJECT_NAME_MASK)
+    }
+}
+
+newtype!(
+    /// Values for the import type subfield of `ImportObjectHeader::name_type`.
+    struct ImportObjectType(u16);
+);
+
+impl From<ImportObjectType> for ImportObjectFlags {
+    fn from(import_type: ImportObjectType) -> Self {
+        ImportObjectFlags(import_type.0 & IMPORT_OBJECT_TYPE_MASK)
+    }
+}
+
+impl From<ImportObjectFlags> for ImportObjectType {
+    fn from(value: ImportObjectFlags) -> Self {
+        value.import_type()
+    }
 }
 
 pub const IMPORT_OBJECT_TYPE_MASK: u16 = 0b11;
 pub const IMPORT_OBJECT_TYPE_SHIFT: u16 = 0;
-pub const IMPORT_OBJECT_CODE: u16 = 0;
-pub const IMPORT_OBJECT_DATA: u16 = 1;
-pub const IMPORT_OBJECT_CONST: u16 = 2;
+
+newtype_constant_names!(NAMES_IMPORT_OBJECT_TYPE: ImportObjectType(u16) = {
+    IMPORT_OBJECT_CODE = 0,
+    IMPORT_OBJECT_DATA = 1,
+    IMPORT_OBJECT_CONST = 2,
+});
+
+newtype!(
+    /// Values for the name type subfield of `ImportObjectHeader::name_type`.
+    struct ImportObjectNameType(u16);
+);
+
+impl From<ImportObjectNameType> for ImportObjectFlags {
+    fn from(name_type: ImportObjectNameType) -> Self {
+        ImportObjectFlags((name_type.0 & IMPORT_OBJECT_NAME_MASK) << IMPORT_OBJECT_NAME_SHIFT)
+    }
+}
+
+impl From<ImportObjectFlags> for ImportObjectNameType {
+    fn from(value: ImportObjectFlags) -> Self {
+        value.name_type()
+    }
+}
 
 pub const IMPORT_OBJECT_NAME_MASK: u16 = 0b111;
 pub const IMPORT_OBJECT_NAME_SHIFT: u16 = 2;
-/// Import by ordinal
-pub const IMPORT_OBJECT_ORDINAL: u16 = 0;
-/// Import name == public symbol name.
-pub const IMPORT_OBJECT_NAME: u16 = 1;
-/// Import name == public symbol name skipping leading ?, @, or optionally _.
-pub const IMPORT_OBJECT_NAME_NO_PREFIX: u16 = 2;
-/// Import name == public symbol name skipping leading ?, @, or optionally _ and truncating at first @.
-pub const IMPORT_OBJECT_NAME_UNDECORATE: u16 = 3;
-/// Import name == a name is explicitly provided after the DLL name.
-pub const IMPORT_OBJECT_NAME_EXPORTAS: u16 = 4;
 
-// COM+ Header entry point flags.
-pub const COMIMAGE_FLAGS_ILONLY: u32 = 0x0000_0001;
-pub const COMIMAGE_FLAGS_32BITREQUIRED: u32 = 0x0000_0002;
-pub const COMIMAGE_FLAGS_IL_LIBRARY: u32 = 0x0000_0004;
-pub const COMIMAGE_FLAGS_STRONGNAMESIGNED: u32 = 0x0000_0008;
-pub const COMIMAGE_FLAGS_NATIVE_ENTRYPOINT: u32 = 0x0000_0010;
-pub const COMIMAGE_FLAGS_TRACKDEBUGDATA: u32 = 0x0001_0000;
-pub const COMIMAGE_FLAGS_32BITPREFERRED: u32 = 0x0002_0000;
+newtype_constant_names!(NAMES_IMPORT_OBJECT_NAME: ImportObjectNameType(u16) = {
+    /// Import by ordinal
+    IMPORT_OBJECT_ORDINAL = 0,
+    /// Import name == public symbol name.
+    IMPORT_OBJECT_NAME = 1,
+    /// Import name == public symbol name skipping leading ?, @, or optionally _.
+    IMPORT_OBJECT_NAME_NO_PREFIX = 2,
+    /// Import name == public symbol name skipping leading ?, @, or optionally _ and truncating at first @.
+    IMPORT_OBJECT_NAME_UNDECORATE = 3,
+    /// Import name == a name is explicitly provided after the DLL name.
+    IMPORT_OBJECT_NAME_EXPORTAS = 4,
+});
+
+newtype!(
+    /// Values for `ImageCor20Header::flags`.
+    struct CorFlags(u32);
+);
+newtype_flag_names!(NAMES_COMIMAGE_FLAGS: CorFlags(u32) = {
+    COMIMAGE_FLAGS_ILONLY = 0x0000_0001,
+    COMIMAGE_FLAGS_32BITREQUIRED = 0x0000_0002,
+    COMIMAGE_FLAGS_IL_LIBRARY = 0x0000_0004,
+    COMIMAGE_FLAGS_STRONGNAMESIGNED = 0x0000_0008,
+    COMIMAGE_FLAGS_NATIVE_ENTRYPOINT = 0x0000_0010,
+    COMIMAGE_FLAGS_TRACKDEBUGDATA = 0x0001_0000,
+    COMIMAGE_FLAGS_32BITPREFERRED = 0x0002_0000,
+});
 
 // Version flags for image.
 pub const COR_VERSION_MAJOR_V2: u16 = 2;
@@ -3121,16 +3426,21 @@ pub const IMAGE_COR_MIH_EHRVA: u16 = 0x02;
 pub const IMAGE_COR_MIH_BASICBLOCK: u16 = 0x08;
 
 // V-table constants
-/// V-table slots are 32-bits in size.
-pub const COR_VTABLE_32BIT: u16 = 0x01;
-/// V-table slots are 64-bits in size.
-pub const COR_VTABLE_64BIT: u16 = 0x02;
-/// If set, transition from unmanaged.
-pub const COR_VTABLE_FROM_UNMANAGED: u16 = 0x04;
-/// If set, transition from unmanaged with keeping the current appdomain.
-pub const COR_VTABLE_FROM_UNMANAGED_RETAIN_APPDOMAIN: u16 = 0x08;
-/// Call most derived method described by
-pub const COR_VTABLE_CALL_MOST_DERIVED: u16 = 0x10;
+newtype!(
+    struct CorVtableFlags(u16);
+);
+newtype_flag_names!(NAMES_COR_VTABLE: CorVtableFlags(u16) = {
+    /// V-table slots are 32-bits in size.
+    COR_VTABLE_32BIT = 0x01,
+    /// V-table slots are 64-bits in size.
+    COR_VTABLE_64BIT = 0x02,
+    /// If set, transition from unmanaged.
+    COR_VTABLE_FROM_UNMANAGED = 0x04,
+    /// If set, transition from unmanaged with keeping the current appdomain.
+    COR_VTABLE_FROM_UNMANAGED_RETAIN_APPDOMAIN = 0x08,
+    /// Call most derived method described by
+    COR_VTABLE_CALL_MOST_DERIVED = 0x10,
+});
 
 // EATJ constants
 /// Size of a jump thunk reserved range.
@@ -3151,7 +3461,7 @@ pub struct ImageCor20Header {
 
     // Symbol table and startup information
     pub meta_data: ImageDataDirectory,
-    pub flags: U32<LE>,
+    pub flags: U32<LE, CorFlags>,
 
     // If COMIMAGE_FLAGS_NATIVE_ENTRYPOINT is not set, EntryPointToken represents a managed entrypoint.
     // If COMIMAGE_FLAGS_NATIVE_ENTRYPOINT is set, EntryPointRVA represents an RVA to a native entrypoint.

@@ -42,13 +42,13 @@ Entry Address: 0
 Segment { name: ".debug$S", address: 0, size: 0, permissions: R-- }
 Segment { name: ".idata$5", address: 0, size: 0, permissions: RW- }
 Segment { name: ".idata$4", address: 0, size: 0, permissions: RW- }
-1: Section { name: ".debug$S", address: 0, size: 42, align: 1, kind: Other, flags: Coff { characteristics: 42100040 } }
-2: Section { name: ".idata$5", address: 0, size: 8, align: 8, kind: Data, flags: Coff { characteristics: c0400040 } }
-3: Section { name: ".idata$4", address: 0, size: 8, align: 8, kind: Data, flags: Coff { characteristics: c0400040 } }
+1: Section { name: ".debug$S", address: 0, size: 42, align: 1, kind: Other, flags: Coff { characteristics: IMAGE_SCN_ALIGN_1BYTES | IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_DISCARDABLE | IMAGE_SCN_MEM_READ } }
+2: Section { name: ".idata$5", address: 0, size: 8, align: 8, kind: Data, flags: Coff { characteristics: IMAGE_SCN_ALIGN_8BYTES | IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_READ | IMAGE_SCN_MEM_WRITE } }
+3: Section { name: ".idata$4", address: 0, size: 8, align: 8, kind: Data, flags: Coff { characteristics: IMAGE_SCN_ALIGN_8BYTES | IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_READ | IMAGE_SCN_MEM_WRITE } }
 
 Symbols
-0: Symbol { name: "@comp.id", address: 0, size: 0, kind: Data, section: Absolute, scope: Compilation, weak: false, flags: Coff { typ: 0, storage_class: 3 } }
-1: Symbol { name: "\u{7f}test_x64_NULL_THUNK_DATA", address: 0, size: 0, kind: Data, section: Section(SectionIndex(2)), scope: Linkage, weak: false, flags: Coff { typ: 0, storage_class: 2 } }
+0: Symbol { name: "@comp.id", address: 0, size: 0, kind: Data, section: Absolute, scope: Compilation, weak: false, flags: Coff { typ: 0, storage_class: IMAGE_SYM_CLASS_STATIC } }
+1: Symbol { name: "\u{7f}test_x64_NULL_THUNK_DATA", address: 0, size: 0, kind: Data, section: Section(SectionIndex(2)), scope: Linkage, weak: false, flags: Coff { typ: 0, storage_class: IMAGE_SYM_CLASS_EXTERNAL } }
 
 Dynamic symbols
 
@@ -64,12 +64,12 @@ Relative Address Base: 0
 Entry Address: 0
 Segment { name: ".debug$S", address: 0, size: 0, permissions: R-- }
 Segment { name: ".idata$3", address: 0, size: 0, permissions: RW- }
-1: Section { name: ".debug$S", address: 0, size: 42, align: 1, kind: Other, flags: Coff { characteristics: 42100040 } }
-2: Section { name: ".idata$3", address: 0, size: 14, align: 4, kind: Data, flags: Coff { characteristics: c0300040 } }
+1: Section { name: ".debug$S", address: 0, size: 42, align: 1, kind: Other, flags: Coff { characteristics: IMAGE_SCN_ALIGN_1BYTES | IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_DISCARDABLE | IMAGE_SCN_MEM_READ } }
+2: Section { name: ".idata$3", address: 0, size: 14, align: 4, kind: Data, flags: Coff { characteristics: IMAGE_SCN_ALIGN_4BYTES | IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_READ | IMAGE_SCN_MEM_WRITE } }
 
 Symbols
-0: Symbol { name: "@comp.id", address: 0, size: 0, kind: Data, section: Absolute, scope: Compilation, weak: false, flags: Coff { typ: 0, storage_class: 3 } }
-1: Symbol { name: "__NULL_IMPORT_DESCRIPTOR", address: 0, size: 0, kind: Data, section: Section(SectionIndex(2)), scope: Linkage, weak: false, flags: Coff { typ: 0, storage_class: 2 } }
+0: Symbol { name: "@comp.id", address: 0, size: 0, kind: Data, section: Absolute, scope: Compilation, weak: false, flags: Coff { typ: 0, storage_class: IMAGE_SYM_CLASS_STATIC } }
+1: Symbol { name: "__NULL_IMPORT_DESCRIPTOR", address: 0, size: 0, kind: Data, section: Section(SectionIndex(2)), scope: Linkage, weak: false, flags: Coff { typ: 0, storage_class: IMAGE_SYM_CLASS_EXTERNAL } }
 
 Dynamic symbols
 
@@ -86,19 +86,19 @@ Entry Address: 0
 Segment { name: ".debug$S", address: 0, size: 0, permissions: R-- }
 Segment { name: ".idata$2", address: 0, size: 0, permissions: RW- }
 Segment { name: ".idata$6", address: 0, size: 0, permissions: RW- }
-1: Section { name: ".debug$S", address: 0, size: 42, align: 1, kind: Other, flags: Coff { characteristics: 42100040 } }
-2: Section { name: ".idata$2", address: 0, size: 14, align: 4, kind: Data, flags: Coff { characteristics: c0300040 } }
-3: Section { name: ".idata$6", address: 0, size: e, align: 2, kind: Data, flags: Coff { characteristics: c0200040 } }
+1: Section { name: ".debug$S", address: 0, size: 42, align: 1, kind: Other, flags: Coff { characteristics: IMAGE_SCN_ALIGN_1BYTES | IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_DISCARDABLE | IMAGE_SCN_MEM_READ } }
+2: Section { name: ".idata$2", address: 0, size: 14, align: 4, kind: Data, flags: Coff { characteristics: IMAGE_SCN_ALIGN_4BYTES | IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_READ | IMAGE_SCN_MEM_WRITE } }
+3: Section { name: ".idata$6", address: 0, size: e, align: 2, kind: Data, flags: Coff { characteristics: IMAGE_SCN_ALIGN_2BYTES | IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_READ | IMAGE_SCN_MEM_WRITE } }
 
 Symbols
-0: Symbol { name: "@comp.id", address: 0, size: 0, kind: Data, section: Absolute, scope: Compilation, weak: false, flags: Coff { typ: 0, storage_class: 3 } }
-1: Symbol { name: "__IMPORT_DESCRIPTOR_test_x64", address: 0, size: 0, kind: Data, section: Section(SectionIndex(2)), scope: Linkage, weak: false, flags: Coff { typ: 0, storage_class: 2 } }
-2: Symbol { name: ".idata$2", address: 0, size: 0, kind: Section, section: Section(SectionIndex(2)), scope: Compilation, weak: false, flags: Coff { typ: 0, storage_class: 68 } }
-3: Symbol { name: ".idata$6", address: 0, size: 0, kind: Data, section: Section(SectionIndex(3)), scope: Compilation, weak: false, flags: Coff { typ: 0, storage_class: 3 } }
-4: Symbol { name: ".idata$4", address: 0, size: 0, kind: Section, section: Undefined, scope: Compilation, weak: false, flags: Coff { typ: 0, storage_class: 68 } }
-5: Symbol { name: ".idata$5", address: 0, size: 0, kind: Section, section: Undefined, scope: Compilation, weak: false, flags: Coff { typ: 0, storage_class: 68 } }
-6: Symbol { name: "__NULL_IMPORT_DESCRIPTOR", address: 0, size: 0, kind: Data, section: Undefined, scope: Linkage, weak: false, flags: Coff { typ: 0, storage_class: 2 } }
-7: Symbol { name: "\u{7f}test_x64_NULL_THUNK_DATA", address: 0, size: 0, kind: Data, section: Undefined, scope: Linkage, weak: false, flags: Coff { typ: 0, storage_class: 2 } }
+0: Symbol { name: "@comp.id", address: 0, size: 0, kind: Data, section: Absolute, scope: Compilation, weak: false, flags: Coff { typ: 0, storage_class: IMAGE_SYM_CLASS_STATIC } }
+1: Symbol { name: "__IMPORT_DESCRIPTOR_test_x64", address: 0, size: 0, kind: Data, section: Section(SectionIndex(2)), scope: Linkage, weak: false, flags: Coff { typ: 0, storage_class: IMAGE_SYM_CLASS_EXTERNAL } }
+2: Symbol { name: ".idata$2", address: 0, size: 0, kind: Section, section: Section(SectionIndex(2)), scope: Compilation, weak: false, flags: Coff { typ: 0, storage_class: IMAGE_SYM_CLASS_SECTION } }
+3: Symbol { name: ".idata$6", address: 0, size: 0, kind: Data, section: Section(SectionIndex(3)), scope: Compilation, weak: false, flags: Coff { typ: 0, storage_class: IMAGE_SYM_CLASS_STATIC } }
+4: Symbol { name: ".idata$4", address: 0, size: 0, kind: Section, section: Undefined, scope: Compilation, weak: false, flags: Coff { typ: 0, storage_class: IMAGE_SYM_CLASS_SECTION } }
+5: Symbol { name: ".idata$5", address: 0, size: 0, kind: Section, section: Undefined, scope: Compilation, weak: false, flags: Coff { typ: 0, storage_class: IMAGE_SYM_CLASS_SECTION } }
+6: Symbol { name: "__NULL_IMPORT_DESCRIPTOR", address: 0, size: 0, kind: Data, section: Undefined, scope: Linkage, weak: false, flags: Coff { typ: 0, storage_class: IMAGE_SYM_CLASS_EXTERNAL } }
+7: Symbol { name: "\u{7f}test_x64_NULL_THUNK_DATA", address: 0, size: 0, kind: Data, section: Undefined, scope: Linkage, weak: false, flags: Coff { typ: 0, storage_class: IMAGE_SYM_CLASS_EXTERNAL } }
 
 .idata$2 relocations
 (c, Relocation { kind: ImageOffset, encoding: Generic, size: 20, target: Symbol(SymbolIndex(3)), addend: 0, implicit_addend: true, flags: Coff { typ: 3 } })
@@ -122,19 +122,19 @@ test_x86.dll:
 Format: Coff Little-endian 32-bit
 Kind: Relocatable
 Architecture: I386
-Flags: Coff { characteristics: 100 }
+Flags: Coff { characteristics: IMAGE_FILE_32BIT_MACHINE }
 Relative Address Base: 0
 Entry Address: 0
 Segment { name: ".debug$S", address: 0, size: 0, permissions: R-- }
 Segment { name: ".idata$5", address: 0, size: 0, permissions: RW- }
 Segment { name: ".idata$4", address: 0, size: 0, permissions: RW- }
-1: Section { name: ".debug$S", address: 0, size: 42, align: 1, kind: Other, flags: Coff { characteristics: 42100040 } }
-2: Section { name: ".idata$5", address: 0, size: 4, align: 4, kind: Data, flags: Coff { characteristics: c0300040 } }
-3: Section { name: ".idata$4", address: 0, size: 4, align: 4, kind: Data, flags: Coff { characteristics: c0300040 } }
+1: Section { name: ".debug$S", address: 0, size: 42, align: 1, kind: Other, flags: Coff { characteristics: IMAGE_SCN_ALIGN_1BYTES | IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_DISCARDABLE | IMAGE_SCN_MEM_READ } }
+2: Section { name: ".idata$5", address: 0, size: 4, align: 4, kind: Data, flags: Coff { characteristics: IMAGE_SCN_ALIGN_4BYTES | IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_READ | IMAGE_SCN_MEM_WRITE } }
+3: Section { name: ".idata$4", address: 0, size: 4, align: 4, kind: Data, flags: Coff { characteristics: IMAGE_SCN_ALIGN_4BYTES | IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_READ | IMAGE_SCN_MEM_WRITE } }
 
 Symbols
-0: Symbol { name: "@comp.id", address: 0, size: 0, kind: Data, section: Absolute, scope: Compilation, weak: false, flags: Coff { typ: 0, storage_class: 3 } }
-1: Symbol { name: "\u{7f}test_x86_NULL_THUNK_DATA", address: 0, size: 0, kind: Data, section: Section(SectionIndex(2)), scope: Linkage, weak: false, flags: Coff { typ: 0, storage_class: 2 } }
+0: Symbol { name: "@comp.id", address: 0, size: 0, kind: Data, section: Absolute, scope: Compilation, weak: false, flags: Coff { typ: 0, storage_class: IMAGE_SYM_CLASS_STATIC } }
+1: Symbol { name: "\u{7f}test_x86_NULL_THUNK_DATA", address: 0, size: 0, kind: Data, section: Section(SectionIndex(2)), scope: Linkage, weak: false, flags: Coff { typ: 0, storage_class: IMAGE_SYM_CLASS_EXTERNAL } }
 
 Dynamic symbols
 
@@ -145,17 +145,17 @@ test_x86.dll:
 Format: Coff Little-endian 32-bit
 Kind: Relocatable
 Architecture: I386
-Flags: Coff { characteristics: 100 }
+Flags: Coff { characteristics: IMAGE_FILE_32BIT_MACHINE }
 Relative Address Base: 0
 Entry Address: 0
 Segment { name: ".debug$S", address: 0, size: 0, permissions: R-- }
 Segment { name: ".idata$3", address: 0, size: 0, permissions: RW- }
-1: Section { name: ".debug$S", address: 0, size: 42, align: 1, kind: Other, flags: Coff { characteristics: 42100040 } }
-2: Section { name: ".idata$3", address: 0, size: 14, align: 4, kind: Data, flags: Coff { characteristics: c0300040 } }
+1: Section { name: ".debug$S", address: 0, size: 42, align: 1, kind: Other, flags: Coff { characteristics: IMAGE_SCN_ALIGN_1BYTES | IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_DISCARDABLE | IMAGE_SCN_MEM_READ } }
+2: Section { name: ".idata$3", address: 0, size: 14, align: 4, kind: Data, flags: Coff { characteristics: IMAGE_SCN_ALIGN_4BYTES | IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_READ | IMAGE_SCN_MEM_WRITE } }
 
 Symbols
-0: Symbol { name: "@comp.id", address: 0, size: 0, kind: Data, section: Absolute, scope: Compilation, weak: false, flags: Coff { typ: 0, storage_class: 3 } }
-1: Symbol { name: "__NULL_IMPORT_DESCRIPTOR", address: 0, size: 0, kind: Data, section: Section(SectionIndex(2)), scope: Linkage, weak: false, flags: Coff { typ: 0, storage_class: 2 } }
+0: Symbol { name: "@comp.id", address: 0, size: 0, kind: Data, section: Absolute, scope: Compilation, weak: false, flags: Coff { typ: 0, storage_class: IMAGE_SYM_CLASS_STATIC } }
+1: Symbol { name: "__NULL_IMPORT_DESCRIPTOR", address: 0, size: 0, kind: Data, section: Section(SectionIndex(2)), scope: Linkage, weak: false, flags: Coff { typ: 0, storage_class: IMAGE_SYM_CLASS_EXTERNAL } }
 
 Dynamic symbols
 
@@ -166,25 +166,25 @@ test_x86.dll:
 Format: Coff Little-endian 32-bit
 Kind: Relocatable
 Architecture: I386
-Flags: Coff { characteristics: 100 }
+Flags: Coff { characteristics: IMAGE_FILE_32BIT_MACHINE }
 Relative Address Base: 0
 Entry Address: 0
 Segment { name: ".debug$S", address: 0, size: 0, permissions: R-- }
 Segment { name: ".idata$2", address: 0, size: 0, permissions: RW- }
 Segment { name: ".idata$6", address: 0, size: 0, permissions: RW- }
-1: Section { name: ".debug$S", address: 0, size: 42, align: 1, kind: Other, flags: Coff { characteristics: 42100040 } }
-2: Section { name: ".idata$2", address: 0, size: 14, align: 4, kind: Data, flags: Coff { characteristics: c0300040 } }
-3: Section { name: ".idata$6", address: 0, size: e, align: 2, kind: Data, flags: Coff { characteristics: c0200040 } }
+1: Section { name: ".debug$S", address: 0, size: 42, align: 1, kind: Other, flags: Coff { characteristics: IMAGE_SCN_ALIGN_1BYTES | IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_DISCARDABLE | IMAGE_SCN_MEM_READ } }
+2: Section { name: ".idata$2", address: 0, size: 14, align: 4, kind: Data, flags: Coff { characteristics: IMAGE_SCN_ALIGN_4BYTES | IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_READ | IMAGE_SCN_MEM_WRITE } }
+3: Section { name: ".idata$6", address: 0, size: e, align: 2, kind: Data, flags: Coff { characteristics: IMAGE_SCN_ALIGN_2BYTES | IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_READ | IMAGE_SCN_MEM_WRITE } }
 
 Symbols
-0: Symbol { name: "@comp.id", address: 0, size: 0, kind: Data, section: Absolute, scope: Compilation, weak: false, flags: Coff { typ: 0, storage_class: 3 } }
-1: Symbol { name: "__IMPORT_DESCRIPTOR_test_x86", address: 0, size: 0, kind: Data, section: Section(SectionIndex(2)), scope: Linkage, weak: false, flags: Coff { typ: 0, storage_class: 2 } }
-2: Symbol { name: ".idata$2", address: 0, size: 0, kind: Section, section: Section(SectionIndex(2)), scope: Compilation, weak: false, flags: Coff { typ: 0, storage_class: 68 } }
-3: Symbol { name: ".idata$6", address: 0, size: 0, kind: Data, section: Section(SectionIndex(3)), scope: Compilation, weak: false, flags: Coff { typ: 0, storage_class: 3 } }
-4: Symbol { name: ".idata$4", address: 0, size: 0, kind: Section, section: Undefined, scope: Compilation, weak: false, flags: Coff { typ: 0, storage_class: 68 } }
-5: Symbol { name: ".idata$5", address: 0, size: 0, kind: Section, section: Undefined, scope: Compilation, weak: false, flags: Coff { typ: 0, storage_class: 68 } }
-6: Symbol { name: "__NULL_IMPORT_DESCRIPTOR", address: 0, size: 0, kind: Data, section: Undefined, scope: Linkage, weak: false, flags: Coff { typ: 0, storage_class: 2 } }
-7: Symbol { name: "\u{7f}test_x86_NULL_THUNK_DATA", address: 0, size: 0, kind: Data, section: Undefined, scope: Linkage, weak: false, flags: Coff { typ: 0, storage_class: 2 } }
+0: Symbol { name: "@comp.id", address: 0, size: 0, kind: Data, section: Absolute, scope: Compilation, weak: false, flags: Coff { typ: 0, storage_class: IMAGE_SYM_CLASS_STATIC } }
+1: Symbol { name: "__IMPORT_DESCRIPTOR_test_x86", address: 0, size: 0, kind: Data, section: Section(SectionIndex(2)), scope: Linkage, weak: false, flags: Coff { typ: 0, storage_class: IMAGE_SYM_CLASS_EXTERNAL } }
+2: Symbol { name: ".idata$2", address: 0, size: 0, kind: Section, section: Section(SectionIndex(2)), scope: Compilation, weak: false, flags: Coff { typ: 0, storage_class: IMAGE_SYM_CLASS_SECTION } }
+3: Symbol { name: ".idata$6", address: 0, size: 0, kind: Data, section: Section(SectionIndex(3)), scope: Compilation, weak: false, flags: Coff { typ: 0, storage_class: IMAGE_SYM_CLASS_STATIC } }
+4: Symbol { name: ".idata$4", address: 0, size: 0, kind: Section, section: Undefined, scope: Compilation, weak: false, flags: Coff { typ: 0, storage_class: IMAGE_SYM_CLASS_SECTION } }
+5: Symbol { name: ".idata$5", address: 0, size: 0, kind: Section, section: Undefined, scope: Compilation, weak: false, flags: Coff { typ: 0, storage_class: IMAGE_SYM_CLASS_SECTION } }
+6: Symbol { name: "__NULL_IMPORT_DESCRIPTOR", address: 0, size: 0, kind: Data, section: Undefined, scope: Linkage, weak: false, flags: Coff { typ: 0, storage_class: IMAGE_SYM_CLASS_EXTERNAL } }
+7: Symbol { name: "\u{7f}test_x86_NULL_THUNK_DATA", address: 0, size: 0, kind: Data, section: Undefined, scope: Linkage, weak: false, flags: Coff { typ: 0, storage_class: IMAGE_SYM_CLASS_EXTERNAL } }
 
 .idata$2 relocations
 (c, Relocation { kind: ImageOffset, encoding: Generic, size: 20, target: Symbol(SymbolIndex(3)), addend: 0, implicit_addend: true, flags: Coff { typ: 7 } })
@@ -215,13 +215,13 @@ Entry Address: 0
 Segment { name: ".debug$S", address: 0, size: 0, permissions: R-- }
 Segment { name: ".idata$5", address: 0, size: 0, permissions: RW- }
 Segment { name: ".idata$4", address: 0, size: 0, permissions: RW- }
-1: Section { name: ".debug$S", address: 0, size: 46, align: 1, kind: Other, flags: Coff { characteristics: 42100040 } }
-2: Section { name: ".idata$5", address: 0, size: 8, align: 8, kind: Data, flags: Coff { characteristics: c0400040 } }
-3: Section { name: ".idata$4", address: 0, size: 8, align: 8, kind: Data, flags: Coff { characteristics: c0400040 } }
+1: Section { name: ".debug$S", address: 0, size: 46, align: 1, kind: Other, flags: Coff { characteristics: IMAGE_SCN_ALIGN_1BYTES | IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_DISCARDABLE | IMAGE_SCN_MEM_READ } }
+2: Section { name: ".idata$5", address: 0, size: 8, align: 8, kind: Data, flags: Coff { characteristics: IMAGE_SCN_ALIGN_8BYTES | IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_READ | IMAGE_SCN_MEM_WRITE } }
+3: Section { name: ".idata$4", address: 0, size: 8, align: 8, kind: Data, flags: Coff { characteristics: IMAGE_SCN_ALIGN_8BYTES | IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_READ | IMAGE_SCN_MEM_WRITE } }
 
 Symbols
-0: Symbol { name: "@comp.id", address: 0, size: 0, kind: Data, section: Absolute, scope: Compilation, weak: false, flags: Coff { typ: 0, storage_class: 3 } }
-1: Symbol { name: "\u{7f}test_arm64ec_NULL_THUNK_DATA", address: 0, size: 0, kind: Data, section: Section(SectionIndex(2)), scope: Linkage, weak: false, flags: Coff { typ: 0, storage_class: 2 } }
+0: Symbol { name: "@comp.id", address: 0, size: 0, kind: Data, section: Absolute, scope: Compilation, weak: false, flags: Coff { typ: 0, storage_class: IMAGE_SYM_CLASS_STATIC } }
+1: Symbol { name: "\u{7f}test_arm64ec_NULL_THUNK_DATA", address: 0, size: 0, kind: Data, section: Section(SectionIndex(2)), scope: Linkage, weak: false, flags: Coff { typ: 0, storage_class: IMAGE_SYM_CLASS_EXTERNAL } }
 
 Dynamic symbols
 
@@ -237,12 +237,12 @@ Relative Address Base: 0
 Entry Address: 0
 Segment { name: ".debug$S", address: 0, size: 0, permissions: R-- }
 Segment { name: ".idata$3", address: 0, size: 0, permissions: RW- }
-1: Section { name: ".debug$S", address: 0, size: 46, align: 1, kind: Other, flags: Coff { characteristics: 42100040 } }
-2: Section { name: ".idata$3", address: 0, size: 14, align: 4, kind: Data, flags: Coff { characteristics: c0300040 } }
+1: Section { name: ".debug$S", address: 0, size: 46, align: 1, kind: Other, flags: Coff { characteristics: IMAGE_SCN_ALIGN_1BYTES | IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_DISCARDABLE | IMAGE_SCN_MEM_READ } }
+2: Section { name: ".idata$3", address: 0, size: 14, align: 4, kind: Data, flags: Coff { characteristics: IMAGE_SCN_ALIGN_4BYTES | IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_READ | IMAGE_SCN_MEM_WRITE } }
 
 Symbols
-0: Symbol { name: "@comp.id", address: 0, size: 0, kind: Data, section: Absolute, scope: Compilation, weak: false, flags: Coff { typ: 0, storage_class: 3 } }
-1: Symbol { name: "__NULL_IMPORT_DESCRIPTOR", address: 0, size: 0, kind: Data, section: Section(SectionIndex(2)), scope: Linkage, weak: false, flags: Coff { typ: 0, storage_class: 2 } }
+0: Symbol { name: "@comp.id", address: 0, size: 0, kind: Data, section: Absolute, scope: Compilation, weak: false, flags: Coff { typ: 0, storage_class: IMAGE_SYM_CLASS_STATIC } }
+1: Symbol { name: "__NULL_IMPORT_DESCRIPTOR", address: 0, size: 0, kind: Data, section: Section(SectionIndex(2)), scope: Linkage, weak: false, flags: Coff { typ: 0, storage_class: IMAGE_SYM_CLASS_EXTERNAL } }
 
 Dynamic symbols
 
@@ -259,19 +259,19 @@ Entry Address: 0
 Segment { name: ".debug$S", address: 0, size: 0, permissions: R-- }
 Segment { name: ".idata$2", address: 0, size: 0, permissions: RW- }
 Segment { name: ".idata$6", address: 0, size: 0, permissions: RW- }
-1: Section { name: ".debug$S", address: 0, size: 46, align: 1, kind: Other, flags: Coff { characteristics: 42100040 } }
-2: Section { name: ".idata$2", address: 0, size: 14, align: 4, kind: Data, flags: Coff { characteristics: c0300040 } }
-3: Section { name: ".idata$6", address: 0, size: 12, align: 2, kind: Data, flags: Coff { characteristics: c0200040 } }
+1: Section { name: ".debug$S", address: 0, size: 46, align: 1, kind: Other, flags: Coff { characteristics: IMAGE_SCN_ALIGN_1BYTES | IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_DISCARDABLE | IMAGE_SCN_MEM_READ } }
+2: Section { name: ".idata$2", address: 0, size: 14, align: 4, kind: Data, flags: Coff { characteristics: IMAGE_SCN_ALIGN_4BYTES | IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_READ | IMAGE_SCN_MEM_WRITE } }
+3: Section { name: ".idata$6", address: 0, size: 12, align: 2, kind: Data, flags: Coff { characteristics: IMAGE_SCN_ALIGN_2BYTES | IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_READ | IMAGE_SCN_MEM_WRITE } }
 
 Symbols
-0: Symbol { name: "@comp.id", address: 0, size: 0, kind: Data, section: Absolute, scope: Compilation, weak: false, flags: Coff { typ: 0, storage_class: 3 } }
-1: Symbol { name: "__IMPORT_DESCRIPTOR_test_arm64ec", address: 0, size: 0, kind: Data, section: Section(SectionIndex(2)), scope: Linkage, weak: false, flags: Coff { typ: 0, storage_class: 2 } }
-2: Symbol { name: ".idata$2", address: 0, size: 0, kind: Section, section: Section(SectionIndex(2)), scope: Compilation, weak: false, flags: Coff { typ: 0, storage_class: 68 } }
-3: Symbol { name: ".idata$6", address: 0, size: 0, kind: Data, section: Section(SectionIndex(3)), scope: Compilation, weak: false, flags: Coff { typ: 0, storage_class: 3 } }
-4: Symbol { name: ".idata$4", address: 0, size: 0, kind: Section, section: Undefined, scope: Compilation, weak: false, flags: Coff { typ: 0, storage_class: 68 } }
-5: Symbol { name: ".idata$5", address: 0, size: 0, kind: Section, section: Undefined, scope: Compilation, weak: false, flags: Coff { typ: 0, storage_class: 68 } }
-6: Symbol { name: "__NULL_IMPORT_DESCRIPTOR", address: 0, size: 0, kind: Data, section: Undefined, scope: Linkage, weak: false, flags: Coff { typ: 0, storage_class: 2 } }
-7: Symbol { name: "\u{7f}test_arm64ec_NULL_THUNK_DATA", address: 0, size: 0, kind: Data, section: Undefined, scope: Linkage, weak: false, flags: Coff { typ: 0, storage_class: 2 } }
+0: Symbol { name: "@comp.id", address: 0, size: 0, kind: Data, section: Absolute, scope: Compilation, weak: false, flags: Coff { typ: 0, storage_class: IMAGE_SYM_CLASS_STATIC } }
+1: Symbol { name: "__IMPORT_DESCRIPTOR_test_arm64ec", address: 0, size: 0, kind: Data, section: Section(SectionIndex(2)), scope: Linkage, weak: false, flags: Coff { typ: 0, storage_class: IMAGE_SYM_CLASS_EXTERNAL } }
+2: Symbol { name: ".idata$2", address: 0, size: 0, kind: Section, section: Section(SectionIndex(2)), scope: Compilation, weak: false, flags: Coff { typ: 0, storage_class: IMAGE_SYM_CLASS_SECTION } }
+3: Symbol { name: ".idata$6", address: 0, size: 0, kind: Data, section: Section(SectionIndex(3)), scope: Compilation, weak: false, flags: Coff { typ: 0, storage_class: IMAGE_SYM_CLASS_STATIC } }
+4: Symbol { name: ".idata$4", address: 0, size: 0, kind: Section, section: Undefined, scope: Compilation, weak: false, flags: Coff { typ: 0, storage_class: IMAGE_SYM_CLASS_SECTION } }
+5: Symbol { name: ".idata$5", address: 0, size: 0, kind: Section, section: Undefined, scope: Compilation, weak: false, flags: Coff { typ: 0, storage_class: IMAGE_SYM_CLASS_SECTION } }
+6: Symbol { name: "__NULL_IMPORT_DESCRIPTOR", address: 0, size: 0, kind: Data, section: Undefined, scope: Linkage, weak: false, flags: Coff { typ: 0, storage_class: IMAGE_SYM_CLASS_EXTERNAL } }
+7: Symbol { name: "\u{7f}test_arm64ec_NULL_THUNK_DATA", address: 0, size: 0, kind: Data, section: Undefined, scope: Linkage, weak: false, flags: Coff { typ: 0, storage_class: IMAGE_SYM_CLASS_EXTERNAL } }
 
 .idata$2 relocations
 (c, Relocation { kind: ImageOffset, encoding: Generic, size: 20, target: Symbol(SymbolIndex(3)), addend: 0, implicit_addend: true, flags: Coff { typ: 2 } })

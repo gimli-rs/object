@@ -26,9 +26,9 @@ ImageSectionHeader {
     NumberOfRelocations: 0
     NumberOfLinenumbers: 0
     Characteristics: 0x100A00
+        IMAGE_SCN_ALIGN_1BYTES (0x100000)
         IMAGE_SCN_LNK_INFO (0x200)
         IMAGE_SCN_LNK_REMOVE (0x800)
-        IMAGE_SCN_ALIGN_1BYTES (0x100000)
 }
 ImageSectionHeader {
     Index: 2
@@ -42,10 +42,10 @@ ImageSectionHeader {
     NumberOfRelocations: 0
     NumberOfLinenumbers: 0
     Characteristics: 0x42100040
+        IMAGE_SCN_ALIGN_1BYTES (0x100000)
         IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
         IMAGE_SCN_MEM_DISCARDABLE (0x2000000)
         IMAGE_SCN_MEM_READ (0x40000000)
-        IMAGE_SCN_ALIGN_1BYTES (0x100000)
 }
 ImageSectionHeader {
     Index: 3
@@ -59,10 +59,10 @@ ImageSectionHeader {
     NumberOfRelocations: 2
     NumberOfLinenumbers: 0
     Characteristics: 0x60500020
+        IMAGE_SCN_ALIGN_16BYTES (0x500000)
         IMAGE_SCN_CNT_CODE (0x20)
         IMAGE_SCN_MEM_EXECUTE (0x20000000)
         IMAGE_SCN_MEM_READ (0x40000000)
-        IMAGE_SCN_ALIGN_16BYTES (0x500000)
     ImageRelocation {
         VirtualAddress: 0x4
         Symbol: "$SG9248" (0x17)
@@ -86,11 +86,11 @@ ImageSectionHeader {
     NumberOfRelocations: 1
     NumberOfLinenumbers: 0
     Characteristics: 0x60501020
+        IMAGE_SCN_ALIGN_16BYTES (0x500000)
         IMAGE_SCN_CNT_CODE (0x20)
         IMAGE_SCN_LNK_COMDAT (0x1000)
         IMAGE_SCN_MEM_EXECUTE (0x20000000)
         IMAGE_SCN_MEM_READ (0x40000000)
-        IMAGE_SCN_ALIGN_16BYTES (0x500000)
     ImageRelocation {
         VirtualAddress: 0x4
         Symbol: "?_OptionsStorage@?1??__local_stdio_printf_options@@9@9" (0x14)
@@ -109,11 +109,11 @@ ImageSectionHeader {
     NumberOfRelocations: 2
     NumberOfLinenumbers: 0
     Characteristics: 0x60501020
+        IMAGE_SCN_ALIGN_16BYTES (0x500000)
         IMAGE_SCN_CNT_CODE (0x20)
         IMAGE_SCN_LNK_COMDAT (0x1000)
         IMAGE_SCN_MEM_EXECUTE (0x20000000)
         IMAGE_SCN_MEM_READ (0x40000000)
-        IMAGE_SCN_ALIGN_16BYTES (0x500000)
     ImageRelocation {
         VirtualAddress: 0x14
         Symbol: "___local_stdio_printf_options" (0xE)
@@ -137,11 +137,11 @@ ImageSectionHeader {
     NumberOfRelocations: 2
     NumberOfLinenumbers: 0
     Characteristics: 0x60501020
+        IMAGE_SCN_ALIGN_16BYTES (0x500000)
         IMAGE_SCN_CNT_CODE (0x20)
         IMAGE_SCN_LNK_COMDAT (0x1000)
         IMAGE_SCN_MEM_EXECUTE (0x20000000)
         IMAGE_SCN_MEM_READ (0x40000000)
-        IMAGE_SCN_ALIGN_16BYTES (0x500000)
     ImageRelocation {
         VirtualAddress: 0x19
         Symbol: "___acrt_iob_func" (0xF)
@@ -165,10 +165,10 @@ ImageSectionHeader {
     NumberOfRelocations: 0
     NumberOfLinenumbers: 0
     Characteristics: 0xC0300040
+        IMAGE_SCN_ALIGN_4BYTES (0x300000)
         IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
         IMAGE_SCN_MEM_READ (0x40000000)
         IMAGE_SCN_MEM_WRITE (0x80000000)
-        IMAGE_SCN_ALIGN_4BYTES (0x300000)
 }
 ImageSectionHeader {
     Index: 8
@@ -191,8 +191,6 @@ ImageSymbol {
     Value: 0x1047556
     Section: IMAGE_SYM_ABSOLUTE (-1)
     Type: 0x0
-    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
-    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
     StorageClass: IMAGE_SYM_CLASS_STATIC (0x3)
     NumberOfAuxSymbols: 0x0
 }
@@ -202,8 +200,6 @@ ImageSymbol {
     Value: 0x80010191
     Section: IMAGE_SYM_ABSOLUTE (-1)
     Type: 0x0
-    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
-    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
     StorageClass: IMAGE_SYM_CLASS_STATIC (0x3)
     NumberOfAuxSymbols: 0x0
 }
@@ -213,8 +209,6 @@ ImageSymbol {
     Value: 0x0
     Section: ".drectve" (0x1)
     Type: 0x0
-    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
-    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
     StorageClass: IMAGE_SYM_CLASS_STATIC (0x3)
     NumberOfAuxSymbols: 0x1
     ImageAuxSymbolSection {
@@ -234,8 +228,6 @@ ImageSymbol {
     Value: 0x0
     Section: ".debug$S" (0x2)
     Type: 0x0
-    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
-    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
     StorageClass: IMAGE_SYM_CLASS_STATIC (0x3)
     NumberOfAuxSymbols: 0x1
     ImageAuxSymbolSection {
@@ -255,8 +247,6 @@ ImageSymbol {
     Value: 0x0
     Section: ".text$mn" (0x3)
     Type: 0x0
-    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
-    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
     StorageClass: IMAGE_SYM_CLASS_STATIC (0x3)
     NumberOfAuxSymbols: 0x1
     ImageAuxSymbolSection {
@@ -276,8 +266,6 @@ ImageSymbol {
     Value: 0x0
     Section: ".text$mn" (0x4)
     Type: 0x0
-    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
-    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
     StorageClass: IMAGE_SYM_CLASS_STATIC (0x3)
     NumberOfAuxSymbols: 0x1
     ImageAuxSymbolSection {
@@ -297,8 +285,6 @@ ImageSymbol {
     Value: 0x0
     Section: ".text$mn" (0x5)
     Type: 0x0
-    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
-    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
     StorageClass: IMAGE_SYM_CLASS_STATIC (0x3)
     NumberOfAuxSymbols: 0x1
     ImageAuxSymbolSection {
@@ -318,8 +304,6 @@ ImageSymbol {
     Value: 0x0
     Section: ".text$mn" (0x6)
     Type: 0x0
-    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
-    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
     StorageClass: IMAGE_SYM_CLASS_STATIC (0x3)
     NumberOfAuxSymbols: 0x1
     ImageAuxSymbolSection {
@@ -338,9 +322,7 @@ ImageSymbol {
     Name: "___local_stdio_printf_options"
     Value: 0x0
     Section: ".text$mn" (0x4)
-    Type: 0x20
-    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
-    DerivedType: IMAGE_SYM_DTYPE_FUNCTION (0x2)
+    Type: IMAGE_SYM_DTYPE_FUNCTION (0x20)
     StorageClass: IMAGE_SYM_CLASS_EXTERNAL (0x2)
     NumberOfAuxSymbols: 0x0
 }
@@ -349,9 +331,7 @@ ImageSymbol {
     Name: "___acrt_iob_func"
     Value: 0x0
     Section: IMAGE_SYM_UNDEFINED (0)
-    Type: 0x20
-    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
-    DerivedType: IMAGE_SYM_DTYPE_FUNCTION (0x2)
+    Type: IMAGE_SYM_DTYPE_FUNCTION (0x20)
     StorageClass: IMAGE_SYM_CLASS_EXTERNAL (0x2)
     NumberOfAuxSymbols: 0x0
 }
@@ -360,9 +340,7 @@ ImageSymbol {
     Name: "___stdio_common_vfprintf"
     Value: 0x0
     Section: IMAGE_SYM_UNDEFINED (0)
-    Type: 0x20
-    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
-    DerivedType: IMAGE_SYM_DTYPE_FUNCTION (0x2)
+    Type: IMAGE_SYM_DTYPE_FUNCTION (0x20)
     StorageClass: IMAGE_SYM_CLASS_EXTERNAL (0x2)
     NumberOfAuxSymbols: 0x0
 }
@@ -371,9 +349,7 @@ ImageSymbol {
     Name: "__vfprintf_l"
     Value: 0x0
     Section: ".text$mn" (0x5)
-    Type: 0x20
-    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
-    DerivedType: IMAGE_SYM_DTYPE_FUNCTION (0x2)
+    Type: IMAGE_SYM_DTYPE_FUNCTION (0x20)
     StorageClass: IMAGE_SYM_CLASS_EXTERNAL (0x2)
     NumberOfAuxSymbols: 0x0
 }
@@ -382,9 +358,7 @@ ImageSymbol {
     Name: "_printf"
     Value: 0x0
     Section: ".text$mn" (0x6)
-    Type: 0x20
-    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
-    DerivedType: IMAGE_SYM_DTYPE_FUNCTION (0x2)
+    Type: IMAGE_SYM_DTYPE_FUNCTION (0x20)
     StorageClass: IMAGE_SYM_CLASS_EXTERNAL (0x2)
     NumberOfAuxSymbols: 0x0
 }
@@ -393,9 +367,7 @@ ImageSymbol {
     Name: "_main"
     Value: 0x0
     Section: ".text$mn" (0x3)
-    Type: 0x20
-    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
-    DerivedType: IMAGE_SYM_DTYPE_FUNCTION (0x2)
+    Type: IMAGE_SYM_DTYPE_FUNCTION (0x20)
     StorageClass: IMAGE_SYM_CLASS_EXTERNAL (0x2)
     NumberOfAuxSymbols: 0x0
 }
@@ -405,8 +377,6 @@ ImageSymbol {
     Value: 0x8
     Section: IMAGE_SYM_UNDEFINED (0)
     Type: 0x0
-    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
-    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
     StorageClass: IMAGE_SYM_CLASS_EXTERNAL (0x2)
     NumberOfAuxSymbols: 0x0
 }
@@ -416,8 +386,6 @@ ImageSymbol {
     Value: 0x0
     Section: ".data" (0x7)
     Type: 0x0
-    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
-    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
     StorageClass: IMAGE_SYM_CLASS_STATIC (0x3)
     NumberOfAuxSymbols: 0x1
     ImageAuxSymbolSection {
@@ -437,8 +405,6 @@ ImageSymbol {
     Value: 0x0
     Section: ".data" (0x7)
     Type: 0x0
-    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
-    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
     StorageClass: IMAGE_SYM_CLASS_STATIC (0x3)
     NumberOfAuxSymbols: 0x0
 }
@@ -448,8 +414,6 @@ ImageSymbol {
     Value: 0x0
     Section: ".chks64" (0x8)
     Type: 0x0
-    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
-    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
     StorageClass: IMAGE_SYM_CLASS_STATIC (0x3)
     NumberOfAuxSymbols: 0x1
     ImageAuxSymbolSection {

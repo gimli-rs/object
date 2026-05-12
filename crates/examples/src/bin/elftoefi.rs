@@ -336,7 +336,7 @@ fn copy_file<Elf: FileHeader<Endian = Endianness>>(
         major_subsystem_version: 0,
         minor_subsystem_version: 0,
         subsystem: pe::IMAGE_SUBSYSTEM_EFI_APPLICATION,
-        dll_characteristics: 0,
+        dll_characteristics: pe::DllFlags(0),
         size_of_stack_reserve: 0,
         size_of_stack_commit: 0,
         size_of_heap_reserve: 0,

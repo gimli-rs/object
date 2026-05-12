@@ -1,7 +1,7 @@
 Format: Pe Little-endian 64-bit
 Kind: Executable
 Architecture: X86_64
-Flags: Coff { characteristics: 26 }
+Flags: Coff { characteristics: IMAGE_FILE_EXECUTABLE_IMAGE | IMAGE_FILE_LINE_NUMS_STRIPPED | IMAGE_FILE_LARGE_ADDRESS_AWARE }
 Relative Address Base: 140000000
 Entry Address: 1400014d0
 Segment { name: ".text", address: 140001000, size: 6bf8, permissions: R-X }
@@ -23,46 +23,46 @@ Segment { name: ".debug_frame", address: 140032000, size: 2198, permissions: R--
 Segment { name: ".debug_str", address: 140035000, size: 87d, permissions: R-- }
 Segment { name: ".debug_loc", address: 140036000, size: 121dc, permissions: R-- }
 Segment { name: ".debug_ranges", address: 140049000, size: 14f0, permissions: R-- }
-1: Section { name: ".text", address: 140001000, size: 6bf8, align: 1000, kind: Text, flags: Coff { characteristics: 60500060 } }
-2: Section { name: ".data", address: 140008000, size: f0, align: 1000, kind: Data, flags: Coff { characteristics: c0500040 } }
-3: Section { name: ".rdata", address: 140009000, size: 1000, align: 1000, kind: ReadOnlyData, flags: Coff { characteristics: 40600040 } }
-4: Section { name: ".pdata", address: 14000a000, size: 474, align: 1000, kind: ReadOnlyData, flags: Coff { characteristics: 40300040 } }
-5: Section { name: ".xdata", address: 14000b000, size: 428, align: 1000, kind: ReadOnlyData, flags: Coff { characteristics: 40300040 } }
-6: Section { name: ".bss", address: 14000c000, size: b80, align: 1000, kind: UninitializedData, flags: Coff { characteristics: c0600080 } }
-7: Section { name: ".idata", address: 14000d000, size: 710, align: 1000, kind: Data, flags: Coff { characteristics: c0300040 } }
-8: Section { name: ".CRT", address: 14000e000, size: 60, align: 1000, kind: Data, flags: Coff { characteristics: c0400040 } }
-9: Section { name: ".tls", address: 14000f000, size: 10, align: 1000, kind: Data, flags: Coff { characteristics: c0400040 } }
-10: Section { name: ".rsrc", address: 140010000, size: 4e8, align: 1000, kind: Data, flags: Coff { characteristics: c0300040 } }
-11: Section { name: ".reloc", address: 140011000, size: 84, align: 1000, kind: Other, flags: Coff { characteristics: 42300040 } }
-12: Section { name: ".debug_aranges", address: 140012000, size: 6a0, align: 1000, kind: Other, flags: Coff { characteristics: 42500040 } }
-13: Section { name: ".debug_info", address: 140013000, size: 12b4c, align: 1000, kind: Other, flags: Coff { characteristics: 42100040 } }
-14: Section { name: ".debug_abbrev", address: 140026000, size: 3035, align: 1000, kind: Other, flags: Coff { characteristics: 42100040 } }
-15: Section { name: ".debug_line", address: 14002a000, size: 7c26, align: 1000, kind: Other, flags: Coff { characteristics: 42100040 } }
-16: Section { name: ".debug_frame", address: 140032000, size: 2198, align: 1000, kind: Other, flags: Coff { characteristics: 42400040 } }
-17: Section { name: ".debug_str", address: 140035000, size: 87d, align: 1000, kind: Other, flags: Coff { characteristics: 42100040 } }
-18: Section { name: ".debug_loc", address: 140036000, size: 121dc, align: 1000, kind: Other, flags: Coff { characteristics: 42100040 } }
-19: Section { name: ".debug_ranges", address: 140049000, size: 14f0, align: 1000, kind: Other, flags: Coff { characteristics: 42100040 } }
+1: Section { name: ".text", address: 140001000, size: 6bf8, align: 1000, kind: Text, flags: Coff { characteristics: IMAGE_SCN_ALIGN_16BYTES | IMAGE_SCN_CNT_CODE | IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_EXECUTE | IMAGE_SCN_MEM_READ } }
+2: Section { name: ".data", address: 140008000, size: f0, align: 1000, kind: Data, flags: Coff { characteristics: IMAGE_SCN_ALIGN_16BYTES | IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_READ | IMAGE_SCN_MEM_WRITE } }
+3: Section { name: ".rdata", address: 140009000, size: 1000, align: 1000, kind: ReadOnlyData, flags: Coff { characteristics: IMAGE_SCN_ALIGN_32BYTES | IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_READ } }
+4: Section { name: ".pdata", address: 14000a000, size: 474, align: 1000, kind: ReadOnlyData, flags: Coff { characteristics: IMAGE_SCN_ALIGN_4BYTES | IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_READ } }
+5: Section { name: ".xdata", address: 14000b000, size: 428, align: 1000, kind: ReadOnlyData, flags: Coff { characteristics: IMAGE_SCN_ALIGN_4BYTES | IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_READ } }
+6: Section { name: ".bss", address: 14000c000, size: b80, align: 1000, kind: UninitializedData, flags: Coff { characteristics: IMAGE_SCN_ALIGN_32BYTES | IMAGE_SCN_CNT_UNINITIALIZED_DATA | IMAGE_SCN_MEM_READ | IMAGE_SCN_MEM_WRITE } }
+7: Section { name: ".idata", address: 14000d000, size: 710, align: 1000, kind: Data, flags: Coff { characteristics: IMAGE_SCN_ALIGN_4BYTES | IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_READ | IMAGE_SCN_MEM_WRITE } }
+8: Section { name: ".CRT", address: 14000e000, size: 60, align: 1000, kind: Data, flags: Coff { characteristics: IMAGE_SCN_ALIGN_8BYTES | IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_READ | IMAGE_SCN_MEM_WRITE } }
+9: Section { name: ".tls", address: 14000f000, size: 10, align: 1000, kind: Data, flags: Coff { characteristics: IMAGE_SCN_ALIGN_8BYTES | IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_READ | IMAGE_SCN_MEM_WRITE } }
+10: Section { name: ".rsrc", address: 140010000, size: 4e8, align: 1000, kind: Data, flags: Coff { characteristics: IMAGE_SCN_ALIGN_4BYTES | IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_READ | IMAGE_SCN_MEM_WRITE } }
+11: Section { name: ".reloc", address: 140011000, size: 84, align: 1000, kind: Other, flags: Coff { characteristics: IMAGE_SCN_ALIGN_4BYTES | IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_DISCARDABLE | IMAGE_SCN_MEM_READ } }
+12: Section { name: ".debug_aranges", address: 140012000, size: 6a0, align: 1000, kind: Other, flags: Coff { characteristics: IMAGE_SCN_ALIGN_16BYTES | IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_DISCARDABLE | IMAGE_SCN_MEM_READ } }
+13: Section { name: ".debug_info", address: 140013000, size: 12b4c, align: 1000, kind: Other, flags: Coff { characteristics: IMAGE_SCN_ALIGN_1BYTES | IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_DISCARDABLE | IMAGE_SCN_MEM_READ } }
+14: Section { name: ".debug_abbrev", address: 140026000, size: 3035, align: 1000, kind: Other, flags: Coff { characteristics: IMAGE_SCN_ALIGN_1BYTES | IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_DISCARDABLE | IMAGE_SCN_MEM_READ } }
+15: Section { name: ".debug_line", address: 14002a000, size: 7c26, align: 1000, kind: Other, flags: Coff { characteristics: IMAGE_SCN_ALIGN_1BYTES | IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_DISCARDABLE | IMAGE_SCN_MEM_READ } }
+16: Section { name: ".debug_frame", address: 140032000, size: 2198, align: 1000, kind: Other, flags: Coff { characteristics: IMAGE_SCN_ALIGN_8BYTES | IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_DISCARDABLE | IMAGE_SCN_MEM_READ } }
+17: Section { name: ".debug_str", address: 140035000, size: 87d, align: 1000, kind: Other, flags: Coff { characteristics: IMAGE_SCN_ALIGN_1BYTES | IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_DISCARDABLE | IMAGE_SCN_MEM_READ } }
+18: Section { name: ".debug_loc", address: 140036000, size: 121dc, align: 1000, kind: Other, flags: Coff { characteristics: IMAGE_SCN_ALIGN_1BYTES | IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_DISCARDABLE | IMAGE_SCN_MEM_READ } }
+19: Section { name: ".debug_ranges", address: 140049000, size: 14f0, align: 1000, kind: Other, flags: Coff { characteristics: IMAGE_SCN_ALIGN_1BYTES | IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_DISCARDABLE | IMAGE_SCN_MEM_READ } }
 
 Symbols
-0: Symbol { name: "crtexe.c", address: 0, size: 0, kind: File, section: None, scope: Compilation, weak: false, flags: Coff { typ: 0, storage_class: 67 } }
-2: Symbol { name: "__mingw_invalidParameterHandler", address: 140001000, size: 0, kind: Text, section: Section(SectionIndex(1)), scope: Compilation, weak: false, flags: Coff { typ: 20, storage_class: 3 } }
-4: Symbol { name: "pre_c_init", address: 140001010, size: 0, kind: Text, section: Section(SectionIndex(1)), scope: Compilation, weak: false, flags: Coff { typ: 20, storage_class: 3 } }
-5: Symbol { name: ".rdata$.refptr.__mingw_initltsdrot_force", address: 140009740, size: 8, kind: Section, section: Section(SectionIndex(3)), scope: Compilation, weak: false, flags: CoffSection { typ: 0, storage_class: 3, selection: 2, associative_section: None } }
-7: Symbol { name: ".rdata$.refptr.__mingw_initltsdyn_force", address: 140009750, size: 8, kind: Section, section: Section(SectionIndex(3)), scope: Compilation, weak: false, flags: CoffSection { typ: 0, storage_class: 3, selection: 2, associative_section: None } }
-9: Symbol { name: ".rdata$.refptr.__mingw_initltssuo_force", address: 140009760, size: 8, kind: Section, section: Section(SectionIndex(3)), scope: Compilation, weak: false, flags: CoffSection { typ: 0, storage_class: 3, selection: 2, associative_section: None } }
-11: Symbol { name: ".rdata$.refptr.__image_base__", address: 1400096e0, size: 8, kind: Section, section: Section(SectionIndex(3)), scope: Compilation, weak: false, flags: CoffSection { typ: 0, storage_class: 3, selection: 2, associative_section: None } }
-13: Symbol { name: ".rdata$.refptr.__mingw_app_type", address: 140009730, size: 8, kind: Section, section: Section(SectionIndex(3)), scope: Compilation, weak: false, flags: CoffSection { typ: 0, storage_class: 3, selection: 2, associative_section: None } }
-15: Symbol { name: "managedapp", address: 14000c020, size: 0, kind: Data, section: Section(SectionIndex(6)), scope: Compilation, weak: false, flags: Coff { typ: 0, storage_class: 3 } }
-16: Symbol { name: ".rdata$.refptr._fmode", address: 140009810, size: 8, kind: Section, section: Section(SectionIndex(3)), scope: Compilation, weak: false, flags: CoffSection { typ: 0, storage_class: 3, selection: 2, associative_section: None } }
-18: Symbol { name: ".rdata$.refptr._commode", address: 1400097f0, size: 8, kind: Section, section: Section(SectionIndex(3)), scope: Compilation, weak: false, flags: CoffSection { typ: 0, storage_class: 3, selection: 2, associative_section: None } }
-20: Symbol { name: ".rdata$.refptr._MINGW_INSTALL_DEBUG_MATHERR", address: 140009690, size: 8, kind: Section, section: Section(SectionIndex(3)), scope: Compilation, weak: false, flags: CoffSection { typ: 0, storage_class: 3, selection: 2, associative_section: None } }
-22: Symbol { name: "pre_cpp_init", address: 140001130, size: 0, kind: Text, section: Section(SectionIndex(1)), scope: Compilation, weak: false, flags: Coff { typ: 20, storage_class: 3 } }
-23: Symbol { name: ".rdata$.refptr._newmode", address: 140009840, size: 8, kind: Section, section: Section(SectionIndex(3)), scope: Compilation, weak: false, flags: CoffSection { typ: 0, storage_class: 3, selection: 2, associative_section: None } }
-25: Symbol { name: "envp", address: 14000c028, size: 0, kind: Data, section: Section(SectionIndex(6)), scope: Compilation, weak: false, flags: Coff { typ: 0, storage_class: 3 } }
-26: Symbol { name: "argv", address: 14000c030, size: 0, kind: Data, section: Section(SectionIndex(6)), scope: Compilation, weak: false, flags: Coff { typ: 0, storage_class: 3 } }
-27: Symbol { name: "argc", address: 14000c038, size: 0, kind: Data, section: Section(SectionIndex(6)), scope: Compilation, weak: false, flags: Coff { typ: 0, storage_class: 3 } }
-28: Symbol { name: "startinfo", address: 14000c018, size: 0, kind: Data, section: Section(SectionIndex(6)), scope: Compilation, weak: false, flags: Coff { typ: 0, storage_class: 3 } }
-29: Symbol { name: ".rdata$.refptr._dowildcard", address: 140009800, size: 8, kind: Section, section: Section(SectionIndex(3)), scope: Compilation, weak: false, flags: CoffSection { typ: 0, storage_class: 3, selection: 2, associative_section: None } }
+0: Symbol { name: "crtexe.c", address: 0, size: 0, kind: File, section: None, scope: Compilation, weak: false, flags: Coff { typ: 0, storage_class: IMAGE_SYM_CLASS_FILE } }
+2: Symbol { name: "__mingw_invalidParameterHandler", address: 140001000, size: 0, kind: Text, section: Section(SectionIndex(1)), scope: Compilation, weak: false, flags: Coff { typ: IMAGE_SYM_DTYPE_FUNCTION, storage_class: IMAGE_SYM_CLASS_STATIC } }
+4: Symbol { name: "pre_c_init", address: 140001010, size: 0, kind: Text, section: Section(SectionIndex(1)), scope: Compilation, weak: false, flags: Coff { typ: IMAGE_SYM_DTYPE_FUNCTION, storage_class: IMAGE_SYM_CLASS_STATIC } }
+5: Symbol { name: ".rdata$.refptr.__mingw_initltsdrot_force", address: 140009740, size: 8, kind: Section, section: Section(SectionIndex(3)), scope: Compilation, weak: false, flags: CoffSection { typ: 0, storage_class: IMAGE_SYM_CLASS_STATIC, selection: IMAGE_COMDAT_SELECT_ANY, associative_section: None } }
+7: Symbol { name: ".rdata$.refptr.__mingw_initltsdyn_force", address: 140009750, size: 8, kind: Section, section: Section(SectionIndex(3)), scope: Compilation, weak: false, flags: CoffSection { typ: 0, storage_class: IMAGE_SYM_CLASS_STATIC, selection: IMAGE_COMDAT_SELECT_ANY, associative_section: None } }
+9: Symbol { name: ".rdata$.refptr.__mingw_initltssuo_force", address: 140009760, size: 8, kind: Section, section: Section(SectionIndex(3)), scope: Compilation, weak: false, flags: CoffSection { typ: 0, storage_class: IMAGE_SYM_CLASS_STATIC, selection: IMAGE_COMDAT_SELECT_ANY, associative_section: None } }
+11: Symbol { name: ".rdata$.refptr.__image_base__", address: 1400096e0, size: 8, kind: Section, section: Section(SectionIndex(3)), scope: Compilation, weak: false, flags: CoffSection { typ: 0, storage_class: IMAGE_SYM_CLASS_STATIC, selection: IMAGE_COMDAT_SELECT_ANY, associative_section: None } }
+13: Symbol { name: ".rdata$.refptr.__mingw_app_type", address: 140009730, size: 8, kind: Section, section: Section(SectionIndex(3)), scope: Compilation, weak: false, flags: CoffSection { typ: 0, storage_class: IMAGE_SYM_CLASS_STATIC, selection: IMAGE_COMDAT_SELECT_ANY, associative_section: None } }
+15: Symbol { name: "managedapp", address: 14000c020, size: 0, kind: Data, section: Section(SectionIndex(6)), scope: Compilation, weak: false, flags: Coff { typ: 0, storage_class: IMAGE_SYM_CLASS_STATIC } }
+16: Symbol { name: ".rdata$.refptr._fmode", address: 140009810, size: 8, kind: Section, section: Section(SectionIndex(3)), scope: Compilation, weak: false, flags: CoffSection { typ: 0, storage_class: IMAGE_SYM_CLASS_STATIC, selection: IMAGE_COMDAT_SELECT_ANY, associative_section: None } }
+18: Symbol { name: ".rdata$.refptr._commode", address: 1400097f0, size: 8, kind: Section, section: Section(SectionIndex(3)), scope: Compilation, weak: false, flags: CoffSection { typ: 0, storage_class: IMAGE_SYM_CLASS_STATIC, selection: IMAGE_COMDAT_SELECT_ANY, associative_section: None } }
+20: Symbol { name: ".rdata$.refptr._MINGW_INSTALL_DEBUG_MATHERR", address: 140009690, size: 8, kind: Section, section: Section(SectionIndex(3)), scope: Compilation, weak: false, flags: CoffSection { typ: 0, storage_class: IMAGE_SYM_CLASS_STATIC, selection: IMAGE_COMDAT_SELECT_ANY, associative_section: None } }
+22: Symbol { name: "pre_cpp_init", address: 140001130, size: 0, kind: Text, section: Section(SectionIndex(1)), scope: Compilation, weak: false, flags: Coff { typ: IMAGE_SYM_DTYPE_FUNCTION, storage_class: IMAGE_SYM_CLASS_STATIC } }
+23: Symbol { name: ".rdata$.refptr._newmode", address: 140009840, size: 8, kind: Section, section: Section(SectionIndex(3)), scope: Compilation, weak: false, flags: CoffSection { typ: 0, storage_class: IMAGE_SYM_CLASS_STATIC, selection: IMAGE_COMDAT_SELECT_ANY, associative_section: None } }
+25: Symbol { name: "envp", address: 14000c028, size: 0, kind: Data, section: Section(SectionIndex(6)), scope: Compilation, weak: false, flags: Coff { typ: 0, storage_class: IMAGE_SYM_CLASS_STATIC } }
+26: Symbol { name: "argv", address: 14000c030, size: 0, kind: Data, section: Section(SectionIndex(6)), scope: Compilation, weak: false, flags: Coff { typ: 0, storage_class: IMAGE_SYM_CLASS_STATIC } }
+27: Symbol { name: "argc", address: 14000c038, size: 0, kind: Data, section: Section(SectionIndex(6)), scope: Compilation, weak: false, flags: Coff { typ: 0, storage_class: IMAGE_SYM_CLASS_STATIC } }
+28: Symbol { name: "startinfo", address: 14000c018, size: 0, kind: Data, section: Section(SectionIndex(6)), scope: Compilation, weak: false, flags: Coff { typ: 0, storage_class: IMAGE_SYM_CLASS_STATIC } }
+29: Symbol { name: ".rdata$.refptr._dowildcard", address: 140009800, size: 8, kind: Section, section: Section(SectionIndex(3)), scope: Compilation, weak: false, flags: CoffSection { typ: 0, storage_class: IMAGE_SYM_CLASS_STATIC, selection: IMAGE_COMDAT_SELECT_ANY, associative_section: None } }
 
 Dynamic symbols
 

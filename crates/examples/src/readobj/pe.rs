@@ -49,12 +49,20 @@ pub(super) fn print_coff_import(p: &mut Printer<'_>, data: &[u8]) {
             p.field_hex("Signature1", header.sig1.get(LE));
             p.field_hex("Signature2", header.sig2.get(LE));
             p.field("Version", header.version.get(LE));
-            p.field_enum("Machine", header.machine.get(LE), FLAGS_IMAGE_FILE_MACHINE);
+            p.field_consts("Machine", header.machine.get(LE), Machine::NAMES);
             p.field("TimeDateStamp", header.time_date_stamp.get(LE));
             p.field_hex("SizeOfData", header.size_of_data.get(LE));
             p.field("OrdinalOrHint", header.ordinal_or_hint.get(LE));
-            p.field_enum("ImportType", header.import_type(), FLAGS_IMAGE_OBJECT_TYPE);
-            p.field_enum("NameType", header.name_type(), FLAGS_IMAGE_OBJECT_NAME);
+            p.field_consts(
+                "ImportType",
+                header.import_type(),
+                pe::ImportObjectType::NAMES,
+            );
+            p.field_consts(
+                "NameType",
+                header.name_type(),
+                pe::ImportObjectNameType::NAMES,
+            );
             if let Some(data) = header.parse_data(data, &mut offset).print_err(p) {
                 p.field_inline_string("Symbol", data.symbol());
                 p.field_inline_string("Dll", data.dll());
@@ -160,7 +168,7 @@ fn print_file(p: &mut Printer<'_>, header: &ImageFileHeader) {
         return;
     }
     p.group("ImageFileHeader", |p| {
-        p.field_enum("Machine", header.machine.get(LE), FLAGS_IMAGE_FILE_MACHINE);
+        p.field_consts("Machine", header.machine.get(LE), Machine::NAMES);
         p.field("NumberOfSections", header.number_of_sections.get(LE));
         p.field("TimeDateStamp", header.time_date_stamp.get(LE));
         p.field_hex(
@@ -172,8 +180,11 @@ fn print_file(p: &mut Printer<'_>, header: &ImageFileHeader) {
             "SizeOfOptionalHeader",
             header.size_of_optional_header.get(LE),
         );
-        p.field_hex("Characteristics", header.characteristics.get(LE));
-        p.flags(header.characteristics.get(LE), 0, FLAGS_IMAGE_FILE);
+        p.field_flags(
+            "Characteristics",
+            header.characteristics.get(LE),
+            FileFlags::NAMES,
+        );
     });
 }
 
@@ -212,12 +223,11 @@ fn print_optional(p: &mut Printer<'_>, header: &impl ImageOptionalHeader) {
         p.field_hex("SizeOfImage", header.size_of_image());
         p.field_hex("SizeOfHeaders", header.size_of_headers());
         p.field_hex("CheckSum", header.check_sum());
-        p.field_enum("Subsystem", header.subsystem(), FLAGS_IMAGE_SUBSYSTEM);
-        p.field_hex("DllCharacteristics", header.dll_characteristics());
-        p.flags(
+        p.field_consts("Subsystem", header.subsystem(), Subsystem::NAMES);
+        p.field_flags(
+            "DllCharacteristics",
             header.dll_characteristics(),
-            0,
-            FLAGS_IMAGE_DLLCHARACTERISTICS,
+            DllFlags::NAMES,
         );
         p.field_hex("SizeOfStackReserve", header.size_of_stack_reserve());
         p.field_hex("SizeOfStackCommit", header.size_of_stack_commit());
@@ -234,7 +244,7 @@ fn print_data_directories(p: &mut Printer<'_>, data_directories: &DataDirectorie
     }
     for (index, dir) in data_directories.iter().enumerate() {
         p.group("ImageDataDirectory", |p| {
-            p.field_enum("Index", index, FLAGS_IMAGE_DIRECTORY_ENTRY);
+            p.field_consts("Index", index, NAMES_DIRECTORY_ENTRY);
             p.field_hex("VirtualAddress", dir.virtual_address.get(LE));
             p.field_hex("Size", dir.size.get(LE));
         });
@@ -249,7 +259,7 @@ fn print_bigobj(p: &mut Printer<'_>, header: &AnonObjectHeaderBigobj) {
         p.field_hex("Signature1", header.sig1.get(LE));
         p.field_hex("Signature2", header.sig2.get(LE));
         p.field("Version", header.version.get(LE));
-        p.field_enum("Machine", header.machine.get(LE), FLAGS_IMAGE_FILE_MACHINE);
+        p.field_consts("Machine", header.machine.get(LE), Machine::NAMES);
         p.field("TimeDateStamp", header.time_date_stamp.get(LE));
         p.field(
             "ClassId",
@@ -540,7 +550,7 @@ fn print_resource_table(
                     }
                     ResourceNameOrId::Id(id) => {
                         if level == 0 {
-                            p.field_enum("NameOrId", id, FLAGS_RT);
+                            p.field_consts("NameOrId", id, NAMES_RT);
                         } else {
                             p.field("NameOrId", id);
                         }
@@ -573,7 +583,7 @@ fn print_resource_table(
 fn print_sections<'data, Coff: CoffHeader>(
     p: &mut Printer<'_>,
     data: &[u8],
-    machine: u16,
+    machine: pe::Machine,
     symbols: Option<&SymbolTable<'data, &'data [u8], Coff>>,
     sections: &SectionTable,
 ) {
@@ -610,16 +620,11 @@ fn print_sections<'data, Coff: CoffHeader>(
                 );
                 p.field("NumberOfRelocations", section.number_of_relocations.get(LE));
                 p.field("NumberOfLinenumbers", section.number_of_linenumbers.get(LE));
-                p.field_hex("Characteristics", section.characteristics.get(LE));
-                p.flags(section.characteristics.get(LE), 0, FLAGS_IMAGE_SCN);
-                // 0 means no alignment flag.
-                if section.characteristics.get(LE) & IMAGE_SCN_ALIGN_MASK != 0 {
-                    p.flags(
-                        section.characteristics.get(LE),
-                        IMAGE_SCN_ALIGN_MASK,
-                        FLAGS_IMAGE_SCN_ALIGN,
-                    );
-                }
+                p.field_flags(
+                    "Characteristics",
+                    section.characteristics.get(LE),
+                    SectionFlags::NAMES,
+                );
             }
             print_relocations(p, data, machine, symbols, section);
         });
@@ -629,7 +634,7 @@ fn print_sections<'data, Coff: CoffHeader>(
 fn print_relocations<'data, Coff: CoffHeader>(
     p: &mut Printer<'_>,
     data: &[u8],
-    machine: u16,
+    machine: pe::Machine,
     symbols: Option<&SymbolTable<'data, &'data [u8], Coff>>,
     section: &ImageSectionHeader,
 ) {
@@ -682,15 +687,17 @@ fn print_symbols<'data, Coff: CoffHeader>(
                 });
                 p.field_string_option("Section", section_index.0, section_name);
             } else {
-                p.field_enum_display("Section", symbol.section_number(), FLAGS_IMAGE_SYM);
+                p.field_consts_display(
+                    "Section",
+                    symbol.section_number(),
+                    pe::SymbolSection::NAMES,
+                );
             }
-            p.field_hex("Type", symbol.typ());
-            p.field_enum("BaseType", symbol.base_type(), FLAGS_IMAGE_SYM_TYPE);
-            p.field_enum("DerivedType", symbol.derived_type(), FLAGS_IMAGE_SYM_DTYPE);
-            p.field_enum(
+            p.field_flags("Type", symbol.typ(), pe::SymbolType::NAMES);
+            p.field_consts(
                 "StorageClass",
                 symbol.storage_class(),
-                FLAGS_IMAGE_SYM_CLASS,
+                pe::SymbolClass::NAMES,
             );
             p.field_hex("NumberOfAuxSymbols", symbol.number_of_aux_symbols());
             if symbol.has_aux_file_name()
@@ -725,7 +732,7 @@ fn print_symbols<'data, Coff: CoffHeader>(
                     p.field("NumberOfLinenumbers", aux.number_of_linenumbers.get(LE));
                     p.field_hex("CheckSum", aux.check_sum.get(LE));
                     p.field("Number", aux.number.get(LE));
-                    p.field_enum("Selection", aux.selection, FLAGS_IMAGE_COMDAT_SELECT);
+                    p.field_consts("Selection", aux.selection, pe::ComdatSelection::NAMES);
                     p.field_hex("Reserved", aux.reserved);
                     p.field("HighNumber", aux.high_number.get(LE));
                 });
@@ -740,10 +747,10 @@ fn print_symbols<'data, Coff: CoffHeader>(
                         .and_then(|symbol| symbol.name(symbols.strings()))
                         .print_err(p);
                     p.field_string_option("DefaultSymbol", index.0, name);
-                    p.field_enum(
+                    p.field_consts(
                         "SearchType",
                         aux.weak_search_type.get(LE),
-                        FLAGS_IMAGE_WEAK_EXTERN,
+                        pe::WeakExternSearch::NAMES,
                     );
                 });
             }
@@ -755,7 +762,7 @@ fn print_symbols<'data, Coff: CoffHeader>(
 fn print_reloc_dir(
     p: &mut Printer<'_>,
     data: &[u8],
-    machine: u16,
+    machine: pe::Machine,
     sections: &SectionTable,
     data_directories: &DataDirectories,
 ) -> Option<()> {
@@ -790,251 +797,3 @@ fn print_reloc_dir(
     }
     Some(())
 }
-
-const FLAGS_IMAGE_FILE: &[Flag<u16>] = &flags!(
-    IMAGE_FILE_RELOCS_STRIPPED,
-    IMAGE_FILE_EXECUTABLE_IMAGE,
-    IMAGE_FILE_LINE_NUMS_STRIPPED,
-    IMAGE_FILE_LOCAL_SYMS_STRIPPED,
-    IMAGE_FILE_AGGRESIVE_WS_TRIM,
-    IMAGE_FILE_LARGE_ADDRESS_AWARE,
-    IMAGE_FILE_BYTES_REVERSED_LO,
-    IMAGE_FILE_32BIT_MACHINE,
-    IMAGE_FILE_DEBUG_STRIPPED,
-    IMAGE_FILE_REMOVABLE_RUN_FROM_SWAP,
-    IMAGE_FILE_NET_RUN_FROM_SWAP,
-    IMAGE_FILE_SYSTEM,
-    IMAGE_FILE_DLL,
-    IMAGE_FILE_UP_SYSTEM_ONLY,
-    IMAGE_FILE_BYTES_REVERSED_HI,
-);
-const FLAGS_IMAGE_FILE_MACHINE: &[Flag<u16>] = &flags!(
-    IMAGE_FILE_MACHINE_UNKNOWN,
-    IMAGE_FILE_MACHINE_TARGET_HOST,
-    IMAGE_FILE_MACHINE_I386,
-    IMAGE_FILE_MACHINE_R3000,
-    IMAGE_FILE_MACHINE_R4000,
-    IMAGE_FILE_MACHINE_R10000,
-    IMAGE_FILE_MACHINE_WCEMIPSV2,
-    IMAGE_FILE_MACHINE_ALPHA,
-    IMAGE_FILE_MACHINE_SH3,
-    IMAGE_FILE_MACHINE_SH3DSP,
-    IMAGE_FILE_MACHINE_SH3E,
-    IMAGE_FILE_MACHINE_SH4,
-    IMAGE_FILE_MACHINE_SH5,
-    IMAGE_FILE_MACHINE_ARM,
-    IMAGE_FILE_MACHINE_THUMB,
-    IMAGE_FILE_MACHINE_ARMNT,
-    IMAGE_FILE_MACHINE_AM33,
-    IMAGE_FILE_MACHINE_POWERPC,
-    IMAGE_FILE_MACHINE_POWERPCFP,
-    IMAGE_FILE_MACHINE_IA64,
-    IMAGE_FILE_MACHINE_MIPS16,
-    IMAGE_FILE_MACHINE_ALPHA64,
-    IMAGE_FILE_MACHINE_MIPSFPU,
-    IMAGE_FILE_MACHINE_MIPSFPU16,
-    IMAGE_FILE_MACHINE_AXP64,
-    IMAGE_FILE_MACHINE_TRICORE,
-    IMAGE_FILE_MACHINE_CEF,
-    IMAGE_FILE_MACHINE_EBC,
-    IMAGE_FILE_MACHINE_AMD64,
-    IMAGE_FILE_MACHINE_M32R,
-    IMAGE_FILE_MACHINE_ARM64,
-    IMAGE_FILE_MACHINE_ARM64EC,
-    IMAGE_FILE_MACHINE_CEE,
-    IMAGE_FILE_MACHINE_RISCV32,
-    IMAGE_FILE_MACHINE_RISCV64,
-    IMAGE_FILE_MACHINE_RISCV128,
-);
-const FLAGS_IMAGE_SCN: &[Flag<u32>] = &flags!(
-    IMAGE_SCN_TYPE_NO_PAD,
-    IMAGE_SCN_CNT_CODE,
-    IMAGE_SCN_CNT_INITIALIZED_DATA,
-    IMAGE_SCN_CNT_UNINITIALIZED_DATA,
-    IMAGE_SCN_LNK_OTHER,
-    IMAGE_SCN_LNK_INFO,
-    IMAGE_SCN_LNK_REMOVE,
-    IMAGE_SCN_LNK_COMDAT,
-    IMAGE_SCN_NO_DEFER_SPEC_EXC,
-    IMAGE_SCN_GPREL,
-    IMAGE_SCN_MEM_FARDATA,
-    IMAGE_SCN_MEM_PURGEABLE,
-    IMAGE_SCN_MEM_16BIT,
-    IMAGE_SCN_MEM_LOCKED,
-    IMAGE_SCN_MEM_PRELOAD,
-    IMAGE_SCN_LNK_NRELOC_OVFL,
-    IMAGE_SCN_MEM_DISCARDABLE,
-    IMAGE_SCN_MEM_NOT_CACHED,
-    IMAGE_SCN_MEM_NOT_PAGED,
-    IMAGE_SCN_MEM_SHARED,
-    IMAGE_SCN_MEM_EXECUTE,
-    IMAGE_SCN_MEM_READ,
-    IMAGE_SCN_MEM_WRITE,
-);
-const FLAGS_IMAGE_SCN_ALIGN: &[Flag<u32>] = &flags!(
-    IMAGE_SCN_ALIGN_1BYTES,
-    IMAGE_SCN_ALIGN_2BYTES,
-    IMAGE_SCN_ALIGN_4BYTES,
-    IMAGE_SCN_ALIGN_8BYTES,
-    IMAGE_SCN_ALIGN_16BYTES,
-    IMAGE_SCN_ALIGN_32BYTES,
-    IMAGE_SCN_ALIGN_64BYTES,
-    IMAGE_SCN_ALIGN_128BYTES,
-    IMAGE_SCN_ALIGN_256BYTES,
-    IMAGE_SCN_ALIGN_512BYTES,
-    IMAGE_SCN_ALIGN_1024BYTES,
-    IMAGE_SCN_ALIGN_2048BYTES,
-    IMAGE_SCN_ALIGN_4096BYTES,
-    IMAGE_SCN_ALIGN_8192BYTES,
-);
-const FLAGS_IMAGE_SYM: &[Flag<i32>] =
-    &flags!(IMAGE_SYM_UNDEFINED, IMAGE_SYM_ABSOLUTE, IMAGE_SYM_DEBUG,);
-const FLAGS_IMAGE_SYM_TYPE: &[Flag<u16>] = &flags!(
-    IMAGE_SYM_TYPE_NULL,
-    IMAGE_SYM_TYPE_VOID,
-    IMAGE_SYM_TYPE_CHAR,
-    IMAGE_SYM_TYPE_SHORT,
-    IMAGE_SYM_TYPE_INT,
-    IMAGE_SYM_TYPE_LONG,
-    IMAGE_SYM_TYPE_FLOAT,
-    IMAGE_SYM_TYPE_DOUBLE,
-    IMAGE_SYM_TYPE_STRUCT,
-    IMAGE_SYM_TYPE_UNION,
-    IMAGE_SYM_TYPE_ENUM,
-    IMAGE_SYM_TYPE_MOE,
-    IMAGE_SYM_TYPE_BYTE,
-    IMAGE_SYM_TYPE_WORD,
-    IMAGE_SYM_TYPE_UINT,
-    IMAGE_SYM_TYPE_DWORD,
-    IMAGE_SYM_TYPE_PCODE,
-);
-const FLAGS_IMAGE_SYM_DTYPE: &[Flag<u16>] = &flags!(
-    IMAGE_SYM_DTYPE_NULL,
-    IMAGE_SYM_DTYPE_POINTER,
-    IMAGE_SYM_DTYPE_FUNCTION,
-    IMAGE_SYM_DTYPE_ARRAY,
-);
-const FLAGS_IMAGE_SYM_CLASS: &[Flag<u8>] = &flags!(
-    IMAGE_SYM_CLASS_END_OF_FUNCTION,
-    IMAGE_SYM_CLASS_NULL,
-    IMAGE_SYM_CLASS_AUTOMATIC,
-    IMAGE_SYM_CLASS_EXTERNAL,
-    IMAGE_SYM_CLASS_STATIC,
-    IMAGE_SYM_CLASS_REGISTER,
-    IMAGE_SYM_CLASS_EXTERNAL_DEF,
-    IMAGE_SYM_CLASS_LABEL,
-    IMAGE_SYM_CLASS_UNDEFINED_LABEL,
-    IMAGE_SYM_CLASS_MEMBER_OF_STRUCT,
-    IMAGE_SYM_CLASS_ARGUMENT,
-    IMAGE_SYM_CLASS_STRUCT_TAG,
-    IMAGE_SYM_CLASS_MEMBER_OF_UNION,
-    IMAGE_SYM_CLASS_UNION_TAG,
-    IMAGE_SYM_CLASS_TYPE_DEFINITION,
-    IMAGE_SYM_CLASS_UNDEFINED_STATIC,
-    IMAGE_SYM_CLASS_ENUM_TAG,
-    IMAGE_SYM_CLASS_MEMBER_OF_ENUM,
-    IMAGE_SYM_CLASS_REGISTER_PARAM,
-    IMAGE_SYM_CLASS_BIT_FIELD,
-    IMAGE_SYM_CLASS_FAR_EXTERNAL,
-    IMAGE_SYM_CLASS_BLOCK,
-    IMAGE_SYM_CLASS_FUNCTION,
-    IMAGE_SYM_CLASS_END_OF_STRUCT,
-    IMAGE_SYM_CLASS_FILE,
-    IMAGE_SYM_CLASS_SECTION,
-    IMAGE_SYM_CLASS_WEAK_EXTERNAL,
-    IMAGE_SYM_CLASS_CLR_TOKEN,
-);
-const FLAGS_IMAGE_COMDAT_SELECT: &[Flag<u8>] = &flags!(
-    IMAGE_COMDAT_SELECT_NODUPLICATES,
-    IMAGE_COMDAT_SELECT_ANY,
-    IMAGE_COMDAT_SELECT_SAME_SIZE,
-    IMAGE_COMDAT_SELECT_EXACT_MATCH,
-    IMAGE_COMDAT_SELECT_ASSOCIATIVE,
-    IMAGE_COMDAT_SELECT_LARGEST,
-    IMAGE_COMDAT_SELECT_NEWEST,
-);
-const FLAGS_IMAGE_WEAK_EXTERN: &[Flag<u32>] = &flags!(
-    IMAGE_WEAK_EXTERN_SEARCH_NOLIBRARY,
-    IMAGE_WEAK_EXTERN_SEARCH_LIBRARY,
-    IMAGE_WEAK_EXTERN_SEARCH_ALIAS,
-    IMAGE_WEAK_EXTERN_ANTI_DEPENDENCY,
-);
-const FLAGS_IMAGE_SUBSYSTEM: &[Flag<u16>] = &flags!(
-    IMAGE_SUBSYSTEM_UNKNOWN,
-    IMAGE_SUBSYSTEM_NATIVE,
-    IMAGE_SUBSYSTEM_WINDOWS_GUI,
-    IMAGE_SUBSYSTEM_WINDOWS_CUI,
-    IMAGE_SUBSYSTEM_OS2_CUI,
-    IMAGE_SUBSYSTEM_POSIX_CUI,
-    IMAGE_SUBSYSTEM_NATIVE_WINDOWS,
-    IMAGE_SUBSYSTEM_WINDOWS_CE_GUI,
-    IMAGE_SUBSYSTEM_EFI_APPLICATION,
-    IMAGE_SUBSYSTEM_EFI_BOOT_SERVICE_DRIVER,
-    IMAGE_SUBSYSTEM_EFI_RUNTIME_DRIVER,
-    IMAGE_SUBSYSTEM_EFI_ROM,
-    IMAGE_SUBSYSTEM_XBOX,
-    IMAGE_SUBSYSTEM_WINDOWS_BOOT_APPLICATION,
-    IMAGE_SUBSYSTEM_XBOX_CODE_CATALOG,
-);
-const FLAGS_IMAGE_DLLCHARACTERISTICS: &[Flag<u16>] = &flags!(
-    IMAGE_DLLCHARACTERISTICS_HIGH_ENTROPY_VA,
-    IMAGE_DLLCHARACTERISTICS_DYNAMIC_BASE,
-    IMAGE_DLLCHARACTERISTICS_FORCE_INTEGRITY,
-    IMAGE_DLLCHARACTERISTICS_NX_COMPAT,
-    IMAGE_DLLCHARACTERISTICS_NO_ISOLATION,
-    IMAGE_DLLCHARACTERISTICS_NO_SEH,
-    IMAGE_DLLCHARACTERISTICS_NO_BIND,
-    IMAGE_DLLCHARACTERISTICS_APPCONTAINER,
-    IMAGE_DLLCHARACTERISTICS_WDM_DRIVER,
-    IMAGE_DLLCHARACTERISTICS_GUARD_CF,
-    IMAGE_DLLCHARACTERISTICS_TERMINAL_SERVER_AWARE,
-);
-const FLAGS_IMAGE_DIRECTORY_ENTRY: &[Flag<usize>] = &flags!(
-    IMAGE_DIRECTORY_ENTRY_EXPORT,
-    IMAGE_DIRECTORY_ENTRY_IMPORT,
-    IMAGE_DIRECTORY_ENTRY_RESOURCE,
-    IMAGE_DIRECTORY_ENTRY_EXCEPTION,
-    IMAGE_DIRECTORY_ENTRY_SECURITY,
-    IMAGE_DIRECTORY_ENTRY_BASERELOC,
-    IMAGE_DIRECTORY_ENTRY_DEBUG,
-    IMAGE_DIRECTORY_ENTRY_ARCHITECTURE,
-    IMAGE_DIRECTORY_ENTRY_GLOBALPTR,
-    IMAGE_DIRECTORY_ENTRY_TLS,
-    IMAGE_DIRECTORY_ENTRY_LOAD_CONFIG,
-    IMAGE_DIRECTORY_ENTRY_BOUND_IMPORT,
-    IMAGE_DIRECTORY_ENTRY_IAT,
-    IMAGE_DIRECTORY_ENTRY_DELAY_IMPORT,
-    IMAGE_DIRECTORY_ENTRY_COM_DESCRIPTOR,
-);
-const FLAGS_RT: &[Flag<u16>] = &flags!(
-    RT_CURSOR,
-    RT_BITMAP,
-    RT_ICON,
-    RT_MENU,
-    RT_DIALOG,
-    RT_STRING,
-    RT_FONTDIR,
-    RT_FONT,
-    RT_ACCELERATOR,
-    RT_RCDATA,
-    RT_MESSAGETABLE,
-    RT_GROUP_CURSOR,
-    RT_GROUP_ICON,
-    RT_VERSION,
-    RT_DLGINCLUDE,
-    RT_PLUGPLAY,
-    RT_VXD,
-    RT_ANICURSOR,
-    RT_ANIICON,
-    RT_HTML,
-    RT_MANIFEST,
-);
-const FLAGS_IMAGE_OBJECT_TYPE: &[Flag<u16>] =
-    &flags!(IMPORT_OBJECT_CODE, IMPORT_OBJECT_DATA, IMPORT_OBJECT_CONST);
-const FLAGS_IMAGE_OBJECT_NAME: &[Flag<u16>] = &flags!(
-    IMPORT_OBJECT_ORDINAL,
-    IMPORT_OBJECT_NAME,
-    IMPORT_OBJECT_NAME_NO_PREFIX,
-    IMPORT_OBJECT_NAME_UNDECORATE,
-    IMPORT_OBJECT_NAME_EXPORTAS,
-);

@@ -321,7 +321,7 @@ impl<'a> Writer<'a> {
         let mut coff_symbol = pe::ImageSymbol {
             name: [0; 8],
             value: symbol.value.into(),
-            section_number: symbol.section_number.into(),
+            section_number: (symbol.section_number.0 as u16).into(),
             typ: symbol.typ.into(),
             storage_class: symbol.storage_class,
             number_of_aux_symbols: symbol.number_of_aux_symbols,
@@ -464,9 +464,9 @@ impl<'a> Writer<'a> {
 #[allow(missing_docs)]
 #[derive(Debug, Default, Clone)]
 pub struct FileHeader {
-    pub machine: u16,
+    pub machine: pe::Machine,
     pub time_date_stamp: u32,
-    pub characteristics: u16,
+    pub characteristics: pe::FileFlags,
 }
 
 /// A section or symbol name.
@@ -504,7 +504,7 @@ pub struct SectionHeader {
     /// This will automatically be clamped if there are more than 0xffff.
     pub number_of_relocations: u32,
     pub number_of_linenumbers: u16,
-    pub characteristics: u32,
+    pub characteristics: pe::SectionFlags,
 }
 
 /// Native endian version of [`pe::ImageSymbol`].
@@ -513,9 +513,9 @@ pub struct SectionHeader {
 pub struct Symbol {
     pub name: Name,
     pub value: u32,
-    pub section_number: u16,
-    pub typ: u16,
-    pub storage_class: u8,
+    pub section_number: pe::SymbolSection,
+    pub typ: pe::SymbolType,
+    pub storage_class: pe::SymbolClass,
     pub number_of_aux_symbols: u8,
 }
 
@@ -529,7 +529,7 @@ pub struct AuxSymbolSection {
     pub number_of_linenumbers: u16,
     pub check_sum: u32,
     pub number: u32,
-    pub selection: u8,
+    pub selection: pe::ComdatSelection,
 }
 
 /// Native endian version of [`pe::ImageAuxSymbolWeak`].
@@ -537,7 +537,7 @@ pub struct AuxSymbolSection {
 #[derive(Debug, Default, Clone)]
 pub struct AuxSymbolWeak {
     pub weak_default_sym_index: u32,
-    pub weak_search_type: u32,
+    pub weak_search_type: pe::WeakExternSearch,
 }
 
 /// Native endian version of [`pe::ImageRelocation`].

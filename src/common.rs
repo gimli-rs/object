@@ -495,7 +495,7 @@ pub enum FileFlags {
     #[cfg(feature = "coff")]
     Coff {
         /// `Characteristics` field in the COFF file header.
-        characteristics: u16,
+        characteristics: crate::pe::FileFlags,
     },
     /// XCOFF file flags.
     #[cfg(feature = "xcoff")]
@@ -533,7 +533,7 @@ pub enum SegmentFlags {
     #[cfg(feature = "coff")]
     Coff {
         /// `Characteristics` field in the segment header.
-        characteristics: u32,
+        characteristics: crate::pe::SectionFlags,
     },
 }
 
@@ -630,7 +630,7 @@ pub enum SectionFlags {
     #[cfg(feature = "coff")]
     Coff {
         /// `Characteristics` field in the section header.
-        characteristics: u32,
+        characteristics: crate::pe::SectionFlags,
     },
     /// XCOFF section flags.
     #[cfg(feature = "xcoff")]
@@ -666,19 +666,19 @@ pub enum SymbolFlags<Section, Symbol> {
     #[cfg(feature = "coff")]
     Coff {
         /// `Type` field in the COFF symbol.
-        typ: u16,
+        typ: crate::pe::SymbolType,
         /// `StorageClass` field in the COFF symbol.
-        storage_class: u8,
+        storage_class: crate::pe::SymbolClass,
     },
     /// COFF flags for a section symbol with an auxiliary symbol.
     #[cfg(feature = "coff")]
     CoffSection {
         /// `Type` field in the COFF symbol.
-        typ: u16,
+        typ: crate::pe::SymbolType,
         /// `StorageClass` field in the COFF symbol.
-        storage_class: u8,
+        storage_class: crate::pe::SymbolClass,
         /// `Selection` field in the auxiliary symbol for the section.
-        selection: u8,
+        selection: crate::pe::ComdatSelection,
         /// `Number` field in the auxiliary symbol for the section.
         associative_section: Option<Section>,
     },

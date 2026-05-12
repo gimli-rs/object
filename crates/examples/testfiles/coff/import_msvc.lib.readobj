@@ -87,10 +87,10 @@ ImageSectionHeader {
     NumberOfRelocations: 0
     NumberOfLinenumbers: 0
     Characteristics: 0x42100040
+        IMAGE_SCN_ALIGN_1BYTES (0x100000)
         IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
         IMAGE_SCN_MEM_DISCARDABLE (0x2000000)
         IMAGE_SCN_MEM_READ (0x40000000)
-        IMAGE_SCN_ALIGN_1BYTES (0x100000)
 }
 ImageSectionHeader {
     Index: 2
@@ -104,10 +104,10 @@ ImageSectionHeader {
     NumberOfRelocations: 0
     NumberOfLinenumbers: 0
     Characteristics: 0xC0400040
+        IMAGE_SCN_ALIGN_8BYTES (0x400000)
         IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
         IMAGE_SCN_MEM_READ (0x40000000)
         IMAGE_SCN_MEM_WRITE (0x80000000)
-        IMAGE_SCN_ALIGN_8BYTES (0x400000)
 }
 ImageSectionHeader {
     Index: 3
@@ -121,10 +121,10 @@ ImageSectionHeader {
     NumberOfRelocations: 0
     NumberOfLinenumbers: 0
     Characteristics: 0xC0400040
+        IMAGE_SCN_ALIGN_8BYTES (0x400000)
         IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
         IMAGE_SCN_MEM_READ (0x40000000)
         IMAGE_SCN_MEM_WRITE (0x80000000)
-        IMAGE_SCN_ALIGN_8BYTES (0x400000)
 }
 ImageSymbol {
     Index: 0
@@ -132,8 +132,6 @@ ImageSymbol {
     Value: 0x1017DD9
     Section: IMAGE_SYM_ABSOLUTE (-1)
     Type: 0x0
-    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
-    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
     StorageClass: IMAGE_SYM_CLASS_STATIC (0x3)
     NumberOfAuxSymbols: 0x0
 }
@@ -143,8 +141,6 @@ ImageSymbol {
     Value: 0x0
     Section: ".idata$5" (0x2)
     Type: 0x0
-    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
-    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
     StorageClass: IMAGE_SYM_CLASS_EXTERNAL (0x2)
     NumberOfAuxSymbols: 0x0
 }
@@ -172,10 +168,10 @@ ImageSectionHeader {
     NumberOfRelocations: 0
     NumberOfLinenumbers: 0
     Characteristics: 0x42100040
+        IMAGE_SCN_ALIGN_1BYTES (0x100000)
         IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
         IMAGE_SCN_MEM_DISCARDABLE (0x2000000)
         IMAGE_SCN_MEM_READ (0x40000000)
-        IMAGE_SCN_ALIGN_1BYTES (0x100000)
 }
 ImageSectionHeader {
     Index: 2
@@ -189,10 +185,10 @@ ImageSectionHeader {
     NumberOfRelocations: 0
     NumberOfLinenumbers: 0
     Characteristics: 0xC0300040
+        IMAGE_SCN_ALIGN_4BYTES (0x300000)
         IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
         IMAGE_SCN_MEM_READ (0x40000000)
         IMAGE_SCN_MEM_WRITE (0x80000000)
-        IMAGE_SCN_ALIGN_4BYTES (0x300000)
 }
 ImageSymbol {
     Index: 0
@@ -200,8 +196,6 @@ ImageSymbol {
     Value: 0x1017DD9
     Section: IMAGE_SYM_ABSOLUTE (-1)
     Type: 0x0
-    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
-    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
     StorageClass: IMAGE_SYM_CLASS_STATIC (0x3)
     NumberOfAuxSymbols: 0x0
 }
@@ -211,8 +205,6 @@ ImageSymbol {
     Value: 0x0
     Section: ".idata$3" (0x2)
     Type: 0x0
-    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
-    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
     StorageClass: IMAGE_SYM_CLASS_EXTERNAL (0x2)
     NumberOfAuxSymbols: 0x0
 }
@@ -240,10 +232,10 @@ ImageSectionHeader {
     NumberOfRelocations: 0
     NumberOfLinenumbers: 0
     Characteristics: 0x42100040
+        IMAGE_SCN_ALIGN_1BYTES (0x100000)
         IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
         IMAGE_SCN_MEM_DISCARDABLE (0x2000000)
         IMAGE_SCN_MEM_READ (0x40000000)
-        IMAGE_SCN_ALIGN_1BYTES (0x100000)
 }
 ImageSectionHeader {
     Index: 2
@@ -257,10 +249,10 @@ ImageSectionHeader {
     NumberOfRelocations: 3
     NumberOfLinenumbers: 0
     Characteristics: 0xC0300040
+        IMAGE_SCN_ALIGN_4BYTES (0x300000)
         IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
         IMAGE_SCN_MEM_READ (0x40000000)
         IMAGE_SCN_MEM_WRITE (0x80000000)
-        IMAGE_SCN_ALIGN_4BYTES (0x300000)
     ImageRelocation {
         VirtualAddress: 0xC
         Symbol: ".idata$6" (0x3)
@@ -289,10 +281,10 @@ ImageSectionHeader {
     NumberOfRelocations: 0
     NumberOfLinenumbers: 0
     Characteristics: 0xC0200040
+        IMAGE_SCN_ALIGN_2BYTES (0x200000)
         IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
         IMAGE_SCN_MEM_READ (0x40000000)
         IMAGE_SCN_MEM_WRITE (0x80000000)
-        IMAGE_SCN_ALIGN_2BYTES (0x200000)
 }
 ImageSymbol {
     Index: 0
@@ -300,8 +292,6 @@ ImageSymbol {
     Value: 0x1017DD9
     Section: IMAGE_SYM_ABSOLUTE (-1)
     Type: 0x0
-    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
-    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
     StorageClass: IMAGE_SYM_CLASS_STATIC (0x3)
     NumberOfAuxSymbols: 0x0
 }
@@ -311,8 +301,6 @@ ImageSymbol {
     Value: 0x0
     Section: ".idata$2" (0x2)
     Type: 0x0
-    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
-    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
     StorageClass: IMAGE_SYM_CLASS_EXTERNAL (0x2)
     NumberOfAuxSymbols: 0x0
 }
@@ -322,8 +310,6 @@ ImageSymbol {
     Value: 0xC0000040
     Section: ".idata$2" (0x2)
     Type: 0x0
-    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
-    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
     StorageClass: IMAGE_SYM_CLASS_SECTION (0x68)
     NumberOfAuxSymbols: 0x0
 }
@@ -333,8 +319,6 @@ ImageSymbol {
     Value: 0x0
     Section: ".idata$6" (0x3)
     Type: 0x0
-    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
-    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
     StorageClass: IMAGE_SYM_CLASS_STATIC (0x3)
     NumberOfAuxSymbols: 0x0
 }
@@ -344,8 +328,6 @@ ImageSymbol {
     Value: 0xC0000040
     Section: IMAGE_SYM_UNDEFINED (0)
     Type: 0x0
-    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
-    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
     StorageClass: IMAGE_SYM_CLASS_SECTION (0x68)
     NumberOfAuxSymbols: 0x0
 }
@@ -355,8 +337,6 @@ ImageSymbol {
     Value: 0xC0000040
     Section: IMAGE_SYM_UNDEFINED (0)
     Type: 0x0
-    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
-    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
     StorageClass: IMAGE_SYM_CLASS_SECTION (0x68)
     NumberOfAuxSymbols: 0x0
 }
@@ -366,8 +346,6 @@ ImageSymbol {
     Value: 0x0
     Section: IMAGE_SYM_UNDEFINED (0)
     Type: 0x0
-    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
-    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
     StorageClass: IMAGE_SYM_CLASS_EXTERNAL (0x2)
     NumberOfAuxSymbols: 0x0
 }
@@ -377,8 +355,6 @@ ImageSymbol {
     Value: 0x0
     Section: IMAGE_SYM_UNDEFINED (0)
     Type: 0x0
-    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
-    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
     StorageClass: IMAGE_SYM_CLASS_EXTERNAL (0x2)
     NumberOfAuxSymbols: 0x0
 }
@@ -408,8 +384,7 @@ ImageFileHeader {
     PointerToSymbolTable: 0xD6
     NumberOfSymbols: 2
     SizeOfOptionalHeader: 0x0
-    Characteristics: 0x100
-        IMAGE_FILE_32BIT_MACHINE (0x100)
+    Characteristics: IMAGE_FILE_32BIT_MACHINE (0x100)
 }
 ImageSectionHeader {
     Index: 1
@@ -423,10 +398,10 @@ ImageSectionHeader {
     NumberOfRelocations: 0
     NumberOfLinenumbers: 0
     Characteristics: 0x42100040
+        IMAGE_SCN_ALIGN_1BYTES (0x100000)
         IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
         IMAGE_SCN_MEM_DISCARDABLE (0x2000000)
         IMAGE_SCN_MEM_READ (0x40000000)
-        IMAGE_SCN_ALIGN_1BYTES (0x100000)
 }
 ImageSectionHeader {
     Index: 2
@@ -440,10 +415,10 @@ ImageSectionHeader {
     NumberOfRelocations: 0
     NumberOfLinenumbers: 0
     Characteristics: 0xC0300040
+        IMAGE_SCN_ALIGN_4BYTES (0x300000)
         IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
         IMAGE_SCN_MEM_READ (0x40000000)
         IMAGE_SCN_MEM_WRITE (0x80000000)
-        IMAGE_SCN_ALIGN_4BYTES (0x300000)
 }
 ImageSectionHeader {
     Index: 3
@@ -457,10 +432,10 @@ ImageSectionHeader {
     NumberOfRelocations: 0
     NumberOfLinenumbers: 0
     Characteristics: 0xC0300040
+        IMAGE_SCN_ALIGN_4BYTES (0x300000)
         IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
         IMAGE_SCN_MEM_READ (0x40000000)
         IMAGE_SCN_MEM_WRITE (0x80000000)
-        IMAGE_SCN_ALIGN_4BYTES (0x300000)
 }
 ImageSymbol {
     Index: 0
@@ -468,8 +443,6 @@ ImageSymbol {
     Value: 0x1017DD9
     Section: IMAGE_SYM_ABSOLUTE (-1)
     Type: 0x0
-    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
-    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
     StorageClass: IMAGE_SYM_CLASS_STATIC (0x3)
     NumberOfAuxSymbols: 0x0
 }
@@ -479,8 +452,6 @@ ImageSymbol {
     Value: 0x0
     Section: ".idata$5" (0x2)
     Type: 0x0
-    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
-    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
     StorageClass: IMAGE_SYM_CLASS_EXTERNAL (0x2)
     NumberOfAuxSymbols: 0x0
 }
@@ -494,8 +465,7 @@ ImageFileHeader {
     PointerToSymbolTable: 0xBA
     NumberOfSymbols: 2
     SizeOfOptionalHeader: 0x0
-    Characteristics: 0x100
-        IMAGE_FILE_32BIT_MACHINE (0x100)
+    Characteristics: IMAGE_FILE_32BIT_MACHINE (0x100)
 }
 ImageSectionHeader {
     Index: 1
@@ -509,10 +479,10 @@ ImageSectionHeader {
     NumberOfRelocations: 0
     NumberOfLinenumbers: 0
     Characteristics: 0x42100040
+        IMAGE_SCN_ALIGN_1BYTES (0x100000)
         IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
         IMAGE_SCN_MEM_DISCARDABLE (0x2000000)
         IMAGE_SCN_MEM_READ (0x40000000)
-        IMAGE_SCN_ALIGN_1BYTES (0x100000)
 }
 ImageSectionHeader {
     Index: 2
@@ -526,10 +496,10 @@ ImageSectionHeader {
     NumberOfRelocations: 0
     NumberOfLinenumbers: 0
     Characteristics: 0xC0300040
+        IMAGE_SCN_ALIGN_4BYTES (0x300000)
         IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
         IMAGE_SCN_MEM_READ (0x40000000)
         IMAGE_SCN_MEM_WRITE (0x80000000)
-        IMAGE_SCN_ALIGN_4BYTES (0x300000)
 }
 ImageSymbol {
     Index: 0
@@ -537,8 +507,6 @@ ImageSymbol {
     Value: 0x1017DD9
     Section: IMAGE_SYM_ABSOLUTE (-1)
     Type: 0x0
-    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
-    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
     StorageClass: IMAGE_SYM_CLASS_STATIC (0x3)
     NumberOfAuxSymbols: 0x0
 }
@@ -548,8 +516,6 @@ ImageSymbol {
     Value: 0x0
     Section: ".idata$3" (0x2)
     Type: 0x0
-    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
-    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
     StorageClass: IMAGE_SYM_CLASS_EXTERNAL (0x2)
     NumberOfAuxSymbols: 0x0
 }
@@ -563,8 +529,7 @@ ImageFileHeader {
     PointerToSymbolTable: 0x10E
     NumberOfSymbols: 8
     SizeOfOptionalHeader: 0x0
-    Characteristics: 0x100
-        IMAGE_FILE_32BIT_MACHINE (0x100)
+    Characteristics: IMAGE_FILE_32BIT_MACHINE (0x100)
 }
 ImageSectionHeader {
     Index: 1
@@ -578,10 +543,10 @@ ImageSectionHeader {
     NumberOfRelocations: 0
     NumberOfLinenumbers: 0
     Characteristics: 0x42100040
+        IMAGE_SCN_ALIGN_1BYTES (0x100000)
         IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
         IMAGE_SCN_MEM_DISCARDABLE (0x2000000)
         IMAGE_SCN_MEM_READ (0x40000000)
-        IMAGE_SCN_ALIGN_1BYTES (0x100000)
 }
 ImageSectionHeader {
     Index: 2
@@ -595,10 +560,10 @@ ImageSectionHeader {
     NumberOfRelocations: 3
     NumberOfLinenumbers: 0
     Characteristics: 0xC0300040
+        IMAGE_SCN_ALIGN_4BYTES (0x300000)
         IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
         IMAGE_SCN_MEM_READ (0x40000000)
         IMAGE_SCN_MEM_WRITE (0x80000000)
-        IMAGE_SCN_ALIGN_4BYTES (0x300000)
     ImageRelocation {
         VirtualAddress: 0xC
         Symbol: ".idata$6" (0x3)
@@ -627,10 +592,10 @@ ImageSectionHeader {
     NumberOfRelocations: 0
     NumberOfLinenumbers: 0
     Characteristics: 0xC0200040
+        IMAGE_SCN_ALIGN_2BYTES (0x200000)
         IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
         IMAGE_SCN_MEM_READ (0x40000000)
         IMAGE_SCN_MEM_WRITE (0x80000000)
-        IMAGE_SCN_ALIGN_2BYTES (0x200000)
 }
 ImageSymbol {
     Index: 0
@@ -638,8 +603,6 @@ ImageSymbol {
     Value: 0x1017DD9
     Section: IMAGE_SYM_ABSOLUTE (-1)
     Type: 0x0
-    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
-    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
     StorageClass: IMAGE_SYM_CLASS_STATIC (0x3)
     NumberOfAuxSymbols: 0x0
 }
@@ -649,8 +612,6 @@ ImageSymbol {
     Value: 0x0
     Section: ".idata$2" (0x2)
     Type: 0x0
-    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
-    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
     StorageClass: IMAGE_SYM_CLASS_EXTERNAL (0x2)
     NumberOfAuxSymbols: 0x0
 }
@@ -660,8 +621,6 @@ ImageSymbol {
     Value: 0xC0000040
     Section: ".idata$2" (0x2)
     Type: 0x0
-    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
-    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
     StorageClass: IMAGE_SYM_CLASS_SECTION (0x68)
     NumberOfAuxSymbols: 0x0
 }
@@ -671,8 +630,6 @@ ImageSymbol {
     Value: 0x0
     Section: ".idata$6" (0x3)
     Type: 0x0
-    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
-    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
     StorageClass: IMAGE_SYM_CLASS_STATIC (0x3)
     NumberOfAuxSymbols: 0x0
 }
@@ -682,8 +639,6 @@ ImageSymbol {
     Value: 0xC0000040
     Section: IMAGE_SYM_UNDEFINED (0)
     Type: 0x0
-    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
-    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
     StorageClass: IMAGE_SYM_CLASS_SECTION (0x68)
     NumberOfAuxSymbols: 0x0
 }
@@ -693,8 +648,6 @@ ImageSymbol {
     Value: 0xC0000040
     Section: IMAGE_SYM_UNDEFINED (0)
     Type: 0x0
-    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
-    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
     StorageClass: IMAGE_SYM_CLASS_SECTION (0x68)
     NumberOfAuxSymbols: 0x0
 }
@@ -704,8 +657,6 @@ ImageSymbol {
     Value: 0x0
     Section: IMAGE_SYM_UNDEFINED (0)
     Type: 0x0
-    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
-    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
     StorageClass: IMAGE_SYM_CLASS_EXTERNAL (0x2)
     NumberOfAuxSymbols: 0x0
 }
@@ -715,8 +666,6 @@ ImageSymbol {
     Value: 0x0
     Section: IMAGE_SYM_UNDEFINED (0)
     Type: 0x0
-    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
-    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
     StorageClass: IMAGE_SYM_CLASS_EXTERNAL (0x2)
     NumberOfAuxSymbols: 0x0
 }
@@ -761,10 +710,10 @@ ImageSectionHeader {
     NumberOfRelocations: 0
     NumberOfLinenumbers: 0
     Characteristics: 0x42100040
+        IMAGE_SCN_ALIGN_1BYTES (0x100000)
         IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
         IMAGE_SCN_MEM_DISCARDABLE (0x2000000)
         IMAGE_SCN_MEM_READ (0x40000000)
-        IMAGE_SCN_ALIGN_1BYTES (0x100000)
 }
 ImageSectionHeader {
     Index: 2
@@ -778,10 +727,10 @@ ImageSectionHeader {
     NumberOfRelocations: 0
     NumberOfLinenumbers: 0
     Characteristics: 0xC0400040
+        IMAGE_SCN_ALIGN_8BYTES (0x400000)
         IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
         IMAGE_SCN_MEM_READ (0x40000000)
         IMAGE_SCN_MEM_WRITE (0x80000000)
-        IMAGE_SCN_ALIGN_8BYTES (0x400000)
 }
 ImageSectionHeader {
     Index: 3
@@ -795,10 +744,10 @@ ImageSectionHeader {
     NumberOfRelocations: 0
     NumberOfLinenumbers: 0
     Characteristics: 0xC0400040
+        IMAGE_SCN_ALIGN_8BYTES (0x400000)
         IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
         IMAGE_SCN_MEM_READ (0x40000000)
         IMAGE_SCN_MEM_WRITE (0x80000000)
-        IMAGE_SCN_ALIGN_8BYTES (0x400000)
 }
 ImageSymbol {
     Index: 0
@@ -806,8 +755,6 @@ ImageSymbol {
     Value: 0x1017DD9
     Section: IMAGE_SYM_ABSOLUTE (-1)
     Type: 0x0
-    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
-    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
     StorageClass: IMAGE_SYM_CLASS_STATIC (0x3)
     NumberOfAuxSymbols: 0x0
 }
@@ -817,8 +764,6 @@ ImageSymbol {
     Value: 0x0
     Section: ".idata$5" (0x2)
     Type: 0x0
-    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
-    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
     StorageClass: IMAGE_SYM_CLASS_EXTERNAL (0x2)
     NumberOfAuxSymbols: 0x0
 }
@@ -846,10 +791,10 @@ ImageSectionHeader {
     NumberOfRelocations: 0
     NumberOfLinenumbers: 0
     Characteristics: 0x42100040
+        IMAGE_SCN_ALIGN_1BYTES (0x100000)
         IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
         IMAGE_SCN_MEM_DISCARDABLE (0x2000000)
         IMAGE_SCN_MEM_READ (0x40000000)
-        IMAGE_SCN_ALIGN_1BYTES (0x100000)
 }
 ImageSectionHeader {
     Index: 2
@@ -863,10 +808,10 @@ ImageSectionHeader {
     NumberOfRelocations: 0
     NumberOfLinenumbers: 0
     Characteristics: 0xC0300040
+        IMAGE_SCN_ALIGN_4BYTES (0x300000)
         IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
         IMAGE_SCN_MEM_READ (0x40000000)
         IMAGE_SCN_MEM_WRITE (0x80000000)
-        IMAGE_SCN_ALIGN_4BYTES (0x300000)
 }
 ImageSymbol {
     Index: 0
@@ -874,8 +819,6 @@ ImageSymbol {
     Value: 0x1017DD9
     Section: IMAGE_SYM_ABSOLUTE (-1)
     Type: 0x0
-    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
-    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
     StorageClass: IMAGE_SYM_CLASS_STATIC (0x3)
     NumberOfAuxSymbols: 0x0
 }
@@ -885,8 +828,6 @@ ImageSymbol {
     Value: 0x0
     Section: ".idata$3" (0x2)
     Type: 0x0
-    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
-    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
     StorageClass: IMAGE_SYM_CLASS_EXTERNAL (0x2)
     NumberOfAuxSymbols: 0x0
 }
@@ -914,10 +855,10 @@ ImageSectionHeader {
     NumberOfRelocations: 0
     NumberOfLinenumbers: 0
     Characteristics: 0x42100040
+        IMAGE_SCN_ALIGN_1BYTES (0x100000)
         IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
         IMAGE_SCN_MEM_DISCARDABLE (0x2000000)
         IMAGE_SCN_MEM_READ (0x40000000)
-        IMAGE_SCN_ALIGN_1BYTES (0x100000)
 }
 ImageSectionHeader {
     Index: 2
@@ -931,10 +872,10 @@ ImageSectionHeader {
     NumberOfRelocations: 3
     NumberOfLinenumbers: 0
     Characteristics: 0xC0300040
+        IMAGE_SCN_ALIGN_4BYTES (0x300000)
         IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
         IMAGE_SCN_MEM_READ (0x40000000)
         IMAGE_SCN_MEM_WRITE (0x80000000)
-        IMAGE_SCN_ALIGN_4BYTES (0x300000)
     ImageRelocation {
         VirtualAddress: 0xC
         Symbol: ".idata$6" (0x3)
@@ -963,10 +904,10 @@ ImageSectionHeader {
     NumberOfRelocations: 0
     NumberOfLinenumbers: 0
     Characteristics: 0xC0200040
+        IMAGE_SCN_ALIGN_2BYTES (0x200000)
         IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
         IMAGE_SCN_MEM_READ (0x40000000)
         IMAGE_SCN_MEM_WRITE (0x80000000)
-        IMAGE_SCN_ALIGN_2BYTES (0x200000)
 }
 ImageSymbol {
     Index: 0
@@ -974,8 +915,6 @@ ImageSymbol {
     Value: 0x1017DD9
     Section: IMAGE_SYM_ABSOLUTE (-1)
     Type: 0x0
-    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
-    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
     StorageClass: IMAGE_SYM_CLASS_STATIC (0x3)
     NumberOfAuxSymbols: 0x0
 }
@@ -985,8 +924,6 @@ ImageSymbol {
     Value: 0x0
     Section: ".idata$2" (0x2)
     Type: 0x0
-    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
-    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
     StorageClass: IMAGE_SYM_CLASS_EXTERNAL (0x2)
     NumberOfAuxSymbols: 0x0
 }
@@ -996,8 +933,6 @@ ImageSymbol {
     Value: 0xC0000040
     Section: ".idata$2" (0x2)
     Type: 0x0
-    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
-    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
     StorageClass: IMAGE_SYM_CLASS_SECTION (0x68)
     NumberOfAuxSymbols: 0x0
 }
@@ -1007,8 +942,6 @@ ImageSymbol {
     Value: 0x0
     Section: ".idata$6" (0x3)
     Type: 0x0
-    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
-    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
     StorageClass: IMAGE_SYM_CLASS_STATIC (0x3)
     NumberOfAuxSymbols: 0x0
 }
@@ -1018,8 +951,6 @@ ImageSymbol {
     Value: 0xC0000040
     Section: IMAGE_SYM_UNDEFINED (0)
     Type: 0x0
-    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
-    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
     StorageClass: IMAGE_SYM_CLASS_SECTION (0x68)
     NumberOfAuxSymbols: 0x0
 }
@@ -1029,8 +960,6 @@ ImageSymbol {
     Value: 0xC0000040
     Section: IMAGE_SYM_UNDEFINED (0)
     Type: 0x0
-    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
-    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
     StorageClass: IMAGE_SYM_CLASS_SECTION (0x68)
     NumberOfAuxSymbols: 0x0
 }
@@ -1040,8 +969,6 @@ ImageSymbol {
     Value: 0x0
     Section: IMAGE_SYM_UNDEFINED (0)
     Type: 0x0
-    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
-    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
     StorageClass: IMAGE_SYM_CLASS_EXTERNAL (0x2)
     NumberOfAuxSymbols: 0x0
 }
@@ -1051,8 +978,6 @@ ImageSymbol {
     Value: 0x0
     Section: IMAGE_SYM_UNDEFINED (0)
     Type: 0x0
-    BaseType: IMAGE_SYM_TYPE_NULL (0x0)
-    DerivedType: IMAGE_SYM_DTYPE_NULL (0x0)
     StorageClass: IMAGE_SYM_CLASS_EXTERNAL (0x2)
     NumberOfAuxSymbols: 0x0
 }

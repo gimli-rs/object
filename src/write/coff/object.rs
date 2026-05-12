@@ -11,7 +11,7 @@ struct SectionOffsets {
     name: writer::Name,
     offset: u32,
     reloc_offset: u32,
-    selection: u8,
+    selection: coff::ComdatSelection,
     associative_section: u32,
 }
 
@@ -134,9 +134,9 @@ impl<'a> Object<'a> {
 
     pub(crate) fn coff_symbol_flags(&self, symbol: &Symbol) -> SymbolFlags<SectionId, SymbolId> {
         let typ = if symbol.kind == SymbolKind::Text {
-            coff::IMAGE_SYM_DTYPE_FUNCTION << coff::IMAGE_SYM_DTYPE_SHIFT
+            coff::IMAGE_SYM_DTYPE_FUNCTION.into()
         } else {
-            coff::IMAGE_SYM_TYPE_NULL
+            coff::SymbolType(0)
         };
         let storage_class = match symbol.kind {
             _ if symbol.weak => coff::IMAGE_SYM_CLASS_WEAK_EXTERNAL,
@@ -622,7 +622,7 @@ impl<'a> Object<'a> {
             time_date_stamp: 0,
             characteristics: match self.flags {
                 FileFlags::Coff { characteristics } => characteristics,
-                _ => 0,
+                _ => coff::FileFlags(0),
             },
         })?;
 
@@ -639,13 +639,13 @@ impl<'a> Object<'a> {
                     section.kind
                 )));
             };
-            if section_offsets[index].selection != 0 {
+            if section_offsets[index].selection.0 != 0 {
                 characteristics |= coff::IMAGE_SCN_LNK_COMDAT;
             };
             if section.relocations.len() > 0xffff {
                 characteristics |= coff::IMAGE_SCN_LNK_NRELOC_OVFL;
             }
-            characteristics |= match section.align {
+            characteristics = characteristics.with_align(match section.align {
                 1 => coff::IMAGE_SCN_ALIGN_1BYTES,
                 2 => coff::IMAGE_SCN_ALIGN_2BYTES,
                 4 => coff::IMAGE_SCN_ALIGN_4BYTES,
@@ -667,7 +667,7 @@ impl<'a> Object<'a> {
                         section.align
                     )));
                 }
-            };
+            });
             writer.write_section_header(writer::SectionHeader {
                 name: section_offsets[index].name,
                 size_of_raw_data: section.size as u32,
@@ -713,15 +713,15 @@ impl<'a> Object<'a> {
             };
             let section_number = match symbol.section {
                 // weak symbols are always undefined
-                _ if symbol.weak => coff::IMAGE_SYM_UNDEFINED as u16,
+                _ if symbol.weak => coff::IMAGE_SYM_UNDEFINED,
                 SymbolSection::None => {
                     debug_assert_eq!(symbol.kind, SymbolKind::File);
-                    coff::IMAGE_SYM_DEBUG as u16
+                    coff::IMAGE_SYM_DEBUG
                 }
-                SymbolSection::Undefined => coff::IMAGE_SYM_UNDEFINED as u16,
-                SymbolSection::Absolute => coff::IMAGE_SYM_ABSOLUTE as u16,
-                SymbolSection::Common => coff::IMAGE_SYM_UNDEFINED as u16,
-                SymbolSection::Section(id) => id.0 as u16 + 1,
+                SymbolSection::Undefined => coff::IMAGE_SYM_UNDEFINED,
+                SymbolSection::Absolute => coff::IMAGE_SYM_ABSOLUTE,
+                SymbolSection::Common => coff::IMAGE_SYM_UNDEFINED,
+                SymbolSection::Section(id) => coff::SymbolSection(id.0 as i32 + 1),
             };
             let number_of_aux_symbols = symbol_offsets[index].aux_count;
             let value = if symbol.weak {
@@ -743,8 +743,8 @@ impl<'a> Object<'a> {
                     name: weak_default_symbol.name,
                     value: symbol.value as u32,
                     section_number: match symbol.section {
-                        SymbolSection::Section(id) => id.0 as u16 + 1,
-                        SymbolSection::Undefined => coff::IMAGE_SYM_ABSOLUTE as u16,
+                        SymbolSection::Section(id) => coff::SymbolSection(id.0 as i32 + 1),
+                        SymbolSection::Undefined => coff::IMAGE_SYM_ABSOLUTE,
                         o => {
                             return Err(Error(format!(
                                 "invalid symbol section for weak external `{}` section {o:?}",
@@ -753,7 +753,7 @@ impl<'a> Object<'a> {
                         }
                     },
                     number_of_aux_symbols: 0,
-                    typ: 0,
+                    typ: coff::SymbolType(0),
                     storage_class: coff::IMAGE_SYM_CLASS_EXTERNAL,
                 });
             }
