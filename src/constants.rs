@@ -692,6 +692,19 @@ macro_rules! newtype_flag_names {
             }
         }
 
+        impl core::ops::BitAnd for $outer {
+            type Output = $outer;
+            fn bitand(self, rhs: $outer) -> $outer {
+                $outer(self.0 & rhs.0)
+            }
+        }
+
+        impl core::ops::BitAndAssign for $outer {
+            fn bitand_assign(&mut self, rhs: $outer) {
+                self.0 &= rhs.0;
+            }
+        }
+
         impl core::ops::BitOr for $outer {
             type Output = $outer;
             fn bitor(self, rhs: $outer) -> $outer {
