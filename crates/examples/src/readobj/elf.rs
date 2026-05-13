@@ -821,17 +821,14 @@ fn print_attributes<Elf: FileHeader>(
 fn print_version<Elf: FileHeader>(
     p: &mut Printer<'_>,
     versions: Option<&VersionTable<Elf>>,
-    version_index: VersymIndex,
+    versym: VersymIndex,
 ) {
-    match versions.and_then(|versions| versions.version(version_index).print_err(p)) {
+    match versions.and_then(|versions| versions.version(versym.index()).print_err(p)) {
         Some(Some(version)) => {
-            p.field_string_option("Version", version_index, Some(version.name()));
-            p.flag_bits(
-                VersymIndex(version_index.0 & VERSYM_HIDDEN.0),
-                VersymIndex::NAMES,
-            );
+            p.field_string_option("Version", versym, Some(version.name()));
+            p.flag_bits(VersymIndex(versym.0 & VERSYM_HIDDEN.0), VersymIndex::NAMES);
         }
-        _ => p.field_flags("Version", version_index, VersymIndex::NAMES),
+        _ => p.field_flags("Version", versym, VersymIndex::NAMES),
     }
 }
 

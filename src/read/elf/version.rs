@@ -159,8 +159,7 @@ impl<'data, Elf: FileHeader> VersionTable<'data, Elf> {
     ///
     /// Returns `Ok(None)` for local and global versions.
     /// Returns `Err(_)` if index is invalid.
-    pub fn version(&self, index: elf::VersymIndex) -> Result<Option<&Version<'data>>> {
-        let index = index.index();
+    pub fn version(&self, index: elf::VersionIndex) -> Result<Option<&Version<'data>>> {
         if index.is_special() {
             return Ok(None);
         }
@@ -183,7 +182,7 @@ impl<'data, Elf: FileHeader> VersionTable<'data, Elf> {
         need: Option<&Version<'_>>,
     ) -> bool {
         let version_index = self.version_index(endian, index);
-        let def = match self.version(version_index) {
+        let def = match self.version(version_index.index()) {
             Ok(def) => def,
             Err(_) => return false,
         };
