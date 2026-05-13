@@ -107,7 +107,7 @@ impl<'data, Elf: FileHeader> VersionTable<'data, Elf> {
                     continue;
                 }
                 if let Some(verdaux) = verdauxs.next()? {
-                    versions[usize::from(index.0)] = Version {
+                    versions[usize::from(index)] = Version {
                         name: verdaux.name(endian, strings)?,
                         hash: verdef.vd_hash.get(endian),
                         valid: true,
@@ -124,7 +124,7 @@ impl<'data, Elf: FileHeader> VersionTable<'data, Elf> {
                         // TODO: return error?
                         continue;
                     }
-                    versions[usize::from(index.0)] = Version {
+                    versions[usize::from(index)] = Version {
                         name: vernaux.name(endian, strings)?,
                         hash: vernaux.vna_hash.get(endian),
                         valid: true,
@@ -165,7 +165,7 @@ impl<'data, Elf: FileHeader> VersionTable<'data, Elf> {
             return Ok(None);
         }
         self.versions
-            .get(usize::from(index.0))
+            .get(usize::from(index))
             .filter(|version| version.valid)
             .read_error("Invalid ELF symbol version index")
             .map(Some)

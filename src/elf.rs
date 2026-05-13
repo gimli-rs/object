@@ -2497,6 +2497,54 @@ newtype!(
 );
 
 impl VersionIndex {
+    /// Add an offset to the index.
+    ///
+    /// This is useful when constructing a `VersionIndex` from a base index
+    /// such as `VER_NDX_GLOBAL`.
+    ///
+    /// Panics in debug builds if the resulting index >= `VERSYM_HIDDEN`.
+    /// In release builds, the result wraps and the bounds check is skipped.
+    pub fn offset(self, offset: u16) -> Self {
+        let index = self.0 + offset;
+        debug_assert!(index < VERSYM_HIDDEN.0);
+        VersionIndex(index)
+    }
+
+    /// Add an offset to the index, checking for overflow.
+    ///
+    /// This is useful when constructing a `VersionIndex` from a base index
+    /// such as `VER_NDX_GLOBAL`.
+    ///
+    /// Returns `None` if the resulting index >= `VERSYM_HIDDEN`.
+    pub fn checked_offset(self, offset: u16) -> Option<Self> {
+        let index = self.0.checked_add(offset)?;
+        if index >= VERSYM_HIDDEN.0 {
+            return None;
+        }
+        Some(VersionIndex(index))
+    }
+
+    /// Compute the offset relative to another index.
+    ///
+    /// This is useful for obtaining an array index relative to a base index
+    /// such as `VER_NDX_GLOBAL`.
+    ///
+    /// Panics in debug builds if `self.0 < base.0`.
+    /// In release builds, the result wraps.
+    pub fn offset_from(self, base: VersionIndex) -> u16 {
+        self.0 - base.0
+    }
+
+    /// Compute the offset relative to another index, checking for underflow.
+    ///
+    /// This is useful for obtaining an array index relative to a base index
+    /// such as `VER_NDX_GLOBAL`.
+    ///
+    /// Returns `None` if `self.0 < base.0`.
+    pub fn checked_offset_from(self, base: VersionIndex) -> Option<u16> {
+        self.0.checked_sub(base.0)
+    }
+
     /// Return true if it is the local index.
     pub fn is_local(&self) -> bool {
         *self == VER_NDX_LOCAL
@@ -2510,6 +2558,34 @@ impl VersionIndex {
     /// Return true if it is the local or global index.
     pub fn is_special(&self) -> bool {
         self.0 <= VER_NDX_GLOBAL.0
+    }
+}
+
+impl core::ops::Add<u16> for VersionIndex {
+    type Output = Self;
+
+    fn add(self, rhs: u16) -> Self::Output {
+        self.offset(rhs)
+    }
+}
+
+impl core::ops::AddAssign<u16> for VersionIndex {
+    fn add_assign(&mut self, rhs: u16) {
+        *self = self.offset(rhs);
+    }
+}
+
+impl core::ops::Sub for VersionIndex {
+    type Output = u16;
+
+    fn sub(self, rhs: VersionIndex) -> Self::Output {
+        self.offset_from(rhs)
+    }
+}
+
+impl From<VersionIndex> for usize {
+    fn from(value: VersionIndex) -> Self {
+        usize::from(value.0)
     }
 }
 
