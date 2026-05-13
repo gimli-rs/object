@@ -177,11 +177,14 @@ fn note() {
     // Add note section with align = 4.
     let mut buffer = Vec::new();
 
+    let nt1 = elf::NoteType(1);
+    let nt2 = elf::NoteType(2);
+
     buffer
         .write_all(object::bytes_of(&elf::NoteHeader32 {
             n_namesz: U32::new(endian, 6),
             n_descsz: U32::new(endian, 11),
-            n_type: U32::new(endian, 1),
+            n_type: U32::new(endian, nt1),
         }))
         .unwrap();
     buffer.write_all(b"name1\0\0\0").unwrap();
@@ -191,7 +194,7 @@ fn note() {
         .write_all(object::bytes_of(&elf::NoteHeader32 {
             n_namesz: U32::new(endian, 6),
             n_descsz: U32::new(endian, 11),
-            n_type: U32::new(endian, 2),
+            n_type: U32::new(endian, nt2),
         }))
         .unwrap();
     buffer.write_all(b"name2\0\0\0").unwrap();
@@ -207,7 +210,7 @@ fn note() {
         .write_all(object::bytes_of(&elf::NoteHeader32 {
             n_namesz: U32::new(endian, 6),
             n_descsz: U32::new(endian, 11),
-            n_type: U32::new(endian, 1),
+            n_type: U32::new(endian, nt1),
         }))
         .unwrap();
     buffer.write_all(b"name1\0\0\0\0\0\0\0").unwrap();
@@ -217,7 +220,7 @@ fn note() {
         .write_all(object::bytes_of(&elf::NoteHeader32 {
             n_namesz: U32::new(endian, 4),
             n_descsz: U32::new(endian, 11),
-            n_type: U32::new(endian, 2),
+            n_type: U32::new(endian, nt2),
         }))
         .unwrap();
     buffer.write_all(b"abc\0").unwrap();
@@ -241,11 +244,11 @@ fn note() {
     let note = notes.next().unwrap().unwrap();
     assert_eq!(note.name(), b"name1");
     assert_eq!(note.desc(), b"descriptor\0");
-    assert_eq!(note.n_type(endian), 1);
+    assert_eq!(note.n_type(endian), nt1);
     let note = notes.next().unwrap().unwrap();
     assert_eq!(note.name(), b"name2");
     assert_eq!(note.desc(), b"descriptor\0");
-    assert_eq!(note.n_type(endian), 2);
+    assert_eq!(note.n_type(endian), nt2);
     assert!(notes.next().unwrap().is_none());
 
     let section = sections.section(SectionIndex(2)).unwrap();
@@ -255,11 +258,11 @@ fn note() {
     let note = notes.next().unwrap().unwrap();
     assert_eq!(note.name(), b"name1");
     assert_eq!(note.desc(), b"descriptor\0");
-    assert_eq!(note.n_type(endian), 1);
+    assert_eq!(note.n_type(endian), nt1);
     let note = notes.next().unwrap().unwrap();
     assert_eq!(note.name(), b"abc");
     assert_eq!(note.desc(), b"descriptor\0");
-    assert_eq!(note.n_type(endian), 2);
+    assert_eq!(note.n_type(endian), nt2);
     assert!(notes.next().unwrap().is_none());
 }
 
