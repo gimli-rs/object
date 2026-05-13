@@ -751,7 +751,8 @@ newtype!(
     struct FileFlags(u32);
 );
 
-newtype_flag_names!(NAMES_EF: FileFlags(u32) = {});
+// Names depend on machine.
+newtype_flag_names!(FileFlags(u32) = {});
 
 impl FileFlags {
     /// Get the MIPS ABI field.

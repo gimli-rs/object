@@ -498,7 +498,8 @@ newtype!(
     struct SymbolType(u16);
 );
 
-newtype_flag_names!(NAMES_SYM_T: SymbolType(u16) = {});
+// Names depend on storage class.
+newtype_flag_names!(SymbolType(u16) = {});
 
 flag_names!(NAMES_SYM_T_EXT: SymbolType(u16) = {
     _ = SYM_V_MASK => NAMES_SYM_V,
