@@ -1590,8 +1590,8 @@ impl SectionFlags {
     }
 
     /// Set the section type field.
-    pub fn with_type(self, typ: SectionType) -> SectionFlags {
-        SectionFlags(self.0 & !SECTION_TYPE | u32::from(typ.0))
+    pub const fn with_type(self, typ: SectionType) -> SectionFlags {
+        SectionFlags(self.0 & !SECTION_TYPE | typ.0 as u32)
     }
 }
 
@@ -1599,6 +1599,13 @@ newtype!(
     /// Constants for the type of a section
     struct SectionType(u8);
 );
+
+impl SectionType {
+    /// Convert to a `SectionFlags` with no attributes, for use in const expressions.
+    pub const fn to_flags(self) -> SectionFlags {
+        SectionFlags(self.0 as u32)
+    }
+}
 
 impl From<SectionType> for SectionFlags {
     fn from(typ: SectionType) -> Self {
