@@ -3400,7 +3400,7 @@ newtype!(
 );
 
 // Names are context-dependent.
-newtype_flag_names!(NAMES_N_DESC: SymbolDesc(u16) = {});
+newtype_flag_names!(SymbolDesc(u16) = {});
 
 impl SymbolDesc {
     /// All possible flag value names for defined symbols.

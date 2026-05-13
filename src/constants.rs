@@ -627,8 +627,19 @@ macro_rules! newtype_consts {
 /// Create `$varname` using `constant_names!`, and then define `pub const $outer::NAMES`
 /// and `pub fn $outer::name`, as well as `Debug` and `Display` implementations.
 macro_rules! newtype_constant_names {
-    ($varname:ident: $outer:ident($inner:ident) = $($next:ident +)? { $($body:tt)* }) => {
-        constant_names!($varname: $outer($inner) = $($next +)? { $($body)* });
+    // No names.
+    ($outer:ident($inner:ident) = {}) => {
+        newtype_constant_names!(@impl $outer($inner));
+
+        impl core::fmt::Debug for $outer {
+            fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+                self.0.fmt(f)
+            }
+        }
+    };
+    ($varname:ident: $outer:ident($inner:ident) = $($next:ident +)? { $($body:tt)+ }) => {
+        constant_names!($varname: $outer($inner) = $($next +)? { $($body)+ });
+        newtype_constant_names!(@impl $outer($inner));
 
         #[cfg(feature = "names")]
         impl $outer {
@@ -648,7 +659,8 @@ macro_rules! newtype_constant_names {
                 self.0.fmt(f)
             }
         }
-
+    };
+    (@impl $outer:ident($inner:ident)) => {
         impl core::fmt::Display for $outer {
             fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
                 core::fmt::Display::fmt(&self.0, f)
@@ -664,8 +676,23 @@ macro_rules! newtype_constant_names {
 ///
 /// Also implement various methods and traits that are useful for working with flags.
 macro_rules! newtype_flag_names {
-    ($varname:ident: $outer:ident($inner:ident) = $($next:ident +)? { $($body:tt)* }) => {
-        flag_names!($varname: $outer($inner) = $($next +)? { $($body)* });
+    // No names.
+    ($outer:ident($inner:ident) = {}) => {
+        newtype_flag_names!(@impl $outer($inner));
+
+        impl core::fmt::Debug for $outer {
+            fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+                if self.0 == 0 {
+                    write!(f, "0")
+                } else {
+                    write!(f, "0x{:x}", self.0)
+                }
+            }
+        }
+    };
+    ($varname:ident: $outer:ident($inner:ident) = $($next:ident +)? { $($body:tt)+ }) => {
+        flag_names!($varname: $outer($inner) = $($next +)? { $($body)+ });
+        newtype_flag_names!(@impl $outer($inner));
 
         #[cfg(feature = "names")]
         impl $outer {
@@ -685,7 +712,8 @@ macro_rules! newtype_flag_names {
                 }
             }
         }
-
+    };
+    (@impl $outer:ident($inner:ident)) => {
         impl core::fmt::Display for $outer {
             fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
                 core::fmt::Display::fmt(&self.0, f)
