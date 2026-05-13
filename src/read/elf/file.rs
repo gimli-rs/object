@@ -413,7 +413,7 @@ where
                 let name = symbol.name(self.endian, self.dynamic_symbols.strings())?;
                 if !name.is_empty() {
                     let library = if let Some(svt) = versions.as_ref() {
-                        let vi = svt.version_index(self.endian, index);
+                        let vi = svt.version_index(self.endian, index).index();
                         svt.version(vi)?.and_then(|v| v.file())
                     } else {
                         None
