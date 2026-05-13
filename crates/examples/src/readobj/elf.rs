@@ -826,7 +826,7 @@ fn print_version<Elf: FileHeader>(
     match versions.and_then(|versions| versions.version(versym.index()).print_err(p)) {
         Some(Some(version)) => {
             p.field_string_option("Version", versym, Some(version.name()));
-            p.flag_bits(VersymIndex(versym.0 & VERSYM_HIDDEN.0), VersymIndex::NAMES);
+            p.flag_bits(versym & VERSYM_HIDDEN, VersymIndex::NAMES);
         }
         _ => p.field_flags("Version", versym, VersymIndex::NAMES),
     }
