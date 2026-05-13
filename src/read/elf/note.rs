@@ -119,7 +119,7 @@ impl<'data, Elf: FileHeader> Note<'data, Elf> {
     /// Return the `n_type` field of the `NoteHeader`.
     ///
     /// The meaning of this field is determined by `name`.
-    pub fn n_type(&self, endian: Elf::Endian) -> u32 {
+    pub fn n_type(&self, endian: Elf::Endian) -> elf::NoteType {
         self.header.n_type(endian)
     }
 
@@ -187,7 +187,7 @@ pub trait NoteHeader: Debug + Pod {
 
     fn n_namesz(&self, endian: Self::Endian) -> u32;
     fn n_descsz(&self, endian: Self::Endian) -> u32;
-    fn n_type(&self, endian: Self::Endian) -> u32;
+    fn n_type(&self, endian: Self::Endian) -> elf::NoteType;
 }
 
 impl<Endian: endian::Endian> NoteHeader for elf::NoteHeader32<Endian> {
@@ -204,7 +204,7 @@ impl<Endian: endian::Endian> NoteHeader for elf::NoteHeader32<Endian> {
     }
 
     #[inline]
-    fn n_type(&self, endian: Self::Endian) -> u32 {
+    fn n_type(&self, endian: Self::Endian) -> elf::NoteType {
         self.n_type.get(endian)
     }
 }
@@ -223,7 +223,7 @@ impl<Endian: endian::Endian> NoteHeader for elf::NoteHeader64<Endian> {
     }
 
     #[inline]
-    fn n_type(&self, endian: Self::Endian) -> u32 {
+    fn n_type(&self, endian: Self::Endian) -> elf::NoteType {
         self.n_type.get(endian)
     }
 }

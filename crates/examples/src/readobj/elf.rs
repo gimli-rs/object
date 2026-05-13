@@ -547,7 +547,7 @@ fn print_notes<Elf: FileHeader>(
         p.group("Note", |p| {
             let name = note.name();
             p.field_string_option("Name", note.n_namesz(endian), Some(name));
-            p.field_consts("Type", note.n_type(endian), note_type_names(name));
+            p.field_consts("Type", note.n_type(endian), NoteType::names(name));
             if let Some(mut properties) = note.gnu_properties(endian) {
                 while let Some(Some(property)) = properties.next().print_err(p) {
                     p.group("Property", |p| {
