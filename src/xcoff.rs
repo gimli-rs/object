@@ -1051,11 +1051,9 @@ pub struct Rel64 {
     pub r_rtype: u8,
 }
 
+constant_names!(
 /// Values for `Rel*::r_rtype`.
-#[cfg(feature = "names")]
-pub const NAMES_REL_TYPE: &ConstantNames<u8> = &NAMES_R;
-
-constant_names!(NAMES_R: u8 = {
+pub NAMES_REL_TYPE: u8 = {
     /// Positive relocation.
     R_POS = 0x00,
     /// Positive indirect load relocation.

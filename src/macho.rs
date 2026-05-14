@@ -49,44 +49,44 @@ pub const fn machine_names(cputype: CpuType) -> &'static Names {
 
 names! {
     struct Base;
-    flags cpusubtype: CpuSubtype = NAMES_CPU_SUBTYPE;
+    flags cpusubtype = NAMES_CPU_SUBTYPE;
     consts reloc: u8 = {};
 }
 
 names! {
     struct X86(Base);
-    flags cpusubtype: CpuSubtype = NAMES_CPU_SUBTYPE_X86;
-    consts reloc: u8 = NAMES_GENERIC_RELOC;
+    flags cpusubtype = NAMES_CPU_SUBTYPE_X86;
+    consts reloc = NAMES_GENERIC_RELOC;
 }
 
 names! {
     struct X86_64(Base);
-    flags cpusubtype: CpuSubtype = NAMES_CPU_SUBTYPE_X86_64;
-    consts reloc: u8 = NAMES_X86_64_RELOC;
+    flags cpusubtype = NAMES_CPU_SUBTYPE_X86_64;
+    consts reloc = NAMES_X86_64_RELOC;
 }
 
 names! {
     struct Arm(Base);
-    flags cpusubtype: CpuSubtype = NAMES_CPU_SUBTYPE_ARM;
-    consts reloc: u8 = NAMES_ARM_RELOC;
+    flags cpusubtype = NAMES_CPU_SUBTYPE_ARM;
+    consts reloc = NAMES_ARM_RELOC;
 }
 
 names! {
     struct Arm64(Base);
-    flags cpusubtype: CpuSubtype = NAMES_CPU_SUBTYPE_ARM64;
-    consts reloc: u8 = NAMES_ARM64_RELOC;
+    flags cpusubtype = NAMES_CPU_SUBTYPE_ARM64;
+    consts reloc = NAMES_ARM64_RELOC;
 }
 
 names! {
     struct Arm64_32(Base);
-    flags cpusubtype: CpuSubtype = NAMES_CPU_SUBTYPE_ARM64_32;
-    consts reloc: u8 = NAMES_ARM64_RELOC;
+    flags cpusubtype = NAMES_CPU_SUBTYPE_ARM64_32;
+    consts reloc = NAMES_ARM64_RELOC;
 }
 
 names! {
     struct Ppc(Base);
-    flags cpusubtype: CpuSubtype = NAMES_CPU_SUBTYPE_POWERPC;
-    consts reloc: u8 = NAMES_PPC_RELOC;
+    flags cpusubtype = NAMES_CPU_SUBTYPE_POWERPC;
+    consts reloc = NAMES_PPC_RELOC;
 }
 
 // Definitions from "/usr/include/mach/machine.h".

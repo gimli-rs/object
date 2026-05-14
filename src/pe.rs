@@ -71,7 +71,7 @@ pub const fn machine_names(machine: Machine) -> &'static Names {
 names! {
     struct Base;
     flags rel: u16 = {};
-    consts rel_based: u16 = NAMES_REL_BASED;
+    consts rel_based = NAMES_REL_BASED;
 }
 
 /// MZ
@@ -651,11 +651,9 @@ newtype_flag_names!(NAMES_DLL_FLAGS: DllFlags(u16) = {
     IMAGE_DLLCHARACTERISTICS_TERMINAL_SERVER_AWARE = 0x8000,
 });
 
+constant_names!(
 /// Indices for `ImageOptionalHeader*::data_directory`.
-#[cfg(feature = "names")]
-pub const NAMES_DIRECTORY_ENTRY: &ConstantNames<usize> = &_NAMES_DIRECTORY_ENTRY;
-
-constant_names!(_NAMES_DIRECTORY_ENTRY: usize = {
+pub NAMES_DIRECTORY_ENTRY: usize = {
     /// Export Directory
     IMAGE_DIRECTORY_ENTRY_EXPORT = 0,
     /// Import Directory
@@ -1317,7 +1315,7 @@ names! {
     flags rel: u16 = {
         _ = !0 => NAMES_IMAGE_REL_MIPS,
     };
-    consts rel_based: u16 = NAMES_REL_BASED_MIPS;
+    consts rel_based = NAMES_REL_BASED_MIPS;
 }
 
 constant_names!(NAMES_IMAGE_REL_MIPS: u16 = {
@@ -1522,7 +1520,7 @@ names! {
     flags rel: u16 = {
         _ = !0 => NAMES_IMAGE_REL_ARM,
     };
-    consts rel_based: u16 = NAMES_REL_BASED_ARM;
+    consts rel_based = NAMES_REL_BASED_ARM;
 }
 
 constant_names!(NAMES_IMAGE_REL_ARM: u16 = {
@@ -1716,7 +1714,7 @@ names! {
     flags rel: u16 = {
         _ = !0 => NAMES_IMAGE_REL_IA64,
     };
-    consts rel_based: u16 = NAMES_REL_BASED_IA64;
+    consts rel_based = NAMES_REL_BASED_IA64;
 }
 
 constant_names!(NAMES_IMAGE_REL_IA64: u16 = {
@@ -1874,7 +1872,7 @@ constant_names!(NAMES_IMAGE_REL_EBC: u16 = {
 
 names! {
     struct Riscv(Base);
-    consts rel_based: u16 = NAMES_REL_BASED_RISCV;
+    consts rel_based = NAMES_REL_BASED_RISCV;
 }
 
 /*

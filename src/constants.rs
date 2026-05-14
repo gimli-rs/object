@@ -327,17 +327,26 @@ where
 /// ```text
 /// names! {
 ///     struct Base;             // or: struct Arch(Base);
-///     // Expands using constant_names!()
-///     consts name: type = { ... };
-///     // Expands using flag_names!()
-///     flags name: type = { ... };
+///     // Anonymous inline definitions.
+///     consts name: type = { ... }; // Uses constant_names!()
+///     flags name: type = { ... }; // Uses flag_names!()
 ///     // Reference constants defined elsewhere.
-///     consts name: type = VAR;
+///     consts name = VAR;
+///     flags name = VAR;
+///     // Define module-level VAR and reference it. Optional doc comments and visibility.
+///     /// Doc comment.
+///     consts name = pub VAR: type = { ... };
+///     flags name = VAR: type = { ... };
 /// }
 /// ```
 macro_rules! names {
     ($(#[$meta:meta])* struct $struct:ident$(($parent:ident))?;
-        $($kind:ident $method:ident: $outer:ident$(($inner:ident))? = $body:tt;)*
+        $(
+            $(#[$varname_meta:meta])*
+            $kind:ident $method:ident
+                $(= $vis:vis $varname:ident)?
+                $(: $outer:ident$(($inner:ident))? = $body:tt)?;
+        )*
     ) => {
         #[cfg(feature = "names")]
         $(#[$meta])*
@@ -349,7 +358,7 @@ macro_rules! names {
             const fn names_value() -> Names {
                 #[allow(clippy::needless_update)]
                 Names {
-                    $($method: names!(@ref $method $body),)*
+                    $($method: names!(@ref $method ($($varname)?) ($($body)?)),)*
                     $(..$parent::names_value())?
                 }
             }
@@ -361,36 +370,50 @@ macro_rules! names {
                 &C
             }
 
-            // This converts $parent into a tt so that the method repetition can use it.
-            names! { @impl_methods ($($parent)?) $($kind $method ($outer $($inner)?) $body)* }
+            // Emit struct methods for anonymous inlines.
+            names! { @impl_methods ($($parent)?) $(
+                $kind $method ($($varname)?) ($($outer $($inner)?)?) ($($body)?)
+            )* }
         }
 
-        $(names! { @consts $kind ($outer $($inner)?) $body })*
+        // Emit module-level statics for named inlines.
+        names! { @statics ($($parent)?) $(
+            $kind $method ($(#[$varname_meta])*) ($($vis $varname)?) ($($outer $($inner)?)?) ($($body)?)
+        )* }
+
+        // Emit module-level constants.
+        $(names! { @consts $kind ($($outer $($inner)?)?) ($($body)?) })*
     };
 
-    (@impl_methods $parent:tt $($kind:ident $method:ident $type:tt $body:tt)*) => {
-        $(names! { @impl_method $kind $method $type $parent $body })*
+    // Struct methods returning anonymous ConstantNames/FlagNames static.
+    (@impl_methods $parent:tt $($kind:ident $method:ident $varname:tt $type:tt $body:tt)*) => {
+        $(names! { @impl_method $kind $method $varname $type (names!(@impl_next $method $parent)) $body })*
     };
-
-    // Struct method returning ConstantNames/FlagNames static.
-    // These methods exist only to give a place to define the statics,
-    // so not needed for delegation.
-    (@impl_method $kind:ident $method:ident $type:tt $parent:tt $fn:ident) => {};
-    (@impl_method consts $method:ident $type:tt $parent:tt $body:tt) => {
+    (@impl_method $kind:ident $method:ident ($varname:ident) $type:tt $next:tt $body:tt) => {};
+    (@impl_method consts $method:ident () $type:tt $next:tt ($body:tt)) => {
         const fn $method() -> &'static crate::constants::ConstantNames<newtype!(@type $type)> {
-            constant_names!(
-                @static NAMES $type (names!(@impl_next $method $parent)) $body
-            );
+            constant_names! { @static () NAMES $type $next $body }
             &NAMES
         }
     };
-    (@impl_method flags $method:ident $type:tt $parent:tt $body:tt) => {
-        const fn $method() -> &'static flag_names!(@flagnames $type) {
-            flag_names!(
-                @static NAMES $type (names!(@impl_next $method $parent)) $body
-            );
+    (@impl_method flags $method:ident () $type:tt $next:tt ($body:tt)) => {
+        const fn $method() -> &'static crate::constants::FlagNames<newtype!(@type $type)> {
+            flag_names! { @static () NAMES $type $next $body }
             &NAMES
         }
+    };
+
+    // Module-level ConstantNames/FlagNames statics.
+    (@statics $parent:tt $($kind:ident $method:ident $meta:tt $varname:tt $type:tt $body:tt)*) => {
+        $(names! { @static $kind $meta $varname $type (names!(@impl_next $method $parent)) $body })*
+    };
+    (@static $kind:ident () () $type:tt $next:tt $body:tt) => {};
+    (@static $kind:ident () $varname:tt $type:tt $next:tt ()) => {};
+    (@static consts $meta:tt ($vis:vis $varname:ident) $type:tt $next:tt ($body:tt)) => {
+        constant_names! { @static $meta $vis $varname $type $next $body }
+    };
+    (@static flags $meta:tt ($vis:vis $varname:ident) $type:tt $next:tt ($body:tt)) => {
+        flag_names! { @static $meta $vis $varname $type $next $body }
     };
 
     // Value of `ConstantNames::next` or `FlagNames::next`.
@@ -398,13 +421,22 @@ macro_rules! names {
     (@impl_next $method:ident ($parent:ident)) => { Some($parent::names_value().$method) };
 
     // Value of a field in `Names`.
-    (@ref $method:ident $fn:ident) => { &$fn };
-    (@ref $method:ident $body:tt) => { Self::$method() };
+    // - Named (reference or inline): use the module-level static directly.
+    // - Anonymous inline: call the const fn that hides the local NAMES static.
+    // - Neither varname nor body: invalid.
+    (@ref $method:ident ($varname:ident) $body:tt) => { &$varname };
+    (@ref $method:ident () ($body:tt)) => { Self::$method() };
+    (@ref $method:ident () ()) => {
+        compile_error!(concat!(
+            "`names!`: `", stringify!($method),
+            "` must specify either a body `= { ... }` or a reference `= NAME`"
+        ))
+    };
 
     // `pub const` values if required.
-    (@consts $kind:tt $type:tt $fn:ident) => {};
-    (@consts consts $type:tt $body:tt) => { constant_names! { @consts $type $body } };
-    (@consts flags $type:tt $body:tt) => { flag_names! { @consts $type $body } };
+    (@consts $kind:tt $type:tt ()) => {};
+    (@consts consts $type:tt ($body:tt)) => { constant_names! { @consts $type $body } };
+    (@consts flags $type:tt ($body:tt)) => { flag_names! { @consts $type $body } };
 }
 
 /// Create a static `ConstantNames` definition, and `pub const` definitions for the values.
@@ -419,17 +451,18 @@ macro_rules! names {
 /// constant_names!(varname: type = NAMES + { NAME = value, ... });
 /// ```
 macro_rules! constant_names {
-    ($varname:ident: $outer:ident$(($inner:ident))? = $($next:ident +)? { $($body:tt)* }) => {
-        constant_names! { @static $varname ($outer $($inner)?) (constant_names!(@next $($next)?)) { $($body)* } }
+    ($(#[$meta:meta])* $vis:vis $varname:ident: $outer:ident$(($inner:ident))? = $($next:ident +)? { $($body:tt)* }) => {
+        constant_names! { @static ($(#[$meta])*) $vis $varname ($outer $($inner)?) (constant_names!(@next $($next)?)) { $($body)* } }
         constant_names! { @consts ($outer $($inner)?) { $($body)* } }
     };
     (@next) => { None };
     (@next $next:ident) => { Some(&$next) };
-    (@static $varname:ident $type:tt ($next:expr) {
-        $($(#[$meta:meta])* $name:ident = $value:expr),* $(,)?
+    (@static ($(#[$meta:meta])*) $vis:vis $varname:ident $type:tt ($next:expr) {
+        $($(#[$entry_meta:meta])* $name:ident = $value:expr),* $(,)?
     }) => {
+        $(#[$meta])*
         #[cfg(feature = "names")]
-        static $varname: crate::constants::ConstantNames<newtype!(@type $type)> = crate::constants::ConstantNames {
+        $vis static $varname: crate::constants::ConstantNames<newtype!(@type $type)> = crate::constants::ConstantNames {
             next: $next,
             entries: &[$(($value, stringify!($name)),)*],
         };
@@ -464,15 +497,16 @@ macro_rules! constant_names {
 /// _ = mask_value => NAMES,
 /// ```
 macro_rules! flag_names {
-    ($varname:ident: $outer:ident$(($inner:ident))? = $($next:ident +)? { $($body:tt)* }) => {
-        flag_names! { @static $varname ($outer $($inner)?) (flag_names!(@next $($next)?)) { $($body)* } }
+    ($(#[$meta:meta])* $vis:vis $varname:ident: $outer:ident$(($inner:ident))? = $($next:ident +)? { $($body:tt)* }) => {
+        flag_names! { @static ($(#[$meta])*) $vis $varname ($outer $($inner)?) (flag_names!(@next $($next)?)) { $($body)* } }
         flag_names! { @consts ($outer $($inner)?) { $($body)* } }
     };
     (@next) => { None };
     (@next $next:ident) => { Some(&$next) };
-    (@static $varname:ident $type:tt ($next:expr) { $($body:tt)* }) => {
+    (@static ($(#[$meta:meta])*) $vis:vis $varname:ident $type:tt ($next:expr) { $($body:tt)* }) => {
+        $(#[$meta])*
         #[cfg(feature = "names")]
-        static $varname: flag_names!(@flagnames $type) = flag_names! {
+        $vis static $varname: crate::constants::FlagNames<newtype!(@type $type)> = flag_names! {
             @build_static ($type $next) [] [] $($body)*
         };
     };
@@ -551,7 +585,7 @@ macro_rules! flag_names {
         $(#[$meta:meta])* $name:ident = $value:expr => $entry:expr,
         $($rest:tt)*
     ) => {
-        $(#[$meta])* pub const $name: flag_names!(@mask $type) = $value;
+        $(#[$meta])* pub const $name: newtype!(@inner $type) = $value;
         flag_names! { @build_consts $type $($rest)* }
     };
 
@@ -562,11 +596,6 @@ macro_rules! flag_names {
     ) => {
         flag_names! { @build_consts $type $($rest)* }
     };
-
-    (@mask ($outer:ident $inner:ident)) => { $inner };
-    (@mask ($type:ident)) => { $type };
-    (@flagnames ($outer:ident $inner:ident)) => { crate::constants::FlagNames<$outer> };
-    (@flagnames ($outer:ident)) => { crate::constants::FlagNames<$outer> };
 }
 
 macro_rules! newtype {
@@ -601,6 +630,8 @@ macro_rules! newtype {
     // Newtype helpers for other macros.
     (@type ($outer:ident $inner:ident)) => { $outer };
     (@type ($type:ident)) => { $type };
+    (@inner ($outer:ident $inner:ident)) => { $inner };
+    (@inner ($type:ident)) => { $type };
     (@value ($outer:ident $inner:ident) $value:expr) => { $outer($value) };
     (@value ($type:ident) $value:expr) => { $value };
 }
@@ -858,8 +889,8 @@ mod tests {
         }
         names! {
             struct Base;
-            consts foo: Foo(u32) = FOO;
-            flags bar: Bar(u32) = BAR;
+            consts foo = FOO;
+            flags bar = BAR;
             // Inline constant definitions.
             consts quux: u64 = {
                 QUUX_A = 1,
@@ -870,9 +901,9 @@ mod tests {
             struct Arch(Base);
             // Does not inherit from Base::foo directly
             // (but the FOO_ARCH definition below does inherit FOO).
-            consts foo: Foo(u32) = FOO_ARCH;
-            // Inherits names from Base::bar.
-            flags bar: Bar(u32) = {
+            consts foo = FOO_ARCH;
+            // BAR_ARCH is a module-level static that inherits names from Base::bar.
+            flags bar = BAR_ARCH: Bar(u32) = {
                 BIT_4 = 0x8,
             };
         }

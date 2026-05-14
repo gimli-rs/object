@@ -48,17 +48,17 @@ pub struct Names {
 
 names! {
     struct Base;
-    consts et: FileType = NAMES_ET;
+    consts et = NAMES_ET;
     flags ef: FileFlags(u32) = {};
-    consts shn: SymbolSection = NAMES_SHN;
-    consts sht: SectionType = NAMES_SHT;
-    flags shf: SectionFlags = NAMES_SHF;
-    consts stb: SymbolBind = NAMES_STB;
-    consts stt: SymbolType = NAMES_STT;
-    flags sto: SymbolFlags = NAMES_STO;
-    consts pt: ProgramType = NAMES_PT;
-    flags pf: ProgramFlags = NAMES_PF;
-    consts dt: DynamicTag = NAMES_DT;
+    consts shn = NAMES_SHN;
+    consts sht = NAMES_SHT;
+    flags shf = NAMES_SHF;
+    consts stb = NAMES_STB;
+    consts stt = NAMES_STT;
+    flags sto = NAMES_STO;
+    consts pt = NAMES_PT;
+    flags pf = NAMES_PF;
+    consts dt = NAMES_DT;
     consts r: u32 = {};
 }
 
