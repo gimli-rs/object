@@ -13,13 +13,13 @@ use crate::constants::{ConstantNames, FlagNames};
 use crate::endian::{Endian, I32, I64, U16, U32, U64};
 use crate::pod::Pod;
 
-/// Platform-specific constants for an ELF file.
+/// Platform-specific constant names for an ELF file.
 ///
-/// Returned by [`constants`] and [`machine_constants`].
+/// Returned by [`names`] and [`machine_names`].
 #[cfg(feature = "names")]
 #[derive(Debug)]
 #[non_exhaustive]
-pub struct Constants {
+pub struct Names {
     /// Values for `FileHeader*::e_type`.
     pub et: &'static ConstantNames<FileType>,
     /// Values for `FileHeader*::e_flags`.
@@ -46,7 +46,7 @@ pub struct Constants {
     pub r: &'static ConstantNames<u32>,
 }
 
-constants! {
+names! {
     struct Base;
     consts et: FileType = NAMES_ET;
     flags ef: FileFlags(u32) = {};
@@ -62,57 +62,57 @@ constants! {
     consts r: u32 = {};
 }
 
-/// Return the platform independent constants.
+/// Return the platform independent names for constants.
 #[cfg(feature = "names")]
-pub const fn constants() -> &'static Constants {
-    Base::constants()
+pub const fn names() -> &'static Names {
+    Base::names()
 }
 
-/// Return the platform specific constants.
+/// Return the platform specific names for constants.
 ///
-/// Note that these also include the values returned by [`constants`].
+/// Note that these also include the values returned by [`names`].
 ///
 /// `machine` corresponds to the `FileHeader*::e_machine` field.
 #[cfg(feature = "names")]
-pub const fn machine_constants(machine: Machine) -> &'static Constants {
+pub const fn machine_names(machine: Machine) -> &'static Names {
     match machine {
-        EM_386 => I386::constants(),
-        EM_68K => M68k::constants(),
-        EM_AARCH64 => Aarch64::constants(),
-        EM_ALPHA => Alpha::constants(),
-        EM_ALTERA_NIOS2 => Nios2::constants(),
-        EM_ARM => Arm::constants(),
-        EM_AVR => Avr::constants(),
-        EM_BPF => Bpf::constants(),
-        EM_CRIS => Cris::constants(),
-        EM_CSKY => Csky::constants(),
-        EM_HEXAGON => Hex::constants(),
-        EM_MCST_ELBRUS => E2k::constants(),
-        EM_IA_64 => Ia64::constants(),
-        EM_LOONGARCH => Larch::constants(),
-        EM_M32R => M32r::constants(),
-        EM_METAG => Metag::constants(),
-        EM_MICROBLAZE => Microblaze::constants(),
-        EM_MIPS => Mips::constants(),
-        EM_MN10300 => Mn10300::constants(),
-        EM_MSP430 => Msp430::constants(),
-        EM_NDS32 => Nds32::constants(),
-        EM_PARISC => Parisc::constants(),
-        EM_PPC => Ppc::constants(),
-        EM_PPC64 => Ppc64::constants(),
-        EM_RISCV => Riscv::constants(),
-        EM_S390 => S390::constants(),
-        EM_SBF => Sbf::constants(),
-        EM_SH => Sh::constants(),
-        EM_SHARC => Sharc::constants(),
+        EM_386 => I386::names(),
+        EM_68K => M68k::names(),
+        EM_AARCH64 => Aarch64::names(),
+        EM_ALPHA => Alpha::names(),
+        EM_ALTERA_NIOS2 => Nios2::names(),
+        EM_ARM => Arm::names(),
+        EM_AVR => Avr::names(),
+        EM_BPF => Bpf::names(),
+        EM_CRIS => Cris::names(),
+        EM_CSKY => Csky::names(),
+        EM_HEXAGON => Hex::names(),
+        EM_MCST_ELBRUS => E2k::names(),
+        EM_IA_64 => Ia64::names(),
+        EM_LOONGARCH => Larch::names(),
+        EM_M32R => M32r::names(),
+        EM_METAG => Metag::names(),
+        EM_MICROBLAZE => Microblaze::names(),
+        EM_MIPS => Mips::names(),
+        EM_MN10300 => Mn10300::names(),
+        EM_MSP430 => Msp430::names(),
+        EM_NDS32 => Nds32::names(),
+        EM_PARISC => Parisc::names(),
+        EM_PPC => Ppc::names(),
+        EM_PPC64 => Ppc64::names(),
+        EM_RISCV => Riscv::names(),
+        EM_S390 => S390::names(),
+        EM_SBF => Sbf::names(),
+        EM_SH => Sh::names(),
+        EM_SHARC => Sharc::names(),
         // TODO: might need to be separated
-        EM_SPARC | EM_SPARC32PLUS => Sparc::constants(),
-        EM_SPARCV9 => SparcV9::constants(),
-        EM_TILEGX => Tilegx::constants(),
-        EM_TILEPRO => Tilepro::constants(),
-        EM_X86_64 => X86_64::constants(),
-        EM_XTENSA => Xtensa::constants(),
-        _ => Base::constants(),
+        EM_SPARC | EM_SPARC32PLUS => Sparc::names(),
+        EM_SPARCV9 => SparcV9::names(),
+        EM_TILEGX => Tilegx::names(),
+        EM_TILEPRO => Tilepro::names(),
+        EM_X86_64 => X86_64::names(),
+        EM_XTENSA => Xtensa::names(),
+        _ => Base::names(),
     }
 }
 
@@ -3019,7 +3019,7 @@ pub fn gnu_hash(name: &[u8]) -> u32 {
 
 // Motorola 68k specific definitions.
 
-constants! {
+names! {
     struct M68k(Base);
     consts r: u32 = {
         /// No reloc
@@ -3109,7 +3109,7 @@ constants! {
 
 // Intel 80386 specific definitions.
 
-constants! {
+names! {
     struct I386(Base);
     consts r: u32 = {
         /// No reloc
@@ -3201,7 +3201,7 @@ constants! {
 
 // ADI SHARC specific definitions
 
-constants! {
+names! {
     struct Sharc(Base);
     consts r: u32 = {
         /// 24-bit absolute address in bits 23:0 of a 48-bit instr
@@ -3311,7 +3311,7 @@ constants! {
 
 // SUN SPARC specific definitions.
 
-constants! {
+names! {
     struct Sparc(Base);
     consts stt: SymbolType(u8) = {
         /// Global register reserved to app.
@@ -3489,7 +3489,7 @@ constants! {
 
 pub const EF_SPARC_EXT_MASK: u32 = 0xFF_FF00;
 
-constants! {
+names! {
     struct SparcV9(Sparc);
     flags ef: FileFlags(u32) = {
         EF_SPARCV9_MM = 3 => NAMES_EF_SPARC_MM,
@@ -3504,7 +3504,7 @@ constant_names!(NAMES_EF_SPARC_MM: FileFlags(u32) = {
 
 // MIPS R3000 specific definitions.
 
-constants! {
+names! {
     struct Mips(Base);
     flags ef: FileFlags(u32) = {
         /// A .noreorder directive was used.
@@ -3939,7 +3939,7 @@ pub const LL_DELTA: u32 = 1 << 5;
 
 // PA-RISC specific definitions.
 
-constants! {
+names! {
     struct Parisc(Base);
     flags ef: FileFlags(u32) = {
         /// Trap nil pointer dereference.
@@ -4241,7 +4241,7 @@ constant_names!(NAMES_EFA_PARISC: FileFlags(u32) = {
 
 // Alpha specific definitions.
 
-constants! {
+names! {
     struct Alpha(Base);
     flags ef: FileFlags(u32) = {
         /// All addresses must be < 2GB.
@@ -4332,7 +4332,7 @@ pub const LITUSE_ALPHA_TLS_LDM: u32 = 5;
 
 // PowerPC specific declarations.
 
-constants! {
+names! {
     struct Ppc(Base);
     flags ef: FileFlags(u32) = {
         /// PowerPC embedded flag
@@ -4515,7 +4515,7 @@ constants! {
 // PowerPC specific values for the `DT_PPC_OPT` entry.
 pub const PPC_OPT_TLS: u32 = 1;
 
-constants! {
+names! {
     struct Ppc64(Base);
     consts r: u32 = {
         // PowerPC64 values for `Rel*::r_type` defined by the ABIs.
@@ -4762,7 +4762,7 @@ pub const STO_PPC64_LOCAL_MASK: u8 = 7 << STO_PPC64_LOCAL_BIT;
 
 // ARM specific declarations.
 
-constants! {
+names! {
     struct Arm(Base);
     flags ef: FileFlags(u32) = {
         EF_ARM_RELEXEC = 0x01,
@@ -5069,7 +5069,7 @@ pub const EF_ARM_SYMSARESORTED: u32 = 0x04;
 pub const EF_ARM_DYNSYMSUSESEGIDX: u32 = 0x08;
 pub const EF_ARM_MAPSYMSFIRST: u32 = 0x10;
 
-constants! {
+names! {
     struct Aarch64(Base);
     consts sht: SectionType(u32) = {
         /// AArch64 attributes section.
@@ -5364,7 +5364,7 @@ constants! {
 
 pub const DT_AARCH64_NUM: i64 = 6;
 
-constants! {
+names! {
     struct Avr(Base);
     flags ef: FileFlags(u32) = {
         /// If set, it is assumed that the elf file uses local symbols as reference
@@ -5438,7 +5438,7 @@ constant_names!(NAMES_EF_AVR_ARCH: FileFlags(u32) = {
     EF_AVR_ARCH_XMEGA7 = 107,
 });
 
-constants! {
+names! {
     struct Msp430(Base);
     consts r: u32 = {
         /// No reloc
@@ -5450,7 +5450,7 @@ constants! {
     };
 }
 
-constants! {
+names! {
     struct Hex(Base);
     consts r: u32 = {
         /// No reloc
@@ -5460,7 +5460,7 @@ constants! {
     };
 }
 
-constants! {
+names! {
     struct Csky(Base);
     consts r: u32 = {
         /// no reloc
@@ -5587,7 +5587,7 @@ constant_names!(NAMES_EF_CSKY_ABI: FileFlags(u32) = {
 
 // IA-64 specific declarations.
 
-constants! {
+names! {
     struct Ia64(Base);
     flags ef: FileFlags(u32) = {
         /// 64-bit ABI
@@ -5794,7 +5794,7 @@ pub const EF_IA_64_ARCH: u32 = 0xff00_0000;
 
 // SH specific declarations.
 
-constants! {
+names! {
     struct Sh(Base);
     flags ef: FileFlags(u32) = {
         EF_SH_MACH_MASK = 0x1f => NAMES_EF_SH_MACH,
@@ -5842,7 +5842,7 @@ constants! {
 
 // S/390 specific definitions.
 
-constants! {
+names! {
     struct S390(Base);
     flags ef: FileFlags(u32) = {
         /// High GPRs kernel facility needed.
@@ -6000,7 +6000,7 @@ constant_names!(NAMES_EF_SH_MACH: FileFlags(u32) = {
     EF_SH2A_SH3E = 0x18,
 });
 
-constants! {
+names! {
     struct Cris(Base);
     consts r: u32 = {
         R_CRIS_NONE = 0,
@@ -6026,7 +6026,7 @@ constants! {
     };
 }
 
-constants! {
+names! {
     struct X86_64(Base);
     consts r: u32 = {
         /// No reloc
@@ -6138,7 +6138,7 @@ constants! {
     };
 }
 
-constants! {
+names! {
     struct Mn10300(Base);
     consts r: u32 = {
         /// No reloc.
@@ -6214,7 +6214,7 @@ constants! {
     };
 }
 
-constants! {
+names! {
     struct M32r(Base);
     consts r: u32 = {
         /// No reloc.
@@ -6306,7 +6306,7 @@ constants! {
     };
 }
 
-constants! {
+names! {
     struct Microblaze(Base);
     consts r: u32 = {
         /// No reloc.
@@ -6373,7 +6373,7 @@ constants! {
 }
 
 // Nios II
-constants! {
+names! {
     struct Nios2(Base);
     consts dt: DynamicTag(i64) = {
         /// Address of _gp.
@@ -6476,7 +6476,7 @@ constants! {
 }
 
 // TILEPro
-constants! {
+names! {
     struct Tilepro(Base);
     consts r: u32 = {
         /// No reloc
@@ -6667,7 +6667,7 @@ constants! {
 }
 
 // TILE-Gx
-constants! {
+names! {
     struct Tilegx(Base);
     consts r: u32 = {
         /// No reloc
@@ -6916,7 +6916,7 @@ constants! {
     };
 }
 
-constants! {
+names! {
     struct Riscv(Base);
     flags ef: FileFlags(u32) = {
         EF_RISCV_RVC = 0x0001,
@@ -7013,7 +7013,7 @@ constant_names!(NAMES_EF_RISCV_FLOAT_ABI: FileFlags(u32) = {
     EF_RISCV_FLOAT_ABI_QUAD = 0x0006,
 });
 
-constants! {
+names! {
     struct Bpf(Base);
     consts r: u32 = {
         /// No reloc
@@ -7023,7 +7023,7 @@ constants! {
     };
 }
 
-constants! {
+names! {
     struct Sbf(Base);
     consts r: u32 = {
         /// No reloc
@@ -7035,7 +7035,7 @@ constants! {
 
 // Imagination Meta
 
-constants! {
+names! {
     struct Metag(Base);
     consts r: u32 = {
         R_METAG_HIADDR16 = 0,
@@ -7101,7 +7101,7 @@ constants! {
     };
 }
 
-constants! {
+names! {
     struct Nds32(Base);
     consts r: u32 = {
         R_NDS32_NONE = 0,
@@ -7115,7 +7115,7 @@ constants! {
     };
 }
 
-constants! {
+names! {
     struct Larch(Base);
     flags ef: FileFlags(u32) = {
         /// Additional properties of the base ABI type, including the FP calling
@@ -7458,7 +7458,7 @@ constant_names!(NAMES_EF_LARCH_ABI: FileFlags(u32) = {
     EF_LARCH_ABI_DOUBLE_FLOAT = 0x3,
 });
 
-constants! {
+names! {
     struct Xtensa(Base);
     consts r: u32 = {
         R_XTENSA_NONE = 0,
@@ -7572,7 +7572,7 @@ pub const E_E2K_MACH_48C: u32 = 24;
 /// -mtune=elbrus-8v7 code.
 pub const E_E2K_MACH_8V7: u32 = 25;
 
-constants! {
+names! {
     struct E2k(Base);
     flags ef: FileFlags(u32) = {
         EF_E2K_IPD = 3,

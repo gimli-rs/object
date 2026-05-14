@@ -12,78 +12,78 @@ use crate::constants::{ConstantNames, FlagNames};
 use crate::endian::{BigEndian, Endian, U16, U32, U64};
 use crate::pod::Pod;
 
-/// Platform-specific constants for a Mach-O file.
+/// Platform-specific constant names for a Mach-O file.
 ///
-/// Returned by [`constants`] and [`machine_constants`].
+/// Returned by [`names`] and [`machine_names`].
 #[cfg(feature = "names")]
 #[derive(Debug)]
 #[non_exhaustive]
-pub struct Constants {
+pub struct Names {
     /// Values for `cpusubtype` fields.
     pub cpusubtype: &'static FlagNames<CpuSubtype>,
     /// Values for `r_type` field of `Rel*::r_info`.
     pub reloc: &'static ConstantNames<u8>,
 }
 
-/// Return the platform independent constants.
+/// Return the platform independent names for constants.
 #[cfg(feature = "names")]
-pub const fn constants() -> &'static Constants {
-    Base::constants()
+pub const fn names() -> &'static Names {
+    Base::names()
 }
 
-/// Return the platform specific constants.
+/// Return the platform specific names for constants.
 ///
-/// Note that these also include the values returned by [`constants`].
+/// Note that these also include the values returned by [`names`].
 #[cfg(feature = "names")]
-pub const fn machine_constants(cputype: CpuType) -> &'static Constants {
+pub const fn machine_names(cputype: CpuType) -> &'static Names {
     match cputype {
-        CPU_TYPE_X86 => X86::constants(),
-        CPU_TYPE_X86_64 => X86_64::constants(),
-        CPU_TYPE_ARM => Arm::constants(),
-        CPU_TYPE_ARM64 => Arm64::constants(),
-        CPU_TYPE_ARM64_32 => Arm64_32::constants(),
-        CPU_TYPE_POWERPC | CPU_TYPE_POWERPC64 => Ppc::constants(),
-        _ => Base::constants(),
+        CPU_TYPE_X86 => X86::names(),
+        CPU_TYPE_X86_64 => X86_64::names(),
+        CPU_TYPE_ARM => Arm::names(),
+        CPU_TYPE_ARM64 => Arm64::names(),
+        CPU_TYPE_ARM64_32 => Arm64_32::names(),
+        CPU_TYPE_POWERPC | CPU_TYPE_POWERPC64 => Ppc::names(),
+        _ => Base::names(),
     }
 }
 
-constants! {
+names! {
     struct Base;
     flags cpusubtype: CpuSubtype = NAMES_CPU_SUBTYPE;
     consts reloc: u8 = {};
 }
 
-constants! {
+names! {
     struct X86(Base);
     flags cpusubtype: CpuSubtype = NAMES_CPU_SUBTYPE_X86;
     consts reloc: u8 = NAMES_GENERIC_RELOC;
 }
 
-constants! {
+names! {
     struct X86_64(Base);
     flags cpusubtype: CpuSubtype = NAMES_CPU_SUBTYPE_X86_64;
     consts reloc: u8 = NAMES_X86_64_RELOC;
 }
 
-constants! {
+names! {
     struct Arm(Base);
     flags cpusubtype: CpuSubtype = NAMES_CPU_SUBTYPE_ARM;
     consts reloc: u8 = NAMES_ARM_RELOC;
 }
 
-constants! {
+names! {
     struct Arm64(Base);
     flags cpusubtype: CpuSubtype = NAMES_CPU_SUBTYPE_ARM64;
     consts reloc: u8 = NAMES_ARM64_RELOC;
 }
 
-constants! {
+names! {
     struct Arm64_32(Base);
     flags cpusubtype: CpuSubtype = NAMES_CPU_SUBTYPE_ARM64_32;
     consts reloc: u8 = NAMES_ARM64_RELOC;
 }
 
-constants! {
+names! {
     struct Ppc(Base);
     flags cpusubtype: CpuSubtype = NAMES_CPU_SUBTYPE_POWERPC;
     consts reloc: u8 = NAMES_PPC_RELOC;

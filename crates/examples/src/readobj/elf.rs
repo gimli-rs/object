@@ -46,7 +46,7 @@ fn print_file_header<Elf: FileHeader>(p: &mut Printer<'_>, endian: Elf::Endian, 
         p.field_hex("Entry", elf.e_entry(endian).into());
         p.field_hex("ProgramHeaderOffset", elf.e_phoff(endian).into());
         p.field_hex("SectionHeaderOffset", elf.e_shoff(endian).into());
-        p.field_flags("Flags", elf.e_flags(endian), constants(endian, elf).ef);
+        p.field_flags("Flags", elf.e_flags(endian), names(endian, elf).ef);
         p.field_hex("HeaderSize", elf.e_ehsize(endian));
         p.field_hex("ProgramHeaderEntrySize", elf.e_phentsize(endian));
         p.field("ProgramHeaderCount", elf.e_phnum(endian));
@@ -82,7 +82,7 @@ fn print_program_headers<Elf: FileHeader>(
     elf: &Elf,
     segments: &[Elf::ProgramHeader],
 ) {
-    let constants = constants(endian, elf);
+    let names = names(endian, elf);
     for segment in segments {
         let p_type = segment.p_type(endian);
         if !p.options.segments
@@ -92,13 +92,13 @@ fn print_program_headers<Elf: FileHeader>(
             continue;
         }
         p.group("ProgramHeader", |p| {
-            p.field_consts("Type", segment.p_type(endian), constants.pt);
+            p.field_consts("Type", segment.p_type(endian), names.pt);
             p.field_hex("Offset", segment.p_offset(endian).into());
             p.field_hex("VirtualAddress", segment.p_vaddr(endian).into());
             p.field_hex("PhysicalAddress", segment.p_paddr(endian).into());
             p.field_hex("FileSize", segment.p_filesz(endian).into());
             p.field_hex("MemorySize", segment.p_memsz(endian).into());
-            p.field_flags("Flags", segment.p_flags(endian), constants.pf);
+            p.field_flags("Flags", segment.p_flags(endian), names.pf);
             p.field_hex("Align", segment.p_align(endian).into());
 
             match segment.p_type(endian) {
@@ -181,7 +181,7 @@ fn print_section_headers<Elf: FileHeader>(
     elf: &Elf,
     sections: &SectionTable<Elf>,
 ) {
-    let constants = constants(endian, elf);
+    let names = names(endian, elf);
     for (index, section) in sections.enumerate() {
         let sh_type = section.sh_type(endian);
         if !p.options.sections
@@ -207,8 +207,8 @@ fn print_section_headers<Elf: FileHeader>(
                 sections.section_name(endian, section),
             );
 
-            p.field_consts("Type", section.sh_type(endian), constants.sht);
-            p.field_flags("Flags", section.sh_flags(endian), constants.shf);
+            p.field_consts("Type", section.sh_type(endian), names.sht);
+            p.field_flags("Flags", section.sh_flags(endian), names.shf);
             p.field_hex("Address", section.sh_addr(endian).into());
             p.field_hex("Offset", section.sh_offset(endian).into());
             p.field_hex("Size", section.sh_size(endian).into());
@@ -284,7 +284,7 @@ fn print_section_symbols<Elf: FileHeader>(
     section_index: SectionIndex,
     section: &Elf::SectionHeader,
 ) {
-    let constants = constants(endian, elf);
+    let names = names(endian, elf);
     if let Some(Some(symbols)) = section
         .symbols(endian, data, sections, section_index)
         .print_err(p)
@@ -312,15 +312,15 @@ fn print_section_symbols<Elf: FileHeader>(
                 }
                 p.field_hex("Value", symbol.st_value(endian).into());
                 p.field_hex("Size", symbol.st_size(endian).into());
-                p.field_consts("Type", symbol.st_type(), constants.stt);
-                p.field_consts("Bind", symbol.st_bind(), constants.stb);
-                p.field_flags("Other", symbol.st_other(), constants.sto);
+                p.field_consts("Type", symbol.st_type(), names.stt);
+                p.field_consts("Bind", symbol.st_bind(), names.stb);
+                p.field_flags("Other", symbol.st_other(), names.sto);
 
                 let shndx = symbol.st_shndx(endian);
                 if let Some(index) = shndx.index() {
                     p.field("SectionIndex", index);
                 } else {
-                    p.field_consts("SectionIndex", shndx, constants.shn);
+                    p.field_consts("SectionIndex", shndx, names.shn);
                 }
                 if let Some(shndx) = symbols.shndx(endian, index) {
                     p.field("ExtendedSectionIndex", shndx);
@@ -349,11 +349,11 @@ fn print_section_rel<Elf: FileHeader>(
         } else {
             None
         };
-        let consts = constants(endian, elf).r;
+        let names = names(endian, elf).r;
         for relocation in relocations {
             p.group("Relocation", |p| {
                 p.field_hex("Offset", relocation.r_offset(endian).into());
-                p.field_consts("Type", relocation.r_type(endian), consts);
+                p.field_consts("Type", relocation.r_type(endian), names);
                 let sym = relocation.symbol(endian);
                 print_rel_symbol(p, endian, symbols, sym);
             });
@@ -380,14 +380,14 @@ fn print_section_rela<Elf: FileHeader>(
         } else {
             None
         };
-        let consts = constants(endian, elf).r;
+        let names = names(endian, elf).r;
         for relocation in relocations {
             p.group("Relocation", |p| {
                 p.field_hex("Offset", relocation.r_offset(endian).into());
                 p.field_consts(
                     "Type",
                     relocation.r_type(endian, elf.is_mips64el(endian)),
-                    consts,
+                    names,
                 );
                 let sym = relocation.symbol(endian, elf.is_mips64el(endian));
                 print_rel_symbol(p, endian, symbols, sym);
@@ -456,7 +456,7 @@ fn print_section_crel<Elf: FileHeader>(
         } else {
             None
         };
-        let consts = constants(endian, elf).r;
+        let names = names(endian, elf).r;
         for relocation_result in relocations {
             let Some(relocation) = relocation_result.print_err(p) else {
                 return;
@@ -464,7 +464,7 @@ fn print_section_crel<Elf: FileHeader>(
 
             p.group("Relocation", |p| {
                 p.field_hex("Offset", relocation.r_offset);
-                p.field_consts("Type", relocation.r_type, consts);
+                p.field_consts("Type", relocation.r_type, names);
                 print_rel_symbol(p, endian, symbols, relocation.symbol());
                 let addend = relocation.r_addend;
                 if addend != 0 {
@@ -574,12 +574,12 @@ fn print_dynamic<Elf: FileHeader>(
     dynamic: &[Elf::Dyn],
     dynstr: StringTable,
 ) {
-    let constants = constants(endian, elf);
+    let names = names(endian, elf);
     for d in dynamic {
         let tag = d.d_tag(endian);
         let val = d.d_val(endian).into();
         p.group("Dynamic", |p| {
-            p.field_consts("Tag", tag, constants.dt);
+            p.field_consts("Tag", tag, names.dt);
             if d.is_string(endian) {
                 p.field_string("Value", val, d.string(endian, dynstr));
             } else {
@@ -832,6 +832,6 @@ fn print_version<Elf: FileHeader>(
     }
 }
 
-fn constants<Elf: FileHeader>(endian: Elf::Endian, elf: &Elf) -> &'static Constants {
-    machine_constants(elf.e_machine(endian))
+fn names<Elf: FileHeader>(endian: Elf::Endian, elf: &Elf) -> &'static Names {
+    machine_names(elf.e_machine(endian))
 }

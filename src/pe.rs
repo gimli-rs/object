@@ -14,61 +14,61 @@ use crate::constants::{ConstantNames, FlagNames};
 use crate::endian::{I32, LittleEndian as LE, U16, U32, U64};
 use crate::pod::Pod;
 
-/// Platform-specific constants for a PE/COFF file.
+/// Platform-specific constant names for a PE/COFF file.
 ///
-/// Returned by [`constants`] and [`machine_constants`].
+/// Returned by [`names`] and [`machine_names`].
 #[cfg(feature = "names")]
 #[derive(Debug)]
 #[non_exhaustive]
-pub struct Constants {
+pub struct Names {
     /// Values for `ImageRelocation::typ`.
     pub rel: &'static FlagNames<u16>,
     /// Values for the type in an `ImageBaseRelocation` block.
     pub rel_based: &'static ConstantNames<u16>,
 }
 
-/// Return the platform independent constants.
+/// Return the platform independent names for constants.
 #[cfg(feature = "names")]
-pub const fn constants() -> &'static Constants {
-    Base::constants()
+pub const fn names() -> &'static Names {
+    Base::names()
 }
 
-/// Return the platform specific constants.
+/// Return the platform specific names for constants.
 ///
-/// Note that these also include the values returned by [`constants`].
+/// Note that these also include the values returned by [`names`].
 #[cfg(feature = "names")]
-pub const fn machine_constants(machine: Machine) -> &'static Constants {
+pub const fn machine_names(machine: Machine) -> &'static Names {
     match machine {
-        IMAGE_FILE_MACHINE_I386 => I386::constants(),
+        IMAGE_FILE_MACHINE_I386 => I386::names(),
         IMAGE_FILE_MACHINE_MIPS16 | IMAGE_FILE_MACHINE_MIPSFPU | IMAGE_FILE_MACHINE_MIPSFPU16 => {
-            Mips::constants()
+            Mips::names()
         }
-        IMAGE_FILE_MACHINE_ALPHA | IMAGE_FILE_MACHINE_ALPHA64 => Alpha::constants(),
+        IMAGE_FILE_MACHINE_ALPHA | IMAGE_FILE_MACHINE_ALPHA64 => Alpha::names(),
         IMAGE_FILE_MACHINE_POWERPC
         | IMAGE_FILE_MACHINE_POWERPCFP
-        | IMAGE_FILE_MACHINE_POWERPCBE => Ppc::constants(),
+        | IMAGE_FILE_MACHINE_POWERPCBE => Ppc::names(),
         IMAGE_FILE_MACHINE_SH3
         | IMAGE_FILE_MACHINE_SH3DSP
         | IMAGE_FILE_MACHINE_SH3E
         | IMAGE_FILE_MACHINE_SH4
-        | IMAGE_FILE_MACHINE_SH5 => Sh::constants(),
-        IMAGE_FILE_MACHINE_ARM => Arm::constants(),
-        IMAGE_FILE_MACHINE_AM33 => Am::constants(),
-        IMAGE_FILE_MACHINE_ARM64 => Arm64::constants(),
-        IMAGE_FILE_MACHINE_AMD64 => Amd64::constants(),
-        IMAGE_FILE_MACHINE_IA64 => Ia64::constants(),
-        IMAGE_FILE_MACHINE_CEF => Cef::constants(),
-        IMAGE_FILE_MACHINE_CEE => Cee::constants(),
-        IMAGE_FILE_MACHINE_M32R => M32r::constants(),
-        IMAGE_FILE_MACHINE_EBC => Ebc::constants(),
+        | IMAGE_FILE_MACHINE_SH5 => Sh::names(),
+        IMAGE_FILE_MACHINE_ARM => Arm::names(),
+        IMAGE_FILE_MACHINE_AM33 => Am::names(),
+        IMAGE_FILE_MACHINE_ARM64 => Arm64::names(),
+        IMAGE_FILE_MACHINE_AMD64 => Amd64::names(),
+        IMAGE_FILE_MACHINE_IA64 => Ia64::names(),
+        IMAGE_FILE_MACHINE_CEF => Cef::names(),
+        IMAGE_FILE_MACHINE_CEE => Cee::names(),
+        IMAGE_FILE_MACHINE_M32R => M32r::names(),
+        IMAGE_FILE_MACHINE_EBC => Ebc::names(),
         IMAGE_FILE_MACHINE_RISCV32 | IMAGE_FILE_MACHINE_RISCV64 | IMAGE_FILE_MACHINE_RISCV128 => {
-            Riscv::constants()
+            Riscv::names()
         }
-        _ => Base::constants(),
+        _ => Base::names(),
     }
 }
 
-constants! {
+names! {
     struct Base;
     flags rel: u16 = {};
     consts rel_based: u16 = NAMES_REL_BASED;
@@ -1279,7 +1279,7 @@ pub struct ImageRelocation {
 //
 // I386 relocation types.
 //
-constants! {
+names! {
     struct I386(Base);
     flags rel: u16 = {
         _ = !0 => NAMES_IMAGE_REL_I386,
@@ -1312,7 +1312,7 @@ constant_names!(NAMES_IMAGE_REL_I386: u16 = {
 //
 // MIPS relocation types.
 //
-constants! {
+names! {
     struct Mips(Base);
     flags rel: u16 = {
         _ = !0 => NAMES_IMAGE_REL_MIPS,
@@ -1346,7 +1346,7 @@ constant_names!(NAMES_IMAGE_REL_MIPS: u16 = {
 //
 // Alpha Relocation types.
 //
-constants! {
+names! {
     struct Alpha(Base);
     flags rel: u16 = {
         _ = !0 => NAMES_IMAGE_REL_ALPHA,
@@ -1390,7 +1390,7 @@ constant_names!(NAMES_IMAGE_REL_ALPHA: u16 = {
 //
 // IBM PowerPC relocation types.
 //
-constants! {
+names! {
     struct Ppc(Base);
     flags rel: u16 = {
         IMAGE_REL_PPC_TYPEMASK = 0x00FF => NAMES_IMAGE_REL_PPC,
@@ -1454,7 +1454,7 @@ constant_names!(NAMES_IMAGE_REL_PPC: u16 = {
 //
 // Hitachi SH3 relocation types.
 //
-constants! {
+names! {
     struct Sh(Base);
     flags rel: u16 = {
         _ = !IMAGE_REL_SH_NOMODE => NAMES_IMAGE_REL_SH,
@@ -1517,7 +1517,7 @@ constant_names!(NAMES_IMAGE_REL_SH: u16 = {
     IMAGE_REL_SHM_PAIR = 0x0018,
 });
 
-constants! {
+names! {
     struct Arm(Base);
     flags rel: u16 = {
         _ = !0 => NAMES_IMAGE_REL_ARM,
@@ -1572,7 +1572,7 @@ constant_names!(NAMES_IMAGE_REL_ARM: u16 = {
     IMAGE_REL_THUMB_BLX23 = 0x0015,
 });
 
-constants! {
+names! {
     struct Am(Base);
     flags rel: u16 = {
         _ = !0 => NAMES_IMAGE_REL_AM,
@@ -1596,7 +1596,7 @@ constant_names!(NAMES_IMAGE_REL_AM: u16 = {
 // ARM64 relocations types.
 //
 
-constants! {
+names! {
     struct Arm64(Base);
     flags rel: u16 = {
         _ = !0 => NAMES_IMAGE_REL_ARM64,
@@ -1644,7 +1644,7 @@ constant_names!(NAMES_IMAGE_REL_ARM64: u16 = {
 //
 // x64 relocations
 //
-constants! {
+names! {
     struct Amd64(Base);
     flags rel: u16 = {
         _ = !0 => NAMES_IMAGE_REL_AMD64,
@@ -1711,7 +1711,7 @@ constant_names!(NAMES_IMAGE_REL_AMD64: u16 = {
 //
 // IA64 relocation types.
 //
-constants! {
+names! {
     struct Ia64(Base);
     flags rel: u16 = {
         _ = !0 => NAMES_IMAGE_REL_IA64,
@@ -1761,7 +1761,7 @@ constant_names!(NAMES_IMAGE_REL_IA64: u16 = {
 //
 // CEF relocation types.
 //
-constants! {
+names! {
     struct Cef(Base);
     flags rel: u16 = {
         _ = !0 => NAMES_IMAGE_REL_CEF,
@@ -1788,7 +1788,7 @@ constant_names!(NAMES_IMAGE_REL_CEF: u16 = {
 //
 // clr relocation types.
 //
-constants! {
+names! {
     struct Cee(Base);
     flags rel: u16 = {
         _ = !0 => NAMES_IMAGE_REL_CEE,
@@ -1812,7 +1812,7 @@ constant_names!(NAMES_IMAGE_REL_CEE: u16 = {
     IMAGE_REL_CEE_TOKEN = 0x0006,
 });
 
-constants! {
+names! {
     struct M32r(Base);
     flags rel: u16 = {
         _ = !0 => NAMES_IMAGE_REL_M32R,
@@ -1852,7 +1852,7 @@ constant_names!(NAMES_IMAGE_REL_M32R: u16 = {
     IMAGE_REL_M32R_TOKEN = 0x000E,
 });
 
-constants! {
+names! {
     struct Ebc(Base);
     flags rel: u16 = {
         _ = !0 => NAMES_IMAGE_REL_EBC,
@@ -1872,7 +1872,7 @@ constant_names!(NAMES_IMAGE_REL_EBC: u16 = {
     IMAGE_REL_EBC_SECREL = 0x0004,
 });
 
-constants! {
+names! {
     struct Riscv(Base);
     consts rel_based: u16 = NAMES_REL_BASED_RISCV;
 }
