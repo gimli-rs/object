@@ -133,7 +133,7 @@ fn print_sections<'data, Xcoff: FileHeader>(
                         });
                         p.field_string_option("Symbol", index.0, name);
                         p.field_hex("Size", relocation.r_rsize());
-                        p.field_consts("Type", relocation.r_rtype(), NAMES_REL_TYPE);
+                        p.field_consts("Type", relocation.r_rtype(), &NAMES_REL_TYPE);
                     });
                 }
             }

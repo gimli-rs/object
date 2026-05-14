@@ -244,7 +244,7 @@ fn print_data_directories(p: &mut Printer<'_>, data_directories: &DataDirectorie
     }
     for (index, dir) in data_directories.iter().enumerate() {
         p.group("ImageDataDirectory", |p| {
-            p.field_consts("Index", index, NAMES_DIRECTORY_ENTRY);
+            p.field_consts("Index", index, &NAMES_DIRECTORY_ENTRY);
             p.field_hex("VirtualAddress", dir.virtual_address.get(LE));
             p.field_hex("Size", dir.size.get(LE));
         });
