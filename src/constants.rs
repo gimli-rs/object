@@ -314,18 +314,18 @@ where
 
 /// Define a set of related constant definitions, such as for an architecture.
 ///
-/// Defines a struct with method `constants` that returns a `struct Constants` containing
-/// fields set to the given definitions. The caller should have defined `struct Constants`
+/// Defines a struct with method `names` that returns a `struct Names` containing
+/// fields set to the given definitions. The caller should have defined `struct Names`
 /// with matching fields.
 ///
 /// An optional parent struct can be specified to inherit definitions via `next` chaining.
 /// For example, if `Base` is the parent then `consts name: type = { ... };` is expanded
-/// similar to `constant_names!(name: type = Base::constants_value().name + { ... })`.
+/// similar to `constant_names!(name: type = Base::names_value().name + { ... })`.
 /// The parent is often a set of constant definitions that are common to all architectures.
 ///
 /// Usage:
 /// ```text
-/// constants! {
+/// names! {
 ///     struct Base;             // or: struct Arch(Base);
 ///     // Expands using constant_names!()
 ///     consts name: type = { ... };
@@ -335,7 +335,7 @@ where
 ///     consts name: type = VAR;
 /// }
 /// ```
-macro_rules! constants {
+macro_rules! names {
     ($(#[$meta:meta])* struct $struct:ident$(($parent:ident))?;
         $($kind:ident $method:ident: $outer:ident$(($inner:ident))? = $body:tt;)*
     ) => {
@@ -346,30 +346,30 @@ macro_rules! constants {
 
         #[cfg(feature = "names")]
         impl $struct {
-            const fn constants_value() -> Constants {
+            const fn names_value() -> Names {
                 #[allow(clippy::needless_update)]
-                Constants {
-                    $($method: constants!(@ref $method $body),)*
-                    $(..$parent::constants_value())?
+                Names {
+                    $($method: names!(@ref $method $body),)*
+                    $(..$parent::names_value())?
                 }
             }
 
             // Not used for inheritance-only structs.
             #[allow(unused)]
-            const fn constants() -> &'static Constants {
-                static C: Constants = $struct::constants_value();
+            const fn names() -> &'static Names {
+                static C: Names = $struct::names_value();
                 &C
             }
 
             // This converts $parent into a tt so that the method repetition can use it.
-            constants! { @impl_methods ($($parent)?) $($kind $method ($outer $($inner)?) $body)* }
+            names! { @impl_methods ($($parent)?) $($kind $method ($outer $($inner)?) $body)* }
         }
 
-        $(constants! { @consts $kind ($outer $($inner)?) $body })*
+        $(names! { @consts $kind ($outer $($inner)?) $body })*
     };
 
     (@impl_methods $parent:tt $($kind:ident $method:ident $type:tt $body:tt)*) => {
-        $(constants! { @impl_method $kind $method $type $parent $body })*
+        $(names! { @impl_method $kind $method $type $parent $body })*
     };
 
     // Struct method returning ConstantNames/FlagNames static.
@@ -379,7 +379,7 @@ macro_rules! constants {
     (@impl_method consts $method:ident $type:tt $parent:tt $body:tt) => {
         const fn $method() -> &'static crate::constants::ConstantNames<newtype!(@type $type)> {
             constant_names!(
-                @static NAMES $type (constants!(@impl_next $method $parent)) $body
+                @static NAMES $type (names!(@impl_next $method $parent)) $body
             );
             &NAMES
         }
@@ -387,7 +387,7 @@ macro_rules! constants {
     (@impl_method flags $method:ident $type:tt $parent:tt $body:tt) => {
         const fn $method() -> &'static flag_names!(@flagnames $type) {
             flag_names!(
-                @static NAMES $type (constants!(@impl_next $method $parent)) $body
+                @static NAMES $type (names!(@impl_next $method $parent)) $body
             );
             &NAMES
         }
@@ -395,9 +395,9 @@ macro_rules! constants {
 
     // Value of `ConstantNames::next` or `FlagNames::next`.
     (@impl_next $method:ident ()) => { None };
-    (@impl_next $method:ident ($parent:ident)) => { Some($parent::constants_value().$method) };
+    (@impl_next $method:ident ($parent:ident)) => { Some($parent::names_value().$method) };
 
-    // Value of a field in `Constants`.
+    // Value of a field in `Names`.
     (@ref $method:ident $fn:ident) => { &$fn };
     (@ref $method:ident $body:tt) => { Self::$method() };
 
@@ -851,12 +851,12 @@ mod tests {
             }
         }
         #[cfg(feature = "names")]
-        struct Constants {
+        struct Names {
             foo: &'static ConstantNames<Foo>,
             bar: &'static FlagNames<Bar>,
             quux: &'static ConstantNames<u64>,
         }
-        constants! {
+        names! {
             struct Base;
             consts foo: Foo(u32) = FOO;
             flags bar: Bar(u32) = BAR;
@@ -866,7 +866,7 @@ mod tests {
                 QUUX_B = 1,
             };
         }
-        constants! {
+        names! {
             struct Arch(Base);
             // Does not inherit from Base::foo directly
             // (but the FOO_ARCH definition below does inherit FOO).
@@ -882,18 +882,15 @@ mod tests {
 
         #[cfg(feature = "names")]
         {
-            let constants = Arch::constants();
-            assert_eq!(constants.foo.name(FOO_A), Some("FOO_A"));
-            assert_eq!(constants.foo.name(FOO_ARCH_A), Some("FOO_ARCH_A"));
-            assert_eq!(constants.bar.name(BIT_1), Some((BIT_1, "BIT_1")));
-            assert_eq!(constants.bar.name(BIT_4), Some((BIT_4, "BIT_4")));
-            assert_eq!(constants.bar.name(BIT_1 | BIT_4), Some((BIT_4, "BIT_4")));
-            assert_eq!(constants.bar.name(BAR_B), Some((BAR_B, "BAR_B")));
-            assert_eq!(constants.bar.name(BAR_D), Some((BAR_D, "BAR_D")));
-            assert_eq!(
-                constants.bar.name(BAZ_B.into()),
-                Some((BAZ_B.into(), "BAZ_B"))
-            );
+            let names = Arch::names();
+            assert_eq!(names.foo.name(FOO_A), Some("FOO_A"));
+            assert_eq!(names.foo.name(FOO_ARCH_A), Some("FOO_ARCH_A"));
+            assert_eq!(names.bar.name(BIT_1), Some((BIT_1, "BIT_1")));
+            assert_eq!(names.bar.name(BIT_4), Some((BIT_4, "BIT_4")));
+            assert_eq!(names.bar.name(BIT_1 | BIT_4), Some((BIT_4, "BIT_4")));
+            assert_eq!(names.bar.name(BAR_B), Some((BAR_B, "BAR_B")));
+            assert_eq!(names.bar.name(BAR_D), Some((BAR_D, "BAR_D")));
+            assert_eq!(names.bar.name(BAZ_B.into()), Some((BAZ_B.into(), "BAZ_B")));
         }
     }
 }

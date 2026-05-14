@@ -812,7 +812,7 @@ fn print_section_relocations<S: Section>(
         return;
     }
     if let Some(relocations) = section.relocations(endian, data).print_err(p) {
-        let constants = macho::machine_constants(state.cputype);
+        let names = macho::machine_names(state.cputype);
         for relocation in relocations {
             if relocation.r_scattered(endian, state.cputype) {
                 let info = relocation.scattered_info(endian);
@@ -820,7 +820,7 @@ fn print_section_relocations<S: Section>(
                     p.field_hex("Address", info.r_address);
                     p.field("PcRel", if info.r_pcrel { "yes" } else { "no" });
                     p.field("Length", info.r_length);
-                    p.field_consts("Type", info.r_type, constants.reloc);
+                    p.field_consts("Type", info.r_type, names.reloc);
                     p.field_hex("Value", info.r_value);
                 });
             } else {
@@ -844,7 +844,7 @@ fn print_section_relocations<S: Section>(
                     }
                     p.field("PcRel", if info.r_pcrel { "yes" } else { "no" });
                     p.field("Length", info.r_length);
-                    p.field_consts("Type", info.r_type, constants.reloc);
+                    p.field_consts("Type", info.r_type, names.reloc);
                 });
             }
         }
@@ -1011,7 +1011,7 @@ fn print_exports_trie<Mach: MachHeader>(
 }
 
 fn print_cputype(p: &mut Printer<'_>, cputype: CpuType, cpusubtype: CpuSubtype) {
-    let constants = macho::machine_constants(cputype);
+    let names = macho::machine_names(cputype);
     p.field_consts("CpuType", cputype, macho::CpuType::NAMES);
-    p.field_flags("CpuSubtype", cpusubtype, constants.cpusubtype);
+    p.field_flags("CpuSubtype", cpusubtype, names.cpusubtype);
 }

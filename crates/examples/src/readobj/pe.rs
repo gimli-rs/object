@@ -642,7 +642,7 @@ fn print_relocations<'data, Coff: CoffHeader>(
         return;
     }
     if let Some(relocations) = section.coff_relocations(data).print_err(p) {
-        let constants = pe::machine_constants(machine);
+        let names = pe::machine_names(machine);
         for relocation in relocations {
             p.group("ImageRelocation", |p| {
                 p.field_hex("VirtualAddress", relocation.virtual_address.get(LE));
@@ -655,7 +655,7 @@ fn print_relocations<'data, Coff: CoffHeader>(
                 });
                 p.field_string_option("Symbol", index.0, name);
                 let typ = relocation.typ.get(LE);
-                p.field_flags("Type", typ, constants.rel);
+                p.field_flags("Type", typ, names.rel);
             });
         }
     }
@@ -769,7 +769,7 @@ fn print_reloc_dir(
     if !p.options.pe_base_relocs {
         return Some(());
     }
-    let constants = pe::machine_constants(machine);
+    let names = pe::machine_names(machine);
     let mut blocks = data_directories
         .relocation_blocks(data, sections)
         .print_err(p)??;
@@ -779,7 +779,7 @@ fn print_reloc_dir(
         for reloc in block {
             p.group("ImageBaseRelocation", |p| {
                 p.field_hex("VirtualAddress", reloc.virtual_address);
-                p.field_consts("Type", reloc.typ, constants.rel_based);
+                p.field_consts("Type", reloc.typ, names.rel_based);
                 let offset = (reloc.virtual_address - block_address) as usize;
                 if let Some(addend) = match reloc.typ {
                     IMAGE_REL_BASED_HIGHLOW => block_data
