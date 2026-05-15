@@ -1284,7 +1284,9 @@ names! {
     };
 }
 
-constant_names!(NAMES_IMAGE_REL_I386: u16 = {
+constant_names!(
+/// Values for `ImageRelocation::typ` on I386.
+pub NAMES_IMAGE_REL_I386: u16 = {
     /// Reference is absolute, no relocation is necessary
     IMAGE_REL_I386_ABSOLUTE = 0x0000,
     /// Direct 16-bit reference to the symbols virtual address
@@ -1318,7 +1320,9 @@ names! {
     consts rel_based = NAMES_REL_BASED_MIPS;
 }
 
-constant_names!(NAMES_IMAGE_REL_MIPS: u16 = {
+constant_names!(
+/// Values for `ImageRelocation::typ` on MIPS.
+pub NAMES_IMAGE_REL_MIPS: u16 = {
     /// Reference is absolute, no relocation is necessary
     IMAGE_REL_MIPS_ABSOLUTE = 0x0000,
     IMAGE_REL_MIPS_REFHALF = 0x0001,
@@ -1351,7 +1355,9 @@ names! {
     };
 }
 
-constant_names!(NAMES_IMAGE_REL_ALPHA: u16 = {
+constant_names!(
+/// Values for `ImageRelocation::typ` on Alpha.
+pub NAMES_IMAGE_REL_ALPHA: u16 = {
     IMAGE_REL_ALPHA_ABSOLUTE = 0x0000,
     IMAGE_REL_ALPHA_REFLONG = 0x0001,
     IMAGE_REL_ALPHA_REFQUAD = 0x0002,
@@ -1403,7 +1409,9 @@ names! {
     };
 }
 
-constant_names!(NAMES_IMAGE_REL_PPC: u16 = {
+constant_names!(
+/// Values for `ImageRelocation::typ` on PowerPC.
+pub NAMES_IMAGE_REL_PPC: u16 = {
     /// NOP
     IMAGE_REL_PPC_ABSOLUTE = 0x0000,
     /// 64-bit address
@@ -1461,7 +1469,9 @@ names! {
     };
 }
 
-constant_names!(NAMES_IMAGE_REL_SH: u16 = {
+constant_names!(
+/// Values for `ImageRelocation::typ` on SH3.
+pub NAMES_IMAGE_REL_SH: u16 = {
     /// No relocation
     IMAGE_REL_SH3_ABSOLUTE = 0x0000,
     /// 16 bit direct
@@ -1523,7 +1533,9 @@ names! {
     consts rel_based = NAMES_REL_BASED_ARM;
 }
 
-constant_names!(NAMES_IMAGE_REL_ARM: u16 = {
+constant_names!(
+/// Values for `ImageRelocation::typ` on ARM.
+pub NAMES_IMAGE_REL_ARM: u16 = {
     /// No relocation required
     IMAGE_REL_ARM_ABSOLUTE = 0x0000,
     /// 32 bit address
@@ -1577,7 +1589,9 @@ names! {
     };
 }
 
-constant_names!(NAMES_IMAGE_REL_AM: u16 = {
+constant_names!(
+/// Values for `ImageRelocation::typ` on AM33.
+pub NAMES_IMAGE_REL_AM: u16 = {
     IMAGE_REL_AM_ABSOLUTE = 0x0000,
     IMAGE_REL_AM_ADDR32 = 0x0001,
     IMAGE_REL_AM_ADDR32NB = 0x0002,
@@ -1601,7 +1615,9 @@ names! {
     };
 }
 
-constant_names!(NAMES_IMAGE_REL_ARM64: u16 = {
+constant_names!(
+/// Values for `ImageRelocation::typ` on ARM64.
+pub NAMES_IMAGE_REL_ARM64: u16 = {
     /// No relocation required
     IMAGE_REL_ARM64_ABSOLUTE = 0x0000,
     /// 32 bit address. Review! do we need it?
@@ -1649,7 +1665,9 @@ names! {
     };
 }
 
-constant_names!(NAMES_IMAGE_REL_AMD64: u16 = {
+constant_names!(
+/// Values for `ImageRelocation::typ` on x64.
+pub NAMES_IMAGE_REL_AMD64: u16 = {
     /// Reference is absolute, no relocation is necessary
     IMAGE_REL_AMD64_ABSOLUTE = 0x0000,
     /// 64-bit address (VA).
@@ -1717,7 +1735,9 @@ names! {
     consts rel_based = NAMES_REL_BASED_IA64;
 }
 
-constant_names!(NAMES_IMAGE_REL_IA64: u16 = {
+constant_names!(
+/// Values for `ImageRelocation::typ` on IA64.
+pub NAMES_IMAGE_REL_IA64: u16 = {
     IMAGE_REL_IA64_ABSOLUTE = 0x0000,
     IMAGE_REL_IA64_IMM14 = 0x0001,
     IMAGE_REL_IA64_IMM22 = 0x0002,
@@ -1766,7 +1786,9 @@ names! {
     };
 }
 
-constant_names!(NAMES_IMAGE_REL_CEF: u16 = {
+constant_names!(
+/// Values for `ImageRelocation::typ` on CEF.
+pub NAMES_IMAGE_REL_CEF: u16 = {
     /// Reference is absolute, no relocation is necessary
     IMAGE_REL_CEF_ABSOLUTE = 0x0000,
     /// 32-bit address (VA).
@@ -1793,7 +1815,9 @@ names! {
     };
 }
 
-constant_names!(NAMES_IMAGE_REL_CEE: u16 = {
+constant_names!(
+/// Values for `ImageRelocation::typ` on CLR.
+pub NAMES_IMAGE_REL_CEE: u16 = {
     /// Reference is absolute, no relocation is necessary
     IMAGE_REL_CEE_ABSOLUTE = 0x0000,
     /// 32-bit address (VA).
@@ -1817,7 +1841,9 @@ names! {
     };
 }
 
-constant_names!(NAMES_IMAGE_REL_M32R: u16 = {
+constant_names!(
+/// Values for `ImageRelocation::typ` on M32R.
+pub NAMES_IMAGE_REL_M32R: u16 = {
     /// No relocation required
     IMAGE_REL_M32R_ABSOLUTE = 0x0000,
     /// 32 bit address
@@ -1857,7 +1883,9 @@ names! {
     };
 }
 
-constant_names!(NAMES_IMAGE_REL_EBC: u16 = {
+constant_names!(
+/// Values for `ImageRelocation::typ` on EBC.
+pub NAMES_IMAGE_REL_EBC: u16 = {
     /// No relocation required
     IMAGE_REL_EBC_ABSOLUTE = 0x0000,
     /// 32 bit address w/o image base
@@ -2078,7 +2106,9 @@ pub struct ImageBaseRelocation {
 // Based relocation types.
 //
 
-constant_names!(NAMES_REL_BASED: u16 = {
+constant_names!(
+/// Values for `ImageBaseRelocation` `type_offset` entries.
+pub NAMES_REL_BASED: u16 = {
     IMAGE_REL_BASED_ABSOLUTE = 0,
     IMAGE_REL_BASED_HIGH = 1,
     IMAGE_REL_BASED_LOW = 2,
@@ -2096,21 +2126,29 @@ constant_names!(NAMES_REL_BASED: u16 = {
 // Platform-specific based relocation types.
 //
 
-constant_names!(NAMES_REL_BASED_IA64: u16 = NAMES_REL_BASED + {
+constant_names!(
+/// Values for `ImageBaseRelocation` `type_offset` entries on IA64.
+pub NAMES_REL_BASED_IA64: u16 = NAMES_REL_BASED + {
     IMAGE_REL_BASED_IA64_IMM64 = 9,
 });
 
-constant_names!(NAMES_REL_BASED_MIPS: u16 = NAMES_REL_BASED + {
+constant_names!(
+/// Values for `ImageBaseRelocation` `type_offset` entries on MIPS.
+pub NAMES_REL_BASED_MIPS: u16 = NAMES_REL_BASED + {
     IMAGE_REL_BASED_MIPS_JMPADDR = 5,
     IMAGE_REL_BASED_MIPS_JMPADDR16 = 9,
 });
 
-constant_names!(NAMES_REL_BASED_ARM: u16 = NAMES_REL_BASED + {
+constant_names!(
+/// Values for `ImageBaseRelocation` `type_offset` entries on ARM.
+pub NAMES_REL_BASED_ARM: u16 = NAMES_REL_BASED + {
     IMAGE_REL_BASED_ARM_MOV32 = 5,
     IMAGE_REL_BASED_THUMB_MOV32 = 7,
 });
 
-constant_names!(NAMES_REL_BASED_RISCV: u16 = NAMES_REL_BASED + {
+constant_names!(
+/// Values for `ImageBaseRelocation` `type_offset` entries on RISC-V.
+pub NAMES_REL_BASED_RISCV: u16 = NAMES_REL_BASED + {
     IMAGE_REL_BASED_RISCV_HIGH20 = 5,
     IMAGE_REL_BASED_RISCV_LOW12I = 7,
     IMAGE_REL_BASED_RISCV_LOW12S = 8,
