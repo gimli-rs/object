@@ -3021,7 +3021,8 @@ pub fn gnu_hash(name: &[u8]) -> u32 {
 
 names! {
     struct M68k(Base);
-    consts r: u32 = {
+    /// `Rel*::r_type` values for `EM_68K`.
+    consts r = pub NAMES_R_68K: u32 = {
         /// No reloc
         R_68K_NONE = 0,
         /// Direct 32 bit
@@ -3111,7 +3112,8 @@ names! {
 
 names! {
     struct I386(Base);
-    consts r: u32 = {
+    /// `Rel*::r_type` values for `EM_386`.
+    consts r = pub NAMES_R_386: u32 = {
         /// No reloc
         R_386_NONE = 0,
         /// Direct 32 bit
@@ -3203,7 +3205,8 @@ names! {
 
 names! {
     struct Sharc(Base);
-    consts r: u32 = {
+    /// `Rel*::r_type` values for `EM_SHARC`.
+    consts r = pub NAMES_R_SHARC: u32 = {
         /// 24-bit absolute address in bits 23:0 of a 48-bit instr
         ///
         /// Targets:
@@ -3329,7 +3332,8 @@ names! {
         /// Sun UltraSPARCIII extensions
         EF_SPARC_SUN_US3 = 0x00_0800,
     };
-    consts r: u32 = {
+    /// `Rel*::r_type` values for `EM_SPARC` and `EM_SPARC32PLUS`.
+    consts r = pub NAMES_R_SPARC: u32 = {
         /// No reloc
         R_SPARC_NONE = 0,
         /// Direct 8 bit
@@ -3605,7 +3609,8 @@ names! {
     consts stb: SymbolBind(u8) = {
         STB_MIPS_SPLIT_COMMON = 13,
     };
-    consts r: u32 = {
+    /// `Rel*::r_type` values for `EM_MIPS`.
+    consts r = pub NAMES_R_MIPS: u32 = {
         /// No reloc
         R_MIPS_NONE = 0,
         /// Direct 16 bit
@@ -3985,7 +3990,8 @@ names! {
         STT_HP_OPAQUE = STT_LOOS + 0x1,
         STT_HP_STUB = STT_LOOS + 0x2,
     };
-    consts r: u32 = {
+    /// `Rel*::r_type` values for `EM_PARISC`.
+    consts r = pub NAMES_R_PARISC: u32 = {
         /// No reloc.
         R_PARISC_NONE = 0,
         /// Direct 32-bit reference.
@@ -4263,7 +4269,8 @@ names! {
         /// PV only used for initial ldgp.
         STO_ALPHA_STD_GPLOAD = 0x88,
     };
-    consts r: u32 = {
+    /// `Rel*::r_type` values for `EM_ALPHA`.
+    consts r = pub NAMES_R_ALPHA: u32 = {
         /// No reloc
         R_ALPHA_NONE = 0,
         /// Direct 32 bit
@@ -4344,7 +4351,8 @@ names! {
         /// PowerPC -mrelocatable-lib flag
         EF_PPC_RELOCATABLE_LIB = 0x0000_8000,
     };
-    consts r: u32 = {
+    /// `Rel*::r_type` values for `EM_PPC`.
+    consts r = pub NAMES_R_PPC: u32 = {
         // PowerPC values for `Rel*::r_type` defined by the ABIs.
         R_PPC_NONE = 0,
         /// 32bit absolute address
@@ -4517,7 +4525,8 @@ pub const PPC_OPT_TLS: u32 = 1;
 
 names! {
     struct Ppc64(Base);
-    consts r: u32 = {
+    /// `Rel*::r_type` values for `EM_PPC64`.
+    consts r = pub NAMES_R_PPC64: u32 = {
         // PowerPC64 values for `Rel*::r_type` defined by the ABIs.
         R_PPC64_NONE = R_PPC_NONE,
         /// 32bit absolute address
@@ -4817,7 +4826,8 @@ names! {
         /// ARM attributes section.
         SHT_ARM_ATTRIBUTES = SHT_LOPROC + 3,
     };
-    consts r: u32 = {
+    /// `Rel*::r_type` values for `EM_ARM`.
+    consts r = pub NAMES_R_ARM: u32 = {
         /// No reloc
         R_ARM_NONE = 0,
         /// Deprecated PC relative 26 bit branch.
@@ -5084,7 +5094,8 @@ names! {
         DT_AARCH64_PAC_PLT = DT_LOPROC + 3,
         DT_AARCH64_VARIANT_PCS = DT_LOPROC + 5,
     };
-    consts r: u32 = {
+    /// `Rel*::r_type` values for `EM_AARCH64`.
+    consts r = pub NAMES_R_AARCH64: u32 = {
         /// No relocation.
         R_AARCH64_NONE = 0,
 
@@ -5374,7 +5385,8 @@ names! {
         /// Bitmask for `EF_AVR_ARCH_*`.
         EF_AVR_ARCH = 0x7F => NAMES_EF_AVR_ARCH,
     };
-    consts r: u32 = {
+    /// `Rel*::r_type` values for `EM_AVR`.
+    consts r = pub NAMES_R_AVR: u32 = {
         R_AVR_NONE = 0,
         /// Direct 32 bit
         R_AVR_32 = 1,
@@ -5440,7 +5452,8 @@ constant_names!(NAMES_EF_AVR_ARCH: FileFlags(u32) = {
 
 names! {
     struct Msp430(Base);
-    consts r: u32 = {
+    /// `Rel*::r_type` values for `EM_MSP430`.
+    consts r = pub NAMES_R_MSP430: u32 = {
         /// No reloc
         R_MSP430_NONE = 0,
         /// Direct 32 bit
@@ -5452,7 +5465,8 @@ names! {
 
 names! {
     struct Hex(Base);
-    consts r: u32 = {
+    /// `Rel*::r_type` values for `EM_HEXAGON`.
+    consts r = pub NAMES_R_HEX: u32 = {
         /// No reloc
         R_HEX_NONE = 0,
         /// Direct 32 bit
@@ -5462,7 +5476,8 @@ names! {
 
 names! {
     struct Csky(Base);
-    consts r: u32 = {
+    /// `Rel*::r_type` values for `EM_CSKY`.
+    consts r = pub NAMES_R_CKCORE: u32 = {
         /// no reloc
         R_CKCORE_NONE = 0,
         /// direct 32 bit (S + A)
@@ -5621,7 +5636,8 @@ names! {
     consts dt: DynamicTag(i64) = {
         DT_IA_64_PLT_RESERVE = DT_LOPROC + 0,
     };
-    consts r: u32 = {
+    /// `Rel*::r_type` values for `EM_IA_64`.
+    consts r = pub NAMES_R_IA64: u32 = {
         /// none
         R_IA64_NONE = 0x00,
         /// symbol + addend, add imm14
@@ -5799,7 +5815,8 @@ names! {
     flags ef: FileFlags(u32) = {
         EF_SH_MACH_MASK = 0x1f => NAMES_EF_SH_MACH,
     };
-    consts r: u32 = {
+    /// `Rel*::r_type` values for `EM_SH`.
+    consts r = pub NAMES_R_SH: u32 = {
         R_SH_NONE = 0,
         R_SH_DIR32 = 1,
         R_SH_REL32 = 2,
@@ -5848,7 +5865,8 @@ names! {
         /// High GPRs kernel facility needed.
         EF_S390_HIGH_GPRS = 0x0000_0001,
     };
-    consts r: u32 = {
+    /// `Rel*::r_type` values for `EM_S390`.
+    consts r = pub NAMES_R_390: u32 = {
         /// No reloc.
         R_390_NONE = 0,
         /// Direct 8 bit.
@@ -6002,7 +6020,8 @@ constant_names!(NAMES_EF_SH_MACH: FileFlags(u32) = {
 
 names! {
     struct Cris(Base);
-    consts r: u32 = {
+    /// `Rel*::r_type` values for `EM_CRIS`.
+    consts r = pub NAMES_R_CRIS: u32 = {
         R_CRIS_NONE = 0,
         R_CRIS_8 = 1,
         R_CRIS_16 = 2,
@@ -6028,7 +6047,8 @@ names! {
 
 names! {
     struct X86_64(Base);
-    consts r: u32 = {
+    /// `Rel*::r_type` values for `EM_X86_64`.
+    consts r = pub NAMES_R_X86_64: u32 = {
         /// No reloc
         R_X86_64_NONE = 0,
         /// Direct 64 bit
@@ -6140,7 +6160,8 @@ names! {
 
 names! {
     struct Mn10300(Base);
-    consts r: u32 = {
+    /// `Rel*::r_type` values for `EM_MN10300`.
+    consts r = pub NAMES_R_MN10300: u32 = {
         /// No reloc.
         R_MN10300_NONE = 0,
         /// Direct 32 bit.
@@ -6216,7 +6237,8 @@ names! {
 
 names! {
     struct M32r(Base);
-    consts r: u32 = {
+    /// `Rel*::r_type` values for `EM_M32R`.
+    consts r = pub NAMES_R_M32R: u32 = {
         /// No reloc.
         R_M32R_NONE = 0,
         /// Direct 16 bit.
@@ -6308,7 +6330,8 @@ names! {
 
 names! {
     struct Microblaze(Base);
-    consts r: u32 = {
+    /// `Rel*::r_type` values for `EM_MICROBLAZE`.
+    consts r = pub NAMES_R_MICROBLAZE: u32 = {
         /// No reloc.
         R_MICROBLAZE_NONE = 0,
         /// Direct 32 bit.
@@ -6379,7 +6402,8 @@ names! {
         /// Address of _gp.
         DT_NIOS2_GP = 0x7000_0002,
     };
-    consts r: u32 = {
+    /// `Rel*::r_type` values for `EM_ALTERA_NIOS2`.
+    consts r = pub NAMES_R_NIOS2: u32 = {
         /// No reloc.
         R_NIOS2_NONE = 0,
         /// Direct signed 16 bit.
@@ -6478,7 +6502,8 @@ names! {
 // TILEPro
 names! {
     struct Tilepro(Base);
-    consts r: u32 = {
+    /// `Rel*::r_type` values for `EM_TILEPRO`.
+    consts r = pub NAMES_R_TILEPRO: u32 = {
         /// No reloc
         R_TILEPRO_NONE = 0,
         /// Direct 32 bit
@@ -6669,7 +6694,8 @@ names! {
 // TILE-Gx
 names! {
     struct Tilegx(Base);
-    consts r: u32 = {
+    /// `Rel*::r_type` values for `EM_TILEGX`.
+    consts r = pub NAMES_R_TILEGX: u32 = {
         /// No reloc
         R_TILEGX_NONE = 0,
         /// Direct 64 bit
@@ -6939,7 +6965,8 @@ names! {
     consts dt: DynamicTag(i64) = {
         DT_RISCV_VARIANT_CC = DT_LOPROC + 1,
     };
-    consts r: u32 = {
+    /// `Rel*::r_type` values for `EM_RISCV`.
+    consts r = pub NAMES_R_RISCV: u32 = {
         R_RISCV_NONE = 0,
         R_RISCV_32 = 1,
         R_RISCV_64 = 2,
@@ -7015,7 +7042,8 @@ constant_names!(NAMES_EF_RISCV_FLOAT_ABI: FileFlags(u32) = {
 
 names! {
     struct Bpf(Base);
-    consts r: u32 = {
+    /// `Rel*::r_type` values for `EM_BPF`.
+    consts r = pub NAMES_R_BPF: u32 = {
         /// No reloc
         R_BPF_NONE = 0,
         R_BPF_64_64 = 1,
@@ -7025,7 +7053,8 @@ names! {
 
 names! {
     struct Sbf(Base);
-    consts r: u32 = {
+    /// `Rel*::r_type` values for `EM_SBF`.
+    consts r = pub NAMES_R_SBF: u32 = {
         /// No reloc
         R_SBF_NONE = 0,
         R_SBF_64_64 = 1,
@@ -7037,7 +7066,8 @@ names! {
 
 names! {
     struct Metag(Base);
-    consts r: u32 = {
+    /// `Rel*::r_type` values for `EM_METAG`.
+    consts r = pub NAMES_R_METAG: u32 = {
         R_METAG_HIADDR16 = 0,
         R_METAG_LOADDR16 = 1,
         /// 32bit absolute address
@@ -7103,7 +7133,8 @@ names! {
 
 names! {
     struct Nds32(Base);
-    consts r: u32 = {
+    /// `Rel*::r_type` values for `EM_NDS32`.
+    consts r = pub NAMES_R_NDS32: u32 = {
         R_NDS32_NONE = 0,
         R_NDS32_32_RELA = 20,
         R_NDS32_COPY = 39,
@@ -7124,7 +7155,8 @@ names! {
         /// Uses relocation types directly writing to immediate slots
         EF_LARCH_OBJABI_V1 = 0x40,
     };
-    consts r: u32 = {
+    /// `Rel*::r_type` values for `EM_LOONGARCH`.
+    consts r = pub NAMES_R_LARCH: u32 = {
         /// No reloc
         R_LARCH_NONE = 0,
         /// Runtime address resolving
@@ -7460,7 +7492,8 @@ constant_names!(NAMES_EF_LARCH_ABI: FileFlags(u32) = {
 
 names! {
     struct Xtensa(Base);
-    consts r: u32 = {
+    /// `Rel*::r_type` values for `EM_XTENSA`.
+    consts r = pub NAMES_R_XTENSA: u32 = {
         R_XTENSA_NONE = 0,
         R_XTENSA_32 = 1,
         R_XTENSA_RTLD = 2,
@@ -7582,7 +7615,8 @@ names! {
         EF_E2K_PM = 32,
         EF_E2K_PACK_SEGMENTS = 64,
     };
-    consts r: u32 = {
+    /// `Rel*::r_type` values for `EM_MCST_ELBRUS`.
+    consts r = pub NAMES_R_E2K: u32 = {
         /// Direct 32 bit.
         R_E2K_32_ABS = 0,
         /// PC relative 32 bit.

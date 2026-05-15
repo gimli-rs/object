@@ -4005,7 +4005,9 @@ impl ScatteredRelocationInfo {
  * using the GENERIC_RELOC_PB_LA_PTR r_type.  This is a scattered relocation
  * entry where the r_value feild is the value of the lazy pointer not prebound.
  */
-constant_names!(NAMES_GENERIC_RELOC: u8 = {
+constant_names!(
+/// Values for `Relocation::r_type` for generic Mach-O architectures.
+pub NAMES_GENERIC_RELOC: u8 = {
     /// generic relocation as described above
     GENERIC_RELOC_VANILLA = 0,
     /// Only follows a GENERIC_RELOC_SECTDIFF
@@ -4028,7 +4030,9 @@ constant_names!(NAMES_GENERIC_RELOC: u8 = {
  * for instructions.  Since they are for instructions the r_address field
  * indicates the 32 bit instruction that the relocation is to be performed on.
  */
-constant_names!(NAMES_ARM_RELOC: u8 = {
+constant_names!(
+/// Values for `Relocation::r_type` on ARM.
+pub NAMES_ARM_RELOC: u8 = {
     /// generic relocation as described above
     ARM_RELOC_VANILLA = 0,
     /// the second relocation entry of a pair
@@ -4068,7 +4072,9 @@ constant_names!(NAMES_ARM_RELOC: u8 = {
 /*
  * Relocation types used in the arm64 implementation.
  */
-constant_names!(NAMES_ARM64_RELOC: u8 = {
+constant_names!(
+/// Values for `Relocation::r_type` on ARM64.
+pub NAMES_ARM64_RELOC: u8 = {
     /// for pointers
     ARM64_RELOC_UNSIGNED = 0,
     /// must be followed by a ARM64_RELOC_UNSIGNED
@@ -4131,7 +4137,9 @@ constant_names!(NAMES_ARM64_RELOC: u8 = {
  * the value of the Y-bit if the sign of the displacement changes for non-branch
  * always conditions.
  */
-constant_names!(NAMES_PPC_RELOC: u8 = {
+constant_names!(
+/// Values for `Relocation::r_type` on PowerPC.
+pub NAMES_PPC_RELOC: u8 = {
     /// generic relocation as described above
     PPC_RELOC_VANILLA = 0,
     /// the second relocation entry of a pair
@@ -4318,7 +4326,9 @@ constant_names!(NAMES_PPC_RELOC: u8 = {
  * the containing image was loaded from its base address (e.g. slide).
  *
  */
-constant_names!(NAMES_X86_64_RELOC: u8 = {
+constant_names!(
+/// Values for `Relocation::r_type` on x86_64.
+pub NAMES_X86_64_RELOC: u8 = {
     /// for absolute addresses
     X86_64_RELOC_UNSIGNED = 0,
     /// for signed 32-bit displacement
