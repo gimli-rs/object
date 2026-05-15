@@ -28,6 +28,7 @@ wasmparser = { version = "0.247.0", default-features = false, optional = true }
 memchr = { version = "2.4.1", default-features = false }
 hashbrown = { version = "0.17.0", features = ["default-hasher"], default-features = false, optional = true }
 ruzstd = { version = "0.8.1", optional = true }
+ebcdic = { version = "0.1.0", optional = true }
 
 # Internal feature, only used when building as part of libstd, not part of the
 # stable interface of this crate.
@@ -66,7 +67,7 @@ names = []
 
 #=======================================
 # File format features.
-archive = []
+archive = ["dep:ebcdic"]
 coff = []
 elf = []
 macho = []

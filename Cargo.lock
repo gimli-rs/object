@@ -119,6 +119,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "ebcdic"
+version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "206cdf0fb3a39f4b0adaf5002a59e7a53382fd68ad2afe907c041f5ae4525600"
+
+[[package]]
 name = "env_filter"
 version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -229,6 +235,7 @@ name = "object"
 version = "0.39.1"
 dependencies = [
  "crc32fast",
+ "ebcdic",
  "flate2",
  "hashbrown",
  "indexmap",

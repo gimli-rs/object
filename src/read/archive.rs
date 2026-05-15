@@ -26,6 +26,8 @@ use core::slice;
 use crate::endian::{BigEndian as BE, LittleEndian as LE, U16, U32, U64};
 use crate::read::{self, Bytes, Error, ReadError, ReadRef};
 use crate::{SkipDebugList, archive};
+use alloc::vec::Vec;
+use ebcdic::ebcdic::Ebcdic;
 
 /// The kind of archive format.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -47,6 +49,8 @@ pub enum ArchiveKind {
     Coff,
     /// The AIX big archive format.
     AixBig,
+    /// The z/OS archive format.
+    Zos,
 }
 
 /// The list of members in the archive.
@@ -58,6 +62,10 @@ enum Members<'data> {
     },
     AixBig {
         index: &'data [archive::AixMemberOffset],
+    },
+    Zos {
+        offset: u64,
+        end_offset: u64,
     },
 }
 
@@ -81,9 +89,13 @@ impl<'data, R: ReadRef<'data>> ArchiveFile<'data, R> {
             .read_bytes(&mut tail, archive::MAGIC.len() as u64)
             .read_error("Invalid archive size")?;
 
-        let thin = if magic == archive::AIX_BIG_MAGIC {
+        if magic == archive::AIX_BIG_MAGIC {
             return Self::parse_aixbig(data);
-        } else if magic == archive::THIN_MAGIC {
+        } else if magic == archive::ZOS_MAGIC {
+            return Self::parse_zos(data);
+        }
+
+        let thin = if magic == archive::THIN_MAGIC {
             true
         } else if magic == archive::MAGIC {
             false
@@ -196,6 +208,43 @@ impl<'data, R: ReadRef<'data>> ArchiveFile<'data, R> {
         };
         Ok(file)
     }
+    /// Parse the z/OS archive header and special .__SYMDEF member.
+    fn parse_zos(data: R) -> read::Result<Self> {
+        let len = data.len().read_error("Unknown archive length")?;
+        let mut tail = 0;
+        let magic = data
+            .read_bytes(&mut tail, archive::MAGIC.len() as u64)
+            .read_error("Invalid z/OS archive size")?;
+        debug_assert_eq!(magic, archive::ZOS_MAGIC);
+
+        let mut file = ArchiveFile {
+            data: SkipDebugList(data),
+            kind: ArchiveKind::Zos,
+            members: Members::Zos {
+                offset: 0,
+                end_offset: 0,
+            },
+            symbols: (0, 0),
+            names: &[],
+            thin: false,
+        };
+
+        let mut members_offset = tail;
+        let members_end_offset = len;
+
+        if tail < len {
+            let member = ArchiveMember::parse_zos(data, &mut tail)?;
+            if member.name() == b"__.SYMDEF" {
+                // Ignore initial symbol table member
+                members_offset = tail;
+            }
+        }
+        file.members = Members::Zos {
+            offset: members_offset,
+            end_offset: members_end_offset,
+        };
+        Ok(file)
+    }
 
     fn parse_aixbig(data: R) -> read::Result<Self> {
         let mut tail = 0;
@@ -303,6 +352,13 @@ impl<'data, R: ReadRef<'data>> ArchiveFile<'data, R> {
                 let offset = member.0;
                 ArchiveMember::parse_aixbig(self.data.0, offset)
             }
+            Members::Zos { offset, end_offset } => {
+                if member.0 < offset || member.0 >= end_offset {
+                    return Err(Error("Invalid archive member offset"));
+                }
+                let mut offset = member.0;
+                ArchiveMember::parse_zos(self.data.0, &mut offset)
+            }
         }
     }
 
@@ -353,6 +409,16 @@ impl<'data, R: ReadRef<'data>> Iterator for ArchiveMemberIterator<'data, R> {
                     Some(member)
                 }
             },
+            Members::Zos { offset, end_offset } => {
+                if *offset >= *end_offset {
+                    return None;
+                }
+                let member = ArchiveMember::parse_zos(self.data, offset);
+                if member.is_err() {
+                    *offset = *end_offset;
+                }
+                Some(member)
+            }
         }
     }
 }
@@ -364,6 +430,9 @@ enum MemberHeader<'data> {
     Common(&'data archive::Header),
     /// AIX big archive header
     AixBig(&'data archive::AixHeader),
+    /// ZOS archive header.
+    /// Same format as Common but fields are EBCDIC.
+    Zos(&'data archive::Header),
 }
 
 /// A partially parsed archive member.
@@ -374,9 +443,66 @@ pub struct ArchiveMember<'data> {
     // May be zero for thin members.
     offset: u64,
     size: u64,
+    // vname is set for z/OS in ArhiveMember::parse_zos().
+    // When set, ArchiveMember::name() uses this instead of the prior name field.
+    vname: Option<Vec<u8>>,
 }
 
 impl<'data> ArchiveMember<'data> {
+    /// Parse the member header, name, and file data in an archive with the Zos format.
+    ///
+    /// This reads the extended name (if any) and adjusts the file size.
+    fn parse_zos<R: ReadRef<'data>>(data: R, offset: &mut u64) -> read::Result<Self> {
+        let eheader = data
+            .read::<archive::Header>(offset)
+            .read_error("Invalid z/OS archive member header")?;
+        const EBCDIC_TERMINATOR: [u8; 2] = *b"y\x15"; // "'\n" in EBCDOC
+        if eheader.terminator != EBCDIC_TERMINATOR {
+            return Err(Error("Invalid z/OS archive header terminator"));
+        }
+        let mut header = *eheader;
+        Ebcdic::ebcdic_to_ascii(&eheader.name, &mut header.name, 16, false, true);
+
+        let header_file_size = zos_parse_u64_ebcdic_digits(&eheader.size, 10)
+            .read_error("Invalid archive member size")?;
+        let mut file_offset = *offset;
+        let mut file_size = header_file_size;
+
+        let mut tmp_nvec;
+        let name = if &header.name[..3] == b"#1/" && (header.name[3] as char).is_ascii_digit() {
+            // Read member name from the start of the file data
+            let ename =
+                parse_bsd_extended_name(&header.name[3..], data, &mut file_offset, &mut file_size)
+                    .read_error("Invalid archive extended name length")?;
+            // Convert member name to ASCII.
+            tmp_nvec = ename.to_vec();
+            Ebcdic::ebcdic_to_ascii(ename, &mut tmp_nvec, ename.len(), false, true);
+            &tmp_nvec
+        } else {
+            // Name is terminated by space.
+            let name_len = memchr::memchr(b' ', &header.name).unwrap_or(header.name.len());
+            &header.name[..name_len]
+        };
+        let nvec = name.to_vec();
+
+        // Skip the file data.
+        *offset = offset
+            .checked_add(header_file_size)
+            .read_error("Archive member size is too large")?;
+        // Entries are padded to an even number of bytes.
+        if (header_file_size & 1) != 0 {
+            *offset = offset.saturating_add(1);
+        }
+
+        Ok(ArchiveMember {
+            header: MemberHeader::Zos(eheader), // Note: is EBCDIC not ASCII.
+            name: &[],
+            offset: file_offset,
+            size: file_size,
+            vname: Some(nvec),
+        })
+    }
+
     /// Parse the member header, name, and file data in an archive with the common format.
     ///
     /// This reads the extended name (if any) and adjusts the file size.
@@ -426,6 +552,7 @@ impl<'data> ArchiveMember<'data> {
                 name,
                 offset: 0,
                 size: file_size,
+                vname: None,
             });
         }
 
@@ -443,6 +570,7 @@ impl<'data> ArchiveMember<'data> {
             name,
             offset: file_offset,
             size: file_size,
+            vname: None,
         })
     }
 
@@ -491,6 +619,7 @@ impl<'data> ArchiveMember<'data> {
             name,
             offset,
             size,
+            vname: None,
         })
     }
 
@@ -520,8 +649,12 @@ impl<'data> ArchiveMember<'data> {
     ///
     /// This may be an extended file name.
     #[inline]
-    pub fn name(&self) -> &'data [u8] {
-        self.name
+    pub fn name(&'data self) -> &'data [u8] {
+        if self.vname.is_some() {
+            self.vname.as_ref().unwrap()
+        } else {
+            self.name
+        }
     }
 
     /// Parse the file modification timestamp from the header.
@@ -530,6 +663,7 @@ impl<'data> ArchiveMember<'data> {
         match &self.header {
             MemberHeader::Common(header) => parse_u64_digits(&header.date, 10),
             MemberHeader::AixBig(header) => parse_u64_digits(&header.date, 10),
+            MemberHeader::Zos(header) => zos_parse_u64_ebcdic_digits(&header.date, 10),
         }
     }
 
@@ -539,6 +673,7 @@ impl<'data> ArchiveMember<'data> {
         match &self.header {
             MemberHeader::Common(header) => parse_u64_digits(&header.uid, 10),
             MemberHeader::AixBig(header) => parse_u64_digits(&header.uid, 10),
+            MemberHeader::Zos(header) => zos_parse_u64_ebcdic_digits(&header.uid, 10),
         }
     }
 
@@ -548,6 +683,7 @@ impl<'data> ArchiveMember<'data> {
         match &self.header {
             MemberHeader::Common(header) => parse_u64_digits(&header.gid, 10),
             MemberHeader::AixBig(header) => parse_u64_digits(&header.gid, 10),
+            MemberHeader::Zos(header) => zos_parse_u64_ebcdic_digits(&header.gid, 10),
         }
     }
 
@@ -557,6 +693,7 @@ impl<'data> ArchiveMember<'data> {
         match &self.header {
             MemberHeader::Common(header) => parse_u64_digits(&header.mode, 8),
             MemberHeader::AixBig(header) => parse_u64_digits(&header.mode, 8),
+            MemberHeader::Zos(header) => zos_parse_u64_ebcdic_digits(&header.mode, 8),
         }
     }
 
@@ -720,6 +857,8 @@ impl<'data> ArchiveSymbolIterator<'data> {
             }
             // TODO: Implement AIX big archive symbol table.
             ArchiveKind::AixBig => Ok(ArchiveSymbolIterator(SymbolIteratorInternal::None)),
+            // TODO: Implement z/OS archive symbol table.
+            ArchiveKind::Zos => Ok(ArchiveSymbolIterator(SymbolIteratorInternal::None)),
         }
     }
 }
@@ -855,6 +994,11 @@ fn parse_u64_digits(digits: &[u8], radix: u32) -> Option<u64> {
         }
     }
     Some(result)
+}
+fn zos_parse_u64_ebcdic_digits(edigits: &[u8], radix: u32) -> Option<u64> {
+    let mut adigits: [u8; 20] = [0u8; 20];
+    Ebcdic::ebcdic_to_ascii(edigits, &mut adigits, edigits.len(), false, true);
+    parse_u64_digits(&adigits[0..edigits.len() - 1], radix)
 }
 
 /// Digits are a decimal offset into the extended name table.
@@ -1138,6 +1282,42 @@ mod tests {
         let member = members.next().unwrap().unwrap();
         assert_eq!(member.name(), b"fedcba9876543210");
         assert_eq!(member.data(data).unwrap(), &b"rev\n"[..]);
+
+        assert!(members.next().is_none());
+    }
+
+    #[test]
+    fn zos_names() {
+        let data = b"\
+            \x5A\x4C\x81\x99\x83\x88\x6E\x15\
+            \xA3\x85\xA2\xA3\xF1\x4B\x96\x40\x40\x40\x40\x40\x40\x40\x40\x40\
+            \xF1\xF6\xF6\xF2\xF6\xF1\xF0\xF3\xF7\xF0\x40\x40\
+            \xF2\xF2\xF3\x40\x40\x40\
+            \xF1\x40\x40\x40\x40\x40\
+            \xF6\xF4\xF4\x40\x40\x40\x40\x40\
+            \xF6\x40\x40\x40\x40\x40\x40\x40\x40\x40\
+            \x79\x15\
+            first\0\
+            \xA3\x85\xA2\xA3\xF2\x4B\x96\x40\x40\x40\x40\x40\x40\x40\x40\x40\
+            \xF1\xF6\xF6\xF2\xF6\xF1\xF0\xF3\xF7\xF0\x40\x40\
+            \xF2\xF2\xF3\x40\x40\x40\
+            \xF1\x40\x40\x40\x40\x40\
+            \xF6\xF4\xF4\x40\x40\x40\x40\x40\
+            \xF7\x40\x40\x40\x40\x40\x40\x40\x40\x40\
+            \x79\x15\
+            second\0";
+        let data = &data[..];
+        let archive = ArchiveFile::parse(data).unwrap();
+        assert_eq!(archive.kind(), ArchiveKind::Zos);
+        let mut members = archive.members();
+
+        let member = members.next().unwrap().unwrap();
+        assert_eq!(member.name(), b"test1.o");
+        assert_eq!(member.data(data).unwrap(), &b"first\0"[..]);
+
+        let member = members.next().unwrap().unwrap();
+        assert_eq!(member.name(), b"test2.o");
+        assert_eq!(member.data(data).unwrap(), &b"second\0"[..]);
 
         assert!(members.next().is_none());
     }
