@@ -3,7 +3,7 @@
 //! These definitions are independent of read/write support, although we do implement
 //! some traits useful for those.
 //!
-//! This module is based heavily on "winnt.h" (10.0.17763.0).
+//! This module is based heavily on "winnt.h" (10.0.28000.0).
 
 #![allow(missing_docs)]
 
@@ -2623,6 +2623,8 @@ newtype_constant_names!(NAMES_DYNAMIC_RELOCATION: DynamicRelocationSymbol(u64) =
     IMAGE_DYNAMIC_RELOCATION_GUARD_IMPORT_CONTROL_TRANSFER = 0x0000_0003,
     IMAGE_DYNAMIC_RELOCATION_GUARD_INDIR_CONTROL_TRANSFER = 0x0000_0004,
     IMAGE_DYNAMIC_RELOCATION_GUARD_SWITCHTABLE_BRANCH = 0x0000_0005,
+    IMAGE_DYNAMIC_RELOCATION_FUNCTION_OVERRIDE = 0x0000_0007,
+    IMAGE_DYNAMIC_RELOCATION_ARM64_KERNEL_IMPORT_CALL_TRANSFER = 0x0000_0008,
 });
 
 // This struct has alignment 1.
@@ -2647,7 +2649,6 @@ pub struct ImageEpilogueDynamicRelocationHeader {
 
 /*
 // TODO? bitfields
-// TODO: unaligned?
 #[derive(Debug, Clone, Copy)]
 #[repr(C)]
 pub struct ImageImportControlTransferDynamicRelocation {
@@ -2656,7 +2657,19 @@ pub struct ImageImportControlTransferDynamicRelocation {
     DWORD       IATIndex           : 19;
 }
 
-// TODO: unaligned?
+// On ARM64, an optimized imported function uses the following data structure
+// insted of a `ImageImportControlTransferDynamicRelocation`.
+#[derive(Debug, Clone, Copy)]
+#[repr(C)]
+pub struct ImageImportControlTransferArm64Relocation {
+    DWORD PageRelativeOffset : 10;  // Offset to the call instruction shifted right by 2 (4-byte aligned instruction)
+    DWORD IndirectCall       :  1;  // 0 if target instruction is a BR, 1 if BLR.
+    DWORD RegisterIndex      :  5;  // Register index used for the indirect call/jump.
+    DWORD ImportType         :  1;  // 0 if this refers to a static import, 1 for delayload import
+    DWORD IATIndex           : 15;  // IAT index of the corresponding import.
+                                    // 0x7FFF is a special value indicating no index.
+}
+
 #[derive(Debug, Clone, Copy)]
 #[repr(C)]
 pub struct ImageIndirControlTransferDynamicRelocation {
@@ -2667,13 +2680,78 @@ pub struct ImageIndirControlTransferDynamicRelocation {
     WORD        Reserved           : 1;
 }
 
-// TODO: unaligned?
 #[derive(Debug, Clone, Copy)]
 #[repr(C)]
 pub struct ImageSwitchtableBranchDynamicRelocation {
     WORD        PageRelativeOffset : 12;
     WORD        RegisterNumber     : 4;
 }
+
+#[derive(Debug, Clone, Copy)]
+#[repr(C)]
+pub struct ImageFunctionOverrideHeader {
+    pub func_override_size: U32<LE>,
+
+    // FuncOverrideSize bytes in size
+    // pub func_override_info: [ImageFunctionOverrideDynamicRelocation; 0],
+
+    // BDD region, size in bytes: DVRTEntrySize - sizeof(IMAGE_FUNCTION_OVERRIDE_HEADER) - FuncOverrideSize
+    // pub bdd_info: ImageBddInfo,
+}
+
+#[derive(Debug, Clone, Copy)]
+#[repr(C)]
+pub struct ImageFunctionOverrideDynamicRelocation {
+    /// RVA of original function
+    pub original_rva: U32<LE>,
+    /// Offset into the BDD region
+    pub bdd_offset: U32<LE>,
+    /// Size in bytes taken by RVAs. Must be multiple of sizeof(DWORD).
+    pub rva_size: U32<LE>,
+    /// Size in bytes taken by BaseRelocs
+    pub base_reloc_size: U32<LE>,
+
+    // Array containing overriding func RVAs.
+    // pub rvas: [U32<LE>; rva_size / sizeof(DWORD)],
+
+    // Base relocations (RVA + Size + TO)
+    //  Padded with extra TOs for 4B alignment
+    // BaseRelocSize size in bytes
+    // pub base_relocs: [ImageBaseRelocation; 0],
+}
+
+#[derive(Debug, Clone, Copy)]
+#[repr(C)]
+pub struct ImageBddInfo {
+    // decides the semantics of serialized BDD
+    pub version: U32<LE>,
+    pub bdd_size: U32<LE>,
+    // bdd_size size in bytes.
+    //pub bdd_nodes: [ImageBddDynamicRelocation; 0],
+}
+
+#[derive(Debug, Clone, Copy)]
+#[repr(C)]
+pub struct ImageBddDynamicRelocation {
+    /// Index of FALSE edge in BDD array
+    pub left: U16<LE>,
+    /// Index of TRUE edge in BDD array
+    pub right: U16<LE>,
+    /// Either FeatureNumber or Index into RVAs array
+    pub value: U32<LE>,
+}
+
+// Function override relocation types in DVRT records.
+
+constant_names!(NAMES_FUNCTION_OVERRIDE: FunctionOverride() = {
+    IMAGE_FUNCTION_OVERRIDE_INVALID = 0,
+    // 32-bit relative address from byte following reloc
+    IMAGE_FUNCTION_OVERRIDE_X64_REL32 = 1,
+    // 26 bit offset << 2 & sign ext. for B & BL
+    IMAGE_FUNCTION_OVERRIDE_ARM64_BRANCH26 = 2,
+    IMAGE_FUNCTION_OVERRIDE_ARM64_THUNK = 3,
+});
+
 */
 
 //
@@ -2805,6 +2883,13 @@ pub struct ImageLoadConfigDirectory64 {
     pub volatile_metadata_pointer: U64<LE>,
 }
 
+/*
+flag_names!(NAMES_HOT_PATCH_INFO_FLAG: HotPatchInfoFlags(u32) = {
+    IMAGE_HOT_PATCH_INFO_FLAG_PATCHORDERCRITICAL = 0x0000_0001,
+    IMAGE_HOT_PATCH_INFO_FLAG_HOTSWAP = 0x0000_0002,
+});
+*/
+
 #[derive(Debug, Clone, Copy)]
 #[repr(C)]
 pub struct ImageHotPatchInfo {
@@ -2817,6 +2902,10 @@ pub struct ImageHotPatchInfo {
     pub buffer_offset: U32<LE>,
     /// Version 3 and later
     pub extra_patch_size: U32<LE>,
+    // Version 4 and later
+    //pub min_sequence_number: U32<LE>,
+    // Version 4 and later
+    //pub flags: U32<LE, HotPatchInfoFlags>,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -2833,6 +2922,17 @@ pub struct ImageHotPatchBase {
     pub buffer_offset: U32<LE>,
 }
 
+/*
+#[derive(Debug, Clone, Copy)]
+#[repr(C)]
+pub struct ImageHotPatchMachine {
+        DWORD _x86     :  1;
+        DWORD Amd64    :  1;
+        DWORD Arm64    :  1;
+        DWORD Amd64EC  :  1;
+}
+*/
+
 #[derive(Debug, Clone, Copy)]
 #[repr(C)]
 pub struct ImageHotPatchHashes {
@@ -2848,6 +2948,10 @@ newtype!(
 newtype_flag_names!(NAMES_HOT_PATCH_BASE: HotPatchBaseFlags(u32) = {
     IMAGE_HOT_PATCH_BASE_OBLIGATORY = 0x0000_0001,
     IMAGE_HOT_PATCH_BASE_CAN_ROLL_BACK = 0x0000_0002,
+
+    IMAGE_HOT_PATCH_BASE_MACHINE_I386 = 0x0000_0004,
+    IMAGE_HOT_PATCH_BASE_MACHINE_ARM64 = 0x0000_0008,
+    IMAGE_HOT_PATCH_BASE_MACHINE_AMD64 = 0x0000_0010,
 });
 
 newtype!(
@@ -2878,6 +2982,89 @@ constant_names!(NAMES_HOT_PATCH_CHUNK_TYPE: HotPatchChunkFlags(u32) = {
     IMAGE_HOT_PATCH_NO_CALL_TARGET = 0x0006_4000,
     IMAGE_HOT_PATCH_DYNAMIC_VALUE = 0x0007_8000,
 });
+
+//
+// Hot-Swap Image Info
+//
+
+/*
+pub const IMAGE_HOTSWAP_ENDPOINT_TABLE_SECTION: &str = ".shsept";
+
+constant_names!(NAMES_ENDPOINT_RETURN_TYPE: HotswapArm64EndpointInfoCcReturn(u32) = {
+    EndpointReturnTypeNone = 0,
+    EndpointReturnTypeX0,
+    EndpointReturnTypeX0_X1,
+    EndpointReturnTypeX0_X2,
+    EndpointReturnTypeX0_X3,
+    EndpointReturnTypeQ0,
+    EndpointReturnTypeQ0_Q1,
+    EndpointReturnTypeQ0_Q2,
+    EndpointReturnTypeQ0_Q3,
+    EndpointReturnTypeX8
+});
+
+constant_names!(NAMES_ENDPOINT_PARAM_REG: HotswapX64EndpointInfoCcReg(u32) = {
+    EndpointParamRegNone = 0x00,
+    EndpointParamRegRAX = 0x01,
+    EndpointParamRegRCX = 0x02,
+    EndpointParamRegRDX = 0x03,
+    EndpointParamRegR8 = 0x09,
+    EndpointParamRegR9 = 0x0A,
+    EndpointParamRegXMM0 = 0xC8,
+    EndpointParamRegXMM1 = 0xC9,
+    EndpointParamRegXMM2 = 0xCA,
+    EndpointParamRegXMM3 = 0xCB,
+});
+
+
+#[derive(Debug, Clone, Copy)]
+#[repr(C)]
+pub struct ImageHotswapEndpointInfoHeaderCommon {
+    pub version: U32<LE>,
+    pub size: U32<LE>,
+}
+
+#[derive(Debug, Clone, Copy)]
+#[repr(C)]
+pub struct ImageHotswapEndpointInfoEntryCommon {
+    // Size of this current entry structure.
+    pub size: U32<LE>,
+    // RVA of the endpoint within the image.
+    pub rva: U32<LE>,
+    pub name_size: U32<LE>,
+    pub name_offset: U32<LE>,
+}
+
+pub const IMAGE_HOTSWAP_ENDPOINT_INFO_V2: u32 = 2;
+
+#[derive(Debug, Clone, Copy)]
+#[repr(C)]
+pub struct ImageHotswapX64EndpointInfoEntryV2 {
+    pub common: ImageHotswapEndpointInfoEntryCommon,
+    pub arg_regs: [U32<LE, HotswapX64EndpointInfoCcReg>; 4],
+    pub arg_stack_size: U32<LE>,
+    pub ret_reg: U32<LE, HotswapX64EndpointInfoCcReg>,
+    // name: [u8; 0],
+}
+
+#[derive(Debug, Clone, Copy)]
+#[repr(C)]
+pub struct ImageHotswapArm64EndpointInfoEntryV2 {
+    pub common: ImageHotswapEndpointInfoEntryCommon,
+    pub int_args: U32<LE>,
+    pub float_args: U32<LE>,
+    pub arg_stack_size: U32<LE>,
+    pub return_type: U32<LE, HotswapArm64EndpointInfoCcReturn>,
+    // name: [u8; 0],
+}
+
+#[derive(Debug, Clone, Copy)]
+#[repr(C)]
+pub struct ImageHotswapEndpointInfoHeaderV2 {
+    pub common: ImageHotswapEndpointInfoHeaderCommon,
+    pub count: U32<LE>,
+}
+*/
 
 newtype!(
     /// Values for `ImageLoadConfigDirectory*::guard_flags`.
@@ -2913,6 +3100,16 @@ newtype_flag_names!(NAMES_GUARD: GuardFlags(u32) = {
     IMAGE_GUARD_RF_STRICT = 0x0008_0000,
     /// Module was built with retpoline support
     IMAGE_GUARD_RETPOLINE_PRESENT = 0x0010_0000,
+    // Was EHCont flag on VB (20H1)
+    // DO_NOT_USE = 0x00200000,
+    /// Module contains EH continuation target information
+    IMAGE_GUARD_EH_CONTINUATION_TABLE_PRESENT = 0x0040_0000,
+    /// Module was built with xfg (deprecated)
+    IMAGE_GUARD_XFG_ENABLED = 0x0080_0000,
+    /// Module has CastGuard instrumentation present
+    IMAGE_GUARD_CASTGUARD_PRESENT = 0x0100_0000,
+    /// Module has Guarded Memcpy instrumentation present
+    IMAGE_GUARD_MEMCPY_PRESENT = 0x0200_0000,
 });
 
 /// Stride of Guard CF function table encoded in these bits (additional count of bytes per element)
@@ -2934,6 +3131,8 @@ newtype_flag_names!(NAMES_GUARD_FLAG: GuardFunctionFlags(u16) = {
     IMAGE_GUARD_FLAG_FID_SUPPRESSED = 0x01,
     /// The containing GFID entry is export suppressed
     IMAGE_GUARD_FLAG_EXPORT_SUPPRESSED = 0x02,
+    IMAGE_GUARD_FLAG_FID_LANGEXCPTHANDLER = 0x04,
+    IMAGE_GUARD_FLAG_FID_XFG = 0x08,
 });
 
 //
@@ -2970,7 +3169,68 @@ pub struct ImageArmRuntimeFunctionEntry {
 pub struct ImageArm64RuntimeFunctionEntry {
     pub begin_address: U32<LE>,
     pub unwind_data: U32<LE>,
+    /* unwind_data bits:
+            DWORD Flag : 2;
+            DWORD FunctionLength : 11;
+            DWORD RegF : 3;
+            DWORD RegI : 4;
+            DWORD H : 1;
+            DWORD CR : 2;
+            DWORD FrameSize : 9;
+    */
 }
+
+/*
+constant_names!(ARM64_FNPDATA_FLAGS = {
+    PdataRefToFullXdata = 0,
+    PdataPackedUnwindFunction = 1,
+    PdataPackedUnwindFragment = 2,
+});
+
+constant_names!(ARM64_FNPDATA_CR = {
+    PdataCrUnchained = 0,
+    PdataCrUnchainedSavedLr = 1,
+    PdataCrChainedWithPac = 2,
+    PdataCrChained = 3,
+});
+
+#[derive(Debug, Clone, Copy)]
+#[repr(C)]
+pub struct ImageArm64RuntimeFunctionEntryXdata {
+    pub header_data: U32<LE>,
+/* header_data bits:
+        DWORD FunctionLength : 18;      // in words (2 bytes)
+        DWORD Version : 2;
+        DWORD ExceptionDataPresent : 1;
+        DWORD EpilogInHeader : 1;
+        DWORD EpilogCount : 5;          // number of epilogs or byte index of the first unwind code for the one only epilog
+        DWORD CodeWords : 5;            // number of dwords with unwind codes
+*/
+}
+
+#[derive(Debug, Clone, Copy)]
+#[repr(C)]
+pub struct ImageArm64RuntimeFunctionEntryXdataExtended {
+    pub extended_header_data: U32<LE>,
+/* extended_header_data bits:
+    struct {
+        DWORD ExtendedEpilogCount : 16;
+        DWORD ExtendedCodeWords : 8;
+    } DUMMYSTRUCTNAME;
+*/
+}
+
+#[derive(Debug, Clone, Copy)]
+#[repr(C)]
+pub struct ImageArm64RuntimeFunctionEntryXdataEpilogScope {
+    pub epilog_scope_data: U32<LE>,
+/* epilog_scope_data bits:
+        DWORD EpilogStartOffset : 18;   // offset in bytes, divided by 4, of the epilog relative to the start of the function.
+        DWORD Res0: 4;
+        DWORD EpilogStartIndex : 10;    // byte index of the first unwind code that describes this epilog.
+*/
+}
+*/
 
 #[derive(Debug, Clone, Copy)]
 #[repr(C)]
@@ -3050,6 +3310,7 @@ newtype!(
 );
 newtype_flag_names!(NAMES_IMAGE_ENCLAVE_POLICY: EnclavePolicyFlags(u32) = {
     IMAGE_ENCLAVE_POLICY_DEBUGGABLE = 0x0000_0001,
+    IMAGE_ENCLAVE_POLICY_STRICT_MEMORY = 0x0000_0002,
 });
 
 newtype!(
@@ -3116,6 +3377,7 @@ newtype_constant_names!(NAMES_DEBUG_TYPE: DebugType(u32) = {
     IMAGE_DEBUG_TYPE_OMAP_TO_SRC = 7,
     IMAGE_DEBUG_TYPE_OMAP_FROM_SRC = 8,
     IMAGE_DEBUG_TYPE_BORLAND = 9,
+    IMAGE_DEBUG_TYPE_BBT = IMAGE_DEBUG_TYPE_RESERVED10.0,
     IMAGE_DEBUG_TYPE_RESERVED10 = 10,
     IMAGE_DEBUG_TYPE_CLSID = 11,
     IMAGE_DEBUG_TYPE_VC_FEATURE = 12,
@@ -3123,7 +3385,24 @@ newtype_constant_names!(NAMES_DEBUG_TYPE: DebugType(u32) = {
     IMAGE_DEBUG_TYPE_ILTCG = 14,
     IMAGE_DEBUG_TYPE_MPX = 15,
     IMAGE_DEBUG_TYPE_REPRO = 16,
+    IMAGE_DEBUG_TYPE_SPGO = 18,
+    IMAGE_DEBUG_TYPE_EX_DLLCHARACTERISTICS = 20,
 });
+
+/*
+flag_names!(NAMES_DLLCHARACTERISTICS_EX: DllFlagsEx() = {
+    IMAGE_DLLCHARACTERISTICS_EX_CET_COMPAT = 0x01,
+    IMAGE_DLLCHARACTERISTICS_EX_CET_COMPAT_STRICT_MODE = 0x02,
+    IMAGE_DLLCHARACTERISTICS_EX_CET_SET_CONTEXT_IP_VALIDATION_RELAXED_MODE = 0x04,
+    IMAGE_DLLCHARACTERISTICS_EX_CET_DYNAMIC_APIS_ALLOW_IN_PROC = 0x08,
+    // Reserved for CET policy *downgrade* only!
+    IMAGE_DLLCHARACTERISTICS_EX_CET_RESERVED_1 = 0x10,
+    // Reserved for CET policy *downgrade* only!
+    IMAGE_DLLCHARACTERISTICS_EX_CET_RESERVED_2 = 0x20,
+    IMAGE_DLLCHARACTERISTICS_EX_FORWARD_CFI_COMPAT = 0x40,
+    IMAGE_DLLCHARACTERISTICS_EX_HOTPATCH_COMPATIBLE = 0x80,
+});
+*/
 
 #[derive(Debug, Clone, Copy)]
 #[repr(C)]
@@ -3571,16 +3850,30 @@ unsafe_impl_pod!(
     ImagePrologueDynamicRelocationHeader,
     ImageEpilogueDynamicRelocationHeader,
     //ImageImportControlTransferDynamicRelocation,
+    //ImageImportControlTransferArm64Relocation,
     //ImageIndirControlTransferDynamicRelocation,
     //ImageSwitchtableBranchDynamicRelocation,
+    //ImageFunctionOverrideHeader,
+    //ImageFunctionOverrideDynamicRelocation,
+    //ImageBddInfo,
+    //ImageBddDynamicRelocation,
     ImageLoadConfigDirectory32,
     ImageLoadConfigDirectory64,
     ImageHotPatchInfo,
     ImageHotPatchBase,
+    //ImageHotPatchMachine,
     ImageHotPatchHashes,
+    //ImageHotswapEndpointInfoHeaderCommon,
+    //ImageHotswapEndpointInfoEntryCommon,
+    //ImageHotswapX64EndpointInfoEntryV2,
+    //ImageHotswapArm64EndpointInfoEntryV2,
+    //ImageHotswapEndpointInfoHeaderV2,
     //ImageCeRuntimeFunctionEntry,
     ImageArmRuntimeFunctionEntry,
     ImageArm64RuntimeFunctionEntry,
+    //ImageArm64RuntimeFunctionEntryXdata,
+    //ImageArm64RuntimeFunctionEntryXdataExtended,
+    //ImageArm64RuntimeFunctionEntryXdataEpilogScope,
     ImageAlpha64RuntimeFunctionEntry,
     ImageAlphaRuntimeFunctionEntry,
     ImageRuntimeFunctionEntry,
