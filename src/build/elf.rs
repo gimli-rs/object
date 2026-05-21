@@ -1194,7 +1194,7 @@ impl<'data> Builder<'data> {
                     }
                     SectionData::DynamicString => {
                         dynstr_addr = Some(section.sh_addr);
-                        writer.reserve_dynstr()
+                        writer.reserve_dynstr()?
                     }
                     SectionData::Hash => {
                         hash_addr = Some(section.sh_addr);
@@ -1272,7 +1272,7 @@ impl<'data> Builder<'data> {
 
         writer.reserve_symtab();
         writer.reserve_symtab_shndx();
-        writer.reserve_strtab();
+        writer.reserve_strtab()?;
 
         // Reserve non-alloc relocations.
         for out_section in &mut out_sections {
@@ -1287,7 +1287,7 @@ impl<'data> Builder<'data> {
                 writer.reserve_relocations(relocations.len(), section.sh_type == elf::SHT_RELA);
         }
 
-        writer.reserve_shstrtab();
+        writer.reserve_shstrtab()?;
         writer.reserve_section_headers();
 
         // Start writing.

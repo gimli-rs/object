@@ -603,7 +603,7 @@ impl<'a> Object<'a> {
         let strtab_offset = offset;
         // Start with null name.
         let mut strtab_data = vec![0];
-        strtab.write(1, &mut strtab_data);
+        strtab.write(1, &mut strtab_data)?;
         write_align(&mut strtab_data, pointer_align);
         offset += strtab_data.len();
 
@@ -932,7 +932,7 @@ impl<'a> Object<'a> {
             macho.write_nlist(
                 buffer,
                 Nlist {
-                    n_strx: n_strx as u32,
+                    n_strx,
                     n_type,
                     n_sect: n_sect as u8,
                     n_desc,

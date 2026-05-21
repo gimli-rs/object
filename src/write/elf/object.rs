@@ -685,7 +685,7 @@ impl<'a> Object<'a> {
         }
         writer.reserve_symtab_shndx();
         writer.reserve_strtab_section_index();
-        writer.reserve_strtab();
+        writer.reserve_strtab()?;
 
         // Calculate size of relocations.
         for (index, section) in self.sections.iter().enumerate() {
@@ -697,7 +697,7 @@ impl<'a> Object<'a> {
 
         // Calculate size of section headers.
         writer.reserve_shstrtab_section_index();
-        writer.reserve_shstrtab();
+        writer.reserve_shstrtab()?;
         writer.reserve_section_headers();
 
         // Start writing.

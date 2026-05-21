@@ -515,7 +515,7 @@ impl<'a> Writer<'a> {
     /// Write a section header.
     pub fn write_section_header(&mut self, section: &SectionHeader) {
         let sh_name = if let Some(name) = section.name {
-            self.shstrtab.get_offset(name) as u32
+            self.shstrtab.get_offset(name)
         } else {
             0
         };
@@ -568,15 +568,18 @@ impl<'a> Writer<'a> {
     /// This function does nothing if no sections were reserved.
     /// This must be called after [`Self::add_section_name`].
     /// and other functions that reserve section names and indices.
-    pub fn reserve_shstrtab(&mut self) {
+    ///
+    /// Returns an error if the string table could not be finalized.
+    pub fn reserve_shstrtab(&mut self) -> Result<()> {
         debug_assert_eq!(self.shstrtab_offset, 0);
         if self.section_num == 0 {
-            return;
+            return Ok(());
         }
         // Start with null section name.
         self.shstrtab_data = vec![0];
-        self.shstrtab.write(1, &mut self.shstrtab_data);
+        self.shstrtab.write(1, &mut self.shstrtab_data)?;
         self.shstrtab_offset = self.reserve(self.shstrtab_data.len(), 1);
+        Ok(())
     }
 
     /// Write the section header string table.
@@ -657,15 +660,18 @@ impl<'a> Writer<'a> {
     ///
     /// This function does nothing if a string table is not required.
     /// This must be called after [`Self::add_string`].
-    pub fn reserve_strtab(&mut self) {
+    ///
+    /// Returns an error if the string table could not be finalized.
+    pub fn reserve_strtab(&mut self) -> Result<()> {
         debug_assert_eq!(self.strtab_offset, 0);
         if !self.need_strtab {
-            return;
+            return Ok(());
         }
         // Start with null string.
         self.strtab_data = vec![0];
-        self.strtab.write(1, &mut self.strtab_data);
+        self.strtab.write(1, &mut self.strtab_data)?;
         self.strtab_offset = self.reserve(self.strtab_data.len(), 1);
+        Ok(())
     }
 
     /// Write the string table.
@@ -818,7 +824,7 @@ impl<'a> Writer<'a> {
     /// Write a symbol.
     pub fn write_symbol(&mut self, sym: &Sym) {
         let st_name = if let Some(name) = sym.name {
-            self.strtab.get_offset(name) as u32
+            self.strtab.get_offset(name)
         } else {
             0
         };
@@ -1023,16 +1029,18 @@ impl<'a> Writer<'a> {
     ///
     /// This function does nothing if no dynamic strings were defined.
     /// This must be called after [`Self::add_dynamic_string`].
-    pub fn reserve_dynstr(&mut self) -> usize {
+    ///
+    /// Returns an error if the string table could not be finalized.
+    pub fn reserve_dynstr(&mut self) -> Result<usize> {
         debug_assert_eq!(self.dynstr_offset, 0);
         if !self.need_dynstr {
-            return 0;
+            return Ok(0);
         }
         // Start with null string.
         self.dynstr_data = vec![0];
-        self.dynstr.write(1, &mut self.dynstr_data);
+        self.dynstr.write(1, &mut self.dynstr_data)?;
         self.dynstr_offset = self.reserve(self.dynstr_data.len(), 1);
-        self.dynstr_offset
+        Ok(self.dynstr_offset)
     }
 
     /// Return the size of the dynamic string table.
@@ -1182,7 +1190,7 @@ impl<'a> Writer<'a> {
     /// Write a dynamic symbol.
     pub fn write_dynamic_symbol(&mut self, sym: &Sym) {
         let st_name = if let Some(name) = sym.name {
-            self.dynstr.get_offset(name) as u32
+            self.dynstr.get_offset(name)
         } else {
             0
         };
@@ -1295,7 +1303,7 @@ impl<'a> Writer<'a> {
 
     /// Write a dynamic string entry.
     pub fn write_dynamic_string(&mut self, tag: elf::DynamicTag, id: StringId) -> Result<()> {
-        self.write_dynamic(tag, self.dynstr.get_offset(id) as u64)
+        self.write_dynamic(tag, self.dynstr.get_offset(id).into())
     }
 
     /// Write a dynamic value entry.
@@ -1699,7 +1707,7 @@ impl<'a> Writer<'a> {
             mem::size_of::<elf::Verdaux<Endianness>>() as u32
         };
         self.buffer.write(&elf::Verdaux {
-            vda_name: U32::new(self.endian, self.dynstr.get_offset(name) as u32),
+            vda_name: U32::new(self.endian, self.dynstr.get_offset(name)),
             vda_next: U32::new(self.endian, vda_next),
         });
     }
@@ -1780,7 +1788,7 @@ impl<'a> Writer<'a> {
         self.buffer.write(&elf::Verneed {
             vn_version: U16::new(self.endian, verneed.version),
             vn_cnt: U16::new(self.endian, verneed.aux_count),
-            vn_file: U32::new(self.endian, self.dynstr.get_offset(verneed.file) as u32),
+            vn_file: U32::new(self.endian, self.dynstr.get_offset(verneed.file)),
             vn_aux: U32::new(self.endian, vn_aux),
             vn_next: U32::new(self.endian, vn_next),
         });
@@ -1799,7 +1807,7 @@ impl<'a> Writer<'a> {
             vna_hash: U32::new(self.endian, elf::hash(self.dynstr.get_string(vernaux.name))),
             vna_flags: U16::new(self.endian, vernaux.flags),
             vna_other: U16::new(self.endian, vernaux.index),
-            vna_name: U32::new(self.endian, self.dynstr.get_offset(vernaux.name) as u32),
+            vna_name: U32::new(self.endian, self.dynstr.get_offset(vernaux.name)),
             vna_next: U32::new(self.endian, vna_next),
         });
     }
