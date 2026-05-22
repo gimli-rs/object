@@ -324,8 +324,16 @@ impl<'a> Writer<'a> {
         } else {
             self.class().program_header_size() as u16
         };
-        // TODO: overflow
-        let e_phnum = self.segment_num as u16;
+        let e_phnum = if self.segment_num >= elf::PN_XNUM.into() {
+            if self.section_num == 0 {
+                return Err(Error(String::from(
+                    "e_phnum overflow requires section headers",
+                )));
+            }
+            elf::PN_XNUM
+        } else {
+            self.segment_num as u16
+        };
 
         let e_shoff = self.section_offset as u64;
         let e_shentsize = if self.section_num == 0 {
@@ -383,6 +391,9 @@ impl<'a> Writer<'a> {
     }
 
     /// Reserve the range for the program headers.
+    ///
+    /// If `num` is >= `elf::PN_XNUM`, you must also reserve and write
+    /// the section table; this is checked in `write_file_header`.
     pub fn reserve_program_headers(&mut self, num: u32) {
         debug_assert_eq!(self.segment_offset, 0);
         if num == 0 {
@@ -505,8 +516,11 @@ impl<'a> Writer<'a> {
             } else {
                 0
             },
-            // TODO: e_phnum overflow
-            sh_info: 0,
+            sh_info: if self.segment_num >= elf::PN_XNUM.into() {
+                self.segment_num
+            } else {
+                0
+            },
             sh_addralign: 0,
             sh_entsize: 0,
         });
