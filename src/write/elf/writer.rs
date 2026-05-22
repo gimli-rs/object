@@ -858,9 +858,13 @@ impl<'a> Writer<'a> {
         }
 
         if self.need_symtab_shndx {
-            let section_index = sym.section.unwrap_or(SectionIndex(0));
+            let section_index = if st_shndx == elf::SHN_XINDEX {
+                sym.section.map_or(0, |s| s.0)
+            } else {
+                0
+            };
             self.symtab_shndx_data
-                .write_pod(&U32::new(self.endian, section_index.0));
+                .write_pod(&U32::new(self.endian, section_index));
         }
     }
 
