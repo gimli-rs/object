@@ -19,6 +19,11 @@ pub(crate) struct StringTable<'a> {
 }
 
 impl<'a> StringTable<'a> {
+    /// Return true if the string table contains no strings.
+    pub(crate) fn is_empty(&self) -> bool {
+        self.strings.is_empty()
+    }
+
     /// Add a string to the string table.
     ///
     /// Duplicate strings return the id of the existing entry.

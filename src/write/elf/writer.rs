@@ -9,7 +9,7 @@ use crate::endian::*;
 use crate::pod;
 use crate::write::string::{StringId, StringTable};
 use crate::write::util;
-use crate::write::{Error, Result, WritableBuffer};
+use crate::write::{Error, GrowableBuffer, Result, WritableBuffer};
 
 const ALIGN_SYMTAB_SHNDX: usize = 4;
 const ALIGN_HASH: usize = 4;
@@ -25,56 +25,72 @@ pub struct SectionIndex(pub u32);
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct SymbolIndex(pub u32);
 
+/// The writing mode of a [`Writer`].
+///
+/// This is a sealed trait with two implementors:
+/// - [`TwoPhase`]: reserve all file ranges, then write.
+/// - [`SinglePhase`]: write directly, discovering file offsets as you go.
+pub trait Mode: ModeSealed {}
+
+use private::ModeSealed;
+mod private {
+    use super::*;
+
+    #[allow(private_interfaces)]
+    pub trait ModeSealed {
+        fn reserve(&self, buffer: &mut dyn WritableBuffer) -> Result<()>;
+        fn need_offset(offset: usize) -> bool;
+        fn set_offset(dest: &mut usize, offset: usize);
+        fn set_size(dest: &mut usize, size: usize);
+        fn set_section_index(dest: &mut SectionIndex, index: SectionIndex);
+        fn set_section_name(
+            dest: &mut Option<StringId>,
+            shstrtab: &mut StringTable<'_>,
+            name: &'static [u8],
+        );
+        fn set_count<T: Copy + PartialOrd>(dest: &mut T, count: T);
+    }
+}
+
 /// A helper for writing ELF files.
 ///
-/// Writing uses a two phase approach. The first phase builds up all of the information
-/// that may need to be known ahead of time:
-/// - build string tables
-/// - reserve section indices
-/// - reserve symbol indices
-/// - reserve file ranges for headers and sections
+/// The writer supports two modes: [`TwoPhase`] or [`SinglePhase`].
+/// See the mode documentation for a description of the use of the writer.
 ///
-/// Some of the information has ordering requirements. For example, strings must be added
-/// to string tables before reserving the file range for the string table. Symbol indices
-/// must be reserved after reserving the section indices they reference. There are debug
-/// asserts to check some of these requirements.
-///
-/// The second phase writes everything out in order. Thus the caller must ensure writing
-/// is in the same order that file ranges were reserved. There are debug asserts to assist
-/// with checking this.
+/// The default mode is two-phase. Use [`Writer::new_single_phase`] to construct
+/// a single-phase writer; the [`SinglePhaseWriter`] type alias is also provided.
 #[allow(missing_debug_implementations)]
-pub struct Writer<'a> {
+pub struct Writer<'a, M: Mode = TwoPhase> {
+    mode: M,
     endian: Endianness,
     is_64: bool,
     is_mips64el: bool,
     elf_align: usize,
 
     buffer: &'a mut dyn WritableBuffer,
-    len: usize,
 
-    segment_offset: usize,
-    segment_num: u32,
-
-    section_offset: usize,
-    section_num: u32,
+    header: FileHeader,
+    layout: FileHeaderLayout,
+    written_segment_num: u32,
+    written_section_num: u32,
 
     shstrtab: StringTable<'a>,
     shstrtab_str_id: Option<StringId>,
-    shstrtab_index: SectionIndex,
     shstrtab_offset: usize,
-    shstrtab_data: Vec<u8>,
+    shstrtab_size: u32,
 
     need_strtab: bool,
     strtab: StringTable<'a>,
     strtab_str_id: Option<StringId>,
     strtab_index: SectionIndex,
     strtab_offset: usize,
-    strtab_data: Vec<u8>,
+    strtab_size: u32,
 
     symtab_str_id: Option<StringId>,
     symtab_index: SectionIndex,
     symtab_offset: usize,
     symtab_num: u32,
+    written_symtab_num: u32,
 
     need_symtab_shndx: bool,
     symtab_shndx_str_id: Option<StringId>,
@@ -86,16 +102,18 @@ pub struct Writer<'a> {
     dynstr_str_id: Option<StringId>,
     dynstr_index: SectionIndex,
     dynstr_offset: usize,
-    dynstr_data: Vec<u8>,
+    dynstr_size: u32,
 
     dynsym_str_id: Option<StringId>,
     dynsym_index: SectionIndex,
     dynsym_offset: usize,
     dynsym_num: u32,
+    written_dynsym_num: u32,
 
     dynamic_str_id: Option<StringId>,
     dynamic_offset: usize,
     dynamic_num: usize,
+    written_dynamic_num: usize,
 
     hash_str_id: Option<StringId>,
     hash_offset: usize,
@@ -110,15 +128,17 @@ pub struct Writer<'a> {
 
     gnu_verdef_str_id: Option<StringId>,
     gnu_verdef_offset: usize,
-    gnu_verdef_size: usize,
     gnu_verdef_count: u16,
+    gnu_verdaux_count: usize,
+    written_verdaux_count: usize,
     gnu_verdef_remaining: u16,
     gnu_verdaux_remaining: u16,
 
     gnu_verneed_str_id: Option<StringId>,
     gnu_verneed_offset: usize,
-    gnu_verneed_size: usize,
     gnu_verneed_count: u16,
+    gnu_vernaux_count: usize,
+    written_vernaux_count: usize,
     gnu_verneed_remaining: u16,
     gnu_vernaux_remaining: u16,
 
@@ -127,11 +147,17 @@ pub struct Writer<'a> {
     gnu_attributes_size: usize,
 }
 
-impl<'a> Writer<'a> {
+impl<'a, M: Mode> Writer<'a, M> {
     /// Create a new `Writer` for the given endianness and ELF class.
-    pub fn new(endian: Endianness, is_64: bool, buffer: &'a mut dyn WritableBuffer) -> Self {
+    fn new_with_mode(
+        endian: Endianness,
+        is_64: bool,
+        buffer: &'a mut dyn WritableBuffer,
+        mode: M,
+    ) -> Self {
         let elf_align = if is_64 { 8 } else { 4 };
         Writer {
+            mode,
             endian,
             is_64,
             // Determined later.
@@ -139,31 +165,29 @@ impl<'a> Writer<'a> {
             elf_align,
 
             buffer,
-            len: 0,
 
-            segment_offset: 0,
-            segment_num: 0,
-
-            section_offset: 0,
-            section_num: 0,
+            header: FileHeader::default(),
+            layout: FileHeaderLayout::default(),
+            written_segment_num: 0,
+            written_section_num: 0,
 
             shstrtab: StringTable::default(),
             shstrtab_str_id: None,
-            shstrtab_index: SectionIndex(0),
             shstrtab_offset: 0,
-            shstrtab_data: Vec::new(),
+            shstrtab_size: 0,
 
             need_strtab: false,
             strtab: StringTable::default(),
             strtab_str_id: None,
             strtab_index: SectionIndex(0),
             strtab_offset: 0,
-            strtab_data: Vec::new(),
+            strtab_size: 0,
 
             symtab_str_id: None,
             symtab_index: SectionIndex(0),
             symtab_offset: 0,
             symtab_num: 0,
+            written_symtab_num: 0,
 
             need_symtab_shndx: false,
             symtab_shndx_str_id: None,
@@ -175,16 +199,18 @@ impl<'a> Writer<'a> {
             dynstr_str_id: None,
             dynstr_index: SectionIndex(0),
             dynstr_offset: 0,
-            dynstr_data: Vec::new(),
+            dynstr_size: 0,
 
             dynsym_str_id: None,
             dynsym_index: SectionIndex(0),
             dynsym_offset: 0,
             dynsym_num: 0,
+            written_dynsym_num: 0,
 
             dynamic_str_id: None,
             dynamic_offset: 0,
             dynamic_num: 0,
+            written_dynamic_num: 0,
 
             hash_str_id: None,
             hash_offset: 0,
@@ -199,15 +225,17 @@ impl<'a> Writer<'a> {
 
             gnu_verdef_str_id: None,
             gnu_verdef_offset: 0,
-            gnu_verdef_size: 0,
             gnu_verdef_count: 0,
+            gnu_verdaux_count: 0,
+            written_verdaux_count: 0,
             gnu_verdef_remaining: 0,
             gnu_verdaux_remaining: 0,
 
             gnu_verneed_str_id: None,
             gnu_verneed_offset: 0,
-            gnu_verneed_size: 0,
             gnu_verneed_count: 0,
+            gnu_vernaux_count: 0,
+            written_vernaux_count: 0,
             gnu_verneed_remaining: 0,
             gnu_vernaux_remaining: 0,
 
@@ -259,20 +287,33 @@ impl<'a> Writer<'a> {
         self.is_mips64el =
             self.is_64 && self.endian.is_little_endian() && header.e_machine == elf::EM_MIPS;
 
-        // Start writing.
-        self.buffer
-            .reserve(self.len)
-            .map_err(|_| Error(String::from("Cannot allocate buffer")))?;
+        self.mode.reserve(self.buffer)?;
+        self.header = header.clone();
+        Self::write_file_header_impl(
+            self.buffer,
+            self.endian,
+            self.is_64,
+            &self.header,
+            &self.layout,
+        )
+    }
 
-        // Write file header.
+    fn write_file_header_impl(
+        buffer: &mut dyn WritableBuffer,
+        endian: Endianness,
+        is_64: bool,
+        header: &FileHeader,
+        layout: &FileHeaderLayout,
+    ) -> Result<()> {
+        let class = Class { is_64 };
         let e_ident = elf::Ident {
             magic: elf::ELFMAG,
-            class: if self.is_64 {
+            class: if class.is_64 {
                 elf::ELFCLASS64
             } else {
                 elf::ELFCLASS32
             },
-            data: if self.endian.is_little_endian() {
+            data: if endian.is_little_endian() {
                 elf::ELFDATA2LSB
             } else {
                 elf::ELFDATA2MSB
@@ -283,40 +324,39 @@ impl<'a> Writer<'a> {
             padding: [0; 7],
         };
 
-        let e_ehsize = self.class().file_header_size() as u16;
+        let e_ehsize = class.file_header_size() as u16;
 
-        let e_phoff = self.segment_offset as u64;
-        let e_phentsize = if self.segment_num == 0 {
+        let e_phoff = layout.segment_offset as u64;
+        let e_phentsize = if layout.segment_num == 0 {
             0
         } else {
-            self.class().program_header_size() as u16
+            class.program_header_size() as u16
         };
-        let e_phnum = if self.segment_num >= elf::PN_XNUM.into() {
-            if self.section_num == 0 {
+        let e_phnum = if layout.segment_num >= elf::PN_XNUM.into() {
+            if layout.section_num == 0 {
                 return Err(Error(String::from(
                     "e_phnum overflow requires section headers",
                 )));
             }
             elf::PN_XNUM
         } else {
-            self.segment_num as u16
+            layout.segment_num as u16
         };
 
-        let e_shoff = self.section_offset as u64;
-        let e_shentsize = if self.section_num == 0 {
+        let e_shoff = layout.section_offset as u64;
+        let e_shentsize = if layout.section_num == 0 {
             0
         } else {
-            self.class().section_header_size() as u16
+            class.section_header_size() as u16
         };
-        let e_shnum = if self.section_num >= elf::SHN_LORESERVE.into() {
+        let e_shnum = if layout.section_num >= elf::SHN_LORESERVE.into() {
             0
         } else {
-            self.section_num as u16
+            layout.section_num as u16
         };
-        let e_shstrndx = elf::SymbolSection::new(self.shstrtab_index.0);
+        let e_shstrndx = elf::SymbolSection::new(layout.shstrtab_index.0);
 
-        let endian = self.endian;
-        if self.is_64 {
+        if class.is_64 {
             let file = elf::FileHeader64 {
                 e_ident,
                 e_type: U16::new(endian, header.e_type),
@@ -333,7 +373,7 @@ impl<'a> Writer<'a> {
                 e_shnum: U16::new(endian, e_shnum),
                 e_shstrndx: U16::new(endian, e_shstrndx),
             };
-            self.buffer.write(&file)
+            buffer.write(&file)
         } else {
             let file = elf::FileHeader32 {
                 e_ident,
@@ -351,7 +391,7 @@ impl<'a> Writer<'a> {
                 e_shnum: U16::new(endian, e_shnum),
                 e_shstrndx: U16::new(endian, e_shstrndx),
             };
-            self.buffer.write(&file);
+            buffer.write(&file);
         }
 
         Ok(())
@@ -359,17 +399,27 @@ impl<'a> Writer<'a> {
 
     /// Write alignment padding bytes prior to the program headers.
     pub fn write_align_program_headers(&mut self) {
-        if self.segment_offset == 0 {
+        if !M::need_offset(self.layout.segment_offset) {
             return;
         }
         util::write_align(self.buffer, self.elf_align);
-        debug_assert_eq!(self.segment_offset, self.buffer.len());
+        M::set_offset(&mut self.layout.segment_offset, self.buffer.len());
     }
 
     /// Write a program header.
     pub fn write_program_header(&mut self, header: &ProgramHeader) {
-        let endian = self.endian;
-        if self.is_64 {
+        Self::write_program_header_impl(self.buffer, self.endian, self.is_64, header);
+        self.written_segment_num += 1;
+        M::set_count(&mut self.layout.segment_num, self.written_segment_num);
+    }
+
+    fn write_program_header_impl(
+        buffer: &mut dyn WritableBuffer,
+        endian: Endianness,
+        is_64: bool,
+        header: &ProgramHeader,
+    ) {
+        if is_64 {
             let header = elf::ProgramHeader64 {
                 p_type: U32::new(endian, header.p_type),
                 p_flags: U32::new(endian, header.p_flags),
@@ -380,7 +430,7 @@ impl<'a> Writer<'a> {
                 p_memsz: U64::new(endian, header.p_memsz),
                 p_align: U64::new(endian, header.p_align),
             };
-            self.buffer.write(&header);
+            buffer.write(&header);
         } else {
             let header = elf::ProgramHeader32 {
                 p_type: U32::new(endian, header.p_type),
@@ -392,7 +442,7 @@ impl<'a> Writer<'a> {
                 p_flags: U32::new(endian, header.p_flags),
                 p_align: U32::new(endian, header.p_align as u32),
             };
-            self.buffer.write(&header);
+            buffer.write(&header);
         }
     }
 
@@ -401,29 +451,29 @@ impl<'a> Writer<'a> {
     /// This must be the first section header that is written.
     /// This function does nothing if no sections were reserved.
     pub fn write_null_section_header(&mut self) {
-        if self.section_num == 0 {
+        if !M::need_offset(self.layout.section_offset) {
             return;
         }
         util::write_align(self.buffer, self.elf_align);
-        debug_assert_eq!(self.section_offset, self.buffer.len());
+        M::set_offset(&mut self.layout.section_offset, self.buffer.len());
         self.write_section_header(&SectionHeader {
             name: None,
             sh_type: elf::SHT_NULL,
             sh_flags: elf::SectionFlags(0),
             sh_addr: 0,
             sh_offset: 0,
-            sh_size: if self.section_num >= elf::SHN_LORESERVE.into() {
-                self.section_num.into()
+            sh_size: if self.layout.section_num >= elf::SHN_LORESERVE.into() {
+                self.layout.section_num.into()
             } else {
                 0
             },
-            sh_link: if self.shstrtab_index.0 >= elf::SHN_LORESERVE.into() {
-                self.shstrtab_index.0
+            sh_link: if self.layout.shstrtab_index.0 >= elf::SHN_LORESERVE.into() {
+                self.layout.shstrtab_index.0
             } else {
                 0
             },
-            sh_info: if self.segment_num >= elf::PN_XNUM.into() {
-                self.segment_num
+            sh_info: if self.layout.segment_num >= elf::PN_XNUM.into() {
+                self.layout.segment_num
             } else {
                 0
             },
@@ -433,7 +483,7 @@ impl<'a> Writer<'a> {
     }
 
     /// Write a section header.
-    pub fn write_section_header(&mut self, section: &SectionHeader) {
+    pub fn write_section_header(&mut self, section: &SectionHeader) -> SectionIndex {
         let sh_name = if let Some(name) = section.name {
             self.shstrtab.get_offset(name)
         } else {
@@ -469,6 +519,10 @@ impl<'a> Writer<'a> {
             };
             self.buffer.write(&section);
         }
+        let index = SectionIndex(self.written_section_num);
+        self.written_section_num += 1;
+        M::set_count(&mut self.layout.section_num, self.written_section_num);
+        index
     }
 
     /// Add a section name to the section header string table.
@@ -485,31 +539,33 @@ impl<'a> Writer<'a> {
     ///
     /// This function does nothing if the section index was not reserved.
     pub fn write_shstrtab_section_header(&mut self) {
-        if self.shstrtab_index == SectionIndex(0) {
+        if self.shstrtab_str_id.is_none() {
             return;
         }
-        self.write_section_header(&SectionHeader {
+        debug_assert_ne!(self.shstrtab_offset, 0);
+        let index = self.write_section_header(&SectionHeader {
             name: self.shstrtab_str_id,
             sh_type: elf::SHT_STRTAB,
             sh_flags: elf::SectionFlags(0),
             sh_addr: 0,
             sh_offset: self.shstrtab_offset as u64,
-            sh_size: self.shstrtab_data.len() as u64,
+            sh_size: self.shstrtab_size.into(),
             sh_link: 0,
             sh_info: 0,
             sh_addralign: 1,
             sh_entsize: 0,
         });
+        M::set_section_index(&mut self.layout.shstrtab_index, index);
     }
 
     /// Add a string to the string table.
     ///
     /// This will be stored in the `.strtab` section.
     ///
-    /// This must be called before [`Self::reserve_strtab`].
+    /// This must be called before [`Self::reserve_strtab`] in two-phase mode,
+    /// or before [`Self::write_strtab`] in single-phase mode.
     pub fn add_string(&mut self, name: &'a [u8]) -> StringId {
         debug_assert_eq!(self.strtab_offset, 0);
-        self.need_strtab = true;
         self.strtab.add(name)
     }
 
@@ -517,21 +573,22 @@ impl<'a> Writer<'a> {
     ///
     /// This function does nothing if the section index was not reserved.
     pub fn write_strtab_section_header(&mut self) {
-        if self.strtab_index == SectionIndex(0) {
+        if self.strtab_str_id.is_none() {
             return;
         }
-        self.write_section_header(&SectionHeader {
+        let index = self.write_section_header(&SectionHeader {
             name: self.strtab_str_id,
             sh_type: elf::SHT_STRTAB,
             sh_flags: elf::SectionFlags(0),
             sh_addr: 0,
             sh_offset: self.strtab_offset as u64,
-            sh_size: self.strtab_data.len() as u64,
+            sh_size: self.strtab_size.into(),
             sh_link: 0,
             sh_info: 0,
             sh_addralign: 1,
             sh_entsize: 0,
         });
+        M::set_section_index(&mut self.strtab_index, index);
     }
 
     /// Write the null symbol.
@@ -539,25 +596,31 @@ impl<'a> Writer<'a> {
     /// This must be the first symbol that is written.
     /// This function does nothing if no symbols were reserved.
     pub fn write_null_symbol(&mut self) {
-        if self.symtab_num == 0 {
+        if !M::need_offset(self.symtab_offset) {
             return;
         }
         util::write_align(self.buffer, self.elf_align);
-        debug_assert_eq!(self.symtab_offset, self.buffer.len());
+        M::set_offset(&mut self.symtab_offset, self.buffer.len());
+        M::set_section_name(&mut self.symtab_str_id, &mut self.shstrtab, b".symtab");
         if self.is_64 {
             self.buffer.write(&elf::Sym64::<Endianness>::default());
         } else {
             self.buffer.write(&elf::Sym32::<Endianness>::default());
         }
 
-        if self.need_symtab_shndx {
+        if M::need_offset(self.symtab_shndx_offset) {
             self.symtab_shndx_data
                 .write_pod(&U32::new(self.endian, 0u32));
         }
+
+        self.written_symtab_num = 1;
+        M::set_count(&mut self.symtab_num, self.written_symtab_num);
+        // The symtab must link to a strtab.
+        self.need_strtab = true;
     }
 
     /// Write a symbol.
-    pub fn write_symbol(&mut self, sym: &Sym) {
+    pub fn write_symbol(&mut self, sym: &Sym) -> SymbolIndex {
         let st_name = if let Some(name) = sym.name {
             self.strtab.get_offset(name)
         } else {
@@ -592,8 +655,9 @@ impl<'a> Writer<'a> {
             self.buffer.write(&sym);
         }
 
-        if self.need_symtab_shndx {
+        if M::need_offset(self.symtab_shndx_offset) {
             let section_index = if st_shndx == elf::SHN_XINDEX {
+                self.need_symtab_shndx = true;
                 sym.section.map_or(0, |s| s.0)
             } else {
                 0
@@ -601,16 +665,21 @@ impl<'a> Writer<'a> {
             self.symtab_shndx_data
                 .write_pod(&U32::new(self.endian, section_index));
         }
+
+        let index = SymbolIndex(self.written_symtab_num);
+        self.written_symtab_num += 1;
+        M::set_count(&mut self.symtab_num, self.written_symtab_num);
+        index
     }
 
     /// Write the section header for the symbol table.
     ///
     /// This function does nothing if the section index was not reserved.
     pub fn write_symtab_section_header(&mut self, num_local: u32) {
-        if self.symtab_index == SectionIndex(0) {
+        if self.symtab_str_id.is_none() {
             return;
         }
-        self.write_section_header(&SectionHeader {
+        let index = self.write_section_header(&SectionHeader {
             name: self.symtab_str_id,
             sh_type: elf::SHT_SYMTAB,
             sh_flags: elf::SectionFlags(0),
@@ -622,19 +691,26 @@ impl<'a> Writer<'a> {
             sh_addralign: self.elf_align as u64,
             sh_entsize: self.class().sym_size() as u64,
         });
+        M::set_section_index(&mut self.symtab_index, index);
     }
 
     /// Write the extended section indices for the symbol table.
     ///
     /// This function does nothing if the section was not reserved.
     pub fn write_symtab_shndx(&mut self) {
-        if self.symtab_shndx_offset == 0 {
+        if !self.need_symtab_shndx {
+            self.symtab_shndx_data = Vec::new();
             return;
         }
         util::write_align(self.buffer, ALIGN_SYMTAB_SHNDX);
-        debug_assert_eq!(self.symtab_shndx_offset, self.buffer.len());
-        debug_assert_eq!(self.symtab_num as usize * 4, self.symtab_shndx_data.len());
+        M::set_offset(&mut self.symtab_shndx_offset, self.buffer.len());
+        M::set_section_name(
+            &mut self.symtab_shndx_str_id,
+            &mut self.shstrtab,
+            b".symtab_shndx",
+        );
         self.buffer.write_bytes(&self.symtab_shndx_data);
+        self.symtab_shndx_data = Vec::new();
     }
 
     /// Write the section header for the extended section indices for the symbol table.
@@ -667,10 +743,10 @@ impl<'a> Writer<'a> {
     ///
     /// This will be stored in the `.dynstr` section.
     ///
-    /// This must be called before [`Self::reserve_dynstr`].
+    /// This must be called before [`Self::reserve_dynstr`] in two-phase mode,
+    /// or before [`Self::write_dynstr`] in single-phase mode.
     pub fn add_dynamic_string(&mut self, name: &'a [u8]) -> StringId {
         debug_assert_eq!(self.dynstr_offset, 0);
-        self.need_dynstr = true;
         self.dynstr.add(name)
     }
 
@@ -685,21 +761,22 @@ impl<'a> Writer<'a> {
     ///
     /// This function does nothing if the section index was not reserved.
     pub fn write_dynstr_section_header(&mut self, sh_addr: u64) {
-        if self.dynstr_index == SectionIndex(0) {
+        if self.dynstr_str_id.is_none() {
             return;
         }
-        self.write_section_header(&SectionHeader {
+        let index = self.write_section_header(&SectionHeader {
             name: self.dynstr_str_id,
             sh_type: elf::SHT_STRTAB,
             sh_flags: elf::SHF_ALLOC,
             sh_addr,
             sh_offset: self.dynstr_offset as u64,
-            sh_size: self.dynstr_data.len() as u64,
+            sh_size: self.dynstr_size.into(),
             sh_link: 0,
             sh_info: 0,
             sh_addralign: 1,
             sh_entsize: 0,
         });
+        M::set_section_index(&mut self.dynstr_index, index);
     }
 
     /// Write the null dynamic symbol.
@@ -707,20 +784,26 @@ impl<'a> Writer<'a> {
     /// This must be the first dynamic symbol that is written.
     /// This function does nothing if no dynamic symbols were reserved.
     pub fn write_null_dynamic_symbol(&mut self) {
-        if self.dynsym_num == 0 {
+        if !M::need_offset(self.dynsym_offset) {
             return;
         }
         util::write_align(self.buffer, self.elf_align);
-        debug_assert_eq!(self.dynsym_offset, self.buffer.len());
+        M::set_offset(&mut self.dynsym_offset, self.buffer.len());
+        M::set_section_name(&mut self.dynsym_str_id, &mut self.shstrtab, b".dynsym");
         if self.is_64 {
             self.buffer.write(&elf::Sym64::<Endianness>::default());
         } else {
             self.buffer.write(&elf::Sym32::<Endianness>::default());
         }
+
+        self.written_dynsym_num = 1;
+        M::set_count(&mut self.dynsym_num, self.written_dynsym_num);
+        // The symbol table must link to a string table.
+        self.need_dynstr = true;
     }
 
     /// Write a dynamic symbol.
-    pub fn write_dynamic_symbol(&mut self, sym: &Sym) {
+    pub fn write_dynamic_symbol(&mut self, sym: &Sym) -> SymbolIndex {
         let st_name = if let Some(name) = sym.name {
             self.dynstr.get_offset(name)
         } else {
@@ -757,16 +840,21 @@ impl<'a> Writer<'a> {
             };
             self.buffer.write(&sym);
         }
+
+        let index = SymbolIndex(self.written_dynsym_num);
+        self.written_dynsym_num += 1;
+        M::set_count(&mut self.dynsym_num, self.written_dynsym_num);
+        index
     }
 
     /// Write the section header for the dynamic symbol table.
     ///
     /// This function does nothing if the section index was not reserved.
     pub fn write_dynsym_section_header(&mut self, sh_addr: u64, num_local: u32) {
-        if self.dynsym_index == SectionIndex(0) {
+        if self.dynsym_str_id.is_none() {
             return;
         }
-        self.write_section_header(&SectionHeader {
+        let index = self.write_section_header(&SectionHeader {
             name: self.dynsym_str_id,
             sh_type: elf::SHT_DYNSYM,
             sh_flags: elf::SHF_ALLOC,
@@ -778,17 +866,19 @@ impl<'a> Writer<'a> {
             sh_addralign: self.elf_align as u64,
             sh_entsize: self.class().sym_size() as u64,
         });
+        M::set_section_index(&mut self.dynsym_index, index);
     }
 
     /// Write alignment padding bytes prior to the `.dynamic` section.
     ///
     /// This function does nothing if the section was not reserved.
     pub fn write_align_dynamic(&mut self) {
-        if self.dynamic_offset == 0 {
+        if !M::need_offset(self.dynamic_offset) {
             return;
         }
         util::write_align(self.buffer, self.elf_align);
-        debug_assert_eq!(self.dynamic_offset, self.buffer.len());
+        M::set_offset(&mut self.dynamic_offset, self.buffer.len());
+        M::set_section_name(&mut self.dynamic_str_id, &mut self.shstrtab, b".dynamic");
     }
 
     /// Write a dynamic string entry.
@@ -817,6 +907,8 @@ impl<'a> Writer<'a> {
             };
             self.buffer.write(&d);
         }
+        self.written_dynamic_num += 1;
+        M::set_count(&mut self.dynamic_num, self.written_dynamic_num);
         Ok(())
     }
 
@@ -860,13 +952,15 @@ impl<'a> Writer<'a> {
         }
 
         util::write_align(self.buffer, ALIGN_HASH);
-        debug_assert_eq!(self.hash_offset, self.buffer.len());
+        M::set_offset(&mut self.hash_offset, self.buffer.len());
+        M::set_section_name(&mut self.hash_str_id, &mut self.shstrtab, b".hash");
         self.buffer.write(&elf::HashHeader {
             bucket_count: U32::new(self.endian, bucket_count),
             chain_count: U32::new(self.endian, chain_count),
         });
         self.buffer.write_slice(&buckets);
         self.buffer.write_slice(&chains);
+        M::set_size(&mut self.hash_size, self.buffer.len() - self.hash_offset);
     }
 
     /// Write the section header for the SysV hash table.
@@ -908,7 +1002,8 @@ impl<'a> Writer<'a> {
         F: Fn(u32) -> u32,
     {
         util::write_align(self.buffer, self.elf_align);
-        debug_assert_eq!(self.gnu_hash_offset, self.buffer.len());
+        M::set_offset(&mut self.gnu_hash_offset, self.buffer.len());
+        M::set_section_name(&mut self.gnu_hash_str_id, &mut self.shstrtab, b".gnu.hash");
         self.buffer.write(&elf::GnuHashHeader {
             bucket_count: U32::new(self.endian, bucket_count),
             symbol_base: U32::new(self.endian, symbol_base),
@@ -969,6 +1064,11 @@ impl<'a> Writer<'a> {
             }
             self.buffer.write(&U32::new(self.endian, h));
         }
+
+        M::set_size(
+            &mut self.gnu_hash_size,
+            self.buffer.len() - self.gnu_hash_offset,
+        );
     }
 
     /// Write the section header for the GNU hash table.
@@ -997,11 +1097,16 @@ impl<'a> Writer<'a> {
     /// This must be the first symbol version that is written.
     /// This function does nothing if no dynamic symbols were reserved.
     pub fn write_null_gnu_versym(&mut self) {
-        if self.dynsym_num == 0 {
+        if !M::need_offset(self.gnu_versym_offset) {
             return;
         }
         util::write_align(self.buffer, ALIGN_GNU_VERSYM);
-        debug_assert_eq!(self.gnu_versym_offset, self.buffer.len());
+        M::set_offset(&mut self.gnu_versym_offset, self.buffer.len());
+        M::set_section_name(
+            &mut self.gnu_versym_str_id,
+            &mut self.shstrtab,
+            b".gnu.version",
+        );
         self.write_gnu_versym(elf::VER_NDX_LOCAL.into());
     }
 
@@ -1033,11 +1138,16 @@ impl<'a> Writer<'a> {
 
     /// Write alignment padding bytes prior to a `.gnu.version_d` section.
     pub fn write_align_gnu_verdef(&mut self) {
-        if self.gnu_verdef_offset == 0 {
+        if !M::need_offset(self.gnu_verdef_offset) {
             return;
         }
         util::write_align(self.buffer, ALIGN_GNU_VERDEF);
-        debug_assert_eq!(self.gnu_verdef_offset, self.buffer.len());
+        M::set_offset(&mut self.gnu_verdef_offset, self.buffer.len());
+        M::set_section_name(
+            &mut self.gnu_verdef_str_id,
+            &mut self.shstrtab,
+            b".gnu.version_d",
+        );
     }
 
     /// Write a version definition entry.
@@ -1053,6 +1163,8 @@ impl<'a> Writer<'a> {
 
         debug_assert_ne!(verdef.aux_count, 0);
         self.gnu_verdaux_remaining = verdef.aux_count;
+        self.written_verdaux_count += verdef.aux_count as usize;
+        M::set_count(&mut self.gnu_verdaux_count, self.written_verdaux_count);
         let vd_aux = mem::size_of::<elf::Verdef<Endianness>>() as u32;
 
         self.buffer.write(&elf::Verdef {
@@ -1114,13 +1226,17 @@ impl<'a> Writer<'a> {
         if self.gnu_verdef_str_id.is_none() {
             return;
         }
+        let sh_size = self
+            .class()
+            .gnu_verdef_size(self.gnu_verdef_count as usize, self.gnu_verdaux_count)
+            as u64;
         self.write_section_header(&SectionHeader {
             name: self.gnu_verdef_str_id,
             sh_type: elf::SHT_GNU_VERDEF,
             sh_flags: elf::SHF_ALLOC,
             sh_addr,
             sh_offset: self.gnu_verdef_offset as u64,
-            sh_size: self.gnu_verdef_size as u64,
+            sh_size,
             sh_link: self.dynstr_index.0,
             sh_info: self.gnu_verdef_count.into(),
             sh_addralign: ALIGN_GNU_VERDEF as u64,
@@ -1130,11 +1246,16 @@ impl<'a> Writer<'a> {
 
     /// Write alignment padding bytes prior to a `.gnu.version_r` section.
     pub fn write_align_gnu_verneed(&mut self) {
-        if self.gnu_verneed_offset == 0 {
+        if !M::need_offset(self.gnu_verneed_offset) {
             return;
         }
         util::write_align(self.buffer, ALIGN_GNU_VERNEED);
-        debug_assert_eq!(self.gnu_verneed_offset, self.buffer.len());
+        M::set_offset(&mut self.gnu_verneed_offset, self.buffer.len());
+        M::set_section_name(
+            &mut self.gnu_verneed_str_id,
+            &mut self.shstrtab,
+            b".gnu.version_r",
+        );
     }
 
     /// Write a version need entry.
@@ -1148,10 +1269,12 @@ impl<'a> Writer<'a> {
                 + verneed.aux_count as u32 * mem::size_of::<elf::Vernaux<Endianness>>() as u32
         };
 
-        self.gnu_vernaux_remaining = verneed.aux_count;
         let vn_aux = if verneed.aux_count == 0 {
             0
         } else {
+            self.gnu_vernaux_remaining = verneed.aux_count;
+            self.written_vernaux_count += verneed.aux_count as usize;
+            M::set_count(&mut self.gnu_vernaux_count, self.written_vernaux_count);
             mem::size_of::<elf::Verneed<Endianness>>() as u32
         };
 
@@ -1189,13 +1312,17 @@ impl<'a> Writer<'a> {
         if self.gnu_verneed_str_id.is_none() {
             return;
         }
+        let sh_size = self
+            .class()
+            .gnu_verneed_size(self.gnu_verneed_count as usize, self.gnu_vernaux_count)
+            as u64;
         self.write_section_header(&SectionHeader {
             name: self.gnu_verneed_str_id,
             sh_type: elf::SHT_GNU_VERNEED,
             sh_flags: elf::SHF_ALLOC,
             sh_addr,
             sh_offset: self.gnu_verneed_offset as u64,
-            sh_size: self.gnu_verneed_size as u64,
+            sh_size,
             sh_link: self.dynstr_index.0,
             sh_info: self.gnu_verneed_count.into(),
             sh_addralign: ALIGN_GNU_VERNEED as u64,
@@ -1226,12 +1353,19 @@ impl<'a> Writer<'a> {
 
     /// Write the data for the `.gnu.attributes` section.
     pub fn write_gnu_attributes(&mut self, data: &[u8]) {
-        if self.gnu_attributes_offset == 0 {
+        if !M::need_offset(self.gnu_attributes_offset) {
             return;
         }
         util::write_align(self.buffer, self.elf_align);
-        debug_assert_eq!(self.gnu_attributes_offset, self.buffer.len());
+        M::set_offset(&mut self.gnu_attributes_offset, self.buffer.len());
+        M::set_section_name(
+            &mut self.gnu_attributes_str_id,
+            &mut self.shstrtab,
+            b".gnu.attributes",
+        );
         self.buffer.write_bytes(data);
+        let size = self.buffer.len() - self.gnu_attributes_offset;
+        M::set_size(&mut self.gnu_attributes_size, size);
     }
 
     /// Write alignment padding bytes prior to a relocation section.
@@ -1371,10 +1505,312 @@ impl<'a> Writer<'a> {
     }
 }
 
-impl<'a> Writer<'a> {
+/// Single-phase writer for ELF files.
+///
+/// See [`SinglePhase`].
+pub type SinglePhaseWriter<'a> = Writer<'a, SinglePhase>;
+
+/// Single-phase writing mode for [`Writer`].
+///
+/// Construct a writer with this mode using [`Writer::new_single_phase`].
+///
+/// There is no reservation phase: items are written directly and their file offsets are
+/// discovered as they are written. The `reserve_*` methods are not available in this mode.
+///
+/// Items must be written before they are referenced:
+/// - write section data before section headers
+/// - write string tables before they are referenced
+/// - write metadata section headers before they are referenced (e.g. `.strtab` before `.symtab`)
+///
+/// The one exception is the file header, which must be written first, but needs to
+/// reference the program header table and section header table. To support this, you can
+/// call [`Writer::write_file_header`] to write placeholders, then after everything
+/// is written call [`Writer::write_file_header_to`] using a new buffer, and manually copy
+/// the header to the start.
+///
+/// The `Writer` will assign section indices to metadata sections as the headers are
+/// written. However, for text/data sections you will need to manually determine
+/// the section indices ahead of time if you need to reference sections from
+/// symbols. Similarly, for symbol indices if you need to reference symbols from
+/// relocations.
+#[derive(Debug)]
+pub struct SinglePhase(());
+
+impl Mode for SinglePhase {}
+#[allow(private_interfaces)]
+impl ModeSealed for SinglePhase {
+    fn reserve(&self, _buffer: &mut dyn WritableBuffer) -> Result<()> {
+        Ok(())
+    }
+
+    fn need_offset(offset: usize) -> bool {
+        debug_assert_eq!(offset, 0);
+        true
+    }
+
+    fn set_offset(dest: &mut usize, offset: usize) {
+        debug_assert_eq!(*dest, 0);
+        *dest = offset;
+    }
+
+    fn set_size(dest: &mut usize, size: usize) {
+        debug_assert_eq!(*dest, 0);
+        *dest = size;
+    }
+
+    fn set_section_index(dest: &mut SectionIndex, index: SectionIndex) {
+        debug_assert_eq!(dest.0, 0);
+        *dest = index;
+    }
+
+    fn set_section_name(
+        dest: &mut Option<StringId>,
+        shstrtab: &mut StringTable<'_>,
+        name: &'static [u8],
+    ) {
+        debug_assert!(dest.is_none());
+        *dest = Some(shstrtab.add(name));
+    }
+
+    fn set_count<T: Copy + PartialOrd>(dest: &mut T, count: T) {
+        debug_assert!(*dest < count);
+        *dest = count;
+    }
+}
+
+impl<'a> Writer<'a, SinglePhase> {
+    /// Create a new single-phase `Writer` for the given endianness and ELF class.
+    pub fn new_single_phase(
+        endian: Endianness,
+        is_64: bool,
+        buffer: &'a mut dyn GrowableBuffer,
+    ) -> Self {
+        Writer::new_with_mode(endian, is_64, buffer.as_writable(), SinglePhase(()))
+    }
+
+    /// Write the file header to the given buffer.
+    ///
+    /// This is needed to write fields such as the section header offset into the file
+    /// header. You must manually copy the resulting `buffer` contents to the start of the
+    /// original buffer after dropping the `Writer`.
+    pub fn write_file_header_to(&mut self, buffer: &mut dyn WritableBuffer) -> Result<()> {
+        if self.layout.section_num >= elf::SHN_LORESERVE.into() {
+            // The null section header was written before section_num was known,
+            // so it won't contain the overflow value.
+            return Err(Error(String::from(
+                "single phase write doesn't support e_shnum overflow",
+            )));
+        }
+        Self::write_file_header_impl(buffer, self.endian, self.is_64, &self.header, &self.layout)
+    }
+
+    /// Write a placeholder for the program header table immediately after the file header.
+    ///
+    /// Must be called immediately after [`Self::write_file_header`] and before any
+    /// other data is written. This pads the buffer by `count` program header entries.
+    /// Use [`Self::write_headers_to`] to write the program headers once their contents
+    /// are known.
+    pub fn write_program_headers_placeholder(&mut self, count: u32) {
+        if count == 0 {
+            return;
+        }
+        debug_assert_eq!(self.buffer.len(), self.class().file_header_size());
+        // file_header_size is always a multiple of elf_align, so no alignment
+        // padding is required.
+        SinglePhase::set_offset(&mut self.layout.segment_offset, self.buffer.len());
+        SinglePhase::set_count(&mut self.layout.segment_num, count);
+        self.written_segment_num = count;
+        let new_len = self.buffer.len() + count as usize * self.class().program_header_size();
+        self.buffer.resize(new_len);
+    }
+
+    /// Write the file header and program headers to the given buffer.
+    ///
+    /// This serves the same purpose as [`Self::write_file_header_to`], but additionally
+    /// writes the program headers immediately following the file header.  You must
+    /// manually copy the resulting `buffer` contents to the start of the original buffer
+    /// after dropping the `Writer`.
+    ///
+    /// The number of program headers must match the count passed to
+    /// [`Self::write_program_headers_placeholder`].
+    pub fn write_headers_to(
+        &mut self,
+        buffer: &mut dyn WritableBuffer,
+        program_headers: &[ProgramHeader],
+    ) -> Result<()> {
+        debug_assert_eq!(program_headers.len() as u32, self.layout.segment_num);
+        Self::write_file_header_impl(buffer, self.endian, self.is_64, &self.header, &self.layout)?;
+        for header in program_headers {
+            Self::write_program_header_impl(buffer, self.endian, self.is_64, header);
+        }
+        Ok(())
+    }
+
+    /// Write a program header to the given buffer.
+    ///
+    /// This serves the same purpose as [`Self::write_headers_to`], but allows you to use
+    /// separate calls for writing the file header and each program header.
+    pub fn write_program_header_to(
+        &mut self,
+        buffer: &mut dyn WritableBuffer,
+        header: &ProgramHeader,
+    ) {
+        Self::write_program_header_impl(buffer, self.endian, self.is_64, header);
+    }
+
+    /// Write the section header string table.
+    ///
+    /// This will always write the string table, even if it is empty.
+    pub fn write_shstrtab(&mut self) -> Result<()> {
+        // This must be written before the .shstrtab section header, so
+        // we can't use write_null_section_header to determine if it is needed.
+        // Thus we always write this if called.
+        debug_assert_eq!(self.shstrtab_offset, 0);
+        self.shstrtab_str_id = Some(self.add_section_name(b".shstrtab"));
+        // Start with null section name.
+        let mut data = vec![0];
+        self.shstrtab_size = self.shstrtab.write(1, &mut data)?;
+        self.shstrtab_offset = self.buffer.len();
+        self.write(&data);
+        Ok(())
+    }
+
+    /// Write the string table.
+    ///
+    /// Only writes the string table if there is a symbol table
+    /// or if it is not empty.
+    pub fn write_strtab(&mut self) -> Result<()> {
+        if !self.need_strtab && self.strtab.is_empty() {
+            return Ok(());
+        }
+        debug_assert_eq!(self.strtab_offset, 0);
+        self.strtab_str_id = Some(self.add_section_name(b".strtab"));
+        // Start with null section name.
+        let mut data = vec![0];
+        self.strtab_size = self.strtab.write(1, &mut data)?;
+        self.strtab_offset = self.buffer.len();
+        self.write(&data);
+        Ok(())
+    }
+
+    /// Write the dynamic string table.
+    ///
+    /// Only writes the string table if there is a dynamic symbol table
+    /// or if it is not empty.
+    pub fn write_dynstr(&mut self) -> Result<()> {
+        if !self.need_dynstr && self.dynstr.is_empty() {
+            return Ok(());
+        }
+        debug_assert_eq!(self.dynstr_offset, 0);
+        self.dynstr_str_id = Some(self.add_section_name(b".dynstr"));
+        // Start with null section name.
+        let mut data = vec![0];
+        self.dynstr_size = self.dynstr.write(1, &mut data)?;
+        self.dynstr_offset = self.buffer.len();
+        self.write(&data);
+        Ok(())
+    }
+
+    /// Set the number of version definition entries that will be written.
+    ///
+    /// Must be called before [`Self::write_gnu_verdef`].
+    pub fn set_gnu_verdef_count(&mut self, count: u16) {
+        self.gnu_verdef_count = count;
+        self.gnu_verdef_remaining = count;
+    }
+
+    /// Set the number of version needed entries that will be written.
+    ///
+    /// Must be called before [`Self::write_gnu_verneed`].
+    pub fn set_gnu_verneed_count(&mut self, count: u16) {
+        self.gnu_verneed_count = count;
+        self.gnu_verneed_remaining = count;
+    }
+}
+
+/// Two-phase writing mode for [`Writer`].
+///
+/// Construct a writer with this mode using [`Writer::new`].
+///
+/// File ranges and indices are reserved up front with the `reserve_*` methods,
+/// then everything is written in the same order. This is the default mode.
+///
+/// The first phase uses the `reserve_*` methods to build up all of the information
+/// that may need to be known ahead of time:
+/// - string table offsets
+/// - section indices
+/// - symbol indices
+/// - file ranges for headers and sections
+///
+/// Some of the information has ordering requirements. For example, strings must be added
+/// to string tables before reserving the file range for the string table. Symbol indices
+/// must be reserved after reserving the section indices they reference. There are debug
+/// asserts to check some of these requirements.
+///
+/// The second phase writes everything out in order. Thus the caller must ensure writing
+/// is in the same order that file ranges were reserved. There are debug asserts to assist
+/// with checking this.
+#[derive(Debug)]
+pub struct TwoPhase {
+    len: usize,
+    shstrtab_data: Vec<u8>,
+    strtab_data: Vec<u8>,
+    dynstr_data: Vec<u8>,
+}
+
+impl Mode for TwoPhase {}
+#[allow(private_interfaces)]
+impl ModeSealed for TwoPhase {
+    fn reserve(&self, buffer: &mut dyn WritableBuffer) -> Result<()> {
+        buffer
+            .reserve(self.len)
+            .map_err(|_| Error(String::from("Cannot allocate buffer")))
+    }
+
+    fn need_offset(offset: usize) -> bool {
+        offset != 0
+    }
+
+    fn set_offset(dest: &mut usize, offset: usize) {
+        debug_assert_eq!(*dest, offset);
+    }
+
+    fn set_size(dest: &mut usize, size: usize) {
+        debug_assert_eq!(*dest, size);
+    }
+
+    fn set_section_index(dest: &mut SectionIndex, index: SectionIndex) {
+        debug_assert_eq!(*dest, index);
+    }
+
+    fn set_section_name(
+        dest: &mut Option<StringId>,
+        shstrtab: &mut StringTable<'_>,
+        name: &'static [u8],
+    ) {
+        debug_assert_eq!(*dest, Some(shstrtab.get_id(name)));
+    }
+
+    fn set_count<T: Copy + PartialOrd>(dest: &mut T, count: T) {
+        debug_assert!(*dest >= count);
+    }
+}
+
+impl<'a> Writer<'a, TwoPhase> {
+    /// Create a new two-phase `Writer` for the given endianness and ELF class.
+    pub fn new(endian: Endianness, is_64: bool, buffer: &'a mut dyn WritableBuffer) -> Self {
+        let mode = TwoPhase {
+            len: 0,
+            shstrtab_data: Vec::new(),
+            strtab_data: Vec::new(),
+            dynstr_data: Vec::new(),
+        };
+        Writer::new_with_mode(endian, is_64, buffer, mode)
+    }
+
     /// Return the current file length that has been reserved.
     pub fn reserved_len(&self) -> usize {
-        self.len
+        self.mode.len
     }
 
     /// Reserve a file range with the given size and starting alignment.
@@ -1384,24 +1820,24 @@ impl<'a> Writer<'a> {
     /// `align_start` must be a power of two.
     pub fn reserve(&mut self, len: usize, align_start: usize) -> usize {
         if align_start > 1 {
-            self.len = util::align(self.len, align_start);
+            self.mode.len = util::align(self.mode.len, align_start);
         }
-        let offset = self.len;
-        self.len += len;
+        let offset = self.mode.len;
+        self.mode.len += len;
         offset
     }
 
     /// Reserve the file range up to the given file offset.
     pub fn reserve_until(&mut self, offset: usize) {
-        debug_assert!(self.len <= offset);
-        self.len = offset;
+        debug_assert!(self.mode.len <= offset);
+        self.mode.len = offset;
     }
 
     /// Reserve the range for the file header.
     ///
     /// This must be at the start of the file.
     pub fn reserve_file_header(&mut self) {
-        debug_assert_eq!(self.len, 0);
+        debug_assert_eq!(self.mode.len, 0);
         self.reserve(self.class().file_header_size(), 1);
     }
 
@@ -1410,12 +1846,12 @@ impl<'a> Writer<'a> {
     /// If `num` is >= `elf::PN_XNUM`, you must also reserve and write
     /// the section table; this is checked in `write_file_header`.
     pub fn reserve_program_headers(&mut self, num: u32) {
-        debug_assert_eq!(self.segment_offset, 0);
+        debug_assert_eq!(self.layout.segment_offset, 0);
         if num == 0 {
             return;
         }
-        self.segment_num = num;
-        self.segment_offset = self.reserve(
+        self.layout.segment_num = num;
+        self.layout.segment_offset = self.reserve(
             num as usize * self.class().program_header_size(),
             self.elf_align,
         );
@@ -1428,9 +1864,9 @@ impl<'a> Writer<'a> {
     ///
     /// This must be called before [`Self::reserve_section_headers`].
     pub fn reserve_null_section_index(&mut self) -> SectionIndex {
-        debug_assert_eq!(self.section_num, 0);
-        if self.section_num == 0 {
-            self.section_num = 1;
+        debug_assert_eq!(self.layout.section_num, 0);
+        if self.layout.section_num == 0 {
+            self.layout.section_num = 1;
         }
         SectionIndex(0)
     }
@@ -1441,12 +1877,12 @@ impl<'a> Writer<'a> {
     ///
     /// This must be called before [`Self::reserve_section_headers`].
     pub fn reserve_section_index(&mut self) -> SectionIndex {
-        debug_assert_eq!(self.section_offset, 0);
-        if self.section_num == 0 {
-            self.section_num = 1;
+        debug_assert_eq!(self.layout.section_offset, 0);
+        if self.layout.section_num == 0 {
+            self.layout.section_num = 1;
         }
-        let index = self.section_num;
-        self.section_num += 1;
+        let index = self.layout.section_num;
+        self.layout.section_num += 1;
         SectionIndex(index)
     }
 
@@ -1456,12 +1892,12 @@ impl<'a> Writer<'a> {
     /// This must be called after [`Self::reserve_section_index`]
     /// and other functions that reserve section indices.
     pub fn reserve_section_headers(&mut self) {
-        debug_assert_eq!(self.section_offset, 0);
-        if self.section_num == 0 {
+        debug_assert_eq!(self.layout.section_offset, 0);
+        if self.layout.section_num == 0 {
             return;
         }
-        self.section_offset = self.reserve(
-            self.section_num as usize * self.class().section_header_size(),
+        self.layout.section_offset = self.reserve(
+            self.layout.section_num as usize * self.class().section_header_size(),
             self.elf_align,
         );
     }
@@ -1477,13 +1913,13 @@ impl<'a> Writer<'a> {
     /// Returns an error if the string table could not be finalized.
     pub fn reserve_shstrtab(&mut self) -> Result<()> {
         debug_assert_eq!(self.shstrtab_offset, 0);
-        if self.section_num == 0 {
+        if self.layout.section_num == 0 {
             return Ok(());
         }
         // Start with null section name.
-        self.shstrtab_data = vec![0];
-        self.shstrtab.write(1, &mut self.shstrtab_data)?;
-        self.shstrtab_offset = self.reserve(self.shstrtab_data.len(), 1);
+        self.mode.shstrtab_data = vec![0];
+        self.shstrtab_size = self.shstrtab.write(1, &mut self.mode.shstrtab_data)?;
+        self.shstrtab_offset = self.reserve(self.shstrtab_size as usize, 1);
         Ok(())
     }
 
@@ -1495,7 +1931,7 @@ impl<'a> Writer<'a> {
             return;
         }
         debug_assert_eq!(self.shstrtab_offset, self.buffer.len());
-        self.buffer.write_bytes(&self.shstrtab_data);
+        self.buffer.write_bytes(&self.mode.shstrtab_data);
     }
 
     /// Reserve the section index for the section header string table.
@@ -1511,15 +1947,15 @@ impl<'a> Writer<'a> {
     /// This must be called before [`Self::reserve_shstrtab`]
     /// and [`Self::reserve_section_headers`].
     pub fn reserve_shstrtab_section_index_with_name(&mut self, name: &'a [u8]) -> SectionIndex {
-        debug_assert_eq!(self.shstrtab_index, SectionIndex(0));
+        debug_assert_eq!(self.layout.shstrtab_index, SectionIndex(0));
         self.shstrtab_str_id = Some(self.add_section_name(name));
-        self.shstrtab_index = self.reserve_section_index();
-        self.shstrtab_index
+        self.layout.shstrtab_index = self.reserve_section_index();
+        self.layout.shstrtab_index
     }
 
     /// Return true if `.strtab` is needed.
     pub fn strtab_needed(&self) -> bool {
-        self.need_strtab
+        self.need_strtab || !self.strtab.is_empty()
     }
 
     /// Require the string table even if no strings were added.
@@ -1531,19 +1967,20 @@ impl<'a> Writer<'a> {
     ///
     /// This range is used for a section named `.strtab`.
     ///
-    /// This function does nothing if a string table is not required.
+    /// The range is only reserved if the string table is needed (either `require_strtab`
+    /// was called, or symbols or strings are present).
     /// This must be called after [`Self::add_string`].
     ///
     /// Returns an error if the string table could not be finalized.
     pub fn reserve_strtab(&mut self) -> Result<()> {
         debug_assert_eq!(self.strtab_offset, 0);
-        if !self.need_strtab {
+        if !self.strtab_needed() {
             return Ok(());
         }
         // Start with null string.
-        self.strtab_data = vec![0];
-        self.strtab.write(1, &mut self.strtab_data)?;
-        self.strtab_offset = self.reserve(self.strtab_data.len(), 1);
+        self.mode.strtab_data = vec![0];
+        self.strtab_size = self.strtab.write(1, &mut self.mode.strtab_data)?;
+        self.strtab_offset = self.reserve(self.strtab_size as usize, 1);
         Ok(())
     }
 
@@ -1555,7 +1992,7 @@ impl<'a> Writer<'a> {
             return;
         }
         debug_assert_eq!(self.strtab_offset, self.buffer.len());
-        self.buffer.write_bytes(&self.strtab_data);
+        self.buffer.write_bytes(&self.mode.strtab_data);
     }
 
     /// Reserve the section index for the string table.
@@ -1693,7 +2130,7 @@ impl<'a> Writer<'a> {
     /// This must be called after [`Self::reserve_symbol_index`].
     pub fn reserve_symtab_shndx(&mut self) {
         debug_assert_eq!(self.symtab_shndx_offset, 0);
-        if !self.need_symtab_shndx {
+        if !self.symtab_shndx_needed() {
             return;
         }
         self.symtab_shndx_offset = self.reserve(self.symtab_num as usize * 4, ALIGN_SYMTAB_SHNDX);
@@ -1724,7 +2161,7 @@ impl<'a> Writer<'a> {
 
     /// Return true if `.dynstr` is needed.
     pub fn dynstr_needed(&self) -> bool {
-        self.need_dynstr
+        self.need_dynstr || !self.dynstr.is_empty()
     }
 
     /// Require the dynamic string table even if no strings were added.
@@ -1736,19 +2173,20 @@ impl<'a> Writer<'a> {
     ///
     /// This range is used for a section named `.dynstr`.
     ///
-    /// This function does nothing if no dynamic strings were defined.
+    /// The range is only reserved if the string table is needed (either `require_dynstr`
+    /// was called, or dynamic symbols or dynamic strings are present).
     /// This must be called after [`Self::add_dynamic_string`].
     ///
     /// Returns an error if the string table could not be finalized.
     pub fn reserve_dynstr(&mut self) -> Result<usize> {
         debug_assert_eq!(self.dynstr_offset, 0);
-        if !self.need_dynstr {
+        if !self.dynstr_needed() {
             return Ok(0);
         }
         // Start with null string.
-        self.dynstr_data = vec![0];
-        self.dynstr.write(1, &mut self.dynstr_data)?;
-        self.dynstr_offset = self.reserve(self.dynstr_data.len(), 1);
+        self.mode.dynstr_data = vec![0];
+        self.dynstr_size = self.dynstr.write(1, &mut self.mode.dynstr_data)?;
+        self.dynstr_offset = self.reserve(self.dynstr_size as usize, 1);
         Ok(self.dynstr_offset)
     }
 
@@ -1757,7 +2195,7 @@ impl<'a> Writer<'a> {
     /// This must be called after [`Self::reserve_dynstr`].
     pub fn dynstr_len(&mut self) -> usize {
         debug_assert_ne!(self.dynstr_offset, 0);
-        self.dynstr_data.len()
+        self.mode.dynstr_data.len()
     }
 
     /// Write the dynamic string table.
@@ -1768,7 +2206,7 @@ impl<'a> Writer<'a> {
             return;
         }
         debug_assert_eq!(self.dynstr_offset, self.buffer.len());
-        self.buffer.write_bytes(&self.dynstr_data);
+        self.buffer.write_bytes(&self.mode.dynstr_data);
     }
 
     /// Reserve the section index for the dynamic string table.
@@ -1888,7 +2326,6 @@ impl<'a> Writer<'a> {
         if dynamic_num == 0 {
             return 0;
         }
-        self.dynamic_num = dynamic_num;
         self.dynamic_offset = self.reserve_dynamics(dynamic_num);
         self.dynamic_offset
     }
@@ -1897,6 +2334,7 @@ impl<'a> Writer<'a> {
     ///
     /// Returns the offset of the range.
     pub fn reserve_dynamics(&mut self, dynamic_num: usize) -> usize {
+        self.dynamic_num += dynamic_num;
         self.reserve(dynamic_num * self.class().dyn_size(), self.elf_align)
     }
 
@@ -1988,9 +2426,10 @@ impl<'a> Writer<'a> {
         if verdef_count == 0 {
             return 0;
         }
-        self.gnu_verdef_size = self.class().gnu_verdef_size(verdef_count, verdaux_count);
-        self.gnu_verdef_offset = self.reserve(self.gnu_verdef_size, ALIGN_GNU_VERDEF);
+        let size = self.class().gnu_verdef_size(verdef_count, verdaux_count);
+        self.gnu_verdef_offset = self.reserve(size, ALIGN_GNU_VERDEF);
         self.gnu_verdef_count = verdef_count as u16;
+        self.gnu_verdaux_count = verdaux_count;
         self.gnu_verdef_remaining = self.gnu_verdef_count;
         self.gnu_verdef_offset
     }
@@ -2013,9 +2452,10 @@ impl<'a> Writer<'a> {
         if verneed_count == 0 {
             return 0;
         }
-        self.gnu_verneed_size = self.class().gnu_verneed_size(verneed_count, vernaux_count);
-        self.gnu_verneed_offset = self.reserve(self.gnu_verneed_size, ALIGN_GNU_VERNEED);
+        let size = self.class().gnu_verneed_size(verneed_count, vernaux_count);
+        self.gnu_verneed_offset = self.reserve(size, ALIGN_GNU_VERNEED);
         self.gnu_verneed_count = verneed_count as u16;
+        self.gnu_vernaux_count = vernaux_count;
         self.gnu_verneed_remaining = self.gnu_verneed_count;
         self.gnu_verneed_offset
     }
@@ -2320,7 +2760,7 @@ impl Class {
 
 /// Native endian version of [`elf::FileHeader64`].
 #[allow(missing_docs)]
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct FileHeader {
     pub os_abi: elf::OsAbi,
     pub abi_version: u8,
@@ -2328,6 +2768,15 @@ pub struct FileHeader {
     pub e_machine: elf::Machine,
     pub e_entry: u64,
     pub e_flags: elf::FileFlags,
+}
+
+#[derive(Debug, Clone, Default)]
+struct FileHeaderLayout {
+    segment_offset: usize,
+    segment_num: u32,
+    section_offset: usize,
+    section_num: u32,
+    shstrtab_index: SectionIndex,
 }
 
 /// Native endian version of [`elf::ProgramHeader64`].
