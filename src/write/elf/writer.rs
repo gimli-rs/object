@@ -222,29 +222,10 @@ impl<'a> Writer<'a> {
         Class { is_64: self.is_64 }
     }
 
-    /// Return the current file length that has been reserved.
-    pub fn reserved_len(&self) -> usize {
-        self.len
-    }
-
     /// Return the current file length that has been written.
     #[allow(clippy::len_without_is_empty)]
     pub fn len(&self) -> usize {
         self.buffer.len()
-    }
-
-    /// Reserve a file range with the given size and starting alignment.
-    ///
-    /// Returns the aligned offset of the start of the range.
-    ///
-    /// `align_start` must be a power of two.
-    pub fn reserve(&mut self, len: usize, align_start: usize) -> usize {
-        if align_start > 1 {
-            self.len = util::align(self.len, align_start);
-        }
-        let offset = self.len;
-        self.len += len;
-        offset
     }
 
     /// Write alignment padding bytes.
@@ -261,24 +242,10 @@ impl<'a> Writer<'a> {
         self.buffer.write_bytes(data);
     }
 
-    /// Reserve the file range up to the given file offset.
-    pub fn reserve_until(&mut self, offset: usize) {
-        debug_assert!(self.len <= offset);
-        self.len = offset;
-    }
-
     /// Write padding up to the given file offset.
     pub fn pad_until(&mut self, offset: usize) {
         debug_assert!(self.buffer.len() <= offset);
         self.buffer.resize(offset);
-    }
-
-    /// Reserve the range for the file header.
-    ///
-    /// This must be at the start of the file.
-    pub fn reserve_file_header(&mut self) {
-        debug_assert_eq!(self.len, 0);
-        self.reserve(self.class().file_header_size(), 1);
     }
 
     /// Write the file header.
@@ -390,22 +357,6 @@ impl<'a> Writer<'a> {
         Ok(())
     }
 
-    /// Reserve the range for the program headers.
-    ///
-    /// If `num` is >= `elf::PN_XNUM`, you must also reserve and write
-    /// the section table; this is checked in `write_file_header`.
-    pub fn reserve_program_headers(&mut self, num: u32) {
-        debug_assert_eq!(self.segment_offset, 0);
-        if num == 0 {
-            return;
-        }
-        self.segment_num = num;
-        self.segment_offset = self.reserve(
-            num as usize * self.class().program_header_size(),
-            self.elf_align,
-        );
-    }
-
     /// Write alignment padding bytes prior to the program headers.
     pub fn write_align_program_headers(&mut self) {
         if self.segment_offset == 0 {
@@ -443,51 +394,6 @@ impl<'a> Writer<'a> {
             };
             self.buffer.write(&header);
         }
-    }
-
-    /// Reserve the section index for the null section header.
-    ///
-    /// The null section header is usually automatically reserved,
-    /// but this can be used to force an empty section table.
-    ///
-    /// This must be called before [`Self::reserve_section_headers`].
-    pub fn reserve_null_section_index(&mut self) -> SectionIndex {
-        debug_assert_eq!(self.section_num, 0);
-        if self.section_num == 0 {
-            self.section_num = 1;
-        }
-        SectionIndex(0)
-    }
-
-    /// Reserve a section table index.
-    ///
-    /// Automatically also reserves the null section header if required.
-    ///
-    /// This must be called before [`Self::reserve_section_headers`].
-    pub fn reserve_section_index(&mut self) -> SectionIndex {
-        debug_assert_eq!(self.section_offset, 0);
-        if self.section_num == 0 {
-            self.section_num = 1;
-        }
-        let index = self.section_num;
-        self.section_num += 1;
-        SectionIndex(index)
-    }
-
-    /// Reserve the range for the section headers.
-    ///
-    /// This function does nothing if no sections were reserved.
-    /// This must be called after [`Self::reserve_section_index`]
-    /// and other functions that reserve section indices.
-    pub fn reserve_section_headers(&mut self) {
-        debug_assert_eq!(self.section_offset, 0);
-        if self.section_num == 0 {
-            return;
-        }
-        self.section_offset = self.reserve(
-            self.section_num as usize * self.class().section_header_size(),
-            self.elf_align,
-        );
     }
 
     /// Write the null section header.
@@ -575,57 +481,6 @@ impl<'a> Writer<'a> {
         self.shstrtab.add(name)
     }
 
-    /// Reserve the range for the section header string table.
-    ///
-    /// This range is used for a section named `.shstrtab`.
-    ///
-    /// This function does nothing if no sections were reserved.
-    /// This must be called after [`Self::add_section_name`].
-    /// and other functions that reserve section names and indices.
-    ///
-    /// Returns an error if the string table could not be finalized.
-    pub fn reserve_shstrtab(&mut self) -> Result<()> {
-        debug_assert_eq!(self.shstrtab_offset, 0);
-        if self.section_num == 0 {
-            return Ok(());
-        }
-        // Start with null section name.
-        self.shstrtab_data = vec![0];
-        self.shstrtab.write(1, &mut self.shstrtab_data)?;
-        self.shstrtab_offset = self.reserve(self.shstrtab_data.len(), 1);
-        Ok(())
-    }
-
-    /// Write the section header string table.
-    ///
-    /// This function does nothing if the section was not reserved.
-    pub fn write_shstrtab(&mut self) {
-        if self.shstrtab_offset == 0 {
-            return;
-        }
-        debug_assert_eq!(self.shstrtab_offset, self.buffer.len());
-        self.buffer.write_bytes(&self.shstrtab_data);
-    }
-
-    /// Reserve the section index for the section header string table.
-    ///
-    /// This must be called before [`Self::reserve_shstrtab`]
-    /// and [`Self::reserve_section_headers`].
-    pub fn reserve_shstrtab_section_index(&mut self) -> SectionIndex {
-        self.reserve_shstrtab_section_index_with_name(&b".shstrtab"[..])
-    }
-
-    /// Reserve the section index for the section header string table.
-    ///
-    /// This must be called before [`Self::reserve_shstrtab`]
-    /// and [`Self::reserve_section_headers`].
-    pub fn reserve_shstrtab_section_index_with_name(&mut self, name: &'a [u8]) -> SectionIndex {
-        debug_assert_eq!(self.shstrtab_index, SectionIndex(0));
-        self.shstrtab_str_id = Some(self.add_section_name(name));
-        self.shstrtab_index = self.reserve_section_index();
-        self.shstrtab_index
-    }
-
     /// Write the section header for the section header string table.
     ///
     /// This function does nothing if the section index was not reserved.
@@ -658,70 +513,6 @@ impl<'a> Writer<'a> {
         self.strtab.add(name)
     }
 
-    /// Return true if `.strtab` is needed.
-    pub fn strtab_needed(&self) -> bool {
-        self.need_strtab
-    }
-
-    /// Require the string table even if no strings were added.
-    pub fn require_strtab(&mut self) {
-        self.need_strtab = true;
-    }
-
-    /// Reserve the range for the string table.
-    ///
-    /// This range is used for a section named `.strtab`.
-    ///
-    /// This function does nothing if a string table is not required.
-    /// This must be called after [`Self::add_string`].
-    ///
-    /// Returns an error if the string table could not be finalized.
-    pub fn reserve_strtab(&mut self) -> Result<()> {
-        debug_assert_eq!(self.strtab_offset, 0);
-        if !self.need_strtab {
-            return Ok(());
-        }
-        // Start with null string.
-        self.strtab_data = vec![0];
-        self.strtab.write(1, &mut self.strtab_data)?;
-        self.strtab_offset = self.reserve(self.strtab_data.len(), 1);
-        Ok(())
-    }
-
-    /// Write the string table.
-    ///
-    /// This function does nothing if the section was not reserved.
-    pub fn write_strtab(&mut self) {
-        if self.strtab_offset == 0 {
-            return;
-        }
-        debug_assert_eq!(self.strtab_offset, self.buffer.len());
-        self.buffer.write_bytes(&self.strtab_data);
-    }
-
-    /// Reserve the section index for the string table.
-    ///
-    /// You should check [`Self::strtab_needed`] before calling this
-    /// unless you have other means of knowing if this section is needed.
-    ///
-    /// This must be called before [`Self::reserve_section_headers`].
-    pub fn reserve_strtab_section_index(&mut self) -> SectionIndex {
-        self.reserve_strtab_section_index_with_name(&b".strtab"[..])
-    }
-
-    /// Reserve the section index for the string table.
-    ///
-    /// You should check [`Self::strtab_needed`] before calling this
-    /// unless you have other means of knowing if this section is needed.
-    ///
-    /// This must be called before [`Self::reserve_section_headers`].
-    pub fn reserve_strtab_section_index_with_name(&mut self, name: &'a [u8]) -> SectionIndex {
-        debug_assert_eq!(self.strtab_index, SectionIndex(0));
-        self.strtab_str_id = Some(self.add_section_name(name));
-        self.strtab_index = self.reserve_section_index();
-        self.strtab_index
-    }
-
     /// Write the section header for the string table.
     ///
     /// This function does nothing if the section index was not reserved.
@@ -741,76 +532,6 @@ impl<'a> Writer<'a> {
             sh_addralign: 1,
             sh_entsize: 0,
         });
-    }
-
-    /// Reserve the null symbol table entry.
-    ///
-    /// This will be stored in the `.symtab` section.
-    ///
-    /// The null symbol table entry is usually automatically reserved,
-    /// but this can be used to force an empty symbol table.
-    ///
-    /// This must be called before [`Self::reserve_symtab`].
-    pub fn reserve_null_symbol_index(&mut self) -> SymbolIndex {
-        debug_assert_eq!(self.symtab_offset, 0);
-        debug_assert_eq!(self.symtab_num, 0);
-        self.symtab_num = 1;
-        // The symtab must link to a strtab.
-        self.need_strtab = true;
-        SymbolIndex(0)
-    }
-
-    /// Reserve a symbol table entry.
-    ///
-    /// This will be stored in the `.symtab` section.
-    ///
-    /// `section_index` is used to determine whether `.symtab_shndx` is required.
-    ///
-    /// Automatically also reserves the null symbol if required.
-    /// Callers may assume that the returned indices will be sequential
-    /// starting at 1.
-    ///
-    /// This must be called before [`Self::reserve_symtab`] and
-    /// [`Self::reserve_symtab_shndx`].
-    pub fn reserve_symbol_index(&mut self, section_index: Option<SectionIndex>) -> SymbolIndex {
-        debug_assert_eq!(self.symtab_offset, 0);
-        debug_assert_eq!(self.symtab_shndx_offset, 0);
-        if self.symtab_num == 0 {
-            self.symtab_num = 1;
-            // The symtab must link to a strtab.
-            self.need_strtab = true;
-        }
-        let index = self.symtab_num;
-        self.symtab_num += 1;
-        if let Some(section_index) = section_index {
-            if section_index.0 >= elf::SHN_LORESERVE.into() {
-                self.need_symtab_shndx = true;
-            }
-        }
-        SymbolIndex(index)
-    }
-
-    /// Return the number of reserved symbol table entries.
-    ///
-    /// Includes the null symbol.
-    pub fn symbol_count(&self) -> u32 {
-        self.symtab_num
-    }
-
-    /// Reserve the range for the symbol table.
-    ///
-    /// This range is used for a section named `.symtab`.
-    /// This function does nothing if no symbols were reserved.
-    /// This must be called after [`Self::reserve_symbol_index`].
-    pub fn reserve_symtab(&mut self) {
-        debug_assert_eq!(self.symtab_offset, 0);
-        if self.symtab_num == 0 {
-            return;
-        }
-        self.symtab_offset = self.reserve(
-            self.symtab_num as usize * self.class().sym_size(),
-            self.elf_align,
-        );
     }
 
     /// Write the null symbol.
@@ -882,28 +603,6 @@ impl<'a> Writer<'a> {
         }
     }
 
-    /// Reserve the section index for the symbol table.
-    ///
-    /// This must be called before [`Self::reserve_section_headers`].
-    pub fn reserve_symtab_section_index(&mut self) -> SectionIndex {
-        self.reserve_symtab_section_index_with_name(&b".symtab"[..])
-    }
-
-    /// Reserve the section index for the symbol table.
-    ///
-    /// This must be called before [`Self::reserve_section_headers`].
-    pub fn reserve_symtab_section_index_with_name(&mut self, name: &'a [u8]) -> SectionIndex {
-        debug_assert_eq!(self.symtab_index, SectionIndex(0));
-        self.symtab_str_id = Some(self.add_section_name(name));
-        self.symtab_index = self.reserve_section_index();
-        self.symtab_index
-    }
-
-    /// Return the section index of the symbol table.
-    pub fn symtab_index(&mut self) -> SectionIndex {
-        self.symtab_index
-    }
-
     /// Write the section header for the symbol table.
     ///
     /// This function does nothing if the section index was not reserved.
@@ -925,33 +624,6 @@ impl<'a> Writer<'a> {
         });
     }
 
-    /// Return true if `.symtab_shndx` is needed.
-    pub fn symtab_shndx_needed(&self) -> bool {
-        self.need_symtab_shndx
-    }
-
-    /// Require the extended section indices for the symbol table even
-    /// if no section indices are too large.
-    pub fn require_symtab_shndx(&mut self) {
-        self.need_symtab_shndx = true;
-    }
-
-    /// Reserve the range for the extended section indices for the symbol table.
-    ///
-    /// This range is used for a section named `.symtab_shndx`.
-    /// This also reserves a section index.
-    ///
-    /// This function does nothing if extended section indices are not needed.
-    /// This must be called after [`Self::reserve_symbol_index`].
-    pub fn reserve_symtab_shndx(&mut self) {
-        debug_assert_eq!(self.symtab_shndx_offset, 0);
-        if !self.need_symtab_shndx {
-            return;
-        }
-        self.symtab_shndx_offset = self.reserve(self.symtab_num as usize * 4, ALIGN_SYMTAB_SHNDX);
-        self.symtab_shndx_data.reserve(self.symtab_num as usize * 4);
-    }
-
     /// Write the extended section indices for the symbol table.
     ///
     /// This function does nothing if the section was not reserved.
@@ -963,28 +635,6 @@ impl<'a> Writer<'a> {
         debug_assert_eq!(self.symtab_shndx_offset, self.buffer.len());
         debug_assert_eq!(self.symtab_num as usize * 4, self.symtab_shndx_data.len());
         self.buffer.write_bytes(&self.symtab_shndx_data);
-    }
-
-    /// Reserve the section index for the extended section indices symbol table.
-    ///
-    /// You should check [`Self::symtab_shndx_needed`] before calling this
-    /// unless you have other means of knowing if this section is needed.
-    ///
-    /// This must be called before [`Self::reserve_section_headers`].
-    pub fn reserve_symtab_shndx_section_index(&mut self) -> SectionIndex {
-        self.reserve_symtab_shndx_section_index_with_name(&b".symtab_shndx"[..])
-    }
-
-    /// Reserve the section index for the extended section indices symbol table.
-    ///
-    /// You should check [`Self::symtab_shndx_needed`] before calling this
-    /// unless you have other means of knowing if this section is needed.
-    ///
-    /// This must be called before [`Self::reserve_section_headers`].
-    pub fn reserve_symtab_shndx_section_index_with_name(&mut self, name: &'a [u8]) -> SectionIndex {
-        debug_assert!(self.symtab_shndx_str_id.is_none());
-        self.symtab_shndx_str_id = Some(self.add_section_name(name));
-        self.reserve_section_index()
     }
 
     /// Write the section header for the extended section indices for the symbol table.
@@ -1031,83 +681,6 @@ impl<'a> Writer<'a> {
         self.dynstr.get_id(name)
     }
 
-    /// Return true if `.dynstr` is needed.
-    pub fn dynstr_needed(&self) -> bool {
-        self.need_dynstr
-    }
-
-    /// Require the dynamic string table even if no strings were added.
-    pub fn require_dynstr(&mut self) {
-        self.need_dynstr = true;
-    }
-
-    /// Reserve the range for the dynamic string table.
-    ///
-    /// This range is used for a section named `.dynstr`.
-    ///
-    /// This function does nothing if no dynamic strings were defined.
-    /// This must be called after [`Self::add_dynamic_string`].
-    ///
-    /// Returns an error if the string table could not be finalized.
-    pub fn reserve_dynstr(&mut self) -> Result<usize> {
-        debug_assert_eq!(self.dynstr_offset, 0);
-        if !self.need_dynstr {
-            return Ok(0);
-        }
-        // Start with null string.
-        self.dynstr_data = vec![0];
-        self.dynstr.write(1, &mut self.dynstr_data)?;
-        self.dynstr_offset = self.reserve(self.dynstr_data.len(), 1);
-        Ok(self.dynstr_offset)
-    }
-
-    /// Return the size of the dynamic string table.
-    ///
-    /// This must be called after [`Self::reserve_dynstr`].
-    pub fn dynstr_len(&mut self) -> usize {
-        debug_assert_ne!(self.dynstr_offset, 0);
-        self.dynstr_data.len()
-    }
-
-    /// Write the dynamic string table.
-    ///
-    /// This function does nothing if the section was not reserved.
-    pub fn write_dynstr(&mut self) {
-        if self.dynstr_offset == 0 {
-            return;
-        }
-        debug_assert_eq!(self.dynstr_offset, self.buffer.len());
-        self.buffer.write_bytes(&self.dynstr_data);
-    }
-
-    /// Reserve the section index for the dynamic string table.
-    ///
-    /// You should check [`Self::dynstr_needed`] before calling this
-    /// unless you have other means of knowing if this section is needed.
-    ///
-    /// This must be called before [`Self::reserve_section_headers`].
-    pub fn reserve_dynstr_section_index(&mut self) -> SectionIndex {
-        self.reserve_dynstr_section_index_with_name(&b".dynstr"[..])
-    }
-
-    /// Reserve the section index for the dynamic string table.
-    ///
-    /// You should check [`Self::dynstr_needed`] before calling this
-    /// unless you have other means of knowing if this section is needed.
-    ///
-    /// This must be called before [`Self::reserve_section_headers`].
-    pub fn reserve_dynstr_section_index_with_name(&mut self, name: &'a [u8]) -> SectionIndex {
-        debug_assert_eq!(self.dynstr_index, SectionIndex(0));
-        self.dynstr_str_id = Some(self.add_section_name(name));
-        self.dynstr_index = self.reserve_section_index();
-        self.dynstr_index
-    }
-
-    /// Return the section index of the dynamic string table.
-    pub fn dynstr_index(&mut self) -> SectionIndex {
-        self.dynstr_index
-    }
-
     /// Write the section header for the dynamic string table.
     ///
     /// This function does nothing if the section index was not reserved.
@@ -1127,65 +700,6 @@ impl<'a> Writer<'a> {
             sh_addralign: 1,
             sh_entsize: 0,
         });
-    }
-
-    /// Reserve the null dynamic symbol table entry.
-    ///
-    /// This will be stored in the `.dynsym` section.
-    ///
-    /// The null dynamic symbol table entry is usually automatically reserved,
-    /// but this can be used to force an empty dynamic symbol table.
-    ///
-    /// This must be called before [`Self::reserve_dynsym`].
-    pub fn reserve_null_dynamic_symbol_index(&mut self) -> SymbolIndex {
-        debug_assert_eq!(self.dynsym_offset, 0);
-        debug_assert_eq!(self.dynsym_num, 0);
-        self.dynsym_num = 1;
-        SymbolIndex(0)
-    }
-
-    /// Reserve a dynamic symbol table entry.
-    ///
-    /// This will be stored in the `.dynsym` section.
-    ///
-    /// Automatically also reserves the null symbol if required.
-    /// Callers may assume that the returned indices will be sequential
-    /// starting at 1.
-    ///
-    /// This must be called before [`Self::reserve_dynsym`].
-    pub fn reserve_dynamic_symbol_index(&mut self) -> SymbolIndex {
-        debug_assert_eq!(self.dynsym_offset, 0);
-        if self.dynsym_num == 0 {
-            self.dynsym_num = 1;
-        }
-        let index = self.dynsym_num;
-        self.dynsym_num += 1;
-        SymbolIndex(index)
-    }
-
-    /// Return the number of reserved dynamic symbols.
-    ///
-    /// Includes the null symbol.
-    pub fn dynamic_symbol_count(&mut self) -> u32 {
-        self.dynsym_num
-    }
-
-    /// Reserve the range for the dynamic symbol table.
-    ///
-    /// This range is used for a section named `.dynsym`.
-    ///
-    /// This function does nothing if no dynamic symbols were reserved.
-    /// This must be called after [`Self::reserve_dynamic_symbol_index`].
-    pub fn reserve_dynsym(&mut self) -> usize {
-        debug_assert_eq!(self.dynsym_offset, 0);
-        if self.dynsym_num == 0 {
-            return 0;
-        }
-        self.dynsym_offset = self.reserve(
-            self.dynsym_num as usize * self.class().sym_size(),
-            self.elf_align,
-        );
-        self.dynsym_offset
     }
 
     /// Write the null dynamic symbol.
@@ -1245,28 +759,6 @@ impl<'a> Writer<'a> {
         }
     }
 
-    /// Reserve the section index for the dynamic symbol table.
-    ///
-    /// This must be called before [`Self::reserve_section_headers`].
-    pub fn reserve_dynsym_section_index(&mut self) -> SectionIndex {
-        self.reserve_dynsym_section_index_with_name(&b".dynsym"[..])
-    }
-
-    /// Reserve the section index for the dynamic symbol table.
-    ///
-    /// This must be called before [`Self::reserve_section_headers`].
-    pub fn reserve_dynsym_section_index_with_name(&mut self, name: &'a [u8]) -> SectionIndex {
-        debug_assert_eq!(self.dynsym_index, SectionIndex(0));
-        self.dynsym_str_id = Some(self.add_section_name(name));
-        self.dynsym_index = self.reserve_section_index();
-        self.dynsym_index
-    }
-
-    /// Return the section index of the dynamic symbol table.
-    pub fn dynsym_index(&mut self) -> SectionIndex {
-        self.dynsym_index
-    }
-
     /// Write the section header for the dynamic symbol table.
     ///
     /// This function does nothing if the section index was not reserved.
@@ -1288,19 +780,6 @@ impl<'a> Writer<'a> {
         });
     }
 
-    /// Reserve the range for the `.dynamic` section.
-    ///
-    /// This function does nothing if `dynamic_num` is zero.
-    pub fn reserve_dynamic(&mut self, dynamic_num: usize) -> usize {
-        debug_assert_eq!(self.dynamic_offset, 0);
-        if dynamic_num == 0 {
-            return 0;
-        }
-        self.dynamic_num = dynamic_num;
-        self.dynamic_offset = self.reserve_dynamics(dynamic_num);
-        self.dynamic_offset
-    }
-
     /// Write alignment padding bytes prior to the `.dynamic` section.
     ///
     /// This function does nothing if the section was not reserved.
@@ -1310,13 +789,6 @@ impl<'a> Writer<'a> {
         }
         util::write_align(self.buffer, self.elf_align);
         debug_assert_eq!(self.dynamic_offset, self.buffer.len());
-    }
-
-    /// Reserve a file range for the given number of dynamic entries.
-    ///
-    /// Returns the offset of the range.
-    pub fn reserve_dynamics(&mut self, dynamic_num: usize) -> usize {
-        self.reserve(dynamic_num * self.class().dyn_size(), self.elf_align)
     }
 
     /// Write a dynamic string entry.
@@ -1348,13 +820,6 @@ impl<'a> Writer<'a> {
         Ok(())
     }
 
-    /// Reserve the section index for the dynamic table.
-    pub fn reserve_dynamic_section_index(&mut self) -> SectionIndex {
-        debug_assert!(self.dynamic_str_id.is_none());
-        self.dynamic_str_id = Some(self.add_section_name(&b".dynamic"[..]));
-        self.reserve_section_index()
-    }
-
     /// Write the section header for the dynamic table.
     ///
     /// This function does nothing if the section index was not reserved.
@@ -1374,16 +839,6 @@ impl<'a> Writer<'a> {
             sh_addralign: self.elf_align as u64,
             sh_entsize: self.class().dyn_size() as u64,
         });
-    }
-
-    /// Reserve a file range for a SysV hash section.
-    ///
-    /// `symbol_count` is the number of symbols in the hash,
-    /// not the total number of symbols.
-    pub fn reserve_hash(&mut self, bucket_count: u32, chain_count: u32) -> usize {
-        self.hash_size = self.class().hash_size(bucket_count, chain_count);
-        self.hash_offset = self.reserve(self.hash_size, ALIGN_HASH);
-        self.hash_offset
     }
 
     /// Write a SysV hash section.
@@ -1414,18 +869,6 @@ impl<'a> Writer<'a> {
         self.buffer.write_slice(&chains);
     }
 
-    /// Reserve the section index for the SysV hash table.
-    pub fn reserve_hash_section_index(&mut self) -> SectionIndex {
-        self.reserve_hash_section_index_with_name(&b".hash"[..])
-    }
-
-    /// Reserve the section index for the SysV hash table.
-    pub fn reserve_hash_section_index_with_name(&mut self, name: &'a [u8]) -> SectionIndex {
-        debug_assert!(self.hash_str_id.is_none());
-        self.hash_str_id = Some(self.add_section_name(name));
-        self.reserve_section_index()
-    }
-
     /// Write the section header for the SysV hash table.
     ///
     /// This function does nothing if the section index was not reserved.
@@ -1445,23 +888,6 @@ impl<'a> Writer<'a> {
             sh_addralign: ALIGN_HASH as u64,
             sh_entsize: 4,
         });
-    }
-
-    /// Reserve a file range for a GNU hash section.
-    ///
-    /// `symbol_count` is the number of symbols in the hash,
-    /// not the total number of symbols.
-    pub fn reserve_gnu_hash(
-        &mut self,
-        bloom_count: u32,
-        bucket_count: u32,
-        symbol_count: u32,
-    ) -> usize {
-        self.gnu_hash_size = self
-            .class()
-            .gnu_hash_size(bloom_count, bucket_count, symbol_count);
-        self.gnu_hash_offset = self.reserve(self.gnu_hash_size, self.elf_align);
-        self.gnu_hash_offset
     }
 
     /// Write a GNU hash section.
@@ -1545,18 +971,6 @@ impl<'a> Writer<'a> {
         }
     }
 
-    /// Reserve the section index for the GNU hash table.
-    pub fn reserve_gnu_hash_section_index(&mut self) -> SectionIndex {
-        self.reserve_gnu_hash_section_index_with_name(&b".gnu.hash"[..])
-    }
-
-    /// Reserve the section index for the GNU hash table.
-    pub fn reserve_gnu_hash_section_index_with_name(&mut self, name: &'a [u8]) -> SectionIndex {
-        debug_assert!(self.gnu_hash_str_id.is_none());
-        self.gnu_hash_str_id = Some(self.add_section_name(name));
-        self.reserve_section_index()
-    }
-
     /// Write the section header for the GNU hash table.
     ///
     /// This function does nothing if the section index was not reserved.
@@ -1578,18 +992,6 @@ impl<'a> Writer<'a> {
         });
     }
 
-    /// Reserve the range for the `.gnu.version` section.
-    ///
-    /// This function does nothing if no dynamic symbols were reserved.
-    pub fn reserve_gnu_versym(&mut self) -> usize {
-        debug_assert_eq!(self.gnu_versym_offset, 0);
-        if self.dynsym_num == 0 {
-            return 0;
-        }
-        self.gnu_versym_offset = self.reserve(self.dynsym_num as usize * 2, ALIGN_GNU_VERSYM);
-        self.gnu_versym_offset
-    }
-
     /// Write the null symbol version entry.
     ///
     /// This must be the first symbol version that is written.
@@ -1606,18 +1008,6 @@ impl<'a> Writer<'a> {
     /// Write a symbol version entry.
     pub fn write_gnu_versym(&mut self, versym: elf::VersymIndex) {
         self.buffer.write(&U16::new(self.endian, versym));
-    }
-
-    /// Reserve the section index for the `.gnu.version` section.
-    pub fn reserve_gnu_versym_section_index(&mut self) -> SectionIndex {
-        self.reserve_gnu_versym_section_index_with_name(&b".gnu.version"[..])
-    }
-
-    /// Reserve the section index for the `.gnu.version` section.
-    pub fn reserve_gnu_versym_section_index_with_name(&mut self, name: &'a [u8]) -> SectionIndex {
-        debug_assert!(self.gnu_versym_str_id.is_none());
-        self.gnu_versym_str_id = Some(self.add_section_name(name));
-        self.reserve_section_index()
     }
 
     /// Write the section header for the `.gnu.version` section.
@@ -1639,19 +1029,6 @@ impl<'a> Writer<'a> {
             sh_addralign: ALIGN_GNU_VERSYM as u64,
             sh_entsize: 2,
         });
-    }
-
-    /// Reserve the range for the `.gnu.version_d` section.
-    pub fn reserve_gnu_verdef(&mut self, verdef_count: usize, verdaux_count: usize) -> usize {
-        debug_assert_eq!(self.gnu_verdef_offset, 0);
-        if verdef_count == 0 {
-            return 0;
-        }
-        self.gnu_verdef_size = self.class().gnu_verdef_size(verdef_count, verdaux_count);
-        self.gnu_verdef_offset = self.reserve(self.gnu_verdef_size, ALIGN_GNU_VERDEF);
-        self.gnu_verdef_count = verdef_count as u16;
-        self.gnu_verdef_remaining = self.gnu_verdef_count;
-        self.gnu_verdef_offset
     }
 
     /// Write alignment padding bytes prior to a `.gnu.version_d` section.
@@ -1730,18 +1107,6 @@ impl<'a> Writer<'a> {
         });
     }
 
-    /// Reserve the section index for the `.gnu.version_d` section.
-    pub fn reserve_gnu_verdef_section_index(&mut self) -> SectionIndex {
-        self.reserve_gnu_verdef_section_index_with_name(&b".gnu.version_d"[..])
-    }
-
-    /// Reserve the section index for the `.gnu.version_d` section.
-    pub fn reserve_gnu_verdef_section_index_with_name(&mut self, name: &'a [u8]) -> SectionIndex {
-        debug_assert!(self.gnu_verdef_str_id.is_none());
-        self.gnu_verdef_str_id = Some(self.add_section_name(name));
-        self.reserve_section_index()
-    }
-
     /// Write the section header for the `.gnu.version_d` section.
     ///
     /// This function does nothing if the section index was not reserved.
@@ -1761,19 +1126,6 @@ impl<'a> Writer<'a> {
             sh_addralign: ALIGN_GNU_VERDEF as u64,
             sh_entsize: 0,
         });
-    }
-
-    /// Reserve the range for the `.gnu.version_r` section.
-    pub fn reserve_gnu_verneed(&mut self, verneed_count: usize, vernaux_count: usize) -> usize {
-        debug_assert_eq!(self.gnu_verneed_offset, 0);
-        if verneed_count == 0 {
-            return 0;
-        }
-        self.gnu_verneed_size = self.class().gnu_verneed_size(verneed_count, vernaux_count);
-        self.gnu_verneed_offset = self.reserve(self.gnu_verneed_size, ALIGN_GNU_VERNEED);
-        self.gnu_verneed_count = verneed_count as u16;
-        self.gnu_verneed_remaining = self.gnu_verneed_count;
-        self.gnu_verneed_offset
     }
 
     /// Write alignment padding bytes prior to a `.gnu.version_r` section.
@@ -1830,18 +1182,6 @@ impl<'a> Writer<'a> {
         });
     }
 
-    /// Reserve the section index for the `.gnu.version_r` section.
-    pub fn reserve_gnu_verneed_section_index(&mut self) -> SectionIndex {
-        self.reserve_gnu_verneed_section_index_with_name(&b".gnu.version_r"[..])
-    }
-
-    /// Reserve the section index for the `.gnu.version_r` section.
-    pub fn reserve_gnu_verneed_section_index_with_name(&mut self, name: &'a [u8]) -> SectionIndex {
-        debug_assert!(self.gnu_verneed_str_id.is_none());
-        self.gnu_verneed_str_id = Some(self.add_section_name(name));
-        self.reserve_section_index()
-    }
-
     /// Write the section header for the `.gnu.version_r` section.
     ///
     /// This function does nothing if the section index was not reserved.
@@ -1861,32 +1201,6 @@ impl<'a> Writer<'a> {
             sh_addralign: ALIGN_GNU_VERNEED as u64,
             sh_entsize: 0,
         });
-    }
-
-    /// Reserve the section index for the `.gnu.attributes` section.
-    pub fn reserve_gnu_attributes_section_index(&mut self) -> SectionIndex {
-        self.reserve_gnu_attributes_section_index_with_name(&b".gnu.attributes"[..])
-    }
-
-    /// Reserve the section index for the `.gnu.attributes` section.
-    pub fn reserve_gnu_attributes_section_index_with_name(
-        &mut self,
-        name: &'a [u8],
-    ) -> SectionIndex {
-        debug_assert!(self.gnu_attributes_str_id.is_none());
-        self.gnu_attributes_str_id = Some(self.add_section_name(name));
-        self.reserve_section_index()
-    }
-
-    /// Reserve the range for the `.gnu.attributes` section.
-    pub fn reserve_gnu_attributes(&mut self, gnu_attributes_size: usize) -> usize {
-        debug_assert_eq!(self.gnu_attributes_offset, 0);
-        if gnu_attributes_size == 0 {
-            return 0;
-        }
-        self.gnu_attributes_size = gnu_attributes_size;
-        self.gnu_attributes_offset = self.reserve(self.gnu_attributes_size, self.elf_align);
-        self.gnu_attributes_offset
     }
 
     /// Write the section header for the `.gnu.attributes` section.
@@ -1918,13 +1232,6 @@ impl<'a> Writer<'a> {
         util::write_align(self.buffer, self.elf_align);
         debug_assert_eq!(self.gnu_attributes_offset, self.buffer.len());
         self.buffer.write_bytes(data);
-    }
-
-    /// Reserve a file range for the given number of relocations.
-    ///
-    /// Returns the offset of the range.
-    pub fn reserve_relocations(&mut self, count: usize, is_rela: bool) -> usize {
-        self.reserve(count * self.class().rel_size(is_rela), self.elf_align)
     }
 
     /// Write alignment padding bytes prior to a relocation section.
@@ -2024,15 +1331,6 @@ impl<'a> Writer<'a> {
         });
     }
 
-    /// Reserve a file range for a COMDAT section.
-    ///
-    /// `count` is the number of sections in the COMDAT group.
-    ///
-    /// Returns the offset of the range.
-    pub fn reserve_comdat(&mut self, count: usize) -> usize {
-        self.reserve((count + 1) * 4, 4)
-    }
-
     /// Write `GRP_COMDAT` at the start of the COMDAT section.
     pub fn write_comdat_header(&mut self) {
         util::write_align(self.buffer, 4);
@@ -2070,6 +1368,710 @@ impl<'a> Writer<'a> {
     /// Return a helper for writing an attributes section.
     pub fn attributes_writer(&self) -> AttributesWriter {
         AttributesWriter::new(self.endian)
+    }
+}
+
+impl<'a> Writer<'a> {
+    /// Return the current file length that has been reserved.
+    pub fn reserved_len(&self) -> usize {
+        self.len
+    }
+
+    /// Reserve a file range with the given size and starting alignment.
+    ///
+    /// Returns the aligned offset of the start of the range.
+    ///
+    /// `align_start` must be a power of two.
+    pub fn reserve(&mut self, len: usize, align_start: usize) -> usize {
+        if align_start > 1 {
+            self.len = util::align(self.len, align_start);
+        }
+        let offset = self.len;
+        self.len += len;
+        offset
+    }
+
+    /// Reserve the file range up to the given file offset.
+    pub fn reserve_until(&mut self, offset: usize) {
+        debug_assert!(self.len <= offset);
+        self.len = offset;
+    }
+
+    /// Reserve the range for the file header.
+    ///
+    /// This must be at the start of the file.
+    pub fn reserve_file_header(&mut self) {
+        debug_assert_eq!(self.len, 0);
+        self.reserve(self.class().file_header_size(), 1);
+    }
+
+    /// Reserve the range for the program headers.
+    ///
+    /// If `num` is >= `elf::PN_XNUM`, you must also reserve and write
+    /// the section table; this is checked in `write_file_header`.
+    pub fn reserve_program_headers(&mut self, num: u32) {
+        debug_assert_eq!(self.segment_offset, 0);
+        if num == 0 {
+            return;
+        }
+        self.segment_num = num;
+        self.segment_offset = self.reserve(
+            num as usize * self.class().program_header_size(),
+            self.elf_align,
+        );
+    }
+
+    /// Reserve the section index for the null section header.
+    ///
+    /// The null section header is usually automatically reserved,
+    /// but this can be used to force an empty section table.
+    ///
+    /// This must be called before [`Self::reserve_section_headers`].
+    pub fn reserve_null_section_index(&mut self) -> SectionIndex {
+        debug_assert_eq!(self.section_num, 0);
+        if self.section_num == 0 {
+            self.section_num = 1;
+        }
+        SectionIndex(0)
+    }
+
+    /// Reserve a section table index.
+    ///
+    /// Automatically also reserves the null section header if required.
+    ///
+    /// This must be called before [`Self::reserve_section_headers`].
+    pub fn reserve_section_index(&mut self) -> SectionIndex {
+        debug_assert_eq!(self.section_offset, 0);
+        if self.section_num == 0 {
+            self.section_num = 1;
+        }
+        let index = self.section_num;
+        self.section_num += 1;
+        SectionIndex(index)
+    }
+
+    /// Reserve the range for the section headers.
+    ///
+    /// This function does nothing if no sections were reserved.
+    /// This must be called after [`Self::reserve_section_index`]
+    /// and other functions that reserve section indices.
+    pub fn reserve_section_headers(&mut self) {
+        debug_assert_eq!(self.section_offset, 0);
+        if self.section_num == 0 {
+            return;
+        }
+        self.section_offset = self.reserve(
+            self.section_num as usize * self.class().section_header_size(),
+            self.elf_align,
+        );
+    }
+
+    /// Reserve the range for the section header string table.
+    ///
+    /// This range is used for a section named `.shstrtab`.
+    ///
+    /// This function does nothing if no sections were reserved.
+    /// This must be called after [`Self::add_section_name`].
+    /// and other functions that reserve section names and indices.
+    ///
+    /// Returns an error if the string table could not be finalized.
+    pub fn reserve_shstrtab(&mut self) -> Result<()> {
+        debug_assert_eq!(self.shstrtab_offset, 0);
+        if self.section_num == 0 {
+            return Ok(());
+        }
+        // Start with null section name.
+        self.shstrtab_data = vec![0];
+        self.shstrtab.write(1, &mut self.shstrtab_data)?;
+        self.shstrtab_offset = self.reserve(self.shstrtab_data.len(), 1);
+        Ok(())
+    }
+
+    /// Write the section header string table.
+    ///
+    /// This function does nothing if the section was not reserved.
+    pub fn write_shstrtab(&mut self) {
+        if self.shstrtab_offset == 0 {
+            return;
+        }
+        debug_assert_eq!(self.shstrtab_offset, self.buffer.len());
+        self.buffer.write_bytes(&self.shstrtab_data);
+    }
+
+    /// Reserve the section index for the section header string table.
+    ///
+    /// This must be called before [`Self::reserve_shstrtab`]
+    /// and [`Self::reserve_section_headers`].
+    pub fn reserve_shstrtab_section_index(&mut self) -> SectionIndex {
+        self.reserve_shstrtab_section_index_with_name(&b".shstrtab"[..])
+    }
+
+    /// Reserve the section index for the section header string table.
+    ///
+    /// This must be called before [`Self::reserve_shstrtab`]
+    /// and [`Self::reserve_section_headers`].
+    pub fn reserve_shstrtab_section_index_with_name(&mut self, name: &'a [u8]) -> SectionIndex {
+        debug_assert_eq!(self.shstrtab_index, SectionIndex(0));
+        self.shstrtab_str_id = Some(self.add_section_name(name));
+        self.shstrtab_index = self.reserve_section_index();
+        self.shstrtab_index
+    }
+
+    /// Return true if `.strtab` is needed.
+    pub fn strtab_needed(&self) -> bool {
+        self.need_strtab
+    }
+
+    /// Require the string table even if no strings were added.
+    pub fn require_strtab(&mut self) {
+        self.need_strtab = true;
+    }
+
+    /// Reserve the range for the string table.
+    ///
+    /// This range is used for a section named `.strtab`.
+    ///
+    /// This function does nothing if a string table is not required.
+    /// This must be called after [`Self::add_string`].
+    ///
+    /// Returns an error if the string table could not be finalized.
+    pub fn reserve_strtab(&mut self) -> Result<()> {
+        debug_assert_eq!(self.strtab_offset, 0);
+        if !self.need_strtab {
+            return Ok(());
+        }
+        // Start with null string.
+        self.strtab_data = vec![0];
+        self.strtab.write(1, &mut self.strtab_data)?;
+        self.strtab_offset = self.reserve(self.strtab_data.len(), 1);
+        Ok(())
+    }
+
+    /// Write the string table.
+    ///
+    /// This function does nothing if the section was not reserved.
+    pub fn write_strtab(&mut self) {
+        if self.strtab_offset == 0 {
+            return;
+        }
+        debug_assert_eq!(self.strtab_offset, self.buffer.len());
+        self.buffer.write_bytes(&self.strtab_data);
+    }
+
+    /// Reserve the section index for the string table.
+    ///
+    /// You should check [`Self::strtab_needed`] before calling this
+    /// unless you have other means of knowing if this section is needed.
+    ///
+    /// This must be called before [`Self::reserve_section_headers`].
+    pub fn reserve_strtab_section_index(&mut self) -> SectionIndex {
+        self.reserve_strtab_section_index_with_name(&b".strtab"[..])
+    }
+
+    /// Reserve the section index for the string table.
+    ///
+    /// You should check [`Self::strtab_needed`] before calling this
+    /// unless you have other means of knowing if this section is needed.
+    ///
+    /// This must be called before [`Self::reserve_section_headers`].
+    pub fn reserve_strtab_section_index_with_name(&mut self, name: &'a [u8]) -> SectionIndex {
+        debug_assert_eq!(self.strtab_index, SectionIndex(0));
+        self.strtab_str_id = Some(self.add_section_name(name));
+        self.strtab_index = self.reserve_section_index();
+        self.strtab_index
+    }
+
+    /// Reserve the null symbol table entry.
+    ///
+    /// This will be stored in the `.symtab` section.
+    ///
+    /// The null symbol table entry is usually automatically reserved,
+    /// but this can be used to force an empty symbol table.
+    ///
+    /// This must be called before [`Self::reserve_symtab`].
+    pub fn reserve_null_symbol_index(&mut self) -> SymbolIndex {
+        debug_assert_eq!(self.symtab_offset, 0);
+        debug_assert_eq!(self.symtab_num, 0);
+        self.symtab_num = 1;
+        // The symtab must link to a strtab.
+        self.need_strtab = true;
+        SymbolIndex(0)
+    }
+
+    /// Reserve a symbol table entry.
+    ///
+    /// This will be stored in the `.symtab` section.
+    ///
+    /// `section_index` is used to determine whether `.symtab_shndx` is required.
+    ///
+    /// Automatically also reserves the null symbol if required.
+    /// Callers may assume that the returned indices will be sequential
+    /// starting at 1.
+    ///
+    /// This must be called before [`Self::reserve_symtab`] and
+    /// [`Self::reserve_symtab_shndx`].
+    pub fn reserve_symbol_index(&mut self, section_index: Option<SectionIndex>) -> SymbolIndex {
+        debug_assert_eq!(self.symtab_offset, 0);
+        debug_assert_eq!(self.symtab_shndx_offset, 0);
+        if self.symtab_num == 0 {
+            self.symtab_num = 1;
+            // The symtab must link to a strtab.
+            self.need_strtab = true;
+        }
+        let index = self.symtab_num;
+        self.symtab_num += 1;
+        if let Some(section_index) = section_index {
+            if section_index.0 >= elf::SHN_LORESERVE.into() {
+                self.need_symtab_shndx = true;
+            }
+        }
+        SymbolIndex(index)
+    }
+
+    /// Return the number of reserved symbol table entries.
+    ///
+    /// Includes the null symbol.
+    pub fn symbol_count(&self) -> u32 {
+        self.symtab_num
+    }
+
+    /// Reserve the range for the symbol table.
+    ///
+    /// This range is used for a section named `.symtab`.
+    /// This function does nothing if no symbols were reserved.
+    /// This must be called after [`Self::reserve_symbol_index`].
+    pub fn reserve_symtab(&mut self) {
+        debug_assert_eq!(self.symtab_offset, 0);
+        if self.symtab_num == 0 {
+            return;
+        }
+        self.symtab_offset = self.reserve(
+            self.symtab_num as usize * self.class().sym_size(),
+            self.elf_align,
+        );
+    }
+
+    /// Reserve the section index for the symbol table.
+    ///
+    /// This must be called before [`Self::reserve_section_headers`].
+    pub fn reserve_symtab_section_index(&mut self) -> SectionIndex {
+        self.reserve_symtab_section_index_with_name(&b".symtab"[..])
+    }
+
+    /// Reserve the section index for the symbol table.
+    ///
+    /// This must be called before [`Self::reserve_section_headers`].
+    pub fn reserve_symtab_section_index_with_name(&mut self, name: &'a [u8]) -> SectionIndex {
+        debug_assert_eq!(self.symtab_index, SectionIndex(0));
+        self.symtab_str_id = Some(self.add_section_name(name));
+        self.symtab_index = self.reserve_section_index();
+        self.symtab_index
+    }
+
+    /// Return the section index of the symbol table.
+    pub fn symtab_index(&mut self) -> SectionIndex {
+        self.symtab_index
+    }
+
+    /// Return true if `.symtab_shndx` is needed.
+    pub fn symtab_shndx_needed(&self) -> bool {
+        self.need_symtab_shndx
+    }
+
+    /// Require the extended section indices for the symbol table even
+    /// if no section indices are too large.
+    pub fn require_symtab_shndx(&mut self) {
+        self.need_symtab_shndx = true;
+    }
+
+    /// Reserve the range for the extended section indices for the symbol table.
+    ///
+    /// This range is used for a section named `.symtab_shndx`.
+    /// This also reserves a section index.
+    ///
+    /// This function does nothing if extended section indices are not needed.
+    /// This must be called after [`Self::reserve_symbol_index`].
+    pub fn reserve_symtab_shndx(&mut self) {
+        debug_assert_eq!(self.symtab_shndx_offset, 0);
+        if !self.need_symtab_shndx {
+            return;
+        }
+        self.symtab_shndx_offset = self.reserve(self.symtab_num as usize * 4, ALIGN_SYMTAB_SHNDX);
+        self.symtab_shndx_data.reserve(self.symtab_num as usize * 4);
+    }
+
+    /// Reserve the section index for the extended section indices symbol table.
+    ///
+    /// You should check [`Self::symtab_shndx_needed`] before calling this
+    /// unless you have other means of knowing if this section is needed.
+    ///
+    /// This must be called before [`Self::reserve_section_headers`].
+    pub fn reserve_symtab_shndx_section_index(&mut self) -> SectionIndex {
+        self.reserve_symtab_shndx_section_index_with_name(&b".symtab_shndx"[..])
+    }
+
+    /// Reserve the section index for the extended section indices symbol table.
+    ///
+    /// You should check [`Self::symtab_shndx_needed`] before calling this
+    /// unless you have other means of knowing if this section is needed.
+    ///
+    /// This must be called before [`Self::reserve_section_headers`].
+    pub fn reserve_symtab_shndx_section_index_with_name(&mut self, name: &'a [u8]) -> SectionIndex {
+        debug_assert!(self.symtab_shndx_str_id.is_none());
+        self.symtab_shndx_str_id = Some(self.add_section_name(name));
+        self.reserve_section_index()
+    }
+
+    /// Return true if `.dynstr` is needed.
+    pub fn dynstr_needed(&self) -> bool {
+        self.need_dynstr
+    }
+
+    /// Require the dynamic string table even if no strings were added.
+    pub fn require_dynstr(&mut self) {
+        self.need_dynstr = true;
+    }
+
+    /// Reserve the range for the dynamic string table.
+    ///
+    /// This range is used for a section named `.dynstr`.
+    ///
+    /// This function does nothing if no dynamic strings were defined.
+    /// This must be called after [`Self::add_dynamic_string`].
+    ///
+    /// Returns an error if the string table could not be finalized.
+    pub fn reserve_dynstr(&mut self) -> Result<usize> {
+        debug_assert_eq!(self.dynstr_offset, 0);
+        if !self.need_dynstr {
+            return Ok(0);
+        }
+        // Start with null string.
+        self.dynstr_data = vec![0];
+        self.dynstr.write(1, &mut self.dynstr_data)?;
+        self.dynstr_offset = self.reserve(self.dynstr_data.len(), 1);
+        Ok(self.dynstr_offset)
+    }
+
+    /// Return the size of the dynamic string table.
+    ///
+    /// This must be called after [`Self::reserve_dynstr`].
+    pub fn dynstr_len(&mut self) -> usize {
+        debug_assert_ne!(self.dynstr_offset, 0);
+        self.dynstr_data.len()
+    }
+
+    /// Write the dynamic string table.
+    ///
+    /// This function does nothing if the section was not reserved.
+    pub fn write_dynstr(&mut self) {
+        if self.dynstr_offset == 0 {
+            return;
+        }
+        debug_assert_eq!(self.dynstr_offset, self.buffer.len());
+        self.buffer.write_bytes(&self.dynstr_data);
+    }
+
+    /// Reserve the section index for the dynamic string table.
+    ///
+    /// You should check [`Self::dynstr_needed`] before calling this
+    /// unless you have other means of knowing if this section is needed.
+    ///
+    /// This must be called before [`Self::reserve_section_headers`].
+    pub fn reserve_dynstr_section_index(&mut self) -> SectionIndex {
+        self.reserve_dynstr_section_index_with_name(&b".dynstr"[..])
+    }
+
+    /// Reserve the section index for the dynamic string table.
+    ///
+    /// You should check [`Self::dynstr_needed`] before calling this
+    /// unless you have other means of knowing if this section is needed.
+    ///
+    /// This must be called before [`Self::reserve_section_headers`].
+    pub fn reserve_dynstr_section_index_with_name(&mut self, name: &'a [u8]) -> SectionIndex {
+        debug_assert_eq!(self.dynstr_index, SectionIndex(0));
+        self.dynstr_str_id = Some(self.add_section_name(name));
+        self.dynstr_index = self.reserve_section_index();
+        self.dynstr_index
+    }
+
+    /// Return the section index of the dynamic string table.
+    pub fn dynstr_index(&mut self) -> SectionIndex {
+        self.dynstr_index
+    }
+
+    /// Reserve the null dynamic symbol table entry.
+    ///
+    /// This will be stored in the `.dynsym` section.
+    ///
+    /// The null dynamic symbol table entry is usually automatically reserved,
+    /// but this can be used to force an empty dynamic symbol table.
+    ///
+    /// This must be called before [`Self::reserve_dynsym`].
+    pub fn reserve_null_dynamic_symbol_index(&mut self) -> SymbolIndex {
+        debug_assert_eq!(self.dynsym_offset, 0);
+        debug_assert_eq!(self.dynsym_num, 0);
+        self.dynsym_num = 1;
+        SymbolIndex(0)
+    }
+
+    /// Reserve a dynamic symbol table entry.
+    ///
+    /// This will be stored in the `.dynsym` section.
+    ///
+    /// Automatically also reserves the null symbol if required.
+    /// Callers may assume that the returned indices will be sequential
+    /// starting at 1.
+    ///
+    /// This must be called before [`Self::reserve_dynsym`].
+    pub fn reserve_dynamic_symbol_index(&mut self) -> SymbolIndex {
+        debug_assert_eq!(self.dynsym_offset, 0);
+        if self.dynsym_num == 0 {
+            self.dynsym_num = 1;
+        }
+        let index = self.dynsym_num;
+        self.dynsym_num += 1;
+        SymbolIndex(index)
+    }
+
+    /// Return the number of reserved dynamic symbols.
+    ///
+    /// Includes the null symbol.
+    pub fn dynamic_symbol_count(&mut self) -> u32 {
+        self.dynsym_num
+    }
+
+    /// Reserve the range for the dynamic symbol table.
+    ///
+    /// This range is used for a section named `.dynsym`.
+    ///
+    /// This function does nothing if no dynamic symbols were reserved.
+    /// This must be called after [`Self::reserve_dynamic_symbol_index`].
+    pub fn reserve_dynsym(&mut self) -> usize {
+        debug_assert_eq!(self.dynsym_offset, 0);
+        if self.dynsym_num == 0 {
+            return 0;
+        }
+        self.dynsym_offset = self.reserve(
+            self.dynsym_num as usize * self.class().sym_size(),
+            self.elf_align,
+        );
+        self.dynsym_offset
+    }
+
+    /// Reserve the section index for the dynamic symbol table.
+    ///
+    /// This must be called before [`Self::reserve_section_headers`].
+    pub fn reserve_dynsym_section_index(&mut self) -> SectionIndex {
+        self.reserve_dynsym_section_index_with_name(&b".dynsym"[..])
+    }
+
+    /// Reserve the section index for the dynamic symbol table.
+    ///
+    /// This must be called before [`Self::reserve_section_headers`].
+    pub fn reserve_dynsym_section_index_with_name(&mut self, name: &'a [u8]) -> SectionIndex {
+        debug_assert_eq!(self.dynsym_index, SectionIndex(0));
+        self.dynsym_str_id = Some(self.add_section_name(name));
+        self.dynsym_index = self.reserve_section_index();
+        self.dynsym_index
+    }
+
+    /// Return the section index of the dynamic symbol table.
+    pub fn dynsym_index(&mut self) -> SectionIndex {
+        self.dynsym_index
+    }
+
+    /// Reserve the range for the `.dynamic` section.
+    ///
+    /// This function does nothing if `dynamic_num` is zero.
+    pub fn reserve_dynamic(&mut self, dynamic_num: usize) -> usize {
+        debug_assert_eq!(self.dynamic_offset, 0);
+        if dynamic_num == 0 {
+            return 0;
+        }
+        self.dynamic_num = dynamic_num;
+        self.dynamic_offset = self.reserve_dynamics(dynamic_num);
+        self.dynamic_offset
+    }
+
+    /// Reserve a file range for the given number of dynamic entries.
+    ///
+    /// Returns the offset of the range.
+    pub fn reserve_dynamics(&mut self, dynamic_num: usize) -> usize {
+        self.reserve(dynamic_num * self.class().dyn_size(), self.elf_align)
+    }
+
+    /// Reserve the section index for the dynamic table.
+    pub fn reserve_dynamic_section_index(&mut self) -> SectionIndex {
+        debug_assert!(self.dynamic_str_id.is_none());
+        self.dynamic_str_id = Some(self.add_section_name(&b".dynamic"[..]));
+        self.reserve_section_index()
+    }
+
+    /// Reserve a file range for a SysV hash section.
+    ///
+    /// `symbol_count` is the number of symbols in the hash,
+    /// not the total number of symbols.
+    pub fn reserve_hash(&mut self, bucket_count: u32, chain_count: u32) -> usize {
+        self.hash_size = self.class().hash_size(bucket_count, chain_count);
+        self.hash_offset = self.reserve(self.hash_size, ALIGN_HASH);
+        self.hash_offset
+    }
+
+    /// Reserve the section index for the SysV hash table.
+    pub fn reserve_hash_section_index(&mut self) -> SectionIndex {
+        self.reserve_hash_section_index_with_name(&b".hash"[..])
+    }
+
+    /// Reserve the section index for the SysV hash table.
+    pub fn reserve_hash_section_index_with_name(&mut self, name: &'a [u8]) -> SectionIndex {
+        debug_assert!(self.hash_str_id.is_none());
+        self.hash_str_id = Some(self.add_section_name(name));
+        self.reserve_section_index()
+    }
+
+    /// Reserve a file range for a GNU hash section.
+    ///
+    /// `symbol_count` is the number of symbols in the hash,
+    /// not the total number of symbols.
+    pub fn reserve_gnu_hash(
+        &mut self,
+        bloom_count: u32,
+        bucket_count: u32,
+        symbol_count: u32,
+    ) -> usize {
+        self.gnu_hash_size = self
+            .class()
+            .gnu_hash_size(bloom_count, bucket_count, symbol_count);
+        self.gnu_hash_offset = self.reserve(self.gnu_hash_size, self.elf_align);
+        self.gnu_hash_offset
+    }
+
+    /// Reserve the section index for the GNU hash table.
+    pub fn reserve_gnu_hash_section_index(&mut self) -> SectionIndex {
+        self.reserve_gnu_hash_section_index_with_name(&b".gnu.hash"[..])
+    }
+
+    /// Reserve the section index for the GNU hash table.
+    pub fn reserve_gnu_hash_section_index_with_name(&mut self, name: &'a [u8]) -> SectionIndex {
+        debug_assert!(self.gnu_hash_str_id.is_none());
+        self.gnu_hash_str_id = Some(self.add_section_name(name));
+        self.reserve_section_index()
+    }
+
+    /// Reserve the range for the `.gnu.version` section.
+    ///
+    /// This function does nothing if no dynamic symbols were reserved.
+    pub fn reserve_gnu_versym(&mut self) -> usize {
+        debug_assert_eq!(self.gnu_versym_offset, 0);
+        if self.dynsym_num == 0 {
+            return 0;
+        }
+        self.gnu_versym_offset = self.reserve(self.dynsym_num as usize * 2, ALIGN_GNU_VERSYM);
+        self.gnu_versym_offset
+    }
+
+    /// Reserve the section index for the `.gnu.version` section.
+    pub fn reserve_gnu_versym_section_index(&mut self) -> SectionIndex {
+        self.reserve_gnu_versym_section_index_with_name(&b".gnu.version"[..])
+    }
+
+    /// Reserve the section index for the `.gnu.version` section.
+    pub fn reserve_gnu_versym_section_index_with_name(&mut self, name: &'a [u8]) -> SectionIndex {
+        debug_assert!(self.gnu_versym_str_id.is_none());
+        self.gnu_versym_str_id = Some(self.add_section_name(name));
+        self.reserve_section_index()
+    }
+
+    /// Reserve the range for the `.gnu.version_d` section.
+    pub fn reserve_gnu_verdef(&mut self, verdef_count: usize, verdaux_count: usize) -> usize {
+        debug_assert_eq!(self.gnu_verdef_offset, 0);
+        if verdef_count == 0 {
+            return 0;
+        }
+        self.gnu_verdef_size = self.class().gnu_verdef_size(verdef_count, verdaux_count);
+        self.gnu_verdef_offset = self.reserve(self.gnu_verdef_size, ALIGN_GNU_VERDEF);
+        self.gnu_verdef_count = verdef_count as u16;
+        self.gnu_verdef_remaining = self.gnu_verdef_count;
+        self.gnu_verdef_offset
+    }
+
+    /// Reserve the section index for the `.gnu.version_d` section.
+    pub fn reserve_gnu_verdef_section_index(&mut self) -> SectionIndex {
+        self.reserve_gnu_verdef_section_index_with_name(&b".gnu.version_d"[..])
+    }
+
+    /// Reserve the section index for the `.gnu.version_d` section.
+    pub fn reserve_gnu_verdef_section_index_with_name(&mut self, name: &'a [u8]) -> SectionIndex {
+        debug_assert!(self.gnu_verdef_str_id.is_none());
+        self.gnu_verdef_str_id = Some(self.add_section_name(name));
+        self.reserve_section_index()
+    }
+
+    /// Reserve the range for the `.gnu.version_r` section.
+    pub fn reserve_gnu_verneed(&mut self, verneed_count: usize, vernaux_count: usize) -> usize {
+        debug_assert_eq!(self.gnu_verneed_offset, 0);
+        if verneed_count == 0 {
+            return 0;
+        }
+        self.gnu_verneed_size = self.class().gnu_verneed_size(verneed_count, vernaux_count);
+        self.gnu_verneed_offset = self.reserve(self.gnu_verneed_size, ALIGN_GNU_VERNEED);
+        self.gnu_verneed_count = verneed_count as u16;
+        self.gnu_verneed_remaining = self.gnu_verneed_count;
+        self.gnu_verneed_offset
+    }
+
+    /// Reserve the section index for the `.gnu.version_r` section.
+    pub fn reserve_gnu_verneed_section_index(&mut self) -> SectionIndex {
+        self.reserve_gnu_verneed_section_index_with_name(&b".gnu.version_r"[..])
+    }
+
+    /// Reserve the section index for the `.gnu.version_r` section.
+    pub fn reserve_gnu_verneed_section_index_with_name(&mut self, name: &'a [u8]) -> SectionIndex {
+        debug_assert!(self.gnu_verneed_str_id.is_none());
+        self.gnu_verneed_str_id = Some(self.add_section_name(name));
+        self.reserve_section_index()
+    }
+
+    /// Reserve the section index for the `.gnu.attributes` section.
+    pub fn reserve_gnu_attributes_section_index(&mut self) -> SectionIndex {
+        self.reserve_gnu_attributes_section_index_with_name(&b".gnu.attributes"[..])
+    }
+
+    /// Reserve the section index for the `.gnu.attributes` section.
+    pub fn reserve_gnu_attributes_section_index_with_name(
+        &mut self,
+        name: &'a [u8],
+    ) -> SectionIndex {
+        debug_assert!(self.gnu_attributes_str_id.is_none());
+        self.gnu_attributes_str_id = Some(self.add_section_name(name));
+        self.reserve_section_index()
+    }
+
+    /// Reserve the range for the `.gnu.attributes` section.
+    pub fn reserve_gnu_attributes(&mut self, gnu_attributes_size: usize) -> usize {
+        debug_assert_eq!(self.gnu_attributes_offset, 0);
+        if gnu_attributes_size == 0 {
+            return 0;
+        }
+        self.gnu_attributes_size = gnu_attributes_size;
+        self.gnu_attributes_offset = self.reserve(self.gnu_attributes_size, self.elf_align);
+        self.gnu_attributes_offset
+    }
+
+    /// Reserve a file range for the given number of relocations.
+    ///
+    /// Returns the offset of the range.
+    pub fn reserve_relocations(&mut self, count: usize, is_rela: bool) -> usize {
+        self.reserve(count * self.class().rel_size(is_rela), self.elf_align)
+    }
+
+    /// Reserve a file range for a COMDAT section.
+    ///
+    /// `count` is the number of sections in the COMDAT group.
+    ///
+    /// Returns the offset of the range.
+    pub fn reserve_comdat(&mut self, count: usize) -> usize {
+        self.reserve((count + 1) * 4, 4)
     }
 }
 
