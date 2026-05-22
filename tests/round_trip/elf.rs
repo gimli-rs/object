@@ -7,6 +7,59 @@ use object::{
 use std::io::Write;
 
 #[test]
+fn phnum_overflow() {
+    let file_header = write::elf::FileHeader {
+        os_abi: elf::ELFOSABI_SYSV,
+        abi_version: 0,
+        e_type: elf::ET_DYN,
+        e_machine: elf::EM_X86_64,
+        e_entry: 0,
+        e_flags: elf::FileFlags(0),
+    };
+
+    for count in 0xfffe..0x10001 {
+        let mut bytes = Vec::new();
+        let mut writer = write::elf::Writer::new(Endianness::Little, true, &mut bytes);
+
+        writer.reserve_file_header();
+        writer.reserve_program_headers(count);
+        writer.reserve_null_section_index();
+        writer.reserve_shstrtab_section_index();
+        writer.reserve_shstrtab().unwrap();
+        writer.reserve_section_headers();
+
+        writer.write_file_header(&file_header).unwrap();
+        writer.write_align_program_headers();
+        for _ in 0..count {
+            writer.write_program_header(&write::elf::ProgramHeader {
+                p_type: elf::PT_NOTE,
+                p_flags: elf::ProgramFlags(0),
+                p_offset: 0,
+                p_vaddr: 0,
+                p_paddr: 0,
+                p_filesz: 0,
+                p_memsz: 0,
+                p_align: 0,
+            });
+        }
+        writer.write_shstrtab();
+        writer.write_null_section_header();
+        writer.write_shstrtab_section_header();
+
+        let object = read::elf::ElfFile64::<Endianness>::parse(&*bytes).unwrap();
+        assert_eq!(object.architecture(), Architecture::X86_64);
+        assert_eq!(object.elf_program_headers().len(), count as usize);
+    }
+
+    // Error if missing section headers.
+    let mut bytes = Vec::new();
+    let mut writer = write::elf::Writer::new(Endianness::Little, true, &mut bytes);
+    writer.reserve_file_header();
+    writer.reserve_program_headers(0xffff);
+    assert!(writer.write_file_header(&file_header).is_err());
+}
+
+#[test]
 fn symtab_shndx() {
     let mut object =
         write::Object::new(BinaryFormat::Elf, Architecture::X86_64, Endianness::Little);
