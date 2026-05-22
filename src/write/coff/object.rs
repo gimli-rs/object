@@ -594,7 +594,7 @@ impl<'a> Object<'a> {
             section_offsets[index].reloc_offset =
                 writer.reserve_relocations(section.relocations.len());
         }
-        writer.reserve_symtab_strtab();
+        writer.reserve_symtab_strtab()?;
 
         // Start writing.
         writer.write_file_header(writer::FileHeader {

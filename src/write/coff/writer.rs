@@ -35,7 +35,7 @@ pub struct Writer<'a> {
     symtab_num: u32,
 
     strtab: StringTable<'a>,
-    strtab_len: usize,
+    strtab_len: u32,
     strtab_offset: u32,
     strtab_data: Vec<u8>,
 }
@@ -194,7 +194,6 @@ impl<'a> Writer<'a> {
                     coff_section.name[0] = b'/';
                     coff_section.name[1..][..len].copy_from_slice(&name[7 - len..]);
                 } else {
-                    debug_assert!(str_offset as u64 <= 0xf_ffff_ffff);
                     coff_section.name[0] = b'/';
                     coff_section.name[1] = b'/';
                     for i in 0..6 {
@@ -330,7 +329,7 @@ impl<'a> Writer<'a> {
             Name::Short(name) => coff_symbol.name = name,
             Name::Long(str_id) => {
                 let str_offset = self.strtab.get_offset(str_id);
-                coff_symbol.name[4..8].copy_from_slice(&u32::to_le_bytes(str_offset as u32));
+                coff_symbol.name[4..8].copy_from_slice(&u32::to_le_bytes(str_offset));
             }
         }
         self.buffer.write(&coff_symbol);
@@ -440,22 +439,23 @@ impl<'a> Writer<'a> {
     ///
     /// This must be called after functions that reserve symbol
     /// indices or add strings.
-    pub fn reserve_symtab_strtab(&mut self) {
+    ///
+    /// Returns an error if the string table could not be finalized.
+    pub fn reserve_symtab_strtab(&mut self) -> Result<()> {
         debug_assert_eq!(self.symtab_offset, 0);
         self.symtab_offset = self.reserve(self.symtab_num as usize * pe::IMAGE_SIZEOF_SYMBOL, 1);
 
         debug_assert_eq!(self.strtab_offset, 0);
         // First 4 bytes of strtab are the length.
-        self.strtab.write(4, &mut self.strtab_data);
-        self.strtab_len = self.strtab_data.len() + 4;
-        self.strtab_offset = self.reserve(self.strtab_len, 1);
+        self.strtab_len = self.strtab.write(4, &mut self.strtab_data)?;
+        self.strtab_offset = self.reserve(self.strtab_len as usize, 1);
+        Ok(())
     }
 
     /// Write the string table.
     pub fn write_strtab(&mut self) {
         debug_assert_eq!(self.strtab_offset, self.buffer.len() as u32);
-        self.buffer
-            .write_bytes(&u32::to_le_bytes(self.strtab_len as u32));
+        self.buffer.write_bytes(&u32::to_le_bytes(self.strtab_len));
         self.buffer.write_bytes(&self.strtab_data);
     }
 }

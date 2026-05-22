@@ -1,5 +1,7 @@
 use alloc::vec::Vec;
 
+use crate::write::{Error, Result};
+
 #[cfg(feature = "write_std")]
 type IndexSet<K> = indexmap::IndexSet<K>;
 #[cfg(not(feature = "write_std"))]
@@ -9,25 +11,30 @@ type IndexSet<K> = indexmap::IndexSet<K, hashbrown::DefaultHashBuilder>;
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct StringId(usize);
 
+/// A string table containing null terminated byte strings.
 #[derive(Debug, Default)]
 pub(crate) struct StringTable<'a> {
     strings: IndexSet<&'a [u8]>,
-    offsets: Vec<usize>,
+    offsets: Vec<u32>,
 }
 
 impl<'a> StringTable<'a> {
     /// Add a string to the string table.
     ///
-    /// Panics if the string table has already been written, or
-    /// if the string contains a null byte.
+    /// Duplicate strings return the id of the existing entry.
+    ///
+    /// Must be called before [`Self::write`].
+    ///
+    /// The string must not contain a null byte; this is asserted here for
+    /// debug builds, and checked by `write` for all builds.
     pub(crate) fn add(&mut self, string: &'a [u8]) -> StringId {
-        assert!(self.offsets.is_empty());
-        assert!(!string.contains(&0));
+        debug_assert!(self.offsets.is_empty());
+        debug_assert!(!string.contains(&0));
         let id = self.strings.insert_full(string).0;
         StringId(id)
     }
 
-    /// Return the id of the given string.
+    /// Return the id of a previously added string.
     ///
     /// Panics if the string is not in the string table.
     #[allow(dead_code)]
@@ -38,7 +45,7 @@ impl<'a> StringTable<'a> {
 
     /// Return the string for the given id.
     ///
-    /// Panics if the string is not in the string table.
+    /// Panics if `id` is invalid.
     #[allow(dead_code)]
     pub(crate) fn get_string(&self, id: StringId) -> &'a [u8] {
         self.strings.get_index(id.0).unwrap()
@@ -46,9 +53,10 @@ impl<'a> StringTable<'a> {
 
     /// Return the offset of the given string.
     ///
-    /// Panics if the string table has not been written, or
-    /// if the string is not in the string table.
-    pub(crate) fn get_offset(&self, id: StringId) -> usize {
+    /// Must be called after [`Self::write`].
+    ///
+    /// Panics if `id` is invalid or `write` was not called.
+    pub(crate) fn get_offset(&self, id: StringId) -> u32 {
         self.offsets[id.0]
     }
 
@@ -59,28 +67,40 @@ impl<'a> StringTable<'a> {
     /// this should be 1 for ELF, to account for the initial
     /// null byte (which must have been written by the caller).
     ///
-    /// Panics if the string table has already been written.
-    pub(crate) fn write(&mut self, base: usize, w: &mut Vec<u8>) {
-        assert!(self.offsets.is_empty());
+    /// Returns the total size, including base.
+    ///
+    /// Returns an error if:
+    /// - `write` has already been called
+    /// - any string contains a null byte
+    /// - the string table size is > `u32::MAX`
+    pub(crate) fn write(&mut self, base: u32, w: &mut Vec<u8>) -> Result<u32> {
+        if !self.offsets.is_empty() {
+            return Err(Error("string table already written".into()));
+        }
+        if self.strings.iter().any(|s| s.contains(&0)) {
+            return Err(Error("string table entry contains null byte".into()));
+        }
 
         let mut ids: Vec<_> = (0..self.strings.len()).collect();
         sort(&mut ids, 1, &self.strings);
 
         self.offsets = vec![0; ids.len()];
-        let mut offset = base;
+        let mut offset = u64::from(base);
         let mut previous = &[][..];
         for id in ids {
             let string = self.strings.get_index(id).unwrap();
+            let len = string.len() as u64 + 1;
             if previous.ends_with(string) {
-                self.offsets[id] = offset - string.len() - 1;
+                self.offsets[id] = (offset - len) as u32;
             } else {
-                self.offsets[id] = offset;
+                self.offsets[id] = offset as u32;
                 w.extend_from_slice(string);
                 w.push(0);
-                offset += string.len() + 1;
+                offset += len;
                 previous = string;
             }
         }
+        u32::try_from(offset).map_err(|_| Error("string table size overflow".into()))
     }
 
     /// Calculate the size in bytes of the string table.
@@ -175,12 +195,15 @@ mod tests {
 
         let mut data = Vec::new();
         data.push(0);
-        table.write(1, &mut data);
+        assert_eq!(table.write(1, &mut data), Ok(12));
         assert_eq!(data, b"\0foobar\0foo\0");
 
         assert_eq!(table.get_offset(id0), 11);
         assert_eq!(table.get_offset(id1), 8);
         assert_eq!(table.get_offset(id2), 4);
         assert_eq!(table.get_offset(id3), 1);
+
+        let mut data = Vec::new();
+        assert!(table.write(1, &mut data).is_err());
     }
 }

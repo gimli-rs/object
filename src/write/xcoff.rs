@@ -349,9 +349,8 @@ impl<'a> Object<'a> {
         let strtab_offset = offset;
         let mut strtab_data = Vec::new();
         // First 4 bytes of strtab are the length.
-        strtab.write(4, &mut strtab_data);
-        let strtab_len = strtab_data.len() + 4;
-        offset += strtab_len;
+        let strtab_len = strtab.write(4, &mut strtab_data)?;
+        offset += strtab_len as usize;
 
         // Start writing.
         buffer
@@ -513,7 +512,7 @@ impl<'a> Object<'a> {
                 };
                 let xcoff_sym = xcoff::Symbol64 {
                     n_value: n_value.into(),
-                    n_offset: (strtab.get_offset(str_id) as u32).into(),
+                    n_offset: strtab.get_offset(str_id).into(),
                     n_scnum: n_scnum.into(),
                     n_type: n_type.into(),
                     n_sclass,
@@ -528,7 +527,7 @@ impl<'a> Object<'a> {
                     sym_name[..symbol.name.len()].copy_from_slice(&symbol.name[..]);
                 } else {
                     let str_offset = strtab.get_offset(symbol_offsets[index].str_id.unwrap());
-                    sym_name[4..8].copy_from_slice(&u32::to_be_bytes(str_offset as u32));
+                    sym_name[4..8].copy_from_slice(&u32::to_be_bytes(str_offset));
                 }
                 let xcoff_sym = xcoff::Symbol32 {
                     n_name: sym_name,
@@ -548,7 +547,7 @@ impl<'a> Object<'a> {
                     x_fname[..symbol.name.len()].copy_from_slice(&symbol.name[..]);
                 } else {
                     let str_offset = strtab.get_offset(symbol_offsets[index].str_id.unwrap());
-                    x_fname[4..8].copy_from_slice(&u32::to_be_bytes(str_offset as u32));
+                    x_fname[4..8].copy_from_slice(&u32::to_be_bytes(str_offset));
                 }
                 if is_64 {
                     let file_aux = xcoff::FileAux64 {
@@ -610,7 +609,7 @@ impl<'a> Object<'a> {
 
         // Write string table.
         debug_assert_eq!(strtab_offset, buffer.len());
-        buffer.write_bytes(&u32::to_be_bytes(strtab_len as u32));
+        buffer.write_bytes(&u32::to_be_bytes(strtab_len));
         buffer.write_bytes(&strtab_data);
 
         debug_assert_eq!(offset, buffer.len());
