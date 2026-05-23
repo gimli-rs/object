@@ -6,3 +6,6 @@ pub mod objdump;
 
 #[cfg(all(feature = "read", feature = "names"))]
 pub mod readobj;
+
+#[cfg(all(feature = "read", feature = "write"))]
+pub mod elfstub;

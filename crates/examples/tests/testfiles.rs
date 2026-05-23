@@ -1,7 +1,7 @@
 #![cfg(all(feature = "read", feature = "names"))]
 
 #[cfg(feature = "write")]
-use object_examples::objcopy;
+use object_examples::{elfstub, objcopy};
 use object_examples::{objdump, readobj};
 use std::ffi::OsStr;
 use std::path::{Path, PathBuf};
@@ -136,6 +136,14 @@ fn testfiles() {
                 {
                     fail |= testfile(&in_path, &out_path, err_path, |out, err, in_data| {
                         let copy_data = objcopy::copy(in_data);
+                        readobj::print(out, err, &copy_data, &[], &readobj::PrintOptions::all());
+                    });
+                }
+            } else if extension == "elfstub" {
+                #[cfg(feature = "write")]
+                {
+                    fail |= testfile(&in_path, &out_path, err_path, |out, err, in_data| {
+                        let copy_data = elfstub::build_stub(in_data).unwrap();
                         readobj::print(out, err, &copy_data, &[], &readobj::PrintOptions::all());
                     });
                 }
