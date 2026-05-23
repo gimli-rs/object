@@ -1,0 +1,397 @@
+Format: ELF 64-bit
+FileHeader {
+    Ident {
+        Magic: [7F, 45, 4C, 46]
+        Class: ELFCLASS64 (0x2)
+        Data: ELFDATA2LSB (0x1)
+        Version: EV_CURRENT (0x1)
+        OsAbi: ELFOSABI_SYSV (0x0)
+        AbiVersion: 0x0
+        Unused: [0, 0, 0, 0, 0, 0, 0]
+    }
+    Type: ET_DYN (0x3)
+    Machine: EM_X86_64 (0x3E)
+    Version: EV_CURRENT (0x1)
+    Entry: 0x0
+    ProgramHeaderOffset: 0x40
+    SectionHeaderOffset: 0x388
+    Flags: 0x0
+    HeaderSize: 0x40
+    ProgramHeaderEntrySize: 0x38
+    ProgramHeaderCount: 3
+    SectionHeaderEntrySize: 0x40
+    SectionHeaderCount: 9
+    SectionHeaderStringTableIndex: 8
+}
+ProgramHeader {
+    Type: PT_PHDR (0x6)
+    Offset: 0x40
+    VirtualAddress: 0x40
+    PhysicalAddress: 0x40
+    FileSize: 0xA8
+    MemorySize: 0xA8
+    Flags: PF_R (0x4)
+    Align: 0x1000
+}
+ProgramHeader {
+    Type: PT_LOAD (0x1)
+    Offset: 0x0
+    VirtualAddress: 0x0
+    PhysicalAddress: 0x0
+    FileSize: 0x338
+    MemorySize: 0x338
+    Flags: PF_R (0x4)
+    Align: 0x1000
+}
+ProgramHeader {
+    Type: PT_DYNAMIC (0x2)
+    Offset: 0x278
+    VirtualAddress: 0x278
+    PhysicalAddress: 0x278
+    FileSize: 0xC0
+    MemorySize: 0xC0
+    Flags: PF_R (0x4)
+    Align: 0x8
+    Dynamic {
+        Tag: DT_NEEDED (0x1)
+        Value: "libc.so.6" (0x6E)
+    }
+    Dynamic {
+        Tag: DT_HASH (0x4)
+        Value: 0x198
+    }
+    Dynamic {
+        Tag: DT_STRTAB (0x5)
+        Value: 0x1F4
+    }
+    Dynamic {
+        Tag: DT_SYMTAB (0x6)
+        Value: 0xF0
+    }
+    Dynamic {
+        Tag: DT_STRSZ (0xA)
+        Value: 0x84
+    }
+    Dynamic {
+        Tag: DT_SYMENT (0xB)
+        Value: 0x18
+    }
+    Dynamic {
+        Tag: DT_VERSYM (0x6FFFFFF0)
+        Value: 0x1C4
+    }
+    Dynamic {
+        Tag: DT_VERNEED (0x6FFFFFFE)
+        Value: 0x1D4
+    }
+    Dynamic {
+        Tag: DT_VERNEEDNUM (0x6FFFFFFF)
+        Value: 0x1
+    }
+    Dynamic {
+        Tag: DT_FLAGS (0x1E)
+        Value: DF_BIND_NOW (0x8)
+    }
+    Dynamic {
+        Tag: DT_FLAGS_1 (0x6FFFFFFB)
+        Value: 0x8000001
+            DF_1_NOW (0x1)
+            DF_1_PIE (0x8000000)
+    }
+    Dynamic {
+        Tag: DT_NULL (0x0)
+        Value: 0x0
+    }
+}
+SectionHeader {
+    Index: 0
+    Name: "" (0x0)
+    Type: SHT_NULL (0x0)
+    Flags: 0x0
+    Address: 0x0
+    Offset: 0x0
+    Size: 0x0
+    Link: 0
+    Info: 0
+    AddressAlign: 0x0
+    EntrySize: 0x0
+}
+SectionHeader {
+    Index: 1
+    Name: ".stub" (0x3C)
+    Type: SHT_PROGBITS (0x1)
+    Flags: SHF_ALLOC (0x2)
+    Address: 0xE8
+    Offset: 0xE8
+    Size: 0x7
+    Link: 0
+    Info: 0
+    AddressAlign: 0x1
+    EntrySize: 0x0
+}
+SectionHeader {
+    Index: 2
+    Name: ".dynstr" (0x2B)
+    Type: SHT_STRTAB (0x3)
+    Flags: SHF_ALLOC (0x2)
+    Address: 0x1F4
+    Offset: 0x1F4
+    Size: 0x84
+    Link: 0
+    Info: 0
+    AddressAlign: 0x1
+    EntrySize: 0x0
+}
+SectionHeader {
+    Index: 3
+    Name: ".dynsym" (0x1)
+    Type: SHT_DYNSYM (0xB)
+    Flags: SHF_ALLOC (0x2)
+    Address: 0xF0
+    Offset: 0xF0
+    Size: 0xA8
+    Link: 2
+    Info: 1
+    AddressAlign: 0x8
+    EntrySize: 0x18
+    Symbol {
+        Index: 0
+        Name: 0x0
+        Version: VER_NDX_LOCAL (0x0)
+        Value: 0x0
+        Size: 0x0
+        Type: STT_NOTYPE (0x0)
+        Bind: STB_LOCAL (0x0)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: SHN_UNDEF (0x0)
+    }
+    Symbol {
+        Index: 1
+        Name: "_ITM_deregisterTMCloneTable" (0x1)
+        Version: VER_NDX_LOCAL (0x0)
+        Value: 0x0
+        Size: 0x0
+        Type: STT_NOTYPE (0x0)
+        Bind: STB_WEAK (0x2)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: SHN_UNDEF (0x0)
+    }
+    Symbol {
+        Index: 2
+        Name: "printf" (0x1D)
+        Version: "GLIBC_2.2.5" (0x2)
+        Value: 0x0
+        Size: 0x0
+        Type: STT_FUNC (0x2)
+        Bind: STB_GLOBAL (0x1)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: SHN_UNDEF (0x0)
+    }
+    Symbol {
+        Index: 3
+        Name: "__libc_start_main" (0x24)
+        Version: "GLIBC_2.2.5" (0x2)
+        Value: 0x0
+        Size: 0x0
+        Type: STT_FUNC (0x2)
+        Bind: STB_GLOBAL (0x1)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: SHN_UNDEF (0x0)
+    }
+    Symbol {
+        Index: 4
+        Name: "__gmon_start__" (0x36)
+        Version: VER_NDX_LOCAL (0x0)
+        Value: 0x0
+        Size: 0x0
+        Type: STT_NOTYPE (0x0)
+        Bind: STB_WEAK (0x2)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: SHN_UNDEF (0x0)
+    }
+    Symbol {
+        Index: 5
+        Name: "_ITM_registerTMCloneTable" (0x45)
+        Version: VER_NDX_LOCAL (0x0)
+        Value: 0x0
+        Size: 0x0
+        Type: STT_NOTYPE (0x0)
+        Bind: STB_WEAK (0x2)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: SHN_UNDEF (0x0)
+    }
+    Symbol {
+        Index: 6
+        Name: "__cxa_finalize" (0x5F)
+        Version: "GLIBC_2.2.5" (0x2)
+        Value: 0x0
+        Size: 0x0
+        Type: STT_FUNC (0x2)
+        Bind: STB_WEAK (0x2)
+        Other: STV_DEFAULT (0x0)
+        SectionIndex: SHN_UNDEF (0x0)
+    }
+}
+SectionHeader {
+    Index: 4
+    Name: ".hash" (0x9)
+    Type: SHT_HASH (0x5)
+    Flags: SHF_ALLOC (0x2)
+    Address: 0x198
+    Offset: 0x198
+    Size: 0x2C
+    Link: 3
+    Info: 0
+    AddressAlign: 0x4
+    EntrySize: 0x4
+    Hash {
+        BucketCount: 2
+        ChainCount: 7
+    }
+}
+SectionHeader {
+    Index: 5
+    Name: ".gnu.version" (0xF)
+    Type: SHT_GNU_VERSYM (0x6FFFFFFF)
+    Flags: SHF_ALLOC (0x2)
+    Address: 0x1C4
+    Offset: 0x1C4
+    Size: 0xE
+    Link: 3
+    Info: 0
+    AddressAlign: 0x2
+    EntrySize: 0x2
+    VersionSymbol {
+        Index: 0
+        Version: VER_NDX_LOCAL (0x0)
+    }
+    VersionSymbol {
+        Index: 1
+        Version: VER_NDX_LOCAL (0x0)
+    }
+    VersionSymbol {
+        Index: 2
+        Version: "GLIBC_2.2.5" (0x2)
+    }
+    VersionSymbol {
+        Index: 3
+        Version: "GLIBC_2.2.5" (0x2)
+    }
+    VersionSymbol {
+        Index: 4
+        Version: VER_NDX_LOCAL (0x0)
+    }
+    VersionSymbol {
+        Index: 5
+        Version: VER_NDX_LOCAL (0x0)
+    }
+    VersionSymbol {
+        Index: 6
+        Version: "GLIBC_2.2.5" (0x2)
+    }
+}
+SectionHeader {
+    Index: 6
+    Name: ".gnu.version_r" (0x1C)
+    Type: SHT_GNU_VERNEED (0x6FFFFFFE)
+    Flags: SHF_ALLOC (0x2)
+    Address: 0x1D4
+    Offset: 0x1D4
+    Size: 0x20
+    Link: 2
+    Info: 1
+    AddressAlign: 0x4
+    EntrySize: 0x0
+    VersionNeed {
+        Version: 1
+        AuxCount: 1
+        Filename: "libc.so.6" (0x6E)
+        AuxOffset: 16
+        NextOffset: 0
+        Aux {
+            Hash: 0x9691A75
+            Flags: 0x0
+            Index: 2
+            Name: "GLIBC_2.2.5" (0x78)
+            NextOffset: 0
+        }
+    }
+}
+SectionHeader {
+    Index: 7
+    Name: ".dynamic" (0x33)
+    Type: SHT_DYNAMIC (0x6)
+    Flags: 0x3
+        SHF_WRITE (0x1)
+        SHF_ALLOC (0x2)
+    Address: 0x278
+    Offset: 0x278
+    Size: 0xC0
+    Link: 2
+    Info: 0
+    AddressAlign: 0x8
+    EntrySize: 0x10
+    Dynamic {
+        Tag: DT_NEEDED (0x1)
+        Value: "libc.so.6" (0x6E)
+    }
+    Dynamic {
+        Tag: DT_HASH (0x4)
+        Value: 0x198
+    }
+    Dynamic {
+        Tag: DT_STRTAB (0x5)
+        Value: 0x1F4
+    }
+    Dynamic {
+        Tag: DT_SYMTAB (0x6)
+        Value: 0xF0
+    }
+    Dynamic {
+        Tag: DT_STRSZ (0xA)
+        Value: 0x84
+    }
+    Dynamic {
+        Tag: DT_SYMENT (0xB)
+        Value: 0x18
+    }
+    Dynamic {
+        Tag: DT_VERSYM (0x6FFFFFF0)
+        Value: 0x1C4
+    }
+    Dynamic {
+        Tag: DT_VERNEED (0x6FFFFFFE)
+        Value: 0x1D4
+    }
+    Dynamic {
+        Tag: DT_VERNEEDNUM (0x6FFFFFFF)
+        Value: 0x1
+    }
+    Dynamic {
+        Tag: DT_FLAGS (0x1E)
+        Value: DF_BIND_NOW (0x8)
+    }
+    Dynamic {
+        Tag: DT_FLAGS_1 (0x6FFFFFFB)
+        Value: 0x8000001
+            DF_1_NOW (0x1)
+            DF_1_PIE (0x8000000)
+    }
+    Dynamic {
+        Tag: DT_NULL (0x0)
+        Value: 0x0
+    }
+}
+SectionHeader {
+    Index: 8
+    Name: ".shstrtab" (0x42)
+    Type: SHT_STRTAB (0x3)
+    Flags: 0x0
+    Address: 0x0
+    Offset: 0x338
+    Size: 0x4C
+    Link: 0
+    Info: 0
+    AddressAlign: 0x1
+    EntrySize: 0x0
+}
