@@ -398,6 +398,8 @@ impl<'a, M: Mode> Writer<'a, M> {
     }
 
     /// Write alignment padding bytes prior to the program headers.
+    ///
+    /// In two-phase mode, does nothing if no program headers were reserved.
     pub fn write_align_program_headers(&mut self) {
         if !M::need_offset(self.layout.segment_offset) {
             return;
@@ -407,6 +409,8 @@ impl<'a, M: Mode> Writer<'a, M> {
     }
 
     /// Write a program header.
+    ///
+    /// Must be called after [`Self::write_align_program_headers`].
     pub fn write_program_header(&mut self, header: &ProgramHeader) {
         Self::write_program_header_impl(self.buffer, self.endian, self.is_64, header);
         self.written_segment_num += 1;
@@ -449,7 +453,7 @@ impl<'a, M: Mode> Writer<'a, M> {
     /// Write the null section header.
     ///
     /// This must be the first section header that is written.
-    /// This function does nothing if no sections were reserved.
+    /// In two-phase mode, does nothing if no sections were reserved.
     pub fn write_null_section_header(&mut self) {
         if !M::need_offset(self.layout.section_offset) {
             return;
@@ -483,6 +487,8 @@ impl<'a, M: Mode> Writer<'a, M> {
     }
 
     /// Write a section header.
+    ///
+    /// Must be called after [`Self::write_null_section_header`].
     pub fn write_section_header(&mut self, section: &SectionHeader) -> SectionIndex {
         let sh_name = if let Some(name) = section.name {
             self.shstrtab.get_offset(name)
@@ -529,7 +535,8 @@ impl<'a, M: Mode> Writer<'a, M> {
     ///
     /// This will be stored in the `.shstrtab` section.
     ///
-    /// This must be called before [`Self::reserve_shstrtab`].
+    /// Must be called before [`Self::reserve_shstrtab`] in two-phase mode,
+    /// or before [`Self::write_shstrtab`] in single-phase mode.
     pub fn add_section_name(&mut self, name: &'a [u8]) -> StringId {
         debug_assert_eq!(self.shstrtab_offset, 0);
         self.shstrtab.add(name)
@@ -537,7 +544,8 @@ impl<'a, M: Mode> Writer<'a, M> {
 
     /// Write the section header for the section header string table.
     ///
-    /// This function does nothing if the section index was not reserved.
+    /// The header is only written if the section index was reserved in two-phase
+    /// mode, or [`Self::write_shstrtab`] was called in single-phase mode.
     pub fn write_shstrtab_section_header(&mut self) {
         if self.shstrtab_str_id.is_none() {
             return;
@@ -562,7 +570,7 @@ impl<'a, M: Mode> Writer<'a, M> {
     ///
     /// This will be stored in the `.strtab` section.
     ///
-    /// This must be called before [`Self::reserve_strtab`] in two-phase mode,
+    /// Must be called before [`Self::reserve_strtab`] in two-phase mode,
     /// or before [`Self::write_strtab`] in single-phase mode.
     pub fn add_string(&mut self, name: &'a [u8]) -> StringId {
         debug_assert_eq!(self.strtab_offset, 0);
@@ -571,7 +579,8 @@ impl<'a, M: Mode> Writer<'a, M> {
 
     /// Write the section header for the string table.
     ///
-    /// This function does nothing if the section index was not reserved.
+    /// Only writes the header if the section index was reserved in two-phase mode,
+    /// or [`Self::write_strtab`] wrote the string table in single-phase mode.
     pub fn write_strtab_section_header(&mut self) {
         if self.strtab_str_id.is_none() {
             return;
@@ -594,7 +603,7 @@ impl<'a, M: Mode> Writer<'a, M> {
     /// Write the null symbol.
     ///
     /// This must be the first symbol that is written.
-    /// This function does nothing if no symbols were reserved.
+    /// In two-phase mode, does nothing if no symbols were reserved.
     pub fn write_null_symbol(&mut self) {
         if !M::need_offset(self.symtab_offset) {
             return;
@@ -620,6 +629,8 @@ impl<'a, M: Mode> Writer<'a, M> {
     }
 
     /// Write a symbol.
+    ///
+    /// Must be called after [`Self::write_null_symbol`].
     pub fn write_symbol(&mut self, sym: &Sym) -> SymbolIndex {
         let st_name = if let Some(name) = sym.name {
             self.strtab.get_offset(name)
@@ -674,7 +685,8 @@ impl<'a, M: Mode> Writer<'a, M> {
 
     /// Write the section header for the symbol table.
     ///
-    /// This function does nothing if the section index was not reserved.
+    /// Only writes the header if the section index was reserved in two-phase mode,
+    /// or [`Self::write_null_symbol`] was called in single-phase mode.
     pub fn write_symtab_section_header(&mut self, num_local: u32) {
         if self.symtab_str_id.is_none() {
             return;
@@ -696,7 +708,7 @@ impl<'a, M: Mode> Writer<'a, M> {
 
     /// Write the extended section indices for the symbol table.
     ///
-    /// This function does nothing if the section was not reserved.
+    /// Does nothing if extended section indices are not needed.
     pub fn write_symtab_shndx(&mut self) {
         if !self.need_symtab_shndx {
             self.symtab_shndx_data = Vec::new();
@@ -715,7 +727,8 @@ impl<'a, M: Mode> Writer<'a, M> {
 
     /// Write the section header for the extended section indices for the symbol table.
     ///
-    /// This function does nothing if the section index was not reserved.
+    /// Only writes the header if the section index was reserved in two-phase mode,
+    /// or [`Self::write_symtab_shndx`] was called in single-phase mode.
     pub fn write_symtab_shndx_section_header(&mut self) {
         if self.symtab_shndx_str_id.is_none() {
             return;
@@ -743,7 +756,7 @@ impl<'a, M: Mode> Writer<'a, M> {
     ///
     /// This will be stored in the `.dynstr` section.
     ///
-    /// This must be called before [`Self::reserve_dynstr`] in two-phase mode,
+    /// Must be called before [`Self::reserve_dynstr`] in two-phase mode,
     /// or before [`Self::write_dynstr`] in single-phase mode.
     pub fn add_dynamic_string(&mut self, name: &'a [u8]) -> StringId {
         debug_assert_eq!(self.dynstr_offset, 0);
@@ -759,7 +772,8 @@ impl<'a, M: Mode> Writer<'a, M> {
 
     /// Write the section header for the dynamic string table.
     ///
-    /// This function does nothing if the section index was not reserved.
+    /// Only writes the header if the section index was reserved in two-phase mode,
+    /// or [`Self::write_dynstr`] wrote the string table in single-phase mode.
     pub fn write_dynstr_section_header(&mut self, sh_addr: u64) {
         if self.dynstr_str_id.is_none() {
             return;
@@ -782,7 +796,7 @@ impl<'a, M: Mode> Writer<'a, M> {
     /// Write the null dynamic symbol.
     ///
     /// This must be the first dynamic symbol that is written.
-    /// This function does nothing if no dynamic symbols were reserved.
+    /// In two-phase mode, does nothing if no dynamic symbols were reserved.
     pub fn write_null_dynamic_symbol(&mut self) {
         if !M::need_offset(self.dynsym_offset) {
             return;
@@ -803,6 +817,8 @@ impl<'a, M: Mode> Writer<'a, M> {
     }
 
     /// Write a dynamic symbol.
+    ///
+    /// Must be called after [`Self::write_null_dynamic_symbol`].
     pub fn write_dynamic_symbol(&mut self, sym: &Sym) -> SymbolIndex {
         let st_name = if let Some(name) = sym.name {
             self.dynstr.get_offset(name)
@@ -849,7 +865,8 @@ impl<'a, M: Mode> Writer<'a, M> {
 
     /// Write the section header for the dynamic symbol table.
     ///
-    /// This function does nothing if the section index was not reserved.
+    /// Only writes the header if the section index was reserved in two-phase mode,
+    /// or [`Self::write_null_dynamic_symbol`] was called in single-phase mode.
     pub fn write_dynsym_section_header(&mut self, sh_addr: u64, num_local: u32) {
         if self.dynsym_str_id.is_none() {
             return;
@@ -871,7 +888,7 @@ impl<'a, M: Mode> Writer<'a, M> {
 
     /// Write alignment padding bytes prior to the `.dynamic` section.
     ///
-    /// This function does nothing if the section was not reserved.
+    /// In two-phase mode, does nothing if the section was not reserved.
     pub fn write_align_dynamic(&mut self) {
         if !M::need_offset(self.dynamic_offset) {
             return;
@@ -882,11 +899,15 @@ impl<'a, M: Mode> Writer<'a, M> {
     }
 
     /// Write a dynamic string entry.
+    ///
+    /// Must be called after [`Self::write_align_dynamic`].
     pub fn write_dynamic_string(&mut self, tag: elf::DynamicTag, id: StringId) -> Result<()> {
         self.write_dynamic(tag, self.dynstr.get_offset(id).into())
     }
 
     /// Write a dynamic value entry.
+    ///
+    /// Must be called after [`Self::write_align_dynamic`].
     pub fn write_dynamic(&mut self, d_tag: elf::DynamicTag, d_val: u64) -> Result<()> {
         let endian = self.endian;
         if self.is_64 {
@@ -914,7 +935,8 @@ impl<'a, M: Mode> Writer<'a, M> {
 
     /// Write the section header for the dynamic table.
     ///
-    /// This function does nothing if the section index was not reserved.
+    /// Only writes the header if the section index was reserved in two-phase mode,
+    /// or [`Self::write_align_dynamic`] was called in single-phase mode.
     pub fn write_dynamic_section_header(&mut self, sh_addr: u64) {
         if self.dynamic_str_id.is_none() {
             return;
@@ -937,6 +959,8 @@ impl<'a, M: Mode> Writer<'a, M> {
     ///
     /// `chain_count` is the number of symbols in the hash.
     /// The argument to `hash` will be in the range `0..chain_count`.
+    ///
+    /// In two-phase mode, [`Self::reserve_hash`] must be called before this.
     pub fn write_hash<F>(&mut self, bucket_count: u32, chain_count: u32, hash: F)
     where
         F: Fn(u32) -> Option<u32>,
@@ -965,7 +989,8 @@ impl<'a, M: Mode> Writer<'a, M> {
 
     /// Write the section header for the SysV hash table.
     ///
-    /// This function does nothing if the section index was not reserved.
+    /// Only writes the header if the section index was reserved in two-phase mode,
+    /// or [`Self::write_hash`] was called in single-phase mode.
     pub fn write_hash_section_header(&mut self, sh_addr: u64) {
         if self.hash_str_id.is_none() {
             return;
@@ -990,6 +1015,8 @@ impl<'a, M: Mode> Writer<'a, M> {
     /// The argument to `hash` will be in the range `0..symbol_count`.
     ///
     /// This requires that symbols are already sorted by bucket.
+    ///
+    /// In two-phase mode, [`Self::reserve_gnu_hash`] must be called before this.
     pub fn write_gnu_hash<F>(
         &mut self,
         symbol_base: u32,
@@ -1073,7 +1100,8 @@ impl<'a, M: Mode> Writer<'a, M> {
 
     /// Write the section header for the GNU hash table.
     ///
-    /// This function does nothing if the section index was not reserved.
+    /// Only writes the header if the section index was reserved in two-phase mode,
+    /// or [`Self::write_gnu_hash`] was called in single-phase mode.
     pub fn write_gnu_hash_section_header(&mut self, sh_addr: u64) {
         if self.gnu_hash_str_id.is_none() {
             return;
@@ -1095,7 +1123,7 @@ impl<'a, M: Mode> Writer<'a, M> {
     /// Write the null symbol version entry.
     ///
     /// This must be the first symbol version that is written.
-    /// This function does nothing if no dynamic symbols were reserved.
+    /// In two-phase mode, does nothing if no dynamic symbols were reserved.
     pub fn write_null_gnu_versym(&mut self) {
         if !M::need_offset(self.gnu_versym_offset) {
             return;
@@ -1111,13 +1139,16 @@ impl<'a, M: Mode> Writer<'a, M> {
     }
 
     /// Write a symbol version entry.
+    ///
+    /// Must be called after [`Self::write_null_gnu_versym`].
     pub fn write_gnu_versym(&mut self, versym: elf::VersymIndex) {
         self.buffer.write(&U16::new(self.endian, versym));
     }
 
     /// Write the section header for the `.gnu.version` section.
     ///
-    /// This function does nothing if the section index was not reserved.
+    /// Only writes the header if the section index was reserved in two-phase mode,
+    /// or [`Self::write_null_gnu_versym`] was called in single-phase mode.
     pub fn write_gnu_versym_section_header(&mut self, sh_addr: u64) {
         if self.gnu_versym_str_id.is_none() {
             return;
@@ -1137,6 +1168,8 @@ impl<'a, M: Mode> Writer<'a, M> {
     }
 
     /// Write alignment padding bytes prior to a `.gnu.version_d` section.
+    ///
+    /// In two-phase mode, does nothing if the section was not reserved.
     pub fn write_align_gnu_verdef(&mut self) {
         if !M::need_offset(self.gnu_verdef_offset) {
             return;
@@ -1151,6 +1184,10 @@ impl<'a, M: Mode> Writer<'a, M> {
     }
 
     /// Write a version definition entry.
+    ///
+    /// Must be called after [`Self::write_align_gnu_verdef`]. The number of entries
+    /// must have been set via [`Self::reserve_gnu_verdef`] in two-phase mode, or
+    /// [`Self::set_gnu_verdef_count`] in single-phase mode.
     pub fn write_gnu_verdef(&mut self, verdef: &Verdef) {
         debug_assert_ne!(self.gnu_verdef_remaining, 0);
         self.gnu_verdef_remaining -= 1;
@@ -1183,6 +1220,10 @@ impl<'a, M: Mode> Writer<'a, M> {
     ///
     /// This is typically useful when there are only two versions (including the base)
     /// and they have the same name.
+    ///
+    /// Must be called after [`Self::write_align_gnu_verdef`]. The number of entries
+    /// must have been set via [`Self::reserve_gnu_verdef`] in two-phase mode, or
+    /// [`Self::set_gnu_verdef_count`] in single-phase mode.
     pub fn write_gnu_verdef_shared(&mut self, verdef: &Verdef) {
         debug_assert_ne!(self.gnu_verdef_remaining, 0);
         self.gnu_verdef_remaining -= 1;
@@ -1205,6 +1246,8 @@ impl<'a, M: Mode> Writer<'a, M> {
     }
 
     /// Write a version definition auxiliary entry.
+    ///
+    /// Must be called inside a version definition started by [`Self::write_gnu_verdef`].
     pub fn write_gnu_verdaux(&mut self, name: StringId) {
         debug_assert_ne!(self.gnu_verdaux_remaining, 0);
         self.gnu_verdaux_remaining -= 1;
@@ -1221,7 +1264,8 @@ impl<'a, M: Mode> Writer<'a, M> {
 
     /// Write the section header for the `.gnu.version_d` section.
     ///
-    /// This function does nothing if the section index was not reserved.
+    /// Only writes the header if the section index was reserved in two-phase mode,
+    /// or [`Self::write_align_gnu_verdef`] was called in single-phase mode.
     pub fn write_gnu_verdef_section_header(&mut self, sh_addr: u64) {
         if self.gnu_verdef_str_id.is_none() {
             return;
@@ -1245,6 +1289,8 @@ impl<'a, M: Mode> Writer<'a, M> {
     }
 
     /// Write alignment padding bytes prior to a `.gnu.version_r` section.
+    ///
+    /// In two-phase mode, does nothing if the section was not reserved.
     pub fn write_align_gnu_verneed(&mut self) {
         if !M::need_offset(self.gnu_verneed_offset) {
             return;
@@ -1259,6 +1305,10 @@ impl<'a, M: Mode> Writer<'a, M> {
     }
 
     /// Write a version need entry.
+    ///
+    /// Must be called after [`Self::write_align_gnu_verneed`]. The number of entries
+    /// must have been set via [`Self::reserve_gnu_verneed`] in two-phase mode, or
+    /// [`Self::set_gnu_verneed_count`] in single-phase mode.
     pub fn write_gnu_verneed(&mut self, verneed: &Verneed) {
         debug_assert_ne!(self.gnu_verneed_remaining, 0);
         self.gnu_verneed_remaining -= 1;
@@ -1288,6 +1338,8 @@ impl<'a, M: Mode> Writer<'a, M> {
     }
 
     /// Write a version need auxiliary entry.
+    ///
+    /// Must be called inside a version need started by [`Self::write_gnu_verneed`].
     pub fn write_gnu_vernaux(&mut self, vernaux: &Vernaux) {
         debug_assert_ne!(self.gnu_vernaux_remaining, 0);
         self.gnu_vernaux_remaining -= 1;
@@ -1307,7 +1359,8 @@ impl<'a, M: Mode> Writer<'a, M> {
 
     /// Write the section header for the `.gnu.version_r` section.
     ///
-    /// This function does nothing if the section index was not reserved.
+    /// Only writes the header if the section index was reserved in two-phase mode,
+    /// or [`Self::write_align_gnu_verneed`] was called in single-phase mode.
     pub fn write_gnu_verneed_section_header(&mut self, sh_addr: u64) {
         if self.gnu_verneed_str_id.is_none() {
             return;
@@ -1332,7 +1385,8 @@ impl<'a, M: Mode> Writer<'a, M> {
 
     /// Write the section header for the `.gnu.attributes` section.
     ///
-    /// This function does nothing if the section index was not reserved.
+    /// Only writes the header if the section index was reserved in two-phase mode,
+    /// or [`Self::write_gnu_attributes`] was called in single-phase mode.
     pub fn write_gnu_attributes_section_header(&mut self) {
         if self.gnu_attributes_str_id.is_none() {
             return;
@@ -1352,6 +1406,8 @@ impl<'a, M: Mode> Writer<'a, M> {
     }
 
     /// Write the data for the `.gnu.attributes` section.
+    ///
+    /// In two-phase mode, does nothing if the section was not reserved.
     pub fn write_gnu_attributes(&mut self, data: &[u8]) {
         if !M::need_offset(self.gnu_attributes_offset) {
             return;
@@ -1374,6 +1430,10 @@ impl<'a, M: Mode> Writer<'a, M> {
     }
 
     /// Write a relocation.
+    ///
+    /// [`Self::write_align_relocation`] should be called before the first relocation
+    /// of a section. In two-phase mode, the file range must have been reserved with
+    /// [`Self::reserve_relocations`].
     pub fn write_relocation(&mut self, is_rela: bool, rel: &Rel) {
         let endian = self.endian;
         if self.is_64 {
@@ -1610,6 +1670,8 @@ impl<'a> Writer<'a, SinglePhase> {
     /// other data is written. This pads the buffer by `count` program header entries.
     /// Use [`Self::write_headers_to`] to write the program headers once their contents
     /// are known.
+    ///
+    /// Does nothing if `count` is zero.
     pub fn write_program_headers_placeholder(&mut self, count: u32) {
         if count == 0 {
             return;
@@ -1660,7 +1722,7 @@ impl<'a> Writer<'a, SinglePhase> {
 
     /// Write the section header string table.
     ///
-    /// This will always write the string table, even if it is empty.
+    /// Always writes the string table, even if it is empty.
     pub fn write_shstrtab(&mut self) -> Result<()> {
         // This must be written before the .shstrtab section header, so
         // we can't use write_null_section_header to determine if it is needed.
@@ -1677,8 +1739,7 @@ impl<'a> Writer<'a, SinglePhase> {
 
     /// Write the string table.
     ///
-    /// Only writes the string table if there is a symbol table
-    /// or if it is not empty.
+    /// Only writes the string table if it is not empty, or if there is a symbol table.
     pub fn write_strtab(&mut self) -> Result<()> {
         if !self.need_strtab && self.strtab.is_empty() {
             return Ok(());
@@ -1695,8 +1756,8 @@ impl<'a> Writer<'a, SinglePhase> {
 
     /// Write the dynamic string table.
     ///
-    /// Only writes the string table if there is a dynamic symbol table
-    /// or if it is not empty.
+    /// Only writes the string table if it is not empty, or if there is a dynamic symbol
+    /// table.
     pub fn write_dynstr(&mut self) -> Result<()> {
         if !self.need_dynstr && self.dynstr.is_empty() {
             return Ok(());
@@ -1845,6 +1906,8 @@ impl<'a> Writer<'a, TwoPhase> {
     ///
     /// If `num` is >= `elf::PN_XNUM`, you must also reserve and write
     /// the section table; this is checked in `write_file_header`.
+    ///
+    /// Does nothing if `num` is zero.
     pub fn reserve_program_headers(&mut self, num: u32) {
         debug_assert_eq!(self.layout.segment_offset, 0);
         if num == 0 {
@@ -1862,7 +1925,8 @@ impl<'a> Writer<'a, TwoPhase> {
     /// The null section header is usually automatically reserved,
     /// but this can be used to force an empty section table.
     ///
-    /// This must be called before [`Self::reserve_section_headers`].
+    /// Must be called before [`Self::reserve_section_index`] and
+    /// [`Self::reserve_section_headers`].
     pub fn reserve_null_section_index(&mut self) -> SectionIndex {
         debug_assert_eq!(self.layout.section_num, 0);
         if self.layout.section_num == 0 {
@@ -1875,7 +1939,7 @@ impl<'a> Writer<'a, TwoPhase> {
     ///
     /// Automatically also reserves the null section header if required.
     ///
-    /// This must be called before [`Self::reserve_section_headers`].
+    /// Must be called before [`Self::reserve_section_headers`].
     pub fn reserve_section_index(&mut self) -> SectionIndex {
         debug_assert_eq!(self.layout.section_offset, 0);
         if self.layout.section_num == 0 {
@@ -1888,8 +1952,8 @@ impl<'a> Writer<'a, TwoPhase> {
 
     /// Reserve the range for the section headers.
     ///
-    /// This function does nothing if no sections were reserved.
-    /// This must be called after [`Self::reserve_section_index`]
+    /// Does nothing if no sections were reserved.
+    /// Must be called after [`Self::reserve_section_index`]
     /// and other functions that reserve section indices.
     pub fn reserve_section_headers(&mut self) {
         debug_assert_eq!(self.layout.section_offset, 0);
@@ -1906,9 +1970,9 @@ impl<'a> Writer<'a, TwoPhase> {
     ///
     /// This range is used for a section named `.shstrtab`.
     ///
-    /// This function does nothing if no sections were reserved.
-    /// This must be called after [`Self::add_section_name`].
-    /// and other functions that reserve section names and indices.
+    /// Does nothing if no sections were reserved.
+    /// Must be called after [`Self::add_section_name`]
+    /// and other functions that add section names and reserve indices.
     ///
     /// Returns an error if the string table could not be finalized.
     pub fn reserve_shstrtab(&mut self) -> Result<()> {
@@ -1925,7 +1989,7 @@ impl<'a> Writer<'a, TwoPhase> {
 
     /// Write the section header string table.
     ///
-    /// This function does nothing if the section was not reserved.
+    /// Does nothing if the section was not reserved.
     pub fn write_shstrtab(&mut self) {
         if self.shstrtab_offset == 0 {
             return;
@@ -1936,7 +2000,7 @@ impl<'a> Writer<'a, TwoPhase> {
 
     /// Reserve the section index for the section header string table.
     ///
-    /// This must be called before [`Self::reserve_shstrtab`]
+    /// Must be called before [`Self::reserve_shstrtab`]
     /// and [`Self::reserve_section_headers`].
     pub fn reserve_shstrtab_section_index(&mut self) -> SectionIndex {
         self.reserve_shstrtab_section_index_with_name(&b".shstrtab"[..])
@@ -1944,7 +2008,7 @@ impl<'a> Writer<'a, TwoPhase> {
 
     /// Reserve the section index for the section header string table.
     ///
-    /// This must be called before [`Self::reserve_shstrtab`]
+    /// Must be called before [`Self::reserve_shstrtab`]
     /// and [`Self::reserve_section_headers`].
     pub fn reserve_shstrtab_section_index_with_name(&mut self, name: &'a [u8]) -> SectionIndex {
         debug_assert_eq!(self.layout.shstrtab_index, SectionIndex(0));
@@ -1968,8 +2032,8 @@ impl<'a> Writer<'a, TwoPhase> {
     /// This range is used for a section named `.strtab`.
     ///
     /// The range is only reserved if the string table is needed (either `require_strtab`
-    /// was called, or symbols or strings are present).
-    /// This must be called after [`Self::add_string`].
+    /// was called, or at least one string or symbol was added).
+    /// Must be called after [`Self::add_string`].
     ///
     /// Returns an error if the string table could not be finalized.
     pub fn reserve_strtab(&mut self) -> Result<()> {
@@ -1986,7 +2050,7 @@ impl<'a> Writer<'a, TwoPhase> {
 
     /// Write the string table.
     ///
-    /// This function does nothing if the section was not reserved.
+    /// Does nothing if the section was not reserved.
     pub fn write_strtab(&mut self) {
         if self.strtab_offset == 0 {
             return;
@@ -2000,7 +2064,7 @@ impl<'a> Writer<'a, TwoPhase> {
     /// You should check [`Self::strtab_needed`] before calling this
     /// unless you have other means of knowing if this section is needed.
     ///
-    /// This must be called before [`Self::reserve_section_headers`].
+    /// Must be called before [`Self::reserve_section_headers`].
     pub fn reserve_strtab_section_index(&mut self) -> SectionIndex {
         self.reserve_strtab_section_index_with_name(&b".strtab"[..])
     }
@@ -2010,7 +2074,7 @@ impl<'a> Writer<'a, TwoPhase> {
     /// You should check [`Self::strtab_needed`] before calling this
     /// unless you have other means of knowing if this section is needed.
     ///
-    /// This must be called before [`Self::reserve_section_headers`].
+    /// Must be called before [`Self::reserve_section_headers`].
     pub fn reserve_strtab_section_index_with_name(&mut self, name: &'a [u8]) -> SectionIndex {
         debug_assert_eq!(self.strtab_index, SectionIndex(0));
         self.strtab_str_id = Some(self.add_section_name(name));
@@ -2025,7 +2089,8 @@ impl<'a> Writer<'a, TwoPhase> {
     /// The null symbol table entry is usually automatically reserved,
     /// but this can be used to force an empty symbol table.
     ///
-    /// This must be called before [`Self::reserve_symtab`].
+    /// Must be called before [`Self::reserve_symbol_index`] and
+    /// [`Self::reserve_symtab`].
     pub fn reserve_null_symbol_index(&mut self) -> SymbolIndex {
         debug_assert_eq!(self.symtab_offset, 0);
         debug_assert_eq!(self.symtab_num, 0);
@@ -2045,7 +2110,7 @@ impl<'a> Writer<'a, TwoPhase> {
     /// Callers may assume that the returned indices will be sequential
     /// starting at 1.
     ///
-    /// This must be called before [`Self::reserve_symtab`] and
+    /// Must be called before [`Self::reserve_symtab`] and
     /// [`Self::reserve_symtab_shndx`].
     pub fn reserve_symbol_index(&mut self, section_index: Option<SectionIndex>) -> SymbolIndex {
         debug_assert_eq!(self.symtab_offset, 0);
@@ -2075,8 +2140,8 @@ impl<'a> Writer<'a, TwoPhase> {
     /// Reserve the range for the symbol table.
     ///
     /// This range is used for a section named `.symtab`.
-    /// This function does nothing if no symbols were reserved.
-    /// This must be called after [`Self::reserve_symbol_index`].
+    /// Does nothing if no symbols were reserved.
+    /// Must be called after [`Self::reserve_symbol_index`].
     pub fn reserve_symtab(&mut self) {
         debug_assert_eq!(self.symtab_offset, 0);
         if self.symtab_num == 0 {
@@ -2090,14 +2155,14 @@ impl<'a> Writer<'a, TwoPhase> {
 
     /// Reserve the section index for the symbol table.
     ///
-    /// This must be called before [`Self::reserve_section_headers`].
+    /// Must be called before [`Self::reserve_section_headers`].
     pub fn reserve_symtab_section_index(&mut self) -> SectionIndex {
         self.reserve_symtab_section_index_with_name(&b".symtab"[..])
     }
 
     /// Reserve the section index for the symbol table.
     ///
-    /// This must be called before [`Self::reserve_section_headers`].
+    /// Must be called before [`Self::reserve_section_headers`].
     pub fn reserve_symtab_section_index_with_name(&mut self, name: &'a [u8]) -> SectionIndex {
         debug_assert_eq!(self.symtab_index, SectionIndex(0));
         self.symtab_str_id = Some(self.add_section_name(name));
@@ -2126,8 +2191,8 @@ impl<'a> Writer<'a, TwoPhase> {
     /// This range is used for a section named `.symtab_shndx`.
     /// This also reserves a section index.
     ///
-    /// This function does nothing if extended section indices are not needed.
-    /// This must be called after [`Self::reserve_symbol_index`].
+    /// Does nothing if extended section indices are not needed.
+    /// Must be called after [`Self::reserve_symbol_index`].
     pub fn reserve_symtab_shndx(&mut self) {
         debug_assert_eq!(self.symtab_shndx_offset, 0);
         if !self.symtab_shndx_needed() {
@@ -2142,7 +2207,7 @@ impl<'a> Writer<'a, TwoPhase> {
     /// You should check [`Self::symtab_shndx_needed`] before calling this
     /// unless you have other means of knowing if this section is needed.
     ///
-    /// This must be called before [`Self::reserve_section_headers`].
+    /// Must be called before [`Self::reserve_section_headers`].
     pub fn reserve_symtab_shndx_section_index(&mut self) -> SectionIndex {
         self.reserve_symtab_shndx_section_index_with_name(&b".symtab_shndx"[..])
     }
@@ -2152,7 +2217,7 @@ impl<'a> Writer<'a, TwoPhase> {
     /// You should check [`Self::symtab_shndx_needed`] before calling this
     /// unless you have other means of knowing if this section is needed.
     ///
-    /// This must be called before [`Self::reserve_section_headers`].
+    /// Must be called before [`Self::reserve_section_headers`].
     pub fn reserve_symtab_shndx_section_index_with_name(&mut self, name: &'a [u8]) -> SectionIndex {
         debug_assert!(self.symtab_shndx_str_id.is_none());
         self.symtab_shndx_str_id = Some(self.add_section_name(name));
@@ -2175,7 +2240,7 @@ impl<'a> Writer<'a, TwoPhase> {
     ///
     /// The range is only reserved if the string table is needed (either `require_dynstr`
     /// was called, or dynamic symbols or dynamic strings are present).
-    /// This must be called after [`Self::add_dynamic_string`].
+    /// Must be called after [`Self::add_dynamic_string`].
     ///
     /// Returns an error if the string table could not be finalized.
     pub fn reserve_dynstr(&mut self) -> Result<usize> {
@@ -2192,7 +2257,7 @@ impl<'a> Writer<'a, TwoPhase> {
 
     /// Return the size of the dynamic string table.
     ///
-    /// This must be called after [`Self::reserve_dynstr`].
+    /// Must be called after [`Self::reserve_dynstr`].
     pub fn dynstr_len(&mut self) -> usize {
         debug_assert_ne!(self.dynstr_offset, 0);
         self.mode.dynstr_data.len()
@@ -2200,7 +2265,7 @@ impl<'a> Writer<'a, TwoPhase> {
 
     /// Write the dynamic string table.
     ///
-    /// This function does nothing if the section was not reserved.
+    /// Does nothing if the section was not reserved.
     pub fn write_dynstr(&mut self) {
         if self.dynstr_offset == 0 {
             return;
@@ -2214,7 +2279,7 @@ impl<'a> Writer<'a, TwoPhase> {
     /// You should check [`Self::dynstr_needed`] before calling this
     /// unless you have other means of knowing if this section is needed.
     ///
-    /// This must be called before [`Self::reserve_section_headers`].
+    /// Must be called before [`Self::reserve_section_headers`].
     pub fn reserve_dynstr_section_index(&mut self) -> SectionIndex {
         self.reserve_dynstr_section_index_with_name(&b".dynstr"[..])
     }
@@ -2224,7 +2289,7 @@ impl<'a> Writer<'a, TwoPhase> {
     /// You should check [`Self::dynstr_needed`] before calling this
     /// unless you have other means of knowing if this section is needed.
     ///
-    /// This must be called before [`Self::reserve_section_headers`].
+    /// Must be called before [`Self::reserve_section_headers`].
     pub fn reserve_dynstr_section_index_with_name(&mut self, name: &'a [u8]) -> SectionIndex {
         debug_assert_eq!(self.dynstr_index, SectionIndex(0));
         self.dynstr_str_id = Some(self.add_section_name(name));
@@ -2244,7 +2309,8 @@ impl<'a> Writer<'a, TwoPhase> {
     /// The null dynamic symbol table entry is usually automatically reserved,
     /// but this can be used to force an empty dynamic symbol table.
     ///
-    /// This must be called before [`Self::reserve_dynsym`].
+    /// Must be called before [`Self::reserve_dynamic_symbol_index`] and
+    /// [`Self::reserve_dynsym`].
     pub fn reserve_null_dynamic_symbol_index(&mut self) -> SymbolIndex {
         debug_assert_eq!(self.dynsym_offset, 0);
         debug_assert_eq!(self.dynsym_num, 0);
@@ -2260,7 +2326,7 @@ impl<'a> Writer<'a, TwoPhase> {
     /// Callers may assume that the returned indices will be sequential
     /// starting at 1.
     ///
-    /// This must be called before [`Self::reserve_dynsym`].
+    /// Must be called before [`Self::reserve_dynsym`].
     pub fn reserve_dynamic_symbol_index(&mut self) -> SymbolIndex {
         debug_assert_eq!(self.dynsym_offset, 0);
         if self.dynsym_num == 0 {
@@ -2282,8 +2348,8 @@ impl<'a> Writer<'a, TwoPhase> {
     ///
     /// This range is used for a section named `.dynsym`.
     ///
-    /// This function does nothing if no dynamic symbols were reserved.
-    /// This must be called after [`Self::reserve_dynamic_symbol_index`].
+    /// Does nothing if no dynamic symbols were reserved.
+    /// Must be called after [`Self::reserve_dynamic_symbol_index`].
     pub fn reserve_dynsym(&mut self) -> usize {
         debug_assert_eq!(self.dynsym_offset, 0);
         if self.dynsym_num == 0 {
@@ -2298,14 +2364,14 @@ impl<'a> Writer<'a, TwoPhase> {
 
     /// Reserve the section index for the dynamic symbol table.
     ///
-    /// This must be called before [`Self::reserve_section_headers`].
+    /// Must be called before [`Self::reserve_section_headers`].
     pub fn reserve_dynsym_section_index(&mut self) -> SectionIndex {
         self.reserve_dynsym_section_index_with_name(&b".dynsym"[..])
     }
 
     /// Reserve the section index for the dynamic symbol table.
     ///
-    /// This must be called before [`Self::reserve_section_headers`].
+    /// Must be called before [`Self::reserve_section_headers`].
     pub fn reserve_dynsym_section_index_with_name(&mut self, name: &'a [u8]) -> SectionIndex {
         debug_assert_eq!(self.dynsym_index, SectionIndex(0));
         self.dynsym_str_id = Some(self.add_section_name(name));
@@ -2320,7 +2386,7 @@ impl<'a> Writer<'a, TwoPhase> {
 
     /// Reserve the range for the `.dynamic` section.
     ///
-    /// This function does nothing if `dynamic_num` is zero.
+    /// Does nothing if `dynamic_num` is zero.
     pub fn reserve_dynamic(&mut self, dynamic_num: usize) -> usize {
         debug_assert_eq!(self.dynamic_offset, 0);
         if dynamic_num == 0 {
@@ -2339,6 +2405,8 @@ impl<'a> Writer<'a, TwoPhase> {
     }
 
     /// Reserve the section index for the dynamic table.
+    ///
+    /// Must be called before [`Self::reserve_section_headers`].
     pub fn reserve_dynamic_section_index(&mut self) -> SectionIndex {
         debug_assert!(self.dynamic_str_id.is_none());
         self.dynamic_str_id = Some(self.add_section_name(&b".dynamic"[..]));
@@ -2356,11 +2424,15 @@ impl<'a> Writer<'a, TwoPhase> {
     }
 
     /// Reserve the section index for the SysV hash table.
+    ///
+    /// Must be called before [`Self::reserve_section_headers`].
     pub fn reserve_hash_section_index(&mut self) -> SectionIndex {
         self.reserve_hash_section_index_with_name(&b".hash"[..])
     }
 
     /// Reserve the section index for the SysV hash table.
+    ///
+    /// Must be called before [`Self::reserve_section_headers`].
     pub fn reserve_hash_section_index_with_name(&mut self, name: &'a [u8]) -> SectionIndex {
         debug_assert!(self.hash_str_id.is_none());
         self.hash_str_id = Some(self.add_section_name(name));
@@ -2385,11 +2457,15 @@ impl<'a> Writer<'a, TwoPhase> {
     }
 
     /// Reserve the section index for the GNU hash table.
+    ///
+    /// Must be called before [`Self::reserve_section_headers`].
     pub fn reserve_gnu_hash_section_index(&mut self) -> SectionIndex {
         self.reserve_gnu_hash_section_index_with_name(&b".gnu.hash"[..])
     }
 
     /// Reserve the section index for the GNU hash table.
+    ///
+    /// Must be called before [`Self::reserve_section_headers`].
     pub fn reserve_gnu_hash_section_index_with_name(&mut self, name: &'a [u8]) -> SectionIndex {
         debug_assert!(self.gnu_hash_str_id.is_none());
         self.gnu_hash_str_id = Some(self.add_section_name(name));
@@ -2398,7 +2474,7 @@ impl<'a> Writer<'a, TwoPhase> {
 
     /// Reserve the range for the `.gnu.version` section.
     ///
-    /// This function does nothing if no dynamic symbols were reserved.
+    /// Does nothing if no dynamic symbols were reserved.
     pub fn reserve_gnu_versym(&mut self) -> usize {
         debug_assert_eq!(self.gnu_versym_offset, 0);
         if self.dynsym_num == 0 {
@@ -2409,11 +2485,15 @@ impl<'a> Writer<'a, TwoPhase> {
     }
 
     /// Reserve the section index for the `.gnu.version` section.
+    ///
+    /// Must be called before [`Self::reserve_section_headers`].
     pub fn reserve_gnu_versym_section_index(&mut self) -> SectionIndex {
         self.reserve_gnu_versym_section_index_with_name(&b".gnu.version"[..])
     }
 
     /// Reserve the section index for the `.gnu.version` section.
+    ///
+    /// Must be called before [`Self::reserve_section_headers`].
     pub fn reserve_gnu_versym_section_index_with_name(&mut self, name: &'a [u8]) -> SectionIndex {
         debug_assert!(self.gnu_versym_str_id.is_none());
         self.gnu_versym_str_id = Some(self.add_section_name(name));
@@ -2421,6 +2501,8 @@ impl<'a> Writer<'a, TwoPhase> {
     }
 
     /// Reserve the range for the `.gnu.version_d` section.
+    ///
+    /// Does nothing if `verdef_count` is zero.
     pub fn reserve_gnu_verdef(&mut self, verdef_count: usize, verdaux_count: usize) -> usize {
         debug_assert_eq!(self.gnu_verdef_offset, 0);
         if verdef_count == 0 {
@@ -2435,11 +2517,15 @@ impl<'a> Writer<'a, TwoPhase> {
     }
 
     /// Reserve the section index for the `.gnu.version_d` section.
+    ///
+    /// Must be called before [`Self::reserve_section_headers`].
     pub fn reserve_gnu_verdef_section_index(&mut self) -> SectionIndex {
         self.reserve_gnu_verdef_section_index_with_name(&b".gnu.version_d"[..])
     }
 
     /// Reserve the section index for the `.gnu.version_d` section.
+    ///
+    /// Must be called before [`Self::reserve_section_headers`].
     pub fn reserve_gnu_verdef_section_index_with_name(&mut self, name: &'a [u8]) -> SectionIndex {
         debug_assert!(self.gnu_verdef_str_id.is_none());
         self.gnu_verdef_str_id = Some(self.add_section_name(name));
@@ -2447,6 +2533,8 @@ impl<'a> Writer<'a, TwoPhase> {
     }
 
     /// Reserve the range for the `.gnu.version_r` section.
+    ///
+    /// Does nothing if `verneed_count` is zero.
     pub fn reserve_gnu_verneed(&mut self, verneed_count: usize, vernaux_count: usize) -> usize {
         debug_assert_eq!(self.gnu_verneed_offset, 0);
         if verneed_count == 0 {
@@ -2461,11 +2549,15 @@ impl<'a> Writer<'a, TwoPhase> {
     }
 
     /// Reserve the section index for the `.gnu.version_r` section.
+    ///
+    /// Must be called before [`Self::reserve_section_headers`].
     pub fn reserve_gnu_verneed_section_index(&mut self) -> SectionIndex {
         self.reserve_gnu_verneed_section_index_with_name(&b".gnu.version_r"[..])
     }
 
     /// Reserve the section index for the `.gnu.version_r` section.
+    ///
+    /// Must be called before [`Self::reserve_section_headers`].
     pub fn reserve_gnu_verneed_section_index_with_name(&mut self, name: &'a [u8]) -> SectionIndex {
         debug_assert!(self.gnu_verneed_str_id.is_none());
         self.gnu_verneed_str_id = Some(self.add_section_name(name));
@@ -2473,11 +2565,15 @@ impl<'a> Writer<'a, TwoPhase> {
     }
 
     /// Reserve the section index for the `.gnu.attributes` section.
+    ///
+    /// Must be called before [`Self::reserve_section_headers`].
     pub fn reserve_gnu_attributes_section_index(&mut self) -> SectionIndex {
         self.reserve_gnu_attributes_section_index_with_name(&b".gnu.attributes"[..])
     }
 
     /// Reserve the section index for the `.gnu.attributes` section.
+    ///
+    /// Must be called before [`Self::reserve_section_headers`].
     pub fn reserve_gnu_attributes_section_index_with_name(
         &mut self,
         name: &'a [u8],
@@ -2488,6 +2584,8 @@ impl<'a> Writer<'a, TwoPhase> {
     }
 
     /// Reserve the range for the `.gnu.attributes` section.
+    ///
+    /// Does nothing if `gnu_attributes_size` is zero.
     pub fn reserve_gnu_attributes(&mut self, gnu_attributes_size: usize) -> usize {
         debug_assert_eq!(self.gnu_attributes_offset, 0);
         if gnu_attributes_size == 0 {
