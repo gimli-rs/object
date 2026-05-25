@@ -16,10 +16,36 @@ pub struct StringId(usize);
 pub(crate) struct StringTable<'a> {
     strings: IndexSet<&'a [u8]>,
     offsets: Vec<u32>,
+    size: u64,
+    in_order: bool,
+    // Only set for in_order.
+    base: u32,
 }
 
 impl<'a> StringTable<'a> {
+    /// Construct a new string table.
+    #[allow(dead_code)]
+    pub(crate) fn new() -> Self {
+        StringTable::default()
+    }
+
+    /// Construct a new string table that writes the strings in
+    /// the order they are added.
+    ///
+    /// This does not perform suffix merging.
+    #[allow(dead_code)]
+    pub(crate) fn new_in_order(base: u32) -> Self {
+        StringTable {
+            strings: IndexSet::default(),
+            offsets: Vec::new(),
+            size: base.into(),
+            in_order: true,
+            base,
+        }
+    }
+
     /// Return true if the string table contains no strings.
+    #[allow(dead_code)]
     pub(crate) fn is_empty(&self) -> bool {
         self.strings.is_empty()
     }
@@ -33,9 +59,13 @@ impl<'a> StringTable<'a> {
     /// The string must not contain a null byte; this is asserted here for
     /// debug builds, and checked by `write` for all builds.
     pub(crate) fn add(&mut self, string: &'a [u8]) -> StringId {
-        debug_assert!(self.offsets.is_empty());
+        debug_assert!(self.in_order || self.offsets.is_empty());
         debug_assert!(!string.contains(&0));
-        let id = self.strings.insert_full(string).0;
+        let (id, new) = self.strings.insert_full(string);
+        if new && self.in_order {
+            self.offsets.push(self.size as u32);
+            self.size += string.len() as u64 + 1;
+        }
         StringId(id)
     }
 
@@ -58,7 +88,11 @@ impl<'a> StringTable<'a> {
 
     /// Return the offset of the given string.
     ///
-    /// Must be called after [`Self::write`].
+    /// Must be called after [`Self::write`] unless the string table was
+    /// constructed with [`Self::new_in_order`].
+    ///
+    /// When using `new_in_order`, the offset returned will be truncated if it
+    /// overflows `u32`. Reporting the overflow is postponed to `write`.
     ///
     /// Panics if `id` is invalid or `write` was not called.
     pub(crate) fn get_offset(&self, id: StringId) -> u32 {
@@ -79,11 +113,21 @@ impl<'a> StringTable<'a> {
     /// - any string contains a null byte
     /// - the string table size is > `u32::MAX`
     pub(crate) fn write(&mut self, base: u32, w: &mut Vec<u8>) -> Result<u32> {
-        if !self.offsets.is_empty() {
+        if !self.in_order && !self.offsets.is_empty() {
             return Err(Error("string table already written".into()));
         }
         if self.strings.iter().any(|s| s.contains(&0)) {
             return Err(Error("string table entry contains null byte".into()));
+        }
+
+        if self.in_order {
+            debug_assert_eq!(self.base, base);
+            for string in &self.strings {
+                w.extend_from_slice(string);
+                w.push(0);
+            }
+            return u32::try_from(self.size)
+                .map_err(|_| Error("string table size overflow".into()));
         }
 
         let mut ids: Vec<_> = (0..self.strings.len()).collect();
@@ -115,6 +159,11 @@ impl<'a> StringTable<'a> {
     /// null byte.
     #[allow(dead_code)]
     pub(crate) fn size(&self, base: usize) -> usize {
+        if self.in_order {
+            debug_assert_eq!(self.base as usize, base);
+            return self.size as usize;
+        }
+
         // TODO: cache this result?
         let mut ids: Vec<_> = (0..self.strings.len()).collect();
         sort(&mut ids, 1, &self.strings);
@@ -198,8 +247,7 @@ mod tests {
         let id2 = table.add(b"bar");
         let id3 = table.add(b"foobar");
 
-        let mut data = Vec::new();
-        data.push(0);
+        let mut data = vec![0];
         assert_eq!(table.write(1, &mut data), Ok(12));
         assert_eq!(data, b"\0foobar\0foo\0");
 
@@ -210,5 +258,28 @@ mod tests {
 
         let mut data = Vec::new();
         assert!(table.write(1, &mut data).is_err());
+    }
+
+    #[test]
+    fn string_table_in_order() {
+        let mut table = StringTable::new_in_order(1);
+        let id0 = table.add(b"");
+        let id1 = table.add(b"foo");
+        let id2 = table.add(b"bar");
+        let id3 = table.add(b"foobar");
+
+        let mut data = vec![0];
+        assert_eq!(table.write(1, &mut data), Ok(17));
+        assert_eq!(data, b"\0\0foo\0bar\0foobar\0");
+
+        assert_eq!(table.get_offset(id0), 1);
+        assert_eq!(table.get_offset(id1), 2);
+        assert_eq!(table.get_offset(id2), 6);
+        assert_eq!(table.get_offset(id3), 10);
+
+        // Not documented or expected to be needed, but multiple writes aren't prevented.
+        let mut data2 = vec![0];
+        assert_eq!(table.write(1, &mut data2), Ok(17));
+        assert_eq!(data, data2);
     }
 }
