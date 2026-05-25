@@ -7,16 +7,16 @@ use crate::{elf, pod};
 
 #[derive(Clone, Copy)]
 struct ComdatOffsets {
-    offset: usize,
+    offset: u64,
     str_id: StringId,
 }
 
 #[derive(Clone, Copy)]
 struct SectionOffsets {
     index: SectionIndex,
-    offset: usize,
+    offset: u64,
     str_id: StringId,
-    reloc_offset: usize,
+    reloc_offset: u64,
     reloc_str_id: Option<StringId>,
 }
 
@@ -776,7 +776,7 @@ impl<'a> Object<'a> {
         }
         for (index, section) in self.sections.iter().enumerate() {
             writer.write_align(section.align as usize);
-            debug_assert_eq!(section_offsets[index].offset, writer.len());
+            debug_assert_eq!(section_offsets[index].offset, writer.offset());
             writer.write(&section.data);
         }
 
@@ -830,7 +830,7 @@ impl<'a> Object<'a> {
         for (index, section) in self.sections.iter().enumerate() {
             if !section.relocations.is_empty() {
                 writer.write_align_relocation();
-                debug_assert_eq!(section_offsets[index].reloc_offset, writer.len());
+                debug_assert_eq!(section_offsets[index].reloc_offset, writer.offset());
                 for reloc in &section.relocations {
                     let r_type = if let RelocationFlags::Elf { r_type } = reloc.flags {
                         r_type
@@ -884,7 +884,7 @@ impl<'a> Object<'a> {
                 sh_type,
                 sh_flags,
                 sh_addr: 0,
-                sh_offset: section_offsets[index].offset as u64,
+                sh_offset: section_offsets[index].offset,
                 sh_size: section.size,
                 sh_link: 0,
                 sh_info: 0,
