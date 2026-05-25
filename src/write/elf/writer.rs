@@ -38,6 +38,7 @@ mod private {
 
     #[allow(private_interfaces)]
     pub trait ModeSealed {
+        fn string_table() -> StringTable<'static>;
         fn reserve(&self, buffer: &mut dyn WritableBuffer) -> Result<()>;
         fn need_offset(offset: u64) -> bool;
         fn set_offset(dest: &mut u64, offset: u64);
@@ -171,13 +172,13 @@ impl<'a, M: Mode> Writer<'a, M> {
             written_segment_num: 0,
             written_section_num: 0,
 
-            shstrtab: StringTable::default(),
+            shstrtab: M::string_table(),
             shstrtab_str_id: None,
             shstrtab_offset: 0,
             shstrtab_size: 0,
 
             need_strtab: false,
-            strtab: StringTable::default(),
+            strtab: M::string_table(),
             strtab_str_id: None,
             strtab_index: SectionIndex(0),
             strtab_offset: 0,
@@ -195,7 +196,7 @@ impl<'a, M: Mode> Writer<'a, M> {
             symtab_shndx_data: Vec::new(),
 
             need_dynstr: false,
-            dynstr: StringTable::default(),
+            dynstr: M::string_table(),
             dynstr_str_id: None,
             dynstr_index: SectionIndex(0),
             dynstr_offset: 0,
@@ -1620,8 +1621,11 @@ pub type SinglePhaseWriter<'a> = Writer<'a, SinglePhase>;
 ///
 /// Items must be written before they are referenced:
 /// - write section data before section headers
-/// - write string tables before they are referenced
 /// - write metadata section headers before they are referenced (e.g. `.strtab` before `.symtab`)
+///
+/// Strings in strings tables are written in the order they are added, without suffix merging.
+/// This means that string offsets are known before the string table is written.
+/// For example, [`Writer::write_symbol`] may be called before [`Writer::write_strtab`].
 ///
 /// The one exception is the file header, which must be written first, but needs to
 /// reference the program header table and section header table. To support this, you can
@@ -1640,6 +1644,10 @@ pub struct SinglePhase(());
 impl Mode for SinglePhase {}
 #[allow(private_interfaces)]
 impl ModeSealed for SinglePhase {
+    fn string_table() -> StringTable<'static> {
+        StringTable::new_in_order(1)
+    }
+
     fn reserve(&self, _buffer: &mut dyn WritableBuffer) -> Result<()> {
         Ok(())
     }
@@ -1871,6 +1879,10 @@ pub struct TwoPhase {
 impl Mode for TwoPhase {}
 #[allow(private_interfaces)]
 impl ModeSealed for TwoPhase {
+    fn string_table() -> StringTable<'static> {
+        StringTable::new()
+    }
+
     fn reserve(&self, buffer: &mut dyn WritableBuffer) -> Result<()> {
         buffer
             .reserve(self.len)
