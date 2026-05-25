@@ -39,9 +39,9 @@ mod private {
     #[allow(private_interfaces)]
     pub trait ModeSealed {
         fn reserve(&self, buffer: &mut dyn WritableBuffer) -> Result<()>;
-        fn need_offset(offset: usize) -> bool;
-        fn set_offset(dest: &mut usize, offset: usize);
-        fn set_size(dest: &mut usize, size: usize);
+        fn need_offset(offset: u64) -> bool;
+        fn set_offset(dest: &mut u64, offset: u64);
+        fn set_size(dest: &mut u64, size: u64);
         fn set_section_index(dest: &mut SectionIndex, index: SectionIndex);
         fn set_section_name(
             dest: &mut Option<StringId>,
@@ -76,58 +76,58 @@ pub struct Writer<'a, M: Mode = TwoPhase> {
 
     shstrtab: StringTable<'a>,
     shstrtab_str_id: Option<StringId>,
-    shstrtab_offset: usize,
+    shstrtab_offset: u64,
     shstrtab_size: u32,
 
     need_strtab: bool,
     strtab: StringTable<'a>,
     strtab_str_id: Option<StringId>,
     strtab_index: SectionIndex,
-    strtab_offset: usize,
+    strtab_offset: u64,
     strtab_size: u32,
 
     symtab_str_id: Option<StringId>,
     symtab_index: SectionIndex,
-    symtab_offset: usize,
+    symtab_offset: u64,
     symtab_num: u32,
     written_symtab_num: u32,
 
     need_symtab_shndx: bool,
     symtab_shndx_str_id: Option<StringId>,
-    symtab_shndx_offset: usize,
+    symtab_shndx_offset: u64,
     symtab_shndx_data: Vec<u8>,
 
     need_dynstr: bool,
     dynstr: StringTable<'a>,
     dynstr_str_id: Option<StringId>,
     dynstr_index: SectionIndex,
-    dynstr_offset: usize,
+    dynstr_offset: u64,
     dynstr_size: u32,
 
     dynsym_str_id: Option<StringId>,
     dynsym_index: SectionIndex,
-    dynsym_offset: usize,
+    dynsym_offset: u64,
     dynsym_num: u32,
     written_dynsym_num: u32,
 
     dynamic_str_id: Option<StringId>,
-    dynamic_offset: usize,
+    dynamic_offset: u64,
     dynamic_num: usize,
     written_dynamic_num: usize,
 
     hash_str_id: Option<StringId>,
-    hash_offset: usize,
-    hash_size: usize,
+    hash_offset: u64,
+    hash_size: u64,
 
     gnu_hash_str_id: Option<StringId>,
-    gnu_hash_offset: usize,
-    gnu_hash_size: usize,
+    gnu_hash_offset: u64,
+    gnu_hash_size: u64,
 
     gnu_versym_str_id: Option<StringId>,
-    gnu_versym_offset: usize,
+    gnu_versym_offset: u64,
 
     gnu_verdef_str_id: Option<StringId>,
-    gnu_verdef_offset: usize,
+    gnu_verdef_offset: u64,
     gnu_verdef_count: u16,
     gnu_verdaux_count: usize,
     written_verdaux_count: usize,
@@ -135,7 +135,7 @@ pub struct Writer<'a, M: Mode = TwoPhase> {
     gnu_verdaux_remaining: u16,
 
     gnu_verneed_str_id: Option<StringId>,
-    gnu_verneed_offset: usize,
+    gnu_verneed_offset: u64,
     gnu_verneed_count: u16,
     gnu_vernaux_count: usize,
     written_vernaux_count: usize,
@@ -143,8 +143,8 @@ pub struct Writer<'a, M: Mode = TwoPhase> {
     gnu_vernaux_remaining: u16,
 
     gnu_attributes_str_id: Option<StringId>,
-    gnu_attributes_offset: usize,
-    gnu_attributes_size: usize,
+    gnu_attributes_offset: u64,
+    gnu_attributes_size: u64,
 }
 
 impl<'a, M: Mode> Writer<'a, M> {
@@ -256,11 +256,19 @@ impl<'a, M: Mode> Writer<'a, M> {
         self.buffer.len()
     }
 
+    /// Return the file offset of the next write.
+    pub fn offset(&self) -> u64 {
+        self.buffer.len() as u64
+    }
+
     /// Write alignment padding bytes.
-    pub fn write_align(&mut self, align_start: usize) {
+    ///
+    /// Returns the file offset after the padding.
+    pub fn write_align(&mut self, align_start: usize) -> u64 {
         if align_start > 1 {
             util::write_align(self.buffer, align_start);
         }
+        self.offset()
     }
 
     /// Write data.
@@ -271,9 +279,10 @@ impl<'a, M: Mode> Writer<'a, M> {
     }
 
     /// Write padding up to the given file offset.
-    pub fn pad_until(&mut self, offset: usize) {
-        debug_assert!(self.buffer.len() <= offset);
-        self.buffer.resize(offset);
+    pub fn pad_until(&mut self, offset: u64) {
+        debug_assert!(self.offset() <= offset);
+        debug_assert!(offset <= usize::MAX as u64);
+        self.buffer.resize(offset as usize);
     }
 
     /// Write the file header.
@@ -326,7 +335,7 @@ impl<'a, M: Mode> Writer<'a, M> {
 
         let e_ehsize = class.file_header_size() as u16;
 
-        let e_phoff = layout.segment_offset as u64;
+        let e_phoff = layout.segment_offset;
         let e_phentsize = if layout.segment_num == 0 {
             0
         } else {
@@ -343,7 +352,7 @@ impl<'a, M: Mode> Writer<'a, M> {
             layout.segment_num as u16
         };
 
-        let e_shoff = layout.section_offset as u64;
+        let e_shoff = layout.section_offset;
         let e_shentsize = if layout.section_num == 0 {
             0
         } else {
@@ -399,13 +408,15 @@ impl<'a, M: Mode> Writer<'a, M> {
 
     /// Write alignment padding bytes prior to the program headers.
     ///
-    /// In two-phase mode, does nothing if no program headers were reserved.
-    pub fn write_align_program_headers(&mut self) {
+    /// Returns the file offset after the padding.
+    /// In two-phase mode, returns 0 without writing if no program headers were reserved.
+    pub fn write_align_program_headers(&mut self) -> u64 {
         if !M::need_offset(self.layout.segment_offset) {
-            return;
+            return 0;
         }
-        util::write_align(self.buffer, self.elf_align);
-        M::set_offset(&mut self.layout.segment_offset, self.buffer.len());
+        let offset = self.write_align(self.elf_align);
+        M::set_offset(&mut self.layout.segment_offset, offset);
+        offset
     }
 
     /// Write a program header.
@@ -453,13 +464,15 @@ impl<'a, M: Mode> Writer<'a, M> {
     /// Write the null section header.
     ///
     /// This must be the first section header that is written.
-    /// In two-phase mode, does nothing if no sections were reserved.
-    pub fn write_null_section_header(&mut self) {
+    ///
+    /// Returns the file offset of the header.
+    /// In two-phase mode, returns 0 without writing if no sections were reserved.
+    pub fn write_null_section_header(&mut self) -> u64 {
         if !M::need_offset(self.layout.section_offset) {
-            return;
+            return 0;
         }
-        util::write_align(self.buffer, self.elf_align);
-        M::set_offset(&mut self.layout.section_offset, self.buffer.len());
+        let offset = self.write_align(self.elf_align);
+        M::set_offset(&mut self.layout.section_offset, offset);
         self.write_section_header(&SectionHeader {
             name: None,
             sh_type: elf::SHT_NULL,
@@ -484,6 +497,7 @@ impl<'a, M: Mode> Writer<'a, M> {
             sh_addralign: 0,
             sh_entsize: 0,
         });
+        offset
     }
 
     /// Write a section header.
@@ -556,7 +570,7 @@ impl<'a, M: Mode> Writer<'a, M> {
             sh_type: elf::SHT_STRTAB,
             sh_flags: elf::SectionFlags(0),
             sh_addr: 0,
-            sh_offset: self.shstrtab_offset as u64,
+            sh_offset: self.shstrtab_offset,
             sh_size: self.shstrtab_size.into(),
             sh_link: 0,
             sh_info: 0,
@@ -590,7 +604,7 @@ impl<'a, M: Mode> Writer<'a, M> {
             sh_type: elf::SHT_STRTAB,
             sh_flags: elf::SectionFlags(0),
             sh_addr: 0,
-            sh_offset: self.strtab_offset as u64,
+            sh_offset: self.strtab_offset,
             sh_size: self.strtab_size.into(),
             sh_link: 0,
             sh_info: 0,
@@ -603,13 +617,15 @@ impl<'a, M: Mode> Writer<'a, M> {
     /// Write the null symbol.
     ///
     /// This must be the first symbol that is written.
-    /// In two-phase mode, does nothing if no symbols were reserved.
-    pub fn write_null_symbol(&mut self) {
+    ///
+    /// Returns the file offset of the symbol.
+    /// In two-phase mode, returns 0 without writing if no symbols were reserved.
+    pub fn write_null_symbol(&mut self) -> u64 {
         if !M::need_offset(self.symtab_offset) {
-            return;
+            return 0;
         }
-        util::write_align(self.buffer, self.elf_align);
-        M::set_offset(&mut self.symtab_offset, self.buffer.len());
+        let offset = self.write_align(self.elf_align);
+        M::set_offset(&mut self.symtab_offset, offset);
         M::set_section_name(&mut self.symtab_str_id, &mut self.shstrtab, b".symtab");
         if self.is_64 {
             self.buffer.write(&elf::Sym64::<Endianness>::default());
@@ -626,6 +642,7 @@ impl<'a, M: Mode> Writer<'a, M> {
         M::set_count(&mut self.symtab_num, self.written_symtab_num);
         // The symtab must link to a strtab.
         self.need_strtab = true;
+        offset
     }
 
     /// Write a symbol.
@@ -696,7 +713,7 @@ impl<'a, M: Mode> Writer<'a, M> {
             sh_type: elf::SHT_SYMTAB,
             sh_flags: elf::SectionFlags(0),
             sh_addr: 0,
-            sh_offset: self.symtab_offset as u64,
+            sh_offset: self.symtab_offset,
             sh_size: self.symtab_num as u64 * self.class().sym_size() as u64,
             sh_link: self.strtab_index.0,
             sh_info: num_local,
@@ -708,14 +725,15 @@ impl<'a, M: Mode> Writer<'a, M> {
 
     /// Write the extended section indices for the symbol table.
     ///
-    /// Does nothing if extended section indices are not needed.
-    pub fn write_symtab_shndx(&mut self) {
+    /// Returns the file offset of the start of the data.
+    /// Returns 0 without writing if extended section indices are not needed.
+    pub fn write_symtab_shndx(&mut self) -> u64 {
         if !self.need_symtab_shndx {
             self.symtab_shndx_data = Vec::new();
-            return;
+            return 0;
         }
-        util::write_align(self.buffer, ALIGN_SYMTAB_SHNDX);
-        M::set_offset(&mut self.symtab_shndx_offset, self.buffer.len());
+        let offset = self.write_align(ALIGN_SYMTAB_SHNDX);
+        M::set_offset(&mut self.symtab_shndx_offset, offset);
         M::set_section_name(
             &mut self.symtab_shndx_str_id,
             &mut self.shstrtab,
@@ -723,6 +741,7 @@ impl<'a, M: Mode> Writer<'a, M> {
         );
         self.buffer.write_bytes(&self.symtab_shndx_data);
         self.symtab_shndx_data = Vec::new();
+        offset
     }
 
     /// Write the section header for the extended section indices for the symbol table.
@@ -743,7 +762,7 @@ impl<'a, M: Mode> Writer<'a, M> {
             sh_type: elf::SHT_SYMTAB_SHNDX,
             sh_flags: elf::SectionFlags(0),
             sh_addr: 0,
-            sh_offset: self.symtab_shndx_offset as u64,
+            sh_offset: self.symtab_shndx_offset,
             sh_size,
             sh_link: self.symtab_index.0,
             sh_info: 0,
@@ -783,7 +802,7 @@ impl<'a, M: Mode> Writer<'a, M> {
             sh_type: elf::SHT_STRTAB,
             sh_flags: elf::SHF_ALLOC,
             sh_addr,
-            sh_offset: self.dynstr_offset as u64,
+            sh_offset: self.dynstr_offset,
             sh_size: self.dynstr_size.into(),
             sh_link: 0,
             sh_info: 0,
@@ -796,13 +815,15 @@ impl<'a, M: Mode> Writer<'a, M> {
     /// Write the null dynamic symbol.
     ///
     /// This must be the first dynamic symbol that is written.
-    /// In two-phase mode, does nothing if no dynamic symbols were reserved.
-    pub fn write_null_dynamic_symbol(&mut self) {
+    ///
+    /// Returns the file offset of the symbol.
+    /// In two-phase mode, returns 0 without writing if no dynamic symbols were reserved.
+    pub fn write_null_dynamic_symbol(&mut self) -> u64 {
         if !M::need_offset(self.dynsym_offset) {
-            return;
+            return 0;
         }
-        util::write_align(self.buffer, self.elf_align);
-        M::set_offset(&mut self.dynsym_offset, self.buffer.len());
+        let offset = self.write_align(self.elf_align);
+        M::set_offset(&mut self.dynsym_offset, offset);
         M::set_section_name(&mut self.dynsym_str_id, &mut self.shstrtab, b".dynsym");
         if self.is_64 {
             self.buffer.write(&elf::Sym64::<Endianness>::default());
@@ -814,6 +835,7 @@ impl<'a, M: Mode> Writer<'a, M> {
         M::set_count(&mut self.dynsym_num, self.written_dynsym_num);
         // The symbol table must link to a string table.
         self.need_dynstr = true;
+        offset
     }
 
     /// Write a dynamic symbol.
@@ -876,7 +898,7 @@ impl<'a, M: Mode> Writer<'a, M> {
             sh_type: elf::SHT_DYNSYM,
             sh_flags: elf::SHF_ALLOC,
             sh_addr,
-            sh_offset: self.dynsym_offset as u64,
+            sh_offset: self.dynsym_offset,
             sh_size: self.dynsym_num as u64 * self.class().sym_size() as u64,
             sh_link: self.dynstr_index.0,
             sh_info: num_local,
@@ -888,14 +910,16 @@ impl<'a, M: Mode> Writer<'a, M> {
 
     /// Write alignment padding bytes prior to the `.dynamic` section.
     ///
-    /// In two-phase mode, does nothing if the section was not reserved.
-    pub fn write_align_dynamic(&mut self) {
+    /// Returns the file offset after the padding.
+    /// In two-phase mode, returns 0 without writing if the section was not reserved.
+    pub fn write_align_dynamic(&mut self) -> u64 {
         if !M::need_offset(self.dynamic_offset) {
-            return;
+            return 0;
         }
-        util::write_align(self.buffer, self.elf_align);
-        M::set_offset(&mut self.dynamic_offset, self.buffer.len());
+        let offset = self.write_align(self.elf_align);
+        M::set_offset(&mut self.dynamic_offset, offset);
         M::set_section_name(&mut self.dynamic_str_id, &mut self.shstrtab, b".dynamic");
+        offset
     }
 
     /// Write a dynamic string entry.
@@ -946,7 +970,7 @@ impl<'a, M: Mode> Writer<'a, M> {
             sh_type: elf::SHT_DYNAMIC,
             sh_flags: elf::SHF_WRITE | elf::SHF_ALLOC,
             sh_addr,
-            sh_offset: self.dynamic_offset as u64,
+            sh_offset: self.dynamic_offset,
             sh_size: (self.dynamic_num * self.class().dyn_size()) as u64,
             sh_link: self.dynstr_index.0,
             sh_info: 0,
@@ -961,7 +985,9 @@ impl<'a, M: Mode> Writer<'a, M> {
     /// The argument to `hash` will be in the range `0..chain_count`.
     ///
     /// In two-phase mode, [`Self::reserve_hash`] must be called before this.
-    pub fn write_hash<F>(&mut self, bucket_count: u32, chain_count: u32, hash: F)
+    ///
+    /// Returns the file offset of the hash table data.
+    pub fn write_hash<F>(&mut self, bucket_count: u32, chain_count: u32, hash: F) -> u64
     where
         F: Fn(u32) -> Option<u32>,
     {
@@ -975,8 +1001,8 @@ impl<'a, M: Mode> Writer<'a, M> {
             }
         }
 
-        util::write_align(self.buffer, ALIGN_HASH);
-        M::set_offset(&mut self.hash_offset, self.buffer.len());
+        let offset = self.write_align(ALIGN_HASH);
+        M::set_offset(&mut self.hash_offset, offset);
         M::set_section_name(&mut self.hash_str_id, &mut self.shstrtab, b".hash");
         self.buffer.write(&elf::HashHeader {
             bucket_count: U32::new(self.endian, bucket_count),
@@ -984,7 +1010,9 @@ impl<'a, M: Mode> Writer<'a, M> {
         });
         self.buffer.write_slice(&buckets);
         self.buffer.write_slice(&chains);
-        M::set_size(&mut self.hash_size, self.buffer.len() - self.hash_offset);
+        let size = self.offset() - self.hash_offset;
+        M::set_size(&mut self.hash_size, size);
+        offset
     }
 
     /// Write the section header for the SysV hash table.
@@ -1000,8 +1028,8 @@ impl<'a, M: Mode> Writer<'a, M> {
             sh_type: elf::SHT_HASH,
             sh_flags: elf::SHF_ALLOC,
             sh_addr,
-            sh_offset: self.hash_offset as u64,
-            sh_size: self.hash_size as u64,
+            sh_offset: self.hash_offset,
+            sh_size: self.hash_size,
             sh_link: self.dynsym_index.0,
             sh_info: 0,
             sh_addralign: ALIGN_HASH as u64,
@@ -1017,6 +1045,8 @@ impl<'a, M: Mode> Writer<'a, M> {
     /// This requires that symbols are already sorted by bucket.
     ///
     /// In two-phase mode, [`Self::reserve_gnu_hash`] must be called before this.
+    ///
+    /// Returns the file offset of the hash table data.
     pub fn write_gnu_hash<F>(
         &mut self,
         symbol_base: u32,
@@ -1025,11 +1055,12 @@ impl<'a, M: Mode> Writer<'a, M> {
         bucket_count: u32,
         symbol_count: u32,
         hash: F,
-    ) where
+    ) -> u64
+    where
         F: Fn(u32) -> u32,
     {
-        util::write_align(self.buffer, self.elf_align);
-        M::set_offset(&mut self.gnu_hash_offset, self.buffer.len());
+        let offset = self.write_align(self.elf_align);
+        M::set_offset(&mut self.gnu_hash_offset, offset);
         M::set_section_name(&mut self.gnu_hash_str_id, &mut self.shstrtab, b".gnu.hash");
         self.buffer.write(&elf::GnuHashHeader {
             bucket_count: U32::new(self.endian, bucket_count),
@@ -1092,10 +1123,9 @@ impl<'a, M: Mode> Writer<'a, M> {
             self.buffer.write(&U32::new(self.endian, h));
         }
 
-        M::set_size(
-            &mut self.gnu_hash_size,
-            self.buffer.len() - self.gnu_hash_offset,
-        );
+        let size = self.offset() - self.gnu_hash_offset;
+        M::set_size(&mut self.gnu_hash_size, size);
+        offset
     }
 
     /// Write the section header for the GNU hash table.
@@ -1111,8 +1141,8 @@ impl<'a, M: Mode> Writer<'a, M> {
             sh_type: elf::SHT_GNU_HASH,
             sh_flags: elf::SHF_ALLOC,
             sh_addr,
-            sh_offset: self.gnu_hash_offset as u64,
-            sh_size: self.gnu_hash_size as u64,
+            sh_offset: self.gnu_hash_offset,
+            sh_size: self.gnu_hash_size,
             sh_link: self.dynsym_index.0,
             sh_info: 0,
             sh_addralign: self.elf_align as u64,
@@ -1123,19 +1153,22 @@ impl<'a, M: Mode> Writer<'a, M> {
     /// Write the null symbol version entry.
     ///
     /// This must be the first symbol version that is written.
-    /// In two-phase mode, does nothing if no dynamic symbols were reserved.
-    pub fn write_null_gnu_versym(&mut self) {
+    ///
+    /// Returns the file offset of the entry.
+    /// In two-phase mode, returns 0 without writing if no dynamic symbols were reserved.
+    pub fn write_null_gnu_versym(&mut self) -> u64 {
         if !M::need_offset(self.gnu_versym_offset) {
-            return;
+            return 0;
         }
-        util::write_align(self.buffer, ALIGN_GNU_VERSYM);
-        M::set_offset(&mut self.gnu_versym_offset, self.buffer.len());
+        let offset = self.write_align(ALIGN_GNU_VERSYM);
+        M::set_offset(&mut self.gnu_versym_offset, offset);
         M::set_section_name(
             &mut self.gnu_versym_str_id,
             &mut self.shstrtab,
             b".gnu.version",
         );
         self.write_gnu_versym(elf::VER_NDX_LOCAL.into());
+        offset
     }
 
     /// Write a symbol version entry.
@@ -1158,7 +1191,7 @@ impl<'a, M: Mode> Writer<'a, M> {
             sh_type: elf::SHT_GNU_VERSYM,
             sh_flags: elf::SHF_ALLOC,
             sh_addr,
-            sh_offset: self.gnu_versym_offset as u64,
+            sh_offset: self.gnu_versym_offset,
             sh_size: self.class().gnu_versym_size(self.dynsym_num as usize) as u64,
             sh_link: self.dynsym_index.0,
             sh_info: 0,
@@ -1169,18 +1202,20 @@ impl<'a, M: Mode> Writer<'a, M> {
 
     /// Write alignment padding bytes prior to a `.gnu.version_d` section.
     ///
-    /// In two-phase mode, does nothing if the section was not reserved.
-    pub fn write_align_gnu_verdef(&mut self) {
+    /// Returns the file offset after the padding.
+    /// In two-phase mode, returns 0 without writing if the section was not reserved.
+    pub fn write_align_gnu_verdef(&mut self) -> u64 {
         if !M::need_offset(self.gnu_verdef_offset) {
-            return;
+            return 0;
         }
-        util::write_align(self.buffer, ALIGN_GNU_VERDEF);
-        M::set_offset(&mut self.gnu_verdef_offset, self.buffer.len());
+        let offset = self.write_align(ALIGN_GNU_VERDEF);
+        M::set_offset(&mut self.gnu_verdef_offset, offset);
         M::set_section_name(
             &mut self.gnu_verdef_str_id,
             &mut self.shstrtab,
             b".gnu.version_d",
         );
+        offset
     }
 
     /// Write a version definition entry.
@@ -1279,7 +1314,7 @@ impl<'a, M: Mode> Writer<'a, M> {
             sh_type: elf::SHT_GNU_VERDEF,
             sh_flags: elf::SHF_ALLOC,
             sh_addr,
-            sh_offset: self.gnu_verdef_offset as u64,
+            sh_offset: self.gnu_verdef_offset,
             sh_size,
             sh_link: self.dynstr_index.0,
             sh_info: self.gnu_verdef_count.into(),
@@ -1290,18 +1325,20 @@ impl<'a, M: Mode> Writer<'a, M> {
 
     /// Write alignment padding bytes prior to a `.gnu.version_r` section.
     ///
-    /// In two-phase mode, does nothing if the section was not reserved.
-    pub fn write_align_gnu_verneed(&mut self) {
+    /// Returns the file offset after the padding.
+    /// In two-phase mode, returns 0 without writing if the section was not reserved.
+    pub fn write_align_gnu_verneed(&mut self) -> u64 {
         if !M::need_offset(self.gnu_verneed_offset) {
-            return;
+            return 0;
         }
-        util::write_align(self.buffer, ALIGN_GNU_VERNEED);
-        M::set_offset(&mut self.gnu_verneed_offset, self.buffer.len());
+        let offset = self.write_align(ALIGN_GNU_VERNEED);
+        M::set_offset(&mut self.gnu_verneed_offset, offset);
         M::set_section_name(
             &mut self.gnu_verneed_str_id,
             &mut self.shstrtab,
             b".gnu.version_r",
         );
+        offset
     }
 
     /// Write a version need entry.
@@ -1374,7 +1411,7 @@ impl<'a, M: Mode> Writer<'a, M> {
             sh_type: elf::SHT_GNU_VERNEED,
             sh_flags: elf::SHF_ALLOC,
             sh_addr,
-            sh_offset: self.gnu_verneed_offset as u64,
+            sh_offset: self.gnu_verneed_offset,
             sh_size,
             sh_link: self.dynstr_index.0,
             sh_info: self.gnu_verneed_count.into(),
@@ -1396,8 +1433,8 @@ impl<'a, M: Mode> Writer<'a, M> {
             sh_type: elf::SHT_GNU_ATTRIBUTES,
             sh_flags: elf::SectionFlags(0),
             sh_addr: 0,
-            sh_offset: self.gnu_attributes_offset as u64,
-            sh_size: self.gnu_attributes_size as u64,
+            sh_offset: self.gnu_attributes_offset,
+            sh_size: self.gnu_attributes_size,
             sh_link: self.dynstr_index.0,
             sh_info: 0, // TODO
             sh_addralign: self.elf_align as u64,
@@ -1407,26 +1444,30 @@ impl<'a, M: Mode> Writer<'a, M> {
 
     /// Write the data for the `.gnu.attributes` section.
     ///
-    /// In two-phase mode, does nothing if the section was not reserved.
-    pub fn write_gnu_attributes(&mut self, data: &[u8]) {
+    /// Returns the file offset of the data.
+    /// In two-phase mode, returns 0 without writing if the section was not reserved.
+    pub fn write_gnu_attributes(&mut self, data: &[u8]) -> u64 {
         if !M::need_offset(self.gnu_attributes_offset) {
-            return;
+            return 0;
         }
-        util::write_align(self.buffer, self.elf_align);
-        M::set_offset(&mut self.gnu_attributes_offset, self.buffer.len());
+        let offset = self.write_align(self.elf_align);
+        M::set_offset(&mut self.gnu_attributes_offset, offset);
         M::set_section_name(
             &mut self.gnu_attributes_str_id,
             &mut self.shstrtab,
             b".gnu.attributes",
         );
         self.buffer.write_bytes(data);
-        let size = self.buffer.len() - self.gnu_attributes_offset;
+        let size = self.offset() - self.gnu_attributes_offset;
         M::set_size(&mut self.gnu_attributes_size, size);
+        offset
     }
 
     /// Write alignment padding bytes prior to a relocation section.
-    pub fn write_align_relocation(&mut self) {
-        util::write_align(self.buffer, self.elf_align);
+    ///
+    /// Returns the file offset after the padding.
+    pub fn write_align_relocation(&mut self) -> u64 {
+        self.write_align(self.elf_align)
     }
 
     /// Write a relocation.
@@ -1483,7 +1524,7 @@ impl<'a, M: Mode> Writer<'a, M> {
         name: StringId,
         section: SectionIndex,
         symtab: SectionIndex,
-        offset: usize,
+        offset: u64,
         count: usize,
         is_rela: bool,
     ) {
@@ -1492,7 +1533,7 @@ impl<'a, M: Mode> Writer<'a, M> {
             sh_type: if is_rela { elf::SHT_RELA } else { elf::SHT_REL },
             sh_flags: elf::SHF_INFO_LINK,
             sh_addr: 0,
-            sh_offset: offset as u64,
+            sh_offset: offset,
             sh_size: (count * self.class().rel_size(is_rela)) as u64,
             sh_link: symtab.0,
             sh_info: section.0,
@@ -1542,7 +1583,7 @@ impl<'a, M: Mode> Writer<'a, M> {
         name: StringId,
         symtab: SectionIndex,
         symbol: SymbolIndex,
-        offset: usize,
+        offset: u64,
         count: usize,
     ) {
         self.write_section_header(&SectionHeader {
@@ -1550,7 +1591,7 @@ impl<'a, M: Mode> Writer<'a, M> {
             sh_type: elf::SHT_GROUP,
             sh_flags: elf::SectionFlags(0),
             sh_addr: 0,
-            sh_offset: offset as u64,
+            sh_offset: offset,
             sh_size: ((count + 1) * 4) as u64,
             sh_link: symtab.0,
             sh_info: symbol.0,
@@ -1603,17 +1644,17 @@ impl ModeSealed for SinglePhase {
         Ok(())
     }
 
-    fn need_offset(offset: usize) -> bool {
+    fn need_offset(offset: u64) -> bool {
         debug_assert_eq!(offset, 0);
         true
     }
 
-    fn set_offset(dest: &mut usize, offset: usize) {
+    fn set_offset(dest: &mut u64, offset: u64) {
         debug_assert_eq!(*dest, 0);
         *dest = offset;
     }
 
-    fn set_size(dest: &mut usize, size: usize) {
+    fn set_size(dest: &mut u64, size: u64) {
         debug_assert_eq!(*dest, 0);
         *dest = size;
     }
@@ -1671,19 +1712,22 @@ impl<'a> Writer<'a, SinglePhase> {
     /// Use [`Self::write_headers_to`] to write the program headers once their contents
     /// are known.
     ///
-    /// Does nothing if `count` is zero.
-    pub fn write_program_headers_placeholder(&mut self, count: u32) {
+    /// Returns the file offset and size of the program headers.
+    /// Returns `(0, 0)` if `count` is zero.
+    pub fn write_program_headers_placeholder(&mut self, count: u32) -> (u64, u64) {
         if count == 0 {
-            return;
+            return (0, 0);
         }
-        debug_assert_eq!(self.buffer.len(), self.class().file_header_size());
         // file_header_size is always a multiple of elf_align, so no alignment
         // padding is required.
-        SinglePhase::set_offset(&mut self.layout.segment_offset, self.buffer.len());
+        let offset = self.offset();
+        debug_assert_eq!(offset, self.class().file_header_size() as u64);
+        SinglePhase::set_offset(&mut self.layout.segment_offset, offset);
         SinglePhase::set_count(&mut self.layout.segment_num, count);
         self.written_segment_num = count;
-        let new_len = self.buffer.len() + count as usize * self.class().program_header_size();
-        self.buffer.resize(new_len);
+        let size = count as usize * self.class().program_header_size();
+        self.buffer.resize(self.buffer.len() + size);
+        (offset, size as u64)
     }
 
     /// Write the file header and program headers to the given buffer.
@@ -1723,7 +1767,9 @@ impl<'a> Writer<'a, SinglePhase> {
     /// Write the section header string table.
     ///
     /// Always writes the string table, even if it is empty.
-    pub fn write_shstrtab(&mut self) -> Result<()> {
+    ///
+    /// Returns the file offset and size of the data.
+    pub fn write_shstrtab(&mut self) -> Result<(u64, u32)> {
         // This must be written before the .shstrtab section header, so
         // we can't use write_null_section_header to determine if it is needed.
         // Thus we always write this if called.
@@ -1732,44 +1778,47 @@ impl<'a> Writer<'a, SinglePhase> {
         // Start with null section name.
         let mut data = vec![0];
         self.shstrtab_size = self.shstrtab.write(1, &mut data)?;
-        self.shstrtab_offset = self.buffer.len();
+        self.shstrtab_offset = self.offset();
         self.write(&data);
-        Ok(())
+        Ok((self.shstrtab_offset, self.shstrtab_size))
     }
 
     /// Write the string table.
     ///
-    /// Only writes the string table if it is not empty, or if there is a symbol table.
-    pub fn write_strtab(&mut self) -> Result<()> {
+    /// Returns the file offset and size of the data.
+    /// Returns `(0, 0)` without writing anything if the string table is empty and
+    /// there is no symbol table.
+    pub fn write_strtab(&mut self) -> Result<(u64, u32)> {
         if !self.need_strtab && self.strtab.is_empty() {
-            return Ok(());
+            return Ok((0, 0));
         }
         debug_assert_eq!(self.strtab_offset, 0);
         self.strtab_str_id = Some(self.add_section_name(b".strtab"));
         // Start with null section name.
         let mut data = vec![0];
         self.strtab_size = self.strtab.write(1, &mut data)?;
-        self.strtab_offset = self.buffer.len();
+        self.strtab_offset = self.offset();
         self.write(&data);
-        Ok(())
+        Ok((self.strtab_offset, self.strtab_size))
     }
 
     /// Write the dynamic string table.
     ///
-    /// Only writes the string table if it is not empty, or if there is a dynamic symbol
-    /// table.
-    pub fn write_dynstr(&mut self) -> Result<()> {
+    /// Returns the file offset and size of the data.
+    /// Returns `(0, 0)` without writing anything if the string table is empty and
+    /// there is no dynamic symbol table.
+    pub fn write_dynstr(&mut self) -> Result<(u64, u32)> {
         if !self.need_dynstr && self.dynstr.is_empty() {
-            return Ok(());
+            return Ok((0, 0));
         }
         debug_assert_eq!(self.dynstr_offset, 0);
         self.dynstr_str_id = Some(self.add_section_name(b".dynstr"));
         // Start with null section name.
         let mut data = vec![0];
         self.dynstr_size = self.dynstr.write(1, &mut data)?;
-        self.dynstr_offset = self.buffer.len();
+        self.dynstr_offset = self.offset();
         self.write(&data);
-        Ok(())
+        Ok((self.dynstr_offset, self.dynstr_size))
     }
 
     /// Set the number of version definition entries that will be written.
@@ -1828,15 +1877,15 @@ impl ModeSealed for TwoPhase {
             .map_err(|_| Error(String::from("Cannot allocate buffer")))
     }
 
-    fn need_offset(offset: usize) -> bool {
+    fn need_offset(offset: u64) -> bool {
         offset != 0
     }
 
-    fn set_offset(dest: &mut usize, offset: usize) {
+    fn set_offset(dest: &mut u64, offset: u64) {
         debug_assert_eq!(*dest, offset);
     }
 
-    fn set_size(dest: &mut usize, size: usize) {
+    fn set_size(dest: &mut u64, size: u64) {
         debug_assert_eq!(*dest, size);
     }
 
@@ -1879,13 +1928,13 @@ impl<'a> Writer<'a, TwoPhase> {
     /// Returns the aligned offset of the start of the range.
     ///
     /// `align_start` must be a power of two.
-    pub fn reserve(&mut self, len: usize, align_start: usize) -> usize {
+    pub fn reserve(&mut self, len: usize, align_start: usize) -> u64 {
         if align_start > 1 {
             self.mode.len = util::align(self.mode.len, align_start);
         }
         let offset = self.mode.len;
         self.mode.len += len;
-        offset
+        offset as u64
     }
 
     /// Reserve the file range up to the given file offset.
@@ -1994,7 +2043,7 @@ impl<'a> Writer<'a, TwoPhase> {
         if self.shstrtab_offset == 0 {
             return;
         }
-        debug_assert_eq!(self.shstrtab_offset, self.buffer.len());
+        debug_assert_eq!(self.shstrtab_offset, self.offset());
         self.buffer.write_bytes(&self.mode.shstrtab_data);
     }
 
@@ -2055,7 +2104,7 @@ impl<'a> Writer<'a, TwoPhase> {
         if self.strtab_offset == 0 {
             return;
         }
-        debug_assert_eq!(self.strtab_offset, self.buffer.len());
+        debug_assert_eq!(self.strtab_offset, self.offset());
         self.buffer.write_bytes(&self.mode.strtab_data);
     }
 
@@ -2242,8 +2291,10 @@ impl<'a> Writer<'a, TwoPhase> {
     /// was called, or dynamic symbols or dynamic strings are present).
     /// Must be called after [`Self::add_dynamic_string`].
     ///
+    /// Returns the file offset of the data.
+    /// Returns 0 if the range was not reserved.
     /// Returns an error if the string table could not be finalized.
-    pub fn reserve_dynstr(&mut self) -> Result<usize> {
+    pub fn reserve_dynstr(&mut self) -> Result<u64> {
         debug_assert_eq!(self.dynstr_offset, 0);
         if !self.dynstr_needed() {
             return Ok(0);
@@ -2258,9 +2309,9 @@ impl<'a> Writer<'a, TwoPhase> {
     /// Return the size of the dynamic string table.
     ///
     /// Must be called after [`Self::reserve_dynstr`].
-    pub fn dynstr_len(&mut self) -> usize {
+    pub fn dynstr_len(&mut self) -> u32 {
         debug_assert_ne!(self.dynstr_offset, 0);
-        self.mode.dynstr_data.len()
+        self.dynstr_size
     }
 
     /// Write the dynamic string table.
@@ -2270,7 +2321,7 @@ impl<'a> Writer<'a, TwoPhase> {
         if self.dynstr_offset == 0 {
             return;
         }
-        debug_assert_eq!(self.dynstr_offset, self.buffer.len());
+        debug_assert_eq!(self.dynstr_offset, self.offset());
         self.buffer.write_bytes(&self.mode.dynstr_data);
     }
 
@@ -2348,9 +2399,11 @@ impl<'a> Writer<'a, TwoPhase> {
     ///
     /// This range is used for a section named `.dynsym`.
     ///
-    /// Does nothing if no dynamic symbols were reserved.
     /// Must be called after [`Self::reserve_dynamic_symbol_index`].
-    pub fn reserve_dynsym(&mut self) -> usize {
+    ///
+    /// Returns the file offset of the symbol table.
+    /// Returns 0 if no dynamic symbols were reserved.
+    pub fn reserve_dynsym(&mut self) -> u64 {
         debug_assert_eq!(self.dynsym_offset, 0);
         if self.dynsym_num == 0 {
             return 0;
@@ -2386,8 +2439,9 @@ impl<'a> Writer<'a, TwoPhase> {
 
     /// Reserve the range for the `.dynamic` section.
     ///
-    /// Does nothing if `dynamic_num` is zero.
-    pub fn reserve_dynamic(&mut self, dynamic_num: usize) -> usize {
+    /// Returns the file offset of the reserved range.
+    /// Returns 0 if `dynamic_num` is zero.
+    pub fn reserve_dynamic(&mut self, dynamic_num: usize) -> u64 {
         debug_assert_eq!(self.dynamic_offset, 0);
         if dynamic_num == 0 {
             return 0;
@@ -2399,7 +2453,7 @@ impl<'a> Writer<'a, TwoPhase> {
     /// Reserve a file range for the given number of dynamic entries.
     ///
     /// Returns the offset of the range.
-    pub fn reserve_dynamics(&mut self, dynamic_num: usize) -> usize {
+    pub fn reserve_dynamics(&mut self, dynamic_num: usize) -> u64 {
         self.dynamic_num += dynamic_num;
         self.reserve(dynamic_num * self.class().dyn_size(), self.elf_align)
     }
@@ -2417,9 +2471,10 @@ impl<'a> Writer<'a, TwoPhase> {
     ///
     /// `symbol_count` is the number of symbols in the hash,
     /// not the total number of symbols.
-    pub fn reserve_hash(&mut self, bucket_count: u32, chain_count: u32) -> usize {
-        self.hash_size = self.class().hash_size(bucket_count, chain_count);
-        self.hash_offset = self.reserve(self.hash_size, ALIGN_HASH);
+    pub fn reserve_hash(&mut self, bucket_count: u32, chain_count: u32) -> u64 {
+        let size = self.class().hash_size(bucket_count, chain_count);
+        self.hash_offset = self.reserve(size, ALIGN_HASH);
+        self.hash_size = size as u64;
         self.hash_offset
     }
 
@@ -2448,11 +2503,12 @@ impl<'a> Writer<'a, TwoPhase> {
         bloom_count: u32,
         bucket_count: u32,
         symbol_count: u32,
-    ) -> usize {
-        self.gnu_hash_size = self
+    ) -> u64 {
+        let size = self
             .class()
             .gnu_hash_size(bloom_count, bucket_count, symbol_count);
-        self.gnu_hash_offset = self.reserve(self.gnu_hash_size, self.elf_align);
+        self.gnu_hash_offset = self.reserve(size, self.elf_align);
+        self.gnu_hash_size = size as u64;
         self.gnu_hash_offset
     }
 
@@ -2474,8 +2530,9 @@ impl<'a> Writer<'a, TwoPhase> {
 
     /// Reserve the range for the `.gnu.version` section.
     ///
-    /// Does nothing if no dynamic symbols were reserved.
-    pub fn reserve_gnu_versym(&mut self) -> usize {
+    /// Returns the file offset of the reserved range.
+    /// Returns 0 if no dynamic symbols were reserved.
+    pub fn reserve_gnu_versym(&mut self) -> u64 {
         debug_assert_eq!(self.gnu_versym_offset, 0);
         if self.dynsym_num == 0 {
             return 0;
@@ -2502,8 +2559,9 @@ impl<'a> Writer<'a, TwoPhase> {
 
     /// Reserve the range for the `.gnu.version_d` section.
     ///
-    /// Does nothing if `verdef_count` is zero.
-    pub fn reserve_gnu_verdef(&mut self, verdef_count: usize, verdaux_count: usize) -> usize {
+    /// Returns the file offset of the reserved range.
+    /// Returns 0 if `verdef_count` is zero.
+    pub fn reserve_gnu_verdef(&mut self, verdef_count: usize, verdaux_count: usize) -> u64 {
         debug_assert_eq!(self.gnu_verdef_offset, 0);
         if verdef_count == 0 {
             return 0;
@@ -2534,8 +2592,9 @@ impl<'a> Writer<'a, TwoPhase> {
 
     /// Reserve the range for the `.gnu.version_r` section.
     ///
-    /// Does nothing if `verneed_count` is zero.
-    pub fn reserve_gnu_verneed(&mut self, verneed_count: usize, vernaux_count: usize) -> usize {
+    /// Returns the file offset of the reserved range.
+    /// Returns 0 if `verneed_count` is zero.
+    pub fn reserve_gnu_verneed(&mut self, verneed_count: usize, vernaux_count: usize) -> u64 {
         debug_assert_eq!(self.gnu_verneed_offset, 0);
         if verneed_count == 0 {
             return 0;
@@ -2585,21 +2644,22 @@ impl<'a> Writer<'a, TwoPhase> {
 
     /// Reserve the range for the `.gnu.attributes` section.
     ///
-    /// Does nothing if `gnu_attributes_size` is zero.
-    pub fn reserve_gnu_attributes(&mut self, gnu_attributes_size: usize) -> usize {
+    /// Returns the file offset of the reserved range.
+    /// Returns 0 if `gnu_attributes_size` is zero.
+    pub fn reserve_gnu_attributes(&mut self, gnu_attributes_size: usize) -> u64 {
         debug_assert_eq!(self.gnu_attributes_offset, 0);
         if gnu_attributes_size == 0 {
             return 0;
         }
-        self.gnu_attributes_size = gnu_attributes_size;
-        self.gnu_attributes_offset = self.reserve(self.gnu_attributes_size, self.elf_align);
+        self.gnu_attributes_size = gnu_attributes_size as u64;
+        self.gnu_attributes_offset = self.reserve(gnu_attributes_size, self.elf_align);
         self.gnu_attributes_offset
     }
 
     /// Reserve a file range for the given number of relocations.
     ///
     /// Returns the offset of the range.
-    pub fn reserve_relocations(&mut self, count: usize, is_rela: bool) -> usize {
+    pub fn reserve_relocations(&mut self, count: usize, is_rela: bool) -> u64 {
         self.reserve(count * self.class().rel_size(is_rela), self.elf_align)
     }
 
@@ -2608,7 +2668,7 @@ impl<'a> Writer<'a, TwoPhase> {
     /// `count` is the number of sections in the COMDAT group.
     ///
     /// Returns the offset of the range.
-    pub fn reserve_comdat(&mut self, count: usize) -> usize {
+    pub fn reserve_comdat(&mut self, count: usize) -> u64 {
         self.reserve((count + 1) * 4, 4)
     }
 }
@@ -2870,9 +2930,9 @@ pub struct FileHeader {
 
 #[derive(Debug, Clone, Default)]
 struct FileHeaderLayout {
-    segment_offset: usize,
+    segment_offset: u64,
     segment_num: u32,
-    section_offset: usize,
+    section_offset: u64,
     section_num: u32,
     shstrtab_index: SectionIndex,
 }

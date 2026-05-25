@@ -730,7 +730,7 @@ impl<'data> Builder<'data> {
         struct SectionOut {
             id: SectionId,
             name: Option<write::StringId>,
-            offset: usize,
+            offset: u64,
             attributes: Vec<u8>,
         }
 
@@ -1163,7 +1163,7 @@ impl<'data> Builder<'data> {
                 if section.sh_type == elf::SHT_NOBITS {
                     // sh_offset is meaningless for SHT_NOBITS, so preserve the input
                     // value without checking it.
-                    out_section.offset = section.sh_offset as usize;
+                    out_section.offset = section.sh_offset;
                     continue;
                 }
 
@@ -1227,7 +1227,7 @@ impl<'data> Builder<'data> {
                         )));
                     }
                 };
-                if out_section.offset as u64 != section.sh_offset {
+                if out_section.offset != section.sh_offset {
                     return Err(Error(format!(
                         "Unaligned sh_offset value 0x{:x} for section '{}', expected 0x{:x}",
                         section.sh_offset, section.name, out_section.offset,
@@ -1246,7 +1246,7 @@ impl<'data> Builder<'data> {
                 SectionData::Data(data) => {
                     writer.reserve(data.len(), section.sh_addralign as usize)
                 }
-                SectionData::UninitializedData(_) => writer.reserved_len(),
+                SectionData::UninitializedData(_) => writer.reserved_len() as u64,
                 SectionData::Note(data) => {
                     writer.reserve(data.len(), section.sh_addralign as usize)
                 }
@@ -1364,7 +1364,7 @@ impl<'data> Builder<'data> {
                                         elf::DT_STRTAB => dynstr_addr.ok_or(Error::new(
                                             "Missing .dynstr section for DT_STRTAB",
                                         ))?,
-                                        elf::DT_STRSZ => writer.dynstr_len() as u64,
+                                        elf::DT_STRSZ => writer.dynstr_len().into(),
                                         elf::DT_HASH => hash_addr.ok_or(Error::new(
                                             "Missing .hash section for DT_HASH",
                                         ))?,
@@ -1540,7 +1540,7 @@ impl<'data> Builder<'data> {
             match &section.data {
                 SectionData::Data(data) => {
                     writer.write_align(section.sh_addralign as usize);
-                    debug_assert_eq!(out_section.offset, writer.len());
+                    debug_assert_eq!(out_section.offset, writer.offset());
                     writer.write(data);
                 }
                 SectionData::UninitializedData(_) => {
@@ -1548,12 +1548,12 @@ impl<'data> Builder<'data> {
                 }
                 SectionData::Note(data) => {
                     writer.write_align(section.sh_addralign as usize);
-                    debug_assert_eq!(out_section.offset, writer.len());
+                    debug_assert_eq!(out_section.offset, writer.offset());
                     writer.write(data);
                 }
                 SectionData::Attributes(_) => {
                     writer.write_align(section.sh_addralign as usize);
-                    debug_assert_eq!(out_section.offset, writer.len());
+                    debug_assert_eq!(out_section.offset, writer.offset());
                     writer.write(&out_section.attributes);
                 }
                 // These are handled elsewhere.
@@ -1684,7 +1684,7 @@ impl<'data> Builder<'data> {
                         sh_type: section.sh_type,
                         sh_flags: section.sh_flags,
                         sh_addr: section.sh_addr,
-                        sh_offset: out_section.offset as u64,
+                        sh_offset: out_section.offset,
                         sh_size,
                         sh_link,
                         sh_info,
