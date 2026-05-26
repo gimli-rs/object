@@ -7,15 +7,17 @@ use crate::pod::{Pod, bytes_of, bytes_of_slice};
 /// Trait for writable buffer.
 #[allow(clippy::len_without_is_empty)]
 pub trait WritableBuffer {
-    /// Returns position/offset for data to be written at.
+    /// Returns the next offset that data will be written at.
     ///
-    /// Should only be used in debug assertions
+    /// This is called often, so implementors should track this value
+    /// themselves if determining the length is an expensive operation.
     fn len(&self) -> usize;
 
     /// Reserves specified number of bytes in the buffer.
     ///
-    /// This will be called exactly once before writing anything to the buffer,
-    /// and the given size is the exact total number of bytes that will be written.
+    /// If called, this will be called exactly once before any writes, and the given size
+    /// is the exact total number of bytes that will be written. Writers that target
+    /// [`GrowableBuffer`] may skip this call, but it is required for other writers.
     fn reserve(&mut self, size: usize) -> Result<(), ()>;
 
     /// Writes zero bytes at the end of the buffer until the buffer
@@ -42,6 +44,9 @@ pub trait WritableBuffer {
     }
 }
 
+// `write_pod`/`write_pod_slice` are generic, so they require `Self: Sized`
+// to keep the trait object-safe. That bound also excludes them from
+// `&mut dyn WritableBuffer` call sites, so provide them again here.
 impl<'a> dyn WritableBuffer + 'a {
     /// Writes the specified `Pod` type at the end of the buffer.
     pub fn write<T: Pod>(&mut self, val: &T) {
@@ -53,6 +58,26 @@ impl<'a> dyn WritableBuffer + 'a {
         self.write_bytes(bytes_of_slice(val))
     }
 }
+
+/// A [`WritableBuffer`] that can grow its capacity while writing.
+///
+/// [`WritableBuffer::reserve`] may still be called but this is not required.
+/// Writes will automatically increase the capacity of the buffer.
+pub trait GrowableBuffer: WritableBuffer {}
+
+impl<'a> dyn GrowableBuffer + 'a {
+    /// Writes the specified `Pod` type at the end of the buffer.
+    pub fn write<T: Pod>(&mut self, val: &T) {
+        self.write_bytes(bytes_of(val))
+    }
+
+    /// Writes the specified `Pod` slice at the end of the buffer.
+    pub fn write_slice<T: Pod>(&mut self, val: &[T]) {
+        self.write_bytes(bytes_of_slice(val))
+    }
+}
+
+impl GrowableBuffer for Vec<u8> {}
 
 impl WritableBuffer for Vec<u8> {
     #[inline]
@@ -75,7 +100,6 @@ impl WritableBuffer for Vec<u8> {
 
     #[inline]
     fn write_bytes(&mut self, val: &[u8]) {
-        debug_assert!(self.len() + val.len() <= self.capacity());
         self.extend_from_slice(val)
     }
 }
@@ -127,6 +151,9 @@ impl<W: io::Write> StreamingBuffer<W> {
 }
 
 #[cfg(feature = "std")]
+impl<W: io::Write> GrowableBuffer for StreamingBuffer<W> {}
+
+#[cfg(feature = "std")]
 impl<W: io::Write> WritableBuffer for StreamingBuffer<W> {
     #[inline]
     fn len(&self) -> usize {
@@ -142,7 +169,7 @@ impl<W: io::Write> WritableBuffer for StreamingBuffer<W> {
     fn resize(&mut self, new_len: usize) {
         debug_assert!(self.len <= new_len);
         while self.len < new_len {
-            let write_amt = (new_len - self.len - 1) % 1024 + 1;
+            let write_amt = (new_len - self.len).min(1024);
             self.write_bytes(&[0; 1024][..write_amt]);
         }
     }
@@ -152,6 +179,8 @@ impl<W: io::Write> WritableBuffer for StreamingBuffer<W> {
         if self.result.is_ok() {
             self.result = self.writer.write_all(val);
         }
+        // Callers depend on `len` being equal to the total requested writes,
+        // even if those writes failed.
         self.len += val.len();
     }
 }
