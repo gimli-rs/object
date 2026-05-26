@@ -63,7 +63,12 @@ impl<'a> dyn WritableBuffer + 'a {
 ///
 /// [`WritableBuffer::reserve`] may still be called but this is not required.
 /// Writes will automatically increase the capacity of the buffer.
-pub trait GrowableBuffer: WritableBuffer {}
+pub trait GrowableBuffer: WritableBuffer {
+    /// Upcast to a [`WritableBuffer`] trait object.
+    //
+    // Manual upcast because trait upcasting coercion requires MSRV 1.86.
+    fn as_writable(&mut self) -> &mut dyn WritableBuffer;
+}
 
 impl<'a> dyn GrowableBuffer + 'a {
     /// Writes the specified `Pod` type at the end of the buffer.
@@ -77,7 +82,11 @@ impl<'a> dyn GrowableBuffer + 'a {
     }
 }
 
-impl GrowableBuffer for Vec<u8> {}
+impl GrowableBuffer for Vec<u8> {
+    fn as_writable(&mut self) -> &mut dyn WritableBuffer {
+        self
+    }
+}
 
 impl WritableBuffer for Vec<u8> {
     #[inline]
@@ -151,7 +160,11 @@ impl<W: io::Write> StreamingBuffer<W> {
 }
 
 #[cfg(feature = "std")]
-impl<W: io::Write> GrowableBuffer for StreamingBuffer<W> {}
+impl<W: io::Write> GrowableBuffer for StreamingBuffer<W> {
+    fn as_writable(&mut self) -> &mut dyn WritableBuffer {
+        self
+    }
+}
 
 #[cfg(feature = "std")]
 impl<W: io::Write> WritableBuffer for StreamingBuffer<W> {
