@@ -99,6 +99,17 @@ impl<'a> StringTable<'a> {
         self.offsets[id.0]
     }
 
+    /// Return the offset of an optional string.
+    ///
+    /// Returns 0 if `id` is `None`. Otherwise see [`Self::get_offset`].
+    #[allow(dead_code)]
+    pub(crate) fn maybe_get_offset(&self, id: Option<StringId>) -> u32 {
+        let Some(id) = id else {
+            return 0;
+        };
+        self.get_offset(id)
+    }
+
     /// Append the string table to the given `Vec`, and
     /// calculate the list of string offsets.
     ///
