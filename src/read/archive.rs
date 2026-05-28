@@ -27,7 +27,6 @@ use crate::endian::{BigEndian as BE, LittleEndian as LE, U16, U32, U64};
 use crate::read::{self, Bytes, Error, ReadError, ReadRef};
 use crate::{SkipDebugList, archive};
 use alloc::vec::Vec;
-use ebcdic::ebcdic::Ebcdic;
 
 /// The kind of archive format.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -208,44 +207,6 @@ impl<'data, R: ReadRef<'data>> ArchiveFile<'data, R> {
         };
         Ok(file)
     }
-    /// Parse the z/OS archive header and special .__SYMDEF member.
-    fn parse_zos(data: R) -> read::Result<Self> {
-        let len = data.len().read_error("Unknown archive length")?;
-        let mut tail = 0;
-        let magic = data
-            .read_bytes(&mut tail, archive::MAGIC.len() as u64)
-            .read_error("Invalid z/OS archive size")?;
-        debug_assert_eq!(magic, archive::ZOS_MAGIC);
-
-        let mut file = ArchiveFile {
-            data: SkipDebugList(data),
-            kind: ArchiveKind::Zos,
-            members: Members::Zos {
-                offset: 0,
-                end_offset: 0,
-            },
-            symbols: (0, 0),
-            names: &[],
-            thin: false,
-        };
-
-        let mut members_offset = tail;
-        let members_end_offset = len;
-
-        if tail < len {
-            let member = ArchiveMember::parse_zos(data, &mut tail)?;
-            if member.name() == b"__.SYMDEF" {
-                // Ignore initial symbol table member
-                members_offset = tail;
-            }
-        }
-        file.members = Members::Zos {
-            offset: members_offset,
-            end_offset: members_end_offset,
-        };
-        Ok(file)
-    }
-
     fn parse_aixbig(data: R) -> read::Result<Self> {
         let mut tail = 0;
 
@@ -313,6 +274,44 @@ impl<'data, R: ReadRef<'data>> ArchiveFile<'data, R> {
 
         Ok(file)
     }
+    /// Parse the z/OS archive header and special .__SYMDEF member.
+    fn parse_zos(data: R) -> read::Result<Self> {
+        let len = data.len().read_error("Unknown archive length")?;
+        let mut tail = 0;
+        let magic = data
+            .read_bytes(&mut tail, archive::MAGIC.len() as u64)
+            .read_error("Invalid z/OS archive size")?;
+        debug_assert_eq!(magic, archive::ZOS_MAGIC);
+
+        let mut file = ArchiveFile {
+            data: SkipDebugList(data),
+            kind: ArchiveKind::Zos,
+            members: Members::Zos {
+                offset: 0,
+                end_offset: 0,
+            },
+            symbols: (0, 0),
+            names: &[],
+            thin: false,
+        };
+
+        let mut members_offset = tail;
+        let members_end_offset = len;
+
+        if tail < len {
+            let member = ArchiveMember::parse_zos(data, &mut tail)?;
+            if member.name() == b"__.SYMDEF" {
+                // Ignore initial symbol table member
+                members_offset = tail;
+            }
+        }
+        file.members = Members::Zos {
+            offset: members_offset,
+            end_offset: members_end_offset,
+        };
+        Ok(file)
+    }
+
 
     /// Return the archive format.
     #[inline]
@@ -456,34 +455,33 @@ impl<'data> ArchiveMember<'data> {
         let eheader = data
             .read::<archive::Header>(offset)
             .read_error("Invalid z/OS archive member header")?;
-        const EBCDIC_TERMINATOR: [u8; 2] = *b"y\x15"; // "'\n" in EBCDOC
+        const EBCDIC_TERMINATOR: [u8; 2] = *b"y\x15"; // "'\n" in EBCDIC
         if eheader.terminator != EBCDIC_TERMINATOR {
             return Err(Error("Invalid z/OS archive header terminator"));
         }
-        let mut header = *eheader;
-        Ebcdic::ebcdic_to_ascii(&eheader.name, &mut header.name, 16, false, true);
 
+        // Parse file size from EBCDIC digits
         let header_file_size = zos_parse_u64_ebcdic_digits(&eheader.size, 10)
             .read_error("Invalid archive member size")?;
         let mut file_offset = *offset;
         let mut file_size = header_file_size;
 
-        let mut tmp_nvec;
-        let name = if &header.name[..3] == b"#1/" && (header.name[3] as char).is_ascii_digit() {
-            // Read member name from the start of the file data
-            let ename =
-                parse_bsd_extended_name(&header.name[3..], data, &mut file_offset, &mut file_size)
-                    .read_error("Invalid archive extended name length")?;
-            // Convert member name to ASCII.
-            tmp_nvec = ename.to_vec();
-            Ebcdic::ebcdic_to_ascii(ename, &mut tmp_nvec, ename.len(), false, true);
-            &tmp_nvec
+        // Keep the raw EBCDIC name - don't convert to ASCII
+        // Name is terminated by EBCDIC space (0x40)
+        let name_len = memchr::memchr(0x40, &eheader.name).unwrap_or(eheader.name.len());
+        let name = &eheader.name[..name_len];
+        
+        // Check for BSD-style extended name (would be in EBCDIC)
+        // Note: This is unlikely for z/OS archives, but we handle it for completeness
+        let nvec = if name.len() >= 3 && name[0] == 0x7C && name[1] == 0xF1 && name[2] == 0x61 {
+            // Starts with "#1/" in EBCDIC (0x7C 0xF1 0x61)
+            // Read extended name from file data
+            let ename = parse_bsd_extended_name(&name[3..], data, &mut file_offset, &mut file_size)
+                .read_error("Invalid archive extended name length")?;
+            ename.to_vec()
         } else {
-            // Name is terminated by space.
-            let name_len = memchr::memchr(b' ', &header.name).unwrap_or(header.name.len());
-            &header.name[..name_len]
+            name.to_vec()
         };
-        let nvec = name.to_vec();
 
         // Skip the file data.
         *offset = offset
@@ -495,11 +493,11 @@ impl<'data> ArchiveMember<'data> {
         }
 
         Ok(ArchiveMember {
-            header: MemberHeader::Zos(eheader), // Note: is EBCDIC not ASCII.
+            header: MemberHeader::Zos(eheader),
             name: &[],
             offset: file_offset,
             size: file_size,
-            vname: Some(nvec),
+            vname: Some(nvec), // Raw EBCDIC bytes
         })
     }
 
@@ -995,10 +993,27 @@ fn parse_u64_digits(digits: &[u8], radix: u32) -> Option<u64> {
     }
     Some(result)
 }
-fn zos_parse_u64_ebcdic_digits(edigits: &[u8], radix: u32) -> Option<u64> {
-    let mut adigits: [u8; 20] = [0u8; 20];
-    Ebcdic::ebcdic_to_ascii(edigits, &mut adigits, edigits.len(), false, true);
-    parse_u64_digits(&adigits[0..edigits.len() - 1], radix)
+/// Parse EBCDIC-encoded numeric digits.
+/// EBCDIC digits: 0xF0='0', 0xF1='1', ..., 0xF9='9'
+/// EBCDIC space: 0x40
+fn zos_parse_u64_ebcdic_digits(digits: &[u8], radix: u32) -> Option<u64> {
+    let mut result: u64 = 0;
+    for &byte in digits {
+        if byte == 0x40 {
+            // EBCDIC space - skip it
+            continue;
+        }
+        if byte >= 0xF0 && byte <= 0xF9 {
+            // EBCDIC digit 0-9
+            let digit = (byte - 0xF0) as u64;
+            result = result.checked_mul(radix as u64)?;
+            result = result.checked_add(digit)?;
+        } else {
+            // Not a valid EBCDIC digit or space
+            break;
+        }
+    }
+    Some(result)
 }
 
 /// Digits are a decimal offset into the extended name table.
@@ -1312,11 +1327,14 @@ mod tests {
         let mut members = archive.members();
 
         let member = members.next().unwrap().unwrap();
-        assert_eq!(member.name(), b"test1.o");
+        // Names are returned in raw EBCDIC encoding
+        // "test1.o" in EBCDIC = \xA3\x85\xA2\xA3\xF1\x4B\x96
+        assert_eq!(member.name(), b"\xA3\x85\xA2\xA3\xF1\x4B\x96");
         assert_eq!(member.data(data).unwrap(), &b"first\0"[..]);
 
         let member = members.next().unwrap().unwrap();
-        assert_eq!(member.name(), b"test2.o");
+        // "test2.o" in EBCDIC = \xA3\x85\xA2\xA3\xF2\x4B\x96
+        assert_eq!(member.name(), b"\xA3\x85\xA2\xA3\xF2\x4B\x96");
         assert_eq!(member.data(data).unwrap(), &b"second\0"[..]);
 
         assert!(members.next().is_none());
