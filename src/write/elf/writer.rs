@@ -1566,16 +1566,8 @@ impl<'a> Writer<'a, TwoPhase> {
     /// Must be called before [`Self::reserve_shstrtab`]
     /// and [`Self::reserve_section_headers`].
     pub fn reserve_shstrtab_section_index(&mut self) -> SectionIndex {
-        self.reserve_shstrtab_section_index_with_name(&b".shstrtab"[..])
-    }
-
-    /// Reserve the section index for the section header string table.
-    ///
-    /// Must be called before [`Self::reserve_shstrtab`]
-    /// and [`Self::reserve_section_headers`].
-    pub fn reserve_shstrtab_section_index_with_name(&mut self, name: &'a [u8]) -> SectionIndex {
         debug_assert_eq!(self.layout.shstrtab_index, 0);
-        self.shstrtab_str_id = Some(self.add_section_name(name));
+        self.shstrtab_str_id = Some(self.add_section_name(b".shstrtab"));
         self.layout.shstrtab_index = self.reserve_section_index().0;
         SectionIndex(self.layout.shstrtab_index)
     }
@@ -1629,18 +1621,8 @@ impl<'a> Writer<'a, TwoPhase> {
     ///
     /// Must be called before [`Self::reserve_section_headers`].
     pub fn reserve_strtab_section_index(&mut self) -> SectionIndex {
-        self.reserve_strtab_section_index_with_name(&b".strtab"[..])
-    }
-
-    /// Reserve the section index for the string table.
-    ///
-    /// You should check [`Self::strtab_needed`] before calling this
-    /// unless you have other means of knowing if this section is needed.
-    ///
-    /// Must be called before [`Self::reserve_section_headers`].
-    pub fn reserve_strtab_section_index_with_name(&mut self, name: &'a [u8]) -> SectionIndex {
         debug_assert_eq!(self.strtab_index, SectionIndex(0));
-        self.strtab_str_id = Some(self.add_section_name(name));
+        self.strtab_str_id = Some(self.add_section_name(b".strtab"));
         self.strtab_index = self.reserve_section_index();
         self.strtab_index
     }
@@ -1720,15 +1702,8 @@ impl<'a> Writer<'a, TwoPhase> {
     ///
     /// Must be called before [`Self::reserve_section_headers`].
     pub fn reserve_symtab_section_index(&mut self) -> SectionIndex {
-        self.reserve_symtab_section_index_with_name(&b".symtab"[..])
-    }
-
-    /// Reserve the section index for the symbol table.
-    ///
-    /// Must be called before [`Self::reserve_section_headers`].
-    pub fn reserve_symtab_section_index_with_name(&mut self, name: &'a [u8]) -> SectionIndex {
         debug_assert_eq!(self.symtab_index, SectionIndex(0));
-        self.symtab_str_id = Some(self.add_section_name(name));
+        self.symtab_str_id = Some(self.add_section_name(b".symtab"));
         self.symtab_index = self.reserve_section_index();
         self.symtab_index
     }
@@ -1773,18 +1748,8 @@ impl<'a> Writer<'a, TwoPhase> {
     ///
     /// Must be called before [`Self::reserve_section_headers`].
     pub fn reserve_symtab_shndx_section_index(&mut self) -> SectionIndex {
-        self.reserve_symtab_shndx_section_index_with_name(&b".symtab_shndx"[..])
-    }
-
-    /// Reserve the section index for the extended section indices symbol table.
-    ///
-    /// You should check [`Self::symtab_shndx_needed`] before calling this
-    /// unless you have other means of knowing if this section is needed.
-    ///
-    /// Must be called before [`Self::reserve_section_headers`].
-    pub fn reserve_symtab_shndx_section_index_with_name(&mut self, name: &'a [u8]) -> SectionIndex {
         debug_assert!(self.symtab_shndx_str_id.is_none());
-        self.symtab_shndx_str_id = Some(self.add_section_name(name));
+        self.symtab_shndx_str_id = Some(self.add_section_name(b".symtab_shndx"));
         self.reserve_section_index()
     }
 
@@ -1847,18 +1812,8 @@ impl<'a> Writer<'a, TwoPhase> {
     ///
     /// Must be called before [`Self::reserve_section_headers`].
     pub fn reserve_dynstr_section_index(&mut self) -> SectionIndex {
-        self.reserve_dynstr_section_index_with_name(&b".dynstr"[..])
-    }
-
-    /// Reserve the section index for the dynamic string table.
-    ///
-    /// You should check [`Self::dynstr_needed`] before calling this
-    /// unless you have other means of knowing if this section is needed.
-    ///
-    /// Must be called before [`Self::reserve_section_headers`].
-    pub fn reserve_dynstr_section_index_with_name(&mut self, name: &'a [u8]) -> SectionIndex {
         debug_assert_eq!(self.dynstr_index, SectionIndex(0));
-        self.dynstr_str_id = Some(self.add_section_name(name));
+        self.dynstr_str_id = Some(self.add_section_name(b".dynstr"));
         self.dynstr_index = self.reserve_section_index();
         self.dynstr_index
     }
@@ -1934,15 +1889,8 @@ impl<'a> Writer<'a, TwoPhase> {
     ///
     /// Must be called before [`Self::reserve_section_headers`].
     pub fn reserve_dynsym_section_index(&mut self) -> SectionIndex {
-        self.reserve_dynsym_section_index_with_name(&b".dynsym"[..])
-    }
-
-    /// Reserve the section index for the dynamic symbol table.
-    ///
-    /// Must be called before [`Self::reserve_section_headers`].
-    pub fn reserve_dynsym_section_index_with_name(&mut self, name: &'a [u8]) -> SectionIndex {
         debug_assert_eq!(self.dynsym_index, SectionIndex(0));
-        self.dynsym_str_id = Some(self.add_section_name(name));
+        self.dynsym_str_id = Some(self.add_section_name(b".dynsym"));
         self.dynsym_index = self.reserve_section_index();
         self.dynsym_index
     }
@@ -1961,19 +1909,12 @@ impl<'a> Writer<'a, TwoPhase> {
         if dynamic_num == 0 {
             return 0;
         }
-        self.dynamic_offset = self.reserve_dynamics(dynamic_num);
-        self.dynamic_offset
-    }
-
-    /// Reserve a file range for the given number of dynamic entries.
-    ///
-    /// Returns the offset of the range.
-    pub fn reserve_dynamics(&mut self, dynamic_num: usize) -> u64 {
-        self.dynamic_num += dynamic_num;
-        self.reserve(
+        self.dynamic_num = dynamic_num;
+        self.dynamic_offset = self.reserve(
             dynamic_num * self.encoder.dyn_size(),
             self.encoder.address_size().into(),
-        )
+        );
+        self.dynamic_offset
     }
 
     /// Reserve the section index for the dynamic table.
@@ -2000,15 +1941,8 @@ impl<'a> Writer<'a, TwoPhase> {
     ///
     /// Must be called before [`Self::reserve_section_headers`].
     pub fn reserve_hash_section_index(&mut self) -> SectionIndex {
-        self.reserve_hash_section_index_with_name(&b".hash"[..])
-    }
-
-    /// Reserve the section index for the SysV hash table.
-    ///
-    /// Must be called before [`Self::reserve_section_headers`].
-    pub fn reserve_hash_section_index_with_name(&mut self, name: &'a [u8]) -> SectionIndex {
         debug_assert!(self.hash_str_id.is_none());
-        self.hash_str_id = Some(self.add_section_name(name));
+        self.hash_str_id = Some(self.add_section_name(b".hash"));
         self.reserve_section_index()
     }
 
@@ -2034,15 +1968,8 @@ impl<'a> Writer<'a, TwoPhase> {
     ///
     /// Must be called before [`Self::reserve_section_headers`].
     pub fn reserve_gnu_hash_section_index(&mut self) -> SectionIndex {
-        self.reserve_gnu_hash_section_index_with_name(&b".gnu.hash"[..])
-    }
-
-    /// Reserve the section index for the GNU hash table.
-    ///
-    /// Must be called before [`Self::reserve_section_headers`].
-    pub fn reserve_gnu_hash_section_index_with_name(&mut self, name: &'a [u8]) -> SectionIndex {
         debug_assert!(self.gnu_hash_str_id.is_none());
-        self.gnu_hash_str_id = Some(self.add_section_name(name));
+        self.gnu_hash_str_id = Some(self.add_section_name(b".gnu.hash"));
         self.reserve_section_index()
     }
 
@@ -2064,15 +1991,8 @@ impl<'a> Writer<'a, TwoPhase> {
     ///
     /// Must be called before [`Self::reserve_section_headers`].
     pub fn reserve_gnu_versym_section_index(&mut self) -> SectionIndex {
-        self.reserve_gnu_versym_section_index_with_name(&b".gnu.version"[..])
-    }
-
-    /// Reserve the section index for the `.gnu.version` section.
-    ///
-    /// Must be called before [`Self::reserve_section_headers`].
-    pub fn reserve_gnu_versym_section_index_with_name(&mut self, name: &'a [u8]) -> SectionIndex {
         debug_assert!(self.gnu_versym_str_id.is_none());
-        self.gnu_versym_str_id = Some(self.add_section_name(name));
+        self.gnu_versym_str_id = Some(self.add_section_name(b".gnu.version"));
         self.reserve_section_index()
     }
 
@@ -2097,15 +2017,8 @@ impl<'a> Writer<'a, TwoPhase> {
     ///
     /// Must be called before [`Self::reserve_section_headers`].
     pub fn reserve_gnu_verdef_section_index(&mut self) -> SectionIndex {
-        self.reserve_gnu_verdef_section_index_with_name(&b".gnu.version_d"[..])
-    }
-
-    /// Reserve the section index for the `.gnu.version_d` section.
-    ///
-    /// Must be called before [`Self::reserve_section_headers`].
-    pub fn reserve_gnu_verdef_section_index_with_name(&mut self, name: &'a [u8]) -> SectionIndex {
         debug_assert!(self.gnu_verdef_str_id.is_none());
-        self.gnu_verdef_str_id = Some(self.add_section_name(name));
+        self.gnu_verdef_str_id = Some(self.add_section_name(b".gnu.version_d"));
         self.reserve_section_index()
     }
 
@@ -2130,15 +2043,8 @@ impl<'a> Writer<'a, TwoPhase> {
     ///
     /// Must be called before [`Self::reserve_section_headers`].
     pub fn reserve_gnu_verneed_section_index(&mut self) -> SectionIndex {
-        self.reserve_gnu_verneed_section_index_with_name(&b".gnu.version_r"[..])
-    }
-
-    /// Reserve the section index for the `.gnu.version_r` section.
-    ///
-    /// Must be called before [`Self::reserve_section_headers`].
-    pub fn reserve_gnu_verneed_section_index_with_name(&mut self, name: &'a [u8]) -> SectionIndex {
         debug_assert!(self.gnu_verneed_str_id.is_none());
-        self.gnu_verneed_str_id = Some(self.add_section_name(name));
+        self.gnu_verneed_str_id = Some(self.add_section_name(b".gnu.version_r"));
         self.reserve_section_index()
     }
 
@@ -2146,18 +2052,8 @@ impl<'a> Writer<'a, TwoPhase> {
     ///
     /// Must be called before [`Self::reserve_section_headers`].
     pub fn reserve_gnu_attributes_section_index(&mut self) -> SectionIndex {
-        self.reserve_gnu_attributes_section_index_with_name(&b".gnu.attributes"[..])
-    }
-
-    /// Reserve the section index for the `.gnu.attributes` section.
-    ///
-    /// Must be called before [`Self::reserve_section_headers`].
-    pub fn reserve_gnu_attributes_section_index_with_name(
-        &mut self,
-        name: &'a [u8],
-    ) -> SectionIndex {
         debug_assert!(self.gnu_attributes_str_id.is_none());
-        self.gnu_attributes_str_id = Some(self.add_section_name(name));
+        self.gnu_attributes_str_id = Some(self.add_section_name(b".gnu.attributes"));
         self.reserve_section_index()
     }
 
