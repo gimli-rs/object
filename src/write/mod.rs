@@ -42,8 +42,8 @@ pub mod pe;
 #[cfg(feature = "xcoff")]
 mod xcoff;
 
-pub(crate) mod string;
-pub use string::StringId;
+mod string;
+pub use string::*;
 
 mod util;
 pub use util::*;

@@ -790,7 +790,7 @@ impl<'data> Builder<'data> {
         if !self.sections.is_empty() {
             section_num = 1;
         }
-        let mut shstrtab = write::string::StringTable::new();
+        let mut shstrtab = write::StringTable::new();
         for section in &self.sections {
             let index = section_num;
             out_sections_index[section.id.0] = index;
@@ -887,7 +887,7 @@ impl<'data> Builder<'data> {
         }
 
         // Add dynamic strings to string table.
-        let mut dynstr = write::string::StringTable::new();
+        let mut dynstr = write::StringTable::new();
         for section in &self.sections {
             if let SectionData::Dynamic(dynamics) = &section.data {
                 for dynamic in dynamics {
@@ -982,7 +982,7 @@ impl<'data> Builder<'data> {
 
         // Assign symbol indices and add names to string table.
         let mut out_syms = Vec::with_capacity(self.symbols.len());
-        let mut strtab = write::string::StringTable::new();
+        let mut strtab = write::StringTable::new();
         let mut need_symtab_shndx = symtab_shndx_index != 0;
         // Local symbols must come before global.
         let local_symbols = self
@@ -1992,7 +1992,7 @@ impl<'data> Builder<'data> {
     /// To get an accurate result, you may need to first call
     /// [`Self::delete_orphan_symbols`] and [`Self::delete_unused_versions`].
     pub fn dynamic_string_size(&self) -> usize {
-        let mut dynstr = write::string::StringTable::default();
+        let mut dynstr = write::StringTable::default();
         for section in &self.sections {
             if let SectionData::Dynamic(dynamics) = &section.data {
                 for dynamic in dynamics {
