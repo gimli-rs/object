@@ -448,59 +448,6 @@ pub struct ArchiveMember<'data> {
 }
 
 impl<'data> ArchiveMember<'data> {
-    /// Parse the member header, name, and file data in an archive with the Zos format.
-    ///
-    /// This reads the extended name (if any) and adjusts the file size.
-    fn parse_zos<R: ReadRef<'data>>(data: R, offset: &mut u64) -> read::Result<Self> {
-        let eheader = data
-            .read::<archive::Header>(offset)
-            .read_error("Invalid z/OS archive member header")?;
-        const EBCDIC_TERMINATOR: [u8; 2] = *b"y\x15"; // "'\n" in EBCDIC
-        if eheader.terminator != EBCDIC_TERMINATOR {
-            return Err(Error("Invalid z/OS archive header terminator"));
-        }
-
-        // Parse file size from EBCDIC digits
-        let header_file_size = zos_parse_u64_ebcdic_digits(&eheader.size, 10)
-            .read_error("Invalid archive member size")?;
-        let mut file_offset = *offset;
-        let mut file_size = header_file_size;
-
-        // Keep the raw EBCDIC name - don't convert to ASCII
-        // Name is terminated by EBCDIC space (0x40)
-        let name_len = memchr::memchr(0x40, &eheader.name).unwrap_or(eheader.name.len());
-        let name = &eheader.name[..name_len];
-        
-        // Check for BSD-style extended name (would be in EBCDIC)
-        // Note: This is unlikely for z/OS archives, but we handle it for completeness
-        let nvec = if name.len() >= 3 && name[0] == 0x7C && name[1] == 0xF1 && name[2] == 0x61 {
-            // Starts with "#1/" in EBCDIC (0x7C 0xF1 0x61)
-            // Read extended name from file data
-            let ename = parse_bsd_extended_name(&name[3..], data, &mut file_offset, &mut file_size)
-                .read_error("Invalid archive extended name length")?;
-            ename.to_vec()
-        } else {
-            name.to_vec()
-        };
-
-        // Skip the file data.
-        *offset = offset
-            .checked_add(header_file_size)
-            .read_error("Archive member size is too large")?;
-        // Entries are padded to an even number of bytes.
-        if (header_file_size & 1) != 0 {
-            *offset = offset.saturating_add(1);
-        }
-
-        Ok(ArchiveMember {
-            header: MemberHeader::Zos(eheader),
-            name: &[],
-            offset: file_offset,
-            size: file_size,
-            vname: Some(nvec), // Raw EBCDIC bytes
-        })
-    }
-
     /// Parse the member header, name, and file data in an archive with the common format.
     ///
     /// This reads the extended name (if any) and adjusts the file size.
@@ -569,6 +516,59 @@ impl<'data> ArchiveMember<'data> {
             offset: file_offset,
             size: file_size,
             vname: None,
+        })
+    }
+
+    /// Parse the member header, name, and file data in an archive with the Zos format.
+    ///
+    /// This reads the extended name (if any) and adjusts the file size.
+    fn parse_zos<R: ReadRef<'data>>(data: R, offset: &mut u64) -> read::Result<Self> {
+        let eheader = data
+            .read::<archive::Header>(offset)
+            .read_error("Invalid z/OS archive member header")?;
+        const EBCDIC_TERMINATOR: [u8; 2] = *b"y\x15"; // "'\n" in EBCDIC
+        if eheader.terminator != EBCDIC_TERMINATOR {
+            return Err(Error("Invalid z/OS archive header terminator"));
+        }
+
+        // Parse file size from EBCDIC digits
+        let header_file_size = zos_parse_u64_ebcdic_digits(&eheader.size, 10)
+            .read_error("Invalid archive member size")?;
+        let mut file_offset = *offset;
+        let mut file_size = header_file_size;
+
+        // Keep the raw EBCDIC name - don't convert to ASCII
+        // Name is terminated by EBCDIC space (0x40)
+        let name_len = memchr::memchr(0x40, &eheader.name).unwrap_or(eheader.name.len());
+        let name = &eheader.name[..name_len];
+        
+        // Check for BSD-style extended name (would be in EBCDIC)
+        // Note: This is unlikely for z/OS archives, but we handle it for completeness
+        let nvec = if name.len() >= 3 && name[0] == 0x7C && name[1] == 0xF1 && name[2] == 0x61 {
+            // Starts with "#1/" in EBCDIC (0x7C 0xF1 0x61)
+            // Read extended name from file data
+            let ename = parse_bsd_extended_name(&name[3..], data, &mut file_offset, &mut file_size)
+                .read_error("Invalid archive extended name length")?;
+            ename.to_vec()
+        } else {
+            name.to_vec()
+        };
+
+        // Skip the file data.
+        *offset = offset
+            .checked_add(header_file_size)
+            .read_error("Archive member size is too large")?;
+        // Entries are padded to an even number of bytes.
+        if (header_file_size & 1) != 0 {
+            *offset = offset.saturating_add(1);
+        }
+
+        Ok(ArchiveMember {
+            header: MemberHeader::Zos(eheader),
+            name: &[],
+            offset: file_offset,
+            size: file_size,
+            vname: Some(nvec), // Raw EBCDIC bytes
         })
     }
 
