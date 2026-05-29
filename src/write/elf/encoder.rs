@@ -1,11 +1,13 @@
 use alloc::string::String;
+use alloc::vec::Vec;
 use core::mem;
 
 use crate::Wrap;
 use crate::elf;
 use crate::endian::*;
+use crate::pod;
 use crate::write::util::{write_align, write_pod, write_pod_slice};
-use crate::write::{Error, Result, WritableBuffer};
+use crate::write::{self, Error, Result, WritableBuffer};
 
 /// Alignment for .symtab_shndx.
 pub const ALIGN_SYMTAB_SHNDX: u8 = 4;
@@ -1129,5 +1131,130 @@ impl<E: Endian> Encoder<E> {
             vna_next: U32::new(self.endian, vna_next),
         };
         write_pod(buffer, data);
+    }
+}
+
+/// A helper for writing an attributes section.
+///
+/// Attributes have a variable length encoding, so it is awkward to write them in a
+/// single pass. Instead, we build the entire attributes section data in memory, using
+/// placeholders for unknown lengths that are filled in later.
+#[allow(missing_debug_implementations)]
+pub struct AttributesWriter {
+    endian: Endianness,
+    data: Vec<u8>,
+    subsection_offset: usize,
+    subsubsection_offset: usize,
+}
+
+impl AttributesWriter {
+    /// Create a new `AttributesWriter` for the given endianness.
+    pub fn new(endian: Endianness) -> Self {
+        AttributesWriter {
+            endian,
+            data: vec![0x41],
+            subsection_offset: 0,
+            subsubsection_offset: 0,
+        }
+    }
+
+    /// Start a new subsection with the given vendor name.
+    pub fn start_subsection(&mut self, vendor: &[u8]) {
+        debug_assert_eq!(self.subsection_offset, 0);
+        debug_assert_eq!(self.subsubsection_offset, 0);
+        self.subsection_offset = self.data.len();
+        self.data.extend_from_slice(&[0; 4]);
+        self.data.extend_from_slice(vendor);
+        self.data.push(0);
+    }
+
+    /// End the subsection.
+    ///
+    /// The subsection length is automatically calculated and written.
+    pub fn end_subsection(&mut self) {
+        debug_assert_ne!(self.subsection_offset, 0);
+        debug_assert_eq!(self.subsubsection_offset, 0);
+        let length = self.data.len() - self.subsection_offset;
+        self.data[self.subsection_offset..][..4]
+            .copy_from_slice(pod::bytes_of(&U32::new(self.endian, length as u32)));
+        self.subsection_offset = 0;
+    }
+
+    /// Start a new sub-subsection with the given tag.
+    pub fn start_subsubsection(&mut self, tag: elf::AttributeTag) {
+        debug_assert_ne!(self.subsection_offset, 0);
+        debug_assert_eq!(self.subsubsection_offset, 0);
+        self.subsubsection_offset = self.data.len();
+        self.data.push(tag.0);
+        self.data.extend_from_slice(&[0; 4]);
+    }
+
+    /// Write a section or symbol index to the sub-subsection.
+    ///
+    /// The user must also call this function to write the terminating 0 index.
+    pub fn write_subsubsection_index(&mut self, index: u32) {
+        debug_assert_ne!(self.subsection_offset, 0);
+        debug_assert_ne!(self.subsubsection_offset, 0);
+        write::write_uleb128(&mut self.data, u64::from(index));
+    }
+
+    /// Write raw index data to the sub-subsection.
+    ///
+    /// The terminating 0 index is automatically written.
+    pub fn write_subsubsection_indices(&mut self, indices: &[u8]) {
+        debug_assert_ne!(self.subsection_offset, 0);
+        debug_assert_ne!(self.subsubsection_offset, 0);
+        self.data.extend_from_slice(indices);
+        self.data.push(0);
+    }
+
+    /// Write an attribute tag to the sub-subsection.
+    pub fn write_attribute_tag(&mut self, tag: u64) {
+        debug_assert_ne!(self.subsection_offset, 0);
+        debug_assert_ne!(self.subsubsection_offset, 0);
+        write::write_uleb128(&mut self.data, tag);
+    }
+
+    /// Write an attribute integer value to the sub-subsection.
+    pub fn write_attribute_integer(&mut self, value: u64) {
+        debug_assert_ne!(self.subsection_offset, 0);
+        debug_assert_ne!(self.subsubsection_offset, 0);
+        write::write_uleb128(&mut self.data, value);
+    }
+
+    /// Write an attribute string value to the sub-subsection.
+    ///
+    /// The value must not include the null terminator.
+    pub fn write_attribute_string(&mut self, value: &[u8]) {
+        debug_assert_ne!(self.subsection_offset, 0);
+        debug_assert_ne!(self.subsubsection_offset, 0);
+        self.data.extend_from_slice(value);
+        self.data.push(0);
+    }
+
+    /// Write raw attribute data to the sub-subsection.
+    pub fn write_subsubsection_attributes(&mut self, attributes: &[u8]) {
+        debug_assert_ne!(self.subsection_offset, 0);
+        debug_assert_ne!(self.subsubsection_offset, 0);
+        self.data.extend_from_slice(attributes);
+    }
+
+    /// End the sub-subsection.
+    ///
+    /// The sub-subsection length is automatically calculated and written.
+    pub fn end_subsubsection(&mut self) {
+        debug_assert_ne!(self.subsection_offset, 0);
+        debug_assert_ne!(self.subsubsection_offset, 0);
+        let length = self.data.len() - self.subsubsection_offset;
+        self.data[self.subsubsection_offset + 1..][..4]
+            .copy_from_slice(pod::bytes_of(&U32::new(self.endian, length as u32)));
+        self.subsubsection_offset = 0;
+    }
+
+    /// Return the completed section data.
+    pub fn data(self) -> Vec<u8> {
+        debug_assert_eq!(self.subsection_offset, 0);
+        debug_assert_eq!(self.subsubsection_offset, 0);
+        self.data
     }
 }
