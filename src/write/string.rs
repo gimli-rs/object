@@ -9,11 +9,11 @@ type IndexSet<K> = indexmap::IndexSet<K, hashbrown::DefaultHashBuilder>;
 
 /// An identifier for an entry in a string table.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct StringId(usize);
+pub struct StringId(u32);
 
 /// A string table containing null terminated byte strings.
 #[derive(Debug, Default)]
-pub(crate) struct StringTable<'a> {
+pub struct StringTable<'a> {
     strings: IndexSet<&'a [u8]>,
     offsets: Vec<u32>,
     size: u64,
@@ -23,18 +23,16 @@ pub(crate) struct StringTable<'a> {
 }
 
 impl<'a> StringTable<'a> {
-    /// Construct a new string table.
-    #[allow(dead_code)]
-    pub(crate) fn new() -> Self {
+    /// Construct an empty string table.
+    pub fn new() -> Self {
         StringTable::default()
     }
 
-    /// Construct a new string table that writes the strings in
+    /// Construct an empty string table that writes the strings in
     /// the order they are added.
     ///
     /// This does not perform suffix merging.
-    #[allow(dead_code)]
-    pub(crate) fn new_in_order(base: u32) -> Self {
+    pub fn new_in_order(base: u32) -> Self {
         StringTable {
             strings: IndexSet::default(),
             offsets: Vec::new(),
@@ -45,8 +43,7 @@ impl<'a> StringTable<'a> {
     }
 
     /// Return true if the string table contains no strings.
-    #[allow(dead_code)]
-    pub(crate) fn is_empty(&self) -> bool {
+    pub fn is_empty(&self) -> bool {
         self.strings.is_empty()
     }
 
@@ -58,7 +55,7 @@ impl<'a> StringTable<'a> {
     ///
     /// The string must not contain a null byte; this is asserted here for
     /// debug builds, and checked by `write` for all builds.
-    pub(crate) fn add(&mut self, string: &'a [u8]) -> StringId {
+    pub fn add(&mut self, string: &'a [u8]) -> StringId {
         debug_assert!(self.in_order || self.offsets.is_empty());
         debug_assert!(!string.contains(&0));
         let (id, new) = self.strings.insert_full(string);
@@ -66,24 +63,22 @@ impl<'a> StringTable<'a> {
             self.offsets.push(self.size as u32);
             self.size += string.len() as u64 + 1;
         }
-        StringId(id)
+        StringId(id as u32)
     }
 
     /// Return the id of a previously added string.
     ///
     /// Panics if the string is not in the string table.
-    #[allow(dead_code)]
-    pub(crate) fn get_id(&self, string: &[u8]) -> StringId {
+    pub fn get_id(&self, string: &[u8]) -> StringId {
         let id = self.strings.get_index_of(string).unwrap();
-        StringId(id)
+        StringId(id as u32)
     }
 
     /// Return the string for the given id.
     ///
     /// Panics if `id` is invalid.
-    #[allow(dead_code)]
-    pub(crate) fn get_string(&self, id: StringId) -> &'a [u8] {
-        self.strings.get_index(id.0).unwrap()
+    pub fn get_string(&self, id: StringId) -> &'a [u8] {
+        self.strings.get_index(id.0 as usize).unwrap()
     }
 
     /// Return the offset of the given string.
@@ -95,15 +90,14 @@ impl<'a> StringTable<'a> {
     /// overflows `u32`. Reporting the overflow is postponed to `write`.
     ///
     /// Panics if `id` is invalid or `write` was not called.
-    pub(crate) fn get_offset(&self, id: StringId) -> u32 {
-        self.offsets[id.0]
+    pub fn get_offset(&self, id: StringId) -> u32 {
+        self.offsets[id.0 as usize]
     }
 
     /// Return the offset of an optional string.
     ///
     /// Returns 0 if `id` is `None`. Otherwise see [`Self::get_offset`].
-    #[allow(dead_code)]
-    pub(crate) fn maybe_get_offset(&self, id: Option<StringId>) -> u32 {
+    pub fn maybe_get_offset(&self, id: Option<StringId>) -> u32 {
         let Some(id) = id else {
             return 0;
         };
@@ -123,7 +117,7 @@ impl<'a> StringTable<'a> {
     /// - `write` has already been called
     /// - any string contains a null byte
     /// - the string table size is > `u32::MAX`
-    pub(crate) fn write(&mut self, base: u32, w: &mut Vec<u8>) -> Result<u32> {
+    pub fn write(&mut self, base: u32, w: &mut Vec<u8>) -> Result<u32> {
         if !self.in_order && !self.offsets.is_empty() {
             return Err(Error("string table already written".into()));
         }
@@ -168,7 +162,7 @@ impl<'a> StringTable<'a> {
     /// `base` is the initial string table offset. For example,
     /// this should be 1 for ELF, to account for the initial
     /// null byte.
-    #[allow(dead_code)]
+    #[cfg(all(feature = "build_core", feature = "elf"))]
     pub(crate) fn size(&self, base: usize) -> usize {
         if self.in_order {
             debug_assert_eq!(self.base as usize, base);
