@@ -815,7 +815,7 @@ impl<'a, M: Mode> Writer<'a, M> {
     ///
     /// Returns the file offset after the padding.
     /// In two-phase mode, returns 0 without writing if the section was not reserved.
-    pub fn write_align_gnu_verdef(&mut self) -> u64 {
+    fn write_align_gnu_verdef_impl(&mut self) -> u64 {
         if !M::need_offset(self.gnu_verdef_offset) {
             return 0;
         }
@@ -831,9 +831,7 @@ impl<'a, M: Mode> Writer<'a, M> {
 
     /// Write a version definition entry.
     ///
-    /// Must be called after [`Self::write_align_gnu_verdef`]. The number of entries
-    /// must have been set via [`Self::reserve_gnu_verdef`] in two-phase mode, or
-    /// [`Self::set_gnu_verdef_count`] in single-phase mode.
+    /// Must be called after [`Self::write_align_gnu_verdef`].
     pub fn write_gnu_verdef(&mut self, verdef: &Verdef) {
         debug_assert_ne!(self.gnu_verdef_remaining, 0);
         self.gnu_verdef_remaining -= 1;
@@ -852,9 +850,7 @@ impl<'a, M: Mode> Writer<'a, M> {
     /// This is typically useful when there are only two versions (including the base)
     /// and they have the same name.
     ///
-    /// Must be called after [`Self::write_align_gnu_verdef`]. The number of entries
-    /// must have been set via [`Self::reserve_gnu_verdef`] in two-phase mode, or
-    /// [`Self::set_gnu_verdef_count`] in single-phase mode.
+    /// Must be called after [`Self::write_align_gnu_verdef`].
     pub fn write_gnu_verdef_shared(&mut self, verdef: &Verdef) {
         debug_assert_ne!(self.gnu_verdef_remaining, 0);
         self.gnu_verdef_remaining -= 1;
@@ -906,7 +902,7 @@ impl<'a, M: Mode> Writer<'a, M> {
     ///
     /// Returns the file offset after the padding.
     /// In two-phase mode, returns 0 without writing if the section was not reserved.
-    pub fn write_align_gnu_verneed(&mut self) -> u64 {
+    fn write_align_gnu_verneed_impl(&mut self) -> u64 {
         if !M::need_offset(self.gnu_verneed_offset) {
             return 0;
         }
@@ -922,9 +918,7 @@ impl<'a, M: Mode> Writer<'a, M> {
 
     /// Write a version needed entry.
     ///
-    /// Must be called after [`Self::write_align_gnu_verneed`]. The number of entries
-    /// must have been set via [`Self::reserve_gnu_verneed`] in two-phase mode, or
-    /// [`Self::set_gnu_verneed_count`] in single-phase mode.
+    /// Must be called after [`Self::write_align_gnu_verneed`].
     pub fn write_gnu_verneed(&mut self, verneed: &Verneed) {
         debug_assert_ne!(self.gnu_verneed_remaining, 0);
         self.gnu_verneed_remaining -= 1;
@@ -1331,20 +1325,34 @@ impl<'a> Writer<'a, SinglePhase> {
         Ok((self.dynstr_offset, self.dynstr_size))
     }
 
-    /// Set the number of version definition entries that will be written.
+    /// Write alignment padding bytes prior to a `.gnu.version_d` section.
     ///
-    /// Must be called before [`Self::write_gnu_verdef`].
-    pub fn set_gnu_verdef_count(&mut self, count: u16) {
+    /// Also sets the number of definition entries that will be written.
+    ///
+    /// Returns the file offset after the padding.
+    /// Returns 0 without writing if count is zero.
+    pub fn write_align_gnu_verdef(&mut self, count: u16) -> u64 {
+        if count == 0 {
+            return 0;
+        }
         self.gnu_verdef_count = count;
         self.gnu_verdef_remaining = count;
+        self.write_align_gnu_verdef_impl()
     }
 
-    /// Set the number of version needed entries that will be written.
+    /// Write alignment padding bytes prior to a `.gnu.version_r` section.
     ///
-    /// Must be called before [`Self::write_gnu_verneed`].
-    pub fn set_gnu_verneed_count(&mut self, count: u16) {
+    /// Also sets the number of version needed entries that will be written.
+    ///
+    /// Returns the file offset after the padding.
+    /// Returns 0 without writing if count is zero.
+    pub fn write_align_gnu_verneed(&mut self, count: u16) -> u64 {
+        if count == 0 {
+            return 0;
+        }
         self.gnu_verneed_count = count;
         self.gnu_verneed_remaining = count;
+        self.write_align_gnu_verneed_impl()
     }
 }
 
@@ -2021,6 +2029,13 @@ impl<'a> Writer<'a, TwoPhase> {
         self.gnu_verdef_offset
     }
 
+    /// Write alignment padding bytes prior to a `.gnu.version_d` section.
+    ///
+    /// Does nothing if the section was not reserved with [`Self::reserve_gnu_verdef`].
+    pub fn write_align_gnu_verdef(&mut self) {
+        self.write_align_gnu_verdef_impl();
+    }
+
     /// Reserve the section index for the `.gnu.version_d` section.
     ///
     /// Must be called before [`Self::reserve_section_headers`].
@@ -2045,6 +2060,13 @@ impl<'a> Writer<'a, TwoPhase> {
         self.gnu_vernaux_count = vernaux_count;
         self.gnu_verneed_remaining = self.gnu_verneed_count;
         self.gnu_verneed_offset
+    }
+
+    /// Write alignment padding bytes prior to a `.gnu.version_r` section.
+    ///
+    /// Does nothing if the section was not reserved with [`Self::reserve_gnu_verneed`].
+    pub fn write_align_gnu_verneed(&mut self) {
+        self.write_align_gnu_verneed_impl();
     }
 
     /// Reserve the section index for the `.gnu.version_r` section.
