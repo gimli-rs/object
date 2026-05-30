@@ -645,7 +645,7 @@ impl<E: Endian> Encoder<E> {
     pub fn gnu_attributes_section_header(self) -> SectionHeader {
         SectionHeader {
             sh_type: elf::SHT_GNU_ATTRIBUTES,
-            sh_addralign: self.address_size().into(),
+            sh_addralign: 1,
             ..SectionHeader::default()
         }
     }

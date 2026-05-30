@@ -991,7 +991,7 @@ impl<'a, M: Mode> Writer<'a, M> {
         if !M::need_offset(self.gnu_attributes_offset) {
             return 0;
         }
-        let offset = self.write_align(self.encoder.address_size().into());
+        let offset = self.offset();
         M::set_offset(&mut self.gnu_attributes_offset, offset);
         M::set_section_name(
             &mut self.gnu_attributes_str_id,
@@ -2097,8 +2097,7 @@ impl<'a> Writer<'a, TwoPhase> {
             return 0;
         }
         self.gnu_attributes_size = gnu_attributes_size as u64;
-        self.gnu_attributes_offset =
-            self.reserve(gnu_attributes_size, self.encoder.address_size().into());
+        self.gnu_attributes_offset = self.reserve(gnu_attributes_size, 1);
         self.gnu_attributes_offset
     }
 
