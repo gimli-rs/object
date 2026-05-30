@@ -117,6 +117,8 @@ pub struct Writer<'a, M: Mode = TwoPhase> {
 
     gnu_versym_str_id: Option<StringId>,
     gnu_versym_offset: u64,
+    gnu_versym_num: u32,
+    written_versym_num: u32,
 
     gnu_verdef_str_id: Option<StringId>,
     gnu_verdef_offset: u64,
@@ -208,6 +210,8 @@ impl<'a, M: Mode> Writer<'a, M> {
 
             gnu_versym_str_id: None,
             gnu_versym_offset: 0,
+            gnu_versym_num: 0,
+            written_versym_num: 0,
 
             gnu_verdef_str_id: None,
             gnu_verdef_offset: 0,
@@ -792,6 +796,8 @@ impl<'a, M: Mode> Writer<'a, M> {
     /// Must be called after [`Self::write_null_gnu_versym`].
     pub fn write_gnu_versym(&mut self, versym: elf::VersymIndex) {
         self.encoder.gnu_versym(self.buffer, versym);
+        self.written_versym_num += 1;
+        M::set_count(&mut self.gnu_versym_num, self.written_versym_num);
     }
 
     /// Write the section header for the `.gnu.version` section.
@@ -806,7 +812,7 @@ impl<'a, M: Mode> Writer<'a, M> {
             sh_name: self.section_name_offset(self.gnu_versym_str_id),
             sh_addr,
             sh_offset: self.gnu_versym_offset,
-            sh_size: self.encoder.gnu_versym_size(self.dynsym_num as usize) as u64,
+            sh_size: self.encoder.gnu_versym_size(self.gnu_versym_num as usize) as u64,
             ..self.encoder.gnu_versym_section_header(self.dynsym_index.0)
         });
     }
@@ -1998,8 +2004,9 @@ impl<'a> Writer<'a, TwoPhase> {
         if self.dynsym_num == 0 {
             return 0;
         }
-        self.gnu_versym_offset =
-            self.reserve(self.dynsym_num as usize * 2, ALIGN_GNU_VERSYM.into());
+        self.gnu_versym_num = self.dynsym_num;
+        let size = self.encoder.gnu_versym_size(self.gnu_versym_num as usize);
+        self.gnu_versym_offset = self.reserve(size, ALIGN_GNU_VERSYM.into());
         self.gnu_versym_offset
     }
 
