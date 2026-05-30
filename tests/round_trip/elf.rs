@@ -109,6 +109,52 @@ fn empty_symtab() {
     assert_eq!(strtab.size(), 1);
 }
 
+// .dynsym must link to .dynstr even when only the null dynamic symbol is present.
+#[test]
+fn empty_dynsym() {
+    let file_header = write::elf::FileHeader {
+        os_abi: elf::ELFOSABI_SYSV,
+        abi_version: 0,
+        e_type: elf::ET_DYN,
+        e_machine: elf::EM_X86_64,
+        e_entry: 0,
+        e_flags: elf::FileFlags(0),
+    };
+
+    let mut bytes = Vec::new();
+    let mut writer = write::elf::Writer::new(Endianness::Little, true, &mut bytes);
+
+    writer.reserve_file_header();
+    writer.reserve_null_dynamic_symbol_index();
+    writer.reserve_dynsym();
+    writer.reserve_dynstr().unwrap();
+    writer.reserve_null_section_index();
+    writer.reserve_dynsym_section_index();
+    let dynstr_index = writer.reserve_dynstr_section_index();
+    writer.reserve_shstrtab_section_index();
+    writer.reserve_shstrtab().unwrap();
+    writer.reserve_section_headers();
+
+    writer.write_file_header(&file_header).unwrap();
+    writer.write_null_dynamic_symbol();
+    writer.write_dynstr();
+    writer.write_shstrtab();
+    writer.write_null_section_header();
+    writer.write_dynsym_section_header(0, 1);
+    writer.write_dynstr_section_header(0);
+    writer.write_shstrtab_section_header();
+
+    let object = read::elf::ElfFile64::<Endianness>::parse(&*bytes).unwrap();
+    let dynsym = object.section_by_name(".dynsym").unwrap();
+    assert_eq!(dynsym.size(), 24);
+    let dynstr = object.section_by_name(".dynstr").unwrap();
+    assert_eq!(dynstr.size(), 1);
+    assert_eq!(
+        dynsym.elf_section_header().sh_link(Endianness::Little),
+        dynstr_index.0,
+    );
+}
+
 #[test]
 fn aligned_sections() {
     let mut object =
