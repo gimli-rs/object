@@ -1789,7 +1789,11 @@ impl<'a> Writer<'a, TwoPhase> {
     /// Return the size of the dynamic string table.
     ///
     /// Must be called after [`Self::reserve_dynstr`].
-    pub fn dynstr_len(&mut self) -> u32 {
+    /// Returns 0 if the dynamic string table is not needed.
+    pub fn dynstr_len(&self) -> u32 {
+        if !self.dynstr_needed() {
+            return 0;
+        }
         debug_assert_ne!(self.dynstr_offset, 0);
         self.dynstr_size
     }
@@ -1836,6 +1840,8 @@ impl<'a> Writer<'a, TwoPhase> {
         debug_assert_eq!(self.dynsym_offset, 0);
         debug_assert_eq!(self.dynsym_num, 0);
         self.dynsym_num = 1;
+        // The symbol table must link to a string table.
+        self.need_dynstr = true;
         SymbolIndex(0)
     }
 
@@ -1852,6 +1858,8 @@ impl<'a> Writer<'a, TwoPhase> {
         debug_assert_eq!(self.dynsym_offset, 0);
         if self.dynsym_num == 0 {
             self.dynsym_num = 1;
+            // The symbol table must link to a string table.
+            self.need_dynstr = true;
         }
         let index = self.dynsym_num;
         self.dynsym_num += 1;
