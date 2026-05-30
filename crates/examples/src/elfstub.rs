@@ -114,9 +114,8 @@ pub fn elfstub(data: &[u8]) -> Result<Vec<u8>, Box<dyn Error>> {
     let mut verdef_count = 0;
     if let Some((mut verdefs, link)) = sections.gnu_verdef(endian, data)? {
         let strings = sections.strings(endian, data, link)?;
-        verdef_offset = writer.write_align_gnu_verdef();
         verdef_count = verdefs.clone().count() as u16;
-        writer.set_gnu_verdef_count(verdef_count);
+        verdef_offset = writer.write_align_gnu_verdef(verdef_count);
         while let Some((verdef, mut verdauxs)) = verdefs.next()? {
             let aux_count = verdauxs.clone().count() as u16;
             let Some(verdaux) = verdauxs.next()? else {
@@ -144,9 +143,8 @@ pub fn elfstub(data: &[u8]) -> Result<Vec<u8>, Box<dyn Error>> {
     let mut verneed_count = 0;
     if let Some((mut verneeds, link)) = sections.gnu_verneed(endian, data)? {
         let strings = sections.strings(endian, data, link)?;
-        verneed_offset = writer.write_align_gnu_verneed();
         verneed_count = verneeds.clone().count() as u16;
-        writer.set_gnu_verneed_count(verneed_count);
+        verneed_offset = writer.write_align_gnu_verneed(verneed_count);
         while let Some((verneed, mut vernauxs)) = verneeds.next()? {
             let aux_count = vernauxs.clone().count() as u16;
             let file_id = writer.add_dynamic_string(verneed.file(endian, strings)?);
