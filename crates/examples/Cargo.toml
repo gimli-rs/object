@@ -27,8 +27,12 @@ name = "dyldcachedump"
 required-features = ["object/read"]
 
 [[bin]]
+name = "elfcopy"
+required-features = ["read", "write"]
+
+[[bin]]
 name = "elfstub"
-required-features = ["object/read", "object/write"]
+required-features = ["read", "write"]
 
 [[bin]]
 name = "elftoefi"
