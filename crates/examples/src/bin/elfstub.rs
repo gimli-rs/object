@@ -18,7 +18,7 @@ fn main() {
         }
     };
 
-    let stub = match object_examples::elfstub::build_stub(&data) {
+    let stub = match object_examples::elfstub(&data) {
         Ok(stub) => stub,
         Err(err) => {
             eprintln!("Failed to create stub: {}", err);

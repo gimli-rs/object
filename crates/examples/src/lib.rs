@@ -8,4 +8,11 @@ pub mod objdump;
 pub mod readobj;
 
 #[cfg(all(feature = "read", feature = "write"))]
-pub mod elfstub;
+mod elfcopy;
+#[cfg(all(feature = "read", feature = "write"))]
+pub use elfcopy::*;
+
+#[cfg(all(feature = "read", feature = "write"))]
+mod elfstub;
+#[cfg(all(feature = "read", feature = "write"))]
+pub use elfstub::*;

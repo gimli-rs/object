@@ -13,7 +13,7 @@ use object::write::elf::{
 /// The output preserves the SONAME, `DT_NEEDED` list, dynamic symbol
 /// table, and version information from the input, but replaces every
 /// defined symbol's code/data with a single placeholder byte.
-pub fn build_stub(data: &[u8]) -> Result<Vec<u8>, Box<dyn Error>> {
+pub fn elfstub(data: &[u8]) -> Result<Vec<u8>, Box<dyn Error>> {
     let elf = ElfFile64::<Endianness>::parse(data)?;
     let endian = elf.endian();
     let header = elf.elf_header();
