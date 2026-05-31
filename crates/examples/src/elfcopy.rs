@@ -613,8 +613,8 @@ pub fn elfcopy<Elf: FileHeader<Endian = Endianness>>(
                     for sym in &out_dynsyms {
                         let in_dynsym = in_dynsyms.symbol(sym.in_sym)?;
                         writer.write_dynamic_symbol(&object::write::elf::Sym {
-                            name: sym.name,
-                            section: sym.section,
+                            section: sym.section.map(|s| s.0),
+                            st_name: writer.dynamic_string_offset(sym.name),
                             st_info: in_dynsym.st_info(),
                             st_other: in_dynsym.st_other(),
                             st_shndx: in_dynsym.st_shndx(endian),
@@ -664,12 +664,15 @@ pub fn elfcopy<Elf: FileHeader<Endian = Endianness>>(
                     writer.write_align_gnu_verdef();
                     while let Some((verdef, mut verdauxs)) = verdefs.next()? {
                         let verdaux = verdauxs.next()?.unwrap();
+                        let name = verdaux.name(endian, strings)?;
+                        let name_id = writer.get_dynamic_string(name);
                         let verdef = object::write::elf::Verdef {
                             version: verdef.vd_version.get(endian),
                             flags: verdef.vd_flags.get(endian),
                             index: verdef.vd_ndx.get(endian),
                             aux_count: verdef.vd_cnt.get(endian),
-                            name: writer.get_dynamic_string(verdaux.name(endian, strings)?),
+                            name: writer.dynamic_string_offset(Some(name_id)),
+                            hash: elf::hash(name),
                         };
                         if verdef_shared_base {
                             writer.write_gnu_verdef_shared(&verdef);
@@ -689,16 +692,20 @@ pub fn elfcopy<Elf: FileHeader<Endian = Endianness>>(
                     let strings = in_sections.strings(endian, in_data, link)?;
                     writer.write_align_gnu_verneed();
                     while let Some((verneed, mut vernauxs)) = verneeds.next()? {
+                        let file_id = writer.get_dynamic_string(verneed.file(endian, strings)?);
                         writer.write_gnu_verneed(&object::write::elf::Verneed {
                             version: verneed.vn_version.get(endian),
                             aux_count: verneed.vn_cnt.get(endian),
-                            file: writer.get_dynamic_string(verneed.file(endian, strings)?),
+                            file: writer.dynamic_string_offset(Some(file_id)),
                         });
                         while let Some(vernaux) = vernauxs.next()? {
+                            let name = vernaux.name(endian, strings)?;
+                            let name_id = writer.get_dynamic_string(name);
                             writer.write_gnu_vernaux(&object::write::elf::Vernaux {
                                 flags: vernaux.vna_flags.get(endian),
                                 index: vernaux.vna_other.get(endian),
-                                name: writer.get_dynamic_string(vernaux.name(endian, strings)?),
+                                name: writer.dynamic_string_offset(Some(name_id)),
+                                hash: elf::hash(name),
                             });
                         }
                     }
@@ -731,8 +738,8 @@ pub fn elfcopy<Elf: FileHeader<Endian = Endianness>>(
     for sym in &out_syms {
         let in_sym = in_syms.symbol(sym.in_sym)?;
         writer.write_symbol(&object::write::elf::Sym {
-            name: sym.name,
-            section: sym.section,
+            section: sym.section.map(|s| s.0),
+            st_name: writer.string_offset(sym.name),
             st_info: in_sym.st_info(),
             st_other: in_sym.st_other(),
             st_shndx: in_sym.st_shndx(endian),
@@ -819,7 +826,7 @@ pub fn elfcopy<Elf: FileHeader<Endian = Endianness>>(
                     sh_info = out_sections_index[sh_info as usize].0;
                 }
                 writer.write_section_header(&object::write::elf::SectionHeader {
-                    name: out_section.name,
+                    sh_name: writer.section_name_offset(out_section.name),
                     sh_type: in_section.sh_type(endian),
                     sh_flags: in_section.sh_flags(endian),
                     sh_addr: in_section.sh_addr(endian).into(),

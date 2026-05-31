@@ -281,9 +281,19 @@ pub(crate) fn align_u64(offset: u64, size: u64) -> u64 {
     (offset + (size - 1)) & !(size - 1)
 }
 
-pub(crate) fn write_align(buffer: &mut dyn WritableBuffer, size: usize) {
+pub(crate) fn write_align<W: WritableBuffer + ?Sized>(buffer: &mut W, size: usize) {
     let new_len = align(buffer.len(), size);
     buffer.resize(new_len);
+}
+
+#[allow(dead_code)]
+pub(crate) fn write_pod<T: Pod, W: WritableBuffer + ?Sized>(buffer: &mut W, val: &T) {
+    buffer.write_bytes(bytes_of(val))
+}
+
+#[allow(dead_code)]
+pub(crate) fn write_pod_slice<T: Pod, W: WritableBuffer + ?Sized>(buffer: &mut W, val: &[T]) {
+    buffer.write_bytes(bytes_of_slice(val))
 }
 
 #[cfg(test)]

@@ -1,5 +1,6 @@
 use alloc::vec::Vec;
 
+use crate::write::elf::encoder::*;
 use crate::write::elf::writer::*;
 use crate::write::string::StringId;
 use crate::write::*;
@@ -799,11 +800,11 @@ impl<'a> Object<'a> {
                 SymbolSection::Absolute => (elf::SHN_ABS, None),
                 SymbolSection::Common => (elf::SHN_COMMON, None),
                 SymbolSection::Section(id) => {
-                    (elf::SymbolSection(0), Some(section_offsets[id.0].index))
+                    (elf::SymbolSection(0), Some(section_offsets[id.0].index.0))
                 }
             };
             writer.write_symbol(&Sym {
-                name: symbol_offsets[index].str_id,
+                st_name: writer.string_offset(symbol_offsets[index].str_id),
                 section,
                 st_info,
                 st_other,
@@ -880,7 +881,7 @@ impl<'a> Object<'a> {
                 _ => 0,
             };
             writer.write_section_header(&SectionHeader {
-                name: Some(section_offsets[index].str_id),
+                sh_name: writer.section_name_offset(Some(section_offsets[index].str_id)),
                 sh_type,
                 sh_flags,
                 sh_addr: 0,

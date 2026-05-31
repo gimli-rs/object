@@ -70,13 +70,13 @@ pub fn elfstub(data: &[u8]) -> Result<Vec<u8>, Box<dyn Error>> {
         let mut st_size = sym.st_size(endian);
         let st_shndx = sym.st_shndx(endian);
         if sym.st_shndx(endian).index().is_some() {
-            section = Some(stub_section_index);
+            section = Some(stub_section_index.0);
             st_value = stub_offset + i as u64;
             st_size = 1;
         }
 
         writer.write_dynamic_symbol(&Sym {
-            name: id,
+            st_name: writer.dynamic_string_offset(id),
             section,
             st_info: sym.st_info(),
             st_other: sym.st_other(),
@@ -122,13 +122,15 @@ pub fn elfstub(data: &[u8]) -> Result<Vec<u8>, Box<dyn Error>> {
             let Some(verdaux) = verdauxs.next()? else {
                 return Err("missing verdef name".into());
             };
-            let name = writer.add_dynamic_string(verdaux.name(endian, strings)?);
+            let name_bytes = verdaux.name(endian, strings)?;
+            let name_id = writer.add_dynamic_string(name_bytes);
             writer.write_gnu_verdef(&Verdef {
                 version: verdef.vd_version.get(endian),
                 flags: verdef.vd_flags.get(endian),
                 index: verdef.vd_ndx.get(endian),
                 aux_count,
-                name,
+                name: writer.dynamic_string_offset(Some(name_id)),
+                hash: elf::hash(name_bytes),
             });
             while let Some(verdaux) = verdauxs.next()? {
                 let name = writer.add_dynamic_string(verdaux.name(endian, strings)?);
@@ -147,18 +149,20 @@ pub fn elfstub(data: &[u8]) -> Result<Vec<u8>, Box<dyn Error>> {
         writer.set_gnu_verneed_count(verneed_count);
         while let Some((verneed, mut vernauxs)) = verneeds.next()? {
             let aux_count = vernauxs.clone().count() as u16;
-            let file = writer.add_dynamic_string(verneed.file(endian, strings)?);
+            let file_id = writer.add_dynamic_string(verneed.file(endian, strings)?);
             writer.write_gnu_verneed(&Verneed {
                 version: verneed.vn_version.get(endian),
                 aux_count,
-                file,
+                file: writer.dynamic_string_offset(Some(file_id)),
             });
             while let Some(vernaux) = vernauxs.next()? {
-                let name = writer.add_dynamic_string(vernaux.name(endian, strings)?);
+                let name_bytes = vernaux.name(endian, strings)?;
+                let name_id = writer.add_dynamic_string(name_bytes);
                 writer.write_gnu_vernaux(&Vernaux {
                     flags: vernaux.vna_flags.get(endian),
                     index: vernaux.vna_other.get(endian),
-                    name,
+                    name: writer.dynamic_string_offset(Some(name_id)),
+                    hash: elf::hash(name_bytes),
                 });
             }
         }
@@ -241,7 +245,7 @@ pub fn elfstub(data: &[u8]) -> Result<Vec<u8>, Box<dyn Error>> {
     // PT_LOAD maps p_vaddr == p_offset so all section addresses are equal to offsets.
     writer.write_null_section_header();
     let index = writer.write_section_header(&SectionHeader {
-        name: Some(stub_name_id),
+        sh_name: writer.section_name_offset(Some(stub_name_id)),
         sh_type: elf::SHT_PROGBITS,
         sh_flags: elf::SHF_ALLOC,
         sh_addr: stub_offset,

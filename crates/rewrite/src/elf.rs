@@ -758,7 +758,7 @@ fn find_move_sections(
     let mut blocks = Vec::new();
     let file_header_size = builder.file_header_size() as u64;
     let program_headers_size = (builder.program_headers_size()
-        + added_segments * builder.class().program_header_size())
+        + added_segments * builder.encoder().program_header_size())
         as u64;
     let interp = builder.interp_section();
 
