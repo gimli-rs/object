@@ -63,7 +63,7 @@ pub fn elfcopy<Elf: FileHeader<Endian = Endianness>>(
     let mut in_attributes = None;
     let mut out_sections = Vec::with_capacity(in_sections.len());
     let mut out_sections_index = Vec::with_capacity(in_sections.len());
-    for (i, in_section) in in_sections.iter().enumerate() {
+    for (i, in_section) in in_sections.enumerate() {
         let mut name = None;
         let index;
         match in_section.sh_type(endian) {
@@ -81,32 +81,32 @@ pub fn elfcopy<Elf: FileHeader<Endian = Endianness>>(
                 index = writer.reserve_section_index();
             }
             elf::SHT_STRTAB => {
-                if i == in_syms.string_section().0 {
+                if i == in_syms.string_section() {
                     index = writer.reserve_strtab_section_index();
-                } else if i == in_dynsyms.string_section().0 {
+                } else if i == in_dynsyms.string_section() {
                     index = writer.reserve_dynstr_section_index();
-                } else if i == in_elf.shstrndx(endian, in_data)? as usize {
+                } else if i == in_elf.section_strings_index(endian, in_data)? {
                     index = writer.reserve_shstrtab_section_index();
                 } else {
                     panic!("Unsupported string section {}", i);
                 }
             }
             elf::SHT_SYMTAB => {
-                if i == in_syms.section().0 {
+                if i == in_syms.section() {
                     index = writer.reserve_symtab_section_index();
                 } else {
                     panic!("Unsupported symtab section {}", i);
                 }
             }
             elf::SHT_SYMTAB_SHNDX => {
-                if i == in_syms.shndx_section().0 {
+                if i == in_syms.shndx_section() {
                     index = writer.reserve_symtab_shndx_section_index();
                 } else {
                     panic!("Unsupported symtab shndx section {}", i);
                 }
             }
             elf::SHT_DYNSYM => {
-                if i == in_dynsyms.section().0 {
+                if i == in_dynsyms.section() {
                     index = writer.reserve_dynsym_section_index();
                 } else {
                     panic!("Unsupported dynsym section {}", i);
@@ -559,9 +559,8 @@ pub fn elfcopy<Elf: FileHeader<Endian = Endianness>>(
                     let (rels, _link) = in_section.rel(endian, in_data)?.unwrap();
                     writer.write_align_relocation();
                     for rel in rels {
-                        let in_sym = rel.r_sym(endian);
-                        let out_sym = if in_sym != 0 {
-                            out_dynsyms_index[in_sym as usize].0
+                        let out_sym = if let Some(in_sym) = rel.symbol(endian) {
+                            out_dynsyms_index[in_sym.0].0
                         } else {
                             0
                         };
@@ -580,9 +579,8 @@ pub fn elfcopy<Elf: FileHeader<Endian = Endianness>>(
                     let (rels, _link) = in_section.rela(endian, in_data)?.unwrap();
                     writer.write_align_relocation();
                     for rel in rels {
-                        let in_sym = rel.r_sym(endian, is_mips64el);
-                        let out_sym = if in_sym != 0 {
-                            out_dynsyms_index[in_sym as usize].0
+                        let out_sym = if let Some(in_sym) = rel.symbol(endian, is_mips64el) {
+                            out_dynsyms_index[in_sym.0].0
                         } else {
                             0
                         };
@@ -754,7 +752,7 @@ pub fn elfcopy<Elf: FileHeader<Endian = Endianness>>(
         if !in_segments.is_empty() && in_section.sh_flags(endian).contains(elf::SHF_ALLOC) {
             continue;
         }
-        let out_syms = if in_section.sh_link(endian) as usize == in_syms.section().0 {
+        let out_syms = if in_section.link(endian) == in_syms.section() {
             &out_syms_index
         } else {
             &out_dynsyms_index
@@ -764,9 +762,8 @@ pub fn elfcopy<Elf: FileHeader<Endian = Endianness>>(
                 let (rels, _link) = in_section.rel(endian, in_data)?.unwrap();
                 writer.write_align_relocation();
                 for rel in rels {
-                    let in_sym = rel.r_sym(endian);
-                    let out_sym = if in_sym != 0 {
-                        out_syms[in_sym as usize].0
+                    let out_sym = if let Some(in_sym) = rel.symbol(endian) {
+                        out_syms[in_sym.0].0
                     } else {
                         0
                     };
@@ -785,9 +782,8 @@ pub fn elfcopy<Elf: FileHeader<Endian = Endianness>>(
                 let (rels, _link) = in_section.rela(endian, in_data)?.unwrap();
                 writer.write_align_relocation();
                 for rel in rels {
-                    let in_sym = rel.r_sym(endian, is_mips64el);
-                    let out_sym = if in_sym != 0 {
-                        out_syms[in_sym as usize].0
+                    let out_sym = if let Some(in_sym) = rel.symbol(endian, is_mips64el) {
+                        out_syms[in_sym.0].0
                     } else {
                         0
                     };
@@ -809,7 +805,7 @@ pub fn elfcopy<Elf: FileHeader<Endian = Endianness>>(
     writer.write_shstrtab();
 
     writer.write_null_section_header();
-    for (i, in_section) in in_sections.iter().enumerate() {
+    for (i, in_section) in in_sections.enumerate() {
         match in_section.sh_type(endian) {
             elf::SHT_NULL => {}
             elf::SHT_PROGBITS
@@ -819,10 +815,10 @@ pub fn elfcopy<Elf: FileHeader<Endian = Endianness>>(
             | elf::SHT_RELA
             | elf::SHT_INIT_ARRAY
             | elf::SHT_FINI_ARRAY => {
-                let out_section = &out_sections[i];
-                let sh_link = out_sections_index[in_section.sh_link(endian) as usize].0;
+                let out_section = &out_sections[i.0];
+                let sh_link = out_sections_index[in_section.link(endian).0].0;
                 let mut sh_info = in_section.sh_info(endian);
-                if in_section.sh_flags(endian).contains(elf::SHF_INFO_LINK) {
+                if in_section.has_info_link(endian) {
                     sh_info = out_sections_index[sh_info as usize].0;
                 }
                 writer.write_section_header(&object::write::elf::SectionHeader {
@@ -839,32 +835,32 @@ pub fn elfcopy<Elf: FileHeader<Endian = Endianness>>(
                 });
             }
             elf::SHT_STRTAB => {
-                if i == in_syms.string_section().0 {
+                if i == in_syms.string_section() {
                     writer.write_strtab_section_header();
-                } else if i == in_dynsyms.string_section().0 {
+                } else if i == in_dynsyms.string_section() {
                     writer.write_dynstr_section_header(dynstr_addr);
-                } else if i == in_elf.shstrndx(endian, in_data)? as usize {
+                } else if i == in_elf.section_strings_index(endian, in_data)? {
                     writer.write_shstrtab_section_header();
                 } else {
                     panic!("Unsupported string section {}", i);
                 }
             }
             elf::SHT_SYMTAB => {
-                if i == in_syms.section().0 {
+                if i == in_syms.section() {
                     writer.write_symtab_section_header(num_local);
                 } else {
                     panic!("Unsupported symtab section {}", i);
                 }
             }
             elf::SHT_SYMTAB_SHNDX => {
-                if i == in_syms.shndx_section().0 {
+                if i == in_syms.shndx_section() {
                     writer.write_symtab_shndx_section_header();
                 } else {
                     panic!("Unsupported symtab shndx section {}", i);
                 }
             }
             elf::SHT_DYNSYM => {
-                if i == in_dynsyms.section().0 {
+                if i == in_dynsyms.section() {
                     writer.write_dynsym_section_header(dynsym_addr, 1);
                 } else {
                     panic!("Unsupported dynsym section {}", i);
