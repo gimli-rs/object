@@ -1135,17 +1135,18 @@ impl<'data> Builder<'data> {
             ));
         }
 
-        // Build string tables.
-        let mut shstrtab_data = vec![0];
-        shstrtab.write(1, &mut shstrtab_data)?;
-        let mut strtab_data = vec![0];
-        strtab.write(1, &mut strtab_data)?;
-        let mut dynstr_data = vec![0];
-        dynstr.write(1, &mut dynstr_data)?;
-
-        // Start reserving file ranges.
         let encoder = self.encoder();
         let address_size = u64::from(encoder.address_size());
+
+        // Build string tables.
+        let mut shstrtab_data = Vec::new();
+        let shstrtab_len = encoder.strtab(&mut shstrtab_data, &mut shstrtab)?;
+        let mut strtab_data = Vec::new();
+        let strtab_len = encoder.strtab(&mut strtab_data, &mut strtab)?;
+        let mut dynstr_data = Vec::new();
+        let dynstr_len = encoder.strtab(&mut dynstr_data, &mut dynstr)?;
+
+        // Start reserving file ranges.
         let mut offset = Offset(encoder.file_header_size());
 
         let mut dynsym_addr = None;
@@ -1236,7 +1237,7 @@ impl<'data> Builder<'data> {
                     }
                     SectionData::DynamicString => {
                         dynstr_addr = Some(section.sh_addr);
-                        offset.reserve(dynstr_data.len() as u64, 1)
+                        offset.reserve(dynstr_len.into(), 1)
                     }
                     SectionData::Hash => {
                         hash_addr = Some(section.sh_addr);
@@ -1323,7 +1324,7 @@ impl<'data> Builder<'data> {
             out_sections[symtab_shndx_index as usize - 1].set_range(range);
         }
         if strtab_index != 0 {
-            let range = offset.reserve(strtab_data.len() as u64, 1);
+            let range = offset.reserve(strtab_len.into(), 1);
             out_sections[strtab_index as usize - 1].set_range(range);
         }
 
@@ -1342,7 +1343,7 @@ impl<'data> Builder<'data> {
         }
 
         if shstrtab_index != 0 {
-            let range = offset.reserve(shstrtab_data.len() as u64, 1);
+            let range = offset.reserve(shstrtab_len.into(), 1);
             out_sections[shstrtab_index as usize - 1].set_range(range);
         }
         let e_shoff = if section_num != 0 {
@@ -1438,7 +1439,7 @@ impl<'data> Builder<'data> {
                                         elf::DT_STRTAB => dynstr_addr.ok_or(Error::new(
                                             "Missing .dynstr section for DT_STRTAB",
                                         ))?,
-                                        elf::DT_STRSZ => dynstr_data.len() as u64,
+                                        elf::DT_STRSZ => dynstr_len.into(),
                                         elf::DT_HASH => hash_addr.ok_or(Error::new(
                                             "Missing .hash section for DT_HASH",
                                         ))?,

@@ -1282,11 +1282,8 @@ impl<'a> Writer<'a, SinglePhase> {
         // Thus we always write this if called.
         debug_assert_eq!(self.shstrtab_offset, 0);
         self.shstrtab_str_id = Some(self.add_section_name(b".shstrtab"));
-        // Start with null section name.
-        let mut data = vec![0];
-        self.shstrtab_size = self.shstrtab.write(1, &mut data)?;
         self.shstrtab_offset = self.offset();
-        self.write(&data);
+        self.shstrtab_size = self.encoder.strtab(self.buffer, &mut self.shstrtab)?;
         Ok((self.shstrtab_offset, self.shstrtab_size))
     }
 
@@ -1301,11 +1298,8 @@ impl<'a> Writer<'a, SinglePhase> {
         }
         debug_assert_eq!(self.strtab_offset, 0);
         self.strtab_str_id = Some(self.add_section_name(b".strtab"));
-        // Start with null section name.
-        let mut data = vec![0];
-        self.strtab_size = self.strtab.write(1, &mut data)?;
         self.strtab_offset = self.offset();
-        self.write(&data);
+        self.strtab_size = self.encoder.strtab(self.buffer, &mut self.strtab)?;
         Ok((self.strtab_offset, self.strtab_size))
     }
 
@@ -1320,11 +1314,8 @@ impl<'a> Writer<'a, SinglePhase> {
         }
         debug_assert_eq!(self.dynstr_offset, 0);
         self.dynstr_str_id = Some(self.add_section_name(b".dynstr"));
-        // Start with null section name.
-        let mut data = vec![0];
-        self.dynstr_size = self.dynstr.write(1, &mut data)?;
         self.dynstr_offset = self.offset();
-        self.write(&data);
+        self.dynstr_size = self.encoder.strtab(self.buffer, &mut self.dynstr)?;
         Ok((self.dynstr_offset, self.dynstr_size))
     }
 
@@ -1554,9 +1545,9 @@ impl<'a> Writer<'a, TwoPhase> {
         if self.layout.section_num == 0 {
             return Ok(());
         }
-        // Start with null section name.
-        self.mode.shstrtab_data = vec![0];
-        self.shstrtab_size = self.shstrtab.write(1, &mut self.mode.shstrtab_data)?;
+        self.shstrtab_size = self
+            .encoder
+            .strtab(&mut self.mode.shstrtab_data, &mut self.shstrtab)?;
         self.shstrtab_offset = self.reserve(self.shstrtab_size as u64, 1);
         Ok(())
     }
@@ -1607,9 +1598,9 @@ impl<'a> Writer<'a, TwoPhase> {
         if !self.strtab_needed() {
             return Ok(());
         }
-        // Start with null string.
-        self.mode.strtab_data = vec![0];
-        self.strtab_size = self.strtab.write(1, &mut self.mode.strtab_data)?;
+        self.strtab_size = self
+            .encoder
+            .strtab(&mut self.mode.strtab_data, &mut self.strtab)?;
         self.strtab_offset = self.reserve(self.strtab_size as u64, 1);
         Ok(())
     }
@@ -1789,9 +1780,9 @@ impl<'a> Writer<'a, TwoPhase> {
         if !self.dynstr_needed() {
             return Ok(0);
         }
-        // Start with null string.
-        self.mode.dynstr_data = vec![0];
-        self.dynstr_size = self.dynstr.write(1, &mut self.mode.dynstr_data)?;
+        self.dynstr_size = self
+            .encoder
+            .strtab(&mut self.mode.dynstr_data, &mut self.dynstr)?;
         self.dynstr_offset = self.reserve(self.dynstr_size as u64, 1);
         Ok(self.dynstr_offset)
     }

@@ -349,7 +349,7 @@ impl<'a> Object<'a> {
         let strtab_offset = offset;
         let mut strtab_data = Vec::new();
         // First 4 bytes of strtab are the length.
-        let strtab_len = strtab.write(4, &mut strtab_data)?;
+        let strtab_len = strtab.write(&mut strtab_data, 4)?;
         offset += strtab_len as u64;
 
         // Start writing.

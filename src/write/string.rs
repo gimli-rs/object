@@ -1,6 +1,6 @@
 use alloc::vec::Vec;
 
-use crate::write::{Error, Result};
+use crate::write::{Error, Result, WritableBuffer};
 
 #[cfg(feature = "write_std")]
 type IndexSet<K> = indexmap::IndexSet<K>;
@@ -104,7 +104,7 @@ impl<'a> StringTable<'a> {
         self.get_offset(id)
     }
 
-    /// Append the string table to the given `Vec`, and
+    /// Append the string table to the given buffer, and
     /// calculate the list of string offsets.
     ///
     /// `base` is the initial string table offset. For example,
@@ -117,7 +117,7 @@ impl<'a> StringTable<'a> {
     /// - `write` has already been called
     /// - any string contains a null byte
     /// - the string table size is > `u32::MAX`
-    pub fn write(&mut self, base: u32, w: &mut Vec<u8>) -> Result<u32> {
+    pub fn write<W: WritableBuffer + ?Sized>(&mut self, w: &mut W, base: u32) -> Result<u32> {
         if !self.in_order && !self.offsets.is_empty() {
             return Err(Error("string table already written".into()));
         }
@@ -128,8 +128,8 @@ impl<'a> StringTable<'a> {
         if self.in_order {
             debug_assert_eq!(self.base, base);
             for string in &self.strings {
-                w.extend_from_slice(string);
-                w.push(0);
+                w.write_bytes(string);
+                w.write_bytes(&[0]);
             }
             return u32::try_from(self.size)
                 .map_err(|_| Error("string table size overflow".into()));
@@ -148,8 +148,8 @@ impl<'a> StringTable<'a> {
                 self.offsets[id] = (offset - len) as u32;
             } else {
                 self.offsets[id] = offset as u32;
-                w.extend_from_slice(string);
-                w.push(0);
+                w.write_bytes(string);
+                w.write_bytes(&[0]);
                 offset += len;
                 previous = string;
             }
@@ -253,7 +253,7 @@ mod tests {
         let id3 = table.add(b"foobar");
 
         let mut data = vec![0];
-        assert_eq!(table.write(1, &mut data), Ok(12));
+        assert_eq!(table.write(&mut data, 1), Ok(12));
         assert_eq!(data, b"\0foobar\0foo\0");
 
         assert_eq!(table.get_offset(id0), 11);
@@ -262,7 +262,7 @@ mod tests {
         assert_eq!(table.get_offset(id3), 1);
 
         let mut data = Vec::new();
-        assert!(table.write(1, &mut data).is_err());
+        assert!(table.write(&mut data, 1).is_err());
     }
 
     #[test]
@@ -274,7 +274,7 @@ mod tests {
         let id3 = table.add(b"foobar");
 
         let mut data = vec![0];
-        assert_eq!(table.write(1, &mut data), Ok(17));
+        assert_eq!(table.write(&mut data, 1), Ok(17));
         assert_eq!(data, b"\0\0foo\0bar\0foobar\0");
 
         assert_eq!(table.get_offset(id0), 1);
@@ -284,7 +284,7 @@ mod tests {
 
         // Not documented or expected to be needed, but multiple writes aren't prevented.
         let mut data2 = vec![0];
-        assert_eq!(table.write(1, &mut data2), Ok(17));
+        assert_eq!(table.write(&mut data2, 1), Ok(17));
         assert_eq!(data, data2);
     }
 }
