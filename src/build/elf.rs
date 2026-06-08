@@ -1136,7 +1136,7 @@ impl<'data> Builder<'data> {
         }
 
         let encoder = self.encoder();
-        let address_size = u64::from(encoder.address_size());
+        let address_size = encoder.address_size();
 
         // Build string tables.
         let mut shstrtab_data = Vec::new();
@@ -1372,7 +1372,7 @@ impl<'data> Builder<'data> {
         encoder.file_header(buffer, &header, &layout)?;
 
         if !self.segments.is_empty() {
-            encoder.address_align(buffer);
+            buffer.resize(e_phoff);
             for segment in &self.segments {
                 encoder.program_header(
                     buffer,

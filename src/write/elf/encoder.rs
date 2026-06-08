@@ -6,7 +6,7 @@ use crate::Wrap;
 use crate::elf;
 use crate::endian::*;
 use crate::pod;
-use crate::write::util::{write_align, write_pod, write_pod_slice};
+use crate::write::util::{write_pod, write_pod_slice};
 use crate::write::{self, Error, Result, StringTable, WritableBuffer};
 
 /// Alignment for .symtab_shndx.
@@ -207,19 +207,11 @@ impl<E: Endian> Encoder<E> {
     }
 
     /// Return the size in bytes of an address for the ELF class.
-    pub fn address_size(self) -> u8 {
-        if self.is_64 { 8 } else { 4 }
-    }
-
-    /// Write alignment padding bytes corresponding to the ELF class.
-    ///
-    /// Required for: program headers, section headers, symbols, dynamics, relocations,
+    /// This should be used as the file offset alignment for various structures
+    /// such as program headers, section headers, symbols, dynamics, relocations,
     /// and .gnu.hash.
-    ///
-    /// Returns the file offset after the padding.
-    pub fn address_align<W: WritableBuffer + ?Sized>(self, buffer: &mut W) -> u64 {
-        write_align(buffer, self.address_size().into());
-        buffer.len()
+    pub fn address_size(self) -> u64 {
+        if self.is_64 { 8 } else { 4 }
     }
 
     /// Return the size of the file header.
@@ -513,7 +505,7 @@ impl<E: Endian> Encoder<E> {
             sh_type: elf::SHT_SYMTAB,
             sh_link: strtab,
             sh_info: num_local,
-            sh_addralign: self.address_size().into(),
+            sh_addralign: self.address_size(),
             sh_entsize: self.sym_size(),
             ..SectionHeader::default()
         }
@@ -543,7 +535,7 @@ impl<E: Endian> Encoder<E> {
             sh_flags: elf::SHF_ALLOC,
             sh_link: dynstr,
             sh_info: num_local,
-            sh_addralign: self.address_size().into(),
+            sh_addralign: self.address_size(),
             sh_entsize: self.sym_size(),
             ..SectionHeader::default()
         }
@@ -558,7 +550,7 @@ impl<E: Endian> Encoder<E> {
             sh_type: elf::SHT_DYNAMIC,
             sh_flags: elf::SHF_WRITE | elf::SHF_ALLOC,
             sh_link: dynstr,
-            sh_addralign: self.address_size().into(),
+            sh_addralign: self.address_size(),
             sh_entsize: self.dyn_size(),
             ..SectionHeader::default()
         }
@@ -588,7 +580,7 @@ impl<E: Endian> Encoder<E> {
             sh_type: elf::SHT_GNU_HASH,
             sh_flags: elf::SHF_ALLOC,
             sh_link: dynsym,
-            sh_addralign: self.address_size().into(),
+            sh_addralign: self.address_size(),
             sh_entsize: if self.is_64 { 0 } else { 4 },
             ..SectionHeader::default()
         }
@@ -660,7 +652,7 @@ impl<E: Endian> Encoder<E> {
         SectionHeader {
             sh_type: if is_rela { elf::SHT_RELA } else { elf::SHT_REL },
             sh_flags: elf::SHF_INFO_LINK,
-            sh_addralign: self.address_size().into(),
+            sh_addralign: self.address_size(),
             sh_entsize: self.rel_size(is_rela),
             ..SectionHeader::default()
         }
@@ -672,7 +664,7 @@ impl<E: Endian> Encoder<E> {
     pub fn relative_relocation_section_header(self) -> SectionHeader {
         SectionHeader {
             sh_type: elf::SHT_RELA,
-            sh_addralign: self.address_size().into(),
+            sh_addralign: self.address_size(),
             sh_entsize: self.relr_size(),
             ..SectionHeader::default()
         }
