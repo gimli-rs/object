@@ -10,15 +10,15 @@ use crate::write::util::{write_align, write_pod, write_pod_slice};
 use crate::write::{self, Error, Result, WritableBuffer};
 
 /// Alignment for .symtab_shndx.
-pub const ALIGN_SYMTAB_SHNDX: u8 = 4;
+pub const ALIGN_SYMTAB_SHNDX: u64 = 4;
 /// Alignment for .hash
-pub const ALIGN_HASH: u8 = 4;
+pub const ALIGN_HASH: u64 = 4;
 /// Alignment for .gnu.version
-pub const ALIGN_GNU_VERSYM: u8 = 2;
+pub const ALIGN_GNU_VERSYM: u64 = 2;
 /// Alignment for .gnu.version_d
-pub const ALIGN_GNU_VERDEF: u8 = 4;
+pub const ALIGN_GNU_VERDEF: u64 = 4;
 /// Alignment for .gnu.version_r
-pub const ALIGN_GNU_VERNEED: u8 = 4;
+pub const ALIGN_GNU_VERNEED: u64 = 4;
 
 /// Native endian version of [`elf::FileHeader64`].
 #[allow(missing_docs)]
@@ -218,16 +218,16 @@ impl<E: Endian> Encoder<E> {
     ///
     /// Returns the file offset after the padding.
     pub fn address_align<W: WritableBuffer + ?Sized>(self, buffer: &mut W) -> u64 {
-        write_align(buffer, self.address_size() as usize);
-        buffer.len() as u64
+        write_align(buffer, self.address_size().into());
+        buffer.len()
     }
 
     /// Return the size of the file header.
-    pub fn file_header_size(self) -> usize {
+    pub fn file_header_size(self) -> u64 {
         if self.is_64 {
-            mem::size_of::<elf::FileHeader64<Endianness>>()
+            mem::size_of::<elf::FileHeader64<Endianness>>() as u64
         } else {
-            mem::size_of::<elf::FileHeader32<Endianness>>()
+            mem::size_of::<elf::FileHeader32<Endianness>>() as u64
         }
     }
 
@@ -331,11 +331,11 @@ impl<E: Endian> Encoder<E> {
     }
 
     /// Return the size of a program header.
-    pub fn program_header_size(self) -> usize {
+    pub fn program_header_size(self) -> u64 {
         if self.is_64 {
-            mem::size_of::<elf::ProgramHeader64<Endianness>>()
+            mem::size_of::<elf::ProgramHeader64<Endianness>>() as u64
         } else {
-            mem::size_of::<elf::ProgramHeader32<Endianness>>()
+            mem::size_of::<elf::ProgramHeader32<Endianness>>() as u64
         }
     }
 
@@ -376,11 +376,11 @@ impl<E: Endian> Encoder<E> {
     }
 
     /// Return the size of a section header.
-    pub fn section_header_size(self) -> usize {
+    pub fn section_header_size(self) -> u64 {
         if self.is_64 {
-            mem::size_of::<elf::SectionHeader64<Endianness>>()
+            mem::size_of::<elf::SectionHeader64<Endianness>>() as u64
         } else {
-            mem::size_of::<elf::SectionHeader32<Endianness>>()
+            mem::size_of::<elf::SectionHeader32<Endianness>>() as u64
         }
     }
 
@@ -514,7 +514,7 @@ impl<E: Endian> Encoder<E> {
             sh_link: strtab,
             sh_info: num_local,
             sh_addralign: self.address_size().into(),
-            sh_entsize: self.sym_size() as u64,
+            sh_entsize: self.sym_size(),
             ..SectionHeader::default()
         }
     }
@@ -527,7 +527,7 @@ impl<E: Endian> Encoder<E> {
         SectionHeader {
             sh_type: elf::SHT_SYMTAB_SHNDX,
             sh_link: symtab,
-            sh_addralign: ALIGN_SYMTAB_SHNDX as u64,
+            sh_addralign: ALIGN_SYMTAB_SHNDX,
             sh_entsize: 4,
             ..SectionHeader::default()
         }
@@ -544,7 +544,7 @@ impl<E: Endian> Encoder<E> {
             sh_link: dynstr,
             sh_info: num_local,
             sh_addralign: self.address_size().into(),
-            sh_entsize: self.sym_size() as u64,
+            sh_entsize: self.sym_size(),
             ..SectionHeader::default()
         }
     }
@@ -559,7 +559,7 @@ impl<E: Endian> Encoder<E> {
             sh_flags: elf::SHF_WRITE | elf::SHF_ALLOC,
             sh_link: dynstr,
             sh_addralign: self.address_size().into(),
-            sh_entsize: self.dyn_size() as u64,
+            sh_entsize: self.dyn_size(),
             ..SectionHeader::default()
         }
     }
@@ -573,7 +573,7 @@ impl<E: Endian> Encoder<E> {
             sh_type: elf::SHT_HASH,
             sh_flags: elf::SHF_ALLOC,
             sh_link: dynsym,
-            sh_addralign: ALIGN_HASH as u64,
+            sh_addralign: ALIGN_HASH,
             sh_entsize: 4,
             ..SectionHeader::default()
         }
@@ -603,7 +603,7 @@ impl<E: Endian> Encoder<E> {
             sh_type: elf::SHT_GNU_VERSYM,
             sh_flags: elf::SHF_ALLOC,
             sh_link: dynsym,
-            sh_addralign: ALIGN_GNU_VERSYM as u64,
+            sh_addralign: ALIGN_GNU_VERSYM,
             sh_entsize: 2,
             ..SectionHeader::default()
         }
@@ -619,7 +619,7 @@ impl<E: Endian> Encoder<E> {
             sh_flags: elf::SHF_ALLOC,
             sh_link: dynstr,
             sh_info: verdef_count,
-            sh_addralign: ALIGN_GNU_VERDEF as u64,
+            sh_addralign: ALIGN_GNU_VERDEF,
             ..SectionHeader::default()
         }
     }
@@ -634,7 +634,7 @@ impl<E: Endian> Encoder<E> {
             sh_flags: elf::SHF_ALLOC,
             sh_link: dynstr,
             sh_info: verneed_count,
-            sh_addralign: ALIGN_GNU_VERNEED as u64,
+            sh_addralign: ALIGN_GNU_VERNEED,
             ..SectionHeader::default()
         }
     }
@@ -661,7 +661,7 @@ impl<E: Endian> Encoder<E> {
             sh_type: if is_rela { elf::SHT_RELA } else { elf::SHT_REL },
             sh_flags: elf::SHF_INFO_LINK,
             sh_addralign: self.address_size().into(),
-            sh_entsize: self.rel_size(is_rela) as u64,
+            sh_entsize: self.rel_size(is_rela),
             ..SectionHeader::default()
         }
     }
@@ -673,7 +673,7 @@ impl<E: Endian> Encoder<E> {
         SectionHeader {
             sh_type: elf::SHT_RELA,
             sh_addralign: self.address_size().into(),
-            sh_entsize: self.relr_size() as u64,
+            sh_entsize: self.relr_size(),
             ..SectionHeader::default()
         }
     }
@@ -693,11 +693,11 @@ impl<E: Endian> Encoder<E> {
     }
 
     /// Return the size of a symbol.
-    pub fn sym_size(self) -> usize {
+    pub fn sym_size(self) -> u64 {
         if self.is_64 {
-            mem::size_of::<elf::Sym64<Endianness>>()
+            mem::size_of::<elf::Sym64<Endianness>>() as u64
         } else {
-            mem::size_of::<elf::Sym32<Endianness>>()
+            mem::size_of::<elf::Sym32<Endianness>>() as u64
         }
     }
 
@@ -766,28 +766,28 @@ impl<E: Endian> Encoder<E> {
     }
 
     /// Return the size of a relocation entry.
-    pub fn rel_size(self, is_rela: bool) -> usize {
+    pub fn rel_size(self, is_rela: bool) -> u64 {
         if self.is_64 {
             if is_rela {
-                mem::size_of::<elf::Rela64<Endianness>>()
+                mem::size_of::<elf::Rela64<Endianness>>() as u64
             } else {
-                mem::size_of::<elf::Rel64<Endianness>>()
+                mem::size_of::<elf::Rel64<Endianness>>() as u64
             }
         } else {
             if is_rela {
-                mem::size_of::<elf::Rela32<Endianness>>()
+                mem::size_of::<elf::Rela32<Endianness>>() as u64
             } else {
-                mem::size_of::<elf::Rel32<Endianness>>()
+                mem::size_of::<elf::Rel32<Endianness>>() as u64
             }
         }
     }
 
     /// Return the size of a relative relocation entry.
-    pub fn relr_size(self) -> usize {
+    pub fn relr_size(self) -> u64 {
         if self.is_64 {
-            mem::size_of::<elf::Relr64<Endianness>>()
+            mem::size_of::<elf::Relr64<Endianness>>() as u64
         } else {
-            mem::size_of::<elf::Relr32<Endianness>>()
+            mem::size_of::<elf::Relr32<Endianness>>() as u64
         }
     }
 
@@ -830,11 +830,11 @@ impl<E: Endian> Encoder<E> {
     }
 
     /// Return the size of a dynamic entry.
-    pub fn dyn_size(self) -> usize {
+    pub fn dyn_size(self) -> u64 {
         if self.is_64 {
-            mem::size_of::<elf::Dyn64<Endianness>>()
+            mem::size_of::<elf::Dyn64<Endianness>>() as u64
         } else {
-            mem::size_of::<elf::Dyn32<Endianness>>()
+            mem::size_of::<elf::Dyn32<Endianness>>() as u64
         }
     }
 
@@ -872,10 +872,10 @@ impl<E: Endian> Encoder<E> {
     }
 
     /// Return the size of a hash table.
-    pub fn hash_size(self, bucket_count: u32, chain_count: u32) -> usize {
-        mem::size_of::<elf::HashHeader<Endianness>>()
-            + bucket_count as usize * 4
-            + chain_count as usize * 4
+    pub fn hash_size(self, bucket_count: u32, chain_count: u32) -> u64 {
+        mem::size_of::<elf::HashHeader<Endianness>>() as u64
+            + bucket_count as u64 * 4
+            + chain_count as u64 * 4
     }
 
     /// Write a SysV hash table.
@@ -909,12 +909,12 @@ impl<E: Endian> Encoder<E> {
     }
 
     /// Return the size of a GNU hash table.
-    pub fn gnu_hash_size(self, bloom_count: u32, bucket_count: u32, symbol_count: u32) -> usize {
+    pub fn gnu_hash_size(self, bloom_count: u32, bucket_count: u32, symbol_count: u32) -> u64 {
         let bloom_size = if self.is_64 { 8 } else { 4 };
-        mem::size_of::<elf::GnuHashHeader<Endianness>>()
-            + bloom_count as usize * bloom_size
-            + bucket_count as usize * 4
-            + symbol_count as usize * 4
+        mem::size_of::<elf::GnuHashHeader<Endianness>>() as u64
+            + bloom_count as u64 * bloom_size
+            + bucket_count as u64 * 4
+            + symbol_count as u64 * 4
     }
 
     /// Write a GNU hash section.
@@ -1000,8 +1000,8 @@ impl<E: Endian> Encoder<E> {
     }
 
     /// Return the size of a GNU symbol version section.
-    pub fn gnu_versym_size(self, symbol_count: usize) -> usize {
-        symbol_count * 2
+    pub fn gnu_versym_size(self, symbol_count: usize) -> u64 {
+        symbol_count as u64 * 2
     }
 
     /// Write a symbol version entry.
@@ -1010,9 +1010,9 @@ impl<E: Endian> Encoder<E> {
     }
 
     /// Return the size of a GNU version definition section.
-    pub fn gnu_verdef_size(self, verdef_count: usize, verdaux_count: usize) -> usize {
-        verdef_count * mem::size_of::<elf::Verdef<Endianness>>()
-            + verdaux_count * mem::size_of::<elf::Verdaux<Endianness>>()
+    pub fn gnu_verdef_size(self, verdef_count: usize, verdaux_count: usize) -> u64 {
+        verdef_count as u64 * mem::size_of::<elf::Verdef<Endianness>>() as u64
+            + verdaux_count as u64 * mem::size_of::<elf::Verdaux<Endianness>>() as u64
     }
 
     /// Write a version definition entry.
@@ -1078,9 +1078,9 @@ impl<E: Endian> Encoder<E> {
     }
 
     /// Return the size of a GNU version dependency section.
-    pub fn gnu_verneed_size(self, verneed_count: usize, vernaux_count: usize) -> usize {
-        verneed_count * mem::size_of::<elf::Verneed<Endianness>>()
-            + vernaux_count * mem::size_of::<elf::Vernaux<Endianness>>()
+    pub fn gnu_verneed_size(self, verneed_count: usize, vernaux_count: usize) -> u64 {
+        verneed_count as u64 * mem::size_of::<elf::Verneed<Endianness>>() as u64
+            + vernaux_count as u64 * mem::size_of::<elf::Vernaux<Endianness>>() as u64
     }
 
     /// Write a version needed entry.

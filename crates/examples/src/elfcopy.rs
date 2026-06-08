@@ -380,20 +380,20 @@ pub fn elfcopy<Elf: FileHeader<Endian = Endianness>>(
             match in_section.sh_type(endian) {
                 elf::SHT_PROGBITS | elf::SHT_NOTE | elf::SHT_INIT_ARRAY | elf::SHT_FINI_ARRAY => {
                     out_sections[i.0].offset = writer.reserve(
-                        in_section.sh_size(endian).into() as usize,
-                        in_section.sh_addralign(endian).into() as usize,
+                        in_section.sh_size(endian).into(),
+                        in_section.sh_addralign(endian).into(),
                     );
                 }
                 elf::SHT_GNU_ATTRIBUTES => {
-                    writer.reserve_gnu_attributes(gnu_attributes.len());
+                    writer.reserve_gnu_attributes(gnu_attributes.len() as u64);
                 }
                 _ => {}
             }
         }
     } else {
         // We don't support moving program headers.
-        assert_eq!(in_elf.e_phoff(endian).into(), writer.reserved_len() as u64);
-        writer.reserve_program_headers(in_segments.len() as u32);
+        assert_eq!(in_elf.e_phoff(endian).into(), writer.reserved_len());
+        writer.reserve_program_headers(in_segments.len());
 
         // Reserve alloc sections at original offsets.
         alloc_sections = in_sections
@@ -404,14 +404,13 @@ pub fn elfcopy<Elf: FileHeader<Endian = Endianness>>(
         // from their section headers.
         alloc_sections.sort_by_key(|(_, x)| x.sh_offset(endian).into());
         for (i, in_section) in alloc_sections.iter() {
-            writer.reserve_until(in_section.sh_offset(endian).into() as usize);
+            writer.reserve_until(in_section.sh_offset(endian).into());
             match in_section.sh_type(endian) {
                 elf::SHT_PROGBITS | elf::SHT_NOTE | elf::SHT_INIT_ARRAY | elf::SHT_FINI_ARRAY => {
-                    out_sections[i.0].offset =
-                        writer.reserve(in_section.sh_size(endian).into() as usize, 1);
+                    out_sections[i.0].offset = writer.reserve(in_section.sh_size(endian).into(), 1);
                 }
                 elf::SHT_NOBITS => {
-                    out_sections[i.0].offset = writer.reserved_len() as u64;
+                    out_sections[i.0].offset = writer.reserved_len();
                 }
                 elf::SHT_REL => {
                     let (rels, _link) = in_section.rel(endian, in_data)?.unwrap();
@@ -473,12 +472,12 @@ pub fn elfcopy<Elf: FileHeader<Endian = Endianness>>(
             match in_section.sh_type(endian) {
                 elf::SHT_PROGBITS | elf::SHT_NOTE => {
                     out_sections[i.0].offset = writer.reserve(
-                        in_section.sh_size(endian).into() as usize,
-                        in_section.sh_addralign(endian).into() as usize,
+                        in_section.sh_size(endian).into(),
+                        in_section.sh_addralign(endian).into(),
                     );
                 }
                 elf::SHT_GNU_ATTRIBUTES => {
-                    writer.reserve_gnu_attributes(gnu_attributes.len());
+                    writer.reserve_gnu_attributes(gnu_attributes.len() as u64);
                 }
                 _ => {}
             }
@@ -522,7 +521,7 @@ pub fn elfcopy<Elf: FileHeader<Endian = Endianness>>(
         for (i, in_section) in in_sections.iter().enumerate() {
             match in_section.sh_type(endian) {
                 elf::SHT_PROGBITS | elf::SHT_NOTE | elf::SHT_INIT_ARRAY | elf::SHT_FINI_ARRAY => {
-                    writer.write_align(in_section.sh_addralign(endian).into() as usize);
+                    writer.write_align(in_section.sh_addralign(endian).into());
                     debug_assert_eq!(out_sections[i].offset, writer.offset());
                     writer.write(in_section.data(endian, in_data)?);
                 }
@@ -722,7 +721,7 @@ pub fn elfcopy<Elf: FileHeader<Endian = Endianness>>(
             }
             match in_section.sh_type(endian) {
                 elf::SHT_PROGBITS | elf::SHT_NOTE => {
-                    writer.write_align(in_section.sh_addralign(endian).into() as usize);
+                    writer.write_align(in_section.sh_addralign(endian).into());
                     debug_assert_eq!(out_sections[i.0].offset, writer.offset());
                     writer.write(in_section.data(endian, in_data)?);
                 }

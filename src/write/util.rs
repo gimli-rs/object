@@ -11,18 +11,18 @@ pub trait WritableBuffer {
     ///
     /// This is called often, so implementors should track this value
     /// themselves if determining the length is an expensive operation.
-    fn len(&self) -> usize;
+    fn len(&self) -> u64;
 
     /// Reserves specified number of bytes in the buffer.
     ///
     /// If called, this will be called exactly once before any writes, and the given size
     /// is the exact total number of bytes that will be written. Writers that target
     /// [`GrowableBuffer`] may skip this call, but it is required for other writers.
-    fn reserve(&mut self, size: usize) -> Result<(), ()>;
+    fn reserve(&mut self, size: u64) -> Result<(), ()>;
 
     /// Writes zero bytes at the end of the buffer until the buffer
     /// has the specified length.
-    fn resize(&mut self, new_len: usize);
+    fn resize(&mut self, new_len: u64);
 
     /// Writes the specified slice of bytes at the end of the buffer.
     fn write_bytes(&mut self, val: &[u8]);
@@ -90,21 +90,22 @@ impl GrowableBuffer for Vec<u8> {
 
 impl WritableBuffer for Vec<u8> {
     #[inline]
-    fn len(&self) -> usize {
-        self.len()
+    fn len(&self) -> u64 {
+        self.len() as u64
     }
 
     #[inline]
-    fn reserve(&mut self, size: usize) -> Result<(), ()> {
+    fn reserve(&mut self, size: u64) -> Result<(), ()> {
         debug_assert!(self.is_empty());
+        let size = usize::try_from(size).map_err(|_| ())?;
         self.reserve(size);
         Ok(())
     }
 
     #[inline]
-    fn resize(&mut self, new_len: usize) {
-        debug_assert!(new_len >= self.len());
-        self.resize(new_len, 0);
+    fn resize(&mut self, new_len: u64) {
+        debug_assert!(new_len as usize >= self.len());
+        self.resize(new_len as usize, 0);
     }
 
     #[inline]
@@ -124,7 +125,7 @@ impl WritableBuffer for Vec<u8> {
 #[derive(Debug)]
 pub struct StreamingBuffer<W> {
     writer: W,
-    len: usize,
+    len: u64,
     result: Result<(), io::Error>,
 }
 
@@ -169,20 +170,20 @@ impl<W: io::Write> GrowableBuffer for StreamingBuffer<W> {
 #[cfg(feature = "std")]
 impl<W: io::Write> WritableBuffer for StreamingBuffer<W> {
     #[inline]
-    fn len(&self) -> usize {
+    fn len(&self) -> u64 {
         self.len
     }
 
     #[inline]
-    fn reserve(&mut self, _size: usize) -> Result<(), ()> {
+    fn reserve(&mut self, _size: u64) -> Result<(), ()> {
         Ok(())
     }
 
     #[inline]
-    fn resize(&mut self, new_len: usize) {
+    fn resize(&mut self, new_len: u64) {
         debug_assert!(self.len <= new_len);
         while self.len < new_len {
-            let write_amt = (new_len - self.len).min(1024);
+            let write_amt = (new_len - self.len).min(1024) as usize;
             self.write_bytes(&[0; 1024][..write_amt]);
         }
     }
@@ -194,7 +195,7 @@ impl<W: io::Write> WritableBuffer for StreamingBuffer<W> {
         }
         // Callers depend on `len` being equal to the total requested writes,
         // even if those writes failed.
-        self.len += val.len();
+        self.len += val.len() as u64;
     }
 }
 
@@ -267,21 +268,17 @@ pub(crate) fn write_sleb128(buf: &mut Vec<u8>, mut val: i64) -> usize {
     }
 }
 
-pub(crate) fn align(offset: usize, size: usize) -> usize {
-    (offset + (size - 1)) & !(size - 1)
-}
-
 #[allow(dead_code)]
 pub(crate) fn align_u32(offset: u32, size: u32) -> u32 {
     (offset + (size - 1)) & !(size - 1)
 }
 
 #[allow(dead_code)]
-pub(crate) fn align_u64(offset: u64, size: u64) -> u64 {
+pub(crate) fn align(offset: u64, size: u64) -> u64 {
     (offset + (size - 1)) & !(size - 1)
 }
 
-pub(crate) fn write_align<W: WritableBuffer + ?Sized>(buffer: &mut W, size: usize) {
+pub(crate) fn write_align<W: WritableBuffer + ?Sized>(buffer: &mut W, size: u64) {
     let new_len = align(buffer.len(), size);
     buffer.resize(new_len);
 }

@@ -48,7 +48,7 @@ fn phnum_overflow() {
 
         let object = read::elf::ElfFile64::<Endianness>::parse(&*bytes).unwrap();
         assert_eq!(object.architecture(), Architecture::X86_64);
-        assert_eq!(object.elf_program_headers().len(), count as usize);
+        assert_eq!(object.elf_program_headers().len(), count);
     }
 
     // Error if missing section headers.

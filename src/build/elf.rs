@@ -761,7 +761,7 @@ impl<'data> Builder<'data> {
         struct Offset(u64);
         impl Offset {
             fn reserve(&mut self, size: u64, align: u64) -> (u64, u64) {
-                self.0 = write::align_u64(self.0, align);
+                self.0 = write::align(self.0, align);
                 let offset = self.0;
                 self.0 += size;
                 (offset, size)
@@ -1146,7 +1146,7 @@ impl<'data> Builder<'data> {
         // Start reserving file ranges.
         let encoder = self.encoder();
         let address_size = u64::from(encoder.address_size());
-        let mut offset = Offset(encoder.file_header_size() as u64);
+        let mut offset = Offset(encoder.file_header_size());
 
         let mut dynsym_addr = None;
         let mut dynstr_addr = None;
@@ -1159,7 +1159,7 @@ impl<'data> Builder<'data> {
         let segment_num = self.segments.count() as u32;
         let mut e_phoff = 0;
         if segment_num != 0 {
-            let size = u64::from(segment_num) * encoder.program_header_size() as u64;
+            let size = u64::from(segment_num) * encoder.program_header_size();
             e_phoff = offset.reserve(size, address_size).0;
             // TODO: support program headers in other locations.
             if self.header.e_phoff != e_phoff {
@@ -1219,19 +1219,19 @@ impl<'data> Builder<'data> {
                     }
                     SectionData::DynamicRelocation(relocations) => {
                         let size = relocations.len() as u64
-                            * encoder.rel_size(section.sh_type == elf::SHT_RELA) as u64;
+                            * encoder.rel_size(section.sh_type == elf::SHT_RELA);
                         offset.reserve(size, address_size)
                     }
                     SectionData::Note(data) => {
                         offset.reserve(data.len() as u64, section.sh_addralign)
                     }
                     SectionData::Dynamic(dynamics) => {
-                        let size = (1 + dynamics.len() as u64) * encoder.dyn_size() as u64;
+                        let size = (1 + dynamics.len() as u64) * encoder.dyn_size();
                         offset.reserve(size, address_size)
                     }
                     SectionData::DynamicSymbol => {
                         dynsym_addr = Some(section.sh_addr);
-                        let size = u64::from(dynsym_num) * encoder.sym_size() as u64;
+                        let size = u64::from(dynsym_num) * encoder.sym_size();
                         offset.reserve(size, address_size)
                     }
                     SectionData::DynamicString => {
@@ -1241,7 +1241,7 @@ impl<'data> Builder<'data> {
                     SectionData::Hash => {
                         hash_addr = Some(section.sh_addr);
                         let size = encoder.hash_size(self.hash_bucket_count, hash_chain_count);
-                        offset.reserve(size as u64, write::elf::ALIGN_HASH.into())
+                        offset.reserve(size, write::elf::ALIGN_HASH)
                     }
                     SectionData::GnuHash => {
                         gnu_hash_addr = Some(section.sh_addr);
@@ -1250,22 +1250,22 @@ impl<'data> Builder<'data> {
                             self.gnu_hash_bucket_count,
                             gnu_hash_symbol_count,
                         );
-                        offset.reserve(size as u64, address_size)
+                        offset.reserve(size, address_size)
                     }
                     SectionData::GnuVersym => {
                         versym_addr = Some(section.sh_addr);
                         let size = encoder.gnu_versym_size(dynsym_num as usize);
-                        offset.reserve(size as u64, write::elf::ALIGN_GNU_VERSYM.into())
+                        offset.reserve(size, write::elf::ALIGN_GNU_VERSYM)
                     }
                     SectionData::GnuVerdef => {
                         verdef_addr = Some(section.sh_addr);
                         let size = encoder.gnu_verdef_size(verdef_count, verdaux_count);
-                        offset.reserve(size as u64, write::elf::ALIGN_GNU_VERDEF.into())
+                        offset.reserve(size, write::elf::ALIGN_GNU_VERDEF)
                     }
                     SectionData::GnuVerneed => {
                         verneed_addr = Some(section.sh_addr);
                         let size = encoder.gnu_verneed_size(verneed_count, vernaux_count);
-                        offset.reserve(size as u64, write::elf::ALIGN_GNU_VERNEED.into())
+                        offset.reserve(size, write::elf::ALIGN_GNU_VERNEED)
                     }
                     _ => {
                         return Err(Error(format!(
@@ -1314,7 +1314,7 @@ impl<'data> Builder<'data> {
         }
 
         if symtab_index != 0 {
-            let size = u64::from(sym_num) * encoder.sym_size() as u64;
+            let size = u64::from(sym_num) * encoder.sym_size();
             let range = offset.reserve(size, address_size);
             out_sections[symtab_index as usize - 1].set_range(range);
         }
@@ -1336,8 +1336,8 @@ impl<'data> Builder<'data> {
             let SectionData::Relocation(relocations) = &section.data else {
                 continue;
             };
-            let size = relocations.len() as u64
-                * encoder.rel_size(section.sh_type == elf::SHT_RELA) as u64;
+            let size =
+                relocations.len() as u64 * encoder.rel_size(section.sh_type == elf::SHT_RELA);
             out_section.set_range(offset.reserve(size, address_size));
         }
 
@@ -1346,7 +1346,7 @@ impl<'data> Builder<'data> {
             out_sections[shstrtab_index as usize - 1].set_range(range);
         }
         let e_shoff = if section_num != 0 {
-            let size = section_num as u64 * encoder.section_header_size() as u64;
+            let size = section_num as u64 * encoder.section_header_size();
             offset.reserve(size, address_size).0
         } else {
             0
@@ -1399,7 +1399,7 @@ impl<'data> Builder<'data> {
                     continue;
                 }
 
-                buffer.resize(out_section.offset as usize);
+                buffer.resize(out_section.offset);
                 match &section.data {
                     SectionData::Data(data) => {
                         buffer.write_bytes(data);
@@ -1627,18 +1627,18 @@ impl<'data> Builder<'data> {
             }
             match &section.data {
                 SectionData::Data(data) => {
-                    buffer.resize(out_section.offset as usize);
+                    buffer.resize(out_section.offset);
                     buffer.write_bytes(data);
                 }
                 SectionData::UninitializedData(_) => {
                     // Nothing to do.
                 }
                 SectionData::Note(data) => {
-                    buffer.resize(out_section.offset as usize);
+                    buffer.resize(out_section.offset);
                     buffer.write_bytes(data);
                 }
                 SectionData::Attributes(_) => {
-                    buffer.resize(out_section.offset as usize);
+                    buffer.resize(out_section.offset);
                     buffer.write_bytes(&out_section.attributes);
                 }
                 // These are handled elsewhere.
@@ -1659,7 +1659,7 @@ impl<'data> Builder<'data> {
         let mut symtab_shndx_data = Vec::new();
         if symtab_index != 0 {
             let out_section = &out_sections[symtab_index as usize - 1];
-            buffer.resize(out_section.offset as usize);
+            buffer.resize(out_section.offset);
             encoder.null_symbol(buffer);
             if need_symtab_shndx {
                 encoder.u32(&mut symtab_shndx_data, 0u32);
@@ -1683,12 +1683,12 @@ impl<'data> Builder<'data> {
         }
         if symtab_shndx_index != 0 {
             let out_section = &out_sections[symtab_shndx_index as usize - 1];
-            buffer.resize(out_section.offset as usize);
+            buffer.resize(out_section.offset);
             buffer.write_bytes(&symtab_shndx_data);
         }
         if strtab_index != 0 {
             let out_section = &out_sections[strtab_index as usize - 1];
-            buffer.resize(out_section.offset as usize);
+            buffer.resize(out_section.offset);
             buffer.write_bytes(&strtab_data);
         }
 
@@ -1701,7 +1701,7 @@ impl<'data> Builder<'data> {
             let SectionData::Relocation(relocations) = &section.data else {
                 continue;
             };
-            buffer.resize(out_section.offset as usize);
+            buffer.resize(out_section.offset);
             for rel in relocations {
                 let r_sym = if let Some(id) = rel.symbol {
                     out_syms_index[id.0]
@@ -1720,12 +1720,12 @@ impl<'data> Builder<'data> {
 
         if shstrtab_index != 0 {
             let out_section = &out_sections[shstrtab_index as usize - 1];
-            buffer.resize(out_section.offset as usize);
+            buffer.resize(out_section.offset);
             buffer.write_bytes(&shstrtab_data);
         }
 
         if e_shoff != 0 {
-            buffer.resize(e_shoff as usize);
+            buffer.resize(e_shoff);
             encoder.null_section_header(buffer, &layout);
         }
         for out_section in &out_sections {
@@ -1804,7 +1804,7 @@ impl<'data> Builder<'data> {
             }
             encoder.section_header(buffer, &header);
         }
-        debug_assert_eq!(offset.0, buffer.len() as u64);
+        debug_assert_eq!(offset.0, buffer.len());
         Ok(())
     }
 
@@ -1967,21 +1967,21 @@ impl<'data> Builder<'data> {
     }
 
     /// Calculate the size of the file header.
-    pub fn file_header_size(&self) -> usize {
+    pub fn file_header_size(&self) -> u64 {
         self.encoder().file_header_size()
     }
 
     /// Calculate the size of the program headers.
-    pub fn program_headers_size(&self) -> usize {
-        self.segments.count() * self.encoder().program_header_size()
+    pub fn program_headers_size(&self) -> u64 {
+        self.segments.count() as u64 * self.encoder().program_header_size()
     }
 
     /// Calculate the size of the dynamic symbol table.
     ///
     /// To get an accurate result, you may need to first call
     /// [`Self::delete_orphan_symbols`].
-    pub fn dynamic_symbol_size(&self) -> usize {
-        (1 + self.dynamic_symbols.count()) * self.encoder().sym_size()
+    pub fn dynamic_symbol_size(&self) -> u64 {
+        (1 + self.dynamic_symbols.count() as u64) * self.encoder().sym_size()
     }
 
     /// Calculate the size of the dynamic string table.
@@ -1991,7 +1991,7 @@ impl<'data> Builder<'data> {
     ///
     /// To get an accurate result, you may need to first call
     /// [`Self::delete_orphan_symbols`] and [`Self::delete_unused_versions`].
-    pub fn dynamic_string_size(&self) -> usize {
+    pub fn dynamic_string_size(&self) -> u64 {
         let mut dynstr = write::StringTable::default();
         for section in &self.sections {
             if let SectionData::Dynamic(dynamics) = &section.data {
@@ -2030,7 +2030,7 @@ impl<'data> Builder<'data> {
     ///
     /// To get an accurate result, you may need to first call
     /// [`Self::delete_orphan_symbols`].
-    pub fn hash_size(&self) -> usize {
+    pub fn hash_size(&self) -> u64 {
         let chain_count = 1 + self.dynamic_symbols.count();
         self.encoder()
             .hash_size(self.hash_bucket_count, chain_count as u32)
@@ -2040,7 +2040,7 @@ impl<'data> Builder<'data> {
     ///
     /// To get an accurate result, you may need to first call
     /// [`Self::delete_orphan_symbols`].
-    pub fn gnu_hash_size(&self) -> usize {
+    pub fn gnu_hash_size(&self) -> u64 {
         let symbol_count = self.dynamic_symbols.count_defined();
         self.encoder().gnu_hash_size(
             self.gnu_hash_bloom_count,
@@ -2053,7 +2053,7 @@ impl<'data> Builder<'data> {
     ///
     /// To get an accurate result, you may need to first call
     /// [`Self::delete_orphan_symbols`] and [`Self::delete_unused_versions`].
-    pub fn gnu_versym_size(&self) -> usize {
+    pub fn gnu_versym_size(&self) -> u64 {
         let symbol_count = 1 + self.dynamic_symbols.count();
         self.encoder().gnu_versym_size(symbol_count)
     }
@@ -2062,7 +2062,7 @@ impl<'data> Builder<'data> {
     ///
     /// To get an accurate result, you may need to first call
     /// [`Self::delete_orphan_symbols`] and [`Self::delete_unused_versions`].
-    pub fn gnu_verdef_size(&self) -> usize {
+    pub fn gnu_verdef_size(&self) -> u64 {
         let mut verdef_count = 0;
         let mut verdaux_count = 0;
         if self.version_base.is_some() {
@@ -2084,7 +2084,7 @@ impl<'data> Builder<'data> {
     ///
     /// To get an accurate result, you may need to first call
     /// [`Self::delete_orphan_symbols`] and [`Self::delete_unused_versions`].
-    pub fn gnu_verneed_size(&self) -> usize {
+    pub fn gnu_verneed_size(&self) -> u64 {
         let verneed_count = self.version_files.count();
         let mut vernaux_count = 0;
         for version in &self.versions {
@@ -2102,21 +2102,23 @@ impl<'data> Builder<'data> {
     ///
     /// To get an accurate result, you may need to first call
     /// [`Self::delete_orphan_symbols`] and [`Self::delete_unused_versions`].
-    pub fn section_size(&self, section: &Section<'_>) -> usize {
+    pub fn section_size(&self, section: &Section<'_>) -> u64 {
         if section.delete || !section.is_alloc() {
             return 0;
         }
         match &section.data {
-            SectionData::Data(data) => data.len(),
-            SectionData::UninitializedData(len) => *len as usize,
+            SectionData::Data(data) => data.len() as u64,
+            SectionData::UninitializedData(len) => *len,
             SectionData::Relocation(relocations) => {
-                relocations.len() * self.encoder().rel_size(section.sh_type == elf::SHT_RELA)
+                relocations.len() as u64 * self.encoder().rel_size(section.sh_type == elf::SHT_RELA)
             }
             SectionData::DynamicRelocation(relocations) => {
-                relocations.len() * self.encoder().rel_size(section.sh_type == elf::SHT_RELA)
+                relocations.len() as u64 * self.encoder().rel_size(section.sh_type == elf::SHT_RELA)
             }
-            SectionData::Note(data) => data.len(),
-            SectionData::Dynamic(dynamics) => (1 + dynamics.len()) * self.encoder().dyn_size(),
+            SectionData::Note(data) => data.len() as u64,
+            SectionData::Dynamic(dynamics) => {
+                (1 + dynamics.len() as u64) * self.encoder().dyn_size()
+            }
             SectionData::DynamicString => self.dynamic_string_size(),
             SectionData::DynamicSymbol => self.dynamic_symbol_size(),
             SectionData::Hash => self.hash_size(),
@@ -2145,7 +2147,7 @@ impl<'data> Builder<'data> {
             if section.delete || !section.is_alloc() {
                 continue;
             }
-            self.sections.get_mut(id).sh_size = self.section_size(section) as u64;
+            self.sections.get_mut(id).sh_size = self.section_size(section);
         }
     }
 
