@@ -603,7 +603,7 @@ impl<'a> Object<'a> {
         let strtab_offset = offset;
         // Start with null name.
         let mut strtab_data = vec![0];
-        strtab.write(1, &mut strtab_data)?;
+        strtab.write(&mut strtab_data, 1)?;
         write_align(&mut strtab_data, pointer_align);
         offset += strtab_data.len() as u64;
 

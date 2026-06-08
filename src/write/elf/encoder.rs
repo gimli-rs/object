@@ -7,7 +7,7 @@ use crate::elf;
 use crate::endian::*;
 use crate::pod;
 use crate::write::util::{write_align, write_pod, write_pod_slice};
-use crate::write::{self, Error, Result, WritableBuffer};
+use crate::write::{self, Error, Result, StringTable, WritableBuffer};
 
 /// Alignment for .symtab_shndx.
 pub const ALIGN_SYMTAB_SHNDX: u64 = 4;
@@ -690,6 +690,18 @@ impl<E: Endian> Encoder<E> {
             sh_entsize: 4,
             ..SectionHeader::default()
         }
+    }
+
+    /// Write the data for a string table.
+    ///
+    /// Returns the length of the written data.
+    pub fn strtab<W: WritableBuffer + ?Sized>(
+        self,
+        buffer: &mut W,
+        strtab: &mut StringTable<'_>,
+    ) -> Result<u32> {
+        buffer.write_bytes(&[0]);
+        strtab.write(buffer, 1)
     }
 
     /// Return the size of a symbol.

@@ -451,7 +451,7 @@ impl<'a> Writer<'a> {
 
         debug_assert_eq!(self.strtab_offset, 0);
         // First 4 bytes of strtab are the length.
-        self.strtab_len = self.strtab.write(4, &mut self.strtab_data)?;
+        self.strtab_len = self.strtab.write(&mut self.strtab_data, 4)?;
         self.strtab_offset = self.reserve(self.strtab_len as u64, 1);
         Ok(())
     }
