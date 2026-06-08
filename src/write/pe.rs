@@ -22,7 +22,7 @@ pub struct Writer<'a> {
     file_alignment: u32,
 
     buffer: &'a mut dyn WritableBuffer,
-    len: u32,
+    len: u64,
     virtual_len: u32,
     headers_len: u32,
 
@@ -113,13 +113,13 @@ impl<'a> Writer<'a> {
     }
 
     /// Return the current file length that has been reserved.
-    pub fn reserved_len(&self) -> u32 {
+    pub fn reserved_len(&self) -> u64 {
         self.len
     }
 
     /// Return the current file length that has been written.
     #[allow(clippy::len_without_is_empty)]
-    pub fn len(&self) -> usize {
+    pub fn len(&self) -> u64 {
         self.buffer.len()
     }
 
@@ -128,11 +128,11 @@ impl<'a> Writer<'a> {
     /// Returns the aligned offset of the start of the range.
     pub fn reserve(&mut self, len: u32, align_start: u32) -> u32 {
         if len == 0 {
-            return self.len;
+            return self.len as u32;
         }
         self.reserve_align(align_start);
-        let offset = self.len;
-        self.len += len;
+        let offset = self.len as u32;
+        self.len += len as u64;
         offset
     }
 
@@ -150,12 +150,12 @@ impl<'a> Writer<'a> {
 
     /// Reserve alignment padding bytes.
     pub fn reserve_align(&mut self, align_start: u32) {
-        self.len = util::align_u32(self.len, align_start);
+        self.len = util::align(self.len, align_start as u64);
     }
 
     /// Write alignment padding bytes.
     pub fn write_align(&mut self, align_start: u32) {
-        util::write_align(self.buffer, align_start as usize);
+        util::write_align(self.buffer, align_start as u64);
     }
 
     /// Write padding up to the next multiple of file alignment.
@@ -165,14 +165,14 @@ impl<'a> Writer<'a> {
 
     /// Reserve the file range up to the given file offset.
     pub fn reserve_until(&mut self, offset: u32) {
-        debug_assert!(self.len <= offset);
-        self.len = offset;
+        debug_assert!(self.len <= offset as u64);
+        self.len = offset as u64;
     }
 
     /// Write padding up to the given file offset.
     pub fn pad_until(&mut self, offset: u32) {
-        debug_assert!(self.buffer.len() <= offset as usize);
-        self.buffer.resize(offset as usize);
+        debug_assert!(self.buffer.len() <= offset as u64);
+        self.buffer.resize(offset as u64);
     }
 
     /// Reserve the range for the DOS header.
@@ -193,7 +193,7 @@ impl<'a> Writer<'a> {
 
         // Start writing.
         self.buffer
-            .reserve(self.len as usize)
+            .reserve(self.len)
             .map_err(|_| Error(String::from("Cannot allocate buffer")))?;
 
         self.buffer.write(dos_header);
@@ -436,8 +436,8 @@ impl<'a> Writer<'a> {
         );
         // Padding before sections must be included in headers_len.
         self.reserve_align(self.file_alignment);
-        self.headers_len = self.len;
-        self.reserve_virtual(self.len);
+        self.headers_len = self.len as u32;
+        self.reserve_virtual(self.len as u32);
     }
 
     /// Write the section headers.

@@ -736,7 +736,7 @@ fn move_sections(builder: &mut build::elf::Builder) -> Result<()> {
         }
 
         // Update the PT_PHDR segment to include the new program headers.
-        let size = builder.program_headers_size() as u64;
+        let size = builder.program_headers_size();
         for segment in &mut builder.segments {
             if segment.p_type != elf::PT_PHDR {
                 continue;
@@ -756,10 +756,9 @@ fn find_move_sections(
 
     let mut move_sections = Vec::new();
     let mut blocks = Vec::new();
-    let file_header_size = builder.file_header_size() as u64;
-    let program_headers_size = (builder.program_headers_size()
-        + added_segments * builder.encoder().program_header_size())
-        as u64;
+    let file_header_size = builder.file_header_size();
+    let program_headers_size = builder.program_headers_size()
+        + added_segments as u64 * builder.encoder().program_header_size();
     let interp = builder.interp_section();
 
     if let Some(segment) = builder.segments.find_load_segment_from_offset(0) {

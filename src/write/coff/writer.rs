@@ -27,7 +27,7 @@ use crate::write::{Error, Result, WritableBuffer};
 #[allow(missing_debug_implementations)]
 pub struct Writer<'a> {
     buffer: &'a mut dyn WritableBuffer,
-    len: usize,
+    len: u64,
 
     section_num: u16,
 
@@ -60,13 +60,13 @@ impl<'a> Writer<'a> {
     }
 
     /// Return the current file length that has been reserved.
-    pub fn reserved_len(&self) -> usize {
+    pub fn reserved_len(&self) -> u64 {
         self.len
     }
 
     /// Return the current file length that has been written.
     #[allow(clippy::len_without_is_empty)]
-    pub fn len(&self) -> usize {
+    pub fn len(&self) -> u64 {
         self.buffer.len()
     }
 
@@ -75,7 +75,7 @@ impl<'a> Writer<'a> {
     /// Returns the aligned offset of the start of the range.
     ///
     /// `align_start` must be a power of two.
-    pub fn reserve(&mut self, len: usize, align_start: usize) -> u32 {
+    pub fn reserve(&mut self, len: u64, align_start: u64) -> u32 {
         if align_start > 1 {
             self.len = util::align(self.len, align_start);
         }
@@ -85,7 +85,7 @@ impl<'a> Writer<'a> {
     }
 
     /// Write alignment padding bytes.
-    pub fn write_align(&mut self, align_start: usize) {
+    pub fn write_align(&mut self, align_start: u64) {
         if align_start > 1 {
             util::write_align(self.buffer, align_start);
         }
@@ -97,13 +97,13 @@ impl<'a> Writer<'a> {
     }
 
     /// Reserve the file range up to the given file offset.
-    pub fn reserve_until(&mut self, offset: usize) {
+    pub fn reserve_until(&mut self, offset: u64) {
         debug_assert!(self.len <= offset);
         self.len = offset;
     }
 
     /// Write padding up to the given file offset.
-    pub fn pad_until(&mut self, offset: usize) {
+    pub fn pad_until(&mut self, offset: u64) {
         debug_assert!(self.buffer.len() <= offset);
         self.buffer.resize(offset);
     }
@@ -113,7 +113,7 @@ impl<'a> Writer<'a> {
     /// This must be at the start of the file.
     pub fn reserve_file_header(&mut self) {
         debug_assert_eq!(self.len, 0);
-        self.reserve(mem::size_of::<pe::ImageFileHeader>(), 1);
+        self.reserve(mem::size_of::<pe::ImageFileHeader>() as u64, 1);
     }
 
     /// Write the file header.
@@ -149,7 +149,7 @@ impl<'a> Writer<'a> {
         debug_assert_eq!(self.section_num, 0);
         self.section_num = section_num;
         self.reserve(
-            section_num as usize * mem::size_of::<pe::ImageSectionHeader>(),
+            section_num as u64 * mem::size_of::<pe::ImageSectionHeader>() as u64,
             1,
         );
     }
@@ -224,7 +224,7 @@ impl<'a> Writer<'a> {
             return 0;
         }
         // TODO: not sure what alignment is required here, but this seems to match LLVM
-        self.reserve(len, 4)
+        self.reserve(len as u64, 4)
     }
 
     /// Write the alignment bytes prior to section data.
@@ -256,7 +256,7 @@ impl<'a> Writer<'a> {
             return;
         }
         self.write_section_align();
-        self.buffer.resize(self.buffer.len() + len);
+        self.buffer.resize(self.buffer.len() + len as u64);
     }
 
     /// Reserve a file range for the given number of relocations.
@@ -272,7 +272,10 @@ impl<'a> Writer<'a> {
         if count > 0xffff {
             count += 1;
         }
-        self.reserve(count * mem::size_of::<pe::ImageRelocation>(), 1)
+        self.reserve(
+            count as u64 * mem::size_of::<pe::ImageRelocation>() as u64,
+            1,
+        )
     }
 
     /// Write a relocation containing the count if required.
@@ -353,7 +356,7 @@ impl<'a> Writer<'a> {
         debug_assert!(aux_len >= name.len());
         let old_len = self.buffer.len();
         self.buffer.write_bytes(name);
-        self.buffer.resize(old_len + aux_len);
+        self.buffer.resize(old_len + aux_len as u64);
     }
 
     /// Reserve an auxiliary symbol for a section.
@@ -443,18 +446,19 @@ impl<'a> Writer<'a> {
     /// Returns an error if the string table could not be finalized.
     pub fn reserve_symtab_strtab(&mut self) -> Result<()> {
         debug_assert_eq!(self.symtab_offset, 0);
-        self.symtab_offset = self.reserve(self.symtab_num as usize * pe::IMAGE_SIZEOF_SYMBOL, 1);
+        self.symtab_offset =
+            self.reserve(self.symtab_num as u64 * pe::IMAGE_SIZEOF_SYMBOL as u64, 1);
 
         debug_assert_eq!(self.strtab_offset, 0);
         // First 4 bytes of strtab are the length.
         self.strtab_len = self.strtab.write(4, &mut self.strtab_data)?;
-        self.strtab_offset = self.reserve(self.strtab_len as usize, 1);
+        self.strtab_offset = self.reserve(self.strtab_len as u64, 1);
         Ok(())
     }
 
     /// Write the string table.
     pub fn write_strtab(&mut self) {
-        debug_assert_eq!(self.strtab_offset, self.buffer.len() as u32);
+        debug_assert_eq!(self.strtab_offset as u64, self.buffer.len());
         self.buffer.write_bytes(&u32::to_le_bytes(self.strtab_len));
         self.buffer.write_bytes(&self.strtab_data);
     }

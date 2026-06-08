@@ -42,12 +42,12 @@ impl<'a> Object<'a> {
         let n_name = b"GNU\0";
         data.extend_from_slice(pod::bytes_of(&elf::NoteHeader32 {
             n_namesz: U32::new(self.endian, n_name.len() as u32),
-            n_descsz: U32::new(self.endian, util::align(3 * 4, align) as u32),
+            n_descsz: U32::new(self.endian, util::align_u32(3 * 4, align as u32)),
             n_type: U32::new(self.endian, elf::NT_GNU_PROPERTY_TYPE_0),
         }));
         data.extend_from_slice(n_name);
         // This happens to already be aligned correctly.
-        debug_assert_eq!(util::align(data.len(), align), data.len());
+        debug_assert_eq!(util::align(data.len() as u64, align), data.len() as u64);
         data.extend_from_slice(pod::bytes_of(&U32::new(self.endian, property)));
         // Value size
         data.extend_from_slice(pod::bytes_of(&U32::new(self.endian, 4u32)));
@@ -55,7 +55,7 @@ impl<'a> Object<'a> {
         util::write_align(&mut data, align);
 
         let section = self.section_id(StandardSection::GnuProperty);
-        self.append_section_data(section, &data, align as u64);
+        self.append_section_data(section, &data, align);
     }
 }
 
@@ -638,7 +638,7 @@ impl<'a> Object<'a> {
         let mut section_offsets = Vec::with_capacity(self.sections.len());
         for (section, reloc_name) in self.sections.iter().zip(reloc_names.iter()) {
             let index = writer.reserve_section_index();
-            let offset = writer.reserve(section.data.len(), section.align as usize);
+            let offset = writer.reserve(section.data.len() as u64, section.align);
             let str_id = writer.add_section_name(&section.name);
             let mut reloc_str_id = None;
             if !section.relocations.is_empty() {
@@ -776,7 +776,7 @@ impl<'a> Object<'a> {
             }
         }
         for (index, section) in self.sections.iter().enumerate() {
-            writer.write_align(section.align as usize);
+            writer.write_align(section.align);
             debug_assert_eq!(section_offsets[index].offset, writer.offset());
             writer.write(&section.data);
         }

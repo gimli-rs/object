@@ -104,8 +104,8 @@ pub struct Writer<'a, M: Mode = TwoPhase> {
 
     dynamic_str_id: Option<StringId>,
     dynamic_offset: u64,
-    dynamic_num: usize,
-    written_dynamic_num: usize,
+    dynamic_num: u64,
+    written_dynamic_num: u64,
 
     hash_str_id: Option<StringId>,
     hash_offset: u64,
@@ -237,19 +237,19 @@ impl<'a, M: Mode> Writer<'a, M> {
 
     /// Return the current file length that has been written.
     #[allow(clippy::len_without_is_empty)]
-    pub fn len(&self) -> usize {
+    pub fn len(&self) -> u64 {
         self.buffer.len()
     }
 
     /// Return the file offset of the next write.
     pub fn offset(&self) -> u64 {
-        self.buffer.len() as u64
+        self.buffer.len()
     }
 
     /// Write alignment padding bytes.
     ///
     /// Returns the file offset after the padding.
-    pub fn write_align(&mut self, align_start: usize) -> u64 {
+    pub fn write_align(&mut self, align_start: u64) -> u64 {
         if align_start > 1 {
             util::write_align(self.buffer, align_start);
         }
@@ -266,8 +266,7 @@ impl<'a, M: Mode> Writer<'a, M> {
     /// Write padding up to the given file offset.
     pub fn pad_until(&mut self, offset: u64) {
         debug_assert!(self.offset() <= offset);
-        debug_assert!(offset <= usize::MAX as u64);
-        self.buffer.resize(offset as usize);
+        self.buffer.resize(offset);
     }
 
     /// Write the file header.
@@ -469,7 +468,7 @@ impl<'a, M: Mode> Writer<'a, M> {
         let index = self.write_section_header(&SectionHeader {
             sh_name: self.section_name_offset(self.symtab_str_id),
             sh_offset: self.symtab_offset,
-            sh_size: self.symtab_num as u64 * self.encoder.sym_size() as u64,
+            sh_size: self.symtab_num as u64 * self.encoder.sym_size(),
             ..self
                 .encoder
                 .symtab_section_header(self.strtab_index.0, num_local)
@@ -486,7 +485,7 @@ impl<'a, M: Mode> Writer<'a, M> {
             self.symtab_shndx_data = Vec::new();
             return 0;
         }
-        let offset = self.write_align(ALIGN_SYMTAB_SHNDX.into());
+        let offset = self.write_align(ALIGN_SYMTAB_SHNDX);
         M::set_offset(&mut self.symtab_shndx_offset, offset);
         M::set_section_name(
             &mut self.symtab_shndx_str_id,
@@ -615,7 +614,7 @@ impl<'a, M: Mode> Writer<'a, M> {
             sh_name: self.section_name_offset(self.dynsym_str_id),
             sh_addr,
             sh_offset: self.dynsym_offset,
-            sh_size: self.dynsym_num as u64 * self.encoder.sym_size() as u64,
+            sh_size: self.dynsym_num as u64 * self.encoder.sym_size(),
             ..self
                 .encoder
                 .dynsym_section_header(self.dynstr_index.0, num_local)
@@ -666,7 +665,7 @@ impl<'a, M: Mode> Writer<'a, M> {
             sh_name: self.section_name_offset(self.dynamic_str_id),
             sh_addr,
             sh_offset: self.dynamic_offset,
-            sh_size: (self.dynamic_num * self.encoder.dyn_size()) as u64,
+            sh_size: self.dynamic_num * self.encoder.dyn_size(),
             ..self.encoder.dynamic_section_header(self.dynstr_index.0)
         });
     }
@@ -683,7 +682,7 @@ impl<'a, M: Mode> Writer<'a, M> {
     where
         F: Fn(u32) -> Option<u32>,
     {
-        let offset = self.write_align(ALIGN_HASH.into());
+        let offset = self.write_align(ALIGN_HASH);
         M::set_offset(&mut self.hash_offset, offset);
         M::set_section_name(&mut self.hash_str_id, &mut self.shstrtab, b".hash");
         self.encoder
@@ -780,7 +779,7 @@ impl<'a, M: Mode> Writer<'a, M> {
         if !M::need_offset(self.gnu_versym_offset) {
             return 0;
         }
-        let offset = self.write_align(ALIGN_GNU_VERSYM.into());
+        let offset = self.write_align(ALIGN_GNU_VERSYM);
         M::set_offset(&mut self.gnu_versym_offset, offset);
         M::set_section_name(
             &mut self.gnu_versym_str_id,
@@ -812,7 +811,7 @@ impl<'a, M: Mode> Writer<'a, M> {
             sh_name: self.section_name_offset(self.gnu_versym_str_id),
             sh_addr,
             sh_offset: self.gnu_versym_offset,
-            sh_size: self.encoder.gnu_versym_size(self.gnu_versym_num as usize) as u64,
+            sh_size: self.encoder.gnu_versym_size(self.gnu_versym_num as usize),
             ..self.encoder.gnu_versym_section_header(self.dynsym_index.0)
         });
     }
@@ -825,7 +824,7 @@ impl<'a, M: Mode> Writer<'a, M> {
         if !M::need_offset(self.gnu_verdef_offset) {
             return 0;
         }
-        let offset = self.write_align(ALIGN_GNU_VERDEF.into());
+        let offset = self.write_align(ALIGN_GNU_VERDEF);
         M::set_offset(&mut self.gnu_verdef_offset, offset);
         M::set_section_name(
             &mut self.gnu_verdef_str_id,
@@ -891,8 +890,7 @@ impl<'a, M: Mode> Writer<'a, M> {
         }
         let sh_size = self
             .encoder
-            .gnu_verdef_size(self.gnu_verdef_count as usize, self.gnu_verdaux_count)
-            as u64;
+            .gnu_verdef_size(self.gnu_verdef_count as usize, self.gnu_verdaux_count);
         self.write_section_header(&SectionHeader {
             sh_name: self.section_name_offset(self.gnu_verdef_str_id),
             sh_addr,
@@ -912,7 +910,7 @@ impl<'a, M: Mode> Writer<'a, M> {
         if !M::need_offset(self.gnu_verneed_offset) {
             return 0;
         }
-        let offset = self.write_align(ALIGN_GNU_VERNEED.into());
+        let offset = self.write_align(ALIGN_GNU_VERNEED);
         M::set_offset(&mut self.gnu_verneed_offset, offset);
         M::set_section_name(
             &mut self.gnu_verneed_str_id,
@@ -959,8 +957,7 @@ impl<'a, M: Mode> Writer<'a, M> {
         }
         let sh_size = self
             .encoder
-            .gnu_verneed_size(self.gnu_verneed_count as usize, self.gnu_vernaux_count)
-            as u64;
+            .gnu_verneed_size(self.gnu_verneed_count as usize, self.gnu_vernaux_count);
         self.write_section_header(&SectionHeader {
             sh_name: self.section_name_offset(self.gnu_verneed_str_id),
             sh_addr,
@@ -1047,7 +1044,7 @@ impl<'a, M: Mode> Writer<'a, M> {
         self.write_section_header(&SectionHeader {
             sh_name: self.section_name_offset(Some(name)),
             sh_offset: offset,
-            sh_size: (count * self.encoder.rel_size(is_rela)) as u64,
+            sh_size: count as u64 * self.encoder.rel_size(is_rela),
             sh_link: symtab.0,
             sh_info: section.0,
             ..self.encoder.relocation_section_header(is_rela)
@@ -1061,13 +1058,13 @@ impl<'a, M: Mode> Writer<'a, M> {
     pub fn write_relative_relocation_section_header(
         &mut self,
         name: StringId,
-        offset: usize,
-        size: usize,
+        offset: u64,
+        size: u64,
     ) {
         self.write_section_header(&SectionHeader {
             sh_name: self.section_name_offset(Some(name)),
-            sh_offset: offset as u64,
-            sh_size: size as u64,
+            sh_offset: offset,
+            sh_size: size,
             ..self.encoder.relative_relocation_section_header()
         });
     }
@@ -1230,13 +1227,13 @@ impl<'a> Writer<'a, SinglePhase> {
         // file_header_size is always a multiple of address size, so no alignment
         // padding is required.
         let offset = self.offset();
-        debug_assert_eq!(offset, self.encoder.file_header_size() as u64);
+        debug_assert_eq!(offset, self.encoder.file_header_size());
         SinglePhase::set_offset(&mut self.layout.e_phoff, offset);
         SinglePhase::set_count(&mut self.layout.segment_num, count);
         self.written_segment_num = count;
-        let size = count as usize * self.encoder.program_header_size();
+        let size = u64::from(count) * self.encoder.program_header_size();
         self.buffer.resize(self.buffer.len() + size);
-        (offset, size as u64)
+        (offset, size)
     }
 
     /// Write the file header and program headers to the given buffer.
@@ -1386,7 +1383,7 @@ impl<'a> Writer<'a, SinglePhase> {
 /// with checking this.
 #[derive(Debug)]
 pub struct TwoPhase {
-    len: usize,
+    len: u64,
     shstrtab_data: Vec<u8>,
     strtab_data: Vec<u8>,
     dynstr_data: Vec<u8>,
@@ -1447,7 +1444,7 @@ impl<'a> Writer<'a, TwoPhase> {
     }
 
     /// Return the current file length that has been reserved.
-    pub fn reserved_len(&self) -> usize {
+    pub fn reserved_len(&self) -> u64 {
         self.mode.len
     }
 
@@ -1456,17 +1453,17 @@ impl<'a> Writer<'a, TwoPhase> {
     /// Returns the aligned offset of the start of the range.
     ///
     /// `align_start` must be a power of two.
-    pub fn reserve(&mut self, len: usize, align_start: usize) -> u64 {
+    pub fn reserve(&mut self, len: u64, align_start: u64) -> u64 {
         if align_start > 1 {
             self.mode.len = util::align(self.mode.len, align_start);
         }
         let offset = self.mode.len;
         self.mode.len += len;
-        offset as u64
+        offset
     }
 
     /// Reserve the file range up to the given file offset.
-    pub fn reserve_until(&mut self, offset: usize) {
+    pub fn reserve_until(&mut self, offset: u64) {
         debug_assert!(self.mode.len <= offset);
         self.mode.len = offset;
     }
@@ -1485,14 +1482,14 @@ impl<'a> Writer<'a, TwoPhase> {
     /// the section table; this is checked in `write_file_header`.
     ///
     /// Does nothing if `num` is zero.
-    pub fn reserve_program_headers(&mut self, num: u32) {
+    pub fn reserve_program_headers(&mut self, num: usize) {
         debug_assert_eq!(self.layout.e_phoff, 0);
         if num == 0 {
             return;
         }
-        self.layout.segment_num = num;
+        self.layout.segment_num = num as u32;
         self.layout.e_phoff = self.reserve(
-            num as usize * self.encoder.program_header_size(),
+            num as u64 * self.encoder.program_header_size(),
             self.encoder.address_size().into(),
         );
     }
@@ -1538,7 +1535,7 @@ impl<'a> Writer<'a, TwoPhase> {
             return;
         }
         self.layout.e_shoff = self.reserve(
-            self.layout.section_num as usize * self.encoder.section_header_size(),
+            self.layout.section_num as u64 * self.encoder.section_header_size(),
             self.encoder.address_size().into(),
         );
     }
@@ -1560,7 +1557,7 @@ impl<'a> Writer<'a, TwoPhase> {
         // Start with null section name.
         self.mode.shstrtab_data = vec![0];
         self.shstrtab_size = self.shstrtab.write(1, &mut self.mode.shstrtab_data)?;
-        self.shstrtab_offset = self.reserve(self.shstrtab_size as usize, 1);
+        self.shstrtab_offset = self.reserve(self.shstrtab_size as u64, 1);
         Ok(())
     }
 
@@ -1613,7 +1610,7 @@ impl<'a> Writer<'a, TwoPhase> {
         // Start with null string.
         self.mode.strtab_data = vec![0];
         self.strtab_size = self.strtab.write(1, &mut self.mode.strtab_data)?;
-        self.strtab_offset = self.reserve(self.strtab_size as usize, 1);
+        self.strtab_offset = self.reserve(self.strtab_size as u64, 1);
         Ok(())
     }
 
@@ -1707,7 +1704,7 @@ impl<'a> Writer<'a, TwoPhase> {
             return;
         }
         self.symtab_offset = self.reserve(
-            self.symtab_num as usize * self.encoder.sym_size(),
+            self.symtab_num as u64 * self.encoder.sym_size(),
             self.encoder.address_size().into(),
         );
     }
@@ -1750,8 +1747,7 @@ impl<'a> Writer<'a, TwoPhase> {
         if !self.symtab_shndx_needed() {
             return;
         }
-        self.symtab_shndx_offset =
-            self.reserve(self.symtab_num as usize * 4, ALIGN_SYMTAB_SHNDX.into());
+        self.symtab_shndx_offset = self.reserve(self.symtab_num as u64 * 4, ALIGN_SYMTAB_SHNDX);
         self.symtab_shndx_data.reserve(self.symtab_num as usize * 4);
     }
 
@@ -1796,7 +1792,7 @@ impl<'a> Writer<'a, TwoPhase> {
         // Start with null string.
         self.mode.dynstr_data = vec![0];
         self.dynstr_size = self.dynstr.write(1, &mut self.mode.dynstr_data)?;
-        self.dynstr_offset = self.reserve(self.dynstr_size as usize, 1);
+        self.dynstr_offset = self.reserve(self.dynstr_size as u64, 1);
         Ok(self.dynstr_offset)
     }
 
@@ -1901,7 +1897,7 @@ impl<'a> Writer<'a, TwoPhase> {
             return 0;
         }
         self.dynsym_offset = self.reserve(
-            self.dynsym_num as usize * self.encoder.sym_size(),
+            self.dynsym_num as u64 * self.encoder.sym_size(),
             self.encoder.address_size().into(),
         );
         self.dynsym_offset
@@ -1931,9 +1927,9 @@ impl<'a> Writer<'a, TwoPhase> {
         if dynamic_num == 0 {
             return 0;
         }
-        self.dynamic_num = dynamic_num;
+        self.dynamic_num = dynamic_num as u64;
         self.dynamic_offset = self.reserve(
-            dynamic_num * self.encoder.dyn_size(),
+            self.dynamic_num * self.encoder.dyn_size(),
             self.encoder.address_size().into(),
         );
         self.dynamic_offset
@@ -1954,8 +1950,8 @@ impl<'a> Writer<'a, TwoPhase> {
     /// not the total number of symbols.
     pub fn reserve_hash(&mut self, bucket_count: u32, symbol_count: u32) -> u64 {
         let size = self.encoder.hash_size(bucket_count, symbol_count);
-        self.hash_offset = self.reserve(size, ALIGN_HASH.into());
-        self.hash_size = size as u64;
+        self.hash_offset = self.reserve(size, ALIGN_HASH);
+        self.hash_size = size;
         self.hash_offset
     }
 
@@ -1982,7 +1978,7 @@ impl<'a> Writer<'a, TwoPhase> {
             .encoder
             .gnu_hash_size(bloom_count, bucket_count, symbol_count);
         self.gnu_hash_offset = self.reserve(size, self.encoder.address_size().into());
-        self.gnu_hash_size = size as u64;
+        self.gnu_hash_size = size;
         self.gnu_hash_offset
     }
 
@@ -2006,7 +2002,7 @@ impl<'a> Writer<'a, TwoPhase> {
         }
         self.gnu_versym_num = self.dynsym_num;
         let size = self.encoder.gnu_versym_size(self.gnu_versym_num as usize);
-        self.gnu_versym_offset = self.reserve(size, ALIGN_GNU_VERSYM.into());
+        self.gnu_versym_offset = self.reserve(size, ALIGN_GNU_VERSYM);
         self.gnu_versym_offset
     }
 
@@ -2029,7 +2025,7 @@ impl<'a> Writer<'a, TwoPhase> {
             return 0;
         }
         let size = self.encoder.gnu_verdef_size(verdef_count, verdaux_count);
-        self.gnu_verdef_offset = self.reserve(size, ALIGN_GNU_VERDEF.into());
+        self.gnu_verdef_offset = self.reserve(size, ALIGN_GNU_VERDEF);
         self.gnu_verdef_count = verdef_count as u16;
         self.gnu_verdaux_count = verdaux_count;
         self.gnu_verdef_remaining = self.gnu_verdef_count;
@@ -2062,7 +2058,7 @@ impl<'a> Writer<'a, TwoPhase> {
             return 0;
         }
         let size = self.encoder.gnu_verneed_size(verneed_count, vernaux_count);
-        self.gnu_verneed_offset = self.reserve(size, ALIGN_GNU_VERNEED.into());
+        self.gnu_verneed_offset = self.reserve(size, ALIGN_GNU_VERNEED);
         self.gnu_verneed_count = verneed_count as u16;
         self.gnu_vernaux_count = vernaux_count;
         self.gnu_verneed_remaining = self.gnu_verneed_count;
@@ -2098,12 +2094,12 @@ impl<'a> Writer<'a, TwoPhase> {
     ///
     /// Returns the file offset of the reserved range.
     /// Returns 0 if `gnu_attributes_size` is zero.
-    pub fn reserve_gnu_attributes(&mut self, gnu_attributes_size: usize) -> u64 {
+    pub fn reserve_gnu_attributes(&mut self, gnu_attributes_size: u64) -> u64 {
         debug_assert_eq!(self.gnu_attributes_offset, 0);
         if gnu_attributes_size == 0 {
             return 0;
         }
-        self.gnu_attributes_size = gnu_attributes_size as u64;
+        self.gnu_attributes_size = gnu_attributes_size;
         self.gnu_attributes_offset = self.reserve(gnu_attributes_size, 1);
         self.gnu_attributes_offset
     }
@@ -2113,7 +2109,7 @@ impl<'a> Writer<'a, TwoPhase> {
     /// Returns the offset of the range.
     pub fn reserve_relocations(&mut self, count: usize, is_rela: bool) -> u64 {
         self.reserve(
-            count * self.encoder.rel_size(is_rela),
+            count as u64 * self.encoder.rel_size(is_rela),
             self.encoder.address_size().into(),
         )
     }
@@ -2124,6 +2120,6 @@ impl<'a> Writer<'a, TwoPhase> {
     ///
     /// Returns the offset of the range.
     pub fn reserve_comdat(&mut self, count: usize) -> u64 {
-        self.reserve((count + 1) * 4, 4)
+        self.reserve((count as u64 + 1) * 4, 4)
     }
 }

@@ -163,22 +163,22 @@ impl<'a> StringTable<'a> {
     /// this should be 1 for ELF, to account for the initial
     /// null byte.
     #[cfg(all(feature = "build_core", feature = "elf"))]
-    pub(crate) fn size(&self, base: usize) -> usize {
+    pub(crate) fn size(&self, base: u32) -> u64 {
         if self.in_order {
-            debug_assert_eq!(self.base as usize, base);
-            return self.size as usize;
+            debug_assert_eq!(self.base, base);
+            return self.size;
         }
 
         // TODO: cache this result?
         let mut ids: Vec<_> = (0..self.strings.len()).collect();
         sort(&mut ids, 1, &self.strings);
 
-        let mut size = base;
+        let mut size = base as u64;
         let mut previous = &[][..];
         for id in ids {
             let string = self.strings.get_index(id).unwrap();
             if !previous.ends_with(string) {
-                size += string.len() + 1;
+                size += string.len() as u64 + 1;
                 previous = string;
             }
         }

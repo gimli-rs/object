@@ -9,8 +9,8 @@ use crate::xcoff;
 #[derive(Default, Clone, Copy)]
 struct SectionOffsets {
     address: u64,
-    data_offset: usize,
-    reloc_offset: usize,
+    data_offset: u64,
+    reloc_offset: u64,
 }
 
 #[derive(Default, Clone, Copy)]
@@ -226,17 +226,17 @@ impl<'a> Object<'a> {
 
         let (hdr_size, sechdr_size, rel_size, sym_size) = if is_64 {
             (
-                mem::size_of::<xcoff::FileHeader64>(),
-                mem::size_of::<xcoff::SectionHeader64>(),
-                mem::size_of::<xcoff::Rel64>(),
-                mem::size_of::<xcoff::Symbol64>(),
+                mem::size_of::<xcoff::FileHeader64>() as u64,
+                mem::size_of::<xcoff::SectionHeader64>() as u64,
+                mem::size_of::<xcoff::Rel64>() as u64,
+                mem::size_of::<xcoff::Symbol64>() as u64,
             )
         } else {
             (
-                mem::size_of::<xcoff::FileHeader32>(),
-                mem::size_of::<xcoff::SectionHeader32>(),
-                mem::size_of::<xcoff::Rel32>(),
-                mem::size_of::<xcoff::Symbol32>(),
+                mem::size_of::<xcoff::FileHeader32>() as u64,
+                mem::size_of::<xcoff::SectionHeader32>() as u64,
+                mem::size_of::<xcoff::Rel32>() as u64,
+                mem::size_of::<xcoff::Symbol32>() as u64,
             )
         };
 
@@ -249,19 +249,19 @@ impl<'a> Object<'a> {
         // XCOFF file header.
         offset += hdr_size;
         // Section headers.
-        offset += self.sections.len() * sechdr_size;
+        offset += self.sections.len() as u64 * sechdr_size;
 
         // Calculate size of section data.
         let mut section_offsets = vec![SectionOffsets::default(); self.sections.len()];
         for (index, section) in self.sections.iter().enumerate() {
-            let len = section.data.len();
+            let len = section.data.len() as u64;
             let sectype = section.kind;
             // Section address should be 0 for all sections except the .text, .data, and .bss sections.
             if sectype == SectionKind::Data
                 || sectype == SectionKind::Text
                 || sectype == SectionKind::UninitializedData
             {
-                section_offsets[index].address = address as u64;
+                section_offsets[index].address = address;
                 address += len;
                 address = align(address, 4);
             } else {
@@ -279,7 +279,7 @@ impl<'a> Object<'a> {
 
         // Calculate size of relocations.
         for (index, section) in self.sections.iter().enumerate() {
-            let count = section.relocations.len();
+            let count = section.relocations.len() as u64;
             if count != 0 {
                 section_offsets[index].reloc_offset = offset;
                 offset += count * rel_size;
@@ -342,7 +342,7 @@ impl<'a> Object<'a> {
             }
         }
         let symtab_offset = offset;
-        let symtab_len = symtab_count * sym_size;
+        let symtab_len = symtab_count as u64 * sym_size;
         offset += symtab_len;
 
         // Calculate size of strtab.
@@ -350,7 +350,7 @@ impl<'a> Object<'a> {
         let mut strtab_data = Vec::new();
         // First 4 bytes of strtab are the length.
         let strtab_len = strtab.write(4, &mut strtab_data)?;
-        offset += strtab_len as usize;
+        offset += strtab_len as u64;
 
         // Start writing.
         buffer
@@ -367,7 +367,7 @@ impl<'a> Object<'a> {
                 f_magic: xcoff::MAGIC_64.into(),
                 f_nscns: (self.sections.len() as u16).into(),
                 f_timdat: 0.into(),
-                f_symptr: (symtab_offset as u64).into(),
+                f_symptr: symtab_offset.into(),
                 f_nsyms: (symtab_count as u32).into(),
                 f_opthdr: 0.into(),
                 f_flags: f_flags.into(),

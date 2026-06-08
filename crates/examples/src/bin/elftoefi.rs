@@ -371,7 +371,7 @@ fn copy_file<Elf: FileHeader<Endian = Endianness>>(
     }
     writer.write_reloc_section();
 
-    debug_assert_eq!(writer.reserved_len() as usize, writer.len());
+    debug_assert_eq!(writer.reserved_len(), writer.len());
 
     Ok(out_data)
 }

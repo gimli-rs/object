@@ -181,7 +181,7 @@ fn copy_file<Pe: ImageNtHeaders>(in_data: &[u8]) -> Result<Vec<u8>, Box<dyn Erro
         writer.write_certificate_table(&in_data[address as usize..][..size as usize]);
     }
 
-    debug_assert_eq!(writer.reserved_len() as usize, writer.len());
+    debug_assert_eq!(writer.reserved_len(), writer.len());
 
     Ok(out_data)
 }

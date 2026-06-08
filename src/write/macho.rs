@@ -9,9 +9,9 @@ use crate::write::*;
 #[derive(Default, Clone, Copy)]
 struct SectionOffsets {
     index: usize,
-    offset: usize,
+    offset: u64,
     address: u64,
-    reloc_offset: usize,
+    reloc_offset: u64,
     reloc_count: usize,
 }
 
@@ -452,7 +452,7 @@ impl<'a> Object<'a> {
             AddressSize::U8 | AddressSize::U16 | AddressSize::U32 => &macho32,
             AddressSize::U64 => &macho64,
         };
-        let pointer_align = address_size.bytes() as usize;
+        let pointer_align = address_size.bytes() as u64;
 
         // Calculate offsets of everything, and build strtab.
         let mut offset = 0;
@@ -467,26 +467,26 @@ impl<'a> Object<'a> {
         // Calculate size of segment command and section headers.
         let segment_command_offset = offset;
         let segment_command_len =
-            macho.segment_command_size() + self.sections.len() * macho.section_header_size();
+            macho.segment_command_size() + self.sections.len() as u64 * macho.section_header_size();
         offset += segment_command_len;
         ncmds += 1;
 
         // Calculate size of build version.
         let build_version_offset = offset;
         if let Some(version) = &self.macho_build_version {
-            offset += version.cmdsize() as usize;
+            offset += version.cmdsize() as u64;
             ncmds += 1;
         }
 
         // Calculate size of symtab command.
         let symtab_command_offset = offset;
-        let symtab_command_len = mem::size_of::<macho::SymtabCommand<Endianness>>();
+        let symtab_command_len = mem::size_of::<macho::SymtabCommand<Endianness>>() as u64;
         offset += symtab_command_len;
         ncmds += 1;
 
         // Calculate size of dysymtab command.
         let dysymtab_command_offset = offset;
-        let dysymtab_command_len = mem::size_of::<macho::DysymtabCommand<Endianness>>();
+        let dysymtab_command_len = mem::size_of::<macho::DysymtabCommand<Endianness>>() as u64;
         offset += dysymtab_command_len;
         ncmds += 1;
 
@@ -500,18 +500,18 @@ impl<'a> Object<'a> {
         for (index, section) in self.sections.iter().enumerate() {
             section_offsets[index].index = 1 + index;
             if !section.is_bss() {
-                address = align_u64(address, section.align);
+                address = align(address, section.align);
                 section_offsets[index].address = address;
-                section_offsets[index].offset = segment_file_offset + address as usize;
+                section_offsets[index].offset = segment_file_offset + address;
                 address += section.size;
             }
         }
-        let segment_file_size = address as usize;
-        offset += address as usize;
+        let segment_file_size = address;
+        offset += address;
         for (index, section) in self.sections.iter().enumerate() {
             if section.is_bss() {
                 debug_assert!(section.data.is_empty());
-                address = align_u64(address, section.align);
+                address = align(address, section.align);
                 section_offsets[index].address = address;
                 address += section.size;
             }
@@ -588,7 +588,7 @@ impl<'a> Object<'a> {
                 offset = align(offset, pointer_align);
                 section_offsets[index].reloc_offset = offset;
                 section_offsets[index].reloc_count = count;
-                let len = count * mem::size_of::<macho::Relocation<Endianness>>();
+                let len = count as u64 * mem::size_of::<macho::Relocation<Endianness>>() as u64;
                 offset += len;
             }
         }
@@ -596,7 +596,7 @@ impl<'a> Object<'a> {
         // Calculate size of symtab.
         offset = align(offset, pointer_align);
         let symtab_offset = offset;
-        let symtab_len = nsyms * macho.nlist_size();
+        let symtab_len = nsyms as u64 * macho.nlist_size();
         offset += symtab_len;
 
         // Calculate size of strtab.
@@ -605,7 +605,7 @@ impl<'a> Object<'a> {
         let mut strtab_data = vec![0];
         strtab.write(1, &mut strtab_data)?;
         write_align(&mut strtab_data, pointer_align);
-        offset += strtab_data.len();
+        offset += strtab_data.len() as u64;
 
         // Start writing.
         buffer
@@ -671,8 +671,8 @@ impl<'a> Object<'a> {
                 segname: [0; 16],
                 vmaddr: 0,
                 vmsize: address,
-                fileoff: segment_file_offset as u64,
-                filesize: segment_file_size as u64,
+                fileoff: segment_file_offset,
+                filesize: segment_file_size,
                 maxprot: macho::VM_PROT_READ | macho::VM_PROT_WRITE | macho::VM_PROT_EXECUTE,
                 initprot: macho::VM_PROT_READ | macho::VM_PROT_WRITE | macho::VM_PROT_EXECUTE,
                 nsects: self.sections.len() as u32,
@@ -994,10 +994,10 @@ struct Nlist {
 }
 
 trait MachO {
-    fn mach_header_size(&self) -> usize;
-    fn segment_command_size(&self) -> usize;
-    fn section_header_size(&self) -> usize;
-    fn nlist_size(&self) -> usize;
+    fn mach_header_size(&self) -> u64;
+    fn segment_command_size(&self) -> u64;
+    fn section_header_size(&self) -> u64;
+    fn nlist_size(&self) -> u64;
     fn write_mach_header(&self, buffer: &mut dyn WritableBuffer, section: MachHeader);
     fn write_segment_command(&self, buffer: &mut dyn WritableBuffer, segment: SegmentCommand);
     fn write_section(&self, buffer: &mut dyn WritableBuffer, section: SectionHeader);
@@ -1009,20 +1009,20 @@ struct MachO32<E> {
 }
 
 impl<E: Endian> MachO for MachO32<E> {
-    fn mach_header_size(&self) -> usize {
-        mem::size_of::<macho::MachHeader32<E>>()
+    fn mach_header_size(&self) -> u64 {
+        mem::size_of::<macho::MachHeader32<E>>() as u64
     }
 
-    fn segment_command_size(&self) -> usize {
-        mem::size_of::<macho::SegmentCommand32<E>>()
+    fn segment_command_size(&self) -> u64 {
+        mem::size_of::<macho::SegmentCommand32<E>>() as u64
     }
 
-    fn section_header_size(&self) -> usize {
-        mem::size_of::<macho::Section32<E>>()
+    fn section_header_size(&self) -> u64 {
+        mem::size_of::<macho::Section32<E>>() as u64
     }
 
-    fn nlist_size(&self) -> usize {
-        mem::size_of::<macho::Nlist32<E>>()
+    fn nlist_size(&self) -> u64 {
+        mem::size_of::<macho::Nlist32<E>>() as u64
     }
 
     fn write_mach_header(&self, buffer: &mut dyn WritableBuffer, header: MachHeader) {
@@ -1098,20 +1098,20 @@ struct MachO64<E> {
 }
 
 impl<E: Endian> MachO for MachO64<E> {
-    fn mach_header_size(&self) -> usize {
-        mem::size_of::<macho::MachHeader64<E>>()
+    fn mach_header_size(&self) -> u64 {
+        mem::size_of::<macho::MachHeader64<E>>() as u64
     }
 
-    fn segment_command_size(&self) -> usize {
-        mem::size_of::<macho::SegmentCommand64<E>>()
+    fn segment_command_size(&self) -> u64 {
+        mem::size_of::<macho::SegmentCommand64<E>>() as u64
     }
 
-    fn section_header_size(&self) -> usize {
-        mem::size_of::<macho::Section64<E>>()
+    fn section_header_size(&self) -> u64 {
+        mem::size_of::<macho::Section64<E>>() as u64
     }
 
-    fn nlist_size(&self) -> usize {
-        mem::size_of::<macho::Nlist64<E>>()
+    fn nlist_size(&self) -> u64 {
+        mem::size_of::<macho::Nlist64<E>>() as u64
     }
 
     fn write_mach_header(&self, buffer: &mut dyn WritableBuffer, header: MachHeader) {
