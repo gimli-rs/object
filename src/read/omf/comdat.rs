@@ -1,44 +1,41 @@
 use crate::read::{self, Error, Result};
-use crate::{omf, ComdatKind, ObjectComdat, ReadRef, SectionIndex, SymbolIndex};
+use crate::{ComdatKind, ObjectComdat, ReadRef, SectionIndex, SymbolIndex};
 
 use super::OmfFile;
 
-/// A COMDAT (communal data) section
+/// Internal representation of a COMDAT.
 #[derive(Debug, Clone)]
 pub(super) struct OmfComdatData<'data> {
     /// Symbol name
     pub(super) name: &'data [u8],
-    /// Segment index where this COMDAT belongs
-    pub(super) segment_index: u16,
-    /// Selection/allocation method
+    /// Index of the synthesized section (0-based index into `sections`)
+    pub(super) section: usize,
+    /// Index of the synthesized symbol
+    pub(super) symbol: SymbolIndex,
+    /// Selection criteria
     pub(super) selection: OmfComdatSelection,
-    /// Alignment
-    #[allow(unused)]
-    pub(super) alignment: omf::SegmentAlignment,
-    /// Data
-    #[allow(unused)]
-    pub(super) data: &'data [u8],
 }
 
-/// COMDAT selection methods
+/// COMDAT selection criteria
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) enum OmfComdatSelection {
     /// Explicit: may not be combined, produce error if multiple definitions
-    Explicit = 0,
+    Explicit,
     /// Use any: pick any instance
-    UseAny = 1,
+    UseAny,
     /// Same size: all instances must be same size
-    SameSize = 2,
+    SameSize,
     /// Exact match: all instances must have identical content
-    ExactMatch = 3,
+    ExactMatch,
 }
 
-/// A COMDAT section in an OMF file.
+/// A COMDAT section group in an [`OmfFile`].
+///
+/// Most functionality is provided by the [`ObjectComdat`] trait implementation.
 #[derive(Debug)]
 pub struct OmfComdat<'data, 'file, R: ReadRef<'data>> {
     file: &'file OmfFile<'data, R>,
     index: usize,
-    _phantom: core::marker::PhantomData<&'data ()>,
 }
 
 impl<'data, 'file, R: ReadRef<'data>> read::private::Sealed for OmfComdat<'data, 'file, R> {}
@@ -47,8 +44,7 @@ impl<'data, 'file, R: ReadRef<'data>> ObjectComdat<'data> for OmfComdat<'data, '
     type SectionIterator = OmfComdatSectionIterator<'data, 'file, R>;
 
     fn kind(&self) -> ComdatKind {
-        let comdat = &self.file.comdats[self.index];
-        match comdat.selection {
+        match self.file.comdats[self.index].selection {
             OmfComdatSelection::Explicit => ComdatKind::NoDuplicates,
             OmfComdatSelection::UseAny => ComdatKind::Any,
             OmfComdatSelection::SameSize => ComdatKind::SameSize,
@@ -57,31 +53,27 @@ impl<'data, 'file, R: ReadRef<'data>> ObjectComdat<'data> for OmfComdat<'data, '
     }
 
     fn symbol(&self) -> SymbolIndex {
-        // COMDAT symbols don't have a direct symbol index in OMF
-        SymbolIndex(usize::MAX)
+        self.file.comdats[self.index].symbol
     }
 
     fn name_bytes(&self) -> Result<&'data [u8]> {
-        let comdat = &self.file.comdats[self.index];
-        Ok(comdat.name)
+        Ok(self.file.comdats[self.index].name)
     }
 
     fn name(&self) -> Result<&'data str> {
-        let comdat = &self.file.comdats[self.index];
-        core::str::from_utf8(comdat.name).map_err(|_| Error("Invalid UTF-8 in COMDAT name"))
+        core::str::from_utf8(self.file.comdats[self.index].name)
+            .map_err(|_| Error("Invalid UTF-8 in COMDAT name"))
     }
 
     fn sections(&self) -> Self::SectionIterator {
-        let comdat = &self.file.comdats[self.index];
         OmfComdatSectionIterator {
-            segment_index: (comdat.segment_index as usize).checked_sub(1),
-            returned: false,
+            section: Some(SectionIndex(self.file.comdats[self.index].section + 1)),
             _phantom: core::marker::PhantomData,
         }
     }
 }
 
-/// An iterator over COMDAT sections.
+/// An iterator for the COMDAT section groups in an [`OmfFile`].
 #[derive(Debug)]
 pub struct OmfComdatIterator<'data, 'file, R: ReadRef<'data>> {
     pub(super) file: &'file OmfFile<'data, R>,
@@ -96,7 +88,6 @@ impl<'data, 'file, R: ReadRef<'data>> Iterator for OmfComdatIterator<'data, 'fil
             let comdat = OmfComdat {
                 file: self.file,
                 index: self.index,
-                _phantom: core::marker::PhantomData,
             };
             self.index += 1;
             Some(comdat)
@@ -106,11 +97,10 @@ impl<'data, 'file, R: ReadRef<'data>> Iterator for OmfComdatIterator<'data, 'fil
     }
 }
 
-/// An iterator over sections in a COMDAT.
+/// An iterator for the sections in a [`OmfComdat`].
 #[derive(Debug)]
 pub struct OmfComdatSectionIterator<'data, 'file, R: ReadRef<'data>> {
-    segment_index: Option<usize>,
-    returned: bool,
+    section: Option<SectionIndex>,
     _phantom: core::marker::PhantomData<(&'data (), &'file (), R)>,
 }
 
@@ -118,11 +108,6 @@ impl<'data, 'file, R: ReadRef<'data>> Iterator for OmfComdatSectionIterator<'dat
     type Item = SectionIndex;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if !self.returned {
-            self.returned = true;
-            self.segment_index.map(|idx| SectionIndex(idx + 1))
-        } else {
-            None
-        }
+        self.section.take()
     }
 }

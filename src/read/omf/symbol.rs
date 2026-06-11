@@ -7,30 +7,34 @@ use crate::read::{
 
 use super::OmfFile;
 
-/// An OMF symbol
+/// A symbol in an [`OmfFile`].
+///
+/// Most functionality is provided by the [`ObjectSymbol`] trait implementation.
 #[derive(Debug, Clone)]
 pub struct OmfSymbol<'data> {
     /// Symbol table index
-    pub symbol_index: usize,
+    pub(super) index: SymbolIndex,
     /// Symbol name
-    pub name: &'data [u8],
+    pub(super) name: &'data [u8],
     /// Symbol class (Public, External, etc.)
-    pub class: OmfSymbolClass,
-    /// Group index (0 if none)
-    pub group_index: u16,
-    /// Segment index (0 if external)
-    pub segment_index: u16,
-    /// Frame number (for absolute symbols when segment_index == 0)
-    pub frame_number: u16,
-    /// Offset within segment
-    pub offset: u32,
+    pub(super) class: OmfSymbolClass,
+    /// The section that defines this symbol, if any
+    pub(super) section: Option<SectionIndex>,
+    /// Whether this is an absolute symbol (PUBDEF with segment index 0)
+    pub(super) absolute: bool,
+    /// Frame number (for absolute symbols)
+    pub(super) frame_number: u16,
+    /// Offset within the section
+    pub(super) offset: u64,
+    /// Symbol size (communal length for COMDEF, section size for COMDAT)
+    pub(super) size: u64,
     /// Type index (usually 0)
-    pub type_index: u16,
+    pub(super) type_index: u16,
     /// Pre-computed symbol kind
-    pub kind: SymbolKind,
+    pub(super) kind: SymbolKind,
 }
 
-/// Symbol class for OMF symbols
+/// The kind of OMF record that defined a symbol.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum OmfSymbolClass {
     /// Public symbol (PUBDEF)
@@ -47,13 +51,35 @@ pub enum OmfSymbolClass {
     LocalCommunal,
     /// COMDAT external symbol (CEXTDEF)
     ComdatExternal,
+    /// COMDAT symbol (COMDAT)
+    Comdat,
+    /// Local COMDAT symbol (COMDAT with the local flag)
+    LocalComdat,
+}
+
+impl<'data> OmfSymbol<'data> {
+    /// Get the symbol class, which corresponds to the kind of OMF record
+    /// that defined the symbol.
+    pub fn class(&self) -> OmfSymbolClass {
+        self.class
+    }
+
+    /// Get the type index.
+    pub fn type_index(&self) -> u16 {
+        self.type_index
+    }
+
+    /// Get the frame number for absolute symbols.
+    pub fn frame_number(&self) -> u16 {
+        self.frame_number
+    }
 }
 
 impl<'data> read::private::Sealed for OmfSymbol<'data> {}
 
 impl<'data> ObjectSymbol<'data> for OmfSymbol<'data> {
     fn index(&self) -> SymbolIndex {
-        SymbolIndex(self.symbol_index)
+        self.index
     }
 
     fn name_bytes(&self) -> Result<&'data [u8]> {
@@ -61,21 +87,21 @@ impl<'data> ObjectSymbol<'data> for OmfSymbol<'data> {
     }
 
     fn name(&self) -> Result<&'data str> {
-        core::str::from_utf8(self.name).map_err(|_| Error("Invalid UTF-8 in OMF symbol name"))
+        str::from_utf8(self.name).map_err(|_| Error("Invalid UTF-8 in OMF symbol name"))
     }
 
     fn address(&self) -> u64 {
-        if self.segment_index == 0 && self.frame_number != 0 {
-            // For absolute symbols, compute the linear address from frame:offset
-            // Frame number is in paragraphs (16-byte units)
-            ((self.frame_number as u64) << 4) + (self.offset as u64)
+        if self.absolute {
+            // For absolute symbols, compute the linear address from frame:offset.
+            // Frame number is in paragraphs (16-byte units).
+            ((self.frame_number as u64) << 4) + self.offset
         } else {
-            self.offset as u64
+            self.offset
         }
     }
 
     fn size(&self) -> u64 {
-        0 // OMF doesn't store symbol sizes
+        self.size
     }
 
     fn kind(&self) -> SymbolKind {
@@ -83,30 +109,37 @@ impl<'data> ObjectSymbol<'data> for OmfSymbol<'data> {
     }
 
     fn section(&self) -> SymbolSection {
-        if self.segment_index == 0 {
-            if self.frame_number != 0 {
-                SymbolSection::Absolute
-            } else {
-                SymbolSection::Undefined
-            }
+        if let Some(section) = self.section {
+            SymbolSection::Section(section)
+        } else if self.absolute {
+            SymbolSection::Absolute
+        } else if self.is_common() {
+            SymbolSection::Common
         } else {
-            SymbolSection::Section(SectionIndex(self.segment_index as usize))
+            SymbolSection::Undefined
         }
     }
 
     fn is_undefined(&self) -> bool {
-        self.segment_index == 0 && self.frame_number == 0
+        matches!(
+            self.class,
+            OmfSymbolClass::External
+                | OmfSymbolClass::LocalExternal
+                | OmfSymbolClass::ComdatExternal
+        )
     }
 
     fn is_definition(&self) -> bool {
-        self.segment_index != 0 || self.frame_number != 0
+        self.section.is_some() || self.absolute
     }
 
     fn is_common(&self) -> bool {
+        // Borland communal symbols with a virtual segment are defined in a
+        // section, so they are not common.
         matches!(
             self.class,
-            super::OmfSymbolClass::Communal | super::OmfSymbolClass::LocalCommunal
-        )
+            OmfSymbolClass::Communal | OmfSymbolClass::LocalCommunal
+        ) && self.section.is_none()
     }
 
     fn is_weak(&self) -> bool {
@@ -115,19 +148,14 @@ impl<'data> ObjectSymbol<'data> for OmfSymbol<'data> {
 
     fn scope(&self) -> SymbolScope {
         match self.class {
-            super::OmfSymbolClass::LocalPublic
-            | super::OmfSymbolClass::LocalExternal
-            | super::OmfSymbolClass::LocalCommunal => SymbolScope::Compilation,
-            super::OmfSymbolClass::Public
-            | super::OmfSymbolClass::External
-            | super::OmfSymbolClass::Communal
-            | super::OmfSymbolClass::ComdatExternal => {
-                if self.segment_index == 0 {
-                    SymbolScope::Unknown
-                } else {
-                    SymbolScope::Linkage
-                }
+            OmfSymbolClass::LocalPublic
+            | OmfSymbolClass::LocalExternal
+            | OmfSymbolClass::LocalCommunal
+            | OmfSymbolClass::LocalComdat => SymbolScope::Compilation,
+            OmfSymbolClass::Public | OmfSymbolClass::Communal | OmfSymbolClass::Comdat => {
+                SymbolScope::Linkage
             }
+            OmfSymbolClass::External | OmfSymbolClass::ComdatExternal => SymbolScope::Unknown,
         }
     }
 
@@ -138,9 +166,10 @@ impl<'data> ObjectSymbol<'data> for OmfSymbol<'data> {
     fn is_local(&self) -> bool {
         matches!(
             self.class,
-            super::OmfSymbolClass::LocalPublic
-                | super::OmfSymbolClass::LocalExternal
-                | super::OmfSymbolClass::LocalCommunal
+            OmfSymbolClass::LocalPublic
+                | OmfSymbolClass::LocalExternal
+                | OmfSymbolClass::LocalCommunal
+                | OmfSymbolClass::LocalComdat
         )
     }
 
@@ -149,7 +178,7 @@ impl<'data> ObjectSymbol<'data> for OmfSymbol<'data> {
     }
 }
 
-/// An iterator over OMF symbols.
+/// An iterator for the symbols in an [`OmfFile`].
 #[derive(Debug)]
 pub struct OmfSymbolIterator<'data, 'file, R: ReadRef<'data> = &'data [u8]> {
     pub(super) file: &'file OmfFile<'data, R>,
@@ -166,7 +195,7 @@ impl<'data, 'file, R: ReadRef<'data>> Iterator for OmfSymbolIterator<'data, 'fil
     }
 }
 
-/// An OMF symbol table.
+/// A symbol table in an [`OmfFile`].
 #[derive(Debug)]
 pub struct OmfSymbolTable<'data, 'file, R: ReadRef<'data>> {
     pub(super) file: &'file OmfFile<'data, R>,

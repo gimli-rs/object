@@ -3,9 +3,9 @@
 use alloc::vec::Vec;
 
 use crate::read::{
-    self, Architecture, ByteString, CodeView, Error, Export, FileFlags, Import,
-    NoDynamicRelocationIterator, Object, ObjectKind, ObjectSection, ReadRef, Result, SectionIndex,
-    SymbolIndex,
+    self, Architecture, CodeView, Error, Export, FileFlags, Import, NoDynamicRelocationIterator,
+    Object, ObjectKind, ObjectSection, ReadRef, Result, SectionIndex, SectionKind, SymbolIndex,
+    SymbolKind,
 };
 use crate::{omf, SubArchitecture};
 
@@ -18,13 +18,22 @@ use super::{
 /// An OMF object file.
 ///
 /// This handles both 16-bit and 32-bit OMF variants.
+///
+/// OMF doesn't have a notion of sections, so this implementation maps both
+/// segments (`SEGDEF`) and COMDATs (`COMDAT`) to sections in the unified API.
 #[derive(Debug)]
 pub struct OmfFile<'data, R: ReadRef<'data> = &'data [u8]> {
     pub(super) data: R,
     /// The module name from THEADR/LHEADR record
     pub(super) module_name: Option<&'data str>,
-    /// Segment definitions
-    pub(super) segments: Vec<OmfSegment<'data>>,
+    /// Sections, in record order. This contains an entry for each SEGDEF
+    /// record, as well as a synthesized entry for each COMDAT and each
+    /// Borland virtual segment (COMDEF).
+    pub(super) sections: Vec<OmfSegment<'data>>,
+    /// Maps SEGDEF index (0-based) to an index into `sections`.
+    pub(super) segdefs: Vec<usize>,
+    /// Maps Borland virtual segment index (0-based) to an index into `sections`.
+    pub(super) virtual_segdefs: Vec<usize>,
     /// All symbols (publics, externals, communals, locals) in occurrence order
     pub(super) symbols: Vec<OmfSymbol<'data>>,
     /// Maps external-name table index (1-based) to SymbolIndex
@@ -45,7 +54,9 @@ impl<'data, R: ReadRef<'data>> OmfFile<'data, R> {
         let mut file = OmfFile {
             data,
             module_name: None,
-            segments: Vec::new(),
+            sections: Vec::new(),
+            segdefs: Vec::new(),
+            virtual_segdefs: Vec::new(),
             symbols: Vec::new(),
             external_order: Vec::new(),
             comdats: Vec::new(),
@@ -54,85 +65,118 @@ impl<'data, R: ReadRef<'data>> OmfFile<'data, R> {
         };
 
         file.parse_records()?;
-        file.assign_symbol_kinds();
+        file.finish_symbols();
         Ok(file)
     }
 
-    fn assign_symbol_kinds(&mut self) {
-        // Compute kinds for symbols based on their segments
-        let kinds: Vec<read::SymbolKind> = self
+    /// Compute symbol kinds and sizes that depend on the complete section list.
+    fn finish_symbols(&mut self) {
+        let kinds_and_sizes: Vec<(SymbolKind, u64)> = self
             .symbols
             .iter()
-            .map(|sym| match sym.class {
-                OmfSymbolClass::Public | OmfSymbolClass::LocalPublic => {
-                    if sym.segment_index > 0 && (sym.segment_index as usize) <= self.segments.len()
-                    {
-                        let segment_idx = (sym.segment_index - 1) as usize;
-                        let section_kind = self.segment_section_kind(segment_idx);
-                        Self::symbol_kind_from_section_kind(section_kind)
-                    } else {
-                        read::SymbolKind::Unknown
-                    }
-                }
-                OmfSymbolClass::Communal | OmfSymbolClass::LocalCommunal => read::SymbolKind::Data,
-                _ => read::SymbolKind::Unknown,
+            .map(|sym| {
+                let kind = if let Some(section) = sym.section {
+                    Self::symbol_kind_from_section_kind(
+                        self.section_kind(section.0.wrapping_sub(1)),
+                    )
+                } else if matches!(
+                    sym.class,
+                    OmfSymbolClass::Communal | OmfSymbolClass::LocalCommunal
+                ) {
+                    SymbolKind::Data
+                } else {
+                    SymbolKind::Unknown
+                };
+                let size = match sym.class {
+                    // The size of a COMDAT symbol is the size of its section.
+                    OmfSymbolClass::Comdat | OmfSymbolClass::LocalComdat => sym
+                        .section
+                        .and_then(|section| self.sections.get(section.0.wrapping_sub(1)))
+                        .map_or(0, |section| section.length),
+                    _ => sym.size,
+                };
+                (kind, size)
             })
             .collect();
 
-        // Apply computed kinds
-        for (sym, kind) in self.symbols.iter_mut().zip(kinds) {
+        for (sym, (kind, size)) in self.symbols.iter_mut().zip(kinds_and_sizes) {
             sym.kind = kind;
+            sym.size = size;
         }
     }
 
-    fn symbol_kind_from_section_kind(section_kind: read::SectionKind) -> read::SymbolKind {
+    fn symbol_kind_from_section_kind(section_kind: SectionKind) -> SymbolKind {
         match section_kind {
-            read::SectionKind::Text => read::SymbolKind::Text,
-            read::SectionKind::Data | read::SectionKind::ReadOnlyData => read::SymbolKind::Data,
-            read::SectionKind::UninitializedData => read::SymbolKind::Data,
-            _ => read::SymbolKind::Unknown,
+            SectionKind::Text => SymbolKind::Text,
+            SectionKind::Data
+            | SectionKind::ReadOnlyData
+            | SectionKind::UninitializedData
+            | SectionKind::Common => SymbolKind::Data,
+            _ => SymbolKind::Unknown,
         }
     }
 
-    /// Get the section kind for a segment
-    pub(super) fn segment_section_kind(&self, segment_index: usize) -> read::SectionKind {
-        let Some(segment) = self.segments.get(segment_index) else {
-            return read::SectionKind::Unknown;
+    /// Get the section kind for a section (0-based index into `sections`).
+    pub(super) fn section_kind(&self, section_index: usize) -> SectionKind {
+        let Some(section) = self.sections.get(section_index) else {
+            return SectionKind::Unknown;
         };
 
-        let segment_name = self.get_name(segment.name_index).unwrap_or_default();
-        let class_name = self.get_name(segment.class_index).unwrap_or_default();
+        // COMDAT sections may have a kind determined by their allocation type.
+        if let Some(kind) = section.kind {
+            return kind;
+        }
+
+        let section_name = section.name;
+        let class_name = section.class;
 
         // Reserved names for debug sections
-        if segment_name.starts_with(b"$$") {
-            return read::SectionKind::Debug;
+        if section_name.starts_with(b"$$") {
+            return SectionKind::Debug;
         }
 
         // Substring matches for common class names
         if class_name.windows(4).any(|w| w == b"CODE") {
-            return read::SectionKind::Text;
+            SectionKind::Text
         } else if class_name.windows(4).any(|w| w == b"DATA") {
-            if segment_name.windows(5).any(|w| w == b"CONST") {
-                return read::SectionKind::ReadOnlyData;
+            if section_name.windows(5).any(|w| w == b"CONST") {
+                SectionKind::ReadOnlyData
             } else {
-                return read::SectionKind::Data;
+                SectionKind::Data
             }
         } else if class_name.windows(3).any(|w| w == b"BSS")
             || class_name.windows(5).any(|w| w == b"STACK")
         {
-            return read::SectionKind::UninitializedData;
+            SectionKind::UninitializedData
         } else if class_name.starts_with(b"DEB") {
-            return read::SectionKind::Debug;
+            SectionKind::Debug
         } else if class_name == b"COMMON" {
-            return read::SectionKind::Common;
+            SectionKind::Common
+        } else {
+            SectionKind::Unknown
         }
+    }
 
-        read::SectionKind::Unknown
+    /// Translate a 1-based segment index into a 0-based index into `sections`.
+    ///
+    /// Indices with bit 14 set are a Borland extension that references
+    /// virtual segments defined by COMDEF records.
+    pub(super) fn segdef_section(&self, segment_index: u16) -> Result<usize> {
+        let (index, segdefs) = if segment_index & 0x4000 != 0 {
+            (segment_index & !0x4000, &self.virtual_segdefs)
+        } else {
+            (segment_index, &self.segdefs)
+        };
+        index
+            .checked_sub(1)
+            .and_then(|i| segdefs.get(i as usize).copied())
+            .ok_or(Error("Invalid OMF segment index"))
     }
 
     fn parse_records(&mut self) -> Result<()> {
-        let mut current_segment: Option<usize> = None;
-        let mut current_data_offset: Option<u32> = None;
+        // The data record (LEDATA/LIDATA/COMDAT) that a FIXUPP record applies to:
+        // a 0-based index into `sections` and the base data offset within it.
+        let mut last_data: Option<(usize, u32)> = None;
 
         // Thread storage for FIXUPP parsing
         let mut frame_threads: [Option<ThreadDef>; 4] = [None; 4];
@@ -201,7 +245,7 @@ impl<'data, R: ReadRef<'data>> OmfFile<'data, R> {
                     self.parse_extdef(inner_data, OmfSymbolClass::LocalExternal)?;
                 }
                 omf::record_type::CEXTDEF => {
-                    self.parse_extdef(inner_data, OmfSymbolClass::ComdatExternal)?;
+                    self.parse_cextdef(inner_data)?;
                 }
                 omf::record_type::COMDEF => {
                     self.parse_comdef(inner_data, OmfSymbolClass::Communal)?;
@@ -210,40 +254,28 @@ impl<'data, R: ReadRef<'data>> OmfFile<'data, R> {
                     self.parse_comdef(inner_data, OmfSymbolClass::LocalCommunal)?;
                 }
                 omf::record_type::COMDAT | omf::record_type::COMDAT32 => {
-                    self.parse_comdat(inner_data, record_type == omf::record_type::COMDAT32)?;
-                }
-                omf::record_type::COMENT => {
-                    self.parse_comment(inner_data)?;
+                    let target =
+                        self.parse_comdat(inner_data, record_type == omf::record_type::COMDAT32)?;
+                    last_data = Some(target);
                 }
                 omf::record_type::LEDATA | omf::record_type::LEDATA32 => {
-                    let (seg_idx, offset) =
+                    let target =
                         self.parse_ledata(inner_data, record_type == omf::record_type::LEDATA32)?;
-                    current_segment = Some(seg_idx);
-                    current_data_offset = Some(offset);
+                    last_data = Some(target);
                 }
                 omf::record_type::LIDATA | omf::record_type::LIDATA32 => {
-                    let (seg_idx, offset) =
+                    let target =
                         self.parse_lidata(inner_data, record_type == omf::record_type::LIDATA32)?;
-                    current_segment = Some(seg_idx);
-                    current_data_offset = Some(offset);
+                    last_data = Some(target);
                 }
                 omf::record_type::FIXUPP | omf::record_type::FIXUPP32 => {
-                    if let (Some(seg_idx), Some(data_offset)) =
-                        (current_segment, current_data_offset)
-                    {
-                        self.parse_fixupp(
-                            inner_data,
-                            record_type == omf::record_type::FIXUPP32,
-                            seg_idx,
-                            data_offset,
-                            &mut frame_threads,
-                            &mut target_threads,
-                        )?;
-                    } else {
-                        return Err(Error(
-                            "FIXUPP/FIXUPP32 record encountered without preceding LEDATA/LIDATA",
-                        ));
-                    }
+                    self.parse_fixupp(
+                        inner_data,
+                        record_type == omf::record_type::FIXUPP32,
+                        last_data,
+                        &mut frame_threads,
+                        &mut target_threads,
+                    )?;
                 }
                 omf::record_type::MODEND | omf::record_type::MODEND32 => {
                     // End of module
@@ -307,12 +339,13 @@ impl<'data, R: ReadRef<'data>> OmfFile<'data, R> {
 
         let combination = match (acbp >> 2) & 0x07 {
             0 => omf::SegmentCombination::Private,
-            2 => omf::SegmentCombination::Public,
+            2 | 4 | 7 => omf::SegmentCombination::Public,
             5 => omf::SegmentCombination::Stack,
             6 => omf::SegmentCombination::Common,
             _ => return Err(Error("Invalid segment combination")),
         };
 
+        let big = (acbp & 0x02) != 0;
         let use32 = (acbp & 0x01) != 0;
 
         // Skip frame number and offset for absolute segments
@@ -320,8 +353,10 @@ impl<'data, R: ReadRef<'data>> OmfFile<'data, R> {
             offset += 3; // frame (2) + offset (1)
         }
 
-        // Parse segment length
-        let length = if is_32bit || use32 {
+        // Parse segment length. The size of this field is determined by the
+        // record type alone; the P (use32) bit describes the default operand
+        // size of the segment, not the record layout.
+        let mut length = if is_32bit {
             if offset + 4 > data.len() {
                 return Err(Error("Truncated SEGDEF record"));
             }
@@ -330,17 +365,21 @@ impl<'data, R: ReadRef<'data>> OmfFile<'data, R> {
                 data[offset + 1],
                 data[offset + 2],
                 data[offset + 3],
-            ]);
+            ]) as u64;
             offset += 4;
             length
         } else {
             if offset + 2 > data.len() {
                 return Err(Error("Truncated SEGDEF record"));
             }
-            let length = u16::from_le_bytes([data[offset], data[offset + 1]]) as u32;
+            let length = u16::from_le_bytes([data[offset], data[offset + 1]]) as u64;
             offset += 2;
             length
         };
+        // The B bit indicates a segment of the maximum size (64K, or 4G for SEGDEF32).
+        if big && length == 0 {
+            length = if is_32bit { 1 << 32 } else { 1 << 16 };
+        }
 
         // Parse segment name index
         let (name_index, size) =
@@ -356,7 +395,10 @@ impl<'data, R: ReadRef<'data>> OmfFile<'data, R> {
         let (overlay_index, _) =
             read_index(&data[offset..]).ok_or(Error("Invalid overlay name index"))?;
 
-        self.segments.push(OmfSegment {
+        self.segdefs.push(self.sections.len());
+        self.sections.push(OmfSegment {
+            name: self.get_name(name_index).unwrap_or_default(),
+            class: self.get_name(class_index).unwrap_or_default(),
             name_index,
             class_index,
             overlay_index,
@@ -364,6 +406,8 @@ impl<'data, R: ReadRef<'data>> OmfFile<'data, R> {
             combination,
             use32,
             length,
+            kind: None,
+            comdat: false,
             data_chunks: Vec::new(),
             relocations: Vec::new(),
         });
@@ -411,7 +455,7 @@ impl<'data, R: ReadRef<'data>> OmfFile<'data, R> {
         let mut offset = 0;
 
         // Parse group index
-        let (group_index, size) = read_index(data).ok_or(Error("Invalid group index"))?;
+        let (_group_index, size) = read_index(data).ok_or(Error("Invalid group index"))?;
         offset += size;
 
         // Parse segment index
@@ -429,6 +473,12 @@ impl<'data, R: ReadRef<'data>> OmfFile<'data, R> {
             frame
         } else {
             0
+        };
+
+        let section = if segment_index == 0 {
+            None
+        } else {
+            Some(SectionIndex(self.segdef_section(segment_index)? + 1))
         };
 
         // Parse public definitions
@@ -467,15 +517,16 @@ impl<'data, R: ReadRef<'data>> OmfFile<'data, R> {
             offset += size;
 
             self.symbols.push(OmfSymbol {
-                symbol_index: self.symbols.len(),
+                index: SymbolIndex(self.symbols.len()),
                 name,
                 class,
-                group_index,
-                segment_index,
+                section,
+                absolute: segment_index == 0,
                 frame_number,
-                offset: pub_offset,
+                offset: pub_offset as u64,
+                size: 0,
                 type_index,
-                kind: read::SymbolKind::Unknown, // Will be computed later
+                kind: SymbolKind::Unknown, // Will be computed later
             });
         }
 
@@ -494,27 +545,55 @@ impl<'data, R: ReadRef<'data>> OmfFile<'data, R> {
 
             // Parse type index
             let (type_index, size) = read_index(&data[offset..])
-                .ok_or(Error("Invalid type index in EXTDEF/LEXTDEF/CEXTDEF record"))?;
+                .ok_or(Error("Invalid type index in EXTDEF/LEXTDEF record"))?;
             offset += size;
 
-            let sym_idx = self.symbols.len();
-            self.symbols.push(OmfSymbol {
-                symbol_index: sym_idx,
-                name,
-                class,
-                group_index: 0,
-                segment_index: 0,
-                frame_number: 0,
-                offset: 0,
-                type_index,
-                kind: read::SymbolKind::Unknown,
-            });
-
-            // Add to external_order for symbols that contribute to external-name table
-            self.external_order.push(read::SymbolIndex(sym_idx));
+            self.push_external(name, class, type_index);
         }
 
         Ok(())
+    }
+
+    /// Parse a CEXTDEF record, which references COMDAT symbols by name index.
+    fn parse_cextdef(&mut self, data: &'data [u8]) -> Result<()> {
+        let mut offset = 0;
+
+        while offset < data.len() {
+            // Parse name index (into LNAMES)
+            let (name_index, size) =
+                read_index(&data[offset..]).ok_or(Error("Invalid name index in CEXTDEF record"))?;
+            offset += size;
+
+            // Parse type index
+            let (type_index, size) =
+                read_index(&data[offset..]).ok_or(Error("Invalid type index in CEXTDEF record"))?;
+            offset += size;
+
+            let name = self
+                .get_name(name_index)
+                .ok_or(Error("Invalid name index in CEXTDEF record"))?;
+            self.push_external(name, OmfSymbolClass::ComdatExternal, type_index);
+        }
+
+        Ok(())
+    }
+
+    /// Add a symbol that contributes to the external-name table.
+    fn push_external(&mut self, name: &'data [u8], class: OmfSymbolClass, type_index: u16) {
+        let index = SymbolIndex(self.symbols.len());
+        self.symbols.push(OmfSymbol {
+            index,
+            name,
+            class,
+            section: None,
+            absolute: false,
+            frame_number: 0,
+            offset: 0,
+            size: 0,
+            type_index,
+            kind: SymbolKind::Unknown,
+        });
+        self.external_order.push(index);
     }
 
     fn parse_comdef(&mut self, data: &'data [u8], class: OmfSymbolClass) -> Result<()> {
@@ -539,58 +618,117 @@ impl<'data, R: ReadRef<'data>> OmfFile<'data, R> {
             let data_type = data[offset];
             offset += 1;
 
-            let communal_length = match data_type {
+            let (communal_length, base_segment) = match data_type {
                 0x61 => {
                     // FAR data - number of elements followed by element size
-                    let (num_elements, size1) = read_encoded_value(&data[offset..])
+                    let (num_elements, size1) = read_communal_length(&data[offset..])
                         .ok_or(Error("Invalid number of elements in FAR COMDEF"))?;
                     offset += size1;
-                    let (element_size, size2) = read_encoded_value(&data[offset..])
+                    let (element_size, size2) = read_communal_length(&data[offset..])
                         .ok_or(Error("Invalid element size in FAR COMDEF"))?;
                     offset += size2;
-                    num_elements * element_size
+                    ((num_elements as u64) * (element_size as u64), None)
                 }
                 0x62 => {
                     // NEAR data - size in bytes
-                    let (size_val, size_bytes) = read_encoded_value(&data[offset..])
+                    let (size_val, size_bytes) = read_communal_length(&data[offset..])
                         .ok_or(Error("Invalid size in NEAR COMDEF"))?;
                     offset += size_bytes;
-                    size_val
+                    (size_val as u64, None)
+                }
+                // Borland extension: the data type is a segment index, and a
+                // single size in bytes follows. This defines a virtual
+                // segment that contains the symbol's data, which can be
+                // referenced by other records using a segment index with
+                // bit 14 set.
+                0x00..=0x5F => {
+                    let (size_val, size_bytes) = read_communal_length(&data[offset..])
+                        .ok_or(Error("Invalid size in COMDEF"))?;
+                    offset += size_bytes;
+                    let base_segment = self.segdef_section(data_type as u16).ok();
+                    (size_val as u64, Some(base_segment))
                 }
                 _ => {
                     return Err(Error("Invalid data type in COMDEF/LCOMDEF record"));
                 }
             };
 
-            let sym_idx = self.symbols.len();
-            self.symbols.push(OmfSymbol {
-                symbol_index: sym_idx,
-                name,
-                class,
-                group_index: 0,
-                segment_index: 0,
-                frame_number: 0,
-                offset: communal_length, // Store size in offset field
-                type_index,
-                kind: read::SymbolKind::Data,
-            });
+            let index = SymbolIndex(self.symbols.len());
+            if let Some(base_segment) = base_segment {
+                // Synthesize a section for the Borland virtual segment, which
+                // behaves like a COMDAT.
+                let section_index = self.sections.len();
+                self.virtual_segdefs.push(section_index);
+                self.sections.push(OmfSegment {
+                    name,
+                    class: base_segment.map_or(&[][..], |i| self.sections[i].class),
+                    name_index: 0,
+                    class_index: base_segment.map_or(0, |i| self.sections[i].class_index),
+                    overlay_index: 0,
+                    alignment: base_segment
+                        .map_or(omf::SegmentAlignment::Byte, |i| self.sections[i].alignment),
+                    combination: omf::SegmentCombination::Private,
+                    use32: base_segment.is_some_and(|i| self.sections[i].use32),
+                    length: communal_length,
+                    kind: None,
+                    comdat: true,
+                    data_chunks: Vec::new(),
+                    relocations: Vec::new(),
+                });
 
-            // Add to external_order for symbols that contribute to external-name table
-            self.external_order.push(read::SymbolIndex(sym_idx));
+                self.symbols.push(OmfSymbol {
+                    index,
+                    name,
+                    class,
+                    section: Some(SectionIndex(section_index + 1)),
+                    absolute: false,
+                    frame_number: 0,
+                    offset: 0,
+                    size: communal_length,
+                    type_index,
+                    kind: SymbolKind::Unknown, // Will be computed later
+                });
+
+                self.comdats.push(OmfComdatData {
+                    name,
+                    section: section_index,
+                    symbol: index,
+                    selection: OmfComdatSelection::UseAny,
+                });
+            } else {
+                self.symbols.push(OmfSymbol {
+                    index,
+                    name,
+                    class,
+                    section: None,
+                    absolute: false,
+                    frame_number: 0,
+                    offset: 0,
+                    size: communal_length,
+                    type_index,
+                    kind: SymbolKind::Data,
+                });
+            }
+
+            // Communal symbols contribute to the external-name table
+            self.external_order.push(index);
         }
 
         Ok(())
     }
 
-    fn parse_comdat(&mut self, data: &'data [u8], is_32bit: bool) -> Result<()> {
+    fn parse_comdat(&mut self, data: &'data [u8], is_32bit: bool) -> Result<(usize, u32)> {
         let mut offset = 0;
 
         // Parse flags byte
         if offset >= data.len() {
             return Err(Error("Truncated COMDAT record"));
         }
-        let _flags = data[offset];
+        let flags = data[offset];
         offset += 1;
+        let continuation = (flags & 0x01) != 0;
+        let iterated = (flags & 0x02) != 0;
+        let local = (flags & 0x04) != 0;
 
         // Parse attributes byte
         if offset >= data.len() {
@@ -599,41 +737,25 @@ impl<'data, R: ReadRef<'data>> OmfFile<'data, R> {
         let attributes = data[offset];
         offset += 1;
 
-        // Extract selection criteria from high nibble of attributes
-        let selection = match (attributes >> 4) & 0x0F {
-            0x00 => OmfComdatSelection::Explicit,   // No match
-            0x01 => OmfComdatSelection::UseAny,     // Pick any
-            0x02 => OmfComdatSelection::SameSize,   // Same size
-            0x03 => OmfComdatSelection::ExactMatch, // Exact match
-            _ => OmfComdatSelection::UseAny,
-        };
-
-        // Extract allocation type from low nibble of attributes
+        // Low nibble is the allocation type
         let allocation_type = attributes & 0x0F;
-
-        // Parse align/segment index field
-        let (segment_index, size) =
-            read_index(&data[offset..]).ok_or(Error("Invalid COMDAT segment index"))?;
-        offset += size;
-
-        // Determine alignment - if segment index is 0-7, it's actually an alignment value
-        let alignment = if segment_index <= 7 {
-            match segment_index {
-                0 => omf::SegmentAlignment::Absolute, // Use value from SEGDEF
-                1 => omf::SegmentAlignment::Byte,
-                2 => omf::SegmentAlignment::Word,
-                3 => omf::SegmentAlignment::Paragraph,
-                4 => omf::SegmentAlignment::Page,
-                5 => omf::SegmentAlignment::DWord,
-                6 => omf::SegmentAlignment::Page4K,
-                _ => omf::SegmentAlignment::Byte,
-            }
-        } else {
-            omf::SegmentAlignment::Byte // Default alignment
+        // High nibble is the selection criteria
+        let selection = match (attributes >> 4) & 0x0F {
+            0x00 => OmfComdatSelection::Explicit, // No match allowed
+            0x01 => OmfComdatSelection::UseAny,   // Pick any
+            0x02 => OmfComdatSelection::SameSize, // Same size
+            _ => OmfComdatSelection::ExactMatch,  // Exact match
         };
 
-        // Parse data offset
-        let _data_offset = if is_32bit {
+        // Parse align byte
+        if offset >= data.len() {
+            return Err(Error("Truncated COMDAT record"));
+        }
+        let align = data[offset];
+        offset += 1;
+
+        // Parse enumerated data offset
+        let data_offset = if is_32bit {
             if offset + 4 > data.len() {
                 return Err(Error("Truncated COMDAT record"));
             }
@@ -659,19 +781,23 @@ impl<'data, R: ReadRef<'data>> OmfFile<'data, R> {
             read_index(&data[offset..]).ok_or(Error("Invalid type index in COMDAT record"))?;
         offset += size;
 
-        // Parse public base (only if allocation type is 0x00 - Explicit)
+        // Parse the public base, which is present only for explicit allocation
+        let mut base_segment = None;
         if allocation_type == 0x00 {
-            // Has public base (Base Group, Base Segment, Base Frame)
             let (_group_index, size) =
                 read_index(&data[offset..]).ok_or(Error("Invalid group index in COMDAT record"))?;
             offset += size;
-            let (_seg_idx, size) = read_index(&data[offset..])
+            let (segment_index, size) = read_index(&data[offset..])
                 .ok_or(Error("Invalid segment index in COMDAT record"))?;
             offset += size;
-            if _seg_idx == 0 {
-                if offset + 2 <= data.len() {
-                    offset += 2; // Skip frame number
+            if segment_index == 0 {
+                // Skip frame number
+                if offset + 2 > data.len() {
+                    return Err(Error("Truncated COMDAT record"));
                 }
+                offset += 2;
+            } else {
+                base_segment = Some(self.segdef_section(segment_index)?);
             }
         }
 
@@ -679,36 +805,106 @@ impl<'data, R: ReadRef<'data>> OmfFile<'data, R> {
         let (name_index, size) =
             read_index(&data[offset..]).ok_or(Error("Invalid name index in COMDAT record"))?;
         offset += size;
-
-        // Look up the name from the names table
-        let name = name_index
-            .checked_sub(1)
-            .and_then(|i| self.names.get(i as usize).copied())
-            .unwrap_or(b"");
+        let name = self
+            .get_name(name_index)
+            .ok_or(Error("Invalid name index in COMDAT record"))?;
 
         // Remaining data is the COMDAT content
-        let comdat_data = &data[offset..];
+        let chunk = if iterated {
+            OmfDataChunk::Iterated {
+                data: &data[offset..],
+                is_32bit,
+            }
+        } else {
+            OmfDataChunk::Direct(&data[offset..])
+        };
+        let chunk_end = data_offset as u64 + chunk.expanded_len()?;
+
+        // Continuation records (and repeated COMDAT records for the same name)
+        // add data to the previously defined COMDAT.
+        if continuation {
+            let comdat = self
+                .comdats
+                .iter()
+                .rev()
+                .find(|comdat| comdat.name == name)
+                .ok_or(Error("COMDAT continuation without a previous COMDAT"))?;
+            let section_index = comdat.section;
+            let section = &mut self.sections[section_index];
+            section.data_chunks.push((data_offset, chunk));
+            if chunk_end > section.length {
+                section.length = chunk_end;
+            }
+            return Ok((section_index, data_offset));
+        }
+
+        // Determine the section kind, alignment, and use32 from the
+        // allocation type, falling back to the base segment for explicit
+        // allocation.
+        let (kind, use32) = match allocation_type {
+            0x00 => (None, base_segment.is_some_and(|i| self.sections[i].use32)),
+            0x01 => (Some(SectionKind::Text), false), // Far code
+            0x02 => (Some(SectionKind::Data), false), // Far data
+            0x03 => (Some(SectionKind::Text), true),  // Code32
+            0x04 => (Some(SectionKind::Data), true),  // Data32
+            _ => (None, false),
+        };
+        let alignment = match align {
+            0 => base_segment.map_or(omf::SegmentAlignment::Byte, |i| self.sections[i].alignment),
+            1 => omf::SegmentAlignment::Byte,
+            2 => omf::SegmentAlignment::Word,
+            3 => omf::SegmentAlignment::Paragraph,
+            4 => omf::SegmentAlignment::Page,
+            5 => omf::SegmentAlignment::DWord,
+            6 => omf::SegmentAlignment::Page4K,
+            _ => omf::SegmentAlignment::Byte,
+        };
+
+        // Synthesize a section for the COMDAT.
+        let section_index = self.sections.len();
+        self.sections.push(OmfSegment {
+            name,
+            class: base_segment.map_or(&[][..], |i| self.sections[i].class),
+            name_index,
+            class_index: base_segment.map_or(0, |i| self.sections[i].class_index),
+            overlay_index: 0,
+            alignment,
+            combination: omf::SegmentCombination::Private,
+            use32,
+            length: chunk_end,
+            kind,
+            comdat: true,
+            data_chunks: alloc::vec![(data_offset, chunk)],
+            relocations: Vec::new(),
+        });
+
+        // Synthesize a symbol for the COMDAT.
+        let symbol_index = SymbolIndex(self.symbols.len());
+        self.symbols.push(OmfSymbol {
+            index: symbol_index,
+            name,
+            class: if local {
+                OmfSymbolClass::LocalComdat
+            } else {
+                OmfSymbolClass::Comdat
+            },
+            section: Some(SectionIndex(section_index + 1)),
+            absolute: false,
+            frame_number: 0,
+            offset: 0,
+            size: 0, // Will be computed later
+            type_index: 0,
+            kind: SymbolKind::Unknown, // Will be computed later
+        });
 
         self.comdats.push(OmfComdatData {
             name,
-            segment_index,
+            section: section_index,
+            symbol: symbol_index,
             selection,
-            alignment,
-            data: comdat_data,
         });
 
-        Ok(())
-    }
-
-    fn parse_comment(&mut self, data: &'data [u8]) -> Result<()> {
-        if data.len() < 2 {
-            return Ok(()); // Ignore truncated comments
-        }
-
-        let _comment_type = data[0]; // Usually 0x00 for non-purge, 0x40 for purge
-        let _comment_class = data[1];
-
-        Ok(())
+        Ok((section_index, data_offset))
     }
 
     fn parse_ledata(&mut self, data: &'data [u8], is_32bit: bool) -> Result<(usize, u32)> {
@@ -718,10 +914,7 @@ impl<'data, R: ReadRef<'data>> OmfFile<'data, R> {
         let (segment_index, size) =
             read_index(data).ok_or(Error("Invalid segment index in LEDATA"))?;
         offset += size;
-
-        if segment_index == 0 || segment_index > self.segments.len() as u16 {
-            return Err(Error("Invalid segment index in LEDATA"));
-        }
+        let section_index = self.segdef_section(segment_index)?;
 
         // Parse data offset
         let data_offset = if is_32bit {
@@ -745,26 +938,68 @@ impl<'data, R: ReadRef<'data>> OmfFile<'data, R> {
             off
         };
 
-        // Store reference to data chunk
-        let seg_idx = (segment_index - 1) as usize;
-        let segment = &mut self.segments[seg_idx];
-
         // Store the data chunk reference
         if offset < data.len() {
-            segment
+            self.sections[section_index]
                 .data_chunks
                 .push((data_offset, OmfDataChunk::Direct(&data[offset..])));
         }
 
-        Ok((seg_idx, data_offset))
+        Ok((section_index, data_offset))
+    }
+
+    fn parse_lidata(&mut self, data: &'data [u8], is_32bit: bool) -> Result<(usize, u32)> {
+        let mut offset = 0;
+
+        // Read segment index
+        let (segment_index, size) =
+            read_index(&data[offset..]).ok_or(Error("Invalid segment index in LIDATA"))?;
+        offset += size;
+        let section_index = self.segdef_section(segment_index)?;
+
+        // Read data offset
+        let data_offset = if is_32bit {
+            if offset + 4 > data.len() {
+                return Err(Error("Truncated LIDATA record"));
+            }
+            let off = u32::from_le_bytes([
+                data[offset],
+                data[offset + 1],
+                data[offset + 2],
+                data[offset + 3],
+            ]);
+            offset += 4;
+            off
+        } else {
+            if offset + 2 > data.len() {
+                return Err(Error("Truncated LIDATA record"));
+            }
+            let off = u16::from_le_bytes([data[offset], data[offset + 1]]) as u32;
+            offset += 2;
+            off
+        };
+
+        // Store the unexpanded data; it is expanded on demand.
+        if offset < data.len() {
+            let chunk = OmfDataChunk::Iterated {
+                data: &data[offset..],
+                is_32bit,
+            };
+            // Validate the iterated data blocks.
+            chunk.expanded_len()?;
+            self.sections[section_index]
+                .data_chunks
+                .push((data_offset, chunk));
+        }
+
+        Ok((section_index, data_offset))
     }
 
     fn parse_fixupp(
         &mut self,
         data: &'data [u8],
         is_32bit: bool,
-        seg_idx: usize,
-        data_offset: u32,
+        last_data: Option<(usize, u32)>,
         frame_threads: &mut [Option<ThreadDef>; 4],
         target_threads: &mut [Option<ThreadDef>; 4],
     ) -> Result<()> {
@@ -807,11 +1042,18 @@ impl<'data, R: ReadRef<'data>> OmfFile<'data, R> {
                 }
             } else {
                 // FIXUP subrecord
+                let (section_index, data_offset) = last_data.ok_or(Error(
+                    "FIXUP subrecord without preceding LEDATA/LIDATA/COMDAT",
+                ))?;
+
                 if offset + 1 > data.len() {
                     return Err(Error("Truncated FIXUP location"));
                 }
                 let locat = data[offset] as u32 | (((b as u32) & 0x03) << 8);
                 offset += 1;
+
+                // The M bit determines segment-relative vs self-relative.
+                let is_segment_relative = (b & 0x40) != 0;
 
                 let location = match (b >> 2) & 0x0F {
                     0 => omf::FixupLocation::LowByte,
@@ -823,7 +1065,7 @@ impl<'data, R: ReadRef<'data>> OmfFile<'data, R> {
                     9 => omf::FixupLocation::Offset32,
                     11 => omf::FixupLocation::Pointer48,
                     13 => omf::FixupLocation::LoaderOffset32,
-                    _ => continue, // Skip unknown fixup types
+                    _ => return Err(Error("Invalid FIXUP location type")),
                 };
 
                 // Parse fix data byte
@@ -840,31 +1082,16 @@ impl<'data, R: ReadRef<'data>> OmfFile<'data, R> {
                     let thread_num = ((fix_data >> 4) & 0x03) as usize;
                     match frame_threads[thread_num] {
                         Some(thread) => {
-                            let method = match thread.method {
-                                0 => FrameMethod::SegmentIndex,
-                                1 => FrameMethod::GroupIndex,
-                                2 => FrameMethod::ExternalIndex,
-                                3 => FrameMethod::FrameNumber,
-                                4 => FrameMethod::Location,
-                                5 => FrameMethod::Target,
-                                _ => return Err(Error("Invalid frame method in thread")),
-                            };
+                            let method = FrameMethod::parse(thread.method)
+                                .ok_or(Error("Invalid frame method in thread"))?;
                             (method, thread.index)
                         }
                         None => return Err(Error("Undefined frame thread in FIXUP")),
                     }
                 } else {
                     // F=0: Read frame datum
-                    let method_bits = (fix_data >> 4) & 0x07;
-                    let method = match method_bits {
-                        0 => FrameMethod::SegmentIndex,
-                        1 => FrameMethod::GroupIndex,
-                        2 => FrameMethod::ExternalIndex,
-                        3 => FrameMethod::FrameNumber,
-                        4 => FrameMethod::Location,
-                        5 => FrameMethod::Target,
-                        _ => return Err(Error("Invalid frame method in FIXUP")),
-                    };
+                    let method = FrameMethod::parse((fix_data >> 4) & 0x07)
+                        .ok_or(Error("Invalid frame method in FIXUP"))?;
                     let index = match method {
                         FrameMethod::SegmentIndex
                         | FrameMethod::GroupIndex
@@ -896,28 +1123,17 @@ impl<'data, R: ReadRef<'data>> OmfFile<'data, R> {
                     let thread_num = (fix_data & 0x03) as usize;
                     match target_threads[thread_num] {
                         Some(thread) => {
-                            // Only check the low 2 bits of method for target
-                            let method = match thread.method & 0x03 {
-                                0 => TargetMethod::SegmentIndex,
-                                1 => TargetMethod::GroupIndex,
-                                2 => TargetMethod::ExternalIndex,
-                                3 => TargetMethod::FrameNumber,
-                                _ => return Err(Error("Invalid target method in thread")),
-                            };
+                            // Only the low 2 bits of the thread method apply to targets
+                            let method = TargetMethod::parse(thread.method & 0x03)
+                                .ok_or(Error("Invalid target method in thread"))?;
                             (method, thread.index)
                         }
                         None => return Err(Error("Undefined target thread in FIXUP")),
                     }
                 } else {
                     // T=0: Read target datum
-                    // Only check the low 2 bits of method for target
-                    let method = match fix_data & 0x03 {
-                        0 => TargetMethod::SegmentIndex,
-                        1 => TargetMethod::GroupIndex,
-                        2 => TargetMethod::ExternalIndex,
-                        3 => TargetMethod::FrameNumber,
-                        _ => return Err(Error("Invalid frame method in FIXUP")),
-                    };
+                    let method = TargetMethod::parse(fix_data & 0x03)
+                        .ok_or(Error("Invalid target method in FIXUP"))?;
                     let index = match method {
                         TargetMethod::SegmentIndex
                         | TargetMethod::GroupIndex
@@ -945,32 +1161,30 @@ impl<'data, R: ReadRef<'data>> OmfFile<'data, R> {
                 let has_displacement = (fix_data & 0x04) == 0;
                 let target_displacement = if has_displacement {
                     if is_32bit {
-                        if offset + 4 <= data.len() {
-                            let disp = u32::from_le_bytes([
-                                data[offset],
-                                data[offset + 1],
-                                data[offset + 2],
-                                data[offset + 3],
-                            ]);
-                            offset += 4;
-                            disp
-                        } else {
+                        if offset + 4 > data.len() {
                             return Err(Error("Truncated FIXUP 32-bit displacement"));
                         }
-                    } else if offset + 2 <= data.len() {
+                        let disp = u32::from_le_bytes([
+                            data[offset],
+                            data[offset + 1],
+                            data[offset + 2],
+                            data[offset + 3],
+                        ]);
+                        offset += 4;
+                        disp
+                    } else {
+                        if offset + 2 > data.len() {
+                            return Err(Error("Truncated FIXUP 16-bit displacement"));
+                        }
                         let disp = u16::from_le_bytes([data[offset], data[offset + 1]]) as u32;
                         offset += 2;
                         disp
-                    } else {
-                        return Err(Error("Truncated FIXUP 16-bit displacement"));
                     }
                 } else {
                     0
                 };
 
-                // Extract M-bit (bit 6 of fix_data)
-                let is_segment_relative = (fix_data & 0x40) != 0;
-                self.segments[seg_idx].relocations.push(OmfFixup {
+                self.sections[section_index].relocations.push(OmfFixup {
                     offset: data_offset + locat,
                     location,
                     frame_method,
@@ -986,63 +1200,18 @@ impl<'data, R: ReadRef<'data>> OmfFile<'data, R> {
         Ok(())
     }
 
-    fn parse_lidata(&mut self, data: &'data [u8], is_32bit: bool) -> Result<(usize, u32)> {
-        let mut offset = 0;
-
-        // Read segment index
-        let (segment_index, size) =
-            read_index(&data[offset..]).ok_or(Error("Invalid segment index in LIDATA"))?;
-        offset += size;
-
-        if segment_index == 0 || segment_index > self.segments.len() as u16 {
-            return Err(Error("Invalid segment index in LIDATA"));
-        }
-
-        // Read data offset
-        let data_offset = if is_32bit {
-            if offset + 4 > data.len() {
-                return Err(Error("Truncated LIDATA record"));
-            }
-            let off = u32::from_le_bytes([
-                data[offset],
-                data[offset + 1],
-                data[offset + 2],
-                data[offset + 3],
-            ]);
-            offset += 4;
-            off
-        } else {
-            if offset + 2 > data.len() {
-                return Err(Error("Truncated LIDATA record"));
-            }
-            let off = u16::from_le_bytes([data[offset], data[offset + 1]]) as u32;
-            offset += 2;
-            off
-        };
-
-        // For LIDATA, we need to store the unexpanded data and expand on demand
-        let seg_idx = (segment_index - 1) as usize;
-        if offset < data.len() {
-            self.segments[seg_idx]
-                .data_chunks
-                .push((data_offset, OmfDataChunk::Iterated(&data[offset..])));
-        }
-
-        Ok((seg_idx, data_offset))
-    }
-
-    /// Get the module name
+    /// Get the module name from the THEADR/LHEADR record.
     pub fn module_name(&self) -> Option<&'data str> {
         self.module_name
     }
 
-    /// Get the segments as a slice
-    pub fn raw_segments(&self) -> &[OmfSegment<'data>] {
-        &self.segments
+    /// Get the parsed sections, which include both segments and COMDATs.
+    pub fn raw_sections(&self) -> &[OmfSegment<'data>] {
+        &self.sections
     }
 
     /// Get symbol by external-name index (1-based, as used in FIXUPP records)
-    pub fn external_symbol(&self, external_index: u16) -> Option<&OmfSymbol<'data>> {
+    pub(super) fn external_symbol(&self, external_index: u16) -> Option<&OmfSymbol<'data>> {
         let symbol_index = self
             .external_order
             .get(external_index.checked_sub(1)? as usize)?;
@@ -1053,6 +1222,12 @@ impl<'data, R: ReadRef<'data>> OmfFile<'data, R> {
     pub fn get_name(&self, index: u16) -> Option<&'data [u8]> {
         let name_index = index.checked_sub(1)?;
         self.names.get(name_index as usize).copied()
+    }
+
+    /// Get a group's name by group index (1-based)
+    pub(super) fn group_name(&self, index: u16) -> Option<&'data [u8]> {
+        let group = self.groups.get(index.checked_sub(1)? as usize)?;
+        self.get_name(group.name_index)
     }
 
     /// Get all symbols (for iteration)
@@ -1153,7 +1328,7 @@ impl<'data, R: ReadRef<'data>> Object<'data> for OmfFile<'data, R> {
             .0
             .checked_sub(1)
             .ok_or(Error("Invalid section index"))?;
-        if idx < self.segments.len() {
+        if idx < self.sections.len() {
             Ok(OmfSection {
                 file: self,
                 index: idx,
@@ -1178,11 +1353,10 @@ impl<'data, R: ReadRef<'data>> Object<'data> for OmfFile<'data, R> {
     }
 
     fn symbol_by_index(&self, index: SymbolIndex) -> Result<Self::Symbol<'_>> {
-        let idx = index.0;
-        if idx >= self.symbols.len() {
-            return Err(Error("Symbol index out of bounds"));
-        }
-        Ok(self.symbols[idx].clone())
+        self.symbols
+            .get(index.0)
+            .cloned()
+            .ok_or(Error("Symbol index out of bounds"))
     }
 
     fn symbols(&self) -> Self::SymbolIterator<'_> {
@@ -1199,7 +1373,7 @@ impl<'data, R: ReadRef<'data>> Object<'data> for OmfFile<'data, R> {
     fn dynamic_symbols(&self) -> Self::SymbolIterator<'_> {
         OmfSymbolIterator {
             file: self,
-            index: usize::MAX, // Empty iterator
+            index: self.symbols.len(), // Empty iterator
         }
     }
 
@@ -1212,36 +1386,18 @@ impl<'data, R: ReadRef<'data>> Object<'data> for OmfFile<'data, R> {
     }
 
     fn imports(&self) -> Result<Vec<Import<'data>>> {
-        Ok(self
-            .raw_symbols()
-            .iter()
-            .filter(|sym| {
-                matches!(
-                    sym.class,
-                    OmfSymbolClass::External | OmfSymbolClass::ComdatExternal
-                )
-            })
-            .map(|ext| Import {
-                library: ByteString(b""),
-                name: ByteString(ext.name),
-            })
-            .collect())
+        // TODO: this could return undefined symbols, but not needed yet.
+        Ok(Vec::new())
     }
 
     fn exports(&self) -> Result<Vec<Export<'data>>> {
-        Ok(self
-            .raw_symbols()
-            .iter()
-            .filter(|sym| sym.class == OmfSymbolClass::Public)
-            .map(|pub_sym| Export {
-                name: ByteString(pub_sym.name),
-                address: pub_sym.offset as u64,
-            })
-            .collect())
+        // TODO: this could return global symbols, but not needed yet.
+        Ok(Vec::new())
     }
 
     fn has_debug_symbols(&self) -> bool {
-        false
+        self.sections()
+            .any(|section| section.kind() == SectionKind::Debug)
     }
 
     fn mach_uuid(&self) -> Result<Option<[u8; 16]>> {
@@ -1288,89 +1444,141 @@ struct ThreadDef {
 
 /// Target method types for fixups
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-#[repr(u8)]
 pub(super) enum TargetMethod {
     /// Segment index
-    SegmentIndex = 0,
+    SegmentIndex,
     /// Group index
-    GroupIndex = 1,
+    GroupIndex,
     /// External index
-    ExternalIndex = 2,
+    ExternalIndex,
     /// Frame number (absolute)
-    FrameNumber = 3,
+    FrameNumber,
+}
+
+impl TargetMethod {
+    fn parse(method: u8) -> Option<Self> {
+        Some(match method {
+            0 => TargetMethod::SegmentIndex,
+            1 => TargetMethod::GroupIndex,
+            2 => TargetMethod::ExternalIndex,
+            3 => TargetMethod::FrameNumber,
+            _ => return None,
+        })
+    }
 }
 
 /// Frame method types for fixups
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-#[repr(u8)]
 pub(super) enum FrameMethod {
     /// Segment index
-    SegmentIndex = 0,
+    SegmentIndex,
     /// Group index
-    GroupIndex = 1,
+    GroupIndex,
     /// External index
-    ExternalIndex = 2,
+    ExternalIndex,
     /// Frame number (absolute)
-    FrameNumber = 3,
-    /// Location (use fixup location)
-    Location = 4,
-    /// Target (use target's frame)
-    Target = 5,
+    FrameNumber,
+    /// Location (use the frame containing the fixup location)
+    Location,
+    /// Target (use the target's frame)
+    Target,
 }
 
-/// Expand a LIDATA block into a newly allocated buffer
-pub(super) fn expand_lidata_block(data: &[u8]) -> Result<Vec<u8>> {
-    let (orig_size, expanded_size) = lidata_block_expanded_size(data)?;
-    let mut result = vec![0u8; expanded_size];
-    let mut write_offset = 0usize;
-    let consumed = expand_lidata_block_into(data, &mut result, &mut write_offset)?;
+impl FrameMethod {
+    fn parse(method: u8) -> Option<Self> {
+        Some(match method {
+            0 => FrameMethod::SegmentIndex,
+            1 => FrameMethod::GroupIndex,
+            2 => FrameMethod::ExternalIndex,
+            3 => FrameMethod::FrameNumber,
+            4 => FrameMethod::Location,
+            5 => FrameMethod::Target,
+            _ => return None,
+        })
+    }
+}
 
+/// Expand iterated data blocks (from LIDATA or COMDAT records) into a newly
+/// allocated buffer.
+///
+/// The data may contain multiple consecutive iterated data blocks.
+pub(super) fn expand_iterated_data(data: &[u8], is_32bit: bool) -> Result<Vec<u8>> {
+    let expanded_size = usize::try_from(iterated_data_expanded_len(data, is_32bit)?)
+        .map_err(|_| Error("LIDATA expanded size overflow"))?;
+    let mut result = alloc::vec![0u8; expanded_size];
+    let mut offset = 0;
+    let mut write_offset = 0;
+    while offset < data.len() {
+        offset += expand_iterated_block(&data[offset..], is_32bit, &mut result, &mut write_offset)?;
+    }
     debug_assert_eq!(write_offset, expanded_size);
-    debug_assert_eq!(consumed, orig_size);
-
     Ok(result)
 }
 
-fn expand_lidata_block_into(
+/// Return the total expanded size of consecutive iterated data blocks.
+pub(super) fn iterated_data_expanded_len(data: &[u8], is_32bit: bool) -> Result<u64> {
+    let mut offset = 0;
+    let mut expanded = 0u64;
+    while offset < data.len() {
+        let (consumed, block_expanded) = iterated_block_expanded_len(&data[offset..], is_32bit)?;
+        offset += consumed;
+        expanded = expanded
+            .checked_add(block_expanded)
+            .ok_or(Error("LIDATA expanded size overflow"))?;
+    }
+    Ok(expanded)
+}
+
+/// Read the repeat count and block count of an iterated data block.
+///
+/// Returns the counts and the number of bytes consumed.
+fn read_iterated_block_header(data: &[u8], is_32bit: bool) -> Result<(u32, u16, usize)> {
+    let mut offset = 0;
+    let repeat_count = if is_32bit {
+        if data.len() < 4 {
+            return Err(Error("Truncated LIDATA block"));
+        }
+        offset += 4;
+        u32::from_le_bytes([data[0], data[1], data[2], data[3]])
+    } else {
+        if data.len() < 2 {
+            return Err(Error("Truncated LIDATA block"));
+        }
+        offset += 2;
+        u16::from_le_bytes([data[0], data[1]]) as u32
+    };
+    if data.len() < offset + 2 {
+        return Err(Error("Truncated LIDATA block"));
+    }
+    let block_count = u16::from_le_bytes([data[offset], data[offset + 1]]);
+    offset += 2;
+    Ok((repeat_count, block_count, offset))
+}
+
+/// Expand a single iterated data block, returning the number of bytes consumed.
+fn expand_iterated_block(
     data: &[u8],
+    is_32bit: bool,
     output: &mut [u8],
     write_offset: &mut usize,
 ) -> Result<usize> {
-    let mut offset = 0;
-
-    let (repeat_count, size) =
-        read_encoded_value(&data[offset..]).ok_or(Error("Invalid repeat count in LIDATA block"))?;
-    offset += size;
-
-    if repeat_count == 0 {
-        return lidata_block_size(data);
-    }
-
-    let repeat_count = repeat_count as usize;
-
-    let (block_count, size) =
-        read_encoded_value(&data[offset..]).ok_or(Error("Invalid block count in LIDATA block"))?;
-    offset += size;
+    let (repeat_count, block_count, mut offset) = read_iterated_block_header(data, is_32bit)?;
 
     if block_count == 0 {
+        // Leaf block: 1-byte length followed by data bytes.
         if offset >= data.len() {
-            return Ok(offset);
+            return Err(Error("Truncated LIDATA block"));
         }
-
         let data_length = data[offset] as usize;
         offset += 1;
-
         if offset + data_length > data.len() {
             return Err(Error("Truncated LIDATA block"));
         }
-
         let block_data = &data[offset..offset + data_length];
         offset += data_length;
 
         for _ in 0..repeat_count {
-            let end = write_offset
-                .checked_add(data_length)
-                .ok_or(Error("LIDATA expanded size overflow"))?;
+            let end = *write_offset + data_length;
             if end > output.len() {
                 return Err(Error("LIDATA expanded size mismatch"));
             }
@@ -1378,136 +1586,65 @@ fn expand_lidata_block_into(
             *write_offset = end;
         }
     } else {
-        let mut block_offset = offset;
+        // Nested blocks: expand one iteration, then repeat it.
         let iteration_start = *write_offset;
-
         for _ in 0..block_count {
-            let block_size = lidata_block_size(&data[block_offset..])?;
-            let block_consumed =
-                expand_lidata_block_into(&data[block_offset..], output, write_offset)?;
-
-            debug_assert_eq!(block_size, block_consumed);
-            block_offset = block_offset
-                .checked_add(block_size)
-                .ok_or(Error("LIDATA block size overflow"))?;
-            if block_offset > data.len() {
+            if offset >= data.len() {
                 return Err(Error("Truncated LIDATA block"));
             }
+            offset += expand_iterated_block(&data[offset..], is_32bit, output, write_offset)?;
         }
-
         let iteration_len = *write_offset - iteration_start;
 
         for _ in 1..repeat_count {
             let dest_start = *write_offset;
-            let dest_end = dest_start
-                .checked_add(iteration_len)
-                .ok_or(Error("LIDATA expanded size overflow"))?;
+            let dest_end = dest_start + iteration_len;
             if dest_end > output.len() {
                 return Err(Error("LIDATA expanded size mismatch"));
             }
-            if iteration_len != 0 {
-                output.copy_within(iteration_start..iteration_start + iteration_len, dest_start);
-            }
+            output.copy_within(iteration_start..iteration_start + iteration_len, dest_start);
             *write_offset = dest_end;
         }
-
-        offset = block_offset;
     }
 
     Ok(offset)
 }
 
-fn lidata_block_expanded_size(data: &[u8]) -> Result<(usize, usize)> {
-    let mut offset = 0;
+/// Return the consumed and expanded size of a single iterated data block.
+fn iterated_block_expanded_len(data: &[u8], is_32bit: bool) -> Result<(usize, u64)> {
+    let (repeat_count, block_count, mut offset) = read_iterated_block_header(data, is_32bit)?;
 
-    let (repeat_count, size) =
-        read_encoded_value(&data[offset..]).ok_or(Error("Invalid repeat count in LIDATA block"))?;
-    offset += size;
-
-    if repeat_count == 0 {
-        let consumed = lidata_block_size(data)?;
-        if consumed > data.len() {
+    let single_iteration = if block_count == 0 {
+        // Leaf block: 1-byte length followed by data bytes.
+        if offset >= data.len() {
             return Err(Error("Truncated LIDATA block"));
         }
-        return Ok((consumed, 0));
-    }
-
-    let (block_count, size) =
-        read_encoded_value(&data[offset..]).ok_or(Error("Invalid block count in LIDATA block"))?;
-    offset += size;
-
-    if block_count == 0 {
-        if offset >= data.len() {
-            return Ok((offset, 0));
-        }
-
         let data_length = data[offset] as usize;
         offset += 1;
-
         if offset + data_length > data.len() {
             return Err(Error("Truncated LIDATA block"));
         }
-
         offset += data_length;
-
-        let expanded = data_length
-            .checked_mul(repeat_count as usize)
-            .ok_or(Error("LIDATA expanded size overflow"))?;
-        Ok((offset, expanded))
+        data_length as u64
     } else {
-        let mut block_offset = offset;
-        let mut single_iteration = 0usize;
-
+        let mut single_iteration = 0u64;
         for _ in 0..block_count {
-            let (consumed, expanded) = lidata_block_expanded_size(&data[block_offset..])?;
-            block_offset = block_offset
-                .checked_add(consumed)
-                .ok_or(Error("LIDATA block size overflow"))?;
-            if block_offset > data.len() {
+            if offset >= data.len() {
                 return Err(Error("Truncated LIDATA block"));
             }
+            let (consumed, expanded) = iterated_block_expanded_len(&data[offset..], is_32bit)?;
+            offset += consumed;
             single_iteration = single_iteration
                 .checked_add(expanded)
                 .ok_or(Error("LIDATA expanded size overflow"))?;
         }
+        single_iteration
+    };
 
-        let expanded = single_iteration
-            .checked_mul(repeat_count as usize)
-            .ok_or(Error("LIDATA expanded size overflow"))?;
-
-        Ok((block_offset, expanded))
-    }
-}
-
-/// Helper function to calculate LIDATA block size
-fn lidata_block_size(data: &[u8]) -> Result<usize> {
-    let mut offset = 0;
-
-    // Read repeat count
-    let (_, size) =
-        read_encoded_value(&data[offset..]).ok_or(Error("Invalid repeat count in LIDATA block"))?;
-    offset += size;
-
-    // Read block count
-    let (block_count, size) =
-        read_encoded_value(&data[offset..]).ok_or(Error("Invalid block count in LIDATA block"))?;
-    offset += size;
-
-    if block_count == 0 {
-        // Leaf block
-        if offset >= data.len() {
-            return Ok(offset);
-        }
-        let data_length = data[offset] as usize;
-        offset += 1 + data_length;
-    } else {
-        // Nested blocks
-        for _ in 0..block_count {
-            offset += lidata_block_size(&data[offset..])?;
-        }
-    }
-
-    Ok(offset)
+    let expanded = single_iteration
+        .checked_mul(repeat_count as u64)
+        .ok_or(Error("LIDATA expanded size overflow"))?;
+    Ok((offset, expanded))
 }
 
 /// Helper to read an OMF index (1 or 2 bytes)
@@ -1544,43 +1681,32 @@ fn read_counted_string(data: &[u8]) -> Option<(&[u8], usize)> {
     }
 }
 
-/// Read an encoded value (used in LIDATA for repeat counts and block counts)
-/// Returns the value and number of bytes consumed
-fn read_encoded_value(data: &[u8]) -> Option<(u32, usize)> {
-    if data.is_empty() {
-        return None;
-    }
-
-    let first_byte = data[0];
-    if first_byte < 0x80 {
+/// Read a COMDEF communal length.
+///
+/// Returns the value and number of bytes consumed.
+fn read_communal_length(data: &[u8]) -> Option<(u32, usize)> {
+    let first_byte = *data.first()?;
+    match first_byte {
         // Single byte value (0-127)
-        Some((first_byte as u32, 1))
-    } else if first_byte == 0x81 {
-        // Two byte value: 0x81 followed by 16-bit little-endian value
-        if data.len() >= 3 {
-            let value = u16::from_le_bytes([data[1], data[2]]) as u32;
-            Some((value, 3))
-        } else {
-            None
+        0..=0x80 => Some((first_byte as u32, 1)),
+        // 0x81 followed by a 16-bit little-endian value
+        0x81 => {
+            let bytes = data.get(1..3)?;
+            Some((u16::from_le_bytes([bytes[0], bytes[1]]) as u32, 3))
         }
-    } else if first_byte == 0x84 {
-        // Three byte value: 0x84 followed by 24-bit little-endian value
-        if data.len() >= 4 {
-            let value = u32::from_le_bytes([data[1], data[2], data[3], 0]);
-            Some((value, 4))
-        } else {
-            None
+        // 0x84 followed by a 24-bit little-endian value
+        0x84 => {
+            let bytes = data.get(1..4)?;
+            Some((u32::from_le_bytes([bytes[0], bytes[1], bytes[2], 0]), 4))
         }
-    } else if first_byte == 0x88 {
-        // Four byte value: 0x88 followed by 32-bit little-endian value
-        if data.len() >= 5 {
-            let value = u32::from_le_bytes([data[1], data[2], data[3], data[4]]);
-            Some((value, 5))
-        } else {
-            None
+        // 0x88 followed by a 32-bit little-endian value
+        0x88 => {
+            let bytes = data.get(1..5)?;
+            Some((
+                u32::from_le_bytes([bytes[0], bytes[1], bytes[2], bytes[3]]),
+                5,
+            ))
         }
-    } else {
-        // Unknown encoding
-        None
+        _ => None,
     }
 }

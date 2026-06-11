@@ -1,5 +1,5 @@
 use alloc::borrow::Cow;
-use alloc::{vec, vec::Vec};
+use alloc::vec::Vec;
 use core::str;
 
 use crate::read::{
@@ -7,9 +7,12 @@ use crate::read::{
     Result, SectionFlags, SectionIndex, SectionKind,
 };
 
-use super::{expand_lidata_block, OmfDataChunk, OmfFile, OmfRelocationIterator, OmfSegment};
+use super::{OmfDataChunk, OmfFile, OmfRelocationIterator, OmfSegment};
 
-/// A section in an OMF file.
+/// A section in an [`OmfFile`].
+///
+/// This is either a segment from a SEGDEF record, or a section synthesized
+/// from COMDAT records.
 #[derive(Debug)]
 pub struct OmfSection<'data, 'file, R: ReadRef<'data>> {
     pub(super) file: &'file OmfFile<'data, R>,
@@ -18,17 +21,17 @@ pub struct OmfSection<'data, 'file, R: ReadRef<'data>> {
 
 /// An OMF group definition
 #[derive(Debug, Clone)]
-#[allow(unused)]
 pub(super) struct OmfGroup {
     /// Group name index (into names table)
     pub(super) name_index: u16,
-    /// Segment indices in this group
+    /// Segment indices in this group (1-based SEGDEF indices)
+    #[allow(unused)]
     pub(super) segments: Vec<u16>,
 }
 
 impl<'data, 'file, R: ReadRef<'data>> OmfSection<'data, 'file, R> {
-    fn segment(&self) -> &OmfSegment<'data> {
-        &self.file.segments[self.index]
+    fn segment(&self) -> &'file OmfSegment<'data> {
+        &self.file.sections[self.index]
     }
 }
 
@@ -46,42 +49,20 @@ impl<'data, 'file, R: ReadRef<'data>> ObjectSection<'data> for OmfSection<'data,
     }
 
     fn size(&self) -> u64 {
-        self.segment().length as u64
+        self.segment().length
     }
 
     fn align(&self) -> u64 {
-        match self.segment().alignment {
-            crate::omf::SegmentAlignment::Byte => 1,
-            crate::omf::SegmentAlignment::Word => 2,
-            crate::omf::SegmentAlignment::Paragraph => 16,
-            crate::omf::SegmentAlignment::Page => 256,
-            crate::omf::SegmentAlignment::DWord => 4,
-            crate::omf::SegmentAlignment::Page4K => 4096,
-            _ => 1,
-        }
+        self.segment().align_bytes()
     }
 
     fn file_range(&self) -> Option<(u64, u64)> {
+        // OMF section data is not contiguous in the file.
         None
     }
 
     fn data(&self) -> Result<&'data [u8]> {
-        let segment = self.segment();
-
-        // Check if we have a single contiguous chunk that doesn't need expansion
-        if let Some(data) = segment.get_single_chunk() {
-            return Ok(data);
-        }
-
-        // If we have no chunks, return empty slice
-        if segment.data_chunks.is_empty() {
-            return Ok(&[]);
-        }
-
-        // For multiple chunks, LIDATA, or non-contiguous data, we can't return a reference
-        Err(Error(
-            "OMF segment data is not contiguous; use uncompressed_data() instead",
-        ))
+        self.segment().data()
     }
 
     fn data_range(&self, address: u64, size: u64) -> Result<Option<&'data [u8]>> {
@@ -91,31 +72,18 @@ impl<'data, 'file, R: ReadRef<'data>> ObjectSection<'data> for OmfSection<'data,
             .checked_add(size as usize)
             .ok_or(Error("Invalid data range"))?;
 
-        // Check if we have a single contiguous chunk that covers the range
-        if let Some(data) = segment.get_single_chunk() {
-            if offset > data.len() || end > data.len() {
-                return Ok(None);
-            }
-            return Ok(Some(&data[offset..end]));
-        }
-
-        // For multiple chunks, check if the requested range is within a single chunk
+        // Check if the requested range is within a single direct chunk.
         for (chunk_offset, chunk) in &segment.data_chunks {
             let chunk_start = *chunk_offset as usize;
-
-            // Only handle direct data chunks for now
             if let OmfDataChunk::Direct(chunk_data) = chunk {
                 let chunk_end = chunk_start + chunk_data.len();
-
                 if offset >= chunk_start && end <= chunk_end {
-                    let relative_offset = offset - chunk_start;
-                    let relative_end = end - chunk_start;
-                    return Ok(Some(&chunk_data[relative_offset..relative_end]));
+                    return Ok(Some(&chunk_data[offset - chunk_start..end - chunk_start]));
                 }
             }
         }
 
-        // Range spans multiple chunks, includes LIDATA, or is not available
+        // Range spans multiple chunks, includes iterated data, or is not available.
         Ok(None)
     }
 
@@ -129,59 +97,22 @@ impl<'data, 'file, R: ReadRef<'data>> ObjectSection<'data> for OmfSection<'data,
 
     fn uncompressed_data(&self) -> Result<Cow<'data, [u8]>> {
         let segment = self.segment();
-
-        // Check if we have a single contiguous chunk that doesn't need expansion
-        if let Some(data) = segment.get_single_chunk() {
-            return Ok(Cow::Borrowed(data));
-        }
-
-        // If we have no chunks, return empty
         if segment.data_chunks.is_empty() {
             return Ok(Cow::Borrowed(&[]));
         }
-
-        // We need to construct the full segment data
-        let mut result = vec![0u8; segment.length as usize];
-
-        for (offset, chunk) in &segment.data_chunks {
-            let start = *offset as usize;
-
-            match chunk {
-                OmfDataChunk::Direct(data) => {
-                    // Direct data
-                    let end = start + data.len();
-                    if end <= result.len() {
-                        result[start..end].copy_from_slice(data);
-                    } else {
-                        return Err(Error("OMF segment data chunk exceeds segment length"));
-                    }
-                }
-                OmfDataChunk::Iterated(lidata) => {
-                    // LIDATA needs expansion
-                    if let Ok(expanded) = expand_lidata_block(lidata) {
-                        let end = start + expanded.len();
-                        if end <= result.len() {
-                            result[start..end].copy_from_slice(&expanded);
-                        } else {
-                            return Err(Error("OMF LIDATA expansion exceeds segment length"));
-                        }
-                    }
-                }
-            }
+        if let Some(data) = segment.single_chunk() {
+            return Ok(Cow::Borrowed(data));
         }
-
-        Ok(Cow::Owned(result))
+        // The data is non-contiguous or iterated, so it must be copied.
+        segment.build_data().map(Cow::Owned)
     }
 
     fn name_bytes(&self) -> Result<&'data [u8]> {
-        let segment = self.segment();
-        self.file
-            .get_name(segment.name_index)
-            .ok_or(Error("Invalid segment name index"))
+        Ok(self.segment().name)
     }
 
     fn name(&self) -> Result<&'data str> {
-        str::from_utf8(self.name_bytes()?).map_err(|_| Error("Invalid UTF-8 in segment name"))
+        str::from_utf8(self.name_bytes()?).map_err(|_| Error("Invalid UTF-8 in OMF section name"))
     }
 
     fn segment_name_bytes(&self) -> Result<Option<&'data [u8]>> {
@@ -193,13 +124,13 @@ impl<'data, 'file, R: ReadRef<'data>> ObjectSection<'data> for OmfSection<'data,
     }
 
     fn kind(&self) -> SectionKind {
-        self.file.segment_section_kind(self.index)
+        self.file.section_kind(self.index)
     }
 
     fn relocations(&self) -> Self::RelocationIterator {
         OmfRelocationIterator {
             file: self.file,
-            segment_index: self.index,
+            section_index: self.index,
             index: 0,
         }
     }
@@ -209,25 +140,11 @@ impl<'data, 'file, R: ReadRef<'data>> ObjectSection<'data> for OmfSection<'data,
     }
 
     fn flags(&self) -> SectionFlags {
-        let segment = self.segment();
-        let flags = SectionFlags::None;
-
-        // Set flags based on segment properties
-        match segment.combination {
-            crate::omf::SegmentCombination::Public => {
-                // Public segments are like COMDAT sections
-            }
-            crate::omf::SegmentCombination::Stack => {
-                // Stack segments
-            }
-            _ => {}
-        }
-
-        flags
+        SectionFlags::None
     }
 }
 
-/// An iterator over OMF sections.
+/// An iterator for the sections in an [`OmfFile`].
 #[derive(Debug)]
 pub struct OmfSectionIterator<'data, 'file, R: ReadRef<'data>> {
     pub(super) file: &'file OmfFile<'data, R>,
@@ -238,7 +155,7 @@ impl<'data, 'file, R: ReadRef<'data>> Iterator for OmfSectionIterator<'data, 'fi
     type Item = OmfSection<'data, 'file, R>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.index < self.file.segments.len() {
+        if self.index < self.file.sections.len() {
             let section = OmfSection {
                 file: self.file,
                 index: self.index,
