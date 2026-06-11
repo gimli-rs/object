@@ -1,0 +1,38 @@
+Format: Omf Little-endian 32-bit
+Kind: Relocatable
+Architecture: I386
+Flags: None
+Relative Address Base: 0
+Entry Address: 0
+Segment { name: "_TEXT", address: 0, size: 12, permissions: R-X }
+Segment { name: "_DATA", address: 0, size: 10, permissions: RW- }
+Segment { name: "_BSS", address: 0, size: 0, permissions: RW- }
+Segment { name: "$$BSYMS", address: 0, size: 85, permissions: R-- }
+Segment { name: "$$BTYPES", address: 0, size: 4c, permissions: R-- }
+Segment { name: "$$BNAMES", address: 0, size: 1a, permissions: R-- }
+Segment { name: "$$BROWSE", address: 0, size: 0, permissions: R-- }
+Segment { name: "$$BROWFILE", address: 0, size: 0, permissions: R-- }
+1: Section { name: "_TEXT", address: 0, size: 12, align: 4, kind: Text, flags: None }
+2: Section { name: "_DATA", address: 0, size: 10, align: 4, kind: Data, flags: None }
+3: Section { name: "_BSS", address: 0, size: 0, align: 4, kind: UninitializedData, flags: None }
+4: Section { name: "$$BSYMS", address: 0, size: 85, align: 1, kind: Debug, flags: None }
+5: Section { name: "$$BTYPES", address: 0, size: 4c, align: 1, kind: Debug, flags: None }
+6: Section { name: "$$BNAMES", address: 0, size: 1a, align: 1, kind: Debug, flags: None }
+7: Section { name: "$$BROWSE", address: 0, size: 0, align: 1, kind: Debug, flags: None }
+8: Section { name: "$$BROWFILE", address: 0, size: 0, align: 1, kind: Debug, flags: None }
+
+Symbols
+0: Symbol { name: "_printf", address: 0, size: 0, kind: Unknown, section: Undefined, scope: Unknown, weak: false, flags: None }
+1: Symbol { name: "_main", address: 0, size: 0, kind: Text, section: Section(SectionIndex(1)), scope: Linkage, weak: false, flags: None }
+
+_TEXT relocations
+(4, Relocation { kind: SectionOffset, encoding: Generic, size: 20, target: Section(SectionIndex(2)), addend: 0, implicit_addend: false, flags: Omf { location: Offset32, mode: SegmentRelative, frame: Target, target: Segment(2) } })
+(9, Relocation { kind: Relative, encoding: Generic, size: 20, target: Symbol(SymbolIndex(0)), addend: fffffffffffffffc, implicit_addend: false, flags: Omf { location: Offset32, mode: SelfRelative, frame: Target, target: External(1) } })
+
+$$BSYMS relocations
+(20, Relocation { kind: Absolute, encoding: Generic, size: 30, target: Section(SectionIndex(1)), addend: 0, implicit_addend: false, flags: Omf { location: Pointer48, mode: SegmentRelative, frame: Target, target: Segment(1) } })
+
+Dynamic symbols
+
+Symbol map
+0x0-0x10 "_main"

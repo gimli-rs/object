@@ -148,7 +148,7 @@ impl<'data, R: ReadRef<'data>> OmfFile<'data, R> {
             || class_name.windows(5).any(|w| w == b"STACK")
         {
             SectionKind::UninitializedData
-        } else if class_name.starts_with(b"DEB") {
+        } else if class_name.starts_with(b"DEB") || class_name == b"DWARF" {
             SectionKind::Debug
         } else if class_name == b"COMMON" {
             SectionKind::Common

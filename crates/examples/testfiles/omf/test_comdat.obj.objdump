@@ -1,0 +1,258 @@
+Format: Omf Little-endian 32-bit
+Kind: Relocatable
+Architecture: I386
+Flags: None
+Relative Address Base: 0
+Entry Address: 0
+Segment { name: "_TEXT", address: 0, size: 1a5, permissions: R-X }
+Segment { name: "CONST", address: 0, size: 85, permissions: R-- }
+Segment { name: "CONST2", address: 0, size: 0, permissions: R-- }
+Segment { name: "_DATA", address: 0, size: 0, permissions: RW- }
+Segment { name: "_BSS", address: 0, size: 8, permissions: RW- }
+Segment { name: ".debug_info", address: 0, size: 91d, permissions: R-- }
+Segment { name: ".debug_pubnames", address: 0, size: f1, permissions: R-- }
+Segment { name: ".debug_aranges", address: 0, size: 7c, permissions: R-- }
+Segment { name: ".debug_line", address: 0, size: f9, permissions: R-- }
+Segment { name: ".debug_loc", address: 0, size: 0, permissions: R-- }
+Segment { name: ".debug_abbrev", address: 0, size: 113, permissions: R-- }
+Segment { name: ".debug_macinfo", address: 0, size: 1, permissions: R-- }
+Segment { name: ".debug_str", address: 0, size: 0, permissions: R-- }
+Segment { name: ".WATCOM_references", address: 0, size: 4, permissions: R-- }
+Segment { name: "W?add$n(ii)i", address: 0, size: 31, permissions: R-X }
+Segment { name: "W?multiply$n(ii)i", address: 0, size: 32, permissions: R-X }
+Segment { name: "W?max_value$::1nin(ii)i", address: 0, size: 44, permissions: R-X }
+Segment { name: "W?max_value$::1nbn(bb)b", address: 0, size: 47, permissions: R-X }
+Segment { name: "W?$ct:Container$::1nin(i)_", address: 0, size: 36, permissions: R-X }
+Segment { name: "W?get$:Container$::1nin.x()i", address: 0, size: 2f, permissions: R-X }
+Segment { name: "W?set$:Container$::1nin(i)v", address: 0, size: 2d, permissions: R-X }
+Segment { name: "W?$ct:Container$::1ndn(d)_", address: 0, size: 40, permissions: R-X }
+Segment { name: "W?get$:Container$::1ndn.x()d", address: 0, size: 38, permissions: R-X }
+Segment { name: "W?set$:Container$::1ndn(d)v", address: 0, size: 37, permissions: R-X }
+1: Section { name: "_TEXT", address: 0, size: 1a5, align: 1, kind: Text, flags: None }
+2: Section { name: "CONST", address: 0, size: 85, align: 1, kind: ReadOnlyData, flags: None }
+3: Section { name: "CONST2", address: 0, size: 0, align: 1, kind: ReadOnlyData, flags: None }
+4: Section { name: "_DATA", address: 0, size: 0, align: 1, kind: Data, flags: None }
+5: Section { name: "_BSS", address: 0, size: 8, align: 4, kind: UninitializedData, flags: None }
+6: Section { name: ".debug_info", address: 0, size: 91d, align: 1, kind: Debug, flags: None }
+7: Section { name: ".debug_pubnames", address: 0, size: f1, align: 1, kind: Debug, flags: None }
+8: Section { name: ".debug_aranges", address: 0, size: 7c, align: 1, kind: Debug, flags: None }
+9: Section { name: ".debug_line", address: 0, size: f9, align: 1, kind: Debug, flags: None }
+10: Section { name: ".debug_loc", address: 0, size: 0, align: 1, kind: Debug, flags: None }
+11: Section { name: ".debug_abbrev", address: 0, size: 113, align: 1, kind: Debug, flags: None }
+12: Section { name: ".debug_macinfo", address: 0, size: 1, align: 1, kind: Debug, flags: None }
+13: Section { name: ".debug_str", address: 0, size: 0, align: 1, kind: Debug, flags: None }
+14: Section { name: ".WATCOM_references", address: 0, size: 4, align: 1, kind: Debug, flags: None }
+15: Section { name: "W?add$n(ii)i", address: 0, size: 31, align: 1, kind: Text, flags: None }
+16: Section { name: "W?multiply$n(ii)i", address: 0, size: 32, align: 1, kind: Text, flags: None }
+17: Section { name: "W?max_value$::1nin(ii)i", address: 0, size: 44, align: 1, kind: Text, flags: None }
+18: Section { name: "W?max_value$::1nbn(bb)b", address: 0, size: 47, align: 1, kind: Text, flags: None }
+19: Section { name: "W?$ct:Container$::1nin(i)_", address: 0, size: 36, align: 1, kind: Text, flags: None }
+20: Section { name: "W?get$:Container$::1nin.x()i", address: 0, size: 2f, align: 1, kind: Text, flags: None }
+21: Section { name: "W?set$:Container$::1nin(i)v", address: 0, size: 2d, align: 1, kind: Text, flags: None }
+22: Section { name: "W?$ct:Container$::1ndn(d)_", address: 0, size: 40, align: 1, kind: Text, flags: None }
+23: Section { name: "W?get$:Container$::1ndn.x()d", address: 0, size: 38, align: 1, kind: Text, flags: None }
+24: Section { name: "W?set$:Container$::1ndn(d)v", address: 0, size: 37, align: 1, kind: Text, flags: None }
+Comdat { symbol: SymbolIndex(4), name: "W?add$n(ii)i", kind: Any } Sections: 15
+Comdat { symbol: SymbolIndex(6), name: "W?multiply$n(ii)i", kind: Any } Sections: 16
+Comdat { symbol: SymbolIndex(17), name: "W?max_value$::1nin(ii)i", kind: Any } Sections: 17
+Comdat { symbol: SymbolIndex(18), name: "W?max_value$::1nbn(bb)b", kind: Any } Sections: 18
+Comdat { symbol: SymbolIndex(19), name: "W?$ct:Container$::1nin(i)_", kind: Any } Sections: 19
+Comdat { symbol: SymbolIndex(20), name: "W?get$:Container$::1nin.x()i", kind: Any } Sections: 20
+Comdat { symbol: SymbolIndex(21), name: "W?set$:Container$::1nin(i)v", kind: Any } Sections: 21
+Comdat { symbol: SymbolIndex(22), name: "W?$ct:Container$::1ndn(d)_", kind: Any } Sections: 22
+Comdat { symbol: SymbolIndex(23), name: "W?get$:Container$::1ndn.x()d", kind: Any } Sections: 23
+Comdat { symbol: SymbolIndex(25), name: "W?set$:Container$::1ndn(d)v", kind: Any } Sections: 24
+
+Symbols
+0: Symbol { name: "W?shared_counter$ni", address: 0, size: 0, kind: Unknown, section: Undefined, scope: Compilation, weak: false, flags: None }
+1: Symbol { name: "W?communal_data$ni", address: 0, size: 0, kind: Unknown, section: Undefined, scope: Unknown, weak: false, flags: None }
+2: Symbol { name: "W?add$n(ii)i", address: 0, size: 0, kind: Unknown, section: Undefined, scope: Unknown, weak: false, flags: None }
+3: Symbol { name: "__CHK", address: 0, size: 0, kind: Unknown, section: Undefined, scope: Unknown, weak: false, flags: None }
+4: Symbol { name: "W?add$n(ii)i", address: 0, size: 31, kind: Text, section: Section(SectionIndex(f)), scope: Linkage, weak: false, flags: None }
+5: Symbol { name: "W?multiply$n(ii)i", address: 0, size: 0, kind: Unknown, section: Undefined, scope: Unknown, weak: false, flags: None }
+6: Symbol { name: "W?multiply$n(ii)i", address: 0, size: 32, kind: Text, section: Section(SectionIndex(10)), scope: Linkage, weak: false, flags: None }
+7: Symbol { name: "printf_", address: 0, size: 0, kind: Unknown, section: Undefined, scope: Unknown, weak: false, flags: None }
+8: Symbol { name: "W?max_value$::1nin(ii)i", address: 0, size: 0, kind: Unknown, section: Undefined, scope: Unknown, weak: false, flags: None }
+9: Symbol { name: "W?max_value$::1nbn(bb)b", address: 0, size: 0, kind: Unknown, section: Undefined, scope: Unknown, weak: false, flags: None }
+10: Symbol { name: "W?$ct:Container$::1nin(i)_", address: 0, size: 0, kind: Unknown, section: Undefined, scope: Unknown, weak: false, flags: None }
+11: Symbol { name: "W?set$:Container$::1nin(i)v", address: 0, size: 0, kind: Unknown, section: Undefined, scope: Unknown, weak: false, flags: None }
+12: Symbol { name: "W?get$:Container$::1nin.x()i", address: 0, size: 0, kind: Unknown, section: Undefined, scope: Unknown, weak: false, flags: None }
+13: Symbol { name: "W?$ct:Container$::1ndn(d)_", address: 0, size: 0, kind: Unknown, section: Undefined, scope: Unknown, weak: false, flags: None }
+14: Symbol { name: "W?set$:Container$::1ndn(d)v", address: 0, size: 0, kind: Unknown, section: Undefined, scope: Unknown, weak: false, flags: None }
+15: Symbol { name: "W?get$:Container$::1ndn.x()d", address: 0, size: 0, kind: Unknown, section: Undefined, scope: Unknown, weak: false, flags: None }
+16: Symbol { name: "W?regular_function$n()v", address: 0, size: 0, kind: Unknown, section: Undefined, scope: Unknown, weak: false, flags: None }
+17: Symbol { name: "W?max_value$::1nin(ii)i", address: 0, size: 44, kind: Text, section: Section(SectionIndex(11)), scope: Linkage, weak: false, flags: None }
+18: Symbol { name: "W?max_value$::1nbn(bb)b", address: 0, size: 47, kind: Text, section: Section(SectionIndex(12)), scope: Linkage, weak: false, flags: None }
+19: Symbol { name: "W?$ct:Container$::1nin(i)_", address: 0, size: 36, kind: Text, section: Section(SectionIndex(13)), scope: Linkage, weak: false, flags: None }
+20: Symbol { name: "W?get$:Container$::1nin.x()i", address: 0, size: 2f, kind: Text, section: Section(SectionIndex(14)), scope: Linkage, weak: false, flags: None }
+21: Symbol { name: "W?set$:Container$::1nin(i)v", address: 0, size: 2d, kind: Text, section: Section(SectionIndex(15)), scope: Linkage, weak: false, flags: None }
+22: Symbol { name: "W?$ct:Container$::1ndn(d)_", address: 0, size: 40, kind: Text, section: Section(SectionIndex(16)), scope: Linkage, weak: false, flags: None }
+23: Symbol { name: "W?get$:Container$::1ndn.x()d", address: 0, size: 38, kind: Text, section: Section(SectionIndex(17)), scope: Linkage, weak: false, flags: None }
+24: Symbol { name: "W?shared_counter$ni", address: 0, size: 0, kind: Data, section: Section(SectionIndex(5)), scope: Compilation, weak: false, flags: None }
+25: Symbol { name: "W?set$:Container$::1ndn(d)v", address: 0, size: 37, kind: Text, section: Section(SectionIndex(18)), scope: Linkage, weak: false, flags: None }
+26: Symbol { name: "W?regular_function$n()v", address: 0, size: 0, kind: Text, section: Section(SectionIndex(1)), scope: Linkage, weak: false, flags: None }
+27: Symbol { name: "main_", address: 2d, size: 0, kind: Text, section: Section(SectionIndex(1)), scope: Linkage, weak: false, flags: None }
+28: Symbol { name: "W?communal_data$ni", address: 4, size: 0, kind: Data, section: Section(SectionIndex(5)), scope: Linkage, weak: false, flags: None }
+29: Symbol { name: "_cstart_", address: 0, size: 0, kind: Unknown, section: Undefined, scope: Unknown, weak: false, flags: None }
+30: Symbol { name: "_fltused_", address: 0, size: 0, kind: Unknown, section: Undefined, scope: Unknown, weak: false, flags: None }
+31: Symbol { name: "__ppfltused_", address: 0, size: 0, kind: Unknown, section: Undefined, scope: Unknown, weak: false, flags: None }
+32: Symbol { name: "__init_387_emulator", address: 0, size: 0, kind: Unknown, section: Undefined, scope: Unknown, weak: false, flags: None }
+33: Symbol { name: "__8087", address: 0, size: 0, kind: Unknown, section: Undefined, scope: Unknown, weak: false, flags: None }
+34: Symbol { name: "___wcpp_4_data_init_fs_root_", address: 0, size: 0, kind: Unknown, section: Undefined, scope: Unknown, weak: false, flags: None }
+
+_TEXT relocations
+(6, Relocation { kind: Relative, encoding: Generic, size: 20, target: Symbol(SymbolIndex(3)), addend: fffffffffffffffc, implicit_addend: false, flags: Omf { location: Offset32, mode: SelfRelative, frame: Group(2), target: External(4) } })
+(19, Relocation { kind: Absolute, encoding: Generic, size: 20, target: Section(SectionIndex(2)), addend: 0, implicit_addend: false, flags: Omf { location: Offset32, mode: SegmentRelative, frame: Group(2), target: Segment(2) } })
+(1f, Relocation { kind: Relative, encoding: Generic, size: 20, target: Symbol(SymbolIndex(7)), addend: fffffffffffffffc, implicit_addend: false, flags: Omf { location: Offset32, mode: SelfRelative, frame: Group(2), target: External(6) } })
+(33, Relocation { kind: Relative, encoding: Generic, size: 20, target: Symbol(SymbolIndex(3)), addend: fffffffffffffffc, implicit_addend: false, flags: Omf { location: Offset32, mode: SelfRelative, frame: Group(2), target: External(4) } })
+(5a, Relocation { kind: Relative, encoding: Generic, size: 20, target: Symbol(SymbolIndex(8)), addend: fffffffffffffffc, implicit_addend: false, flags: Omf { location: Offset32, mode: SelfRelative, frame: Group(2), target: External(7) } })
+(82, Relocation { kind: Relative, encoding: Generic, size: 20, target: Symbol(SymbolIndex(9)), addend: fffffffffffffffc, implicit_addend: false, flags: Omf { location: Offset32, mode: SelfRelative, frame: Group(2), target: External(8) } })
+(94, Relocation { kind: Relative, encoding: Generic, size: 20, target: Symbol(SymbolIndex(2)), addend: fffffffffffffffc, implicit_addend: false, flags: Omf { location: Offset32, mode: SelfRelative, frame: Group(2), target: External(3) } })
+(a6, Relocation { kind: Relative, encoding: Generic, size: 20, target: Symbol(SymbolIndex(5)), addend: fffffffffffffffc, implicit_addend: false, flags: Omf { location: Offset32, mode: SelfRelative, frame: Group(2), target: External(5) } })
+(b6, Relocation { kind: Relative, encoding: Generic, size: 20, target: Symbol(SymbolIndex(a)), addend: fffffffffffffffc, implicit_addend: false, flags: Omf { location: Offset32, mode: SelfRelative, frame: Group(2), target: External(9) } })
+(c3, Relocation { kind: Relative, encoding: Generic, size: 20, target: Symbol(SymbolIndex(b)), addend: fffffffffffffffc, implicit_addend: false, flags: Omf { location: Offset32, mode: SelfRelative, frame: Group(2), target: External(a) } })
+(cb, Relocation { kind: Relative, encoding: Generic, size: 20, target: Symbol(SymbolIndex(c)), addend: fffffffffffffffc, implicit_addend: false, flags: Omf { location: Offset32, mode: SelfRelative, frame: Group(2), target: External(b) } })
+(e0, Relocation { kind: Relative, encoding: Generic, size: 20, target: Symbol(SymbolIndex(d)), addend: fffffffffffffffc, implicit_addend: false, flags: Omf { location: Offset32, mode: SelfRelative, frame: Group(2), target: External(c) } })
+(f2, Relocation { kind: Relative, encoding: Generic, size: 20, target: Symbol(SymbolIndex(e)), addend: fffffffffffffffc, implicit_addend: false, flags: Omf { location: Offset32, mode: SelfRelative, frame: Group(2), target: External(d) } })
+(fa, Relocation { kind: Relative, encoding: Generic, size: 20, target: Symbol(SymbolIndex(f)), addend: fffffffffffffffc, implicit_addend: false, flags: Omf { location: Offset32, mode: SelfRelative, frame: Group(2), target: External(e) } })
+(103, Relocation { kind: Absolute, encoding: Generic, size: 20, target: Symbol(SymbolIndex(1)), addend: 0, implicit_addend: false, flags: Omf { location: Offset32, mode: SegmentRelative, frame: Group(2), target: External(2) } })
+(10c, Relocation { kind: Relative, encoding: Generic, size: 20, target: Symbol(SymbolIndex(10)), addend: fffffffffffffffc, implicit_addend: false, flags: Omf { location: Offset32, mode: SelfRelative, frame: Group(2), target: External(f) } })
+(115, Relocation { kind: Absolute, encoding: Generic, size: 20, target: Section(SectionIndex(2)), addend: 0, implicit_addend: false, flags: Omf { location: Offset32, mode: SegmentRelative, frame: Group(2), target: Segment(2) } })
+(11b, Relocation { kind: Relative, encoding: Generic, size: 20, target: Symbol(SymbolIndex(7)), addend: fffffffffffffffc, implicit_addend: false, flags: Omf { location: Offset32, mode: SelfRelative, frame: Group(2), target: External(6) } })
+(12c, Relocation { kind: Absolute, encoding: Generic, size: 20, target: Section(SectionIndex(2)), addend: 0, implicit_addend: false, flags: Omf { location: Offset32, mode: SegmentRelative, frame: Group(2), target: Segment(2) } })
+(132, Relocation { kind: Relative, encoding: Generic, size: 20, target: Symbol(SymbolIndex(7)), addend: fffffffffffffffc, implicit_addend: false, flags: Omf { location: Offset32, mode: SelfRelative, frame: Group(2), target: External(6) } })
+(142, Relocation { kind: Absolute, encoding: Generic, size: 20, target: Section(SectionIndex(2)), addend: 0, implicit_addend: false, flags: Omf { location: Offset32, mode: SegmentRelative, frame: Group(2), target: Segment(2) } })
+(148, Relocation { kind: Relative, encoding: Generic, size: 20, target: Symbol(SymbolIndex(7)), addend: fffffffffffffffc, implicit_addend: false, flags: Omf { location: Offset32, mode: SelfRelative, frame: Group(2), target: External(6) } })
+(15d, Relocation { kind: Absolute, encoding: Generic, size: 20, target: Section(SectionIndex(2)), addend: 0, implicit_addend: false, flags: Omf { location: Offset32, mode: SegmentRelative, frame: Group(2), target: Segment(2) } })
+(163, Relocation { kind: Relative, encoding: Generic, size: 20, target: Symbol(SymbolIndex(7)), addend: fffffffffffffffc, implicit_addend: false, flags: Omf { location: Offset32, mode: SelfRelative, frame: Group(2), target: External(6) } })
+(16c, Relocation { kind: Absolute, encoding: Generic, size: 20, target: Symbol(SymbolIndex(1)), addend: 0, implicit_addend: false, flags: Omf { location: Offset32, mode: SegmentRelative, frame: Group(2), target: External(2) } })
+(171, Relocation { kind: Absolute, encoding: Generic, size: 20, target: Section(SectionIndex(2)), addend: 0, implicit_addend: false, flags: Omf { location: Offset32, mode: SegmentRelative, frame: Group(2), target: Segment(2) } })
+(177, Relocation { kind: Relative, encoding: Generic, size: 20, target: Symbol(SymbolIndex(7)), addend: fffffffffffffffc, implicit_addend: false, flags: Omf { location: Offset32, mode: SelfRelative, frame: Group(2), target: External(6) } })
+(180, Relocation { kind: Absolute, encoding: Generic, size: 20, target: Symbol(SymbolIndex(0)), addend: 0, implicit_addend: false, flags: Omf { location: Offset32, mode: SegmentRelative, frame: Group(2), target: External(1) } })
+(185, Relocation { kind: Absolute, encoding: Generic, size: 20, target: Section(SectionIndex(2)), addend: 0, implicit_addend: false, flags: Omf { location: Offset32, mode: SegmentRelative, frame: Group(2), target: Segment(2) } })
+(18b, Relocation { kind: Relative, encoding: Generic, size: 20, target: Symbol(SymbolIndex(7)), addend: fffffffffffffffc, implicit_addend: false, flags: Omf { location: Offset32, mode: SelfRelative, frame: Group(2), target: External(6) } })
+
+.debug_info relocations
+(6, Relocation { kind: Absolute, encoding: Generic, size: 20, target: Section(SectionIndex(b)), addend: 0, implicit_addend: false, flags: Omf { location: Offset32, mode: SegmentRelative, frame: Group(2), target: Segment(b) } })
+(53, Relocation { kind: Absolute, encoding: Generic, size: 20, target: Section(SectionIndex(9)), addend: 0, implicit_addend: false, flags: Omf { location: Offset32, mode: SegmentRelative, frame: Group(2), target: Segment(9) } })
+(66, Relocation { kind: Absolute, encoding: Generic, size: 20, target: Section(SectionIndex(c)), addend: 0, implicit_addend: false, flags: Omf { location: Offset32, mode: SegmentRelative, frame: Group(2), target: Segment(c) } })
+(6f, Relocation { kind: Absolute, encoding: Generic, size: 20, target: Section(SectionIndex(e)), addend: 0, implicit_addend: false, flags: Omf { location: Offset32, mode: SegmentRelative, frame: Group(2), target: Segment(e) } })
+(3aa, Relocation { kind: Absolute, encoding: Generic, size: 20, target: Symbol(SymbolIndex(0)), addend: 0, implicit_addend: false, flags: Omf { location: Offset32, mode: SegmentRelative, frame: Group(2), target: External(1) } })
+(3c7, Relocation { kind: Absolute, encoding: Generic, size: 20, target: Symbol(SymbolIndex(1)), addend: 0, implicit_addend: false, flags: Omf { location: Offset32, mode: SegmentRelative, frame: Group(2), target: External(2) } })
+(3e8, Relocation { kind: Absolute, encoding: Generic, size: 20, target: Symbol(SymbolIndex(2)), addend: 0, implicit_addend: false, flags: Omf { location: Offset32, mode: SegmentRelative, frame: Group(2), target: External(3) } })
+(3ec, Relocation { kind: Absolute, encoding: Generic, size: 20, target: Symbol(SymbolIndex(2)), addend: 0, implicit_addend: false, flags: Omf { location: Offset32, mode: SegmentRelative, frame: Group(2), target: External(3) } })
+(425, Relocation { kind: Absolute, encoding: Generic, size: 20, target: Symbol(SymbolIndex(2)), addend: 0, implicit_addend: false, flags: Omf { location: Offset32, mode: SegmentRelative, frame: Group(2), target: External(3) } })
+(429, Relocation { kind: Absolute, encoding: Generic, size: 20, target: Symbol(SymbolIndex(2)), addend: 0, implicit_addend: false, flags: Omf { location: Offset32, mode: SegmentRelative, frame: Group(2), target: External(3) } })
+(44d, Relocation { kind: Absolute, encoding: Generic, size: 20, target: Symbol(SymbolIndex(5)), addend: 0, implicit_addend: false, flags: Omf { location: Offset32, mode: SegmentRelative, frame: Group(2), target: External(5) } })
+(451, Relocation { kind: Absolute, encoding: Generic, size: 20, target: Symbol(SymbolIndex(5)), addend: 0, implicit_addend: false, flags: Omf { location: Offset32, mode: SegmentRelative, frame: Group(2), target: External(5) } })
+(48a, Relocation { kind: Absolute, encoding: Generic, size: 20, target: Symbol(SymbolIndex(5)), addend: 0, implicit_addend: false, flags: Omf { location: Offset32, mode: SegmentRelative, frame: Group(2), target: External(5) } })
+(48e, Relocation { kind: Absolute, encoding: Generic, size: 20, target: Symbol(SymbolIndex(5)), addend: 0, implicit_addend: false, flags: Omf { location: Offset32, mode: SegmentRelative, frame: Group(2), target: External(5) } })
+(4ba, Relocation { kind: Absolute, encoding: Generic, size: 20, target: Section(SectionIndex(1)), addend: 0, implicit_addend: false, flags: Omf { location: Offset32, mode: SegmentRelative, frame: Group(2), target: Segment(1) } })
+(4be, Relocation { kind: Absolute, encoding: Generic, size: 20, target: Section(SectionIndex(1)), addend: 0, implicit_addend: false, flags: Omf { location: Offset32, mode: SegmentRelative, frame: Group(2), target: Segment(1) } })
+(4ca, Relocation { kind: Absolute, encoding: Generic, size: 20, target: Section(SectionIndex(1)), addend: 0, implicit_addend: false, flags: Omf { location: Offset32, mode: SegmentRelative, frame: Group(2), target: Segment(1) } })
+(4ce, Relocation { kind: Absolute, encoding: Generic, size: 20, target: Section(SectionIndex(1)), addend: 0, implicit_addend: false, flags: Omf { location: Offset32, mode: SegmentRelative, frame: Group(2), target: Segment(1) } })
+(4ee, Relocation { kind: Absolute, encoding: Generic, size: 20, target: Section(SectionIndex(1)), addend: 0, implicit_addend: false, flags: Omf { location: Offset32, mode: SegmentRelative, frame: Group(2), target: Segment(1) } })
+(4f2, Relocation { kind: Absolute, encoding: Generic, size: 20, target: Section(SectionIndex(1)), addend: 0, implicit_addend: false, flags: Omf { location: Offset32, mode: SegmentRelative, frame: Group(2), target: Segment(1) } })
+(511, Relocation { kind: Absolute, encoding: Generic, size: 20, target: Section(SectionIndex(1)), addend: 0, implicit_addend: false, flags: Omf { location: Offset32, mode: SegmentRelative, frame: Group(2), target: Segment(1) } })
+(515, Relocation { kind: Absolute, encoding: Generic, size: 20, target: Section(SectionIndex(1)), addend: 0, implicit_addend: false, flags: Omf { location: Offset32, mode: SegmentRelative, frame: Group(2), target: Segment(1) } })
+(622, Relocation { kind: Absolute, encoding: Generic, size: 20, target: Symbol(SymbolIndex(8)), addend: 0, implicit_addend: false, flags: Omf { location: Offset32, mode: SegmentRelative, frame: Group(2), target: External(7) } })
+(626, Relocation { kind: Absolute, encoding: Generic, size: 20, target: Symbol(SymbolIndex(8)), addend: 0, implicit_addend: false, flags: Omf { location: Offset32, mode: SegmentRelative, frame: Group(2), target: External(7) } })
+(65f, Relocation { kind: Absolute, encoding: Generic, size: 20, target: Symbol(SymbolIndex(8)), addend: 0, implicit_addend: false, flags: Omf { location: Offset32, mode: SegmentRelative, frame: Group(2), target: External(7) } })
+(663, Relocation { kind: Absolute, encoding: Generic, size: 20, target: Symbol(SymbolIndex(8)), addend: 0, implicit_addend: false, flags: Omf { location: Offset32, mode: SegmentRelative, frame: Group(2), target: External(7) } })
+(690, Relocation { kind: Absolute, encoding: Generic, size: 20, target: Symbol(SymbolIndex(9)), addend: 0, implicit_addend: false, flags: Omf { location: Offset32, mode: SegmentRelative, frame: Group(2), target: External(8) } })
+(694, Relocation { kind: Absolute, encoding: Generic, size: 20, target: Symbol(SymbolIndex(9)), addend: 0, implicit_addend: false, flags: Omf { location: Offset32, mode: SegmentRelative, frame: Group(2), target: External(8) } })
+(6cf, Relocation { kind: Absolute, encoding: Generic, size: 20, target: Symbol(SymbolIndex(9)), addend: 0, implicit_addend: false, flags: Omf { location: Offset32, mode: SegmentRelative, frame: Group(2), target: External(8) } })
+(6d3, Relocation { kind: Absolute, encoding: Generic, size: 20, target: Symbol(SymbolIndex(9)), addend: 0, implicit_addend: false, flags: Omf { location: Offset32, mode: SegmentRelative, frame: Group(2), target: External(8) } })
+(6fc, Relocation { kind: Absolute, encoding: Generic, size: 20, target: Symbol(SymbolIndex(a)), addend: 0, implicit_addend: false, flags: Omf { location: Offset32, mode: SegmentRelative, frame: Group(2), target: External(9) } })
+(700, Relocation { kind: Absolute, encoding: Generic, size: 20, target: Symbol(SymbolIndex(a)), addend: 0, implicit_addend: false, flags: Omf { location: Offset32, mode: SegmentRelative, frame: Group(2), target: External(9) } })
+(741, Relocation { kind: Absolute, encoding: Generic, size: 20, target: Symbol(SymbolIndex(a)), addend: 0, implicit_addend: false, flags: Omf { location: Offset32, mode: SegmentRelative, frame: Group(2), target: External(9) } })
+(745, Relocation { kind: Absolute, encoding: Generic, size: 20, target: Symbol(SymbolIndex(a)), addend: 0, implicit_addend: false, flags: Omf { location: Offset32, mode: SegmentRelative, frame: Group(2), target: External(9) } })
+(768, Relocation { kind: Absolute, encoding: Generic, size: 20, target: Symbol(SymbolIndex(c)), addend: 0, implicit_addend: false, flags: Omf { location: Offset32, mode: SegmentRelative, frame: Group(2), target: External(b) } })
+(76c, Relocation { kind: Absolute, encoding: Generic, size: 20, target: Symbol(SymbolIndex(c)), addend: 0, implicit_addend: false, flags: Omf { location: Offset32, mode: SegmentRelative, frame: Group(2), target: External(b) } })
+(79b, Relocation { kind: Absolute, encoding: Generic, size: 20, target: Symbol(SymbolIndex(c)), addend: 0, implicit_addend: false, flags: Omf { location: Offset32, mode: SegmentRelative, frame: Group(2), target: External(b) } })
+(79f, Relocation { kind: Absolute, encoding: Generic, size: 20, target: Symbol(SymbolIndex(c)), addend: 0, implicit_addend: false, flags: Omf { location: Offset32, mode: SegmentRelative, frame: Group(2), target: External(b) } })
+(7c2, Relocation { kind: Absolute, encoding: Generic, size: 20, target: Symbol(SymbolIndex(b)), addend: 0, implicit_addend: false, flags: Omf { location: Offset32, mode: SegmentRelative, frame: Group(2), target: External(a) } })
+(7c6, Relocation { kind: Absolute, encoding: Generic, size: 20, target: Symbol(SymbolIndex(b)), addend: 0, implicit_addend: false, flags: Omf { location: Offset32, mode: SegmentRelative, frame: Group(2), target: External(a) } })
+(7ef, Relocation { kind: Absolute, encoding: Generic, size: 20, target: Symbol(SymbolIndex(b)), addend: 0, implicit_addend: false, flags: Omf { location: Offset32, mode: SegmentRelative, frame: Group(2), target: External(a) } })
+(7f3, Relocation { kind: Absolute, encoding: Generic, size: 20, target: Symbol(SymbolIndex(b)), addend: 0, implicit_addend: false, flags: Omf { location: Offset32, mode: SegmentRelative, frame: Group(2), target: External(a) } })
+(81c, Relocation { kind: Absolute, encoding: Generic, size: 20, target: Symbol(SymbolIndex(d)), addend: 0, implicit_addend: false, flags: Omf { location: Offset32, mode: SegmentRelative, frame: Group(2), target: External(c) } })
+(820, Relocation { kind: Absolute, encoding: Generic, size: 20, target: Symbol(SymbolIndex(d)), addend: 0, implicit_addend: false, flags: Omf { location: Offset32, mode: SegmentRelative, frame: Group(2), target: External(c) } })
+(862, Relocation { kind: Absolute, encoding: Generic, size: 20, target: Symbol(SymbolIndex(d)), addend: 0, implicit_addend: false, flags: Omf { location: Offset32, mode: SegmentRelative, frame: Group(2), target: External(c) } })
+(866, Relocation { kind: Absolute, encoding: Generic, size: 20, target: Symbol(SymbolIndex(d)), addend: 0, implicit_addend: false, flags: Omf { location: Offset32, mode: SegmentRelative, frame: Group(2), target: External(c) } })
+(889, Relocation { kind: Absolute, encoding: Generic, size: 20, target: Symbol(SymbolIndex(f)), addend: 0, implicit_addend: false, flags: Omf { location: Offset32, mode: SegmentRelative, frame: Group(2), target: External(e) } })
+(88d, Relocation { kind: Absolute, encoding: Generic, size: 20, target: Symbol(SymbolIndex(f)), addend: 0, implicit_addend: false, flags: Omf { location: Offset32, mode: SegmentRelative, frame: Group(2), target: External(e) } })
+(8bc, Relocation { kind: Absolute, encoding: Generic, size: 20, target: Symbol(SymbolIndex(f)), addend: 0, implicit_addend: false, flags: Omf { location: Offset32, mode: SegmentRelative, frame: Group(2), target: External(e) } })
+(8c0, Relocation { kind: Absolute, encoding: Generic, size: 20, target: Symbol(SymbolIndex(f)), addend: 0, implicit_addend: false, flags: Omf { location: Offset32, mode: SegmentRelative, frame: Group(2), target: External(e) } })
+(8e3, Relocation { kind: Absolute, encoding: Generic, size: 20, target: Symbol(SymbolIndex(e)), addend: 0, implicit_addend: false, flags: Omf { location: Offset32, mode: SegmentRelative, frame: Group(2), target: External(d) } })
+(8e7, Relocation { kind: Absolute, encoding: Generic, size: 20, target: Symbol(SymbolIndex(e)), addend: 0, implicit_addend: false, flags: Omf { location: Offset32, mode: SegmentRelative, frame: Group(2), target: External(d) } })
+(911, Relocation { kind: Absolute, encoding: Generic, size: 20, target: Symbol(SymbolIndex(e)), addend: 0, implicit_addend: false, flags: Omf { location: Offset32, mode: SegmentRelative, frame: Group(2), target: External(d) } })
+(915, Relocation { kind: Absolute, encoding: Generic, size: 20, target: Symbol(SymbolIndex(e)), addend: 0, implicit_addend: false, flags: Omf { location: Offset32, mode: SegmentRelative, frame: Group(2), target: External(d) } })
+
+.debug_pubnames relocations
+(6, Relocation { kind: Absolute, encoding: Generic, size: 20, target: Section(SectionIndex(6)), addend: 0, implicit_addend: false, flags: Omf { location: Offset32, mode: SegmentRelative, frame: Group(2), target: Segment(6) } })
+
+.debug_aranges relocations
+(6, Relocation { kind: Absolute, encoding: Generic, size: 20, target: Section(SectionIndex(6)), addend: 0, implicit_addend: false, flags: Omf { location: Offset32, mode: SegmentRelative, frame: Group(2), target: Segment(6) } })
+(c, Relocation { kind: Absolute, encoding: Generic, size: 20, target: Symbol(SymbolIndex(2)), addend: 0, implicit_addend: false, flags: Omf { location: Offset32, mode: SegmentRelative, frame: Group(2), target: External(3) } })
+(14, Relocation { kind: Absolute, encoding: Generic, size: 20, target: Symbol(SymbolIndex(5)), addend: 0, implicit_addend: false, flags: Omf { location: Offset32, mode: SegmentRelative, frame: Group(2), target: External(5) } })
+(1c, Relocation { kind: Absolute, encoding: Generic, size: 20, target: Symbol(SymbolIndex(8)), addend: 0, implicit_addend: false, flags: Omf { location: Offset32, mode: SegmentRelative, frame: Group(2), target: External(7) } })
+(24, Relocation { kind: Absolute, encoding: Generic, size: 20, target: Symbol(SymbolIndex(9)), addend: 0, implicit_addend: false, flags: Omf { location: Offset32, mode: SegmentRelative, frame: Group(2), target: External(8) } })
+(2c, Relocation { kind: Absolute, encoding: Generic, size: 20, target: Symbol(SymbolIndex(a)), addend: 0, implicit_addend: false, flags: Omf { location: Offset32, mode: SegmentRelative, frame: Group(2), target: External(9) } })
+(34, Relocation { kind: Absolute, encoding: Generic, size: 20, target: Symbol(SymbolIndex(c)), addend: 0, implicit_addend: false, flags: Omf { location: Offset32, mode: SegmentRelative, frame: Group(2), target: External(b) } })
+(3c, Relocation { kind: Absolute, encoding: Generic, size: 20, target: Symbol(SymbolIndex(b)), addend: 0, implicit_addend: false, flags: Omf { location: Offset32, mode: SegmentRelative, frame: Group(2), target: External(a) } })
+(44, Relocation { kind: Absolute, encoding: Generic, size: 20, target: Symbol(SymbolIndex(d)), addend: 0, implicit_addend: false, flags: Omf { location: Offset32, mode: SegmentRelative, frame: Group(2), target: External(c) } })
+(4c, Relocation { kind: Absolute, encoding: Generic, size: 20, target: Symbol(SymbolIndex(f)), addend: 0, implicit_addend: false, flags: Omf { location: Offset32, mode: SegmentRelative, frame: Group(2), target: External(e) } })
+(54, Relocation { kind: Absolute, encoding: Generic, size: 20, target: Symbol(SymbolIndex(e)), addend: 0, implicit_addend: false, flags: Omf { location: Offset32, mode: SegmentRelative, frame: Group(2), target: External(d) } })
+(5c, Relocation { kind: Absolute, encoding: Generic, size: 20, target: Section(SectionIndex(1)), addend: 0, implicit_addend: false, flags: Omf { location: Offset32, mode: SegmentRelative, frame: Group(2), target: Segment(1) } })
+(64, Relocation { kind: Absolute, encoding: Generic, size: 20, target: Section(SectionIndex(2)), addend: 0, implicit_addend: false, flags: Omf { location: Offset32, mode: SegmentRelative, frame: Group(2), target: Segment(2) } })
+(6c, Relocation { kind: Absolute, encoding: Generic, size: 20, target: Section(SectionIndex(5)), addend: 0, implicit_addend: false, flags: Omf { location: Offset32, mode: SegmentRelative, frame: Group(2), target: Segment(5) } })
+
+.debug_line relocations
+(66, Relocation { kind: Absolute, encoding: Generic, size: 20, target: Symbol(SymbolIndex(2)), addend: 0, implicit_addend: false, flags: Omf { location: Offset32, mode: SegmentRelative, frame: Group(2), target: External(3) } })
+(75, Relocation { kind: Absolute, encoding: Generic, size: 20, target: Symbol(SymbolIndex(5)), addend: 0, implicit_addend: false, flags: Omf { location: Offset32, mode: SegmentRelative, frame: Group(2), target: External(5) } })
+(81, Relocation { kind: Absolute, encoding: Generic, size: 20, target: Section(SectionIndex(1)), addend: 0, implicit_addend: false, flags: Omf { location: Offset32, mode: SegmentRelative, frame: Group(2), target: Segment(1) } })
+(ac, Relocation { kind: Absolute, encoding: Generic, size: 20, target: Symbol(SymbolIndex(8)), addend: 0, implicit_addend: false, flags: Omf { location: Offset32, mode: SegmentRelative, frame: Group(2), target: External(7) } })
+(b9, Relocation { kind: Absolute, encoding: Generic, size: 20, target: Symbol(SymbolIndex(9)), addend: 0, implicit_addend: false, flags: Omf { location: Offset32, mode: SegmentRelative, frame: Group(2), target: External(8) } })
+(c5, Relocation { kind: Absolute, encoding: Generic, size: 20, target: Symbol(SymbolIndex(a)), addend: 0, implicit_addend: false, flags: Omf { location: Offset32, mode: SegmentRelative, frame: Group(2), target: External(9) } })
+(cf, Relocation { kind: Absolute, encoding: Generic, size: 20, target: Symbol(SymbolIndex(c)), addend: 0, implicit_addend: false, flags: Omf { location: Offset32, mode: SegmentRelative, frame: Group(2), target: External(b) } })
+(d7, Relocation { kind: Absolute, encoding: Generic, size: 20, target: Symbol(SymbolIndex(b)), addend: 0, implicit_addend: false, flags: Omf { location: Offset32, mode: SegmentRelative, frame: Group(2), target: External(a) } })
+(df, Relocation { kind: Absolute, encoding: Generic, size: 20, target: Symbol(SymbolIndex(d)), addend: 0, implicit_addend: false, flags: Omf { location: Offset32, mode: SegmentRelative, frame: Group(2), target: External(c) } })
+(e9, Relocation { kind: Absolute, encoding: Generic, size: 20, target: Symbol(SymbolIndex(f)), addend: 0, implicit_addend: false, flags: Omf { location: Offset32, mode: SegmentRelative, frame: Group(2), target: External(e) } })
+(f1, Relocation { kind: Absolute, encoding: Generic, size: 20, target: Symbol(SymbolIndex(e)), addend: 0, implicit_addend: false, flags: Omf { location: Offset32, mode: SegmentRelative, frame: Group(2), target: External(d) } })
+
+W?add$n(ii)i relocations
+(6, Relocation { kind: Relative, encoding: Generic, size: 20, target: Symbol(SymbolIndex(3)), addend: fffffffffffffffc, implicit_addend: false, flags: Omf { location: Offset32, mode: SelfRelative, frame: Group(2), target: External(4) } })
+
+W?multiply$n(ii)i relocations
+(6, Relocation { kind: Relative, encoding: Generic, size: 20, target: Symbol(SymbolIndex(3)), addend: fffffffffffffffc, implicit_addend: false, flags: Omf { location: Offset32, mode: SelfRelative, frame: Group(2), target: External(4) } })
+
+W?max_value$::1nin(ii)i relocations
+(6, Relocation { kind: Relative, encoding: Generic, size: 20, target: Symbol(SymbolIndex(3)), addend: fffffffffffffffc, implicit_addend: false, flags: Omf { location: Offset32, mode: SelfRelative, frame: Group(2), target: External(4) } })
+
+W?max_value$::1nbn(bb)b relocations
+(6, Relocation { kind: Relative, encoding: Generic, size: 20, target: Symbol(SymbolIndex(3)), addend: fffffffffffffffc, implicit_addend: false, flags: Omf { location: Offset32, mode: SelfRelative, frame: Group(2), target: External(4) } })
+
+W?$ct:Container$::1nin(i)_ relocations
+(6, Relocation { kind: Relative, encoding: Generic, size: 20, target: Symbol(SymbolIndex(3)), addend: fffffffffffffffc, implicit_addend: false, flags: Omf { location: Offset32, mode: SelfRelative, frame: Group(2), target: External(4) } })
+
+W?get$:Container$::1nin.x()i relocations
+(6, Relocation { kind: Relative, encoding: Generic, size: 20, target: Symbol(SymbolIndex(3)), addend: fffffffffffffffc, implicit_addend: false, flags: Omf { location: Offset32, mode: SelfRelative, frame: Group(2), target: External(4) } })
+
+W?set$:Container$::1nin(i)v relocations
+(6, Relocation { kind: Relative, encoding: Generic, size: 20, target: Symbol(SymbolIndex(3)), addend: fffffffffffffffc, implicit_addend: false, flags: Omf { location: Offset32, mode: SelfRelative, frame: Group(2), target: External(4) } })
+
+W?$ct:Container$::1ndn(d)_ relocations
+(6, Relocation { kind: Relative, encoding: Generic, size: 20, target: Symbol(SymbolIndex(3)), addend: fffffffffffffffc, implicit_addend: false, flags: Omf { location: Offset32, mode: SelfRelative, frame: Group(2), target: External(4) } })
+
+W?get$:Container$::1ndn.x()d relocations
+(6, Relocation { kind: Relative, encoding: Generic, size: 20, target: Symbol(SymbolIndex(3)), addend: fffffffffffffffc, implicit_addend: false, flags: Omf { location: Offset32, mode: SelfRelative, frame: Group(2), target: External(4) } })
+
+W?set$:Container$::1ndn(d)v relocations
+(6, Relocation { kind: Relative, encoding: Generic, size: 20, target: Symbol(SymbolIndex(3)), addend: fffffffffffffffc, implicit_addend: false, flags: Omf { location: Offset32, mode: SelfRelative, frame: Group(2), target: External(4) } })
+
+Dynamic symbols
+
+Symbol map
+0x0-0x37 "W?set$:Container$::1ndn(d)v"
+0x4-0x8 "W?communal_data$ni"
+0x2d-0x2f "main_"

@@ -1,0 +1,53 @@
+Format: Omf Little-endian 32-bit
+Kind: Relocatable
+Architecture: I386
+Flags: None
+Relative Address Base: 0
+Entry Address: 0
+Segment { name: "_TEXT", address: 0, size: f, permissions: R-X }
+Segment { name: "_DATA", address: 0, size: 0, permissions: RW- }
+Segment { name: "_BSS", address: 0, size: 0, permissions: RW- }
+Segment { name: "@foo1$qi", address: 0, size: f, permissions: R-X }
+Segment { name: "@foo2$qi", address: 0, size: a, permissions: R-X }
+Segment { name: "$$BSYMS", address: 0, size: 19b, permissions: R-- }
+Segment { name: "$$BTYPES", address: 0, size: 9e, permissions: R-- }
+Segment { name: "$$BNAMES", address: 0, size: 1f, permissions: R-- }
+Segment { name: "$$BROWSE", address: 0, size: 0, permissions: R-- }
+Segment { name: "$$BROWFILE", address: 0, size: 0, permissions: R-- }
+1: Section { name: "_TEXT", address: 0, size: f, align: 4, kind: Text, flags: None }
+2: Section { name: "_DATA", address: 0, size: 0, align: 4, kind: Data, flags: None }
+3: Section { name: "_BSS", address: 0, size: 0, align: 4, kind: UninitializedData, flags: None }
+4: Section { name: "@foo1$qi", address: 0, size: f, align: 4, kind: Text, flags: None }
+5: Section { name: "@foo2$qi", address: 0, size: a, align: 4, kind: Text, flags: None }
+6: Section { name: "$$BSYMS", address: 0, size: 19b, align: 1, kind: Debug, flags: None }
+7: Section { name: "$$BTYPES", address: 0, size: 9e, align: 1, kind: Debug, flags: None }
+8: Section { name: "$$BNAMES", address: 0, size: 1f, align: 1, kind: Debug, flags: None }
+9: Section { name: "$$BROWSE", address: 0, size: 0, align: 1, kind: Debug, flags: None }
+10: Section { name: "$$BROWFILE", address: 0, size: 0, align: 1, kind: Debug, flags: None }
+Comdat { symbol: SymbolIndex(0), name: "@foo1$qi", kind: Any } Sections: 4
+Comdat { symbol: SymbolIndex(1), name: "@foo2$qi", kind: Any } Sections: 5
+
+Symbols
+0: Symbol { name: "@foo1$qi", address: 0, size: f, kind: Text, section: Section(SectionIndex(4)), scope: Linkage, weak: false, flags: None }
+1: Symbol { name: "@foo2$qi", address: 0, size: a, kind: Text, section: Section(SectionIndex(5)), scope: Linkage, weak: false, flags: None }
+2: Symbol { name: "@bar1$qv", address: 0, size: 0, kind: Text, section: Section(SectionIndex(1)), scope: Linkage, weak: false, flags: None }
+3: Symbol { name: "@bar2$qv", address: 6, size: 0, kind: Text, section: Section(SectionIndex(1)), scope: Linkage, weak: false, flags: None }
+4: Symbol { name: "_main", address: c, size: 0, kind: Text, section: Section(SectionIndex(1)), scope: Linkage, weak: false, flags: None }
+
+_TEXT relocations
+(1, Relocation { kind: SectionOffset, encoding: Generic, size: 20, target: Section(SectionIndex(4)), addend: 0, implicit_addend: false, flags: Omf { location: Offset32, mode: SegmentRelative, frame: Target, target: Segment(4001) } })
+(7, Relocation { kind: SectionOffset, encoding: Generic, size: 20, target: Section(SectionIndex(5)), addend: 0, implicit_addend: false, flags: Omf { location: Offset32, mode: SegmentRelative, frame: Target, target: Segment(4002) } })
+
+$$BSYMS relocations
+(20, Relocation { kind: Absolute, encoding: Generic, size: 30, target: Section(SectionIndex(1)), addend: 0, implicit_addend: false, flags: Omf { location: Pointer48, mode: SegmentRelative, frame: Target, target: Segment(1) } })
+(5d, Relocation { kind: Absolute, encoding: Generic, size: 30, target: Section(SectionIndex(1)), addend: 0, implicit_addend: false, flags: Omf { location: Pointer48, mode: SegmentRelative, frame: Target, target: Segment(1) } })
+(9a, Relocation { kind: Absolute, encoding: Generic, size: 30, target: Section(SectionIndex(1)), addend: 0, implicit_addend: false, flags: Omf { location: Pointer48, mode: SegmentRelative, frame: Target, target: Segment(1) } })
+(d4, Relocation { kind: SectionOffset, encoding: Generic, size: 20, target: Section(SectionIndex(4)), addend: 0, implicit_addend: false, flags: Omf { location: Offset32, mode: SegmentRelative, frame: Target, target: Segment(4001) } })
+(135, Relocation { kind: SectionOffset, encoding: Generic, size: 20, target: Section(SectionIndex(5)), addend: 0, implicit_addend: false, flags: Omf { location: Offset32, mode: SegmentRelative, frame: Target, target: Segment(4002) } })
+
+Dynamic symbols
+
+Symbol map
+0x0-0xa "@foo2$qi"
+0x6-0xa "@bar2$qv"
+0xc-0xf "_main"
