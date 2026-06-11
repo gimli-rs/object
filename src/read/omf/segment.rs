@@ -1,9 +1,9 @@
 use alloc::vec::Vec;
 
 use crate::read::{self, Error, ObjectSegment, ReadRef, Result, SectionKind};
-use crate::{omf, Permissions, SegmentFlags};
+use crate::{Permissions, SegmentFlags, omf};
 
-use super::{expand_iterated_data, iterated_data_expanded_len, OmfFile, OmfFixup};
+use super::{OmfFile, OmfFixup, expand_iterated_data, iterated_data_expanded_len};
 
 /// A section in an OMF file.
 ///

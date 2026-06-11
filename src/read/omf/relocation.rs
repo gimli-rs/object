@@ -1,7 +1,7 @@
 use crate::read::ReadRef;
 use crate::{
-    omf, Relocation, RelocationEncoding, RelocationFlags, RelocationKind, RelocationTarget,
-    SectionIndex,
+    Relocation, RelocationEncoding, RelocationFlags, RelocationKind, RelocationTarget,
+    SectionIndex, omf,
 };
 
 use super::{FrameMethod, OmfFile, TargetMethod};

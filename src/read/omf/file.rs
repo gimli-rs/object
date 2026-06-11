@@ -7,7 +7,7 @@ use crate::read::{
     Object, ObjectKind, ObjectSection, ReadRef, Result, SectionIndex, SectionKind, SymbolIndex,
     SymbolKind,
 };
-use crate::{omf, SubArchitecture};
+use crate::{SubArchitecture, omf};
 
 use super::{
     OmfComdat, OmfComdatData, OmfComdatIterator, OmfComdatSelection, OmfDataChunk, OmfFixup,
@@ -282,7 +282,10 @@ impl<'data, R: ReadRef<'data>> OmfFile<'data, R> {
                     break;
                 }
                 _ => {
-                    // Skip unknown record types
+                    if !omf::record_type::is_valid(record_type) {
+                        return Err(Error("Invalid OMF record type"));
+                    }
+                    // Skip unhandled record types (e.g. LINNUM, LINSYM)
                 }
             }
 
