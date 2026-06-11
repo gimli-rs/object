@@ -31,7 +31,11 @@ mod private {
     #[allow(private_interfaces)]
     pub trait ModeSealed {
         fn string_table() -> StringTable<'static>;
-        fn reserve(&self, buffer: &mut dyn WritableBuffer) -> Result<()>;
+        fn reserve(
+            &self,
+            buffer: &mut dyn WritableBuffer,
+            encoder: Encoder<Endianness>,
+        ) -> Result<()>;
         fn need_offset(offset: u64) -> bool;
         fn set_offset(dest: &mut u64, offset: u64);
         fn set_size(dest: &mut u64, size: u64);
@@ -277,7 +281,7 @@ impl<'a, M: Mode> Writer<'a, M> {
     pub fn write_file_header(&mut self, header: &FileHeader) -> Result<()> {
         debug_assert_eq!(self.buffer.len(), 0);
 
-        self.mode.reserve(self.buffer)?;
+        self.mode.reserve(self.buffer, self.encoder)?;
         self.header = header.clone();
         self.encoder.set_machine(header.e_machine);
         self.encoder
@@ -811,7 +815,7 @@ impl<'a, M: Mode> Writer<'a, M> {
             sh_name: self.section_name_offset(self.gnu_versym_str_id),
             sh_addr,
             sh_offset: self.gnu_versym_offset,
-            sh_size: self.encoder.gnu_versym_size(self.gnu_versym_num as usize),
+            sh_size: self.encoder.gnu_versym_size(self.gnu_versym_num),
             ..self.encoder.gnu_versym_section_header(self.dynsym_index.0)
         });
     }
@@ -843,7 +847,7 @@ impl<'a, M: Mode> Writer<'a, M> {
 
         debug_assert_ne!(verdef.aux_count, 0);
         self.gnu_verdaux_remaining = verdef.aux_count;
-        self.written_verdaux_count += verdef.aux_count as usize;
+        self.written_verdaux_count += usize::from(verdef.aux_count);
         M::set_count(&mut self.gnu_verdaux_count, self.written_verdaux_count);
 
         self.encoder
@@ -890,7 +894,7 @@ impl<'a, M: Mode> Writer<'a, M> {
         }
         let sh_size = self
             .encoder
-            .gnu_verdef_size(self.gnu_verdef_count as usize, self.gnu_verdaux_count);
+            .gnu_verdef_size(self.gnu_verdef_count, self.gnu_verdaux_count);
         self.write_section_header(&SectionHeader {
             sh_name: self.section_name_offset(self.gnu_verdef_str_id),
             sh_addr,
@@ -898,7 +902,7 @@ impl<'a, M: Mode> Writer<'a, M> {
             sh_size,
             ..self
                 .encoder
-                .gnu_verdef_section_header(self.dynstr_index.0, self.gnu_verdef_count.into())
+                .gnu_verdef_section_header(self.dynstr_index.0, self.gnu_verdef_count)
         });
     }
 
@@ -929,7 +933,7 @@ impl<'a, M: Mode> Writer<'a, M> {
 
         if verneed.aux_count != 0 {
             self.gnu_vernaux_remaining = verneed.aux_count;
-            self.written_vernaux_count += verneed.aux_count as usize;
+            self.written_vernaux_count += usize::from(verneed.aux_count);
             M::set_count(&mut self.gnu_vernaux_count, self.written_vernaux_count);
         };
 
@@ -957,7 +961,7 @@ impl<'a, M: Mode> Writer<'a, M> {
         }
         let sh_size = self
             .encoder
-            .gnu_verneed_size(self.gnu_verneed_count as usize, self.gnu_vernaux_count);
+            .gnu_verneed_size(self.gnu_verneed_count, self.gnu_vernaux_count);
         self.write_section_header(&SectionHeader {
             sh_name: self.section_name_offset(self.gnu_verneed_str_id),
             sh_addr,
@@ -965,7 +969,7 @@ impl<'a, M: Mode> Writer<'a, M> {
             sh_size,
             ..self
                 .encoder
-                .gnu_verneed_section_header(self.dynstr_index.0, self.gnu_verneed_count.into())
+                .gnu_verneed_section_header(self.dynstr_index.0, self.gnu_verneed_count)
         });
     }
 
@@ -1146,7 +1150,11 @@ impl ModeSealed for SinglePhase {
         StringTable::new_in_order(1)
     }
 
-    fn reserve(&self, _buffer: &mut dyn WritableBuffer) -> Result<()> {
+    fn reserve(
+        &self,
+        _buffer: &mut dyn WritableBuffer,
+        _encoder: Encoder<Endianness>,
+    ) -> Result<()> {
         Ok(())
     }
 
@@ -1201,6 +1209,10 @@ impl<'a> Writer<'a, SinglePhase> {
     /// header. You must manually copy the resulting `buffer` contents to the start of the
     /// original buffer after dropping the `Writer`.
     pub fn write_file_header_to(&mut self, buffer: &mut dyn WritableBuffer) -> Result<()> {
+        let len = self.offset();
+        if !self.encoder.is_64() && len > u64::from(u32::MAX) {
+            return Err(Error(format!("File size overflow: {len:#x}")));
+        }
         if self.layout.section_num >= elf::SHN_LORESERVE.into() {
             // The null section header was written before section_num was known,
             // so it won't contain the overflow value.
@@ -1250,9 +1262,8 @@ impl<'a> Writer<'a, SinglePhase> {
         buffer: &mut dyn WritableBuffer,
         program_headers: &[ProgramHeader],
     ) -> Result<()> {
-        debug_assert_eq!(program_headers.len() as u32, self.layout.segment_num);
-        self.encoder
-            .file_header(buffer, &self.header, &self.layout)?;
+        debug_assert_eq!(program_headers.len(), self.layout.segment_num as usize);
+        self.write_file_header_to(buffer)?;
         for header in program_headers {
             self.encoder.program_header(buffer, header);
         }
@@ -1387,9 +1398,13 @@ impl ModeSealed for TwoPhase {
         StringTable::new()
     }
 
-    fn reserve(&self, buffer: &mut dyn WritableBuffer) -> Result<()> {
+    fn reserve(&self, buffer: &mut dyn WritableBuffer, encoder: Encoder<Endianness>) -> Result<()> {
+        let len = self.len;
+        if !encoder.is_64() && len > u64::from(u32::MAX) {
+            return Err(Error(format!("File size overflow: {len:#x}")));
+        }
         buffer
-            .reserve(self.len)
+            .reserve(len)
             .map_err(|_| Error(String::from("Cannot allocate buffer")))
     }
 
@@ -1473,12 +1488,12 @@ impl<'a> Writer<'a, TwoPhase> {
     /// the section table; this is checked in `write_file_header`.
     ///
     /// Does nothing if `num` is zero.
-    pub fn reserve_program_headers(&mut self, num: usize) {
+    pub fn reserve_program_headers(&mut self, num: u32) {
         debug_assert_eq!(self.layout.e_phoff, 0);
         if num == 0 {
             return;
         }
-        self.layout.segment_num = num as u32;
+        self.layout.segment_num = num;
         self.layout.e_phoff = self.reserve(
             num as u64 * self.encoder.program_header_size(),
             self.encoder.address_size(),
@@ -1992,7 +2007,7 @@ impl<'a> Writer<'a, TwoPhase> {
             return 0;
         }
         self.gnu_versym_num = self.dynsym_num;
-        let size = self.encoder.gnu_versym_size(self.gnu_versym_num as usize);
+        let size = self.encoder.gnu_versym_size(self.gnu_versym_num);
         self.gnu_versym_offset = self.reserve(size, ALIGN_GNU_VERSYM);
         self.gnu_versym_offset
     }
@@ -2010,14 +2025,14 @@ impl<'a> Writer<'a, TwoPhase> {
     ///
     /// Returns the file offset of the reserved range.
     /// Returns 0 if `verdef_count` is zero.
-    pub fn reserve_gnu_verdef(&mut self, verdef_count: usize, verdaux_count: usize) -> u64 {
+    pub fn reserve_gnu_verdef(&mut self, verdef_count: u16, verdaux_count: usize) -> u64 {
         debug_assert_eq!(self.gnu_verdef_offset, 0);
         if verdef_count == 0 {
             return 0;
         }
         let size = self.encoder.gnu_verdef_size(verdef_count, verdaux_count);
         self.gnu_verdef_offset = self.reserve(size, ALIGN_GNU_VERDEF);
-        self.gnu_verdef_count = verdef_count as u16;
+        self.gnu_verdef_count = verdef_count;
         self.gnu_verdaux_count = verdaux_count;
         self.gnu_verdef_remaining = self.gnu_verdef_count;
         self.gnu_verdef_offset
@@ -2043,14 +2058,14 @@ impl<'a> Writer<'a, TwoPhase> {
     ///
     /// Returns the file offset of the reserved range.
     /// Returns 0 if `verneed_count` is zero.
-    pub fn reserve_gnu_verneed(&mut self, verneed_count: usize, vernaux_count: usize) -> u64 {
+    pub fn reserve_gnu_verneed(&mut self, verneed_count: u16, vernaux_count: usize) -> u64 {
         debug_assert_eq!(self.gnu_verneed_offset, 0);
         if verneed_count == 0 {
             return 0;
         }
         let size = self.encoder.gnu_verneed_size(verneed_count, vernaux_count);
         self.gnu_verneed_offset = self.reserve(size, ALIGN_GNU_VERNEED);
-        self.gnu_verneed_count = verneed_count as u16;
+        self.gnu_verneed_count = verneed_count;
         self.gnu_vernaux_count = vernaux_count;
         self.gnu_verneed_remaining = self.gnu_verneed_count;
         self.gnu_verneed_offset

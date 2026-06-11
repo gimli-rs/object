@@ -773,6 +773,12 @@ impl<'data> Builder<'data> {
         self.delete_unused_versions();
 
         // Find metadata sections, and assign section indices.
+        let section_num = if self.sections.is_empty() {
+            0
+        } else {
+            // Code below depends on this check.
+            u32::try_from(1 + self.sections.count()).map_err(|_| Error::new("Too many sections"))?
+        };
         let mut shstrtab_index = 0;
         let mut symtab_index = 0;
         let mut symtab_shndx_index = 0;
@@ -786,16 +792,8 @@ impl<'data> Builder<'data> {
         let mut gnu_verneed_index = 0;
         let mut out_sections = Vec::with_capacity(self.sections.len());
         let mut out_sections_index = vec![0; self.sections.len()];
-        let mut section_num = 0;
-        if !self.sections.is_empty() {
-            section_num = 1;
-        }
         let mut shstrtab = write::StringTable::new();
-        for section in &self.sections {
-            let index = section_num;
-            out_sections_index[section.id.0] = index;
-            section_num += 1;
-
+        for (section, index) in self.sections.iter().zip(1..) {
             match &section.data {
                 SectionData::Data(_)
                 | SectionData::UninitializedData(_)
@@ -884,6 +882,7 @@ impl<'data> Builder<'data> {
                 size: 0,
                 attributes: Vec::new(),
             });
+            out_sections_index[section.id.0] = index;
         }
 
         // Add dynamic strings to string table.
@@ -899,6 +898,13 @@ impl<'data> Builder<'data> {
         }
 
         // Assign dynamic symbol indices and add symbol names to string table.
+        let dynsym_num = if dynsym_index == 0 && self.dynamic_symbols.is_empty() {
+            0
+        } else {
+            // Code below depends on this check, even if dynsym_index == 0.
+            u32::try_from(1 + self.dynamic_symbols.count())
+                .map_err(|_| Error::new("Too many dynamic symbols"))?
+        };
         let mut out_dynsyms = Vec::with_capacity(self.dynamic_symbols.len());
         // Local symbols must come before global.
         let local_symbols = self
@@ -936,8 +942,9 @@ impl<'data> Builder<'data> {
             .take_while(|sym| self.dynamic_symbols.get(sym.id).st_bind() == elf::STB_LOCAL)
             .count();
         // We must sort for GNU hash before allocating symbol indices.
-        let mut gnu_hash_symbol_count = 0;
-        if gnu_hash_index != 0 {
+        let gnu_hash_symbol_count = if gnu_hash_index == 0 {
+            0
+        } else {
             if self.gnu_hash_bucket_count == 0 {
                 return Err(Error::new(".gnu.hash bucket count is zero"));
             }
@@ -946,31 +953,27 @@ impl<'data> Builder<'data> {
                 None => (0, 0),
                 Some(hash) => (1, hash % self.gnu_hash_bucket_count),
             });
-            gnu_hash_symbol_count = out_dynsyms
+            out_dynsyms
                 .iter()
                 .skip(num_local_dynamic)
                 .skip_while(|sym| sym.gnu_hash.is_none())
-                .count() as u32;
-        }
+                .count() as u32
+        };
+        let num_local_dynamic = num_local_dynamic as u32;
         let mut out_dynsyms_index = vec![0; self.dynamic_symbols.len()];
-        let mut dynsym_num = 0u32;
-        if dynsym_index != 0 {
-            dynsym_num = 1;
-        }
-        for out_dynsym in &mut out_dynsyms {
-            out_dynsyms_index[out_dynsym.id.0] = dynsym_num;
-            dynsym_num += 1;
+        for (out_dynsym, index) in out_dynsyms.iter().zip(1..) {
+            out_dynsyms_index[out_dynsym.id.0] = index;
         }
 
         // Hash parameters.
         let hash_index_base = 1; // Null symbol.
-        let hash_chain_count = hash_index_base + out_dynsyms.len() as u32;
+        let hash_chain_count = dynsym_num;
 
         // GNU hash parameters.
         let gnu_hash_index_base = if gnu_hash_symbol_count == 0 {
             0
         } else {
-            out_dynsyms.len() as u32 - gnu_hash_symbol_count
+            dynsym_num - 1 - gnu_hash_symbol_count
         };
         let gnu_hash_table = write::elf::GnuHashTable {
             bucket_count: self.gnu_hash_bucket_count,
@@ -981,6 +984,12 @@ impl<'data> Builder<'data> {
         };
 
         // Assign symbol indices and add names to string table.
+        let sym_num = if symtab_index == 0 && self.symbols.is_empty() {
+            0
+        } else {
+            // Code below depends on this check, even if symtab_index == 0.
+            u32::try_from(1 + self.symbols.count()).map_err(|_| Error::new("Too many symbols"))?
+        };
         let mut out_syms = Vec::with_capacity(self.symbols.len());
         let mut strtab = write::StringTable::new();
         let mut need_symtab_shndx = symtab_shndx_index != 0;
@@ -1012,18 +1021,18 @@ impl<'data> Builder<'data> {
         let num_local = out_syms
             .iter()
             .take_while(|sym| self.symbols.get(sym.id).st_bind() == elf::STB_LOCAL)
-            .count();
+            .count() as u32;
         let mut out_syms_index = vec![0; self.symbols.len()];
-        let mut sym_num = 0;
-        if symtab_index != 0 {
-            sym_num = 1;
-        }
-        for out_sym in out_syms.iter_mut() {
-            out_syms_index[out_sym.id.0] = sym_num;
-            sym_num += 1;
+        for (out_sym, index) in out_syms.iter().zip(1..) {
+            out_syms_index[out_sym.id.0] = index;
         }
 
         // Count the versions and add version strings.
+        // len() instead of count() because we use version.id directly as the index
+        // (leaving gaps for deleted versions).
+        if VERSION_ID_BASE + self.versions.len() - 1 > usize::from(elf::VERSYM_VERSION) {
+            return Err(Error::new("Too many versions"));
+        }
         let mut verdef_count = 0;
         let mut verdaux_count = 0;
         let mut verdef_shared_base = false;
@@ -1157,8 +1166,9 @@ impl<'data> Builder<'data> {
         let mut verdef_addr = None;
         let mut verneed_addr = None;
 
-        let segment_num = self.segments.count() as u32;
         let mut e_phoff = 0;
+        let segment_num =
+            u32::try_from(self.segments.count()).map_err(|_| Error::new("Too many segments"))?;
         if segment_num != 0 {
             let size = u64::from(segment_num) * encoder.program_header_size();
             e_phoff = offset.reserve(size, address_size).0;
@@ -1255,7 +1265,7 @@ impl<'data> Builder<'data> {
                     }
                     SectionData::GnuVersym => {
                         versym_addr = Some(section.sh_addr);
-                        let size = encoder.gnu_versym_size(dynsym_num as usize);
+                        let size = encoder.gnu_versym_size(dynsym_num);
                         offset.reserve(size, write::elf::ALIGN_GNU_VERSYM)
                     }
                     SectionData::GnuVerdef => {
@@ -1352,6 +1362,17 @@ impl<'data> Builder<'data> {
         } else {
             0
         };
+
+        // Finished layout.
+        let reserved_len = offset.0;
+        // If the total length fits in 32-bit, then none of the u32 file size casts below
+        // need checking.
+        if !self.is_64 && reserved_len > u64::from(u32::MAX) {
+            return Err(Error(format!("File size overflow: {reserved_len:#x}")));
+        }
+        buffer
+            .reserve(reserved_len)
+            .map_err(|_| Error(format!("Cannot allocate buffer length {reserved_len:#x}")))?;
 
         // Start writing.
         let header = write::elf::FileHeader {
@@ -1556,6 +1577,9 @@ impl<'data> Builder<'data> {
                         for version in &self.versions {
                             if let VersionData::Def(def) = &version.data {
                                 count -= 1;
+                                let aux_count = u16::try_from(def.names.len()).map_err(|_| {
+                                    Error::new("Too many auxiliary version definitions")
+                                })?;
                                 let mut names = def.names.iter();
                                 let name = names.next().ok_or_else(|| {
                                     Error(format!("Missing SHT_GNU_VERDEF name {}", version.id.0))
@@ -1563,8 +1587,8 @@ impl<'data> Builder<'data> {
                                 let verdef = write::elf::Verdef {
                                     version: elf::VER_DEF_CURRENT,
                                     flags: def.flags,
-                                    index: elf::VersionIndex(version.id.0 as u16),
-                                    aux_count: def.names.len() as u16,
+                                    index: version.id.index(),
+                                    aux_count,
                                     name: dynstr.get_offset(dynstr.get_id(name)),
                                     hash: elf::hash(name),
                                 };
@@ -1586,9 +1610,13 @@ impl<'data> Builder<'data> {
                         for file in &self.version_files {
                             let out_file = &out_version_files[file.id.0];
                             count -= 1;
+                            let aux_count =
+                                u16::try_from(out_file.versions.len()).map_err(|_| {
+                                    Error::new("Too many auxiliary version dependencies")
+                                })?;
                             let verneed = write::elf::Verneed {
                                 version: elf::VER_NEED_CURRENT,
-                                aux_count: out_file.versions.len() as u16,
+                                aux_count,
                                 file: dynstr.get_offset(dynstr.get_id(&file.name)),
                             };
                             encoder.gnu_verneed(buffer, count != 0, &verneed);
@@ -1601,7 +1629,7 @@ impl<'data> Builder<'data> {
                                     debug_assert_eq!(*id, version.id);
                                     let vernaux = write::elf::Vernaux {
                                         flags: need.flags,
-                                        index: elf::VersionIndex(version.id.0 as u16),
+                                        index: version.id.index(),
                                         name: dynstr.get_offset(dynstr.get_id(&need.name)),
                                         hash: elf::hash(&need.name),
                                     };
@@ -1776,25 +1804,23 @@ impl<'data> Builder<'data> {
                     }
                 }
                 SectionData::SectionString => encoder.strtab_section_header(),
-                SectionData::Symbol => {
-                    encoder.symtab_section_header(strtab_index, 1 + num_local as u32)
-                }
+                SectionData::Symbol => encoder.symtab_section_header(strtab_index, 1 + num_local),
                 SectionData::SymbolSectionIndex => {
                     encoder.symtab_shndx_section_header(symtab_index)
                 }
                 SectionData::String => encoder.strtab_section_header(),
                 SectionData::DynamicString => encoder.dynstr_section_header(),
                 SectionData::DynamicSymbol => {
-                    encoder.dynsym_section_header(dynstr_index, 1 + num_local_dynamic as u32)
+                    encoder.dynsym_section_header(dynstr_index, 1 + num_local_dynamic)
                 }
                 SectionData::Hash => encoder.hash_section_header(dynsym_index),
                 SectionData::GnuHash => encoder.gnu_hash_section_header(dynsym_index),
                 SectionData::GnuVersym => encoder.gnu_versym_section_header(dynsym_index),
                 SectionData::GnuVerdef => {
-                    encoder.gnu_verdef_section_header(dynstr_index, verdef_count as u32)
+                    encoder.gnu_verdef_section_header(dynstr_index, verdef_count)
                 }
                 SectionData::GnuVerneed => {
-                    encoder.gnu_verneed_section_header(dynstr_index, verneed_count as u32)
+                    encoder.gnu_verneed_section_header(dynstr_index, verneed_count)
                 }
             };
             header.sh_name = shstrtab.maybe_get_offset(out_section.name);
@@ -1805,7 +1831,7 @@ impl<'data> Builder<'data> {
             }
             encoder.section_header(buffer, &header);
         }
-        debug_assert_eq!(offset.0, buffer.len());
+        debug_assert_eq!(reserved_len, buffer.len());
         Ok(())
     }
 
@@ -2056,7 +2082,7 @@ impl<'data> Builder<'data> {
     /// [`Self::delete_orphan_symbols`] and [`Self::delete_unused_versions`].
     pub fn gnu_versym_size(&self) -> u64 {
         let symbol_count = 1 + self.dynamic_symbols.count();
-        self.encoder().gnu_versym_size(symbol_count)
+        self.encoder().gnu_versym_size(symbol_count as u32)
     }
 
     /// Calculate the size of the GNU version definition section.
@@ -2094,7 +2120,7 @@ impl<'data> Builder<'data> {
             }
         }
         self.encoder()
-            .gnu_verneed_size(verneed_count, vernaux_count)
+            .gnu_verneed_size(verneed_count as u16, vernaux_count)
     }
 
     /// Calculate the memory size of a section.
@@ -3103,7 +3129,7 @@ pub struct VersionDef<'data> {
 
 impl<'data> VersionDef<'data> {
     /// Optimise for the common case where the first version is the same as the base version.
-    fn is_shared(&self, index: usize, base: Option<&ByteString<'_>>) -> bool {
+    fn is_shared(&self, index: u16, base: Option<&ByteString<'_>>) -> bool {
         index == 1 && self.names.len() == 1 && self.names.first() == base
     }
 }
