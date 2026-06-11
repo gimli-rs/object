@@ -136,6 +136,7 @@ impl<'data, 'file, R: ReadRef<'data>> Iterator for OmfRelocationIterator<'data, 
             target,
             addend: (reloc.target_displacement as i64) + base_addend,
             implicit_addend: false,
+            subtractor: None,
             flags: RelocationFlags::Omf {
                 location: reloc.location,
                 mode: if reloc.is_segment_relative {

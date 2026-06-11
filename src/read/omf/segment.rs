@@ -1,7 +1,7 @@
 use alloc::vec::Vec;
 
-use crate::read::{self, ObjectSegment, ReadRef, Result};
-use crate::{omf, SegmentFlags};
+use crate::read::{self, ObjectSegment, ReadRef, Result, SectionKind};
+use crate::{omf, Permissions, SegmentFlags};
 
 use super::{OmfFile, OmfFixup};
 
@@ -125,6 +125,18 @@ impl<'data, 'file, R: ReadRef<'data>> ObjectSegment<'data> for OmfSegmentRef<'da
 
     fn flags(&self) -> SegmentFlags {
         SegmentFlags::None
+    }
+
+    fn permissions(&self) -> Permissions {
+        // OMF segment definitions don't carry permission flags, so derive them
+        // from the segment's class name.
+        match self.file.segment_section_kind(self.index) {
+            SectionKind::Text => Permissions::new(true, false, true),
+            SectionKind::ReadOnlyData | SectionKind::ReadOnlyString | SectionKind::Debug => {
+                Permissions::new(true, false, false)
+            }
+            _ => Permissions::new(true, true, false),
+        }
     }
 }
 
