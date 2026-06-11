@@ -186,6 +186,10 @@ impl<'data, R: ReadRef<'data>> OmfFile<'data, R> {
         while let Ok(record_header) = self.data.read_at::<omf::RecordHeader>(offset) {
             let record_type = record_header.record_type;
             let record_length = record_header.length.get(crate::endian::LittleEndian);
+            // A valid record must contain at least the checksum byte.
+            if record_length == 0 {
+                return Err(Error("Invalid OMF record length"));
+            }
             let record_data = self
                 .data
                 .read_bytes_at(offset, record_length as u64 + 3)
@@ -1187,8 +1191,11 @@ impl<'data, R: ReadRef<'data>> OmfFile<'data, R> {
                     0
                 };
 
+                let fixup_offset = data_offset
+                    .checked_add(locat)
+                    .ok_or(Error("Invalid FIXUP data record offset"))?;
                 self.sections[section_index].relocations.push(OmfFixup {
-                    offset: data_offset + locat,
+                    offset: fixup_offset,
                     location,
                     frame_method,
                     target_method,
@@ -1501,6 +1508,12 @@ impl FrameMethod {
     }
 }
 
+/// The maximum nesting depth of iterated data blocks.
+///
+/// This limits recursion when parsing malformed files. Real files rarely
+/// nest more than a few levels deep.
+const ITERATED_DATA_MAX_DEPTH: usize = 16;
+
 /// Expand iterated data blocks (from LIDATA or COMDAT records) into a newly
 /// allocated buffer.
 ///
@@ -1512,7 +1525,8 @@ pub(super) fn expand_iterated_data(data: &[u8], is_32bit: bool) -> Result<Vec<u8
     let mut offset = 0;
     let mut write_offset = 0;
     while offset < data.len() {
-        offset += expand_iterated_block(&data[offset..], is_32bit, &mut result, &mut write_offset)?;
+        offset +=
+            expand_iterated_block(&data[offset..], is_32bit, &mut result, &mut write_offset, 0)?;
     }
     debug_assert_eq!(write_offset, expanded_size);
     Ok(result)
@@ -1523,7 +1537,7 @@ pub(super) fn iterated_data_expanded_len(data: &[u8], is_32bit: bool) -> Result<
     let mut offset = 0;
     let mut expanded = 0u64;
     while offset < data.len() {
-        let (consumed, block_expanded) = iterated_block_expanded_len(&data[offset..], is_32bit)?;
+        let (consumed, block_expanded) = iterated_block_expanded_len(&data[offset..], is_32bit, 0)?;
         offset += consumed;
         expanded = expanded
             .checked_add(block_expanded)
@@ -1564,7 +1578,11 @@ fn expand_iterated_block(
     is_32bit: bool,
     output: &mut [u8],
     write_offset: &mut usize,
+    depth: usize,
 ) -> Result<usize> {
+    if depth >= ITERATED_DATA_MAX_DEPTH {
+        return Err(Error("LIDATA blocks nested too deeply"));
+    }
     let (repeat_count, block_count, mut offset) = read_iterated_block_header(data, is_32bit)?;
 
     if block_count == 0 {
@@ -1595,7 +1613,8 @@ fn expand_iterated_block(
             if offset >= data.len() {
                 return Err(Error("Truncated LIDATA block"));
             }
-            offset += expand_iterated_block(&data[offset..], is_32bit, output, write_offset)?;
+            offset +=
+                expand_iterated_block(&data[offset..], is_32bit, output, write_offset, depth + 1)?;
         }
         let iteration_len = *write_offset - iteration_start;
 
@@ -1614,7 +1633,10 @@ fn expand_iterated_block(
 }
 
 /// Return the consumed and expanded size of a single iterated data block.
-fn iterated_block_expanded_len(data: &[u8], is_32bit: bool) -> Result<(usize, u64)> {
+fn iterated_block_expanded_len(data: &[u8], is_32bit: bool, depth: usize) -> Result<(usize, u64)> {
+    if depth >= ITERATED_DATA_MAX_DEPTH {
+        return Err(Error("LIDATA blocks nested too deeply"));
+    }
     let (repeat_count, block_count, mut offset) = read_iterated_block_header(data, is_32bit)?;
 
     let single_iteration = if block_count == 0 {
@@ -1635,7 +1657,8 @@ fn iterated_block_expanded_len(data: &[u8], is_32bit: bool) -> Result<(usize, u6
             if offset >= data.len() {
                 return Err(Error("Truncated LIDATA block"));
             }
-            let (consumed, expanded) = iterated_block_expanded_len(&data[offset..], is_32bit)?;
+            let (consumed, expanded) =
+                iterated_block_expanded_len(&data[offset..], is_32bit, depth + 1)?;
             offset += consumed;
             single_iteration = single_iteration
                 .checked_add(expanded)
