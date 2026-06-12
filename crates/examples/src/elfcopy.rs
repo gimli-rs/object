@@ -393,7 +393,7 @@ pub fn elfcopy<Elf: FileHeader<Endian = Endianness>>(
     } else {
         // We don't support moving program headers.
         assert_eq!(in_elf.e_phoff(endian).into(), writer.reserved_len());
-        writer.reserve_program_headers(in_segments.len());
+        writer.reserve_program_headers(in_segments.len() as u32);
 
         // Reserve alloc sections at original offsets.
         alloc_sections = in_sections

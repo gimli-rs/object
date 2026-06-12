@@ -37,25 +37,28 @@ impl<'a> Object<'a> {
             return;
         }
 
-        let align = if self.elf_is_64() { 8 } else { 4 };
+        let address_size = if self.elf_is_64() { 8 } else { 4 };
         let mut data = Vec::with_capacity(32);
         let n_name = b"GNU\0";
         data.extend_from_slice(pod::bytes_of(&elf::NoteHeader32 {
             n_namesz: U32::new(self.endian, n_name.len() as u32),
-            n_descsz: U32::new(self.endian, util::align_u32(3 * 4, align as u32)),
+            n_descsz: U32::new(self.endian, align_u32(3 * 4, address_size)),
             n_type: U32::new(self.endian, elf::NT_GNU_PROPERTY_TYPE_0),
         }));
         data.extend_from_slice(n_name);
         // This happens to already be aligned correctly.
-        debug_assert_eq!(util::align(data.len() as u64, align), data.len() as u64);
+        debug_assert_eq!(
+            align(data.len() as u64, address_size.into()),
+            data.len() as u64
+        );
         data.extend_from_slice(pod::bytes_of(&U32::new(self.endian, property)));
         // Value size
         data.extend_from_slice(pod::bytes_of(&U32::new(self.endian, 4u32)));
         data.extend_from_slice(pod::bytes_of(&U32::new(self.endian, value)));
-        util::write_align(&mut data, align);
+        write_align(&mut data, address_size.into());
 
         let section = self.section_id(StandardSection::GnuProperty);
-        self.append_section_data(section, &data, align);
+        self.append_section_data(section, &data, address_size.into());
     }
 }
 

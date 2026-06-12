@@ -162,6 +162,10 @@ pub struct Vernaux {
 }
 
 /// A helper for encoding headers and data when writing an ELF file.
+///
+/// None of the methods check for overflow when truncating addresses and file offsets for
+/// 32-bit ELF. It is recommended that the caller keep track of the largest address and
+/// file offset, and perform a single overflow check.
 #[derive(Debug, Clone, Copy)]
 pub struct Encoder<E: Endian> {
     endian: E,
@@ -207,6 +211,7 @@ impl<E: Endian> Encoder<E> {
     }
 
     /// Return the size in bytes of an address for the ELF class.
+    ///
     /// This should be used as the file offset alignment for various structures
     /// such as program headers, section headers, symbols, dynamics, relocations,
     /// and .gnu.hash.
@@ -226,6 +231,12 @@ impl<E: Endian> Encoder<E> {
     /// Write the file header.
     ///
     /// The buffer should be at the start of the file.
+    ///
+    /// `layout.segment_num`, `layout.section_num`, and `layout.shstrtab_index`
+    /// are replaced with the appropriate sentinel values if overflow occurs.
+    ///
+    /// No overflow check is performed when truncating `e_entry`, `e_phoff`,
+    /// and `e_shoff` for 32-bit ELF.
     pub fn file_header<W: WritableBuffer + ?Sized>(
         self,
         buffer: &mut W,
@@ -334,6 +345,9 @@ impl<E: Endian> Encoder<E> {
     /// Write a program header.
     ///
     /// The buffer should already be aligned to `address_size`.
+    ///
+    /// No overflow check is performed when truncating `p_offset`, `p_vaddr`,
+    /// `p_paddr`, `p_filesz`, `p_memsz` and `p_align` for 32-bit ELF.
     pub fn program_header<W: WritableBuffer + ?Sized>(
         self,
         buffer: &mut W,
@@ -436,6 +450,9 @@ impl<E: Endian> Encoder<E> {
     /// Write a section header.
     ///
     /// The buffer should already be aligned to `address_size`.
+    ///
+    /// No overflow check is performed when truncating `sh_addr`, `sh_offset`,
+    /// `sh_size`, `sh_addralign`, and `sh_entsize` for 32-bit ELF.
     pub fn section_header<W: WritableBuffer + ?Sized>(
         self,
         buffer: &mut W,
@@ -605,12 +622,12 @@ impl<E: Endian> Encoder<E> {
     ///
     /// `sh_link` is set to `dynstr`. `sh_info` is set to `verdef_count`.
     /// The caller must set `sh_name`, `sh_addr`, `sh_offset`, and `sh_size`.
-    pub fn gnu_verdef_section_header(self, dynstr: u32, verdef_count: u32) -> SectionHeader {
+    pub fn gnu_verdef_section_header(self, dynstr: u32, verdef_count: u16) -> SectionHeader {
         SectionHeader {
             sh_type: elf::SHT_GNU_VERDEF,
             sh_flags: elf::SHF_ALLOC,
             sh_link: dynstr,
-            sh_info: verdef_count,
+            sh_info: verdef_count.into(),
             sh_addralign: ALIGN_GNU_VERDEF,
             ..SectionHeader::default()
         }
@@ -620,12 +637,12 @@ impl<E: Endian> Encoder<E> {
     ///
     /// `sh_link` is set to `dynstr`. `sh_info` is set to `verneed_count`.
     /// The caller must set `sh_name`, `sh_addr`, `sh_offset`, and `sh_size`.
-    pub fn gnu_verneed_section_header(self, dynstr: u32, verneed_count: u32) -> SectionHeader {
+    pub fn gnu_verneed_section_header(self, dynstr: u32, verneed_count: u16) -> SectionHeader {
         SectionHeader {
             sh_type: elf::SHT_GNU_VERNEED,
             sh_flags: elf::SHF_ALLOC,
             sh_link: dynstr,
-            sh_info: verneed_count,
+            sh_info: verneed_count.into(),
             sh_addralign: ALIGN_GNU_VERNEED,
             ..SectionHeader::default()
         }
@@ -721,6 +738,9 @@ impl<E: Endian> Encoder<E> {
     /// Returns the extended symbol index if overflow occurred.
     ///
     /// The buffer should already be aligned to `address_size`.
+    ///
+    /// No overflow check is performed when truncating `st_value` and `st_size`
+    /// for 32-bit ELF.
     pub fn symbol<W: WritableBuffer + ?Sized>(self, buffer: &mut W, sym: &Sym) -> Option<u32> {
         let st_shndx = if let Some(section) = sym.section {
             elf::SymbolSection::new(section)
@@ -798,6 +818,9 @@ impl<E: Endian> Encoder<E> {
     /// Write a relocation.
     ///
     /// The buffer should already be aligned to `address_size`.
+    ///
+    /// No overflow check is performed when truncating `r_offset`, `r_sym`, `r_type`,
+    /// and `r_addend` for 32-bit ELF.
     pub fn relocation<W: WritableBuffer + ?Sized>(self, buffer: &mut W, is_rela: bool, rel: &Rel) {
         let endian = self.endian;
         if self.is_64 {
@@ -878,8 +901,8 @@ impl<E: Endian> Encoder<E> {
     /// Return the size of a hash table.
     pub fn hash_size(self, bucket_count: u32, chain_count: u32) -> u64 {
         mem::size_of::<elf::HashHeader<Endianness>>() as u64
-            + bucket_count as u64 * 4
-            + chain_count as u64 * 4
+            + u64::from(bucket_count) * 4
+            + u64::from(chain_count) * 4
     }
 
     /// Write a SysV hash table.
@@ -916,9 +939,9 @@ impl<E: Endian> Encoder<E> {
     pub fn gnu_hash_size(self, bloom_count: u32, bucket_count: u32, symbol_count: u32) -> u64 {
         let bloom_size = if self.is_64 { 8 } else { 4 };
         mem::size_of::<elf::GnuHashHeader<Endianness>>() as u64
-            + bloom_count as u64 * bloom_size
-            + bucket_count as u64 * 4
-            + symbol_count as u64 * 4
+            + u64::from(bloom_count) * bloom_size
+            + u64::from(bucket_count) * 4
+            + u64::from(symbol_count) * 4
     }
 
     /// Write a GNU hash section.
@@ -1004,8 +1027,8 @@ impl<E: Endian> Encoder<E> {
     }
 
     /// Return the size of a GNU symbol version section.
-    pub fn gnu_versym_size(self, symbol_count: usize) -> u64 {
-        symbol_count as u64 * 2
+    pub fn gnu_versym_size(self, symbol_count: u32) -> u64 {
+        u64::from(symbol_count) * 2
     }
 
     /// Write a symbol version entry.
@@ -1014,8 +1037,8 @@ impl<E: Endian> Encoder<E> {
     }
 
     /// Return the size of a GNU version definition section.
-    pub fn gnu_verdef_size(self, verdef_count: usize, verdaux_count: usize) -> u64 {
-        verdef_count as u64 * mem::size_of::<elf::Verdef<Endianness>>() as u64
+    pub fn gnu_verdef_size(self, verdef_count: u16, verdaux_count: usize) -> u64 {
+        u64::from(verdef_count) * mem::size_of::<elf::Verdef<Endianness>>() as u64
             + verdaux_count as u64 * mem::size_of::<elf::Verdaux<Endianness>>() as u64
     }
 
@@ -1028,7 +1051,7 @@ impl<E: Endian> Encoder<E> {
     ) {
         let vd_next = if next {
             mem::size_of::<elf::Verdef<Endianness>>() as u32
-                + verdef.aux_count as u32 * mem::size_of::<elf::Verdaux<Endianness>>() as u32
+                + u32::from(verdef.aux_count) * mem::size_of::<elf::Verdaux<Endianness>>() as u32
         } else {
             0
         };
@@ -1082,8 +1105,8 @@ impl<E: Endian> Encoder<E> {
     }
 
     /// Return the size of a GNU version dependency section.
-    pub fn gnu_verneed_size(self, verneed_count: usize, vernaux_count: usize) -> u64 {
-        verneed_count as u64 * mem::size_of::<elf::Verneed<Endianness>>() as u64
+    pub fn gnu_verneed_size(self, verneed_count: u16, vernaux_count: usize) -> u64 {
+        u64::from(verneed_count) * mem::size_of::<elf::Verneed<Endianness>>() as u64
             + vernaux_count as u64 * mem::size_of::<elf::Vernaux<Endianness>>() as u64
     }
 
@@ -1096,7 +1119,7 @@ impl<E: Endian> Encoder<E> {
     ) {
         let vn_next = if next {
             mem::size_of::<elf::Verneed<Endianness>>() as u32
-                + verneed.aux_count as u32 * mem::size_of::<elf::Vernaux<Endianness>>() as u32
+                + u32::from(verneed.aux_count) * mem::size_of::<elf::Vernaux<Endianness>>() as u32
         } else {
             0
         };
@@ -1147,8 +1170,8 @@ impl<E: Endian> Encoder<E> {
 pub struct AttributesWriter {
     endian: Endianness,
     data: Vec<u8>,
-    subsection_offset: usize,
-    subsubsection_offset: usize,
+    subsection_offset: u32,
+    subsubsection_offset: u32,
 }
 
 impl AttributesWriter {
@@ -1162,11 +1185,15 @@ impl AttributesWriter {
         }
     }
 
+    fn offset(&self) -> u32 {
+        self.data.len() as u32
+    }
+
     /// Start a new subsection with the given vendor name.
     pub fn start_subsection(&mut self, vendor: &[u8]) {
         debug_assert_eq!(self.subsection_offset, 0);
         debug_assert_eq!(self.subsubsection_offset, 0);
-        self.subsection_offset = self.data.len();
+        self.subsection_offset = self.offset();
         self.data.extend_from_slice(&[0; 4]);
         self.data.extend_from_slice(vendor);
         self.data.push(0);
@@ -1178,9 +1205,9 @@ impl AttributesWriter {
     pub fn end_subsection(&mut self) {
         debug_assert_ne!(self.subsection_offset, 0);
         debug_assert_eq!(self.subsubsection_offset, 0);
-        let length = self.data.len() - self.subsection_offset;
-        self.data[self.subsection_offset..][..4]
-            .copy_from_slice(pod::bytes_of(&U32::new(self.endian, length as u32)));
+        let length = self.offset() - self.subsection_offset;
+        self.data[self.subsection_offset as usize..][..4]
+            .copy_from_slice(pod::bytes_of(&U32::new(self.endian, length)));
         self.subsection_offset = 0;
     }
 
@@ -1188,7 +1215,7 @@ impl AttributesWriter {
     pub fn start_subsubsection(&mut self, tag: elf::AttributeTag) {
         debug_assert_ne!(self.subsection_offset, 0);
         debug_assert_eq!(self.subsubsection_offset, 0);
-        self.subsubsection_offset = self.data.len();
+        self.subsubsection_offset = self.offset();
         self.data.push(tag.0);
         self.data.extend_from_slice(&[0; 4]);
     }
@@ -1249,9 +1276,9 @@ impl AttributesWriter {
     pub fn end_subsubsection(&mut self) {
         debug_assert_ne!(self.subsection_offset, 0);
         debug_assert_ne!(self.subsubsection_offset, 0);
-        let length = self.data.len() - self.subsubsection_offset;
-        self.data[self.subsubsection_offset + 1..][..4]
-            .copy_from_slice(pod::bytes_of(&U32::new(self.endian, length as u32)));
+        let length = self.offset() - self.subsubsection_offset;
+        self.data[self.subsubsection_offset as usize + 1..][..4]
+            .copy_from_slice(pod::bytes_of(&U32::new(self.endian, length)));
         self.subsubsection_offset = 0;
     }
 
@@ -1259,6 +1286,7 @@ impl AttributesWriter {
     pub fn data(self) -> Vec<u8> {
         debug_assert_eq!(self.subsection_offset, 0);
         debug_assert_eq!(self.subsubsection_offset, 0);
+        debug_assert!((self.data.len() as u64) < (u32::MAX as u64));
         self.data
     }
 }
