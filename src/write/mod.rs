@@ -19,7 +19,7 @@ use hashbrown::HashMap;
 #[cfg(feature = "std")]
 use std::{boxed::Box, collections::HashMap, error, io};
 
-use crate::endian::{Endianness, U32, U64};
+use crate::endian::{Endian, Endianness};
 
 pub use crate::common::*;
 
@@ -777,10 +777,16 @@ impl<'a> Object<'a> {
             _ => unimplemented!(),
         };
         let data = self.sections[section.0].data_mut();
-        let offset = relocation.offset as usize;
+        let mut write_bytes = |src: &[u8]| -> Option<()> {
+            let offset = usize::try_from(relocation.offset).ok()?;
+            data.get_mut(offset..)?
+                .get_mut(..src.len())?
+                .copy_from_slice(src);
+            Some(())
+        };
         match size {
-            32 => data.write_at(offset, &U32::new(self.endian, relocation.addend as u32)),
-            64 => data.write_at(offset, &U64::new(self.endian, relocation.addend as u64)),
+            32 => write_bytes(&self.endian.write_u32(relocation.addend as u32)),
+            64 => write_bytes(&self.endian.write_u64(relocation.addend as u64)),
             _ => {
                 return Err(Error(format!(
                     "unimplemented relocation addend {:?}",
@@ -788,7 +794,7 @@ impl<'a> Object<'a> {
                 )));
             }
         }
-        .map_err(|_| {
+        .ok_or_else(|| {
             Error(format!(
                 "invalid relocation offset {}+{} (max {})",
                 relocation.offset,
