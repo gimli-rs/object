@@ -199,24 +199,6 @@ impl<W: io::Write> WritableBuffer for StreamingBuffer<W> {
     }
 }
 
-/// A trait for mutable byte slices.
-///
-/// It provides convenience methods for `Pod` types.
-pub(crate) trait BytesMut {
-    fn write_at<T: Pod>(self, offset: usize, val: &T) -> Result<(), ()>;
-}
-
-impl<'a> BytesMut for &'a mut [u8] {
-    #[inline]
-    fn write_at<T: Pod>(self, offset: usize, val: &T) -> Result<(), ()> {
-        let src = bytes_of(val);
-        let dest = self.get_mut(offset..).ok_or(())?;
-        let dest = dest.get_mut(..src.len()).ok_or(())?;
-        dest.copy_from_slice(src);
-        Ok(())
-    }
-}
-
 /// Write an unsigned number using the LEB128 encoding to a buffer.
 ///
 /// Returns the number of bytes written.
@@ -291,30 +273,4 @@ pub(crate) fn write_pod<T: Pod, W: WritableBuffer + ?Sized>(buffer: &mut W, val:
 #[allow(dead_code)]
 pub(crate) fn write_pod_slice<T: Pod, W: WritableBuffer + ?Sized>(buffer: &mut W, val: &[T]) {
     buffer.write_bytes(bytes_of_slice(val))
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn bytes_mut() {
-        let data = vec![0x01, 0x23, 0x45, 0x67];
-
-        let mut bytes = data.clone();
-        bytes.extend_from_slice(bytes_of(&u16::to_be(0x89ab)));
-        assert_eq!(bytes, [0x01, 0x23, 0x45, 0x67, 0x89, 0xab]);
-
-        let mut bytes = data.clone();
-        assert_eq!(bytes.write_at(0, &u16::to_be(0x89ab)), Ok(()));
-        assert_eq!(bytes, [0x89, 0xab, 0x45, 0x67]);
-
-        let mut bytes = data.clone();
-        assert_eq!(bytes.write_at(2, &u16::to_be(0x89ab)), Ok(()));
-        assert_eq!(bytes, [0x01, 0x23, 0x89, 0xab]);
-
-        assert_eq!(bytes.write_at(3, &u16::to_be(0x89ab)), Err(()));
-        assert_eq!(bytes.write_at(4, &u16::to_be(0x89ab)), Err(()));
-        assert_eq!([].write_at(0, &u32::to_be(0x89ab)), Err(()));
-    }
 }

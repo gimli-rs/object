@@ -1,10 +1,11 @@
 use alloc::vec::Vec;
 
+use crate::elf;
+use crate::endian::U32;
 use crate::write::elf::encoder::*;
 use crate::write::elf::writer::*;
 use crate::write::string::StringId;
 use crate::write::*;
-use crate::{elf, pod};
 
 #[derive(Clone, Copy)]
 struct ComdatOffsets {
@@ -40,21 +41,22 @@ impl<'a> Object<'a> {
         let address_size = if self.elf_is_64() { 8 } else { 4 };
         let mut data = Vec::with_capacity(32);
         let n_name = b"GNU\0";
-        data.extend_from_slice(pod::bytes_of(&elf::NoteHeader32 {
+        let header = &elf::NoteHeader32 {
             n_namesz: U32::new(self.endian, n_name.len() as u32),
             n_descsz: U32::new(self.endian, align_u32(3 * 4, address_size)),
             n_type: U32::new(self.endian, elf::NT_GNU_PROPERTY_TYPE_0),
-        }));
+        };
+        write_pod(&mut data, header);
         data.extend_from_slice(n_name);
         // This happens to already be aligned correctly.
         debug_assert_eq!(
             align(data.len() as u64, address_size.into()),
             data.len() as u64
         );
-        data.extend_from_slice(pod::bytes_of(&U32::new(self.endian, property)));
+        write_pod(&mut data, &U32::new(self.endian, property));
         // Value size
-        data.extend_from_slice(pod::bytes_of(&U32::new(self.endian, 4u32)));
-        data.extend_from_slice(pod::bytes_of(&U32::new(self.endian, value)));
+        write_pod(&mut data, &U32::new(self.endian, 4u32));
+        write_pod(&mut data, &U32::new(self.endian, value));
         write_align(&mut data, address_size.into());
 
         let section = self.section_id(StandardSection::GnuProperty);
