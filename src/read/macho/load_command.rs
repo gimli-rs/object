@@ -176,7 +176,11 @@ impl<'data, E: Endian> LoadCommandData<'data, E> {
             macho::LC_ENCRYPTION_INFO_64 => LoadCommandVariant::EncryptionInfo64(self.data()?),
             macho::LC_LINKER_OPTION => LoadCommandVariant::LinkerOption(self.data()?),
             macho::LC_NOTE => LoadCommandVariant::Note(self.data()?),
-            macho::LC_BUILD_VERSION => LoadCommandVariant::BuildVersion(self.data()?),
+            macho::LC_BUILD_VERSION => {
+                let mut data = self.data;
+                let build_version = data.read().read_error("Invalid Mach-O command size")?;
+                LoadCommandVariant::BuildVersion(build_version, data.0)
+            }
             macho::LC_FILESET_ENTRY => LoadCommandVariant::FilesetEntry(self.data()?),
             _ => LoadCommandVariant::Other,
         })
@@ -308,12 +312,24 @@ impl<'data, E: Endian> LoadCommandData<'data, E> {
     }
 
     /// Try to parse this command as a [`macho::BuildVersionCommand`].
-    pub fn build_version(self) -> Result<Option<&'data macho::BuildVersionCommand<E>>> {
-        if self.cmd == macho::LC_BUILD_VERSION {
-            Some(self.data()).transpose()
-        } else {
-            Ok(None)
+    pub fn build_version(
+        self,
+        endian: E,
+    ) -> Result<
+        Option<(
+            &'data macho::BuildVersionCommand<E>,
+            &'data [macho::BuildToolVersion<E>],
+        )>,
+    > {
+        if self.cmd != macho::LC_BUILD_VERSION {
+            return Ok(None);
         }
+        let mut data = self.data;
+        let build_version = data
+            .read::<macho::BuildVersionCommand<E>>()
+            .read_error("Invalid Mach-O command size")?;
+        let tools = build_version.tools(endian, data.0)?;
+        Ok(Some((build_version, tools)))
     }
 }
 
@@ -399,7 +415,7 @@ pub enum LoadCommandVariant<'data, E: Endian> {
     /// `LC_NOTE`
     Note(&'data macho::NoteCommand<E>),
     /// `LC_BUILD_VERSION`
-    BuildVersion(&'data macho::BuildVersionCommand<E>),
+    BuildVersion(&'data macho::BuildVersionCommand<E>, &'data [u8]),
     /// `LC_FILESET_ENTRY`
     FilesetEntry(&'data macho::FilesetEntryCommand<E>),
     /// An unrecognized or obsolete load command.
@@ -491,6 +507,21 @@ impl<E: Endian> macho::LinkeditDataCommand<E> {
             )
             .read_error("Invalid exports trie offset or size")?;
         Ok(ExportsTrieIterator::new(data))
+    }
+}
+
+impl<E: Endian> macho::BuildVersionCommand<E> {
+    /// Get the array of tools versions from the data following the build version command.
+    ///
+    /// Returns `Err` for invalid values.
+    pub fn tools<'data>(
+        &self,
+        endian: E,
+        version_data: &'data [u8],
+    ) -> Result<&'data [macho::BuildToolVersion<E>]> {
+        version_data
+            .read_slice_at(0, self.ntools.get(endian) as usize)
+            .read_error("Invalid Mach-O number of tools")
     }
 }
 

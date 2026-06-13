@@ -674,7 +674,7 @@ fn print_load_command<Mach: MachHeader>(
                     p.field_hex("Size", x.size.get(endian));
                 });
             }
-            LoadCommandVariant::BuildVersion(x) => {
+            LoadCommandVariant::BuildVersion(x, data) => {
                 p.group("BuildVersionCommand", |p| {
                     p.field_consts("Cmd", x.cmd.get(endian), LoadCommandType::NAMES);
                     p.field_hex("CmdSize", x.cmdsize.get(endian));
@@ -682,7 +682,14 @@ fn print_load_command<Mach: MachHeader>(
                     p.field("MinOs", x.minos.get(endian));
                     p.field("Sdk", x.sdk.get(endian));
                     p.field_hex("NumberOfTools", x.ntools.get(endian));
-                    // TODO: dump tools
+                    if let Some(tools) = x.tools(endian, data).print_err(p) {
+                        for tool in tools {
+                            p.group("BuildToolVersion", |p| {
+                                p.field_consts("Tool", tool.tool.get(endian), Tool::NAMES);
+                                p.field("Version", tool.version.get(endian));
+                            });
+                        }
+                    }
                 });
             }
             LoadCommandVariant::FilesetEntry(x) => {

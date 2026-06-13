@@ -335,6 +335,10 @@ BuildVersionCommand {
     MinOs: 12.0.0
     Sdk: 13.1.0
     NumberOfTools: 0x1
+    BuildToolVersion {
+        Tool: TOOL_LD (0x3)
+        Version: 820.1.0
+    }
 }
 SourceVersionCommand {
     Cmd: LC_SOURCE_VERSION (0x2A)
