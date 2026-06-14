@@ -32,7 +32,7 @@ pub use coff::CoffExportStyle;
 pub mod elf;
 
 #[cfg(feature = "macho")]
-mod macho;
+pub mod macho;
 #[cfg(feature = "macho")]
 pub use macho::MachOBuildVersion;
 

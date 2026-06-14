@@ -260,6 +260,7 @@ pub(crate) fn align(offset: u64, size: u64) -> u64 {
     (offset + (size - 1)) & !(size - 1)
 }
 
+#[allow(dead_code)]
 pub(crate) fn write_align<W: WritableBuffer + ?Sized>(buffer: &mut W, size: u64) {
     let new_len = align(buffer.len(), size);
     buffer.resize(new_len);
