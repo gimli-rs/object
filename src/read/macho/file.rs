@@ -205,12 +205,19 @@ where
     }
 
     /// Return the `LC_BUILD_VERSION` load command if present.
-    pub fn build_version(&self) -> Result<Option<&'data macho::BuildVersionCommand<Mach::Endian>>> {
+    pub fn build_version(
+        &self,
+    ) -> Result<
+        Option<(
+            &'data macho::BuildVersionCommand<Mach::Endian>,
+            &'data [macho::BuildToolVersion<Mach::Endian>],
+        )>,
+    > {
         let mut commands =
             self.header
                 .load_commands(self.endian, self.data.0, self.header_offset)?;
         while let Some(command) = commands.next()? {
-            if let Some(build_version) = command.build_version()? {
+            if let Some(build_version) = command.build_version(self.endian)? {
                 return Ok(Some(build_version));
             }
         }

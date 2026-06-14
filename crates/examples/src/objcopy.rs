@@ -167,7 +167,7 @@ pub fn copy(in_data: &[u8]) -> Vec<u8> {
         });
     }
 
-    if let Some(in_build_version) = match &in_object {
+    if let Some((in_build_version, _tools)) = match &in_object {
         object::File::MachO32(file) => file.build_version().unwrap(),
         object::File::MachO64(file) => file.build_version().unwrap(),
         _ => None,
@@ -176,6 +176,7 @@ pub fn copy(in_data: &[u8]) -> Vec<u8> {
         out_build_version.platform = in_build_version.platform.get(in_object.endianness());
         out_build_version.minos = in_build_version.minos.get(in_object.endianness());
         out_build_version.sdk = in_build_version.sdk.get(in_object.endianness());
+        // TODO: set tools
         out_object.set_macho_build_version(out_build_version);
     }
 
