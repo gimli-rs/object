@@ -381,6 +381,9 @@ fn print_load_command<Mach: MachHeader>(
             LoadCommandVariant::Symtab(symtab) => {
                 print_symtab::<Mach>(p, endian, state.linkedit_data, symtab, state);
             }
+            LoadCommandVariant::Dysymtab(dysymtab) => {
+                print_dysymtab::<Mach>(p, endian, dysymtab);
+            }
             LoadCommandVariant::LinkeditData(linkedit) => {
                 print_linkedit_data::<Mach>(p, endian, linkedit, state);
             }
@@ -393,37 +396,13 @@ fn print_load_command<Mach: MachHeader>(
             LoadCommandVariant::Segment32(..)
             | LoadCommandVariant::Segment64(..)
             | LoadCommandVariant::Symtab(..)
+            | LoadCommandVariant::Dysymtab(..)
             | LoadCommandVariant::LinkeditData(..) => {}
             LoadCommandVariant::Thread(x, _thread_data) => {
                 p.group("ThreadCommand", |p| {
                     p.field_consts("Cmd", x.cmd.get(endian), LoadCommandType::NAMES);
                     p.field_hex("CmdSize", x.cmdsize.get(endian));
                     // TODO: thread_data
-                });
-            }
-            LoadCommandVariant::Dysymtab(x) => {
-                p.group("DysymtabCommand", |p| {
-                    p.field_consts("Cmd", x.cmd.get(endian), LoadCommandType::NAMES);
-                    p.field_hex("CmdSize", x.cmdsize.get(endian));
-                    // TODO: dump the tables these are all pointing to
-                    p.field("IndexOfLocalSymbols", x.ilocalsym.get(endian));
-                    p.field("NumberOfLocalSymbols", x.nlocalsym.get(endian));
-                    p.field("IndexOfExternallyDefinedSymbols", x.iextdefsym.get(endian));
-                    p.field("NumberOfExternallyDefinedSymbols", x.nextdefsym.get(endian));
-                    p.field("IndexOfUndefinedSymbols", x.iundefsym.get(endian));
-                    p.field("NumberOfUndefinedSymbols", x.nundefsym.get(endian));
-                    p.field_hex("TocOffset", x.tocoff.get(endian));
-                    p.field("NumberOfTocEntries", x.ntoc.get(endian));
-                    p.field_hex("ModuleTableOffset", x.modtaboff.get(endian));
-                    p.field("NumberOfModuleTableEntries", x.nmodtab.get(endian));
-                    p.field_hex("ExternalRefSymbolOffset", x.extrefsymoff.get(endian));
-                    p.field("NumberOfExternalRefSymbols", x.nextrefsyms.get(endian));
-                    p.field_hex("IndirectSymbolOffset", x.indirectsymoff.get(endian));
-                    p.field("NumberOfIndirectSymbols", x.nindirectsyms.get(endian));
-                    p.field_hex("ExternalRelocationOffset", x.extreloff.get(endian));
-                    p.field("NumberOfExternalRelocations", x.nextrel.get(endian));
-                    p.field_hex("LocalRelocationOffset", x.locreloff.get(endian));
-                    p.field("NumberOfLocalRelocations", x.nlocrel.get(endian));
                 });
             }
             LoadCommandVariant::Dylib(x) | LoadCommandVariant::IdDylib(x) => {
@@ -876,6 +855,51 @@ fn print_symtab<Mach: MachHeader>(
         p.field_hex("StringOffset", symtab.stroff.get(endian));
         p.field_hex("StringSize", symtab.strsize.get(endian));
         print_symtab_symbols::<Mach>(p, endian, data, symtab, state);
+    });
+}
+
+fn print_dysymtab<Mach: MachHeader>(
+    p: &mut Printer<'_>,
+    endian: Mach::Endian,
+    dysymtab: &DysymtabCommand<Mach::Endian>,
+) {
+    if !p.options.macho_load_commands && !p.options.symbols {
+        return;
+    }
+    p.group("DysymtabCommand", |p| {
+        p.field_consts("Cmd", dysymtab.cmd.get(endian), LoadCommandType::NAMES);
+        p.field_hex("CmdSize", dysymtab.cmdsize.get(endian));
+        // TODO: dump the tables these are all pointing to
+        p.field("IndexOfLocalSymbols", dysymtab.ilocalsym.get(endian));
+        p.field("NumberOfLocalSymbols", dysymtab.nlocalsym.get(endian));
+        p.field(
+            "IndexOfExternallyDefinedSymbols",
+            dysymtab.iextdefsym.get(endian),
+        );
+        p.field(
+            "NumberOfExternallyDefinedSymbols",
+            dysymtab.nextdefsym.get(endian),
+        );
+        p.field("IndexOfUndefinedSymbols", dysymtab.iundefsym.get(endian));
+        p.field("NumberOfUndefinedSymbols", dysymtab.nundefsym.get(endian));
+        p.field_hex("TocOffset", dysymtab.tocoff.get(endian));
+        p.field("NumberOfTocEntries", dysymtab.ntoc.get(endian));
+        p.field_hex("ModuleTableOffset", dysymtab.modtaboff.get(endian));
+        p.field("NumberOfModuleTableEntries", dysymtab.nmodtab.get(endian));
+        p.field_hex("ExternalRefSymbolOffset", dysymtab.extrefsymoff.get(endian));
+        p.field(
+            "NumberOfExternalRefSymbols",
+            dysymtab.nextrefsyms.get(endian),
+        );
+        p.field_hex("IndirectSymbolOffset", dysymtab.indirectsymoff.get(endian));
+        p.field(
+            "NumberOfIndirectSymbols",
+            dysymtab.nindirectsyms.get(endian),
+        );
+        p.field_hex("ExternalRelocationOffset", dysymtab.extreloff.get(endian));
+        p.field("NumberOfExternalRelocations", dysymtab.nextrel.get(endian));
+        p.field_hex("LocalRelocationOffset", dysymtab.locreloff.get(endian));
+        p.field("NumberOfLocalRelocations", dysymtab.nlocrel.get(endian));
     });
 }
 

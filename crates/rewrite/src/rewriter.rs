@@ -1,6 +1,7 @@
 use std::collections::{HashMap, HashSet};
 
 use object::build;
+use object::read::FileKind;
 
 use super::{Error, Result};
 
@@ -30,6 +31,8 @@ pub struct Options {
     pub rename_sections: HashMap<Vec<u8>, Vec<u8>>,
     /// Options that are specific to ELF files.
     pub elf: super::ElfOptions,
+    /// Options that are specific to Mach-O files.
+    pub macho: super::MachOOptions,
 }
 
 /// A rewriter for object and executable files.
@@ -37,14 +40,22 @@ pub struct Options {
 /// This struct provides a way to read a file, modify it, and write it back.
 #[derive(Debug)]
 pub struct Rewriter<'data> {
-    pub(crate) builder: build::elf::Builder<'data>,
+    pub(crate) builder: Builder<'data>,
     pub(crate) modified: bool,
 }
 
 impl<'data> Rewriter<'data> {
     /// Read a file and create a new rewriter.
     pub fn read(data: &'data [u8]) -> Result<Self> {
-        let builder = build::elf::Builder::read(data).map_err(Error::parse)?;
+        let builder = match FileKind::parse(data).map_err(|err| Error::parse(err.into()))? {
+            FileKind::Elf32 => build::elf::Builder::read32(data).map(Builder::Elf),
+            FileKind::Elf64 => build::elf::Builder::read64(data).map(Builder::Elf),
+            FileKind::MachO32 => build::macho::Builder::read32(data).map(Builder::MachO),
+            FileKind::MachO64 => build::macho::Builder::read64(data).map(Builder::MachO),
+            #[allow(unreachable_patterns)]
+            _ => return Err(Error::file_kind("Unsupported file format")),
+        }
+        .map_err(Error::parse)?;
         Ok(Self {
             builder,
             modified: false,
@@ -54,8 +65,12 @@ impl<'data> Rewriter<'data> {
     /// Write the file to an output stream.
     pub fn write<W: std::io::Write>(mut self, w: W) -> Result<()> {
         self.elf_finalize()?;
+        self.macho_finalize()?;
         let mut buffer = object::write::StreamingBuffer::new(w);
-        self.builder.write(&mut buffer).map_err(Error::write)?;
+        match self.builder {
+            Builder::Elf(builder) => builder.write(&mut buffer).map_err(Error::write)?,
+            Builder::MachO(builder) => builder.write(&mut buffer).map_err(Error::write)?,
+        }
         buffer.result().map_err(Error::io)
     }
 
@@ -71,9 +86,10 @@ impl<'data> Rewriter<'data> {
             self.delete_sections(&options.delete_sections);
         }
         if !options.rename_sections.is_empty() {
-            self.rename_sections(&options.rename_sections);
+            self.rename_sections(&options.rename_sections)?;
         }
         self.elf_modify(options.elf)?;
+        self.macho_modify(options.macho)?;
         Ok(())
     }
 
@@ -84,6 +100,7 @@ impl<'data> Rewriter<'data> {
     pub fn delete_symbols(&mut self, names: &HashSet<Vec<u8>>) {
         self.elf_delete_symbols(names);
         self.elf_delete_dynamic_symbols(names);
+        self.macho_delete_symbols(names);
     }
 
     /// Rename symbols in the symbol table.
@@ -95,17 +112,26 @@ impl<'data> Rewriter<'data> {
     pub fn rename_symbols(&mut self, names: &HashMap<Vec<u8>, Vec<u8>>) {
         self.elf_rename_symbols(names);
         self.elf_rename_dynamic_symbols(names);
+        self.macho_rename_symbols(names);
     }
 
     /// Delete sections from the file.
     pub fn delete_sections(&mut self, names: &HashSet<Vec<u8>>) {
         self.elf_delete_sections(names);
+        self.macho_delete_sections(names);
     }
 
     /// Rename sections in the file.
     ///
     /// The `names` map is from old names to new names.
-    pub fn rename_sections(&mut self, names: &HashMap<Vec<u8>, Vec<u8>>) {
+    pub fn rename_sections(&mut self, names: &HashMap<Vec<u8>, Vec<u8>>) -> Result<()> {
         self.elf_rename_sections(names);
+        self.macho_rename_sections(names)
     }
+}
+
+#[derive(Debug)]
+pub(crate) enum Builder<'data> {
+    Elf(build::elf::Builder<'data>),
+    MachO(build::macho::Builder<'data>),
 }

@@ -10,6 +10,7 @@ pub struct Error {
 #[derive(Debug)]
 enum ErrorInner {
     Io(io::Error),
+    FileKind(String),
     Parse(build::Error),
     Write(build::Error),
     Modify(String),
@@ -33,6 +34,7 @@ impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match &self.inner {
             ErrorInner::Io(e) => e.fmt(f),
+            ErrorInner::FileKind(e) => e.fmt(f),
             ErrorInner::Parse(e) => e.fmt(f),
             ErrorInner::Write(e) => e.fmt(f),
             ErrorInner::Modify(e) => e.fmt(f),
@@ -47,7 +49,7 @@ impl Error {
     pub fn kind(&self) -> ErrorKind {
         match &self.inner {
             ErrorInner::Io(e) => ErrorKind::Io(e.kind()),
-            ErrorInner::Parse(_) => ErrorKind::Parse,
+            ErrorInner::FileKind(_) | ErrorInner::Parse(_) => ErrorKind::Parse,
             ErrorInner::Write(_) => ErrorKind::Write,
             ErrorInner::Modify(_) => ErrorKind::Modify,
         }
@@ -56,6 +58,12 @@ impl Error {
     pub(crate) fn io(error: io::Error) -> Self {
         Self {
             inner: ErrorInner::Io(error),
+        }
+    }
+
+    pub(crate) fn file_kind(message: impl Into<String>) -> Self {
+        Self {
+            inner: ErrorInner::FileKind(message.into()),
         }
     }
 

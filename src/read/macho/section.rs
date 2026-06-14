@@ -1,5 +1,5 @@
 use core::fmt::Debug;
-use core::{fmt, mem, result, slice, str};
+use core::{fmt, mem, slice, str};
 
 use crate::endian::{self, Endianness, U32};
 use crate::macho;
@@ -328,13 +328,10 @@ pub trait Section: Debug + Pod {
     ///
     /// Returns `Ok(&[])` if the section has no data.
     /// Returns `Err` for invalid values.
-    fn data<'data, R: ReadRef<'data>>(
-        &self,
-        endian: Self::Endian,
-        data: R,
-    ) -> result::Result<&'data [u8], ()> {
+    fn data<'data, R: ReadRef<'data>>(&self, endian: Self::Endian, data: R) -> Result<&'data [u8]> {
         if let Some((offset, size)) = self.file_range(endian) {
             data.read_bytes_at(offset, size)
+                .read_error("Invalid Mach-O section size or offset")
         } else {
             Ok(&[])
         }

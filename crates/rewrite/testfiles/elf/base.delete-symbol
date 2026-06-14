@@ -316,6 +316,49 @@ SectionHeader {
     Info: 0
     AddressAlign: 0x8
     EntrySize: 0x18
+    Relocation {
+        Offset: 0x200DA8
+        Type: R_X86_64_RELATIVE (0x8)
+        Symbol: 0x0
+        Addend: 0x670
+    }
+    Relocation {
+        Offset: 0x200DB0
+        Type: R_X86_64_RELATIVE (0x8)
+        Symbol: 0x0
+        Addend: 0x630
+    }
+    Relocation {
+        Offset: 0x201008
+        Type: R_X86_64_RELATIVE (0x8)
+        Symbol: 0x0
+        Addend: 0x201008
+    }
+    Relocation {
+        Offset: 0x200FD8
+        Type: R_X86_64_GLOB_DAT (0x6)
+        Symbol: "_ITM_deregisterTMCloneTable"
+    }
+    Relocation {
+        Offset: 0x200FE0
+        Type: R_X86_64_GLOB_DAT (0x6)
+        Symbol: "__libc_start_main"
+    }
+    Relocation {
+        Offset: 0x200FE8
+        Type: R_X86_64_GLOB_DAT (0x6)
+        Symbol: "__gmon_start__"
+    }
+    Relocation {
+        Offset: 0x200FF0
+        Type: R_X86_64_GLOB_DAT (0x6)
+        Symbol: "_ITM_registerTMCloneTable"
+    }
+    Relocation {
+        Offset: 0x200FF8
+        Type: R_X86_64_GLOB_DAT (0x6)
+        Symbol: "__cxa_finalize"
+    }
 }
 SectionHeader {
     Index: 11
