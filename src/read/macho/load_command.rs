@@ -465,6 +465,15 @@ impl<E: Endian> macho::DysymtabCommand<E> {
 }
 
 impl<E: Endian> macho::LinkeditDataCommand<E> {
+    /// Return the linkedit data referenced by the command.
+    pub fn data<'data, R: ReadRef<'data>>(&self, endian: E, data: R) -> Result<&'data [u8]> {
+        data.read_bytes_at(
+            self.dataoff.get(endian).into(),
+            self.datasize.get(endian).into(),
+        )
+        .read_error("Invalid linkedit offset or size")
+    }
+
     /// Return an iterator over the function start addresses.
     ///
     /// Only works if the command is a `LC_FUNCTION_STARTS` command.
@@ -480,12 +489,7 @@ impl<E: Endian> macho::LinkeditDataCommand<E> {
         if self.cmd.get(endian) != macho::LC_FUNCTION_STARTS {
             return Err(Error("Not a function starts command"));
         }
-        let data = data
-            .read_bytes_at(
-                self.dataoff.get(endian).into(),
-                self.datasize.get(endian).into(),
-            )
-            .read_error("Invalid function starts offset or size")?;
+        let data = self.data(endian, data)?;
         Ok(FunctionStartsIterator::new(data, text_segment_addr))
     }
 
@@ -500,12 +504,7 @@ impl<E: Endian> macho::LinkeditDataCommand<E> {
         if self.cmd.get(endian) != macho::LC_DYLD_EXPORTS_TRIE {
             return Err(Error("Not an exports trie command"));
         }
-        let data = data
-            .read_bytes_at(
-                self.dataoff.get(endian).into(),
-                self.datasize.get(endian).into(),
-            )
-            .read_error("Invalid exports trie offset or size")?;
+        let data = self.data(endian, data)?;
         Ok(ExportsTrieIterator::new(data))
     }
 }

@@ -35,3 +35,6 @@ pub use rewriter::{Options, Rewriter};
 
 mod elf;
 pub use elf::ElfOptions;
+
+mod macho;
+pub use macho::MachOOptions;

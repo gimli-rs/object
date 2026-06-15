@@ -55,6 +55,16 @@ impl<'data, Mach: MachHeader, R: ReadRef<'data>> SymbolTable<'data, Mach, R> {
         self.symbols.iter()
     }
 
+    /// Iterate over the symbols and their indices.
+    #[inline]
+    pub fn enumerate(
+        &self,
+    ) -> impl Iterator<Item = (SymbolIndex, &'data Mach::Nlist)> + use<'data, Mach, R> {
+        self.iter()
+            .enumerate()
+            .map(|(i, sym)| (SymbolIndex(i), sym))
+    }
+
     /// Return true if the symbol table is empty.
     #[inline]
     pub fn is_empty(&self) -> bool {
@@ -72,6 +82,15 @@ impl<'data, Mach: MachHeader, R: ReadRef<'data>> SymbolTable<'data, Mach, R> {
         self.symbols
             .get(index.0)
             .read_error("Invalid Mach-O symbol index")
+    }
+
+    /// Return the symbol name for the given symbol.
+    pub fn symbol_name(
+        &self,
+        endian: Mach::Endian,
+        symbol: &'data Mach::Nlist,
+    ) -> read::Result<&'data [u8]> {
+        symbol.name(endian, self.strings)
     }
 
     /// Construct a map from addresses to a user-defined map entry.

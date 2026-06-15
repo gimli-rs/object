@@ -1,0 +1,71 @@
+Format: Mach-O 64-bit
+SegmentCommand {
+    Cmd: LC_SEGMENT_64 (0x19)
+    CmdSize: 0x138
+    SegmentName: ""
+    VmAddress: 0x0
+    VmSize: 0x88
+    FileOffset: 0x1D8
+    FileSize: 0x88
+    MaxProt: 0x7
+        VM_PROT_READ (0x1)
+        VM_PROT_WRITE (0x2)
+        VM_PROT_EXECUTE (0x4)
+    InitProt: 0x7
+        VM_PROT_READ (0x1)
+        VM_PROT_WRITE (0x2)
+        VM_PROT_EXECUTE (0x4)
+    NumberOfSections: 3
+    Flags: 0x0
+    Section {
+        Index: 1
+        SectionName: "__text"
+        SegmentName: "__TEXT"
+        Address: 0x0
+        Size: 0x25
+        Offset: 0x1D8
+        Align: 0x4
+        RelocationOffset: 0x260
+        NumberOfRelocations: 0x2
+        Flags: 0x80000400
+            S_REGULAR (0x0)
+            S_ATTR_PURE_INSTRUCTIONS (0x80000000)
+            S_ATTR_SOME_INSTRUCTIONS (0x400)
+        Reserved1: 0x0
+        Reserved2: 0x0
+    }
+    Section {
+        Index: 2
+        SectionName: "__compact_unwind"
+        SegmentName: "__LD"
+        Address: 0x38
+        Size: 0x20
+        Offset: 0x200
+        Align: 0x3
+        RelocationOffset: 0x270
+        NumberOfRelocations: 0x1
+        Flags: 0x2000000
+            S_REGULAR (0x0)
+            S_ATTR_DEBUG (0x2000000)
+        Reserved1: 0x0
+        Reserved2: 0x0
+    }
+    Section {
+        Index: 3
+        SectionName: "__eh_frame"
+        SegmentName: "__TEXT"
+        Address: 0x58
+        Size: 0x40
+        Offset: 0x220
+        Align: 0x3
+        RelocationOffset: 0x0
+        NumberOfRelocations: 0x0
+        Flags: 0x6800000B
+            S_COALESCED (0xB)
+            S_ATTR_NO_TOC (0x40000000)
+            S_ATTR_STRIP_STATIC_SYMS (0x20000000)
+            S_ATTR_LIVE_SUPPORT (0x8000000)
+        Reserved1: 0x0
+        Reserved2: 0x0
+    }
+}

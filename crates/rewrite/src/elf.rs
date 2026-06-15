@@ -5,6 +5,7 @@ use log::info;
 use object::{build, elf};
 
 use super::{Error, Result, Rewriter};
+use crate::rewriter::Builder;
 
 /// Options for modifying an ELF file.
 ///
@@ -64,7 +65,10 @@ pub struct ElfOptions {
 impl Rewriter<'_> {
     /// Delete symbols from the symbol table.
     pub fn elf_delete_symbols(&mut self, names: &HashSet<Vec<u8>>) {
-        for symbol in &mut self.builder.dynamic_symbols {
+        let Builder::Elf(builder) = &mut self.builder else {
+            return;
+        };
+        for symbol in &mut builder.symbols {
             if names.contains(&*symbol.name) {
                 #[cfg(feature = "logging")]
                 info!("Deleting symbol {}", symbol.name);
@@ -76,7 +80,10 @@ impl Rewriter<'_> {
 
     /// Delete symbols from the dynamic symbol table.
     pub fn elf_delete_dynamic_symbols(&mut self, names: &HashSet<Vec<u8>>) {
-        for symbol in &mut self.builder.symbols {
+        let Builder::Elf(builder) = &mut self.builder else {
+            return;
+        };
+        for symbol in &mut builder.dynamic_symbols {
             if names.contains(&*symbol.name) {
                 #[cfg(feature = "logging")]
                 info!("Deleting dynamic symbol {}", symbol.name);
@@ -90,7 +97,10 @@ impl Rewriter<'_> {
     ///
     /// The `names` map is from old names to new names.
     pub fn elf_rename_symbols(&mut self, names: &HashMap<Vec<u8>, Vec<u8>>) {
-        for symbol in &mut self.builder.dynamic_symbols {
+        let Builder::Elf(builder) = &mut self.builder else {
+            return;
+        };
+        for symbol in &mut builder.symbols {
             if let Some(name) = names.get(&*symbol.name) {
                 let name = name.clone().into();
                 #[cfg(feature = "logging")]
@@ -105,7 +115,10 @@ impl Rewriter<'_> {
     ///
     /// The `names` map is from old names to new names.
     pub fn elf_rename_dynamic_symbols(&mut self, names: &HashMap<Vec<u8>, Vec<u8>>) {
-        for symbol in &mut self.builder.dynamic_symbols {
+        let Builder::Elf(builder) = &mut self.builder else {
+            return;
+        };
+        for symbol in &mut builder.dynamic_symbols {
             if let Some(name) = names.get(&*symbol.name) {
                 let name = name.clone().into();
                 #[cfg(feature = "logging")]
@@ -117,7 +130,10 @@ impl Rewriter<'_> {
     }
 
     pub(crate) fn elf_delete_sections(&mut self, names: &HashSet<Vec<u8>>) {
-        for section in &mut self.builder.sections {
+        let Builder::Elf(builder) = &mut self.builder else {
+            return;
+        };
+        for section in &mut builder.sections {
             if names.contains(&*section.name) {
                 #[cfg(feature = "logging")]
                 info!("Deleting section {}", section.name);
@@ -129,7 +145,10 @@ impl Rewriter<'_> {
     }
 
     pub(crate) fn elf_rename_sections(&mut self, names: &HashMap<Vec<u8>, Vec<u8>>) {
-        for section in &mut self.builder.sections {
+        let Builder::Elf(builder) = &mut self.builder else {
+            return;
+        };
+        for section in &mut builder.sections {
             if let Some(name) = names.get(&*section.name) {
                 let name = name.clone().into();
                 #[cfg(feature = "logging")]
@@ -179,8 +198,10 @@ impl Rewriter<'_> {
 
     /// Add a `DT_DEBUG` entry to the dynamic section.
     pub fn elf_add_dynamic_debug(&mut self) -> Result<()> {
-        let dynamic = self
-            .builder
+        let Builder::Elf(builder) = &mut self.builder else {
+            return Err(Error::modify("Not an ELF file; can't add debug entry"))?;
+        };
+        let dynamic = builder
             .dynamic_data_mut()
             .ok_or_else(|| Error::modify("No dynamic section found; can't add debug entry"))?;
         if dynamic.iter().any(|entry| entry.tag() == elf::DT_DEBUG) {
@@ -199,7 +220,10 @@ impl Rewriter<'_> {
 
     /// Find the first `DT_RUNPATH` or `DT_RPATH` entry in the dynamic section.
     pub fn elf_runpath(&self) -> Option<&[u8]> {
-        let dynamic = self.builder.dynamic_data()?;
+        let Builder::Elf(builder) = &self.builder else {
+            return None;
+        };
+        let dynamic = builder.dynamic_data()?;
         for entry in dynamic.iter() {
             let build::elf::Dynamic::String { tag, val } = entry else {
                 continue;
@@ -214,8 +238,10 @@ impl Rewriter<'_> {
 
     /// Delete any `DT_RUNPATH` or `DT_RPATH` entries in the dynamic section.
     pub fn elf_delete_runpath(&mut self) -> Result<()> {
-        let dynamic = self
-            .builder
+        let Builder::Elf(builder) = &mut self.builder else {
+            return Err(Error::modify("Not an ELF file; can't delete runpath"))?;
+        };
+        let dynamic = builder
             .dynamic_data_mut()
             .ok_or_else(|| Error::modify("No dynamic section found; can't delete runpath"))?;
         let mut modified = false;
@@ -245,8 +271,10 @@ impl Rewriter<'_> {
 
     /// Set the path for any `DT_RUNPATH` or `DT_RPATH` entry in the dynamic section.
     pub fn elf_set_runpath(&mut self, runpath: Vec<u8>) -> Result<()> {
-        let dynamic = self
-            .builder
+        let Builder::Elf(builder) = &mut self.builder else {
+            return Err(Error::modify("Not an ELF file; can't set runpath"))?;
+        };
+        let dynamic = builder
             .dynamic_data_mut()
             .ok_or_else(|| Error::modify("No dynamic section found; can't set runpath"))?;
         let mut found = false;
@@ -286,8 +314,10 @@ impl Rewriter<'_> {
 
     /// Add additional paths to any `DT_RUNPATH` or `DT_RPATH` entry in the dynamic section.
     pub fn elf_add_runpath(&mut self, runpaths: &[Vec<u8>]) -> Result<()> {
-        let dynamic = self
-            .builder
+        let Builder::Elf(builder) = &mut self.builder else {
+            return Err(Error::modify("Not an ELF file; can't add runpath"))?;
+        };
+        let dynamic = builder
             .dynamic_data_mut()
             .ok_or_else(|| Error::modify("No dynamic section found; can't add runpath"))?;
         let mut found = false;
@@ -332,8 +362,10 @@ impl Rewriter<'_> {
 
     /// Change any `DT_RPATH` entry in the dynamic section to `DT_RUNPATH`.
     pub fn elf_use_runpath(&mut self) -> Result<()> {
-        let dynamic = self
-            .builder
+        let Builder::Elf(builder) = &mut self.builder else {
+            return Err(Error::modify("Not an ELF file; can't change runpath"))?;
+        };
+        let dynamic = builder
             .dynamic_data_mut()
             .ok_or_else(|| Error::modify("No dynamic section found; can't change runpath"))?;
         for entry in dynamic.iter_mut() {
@@ -354,8 +386,10 @@ impl Rewriter<'_> {
 
     /// Change any `DT_RUNPATH` entry in the dynamic section to `DT_RPATH`.
     pub fn elf_use_rpath(&mut self) -> Result<()> {
-        let dynamic = self
-            .builder
+        let Builder::Elf(builder) = &mut self.builder else {
+            return Err(Error::modify("Not an ELF file; can't change rpath"))?;
+        };
+        let dynamic = builder
             .dynamic_data_mut()
             .ok_or_else(|| Error::modify("No dynamic section found; can't change rpath"))?;
         for entry in dynamic.iter_mut() {
@@ -376,7 +410,11 @@ impl Rewriter<'_> {
 
     /// Find the `DT_NEEDED` entries in the dynamic section.
     pub fn elf_needed(&self) -> impl Iterator<Item = &[u8]> {
-        let dynamic = self.builder.dynamic_data().unwrap_or(&[]);
+        let dynamic = if let Builder::Elf(builder) = &self.builder {
+            builder.dynamic_data().unwrap_or(&[])
+        } else {
+            &[]
+        };
         dynamic.iter().filter_map(|entry| {
             if let build::elf::Dynamic::String { tag, val } = entry
                 && *tag == elf::DT_NEEDED
@@ -389,7 +427,12 @@ impl Rewriter<'_> {
 
     /// Delete `DT_NEEDED` entries from the dynamic section.
     pub fn elf_delete_needed(&mut self, names: &HashSet<Vec<u8>>) -> Result<()> {
-        let dynamic = self.builder.dynamic_data_mut().ok_or_else(|| {
+        let Builder::Elf(builder) = &mut self.builder else {
+            return Err(Error::modify(
+                "Not an ELF file; can't delete needed library",
+            ))?;
+        };
+        let dynamic = builder.dynamic_data_mut().ok_or_else(|| {
             Error::modify("No dynamic section found; can't delete needed library")
         })?;
         let mut modified = false;
@@ -414,7 +457,12 @@ impl Rewriter<'_> {
 
     /// Replace `DT_NEEDED` entries in the dynamic section.
     pub fn elf_replace_needed(&mut self, names: &HashMap<Vec<u8>, Vec<u8>>) -> Result<()> {
-        let dynamic = self.builder.dynamic_data_mut().ok_or_else(|| {
+        let Builder::Elf(builder) = &mut self.builder else {
+            return Err(Error::modify(
+                "Not an ELF file; can't replace needed library",
+            ))?;
+        };
+        let dynamic = builder.dynamic_data_mut().ok_or_else(|| {
             Error::modify("No dynamic section found; can't replace needed library")
         })?;
         for entry in dynamic.iter_mut() {
@@ -441,8 +489,10 @@ impl Rewriter<'_> {
     ///
     /// This does not add a `DT_NEEDED` entry if the library is already listed.
     pub fn elf_add_needed(&mut self, names: &[Vec<u8>]) -> Result<()> {
-        let dynamic = self
-            .builder
+        let Builder::Elf(builder) = &mut self.builder else {
+            return Err(Error::modify("Not an ELF file; can't add needed library"))?;
+        };
+        let dynamic = builder
             .dynamic_data_mut()
             .ok_or_else(|| Error::modify("No dynamic section found; can't add needed library"))?;
         let mut found = HashSet::new();
@@ -477,8 +527,11 @@ impl Rewriter<'_> {
 
     /// Find the `DT_SONAME` entry in the dynamic section.
     pub fn elf_soname(&self) -> Option<&[u8]> {
-        let id = self.builder.dynamic_section()?;
-        let section = self.builder.sections.get(id);
+        let Builder::Elf(builder) = &self.builder else {
+            return None;
+        };
+        let id = builder.dynamic_section()?;
+        let section = builder.sections.get(id);
         let build::elf::SectionData::Dynamic(dynamic) = &section.data else {
             return None;
         };
@@ -497,8 +550,10 @@ impl Rewriter<'_> {
 
     /// Set the `DT_SONAME` entry in the dynamic section.
     pub fn elf_set_soname(&mut self, soname: Vec<u8>) -> Result<()> {
-        let dynamic = self
-            .builder
+        let Builder::Elf(builder) = &mut self.builder else {
+            return Err(Error::modify("Not an ELF file; can't set soname"))?;
+        };
+        let dynamic = builder
             .dynamic_data_mut()
             .ok_or_else(|| Error::modify("No dynamic section found; can't set soname"))?;
         let mut found = false;
@@ -530,15 +585,20 @@ impl Rewriter<'_> {
 
     /// Find the interpreter path in the `PT_INTERP` segment.
     pub fn elf_interpreter(&self) -> Option<&[u8]> {
-        self.builder.interp_data()
+        let Builder::Elf(builder) = &self.builder else {
+            return None;
+        };
+        builder.interp_data()
     }
 
     /// Set the interpreter path in the `PT_INTERP` segment.
     ///
     /// The null terminator is automatically added if needed.
     pub fn elf_set_interpreter(&mut self, mut interpreter: Vec<u8>) -> Result<()> {
-        let data = self
-            .builder
+        let Builder::Elf(builder) = &mut self.builder else {
+            return Err(Error::modify("Not an ELF file; can't set interpreter"))?;
+        };
+        let data = builder
             .interp_data_mut()
             .ok_or_else(|| Error::modify("No interp section found; can't set interpreter"))?;
         #[cfg(feature = "logging")]
@@ -555,8 +615,11 @@ impl Rewriter<'_> {
     }
 
     pub(crate) fn elf_finalize(&mut self) -> Result<()> {
+        let Builder::Elf(builder) = &mut self.builder else {
+            return Ok(());
+        };
         if self.modified {
-            move_sections(&mut self.builder)?;
+            move_sections(builder)?;
         }
         Ok(())
     }
