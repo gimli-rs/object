@@ -1,0 +1,64 @@
+Format: Omf Little-endian 32-bit
+Kind: Relocatable
+Architecture: I386
+Flags: None
+Relative Address Base: 0
+Entry Address: 0
+Segment { name: "_TEXT", address: 0, size: 81, permissions: R-X }
+Segment { name: "CONST", address: 0, size: 0, permissions: R-- }
+Segment { name: "CONST2", address: 0, size: 0, permissions: R-- }
+Segment { name: "_DATA", address: 0, size: 0, permissions: RW- }
+Segment { name: "_BSS", address: 0, size: 0, permissions: RW- }
+Segment { name: "$$SYMBOLS", address: 0, size: aa, permissions: R-- }
+Segment { name: "$$TYPES", address: 0, size: bd, permissions: R-- }
+Segment { name: "W?foo1$n(i)i", address: 0, size: 31, permissions: R-X }
+Segment { name: "W?foo2$n(i)i", address: 0, size: 30, permissions: R-X }
+Segment { name: "$$TYPES", address: 0, size: 2d, permissions: R-- }
+1: Section { name: "_TEXT", address: 0, size: 81, align: 4, kind: Text, flags: None }
+2: Section { name: "CONST", address: 0, size: 0, align: 4, kind: ReadOnlyData, flags: None }
+3: Section { name: "CONST2", address: 0, size: 0, align: 4, kind: ReadOnlyData, flags: None }
+4: Section { name: "_DATA", address: 0, size: 0, align: 4, kind: Data, flags: None }
+5: Section { name: "_BSS", address: 0, size: 0, align: 4, kind: UninitializedData, flags: None }
+6: Section { name: "$$SYMBOLS", address: 0, size: aa, align: 1, kind: Debug, flags: None }
+7: Section { name: "$$TYPES", address: 0, size: bd, align: 1, kind: Debug, flags: None }
+8: Section { name: "W?foo1$n(i)i", address: 0, size: 31, align: 4, kind: Text, flags: None }
+9: Section { name: "W?foo2$n(i)i", address: 0, size: 30, align: 4, kind: Text, flags: None }
+10: Section { name: "$$TYPES", address: 0, size: 2d, align: 1, kind: Debug, flags: None }
+Comdat { symbol: SymbolIndex(2), name: "W?foo1$n(i)i", kind: Any } Sections: 8
+Comdat { symbol: SymbolIndex(4), name: "W?foo2$n(i)i", kind: Any } Sections: 9
+
+Symbols
+0: Symbol { name: "W?foo1$n(i)i", address: 0, size: 0, kind: Unknown, section: Undefined, scope: Unknown, weak: false, flags: None }
+1: Symbol { name: "__CHK", address: 0, size: 0, kind: Unknown, section: Undefined, scope: Unknown, weak: false, flags: None }
+2: Symbol { name: "W?foo1$n(i)i", address: 0, size: 31, kind: Text, section: Section(SectionIndex(8)), scope: Linkage, weak: false, flags: None }
+3: Symbol { name: "W?foo2$n(i)i", address: 0, size: 0, kind: Unknown, section: Undefined, scope: Unknown, weak: false, flags: None }
+4: Symbol { name: "W?foo2$n(i)i", address: 0, size: 30, kind: Text, section: Section(SectionIndex(9)), scope: Linkage, weak: false, flags: None }
+5: Symbol { name: "W?bar1$n()pn(i)i", address: 0, size: 0, kind: Text, section: Section(SectionIndex(1)), scope: Linkage, weak: false, flags: None }
+6: Symbol { name: "W?bar2$n()pn(i)i", address: 2b, size: 0, kind: Text, section: Section(SectionIndex(1)), scope: Linkage, weak: false, flags: None }
+7: Symbol { name: "main_", address: 56, size: 0, kind: Text, section: Section(SectionIndex(1)), scope: Linkage, weak: false, flags: None }
+8: Symbol { name: "_cstart_", address: 0, size: 0, kind: Unknown, section: Undefined, scope: Unknown, weak: false, flags: None }
+
+_TEXT relocations
+(6, Relocation { kind: Relative, encoding: Generic, size: 20, target: Symbol(SymbolIndex(1)), addend: fffffffffffffffc, implicit_addend: false, flags: Omf { location: Offset32, mode: SelfRelative, frame: Group(2), target: External(2) } })
+(1b, Relocation { kind: Absolute, encoding: Generic, size: 20, target: Symbol(SymbolIndex(0)), addend: 0, implicit_addend: false, flags: Omf { location: Offset32, mode: SegmentRelative, frame: Group(2), target: External(1) } })
+(31, Relocation { kind: Relative, encoding: Generic, size: 20, target: Symbol(SymbolIndex(1)), addend: fffffffffffffffc, implicit_addend: false, flags: Omf { location: Offset32, mode: SelfRelative, frame: Group(2), target: External(2) } })
+(46, Relocation { kind: Absolute, encoding: Generic, size: 20, target: Symbol(SymbolIndex(3)), addend: 0, implicit_addend: false, flags: Omf { location: Offset32, mode: SegmentRelative, frame: Group(2), target: External(3) } })
+(5c, Relocation { kind: Relative, encoding: Generic, size: 20, target: Symbol(SymbolIndex(1)), addend: fffffffffffffffc, implicit_addend: false, flags: Omf { location: Offset32, mode: SelfRelative, frame: Group(2), target: External(2) } })
+
+$$SYMBOLS relocations
+(2, Relocation { kind: Absolute, encoding: Generic, size: 30, target: Symbol(SymbolIndex(0)), addend: 0, implicit_addend: false, flags: Omf { location: Pointer48, mode: SegmentRelative, frame: Group(2), target: External(1) } })
+(2c, Relocation { kind: Absolute, encoding: Generic, size: 30, target: Symbol(SymbolIndex(3)), addend: 0, implicit_addend: false, flags: Omf { location: Pointer48, mode: SegmentRelative, frame: Group(2), target: External(3) } })
+(56, Relocation { kind: Absolute, encoding: Generic, size: 30, target: Section(SectionIndex(1)), addend: 0, implicit_addend: false, flags: Omf { location: Pointer48, mode: SegmentRelative, frame: Group(2), target: Segment(1) } })
+
+W?foo1$n(i)i relocations
+(6, Relocation { kind: Relative, encoding: Generic, size: 20, target: Symbol(SymbolIndex(1)), addend: fffffffffffffffc, implicit_addend: false, flags: Omf { location: Offset32, mode: SelfRelative, frame: Group(2), target: External(2) } })
+
+W?foo2$n(i)i relocations
+(6, Relocation { kind: Relative, encoding: Generic, size: 20, target: Symbol(SymbolIndex(1)), addend: fffffffffffffffc, implicit_addend: false, flags: Omf { location: Offset32, mode: SelfRelative, frame: Group(2), target: External(2) } })
+
+Dynamic symbols
+
+Symbol map
+0x0-0x30 "W?foo2$n(i)i"
+0x2b-0x2d "W?bar2$n()pn(i)i"
+0x56-0x81 "main_"

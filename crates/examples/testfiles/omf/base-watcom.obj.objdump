@@ -1,0 +1,32 @@
+Format: Omf Little-endian 32-bit
+Kind: Relocatable
+Architecture: I386
+Flags: None
+Relative Address Base: 0
+Entry Address: 0
+Segment { name: "_TEXT", address: 0, size: 1e, permissions: R-X }
+Segment { name: "CONST", address: 0, size: d, permissions: R-- }
+Segment { name: "CONST2", address: 0, size: 0, permissions: R-- }
+Segment { name: "_DATA", address: 0, size: 0, permissions: RW- }
+Segment { name: "_BSS", address: 0, size: 0, permissions: RW- }
+1: Section { name: "_TEXT", address: 0, size: 1e, align: 1, kind: Text, flags: None }
+2: Section { name: "CONST", address: 0, size: d, align: 4, kind: ReadOnlyData, flags: None }
+3: Section { name: "CONST2", address: 0, size: 0, align: 4, kind: ReadOnlyData, flags: None }
+4: Section { name: "_DATA", address: 0, size: 0, align: 4, kind: Data, flags: None }
+5: Section { name: "_BSS", address: 0, size: 0, align: 4, kind: UninitializedData, flags: None }
+
+Symbols
+0: Symbol { name: "__CHK", address: 0, size: 0, kind: Unknown, section: Undefined, scope: Unknown, weak: false, flags: None }
+1: Symbol { name: "_printf", address: 0, size: 0, kind: Unknown, section: Undefined, scope: Unknown, weak: false, flags: None }
+2: Symbol { name: "main_", address: 0, size: 0, kind: Text, section: Section(SectionIndex(1)), scope: Linkage, weak: false, flags: None }
+3: Symbol { name: "_cstart_", address: 0, size: 0, kind: Unknown, section: Undefined, scope: Unknown, weak: false, flags: None }
+
+_TEXT relocations
+(6, Relocation { kind: Relative, encoding: Generic, size: 20, target: Symbol(SymbolIndex(0)), addend: fffffffffffffffc, implicit_addend: false, flags: Omf { location: Offset32, mode: SelfRelative, frame: Group(2), target: External(1) } })
+(d, Relocation { kind: Absolute, encoding: Generic, size: 20, target: Section(SectionIndex(2)), addend: 0, implicit_addend: false, flags: Omf { location: Offset32, mode: SegmentRelative, frame: Group(2), target: Segment(2) } })
+(12, Relocation { kind: Relative, encoding: Generic, size: 20, target: Symbol(SymbolIndex(1)), addend: fffffffffffffffc, implicit_addend: false, flags: Omf { location: Offset32, mode: SelfRelative, frame: Group(2), target: External(2) } })
+
+Dynamic symbols
+
+Symbol map
+0x0-0xd "main_"

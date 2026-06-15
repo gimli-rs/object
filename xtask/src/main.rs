@@ -130,6 +130,7 @@ fn cmd_features() -> Result<(), DynError> {
         "read_core,write_core,coff",
         "read_core,write_core,build_core,elf",
         "read_core,write_core,macho",
+        "read_core,omf",
         "read_core,write_core,pe",
         "read_core,write_core,xcoff",
         "read_core,wasm",

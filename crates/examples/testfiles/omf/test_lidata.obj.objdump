@@ -1,0 +1,48 @@
+Format: Omf Little-endian 32-bit
+Kind: Relocatable
+Architecture: I386
+Flags: None
+Relative Address Base: 0
+Entry Address: 0
+Segment { name: "_TEXT", address: 0, size: 24, permissions: R-X }
+Segment { name: "CONST", address: 0, size: 0, permissions: R-- }
+Segment { name: "CONST2", address: 0, size: 0, permissions: R-- }
+Segment { name: "_DATA", address: 0, size: 16d, permissions: RW- }
+1: Section { name: "_TEXT", address: 0, size: 24, align: 1, kind: Text, flags: None }
+2: Section { name: "CONST", address: 0, size: 0, align: 2, kind: ReadOnlyData, flags: None }
+3: Section { name: "CONST2", address: 0, size: 0, align: 2, kind: ReadOnlyData, flags: None }
+4: Section { name: "_DATA", address: 0, size: 16d, align: 2, kind: Data, flags: None }
+
+Symbols
+0: Symbol { name: "__STK", address: 0, size: 0, kind: Unknown, section: Undefined, scope: Unknown, weak: false, flags: None }
+1: Symbol { name: "_zeros", address: 0, size: 0, kind: Unknown, section: Undefined, scope: Unknown, weak: false, flags: None }
+2: Symbol { name: "_pattern", address: 0, size: 0, kind: Unknown, section: Undefined, scope: Unknown, weak: false, flags: None }
+3: Symbol { name: "_ffs", address: 0, size: 0, kind: Unknown, section: Undefined, scope: Unknown, weak: false, flags: None }
+4: Symbol { name: "use_arrays_", address: 0, size: 0, kind: Unknown, section: Undefined, scope: Unknown, weak: false, flags: None }
+5: Symbol { name: "use_arrays_", address: 0, size: 0, kind: Text, section: Section(SectionIndex(1)), scope: Linkage, weak: false, flags: None }
+6: Symbol { name: "main_", address: 18, size: 0, kind: Text, section: Section(SectionIndex(1)), scope: Linkage, weak: false, flags: None }
+7: Symbol { name: "_zeros", address: 0, size: 0, kind: Data, section: Section(SectionIndex(4)), scope: Linkage, weak: false, flags: None }
+8: Symbol { name: "_pattern", address: 64, size: 0, kind: Data, section: Section(SectionIndex(4)), scope: Linkage, weak: false, flags: None }
+9: Symbol { name: "_ffs", address: fa, size: 0, kind: Data, section: Section(SectionIndex(4)), scope: Linkage, weak: false, flags: None }
+10: Symbol { name: "_small", address: 15e, size: 0, kind: Data, section: Section(SectionIndex(4)), scope: Linkage, weak: false, flags: None }
+11: Symbol { name: "_mixed", address: 168, size: 0, kind: Data, section: Section(SectionIndex(4)), scope: Linkage, weak: false, flags: None }
+12: Symbol { name: "_cstart_", address: 0, size: 0, kind: Unknown, section: Undefined, scope: Unknown, weak: false, flags: None }
+13: Symbol { name: "_small_code_", address: 0, size: 0, kind: Unknown, section: Undefined, scope: Unknown, weak: false, flags: None }
+
+_TEXT relocations
+(4, Relocation { kind: Relative, encoding: Generic, size: 10, target: Symbol(SymbolIndex(0)), addend: fffffffffffffffe, implicit_addend: false, flags: Omf { location: Offset, mode: SelfRelative, frame: Target, target: External(1) } })
+(8, Relocation { kind: SectionOffset, encoding: Generic, size: 10, target: Symbol(SymbolIndex(1)), addend: 0, implicit_addend: false, flags: Omf { location: Offset, mode: SegmentRelative, frame: Target, target: External(2) } })
+(d, Relocation { kind: SectionOffset, encoding: Generic, size: 10, target: Symbol(SymbolIndex(2)), addend: 0, implicit_addend: false, flags: Omf { location: Offset, mode: SegmentRelative, frame: Target, target: External(3) } })
+(13, Relocation { kind: SectionOffset, encoding: Generic, size: 10, target: Symbol(SymbolIndex(3)), addend: 0, implicit_addend: false, flags: Omf { location: Offset, mode: SegmentRelative, frame: Target, target: External(4) } })
+(1c, Relocation { kind: Relative, encoding: Generic, size: 10, target: Symbol(SymbolIndex(0)), addend: fffffffffffffffe, implicit_addend: false, flags: Omf { location: Offset, mode: SelfRelative, frame: Target, target: External(1) } })
+(1f, Relocation { kind: Relative, encoding: Generic, size: 10, target: Symbol(SymbolIndex(4)), addend: fffffffffffffffe, implicit_addend: false, flags: Omf { location: Offset, mode: SelfRelative, frame: Target, target: External(5) } })
+
+Dynamic symbols
+
+Symbol map
+0x0-0x18 "_zeros"
+0x18-0x24 "main_"
+0x64-0xfa "_pattern"
+0xfa-0x15e "_ffs"
+0x15e-0x168 "_small"
+0x168-0x16d "_mixed"

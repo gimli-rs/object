@@ -1,0 +1,56 @@
+Format: Omf Little-endian 32-bit
+Kind: Relocatable
+Architecture: I386
+Flags: None
+Relative Address Base: 0
+Entry Address: 0
+Segment { name: "comprehensive_test_TEXT", address: 0, size: 0, permissions: R-X }
+Segment { name: "_DATA", address: 0, size: d4, permissions: RW- }
+Segment { name: "_TEXT", address: 0, size: 2e, permissions: R-X }
+Segment { name: "CONST", address: 0, size: 0, permissions: R-- }
+Segment { name: "_BSS", address: 0, size: c8, permissions: RW- }
+1: Section { name: "comprehensive_test_TEXT", address: 0, size: 0, align: 2, kind: Text, flags: None }
+2: Section { name: "_DATA", address: 0, size: d4, align: 2, kind: Data, flags: None }
+3: Section { name: "_TEXT", address: 0, size: 2e, align: 2, kind: Text, flags: None }
+4: Section { name: "CONST", address: 0, size: 0, align: 2, kind: ReadOnlyData, flags: None }
+5: Section { name: "_BSS", address: 0, size: c8, align: 2, kind: UninitializedData, flags: None }
+
+Symbols
+0: Symbol { name: "shared_var", address: 0, size: 2, kind: Data, section: Common, scope: Linkage, weak: false, flags: None }
+1: Symbol { name: "shared_array", address: 0, size: 100, kind: Data, section: Common, scope: Linkage, weak: false, flags: None }
+2: Symbol { name: "external_var", address: 0, size: 0, kind: Unknown, section: Undefined, scope: Unknown, weak: false, flags: None }
+3: Symbol { name: "external_func", address: 0, size: 0, kind: Unknown, section: Undefined, scope: Unknown, weak: false, flags: None }
+4: Symbol { name: "test_threads", address: 0, size: 0, kind: Text, section: Section(SectionIndex(3)), scope: Linkage, weak: false, flags: None }
+5: Symbol { name: "test_mbit", address: 10, size: 0, kind: Text, section: Section(SectionIndex(3)), scope: Linkage, weak: false, flags: None }
+6: Symbol { name: "data_item", address: 0, size: 0, kind: Data, section: Section(SectionIndex(2)), scope: Linkage, weak: false, flags: None }
+7: Symbol { name: "BIOS_TIMER_TICKS", address: 46c, size: 0, kind: Unknown, section: Absolute, scope: Linkage, weak: false, flags: None }
+8: Symbol { name: "BIOS_KEYBOARD_FLAGS", address: 417, size: 0, kind: Unknown, section: Absolute, scope: Linkage, weak: false, flags: None }
+9: Symbol { name: "VIDEO_MEMORY", address: b800, size: 0, kind: Unknown, section: Absolute, scope: Linkage, weak: false, flags: None }
+10: Symbol { name: "near_func", address: 20, size: 0, kind: Text, section: Section(SectionIndex(3)), scope: Compilation, weak: false, flags: None }
+11: Symbol { name: "test_frame", address: 23, size: 0, kind: Text, section: Section(SectionIndex(3)), scope: Compilation, weak: false, flags: None }
+
+_DATA relocations
+(2, Relocation { kind: Absolute, encoding: Generic, size: 20, target: Section(SectionIndex(3)), addend: 0, implicit_addend: false, flags: Omf { location: Pointer, mode: SegmentRelative, frame: Target, target: Segment(3) } })
+(ce, Relocation { kind: SectionOffset, encoding: Generic, size: 10, target: Section(SectionIndex(3)), addend: 0, implicit_addend: false, flags: Omf { location: Offset, mode: SegmentRelative, frame: Target, target: Segment(3) } })
+(d0, Relocation { kind: SectionOffset, encoding: Generic, size: 10, target: Section(SectionIndex(3)), addend: 0, implicit_addend: false, flags: Omf { location: Offset, mode: SegmentRelative, frame: Target, target: Segment(3) } })
+(d2, Relocation { kind: SectionIndex, encoding: Generic, size: 10, target: Section(SectionIndex(3)), addend: 0, implicit_addend: false, flags: Omf { location: Base, mode: SegmentRelative, frame: Target, target: Segment(3) } })
+
+_TEXT relocations
+(1, Relocation { kind: Unknown, encoding: Generic, size: 10, target: Absolute, addend: 0, implicit_addend: false, flags: Omf { location: Base, mode: SegmentRelative, frame: Target, target: Group(1) } })
+(6, Relocation { kind: SectionOffset, encoding: Generic, size: 10, target: Symbol(SymbolIndex(2)), addend: 0, implicit_addend: false, flags: Omf { location: Offset, mode: SegmentRelative, frame: Target, target: External(3) } })
+(9, Relocation { kind: Relative, encoding: Generic, size: 10, target: Symbol(SymbolIndex(3)), addend: fffffffffffffffe, implicit_addend: false, flags: Omf { location: Offset, mode: SelfRelative, frame: Target, target: External(4) } })
+(d, Relocation { kind: Unknown, encoding: Generic, size: 10, target: Section(SectionIndex(2)), addend: 0, implicit_addend: false, flags: Omf { location: Offset, mode: SegmentRelative, frame: Group(1), target: Segment(2) } })
+(16, Relocation { kind: Unknown, encoding: Generic, size: 10, target: Section(SectionIndex(2)), addend: 0, implicit_addend: false, flags: Omf { location: Offset, mode: SegmentRelative, frame: Group(1), target: Segment(2) } })
+(19, Relocation { kind: SectionOffset, encoding: Generic, size: 10, target: Section(SectionIndex(3)), addend: 0, implicit_addend: false, flags: Omf { location: Offset, mode: SegmentRelative, frame: Target, target: Segment(3) } })
+(1d, Relocation { kind: Unknown, encoding: Generic, size: 10, target: Section(SectionIndex(2)), addend: 0, implicit_addend: false, flags: Omf { location: Offset, mode: SegmentRelative, frame: Group(1), target: Segment(2) } })
+
+Dynamic symbols
+
+Symbol map
+0x0-0x10 "data_item"
+0x10-0x20 "test_mbit"
+0x20-0x23 "near_func"
+0x23-0x2e "test_frame"
+0x417-0x46c "BIOS_KEYBOARD_FLAGS"
+0x46c-0xb800 "BIOS_TIMER_TICKS"
+0xb800-0xb800 "VIDEO_MEMORY"

@@ -135,6 +135,7 @@ pub enum BinaryFormat {
     Pe,
     Wasm,
     Xcoff,
+    Omf,
 }
 
 impl BinaryFormat {
@@ -769,6 +770,18 @@ pub enum RelocationFlags {
     Wasm {
         /// Relocation type (the `R_WASM_*` constant).
         r_type: u8,
+    },
+    /// OMF relocation metadata.
+    #[cfg(feature = "omf")]
+    Omf {
+        /// The location field describing what bytes are being fixed up.
+        location: crate::omf::FixupLocation,
+        /// Whether the relocation is applied segment-relative (`M = 1`) or self-relative (`M = 0`).
+        mode: crate::omf::FixupMode,
+        /// The frame datum used to establish the base reference for the relocation.
+        frame: crate::omf::FixupFrame,
+        /// The target datum identifying the entity being referenced.
+        target: crate::omf::FixupTarget,
     },
 }
 
