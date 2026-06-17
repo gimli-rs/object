@@ -310,9 +310,11 @@ impl<'data> Builder<'data> {
         R: ReadRef<'data>,
     {
         let id = self.sections.next_id();
+        // TODO: reuse MachOFile::parse_sections
+        let offset = section.offset(endian).into();
         let size = section.size(endian).into();
-        let section_data = if section.file_range(endian).is_some() {
-            SectionData::Data(section.data(endian, data)?.into())
+        let section_data = if section.file_range(endian, offset).is_some() {
+            SectionData::Data(section.data(endian, data, offset)?.into())
         } else {
             SectionData::UninitializedData(size as u32)
         };
