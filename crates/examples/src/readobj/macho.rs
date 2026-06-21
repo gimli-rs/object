@@ -249,6 +249,7 @@ struct MachState<'a, E: Endian> {
     cputype: CpuType,
     filetype: FileType,
     twolevel: bool,
+    segment_data: Vec<&'a [u8]>,
     linkedit_data: &'a [u8],
     symbols: Vec<Option<&'a [u8]>>,
     indirect_symbols: &'a [U32<E, macho::IndirectSymbol>],
@@ -280,6 +281,9 @@ fn print_macho<Mach: MachHeader<Endian = Endianness>>(
             let mut dysymtab_command = None;
             while let Ok(Some(command)) = commands.next() {
                 if let Ok(Some((segment, section_data))) = Mach::Segment::from_command(command) {
+                    state
+                        .segment_data
+                        .push(segment.data(endian, data).unwrap_or(&[]));
                     if segment.name() == macho::SEG_TEXT.as_bytes() {
                         state.text_segment_addr = segment.vmaddr(endian).into();
                     }
@@ -384,6 +388,9 @@ fn print_load_command<Mach: MachHeader>(
             LoadCommandVariant::Dysymtab(dysymtab) => {
                 print_dysymtab::<Mach>(p, endian, dysymtab);
             }
+            LoadCommandVariant::DyldInfo(x) => {
+                print_dyld_info::<Mach>(p, endian, x, state);
+            }
             LoadCommandVariant::LinkeditData(linkedit) => {
                 print_linkedit_data::<Mach>(p, endian, linkedit, state);
             }
@@ -397,6 +404,7 @@ fn print_load_command<Mach: MachHeader>(
             | LoadCommandVariant::Segment64(..)
             | LoadCommandVariant::Symtab(..)
             | LoadCommandVariant::Dysymtab(..)
+            | LoadCommandVariant::DyldInfo(..)
             | LoadCommandVariant::LinkeditData(..) => {}
             LoadCommandVariant::Thread(x, _thread_data) => {
                 p.group("ThreadCommand", |p| {
@@ -594,9 +602,6 @@ fn print_load_command<Mach: MachHeader>(
                     p.field_hex("CryptId", x.cryptid.get(endian));
                     p.field_hex("Pad", x.pad.get(endian));
                 });
-            }
-            LoadCommandVariant::DyldInfo(x) => {
-                print_dyld_info::<Mach>(p, endian, x, state);
             }
             LoadCommandVariant::VersionMin(x) => {
                 p.group("VersionMinCommand", |p| {
@@ -955,7 +960,8 @@ fn print_linkedit_data<Mach: MachHeader>(
     let cmd = linkedit.cmd.get(endian);
     let function_starts = p.options.macho_function_starts && cmd == LC_FUNCTION_STARTS;
     let exports_trie = p.options.macho_exports_trie && cmd == LC_DYLD_EXPORTS_TRIE;
-    if !p.options.macho_load_commands && !function_starts && !exports_trie {
+    let chained_fixups = p.options.macho_fixups && cmd == LC_DYLD_CHAINED_FIXUPS;
+    if !p.options.macho_load_commands && !function_starts && !exports_trie && !chained_fixups {
         return;
     }
     p.group("LinkeditDataCommand", |p| {
@@ -968,6 +974,9 @@ fn print_linkedit_data<Mach: MachHeader>(
         }
         if exports_trie {
             print_exports_trie(p, linkedit.exports_trie(endian, state.linkedit_data));
+        }
+        if chained_fixups {
+            print_chained_fixups::<Mach>(p, endian, linkedit, state);
         }
     });
 }
@@ -1029,6 +1038,13 @@ fn print_dyld_info<Mach: MachHeader>(
     x: &DyldInfoCommand<Mach::Endian>,
     state: &MachState<Mach::Endian>,
 ) {
+    if !p.options.macho_load_commands
+        && !p.options.macho_fixups
+        && !p.options.macho_fixup_opcodes
+        && !p.options.macho_exports_trie
+    {
+        return;
+    }
     p.group("DyldInfoCommand", |p| {
         p.field_consts("Cmd", x.cmd.get(endian), LoadCommandType::NAMES);
         p.field_hex("CmdSize", x.cmdsize.get(endian));
@@ -1045,38 +1061,54 @@ fn print_dyld_info<Mach: MachHeader>(
 
         let pointer_size = Mach::pointer_size();
         if x.rebase_size.get(endian) != 0 {
-            p.group("RebaseOperations", |p| {
-                print_rebase_operations(p, x.rebase_operations(endian, state.linkedit_data));
-            });
-            p.group("Rebases", |p| {
-                print_rebases(p, x.rebases(endian, state.linkedit_data, pointer_size));
-            });
+            if p.options.macho_fixup_opcodes {
+                p.group("RebaseOperations", |p| {
+                    print_rebase_operations(p, x.rebase_operations(endian, state.linkedit_data));
+                });
+            }
+            if p.options.macho_fixups {
+                p.group("Rebases", |p| {
+                    print_rebases(p, x.rebases(endian, state.linkedit_data, pointer_size));
+                });
+            }
         }
         if x.bind_size.get(endian) != 0 {
-            p.group("BindOperations", |p| {
-                print_bind_operations(p, x.bind_operations(endian, state.linkedit_data));
-            });
-            p.group("Binds", |p| {
-                print_binds(p, x.binds(endian, state.linkedit_data, pointer_size));
-            });
+            if p.options.macho_fixup_opcodes {
+                p.group("BindOperations", |p| {
+                    print_bind_operations(p, x.bind_operations(endian, state.linkedit_data));
+                });
+            }
+            if p.options.macho_fixups {
+                p.group("Binds", |p| {
+                    print_binds(p, x.binds(endian, state.linkedit_data, pointer_size));
+                });
+            }
         }
         if x.weak_bind_size.get(endian) != 0 {
-            p.group("WeakBindOperations", |p| {
-                print_bind_operations(p, x.weak_bind_operations(endian, state.linkedit_data));
-            });
-            p.group("WeakBinds", |p| {
-                print_binds(p, x.weak_binds(endian, state.linkedit_data, pointer_size));
-            });
+            if p.options.macho_fixup_opcodes {
+                p.group("WeakBindOperations", |p| {
+                    print_bind_operations(p, x.weak_bind_operations(endian, state.linkedit_data));
+                });
+            }
+            if p.options.macho_fixups {
+                p.group("WeakBinds", |p| {
+                    print_binds(p, x.weak_binds(endian, state.linkedit_data, pointer_size));
+                });
+            }
         }
         if x.lazy_bind_size.get(endian) != 0 {
-            p.group("LazyBindOperations", |p| {
-                print_bind_operations(p, x.lazy_bind_operations(endian, state.linkedit_data));
-            });
-            p.group("LazyBinds", |p| {
-                print_binds(p, x.lazy_binds(endian, state.linkedit_data, pointer_size));
-            });
+            if p.options.macho_fixup_opcodes {
+                p.group("LazyBindOperations", |p| {
+                    print_bind_operations(p, x.lazy_bind_operations(endian, state.linkedit_data));
+                });
+            }
+            if p.options.macho_fixups {
+                p.group("LazyBinds", |p| {
+                    print_binds(p, x.lazy_binds(endian, state.linkedit_data, pointer_size));
+                });
+            }
         }
-        if x.export_size.get(endian) != 0 {
+        if x.export_size.get(endian) != 0 && p.options.macho_exports_trie {
             p.group("ExportsTrie", |p| {
                 print_exports_trie(p, x.exports_trie(endian, state.linkedit_data));
             });
@@ -1208,6 +1240,138 @@ fn print_binds(p: &mut Printer<'_>, binds: object::read::Result<BindIterator<'_>
             p.field_inline_string("Symbol", bind.symbol);
             p.field("Addend", bind.addend);
         });
+    }
+}
+
+fn print_chained_fixups<Mach: MachHeader>(
+    p: &mut Printer<'_>,
+    endian: Mach::Endian,
+    linkedit: &LinkeditDataCommand<Mach::Endian>,
+    state: &MachState<Mach::Endian>,
+) {
+    let Some(fixups) = linkedit
+        .chained_fixups(endian, state.linkedit_data)
+        .print_err(p)
+    else {
+        return;
+    };
+    p.group("DyldChainedFixups", |p| {
+        let header = fixups.header();
+        p.field("FixupsVersion", header.fixups_version.get(endian));
+        p.field_hex("StartsOffset", header.starts_offset.get(endian));
+        p.field_hex("ImportsOffset", header.imports_offset.get(endian));
+        p.field_hex("SymbolsOffset", header.symbols_offset.get(endian));
+        p.field("ImportsCount", header.imports_count.get(endian));
+        p.field_consts(
+            "ImportsFormat",
+            header.imports_format.get(endian),
+            DyldChainedImportFormat::NAMES,
+        );
+        p.field("SymbolsFormat", header.symbols_format.get(endian));
+
+        let mut import_names = Vec::new();
+        if header.imports_count.get(endian) != 0
+            && let Some(mut imports) = fixups.imports(endian).print_err(p)
+        {
+            while let Some(Some(import)) = imports.next().print_err(p) {
+                p.group("Import", |p| {
+                    p.field_consts_display("LibraryOrdinal", import.dylib, BindDylib::NAMES);
+                    p.field("WeakImport", import.weak_import);
+                    p.field("Addend", import.addend);
+                    p.field_inline_string("Name", import.name);
+                });
+                import_names.push(import.name);
+            }
+        }
+
+        if let Some(mut segments) = fixups.segments(endian).print_err(p) {
+            while let Some(Some(segment)) = segments.next().print_err(p) {
+                print_chained_fixups_in_segment::<Mach>(p, endian, &segment, state, &import_names);
+            }
+        }
+    });
+}
+
+fn print_chained_fixups_in_segment<Mach: MachHeader>(
+    p: &mut Printer<'_>,
+    endian: Mach::Endian,
+    segment: &DyldChainedSegment<Mach::Endian>,
+    state: &MachState<Mach::Endian>,
+    import_names: &[&[u8]],
+) {
+    p.group("Segment", |p| {
+        let header = segment.header();
+        p.field("SegmentIndex", segment.index());
+        p.field_hex("Size", header.size.get(endian));
+        p.field_hex("PageSize", header.page_size.get(endian));
+        p.field_consts(
+            "PointerFormat",
+            header.pointer_format.get(endian),
+            DyldChainedPtrFormat::NAMES,
+        );
+        p.field_hex("SegmentOffset", header.segment_offset.get(endian));
+        p.field_hex("MaxValidPointer", header.max_valid_pointer.get(endian));
+        p.field("PageCount", header.page_count.get(endian));
+
+        let segment_index = segment.index() as usize;
+        let Some(segment_data) = state.segment_data.get(segment_index) else {
+            return;
+        };
+        let mut fixups = segment.fixups(endian, state.text_segment_addr, segment_data);
+        while let Some(Some((offset, fixup))) = fixups.next().print_err(p) {
+            print_chained_fixup(p, offset, fixup, import_names);
+        }
+    });
+}
+
+fn print_chained_fixup(p: &mut Printer<'_>, offset: u64, fixup: Fixup, import_names: &[&[u8]]) {
+    match fixup {
+        Fixup::Rebase(fixup) => p.group("Rebase", |p| {
+            p.field_hex("Offset", offset);
+            p.field_hex("TargetOffset", fixup.target_offset);
+            print_fixup_auth(p, fixup.auth);
+        }),
+        Fixup::Bind(fixup) => p.group("Bind", |p| {
+            p.field_hex("Offset", offset);
+            p.field_string_option(
+                "Ordinal",
+                fixup.ordinal,
+                import_names.get(fixup.ordinal as usize).copied(),
+            );
+            if fixup.addend != 0 {
+                p.field_hex("Addend", fixup.addend);
+            }
+            print_fixup_auth(p, fixup.auth);
+        }),
+        Fixup::KernelCacheRebase(fixup) => p.group("Rebase", |p| {
+            p.field_hex("Offset", offset);
+            p.field_hex("TargetOffset", fixup.target_offset);
+            p.field_hex("CacheLevel", fixup.cache_level);
+            print_fixup_auth(p, fixup.auth);
+        }),
+        Fixup::SegmentedRebase(fixup) => p.group("Rebase", |p| {
+            p.field_hex("Offset", offset);
+            // TODO: segment name
+            p.field_hex("TargetSegmentIndex", fixup.target_segment_index);
+            p.field_hex("TargetSegmentOffset", fixup.target_segment_offset);
+            print_fixup_auth(p, fixup.auth);
+        }),
+    }
+}
+
+fn print_fixup_auth(p: &mut Printer<'_>, auth: Option<FixupAuth>) {
+    if let Some(auth) = auth {
+        p.field(
+            "Key",
+            match auth.key {
+                PtrauthKey::IA => "IA",
+                PtrauthKey::IB => "IB",
+                PtrauthKey::DA => "DA",
+                PtrauthKey::DB => "DB",
+            },
+        );
+        p.field("AddrDiv", auth.addr_div);
+        p.field_hex("Diversity", auth.diversity);
     }
 }
 

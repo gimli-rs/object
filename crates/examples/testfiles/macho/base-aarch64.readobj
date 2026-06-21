@@ -161,6 +161,34 @@ LinkeditDataCommand {
     CmdSize: 0x10
     DataOffset: 0x8000
     DataSize: 0x60
+    DyldChainedFixups {
+        FixupsVersion: 0
+        StartsOffset: 0x20
+        ImportsOffset: 0x50
+        SymbolsOffset: 0x54
+        ImportsCount: 1
+        ImportsFormat: DYLD_CHAINED_IMPORT (0x1)
+        SymbolsFormat: 0
+        Import {
+            LibraryOrdinal: 1
+            WeakImport: false
+            Addend: 0
+            Name: "_printf"
+        }
+        Segment {
+            SegmentIndex: 2
+            Size: 0x18
+            PageSize: 0x4000
+            PointerFormat: DYLD_CHAINED_PTR_64_OFFSET (0x6)
+            SegmentOffset: 0x4000
+            MaxValidPointer: 0x0
+            PageCount: 1
+            Bind {
+                Offset: 0x0
+                Ordinal: "_printf" (0x0)
+            }
+        }
+    }
 }
 LinkeditDataCommand {
     Cmd: LC_DYLD_EXPORTS_TRIE (0x80000033)

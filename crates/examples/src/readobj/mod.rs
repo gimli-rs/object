@@ -26,6 +26,8 @@ pub struct PrintOptions {
     pub macho_load_commands: bool,
     pub macho_function_starts: bool,
     pub macho_exports_trie: bool,
+    pub macho_fixups: bool,
+    pub macho_fixup_opcodes: bool,
 
     // PE specific selectors
     pub pe_rich: bool,
@@ -57,6 +59,8 @@ impl PrintOptions {
             macho_load_commands: true,
             macho_function_starts: true,
             macho_exports_trie: true,
+            macho_fixups: true,
+            macho_fixup_opcodes: true,
             pe_rich: true,
             pe_base_relocs: true,
             pe_imports: true,
@@ -83,6 +87,8 @@ impl PrintOptions {
             macho_load_commands: false,
             macho_function_starts: false,
             macho_exports_trie: false,
+            macho_fixups: false,
+            macho_fixup_opcodes: false,
             pe_rich: false,
             pe_base_relocs: false,
             pe_imports: false,

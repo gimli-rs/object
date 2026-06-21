@@ -4420,6 +4420,708 @@ pub NAMES_X86_64_RELOC: u8 = {
     X86_64_RELOC_TLV = 9,
 });
 
+// Definitions from https://github.com/apple-oss-distributions/dyld/blob/dyld-1376.6/include/mach-o/fixup-chains.h
+
+// Header of the `LC_DYLD_CHAINED_FIXUPS` payload.
+#[derive(Debug, Clone, Copy)]
+#[repr(C)]
+pub struct DyldChainedFixupsHeader<E: Endian> {
+    /// 0
+    pub fixups_version: U32<E>,
+    /// offset of `DyldChainedStartsInImage` in chain_data
+    pub starts_offset: U32<E>,
+    /// offset of imports table in chain_data
+    pub imports_offset: U32<E>,
+    /// offset of symbol strings in chain_data
+    pub symbols_offset: U32<E>,
+    /// number of imported symbol names
+    pub imports_count: U32<E>,
+    /// `DYLD_CHAINED_IMPORT*`
+    pub imports_format: U32<E, DyldChainedImportFormat>,
+    /// 0 => uncompressed, 1 => zlib compressed
+    pub symbols_format: U32<E>,
+}
+
+/// Holds the chain starts for each segment in the image.
+///
+/// This struct is embedded in `LC_DYLD_CHAINED_FIXUPS` payload.
+#[derive(Debug, Clone, Copy)]
+#[repr(C)]
+pub struct DyldChainedStartsInImage<E: Endian> {
+    pub seg_count: U32<E>,
+    // Each entry is offset into this struct for that segment
+    // followed by pool of `DyldChainedStartsInSegment` data.
+    //pub seg_info_offset: [U32<E>; 1],
+}
+
+/// Holds the chain starts for each page in a segment.
+///
+/// This struct is embedded in `DyldChainedStartsInImage`.
+#[derive(Debug, Clone, Copy)]
+#[repr(C)]
+pub struct DyldChainedStartsInSegment<E: Endian> {
+    /// size of this (amount kernel needs to copy)
+    pub size: U32<E>,
+    /// 0x1000 or 0x4000
+    pub page_size: U16<E>,
+    /// `DYLD_CHAINED_PTR_*`
+    pub pointer_format: U16<E, DyldChainedPtrFormat>,
+    /// offset in memory to start of segment
+    pub segment_offset: U64<E>,
+    /// for 32-bit OS, any value beyond this is not a pointer
+    pub max_valid_pointer: U32<E>,
+    /// how many pages are in array
+    pub page_count: U16<E>,
+    // each entry is offset in each page of first element in chain
+    // or DYLD_CHAINED_PTR_START_NONE if no fixups on page
+    //pub page_start: [U16<E>; 1],
+    // some 32-bit formats may require multiple starts per page.
+    // for those, if high bit is set in page_starts[], then it
+    // is index into chain_starts[] which is a list of starts
+    // the last of which has the high bit set
+    //pub chain_starts: [U16<E>; 1],
+}
+
+/// Used in `DyldChainedStartsInSegment::page_start[]` to denote a page with no fixups.
+pub const DYLD_CHAINED_PTR_START_NONE: u16 = 0xFFFF;
+/// Used in `DyldChainedStartsInSegment::page_start[]` to denote a page which has multiple starts.
+pub const DYLD_CHAINED_PTR_START_MULTI: u16 = 0x8000;
+/// Used in `DyldChainedStartsInSegment::chain_starts[]` to denote last start in list for page.
+pub const DYLD_CHAINED_PTR_START_LAST: u16 = 0x8000;
+
+// these values are set in the reserved1 field of the __chain_starts section
+/*
+enum {
+    /// denotes chain starts linked with -fixup_chains_section
+    DYLD_CHAINED_STARTS_USE_FILE_OFFSET = 0x1,
+    /// denotes chain starts linked with -fixup_chains_section_vm
+    DYLD_CHAINED_STARTS_USE_VM_OFFSET   = 0x2,
+};
+*/
+
+/// Holds the chain starts in the `__TEXT,__chain_starts` section in firmware.
+#[derive(Debug, Clone, Copy)]
+#[repr(C)]
+pub struct DyldChainedStartsOffsets<E: Endian> {
+    /// `DYLD_CHAINED_PTR_32_FIRMWARE` or `DYLD_CHAINED_PTR_ARM64E_FIRMWARE`
+    pub pointer_format: U32<E, DyldChainedPtrFormat>,
+    /// number of starts in array
+    pub starts_count: U32<E>,
+    // array chain start offsets
+    //pub chain_starts: [U32<E>; 1],
+}
+
+newtype!(
+    /// Value for `DyldChainedStartsInSegment::pointer_format`.
+    struct DyldChainedPtrFormat(u16);
+);
+
+newtype_constant_names!(NAMES_DYLD_CHAINED_PTR: DyldChainedPtrFormat(u16) = {
+    /// stride 8, unauth target is vmaddr
+    DYLD_CHAINED_PTR_ARM64E                 =  1,
+    /// target is vmaddr
+    DYLD_CHAINED_PTR_64                     =  2,
+    /// target is vmaddr
+    DYLD_CHAINED_PTR_32                     =  3,
+    DYLD_CHAINED_PTR_32_CACHE               =  4,
+    DYLD_CHAINED_PTR_32_FIRMWARE            =  5,
+    /// target is vm offset
+    DYLD_CHAINED_PTR_64_OFFSET              =  6,
+    /// stride 4, unauth target is vm offset
+    DYLD_CHAINED_PTR_ARM64E_KERNEL          =  7,
+    /// old name
+    DYLD_CHAINED_PTR_ARM64E_OFFSET          =  7,
+    DYLD_CHAINED_PTR_64_KERNEL_CACHE        =  8,
+    /// stride 8, unauth target is vm offset
+    DYLD_CHAINED_PTR_ARM64E_USERLAND        =  9,
+    /// stride 4, unauth target is vmaddr
+    DYLD_CHAINED_PTR_ARM64E_FIRMWARE        = 10,
+    /// stride 1, x86_64 kernel caches
+    DYLD_CHAINED_PTR_X86_64_KERNEL_CACHE    = 11,
+    /// stride 8, unauth target is vm offset, 24-bit bind
+    DYLD_CHAINED_PTR_ARM64E_USERLAND24      = 12,
+    /// stride 8, regular/auth targets both vm offsets
+    DYLD_CHAINED_PTR_ARM64E_SHARED_CACHE    = 13,
+    /// stride 4, rebase offsets use segIndex and segOffset
+    DYLD_CHAINED_PTR_ARM64E_SEGMENTED       = 14,
+});
+
+/// A chained pointer for `DYLD_CHAINED_PTR_ARM64E` and `DYLD_CHAINED_PTR_ARM64E_USERLAND24`.
+#[derive(Debug, Clone, Copy)]
+pub struct DyldChainedPtrArm64e(pub u64);
+
+impl DyldChainedPtrArm64e {
+    /// The offset to the next chained pointer, in units of the stride.
+    pub fn next(self) -> u64 {
+        (self.0 >> 51) & ((1 << 11) - 1)
+    }
+
+    /// Whether this is a bind or a rebase.
+    pub fn is_bind(self) -> bool {
+        (self.0 >> 62) & 1 != 0
+    }
+
+    /// Whether the pointer is authenticated.
+    pub fn is_auth(self) -> bool {
+        (self.0 >> 63) & 1 != 0
+    }
+
+    /// Get the bind fields.
+    pub fn bind(self) -> DyldChainedPtrArm64eBind {
+        DyldChainedPtrArm64eBind(self.0)
+    }
+
+    /// Get the authenticated bind fields.
+    pub fn auth_bind(self) -> DyldChainedPtrArm64eAuthBind {
+        DyldChainedPtrArm64eAuthBind(self.0)
+    }
+
+    /// Get the rebase fields.
+    pub fn rebase(self) -> DyldChainedPtrArm64eRebase {
+        DyldChainedPtrArm64eRebase(self.0)
+    }
+
+    /// Get the authenticated rebase fields.
+    pub fn auth_rebase(self) -> DyldChainedPtrArm64eAuthRebase {
+        DyldChainedPtrArm64eAuthRebase(self.0)
+    }
+
+    /// Get the 24-bit bind fields.
+    pub fn bind24(self) -> DyldChainedPtrArm64eBind24 {
+        DyldChainedPtrArm64eBind24(self.0)
+    }
+
+    /// Get the authenticated 24-bit bind fields.
+    pub fn auth_bind24(self) -> DyldChainedPtrArm64eAuthBind24 {
+        DyldChainedPtrArm64eAuthBind24(self.0)
+    }
+}
+
+/// The unauthenticated rebase fields for [`DyldChainedPtrArm64e`].
+#[derive(Debug, Clone, Copy)]
+pub struct DyldChainedPtrArm64eRebase(pub u64);
+
+impl DyldChainedPtrArm64eRebase {
+    /// The unauthenticated target.
+    pub fn target(self) -> u64 {
+        self.0 & ((1 << 43) - 1)
+    }
+
+    /// The top 8 bits of the pointer.
+    pub fn high8(self) -> u64 {
+        (self.0 >> 43) & 0xff
+    }
+}
+
+/// The authenticated rebase fields for [`DyldChainedPtrArm64e`].
+#[derive(Debug, Clone, Copy)]
+pub struct DyldChainedPtrArm64eAuthRebase(pub u64);
+
+impl DyldChainedPtrArm64eAuthRebase {
+    /// The runtime offset target.
+    pub fn runtime_offset(self) -> u64 {
+        self.0 & ((1 << 32) - 1)
+    }
+
+    /// The diversity value for authentication.
+    pub fn diversity(self) -> u16 {
+        ((self.0 >> 32) & 0xffff) as u16
+    }
+
+    /// Whether to use address diversity for authentication.
+    pub fn addr_div(self) -> bool {
+        (self.0 >> 48) & 1 != 0
+    }
+
+    /// The key for authentication.
+    pub fn key(self) -> u8 {
+        ((self.0 >> 49) & 3) as u8
+    }
+}
+
+/// The unauthenticated bind fields for [`DyldChainedPtrArm64e`].
+#[derive(Debug, Clone, Copy)]
+pub struct DyldChainedPtrArm64eBind(pub u64);
+
+impl DyldChainedPtrArm64eBind {
+    /// The import ordinal.
+    pub fn ordinal(self) -> u32 {
+        (self.0 & 0xffff) as u32
+    }
+
+    /// The signed 19-bit addend.
+    pub fn addend(self) -> i32 {
+        // Sign extend.
+        ((self.0 >> 19) as i32) >> 13
+    }
+}
+
+/// The authenticated bind fields for [`DyldChainedPtrArm64e`].
+#[derive(Debug, Clone, Copy)]
+pub struct DyldChainedPtrArm64eAuthBind(pub u64);
+
+impl DyldChainedPtrArm64eAuthBind {
+    /// The import ordinal.
+    pub fn ordinal(self) -> u32 {
+        (self.0 & 0xffff) as u32
+    }
+
+    /// The diversity value for authentication.
+    pub fn diversity(self) -> u16 {
+        ((self.0 >> 32) & 0xffff) as u16
+    }
+
+    /// Whether to use address diversity for authentication.
+    pub fn addr_div(self) -> bool {
+        (self.0 >> 48) & 1 != 0
+    }
+
+    /// The key for authentication.
+    pub fn key(self) -> u8 {
+        ((self.0 >> 49) & 3) as u8
+    }
+}
+
+/// The unauthenticated bind fields for `DYLD_CHAINED_PTR_ARM64E_USERLAND24`.
+#[derive(Debug, Clone, Copy)]
+pub struct DyldChainedPtrArm64eBind24(pub u64);
+
+impl DyldChainedPtrArm64eBind24 {
+    /// The 24-bit import ordinal.
+    pub fn ordinal(self) -> u32 {
+        (self.0 & ((1 << 24) - 1)) as u32
+    }
+
+    /// The signed 19-bit addend.
+    pub fn addend(self) -> i32 {
+        // Sign extend.
+        ((self.0 >> 19) as i32) >> 13
+    }
+}
+
+/// The authenticated bind fields for `DYLD_CHAINED_PTR_ARM64E_USERLAND24`.
+#[derive(Debug, Clone, Copy)]
+pub struct DyldChainedPtrArm64eAuthBind24(pub u64);
+
+impl DyldChainedPtrArm64eAuthBind24 {
+    /// The 24-bit import ordinal.
+    pub fn ordinal(self) -> u32 {
+        (self.0 & ((1 << 24) - 1)) as u32
+    }
+
+    /// The diversity value for authentication.
+    pub fn diversity(self) -> u16 {
+        ((self.0 >> 32) & 0xffff) as u16
+    }
+
+    /// Whether to use address diversity for authentication.
+    pub fn addr_div(self) -> bool {
+        (self.0 >> 48) & 1 != 0
+    }
+
+    /// The key for authentication.
+    pub fn key(self) -> u8 {
+        ((self.0 >> 49) & 3) as u8
+    }
+}
+
+/// A chained pointer for `DYLD_CHAINED_PTR_ARM64E_SEGMENTED`.
+#[derive(Debug, Clone, Copy)]
+pub struct DyldChainedPtrArm64eSegmentedRebase(pub u64);
+
+impl DyldChainedPtrArm64eSegmentedRebase {
+    /// The offset to the next chained pointer, in units of the stride.
+    pub fn next(self) -> u64 {
+        (self.0 >> 51) & ((1 << 12) - 1)
+    }
+
+    /// Whether the pointer is authenticated.
+    pub fn is_auth(self) -> bool {
+        (self.0 >> 63) & 1 != 0
+    }
+
+    /// The offset in the segment.
+    pub fn target_seg_offset(self) -> u64 {
+        self.0 & ((1 << 28) - 1)
+    }
+
+    /// The index into the segment address table.
+    pub fn target_seg_index(self) -> u8 {
+        ((self.0 >> 28) & 0xf) as u8
+    }
+
+    /// The diversity value for authentication.
+    ///
+    /// Only valid if `is_auth` is true.
+    pub fn diversity(self) -> u16 {
+        ((self.0 >> 32) & 0xffff) as u16
+    }
+
+    /// Whether to use address diversity for authentication.
+    ///
+    /// Only valid if `is_auth` is true.
+    pub fn addr_div(self) -> bool {
+        (self.0 >> 48) & 1 != 0
+    }
+
+    /// The key for authentication.
+    ///
+    /// Only valid if `is_auth` is true.
+    pub fn key(self) -> u8 {
+        ((self.0 >> 49) & 3) as u8
+    }
+}
+
+/// A chained pointer for `DYLD_CHAINED_PTR_64` and `DYLD_CHAINED_PTR_64_OFFSET`.
+#[derive(Debug, Clone, Copy)]
+pub struct DyldChainedPtr64(pub u64);
+
+impl DyldChainedPtr64 {
+    /// The offset to the next chained pointer, in units of the stride.
+    pub fn next(self) -> u64 {
+        (self.0 >> 51) & ((1 << 12) - 1)
+    }
+
+    /// Whether this is a bind or a rebase.
+    pub fn is_bind(self) -> bool {
+        (self.0 >> 63) & 1 != 0
+    }
+
+    /// Get the bind fields.
+    pub fn bind(self) -> DyldChainedPtr64Bind {
+        DyldChainedPtr64Bind(self.0)
+    }
+
+    /// Get the rebase fields.
+    pub fn rebase(self) -> DyldChainedPtr64Rebase {
+        DyldChainedPtr64Rebase(self.0)
+    }
+}
+
+/// The rebase fields for [`DyldChainedPtr64`].
+#[derive(Debug, Clone, Copy)]
+pub struct DyldChainedPtr64Rebase(pub u64);
+
+impl DyldChainedPtr64Rebase {
+    /// The target.
+    ///
+    /// A vmaddr for `DYLD_CHAINED_PTR_64`, or a runtime offset for
+    /// `DYLD_CHAINED_PTR_64_OFFSET`.
+    pub fn target(self) -> u64 {
+        self.0 & ((1 << 36) - 1)
+    }
+
+    /// The top 8 bits of the pointer.
+    pub fn high8(self) -> u64 {
+        (self.0 >> 36) & 0xff
+    }
+}
+
+/// The bind fields for [`DyldChainedPtr64`].
+#[derive(Debug, Clone, Copy)]
+pub struct DyldChainedPtr64Bind(pub u64);
+
+impl DyldChainedPtr64Bind {
+    /// The 24-bit import ordinal.
+    pub fn ordinal(self) -> u32 {
+        (self.0 & ((1 << 24) - 1)) as u32
+    }
+
+    /// The unsigned 8-bit addend.
+    pub fn addend(self) -> i32 {
+        // No sign extend.
+        ((self.0 >> 24) & 0xff) as i32
+    }
+}
+
+/// A chained pointer for `DYLD_CHAINED_PTR_64_KERNEL_CACHE` and
+/// `DYLD_CHAINED_PTR_X86_64_KERNEL_CACHE`.
+#[derive(Debug, Clone, Copy)]
+pub struct DyldChainedPtr64KernelCacheRebase(pub u64);
+
+impl DyldChainedPtr64KernelCacheRebase {
+    /// The offset to the next chained pointer, in units of the stride.
+    pub fn next(self) -> u64 {
+        (self.0 >> 51) & ((1 << 12) - 1)
+    }
+
+    /// Whether the pointer is authenticated.
+    pub fn is_auth(self) -> bool {
+        (self.0 >> 63) & 1 != 0
+    }
+
+    /// The target.
+    pub fn target(self) -> u64 {
+        self.0 & ((1 << 30) - 1)
+    }
+
+    /// The cache level to bind to.
+    pub fn cache_level(self) -> u8 {
+        ((self.0 >> 30) & 3) as u8
+    }
+
+    /// The diversity value for authentication.
+    ///
+    /// Only valid if `is_auth` is true.
+    pub fn diversity(self) -> u16 {
+        ((self.0 >> 32) & 0xffff) as u16
+    }
+
+    /// Whether to use address diversity for authentication.
+    ///
+    /// Only valid if `is_auth` is true.
+    pub fn addr_div(self) -> bool {
+        (self.0 >> 48) & 1 != 0
+    }
+
+    /// The key for authentication.
+    ///
+    /// Only valid if `is_auth` is true.
+    pub fn key(self) -> u8 {
+        ((self.0 >> 49) & 3) as u8
+    }
+}
+
+/// A chained pointer for `DYLD_CHAINED_PTR_32`.
+#[derive(Debug, Clone, Copy)]
+pub struct DyldChainedPtr32(pub u32);
+
+impl DyldChainedPtr32 {
+    /// The offset to the next chained pointer, in units of the stride.
+    pub fn next(self) -> u32 {
+        (self.0 >> 26) & ((1 << 5) - 1)
+    }
+
+    /// Whether this is a bind or a rebase.
+    pub fn is_bind(self) -> bool {
+        (self.0 >> 31) & 1 != 0
+    }
+
+    /// Get the bind fields.
+    pub fn bind(self) -> DyldChainedPtr32Bind {
+        DyldChainedPtr32Bind(self.0)
+    }
+
+    /// Get the rebase fields.
+    pub fn rebase(self) -> DyldChainedPtr32Rebase {
+        DyldChainedPtr32Rebase(self.0)
+    }
+}
+
+/// The rebase fields for [`DyldChainedPtr32`].
+#[derive(Debug, Clone, Copy)]
+pub struct DyldChainedPtr32Rebase(pub u32);
+
+impl DyldChainedPtr32Rebase {
+    /// The target vmaddr.
+    pub fn target(self) -> u32 {
+        self.0 & ((1 << 26) - 1)
+    }
+}
+
+/// The bind fields for [`DyldChainedPtr32`].
+#[derive(Debug, Clone, Copy)]
+pub struct DyldChainedPtr32Bind(pub u32);
+
+impl DyldChainedPtr32Bind {
+    /// The import ordinal.
+    pub fn ordinal(self) -> u32 {
+        self.0 & ((1 << 20) - 1)
+    }
+
+    /// The unsigned 6-bit addend.
+    pub fn addend(self) -> i32 {
+        // No sign extend.
+        ((self.0 >> 20) & ((1 << 6) - 1)) as i32
+    }
+}
+
+/// A chained pointer for `DYLD_CHAINED_PTR_32_CACHE`.
+#[derive(Debug, Clone, Copy)]
+pub struct DyldChainedPtr32CacheRebase(pub u32);
+
+impl DyldChainedPtr32CacheRebase {
+    /// The target.
+    pub fn target(self) -> u32 {
+        self.0 & ((1 << 30) - 1)
+    }
+
+    /// The offset to the next chained pointer, in units of the stride.
+    pub fn next(self) -> u32 {
+        (self.0 >> 30) & ((1 << 2) - 1)
+    }
+}
+
+/// A chained pointer for `DYLD_CHAINED_PTR_32_FIRMWARE`.
+#[derive(Debug, Clone, Copy)]
+pub struct DyldChainedPtr32FirmwareRebase(pub u32);
+
+impl DyldChainedPtr32FirmwareRebase {
+    /// The target.
+    pub fn target(self) -> u32 {
+        self.0 & ((1 << 26) - 1)
+    }
+
+    /// The offset to the next chained pointer, in units of the stride.
+    pub fn next(self) -> u32 {
+        (self.0 >> 26) & ((1 << 6) - 1)
+    }
+}
+
+/// A chained pointer for `DYLD_CHAINED_PTR_ARM64E_SHARED_CACHE`.
+#[derive(Debug, Clone, Copy)]
+pub struct DyldChainedPtrArm64eSharedCache(pub u64);
+
+impl DyldChainedPtrArm64eSharedCache {
+    /// The offset to the next chained pointer, in units of the stride.
+    pub fn next(self) -> u64 {
+        (self.0 >> 52) & ((1 << 11) - 1)
+    }
+    /// Whether the pointer is authenticated.
+    pub fn is_auth(self) -> bool {
+        (self.0 >> 63) & 1 != 0
+    }
+
+    /// Get the rebase fields.
+    pub fn rebase(self) -> DyldChainedPtrArm64eSharedCacheRebase {
+        DyldChainedPtrArm64eSharedCacheRebase(self.0)
+    }
+
+    /// Get the authenticated rebase fields.
+    pub fn auth_rebase(self) -> DyldChainedPtrArm64eSharedCacheAuthRebase {
+        DyldChainedPtrArm64eSharedCacheAuthRebase(self.0)
+    }
+}
+
+/// The unauthenticated rebase fields for [`DyldChainedPtrArm64eSharedCache`].
+#[derive(Debug, Clone, Copy)]
+pub struct DyldChainedPtrArm64eSharedCacheRebase(pub u64);
+
+impl DyldChainedPtrArm64eSharedCacheRebase {
+    /// The offset from the start of the shared cache.
+    pub fn runtime_offset(self) -> u64 {
+        self.0 & ((1 << 34) - 1)
+    }
+
+    /// The top 8 bits of the pointer.
+    ///
+    /// Only valid if `is_auth` is false.
+    pub fn high8(self) -> u64 {
+        (self.0 >> 34) & 0xff
+    }
+}
+
+/// The authenticated rebase fields for [`DyldChainedPtrArm64eSharedCache`].
+#[derive(Debug, Clone, Copy)]
+pub struct DyldChainedPtrArm64eSharedCacheAuthRebase(pub u64);
+
+impl DyldChainedPtrArm64eSharedCacheAuthRebase {
+    /// The offset from the start of the shared cache.
+    pub fn runtime_offset(self) -> u64 {
+        self.0 & ((1 << 34) - 1)
+    }
+
+    /// The diversity value for authentication.
+    pub fn diversity(self) -> u16 {
+        ((self.0 >> 34) & 0xffff) as u16
+    }
+
+    /// Whether to use address diversity for authentication.
+    pub fn addr_div(self) -> bool {
+        (self.0 >> 50) & 1 != 0
+    }
+
+    /// Whether the key is IA (false) or DA (true).
+    pub fn key_is_data(self) -> bool {
+        (self.0 >> 51) & 1 != 0
+    }
+}
+
+newtype!(
+    /// Value for `DyldChainedFixupsHeader::imports_format`.
+    struct DyldChainedImportFormat(u32);
+);
+
+newtype_constant_names!(NAMES_DYLD_CHAINED_IMPORT_FORMAT: DyldChainedImportFormat(u32) = {
+    DYLD_CHAINED_IMPORT = 1,
+    DYLD_CHAINED_IMPORT_ADDEND = 2,
+    DYLD_CHAINED_IMPORT_ADDEND64 = 3,
+});
+
+newtype!(
+    /// An entry in the imports table, for `DYLD_CHAINED_IMPORT` and `DYLD_CHAINED_IMPORT_ADDEND`.
+    ///
+    /// For `DYLD_CHAINED_IMPORT_ADDEND`, this is followed by an i32 addend.
+    #[derive(Debug)]
+    struct DyldChainedImport32(u32);
+);
+
+impl DyldChainedImport32 {
+    /// The ordinal of the library that the symbol is imported from.
+    ///
+    /// `0` and `0xF1..` are special `BindDylib` values.
+    pub fn lib_ordinal(self) -> u8 {
+        (self.0 & 0xff) as u8
+    }
+
+    /// Return `lib_ordinal` as a `BindDylib`.
+    pub fn dylib(self) -> BindDylib {
+        let lib_ordinal = self.lib_ordinal();
+        if lib_ordinal > 0xf0 {
+            BindDylib((lib_ordinal as i8).into())
+        } else {
+            BindDylib(lib_ordinal.into())
+        }
+    }
+
+    /// Whether this is a weak import.
+    pub fn weak_import(self) -> bool {
+        (self.0 >> 8) & 1 != 0
+    }
+
+    /// The offset of the symbol name in the symbol string pool.
+    pub fn name_offset(self) -> u32 {
+        self.0 >> 9
+    }
+}
+
+newtype!(
+    /// An entry in the imports table, for `DYLD_CHAINED_IMPORT_ADDEND64`.
+    ///
+    /// This is followed by a u64 addend.
+    #[derive(Debug)]
+    struct DyldChainedImport64(u64);
+);
+
+impl DyldChainedImport64 {
+    /// The ordinal of the library that the symbol is imported from.
+    ///
+    /// `0` and `0xFFF1..` are special `BindDylib` values.
+    pub fn lib_ordinal(self) -> u16 {
+        (self.0 & 0xffff) as u16
+    }
+
+    /// Return `lib_ordinal` as a `BindDylib`.
+    pub fn dylib(self) -> BindDylib {
+        let lib_ordinal = self.lib_ordinal();
+        if lib_ordinal > 0xfff0 {
+            BindDylib((lib_ordinal as i16).into())
+        } else {
+            BindDylib(lib_ordinal.into())
+        }
+    }
+
+    /// Whether this is a weak import.
+    pub fn weak_import(self) -> bool {
+        (self.0 >> 16) & 1 != 0
+    }
+
+    /// The offset of the symbol name in the symbol string pool.
+    pub fn name_offset(self) -> u32 {
+        (self.0 >> 32) as u32
+    }
+}
+
 unsafe_impl_pod!(FatHeader, FatArch32, FatArch64,);
 unsafe_impl_endian_pod!(
     DyldCacheHeader,
@@ -4473,6 +5175,10 @@ unsafe_impl_endian_pod!(
     BuildVersionCommand,
     BuildToolVersion,
     DyldInfoCommand,
+    DyldChainedFixupsHeader,
+    DyldChainedStartsInImage,
+    DyldChainedStartsInSegment,
+    DyldChainedStartsOffsets,
     LinkerOptionCommand,
     SymsegCommand,
     IdentCommand,

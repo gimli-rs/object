@@ -59,6 +59,9 @@ pub use exports_trie::*;
 mod fat;
 pub use fat::*;
 
+mod fixup;
+pub use fixup::*;
+
 mod file;
 pub use file::*;
 
