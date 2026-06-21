@@ -2909,55 +2909,124 @@ pub struct DyldInfoCommand<E: Endian> {
 /*
  * The following are used to encode rebasing information
  */
-pub const REBASE_TYPE_POINTER: u8 = 1;
-pub const REBASE_TYPE_TEXT_ABSOLUTE32: u8 = 2;
-pub const REBASE_TYPE_TEXT_PCREL32: u8 = 3;
+
+newtype!(
+    struct RebaseType(u8);
+);
+
+newtype_constant_names!(NAMES_REBASE_TYPE: RebaseType(u8) = {
+    REBASE_TYPE_POINTER = 1,
+    REBASE_TYPE_TEXT_ABSOLUTE32 = 2,
+    REBASE_TYPE_TEXT_PCREL32 = 3,
+});
+
+newtype!(
+    struct RebaseOpcode(u8);
+);
 
 pub const REBASE_OPCODE_MASK: u8 = 0xF0;
 pub const REBASE_IMMEDIATE_MASK: u8 = 0x0F;
-pub const REBASE_OPCODE_DONE: u8 = 0x00;
-pub const REBASE_OPCODE_SET_TYPE_IMM: u8 = 0x10;
-pub const REBASE_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB: u8 = 0x20;
-pub const REBASE_OPCODE_ADD_ADDR_ULEB: u8 = 0x30;
-pub const REBASE_OPCODE_ADD_ADDR_IMM_SCALED: u8 = 0x40;
-pub const REBASE_OPCODE_DO_REBASE_IMM_TIMES: u8 = 0x50;
-pub const REBASE_OPCODE_DO_REBASE_ULEB_TIMES: u8 = 0x60;
-pub const REBASE_OPCODE_DO_REBASE_ADD_ADDR_ULEB: u8 = 0x70;
-pub const REBASE_OPCODE_DO_REBASE_ULEB_TIMES_SKIPPING_ULEB: u8 = 0x80;
+
+newtype_constant_names!(NAMES_REBASE_OPCODE: RebaseOpcode(u8) = {
+    REBASE_OPCODE_DONE = 0x00,
+    REBASE_OPCODE_SET_TYPE_IMM = 0x10,
+    REBASE_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB = 0x20,
+    REBASE_OPCODE_ADD_ADDR_ULEB = 0x30,
+    REBASE_OPCODE_ADD_ADDR_IMM_SCALED = 0x40,
+    REBASE_OPCODE_DO_REBASE_IMM_TIMES = 0x50,
+    REBASE_OPCODE_DO_REBASE_ULEB_TIMES = 0x60,
+    REBASE_OPCODE_DO_REBASE_ADD_ADDR_ULEB = 0x70,
+    REBASE_OPCODE_DO_REBASE_ULEB_TIMES_SKIPPING_ULEB = 0x80,
+});
 
 /*
  * The following are used to encode binding information
  */
-pub const BIND_TYPE_POINTER: u8 = 1;
-pub const BIND_TYPE_TEXT_ABSOLUTE32: u8 = 2;
-pub const BIND_TYPE_TEXT_PCREL32: u8 = 3;
 
-pub const BIND_SPECIAL_DYLIB_SELF: i8 = 0;
-pub const BIND_SPECIAL_DYLIB_MAIN_EXECUTABLE: i8 = -1;
-pub const BIND_SPECIAL_DYLIB_FLAT_LOOKUP: i8 = -2;
-pub const BIND_SPECIAL_DYLIB_WEAK_LOOKUP: i8 = -3;
+newtype!(
+    struct BindType(u8);
+);
 
-pub const BIND_SYMBOL_FLAGS_WEAK_IMPORT: u8 = 0x1;
-pub const BIND_SYMBOL_FLAGS_NON_WEAK_DEFINITION: u8 = 0x8;
+newtype_constant_names!(NAMES_BIND_TYPE: BindType(u8) = {
+    BIND_TYPE_POINTER = 1,
+    BIND_TYPE_TEXT_ABSOLUTE32 = 2,
+    BIND_TYPE_TEXT_PCREL32 = 3,
+});
+
+newtype!(
+    /// The library ordinal for a bind.
+    ///
+    /// A positive value is the 1-based index of the dylib containing the symbol.
+    /// Zero and negative values are the special `BIND_SPECIAL_DYLIB_*` constants.
+    struct BindDylib(i32);
+);
+
+impl BindDylib {
+    /// Whether this is a reserved constant, rather than a library ordinal.
+    pub fn is_special(self) -> bool {
+        self.0 <= 0
+    }
+
+    /// Get the library ordinal.
+    ///
+    /// Returns `None` for reserved constants.
+    pub fn index(self) -> Option<u32> {
+        if self.0 <= 0 {
+            None
+        } else {
+            Some(self.0 as u32)
+        }
+    }
+}
+
+newtype_constant_names!(NAMES_BIND_DYLIB: BindDylib(i32) = {
+    BIND_SPECIAL_DYLIB_SELF = 0,
+    BIND_SPECIAL_DYLIB_MAIN_EXECUTABLE = -1,
+    BIND_SPECIAL_DYLIB_FLAT_LOOKUP = -2,
+    BIND_SPECIAL_DYLIB_WEAK_LOOKUP = -3,
+});
+
+newtype!(
+    struct BindSymbolFlags(u8);
+);
+
+newtype_flag_names!(NAMES_BIND_SYMBOL_FLAGS: BindSymbolFlags(u8) = {
+    BIND_SYMBOL_FLAGS_WEAK_IMPORT = 0x1,
+    BIND_SYMBOL_FLAGS_NON_WEAK_DEFINITION = 0x8,
+});
+
+newtype!(
+    struct BindOpcode(u8);
+);
 
 pub const BIND_OPCODE_MASK: u8 = 0xF0;
 pub const BIND_IMMEDIATE_MASK: u8 = 0x0F;
-pub const BIND_OPCODE_DONE: u8 = 0x00;
-pub const BIND_OPCODE_SET_DYLIB_ORDINAL_IMM: u8 = 0x10;
-pub const BIND_OPCODE_SET_DYLIB_ORDINAL_ULEB: u8 = 0x20;
-pub const BIND_OPCODE_SET_DYLIB_SPECIAL_IMM: u8 = 0x30;
-pub const BIND_OPCODE_SET_SYMBOL_TRAILING_FLAGS_IMM: u8 = 0x40;
-pub const BIND_OPCODE_SET_TYPE_IMM: u8 = 0x50;
-pub const BIND_OPCODE_SET_ADDEND_SLEB: u8 = 0x60;
-pub const BIND_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB: u8 = 0x70;
-pub const BIND_OPCODE_ADD_ADDR_ULEB: u8 = 0x80;
-pub const BIND_OPCODE_DO_BIND: u8 = 0x90;
-pub const BIND_OPCODE_DO_BIND_ADD_ADDR_ULEB: u8 = 0xA0;
-pub const BIND_OPCODE_DO_BIND_ADD_ADDR_IMM_SCALED: u8 = 0xB0;
-pub const BIND_OPCODE_DO_BIND_ULEB_TIMES_SKIPPING_ULEB: u8 = 0xC0;
-pub const BIND_OPCODE_THREADED: u8 = 0xD0;
-pub const BIND_SUBOPCODE_THREADED_SET_BIND_ORDINAL_TABLE_SIZE_ULEB: u8 = 0x00;
-pub const BIND_SUBOPCODE_THREADED_APPLY: u8 = 0x01;
+
+newtype_constant_names!(NAMES_BIND_OPCODE: BindOpcode(u8) = {
+    BIND_OPCODE_DONE = 0x00,
+    BIND_OPCODE_SET_DYLIB_ORDINAL_IMM = 0x10,
+    BIND_OPCODE_SET_DYLIB_ORDINAL_ULEB = 0x20,
+    BIND_OPCODE_SET_DYLIB_SPECIAL_IMM = 0x30,
+    BIND_OPCODE_SET_SYMBOL_TRAILING_FLAGS_IMM = 0x40,
+    BIND_OPCODE_SET_TYPE_IMM = 0x50,
+    BIND_OPCODE_SET_ADDEND_SLEB = 0x60,
+    BIND_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB = 0x70,
+    BIND_OPCODE_ADD_ADDR_ULEB = 0x80,
+    BIND_OPCODE_DO_BIND = 0x90,
+    BIND_OPCODE_DO_BIND_ADD_ADDR_ULEB = 0xA0,
+    BIND_OPCODE_DO_BIND_ADD_ADDR_IMM_SCALED = 0xB0,
+    BIND_OPCODE_DO_BIND_ULEB_TIMES_SKIPPING_ULEB = 0xC0,
+    BIND_OPCODE_THREADED = 0xD0,
+});
+
+newtype!(
+    struct BindSubopcodeThreaded(u8);
+);
+
+newtype_constant_names!(NAMES_BIND_SUBOPCODE_THREADED: BindSubopcodeThreaded(u8) = {
+    BIND_SUBOPCODE_THREADED_SET_BIND_ORDINAL_TABLE_SIZE_ULEB = 0x00,
+    BIND_SUBOPCODE_THREADED_APPLY = 0x01,
+});
 
 /*
  * The following are used on the flags byte of a terminal node

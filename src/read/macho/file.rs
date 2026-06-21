@@ -711,6 +711,14 @@ pub trait MachHeader: Debug + Pod {
     /// Return true if the `magic` field signifies little-endian.
     fn is_little_endian(&self) -> bool;
 
+    /// Return the size in bytes of `Self::Word`.
+    fn pointer_size() -> u8
+    where
+        Self: Sized,
+    {
+        core::mem::size_of::<Self::Word>() as u8
+    }
+
     fn magic(&self) -> u32;
     fn cputype(&self, endian: Self::Endian) -> macho::CpuType;
     fn cpusubtype(&self, endian: Self::Endian) -> macho::CpuSubtype;

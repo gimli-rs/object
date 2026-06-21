@@ -235,6 +235,128 @@ DyldInfoCommand {
     LazyBindSize: 0x10
     ExportOffset: 0xC030
     ExportSize: 0x30
+    RebaseOperations {
+        Operation {
+            Opcode: REBASE_OPCODE_SET_TYPE_IMM (0x10)
+            Type: REBASE_TYPE_POINTER (0x1)
+        }
+        Operation {
+            Opcode: REBASE_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB (0x20)
+            SegmentIndex: 3
+            Offset: 0x0
+        }
+        Operation {
+            Opcode: REBASE_OPCODE_DO_REBASE_IMM_TIMES (0x50)
+            Count: 1
+        }
+        Operation {
+            Opcode: REBASE_OPCODE_DONE (0x0)
+        }
+        Operation {
+            Opcode: REBASE_OPCODE_DONE (0x0)
+        }
+        Operation {
+            Opcode: REBASE_OPCODE_DONE (0x0)
+        }
+        Operation {
+            Opcode: REBASE_OPCODE_DONE (0x0)
+        }
+    }
+    Rebases {
+        Rebase {
+            SegmentIndex: 3
+            SegmentOffset: 0x0
+            Type: REBASE_TYPE_POINTER (0x1)
+        }
+    }
+    BindOperations {
+        Operation {
+            Opcode: BIND_OPCODE_SET_DYLIB_ORDINAL_IMM (0x10)
+            Ordinal: 1
+        }
+        Operation {
+            Opcode: BIND_OPCODE_SET_SYMBOL_TRAILING_FLAGS_IMM (0x40)
+            Flags: 0x0
+            Name: "dyld_stub_binder"
+        }
+        Operation {
+            Opcode: BIND_OPCODE_SET_TYPE_IMM (0x50)
+            Type: BIND_TYPE_POINTER (0x1)
+        }
+        Operation {
+            Opcode: BIND_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB (0x70)
+            SegmentIndex: 2
+            Offset: 0x0
+        }
+        Operation {
+            Opcode: BIND_OPCODE_DO_BIND (0x90)
+        }
+        Operation {
+            Opcode: BIND_OPCODE_DONE (0x0)
+        }
+    }
+    Binds {
+        Bind {
+            SegmentIndex: 2
+            SegmentOffset: 0x0
+            Type: BIND_TYPE_POINTER (0x1)
+            LibraryOrdinal: 1
+            Flags: 0x0
+            Symbol: "dyld_stub_binder"
+            Addend: 0
+        }
+    }
+    LazyBindOperations {
+        Operation {
+            Opcode: BIND_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB (0x70)
+            SegmentIndex: 3
+            Offset: 0x0
+        }
+        Operation {
+            Opcode: BIND_OPCODE_SET_DYLIB_ORDINAL_IMM (0x10)
+            Ordinal: 1
+        }
+        Operation {
+            Opcode: BIND_OPCODE_SET_SYMBOL_TRAILING_FLAGS_IMM (0x40)
+            Flags: 0x0
+            Name: "_printf"
+        }
+        Operation {
+            Opcode: BIND_OPCODE_DO_BIND (0x90)
+        }
+        Operation {
+            Opcode: BIND_OPCODE_DONE (0x0)
+        }
+        Operation {
+            Opcode: BIND_OPCODE_DONE (0x0)
+        }
+        Operation {
+            Opcode: BIND_OPCODE_DONE (0x0)
+        }
+    }
+    LazyBinds {
+        Bind {
+            SegmentIndex: 3
+            SegmentOffset: 0x0
+            Type: BIND_TYPE_POINTER (0x1)
+            LibraryOrdinal: 1
+            Flags: 0x0
+            Symbol: "_printf"
+            Addend: 0
+        }
+    }
+    ExportsTrie {
+        ExportSymbol {
+            Name: "__mh_execute_header"
+            Flags: EXPORT_SYMBOL_FLAGS_KIND_REGULAR (0x0)
+            Address: 0x0
+        }
+        ExportSymbol {
+            Name: "_main"
+            Flags: EXPORT_SYMBOL_FLAGS_KIND_REGULAR (0x0)
+            Address: 0x3F60
+        }
+    }
 }
 SymtabCommand {
     Cmd: LC_SYMTAB (0x2)
