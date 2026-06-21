@@ -99,7 +99,7 @@ where
     fn bytes(&self) -> Result<&'data [u8]> {
         self.internal
             .section
-            .data(self.file.endian, self.internal.data)
+            .data(self.file.endian, self.internal.data, self.internal.offset)
             .read_error("Invalid Mach-O section size or offset")
     }
 
@@ -153,7 +153,9 @@ where
 
     #[inline]
     fn file_range(&self) -> Option<(u64, u64)> {
-        self.internal.section.file_range(self.file.endian)
+        self.internal
+            .section
+            .file_range(self.file.endian, self.internal.offset)
     }
 
     #[inline]
@@ -240,10 +242,19 @@ pub(super) struct MachOSectionInternal<'data, Mach: MachHeader, R: ReadRef<'data
     /// This is required for dyld caches, where this may be a different subcache
     /// from the file containing the Mach-O load commands.
     pub data: R,
+    /// The file offset of the section.
+    ///
+    /// Used instead of `section.offset()` to handle file offsets greater than 32-bit.
+    pub offset: u64,
 }
 
 impl<'data, Mach: MachHeader, R: ReadRef<'data>> MachOSectionInternal<'data, Mach, R> {
-    pub(super) fn parse(index: SectionIndex, section: &'data Mach::Section, data: R) -> Self {
+    pub(super) fn parse(
+        index: SectionIndex,
+        section: &'data Mach::Section,
+        data: R,
+        offset: u64,
+    ) -> Self {
         // TODO: we don't validate flags, should we?
         let kind = match (section.segment_name(), section.name()) {
             (b"__TEXT", b"__text") => SectionKind::Text,
@@ -269,6 +280,7 @@ impl<'data, Mach: MachHeader, R: ReadRef<'data>> MachOSectionInternal<'data, Mac
             kind,
             section,
             data,
+            offset,
         }
     }
 }
@@ -283,6 +295,9 @@ pub trait Section: Debug + Pod {
     fn segname(&self) -> &[u8; 16];
     fn addr(&self, endian: Self::Endian) -> Self::Word;
     fn size(&self, endian: Self::Endian) -> Self::Word;
+    /// The file offset of the section.
+    ///
+    /// Note that for offsets larger than 32-bit this will be truncated.
     fn offset(&self, endian: Self::Endian) -> u32;
     fn align(&self, endian: Self::Endian) -> u32;
     fn reloff(&self, endian: Self::Endian) -> u32;
@@ -316,20 +331,33 @@ pub trait Section: Debug + Pod {
 
     /// Return the offset and size of the section in the file.
     ///
+    /// `offset` must be the section file offset. Note that for file offsets larger than
+    /// `u32::MAX`, [`Self::offset`] will be truncated, so you will need to determine the
+    /// offset in another way. `(section.addr - segment.vmaddr) + segment.fileoff` is
+    /// equivalent for well-formed files. Alternatively, you could track the file offset
+    /// of consecutive sections to determine when overflow occurs.
+    ///
     /// Returns `None` for sections that have no data in the file.
-    fn file_range(&self, endian: Self::Endian) -> Option<(u64, u64)> {
+    fn file_range(&self, endian: Self::Endian, offset: u64) -> Option<(u64, u64)> {
         match self.section_type(endian) {
             macho::S_ZEROFILL | macho::S_GB_ZEROFILL | macho::S_THREAD_LOCAL_ZEROFILL => None,
-            _ => Some((self.offset(endian).into(), self.size(endian).into())),
+            _ => Some((offset, self.size(endian).into())),
         }
     }
 
     /// Return the section data.
     ///
+    /// `offset` must be the section file offset. See [`Self::file_range`].
+    ///
     /// Returns `Ok(&[])` if the section has no data.
     /// Returns `Err` for invalid values.
-    fn data<'data, R: ReadRef<'data>>(&self, endian: Self::Endian, data: R) -> Result<&'data [u8]> {
-        if let Some((offset, size)) = self.file_range(endian) {
+    fn data<'data, R: ReadRef<'data>>(
+        &self,
+        endian: Self::Endian,
+        data: R,
+        offset: u64,
+    ) -> Result<&'data [u8]> {
+        if let Some((offset, size)) = self.file_range(endian, offset) {
             data.read_bytes_at(offset, size)
                 .read_error("Invalid Mach-O section size or offset")
         } else {

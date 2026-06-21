@@ -75,10 +75,7 @@ where
             while let Ok(Some(command)) = commands.next() {
                 if let Some((segment, section_data)) = Mach::Segment::from_command(command)? {
                     segments.push(MachOSegmentInternal { segment, data });
-                    for section in segment.sections(endian, section_data)? {
-                        let index = SectionIndex(sections.len() + 1);
-                        sections.push(MachOSectionInternal::parse(index, section, data));
-                    }
+                    Self::parse_sections(endian, data, segment, section_data, &mut sections)?;
                 } else if let Some(symtab) = command.symtab()? {
                     symbols = symtab.symbols(endian, data)?;
                 }
@@ -128,11 +125,7 @@ where
                         linkedit_data = Some(data);
                     }
                     segments.push(MachOSegmentInternal { segment, data });
-
-                    for section in segment.sections(endian, section_data)? {
-                        let index = SectionIndex(sections.len() + 1);
-                        sections.push(MachOSectionInternal::parse(index, section, data));
-                    }
+                    Self::parse_sections(endian, data, segment, section_data, &mut sections)?;
                 } else if let Some(st) = command.symtab()? {
                     symtab = Some(st);
                 }
@@ -155,6 +148,45 @@ where
             sections,
             symbols,
         })
+    }
+
+    fn parse_sections(
+        endian: Mach::Endian,
+        data: R,
+        segment: &Mach::Segment,
+        section_data: &'data [u8],
+        sections: &mut Vec<MachOSectionInternal<'data, Mach, R>>,
+    ) -> Result<()> {
+        let segment_fileoff: u64 = segment.fileoff(endian).into();
+        let segment_end = segment_fileoff.wrapping_add(segment.filesize(endian).into());
+        let overflow_possible = segment_end > u32::MAX as u64;
+        let mut prev_offset = segment_fileoff;
+
+        for section in segment.sections(endian, section_data)? {
+            let mut offset = u64::from(section.offset(endian));
+
+            // Section headers only have 32-bit file offsets, which can overflow in files
+            // larger than 4GB. When that is possible, reconstruct the full offset by
+            // assuming sections are ordered by file offset.
+            // This is a refinement of the algorithm used by LLVM.
+            if overflow_possible {
+                if let Some((_, size)) = section.file_range(endian, offset) {
+                    offset |= prev_offset & 0xffff_ffff_0000_0000;
+                    if offset < prev_offset {
+                        offset = offset.wrapping_add(0x1_0000_0000);
+                    }
+                    let section_end = offset.wrapping_add(size);
+                    if section_end > segment_end {
+                        return Err(Error("Unsupported Mach-O large section offsets"));
+                    }
+                    prev_offset = section_end;
+                }
+            }
+
+            let index = SectionIndex(sections.len() + 1);
+            sections.push(MachOSectionInternal::parse(index, section, data, offset));
+        }
+        Ok(())
     }
 
     /// Return the section at the given index.
