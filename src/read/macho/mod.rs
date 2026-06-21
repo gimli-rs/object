@@ -50,6 +50,9 @@ use crate::macho;
 mod dyld_cache;
 pub use dyld_cache::*;
 
+mod dyld_info;
+pub use dyld_info::*;
+
 mod exports_trie;
 pub use exports_trie::*;
 

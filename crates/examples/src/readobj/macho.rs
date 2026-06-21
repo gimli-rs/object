@@ -596,21 +596,7 @@ fn print_load_command<Mach: MachHeader>(
                 });
             }
             LoadCommandVariant::DyldInfo(x) => {
-                p.group("DyldInfoCommand", |p| {
-                    p.field_consts("Cmd", x.cmd.get(endian), LoadCommandType::NAMES);
-                    p.field_hex("CmdSize", x.cmdsize.get(endian));
-                    // TODO: dump the tables these are all pointing to
-                    p.field_hex("RebaseOffset", x.rebase_off.get(endian));
-                    p.field_hex("RebaseSize", x.rebase_size.get(endian));
-                    p.field_hex("BindOffset", x.bind_off.get(endian));
-                    p.field_hex("BindSize", x.bind_size.get(endian));
-                    p.field_hex("WeakBindOffset", x.weak_bind_off.get(endian));
-                    p.field_hex("WeakBindSize", x.weak_bind_size.get(endian));
-                    p.field_hex("LazyBindOffset", x.lazy_bind_off.get(endian));
-                    p.field_hex("LazyBindSize", x.lazy_bind_size.get(endian));
-                    p.field_hex("ExportOffset", x.export_off.get(endian));
-                    p.field_hex("ExportSize", x.export_size.get(endian));
-                });
+                print_dyld_info::<Mach>(p, endian, x, state);
             }
             LoadCommandVariant::VersionMin(x) => {
                 p.group("VersionMinCommand", |p| {
@@ -981,7 +967,7 @@ fn print_linkedit_data<Mach: MachHeader>(
             print_function_starts::<Mach>(p, endian, linkedit, state);
         }
         if exports_trie {
-            print_exports_trie::<Mach>(p, endian, linkedit, state);
+            print_exports_trie(p, linkedit.exports_trie(endian, state.linkedit_data));
         }
     });
 }
@@ -1005,39 +991,223 @@ fn print_function_starts<Mach: MachHeader>(
     });
 }
 
-fn print_exports_trie<Mach: MachHeader>(
+fn print_exports_trie(
+    p: &mut Printer<'_>,
+    exports_trie: object::read::Result<ExportsTrieIterator<'_>>,
+) {
+    let Some(mut exports_trie) = exports_trie.print_err(p) else {
+        return;
+    };
+    while let Some(Some(export_symbol)) = exports_trie.next().print_err(p) {
+        p.group("ExportSymbol", |p| {
+            p.field_inline_string("Name", export_symbol.name());
+            p.field_flags("Flags", export_symbol.flags(), ExportSymbolFlags::NAMES);
+            match export_symbol.data() {
+                ExportData::Regular { address } => p.field_hex("Address", address),
+                ExportData::Reexport {
+                    dylib_ordinal,
+                    import_name,
+                } => {
+                    p.field_hex("DylibOrdinal", dylib_ordinal);
+                    p.field_inline_string("ImportName", import_name);
+                }
+                ExportData::StubAndResolver {
+                    stub_address,
+                    resolver_address,
+                } => {
+                    p.field_hex("StubAddress", stub_address);
+                    p.field_hex("ResolverAddress", resolver_address);
+                }
+            }
+        });
+    }
+}
+
+fn print_dyld_info<Mach: MachHeader>(
     p: &mut Printer<'_>,
     endian: Mach::Endian,
-    linkedit: &LinkeditDataCommand<Mach::Endian>,
+    x: &DyldInfoCommand<Mach::Endian>,
     state: &MachState<Mach::Endian>,
 ) {
-    if let Some(mut exports_trie) = linkedit
-        .exports_trie(endian, state.linkedit_data)
-        .print_err(p)
-    {
-        while let Some(Some(export_symbol)) = exports_trie.next().print_err(p) {
-            p.group("ExportSymbol", |p| {
-                p.field_inline_string("Name", export_symbol.name());
-                p.field_flags("Flags", export_symbol.flags(), ExportSymbolFlags::NAMES);
-                match export_symbol.data() {
-                    ExportData::Regular { address } => p.field_hex("Address", address),
-                    ExportData::Reexport {
-                        dylib_ordinal,
-                        import_name,
-                    } => {
-                        p.field_hex("DylibOrdinal", dylib_ordinal);
-                        p.field_inline_string("ImportName", import_name);
-                    }
-                    ExportData::StubAndResolver {
-                        stub_address,
-                        resolver_address,
-                    } => {
-                        p.field_hex("StubAddress", stub_address);
-                        p.field_hex("ResolverAddress", resolver_address);
-                    }
-                }
+    p.group("DyldInfoCommand", |p| {
+        p.field_consts("Cmd", x.cmd.get(endian), LoadCommandType::NAMES);
+        p.field_hex("CmdSize", x.cmdsize.get(endian));
+        p.field_hex("RebaseOffset", x.rebase_off.get(endian));
+        p.field_hex("RebaseSize", x.rebase_size.get(endian));
+        p.field_hex("BindOffset", x.bind_off.get(endian));
+        p.field_hex("BindSize", x.bind_size.get(endian));
+        p.field_hex("WeakBindOffset", x.weak_bind_off.get(endian));
+        p.field_hex("WeakBindSize", x.weak_bind_size.get(endian));
+        p.field_hex("LazyBindOffset", x.lazy_bind_off.get(endian));
+        p.field_hex("LazyBindSize", x.lazy_bind_size.get(endian));
+        p.field_hex("ExportOffset", x.export_off.get(endian));
+        p.field_hex("ExportSize", x.export_size.get(endian));
+
+        let pointer_size = Mach::pointer_size();
+        if x.rebase_size.get(endian) != 0 {
+            p.group("RebaseOperations", |p| {
+                print_rebase_operations(p, x.rebase_operations(endian, state.linkedit_data));
+            });
+            p.group("Rebases", |p| {
+                print_rebases(p, x.rebases(endian, state.linkedit_data, pointer_size));
             });
         }
+        if x.bind_size.get(endian) != 0 {
+            p.group("BindOperations", |p| {
+                print_bind_operations(p, x.bind_operations(endian, state.linkedit_data));
+            });
+            p.group("Binds", |p| {
+                print_binds(p, x.binds(endian, state.linkedit_data, pointer_size));
+            });
+        }
+        if x.weak_bind_size.get(endian) != 0 {
+            p.group("WeakBindOperations", |p| {
+                print_bind_operations(p, x.weak_bind_operations(endian, state.linkedit_data));
+            });
+            p.group("WeakBinds", |p| {
+                print_binds(p, x.weak_binds(endian, state.linkedit_data, pointer_size));
+            });
+        }
+        if x.lazy_bind_size.get(endian) != 0 {
+            p.group("LazyBindOperations", |p| {
+                print_bind_operations(p, x.lazy_bind_operations(endian, state.linkedit_data));
+            });
+            p.group("LazyBinds", |p| {
+                print_binds(p, x.lazy_binds(endian, state.linkedit_data, pointer_size));
+            });
+        }
+        if x.export_size.get(endian) != 0 {
+            p.group("ExportsTrie", |p| {
+                print_exports_trie(p, x.exports_trie(endian, state.linkedit_data));
+            });
+        }
+    });
+}
+
+fn print_rebase_operations(
+    p: &mut Printer<'_>,
+    operations: object::read::Result<RebaseOperationIterator<'_>>,
+) {
+    let Some(mut operations) = operations.print_err(p) else {
+        return;
+    };
+    while let Some(Some((opcode, operation))) = operations.next().print_err(p) {
+        p.group("Operation", |p| {
+            p.field_consts("Opcode", opcode, RebaseOpcode::NAMES);
+            match operation {
+                RebaseOperation::Done => {}
+                RebaseOperation::SetType { kind } => {
+                    p.field_consts("Type", kind, RebaseType::NAMES);
+                }
+                RebaseOperation::SetSegmentAndOffset {
+                    index: segment_index,
+                    offset,
+                } => {
+                    p.field("SegmentIndex", segment_index);
+                    p.field_hex("Offset", offset);
+                }
+                RebaseOperation::AddAddr { offset } => {
+                    p.field_hex("Offset", offset);
+                }
+                RebaseOperation::AddAddrScaled { count } => {
+                    p.field("Count", count);
+                }
+                RebaseOperation::DoRebaseTimes { count } => {
+                    p.field("Count", count);
+                }
+                RebaseOperation::DoRebaseAddAddr { offset } => {
+                    p.field_hex("Offset", offset);
+                }
+                RebaseOperation::DoRebaseTimesSkipping { count, skip } => {
+                    p.field("Count", count);
+                    p.field_hex("Skip", skip);
+                }
+            }
+        });
+    }
+}
+
+fn print_bind_operations(
+    p: &mut Printer<'_>,
+    operations: object::read::Result<BindOperationIterator<'_>>,
+) {
+    let Some(mut operations) = operations.print_err(p) else {
+        return;
+    };
+    while let Some(Some((opcode, operation))) = operations.next().print_err(p) {
+        p.group("Operation", |p| {
+            p.field_consts("Opcode", opcode, BindOpcode::NAMES);
+            match operation {
+                BindOperation::Done => {}
+                BindOperation::SetDylibOrdinal { ordinal } => {
+                    p.field("Ordinal", ordinal);
+                }
+                BindOperation::SetDylibSpecial { ordinal } => {
+                    p.field_consts_display("Ordinal", ordinal, BindDylib::NAMES);
+                }
+                BindOperation::SetSymbol { flags, name } => {
+                    p.field_flags("Flags", flags, BindSymbolFlags::NAMES);
+                    p.field_inline_string("Name", name);
+                }
+                BindOperation::SetType { kind } => {
+                    p.field_consts("Type", kind, BindType::NAMES);
+                }
+                BindOperation::SetAddend { addend } => {
+                    p.field("Addend", addend);
+                }
+                BindOperation::SetSegmentAndOffset {
+                    segment_index,
+                    offset,
+                } => {
+                    p.field("SegmentIndex", segment_index);
+                    p.field_hex("Offset", offset);
+                }
+                BindOperation::AddAddr { offset } => {
+                    p.field_hex("Offset", offset);
+                }
+                BindOperation::DoBind => {}
+                BindOperation::DoBindAddAddr { offset } => {
+                    p.field_hex("Offset", offset);
+                }
+                BindOperation::DoBindAddAddrScaled { count } => {
+                    p.field("Count", count);
+                }
+                BindOperation::DoBindTimesSkipping { count, skip } => {
+                    p.field("Count", count);
+                    p.field_hex("Skip", skip);
+                }
+            }
+        });
+    }
+}
+
+fn print_rebases(p: &mut Printer<'_>, rebases: object::read::Result<RebaseIterator<'_>>) {
+    let Some(mut rebases) = rebases.print_err(p) else {
+        return;
+    };
+    while let Some(Some(rebase)) = rebases.next().print_err(p) {
+        p.group("Rebase", |p| {
+            p.field("SegmentIndex", rebase.segment_index);
+            p.field_hex("SegmentOffset", rebase.segment_offset);
+            p.field_consts("Type", rebase.kind, RebaseType::NAMES);
+        });
+    }
+}
+
+fn print_binds(p: &mut Printer<'_>, binds: object::read::Result<BindIterator<'_>>) {
+    let Some(mut binds) = binds.print_err(p) else {
+        return;
+    };
+    while let Some(Some(bind)) = binds.next().print_err(p) {
+        p.group("Bind", |p| {
+            p.field("SegmentIndex", bind.segment_index);
+            p.field_hex("SegmentOffset", bind.segment_offset);
+            p.field_consts("Type", bind.kind, BindType::NAMES);
+            p.field_consts_display("LibraryOrdinal", bind.dylib, BindDylib::NAMES);
+            p.field_flags("Flags", bind.flags, BindSymbolFlags::NAMES);
+            p.field_inline_string("Symbol", bind.symbol);
+            p.field("Addend", bind.addend);
+        });
     }
 }
 
