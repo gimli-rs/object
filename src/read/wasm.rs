@@ -50,6 +50,8 @@ pub struct WasmFile<'data, R = &'data [u8]> {
     id_sections: Box<[Option<usize>; MAX_SECTION_ID + 1]>,
     // Parsed `reloc.*` custom sections, keyed by the binary index of the target section.
     relocations: Vec<RelocSection>,
+    // Data segments parsed from the `data` section.
+    data_segments: Vec<WasmDataSegmentInternal<'data>>,
     // Whether the file has DWARF information.
     has_debug_symbols: bool,
     // Symbols collected from imports, exports, code and name sections.
@@ -63,6 +65,26 @@ pub struct WasmFile<'data, R = &'data [u8]> {
 struct RelocSection {
     target: u32,
     entries: Vec<wp::RelocationEntry>,
+}
+
+#[derive(Debug)]
+struct WasmDataSegmentInternal<'data> {
+    /// Name from the `SegmentInfo` subsection of `linking`. Empty if unavailable.
+    name: &'data str,
+    /// Required alignment encoded as a power of 2.
+    alignment: u32,
+    /// Raw `SegmentFlags` bits from `SegmentInfo`.
+    flags: u32,
+    /// Whether `SegmentInfo` provided metadata for this segment.
+    has_info: bool,
+    /// The address of the segment in linear memory (for active segments), or 0.
+    address: u64,
+    /// Whether this is a passive (non-active) data segment.
+    is_passive: bool,
+    /// File offset of `data` within the wasm module.
+    file_offset: u64,
+    /// Raw bytes of the segment.
+    data: &'data [u8],
 }
 
 #[derive(Debug)]
@@ -98,6 +120,7 @@ impl<'data, R: ReadRef<'data>> WasmFile<'data, R> {
             sections: Vec::new(),
             id_sections: Default::default(),
             relocations: Vec::new(),
+            data_segments: Vec::new(),
             has_debug_symbols: false,
             symbols: Vec::new(),
             entry: 0,
@@ -122,6 +145,7 @@ impl<'data, R: ReadRef<'data>> WasmFile<'data, R> {
         let mut exports = None;
         let mut names = None;
         let mut symbols = None;
+        let mut segment_infos: Vec<wp::Segment<'data>> = Vec::new();
         // One-to-one mapping of globals to their value (if the global is a constant integer).
         let mut global_values = Vec::new();
 
@@ -196,6 +220,40 @@ impl<'data, R: ReadRef<'data>> WasmFile<'data, R> {
                 }
                 wp::Payload::DataSection(section) => {
                     file.add_section(SectionId::Data, section.range(), "");
+                    for segment in section.clone() {
+                        let segment = segment.read_error("Couldn't read a data segment")?;
+                        let mut address = 0u64;
+                        let mut is_passive = false;
+                        match &segment.kind {
+                            wp::DataKind::Active { offset_expr, .. } => {
+                                let init = offset_expr.get_operators_reader().read();
+                                address = match init
+                                    .read_error("Couldn't read a data segment offset expr")?
+                                {
+                                    wp::Operator::I32Const { value } => value as u32 as u64,
+                                    wp::Operator::I64Const { value } => value as u64,
+                                    _ => 0,
+                                };
+                            }
+                            wp::DataKind::Passive => {
+                                is_passive = true;
+                            }
+                        }
+                        // Compute file offset of `segment.data` within the wasm module.
+                        let file_offset = (segment.data.as_ptr() as usize)
+                            .wrapping_sub(data.as_ptr() as usize)
+                            as u64;
+                        file.data_segments.push(WasmDataSegmentInternal {
+                            name: "",
+                            alignment: 0,
+                            flags: 0,
+                            has_info: false,
+                            address,
+                            is_passive,
+                            file_offset,
+                            data: segment.data,
+                        });
+                    }
                 }
                 wp::Payload::DataCountSection { range, .. } => {
                     file.add_section(SectionId::DataCount, range, "");
@@ -220,8 +278,18 @@ impl<'data, R: ReadRef<'data>> WasmFile<'data, R> {
                         for subsection in linking {
                             let subsection =
                                 subsection.read_error("Invalid Wasm linking subsection")?;
-                            if let wp::Linking::SymbolTable(s) = subsection {
-                                symbols = Some(s);
+                            match subsection {
+                                wp::Linking::SymbolTable(s) => {
+                                    symbols = Some(s);
+                                }
+                                wp::Linking::SegmentInfo(map) => {
+                                    for segment in map {
+                                        let segment = segment
+                                            .read_error("Invalid Wasm linking SegmentInfo entry")?;
+                                        segment_infos.push(segment);
+                                    }
+                                }
+                                _ => {}
                             }
                         }
                     } else if name.strip_prefix("reloc.").is_some() {
@@ -247,6 +315,16 @@ impl<'data, R: ReadRef<'data>> WasmFile<'data, R> {
         if let Some(entry_func_id) = entry_func_id {
             if let Some(range) = code_ranges.get(entry_func_id as usize) {
                 file.entry = range.0;
+            }
+        }
+
+        // Apply any `SegmentInfo` entries collected from the `linking` section to the already-parsed data segments.
+        for (i, info) in segment_infos.into_iter().enumerate() {
+            if let Some(slot) = file.data_segments.get_mut(i) {
+                slot.name = info.name;
+                slot.alignment = info.alignment;
+                slot.flags = info.flags.bits();
+                slot.has_info = true;
             }
         }
 
@@ -623,7 +701,10 @@ impl<'data, R: ReadRef<'data>> Object<'data> for WasmFile<'data, R> {
     }
 
     fn segments(&self) -> Self::SegmentIterator<'_> {
-        WasmSegmentIterator { file: self }
+        WasmSegmentIterator {
+            file: self,
+            iter: self.data_segments.iter().enumerate(),
+        }
     }
 
     fn section_by_name_bytes<'file>(
@@ -726,12 +807,10 @@ impl<'data, R: ReadRef<'data>> Object<'data> for WasmFile<'data, R> {
 }
 
 /// An iterator for the segments in a [`WasmFile`].
-///
-/// This is a stub that doesn't implement any functionality.
 #[derive(Debug)]
 pub struct WasmSegmentIterator<'data, 'file, R = &'data [u8]> {
-    #[allow(unused)]
     file: &'file WasmFile<'data, R>,
+    iter: core::iter::Enumerate<slice::Iter<'file, WasmDataSegmentInternal<'data>>>,
 }
 
 impl<'data, 'file, R> Iterator for WasmSegmentIterator<'data, 'file, R> {
@@ -739,17 +818,23 @@ impl<'data, 'file, R> Iterator for WasmSegmentIterator<'data, 'file, R> {
 
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
-        None
+        let (index, segment) = self.iter.next()?;
+        Some(WasmSegment {
+            file: self.file,
+            index,
+            segment,
+        })
     }
 }
 
 /// A segment in a [`WasmFile`].
-///
-/// This is a stub that doesn't implement any functionality.
 #[derive(Debug)]
 pub struct WasmSegment<'data, 'file, R = &'data [u8]> {
     #[allow(unused)]
     file: &'file WasmFile<'data, R>,
+    #[allow(unused)]
+    index: usize,
+    segment: &'file WasmDataSegmentInternal<'data>,
 }
 
 impl<'data, 'file, R> read::private::Sealed for WasmSegment<'data, 'file, R> {}
@@ -757,50 +842,82 @@ impl<'data, 'file, R> read::private::Sealed for WasmSegment<'data, 'file, R> {}
 impl<'data, 'file, R> ObjectSegment<'data> for WasmSegment<'data, 'file, R> {
     #[inline]
     fn address(&self) -> u64 {
-        unreachable!()
+        self.segment.address
     }
 
     #[inline]
     fn size(&self) -> u64 {
-        unreachable!()
+        self.segment.data.len() as u64
     }
 
     #[inline]
     fn align(&self) -> u64 {
-        unreachable!()
+        // `alignment` is encoded as a power of 2.
+        if self.segment.has_info {
+            1u64 << self.segment.alignment
+        } else {
+            1
+        }
     }
 
     #[inline]
     fn file_range(&self) -> (u64, u64) {
-        unreachable!()
+        (self.segment.file_offset, self.segment.data.len() as u64)
     }
 
     fn data(&self) -> Result<&'data [u8]> {
-        unreachable!()
+        Ok(self.segment.data)
     }
 
-    fn data_range(&self, _address: u64, _size: u64) -> Result<Option<&'data [u8]>> {
-        unreachable!()
+    fn data_range(&self, address: u64, size: u64) -> Result<Option<&'data [u8]>> {
+        let segment_address = self.segment.address;
+        let segment_size = self.segment.data.len() as u64;
+        if self.segment.is_passive {
+            return Ok(None);
+        }
+        if address < segment_address {
+            return Ok(None);
+        }
+        let offset = address - segment_address;
+        if offset
+            .checked_add(size)
+            .map_or(true, |end| end > segment_size)
+        {
+            return Ok(None);
+        }
+        let offset = offset as usize;
+        let size = size as usize;
+        Ok(Some(&self.segment.data[offset..offset + size]))
     }
 
     #[inline]
     fn name_bytes(&self) -> Result<Option<&[u8]>> {
-        unreachable!()
+        if self.segment.has_info {
+            Ok(Some(self.segment.name.as_bytes()))
+        } else {
+            Ok(None)
+        }
     }
 
     #[inline]
     fn name(&self) -> Result<Option<&str>> {
-        unreachable!()
+        if self.segment.has_info {
+            Ok(Some(self.segment.name))
+        } else {
+            Ok(None)
+        }
     }
 
     #[inline]
     fn flags(&self) -> SegmentFlags {
-        unreachable!()
+        SegmentFlags::Wasm {
+            flags: self.segment.flags,
+        }
     }
 
     #[inline]
     fn permissions(&self) -> Permissions {
-        unreachable!()
+        Permissions::new(true, true, false)
     }
 }
 
