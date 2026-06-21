@@ -1,0 +1,358 @@
+Format: Mach-O 32-bit
+MachHeader {
+    Magic: 0xCEFAEDFE
+    CpuType: CPU_TYPE_ARM (0xC)
+    CpuSubtype: CPU_SUBTYPE_ARM_V7K (0xC)
+    FileType: MH_DYLIB (0x6)
+    NumberOfCmds: 15
+    SizeOfCmds: 0x324
+    Flags: 0x100085
+        MH_NOUNDEFS (0x1)
+        MH_DYLDLINK (0x4)
+        MH_TWOLEVEL (0x80)
+        MH_NO_REEXPORTED_DYLIBS (0x100000)
+}
+SegmentCommand {
+    Cmd: LC_SEGMENT (0x1)
+    CmdSize: 0xC0
+    SegmentName: "__TEXT"
+    VmAddress: 0x0
+    VmSize: 0x8000
+    FileOffset: 0x0
+    FileSize: 0x8000
+    MaxProt: 0x5
+        VM_PROT_READ (0x1)
+        VM_PROT_EXECUTE (0x4)
+    InitProt: 0x5
+        VM_PROT_READ (0x1)
+        VM_PROT_EXECUTE (0x4)
+    NumberOfSections: 2
+    Flags: 0x0
+    Section {
+        Index: 1
+        SectionName: "__text"
+        SegmentName: "__TEXT"
+        Address: 0x7FB6
+        Size: 0x2
+        Offset: 0x7FB6
+        Align: 0x1
+        RelocationOffset: 0x0
+        NumberOfRelocations: 0x0
+        Flags: 0x80000400
+            S_REGULAR (0x0)
+            S_ATTR_PURE_INSTRUCTIONS (0x80000000)
+            S_ATTR_SOME_INSTRUCTIONS (0x400)
+        Reserved1: 0x0
+        Reserved2: 0x0
+    }
+    Section {
+        Index: 2
+        SectionName: "__unwind_info"
+        SegmentName: "__TEXT"
+        Address: 0x7FB8
+        Size: 0x48
+        Offset: 0x7FB8
+        Align: 0x2
+        RelocationOffset: 0x0
+        NumberOfRelocations: 0x0
+        Flags: S_REGULAR (0x0)
+        Reserved1: 0x0
+        Reserved2: 0x0
+    }
+}
+SegmentCommand {
+    Cmd: LC_SEGMENT (0x1)
+    CmdSize: 0xC0
+    SegmentName: "__DATA"
+    VmAddress: 0x8000
+    VmSize: 0x4000
+    FileOffset: 0x8000
+    FileSize: 0x4000
+    MaxProt: 0x3
+        VM_PROT_READ (0x1)
+        VM_PROT_WRITE (0x2)
+    InitProt: 0x3
+        VM_PROT_READ (0x1)
+        VM_PROT_WRITE (0x2)
+    NumberOfSections: 2
+    Flags: 0x0
+    Section {
+        Index: 3
+        SectionName: "__data"
+        SegmentName: "__DATA"
+        Address: 0x8000
+        Size: 0x31C
+        Offset: 0x8000
+        Align: 0x2
+        RelocationOffset: 0x0
+        NumberOfRelocations: 0x0
+        Flags: S_REGULAR (0x0)
+        Reserved1: 0x0
+        Reserved2: 0x0
+    }
+    Section {
+        Index: 4
+        SectionName: "__bss"
+        SegmentName: "__DATA"
+        Address: 0x831C
+        Size: 0x4
+        Offset: 0x0
+        Align: 0x2
+        RelocationOffset: 0x0
+        NumberOfRelocations: 0x0
+        Flags: S_ZEROFILL (0x1)
+        Reserved1: 0x0
+        Reserved2: 0x0
+    }
+}
+SegmentCommand {
+    Cmd: LC_SEGMENT (0x1)
+    CmdSize: 0x38
+    SegmentName: "__LINKEDIT"
+    VmAddress: 0xC000
+    VmSize: 0x4000
+    FileOffset: 0xC000
+    FileSize: 0x1F0
+    MaxProt: VM_PROT_READ (0x1)
+    InitProt: VM_PROT_READ (0x1)
+    NumberOfSections: 0
+    Flags: 0x0
+}
+DylibCommand {
+    Cmd: LC_ID_DYLIB (0xD)
+    CmdSize: 0x34
+    Dylib {
+        Name: "fixup-chains-armv7k.dylib" (0x18)
+        Timestamp: 1
+        CurrentVersion: 0.0.0
+        CompatibilityVersion: 0.0.0
+    }
+}
+LinkeditDataCommand {
+    Cmd: LC_DYLD_CHAINED_FIXUPS (0x80000034)
+    CmdSize: 0x10
+    DataOffset: 0xC000
+    DataSize: 0x168
+    DyldChainedFixups {
+        FixupsVersion: 0
+        StartsOffset: 0x20
+        ImportsOffset: 0x148
+        SymbolsOffset: 0x154
+        ImportsCount: 3
+        ImportsFormat: DYLD_CHAINED_IMPORT (0x1)
+        SymbolsFormat: 0
+        Import {
+            LibraryOrdinal: 1
+            WeakImport: false
+            Addend: 0
+            Name: "_close"
+        }
+        Import {
+            LibraryOrdinal: 1
+            WeakImport: false
+            Addend: 0
+            Name: "_dup"
+        }
+        Import {
+            LibraryOrdinal: 1
+            WeakImport: false
+            Addend: 0
+            Name: "_errno"
+        }
+        Segment {
+            SegmentIndex: 1
+            Size: 0x116
+            PageSize: 0x4000
+            PointerFormat: DYLD_CHAINED_PTR_32 (0x3)
+            SegmentOffset: 0x8000
+            MaxValidPointer: 0x100000
+            PageCount: 1
+            Bind {
+                Offset: 0x0
+                Ordinal: "_errno" (0x2)
+            }
+            Rebase {
+                Offset: 0x4
+                TargetOffset: 0x831C
+            }
+            Bind {
+                Offset: 0x108
+                Ordinal: "_errno" (0x2)
+                Addend: 0x8
+            }
+            Rebase {
+                Offset: 0x10C
+                TargetOffset: 0x8324
+            }
+            Bind {
+                Offset: 0x210
+                Ordinal: "_dup" (0x1)
+            }
+            Rebase {
+                Offset: 0x214
+                TargetOffset: 0x7FB7
+            }
+            Bind {
+                Offset: 0x318
+                Ordinal: "_close" (0x0)
+            }
+        }
+    }
+}
+LinkeditDataCommand {
+    Cmd: LC_DYLD_EXPORTS_TRIE (0x80000033)
+    CmdSize: 0x10
+    DataOffset: 0xC168
+    DataSize: 0x10
+    ExportSymbol {
+        Name: "_h"
+        Flags: EXPORT_SYMBOL_FLAGS_KIND_REGULAR (0x0)
+        Address: 0x8000
+    }
+}
+SymtabCommand {
+    Cmd: LC_SYMTAB (0x2)
+    CmdSize: 0x18
+    SymbolOffset: 0xC17C
+    NumberOfSymbols: 0x6
+    StringOffset: 0xC1C4
+    StringSize: 0x2C
+    Nlist {
+        Index: 0
+        String: "_local_func" (0x18)
+        Type: N_SECT (0xE)
+        Section: "__TEXT,__text" (0x1)
+        Desc: N_ARM_THUMB_DEF (0x8)
+        Value: 0x7FB6
+    }
+    Nlist {
+        Index: 1
+        String: "_local" (0x24)
+        Type: N_SECT (0xE)
+        Section: "__DATA,__bss" (0x4)
+        Desc: 0x0
+        Value: 0x831C
+    }
+    Nlist {
+        Index: 2
+        String: "_h" (0x2)
+        Type: 0xF
+            N_SECT (0xE)
+            N_EXT (0x1)
+        Section: "__DATA,__data" (0x3)
+        Desc: 0x0
+        Value: 0x8000
+    }
+    Nlist {
+        Index: 3
+        String: "_close" (0x5)
+        Type: 0x1
+            N_UNDF (0x0)
+            N_EXT (0x1)
+        Section: "" (0x0)
+        Desc: 0x100
+            REFERENCE_FLAG_UNDEFINED_NON_LAZY (0x0)
+        DylibOrdinal: 0x1
+        Value: 0x0
+    }
+    Nlist {
+        Index: 4
+        String: "_dup" (0xC)
+        Type: 0x1
+            N_UNDF (0x0)
+            N_EXT (0x1)
+        Section: "" (0x0)
+        Desc: 0x100
+            REFERENCE_FLAG_UNDEFINED_NON_LAZY (0x0)
+        DylibOrdinal: 0x1
+        Value: 0x0
+    }
+    Nlist {
+        Index: 5
+        String: "_errno" (0x11)
+        Type: 0x1
+            N_UNDF (0x0)
+            N_EXT (0x1)
+        Section: "" (0x0)
+        Desc: 0x100
+            REFERENCE_FLAG_UNDEFINED_NON_LAZY (0x0)
+        DylibOrdinal: 0x1
+        Value: 0x0
+    }
+}
+DysymtabCommand {
+    Cmd: LC_DYSYMTAB (0xB)
+    CmdSize: 0x50
+    IndexOfLocalSymbols: 0
+    NumberOfLocalSymbols: 2
+    IndexOfExternallyDefinedSymbols: 2
+    NumberOfExternallyDefinedSymbols: 1
+    IndexOfUndefinedSymbols: 3
+    NumberOfUndefinedSymbols: 3
+    TocOffset: 0x0
+    NumberOfTocEntries: 0
+    ModuleTableOffset: 0x0
+    NumberOfModuleTableEntries: 0
+    ExternalRefSymbolOffset: 0x0
+    NumberOfExternalRefSymbols: 0
+    IndirectSymbolOffset: 0x0
+    NumberOfIndirectSymbols: 0
+    ExternalRelocationOffset: 0x0
+    NumberOfExternalRelocations: 0
+    LocalRelocationOffset: 0x0
+    NumberOfLocalRelocations: 0
+}
+UuidCommand {
+    Cmd: LC_UUID (0x1B)
+    CmdSize: 0x18
+    Uuid: [50, 29, D5, 94, 88, F3, 38, 83, 8B, AD, CF, 4A, 91, 71, 6A, 30]
+}
+BuildVersionCommand {
+    Cmd: LC_BUILD_VERSION (0x32)
+    CmdSize: 0x20
+    Platform: PLATFORM_WATCHOS (0x4)
+    MinOs: 7.0.0
+    Sdk: 26.5.0
+    NumberOfTools: 0x1
+    BuildToolVersion {
+        Tool: TOOL_LD (0x3)
+        Version: 957.1.0
+    }
+}
+SourceVersionCommand {
+    Cmd: LC_SOURCE_VERSION (0x2A)
+    CmdSize: 0x10
+    Version: 0x0
+}
+EncryptionInfoCommand32 {
+    Cmd: LC_ENCRYPTION_INFO (0x21)
+    CmdSize: 0x14
+    CryptOffset: 0x4000
+    CryptSize: 0x4000
+    CryptId: 0x0
+}
+DylibCommand {
+    Cmd: LC_LOAD_DYLIB (0xC)
+    CmdSize: 0x34
+    Dylib {
+        Name: "/usr/lib/libSystem.B.dylib" (0x18)
+        Timestamp: 2
+        CurrentVersion: 1356.0.0
+        CompatibilityVersion: 1.0.0
+    }
+}
+LinkeditDataCommand {
+    Cmd: LC_FUNCTION_STARTS (0x26)
+    CmdSize: 0x10
+    DataOffset: 0xC178
+    DataSize: 0x4
+    FunctionStarts {
+        Address: 0x7FB7
+    }
+}
+LinkeditDataCommand {
+    Cmd: LC_DATA_IN_CODE (0x29)
+    CmdSize: 0x10
+    DataOffset: 0xC17C
+    DataSize: 0x0
+}
