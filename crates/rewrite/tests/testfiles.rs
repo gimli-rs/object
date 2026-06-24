@@ -9,7 +9,7 @@ fn fail_message(fail: bool) {
 }
 
 #[test]
-fn rewrite_base() {
+fn rewrite_base_elf() {
     let print_options = readobj::PrintOptions {
         string_indices: false,
         ..readobj::PrintOptions::all()
@@ -19,10 +19,37 @@ fn rewrite_base() {
     let options = object_rewrite::Options::default();
     fail |= testfile("elf/base", "elf/base.noop", options, &print_options);
 
+    fail_message(fail);
+}
+
+#[test]
+fn rewrite_base_macho() {
+    let print_options = readobj::PrintOptions {
+        string_indices: false,
+        ..readobj::PrintOptions::all()
+    };
+    let mut fail = false;
+
     let options = object_rewrite::Options::default();
     fail |= testfile(
         "macho/base-x86_64.o",
         "macho/base-x86_64.o.noop",
+        options,
+        &print_options,
+    );
+
+    let options = object_rewrite::Options::default();
+    fail |= testfile(
+        "macho/base-x86_64",
+        "macho/base-x86_64.noop",
+        options,
+        &print_options,
+    );
+
+    let options = object_rewrite::Options::default();
+    fail |= testfile(
+        "macho/fixup-chains-armv7k.dylib",
+        "macho/fixup-chains-armv7k.dylib.noop",
         options,
         &print_options,
     );

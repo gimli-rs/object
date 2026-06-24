@@ -116,6 +116,22 @@ pub struct BuildVersionCommand {
     pub ntools: u32,
 }
 
+/// Native endian version of [`macho::DyldInfoCommand`].
+#[allow(missing_docs)]
+#[derive(Debug, Clone)]
+pub struct DyldInfoCommand {
+    pub rebase_off: u32,
+    pub rebase_size: u32,
+    pub bind_off: u32,
+    pub bind_size: u32,
+    pub weak_bind_off: u32,
+    pub weak_bind_size: u32,
+    pub lazy_bind_off: u32,
+    pub lazy_bind_size: u32,
+    pub export_off: u32,
+    pub export_size: u32,
+}
+
 /// A helper for encoding headers and data when writing a Mach-O file.
 ///
 /// None of the methods check for overflow when truncating file offsets, or when
@@ -577,6 +593,36 @@ impl<E: Endian> Encoder<E> {
             cmdsize: U32::new(endian, self.linkedit_data_command_size() as u32),
             dataoff: U32::new(endian, dataoff),
             datasize: U32::new(endian, datasize),
+        };
+        write_pod(buffer, data);
+    }
+
+    /// Return the size of a load command referencing dyld information.
+    pub fn dyld_info_command_size(self) -> u64 {
+        mem::size_of::<macho::DyldInfoCommand<Endianness>>() as u64
+    }
+
+    /// Write a load command referencing dyld information.
+    pub fn dyld_info_command<W: WritableBuffer + ?Sized>(
+        self,
+        buffer: &mut W,
+        cmd: macho::LoadCommandType,
+        info: &DyldInfoCommand,
+    ) {
+        let endian = self.endian;
+        let data = &macho::DyldInfoCommand {
+            cmd: U32::new(endian, cmd),
+            cmdsize: U32::new(endian, self.dyld_info_command_size() as u32),
+            rebase_off: U32::new(endian, info.rebase_off),
+            rebase_size: U32::new(endian, info.rebase_size),
+            bind_off: U32::new(endian, info.bind_off),
+            bind_size: U32::new(endian, info.bind_size),
+            weak_bind_off: U32::new(endian, info.weak_bind_off),
+            weak_bind_size: U32::new(endian, info.weak_bind_size),
+            lazy_bind_off: U32::new(endian, info.lazy_bind_off),
+            lazy_bind_size: U32::new(endian, info.lazy_bind_size),
+            export_off: U32::new(endian, info.export_off),
+            export_size: U32::new(endian, info.export_size),
         };
         write_pod(buffer, data);
     }

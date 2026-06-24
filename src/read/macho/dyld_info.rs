@@ -3,19 +3,68 @@ use crate::macho;
 use crate::read::{Bytes, Error, ReadError, ReadRef, Result};
 
 impl<E: Endian> macho::DyldInfoCommand<E> {
+    /// Return the data for the rebase operations.
+    pub fn rebase_data<'data, R: ReadRef<'data>>(&self, endian: E, data: R) -> Result<&'data [u8]> {
+        data.read_bytes_at(
+            self.rebase_off.get(endian).into(),
+            self.rebase_size.get(endian).into(),
+        )
+        .read_error("Invalid Mach-O dyld info rebase offset or size")
+    }
+
+    /// Return the data for the bind operations.
+    pub fn bind_data<'data, R: ReadRef<'data>>(&self, endian: E, data: R) -> Result<&'data [u8]> {
+        data.read_bytes_at(
+            self.bind_off.get(endian).into(),
+            self.bind_size.get(endian).into(),
+        )
+        .read_error("Invalid Mach-O dyld info bind offset or size")
+    }
+
+    /// Return the data for the weak bind operations.
+    pub fn weak_bind_data<'data, R: ReadRef<'data>>(
+        &self,
+        endian: E,
+        data: R,
+    ) -> Result<&'data [u8]> {
+        data.read_bytes_at(
+            self.weak_bind_off.get(endian).into(),
+            self.weak_bind_size.get(endian).into(),
+        )
+        .read_error("Invalid Mach-O dyld info weak bind offset or size")
+    }
+
+    /// Return the data for the lazy bind operations.
+    pub fn lazy_bind_data<'data, R: ReadRef<'data>>(
+        &self,
+        endian: E,
+        data: R,
+    ) -> Result<&'data [u8]> {
+        data.read_bytes_at(
+            self.lazy_bind_off.get(endian).into(),
+            self.lazy_bind_size.get(endian).into(),
+        )
+        .read_error("Invalid Mach-O dyld info lazy bind offset or size")
+    }
+
+    /// Return the data for the export trie.
+    pub fn export_data<'data, R: ReadRef<'data>>(&self, endian: E, data: R) -> Result<&'data [u8]> {
+        data.read_bytes_at(
+            self.export_off.get(endian).into(),
+            self.export_size.get(endian).into(),
+        )
+        .read_error("Invalid Mach-O dyld info export offset or size")
+    }
+
     /// Return an iterator over the rebase operations.
     pub fn rebase_operations<'data, R: ReadRef<'data>>(
         &self,
         endian: E,
         data: R,
     ) -> Result<RebaseOperationIterator<'data>> {
-        let operations = data
-            .read_bytes_at(
-                self.rebase_off.get(endian).into(),
-                self.rebase_size.get(endian).into(),
-            )
-            .read_error("Invalid Mach-O dyld info rebase offset or size")?;
-        Ok(RebaseOperationIterator::new(operations))
+        Ok(RebaseOperationIterator::new(
+            self.rebase_data(endian, data)?,
+        ))
     }
 
     /// Return an iterator over the bind operations.
@@ -24,13 +73,7 @@ impl<E: Endian> macho::DyldInfoCommand<E> {
         endian: E,
         data: R,
     ) -> Result<BindOperationIterator<'data>> {
-        let operations = data
-            .read_bytes_at(
-                self.bind_off.get(endian).into(),
-                self.bind_size.get(endian).into(),
-            )
-            .read_error("Invalid Mach-O dyld info bind offset or size")?;
-        Ok(BindOperationIterator::new(operations))
+        Ok(BindOperationIterator::new(self.bind_data(endian, data)?))
     }
 
     /// Return an iterator over the weak bind operations.
@@ -39,13 +82,9 @@ impl<E: Endian> macho::DyldInfoCommand<E> {
         endian: E,
         data: R,
     ) -> Result<BindOperationIterator<'data>> {
-        let operations = data
-            .read_bytes_at(
-                self.weak_bind_off.get(endian).into(),
-                self.weak_bind_size.get(endian).into(),
-            )
-            .read_error("Invalid Mach-O dyld info weak bind offset or size")?;
-        Ok(BindOperationIterator::new(operations))
+        Ok(BindOperationIterator::new(
+            self.weak_bind_data(endian, data)?,
+        ))
     }
 
     /// Return an iterator over the lazy bind operations.
@@ -54,13 +93,9 @@ impl<E: Endian> macho::DyldInfoCommand<E> {
         endian: E,
         data: R,
     ) -> Result<BindOperationIterator<'data>> {
-        let operations = data
-            .read_bytes_at(
-                self.lazy_bind_off.get(endian).into(),
-                self.lazy_bind_size.get(endian).into(),
-            )
-            .read_error("Invalid Mach-O dyld info lazy bind offset or size")?;
-        Ok(BindOperationIterator::new(operations))
+        Ok(BindOperationIterator::new(
+            self.lazy_bind_data(endian, data)?,
+        ))
     }
 
     /// Return an iterator over the decoded rebases.
@@ -133,13 +168,9 @@ impl<E: Endian> macho::DyldInfoCommand<E> {
         endian: E,
         data: R,
     ) -> Result<super::ExportsTrieIterator<'data>> {
-        let trie_data = data
-            .read_bytes_at(
-                self.export_off.get(endian).into(),
-                self.export_size.get(endian).into(),
-            )
-            .read_error("Invalid Mach-O dyld info export offset or size")?;
-        Ok(super::ExportsTrieIterator::new(trie_data))
+        Ok(super::ExportsTrieIterator::new(
+            self.export_data(endian, data)?,
+        ))
     }
 }
 
