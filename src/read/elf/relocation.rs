@@ -4,7 +4,7 @@ use core::fmt::Debug;
 use core::slice;
 
 use crate::elf;
-use crate::endian::{self, Endianness};
+use crate::endian::{self, Endian, Endianness};
 use crate::pod::Pod;
 use crate::read::{
     self, Bytes, Error, ReadError, ReadRef, Relocation, RelocationEncoding, RelocationFlags,
@@ -342,6 +342,26 @@ fn parse_relocation<Elf: FileHeader>(
             elf::R_CKCORE_PCREL32 => (K::Relative, g, 32),
             _ => unknown,
         },
+        elf::EM_IA_64 => {
+            let (lsb, msb) = if endian.is_little_endian() {
+                (g, E::Unknown)
+            } else {
+                (E::Unknown, g)
+            };
+
+            match r_type {
+                elf::R_IA64_NONE => (K::None, g, 0),
+                elf::R_IA64_DIR32LSB => (K::Absolute, lsb, 32),
+                elf::R_IA64_DIR32MSB => (K::Absolute, msb, 32),
+                elf::R_IA64_DIR64LSB => (K::Absolute, lsb, 64),
+                elf::R_IA64_DIR64MSB => (K::Absolute, msb, 64),
+                elf::R_IA64_PCREL32LSB => (K::Relative, lsb, 32),
+                elf::R_IA64_PCREL32MSB => (K::Relative, msb, 32),
+                elf::R_IA64_PCREL64LSB => (K::Relative, lsb, 64),
+                elf::R_IA64_PCREL64MSB => (K::Relative, msb, 64),
+                _ => unknown,
+            }
+        }
         elf::EM_MCST_ELBRUS => match r_type {
             elf::R_E2K_NONE => (K::None, g, 0),
             elf::R_E2K_32_ABS => (K::Absolute, g, 32),
