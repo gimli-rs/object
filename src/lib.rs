@@ -96,3 +96,5 @@ pub mod macho;
 pub mod pe;
 #[cfg(feature = "xcoff")]
 pub mod xcoff;
+#[cfg(feature = "goff")]
+pub mod goff;
