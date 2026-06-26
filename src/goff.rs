@@ -3,7 +3,7 @@
 //! These definitions are independent of read/write support, although we do implement
 //! some traits useful for those.
 //!
-//! This module is based of the official documentation for z/OS https://www.ibm.com/docs/en/zos/3.2.0?topic=goff-record-formats
+//! This module is based of the official documentation for z/OS <https://www.ibm.com/docs/en/zos/3.2.0?topic=goff-record-formats>
 
 #![allow(missing_docs)]
 
@@ -157,7 +157,7 @@ pub const RECORD_LEN: u64 = 80;
 
 newtype!(
     /// Values for `FileEnd64::f_flags`.
-    /// 
+    ///
     /// The lower 2 bits indicate entry point presence/type.
     /// Upper 6 bits are reserved and must be 0.
     struct FileFlags(u8);
@@ -182,7 +182,7 @@ pub const F_ENTRY_MASK: u8 = 0x03;
 
 newtype!(
     /// GOFF section flags.
-    /// 
+    ///
     /// For GOFF, this represents the record type of the section.
     #[derive(Debug)]
     struct SectionFlags(u8);
@@ -208,7 +208,7 @@ impl From<RecordType> for SectionFlags {
 
 newtype!(
     /// GOFF record type values.
-    /// 
+    ///
     /// These appear in the second byte of the `f_ptv` field (bits masked with 0xFC).
     struct RecordType(u8);
 );
@@ -231,9 +231,9 @@ newtype_flag_names!(NAMES_RECORD_TYPE: RecordType(u8) = {
 // Values for `f_ptv`, the GOFF Record prefix
 //
 /// GOFF Record Prefix (every GOFF file begins with this)
-pub const GOFF_PREFIX : u8 = 0x03;
+pub const GOFF_PREFIX: u8 = 0x03;
 /// GOFF Version (only supported version)
-pub const GOFF_VERSION : u8 = 0x00;
+pub const GOFF_VERSION: u8 = 0x00;
 /// The GOFF HDR Record Magic Number
 pub const GOFF_HDR_BYTES: [u8; 3] = [GOFF_PREFIX, RT_HDR.0, GOFF_VERSION];
 /// The GOFF ESD Record Magic Number
@@ -266,15 +266,15 @@ newtype_flag_names!(NAMES_SYMBOL_TYPE: SymbolType(u8) = {
 });
 
 /// ESD Namespace
-pub const ESD_NS_PROGRAM_MANAGEMENT_BINDER : u8 = 0;
-pub const ESD_NS_NORMAL_NAME : u8 = 1;
-pub const ESD_NS_PSEUDO_REGISTER : u8 = 2;
-pub const ESD_NS_PARTS : u8 = 3;
+pub const ESD_NS_PROGRAM_MANAGEMENT_BINDER: u8 = 0;
+pub const ESD_NS_NORMAL_NAME: u8 = 1;
+pub const ESD_NS_PSEUDO_REGISTER: u8 = 2;
+pub const ESD_NS_PARTS: u8 = 3;
 
 /// TXT Record style
-pub const TXT_RS_BYTE : u8 = 0;
-pub const TXT_RS_STRUCTURED : u8 = 1;
-pub const TXT_RS_UNSTRUCTURED : u8 = 2;
+pub const TXT_RS_BYTE: u8 = 0;
+pub const TXT_RS_STRUCTURED: u8 = 1;
+pub const TXT_RS_UNSTRUCTURED: u8 = 2;
 
 unsafe_impl_pod!(
     FileHeader64,

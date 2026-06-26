@@ -90,11 +90,11 @@ pub mod build;
 pub mod archive;
 #[cfg(feature = "elf")]
 pub mod elf;
+#[cfg(feature = "goff")]
+pub mod goff;
 #[cfg(feature = "macho")]
 pub mod macho;
 #[cfg(any(feature = "coff", feature = "pe"))]
 pub mod pe;
 #[cfg(feature = "xcoff")]
 pub mod xcoff;
-#[cfg(feature = "goff")]
-pub mod goff;
