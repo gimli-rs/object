@@ -10,18 +10,18 @@
 use crate::endian::{BigEndian as BE, U16, U32};
 use crate::pod::Pod;
 
-/// The module header ("HDR") record at the start of every 64-bit XCOFF file.
+/// The module header ("HDR") record at the start of every 64-bit GOFF file.
 #[derive(Debug, Clone, Copy)]
 #[repr(C)]
-pub struct FileHeader64 {
+pub struct HeaderRecord64 {
     /// Type of record. Must be 0x03F000.
-    pub f_ptv: [u8; 3],
+    pub ptv: [u8; 3],
     /// Reserved. Must be 45 bytes of 0.
-    pub f_reserved1: [u8; 45],
+    pub reserved1: [u8; 45],
     /// Architecture Level. Must be 1.
-    pub f_archlvl: U32<BE>,
+    pub archlvl: U32<BE>,
     /// Reserved. Must be 28 bytes of 0.
-    pub f_reserved2: [u8; 28],
+    pub reserved2: [u8; 28],
 }
 
 /// ESD data has 8 bytes till the end of the record
@@ -31,49 +31,49 @@ pub const SIZEOF_ESD_DATA: usize = 8;
 /// The external symbol definition ("ESD") record.
 #[derive(Debug, Clone, Copy)]
 #[repr(C)]
-pub struct FileSymbol64 {
+pub struct SymbolRecord64 {
     /// Type of record. Must be 0x030000 or 0x030100.
-    pub f_ptv: [u8; 3],
+    pub ptv: [u8; 3],
     /// Symbol Type.
-    pub f_symboltype: u8,
+    pub symboltype: SymbolType,
     /// ESD Identifier (ESDID).
-    pub f_esdid: U32<BE>,
+    pub esdid: U32<BE>,
     /// Parent of Owning ESDID
-    pub f_parentesdid: U32<BE>,
+    pub parentesdid: U32<BE>,
     /// Reserved. Must be 4 bytes of 0.
-    pub f_reserved1: U32<BE>,
+    pub reserved1: U32<BE>,
     /// Offset.
-    pub f_offset: U32<BE>,
+    pub offset: U32<BE>,
     /// Reserved. Must be 4 bytes of 0.
-    pub f_reserved2: U32<BE>,
+    pub reserved2: U32<BE>,
     /// Length
-    pub f_length: U32<BE>,
+    pub length: U32<BE>,
     /// Extended Attribute ESDID
-    pub f_eaesdid: U32<BE>,
+    pub eaesdid: U32<BE>,
     /// Extended Attribute Data Offset
-    pub f_eadataoffset: U32<BE>,
+    pub eadataoffset: U32<BE>,
     /// Reserved. Must be 4 bytes of 0.
-    pub f_reserved3: U32<BE>,
+    pub reserved3: U32<BE>,
     /// Name Space ID
-    pub f_namespaceid: u8,
+    pub namespaceid: u8,
     /// Symbol Flags.
-    pub f_symflags: u8,
+    pub symflags: u8,
     /// Fill Byte Value.
-    pub f_fillbytevalue: u8,
+    pub fillbytevalue: u8,
     /// Reserved. Must be 1 bytes of 0.
-    pub f_reserved4: u8,
+    pub reserved4: u8,
     /// Associated data ID
-    pub f_adaesdid: U32<BE>,
+    pub adaesdid: U32<BE>,
     /// Priority
-    pub f_priority: U32<BE>,
+    pub priority: U32<BE>,
     /// Reserved. Must be 8 bytes of 0.
-    pub f_reserved5: [u8; 8],
+    pub reserved5: [u8; 8],
     /// Behavioral Attributes
-    pub f_behavioralattributes: [u8; 10],
+    pub behavioralattributes: [u8; 10],
     /// Name Length
-    pub f_namelength: U16<BE>,
+    pub namelength: U16<BE>,
     /// Name
-    pub f_name: [u8; SIZEOF_ESD_DATA],
+    pub name: [u8; SIZEOF_ESD_DATA],
 }
 
 /// TXT data has 56 bytes till the end of the record,
@@ -83,39 +83,39 @@ pub const SIZEOF_TXT_DATA: usize = 56;
 /// The text ("TXT") record.
 #[derive(Debug, Clone, Copy)]
 #[repr(C)]
-pub struct FileText64 {
+pub struct TextRecord64 {
     /// Type of record. Must be 0x031000 or 0x031100.
-    pub f_ptv: [u8; 3],
+    pub ptv: [u8; 3],
     /// Text Record Style
-    pub f_recordstyle: u8,
+    pub recordstyle: u8,
     /// Element ESDID
-    pub f_elementesdid: U32<BE>,
+    pub elementesdid: U32<BE>,
     /// Reserved. Must be 4 bytes of 0.
-    pub f_reserved1: U32<BE>,
+    pub reserved1: U32<BE>,
     /// Offset.
-    pub f_offset: U32<BE>,
+    pub offset: U32<BE>,
     /// Text Field True Length
-    pub f_truelength: U32<BE>,
+    pub truelength: U32<BE>,
     /// Text Encoding
-    pub f_textencoding: U16<BE>,
+    pub textencoding: U16<BE>,
     /// Data Length
-    pub f_datalength: U16<BE>,
+    pub datalength: U16<BE>,
     /// Data
-    pub f_data: [u8; SIZEOF_TXT_DATA],
+    pub data: [u8; SIZEOF_TXT_DATA],
 }
 
 /// The relocation directory ("RLD") record.
 #[derive(Debug, Clone, Copy)]
 #[repr(C)]
-pub struct FileRelocation64 {
+pub struct RelocationRecord64 {
     /// Type of record. Must be 0x032000 or 0x032100.
-    pub f_ptv: [u8; 3],
+    pub ptv: [u8; 3],
     /// Reserved. Must be 1 byte of 0.
-    pub f_reserved: u8,
+    pub reserved: u8,
     /// Length.
-    pub f_length: U16<BE>,
+    pub length: U16<BE>,
     /// Relocation Data
-    pub f_data: [u8; 74],
+    pub data: [u8; 74],
 }
 
 /// Each continuation record will have a payload of 77 bytes
@@ -124,30 +124,30 @@ pub const SIZEOF_CONTINUATION_RECORD_DATA: usize = 77;
 /// The generic continuation record.
 #[derive(Debug, Clone, Copy)]
 #[repr(C)]
-pub struct FileContinuation64 {
+pub struct ContinuationRecord64 {
     /// Type of record.
-    pub f_ptv: [u8; 3],
-    pub f_data: [u8; SIZEOF_CONTINUATION_RECORD_DATA],
+    pub ptv: [u8; 3],
+    pub data: [u8; SIZEOF_CONTINUATION_RECORD_DATA],
 }
 
-/// The module end ("END") record at the end of every 64-bit XCOFF file.
+/// The module end ("END") record at the end of every 64-bit GOFF file.
 #[derive(Debug, Clone, Copy)]
 #[repr(C)]
-pub struct FileEnd64 {
+pub struct EndRecord64 {
     /// Type of record. Must be 0x034000.
-    pub f_ptv: [u8; 3],
+    pub ptv: [u8; 3],
     /// Flags.  Upper 6 bits are reserved to 0
-    pub f_flags: u8,
+    pub flags: u8,
     /// AMODE.
-    pub f_amode: u8,
+    pub amode: u8,
     /// Reserved. Must be 3 bytes of 0.
-    pub f_reserved1: [u8; 3],
+    pub reserved1: [u8; 3],
     /// Record Count.
-    pub f_recordcnt: U32<BE>,
+    pub recordcnt: U32<BE>,
     /// ESDID
-    pub f_esdid: U32<BE>,
+    pub esdid: U32<BE>,
     /// Reserved. Must be 64 bytes of 0.
-    pub f_reserved2: [u8; 64],
+    pub reserved2: [u8; 64],
 }
 
 /// Only fixed length records are supported (UNIX compatible file
@@ -156,7 +156,7 @@ pub struct FileEnd64 {
 pub const RECORD_LEN: u64 = 80;
 
 newtype!(
-    /// Values for `FileEnd64::f_flags`.
+    /// Values for `FileEnd64::flags`.
     ///
     /// The lower 2 bits indicate entry point presence/type.
     /// Upper 6 bits are reserved and must be 0.
@@ -181,35 +181,9 @@ newtype_flag_names!(NAMES_F_FLAGS: FileFlags(u8) = {
 pub const F_ENTRY_MASK: u8 = 0x03;
 
 newtype!(
-    /// GOFF section flags.
-    ///
-    /// For GOFF, this represents the record type of the section.
-    #[derive(Debug)]
-    struct SectionFlags(u8);
-);
-
-impl SectionFlags {
-    /// Get the record type.
-    pub fn record_type(self) -> RecordType {
-        RecordType(self.0)
-    }
-
-    /// Set the record type.
-    pub fn with_record_type(self, record_type: RecordType) -> SectionFlags {
-        SectionFlags(record_type.0)
-    }
-}
-
-impl From<RecordType> for SectionFlags {
-    fn from(value: RecordType) -> Self {
-        SectionFlags(value.0)
-    }
-}
-
-newtype!(
     /// GOFF record type values.
     ///
-    /// These appear in the second byte of the `f_ptv` field (bits masked with 0xFC).
+    /// These appear in the second byte of the `ptv` field (bits masked with 0xFC).
     struct RecordType(u8);
 );
 
@@ -228,7 +202,7 @@ newtype_flag_names!(NAMES_RECORD_TYPE: RecordType(u8) = {
     RT_HDR = 0xF0,
 });
 
-// Values for `f_ptv`, the GOFF Record prefix
+// Values for `ptv`, the GOFF Record prefix
 //
 /// GOFF Record Prefix (every GOFF file begins with this)
 pub const GOFF_PREFIX: u8 = 0x03;
@@ -265,22 +239,34 @@ newtype_flag_names!(NAMES_SYMBOL_TYPE: SymbolType(u8) = {
     ESD_SYMTYPE_ER = 4,
 });
 
-/// ESD Namespace
-pub const ESD_NS_PROGRAM_MANAGEMENT_BINDER: u8 = 0;
-pub const ESD_NS_NORMAL_NAME: u8 = 1;
-pub const ESD_NS_PSEUDO_REGISTER: u8 = 2;
-pub const ESD_NS_PARTS: u8 = 3;
+newtype!(
+    /// ESD Namespace
+    struct EsdNameSpace(u8);
+);
 
-/// TXT Record style
-pub const TXT_RS_BYTE: u8 = 0;
-pub const TXT_RS_STRUCTURED: u8 = 1;
-pub const TXT_RS_UNSTRUCTURED: u8 = 2;
+newtype_flag_names!(NAMES_ESD_NAMSPACE: EsdNameSpace(u8) = {
+    ESD_NS_PROGRAM_MANAGEMENT_BINDER = 0,
+    ESD_NS_NORMAL_NAME = 1,
+    ESD_NS_PSEUDO_REGISTER = 2,
+    ESD_NS_PARTS = 3,
+});
+
+newtype!(
+    /// TXT Record Style
+    struct TxtRecordStyle(u8);
+);
+
+newtype_flag_names!(NAMES_TXT_RECORD: TxtRecordStyle(u8) = {
+    TXT_RS_BYTE = 0,
+    TXT_RS_STRUCTURED = 1,
+    TXT_RS_UNSTRUCTURED = 2,
+});
 
 unsafe_impl_pod!(
-    FileHeader64,
-    FileSymbol64,
-    FileText64,
-    FileRelocation64,
-    FileContinuation64,
-    FileEnd64,
+    HeaderRecord64,
+    SymbolRecord64,
+    TextRecord64,
+    RelocationRecord64,
+    ContinuationRecord64,
+    EndRecord64,
 );
