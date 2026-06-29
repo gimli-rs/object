@@ -685,7 +685,6 @@ impl<'a> Object<'a> {
             writer.write_section(&section.data);
 
             if !section.relocations.is_empty() {
-                //debug_assert_eq!(section_offsets[index].reloc_offset, buffer.len());
                 writer.write_relocations_count(section.relocations.len());
                 for reloc in &section.relocations {
                     let typ = if let RelocationFlags::Coff { typ } = reloc.flags {

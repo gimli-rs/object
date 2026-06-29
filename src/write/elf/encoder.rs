@@ -6,8 +6,7 @@ use crate::Wrap;
 use crate::elf;
 use crate::endian::*;
 use crate::pod;
-use crate::write::util::{write_pod, write_pod_slice};
-use crate::write::{self, Error, Result, StringTable, WritableBuffer};
+use crate::write::{self, Error, Result, StringTable, WritableBuffer, WritableBufferExt};
 
 /// Alignment for .symtab_shndx.
 pub const ALIGN_SYMTAB_SHNDX: u64 = 4;
@@ -309,7 +308,7 @@ impl<E: Endian> Encoder<E> {
                 e_shnum: U16::new(endian, e_shnum),
                 e_shstrndx: U16::new(endian, e_shstrndx),
             };
-            write_pod(buffer, data);
+            buffer.write_pod(data);
         } else {
             let data = &elf::FileHeader32 {
                 e_ident,
@@ -327,7 +326,7 @@ impl<E: Endian> Encoder<E> {
                 e_shnum: U16::new(endian, e_shnum),
                 e_shstrndx: U16::new(endian, e_shstrndx),
             };
-            write_pod(buffer, data);
+            buffer.write_pod(data);
         }
 
         Ok(())
@@ -365,7 +364,7 @@ impl<E: Endian> Encoder<E> {
                 p_memsz: U64::new(endian, header.p_memsz),
                 p_align: U64::new(endian, header.p_align),
             };
-            write_pod(buffer, data);
+            buffer.write_pod(data);
         } else {
             let data = &elf::ProgramHeader32 {
                 p_type: U32::new(endian, header.p_type),
@@ -377,7 +376,7 @@ impl<E: Endian> Encoder<E> {
                 p_flags: U32::new(endian, header.p_flags),
                 p_align: U32::new(endian, header.p_align as u32),
             };
-            write_pod(buffer, data);
+            buffer.write_pod(data);
         }
     }
 
@@ -429,7 +428,7 @@ impl<E: Endian> Encoder<E> {
                 sh_addralign: U64::new(endian, 0),
                 sh_entsize: U64::new(endian, 0),
             };
-            write_pod(buffer, data);
+            buffer.write_pod(data);
         } else {
             let data = &elf::SectionHeader32 {
                 sh_name: U32::new(endian, 0),
@@ -443,7 +442,7 @@ impl<E: Endian> Encoder<E> {
                 sh_addralign: U32::new(endian, 0),
                 sh_entsize: U32::new(endian, 0),
             };
-            write_pod(buffer, data);
+            buffer.write_pod(data);
         }
     }
 
@@ -472,7 +471,7 @@ impl<E: Endian> Encoder<E> {
                 sh_addralign: U64::new(endian, section.sh_addralign),
                 sh_entsize: U64::new(endian, section.sh_entsize),
             };
-            write_pod(buffer, data);
+            buffer.write_pod(data);
         } else {
             let data = &elf::SectionHeader32 {
                 sh_name: U32::new(endian, section.sh_name),
@@ -486,7 +485,7 @@ impl<E: Endian> Encoder<E> {
                 sh_addralign: U32::new(endian, section.sh_addralign as u32),
                 sh_entsize: U32::new(endian, section.sh_entsize as u32),
             };
-            write_pod(buffer, data);
+            buffer.write_pod(data);
         }
     }
 
@@ -727,9 +726,9 @@ impl<E: Endian> Encoder<E> {
     /// The buffer should already be aligned to `address_size`.
     pub fn null_symbol<W: WritableBuffer + ?Sized>(self, buffer: &mut W) {
         if self.is_64 {
-            write_pod(buffer, &elf::Sym64::<Endianness>::default());
+            buffer.write_pod(&elf::Sym64::<Endianness>::default());
         } else {
-            write_pod(buffer, &elf::Sym32::<Endianness>::default());
+            buffer.write_pod(&elf::Sym32::<Endianness>::default());
         }
     }
 
@@ -758,7 +757,7 @@ impl<E: Endian> Encoder<E> {
                 st_value: U64::new(endian, sym.st_value),
                 st_size: U64::new(endian, sym.st_size),
             };
-            write_pod(buffer, data);
+            buffer.write_pod(data);
         } else {
             let data = &elf::Sym32 {
                 st_name: U32::new(endian, sym.st_name),
@@ -768,7 +767,7 @@ impl<E: Endian> Encoder<E> {
                 st_value: U32::new(endian, sym.st_value as u32),
                 st_size: U32::new(endian, sym.st_size as u32),
             };
-            write_pod(buffer, data);
+            buffer.write_pod(data);
         }
 
         if st_shndx == elf::SHN_XINDEX {
@@ -786,7 +785,7 @@ impl<E: Endian> Encoder<E> {
         buffer: &mut W,
         value: T,
     ) {
-        write_pod(buffer, &U32::new(self.endian, value));
+        buffer.write_u32(self.endian, value);
     }
 
     /// Return the size of a relocation entry.
@@ -830,13 +829,13 @@ impl<E: Endian> Encoder<E> {
                     r_info: elf::Rela64::r_info(endian, self.is_mips64el, rel.r_sym, rel.r_type),
                     r_addend: I64::new(endian, rel.r_addend),
                 };
-                write_pod(buffer, data);
+                buffer.write_pod(data);
             } else {
                 let data = &elf::Rel64 {
                     r_offset: U64::new(endian, rel.r_offset),
                     r_info: elf::Rel64::r_info(endian, rel.r_sym, rel.r_type),
                 };
-                write_pod(buffer, data);
+                buffer.write_pod(data);
             }
         } else {
             if is_rela {
@@ -845,13 +844,13 @@ impl<E: Endian> Encoder<E> {
                     r_info: elf::Rel32::r_info(endian, rel.r_sym, rel.r_type as u8),
                     r_addend: I32::new(endian, rel.r_addend as i32),
                 };
-                write_pod(buffer, data);
+                buffer.write_pod(data);
             } else {
                 let data = &elf::Rel32 {
                     r_offset: U32::new(endian, rel.r_offset as u32),
                     r_info: elf::Rel32::r_info(endian, rel.r_sym, rel.r_type as u8),
                 };
-                write_pod(buffer, data);
+                buffer.write_pod(data);
             }
         }
     }
@@ -882,7 +881,7 @@ impl<E: Endian> Encoder<E> {
                 d_tag: I64::new(endian, d_tag),
                 d_val: U64::new(endian, d_val),
             };
-            write_pod(buffer, data);
+            buffer.write_pod(data);
         } else {
             let d_tag = I32::new_i64(endian, d_tag)
                 .map_err(|_| Error(format!("d_tag overflow: 0x{:x}", d_tag)))?;
@@ -893,7 +892,7 @@ impl<E: Endian> Encoder<E> {
                 d_tag,
                 d_val: U32::new(endian, d_val),
             };
-            write_pod(buffer, data);
+            buffer.write_pod(data);
         }
         Ok(())
     }
@@ -930,9 +929,9 @@ impl<E: Endian> Encoder<E> {
             bucket_count: U32::new(self.endian, bucket_count),
             chain_count: U32::new(self.endian, chain_count),
         };
-        write_pod(buffer, data);
-        write_pod_slice(buffer, &buckets);
-        write_pod_slice(buffer, &chains);
+        buffer.write_pod(data);
+        buffer.write_pod_slice(&buckets);
+        buffer.write_pod_slice(&chains);
     }
 
     /// Return the size of a GNU hash table.
@@ -969,7 +968,7 @@ impl<E: Endian> Encoder<E> {
             bloom_count: U32::new(self.endian, bloom_count),
             bloom_shift: U32::new(self.endian, bloom_shift),
         };
-        write_pod(buffer, data);
+        buffer.write_pod(data);
 
         // Calculate and write bloom filter.
         if self.is_64 {
@@ -980,7 +979,7 @@ impl<E: Endian> Encoder<E> {
                     1 << (h % 64) | 1 << ((h >> bloom_shift) % 64);
             }
             for bloom_filter in bloom_filters {
-                write_pod(buffer, &U64::new(self.endian, bloom_filter));
+                buffer.write_u64(self.endian, bloom_filter);
             }
         } else {
             let mut bloom_filters = vec![0u32; bloom_count as usize];
@@ -990,7 +989,7 @@ impl<E: Endian> Encoder<E> {
                     1 << (h % 32) | 1 << ((h >> bloom_shift) % 32);
             }
             for bloom_filter in bloom_filters {
-                write_pod(buffer, &U32::new(self.endian, bloom_filter));
+                buffer.write_u32(self.endian, bloom_filter);
             }
         }
 
@@ -1001,16 +1000,16 @@ impl<E: Endian> Encoder<E> {
         for i in 0..symbol_count {
             let symbol_bucket = hash(i) % bucket_count;
             while bucket < symbol_bucket {
-                write_pod(buffer, &U32::new(self.endian, 0u32));
+                buffer.write_u32(self.endian, 0u32);
                 bucket += 1;
             }
             if bucket == symbol_bucket {
-                write_pod(buffer, &U32::new(self.endian, symbol_base + i));
+                buffer.write_u32(self.endian, symbol_base + i);
                 bucket += 1;
             }
         }
         while bucket < bucket_count {
-            write_pod(buffer, &U32::new(self.endian, 0u32));
+            buffer.write_u32(self.endian, 0u32);
             bucket += 1;
         }
 
@@ -1022,7 +1021,7 @@ impl<E: Endian> Encoder<E> {
             } else {
                 h &= !1;
             }
-            write_pod(buffer, &U32::new(self.endian, h));
+            buffer.write_u32(self.endian, h);
         }
     }
 
@@ -1033,7 +1032,7 @@ impl<E: Endian> Encoder<E> {
 
     /// Write a symbol version entry.
     pub fn gnu_versym<W: WritableBuffer + ?Sized>(self, buffer: &mut W, versym: elf::VersymIndex) {
-        write_pod(buffer, &U16::new(self.endian, versym));
+        buffer.write_u16(self.endian, versym);
     }
 
     /// Return the size of a GNU version definition section.
@@ -1065,7 +1064,7 @@ impl<E: Endian> Encoder<E> {
             vd_aux: U32::new(self.endian, vd_aux),
             vd_next: U32::new(self.endian, vd_next),
         };
-        write_pod(buffer, data);
+        buffer.write_pod(data);
         self.gnu_verdaux(buffer, verdef.aux_count > 1, verdef.name);
     }
 
@@ -1085,7 +1084,7 @@ impl<E: Endian> Encoder<E> {
             vd_aux: U32::new(self.endian, vd_aux),
             vd_next: U32::new(self.endian, vd_next),
         };
-        write_pod(buffer, data);
+        buffer.write_pod(data);
     }
 
     /// Write a version definition auxiliary entry.
@@ -1101,7 +1100,7 @@ impl<E: Endian> Encoder<E> {
             vda_name: U32::new(self.endian, name),
             vda_next: U32::new(self.endian, vda_next),
         };
-        write_pod(buffer, data);
+        buffer.write_pod(data);
     }
 
     /// Return the size of a GNU version dependency section.
@@ -1135,7 +1134,7 @@ impl<E: Endian> Encoder<E> {
             vn_aux: U32::new(self.endian, vn_aux),
             vn_next: U32::new(self.endian, vn_next),
         };
-        write_pod(buffer, data);
+        buffer.write_pod(data);
     }
 
     /// Write a version needed auxiliary entry.
@@ -1157,7 +1156,7 @@ impl<E: Endian> Encoder<E> {
             vna_name: U32::new(self.endian, vernaux.name),
             vna_next: U32::new(self.endian, vna_next),
         };
-        write_pod(buffer, data);
+        buffer.write_pod(data);
     }
 }
 

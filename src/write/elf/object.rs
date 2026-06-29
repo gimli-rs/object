@@ -46,18 +46,18 @@ impl<'a> Object<'a> {
             n_descsz: U32::new(self.endian, align_u32(3 * 4, address_size)),
             n_type: U32::new(self.endian, elf::NT_GNU_PROPERTY_TYPE_0),
         };
-        write_pod(&mut data, header);
+        data.write_pod(header);
         data.extend_from_slice(n_name);
         // This happens to already be aligned correctly.
         debug_assert_eq!(
             align(data.len() as u64, address_size.into()),
             data.len() as u64
         );
-        write_pod(&mut data, &U32::new(self.endian, property));
+        data.write_u32(self.endian, property);
         // Value size
-        write_pod(&mut data, &U32::new(self.endian, 4u32));
-        write_pod(&mut data, &U32::new(self.endian, value));
-        write_align(&mut data, address_size.into());
+        data.write_u32(self.endian, 4u32);
+        data.write_u32(self.endian, value);
+        data.resize(align(data.len() as u64, address_size.into()) as usize, 0);
 
         let section = self.section_id(StandardSection::GnuProperty);
         self.append_section_data(section, &data, address_size.into());

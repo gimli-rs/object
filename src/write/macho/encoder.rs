@@ -2,8 +2,8 @@ use core::mem;
 
 use crate::endian::*;
 use crate::macho;
-use crate::write::util::{align, write_pod};
-use crate::write::{Error, Result, StringTable, WritableBuffer};
+use crate::write::util::align;
+use crate::write::{Error, Result, StringTable, WritableBuffer, WritableBufferExt};
 
 /// Native endian version of [`macho::MachHeader64`].
 #[allow(missing_docs)]
@@ -197,7 +197,7 @@ impl<E: Endian> Encoder<E> {
                 flags: U32::new(endian, header.flags),
                 reserved: U32::default(),
             };
-            write_pod(buffer, data);
+            buffer.write_pod(data);
         } else {
             let magic = if endian.is_big_endian() {
                 macho::MH_MAGIC
@@ -213,7 +213,7 @@ impl<E: Endian> Encoder<E> {
                 sizeofcmds: U32::new(endian, header.sizeofcmds),
                 flags: U32::new(endian, header.flags),
             };
-            write_pod(buffer, data);
+            buffer.write_pod(data);
         }
     }
 
@@ -241,7 +241,7 @@ impl<E: Endian> Encoder<E> {
             cmd: U32::new(endian, cmd),
             cmdsize: U32::new(endian, cmdsize),
         };
-        write_pod(buffer, command);
+        buffer.write_pod(command);
         buffer.write_bytes(data);
     }
 
@@ -279,7 +279,7 @@ impl<E: Endian> Encoder<E> {
                 nsects: U32::new(endian, segment.nsects),
                 flags: U32::new(endian, segment.flags),
             };
-            write_pod(buffer, data);
+            buffer.write_pod(data);
         } else {
             let data = &macho::SegmentCommand32 {
                 cmd: U32::new(endian, macho::LC_SEGMENT),
@@ -294,7 +294,7 @@ impl<E: Endian> Encoder<E> {
                 nsects: U32::new(endian, segment.nsects),
                 flags: U32::new(endian, segment.flags),
             };
-            write_pod(buffer, data);
+            buffer.write_pod(data);
         }
     }
 
@@ -332,7 +332,7 @@ impl<E: Endian> Encoder<E> {
                 reserved2: U32::new(endian, section.reserved2),
                 reserved3: U32::new(endian, section.reserved3),
             };
-            write_pod(buffer, data);
+            buffer.write_pod(data);
         } else {
             let data = &macho::Section32 {
                 sectname: section.sectname,
@@ -347,7 +347,7 @@ impl<E: Endian> Encoder<E> {
                 reserved1: U32::new(endian, section.reserved1),
                 reserved2: U32::new(endian, section.reserved2),
             };
-            write_pod(buffer, data);
+            buffer.write_pod(data);
         }
     }
 
@@ -364,7 +364,7 @@ impl<E: Endian> Encoder<E> {
         buffer: &mut W,
         rel: &macho::RelocationInfo,
     ) {
-        write_pod(buffer, &rel.relocation(self.endian));
+        buffer.write_pod(&rel.relocation(self.endian));
     }
 
     /// Return the size of a symtab load command.
@@ -387,7 +387,7 @@ impl<E: Endian> Encoder<E> {
             stroff: U32::new(endian, symtab.stroff),
             strsize: U32::new(endian, symtab.strsize),
         };
-        write_pod(buffer, data);
+        buffer.write_pod(data);
     }
 
     /// Return the size of a symbol.
@@ -412,7 +412,7 @@ impl<E: Endian> Encoder<E> {
                 n_desc: U16::new(endian, nlist.n_desc),
                 n_value: U64::new(endian, nlist.n_value),
             };
-            write_pod(buffer, data);
+            buffer.write_pod(data);
         } else {
             let data = &macho::Nlist32 {
                 n_strx: U32::new(endian, nlist.n_strx),
@@ -421,7 +421,7 @@ impl<E: Endian> Encoder<E> {
                 n_desc: U16::new(endian, nlist.n_desc),
                 n_value: U32::new(endian, nlist.n_value as u32),
             };
-            write_pod(buffer, data);
+            buffer.write_pod(data);
         }
     }
 
@@ -438,7 +438,7 @@ impl<E: Endian> Encoder<E> {
         buffer.write_bytes(&[0]);
         let len = strtab.write(buffer, 1)? as u64;
         let aligned_len = align(len, self.address_size());
-        buffer.resize(buffer.len() + (aligned_len - len));
+        buffer.write_zeros(aligned_len - len);
         u32::try_from(aligned_len).map_err(|_| Error("string table size overflow".into()))
     }
 
@@ -476,7 +476,7 @@ impl<E: Endian> Encoder<E> {
             locreloff: U32::new(endian, dysymtab.locreloff),
             nlocrel: U32::new(endian, dysymtab.nlocrel),
         };
-        write_pod(buffer, data);
+        buffer.write_pod(data);
     }
 
     /// Return the size of an indirect symbol for a dynamic symtab load command.
@@ -490,7 +490,7 @@ impl<E: Endian> Encoder<E> {
         buffer: &mut W,
         symbol: macho::IndirectSymbol,
     ) {
-        write_pod(buffer, &U32::new(self.endian, symbol));
+        buffer.write_u32(self.endian, symbol);
     }
 
     /// Return the size of a dylib command.
@@ -509,7 +509,6 @@ impl<E: Endian> Encoder<E> {
         buffer: &mut W,
         dylib: &DylibCommand<'_>,
     ) {
-        let offset = buffer.len();
         let cmdsize = self.dylib_command_size(dylib.name.len());
         let name_offset = mem::size_of::<macho::DylibCommand<Endianness>>() as u32;
         let endian = self.endian;
@@ -525,9 +524,10 @@ impl<E: Endian> Encoder<E> {
                 compatibility_version: U32::new(endian, dylib.compatibility_version),
             },
         };
-        write_pod(buffer, data);
+        buffer.write_pod(data);
         buffer.write_bytes(dylib.name);
-        buffer.resize(offset + cmdsize);
+        let written = name_offset as u64 + dylib.name.len() as u64;
+        buffer.write_zeros(cmdsize - written);
     }
 
     /// Return the size of a build version load command.
@@ -554,7 +554,7 @@ impl<E: Endian> Encoder<E> {
             sdk: U32::new(endian, version.sdk),
             ntools: U32::new(endian, version.ntools),
         };
-        write_pod(buffer, data);
+        buffer.write_pod(data);
     }
 
     /// Write a build tool version.
@@ -571,7 +571,7 @@ impl<E: Endian> Encoder<E> {
             tool: U32::new(endian, tool),
             version: U32::new(endian, version),
         };
-        write_pod(buffer, data);
+        buffer.write_pod(data);
     }
 
     /// Return the size of a load command referencing linkedit data.
@@ -594,7 +594,7 @@ impl<E: Endian> Encoder<E> {
             dataoff: U32::new(endian, dataoff),
             datasize: U32::new(endian, datasize),
         };
-        write_pod(buffer, data);
+        buffer.write_pod(data);
     }
 
     /// Return the size of a load command referencing dyld information.
@@ -624,6 +624,6 @@ impl<E: Endian> Encoder<E> {
             export_off: U32::new(endian, info.export_off),
             export_size: U32::new(endian, info.export_size),
         };
-        write_pod(buffer, data);
+        buffer.write_pod(data);
     }
 }

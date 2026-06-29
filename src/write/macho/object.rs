@@ -599,6 +599,7 @@ impl<'a> Object<'a> {
         buffer
             .reserve(reserved_len)
             .map_err(|_| Error(String::from("Cannot allocate buffer")))?;
+        let buffer = &mut CountingBuffer::new(buffer);
 
         // Write file header.
         let (cputype, cpusubtype_id) = match (self.architecture, self.sub_architecture) {
@@ -649,7 +650,7 @@ impl<'a> Object<'a> {
         encoder.mach_header(buffer, mach_header);
 
         // Write segment command.
-        debug_assert_eq!(segment_command_offset, buffer.len());
+        debug_assert_eq!(segment_command_offset, buffer.count());
         let segment_command = &SegmentCommand {
             segname: [0; 16],
             vmaddr: 0,
@@ -711,7 +712,7 @@ impl<'a> Object<'a> {
 
         // Write build version.
         if let Some(version) = &self.macho_build_version {
-            debug_assert_eq!(build_version_offset, buffer.len());
+            debug_assert_eq!(build_version_offset, buffer.count());
             let build_version_command = &BuildVersionCommand {
                 platform: version.platform,
                 minos: version.minos,
@@ -722,7 +723,7 @@ impl<'a> Object<'a> {
         }
 
         // Write symtab command.
-        debug_assert_eq!(symtab_command_offset, buffer.len());
+        debug_assert_eq!(symtab_command_offset, buffer.count());
         let symtab_command = &SymtabCommand {
             symoff: symtab_offset as u32,
             nsyms,
@@ -732,7 +733,7 @@ impl<'a> Object<'a> {
         encoder.symtab_command(buffer, symtab_command);
 
         // Write dysymtab command.
-        debug_assert_eq!(dysymtab_command_offset, buffer.len());
+        debug_assert_eq!(dysymtab_command_offset, buffer.count());
         let dysymtab_command = &DysymtabCommand {
             ilocalsym: 0,
             nlocalsym: local_symbols.len() as u32,
@@ -745,14 +746,14 @@ impl<'a> Object<'a> {
         encoder.dysymtab_command(buffer, dysymtab_command);
 
         // Write section data.
-        debug_assert_eq!(segment_file_offset, buffer.len());
+        debug_assert_eq!(segment_file_offset, buffer.count());
         for (index, section) in self.sections.iter().enumerate() {
             if !section.is_bss() {
                 buffer.resize(section_offsets[index].offset);
                 buffer.write_bytes(&section.data);
             }
         }
-        debug_assert_eq!(segment_file_offset + segment_file_size, buffer.len());
+        debug_assert_eq!(segment_file_offset + segment_file_size, buffer.count());
 
         // Write relocations.
         for (index, section) in self.sections.iter().enumerate() {
@@ -904,10 +905,10 @@ impl<'a> Object<'a> {
         }
 
         // Write strtab.
-        debug_assert_eq!(strtab_offset, buffer.len());
+        debug_assert_eq!(strtab_offset, buffer.count());
         buffer.write_bytes(&strtab_data);
 
-        debug_assert_eq!(reserved_len, buffer.len());
+        debug_assert_eq!(reserved_len, buffer.count());
 
         Ok(())
     }
