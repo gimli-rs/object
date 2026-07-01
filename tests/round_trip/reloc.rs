@@ -317,6 +317,7 @@ fn reloc_round_trip() {
             vec![
                 elf_r(A::X86_64, elf::R_X86_64_GOTPCREL),
                 macho_r(A::X86_64, macho::X86_64_RELOC_GOT, true, 2),
+                macho_r(A::Aarch64, macho::ARM64_RELOC_POINTER_TO_GOT, true, 2),
             ],
             vec![],
         ),

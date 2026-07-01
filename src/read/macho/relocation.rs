@@ -69,6 +69,7 @@ where
                             size = 26;
                             (K::PltRelative, E::AArch64Call)
                         }
+                        (macho::ARM64_RELOC_POINTER_TO_GOT, true) => (K::GotRelative, g),
                         (macho::ARM64_RELOC_ADDEND, _) => {
                             paired_addend = i64::from(reloc.r_symbolnum)
                                 .wrapping_shl(64 - 24)
