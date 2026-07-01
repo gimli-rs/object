@@ -826,6 +826,9 @@ impl<'a> Object<'a> {
     }
 
     /// Write the object to a `WritableBuffer`.
+    ///
+    /// The buffer will receive a single [`WritableBuffer::reserve`] call with the exact
+    /// output size before any bytes are written.
     pub fn emit(&self, buffer: &mut dyn WritableBuffer) -> Result<()> {
         match self.format {
             #[cfg(feature = "coff")]

@@ -42,6 +42,9 @@ pub struct Writer<'a> {
 
 impl<'a> Writer<'a> {
     /// Create a new `Writer`.
+    ///
+    /// [`Writer::write_file_header`] will call [`WritableBuffer::reserve`] with the
+    /// total file size.
     pub fn new(buffer: &'a mut dyn WritableBuffer) -> Self {
         Writer {
             buffer: CountingBuffer::new(buffer),
@@ -121,6 +124,8 @@ impl<'a> Writer<'a> {
     /// This must be at the start of the file.
     ///
     /// Fields that can be derived from known information are automatically set by this function.
+    ///
+    /// This calls [`WritableBuffer::reserve`] with the total file size.
     pub fn write_file_header(&mut self, header: FileHeader) -> Result<()> {
         debug_assert_eq!(self.buffer.count(), 0);
 

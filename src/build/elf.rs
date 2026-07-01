@@ -726,6 +726,8 @@ impl<'data> Builder<'data> {
     }
 
     /// Write the ELF file to the buffer.
+    ///
+    /// This calls [`WritableBuffer::reserve`] with the total file size.
     pub fn write(mut self, buffer: &mut dyn write::WritableBuffer) -> Result<()> {
         struct SectionOut {
             id: SectionId,

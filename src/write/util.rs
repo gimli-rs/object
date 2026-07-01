@@ -12,11 +12,12 @@ use crate::pod::{Pod, bytes_of, bytes_of_slice};
 /// write offset should wrap the buffer in a [`CountingBuffer`], which counts the
 /// number of bytes written.
 pub trait WritableBuffer {
-    /// Reserves specified number of bytes in the buffer.
+    /// Reserves capacity for `size` bytes.
     ///
-    /// If called, this will be called exactly once before any writes, and the given size
-    /// is the exact total number of bytes that will be written. Writers that target
-    /// [`GrowableBuffer`] may skip this call, but it is required for other writers.
+    /// When a writer calls this, it does so exactly once, before writing any bytes,
+    /// with `size` equal to the exact total number of bytes it will write.
+    /// A writer targeting a [`GrowableBuffer`] may skip this call.
+    /// Whether a writer calls this is part of that writer's contract.
     fn reserve(&mut self, size: u64) -> Result<(), ()>;
 
     /// Writes the specified slice of bytes at the end of the buffer.
