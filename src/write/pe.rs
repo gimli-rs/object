@@ -49,6 +49,9 @@ impl<'a> Writer<'a> {
     /// Create a new `Writer`.
     ///
     /// The alignment values must be powers of two.
+    ///
+    /// Methods that write the DOS header will call [`WritableBuffer::reserve`] with the total
+    /// file size.
     pub fn new(
         is_64: bool,
         section_alignment: u32,
@@ -188,6 +191,8 @@ impl<'a> Writer<'a> {
     /// Write a custom DOS header.
     ///
     /// This must be at the start of the file.
+    ///
+    /// This calls [`WritableBuffer::reserve`] with the total file size.
     pub fn write_custom_dos_header(&mut self, dos_header: &pe::ImageDosHeader) -> Result<()> {
         debug_assert_eq!(self.buffer.count(), 0);
 
@@ -205,6 +210,8 @@ impl<'a> Writer<'a> {
     /// This must be at the start of the file.
     ///
     /// Uses default values for all fields.
+    ///
+    /// This calls [`WritableBuffer::reserve`] with the total file size.
     pub fn write_empty_dos_header(&mut self) -> Result<()> {
         self.write_custom_dos_header(&pe::ImageDosHeader {
             e_magic: pe::IMAGE_DOS_SIGNATURE.into(),
@@ -240,6 +247,8 @@ impl<'a> Writer<'a> {
     /// Write a fixed DOS header and stub.
     ///
     /// Use `write_custom_dos_header` and `write` if you need a custom stub.
+    ///
+    /// This calls [`WritableBuffer::reserve`] with the total file size.
     pub fn write_dos_header_and_stub(&mut self) -> Result<()> {
         self.write_custom_dos_header(&pe::ImageDosHeader {
             e_magic: pe::IMAGE_DOS_SIGNATURE.into(),

@@ -278,6 +278,8 @@ impl<'a, M: Mode> Writer<'a, M> {
     /// This must be at the start of the file.
     ///
     /// Fields that can be derived from known information are automatically set by this function.
+    ///
+    /// For [`TwoPhase`] mode, this calls [`WritableBuffer::reserve`] with the total file size.
     pub fn write_file_header(&mut self, header: &FileHeader) -> Result<()> {
         debug_assert_eq!(self.buffer.count(), 0);
 
@@ -1209,6 +1211,8 @@ impl<'a> Writer<'a, SinglePhase> {
     /// This is needed to write fields such as the section header offset into the file
     /// header. You must manually copy the resulting `buffer` contents to the start of the
     /// original buffer after dropping the `Writer`.
+    ///
+    /// This does not call [`WritableBuffer::reserve`].
     pub fn write_file_header_to(&mut self, buffer: &mut dyn WritableBuffer) -> Result<()> {
         let len = self.offset();
         if !self.encoder.is_64() && len > u64::from(u32::MAX) {
@@ -1258,6 +1262,8 @@ impl<'a> Writer<'a, SinglePhase> {
     ///
     /// The number of program headers must match the count passed to
     /// [`Self::write_program_headers_placeholder`].
+    ///
+    /// This does not call [`WritableBuffer::reserve`].
     pub fn write_headers_to(
         &mut self,
         buffer: &mut dyn WritableBuffer,
@@ -1275,6 +1281,8 @@ impl<'a> Writer<'a, SinglePhase> {
     ///
     /// This serves the same purpose as [`Self::write_headers_to`], but allows you to use
     /// separate calls for writing the file header and each program header.
+    ///
+    /// This does not call [`WritableBuffer::reserve`].
     pub fn write_program_header_to(
         &mut self,
         buffer: &mut dyn WritableBuffer,
@@ -1440,6 +1448,9 @@ impl ModeSealed for TwoPhase {
 
 impl<'a> Writer<'a, TwoPhase> {
     /// Create a new two-phase `Writer` for the given endianness and ELF class.
+    ///
+    /// [`Writer::write_file_header`] will call [`WritableBuffer::reserve`] with the
+    /// total file size.
     pub fn new(endian: Endianness, is_64: bool, buffer: &'a mut dyn WritableBuffer) -> Self {
         let mode = TwoPhase {
             len: 0,
