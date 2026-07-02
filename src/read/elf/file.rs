@@ -544,7 +544,7 @@ where
 
 /// A trait for generic access to [`elf::FileHeader32`] and [`elf::FileHeader64`].
 #[allow(missing_docs)]
-pub trait FileHeader: Debug + Pod {
+pub trait FileHeader: Debug + Pod + read::private::Sealed {
     // Ideally this would be a `u64: From<Word>`, but can't express that.
     type Word: Into<u64> + Default + Copy;
     type Sword: Into<i64>;
@@ -837,6 +837,8 @@ pub trait FileHeader: Debug + Pod {
     }
 }
 
+impl<Endian: endian::Endian> read::private::Sealed for elf::FileHeader32<Endian> {}
+
 impl<Endian: endian::Endian> FileHeader for elf::FileHeader32<Endian> {
     type Word = u32;
     type Sword = i32;
@@ -934,6 +936,8 @@ impl<Endian: endian::Endian> FileHeader for elf::FileHeader32<Endian> {
         self.e_shstrndx.get(endian)
     }
 }
+
+impl<Endian: endian::Endian> read::private::Sealed for elf::FileHeader64<Endian> {}
 
 impl<Endian: endian::Endian> FileHeader for elf::FileHeader64<Endian> {
     type Word = u64;

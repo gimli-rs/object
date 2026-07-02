@@ -535,7 +535,7 @@ impl<'data, 'file, R: ReadRef<'data>, Coff: CoffHeader> ObjectSymbol<'data>
 
 /// A trait for generic access to [`pe::ImageSymbol`] and [`pe::ImageSymbolEx`].
 #[allow(missing_docs)]
-pub trait ImageSymbol: Debug + Pod {
+pub trait ImageSymbol: Debug + Pod + read::private::Sealed {
     fn raw_name(&self) -> &[u8; 8];
     fn value(&self) -> u32;
     fn section_number(&self) -> pe::SymbolSection;
@@ -644,6 +644,8 @@ pub trait ImageSymbol: Debug + Pod {
     }
 }
 
+impl read::private::Sealed for pe::ImageSymbol {}
+
 impl ImageSymbol for pe::ImageSymbol {
     fn raw_name(&self) -> &[u8; 8] {
         &self.name
@@ -669,6 +671,8 @@ impl ImageSymbol for pe::ImageSymbol {
         self.number_of_aux_symbols
     }
 }
+
+impl read::private::Sealed for pe::ImageSymbolEx {}
 
 impl ImageSymbol for pe::ImageSymbolEx {
     fn raw_name(&self) -> &[u8; 8] {

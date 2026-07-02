@@ -542,7 +542,7 @@ impl<'data, 'file, Xcoff: FileHeader, R: ReadRef<'data>> ObjectSymbol<'data>
 
 /// A trait for generic access to [`xcoff::Symbol32`] and [`xcoff::Symbol64`].
 #[allow(missing_docs)]
-pub trait Symbol: Debug + Pod {
+pub trait Symbol: Debug + Pod + read::private::Sealed {
     type Word: Into<u64>;
 
     fn n_value(&self) -> Self::Word;
@@ -594,6 +594,8 @@ pub trait Symbol: Debug + Pod {
     }
 }
 
+impl read::private::Sealed for xcoff::Symbol64 {}
+
 impl Symbol for xcoff::Symbol64 {
     type Word = u64;
 
@@ -631,6 +633,8 @@ impl Symbol for xcoff::Symbol64 {
             .read_error("Invalid XCOFF symbol name offset")
     }
 }
+
+impl read::private::Sealed for xcoff::Symbol32 {}
 
 impl Symbol for xcoff::Symbol32 {
     type Word = u32;
@@ -686,7 +690,7 @@ impl Symbol for xcoff::Symbol32 {
 
 /// A trait for generic access to [`xcoff::FileAux32`] and [`xcoff::FileAux64`].
 #[allow(missing_docs)]
-pub trait FileAux: Debug + Pod {
+pub trait FileAux: Debug + Pod + read::private::Sealed {
     fn x_fname(&self) -> &[u8; 8];
     fn x_ftype(&self) -> xcoff::FileAuxType;
     fn x_auxtype(&self) -> Option<xcoff::AuxType>;
@@ -721,6 +725,8 @@ pub trait FileAux: Debug + Pod {
     }
 }
 
+impl read::private::Sealed for xcoff::FileAux64 {}
+
 impl FileAux for xcoff::FileAux64 {
     fn x_fname(&self) -> &[u8; 8] {
         &self.x_fname
@@ -734,6 +740,8 @@ impl FileAux for xcoff::FileAux64 {
         Some(self.x_auxtype)
     }
 }
+
+impl read::private::Sealed for xcoff::FileAux32 {}
 
 impl FileAux for xcoff::FileAux32 {
     fn x_fname(&self) -> &[u8; 8] {
@@ -751,7 +759,7 @@ impl FileAux for xcoff::FileAux32 {
 
 /// A trait for generic access to [`xcoff::CsectAux32`] and [`xcoff::CsectAux64`].
 #[allow(missing_docs)]
-pub trait CsectAux: Debug + Pod {
+pub trait CsectAux: Debug + Pod + read::private::Sealed {
     fn x_scnlen(&self) -> u64;
     fn x_parmhash(&self) -> u32;
     fn x_snhash(&self) -> u16;
@@ -768,6 +776,8 @@ pub trait CsectAux: Debug + Pod {
         self.x_smtyp().typ()
     }
 }
+
+impl read::private::Sealed for xcoff::CsectAux64 {}
 
 impl CsectAux for xcoff::CsectAux64 {
     fn x_scnlen(&self) -> u64 {
@@ -802,6 +812,8 @@ impl CsectAux for xcoff::CsectAux64 {
         Some(self.x_auxtype)
     }
 }
+
+impl read::private::Sealed for xcoff::CsectAux32 {}
 
 impl CsectAux for xcoff::CsectAux32 {
     fn x_scnlen(&self) -> u64 {

@@ -697,7 +697,7 @@ where
 
 /// A trait for generic access to [`elf::SectionHeader32`] and [`elf::SectionHeader64`].
 #[allow(missing_docs)]
-pub trait SectionHeader: Debug + Pod {
+pub trait SectionHeader: Debug + Pod + read::private::Sealed {
     type Elf: FileHeader<SectionHeader = Self, Endian = Self::Endian, Word = Self::Word>;
     type Word: Into<u64>;
     type Endian: endian::Endian;
@@ -1201,6 +1201,8 @@ pub trait SectionHeader: Debug + Pod {
     }
 }
 
+impl<Endian: endian::Endian> read::private::Sealed for elf::SectionHeader32<Endian> {}
+
 impl<Endian: endian::Endian> SectionHeader for elf::SectionHeader32<Endian> {
     type Elf = elf::FileHeader32<Endian>;
     type Word = u32;
@@ -1256,6 +1258,8 @@ impl<Endian: endian::Endian> SectionHeader for elf::SectionHeader32<Endian> {
         self.sh_entsize.get(endian)
     }
 }
+
+impl<Endian: endian::Endian> read::private::Sealed for elf::SectionHeader64<Endian> {}
 
 impl<Endian: endian::Endian> SectionHeader for elf::SectionHeader64<Endian> {
     type Word = u64;

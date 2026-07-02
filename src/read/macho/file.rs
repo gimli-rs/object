@@ -725,7 +725,7 @@ where
 
 /// A trait for generic access to [`macho::MachHeader32`] and [`macho::MachHeader64`].
 #[allow(missing_docs)]
-pub trait MachHeader: Debug + Pod {
+pub trait MachHeader: Debug + Pod + read::private::Sealed {
     type Word: Into<u64>;
     type Endian: endian::Endian;
     type Segment: Segment<Endian = Self::Endian, Section = Self::Section>;
@@ -814,6 +814,8 @@ pub trait MachHeader: Debug + Pod {
     }
 }
 
+impl<Endian: endian::Endian> read::private::Sealed for macho::MachHeader32<Endian> {}
+
 impl<Endian: endian::Endian> MachHeader for macho::MachHeader32<Endian> {
     type Word = u32;
     type Endian = Endian;
@@ -861,6 +863,8 @@ impl<Endian: endian::Endian> MachHeader for macho::MachHeader32<Endian> {
         self.flags.get(endian)
     }
 }
+
+impl<Endian: endian::Endian> read::private::Sealed for macho::MachHeader64<Endian> {}
 
 impl<Endian: endian::Endian> MachHeader for macho::MachHeader64<Endian> {
     type Word = u64;

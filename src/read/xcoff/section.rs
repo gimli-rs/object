@@ -286,7 +286,7 @@ where
 
 /// A trait for generic access to [`xcoff::SectionHeader32`] and [`xcoff::SectionHeader64`].
 #[allow(missing_docs)]
-pub trait SectionHeader: Debug + Pod {
+pub trait SectionHeader: Debug + Pod + read::private::Sealed {
     type Word: Into<u64>;
     type HalfWord: Into<u32>;
     type Xcoff: FileHeader<SectionHeader = Self, Word = Self::Word>;
@@ -332,6 +332,8 @@ pub trait SectionHeader: Debug + Pod {
     /// Read the relocations.
     fn relocations<'data, R: ReadRef<'data>>(&self, data: R) -> read::Result<&'data [Self::Rel]>;
 }
+
+impl read::private::Sealed for xcoff::SectionHeader32 {}
 
 impl SectionHeader for xcoff::SectionHeader32 {
     type Word = u32;
@@ -394,6 +396,8 @@ impl SectionHeader for xcoff::SectionHeader32 {
             .read_error("Invalid XCOFF relocation offset or number")
     }
 }
+
+impl read::private::Sealed for xcoff::SectionHeader64 {}
 
 impl SectionHeader for xcoff::SectionHeader64 {
     type Word = u64;

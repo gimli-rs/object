@@ -5,8 +5,8 @@ use core::slice;
 use crate::endian::BigEndian as BE;
 use crate::pod::Pod;
 use crate::read::{
-    ReadRef, Relocation, RelocationEncoding, RelocationFlags, RelocationKind, RelocationTarget,
-    SymbolIndex,
+    self, ReadRef, Relocation, RelocationEncoding, RelocationFlags, RelocationKind,
+    RelocationTarget, SymbolIndex,
 };
 use crate::xcoff;
 
@@ -86,7 +86,7 @@ where
 
 /// A trait for generic access to [`xcoff::Rel32`] and [`xcoff::Rel64`].
 #[allow(missing_docs)]
-pub trait Rel: Debug + Pod {
+pub trait Rel: Debug + Pod + read::private::Sealed {
     type Word: Into<u64>;
     fn r_vaddr(&self) -> Self::Word;
     fn r_symndx(&self) -> u32;
@@ -97,6 +97,8 @@ pub trait Rel: Debug + Pod {
         SymbolIndex(self.r_symndx() as usize)
     }
 }
+
+impl read::private::Sealed for xcoff::Rel32 {}
 
 impl Rel for xcoff::Rel32 {
     type Word = u32;
@@ -117,6 +119,8 @@ impl Rel for xcoff::Rel32 {
         self.r_rtype
     }
 }
+
+impl read::private::Sealed for xcoff::Rel64 {}
 
 impl Rel for xcoff::Rel64 {
     type Word = u64;
