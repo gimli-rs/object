@@ -356,6 +356,7 @@ impl<'a> Object<'a> {
         buffer
             .reserve(offset)
             .map_err(|_| Error(String::from("Cannot allocate buffer")))?;
+        let buffer = &mut CountingBuffer::new(buffer);
 
         // Write file header.
         let f_flags = match self.flags {
@@ -372,7 +373,7 @@ impl<'a> Object<'a> {
                 f_opthdr: 0.into(),
                 f_flags: f_flags.into(),
             };
-            buffer.write(&header);
+            buffer.write_pod(&header);
         } else {
             let header = xcoff::FileHeader32 {
                 f_magic: xcoff::MAGIC_32.into(),
@@ -383,7 +384,7 @@ impl<'a> Object<'a> {
                 f_opthdr: 0.into(),
                 f_flags: f_flags.into(),
             };
-            buffer.write(&header);
+            buffer.write_pod(&header);
         }
 
         // Write section headers.
@@ -420,7 +421,7 @@ impl<'a> Object<'a> {
                     s_flags: s_flags.into(),
                     s_reserve: 0.into(),
                 };
-                buffer.write(&section_header);
+                buffer.write_pod(&section_header);
             } else {
                 let section_header = xcoff::SectionHeader32 {
                     s_name: sectname,
@@ -438,7 +439,7 @@ impl<'a> Object<'a> {
                     s_nlnno: 0.into(),
                     s_flags: s_flags.into(),
                 };
-                buffer.write(&section_header);
+                buffer.write_pod(&section_header);
             }
         }
 
@@ -446,8 +447,8 @@ impl<'a> Object<'a> {
         for (index, section) in self.sections.iter().enumerate() {
             let len = section.data.len();
             if len != 0 {
-                write_align(buffer, 4);
-                debug_assert_eq!(section_offsets[index].data_offset, buffer.len());
+                buffer.write_align(4);
+                debug_assert_eq!(section_offsets[index].data_offset, buffer.count());
                 buffer.write_bytes(&section.data);
             }
         }
@@ -455,7 +456,7 @@ impl<'a> Object<'a> {
         // Write relocations.
         for (index, section) in self.sections.iter().enumerate() {
             if !section.relocations.is_empty() {
-                debug_assert_eq!(section_offsets[index].reloc_offset, buffer.len());
+                debug_assert_eq!(section_offsets[index].reloc_offset, buffer.count());
                 for reloc in &section.relocations {
                     let (r_rtype, r_rsize) =
                         if let RelocationFlags::Xcoff { r_rtype, r_rsize } = reloc.flags {
@@ -470,7 +471,7 @@ impl<'a> Object<'a> {
                             r_rsize,
                             r_rtype,
                         };
-                        buffer.write(&xcoff_rel);
+                        buffer.write_pod(&xcoff_rel);
                     } else {
                         let xcoff_rel = xcoff::Rel32 {
                             r_vaddr: (reloc.offset as u32).into(),
@@ -478,14 +479,14 @@ impl<'a> Object<'a> {
                             r_rsize,
                             r_rtype,
                         };
-                        buffer.write(&xcoff_rel);
+                        buffer.write_pod(&xcoff_rel);
                     }
                 }
             }
         }
 
         // Write symbols.
-        debug_assert_eq!(symtab_offset, buffer.len());
+        debug_assert_eq!(symtab_offset, buffer.count());
         for (index, symbol) in self.symbols.iter().enumerate() {
             let n_value = if let SymbolSection::Section(id) = symbol.section {
                 section_offsets[id.0].address + symbol.value
@@ -518,7 +519,7 @@ impl<'a> Object<'a> {
                     n_sclass,
                     n_numaux,
                 };
-                buffer.write(&xcoff_sym);
+                buffer.write_pod(&xcoff_sym);
             } else {
                 let mut sym_name = [0; 8];
                 if n_sclass == xcoff::C_FILE {
@@ -537,7 +538,7 @@ impl<'a> Object<'a> {
                     n_sclass,
                     n_numaux,
                 };
-                buffer.write(&xcoff_sym);
+                buffer.write_pod(&xcoff_sym);
             }
             // Generate auxiliary entries.
             if n_sclass == xcoff::C_FILE {
@@ -557,7 +558,7 @@ impl<'a> Object<'a> {
                         x_freserve: Default::default(),
                         x_auxtype: xcoff::AUX_FILE,
                     };
-                    buffer.write(&file_aux);
+                    buffer.write_pod(&file_aux);
                 } else {
                     let file_aux = xcoff::FileAux32 {
                         x_fname,
@@ -565,7 +566,7 @@ impl<'a> Object<'a> {
                         x_ftype: xcoff::XFT_FN,
                         x_freserve: Default::default(),
                     };
-                    buffer.write(&file_aux);
+                    buffer.write_pod(&file_aux);
                 }
             } else if n_sclass == xcoff::C_EXT
                 || n_sclass == xcoff::C_WEAKEXT
@@ -591,7 +592,7 @@ impl<'a> Object<'a> {
                         pad: 0,
                         x_auxtype: xcoff::AUX_CSECT,
                     };
-                    buffer.write(&csect_aux);
+                    buffer.write_pod(&csect_aux);
                 } else {
                     let csect_aux = xcoff::CsectAux32 {
                         x_scnlen: (scnlen as u32).into(),
@@ -602,17 +603,17 @@ impl<'a> Object<'a> {
                         x_stab: 0.into(),
                         x_snstab: 0.into(),
                     };
-                    buffer.write(&csect_aux);
+                    buffer.write_pod(&csect_aux);
                 }
             }
         }
 
         // Write string table.
-        debug_assert_eq!(strtab_offset, buffer.len());
+        debug_assert_eq!(strtab_offset, buffer.count());
         buffer.write_bytes(&u32::to_be_bytes(strtab_len));
         buffer.write_bytes(&strtab_data);
 
-        debug_assert_eq!(offset, buffer.len());
+        debug_assert_eq!(offset, buffer.count());
         Ok(())
     }
 }

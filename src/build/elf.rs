@@ -12,7 +12,7 @@ use crate::build::{ByteString, Bytes, Error, Id, IdPrivate, Item, Result, Table}
 use crate::elf;
 use crate::read::elf::{FileHeader, ProgramHeader, Rela, SectionHeader, Sym};
 use crate::read::{self, FileKind, ReadRef};
-use crate::write;
+use crate::write::{self, WritableBuffer};
 
 /// A builder for reading, modifying, and then writing ELF files.
 ///
@@ -1373,6 +1373,7 @@ impl<'data> Builder<'data> {
         buffer
             .reserve(reserved_len)
             .map_err(|_| Error(format!("Cannot allocate buffer length {reserved_len:#x}")))?;
+        let buffer = &mut write::CountingBuffer::new(buffer);
 
         // Start writing.
         let header = write::elf::FileHeader {
@@ -1831,7 +1832,7 @@ impl<'data> Builder<'data> {
             }
             encoder.section_header(buffer, &header);
         }
-        debug_assert_eq!(reserved_len, buffer.len());
+        debug_assert_eq!(reserved_len, buffer.count());
         Ok(())
     }
 

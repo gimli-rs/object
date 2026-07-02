@@ -8,7 +8,7 @@ use crate::endian::{Endianness, U32};
 use crate::macho;
 use crate::read::macho::{MachHeader, Nlist};
 use crate::read::{self, FileKind, ReadRef};
-use crate::write;
+use crate::write::{self, WritableBuffer};
 
 /// A builder for reading, modifying, and then writing Mach-O files.
 ///
@@ -822,6 +822,7 @@ impl<'data> Builder<'data> {
         buffer
             .reserve(reserved_len)
             .map_err(|_| Error(format!("Cannot allocate buffer length {reserved_len:#x}")))?;
+        let buffer = &mut write::CountingBuffer::new(buffer);
 
         // Start writing.
         encoder.mach_header(
@@ -1091,7 +1092,7 @@ impl<'data> Builder<'data> {
             }
         }
 
-        debug_assert_eq!(stroff, buffer.len());
+        debug_assert_eq!(stroff, buffer.count());
         buffer.write_bytes(&strtab_data);
 
         // Write code signature.
@@ -1104,7 +1105,7 @@ impl<'data> Builder<'data> {
             }
         }
 
-        debug_assert_eq!(reserved_len, buffer.len());
+        debug_assert_eq!(reserved_len, buffer.count());
         Ok(())
     }
 

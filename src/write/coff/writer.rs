@@ -6,7 +6,7 @@ use core::mem;
 use crate::pe;
 use crate::write::string::{StringId, StringTable};
 use crate::write::util;
-use crate::write::{Error, Result, WritableBuffer};
+use crate::write::{CountingBuffer, Error, Result, WritableBuffer, WritableBufferExt};
 
 /// A helper for writing COFF files.
 ///
@@ -26,7 +26,7 @@ use crate::write::{Error, Result, WritableBuffer};
 /// with checking this.
 #[allow(missing_debug_implementations)]
 pub struct Writer<'a> {
-    buffer: &'a mut dyn WritableBuffer,
+    buffer: CountingBuffer<&'a mut dyn WritableBuffer>,
     len: u64,
 
     section_num: u16,
@@ -44,7 +44,7 @@ impl<'a> Writer<'a> {
     /// Create a new `Writer`.
     pub fn new(buffer: &'a mut dyn WritableBuffer) -> Self {
         Writer {
-            buffer,
+            buffer: CountingBuffer::new(buffer),
             len: 0,
 
             section_num: 0,
@@ -67,7 +67,7 @@ impl<'a> Writer<'a> {
     /// Return the current file length that has been written.
     #[allow(clippy::len_without_is_empty)]
     pub fn len(&self) -> u64 {
-        self.buffer.len()
+        self.buffer.count()
     }
 
     /// Reserve a file range with the given size and starting alignment.
@@ -87,7 +87,7 @@ impl<'a> Writer<'a> {
     /// Write alignment padding bytes.
     pub fn write_align(&mut self, align_start: u64) {
         if align_start > 1 {
-            util::write_align(self.buffer, align_start);
+            self.buffer.write_align(align_start);
         }
     }
 
@@ -104,7 +104,7 @@ impl<'a> Writer<'a> {
 
     /// Write padding up to the given file offset.
     pub fn pad_until(&mut self, offset: u64) {
-        debug_assert!(self.buffer.len() <= offset);
+        debug_assert!(self.buffer.count() <= offset);
         self.buffer.resize(offset);
     }
 
@@ -122,7 +122,7 @@ impl<'a> Writer<'a> {
     ///
     /// Fields that can be derived from known information are automatically set by this function.
     pub fn write_file_header(&mut self, header: FileHeader) -> Result<()> {
-        debug_assert_eq!(self.buffer.len(), 0);
+        debug_assert_eq!(self.buffer.count(), 0);
 
         // Start writing.
         self.buffer
@@ -139,7 +139,7 @@ impl<'a> Writer<'a> {
             size_of_optional_header: 0.into(),
             characteristics: header.characteristics.into(),
         };
-        self.buffer.write(&header);
+        self.buffer.write_pod(&header);
 
         Ok(())
     }
@@ -212,7 +212,7 @@ impl<'a> Writer<'a> {
                 }
             }
         }
-        self.buffer.write(&coff_section);
+        self.buffer.write_pod(&coff_section);
     }
 
     /// Reserve the range for the section data.
@@ -232,7 +232,7 @@ impl<'a> Writer<'a> {
     /// This is unneeded if you are using `write_section` or `write_section_zeroes`
     /// for the data.
     pub fn write_section_align(&mut self) {
-        util::write_align(self.buffer, 4);
+        self.buffer.write_align(4);
     }
 
     /// Write the section data.
@@ -256,7 +256,7 @@ impl<'a> Writer<'a> {
             return;
         }
         self.write_section_align();
-        self.buffer.resize(self.buffer.len() + len as u64);
+        self.buffer.write_zeros(len as u64);
     }
 
     /// Reserve a file range for the given number of relocations.
@@ -288,7 +288,7 @@ impl<'a> Writer<'a> {
                 symbol_table_index: 0.into(),
                 typ: 0.into(),
             };
-            self.buffer.write(&coff_relocation);
+            self.buffer.write_pod(&coff_relocation);
         }
     }
 
@@ -299,7 +299,7 @@ impl<'a> Writer<'a> {
             symbol_table_index: reloc.symbol.into(),
             typ: reloc.typ.into(),
         };
-        self.buffer.write(&coff_relocation);
+        self.buffer.write_pod(&coff_relocation);
     }
 
     /// Reserve a symbol table entry.
@@ -335,7 +335,7 @@ impl<'a> Writer<'a> {
                 coff_symbol.name[4..8].copy_from_slice(&u32::to_le_bytes(str_offset));
             }
         }
-        self.buffer.write(&coff_symbol);
+        self.buffer.write_pod(&coff_symbol);
     }
 
     /// Reserve auxiliary symbols for a file name.
@@ -354,7 +354,7 @@ impl<'a> Writer<'a> {
     pub fn write_aux_file_name(&mut self, name: &[u8], aux_count: u8) {
         let aux_len = aux_count as usize * pe::IMAGE_SIZEOF_SYMBOL;
         debug_assert!(aux_len >= name.len());
-        let old_len = self.buffer.len();
+        let old_len = self.buffer.count();
         self.buffer.write_bytes(name);
         self.buffer.resize(old_len + aux_len as u64);
     }
@@ -386,7 +386,7 @@ impl<'a> Writer<'a> {
             reserved: 0,
             high_number: ((section.number >> 16) as u16).into(),
         };
-        self.buffer.write(&aux);
+        self.buffer.write_pod(&aux);
     }
 
     /// Reserve an auxiliary symbol for a weak external.
@@ -406,7 +406,7 @@ impl<'a> Writer<'a> {
             weak_default_sym_index: weak.weak_default_sym_index.into(),
             weak_search_type: weak.weak_search_type.into(),
         };
-        self.buffer.write(&aux);
+        self.buffer.write_pod(&aux);
         // write padding for the unused field
         const PAD_LEN: usize = pe::IMAGE_SIZEOF_SYMBOL - mem::size_of::<pe::ImageAuxSymbolWeak>();
         self.buffer.write_bytes(&[0u8; PAD_LEN]);
@@ -458,7 +458,7 @@ impl<'a> Writer<'a> {
 
     /// Write the string table.
     pub fn write_strtab(&mut self) {
-        debug_assert_eq!(self.strtab_offset as u64, self.buffer.len());
+        debug_assert_eq!(self.strtab_offset as u64, self.buffer.count());
         self.buffer.write_bytes(&u32::to_le_bytes(self.strtab_len));
         self.buffer.write_bytes(&self.strtab_data);
     }

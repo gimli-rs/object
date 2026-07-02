@@ -6,7 +6,7 @@ use core::mem;
 use crate::endian::{LittleEndian as LE, *};
 use crate::pe;
 use crate::write::util;
-use crate::write::{Error, Result, WritableBuffer};
+use crate::write::{CountingBuffer, Error, Result, WritableBuffer, WritableBufferExt};
 
 /// A helper for writing PE files.
 ///
@@ -21,7 +21,7 @@ pub struct Writer<'a> {
     section_alignment: u32,
     file_alignment: u32,
 
-    buffer: &'a mut dyn WritableBuffer,
+    buffer: CountingBuffer<&'a mut dyn WritableBuffer>,
     len: u64,
     virtual_len: u32,
     headers_len: u32,
@@ -60,7 +60,7 @@ impl<'a> Writer<'a> {
             section_alignment,
             file_alignment,
 
-            buffer,
+            buffer: CountingBuffer::new(buffer),
             len: 0,
             virtual_len: 0,
             headers_len: 0,
@@ -120,7 +120,7 @@ impl<'a> Writer<'a> {
     /// Return the current file length that has been written.
     #[allow(clippy::len_without_is_empty)]
     pub fn len(&self) -> u64 {
-        self.buffer.len()
+        self.buffer.count()
     }
 
     /// Reserve a file range with the given size and starting alignment.
@@ -155,7 +155,7 @@ impl<'a> Writer<'a> {
 
     /// Write alignment padding bytes.
     pub fn write_align(&mut self, align_start: u32) {
-        util::write_align(self.buffer, align_start as u64);
+        self.buffer.write_align(align_start as u64);
     }
 
     /// Write padding up to the next multiple of file alignment.
@@ -171,7 +171,7 @@ impl<'a> Writer<'a> {
 
     /// Write padding up to the given file offset.
     pub fn pad_until(&mut self, offset: u32) {
-        debug_assert!(self.buffer.len() <= offset as u64);
+        debug_assert!(self.buffer.count() <= offset as u64);
         self.buffer.resize(offset as u64);
     }
 
@@ -189,14 +189,14 @@ impl<'a> Writer<'a> {
     ///
     /// This must be at the start of the file.
     pub fn write_custom_dos_header(&mut self, dos_header: &pe::ImageDosHeader) -> Result<()> {
-        debug_assert_eq!(self.buffer.len(), 0);
+        debug_assert_eq!(self.buffer.count(), 0);
 
         // Start writing.
         self.buffer
             .reserve(self.len)
             .map_err(|_| Error(String::from("Cannot allocate buffer")))?;
 
-        self.buffer.write(dos_header);
+        self.buffer.write_pod(dos_header);
         Ok(())
     }
 
@@ -322,7 +322,7 @@ impl<'a> Writer<'a> {
     /// Write the NT headers.
     pub fn write_nt_headers(&mut self, nt_headers: NtHeaders) {
         self.pad_until(self.nt_headers_offset);
-        self.buffer.write(&U32::new(LE, pe::IMAGE_NT_SIGNATURE));
+        self.buffer.write_u32(LE, pe::IMAGE_NT_SIGNATURE);
         let file_header = pe::ImageFileHeader {
             machine: nt_headers.machine.into(),
             number_of_sections: self.section_header_num.into(),
@@ -332,7 +332,7 @@ impl<'a> Writer<'a> {
             size_of_optional_header: (self.optional_header_size() as u16).into(),
             characteristics: nt_headers.characteristics.into(),
         };
-        self.buffer.write(&file_header);
+        self.buffer.write_pod(&file_header);
         if self.is_64 {
             let optional_header = pe::ImageOptionalHeader64 {
                 magic: pe::IMAGE_NT_OPTIONAL_HDR64_MAGIC.into(),
@@ -371,7 +371,7 @@ impl<'a> Writer<'a> {
                 loader_flags: 0.into(),
                 number_of_rva_and_sizes: (self.data_directories.len() as u32).into(),
             };
-            self.buffer.write(&optional_header);
+            self.buffer.write_pod(&optional_header);
         } else {
             let optional_header = pe::ImageOptionalHeader32 {
                 magic: pe::IMAGE_NT_OPTIONAL_HDR32_MAGIC.into(),
@@ -411,11 +411,11 @@ impl<'a> Writer<'a> {
                 loader_flags: 0.into(),
                 number_of_rva_and_sizes: (self.data_directories.len() as u32).into(),
             };
-            self.buffer.write(&optional_header);
+            self.buffer.write_pod(&optional_header);
         }
 
         for dir in &self.data_directories {
-            self.buffer.write(&pe::ImageDataDirectory {
+            self.buffer.write_pod(&pe::ImageDataDirectory {
                 virtual_address: dir.virtual_address.into(),
                 size: dir.size.into(),
             })
@@ -458,7 +458,7 @@ impl<'a> Writer<'a> {
                 number_of_linenumbers: 0.into(),
                 characteristics: section.characteristics.into(),
             };
-            self.buffer.write(&section_header);
+            self.buffer.write_pod(&section_header);
         }
     }
 
@@ -747,12 +747,12 @@ impl<'a> Writer<'a> {
 
         let mut total = 0;
         for block in &self.reloc_blocks {
-            self.buffer.write(&pe::ImageBaseRelocation {
+            self.buffer.write_pod(&pe::ImageBaseRelocation {
                 virtual_address: block.virtual_address.into(),
                 size_of_block: block.size().into(),
             });
             self.buffer
-                .write_slice(&self.relocs[total..][..block.count as usize]);
+                .write_pod_slice(&self.relocs[total..][..block.count as usize]);
             total += block.count as usize;
         }
         debug_assert_eq!(total, self.relocs.len());
