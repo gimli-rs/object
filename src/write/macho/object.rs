@@ -357,6 +357,7 @@ impl<'a> Object<'a> {
                 (K::PltRelative, E::Generic | E::AArch64Call) => {
                     (true, macho::ARM64_RELOC_BRANCH26)
                 }
+                (K::GotRelative, E::Generic) => (true, macho::ARM64_RELOC_POINTER_TO_GOT),
                 _ => return unsupported_reloc(),
             },
             Architecture::PowerPc | Architecture::PowerPc64 => match kind {
