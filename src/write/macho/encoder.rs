@@ -627,3 +627,176 @@ impl<E: Endian> Encoder<E> {
         buffer.write_pod(data);
     }
 }
+
+/// Native endian version of [`macho::CsCodeDirectoryV0`].
+#[allow(missing_docs)]
+#[derive(Debug, Clone)]
+pub struct CodeDirectory {
+    pub length: u32,
+    pub version: macho::CsVersion,
+    pub flags: macho::CsFlags,
+    pub hash_offset: u32,
+    pub ident_offset: u32,
+    pub n_special_slots: u32,
+    pub n_code_slots: u32,
+    pub code_limit: u64,
+    pub hash_size: u8,
+    pub hash_type: macho::CsHashType,
+    pub platform: u8,
+    pub page_size: u8,
+    pub scatter_offset: u32,
+    pub team_offset: u32,
+    pub exec_seg_base: u64,
+    pub exec_seg_limit: u64,
+    pub exec_seg_flags: macho::CsExecSegFlags,
+}
+
+/// A helper for encoding code signatures.
+#[derive(Debug, Clone, Copy)]
+pub struct CodeSignatureEncoder;
+
+impl CodeSignatureEncoder {
+    /// Return the size of a super blob header.
+    pub fn super_blob_size(self) -> u32 {
+        mem::size_of::<macho::CsSuperBlob>() as u32
+    }
+
+    /// Write a code signature super blob header.
+    pub fn signature_super_blob<W: WritableBuffer + ?Sized>(
+        self,
+        buffer: &mut W,
+        length: u32,
+        count: u32,
+    ) {
+        let data = &macho::CsSuperBlob {
+            magic: U32::new(BigEndian, macho::CSMAGIC_EMBEDDED_SIGNATURE),
+            length: U32::new(BigEndian, length),
+            count: U32::new(BigEndian, count),
+        };
+        buffer.write_pod(data);
+    }
+
+    /// Write a requirements super blob header.
+    pub fn requirements_super_blob<W: WritableBuffer + ?Sized>(
+        self,
+        buffer: &mut W,
+        length: u32,
+        count: u32,
+    ) {
+        let data = &macho::CsSuperBlob {
+            magic: U32::new(BigEndian, macho::CSMAGIC_REQUIREMENTS),
+            length: U32::new(BigEndian, length),
+            count: U32::new(BigEndian, count),
+        };
+        buffer.write_pod(data);
+    }
+
+    /// Return the size of a blob index entry.
+    pub fn blob_index_size(self) -> u32 {
+        mem::size_of::<macho::CsBlobIndex>() as u32
+    }
+
+    /// Write a code signature blob index entry.
+    pub fn blob_index<W: WritableBuffer + ?Sized>(
+        self,
+        buffer: &mut W,
+        slot: macho::CsSlot,
+        offset: u32,
+    ) {
+        let data = &macho::CsBlobIndex {
+            slot: U32::new(BigEndian, slot),
+            offset: U32::new(BigEndian, offset),
+        };
+        buffer.write_pod(data);
+    }
+
+    /// Return the size of a generic blob header.
+    pub fn generic_blob_size(self) -> u32 {
+        mem::size_of::<macho::CsGenericBlob>() as u32
+    }
+
+    /// Write a generic blob header.
+    pub fn generic_blob<W: WritableBuffer + ?Sized>(self, buffer: &mut W, magic: u32, length: u32) {
+        let header = &macho::CsGenericBlob {
+            magic: U32::new(BigEndian, magic),
+            length: U32::new(BigEndian, length),
+        };
+        buffer.write_pod(header);
+    }
+
+    /// Return the size of a code directory header for the given version.
+    ///
+    /// This does not include data such as the identifier, team identifier,
+    /// hash slots, or scatter vector.
+    ///
+    /// Only versions <= [`macho::CS_SUPPORTSEXECSEG`] are supported.
+    pub fn code_directory_size(self, version: macho::CsVersion) -> u32 {
+        debug_assert!(version <= macho::CS_SUPPORTSEXECSEG);
+        let mut size = mem::size_of::<macho::CsCodeDirectoryV0>();
+        if version >= macho::CS_SUPPORTSSCATTER {
+            size += mem::size_of::<macho::CsCodeDirectoryV1>();
+        }
+        if version >= macho::CS_SUPPORTSTEAMID {
+            size += mem::size_of::<macho::CsCodeDirectoryV2>();
+        }
+        if version >= macho::CS_SUPPORTSCODELIMIT64 {
+            size += mem::size_of::<macho::CsCodeDirectoryV3>();
+        }
+        if version >= macho::CS_SUPPORTSEXECSEG {
+            size += mem::size_of::<macho::CsCodeDirectoryV4>();
+        }
+        size as u32
+    }
+
+    /// Write a code directory header.
+    ///
+    /// The version is used to determine which fields to write.
+    /// Only versions <= [`macho::CS_SUPPORTSEXECSEG`] are supported.
+    pub fn code_directory<W: WritableBuffer + ?Sized>(self, buffer: &mut W, cd: &CodeDirectory) {
+        debug_assert!(cd.version <= macho::CS_SUPPORTSEXECSEG);
+        let v0 = macho::CsCodeDirectoryV0 {
+            magic: U32::new(BigEndian, macho::CSMAGIC_CODEDIRECTORY),
+            length: U32::new(BigEndian, cd.length),
+            version: U32::new(BigEndian, cd.version),
+            flags: U32::new(BigEndian, cd.flags),
+            hash_offset: U32::new(BigEndian, cd.hash_offset),
+            ident_offset: U32::new(BigEndian, cd.ident_offset),
+            n_special_slots: U32::new(BigEndian, cd.n_special_slots),
+            n_code_slots: U32::new(BigEndian, cd.n_code_slots),
+            code_limit: U32::new(BigEndian, cd.code_limit as u32),
+            hash_size: cd.hash_size,
+            hash_type: cd.hash_type,
+            platform: cd.platform,
+            page_size: cd.page_size,
+            spare2: U32::new(BigEndian, 0),
+        };
+        buffer.write_pod(&v0);
+        if cd.version >= macho::CS_SUPPORTSSCATTER {
+            let v1 = macho::CsCodeDirectoryV1 {
+                scatter_offset: U32::new(BigEndian, cd.scatter_offset),
+            };
+            buffer.write_pod(&v1);
+        }
+        if cd.version >= macho::CS_SUPPORTSTEAMID {
+            let v2 = macho::CsCodeDirectoryV2 {
+                team_offset: U32::new(BigEndian, cd.team_offset),
+            };
+            buffer.write_pod(&v2);
+        }
+        if cd.version >= macho::CS_SUPPORTSCODELIMIT64 {
+            let v3 = macho::CsCodeDirectoryV3 {
+                spare3: U32::new(BigEndian, 0),
+                code_limit64: U64::new(BigEndian, cd.code_limit),
+            };
+            buffer.write_pod(&v3);
+        }
+        if cd.version >= macho::CS_SUPPORTSEXECSEG {
+            let v4 = macho::CsCodeDirectoryV4 {
+                exec_seg_base: U64::new(BigEndian, cd.exec_seg_base),
+                exec_seg_limit: U64::new(BigEndian, cd.exec_seg_limit),
+                exec_seg_flags: U64::new(BigEndian, cd.exec_seg_flags),
+            };
+            buffer.write_pod(&v4);
+        }
+    }
+}
