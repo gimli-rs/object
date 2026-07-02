@@ -107,6 +107,12 @@ fn main() {
                 .help("Print the Mach-O rebase and bind fixup opcodes"),
         )
         .arg(
+            Arg::new("macho-code-signature")
+                .long("macho-code-signature")
+                .action(ArgAction::SetTrue)
+                .help("Print the Mach-O code signature"),
+        )
+        .arg(
             Arg::new("pe-rich")
                 .long("pe-rich")
                 .action(ArgAction::SetTrue)
@@ -159,6 +165,7 @@ fn main() {
         macho_exports_trie: matches.get_flag("macho-exports-trie"),
         macho_fixups: matches.get_flag("macho-fixups"),
         macho_fixup_opcodes: matches.get_flag("macho-fixup-opcodes"),
+        macho_code_signature: matches.get_flag("macho-code-signature"),
         pe_rich: matches.get_flag("pe-rich"),
         pe_base_relocs: matches.get_flag("pe-base-relocs"),
         pe_imports: matches.get_flag("pe-imports"),

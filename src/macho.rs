@@ -5122,6 +5122,319 @@ impl DyldChainedImport64 {
     }
 }
 
+// Definitions from:
+// https://github.com/apple-oss-distributions/xnu/blob/rel/xnu-12377/osfmk/kern/cs_blobs.h
+
+newtype!(
+    struct CsFlags(u32);
+);
+
+newtype_flag_names!(NAMES_CS: CsFlags(u32) = {
+    /// dynamically valid
+    CS_VALID = 0x00000001,
+    /// ad hoc signed
+    CS_ADHOC = 0x00000002,
+    /// has get-task-allow entitlement
+    CS_GET_TASK_ALLOW = 0x00000004,
+    /// has installer entitlement
+    CS_INSTALLER = 0x00000008,
+
+    /// Library Validation required by Hardened System Policy
+    CS_FORCED_LV = 0x00000010,
+    /// (macOS Only) Page invalidation allowed by task port policy
+    CS_INVALID_ALLOWED = 0x00000020,
+
+    /// don't load invalid pages
+    CS_HARD = 0x00000100,
+    /// kill process if it becomes invalid
+    CS_KILL = 0x00000200,
+    /// force expiration checking
+    CS_CHECK_EXPIRATION = 0x00000400,
+    /// tell dyld to treat restricted
+    CS_RESTRICT = 0x00000800,
+
+    /// require enforcement
+    CS_ENFORCEMENT = 0x00001000,
+    /// require library validation
+    CS_REQUIRE_LV = 0x00002000,
+    /// code signature permits restricted entitlements
+    CS_ENTITLEMENTS_VALIDATED = 0x00004000,
+    /// has com.apple.rootless.restricted-nvram-variables.heritable entitlement
+    CS_NVRAM_UNRESTRICTED = 0x00008000,
+
+    /// Apply hardened runtime policies
+    CS_RUNTIME = 0x00010000,
+    /// Automatically signed by the linker
+    CS_LINKER_SIGNED = 0x00020000,
+
+    /// set CS_HARD on any exec'ed process
+    CS_EXEC_SET_HARD = 0x00100000,
+    /// set CS_KILL on any exec'ed process
+    CS_EXEC_SET_KILL = 0x00200000,
+    /// set CS_ENFORCEMENT on any exec'ed process
+    CS_EXEC_SET_ENFORCEMENT = 0x00400000,
+    /// set CS_INSTALLER on any exec'ed process
+    CS_EXEC_INHERIT_SIP = 0x00800000,
+
+    /// was killed by kernel for invalidity
+    CS_KILLED = 0x01000000,
+    /// kernel did not load a non-platform-binary dyld or Rosetta runtime
+    CS_NO_UNTRUSTED_HELPERS = 0x02000000,
+    /// old name
+    CS_DYLD_PLATFORM = CS_NO_UNTRUSTED_HELPERS.0,
+    /// this is a platform binary
+    CS_PLATFORM_BINARY = 0x04000000,
+    /// platform binary by the fact of path (osx only)
+    CS_PLATFORM_PATH = 0x08000000,
+
+    /// process is currently or has previously been debugged and allowed to run with invalid pages
+    CS_DEBUGGED = 0x10000000,
+    /// process has a signature (may have gone invalid)
+    CS_SIGNED = 0x20000000,
+    /// code is dev signed, cannot be loaded into prod signed code (will go away with rdar://problem/28322552)
+    CS_DEV_CODE = 0x40000000,
+    /// has Data Vault controller entitlement
+    CS_DATAVAULT_CONTROLLER = 0x80000000,
+});
+
+pub const CS_ALLOWED_MACHO: CsFlags = CS_ADHOC
+    .with(CS_HARD)
+    .with(CS_KILL)
+    .with(CS_CHECK_EXPIRATION)
+    .with(CS_RESTRICT)
+    .with(CS_ENFORCEMENT)
+    .with(CS_REQUIRE_LV)
+    .with(CS_RUNTIME)
+    .with(CS_LINKER_SIGNED);
+
+pub const CS_ENTITLEMENT_FLAGS: CsFlags = CS_GET_TASK_ALLOW
+    .with(CS_INSTALLER)
+    .with(CS_DATAVAULT_CONTROLLER)
+    .with(CS_NVRAM_UNRESTRICTED);
+
+newtype!(
+    struct CsExecSegFlags(u64);
+);
+
+newtype_flag_names!(NAMES_CS_EXECSEG: CsExecSegFlags(u64) = {
+    /// executable segment denotes main binary
+    CS_EXECSEG_MAIN_BINARY = 0x1,
+    /// allow unsigned pages (for debugging)
+    CS_EXECSEG_ALLOW_UNSIGNED = 0x10,
+    /// main binary is debugger
+    CS_EXECSEG_DEBUGGER = 0x20,
+    /// JIT enabled
+    CS_EXECSEG_JIT = 0x40,
+    /// OBSOLETE: skip library validation
+    CS_EXECSEG_SKIP_LV = 0x80,
+    /// can bless cdhash for execution
+    CS_EXECSEG_CAN_LOAD_CDHASH = 0x100,
+    /// can execute blessed cdhash
+    CS_EXECSEG_CAN_EXEC_CDHASH = 0x200,
+});
+
+/// single Requirement blob
+pub const CSMAGIC_REQUIREMENT: u32 = 0xfade0c00;
+/// Requirements vector (internal requirements)
+pub const CSMAGIC_REQUIREMENTS: u32 = 0xfade0c01;
+/// CodeDirectory blob
+pub const CSMAGIC_CODEDIRECTORY: u32 = 0xfade0c02;
+/// embedded form of signature data
+pub const CSMAGIC_EMBEDDED_SIGNATURE: u32 = 0xfade0cc0;
+pub const CSMAGIC_EMBEDDED_SIGNATURE_OLD: u32 = 0xfade0b02;
+/// embedded entitlements
+pub const CSMAGIC_EMBEDDED_ENTITLEMENTS: u32 = 0xfade7171;
+/// embedded DER encoded entitlements
+pub const CSMAGIC_EMBEDDED_DER_ENTITLEMENTS: u32 = 0xfade7172;
+/// multi-arch collection of embedded signatures
+pub const CSMAGIC_DETACHED_SIGNATURE: u32 = 0xfade0cc1;
+/// CMS Signature, among other things
+pub const CSMAGIC_BLOBWRAPPER: u32 = 0xfade0b01;
+/// Light weight code requirement
+pub const CSMAGIC_EMBEDDED_LAUNCH_CONSTRAINT: u32 = 0xfade8181;
+
+newtype!(
+    struct CsVersion(u32);
+);
+
+newtype_constant_names!(NAMES_CS_SUPPORT: CsVersion(u32) = {
+    CS_SUPPORTSSCATTER = 0x20100,
+    CS_SUPPORTSTEAMID = 0x20200,
+    CS_SUPPORTSCODELIMIT64 = 0x20300,
+    CS_SUPPORTSEXECSEG = 0x20400,
+    CS_SUPPORTSRUNTIME = 0x20500,
+    CS_SUPPORTSLINKAGE = 0x20600,
+});
+
+newtype!(
+    struct CsSlot(u32);
+);
+
+newtype_constant_names!(NAMES_CSSLOT: CsSlot(u32) = {
+    CSSLOT_CODEDIRECTORY = 0,
+    CSSLOT_INFOSLOT = 1,
+    CSSLOT_REQUIREMENTS = 2,
+    CSSLOT_RESOURCEDIR = 3,
+    CSSLOT_APPLICATION = 4,
+    CSSLOT_ENTITLEMENTS = 5,
+    CSSLOT_DER_ENTITLEMENTS = 7,
+    CSSLOT_LAUNCH_CONSTRAINT_SELF = 8,
+    CSSLOT_LAUNCH_CONSTRAINT_PARENT = 9,
+    CSSLOT_LAUNCH_CONSTRAINT_RESPONSIBLE = 10,
+    CSSLOT_LIBRARY_CONSTRAINT = 11,
+
+
+    CSSLOT_SIGNATURESLOT = 0x10000,
+    CSSLOT_IDENTIFICATIONSLOT = 0x10001,
+    CSSLOT_TICKETSLOT = 0x10002,
+});
+
+impl CsSlot {
+    pub fn is_alternate_codedirectory(self) -> bool {
+        matches!(
+            self.0,
+            CSSLOT_ALTERNATE_CODEDIRECTORIES..CSSLOT_ALTERNATE_CODEDIRECTORY_LIMIT
+        )
+    }
+}
+
+/// first alternate CodeDirectory, if any
+pub const CSSLOT_ALTERNATE_CODEDIRECTORIES: u32 = 0x1000;
+/// max number of alternate CD slots
+pub const CSSLOT_ALTERNATE_CODEDIRECTORY_MAX: u32 = 5;
+pub const CSSLOT_ALTERNATE_CODEDIRECTORY_LIMIT: u32 =
+    CSSLOT_ALTERNATE_CODEDIRECTORIES + CSSLOT_ALTERNATE_CODEDIRECTORY_MAX;
+
+newtype!(
+    #[repr(C)]
+    struct CsHashType(u8);
+);
+
+newtype_constant_names!(NAMES_CS_HASHTYPE: CsHashType(u8) = {
+    CS_HASHTYPE_SHA1              = 1,
+    CS_HASHTYPE_SHA256            = 2,
+    CS_HASHTYPE_SHA256_TRUNCATED  = 3,
+    CS_HASHTYPE_SHA384 = 4,
+});
+
+#[derive(Debug, Clone, Copy)]
+#[repr(C)]
+pub struct CsCodeDirectoryV0 {
+    /// magic number (CSMAGIC_CODEDIRECTORY)
+    pub magic: U32<BigEndian>,
+    /// total length of CodeDirectory blob
+    pub length: U32<BigEndian>,
+    /// compatibility version
+    pub version: U32<BigEndian, CsVersion>,
+    /// setup and mode flags
+    pub flags: U32<BigEndian, CsFlags>,
+    /// offset of hash slot element at index zero
+    pub hash_offset: U32<BigEndian>,
+    /// offset of identifier string
+    pub ident_offset: U32<BigEndian>,
+    /// number of special hash slots
+    pub n_special_slots: U32<BigEndian>,
+    /// number of ordinary (code) hash slots
+    pub n_code_slots: U32<BigEndian>,
+    /// limit to main image signature range
+    pub code_limit: U32<BigEndian>,
+    /// size of each hash in bytes
+    pub hash_size: u8,
+    /// type of hash
+    pub hash_type: CsHashType,
+    /// platform identifier; zero if not platform binary
+    pub platform: u8,
+    /// log2(page size in bytes); 0 => infinite
+    pub page_size: u8,
+    /// unused (must be zero)
+    pub spare2: U32<BigEndian>,
+    //char end_earliest[0];
+}
+
+// Version 0x20100
+#[derive(Debug, Clone, Copy)]
+#[repr(C)]
+pub struct CsCodeDirectoryV1 {
+    /// offset of optional scatter vector
+    pub scatter_offset: U32<BigEndian>,
+}
+
+// Version 0x20200
+#[derive(Debug, Clone, Copy)]
+#[repr(C)]
+pub struct CsCodeDirectoryV2 {
+    /// offset of optional team identifier
+    pub team_offset: U32<BigEndian>,
+}
+
+// Version 0x20300
+#[derive(Debug, Clone, Copy)]
+#[repr(C)]
+pub struct CsCodeDirectoryV3 {
+    /// unused (must be zero)
+    pub spare3: U32<BigEndian>,
+    /// limit to main image signature range, 64 bits
+    pub code_limit64: U64<BigEndian>,
+}
+
+// Version 0x20400
+#[derive(Debug, Clone, Copy)]
+#[repr(C)]
+pub struct CsCodeDirectoryV4 {
+    /// offset of executable segment
+    pub exec_seg_base: U64<BigEndian>,
+    /// limit of executable segment
+    pub exec_seg_limit: U64<BigEndian>,
+    /// exec segment flags
+    pub exec_seg_flags: U64<BigEndian, CsExecSegFlags>,
+}
+
+#[derive(Debug, Clone, Copy)]
+#[repr(C)]
+pub struct CsBlobIndex {
+    /// type of entry
+    pub slot: U32<BigEndian, CsSlot>,
+    /// offset of entry
+    pub offset: U32<BigEndian>,
+}
+
+#[derive(Debug, Clone, Copy)]
+#[repr(C)]
+pub struct CsSuperBlob {
+    /// magic number
+    pub magic: U32<BigEndian>,
+    /// total length of SuperBlob
+    pub length: U32<BigEndian>,
+    /// number of index entries following
+    pub count: U32<BigEndian>,
+    // (count) entries
+    // index: [CsBlobIndex]
+    // followed by Blobs in no particular order as indicated by offsets in index
+}
+
+#[derive(Debug, Clone, Copy)]
+#[repr(C)]
+pub struct CsGenericBlob {
+    /// magic number
+    pub magic: U32<BigEndian>,
+    /// total length of blob
+    pub length: U32<BigEndian>,
+    // data: [u8],
+}
+
+#[derive(Debug, Clone, Copy)]
+#[repr(C)]
+pub struct CsScatter {
+    /// number of pages; zero for sentinel (only)
+    pub count: U32<BigEndian>,
+    /// first page number
+    pub base: U32<BigEndian>,
+    /// byte offset in target
+    pub target_offset: U64<BigEndian>,
+    /// reserved (must be zero)
+    pub spare: U64<BigEndian>,
+}
+
 unsafe_impl_pod!(FatHeader, FatArch32, FatArch64,);
 unsafe_impl_endian_pod!(
     DyldCacheHeader,
@@ -5192,4 +5505,15 @@ unsafe_impl_endian_pod!(
     Nlist32,
     Nlist64,
     Relocation,
+);
+unsafe_impl_pod!(
+    CsBlobIndex,
+    CsSuperBlob,
+    CsCodeDirectoryV0,
+    CsCodeDirectoryV1,
+    CsCodeDirectoryV2,
+    CsCodeDirectoryV3,
+    CsCodeDirectoryV4,
+    CsGenericBlob,
+    CsScatter,
 );

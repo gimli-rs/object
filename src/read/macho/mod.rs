@@ -47,6 +47,9 @@
 #[cfg(doc)]
 use crate::macho;
 
+mod codesign;
+pub use codesign::*;
+
 mod dyld_cache;
 pub use dyld_cache::*;
 

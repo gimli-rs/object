@@ -354,4 +354,45 @@ LinkeditDataCommand {
     CmdSize: 0x10
     DataOffset: 0x8110
     DataSize: 0x1A8
+    CodeSignature {
+        Magic: 0xFADE0CC0
+        Length: 0x1A5
+        Count: 1
+        Blob {
+            Slot: CSSLOT_CODEDIRECTORY (0x0)
+            Offset: 0x14
+            Magic: 0xFADE0C02
+            Length: 0x191
+            CodeDirectory {
+                Version: CS_SUPPORTSEXECSEG (0x20400)
+                Flags: 0x20002
+                    CS_ADHOC (0x2)
+                    CS_LINKER_SIGNED (0x20000)
+                HashOffset: 0x71
+                IdentOffset: "fixup-chains-arm64.dylib" (0x58)
+                NSpecialSlots: 0
+                NCodeSlots: 9
+                CodeLimit: 0x8110
+                HashSize: 32
+                HashType: CS_HASHTYPE_SHA256 (0x2)
+                Platform: 0
+                PageSize: 12
+                ScatterOffset: 0x0
+                TeamOffset: 0x0
+                CodeLimit64: 0x0
+                ExecSegBase: 0x0
+                ExecSegLimit: 0x4
+                ExecSegFlags: 0x0
+                CodeHash: 6d768285b4bf52a679e284e892289be78d93b336e83926a0b3c34a76f0d34814
+                CodeHash: ad7facb2586fc6e966c004d7d1d16b024f5805ff7cb47c7a85dabd8b48892ca7
+                CodeHash: ad7facb2586fc6e966c004d7d1d16b024f5805ff7cb47c7a85dabd8b48892ca7
+                CodeHash: ad7facb2586fc6e966c004d7d1d16b024f5805ff7cb47c7a85dabd8b48892ca7
+                CodeHash: 1e7c324bf6480d941694ca68e15dcad63d95a1d1646b6be6cf6abdbaadef47e4
+                CodeHash: ad7facb2586fc6e966c004d7d1d16b024f5805ff7cb47c7a85dabd8b48892ca7
+                CodeHash: ad7facb2586fc6e966c004d7d1d16b024f5805ff7cb47c7a85dabd8b48892ca7
+                CodeHash: ad7facb2586fc6e966c004d7d1d16b024f5805ff7cb47c7a85dabd8b48892ca7
+                CodeHash: 15c58bc2495c2956b06819f58c3b27399572a07c03d93a9fa459b5172446d76d
+            }
+        }
+    }
 }

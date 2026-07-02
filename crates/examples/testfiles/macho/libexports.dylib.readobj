@@ -337,4 +337,45 @@ LinkeditDataCommand {
     CmdSize: 0x10
     DataOffset: 0x8160
     DataSize: 0x1A0
+    CodeSignature {
+        Magic: 0xFADE0CC0
+        Length: 0x19D
+        Count: 1
+        Blob {
+            Slot: CSSLOT_CODEDIRECTORY (0x0)
+            Offset: 0x14
+            Magic: 0xFADE0C02
+            Length: 0x189
+            CodeDirectory {
+                Version: CS_SUPPORTSEXECSEG (0x20400)
+                Flags: 0x20002
+                    CS_ADHOC (0x2)
+                    CS_LINKER_SIGNED (0x20000)
+                HashOffset: 0x69
+                IdentOffset: "libexports.dylib" (0x58)
+                NSpecialSlots: 0
+                NCodeSlots: 9
+                CodeLimit: 0x8160
+                HashSize: 32
+                HashType: CS_HASHTYPE_SHA256 (0x2)
+                Platform: 0
+                PageSize: 12
+                ScatterOffset: 0x0
+                TeamOffset: 0x0
+                CodeLimit64: 0x0
+                ExecSegBase: 0x0
+                ExecSegLimit: 0x8
+                ExecSegFlags: 0x0
+                CodeHash: 6c326c41def2dd9ec9126ea37fa3f1fd6904044dfdc08d07e9acbc08212e16c8
+                CodeHash: ad7facb2586fc6e966c004d7d1d16b024f5805ff7cb47c7a85dabd8b48892ca7
+                CodeHash: ad7facb2586fc6e966c004d7d1d16b024f5805ff7cb47c7a85dabd8b48892ca7
+                CodeHash: ad7facb2586fc6e966c004d7d1d16b024f5805ff7cb47c7a85dabd8b48892ca7
+                CodeHash: 076c835d76cdd6d2b5dced38b03021f1c9a2d9ee74a51100ba59dac47d4fa46d
+                CodeHash: ad7facb2586fc6e966c004d7d1d16b024f5805ff7cb47c7a85dabd8b48892ca7
+                CodeHash: ad7facb2586fc6e966c004d7d1d16b024f5805ff7cb47c7a85dabd8b48892ca7
+                CodeHash: ad7facb2586fc6e966c004d7d1d16b024f5805ff7cb47c7a85dabd8b48892ca7
+                CodeHash: 3caf14417b01ed31160dd3578e6ebb16101b54ec904ba2ccf5e44f576bfc2266
+            }
+        }
+    }
 }
