@@ -454,6 +454,8 @@ impl<'data> Builder<'data> {
     /// Segment sizes will be calculated based on their contents. The first segment
     /// containing data must leave space for the Mach-O header and load commands between
     /// the segment address and the address of the first section.
+    ///
+    /// This calls [`WritableBuffer::reserve`] with the total file size.
     pub fn write(mut self, buffer: &mut dyn write::WritableBuffer) -> Result<()> {
         struct SegmentOut {
             id: SegmentId,
