@@ -494,7 +494,7 @@ impl<'data, 'file, Elf: FileHeader, R: ReadRef<'data>> ObjectSymbol<'data>
 
 /// A trait for generic access to [`elf::Sym32`] and [`elf::Sym64`].
 #[allow(missing_docs)]
-pub trait Sym: Debug + Pod {
+pub trait Sym: Debug + Pod + read::private::Sealed {
     type Word: Into<u64>;
     type Endian: endian::Endian;
 
@@ -571,6 +571,8 @@ pub trait Sym: Debug + Pod {
     }
 }
 
+impl<Endian: endian::Endian> read::private::Sealed for elf::Sym32<Endian> {}
+
 impl<Endian: endian::Endian> Sym for elf::Sym32<Endian> {
     type Word = u32;
     type Endian = Endian;
@@ -620,6 +622,8 @@ impl<Endian: endian::Endian> Sym for elf::Sym32<Endian> {
         self.st_size.get(endian)
     }
 }
+
+impl<Endian: endian::Endian> read::private::Sealed for elf::Sym64<Endian> {}
 
 impl<Endian: endian::Endian> Sym for elf::Sym64<Endian> {
     type Word = u64;

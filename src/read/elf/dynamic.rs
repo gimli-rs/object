@@ -5,7 +5,7 @@ use core::slice;
 use crate::elf;
 use crate::endian;
 use crate::pod::Pod;
-use crate::read::{ReadError, ReadRef, Result, SectionIndex, StringTable};
+use crate::read::{self, ReadError, ReadRef, Result, SectionIndex, StringTable};
 
 use super::{FileHeader, SectionHeader, SectionTable};
 
@@ -190,7 +190,7 @@ impl Dynamic {
 
 /// A trait for generic access to [`elf::Dyn32`] and [`elf::Dyn64`].
 #[allow(missing_docs)]
-pub trait Dyn: Debug + Pod {
+pub trait Dyn: Debug + Pod + read::private::Sealed {
     type Word: Into<u64>;
     type Endian: endian::Endian;
 
@@ -245,6 +245,8 @@ pub trait Dyn: Debug + Pod {
     }
 }
 
+impl<Endian: endian::Endian> read::private::Sealed for elf::Dyn32<Endian> {}
+
 impl<Endian: endian::Endian> Dyn for elf::Dyn32<Endian> {
     type Word = u32;
     type Endian = Endian;
@@ -259,6 +261,8 @@ impl<Endian: endian::Endian> Dyn for elf::Dyn32<Endian> {
         self.d_val.get(endian)
     }
 }
+
+impl<Endian: endian::Endian> read::private::Sealed for elf::Dyn64<Endian> {}
 
 impl<Endian: endian::Endian> Dyn for elf::Dyn64<Endian> {
     type Word = u64;

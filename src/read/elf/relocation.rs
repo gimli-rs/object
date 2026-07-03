@@ -556,7 +556,7 @@ fn parse_relocation<Elf: FileHeader>(
 
 /// A trait for generic access to [`elf::Rel32`] and [`elf::Rel64`].
 #[allow(missing_docs)]
-pub trait Rel: Debug + Pod + Clone {
+pub trait Rel: Debug + Pod + Clone + read::private::Sealed {
     type Word: Into<u64>;
     type Sword: Into<i64>;
     type Endian: endian::Endian;
@@ -578,6 +578,8 @@ pub trait Rel: Debug + Pod + Clone {
         }
     }
 }
+
+impl<Endian: endian::Endian> read::private::Sealed for elf::Rel32<Endian> {}
 
 impl<Endian: endian::Endian> Rel for elf::Rel32<Endian> {
     type Word = u32;
@@ -604,6 +606,8 @@ impl<Endian: endian::Endian> Rel for elf::Rel32<Endian> {
         self.r_type(endian)
     }
 }
+
+impl<Endian: endian::Endian> read::private::Sealed for elf::Rel64<Endian> {}
 
 impl<Endian: endian::Endian> Rel for elf::Rel64<Endian> {
     type Word = u64;
@@ -633,7 +637,7 @@ impl<Endian: endian::Endian> Rel for elf::Rel64<Endian> {
 
 /// A trait for generic access to [`elf::Rela32`] and [`elf::Rela64`].
 #[allow(missing_docs)]
-pub trait Rela: Debug + Pod + Clone {
+pub trait Rela: Debug + Pod + Clone + read::private::Sealed {
     type Word: Into<u64>;
     type Sword: Into<i64>;
     type Endian: endian::Endian;
@@ -656,6 +660,8 @@ pub trait Rela: Debug + Pod + Clone {
         }
     }
 }
+
+impl<Endian: endian::Endian> read::private::Sealed for elf::Rela32<Endian> {}
 
 impl<Endian: endian::Endian> Rela for elf::Rela32<Endian> {
     type Word = u32;
@@ -687,6 +693,8 @@ impl<Endian: endian::Endian> Rela for elf::Rela32<Endian> {
         self.r_type(endian)
     }
 }
+
+impl<Endian: endian::Endian> read::private::Sealed for elf::Rela64<Endian> {}
 
 impl<Endian: endian::Endian> Rela for elf::Rela64<Endian> {
     type Word = u64;
@@ -769,7 +777,7 @@ impl<'data, Elf: FileHeader> Iterator for RelrIterator<'data, Elf> {
 
 /// A trait for generic access to [`elf::Relr32`] and [`elf::Relr64`].
 #[allow(missing_docs)]
-pub trait Relr: Debug + Pod + Clone {
+pub trait Relr: Debug + Pod + Clone + read::private::Sealed {
     type Word: Into<u64>;
     type Endian: endian::Endian;
 
@@ -790,6 +798,8 @@ pub trait Relr: Debug + Pod + Clone {
     fn next(offset: &mut Self::Word, bits: &mut Self::Word) -> Option<Self::Word>;
 }
 
+impl<Endian: endian::Endian> read::private::Sealed for elf::Relr32<Endian> {}
+
 impl<Endian: endian::Endian> Relr for elf::Relr32<Endian> {
     type Word = u32;
     type Endian = Endian;
@@ -805,6 +815,8 @@ impl<Endian: endian::Endian> Relr for elf::Relr32<Endian> {
         if *bits & 1 != 0 { Some(*offset) } else { None }
     }
 }
+
+impl<Endian: endian::Endian> read::private::Sealed for elf::Relr64<Endian> {}
 
 impl<Endian: endian::Endian> Relr for elf::Relr64<Endian> {
     type Word = u64;

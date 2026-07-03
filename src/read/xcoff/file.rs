@@ -312,7 +312,7 @@ where
 
 /// A trait for generic access to [`xcoff::FileHeader32`] and [`xcoff::FileHeader64`].
 #[allow(missing_docs)]
-pub trait FileHeader: Debug + Pod {
+pub trait FileHeader: Debug + Pod + read::private::Sealed {
     type Word: Into<u64>;
     type AuxHeader: AuxHeader<Word = Self::Word>;
     type SectionHeader: SectionHeader<Word = Self::Word, Rel = Self::Rel>;
@@ -395,6 +395,8 @@ pub trait FileHeader: Debug + Pod {
     }
 }
 
+impl read::private::Sealed for xcoff::FileHeader32 {}
+
 impl FileHeader for xcoff::FileHeader32 {
     type Word = u32;
     type AuxHeader = xcoff::AuxHeader32;
@@ -436,6 +438,8 @@ impl FileHeader for xcoff::FileHeader32 {
         self.f_flags.get(BE)
     }
 }
+
+impl read::private::Sealed for xcoff::FileHeader64 {}
 
 impl FileHeader for xcoff::FileHeader64 {
     type Word = u64;
@@ -481,7 +485,7 @@ impl FileHeader for xcoff::FileHeader64 {
 
 /// A trait for generic access to [`xcoff::AuxHeader32`] and [`xcoff::AuxHeader64`].
 #[allow(missing_docs)]
-pub trait AuxHeader: Debug + Pod {
+pub trait AuxHeader: Debug + Pod + read::private::Sealed {
     type Word: Into<u64>;
 
     fn o_mflag(&self) -> u16;
@@ -515,6 +519,8 @@ pub trait AuxHeader: Debug + Pod {
     fn o_sntbss(&self) -> u16;
     fn o_x64flags(&self) -> Option<u16>;
 }
+
+impl read::private::Sealed for xcoff::AuxHeader32 {}
 
 impl AuxHeader for xcoff::AuxHeader32 {
     type Word = u32;
@@ -639,6 +645,8 @@ impl AuxHeader for xcoff::AuxHeader32 {
         None
     }
 }
+
+impl read::private::Sealed for xcoff::AuxHeader64 {}
 
 impl AuxHeader for xcoff::AuxHeader64 {
     type Word = u64;

@@ -290,7 +290,7 @@ pub fn anon_object_class_id<'data, R: ReadRef<'data>>(data: R) -> Result<pe::Cls
 
 /// A trait for generic access to [`pe::ImageFileHeader`] and [`pe::AnonObjectHeaderBigobj`].
 #[allow(missing_docs)]
-pub trait CoffHeader: Debug + Pod {
+pub trait CoffHeader: Debug + Pod + read::private::Sealed {
     type ImageSymbol: ImageSymbol;
     type ImageSymbolBytes: Debug + Pod;
 
@@ -337,6 +337,8 @@ pub trait CoffHeader: Debug + Pod {
     }
 }
 
+impl read::private::Sealed for pe::ImageFileHeader {}
+
 impl CoffHeader for pe::ImageFileHeader {
     type ImageSymbol = pe::ImageSymbol;
     type ImageSymbolBytes = pe::ImageSymbolBytes;
@@ -379,6 +381,8 @@ impl CoffHeader for pe::ImageFileHeader {
         Ok(header)
     }
 }
+
+impl read::private::Sealed for pe::AnonObjectHeaderBigobj {}
 
 impl CoffHeader for pe::AnonObjectHeaderBigobj {
     type ImageSymbol = pe::ImageSymbolEx;

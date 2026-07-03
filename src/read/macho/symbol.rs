@@ -484,7 +484,7 @@ where
 
 /// A trait for generic access to [`macho::Nlist32`] and [`macho::Nlist64`].
 #[allow(missing_docs)]
-pub trait Nlist: Debug + Pod {
+pub trait Nlist: Debug + Pod + read::private::Sealed {
     type Word: Into<u64>;
     type Endian: endian::Endian;
 
@@ -538,6 +538,8 @@ pub trait Nlist: Debug + Pod {
     }
 }
 
+impl<Endian: endian::Endian> read::private::Sealed for macho::Nlist32<Endian> {}
+
 impl<Endian: endian::Endian> Nlist for macho::Nlist32<Endian> {
     type Word = u32;
     type Endian = Endian;
@@ -558,6 +560,8 @@ impl<Endian: endian::Endian> Nlist for macho::Nlist32<Endian> {
         self.n_value.get(endian)
     }
 }
+
+impl<Endian: endian::Endian> read::private::Sealed for macho::Nlist64<Endian> {}
 
 impl<Endian: endian::Endian> Nlist for macho::Nlist64<Endian> {
     type Word = u64;

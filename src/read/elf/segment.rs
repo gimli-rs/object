@@ -160,7 +160,7 @@ where
 
 /// A trait for generic access to [`elf::ProgramHeader32`] and [`elf::ProgramHeader64`].
 #[allow(missing_docs)]
-pub trait ProgramHeader: Debug + Pod {
+pub trait ProgramHeader: Debug + Pod + read::private::Sealed {
     type Elf: FileHeader<ProgramHeader = Self, Endian = Self::Endian, Word = Self::Word>;
     type Word: Into<u64>;
     type Endian: endian::Endian;
@@ -283,6 +283,8 @@ pub trait ProgramHeader: Debug + Pod {
     }
 }
 
+impl<Endian: endian::Endian> read::private::Sealed for elf::ProgramHeader32<Endian> {}
+
 impl<Endian: endian::Endian> ProgramHeader for elf::ProgramHeader32<Endian> {
     type Word = u32;
     type Endian = Endian;
@@ -328,6 +330,8 @@ impl<Endian: endian::Endian> ProgramHeader for elf::ProgramHeader32<Endian> {
         self.p_align.get(endian)
     }
 }
+
+impl<Endian: endian::Endian> read::private::Sealed for elf::ProgramHeader64<Endian> {}
 
 impl<Endian: endian::Endian> ProgramHeader for elf::ProgramHeader64<Endian> {
     type Word = u64;

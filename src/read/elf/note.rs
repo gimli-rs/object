@@ -182,13 +182,15 @@ impl<'data, Elf: FileHeader> Note<'data, Elf> {
 
 /// A trait for generic access to [`elf::NoteHeader32`] and [`elf::NoteHeader64`].
 #[allow(missing_docs)]
-pub trait NoteHeader: Debug + Pod {
+pub trait NoteHeader: Debug + Pod + read::private::Sealed {
     type Endian: endian::Endian;
 
     fn n_namesz(&self, endian: Self::Endian) -> u32;
     fn n_descsz(&self, endian: Self::Endian) -> u32;
     fn n_type(&self, endian: Self::Endian) -> elf::NoteType;
 }
+
+impl<Endian: endian::Endian> read::private::Sealed for elf::NoteHeader32<Endian> {}
 
 impl<Endian: endian::Endian> NoteHeader for elf::NoteHeader32<Endian> {
     type Endian = Endian;
@@ -208,6 +210,8 @@ impl<Endian: endian::Endian> NoteHeader for elf::NoteHeader32<Endian> {
         self.n_type.get(endian)
     }
 }
+
+impl<Endian: endian::Endian> read::private::Sealed for elf::NoteHeader64<Endian> {}
 
 impl<Endian: endian::Endian> NoteHeader for elf::NoteHeader64<Endian> {
     type Endian = Endian;

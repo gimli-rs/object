@@ -595,7 +595,7 @@ pub fn optional_header_magic<'data, R: ReadRef<'data>>(data: R) -> Result<u16> {
 
 /// A trait for generic access to [`pe::ImageNtHeaders32`] and [`pe::ImageNtHeaders64`].
 #[allow(missing_docs)]
-pub trait ImageNtHeaders: Debug + Pod {
+pub trait ImageNtHeaders: Debug + Pod + read::private::Sealed {
     type ImageOptionalHeader: ImageOptionalHeader;
     type ImageThunkData: ImageThunkData;
 
@@ -681,7 +681,7 @@ pub trait ImageNtHeaders: Debug + Pod {
 
 /// A trait for generic access to [`pe::ImageOptionalHeader32`] and [`pe::ImageOptionalHeader64`].
 #[allow(missing_docs)]
-pub trait ImageOptionalHeader: Debug + Pod {
+pub trait ImageOptionalHeader: Debug + Pod + read::private::Sealed {
     // Standard fields.
     fn magic(&self) -> u16;
     fn major_linker_version(&self) -> u8;
@@ -717,6 +717,8 @@ pub trait ImageOptionalHeader: Debug + Pod {
     fn number_of_rva_and_sizes(&self) -> u32;
 }
 
+impl read::private::Sealed for pe::ImageNtHeaders32 {}
+
 impl ImageNtHeaders for pe::ImageNtHeaders32 {
     type ImageOptionalHeader = pe::ImageOptionalHeader32;
     type ImageThunkData = pe::ImageThunkData32;
@@ -746,6 +748,8 @@ impl ImageNtHeaders for pe::ImageNtHeaders32 {
         &self.optional_header
     }
 }
+
+impl read::private::Sealed for pe::ImageOptionalHeader32 {}
 
 impl ImageOptionalHeader for pe::ImageOptionalHeader32 {
     #[inline]
@@ -899,6 +903,8 @@ impl ImageOptionalHeader for pe::ImageOptionalHeader32 {
     }
 }
 
+impl read::private::Sealed for pe::ImageNtHeaders64 {}
+
 impl ImageNtHeaders for pe::ImageNtHeaders64 {
     type ImageOptionalHeader = pe::ImageOptionalHeader64;
     type ImageThunkData = pe::ImageThunkData64;
@@ -928,6 +934,8 @@ impl ImageNtHeaders for pe::ImageNtHeaders64 {
         &self.optional_header
     }
 }
+
+impl read::private::Sealed for pe::ImageOptionalHeader64 {}
 
 impl ImageOptionalHeader for pe::ImageOptionalHeader64 {
     #[inline]

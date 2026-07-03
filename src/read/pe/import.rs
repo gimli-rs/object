@@ -4,7 +4,7 @@ use core::mem;
 use crate::endian::{LittleEndian as LE, U16};
 use crate::pe;
 use crate::pod::Pod;
-use crate::read::{Bytes, ReadError, ReadRef, Result};
+use crate::read::{self, Bytes, ReadError, ReadRef, Result};
 
 use super::{ImageNtHeaders, SectionTable};
 
@@ -238,7 +238,7 @@ pub enum Import<'data> {
 
 /// A trait for generic access to [`pe::ImageThunkData32`] and [`pe::ImageThunkData64`].
 #[allow(missing_docs)]
-pub trait ImageThunkData: Debug + Pod {
+pub trait ImageThunkData: Debug + Pod + read::private::Sealed {
     /// Return the raw thunk value.
     fn raw(self) -> u64;
 
@@ -255,6 +255,8 @@ pub trait ImageThunkData: Debug + Pod {
     /// Does not check the ordinal flag.
     fn address(self) -> u32;
 }
+
+impl read::private::Sealed for pe::ImageThunkData64 {}
 
 impl ImageThunkData for pe::ImageThunkData64 {
     fn raw(self) -> u64 {
@@ -273,6 +275,8 @@ impl ImageThunkData for pe::ImageThunkData64 {
         self.0.get(LE) as u32 & 0x7fff_ffff
     }
 }
+
+impl read::private::Sealed for pe::ImageThunkData32 {}
 
 impl ImageThunkData for pe::ImageThunkData32 {
     fn raw(self) -> u64 {

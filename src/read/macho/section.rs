@@ -287,7 +287,7 @@ impl<'data, Mach: MachHeader, R: ReadRef<'data>> MachOSectionInternal<'data, Mac
 
 /// A trait for generic access to [`macho::Section32`] and [`macho::Section64`].
 #[allow(missing_docs)]
-pub trait Section: Debug + Pod {
+pub trait Section: Debug + Pod + read::private::Sealed {
     type Word: Into<u64>;
     type Endian: endian::Endian;
 
@@ -419,6 +419,8 @@ pub trait Section: Debug + Pod {
     }
 }
 
+impl<Endian: endian::Endian> read::private::Sealed for macho::Section32<Endian> {}
+
 impl<Endian: endian::Endian> Section for macho::Section32<Endian> {
     type Word = u32;
     type Endian = Endian;
@@ -457,6 +459,8 @@ impl<Endian: endian::Endian> Section for macho::Section32<Endian> {
         self.reserved2.get(endian)
     }
 }
+
+impl<Endian: endian::Endian> read::private::Sealed for macho::Section64<Endian> {}
 
 impl<Endian: endian::Endian> Section for macho::Section64<Endian> {
     type Word = u64;
