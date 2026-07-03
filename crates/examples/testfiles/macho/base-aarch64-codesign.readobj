@@ -150,7 +150,7 @@ SegmentCommand {
     VmAddress: 0x100008000
     VmSize: 0x4000
     FileOffset: 0x8000
-    FileSize: 0x291
+    FileSize: 0x1D00
     MaxProt: VM_PROT_READ (0x1)
     InitProt: VM_PROT_READ (0x1)
     NumberOfSections: 0
@@ -330,24 +330,22 @@ LinkeditDataCommand {
     Cmd: LC_CODE_SIGNATURE (0x1D)
     CmdSize: 0x10
     DataOffset: 0x8100
-    DataSize: 0x191
+    DataSize: 0x1C00
     CodeSignature {
         Magic: 0xFADE0CC0
-        Length: 0x191
-        Count: 1
+        Length: 0x565
+        Count: 6
         Blob {
             Slot: CSSLOT_CODEDIRECTORY (0x0)
-            Offset: 0x14
+            Offset: 0x3C
             Magic: 0xFADE0C02
-            Length: 0x17D
+            Length: 0x265
             CodeDirectory {
                 Version: CS_SUPPORTSEXECSEG (0x20400)
-                Flags: 0x20002
-                    CS_ADHOC (0x2)
-                    CS_LINKER_SIGNED (0x20000)
-                HashOffset: 0x5D
-                IdentOffset: "base" (0x58)
-                NSpecialSlots: 0
+                Flags: CS_ADHOC (0x2)
+                HashOffset: 0x145
+                IdentOffset: "base-aarch64" (0x58)
+                NSpecialSlots: 7
                 NCodeSlots: 9
                 CodeLimit: 0x8100
                 HashSize: 32
@@ -359,8 +357,38 @@ LinkeditDataCommand {
                 CodeLimit64: 0x0
                 ExecSegBase: 0x0
                 ExecSegLimit: 0x4000
-                ExecSegFlags: CS_EXECSEG_MAIN_BINARY (0x1)
-                CodeHash: ec26a825e6a01760244569207018b0516c4758b557b02c5e1e0c1f4275243a9c
+                ExecSegFlags: 0x11
+                    CS_EXECSEG_MAIN_BINARY (0x1)
+                    CS_EXECSEG_ALLOW_UNSIGNED (0x10)
+                SpecialSlot {
+                    Slot: CSSLOT_INFOSLOT (0x1)
+                    Hash: 636f23667618d41b4a522863da30452f21301c7b0ee00e2429a76a38a572aad1
+                }
+                SpecialSlot {
+                    Slot: CSSLOT_REQUIREMENTS (0x2)
+                    Hash: 987920904eab650e75788c054aa0b0524e6a80bfc71aa32df8d237a61743f986
+                }
+                SpecialSlot {
+                    Slot: CSSLOT_RESOURCEDIR (0x3)
+                    Hash: 0000000000000000000000000000000000000000000000000000000000000000
+                }
+                SpecialSlot {
+                    Slot: CSSLOT_APPLICATION (0x4)
+                    Hash: 0000000000000000000000000000000000000000000000000000000000000000
+                }
+                SpecialSlot {
+                    Slot: CSSLOT_ENTITLEMENTS (0x5)
+                    Hash: adea2675562421d85cc35e2c909ae27f33846eeb3b2b7c68017abd1b4b02f624
+                }
+                SpecialSlot {
+                    Slot: 0x6
+                    Hash: 0000000000000000000000000000000000000000000000000000000000000000
+                }
+                SpecialSlot {
+                    Slot: CSSLOT_DER_ENTITLEMENTS (0x7)
+                    Hash: 4d9925d24f1357a00429379f31f567cedfaa8101d58442e7864f923bfb708794
+                }
+                CodeHash: e88b98c19bad8b22c72739bb791a50c2d8e0964d199cca3557df4f8c6b11226c
                 CodeHash: ad7facb2586fc6e966c004d7d1d16b024f5805ff7cb47c7a85dabd8b48892ca7
                 CodeHash: ad7facb2586fc6e966c004d7d1d16b024f5805ff7cb47c7a85dabd8b48892ca7
                 CodeHash: 60417fa9c2dedd7c20d9708af469b59e251790446f528ab4d1734761adaab748
@@ -370,6 +398,94 @@ LinkeditDataCommand {
                 CodeHash: ad7facb2586fc6e966c004d7d1d16b024f5805ff7cb47c7a85dabd8b48892ca7
                 CodeHash: 6a8d40e904cd3f5a21f12d8607b915a153486985c99ce0a508a8888a99c48b5a
             }
+        }
+        Blob {
+            Slot: CSSLOT_REQUIREMENTS (0x2)
+            Offset: 0x2A1
+            Magic: 0xFADE0C01
+            Length: 0xC
+        }
+        Blob {
+            Slot: CSSLOT_ENTITLEMENTS (0x5)
+            Offset: 0x2AD
+            Magic: 0xFADE7171
+            Length: 0xE7
+        }
+        Blob {
+            Slot: CSSLOT_DER_ENTITLEMENTS (0x7)
+            Offset: 0x394
+            Magic: 0xFADE7172
+            Length: 0x24
+        }
+        Blob {
+            Slot: CSSLOT_ALTERNATE_CODEDIRECTORIES + 0 (0x1000)
+            Offset: 0x3B8
+            Magic: 0xFADE0C02
+            Length: 0x1A5
+            CodeDirectory {
+                Version: CS_SUPPORTSEXECSEG (0x20400)
+                Flags: CS_ADHOC (0x2)
+                HashOffset: 0xF1
+                IdentOffset: "base-aarch64" (0x58)
+                NSpecialSlots: 7
+                NCodeSlots: 9
+                CodeLimit: 0x8100
+                HashSize: 20
+                HashType: CS_HASHTYPE_SHA1 (0x1)
+                Platform: 0
+                PageSize: 12
+                ScatterOffset: 0x0
+                TeamOffset: 0x0
+                CodeLimit64: 0x0
+                ExecSegBase: 0x0
+                ExecSegLimit: 0x4000
+                ExecSegFlags: 0x11
+                    CS_EXECSEG_MAIN_BINARY (0x1)
+                    CS_EXECSEG_ALLOW_UNSIGNED (0x10)
+                SpecialSlot {
+                    Slot: CSSLOT_INFOSLOT (0x1)
+                    Hash: 202148b375ae64a5bcab3edf8dbb9c543f6af5b2
+                }
+                SpecialSlot {
+                    Slot: CSSLOT_REQUIREMENTS (0x2)
+                    Hash: 3a75f6db058529148e14dd7ea1b4729cc09ec973
+                }
+                SpecialSlot {
+                    Slot: CSSLOT_RESOURCEDIR (0x3)
+                    Hash: 0000000000000000000000000000000000000000
+                }
+                SpecialSlot {
+                    Slot: CSSLOT_APPLICATION (0x4)
+                    Hash: 0000000000000000000000000000000000000000
+                }
+                SpecialSlot {
+                    Slot: CSSLOT_ENTITLEMENTS (0x5)
+                    Hash: 609a70a1468d84bef2be0146d1f0a5ea1c839948
+                }
+                SpecialSlot {
+                    Slot: 0x6
+                    Hash: 0000000000000000000000000000000000000000
+                }
+                SpecialSlot {
+                    Slot: CSSLOT_DER_ENTITLEMENTS (0x7)
+                    Hash: 1018e52606e45993b16da1c621ceec945b9d5226
+                }
+                CodeHash: 1142a4a92f075b51c90c7dbb835abf90f0306256
+                CodeHash: 1ceaf73df40e531df3bfb26b4fb7cd95fb7bff1d
+                CodeHash: 1ceaf73df40e531df3bfb26b4fb7cd95fb7bff1d
+                CodeHash: 036bb3643ce5120de6f085638ed3dbd04c3090a0
+                CodeHash: ef9fd7224de276b4dbd358c75ed34b053dde230b
+                CodeHash: 1ceaf73df40e531df3bfb26b4fb7cd95fb7bff1d
+                CodeHash: 1ceaf73df40e531df3bfb26b4fb7cd95fb7bff1d
+                CodeHash: 1ceaf73df40e531df3bfb26b4fb7cd95fb7bff1d
+                CodeHash: f404641b92e31788ad9cfbc59bade84d239e004f
+            }
+        }
+        Blob {
+            Slot: CSSLOT_SIGNATURESLOT (0x10000)
+            Offset: 0x55D
+            Magic: 0xFADE0B01
+            Length: 0x8
         }
     }
 }

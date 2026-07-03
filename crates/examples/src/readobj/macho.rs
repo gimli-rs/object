@@ -961,7 +961,13 @@ fn print_linkedit_data<Mach: MachHeader>(
     let function_starts = p.options.macho_function_starts && cmd == LC_FUNCTION_STARTS;
     let exports_trie = p.options.macho_exports_trie && cmd == LC_DYLD_EXPORTS_TRIE;
     let chained_fixups = p.options.macho_fixups && cmd == LC_DYLD_CHAINED_FIXUPS;
-    if !p.options.macho_load_commands && !function_starts && !exports_trie && !chained_fixups {
+    let code_signature = p.options.macho_code_signature && cmd == LC_CODE_SIGNATURE;
+    if !p.options.macho_load_commands
+        && !function_starts
+        && !exports_trie
+        && !chained_fixups
+        && !code_signature
+    {
         return;
     }
     p.group("LinkeditDataCommand", |p| {
@@ -977,6 +983,9 @@ fn print_linkedit_data<Mach: MachHeader>(
         }
         if chained_fixups {
             print_chained_fixups::<Mach>(p, endian, linkedit, state);
+        }
+        if code_signature {
+            print_code_signature::<Mach>(p, endian, linkedit, state);
         }
     });
 }
@@ -1373,6 +1382,108 @@ fn print_fixup_auth(p: &mut Printer<'_>, auth: Option<FixupAuth>) {
         p.field("AddrDiv", auth.addr_div);
         p.field_hex("Diversity", auth.diversity);
     }
+}
+
+fn print_code_signature<Mach: MachHeader>(
+    p: &mut Printer<'_>,
+    endian: Mach::Endian,
+    linkedit: &LinkeditDataCommand<Mach::Endian>,
+    state: &MachState<Mach::Endian>,
+) {
+    let Some(signature) = linkedit
+        .code_signature(endian, state.linkedit_data)
+        .print_err(p)
+    else {
+        return;
+    };
+    p.group("CodeSignature", |p| {
+        let super_blob = signature.header();
+        p.field_hex("Magic", super_blob.magic.get(BigEndian));
+        p.field_hex("Length", super_blob.length.get(BigEndian));
+        p.field("Count", super_blob.count.get(BigEndian));
+        let mut blobs = signature.blobs();
+        while let Some(Some(blob)) = blobs.next().print_err(p) {
+            p.group("Blob", |p| {
+                print_cs_slot(p, blob.slot());
+                p.field_hex("Offset", blob.offset());
+                p.field_hex("Magic", blob.magic());
+                p.field_hex("Length", blob.data().len());
+                if let Some(code_directory) = blob.code_directory().print_err(p).flatten() {
+                    print_code_directory(p, &code_directory);
+                }
+            });
+        }
+    });
+}
+
+fn print_cs_slot(p: &mut Printer<'_>, slot: CsSlot) {
+    if slot.is_alternate_codedirectory() {
+        p.field_name("Slot");
+        writeln!(
+            p.w,
+            "CSSLOT_ALTERNATE_CODEDIRECTORIES + {} (0x{:X})",
+            slot.0 - CSSLOT_ALTERNATE_CODEDIRECTORIES,
+            slot.0
+        )
+        .unwrap();
+    } else {
+        p.field_consts("Slot", slot, CsSlot::NAMES);
+    }
+}
+
+fn print_code_directory(p: &mut Printer<'_>, code_directory: &CodeDirectory<'_>) {
+    p.group("CodeDirectory", |p| {
+        let header = code_directory.header();
+        p.field_consts("Version", header.version.get(BigEndian), CsVersion::NAMES);
+        p.field_flags("Flags", header.flags.get(BigEndian), CsFlags::NAMES);
+        p.field_hex("HashOffset", header.hash_offset.get(BigEndian));
+        p.field_string(
+            "IdentOffset",
+            header.ident_offset.get(BigEndian),
+            code_directory.ident(),
+        );
+        p.field("NSpecialSlots", header.n_special_slots.get(BigEndian));
+        p.field("NCodeSlots", header.n_code_slots.get(BigEndian));
+        p.field_hex("CodeLimit", header.code_limit.get(BigEndian));
+        p.field("HashSize", header.hash_size);
+        p.field_consts("HashType", header.hash_type, CsHashType::NAMES);
+        p.field("Platform", header.platform);
+        p.field("PageSize", header.page_size);
+        if let Some(scatter_offset) = code_directory.scatter_offset() {
+            p.field_hex("ScatterOffset", scatter_offset);
+        }
+        if let Some(team_offset) = code_directory.team_offset() {
+            let team_id = code_directory.team_id().print_err(p).flatten();
+            p.field_string_option("TeamOffset", team_offset, team_id);
+        }
+        if let Some(code_limit64) = code_directory.code_limit64() {
+            p.field_hex("CodeLimit64", code_limit64);
+        }
+        if let Some(exec_seg) = code_directory.exec_seg() {
+            p.field_hex("ExecSegBase", exec_seg.exec_seg_base.get(BigEndian));
+            p.field_hex("ExecSegLimit", exec_seg.exec_seg_limit.get(BigEndian));
+            p.field_flags(
+                "ExecSegFlags",
+                exec_seg.exec_seg_flags.get(BigEndian),
+                CsExecSegFlags::NAMES,
+            );
+        }
+        for slot in (1..=header.n_special_slots.get(BigEndian)).map(CsSlot) {
+            let Some(hash) = code_directory.special_hash(slot).print_err(p) else {
+                break;
+            };
+            p.group("SpecialSlot", |p| {
+                p.field_consts("Slot", slot, CsSlot::NAMES);
+                p.field_hash("Hash", hash);
+            });
+        }
+        for code_page in 0..header.n_code_slots.get(BigEndian) {
+            let Some(hash) = code_directory.code_hash(code_page).print_err(p) else {
+                break;
+            };
+            p.field_hash("CodeHash", hash);
+        }
+    });
 }
 
 fn print_cputype(p: &mut Printer<'_>, cputype: CpuType, cpusubtype: CpuSubtype) {
