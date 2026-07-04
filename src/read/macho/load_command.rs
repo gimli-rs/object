@@ -13,14 +13,16 @@ pub struct LoadCommandIterator<'data, E: Endian> {
     endian: E,
     data: Bytes<'data>,
     ncmds: u32,
+    offset: u64,
 }
 
 impl<'data, E: Endian> LoadCommandIterator<'data, E> {
-    pub(super) fn new(endian: E, data: &'data [u8], ncmds: u32) -> Self {
+    pub(super) fn new(endian: E, data: &'data [u8], ncmds: u32, offset: u64) -> Self {
         LoadCommandIterator {
             endian,
             data: Bytes(data),
             ncmds,
+            offset,
         }
     }
 
@@ -53,8 +55,11 @@ impl<'data, E: Endian> LoadCommandIterator<'data, E> {
             .data
             .read_bytes(cmdsize)
             .read_error("Invalid Mach-O load command size")?;
+        let offset = self.offset;
+        self.offset += cmdsize as u64;
         Ok(LoadCommandData {
             cmd,
+            offset,
             data,
             marker: Default::default(),
         })
@@ -73,6 +78,7 @@ impl<'data, E: Endian> Iterator for LoadCommandIterator<'data, E> {
 #[derive(Debug, Clone, Copy)]
 pub struct LoadCommandData<'data, E: Endian> {
     cmd: macho::LoadCommandType,
+    offset: u64,
     // Includes the header.
     data: Bytes<'data>,
     marker: PhantomData<E>,
@@ -89,6 +95,11 @@ impl<'data, E: Endian> LoadCommandData<'data, E> {
     /// Return the `cmdsize` field of the [`macho::LoadCommand`].
     pub fn cmdsize(&self) -> u32 {
         self.data.len() as u32
+    }
+
+    /// Return the file offset of the command, relative to the start of the Mach-O header.
+    pub fn offset(&self) -> u64 {
+        self.offset
     }
 
     /// Parse the data as the given type.
@@ -533,13 +544,13 @@ mod tests {
     fn cmd_size_invalid() {
         #[repr(align(16))]
         struct Align<const N: usize>([u8; N]);
-        let mut commands = LoadCommandIterator::new(LittleEndian, &Align([0; 8]).0, 10);
+        let mut commands = LoadCommandIterator::new(LittleEndian, &Align([0; 8]).0, 10, 0);
         assert!(commands.next().is_err());
         let mut commands =
-            LoadCommandIterator::new(LittleEndian, &Align([0, 0, 0, 0, 7, 0, 0, 0, 0]).0, 10);
+            LoadCommandIterator::new(LittleEndian, &Align([0, 0, 0, 0, 7, 0, 0, 0, 0]).0, 10, 0);
         assert!(commands.next().is_err());
         let mut commands =
-            LoadCommandIterator::new(LittleEndian, &Align([0, 0, 0, 0, 8, 0, 0, 0, 0]).0, 10);
+            LoadCommandIterator::new(LittleEndian, &Align([0, 0, 0, 0, 8, 0, 0, 0, 0]).0, 10, 0);
         assert!(commands.next().is_ok());
     }
 

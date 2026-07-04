@@ -788,13 +788,16 @@ pub trait MachHeader: Debug + Pod + read::private::Sealed {
         data: R,
         header_offset: u64,
     ) -> Result<LoadCommandIterator<'data, Self::Endian>> {
+        let header_size = mem::size_of::<Self>() as u64;
         let data = data
-            .read_bytes_at(
-                header_offset + mem::size_of::<Self>() as u64,
-                self.sizeofcmds(endian).into(),
-            )
+            .read_bytes_at(header_offset + header_size, self.sizeofcmds(endian).into())
             .read_error("Invalid Mach-O load command table size")?;
-        Ok(LoadCommandIterator::new(endian, data, self.ncmds(endian)))
+        Ok(LoadCommandIterator::new(
+            endian,
+            data,
+            self.ncmds(endian),
+            header_size,
+        ))
     }
 
     /// Return the UUID from the `LC_UUID` load command, if one is present.

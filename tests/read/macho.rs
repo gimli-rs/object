@@ -109,3 +109,37 @@ fn test_go_macho() {
         }
     }
 }
+
+#[cfg(feature = "std")]
+#[test]
+fn test_macho_load_command_offset() {
+    use object::LittleEndian;
+    use object::read::macho::MachOFile64;
+
+    let path = std::path::Path::new("testfiles/macho").join("base-x86_64");
+    let data = std::fs::read(&path).unwrap();
+    let object = MachOFile64::<LittleEndian>::parse(&*data).unwrap();
+
+    let mut commands = object.macho_load_commands().unwrap();
+
+    let command = commands.next().unwrap().unwrap();
+    let offset = command.offset();
+    let cmdsize = command.cmdsize();
+    assert_eq!(offset, 32);
+    assert_eq!(
+        &data[offset as usize..][..cmdsize as usize],
+        command.raw_data()
+    );
+
+    let command = commands.last().unwrap().unwrap();
+    let offset = command.offset();
+    let cmdsize = command.cmdsize();
+    assert_eq!(
+        offset,
+        (32 + object.macho_header().sizeofcmds.get(LittleEndian) - cmdsize) as u64
+    );
+    assert_eq!(
+        &data[offset as usize..][..cmdsize as usize],
+        command.raw_data()
+    );
+}
