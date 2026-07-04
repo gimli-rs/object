@@ -219,36 +219,25 @@ fn cmd_doc() -> Result<(), DynError> {
 
 fn cmd_coverage() -> Result<(), DynError> {
     cargo(&[
-        "tarpaulin",
+        "llvm-cov",
         "--features",
         "all",
-        "--ignore-tests",
-        "--out",
-        "xml",
+        "--workspace",
+        "--html",
+        "--open",
     ])?;
-    cmd(
-        "pycobertura",
-        &[
-            "show",
-            "--format",
-            "html",
-            "cobertura.xml",
-            "--output",
-            "cobertura.html",
-        ],
-    )?;
-    cmd("open", &["cobertura.html"])?;
     Ok(())
 }
 
 fn cmd_coverage_lcov() -> Result<(), DynError> {
     cargo(&[
-        "tarpaulin",
+        "llvm-cov",
         "--features",
         "all",
-        "--ignore-tests",
-        "--out",
-        "Lcov",
+        "--workspace",
+        "--lcov",
+        "--output-path",
+        "lcov.info",
     ])
 }
 
