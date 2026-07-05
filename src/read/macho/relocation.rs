@@ -109,6 +109,8 @@ where
             };
             let target = if reloc.r_extern {
                 RelocationTarget::Symbol(SymbolIndex(reloc.r_symbolnum as usize))
+            } else if reloc.r_symbolnum == macho::R_ABS {
+                RelocationTarget::Absolute
             } else {
                 RelocationTarget::Section(SectionIndex(reloc.r_symbolnum as usize))
             };
