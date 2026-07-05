@@ -6,7 +6,7 @@ use crate::read::{
     self, ComdatKind, ObjectComdat, ReadError, ReadRef, Result, SectionIndex, SymbolIndex,
 };
 
-use super::{CoffFile, CoffHeader, ImageSymbol};
+use super::{CoffFile, CoffHeader, Symbol};
 
 /// An iterator for the COMDAT section groups in a [`CoffBigFile`](super::CoffBigFile).
 pub type CoffBigComdatIterator<'data, 'file, R = &'data [u8]> =
@@ -68,7 +68,7 @@ pub struct CoffComdat<
 > {
     file: &'file CoffFile<'data, R, Coff>,
     symbol_index: SymbolIndex,
-    symbol: &'data Coff::ImageSymbol,
+    symbol: &'data Coff::Symbol,
     section_index: u32,
     selection: pe::ComdatSelection,
 }
@@ -76,7 +76,7 @@ pub struct CoffComdat<
 impl<'data, 'file, R: ReadRef<'data>, Coff: CoffHeader> CoffComdat<'data, 'file, R, Coff> {
     fn parse(
         file: &'file CoffFile<'data, R, Coff>,
-        section_symbol: &'data Coff::ImageSymbol,
+        section_symbol: &'data Coff::Symbol,
         index: SymbolIndex,
     ) -> Option<CoffComdat<'data, 'file, R, Coff>> {
         // Must be a section symbol.

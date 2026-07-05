@@ -26,7 +26,7 @@ where
     R: ReadRef<'data>,
     Coff: CoffHeader,
 {
-    symbols: &'data [Coff::ImageSymbolBytes],
+    symbols: &'data [Coff::SymbolBytes],
     strings: StringTable<'data, R>,
 }
 
@@ -98,8 +98,8 @@ impl<'data, R: ReadRef<'data>, Coff: CoffHeader> SymbolTable<'data, R, Coff> {
 
     /// Return the symbol table entry at the given index.
     #[inline]
-    pub fn symbol(&self, index: SymbolIndex) -> Result<&'data Coff::ImageSymbol> {
-        self.get::<Coff::ImageSymbol>(index, 0)
+    pub fn symbol(&self, index: SymbolIndex) -> Result<&'data Coff::Symbol> {
+        self.get::<Coff::Symbol>(index, 0)
     }
 
     /// Return the auxiliary function symbol for the symbol table entry at the given index.
@@ -157,7 +157,7 @@ impl<'data, R: ReadRef<'data>, Coff: CoffHeader> SymbolTable<'data, R, Coff> {
     }
 
     /// Construct a map from addresses to a user-defined map entry.
-    pub fn map<Entry: SymbolMapEntry, F: Fn(&'data Coff::ImageSymbol) -> Option<Entry>>(
+    pub fn map<Entry: SymbolMapEntry, F: Fn(&'data Coff::Symbol) -> Option<Entry>>(
         &self,
         f: F,
     ) -> SymbolMap<Entry> {
@@ -190,7 +190,7 @@ where
 impl<'data, 'table, R: ReadRef<'data>, Coff: CoffHeader> Iterator
     for SymbolIterator<'data, 'table, R, Coff>
 {
-    type Item = (SymbolIndex, &'data Coff::ImageSymbol);
+    type Item = (SymbolIndex, &'data Coff::Symbol);
 
     fn next(&mut self) -> Option<Self::Item> {
         let index = self.index;
@@ -317,19 +317,19 @@ where
 {
     pub(crate) file: &'file CoffCommon<'data, R, Coff>,
     pub(crate) index: SymbolIndex,
-    pub(crate) symbol: &'data Coff::ImageSymbol,
+    pub(crate) symbol: &'data Coff::Symbol,
 }
 
 impl<'data, 'file, R: ReadRef<'data>, Coff: CoffHeader> CoffSymbol<'data, 'file, R, Coff> {
     #[inline]
-    /// Get the raw `ImageSymbol` struct.
+    /// Get the raw symbol struct.
     #[deprecated(note = "Use `coff_symbol` instead")]
-    pub fn raw_symbol(&self) -> &'data Coff::ImageSymbol {
+    pub fn raw_symbol(&self) -> &'data Coff::Symbol {
         self.symbol
     }
 
-    /// Get the raw `ImageSymbol` struct.
-    pub fn coff_symbol(&self) -> &'data Coff::ImageSymbol {
+    /// Get the raw symbol struct.
+    pub fn coff_symbol(&self) -> &'data Coff::Symbol {
         self.symbol
     }
 }
@@ -535,7 +535,7 @@ impl<'data, 'file, R: ReadRef<'data>, Coff: CoffHeader> ObjectSymbol<'data>
 
 /// A trait for generic access to [`pe::ImageSymbol`] and [`pe::ImageSymbolEx`].
 #[allow(missing_docs)]
-pub trait ImageSymbol: Debug + Pod + read::private::Sealed {
+pub trait Symbol: Debug + Pod + read::private::Sealed {
     fn raw_name(&self) -> &[u8; 8];
     fn value(&self) -> u32;
     fn section_number(&self) -> pe::SymbolSection;
@@ -646,7 +646,7 @@ pub trait ImageSymbol: Debug + Pod + read::private::Sealed {
 
 impl read::private::Sealed for pe::ImageSymbol {}
 
-impl ImageSymbol for pe::ImageSymbol {
+impl Symbol for pe::ImageSymbol {
     fn raw_name(&self) -> &[u8; 8] {
         &self.name
     }
@@ -674,7 +674,7 @@ impl ImageSymbol for pe::ImageSymbol {
 
 impl read::private::Sealed for pe::ImageSymbolEx {}
 
-impl ImageSymbol for pe::ImageSymbolEx {
+impl Symbol for pe::ImageSymbolEx {
     fn raw_name(&self) -> &[u8; 8] {
         &self.name
     }

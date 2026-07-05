@@ -1,7 +1,6 @@
 use super::*;
 use object::LittleEndian as LE;
 use object::pe::*;
-use object::read::coff::ImageSymbol as _;
 use object::read::coff::*;
 use object::read::pe::*;
 use object::{Bytes, U32, U64};

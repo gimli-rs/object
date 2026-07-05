@@ -11,8 +11,8 @@ use crate::{SkipDebugList, pe};
 
 use super::{
     CoffComdat, CoffComdatIterator, CoffSection, CoffSectionIterator, CoffSegment,
-    CoffSegmentIterator, CoffSymbol, CoffSymbolIterator, CoffSymbolTable, ImageSymbol,
-    SectionTable, SymbolTable,
+    CoffSegmentIterator, CoffSymbol, CoffSymbolIterator, CoffSymbolTable, SectionTable, Symbol,
+    SymbolTable,
 };
 
 /// The common parts of `PeFile` and `CoffFile`.
@@ -291,8 +291,8 @@ pub fn anon_object_class_id<'data, R: ReadRef<'data>>(data: R) -> Result<pe::Cls
 /// A trait for generic access to [`pe::ImageFileHeader`] and [`pe::AnonObjectHeaderBigobj`].
 #[allow(missing_docs)]
 pub trait CoffHeader: Debug + Pod + read::private::Sealed {
-    type ImageSymbol: ImageSymbol;
-    type ImageSymbolBytes: Debug + Pod;
+    type Symbol: Symbol;
+    type SymbolBytes: Debug + Pod;
 
     /// Return true if this type is [`pe::AnonObjectHeaderBigobj`].
     ///
@@ -340,8 +340,8 @@ pub trait CoffHeader: Debug + Pod + read::private::Sealed {
 impl read::private::Sealed for pe::ImageFileHeader {}
 
 impl CoffHeader for pe::ImageFileHeader {
-    type ImageSymbol = pe::ImageSymbol;
-    type ImageSymbolBytes = pe::ImageSymbolBytes;
+    type Symbol = pe::ImageSymbol;
+    type SymbolBytes = pe::ImageSymbolBytes;
 
     fn is_type_bigobj() -> bool {
         false
@@ -385,8 +385,8 @@ impl CoffHeader for pe::ImageFileHeader {
 impl read::private::Sealed for pe::AnonObjectHeaderBigobj {}
 
 impl CoffHeader for pe::AnonObjectHeaderBigobj {
-    type ImageSymbol = pe::ImageSymbolEx;
-    type ImageSymbolBytes = pe::ImageSymbolExBytes;
+    type Symbol = pe::ImageSymbolEx;
+    type SymbolBytes = pe::ImageSymbolExBytes;
 
     fn is_type_bigobj() -> bool {
         true
