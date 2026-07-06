@@ -248,10 +248,10 @@ where
     /// Find the file offset an address in the mappings.
     fn address_to_file_offset(&self, endian: E, address: u64) -> Option<u64> {
         for mapping in self.mappings(endian) {
-            let mapping_address = mapping.address();
-            if address >= mapping_address && address < mapping_address.wrapping_add(mapping.size())
-            {
-                return Some(address - mapping_address + mapping.file_offset());
+            if let Some(mapping_offset) = address.checked_sub(mapping.address()) {
+                if mapping_offset < mapping.size() {
+                    return mapping.file_offset().checked_add(mapping_offset);
+                }
             }
         }
         None
@@ -680,8 +680,10 @@ where
                 RelocationStateV2::Page | RelocationStateV2::PageExtra => {
                     let offset = self.offset;
                     let pointer = self
-                        .data
-                        .read_at::<U64<E>>(self.mapping_file_offset + self.page_offset + offset)
+                        .mapping_file_offset
+                        .checked_add(self.page_offset)
+                        .and_then(|x| x.checked_add(offset))
+                        .and_then(|x| self.data.read_at::<U64<E>>(x).ok())
                         .read_error("Invalid dyld cache slide pointer offset")?
                         .get(self.endian);
 
@@ -693,14 +695,17 @@ where
                             self.state = RelocationStateV2::Start
                         };
                     } else {
-                        self.offset = offset + next * 4;
+                        self.offset = next
+                            .checked_mul(4)
+                            .and_then(|delta| offset.checked_add(delta))
+                            .read_error("Invalid dyld cache slide pointer offset")?;
                     };
 
                     let value = pointer & !self.delta_mask;
                     if value != 0 {
                         return Ok(Some(DyldRelocation {
                             offset,
-                            value: value + self.value_add,
+                            value: value.wrapping_add(self.value_add),
                             auth: None,
                         }));
                     }
@@ -762,8 +767,9 @@ where
                 RelocationStateV3::Page => {
                     let offset = self.offset;
                     let pointer = self
-                        .data
-                        .read_at::<U64<E>>(self.mapping_file_offset + offset)
+                        .mapping_file_offset
+                        .checked_add(offset)
+                        .and_then(|x| self.data.read_at::<U64<E>>(x).ok())
                         .read_error("Invalid dyld cache slide pointer offset")?
                         .get(self.endian);
                     let pointer = macho::DyldCacheSlidePointer3(pointer);
@@ -772,11 +778,13 @@ where
                     if next == 0 {
                         self.state = RelocationStateV3::Start;
                     } else {
-                        self.offset = offset + next * 8;
+                        self.offset = offset
+                            .checked_add(next * 8)
+                            .read_error("Invalid dyld cache slide pointer offset")?;
                     }
 
                     if pointer.is_auth() {
-                        let value = pointer.runtime_offset() + self.auth_value_add;
+                        let value = pointer.runtime_offset().wrapping_add(self.auth_value_add);
                         let key = match pointer.key() {
                             1 => macho::PtrauthKey::IB,
                             2 => macho::PtrauthKey::DA,
@@ -859,8 +867,9 @@ where
                 RelocationStateV5::Page => {
                     let offset = self.offset;
                     let pointer = self
-                        .data
-                        .read_at::<U64<E>>(self.mapping_file_offset + offset)
+                        .mapping_file_offset
+                        .checked_add(offset)
+                        .and_then(|x| self.data.read_at::<U64<E>>(x).ok())
                         .read_error("Invalid dyld cache slide pointer offset")?
                         .get(self.endian);
                     let pointer = macho::DyldCacheSlidePointer5(pointer);
@@ -869,10 +878,12 @@ where
                     if next == 0 {
                         self.state = RelocationStateV5::Start;
                     } else {
-                        self.offset = offset + next * 8;
+                        self.offset = offset
+                            .checked_add(next * 8)
+                            .read_error("Invalid dyld cache slide pointer offset")?;
                     }
 
-                    let mut value = pointer.runtime_offset() + self.value_add;
+                    let mut value = pointer.runtime_offset().wrapping_add(self.value_add);
                     let auth = if pointer.is_auth() {
                         let key = if pointer.key_is_data() {
                             macho::PtrauthKey::DA

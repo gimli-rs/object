@@ -202,9 +202,9 @@ pub struct ImportThunkList<'data> {
 impl<'data> ImportThunkList<'data> {
     /// Get the thunk at the given index.
     pub fn get<Pe: ImageNtHeaders>(&self, index: usize) -> Result<Pe::ImageThunkData> {
-        let thunk = self
-            .data
-            .read_at(index * mem::size_of::<Pe::ImageThunkData>())
+        let thunk = index
+            .checked_mul(mem::size_of::<Pe::ImageThunkData>())
+            .and_then(|offset| self.data.read_at(offset).ok())
             .read_error("Invalid PE import thunk index")?;
         Ok(*thunk)
     }

@@ -810,7 +810,7 @@ impl<Endian: endian::Endian> Relr for elf::Relr32<Endian> {
     }
 
     fn next(offset: &mut Self::Word, bits: &mut Self::Word) -> Option<Self::Word> {
-        *offset += 4;
+        *offset = offset.wrapping_add(4);
         *bits >>= 1;
         if *bits & 1 != 0 { Some(*offset) } else { None }
     }
@@ -828,7 +828,7 @@ impl<Endian: endian::Endian> Relr for elf::Relr64<Endian> {
     }
 
     fn next(offset: &mut Self::Word, bits: &mut Self::Word) -> Option<Self::Word> {
-        *offset += 8;
+        *offset = offset.wrapping_add(8);
         *bits >>= 1;
         if *bits & 1 != 0 { Some(*offset) } else { None }
     }
@@ -1020,5 +1020,31 @@ impl<'data> Iterator for CrelIterator<'data> {
 
     fn size_hint(&self) -> (usize, Option<usize>) {
         (self.len(), Some(self.len()))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::endian::LittleEndian;
+
+    // Pedantic overflow tests; in practice the offset is already invalid before it gets this far.
+    #[test]
+    fn relr32_next_offset_overflow() {
+        let data = [elf::Relr32(0xffff_fffc.into()), elf::Relr32(0b111.into())];
+        let offsets =
+            RelrIterator::<elf::FileHeader32<_>>::new(LittleEndian, &data).collect::<Vec<_>>();
+        assert_eq!(offsets, [0xffff_fffc, 0, 4]);
+    }
+
+    #[test]
+    fn relr64_next_offset_overflow() {
+        let data = [
+            elf::Relr64(0xffff_ffff_ffff_fff8.into()),
+            elf::Relr64(0b111.into()),
+        ];
+        let offsets =
+            RelrIterator::<elf::FileHeader64<_>>::new(LittleEndian, &data).collect::<Vec<_>>();
+        assert_eq!(offsets, [0xffff_ffff_ffff_fff8, 0, 8]);
     }
 }
