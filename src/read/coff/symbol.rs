@@ -585,7 +585,8 @@ pub trait Symbol: Debug + Pod + read::private::Sealed {
         let section = sections.section(section_index)?;
         let virtual_address = u64::from(section.virtual_address.get(LE));
         let value = u64::from(self.value());
-        Ok(Some(image_base + virtual_address + value))
+        let address = image_base.wrapping_add(virtual_address).wrapping_add(value);
+        Ok(Some(address))
     }
 
     /// Return the section index for the symbol.
