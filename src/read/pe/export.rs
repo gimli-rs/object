@@ -1,9 +1,12 @@
 use alloc::vec::Vec;
-use core::fmt::Debug;
+use core::fmt;
+use core::marker::PhantomData;
 
 use crate::endian::{LittleEndian as LE, U16, U32};
 use crate::pe;
-use crate::read::{ByteString, Bytes, Error, ReadError, ReadRef, Result};
+use crate::read::{self, ByteString, Bytes, Error, ReadError, ReadRef, Result};
+
+use super::{ImageNtHeaders, PeFile};
 
 /// Where an export is pointing to.
 #[derive(Clone, Copy)]
@@ -50,7 +53,7 @@ pub struct Export<'data> {
     pub target: ExportTarget<'data>,
 }
 
-impl<'a> Debug for Export<'a> {
+impl<'a> fmt::Debug for Export<'a> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::result::Result<(), core::fmt::Error> {
         f.debug_struct("Export")
             .field("ordinal", &self.ordinal)
@@ -60,7 +63,7 @@ impl<'a> Debug for Export<'a> {
     }
 }
 
-impl<'a> Debug for ExportTarget<'a> {
+impl<'a> fmt::Debug for ExportTarget<'a> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::result::Result<(), core::fmt::Error> {
         match self {
             ExportTarget::Address(address) => write!(f, "Address({:#x})", address),
@@ -331,4 +334,70 @@ fn parse_ordinal(digits: &[u8]) -> Option<u32> {
         result = result.checked_mul(10)?.checked_add(x)?;
     }
     Some(result)
+}
+
+/// An iterator for the exports in a [`PeFile`].
+pub struct PeExportIterator<'data, 'file, R = &'data [u8]>
+where
+    R: ReadRef<'data>,
+{
+    image_base: u64,
+    table: Option<ExportTable<'data>>,
+    index: usize,
+    marker: PhantomData<(&'file (), R)>,
+}
+
+impl<'data, 'file, R> PeExportIterator<'data, 'file, R>
+where
+    R: ReadRef<'data>,
+{
+    pub(super) fn new<Pe: ImageNtHeaders>(file: &'file PeFile<'data, Pe, R>) -> Result<Self> {
+        let table = file.export_table()?;
+        Ok(PeExportIterator {
+            image_base: file.common.image_base,
+            table,
+            index: 0,
+            marker: PhantomData,
+        })
+    }
+
+    fn next(&mut self) -> read::Result<Option<read::Export<'data>>> {
+        let Some(table) = &self.table else {
+            return Ok(None);
+        };
+        loop {
+            let index = self.index;
+            let Some(name_pointer) = table.name_pointers().get(index) else {
+                return Ok(None);
+            };
+            let Some(address_index) = table.name_ordinals().get(index) else {
+                return Ok(None);
+            };
+            // Ensure progress is made, so errors after here don't need to terminate iteration.
+            self.index += 1;
+
+            let name = table.name_from_pointer(name_pointer.get(LE))?;
+            let address = table.address_by_index(address_index.get(LE).into())?;
+            if !table.is_forward(address) {
+                return Ok(Some(read::Export {
+                    name: ByteString(name),
+                    address: self.image_base.wrapping_add(address.into()),
+                }));
+            }
+        }
+    }
+}
+
+impl<'data, 'file, R: ReadRef<'data>> fmt::Debug for PeExportIterator<'data, 'file, R> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("PeExportIterator").finish()
+    }
+}
+
+impl<'data, 'file, R: ReadRef<'data>> Iterator for PeExportIterator<'data, 'file, R> {
+    type Item = Result<read::Export<'data>>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.next().transpose()
+    }
 }

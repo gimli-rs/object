@@ -49,6 +49,12 @@ impl<'data, Mach: MachHeader, R: ReadRef<'data>> SymbolTable<'data, Mach, R> {
         self.strings
     }
 
+    /// Return the symbol table.
+    #[inline]
+    pub fn symbols(&self) -> &'data [Mach::Nlist] {
+        self.symbols
+    }
+
     /// Iterate over the symbols.
     #[inline]
     pub fn iter(&self) -> slice::Iter<'data, Mach::Nlist> {

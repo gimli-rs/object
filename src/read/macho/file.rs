@@ -5,16 +5,17 @@ use core::{mem, str};
 use crate::endian::{self, BigEndian, Endian, Endianness, NativeEndian};
 use crate::pod::Pod;
 use crate::read::{
-    self, Architecture, ByteString, ComdatKind, Error, Export, FileFlags, Import,
-    NoDynamicRelocationIterator, Object, ObjectComdat, ObjectKind, ObjectMap, ObjectSection,
-    ReadError, ReadRef, Result, SectionIndex, SubArchitecture, SymbolIndex,
+    self, Architecture, ComdatKind, Error, FileFlags, NoDynamicRelocationIterator, Object,
+    ObjectComdat, ObjectKind, ObjectMap, ObjectSection, ReadError, ReadRef, Result, SectionIndex,
+    SubArchitecture, SymbolIndex,
 };
 use crate::{SkipDebugList, macho};
 
 use super::{
-    DyldCacheImage, LoadCommandIterator, MachOSection, MachOSectionInternal, MachOSectionIterator,
-    MachOSegment, MachOSegmentInternal, MachOSegmentIterator, MachOSymbol, MachOSymbolIterator,
-    MachOSymbolTable, Nlist, Section, Segment, SymbolTable,
+    DyldCacheImage, LoadCommandIterator, MachOExportIterator, MachOImportIterator, MachOSection,
+    MachOSectionInternal, MachOSectionIterator, MachOSegment, MachOSegmentInternal,
+    MachOSegmentIterator, MachOSymbol, MachOSymbolIterator, MachOSymbolTable, Nlist, Section,
+    Segment, SymbolTable,
 };
 
 /// A 32-bit Mach-O object file.
@@ -319,6 +320,16 @@ where
     where
         Self: 'file,
         'data: 'file;
+    type ImportIterator<'file>
+        = MachOImportIterator<'data, 'file, Mach, R>
+    where
+        Self: 'file,
+        'data: 'file;
+    type ExportIterator<'file>
+        = MachOExportIterator<'data, 'file, Mach, R>
+    where
+        Self: 'file,
+        'data: 'file;
 
     fn architecture(&self) -> Architecture {
         match self.header.cputype(self.endian) {
@@ -447,84 +458,12 @@ where
         self.symbols.object_map(self.endian)
     }
 
-    fn imports(&self) -> Result<Vec<Import<'data>>> {
-        let mut dysymtab = None;
-        let mut libraries = Vec::new();
-        let twolevel = self.header.flags(self.endian).contains(macho::MH_TWOLEVEL);
-        if twolevel {
-            libraries.push(&[][..]);
-        }
-        let mut commands =
-            self.header
-                .load_commands(self.endian, self.data.0, self.header_offset)?;
-        while let Some(command) = commands.next()? {
-            if let Some(command) = command.dysymtab()? {
-                dysymtab = Some(command);
-            }
-            if twolevel {
-                if let Some(dylib) = command.dylib()? {
-                    libraries.push(command.string(self.endian, dylib.dylib.name)?);
-                }
-            }
-        }
-
-        let mut imports = Vec::new();
-        if let Some(dysymtab) = dysymtab {
-            let index = dysymtab.iundefsym.get(self.endian) as usize;
-            let number = dysymtab.nundefsym.get(self.endian) as usize;
-            for i in index..(index.wrapping_add(number)) {
-                let symbol = self.symbols.symbol(SymbolIndex(i))?;
-                let name = symbol.name(self.endian, self.symbols.strings())?;
-                let library = if twolevel {
-                    if let Some(index) = symbol.library_ordinal(self.endian).index() {
-                        libraries
-                            .get(index as usize)
-                            .copied()
-                            .read_error("Invalid Mach-O symbol library ordinal")?
-                    } else {
-                        // Don't currently distinguish between self/executable/flat.
-                        &[]
-                    }
-                } else {
-                    // Flat namespace.
-                    &[]
-                };
-                imports.push(Import {
-                    name: ByteString(name),
-                    library: ByteString(library),
-                });
-            }
-        }
-        Ok(imports)
+    fn imports(&self) -> Result<MachOImportIterator<'data, '_, Mach, R>> {
+        MachOImportIterator::new(self)
     }
 
-    fn exports(&self) -> Result<Vec<Export<'data>>> {
-        let mut dysymtab = None;
-        let mut commands =
-            self.header
-                .load_commands(self.endian, self.data.0, self.header_offset)?;
-        while let Some(command) = commands.next()? {
-            if let Some(command) = command.dysymtab()? {
-                dysymtab = Some(command);
-                break;
-            }
-        }
-
-        let mut exports = Vec::new();
-        if let Some(dysymtab) = dysymtab {
-            let index = dysymtab.iextdefsym.get(self.endian) as usize;
-            let number = dysymtab.nextdefsym.get(self.endian) as usize;
-            for i in index..(index.wrapping_add(number)) {
-                let symbol = self.symbols.symbol(SymbolIndex(i))?;
-                let name = symbol.name(self.endian, self.symbols.strings())?;
-                let address = symbol.n_value(self.endian).into();
-                exports.push(Export {
-                    name: ByteString(name),
-                    address,
-                });
-            }
-        }
-        Ok(exports)
+    fn exports(&self) -> Result<MachOExportIterator<'data, '_, Mach, R>> {
+        MachOExportIterator::new(self)
     }
 
     #[inline]

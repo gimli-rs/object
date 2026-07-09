@@ -1,12 +1,13 @@
-use core::fmt::Debug;
+use core::fmt;
+use core::marker::PhantomData;
 use core::mem;
 
 use crate::endian::{LittleEndian as LE, U16};
 use crate::pe;
 use crate::pod::Pod;
-use crate::read::{self, Bytes, ReadError, ReadRef, Result};
+use crate::read::{self, ByteString, Bytes, Error, ReadError, ReadRef, Result};
 
-use super::{ImageNtHeaders, SectionTable};
+use super::{ImageNtHeaders, PeFile, SectionTable};
 
 /// Information for parsing a PE import table.
 ///
@@ -111,7 +112,7 @@ impl<'data> ImportTable<'data> {
         let mut data = self.import_section_data;
         data.skip(offset as usize)
             .read_error("Invalid PE import thunk table address")?;
-        Ok(ImportThunkList { data })
+        Ok(ImportThunkList { data, null: false })
     }
 
     /// Parse a thunk.
@@ -158,27 +159,21 @@ impl<'data> ImportDescriptorIterator<'data> {
     /// Return the next descriptor.
     ///
     /// Returns `Ok(None)` when a null descriptor is found.
+    ///
+    /// Once this returns `Ok(None)` or an error, it will always return `Ok(None)`.
     pub fn next(&mut self) -> Result<Option<&'data pe::ImageImportDescriptor>> {
         if self.null {
             return Ok(None);
         }
-        let result = self
-            .data
-            .read::<pe::ImageImportDescriptor>()
-            .read_error("Missing PE null import descriptor");
-        match result {
-            Ok(import_desc) => {
-                if import_desc.is_null() {
-                    self.null = true;
-                    Ok(None)
-                } else {
-                    Ok(Some(import_desc))
-                }
-            }
-            Err(e) => {
-                self.null = true;
-                Err(e)
-            }
+        let Ok(import_desc) = self.data.read::<pe::ImageImportDescriptor>() else {
+            self.null = true;
+            return Err(Error("Missing PE null import descriptor"));
+        };
+        if import_desc.is_null() {
+            self.null = true;
+            Ok(None)
+        } else {
+            Ok(Some(import_desc))
         }
     }
 }
@@ -197,6 +192,7 @@ impl<'data> Iterator for ImportDescriptorIterator<'data> {
 #[derive(Debug, Clone)]
 pub struct ImportThunkList<'data> {
     data: Bytes<'data>,
+    null: bool,
 }
 
 impl<'data> ImportThunkList<'data> {
@@ -212,12 +208,18 @@ impl<'data> ImportThunkList<'data> {
     /// Return the first thunk in the list, and update `self` to point after it.
     ///
     /// Returns `Ok(None)` when a null thunk is found.
+    ///
+    /// Once this returns `Ok(None)` or an error, it will always return `Ok(None)`.
     pub fn next<Pe: ImageNtHeaders>(&mut self) -> Result<Option<Pe::ImageThunkData>> {
-        let thunk = self
-            .data
-            .read::<Pe::ImageThunkData>()
-            .read_error("Missing PE null import thunk")?;
+        if self.null {
+            return Ok(None);
+        }
+        let Ok(thunk) = self.data.read::<Pe::ImageThunkData>() else {
+            self.null = true;
+            return Err(Error("Missing PE null import thunk"));
+        };
         if thunk.address() == 0 {
+            self.null = true;
             Ok(None)
         } else {
             Ok(Some(*thunk))
@@ -238,7 +240,7 @@ pub enum Import<'data> {
 
 /// A trait for generic access to [`pe::ImageThunkData32`] and [`pe::ImageThunkData64`].
 #[allow(missing_docs)]
-pub trait ImageThunkData: Debug + Pod + read::private::Sealed {
+pub trait ImageThunkData: fmt::Debug + Pod + read::private::Sealed {
     /// Return the raw thunk value.
     fn raw(self) -> u64;
 
@@ -356,7 +358,7 @@ impl<'data> DelayLoadImportTable<'data> {
         let mut data = self.section_data;
         data.skip(offset as usize)
             .read_error("Invalid PE delay load import thunk table address")?;
-        Ok(ImportThunkList { data })
+        Ok(ImportThunkList { data, null: false })
     }
 
     /// Parse a thunk.
@@ -403,33 +405,127 @@ impl<'data> DelayLoadDescriptorIterator<'data> {
     /// Return the next descriptor.
     ///
     /// Returns `Ok(None)` when a null descriptor is found.
+    ///
+    /// Once this returns `Ok(None)` or an error, it will always return `Ok(None)`.
     pub fn next(&mut self) -> Result<Option<&'data pe::ImageDelayloadDescriptor>> {
         if self.null {
             return Ok(None);
         }
-        let result = self
-            .data
-            .read::<pe::ImageDelayloadDescriptor>()
-            .read_error("Missing PE null delay-load import descriptor");
-        match result {
-            Ok(import_desc) => {
-                if import_desc.is_null() {
-                    self.null = true;
-                    Ok(None)
-                } else {
-                    Ok(Some(import_desc))
-                }
-            }
-            Err(e) => {
-                self.null = true;
-                Err(e)
-            }
+        let Ok(import_desc) = self.data.read::<pe::ImageDelayloadDescriptor>() else {
+            self.null = true;
+            return Err(Error("Missing PE null delay-load import descriptor"));
+        };
+        if import_desc.is_null() {
+            self.null = true;
+            Ok(None)
+        } else {
+            Ok(Some(import_desc))
         }
     }
 }
 
 impl<'data> Iterator for DelayLoadDescriptorIterator<'data> {
     type Item = Result<&'data pe::ImageDelayloadDescriptor>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.next().transpose()
+    }
+}
+
+/// An iterator for the imports in a [`PeFile32`](super::PeFile32).
+pub type PeImportIterator32<'data, 'file, R = &'data [u8]> =
+    PeImportIterator<'data, 'file, pe::ImageNtHeaders32, R>;
+/// An iterator for the imports in a [`PeFile64`](super::PeFile64).
+pub type PeImportIterator64<'data, 'file, R = &'data [u8]> =
+    PeImportIterator<'data, 'file, pe::ImageNtHeaders64, R>;
+
+/// An iterator for the imports in a [`PeFile`].
+pub struct PeImportIterator<'data, 'file, Pe, R = &'data [u8]>
+where
+    Pe: ImageNtHeaders,
+    R: ReadRef<'data>,
+{
+    table: Option<ImportTable<'data>>,
+    descs: Option<ImportDescriptorIterator<'data>>,
+    thunks: Option<ImportThunkList<'data>>,
+    library: ByteString<'data>,
+    marker: PhantomData<(&'file (), Pe, R)>,
+}
+
+impl<'data, 'file, Pe, R> PeImportIterator<'data, 'file, Pe, R>
+where
+    Pe: ImageNtHeaders,
+    R: ReadRef<'data>,
+{
+    pub(super) fn new(file: &'file PeFile<'data, Pe, R>) -> Result<Self> {
+        let table = file.import_table()?;
+        let descs = table
+            .as_ref()
+            .map(|table| table.descriptors())
+            .transpose()?;
+        Ok(PeImportIterator {
+            table,
+            descs,
+            thunks: None,
+            library: ByteString(&[]),
+            marker: PhantomData,
+        })
+    }
+
+    fn next(&mut self) -> read::Result<Option<read::Import<'data>>> {
+        loop {
+            let Some(table) = self.table.as_ref() else {
+                return Ok(None);
+            };
+            if let Some(thunks) = self.thunks.as_mut() {
+                // This iterator fuses, so errors after here don't need to terminate iteration.
+                if let Some(thunk) = thunks.next::<Pe>()? {
+                    if !thunk.is_ordinal() {
+                        let (_hint, name) = table.hint_name(thunk.address())?;
+                        return Ok(Some(read::Import {
+                            library: self.library,
+                            name: ByteString(name),
+                        }));
+                    }
+                    continue;
+                }
+                self.thunks = None;
+            }
+            if let Some(descs) = self.descs.as_mut() {
+                // This iterator fuses, so errors after here don't need to terminate iteration.
+                if let Some(desc) = descs.next()? {
+                    self.library = ByteString(table.name(desc.name.get(LE))?);
+                    let mut first_thunk = desc.original_first_thunk.get(LE);
+                    if first_thunk == 0 {
+                        first_thunk = desc.first_thunk.get(LE);
+                    }
+                    self.thunks = Some(table.thunks(first_thunk)?);
+                    continue;
+                }
+                self.descs = None;
+            }
+            self.table = None;
+            return Ok(None);
+        }
+    }
+}
+
+impl<'data, 'file, Pe, R> fmt::Debug for PeImportIterator<'data, 'file, Pe, R>
+where
+    Pe: ImageNtHeaders,
+    R: ReadRef<'data>,
+{
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("PeImportIterator").finish()
+    }
+}
+
+impl<'data, 'file, Pe, R> Iterator for PeImportIterator<'data, 'file, Pe, R>
+where
+    Pe: ImageNtHeaders,
+    R: ReadRef<'data>,
+{
+    type Item = Result<read::Import<'data>>;
 
     fn next(&mut self) -> Option<Self::Item> {
         self.next().transpose()

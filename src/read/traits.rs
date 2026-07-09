@@ -1,5 +1,5 @@
 use alloc::borrow::Cow;
-use alloc::vec::Vec;
+use core::marker::PhantomData;
 
 use crate::endian::Endianness;
 use crate::read::{
@@ -77,6 +77,18 @@ pub trait Object<'data>: read::private::Sealed {
     /// The first field in the item tuple is the address
     /// that the relocation applies to.
     type DynamicRelocationIterator<'file>: Iterator<Item = (u64, Relocation)>
+    where
+        Self: 'file,
+        'data: 'file;
+
+    /// An iterator for imports in the object file.
+    type ImportIterator<'file>: Iterator<Item = Result<Import<'data>>>
+    where
+        Self: 'file,
+        'data: 'file;
+
+    /// An iterator for exports in the object file.
+    type ExportIterator<'file>: Iterator<Item = Result<Export<'data>>>
     where
         Self: 'file,
         'data: 'file;
@@ -225,14 +237,22 @@ pub trait Object<'data>: read::private::Sealed {
         ObjectMap::default()
     }
 
-    /// Get the imported symbols.
-    fn imports(&self) -> Result<Vec<Import<'data>>>;
+    /// Get an iterator for the imported symbols.
+    ///
+    /// An error is returned if the tables that describe the imports could not be parsed.
+    /// Errors for individual imports are returned by the iterator instead, and iteration
+    /// continues with the next import.
+    fn imports(&self) -> Result<Self::ImportIterator<'_>>;
 
-    /// Get the exported symbols that expose both a name and an address.
+    /// Get an iterator for the exported symbols that expose both a name and an address.
     ///
     /// Some file formats may provide other kinds of symbols that can be retrieved using
     /// the low level API.
-    fn exports(&self) -> Result<Vec<Export<'data>>>;
+    ///
+    /// An error is returned if the tables that describe the exports could not be parsed.
+    /// Errors for individual exports are returned by the iterator instead, and iteration
+    /// continues with the next export.
+    fn exports(&self) -> Result<Self::ExportIterator<'_>>;
 
     /// Return true if the file contains DWARF debug information sections, false if not.
     fn has_debug_symbols(&self) -> bool;
@@ -529,6 +549,44 @@ pub struct NoDynamicRelocationIterator;
 
 impl Iterator for NoDynamicRelocationIterator {
     type Item = (u64, Relocation);
+
+    #[inline]
+    fn next(&mut self) -> Option<Self::Item> {
+        None
+    }
+}
+
+/// An iterator for files that don't have imports.
+#[derive(Debug)]
+pub struct NoImportIterator<'data, 'file, R>(PhantomData<(&'data (), &'file (), R)>);
+
+impl<'data, 'file, R> Default for NoImportIterator<'data, 'file, R> {
+    fn default() -> Self {
+        Self(PhantomData)
+    }
+}
+
+impl<'data, 'file, R> Iterator for NoImportIterator<'data, 'file, R> {
+    type Item = Result<Import<'data>>;
+
+    #[inline]
+    fn next(&mut self) -> Option<Self::Item> {
+        None
+    }
+}
+
+/// An iterator for files that don't have exports.
+#[derive(Debug)]
+pub struct NoExportIterator<'data, 'file, R>(PhantomData<(&'data (), &'file (), R)>);
+
+impl<'data, 'file, R> Default for NoExportIterator<'data, 'file, R> {
+    fn default() -> Self {
+        Self(PhantomData)
+    }
+}
+
+impl<'data, 'file, R> Iterator for NoExportIterator<'data, 'file, R> {
+    type Item = Result<Export<'data>>;
 
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
