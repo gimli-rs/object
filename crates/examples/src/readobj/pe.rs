@@ -324,28 +324,24 @@ fn print_export_dir(
         {
             // TODO: the order of the name pointers might be interesting?
             let mut names = vec![None; export_table.addresses().len()];
-            for (name_pointer, ordinal) in export_table.name_iter() {
-                if let Some(name) = names.get_mut(ordinal as usize) {
+            for (name_pointer, index) in export_table.name_iter() {
+                if let Some(name) = names.get_mut(index.0 as usize) {
                     *name = Some(name_pointer);
                 }
             }
 
-            let ordinal_base = export_table.ordinal_base();
-            for (ordinal, address) in export_table.addresses().iter().enumerate() {
+            for (index, ordinal, address) in export_table.address_iter() {
                 p.group("Export", |p| {
-                    p.field("Ordinal", ordinal_base.wrapping_add(ordinal as u32));
-                    if let Some(name_pointer) = names[ordinal] {
+                    p.field("Ordinal", ordinal);
+                    if let Some(name_pointer) = names[index.0 as usize] {
                         p.field_string(
                             "Name",
                             name_pointer,
                             export_table.name_from_pointer(name_pointer),
                         );
                     }
-                    p.field_hex("Address", address.get(LE));
-                    if let Some(target) = export_table
-                        .target_from_address(address.get(LE))
-                        .print_err(p)
-                    {
+                    p.field_hex("Address", address);
+                    if let Some(target) = export_table.target_from_address(address).print_err(p) {
                         match target {
                             ExportTarget::Address(_) => {}
                             ExportTarget::ForwardByOrdinal(library, ordinal) => {
@@ -358,7 +354,7 @@ fn print_export_dir(
                             }
                         }
                     } else if let Some(Some(forward)) =
-                        export_table.forward_string(address.get(LE)).print_err(p)
+                        export_table.forward_string(address).print_err(p)
                     {
                         p.field_inline_string("Forward", forward);
                     }
