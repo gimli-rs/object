@@ -1,11 +1,11 @@
-use alloc::vec::Vec;
 use core::fmt::Debug;
 
 use crate::endian::LittleEndian as LE;
 use crate::pod::Pod;
 use crate::read::{
-    self, Architecture, Export, FileFlags, Import, NoDynamicRelocationIterator, Object, ObjectKind,
-    ObjectSection, ReadError, ReadRef, Result, SectionIndex, SubArchitecture, SymbolIndex,
+    self, Architecture, FileFlags, NoDynamicRelocationIterator, NoExportIterator, NoImportIterator,
+    Object, ObjectKind, ObjectSection, ReadError, ReadRef, Result, SectionIndex, SubArchitecture,
+    SymbolIndex,
 };
 use crate::{SkipDebugList, pe};
 
@@ -140,6 +140,16 @@ where
     where
         Self: 'file,
         'data: 'file;
+    type ImportIterator<'file>
+        = NoImportIterator<'data, 'file, R>
+    where
+        Self: 'file,
+        'data: 'file;
+    type ExportIterator<'file>
+        = NoExportIterator<'data, 'file, R>
+    where
+        Self: 'file,
+        'data: 'file;
 
     fn architecture(&self) -> Architecture {
         match self.header.machine() {
@@ -247,15 +257,15 @@ where
     }
 
     #[inline]
-    fn imports(&self) -> Result<Vec<Import<'data>>> {
+    fn imports(&self) -> Result<Self::ImportIterator<'_>> {
         // TODO: this could return undefined symbols, but not needed yet.
-        Ok(Vec::new())
+        Ok(Default::default())
     }
 
     #[inline]
-    fn exports(&self) -> Result<Vec<Export<'data>>> {
+    fn exports(&self) -> Result<Self::ExportIterator<'_>> {
         // TODO: this could return global symbols, but not needed yet.
-        Ok(Vec::new())
+        Ok(Default::default())
     }
 
     fn has_debug_symbols(&self) -> bool {

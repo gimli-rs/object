@@ -1,4 +1,3 @@
-use alloc::vec::Vec;
 use core::convert::TryInto;
 use core::fmt::Debug;
 use core::mem;
@@ -6,16 +5,17 @@ use core::mem;
 use crate::endian::{self, Endian, Endianness, NativeEndian, U32};
 use crate::pod::Pod;
 use crate::read::{
-    self, Architecture, ByteString, Bytes, Error, Export, FileFlags, Import, Object, ObjectKind,
-    ReadError, ReadRef, SectionIndex, StringTable, SymbolIndex, util,
+    self, Architecture, Bytes, Error, FileFlags, Object, ObjectKind, ReadError, ReadRef,
+    SectionIndex, StringTable, SymbolIndex, util,
 };
 use crate::{SkipDebugList, elf};
 
 use super::{
     CompressionHeader, Dyn, DynamicTable, ElfComdat, ElfComdatIterator,
-    ElfDynamicRelocationIterator, ElfSection, ElfSectionIterator, ElfSegment, ElfSegmentIterator,
-    ElfSymbol, ElfSymbolIterator, ElfSymbolTable, NoteHeader, ProgramHeader, Rel, Rela,
-    RelocationSections, Relr, SectionHeader, SectionTable, Sym, SymbolTable,
+    ElfDynamicRelocationIterator, ElfExportIterator, ElfImportIterator, ElfSection,
+    ElfSectionIterator, ElfSegment, ElfSegmentIterator, ElfSymbol, ElfSymbolIterator,
+    ElfSymbolTable, NoteHeader, ProgramHeader, Rel, Rela, RelocationSections, Relr, SectionHeader,
+    SectionTable, Sym, SymbolTable,
 };
 
 /// A 32-bit ELF object file.
@@ -176,7 +176,7 @@ where
         if !section_name.starts_with(b".debug_") {
             return None;
         }
-        let mut name = Vec::with_capacity(section_name.len() + 1);
+        let mut name = alloc::vec::Vec::with_capacity(section_name.len() + 1);
         name.extend_from_slice(b".zdebug_");
         name.extend_from_slice(&section_name[7..]);
         self.raw_section_by_name(&name)
@@ -250,6 +250,16 @@ where
         'data: 'file;
     type DynamicRelocationIterator<'file>
         = ElfDynamicRelocationIterator<'data, 'file, Elf, R>
+    where
+        Self: 'file,
+        'data: 'file;
+    type ImportIterator<'file>
+        = ElfImportIterator<'data, 'file, Elf, R>
+    where
+        Self: 'file,
+        'data: 'file;
+    type ExportIterator<'file>
+        = ElfExportIterator<'data, 'file, Elf, R>
     where
         Self: 'file,
         'data: 'file;
@@ -405,44 +415,17 @@ where
         })
     }
 
-    fn imports(&self) -> read::Result<Vec<Import<'data>>> {
+    fn imports(&self) -> read::Result<ElfImportIterator<'data, '_, Elf, R>> {
         let versions = self.sections.versions(self.endian, self.data.0)?;
-
-        let mut imports = Vec::new();
-        for (index, symbol) in self.dynamic_symbols.enumerate() {
-            if symbol.is_undefined(self.endian) {
-                let name = symbol.name(self.endian, self.dynamic_symbols.strings())?;
-                if !name.is_empty() {
-                    let library = if let Some(svt) = versions.as_ref() {
-                        let vi = svt.version_index(self.endian, index).index();
-                        svt.version(vi)?.and_then(|v| v.file())
-                    } else {
-                        None
-                    }
-                    .unwrap_or(&[]);
-                    imports.push(Import {
-                        name: ByteString(name),
-                        library: ByteString(library),
-                    });
-                }
-            }
-        }
-        Ok(imports)
+        Ok(ElfImportIterator::new(
+            self.endian,
+            versions,
+            &self.dynamic_symbols,
+        ))
     }
 
-    fn exports(&self) -> read::Result<Vec<Export<'data>>> {
-        let mut exports = Vec::new();
-        for symbol in self.dynamic_symbols.iter() {
-            if symbol.is_definition(self.endian, self.dynamic_symbols.strings()) {
-                let name = symbol.name(self.endian, self.dynamic_symbols.strings())?;
-                let address = symbol.st_value(self.endian).into();
-                exports.push(Export {
-                    name: ByteString(name),
-                    address,
-                });
-            }
-        }
-        Ok(exports)
+    fn exports(&self) -> read::Result<ElfExportIterator<'data, '_, Elf, R>> {
+        Ok(ElfExportIterator::new(self.endian, &self.dynamic_symbols))
     }
 
     fn has_debug_symbols(&self) -> bool {

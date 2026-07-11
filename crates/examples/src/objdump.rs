@@ -229,10 +229,17 @@ fn dump_parsed_object<W: Write, E: Write>(w: &mut W, e: &mut E, file: &object::F
 
     match file.imports() {
         Ok(imports) => {
-            if !imports.is_empty() {
-                writeln!(w)?;
-                for import in imports {
-                    writeln!(w, "{:x?}", import)?;
+            let mut first = true;
+            for import in imports {
+                match import {
+                    Ok(import) => {
+                        if first {
+                            writeln!(w)?;
+                            first = false;
+                        }
+                        writeln!(w, "{:x?}", import)?;
+                    }
+                    Err(err) => writeln!(e, "Failed to parse import: {}", err)?,
                 }
             }
         }
@@ -241,10 +248,17 @@ fn dump_parsed_object<W: Write, E: Write>(w: &mut W, e: &mut E, file: &object::F
 
     match file.exports() {
         Ok(exports) => {
-            if !exports.is_empty() {
-                writeln!(w)?;
-                for export in exports {
-                    writeln!(w, "{:x?}", export)?;
+            let mut first = true;
+            for export in exports {
+                match export {
+                    Ok(export) => {
+                        if first {
+                            writeln!(w)?;
+                            first = false;
+                        }
+                        writeln!(w, "{:x?}", export)?;
+                    }
+                    Err(err) => writeln!(e, "Failed to parse export: {}", err)?,
                 }
             }
         }

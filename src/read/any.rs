@@ -1,5 +1,4 @@
 use alloc::fmt;
-use alloc::vec::Vec;
 use core::marker::PhantomData;
 
 #[allow(unused_imports)] // Unused for Wasm
@@ -358,6 +357,16 @@ where
     where
         Self: 'file,
         'data: 'file;
+    type ImportIterator<'file>
+        = ImportIterator<'data, 'file, R>
+    where
+        Self: 'file,
+        'data: 'file;
+    type ExportIterator<'file>
+        = ExportIterator<'data, 'file, R>
+    where
+        Self: 'file,
+        'data: 'file;
 
     fn architecture(&self) -> Architecture {
         with_inner!(self, File, |x| x.architecture())
@@ -478,12 +487,14 @@ where
         with_inner!(self, File, |x| x.object_map())
     }
 
-    fn imports(&self) -> Result<Vec<Import<'data>>> {
-        with_inner!(self, File, |x| x.imports())
+    fn imports(&self) -> Result<ImportIterator<'data, '_, R>> {
+        map_inner_option!(self, File, ImportIteratorInternal, |x| x.imports())
+            .map(|inner| ImportIterator { inner })
     }
 
-    fn exports(&self) -> Result<Vec<Export<'data>>> {
-        with_inner!(self, File, |x| x.exports())
+    fn exports(&self) -> Result<ExportIterator<'data, '_, R>> {
+        map_inner_option!(self, File, ExportIteratorInternal, |x| x.exports())
+            .map(|inner| ExportIterator { inner })
     }
 
     fn has_debug_symbols(&self) -> bool {
@@ -1376,5 +1387,85 @@ impl<'data, 'file, R: ReadRef<'data>> Iterator for SectionRelocationIterator<'da
 
     fn next(&mut self) -> Option<Self::Item> {
         with_inner_mut!(self.inner, SectionRelocationIteratorInternal, |x| x.next())
+    }
+}
+
+/// An iterator for the imports in a [`File`].
+#[derive(Debug)]
+pub struct ImportIterator<'data, 'file, R: ReadRef<'data> = &'data [u8]> {
+    inner: ImportIteratorInternal<'data, 'file, R>,
+}
+
+#[derive(Debug)]
+enum ImportIteratorInternal<'data, 'file, R: ReadRef<'data>> {
+    #[cfg(feature = "coff")]
+    Coff(read::NoImportIterator<'data, 'file, R>),
+    #[cfg(feature = "coff")]
+    CoffBig(read::NoImportIterator<'data, 'file, R>),
+    #[cfg(feature = "elf")]
+    Elf32(elf::ElfImportIterator32<'data, 'file, Endianness, R>),
+    #[cfg(feature = "elf")]
+    Elf64(elf::ElfImportIterator64<'data, 'file, Endianness, R>),
+    #[cfg(feature = "macho")]
+    MachO32(macho::MachOImportIterator32<'data, 'file, Endianness, R>),
+    #[cfg(feature = "macho")]
+    MachO64(macho::MachOImportIterator64<'data, 'file, Endianness, R>),
+    #[cfg(feature = "pe")]
+    Pe32(pe::PeImportIterator32<'data, 'file, R>),
+    #[cfg(feature = "pe")]
+    Pe64(pe::PeImportIterator64<'data, 'file, R>),
+    #[cfg(feature = "wasm")]
+    Wasm(read::NoImportIterator<'data, 'file, R>),
+    #[cfg(feature = "xcoff")]
+    Xcoff32(read::NoImportIterator<'data, 'file, R>),
+    #[cfg(feature = "xcoff")]
+    Xcoff64(read::NoImportIterator<'data, 'file, R>),
+}
+
+impl<'data, 'file, R: ReadRef<'data>> Iterator for ImportIterator<'data, 'file, R> {
+    type Item = Result<Import<'data>>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        with_inner_mut!(self.inner, ImportIteratorInternal, |x| x.next())
+    }
+}
+
+/// An iterator for the exports in a [`File`].
+#[derive(Debug)]
+pub struct ExportIterator<'data, 'file, R: ReadRef<'data> = &'data [u8]> {
+    inner: ExportIteratorInternal<'data, 'file, R>,
+}
+
+#[derive(Debug)]
+enum ExportIteratorInternal<'data, 'file, R: ReadRef<'data>> {
+    #[cfg(feature = "coff")]
+    Coff(read::NoExportIterator<'data, 'file, R>),
+    #[cfg(feature = "coff")]
+    CoffBig(read::NoExportIterator<'data, 'file, R>),
+    #[cfg(feature = "elf")]
+    Elf32(elf::ElfExportIterator32<'data, 'file, Endianness, R>),
+    #[cfg(feature = "elf")]
+    Elf64(elf::ElfExportIterator64<'data, 'file, Endianness, R>),
+    #[cfg(feature = "macho")]
+    MachO32(macho::MachOExportIterator32<'data, 'file, Endianness, R>),
+    #[cfg(feature = "macho")]
+    MachO64(macho::MachOExportIterator64<'data, 'file, Endianness, R>),
+    #[cfg(feature = "pe")]
+    Pe32(pe::PeExportIterator<'data, 'file, R>),
+    #[cfg(feature = "pe")]
+    Pe64(pe::PeExportIterator<'data, 'file, R>),
+    #[cfg(feature = "wasm")]
+    Wasm(read::NoExportIterator<'data, 'file, R>),
+    #[cfg(feature = "xcoff")]
+    Xcoff32(read::NoExportIterator<'data, 'file, R>),
+    #[cfg(feature = "xcoff")]
+    Xcoff64(read::NoExportIterator<'data, 'file, R>),
+}
+
+impl<'data, 'file, R: ReadRef<'data>> Iterator for ExportIterator<'data, 'file, R> {
+    type Item = Result<Export<'data>>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        with_inner_mut!(self.inner, ExportIteratorInternal, |x| x.next())
     }
 }

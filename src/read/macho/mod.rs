@@ -56,6 +56,9 @@ pub use dyld_cache::*;
 mod dyld_info;
 pub use dyld_info::*;
 
+mod export;
+pub use export::*;
+
 mod exports_trie;
 pub use exports_trie::*;
 
@@ -70,6 +73,9 @@ pub use file::*;
 
 mod function_starts;
 pub use function_starts::*;
+
+mod import;
+pub use import::*;
 
 mod load_command;
 pub use load_command::*;

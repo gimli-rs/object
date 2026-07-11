@@ -1,13 +1,12 @@
 use core::fmt::Debug;
 use core::mem;
 
-use alloc::vec::Vec;
-
 use crate::endian::BigEndian as BE;
 use crate::pod::Pod;
 use crate::read::{
-    self, Architecture, Error, Export, FileFlags, Import, NoDynamicRelocationIterator, Object,
-    ObjectKind, ObjectSection, ReadError, ReadRef, Result, SectionIndex, SymbolIndex,
+    self, Architecture, Error, FileFlags, NoDynamicRelocationIterator, NoExportIterator,
+    NoImportIterator, Object, ObjectKind, ObjectSection, ReadError, ReadRef, Result, SectionIndex,
+    SymbolIndex,
 };
 use crate::{SkipDebugList, xcoff};
 
@@ -169,6 +168,16 @@ where
     where
         Self: 'file,
         'data: 'file;
+    type ImportIterator<'file>
+        = NoImportIterator<'data, 'file, R>
+    where
+        Self: 'file,
+        'data: 'file;
+    type ExportIterator<'file>
+        = NoExportIterator<'data, 'file, R>
+    where
+        Self: 'file,
+        'data: 'file;
 
     fn architecture(&self) -> Architecture {
         if self.is_64() {
@@ -277,14 +286,14 @@ where
         None
     }
 
-    fn imports(&self) -> Result<alloc::vec::Vec<Import<'data>>> {
+    fn imports(&self) -> Result<Self::ImportIterator<'_>> {
         // TODO: return the imports in the STYP_LOADER section.
-        Ok(Vec::new())
+        Ok(Default::default())
     }
 
-    fn exports(&self) -> Result<alloc::vec::Vec<Export<'data>>> {
+    fn exports(&self) -> Result<Self::ExportIterator<'_>> {
         // TODO: return the exports in the STYP_LOADER section.
-        Ok(Vec::new())
+        Ok(Default::default())
     }
 
     fn has_debug_symbols(&self) -> bool {

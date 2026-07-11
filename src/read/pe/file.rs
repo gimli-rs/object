@@ -1,4 +1,3 @@
-use alloc::vec::Vec;
 use core::fmt::Debug;
 use core::{mem, str};
 
@@ -8,15 +7,15 @@ use crate::endian::{LittleEndian as LE, U32};
 use crate::pod::{self, Pod};
 use crate::read::coff::{CoffCommon, CoffSymbol, CoffSymbolIterator, CoffSymbolTable, SymbolTable};
 use crate::read::{
-    self, Architecture, ByteString, Bytes, CodeView, ComdatKind, Error, Export, FileFlags, Import,
+    self, Architecture, ByteString, Bytes, CodeView, ComdatKind, Error, FileFlags,
     NoDynamicRelocationIterator, Object, ObjectComdat, ObjectKind, ReadError, ReadRef, Result,
     SectionIndex, SubArchitecture, SymbolIndex,
 };
 use crate::{SkipDebugList, pe};
 
 use super::{
-    DataDirectories, ExportTable, ImageThunkData, ImportTable, PeSection, PeSectionIterator,
-    PeSegment, PeSegmentIterator, RichHeaderInfo, SectionTable,
+    DataDirectories, ExportTable, ImageThunkData, ImportTable, PeExportIterator, PeImportIterator,
+    PeSection, PeSectionIterator, PeSegment, PeSegmentIterator, RichHeaderInfo, SectionTable,
 };
 
 /// A PE32 (32-bit) image file.
@@ -202,6 +201,16 @@ where
     where
         Self: 'file,
         'data: 'file;
+    type ImportIterator<'file>
+        = PeImportIterator<'data, 'file, Pe, R>
+    where
+        Self: 'file,
+        'data: 'file;
+    type ExportIterator<'file>
+        = PeExportIterator<'data, 'file, R>
+    where
+        Self: 'file,
+        'data: 'file;
 
     fn architecture(&self) -> Architecture {
         match self.nt_headers.file_header().machine.get(LE) {
@@ -312,46 +321,12 @@ where
         None
     }
 
-    fn imports(&self) -> Result<Vec<Import<'data>>> {
-        let mut imports = Vec::new();
-        if let Some(import_table) = self.import_table()? {
-            let mut import_descs = import_table.descriptors()?;
-            while let Some(import_desc) = import_descs.next()? {
-                let library = import_table.name(import_desc.name.get(LE))?;
-                let mut first_thunk = import_desc.original_first_thunk.get(LE);
-                if first_thunk == 0 {
-                    first_thunk = import_desc.first_thunk.get(LE);
-                }
-                let mut thunks = import_table.thunks(first_thunk)?;
-                while let Some(thunk) = thunks.next::<Pe>()? {
-                    if !thunk.is_ordinal() {
-                        let (_hint, name) = import_table.hint_name(thunk.address())?;
-                        imports.push(Import {
-                            library: ByteString(library),
-                            name: ByteString(name),
-                        });
-                    }
-                }
-            }
-        }
-        Ok(imports)
+    fn imports(&self) -> Result<Self::ImportIterator<'_>> {
+        PeImportIterator::new(self)
     }
 
-    fn exports(&self) -> Result<Vec<Export<'data>>> {
-        let mut exports = Vec::new();
-        if let Some(export_table) = self.export_table()? {
-            for (name_pointer, address_index) in export_table.name_iter() {
-                let name = export_table.name_from_pointer(name_pointer)?;
-                let address = export_table.address_by_index(address_index.into())?;
-                if !export_table.is_forward(address) {
-                    exports.push(Export {
-                        name: ByteString(name),
-                        address: self.common.image_base.wrapping_add(address.into()),
-                    })
-                }
-            }
-        }
-        Ok(exports)
+    fn exports(&self) -> Result<Self::ExportIterator<'_>> {
+        PeExportIterator::new(self)
     }
 
     fn pdb_info(&self) -> Result<Option<CodeView<'_>>> {
