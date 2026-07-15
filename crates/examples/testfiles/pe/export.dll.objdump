@@ -13,8 +13,11 @@ Symbols
 
 Dynamic symbols
 
-Export { name: "exported_alias", address: 180001020 }
-Export { name: "exported_multi", address: 180001020 }
-Export { name: "exported_named", address: 180001000 }
+Export { name: "exported_alias", target: Address { address: 180001020 }, flags: Pe { ordinal: 4 } }
+Export { name: "exported_multi", target: Address { address: 180001020 }, flags: Pe { ordinal: 3 } }
+Export { name: "exported_named", target: Address { address: 180001000 }, flags: Pe { ordinal: 1 } }
+Export { name: "forward_by_name", target: Reexport { library: "kernel32", name: "Sleep" }, flags: Pe { ordinal: 6 } }
+Export { name: "forward_by_ordinal", target: ReexportOrdinal { library: "kernel32", ordinal: 7b }, flags: Pe { ordinal: 7 } }
+Export { name: "forward_with_dot", target: Reexport { library: "kernel32.dll", name: "Sleep" }, flags: Pe { ordinal: 8 } }
 
 Symbol map

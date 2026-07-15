@@ -31,12 +31,12 @@ Dynamic symbols
 Import { library: "/usr/lib/libSystem.B.dylib", name: "__tlv_bootstrap" }
 Import { library: "/usr/lib/libSystem.B.dylib", name: "dyld_stub_binder" }
 
-Export { name: "_abs", address: fffff }
-Export { name: "_foo", address: 460 }
-Export { name: "_foo_resolver", address: 464 }
-Export { name: "_tls", address: 4008 }
-Export { name: "_weak", address: 468 }
-Export { name: "my_stub_binder", address: 34 }
+Export { name: "_abs", target: Absolute { value: fffff }, flags: None }
+Export { name: "_foo", target: Resolver { resolver: 460, stub: Some(46c) }, flags: None }
+Export { name: "_foo_resolver", target: Address { address: 464 }, flags: None }
+Export { name: "_tls", target: TlvDescriptor { address: 4008 }, flags: None }
+Export { name: "_weak", target: Address { address: 468 }, weak: true, flags: None }
+Export { name: "my_stub_binder", target: Reexport { library: "/usr/lib/libSystem.B.dylib", name: "dyld_stub_binder" }, flags: None }
 
 Symbol map
 0x460-0x464 "_foo"

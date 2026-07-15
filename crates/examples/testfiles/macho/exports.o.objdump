@@ -26,6 +26,16 @@ __thread_vars relocations
 
 Dynamic symbols
 
+Import { library: "", name: "__tlv_bootstrap" }
+Import { library: "", name: "dyld_stub_binder" }
+
+Export { name: "_abs", target: Absolute { value: fffff }, flags: MachO { n_type: N_ABS | N_EXT, n_desc: 0 } }
+Export { name: "_foo", target: Resolver { resolver: 0, stub: None }, flags: MachO { n_type: N_SECT | N_EXT, n_desc: 0x100 } }
+Export { name: "_foo_resolver", target: Address { address: 4 }, flags: MachO { n_type: N_SECT | N_EXT, n_desc: 0 } }
+Export { name: "_tls", target: TlvDescriptor { address: 10 }, flags: MachO { n_type: N_SECT | N_EXT, n_desc: 0 } }
+Export { name: "_weak", target: Address { address: 8 }, weak: true, flags: MachO { n_type: N_SECT | N_EXT, n_desc: 0x80 } }
+Export { name: "my_stub_binder", target: Reexport { library: "", name: "dyld_stub_binder" }, flags: MachO { n_type: N_INDR | N_EXT, n_desc: 0 } }
+
 Symbol map
 0x0-0x4 "_foo"
 0x4-0x8 "_foo_resolver"

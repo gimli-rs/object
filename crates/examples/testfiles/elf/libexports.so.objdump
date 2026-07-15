@@ -106,11 +106,16 @@ Import { library: "", name: "_ITM_registerTMCloneTable" }
 Import { library: "", name: "_ITM_deregisterTMCloneTable" }
 Import { library: "", name: "__gmon_start__" }
 
-Export { name: "global_func", address: 10f9 }
-Export { name: "versioned_func", address: 1137 }
-Export { name: "global_data", address: 4008 }
-Export { name: "weak_func", address: 1108 }
-Export { name: "versioned_func", address: 1146 }
+Export { name: "VERS_1", target: Absolute { value: 0 }, flags: Elf { st_info: STB_GLOBAL | STT_OBJECT, st_other: STV_DEFAULT, version: "VERS_1" } }
+Export { name: "abs_sym", target: Absolute { value: fffff }, flags: Elf { st_info: STB_GLOBAL | STT_NOTYPE, st_other: STV_DEFAULT, version: "VERS_1" } }
+Export { name: "tls_var", target: Tls { offset: 0 }, flags: Elf { st_info: STB_GLOBAL | STT_TLS, st_other: STV_DEFAULT, version: "VERS_1" } }
+Export { name: "global_func", target: Address { address: 10f9 }, flags: Elf { st_info: STB_GLOBAL | STT_FUNC, st_other: STV_DEFAULT, version: "VERS_1" } }
+Export { name: "ifunc_func", target: Resolver { resolver: 1126, stub: None }, flags: Elf { st_info: STB_GLOBAL | STT_GNU_IFUNC, st_other: STV_DEFAULT, version: "VERS_1" } }
+Export { name: "VERS_2", target: Absolute { value: 0 }, flags: Elf { st_info: STB_GLOBAL | STT_OBJECT, st_other: STV_DEFAULT, version: "VERS_2" } }
+Export { name: "versioned_func", target: Address { address: 1137 }, flags: Elf { st_info: STB_GLOBAL | STT_FUNC, st_other: STV_DEFAULT, version: "VERS_1", version_hidden: true } }
+Export { name: "global_data", target: Address { address: 4008 }, flags: Elf { st_info: STB_GLOBAL | STT_OBJECT, st_other: STV_DEFAULT, version: "VERS_1" } }
+Export { name: "weak_func", target: Address { address: 1108 }, weak: true, flags: Elf { st_info: STB_WEAK | STT_FUNC, st_other: STV_DEFAULT, version: "VERS_1" } }
+Export { name: "versioned_func", target: Address { address: 1146 }, flags: Elf { st_info: STB_GLOBAL | STT_FUNC, st_other: STV_DEFAULT, version: "VERS_2" } }
 
 Symbol map
 0x1000-0x101b "_init"

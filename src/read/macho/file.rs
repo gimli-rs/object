@@ -51,6 +51,7 @@ where
 {
     pub(super) endian: Mach::Endian,
     pub(super) data: SkipDebugList<R>,
+    pub(super) linkedit_data: Option<SkipDebugList<R>>,
     pub(super) header_offset: u64,
     pub(super) header: &'data Mach,
     pub(super) segments: Vec<MachOSegmentInternal<'data, Mach, R>>,
@@ -86,6 +87,7 @@ where
         Ok(MachOFile {
             endian,
             data: SkipDebugList(data),
+            linkedit_data: Some(SkipDebugList(data)),
             header_offset: 0,
             header,
             segments,
@@ -143,6 +145,7 @@ where
         Ok(MachOFile {
             endian,
             data: SkipDebugList(data),
+            linkedit_data: linkedit_data.map(SkipDebugList),
             header_offset,
             header,
             segments,
@@ -235,6 +238,20 @@ where
     /// Returns an empty symbol table if the file has no symbol table.
     pub fn macho_symbol_table(&self) -> &SymbolTable<'data, Mach, R> {
         &self.symbols
+    }
+
+    /// Get the names of the libraries in the dylib load commands.
+    ///
+    /// Library ordinals are 1-based so the first entry is an empty `&[]`.
+    pub(super) fn libraries(&self) -> Result<Vec<&'data [u8]>> {
+        let mut libraries = vec![&[][..]];
+        let mut commands = self.macho_load_commands()?;
+        while let Some(command) = commands.next()? {
+            if let Some(dylib) = command.dylib()? {
+                libraries.push(command.string(self.endian, dylib.dylib.name)?);
+            }
+        }
+        Ok(libraries)
     }
 
     /// Return the `LC_BUILD_VERSION` load command if present.

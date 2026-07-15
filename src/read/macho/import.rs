@@ -45,30 +45,14 @@ where
 {
     pub(super) fn new(file: &'file MachOFile<'data, Mach, R>) -> Result<Self> {
         let endian = file.endian;
-        let mut iter = slice::Iter::default();
-        let mut libraries = Vec::new();
         let twolevel = file.header.flags(endian).contains(macho::MH_TWOLEVEL);
-        if twolevel {
-            libraries.push(&[][..]);
-        }
-        let mut commands = file.macho_load_commands()?;
-        while let Some(command) = commands.next()? {
-            if let Some(dysymtab) = command.dysymtab()? {
-                let symbols = file.symbols.symbols();
-                let symbols = symbols
-                    .get(dysymtab.iundefsym.get(endian) as usize..)
-                    .read_error("Invalid Mach-O dysymtab iundefsym")?;
-                let symbols = symbols
-                    .get(..dysymtab.nundefsym.get(endian) as usize)
-                    .read_error("Invalid Mach-O dysymtab nundefsym")?;
-                iter = symbols.iter();
-            }
-            if twolevel {
-                if let Some(dylib) = command.dylib()? {
-                    libraries.push(command.string(endian, dylib.dylib.name)?);
-                }
-            }
-        }
+        let libraries = if twolevel {
+            file.libraries()?
+        } else {
+            Vec::new()
+        };
+        // `LC_DYSYMTAB` is not required, so use the symbol table directly.
+        let iter = file.symbols.symbols().iter();
         Ok(MachOImportIterator {
             endian,
             libraries,
@@ -79,7 +63,7 @@ where
     }
 
     fn next(&mut self) -> Result<Option<Import<'data>>> {
-        let Some(symbol) = self.iter.next() else {
+        let Some(symbol) = self.iter.find(|s| s.is_undefined()) else {
             return Ok(None);
         };
         // The above iterator has made progress, so errors after here don't need to

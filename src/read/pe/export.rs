@@ -1,3 +1,4 @@
+use alloc::borrow::Cow;
 use alloc::vec::Vec;
 use core::fmt;
 use core::marker::PhantomData;
@@ -446,26 +447,40 @@ where
         let Some(table) = &self.table else {
             return Ok(None);
         };
-        loop {
-            let index = self.index;
-            let Some(name_pointer) = table.name_pointers().get(index) else {
-                return Ok(None);
-            };
-            let Some(address_index) = table.name_ordinals().get(index) else {
-                return Ok(None);
-            };
-            // Ensure progress is made, so errors after here don't need to terminate iteration.
-            self.index += 1;
+        let index = self.index;
+        let Some(name_pointer) = table.name_pointers().get(index) else {
+            return Ok(None);
+        };
+        let Some(address_index) = table.name_ordinals().get(index) else {
+            return Ok(None);
+        };
+        // Ensure progress is made, so errors after here don't need to terminate iteration.
+        self.index += 1;
 
-            let name = table.name_from_pointer(name_pointer.get(LE))?;
-            let address = table.address_by_index(address_index.get(LE))?;
-            if !table.is_forward(address) {
-                return Ok(Some(read::Export {
-                    name: ByteString(name),
-                    address: self.image_base.wrapping_add(address.into()),
-                }));
+        let name = table.name_from_pointer(name_pointer.get(LE))?;
+        let address_index = address_index.get(LE);
+        let address = table.address_by_index(address_index)?;
+        let ordinal = table.ordinal_from_index(address_index)?;
+        let target = match table.target_from_address(address)? {
+            ExportTarget::Address(address) => read::ExportTarget::Address {
+                address: self.image_base.wrapping_add(address.into()),
+            },
+            ExportTarget::ForwardByName(library, name) => {
+                read::ExportTarget::Reexport { library, name }
             }
-        }
+            ExportTarget::ForwardByOrdinal(library, ordinal) => {
+                read::ExportTarget::ReexportOrdinal {
+                    library,
+                    ordinal: ordinal.0,
+                }
+            }
+        };
+        Ok(Some(read::Export {
+            name: Cow::Borrowed(name),
+            target,
+            weak: false,
+            flags: read::ExportFlags::Pe { ordinal },
+        }))
     }
 }
 

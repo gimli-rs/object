@@ -25,7 +25,7 @@ Dynamic symbols
 
 Import { library: "", name: "_printf" }
 
-Export { name: "_main", address: 0 }
+Export { name: "_main", target: Address { address: 0 }, flags: MachO { n_type: N_SECT | N_EXT, n_desc: 0 } }
 
 Symbol map
 0x0-0x25 "_main"
