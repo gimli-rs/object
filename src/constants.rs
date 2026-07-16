@@ -24,85 +24,39 @@ pub trait Wrap {
     fn into_inner(self) -> Self::Inner;
 }
 
-impl Wrap for u8 {
-    type Inner = u8;
-    fn from_inner(inner: u8) -> Self {
-        inner
-    }
-    fn into_inner(self) -> u8 {
-        self
-    }
+macro_rules! wrap {
+    ($outer:ident, $inner:ident) => {
+        impl crate::constants::Wrap for $outer {
+            type Inner = $inner;
+            fn into_inner(self) -> $inner {
+                self.0
+            }
+            fn from_inner(inner: $inner) -> Self {
+                Self(inner)
+            }
+        }
+    };
+    ($primitive:ident) => {
+        impl crate::constants::Wrap for $primitive {
+            type Inner = $primitive;
+            fn into_inner(self) -> $primitive {
+                self
+            }
+            fn from_inner(inner: $primitive) -> Self {
+                inner
+            }
+        }
+    };
 }
 
-impl Wrap for u16 {
-    type Inner = u16;
-    fn from_inner(inner: u16) -> Self {
-        inner
-    }
-    fn into_inner(self) -> u16 {
-        self
-    }
-}
-
-impl Wrap for u32 {
-    type Inner = u32;
-    fn from_inner(inner: u32) -> Self {
-        inner
-    }
-    fn into_inner(self) -> u32 {
-        self
-    }
-}
-
-impl Wrap for u64 {
-    type Inner = u64;
-    fn from_inner(inner: u64) -> Self {
-        inner
-    }
-    fn into_inner(self) -> u64 {
-        self
-    }
-}
-
-impl Wrap for usize {
-    type Inner = usize;
-    fn from_inner(inner: usize) -> Self {
-        inner
-    }
-    fn into_inner(self) -> usize {
-        self
-    }
-}
-
-impl Wrap for i16 {
-    type Inner = i16;
-    fn from_inner(inner: i16) -> Self {
-        inner
-    }
-    fn into_inner(self) -> i16 {
-        self
-    }
-}
-
-impl Wrap for i32 {
-    type Inner = i32;
-    fn from_inner(inner: i32) -> Self {
-        inner
-    }
-    fn into_inner(self) -> i32 {
-        self
-    }
-}
-
-impl Wrap for i64 {
-    type Inner = i64;
-    fn from_inner(inner: i64) -> Self {
-        inner
-    }
-    fn into_inner(self) -> i64 {
-        self
-    }
-}
+wrap!(u8);
+wrap!(u16);
+wrap!(u32);
+wrap!(u64);
+wrap!(usize);
+wrap!(i16);
+wrap!(i32);
+wrap!(i64);
 
 /// The names and values for a set of constants with a given type.
 #[cfg(feature = "names")]
@@ -616,15 +570,7 @@ macro_rules! newtype {
             }
         }
 
-        impl crate::constants::Wrap for $outer {
-            type Inner = $inner;
-            fn into_inner(self) -> $inner {
-                self.0
-            }
-            fn from_inner(inner: $inner) -> Self {
-                Self(inner)
-            }
-        }
+        wrap!($outer, $inner);
     };
 
     // Newtype helpers for other macros.
