@@ -1,0 +1,137 @@
+Format: Elf Little-endian 64-bit
+Kind: Dynamic
+Architecture: X86_64
+Flags: Elf { os_abi: ELFOSABI_GNU, abi_version: 0, e_flags: 0 }
+Relative Address Base: 0
+Entry Address: 0
+Build ID: [a9, b9, d6, 9, a4, c0, db, 15, 4a, f4, 9a, 8d, 64, 24, 49, e1, 21, 41, e7, 8f]
+Segment { address: 0, size: 6c8, permissions: R-- }
+Segment { address: 1000, size: 165, permissions: R-X }
+Segment { address: 2000, size: 16c, permissions: R-- }
+Segment { address: 3e34, size: 1dc, permissions: RW- }
+1: Section { name: ".note.gnu.property", address: 2e0, size: 20, align: 8, kind: Note, flags: Elf { sh_type: SHT_NOTE, sh_flags: SHF_ALLOC } }
+2: Section { name: ".note.gnu.build-id", address: 300, size: 24, align: 4, kind: Note, flags: Elf { sh_type: SHT_NOTE, sh_flags: SHF_ALLOC } }
+3: Section { name: ".gnu.hash", address: 328, size: 4c, align: 8, kind: Unknown, flags: Elf { sh_type: SHT_GNU_HASH, sh_flags: SHF_ALLOC } }
+4: Section { name: ".dynsym", address: 378, size: 168, align: 8, kind: Metadata, flags: Elf { sh_type: SHT_DYNSYM, sh_flags: SHF_ALLOC } }
+5: Section { name: ".dynstr", address: 4e0, size: bd, align: 1, kind: Metadata, flags: Elf { sh_type: SHT_STRTAB, sh_flags: SHF_ALLOC } }
+6: Section { name: ".gnu.version", address: 59e, size: 1e, align: 2, kind: Unknown, flags: Elf { sh_type: SHT_GNU_VERSYM, sh_flags: SHF_ALLOC } }
+7: Section { name: ".gnu.version_d", address: 5c0, size: 5c, align: 8, kind: Unknown, flags: Elf { sh_type: SHT_GNU_VERDEF, sh_flags: SHF_ALLOC } }
+8: Section { name: ".rela.dyn", address: 620, size: a8, align: 8, kind: Metadata, flags: Elf { sh_type: SHT_RELA, sh_flags: SHF_ALLOC } }
+9: Section { name: ".init", address: 1000, size: 1b, align: 4, kind: Text, flags: Elf { sh_type: SHT_PROGBITS, sh_flags: SHF_ALLOC | SHF_EXECINSTR } }
+10: Section { name: ".plt", address: 1020, size: 10, align: 10, kind: Text, flags: Elf { sh_type: SHT_PROGBITS, sh_flags: SHF_ALLOC | SHF_EXECINSTR } }
+11: Section { name: ".plt.got", address: 1030, size: 10, align: 10, kind: Text, flags: Elf { sh_type: SHT_PROGBITS, sh_flags: SHF_ALLOC | SHF_EXECINSTR } }
+12: Section { name: ".text", address: 1040, size: 115, align: 10, kind: Text, flags: Elf { sh_type: SHT_PROGBITS, sh_flags: SHF_ALLOC | SHF_EXECINSTR } }
+13: Section { name: ".fini", address: 1158, size: d, align: 4, kind: Text, flags: Elf { sh_type: SHT_PROGBITS, sh_flags: SHF_ALLOC | SHF_EXECINSTR } }
+14: Section { name: ".eh_frame_hdr", address: 2000, size: 4c, align: 4, kind: ReadOnlyData, flags: Elf { sh_type: SHT_PROGBITS, sh_flags: SHF_ALLOC } }
+15: Section { name: ".eh_frame", address: 2050, size: 11c, align: 8, kind: ReadOnlyData, flags: Elf { sh_type: SHT_PROGBITS, sh_flags: SHF_ALLOC } }
+16: Section { name: ".tdata", address: 3e34, size: 4, align: 4, kind: Tls, flags: Elf { sh_type: SHT_PROGBITS, sh_flags: SHF_WRITE | SHF_ALLOC | SHF_TLS } }
+17: Section { name: ".init_array", address: 3e38, size: 8, align: 8, kind: Unknown, flags: Elf { sh_type: SHT_INIT_ARRAY, sh_flags: SHF_WRITE | SHF_ALLOC } }
+18: Section { name: ".fini_array", address: 3e40, size: 8, align: 8, kind: Unknown, flags: Elf { sh_type: SHT_FINI_ARRAY, sh_flags: SHF_WRITE | SHF_ALLOC } }
+19: Section { name: ".dynamic", address: 3e48, size: 180, align: 8, kind: Metadata, flags: Elf { sh_type: SHT_DYNAMIC, sh_flags: SHF_WRITE | SHF_ALLOC } }
+20: Section { name: ".got", address: 3fc8, size: 20, align: 8, kind: Data, flags: Elf { sh_type: SHT_PROGBITS, sh_flags: SHF_WRITE | SHF_ALLOC } }
+21: Section { name: ".got.plt", address: 3fe8, size: 18, align: 8, kind: Data, flags: Elf { sh_type: SHT_PROGBITS, sh_flags: SHF_WRITE | SHF_ALLOC } }
+22: Section { name: ".data", address: 4000, size: c, align: 8, kind: Data, flags: Elf { sh_type: SHT_PROGBITS, sh_flags: SHF_WRITE | SHF_ALLOC } }
+23: Section { name: ".bss", address: 400c, size: 4, align: 1, kind: UninitializedData, flags: Elf { sh_type: SHT_NOBITS, sh_flags: SHF_WRITE | SHF_ALLOC } }
+24: Section { name: ".comment", address: 0, size: 2d, align: 1, kind: OtherString, flags: Elf { sh_type: SHT_PROGBITS, sh_flags: SHF_MERGE | SHF_STRINGS } }
+25: Section { name: ".symtab", address: 0, size: 390, align: 8, kind: Metadata, flags: Elf { sh_type: SHT_SYMTAB, sh_flags: 0 } }
+26: Section { name: ".strtab", address: 0, size: 200, align: 1, kind: Metadata, flags: Elf { sh_type: SHT_STRTAB, sh_flags: 0 } }
+27: Section { name: ".shstrtab", address: 0, size: f9, align: 1, kind: Metadata, flags: Elf { sh_type: SHT_STRTAB, sh_flags: 0 } }
+
+Symbols
+1: Symbol { name: "crtstuff.c", address: 0, size: 0, kind: File, section: None, scope: Compilation, weak: false, flags: Elf { st_info: STB_LOCAL | STT_FILE, st_other: STV_DEFAULT } }
+2: Symbol { name: "deregister_tm_clones", address: 1040, size: 0, kind: Text, section: Section(SectionIndex(c)), scope: Compilation, weak: false, flags: Elf { st_info: STB_LOCAL | STT_FUNC, st_other: STV_DEFAULT } }
+3: Symbol { name: "register_tm_clones", address: 1070, size: 0, kind: Text, section: Section(SectionIndex(c)), scope: Compilation, weak: false, flags: Elf { st_info: STB_LOCAL | STT_FUNC, st_other: STV_DEFAULT } }
+4: Symbol { name: "__do_global_dtors_aux", address: 10b0, size: 0, kind: Text, section: Section(SectionIndex(c)), scope: Compilation, weak: false, flags: Elf { st_info: STB_LOCAL | STT_FUNC, st_other: STV_DEFAULT } }
+5: Symbol { name: "completed.0", address: 400c, size: 1, kind: Data, section: Section(SectionIndex(17)), scope: Compilation, weak: false, flags: Elf { st_info: STB_LOCAL | STT_OBJECT, st_other: STV_DEFAULT } }
+6: Symbol { name: "__do_global_dtors_aux_fini_array_entry", address: 3e40, size: 0, kind: Data, section: Section(SectionIndex(12)), scope: Compilation, weak: false, flags: Elf { st_info: STB_LOCAL | STT_OBJECT, st_other: STV_DEFAULT } }
+7: Symbol { name: "frame_dummy", address: 10f0, size: 0, kind: Text, section: Section(SectionIndex(c)), scope: Compilation, weak: false, flags: Elf { st_info: STB_LOCAL | STT_FUNC, st_other: STV_DEFAULT } }
+8: Symbol { name: "__frame_dummy_init_array_entry", address: 3e38, size: 0, kind: Data, section: Section(SectionIndex(11)), scope: Compilation, weak: false, flags: Elf { st_info: STB_LOCAL | STT_OBJECT, st_other: STV_DEFAULT } }
+9: Symbol { name: "exports.c", address: 0, size: 0, kind: File, section: None, scope: Compilation, weak: false, flags: Elf { st_info: STB_LOCAL | STT_FILE, st_other: STV_DEFAULT } }
+10: Symbol { name: "ifunc_impl", address: 1117, size: f, kind: Text, section: Section(SectionIndex(c)), scope: Compilation, weak: false, flags: Elf { st_info: STB_LOCAL | STT_FUNC, st_other: STV_DEFAULT } }
+11: Symbol { name: "ifunc_resolver", address: 1126, size: 11, kind: Text, section: Section(SectionIndex(c)), scope: Compilation, weak: false, flags: Elf { st_info: STB_LOCAL | STT_FUNC, st_other: STV_DEFAULT } }
+12: Symbol { name: "crtstuff.c", address: 0, size: 0, kind: File, section: None, scope: Compilation, weak: false, flags: Elf { st_info: STB_LOCAL | STT_FILE, st_other: STV_DEFAULT } }
+13: Symbol { name: "__FRAME_END__", address: 2168, size: 0, kind: Data, section: Section(SectionIndex(f)), scope: Compilation, weak: false, flags: Elf { st_info: STB_LOCAL | STT_OBJECT, st_other: STV_DEFAULT } }
+14: Symbol { name: "", address: 0, size: 0, kind: File, section: None, scope: Compilation, weak: false, flags: Elf { st_info: STB_LOCAL | STT_FILE, st_other: STV_DEFAULT } }
+15: Symbol { name: "_DYNAMIC", address: 3e48, size: 0, kind: Data, section: Section(SectionIndex(13)), scope: Compilation, weak: false, flags: Elf { st_info: STB_LOCAL | STT_OBJECT, st_other: STV_DEFAULT } }
+16: Symbol { name: "__TMC_END__", address: 4010, size: 0, kind: Data, section: Section(SectionIndex(16)), scope: Compilation, weak: false, flags: Elf { st_info: STB_LOCAL | STT_OBJECT, st_other: STV_DEFAULT } }
+17: Symbol { name: "versioned_func_v2", address: 1146, size: f, kind: Text, section: Section(SectionIndex(c)), scope: Compilation, weak: false, flags: Elf { st_info: STB_LOCAL | STT_FUNC, st_other: STV_DEFAULT } }
+18: Symbol { name: "__dso_handle", address: 4000, size: 0, kind: Data, section: Section(SectionIndex(16)), scope: Compilation, weak: false, flags: Elf { st_info: STB_LOCAL | STT_OBJECT, st_other: STV_DEFAULT } }
+19: Symbol { name: "_init", address: 1000, size: 0, kind: Text, section: Section(SectionIndex(9)), scope: Compilation, weak: false, flags: Elf { st_info: STB_LOCAL | STT_FUNC, st_other: STV_DEFAULT } }
+20: Symbol { name: "__GNU_EH_FRAME_HDR", address: 2000, size: 0, kind: Unknown, section: Section(SectionIndex(e)), scope: Compilation, weak: false, flags: Elf { st_info: STB_LOCAL | STT_NOTYPE, st_other: STV_DEFAULT } }
+21: Symbol { name: "_fini", address: 1158, size: 0, kind: Text, section: Section(SectionIndex(d)), scope: Compilation, weak: false, flags: Elf { st_info: STB_LOCAL | STT_FUNC, st_other: STV_DEFAULT } }
+22: Symbol { name: "_GLOBAL_OFFSET_TABLE_", address: 3fe8, size: 0, kind: Data, section: Section(SectionIndex(15)), scope: Compilation, weak: false, flags: Elf { st_info: STB_LOCAL | STT_OBJECT, st_other: STV_DEFAULT } }
+23: Symbol { name: "versioned_func_v1", address: 1137, size: f, kind: Text, section: Section(SectionIndex(c)), scope: Compilation, weak: false, flags: Elf { st_info: STB_LOCAL | STT_FUNC, st_other: STV_DEFAULT } }
+24: Symbol { name: "__cxa_finalize", address: 0, size: 0, kind: Unknown, section: Undefined, scope: Unknown, weak: true, flags: Elf { st_info: STB_WEAK | STT_NOTYPE, st_other: STV_DEFAULT } }
+25: Symbol { name: "versioned_func@VERS_1", address: 1137, size: f, kind: Text, section: Section(SectionIndex(c)), scope: Dynamic, weak: false, flags: Elf { st_info: STB_GLOBAL | STT_FUNC, st_other: STV_DEFAULT } }
+26: Symbol { name: "global_func", address: 10f9, size: f, kind: Text, section: Section(SectionIndex(c)), scope: Dynamic, weak: false, flags: Elf { st_info: STB_GLOBAL | STT_FUNC, st_other: STV_DEFAULT } }
+27: Symbol { name: "ifunc_func", address: 1126, size: 11, kind: Text, section: Section(SectionIndex(c)), scope: Dynamic, weak: false, flags: Elf { st_info: STB_GLOBAL | STT_GNU_IFUNC, st_other: STV_DEFAULT } }
+28: Symbol { name: "global_data", address: 4008, size: 4, kind: Data, section: Section(SectionIndex(16)), scope: Dynamic, weak: false, flags: Elf { st_info: STB_GLOBAL | STT_OBJECT, st_other: STV_DEFAULT } }
+29: Symbol { name: "weak_func", address: 1108, size: f, kind: Text, section: Section(SectionIndex(c)), scope: Dynamic, weak: true, flags: Elf { st_info: STB_WEAK | STT_FUNC, st_other: STV_DEFAULT } }
+30: Symbol { name: "_ITM_registerTMCloneTable", address: 0, size: 0, kind: Unknown, section: Undefined, scope: Unknown, weak: true, flags: Elf { st_info: STB_WEAK | STT_NOTYPE, st_other: STV_DEFAULT } }
+31: Symbol { name: "_ITM_deregisterTMCloneTable", address: 0, size: 0, kind: Unknown, section: Undefined, scope: Unknown, weak: true, flags: Elf { st_info: STB_WEAK | STT_NOTYPE, st_other: STV_DEFAULT } }
+32: Symbol { name: "VERS_2", address: 0, size: 0, kind: Data, section: Absolute, scope: Dynamic, weak: false, flags: Elf { st_info: STB_GLOBAL | STT_OBJECT, st_other: STV_DEFAULT } }
+33: Symbol { name: "VERS_1", address: 0, size: 0, kind: Data, section: Absolute, scope: Dynamic, weak: false, flags: Elf { st_info: STB_GLOBAL | STT_OBJECT, st_other: STV_DEFAULT } }
+34: Symbol { name: "abs_sym", address: fffff, size: 0, kind: Unknown, section: Absolute, scope: Dynamic, weak: false, flags: Elf { st_info: STB_GLOBAL | STT_NOTYPE, st_other: STV_DEFAULT } }
+35: Symbol { name: "versioned_func@@VERS_2", address: 1146, size: f, kind: Text, section: Section(SectionIndex(c)), scope: Dynamic, weak: false, flags: Elf { st_info: STB_GLOBAL | STT_FUNC, st_other: STV_DEFAULT } }
+36: Symbol { name: "tls_var", address: 0, size: 4, kind: Tls, section: Section(SectionIndex(10)), scope: Dynamic, weak: false, flags: Elf { st_info: STB_GLOBAL | STT_TLS, st_other: STV_DEFAULT } }
+37: Symbol { name: "__gmon_start__", address: 0, size: 0, kind: Unknown, section: Undefined, scope: Unknown, weak: true, flags: Elf { st_info: STB_WEAK | STT_NOTYPE, st_other: STV_DEFAULT } }
+
+Dynamic symbols
+1: Symbol { name: "__cxa_finalize", address: 0, size: 0, kind: Unknown, section: Undefined, scope: Unknown, weak: true, flags: Elf { st_info: STB_WEAK | STT_NOTYPE, st_other: STV_DEFAULT } }
+2: Symbol { name: "_ITM_registerTMCloneTable", address: 0, size: 0, kind: Unknown, section: Undefined, scope: Unknown, weak: true, flags: Elf { st_info: STB_WEAK | STT_NOTYPE, st_other: STV_DEFAULT } }
+3: Symbol { name: "_ITM_deregisterTMCloneTable", address: 0, size: 0, kind: Unknown, section: Undefined, scope: Unknown, weak: true, flags: Elf { st_info: STB_WEAK | STT_NOTYPE, st_other: STV_DEFAULT } }
+4: Symbol { name: "__gmon_start__", address: 0, size: 0, kind: Unknown, section: Undefined, scope: Unknown, weak: true, flags: Elf { st_info: STB_WEAK | STT_NOTYPE, st_other: STV_DEFAULT } }
+5: Symbol { name: "VERS_1", address: 0, size: 0, kind: Data, section: Absolute, scope: Dynamic, weak: false, flags: Elf { st_info: STB_GLOBAL | STT_OBJECT, st_other: STV_DEFAULT } }
+6: Symbol { name: "abs_sym", address: fffff, size: 0, kind: Unknown, section: Absolute, scope: Dynamic, weak: false, flags: Elf { st_info: STB_GLOBAL | STT_NOTYPE, st_other: STV_DEFAULT } }
+7: Symbol { name: "tls_var", address: 0, size: 4, kind: Tls, section: Section(SectionIndex(10)), scope: Dynamic, weak: false, flags: Elf { st_info: STB_GLOBAL | STT_TLS, st_other: STV_DEFAULT } }
+8: Symbol { name: "global_func", address: 10f9, size: f, kind: Text, section: Section(SectionIndex(c)), scope: Dynamic, weak: false, flags: Elf { st_info: STB_GLOBAL | STT_FUNC, st_other: STV_DEFAULT } }
+9: Symbol { name: "ifunc_func", address: 1126, size: 11, kind: Text, section: Section(SectionIndex(c)), scope: Dynamic, weak: false, flags: Elf { st_info: STB_GLOBAL | STT_GNU_IFUNC, st_other: STV_DEFAULT } }
+10: Symbol { name: "VERS_2", address: 0, size: 0, kind: Data, section: Absolute, scope: Dynamic, weak: false, flags: Elf { st_info: STB_GLOBAL | STT_OBJECT, st_other: STV_DEFAULT } }
+11: Symbol { name: "versioned_func", address: 1137, size: f, kind: Text, section: Section(SectionIndex(c)), scope: Dynamic, weak: false, flags: Elf { st_info: STB_GLOBAL | STT_FUNC, st_other: STV_DEFAULT } }
+12: Symbol { name: "global_data", address: 4008, size: 4, kind: Data, section: Section(SectionIndex(16)), scope: Dynamic, weak: false, flags: Elf { st_info: STB_GLOBAL | STT_OBJECT, st_other: STV_DEFAULT } }
+13: Symbol { name: "weak_func", address: 1108, size: f, kind: Text, section: Section(SectionIndex(c)), scope: Dynamic, weak: true, flags: Elf { st_info: STB_WEAK | STT_FUNC, st_other: STV_DEFAULT } }
+14: Symbol { name: "versioned_func", address: 1146, size: f, kind: Text, section: Section(SectionIndex(c)), scope: Dynamic, weak: false, flags: Elf { st_info: STB_GLOBAL | STT_FUNC, st_other: STV_DEFAULT } }
+
+Dynamic relocations
+(3e38, Relocation { kind: Unknown, encoding: Unknown, size: 0, target: Absolute, addend: 10f0, implicit_addend: false, flags: Elf { r_type: 8 } })
+(3e40, Relocation { kind: Unknown, encoding: Unknown, size: 0, target: Absolute, addend: 10b0, implicit_addend: false, flags: Elf { r_type: 8 } })
+(4000, Relocation { kind: Unknown, encoding: Unknown, size: 0, target: Absolute, addend: 4000, implicit_addend: false, flags: Elf { r_type: 8 } })
+(3fc8, Relocation { kind: Unknown, encoding: Unknown, size: 0, target: Symbol(SymbolIndex(1)), addend: 0, implicit_addend: false, flags: Elf { r_type: 6 } })
+(3fd0, Relocation { kind: Unknown, encoding: Unknown, size: 0, target: Symbol(SymbolIndex(2)), addend: 0, implicit_addend: false, flags: Elf { r_type: 6 } })
+(3fd8, Relocation { kind: Unknown, encoding: Unknown, size: 0, target: Symbol(SymbolIndex(3)), addend: 0, implicit_addend: false, flags: Elf { r_type: 6 } })
+(3fe0, Relocation { kind: Unknown, encoding: Unknown, size: 0, target: Symbol(SymbolIndex(4)), addend: 0, implicit_addend: false, flags: Elf { r_type: 6 } })
+
+Import { library: "", name: "__cxa_finalize" }
+Import { library: "", name: "_ITM_registerTMCloneTable" }
+Import { library: "", name: "_ITM_deregisterTMCloneTable" }
+Import { library: "", name: "__gmon_start__" }
+
+Export { name: "global_func", address: 10f9 }
+Export { name: "versioned_func", address: 1137 }
+Export { name: "global_data", address: 4008 }
+Export { name: "weak_func", address: 1108 }
+Export { name: "versioned_func", address: 1146 }
+
+Symbol map
+0x1000-0x101b "_init"
+0x1040-0x1070 "deregister_tm_clones"
+0x1070-0x10b0 "register_tm_clones"
+0x10b0-0x10f0 "__do_global_dtors_aux"
+0x10f0-0x10f9 "frame_dummy"
+0x10f9-0x1108 "global_func"
+0x1108-0x1117 "weak_func"
+0x1117-0x1126 "ifunc_impl"
+0x1126-0x1137 "ifunc_resolver"
+0x1137-0x1146 "versioned_func@VERS_1"
+0x1146-0x1155 "versioned_func@@VERS_2"
+0x1158-0x1165 "_fini"
+0x2000-0x204c "__GNU_EH_FRAME_HDR"
+0x2168-0x216c "__FRAME_END__"
+0x3e38-0x3e40 "__frame_dummy_init_array_entry"
+0x3e40-0x3e48 "__do_global_dtors_aux_fini_array_entry"
+0x3e48-0x3fc8 "_DYNAMIC"
+0x3fe8-0x4000 "_GLOBAL_OFFSET_TABLE_"
+0x4000-0x4008 "__dso_handle"
+0x4008-0x400c "global_data"
+0x400c-0x400d "completed.0"
+0x4010-0x4010 "__TMC_END__"

@@ -1,0 +1,44 @@
+Format: MachO Little-endian 64-bit
+Kind: Dynamic
+Architecture: Aarch64
+Flags: MachO { flags: MH_NOUNDEFS | MH_DYLDLINK | MH_TWOLEVEL | MH_WEAK_DEFINES | MH_BINDS_TO_WEAK | MH_NO_REEXPORTED_DYLIBS | MH_HAS_TLV_DESCRIPTORS }
+Relative Address Base: 0
+Entry Address: 0
+Mach UUID: [50, a7, 77, 38, b1, 36, 32, 92, 8d, 7c, 4d, a2, 99, 9c, e1, a]
+Segment { name: "__TEXT", address: 0, size: 4000, permissions: R-X }
+Segment { name: "__DATA", address: 4000, size: 4000, permissions: RW- }
+Segment { name: "__LINKEDIT", address: 8000, size: 4000, permissions: R-- }
+1: Section { segment: "__TEXT", name: "__text", address: 460, size: c, align: 1, kind: Text, flags: MachO { flags: S_REGULAR | S_ATTR_PURE_INSTRUCTIONS | S_ATTR_SOME_INSTRUCTIONS } }
+2: Section { segment: "__TEXT", name: "__stubs", address: 46c, size: c, align: 4, kind: Unknown, flags: MachO { flags: S_SYMBOL_STUBS | S_ATTR_PURE_INSTRUCTIONS | S_ATTR_SOME_INSTRUCTIONS } }
+3: Section { segment: "__TEXT", name: "__resolver_help", address: 478, size: 64, align: 4, kind: Unknown, flags: MachO { flags: S_REGULAR | S_ATTR_PURE_INSTRUCTIONS | S_ATTR_SOME_INSTRUCTIONS } }
+4: Section { segment: "__DATA", name: "__la_symbol_ptr", address: 4000, size: 8, align: 8, kind: Unknown, flags: MachO { flags: S_LAZY_SYMBOL_POINTERS } }
+5: Section { segment: "__DATA", name: "__thread_vars", address: 4008, size: 18, align: 8, kind: TlsVariables, flags: MachO { flags: S_THREAD_LOCAL_VARIABLES } }
+6: Section { segment: "__DATA", name: "__thread_data", address: 4020, size: 4, align: 4, kind: Tls, flags: MachO { flags: S_THREAD_LOCAL_REGULAR } }
+
+Symbols
+0: Symbol { name: "_tls$tlv$init", address: 4020, size: 0, kind: Tls, section: Section(SectionIndex(6)), scope: Compilation, weak: false, flags: MachO { n_type: N_SECT, n_desc: 0 } }
+1: Symbol { name: "_abs", address: fffff, size: 0, kind: Unknown, section: Absolute, scope: Dynamic, weak: false, flags: MachO { n_type: N_ABS | N_EXT, n_desc: 0 } }
+2: Symbol { name: "_foo", address: 460, size: 0, kind: Text, section: Section(SectionIndex(1)), scope: Dynamic, weak: false, flags: MachO { n_type: N_SECT | N_EXT, n_desc: 0x100 } }
+3: Symbol { name: "_foo_resolver", address: 464, size: 0, kind: Text, section: Section(SectionIndex(1)), scope: Dynamic, weak: false, flags: MachO { n_type: N_SECT | N_EXT, n_desc: 0 } }
+4: Symbol { name: "_tls", address: 4008, size: 0, kind: Tls, section: Section(SectionIndex(5)), scope: Dynamic, weak: false, flags: MachO { n_type: N_SECT | N_EXT, n_desc: 0 } }
+5: Symbol { name: "_weak", address: 468, size: 0, kind: Text, section: Section(SectionIndex(1)), scope: Dynamic, weak: true, flags: MachO { n_type: N_SECT | N_EXT, n_desc: 0x80 } }
+6: Symbol { name: "my_stub_binder", address: 34, size: 0, kind: Unknown, section: Unknown, scope: Dynamic, weak: false, flags: MachO { n_type: N_INDR | N_EXT, n_desc: 0 } }
+7: Symbol { name: "__tlv_bootstrap", address: 0, size: 0, kind: Unknown, section: Undefined, scope: Unknown, weak: false, flags: MachO { n_type: N_UNDF | N_EXT, n_desc: 0x100 } }
+8: Symbol { name: "dyld_stub_binder", address: 0, size: 0, kind: Unknown, section: Undefined, scope: Unknown, weak: false, flags: MachO { n_type: N_UNDF | N_EXT, n_desc: 0x100 } }
+
+Dynamic symbols
+
+Import { library: "/usr/lib/libSystem.B.dylib", name: "__tlv_bootstrap" }
+Import { library: "/usr/lib/libSystem.B.dylib", name: "dyld_stub_binder" }
+
+Export { name: "_abs", address: fffff }
+Export { name: "_foo", address: 460 }
+Export { name: "_foo_resolver", address: 464 }
+Export { name: "_tls", address: 4008 }
+Export { name: "_weak", address: 468 }
+Export { name: "my_stub_binder", address: 34 }
+
+Symbol map
+0x460-0x464 "_foo"
+0x464-0x468 "_foo_resolver"
+0x468-0x46c "_weak"

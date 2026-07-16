@@ -1,0 +1,20 @@
+Format: Pe Little-endian 64-bit
+Kind: Dynamic
+Architecture: X86_64
+Flags: Coff { characteristics: IMAGE_FILE_EXECUTABLE_IMAGE | IMAGE_FILE_LARGE_ADDRESS_AWARE | IMAGE_FILE_DLL }
+Relative Address Base: 180000000
+Entry Address: 180000000
+Segment { name: ".text", address: 180001000, size: 26, permissions: R-X }
+Segment { name: ".rdata", address: 180002000, size: 108, permissions: R-- }
+1: Section { name: ".text", address: 180001000, size: 26, align: 1000, kind: Text, flags: Coff { characteristics: IMAGE_SCN_CNT_CODE | IMAGE_SCN_MEM_EXECUTE | IMAGE_SCN_MEM_READ } }
+2: Section { name: ".rdata", address: 180002000, size: 108, align: 1000, kind: ReadOnlyData, flags: Coff { characteristics: IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_READ } }
+
+Symbols
+
+Dynamic symbols
+
+Export { name: "exported_alias", address: 180001020 }
+Export { name: "exported_multi", address: 180001020 }
+Export { name: "exported_named", address: 180001000 }
+
+Symbol map

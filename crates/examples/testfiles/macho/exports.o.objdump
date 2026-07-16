@@ -1,0 +1,32 @@
+Format: MachO Little-endian 64-bit
+Kind: Relocatable
+Architecture: Aarch64
+Flags: MachO { flags: MH_SUBSECTIONS_VIA_SYMBOLS }
+Relative Address Base: 0
+Entry Address: 0
+Segment { name: "", address: 0, size: 2c, permissions: RWX }
+1: Section { segment: "__TEXT", name: "__text", address: 0, size: c, align: 1, kind: Text, flags: MachO { flags: S_REGULAR | S_ATTR_PURE_INSTRUCTIONS | S_ATTR_SOME_INSTRUCTIONS } }
+2: Section { segment: "__DATA", name: "__thread_vars", address: 10, size: 18, align: 8, kind: TlsVariables, flags: MachO { flags: S_THREAD_LOCAL_VARIABLES } }
+3: Section { segment: "__DATA", name: "__thread_data", address: 28, size: 4, align: 4, kind: Tls, flags: MachO { flags: S_THREAD_LOCAL_REGULAR } }
+
+Symbols
+0: Symbol { name: "_tls$tlv$init", address: 28, size: 0, kind: Tls, section: Section(SectionIndex(3)), scope: Compilation, weak: false, flags: MachO { n_type: N_SECT, n_desc: 0 } }
+1: Symbol { name: "_abs", address: fffff, size: 0, kind: Unknown, section: Absolute, scope: Dynamic, weak: false, flags: MachO { n_type: N_ABS | N_EXT, n_desc: 0 } }
+2: Symbol { name: "_foo", address: 0, size: 0, kind: Text, section: Section(SectionIndex(1)), scope: Dynamic, weak: false, flags: MachO { n_type: N_SECT | N_EXT, n_desc: 0x100 } }
+3: Symbol { name: "_foo_resolver", address: 4, size: 0, kind: Text, section: Section(SectionIndex(1)), scope: Dynamic, weak: false, flags: MachO { n_type: N_SECT | N_EXT, n_desc: 0 } }
+4: Symbol { name: "_tls", address: 10, size: 0, kind: Tls, section: Section(SectionIndex(2)), scope: Dynamic, weak: false, flags: MachO { n_type: N_SECT | N_EXT, n_desc: 0 } }
+5: Symbol { name: "_weak", address: 8, size: 0, kind: Text, section: Section(SectionIndex(1)), scope: Dynamic, weak: true, flags: MachO { n_type: N_SECT | N_EXT, n_desc: 0x80 } }
+6: Symbol { name: "my_stub_binder", address: 34, size: 0, kind: Unknown, section: Unknown, scope: Dynamic, weak: false, flags: MachO { n_type: N_INDR | N_EXT, n_desc: 0 } }
+7: Symbol { name: "__tlv_bootstrap", address: 0, size: 0, kind: Unknown, section: Undefined, scope: Unknown, weak: false, flags: MachO { n_type: N_UNDF | N_EXT, n_desc: 0 } }
+8: Symbol { name: "dyld_stub_binder", address: 0, size: 0, kind: Unknown, section: Undefined, scope: Unknown, weak: false, flags: MachO { n_type: N_UNDF | N_EXT, n_desc: 0 } }
+
+__thread_vars relocations
+(10, Relocation { kind: Absolute, encoding: Generic, size: 40, target: Symbol(SymbolIndex(0)), addend: 0, implicit_addend: true, flags: MachO { r_type: 0, r_pcrel: false, r_length: 3 } })
+(0, Relocation { kind: Absolute, encoding: Generic, size: 40, target: Symbol(SymbolIndex(7)), addend: 0, implicit_addend: true, flags: MachO { r_type: 0, r_pcrel: false, r_length: 3 } })
+
+Dynamic symbols
+
+Symbol map
+0x0-0x4 "_foo"
+0x4-0x8 "_foo_resolver"
+0x8-0xc "_weak"

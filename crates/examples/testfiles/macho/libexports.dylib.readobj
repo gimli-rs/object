@@ -5,12 +5,15 @@ MachHeader {
     CpuSubtype: CPU_SUBTYPE_ARM64_ALL (0x0)
     FileType: MH_DYLIB (0x6)
     NumberOfCmds: 15
-    SizeOfCmds: 0x380
-    Flags: 0x100085
+    SizeOfCmds: 0x420
+    Flags: 0x918085
         MH_NOUNDEFS (0x1)
         MH_DYLDLINK (0x4)
         MH_TWOLEVEL (0x80)
+        MH_WEAK_DEFINES (0x8000)
+        MH_BINDS_TO_WEAK (0x10000)
         MH_NO_REEXPORTED_DYLIBS (0x100000)
+        MH_HAS_TLV_DESCRIPTORS (0x800000)
 }
 SegmentCommand {
     Cmd: LC_SEGMENT_64 (0x19)
@@ -32,9 +35,9 @@ SegmentCommand {
         Index: 1
         SectionName: "__text"
         SegmentName: "__TEXT"
-        Address: 0x3C0
-        Size: 0x8
-        Offset: 0x3C0
+        Address: 0x460
+        Size: 0xC
+        Offset: 0x460
         Align: 0x0
         RelocationOffset: 0x0
         NumberOfRelocations: 0x0
@@ -49,9 +52,9 @@ SegmentCommand {
         Index: 2
         SectionName: "__stubs"
         SegmentName: "__TEXT"
-        Address: 0x3C8
+        Address: 0x46C
         Size: 0xC
-        Offset: 0x3C8
+        Offset: 0x46C
         Align: 0x2
         RelocationOffset: 0x0
         NumberOfRelocations: 0x0
@@ -63,16 +66,16 @@ SegmentCommand {
         Reserved2: 0xC
         IndirectSymbol {
             Index: 0
-            Symbol: "_foo" (0x1)
+            Symbol: "_foo" (0x2)
         }
     }
     Section {
         Index: 3
         SectionName: "__resolver_help"
         SegmentName: "__TEXT"
-        Address: 0x3D4
+        Address: 0x478
         Size: 0x64
-        Offset: 0x3D4
+        Offset: 0x478
         Align: 0x2
         RelocationOffset: 0x0
         NumberOfRelocations: 0x0
@@ -86,7 +89,7 @@ SegmentCommand {
 }
 SegmentCommand {
     Cmd: LC_SEGMENT_64 (0x19)
-    CmdSize: 0x98
+    CmdSize: 0x138
     SegmentName: "__DATA"
     VmAddress: 0x4000
     VmSize: 0x4000
@@ -98,7 +101,7 @@ SegmentCommand {
     InitProt: 0x3
         VM_PROT_READ (0x1)
         VM_PROT_WRITE (0x2)
-    NumberOfSections: 1
+    NumberOfSections: 3
     Flags: 0x0
     Section {
         Index: 4
@@ -115,8 +118,36 @@ SegmentCommand {
         Reserved2: 0x0
         IndirectSymbol {
             Index: 0
-            Symbol: "_foo" (0x1)
+            Symbol: "_foo" (0x2)
         }
+    }
+    Section {
+        Index: 5
+        SectionName: "__thread_vars"
+        SegmentName: "__DATA"
+        Address: 0x4008
+        Size: 0x18
+        Offset: 0x4008
+        Align: 0x3
+        RelocationOffset: 0x0
+        NumberOfRelocations: 0x0
+        Flags: S_THREAD_LOCAL_VARIABLES (0x13)
+        Reserved1: 0x0
+        Reserved2: 0x0
+    }
+    Section {
+        Index: 6
+        SectionName: "__thread_data"
+        SegmentName: "__DATA"
+        Address: 0x4020
+        Size: 0x4
+        Offset: 0x4020
+        Align: 0x2
+        RelocationOffset: 0x0
+        NumberOfRelocations: 0x0
+        Flags: S_THREAD_LOCAL_REGULAR (0x11)
+        Reserved1: 0x0
+        Reserved2: 0x0
     }
 }
 SegmentCommand {
@@ -126,7 +157,7 @@ SegmentCommand {
     VmAddress: 0x8000
     VmSize: 0x4000
     FileOffset: 0x8000
-    FileSize: 0x300
+    FileSize: 0x390
     MaxProt: VM_PROT_READ (0x1)
     InitProt: VM_PROT_READ (0x1)
     NumberOfSections: 0
@@ -146,15 +177,21 @@ LinkeditDataCommand {
     Cmd: LC_DYLD_CHAINED_FIXUPS (0x80000034)
     CmdSize: 0x10
     DataOffset: 0x8000
-    DataSize: 0x50
+    DataSize: 0x60
     DyldChainedFixups {
         FixupsVersion: 0
         StartsOffset: 0x20
         ImportsOffset: 0x48
-        SymbolsOffset: 0x48
-        ImportsCount: 0
+        SymbolsOffset: 0x4C
+        ImportsCount: 1
         ImportsFormat: DYLD_CHAINED_IMPORT (0x1)
         SymbolsFormat: 0
+        Import {
+            LibraryOrdinal: 1
+            WeakImport: false
+            Addend: 0
+            Name: "__tlv_bootstrap"
+        }
         Segment {
             SegmentIndex: 1
             Size: 0x18
@@ -165,7 +202,11 @@ LinkeditDataCommand {
             PageCount: 1
             Rebase {
                 Offset: 0x0
-                TargetOffset: 0x3D4
+                TargetOffset: 0x478
+            }
+            Bind {
+                Offset: 0x8
+                Ordinal: "__tlv_bootstrap" (0x0)
             }
         }
     }
@@ -173,8 +214,8 @@ LinkeditDataCommand {
 LinkeditDataCommand {
     Cmd: LC_DYLD_EXPORTS_TRIE (0x80000033)
     CmdSize: 0x10
-    DataOffset: 0x8050
-    DataSize: 0x60
+    DataOffset: 0x8060
+    DataSize: 0x78
     ExportSymbol {
         Name: "_abs"
         Flags: EXPORT_SYMBOL_FLAGS_KIND_ABSOLUTE (0x2)
@@ -185,13 +226,25 @@ LinkeditDataCommand {
         Flags: 0x10
             EXPORT_SYMBOL_FLAGS_KIND_REGULAR (0x0)
             EXPORT_SYMBOL_FLAGS_STUB_AND_RESOLVER (0x10)
-        StubAddress: 0x3C8
-        ResolverAddress: 0x3C0
+        StubAddress: 0x46C
+        ResolverAddress: 0x460
     }
     ExportSymbol {
         Name: "_foo_resolver"
         Flags: EXPORT_SYMBOL_FLAGS_KIND_REGULAR (0x0)
-        Address: 0x3C4
+        Address: 0x464
+    }
+    ExportSymbol {
+        Name: "_tls"
+        Flags: EXPORT_SYMBOL_FLAGS_KIND_THREAD_LOCAL (0x1)
+        Address: 0x4008
+    }
+    ExportSymbol {
+        Name: "_weak"
+        Flags: 0x4
+            EXPORT_SYMBOL_FLAGS_KIND_REGULAR (0x0)
+            EXPORT_SYMBOL_FLAGS_WEAK_DEFINITION (0x4)
+        Address: 0x468
     }
     ExportSymbol {
         Name: "my_stub_binder"
@@ -205,12 +258,20 @@ LinkeditDataCommand {
 SymtabCommand {
     Cmd: LC_SYMTAB (0x2)
     CmdSize: 0x18
-    SymbolOffset: 0x80B8
-    NumberOfSymbols: 0x5
-    StringOffset: 0x8110
-    StringSize: 0x50
+    SymbolOffset: 0x80E0
+    NumberOfSymbols: 0x9
+    StringOffset: 0x8178
+    StringSize: 0x78
     Nlist {
         Index: 0
+        String: "_tls$tlv$init" (0x66)
+        Type: N_SECT (0xE)
+        Section: "__DATA,__thread_data" (0x6)
+        Desc: 0x0
+        Value: 0x4020
+    }
+    Nlist {
+        Index: 1
         String: "_abs" (0x2)
         Type: 0x3
             N_ABS (0x2)
@@ -220,38 +281,70 @@ SymtabCommand {
         Value: 0xFFFFF
     }
     Nlist {
-        Index: 1
+        Index: 2
         String: "_foo" (0x7)
         Type: 0xF
             N_SECT (0xE)
             N_EXT (0x1)
         Section: "__TEXT,__text" (0x1)
         Desc: N_SYMBOL_RESOLVER (0x100)
-        Value: 0x3C0
+        Value: 0x460
     }
     Nlist {
-        Index: 2
+        Index: 3
         String: "_foo_resolver" (0xC)
         Type: 0xF
             N_SECT (0xE)
             N_EXT (0x1)
         Section: "__TEXT,__text" (0x1)
         Desc: 0x0
-        Value: 0x3C4
+        Value: 0x464
     }
     Nlist {
-        Index: 3
-        String: "my_stub_binder" (0x1A)
+        Index: 4
+        String: "_tls" (0x1A)
+        Type: 0xF
+            N_SECT (0xE)
+            N_EXT (0x1)
+        Section: "__DATA,__thread_vars" (0x5)
+        Desc: 0x0
+        Value: 0x4008
+    }
+    Nlist {
+        Index: 5
+        String: "_weak" (0x1F)
+        Type: 0xF
+            N_SECT (0xE)
+            N_EXT (0x1)
+        Section: "__TEXT,__text" (0x1)
+        Desc: N_WEAK_DEF (0x80)
+        Value: 0x468
+    }
+    Nlist {
+        Index: 6
+        String: "my_stub_binder" (0x25)
         Type: 0xB
             N_INDR (0xA)
             N_EXT (0x1)
         Section: "" (0x0)
         Desc: 0x0
-        Value: 0x29
+        Value: 0x34
     }
     Nlist {
-        Index: 4
-        String: "dyld_stub_binder" (0x3A)
+        Index: 7
+        String: "__tlv_bootstrap" (0x45)
+        Type: 0x1
+            N_UNDF (0x0)
+            N_EXT (0x1)
+        Section: "" (0x0)
+        Desc: 0x100
+            REFERENCE_FLAG_UNDEFINED_NON_LAZY (0x0)
+        DylibOrdinal: 0x1
+        Value: 0x0
+    }
+    Nlist {
+        Index: 8
+        String: "dyld_stub_binder" (0x55)
         Type: 0x1
             N_UNDF (0x0)
             N_EXT (0x1)
@@ -266,18 +359,18 @@ DysymtabCommand {
     Cmd: LC_DYSYMTAB (0xB)
     CmdSize: 0x50
     IndexOfLocalSymbols: 0
-    NumberOfLocalSymbols: 0
-    IndexOfExternallyDefinedSymbols: 0
-    NumberOfExternallyDefinedSymbols: 4
-    IndexOfUndefinedSymbols: 4
-    NumberOfUndefinedSymbols: 1
+    NumberOfLocalSymbols: 1
+    IndexOfExternallyDefinedSymbols: 1
+    NumberOfExternallyDefinedSymbols: 6
+    IndexOfUndefinedSymbols: 7
+    NumberOfUndefinedSymbols: 2
     TocOffset: 0x0
     NumberOfTocEntries: 0
     ModuleTableOffset: 0x0
     NumberOfModuleTableEntries: 0
     ExternalRefSymbolOffset: 0x0
     NumberOfExternalRefSymbols: 0
-    IndirectSymbolOffset: 0x8108
+    IndirectSymbolOffset: 0x8170
     NumberOfIndirectSymbols: 2
     ExternalRelocationOffset: 0x0
     NumberOfExternalRelocations: 0
@@ -287,7 +380,7 @@ DysymtabCommand {
 UuidCommand {
     Cmd: LC_UUID (0x1B)
     CmdSize: 0x18
-    Uuid: [D5, 7C, 4F, 5, 27, 11, 3B, B3, 8D, 4F, 6B, 17, 77, ED, 7C, 25]
+    Uuid: [50, A7, 77, 38, B1, 36, 32, 92, 8D, 7C, 4D, A2, 99, 9C, E1, A]
 }
 BuildVersionCommand {
     Cmd: LC_BUILD_VERSION (0x32)
@@ -298,7 +391,7 @@ BuildVersionCommand {
     NumberOfTools: 0x1
     BuildToolVersion {
         Tool: TOOL_LD (0x3)
-        Version: 1221.4.0
+        Version: 1267.0.0
     }
 }
 SourceVersionCommand {
@@ -319,23 +412,24 @@ DylibCommand {
 LinkeditDataCommand {
     Cmd: LC_FUNCTION_STARTS (0x26)
     CmdSize: 0x10
-    DataOffset: 0x80B0
+    DataOffset: 0x80D8
     DataSize: 0x8
     FunctionStarts {
-        Address: 0x3C0
-        Address: 0x3C4
+        Address: 0x460
+        Address: 0x464
+        Address: 0x468
     }
 }
 LinkeditDataCommand {
     Cmd: LC_DATA_IN_CODE (0x29)
     CmdSize: 0x10
-    DataOffset: 0x80B8
+    DataOffset: 0x80E0
     DataSize: 0x0
 }
 LinkeditDataCommand {
     Cmd: LC_CODE_SIGNATURE (0x1D)
     CmdSize: 0x10
-    DataOffset: 0x8160
+    DataOffset: 0x81F0
     DataSize: 0x1A0
     CodeSignature {
         Magic: 0xFADE0CC0
@@ -355,7 +449,7 @@ LinkeditDataCommand {
                 IdentOffset: "libexports.dylib" (0x58)
                 NSpecialSlots: 0
                 NCodeSlots: 9
-                CodeLimit: 0x8160
+                CodeLimit: 0x81F0
                 HashSize: 32
                 HashType: CS_HASHTYPE_SHA256 (0x2)
                 Platform: 0
@@ -364,17 +458,17 @@ LinkeditDataCommand {
                 TeamOffset: 0x0
                 CodeLimit64: 0x0
                 ExecSegBase: 0x0
-                ExecSegLimit: 0x8
+                ExecSegLimit: 0xC
                 ExecSegFlags: 0x0
-                CodeHash: 6c326c41def2dd9ec9126ea37fa3f1fd6904044dfdc08d07e9acbc08212e16c8
+                CodeHash: f18a4b95f38c14a17241083d859f763158fb8a71e334e899bf72f1f9ff2f487f
                 CodeHash: ad7facb2586fc6e966c004d7d1d16b024f5805ff7cb47c7a85dabd8b48892ca7
                 CodeHash: ad7facb2586fc6e966c004d7d1d16b024f5805ff7cb47c7a85dabd8b48892ca7
                 CodeHash: ad7facb2586fc6e966c004d7d1d16b024f5805ff7cb47c7a85dabd8b48892ca7
-                CodeHash: 076c835d76cdd6d2b5dced38b03021f1c9a2d9ee74a51100ba59dac47d4fa46d
+                CodeHash: bcfcfae577355a1d74d75864ed7a4362db80845e0d031f94d07c0085d3042545
                 CodeHash: ad7facb2586fc6e966c004d7d1d16b024f5805ff7cb47c7a85dabd8b48892ca7
                 CodeHash: ad7facb2586fc6e966c004d7d1d16b024f5805ff7cb47c7a85dabd8b48892ca7
                 CodeHash: ad7facb2586fc6e966c004d7d1d16b024f5805ff7cb47c7a85dabd8b48892ca7
-                CodeHash: 3caf14417b01ed31160dd3578e6ebb16101b54ec904ba2ccf5e44f576bfc2266
+                CodeHash: 3e9cc5d8eb574c67b0968ddb6ccf0f908505001b2b6e9c43a7d6d318dda05511
             }
         }
     }
