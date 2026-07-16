@@ -1,0 +1,46 @@
+Format: MachO Little-endian 64-bit
+Kind: Unknown
+Architecture: X86_64
+Flags: MachO { flags: MH_NOUNDEFS | MH_DYLDLINK | MH_TWOLEVEL | MH_WEAK_DEFINES | MH_BINDS_TO_WEAK }
+Relative Address Base: 0
+Entry Address: 0
+Mach UUID: [8f, 22, c8, 78, 8, 2e, 3a, cb, a1, 2, ed, 53, 52, f5, 81, 2a]
+Segment { name: "__TEXT", address: 0, size: 1000, permissions: R-X }
+Segment { name: "__DATA", address: 1000, size: 1000, permissions: RW- }
+Segment { name: "__LINKEDIT", address: 2000, size: 1000, permissions: R-- }
+1: Section { segment: "__TEXT", name: "__text", address: 480, size: 4c, align: 10, kind: Text, flags: MachO { flags: S_REGULAR | S_ATTR_PURE_INSTRUCTIONS | S_ATTR_SOME_INSTRUCTIONS } }
+2: Section { segment: "__TEXT", name: "__stubs", address: 4cc, size: 24, align: 2, kind: Unknown, flags: MachO { flags: S_SYMBOL_STUBS | S_ATTR_PURE_INSTRUCTIONS | S_ATTR_SOME_INSTRUCTIONS } }
+3: Section { segment: "__TEXT", name: "__stub_helper", address: 4f0, size: 4a, align: 4, kind: Unknown, flags: MachO { flags: S_REGULAR | S_ATTR_PURE_INSTRUCTIONS | S_ATTR_SOME_INSTRUCTIONS } }
+4: Section { segment: "__TEXT", name: "__unwind_info", address: 53c, size: 58, align: 4, kind: Unknown, flags: MachO { flags: S_REGULAR } }
+5: Section { segment: "__DATA", name: "__got", address: 1000, size: 10, align: 8, kind: Unknown, flags: MachO { flags: S_NON_LAZY_SYMBOL_POINTERS } }
+6: Section { segment: "__DATA", name: "__la_symbol_ptr", address: 1010, size: 28, align: 8, kind: Unknown, flags: MachO { flags: S_LAZY_SYMBOL_POINTERS } }
+7: Section { segment: "__DATA", name: "__data", address: 1038, size: 8, align: 8, kind: Data, flags: MachO { flags: S_REGULAR } }
+
+Symbols
+0: Symbol { name: "__dyld_private", address: 1038, size: 0, kind: Data, section: Section(SectionIndex(7)), scope: Compilation, weak: false, flags: MachO { n_type: N_SECT, n_desc: 0 } }
+1: Symbol { name: "_interposable", address: 480, size: 0, kind: Text, section: Section(SectionIndex(1)), scope: Dynamic, weak: false, flags: MachO { n_type: N_SECT | N_EXT, n_desc: 0 } }
+2: Symbol { name: "_use_imports", address: 4a0, size: 0, kind: Text, section: Section(SectionIndex(1)), scope: Dynamic, weak: false, flags: MachO { n_type: N_SECT | N_EXT, n_desc: 0 } }
+3: Symbol { name: "_weak_lookup", address: 490, size: 0, kind: Text, section: Section(SectionIndex(1)), scope: Dynamic, weak: true, flags: MachO { n_type: N_SECT | N_EXT, n_desc: 0x80 } }
+4: Symbol { name: "_close", address: 0, size: 0, kind: Unknown, section: Undefined, scope: Unknown, weak: true, flags: MachO { n_type: N_UNDF | N_EXT, n_desc: 0x140 } }
+5: Symbol { name: "_dup", address: 0, size: 0, kind: Unknown, section: Undefined, scope: Unknown, weak: false, flags: MachO { n_type: N_UNDF | N_EXT, n_desc: 0x100 } }
+6: Symbol { name: "_flat_lookup", address: 0, size: 0, kind: Unknown, section: Undefined, scope: Unknown, weak: false, flags: MachO { n_type: N_UNDF | N_EXT, n_desc: 0xfe00 } }
+7: Symbol { name: "_main_executable", address: 0, size: 0, kind: Unknown, section: Undefined, scope: Unknown, weak: false, flags: MachO { n_type: N_UNDF | N_EXT, n_desc: 0xff00 } }
+8: Symbol { name: "dyld_stub_binder", address: 0, size: 0, kind: Unknown, section: Undefined, scope: Unknown, weak: false, flags: MachO { n_type: N_UNDF | N_EXT, n_desc: 0x100 } }
+
+Dynamic symbols
+
+Import { library: "/usr/lib/libSystem.B.dylib", name: "_close" }
+Import { library: "/usr/lib/libSystem.B.dylib", name: "_dup" }
+Import { library: "", name: "_flat_lookup" }
+Import { library: "", name: "_main_executable" }
+Import { library: "/usr/lib/libSystem.B.dylib", name: "dyld_stub_binder" }
+
+Export { name: "_interposable", target: Address { address: 480 }, flags: None }
+Export { name: "_use_imports", target: Address { address: 4a0 }, flags: None }
+Export { name: "_weak_lookup", target: Address { address: 490 }, weak: true, flags: None }
+
+Symbol map
+0x480-0x490 "_interposable"
+0x490-0x4a0 "_weak_lookup"
+0x4a0-0x4cc "_use_imports"
+0x1038-0x1040 "__dyld_private"

@@ -1,0 +1,760 @@
+Format: Mach-O 64-bit
+MachHeader {
+    Magic: 0xCFFAEDFE
+    CpuType: CPU_TYPE_X86_64 (0x1000007)
+    CpuSubtype: CPU_SUBTYPE_X86_64_ALL (0x3)
+    FileType: MH_BUNDLE (0x8)
+    NumberOfCmds: 12
+    SizeOfCmds: 0x430
+    Flags: 0x18085
+        MH_NOUNDEFS (0x1)
+        MH_DYLDLINK (0x4)
+        MH_TWOLEVEL (0x80)
+        MH_WEAK_DEFINES (0x8000)
+        MH_BINDS_TO_WEAK (0x10000)
+}
+SegmentCommand {
+    Cmd: LC_SEGMENT_64 (0x19)
+    CmdSize: 0x188
+    SegmentName: "__TEXT"
+    VmAddress: 0x0
+    VmSize: 0x1000
+    FileOffset: 0x0
+    FileSize: 0x1000
+    MaxProt: 0x5
+        VM_PROT_READ (0x1)
+        VM_PROT_EXECUTE (0x4)
+    InitProt: 0x5
+        VM_PROT_READ (0x1)
+        VM_PROT_EXECUTE (0x4)
+    NumberOfSections: 4
+    Flags: 0x0
+    Section {
+        Index: 1
+        SectionName: "__text"
+        SegmentName: "__TEXT"
+        Address: 0x480
+        Size: 0x4C
+        Offset: 0x480
+        Align: 0x4
+        RelocationOffset: 0x0
+        NumberOfRelocations: 0x0
+        Flags: 0x80000400
+            S_REGULAR (0x0)
+            S_ATTR_PURE_INSTRUCTIONS (0x80000000)
+            S_ATTR_SOME_INSTRUCTIONS (0x400)
+        Reserved1: 0x0
+        Reserved2: 0x0
+    }
+    Section {
+        Index: 2
+        SectionName: "__stubs"
+        SegmentName: "__TEXT"
+        Address: 0x4CC
+        Size: 0x24
+        Offset: 0x4CC
+        Align: 0x1
+        RelocationOffset: 0x0
+        NumberOfRelocations: 0x0
+        Flags: 0x80000408
+            S_SYMBOL_STUBS (0x8)
+            S_ATTR_PURE_INSTRUCTIONS (0x80000000)
+            S_ATTR_SOME_INSTRUCTIONS (0x400)
+        Reserved1: 0x0
+        Reserved2: 0x6
+        IndirectSymbol {
+            Index: 0
+            Symbol: "_close" (0x4)
+        }
+        IndirectSymbol {
+            Index: 1
+            Symbol: "_dup" (0x5)
+        }
+        IndirectSymbol {
+            Index: 2
+            Symbol: "_flat_lookup" (0x6)
+        }
+        IndirectSymbol {
+            Index: 3
+            Symbol: "_interposable" (0x1)
+        }
+        IndirectSymbol {
+            Index: 4
+            Symbol: "_main_executable" (0x7)
+        }
+        IndirectSymbol {
+            Index: 5
+            Symbol: "_weak_lookup" (0x3)
+        }
+    }
+    Section {
+        Index: 3
+        SectionName: "__stub_helper"
+        SegmentName: "__TEXT"
+        Address: 0x4F0
+        Size: 0x4A
+        Offset: 0x4F0
+        Align: 0x2
+        RelocationOffset: 0x0
+        NumberOfRelocations: 0x0
+        Flags: 0x80000400
+            S_REGULAR (0x0)
+            S_ATTR_PURE_INSTRUCTIONS (0x80000000)
+            S_ATTR_SOME_INSTRUCTIONS (0x400)
+        Reserved1: 0x0
+        Reserved2: 0x0
+    }
+    Section {
+        Index: 4
+        SectionName: "__unwind_info"
+        SegmentName: "__TEXT"
+        Address: 0x53C
+        Size: 0x58
+        Offset: 0x53C
+        Align: 0x2
+        RelocationOffset: 0x0
+        NumberOfRelocations: 0x0
+        Flags: S_REGULAR (0x0)
+        Reserved1: 0x0
+        Reserved2: 0x0
+    }
+}
+SegmentCommand {
+    Cmd: LC_SEGMENT_64 (0x19)
+    CmdSize: 0x138
+    SegmentName: "__DATA"
+    VmAddress: 0x1000
+    VmSize: 0x1000
+    FileOffset: 0x1000
+    FileSize: 0x1000
+    MaxProt: 0x3
+        VM_PROT_READ (0x1)
+        VM_PROT_WRITE (0x2)
+    InitProt: 0x3
+        VM_PROT_READ (0x1)
+        VM_PROT_WRITE (0x2)
+    NumberOfSections: 3
+    Flags: 0x0
+    Section {
+        Index: 5
+        SectionName: "__got"
+        SegmentName: "__DATA"
+        Address: 0x1000
+        Size: 0x10
+        Offset: 0x1000
+        Align: 0x3
+        RelocationOffset: 0x0
+        NumberOfRelocations: 0x0
+        Flags: S_NON_LAZY_SYMBOL_POINTERS (0x6)
+        Reserved1: 0x6
+        Reserved2: 0x0
+        IndirectSymbol {
+            Index: 0
+            Symbol: "dyld_stub_binder" (0x8)
+        }
+        IndirectSymbol {
+            Index: 1
+            Symbol: "_weak_lookup" (0x3)
+        }
+    }
+    Section {
+        Index: 6
+        SectionName: "__la_symbol_ptr"
+        SegmentName: "__DATA"
+        Address: 0x1010
+        Size: 0x28
+        Offset: 0x1010
+        Align: 0x3
+        RelocationOffset: 0x0
+        NumberOfRelocations: 0x0
+        Flags: S_LAZY_SYMBOL_POINTERS (0x7)
+        Reserved1: 0x8
+        Reserved2: 0x0
+        IndirectSymbol {
+            Index: 0
+            Symbol: "_close" (0x4)
+        }
+        IndirectSymbol {
+            Index: 1
+            Symbol: "_dup" (0x5)
+        }
+        IndirectSymbol {
+            Index: 2
+            Symbol: "_flat_lookup" (0x6)
+        }
+        IndirectSymbol {
+            Index: 3
+            Symbol: "_interposable" (0x1)
+        }
+        IndirectSymbol {
+            Index: 4
+            Symbol: "_main_executable" (0x7)
+        }
+    }
+    Section {
+        Index: 7
+        SectionName: "__data"
+        SegmentName: "__DATA"
+        Address: 0x1038
+        Size: 0x8
+        Offset: 0x1038
+        Align: 0x3
+        RelocationOffset: 0x0
+        NumberOfRelocations: 0x0
+        Flags: S_REGULAR (0x0)
+        Reserved1: 0x0
+        Reserved2: 0x0
+    }
+}
+SegmentCommand {
+    Cmd: LC_SEGMENT_64 (0x19)
+    CmdSize: 0x48
+    SegmentName: "__LINKEDIT"
+    VmAddress: 0x2000
+    VmSize: 0x1000
+    FileOffset: 0x2000
+    FileSize: 0x240
+    MaxProt: VM_PROT_READ (0x1)
+    InitProt: VM_PROT_READ (0x1)
+    NumberOfSections: 0
+    Flags: 0x0
+}
+DyldInfoCommand {
+    Cmd: LC_DYLD_INFO_ONLY (0x80000022)
+    CmdSize: 0x30
+    RebaseOffset: 0x2000
+    RebaseSize: 0x8
+    BindOffset: 0x2008
+    BindSize: 0x38
+    WeakBindOffset: 0x2040
+    WeakBindSize: 0x18
+    LazyBindOffset: 0x2058
+    LazyBindSize: 0x58
+    ExportOffset: 0x20B0
+    ExportSize: 0x48
+    RebaseOperations {
+        Operation {
+            Opcode: REBASE_OPCODE_SET_TYPE_IMM (0x10)
+            Type: REBASE_TYPE_POINTER (0x1)
+        }
+        Operation {
+            Opcode: REBASE_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB (0x20)
+            SegmentIndex: 1
+            Offset: 0x10
+        }
+        Operation {
+            Opcode: REBASE_OPCODE_DO_REBASE_IMM_TIMES (0x50)
+            Count: 5
+        }
+        Operation {
+            Opcode: REBASE_OPCODE_DONE (0x0)
+        }
+        Operation {
+            Opcode: REBASE_OPCODE_DONE (0x0)
+        }
+        Operation {
+            Opcode: REBASE_OPCODE_DONE (0x0)
+        }
+        Operation {
+            Opcode: REBASE_OPCODE_DONE (0x0)
+        }
+    }
+    Rebases {
+        Rebase {
+            SegmentIndex: 1
+            SegmentOffset: 0x10
+            Type: REBASE_TYPE_POINTER (0x1)
+        }
+        Rebase {
+            SegmentIndex: 1
+            SegmentOffset: 0x18
+            Type: REBASE_TYPE_POINTER (0x1)
+        }
+        Rebase {
+            SegmentIndex: 1
+            SegmentOffset: 0x20
+            Type: REBASE_TYPE_POINTER (0x1)
+        }
+        Rebase {
+            SegmentIndex: 1
+            SegmentOffset: 0x28
+            Type: REBASE_TYPE_POINTER (0x1)
+        }
+        Rebase {
+            SegmentIndex: 1
+            SegmentOffset: 0x30
+            Type: REBASE_TYPE_POINTER (0x1)
+        }
+    }
+    BindOperations {
+        Operation {
+            Opcode: BIND_OPCODE_SET_DYLIB_SPECIAL_IMM (0x30)
+            Ordinal: BIND_SPECIAL_DYLIB_SELF (0)
+        }
+        Operation {
+            Opcode: BIND_OPCODE_SET_SYMBOL_TRAILING_FLAGS_IMM (0x40)
+            Flags: 0x0
+            Name: "_weak_lookup"
+        }
+        Operation {
+            Opcode: BIND_OPCODE_SET_TYPE_IMM (0x50)
+            Type: BIND_TYPE_POINTER (0x1)
+        }
+        Operation {
+            Opcode: BIND_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB (0x70)
+            SegmentIndex: 1
+            Offset: 0x8
+        }
+        Operation {
+            Opcode: BIND_OPCODE_DO_BIND (0x90)
+        }
+        Operation {
+            Opcode: BIND_OPCODE_SET_DYLIB_ORDINAL_IMM (0x10)
+            Ordinal: 1
+        }
+        Operation {
+            Opcode: BIND_OPCODE_SET_SYMBOL_TRAILING_FLAGS_IMM (0x40)
+            Flags: 0x0
+            Name: "dyld_stub_binder"
+        }
+        Operation {
+            Opcode: BIND_OPCODE_ADD_ADDR_ULEB (0x80)
+            Offset: 0xFFFFFFFFFFFFFFF0
+        }
+        Operation {
+            Opcode: BIND_OPCODE_DO_BIND (0x90)
+        }
+        Operation {
+            Opcode: BIND_OPCODE_DONE (0x0)
+        }
+        Operation {
+            Opcode: BIND_OPCODE_DONE (0x0)
+        }
+        Operation {
+            Opcode: BIND_OPCODE_DONE (0x0)
+        }
+        Operation {
+            Opcode: BIND_OPCODE_DONE (0x0)
+        }
+        Operation {
+            Opcode: BIND_OPCODE_DONE (0x0)
+        }
+        Operation {
+            Opcode: BIND_OPCODE_DONE (0x0)
+        }
+    }
+    Binds {
+        Bind {
+            SegmentIndex: 1
+            SegmentOffset: 0x8
+            Type: BIND_TYPE_POINTER (0x1)
+            LibraryOrdinal: BIND_SPECIAL_DYLIB_SELF (0)
+            Flags: 0x0
+            Symbol: "_weak_lookup"
+            Addend: 0
+        }
+        Bind {
+            SegmentIndex: 1
+            SegmentOffset: 0x0
+            Type: BIND_TYPE_POINTER (0x1)
+            LibraryOrdinal: 1
+            Flags: 0x0
+            Symbol: "dyld_stub_binder"
+            Addend: 0
+        }
+    }
+    WeakBindOperations {
+        Operation {
+            Opcode: BIND_OPCODE_SET_SYMBOL_TRAILING_FLAGS_IMM (0x40)
+            Flags: 0x0
+            Name: "_weak_lookup"
+        }
+        Operation {
+            Opcode: BIND_OPCODE_SET_TYPE_IMM (0x50)
+            Type: BIND_TYPE_POINTER (0x1)
+        }
+        Operation {
+            Opcode: BIND_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB (0x70)
+            SegmentIndex: 1
+            Offset: 0x8
+        }
+        Operation {
+            Opcode: BIND_OPCODE_DO_BIND (0x90)
+        }
+        Operation {
+            Opcode: BIND_OPCODE_DONE (0x0)
+        }
+        Operation {
+            Opcode: BIND_OPCODE_DONE (0x0)
+        }
+        Operation {
+            Opcode: BIND_OPCODE_DONE (0x0)
+        }
+        Operation {
+            Opcode: BIND_OPCODE_DONE (0x0)
+        }
+        Operation {
+            Opcode: BIND_OPCODE_DONE (0x0)
+        }
+        Operation {
+            Opcode: BIND_OPCODE_DONE (0x0)
+        }
+    }
+    WeakBinds {
+        Bind {
+            SegmentIndex: 1
+            SegmentOffset: 0x8
+            Type: BIND_TYPE_POINTER (0x1)
+            LibraryOrdinal: BIND_SPECIAL_DYLIB_WEAK_LOOKUP (-3)
+            Flags: 0x0
+            Symbol: "_weak_lookup"
+            Addend: 0
+        }
+    }
+    LazyBindOperations {
+        Operation {
+            Opcode: BIND_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB (0x70)
+            SegmentIndex: 1
+            Offset: 0x10
+        }
+        Operation {
+            Opcode: BIND_OPCODE_SET_DYLIB_ORDINAL_IMM (0x10)
+            Ordinal: 1
+        }
+        Operation {
+            Opcode: BIND_OPCODE_SET_SYMBOL_TRAILING_FLAGS_IMM (0x40)
+            Flags: BIND_SYMBOL_FLAGS_WEAK_IMPORT (0x1)
+            Name: "_close"
+        }
+        Operation {
+            Opcode: BIND_OPCODE_DO_BIND (0x90)
+        }
+        Operation {
+            Opcode: BIND_OPCODE_DONE (0x0)
+        }
+        Operation {
+            Opcode: BIND_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB (0x70)
+            SegmentIndex: 1
+            Offset: 0x18
+        }
+        Operation {
+            Opcode: BIND_OPCODE_SET_DYLIB_ORDINAL_IMM (0x10)
+            Ordinal: 1
+        }
+        Operation {
+            Opcode: BIND_OPCODE_SET_SYMBOL_TRAILING_FLAGS_IMM (0x40)
+            Flags: 0x0
+            Name: "_dup"
+        }
+        Operation {
+            Opcode: BIND_OPCODE_DO_BIND (0x90)
+        }
+        Operation {
+            Opcode: BIND_OPCODE_DONE (0x0)
+        }
+        Operation {
+            Opcode: BIND_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB (0x70)
+            SegmentIndex: 1
+            Offset: 0x20
+        }
+        Operation {
+            Opcode: BIND_OPCODE_SET_DYLIB_SPECIAL_IMM (0x30)
+            Ordinal: BIND_SPECIAL_DYLIB_FLAT_LOOKUP (-2)
+        }
+        Operation {
+            Opcode: BIND_OPCODE_SET_SYMBOL_TRAILING_FLAGS_IMM (0x40)
+            Flags: 0x0
+            Name: "_flat_lookup"
+        }
+        Operation {
+            Opcode: BIND_OPCODE_DO_BIND (0x90)
+        }
+        Operation {
+            Opcode: BIND_OPCODE_DONE (0x0)
+        }
+        Operation {
+            Opcode: BIND_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB (0x70)
+            SegmentIndex: 1
+            Offset: 0x28
+        }
+        Operation {
+            Opcode: BIND_OPCODE_SET_DYLIB_SPECIAL_IMM (0x30)
+            Ordinal: BIND_SPECIAL_DYLIB_SELF (0)
+        }
+        Operation {
+            Opcode: BIND_OPCODE_SET_SYMBOL_TRAILING_FLAGS_IMM (0x40)
+            Flags: 0x0
+            Name: "_interposable"
+        }
+        Operation {
+            Opcode: BIND_OPCODE_DO_BIND (0x90)
+        }
+        Operation {
+            Opcode: BIND_OPCODE_DONE (0x0)
+        }
+        Operation {
+            Opcode: BIND_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB (0x70)
+            SegmentIndex: 1
+            Offset: 0x30
+        }
+        Operation {
+            Opcode: BIND_OPCODE_SET_DYLIB_SPECIAL_IMM (0x30)
+            Ordinal: BIND_SPECIAL_DYLIB_MAIN_EXECUTABLE (-1)
+        }
+        Operation {
+            Opcode: BIND_OPCODE_SET_SYMBOL_TRAILING_FLAGS_IMM (0x40)
+            Flags: 0x0
+            Name: "_main_executable"
+        }
+        Operation {
+            Opcode: BIND_OPCODE_DO_BIND (0x90)
+        }
+        Operation {
+            Opcode: BIND_OPCODE_DONE (0x0)
+        }
+        Operation {
+            Opcode: BIND_OPCODE_DONE (0x0)
+        }
+        Operation {
+            Opcode: BIND_OPCODE_DONE (0x0)
+        }
+    }
+    LazyBinds {
+        Bind {
+            SegmentIndex: 1
+            SegmentOffset: 0x10
+            Type: BIND_TYPE_POINTER (0x1)
+            LibraryOrdinal: 1
+            Flags: BIND_SYMBOL_FLAGS_WEAK_IMPORT (0x1)
+            Symbol: "_close"
+            Addend: 0
+        }
+        Bind {
+            SegmentIndex: 1
+            SegmentOffset: 0x18
+            Type: BIND_TYPE_POINTER (0x1)
+            LibraryOrdinal: 1
+            Flags: 0x0
+            Symbol: "_dup"
+            Addend: 0
+        }
+        Bind {
+            SegmentIndex: 1
+            SegmentOffset: 0x20
+            Type: BIND_TYPE_POINTER (0x1)
+            LibraryOrdinal: BIND_SPECIAL_DYLIB_FLAT_LOOKUP (-2)
+            Flags: 0x0
+            Symbol: "_flat_lookup"
+            Addend: 0
+        }
+        Bind {
+            SegmentIndex: 1
+            SegmentOffset: 0x28
+            Type: BIND_TYPE_POINTER (0x1)
+            LibraryOrdinal: BIND_SPECIAL_DYLIB_SELF (0)
+            Flags: 0x0
+            Symbol: "_interposable"
+            Addend: 0
+        }
+        Bind {
+            SegmentIndex: 1
+            SegmentOffset: 0x30
+            Type: BIND_TYPE_POINTER (0x1)
+            LibraryOrdinal: BIND_SPECIAL_DYLIB_MAIN_EXECUTABLE (-1)
+            Flags: 0x0
+            Symbol: "_main_executable"
+            Addend: 0
+        }
+    }
+    ExportsTrie {
+        ExportSymbol {
+            Name: "_interposable"
+            Flags: EXPORT_SYMBOL_FLAGS_KIND_REGULAR (0x0)
+            Address: 0x480
+        }
+        ExportSymbol {
+            Name: "_use_imports"
+            Flags: EXPORT_SYMBOL_FLAGS_KIND_REGULAR (0x0)
+            Address: 0x4A0
+        }
+        ExportSymbol {
+            Name: "_weak_lookup"
+            Flags: 0x4
+                EXPORT_SYMBOL_FLAGS_KIND_REGULAR (0x0)
+                EXPORT_SYMBOL_FLAGS_WEAK_DEFINITION (0x4)
+            Address: 0x490
+        }
+    }
+}
+SymtabCommand {
+    Cmd: LC_SYMTAB (0x2)
+    CmdSize: 0x18
+    SymbolOffset: 0x2100
+    NumberOfSymbols: 0x9
+    StringOffset: 0x21C8
+    StringSize: 0x78
+    Nlist {
+        Index: 0
+        String: "__dyld_private" (0x65)
+        Type: N_SECT (0xE)
+        Section: "__DATA,__data" (0x7)
+        Desc: 0x0
+        Value: 0x1038
+    }
+    Nlist {
+        Index: 1
+        String: "_interposable" (0x2)
+        Type: 0xF
+            N_SECT (0xE)
+            N_EXT (0x1)
+        Section: "__TEXT,__text" (0x1)
+        Desc: 0x0
+        Value: 0x480
+    }
+    Nlist {
+        Index: 2
+        String: "_use_imports" (0x10)
+        Type: 0xF
+            N_SECT (0xE)
+            N_EXT (0x1)
+        Section: "__TEXT,__text" (0x1)
+        Desc: 0x0
+        Value: 0x4A0
+    }
+    Nlist {
+        Index: 3
+        String: "_weak_lookup" (0x1D)
+        Type: 0xF
+            N_SECT (0xE)
+            N_EXT (0x1)
+        Section: "__TEXT,__text" (0x1)
+        Desc: N_WEAK_DEF (0x80)
+        Value: 0x490
+    }
+    Nlist {
+        Index: 4
+        String: "_close" (0x2A)
+        Type: 0x1
+            N_UNDF (0x0)
+            N_EXT (0x1)
+        Section: "" (0x0)
+        Desc: 0x140
+            REFERENCE_FLAG_UNDEFINED_NON_LAZY (0x0)
+            N_WEAK_REF (0x40)
+        DylibOrdinal: 0x1
+        Value: 0x0
+    }
+    Nlist {
+        Index: 5
+        String: "_dup" (0x31)
+        Type: 0x1
+            N_UNDF (0x0)
+            N_EXT (0x1)
+        Section: "" (0x0)
+        Desc: 0x100
+            REFERENCE_FLAG_UNDEFINED_NON_LAZY (0x0)
+        DylibOrdinal: 0x1
+        Value: 0x0
+    }
+    Nlist {
+        Index: 6
+        String: "_flat_lookup" (0x36)
+        Type: 0x1
+            N_UNDF (0x0)
+            N_EXT (0x1)
+        Section: "" (0x0)
+        Desc: 0xFE00
+            REFERENCE_FLAG_UNDEFINED_NON_LAZY (0x0)
+        DylibOrdinal: DYNAMIC_LOOKUP_ORDINAL (0xFE)
+        Value: 0x0
+    }
+    Nlist {
+        Index: 7
+        String: "_main_executable" (0x43)
+        Type: 0x1
+            N_UNDF (0x0)
+            N_EXT (0x1)
+        Section: "" (0x0)
+        Desc: 0xFF00
+            REFERENCE_FLAG_UNDEFINED_NON_LAZY (0x0)
+        DylibOrdinal: EXECUTABLE_ORDINAL (0xFF)
+        Value: 0x0
+    }
+    Nlist {
+        Index: 8
+        String: "dyld_stub_binder" (0x54)
+        Type: 0x1
+            N_UNDF (0x0)
+            N_EXT (0x1)
+        Section: "" (0x0)
+        Desc: 0x100
+            REFERENCE_FLAG_UNDEFINED_NON_LAZY (0x0)
+        DylibOrdinal: 0x1
+        Value: 0x0
+    }
+}
+DysymtabCommand {
+    Cmd: LC_DYSYMTAB (0xB)
+    CmdSize: 0x50
+    IndexOfLocalSymbols: 0
+    NumberOfLocalSymbols: 1
+    IndexOfExternallyDefinedSymbols: 1
+    NumberOfExternallyDefinedSymbols: 3
+    IndexOfUndefinedSymbols: 4
+    NumberOfUndefinedSymbols: 5
+    TocOffset: 0x0
+    NumberOfTocEntries: 0
+    ModuleTableOffset: 0x0
+    NumberOfModuleTableEntries: 0
+    ExternalRefSymbolOffset: 0x0
+    NumberOfExternalRefSymbols: 0
+    IndirectSymbolOffset: 0x2190
+    NumberOfIndirectSymbols: 13
+    ExternalRelocationOffset: 0x0
+    NumberOfExternalRelocations: 0
+    LocalRelocationOffset: 0x0
+    NumberOfLocalRelocations: 0
+}
+UuidCommand {
+    Cmd: LC_UUID (0x1B)
+    CmdSize: 0x18
+    Uuid: [8F, 22, C8, 78, 8, 2E, 3A, CB, A1, 2, ED, 53, 52, F5, 81, 2A]
+}
+VersionMinCommand {
+    Cmd: LC_VERSION_MIN_MACOSX (0x24)
+    CmdSize: 0x10
+    Version: 10.13.0
+    Sdk: 10.13.0
+}
+SourceVersionCommand {
+    Cmd: LC_SOURCE_VERSION (0x2A)
+    CmdSize: 0x10
+    Version: 0x0
+}
+DylibCommand {
+    Cmd: LC_LOAD_DYLIB (0xC)
+    CmdSize: 0x38
+    Dylib {
+        Name: "/usr/lib/libSystem.B.dylib" (0x18)
+        Timestamp: 2
+        CurrentVersion: 1356.0.0
+        CompatibilityVersion: 1.0.0
+    }
+}
+LinkeditDataCommand {
+    Cmd: LC_FUNCTION_STARTS (0x26)
+    CmdSize: 0x10
+    DataOffset: 0x20F8
+    DataSize: 0x8
+    FunctionStarts {
+        Address: 0x480
+        Address: 0x490
+        Address: 0x4A0
+    }
+}
+LinkeditDataCommand {
+    Cmd: LC_DATA_IN_CODE (0x29)
+    CmdSize: 0x10
+    DataOffset: 0x2100
+    DataSize: 0x0
+}
