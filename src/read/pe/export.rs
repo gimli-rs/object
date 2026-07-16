@@ -324,7 +324,7 @@ impl<'data> ExportTable<'data> {
         Ok(if let Some(forward) = self.forward_string(address)? {
             let i = forward
                 .iter()
-                .position(|x| *x == b'.')
+                .rposition(|x| *x == b'.')
                 .read_error("Missing PE forwarded export separator")?;
             let library = &forward[..i];
             match &forward[i + 1..] {

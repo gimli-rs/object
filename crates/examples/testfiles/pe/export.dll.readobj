@@ -231,7 +231,7 @@ ImageExportDirectory {
         Ordinal: 8
         Name: "forward_with_dot" (0x20C7)
         Address: 0x20F5
-        ForwardLibrary: "kernel32"
-        ForwardName: "dll.Sleep"
+        ForwardLibrary: "kernel32.dll"
+        ForwardName: "Sleep"
     }
 }
