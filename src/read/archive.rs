@@ -1242,7 +1242,7 @@ mod tests {
         add_member(&mut data, "/", &[0, 0, 0, 0]);
         add_member(&mut data, "//", b"foo.obj/\n");
         add_member(&mut data, "/<ECSYMBOLS>/", &[1, 0, 1, 0]);
-        add_member(&mut data, "foo.obj/", b"data");
+        add_member(&mut data, "/0", b"data");
 
         let archive = ArchiveFile::parse(&data[..]).unwrap();
         assert_eq!(archive.kind(), ArchiveKind::Coff);
