@@ -24,10 +24,10 @@ Symbols
 
 Dynamic symbols
 
-Import { library: "/usr/lib/libSystem.B.dylib", name: "_close" }
-Import { library: "/usr/lib/libSystem.B.dylib", name: "_dup" }
-Import { library: "", name: "_flat_lookup" }
-Import { library: "", name: "_main_executable" }
+Import { library: "/usr/lib/libSystem.B.dylib", name: "_close", weak: true, flags: MachO { n_type: N_UNDF | N_EXT, n_desc: 0x140 } }
+Import { library: "/usr/lib/libSystem.B.dylib", name: "_dup", flags: MachO { n_type: N_UNDF | N_EXT, n_desc: 0x100 } }
+Import { library: "", name: "_flat_lookup", flags: MachO { n_type: N_UNDF | N_EXT, n_desc: 0xfe00 } }
+Import { library: "", name: "_main_executable", flags: MachO { n_type: N_UNDF | N_EXT, n_desc: 0xff00 } }
 
 Export { name: "_interposable", target: Address { address: 390 }, flags: None }
 Export { name: "_use_imports", target: Address { address: 3a0 }, flags: None }

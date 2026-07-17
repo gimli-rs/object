@@ -101,10 +101,10 @@ Dynamic relocations
 (3fd8, Relocation { kind: Unknown, encoding: Unknown, size: 0, target: Symbol(SymbolIndex(3)), addend: 0, implicit_addend: false, flags: Elf { r_type: 6 } })
 (3fe0, Relocation { kind: Unknown, encoding: Unknown, size: 0, target: Symbol(SymbolIndex(4)), addend: 0, implicit_addend: false, flags: Elf { r_type: 6 } })
 
-Import { library: "", name: "__cxa_finalize" }
-Import { library: "", name: "_ITM_registerTMCloneTable" }
-Import { library: "", name: "_ITM_deregisterTMCloneTable" }
-Import { library: "", name: "__gmon_start__" }
+Import { library: "", name: "__cxa_finalize", weak: true, flags: Elf { st_info: STB_WEAK | STT_NOTYPE, st_other: STV_DEFAULT } }
+Import { library: "", name: "_ITM_registerTMCloneTable", weak: true, flags: Elf { st_info: STB_WEAK | STT_NOTYPE, st_other: STV_DEFAULT } }
+Import { library: "", name: "_ITM_deregisterTMCloneTable", weak: true, flags: Elf { st_info: STB_WEAK | STT_NOTYPE, st_other: STV_DEFAULT } }
+Import { library: "", name: "__gmon_start__", weak: true, flags: Elf { st_info: STB_WEAK | STT_NOTYPE, st_other: STV_DEFAULT } }
 
 Export { name: "VERS_1", target: Absolute { value: 0 }, flags: Elf { st_info: STB_GLOBAL | STT_OBJECT, st_other: STV_DEFAULT, version: "VERS_1" } }
 Export { name: "abs_sym", target: Absolute { value: fffff }, flags: Elf { st_info: STB_GLOBAL | STT_NOTYPE, st_other: STV_DEFAULT, version: "VERS_1" } }

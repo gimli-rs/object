@@ -14,8 +14,9 @@ use crate::read::{
 use crate::{SkipDebugList, pe};
 
 use super::{
-    DataDirectories, ExportTable, ImageThunkData, ImportTable, PeExportIterator, PeImportIterator,
-    PeSection, PeSectionIterator, PeSegment, PeSegmentIterator, RichHeaderInfo, SectionTable,
+    DataDirectories, DelayLoadImportTable, ExportTable, ImageThunkData, ImportTable,
+    PeExportIterator, PeImportIterator, PeSection, PeSectionIterator, PeSegment, PeSegmentIterator,
+    RichHeaderInfo, SectionTable,
 };
 
 /// A PE32 (32-bit) image file.
@@ -132,6 +133,14 @@ where
     pub fn import_table(&self) -> Result<Option<ImportTable<'data>>> {
         self.data_directories
             .import_table(self.data.0, &self.common.sections)
+    }
+
+    /// Returns the delay-load import table of this file.
+    ///
+    /// The delay-load import table is located using the data directory.
+    pub fn delay_load_import_table(&self) -> Result<Option<DelayLoadImportTable<'data>>> {
+        self.data_directories
+            .delay_load_import_table(self.data.0, &self.common.sections)
     }
 
     pub(super) fn section_alignment(&self) -> u64 {

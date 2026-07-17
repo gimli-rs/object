@@ -5,7 +5,7 @@ use core::mem;
 use crate::endian::{LittleEndian as LE, U16};
 use crate::pe;
 use crate::pod::Pod;
-use crate::read::{self, ByteString, Bytes, Error, ReadError, ReadRef, Result};
+use crate::read::{self, Bytes, Error, ReadError, ReadRef, Result};
 
 use super::{ImageNtHeaders, PeFile, SectionTable};
 
@@ -447,8 +447,10 @@ where
 {
     table: Option<ImportTable<'data>>,
     descs: Option<ImportDescriptorIterator<'data>>,
+    delay_table: Option<DelayLoadImportTable<'data>>,
+    delay_descs: Option<DelayLoadDescriptorIterator<'data>>,
     thunks: Option<ImportThunkList<'data>>,
-    library: ByteString<'data>,
+    library: &'data [u8],
     marker: PhantomData<(&'file (), Pe, R)>,
 }
 
@@ -463,38 +465,36 @@ where
             .as_ref()
             .map(|table| table.descriptors())
             .transpose()?;
+        let delay_table = file.delay_load_import_table()?;
+        let delay_descs = delay_table
+            .as_ref()
+            .map(|table| table.descriptors())
+            .transpose()?;
         Ok(PeImportIterator {
             table,
             descs,
+            delay_table,
+            delay_descs,
             thunks: None,
-            library: ByteString(&[]),
+            library: &[],
             marker: PhantomData,
         })
     }
 
     fn next(&mut self) -> read::Result<Option<read::Import<'data>>> {
-        loop {
-            let Some(table) = self.table.as_ref() else {
-                return Ok(None);
-            };
+        // All iterators used in this method fuse after error, and any other errors only
+        // occur after an iterator has made progress, so this method doesn't need to fuse
+        // itself.
+        while let Some(table) = self.table.as_ref() {
             if let Some(thunks) = self.thunks.as_mut() {
-                // This iterator fuses, so errors after here don't need to terminate iteration.
                 if let Some(thunk) = thunks.next::<Pe>()? {
-                    if !thunk.is_ordinal() {
-                        let (_hint, name) = table.hint_name(thunk.address())?;
-                        return Ok(Some(read::Import {
-                            library: self.library,
-                            name: ByteString(name),
-                        }));
-                    }
-                    continue;
+                    return Ok(Some(self.import(table.import::<Pe>(thunk)?, false)));
                 }
                 self.thunks = None;
             }
             if let Some(descs) = self.descs.as_mut() {
-                // This iterator fuses, so errors after here don't need to terminate iteration.
                 if let Some(desc) = descs.next()? {
-                    self.library = ByteString(table.name(desc.name.get(LE))?);
+                    self.library = table.name(desc.name.get(LE))?;
                     let mut first_thunk = desc.original_first_thunk.get(LE);
                     if first_thunk == 0 {
                         first_thunk = desc.first_thunk.get(LE);
@@ -505,7 +505,40 @@ where
                 self.descs = None;
             }
             self.table = None;
-            return Ok(None);
+        }
+        while let Some(table) = self.delay_table.as_ref() {
+            if let Some(thunks) = self.thunks.as_mut() {
+                if let Some(thunk) = thunks.next::<Pe>()? {
+                    return Ok(Some(self.import(table.import::<Pe>(thunk)?, true)));
+                }
+                self.thunks = None;
+            }
+            if let Some(descs) = self.delay_descs.as_mut() {
+                if let Some(desc) = descs.next()? {
+                    if desc.attributes.get(LE) & pe::IMAGE_DELAYLOAD_RVA_BASED == 0 {
+                        return Err(Error("Unsupported PE delay-load non-RVA based descriptor"));
+                    }
+                    self.library = table.name(desc.dll_name_rva.get(LE))?;
+                    self.thunks = Some(table.thunks(desc.import_name_table_rva.get(LE))?);
+                    continue;
+                }
+                self.delay_descs = None;
+            }
+            self.delay_table = None;
+        }
+        Ok(None)
+    }
+
+    fn import(&self, import: Import<'data>, delay: bool) -> read::Import<'data> {
+        let name = match import {
+            Import::Ordinal(ordinal) => read::NameOrOrdinal::Ordinal(ordinal),
+            Import::Name(_hint, name) => read::NameOrOrdinal::Name(name),
+        };
+        read::Import {
+            library: self.library,
+            name,
+            weak: false,
+            flags: read::ImportFlags::Pe { delay },
         }
     }
 }

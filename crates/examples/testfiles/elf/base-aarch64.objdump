@@ -151,13 +151,13 @@ Dynamic relocations
 (10fb0, Relocation { kind: Unknown, encoding: Unknown, size: 0, target: Symbol(SymbolIndex(7)), addend: 0, implicit_addend: false, flags: Elf { r_type: 402 } })
 (10fb8, Relocation { kind: Unknown, encoding: Unknown, size: 0, target: Symbol(SymbolIndex(9)), addend: 0, implicit_addend: false, flags: Elf { r_type: 402 } })
 
-Import { library: "", name: "_ITM_deregisterTMCloneTable" }
-Import { library: "libc.so.6", name: "__cxa_finalize" }
-Import { library: "libc.so.6", name: "__libc_start_main" }
-Import { library: "", name: "__gmon_start__" }
-Import { library: "libc.so.6", name: "abort" }
-Import { library: "", name: "_ITM_registerTMCloneTable" }
-Import { library: "libc.so.6", name: "printf" }
+Import { library: "", name: "_ITM_deregisterTMCloneTable", weak: true, flags: Elf { st_info: STB_WEAK | STT_NOTYPE, st_other: STV_DEFAULT } }
+Import { library: "libc.so.6", name: "__cxa_finalize", weak: true, flags: Elf { st_info: STB_WEAK | STT_FUNC, st_other: STV_DEFAULT, version: "GLIBC_2.17" } }
+Import { library: "libc.so.6", name: "__libc_start_main", flags: Elf { st_info: STB_GLOBAL | STT_FUNC, st_other: STV_DEFAULT, version: "GLIBC_2.17" } }
+Import { library: "", name: "__gmon_start__", weak: true, flags: Elf { st_info: STB_WEAK | STT_NOTYPE, st_other: STV_DEFAULT } }
+Import { library: "libc.so.6", name: "abort", flags: Elf { st_info: STB_GLOBAL | STT_FUNC, st_other: STV_DEFAULT, version: "GLIBC_2.17" } }
+Import { library: "", name: "_ITM_registerTMCloneTable", weak: true, flags: Elf { st_info: STB_WEAK | STT_NOTYPE, st_other: STV_DEFAULT } }
+Import { library: "libc.so.6", name: "printf", flags: Elf { st_info: STB_GLOBAL | STT_FUNC, st_other: STV_DEFAULT, version: "GLIBC_2.17" } }
 
 Symbol map
 0x598-0x5ac "_init"

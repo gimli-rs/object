@@ -42,7 +42,7 @@ __debug_line relocations
 
 Dynamic symbols
 
-Import { library: "", name: "_printf" }
+Import { library: "", name: "_printf", flags: MachO { n_type: N_UNDF | N_EXT, n_desc: 0 } }
 
 Export { name: "_main", target: Address { address: 0 }, flags: MachO { n_type: N_SECT | N_EXT, n_desc: 0 } }
 

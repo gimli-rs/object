@@ -36,8 +36,8 @@ __data relocations
 
 Dynamic symbols
 
-Import { library: "", name: "_g0" }
-Import { library: "", name: "_g1" }
+Import { library: "", name: "_g0", flags: MachO { n_type: N_UNDF | N_EXT, n_desc: 0 } }
+Import { library: "", name: "_g1", flags: MachO { n_type: N_UNDF | N_EXT, n_desc: 0 } }
 
 Symbol map
 0x28-0x48 "_data"

@@ -4,7 +4,7 @@ use core::slice;
 
 use crate::Endianness;
 use crate::macho;
-use crate::read::{ByteString, Import, ReadError, ReadRef, Result};
+use crate::read::{Import, ImportFlags, NameOrOrdinal, ReadError, ReadRef, Result};
 
 use super::{MachHeader, MachOFile, Nlist, SymbolTable};
 
@@ -70,14 +70,15 @@ where
         // terminate iteration.
 
         let name = symbol.name(self.endian, self.symbols.strings())?;
+        let n_desc = symbol.n_desc(self.endian);
         let library = if self.twolevel {
-            if let Some(index) = symbol.library_ordinal(self.endian).index() {
+            if let Some(index) = n_desc.library().index() {
                 self.libraries
                     .get(index as usize)
                     .copied()
                     .read_error("Invalid Mach-O symbol library ordinal")?
             } else {
-                // Don't currently distinguish between self/executable/flat.
+                // Reserved ordinal; caller can use `n_desc.library()` from `flags`.
                 &[]
             }
         } else {
@@ -85,8 +86,13 @@ where
             &[]
         };
         Ok(Some(Import {
-            name: ByteString(name),
-            library: ByteString(library),
+            library,
+            name: NameOrOrdinal::Name(name),
+            weak: n_desc.contains(macho::N_WEAK_REF),
+            flags: ImportFlags::MachO {
+                n_type: symbol.n_type(),
+                n_desc,
+            },
         }))
     }
 }

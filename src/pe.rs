@@ -2385,7 +2385,7 @@ impl ImageDelayloadDescriptor {
 }
 
 /// Delay load version 2 flag for `ImageDelayloadDescriptor::attributes`.
-pub const IMAGE_DELAYLOAD_RVA_BASED: u32 = 0x8000_0000;
+pub const IMAGE_DELAYLOAD_RVA_BASED: u32 = 0x1;
 
 //
 // Resource Format.
