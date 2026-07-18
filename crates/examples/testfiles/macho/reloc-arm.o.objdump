@@ -36,7 +36,7 @@ Dynamic symbols
 
 Import { library: "", name: "_g0" }
 
-Export { name: "_g2", address: 14 }
+Export { name: "_g2", target: Address { address: 14 }, flags: MachO { n_type: N_SECT | N_EXT, n_desc: 0 } }
 
 Symbol map
 0x0-0x14 "_g1"

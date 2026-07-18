@@ -447,24 +447,238 @@ impl<'data> Import<'data> {
 /// An exported symbol.
 ///
 /// Returned by [`Object::exports`].
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq)]
 pub struct Export<'data> {
-    // TODO: and ordinal?
-    name: ByteString<'data>,
-    address: u64,
+    name: Cow<'data, [u8]>,
+    target: ExportTarget<'data>,
+    weak: bool,
+    flags: ExportFlags<'data>,
+}
+
+impl<'data> fmt::Debug for Export<'data> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let mut s = f.debug_struct("Export");
+        s.field("name", &ByteString(&self.name));
+        s.field("target", &self.target);
+        if self.weak {
+            s.field("weak", &self.weak);
+        }
+        s.field("flags", &self.flags);
+        s.finish()
+    }
 }
 
 impl<'data> Export<'data> {
     /// The symbol name.
     #[inline]
-    pub fn name(&self) -> &'data [u8] {
-        self.name.0
+    pub fn name(&self) -> &[u8] {
+        &self.name
     }
 
-    /// The virtual address of the symbol.
+    /// Consume the export and return the name buffer.
     #[inline]
-    pub fn address(&self) -> u64 {
-        self.address
+    pub fn into_name(self) -> Cow<'data, [u8]> {
+        self.name
+    }
+
+    /// The target of the export.
+    #[inline]
+    pub fn target(&self) -> ExportTarget<'data> {
+        self.target
+    }
+
+    /// Return true if the export is a weak definition.
+    #[inline]
+    pub fn is_weak(&self) -> bool {
+        self.weak
+    }
+
+    /// The format-specific flags for the exported symbol.
+    #[inline]
+    pub fn flags(&self) -> ExportFlags<'data> {
+        self.flags
+    }
+}
+
+/// The target of an [`Export`].
+#[derive(Clone, Copy, PartialEq, Eq)]
+#[non_exhaustive]
+pub enum ExportTarget<'data> {
+    /// A regular export.
+    Address {
+        /// The address to export.
+        address: u64,
+    },
+    /// A symbol with an absolute value.
+    ///
+    /// The value is not an address in the image.
+    Absolute {
+        /// The value of the symbol.
+        value: u64,
+    },
+    /// A symbol in thread local storage.
+    ///
+    /// This is used for ELF `STT_TLS`.
+    Tls {
+        /// The offset of the symbol in the TLS block for this module.
+        offset: u64,
+    },
+    /// A symbol in thread local storage that is accessed using a descriptor.
+    ///
+    /// This is used for Mach-O.
+    TlvDescriptor {
+        /// The virtual address of the thread local variable descriptor.
+        ///
+        /// The descriptor contains a function that must be called to obtain the
+        /// address of the symbol for the current thread.
+        address: u64,
+    },
+    /// An address that is determined by a resolver function.
+    ///
+    /// This is used for Mach-O, and for ELF `STT_GNU_IFUNC`.
+    Resolver {
+        /// The resolver function used to determine the target address.
+        resolver: u64,
+        /// The address of the stub to export, which will contain a call to the resolved address.
+        ///
+        /// For Mach-O, this is obtained from the exports trie.
+        ///
+        /// ELF may have a corresponding PLT entry, but we don't attempt to determine it.
+        stub: Option<u64>,
+    },
+    /// A symbol from an external library which is reexported by name.
+    ///
+    /// This is used for PE and Mach-O.
+    Reexport {
+        /// The name of the library.
+        ///
+        /// This is empty if the library is not specified.
+        // TODO: Mach-O special library ordinals
+        library: &'data [u8],
+        /// The symbol name in the external library.
+        ///
+        /// An empty name means the imported symbol has the same name as this export.
+        name: &'data [u8],
+    },
+    /// A symbol from an external library which is reexported by ordinal.
+    ///
+    /// This is only used for PE.
+    ReexportOrdinal {
+        /// The name of the library.
+        library: &'data [u8],
+        /// The ordinal of the symbol in the external library.
+        ordinal: u16,
+    },
+}
+
+impl<'data> fmt::Debug for ExportTarget<'data> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            ExportTarget::Address { address } => {
+                f.debug_struct("Address").field("address", address).finish()
+            }
+            ExportTarget::Absolute { value } => {
+                f.debug_struct("Absolute").field("value", value).finish()
+            }
+            ExportTarget::Tls { offset } => f.debug_struct("Tls").field("offset", offset).finish(),
+            ExportTarget::TlvDescriptor { address } => f
+                .debug_struct("TlvDescriptor")
+                .field("address", address)
+                .finish(),
+            ExportTarget::Resolver { resolver, stub } => f
+                .debug_struct("Resolver")
+                .field("resolver", resolver)
+                .field("stub", stub)
+                .finish(),
+            ExportTarget::Reexport { library, name } => f
+                .debug_struct("Reexport")
+                .field("library", &ByteString(library))
+                .field("name", &ByteString(name))
+                .finish(),
+            ExportTarget::ReexportOrdinal { library, ordinal } => f
+                .debug_struct("ReexportOrdinal")
+                .field("library", &ByteString(library))
+                .field("ordinal", ordinal)
+                .finish(),
+        }
+    }
+}
+
+/// Export flags that are specific to each file format.
+#[derive(Clone, Copy, PartialEq, Eq)]
+#[non_exhaustive]
+pub enum ExportFlags<'data> {
+    /// No export flags.
+    None,
+    /// ELF export flags.
+    #[cfg(feature = "elf")]
+    Elf {
+        /// `st_info` field in the ELF symbol (binding and type).
+        st_info: crate::elf::SymbolInfo,
+        /// `st_other` field in the ELF symbol (visibility).
+        st_other: crate::elf::SymbolOther,
+        /// The GNU symbol version.
+        version: Option<&'data [u8]>,
+        /// Whether the `VERSYM_HIDDEN` bit is set.
+        version_hidden: bool,
+    },
+    /// Mach-O export flags.
+    ///
+    /// This is only used for exports from the symbol table.
+    #[cfg(feature = "macho")]
+    MachO {
+        /// `n_type` field in the nlist symbol.
+        n_type: crate::macho::SymbolFlags,
+        /// `n_desc` field in the nlist symbol.
+        n_desc: crate::macho::SymbolDesc,
+    },
+    /// PE export flags.
+    #[cfg(feature = "pe")]
+    Pe {
+        /// The export ordinal.
+        ordinal: crate::read::pe::ExportOrdinal,
+    },
+    #[doc(hidden)]
+    #[cfg(not(feature = "elf"))]
+    _Phantom(
+        core::marker::PhantomData<&'data ()>,
+        core::convert::Infallible,
+    ),
+}
+
+impl<'data> fmt::Debug for ExportFlags<'data> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            ExportFlags::None => f.write_str("None"),
+            #[cfg(feature = "elf")]
+            ExportFlags::Elf {
+                st_info,
+                st_other,
+                version,
+                version_hidden,
+            } => {
+                let mut s = f.debug_struct("Elf");
+                s.field("st_info", st_info);
+                s.field("st_other", st_other);
+                if let Some(version) = version {
+                    s.field("version", &ByteString(version));
+                }
+                if *version_hidden {
+                    s.field("version_hidden", version_hidden);
+                }
+                s.finish()
+            }
+            #[cfg(feature = "macho")]
+            ExportFlags::MachO { n_type, n_desc } => f
+                .debug_struct("MachO")
+                .field("n_type", n_type)
+                .field("n_desc", n_desc)
+                .finish(),
+            #[cfg(feature = "pe")]
+            ExportFlags::Pe { ordinal } => f.debug_struct("Pe").field("ordinal", ordinal).finish(),
+            #[cfg(not(feature = "elf"))]
+            ExportFlags::_Phantom(_, i) => match *i {},
+        }
     }
 }
 

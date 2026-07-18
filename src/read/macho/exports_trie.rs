@@ -86,6 +86,11 @@ impl<'data> ExportSymbol<'data> {
         &self.name
     }
 
+    /// Consume the symbol and return the name buffer.
+    pub fn into_name(self) -> Vec<u8> {
+        self.name.into_vec()
+    }
+
     /// The flags for the exported symbol.
     pub fn flags(&self) -> macho::ExportSymbolFlags {
         self.flags

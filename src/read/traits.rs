@@ -242,16 +242,19 @@ pub trait Object<'data>: read::private::Sealed {
     /// An error is returned if the tables that describe the imports could not be parsed.
     /// Errors for individual imports are returned by the iterator instead, and iteration
     /// continues with the next import.
+    ///
+    /// Additional tables may be parsed each time this is called, so if you need
+    /// the imports more than once, collect them instead of calling this again.
     fn imports(&self) -> Result<Self::ImportIterator<'_>>;
 
-    /// Get an iterator for the exported symbols that expose both a name and an address.
-    ///
-    /// Some file formats may provide other kinds of symbols that can be retrieved using
-    /// the low level API.
+    /// Get an iterator for the exported items.
     ///
     /// An error is returned if the tables that describe the exports could not be parsed.
     /// Errors for individual exports are returned by the iterator instead, and iteration
     /// continues with the next export.
+    ///
+    /// Additional tables may be parsed each time this is called, so if you need
+    /// the exports more than once, collect them instead of calling this again.
     fn exports(&self) -> Result<Self::ExportIterator<'_>>;
 
     /// Return true if the file contains DWARF debug information sections, false if not.

@@ -425,7 +425,12 @@ where
     }
 
     fn exports(&self) -> read::Result<ElfExportIterator<'data, '_, Elf, R>> {
-        Ok(ElfExportIterator::new(self.endian, &self.dynamic_symbols))
+        let versions = self.sections.versions(self.endian, self.data.0)?;
+        Ok(ElfExportIterator::new(
+            self.endian,
+            versions,
+            &self.dynamic_symbols,
+        ))
     }
 
     fn has_debug_symbols(&self) -> bool {

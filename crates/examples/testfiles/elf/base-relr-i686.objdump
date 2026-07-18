@@ -104,7 +104,7 @@ Import { library: "libc.so.6", name: "__cxa_finalize" }
 Import { library: "", name: "__gmon_start__" }
 Import { library: "", name: "_ITM_registerTMCloneTable" }
 
-Export { name: "_IO_stdin_used", address: 2004 }
+Export { name: "_IO_stdin_used", target: Address { address: 2004 }, flags: Elf { st_info: STB_GLOBAL | STT_OBJECT, st_other: STV_DEFAULT } }
 
 Symbol map
 0x1cc-0x1ec "__abi_tag"
