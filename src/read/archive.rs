@@ -116,6 +116,14 @@ impl<'data, R: ReadRef<'data>> ArchiveFile<'data, R> {
             thin,
         };
 
+        let parse_member = |file: &ArchiveFile<'data, R>, tail: &mut u64| {
+            if *tail < len {
+                ArchiveMember::parse(file.data.0, tail, file.names, file.thin).map(Some)
+            } else {
+                Ok(None)
+            }
+        };
+
         // The first few members may be special, so parse them.
         // GNU has:
         // - "/" or "/SYM64/": symbol table (optional)
@@ -123,54 +131,45 @@ impl<'data, R: ReadRef<'data>> ArchiveFile<'data, R> {
         // COFF has:
         // - "/": first linker member
         // - "/": second linker member
-        // - "//": names table
+        // - "//": names table (optional)
+        // - "/<ECSYMBOLS>/": ARM EC symbol table (optional)
         // BSD has:
         // - "__.SYMDEF" or "__.SYMDEF SORTED": symbol table (optional)
         // BSD 64-bit has:
         // - "__.SYMDEF_64" or "__.SYMDEF_64 SORTED": symbol table (optional)
         // BSD may use the extended name for the symbol table. This is handled
         // by `ArchiveMember::parse`.
-        if tail < len {
-            let member = ArchiveMember::parse(data, &mut tail, &[], thin)?;
+        if let Some(member) = parse_member(&file, &mut tail)? {
             if member.name == b"/" {
                 // GNU symbol table (unless we later determine this is COFF).
                 file.kind = ArchiveKind::Gnu;
                 file.symbols = member.file_range();
                 members_offset = tail;
-
-                if tail < len {
-                    let member = ArchiveMember::parse(data, &mut tail, &[], thin)?;
-                    if member.name == b"/" {
+                if let Some(member) = parse_member(&file, &mut tail)? {
+                    if member.name == b"//" {
+                        // GNU names table.
+                        file.names = member.data(data)?;
+                        members_offset = tail;
+                    } else if member.name == b"/" {
                         // COFF linker member.
                         file.kind = ArchiveKind::Coff;
                         file.symbols = member.file_range();
                         members_offset = tail;
-
-                        if tail < len {
-                            let member = ArchiveMember::parse(data, &mut tail, &[], thin)?;
+                        let mut next_member = parse_member(&file, &mut tail)?;
+                        if let Some(member) = &next_member {
                             if member.name == b"//" {
-                                // COFF names table.
+                                // COFF names table (optional if no long names).
                                 file.names = member.data(data)?;
                                 members_offset = tail;
-
-                                // The EC symbol table may follow the names table.
-                                if tail < len {
-                                    let member =
-                                        ArchiveMember::parse(data, &mut tail, file.names, thin)?;
-                                    if member.name == b"/<ECSYMBOLS>/" {
-                                        // COFF EC symbol table.
-                                        members_offset = tail;
-                                    }
-                                }
-                            } else if member.name == b"/<ECSYMBOLS>/" {
-                                // COFF EC symbol table with no names table.
+                                next_member = parse_member(&file, &mut tail)?;
+                            }
+                        }
+                        if let Some(member) = &next_member {
+                            if member.name == b"/<ECSYMBOLS>/" {
+                                // COFF EC symbol table.
                                 members_offset = tail;
                             }
                         }
-                    } else if member.name == b"//" {
-                        // GNU names table.
-                        file.names = member.data(data)?;
-                        members_offset = tail;
                     }
                 }
             } else if member.name == b"/SYM64/" {
@@ -178,9 +177,7 @@ impl<'data, R: ReadRef<'data>> ArchiveFile<'data, R> {
                 file.kind = ArchiveKind::Gnu64;
                 file.symbols = member.file_range();
                 members_offset = tail;
-
-                if tail < len {
-                    let member = ArchiveMember::parse(data, &mut tail, &[], thin)?;
+                if let Some(member) = parse_member(&file, &mut tail)? {
                     if member.name == b"//" {
                         // GNU names table.
                         file.names = member.data(data)?;
