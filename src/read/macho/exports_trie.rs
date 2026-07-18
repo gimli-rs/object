@@ -117,6 +117,12 @@ struct NodeIterator<'data> {
     stack: Vec<Frame<'data>>,
     // Accumulates the prefix edge strings as we traverse the trie.
     name_buf: Vec<u8>,
+    // Bounds the traversal. A well-formed exports trie is a prefix tree with at
+    // most `data.len()` nodes, so a DFS needs at most ~2 * data.len() steps. The
+    // ancestor check below rejects cycles, but not shared subtrees, which can
+    // cause exponential re-traversal; this budget stops such (and any other
+    // pathological) input cleanly instead of hanging.
+    budget: usize,
 }
 
 // Implements a DFS pre-order traversal of the exports trie.
@@ -127,6 +133,7 @@ impl<'data> NodeIterator<'data> {
             first: true,
             stack: Vec::new(),
             name_buf: Vec::new(),
+            budget: data.len().saturating_mul(2).saturating_add(2),
         }
     }
 
@@ -169,6 +176,15 @@ impl<'data> NodeIterator<'data> {
     // - `Ok(Some(None))` if we don't have terminal data at the current node.
     // - `Ok(None)` if we've reached the end of the trie.
     fn next(&mut self) -> Result<Option<Option<ExportSymbol<'data>>>> {
+        match self.budget.checked_sub(1) {
+            Some(remaining) => self.budget = remaining,
+            None => {
+                // Cyclic or shared-subtree (exponential) trie: stop cleanly.
+                self.stack.clear();
+                self.first = false;
+                return Ok(None);
+            }
+        }
         if self.first {
             self.first = false;
             // The root node is at offset 0.
