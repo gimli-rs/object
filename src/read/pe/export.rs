@@ -5,7 +5,7 @@ use core::marker::PhantomData;
 
 use crate::endian::{LittleEndian as LE, U16, U32};
 use crate::pe;
-use crate::read::{self, ByteString, Bytes, Error, ReadError, ReadRef, Result};
+use crate::read::{self, ByteString, Bytes, Error, NameOrOrdinal, ReadError, ReadRef, Result};
 
 use super::{ImageNtHeaders, PeFile};
 
@@ -426,6 +426,9 @@ where
     image_base: u64,
     table: Option<ExportTable<'data>>,
     index: usize,
+    // false: iterating names, true: iterating addresses
+    addresses: bool,
+    seen: Vec<bool>,
     marker: PhantomData<(&'file (), R)>,
 }
 
@@ -435,10 +438,16 @@ where
 {
     pub(super) fn new<Pe: ImageNtHeaders>(file: &'file PeFile<'data, Pe, R>) -> Result<Self> {
         let table = file.export_table()?;
+        let seen = match &table {
+            Some(table) => vec![false; table.addresses().len()],
+            None => Vec::new(),
+        };
         Ok(PeExportIterator {
             image_base: file.common.image_base,
             table,
             index: 0,
+            addresses: false,
+            seen,
             marker: PhantomData,
         })
     }
@@ -447,36 +456,69 @@ where
         let Some(table) = &self.table else {
             return Ok(None);
         };
-        let index = self.index;
-        let Some(name_pointer) = table.name_pointers().get(index) else {
-            return Ok(None);
-        };
-        let Some(address_index) = table.name_ordinals().get(index) else {
-            return Ok(None);
-        };
-        // Ensure progress is made, so errors after here don't need to terminate iteration.
-        self.index += 1;
+        if !self.addresses {
+            let index = self.index;
+            if let (Some(name_pointer), Some(address_index)) = (
+                table.name_pointers().get(index),
+                table.name_ordinals().get(index),
+            ) {
+                // Ensure progress is made, so errors after here don't need to terminate iteration.
+                self.index += 1;
 
-        let name = table.name_from_pointer(name_pointer.get(LE))?;
-        let address_index = address_index.get(LE);
-        let address = table.address_by_index(address_index)?;
-        let ordinal = table.ordinal_from_index(address_index)?;
+                let address_index = address_index.get(LE);
+                if let Some(seen) = self.seen.get_mut(usize::from(address_index.0)) {
+                    *seen = true;
+                }
+
+                let address = table.address_by_index(address_index)?;
+                let ordinal = table.ordinal_from_index(address_index)?;
+                let name = table.name_from_pointer(name_pointer.get(LE))?;
+                let name = NameOrOrdinal::Name(Cow::Borrowed(name));
+                return self.export(table, address, ordinal, name);
+            } else {
+                self.index = 0;
+                self.addresses = true;
+            }
+        }
+        loop {
+            let index = self.index;
+            let Some(address) = table.addresses().get(index).map(|x| x.get(LE)) else {
+                return Ok(None);
+            };
+            // Ensure progress is made, so errors after here don't need to terminate iteration.
+            self.index += 1;
+
+            if self.seen[index] || address == 0 {
+                continue;
+            }
+
+            let ordinal = table.ordinal_from_index(ExportAddressIndex(index as u16))?;
+            return self.export(table, address, ordinal, NameOrOrdinal::Ordinal(ordinal.0));
+        }
+    }
+
+    fn export(
+        &self,
+        table: &ExportTable<'data>,
+        address: u32,
+        ordinal: ExportOrdinal,
+        name: NameOrOrdinal<Cow<'data, [u8]>>,
+    ) -> read::Result<Option<read::Export<'data>>> {
         let target = match table.target_from_address(address)? {
             ExportTarget::Address(address) => read::ExportTarget::Address {
                 address: self.image_base.wrapping_add(address.into()),
             },
-            ExportTarget::ForwardByName(library, name) => {
-                read::ExportTarget::Reexport { library, name }
-            }
-            ExportTarget::ForwardByOrdinal(library, ordinal) => {
-                read::ExportTarget::ReexportOrdinal {
-                    library,
-                    ordinal: ordinal.0,
-                }
-            }
+            ExportTarget::ForwardByName(library, name) => read::ExportTarget::Reexport {
+                library,
+                name: NameOrOrdinal::Name(name),
+            },
+            ExportTarget::ForwardByOrdinal(library, ordinal) => read::ExportTarget::Reexport {
+                library,
+                name: NameOrOrdinal::Ordinal(ordinal.0),
+            },
         };
         Ok(Some(read::Export {
-            name: Cow::Borrowed(name),
+            name,
             target,
             weak: false,
             flags: read::ExportFlags::Pe { ordinal },

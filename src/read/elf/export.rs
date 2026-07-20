@@ -3,7 +3,7 @@ use alloc::fmt;
 
 use crate::elf;
 use crate::endian::Endianness;
-use crate::read::{self, Export, ExportFlags, ExportTarget, ReadRef, SymbolIndex};
+use crate::read::{self, Export, ExportFlags, ExportTarget, NameOrOrdinal, ReadRef, SymbolIndex};
 
 use super::{FileHeader, Sym, SymbolTable, VersionTable};
 
@@ -89,7 +89,7 @@ where
                 (None, false)
             };
             return Ok(Some(Export {
-                name: Cow::Borrowed(name),
+                name: NameOrOrdinal::Name(Cow::Borrowed(name)),
                 target,
                 weak: symbol.st_bind() == elf::STB_WEAK,
                 flags: ExportFlags::Elf {

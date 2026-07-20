@@ -449,7 +449,7 @@ impl<'data> Import<'data> {
 /// Returned by [`Object::exports`].
 #[derive(Clone, PartialEq, Eq)]
 pub struct Export<'data> {
-    name: Cow<'data, [u8]>,
+    name: NameOrOrdinal<Cow<'data, [u8]>>,
     target: ExportTarget<'data>,
     weak: bool,
     flags: ExportFlags<'data>,
@@ -458,8 +458,11 @@ pub struct Export<'data> {
 impl<'data> fmt::Debug for Export<'data> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut s = f.debug_struct("Export");
-        s.field("name", &ByteString(&self.name));
-        s.field("target", &self.target);
+        match &self.name {
+            NameOrOrdinal::Name(name) => s.field("name", &ByteString(name)),
+            NameOrOrdinal::Ordinal(ordinal) => s.field("ordinal", ordinal),
+        };
+        s.field("target", &self.target());
         if self.weak {
             s.field("weak", &self.weak);
         }
@@ -469,22 +472,34 @@ impl<'data> fmt::Debug for Export<'data> {
 }
 
 impl<'data> Export<'data> {
-    /// The symbol name.
+    /// The name or ordinal that the symbol is exported as.
     #[inline]
-    pub fn name(&self) -> &[u8] {
-        &self.name
+    pub fn name(&self) -> NameOrOrdinal<&[u8]> {
+        self.name.as_ref()
     }
 
-    /// Consume the export and return the name buffer.
+    /// Consume the export and return the name.
+    ///
+    /// Use this to avoid copying the name when it is owned.
     #[inline]
-    pub fn into_name(self) -> Cow<'data, [u8]> {
+    pub fn into_name(self) -> NameOrOrdinal<Cow<'data, [u8]>> {
         self.name
     }
 
     /// The target of the export.
     #[inline]
-    pub fn target(&self) -> ExportTarget<'data> {
-        self.target
+    pub fn target(&self) -> ExportTarget<'_> {
+        match self.target {
+            // Handle empty name for EXPORT_SYMBOL_FLAGS_REEXPORT in Mach-O exports trie.
+            ExportTarget::Reexport {
+                library,
+                name: NameOrOrdinal::Name(b""),
+            } => ExportTarget::Reexport {
+                library,
+                name: self.name.as_ref(),
+            },
+            target => target,
+        }
     }
 
     /// Return true if the export is a weak definition.
@@ -546,7 +561,7 @@ pub enum ExportTarget<'data> {
         /// ELF may have a corresponding PLT entry, but we don't attempt to determine it.
         stub: Option<u64>,
     },
-    /// A symbol from an external library which is reexported by name.
+    /// A symbol from an external library which is reexported.
     ///
     /// This is used for PE and Mach-O.
     Reexport {
@@ -555,19 +570,8 @@ pub enum ExportTarget<'data> {
         /// This is empty if the library is not specified.
         // TODO: Mach-O special library ordinals
         library: &'data [u8],
-        /// The symbol name in the external library.
-        ///
-        /// An empty name means the imported symbol has the same name as this export.
-        name: &'data [u8],
-    },
-    /// A symbol from an external library which is reexported by ordinal.
-    ///
-    /// This is only used for PE.
-    ReexportOrdinal {
-        /// The name of the library.
-        library: &'data [u8],
-        /// The ordinal of the symbol in the external library.
-        ordinal: u16,
+        /// The name or ordinal of the symbol in the external library.
+        name: NameOrOrdinal<&'data [u8]>,
     },
 }
 
@@ -590,16 +594,15 @@ impl<'data> fmt::Debug for ExportTarget<'data> {
                 .field("resolver", resolver)
                 .field("stub", stub)
                 .finish(),
-            ExportTarget::Reexport { library, name } => f
-                .debug_struct("Reexport")
-                .field("library", &ByteString(library))
-                .field("name", &ByteString(name))
-                .finish(),
-            ExportTarget::ReexportOrdinal { library, ordinal } => f
-                .debug_struct("ReexportOrdinal")
-                .field("library", &ByteString(library))
-                .field("ordinal", ordinal)
-                .finish(),
+            ExportTarget::Reexport { library, name } => {
+                let mut s = f.debug_struct("Reexport");
+                s.field("library", &ByteString(library));
+                match name {
+                    NameOrOrdinal::Name(name) => s.field("name", &ByteString(name)),
+                    NameOrOrdinal::Ordinal(ordinal) => s.field("ordinal", ordinal),
+                };
+                s.finish()
+            }
         }
     }
 }
@@ -678,6 +681,61 @@ impl<'data> fmt::Debug for ExportFlags<'data> {
             ExportFlags::Pe { ordinal } => f.debug_struct("Pe").field("ordinal", ordinal).finish(),
             #[cfg(not(feature = "elf"))]
             ExportFlags::_Phantom(_, i) => match *i {},
+        }
+    }
+}
+
+/// The name or ordinal of an exported symbol in a library.
+///
+/// Only PE supports identifying a symbol by ordinal instead of by name.
+///
+/// `T` is the storage for the name. This is normally `&[u8]`, but it is
+/// `Cow<[u8]>` where the name may need to be owned (see [`Export::into_name`]).
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum NameOrOrdinal<T> {
+    /// The name of the symbol.
+    Name(T),
+    /// The ordinal of the symbol in the library.
+    Ordinal(u16),
+}
+
+impl<T: AsRef<[u8]>> fmt::Debug for NameOrOrdinal<T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            NameOrOrdinal::Name(name) => f
+                .debug_tuple("Name")
+                .field(&ByteString(name.as_ref()))
+                .finish(),
+            NameOrOrdinal::Ordinal(ordinal) => f.debug_tuple("Ordinal").field(ordinal).finish(),
+        }
+    }
+}
+
+impl<T: AsRef<[u8]>> NameOrOrdinal<T> {
+    /// The name of the symbol, or `None` if it is identified by ordinal.
+    #[inline]
+    pub fn name(&self) -> Option<&[u8]> {
+        match self {
+            NameOrOrdinal::Name(name) => Some(name.as_ref()),
+            NameOrOrdinal::Ordinal(_) => None,
+        }
+    }
+
+    /// The ordinal of the symbol, or `None` if it is identified by name.
+    #[inline]
+    pub fn ordinal(&self) -> Option<u16> {
+        match self {
+            NameOrOrdinal::Name(_) => None,
+            NameOrOrdinal::Ordinal(ordinal) => Some(*ordinal),
+        }
+    }
+
+    /// Borrow the name.
+    #[inline]
+    pub fn as_ref(&self) -> NameOrOrdinal<&[u8]> {
+        match self {
+            NameOrOrdinal::Name(name) => NameOrOrdinal::Name(name.as_ref()),
+            NameOrOrdinal::Ordinal(ordinal) => NameOrOrdinal::Ordinal(*ordinal),
         }
     }
 }

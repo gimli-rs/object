@@ -6,7 +6,8 @@ use core::slice;
 use crate::Endianness;
 use crate::macho;
 use crate::read::{
-    Error, Export, ExportFlags, ExportTarget, ReadError, ReadRef, Result, SectionIndex,
+    Error, Export, ExportFlags, ExportTarget, NameOrOrdinal, ReadError, ReadRef, Result,
+    SectionIndex,
 };
 
 use super::{ExportData, ExportsTrieIterator, MachHeader, MachOFile, Nlist, Section, Segment};
@@ -159,12 +160,12 @@ where
                             .read_error("Invalid Mach-O export dylib ordinal")?;
                         ExportTarget::Reexport {
                             library,
-                            name: import_name,
+                            name: NameOrOrdinal::Name(import_name),
                         }
                     }
                 };
                 Ok(Some(Export {
-                    name: Cow::Owned(symbol.into_name()),
+                    name: NameOrOrdinal::Name(Cow::Owned(symbol.into_name())),
                     target,
                     weak: flags.contains(macho::EXPORT_SYMBOL_FLAGS_WEAK_DEFINITION),
                     flags: ExportFlags::None,
@@ -195,7 +196,7 @@ where
                                 .read_error("Invalid Mach-O indirect symbol value")?;
                             ExportTarget::Reexport {
                                 library: &[],
-                                name: import_name,
+                                name: NameOrOrdinal::Name(import_name),
                             }
                         }
                         macho::N_SECT => {
@@ -219,7 +220,7 @@ where
                         _ => continue,
                     };
                     break Ok(Some(Export {
-                        name: Cow::Borrowed(name),
+                        name: NameOrOrdinal::Name(Cow::Borrowed(name)),
                         target,
                         weak: symbol.n_desc(endian).contains(macho::N_WEAK_DEF),
                         flags: ExportFlags::MachO {
