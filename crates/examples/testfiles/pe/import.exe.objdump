@@ -1,0 +1,24 @@
+Format: Pe Little-endian 64-bit
+Kind: Executable
+Architecture: X86_64
+Flags: Coff { characteristics: IMAGE_FILE_EXECUTABLE_IMAGE | IMAGE_FILE_LARGE_ADDRESS_AWARE }
+Relative Address Base: 140000000
+Entry Address: 140001020
+Segment { name: ".text", address: 140001000, size: d6, permissions: R-X }
+Segment { name: ".rdata", address: 140002000, size: f8, permissions: R-- }
+Segment { name: ".data", address: 140003000, size: 18, permissions: RW- }
+Segment { name: ".pdata", address: 140004000, size: 24, permissions: R-- }
+Segment { name: ".reloc", address: 140005000, size: c, permissions: R-- }
+1: Section { name: ".text", address: 140001000, size: d6, align: 1000, kind: Text, flags: Coff { characteristics: IMAGE_SCN_CNT_CODE | IMAGE_SCN_MEM_EXECUTE | IMAGE_SCN_MEM_READ } }
+2: Section { name: ".rdata", address: 140002000, size: f8, align: 1000, kind: ReadOnlyData, flags: Coff { characteristics: IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_READ } }
+3: Section { name: ".data", address: 140003000, size: 18, align: 1000, kind: Data, flags: Coff { characteristics: IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_READ | IMAGE_SCN_MEM_WRITE } }
+4: Section { name: ".pdata", address: 140004000, size: 24, align: 1000, kind: ReadOnlyData, flags: Coff { characteristics: IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_READ } }
+5: Section { name: ".reloc", address: 140005000, size: c, align: 1000, kind: Other, flags: Coff { characteristics: IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_DISCARDABLE | IMAGE_SCN_MEM_READ } }
+
+Symbols
+
+Dynamic symbols
+
+Import { library: "export.dll", name: "exported_named" }
+
+Symbol map

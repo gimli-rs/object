@@ -1,0 +1,263 @@
+Format: PE 64-bit
+ImageDosHeader {
+    Magic: 0x5A4D
+    CountBytesLastPage: 0x78
+    CountPages: 0x1
+    CountRelocations: 0x0
+    CountHeaderParagraphs: 0x4
+    MinAllocParagraphs: 0x0
+    MaxAllocParagraphs: 0x0
+    StackSegment: 0x0
+    StackPointer: 0x0
+    Checksum: 0x0
+    InstructionPointer: 0x0
+    CodeSegment: 0x0
+    AddressOfRelocations: 0x40
+    OverlayNumber: 0x0
+    OemId: 0x0
+    OemInfo: 0x0
+    AddressOfNewHeader: 0x78
+}
+ImageNtHeaders {
+    Signature: 0x4550
+}
+ImageFileHeader {
+    Machine: IMAGE_FILE_MACHINE_AMD64 (0x8664)
+    NumberOfSections: 5
+    TimeDateStamp: 1784266765
+    PointerToSymbolTable: 0x0
+    NumberOfSymbols: 0
+    SizeOfOptionalHeader: 0xF0
+    Characteristics: 0x22
+        IMAGE_FILE_EXECUTABLE_IMAGE (0x2)
+        IMAGE_FILE_LARGE_ADDRESS_AWARE (0x20)
+}
+ImageOptionalHeader {
+    Magic: 0x20B
+    MajorLinkerVersion: 14
+    MinorLinkerVersion: 0
+    SizeOfCode: 0x200
+    SizeOfInitializedData: 0x800
+    SizeOfUninitializedData: 0x0
+    AddressOfEntryPoint: 0x1020
+    BaseOfCode: 0x1000
+    ImageBase: 0x140000000
+    SectionAlignment: 0x1000
+    FileAlignment: 0x200
+    MajorOperatingSystemVersion: 6
+    MinorOperatingSystemVersion: 0
+    MajorImageVersion: 0
+    MinorImageVersion: 0
+    MajorSubsystemVersion: 6
+    MinorSubsystemVersion: 0
+    Win32VersionValue: 0
+    SizeOfImage: 0x6000
+    SizeOfHeaders: 0x400
+    CheckSum: 0x0
+    Subsystem: IMAGE_SUBSYSTEM_WINDOWS_CUI (0x3)
+    DllCharacteristics: 0x8160
+        IMAGE_DLLCHARACTERISTICS_HIGH_ENTROPY_VA (0x20)
+        IMAGE_DLLCHARACTERISTICS_DYNAMIC_BASE (0x40)
+        IMAGE_DLLCHARACTERISTICS_NX_COMPAT (0x100)
+        IMAGE_DLLCHARACTERISTICS_TERMINAL_SERVER_AWARE (0x8000)
+    SizeOfStackReserve: 0x100000
+    SizeOfStackCommit: 0x1000
+    SizeOfHeapReserve: 0x100000
+    SizeOfHeapCommit: 0x1000
+    LoaderFlags: 0x0
+    NumberOfRvaAndSizes: 0x10
+}
+ImageDataDirectory {
+    Index: IMAGE_DIRECTORY_ENTRY_EXPORT (0x0)
+    VirtualAddress: 0x0
+    Size: 0x0
+}
+ImageDataDirectory {
+    Index: IMAGE_DIRECTORY_ENTRY_IMPORT (0x1)
+    VirtualAddress: 0x206C
+    Size: 0x28
+}
+ImageDataDirectory {
+    Index: IMAGE_DIRECTORY_ENTRY_RESOURCE (0x2)
+    VirtualAddress: 0x0
+    Size: 0x0
+}
+ImageDataDirectory {
+    Index: IMAGE_DIRECTORY_ENTRY_EXCEPTION (0x3)
+    VirtualAddress: 0x4000
+    Size: 0x24
+}
+ImageDataDirectory {
+    Index: IMAGE_DIRECTORY_ENTRY_SECURITY (0x4)
+    VirtualAddress: 0x0
+    Size: 0x0
+}
+ImageDataDirectory {
+    Index: IMAGE_DIRECTORY_ENTRY_BASERELOC (0x5)
+    VirtualAddress: 0x5000
+    Size: 0xC
+}
+ImageDataDirectory {
+    Index: IMAGE_DIRECTORY_ENTRY_DEBUG (0x6)
+    VirtualAddress: 0x0
+    Size: 0x0
+}
+ImageDataDirectory {
+    Index: IMAGE_DIRECTORY_ENTRY_ARCHITECTURE (0x7)
+    VirtualAddress: 0x0
+    Size: 0x0
+}
+ImageDataDirectory {
+    Index: IMAGE_DIRECTORY_ENTRY_GLOBALPTR (0x8)
+    VirtualAddress: 0x0
+    Size: 0x0
+}
+ImageDataDirectory {
+    Index: IMAGE_DIRECTORY_ENTRY_TLS (0x9)
+    VirtualAddress: 0x0
+    Size: 0x0
+}
+ImageDataDirectory {
+    Index: IMAGE_DIRECTORY_ENTRY_LOAD_CONFIG (0xA)
+    VirtualAddress: 0x0
+    Size: 0x0
+}
+ImageDataDirectory {
+    Index: IMAGE_DIRECTORY_ENTRY_BOUND_IMPORT (0xB)
+    VirtualAddress: 0x0
+    Size: 0x0
+}
+ImageDataDirectory {
+    Index: IMAGE_DIRECTORY_ENTRY_IAT (0xC)
+    VirtualAddress: 0x20B0
+    Size: 0x18
+}
+ImageDataDirectory {
+    Index: IMAGE_DIRECTORY_ENTRY_DELAY_IMPORT (0xD)
+    VirtualAddress: 0x2008
+    Size: 0x40
+}
+ImageDataDirectory {
+    Index: IMAGE_DIRECTORY_ENTRY_COM_DESCRIPTOR (0xE)
+    VirtualAddress: 0x0
+    Size: 0x0
+}
+ImageDataDirectory {
+    Index: 0xF
+    VirtualAddress: 0x0
+    Size: 0x0
+}
+ImageSectionHeader {
+    Index: 1
+    Name: ".text"
+    VirtualSize: 0xD6
+    VirtualAddress: 0x1000
+    SizeOfRawData: 0x200
+    PointerToRawData: 0x400
+    PointerToRelocations: 0x0
+    PointerToLinenumbers: 0x0
+    NumberOfRelocations: 0
+    NumberOfLinenumbers: 0
+    Characteristics: 0x60000020
+        IMAGE_SCN_CNT_CODE (0x20)
+        IMAGE_SCN_MEM_EXECUTE (0x20000000)
+        IMAGE_SCN_MEM_READ (0x40000000)
+}
+ImageSectionHeader {
+    Index: 2
+    Name: ".rdata"
+    VirtualSize: 0xF8
+    VirtualAddress: 0x2000
+    SizeOfRawData: 0x200
+    PointerToRawData: 0x600
+    PointerToRelocations: 0x0
+    PointerToLinenumbers: 0x0
+    NumberOfRelocations: 0
+    NumberOfLinenumbers: 0
+    Characteristics: 0x40000040
+        IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
+        IMAGE_SCN_MEM_READ (0x40000000)
+}
+ImageSectionHeader {
+    Index: 3
+    Name: ".data"
+    VirtualSize: 0x18
+    VirtualAddress: 0x3000
+    SizeOfRawData: 0x200
+    PointerToRawData: 0x800
+    PointerToRelocations: 0x0
+    PointerToLinenumbers: 0x0
+    NumberOfRelocations: 0
+    NumberOfLinenumbers: 0
+    Characteristics: 0xC0000040
+        IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
+        IMAGE_SCN_MEM_READ (0x40000000)
+        IMAGE_SCN_MEM_WRITE (0x80000000)
+}
+ImageSectionHeader {
+    Index: 4
+    Name: ".pdata"
+    VirtualSize: 0x24
+    VirtualAddress: 0x4000
+    SizeOfRawData: 0x200
+    PointerToRawData: 0xA00
+    PointerToRelocations: 0x0
+    PointerToLinenumbers: 0x0
+    NumberOfRelocations: 0
+    NumberOfLinenumbers: 0
+    Characteristics: 0x40000040
+        IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
+        IMAGE_SCN_MEM_READ (0x40000000)
+}
+ImageSectionHeader {
+    Index: 5
+    Name: ".reloc"
+    VirtualSize: 0xC
+    VirtualAddress: 0x5000
+    SizeOfRawData: 0x200
+    PointerToRawData: 0xC00
+    PointerToRelocations: 0x0
+    PointerToLinenumbers: 0x0
+    NumberOfRelocations: 0
+    NumberOfLinenumbers: 0
+    Characteristics: 0x42000040
+        IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
+        IMAGE_SCN_MEM_DISCARDABLE (0x2000000)
+        IMAGE_SCN_MEM_READ (0x40000000)
+}
+ImageImportDirectory {
+    ImageImportDescriptor {
+        LookupTable: 0x2098
+        TimeDataStamp: 0x0
+        ForwarderChain: 0x0
+        Name: "export.dll" (0x20DA)
+        AddressTable: 0x20B0
+        Thunk {
+            Lookup: 0x20C8
+            Address: 0x20C8
+            Hint: 1
+            Name: "exported_named"
+        }
+        Thunk {
+            Lookup: 0x8000000000000002
+            Address: 0x8000000000000002
+            Ordinal: 2
+        }
+    }
+}
+ImageDelayLoadDirectory {
+    ImageDelayLoadDescriptor {
+        Attributes: 0x1
+        DllName: "delay.dll" (0x2062)
+        ModuleHandle: 0x3000
+        ImportAddressTable: 0x3008
+        ImportNameTable: 0x2048
+        BoundImportAddressTable: 0x0
+        UnloadInformationTable: 0x0
+        TimeDateStamp: 0x0
+        Thunk {
+            Hint: 0
+            Name: "delayed"
+        }
+    }
+}
