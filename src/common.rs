@@ -537,6 +537,13 @@ pub enum SegmentFlags {
         /// `Characteristics` field in the segment header.
         characteristics: crate::pe::SectionFlags,
     },
+    /// Wasm segment flags.
+    #[cfg(feature = "wasm")]
+    Wasm {
+        /// The raw `flags` bits as defined by the WebAssembly tool conventions.
+        /// See <https://github.com/WebAssembly/tool-conventions/blob/main/Linking.md>.
+        flags: u32,
+    },
 }
 
 /// Memory permissions for a segment.
