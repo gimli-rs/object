@@ -156,6 +156,8 @@ where
                         }
                         let library = usize::try_from(*dylib_ordinal)
                             .ok()
+                            // No special ordinals.
+                            .filter(|index| *index != 0)
                             .and_then(|index| libraries.as_deref()?.get(index).copied())
                             .read_error("Invalid Mach-O export dylib ordinal")?;
                         ExportTarget::Reexport {

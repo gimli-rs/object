@@ -29,8 +29,7 @@ Symbols
 
 Dynamic symbols
 
-Import { library: "/usr/lib/libSystem.B.dylib", name: "__tlv_bootstrap", flags: MachO { n_type: N_UNDF | N_EXT, n_desc: 0x100 } }
-Import { library: "/usr/lib/libSystem.B.dylib", name: "dyld_stub_binder", flags: MachO { n_type: N_UNDF | N_EXT, n_desc: 0x100 } }
+Import { library: "/usr/lib/libSystem.B.dylib", name: "__tlv_bootstrap", flags: MachOBind { dylib: 1, flags: 0 } }
 
 Export { name: "_abs", target: Absolute { value: fffff }, flags: None }
 Export { name: "_foo", target: Resolver { resolver: 460, stub: Some(46c) }, flags: None }

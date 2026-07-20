@@ -29,11 +29,12 @@ Symbols
 
 Dynamic symbols
 
-Import { library: "/usr/lib/libSystem.B.dylib", name: "_close", weak: true, flags: MachO { n_type: N_UNDF | N_EXT, n_desc: 0x140 } }
-Import { library: "/usr/lib/libSystem.B.dylib", name: "_dup", flags: MachO { n_type: N_UNDF | N_EXT, n_desc: 0x100 } }
-Import { library: "", name: "_flat_lookup", flags: MachO { n_type: N_UNDF | N_EXT, n_desc: 0xfe00 } }
-Import { library: "", name: "_main_executable", flags: MachO { n_type: N_UNDF | N_EXT, n_desc: 0xff00 } }
-Import { library: "/usr/lib/libSystem.B.dylib", name: "dyld_stub_binder", flags: MachO { n_type: N_UNDF | N_EXT, n_desc: 0x100 } }
+Import { library: "/usr/lib/libSystem.B.dylib", name: "dyld_stub_binder", flags: MachOBind { dylib: 1, flags: 0 } }
+Import { library: "", name: "_weak_lookup", flags: MachOBind { dylib: BIND_SPECIAL_DYLIB_WEAK_LOOKUP, flags: 0 } }
+Import { library: "/usr/lib/libSystem.B.dylib", name: "_close", weak: true, flags: MachOBind { dylib: 1, flags: BIND_SYMBOL_FLAGS_WEAK_IMPORT } }
+Import { library: "/usr/lib/libSystem.B.dylib", name: "_dup", flags: MachOBind { dylib: 1, flags: 0 } }
+Import { library: "", name: "_flat_lookup", flags: MachOBind { dylib: BIND_SPECIAL_DYLIB_FLAT_LOOKUP, flags: 0 } }
+Import { library: "", name: "_main_executable", flags: MachOBind { dylib: BIND_SPECIAL_DYLIB_MAIN_EXECUTABLE, flags: 0 } }
 
 Export { name: "_interposable", target: Address { address: 480 }, flags: None }
 Export { name: "_use_imports", target: Address { address: 4a0 }, flags: None }

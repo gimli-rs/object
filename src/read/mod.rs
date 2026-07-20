@@ -453,7 +453,7 @@ impl<'data> Import<'data> {
     /// This is empty if the library name is not specified.
     ///
     /// For Mach-O, this will also be empty for a special library ordinal,
-    /// which can be obtained from the `n_desc` field in the flags.
+    /// which can be obtained from the `n_desc` or `dylib` field in the flags.
     #[inline]
     pub fn library(&self) -> &'data [u8] {
         self.library
@@ -504,6 +504,16 @@ pub enum ImportFlags<'data> {
         /// For a file using `MH_TWOLEVEL`, this contains the library ordinal.
         n_desc: crate::macho::SymbolDesc,
     },
+    /// Mach-O dynamic linker import flags.
+    ///
+    /// Used for imports that are obtained from `LC_DYLD_CHAINED_FIXUPS` or `LC_DYLD_INFO`.
+    #[cfg(feature = "macho")]
+    MachOBind {
+        /// The library ordinal that the symbol is imported from.
+        dylib: crate::macho::BindDylib,
+        /// The bind symbol flags.
+        flags: crate::macho::BindSymbolFlags,
+    },
     /// PE import flags.
     #[cfg(feature = "pe")]
     Pe {
@@ -541,6 +551,12 @@ impl<'data> fmt::Debug for ImportFlags<'data> {
                 .debug_struct("MachO")
                 .field("n_type", n_type)
                 .field("n_desc", n_desc)
+                .finish(),
+            #[cfg(feature = "macho")]
+            ImportFlags::MachOBind { dylib, flags } => f
+                .debug_struct("MachOBind")
+                .field("dylib", dylib)
+                .field("flags", flags)
                 .finish(),
             #[cfg(feature = "pe")]
             ImportFlags::Pe { delay } => {
@@ -680,7 +696,6 @@ pub enum ExportTarget<'data> {
         /// The name of the library.
         ///
         /// This is empty if the library is not specified.
-        // TODO: Mach-O special library ordinals
         library: &'data [u8],
         /// The name or ordinal of the symbol in the external library.
         name: NameOrOrdinal<&'data [u8]>,
