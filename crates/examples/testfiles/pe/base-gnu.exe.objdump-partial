@@ -66,55 +66,55 @@ Symbols
 
 Dynamic symbols
 
-Import { library: "KERNEL32.dll", name: "DeleteCriticalSection" }
-Import { library: "KERNEL32.dll", name: "EnterCriticalSection" }
-Import { library: "KERNEL32.dll", name: "GetLastError" }
-Import { library: "KERNEL32.dll", name: "GetStartupInfoA" }
-Import { library: "KERNEL32.dll", name: "InitializeCriticalSection" }
-Import { library: "KERNEL32.dll", name: "IsDBCSLeadByteEx" }
-Import { library: "KERNEL32.dll", name: "LeaveCriticalSection" }
-Import { library: "KERNEL32.dll", name: "MultiByteToWideChar" }
-Import { library: "KERNEL32.dll", name: "SetUnhandledExceptionFilter" }
-Import { library: "KERNEL32.dll", name: "Sleep" }
-Import { library: "KERNEL32.dll", name: "TlsGetValue" }
-Import { library: "KERNEL32.dll", name: "VirtualProtect" }
-Import { library: "KERNEL32.dll", name: "VirtualQuery" }
-Import { library: "KERNEL32.dll", name: "WideCharToMultiByte" }
-Import { library: "msvcrt.dll", name: "__C_specific_handler" }
-Import { library: "msvcrt.dll", name: "___lc_codepage_func" }
-Import { library: "msvcrt.dll", name: "___mb_cur_max_func" }
-Import { library: "msvcrt.dll", name: "__getmainargs" }
-Import { library: "msvcrt.dll", name: "__initenv" }
-Import { library: "msvcrt.dll", name: "__iob_func" }
-Import { library: "msvcrt.dll", name: "__set_app_type" }
-Import { library: "msvcrt.dll", name: "__setusermatherr" }
-Import { library: "msvcrt.dll", name: "_acmdln" }
-Import { library: "msvcrt.dll", name: "_amsg_exit" }
-Import { library: "msvcrt.dll", name: "_cexit" }
-Import { library: "msvcrt.dll", name: "_commode" }
-Import { library: "msvcrt.dll", name: "_errno" }
-Import { library: "msvcrt.dll", name: "_fmode" }
-Import { library: "msvcrt.dll", name: "_initterm" }
-Import { library: "msvcrt.dll", name: "_lock" }
-Import { library: "msvcrt.dll", name: "_onexit" }
-Import { library: "msvcrt.dll", name: "_unlock" }
-Import { library: "msvcrt.dll", name: "abort" }
-Import { library: "msvcrt.dll", name: "calloc" }
-Import { library: "msvcrt.dll", name: "exit" }
-Import { library: "msvcrt.dll", name: "fprintf" }
-Import { library: "msvcrt.dll", name: "fputc" }
-Import { library: "msvcrt.dll", name: "free" }
-Import { library: "msvcrt.dll", name: "fwrite" }
-Import { library: "msvcrt.dll", name: "localeconv" }
-Import { library: "msvcrt.dll", name: "malloc" }
-Import { library: "msvcrt.dll", name: "memcpy" }
-Import { library: "msvcrt.dll", name: "memset" }
-Import { library: "msvcrt.dll", name: "signal" }
-Import { library: "msvcrt.dll", name: "strerror" }
-Import { library: "msvcrt.dll", name: "strlen" }
-Import { library: "msvcrt.dll", name: "strncmp" }
-Import { library: "msvcrt.dll", name: "vfprintf" }
-Import { library: "msvcrt.dll", name: "wcslen" }
+Import { library: "KERNEL32.dll", name: "DeleteCriticalSection", flags: Pe }
+Import { library: "KERNEL32.dll", name: "EnterCriticalSection", flags: Pe }
+Import { library: "KERNEL32.dll", name: "GetLastError", flags: Pe }
+Import { library: "KERNEL32.dll", name: "GetStartupInfoA", flags: Pe }
+Import { library: "KERNEL32.dll", name: "InitializeCriticalSection", flags: Pe }
+Import { library: "KERNEL32.dll", name: "IsDBCSLeadByteEx", flags: Pe }
+Import { library: "KERNEL32.dll", name: "LeaveCriticalSection", flags: Pe }
+Import { library: "KERNEL32.dll", name: "MultiByteToWideChar", flags: Pe }
+Import { library: "KERNEL32.dll", name: "SetUnhandledExceptionFilter", flags: Pe }
+Import { library: "KERNEL32.dll", name: "Sleep", flags: Pe }
+Import { library: "KERNEL32.dll", name: "TlsGetValue", flags: Pe }
+Import { library: "KERNEL32.dll", name: "VirtualProtect", flags: Pe }
+Import { library: "KERNEL32.dll", name: "VirtualQuery", flags: Pe }
+Import { library: "KERNEL32.dll", name: "WideCharToMultiByte", flags: Pe }
+Import { library: "msvcrt.dll", name: "__C_specific_handler", flags: Pe }
+Import { library: "msvcrt.dll", name: "___lc_codepage_func", flags: Pe }
+Import { library: "msvcrt.dll", name: "___mb_cur_max_func", flags: Pe }
+Import { library: "msvcrt.dll", name: "__getmainargs", flags: Pe }
+Import { library: "msvcrt.dll", name: "__initenv", flags: Pe }
+Import { library: "msvcrt.dll", name: "__iob_func", flags: Pe }
+Import { library: "msvcrt.dll", name: "__set_app_type", flags: Pe }
+Import { library: "msvcrt.dll", name: "__setusermatherr", flags: Pe }
+Import { library: "msvcrt.dll", name: "_acmdln", flags: Pe }
+Import { library: "msvcrt.dll", name: "_amsg_exit", flags: Pe }
+Import { library: "msvcrt.dll", name: "_cexit", flags: Pe }
+Import { library: "msvcrt.dll", name: "_commode", flags: Pe }
+Import { library: "msvcrt.dll", name: "_errno", flags: Pe }
+Import { library: "msvcrt.dll", name: "_fmode", flags: Pe }
+Import { library: "msvcrt.dll", name: "_initterm", flags: Pe }
+Import { library: "msvcrt.dll", name: "_lock", flags: Pe }
+Import { library: "msvcrt.dll", name: "_onexit", flags: Pe }
+Import { library: "msvcrt.dll", name: "_unlock", flags: Pe }
+Import { library: "msvcrt.dll", name: "abort", flags: Pe }
+Import { library: "msvcrt.dll", name: "calloc", flags: Pe }
+Import { library: "msvcrt.dll", name: "exit", flags: Pe }
+Import { library: "msvcrt.dll", name: "fprintf", flags: Pe }
+Import { library: "msvcrt.dll", name: "fputc", flags: Pe }
+Import { library: "msvcrt.dll", name: "free", flags: Pe }
+Import { library: "msvcrt.dll", name: "fwrite", flags: Pe }
+Import { library: "msvcrt.dll", name: "localeconv", flags: Pe }
+Import { library: "msvcrt.dll", name: "malloc", flags: Pe }
+Import { library: "msvcrt.dll", name: "memcpy", flags: Pe }
+Import { library: "msvcrt.dll", name: "memset", flags: Pe }
+Import { library: "msvcrt.dll", name: "signal", flags: Pe }
+Import { library: "msvcrt.dll", name: "strerror", flags: Pe }
+Import { library: "msvcrt.dll", name: "strlen", flags: Pe }
+Import { library: "msvcrt.dll", name: "strncmp", flags: Pe }
+Import { library: "msvcrt.dll", name: "vfprintf", flags: Pe }
+Import { library: "msvcrt.dll", name: "wcslen", flags: Pe }
 
 Symbol map
 0x140001000-0x140001010 "__mingw_invalidParameterHandler"

@@ -423,24 +423,136 @@ impl SymbolSection {
 /// An imported symbol.
 ///
 /// Returned by [`Object::imports`].
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, PartialEq, Eq)]
 pub struct Import<'data> {
-    library: ByteString<'data>,
-    // TODO: or ordinal
-    name: ByteString<'data>,
+    library: &'data [u8],
+    name: NameOrOrdinal<&'data [u8]>,
+    weak: bool,
+    flags: ImportFlags<'data>,
+}
+
+impl<'data> fmt::Debug for Import<'data> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let mut s = f.debug_struct("Import");
+        s.field("library", &ByteString(self.library));
+        match &self.name {
+            NameOrOrdinal::Name(name) => s.field("name", &ByteString(name)),
+            NameOrOrdinal::Ordinal(ordinal) => s.field("ordinal", ordinal),
+        };
+        if self.weak {
+            s.field("weak", &self.weak);
+        }
+        s.field("flags", &self.flags);
+        s.finish()
+    }
 }
 
 impl<'data> Import<'data> {
-    /// The symbol name.
-    #[inline]
-    pub fn name(&self) -> &'data [u8] {
-        self.name.0
-    }
-
     /// The name of the library to import the symbol from.
+    ///
+    /// This is empty if the library name is not specified.
+    ///
+    /// For Mach-O, this will also be empty for a special library ordinal,
+    /// which can be obtained from the `n_desc` field in the flags.
     #[inline]
     pub fn library(&self) -> &'data [u8] {
-        self.library.0
+        self.library
+    }
+
+    /// The name or ordinal of the symbol to import.
+    #[inline]
+    pub fn name(&self) -> NameOrOrdinal<&'data [u8]> {
+        self.name
+    }
+
+    /// Return true if the import is a weak reference.
+    #[inline]
+    pub fn is_weak(&self) -> bool {
+        self.weak
+    }
+
+    /// The format-specific flags for the imported symbol.
+    #[inline]
+    pub fn flags(&self) -> ImportFlags<'data> {
+        self.flags
+    }
+}
+
+/// Import flags that are specific to each file format.
+#[derive(Clone, Copy, PartialEq, Eq)]
+#[non_exhaustive]
+pub enum ImportFlags<'data> {
+    /// No import flags.
+    None,
+    /// ELF import flags.
+    #[cfg(feature = "elf")]
+    Elf {
+        /// `st_info` field in the ELF symbol (binding and type).
+        st_info: crate::elf::SymbolInfo,
+        /// `st_other` field in the ELF symbol (visibility).
+        st_other: crate::elf::SymbolOther,
+        /// The GNU symbol version that is required.
+        version: Option<&'data [u8]>,
+    },
+    /// Mach-O import flags.
+    #[cfg(feature = "macho")]
+    MachO {
+        /// `n_type` field in the nlist symbol.
+        n_type: crate::macho::SymbolFlags,
+        /// `n_desc` field in the nlist symbol.
+        ///
+        /// For a file using `MH_TWOLEVEL`, this contains the library ordinal.
+        n_desc: crate::macho::SymbolDesc,
+    },
+    /// PE import flags.
+    #[cfg(feature = "pe")]
+    Pe {
+        /// The symbol is from the delay-load import table.
+        delay: bool,
+    },
+    #[doc(hidden)]
+    #[cfg(not(feature = "elf"))]
+    _Phantom(
+        core::marker::PhantomData<&'data ()>,
+        core::convert::Infallible,
+    ),
+}
+
+impl<'data> fmt::Debug for ImportFlags<'data> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            ImportFlags::None => f.write_str("None"),
+            #[cfg(feature = "elf")]
+            ImportFlags::Elf {
+                st_info,
+                st_other,
+                version,
+            } => {
+                let mut s = f.debug_struct("Elf");
+                s.field("st_info", st_info);
+                s.field("st_other", st_other);
+                if let Some(version) = version {
+                    s.field("version", &ByteString(version));
+                }
+                s.finish()
+            }
+            #[cfg(feature = "macho")]
+            ImportFlags::MachO { n_type, n_desc } => f
+                .debug_struct("MachO")
+                .field("n_type", n_type)
+                .field("n_desc", n_desc)
+                .finish(),
+            #[cfg(feature = "pe")]
+            ImportFlags::Pe { delay } => {
+                let mut s = f.debug_struct("Pe");
+                if *delay {
+                    s.field("delay", delay);
+                }
+                s.finish()
+            }
+            #[cfg(not(feature = "elf"))]
+            ImportFlags::_Phantom(_, i) => match *i {},
+        }
     }
 }
 
@@ -711,12 +823,14 @@ impl<T: AsRef<[u8]>> fmt::Debug for NameOrOrdinal<T> {
     }
 }
 
-impl<T: AsRef<[u8]>> NameOrOrdinal<T> {
-    /// The name of the symbol, or `None` if it is identified by ordinal.
+impl<T> NameOrOrdinal<T> {
+    /// Consume and return the name, or `None` if it is identified by ordinal.
+    ///
+    /// Use this instead of [`Self::name`] to retain the lifetime of the name.
     #[inline]
-    pub fn name(&self) -> Option<&[u8]> {
+    pub fn into_name(self) -> Option<T> {
         match self {
-            NameOrOrdinal::Name(name) => Some(name.as_ref()),
+            NameOrOrdinal::Name(name) => Some(name),
             NameOrOrdinal::Ordinal(_) => None,
         }
     }
@@ -727,6 +841,17 @@ impl<T: AsRef<[u8]>> NameOrOrdinal<T> {
         match self {
             NameOrOrdinal::Name(_) => None,
             NameOrOrdinal::Ordinal(ordinal) => Some(*ordinal),
+        }
+    }
+}
+
+impl<T: AsRef<[u8]>> NameOrOrdinal<T> {
+    /// The name of the symbol, or `None` if it is identified by ordinal.
+    #[inline]
+    pub fn name(&self) -> Option<&[u8]> {
+        match self {
+            NameOrOrdinal::Name(name) => Some(name.as_ref()),
+            NameOrOrdinal::Ordinal(_) => None,
         }
     }
 

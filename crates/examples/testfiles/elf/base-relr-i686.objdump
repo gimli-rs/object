@@ -97,12 +97,12 @@ Dynamic relocations
 (3fe4, Relocation { kind: Unknown, encoding: Unknown, size: 0, target: Symbol(SymbolIndex(1)), addend: 0, implicit_addend: true, flags: Elf { r_type: 7 } })
 (3fe8, Relocation { kind: Unknown, encoding: Unknown, size: 0, target: Symbol(SymbolIndex(3)), addend: 0, implicit_addend: true, flags: Elf { r_type: 7 } })
 
-Import { library: "libc.so.6", name: "__libc_start_main" }
-Import { library: "", name: "_ITM_deregisterTMCloneTable" }
-Import { library: "libc.so.6", name: "printf" }
-Import { library: "libc.so.6", name: "__cxa_finalize" }
-Import { library: "", name: "__gmon_start__" }
-Import { library: "", name: "_ITM_registerTMCloneTable" }
+Import { library: "libc.so.6", name: "__libc_start_main", flags: Elf { st_info: STB_GLOBAL | STT_FUNC, st_other: STV_DEFAULT, version: "GLIBC_2.34" } }
+Import { library: "", name: "_ITM_deregisterTMCloneTable", weak: true, flags: Elf { st_info: STB_WEAK | STT_NOTYPE, st_other: STV_DEFAULT } }
+Import { library: "libc.so.6", name: "printf", flags: Elf { st_info: STB_GLOBAL | STT_FUNC, st_other: STV_DEFAULT, version: "GLIBC_2.0" } }
+Import { library: "libc.so.6", name: "__cxa_finalize", weak: true, flags: Elf { st_info: STB_WEAK | STT_FUNC, st_other: STV_DEFAULT, version: "GLIBC_2.1.3" } }
+Import { library: "", name: "__gmon_start__", weak: true, flags: Elf { st_info: STB_WEAK | STT_NOTYPE, st_other: STV_DEFAULT } }
+Import { library: "", name: "_ITM_registerTMCloneTable", weak: true, flags: Elf { st_info: STB_WEAK | STT_NOTYPE, st_other: STV_DEFAULT } }
 
 Export { name: "_IO_stdin_used", target: Address { address: 2004 }, flags: Elf { st_info: STB_GLOBAL | STT_OBJECT, st_other: STV_DEFAULT } }
 

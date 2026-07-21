@@ -24,7 +24,7 @@ __data relocations
 
 Dynamic symbols
 
-Import { library: "", name: "_g0" }
+Import { library: "", name: "_g0", flags: MachO { n_type: N_UNDF | N_EXT, n_desc: 0 } }
 
 Export { name: "_g2", target: Address { address: 10 }, flags: MachO { n_type: N_SECT | N_EXT, n_desc: 0 } }
 

@@ -102,17 +102,17 @@ Dynamic relocations
 (4010, Relocation { kind: Unknown, encoding: Unknown, size: 0, target: Symbol(SymbolIndex(9)), addend: 0, implicit_addend: false, flags: Elf { r_type: 7 } })
 (4018, Relocation { kind: Unknown, encoding: Unknown, size: 0, target: Symbol(SymbolIndex(b)), addend: 0, implicit_addend: false, flags: Elf { r_type: 7 } })
 
-Import { library: "libexports.so", name: "global_data" }
-Import { library: "libexports.so", name: "tls_var" }
-Import { library: "", name: "_ITM_deregisterTMCloneTable" }
-Import { library: "libexports.so", name: "global_func" }
-Import { library: "libexports.so", name: "weak_func" }
-Import { library: "ld-linux-x86-64.so.2", name: "__tls_get_addr" }
-Import { library: "", name: "__gmon_start__" }
-Import { library: "", name: "_ITM_registerTMCloneTable" }
-Import { library: "libexports.so", name: "versioned_func" }
-Import { library: "libc.so.6", name: "__cxa_finalize" }
-Import { library: "libexports.so", name: "versioned_func" }
+Import { library: "libexports.so", name: "global_data", flags: Elf { st_info: STB_GLOBAL | STT_OBJECT, st_other: STV_DEFAULT, version: "VERS_1" } }
+Import { library: "libexports.so", name: "tls_var", flags: Elf { st_info: STB_GLOBAL | STT_TLS, st_other: STV_DEFAULT, version: "VERS_1" } }
+Import { library: "", name: "_ITM_deregisterTMCloneTable", weak: true, flags: Elf { st_info: STB_WEAK | STT_NOTYPE, st_other: STV_DEFAULT } }
+Import { library: "libexports.so", name: "global_func", flags: Elf { st_info: STB_GLOBAL | STT_FUNC, st_other: STV_DEFAULT, version: "VERS_1" } }
+Import { library: "libexports.so", name: "weak_func", weak: true, flags: Elf { st_info: STB_WEAK | STT_FUNC, st_other: STV_DEFAULT, version: "VERS_1" } }
+Import { library: "ld-linux-x86-64.so.2", name: "__tls_get_addr", flags: Elf { st_info: STB_GLOBAL | STT_FUNC, st_other: STV_DEFAULT, version: "GLIBC_2.3" } }
+Import { library: "", name: "__gmon_start__", weak: true, flags: Elf { st_info: STB_WEAK | STT_NOTYPE, st_other: STV_DEFAULT } }
+Import { library: "", name: "_ITM_registerTMCloneTable", weak: true, flags: Elf { st_info: STB_WEAK | STT_NOTYPE, st_other: STV_DEFAULT } }
+Import { library: "libexports.so", name: "versioned_func", flags: Elf { st_info: STB_GLOBAL | STT_FUNC, st_other: STV_DEFAULT, version: "VERS_1" } }
+Import { library: "libc.so.6", name: "__cxa_finalize", weak: true, flags: Elf { st_info: STB_WEAK | STT_FUNC, st_other: STV_DEFAULT, version: "GLIBC_2.2.5" } }
+Import { library: "libexports.so", name: "versioned_func", flags: Elf { st_info: STB_GLOBAL | STT_FUNC, st_other: STV_DEFAULT, version: "VERS_2" } }
 
 Export { name: "use_imports", target: Address { address: 1189 }, flags: Elf { st_info: STB_GLOBAL | STT_FUNC, st_other: STV_DEFAULT } }
 

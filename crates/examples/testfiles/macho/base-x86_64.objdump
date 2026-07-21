@@ -28,8 +28,8 @@ Symbols
 
 Dynamic symbols
 
-Import { library: "/usr/lib/libSystem.B.dylib", name: "_printf" }
-Import { library: "/usr/lib/libSystem.B.dylib", name: "dyld_stub_binder" }
+Import { library: "/usr/lib/libSystem.B.dylib", name: "_printf", flags: MachO { n_type: N_UNDF | N_EXT, n_desc: 0x100 } }
+Import { library: "/usr/lib/libSystem.B.dylib", name: "dyld_stub_binder", flags: MachO { n_type: N_UNDF | N_EXT, n_desc: 0x100 } }
 
 Export { name: "__mh_execute_header", target: Address { address: 100000000 }, flags: None }
 Export { name: "_main", target: Address { address: 100003f60 }, flags: None }

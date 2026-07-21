@@ -2,7 +2,7 @@ use alloc::fmt;
 
 use crate::elf;
 use crate::endian::Endianness;
-use crate::read::{self, ByteString, Import, ReadRef, SymbolIndex};
+use crate::read::{self, Import, ImportFlags, NameOrOrdinal, ReadRef, SymbolIndex};
 
 use super::{FileHeader, Sym, SymbolTable, VersionTable};
 
@@ -59,16 +59,21 @@ where
             if name.is_empty() {
                 continue;
             }
-            let library = if let Some(svt) = self.versions.as_ref() {
-                let vi = svt.version_index(self.endian, index).index();
-                svt.version(vi)?.and_then(|v| v.file())
+            let version = if let Some(versions) = self.versions.as_ref() {
+                let vi = versions.version_index(self.endian, index).index();
+                versions.version(vi)?
             } else {
                 None
-            }
-            .unwrap_or(&[]);
+            };
             return Ok(Some(Import {
-                name: ByteString(name),
-                library: ByteString(library),
+                library: version.and_then(|v| v.file()).unwrap_or(&[]),
+                name: NameOrOrdinal::Name(name),
+                weak: symbol.st_bind() == elf::STB_WEAK,
+                flags: ImportFlags::Elf {
+                    st_info: symbol.st_info(),
+                    st_other: symbol.st_other(),
+                    version: version.map(|v| v.name()),
+                },
             }));
         }
     }
