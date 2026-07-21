@@ -1245,10 +1245,21 @@ impl<'data> CompressedData<'data> {
                                 }
                                 x => x.ok().read_error("Invalid zstd compressed data")?,
                             };
-                            decoder
+                            // Bound the decoded output to the reserved `size` so a crafted
+                            // stream cannot grow `decompressed` past the reservation (the Zlib
+                            // branch is already bounded by its reserved capacity). One extra byte
+                            // lets the `size != decompressed.len()` check below reject.
+                            let limit = (size as u64)
+                                .saturating_sub(decompressed.len() as u64)
+                                .saturating_add(1);
+                            (&mut decoder)
+                                .take(limit)
                                 .read_to_end(&mut decompressed)
                                 .ok()
                                 .read_error("Invalid zstd compressed data")?;
+                            if decompressed.len() > size {
+                                break;
+                            }
                         }
                     }
                     _ => unreachable!(),
