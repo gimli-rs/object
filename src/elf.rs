@@ -2400,15 +2400,6 @@ newtype!(
 );
 
 impl VersymIndex {
-    /// Construct a `VersymIndex` from an index and a hidden flag.
-    pub fn new(index: VersionIndex, hidden: bool) -> Self {
-        if hidden {
-            Self(index.0).with(VERSYM_HIDDEN)
-        } else {
-            Self(index.0)
-        }
-    }
-
     /// Return the version index.
     pub fn index(&self) -> VersionIndex {
         VersionIndex(self.0 & VERSYM_VERSION)
@@ -2498,6 +2489,15 @@ newtype!(
 );
 
 impl VersionIndex {
+    /// Construct a `VersymIndex` from an index and a hidden flag.
+    pub fn versym(self, hidden: bool) -> VersymIndex {
+        if hidden {
+            VersymIndex(self.0).with(VERSYM_HIDDEN)
+        } else {
+            VersymIndex(self.0)
+        }
+    }
+
     /// Add an offset to the index.
     ///
     /// This is useful when constructing a `VersionIndex` from a base index

@@ -1552,10 +1552,7 @@ impl<'data> Builder<'data> {
                         encoder.gnu_versym(buffer, elf::VER_NDX_LOCAL.into());
                         for out_dynsym in &out_dynsyms {
                             let symbol = self.dynamic_symbols.get(out_dynsym.id);
-                            let index = elf::VersymIndex::new(
-                                symbol.version.index(),
-                                symbol.version_hidden,
-                            );
+                            let index = symbol.version.index().versym(symbol.version_hidden);
                             encoder.gnu_versym(buffer, index);
                         }
                     }
