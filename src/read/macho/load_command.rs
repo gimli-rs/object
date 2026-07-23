@@ -309,6 +309,15 @@ impl<'data, E: Endian> LoadCommandData<'data, E> {
         }
     }
 
+    /// Try to parse this command as an `LC_DYLD_CHAINED_FIXUPS` [`macho::LinkeditDataCommand`].
+    pub fn dyld_chained_fixups(self) -> Result<Option<&'data macho::LinkeditDataCommand<E>>> {
+        if self.cmd == macho::LC_DYLD_CHAINED_FIXUPS {
+            Some(self.data()).transpose()
+        } else {
+            Ok(None)
+        }
+    }
+
     /// Try to parse this command as an [`macho::EntryPointCommand`].
     pub fn entry_point(self) -> Result<Option<&'data macho::EntryPointCommand<E>>> {
         if self.cmd == macho::LC_MAIN {
