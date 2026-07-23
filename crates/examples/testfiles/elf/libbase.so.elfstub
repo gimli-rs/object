@@ -318,7 +318,7 @@ SectionHeader {
     VersionDefinition {
         Version: 1
         Flags: VER_FLG_BASE (0x1)
-        Index: VER_NDX_GLOBAL (1)
+        Index: VER_NDX_GLOBAL (0x1)
         AuxCount: 1
         Hash: 0x88E6A1F
         AuxOffset: 20
@@ -331,7 +331,7 @@ SectionHeader {
     VersionDefinition {
         Version: 1
         Flags: 0x0
-        Index: 2
+        Index: 0x2
         AuxCount: 1
         Hash: 0x88E6A1F
         AuxOffset: 20
@@ -363,7 +363,7 @@ SectionHeader {
         Aux {
             Hash: 0x9691A75
             Flags: 0x0
-            Index: 3
+            Index: 0x3
             Name: "GLIBC_2.2.5" (0x76)
             NextOffset: 0
         }

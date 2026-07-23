@@ -311,7 +311,7 @@ SectionHeader {
         Aux {
             Hash: 0x9691A75
             Flags: 0x0
-            Index: 2
+            Index: 0x2
             Name: "GLIBC_2.2.5" (0x78)
             NextOffset: 0
         }

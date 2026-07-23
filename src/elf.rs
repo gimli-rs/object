@@ -2484,7 +2484,7 @@ newtype!(
     /// Version index.
     ///
     /// This is the index value stored in [`VersymIndex`], [`Verdef::vd_ndx`] or
-    /// [`Vernaux::vna_other`].
+    /// [`field@Vernaux::vna_other`].
     struct VersionIndex(u16);
 );
 
@@ -2638,11 +2638,22 @@ pub struct Vernaux<E: Endian> {
     /// Dependency specific information
     pub vna_flags: U16<E, VersionFlags>,
     /// Version Index
+    ///
+    /// LSB documents that this supports `VERSYM_HIDDEN`, but no linker sets it, so we
+    /// keep this as a `VersionIndex`. Use [`method@Self::vna_other`] if you wish to handle
+    /// the hidden bit when parsing.
     pub vna_other: U16<E, VersionIndex>,
     /// Dependency name string offset
     pub vna_name: U32<E>,
     /// Offset in bytes to next vernaux entry
     pub vna_next: U32<E>,
+}
+
+impl<E: Endian> Vernaux<E> {
+    /// Return the `vna_other` field as a `VersymIndex`.
+    pub fn vna_other(self, endian: E) -> VersymIndex {
+        VersymIndex(self.vna_other.get(endian).0)
+    }
 }
 
 // TODO: Elf*_auxv_t, AT_*

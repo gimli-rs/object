@@ -694,7 +694,7 @@ fn print_gnu_verdef<Elf: FileHeader>(
             p.group("VersionDefinition", |p| {
                 p.field("Version", verdef.vd_version.get(endian));
                 p.field_flags("Flags", verdef.vd_flags.get(endian), VersionFlags::NAMES);
-                p.field_consts_display("Index", verdef.vd_ndx.get(endian), VersionIndex::NAMES);
+                p.field_consts("Index", verdef.vd_ndx.get(endian), VersionIndex::NAMES);
                 p.field("AuxCount", verdef.vd_cnt.get(endian));
                 p.field_hex("Hash", verdef.vd_hash.get(endian));
                 p.field("AuxOffset", verdef.vd_aux.get(endian));
@@ -742,11 +742,7 @@ fn print_gnu_verneed<Elf: FileHeader>(
                     p.group("Aux", |p| {
                         p.field_hex("Hash", vernaux.vna_hash.get(endian));
                         p.field_flags("Flags", vernaux.vna_flags.get(endian), VersionFlags::NAMES);
-                        p.field_consts_display(
-                            "Index",
-                            vernaux.vna_other.get(endian),
-                            VersionIndex::NAMES,
-                        );
+                        p.field_flags("Index", vernaux.vna_other(endian), VersymIndex::NAMES);
                         p.field_string(
                             "Name",
                             vernaux.vna_name.get(endian),
