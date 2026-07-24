@@ -84,7 +84,7 @@ impl<'data, Elf: FileHeader> VersionTable<'data, Elf> {
         if let Some(mut verneeds) = verneeds.clone() {
             while let Some((_, mut vernauxs)) = verneeds.next()? {
                 while let Some(vernaux) = vernauxs.next()? {
-                    let index = vernaux.vna_other.get(endian);
+                    let index = vernaux.vna_other(endian).index();
                     if max_index < index.0 {
                         max_index = index.0;
                     }
@@ -93,7 +93,7 @@ impl<'data, Elf: FileHeader> VersionTable<'data, Elf> {
         }
 
         // Indices should be sequential, but this could be up to
-        // 32k * size_of::<Version>() if max_index is bad.
+        // 64k * size_of::<Version>() if max_index is bad.
         let mut versions = vec![Version::default(); max_index as usize + 1];
 
         if let Some(mut verdefs) = verdefs {
@@ -119,7 +119,8 @@ impl<'data, Elf: FileHeader> VersionTable<'data, Elf> {
         if let Some(mut verneeds) = verneeds {
             while let Some((verneed, mut vernauxs)) = verneeds.next()? {
                 while let Some(vernaux) = vernauxs.next()? {
-                    let index = vernaux.vna_other.get(endian);
+                    // We currently ignore the hidden bit; no linker sets it.
+                    let index = vernaux.vna_other(endian).index();
                     if index.is_special() {
                         // TODO: return error?
                         continue;

@@ -531,28 +531,28 @@ SectionHeader {
         Aux {
             Hash: 0xFD0E42
             Flags: 0x0
-            Index: 2
+            Index: 0x2
             Name: "GLIBC_ABI_DT_RELR"
             NextOffset: 16
         }
         Aux {
             Hash: 0x9691F73
             Flags: 0x0
-            Index: 3
+            Index: 0x3
             Name: "GLIBC_2.1.3"
             NextOffset: 16
         }
         Aux {
             Hash: 0xD696910
             Flags: 0x0
-            Index: 4
+            Index: 0x4
             Name: "GLIBC_2.0"
             NextOffset: 16
         }
         Aux {
             Hash: 0x69691B4
             Flags: 0x0
-            Index: 5
+            Index: 0x5
             Name: "GLIBC_2.34"
             NextOffset: 0
         }
