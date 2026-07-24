@@ -15,8 +15,8 @@ use crate::{SkipDebugList, pe};
 
 use super::{
     DataDirectories, DelayLoadImportTable, ExportTable, ImageThunkData, ImportTable,
-    PeExportIterator, PeImportIterator, PeSection, PeSectionIterator, PeSegment, PeSegmentIterator,
-    RichHeaderInfo, SectionTable,
+    PeExportIterator, PeImportIterator, PeImportLibraryIterator, PeSection, PeSectionIterator,
+    PeSegment, PeSegmentIterator, RichHeaderInfo, SectionTable,
 };
 
 /// A PE32 (32-bit) image file.
@@ -210,6 +210,11 @@ where
     where
         Self: 'file,
         'data: 'file;
+    type ImportLibraryIterator<'file>
+        = PeImportLibraryIterator<'data, 'file, Pe, R>
+    where
+        Self: 'file,
+        'data: 'file;
     type ImportIterator<'file>
         = PeImportIterator<'data, 'file, Pe, R>
     where
@@ -328,6 +333,10 @@ where
 
     fn dynamic_relocations(&self) -> Option<NoDynamicRelocationIterator> {
         None
+    }
+
+    fn import_libraries(&self) -> Result<Self::ImportLibraryIterator<'_>> {
+        PeImportLibraryIterator::new(self)
     }
 
     fn imports(&self) -> Result<Self::ImportIterator<'_>> {

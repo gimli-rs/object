@@ -4,8 +4,8 @@ use crate::endian::LittleEndian as LE;
 use crate::pod::Pod;
 use crate::read::{
     self, Architecture, FileFlags, NoDynamicRelocationIterator, NoExportIterator, NoImportIterator,
-    Object, ObjectKind, ObjectSection, ReadError, ReadRef, Result, SectionIndex, SubArchitecture,
-    SymbolIndex,
+    NoImportLibraryIterator, Object, ObjectKind, ObjectSection, ReadError, ReadRef, Result,
+    SectionIndex, SubArchitecture, SymbolIndex,
 };
 use crate::{SkipDebugList, pe};
 
@@ -140,6 +140,11 @@ where
     where
         Self: 'file,
         'data: 'file;
+    type ImportLibraryIterator<'file>
+        = NoImportLibraryIterator<'data, 'file, R>
+    where
+        Self: 'file,
+        'data: 'file;
     type ImportIterator<'file>
         = NoImportIterator<'data, 'file, R>
     where
@@ -254,6 +259,11 @@ where
     #[inline]
     fn dynamic_relocations(&self) -> Option<NoDynamicRelocationIterator> {
         None
+    }
+
+    #[inline]
+    fn import_libraries(&self) -> Result<Self::ImportLibraryIterator<'_>> {
+        Ok(Default::default())
     }
 
     #[inline]

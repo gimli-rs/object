@@ -1,10 +1,83 @@
 use alloc::fmt;
+use core::marker::PhantomData;
 
 use crate::elf;
 use crate::endian::Endianness;
-use crate::read::{self, Import, ImportFlags, NameOrOrdinal, ReadRef, SymbolIndex};
+use crate::read::{
+    self, Import, ImportFlags, ImportLibrary, ImportLibraryFlags, NameOrOrdinal, ReadRef,
+    SymbolIndex,
+};
 
-use super::{FileHeader, Sym, SymbolTable, VersionTable};
+use super::{DynamicIterator, DynamicTable, FileHeader, Sym, SymbolTable, VersionTable};
+
+/// An iterator for the import libraries in an [`ElfFile32`](super::ElfFile32).
+pub type ElfImportLibraryIterator32<'data, 'file, Endian = Endianness, R = &'data [u8]> =
+    ElfImportLibraryIterator<'data, 'file, elf::FileHeader32<Endian>, R>;
+/// An iterator for the import libraries in an [`ElfFile64`](super::ElfFile64).
+pub type ElfImportLibraryIterator64<'data, 'file, Endian = Endianness, R = &'data [u8]> =
+    ElfImportLibraryIterator<'data, 'file, elf::FileHeader64<Endian>, R>;
+
+/// An iterator for the import libraries in an [`ElfFile`](super::ElfFile).
+pub struct ElfImportLibraryIterator<'data, 'file, Elf, R = &'data [u8]>
+where
+    Elf: FileHeader,
+    R: ReadRef<'data>,
+{
+    dynamic: DynamicTable<'data, Elf, R>,
+    iter: DynamicIterator<'data, Elf>,
+    marker: PhantomData<&'file ()>,
+}
+
+impl<'data, 'file, Elf, R> ElfImportLibraryIterator<'data, 'file, Elf, R>
+where
+    Elf: FileHeader,
+    R: ReadRef<'data>,
+{
+    pub(super) fn new(dynamic: DynamicTable<'data, Elf, R>) -> Self {
+        let iter = dynamic.iter();
+        ElfImportLibraryIterator {
+            dynamic,
+            iter,
+            marker: PhantomData,
+        }
+    }
+
+    fn next(&mut self) -> read::Result<Option<ImportLibrary<'data>>> {
+        loop {
+            let Some(d) = self.iter.next() else {
+                return Ok(None);
+            };
+            // The above iterator has made progress, so errors after here don't need to
+            // terminate iteration.
+
+            if d.tag != elf::DT_NEEDED {
+                continue;
+            }
+            return Ok(Some(ImportLibrary {
+                name: self.dynamic.string(d)?,
+                flags: ImportLibraryFlags::None,
+            }));
+        }
+    }
+}
+
+impl<'data, 'file, Elf: FileHeader, R: ReadRef<'data>> fmt::Debug
+    for ElfImportLibraryIterator<'data, 'file, Elf, R>
+{
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("ElfImportLibraryIterator").finish()
+    }
+}
+
+impl<'data, 'file, Elf: FileHeader, R: ReadRef<'data>> Iterator
+    for ElfImportLibraryIterator<'data, 'file, Elf, R>
+{
+    type Item = read::Result<ImportLibrary<'data>>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.next().transpose()
+    }
+}
 
 /// An iterator for the imports in an [`ElfFile32`](super::ElfFile32).
 pub type ElfImportIterator32<'data, 'file, Endian = Endianness, R = &'data [u8]> =

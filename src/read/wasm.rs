@@ -11,10 +11,11 @@ use wasmparser as wp;
 
 use crate::read::{
     self, Architecture, ComdatKind, CompressedData, CompressedFileRange, Error, FileFlags,
-    NoDynamicRelocationIterator, NoExportIterator, NoImportIterator, Object, ObjectComdat,
-    ObjectKind, ObjectSection, ObjectSegment, ObjectSymbol, ObjectSymbolTable, Permissions,
-    ReadError, ReadRef, Relocation, RelocationMap, Result, SectionFlags, SectionIndex, SectionKind,
-    SegmentFlags, SymbolFlags, SymbolIndex, SymbolKind, SymbolScope, SymbolSection,
+    NoDynamicRelocationIterator, NoExportIterator, NoImportIterator, NoImportLibraryIterator,
+    Object, ObjectComdat, ObjectKind, ObjectSection, ObjectSegment, ObjectSymbol,
+    ObjectSymbolTable, Permissions, ReadError, ReadRef, Relocation, RelocationMap, Result,
+    SectionFlags, SectionIndex, SectionKind, SegmentFlags, SymbolFlags, SymbolIndex, SymbolKind,
+    SymbolScope, SymbolSection,
 };
 use crate::{RelocationEncoding, RelocationFlags, RelocationKind, RelocationTarget};
 
@@ -597,6 +598,11 @@ impl<'data, R: ReadRef<'data>> Object<'data> for WasmFile<'data, R> {
     where
         Self: 'file,
         'data: 'file;
+    type ImportLibraryIterator<'file>
+        = NoImportLibraryIterator<'data, 'file, R>
+    where
+        Self: 'file,
+        'data: 'file;
     type ImportIterator<'file>
         = NoImportIterator<'data, 'file, R>
     where
@@ -704,6 +710,11 @@ impl<'data, R: ReadRef<'data>> Object<'data> for WasmFile<'data, R> {
     #[inline]
     fn dynamic_relocations(&self) -> Option<NoDynamicRelocationIterator> {
         None
+    }
+
+    fn import_libraries(&self) -> Result<Self::ImportLibraryIterator<'_>> {
+        // TODO: return module names in the import section
+        Ok(Default::default())
     }
 
     fn imports(&self) -> Result<Self::ImportIterator<'_>> {

@@ -12,8 +12,8 @@ use crate::{SkipDebugList, elf};
 
 use super::{
     CompressionHeader, Dyn, DynamicTable, ElfComdat, ElfComdatIterator,
-    ElfDynamicRelocationIterator, ElfExportIterator, ElfImportIterator, ElfSection,
-    ElfSectionIterator, ElfSegment, ElfSegmentIterator, ElfSymbol, ElfSymbolIterator,
+    ElfDynamicRelocationIterator, ElfExportIterator, ElfImportIterator, ElfImportLibraryIterator,
+    ElfSection, ElfSectionIterator, ElfSegment, ElfSegmentIterator, ElfSymbol, ElfSymbolIterator,
     ElfSymbolTable, NoteHeader, ProgramHeader, Rel, Rela, RelocationSections, Relr, SectionHeader,
     SectionTable, Sym, SymbolTable,
 };
@@ -253,6 +253,11 @@ where
     where
         Self: 'file,
         'data: 'file;
+    type ImportLibraryIterator<'file>
+        = ElfImportLibraryIterator<'data, 'file, Elf, R>
+    where
+        Self: 'file,
+        'data: 'file;
     type ImportIterator<'file>
         = ElfImportIterator<'data, 'file, Elf, R>
     where
@@ -413,6 +418,11 @@ where
             file: self,
             relocations: None,
         })
+    }
+
+    fn import_libraries(&self) -> read::Result<ElfImportLibraryIterator<'data, '_, Elf, R>> {
+        let dynamic = self.sections.dynamic_table(self.endian, self.data.0)?;
+        Ok(ElfImportLibraryIterator::new(dynamic))
     }
 
     fn imports(&self) -> read::Result<ElfImportIterator<'data, '_, Elf, R>> {

@@ -97,6 +97,8 @@ Dynamic relocations
 (3fe4, Relocation { kind: Unknown, encoding: Unknown, size: 0, target: Symbol(SymbolIndex(1)), addend: 0, implicit_addend: true, flags: Elf { r_type: 7 } })
 (3fe8, Relocation { kind: Unknown, encoding: Unknown, size: 0, target: Symbol(SymbolIndex(3)), addend: 0, implicit_addend: true, flags: Elf { r_type: 7 } })
 
+ImportLibrary { name: "libc.so.6", flags: None }
+
 Import { library: "libc.so.6", name: "__libc_start_main", flags: Elf { st_info: STB_GLOBAL | STT_FUNC, st_other: STV_DEFAULT, version: "GLIBC_2.34" } }
 Import { library: "", name: "_ITM_deregisterTMCloneTable", weak: true, flags: Elf { st_info: STB_WEAK | STT_NOTYPE, st_other: STV_DEFAULT } }
 Import { library: "libc.so.6", name: "printf", flags: Elf { st_info: STB_GLOBAL | STT_FUNC, st_other: STV_DEFAULT, version: "GLIBC_2.0" } }

@@ -572,6 +572,105 @@ impl<'data> fmt::Debug for ImportFlags<'data> {
     }
 }
 
+/// A library that the file depends on.
+///
+/// Returned by [`Object::import_libraries`].
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub struct ImportLibrary<'data> {
+    name: &'data [u8],
+    flags: ImportLibraryFlags,
+}
+
+impl<'data> fmt::Debug for ImportLibrary<'data> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("ImportLibrary")
+            .field("name", &ByteString(self.name))
+            .field("flags", &self.flags)
+            .finish()
+    }
+}
+
+impl<'data> ImportLibrary<'data> {
+    /// The name of the library.
+    #[inline]
+    pub fn name(&self) -> &'data [u8] {
+        self.name
+    }
+
+    /// The format-specific flags for the library.
+    #[inline]
+    pub fn flags(&self) -> ImportLibraryFlags {
+        self.flags
+    }
+}
+
+/// Import library flags that are specific to each file format.
+#[derive(Clone, Copy, PartialEq, Eq)]
+#[non_exhaustive]
+pub enum ImportLibraryFlags {
+    /// No import library flags.
+    ///
+    /// Used for ELF, which has no additional information for `DT_NEEDED` entries.
+    None,
+    /// Mach-O import library flags.
+    #[cfg(feature = "macho")]
+    MachO {
+        /// The 1-based index that is used to refer to this library.
+        ordinal: u32,
+        /// The type of the dylib load command.
+        ///
+        /// One of `LC_LOAD_DYLIB`, `LC_LOAD_WEAK_DYLIB`, `LC_REEXPORT_DYLIB`,
+        /// `LC_LAZY_LOAD_DYLIB`, or `LC_LOAD_UPWARD_DYLIB`.
+        cmd: crate::macho::LoadCommandType,
+        /// The `current_version` field in the dylib.
+        current_version: crate::macho::Version,
+        /// The `compatibility_version` field in the dylib.
+        compatibility_version: crate::macho::Version,
+        /// The dylib use flags.
+        use_flags: Option<crate::macho::DylibUseFlags>,
+    },
+    /// PE import library flags.
+    #[cfg(feature = "pe")]
+    Pe {
+        /// The library is from the delay-load import table.
+        delay: bool,
+    },
+}
+
+impl fmt::Debug for ImportLibraryFlags {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            ImportLibraryFlags::None => f.write_str("None"),
+            #[cfg(feature = "macho")]
+            ImportLibraryFlags::MachO {
+                ordinal,
+                cmd,
+                current_version,
+                compatibility_version,
+                use_flags,
+            } => {
+                let mut s = f.debug_struct("MachO");
+                s.field("ordinal", ordinal);
+                s.field("cmd", cmd);
+                s.field("current_version", current_version);
+                s.field("compatibility_version", compatibility_version);
+                if let Some(use_flags) = use_flags {
+                    s.field("use_flags", use_flags);
+                }
+                s.finish()
+            }
+            #[cfg(feature = "pe")]
+            ImportLibraryFlags::Pe { delay } => {
+                let mut s = f.debug_struct("Pe");
+                if *delay {
+                    s.field("delay", delay);
+                }
+                s.finish()
+            }
+        }
+    }
+}
+
 /// An exported symbol.
 ///
 /// Returned by [`Object::exports`].

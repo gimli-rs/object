@@ -66,6 +66,9 @@ Symbols
 
 Dynamic symbols
 
+ImportLibrary { name: "KERNEL32.dll", flags: Pe }
+ImportLibrary { name: "msvcrt.dll", flags: Pe }
+
 Import { library: "KERNEL32.dll", name: "DeleteCriticalSection", flags: Pe }
 Import { library: "KERNEL32.dll", name: "EnterCriticalSection", flags: Pe }
 Import { library: "KERNEL32.dll", name: "GetLastError", flags: Pe }
