@@ -106,7 +106,7 @@ pub struct Sym {
 pub struct Rel {
     pub r_offset: u64,
     pub r_sym: u32,
-    pub r_type: u32,
+    pub r_type: elf::RelocationType,
     pub r_addend: i64,
 }
 
@@ -841,14 +841,14 @@ impl<E: Endian> Encoder<E> {
             if is_rela {
                 let data = &elf::Rela32 {
                     r_offset: U32::new(endian, rel.r_offset as u32),
-                    r_info: elf::Rel32::r_info(endian, rel.r_sym, rel.r_type as u8),
+                    r_info: elf::Rel32::r_info(endian, rel.r_sym, rel.r_type),
                     r_addend: I32::new(endian, rel.r_addend as i32),
                 };
                 buffer.write_pod(data);
             } else {
                 let data = &elf::Rel32 {
                     r_offset: U32::new(endian, rel.r_offset as u32),
-                    r_info: elf::Rel32::r_info(endian, rel.r_sym, rel.r_type as u8),
+                    r_info: elf::Rel32::r_info(endian, rel.r_sym, rel.r_type),
                 };
                 buffer.write_pod(data);
             }

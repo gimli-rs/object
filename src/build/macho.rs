@@ -1541,7 +1541,7 @@ pub struct Relocation {
     /// The `r_length` field in the Mach-O relocation.
     pub r_length: u8,
     /// The `r_type` field in the Mach-O relocation.
-    pub r_type: u8,
+    pub r_type: macho::RelocationType,
 }
 
 /// The symbol or section referenced by a Mach-O relocation.

@@ -291,7 +291,7 @@ impl<'a> Writer<'a> {
             let coff_relocation = pe::ImageRelocation {
                 virtual_address: (count as u32 + 1).into(),
                 symbol_table_index: 0.into(),
-                typ: 0.into(),
+                typ: pe::RelocationType(0).into(),
             };
             self.buffer.write_pod(&coff_relocation);
         }
@@ -555,5 +555,5 @@ pub struct AuxSymbolWeak {
 pub struct Relocation {
     pub virtual_address: u32,
     pub symbol: u32,
-    pub typ: u16,
+    pub typ: pe::RelocationType,
 }
