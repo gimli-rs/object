@@ -2899,7 +2899,7 @@ pub struct Relocation<const DYNAMIC: bool = false> {
     /// The symbol referenced by the ELF relocation.
     pub symbol: Option<SymbolId<DYNAMIC>>,
     /// The `r_type` field in the ELF relocation.
-    pub r_type: u32,
+    pub r_type: elf::RelocationType,
     /// The `r_addend` field in the ELF relocation.
     ///
     /// Only used if the section type is `SHT_RELA`.

@@ -1034,7 +1034,7 @@ pub struct Rel32 {
     /// Relocation size and information.
     pub r_rsize: u8,
     /// Relocation type.
-    pub r_rtype: u8,
+    pub r_rtype: RelocationType,
 }
 
 /// Relocation table entry
@@ -1048,12 +1048,15 @@ pub struct Rel64 {
     /// Relocation size and information.
     pub r_rsize: u8,
     /// Relocation type.
-    pub r_rtype: u8,
+    pub r_rtype: RelocationType,
 }
 
-constant_names!(
-/// Values for `Rel*::r_rtype`.
-pub NAMES_REL_TYPE: u8 = {
+newtype!(
+    /// Values for `Rel*::r_rtype`.
+    struct RelocationType(u8);
+);
+
+newtype_constant_names!(NAMES_REL_TYPE: RelocationType(u8) = {
     /// Positive relocation.
     R_POS = 0x00,
     /// Positive indirect load relocation.

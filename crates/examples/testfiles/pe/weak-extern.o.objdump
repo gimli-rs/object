@@ -29,9 +29,9 @@ Symbols
 15: Symbol { name: "weak_symbol", address: 0, size: 0, kind: Text, section: Unknown, scope: Linkage, weak: true, flags: Coff { typ: IMAGE_SYM_DTYPE_FUNCTION, storage_class: IMAGE_SYM_CLASS_WEAK_EXTERNAL } }
 
 .pdata relocations
-(0, Relocation { kind: ImageOffset, encoding: Generic, size: 20, target: Symbol(SymbolIndex(2)), addend: 0, implicit_addend: true, flags: Coff { typ: 3 } })
-(4, Relocation { kind: ImageOffset, encoding: Generic, size: 20, target: Symbol(SymbolIndex(2)), addend: 0, implicit_addend: true, flags: Coff { typ: 3 } })
-(8, Relocation { kind: ImageOffset, encoding: Generic, size: 20, target: Symbol(SymbolIndex(8)), addend: 0, implicit_addend: true, flags: Coff { typ: 3 } })
+(0, Relocation { kind: ImageOffset, encoding: Generic, size: 20, target: Symbol(SymbolIndex(2)), addend: 0, implicit_addend: true, flags: Coff { typ: 0x3 } })
+(4, Relocation { kind: ImageOffset, encoding: Generic, size: 20, target: Symbol(SymbolIndex(2)), addend: 0, implicit_addend: true, flags: Coff { typ: 0x3 } })
+(8, Relocation { kind: ImageOffset, encoding: Generic, size: 20, target: Symbol(SymbolIndex(8)), addend: 0, implicit_addend: true, flags: Coff { typ: 0x3 } })
 
 Dynamic symbols
 

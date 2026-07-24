@@ -91,7 +91,7 @@ pub trait Rel: Debug + Pod + read::private::Sealed {
     fn r_vaddr(&self) -> Self::Word;
     fn r_symndx(&self) -> u32;
     fn r_rsize(&self) -> u8;
-    fn r_rtype(&self) -> u8;
+    fn r_rtype(&self) -> xcoff::RelocationType;
 
     fn symbol(&self) -> SymbolIndex {
         SymbolIndex(self.r_symndx() as usize)
@@ -115,7 +115,7 @@ impl Rel for xcoff::Rel32 {
         self.r_rsize
     }
 
-    fn r_rtype(&self) -> u8 {
+    fn r_rtype(&self) -> xcoff::RelocationType {
         self.r_rtype
     }
 }
@@ -137,7 +137,7 @@ impl Rel for xcoff::Rel64 {
         self.r_rsize
     }
 
-    fn r_rtype(&self) -> u8 {
+    fn r_rtype(&self) -> xcoff::RelocationType {
         self.r_rtype
     }
 }
