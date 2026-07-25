@@ -397,6 +397,11 @@ pub trait ObjectSection<'data>: read::private::Sealed {
     /// The length of this data may be different from the size of the
     /// section in memory.
     ///
+    /// This may allocate the uncompressed size that is recorded in the file, which
+    /// is not bounded. Use [`Self::compressed_data`] and check
+    /// [`CompressedData::uncompressed_size`] first if you need to bound this for
+    /// untrusted files.
+    ///
     /// If no compression is detected, then returns the data unchanged.
     /// Returns `Err` if decompression fails.
     fn uncompressed_data(&self) -> Result<Cow<'data, [u8]>> {
