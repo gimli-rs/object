@@ -685,8 +685,8 @@ impl<'a> Writer<'a> {
     /// Add a base relocation.
     ///
     /// `typ` must be one of the `IMAGE_REL_BASED_*` constants.
-    pub fn add_reloc(&mut self, mut virtual_address: u32, typ: u16) {
-        let reloc = (typ << 12 | (virtual_address & 0xfff) as u16).into();
+    pub fn add_reloc(&mut self, mut virtual_address: u32, typ: pe::BaseRelocationType) {
+        let reloc = (typ.0 << 12 | (virtual_address & 0xfff) as u16).into();
         virtual_address &= !0xfff;
         if let Some(block) = self.reloc_blocks.last_mut() {
             if block.virtual_address == virtual_address {

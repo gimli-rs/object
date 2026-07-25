@@ -22,7 +22,7 @@ pub struct Names {
     /// Values for `cpusubtype` fields.
     pub cpusubtype: &'static FlagNames<CpuSubtype>,
     /// Values for `r_type` field of `Rel*::r_info`.
-    pub reloc: &'static ConstantNames<u8>,
+    pub reloc: &'static ConstantNames<RelocationType>,
 }
 
 /// Return the platform independent names for constants.
@@ -50,7 +50,7 @@ pub const fn machine_names(cputype: CpuType) -> &'static Names {
 names! {
     struct Base;
     flags cpusubtype = NAMES_CPU_SUBTYPE;
-    consts reloc: u8 = {};
+    consts reloc: RelocationType(u8) = {};
 }
 
 names! {
@@ -3880,7 +3880,7 @@ impl<E: Endian> Relocation<E> {
                 r_pcrel: ((r_word1 >> 24) & 0x1) != 0,
                 r_length: ((r_word1 >> 25) & 0x3) as u8,
                 r_extern: ((r_word1 >> 27) & 0x1) != 0,
-                r_type: (r_word1 >> 28) as u8,
+                r_type: RelocationType((r_word1 >> 28) as u8),
             }
         } else {
             RelocationInfo {
@@ -3889,7 +3889,7 @@ impl<E: Endian> Relocation<E> {
                 r_pcrel: ((r_word1 >> 7) & 0x1) != 0,
                 r_length: ((r_word1 >> 5) & 0x3) as u8,
                 r_extern: ((r_word1 >> 4) & 0x1) != 0,
-                r_type: (r_word1 & 0xf) as u8,
+                r_type: RelocationType((r_word1 & 0xf) as u8),
             }
         }
     }
@@ -3900,7 +3900,7 @@ impl<E: Endian> Relocation<E> {
         let r_value = self.r_word1.get(endian);
         ScatteredRelocationInfo {
             r_address: r_word0 & 0x00ff_ffff,
-            r_type: ((r_word0 >> 24) & 0xf) as u8,
+            r_type: RelocationType(((r_word0 >> 24) & 0xf) as u8),
             r_length: ((r_word0 >> 28) & 0x3) as u8,
             r_pcrel: ((r_word0 >> 30) & 0x1) != 0,
             r_value,
@@ -3930,7 +3930,7 @@ pub struct RelocationInfo {
     /// does not include value of sym referenced
     pub r_extern: bool,
     /// if not 0, machine specific relocation type
-    pub r_type: u8,
+    pub r_type: RelocationType,
 }
 
 impl RelocationInfo {
@@ -3944,13 +3944,13 @@ impl RelocationInfo {
                     | u32::from(self.r_pcrel) << 24
                     | u32::from(self.r_length & 0x3) << 25
                     | u32::from(self.r_extern) << 27
-                    | u32::from(self.r_type) << 28
+                    | u32::from(self.r_type.0) << 28
             } else {
                 self.r_symbolnum >> 8
                     | u32::from(self.r_pcrel) << 7
                     | u32::from(self.r_length & 0x3) << 5
                     | u32::from(self.r_extern) << 4
-                    | u32::from(self.r_type) & 0xf
+                    | u32::from(self.r_type.0) & 0xf
             },
         );
         Relocation { r_word0, r_word1 }
@@ -4031,7 +4031,7 @@ pub struct ScatteredRelocationInfo {
     /// offset in the section to what is being relocated
     pub r_address: u32,
     /// if not 0, machine specific relocation type
-    pub r_type: u8,
+    pub r_type: RelocationType,
     /// 0=byte, 1=word, 2=long, 3=quad
     pub r_length: u8,
     /// was relocated pc relative already
@@ -4046,7 +4046,7 @@ impl ScatteredRelocationInfo {
         let r_word0 = U32::new(
             endian,
             self.r_address & 0x00ff_ffff
-                | u32::from(self.r_type & 0xf) << 24
+                | u32::from(self.r_type.0 & 0xf) << 24
                 | u32::from(self.r_length & 0x3) << 28
                 | u32::from(self.r_pcrel) << 30
                 | R_SCATTERED,
@@ -4055,6 +4055,13 @@ impl ScatteredRelocationInfo {
         Relocation { r_word0, r_word1 }
     }
 }
+
+newtype!(
+    /// Values for `RelocationInfo::r_type` and `ScatteredRelocationInfo::r_type`.
+    struct RelocationType(u8);
+);
+
+newtype_constant_names!(RelocationType(u8) = {});
 
 /*
  * Relocation types used in a generic implementation.  Relocation entries for
@@ -4076,7 +4083,7 @@ impl ScatteredRelocationInfo {
  */
 constant_names!(
 /// Values for `Relocation::r_type` for generic Mach-O architectures.
-pub NAMES_GENERIC_RELOC: u8 = {
+pub NAMES_GENERIC_RELOC: RelocationType(u8) = {
     /// generic relocation as described above
     GENERIC_RELOC_VANILLA = 0,
     /// Only follows a GENERIC_RELOC_SECTDIFF
@@ -4101,7 +4108,7 @@ pub NAMES_GENERIC_RELOC: u8 = {
  */
 constant_names!(
 /// Values for `Relocation::r_type` on ARM.
-pub NAMES_ARM_RELOC: u8 = {
+pub NAMES_ARM_RELOC: RelocationType(u8) = {
     /// generic relocation as described above
     ARM_RELOC_VANILLA = 0,
     /// the second relocation entry of a pair
@@ -4143,7 +4150,7 @@ pub NAMES_ARM_RELOC: u8 = {
  */
 constant_names!(
 /// Values for `Relocation::r_type` on ARM64.
-pub NAMES_ARM64_RELOC: u8 = {
+pub NAMES_ARM64_RELOC: RelocationType(u8) = {
     /// for pointers
     ARM64_RELOC_UNSIGNED = 0,
     /// must be followed by a ARM64_RELOC_UNSIGNED
@@ -4208,7 +4215,7 @@ pub NAMES_ARM64_RELOC: u8 = {
  */
 constant_names!(
 /// Values for `Relocation::r_type` on PowerPC.
-pub NAMES_PPC_RELOC: u8 = {
+pub NAMES_PPC_RELOC: RelocationType(u8) = {
     /// generic relocation as described above
     PPC_RELOC_VANILLA = 0,
     /// the second relocation entry of a pair
@@ -4397,7 +4404,7 @@ pub NAMES_PPC_RELOC: u8 = {
  */
 constant_names!(
 /// Values for `Relocation::r_type` on x86_64.
-pub NAMES_X86_64_RELOC: u8 = {
+pub NAMES_X86_64_RELOC: RelocationType(u8) = {
     /// for absolute addresses
     X86_64_RELOC_UNSIGNED = 0,
     /// for signed 32-bit displacement

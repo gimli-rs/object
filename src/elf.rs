@@ -43,7 +43,7 @@ pub struct Names {
     /// Values for `Dyn*::d_tag`.
     pub dt: &'static ConstantNames<DynamicTag>,
     /// Values for `r_type` field of `Rel*::r_info`.
-    pub r: &'static ConstantNames<u32>,
+    pub r: &'static ConstantNames<RelocationType>,
 }
 
 names! {
@@ -59,7 +59,7 @@ names! {
     consts pt = NAMES_PT;
     flags pf = NAMES_PF;
     consts dt = NAMES_DT;
-    consts r: u32 = {};
+    consts r: RelocationType = {};
 }
 
 /// Return the platform independent names for constants.
@@ -1649,17 +1649,21 @@ impl<E: Endian> Rel32<E> {
 
     /// Get the `r_type` subfield of the `r_info` field.
     #[inline]
-    pub fn r_type(&self, endian: E) -> u32 {
-        self.r_info.get(endian) & 0xff
+    pub fn r_type(&self, endian: E) -> RelocationType {
+        RelocationType(self.r_info.get(endian) & 0xff)
     }
 
     /// Calculate the `r_info` field given the `r_sym` and `r_type` subfields.
-    pub fn r_info(endian: E, r_sym: u32, r_type: u8) -> U32<E> {
-        U32::new(endian, (r_sym << 8) | u32::from(r_type))
+    ///
+    /// No overflow check is performed when truncating `r_sym` and `r_type`.
+    pub fn r_info(endian: E, r_sym: u32, r_type: RelocationType) -> U32<E> {
+        U32::new(endian, (r_sym << 8) | (r_type.0 & 0xff))
     }
 
     /// Set the `r_info` field given the `r_sym` and `r_type` subfields.
-    pub fn set_r_info(&mut self, endian: E, r_sym: u32, r_type: u8) {
+    ///
+    /// No overflow check is performed when truncating `r_sym` and `r_type`.
+    pub fn set_r_info(&mut self, endian: E, r_sym: u32, r_type: RelocationType) {
         self.r_info = Self::r_info(endian, r_sym, r_type)
     }
 }
@@ -1685,17 +1689,21 @@ impl<E: Endian> Rela32<E> {
 
     /// Get the `r_type` subfield of the `r_info` field.
     #[inline]
-    pub fn r_type(&self, endian: E) -> u32 {
-        self.r_info.get(endian) & 0xff
+    pub fn r_type(&self, endian: E) -> RelocationType {
+        RelocationType(self.r_info.get(endian) & 0xff)
     }
 
     /// Calculate the `r_info` field given the `r_sym` and `r_type` subfields.
-    pub fn r_info(endian: E, r_sym: u32, r_type: u8) -> U32<E> {
-        U32::new(endian, (r_sym << 8) | u32::from(r_type))
+    ///
+    /// No overflow check is performed when truncating `r_sym` and `r_type`.
+    pub fn r_info(endian: E, r_sym: u32, r_type: RelocationType) -> U32<E> {
+        U32::new(endian, (r_sym << 8) | u32::from(r_type.0 as u8))
     }
 
     /// Set the `r_info` field given the `r_sym` and `r_type` subfields.
-    pub fn set_r_info(&mut self, endian: E, r_sym: u32, r_type: u8) {
+    ///
+    /// No overflow check is performed when truncating `r_sym` and `r_type`.
+    pub fn set_r_info(&mut self, endian: E, r_sym: u32, r_type: RelocationType) {
         self.r_info = Self::r_info(endian, r_sym, r_type)
     }
 }
@@ -1729,17 +1737,17 @@ impl<E: Endian> Rel64<E> {
 
     /// Get the `r_type` subfield of the `r_info` field.
     #[inline]
-    pub fn r_type(&self, endian: E) -> u32 {
-        (self.r_info.get(endian) & 0xffff_ffff) as u32
+    pub fn r_type(&self, endian: E) -> RelocationType {
+        RelocationType((self.r_info.get(endian) & 0xffff_ffff) as u32)
     }
 
     /// Calculate the `r_info` field given the `r_sym` and `r_type` subfields.
-    pub fn r_info(endian: E, r_sym: u32, r_type: u32) -> U64<E> {
-        U64::new(endian, (u64::from(r_sym) << 32) | u64::from(r_type))
+    pub fn r_info(endian: E, r_sym: u32, r_type: RelocationType) -> U64<E> {
+        U64::new(endian, (u64::from(r_sym) << 32) | u64::from(r_type.0))
     }
 
     /// Set the `r_info` field given the `r_sym` and `r_type` subfields.
-    pub fn set_r_info(&mut self, endian: E, r_sym: u32, r_type: u32) {
+    pub fn set_r_info(&mut self, endian: E, r_sym: u32, r_type: RelocationType) {
         self.r_info = Self::r_info(endian, r_sym, r_type)
     }
 }
@@ -1787,13 +1795,13 @@ impl<E: Endian> Rela64<E> {
 
     /// Get the `r_type` subfield of the `r_info` field.
     #[inline]
-    pub fn r_type(&self, endian: E, is_mips64el: bool) -> u32 {
-        (self.get_r_info(endian, is_mips64el) & 0xffff_ffff) as u32
+    pub fn r_type(&self, endian: E, is_mips64el: bool) -> RelocationType {
+        RelocationType((self.get_r_info(endian, is_mips64el) & 0xffff_ffff) as u32)
     }
 
     /// Calculate the `r_info` field given the `r_sym` and `r_type` subfields.
-    pub fn r_info(endian: E, is_mips64el: bool, r_sym: u32, r_type: u32) -> U64<E> {
-        let mut t = (u64::from(r_sym) << 32) | u64::from(r_type);
+    pub fn r_info(endian: E, is_mips64el: bool, r_sym: u32, r_type: RelocationType) -> U64<E> {
+        let mut t = (u64::from(r_sym) << 32) | u64::from(r_type.0);
         if is_mips64el {
             t = (t >> 32)
                 | ((t & 0xff000000) << 8)
@@ -1805,7 +1813,7 @@ impl<E: Endian> Rela64<E> {
     }
 
     /// Set the `r_info` field given the `r_sym` and `r_type` subfields.
-    pub fn set_r_info(&mut self, endian: E, is_mips64el: bool, r_sym: u32, r_type: u32) {
+    pub fn set_r_info(&mut self, endian: E, is_mips64el: bool, r_sym: u32, r_type: RelocationType) {
         self.r_info = Self::r_info(endian, is_mips64el, r_sym, r_type);
     }
 }
@@ -1819,6 +1827,13 @@ pub struct Relr32<E: Endian>(pub U32<E>);
 #[derive(Debug, Clone, Copy)]
 #[repr(C)]
 pub struct Relr64<E: Endian>(pub U64<E>);
+
+newtype!(
+    /// Values for `Rel*::r_type`.
+    struct RelocationType(u32);
+);
+
+newtype_constant_names!(RelocationType(u32) = {});
 
 /// Program segment header.
 #[derive(Debug, Clone, Copy)]
@@ -3033,7 +3048,7 @@ pub fn gnu_hash(name: &[u8]) -> u32 {
 names! {
     struct M68k(Base);
     /// `Rel*::r_type` values for `EM_68K`.
-    consts r = pub NAMES_R_68K: u32 = {
+    consts r = pub NAMES_R_68K: RelocationType(u32) = {
         /// No reloc
         R_68K_NONE = 0,
         /// Direct 32 bit
@@ -3124,7 +3139,7 @@ names! {
 names! {
     struct I386(Base);
     /// `Rel*::r_type` values for `EM_386`.
-    consts r = pub NAMES_R_386: u32 = {
+    consts r = pub NAMES_R_386: RelocationType(u32) = {
         /// No reloc
         R_386_NONE = 0,
         /// Direct 32 bit
@@ -3217,7 +3232,7 @@ names! {
 names! {
     struct Sharc(Base);
     /// `Rel*::r_type` values for `EM_SHARC`.
-    consts r = pub NAMES_R_SHARC: u32 = {
+    consts r = pub NAMES_R_SHARC: RelocationType(u32) = {
         /// 24-bit absolute address in bits 23:0 of a 48-bit instr
         ///
         /// Targets:
@@ -3344,7 +3359,7 @@ names! {
         EF_SPARC_SUN_US3 = 0x00_0800,
     };
     /// `Rel*::r_type` values for `EM_SPARC` and `EM_SPARC32PLUS`.
-    consts r = pub NAMES_R_SPARC: u32 = {
+    consts r = pub NAMES_R_SPARC: RelocationType(u32) = {
         /// No reloc
         R_SPARC_NONE = 0,
         /// Direct 8 bit
@@ -3621,7 +3636,7 @@ names! {
         STB_MIPS_SPLIT_COMMON = 13,
     };
     /// `Rel*::r_type` values for `EM_MIPS`.
-    consts r = pub NAMES_R_MIPS: u32 = {
+    consts r = pub NAMES_R_MIPS: RelocationType(u32) = {
         /// No reloc
         R_MIPS_NONE = 0,
         /// Direct 16 bit
@@ -4002,7 +4017,7 @@ names! {
         STT_HP_STUB = STT_LOOS + 0x2,
     };
     /// `Rel*::r_type` values for `EM_PARISC`.
-    consts r = pub NAMES_R_PARISC: u32 = {
+    consts r = pub NAMES_R_PARISC: RelocationType(u32) = {
         /// No reloc.
         R_PARISC_NONE = 0,
         /// Direct 32-bit reference.
@@ -4206,12 +4221,12 @@ names! {
         R_PARISC_TLS_DTPOFF32 = 244,
         /// DTP offset 32-bit.
         R_PARISC_TLS_DTPOFF64 = 245,
-        R_PARISC_TLS_LE21L = R_PARISC_TPREL21L,
-        R_PARISC_TLS_LE14R = R_PARISC_TPREL14R,
-        R_PARISC_TLS_IE21L = R_PARISC_LTOFF_TP21L,
-        R_PARISC_TLS_IE14R = R_PARISC_LTOFF_TP14R,
-        R_PARISC_TLS_TPREL32 = R_PARISC_TPREL32,
-        R_PARISC_TLS_TPREL64 = R_PARISC_TPREL64,
+        R_PARISC_TLS_LE21L = R_PARISC_TPREL21L.0,
+        R_PARISC_TLS_LE14R = R_PARISC_TPREL14R.0,
+        R_PARISC_TLS_IE21L = R_PARISC_LTOFF_TP21L.0,
+        R_PARISC_TLS_IE14R = R_PARISC_LTOFF_TP14R.0,
+        R_PARISC_TLS_TPREL32 = R_PARISC_TPREL32.0,
+        R_PARISC_TLS_TPREL64 = R_PARISC_TPREL64.0,
         R_PARISC_HIRESERVE = 255,
     };
     consts pt: ProgramType(u32) = {
@@ -4281,7 +4296,7 @@ names! {
         STO_ALPHA_STD_GPLOAD = 0x88,
     };
     /// `Rel*::r_type` values for `EM_ALPHA`.
-    consts r = pub NAMES_R_ALPHA: u32 = {
+    consts r = pub NAMES_R_ALPHA: RelocationType(u32) = {
         /// No reloc
         R_ALPHA_NONE = 0,
         /// Direct 32 bit
@@ -4363,7 +4378,7 @@ names! {
         EF_PPC_RELOCATABLE_LIB = 0x0000_8000,
     };
     /// `Rel*::r_type` values for `EM_PPC`.
-    consts r = pub NAMES_R_PPC: u32 = {
+    consts r = pub NAMES_R_PPC: RelocationType(u32) = {
         // PowerPC values for `Rel*::r_type` defined by the ABIs.
         R_PPC_NONE = 0,
         /// 32bit absolute address
@@ -4537,54 +4552,54 @@ pub const PPC_OPT_TLS: u32 = 1;
 names! {
     struct Ppc64(Base);
     /// `Rel*::r_type` values for `EM_PPC64`.
-    consts r = pub NAMES_R_PPC64: u32 = {
+    consts r = pub NAMES_R_PPC64: RelocationType(u32) = {
         // PowerPC64 values for `Rel*::r_type` defined by the ABIs.
-        R_PPC64_NONE = R_PPC_NONE,
+        R_PPC64_NONE = R_PPC_NONE.0,
         /// 32bit absolute address
-        R_PPC64_ADDR32 = R_PPC_ADDR32,
+        R_PPC64_ADDR32 = R_PPC_ADDR32.0,
         /// 26bit address, word aligned
-        R_PPC64_ADDR24 = R_PPC_ADDR24,
+        R_PPC64_ADDR24 = R_PPC_ADDR24.0,
         /// 16bit absolute address
-        R_PPC64_ADDR16 = R_PPC_ADDR16,
+        R_PPC64_ADDR16 = R_PPC_ADDR16.0,
         /// lower 16bits of address
-        R_PPC64_ADDR16_LO = R_PPC_ADDR16_LO,
+        R_PPC64_ADDR16_LO = R_PPC_ADDR16_LO.0,
         /// high 16bits of address.
-        R_PPC64_ADDR16_HI = R_PPC_ADDR16_HI,
+        R_PPC64_ADDR16_HI = R_PPC_ADDR16_HI.0,
         /// adjusted high 16bits.
-        R_PPC64_ADDR16_HA = R_PPC_ADDR16_HA,
+        R_PPC64_ADDR16_HA = R_PPC_ADDR16_HA.0,
         /// 16bit address, word aligned
-        R_PPC64_ADDR14 = R_PPC_ADDR14,
-        R_PPC64_ADDR14_BRTAKEN = R_PPC_ADDR14_BRTAKEN,
-        R_PPC64_ADDR14_BRNTAKEN = R_PPC_ADDR14_BRNTAKEN,
+        R_PPC64_ADDR14 = R_PPC_ADDR14.0,
+        R_PPC64_ADDR14_BRTAKEN = R_PPC_ADDR14_BRTAKEN.0,
+        R_PPC64_ADDR14_BRNTAKEN = R_PPC_ADDR14_BRNTAKEN.0,
         /// PC-rel. 26 bit, word aligned
-        R_PPC64_REL24 = R_PPC_REL24,
+        R_PPC64_REL24 = R_PPC_REL24.0,
         /// PC relative 16 bit
-        R_PPC64_REL14 = R_PPC_REL14,
-        R_PPC64_REL14_BRTAKEN = R_PPC_REL14_BRTAKEN,
-        R_PPC64_REL14_BRNTAKEN = R_PPC_REL14_BRNTAKEN,
-        R_PPC64_GOT16 = R_PPC_GOT16,
-        R_PPC64_GOT16_LO = R_PPC_GOT16_LO,
-        R_PPC64_GOT16_HI = R_PPC_GOT16_HI,
-        R_PPC64_GOT16_HA = R_PPC_GOT16_HA,
+        R_PPC64_REL14 = R_PPC_REL14.0,
+        R_PPC64_REL14_BRTAKEN = R_PPC_REL14_BRTAKEN.0,
+        R_PPC64_REL14_BRNTAKEN = R_PPC_REL14_BRNTAKEN.0,
+        R_PPC64_GOT16 = R_PPC_GOT16.0,
+        R_PPC64_GOT16_LO = R_PPC_GOT16_LO.0,
+        R_PPC64_GOT16_HI = R_PPC_GOT16_HI.0,
+        R_PPC64_GOT16_HA = R_PPC_GOT16_HA.0,
 
-        R_PPC64_COPY = R_PPC_COPY,
-        R_PPC64_GLOB_DAT = R_PPC_GLOB_DAT,
-        R_PPC64_JMP_SLOT = R_PPC_JMP_SLOT,
-        R_PPC64_RELATIVE = R_PPC_RELATIVE,
+        R_PPC64_COPY = R_PPC_COPY.0,
+        R_PPC64_GLOB_DAT = R_PPC_GLOB_DAT.0,
+        R_PPC64_JMP_SLOT = R_PPC_JMP_SLOT.0,
+        R_PPC64_RELATIVE = R_PPC_RELATIVE.0,
 
-        R_PPC64_UADDR32 = R_PPC_UADDR32,
-        R_PPC64_UADDR16 = R_PPC_UADDR16,
-        R_PPC64_REL32 = R_PPC_REL32,
-        R_PPC64_PLT32 = R_PPC_PLT32,
-        R_PPC64_PLTREL32 = R_PPC_PLTREL32,
-        R_PPC64_PLT16_LO = R_PPC_PLT16_LO,
-        R_PPC64_PLT16_HI = R_PPC_PLT16_HI,
-        R_PPC64_PLT16_HA = R_PPC_PLT16_HA,
+        R_PPC64_UADDR32 = R_PPC_UADDR32.0,
+        R_PPC64_UADDR16 = R_PPC_UADDR16.0,
+        R_PPC64_REL32 = R_PPC_REL32.0,
+        R_PPC64_PLT32 = R_PPC_PLT32.0,
+        R_PPC64_PLTREL32 = R_PPC_PLTREL32.0,
+        R_PPC64_PLT16_LO = R_PPC_PLT16_LO.0,
+        R_PPC64_PLT16_HI = R_PPC_PLT16_HI.0,
+        R_PPC64_PLT16_HA = R_PPC_PLT16_HA.0,
 
-        R_PPC64_SECTOFF = R_PPC_SECTOFF,
-        R_PPC64_SECTOFF_LO = R_PPC_SECTOFF_LO,
-        R_PPC64_SECTOFF_HI = R_PPC_SECTOFF_HI,
-        R_PPC64_SECTOFF_HA = R_PPC_SECTOFF_HA,
+        R_PPC64_SECTOFF = R_PPC_SECTOFF.0,
+        R_PPC64_SECTOFF_LO = R_PPC_SECTOFF_LO.0,
+        R_PPC64_SECTOFF_HI = R_PPC_SECTOFF_HI.0,
+        R_PPC64_SECTOFF_HA = R_PPC_SECTOFF_HA.0,
         /// word30 (S + A - P) >> 2
         R_PPC64_ADDR30 = 37,
         /// doubleword64 S + A
@@ -4838,7 +4853,7 @@ names! {
         SHT_ARM_ATTRIBUTES = SHT_LOPROC + 3,
     };
     /// `Rel*::r_type` values for `EM_ARM`.
-    consts r = pub NAMES_R_ARM: u32 = {
+    consts r = pub NAMES_R_ARM: RelocationType(u32) = {
         /// No reloc
         R_ARM_NONE = 0,
         /// Deprecated PC relative 26 bit branch.
@@ -5106,7 +5121,7 @@ names! {
         DT_AARCH64_VARIANT_PCS = DT_LOPROC + 5,
     };
     /// `Rel*::r_type` values for `EM_AARCH64`.
-    consts r = pub NAMES_R_AARCH64: u32 = {
+    consts r = pub NAMES_R_AARCH64: RelocationType(u32) = {
         /// No relocation.
         R_AARCH64_NONE = 0,
 
@@ -5397,7 +5412,7 @@ names! {
         EF_AVR_ARCH = 0x7F => NAMES_EF_AVR_ARCH,
     };
     /// `Rel*::r_type` values for `EM_AVR`.
-    consts r = pub NAMES_R_AVR: u32 = {
+    consts r = pub NAMES_R_AVR: RelocationType(u32) = {
         R_AVR_NONE = 0,
         /// Direct 32 bit
         R_AVR_32 = 1,
@@ -5464,7 +5479,7 @@ constant_names!(NAMES_EF_AVR_ARCH: FileFlags(u32) = {
 names! {
     struct Msp430(Base);
     /// `Rel*::r_type` values for `EM_MSP430`.
-    consts r = pub NAMES_R_MSP430: u32 = {
+    consts r = pub NAMES_R_MSP430: RelocationType(u32) = {
         /// No reloc
         R_MSP430_NONE = 0,
         /// Direct 32 bit
@@ -5477,7 +5492,7 @@ names! {
 names! {
     struct Hex(Base);
     /// `Rel*::r_type` values for `EM_HEXAGON`.
-    consts r = pub NAMES_R_HEX: u32 = {
+    consts r = pub NAMES_R_HEX: RelocationType(u32) = {
         /// No reloc
         R_HEX_NONE = 0,
         /// Direct 32 bit
@@ -5488,7 +5503,7 @@ names! {
 names! {
     struct Csky(Base);
     /// `Rel*::r_type` values for `EM_CSKY`.
-    consts r = pub NAMES_R_CKCORE: u32 = {
+    consts r = pub NAMES_R_CKCORE: RelocationType(u32) = {
         /// no reloc
         R_CKCORE_NONE = 0,
         /// direct 32 bit (S + A)
@@ -5648,7 +5663,7 @@ names! {
         DT_IA_64_PLT_RESERVE = DT_LOPROC + 0,
     };
     /// `Rel*::r_type` values for `EM_IA_64`.
-    consts r = pub NAMES_R_IA64: u32 = {
+    consts r = pub NAMES_R_IA64: RelocationType(u32) = {
         /// none
         R_IA64_NONE = 0x00,
         /// symbol + addend, add imm14
@@ -5827,7 +5842,7 @@ names! {
         EF_SH_MACH_MASK = 0x1f => NAMES_EF_SH_MACH,
     };
     /// `Rel*::r_type` values for `EM_SH`.
-    consts r = pub NAMES_R_SH: u32 = {
+    consts r = pub NAMES_R_SH: RelocationType(u32) = {
         R_SH_NONE = 0,
         R_SH_DIR32 = 1,
         R_SH_REL32 = 2,
@@ -5877,7 +5892,7 @@ names! {
         EF_S390_HIGH_GPRS = 0x0000_0001,
     };
     /// `Rel*::r_type` values for `EM_S390`.
-    consts r = pub NAMES_R_390: u32 = {
+    consts r = pub NAMES_R_390: RelocationType(u32) = {
         /// No reloc.
         R_390_NONE = 0,
         /// Direct 8 bit.
@@ -6032,7 +6047,7 @@ constant_names!(NAMES_EF_SH_MACH: FileFlags(u32) = {
 names! {
     struct Cris(Base);
     /// `Rel*::r_type` values for `EM_CRIS`.
-    consts r = pub NAMES_R_CRIS: u32 = {
+    consts r = pub NAMES_R_CRIS: RelocationType(u32) = {
         R_CRIS_NONE = 0,
         R_CRIS_8 = 1,
         R_CRIS_16 = 2,
@@ -6059,7 +6074,7 @@ names! {
 names! {
     struct X86_64(Base);
     /// `Rel*::r_type` values for `EM_X86_64`.
-    consts r = pub NAMES_R_X86_64: u32 = {
+    consts r = pub NAMES_R_X86_64: RelocationType(u32) = {
         /// No reloc
         R_X86_64_NONE = 0,
         /// Direct 64 bit
@@ -6172,7 +6187,7 @@ names! {
 names! {
     struct Mn10300(Base);
     /// `Rel*::r_type` values for `EM_MN10300`.
-    consts r = pub NAMES_R_MN10300: u32 = {
+    consts r = pub NAMES_R_MN10300: RelocationType(u32) = {
         /// No reloc.
         R_MN10300_NONE = 0,
         /// Direct 32 bit.
@@ -6249,7 +6264,7 @@ names! {
 names! {
     struct M32r(Base);
     /// `Rel*::r_type` values for `EM_M32R`.
-    consts r = pub NAMES_R_M32R: u32 = {
+    consts r = pub NAMES_R_M32R: RelocationType(u32) = {
         /// No reloc.
         R_M32R_NONE = 0,
         /// Direct 16 bit.
@@ -6342,7 +6357,7 @@ names! {
 names! {
     struct Microblaze(Base);
     /// `Rel*::r_type` values for `EM_MICROBLAZE`.
-    consts r = pub NAMES_R_MICROBLAZE: u32 = {
+    consts r = pub NAMES_R_MICROBLAZE: RelocationType(u32) = {
         /// No reloc.
         R_MICROBLAZE_NONE = 0,
         /// Direct 32 bit.
@@ -6414,7 +6429,7 @@ names! {
         DT_NIOS2_GP = 0x7000_0002,
     };
     /// `Rel*::r_type` values for `EM_ALTERA_NIOS2`.
-    consts r = pub NAMES_R_NIOS2: u32 = {
+    consts r = pub NAMES_R_NIOS2: RelocationType(u32) = {
         /// No reloc.
         R_NIOS2_NONE = 0,
         /// Direct signed 16 bit.
@@ -6514,7 +6529,7 @@ names! {
 names! {
     struct Tilepro(Base);
     /// `Rel*::r_type` values for `EM_TILEPRO`.
-    consts r = pub NAMES_R_TILEPRO: u32 = {
+    consts r = pub NAMES_R_TILEPRO: RelocationType(u32) = {
         /// No reloc
         R_TILEPRO_NONE = 0,
         /// Direct 32 bit
@@ -6706,7 +6721,7 @@ names! {
 names! {
     struct Tilegx(Base);
     /// `Rel*::r_type` values for `EM_TILEGX`.
-    consts r = pub NAMES_R_TILEGX: u32 = {
+    consts r = pub NAMES_R_TILEGX: RelocationType(u32) = {
         /// No reloc
         R_TILEGX_NONE = 0,
         /// Direct 64 bit
@@ -6977,7 +6992,7 @@ names! {
         DT_RISCV_VARIANT_CC = DT_LOPROC + 1,
     };
     /// `Rel*::r_type` values for `EM_RISCV`.
-    consts r = pub NAMES_R_RISCV: u32 = {
+    consts r = pub NAMES_R_RISCV: RelocationType(u32) = {
         R_RISCV_NONE = 0,
         R_RISCV_32 = 1,
         R_RISCV_64 = 2,
@@ -7054,7 +7069,7 @@ constant_names!(NAMES_EF_RISCV_FLOAT_ABI: FileFlags(u32) = {
 names! {
     struct Bpf(Base);
     /// `Rel*::r_type` values for `EM_BPF`.
-    consts r = pub NAMES_R_BPF: u32 = {
+    consts r = pub NAMES_R_BPF: RelocationType(u32) = {
         /// No reloc
         R_BPF_NONE = 0,
         R_BPF_64_64 = 1,
@@ -7065,7 +7080,7 @@ names! {
 names! {
     struct Sbf(Base);
     /// `Rel*::r_type` values for `EM_SBF`.
-    consts r = pub NAMES_R_SBF: u32 = {
+    consts r = pub NAMES_R_SBF: RelocationType(u32) = {
         /// No reloc
         R_SBF_NONE = 0,
         R_SBF_64_64 = 1,
@@ -7078,7 +7093,7 @@ names! {
 names! {
     struct Metag(Base);
     /// `Rel*::r_type` values for `EM_METAG`.
-    consts r = pub NAMES_R_METAG: u32 = {
+    consts r = pub NAMES_R_METAG: RelocationType(u32) = {
         R_METAG_HIADDR16 = 0,
         R_METAG_LOADDR16 = 1,
         /// 32bit absolute address
@@ -7145,7 +7160,7 @@ names! {
 names! {
     struct Nds32(Base);
     /// `Rel*::r_type` values for `EM_NDS32`.
-    consts r = pub NAMES_R_NDS32: u32 = {
+    consts r = pub NAMES_R_NDS32: RelocationType(u32) = {
         R_NDS32_NONE = 0,
         R_NDS32_32_RELA = 20,
         R_NDS32_COPY = 39,
@@ -7167,7 +7182,7 @@ names! {
         EF_LARCH_OBJABI_V1 = 0x40,
     };
     /// `Rel*::r_type` values for `EM_LOONGARCH`.
-    consts r = pub NAMES_R_LARCH: u32 = {
+    consts r = pub NAMES_R_LARCH: RelocationType(u32) = {
         /// No reloc
         R_LARCH_NONE = 0,
         /// Runtime address resolving
@@ -7504,7 +7519,7 @@ constant_names!(NAMES_EF_LARCH_ABI: FileFlags(u32) = {
 names! {
     struct Xtensa(Base);
     /// `Rel*::r_type` values for `EM_XTENSA`.
-    consts r = pub NAMES_R_XTENSA: u32 = {
+    consts r = pub NAMES_R_XTENSA: RelocationType(u32) = {
         R_XTENSA_NONE = 0,
         R_XTENSA_32 = 1,
         R_XTENSA_RTLD = 2,
@@ -7627,7 +7642,7 @@ names! {
         EF_E2K_PACK_SEGMENTS = 64,
     };
     /// `Rel*::r_type` values for `EM_MCST_ELBRUS`.
-    consts r = pub NAMES_R_E2K: u32 = {
+    consts r = pub NAMES_R_E2K: RelocationType(u32) = {
         /// Direct 32 bit.
         R_E2K_32_ABS = 0,
         /// PC relative 32 bit.

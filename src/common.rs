@@ -740,13 +740,13 @@ pub enum RelocationFlags {
     #[cfg(feature = "elf")]
     Elf {
         /// `r_type` field in the ELF relocation.
-        r_type: u32,
+        r_type: crate::elf::RelocationType,
     },
     /// Mach-O relocation fields.
     #[cfg(feature = "macho")]
     MachO {
         /// `r_type` field in the Mach-O relocation.
-        r_type: u8,
+        r_type: crate::macho::RelocationType,
         /// `r_pcrel` field in the Mach-O relocation.
         r_pcrel: bool,
         /// `r_length` field in the Mach-O relocation.
@@ -756,13 +756,13 @@ pub enum RelocationFlags {
     #[cfg(feature = "coff")]
     Coff {
         /// `typ` field in the COFF relocation.
-        typ: u16,
+        typ: crate::pe::RelocationType,
     },
     /// XCOFF relocation fields.
     #[cfg(feature = "xcoff")]
     Xcoff {
         /// `r_rtype` field in the XCOFF relocation.
-        r_rtype: u8,
+        r_rtype: crate::xcoff::RelocationType,
         /// `r_rsize` field in the XCOFF relocation.
         r_rsize: u8,
     },

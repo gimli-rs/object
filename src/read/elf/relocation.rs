@@ -564,7 +564,7 @@ pub trait Rel: Debug + Pod + Clone + read::private::Sealed {
     fn r_offset(&self, endian: Self::Endian) -> Self::Word;
     fn r_info(&self, endian: Self::Endian) -> Self::Word;
     fn r_sym(&self, endian: Self::Endian) -> u32;
-    fn r_type(&self, endian: Self::Endian) -> u32;
+    fn r_type(&self, endian: Self::Endian) -> elf::RelocationType;
 
     /// Get the symbol index referenced by the relocation.
     ///
@@ -602,7 +602,7 @@ impl<Endian: endian::Endian> Rel for elf::Rel32<Endian> {
     }
 
     #[inline]
-    fn r_type(&self, endian: Self::Endian) -> u32 {
+    fn r_type(&self, endian: Self::Endian) -> elf::RelocationType {
         self.r_type(endian)
     }
 }
@@ -630,7 +630,7 @@ impl<Endian: endian::Endian> Rel for elf::Rel64<Endian> {
     }
 
     #[inline]
-    fn r_type(&self, endian: Self::Endian) -> u32 {
+    fn r_type(&self, endian: Self::Endian) -> elf::RelocationType {
         self.r_type(endian)
     }
 }
@@ -646,7 +646,7 @@ pub trait Rela: Debug + Pod + Clone + read::private::Sealed {
     fn r_info(&self, endian: Self::Endian, is_mips64el: bool) -> Self::Word;
     fn r_addend(&self, endian: Self::Endian) -> Self::Sword;
     fn r_sym(&self, endian: Self::Endian, is_mips64el: bool) -> u32;
-    fn r_type(&self, endian: Self::Endian, is_mips64el: bool) -> u32;
+    fn r_type(&self, endian: Self::Endian, is_mips64el: bool) -> elf::RelocationType;
 
     /// Get the symbol index referenced by the relocation.
     ///
@@ -689,7 +689,7 @@ impl<Endian: endian::Endian> Rela for elf::Rela32<Endian> {
     }
 
     #[inline]
-    fn r_type(&self, endian: Self::Endian, _is_mips64el: bool) -> u32 {
+    fn r_type(&self, endian: Self::Endian, _is_mips64el: bool) -> elf::RelocationType {
         self.r_type(endian)
     }
 }
@@ -722,7 +722,7 @@ impl<Endian: endian::Endian> Rela for elf::Rela64<Endian> {
     }
 
     #[inline]
-    fn r_type(&self, endian: Self::Endian, is_mips64el: bool) -> u32 {
+    fn r_type(&self, endian: Self::Endian, is_mips64el: bool) -> elf::RelocationType {
         self.r_type(endian, is_mips64el)
     }
 }
@@ -844,7 +844,7 @@ pub struct Crel {
     /// Relocation symbol index.
     pub r_sym: u32,
     /// Relocation type.
-    pub r_type: u32,
+    pub r_type: elf::RelocationType,
     /// Relocation addend.
     ///
     /// Only set if `CrelIterator::is_rela()` returns `true`.
@@ -989,7 +989,7 @@ impl<'data> CrelIterator<'data> {
                 .data
                 .read_sleb128()
                 .read_error("Cannot read type of CREL relocation")?;
-            self.state.r_type = self.state.r_type.wrapping_add(delta_typ as u32);
+            self.state.r_type.0 = self.state.r_type.0.wrapping_add(delta_typ as u32);
         }
         if self.header.is_rela && flags & DELTA_ADDEND_MASK != 0 {
             let delta_addend = self
