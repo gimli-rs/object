@@ -627,6 +627,10 @@ pub enum SectionFlags {
     MachO {
         /// `flags` field in the section header.
         flags: crate::macho::SectionFlags,
+        /// `reserved2` field in the section header.
+        ///
+        /// This is the size of a stub in a section with type `S_SYMBOL_STUBS`.
+        reserved2: u32,
     },
     /// COFF section flags.
     #[cfg(feature = "coff")]

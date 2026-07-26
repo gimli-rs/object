@@ -228,6 +228,7 @@ where
     fn flags(&self) -> SectionFlags {
         SectionFlags::MachO {
             flags: self.internal.section.flags(self.file.endian),
+            reserved2: self.internal.section.reserved2(self.file.endian),
         }
     }
 }

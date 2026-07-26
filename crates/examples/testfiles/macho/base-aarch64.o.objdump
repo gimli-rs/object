@@ -5,9 +5,9 @@ Flags: MachO { flags: MH_SUBSECTIONS_VIA_SYMBOLS }
 Relative Address Base: 0
 Entry Address: 0
 Segment { name: "", address: 0, size: 68, permissions: RWX }
-1: Section { segment: "__TEXT", name: "__text", address: 0, size: 34, align: 4, kind: Text, flags: MachO { flags: S_REGULAR | S_ATTR_PURE_INSTRUCTIONS | S_ATTR_SOME_INSTRUCTIONS } }
-2: Section { segment: "__TEXT", name: "__cstring", address: 34, size: d, align: 1, kind: ReadOnlyString, flags: MachO { flags: S_CSTRING_LITERALS } }
-3: Section { segment: "__LD", name: "__compact_unwind", address: 48, size: 20, align: 8, kind: Unknown, flags: MachO { flags: S_REGULAR | S_ATTR_DEBUG } }
+1: Section { segment: "__TEXT", name: "__text", address: 0, size: 34, align: 4, kind: Text, flags: MachO { flags: S_REGULAR | S_ATTR_PURE_INSTRUCTIONS | S_ATTR_SOME_INSTRUCTIONS, reserved2: 0 } }
+2: Section { segment: "__TEXT", name: "__cstring", address: 34, size: d, align: 1, kind: ReadOnlyString, flags: MachO { flags: S_CSTRING_LITERALS, reserved2: 0 } }
+3: Section { segment: "__LD", name: "__compact_unwind", address: 48, size: 20, align: 8, kind: Unknown, flags: MachO { flags: S_REGULAR | S_ATTR_DEBUG, reserved2: 0 } }
 
 Symbols
 0: Symbol { name: "ltmp0", address: 0, size: 0, kind: Section, section: Section(SectionIndex(1)), scope: Compilation, weak: false, flags: MachO { n_type: N_SECT, n_desc: 0 } }

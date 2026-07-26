@@ -5,8 +5,8 @@ Flags: MachO { flags: MH_SUBSECTIONS_VIA_SYMBOLS }
 Relative Address Base: 0
 Entry Address: 0
 Segment { name: "", address: 0, size: 3c, permissions: RWX }
-1: Section { segment: "__TEXT", name: "__text", address: 0, size: 28, align: 4, kind: Text, flags: MachO { flags: S_REGULAR | S_ATTR_PURE_INSTRUCTIONS | S_ATTR_SOME_INSTRUCTIONS } }
-2: Section { segment: "__DATA", name: "__data", address: 28, size: 14, align: 1, kind: Data, flags: MachO { flags: S_REGULAR } }
+1: Section { segment: "__TEXT", name: "__text", address: 0, size: 28, align: 4, kind: Text, flags: MachO { flags: S_REGULAR | S_ATTR_PURE_INSTRUCTIONS | S_ATTR_SOME_INSTRUCTIONS, reserved2: 0 } }
+2: Section { segment: "__DATA", name: "__data", address: 28, size: 14, align: 1, kind: Data, flags: MachO { flags: S_REGULAR, reserved2: 0 } }
 
 Symbols
 0: Symbol { name: "_g1", address: 0, size: 0, kind: Text, section: Section(SectionIndex(1)), scope: Compilation, weak: false, flags: MachO { n_type: N_SECT, n_desc: 0 } }

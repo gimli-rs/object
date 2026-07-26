@@ -8,12 +8,12 @@ Mach UUID: [9c, 74, 2d, 58, db, b2, 33, 1, bd, 99, 78, 30, 93, d2, ef, 76]
 Segment { name: "__TEXT", address: 0, size: 4000, permissions: R-X }
 Segment { name: "__DATA", address: 4000, size: 4000, permissions: RW- }
 Segment { name: "__LINKEDIT", address: 8000, size: 4000, permissions: R-- }
-1: Section { segment: "__TEXT", name: "__text", address: 460, size: c, align: 1, kind: Text, flags: MachO { flags: S_REGULAR | S_ATTR_PURE_INSTRUCTIONS | S_ATTR_SOME_INSTRUCTIONS } }
-2: Section { segment: "__TEXT", name: "__stubs", address: 46c, size: c, align: 4, kind: Unknown, flags: MachO { flags: S_SYMBOL_STUBS | S_ATTR_PURE_INSTRUCTIONS | S_ATTR_SOME_INSTRUCTIONS } }
-3: Section { segment: "__TEXT", name: "__resolver_help", address: 478, size: 64, align: 4, kind: Unknown, flags: MachO { flags: S_REGULAR | S_ATTR_PURE_INSTRUCTIONS | S_ATTR_SOME_INSTRUCTIONS } }
-4: Section { segment: "__DATA", name: "__la_symbol_ptr", address: 4000, size: 8, align: 8, kind: Unknown, flags: MachO { flags: S_LAZY_SYMBOL_POINTERS } }
-5: Section { segment: "__DATA", name: "__thread_vars", address: 4008, size: 18, align: 8, kind: TlsVariables, flags: MachO { flags: S_THREAD_LOCAL_VARIABLES } }
-6: Section { segment: "__DATA", name: "__thread_data", address: 4020, size: 4, align: 4, kind: Tls, flags: MachO { flags: S_THREAD_LOCAL_REGULAR } }
+1: Section { segment: "__TEXT", name: "__text", address: 460, size: c, align: 1, kind: Text, flags: MachO { flags: S_REGULAR | S_ATTR_PURE_INSTRUCTIONS | S_ATTR_SOME_INSTRUCTIONS, reserved2: 0 } }
+2: Section { segment: "__TEXT", name: "__stubs", address: 46c, size: c, align: 4, kind: Unknown, flags: MachO { flags: S_SYMBOL_STUBS | S_ATTR_PURE_INSTRUCTIONS | S_ATTR_SOME_INSTRUCTIONS, reserved2: c } }
+3: Section { segment: "__TEXT", name: "__resolver_help", address: 478, size: 64, align: 4, kind: Unknown, flags: MachO { flags: S_REGULAR | S_ATTR_PURE_INSTRUCTIONS | S_ATTR_SOME_INSTRUCTIONS, reserved2: 0 } }
+4: Section { segment: "__DATA", name: "__la_symbol_ptr", address: 4000, size: 8, align: 8, kind: Unknown, flags: MachO { flags: S_LAZY_SYMBOL_POINTERS, reserved2: 0 } }
+5: Section { segment: "__DATA", name: "__thread_vars", address: 4008, size: 18, align: 8, kind: TlsVariables, flags: MachO { flags: S_THREAD_LOCAL_VARIABLES, reserved2: 0 } }
+6: Section { segment: "__DATA", name: "__thread_data", address: 4020, size: 4, align: 4, kind: Tls, flags: MachO { flags: S_THREAD_LOCAL_REGULAR, reserved2: 0 } }
 
 Symbols
 0: Symbol { name: "_tls$tlv$init", address: 4020, size: 0, kind: Tls, section: Section(SectionIndex(6)), scope: Compilation, weak: false, flags: MachO { n_type: N_SECT, n_desc: 0 } }
