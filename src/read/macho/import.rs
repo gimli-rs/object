@@ -1,15 +1,106 @@
 use alloc::fmt;
 use alloc::vec::Vec;
+use core::marker::PhantomData;
 use core::slice;
 
 use crate::Endianness;
 use crate::macho;
-use crate::read::{Import, ImportFlags, NameOrOrdinal, ReadError, ReadRef, Result};
+use crate::read::{
+    Import, ImportFlags, ImportLibrary, ImportLibraryFlags, NameOrOrdinal, ReadError, ReadRef,
+    Result,
+};
 
 use super::{
-    BindOperation, BindOperationIterator, DyldChainedImportIterator, MachHeader, MachOFile, Nlist,
-    SymbolTable,
+    BindOperation, BindOperationIterator, DyldChainedImportIterator, LoadCommandIterator,
+    MachHeader, MachOFile, Nlist, SymbolTable,
 };
+
+/// An iterator for the import libraries in a [`MachOFile32`](super::MachOFile32).
+pub type MachOImportLibraryIterator32<'data, 'file, Endian = Endianness, R = &'data [u8]> =
+    MachOImportLibraryIterator<'data, 'file, macho::MachHeader32<Endian>, R>;
+/// An iterator for the import libraries in a [`MachOFile64`](super::MachOFile64).
+pub type MachOImportLibraryIterator64<'data, 'file, Endian = Endianness, R = &'data [u8]> =
+    MachOImportLibraryIterator<'data, 'file, macho::MachHeader64<Endian>, R>;
+
+/// An iterator for the import libraries in a [`MachOFile`].
+pub struct MachOImportLibraryIterator<'data, 'file, Mach, R = &'data [u8]>
+where
+    Mach: MachHeader,
+    R: ReadRef<'data>,
+{
+    endian: Mach::Endian,
+    commands: LoadCommandIterator<'data, Mach::Endian>,
+    ordinal: u32,
+    marker: PhantomData<(&'file (), R)>,
+}
+
+impl<'data, 'file, Mach, R> MachOImportLibraryIterator<'data, 'file, Mach, R>
+where
+    Mach: MachHeader,
+    R: ReadRef<'data>,
+{
+    pub(super) fn new(file: &'file MachOFile<'data, Mach, R>) -> Result<Self> {
+        Ok(MachOImportLibraryIterator {
+            endian: file.endian,
+            commands: file.macho_load_commands()?,
+            ordinal: 0,
+            marker: PhantomData,
+        })
+    }
+
+    fn next(&mut self) -> Result<Option<ImportLibrary<'data>>> {
+        loop {
+            let Some(command) = self.commands.next()? else {
+                return Ok(None);
+            };
+            // The above iterator either fused or made progress, so errors after here don't
+            // need to terminate iteration.
+
+            let Some(dylib) = command.dylib().transpose() else {
+                // Above only returned Ok(None) if the command type didn't match.
+                continue;
+            };
+            self.ordinal += 1;
+            let dylib = dylib?;
+
+            let name = command.string(self.endian, dylib.dylib.name)?;
+            let cmd = command.cmd();
+            let use_flags = command.dylib_use_flags(self.endian, dylib)?;
+            return Ok(Some(ImportLibrary {
+                name,
+                flags: ImportLibraryFlags::MachO {
+                    ordinal: self.ordinal,
+                    cmd,
+                    current_version: dylib.dylib.current_version.get(self.endian),
+                    compatibility_version: dylib.dylib.compatibility_version.get(self.endian),
+                    use_flags,
+                },
+            }));
+        }
+    }
+}
+
+impl<'data, 'file, Mach, R> fmt::Debug for MachOImportLibraryIterator<'data, 'file, Mach, R>
+where
+    Mach: MachHeader,
+    R: ReadRef<'data>,
+{
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("MachOImportLibraryIterator").finish()
+    }
+}
+
+impl<'data, 'file, Mach, R> Iterator for MachOImportLibraryIterator<'data, 'file, Mach, R>
+where
+    Mach: MachHeader,
+    R: ReadRef<'data>,
+{
+    type Item = Result<ImportLibrary<'data>>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.next().transpose()
+    }
+}
 
 /// An iterator for the imports in a [`MachOFile32`](super::MachOFile32).
 pub type MachOImportIterator32<'data, 'file, Endian = Endianness, R = &'data [u8]> =

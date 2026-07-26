@@ -4,9 +4,9 @@ use core::marker::PhantomData;
 use crate::endian::Endianness;
 use crate::read::{
     self, Architecture, CodeView, ComdatKind, CompressedData, CompressedFileRange, Export,
-    FileFlags, Import, ObjectKind, ObjectMap, Permissions, Relocation, RelocationMap, Result,
-    SectionFlags, SectionIndex, SectionKind, SegmentFlags, SubArchitecture, SymbolFlags,
-    SymbolIndex, SymbolKind, SymbolMap, SymbolMapBuilder, SymbolMapName, SymbolScope,
+    FileFlags, Import, ImportLibrary, ObjectKind, ObjectMap, Permissions, Relocation,
+    RelocationMap, Result, SectionFlags, SectionIndex, SectionKind, SegmentFlags, SubArchitecture,
+    SymbolFlags, SymbolIndex, SymbolKind, SymbolMap, SymbolMapBuilder, SymbolMapName, SymbolScope,
     SymbolSection,
 };
 
@@ -77,6 +77,12 @@ pub trait Object<'data>: read::private::Sealed {
     /// The first field in the item tuple is the address
     /// that the relocation applies to.
     type DynamicRelocationIterator<'file>: Iterator<Item = (u64, Relocation)>
+    where
+        Self: 'file,
+        'data: 'file;
+
+    /// An iterator for import libraries in the object file.
+    type ImportLibraryIterator<'file>: Iterator<Item = Result<ImportLibrary<'data>>>
     where
         Self: 'file,
         'data: 'file;
@@ -236,6 +242,17 @@ pub trait Object<'data>: read::private::Sealed {
     fn object_map(&self) -> ObjectMap<'data> {
         ObjectMap::default()
     }
+
+    /// Get an iterator for the libraries that the file depends on.
+    ///
+    /// An error is returned if the tables that describe the libraries could not be parsed.
+    /// Errors for individual libraries are returned by the iterator instead, and iteration
+    /// continues with the next library.
+    ///
+    /// For ELF, these are the `DT_NEEDED` entries in the dynamic table.
+    /// For Mach-O, these are the dylib load commands.
+    /// For PE, these are from the import table and the delay-load import table.
+    fn import_libraries(&self) -> Result<Self::ImportLibraryIterator<'_>>;
 
     /// Get an iterator for the imported symbols.
     ///
@@ -552,6 +569,25 @@ pub struct NoDynamicRelocationIterator;
 
 impl Iterator for NoDynamicRelocationIterator {
     type Item = (u64, Relocation);
+
+    #[inline]
+    fn next(&mut self) -> Option<Self::Item> {
+        None
+    }
+}
+
+/// An iterator for files that don't have import libraries.
+#[derive(Debug)]
+pub struct NoImportLibraryIterator<'data, 'file, R>(PhantomData<(&'data (), &'file (), R)>);
+
+impl<'data, 'file, R> Default for NoImportLibraryIterator<'data, 'file, R> {
+    fn default() -> Self {
+        Self(PhantomData)
+    }
+}
+
+impl<'data, 'file, R> Iterator for NoImportLibraryIterator<'data, 'file, R> {
+    type Item = Result<ImportLibrary<'data>>;
 
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {

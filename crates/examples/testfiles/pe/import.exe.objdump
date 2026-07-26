@@ -19,6 +19,9 @@ Symbols
 
 Dynamic symbols
 
+ImportLibrary { name: "export.dll", flags: Pe }
+ImportLibrary { name: "delay.dll", flags: Pe { delay: true } }
+
 Import { library: "export.dll", name: "exported_named", flags: Pe }
 Import { library: "export.dll", ordinal: 2, flags: Pe }
 Import { library: "delay.dll", name: "delayed", flags: Pe { delay: true } }

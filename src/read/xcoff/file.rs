@@ -5,8 +5,8 @@ use crate::endian::BigEndian as BE;
 use crate::pod::Pod;
 use crate::read::{
     self, Architecture, Error, FileFlags, NoDynamicRelocationIterator, NoExportIterator,
-    NoImportIterator, Object, ObjectKind, ObjectSection, ReadError, ReadRef, Result, SectionIndex,
-    SymbolIndex,
+    NoImportIterator, NoImportLibraryIterator, Object, ObjectKind, ObjectSection, ReadError,
+    ReadRef, Result, SectionIndex, SymbolIndex,
 };
 use crate::{SkipDebugList, xcoff};
 
@@ -168,6 +168,11 @@ where
     where
         Self: 'file,
         'data: 'file;
+    type ImportLibraryIterator<'file>
+        = NoImportLibraryIterator<'data, 'file, R>
+    where
+        Self: 'file,
+        'data: 'file;
     type ImportIterator<'file>
         = NoImportIterator<'data, 'file, R>
     where
@@ -284,6 +289,11 @@ where
     fn dynamic_relocations(&self) -> Option<Self::DynamicRelocationIterator<'_>> {
         // TODO: return the relocations in the STYP_LOADER section.
         None
+    }
+
+    fn import_libraries(&self) -> Result<Self::ImportLibraryIterator<'_>> {
+        // TODO: return the import file IDs in the STYP_LOADER section.
+        Ok(Default::default())
     }
 
     fn imports(&self) -> Result<Self::ImportIterator<'_>> {

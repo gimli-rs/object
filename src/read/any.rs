@@ -17,8 +17,8 @@ use crate::read::wasm;
 use crate::read::xcoff;
 use crate::read::{
     self, Architecture, BinaryFormat, CodeView, ComdatKind, CompressedData, CompressedFileRange,
-    Error, Export, FileFlags, FileKind, Import, Object, ObjectComdat, ObjectKind, ObjectMap,
-    ObjectSection, ObjectSegment, ObjectSymbol, ObjectSymbolTable, Permissions, ReadRef,
+    Error, Export, FileFlags, FileKind, Import, ImportLibrary, Object, ObjectComdat, ObjectKind,
+    ObjectMap, ObjectSection, ObjectSegment, ObjectSymbol, ObjectSymbolTable, Permissions, ReadRef,
     Relocation, RelocationMap, Result, SectionFlags, SectionIndex, SectionKind, SegmentFlags,
     SubArchitecture, SymbolFlags, SymbolIndex, SymbolKind, SymbolMap, SymbolMapName, SymbolScope,
     SymbolSection,
@@ -357,6 +357,11 @@ where
     where
         Self: 'file,
         'data: 'file;
+    type ImportLibraryIterator<'file>
+        = ImportLibraryIterator<'data, 'file, R>
+    where
+        Self: 'file,
+        'data: 'file;
     type ImportIterator<'file>
         = ImportIterator<'data, 'file, R>
     where
@@ -485,6 +490,12 @@ where
 
     fn object_map(&self) -> ObjectMap<'data> {
         with_inner!(self, File, |x| x.object_map())
+    }
+
+    fn import_libraries(&self) -> Result<ImportLibraryIterator<'data, '_, R>> {
+        map_inner_option!(self, File, ImportLibraryIteratorInternal, |x| x
+            .import_libraries())
+        .map(|inner| ImportLibraryIterator { inner })
     }
 
     fn imports(&self) -> Result<ImportIterator<'data, '_, R>> {
@@ -1387,6 +1398,46 @@ impl<'data, 'file, R: ReadRef<'data>> Iterator for SectionRelocationIterator<'da
 
     fn next(&mut self) -> Option<Self::Item> {
         with_inner_mut!(self.inner, SectionRelocationIteratorInternal, |x| x.next())
+    }
+}
+
+/// An iterator for the import libraries in a [`File`].
+#[derive(Debug)]
+pub struct ImportLibraryIterator<'data, 'file, R: ReadRef<'data> = &'data [u8]> {
+    inner: ImportLibraryIteratorInternal<'data, 'file, R>,
+}
+
+#[derive(Debug)]
+enum ImportLibraryIteratorInternal<'data, 'file, R: ReadRef<'data>> {
+    #[cfg(feature = "coff")]
+    Coff(read::NoImportLibraryIterator<'data, 'file, R>),
+    #[cfg(feature = "coff")]
+    CoffBig(read::NoImportLibraryIterator<'data, 'file, R>),
+    #[cfg(feature = "elf")]
+    Elf32(elf::ElfImportLibraryIterator32<'data, 'file, Endianness, R>),
+    #[cfg(feature = "elf")]
+    Elf64(elf::ElfImportLibraryIterator64<'data, 'file, Endianness, R>),
+    #[cfg(feature = "macho")]
+    MachO32(macho::MachOImportLibraryIterator32<'data, 'file, Endianness, R>),
+    #[cfg(feature = "macho")]
+    MachO64(macho::MachOImportLibraryIterator64<'data, 'file, Endianness, R>),
+    #[cfg(feature = "pe")]
+    Pe32(pe::PeImportLibraryIterator32<'data, 'file, R>),
+    #[cfg(feature = "pe")]
+    Pe64(pe::PeImportLibraryIterator64<'data, 'file, R>),
+    #[cfg(feature = "wasm")]
+    Wasm(read::NoImportLibraryIterator<'data, 'file, R>),
+    #[cfg(feature = "xcoff")]
+    Xcoff32(read::NoImportLibraryIterator<'data, 'file, R>),
+    #[cfg(feature = "xcoff")]
+    Xcoff64(read::NoImportLibraryIterator<'data, 'file, R>),
+}
+
+impl<'data, 'file, R: ReadRef<'data>> Iterator for ImportLibraryIterator<'data, 'file, R> {
+    type Item = Result<ImportLibrary<'data>>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        with_inner_mut!(self.inner, ImportLibraryIteratorInternal, |x| x.next())
     }
 }
 

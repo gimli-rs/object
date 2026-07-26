@@ -17,6 +17,8 @@ Symbols
 
 Dynamic symbols
 
+ImportLibrary { name: "KERNEL32.dll", flags: Pe }
+
 Import { library: "KERNEL32.dll", name: "QueryPerformanceCounter", flags: Pe }
 Import { library: "KERNEL32.dll", name: "GetCurrentProcessId", flags: Pe }
 Import { library: "KERNEL32.dll", name: "GetCurrentThreadId", flags: Pe }

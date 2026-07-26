@@ -432,6 +432,108 @@ impl<'data> Iterator for DelayLoadDescriptorIterator<'data> {
     }
 }
 
+/// An iterator for the import libraries in a [`PeFile32`](super::PeFile32).
+pub type PeImportLibraryIterator32<'data, 'file, R = &'data [u8]> =
+    PeImportLibraryIterator<'data, 'file, pe::ImageNtHeaders32, R>;
+/// An iterator for the import libraries in a [`PeFile64`](super::PeFile64).
+pub type PeImportLibraryIterator64<'data, 'file, R = &'data [u8]> =
+    PeImportLibraryIterator<'data, 'file, pe::ImageNtHeaders64, R>;
+
+/// An iterator for the import libraries in a [`PeFile`].
+pub struct PeImportLibraryIterator<'data, 'file, Pe, R = &'data [u8]>
+where
+    Pe: ImageNtHeaders,
+    R: ReadRef<'data>,
+{
+    table: Option<ImportTable<'data>>,
+    descs: Option<ImportDescriptorIterator<'data>>,
+    delay_table: Option<DelayLoadImportTable<'data>>,
+    delay_descs: Option<DelayLoadDescriptorIterator<'data>>,
+    marker: PhantomData<(&'file (), Pe, R)>,
+}
+
+impl<'data, 'file, Pe, R> PeImportLibraryIterator<'data, 'file, Pe, R>
+where
+    Pe: ImageNtHeaders,
+    R: ReadRef<'data>,
+{
+    pub(super) fn new(file: &'file PeFile<'data, Pe, R>) -> Result<Self> {
+        let table = file.import_table()?;
+        let descs = table
+            .as_ref()
+            .map(|table| table.descriptors())
+            .transpose()?;
+        let delay_table = file.delay_load_import_table()?;
+        let delay_descs = delay_table
+            .as_ref()
+            .map(|table| table.descriptors())
+            .transpose()?;
+        Ok(PeImportLibraryIterator {
+            table,
+            descs,
+            delay_table,
+            delay_descs,
+            marker: PhantomData,
+        })
+    }
+
+    fn next(&mut self) -> read::Result<Option<read::ImportLibrary<'data>>> {
+        // All iterators used in this method fuse after error, and any other errors only
+        // occur after an iterator has made progress, so this method doesn't need to fuse
+        // itself.
+        if let Some(table) = self.table.as_ref() {
+            if let Some(descs) = self.descs.as_mut() {
+                if let Some(desc) = descs.next()? {
+                    return Ok(Some(read::ImportLibrary {
+                        name: table.name(desc.name.get(LE))?,
+                        flags: read::ImportLibraryFlags::Pe { delay: false },
+                    }));
+                }
+                self.descs = None;
+            }
+            self.table = None;
+        }
+        if let Some(table) = self.delay_table.as_ref() {
+            if let Some(descs) = self.delay_descs.as_mut() {
+                if let Some(desc) = descs.next()? {
+                    if desc.attributes.get(LE) & pe::IMAGE_DELAYLOAD_RVA_BASED == 0 {
+                        return Err(Error("Unsupported PE delay-load non-RVA based descriptor"));
+                    }
+                    return Ok(Some(read::ImportLibrary {
+                        name: table.name(desc.dll_name_rva.get(LE))?,
+                        flags: read::ImportLibraryFlags::Pe { delay: true },
+                    }));
+                }
+                self.delay_descs = None;
+            }
+            self.delay_table = None;
+        }
+        Ok(None)
+    }
+}
+
+impl<'data, 'file, Pe, R> fmt::Debug for PeImportLibraryIterator<'data, 'file, Pe, R>
+where
+    Pe: ImageNtHeaders,
+    R: ReadRef<'data>,
+{
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("PeImportLibraryIterator").finish()
+    }
+}
+
+impl<'data, 'file, Pe, R> Iterator for PeImportLibraryIterator<'data, 'file, Pe, R>
+where
+    Pe: ImageNtHeaders,
+    R: ReadRef<'data>,
+{
+    type Item = Result<read::ImportLibrary<'data>>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.next().transpose()
+    }
+}
+
 /// An iterator for the imports in a [`PeFile32`](super::PeFile32).
 pub type PeImportIterator32<'data, 'file, R = &'data [u8]> =
     PeImportIterator<'data, 'file, pe::ImageNtHeaders32, R>;

@@ -22,6 +22,8 @@ Symbols
 
 Dynamic symbols
 
+ImportLibrary { name: "/usr/lib/libSystem.B.dylib", flags: MachO { ordinal: 1, cmd: LC_LOAD_DYLIB, current_version: 1319.100.3, compatibility_version: 1.0.0 } }
+
 Import { library: "/usr/lib/libSystem.B.dylib", name: "_printf", flags: MachOBind { dylib: 1, flags: 0 } }
 
 Export { name: "__mh_execute_header", target: Address { address: 100000000 }, flags: None }

@@ -12,10 +12,10 @@ use crate::read::{
 use crate::{SkipDebugList, macho};
 
 use super::{
-    DyldCacheImage, LoadCommandIterator, MachOExportIterator, MachOImportIterator, MachOSection,
-    MachOSectionInternal, MachOSectionIterator, MachOSegment, MachOSegmentInternal,
-    MachOSegmentIterator, MachOSymbol, MachOSymbolIterator, MachOSymbolTable, Nlist, Section,
-    Segment, SymbolTable,
+    DyldCacheImage, LoadCommandIterator, MachOExportIterator, MachOImportIterator,
+    MachOImportLibraryIterator, MachOSection, MachOSectionInternal, MachOSectionIterator,
+    MachOSegment, MachOSegmentInternal, MachOSegmentIterator, MachOSymbol, MachOSymbolIterator,
+    MachOSymbolTable, Nlist, Section, Segment, SymbolTable,
 };
 
 /// A 32-bit Mach-O object file.
@@ -337,6 +337,11 @@ where
     where
         Self: 'file,
         'data: 'file;
+    type ImportLibraryIterator<'file>
+        = MachOImportLibraryIterator<'data, 'file, Mach, R>
+    where
+        Self: 'file,
+        'data: 'file;
     type ImportIterator<'file>
         = MachOImportIterator<'data, 'file, Mach, R>
     where
@@ -473,6 +478,10 @@ where
 
     fn object_map(&self) -> ObjectMap<'data> {
         self.symbols.object_map(self.endian)
+    }
+
+    fn import_libraries(&self) -> Result<MachOImportLibraryIterator<'data, '_, Mach, R>> {
+        MachOImportLibraryIterator::new(self)
     }
 
     fn imports(&self) -> Result<MachOImportIterator<'data, '_, Mach, R>> {

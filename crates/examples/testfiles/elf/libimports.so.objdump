@@ -102,6 +102,10 @@ Dynamic relocations
 (4010, Relocation { kind: Unknown, encoding: Unknown, size: 0, target: Symbol(SymbolIndex(9)), addend: 0, implicit_addend: false, flags: Elf { r_type: 7 } })
 (4018, Relocation { kind: Unknown, encoding: Unknown, size: 0, target: Symbol(SymbolIndex(b)), addend: 0, implicit_addend: false, flags: Elf { r_type: 7 } })
 
+ImportLibrary { name: "libexports.so", flags: None }
+ImportLibrary { name: "libc.so.6", flags: None }
+ImportLibrary { name: "ld-linux-x86-64.so.2", flags: None }
+
 Import { library: "libexports.so", name: "global_data", flags: Elf { st_info: STB_GLOBAL | STT_OBJECT, st_other: STV_DEFAULT, version: "VERS_1" } }
 Import { library: "libexports.so", name: "tls_var", flags: Elf { st_info: STB_GLOBAL | STT_TLS, st_other: STV_DEFAULT, version: "VERS_1" } }
 Import { library: "", name: "_ITM_deregisterTMCloneTable", weak: true, flags: Elf { st_info: STB_WEAK | STT_NOTYPE, st_other: STV_DEFAULT } }
