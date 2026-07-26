@@ -37,6 +37,9 @@ default = []
 all = ["cli", "logging"]
 doc = []
 
+# Internal feature; matches workspace feature for development purposes.
+unstable-all = ["all"]
+
 [[bin]]
 name = "object-rewrite"
 path = "src/main.rs"

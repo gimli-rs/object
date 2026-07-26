@@ -86,27 +86,27 @@ fn cmd_ci() -> Result<(), DynError> {
 }
 
 fn cmd_check() -> Result<(), DynError> {
-    cargo(&["check", "--workspace", "--features", "all"])
+    cargo(&["check", "--workspace", "--features", "unstable-all"])
 }
 
 fn cmd_build() -> Result<(), DynError> {
-    cargo(&["build", "--workspace", "--features", "all"])
+    cargo(&["build", "--workspace", "--features", "unstable-all"])
 }
 
 fn cmd_build_release() -> Result<(), DynError> {
-    cargo(&["build", "--workspace", "--features", "all", "--release"])
+    cargo(&["build", "--workspace", "--features", "unstable-all", "--release"])
 }
 
 fn cmd_test() -> Result<(), DynError> {
-    cargo(&["test", "--workspace", "--features", "all"])
+    cargo(&["test", "--workspace", "--features", "unstable-all"])
 }
 
 fn cmd_test_release() -> Result<(), DynError> {
-    cargo(&["test", "--workspace", "--features", "all", "--release"])
+    cargo(&["test", "--workspace", "--features", "unstable-all", "--release"])
 }
 
 fn cmd_test_update() -> Result<(), DynError> {
-    cargo_with(&["test", "--workspace", "--features", "all"], |cmd| {
+    cargo_with(&["test", "--workspace", "--features", "unstable-all"], |cmd| {
         cmd.env("OBJECT_TESTFILES_UPDATE", "1");
     })
 }
@@ -122,6 +122,7 @@ fn cmd_features() -> Result<(), DynError> {
 
     // Feature combinations for the `object` and `object-examples` packages.
     for features in [
+        "all",
         // Test the main submodules.
         "read",
         "write",
@@ -129,7 +130,8 @@ fn cmd_features() -> Result<(), DynError> {
         // Test each file format individually.
         "read_core,write_core,coff",
         "read_core,write_core,build_core,elf",
-        "read_core,write_core,macho",
+        "read_core,write_core,goff,unstable",
+        "read_core,write_core,build_core,macho",
         "read_core,write_core,pe",
         "read_core,write_core,xcoff",
         "read_core,wasm",
@@ -175,7 +177,7 @@ fn cmd_cross() -> Result<(), DynError> {
                 "test",
                 "--workspace",
                 "--features",
-                "all",
+                "unstable-all",
                 "--target",
                 target,
             ],
@@ -192,7 +194,7 @@ fn cmd_msrv() -> Result<(), DynError> {
     // ruzstd needs 1.87.0
     cmd(
         "cargo",
-        &["+1.87.0", "test", "-p", "object", "--features", "all"],
+        &["+1.87.0", "test", "-p", "object", "--features", "unstable-all"],
     )?;
     Ok(())
 }
@@ -221,7 +223,7 @@ fn cmd_coverage() -> Result<(), DynError> {
     cargo(&[
         "llvm-cov",
         "--features",
-        "all",
+        "unstable-all",
         "--workspace",
         "--html",
         "--open",
@@ -233,7 +235,7 @@ fn cmd_coverage_lcov() -> Result<(), DynError> {
     cargo(&[
         "llvm-cov",
         "--features",
-        "all",
+        "unstable-all",
         "--workspace",
         "--lcov",
         "--output-path",
@@ -246,7 +248,7 @@ fn cmd_clippy() -> Result<(), DynError> {
         "clippy",
         "--workspace",
         "--features",
-        "all",
+        "unstable-all",
         "--all-targets",
     ])
 }
