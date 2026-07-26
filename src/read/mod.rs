@@ -1305,6 +1305,13 @@ impl<'data> CompressedData<'data> {
 
     /// Return the uncompressed data.
     ///
+    /// If decompression is required, this allocates [`Self::uncompressed_size`] bytes.
+    /// This is typically a value recorded in the file, and is not bounded, so check it
+    /// first if you need to bound it for untrusted files.
+    ///
+    /// Returns an error if the decompressed length does not equal
+    /// [`Self::uncompressed_size`].
+    ///
     /// Returns an error for invalid data or unsupported compression.
     /// This includes if the data is compressed but the `compression` feature
     /// for this crate is disabled.
@@ -1315,7 +1322,6 @@ impl<'data> CompressedData<'data> {
             CompressionFormat::Zlib | CompressionFormat::Zstandard => {
                 use alloc::vec::Vec;
                 use core::convert::TryInto;
-                use std::io::Read;
                 let size = self
                     .uncompressed_size
                     .try_into()
@@ -1340,30 +1346,11 @@ impl<'data> CompressedData<'data> {
                             .read_error("Invalid zlib compressed data")?;
                     }
                     CompressionFormat::Zstandard => {
-                        let mut input = self.data;
-                        while !input.is_empty() {
-                            let mut decoder = match ruzstd::decoding::StreamingDecoder::new(&mut input) {
-                                Ok(decoder) => decoder,
-                                Err(
-                                    ruzstd::decoding::errors::FrameDecoderError::ReadFrameHeaderError(
-                                        ruzstd::decoding::errors::ReadFrameHeaderError::SkipFrame {
-                                            length,
-                                            ..
-                                        },
-                                    ),
-                                ) => {
-                                    input = input
-                                        .get(length as usize..)
-                                        .read_error("Invalid zstd compressed data")?;
-                                    continue;
-                                }
-                                x => x.ok().read_error("Invalid zstd compressed data")?,
-                            };
-                            decoder
-                                .read_to_end(&mut decompressed)
-                                .ok()
-                                .read_error("Invalid zstd compressed data")?;
-                        }
+                        let mut decoder = ruzstd::decoding::FrameDecoder::new();
+                        decoder
+                            .decode_all_to_vec(self.data, &mut decompressed)
+                            .ok()
+                            .read_error("Invalid zstd compressed data")?;
                     }
                     _ => unreachable!(),
                 }
