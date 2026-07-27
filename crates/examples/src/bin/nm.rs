@@ -71,7 +71,6 @@ fn print_symbol(symbol: &Symbol<'_, '_>, section_kinds: &HashMap<SectionIndex, S
             }
             Some(SectionKind::ReadOnlyData) | Some(SectionKind::ReadOnlyString) => 'r',
             Some(SectionKind::UninitializedData) | Some(SectionKind::UninitializedTls) => 'b',
-            Some(SectionKind::Common) => 'C',
             _ => '?',
         },
         _ => '?',

@@ -193,12 +193,8 @@ pub enum SectionKind {
     ///
     /// Example ELF sections: `.bss`
     ///
-    /// Example Mach-O sections: `__DATA/__bss`
+    /// Example Mach-O sections: `__DATA/__bss`, `__DATA/__common`
     UninitializedData,
-    /// An uninitialized common data section.
-    ///
-    /// Example Mach-O sections: `__DATA/__common`
-    Common,
     /// A TLS data section.
     ///
     /// Example ELF sections: `.tdata`
@@ -249,9 +245,7 @@ pub enum SectionKind {
 impl SectionKind {
     /// Return true if this section contains zerofill data.
     pub fn is_bss(self) -> bool {
-        self == SectionKind::UninitializedData
-            || self == SectionKind::UninitializedTls
-            || self == SectionKind::Common
+        self == SectionKind::UninitializedData || self == SectionKind::UninitializedTls
     }
 }
 

@@ -388,6 +388,10 @@ impl<'data, 'file, Elf: FileHeader, R: ReadRef<'data>> ObjectSymbol<'data>
 
     #[inline]
     fn address(&self) -> u64 {
+        if self.is_common() {
+            // The value is the alignment, not an address.
+            return 0;
+        }
         self.symbol.st_value(self.endian).into()
     }
 

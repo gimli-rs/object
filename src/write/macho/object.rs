@@ -121,12 +121,6 @@ impl<'a> Object<'a> {
                 SectionKind::TlsVariables,
                 SectionFlags::None,
             ),
-            StandardSection::Common => (
-                &b"__DATA"[..],
-                &b"__common"[..],
-                SectionKind::Common,
-                SectionFlags::None,
-            ),
             StandardSection::GnuProperty => {
                 // Unsupported section.
                 (&[], &[], SectionKind::Note, SectionFlags::None)
@@ -155,7 +149,7 @@ impl<'a> Object<'a> {
                 macho::S_REGULAR.into()
             }
             SectionKind::ReadOnlyString => macho::S_CSTRING_LITERALS.into(),
-            SectionKind::UninitializedData | SectionKind::Common => macho::S_ZEROFILL.into(),
+            SectionKind::UninitializedData => macho::S_ZEROFILL.into(),
             SectionKind::Tls => macho::S_THREAD_LOCAL_REGULAR.into(),
             SectionKind::UninitializedTls => macho::S_THREAD_LOCAL_ZEROFILL.into(),
             SectionKind::TlsVariables => macho::S_THREAD_LOCAL_VARIABLES.into(),
@@ -177,10 +171,10 @@ impl<'a> Object<'a> {
     pub(crate) fn macho_symbol_flags(&self, symbol: &Symbol) -> SymbolFlags<SectionId, SymbolId> {
         // TODO: N_STAB
         let n_type = match symbol.section {
-            SymbolSection::Undefined => macho::N_UNDF | macho::N_EXT,
+            SymbolSection::Undefined | SymbolSection::Common => macho::N_UNDF | macho::N_EXT,
             SymbolSection::Absolute => macho::N_ABS.into(),
             SymbolSection::Section(_) => macho::N_SECT.into(),
-            SymbolSection::None | SymbolSection::Common => {
+            SymbolSection::None => {
                 return SymbolFlags::None;
             }
         } | match symbol.scope {
@@ -188,7 +182,7 @@ impl<'a> Object<'a> {
             SymbolScope::Linkage => macho::N_EXT | macho::N_PEXT,
             SymbolScope::Dynamic => macho::N_EXT,
         };
-        let n_desc = if symbol.weak {
+        let mut n_desc = if symbol.weak {
             if symbol.is_undefined() {
                 macho::N_WEAK_REF
             } else {
@@ -197,6 +191,14 @@ impl<'a> Object<'a> {
         } else {
             macho::SymbolDesc(0)
         };
+        if symbol.is_common() {
+            let align = if symbol.value > 1 {
+                symbol.value.trailing_zeros().min(15) as u8
+            } else {
+                0
+            };
+            n_desc = n_desc.with_common_alignment(align);
+        }
         SymbolFlags::MachO { n_type, n_desc }
     }
 
@@ -547,7 +549,7 @@ impl<'a> Object<'a> {
             if !symbol.name.is_empty() {
                 symbol_offsets[index].str_id = Some(strtab.add(&symbol.name));
             }
-            if symbol.is_undefined() {
+            if symbol.is_undefined() || symbol.is_common() {
                 undefined_symbols.push(index);
             } else if symbol.is_local() {
                 local_symbols.push(index);
@@ -889,9 +891,12 @@ impl<'a> Object<'a> {
                 _ => 0,
             };
 
-            let n_value = match symbol.section.id() {
-                Some(section) => section_offsets[section.0].address + symbol.value,
-                None => symbol.value,
+            let n_value = match symbol.section {
+                SymbolSection::Common => symbol.size,
+                SymbolSection::Section(section) => {
+                    section_offsets[section.0].address + symbol.value
+                }
+                _ => symbol.value,
             };
 
             let n_strx = symbol_offsets[index]

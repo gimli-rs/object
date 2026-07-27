@@ -524,28 +524,18 @@ impl<'a> Object<'a> {
         self.format != BinaryFormat::Coff
     }
 
-    /// Return true if the file format supports `StandardSection::Common`.
-    #[inline]
-    pub fn has_common(&self) -> bool {
-        self.format == BinaryFormat::MachO
-    }
-
     /// Add a new common symbol and return its `SymbolId`.
     ///
-    /// For Mach-O, this appends the symbol to the `__common` section.
+    /// This sets `symbol.section` to [`SymbolSection::Common`], `symbol.size` to `size`,
+    /// and `symbol.value` to `align`.
     ///
-    /// `align` must be a power of two.
+    /// `align` must be a power of two. It is ignored for COFF, which has no way of
+    /// encoding the alignment of a common symbol.
     pub fn add_common_symbol(&mut self, mut symbol: Symbol, size: u64, align: u64) -> SymbolId {
-        if self.has_common() {
-            let symbol_id = self.add_symbol(symbol);
-            let section = self.section_id(StandardSection::Common);
-            self.add_symbol_bss(symbol_id, section, size, align);
-            symbol_id
-        } else {
-            symbol.section = SymbolSection::Common;
-            symbol.size = size;
-            self.add_symbol(symbol)
-        }
+        symbol.section = SymbolSection::Common;
+        symbol.size = size;
+        symbol.value = align;
+        self.add_symbol(symbol)
     }
 
     /// Add a new file symbol and return its `SymbolId`.
@@ -870,8 +860,6 @@ pub enum StandardSection {
     UninitializedTls,
     /// TLS variable structures. Only supported for Mach-O.
     TlsVariables,
-    /// Common data. Only supported for Mach-O.
-    Common,
     /// Notes for GNU properties. Only supported for ELF.
     GnuProperty,
     EhFrame,
@@ -890,7 +878,6 @@ impl StandardSection {
             StandardSection::Tls => SectionKind::Tls,
             StandardSection::UninitializedTls => SectionKind::UninitializedTls,
             StandardSection::TlsVariables => SectionKind::TlsVariables,
-            StandardSection::Common => SectionKind::Common,
             StandardSection::GnuProperty => SectionKind::Note,
             StandardSection::EhFrame => SectionKind::ReadOnlyData,
         }
@@ -908,7 +895,6 @@ impl StandardSection {
             StandardSection::Tls,
             StandardSection::UninitializedTls,
             StandardSection::TlsVariables,
-            StandardSection::Common,
             StandardSection::GnuProperty,
             StandardSection::EhFrame,
         ]
@@ -1068,7 +1054,9 @@ pub struct Symbol {
     pub name: Vec<u8>,
     /// The value of the symbol.
     ///
-    /// If the symbol defined in a section, then this is the section offset of the symbol.
+    /// For [`SymbolSection::Section`], this is the section offset of the symbol.
+    ///
+    /// For [`SymbolSection::Common`], this is its alignment, which must be a power of two.
     pub value: u64,
     /// The size of the symbol.
     pub size: u64,
@@ -1098,8 +1086,6 @@ impl Symbol {
     }
 
     /// Return true if the symbol is common data.
-    ///
-    /// Note: does not check for `SymbolSection::Section` with `SectionKind::Common`.
     #[inline]
     pub fn is_common(&self) -> bool {
         self.section == SymbolSection::Common

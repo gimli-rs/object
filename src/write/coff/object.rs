@@ -64,10 +64,6 @@ impl<'a> Object<'a> {
                 // Unsupported section.
                 (&[], &[], SectionKind::TlsVariables, SectionFlags::None)
             }
-            StandardSection::Common => {
-                // Unsupported section.
-                (&[], &[], SectionKind::Common, SectionFlags::None)
-            }
             StandardSection::GnuProperty => {
                 // Unsupported section.
                 (&[], &[], SectionKind::Note, SectionFlags::None)
@@ -119,8 +115,7 @@ impl<'a> Object<'a> {
                     | coff::IMAGE_SCN_MEM_DISCARDABLE
             }
             SectionKind::Linker => coff::IMAGE_SCN_LNK_INFO | coff::IMAGE_SCN_LNK_REMOVE,
-            SectionKind::Common
-            | SectionKind::Tls
+            SectionKind::Tls
             | SectionKind::UninitializedTls
             | SectionKind::TlsVariables
             | SectionKind::Note

@@ -925,10 +925,13 @@ fn print_symtab_symbols<Mach: MachHeader>(
                 let n_desc = nlist.n_desc(endian);
                 if nlist.is_stab() {
                     p.field_hex("Desc", n_desc);
+                } else if nlist.is_common() {
+                    p.field_hex("Desc", n_desc);
+                    p.flag_bits(n_desc.with_common_alignment(0), SymbolDesc::NAMES_UNDEFINED);
+                    p.field("CommonAlignment", n_desc.common_alignment());
                 } else if nlist.is_undefined() {
                     if state.filetype == MH_OBJECT {
                         p.field_flags("Desc", n_desc, SymbolDesc::NAMES_UNDEFINED);
-                        // TODO: alignment for common symbols
                     } else {
                         let mut n_desc_bits = n_desc.with_reference(SymbolReference(0));
                         if state.twolevel {
