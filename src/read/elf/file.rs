@@ -662,16 +662,12 @@ pub trait FileHeader: Debug + Pod + read::private::Sealed {
     /// Return the `e_phnum` field of the header. Handles extended values.
     ///
     /// Returns `Err` for invalid values.
-    fn phnum<'data, R: ReadRef<'data>>(
-        &self,
-        endian: Self::Endian,
-        data: R,
-    ) -> read::Result<usize> {
+    fn phnum<'data, R: ReadRef<'data>>(&self, endian: Self::Endian, data: R) -> read::Result<u32> {
         let e_phnum = self.e_phnum(endian);
         if e_phnum < elf::PN_XNUM {
-            Ok(e_phnum as usize)
+            Ok(e_phnum.into())
         } else if let Some(section_0) = self.section_0(endian, data)? {
-            Ok(section_0.sh_info(endian) as usize)
+            Ok(section_0.sh_info(endian))
         } else {
             // Section 0 must exist if e_phnum overflows.
             Err(Error("Missing ELF section headers for e_phnum overflow"))
@@ -681,14 +677,10 @@ pub trait FileHeader: Debug + Pod + read::private::Sealed {
     /// Return the `e_shnum` field of the header. Handles extended values.
     ///
     /// Returns `Err` for invalid values.
-    fn shnum<'data, R: ReadRef<'data>>(
-        &self,
-        endian: Self::Endian,
-        data: R,
-    ) -> read::Result<usize> {
+    fn shnum<'data, R: ReadRef<'data>>(&self, endian: Self::Endian, data: R) -> read::Result<u32> {
         let e_shnum = self.e_shnum(endian);
         if e_shnum > 0 {
-            Ok(e_shnum as usize)
+            Ok(e_shnum.into())
         } else if let Some(section_0) = self.section_0(endian, data)? {
             section_0
                 .sh_size(endian)
@@ -751,7 +743,7 @@ pub trait FileHeader: Debug + Pod + read::private::Sealed {
             // Program header size must match.
             return Err(Error("Invalid ELF program header entry size"));
         }
-        data.read_slice_at(phoff, phnum)
+        data.read_slice_at(phoff, phnum as usize)
             .read_error("Invalid ELF program header size or alignment")
     }
 
@@ -779,7 +771,7 @@ pub trait FileHeader: Debug + Pod + read::private::Sealed {
             // Section header size must match.
             return Err(Error("Invalid ELF section header entry size"));
         }
-        data.read_slice_at(shoff, shnum)
+        data.read_slice_at(shoff, shnum as usize)
             .read_error("Invalid ELF section header offset/size/alignment")
     }
 

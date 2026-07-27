@@ -342,6 +342,7 @@ pub trait Section: Debug + Pod + read::private::Sealed {
     fn flags(&self, endian: Self::Endian) -> macho::SectionFlags;
     fn reserved1(&self, endian: Self::Endian) -> u32;
     fn reserved2(&self, endian: Self::Endian) -> u32;
+    fn reserved3(&self, endian: Self::Endian) -> u32;
 
     /// Return the `sectname` bytes up until the null terminator.
     fn name(&self) -> &[u8] {
@@ -495,6 +496,9 @@ impl<Endian: endian::Endian> Section for macho::Section32<Endian> {
     fn reserved2(&self, endian: Self::Endian) -> u32 {
         self.reserved2.get(endian)
     }
+    fn reserved3(&self, _endian: Self::Endian) -> u32 {
+        0
+    }
 }
 
 impl<Endian: endian::Endian> read::private::Sealed for macho::Section64<Endian> {}
@@ -535,5 +539,8 @@ impl<Endian: endian::Endian> Section for macho::Section64<Endian> {
     }
     fn reserved2(&self, endian: Self::Endian) -> u32 {
         self.reserved2.get(endian)
+    }
+    fn reserved3(&self, endian: Self::Endian) -> u32 {
+        self.reserved3.get(endian)
     }
 }

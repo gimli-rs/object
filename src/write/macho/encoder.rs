@@ -2,6 +2,8 @@ use core::mem;
 
 use crate::endian::*;
 use crate::macho;
+#[cfg(feature = "read_core")]
+use crate::read;
 use crate::write::util::align;
 use crate::write::{Error, Result, StringTable, WritableBuffer, WritableBufferExt};
 
@@ -17,6 +19,21 @@ pub struct MachHeader {
     pub flags: macho::FileFlags,
 }
 
+#[cfg(feature = "read_core")]
+impl MachHeader {
+    /// Convert from a raw file header.
+    pub fn from_raw<Mach: read::macho::MachHeader>(endian: Mach::Endian, header: &Mach) -> Self {
+        MachHeader {
+            cputype: header.cputype(endian),
+            cpusubtype: header.cpusubtype(endian),
+            filetype: header.filetype(endian),
+            ncmds: header.ncmds(endian),
+            sizeofcmds: header.sizeofcmds(endian),
+            flags: header.flags(endian),
+        }
+    }
+}
+
 /// Native endian version of [`macho::SegmentCommand64`].
 #[allow(missing_docs)]
 #[derive(Debug, Clone)]
@@ -30,6 +47,24 @@ pub struct SegmentCommand {
     pub initprot: macho::VmProt,
     pub nsects: u32,
     pub flags: macho::SegmentFlags,
+}
+
+#[cfg(feature = "read_core")]
+impl SegmentCommand {
+    /// Convert from a raw segment command.
+    pub fn from_raw<S: read::macho::Segment>(endian: S::Endian, segment: &S) -> Self {
+        SegmentCommand {
+            segname: *segment.segname(),
+            vmaddr: segment.vmaddr(endian).into(),
+            vmsize: segment.vmsize(endian).into(),
+            fileoff: segment.fileoff(endian).into(),
+            filesize: segment.filesize(endian).into(),
+            maxprot: segment.maxprot(endian),
+            initprot: segment.initprot(endian),
+            nsects: segment.nsects(endian),
+            flags: segment.flags(endian),
+        }
+    }
 }
 
 /// Native endian version of [`macho::Section64`].
@@ -50,6 +85,27 @@ pub struct SectionHeader {
     pub reserved3: u32,
 }
 
+#[cfg(feature = "read_core")]
+impl SectionHeader {
+    /// Convert from a raw section header.
+    pub fn from_raw<S: read::macho::Section>(endian: S::Endian, section: &S) -> Self {
+        SectionHeader {
+            sectname: *section.sectname(),
+            segname: *section.segname(),
+            addr: section.addr(endian).into(),
+            size: section.size(endian).into(),
+            offset: section.offset(endian),
+            align: section.align(endian),
+            reloff: section.reloff(endian),
+            nreloc: section.nreloc(endian),
+            flags: section.flags(endian),
+            reserved1: section.reserved1(endian),
+            reserved2: section.reserved2(endian),
+            reserved3: section.reserved3(endian),
+        }
+    }
+}
+
 /// Native endian version of [`macho::SymtabCommand`].
 #[allow(missing_docs)]
 #[derive(Debug, Clone)]
@@ -58,6 +114,19 @@ pub struct SymtabCommand {
     pub nsyms: u32,
     pub stroff: u32,
     pub strsize: u32,
+}
+
+#[cfg(feature = "read_core")]
+impl SymtabCommand {
+    /// Convert from a raw symtab load command.
+    pub fn from_raw<E: Endian>(endian: E, command: &macho::SymtabCommand<E>) -> Self {
+        SymtabCommand {
+            symoff: command.symoff.get(endian),
+            nsyms: command.nsyms.get(endian),
+            stroff: command.stroff.get(endian),
+            strsize: command.strsize.get(endian),
+        }
+    }
 }
 
 /// Native endian version of [`macho::DysymtabCommand`].
@@ -84,6 +153,33 @@ pub struct DysymtabCommand {
     pub nlocrel: u32,
 }
 
+#[cfg(feature = "read_core")]
+impl DysymtabCommand {
+    /// Convert from a raw dynamic symtab load command.
+    pub fn from_raw<E: Endian>(endian: E, command: &macho::DysymtabCommand<E>) -> Self {
+        DysymtabCommand {
+            ilocalsym: command.ilocalsym.get(endian),
+            nlocalsym: command.nlocalsym.get(endian),
+            iextdefsym: command.iextdefsym.get(endian),
+            nextdefsym: command.nextdefsym.get(endian),
+            iundefsym: command.iundefsym.get(endian),
+            nundefsym: command.nundefsym.get(endian),
+            tocoff: command.tocoff.get(endian),
+            ntoc: command.ntoc.get(endian),
+            modtaboff: command.modtaboff.get(endian),
+            nmodtab: command.nmodtab.get(endian),
+            extrefsymoff: command.extrefsymoff.get(endian),
+            nextrefsyms: command.nextrefsyms.get(endian),
+            indirectsymoff: command.indirectsymoff.get(endian),
+            nindirectsyms: command.nindirectsyms.get(endian),
+            extreloff: command.extreloff.get(endian),
+            nextrel: command.nextrel.get(endian),
+            locreloff: command.locreloff.get(endian),
+            nlocrel: command.nlocrel.get(endian),
+        }
+    }
+}
+
 /// Native endian version of [`macho::Nlist64`].
 #[allow(missing_docs)]
 #[derive(Debug, Clone)]
@@ -93,6 +189,20 @@ pub struct Nlist {
     pub n_sect: u8,
     pub n_desc: macho::SymbolDesc,
     pub n_value: u64,
+}
+
+#[cfg(feature = "read_core")]
+impl Nlist {
+    /// Convert from a raw symbol.
+    pub fn from_raw<N: read::macho::Nlist>(endian: N::Endian, nlist: &N) -> Self {
+        Nlist {
+            n_strx: nlist.n_strx(endian),
+            n_type: nlist.n_type(),
+            n_sect: nlist.n_sect(),
+            n_desc: nlist.n_desc(endian),
+            n_value: nlist.n_value(endian).into(),
+        }
+    }
 }
 
 /// Native endian version of [`macho::DylibCommand`].
@@ -106,6 +216,27 @@ pub struct DylibCommand<'data> {
     pub compatibility_version: macho::Version,
 }
 
+#[cfg(feature = "read_core")]
+impl<'data> DylibCommand<'data> {
+    /// Convert from a raw dylib load command.
+    ///
+    /// `name` is the string referenced by the `dylib.name` field. It can be obtained
+    /// using [`read::macho::LoadCommandData::string`].
+    pub fn from_raw<E: Endian>(
+        endian: E,
+        command: &macho::DylibCommand<E>,
+        name: &'data [u8],
+    ) -> Self {
+        DylibCommand {
+            cmd: command.cmd.get(endian),
+            name,
+            timestamp: command.dylib.timestamp.get(endian),
+            current_version: command.dylib.current_version.get(endian),
+            compatibility_version: command.dylib.compatibility_version.get(endian),
+        }
+    }
+}
+
 /// Native endian version of [`macho::BuildVersionCommand`].
 #[allow(missing_docs)]
 #[derive(Debug, Clone)]
@@ -114,6 +245,19 @@ pub struct BuildVersionCommand {
     pub minos: macho::Version,
     pub sdk: macho::Version,
     pub ntools: u32,
+}
+
+#[cfg(feature = "read_core")]
+impl BuildVersionCommand {
+    /// Convert from a raw build version load command.
+    pub fn from_raw<E: Endian>(endian: E, command: &macho::BuildVersionCommand<E>) -> Self {
+        BuildVersionCommand {
+            platform: command.platform.get(endian),
+            minos: command.minos.get(endian),
+            sdk: command.sdk.get(endian),
+            ntools: command.ntools.get(endian),
+        }
+    }
 }
 
 /// Native endian version of [`macho::DyldInfoCommand`].
@@ -130,6 +274,25 @@ pub struct DyldInfoCommand {
     pub lazy_bind_size: u32,
     pub export_off: u32,
     pub export_size: u32,
+}
+
+#[cfg(feature = "read_core")]
+impl DyldInfoCommand {
+    /// Convert from a raw dyld info load command.
+    pub fn from_raw<E: Endian>(endian: E, command: &macho::DyldInfoCommand<E>) -> Self {
+        DyldInfoCommand {
+            rebase_off: command.rebase_off.get(endian),
+            rebase_size: command.rebase_size.get(endian),
+            bind_off: command.bind_off.get(endian),
+            bind_size: command.bind_size.get(endian),
+            weak_bind_off: command.weak_bind_off.get(endian),
+            weak_bind_size: command.weak_bind_size.get(endian),
+            lazy_bind_off: command.lazy_bind_off.get(endian),
+            lazy_bind_size: command.lazy_bind_size.get(endian),
+            export_off: command.export_off.get(endian),
+            export_size: command.export_size.get(endian),
+        }
+    }
 }
 
 /// A helper for encoding headers and data when writing a Mach-O file.
@@ -649,6 +812,38 @@ pub struct CodeDirectory {
     pub exec_seg_base: u64,
     pub exec_seg_limit: u64,
     pub exec_seg_flags: macho::CsExecSegFlags,
+}
+
+#[cfg(feature = "read_core")]
+impl CodeDirectory {
+    /// Convert from a raw code directory.
+    ///
+    /// Fields that are not present for the version of the code directory are set to 0.
+    pub fn from_raw(code_directory: &read::macho::CodeDirectory<'_>) -> Self {
+        let header = code_directory.header();
+        let exec_seg = code_directory.exec_seg();
+        CodeDirectory {
+            length: header.length.get(BigEndian),
+            version: header.version.get(BigEndian),
+            flags: header.flags.get(BigEndian),
+            hash_offset: header.hash_offset.get(BigEndian),
+            ident_offset: header.ident_offset.get(BigEndian),
+            n_special_slots: header.n_special_slots.get(BigEndian),
+            n_code_slots: header.n_code_slots.get(BigEndian),
+            code_limit: code_directory.code_limit(),
+            hash_size: header.hash_size,
+            hash_type: header.hash_type,
+            platform: header.platform,
+            page_size: header.page_size,
+            scatter_offset: code_directory.scatter_offset().unwrap_or(0),
+            team_offset: code_directory.team_offset().unwrap_or(0),
+            exec_seg_base: exec_seg.map_or(0, |v| v.exec_seg_base.get(BigEndian)),
+            exec_seg_limit: exec_seg.map_or(0, |v| v.exec_seg_limit.get(BigEndian)),
+            exec_seg_flags: exec_seg.map_or(macho::CsExecSegFlags(0), |v| {
+                v.exec_seg_flags.get(BigEndian)
+            }),
+        }
+    }
 }
 
 /// A helper for encoding code signatures.

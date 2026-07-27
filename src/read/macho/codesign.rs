@@ -263,7 +263,20 @@ impl<'data> CodeDirectory<'data> {
         Some(self.v2?.team_offset.get(BigEndian))
     }
 
+    /// Return the limit to the main image signature range.
+    ///
+    /// This handles both the 32-bit and 64-bit fields.
+    pub fn code_limit(&self) -> u64 {
+        match self.code_limit64() {
+            Some(code_limit64) if code_limit64 != 0 => code_limit64,
+            _ => self.header.code_limit.get(BigEndian).into(),
+        }
+    }
+
     /// Return the 64-bit limit to the main image signature range.
+    ///
+    /// This is zero for images that are smaller than 4GB. Use [`Self::code_limit`]
+    /// to obtain the limit for any image.
     ///
     /// Returns `None` if the version does not support this field.
     pub fn code_limit64(&self) -> Option<u64> {
