@@ -140,6 +140,7 @@ impl<'a> Object<'a> {
                         | macho::S_ATTR_LIVE_SUPPORT
                         | macho::S_ATTR_NO_TOC
                         | macho::S_ATTR_STRIP_STATIC_SYMS,
+                    reserved2: 0,
                 },
             ),
         }
@@ -167,7 +168,10 @@ impl<'a> Object<'a> {
                 return SectionFlags::None;
             }
         };
-        SectionFlags::MachO { flags }
+        SectionFlags::MachO {
+            flags,
+            reserved2: 0,
+        }
     }
 
     pub(crate) fn macho_symbol_flags(&self, symbol: &Symbol) -> SymbolFlags<SectionId, SymbolId> {
@@ -687,7 +691,7 @@ impl<'a> Object<'a> {
                     ))
                 })?
                 .copy_from_slice(&section.segment);
-            let SectionFlags::MachO { flags } = self.section_flags(section) else {
+            let SectionFlags::MachO { flags, reserved2 } = self.section_flags(section) else {
                 return Err(Error(format!(
                     "unimplemented section `{}` kind {:?}",
                     section.name().unwrap_or(""),
@@ -705,7 +709,7 @@ impl<'a> Object<'a> {
                 nreloc: section_offsets[index].reloc_count as u32,
                 flags,
                 reserved1: 0,
-                reserved2: 0,
+                reserved2,
                 reserved3: 0,
             };
             encoder.section_header(buffer, section_header);

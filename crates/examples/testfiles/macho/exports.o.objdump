@@ -5,9 +5,9 @@ Flags: MachO { flags: MH_SUBSECTIONS_VIA_SYMBOLS }
 Relative Address Base: 0
 Entry Address: 0
 Segment { name: "", address: 0, size: 2c, permissions: RWX }
-1: Section { segment: "__TEXT", name: "__text", address: 0, size: c, align: 1, kind: Text, flags: MachO { flags: S_REGULAR | S_ATTR_PURE_INSTRUCTIONS | S_ATTR_SOME_INSTRUCTIONS } }
-2: Section { segment: "__DATA", name: "__thread_vars", address: 10, size: 18, align: 8, kind: TlsVariables, flags: MachO { flags: S_THREAD_LOCAL_VARIABLES } }
-3: Section { segment: "__DATA", name: "__thread_data", address: 28, size: 4, align: 4, kind: Tls, flags: MachO { flags: S_THREAD_LOCAL_REGULAR } }
+1: Section { segment: "__TEXT", name: "__text", address: 0, size: c, align: 1, kind: Text, flags: MachO { flags: S_REGULAR | S_ATTR_PURE_INSTRUCTIONS | S_ATTR_SOME_INSTRUCTIONS, reserved2: 0 } }
+2: Section { segment: "__DATA", name: "__thread_vars", address: 10, size: 18, align: 8, kind: TlsVariables, flags: MachO { flags: S_THREAD_LOCAL_VARIABLES, reserved2: 0 } }
+3: Section { segment: "__DATA", name: "__thread_data", address: 28, size: 4, align: 4, kind: Tls, flags: MachO { flags: S_THREAD_LOCAL_REGULAR, reserved2: 0 } }
 
 Symbols
 0: Symbol { name: "_tls$tlv$init", address: 28, size: 0, kind: Tls, section: Section(SectionIndex(3)), scope: Compilation, weak: false, flags: MachO { n_type: N_SECT, n_desc: 0 } }
