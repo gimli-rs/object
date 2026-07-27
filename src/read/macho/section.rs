@@ -269,7 +269,7 @@ impl<'data, Mach: MachHeader, R: ReadRef<'data>> MachOSectionInternal<'data, Mac
             (b"__DATA", b"__data") => SectionKind::Data,
             (b"__DATA", b"__const") => SectionKind::ReadOnlyData,
             (b"__DATA", b"__bss") => SectionKind::UninitializedData,
-            (b"__DATA", b"__common") => SectionKind::Common,
+            (b"__DATA", b"__common") => SectionKind::UninitializedData,
             (b"__DATA", b"__thread_data") => SectionKind::Tls,
             (b"__DATA", b"__thread_bss") => SectionKind::UninitializedTls,
             (b"__DATA", b"__thread_vars") => SectionKind::TlsVariables,

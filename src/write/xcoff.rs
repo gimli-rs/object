@@ -58,10 +58,6 @@ impl<'a> Object<'a> {
                 // Unsupported section.
                 (&[], &[], SectionKind::Unknown, SectionFlags::None)
             }
-            StandardSection::Common => {
-                // Unsupported section.
-                (&[], &[], SectionKind::Unknown, SectionFlags::None)
-            }
             StandardSection::GnuProperty => {
                 // Unsupported section.
                 (&[], &[], SectionKind::Unknown, SectionFlags::None)
@@ -88,7 +84,6 @@ impl<'a> Object<'a> {
             SectionKind::Other | SectionKind::Metadata => xcoff::STYP_REG,
             SectionKind::Note
             | SectionKind::Linker
-            | SectionKind::Common
             | SectionKind::Unknown
             | SectionKind::TlsVariables => {
                 return SectionFlags::None;

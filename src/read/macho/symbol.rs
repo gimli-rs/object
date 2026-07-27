@@ -379,49 +379,65 @@ where
 
     #[inline]
     fn address(&self) -> u64 {
+        if self.is_common() {
+            // The value is the size, not an address.
+            return 0;
+        }
         self.nlist.n_value(self.file.endian).into()
     }
 
     #[inline]
     fn size(&self) -> u64 {
+        if self.is_common() {
+            return self.nlist.n_value(self.file.endian).into();
+        }
         0
     }
 
     fn kind(&self) -> SymbolKind {
-        self.section()
+        if let Some(section) = self
+            .section()
             .index()
             .and_then(|index| self.file.section_internal(index).ok())
-            .map(|section| {
-                if let Ok(name) = self.name_bytes() {
-                    // Heuristic to match LLVM's convention for section symbols; may misclassify.
-                    if self.is_local()
-                        && name.len() > 4
-                        && name.starts_with(b"ltmp")
-                        && name[4..].iter().all(|b| b.is_ascii_digit())
-                        && self.address() == section.section.addr(self.file.endian).into()
-                    {
-                        return SymbolKind::Section;
-                    }
+        {
+            if let Ok(name) = self.name_bytes() {
+                // Heuristic to match LLVM's convention for section symbols; may misclassify.
+                if self.is_local()
+                    && name.len() > 4
+                    && name.starts_with(b"ltmp")
+                    && name[4..].iter().all(|b| b.is_ascii_digit())
+                    && self.address() == section.section.addr(self.file.endian).into()
+                {
+                    return SymbolKind::Section;
                 }
-                match section.kind {
-                    SectionKind::Text => SymbolKind::Text,
-                    SectionKind::Data
-                    | SectionKind::ReadOnlyData
-                    | SectionKind::ReadOnlyString
-                    | SectionKind::UninitializedData
-                    | SectionKind::Common => SymbolKind::Data,
-                    SectionKind::Tls
-                    | SectionKind::UninitializedTls
-                    | SectionKind::TlsVariables => SymbolKind::Tls,
-                    _ => SymbolKind::Unknown,
+            }
+            match section.kind {
+                SectionKind::Text => SymbolKind::Text,
+                SectionKind::Data
+                | SectionKind::ReadOnlyData
+                | SectionKind::ReadOnlyString
+                | SectionKind::UninitializedData => SymbolKind::Data,
+                SectionKind::Tls | SectionKind::UninitializedTls | SectionKind::TlsVariables => {
+                    SymbolKind::Tls
                 }
-            })
-            .unwrap_or(SymbolKind::Unknown)
+                _ => SymbolKind::Unknown,
+            }
+        } else if self.is_common() {
+            SymbolKind::Data
+        } else {
+            SymbolKind::Unknown
+        }
     }
 
     fn section(&self) -> SymbolSection {
         match self.nlist.n_type().typ() {
-            macho::N_UNDF => SymbolSection::Undefined,
+            macho::N_UNDF => {
+                if self.is_common() {
+                    SymbolSection::Common
+                } else {
+                    SymbolSection::Undefined
+                }
+            }
             macho::N_ABS => SymbolSection::Absolute,
             macho::N_SECT => {
                 let n_sect = self.nlist.n_sect();
@@ -437,7 +453,7 @@ where
 
     #[inline]
     fn is_undefined(&self) -> bool {
-        self.nlist.n_type().typ() == macho::N_UNDF
+        self.nlist.is_undefined()
     }
 
     #[inline]
@@ -447,8 +463,7 @@ where
 
     #[inline]
     fn is_common(&self) -> bool {
-        // Mach-O common symbols are based on section, not symbol
-        false
+        self.nlist.is_common()
     }
 
     #[inline]
@@ -459,7 +474,7 @@ where
 
     fn scope(&self) -> SymbolScope {
         let n_type = self.nlist.n_type();
-        if n_type.typ() == macho::N_UNDF {
+        if self.is_undefined() {
             SymbolScope::Unknown
         } else if !n_type.is_ext() {
             SymbolScope::Compilation
@@ -523,9 +538,24 @@ pub trait Nlist: Debug + Pod + read::private::Sealed {
     }
 
     /// Return true if this is an undefined symbol.
+    ///
+    /// This returns false for common symbols.
     fn is_undefined(&self) -> bool {
         let n_type = self.n_type();
-        !n_type.is_stab() && n_type.typ() == macho::N_UNDF
+        !n_type.is_stab()
+            && n_type.typ() == macho::N_UNDF
+            // Comparing `n_value` with 0 gives the same result for any endian.
+            && self.n_value(Self::Endian::default()).into() == 0
+    }
+
+    /// Return true if this is a common symbol.
+    fn is_common(&self) -> bool {
+        let n_type = self.n_type();
+        // Don't require N_EXT, to match the behavior of lld.
+        !n_type.is_stab()
+            && n_type.typ() == macho::N_UNDF
+            // Comparing `n_value` with 0 gives the same result for any endian.
+            && self.n_value(Self::Endian::default()).into() != 0
     }
 
     /// Return true if the symbol is a definition of a function or data object.

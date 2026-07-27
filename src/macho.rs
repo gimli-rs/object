@@ -3512,7 +3512,7 @@ impl SymbolDesc {
 
     /// Get the alignment for common symbols.
     ///
-    /// This is a power of 2 from 1 to 15. A value of 0 mean that the natural
+    /// This is a power of 2 from 1 to 15. A value of 0 means that the natural
     /// alignment based on the size is used.
     ///
     /// Common symbols are represented by undefined (`N_UNDF`) external (`N_EXT`) symbols

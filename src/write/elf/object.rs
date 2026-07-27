@@ -102,10 +102,6 @@ impl<'a> Object<'a> {
                 // Unsupported section.
                 (&[], &[], SectionKind::TlsVariables, SectionFlags::None)
             }
-            StandardSection::Common => {
-                // Unsupported section.
-                (&[], &[], SectionKind::Common, SectionFlags::None)
-            }
             StandardSection::GnuProperty => (
                 &[],
                 &b".note.gnu.property"[..],
@@ -145,7 +141,7 @@ impl<'a> Object<'a> {
 
     pub(crate) fn elf_section_flags(&self, section: &Section<'_>) -> SectionFlags {
         let sh_type = match section.kind {
-            SectionKind::Unknown | SectionKind::Common | SectionKind::TlsVariables => {
+            SectionKind::Unknown | SectionKind::TlsVariables => {
                 // Unsupported sections.
                 return SectionFlags::None;
             }

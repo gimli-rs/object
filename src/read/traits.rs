@@ -517,7 +517,10 @@ pub trait ObjectSymbol<'data>: read::private::Sealed {
     /// Returns an error if the name is not UTF-8.
     fn name(&self) -> Result<&'data str>;
 
-    /// The address of the symbol. May be zero if the address is unknown.
+    /// The address of the symbol.
+    ///
+    /// May be zero if the symbol does not have an address, such as for undefined or
+    /// common symbols.
     fn address(&self) -> u64;
 
     /// The size of the symbol. May be zero if the size is unknown.
@@ -546,8 +549,6 @@ pub trait ObjectSymbol<'data>: read::private::Sealed {
     fn is_definition(&self) -> bool;
 
     /// Return true if the symbol is common data.
-    ///
-    /// Note: does not check for [`SymbolSection::Section`] with [`SectionKind::Common`].
     fn is_common(&self) -> bool;
 
     /// Return true if the symbol is weak.
