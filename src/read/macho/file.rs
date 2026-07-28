@@ -77,7 +77,14 @@ where
             while let Ok(Some(command)) = commands.next() {
                 if let Some((segment, section_data)) = Mach::Segment::from_command(command)? {
                     segments.push(MachOSegmentInternal { segment, data });
-                    Self::parse_sections(endian, data, segment, section_data, &mut sections)?;
+                    Self::parse_sections(
+                        endian,
+                        data,
+                        header,
+                        segment,
+                        section_data,
+                        &mut sections,
+                    )?;
                 } else if let Some(symtab) = command.symtab()? {
                     symbols = symtab.symbols(endian, data)?;
                 }
@@ -128,7 +135,14 @@ where
                         linkedit_data = Some(data);
                     }
                     segments.push(MachOSegmentInternal { segment, data });
-                    Self::parse_sections(endian, data, segment, section_data, &mut sections)?;
+                    Self::parse_sections(
+                        endian,
+                        data,
+                        header,
+                        segment,
+                        section_data,
+                        &mut sections,
+                    )?;
                 } else if let Some(st) = command.symtab()? {
                     symtab = Some(st);
                 }
@@ -157,6 +171,7 @@ where
     fn parse_sections(
         endian: Mach::Endian,
         data: R,
+        header: &Mach,
         segment: &Mach::Segment,
         section_data: &'data [u8],
         sections: &mut Vec<MachOSectionInternal<'data, Mach, R>>,
@@ -165,6 +180,16 @@ where
         let segment_end = segment_fileoff.wrapping_add(segment.filesize(endian).into());
         let overflow_possible = segment_end > u32::MAX as u64;
         let mut prev_offset = segment_fileoff;
+
+        let readonly = if header.filetype(endian) == macho::MH_OBJECT {
+            // Let the section parser determine it from segment name.
+            None
+        } else {
+            Some(
+                !segment.initprot(endian).contains(macho::VM_PROT_WRITE)
+                    || segment.flags(endian).contains(macho::SG_READ_ONLY),
+            )
+        };
 
         for section in segment.sections(endian, section_data)? {
             let mut offset = u64::from(section.offset(endian));
@@ -188,7 +213,9 @@ where
             }
 
             let index = SectionIndex(sections.len() + 1);
-            sections.push(MachOSectionInternal::parse(index, section, data, offset));
+            sections.push(MachOSectionInternal::parse(
+                endian, index, readonly, section, data, offset,
+            ));
         }
         Ok(())
     }

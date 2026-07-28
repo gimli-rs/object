@@ -176,7 +176,7 @@ pub enum SectionKind {
     ///
     /// Example ELF sections: `.rodata`
     ///
-    /// Example Mach-O sections: `__TEXT/__const`, `__DATA/__const`, `__TEXT/__literal4`
+    /// Example Mach-O sections: `__TEXT/__const`, `__TEXT/__literal4`
     ReadOnlyData,
     /// A read only data section with relocations.
     ///

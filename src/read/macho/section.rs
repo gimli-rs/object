@@ -251,37 +251,73 @@ pub(super) struct MachOSectionInternal<'data, Mach: MachHeader, R: ReadRef<'data
 
 impl<'data, Mach: MachHeader, R: ReadRef<'data>> MachOSectionInternal<'data, Mach, R> {
     pub(super) fn parse(
+        endian: Mach::Endian,
         index: SectionIndex,
+        readonly: Option<bool>,
         section: &'data Mach::Section,
         data: R,
         offset: u64,
     ) -> Self {
-        // TODO: we don't validate flags, should we?
-        let kind = match (section.segment_name(), section.name()) {
-            (b"__TEXT", b"__text") => SectionKind::Text,
-            (b"__TEXT", b"__const") => SectionKind::ReadOnlyData,
-            (b"__TEXT", b"__cstring") => SectionKind::ReadOnlyString,
-            (b"__TEXT", b"__literal4") => SectionKind::ReadOnlyData,
-            (b"__TEXT", b"__literal8") => SectionKind::ReadOnlyData,
-            (b"__TEXT", b"__literal16") => SectionKind::ReadOnlyData,
-            (b"__TEXT", b"__eh_frame") => SectionKind::ReadOnlyData,
-            (b"__TEXT", b"__gcc_except_tab") => SectionKind::ReadOnlyData,
-            (b"__DATA", b"__data") => SectionKind::Data,
-            (b"__DATA", b"__const") => SectionKind::ReadOnlyData,
-            (b"__DATA", b"__bss") => SectionKind::UninitializedData,
-            (b"__DATA", b"__common") => SectionKind::UninitializedData,
-            (b"__DATA", b"__thread_data") => SectionKind::Tls,
-            (b"__DATA", b"__thread_bss") => SectionKind::UninitializedTls,
-            (b"__DATA", b"__thread_vars") => SectionKind::TlsVariables,
-            (b"__DWARF", _) => SectionKind::Debug,
-            _ => SectionKind::Unknown,
-        };
+        let kind = Self::parse_kind(endian, readonly, section);
         MachOSectionInternal {
             index,
             kind,
             section,
             data,
             offset,
+        }
+    }
+
+    fn parse_kind(
+        endian: Mach::Endian,
+        readonly: Option<bool>,
+        section: &Mach::Section,
+    ) -> SectionKind {
+        let flags = section.flags(endian);
+        let segment_name = section.segment_name();
+
+        // Don't require the S_ATTR_DEBUG flag for DWARF, but treat its presence
+        // in any other segment as unknown.
+        if segment_name == b"__DWARF" {
+            return SectionKind::Debug;
+        }
+        if flags.contains(macho::S_ATTR_DEBUG) {
+            return SectionKind::Unknown;
+        }
+
+        match flags.typ() {
+            macho::S_ZEROFILL | macho::S_GB_ZEROFILL => SectionKind::UninitializedData,
+            macho::S_CSTRING_LITERALS => SectionKind::ReadOnlyString,
+            macho::S_4BYTE_LITERALS
+            | macho::S_8BYTE_LITERALS
+            | macho::S_16BYTE_LITERALS
+            | macho::S_LITERAL_POINTERS => SectionKind::ReadOnlyData,
+            macho::S_SYMBOL_STUBS => SectionKind::Text,
+            macho::S_THREAD_LOCAL_REGULAR => SectionKind::Tls,
+            macho::S_THREAD_LOCAL_ZEROFILL => SectionKind::UninitializedTls,
+            macho::S_THREAD_LOCAL_VARIABLES => SectionKind::TlsVariables,
+            macho::S_REGULAR
+            | macho::S_COALESCED
+            | macho::S_NON_LAZY_SYMBOL_POINTERS
+            | macho::S_LAZY_SYMBOL_POINTERS
+            | macho::S_MOD_INIT_FUNC_POINTERS
+            | macho::S_MOD_TERM_FUNC_POINTERS
+            | macho::S_INTERPOSING
+            | macho::S_LAZY_DYLIB_SYMBOL_POINTERS
+            | macho::S_THREAD_LOCAL_VARIABLE_POINTERS
+            | macho::S_THREAD_LOCAL_INIT_FUNCTION_POINTERS
+            | macho::S_INIT_FUNC_OFFSETS => {
+                if flags
+                    .intersects(macho::S_ATTR_PURE_INSTRUCTIONS | macho::S_ATTR_SOME_INSTRUCTIONS)
+                {
+                    SectionKind::Text
+                } else if readonly.unwrap_or(segment_name == b"__TEXT") {
+                    SectionKind::ReadOnlyData
+                } else {
+                    SectionKind::Data
+                }
+            }
+            _ => SectionKind::Unknown,
         }
     }
 }

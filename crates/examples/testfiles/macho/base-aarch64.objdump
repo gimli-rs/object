@@ -10,10 +10,10 @@ Segment { name: "__TEXT", address: 100000000, size: 4000, permissions: R-X }
 Segment { name: "__DATA_CONST", address: 100004000, size: 4000, permissions: RW- }
 Segment { name: "__LINKEDIT", address: 100008000, size: 4000, permissions: R-- }
 1: Section { segment: "__TEXT", name: "__text", address: 100003f68, size: 34, align: 4, kind: Text, flags: MachO { flags: S_REGULAR | S_ATTR_PURE_INSTRUCTIONS | S_ATTR_SOME_INSTRUCTIONS, reserved2: 0 } }
-2: Section { segment: "__TEXT", name: "__stubs", address: 100003f9c, size: c, align: 4, kind: Unknown, flags: MachO { flags: S_SYMBOL_STUBS | S_ATTR_PURE_INSTRUCTIONS | S_ATTR_SOME_INSTRUCTIONS, reserved2: c } }
+2: Section { segment: "__TEXT", name: "__stubs", address: 100003f9c, size: c, align: 4, kind: Text, flags: MachO { flags: S_SYMBOL_STUBS | S_ATTR_PURE_INSTRUCTIONS | S_ATTR_SOME_INSTRUCTIONS, reserved2: c } }
 3: Section { segment: "__TEXT", name: "__cstring", address: 100003fa8, size: d, align: 1, kind: ReadOnlyString, flags: MachO { flags: S_CSTRING_LITERALS, reserved2: 0 } }
-4: Section { segment: "__TEXT", name: "__unwind_info", address: 100003fb8, size: 48, align: 4, kind: Unknown, flags: MachO { flags: S_REGULAR, reserved2: 0 } }
-5: Section { segment: "__DATA_CONST", name: "__got", address: 100004000, size: 8, align: 8, kind: Unknown, flags: MachO { flags: S_NON_LAZY_SYMBOL_POINTERS, reserved2: 0 } }
+4: Section { segment: "__TEXT", name: "__unwind_info", address: 100003fb8, size: 48, align: 4, kind: ReadOnlyData, flags: MachO { flags: S_REGULAR, reserved2: 0 } }
+5: Section { segment: "__DATA_CONST", name: "__got", address: 100004000, size: 8, align: 8, kind: ReadOnlyData, flags: MachO { flags: S_NON_LAZY_SYMBOL_POINTERS, reserved2: 0 } }
 
 Symbols
 0: Symbol { name: "__mh_execute_header", address: 100000000, size: 0, kind: Text, section: Section(SectionIndex(1)), scope: Dynamic, weak: false, flags: MachO { n_type: N_SECT | N_EXT, n_desc: 0x10 } }

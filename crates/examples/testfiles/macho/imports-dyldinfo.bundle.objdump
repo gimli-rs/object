@@ -9,11 +9,11 @@ Segment { name: "__TEXT", address: 0, size: 1000, permissions: R-X }
 Segment { name: "__DATA", address: 1000, size: 1000, permissions: RW- }
 Segment { name: "__LINKEDIT", address: 2000, size: 1000, permissions: R-- }
 1: Section { segment: "__TEXT", name: "__text", address: 480, size: 4c, align: 10, kind: Text, flags: MachO { flags: S_REGULAR | S_ATTR_PURE_INSTRUCTIONS | S_ATTR_SOME_INSTRUCTIONS, reserved2: 0 } }
-2: Section { segment: "__TEXT", name: "__stubs", address: 4cc, size: 24, align: 2, kind: Unknown, flags: MachO { flags: S_SYMBOL_STUBS | S_ATTR_PURE_INSTRUCTIONS | S_ATTR_SOME_INSTRUCTIONS, reserved2: 6 } }
-3: Section { segment: "__TEXT", name: "__stub_helper", address: 4f0, size: 4a, align: 4, kind: Unknown, flags: MachO { flags: S_REGULAR | S_ATTR_PURE_INSTRUCTIONS | S_ATTR_SOME_INSTRUCTIONS, reserved2: 0 } }
-4: Section { segment: "__TEXT", name: "__unwind_info", address: 53c, size: 58, align: 4, kind: Unknown, flags: MachO { flags: S_REGULAR, reserved2: 0 } }
-5: Section { segment: "__DATA", name: "__got", address: 1000, size: 10, align: 8, kind: Unknown, flags: MachO { flags: S_NON_LAZY_SYMBOL_POINTERS, reserved2: 0 } }
-6: Section { segment: "__DATA", name: "__la_symbol_ptr", address: 1010, size: 28, align: 8, kind: Unknown, flags: MachO { flags: S_LAZY_SYMBOL_POINTERS, reserved2: 0 } }
+2: Section { segment: "__TEXT", name: "__stubs", address: 4cc, size: 24, align: 2, kind: Text, flags: MachO { flags: S_SYMBOL_STUBS | S_ATTR_PURE_INSTRUCTIONS | S_ATTR_SOME_INSTRUCTIONS, reserved2: 6 } }
+3: Section { segment: "__TEXT", name: "__stub_helper", address: 4f0, size: 4a, align: 4, kind: Text, flags: MachO { flags: S_REGULAR | S_ATTR_PURE_INSTRUCTIONS | S_ATTR_SOME_INSTRUCTIONS, reserved2: 0 } }
+4: Section { segment: "__TEXT", name: "__unwind_info", address: 53c, size: 58, align: 4, kind: ReadOnlyData, flags: MachO { flags: S_REGULAR, reserved2: 0 } }
+5: Section { segment: "__DATA", name: "__got", address: 1000, size: 10, align: 8, kind: Data, flags: MachO { flags: S_NON_LAZY_SYMBOL_POINTERS, reserved2: 0 } }
+6: Section { segment: "__DATA", name: "__la_symbol_ptr", address: 1010, size: 28, align: 8, kind: Data, flags: MachO { flags: S_LAZY_SYMBOL_POINTERS, reserved2: 0 } }
 7: Section { segment: "__DATA", name: "__data", address: 1038, size: 8, align: 8, kind: Data, flags: MachO { flags: S_REGULAR, reserved2: 0 } }
 
 Symbols
