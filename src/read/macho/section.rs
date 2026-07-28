@@ -334,7 +334,11 @@ pub trait Section: Debug + Pod + read::private::Sealed {
     fn size(&self, endian: Self::Endian) -> Self::Word;
     /// The file offset of the section.
     ///
-    /// Note that for offsets larger than 32-bit this will be truncated.
+    /// Note that for offsets larger than `u32::MAX` this will be truncated, so you will
+    /// need to determine the offset in another way.
+    /// `(section.addr - segment.vmaddr) + segment.fileoff` is equivalent for well-formed files.
+    /// Alternatively, you can use [`Segment::section_offsets`](super::Segment::section_offsets)
+    /// to track the file offset of consecutive sections to determine when overflow occurs.
     fn offset(&self, endian: Self::Endian) -> u32;
     fn align(&self, endian: Self::Endian) -> u32;
     fn reloff(&self, endian: Self::Endian) -> u32;
@@ -367,25 +371,31 @@ pub trait Section: Debug + Pod + read::private::Sealed {
         self.flags(endian).typ()
     }
 
+    /// Return the size of the section in the file.
+    ///
+    /// Returns `None` for sections that have no data in the file.
+    fn file_size(&self, endian: Self::Endian) -> Option<u64> {
+        match self.section_type(endian) {
+            macho::S_ZEROFILL | macho::S_GB_ZEROFILL | macho::S_THREAD_LOCAL_ZEROFILL => None,
+            _ => Some(self.size(endian).into()),
+        }
+    }
+
     /// Return the offset and size of the section in the file.
     ///
-    /// `offset` must be the section file offset. Note that for file offsets larger than
-    /// `u32::MAX`, [`Self::offset`] will be truncated, so you will need to determine the
-    /// offset in another way. `(section.addr - segment.vmaddr) + segment.fileoff` is
-    /// equivalent for well-formed files. Alternatively, you could track the file offset
-    /// of consecutive sections to determine when overflow occurs.
+    /// `offset` must be the section file offset. See [`Self::offset`] and
+    /// [`Segment::section_offsets`](super::Segment::section_offsets).
     ///
     /// Returns `None` for sections that have no data in the file.
     fn file_range(&self, endian: Self::Endian, offset: u64) -> Option<(u64, u64)> {
-        match self.section_type(endian) {
-            macho::S_ZEROFILL | macho::S_GB_ZEROFILL | macho::S_THREAD_LOCAL_ZEROFILL => None,
-            _ => Some((offset, self.size(endian).into())),
-        }
+        let size = self.file_size(endian)?;
+        Some((offset, size))
     }
 
     /// Return the section data.
     ///
-    /// `offset` must be the section file offset. See [`Self::file_range`].
+    /// `offset` must be the section file offset. See [`Self::offset`] and
+    /// [`Segment::section_offsets`](super::Segment::section_offsets).
     ///
     /// Returns `Ok(&[])` if the section has no data.
     /// Returns `Err` for invalid values.
@@ -395,7 +405,7 @@ pub trait Section: Debug + Pod + read::private::Sealed {
         data: R,
         offset: u64,
     ) -> Result<&'data [u8]> {
-        if let Some((offset, size)) = self.file_range(endian, offset) {
+        if let Some(size) = self.file_size(endian) {
             data.read_bytes_at(offset, size)
                 .read_error("Invalid Mach-O section size or offset")
         } else {

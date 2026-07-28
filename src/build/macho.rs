@@ -302,8 +302,10 @@ impl<'data> Builder<'data> {
     {
         let id = self.segments.next_id();
         let mut sections = Vec::new();
-        for section in segment.sections(endian, section_data)? {
-            let id = self.read_section(endian, data, section, state)?;
+        let segment_sections = segment.sections(endian, section_data)?;
+        for section_offset in segment.section_offsets(endian, segment_sections) {
+            let (section, offset) = section_offset?;
+            let id = self.read_section(endian, data, section, offset, state)?;
             sections.push(id);
         }
         self.segments.push(Segment {
@@ -326,6 +328,7 @@ impl<'data> Builder<'data> {
         endian: Endianness,
         data: R,
         section: &S,
+        offset: u64,
         state: &ReadState<'_>,
     ) -> Result<SectionId>
     where
@@ -333,10 +336,8 @@ impl<'data> Builder<'data> {
         R: ReadRef<'data>,
     {
         let id = self.sections.next_id();
-        // TODO: reuse MachOFile::parse_sections
-        let offset = section.offset(endian).into();
         let size = section.size(endian).into();
-        let section_data = if section.file_range(endian, offset).is_some() {
+        let section_data = if section.file_size(endian).is_some() {
             SectionData::Data(section.data(endian, data, offset)?.into())
         } else {
             SectionData::UninitializedData(size as u32)

@@ -176,11 +176,6 @@ where
         section_data: &'data [u8],
         sections: &mut Vec<MachOSectionInternal<'data, Mach, R>>,
     ) -> Result<()> {
-        let segment_fileoff: u64 = segment.fileoff(endian).into();
-        let segment_end = segment_fileoff.wrapping_add(segment.filesize(endian).into());
-        let overflow_possible = segment_end > u32::MAX as u64;
-        let mut prev_offset = segment_fileoff;
-
         let readonly = if header.filetype(endian) == macho::MH_OBJECT {
             // Let the section parser determine it from segment name.
             None
@@ -191,27 +186,9 @@ where
             )
         };
 
-        for section in segment.sections(endian, section_data)? {
-            let mut offset = u64::from(section.offset(endian));
-
-            // Section headers only have 32-bit file offsets, which can overflow in files
-            // larger than 4GB. When that is possible, reconstruct the full offset by
-            // assuming sections are ordered by file offset.
-            // This is a refinement of the algorithm used by LLVM.
-            if overflow_possible {
-                if let Some((_, size)) = section.file_range(endian, offset) {
-                    offset |= prev_offset & 0xffff_ffff_0000_0000;
-                    if offset < prev_offset {
-                        offset = offset.wrapping_add(0x1_0000_0000);
-                    }
-                    let section_end = offset.wrapping_add(size);
-                    if section_end > segment_end {
-                        return Err(Error("Unsupported Mach-O large section offsets"));
-                    }
-                    prev_offset = section_end;
-                }
-            }
-
+        let segment_sections = segment.sections(endian, section_data)?;
+        for section_offset in segment.section_offsets(endian, segment_sections) {
+            let (section, offset) = section_offset?;
             let index = SectionIndex(sections.len() + 1);
             sections.push(MachOSectionInternal::parse(
                 endian, index, readonly, section, data, offset,
