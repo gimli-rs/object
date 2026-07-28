@@ -162,7 +162,8 @@ fn code_signature_encoder() {
     assert_eq!(header.hash_type, macho::CS_HASHTYPE_SHA256);
     assert_eq!(header.page_size, 12);
     assert_eq!(code_directory.ident().unwrap(), b"com.example.test");
-    assert_eq!(code_directory.code_limit64(), Some(0x1234));
+    assert_eq!(code_directory.code_limit64(), Some(0));
+    assert_eq!(code_directory.code_limit(), 0x1234);
     let exec_seg = code_directory.exec_seg().unwrap();
     assert_eq!(exec_seg.exec_seg_limit.get(BigEndian), 0x4000);
     assert_eq!(
@@ -189,4 +190,29 @@ fn code_signature_encoder() {
     assert_eq!(req_blob.magic(), macho::CSMAGIC_REQUIREMENTS);
 
     assert!(blobs.next().unwrap().is_none());
+}
+
+#[test]
+fn code_signature_encoder_code_limit64() {
+    let encoder = object::write::macho::CodeSignatureEncoder;
+    let version = macho::CS_SUPPORTSEXECSEG;
+    let code_limit = 0x1_2345_6789;
+
+    let cd = object::write::macho::CodeDirectory {
+        length: encoder.code_directory_size(version),
+        version,
+        code_limit,
+        hash_size: 32,
+        hash_type: macho::CS_HASHTYPE_SHA256,
+        page_size: 12,
+        ..Default::default()
+    };
+
+    let mut cd_blob = Vec::new();
+    encoder.code_directory(&mut cd_blob, &cd);
+
+    let code_directory = read::macho::CodeDirectory::parse(&cd_blob).unwrap();
+    assert_eq!(code_directory.header().code_limit.get(BigEndian), u32::MAX);
+    assert_eq!(code_directory.code_limit64(), Some(code_limit));
+    assert_eq!(code_directory.code_limit(), code_limit);
 }

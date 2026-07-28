@@ -793,7 +793,7 @@ impl<E: Endian> Encoder<E> {
 
 /// Native endian version of [`macho::CsCodeDirectoryV0`].
 #[allow(missing_docs)]
-#[derive(Debug, Clone)]
+#[derive(Debug, Default, Clone)]
 pub struct CodeDirectory {
     pub length: u32,
     pub version: macho::CsVersion,
@@ -949,6 +949,12 @@ impl CodeSignatureEncoder {
     /// Only versions <= [`macho::CS_SUPPORTSEXECSEG`] are supported.
     pub fn code_directory<W: WritableBuffer + ?Sized>(self, buffer: &mut W, cd: &CodeDirectory) {
         debug_assert!(cd.version <= macho::CS_SUPPORTSEXECSEG);
+        let (code_limit, code_limit64) = if cd.code_limit > u64::from(u32::MAX) {
+            debug_assert!(cd.version >= macho::CS_SUPPORTSCODELIMIT64);
+            (u32::MAX, cd.code_limit)
+        } else {
+            (cd.code_limit as u32, 0)
+        };
         let v0 = macho::CsCodeDirectoryV0 {
             magic: U32::new(BigEndian, macho::CSMAGIC_CODEDIRECTORY),
             length: U32::new(BigEndian, cd.length),
@@ -958,7 +964,7 @@ impl CodeSignatureEncoder {
             ident_offset: U32::new(BigEndian, cd.ident_offset),
             n_special_slots: U32::new(BigEndian, cd.n_special_slots),
             n_code_slots: U32::new(BigEndian, cd.n_code_slots),
-            code_limit: U32::new(BigEndian, cd.code_limit as u32),
+            code_limit: U32::new(BigEndian, code_limit),
             hash_size: cd.hash_size,
             hash_type: cd.hash_type,
             platform: cd.platform,
@@ -981,7 +987,7 @@ impl CodeSignatureEncoder {
         if cd.version >= macho::CS_SUPPORTSCODELIMIT64 {
             let v3 = macho::CsCodeDirectoryV3 {
                 spare3: U32::new(BigEndian, 0),
-                code_limit64: U64::new(BigEndian, cd.code_limit),
+                code_limit64: U64::new(BigEndian, code_limit64),
             };
             buffer.write_pod(&v3);
         }
