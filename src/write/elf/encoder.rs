@@ -6,6 +6,8 @@ use crate::Wrap;
 use crate::elf;
 use crate::endian::*;
 use crate::pod;
+#[cfg(feature = "read_core")]
+use crate::read;
 use crate::write::{self, Error, Result, StringTable, WritableBuffer, WritableBufferExt};
 
 /// Alignment for .symtab_shndx.
@@ -31,6 +33,23 @@ pub struct FileHeader {
     pub e_flags: elf::FileFlags,
 }
 
+#[cfg(feature = "read_core")]
+impl FileHeader {
+    /// Convert from a raw file header.
+    ///
+    /// The layout-related fields are not converted. See [`FileHeaderLayout`].
+    pub fn from_raw<Elf: read::elf::FileHeader>(endian: Elf::Endian, header: &Elf) -> Self {
+        FileHeader {
+            os_abi: header.e_ident().os_abi,
+            abi_version: header.e_ident().abi_version,
+            e_type: header.e_type(endian),
+            e_machine: header.e_machine(endian),
+            e_entry: header.e_entry(endian).into(),
+            e_flags: header.e_flags(endian),
+        }
+    }
+}
+
 /// Native endian layout-related fields of [`elf::FileHeader64`].
 #[derive(Debug, Clone, Default)]
 pub struct FileHeaderLayout {
@@ -52,6 +71,32 @@ pub struct FileHeaderLayout {
     pub shstrtab_index: u32,
 }
 
+#[cfg(feature = "read_core")]
+impl FileHeaderLayout {
+    /// Convert from a raw file header.
+    ///
+    /// `data` is the entire file data; it is used to obtain the first section header if required.
+    pub fn from_raw<'data, Elf: read::elf::FileHeader, R: read::ReadRef<'data>>(
+        endian: Elf::Endian,
+        header: &Elf,
+        data: R,
+    ) -> read::Result<Self> {
+        let e_shstrndx = header.e_shstrndx(endian);
+        let shstrtab_index = if e_shstrndx == elf::SHN_UNDEF {
+            0
+        } else {
+            header.shstrndx(endian, data)?
+        };
+        Ok(FileHeaderLayout {
+            e_phoff: header.e_phoff(endian).into(),
+            segment_num: header.phnum(endian, data)?,
+            e_shoff: header.e_shoff(endian).into(),
+            section_num: header.shnum(endian, data)?,
+            shstrtab_index,
+        })
+    }
+}
+
 /// Native endian version of [`elf::ProgramHeader64`].
 #[allow(missing_docs)]
 #[derive(Debug, Clone)]
@@ -64,6 +109,23 @@ pub struct ProgramHeader {
     pub p_filesz: u64,
     pub p_memsz: u64,
     pub p_align: u64,
+}
+
+#[cfg(feature = "read_core")]
+impl ProgramHeader {
+    /// Convert from a raw program header.
+    pub fn from_raw<Phdr: read::elf::ProgramHeader>(endian: Phdr::Endian, header: &Phdr) -> Self {
+        ProgramHeader {
+            p_type: header.p_type(endian),
+            p_flags: header.p_flags(endian),
+            p_offset: header.p_offset(endian).into(),
+            p_vaddr: header.p_vaddr(endian).into(),
+            p_paddr: header.p_paddr(endian).into(),
+            p_filesz: header.p_filesz(endian).into(),
+            p_memsz: header.p_memsz(endian).into(),
+            p_align: header.p_align(endian).into(),
+        }
+    }
 }
 
 /// Native endian version of [`elf::SectionHeader64`].
@@ -83,6 +145,25 @@ pub struct SectionHeader {
     pub sh_entsize: u64,
 }
 
+#[cfg(feature = "read_core")]
+impl SectionHeader {
+    /// Convert from a raw section header.
+    pub fn from_raw<Shdr: read::elf::SectionHeader>(endian: Shdr::Endian, header: &Shdr) -> Self {
+        SectionHeader {
+            sh_name: header.sh_name(endian),
+            sh_type: header.sh_type(endian),
+            sh_flags: header.sh_flags(endian),
+            sh_addr: header.sh_addr(endian).into(),
+            sh_offset: header.sh_offset(endian).into(),
+            sh_size: header.sh_size(endian).into(),
+            sh_link: header.sh_link(endian),
+            sh_info: header.sh_info(endian),
+            sh_addralign: header.sh_addralign(endian).into(),
+            sh_entsize: header.sh_entsize(endian).into(),
+        }
+    }
+}
+
 /// Native endian version of [`elf::Sym64`].
 #[allow(missing_docs)]
 #[derive(Debug, Clone)]
@@ -100,6 +181,25 @@ pub struct Sym {
     pub st_size: u64,
 }
 
+#[cfg(feature = "read_core")]
+impl Sym {
+    /// Convert from a raw symbol.
+    ///
+    /// `section` can be obtained using [`read::elf::SymbolTable::symbol_section`].
+    pub fn from_raw<S: read::elf::Sym>(endian: S::Endian, sym: &S, section: Option<u32>) -> Self {
+        let st_shndx = sym.st_shndx(endian);
+        Sym {
+            section,
+            st_name: sym.st_name(endian),
+            st_info: sym.st_info(),
+            st_other: sym.st_other(),
+            st_shndx,
+            st_value: sym.st_value(endian).into(),
+            st_size: sym.st_size(endian).into(),
+        }
+    }
+}
+
 /// Unified native endian version of [`elf::Rel64`] and [`elf::Rela64`].
 #[allow(missing_docs)]
 #[derive(Debug, Clone)]
@@ -108,6 +208,29 @@ pub struct Rel {
     pub r_sym: u32,
     pub r_type: elf::RelocationType,
     pub r_addend: i64,
+}
+
+#[cfg(feature = "read_core")]
+impl Rel {
+    /// Convert from a raw relocation without an addend.
+    pub fn from_rel<R: read::elf::Rel>(endian: R::Endian, rel: &R) -> Self {
+        Rel {
+            r_offset: rel.r_offset(endian).into(),
+            r_sym: rel.r_sym(endian),
+            r_type: rel.r_type(endian),
+            r_addend: 0,
+        }
+    }
+
+    /// Convert from a raw relocation with an addend.
+    pub fn from_rela<R: read::elf::Rela>(endian: R::Endian, rela: &R, is_mips64el: bool) -> Self {
+        Rel {
+            r_offset: rela.r_offset(endian).into(),
+            r_sym: rela.r_sym(endian, is_mips64el),
+            r_type: rela.r_type(endian, is_mips64el),
+            r_addend: rela.r_addend(endian).into(),
+        }
+    }
 }
 
 /// Information required for writing [`elf::GnuHashHeader`].
@@ -119,6 +242,27 @@ pub struct GnuHashTable {
     pub bloom_shift: u32,
     pub symbol_base: u32,
     pub symbol_count: u32,
+}
+
+#[cfg(feature = "read_core")]
+impl GnuHashTable {
+    /// Convert from a raw GNU hash header.
+    ///
+    /// `symbol_count` is the number of symbols in the hash. This is used in
+    /// [`Encoder::gnu_hash_table`] and is not stored in the header.
+    pub fn from_raw<E: Endian>(
+        endian: E,
+        header: &elf::GnuHashHeader<E>,
+        symbol_count: u32,
+    ) -> Self {
+        GnuHashTable {
+            bucket_count: header.bucket_count.get(endian),
+            bloom_count: header.bloom_count.get(endian),
+            bloom_shift: header.bloom_shift.get(endian),
+            symbol_base: header.symbol_base.get(endian),
+            symbol_count,
+        }
+    }
 }
 
 /// Information required for writing [`elf::Verdef`].
@@ -138,6 +282,23 @@ pub struct Verdef {
     pub hash: u32,
 }
 
+#[cfg(feature = "read_core")]
+impl Verdef {
+    /// Convert from a raw version definition.
+    ///
+    /// `name` is the `vda_name` field of the first [`elf::Verdaux`] entry.
+    pub fn from_raw<E: Endian>(endian: E, verdef: &elf::Verdef<E>, name: u32) -> Self {
+        Verdef {
+            version: verdef.vd_version.get(endian),
+            flags: verdef.vd_flags.get(endian),
+            index: verdef.vd_ndx.get(endian),
+            aux_count: verdef.vd_cnt.get(endian),
+            name,
+            hash: verdef.vd_hash.get(endian),
+        }
+    }
+}
+
 /// Information required for writing [`elf::Verneed`].
 #[allow(missing_docs)]
 #[derive(Debug, Clone)]
@@ -146,6 +307,18 @@ pub struct Verneed {
     pub aux_count: u16,
     /// The string table offset of the file name. Written to `vn_file`.
     pub file: u32,
+}
+
+#[cfg(feature = "read_core")]
+impl Verneed {
+    /// Convert from a raw version dependency.
+    pub fn from_raw<E: Endian>(endian: E, verneed: &elf::Verneed<E>) -> Self {
+        Verneed {
+            version: verneed.vn_version.get(endian),
+            aux_count: verneed.vn_cnt.get(endian),
+            file: verneed.vn_file.get(endian),
+        }
+    }
 }
 
 /// Information required for writing [`elf::Vernaux`].
@@ -158,6 +331,19 @@ pub struct Vernaux {
     pub name: u32,
     /// The hash of the version name, as computed by [`elf::hash`]. Written to `vna_hash`.
     pub hash: u32,
+}
+
+#[cfg(feature = "read_core")]
+impl Vernaux {
+    /// Convert from a raw version dependency auxiliary entry.
+    pub fn from_raw<E: Endian>(endian: E, vernaux: &elf::Vernaux<E>) -> Self {
+        Vernaux {
+            flags: vernaux.vna_flags.get(endian),
+            index: vernaux.vna_other.get(endian),
+            name: vernaux.vna_name.get(endian),
+            hash: vernaux.vna_hash.get(endian),
+        }
+    }
 }
 
 /// A helper for encoding headers and data when writing an ELF file.
