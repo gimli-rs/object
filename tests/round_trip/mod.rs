@@ -12,6 +12,7 @@ mod coff;
 mod comdat;
 mod common;
 mod elf;
+mod goff;
 mod macho;
 mod reloc;
 mod section_flags;
