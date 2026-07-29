@@ -7,7 +7,7 @@
 //! The submodules define helpers for writing the raw structs. These support
 //! writing both relocatable and executable files. There are writers for
 //! the following file formats: [COFF](coff::Writer), [ELF](elf::Writer),
-//! and [PE](pe::Writer), [GOFF](goff::Writer).
+//! and [PE](pe::Writer).
 
 use alloc::borrow::Cow;
 use alloc::string::String;

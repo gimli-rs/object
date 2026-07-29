@@ -320,7 +320,7 @@ impl<'data> ObjectSymbol<'data> for GoffSymbol<'data> {
 /// Note: This table filters out `ESD_SYMTYPE_ED` (Element Definition) and
 /// `ESD_SYMTYPE_SD` (Section Definition) symbols from the public API, as these
 /// represent structural metadata rather than user-visible symbols. Internal
-/// code can access all symbols via `GoffFile::symbol_records()`.
+/// code can access all symbols via `symbol_records()`.
 ///
 /// The public API exposes:
 /// - `ESD_SYMTYPE_LD` (Label Definition) - labels within sections
@@ -328,8 +328,6 @@ impl<'data> ObjectSymbol<'data> for GoffSymbol<'data> {
 /// - `ESD_SYMTYPE_ER` (External Reference) - external symbols
 ///
 /// Also includes the string table used for the symbol names.
-///
-/// Returned by [`FileHeader::symbols`].
 #[derive(Debug)]
 pub struct GoffSymbolTable<'data, 'file, R = &'data [u8]>
 where
