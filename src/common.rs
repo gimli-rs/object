@@ -137,6 +137,7 @@ pub enum BinaryFormat {
     Pe,
     Wasm,
     Xcoff,
+    Goff,
 }
 
 impl BinaryFormat {
@@ -499,6 +500,16 @@ pub enum FileFlags {
         /// `f_flags` field in the XCOFF file header.
         f_flags: crate::xcoff::FileFlags,
     },
+    /// GOFF file flags.
+    #[cfg(feature = "goff")]
+    Goff {
+        /// `archlvl` field in the GOFF file header.
+        archlvl: u32,
+        /// `flags` field in the GOFF END record.
+        flags: Option<crate::goff::FileFlags>,
+        /// `amode` field in the GOFF END record.
+        amode: Option<u8>,
+    },
 }
 
 /// Segment flags that are specific to each file format.
@@ -530,6 +541,12 @@ pub enum SegmentFlags {
     Coff {
         /// `Characteristics` field in the segment header.
         characteristics: crate::pe::SectionFlags,
+    },
+    /// GOFF segment flags.
+    #[cfg(feature = "goff")]
+    GOFF {
+        /// `behavioral_attributes` serves as both the segment and section flags
+        behavioral_attributes: crate::goff::SectionFlags,
     },
 }
 
@@ -638,6 +655,12 @@ pub enum SectionFlags {
         /// `s_flags` field in the section header.
         s_flags: crate::xcoff::SectionFlags,
     },
+    /// GOFF section flags.
+    #[cfg(feature = "goff")]
+    Goff {
+        /// Section flags containing the record type.
+        flags: crate::goff::SectionFlags,
+    },
 }
 
 /// Symbol flags that are specific to each file format.
@@ -701,6 +724,18 @@ pub enum SymbolFlags<Section, Symbol> {
         ///
         /// Only valid if `x_smtyp` is `XTY_LD`.
         containing_csect: Option<Symbol>,
+    },
+    /// GOFF symbol flags.
+    #[cfg(feature = "goff")]
+    Goff {
+        /// `symboltype` field in the GOFF ESD record.
+        symboltype: crate::goff::SymbolType,
+        /// `symflags` field in the GOFF ESD record.
+        symflags: u8,
+        /// `namespaceid` field in the GOFF ESD record.
+        namespaceid: u8,
+        /// `behavioralattributes` field in the GOFF ESD record.
+        behavioral_attributes: [u8; 10],
     },
     #[doc(hidden)]
     #[cfg(not(all(feature = "coff", feature = "xcoff")))]
@@ -769,6 +804,12 @@ pub enum RelocationFlags {
     Wasm {
         /// Relocation type (the `R_WASM_*` constant).
         r_type: u8,
+    },
+    /// GOFF relocation fields.
+    #[cfg(feature = "goff")]
+    Goff {
+        /// The 6-byte GOFF relocation flags structure
+        flags: crate::read::goff::RelocationFlags,
     },
 }
 
