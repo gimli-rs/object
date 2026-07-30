@@ -169,6 +169,13 @@ impl From<CpuSubtype> for CpuSubtypeId {
     }
 }
 
+impl core::ops::BitOr<CpuSubtype> for CpuSubtypeId {
+    type Output = CpuSubtype;
+    fn bitor(self, rhs: CpuSubtype) -> CpuSubtype {
+        rhs.with_id(self)
+    }
+}
+
 /*
  * Capability bits used in the definition of cpu_subtype.
  */

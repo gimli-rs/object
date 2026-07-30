@@ -346,6 +346,13 @@ impl From<SectionType> for SectionFlags {
     }
 }
 
+impl core::ops::BitOr<SectionFlags> for SectionType {
+    type Output = SectionFlags;
+    fn bitor(self, subtype: SectionFlags) -> SectionFlags {
+        subtype.with_type(self)
+    }
+}
+
 newtype!(
     /// Values for the type field of `SectionHeader*::s_flags`.
     ///
