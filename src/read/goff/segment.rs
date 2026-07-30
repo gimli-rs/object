@@ -21,19 +21,22 @@ pub struct GoffSegmentIterator<'data, 'file, R = &'data [u8]>
 where
     R: ReadRef<'data>,
 {
-    #[allow(unused)]
     pub(super) file: &'file GoffFile<'data, R>,
-    pub(super) iter: hash_map::Values<'file, SymbolIndex, GoffSegment<'data>>,
+    pub(super) iter: hash_map::Keys<'file, SymbolIndex, GoffSegment<'data>>,
 }
 
 impl<'data, 'file, R> Iterator for GoffSegmentIterator<'data, 'file, R>
 where
     R: ReadRef<'data>,
 {
-    type Item = GoffSegment<'data>;
+    type Item = GoffSegmentRef<'data, 'file, R>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.iter.next().cloned()
+        let index = *self.iter.next()?;
+        Some(GoffSegmentRef {
+            file: self.file,
+            index,
+        })
     }
 }
 
@@ -117,12 +120,13 @@ impl<'data> GoffSegment<'data> {
     }
 }
 
-impl<'data> read::private::Sealed for GoffSegment<'data> {}
+impl<'data, 'file, R: ReadRef<'data>> read::private::Sealed for GoffSegmentRef<'data, 'file, R> {}
 
-impl<'data> ObjectSegment<'data> for GoffSegment<'data> {
+impl<'data, 'file, R: ReadRef<'data>> ObjectSegment<'data> for GoffSegmentRef<'data, 'file, R> {
     fn address(&self) -> u64 {
+        let segment = self.segment();
         // Find the first text reference with the lowest offset
-        let first_text_ref = match self.text_refs.iter().min_by_key(|tr| tr.offset) {
+        let first_text_ref = match segment.text_refs.iter().min_by_key(|tr| tr.offset) {
             Some(tr) => tr,
             None => return 0,
         };
@@ -130,26 +134,29 @@ impl<'data> ObjectSegment<'data> for GoffSegment<'data> {
         let mut address = first_text_ref.offset as u64;
 
         // If the text record is in a PR (Part Reference), add the PR's offset
-        // The segment's esdid is the ED, so if text_ref.esdid != self.symbol.esdid,
+        // The segment's esdid is the ED, so if text_ref.esdid != segment.symbol.esdid,
         // then the text is in a PR and we need to add the PR's offset
-        if first_text_ref.esdid != SymbolIndex(self.symbol.esdid() as usize) {
+        if first_text_ref.esdid != SymbolIndex(segment.symbol.esdid() as usize) {
             // The text reference is from a PR, add the PR's offset to get absolute address
-            address += self.symbol.offset as u64;
+            address += segment.symbol.offset as u64;
         }
 
         address
     }
 
     fn size(&self) -> u64 {
-        self.text_refs
+        let segment = self.segment();
+        segment
+            .text_refs
             .iter()
             .map(|text_ref| text_ref.data_length as u64)
             .sum()
     }
 
     fn align(&self) -> u64 {
+        let segment = self.segment();
         // Use the behavioral_flags method to get SectionFlags, then extract alignment
-        let flags = self.symbol.behavioral_flags();
+        let flags = segment.symbol.behavioral_flags();
         match flags.alignment() {
             GOFF_ALIGN_BYTE => 1,
             GOFF_ALIGN_HALFWORD => 2,
@@ -169,10 +176,11 @@ impl<'data> ObjectSegment<'data> for GoffSegment<'data> {
     }
 
     fn file_range(&self) -> (u64, u64) {
+        let segment = self.segment();
         let start = self.address();
 
         // Find the text reference with the largest offset
-        let last_text_ref = match self.text_refs.iter().max_by_key(|tr| tr.offset) {
+        let last_text_ref = match segment.text_refs.iter().max_by_key(|tr| tr.offset) {
             Some(tr) => tr,
             None => return (start, start),
         };
@@ -204,13 +212,15 @@ impl<'data> ObjectSegment<'data> for GoffSegment<'data> {
     }
 
     fn flags(&self) -> SegmentFlags {
+        let segment = self.segment();
         SegmentFlags::GOFF {
-            behavioral_attributes: self.symbol.behavioral_flags(),
+            behavioral_attributes: segment.symbol.behavioral_flags(),
         }
     }
 
     fn permissions(&self) -> Permissions {
-        let flags = self.symbol.behavioral_flags();
+        let segment = self.segment();
+        let flags = segment.symbol.behavioral_flags();
 
         // Read: GOFF doesn't have a no-read flag, so always readable
         let read = true;
@@ -222,5 +232,18 @@ impl<'data> ObjectSegment<'data> for GoffSegment<'data> {
         let execute = flags.executable() == GOFF_EXEC_CODE;
 
         Permissions::new(read, write, execute)
+    }
+}
+
+/// A reference to a segment in a [`GoffFile`].
+#[derive(Debug)]
+pub struct GoffSegmentRef<'data, 'file, R: ReadRef<'data>> {
+    pub(super) file: &'file GoffFile<'data, R>,
+    pub(super) index: SymbolIndex,
+}
+
+impl<'data, 'file, R: ReadRef<'data>> GoffSegmentRef<'data, 'file, R> {
+    fn segment(&self) -> &'file GoffSegment<'data> {
+        &self.file.segments[&self.index]
     }
 }

@@ -29,7 +29,7 @@ where
     R: ReadRef<'data>,
 {
     pub(super) file: &'file GoffFile<'data, R>,
-    pub(super) iter: std::slice::Iter<'file, SymbolIndex>,
+    pub(super) iter: core::slice::Iter<'file, SymbolIndex>,
     pub(super) index: usize,
 }
 

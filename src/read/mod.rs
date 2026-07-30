@@ -391,7 +391,7 @@ impl fmt::Display for SectionIndex {
 }
 
 /// The index used to identify a symbol in a symbol table.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct SymbolIndex(pub usize);
 
 impl fmt::Display for SymbolIndex {

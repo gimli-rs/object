@@ -21,7 +21,8 @@ use std::collections::HashMap;
 
 use super::{
     GoffComdat, GoffComdatIterator, GoffRelocation, GoffSection, GoffSectionIterator, GoffSegment,
-    GoffSegmentIterator, GoffSymbol, GoffSymbolIterator, GoffSymbolTable, GoffTextReference,
+    GoffSegmentIterator, GoffSegmentRef, GoffSymbol, GoffSymbolIterator, GoffSymbolTable,
+    GoffTextReference,
 };
 
 ///
@@ -488,7 +489,7 @@ where
     R: ReadRef<'data>,
 {
     type Segment<'file>
-        = GoffSegment<'data>
+        = GoffSegmentRef<'data, 'file, R>
     where
         Self: 'file,
         'data: 'file;
@@ -572,7 +573,7 @@ where
     fn segments(&self) -> GoffSegmentIterator<'data, '_, R> {
         GoffSegmentIterator {
             file: self,
-            iter: self.segments.values(),
+            iter: self.segments.keys(),
         }
     }
 

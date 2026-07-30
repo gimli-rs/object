@@ -3,8 +3,11 @@ use crate::goff;
 use crate::goff::SIZEOF_ENTRY_POINT_NAME;
 use crate::write::util::*;
 use crate::write::*;
-use alloc::collections::BTreeMap as HashMap;
+#[cfg(not(feature = "std"))]
+use alloc::collections::btree_map::BTreeMap as HashMap;
 use alloc::vec::Vec;
+#[cfg(feature = "std")]
+use std::collections::hash_map::HashMap;
 
 // EBCDIC-encoded constant strings
 const EBCDIC_RUSTCU: &[u8] = &[0x99, 0xA4, 0xA2, 0xA3, 0x83, 0xA4]; // "rustcu"

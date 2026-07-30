@@ -631,7 +631,7 @@ enum SegmentInternal<'data, 'file, R: ReadRef<'data>> {
     #[cfg(feature = "elf")]
     Elf64(elf::ElfSegment64<'data, 'file, Endianness, R>),
     #[cfg(feature = "goff")]
-    Goff64(goff::GoffSegment<'data>),
+    Goff64(goff::GoffSegmentRef<'data, 'file, R>),
     #[cfg(feature = "macho")]
     MachO32(macho::MachOSegment32<'data, 'file, Endianness, R>),
     #[cfg(feature = "macho")]
@@ -1258,7 +1258,7 @@ where
         ),
     ),
     #[cfg(feature = "goff")]
-    Goff64((goff::GoffSymbol64<'data>, PhantomData<R>)),
+    Goff64((goff::GoffSymbol64<'data>, PhantomData<(&'file (), R)>)),
     #[cfg(feature = "macho")]
     MachO32(
         (
