@@ -2,6 +2,245 @@
 
 --------------------------------------------------------------------------------
 
+## 0.40.0
+
+Released 2026/08/01.
+
+### Breaking changes
+
+* Changed many file format struct fields and constants to use newtypes.
+  Newtypes for bit flags have methods such as `contains` and `intersects`.
+  Some constants are fields within another newtype and have methods for conversion.
+  The raw values are always accessible by `.0`.
+  [#894](https://github.com/gimli-rs/object/pull/894)
+  [#897](https://github.com/gimli-rs/object/pull/897)
+  [#898](https://github.com/gimli-rs/object/pull/898)
+  [#899](https://github.com/gimli-rs/object/pull/899)
+  [#900](https://github.com/gimli-rs/object/pull/900)
+  [#957](https://github.com/gimli-rs/object/pull/957)
+  [#958](https://github.com/gimli-rs/object/pull/958)
+  [#959](https://github.com/gimli-rs/object/pull/959)
+  [#970](https://github.com/gimli-rs/object/pull/970)
+
+* Updated `macho::DyldCacheHeader` to dyld-1340.
+  [#885](https://github.com/gimli-rs/object/pull/885)
+
+* Deleted `SectionKind::Elf` and added `sh_type` field to `SectionFlags::Elf`.
+  [#891](https://github.com/gimli-rs/object/pull/891)
+
+* Added feature gates to variants of `FileFlags`, `SegmentFlags`,
+  `SectionFlags`, `SymbolFlags`, and `RelocationFlags`.
+  [#891](https://github.com/gimli-rs/object/pull/891)
+
+* Added `p_type` field to `SegmentFlags::Elf`.
+  Added `n_type` field to `SymbolFlags::MachO`.
+  Added `typ` and `storage_class` fields to `SymbolFlags::CoffSection`.
+  Added `n_type` field to `SymbolFlags::Xcoff`.
+  Added `reserved2` field to `SectionFlags::MachO`.
+  [#891](https://github.com/gimli-rs/object/pull/891)
+  [#963](https://github.com/gimli-rs/object/pull/963)
+
+* Renamed `build::elf::AttributeTag` to `AttributeScope`.
+  [#894](https://github.com/gimli-rs/object/pull/894)
+
+* Changed `write::elf::Writer::reserve_strtab/reserve_shstrtab/reserve_dynstr`
+  and `write::coff::Writer::reserve_symtab_strtab` to return an `Error` for
+  null bytes in strings, or table size overflow.
+  [#905](https://github.com/gimli-rs/object/pull/905)
+
+* Changed many `write::elf::Writer` methods to return `u64` instead of `usize`.
+  [#909](https://github.com/gimli-rs/object/pull/909)
+
+* Replaced name fields in `write::elf::SectionHeader`, `write::elf::Sym`,
+  `write::elf::Verdef` and `write::elf::Vernaux` with string table offsets.
+  Added `write::elf::Writer` methods to obtain these offsets.
+  [#910](https://github.com/gimli-rs/object/pull/910)
+
+* Added hash fields to `write::elf::Verdef` and `write::elf::Vernaux`.
+  Use `elf::hash` to calculate the hash values.
+  [#910](https://github.com/gimli-rs/object/pull/910)
+
+* Replaced `write::elf::Class` with `write::elf::Encoder`,
+  and replaced `build::elf::Builder::class` with `encoder`.
+  [#910](https://github.com/gimli-rs/object/pull/910)
+
+* Deleted `write::elf::Writer::reserve_*_section_index_with_name`
+  and `write::elf::Writer::reserve_dynamics`. There is no replacement
+  for these.
+  [#912](https://github.com/gimli-rs/object/pull/912)
+
+* Changed offsets from `usize` to `u64` in `write::WritableBuffer`
+  and low level writing APIs.
+  [#914](https://github.com/gimli-rs/object/pull/914)
+
+* Improved overflow handling when writing. Some overflow handling for
+  `write::elf::Writer` has been shifted to the caller, as indicated by
+  narrowed parameter types for `reserve_program_headers`,
+  `reserve_gnu_verdef` and `reserve_gnu_verneed`.
+  [#918](https://github.com/gimli-rs/object/pull/918)
+
+* Added tool version data to `read::macho::LoadCommandVariant::BuildVersion`
+  and `endian` parameter to `read::macho::LoadCommandData::build_version`.
+  [#920](https://github.com/gimli-rs/object/pull/920)
+
+* Added `offset` parameter to `read::macho::Section::file_range` and `data`.
+  Added `read::macho::Segment::section_offsets` to assist.
+  [#923](https://github.com/gimli-rs/object/pull/923)
+  [#968](https://github.com/gimli-rs/object/pull/968)
+
+* Replaced `write::WritableBuffer::resize` with `write_zeros` and deleted
+  `write::WritableBuffer::len`. Added `write::CountingBuffer` which can
+  wrap `WritableBuffer` to provide `resize` and `count` methods.
+  [#930](https://github.com/gimli-rs/object/pull/930)
+  [#931](https://github.com/gimli-rs/object/pull/931)
+
+* Moved `write::WritableBuffer::write_pod` and `write_pod_slice` to a
+  new `write::WritableBufferExt` trait, and deleted the `write` and
+  `write_slice` methods for `dyn WritableBuffer`.
+  [#930](https://github.com/gimli-rs/object/pull/930)
+
+* Sealed low level parsing traits.
+  [#934](https://github.com/gimli-rs/object/pull/934)
+
+* Renamed `read::coff::ImageSymbol` to `read::coff::Symbol`.
+  [#936](https://github.com/gimli-rs/object/pull/936)
+
+* Added `read::pe::ExportOrdinal` and `read::pe::ExportAddressIndex`,
+  and changed `read::pe::ExportTable` methods to use them.
+  [#942](https://github.com/gimli-rs/object/pull/942)
+
+* Changed `read::Object::imports` and `read::Object::exports` to iterators,
+  and expanded `read::Import` and `read::Export` to handle more types of
+  imports and exports. `Import::name` and `Export::name` return `NameOrOrdinal`
+  and `Export::address` is replaced by `Export::target`.
+  [#941](https://github.com/gimli-rs/object/pull/941)
+  [#945](https://github.com/gimli-rs/object/pull/945)
+  [#946](https://github.com/gimli-rs/object/pull/946)
+  [#949](https://github.com/gimli-rs/object/pull/949)
+  [#955](https://github.com/gimli-rs/object/pull/955)
+  [#956](https://github.com/gimli-rs/object/pull/956)
+
+* Fixed handling of common symbols for Mach-O; it is now similar to other formats.
+  Folded `SectionKind::Common` into `SectionKind::UninitializedData` and
+  deleted `write::StandardSection::Common`, and `write::Object::has_common`.
+  `read::macho::Nlist::is_undefined` now excludes common symbols.
+  [#964](https://github.com/gimli-rs/object/pull/964)
+
+* Changed `write::Symbol::value` to hold the alignment for common symbols.
+  This is supported for ELF and Mach-O.
+  [#964](https://github.com/gimli-rs/object/pull/964)
+
+* Changed the return types of `read::elf::FileHeader::phnum` and `shnum`
+  from `usize` to `u32`.
+  [#966](https://github.com/gimli-rs/object/pull/966)
+
+### Added
+
+* Added `names` feature to provide display names for file format constants.
+  [#876](https://github.com/gimli-rs/object/pull/876)
+  [#878](https://github.com/gimli-rs/object/pull/878)
+  [#902](https://github.com/gimli-rs/object/pull/902)
+
+* Added relocation parsing for Wasm.
+  [#895](https://github.com/gimli-rs/object/pull/895)
+
+* Added more PE constants definitions.
+  [#903](https://github.com/gimli-rs/object/pull/903)
+
+* Added z/OS archive support.
+  [#904](https://github.com/gimli-rs/object/pull/904)
+
+* Added `write::elf::GrowableBuffer` and `write::elf::SinglePhaseWriter`.
+  [#908](https://github.com/gimli-rs/object/pull/908)
+  [#909](https://github.com/gimli-rs/object/pull/909)
+  [#916](https://github.com/gimli-rs/object/pull/916)
+  [#917](https://github.com/gimli-rs/object/pull/917)
+
+* Added `write::StringTable`.
+  [#910](https://github.com/gimli-rs/object/pull/910)
+
+* Added `write::macho::Encoder`.
+  [#913](https://github.com/gimli-rs/object/pull/913)
+  [#967](https://github.com/gimli-rs/object/pull/967)
+
+* Added `build::macho::Builder`.
+  [#921](https://github.com/gimli-rs/object/pull/921)
+  [#925](https://github.com/gimli-rs/object/pull/925)
+
+* Added `macho::DyldInfoCommand` methods to parse rebases, binds, and exports.
+  [#922](https://github.com/gimli-rs/object/pull/922)
+
+* Added `macho::LinkeditDataCommand::chained_fixups`.
+  [#924](https://github.com/gimli-rs/object/pull/924)
+
+* Added `macho::LinkeditDataCommand::code_signature`.
+  [#932](https://github.com/gimli-rs/object/pull/932)
+
+* Added initial GOFF definitions as an unstable feature.
+  [#926](https://github.com/gimli-rs/object/pull/926)
+  [#962](https://github.com/gimli-rs/object/pull/962)
+
+* Added `Architecture::Ia64`.
+  [#927](https://github.com/gimli-rs/object/pull/927)
+
+* Added `RelocationKind` support for `macho::ARM64_RELOC_POINTER_TO_GOT`.
+  [#929](https://github.com/gimli-rs/object/pull/929)
+
+* Added `read::macho::LoadCommandData::offset`.
+  [#937](https://github.com/gimli-rs/object/pull/937)
+
+* Added parsing support for `macho::R_ABS`.
+  [#938](https://github.com/gimli-rs/object/pull/938)
+
+* Added `read::Object::import_libraries`.
+  [#960](https://github.com/gimli-rs/object/pull/960)
+
+* Added `from_raw` methods for various `write::elf` structs.
+  [#966](https://github.com/gimli-rs/object/pull/966)
+
+### Changed
+
+* Changed the minimum supported rust version (MSRV) for the `read` feature and
+  its dependencies to 1.85.0.
+  [#892](https://github.com/gimli-rs/object/pull/892)
+
+* Changed the rust edition to 2024.
+  [#893](https://github.com/gimli-rs/object/pull/893)
+
+* Fixed `SectionKind` for Wasm `reloc.*` sections.
+  [#896](https://github.com/gimli-rs/object/pull/896)
+
+* Fixed ELF `.symtab_shndx` writing when `st_shndx` is not `SHN_INDEX`.
+  [#906](https://github.com/gimli-rs/object/pull/906)
+
+* Changed `write::elf::Writer` to handle `e_phnum` overflow.
+  [#907](https://github.com/gimli-rs/object/pull/907)
+
+* Fix ELF `.gnu.attributes` alignment when writing.
+  [#912](https://github.com/gimli-rs/object/pull/912)
+
+* Fixed some malformed data handling.
+  [#939](https://github.com/gimli-rs/object/pull/939)
+  [#940](https://github.com/gimli-rs/object/pull/940)
+  [#961](https://github.com/gimli-rs/object/pull/961)
+
+* Fixed COFF archive parsing of `/<ECSYMBOLS>' member when no names table is
+  present.
+  [#947](https://github.com/gimli-rs/object/pull/947)
+  [#948](https://github.com/gimli-rs/object/pull/948)
+
+* Fixed `read::ObjectSymbol::address` to return 0 for common symbols instead
+  of the alignment.
+  [#964](https://github.com/gimli-rs/object/pull/964)
+
+* Changed Mach-O `SectionKind` parsing to use flags where possible instead
+  of segment and section names.
+  [#965](https://github.com/gimli-rs/object/pull/965)
+
+* Updated `ruzstd` and `wasmparser` dependencies.
+
+--------------------------------------------------------------------------------
+
 ## 0.39.1
 
 Released 2026/04/21.
