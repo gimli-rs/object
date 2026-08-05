@@ -69,6 +69,7 @@ mod gnu_compression;
 #[cfg(any(
     feature = "coff",
     feature = "elf",
+    feature = "goff",
     feature = "macho",
     feature = "pe",
     feature = "wasm",
@@ -78,6 +79,7 @@ mod any;
 #[cfg(any(
     feature = "coff",
     feature = "elf",
+    feature = "goff",
     feature = "macho",
     feature = "pe",
     feature = "wasm",
@@ -105,6 +107,9 @@ pub mod wasm;
 
 #[cfg(feature = "xcoff")]
 pub mod xcoff;
+
+#[cfg(feature = "goff")]
+pub mod goff;
 
 mod traits;
 pub use traits::*;
@@ -217,6 +222,11 @@ pub enum FileKind {
     /// See [`elf::ElfFile64`].
     #[cfg(feature = "elf")]
     Elf64,
+    /// A 64-bit GOFF file.
+    ///
+    /// See [`goff::GoffFile64`].
+    #[cfg(feature = "goff")]
+    Goff64,
     /// A 32-bit Mach-O file.
     ///
     /// See [`macho::MachOFile32`].
@@ -289,6 +299,8 @@ impl FileKind {
             [0x7f, b'E', b'L', b'F', 1, ..] => FileKind::Elf32,
             #[cfg(feature = "elf")]
             [0x7f, b'E', b'L', b'F', 2, ..] => FileKind::Elf64,
+            #[cfg(feature = "goff")]
+            [0x03, 0xf0, 0x00, ..] => FileKind::Goff64,
             #[cfg(feature = "macho")]
             [0xfe, 0xed, 0xfa, 0xce, ..]
             | [0xce, 0xfa, 0xed, 0xfe, ..] => FileKind::MachO32,
@@ -379,7 +391,7 @@ impl fmt::Display for SectionIndex {
 }
 
 /// The index used to identify a symbol in a symbol table.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct SymbolIndex(pub usize);
 
 impl fmt::Display for SymbolIndex {

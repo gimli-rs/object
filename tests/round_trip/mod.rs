@@ -12,6 +12,8 @@ mod coff;
 mod comdat;
 mod common;
 mod elf;
+#[cfg(feature = "goff")]
+mod goff;
 mod macho;
 mod reloc;
 mod section_flags;

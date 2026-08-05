@@ -2,7 +2,7 @@
 //!
 //! This module provides a unified write API for relocatable object files
 //! using [`Object`]. This does not support writing executable files.
-//! This supports the following file formats: COFF, ELF, Mach-O, and XCOFF.
+//! This supports the following file formats: COFF, ELF, Mach-O, XCOFF, and GOFF.
 //!
 //! The submodules define helpers for writing the raw structs. These support
 //! writing both relocatable and executable files. There are writers for
@@ -41,6 +41,9 @@ pub mod pe;
 
 #[cfg(feature = "xcoff")]
 mod xcoff;
+
+#[cfg(feature = "goff")]
+mod goff;
 
 mod string;
 pub use string::*;
@@ -272,6 +275,8 @@ impl<'a> Object<'a> {
             BinaryFormat::MachO => self.macho_section_info(section),
             #[cfg(feature = "xcoff")]
             BinaryFormat::Xcoff => self.xcoff_section_info(section),
+            #[cfg(feature = "goff")]
+            BinaryFormat::Goff => self.goff_section_info(section),
             _ => unimplemented!(),
         }
     }
@@ -729,6 +734,8 @@ impl<'a> Object<'a> {
             BinaryFormat::MachO => self.macho_translate_relocation(section, &mut relocation)?,
             #[cfg(feature = "xcoff")]
             BinaryFormat::Xcoff => self.xcoff_translate_relocation(&mut relocation)?,
+            #[cfg(feature = "goff")]
+            BinaryFormat::Goff => self.goff_translate_relocation(&mut relocation)?,
             _ => unimplemented!(),
         }
         let implicit = match self.format {
@@ -740,6 +747,8 @@ impl<'a> Object<'a> {
             BinaryFormat::MachO => self.macho_adjust_addend(&mut relocation)?,
             #[cfg(feature = "xcoff")]
             BinaryFormat::Xcoff => self.xcoff_adjust_addend(&mut relocation)?,
+            #[cfg(feature = "goff")]
+            BinaryFormat::Goff => self.goff_adjust_addend(&mut relocation)?,
             _ => unimplemented!(),
         };
         if implicit && relocation.addend != 0 {
@@ -829,6 +838,8 @@ impl<'a> Object<'a> {
             BinaryFormat::MachO => self.macho_write(buffer),
             #[cfg(feature = "xcoff")]
             BinaryFormat::Xcoff => self.xcoff_write(buffer),
+            #[cfg(feature = "goff")]
+            BinaryFormat::Goff => self.goff_write(buffer),
             _ => unimplemented!(),
         }
     }
@@ -1174,6 +1185,8 @@ pub enum Mangling {
     MachO,
     /// Xcoff symbol mangling.
     Xcoff,
+    /// Goff symbol mangling.
+    Goff,
 }
 
 impl Mangling {
@@ -1185,6 +1198,7 @@ impl Mangling {
             (BinaryFormat::Elf, _) => Mangling::Elf,
             (BinaryFormat::MachO, _) => Mangling::MachO,
             (BinaryFormat::Xcoff, _) => Mangling::Xcoff,
+            (BinaryFormat::Goff, _) => Mangling::Goff,
             _ => Mangling::None,
         }
     }
@@ -1192,7 +1206,9 @@ impl Mangling {
     /// Return the prefix to use for global symbols.
     pub fn global_prefix(self) -> Option<u8> {
         match self {
-            Mangling::None | Mangling::Elf | Mangling::Coff | Mangling::Xcoff => None,
+            Mangling::None | Mangling::Elf | Mangling::Coff | Mangling::Xcoff | Mangling::Goff => {
+                None
+            }
             Mangling::CoffI386 | Mangling::MachO => Some(b'_'),
         }
     }
