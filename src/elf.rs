@@ -1092,6 +1092,8 @@ newtype_constant_names!(NAMES_SHT: SectionType(u32) = {
     SHT_ANDROID_RELA = 0x60000002,
     /// LLVM-style dependent libraries.
     SHT_LLVM_DEPENDENT_LIBRARIES = 0x6fff4c04,
+    /// LLVM bitcode emitted with fat LTO.
+    SHT_LLVM_LTO = 0x6fff_4c0c,
     /// Android-specific precursor of `SHT_RELR`; differs only by constants and required API level.
     SHT_ANDROID_RELR = 0x6fff_ff00,
     /// GNU SFrame stack trace format.
