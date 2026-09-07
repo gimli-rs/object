@@ -956,9 +956,6 @@ impl<'data, 'file, R> ObjectSegment<'data> for WasmSegment<'data, 'file, R> {
     }
 
     fn data_range(&self, address: u64, size: u64) -> Result<Option<&'data [u8]>> {
-        if self.segment.is_passive {
-            return Ok(None);
-        }
         Ok(read::util::data_range(
             self.segment.data,
             self.segment.address,
@@ -969,20 +966,12 @@ impl<'data, 'file, R> ObjectSegment<'data> for WasmSegment<'data, 'file, R> {
 
     #[inline]
     fn name_bytes(&self) -> Result<Option<&[u8]>> {
-        if self.segment.info.is_some() {
-            Ok(Some(self.segment.name().as_bytes()))
-        } else {
-            Ok(None)
-        }
+        Ok(None)
     }
 
     #[inline]
     fn name(&self) -> Result<Option<&str>> {
-        if self.segment.info.is_some() {
-            Ok(Some(self.segment.name()))
-        } else {
-            Ok(None)
-        }
+        Ok(None)
     }
 
     #[inline]
