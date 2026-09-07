@@ -46,22 +46,6 @@ fn data_segment_section_index(index: usize) -> SectionIndex {
     SectionIndex(DATA_SEGMENT_SECTION_INDEX_BASE + index)
 }
 
-fn data_segment_kind(name: &str, flags: crate::wasm::SegmentFlags) -> SectionKind {
-    if name == ".tbss" || name.starts_with(".tbss.") {
-        SectionKind::UninitializedTls
-    } else if flags.contains(crate::wasm::WASM_SEG_FLAG_TLS) {
-        SectionKind::Tls
-    } else if flags.contains(crate::wasm::WASM_SEG_FLAG_STRINGS) {
-        SectionKind::ReadOnlyString
-    } else if name == ".rodata" || name.starts_with(".rodata.") {
-        SectionKind::ReadOnlyData
-    } else if name == ".bss" || name.starts_with(".bss.") {
-        SectionKind::UninitializedData
-    } else {
-        SectionKind::Data
-    }
-}
-
 /// A WebAssembly object file.
 #[derive(Debug)]
 pub struct WasmFile<'data, R = &'data [u8]> {
@@ -120,6 +104,26 @@ impl<'data> WasmDataSegmentInternal<'data> {
 
     fn flags(&self) -> crate::wasm::SegmentFlags {
         crate::wasm::SegmentFlags(self.info.map(|info| info.flags.bits()).unwrap_or(0))
+    }
+
+    fn section_kind(&self) -> SectionKind {
+        let Some(info) = self.info else {
+            return SectionKind::Data;
+        };
+
+        if info.name == ".tbss" || info.name.starts_with(".tbss.") {
+            SectionKind::UninitializedTls
+        } else if info.flags.contains(wp::SegmentFlags::TLS) {
+            SectionKind::Tls
+        } else if info.flags.contains(wp::SegmentFlags::STRINGS) {
+            SectionKind::ReadOnlyString
+        } else if info.name == ".rodata" || info.name.starts_with(".rodata.") {
+            SectionKind::ReadOnlyData
+        } else if info.name == ".bss" || info.name.starts_with(".bss.") {
+            SectionKind::UninitializedData
+        } else {
+            SectionKind::Data
+        }
     }
 }
 
@@ -1179,9 +1183,7 @@ impl<'data, 'file, R: ReadRef<'data>> ObjectSection<'data> for WasmSection<'data
                 SectionId::DataCount => SectionKind::UninitializedData,
                 SectionId::Tag => SectionKind::Data,
             },
-            WasmSectionInner::DataSegment { segment, .. } => {
-                data_segment_kind(segment.name(), segment.flags())
-            }
+            WasmSectionInner::DataSegment { segment, .. } => segment.section_kind(),
         }
     }
 
