@@ -767,7 +767,7 @@ impl<'data, R: ReadRef<'data>> Object<'data> for WasmFile<'data, R> {
         };
         WasmSegmentIterator {
             file: self,
-            iter: segments.iter().enumerate(),
+            iter: segments.iter(),
         }
     }
 
@@ -899,7 +899,7 @@ impl<'data, R: ReadRef<'data>> Object<'data> for WasmFile<'data, R> {
 #[derive(Debug)]
 pub struct WasmSegmentIterator<'data, 'file, R = &'data [u8]> {
     file: &'file WasmFile<'data, R>,
-    iter: core::iter::Enumerate<slice::Iter<'file, WasmDataSegmentInternal<'data>>>,
+    iter: slice::Iter<'file, WasmDataSegmentInternal<'data>>,
 }
 
 impl<'data, 'file, R> Iterator for WasmSegmentIterator<'data, 'file, R> {
@@ -908,14 +908,13 @@ impl<'data, 'file, R> Iterator for WasmSegmentIterator<'data, 'file, R> {
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
         loop {
-            let (index, segment) = self.iter.next()?;
+            let segment = self.iter.next()?;
             // Passive segments are not loaded automatically.
             if segment.is_passive {
                 continue;
             }
             return Some(WasmSegment {
                 file: self.file,
-                index,
                 segment,
             });
         }
@@ -927,8 +926,6 @@ impl<'data, 'file, R> Iterator for WasmSegmentIterator<'data, 'file, R> {
 pub struct WasmSegment<'data, 'file, R = &'data [u8]> {
     #[allow(unused)]
     file: &'file WasmFile<'data, R>,
-    #[allow(unused)]
-    index: usize,
     segment: &'file WasmDataSegmentInternal<'data>,
 }
 
