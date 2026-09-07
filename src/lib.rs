@@ -99,5 +99,7 @@ pub mod goff;
 pub mod macho;
 #[cfg(any(feature = "coff", feature = "pe"))]
 pub mod pe;
+#[cfg(feature = "wasm")]
+pub mod wasm;
 #[cfg(feature = "xcoff")]
 pub mod xcoff;

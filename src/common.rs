@@ -649,6 +649,12 @@ pub enum SectionFlags {
         /// `s_flags` field in the section header.
         s_flags: crate::xcoff::SectionFlags,
     },
+    /// Wasm section flags.
+    #[cfg(feature = "wasm")]
+    Wasm {
+        /// Flags from the `SegmentInfo` subsection of `linking`.
+        flags: crate::wasm::SegmentFlags,
+    },
     /// GOFF section flags.
     #[cfg(feature = "goff")]
     Goff {
