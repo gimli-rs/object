@@ -1,0 +1,52 @@
+Format: Wasm Little-endian 32-bit
+Kind: Executable
+Architecture: Wasm32
+Flags: None
+Relative Address Base: 0
+Entry Address: 16
+0: Section { name: "dylink.0", address: 0, size: 1e, align: 1, kind: Other, flags: None }
+1: Section { name: "<type>", address: 0, size: 8, align: 1, kind: Metadata, flags: None }
+2: Section { name: "<import>", address: 0, size: a6, align: 1, kind: Linker, flags: None }
+3: Section { name: "<function>", address: 0, size: 5, align: 1, kind: Metadata, flags: None }
+6: Section { name: "<global>", address: 0, size: 29, align: 1, kind: Data, flags: None }
+7: Section { name: "<export>", address: 0, size: 77, align: 1, kind: Linker, flags: None }
+8: Section { name: "<start>", address: 0, size: 1, align: 1, kind: Linker, flags: None }
+12: Section { name: "<data_count>", address: 0, size: 1, align: 1, kind: UninitializedData, flags: None }
+10: Section { name: "<code>", address: 0, size: f4, align: 1, kind: Text, flags: None }
+11: Section { name: "<data>", address: 0, size: 24, align: 1, kind: Data, flags: None }
+0: Section { name: "name", address: 0, size: e7, align: 1, kind: Other, flags: None }
+0: Section { name: "producers", address: 0, size: 5e, align: 1, kind: Other, flags: None }
+0: Section { name: "target_features", address: 0, size: 8d, align: 1, kind: Other, flags: None }
+
+Symbols
+0: Symbol { name: "env", address: 0, size: 0, kind: File, section: None, scope: Dynamic, weak: false, flags: None }
+1: Symbol { name: "memory", address: 0, size: 0, kind: Data, section: Undefined, scope: Dynamic, weak: false, flags: None }
+2: Symbol { name: "__memory_base", address: 0, size: 0, kind: Data, section: Undefined, scope: Dynamic, weak: false, flags: None }
+3: Symbol { name: "__table_base", address: 0, size: 0, kind: Data, section: Undefined, scope: Dynamic, weak: false, flags: None }
+4: Symbol { name: "GOT.mem", address: 0, size: 0, kind: File, section: None, scope: Dynamic, weak: false, flags: None }
+5: Symbol { name: "data_int", address: 0, size: 0, kind: Data, section: Undefined, scope: Dynamic, weak: false, flags: None }
+6: Symbol { name: "bss_int", address: 0, size: 0, kind: Data, section: Undefined, scope: Dynamic, weak: false, flags: None }
+7: Symbol { name: "rodata_bytes", address: 0, size: 0, kind: Data, section: Undefined, scope: Dynamic, weak: false, flags: None }
+8: Symbol { name: "rodata_str", address: 0, size: 0, kind: Data, section: Undefined, scope: Dynamic, weak: false, flags: None }
+9: Symbol { name: "retained_int", address: 0, size: 0, kind: Data, section: Undefined, scope: Dynamic, weak: false, flags: None }
+10: Symbol { name: "", address: 0, size: 0, kind: File, section: None, scope: Compilation, weak: false, flags: None }
+11: Symbol { name: "get", address: 97, size: 5d, kind: Text, section: Section(SectionIndex(a)), scope: Dynamic, weak: false, flags: None }
+12: Symbol { name: "data_int", address: 0, size: 0, kind: Data, section: Section(SectionIndex(b)), scope: Dynamic, weak: false, flags: None }
+13: Symbol { name: "bss_int", address: 0, size: 0, kind: Data, section: Section(SectionIndex(b)), scope: Dynamic, weak: false, flags: None }
+14: Symbol { name: "tls_int", address: 0, size: 0, kind: Data, section: Section(SectionIndex(b)), scope: Dynamic, weak: false, flags: None }
+15: Symbol { name: "tbss_int", address: 0, size: 0, kind: Data, section: Section(SectionIndex(b)), scope: Dynamic, weak: false, flags: None }
+16: Symbol { name: "rodata_bytes", address: 0, size: 0, kind: Data, section: Section(SectionIndex(b)), scope: Dynamic, weak: false, flags: None }
+17: Symbol { name: "rodata_str", address: 0, size: 0, kind: Data, section: Section(SectionIndex(b)), scope: Dynamic, weak: false, flags: None }
+18: Symbol { name: "retained_int", address: 0, size: 0, kind: Data, section: Section(SectionIndex(b)), scope: Dynamic, weak: false, flags: None }
+19: Symbol { name: "__wasm_apply_data_relocs", address: 5, size: f, kind: Text, section: Section(SectionIndex(a)), scope: Dynamic, weak: false, flags: None }
+20: Symbol { name: "__wasm_call_ctors", address: 2, size: 2, kind: Text, section: Section(SectionIndex(a)), scope: Compilation, weak: false, flags: None }
+21: Symbol { name: "__wasm_init_memory", address: 16, size: 80, kind: Text, section: Section(SectionIndex(a)), scope: Compilation, weak: false, flags: None }
+
+Dynamic symbols
+
+Symbol map
+0x0-0x1 "retained_int"
+0x2-0x4 "__wasm_call_ctors"
+0x5-0x14 "__wasm_apply_data_relocs"
+0x16-0x96 "__wasm_init_memory"
+0x97-0xf4 "get"
