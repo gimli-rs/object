@@ -35,7 +35,7 @@ impl<'data> ImportFile<'data> {
         // Unmangles a name by removing a `?`, `@` or `_` prefix.
         fn strip_prefix(s: &[u8]) -> &[u8] {
             match s.split_first() {
-                Some((b, rest)) if [b'?', b'@', b'_'].contains(b) => rest,
+                Some((b, rest)) if b"?@_".contains(b) => rest,
                 _ => s,
             }
         }

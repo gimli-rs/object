@@ -1,3 +1,5 @@
+#![cfg(feature = "goff")]
+
 use object::read;
 use std::fs;
 use std::path::PathBuf;
@@ -38,7 +40,6 @@ fn ebcdic_to_ascii(bytes: &[u8]) -> String {
         .to_string()
 }
 
-#[cfg(feature = "goff")]
 #[test]
 fn goff_base_symbols() {
     let path_to_obj: PathBuf = ["testfiles", "goff", "base.o"].iter().collect();
@@ -134,10 +135,7 @@ fn goff_base_symbols() {
     {
         let symbol = symbol_records
             .get(*expected_esdid as usize - 1)
-            .expect(&format!(
-                "Failed to find symbol with ESDID 0x{:08X}",
-                expected_esdid
-            ));
+            .unwrap_or_else(|| panic!("Failed to find symbol with ESDID 0x{:08X}", expected_esdid));
 
         // Check ESDID using public getter
         assert_eq!(
@@ -193,7 +191,6 @@ fn goff_base_symbols() {
     }
 }
 
-#[cfg(feature = "goff")]
 #[test]
 fn goff_foo_symbols() {
     let path_to_obj: PathBuf = ["testfiles", "goff", "foo.o"].iter().collect();
@@ -262,10 +259,7 @@ fn goff_foo_symbols() {
     {
         let symbol = symbol_records
             .get(*expected_esdid as usize - 1)
-            .expect(&format!(
-                "Failed to find symbol with ESDID 0x{:08X}",
-                expected_esdid
-            ));
+            .unwrap_or_else(|| panic!("Failed to find symbol with ESDID 0x{:08X}", expected_esdid));
 
         // Check ESDID using public getter
         assert_eq!(
@@ -321,7 +315,6 @@ fn goff_foo_symbols() {
     }
 }
 
-#[cfg(feature = "goff")]
 #[test]
 fn goff_foo_behavioral_attributes() {
     use object::goff::*;
@@ -481,7 +474,6 @@ fn goff_foo_behavioral_attributes() {
     );
 }
 
-#[cfg(feature = "goff")]
 #[test]
 fn goff_foo_section_flags() {
     let path_to_obj: PathBuf = ["testfiles", "goff", "foo.o"].iter().collect();
@@ -552,7 +544,6 @@ fn goff_foo_section_flags() {
     }
 }
 
-#[cfg(feature = "goff")]
 #[test]
 fn goff_foo_binding_scope() {
     let path_to_obj: PathBuf = ["testfiles", "goff", "foo.o"].iter().collect();
