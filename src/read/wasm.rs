@@ -1182,12 +1182,12 @@ impl<'data, 'file, R: ReadRef<'data>> ObjectSection<'data> for WasmSection<'data
     }
 
     fn data_range(&self, address: u64, size: u64) -> Result<Option<&'data [u8]>> {
-        match self.inner {
-            WasmSectionInner::Header { .. } => Ok(None),
-            WasmSectionInner::DataSegment { segment, .. } => {
-                Ok(read::util::data_range(segment.data, 0, address, size))
-            }
-        }
+        Ok(read::util::data_range(
+            self.data()?,
+            self.address(),
+            address,
+            size,
+        ))
     }
 
     #[inline]
