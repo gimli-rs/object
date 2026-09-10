@@ -1,0 +1,141 @@
+Format: Wasm Little-endian 32-bit
+Kind: Relocatable
+Architecture: Wasm32
+Flags: None
+Relative Address Base: 0
+Entry Address: 0
+1: Section { name: "<type>", address: 0, size: 11, align: 1, kind: Metadata, flags: None }
+2: Section { name: "<import>", address: 0, size: 109, align: 1, kind: Linker, flags: None }
+3: Section { name: "<function>", address: 0, size: 4, align: 1, kind: Metadata, flags: None }
+9: Section { name: "<element>", address: 0, size: 8, align: 1, kind: Data, flags: None }
+12: Section { name: "<data_count>", address: 0, size: 1, align: 1, kind: UninitializedData, flags: None }
+10: Section { name: "<code>", address: 0, size: ee, align: 1, kind: Text, flags: None }
+0: Section { name: ".debug_abbrev", address: 0, size: 91, align: 1, kind: Other, flags: None }
+0: Section { name: ".debug_info", address: 0, size: 149, align: 1, kind: Other, flags: None }
+0: Section { name: ".debug_ranges", address: 0, size: 18, align: 1, kind: Other, flags: None }
+0: Section { name: ".debug_str", address: 0, size: 130, align: 1, kind: Other, flags: None }
+0: Section { name: "llvm.func_attr.annotate.my_annotation", address: 0, size: 4, align: 1, kind: Other, flags: None }
+0: Section { name: ".debug_line", address: 0, size: 81, align: 1, kind: Other, flags: None }
+0: Section { name: "linking", address: 0, size: 18f, align: 1, kind: Linker, flags: None }
+0: Section { name: "reloc.CODE", address: 0, size: 4f, align: 1, kind: Linker, flags: None }
+0: Section { name: "reloc.DATA", address: 0, size: d, align: 1, kind: Linker, flags: None }
+0: Section { name: "reloc..debug_info", address: 0, size: bc, align: 1, kind: Linker, flags: None }
+0: Section { name: "reloc..debug_ranges", address: 0, size: 13, align: 1, kind: Linker, flags: None }
+0: Section { name: "reloc.llvm.func_attr.annotate.my_annotation", address: 0, size: 5, align: 1, kind: Linker, flags: None }
+0: Section { name: "reloc..debug_line", address: 0, size: a, align: 1, kind: Linker, flags: None }
+0: Section { name: "producers", address: 0, size: 8f, align: 1, kind: Other, flags: None }
+0: Section { name: "target_features", address: 0, size: a1, align: 1, kind: Other, flags: None }
+14: Section { name: ".data.global_int", address: 0, size: 4, align: 4, kind: Data, flags: Wasm { flags: 0 } }
+15: Section { name: ".data.global_point", address: 0, size: 8, align: 4, kind: Data, flags: Wasm { flags: 0 } }
+16: Section { name: ".tbss.tls_counter", address: 0, size: 4, align: 4, kind: UninitializedTls, flags: Wasm { flags: WASM_SEG_FLAG_TLS } }
+17: Section { name: ".data.data_ptr_to_global", address: 0, size: 4, align: 4, kind: Data, flags: Wasm { flags: 0 } }
+18: Section { name: ".data.data_ptr_with_addend", address: 0, size: 4, align: 4, kind: Data, flags: Wasm { flags: 0 } }
+19: Section { name: ".data.data_func_ptr", address: 0, size: 4, align: 4, kind: Data, flags: Wasm { flags: 0 } }
+
+Symbols
+0: Symbol { name: "_Z6relocsv", address: 3, size: d6, kind: Text, section: Section(SectionIndex(a)), scope: Linkage, weak: false, flags: None }
+1: Symbol { name: "__stack_pointer", address: 0, size: 0, kind: Data, section: Undefined, scope: Dynamic, weak: false, flags: None }
+2: Symbol { name: "_Z13external_funcv", address: 0, size: 0, kind: Text, section: Undefined, scope: Dynamic, weak: false, flags: None }
+3: Symbol { name: "_ZL11static_funcv", address: da, size: 3, kind: Text, section: Section(SectionIndex(a)), scope: Compilation, weak: false, flags: None }
+4: Symbol { name: "__table_base", address: 0, size: 0, kind: Data, section: Undefined, scope: Dynamic, weak: false, flags: None }
+5: Symbol { name: "", address: 0, size: 0, kind: Data, section: Undefined, scope: Dynamic, weak: false, flags: None }
+6: Symbol { name: "global_int", address: 0, size: 4, kind: Data, section: Section(SectionIndex(e)), scope: Linkage, weak: false, flags: None }
+7: Symbol { name: "__memory_base", address: 0, size: 0, kind: Data, section: Undefined, scope: Dynamic, weak: false, flags: None }
+8: Symbol { name: "global_point", address: 0, size: 8, kind: Data, section: Section(SectionIndex(f)), scope: Linkage, weak: false, flags: None }
+9: Symbol { name: "tls_counter", address: 0, size: 4, kind: Tls, section: Section(SectionIndex(10)), scope: Linkage, weak: false, flags: None }
+10: Symbol { name: "__tls_base", address: 0, size: 0, kind: Data, section: Undefined, scope: Dynamic, weak: false, flags: None }
+11: Symbol { name: "", address: 0, size: 0, kind: Unknown, section: Undefined, scope: Dynamic, weak: false, flags: None }
+12: Symbol { name: "__cxa_begin_catch", address: 0, size: 0, kind: Text, section: Undefined, scope: Dynamic, weak: false, flags: None }
+13: Symbol { name: "__cxa_end_catch", address: 0, size: 0, kind: Text, section: Undefined, scope: Dynamic, weak: false, flags: None }
+14: Symbol { name: "_ZTW11tls_counter", address: de, size: 10, kind: Text, section: Section(SectionIndex(a)), scope: Linkage, weak: true, flags: None }
+15: Symbol { name: "data_ptr_to_global", address: 0, size: 4, kind: Data, section: Section(SectionIndex(11)), scope: Linkage, weak: false, flags: None }
+16: Symbol { name: "data_ptr_with_addend", address: 0, size: 4, kind: Data, section: Section(SectionIndex(12)), scope: Linkage, weak: false, flags: None }
+17: Symbol { name: "data_func_ptr", address: 0, size: 4, kind: Data, section: Section(SectionIndex(13)), scope: Linkage, weak: false, flags: None }
+18: Symbol { name: "", address: 0, size: 0, kind: Section, section: Unknown, scope: Compilation, weak: false, flags: None }
+19: Symbol { name: "", address: 0, size: 0, kind: Section, section: Unknown, scope: Compilation, weak: false, flags: None }
+20: Symbol { name: "", address: 0, size: 0, kind: Section, section: Unknown, scope: Compilation, weak: false, flags: None }
+21: Symbol { name: "", address: 0, size: 0, kind: Section, section: Unknown, scope: Compilation, weak: false, flags: None }
+
+<code> relocations
+(7, Relocation { kind: Unknown, encoding: Generic, size: 28, target: Symbol(SymbolIndex(1)), addend: 0, implicit_addend: false, flags: Wasm { r_type: 7 } })
+(14, Relocation { kind: Unknown, encoding: Generic, size: 28, target: Symbol(SymbolIndex(1)), addend: 0, implicit_addend: false, flags: Wasm { r_type: 7 } })
+(1a, Relocation { kind: Unknown, encoding: Generic, size: 28, target: Symbol(SymbolIndex(2)), addend: 0, implicit_addend: false, flags: Wasm { r_type: 0 } })
+(22, Relocation { kind: Unknown, encoding: Generic, size: 28, target: Symbol(SymbolIndex(2)), addend: 0, implicit_addend: false, flags: Wasm { r_type: 7 } })
+(2d, Relocation { kind: Unknown, encoding: Generic, size: 28, target: Symbol(SymbolIndex(3)), addend: 0, implicit_addend: false, flags: Wasm { r_type: c } })
+(33, Relocation { kind: Unknown, encoding: Generic, size: 28, target: Symbol(SymbolIndex(4)), addend: 0, implicit_addend: false, flags: Wasm { r_type: 7 } })
+(42, Relocation { kind: Unknown, encoding: Generic, size: 28, target: Section(SectionIndex(1)), addend: 0, implicit_addend: false, flags: Wasm { r_type: 6 } })
+(47, Relocation { kind: Unknown, encoding: Generic, size: 28, target: Symbol(SymbolIndex(5)), addend: 0, implicit_addend: false, flags: Wasm { r_type: 14 } })
+(4d, Relocation { kind: Unknown, encoding: Generic, size: 28, target: Symbol(SymbolIndex(6)), addend: 0, implicit_addend: false, flags: Wasm { r_type: b } })
+(55, Relocation { kind: Unknown, encoding: Generic, size: 28, target: Symbol(SymbolIndex(7)), addend: 0, implicit_addend: false, flags: Wasm { r_type: 7 } })
+(71, Relocation { kind: Unknown, encoding: Generic, size: 28, target: Symbol(SymbolIndex(8)), addend: 0, implicit_addend: false, flags: Wasm { r_type: b } })
+(84, Relocation { kind: Unknown, encoding: Generic, size: 28, target: Symbol(SymbolIndex(9)), addend: 0, implicit_addend: false, flags: Wasm { r_type: 15 } })
+(8a, Relocation { kind: Unknown, encoding: Generic, size: 28, target: Symbol(SymbolIndex(a)), addend: 0, implicit_addend: false, flags: Wasm { r_type: 7 } })
+(9a, Relocation { kind: Unknown, encoding: Generic, size: 28, target: Symbol(SymbolIndex(2)), addend: 0, implicit_addend: false, flags: Wasm { r_type: 0 } })
+(a0, Relocation { kind: Unknown, encoding: Generic, size: 28, target: Symbol(SymbolIndex(b)), addend: 0, implicit_addend: false, flags: Wasm { r_type: a } })
+(aa, Relocation { kind: Unknown, encoding: Generic, size: 28, target: Symbol(SymbolIndex(1)), addend: 0, implicit_addend: false, flags: Wasm { r_type: 7 } })
+(bc, Relocation { kind: Unknown, encoding: Generic, size: 28, target: Symbol(SymbolIndex(c)), addend: 0, implicit_addend: false, flags: Wasm { r_type: 0 } })
+(c3, Relocation { kind: Unknown, encoding: Generic, size: 28, target: Symbol(SymbolIndex(d)), addend: 0, implicit_addend: false, flags: Wasm { r_type: 0 } })
+(d2, Relocation { kind: Unknown, encoding: Generic, size: 28, target: Symbol(SymbolIndex(1)), addend: 0, implicit_addend: false, flags: Wasm { r_type: 7 } })
+(e0, Relocation { kind: Unknown, encoding: Generic, size: 28, target: Symbol(SymbolIndex(9)), addend: 0, implicit_addend: false, flags: Wasm { r_type: 15 } })
+(e6, Relocation { kind: Unknown, encoding: Generic, size: 28, target: Symbol(SymbolIndex(a)), addend: 0, implicit_addend: false, flags: Wasm { r_type: 7 } })
+
+.debug_info relocations
+(6, Relocation { kind: Unknown, encoding: Generic, size: 20, target: Symbol(SymbolIndex(12)), addend: 0, implicit_addend: false, flags: Wasm { r_type: 9 } })
+(c, Relocation { kind: Unknown, encoding: Generic, size: 20, target: Symbol(SymbolIndex(14)), addend: 0, implicit_addend: false, flags: Wasm { r_type: 9 } })
+(12, Relocation { kind: Unknown, encoding: Generic, size: 20, target: Symbol(SymbolIndex(14)), addend: 6e, implicit_addend: false, flags: Wasm { r_type: 9 } })
+(16, Relocation { kind: Unknown, encoding: Generic, size: 20, target: Symbol(SymbolIndex(15)), addend: 0, implicit_addend: false, flags: Wasm { r_type: 9 } })
+(1a, Relocation { kind: Unknown, encoding: Generic, size: 20, target: Symbol(SymbolIndex(14)), addend: 78, implicit_addend: false, flags: Wasm { r_type: 9 } })
+(22, Relocation { kind: Unknown, encoding: Generic, size: 20, target: Symbol(SymbolIndex(13)), addend: 0, implicit_addend: false, flags: Wasm { r_type: 9 } })
+(27, Relocation { kind: Unknown, encoding: Generic, size: 20, target: Symbol(SymbolIndex(14)), addend: 8f, implicit_addend: false, flags: Wasm { r_type: 9 } })
+(34, Relocation { kind: Unknown, encoding: Generic, size: 20, target: Symbol(SymbolIndex(7)), addend: 0, implicit_addend: false, flags: Wasm { r_type: d } })
+(39, Relocation { kind: Unknown, encoding: Generic, size: 20, target: Symbol(SymbolIndex(6)), addend: 0, implicit_addend: false, flags: Wasm { r_type: 5 } })
+(3f, Relocation { kind: Unknown, encoding: Generic, size: 20, target: Symbol(SymbolIndex(14)), addend: 9a, implicit_addend: false, flags: Wasm { r_type: 9 } })
+(46, Relocation { kind: Unknown, encoding: Generic, size: 20, target: Symbol(SymbolIndex(14)), addend: 9e, implicit_addend: false, flags: Wasm { r_type: 9 } })
+(53, Relocation { kind: Unknown, encoding: Generic, size: 20, target: Symbol(SymbolIndex(7)), addend: 0, implicit_addend: false, flags: Wasm { r_type: d } })
+(58, Relocation { kind: Unknown, encoding: Generic, size: 20, target: Symbol(SymbolIndex(8)), addend: 0, implicit_addend: false, flags: Wasm { r_type: 5 } })
+(5f, Relocation { kind: Unknown, encoding: Generic, size: 20, target: Symbol(SymbolIndex(14)), addend: af, implicit_addend: false, flags: Wasm { r_type: 9 } })
+(67, Relocation { kind: Unknown, encoding: Generic, size: 20, target: Symbol(SymbolIndex(14)), addend: ab, implicit_addend: false, flags: Wasm { r_type: 9 } })
+(73, Relocation { kind: Unknown, encoding: Generic, size: 20, target: Symbol(SymbolIndex(14)), addend: ad, implicit_addend: false, flags: Wasm { r_type: 9 } })
+(80, Relocation { kind: Unknown, encoding: Generic, size: 20, target: Symbol(SymbolIndex(14)), addend: b5, implicit_addend: false, flags: Wasm { r_type: 9 } })
+(8d, Relocation { kind: Unknown, encoding: Generic, size: 20, target: Symbol(SymbolIndex(a)), addend: 0, implicit_addend: false, flags: Wasm { r_type: d } })
+(92, Relocation { kind: Unknown, encoding: Generic, size: 20, target: Symbol(SymbolIndex(9)), addend: 0, implicit_addend: false, flags: Wasm { r_type: 5 } })
+(98, Relocation { kind: Unknown, encoding: Generic, size: 20, target: Symbol(SymbolIndex(14)), addend: c1, implicit_addend: false, flags: Wasm { r_type: 9 } })
+(a5, Relocation { kind: Unknown, encoding: Generic, size: 20, target: Symbol(SymbolIndex(7)), addend: 0, implicit_addend: false, flags: Wasm { r_type: d } })
+(aa, Relocation { kind: Unknown, encoding: Generic, size: 20, target: Symbol(SymbolIndex(f)), addend: 0, implicit_addend: false, flags: Wasm { r_type: 5 } })
+(b5, Relocation { kind: Unknown, encoding: Generic, size: 20, target: Symbol(SymbolIndex(14)), addend: d4, implicit_addend: false, flags: Wasm { r_type: 9 } })
+(c2, Relocation { kind: Unknown, encoding: Generic, size: 20, target: Symbol(SymbolIndex(7)), addend: 0, implicit_addend: false, flags: Wasm { r_type: d } })
+(c7, Relocation { kind: Unknown, encoding: Generic, size: 20, target: Symbol(SymbolIndex(10)), addend: 0, implicit_addend: false, flags: Wasm { r_type: 5 } })
+(cd, Relocation { kind: Unknown, encoding: Generic, size: 20, target: Symbol(SymbolIndex(14)), addend: e9, implicit_addend: false, flags: Wasm { r_type: 9 } })
+(da, Relocation { kind: Unknown, encoding: Generic, size: 20, target: Symbol(SymbolIndex(7)), addend: 0, implicit_addend: false, flags: Wasm { r_type: d } })
+(df, Relocation { kind: Unknown, encoding: Generic, size: 20, target: Symbol(SymbolIndex(11)), addend: 0, implicit_addend: false, flags: Wasm { r_type: 5 } })
+(eb, Relocation { kind: Unknown, encoding: Generic, size: 20, target: Symbol(SymbolIndex(0)), addend: 0, implicit_addend: false, flags: Wasm { r_type: 8 } })
+(f8, Relocation { kind: Unknown, encoding: Generic, size: 20, target: Symbol(SymbolIndex(14)), addend: f7, implicit_addend: false, flags: Wasm { r_type: 9 } })
+(fc, Relocation { kind: Unknown, encoding: Generic, size: 20, target: Symbol(SymbolIndex(14)), addend: 102, implicit_addend: false, flags: Wasm { r_type: 9 } })
+(106, Relocation { kind: Unknown, encoding: Generic, size: 20, target: Symbol(SymbolIndex(14)), addend: 127, implicit_addend: false, flags: Wasm { r_type: 9 } })
+(114, Relocation { kind: Unknown, encoding: Generic, size: 20, target: Symbol(SymbolIndex(14)), addend: 12a, implicit_addend: false, flags: Wasm { r_type: 9 } })
+(122, Relocation { kind: Unknown, encoding: Generic, size: 20, target: Symbol(SymbolIndex(14)), addend: 12e, implicit_addend: false, flags: Wasm { r_type: 9 } })
+(12e, Relocation { kind: Unknown, encoding: Generic, size: 20, target: Symbol(SymbolIndex(3)), addend: 0, implicit_addend: false, flags: Wasm { r_type: 8 } })
+(139, Relocation { kind: Unknown, encoding: Generic, size: 20, target: Symbol(SymbolIndex(1)), addend: 0, implicit_addend: false, flags: Wasm { r_type: d } })
+(13e, Relocation { kind: Unknown, encoding: Generic, size: 20, target: Symbol(SymbolIndex(14)), addend: 109, implicit_addend: false, flags: Wasm { r_type: 9 } })
+(142, Relocation { kind: Unknown, encoding: Generic, size: 20, target: Symbol(SymbolIndex(14)), addend: 11b, implicit_addend: false, flags: Wasm { r_type: 9 } })
+
+.debug_ranges relocations
+(0, Relocation { kind: Unknown, encoding: Generic, size: 20, target: Symbol(SymbolIndex(0)), addend: 0, implicit_addend: false, flags: Wasm { r_type: 8 } })
+(4, Relocation { kind: Unknown, encoding: Generic, size: 20, target: Symbol(SymbolIndex(0)), addend: d6, implicit_addend: false, flags: Wasm { r_type: 8 } })
+(8, Relocation { kind: Unknown, encoding: Generic, size: 20, target: Symbol(SymbolIndex(3)), addend: 0, implicit_addend: false, flags: Wasm { r_type: 8 } })
+(c, Relocation { kind: Unknown, encoding: Generic, size: 20, target: Symbol(SymbolIndex(3)), addend: 3, implicit_addend: false, flags: Wasm { r_type: 8 } })
+
+llvm.func_attr.annotate.my_annotation relocations
+(0, Relocation { kind: Unknown, encoding: Generic, size: 20, target: Symbol(SymbolIndex(0)), addend: 0, implicit_addend: false, flags: Wasm { r_type: 1a } })
+
+.debug_line relocations
+(2e, Relocation { kind: Unknown, encoding: Generic, size: 20, target: Symbol(SymbolIndex(0)), addend: 0, implicit_addend: false, flags: Wasm { r_type: 8 } })
+(77, Relocation { kind: Unknown, encoding: Generic, size: 20, target: Symbol(SymbolIndex(3)), addend: 1, implicit_addend: false, flags: Wasm { r_type: 8 } })
+
+Dynamic symbols
+
+Symbol map
+0x0-0x4 "data_func_ptr"
+0x3-0xd9 "_Z6relocsv"
+0xda-0xdd "_ZL11static_funcv"
+0xde-0xee "_ZTW11tls_counter"
