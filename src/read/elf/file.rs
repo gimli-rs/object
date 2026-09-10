@@ -799,15 +799,10 @@ pub trait FileHeader: Debug + Pod + read::private::Sealed {
         }
         let index = self.section_strings_index(endian, data)?;
         let shstrtab = sections.get(index.0).read_error("Invalid ELF e_shstrndx")?;
-        let strings = if let Some((shstrtab_offset, shstrtab_size)) = shstrtab.file_range(endian) {
-            let shstrtab_end = shstrtab_offset
-                .checked_add(shstrtab_size)
-                .read_error("Invalid ELF shstrtab size")?;
-            StringTable::new(data, shstrtab_offset, shstrtab_end)
-        } else {
-            StringTable::default()
-        };
-        Ok(strings)
+        let shstrtab_data = shstrtab
+            .data(endian, data)
+            .read_error("Invalid ELF shstrtab offset or size")?;
+        Ok(StringTable::from_bytes(shstrtab_data))
     }
 
     /// Return the section table.

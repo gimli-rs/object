@@ -798,12 +798,10 @@ pub trait SectionHeader: Debug + Pod + read::private::Sealed {
         if self.sh_type(endian) != elf::SHT_STRTAB {
             return Ok(None);
         }
-        let str_offset = self.sh_offset(endian).into();
-        let str_size = self.sh_size(endian).into();
-        let str_end = str_offset
-            .checked_add(str_size)
+        let strtab_data = self
+            .data(endian, data)
             .read_error("Invalid ELF string section offset or size")?;
-        Ok(Some(StringTable::new(data, str_offset, str_end)))
+        Ok(Some(StringTable::from_bytes(strtab_data)))
     }
 
     /// Return the symbols in the section.

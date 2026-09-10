@@ -63,19 +63,18 @@ where
                 .read_at::<U32<_>>(offset)
                 .read_error("Missing XCOFF string table")?
                 .get(BE);
-            let str_end = offset
-                .checked_add(length as u64)
+            let strings = data
+                .read_bytes(&mut offset, length.into())
                 .read_error("Invalid XCOFF string table length")?;
-            let strings = StringTable::new(data, offset, str_end);
 
             (symbols, strings)
         } else {
-            (&[][..], StringTable::default())
+            (&[][..], &[][..])
         };
 
         Ok(SymbolTable {
             symbols,
-            strings,
+            strings: StringTable::from_bytes(strings),
             header: PhantomData,
         })
     }

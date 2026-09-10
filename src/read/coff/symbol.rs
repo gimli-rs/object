@@ -54,17 +54,19 @@ impl<'data, R: ReadRef<'data>, Coff: CoffHeader> SymbolTable<'data, R, Coff> {
                 .read_at::<U32<_>>(offset)
                 .read_error("Missing COFF string table")?
                 .get(LE);
-            let str_end = offset
-                .checked_add(length as u64)
+            let strings = data
+                .read_bytes(&mut offset, length.into())
                 .read_error("Invalid COFF string table length")?;
-            let strings = StringTable::new(data, offset, str_end);
 
             (symbols, strings)
         } else {
-            (&[][..], StringTable::default())
+            (&[][..], &[][..])
         };
 
-        Ok(SymbolTable { symbols, strings })
+        Ok(SymbolTable {
+            symbols,
+            strings: StringTable::from_bytes(strings),
+        })
     }
 
     /// Return the string table used for the symbol names.
