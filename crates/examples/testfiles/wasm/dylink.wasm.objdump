@@ -33,13 +33,13 @@ Symbols
 11: Symbol { name: "retained_int", address: 0, size: 0, kind: Data, section: Undefined, scope: Dynamic, weak: false, flags: None }
 12: Symbol { name: "", address: 0, size: 0, kind: File, section: None, scope: Compilation, weak: false, flags: None }
 13: Symbol { name: "get", address: 24, size: 45, kind: Text, section: Section(SectionIndex(a)), scope: Dynamic, weak: false, flags: None }
-14: Symbol { name: "data_int", address: 0, size: 0, kind: Data, section: Section(SectionIndex(b)), scope: Dynamic, weak: false, flags: None }
-15: Symbol { name: "bss_int", address: 0, size: 0, kind: Data, section: Section(SectionIndex(b)), scope: Dynamic, weak: false, flags: None }
-16: Symbol { name: "tls_int", address: 0, size: 0, kind: Data, section: Section(SectionIndex(b)), scope: Dynamic, weak: false, flags: None }
-17: Symbol { name: "tbss_int", address: 0, size: 0, kind: Data, section: Section(SectionIndex(b)), scope: Dynamic, weak: false, flags: None }
+14: Symbol { name: "data_int", address: c, size: 0, kind: Data, section: Section(SectionIndex(b)), scope: Dynamic, weak: false, flags: None }
+15: Symbol { name: "bss_int", address: 1c, size: 0, kind: Data, section: Section(SectionIndex(b)), scope: Dynamic, weak: false, flags: None }
+16: Symbol { name: "tls_int", address: 10, size: 0, kind: Data, section: Section(SectionIndex(b)), scope: Dynamic, weak: false, flags: None }
+17: Symbol { name: "tbss_int", address: 20, size: 0, kind: Data, section: Section(SectionIndex(b)), scope: Dynamic, weak: false, flags: None }
 18: Symbol { name: "rodata_bytes", address: 0, size: 0, kind: Data, section: Section(SectionIndex(b)), scope: Dynamic, weak: false, flags: None }
-19: Symbol { name: "rodata_str", address: 0, size: 0, kind: Data, section: Section(SectionIndex(b)), scope: Dynamic, weak: false, flags: None }
-20: Symbol { name: "retained_int", address: 0, size: 0, kind: Data, section: Section(SectionIndex(b)), scope: Dynamic, weak: false, flags: None }
+19: Symbol { name: "rodata_str", address: 14, size: 0, kind: Data, section: Section(SectionIndex(b)), scope: Dynamic, weak: false, flags: None }
+20: Symbol { name: "retained_int", address: 18, size: 0, kind: Data, section: Section(SectionIndex(b)), scope: Dynamic, weak: false, flags: None }
 21: Symbol { name: "__wasm_apply_data_relocs", address: 5, size: f, kind: Text, section: Section(SectionIndex(a)), scope: Dynamic, weak: false, flags: None }
 22: Symbol { name: "__wasm_call_ctors", address: 2, size: 2, kind: Text, section: Section(SectionIndex(a)), scope: Compilation, weak: false, flags: None }
 23: Symbol { name: "__wasm_init_memory", address: 15, size: e, kind: Text, section: Section(SectionIndex(a)), scope: Compilation, weak: false, flags: None }
@@ -47,8 +47,14 @@ Symbols
 Dynamic symbols
 
 Symbol map
-0x0-0x1 "retained_int"
+0x0-0x1 "rodata_bytes"
 0x2-0x4 "__wasm_call_ctors"
 0x5-0x14 "__wasm_apply_data_relocs"
+0xc-0x10 "data_int"
+0x10-0x14 "tls_int"
+0x14-0x15 "rodata_str"
 0x15-0x23 "__wasm_init_memory"
+0x18-0x1c "retained_int"
+0x1c-0x20 "bss_int"
+0x20-0x22 "tbss_int"
 0x24-0x69 "get"
