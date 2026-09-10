@@ -348,7 +348,7 @@ impl Rewriter<'_> {
             found = true;
         }
         if !found {
-            let val = runpaths.join(&[b':'][..]).into();
+            let val = runpaths.join(&b":"[..]).into();
             #[cfg(feature = "logging")]
             info!("Adding DT_RUNPATH entry {}", val);
             dynamic.push(build::elf::Dynamic::String {
