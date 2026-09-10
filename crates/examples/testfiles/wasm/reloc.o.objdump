@@ -7,9 +7,10 @@ Entry Address: 0
 1: Section { name: "<type>", address: 0, size: 11, align: 1, kind: Metadata, flags: None }
 2: Section { name: "<import>", address: 0, size: c1, align: 1, kind: Linker, flags: None }
 3: Section { name: "<function>", address: 0, size: 4, align: 1, kind: Metadata, flags: None }
-9: Section { name: "<element>", address: 0, size: 8, align: 1, kind: Data, flags: None }
-12: Section { name: "<data_count>", address: 0, size: 1, align: 1, kind: UninitializedData, flags: None }
+9: Section { name: "<element>", address: 0, size: 8, align: 1, kind: Metadata, flags: None }
+12: Section { name: "<data_count>", address: 0, size: 1, align: 1, kind: Metadata, flags: None }
 10: Section { name: "<code>", address: 0, size: dd, align: 1, kind: Text, flags: None }
+11: Section { name: "<data>", address: 0, size: 3b, align: 1, kind: Metadata, flags: None }
 0: Section { name: ".debug_abbrev", address: 0, size: 91, align: 1, kind: Other, flags: None }
 0: Section { name: ".debug_info", address: 0, size: 126, align: 1, kind: Other, flags: None }
 0: Section { name: ".debug_ranges", address: 0, size: 18, align: 1, kind: Other, flags: None }
@@ -26,11 +27,11 @@ Entry Address: 0
 0: Section { name: "producers", address: 0, size: 8f, align: 1, kind: Other, flags: None }
 0: Section { name: "target_features", address: 0, size: a1, align: 1, kind: Other, flags: None }
 14: Section { name: ".data.global_int", address: 0, size: 4, align: 4, kind: Data, flags: Wasm { flags: 0 } }
-15: Section { name: ".data.global_point", address: 0, size: 8, align: 4, kind: Data, flags: Wasm { flags: 0 } }
-16: Section { name: ".tbss.tls_counter", address: 0, size: 4, align: 4, kind: UninitializedTls, flags: Wasm { flags: WASM_SEG_FLAG_TLS } }
-17: Section { name: ".data.data_ptr_to_global", address: 0, size: 4, align: 4, kind: Data, flags: Wasm { flags: 0 } }
-18: Section { name: ".data.data_ptr_with_addend", address: 0, size: 4, align: 4, kind: Data, flags: Wasm { flags: 0 } }
-19: Section { name: ".data.data_func_ptr", address: 0, size: 4, align: 4, kind: Data, flags: Wasm { flags: 0 } }
+15: Section { name: ".data.global_point", address: 4, size: 8, align: 4, kind: Data, flags: Wasm { flags: 0 } }
+16: Section { name: ".tbss.tls_counter", address: c, size: 4, align: 4, kind: UninitializedTls, flags: Wasm { flags: WASM_SEG_FLAG_TLS } }
+17: Section { name: ".data.data_ptr_to_global", address: 10, size: 4, align: 4, kind: Data, flags: Wasm { flags: 0 } }
+18: Section { name: ".data.data_ptr_with_addend", address: 14, size: 4, align: 4, kind: Data, flags: Wasm { flags: 0 } }
+19: Section { name: ".data.data_func_ptr", address: 18, size: 4, align: 4, kind: Data, flags: Wasm { flags: 0 } }
 
 Symbols
 0: Symbol { name: "_Z6relocsv", address: 3, size: c5, kind: Text, section: Section(SectionIndex(a)), scope: Linkage, weak: false, flags: None }
@@ -39,16 +40,16 @@ Symbols
 3: Symbol { name: "_ZL11static_funcv", address: c9, size: 3, kind: Text, section: Section(SectionIndex(a)), scope: Compilation, weak: false, flags: None }
 4: Symbol { name: "", address: 0, size: 0, kind: Data, section: Undefined, scope: Dynamic, weak: false, flags: None }
 5: Symbol { name: "global_int", address: 0, size: 4, kind: Data, section: Section(SectionIndex(e)), scope: Linkage, weak: false, flags: None }
-6: Symbol { name: "global_point", address: 0, size: 8, kind: Data, section: Section(SectionIndex(f)), scope: Linkage, weak: false, flags: None }
-7: Symbol { name: "tls_counter", address: 0, size: 4, kind: Tls, section: Section(SectionIndex(10)), scope: Linkage, weak: false, flags: None }
+6: Symbol { name: "global_point", address: 4, size: 8, kind: Data, section: Section(SectionIndex(f)), scope: Linkage, weak: false, flags: None }
+7: Symbol { name: "tls_counter", address: c, size: 4, kind: Tls, section: Section(SectionIndex(10)), scope: Linkage, weak: false, flags: None }
 8: Symbol { name: "__tls_base", address: 0, size: 0, kind: Data, section: Undefined, scope: Dynamic, weak: false, flags: None }
 9: Symbol { name: "", address: 0, size: 0, kind: Unknown, section: Undefined, scope: Dynamic, weak: false, flags: None }
 10: Symbol { name: "__cxa_begin_catch", address: 0, size: 0, kind: Text, section: Undefined, scope: Dynamic, weak: false, flags: None }
 11: Symbol { name: "__cxa_end_catch", address: 0, size: 0, kind: Text, section: Undefined, scope: Dynamic, weak: false, flags: None }
 12: Symbol { name: "_ZTW11tls_counter", address: cd, size: 10, kind: Text, section: Section(SectionIndex(a)), scope: Linkage, weak: true, flags: None }
-13: Symbol { name: "data_ptr_to_global", address: 0, size: 4, kind: Data, section: Section(SectionIndex(11)), scope: Linkage, weak: false, flags: None }
-14: Symbol { name: "data_ptr_with_addend", address: 0, size: 4, kind: Data, section: Section(SectionIndex(12)), scope: Linkage, weak: false, flags: None }
-15: Symbol { name: "data_func_ptr", address: 0, size: 4, kind: Data, section: Section(SectionIndex(13)), scope: Linkage, weak: false, flags: None }
+13: Symbol { name: "data_ptr_to_global", address: 10, size: 4, kind: Data, section: Section(SectionIndex(11)), scope: Linkage, weak: false, flags: None }
+14: Symbol { name: "data_ptr_with_addend", address: 14, size: 4, kind: Data, section: Section(SectionIndex(12)), scope: Linkage, weak: false, flags: None }
+15: Symbol { name: "data_func_ptr", address: 18, size: 4, kind: Data, section: Section(SectionIndex(13)), scope: Linkage, weak: false, flags: None }
 16: Symbol { name: "", address: 0, size: 0, kind: Section, section: Unknown, scope: Compilation, weak: false, flags: None }
 17: Symbol { name: "", address: 0, size: 0, kind: Section, section: Unknown, scope: Compilation, weak: false, flags: None }
 18: Symbol { name: "", address: 0, size: 0, kind: Section, section: Unknown, scope: Compilation, weak: false, flags: None }
@@ -136,7 +137,11 @@ llvm.func_attr.annotate.my_annotation relocations
 Dynamic symbols
 
 Symbol map
-0x0-0x4 "data_func_ptr"
+0x0-0x4 "global_int"
 0x3-0xc8 "_Z6relocsv"
+0x4-0xc "global_point"
+0x10-0x14 "data_ptr_to_global"
+0x14-0x18 "data_ptr_with_addend"
+0x18-0x1c "data_func_ptr"
 0xc9-0xcc "_ZL11static_funcv"
 0xcd-0xdd "_ZTW11tls_counter"

@@ -8,15 +8,18 @@ Entry Address: 16
 1: Section { name: "<type>", address: 0, size: 8, align: 1, kind: Metadata, flags: None }
 2: Section { name: "<import>", address: 0, size: a6, align: 1, kind: Linker, flags: None }
 3: Section { name: "<function>", address: 0, size: 5, align: 1, kind: Metadata, flags: None }
-6: Section { name: "<global>", address: 0, size: 29, align: 1, kind: Data, flags: None }
+6: Section { name: "<global>", address: 0, size: 29, align: 1, kind: Metadata, flags: None }
 7: Section { name: "<export>", address: 0, size: 77, align: 1, kind: Linker, flags: None }
-8: Section { name: "<start>", address: 0, size: 1, align: 1, kind: Linker, flags: None }
-12: Section { name: "<data_count>", address: 0, size: 1, align: 1, kind: UninitializedData, flags: None }
+8: Section { name: "<start>", address: 0, size: 1, align: 1, kind: Metadata, flags: None }
+12: Section { name: "<data_count>", address: 0, size: 1, align: 1, kind: Metadata, flags: None }
 10: Section { name: "<code>", address: 0, size: f4, align: 1, kind: Text, flags: None }
-11: Section { name: "<data>", address: 0, size: 24, align: 1, kind: Data, flags: None }
+11: Section { name: "<data>", address: 0, size: 24, align: 1, kind: Metadata, flags: None }
 0: Section { name: "name", address: 0, size: e7, align: 1, kind: Other, flags: None }
 0: Section { name: "producers", address: 0, size: 5e, align: 1, kind: Other, flags: None }
 0: Section { name: "target_features", address: 0, size: 8d, align: 1, kind: Other, flags: None }
+14: Section { name: "<data_segment>", address: 0, size: 8, align: 1, kind: Data, flags: None }
+15: Section { name: "<data_segment>", address: 0, size: 9, align: 1, kind: Data, flags: None }
+16: Section { name: "<data_segment>", address: 0, size: c, align: 1, kind: Data, flags: None }
 
 Symbols
 0: Symbol { name: "env", address: 0, size: 0, kind: File, section: None, scope: Dynamic, weak: false, flags: None }
@@ -49,7 +52,7 @@ Symbol map
 0x2-0x4 "__wasm_call_ctors"
 0x4-0x5 "tbss_int"
 0x5-0x14 "__wasm_apply_data_relocs"
-0x8-0x14 "rodata_bytes"
+0x8-0x9 "rodata_bytes"
 0x14-0x16 "data_int"
 0x16-0x96 "__wasm_init_memory"
 0x18-0x1c "rodata_str"
