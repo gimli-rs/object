@@ -223,16 +223,19 @@ impl<'data, R: ReadRef<'data>> WasmFile<'data, R> {
             weak: false,
         });
 
-        let mut local_func_kinds = Vec::new();
         let mut entry_func_id = None;
         let mut code_range_start = 0;
-        let mut code_ranges = Vec::new();
         let mut imports_section = None;
         let mut exports = None;
         let mut names = None;
         let mut symbols = None;
         let mut segment_infos: Vec<wp::Segment<'data>> = Vec::new();
-        // One-to-one mapping of globals to their value (if the global is a constant integer).
+
+        // Function kind for each function section entry.
+        let mut local_func_kinds = Vec::new();
+        // Address range of each code section entry.
+        let mut code_ranges = Vec::new();
+        // Value of each global section entry if the global is a constant integer.
         let mut global_values = Vec::new();
 
         for payload in parser {
@@ -275,7 +278,7 @@ impl<'data, R: ReadRef<'data>> WasmFile<'data, R> {
                             // There should be exactly one instruction.
                             let init = global.init_expr.get_operators_reader().read();
                             address = match init.read_error("Couldn't read a global init expr")? {
-                                wp::Operator::I32Const { value } => Some(value as u64),
+                                wp::Operator::I32Const { value } => Some(value as u32 as u64),
                                 wp::Operator::I64Const { value } => Some(value as u64),
                                 _ => None,
                             };
@@ -406,12 +409,6 @@ impl<'data, R: ReadRef<'data>> WasmFile<'data, R> {
             }
         }
 
-        if let Some(entry_func_id) = entry_func_id {
-            if let Some(range) = code_ranges.get(entry_func_id as usize) {
-                file.entry = range.0;
-            }
-        }
-
         // Apply any `SegmentInfo` entries collected from the `linking` section to the already-parsed data segments.
         for (i, info) in segment_infos.into_iter().enumerate() {
             if let Some(slot) = file.data_segments.get_mut(i) {
@@ -493,6 +490,19 @@ impl<'data, R: ReadRef<'data>> WasmFile<'data, R> {
             }
         }
 
+        // Bias to apply to function indices when accessing `local_func_kinds` and `code_ranges`.
+        let local_func_base = import_func_names.len() as u32;
+        // Bias to apply to global indices when accessing `global_values`.
+        let local_global_base = import_global_names.len() as u32;
+
+        if let Some(entry_func_id) = entry_func_id {
+            if let Some(local_func_index) = entry_func_id.checked_sub(local_func_base) {
+                if let Some(range) = code_ranges.get(local_func_index as usize) {
+                    file.entry = range.0;
+                }
+            }
+        }
+
         if let Some(symbols) = symbols {
             // We have a symbol table, so we don't need to add symbols for locals or exports.
             // These sections shouldn't be present at the same time as a symbol table anyway.
@@ -561,9 +571,9 @@ impl<'data, R: ReadRef<'data>> WasmFile<'data, R> {
                     wp::SymbolInfo::Func {
                         index, mut name, ..
                     } => {
-                        if let Some(local_index) = index.checked_sub(import_func_names.len() as u32)
-                        {
-                            if let Some(range) = code_ranges.get(local_index as usize).copied() {
+                        if let Some(local_func_index) = index.checked_sub(local_func_base) {
+                            if let Some(range) = code_ranges.get(local_func_index as usize).copied()
+                            {
                                 address = range.0;
                                 size = range.1;
                             }
@@ -586,12 +596,21 @@ impl<'data, R: ReadRef<'data>> WasmFile<'data, R> {
                         // TODO: find the section name
                         None
                     }
-                    wp::SymbolInfo::Global { name, index, .. } => {
-                        if !flags.contains(wp::SymbolFlags::EXPLICIT_NAME) {
-                            import_global_names.get(index as usize).copied()
+                    wp::SymbolInfo::Global {
+                        index, mut name, ..
+                    } => {
+                        if let Some(local_global_index) = index.checked_sub(local_global_base) {
+                            if let Some(Some(value)) =
+                                global_values.get(local_global_index as usize).copied()
+                            {
+                                address = value;
+                            }
                         } else {
-                            name
+                            if !flags.contains(wp::SymbolFlags::EXPLICIT_NAME) {
+                                name = import_global_names.get(index as usize).copied()
+                            }
                         }
+                        name
                     }
                     wp::SymbolInfo::Event { name, .. } | wp::SymbolInfo::Table { name, .. } => name,
                 };
@@ -618,11 +637,9 @@ impl<'data, R: ReadRef<'data>> WasmFile<'data, R> {
 
                 let (kind, section_idx) = match export.kind {
                     wp::ExternalKind::Func | wp::ExternalKind::FuncExact => {
-                        if let Some(local_func_id) =
-                            export.index.checked_sub(import_func_names.len() as u32)
-                        {
+                        if let Some(local_func_index) = export.index.checked_sub(local_func_base) {
                             let local_func_kind = local_func_kinds
-                                .get_mut(local_func_id as usize)
+                                .get_mut(local_func_index as usize)
                                 .read_error("Invalid Wasm export index")?;
                             *local_func_kind = LocalFunctionKind::Exported;
                         }
@@ -640,15 +657,15 @@ impl<'data, R: ReadRef<'data>> WasmFile<'data, R> {
                 let mut address = 0;
                 let mut size = 0;
                 if export.kind == wp::ExternalKind::Global {
-                    if let Some(&Some(x)) = global_values.get(export.index as usize) {
-                        address = x;
+                    if let Some(local_global_index) = export.index.checked_sub(local_global_base) {
+                        if let Some(&Some(x)) = global_values.get(local_global_index as usize) {
+                            address = x;
+                        }
                     }
                 }
                 if export.kind == wp::ExternalKind::Func {
-                    if let Some(local_func_id) =
-                        export.index.checked_sub(import_func_names.len() as u32)
-                    {
-                        if let Some(range) = code_ranges.get(local_func_id as usize) {
+                    if let Some(local_func_index) = export.index.checked_sub(local_func_base) {
+                        if let Some(range) = code_ranges.get(local_func_index as usize) {
                             address = range.0;
                             size = range.1
                         }
@@ -677,17 +694,15 @@ impl<'data, R: ReadRef<'data>> WasmFile<'data, R> {
                 };
                 for naming in name_map {
                     let naming = naming.read_error("Couldn't read a function name")?;
-                    let Some(local_index) =
-                        naming.index.checked_sub(import_func_names.len() as u32)
-                    else {
+                    let Some(local_func_index) = naming.index.checked_sub(local_func_base) else {
                         continue;
                     };
                     let Some(LocalFunctionKind::Unknown) =
-                        local_func_kinds.get(local_index as usize)
+                        local_func_kinds.get(local_func_index as usize)
                     else {
                         continue;
                     };
-                    let Some((address, size)) = code_ranges.get(local_index as usize).copied()
+                    let Some((address, size)) = code_ranges.get(local_func_index as usize).copied()
                     else {
                         continue;
                     };
