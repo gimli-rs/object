@@ -45,6 +45,9 @@ Symbols
 (4a, Relocation { kind: Unknown, encoding: Generic, size: 28, target: Symbol(SymbolIndex(7)), addend: 0, implicit_addend: false, flags: Wasm { r_type: 7 } })
 (54, Relocation { kind: Unknown, encoding: Generic, size: 28, target: Symbol(SymbolIndex(8)), addend: 0, implicit_addend: false, flags: Wasm { r_type: 7 } })
 
+.data.rodata_str relocations
+(0, Relocation { kind: Unknown, encoding: Generic, size: 20, target: Symbol(SymbolIndex(9)), addend: 0, implicit_addend: false, flags: Wasm { r_type: 5 } })
+
 Dynamic symbols
 
 Symbol map

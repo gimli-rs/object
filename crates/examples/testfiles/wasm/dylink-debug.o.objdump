@@ -95,6 +95,9 @@ Symbols
 .debug_line relocations
 (30, Relocation { kind: Unknown, encoding: Generic, size: 20, target: Symbol(SymbolIndex(0)), addend: 1, implicit_addend: false, flags: Wasm { r_type: 8 } })
 
+.data.rodata_str relocations
+(0, Relocation { kind: Unknown, encoding: Generic, size: 20, target: Symbol(SymbolIndex(8)), addend: 0, implicit_addend: false, flags: Wasm { r_type: 5 } })
+
 Dynamic symbols
 
 Symbol map
