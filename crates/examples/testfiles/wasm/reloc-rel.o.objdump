@@ -132,6 +132,15 @@ llvm.func_attr.annotate.my_annotation relocations
 (2e, Relocation { kind: Unknown, encoding: Generic, size: 20, target: Symbol(SymbolIndex(0)), addend: 0, implicit_addend: false, flags: Wasm { r_type: 8 } })
 (77, Relocation { kind: Unknown, encoding: Generic, size: 20, target: Symbol(SymbolIndex(3)), addend: 1, implicit_addend: false, flags: Wasm { r_type: 8 } })
 
+.data.data_ptr_to_global relocations
+(0, Relocation { kind: Unknown, encoding: Generic, size: 20, target: Symbol(SymbolIndex(6)), addend: 0, implicit_addend: false, flags: Wasm { r_type: 5 } })
+
+.data.data_ptr_with_addend relocations
+(0, Relocation { kind: Unknown, encoding: Generic, size: 20, target: Symbol(SymbolIndex(6)), addend: 4, implicit_addend: false, flags: Wasm { r_type: 5 } })
+
+.data.data_func_ptr relocations
+(0, Relocation { kind: Unknown, encoding: Generic, size: 20, target: Symbol(SymbolIndex(2)), addend: 0, implicit_addend: false, flags: Wasm { r_type: 2 } })
+
 Dynamic symbols
 
 Symbol map
