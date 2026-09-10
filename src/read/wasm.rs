@@ -85,6 +85,8 @@ pub struct WasmFile<'data, R = &'data [u8]> {
     relocations: Vec<RelocSection>,
     // Data segments parsed from the `data` section.
     data_segments: Vec<WasmDataSegmentInternal<'data>>,
+    // Whether the file has a `dylink` or `dylink.0` custom section.
+    has_dylink: bool,
     // Whether the file has a `linking` custom section (relocatable object).
     has_linking: bool,
     // Whether the file has DWARF information.
@@ -206,6 +208,7 @@ impl<'data, R: ReadRef<'data>> WasmFile<'data, R> {
             id_sections: Default::default(),
             relocations: Vec::new(),
             data_segments: Vec::new(),
+            has_dylink: false,
             has_linking: false,
             has_debug_symbols: false,
             symbols: Vec::new(),
@@ -357,6 +360,9 @@ impl<'data, R: ReadRef<'data>> WasmFile<'data, R> {
                     if name == "name" {
                         let reader = wp::BinaryReader::new(section.data(), section.data_offset());
                         names = Some(wp::NameSectionReader::new(reader));
+                    } else if name == "dylink" || name == "dylink.0" {
+                        // https://github.com/WebAssembly/tool-conventions/blob/main/DynamicLinking.md
+                        file.has_dylink = true;
                     } else if name == "linking" {
                         // https://github.com/WebAssembly/tool-conventions/blob/main/Linking.md
                         file.has_linking = true;
@@ -807,6 +813,8 @@ impl<'data, R: ReadRef<'data>> Object<'data> for WasmFile<'data, R> {
     fn kind(&self) -> ObjectKind {
         if self.has_linking {
             ObjectKind::Relocatable
+        } else if self.has_dylink {
+            ObjectKind::Dynamic
         } else {
             ObjectKind::Executable
         }
