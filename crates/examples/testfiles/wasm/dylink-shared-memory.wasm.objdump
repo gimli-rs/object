@@ -1,5 +1,5 @@
 Format: Wasm Little-endian 32-bit
-Kind: Executable
+Kind: Dynamic
 Architecture: Wasm32
 Flags: None
 Relative Address Base: 0
