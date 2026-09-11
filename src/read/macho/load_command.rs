@@ -458,17 +458,47 @@ impl<E: Endian> macho::SymtabCommand<E> {
         endian: E,
         data: R,
     ) -> Result<SymbolTable<'data, Mach, R>> {
+        self.symbols_internal(endian, data, false)
+    }
+
+    /// Return the symbol table that this command references, and read the
+    /// symbol names as needed.
+    ///
+    /// This allows us to avoid loading the entire string table in the dyld shared
+    /// cache. Prefer [`Self::symbols`] for other uses.
+    pub(super) fn symbols_lazy<'data, Mach: MachHeader<Endian = E>, R: ReadRef<'data>>(
+        &self,
+        endian: E,
+        data: R,
+    ) -> Result<SymbolTable<'data, Mach, R>> {
+        self.symbols_internal(endian, data, true)
+    }
+
+    fn symbols_internal<'data, Mach: MachHeader<Endian = E>, R: ReadRef<'data>>(
+        &self,
+        endian: E,
+        data: R,
+        lazy: bool,
+    ) -> Result<SymbolTable<'data, Mach, R>> {
         let symbols = data
             .read_slice_at(
                 self.symoff.get(endian).into(),
                 self.nsyms.get(endian) as usize,
             )
             .read_error("Invalid Mach-O symbol table offset or size")?;
-        let str_start: u64 = self.stroff.get(endian).into();
-        let str_end = str_start
-            .checked_add(self.strsize.get(endian).into())
-            .read_error("Invalid Mach-O string table length")?;
-        let strings = StringTable::new(data, str_start, str_end);
+        let stroff: u64 = self.stroff.get(endian).into();
+        let strsize: u64 = self.strsize.get(endian).into();
+        let strings = if lazy {
+            let str_end = stroff
+                .checked_add(strsize)
+                .read_error("Invalid Mach-O string table offset or size")?;
+            StringTable::new(data, stroff, str_end)
+        } else {
+            let strings = data
+                .read_bytes_at(stroff, strsize)
+                .read_error("Invalid Mach-O string table offset or size")?;
+            StringTable::from_bytes(strings)
+        };
         Ok(SymbolTable::new(symbols, strings))
     }
 }

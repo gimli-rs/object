@@ -152,7 +152,7 @@ where
         // The symbols are found in the __LINKEDIT segment, so make sure to read them from the
         // correct subcache.
         let symbols = match (symtab, linkedit_data) {
-            (Some(symtab), Some(linkedit_data)) => symtab.symbols(endian, linkedit_data)?,
+            (Some(symtab), Some(linkedit_data)) => symtab.symbols_lazy(endian, linkedit_data)?,
             _ => SymbolTable::default(),
         };
 

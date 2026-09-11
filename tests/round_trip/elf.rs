@@ -404,3 +404,29 @@ fn gnu_property_inner<Elf: FileHeader<Endian = Endianness>>(architecture: Archit
     assert!(props.next().unwrap().is_none());
     assert!(notes.next().unwrap().is_none());
 }
+
+#[test]
+#[cfg(feature = "std")]
+fn long_symbol_name() {
+    // `ReadCache::read_bytes_at_until` can't read long strings.
+    let name = vec![b'a'; 8192];
+
+    let mut object =
+        write::Object::new(BinaryFormat::Elf, Architecture::X86_64, Endianness::Little);
+    object.add_symbol(write::Symbol {
+        name: name.clone(),
+        value: 0,
+        size: 0,
+        kind: SymbolKind::Text,
+        scope: SymbolScope::Linkage,
+        weak: false,
+        section: write::SymbolSection::Absolute,
+        flags: SymbolFlags::None,
+    });
+    let bytes = object.write().unwrap();
+
+    let cache = read::ReadCache::new(std::io::Cursor::new(bytes));
+    let object = read::File::parse(&cache).unwrap();
+    let symbol = object.symbol_by_name_bytes(&name).unwrap();
+    assert_eq!(symbol.name_bytes().unwrap(), &name[..]);
+}

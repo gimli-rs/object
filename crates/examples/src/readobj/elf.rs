@@ -165,7 +165,7 @@ fn print_segment_dynamic<Elf: FileHeader>(
         // TODO: print error if DT_STRTAB/DT_STRSZ are invalid
         for s in segments {
             if let Ok(Some(data)) = s.data_range(endian, data, strtab, strsz) {
-                dynstr = StringTable::new(data, 0, data.len() as u64);
+                dynstr = StringTable::from_bytes(data);
                 break;
             }
         }

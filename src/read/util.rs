@@ -1,7 +1,6 @@
 use alloc::string::String;
 use core::convert::TryInto;
 use core::fmt;
-use core::marker::PhantomData;
 
 use crate::SkipDebugList;
 use crate::pod::{Pod, from_bytes, slice_from_bytes};
@@ -276,31 +275,56 @@ pub struct StringTable<'data, R = &'data [u8]>
 where
     R: ReadRef<'data>,
 {
-    data: Option<SkipDebugList<R>>,
-    start: u64,
-    end: u64,
-    marker: PhantomData<&'data ()>,
+    data: StringTableData<'data, R>,
+}
+
+#[derive(Debug, Clone, Copy)]
+enum StringTableData<'data, R>
+where
+    R: ReadRef<'data>,
+{
+    /// The complete string table data.
+    Bytes(Bytes<'data>),
+    /// A range of data that strings are read from as needed.
+    Lazy {
+        data: SkipDebugList<R>,
+        start: u64,
+        end: u64,
+    },
 }
 
 impl<'data, R: ReadRef<'data>> StringTable<'data, R> {
     /// Interpret the given data as a string table.
+    // TODO: rename to `new` when doing breaking changes
+    pub fn from_bytes(data: &'data [u8]) -> Self {
+        StringTable {
+            data: StringTableData::Bytes(Bytes(data)),
+        }
+    }
+
+    /// Interpret the given range of data as a string table, and read each string as
+    /// needed.
+    ///
+    /// This allows us to avoid loading the entire string table in the dyld shared
+    /// cache. Prefer [`Self::from_bytes`] for other uses.
     pub fn new(data: R, start: u64, end: u64) -> Self {
         StringTable {
-            data: Some(SkipDebugList(data)),
-            start,
-            end,
-            marker: PhantomData,
+            data: StringTableData::Lazy {
+                data: SkipDebugList(data),
+                start,
+                end,
+            },
         }
     }
 
     /// Return the string at the given offset.
     pub fn get(&self, offset: u32) -> Result<&'data [u8], ()> {
         match self.data {
-            Some(data) => {
-                let r_start = self.start.checked_add(offset.into()).ok_or(())?;
-                data.read_bytes_at_until(r_start..self.end, 0)
+            StringTableData::Bytes(data) => data.read_string_at(offset as usize),
+            StringTableData::Lazy { data, start, end } => {
+                let r_start = start.checked_add(offset.into()).ok_or(())?;
+                data.read_bytes_at_until(r_start..end, 0)
             }
-            None => Err(()),
         }
     }
 }
@@ -308,10 +332,7 @@ impl<'data, R: ReadRef<'data>> StringTable<'data, R> {
 impl<'data, R: ReadRef<'data>> Default for StringTable<'data, R> {
     fn default() -> Self {
         StringTable {
-            data: None,
-            start: 0,
-            end: 0,
-            marker: PhantomData,
+            data: StringTableData::Bytes(Bytes(&[])),
         }
     }
 }
