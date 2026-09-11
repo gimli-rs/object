@@ -24,7 +24,7 @@ Symbols
 3: Symbol { name: "weak_data", address: 0, size: 4, kind: Data, section: Section(SectionIndex(e)), scope: Dynamic, weak: true, flags: None }
 4: Symbol { name: "weak_tls", address: 4, size: 4, kind: Tls, section: Section(SectionIndex(f)), scope: Dynamic, weak: true, flags: None }
 5: Symbol { name: "__tls_base", address: 0, size: 0, kind: Data, section: Undefined, scope: Dynamic, weak: false, flags: None }
-6: Symbol { name: "", address: 0, size: 0, kind: Data, section: Undefined, scope: Dynamic, weak: false, flags: None }
+6: Symbol { name: "__indirect_function_table", address: 0, size: 0, kind: Data, section: Undefined, scope: Dynamic, weak: false, flags: None }
 
 <code> relocations
 (10, Relocation { kind: Unknown, encoding: Generic, size: 28, target: Symbol(SymbolIndex(2)), addend: 0, implicit_addend: false, flags: Wasm { r_type: 7 } })
@@ -35,6 +35,13 @@ Symbols
 (4c, Relocation { kind: Unknown, encoding: Generic, size: 28, target: Symbol(SymbolIndex(0)), addend: 0, implicit_addend: false, flags: Wasm { r_type: 0 } })
 
 Dynamic symbols
+
+Import { library: "", name: "__linear_memory", flags: Wasm { module: "env", kind: WASM_EXTERNAL_MEMORY, index: 0 } }
+Import { library: "", name: "weak_undef", weak: true, flags: Wasm { module: "env", kind: WASM_EXTERNAL_FUNCTION, index: 0 } }
+Import { library: "", name: "__tls_base", flags: Wasm { module: "env", kind: WASM_EXTERNAL_GLOBAL, index: 0 } }
+Import { library: "", name: "__indirect_function_table", flags: Wasm { module: "env", kind: WASM_EXTERNAL_TABLE, index: 0 } }
+Import { library: "", name: "weak_undef", flags: Wasm { module: "GOT.func", kind: WASM_EXTERNAL_GLOBAL, index: 1 } }
+Import { library: "", name: "weak_data", flags: Wasm { module: "GOT.mem", kind: WASM_EXTERNAL_GLOBAL, index: 2 } }
 
 Symbol map
 0x0-0x4 "weak_data"

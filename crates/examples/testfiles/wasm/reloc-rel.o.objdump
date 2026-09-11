@@ -39,13 +39,13 @@ Symbols
 2: Symbol { name: "_Z13external_funcv", address: 0, size: 0, kind: Text, section: Undefined, scope: Dynamic, weak: false, flags: None }
 3: Symbol { name: "_ZL11static_funcv", address: da, size: 3, kind: Text, section: Section(SectionIndex(a)), scope: Compilation, weak: false, flags: None }
 4: Symbol { name: "__table_base", address: 0, size: 0, kind: Data, section: Undefined, scope: Dynamic, weak: false, flags: None }
-5: Symbol { name: "", address: 0, size: 0, kind: Data, section: Undefined, scope: Dynamic, weak: false, flags: None }
+5: Symbol { name: "__indirect_function_table", address: 0, size: 0, kind: Data, section: Undefined, scope: Dynamic, weak: false, flags: None }
 6: Symbol { name: "global_int", address: 0, size: 4, kind: Data, section: Section(SectionIndex(e)), scope: Linkage, weak: false, flags: None }
 7: Symbol { name: "__memory_base", address: 0, size: 0, kind: Data, section: Undefined, scope: Dynamic, weak: false, flags: None }
 8: Symbol { name: "global_point", address: 4, size: 8, kind: Data, section: Section(SectionIndex(f)), scope: Linkage, weak: false, flags: None }
 9: Symbol { name: "tls_counter", address: c, size: 4, kind: Tls, section: Section(SectionIndex(10)), scope: Linkage, weak: false, flags: None }
 10: Symbol { name: "__tls_base", address: 0, size: 0, kind: Data, section: Undefined, scope: Dynamic, weak: false, flags: None }
-11: Symbol { name: "", address: 0, size: 0, kind: Unknown, section: Undefined, scope: Dynamic, weak: false, flags: None }
+11: Symbol { name: "__cpp_exception", address: 0, size: 0, kind: Unknown, section: Undefined, scope: Dynamic, weak: false, flags: None }
 12: Symbol { name: "__cxa_begin_catch", address: 0, size: 0, kind: Text, section: Undefined, scope: Dynamic, weak: false, flags: None }
 13: Symbol { name: "__cxa_end_catch", address: 0, size: 0, kind: Text, section: Undefined, scope: Dynamic, weak: false, flags: None }
 14: Symbol { name: "_ZTW11tls_counter", address: de, size: 10, kind: Text, section: Section(SectionIndex(a)), scope: Linkage, weak: true, flags: None }
@@ -143,6 +143,18 @@ llvm.func_attr.annotate.my_annotation relocations
 (0, Relocation { kind: Unknown, encoding: Generic, size: 20, target: Symbol(SymbolIndex(2)), addend: 0, implicit_addend: false, flags: Wasm { r_type: 2 } })
 
 Dynamic symbols
+
+Import { library: "", name: "__linear_memory", flags: Wasm { module: "env", kind: WASM_EXTERNAL_MEMORY, index: 0 } }
+Import { library: "", name: "__stack_pointer", flags: Wasm { module: "env", kind: WASM_EXTERNAL_GLOBAL, index: 0 } }
+Import { library: "", name: "_Z13external_funcv", flags: Wasm { module: "env", kind: WASM_EXTERNAL_FUNCTION, index: 0 } }
+Import { library: "", name: "__table_base", flags: Wasm { module: "env", kind: WASM_EXTERNAL_GLOBAL, index: 1 } }
+Import { library: "", name: "__indirect_function_table", flags: Wasm { module: "env", kind: WASM_EXTERNAL_TABLE, index: 0 } }
+Import { library: "", name: "__memory_base", flags: Wasm { module: "env", kind: WASM_EXTERNAL_GLOBAL, index: 2 } }
+Import { library: "", name: "__tls_base", flags: Wasm { module: "env", kind: WASM_EXTERNAL_GLOBAL, index: 3 } }
+Import { library: "", name: "__cpp_exception", flags: Wasm { module: "env", kind: WASM_EXTERNAL_TAG, index: 0 } }
+Import { library: "", name: "__cxa_begin_catch", flags: Wasm { module: "env", kind: WASM_EXTERNAL_FUNCTION, index: 1 } }
+Import { library: "", name: "__cxa_end_catch", flags: Wasm { module: "env", kind: WASM_EXTERNAL_FUNCTION, index: 2 } }
+Import { library: "", name: "_Z13external_funcv", flags: Wasm { module: "GOT.func", kind: WASM_EXTERNAL_GLOBAL, index: 4 } }
 
 Symbol map
 0x0-0x4 "global_int"

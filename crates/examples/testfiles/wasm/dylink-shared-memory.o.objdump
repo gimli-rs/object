@@ -51,6 +51,14 @@ Symbols
 
 Dynamic symbols
 
+Import { library: "", name: "__linear_memory", flags: Wasm { module: "env", kind: WASM_EXTERNAL_MEMORY, index: 0 } }
+Import { library: "", name: "__tls_base", flags: Wasm { module: "env", kind: WASM_EXTERNAL_GLOBAL, index: 0 } }
+Import { library: "", name: "data_int", flags: Wasm { module: "GOT.mem", kind: WASM_EXTERNAL_GLOBAL, index: 1 } }
+Import { library: "", name: "bss_int", flags: Wasm { module: "GOT.mem", kind: WASM_EXTERNAL_GLOBAL, index: 2 } }
+Import { library: "", name: "rodata_bytes", flags: Wasm { module: "GOT.mem", kind: WASM_EXTERNAL_GLOBAL, index: 3 } }
+Import { library: "", name: "rodata_str", flags: Wasm { module: "GOT.mem", kind: WASM_EXTERNAL_GLOBAL, index: 4 } }
+Import { library: "", name: "retained_int", flags: Wasm { module: "GOT.mem", kind: WASM_EXTERNAL_GLOBAL, index: 5 } }
+
 Symbol map
 0x0-0x4 "data_int"
 0x2-0x5f "get"

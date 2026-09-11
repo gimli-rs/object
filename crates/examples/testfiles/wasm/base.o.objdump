@@ -33,6 +33,11 @@ Symbols
 
 Dynamic symbols
 
+Import { library: "", name: "__linear_memory", flags: Wasm { module: "env", kind: WASM_EXTERNAL_MEMORY, index: 0 } }
+Import { library: "", name: "__indirect_function_table", flags: Wasm { module: "env", kind: WASM_EXTERNAL_TABLE, index: 0 } }
+Import { library: "", name: "__stack_pointer", flags: Wasm { module: "env", kind: WASM_EXTERNAL_GLOBAL, index: 0 } }
+Import { library: "", name: "printf", flags: Wasm { module: "env", kind: WASM_EXTERNAL_FUNCTION, index: 0 } }
+
 Symbol map
 0x0-0xd ".L.str"
 0x2-0x5d "__main_void"

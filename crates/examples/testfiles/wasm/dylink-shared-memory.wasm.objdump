@@ -22,40 +22,34 @@ Entry Address: 16
 16: Section { name: "<data_segment>", address: 0, size: c, align: 1, kind: Data, flags: None }
 
 Symbols
-0: Symbol { name: "env", address: 0, size: 0, kind: File, section: None, scope: Dynamic, weak: false, flags: None }
-1: Symbol { name: "memory", address: 0, size: 0, kind: Data, section: Undefined, scope: Dynamic, weak: false, flags: None }
-2: Symbol { name: "__memory_base", address: 0, size: 0, kind: Data, section: Undefined, scope: Dynamic, weak: false, flags: None }
-3: Symbol { name: "__table_base", address: 0, size: 0, kind: Data, section: Undefined, scope: Dynamic, weak: false, flags: None }
-4: Symbol { name: "GOT.mem", address: 0, size: 0, kind: File, section: None, scope: Dynamic, weak: false, flags: None }
-5: Symbol { name: "data_int", address: 0, size: 0, kind: Data, section: Undefined, scope: Dynamic, weak: false, flags: None }
-6: Symbol { name: "bss_int", address: 0, size: 0, kind: Data, section: Undefined, scope: Dynamic, weak: false, flags: None }
-7: Symbol { name: "rodata_bytes", address: 0, size: 0, kind: Data, section: Undefined, scope: Dynamic, weak: false, flags: None }
-8: Symbol { name: "rodata_str", address: 0, size: 0, kind: Data, section: Undefined, scope: Dynamic, weak: false, flags: None }
-9: Symbol { name: "retained_int", address: 0, size: 0, kind: Data, section: Undefined, scope: Dynamic, weak: false, flags: None }
-10: Symbol { name: "", address: 0, size: 0, kind: File, section: None, scope: Compilation, weak: false, flags: None }
-11: Symbol { name: "get", address: 97, size: 5d, kind: Text, section: Section(SectionIndex(a)), scope: Dynamic, weak: false, flags: None }
-12: Symbol { name: "data_int", address: 14, size: 0, kind: Data, section: Section(SectionIndex(b)), scope: Dynamic, weak: false, flags: None }
-13: Symbol { name: "bss_int", address: 20, size: 0, kind: Data, section: Section(SectionIndex(b)), scope: Dynamic, weak: false, flags: None }
-14: Symbol { name: "tls_int", address: 0, size: 0, kind: Data, section: Section(SectionIndex(b)), scope: Dynamic, weak: false, flags: None }
-15: Symbol { name: "tbss_int", address: 4, size: 0, kind: Data, section: Section(SectionIndex(b)), scope: Dynamic, weak: false, flags: None }
-16: Symbol { name: "rodata_bytes", address: 8, size: 0, kind: Data, section: Section(SectionIndex(b)), scope: Dynamic, weak: false, flags: None }
-17: Symbol { name: "rodata_str", address: 18, size: 0, kind: Data, section: Section(SectionIndex(b)), scope: Dynamic, weak: false, flags: None }
-18: Symbol { name: "retained_int", address: 1c, size: 0, kind: Data, section: Section(SectionIndex(b)), scope: Dynamic, weak: false, flags: None }
-19: Symbol { name: "__wasm_apply_data_relocs", address: 5, size: f, kind: Text, section: Section(SectionIndex(a)), scope: Dynamic, weak: false, flags: None }
-20: Symbol { name: "__wasm_call_ctors", address: 2, size: 2, kind: Text, section: Section(SectionIndex(a)), scope: Compilation, weak: false, flags: None }
-21: Symbol { name: "__wasm_init_memory", address: 16, size: 80, kind: Text, section: Section(SectionIndex(a)), scope: Compilation, weak: false, flags: None }
+0: Symbol { name: "__wasm_call_ctors", address: 2, size: 2, kind: Text, section: Section(SectionIndex(a)), scope: Compilation, weak: false, flags: None }
+1: Symbol { name: "__wasm_apply_data_relocs", address: 5, size: f, kind: Text, section: Section(SectionIndex(a)), scope: Dynamic, weak: false, flags: None }
+2: Symbol { name: "__wasm_init_memory", address: 16, size: 80, kind: Text, section: Section(SectionIndex(a)), scope: Compilation, weak: false, flags: None }
+3: Symbol { name: "get", address: 97, size: 5d, kind: Text, section: Section(SectionIndex(a)), scope: Dynamic, weak: false, flags: None }
 
 Dynamic symbols
 
+Import { library: "", name: "memory", flags: Wasm { module: "env", kind: WASM_EXTERNAL_MEMORY, index: 0 } }
+Import { library: "", name: "__memory_base", flags: Wasm { module: "env", kind: WASM_EXTERNAL_GLOBAL, index: 0 } }
+Import { library: "", name: "__table_base", flags: Wasm { module: "env", kind: WASM_EXTERNAL_GLOBAL, index: 1 } }
+Import { library: "", name: "data_int", flags: Wasm { module: "GOT.mem", kind: WASM_EXTERNAL_GLOBAL, index: 2 } }
+Import { library: "", name: "bss_int", flags: Wasm { module: "GOT.mem", kind: WASM_EXTERNAL_GLOBAL, index: 3 } }
+Import { library: "", name: "rodata_bytes", flags: Wasm { module: "GOT.mem", kind: WASM_EXTERNAL_GLOBAL, index: 4 } }
+Import { library: "", name: "rodata_str", flags: Wasm { module: "GOT.mem", kind: WASM_EXTERNAL_GLOBAL, index: 5 } }
+Import { library: "", name: "retained_int", flags: Wasm { module: "GOT.mem", kind: WASM_EXTERNAL_GLOBAL, index: 6 } }
+
+Export { name: "get", target: Address { address: 97 }, flags: Wasm { kind: WASM_EXTERNAL_FUNCTION, index: 3 } }
+Export { name: "data_int", target: Address { address: 14 }, flags: Wasm { kind: WASM_EXTERNAL_GLOBAL, index: 8 } }
+Export { name: "bss_int", target: Address { address: 20 }, flags: Wasm { kind: WASM_EXTERNAL_GLOBAL, index: 9 } }
+Export { name: "tls_int", target: Address { address: 0 }, flags: Wasm { kind: WASM_EXTERNAL_GLOBAL, index: a } }
+Export { name: "tbss_int", target: Address { address: 4 }, flags: Wasm { kind: WASM_EXTERNAL_GLOBAL, index: b } }
+Export { name: "rodata_bytes", target: Address { address: 8 }, flags: Wasm { kind: WASM_EXTERNAL_GLOBAL, index: c } }
+Export { name: "rodata_str", target: Address { address: 18 }, flags: Wasm { kind: WASM_EXTERNAL_GLOBAL, index: d } }
+Export { name: "retained_int", target: Address { address: 1c }, flags: Wasm { kind: WASM_EXTERNAL_GLOBAL, index: e } }
+Export { name: "__wasm_apply_data_relocs", target: Address { address: 5 }, flags: Wasm { kind: WASM_EXTERNAL_FUNCTION, index: 1 } }
+
 Symbol map
-0x0-0x1 "tls_int"
 0x2-0x4 "__wasm_call_ctors"
-0x4-0x5 "tbss_int"
 0x5-0x14 "__wasm_apply_data_relocs"
-0x8-0x9 "rodata_bytes"
-0x14-0x16 "data_int"
 0x16-0x96 "__wasm_init_memory"
-0x18-0x1c "rodata_str"
-0x1c-0x1e "retained_int"
-0x20-0x24 "bss_int"
 0x97-0xf4 "get"

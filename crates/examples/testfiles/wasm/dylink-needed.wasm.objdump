@@ -15,16 +15,19 @@ Entry Address: 0
 0: Section { name: "target_features", address: 0, size: 84, align: 1, kind: Other, flags: None }
 
 Symbols
-0: Symbol { name: "env", address: 0, size: 0, kind: File, section: None, scope: Dynamic, weak: false, flags: None }
-1: Symbol { name: "memory", address: 0, size: 0, kind: Data, section: Undefined, scope: Dynamic, weak: false, flags: None }
-2: Symbol { name: "__memory_base", address: 0, size: 0, kind: Data, section: Undefined, scope: Dynamic, weak: false, flags: None }
-3: Symbol { name: "__table_base", address: 0, size: 0, kind: Data, section: Undefined, scope: Dynamic, weak: false, flags: None }
-4: Symbol { name: "get", address: 0, size: 0, kind: Text, section: Undefined, scope: Dynamic, weak: false, flags: None }
-5: Symbol { name: "", address: 0, size: 0, kind: File, section: None, scope: Compilation, weak: false, flags: None }
-6: Symbol { name: "get_dep", address: 5, size: 9, kind: Text, section: Section(SectionIndex(a)), scope: Dynamic, weak: false, flags: None }
-7: Symbol { name: "__wasm_call_ctors", address: 2, size: 2, kind: Text, section: Section(SectionIndex(a)), scope: Compilation, weak: false, flags: None }
+0: Symbol { name: "__wasm_call_ctors", address: 2, size: 2, kind: Text, section: Section(SectionIndex(a)), scope: Compilation, weak: false, flags: None }
+1: Symbol { name: "get_dep", address: 5, size: 9, kind: Text, section: Section(SectionIndex(a)), scope: Dynamic, weak: false, flags: None }
 
 Dynamic symbols
+
+ImportLibrary { name: "dylink.wasm", flags: None }
+
+Import { library: "", name: "memory", flags: Wasm { module: "env", kind: WASM_EXTERNAL_MEMORY, index: 0 } }
+Import { library: "", name: "__memory_base", flags: Wasm { module: "env", kind: WASM_EXTERNAL_GLOBAL, index: 0 } }
+Import { library: "", name: "__table_base", flags: Wasm { module: "env", kind: WASM_EXTERNAL_GLOBAL, index: 1 } }
+Import { library: "", name: "get", flags: Wasm { module: "env", kind: WASM_EXTERNAL_FUNCTION, index: 0 } }
+
+Export { name: "get_dep", target: Address { address: 5 }, flags: Wasm { kind: WASM_EXTERNAL_FUNCTION, index: 2 } }
 
 Symbol map
 0x2-0x4 "__wasm_call_ctors"
