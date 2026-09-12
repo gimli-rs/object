@@ -19,35 +19,29 @@ Segment { address: 400, size: 8, permissions: RW- }
 14: Section { name: "<data_segment>", address: 400, size: 8, align: 1, kind: Data, flags: None }
 
 Symbols
-0: Symbol { name: "env", address: 0, size: 0, kind: File, section: None, scope: Dynamic, weak: false, flags: None }
-1: Symbol { name: "console_log", address: 0, size: 0, kind: Text, section: Undefined, scope: Dynamic, weak: false, flags: None }
-2: Symbol { name: "", address: 0, size: 0, kind: File, section: None, scope: Compilation, weak: false, flags: None }
-3: Symbol { name: "memory", address: 0, size: 0, kind: Data, section: Section(SectionIndex(b)), scope: Dynamic, weak: false, flags: None }
-4: Symbol { name: "__wasm_call_ctors", address: 2, size: 2, kind: Text, section: Section(SectionIndex(a)), scope: Dynamic, weak: false, flags: None }
-5: Symbol { name: "print", address: 5, size: 43, kind: Text, section: Section(SectionIndex(a)), scope: Dynamic, weak: false, flags: None }
-6: Symbol { name: "global1", address: 400, size: 0, kind: Data, section: Section(SectionIndex(b)), scope: Dynamic, weak: false, flags: None }
-7: Symbol { name: "global2", address: 404, size: 0, kind: Data, section: Section(SectionIndex(b)), scope: Dynamic, weak: false, flags: None }
-8: Symbol { name: "__dso_handle", address: 400, size: 0, kind: Data, section: Section(SectionIndex(b)), scope: Dynamic, weak: false, flags: None }
-9: Symbol { name: "__data_end", address: 408, size: 0, kind: Data, section: Section(SectionIndex(b)), scope: Dynamic, weak: false, flags: None }
-10: Symbol { name: "__stack_low", address: 410, size: 0, kind: Data, section: Section(SectionIndex(b)), scope: Dynamic, weak: false, flags: None }
-11: Symbol { name: "__stack_high", address: 10410, size: 0, kind: Data, section: Section(SectionIndex(b)), scope: Dynamic, weak: false, flags: None }
-12: Symbol { name: "__global_base", address: 400, size: 0, kind: Data, section: Section(SectionIndex(b)), scope: Dynamic, weak: false, flags: None }
-13: Symbol { name: "__heap_base", address: 10410, size: 0, kind: Data, section: Section(SectionIndex(b)), scope: Dynamic, weak: false, flags: None }
-14: Symbol { name: "__heap_end", address: 20000, size: 0, kind: Data, section: Section(SectionIndex(b)), scope: Dynamic, weak: false, flags: None }
-15: Symbol { name: "__memory_base", address: 0, size: 0, kind: Data, section: Section(SectionIndex(b)), scope: Dynamic, weak: false, flags: None }
-16: Symbol { name: "__table_base", address: 1, size: 0, kind: Data, section: Section(SectionIndex(b)), scope: Dynamic, weak: false, flags: None }
-17: Symbol { name: "__table_base32", address: 1, size: 0, kind: Data, section: Section(SectionIndex(b)), scope: Dynamic, weak: false, flags: None }
+0: Symbol { name: "__wasm_call_ctors", address: 2, size: 2, kind: Text, section: Section(SectionIndex(a)), scope: Dynamic, weak: false, flags: None }
+1: Symbol { name: "print", address: 5, size: 43, kind: Text, section: Section(SectionIndex(a)), scope: Dynamic, weak: false, flags: None }
 
 Dynamic symbols
 
+Import { library: "", name: "console_log", flags: Wasm { module: "env", kind: WASM_EXTERNAL_FUNCTION, index: 0 } }
+
+Export { name: "memory", target: Wasm, flags: Wasm { kind: WASM_EXTERNAL_MEMORY, index: 0 } }
+Export { name: "__wasm_call_ctors", target: Address { address: 2 }, flags: Wasm { kind: WASM_EXTERNAL_FUNCTION, index: 1 } }
+Export { name: "print", target: Address { address: 5 }, flags: Wasm { kind: WASM_EXTERNAL_FUNCTION, index: 2 } }
+Export { name: "global1", target: Address { address: 400 }, flags: Wasm { kind: WASM_EXTERNAL_GLOBAL, index: 1 } }
+Export { name: "global2", target: Address { address: 404 }, flags: Wasm { kind: WASM_EXTERNAL_GLOBAL, index: 2 } }
+Export { name: "__dso_handle", target: Address { address: 400 }, flags: Wasm { kind: WASM_EXTERNAL_GLOBAL, index: 3 } }
+Export { name: "__data_end", target: Address { address: 408 }, flags: Wasm { kind: WASM_EXTERNAL_GLOBAL, index: 4 } }
+Export { name: "__stack_low", target: Address { address: 410 }, flags: Wasm { kind: WASM_EXTERNAL_GLOBAL, index: 5 } }
+Export { name: "__stack_high", target: Address { address: 10410 }, flags: Wasm { kind: WASM_EXTERNAL_GLOBAL, index: 6 } }
+Export { name: "__global_base", target: Address { address: 400 }, flags: Wasm { kind: WASM_EXTERNAL_GLOBAL, index: 7 } }
+Export { name: "__heap_base", target: Address { address: 10410 }, flags: Wasm { kind: WASM_EXTERNAL_GLOBAL, index: 8 } }
+Export { name: "__heap_end", target: Address { address: 20000 }, flags: Wasm { kind: WASM_EXTERNAL_GLOBAL, index: 9 } }
+Export { name: "__memory_base", target: Address { address: 0 }, flags: Wasm { kind: WASM_EXTERNAL_GLOBAL, index: a } }
+Export { name: "__table_base", target: Address { address: 1 }, flags: Wasm { kind: WASM_EXTERNAL_GLOBAL, index: b } }
+Export { name: "__table_base32", target: Address { address: 1 }, flags: Wasm { kind: WASM_EXTERNAL_GLOBAL, index: c } }
+
 Symbol map
-0x0-0x1 "__memory_base"
-0x1-0x2 "__table_base32"
 0x2-0x4 "__wasm_call_ctors"
 0x5-0x48 "print"
-0x400-0x404 "__global_base"
-0x404-0x408 "global2"
-0x408-0x410 "__data_end"
-0x410-0x10410 "__stack_low"
-0x10410-0x20000 "__heap_base"
-0x20000-0x20000 "__heap_end"

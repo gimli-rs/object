@@ -1470,7 +1470,7 @@ enum ImportLibraryIteratorInternal<'data, 'file, R: ReadRef<'data>> {
     #[cfg(feature = "pe")]
     Pe64(pe::PeImportLibraryIterator64<'data, 'file, R>),
     #[cfg(feature = "wasm")]
-    Wasm(read::NoImportLibraryIterator<'data, 'file, R>),
+    Wasm(wasm::WasmImportLibraryIterator<'data, 'file, R>),
     #[cfg(feature = "xcoff")]
     Xcoff32(read::NoImportLibraryIterator<'data, 'file, R>),
     #[cfg(feature = "xcoff")]
@@ -1512,7 +1512,7 @@ enum ImportIteratorInternal<'data, 'file, R: ReadRef<'data>> {
     #[cfg(feature = "pe")]
     Pe64(pe::PeImportIterator64<'data, 'file, R>),
     #[cfg(feature = "wasm")]
-    Wasm(read::NoImportIterator<'data, 'file, R>),
+    Wasm(wasm::WasmImportIterator<'data, 'file, R>),
     #[cfg(feature = "xcoff")]
     Xcoff32(read::NoImportIterator<'data, 'file, R>),
     #[cfg(feature = "xcoff")]
@@ -1554,7 +1554,7 @@ enum ExportIteratorInternal<'data, 'file, R: ReadRef<'data>> {
     #[cfg(feature = "pe")]
     Pe64(pe::PeExportIterator<'data, 'file, R>),
     #[cfg(feature = "wasm")]
-    Wasm(read::NoExportIterator<'data, 'file, R>),
+    Wasm(wasm::WasmExportIterator<'data, 'file, R>),
     #[cfg(feature = "xcoff")]
     Xcoff32(read::NoExportIterator<'data, 'file, R>),
     #[cfg(feature = "xcoff")]

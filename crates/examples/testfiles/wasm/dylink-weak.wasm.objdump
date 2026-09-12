@@ -21,31 +21,29 @@ Entry Address: 5
 15: Section { name: "<data_segment>", address: 0, size: 4, align: 1, kind: Data, flags: None }
 
 Symbols
-0: Symbol { name: "env", address: 0, size: 0, kind: File, section: None, scope: Dynamic, weak: false, flags: None }
-1: Symbol { name: "memory", address: 0, size: 0, kind: Data, section: Undefined, scope: Dynamic, weak: false, flags: None }
-2: Symbol { name: "__indirect_function_table", address: 0, size: 0, kind: Data, section: Undefined, scope: Dynamic, weak: false, flags: None }
-3: Symbol { name: "__memory_base", address: 0, size: 0, kind: Data, section: Undefined, scope: Dynamic, weak: false, flags: None }
-4: Symbol { name: "__table_base", address: 0, size: 0, kind: Data, section: Undefined, scope: Dynamic, weak: false, flags: None }
-5: Symbol { name: "weak_func", address: 0, size: 0, kind: Text, section: Undefined, scope: Dynamic, weak: false, flags: None }
-6: Symbol { name: "weak_undef", address: 0, size: 0, kind: Text, section: Undefined, scope: Dynamic, weak: false, flags: None }
-7: Symbol { name: "GOT.func", address: 0, size: 0, kind: File, section: None, scope: Dynamic, weak: false, flags: None }
-8: Symbol { name: "weak_undef", address: 0, size: 0, kind: Data, section: Undefined, scope: Dynamic, weak: false, flags: None }
-9: Symbol { name: "GOT.mem", address: 0, size: 0, kind: File, section: None, scope: Dynamic, weak: false, flags: None }
-10: Symbol { name: "weak_data", address: 0, size: 0, kind: Data, section: Undefined, scope: Dynamic, weak: false, flags: None }
-11: Symbol { name: "", address: 0, size: 0, kind: File, section: None, scope: Compilation, weak: false, flags: None }
-12: Symbol { name: "weak_func", address: 6a, size: 5, kind: Text, section: Section(SectionIndex(a)), scope: Dynamic, weak: false, flags: None }
-13: Symbol { name: "get", address: 70, size: 4c, kind: Text, section: Section(SectionIndex(a)), scope: Dynamic, weak: false, flags: None }
-14: Symbol { name: "weak_data", address: 4, size: 0, kind: Data, section: Section(SectionIndex(b)), scope: Dynamic, weak: false, flags: None }
-15: Symbol { name: "weak_tls", address: 0, size: 0, kind: Data, section: Section(SectionIndex(b)), scope: Dynamic, weak: false, flags: None }
-16: Symbol { name: "__wasm_call_ctors", address: 2, size: 2, kind: Text, section: Section(SectionIndex(a)), scope: Compilation, weak: false, flags: None }
-17: Symbol { name: "__wasm_init_memory", address: 5, size: 64, kind: Text, section: Section(SectionIndex(a)), scope: Compilation, weak: false, flags: None }
+0: Symbol { name: "__wasm_call_ctors", address: 2, size: 2, kind: Text, section: Section(SectionIndex(a)), scope: Compilation, weak: false, flags: None }
+1: Symbol { name: "__wasm_init_memory", address: 5, size: 64, kind: Text, section: Section(SectionIndex(a)), scope: Compilation, weak: false, flags: None }
+2: Symbol { name: "weak_func", address: 6a, size: 5, kind: Text, section: Section(SectionIndex(a)), scope: Dynamic, weak: false, flags: None }
+3: Symbol { name: "get", address: 70, size: 4c, kind: Text, section: Section(SectionIndex(a)), scope: Dynamic, weak: false, flags: None }
 
 Dynamic symbols
 
+Import { library: "", name: "memory", flags: Wasm { module: "env", kind: WASM_EXTERNAL_MEMORY, index: 0 } }
+Import { library: "", name: "__indirect_function_table", flags: Wasm { module: "env", kind: WASM_EXTERNAL_TABLE, index: 0 } }
+Import { library: "", name: "__memory_base", flags: Wasm { module: "env", kind: WASM_EXTERNAL_GLOBAL, index: 0 } }
+Import { library: "", name: "__table_base", flags: Wasm { module: "env", kind: WASM_EXTERNAL_GLOBAL, index: 1 } }
+Import { library: "", name: "weak_func", flags: Wasm { module: "env", kind: WASM_EXTERNAL_FUNCTION, index: 0 } }
+Import { library: "", name: "weak_undef", weak: true, flags: Wasm { module: "env", kind: WASM_EXTERNAL_FUNCTION, index: 1 } }
+Import { library: "", name: "weak_undef", flags: Wasm { module: "GOT.func", kind: WASM_EXTERNAL_GLOBAL, index: 2 } }
+Import { library: "", name: "weak_data", flags: Wasm { module: "GOT.mem", kind: WASM_EXTERNAL_GLOBAL, index: 3 } }
+
+Export { name: "weak_func", target: Address { address: 6a }, flags: Wasm { kind: WASM_EXTERNAL_FUNCTION, index: 4 } }
+Export { name: "get", target: Address { address: 70 }, flags: Wasm { kind: WASM_EXTERNAL_FUNCTION, index: 5 } }
+Export { name: "weak_data", target: Address { address: 4 }, flags: Wasm { kind: WASM_EXTERNAL_GLOBAL, index: 5 } }
+Export { name: "weak_tls", target: Address { address: 0 }, weak: true, flags: Wasm { kind: WASM_EXTERNAL_GLOBAL, index: 6 } }
+
 Symbol map
-0x0-0x1 "weak_tls"
 0x2-0x4 "__wasm_call_ctors"
-0x4-0x5 "weak_data"
 0x5-0x69 "__wasm_init_memory"
 0x6a-0x6f "weak_func"
 0x70-0xbc "get"

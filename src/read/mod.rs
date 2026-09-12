@@ -532,6 +532,16 @@ pub enum ImportFlags<'data> {
         /// The symbol is from the delay-load import table.
         delay: bool,
     },
+    /// Wasm import flags.
+    #[cfg(feature = "wasm")]
+    Wasm {
+        /// The module name of the import.
+        module: &'data str,
+        /// The kind of the imported item.
+        kind: crate::wasm::ExternalKind,
+        /// The index of the item in the index space for its kind.
+        index: u32,
+    },
     #[doc(hidden)]
     #[cfg(not(feature = "elf"))]
     _Phantom(
@@ -578,6 +588,17 @@ impl<'data> fmt::Debug for ImportFlags<'data> {
                 }
                 s.finish()
             }
+            #[cfg(feature = "wasm")]
+            ImportFlags::Wasm {
+                module,
+                kind,
+                index,
+            } => f
+                .debug_struct("Wasm")
+                .field("module", module)
+                .field("kind", kind)
+                .field("index", index)
+                .finish(),
             #[cfg(not(feature = "elf"))]
             ImportFlags::_Phantom(_, i) => match *i {},
         }
@@ -811,6 +832,11 @@ pub enum ExportTarget<'data> {
         /// The name or ordinal of the symbol in the external library.
         name: NameOrOrdinal<&'data [u8]>,
     },
+    /// An item in a Wasm module that has no address.
+    ///
+    /// Details of the item are in the flags.
+    #[cfg(feature = "wasm")]
+    Wasm,
 }
 
 impl<'data> fmt::Debug for ExportTarget<'data> {
@@ -841,6 +867,8 @@ impl<'data> fmt::Debug for ExportTarget<'data> {
                 };
                 s.finish()
             }
+            #[cfg(feature = "wasm")]
+            ExportTarget::Wasm => f.debug_struct("Wasm").finish(),
         }
     }
 }
@@ -878,6 +906,14 @@ pub enum ExportFlags<'data> {
     Pe {
         /// The export ordinal.
         ordinal: crate::read::pe::ExportOrdinal,
+    },
+    /// Wasm export flags.
+    #[cfg(feature = "wasm")]
+    Wasm {
+        /// The kind of exported item.
+        kind: crate::wasm::ExternalKind,
+        /// The index of the item in the index space for its kind.
+        index: u32,
     },
     #[doc(hidden)]
     #[cfg(not(feature = "elf"))]
@@ -917,6 +953,12 @@ impl<'data> fmt::Debug for ExportFlags<'data> {
                 .finish(),
             #[cfg(feature = "pe")]
             ExportFlags::Pe { ordinal } => f.debug_struct("Pe").field("ordinal", ordinal).finish(),
+            #[cfg(feature = "wasm")]
+            ExportFlags::Wasm { kind, index } => f
+                .debug_struct("Wasm")
+                .field("kind", kind)
+                .field("index", index)
+                .finish(),
             #[cfg(not(feature = "elf"))]
             ExportFlags::_Phantom(_, i) => match *i {},
         }
