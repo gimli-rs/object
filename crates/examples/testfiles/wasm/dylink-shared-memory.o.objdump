@@ -7,33 +7,34 @@ Entry Address: 0
 1: Section { name: "<type>", address: 0, size: 5, align: 1, kind: Metadata, flags: None }
 2: Section { name: "<import>", address: 0, size: 97, align: 1, kind: Linker, flags: None }
 3: Section { name: "<function>", address: 0, size: 2, align: 1, kind: Metadata, flags: None }
-12: Section { name: "<data_count>", address: 0, size: 1, align: 1, kind: UninitializedData, flags: None }
+12: Section { name: "<data_count>", address: 0, size: 1, align: 1, kind: Metadata, flags: None }
 10: Section { name: "<code>", address: 0, size: 5f, align: 1, kind: Text, flags: None }
+11: Section { name: "<data>", address: 0, size: 4a, align: 1, kind: Metadata, flags: None }
 0: Section { name: "linking", address: 0, size: 124, align: 1, kind: Linker, flags: None }
 0: Section { name: "reloc.CODE", address: 0, size: 1c, align: 1, kind: Linker, flags: None }
 0: Section { name: "reloc.DATA", address: 0, size: 6, align: 1, kind: Linker, flags: None }
 0: Section { name: "producers", address: 0, size: 5e, align: 1, kind: Other, flags: None }
 0: Section { name: "target_features", address: 0, size: 8d, align: 1, kind: Other, flags: None }
 14: Section { name: ".data.data_int", address: 0, size: 4, align: 4, kind: Data, flags: Wasm { flags: 0 } }
-15: Section { name: ".tdata.tls_int", address: 0, size: 4, align: 4, kind: Tls, flags: Wasm { flags: WASM_SEG_FLAG_TLS } }
-16: Section { name: ".rodata.rodata_bytes", address: 0, size: 3, align: 1, kind: ReadOnlyData, flags: Wasm { flags: 0 } }
-17: Section { name: ".rodata..L.str", address: 0, size: 6, align: 1, kind: ReadOnlyString, flags: Wasm { flags: WASM_SEG_FLAG_STRINGS } }
-18: Section { name: ".data.rodata_str", address: 0, size: 4, align: 4, kind: Data, flags: Wasm { flags: 0 } }
-19: Section { name: ".data.retained_int", address: 0, size: 4, align: 4, kind: Data, flags: Wasm { flags: WASM_SEG_FLAG_RETAIN } }
-20: Section { name: ".bss.bss_int", address: 0, size: 4, align: 4, kind: UninitializedData, flags: Wasm { flags: 0 } }
-21: Section { name: ".tbss.tbss_int", address: 0, size: 4, align: 4, kind: UninitializedTls, flags: Wasm { flags: WASM_SEG_FLAG_TLS } }
+15: Section { name: ".tdata.tls_int", address: 4, size: 4, align: 4, kind: Tls, flags: Wasm { flags: WASM_SEG_FLAG_TLS } }
+16: Section { name: ".rodata.rodata_bytes", address: 8, size: 3, align: 1, kind: ReadOnlyData, flags: Wasm { flags: 0 } }
+17: Section { name: ".rodata..L.str", address: b, size: 6, align: 1, kind: ReadOnlyString, flags: Wasm { flags: WASM_SEG_FLAG_STRINGS } }
+18: Section { name: ".data.rodata_str", address: 14, size: 4, align: 4, kind: Data, flags: Wasm { flags: 0 } }
+19: Section { name: ".data.retained_int", address: 18, size: 4, align: 4, kind: Data, flags: Wasm { flags: WASM_SEG_FLAG_RETAIN } }
+20: Section { name: ".bss.bss_int", address: 1c, size: 4, align: 4, kind: UninitializedData, flags: Wasm { flags: 0 } }
+21: Section { name: ".tbss.tbss_int", address: 20, size: 4, align: 4, kind: UninitializedTls, flags: Wasm { flags: WASM_SEG_FLAG_TLS } }
 
 Symbols
 0: Symbol { name: "get", address: 2, size: 5d, kind: Text, section: Section(SectionIndex(a)), scope: Dynamic, weak: false, flags: None }
 1: Symbol { name: "data_int", address: 0, size: 4, kind: Data, section: Section(SectionIndex(e)), scope: Dynamic, weak: false, flags: None }
-2: Symbol { name: "bss_int", address: 0, size: 4, kind: Data, section: Section(SectionIndex(14)), scope: Dynamic, weak: false, flags: None }
-3: Symbol { name: "tls_int", address: 0, size: 4, kind: Tls, section: Section(SectionIndex(f)), scope: Dynamic, weak: false, flags: None }
+2: Symbol { name: "bss_int", address: 1c, size: 4, kind: Data, section: Section(SectionIndex(14)), scope: Dynamic, weak: false, flags: None }
+3: Symbol { name: "tls_int", address: 4, size: 4, kind: Tls, section: Section(SectionIndex(f)), scope: Dynamic, weak: false, flags: None }
 4: Symbol { name: "__tls_base", address: 0, size: 0, kind: Data, section: Undefined, scope: Dynamic, weak: false, flags: None }
-5: Symbol { name: "tbss_int", address: 0, size: 4, kind: Tls, section: Section(SectionIndex(15)), scope: Dynamic, weak: false, flags: None }
-6: Symbol { name: "rodata_bytes", address: 0, size: 3, kind: Data, section: Section(SectionIndex(10)), scope: Dynamic, weak: false, flags: None }
-7: Symbol { name: "rodata_str", address: 0, size: 4, kind: Data, section: Section(SectionIndex(12)), scope: Dynamic, weak: false, flags: None }
-8: Symbol { name: "retained_int", address: 0, size: 4, kind: Data, section: Section(SectionIndex(13)), scope: Dynamic, weak: false, flags: None }
-9: Symbol { name: ".L.str", address: 0, size: 6, kind: Data, section: Section(SectionIndex(11)), scope: Compilation, weak: false, flags: None }
+5: Symbol { name: "tbss_int", address: 20, size: 4, kind: Tls, section: Section(SectionIndex(15)), scope: Dynamic, weak: false, flags: None }
+6: Symbol { name: "rodata_bytes", address: 8, size: 3, kind: Data, section: Section(SectionIndex(10)), scope: Dynamic, weak: false, flags: None }
+7: Symbol { name: "rodata_str", address: 14, size: 4, kind: Data, section: Section(SectionIndex(12)), scope: Dynamic, weak: false, flags: None }
+8: Symbol { name: "retained_int", address: 18, size: 4, kind: Data, section: Section(SectionIndex(13)), scope: Dynamic, weak: false, flags: None }
+9: Symbol { name: ".L.str", address: b, size: 6, kind: Data, section: Section(SectionIndex(11)), scope: Compilation, weak: false, flags: None }
 
 <code> relocations
 (6, Relocation { kind: Unknown, encoding: Generic, size: 28, target: Symbol(SymbolIndex(1)), addend: 0, implicit_addend: false, flags: Wasm { r_type: 7 } })
@@ -51,5 +52,10 @@ Symbols
 Dynamic symbols
 
 Symbol map
-0x0-0x4 "retained_int"
+0x0-0x4 "data_int"
 0x2-0x5f "get"
+0x8-0xb "rodata_bytes"
+0xb-0x11 ".L.str"
+0x14-0x18 "rodata_str"
+0x18-0x1c "retained_int"
+0x1c-0x20 "bss_int"

@@ -9,15 +9,17 @@ Segment { address: d68, size: ec, permissions: RW- }
 1: Section { name: "<type>", address: 0, size: 4a, align: 1, kind: Metadata, flags: None }
 2: Section { name: "<import>", address: 0, size: b0, align: 1, kind: Linker, flags: None }
 3: Section { name: "<function>", address: 0, size: 25, align: 1, kind: Metadata, flags: None }
-4: Section { name: "<table>", address: 0, size: 5, align: 1, kind: UninitializedData, flags: None }
-5: Section { name: "<memory>", address: 0, size: 3, align: 1, kind: UninitializedData, flags: None }
-6: Section { name: "<global>", address: 0, size: 8, align: 1, kind: Data, flags: None }
+4: Section { name: "<table>", address: 0, size: 5, align: 1, kind: Metadata, flags: None }
+5: Section { name: "<memory>", address: 0, size: 3, align: 1, kind: Metadata, flags: None }
+6: Section { name: "<global>", address: 0, size: 8, align: 1, kind: Metadata, flags: None }
 7: Section { name: "<export>", address: 0, size: 13, align: 1, kind: Linker, flags: None }
-9: Section { name: "<element>", address: 0, size: a, align: 1, kind: Data, flags: None }
+9: Section { name: "<element>", address: 0, size: a, align: 1, kind: Metadata, flags: None }
 10: Section { name: "<code>", address: 0, size: 3bc6, align: 1, kind: Text, flags: None }
-11: Section { name: "<data>", address: 0, size: a60, align: 1, kind: Data, flags: None }
+11: Section { name: "<data>", address: 0, size: a60, align: 1, kind: Metadata, flags: None }
 0: Section { name: "name", address: 0, size: 1e8, align: 1, kind: Other, flags: None }
 0: Section { name: "producers", address: 0, size: 6c, align: 1, kind: Other, flags: None }
+14: Section { name: "<data_segment>", address: 400, size: 965, align: 1, kind: Data, flags: None }
+15: Section { name: "<data_segment>", address: d68, size: ec, align: 1, kind: Data, flags: None }
 
 Symbols
 0: Symbol { name: "wasi_snapshot_preview1", address: 0, size: 0, kind: File, section: None, scope: Dynamic, weak: false, flags: None }
