@@ -1,0 +1,31 @@
+Format: Wasm Little-endian 32-bit
+Kind: Dynamic
+Architecture: Wasm32
+Flags: None
+Relative Address Base: 0
+Entry Address: 0
+0: Section { name: "dylink.0", address: 0, size: 15, align: 1, kind: Other, flags: None }
+1: Section { name: "<type>", address: 0, size: 8, align: 1, kind: Metadata, flags: None }
+2: Section { name: "<import>", address: 0, size: 42, align: 1, kind: Linker, flags: None }
+3: Section { name: "<function>", address: 0, size: 3, align: 1, kind: Metadata, flags: None }
+7: Section { name: "<export>", address: 0, size: b, align: 1, kind: Linker, flags: None }
+10: Section { name: "<code>", address: 0, size: e, align: 1, kind: Text, flags: None }
+0: Section { name: "name", address: 0, size: 59, align: 1, kind: Other, flags: None }
+0: Section { name: "producers", address: 0, size: 5e, align: 1, kind: Other, flags: None }
+0: Section { name: "target_features", address: 0, size: 84, align: 1, kind: Other, flags: None }
+
+Symbols
+0: Symbol { name: "env", address: 0, size: 0, kind: File, section: None, scope: Dynamic, weak: false, flags: None }
+1: Symbol { name: "memory", address: 0, size: 0, kind: Data, section: Undefined, scope: Dynamic, weak: false, flags: None }
+2: Symbol { name: "__memory_base", address: 0, size: 0, kind: Data, section: Undefined, scope: Dynamic, weak: false, flags: None }
+3: Symbol { name: "__table_base", address: 0, size: 0, kind: Data, section: Undefined, scope: Dynamic, weak: false, flags: None }
+4: Symbol { name: "get", address: 0, size: 0, kind: Text, section: Undefined, scope: Dynamic, weak: false, flags: None }
+5: Symbol { name: "", address: 0, size: 0, kind: File, section: None, scope: Compilation, weak: false, flags: None }
+6: Symbol { name: "get_dep", address: 5, size: 9, kind: Text, section: Section(SectionIndex(a)), scope: Dynamic, weak: false, flags: None }
+7: Symbol { name: "__wasm_call_ctors", address: 2, size: 2, kind: Text, section: Section(SectionIndex(a)), scope: Compilation, weak: false, flags: None }
+
+Dynamic symbols
+
+Symbol map
+0x2-0x4 "__wasm_call_ctors"
+0x5-0xe "get_dep"

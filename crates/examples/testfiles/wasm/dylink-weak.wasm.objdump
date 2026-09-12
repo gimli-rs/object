@@ -1,0 +1,51 @@
+Format: Wasm Little-endian 32-bit
+Kind: Dynamic
+Architecture: Wasm32
+Flags: None
+Relative Address Base: 0
+Entry Address: 5
+0: Section { name: "dylink.0", address: 0, size: 27, align: 1, kind: Other, flags: None }
+1: Section { name: "<type>", address: 0, size: 8, align: 1, kind: Metadata, flags: None }
+2: Section { name: "<import>", address: 0, size: a8, align: 1, kind: Linker, flags: None }
+3: Section { name: "<function>", address: 0, size: 5, align: 1, kind: Metadata, flags: None }
+6: Section { name: "<global>", address: 0, size: 10, align: 1, kind: Metadata, flags: None }
+7: Section { name: "<export>", address: 0, size: 2a, align: 1, kind: Linker, flags: None }
+8: Section { name: "<start>", address: 0, size: 1, align: 1, kind: Metadata, flags: None }
+12: Section { name: "<data_count>", address: 0, size: 1, align: 1, kind: Metadata, flags: None }
+10: Section { name: "<code>", address: 0, size: bc, align: 1, kind: Text, flags: None }
+11: Section { name: "<data>", address: 0, size: d, align: 1, kind: Metadata, flags: None }
+0: Section { name: "name", address: 0, size: b9, align: 1, kind: Other, flags: None }
+0: Section { name: "producers", address: 0, size: 5e, align: 1, kind: Other, flags: None }
+0: Section { name: "target_features", address: 0, size: 8d, align: 1, kind: Other, flags: None }
+14: Section { name: "<data_segment>", address: 0, size: 4, align: 1, kind: Data, flags: None }
+15: Section { name: "<data_segment>", address: 0, size: 4, align: 1, kind: Data, flags: None }
+
+Symbols
+0: Symbol { name: "env", address: 0, size: 0, kind: File, section: None, scope: Dynamic, weak: false, flags: None }
+1: Symbol { name: "memory", address: 0, size: 0, kind: Data, section: Undefined, scope: Dynamic, weak: false, flags: None }
+2: Symbol { name: "__indirect_function_table", address: 0, size: 0, kind: Data, section: Undefined, scope: Dynamic, weak: false, flags: None }
+3: Symbol { name: "__memory_base", address: 0, size: 0, kind: Data, section: Undefined, scope: Dynamic, weak: false, flags: None }
+4: Symbol { name: "__table_base", address: 0, size: 0, kind: Data, section: Undefined, scope: Dynamic, weak: false, flags: None }
+5: Symbol { name: "weak_func", address: 0, size: 0, kind: Text, section: Undefined, scope: Dynamic, weak: false, flags: None }
+6: Symbol { name: "weak_undef", address: 0, size: 0, kind: Text, section: Undefined, scope: Dynamic, weak: false, flags: None }
+7: Symbol { name: "GOT.func", address: 0, size: 0, kind: File, section: None, scope: Dynamic, weak: false, flags: None }
+8: Symbol { name: "weak_undef", address: 0, size: 0, kind: Data, section: Undefined, scope: Dynamic, weak: false, flags: None }
+9: Symbol { name: "GOT.mem", address: 0, size: 0, kind: File, section: None, scope: Dynamic, weak: false, flags: None }
+10: Symbol { name: "weak_data", address: 0, size: 0, kind: Data, section: Undefined, scope: Dynamic, weak: false, flags: None }
+11: Symbol { name: "", address: 0, size: 0, kind: File, section: None, scope: Compilation, weak: false, flags: None }
+12: Symbol { name: "weak_func", address: 6a, size: 5, kind: Text, section: Section(SectionIndex(a)), scope: Dynamic, weak: false, flags: None }
+13: Symbol { name: "get", address: 70, size: 4c, kind: Text, section: Section(SectionIndex(a)), scope: Dynamic, weak: false, flags: None }
+14: Symbol { name: "weak_data", address: 4, size: 0, kind: Data, section: Section(SectionIndex(b)), scope: Dynamic, weak: false, flags: None }
+15: Symbol { name: "weak_tls", address: 0, size: 0, kind: Data, section: Section(SectionIndex(b)), scope: Dynamic, weak: false, flags: None }
+16: Symbol { name: "__wasm_call_ctors", address: 2, size: 2, kind: Text, section: Section(SectionIndex(a)), scope: Compilation, weak: false, flags: None }
+17: Symbol { name: "__wasm_init_memory", address: 5, size: 64, kind: Text, section: Section(SectionIndex(a)), scope: Compilation, weak: false, flags: None }
+
+Dynamic symbols
+
+Symbol map
+0x0-0x1 "weak_tls"
+0x2-0x4 "__wasm_call_ctors"
+0x4-0x5 "weak_data"
+0x5-0x69 "__wasm_init_memory"
+0x6a-0x6f "weak_func"
+0x70-0xbc "get"

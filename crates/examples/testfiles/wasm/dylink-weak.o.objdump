@@ -1,0 +1,42 @@
+Format: Wasm Little-endian 32-bit
+Kind: Relocatable
+Architecture: Wasm32
+Flags: None
+Relative Address Base: 0
+Entry Address: 0
+1: Section { name: "<type>", address: 0, size: 5, align: 1, kind: Metadata, flags: None }
+2: Section { name: "<import>", address: 0, size: 89, align: 1, kind: Linker, flags: None }
+3: Section { name: "<function>", address: 0, size: 3, align: 1, kind: Metadata, flags: None }
+12: Section { name: "<data_count>", address: 0, size: 1, align: 1, kind: Metadata, flags: None }
+10: Section { name: "<code>", address: 0, size: 54, align: 1, kind: Text, flags: None }
+11: Section { name: "<data>", address: 0, size: 13, align: 1, kind: Metadata, flags: None }
+0: Section { name: "linking", address: 0, size: 6f, align: 1, kind: Linker, flags: None }
+0: Section { name: "reloc.CODE", address: 0, size: 15, align: 1, kind: Linker, flags: None }
+0: Section { name: "producers", address: 0, size: 5e, align: 1, kind: Other, flags: None }
+0: Section { name: "target_features", address: 0, size: 8d, align: 1, kind: Other, flags: None }
+14: Section { name: ".data.weak_data", address: 0, size: 4, align: 4, kind: Data, flags: Wasm { flags: 0 } }
+15: Section { name: ".tdata.weak_tls", address: 4, size: 4, align: 4, kind: Tls, flags: Wasm { flags: WASM_SEG_FLAG_TLS } }
+
+Symbols
+0: Symbol { name: "weak_func", address: 2, size: 5, kind: Text, section: Section(SectionIndex(a)), scope: Dynamic, weak: true, flags: None }
+1: Symbol { name: "get", address: 8, size: 4c, kind: Text, section: Section(SectionIndex(a)), scope: Dynamic, weak: false, flags: None }
+2: Symbol { name: "weak_undef", address: 0, size: 0, kind: Text, section: Undefined, scope: Dynamic, weak: true, flags: None }
+3: Symbol { name: "weak_data", address: 0, size: 4, kind: Data, section: Section(SectionIndex(e)), scope: Dynamic, weak: true, flags: None }
+4: Symbol { name: "weak_tls", address: 4, size: 4, kind: Tls, section: Section(SectionIndex(f)), scope: Dynamic, weak: true, flags: None }
+5: Symbol { name: "__tls_base", address: 0, size: 0, kind: Data, section: Undefined, scope: Dynamic, weak: false, flags: None }
+6: Symbol { name: "", address: 0, size: 0, kind: Data, section: Undefined, scope: Dynamic, weak: false, flags: None }
+
+<code> relocations
+(10, Relocation { kind: Unknown, encoding: Generic, size: 28, target: Symbol(SymbolIndex(2)), addend: 0, implicit_addend: false, flags: Wasm { r_type: 7 } })
+(1f, Relocation { kind: Unknown, encoding: Generic, size: 28, target: Symbol(SymbolIndex(2)), addend: 0, implicit_addend: false, flags: Wasm { r_type: 0 } })
+(31, Relocation { kind: Unknown, encoding: Generic, size: 28, target: Symbol(SymbolIndex(3)), addend: 0, implicit_addend: false, flags: Wasm { r_type: 7 } })
+(3b, Relocation { kind: Unknown, encoding: Generic, size: 28, target: Symbol(SymbolIndex(4)), addend: 0, implicit_addend: false, flags: Wasm { r_type: 15 } })
+(41, Relocation { kind: Unknown, encoding: Generic, size: 28, target: Symbol(SymbolIndex(5)), addend: 0, implicit_addend: false, flags: Wasm { r_type: 7 } })
+(4c, Relocation { kind: Unknown, encoding: Generic, size: 28, target: Symbol(SymbolIndex(0)), addend: 0, implicit_addend: false, flags: Wasm { r_type: 0 } })
+
+Dynamic symbols
+
+Symbol map
+0x0-0x4 "weak_data"
+0x2-0x7 "weak_func"
+0x8-0x54 "get"
