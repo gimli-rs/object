@@ -10,13 +10,14 @@ use core::{slice, str};
 use wasmparser as wp;
 
 use crate::read::{
-    self, Architecture, ComdatKind, CompressedData, CompressedFileRange, Error, FileFlags,
-    NoDynamicRelocationIterator, NoExportIterator, NoImportIterator, NoImportLibraryIterator,
-    Object, ObjectComdat, ObjectKind, ObjectSection, ObjectSegment, ObjectSymbol,
-    ObjectSymbolTable, Permissions, ReadError, ReadRef, Relocation, RelocationMap, Result,
-    SectionFlags, SectionIndex, SectionKind, SegmentFlags, SymbolFlags, SymbolIndex, SymbolKind,
-    SymbolScope, SymbolSection,
+    self, Architecture, ComdatKind, CompressedData, CompressedFileRange, Error, Export,
+    ExportFlags, ExportTarget, FileFlags, Import, ImportFlags, ImportLibrary, ImportLibraryFlags,
+    NameOrOrdinal, NoDynamicRelocationIterator, Object, ObjectComdat, ObjectKind, ObjectSection,
+    ObjectSegment, ObjectSymbol, ObjectSymbolTable, Permissions, ReadError, ReadRef, Relocation,
+    RelocationMap, Result, SectionFlags, SectionIndex, SectionKind, SegmentFlags, SymbolFlags,
+    SymbolIndex, SymbolKind, SymbolScope, SymbolSection,
 };
+use crate::wasm;
 use crate::{RelocationEncoding, RelocationFlags, RelocationKind, RelocationTarget};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -91,8 +92,14 @@ pub struct WasmFile<'data, R = &'data [u8]> {
     has_linking: bool,
     // Whether the file has DWARF information.
     has_debug_symbols: bool,
-    // Symbols collected from imports, exports, code and name sections.
+    // Symbols collected from `linking` and `name` custom sections.
     symbols: Vec<WasmSymbolInternal<'data>>,
+    // Entries in `WASM_DYLINK_NEEDED` sub-section.
+    needed: Vec<&'data str>,
+    // Entries in the imports section.
+    imports: Vec<WasmImportInternal<'data>>,
+    // Entries in the exports section.
+    exports: Vec<WasmExportInternal<'data>>,
     // Address of the function body for the entry point.
     entry: u64,
     marker: PhantomData<R>,
@@ -150,8 +157,8 @@ impl<'data> WasmDataSegmentInternal<'data> {
         }
     }
 
-    fn flags(&self) -> crate::wasm::SegmentFlags {
-        crate::wasm::SegmentFlags(self.info.map(|info| info.flags.bits()).unwrap_or(0))
+    fn flags(&self) -> wasm::SegmentFlags {
+        wasm::SegmentFlags(self.info.map(|info| info.flags.bits()).unwrap_or(0))
     }
 
     fn section_kind(&self) -> SectionKind {
@@ -212,6 +219,9 @@ impl<'data, R: ReadRef<'data>> WasmFile<'data, R> {
             has_linking: false,
             has_debug_symbols: false,
             symbols: Vec::new(),
+            needed: Vec::new(),
+            imports: Vec::new(),
+            exports: Vec::new(),
             entry: 0,
             marker: PhantomData,
         };
@@ -232,6 +242,8 @@ impl<'data, R: ReadRef<'data>> WasmFile<'data, R> {
         let mut exports = None;
         let mut names = None;
         let mut symbols = None;
+        let mut import_infos = Vec::new();
+        let mut export_infos = Vec::new();
         let mut segment_infos: Vec<wp::Segment<'data>> = Vec::new();
 
         // Function kind for each function section entry.
@@ -363,9 +375,32 @@ impl<'data, R: ReadRef<'data>> WasmFile<'data, R> {
                     if name == "name" {
                         let reader = wp::BinaryReader::new(section.data(), section.data_offset());
                         names = Some(wp::NameSectionReader::new(reader));
-                    } else if name == "dylink" || name == "dylink.0" {
+                    } else if name == "dylink" {
+                        // Obsolete. Set the file kind but don't parse.
+                        file.has_dylink = true;
+                    } else if name == "dylink.0" {
                         // https://github.com/WebAssembly/tool-conventions/blob/main/DynamicLinking.md
                         file.has_dylink = true;
+                        let reader = wp::BinaryReader::new(section.data(), section.data_offset());
+                        for subsection in wp::Dylink0SectionReader::new(reader) {
+                            let subsection =
+                                subsection.read_error("Invalid Wasm dylink.0 subsection")?;
+                            match subsection {
+                                wp::Dylink0Subsection::Needed(names) => file.needed = names,
+                                wp::Dylink0Subsection::ImportInfo(infos) => {
+                                    import_infos = infos;
+                                    // Sort so that the lookup for each import is a binary search.
+                                    import_infos
+                                        .sort_unstable_by_key(|info| (info.module, info.field));
+                                }
+                                wp::Dylink0Subsection::ExportInfo(infos) => {
+                                    export_infos = infos;
+                                    // Sort so that the lookup for each export is a binary search.
+                                    export_infos.sort_unstable_by_key(|info| info.name);
+                                }
+                                _ => {}
+                            }
+                        }
                     } else if name == "linking" {
                         // https://github.com/WebAssembly/tool-conventions/blob/main/Linking.md
                         file.has_linking = true;
@@ -422,36 +457,79 @@ impl<'data, R: ReadRef<'data>> WasmFile<'data, R> {
             }
         }
 
-        let mut import_func_names = Vec::new();
-        let mut import_global_names = Vec::new();
+        // Index into `file.imports` for each imported item.
+        let mut import_funcs = Vec::new();
+        let mut import_globals = Vec::new();
+        let mut import_tables = Vec::new();
+        let mut import_tags = Vec::new();
+        let mut import_memory_count = 0;
+
         if let Some(imports_section) = imports_section {
             let mut last_module_name = None;
-
             for imports in imports_section {
                 let imports = imports.read_error("Couldn't read an imports item")?;
                 let add_import = &mut |module, ty, name| {
-                    let kind = match ty {
-                        wp::TypeRef::Func(_) | wp::TypeRef::FuncExact(_) => {
-                            import_func_names.push(name);
-                            SymbolKind::Text
+                    let import_index = file.imports.len();
+                    let (kind, index) = match ty {
+                        wp::TypeRef::Func(_) => {
+                            let index = import_funcs.len() as u32;
+                            import_funcs.push(import_index);
+                            (wasm::EXTERNAL_FUNCTION, index)
+                        }
+                        wp::TypeRef::FuncExact(_) => {
+                            let index = import_funcs.len() as u32;
+                            import_funcs.push(import_index);
+                            (wasm::EXTERNAL_FUNCTION_EXACT, index)
                         }
                         wp::TypeRef::Memory(memory) => {
+                            let index = import_memory_count;
+                            import_memory_count += 1;
                             file.has_memory64 |= memory.memory64;
-                            SymbolKind::Data
+                            (wasm::EXTERNAL_MEMORY, index)
                         }
                         wp::TypeRef::Global(_) => {
-                            import_global_names.push(name);
-                            SymbolKind::Data
+                            let index = import_globals.len() as u32;
+                            import_globals.push(import_index);
+                            (wasm::EXTERNAL_GLOBAL, index)
                         }
+                        wp::TypeRef::Table(_) => {
+                            let index = import_tables.len() as u32;
+                            import_tables.push(import_index);
+                            (wasm::EXTERNAL_TABLE, index)
+                        }
+                        wp::TypeRef::Tag(_) => {
+                            let index = import_tags.len() as u32;
+                            import_tags.push(import_index);
+                            (wasm::EXTERNAL_TAG, index)
+                        }
+                    };
+
+                    let flags = import_infos
+                        .binary_search_by_key(&(module, name), |info| (info.module, info.field))
+                        .ok()
+                        .map(|index| wasm::SymbolFlags(import_infos[index].flags.bits()));
+
+                    file.imports.push(WasmImportInternal {
+                        module,
+                        name,
+                        kind,
+                        index,
+                        flags,
+                    });
+
+                    if file.has_linking {
+                        // Relocatable objects should have a symbol table, so we don't need to add
+                        // symbols for imports.
+                        return;
+                    }
+
+                    let symbol_kind = match ty {
+                        wp::TypeRef::Func(_) | wp::TypeRef::FuncExact(_) => SymbolKind::Text,
+                        wp::TypeRef::Memory(_) => SymbolKind::Data,
+                        wp::TypeRef::Global(_) => SymbolKind::Data,
                         wp::TypeRef::Table(_) => SymbolKind::Data,
                         wp::TypeRef::Tag(_) => SymbolKind::Unknown,
                     };
-
-                    if symbols.is_some() {
-                        // We have a symbol table, so we don't need to add symbols for imports.
-                        // TODO: never add symbols for imports. Return them via Object::imports instead.
-                        return;
-                    }
 
                     if last_module_name != Some(module) {
                         file.symbols.push(WasmSymbolInternal {
@@ -466,12 +544,12 @@ impl<'data, R: ReadRef<'data>> WasmFile<'data, R> {
                         last_module_name = Some(module);
                     }
 
-                    // TODO: these are imports, not symbols
+                    // TODO: never add symbols for imports?
                     file.symbols.push(WasmSymbolInternal {
                         name,
                         address: 0,
                         size: 0,
-                        kind,
+                        kind: symbol_kind,
                         section: SymbolSection::Undefined,
                         scope: SymbolScope::Dynamic,
                         weak: false,
@@ -498,9 +576,9 @@ impl<'data, R: ReadRef<'data>> WasmFile<'data, R> {
         }
 
         // Bias to apply to function indices when accessing `local_func_kinds` and `code_ranges`.
-        let local_func_base = import_func_names.len() as u32;
+        let local_func_base = import_funcs.len() as u32;
         // Bias to apply to global indices when accessing `global_values`.
-        let local_global_base = import_global_names.len() as u32;
+        let local_global_base = import_globals.len() as u32;
 
         if let Some(entry_func_id) = entry_func_id {
             if let Some(local_func_index) = entry_func_id.checked_sub(local_func_base) {
@@ -511,12 +589,6 @@ impl<'data, R: ReadRef<'data>> WasmFile<'data, R> {
         }
 
         if let Some(symbols) = symbols {
-            // We have a symbol table, so we don't need to add symbols for locals or exports.
-            // These sections shouldn't be present at the same time as a symbol table anyway.
-            // TODO: never add symbols for exports. Return them via Object::exports instead.
-            exports = None;
-            names = None;
-
             for symbol in symbols {
                 let symbol = symbol.read_error("Invalid Wasm linking symbol")?;
                 if let wp::SymbolInfo::Data {
@@ -590,8 +662,9 @@ impl<'data, R: ReadRef<'data>> WasmFile<'data, R> {
                                 size = range.1;
                             }
                         } else {
+                            let import = &file.imports[import_funcs[index as usize]];
                             if !flags.contains(wp::SymbolFlags::EXPLICIT_NAME) {
-                                name = Some(import_func_names[index as usize]);
+                                name = Some(import.name);
                             }
                         }
                         name
@@ -619,15 +692,38 @@ impl<'data, R: ReadRef<'data>> WasmFile<'data, R> {
                                 address = value;
                             }
                         } else {
+                            let import = &file.imports[import_globals[index as usize]];
                             if !flags.contains(wp::SymbolFlags::EXPLICIT_NAME) {
-                                name = import_global_names.get(index as usize).copied()
+                                name = Some(import.name);
                             }
                         }
                         name
                     }
-                    wp::SymbolInfo::Event { name, .. } | wp::SymbolInfo::Table { name, .. } => name,
+                    wp::SymbolInfo::Event {
+                        index, mut name, ..
+                    } => {
+                        if let Some(import_index) = import_tags.get(index as usize) {
+                            let import = &file.imports[*import_index];
+                            if !flags.contains(wp::SymbolFlags::EXPLICIT_NAME) {
+                                name = Some(import.name);
+                            }
+                        }
+                        name
+                    }
+                    wp::SymbolInfo::Table {
+                        index, mut name, ..
+                    } => {
+                        if let Some(import_index) = import_tables.get(index as usize) {
+                            let import = &file.imports[*import_index];
+                            if !flags.contains(wp::SymbolFlags::EXPLICIT_NAME) {
+                                name = Some(import.name);
+                            }
+                        }
+                        name
+                    }
                 };
 
+                // TODO: flags, export_name
                 file.symbols.push(WasmSymbolInternal {
                     name: name.unwrap_or(""),
                     address,
@@ -640,7 +736,8 @@ impl<'data, R: ReadRef<'data>> WasmFile<'data, R> {
             }
         }
 
-        if let Some(exports) = exports {
+        // Exports in relocatable objects are only used for the export_name attribute.
+        if let Some(exports) = exports.filter(|_| !file.has_linking) {
             if let Some(main_file_symbol) = main_file_symbol.take() {
                 file.symbols.push(main_file_symbol);
             }
@@ -648,7 +745,56 @@ impl<'data, R: ReadRef<'data>> WasmFile<'data, R> {
             for export in exports {
                 let export = export.read_error("Couldn't read an export item")?;
 
-                let (kind, section_idx) = match export.kind {
+                let kind = match export.kind {
+                    wp::ExternalKind::Func => wasm::EXTERNAL_FUNCTION,
+                    wp::ExternalKind::Table => wasm::EXTERNAL_TABLE,
+                    wp::ExternalKind::Memory => wasm::EXTERNAL_MEMORY,
+                    wp::ExternalKind::Global => wasm::EXTERNAL_GLOBAL,
+                    wp::ExternalKind::Tag => wasm::EXTERNAL_TAG,
+                    // Shouldn't occur for exports.
+                    wp::ExternalKind::FuncExact => wasm::EXTERNAL_FUNCTION_EXACT,
+                };
+
+                let flags = export_infos
+                    .binary_search_by_key(&export.name, |info| info.name)
+                    .ok()
+                    .map(|index| wasm::SymbolFlags(export_infos[index].flags.bits()));
+
+                let mut target = ExportTarget::Wasm;
+                if export.kind == wp::ExternalKind::Global {
+                    // Try to guess some special export targets. We can only reliably
+                    // do this if we have symbol flags.
+                    // We deliberately do not use `ExportTarget::Address` for globals,
+                    // since that is a different address space from functions.
+                    (|| {
+                        let local_global_index = export.index.checked_sub(local_global_base)?;
+                        let x = global_values.get(local_global_index as usize)?.as_ref()?;
+                        let flags = flags?;
+                        if flags.contains(wasm::SYM_TLS) {
+                            target = ExportTarget::Tls { offset: *x };
+                        } else if flags.contains(wasm::SYM_ABSOLUTE) {
+                            target = ExportTarget::Absolute { value: *x };
+                        }
+                        Some(())
+                    })();
+                } else if export.kind == wp::ExternalKind::Func {
+                    if let Some(local_func_index) = export.index.checked_sub(local_func_base) {
+                        // We know the code address for local functions.
+                        if let Some(range) = code_ranges.get(local_func_index as usize) {
+                            target = ExportTarget::Address { address: range.0 };
+                        }
+                    }
+                }
+
+                file.exports.push(WasmExportInternal {
+                    name: export.name,
+                    kind,
+                    index: export.index,
+                    target,
+                    flags,
+                });
+
+                let (symbol_kind, section_idx) = match export.kind {
                     wp::ExternalKind::Func | wp::ExternalKind::FuncExact => {
                         if let Some(local_func_index) = export.index.checked_sub(local_func_base) {
                             let local_func_kind = local_func_kinds
@@ -685,19 +831,22 @@ impl<'data, R: ReadRef<'data>> WasmFile<'data, R> {
                     }
                 }
 
-                // TODO: these are exports, not symbols
+                // TODO: never add symbols for exports?
                 file.symbols.push(WasmSymbolInternal {
                     name: export.name,
                     address,
                     size,
-                    kind,
+                    kind: symbol_kind,
                     section: SymbolSection::Section(SectionIndex(section_idx as usize)),
                     scope: SymbolScope::Dynamic,
                     weak: false,
                 });
             }
         }
-        if let Some(names) = names {
+
+        // Create synthetic symbols from the "name" custom section so the symbol map contains them.
+        // Not needed for relocatable object files (and shouldn't be present in them anyway).
+        if let Some(names) = names.filter(|_| !file.has_linking) {
             if let Some(main_file_symbol) = main_file_symbol.take() {
                 file.symbols.push(main_file_symbol);
             }
@@ -799,17 +948,17 @@ impl<'data, R: ReadRef<'data>> Object<'data> for WasmFile<'data, R> {
         Self: 'file,
         'data: 'file;
     type ImportLibraryIterator<'file>
-        = NoImportLibraryIterator<'data, 'file, R>
+        = WasmImportLibraryIterator<'data, 'file, R>
     where
         Self: 'file,
         'data: 'file;
     type ImportIterator<'file>
-        = NoImportIterator<'data, 'file, R>
+        = WasmImportIterator<'data, 'file, R>
     where
         Self: 'file,
         'data: 'file;
     type ExportIterator<'file>
-        = NoExportIterator<'data, 'file, R>
+        = WasmExportIterator<'data, 'file, R>
     where
         Self: 'file,
         'data: 'file;
@@ -943,18 +1092,36 @@ impl<'data, R: ReadRef<'data>> Object<'data> for WasmFile<'data, R> {
     }
 
     fn import_libraries(&self) -> Result<Self::ImportLibraryIterator<'_>> {
-        // TODO: return module names in the import section
-        Ok(Default::default())
+        Ok(WasmImportLibraryIterator {
+            needed: self.needed.iter(),
+            marker: PhantomData,
+        })
     }
 
     fn imports(&self) -> Result<Self::ImportIterator<'_>> {
-        // TODO: return entries in the import section
-        Ok(Default::default())
+        if self.has_linking {
+            return Ok(WasmImportIterator {
+                imports: [].iter(),
+                marker: PhantomData,
+            });
+        }
+        Ok(WasmImportIterator {
+            imports: self.imports.iter(),
+            marker: PhantomData,
+        })
     }
 
     fn exports(&self) -> Result<Self::ExportIterator<'_>> {
-        // TODO: return entries in the export section
-        Ok(Default::default())
+        if self.has_linking {
+            return Ok(WasmExportIterator {
+                exports: [].iter(),
+                marker: PhantomData,
+            });
+        }
+        Ok(WasmExportIterator {
+            exports: self.exports.iter(),
+            marker: PhantomData,
+        })
     }
 
     fn has_debug_symbols(&self) -> bool {
@@ -1599,5 +1766,97 @@ impl<'data, 'file, R> Iterator for WasmRelocationIterator<'data, 'file, R> {
         };
         let offset = u64::from(entry.offset) - self.offset_range.start;
         Some((offset, relocation))
+    }
+}
+
+#[derive(Clone, Debug)]
+struct WasmImportInternal<'data> {
+    module: &'data str,
+    name: &'data str,
+    kind: wasm::ExternalKind,
+    index: u32,
+    flags: Option<wasm::SymbolFlags>,
+}
+
+#[derive(Clone, Debug)]
+struct WasmExportInternal<'data> {
+    name: &'data str,
+    kind: wasm::ExternalKind,
+    index: u32,
+    target: ExportTarget<'data>,
+    flags: Option<wasm::SymbolFlags>,
+}
+
+/// An iterator for the import libraries in a [`WasmFile`].
+///
+/// Yields the needed libraries from the `dylink.0` custom section.
+#[derive(Debug)]
+pub struct WasmImportLibraryIterator<'data, 'file, R = &'data [u8]> {
+    needed: slice::Iter<'file, &'data str>,
+    marker: PhantomData<R>,
+}
+
+impl<'data, 'file, R> Iterator for WasmImportLibraryIterator<'data, 'file, R> {
+    type Item = Result<ImportLibrary<'data>>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let needed = self.needed.next()?;
+        Some(Ok(ImportLibrary {
+            name: needed.as_bytes(),
+            flags: ImportLibraryFlags::None,
+        }))
+    }
+}
+
+/// An iterator for the imports in a [`WasmFile`].
+#[derive(Debug)]
+pub struct WasmImportIterator<'data, 'file, R = &'data [u8]> {
+    imports: slice::Iter<'file, WasmImportInternal<'data>>,
+    marker: PhantomData<R>,
+}
+
+impl<'data, 'file, R> Iterator for WasmImportIterator<'data, 'file, R> {
+    type Item = Result<Import<'data>>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let import = self.imports.next()?;
+        Some(Ok(Import {
+            // We use `library` to mean the needed entries from the `dylink.0` custom section,
+            // which are not specified per import.
+            library: &[],
+            name: NameOrOrdinal::Name(import.name.as_bytes()),
+            weak: import.flags.map(|f| f.binding()) == Some(wasm::SYM_BINDING_WEAK),
+            flags: ImportFlags::Wasm {
+                module: import.module,
+                kind: import.kind,
+                index: import.index,
+                flags: import.flags,
+            },
+        }))
+    }
+}
+
+/// An iterator for the exports in a [`WasmFile`].
+#[derive(Debug)]
+pub struct WasmExportIterator<'data, 'file, R = &'data [u8]> {
+    exports: slice::Iter<'file, WasmExportInternal<'data>>,
+    marker: PhantomData<R>,
+}
+
+impl<'data, 'file, R> Iterator for WasmExportIterator<'data, 'file, R> {
+    type Item = Result<Export<'data>>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let export = self.exports.next()?;
+        Some(Ok(Export {
+            name: NameOrOrdinal::Name(export.name.as_bytes().into()),
+            target: export.target,
+            weak: export.flags.map(|f| f.binding()) == Some(wasm::SYM_BINDING_WEAK),
+            flags: ExportFlags::Wasm {
+                kind: export.kind,
+                index: export.index,
+                flags: export.flags,
+            },
+        }))
     }
 }

@@ -40,6 +40,24 @@ Symbols
 
 Dynamic symbols
 
+Import { library: "", name: "console_log", flags: Wasm { module: "env", kind: EXTERNAL_FUNCTION, index: 0 } }
+
+Export { name: "memory", target: Wasm, flags: Wasm { kind: EXTERNAL_MEMORY, index: 0 } }
+Export { name: "__wasm_call_ctors", target: Address { address: 2 }, flags: Wasm { kind: EXTERNAL_FUNCTION, index: 1 } }
+Export { name: "print", target: Address { address: 5 }, flags: Wasm { kind: EXTERNAL_FUNCTION, index: 2 } }
+Export { name: "global1", target: Wasm, flags: Wasm { kind: EXTERNAL_GLOBAL, index: 1 } }
+Export { name: "global2", target: Wasm, flags: Wasm { kind: EXTERNAL_GLOBAL, index: 2 } }
+Export { name: "__dso_handle", target: Wasm, flags: Wasm { kind: EXTERNAL_GLOBAL, index: 3 } }
+Export { name: "__data_end", target: Wasm, flags: Wasm { kind: EXTERNAL_GLOBAL, index: 4 } }
+Export { name: "__stack_low", target: Wasm, flags: Wasm { kind: EXTERNAL_GLOBAL, index: 5 } }
+Export { name: "__stack_high", target: Wasm, flags: Wasm { kind: EXTERNAL_GLOBAL, index: 6 } }
+Export { name: "__global_base", target: Wasm, flags: Wasm { kind: EXTERNAL_GLOBAL, index: 7 } }
+Export { name: "__heap_base", target: Wasm, flags: Wasm { kind: EXTERNAL_GLOBAL, index: 8 } }
+Export { name: "__heap_end", target: Wasm, flags: Wasm { kind: EXTERNAL_GLOBAL, index: 9 } }
+Export { name: "__memory_base", target: Wasm, flags: Wasm { kind: EXTERNAL_GLOBAL, index: a } }
+Export { name: "__table_base", target: Wasm, flags: Wasm { kind: EXTERNAL_GLOBAL, index: b } }
+Export { name: "__table_base32", target: Wasm, flags: Wasm { kind: EXTERNAL_GLOBAL, index: c } }
+
 Symbol map
 0x0-0x1 "__memory_base"
 0x1-0x2 "__table_base32"

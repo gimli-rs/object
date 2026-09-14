@@ -24,9 +24,9 @@ Entry Address: 0
 14: Section { name: ".data.data_int", address: 0, size: 4, align: 4, kind: Data, flags: Wasm { flags: 0 } }
 15: Section { name: ".data.tls_int", address: 4, size: 4, align: 4, kind: Data, flags: Wasm { flags: 0 } }
 16: Section { name: ".rodata.rodata_bytes", address: 8, size: 3, align: 1, kind: ReadOnlyData, flags: Wasm { flags: 0 } }
-17: Section { name: ".rodata..L.str", address: b, size: 6, align: 1, kind: ReadOnlyString, flags: Wasm { flags: WASM_SEG_FLAG_STRINGS } }
+17: Section { name: ".rodata..L.str", address: b, size: 6, align: 1, kind: ReadOnlyString, flags: Wasm { flags: SEG_FLAG_STRINGS } }
 18: Section { name: ".data.rodata_str", address: 14, size: 4, align: 4, kind: Data, flags: Wasm { flags: 0 } }
-19: Section { name: ".data.retained_int", address: 18, size: 4, align: 4, kind: Data, flags: Wasm { flags: WASM_SEG_FLAG_RETAIN } }
+19: Section { name: ".data.retained_int", address: 18, size: 4, align: 4, kind: Data, flags: Wasm { flags: SEG_FLAG_RETAIN } }
 20: Section { name: ".bss.bss_int", address: 1c, size: 4, align: 4, kind: UninitializedData, flags: Wasm { flags: 0 } }
 21: Section { name: ".bss.tbss_int", address: 20, size: 4, align: 4, kind: UninitializedData, flags: Wasm { flags: 0 } }
 

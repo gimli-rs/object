@@ -69,6 +69,15 @@ Symbols
 
 Dynamic symbols
 
+Import { library: "", name: "proc_exit", flags: Wasm { module: "wasi_snapshot_preview1", kind: EXTERNAL_FUNCTION, index: 0 } }
+Import { library: "", name: "fd_seek", flags: Wasm { module: "wasi_snapshot_preview1", kind: EXTERNAL_FUNCTION, index: 1 } }
+Import { library: "", name: "fd_write", flags: Wasm { module: "wasi_snapshot_preview1", kind: EXTERNAL_FUNCTION, index: 2 } }
+Import { library: "", name: "fd_close", flags: Wasm { module: "wasi_snapshot_preview1", kind: EXTERNAL_FUNCTION, index: 3 } }
+Import { library: "", name: "fd_fdstat_get", flags: Wasm { module: "wasi_snapshot_preview1", kind: EXTERNAL_FUNCTION, index: 4 } }
+
+Export { name: "memory", target: Wasm, flags: Wasm { kind: EXTERNAL_MEMORY, index: 0 } }
+Export { name: "_start", target: Address { address: 5 }, flags: Wasm { kind: EXTERNAL_FUNCTION, index: 6 } }
+
 Symbol map
 0x0-0x2 "memory"
 0x2-0x4 "__wasm_call_ctors"

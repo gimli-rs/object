@@ -252,6 +252,7 @@ pub trait Object<'data>: read::private::Sealed {
     /// For ELF, these are the `DT_NEEDED` entries in the dynamic table.
     /// For Mach-O, these are the dylib load commands.
     /// For PE, these are from the import table and the delay-load import table.
+    /// For Wasm, these are the needed libraries in the `dylink.0` custom section.
     fn import_libraries(&self) -> Result<Self::ImportLibraryIterator<'_>>;
 
     /// Get an iterator for the imported symbols.

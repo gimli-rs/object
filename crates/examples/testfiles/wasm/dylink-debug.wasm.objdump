@@ -51,6 +51,27 @@ Symbols
 
 Dynamic symbols
 
+Import { library: "", name: "memory", flags: Wasm { module: "env", kind: EXTERNAL_MEMORY, index: 0 } }
+Import { library: "", name: "__memory_base", flags: Wasm { module: "env", kind: EXTERNAL_GLOBAL, index: 0 } }
+Import { library: "", name: "__table_base", flags: Wasm { module: "env", kind: EXTERNAL_GLOBAL, index: 1 } }
+Import { library: "", name: "data_int", flags: Wasm { module: "GOT.mem", kind: EXTERNAL_GLOBAL, index: 2 } }
+Import { library: "", name: "bss_int", flags: Wasm { module: "GOT.mem", kind: EXTERNAL_GLOBAL, index: 3 } }
+Import { library: "", name: "tls_int", flags: Wasm { module: "GOT.mem", kind: EXTERNAL_GLOBAL, index: 4 } }
+Import { library: "", name: "tbss_int", flags: Wasm { module: "GOT.mem", kind: EXTERNAL_GLOBAL, index: 5 } }
+Import { library: "", name: "rodata_bytes", flags: Wasm { module: "GOT.mem", kind: EXTERNAL_GLOBAL, index: 6 } }
+Import { library: "", name: "rodata_str", flags: Wasm { module: "GOT.mem", kind: EXTERNAL_GLOBAL, index: 7 } }
+Import { library: "", name: "retained_int", flags: Wasm { module: "GOT.mem", kind: EXTERNAL_GLOBAL, index: 8 } }
+
+Export { name: "get", target: Address { address: 24 }, flags: Wasm { kind: EXTERNAL_FUNCTION, index: 3 } }
+Export { name: "data_int", target: Wasm, flags: Wasm { kind: EXTERNAL_GLOBAL, index: 9 } }
+Export { name: "bss_int", target: Wasm, flags: Wasm { kind: EXTERNAL_GLOBAL, index: a } }
+Export { name: "tls_int", target: Wasm, flags: Wasm { kind: EXTERNAL_GLOBAL, index: b } }
+Export { name: "tbss_int", target: Wasm, flags: Wasm { kind: EXTERNAL_GLOBAL, index: c } }
+Export { name: "rodata_bytes", target: Wasm, flags: Wasm { kind: EXTERNAL_GLOBAL, index: d } }
+Export { name: "rodata_str", target: Wasm, flags: Wasm { kind: EXTERNAL_GLOBAL, index: e } }
+Export { name: "retained_int", target: Wasm, flags: Wasm { kind: EXTERNAL_GLOBAL, index: f } }
+Export { name: "__wasm_apply_data_relocs", target: Address { address: 5 }, flags: Wasm { kind: EXTERNAL_FUNCTION, index: 1 } }
+
 Symbol map
 0x0-0x1 "rodata_bytes"
 0x2-0x4 "__wasm_call_ctors"
