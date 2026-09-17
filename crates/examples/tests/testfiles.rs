@@ -6,6 +6,8 @@ use std::path::{Path, PathBuf};
 use std::{env, fs};
 
 const DISABLED_TEST_DIRS: &[&str] = &[
+    #[cfg(not(feature = "goff"))]
+    "goff",
     #[cfg(not(feature = "wasm"))]
     "wasm",
     #[cfg(not(feature = "xcoff"))]
