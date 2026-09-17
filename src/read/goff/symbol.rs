@@ -1,7 +1,9 @@
+use alloc::borrow::Cow;
 use alloc::vec::Vec;
 use core::fmt::Debug;
 use core::str;
 
+use crate::ebcdic;
 use crate::goff::*;
 use crate::goff::{ESD_SYMTYPE_ED, ESD_SYMTYPE_SD};
 
@@ -124,7 +126,7 @@ impl GoffSymbol {
     /// Get the raw EBCDIC-encoded name bytes of this symbol.
     ///
     /// The name is stored as a flat byte vector in EBCDIC encoding.
-    /// Use `ebcdic::ebcdic::Ebcdic::ebcdic_to_ascii` to convert to ASCII.
+    /// Use [`ObjectSymbol::name_utf8`] to convert to UTF-8.
     #[inline]
     pub fn name_bytes_owned(&self) -> &[u8] {
         &self.name
@@ -159,17 +161,19 @@ impl<'data> ObjectSymbol<'data> for GoffSymbol {
     }
 
     fn name_bytes(&self) -> Result<&'data [u8]> {
-        // GOFF symbol names are EBCDIC-encoded; use name_bytes_owned() to access the owned bytes.
         Err(Error(
-            "GOFF symbol names use non-continguent EBCDIC encoded bytes, not UTF-8 byte slices. Use name_bytes_owned()",
+            "GOFF symbol names are non-contiguous EBCDIC. Use name_utf8() instead",
         ))
     }
 
     fn name(&self) -> Result<&'data str> {
-        // GOFF symbol names are always stored as ebcidic, not utf-8
         Err(Error(
-            "GOFF symbol names use non-continguent EBCDIC encoded bytes, not UTF-8 byte slices. Use name_bytes_owned()",
+            "GOFF symbol names use non-contiguous EBCDIC. Use name_utf8() instead",
         ))
+    }
+
+    fn name_utf8(&self) -> Result<Cow<'data, str>> {
+        Ok(Cow::Owned(ebcdic::to_string(&self.name)))
     }
 
     #[inline]

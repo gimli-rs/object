@@ -1,3 +1,4 @@
+use alloc::borrow::Cow;
 use alloc::fmt;
 use core::marker::PhantomData;
 
@@ -803,7 +804,7 @@ impl<'data, 'file, R: ReadRef<'data>> fmt::Debug for Section<'data, 'file, R> {
                 s.field("segment", &"<invalid>");
             }
         }
-        s.field("name", &self.name().unwrap_or("<invalid>"))
+        s.field("name", &self.name_utf8().unwrap_or("<invalid>".into()))
             .field("address", &self.address())
             .field("size", &self.size())
             .field("align", &self.align())
@@ -860,6 +861,10 @@ impl<'data, 'file, R: ReadRef<'data>> ObjectSection<'data> for Section<'data, 'f
 
     fn name(&self) -> Result<&'data str> {
         with_inner!(self.inner, SectionInternal, |x| x.name())
+    }
+
+    fn name_utf8(&self) -> Result<Cow<'data, str>> {
+        with_inner!(self.inner, SectionInternal, |x| x.name_utf8())
     }
 
     fn segment_name_bytes(&self) -> Result<Option<&[u8]>> {
@@ -1288,7 +1293,7 @@ where
 impl<'data, 'file, R: ReadRef<'data>> fmt::Debug for Symbol<'data, 'file, R> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut s = f.debug_struct("Symbol");
-        s.field("name", &self.name().unwrap_or("<invalid>"))
+        s.field("name", &self.name_utf8().unwrap_or("<invalid>".into()))
             .field("address", &self.address())
             .field("size", &self.size())
             .field("kind", &self.kind())
@@ -1316,6 +1321,10 @@ impl<'data, 'file, R: ReadRef<'data>> ObjectSymbol<'data> for Symbol<'data, 'fil
 
     fn name(&self) -> Result<&'data str> {
         with_inner!(self.inner, SymbolInternal, |x| x.0.name())
+    }
+
+    fn name_utf8(&self) -> Result<Cow<'data, str>> {
+        with_inner!(self.inner, SymbolInternal, |x| x.0.name_utf8())
     }
 
     fn address(&self) -> u64 {
