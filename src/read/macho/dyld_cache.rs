@@ -578,13 +578,16 @@ where
     type Item = Result<DyldRelocation>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        match &mut self.version {
+        let result = match &mut self.version {
             DyldCacheRelocationIteratorVersion::None => Ok(None),
             DyldCacheRelocationIteratorVersion::V2(iter) => iter.next(),
             DyldCacheRelocationIteratorVersion::V3(iter) => iter.next(),
             DyldCacheRelocationIteratorVersion::V5(iter) => iter.next(),
+        };
+        if result.is_err() {
+            self.version = DyldCacheRelocationIteratorVersion::None;
         }
-        .transpose()
+        result.transpose()
     }
 }
 
