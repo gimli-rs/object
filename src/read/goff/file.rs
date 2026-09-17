@@ -618,7 +618,7 @@ where
     }
 
     fn comdats(&self) -> GoffComdatIterator<'data, '_, R> {
-        unimplemented!(); // currently unsupported
+        GoffComdatIterator { file: self }
     }
 
     fn symbol_table(&self) -> Option<GoffSymbolTable<'data, '_, R>> {
