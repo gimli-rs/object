@@ -70,6 +70,9 @@ pub use common::*;
 mod constants;
 pub use constants::*;
 
+#[cfg(all(feature = "read_core", any(feature = "archive", feature = "goff")))]
+mod ebcdic;
+
 #[macro_use]
 pub mod endian;
 pub use endian::*;

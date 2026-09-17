@@ -350,7 +350,7 @@ pub trait ObjectSegment<'data>: read::private::Sealed {
     /// Returns the name of the segment.
     fn name_bytes(&self) -> Result<Option<&[u8]>>;
 
-    /// Returns the name of the segment.
+    /// Returns the name of the segment, validated as UTF-8.
     ///
     /// Returns an error if the name is not UTF-8.
     fn name(&self) -> Result<Option<&str>>;
@@ -427,12 +427,23 @@ pub trait ObjectSection<'data>: read::private::Sealed {
     }
 
     /// Returns the name of the section.
+    ///
+    /// Returns an error if the name is not a contiguous byte array.
     fn name_bytes(&self) -> Result<&'data [u8]>;
 
-    /// Returns the name of the section.
+    /// Returns the name of the section, validated as UTF-8.
     ///
     /// Returns an error if the name is not UTF-8.
     fn name(&self) -> Result<&'data str>;
+
+    /// Returns the name of the section, converted to UTF-8.
+    ///
+    /// This allocates if the file format requires a conversion, such as for GOFF names.
+    ///
+    /// Returns an error if the name cannot be converted to UTF-8.
+    fn name_utf8(&self) -> Result<Cow<'data, str>> {
+        self.name().map(Cow::Borrowed)
+    }
 
     /// Returns the name of the segment for this section.
     fn segment_name_bytes(&self) -> Result<Option<&[u8]>>;
@@ -511,12 +522,23 @@ pub trait ObjectSymbol<'data>: read::private::Sealed {
     fn index(&self) -> SymbolIndex;
 
     /// The name of the symbol.
+    ///
+    /// Returns an error if the name is not a contiguous byte array.
     fn name_bytes(&self) -> Result<&'data [u8]>;
 
-    /// The name of the symbol.
+    /// The name of the symbol, validated as UTF-8.
     ///
     /// Returns an error if the name is not UTF-8.
     fn name(&self) -> Result<&'data str>;
+
+    /// The name of the symbol, converted to UTF-8.
+    ///
+    /// This allocates if the file format requires a conversion, such as for GOFF names.
+    ///
+    /// Returns an error if the name cannot be converted to UTF-8.
+    fn name_utf8(&self) -> Result<Cow<'data, str>> {
+        self.name().map(Cow::Borrowed)
+    }
 
     /// The address of the symbol.
     ///

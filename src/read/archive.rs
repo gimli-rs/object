@@ -20,9 +20,12 @@
 //! }
 //! ```
 
+use alloc::borrow::Cow;
 use core::convert::TryInto;
 use core::slice;
+use core::str;
 
+use crate::ebcdic;
 use crate::endian::{BigEndian as BE, LittleEndian as LE, U16, U32, U64};
 use crate::read::{self, Bytes, Error, ReadError, ReadRef};
 use crate::{SkipDebugList, archive};
@@ -639,6 +642,21 @@ impl<'data> ArchiveMember<'data> {
     #[inline]
     pub fn name(&self) -> &'data [u8] {
         self.name
+    }
+
+    /// The parsed file name, converted to UTF-8.
+    ///
+    /// This allocates if the file format requires a conversion, such as for z/OS archives.
+    ///
+    /// Returns an error if the name cannot be converted to UTF-8.
+    pub fn name_utf8(&self) -> read::Result<Cow<'data, str>> {
+        match self.header {
+            MemberHeader::Zos(_) => Ok(Cow::Owned(ebcdic::to_string(self.name))),
+            _ => str::from_utf8(self.name)
+                .ok()
+                .map(Cow::Borrowed)
+                .read_error("Non UTF-8 archive file name"),
+        }
     }
 
     /// Parse the file modification timestamp from the header.
@@ -1400,14 +1418,11 @@ mod tests {
         let mut members = archive.members();
 
         let member = members.next().unwrap().unwrap();
-        // Names are returned in raw EBCDIC encoding
-        // "test1.o" in EBCDIC = \xA3\x85\xA2\xA3\xF1\x4B\x96
-        assert_eq!(member.name(), b"\xA3\x85\xA2\xA3\xF1\x4B\x96");
+        assert_eq!(member.name_utf8().unwrap(), "test1.o");
         assert_eq!(member.data(data).unwrap(), &b"first\0"[..]);
 
         let member = members.next().unwrap().unwrap();
-        // "test2.o" in EBCDIC = \xA3\x85\xA2\xA3\xF2\x4B\x96
-        assert_eq!(member.name(), b"\xA3\x85\xA2\xA3\xF2\x4B\x96");
+        assert_eq!(member.name_utf8().unwrap(), "test2.o");
         assert_eq!(member.data(data).unwrap(), &b"second\0"[..]);
 
         assert!(members.next().is_none());

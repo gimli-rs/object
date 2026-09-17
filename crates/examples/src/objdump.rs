@@ -2,6 +2,7 @@ use object::read::archive::ArchiveFile;
 use object::read::coff;
 use object::read::macho::{DyldCache, FatArch, MachOFatFile32, MachOFatFile64};
 use object::{Endianness, FileKind, Object, ObjectComdat, ObjectSection, ObjectSymbol};
+use std::borrow::Cow;
 use std::io::{Result, Write};
 
 pub fn print<W: Write, E: Write>(
@@ -18,9 +19,11 @@ pub fn print<W: Write, E: Write>(
         for member in archive.members() {
             match member {
                 Ok(member) => {
-                    if find_member(&mut member_names, member.name()) {
-                        writeln!(w)?;
-                        writeln!(w, "{}:", String::from_utf8_lossy(member.name()))?;
+                    let name = member
+                        .name_utf8()
+                        .unwrap_or(Cow::Borrowed("<invalid name>"));
+                    if find_member(&mut member_names, &name) {
+                        writeln!(w, "\n{}:", name)?;
                         if let Ok(data) = member.data(file) {
                             if FileKind::parse(data) == Ok(FileKind::CoffImport) {
                                 dump_import(w, e, data)?;
@@ -64,7 +67,7 @@ pub fn print<W: Write, E: Write>(
                     continue;
                 }
             };
-            if !find_member(&mut member_names, path.as_bytes()) {
+            if !find_member(&mut member_names, path) {
                 continue;
             }
             writeln!(w)?;
@@ -90,11 +93,11 @@ pub fn print<W: Write, E: Write>(
     Ok(())
 }
 
-fn find_member(member_names: &mut [(String, bool)], name: &[u8]) -> bool {
+fn find_member(member_names: &mut [(String, bool)], name: &str) -> bool {
     if member_names.is_empty() {
         return true;
     }
-    match member_names.iter().position(|x| x.0.as_bytes() == name) {
+    match member_names.iter().position(|x| x.0 == name) {
         Some(i) => {
             member_names[i].1 = true;
             true
@@ -202,11 +205,10 @@ fn dump_parsed_object<W: Write, E: Write>(w: &mut W, e: &mut E, file: &object::F
 
     for section in file.sections() {
         if section.relocations().next().is_some() {
-            writeln!(
-                w,
-                "\n{} relocations",
-                section.name().unwrap_or("<invalid name>")
-            )?;
+            let name = section
+                .name_utf8()
+                .unwrap_or(Cow::Borrowed("<invalid name>"));
+            writeln!(w, "\n{} relocations", name)?;
             for relocation in section.relocations() {
                 writeln!(w, "{:x?}", relocation)?;
             }
