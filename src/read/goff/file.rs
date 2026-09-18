@@ -1,9 +1,9 @@
-use core::fmt::Debug;
-use core::mem;
-
+use alloc::string::String;
 use alloc::vec::Vec;
+use core::fmt::Debug;
+use core::{iter, mem};
 
-use crate::ebcdic::EbcdicString;
+use crate::ebcdic::EbcdicStr;
 use crate::read::{
     self, Error, NoDynamicRelocationIterator, NoExportIterator, NoImportIterator,
     NoImportLibraryIterator, Object, ReadError, ReadRef, Result,
@@ -137,20 +137,22 @@ where
             Vec::new()
         };
 
-        // Flatten name from the ESD record and any continuation records into a single Vec<u8>
+        // Flatten name from the ESD record and any continuation records into a single String
         let name_length: usize = esd_record.name_length.get(BE).into();
         let capped_length = name_length.clamp(0, SIZEOF_ESD_DATA);
-        let mut esd_name_data: Vec<u8> = esd_record.name[0..capped_length].to_vec();
-        for part in cont_data {
-            esd_name_data.extend_from_slice(part);
-        }
-        // Trim to declared name_length (continuation payloads are zero-padded to 77 bytes)
-        esd_name_data.truncate(name_length);
+        let mut name = String::with_capacity(name_length);
+        name.extend(
+            iter::once(&esd_record.name[0..capped_length])
+                .chain(cont_data)
+                .flat_map(|part| EbcdicStr::from_bytes(part).chars())
+                // Trim to declared name_length (continuation payloads are zero-padded to 77 bytes)
+                .take(name_length),
+        );
 
         let goffsymbol = GoffSymbol {
             symbol_index: symbolindex,
             esdid,
-            name: EbcdicString::from_bytes(esd_name_data),
+            name,
             symbol_type: esd_record.symbol_type,
             parent_esdid: parent_symbolindex,
             offset: esd_record.offset.get(BE),
@@ -662,11 +664,10 @@ where
     }
 
     fn has_debug_symbols(&self) -> bool {
-        // Check if any symbol name begins with the debug symbol prefix [0xC4, 0x6D] (i.e., the prefix D_ in EBCDIC)
-        self.symbols.iter().any(|symbol| {
-            let name = symbol.name_bytes_owned();
-            name.len() >= 2 && name[0] == 0xC4 && name[1] == 0x6D
-        })
+        // Check if any symbol name begins with the debug symbol prefix "D_"
+        self.symbols
+            .iter()
+            .any(|symbol| symbol.name.starts_with("D_"))
     }
 
     fn relative_address_base(&self) -> u64 {
