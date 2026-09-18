@@ -26,6 +26,15 @@ Symbols
 
 Dynamic symbols
 
+ImportLibrary { name: "dylink.wasm", flags: None }
+
+Import { library: "", name: "memory", flags: Wasm { module: "env", kind: EXTERNAL_MEMORY, index: 0 } }
+Import { library: "", name: "__memory_base", flags: Wasm { module: "env", kind: EXTERNAL_GLOBAL, index: 0 } }
+Import { library: "", name: "__table_base", flags: Wasm { module: "env", kind: EXTERNAL_GLOBAL, index: 1 } }
+Import { library: "", name: "get", flags: Wasm { module: "env", kind: EXTERNAL_FUNCTION, index: 0 } }
+
+Export { name: "get_dep", target: Address { address: 5 }, flags: Wasm { kind: EXTERNAL_FUNCTION, index: 2 } }
+
 Symbol map
 0x2-0x4 "__wasm_call_ctors"
 0x5-0xe "get_dep"
