@@ -111,7 +111,9 @@ impl EbcdicString {
         EbcdicString(bytes)
     }
 
-    #[cfg(test)]
+    /// Encodes a UTF-8 string.
+    ///
+    /// Returns `None` if the string contains characters that are not in ISO-8859-1.
     pub fn from_utf8(s: &str) -> Option<Self> {
         let out: Option<Vec<u8>> = s
             .chars()
