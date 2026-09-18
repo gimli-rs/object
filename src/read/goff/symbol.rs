@@ -1,9 +1,8 @@
 use alloc::borrow::Cow;
-use alloc::vec::Vec;
 use core::fmt::Debug;
 use core::str;
 
-use crate::ebcdic;
+use crate::ebcdic::EbcdicString;
 use crate::goff::*;
 use crate::goff::{ESD_SYMTYPE_ED, ESD_SYMTYPE_SD};
 
@@ -27,7 +26,7 @@ pub struct GoffSymbol {
     /// ESD Identifier (ESDID).
     pub(super) esdid: u32,
     /// Symbol name (EBCDIC-encoded, flattened from ESD record and any continuation records)
-    pub(super) name: Vec<u8>,
+    pub(super) name: EbcdicString,
     /// Symbol Type
     pub(super) symbol_type: SymbolType,
     /// Parent of Owning ESDID
@@ -129,7 +128,7 @@ impl GoffSymbol {
     /// Use [`ObjectSymbol::name_utf8`] to convert to UTF-8.
     #[inline]
     pub fn name_bytes_owned(&self) -> &[u8] {
-        &self.name
+        self.name.as_bytes()
     }
 
     /// Convert the behavioral attributes byte array to a structured SectionFlags
@@ -173,7 +172,7 @@ impl<'data> ObjectSymbol<'data> for GoffSymbol {
     }
 
     fn name_utf8(&self) -> Result<Cow<'data, str>> {
-        Ok(Cow::Owned(ebcdic::to_string(&self.name)))
+        Ok(Cow::Owned(self.name.to_utf8()))
     }
 
     #[inline]

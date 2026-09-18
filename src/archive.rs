@@ -3,6 +3,7 @@
 //! These definitions are independent of read/write support, although we do implement
 //! some traits useful for those.
 
+use crate::ebcdic::EbcdicArray;
 use crate::pod::Pod;
 
 /// File identification bytes stored at the beginning of the file.
@@ -22,12 +23,12 @@ pub const TERMINATOR: [u8; 2] = *b"`\n";
 /// File identification bytes at the beginning of a z/OS archive.
 ///
 /// This is [`MAGIC`] in EBCDIC.
-pub const ZOS_MAGIC: [u8; 8] = *b"\x5A\x4C\x81\x99\x83\x88\x6E\x15";
+pub const ZOS_MAGIC: [u8; 8] = EbcdicArray::from_ascii(MAGIC).into_inner();
 
 /// The terminator for each z/OS archive member header.
 ///
 /// This is [`TERMINATOR`] in EBCDIC.
-pub const ZOS_TERMINATOR: [u8; 2] = *b"\x79\x15";
+pub const ZOS_TERMINATOR: [u8; 2] = EbcdicArray::from_ascii(TERMINATOR).into_inner();
 
 /// The header at the start of an archive member.
 #[derive(Debug, Clone, Copy)]

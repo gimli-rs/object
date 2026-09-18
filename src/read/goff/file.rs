@@ -3,11 +3,11 @@ use core::mem;
 
 use alloc::vec::Vec;
 
+use crate::ebcdic::EbcdicString;
 use crate::read::{
     self, Error, NoDynamicRelocationIterator, NoExportIterator, NoImportIterator,
     NoImportLibraryIterator, Object, ReadError, ReadRef, Result,
 };
-
 use crate::{
     Architecture, BigEndian as BE, FileFlags, ObjectKind, ObjectSymbolTable, SectionIndex,
     SymbolIndex, goff,
@@ -150,7 +150,7 @@ where
         let goffsymbol = GoffSymbol {
             symbol_index: symbolindex,
             esdid,
-            name: esd_name_data,
+            name: EbcdicString::from_bytes(esd_name_data),
             symbol_type: esd_record.symbol_type,
             parent_esdid: parent_symbolindex,
             offset: esd_record.offset.get(BE),

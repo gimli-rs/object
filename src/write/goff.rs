@@ -1,18 +1,20 @@
-use crate::endian::{BigEndian as BE, U16, U32};
-use crate::goff;
-use crate::goff::SIZEOF_ENTRY_POINT_NAME;
-use crate::write::util::*;
-use crate::write::*;
 #[cfg(not(feature = "std"))]
 use alloc::collections::btree_map::BTreeMap as HashMap;
 use alloc::vec::Vec;
 #[cfg(feature = "std")]
 use std::collections::hash_map::HashMap;
 
+use crate::ebcdic::{EbcdicArray, EbcdicStr};
+use crate::endian::{BigEndian as BE, U16, U32};
+use crate::goff;
+use crate::goff::SIZEOF_ENTRY_POINT_NAME;
+use crate::write::util::*;
+use crate::write::*;
+
 // EBCDIC-encoded constant strings
-const EBCDIC_RUSTCU: &[u8] = &[0x99, 0xA4, 0xA2, 0xA3, 0x83, 0xA4]; // "rustcu"
-const EBCDIC_C_WSA64: &[u8] = &[0xC3, 0x5F, 0xE6, 0xE2, 0xC1, 0xF6, 0xF4]; // "C_WSA64"
-const EBCDIC_C_CODE64: &[u8] = &[0xC3, 0x5F, 0xC3, 0xD6, 0xC4, 0xC5, 0xF6, 0xF4]; // "C_CODE64"
+const EBCDIC_RUSTCU: &EbcdicArray<6> = &EbcdicArray::from_ascii(*b"rustcu");
+const EBCDIC_C_WSA64: &EbcdicArray<7> = &EbcdicArray::from_ascii(*b"C_WSA64");
+const EBCDIC_C_CODE64: &EbcdicArray<8> = &EbcdicArray::from_ascii(*b"C_CODE64");
 
 impl<'a> Object<'a> {
     /// Get symbols that belong to a specific section.
@@ -93,23 +95,33 @@ impl<'a> Object<'a> {
         section: StandardSection,
     ) -> (&'static [u8], &'static [u8], SectionKind, SectionFlags) {
         match section {
-            StandardSection::Text => (&[], EBCDIC_C_CODE64, SectionKind::Text, SectionFlags::None),
-            StandardSection::Data => (&[], EBCDIC_C_WSA64, SectionKind::Data, SectionFlags::None),
+            StandardSection::Text => (
+                &[],
+                EBCDIC_C_CODE64.as_bytes(),
+                SectionKind::Text,
+                SectionFlags::None,
+            ),
+            StandardSection::Data => (
+                &[],
+                EBCDIC_C_WSA64.as_bytes(),
+                SectionKind::Data,
+                SectionFlags::None,
+            ),
             StandardSection::ReadOnlyData | StandardSection::ReadOnlyString => (
                 &[],
-                EBCDIC_C_CODE64,
+                EBCDIC_C_CODE64.as_bytes(),
                 SectionKind::ReadOnlyData,
                 SectionFlags::None,
             ),
             StandardSection::ReadOnlyDataWithRel => (
                 &[],
-                EBCDIC_C_WSA64,
+                EBCDIC_C_WSA64.as_bytes(),
                 SectionKind::ReadOnlyDataWithRel,
                 SectionFlags::None,
             ),
             StandardSection::UninitializedData => (
                 &[],
-                EBCDIC_C_WSA64,
+                EBCDIC_C_WSA64.as_bytes(),
                 SectionKind::UninitializedData,
                 SectionFlags::None,
             ),
@@ -316,7 +328,7 @@ impl<'a> Writer<'a> {
         self.buffer.write_pod(&fileend);
     }
 
-    pub fn write_er_to_text(&mut self, symbol_name: &[u8]) -> u32 {
+    pub fn write_er_to_text(&mut self, symbol_name: &EbcdicStr) -> u32 {
         let mut er = self.get_esd_record(
             goff::ESD_SYMTYPE_ER,
             goff::ESD_NS_NORMAL_NAME,
@@ -334,11 +346,11 @@ impl<'a> Writer<'a> {
         self.write_esd_record(&er, symbol_name)
     }
 
-    pub fn write_er_to_data(&mut self, symbol_name: &[u8]) -> u32 {
+    pub fn write_er_to_data(&mut self, symbol_name: &EbcdicStr) -> u32 {
         self.write_wsa_symbol(symbol_name, 0)
     }
 
-    pub fn write_wsa_symbol(&mut self, symbol_name: &[u8], symbol_length: u32) -> u32 {
+    pub fn write_wsa_symbol(&mut self, symbol_name: &EbcdicStr, symbol_length: u32) -> u32 {
         // Emit parent C_WSA64 ED symbol (data section).
         let mut ed = self.get_esd_record(goff::ESD_SYMTYPE_ED, goff::ESD_NS_PARTS, self.cu_esdid);
         ed.sym_flags = 0x80; // Fill byte present
@@ -363,7 +375,11 @@ impl<'a> Writer<'a> {
         self.write_pr(symbol_name, ed_esdid, symbol_length, pr_attrs)
     }
 
-    pub fn write_debug_section_symbol(&mut self, section_name: &[u8], section_length: u32) -> u32 {
+    pub fn write_debug_section_symbol(
+        &mut self,
+        section_name: &EbcdicStr,
+        section_length: u32,
+    ) -> u32 {
         // Emit ED symbol for debug section.
         let mut ed = self.get_esd_record(goff::ESD_SYMTYPE_ED, goff::ESD_NS_PARTS, self.cu_esdid);
         ed.sym_flags = 0x80; // Fill byte present
@@ -384,7 +400,7 @@ impl<'a> Writer<'a> {
     /// Write an SD (Section Definition) record.
     ///
     /// SD records define control sections (compilation units).
-    pub fn write_sd(&mut self, name: &[u8], attributes: [u8; 10]) -> u32 {
+    pub fn write_sd(&mut self, name: &EbcdicStr, attributes: [u8; 10]) -> u32 {
         let mut sd = self.get_esd_record(
             goff::ESD_SYMTYPE_SD,
             goff::ESD_NS_PROGRAM_MANAGEMENT_BINDER,
@@ -399,7 +415,7 @@ impl<'a> Writer<'a> {
     /// ED records define elements (code/data sections).
     pub fn write_ed(
         &mut self,
-        name: &[u8],
+        name: &EbcdicStr,
         parent_esdid: u32,
         length: u32,
         attributes: [u8; 10],
@@ -417,7 +433,7 @@ impl<'a> Writer<'a> {
     /// LD records define labels within sections (function/variable names).
     pub fn write_ld(
         &mut self,
-        name: &[u8],
+        name: &EbcdicStr,
         parent_esdid: u32,
         offset: u32,
         scope: goff::BindingScope,
@@ -439,7 +455,7 @@ impl<'a> Writer<'a> {
     /// PR records reference parts of elements (data within sections).
     pub fn write_pr(
         &mut self,
-        name: &[u8],
+        name: &EbcdicStr,
         parent_esdid: u32,
         length: u32,
         attributes: [u8; 10],
@@ -451,7 +467,7 @@ impl<'a> Writer<'a> {
     }
 
     /// Write an ER (External Reference) record with weak binding.
-    pub fn write_er_weak(&mut self, name: &[u8], parent_esdid: u32, is_code: bool) -> u32 {
+    pub fn write_er_weak(&mut self, name: &EbcdicStr, parent_esdid: u32, is_code: bool) -> u32 {
         let mut er =
             self.get_esd_record(goff::ESD_SYMTYPE_ER, goff::ESD_NS_NORMAL_NAME, parent_esdid);
 
@@ -502,44 +518,31 @@ impl<'a> Writer<'a> {
             return Ok(ed_esdid);
         }
 
+        let name = EbcdicStr::from_bytes(&section.name);
+
         // Determine section attributes and create ED based on kind
         let ed_esdid = match section.kind {
             SectionKind::Text => {
                 let attrs = BehavioralAttributesBuilder::for_code_section()
                     .with_binding_scope(goff::GOFF_SCOPE_MODULE)
                     .build();
-                self.write_ed(
-                    &section.name,
-                    self.cu_esdid,
-                    section.data.len() as u32,
-                    attrs,
-                )
+                self.write_ed(name, self.cu_esdid, section.data.len() as u32, attrs)
             }
             SectionKind::Data => {
                 let attrs = BehavioralAttributesBuilder::for_data_section()
                     .with_binding_scope(goff::GOFF_SCOPE_MODULE)
                     .build();
-                self.write_ed(
-                    &section.name,
-                    self.cu_esdid,
-                    section.data.len() as u32,
-                    attrs,
-                )
+                self.write_ed(name, self.cu_esdid, section.data.len() as u32, attrs)
             }
             SectionKind::ReadOnlyData => {
                 let attrs = BehavioralAttributesBuilder::for_readonly_data()
                     .with_binding_scope(goff::GOFF_SCOPE_MODULE)
                     .build();
-                self.write_ed(
-                    &section.name,
-                    self.cu_esdid,
-                    section.data.len() as u32,
-                    attrs,
-                )
+                self.write_ed(name, self.cu_esdid, section.data.len() as u32, attrs)
             }
             SectionKind::Debug => {
                 // Debug sections need special handling with ESD_NS_PARTS namespace
-                self.write_debug_section_symbol(&section.name, section.data.len() as u32)
+                self.write_debug_section_symbol(name, section.data.len() as u32)
             }
             _ => {
                 return Err(Error(format!(
@@ -558,7 +561,7 @@ impl<'a> Writer<'a> {
     }
 
     /// Write a compilation unit SD.
-    fn write_compilation_unit(&mut self, cu_name: &[u8]) -> u32 {
+    fn write_compilation_unit(&mut self, cu_name: &EbcdicStr) -> u32 {
         let attrs = BehavioralAttributesBuilder::new()
             .with_binding_scope(goff::GOFF_SCOPE_SECTION)
             .build();
@@ -602,8 +605,9 @@ impl<'a> Writer<'a> {
         }
     }
 
-    pub fn write_esd_record(&mut self, record: &goff::SymbolRecord64, name: &[u8]) -> u32 {
+    pub fn write_esd_record(&mut self, record: &goff::SymbolRecord64, name: &EbcdicStr) -> u32 {
         let mut esd_record = *record;
+        let name = name.as_bytes();
         let mut record_name_len = name.len();
         let mut ptv = goff::GOFF_ESD_BYTES;
         if record_name_len > goff::SIZEOF_ESD_DATA {
@@ -713,6 +717,8 @@ impl<'a> Writer<'a> {
         symbol_id: SymbolId,
         parent_ed_esdid: u32,
     ) -> Result<u32> {
+        let name = EbcdicStr::from_bytes(&symbol.name);
+
         // Determine binding scope based on symbol properties
         let scope = if symbol.is_local() {
             goff::GOFF_SCOPE_SECTION
@@ -723,7 +729,7 @@ impl<'a> Writer<'a> {
         };
 
         // Write LD (Label Definition) for the symbol
-        let ld_esdid = self.write_ld(&symbol.name, parent_ed_esdid, symbol.value as u32, scope);
+        let ld_esdid = self.write_ld(name, parent_ed_esdid, symbol.value as u32, scope);
 
         // Track the LD
         self.add_symbol_to_hierarchy(ld_esdid, parent_ed_esdid, Some(symbol_id));
@@ -733,6 +739,8 @@ impl<'a> Writer<'a> {
 
     /// Write an undefined symbol (external reference).
     fn write_undefined_symbol(&mut self, symbol: &Symbol, symbol_id: SymbolId) -> Result<u32> {
+        let name = EbcdicStr::from_bytes(&symbol.name);
+
         let is_code = match symbol.kind {
             SymbolKind::Text => true,
             SymbolKind::Data => false,
@@ -744,13 +752,13 @@ impl<'a> Writer<'a> {
 
         // Check if it's a weak reference
         let esdid = if symbol.weak {
-            self.write_er_weak(&symbol.name, self.cu_esdid, is_code)
+            self.write_er_weak(name, self.cu_esdid, is_code)
         } else {
             // Use existing methods for compatibility
             if is_code {
-                self.write_er_to_text(&symbol.name)
+                self.write_er_to_text(name)
             } else {
-                self.write_er_to_data(&symbol.name)
+                self.write_er_to_data(name)
             }
         };
 

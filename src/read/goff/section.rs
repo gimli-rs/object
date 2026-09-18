@@ -8,11 +8,12 @@ use core::str;
 #[allow(unused_imports)]
 use std::collections::hash_map;
 
+use crate::ebcdic::EbcdicStr;
+use crate::goff;
 use crate::read::{
     self, Error, ObjectSection, ReadRef, RelocationMap, Result, SectionIndex, SymbolIndex,
 };
 use crate::{CompressedData, CompressedFileRange, SectionFlags, SectionKind};
-use crate::{ebcdic, goff};
 
 use super::{GoffFile, GoffRelocationIterator};
 
@@ -235,7 +236,7 @@ where
 
     fn name_utf8(&self) -> read::Result<Cow<'data, str>> {
         let name = self.name_bytes_parts()?;
-        Ok(Cow::Owned(ebcdic::to_string(&name)))
+        Ok(Cow::Owned(EbcdicStr::from_bytes(&name).to_utf8()))
     }
 
     fn segment_name_bytes(&self) -> Result<Option<&[u8]>> {

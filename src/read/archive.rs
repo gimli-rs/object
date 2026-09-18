@@ -25,7 +25,7 @@ use core::convert::TryInto;
 use core::slice;
 use core::str;
 
-use crate::ebcdic;
+use crate::ebcdic::EbcdicStr;
 use crate::endian::{BigEndian as BE, LittleEndian as LE, U16, U32, U64};
 use crate::read::{self, Bytes, Error, ReadError, ReadRef};
 use crate::{SkipDebugList, archive};
@@ -651,7 +651,7 @@ impl<'data> ArchiveMember<'data> {
     /// Returns an error if the name cannot be converted to UTF-8.
     pub fn name_utf8(&self) -> read::Result<Cow<'data, str>> {
         match self.header {
-            MemberHeader::Zos(_) => Ok(Cow::Owned(ebcdic::to_string(self.name))),
+            MemberHeader::Zos(_) => Ok(Cow::Owned(EbcdicStr::from_bytes(self.name).to_utf8())),
             _ => str::from_utf8(self.name)
                 .ok()
                 .map(Cow::Borrowed)
