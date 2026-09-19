@@ -169,6 +169,14 @@ impl<'data> NodeIterator<'data> {
     // - `Ok(Some(None))` if we don't have terminal data at the current node.
     // - `Ok(None)` if we've reached the end of the trie.
     fn next(&mut self) -> Result<Option<Option<ExportSymbol<'data>>>> {
+        let result = self.parse_node();
+        if result.is_err() {
+            self.stack.clear();
+        }
+        result
+    }
+
+    fn parse_node(&mut self) -> Result<Option<Option<ExportSymbol<'data>>>> {
         if self.first {
             self.first = false;
             // The root node is at offset 0.
@@ -331,5 +339,18 @@ mod tests {
         ];
         let mut exports = ExportsTrieIterator::new(&data);
         assert!(exports.next().is_err());
+        assert!(exports.next().unwrap().is_none());
+    }
+
+    #[test]
+    fn fuse_after_error() {
+        let data = [
+            0x00, // terminal_size
+            0x01, // children_count
+            b'a', // edge_str (no null terminator)
+        ];
+        let mut exports = ExportsTrieIterator::new(&data);
+        assert!(exports.next().is_err());
+        assert!(exports.next().unwrap().is_none());
     }
 }
