@@ -20,27 +20,8 @@ use crate::read::{
 use crate::wasm;
 use crate::{RelocationEncoding, RelocationFlags, RelocationKind, RelocationTarget};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[repr(u8)]
-enum SectionId {
-    Unknown = 255,
-    Custom = 0,
-    Type = 1,
-    Import = 2,
-    Function = 3,
-    Table = 4,
-    Memory = 5,
-    Global = 6,
-    Export = 7,
-    Start = 8,
-    Element = 9,
-    Code = 10,
-    Data = 11,
-    DataCount = 12,
-    Tag = 13,
-}
 // Update this constant when adding new section id:
-const MAX_SECTION_ID: usize = SectionId::Tag as usize;
+const MAX_SECTION_ID: usize = wasm::SEC_TAG.0 as usize;
 // Section indices for data segments start after the Wasm section id space.
 const DATA_SEGMENT_SECTION_INDEX_BASE: usize = MAX_SECTION_ID + 1;
 
@@ -184,7 +165,7 @@ impl<'data> WasmDataSegmentInternal<'data> {
 
 #[derive(Debug)]
 struct SectionHeader<'data> {
-    id: SectionId,
+    id: wasm::SectionId,
     range: Range<usize>,
     name: &'data str,
 }
@@ -263,29 +244,29 @@ impl<'data, R: ReadRef<'data>> WasmFile<'data, R> {
                     }
                 }
                 wp::Payload::TypeSection(section) => {
-                    file.add_section(SectionId::Type, section.range(), "");
+                    file.add_section(wasm::SEC_TYPE, section.range(), "");
                 }
                 wp::Payload::ImportSection(section) => {
-                    file.add_section(SectionId::Import, section.range(), "");
+                    file.add_section(wasm::SEC_IMPORT, section.range(), "");
                     imports_section = Some(section);
                 }
                 wp::Payload::FunctionSection(section) => {
-                    file.add_section(SectionId::Function, section.range(), "");
+                    file.add_section(wasm::SEC_FUNCTION, section.range(), "");
                     local_func_kinds =
                         vec![LocalFunctionKind::Unknown; section.into_iter().count()];
                 }
                 wp::Payload::TableSection(section) => {
-                    file.add_section(SectionId::Table, section.range(), "");
+                    file.add_section(wasm::SEC_TABLE, section.range(), "");
                 }
                 wp::Payload::MemorySection(section) => {
-                    file.add_section(SectionId::Memory, section.range(), "");
+                    file.add_section(wasm::SEC_MEMORY, section.range(), "");
                     for memory in section {
                         let memory = memory.read_error("Couldn't read a memory item")?;
                         file.has_memory64 |= memory.memory64;
                     }
                 }
                 wp::Payload::GlobalSection(section) => {
-                    file.add_section(SectionId::Global, section.range(), "");
+                    file.add_section(wasm::SEC_GLOBAL, section.range(), "");
                     for global in section {
                         let global = global.read_error("Couldn't read a global item")?;
                         let mut address = None;
@@ -302,19 +283,19 @@ impl<'data, R: ReadRef<'data>> WasmFile<'data, R> {
                     }
                 }
                 wp::Payload::ExportSection(section) => {
-                    file.add_section(SectionId::Export, section.range(), "");
+                    file.add_section(wasm::SEC_EXPORT, section.range(), "");
                     exports = Some(section);
                 }
                 wp::Payload::StartSection { func, range, .. } => {
-                    file.add_section(SectionId::Start, range, "");
+                    file.add_section(wasm::SEC_START, range, "");
                     entry_func_id = Some(func);
                 }
                 wp::Payload::ElementSection(section) => {
-                    file.add_section(SectionId::Element, section.range(), "");
+                    file.add_section(wasm::SEC_ELEMENT, section.range(), "");
                 }
                 wp::Payload::CodeSectionStart { range, .. } => {
                     code_range_start = range.start;
-                    file.add_section(SectionId::Code, range, "");
+                    file.add_section(wasm::SEC_CODE, range, "");
                 }
                 wp::Payload::CodeSectionEntry(body) => {
                     let range = body.range();
@@ -324,7 +305,7 @@ impl<'data, R: ReadRef<'data>> WasmFile<'data, R> {
                 }
                 wp::Payload::DataSection(section) => {
                     let section_range = section.range();
-                    file.add_section(SectionId::Data, section_range.clone(), "");
+                    file.add_section(wasm::SEC_DATA, section_range.clone(), "");
                     for segment in section.clone() {
                         let segment = segment.read_error("Couldn't read a data segment")?;
                         let mut address = 0u64;
@@ -357,21 +338,20 @@ impl<'data, R: ReadRef<'data>> WasmFile<'data, R> {
                     }
                 }
                 wp::Payload::DataCountSection { range, .. } => {
-                    file.add_section(SectionId::DataCount, range, "");
+                    file.add_section(wasm::SEC_DATA_COUNT, range, "");
                 }
                 wp::Payload::TagSection(section) => {
-                    file.add_section(SectionId::Tag, section.range(), "");
+                    file.add_section(wasm::SEC_TAG, section.range(), "");
                 }
-                wp::Payload::UnknownSection { range, .. } => {
-                    // TODO: report id
-                    file.add_section(SectionId::Unknown, range, "");
+                wp::Payload::UnknownSection { id, range, .. } => {
+                    file.add_section(wasm::SectionId(id), range, "");
                 }
                 wp::Payload::CustomSection(section) => {
                     let name = section.name();
                     let size = section.data().len();
                     let mut range = section.range();
                     range.start = range.end - size;
-                    file.add_section(SectionId::Custom, range, name);
+                    file.add_section(wasm::SEC_CUSTOM, range, name);
                     if name == "name" {
                         let reader = wp::BinaryReader::new(section.data(), section.data_offset());
                         names = Some(wp::NameSectionReader::new(reader));
@@ -436,7 +416,7 @@ impl<'data, R: ReadRef<'data>> WasmFile<'data, R> {
                             entries.push(entry);
                         }
                         if let Some(section) = file.sections.get(target.0 as usize) {
-                            if section.id == SectionId::Data {
+                            if section.id == wasm::SEC_DATA {
                                 // Sort so that we can binary search for data segments.
                                 entries.sort_by_key(|entry| entry.offset);
                             }
@@ -626,7 +606,7 @@ impl<'data, R: ReadRef<'data>> WasmFile<'data, R> {
                 } else {
                     match symbol {
                         wp::SymbolInfo::Func { .. } => {
-                            SymbolSection::Section(SectionIndex(SectionId::Code as usize))
+                            SymbolSection::Section(SectionIndex(wasm::SEC_CODE.0 as usize))
                         }
                         wp::SymbolInfo::Data {
                             symbol: Some(data), ..
@@ -802,11 +782,11 @@ impl<'data, R: ReadRef<'data>> WasmFile<'data, R> {
                                 .read_error("Invalid Wasm export index")?;
                             *local_func_kind = LocalFunctionKind::Exported;
                         }
-                        (SymbolKind::Text, SectionId::Code)
+                        (SymbolKind::Text, wasm::SEC_CODE)
                     }
                     wp::ExternalKind::Table
                     | wp::ExternalKind::Memory
-                    | wp::ExternalKind::Global => (SymbolKind::Data, SectionId::Data),
+                    | wp::ExternalKind::Global => (SymbolKind::Data, wasm::SEC_DATA),
                     // TODO
                     wp::ExternalKind::Tag => continue,
                 };
@@ -837,7 +817,7 @@ impl<'data, R: ReadRef<'data>> WasmFile<'data, R> {
                     address,
                     size,
                     kind: symbol_kind,
-                    section: SymbolSection::Section(SectionIndex(section_idx as usize)),
+                    section: SymbolSection::Section(SectionIndex(section_idx.0 as usize)),
                     scope: SymbolScope::Dynamic,
                     weak: false,
                 });
@@ -874,7 +854,7 @@ impl<'data, R: ReadRef<'data>> WasmFile<'data, R> {
                         address,
                         size,
                         kind: SymbolKind::Text,
-                        section: SymbolSection::Section(SectionIndex(SectionId::Code as usize)),
+                        section: SymbolSection::Section(SectionIndex(wasm::SEC_CODE.0 as usize)),
                         scope: SymbolScope::Compilation,
                         weak: false,
                     });
@@ -885,10 +865,10 @@ impl<'data, R: ReadRef<'data>> WasmFile<'data, R> {
         Ok(file)
     }
 
-    fn add_section(&mut self, id: SectionId, range: Range<usize>, name: &'data str) {
+    fn add_section(&mut self, id: wasm::SectionId, range: Range<usize>, name: &'data str) {
         let section = SectionHeader { id, range, name };
-        if id != SectionId::Custom && id != SectionId::Unknown {
-            self.id_sections[id as usize] = Some(WasmSectionIndex(self.sections.len() as u32));
+        if id != wasm::SEC_CUSTOM && id.0 as usize <= MAX_SECTION_ID {
+            self.id_sections[id.0 as usize] = Some(WasmSectionIndex(self.sections.len() as u32));
         }
         self.sections.push(section);
     }
@@ -1298,10 +1278,10 @@ impl<'data, 'file, R: ReadRef<'data>> ObjectSection<'data> for WasmSection<'data
             // Note that we treat all custom and unknown sections as index 0.
             // This is ok because they are never looked up by index.
             WasmSectionInner::Header { section, .. } => {
-                if section.id == SectionId::Custom || section.id == SectionId::Unknown {
+                if section.id == wasm::SEC_CUSTOM || section.id.0 as usize > MAX_SECTION_ID {
                     SectionIndex(0)
                 } else {
-                    SectionIndex(section.id as usize)
+                    SectionIndex(section.id.0 as usize)
                 }
             }
             WasmSectionInner::DataSegment { segment_index, .. } => segment_index.section_index(),
@@ -1390,21 +1370,21 @@ impl<'data, 'file, R: ReadRef<'data>> ObjectSection<'data> for WasmSection<'data
     fn name(&self) -> Result<&'data str> {
         Ok(match self.inner {
             WasmSectionInner::Header { section, .. } => match section.id {
-                SectionId::Custom => section.name,
-                SectionId::Type => "<type>",
-                SectionId::Import => "<import>",
-                SectionId::Function => "<function>",
-                SectionId::Table => "<table>",
-                SectionId::Memory => "<memory>",
-                SectionId::Global => "<global>",
-                SectionId::Export => "<export>",
-                SectionId::Start => "<start>",
-                SectionId::Element => "<element>",
-                SectionId::Code => "<code>",
-                SectionId::Data => "<data>",
-                SectionId::DataCount => "<data_count>",
-                SectionId::Tag => "<tag>",
-                SectionId::Unknown => "<unknown>",
+                wasm::SEC_CUSTOM => section.name,
+                wasm::SEC_TYPE => "<type>",
+                wasm::SEC_IMPORT => "<import>",
+                wasm::SEC_FUNCTION => "<function>",
+                wasm::SEC_TABLE => "<table>",
+                wasm::SEC_MEMORY => "<memory>",
+                wasm::SEC_GLOBAL => "<global>",
+                wasm::SEC_EXPORT => "<export>",
+                wasm::SEC_START => "<start>",
+                wasm::SEC_ELEMENT => "<element>",
+                wasm::SEC_CODE => "<code>",
+                wasm::SEC_DATA => "<data>",
+                wasm::SEC_DATA_COUNT => "<data_count>",
+                wasm::SEC_TAG => "<tag>",
+                _ => "<unknown>",
             },
             WasmSectionInner::DataSegment { segment, .. } => segment.name(),
         })
@@ -1424,25 +1404,25 @@ impl<'data, 'file, R: ReadRef<'data>> ObjectSection<'data> for WasmSection<'data
     fn kind(&self) -> SectionKind {
         match self.inner {
             WasmSectionInner::Header { section, .. } => match section.id {
-                SectionId::Custom => match section.name {
+                wasm::SEC_CUSTOM => match section.name {
                     "linking" => SectionKind::Linker,
                     name if name.starts_with("reloc.") => SectionKind::Linker,
                     _ => SectionKind::Other,
                 },
-                SectionId::Type => SectionKind::Metadata,
-                SectionId::Import => SectionKind::Linker,
-                SectionId::Function => SectionKind::Metadata,
-                SectionId::Table => SectionKind::Metadata,
-                SectionId::Memory => SectionKind::Metadata,
-                SectionId::Global => SectionKind::Metadata,
-                SectionId::Export => SectionKind::Linker,
-                SectionId::Start => SectionKind::Metadata,
-                SectionId::Element => SectionKind::Metadata,
-                SectionId::Code => SectionKind::Text,
-                SectionId::Data => SectionKind::Metadata,
-                SectionId::DataCount => SectionKind::Metadata,
-                SectionId::Tag => SectionKind::Metadata,
-                SectionId::Unknown => SectionKind::Unknown,
+                wasm::SEC_TYPE => SectionKind::Metadata,
+                wasm::SEC_IMPORT => SectionKind::Linker,
+                wasm::SEC_FUNCTION => SectionKind::Metadata,
+                wasm::SEC_TABLE => SectionKind::Metadata,
+                wasm::SEC_MEMORY => SectionKind::Metadata,
+                wasm::SEC_GLOBAL => SectionKind::Metadata,
+                wasm::SEC_EXPORT => SectionKind::Linker,
+                wasm::SEC_START => SectionKind::Metadata,
+                wasm::SEC_ELEMENT => SectionKind::Metadata,
+                wasm::SEC_CODE => SectionKind::Text,
+                wasm::SEC_DATA => SectionKind::Metadata,
+                wasm::SEC_DATA_COUNT => SectionKind::Metadata,
+                wasm::SEC_TAG => SectionKind::Metadata,
+                _ => SectionKind::Unknown,
             },
             WasmSectionInner::DataSegment { segment, .. } => segment.section_kind(),
         }
@@ -1455,14 +1435,14 @@ impl<'data, 'file, R: ReadRef<'data>> ObjectSection<'data> for WasmSection<'data
                 section_index,
                 section,
             } => {
-                if section.id == SectionId::Data {
+                if section.id == wasm::SEC_DATA {
                     (None, 0..u64::MAX)
                 } else {
                     (Some(section_index), 0..u64::MAX)
                 }
             }
             WasmSectionInner::DataSegment { segment, .. } => (
-                self.file.id_sections[SectionId::Data as usize],
+                self.file.id_sections[wasm::SEC_DATA.0 as usize],
                 segment.section_offset..segment.section_offset + segment.data.len() as u64,
             ),
         };
@@ -1744,7 +1724,7 @@ impl<'data, 'file, R> Iterator for WasmRelocationIterator<'data, 'file, R> {
         // For `R_WASM_TYPE_INDEX_LEB`, the `index` field refers to the type section, not the symbol table.
         let (target, addend) = if entry.ty == wp::RelocationType::TypeIndexLeb {
             (
-                RelocationTarget::Section(SectionIndex(SectionId::Type as usize)),
+                RelocationTarget::Section(SectionIndex(wasm::SEC_TYPE.0 as usize)),
                 entry.index as i64,
             )
         } else {
