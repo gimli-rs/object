@@ -190,9 +190,10 @@ where
         );
 
         // if esdid is a PR, get the parent ED
-        let symbol = self
-            .symbols
-            .get(esdid as usize - 1)
+        // ESDID 0 means "none"; guard the underflow the way is_descendant_of does
+        let symbol = (esdid as usize)
+            .checked_sub(1)
+            .and_then(|index| self.symbols.get(index))
             .ok_or(Error("txt record references undefined symbol"))?;
         let ed_symbolindex: SymbolIndex = match symbol.symbol_type() {
             ESD_SYMTYPE_ED => symbolindex,
