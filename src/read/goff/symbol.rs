@@ -1,4 +1,5 @@
-use alloc::vec::Vec;
+use alloc::borrow::Cow;
+use alloc::string::String;
 use core::fmt::Debug;
 use core::str;
 
@@ -24,8 +25,8 @@ pub struct GoffSymbol {
     pub(super) symbol_index: SymbolIndex,
     /// ESD Identifier (ESDID).
     pub(super) esdid: u32,
-    /// Symbol name (EBCDIC-encoded, flattened from ESD record and any continuation records)
-    pub(super) name: Vec<u8>,
+    /// Symbol name (converted from EBCDIC, flattened from ESD record and any continuation records)
+    pub(super) name: String,
     /// Symbol Type
     pub(super) symbol_type: SymbolType,
     /// Parent of Owning ESDID
@@ -121,15 +122,6 @@ impl GoffSymbol {
         self.name_length
     }
 
-    /// Get the raw EBCDIC-encoded name bytes of this symbol.
-    ///
-    /// The name is stored as a flat byte vector in EBCDIC encoding.
-    /// Use `ebcdic::ebcdic::Ebcdic::ebcdic_to_ascii` to convert to ASCII.
-    #[inline]
-    pub fn name_bytes_owned(&self) -> &[u8] {
-        &self.name
-    }
-
     /// Convert the behavioral attributes byte array to a structured SectionFlags
     #[inline]
     pub fn behavioral_flags(&self) -> SectionFlags {
@@ -159,17 +151,19 @@ impl<'data> ObjectSymbol<'data> for GoffSymbol {
     }
 
     fn name_bytes(&self) -> Result<&'data [u8]> {
-        // GOFF symbol names are EBCDIC-encoded; use name_bytes_owned() to access the owned bytes.
         Err(Error(
-            "GOFF symbol names use non-continguent EBCDIC encoded bytes, not UTF-8 byte slices. Use name_bytes_owned()",
+            "GOFF symbol names are non-contiguous EBCDIC. Use name_utf8() instead",
         ))
     }
 
     fn name(&self) -> Result<&'data str> {
-        // GOFF symbol names are always stored as ebcidic, not utf-8
         Err(Error(
-            "GOFF symbol names use non-continguent EBCDIC encoded bytes, not UTF-8 byte slices. Use name_bytes_owned()",
+            "GOFF symbol names use non-contiguous EBCDIC. Use name_utf8() instead",
         ))
+    }
+
+    fn name_utf8(&self) -> Result<Cow<'data, str>> {
+        Ok(Cow::Owned(self.name.clone()))
     }
 
     #[inline]
@@ -280,8 +274,8 @@ impl<'data> ObjectSymbol<'data> for GoffSymbol {
         // Section definitions and Element definitions are local by default
         let is_section =
             self.symbol_type() == ESD_SYMTYPE_SD || self.symbol_type() == ESD_SYMTYPE_ED;
-        // Symbol identifiers that are a single EBCDIC encoded space are local
-        let is_local_name = self.name_bytes_owned() == [0x40u8];
+        // Symbol identifiers that are a single space are local
+        let is_local_name = self.name == " ";
         // If binding scope is section or module symbol is local
         let scope = self.behavioral_flags().binding_scope();
         if is_section || is_local_name || scope == GOFF_SCOPE_SECTION || scope == GOFF_SCOPE_MODULE

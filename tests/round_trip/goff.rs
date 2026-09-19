@@ -7,24 +7,6 @@ use object::{
 };
 use object::{read, write};
 
-// EBCDIC-encoded string constants
-//
-const CEESTART_EBCDIC: &[u8] = &[0xC3, 0xC5, 0xC5, 0xE2, 0xE3, 0xC1, 0xD9, 0xE3]; // "CEESTART"
-const PRINTF_EBCDIC: &[u8] = &[0x97, 0x99, 0x89, 0x95, 0xA3, 0x86]; // "printf"
-const DOTDEBUG_INFO_EBCDIC: &[u8] = &[0xC4, 0x6D, 0xC9, 0xD5, 0xC6, 0xD6]; // "D_INFO"
-const DOTDEBUG_LINE_EBCDIC: &[u8] = &[0xC4, 0x6D, 0xD3, 0xC9, 0xD5, 0xC5]; // "D_LINE"
-const DOTDEBUG_STR_EBCDIC: &[u8] = &[0xC4, 0x6D, 0xE2, 0xE3, 0xD9]; // "D_STR"
-const C_CODE_EBCDIC: &[u8] = &[0xC3, 0x6D, 0xC3, 0xD6, 0xC4, 0xC5]; // "C_CODE"
-const EXTERNAL_FUNC_EBCDIC: &[u8] = &[
-    0x85, 0xA7, 0xA3, 0x85, 0x99, 0x95, 0x81, 0x93, 0x6D, 0x86, 0xA4, 0x95, 0x83,
-]; // "external_func"
-const FUNC1_EBCDIC: &[u8] = &[0x86, 0xA4, 0x95, 0x83, 0xF1]; // "func1"
-const FUNC2_EBCDIC: &[u8] = &[0x86, 0xA4, 0x95, 0x83, 0xF2, 0x6D, 0x85, 0xA7, 0xA3]; // "func2_ext" (9 bytes, requires continuation record)
-const FUNC3_EBCDIC: &[u8] = &[0x86, 0xA4, 0x95, 0x83, 0xF3]; // "func3"
-const FUNC4_EBCDIC: &[u8] = &[0x86, 0xA4, 0x95, 0x83, 0xF4]; // "func4"
-const FUNC5_EBCDIC: &[u8] = &[0x86, 0xA4, 0x95, 0x83, 0xF5]; // "func5"
-const EXTERNAL_EBCDIC: &[u8] = &[0x85, 0xA7, 0xA3, 0x85, 0x99, 0x95, 0x81, 0x93]; // "external"
-
 /// Test basic GOFF file structure with external references
 /// Similar to base.o which has SD (compile unit), ER (external refs), and ED (sections)
 #[test]
@@ -33,7 +15,7 @@ fn goff_basic_structure() {
 
     // Add external text reference (like CEESTART in base.o)
     let _text_er = object.add_symbol(write::Symbol {
-        name: CEESTART_EBCDIC.to_vec(),
+        name: b"CEESTART".to_vec(),
         value: 0,
         size: 0,
         kind: SymbolKind::Text,
@@ -45,7 +27,7 @@ fn goff_basic_structure() {
 
     // Add external data reference (like printf in base.o)
     let _data_er = object.add_symbol(write::Symbol {
-        name: PRINTF_EBCDIC.to_vec(),
+        name: b"printf".to_vec(),
         value: 0,
         size: 0,
         kind: SymbolKind::Data,
@@ -56,11 +38,7 @@ fn goff_basic_structure() {
     });
 
     // Add a debug section (ED record in GOFF)
-    let debug_section = object.add_section(
-        Vec::new(),
-        DOTDEBUG_INFO_EBCDIC.to_vec(),
-        SectionKind::Debug,
-    );
+    let debug_section = object.add_section(Vec::new(), b"D_INFO".to_vec(), SectionKind::Debug);
     // 58 bytes of data forces a TXT continuation record (inline field holds 56 bytes max)
     object.append_section_data(
         debug_section,
@@ -91,16 +69,16 @@ fn goff_basic_structure() {
         "Should have at least 2 external symbols"
     );
 
-    // Find our external symbols using name_bytes_owned() for direct EBCDIC comparison
+    // Find our external symbols
     let mut found_ceestart = false;
     let mut found_printf = false;
 
     for symbol in &symbols {
-        let name_bytes = symbol.name_bytes_owned();
-        if name_bytes == CEESTART_EBCDIC {
+        let name = symbol.name_utf8().unwrap();
+        if name == "CEESTART" {
             found_ceestart = true;
             assert!(symbol.is_undefined());
-        } else if name_bytes == PRINTF_EBCDIC {
+        } else if name == "printf" {
             found_printf = true;
             assert!(symbol.is_undefined());
         }
@@ -119,18 +97,11 @@ fn goff_basic_structure() {
         "Concrete GOFF parser should expose at least one section"
     );
 
-    // Find the debug section by comparing EBCDIC bytes directly
+    // Find the debug section
     let debug_section = goff_sections
         .iter()
-        .find(|s| {
-            if let Ok(name_bytes) = s.name_bytes_parts() {
-                // Compare the actual bytes, handling potential padding
-                name_bytes.starts_with(DOTDEBUG_INFO_EBCDIC)
-            } else {
-                false
-            }
-        })
-        .expect("Should find .debug_info section");
+        .find(|s| s.name_utf8().as_deref() == Ok("D_INFO"))
+        .expect("Should find D_INFO section");
 
     // Check section data using the concrete GOFF section type.
     let data = ObjectSection::uncompressed_data(debug_section).unwrap();
@@ -168,14 +139,10 @@ fn goff_multiple_debug_sections() {
     let mut object = write::Object::new(BinaryFormat::Goff, Architecture::S390x, Endianness::Big);
 
     // Add multiple debug sections (like B_IDRL in base.o)
-    let debug1 = object.add_section(
-        Vec::new(),
-        DOTDEBUG_LINE_EBCDIC.to_vec(),
-        SectionKind::Debug,
-    );
+    let debug1 = object.add_section(Vec::new(), b"D_LINE".to_vec(), SectionKind::Debug);
     object.append_section_data(debug1, &[0xDE, 0xAD], 1);
 
-    let debug2 = object.add_section(Vec::new(), DOTDEBUG_STR_EBCDIC.to_vec(), SectionKind::Debug);
+    let debug2 = object.add_section(Vec::new(), b"D_STR".to_vec(), SectionKind::Debug);
     object.append_section_data(debug2, &[0xBE, 0xEF], 1);
 
     let bytes = object.write().unwrap();
@@ -210,12 +177,12 @@ fn goff_relocation_absolute() {
         0xC0, 0xE5, 0x00, 0x00, 0x00, 0x00, // BRASL %r14, 0 (placeholder)
         0x07, 0xFE, // BR %r14
     ];
-    let code_section = object.add_section(vec![], C_CODE_EBCDIC.to_vec(), SectionKind::Text);
+    let code_section = object.add_section(vec![], b"C_CODE".to_vec(), SectionKind::Text);
     object.section_mut(code_section).set_data(code_data, 8);
 
     // Add external symbol
     let ext_symbol = object.add_symbol(write::Symbol {
-        name: EXTERNAL_FUNC_EBCDIC.to_vec(),
+        name: b"external_func".to_vec(),
         value: 0,
         size: 0,
         kind: SymbolKind::Text,
@@ -285,12 +252,12 @@ fn goff_relocation_multiple() {
 
     // Add code section
     let code_data = vec![0x00; 32];
-    let code_section = object.add_section(vec![], C_CODE_EBCDIC.to_vec(), SectionKind::Text);
+    let code_section = object.add_section(vec![], b"C_CODE".to_vec(), SectionKind::Text);
     object.section_mut(code_section).set_data(code_data, 8);
 
     // Add multiple external symbols
     let sym1 = object.add_symbol(write::Symbol {
-        name: FUNC1_EBCDIC.to_vec(),
+        name: b"func1".to_vec(),
         value: 0,
         size: 0,
         kind: SymbolKind::Text,
@@ -301,7 +268,7 @@ fn goff_relocation_multiple() {
     });
 
     let sym2 = object.add_symbol(write::Symbol {
-        name: FUNC2_EBCDIC.to_vec(),
+        name: b"func2_ext".to_vec(),
         value: 0,
         size: 0,
         kind: SymbolKind::Text,
@@ -365,12 +332,12 @@ fn goff_relocation_compression() {
 
     // Add code section
     let code_data = vec![0x00; 64];
-    let code_section = object.add_section(vec![], C_CODE_EBCDIC.to_vec(), SectionKind::Text);
+    let code_section = object.add_section(vec![], b"C_CODE".to_vec(), SectionKind::Text);
     object.section_mut(code_section).set_data(code_data, 8);
 
     // Add external symbol
     let ext_symbol = object.add_symbol(write::Symbol {
-        name: EXTERNAL_EBCDIC.to_vec(),
+        name: b"external".to_vec(),
         value: 0,
         size: 0,
         kind: SymbolKind::Text,
@@ -427,19 +394,14 @@ fn goff_relocation_rld_continuation() {
     let mut object = write::Object::new(BinaryFormat::Goff, Architecture::S390x, Endianness::Big);
 
     // Section large enough for all five 8-byte-spaced relocation targets
-    let code_section = object.add_section(vec![], C_CODE_EBCDIC.to_vec(), SectionKind::Text);
+    let code_section = object.add_section(vec![], b"C_CODE".to_vec(), SectionKind::Text);
     object.section_mut(code_section).set_data(vec![0x00; 64], 8);
 
     // Five distinct symbols → five distinct R-pointers → no R-pointer compression.
     // Each relocation item is fully uncompressed except for the P-pointer (same section
     // throughout), so sizes are: item 1 = 20 bytes, items 2-5 = 16 bytes each → 84 total.
-    let sym_names: &[&[u8]] = &[
-        FUNC1_EBCDIC,
-        FUNC2_EBCDIC,
-        FUNC3_EBCDIC,
-        FUNC4_EBCDIC,
-        FUNC5_EBCDIC,
-    ];
+    // "func2_ext" (9 bytes) requires an ESD continuation record.
+    let sym_names: &[&[u8]] = &[b"func1", b"func2_ext", b"func3", b"func4", b"func5"];
     let syms: Vec<_> = sym_names
         .iter()
         .map(|name| {

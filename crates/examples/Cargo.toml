@@ -11,11 +11,12 @@ object = { path = "../..", default-features = false }
 [features]
 read = ["object/read"]
 write = ["object/write"]
+goff = ["object/goff"]
 wasm = ["object/wasm"]
 xcoff = ["object/xcoff"]
 names = ["object/names"]
 all = ["read", "write", "wasm", "xcoff", "names"]
-unstable-all = ["all"]
+unstable-all = ["all", "goff"]
 default = ["read"]
 
 [[bin]]

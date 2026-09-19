@@ -7,12 +7,12 @@ use core::str;
 #[cfg(feature = "std")]
 #[allow(unused_imports)]
 use std::collections::hash_map;
-//FIXME_GOFF
-use crate::{CompressedData, CompressedFileRange, SectionFlags, SectionKind, goff};
 
+use crate::goff;
 use crate::read::{
     self, Error, ObjectSection, ReadRef, RelocationMap, Result, SectionIndex, SymbolIndex,
 };
+use crate::{CompressedData, CompressedFileRange, SectionFlags, SectionKind};
 
 use super::{GoffFile, GoffRelocationIterator};
 
@@ -111,19 +111,18 @@ impl<'data, 'file, R: ReadRef<'data>> GoffSection<'data, 'file, R> {
         data
     }
 
-    /// Returns GOFF section name bytes from the flattened symbol name.
-    pub fn name_bytes_parts(&self) -> Result<Cow<'data, [u8]>> {
+    /// Returns the GOFF section name from the flattened symbol name.
+    fn name_str(&self) -> Result<&'file str> {
         let symbol = self
             .file
             .symbols
             .get(self.esdid.0 - 1)
             .ok_or(Error("Invalid GOFF section ESDID"))?;
 
-        let name = symbol.name_bytes_owned();
-        if name.is_empty() {
+        if symbol.name.is_empty() {
             Err(Error("Invalid GOFF section, empty section name"))
         } else {
-            Ok(Cow::Owned(name.to_vec()))
+            Ok(&symbol.name)
         }
     }
 }
@@ -223,26 +222,26 @@ where
 
     fn name_bytes(&self) -> read::Result<&'data [u8]> {
         Err(Error(
-            "Section name data in GOFF in non-contiguous, use GoffSection::name_bytes_parts instead",
+            "GOFF section names are non-contiguous EBCDIC. Use name_utf8() instead",
         ))
     }
 
     fn name(&self) -> read::Result<&'data str> {
         Err(Error(
-            "Section name data in GOFF in non-contiguous and encoded in ebcidic, use GoffSection::name_bytes_parts instead",
+            "GOFF section names are non-contiguous EBCDIC. Use name_utf8() instead",
         ))
+    }
+
+    fn name_utf8(&self) -> read::Result<Cow<'data, str>> {
+        self.name_str().map(|name| Cow::Owned(name.into()))
     }
 
     fn segment_name_bytes(&self) -> Result<Option<&[u8]>> {
-        Err(Error(
-            "Segment name data in GOFF in non-contiguous, look up segments by their ESDID",
-        ))
+        Ok(None)
     }
 
     fn segment_name(&self) -> Result<Option<&str>> {
-        Err(Error(
-            "Segment name data in GOFF in non-contiguous, look up segments by their ESDID",
-        ))
+        Ok(None)
     }
 
     fn kind(&self) -> SectionKind {
