@@ -4,6 +4,12 @@
 
 #![allow(missing_docs)]
 
+// These were accidentally re-exported before this module existed.
+#[deprecated]
+#[doc(hidden)]
+#[cfg(feature = "read_core")]
+pub use crate::read::wasm::*;
+
 newtype!(
     /// Flags for a symbol, import or export.
     ///
