@@ -658,8 +658,8 @@ pub enum SectionFlags {
     /// GOFF section flags.
     #[cfg(feature = "goff")]
     Goff {
-        /// Section flags containing the record type.
-        flags: crate::goff::SectionFlags,
+        /// Behavioral attributes of the element definition.
+        flags: crate::goff::BehavioralAttributes,
     },
 }
 
@@ -735,7 +735,7 @@ pub enum SymbolFlags<Section, Symbol> {
         /// `namespace_id` field in the GOFF ESD record.
         namespaceid: u8,
         /// `behavioral_attributes` field in the GOFF ESD record.
-        behavioral_attributes: [u8; 10],
+        behavioral_attributes: crate::goff::BehavioralAttributes,
     },
     /// Wasm symbol flags.
     #[cfg(feature = "wasm")]

@@ -6,7 +6,7 @@ use crate::Relocation;
 use crate::read::{ReadRef, RelocationEncoding, RelocationKind, RelocationTarget, SymbolIndex};
 
 use super::GoffFile;
-use crate::goff::{ESD_SYMTYPE_ED, ESD_SYMTYPE_ER, ESD_SYMTYPE_PR, SymbolType};
+use crate::goff;
 
 /// GOFF Relocation Flags - complete 6-byte structure from RLD records
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -191,7 +191,7 @@ where
     }
 
     /// Get the symbol type for a given ESDID
-    fn get_symbol_type(&self, esdid: u32) -> Option<SymbolType> {
+    fn get_symbol_type(&self, esdid: u32) -> Option<goff::SymbolType> {
         // ESDIDs are 1-based; Vec index is esdid - 1
         self.file
             .symbols
@@ -214,11 +214,11 @@ where
         let symbol_type = self.get_symbol_type(r_pointer)?;
         let symbol_index = SymbolIndex(r_pointer as usize);
 
-        if symbol_type == ESD_SYMTYPE_ED {
+        if symbol_type == goff::ESD_ST_ED {
             // Element Definition - map to section
             self.find_section_index(r_pointer)
                 .map(RelocationTarget::Section)
-        } else if symbol_type == ESD_SYMTYPE_ER || symbol_type == ESD_SYMTYPE_PR {
+        } else if symbol_type == goff::ESD_ST_ER || symbol_type == goff::ESD_ST_PR {
             // External/Part Reference - map to symbol
             Some(RelocationTarget::Symbol(symbol_index))
         } else {

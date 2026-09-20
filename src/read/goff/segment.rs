@@ -2,7 +2,7 @@ use alloc::vec::Vec;
 use core::fmt::Debug;
 use core::str;
 
-use crate::goff::TxtRecordStyle;
+use crate::goff::TextRecordStyle;
 use crate::read::{self, ObjectSegment, ReadRef, Result};
 use crate::{Permissions, SegmentFlags, SymbolIndex};
 
@@ -36,7 +36,7 @@ pub struct GoffTextReference<'data> {
     /// ESDID (either a PR, LD or ED)
     pub(super) esdid: SymbolIndex,
     /// Text Record Style
-    pub(super) record_style: TxtRecordStyle,
+    pub(super) record_style: TextRecordStyle,
     /// Starting offset from the element or part origin of the text
     pub(super) offset: u32,
     /// Text length after data encoding expansion (zero if encoding is zero)
@@ -56,7 +56,7 @@ impl<'data> GoffTextReference<'data> {
     }
 
     /// Returns the text record style.
-    pub fn record_style(&self) -> TxtRecordStyle {
+    pub fn record_style(&self) -> TextRecordStyle {
         self.record_style
     }
 

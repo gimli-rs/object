@@ -10,6 +10,97 @@
 use crate::endian::{BigEndian as BE, U16, U32};
 use crate::pod::Pod;
 
+// Get bits using IBM bit numbering.
+const fn get_bits(val: u8, index: u8, length: u8) -> u8 {
+    let shift = 8 - index - length;
+    let mask = u8::MAX >> (8 - length);
+    (val >> shift) & mask
+}
+
+// Set bits using IBM bit numbering.
+const fn set_bits(val: &mut u8, index: u8, length: u8, new_val: u8) {
+    let shift = 8 - index - length;
+    let mask = u8::MAX >> (8 - length);
+    *val = (*val & !(mask << shift)) | ((new_val & mask) << shift);
+}
+
+/// Helper for implementing `Debug` for bit fields using getter and setter methods.
+///
+/// The setters are used to clear each field so that any remaining bits can be printed.
+struct DebugBitFields<'a, 'b, T> {
+    f: &'a mut core::fmt::Formatter<'b>,
+    result: core::fmt::Result,
+    sep: &'static str,
+    value: T,
+    unused: T,
+}
+
+impl<'a, 'b, T: Copy> DebugBitFields<'a, 'b, T> {
+    fn new(f: &'a mut core::fmt::Formatter<'b>, value: T) -> Self {
+        DebugBitFields {
+            f,
+            result: Ok(()),
+            sep: "",
+            value,
+            unused: value,
+        }
+    }
+
+    /// Always print the field.
+    fn field<V: core::fmt::Debug + Default>(
+        &mut self,
+        get: fn(T) -> V,
+        set: fn(T, V) -> T,
+    ) -> &mut Self {
+        if cfg!(feature = "names") && self.result.is_ok() {
+            self.result = write!(self.f, "{}{:?}", self.sep, get(self.value));
+            self.sep = " | ";
+            self.unused = set(self.unused, V::default());
+        }
+        self
+    }
+
+    /// Print the name if the flag is set.
+    fn flag(&mut self, name: &str, get: fn(T) -> bool, set: fn(T, bool) -> T) -> &mut Self {
+        if cfg!(feature = "names") && self.result.is_ok() {
+            if get(self.value) {
+                self.result = write!(self.f, "{}{}", self.sep, name);
+                self.sep = " | ";
+            }
+            self.unused = set(self.unused, false);
+        }
+        self
+    }
+
+    /// Print the name and value if the value is non-zero.
+    fn value(&mut self, name: &str, get: fn(T) -> u8, set: fn(T, u8) -> T) -> &mut Self {
+        if cfg!(feature = "names") && self.result.is_ok() {
+            let val = get(self.value);
+            if val != 0 {
+                self.result = write!(self.f, "{}{}({})", self.sep, name, val);
+                self.sep = " | ";
+            }
+            self.unused = set(self.unused, 0);
+        }
+        self
+    }
+
+    /// Print any remaining bits, using `bytes` to convert the value to bytes.
+    fn finish<const N: usize>(&mut self, bytes: fn(T) -> [u8; N]) -> core::fmt::Result {
+        self.result?;
+        for (i, &val) in bytes(self.unused).iter().enumerate() {
+            if val != 0 {
+                write!(self.f, "{}B{}(0x{:02x})", self.sep, i, val)?;
+                self.sep = " | ";
+            }
+        }
+        if self.sep.is_empty() {
+            self.f.write_str("0")?;
+        }
+        Ok(())
+    }
+}
+
 /// The module header ("HDR") record at the start of every 64-bit GOFF file.
 #[derive(Debug, Clone, Copy)]
 #[repr(C)]
@@ -69,31 +160,11 @@ pub struct SymbolRecord64 {
     /// Reserved. Must be 8 bytes of 0.
     pub reserved5: [u8; 8],
     /// Behavioral Attributes
-    pub behavioral_attributes: [u8; 10],
+    pub behavioral_attributes: BehavioralAttributes,
     /// Name Length
     pub name_length: U16<BE>,
     /// Name
     pub name: [u8; SIZEOF_ESD_DATA],
-}
-
-impl SymbolRecord64 {
-    /// Convert the behavioral attributes byte array to a structured SectionFlags
-    pub fn behavioral_flags(&self) -> SectionFlags {
-        SectionFlags {
-            amode: AmodeFlags(self.behavioral_attributes[0]),
-            rmode: RmodeFlags(self.behavioral_attributes[1]),
-            text_and_binding: self.behavioral_attributes[2],
-            tasking_and_exec: self.behavioral_attributes[3],
-            dup_and_strength: self.behavioral_attributes[4],
-            loading_and_scope: self.behavioral_attributes[5],
-            linkage_and_align: self.behavioral_attributes[6],
-            reserved: [
-                self.behavioral_attributes[7],
-                self.behavioral_attributes[8],
-                self.behavioral_attributes[9],
-            ],
-        }
-    }
 }
 
 /// TXT data has 56 bytes till the end of the record,
@@ -107,7 +178,7 @@ pub struct TextRecord64 {
     /// Type of record. Must be 0x031000 or 0x031100.
     pub ptv: [u8; 3],
     /// Text Record Style
-    pub record_style: TxtRecordStyle,
+    pub record_style: TextRecordStyle,
     /// Element ESDID
     pub element_esdid: U32<BE>,
     /// Reserved. Must be 4 bytes of 0.
@@ -293,17 +364,17 @@ newtype!(
     struct SymbolType(u8);
 );
 
-newtype_constant_names!(NAMES_SYMBOL_TYPE: SymbolType(u8) = {
+newtype_constant_names!(NAMES_ESD_ST: SymbolType(u8) = {
     /// Section Definition (SD) - defines a control section.
-    ESD_SYMTYPE_SD = 0,
+    ESD_ST_SD = 0,
     /// Element Definition (ED) - defines an element (part/class).
-    ESD_SYMTYPE_ED = 1,
+    ESD_ST_ED = 1,
     /// Label Definition (LD) - defines a label within a section.
-    ESD_SYMTYPE_LD = 2,
+    ESD_ST_LD = 2,
     /// Part Reference (PR) - references a part of an element.
-    ESD_SYMTYPE_PR = 3,
+    ESD_ST_PR = 3,
     /// External Reference (ER) - references an external symbol.
-    ESD_SYMTYPE_ER = 4,
+    ESD_ST_ER = 4,
 });
 
 newtype!(
@@ -320,12 +391,12 @@ newtype_constant_names!(NAMES_ESD_NAMESPACE: EsdNameSpace(u8) = {
 });
 
 newtype!(
-    /// TXT Record Style
+    /// Text Record Style
     #[repr(transparent)]
-    struct TxtRecordStyle(u8);
+    struct TextRecordStyle(u8);
 );
 
-newtype_constant_names!(NAMES_TXT_RECORD: TxtRecordStyle(u8) = {
+newtype_constant_names!(NAMES_TXT_RS: TextRecordStyle(u8) = {
     TXT_RS_BYTE = 0,
     TXT_RS_STRUCTURED = 1,
     TXT_RS_UNSTRUCTURED = 2,
@@ -365,39 +436,39 @@ impl RecordPrefix {
 newtype!(
     /// GOFF Addressing Mode (AMODE) - Byte 0 of behavioral attributes
     #[repr(transparent)]
-    struct AmodeFlags(u8);
+    struct Amode(u8);
 );
 
-newtype_constant_names!(NAMES_GOFF_AMODE: AmodeFlags(u8) = {
+newtype_constant_names!(NAMES_AMODE: Amode(u8) = {
     /// AMODE not specified (default=24)
-    GOFF_AMODE_UNSPEC = 0x00,
+    AMODE_UNSPEC = 0x00,
     /// AMODE(24)
-    GOFF_AMODE_24 = 0x01,
+    AMODE_24 = 0x01,
     /// AMODE(31)
-    GOFF_AMODE_31 = 0x02,
+    AMODE_31 = 0x02,
     /// AMODE(ANY) - either 24-bit or 31-bit
-    GOFF_AMODE_ANY = 0x03,
+    AMODE_ANY = 0x03,
     /// AMODE(64)
-    GOFF_AMODE_64 = 0x04,
+    AMODE_64 = 0x04,
     /// AMODE(MIN) - binder can set to minimum AMODE
-    GOFF_AMODE_MIN = 0x10,
+    AMODE_MIN = 0x10,
 });
 
 newtype!(
     /// GOFF Residence Mode (RMODE) - Byte 1 of behavioral attributes
     #[repr(transparent)]
-    struct RmodeFlags(u8);
+    struct Rmode(u8);
 );
 
-newtype_constant_names!(NAMES_GOFF_RMODE: RmodeFlags(u8) = {
+newtype_constant_names!(NAMES_RMODE: Rmode(u8) = {
     /// RMODE not specified (default=24)
-    GOFF_RMODE_UNSPEC = 0x00,
+    RMODE_UNSPEC = 0x00,
     /// RMODE(24)
-    GOFF_RMODE_24 = 0x01,
+    RMODE_24 = 0x01,
     /// RMODE(31) - equivalent to OBJ RMODE(ANY)
-    GOFF_RMODE_31 = 0x03,
+    RMODE_31 = 0x03,
     /// RMODE(64)
-    GOFF_RMODE_64 = 0x04,
+    RMODE_64 = 0x04,
 });
 
 newtype!(
@@ -406,11 +477,11 @@ newtype!(
     struct BindingAlgorithm(u8);
 );
 
-newtype_constant_names!(NAMES_GOFF_BINDING_ALGORITHM: BindingAlgorithm(u8) = {
+newtype_constant_names!(NAMES_ESD_BA: BindingAlgorithm(u8) = {
     /// Concatenate - sections placed end to end
-    GOFF_BIND_CONCATENATE = 0x00,
+    ESD_BA_CONCATENATE = 0,
     /// Merge - identically named parts merged
-    GOFF_BIND_MERGE = 0x10,
+    ESD_BA_MERGE = 1,
 });
 
 newtype!(
@@ -419,30 +490,45 @@ newtype!(
     struct TaskingBehavior(u8);
 );
 
-newtype_constant_names!(NAMES_GOFF_TASKING: TaskingBehavior(u8) = {
+newtype_constant_names!(NAMES_TASK: TaskingBehavior(u8) = {
     /// Unspecified
-    GOFF_TASK_UNSPEC = 0x00,
+    TASK_UNSPEC = 0x00,
     /// NON-REUS - Not serially reusable
-    GOFF_TASK_NON_REUS = 0x01,
+    TASK_NON_REUS = 0x01,
     /// REUS - Serially reusable
-    GOFF_TASK_REUS = 0x02,
+    TASK_REUS = 0x02,
     /// RENT - Reentrant
-    GOFF_TASK_RENT = 0x03,
+    TASK_RENT = 0x03,
 });
 
 newtype!(
-    /// GOFF Executable Flags - Byte 3 bits 5-7 of behavioral attributes
+    /// GOFF Executable Indicator - Byte 3 bits 5-7 of behavioral attributes
     #[repr(transparent)]
-    struct ExecutableFlags(u8);
+    struct Executable(u8);
 );
 
-newtype_constant_names!(NAMES_GOFF_EXECUTABLE: ExecutableFlags(u8) = {
+newtype_constant_names!(NAMES_EXEC: Executable(u8) = {
     /// Not specified
-    GOFF_EXEC_UNSPEC = 0x00,
+    EXEC_UNSPEC = 0,
     /// Not executable (data)
-    GOFF_EXEC_DATA = 0x20,
+    EXEC_DATA = 1,
     /// Executable (code)
-    GOFF_EXEC_CODE = 0x40,
+    EXEC_CODE = 2,
+});
+
+newtype!(
+    /// GOFF Duplicate Symbol Severity - Byte 4 bits 2-3 of behavioral attributes
+    #[repr(transparent)]
+    struct DuplicateSymbolSeverity(u8);
+);
+
+newtype_constant_names!(NAMES_ESD_DSS: DuplicateSymbolSeverity(u8) = {
+    /// Severity determined by the binder.
+    ESD_DSS_NO_WARNING = 0,
+    /// Severity should be at least 4 (warning).
+    ESD_DSS_WARNING = 1,
+    /// Severity should be at least 8 (error).
+    ESD_DSS_ERROR = 2,
 });
 
 newtype!(
@@ -451,11 +537,11 @@ newtype!(
     struct BindingStrength(u8);
 );
 
-newtype_constant_names!(NAMES_GOFF_BINDING_STRENGTH: BindingStrength(u8) = {
+newtype_constant_names!(NAMES_ESD_BST: BindingStrength(u8) = {
     /// Strong reference/definition
-    GOFF_BIND_STRONG = 0x00,
+    ESD_BST_STRONG = 0,
     /// Weak reference/definition
-    GOFF_BIND_WEAK = 0x10,
+    ESD_BST_WEAK = 1,
 });
 
 newtype!(
@@ -464,13 +550,13 @@ newtype!(
     struct LoadingBehavior(u8);
 );
 
-newtype_constant_names!(NAMES_GOFF_LOADING: LoadingBehavior(u8) = {
+newtype_constant_names!(NAMES_LOAD: LoadingBehavior(u8) = {
     /// Load with module
-    GOFF_LOAD = 0x00,
+    LOAD_INITIAL = 0x00,
     /// Deferred load
-    GOFF_LOAD_DEFERRED = 0x01,
+    LOAD_DEFERRED = 0x01,
     /// Do not load with module
-    GOFF_NOLOAD = 0x02,
+    LOAD_NONE = 0x02,
 });
 
 newtype!(
@@ -479,149 +565,245 @@ newtype!(
     struct BindingScope(u8);
 );
 
-newtype_constant_names!(NAMES_GOFF_BINDING_SCOPE: BindingScope(u8) = {
+newtype_constant_names!(NAMES_ESD_BSC: BindingScope(u8) = {
     /// Unspecified
-    GOFF_SCOPE_UNSPEC = 0x00,
+    ESD_BSC_UNSPEC = 0x00,
     /// Section (local)
-    GOFF_SCOPE_SECTION = 0x01,
+    ESD_BSC_SECTION = 0x01,
     /// Module (global)
-    GOFF_SCOPE_MODULE = 0x02,
+    ESD_BSC_MODULE = 0x02,
     /// Library
-    GOFF_SCOPE_LIBRARY = 0x03,
+    ESD_BSC_LIBRARY = 0x03,
     /// Import-Export
-    GOFF_SCOPE_IMPORT_EXPORT = 0x04,
+    ESD_BSC_IMPORT_EXPORT = 0x04,
 });
 
 newtype!(
     /// GOFF Alignment - Byte 6 bits 3-7 of behavioral attributes
     #[repr(transparent)]
-    struct AlignmentFlags(u8);
+    struct Alignment(u8);
 );
 
-newtype_constant_names!(NAMES_GOFF_ALIGNMENT: AlignmentFlags(u8) = {
+newtype_constant_names!(NAMES_ALIGN: Alignment(u8) = {
     /// Byte alignment
-    GOFF_ALIGN_BYTE = 0x00,
+    ALIGN_BYTE = 0,
     /// Halfword alignment
-    GOFF_ALIGN_HALFWORD = 0x08,
+    ALIGN_HALFWORD = 1,
     /// Fullword alignment
-    GOFF_ALIGN_FULLWORD = 0x10,
+    ALIGN_FULLWORD = 2,
     /// Doubleword alignment
-    GOFF_ALIGN_DOUBLEWORD = 0x18,
+    ALIGN_DOUBLEWORD = 3,
     /// Quadword alignment
-    GOFF_ALIGN_QUADWORD = 0x20,
+    ALIGN_QUADWORD = 4,
     /// 32 byte alignment
-    GOFF_ALIGN_32BYTE = 0x28,
+    ALIGN_32BYTE = 5,
     /// 64 byte alignment
-    GOFF_ALIGN_64BYTE = 0x30,
+    ALIGN_64BYTE = 6,
     /// 128 byte alignment
-    GOFF_ALIGN_128BYTE = 0x38,
+    ALIGN_128BYTE = 7,
     /// 256 byte alignment
-    GOFF_ALIGN_256BYTE = 0x40,
+    ALIGN_256BYTE = 8,
     /// 512 byte alignment
-    GOFF_ALIGN_512BYTE = 0x48,
+    ALIGN_512BYTE = 9,
     /// 1024 byte alignment
-    GOFF_ALIGN_1024BYTE = 0x50,
+    ALIGN_1024BYTE = 10,
     /// 2KB alignment
-    GOFF_ALIGN_2KB = 0x58,
+    ALIGN_2KB = 11,
     /// 4KB page alignment
-    GOFF_ALIGN_4KB = 0x60,
+    ALIGN_4KB = 12,
 });
 
-/// Additional behavioral attribute flags (single-bit flags)
-/// Read-only flag - Byte 3 bit 4 (IBM bit numbering: bit 0 is leftmost/MSB)
-pub const GOFF_READ_ONLY: u8 = 0x08;
-/// COMMON flag - Byte 5 bit 2 (IBM bit numbering: bit 0 is leftmost/MSB)
-pub const GOFF_COMMON: u8 = 0x20;
-/// Indirect reference flag - Byte 5 bit 3 (IBM bit numbering: bit 0 is leftmost/MSB)
-pub const GOFF_INDIRECT: u8 = 0x10;
-/// XPLINK linkage flag - Byte 6 bit 2 (IBM bit numbering: bit 0 is leftmost/MSB)
-pub const GOFF_LINKAGE_XPLINK: u8 = 0x20;
-
 /// GOFF Behavioral Attributes - complete 10-byte structure from ESD records
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct SectionFlags {
-    /// Byte 0: Addressing mode (AMODE)
-    pub amode: AmodeFlags,
-    /// Byte 1: Residence mode (RMODE)
-    pub rmode: RmodeFlags,
-    /// Byte 2: Text record style (bits 0-3) and binding algorithm (bits 4-7)
-    pub text_and_binding: u8,
-    /// Byte 3: Tasking behavior (bits 0-2), read-only (bit 4), executable (bits 5-7)
-    pub tasking_and_exec: u8,
-    /// Byte 4: Duplicate severity (bits 2-3) and binding strength (bits 4-7)
-    pub dup_and_strength: u8,
-    /// Byte 5: Loading behavior (bits 0-1), COMMON (bit 2), direct/indirect (bit 3), binding scope (bits 4-7)
-    pub loading_and_scope: u8,
-    /// Byte 6: Linkage type (bit 2) and alignment (bits 3-7)
-    pub linkage_and_align: u8,
-    /// Bytes 7-9: Reserved
-    pub reserved: [u8; 3],
+#[derive(Default, Clone, Copy, PartialEq, Eq, Hash)]
+#[repr(transparent)]
+pub struct BehavioralAttributes(pub [u8; 10]);
+
+impl core::fmt::Debug for BehavioralAttributes {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        DebugBitFields::new(f, *self)
+            .field(Self::amode, Self::with_amode)
+            .field(Self::rmode, Self::with_rmode)
+            .field(Self::text_record_style, Self::with_text_record_style)
+            .field(Self::binding_algorithm, Self::with_binding_algorithm)
+            .field(Self::tasking_behavior, Self::with_tasking_behavior)
+            .flag("READ_ONLY", Self::is_read_only, Self::with_read_only)
+            .field(Self::executable, Self::with_executable)
+            .field(Self::duplicate_severity, Self::with_duplicate_severity)
+            .field(Self::binding_strength, Self::with_binding_strength)
+            .field(Self::loading_behavior, Self::with_loading_behavior)
+            .flag("COMMON", Self::is_common, Self::with_common)
+            .flag("INDIRECT", Self::is_indirect, Self::with_indirect)
+            .field(Self::binding_scope, Self::with_binding_scope)
+            .flag("XPLINK", Self::is_xplink, Self::with_xplink)
+            .field(Self::alignment, Self::with_alignment)
+            .finish(|x| x.0)
+    }
 }
 
-impl SectionFlags {
-    /// Get the addressing mode
-    pub fn amode(self) -> AmodeFlags {
-        self.amode
+impl BehavioralAttributes {
+    /// Get the addressing mode (byte 0)
+    pub fn amode(self) -> Amode {
+        Amode(self.0[0])
     }
 
-    /// Get the residence mode
-    pub fn rmode(self) -> RmodeFlags {
-        self.rmode
+    /// Set the addressing mode (byte 0)
+    pub fn with_amode(mut self, val: Amode) -> Self {
+        self.0[0] = val.0;
+        self
     }
 
-    /// Get the binding algorithm
+    /// Get the residence mode (byte 1)
+    pub fn rmode(self) -> Rmode {
+        Rmode(self.0[1])
+    }
+
+    /// Set the residence mode (byte 1)
+    pub fn with_rmode(mut self, val: Rmode) -> Self {
+        self.0[1] = val.0;
+        self
+    }
+
+    /// Get the text record style (byte 2, bits 0-3)
+    pub fn text_record_style(self) -> TextRecordStyle {
+        TextRecordStyle(get_bits(self.0[2], 0, 4))
+    }
+
+    /// Set the text record style (byte 2, bits 0-3)
+    pub fn with_text_record_style(mut self, val: TextRecordStyle) -> Self {
+        set_bits(&mut self.0[2], 0, 4, val.0);
+        self
+    }
+
+    /// Get the binding algorithm (byte 2, bits 4-7)
     pub fn binding_algorithm(self) -> BindingAlgorithm {
-        BindingAlgorithm(self.text_and_binding & 0xF0)
+        BindingAlgorithm(get_bits(self.0[2], 4, 4))
     }
 
-    /// Get the tasking behavior
+    /// Set the binding algorithm (byte 2, bits 4-7)
+    pub fn with_binding_algorithm(mut self, val: BindingAlgorithm) -> Self {
+        set_bits(&mut self.0[2], 4, 4, val.0);
+        self
+    }
+
+    /// Get the tasking behavior (byte 3, bits 0-2)
     pub fn tasking_behavior(self) -> TaskingBehavior {
-        TaskingBehavior(self.tasking_and_exec & 0x07)
+        TaskingBehavior(get_bits(self.0[3], 0, 3))
     }
 
-    /// Check if read-only
+    /// Set the tasking behavior (byte 3, bits 0-2)
+    pub fn with_tasking_behavior(mut self, val: TaskingBehavior) -> Self {
+        set_bits(&mut self.0[3], 0, 3, val.0);
+        self
+    }
+
+    /// Check if read-only (byte 3, bit 4)
     pub fn is_read_only(self) -> bool {
-        (self.tasking_and_exec & GOFF_READ_ONLY) != 0
+        get_bits(self.0[3], 4, 1) != 0
     }
 
-    /// Get executable flags
-    pub fn executable(self) -> ExecutableFlags {
-        ExecutableFlags(self.tasking_and_exec & 0xE0)
+    /// Set the read-only flag (byte 3, bit 4)
+    pub fn with_read_only(mut self, val: bool) -> Self {
+        set_bits(&mut self.0[3], 4, 1, val as u8);
+        self
     }
 
-    /// Get binding strength
+    /// Get executable flags (byte 3, bits 5-7)
+    pub fn executable(self) -> Executable {
+        Executable(get_bits(self.0[3], 5, 3))
+    }
+
+    /// Set executable flags (byte 3, bits 5-7)
+    pub fn with_executable(mut self, val: Executable) -> Self {
+        set_bits(&mut self.0[3], 5, 3, val.0);
+        self
+    }
+
+    /// Get duplicate symbol severity (byte 4, bits 2-3)
+    pub fn duplicate_severity(self) -> DuplicateSymbolSeverity {
+        DuplicateSymbolSeverity(get_bits(self.0[4], 2, 2))
+    }
+
+    /// Set duplicate symbol severity (byte 4, bits 2-3)
+    pub fn with_duplicate_severity(mut self, val: DuplicateSymbolSeverity) -> Self {
+        set_bits(&mut self.0[4], 2, 2, val.0);
+        self
+    }
+
+    /// Get binding strength (byte 4, bits 4-7)
     pub fn binding_strength(self) -> BindingStrength {
-        BindingStrength(self.dup_and_strength & 0xF0)
+        BindingStrength(get_bits(self.0[4], 4, 4))
     }
 
-    /// Get loading behavior
+    /// Set binding strength (byte 4, bits 4-7)
+    pub fn with_binding_strength(mut self, val: BindingStrength) -> Self {
+        set_bits(&mut self.0[4], 4, 4, val.0);
+        self
+    }
+
+    /// Get loading behavior (byte 5, bits 0-1)
     pub fn loading_behavior(self) -> LoadingBehavior {
-        LoadingBehavior(self.loading_and_scope & 0x03)
+        LoadingBehavior(get_bits(self.0[5], 0, 2))
     }
 
-    /// Check if COMMON flag is set
+    /// Set loading behavior (byte 5, bits 0-1)
+    pub fn with_loading_behavior(mut self, val: LoadingBehavior) -> Self {
+        set_bits(&mut self.0[5], 0, 2, val.0);
+        self
+    }
+
+    /// Check if COMMON flag is set (byte 5, bit 2)
     pub fn is_common(self) -> bool {
-        (self.loading_and_scope & GOFF_COMMON) != 0
+        get_bits(self.0[5], 2, 1) != 0
     }
 
-    /// Check if indirect reference
+    /// Set the COMMON flag (byte 5, bit 2)
+    pub fn with_common(mut self, val: bool) -> Self {
+        set_bits(&mut self.0[5], 2, 1, val as u8);
+        self
+    }
+
+    /// Check if indirect reference (byte 5, bit 3)
     pub fn is_indirect(self) -> bool {
-        (self.loading_and_scope & GOFF_INDIRECT) != 0
+        get_bits(self.0[5], 3, 1) != 0
     }
 
-    /// Get binding scope
+    /// Set the indirect reference flag (byte 5, bit 3)
+    pub fn with_indirect(mut self, val: bool) -> Self {
+        set_bits(&mut self.0[5], 3, 1, val as u8);
+        self
+    }
+
+    /// Get binding scope (byte 5, bits 4-7)
     pub fn binding_scope(self) -> BindingScope {
-        BindingScope(self.loading_and_scope & 0xF0)
+        BindingScope(get_bits(self.0[5], 4, 4))
     }
 
-    /// Check if XPLINK linkage
+    /// Set binding scope (byte 5, bits 4-7)
+    pub fn with_binding_scope(mut self, val: BindingScope) -> Self {
+        set_bits(&mut self.0[5], 4, 4, val.0);
+        self
+    }
+
+    /// Check if XPLINK linkage (byte 6, bit 2)
     pub fn is_xplink(self) -> bool {
-        (self.linkage_and_align & GOFF_LINKAGE_XPLINK) != 0
+        get_bits(self.0[6], 2, 1) != 0
     }
 
-    /// Get alignment
-    pub fn alignment(self) -> AlignmentFlags {
-        AlignmentFlags(self.linkage_and_align & 0xF8)
+    /// Set the XPLINK linkage flag (byte 6, bit 2)
+    pub fn with_xplink(mut self, val: bool) -> Self {
+        set_bits(&mut self.0[6], 2, 1, val as u8);
+        self
+    }
+
+    /// Get alignment (byte 6, bits 3-7)
+    pub fn alignment(self) -> Alignment {
+        Alignment(get_bits(self.0[6], 3, 5))
+    }
+
+    /// Set alignment (byte 6, bits 3-7)
+    pub fn with_alignment(mut self, val: Alignment) -> Self {
+        set_bits(&mut self.0[6], 3, 5, val.0);
+        self
     }
 }
 
@@ -635,4 +817,5 @@ unsafe_impl_pod!(
     LengthDataItem,
     EndRecord64,
     RecordPrefix,
+    BehavioralAttributes,
 );

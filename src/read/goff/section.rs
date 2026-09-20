@@ -158,22 +158,20 @@ where
             .symbols
             .get(self.esdid.0 - 1)
             .map(|symbol| {
-                // Extract alignment from byte 6 (index 5) bits 3-7 of behavioral attributes
-                let align_flags = goff::AlignmentFlags(symbol.behavioral_attributes[5] & 0xF8);
-                match align_flags {
-                    goff::GOFF_ALIGN_BYTE => 1,
-                    goff::GOFF_ALIGN_HALFWORD => 2,
-                    goff::GOFF_ALIGN_FULLWORD => 4,
-                    goff::GOFF_ALIGN_DOUBLEWORD => 8,
-                    goff::GOFF_ALIGN_QUADWORD => 16,
-                    goff::GOFF_ALIGN_32BYTE => 32,
-                    goff::GOFF_ALIGN_64BYTE => 64,
-                    goff::GOFF_ALIGN_128BYTE => 128,
-                    goff::GOFF_ALIGN_256BYTE => 256,
-                    goff::GOFF_ALIGN_512BYTE => 512,
-                    goff::GOFF_ALIGN_1024BYTE => 1024,
-                    goff::GOFF_ALIGN_2KB => 2048,
-                    goff::GOFF_ALIGN_4KB => 4096,
+                match symbol.behavioral_attributes.alignment() {
+                    goff::ALIGN_BYTE => 1,
+                    goff::ALIGN_HALFWORD => 2,
+                    goff::ALIGN_FULLWORD => 4,
+                    goff::ALIGN_DOUBLEWORD => 8,
+                    goff::ALIGN_QUADWORD => 16,
+                    goff::ALIGN_32BYTE => 32,
+                    goff::ALIGN_64BYTE => 64,
+                    goff::ALIGN_128BYTE => 128,
+                    goff::ALIGN_256BYTE => 256,
+                    goff::ALIGN_512BYTE => 512,
+                    goff::ALIGN_1024BYTE => 1024,
+                    goff::ALIGN_2KB => 2048,
+                    goff::ALIGN_4KB => 4096,
                     _ => 1, // Default to byte alignment
                 }
             })
@@ -251,10 +249,12 @@ where
             return SectionKind::Unknown;
         };
 
-        match flags.executable() {
-            goff::GOFF_EXEC_CODE => SectionKind::Text,
-            _ if flags.is_read_only() => SectionKind::ReadOnlyData,
-            _ => SectionKind::Data,
+        if flags.executable() == goff::EXEC_CODE {
+            SectionKind::Text
+        } else if flags.is_read_only() {
+            SectionKind::ReadOnlyData
+        } else {
+            SectionKind::Data
         }
     }
 
@@ -274,20 +274,8 @@ where
         self.file
             .symbols
             .get(self.esdid.0 - 1)
-            .map(|symbol| {
-                let attrs = &symbol.behavioral_attributes;
-                SectionFlags::Goff {
-                    flags: goff::SectionFlags {
-                        amode: goff::AmodeFlags(attrs[0]),
-                        rmode: goff::RmodeFlags(attrs[1]),
-                        text_and_binding: attrs[2],
-                        tasking_and_exec: attrs[3],
-                        dup_and_strength: attrs[4],
-                        loading_and_scope: attrs[5],
-                        linkage_and_align: attrs[6],
-                        reserved: [attrs[7], attrs[8], attrs[9]],
-                    },
-                }
+            .map(|symbol| SectionFlags::Goff {
+                flags: symbol.behavioral_attributes,
             })
             .unwrap_or(SectionFlags::None)
     }
