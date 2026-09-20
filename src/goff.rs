@@ -224,10 +224,11 @@ newtype!(
     ///
     /// The lower 2 bits indicate entry point presence/type.
     /// Upper 6 bits are reserved and must be 0.
+    #[repr(transparent)]
     struct FileFlags(u8);
 );
 
-newtype_flag_names!(NAMES_F_FLAGS: FileFlags(u8) = {
+newtype_constant_names!(NAMES_F_FLAGS: FileFlags(u8) = {
     /// No entry point is suggested or requested.
     /// No subsequent fields (other than Record Count) are valid.
     F_NO_ENTRY_POINT = 0x00,
@@ -248,10 +249,11 @@ newtype!(
     /// GOFF record type values.
     ///
     /// These appear in the second byte of the `ptv` field (bits masked with 0xFC).
+    #[repr(transparent)]
     struct RecordType(u8);
 );
 
-newtype_flag_names!(NAMES_RECORD_TYPE: RecordType(u8) = {
+newtype_constant_names!(NAMES_RECORD_TYPE: RecordType(u8) = {
     /// External Symbol Dictionary record.
     RT_ESD = 0x00,
     /// Text (code/data) record.
@@ -287,10 +289,11 @@ pub const GOFF_END_BYTES: [u8; 3] = [GOFF_PREFIX, RT_END.0, GOFF_VERSION];
 
 newtype!(
     /// GOFF symbol type values from ESD records.
+    #[repr(transparent)]
     struct SymbolType(u8);
 );
 
-newtype_flag_names!(NAMES_SYMBOL_TYPE: SymbolType(u8) = {
+newtype_constant_names!(NAMES_SYMBOL_TYPE: SymbolType(u8) = {
     /// Section Definition (SD) - defines a control section.
     ESD_SYMTYPE_SD = 0,
     /// Element Definition (ED) - defines an element (part/class).
@@ -305,10 +308,11 @@ newtype_flag_names!(NAMES_SYMBOL_TYPE: SymbolType(u8) = {
 
 newtype!(
     /// ESD Namespace
+    #[repr(transparent)]
     struct EsdNameSpace(u8);
 );
 
-newtype_flag_names!(NAMES_ESD_NAMESPACE: EsdNameSpace(u8) = {
+newtype_constant_names!(NAMES_ESD_NAMESPACE: EsdNameSpace(u8) = {
     ESD_NS_PROGRAM_MANAGEMENT_BINDER = 0,
     ESD_NS_NORMAL_NAME = 1,
     ESD_NS_PSEUDO_REGISTER = 2,
@@ -317,10 +321,11 @@ newtype_flag_names!(NAMES_ESD_NAMESPACE: EsdNameSpace(u8) = {
 
 newtype!(
     /// TXT Record Style
+    #[repr(transparent)]
     struct TxtRecordStyle(u8);
 );
 
-newtype_flag_names!(NAMES_TXT_RECORD: TxtRecordStyle(u8) = {
+newtype_constant_names!(NAMES_TXT_RECORD: TxtRecordStyle(u8) = {
     TXT_RS_BYTE = 0,
     TXT_RS_STRUCTURED = 1,
     TXT_RS_UNSTRUCTURED = 2,
@@ -359,10 +364,11 @@ impl RecordPrefix {
 
 newtype!(
     /// GOFF Addressing Mode (AMODE) - Byte 0 of behavioral attributes
+    #[repr(transparent)]
     struct AmodeFlags(u8);
 );
 
-newtype_flag_names!(NAMES_GOFF_AMODE: AmodeFlags(u8) = {
+newtype_constant_names!(NAMES_GOFF_AMODE: AmodeFlags(u8) = {
     /// AMODE not specified (default=24)
     GOFF_AMODE_UNSPEC = 0x00,
     /// AMODE(24)
@@ -379,10 +385,11 @@ newtype_flag_names!(NAMES_GOFF_AMODE: AmodeFlags(u8) = {
 
 newtype!(
     /// GOFF Residence Mode (RMODE) - Byte 1 of behavioral attributes
+    #[repr(transparent)]
     struct RmodeFlags(u8);
 );
 
-newtype_flag_names!(NAMES_GOFF_RMODE: RmodeFlags(u8) = {
+newtype_constant_names!(NAMES_GOFF_RMODE: RmodeFlags(u8) = {
     /// RMODE not specified (default=24)
     GOFF_RMODE_UNSPEC = 0x00,
     /// RMODE(24)
@@ -395,10 +402,11 @@ newtype_flag_names!(NAMES_GOFF_RMODE: RmodeFlags(u8) = {
 
 newtype!(
     /// GOFF Binding Algorithm - Byte 2 bits 4-7 of behavioral attributes
+    #[repr(transparent)]
     struct BindingAlgorithm(u8);
 );
 
-newtype_flag_names!(NAMES_GOFF_BINDING_ALGORITHM: BindingAlgorithm(u8) = {
+newtype_constant_names!(NAMES_GOFF_BINDING_ALGORITHM: BindingAlgorithm(u8) = {
     /// Concatenate - sections placed end to end
     GOFF_BIND_CONCATENATE = 0x00,
     /// Merge - identically named parts merged
@@ -407,10 +415,11 @@ newtype_flag_names!(NAMES_GOFF_BINDING_ALGORITHM: BindingAlgorithm(u8) = {
 
 newtype!(
     /// GOFF Tasking Behavior - Byte 3 bits 0-2 of behavioral attributes
+    #[repr(transparent)]
     struct TaskingBehavior(u8);
 );
 
-newtype_flag_names!(NAMES_GOFF_TASKING: TaskingBehavior(u8) = {
+newtype_constant_names!(NAMES_GOFF_TASKING: TaskingBehavior(u8) = {
     /// Unspecified
     GOFF_TASK_UNSPEC = 0x00,
     /// NON-REUS - Not serially reusable
@@ -423,10 +432,11 @@ newtype_flag_names!(NAMES_GOFF_TASKING: TaskingBehavior(u8) = {
 
 newtype!(
     /// GOFF Executable Flags - Byte 3 bits 5-7 of behavioral attributes
+    #[repr(transparent)]
     struct ExecutableFlags(u8);
 );
 
-newtype_flag_names!(NAMES_GOFF_EXECUTABLE: ExecutableFlags(u8) = {
+newtype_constant_names!(NAMES_GOFF_EXECUTABLE: ExecutableFlags(u8) = {
     /// Not specified
     GOFF_EXEC_UNSPEC = 0x00,
     /// Not executable (data)
@@ -437,10 +447,11 @@ newtype_flag_names!(NAMES_GOFF_EXECUTABLE: ExecutableFlags(u8) = {
 
 newtype!(
     /// GOFF Binding Strength - Byte 4 bits 4-7 of behavioral attributes
+    #[repr(transparent)]
     struct BindingStrength(u8);
 );
 
-newtype_flag_names!(NAMES_GOFF_BINDING_STRENGTH: BindingStrength(u8) = {
+newtype_constant_names!(NAMES_GOFF_BINDING_STRENGTH: BindingStrength(u8) = {
     /// Strong reference/definition
     GOFF_BIND_STRONG = 0x00,
     /// Weak reference/definition
@@ -449,10 +460,11 @@ newtype_flag_names!(NAMES_GOFF_BINDING_STRENGTH: BindingStrength(u8) = {
 
 newtype!(
     /// GOFF Loading Behavior - Byte 5 bits 0-1 of behavioral attributes
+    #[repr(transparent)]
     struct LoadingBehavior(u8);
 );
 
-newtype_flag_names!(NAMES_GOFF_LOADING: LoadingBehavior(u8) = {
+newtype_constant_names!(NAMES_GOFF_LOADING: LoadingBehavior(u8) = {
     /// Load with module
     GOFF_LOAD = 0x00,
     /// Deferred load
@@ -463,10 +475,11 @@ newtype_flag_names!(NAMES_GOFF_LOADING: LoadingBehavior(u8) = {
 
 newtype!(
     /// GOFF Binding Scope - Byte 5 bits 4-7 of behavioral attributes
+    #[repr(transparent)]
     struct BindingScope(u8);
 );
 
-newtype_flag_names!(NAMES_GOFF_BINDING_SCOPE: BindingScope(u8) = {
+newtype_constant_names!(NAMES_GOFF_BINDING_SCOPE: BindingScope(u8) = {
     /// Unspecified
     GOFF_SCOPE_UNSPEC = 0x00,
     /// Section (local)
@@ -481,10 +494,11 @@ newtype_flag_names!(NAMES_GOFF_BINDING_SCOPE: BindingScope(u8) = {
 
 newtype!(
     /// GOFF Alignment - Byte 6 bits 3-7 of behavioral attributes
+    #[repr(transparent)]
     struct AlignmentFlags(u8);
 );
 
-newtype_flag_names!(NAMES_GOFF_ALIGNMENT: AlignmentFlags(u8) = {
+newtype_constant_names!(NAMES_GOFF_ALIGNMENT: AlignmentFlags(u8) = {
     /// Byte alignment
     GOFF_ALIGN_BYTE = 0x00,
     /// Halfword alignment
