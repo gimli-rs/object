@@ -170,7 +170,7 @@ where
         self.symbols.push(goffsymbol);
         // Only ED (Element Definition) represents user sections
         // SD (Section Definition) is the compile unit, not a user section
-        if esd_record.symbol_type == ESD_SYMTYPE_ED {
+        if esd_record.symbol_type == ESD_ST_ED {
             self.sections.push(symbolindex);
         }
 
@@ -195,7 +195,7 @@ where
             .get(esdid as usize - 1)
             .ok_or(Error("txt record references undefined symbol"))?;
         let ed_symbolindex: SymbolIndex = match symbol.symbol_type() {
-            ESD_SYMTYPE_ED => symbolindex,
+            ESD_ST_ED => symbolindex,
             _ => symbol.parent_esdid(),
         };
 

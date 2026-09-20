@@ -317,18 +317,13 @@ impl<'a> Writer<'a> {
     }
 
     pub fn write_er_to_text(&mut self, symbol_name: &[u8]) -> u32 {
-        let mut er = self.get_esd_record(
-            goff::ESD_SYMTYPE_ER,
-            goff::ESD_NS_NORMAL_NAME,
-            self.cu_esdid,
-        );
+        let mut er = self.get_esd_record(goff::ESD_ST_ER, goff::ESD_NS_NORMAL_NAME, self.cu_esdid);
 
         // External reference to code: executable, export scope
-        let attrs = BehavioralAttributesBuilder::new()
-            .with_executable(goff::GOFF_EXEC_CODE)
-            .with_binding_scope(goff::GOFF_SCOPE_IMPORT_EXPORT)
-            .with_alignment(goff::GOFF_ALIGN_32BYTE)
-            .build();
+        let attrs = default_attrs()
+            .with_executable(goff::EXEC_CODE)
+            .with_binding_scope(goff::ESD_BSC_IMPORT_EXPORT)
+            .with_alignment(goff::ALIGN_32BYTE);
         er.behavioral_attributes = attrs;
 
         self.write_esd_record(&er, symbol_name)
@@ -340,42 +335,39 @@ impl<'a> Writer<'a> {
 
     pub fn write_wsa_symbol(&mut self, symbol_name: &[u8], symbol_length: u32) -> u32 {
         // Emit parent C_WSA64 ED symbol (data section).
-        let mut ed = self.get_esd_record(goff::ESD_SYMTYPE_ED, goff::ESD_NS_PARTS, self.cu_esdid);
+        let mut ed = self.get_esd_record(goff::ESD_ST_ED, goff::ESD_NS_PARTS, self.cu_esdid);
         ed.sym_flags = 0x80; // Fill byte present
 
-        let ed_attrs = BehavioralAttributesBuilder::for_data_section()
-            .with_binding_algorithm(goff::GOFF_BIND_MERGE)
-            .with_executable(goff::GOFF_EXEC_DATA)
-            .with_binding_scope(goff::GOFF_SCOPE_IMPORT_EXPORT)
-            .with_alignment(goff::GOFF_ALIGN_HALFWORD)
-            .build();
+        let ed_attrs = data_attrs()
+            .with_binding_algorithm(goff::ESD_BA_MERGE)
+            .with_executable(goff::EXEC_DATA)
+            .with_binding_scope(goff::ESD_BSC_IMPORT_EXPORT)
+            .with_alignment(goff::ALIGN_HALFWORD);
         ed.behavioral_attributes = ed_attrs;
         let ed_esdid = self.write_esd_record(&ed, EBCDIC_C_WSA64);
 
         // Emit PR child symbol using write_pr method.
-        let pr_attrs = BehavioralAttributesBuilder::new()
-            .with_executable(goff::GOFF_EXEC_DATA)
-            .with_binding_strength(goff::GOFF_BIND_WEAK)
-            .with_binding_scope(goff::GOFF_SCOPE_IMPORT_EXPORT)
-            .with_alignment(goff::GOFF_ALIGN_HALFWORD)
-            .build();
+        let pr_attrs = default_attrs()
+            .with_executable(goff::EXEC_DATA)
+            .with_binding_strength(goff::ESD_BST_WEAK)
+            .with_binding_scope(goff::ESD_BSC_IMPORT_EXPORT)
+            .with_alignment(goff::ALIGN_HALFWORD);
 
         self.write_pr(symbol_name, ed_esdid, symbol_length, pr_attrs)
     }
 
     pub fn write_debug_section_symbol(&mut self, section_name: &[u8], section_length: u32) -> u32 {
         // Emit ED symbol for debug section.
-        let mut ed = self.get_esd_record(goff::ESD_SYMTYPE_ED, goff::ESD_NS_PARTS, self.cu_esdid);
+        let mut ed = self.get_esd_record(goff::ESD_ST_ED, goff::ESD_NS_PARTS, self.cu_esdid);
         ed.sym_flags = 0x80; // Fill byte present
         ed.length = U32::new(BE, section_length);
 
         // Debug sections are read-only data that must be loaded
-        let attrs = BehavioralAttributesBuilder::for_readonly_data()
-            .with_binding_algorithm(goff::GOFF_BIND_MERGE)
-            .with_executable(goff::GOFF_EXEC_DATA)
-            .with_loading(goff::GOFF_LOAD)
-            .with_alignment(goff::GOFF_ALIGN_BYTE)
-            .build();
+        let attrs = readonly_data_attrs()
+            .with_binding_algorithm(goff::ESD_BA_MERGE)
+            .with_executable(goff::EXEC_DATA)
+            .with_loading_behavior(goff::LOAD_INITIAL)
+            .with_alignment(goff::ALIGN_BYTE);
         ed.behavioral_attributes = attrs;
 
         self.write_esd_record(&ed, section_name)
@@ -384,9 +376,9 @@ impl<'a> Writer<'a> {
     /// Write an SD (Section Definition) record.
     ///
     /// SD records define control sections (compilation units).
-    pub fn write_sd(&mut self, name: &[u8], attributes: [u8; 10]) -> u32 {
+    pub fn write_sd(&mut self, name: &[u8], attributes: goff::BehavioralAttributes) -> u32 {
         let mut sd = self.get_esd_record(
-            goff::ESD_SYMTYPE_SD,
+            goff::ESD_ST_SD,
             goff::ESD_NS_PROGRAM_MANAGEMENT_BINDER,
             0, // No parent for SD
         );
@@ -402,10 +394,9 @@ impl<'a> Writer<'a> {
         name: &[u8],
         parent_esdid: u32,
         length: u32,
-        attributes: [u8; 10],
+        attributes: goff::BehavioralAttributes,
     ) -> u32 {
-        let mut ed =
-            self.get_esd_record(goff::ESD_SYMTYPE_ED, goff::ESD_NS_NORMAL_NAME, parent_esdid);
+        let mut ed = self.get_esd_record(goff::ESD_ST_ED, goff::ESD_NS_NORMAL_NAME, parent_esdid);
         ed.length = U32::new(BE, length);
         ed.sym_flags = 0x80; // Fill byte present
         ed.behavioral_attributes = attributes;
@@ -422,13 +413,10 @@ impl<'a> Writer<'a> {
         offset: u32,
         scope: goff::BindingScope,
     ) -> u32 {
-        let mut ld =
-            self.get_esd_record(goff::ESD_SYMTYPE_LD, goff::ESD_NS_NORMAL_NAME, parent_esdid);
+        let mut ld = self.get_esd_record(goff::ESD_ST_LD, goff::ESD_NS_NORMAL_NAME, parent_esdid);
         ld.offset = U32::new(BE, offset);
 
-        let attrs = BehavioralAttributesBuilder::new()
-            .with_binding_scope(scope)
-            .build();
+        let attrs = default_attrs().with_binding_scope(scope);
         ld.behavioral_attributes = attrs;
 
         self.write_esd_record(&ld, name)
@@ -442,9 +430,9 @@ impl<'a> Writer<'a> {
         name: &[u8],
         parent_esdid: u32,
         length: u32,
-        attributes: [u8; 10],
+        attributes: goff::BehavioralAttributes,
     ) -> u32 {
-        let mut pr = self.get_esd_record(goff::ESD_SYMTYPE_PR, goff::ESD_NS_PARTS, parent_esdid);
+        let mut pr = self.get_esd_record(goff::ESD_ST_PR, goff::ESD_NS_PARTS, parent_esdid);
         pr.length = U32::new(BE, length);
         pr.behavioral_attributes = attributes;
         self.write_esd_record(&pr, name)
@@ -452,18 +440,16 @@ impl<'a> Writer<'a> {
 
     /// Write an ER (External Reference) record with weak binding.
     pub fn write_er_weak(&mut self, name: &[u8], parent_esdid: u32, is_code: bool) -> u32 {
-        let mut er =
-            self.get_esd_record(goff::ESD_SYMTYPE_ER, goff::ESD_NS_NORMAL_NAME, parent_esdid);
+        let mut er = self.get_esd_record(goff::ESD_ST_ER, goff::ESD_NS_NORMAL_NAME, parent_esdid);
 
-        let attrs = BehavioralAttributesBuilder::new()
+        let attrs = default_attrs()
             .with_executable(if is_code {
-                goff::GOFF_EXEC_CODE
+                goff::EXEC_CODE
             } else {
-                goff::GOFF_EXEC_DATA
+                goff::EXEC_DATA
             })
-            .with_binding_strength(goff::GOFF_BIND_WEAK)
-            .with_binding_scope(goff::GOFF_SCOPE_IMPORT_EXPORT)
-            .build();
+            .with_binding_strength(goff::ESD_BST_WEAK)
+            .with_binding_scope(goff::ESD_BSC_IMPORT_EXPORT);
         er.behavioral_attributes = attrs;
 
         self.write_esd_record(&er, name)
@@ -505,9 +491,7 @@ impl<'a> Writer<'a> {
         // Determine section attributes and create ED based on kind
         let ed_esdid = match section.kind {
             SectionKind::Text => {
-                let attrs = BehavioralAttributesBuilder::for_code_section()
-                    .with_binding_scope(goff::GOFF_SCOPE_MODULE)
-                    .build();
+                let attrs = code_attrs().with_binding_scope(goff::ESD_BSC_MODULE);
                 self.write_ed(
                     &section.name,
                     self.cu_esdid,
@@ -516,9 +500,7 @@ impl<'a> Writer<'a> {
                 )
             }
             SectionKind::Data => {
-                let attrs = BehavioralAttributesBuilder::for_data_section()
-                    .with_binding_scope(goff::GOFF_SCOPE_MODULE)
-                    .build();
+                let attrs = data_attrs().with_binding_scope(goff::ESD_BSC_MODULE);
                 self.write_ed(
                     &section.name,
                     self.cu_esdid,
@@ -527,9 +509,7 @@ impl<'a> Writer<'a> {
                 )
             }
             SectionKind::ReadOnlyData => {
-                let attrs = BehavioralAttributesBuilder::for_readonly_data()
-                    .with_binding_scope(goff::GOFF_SCOPE_MODULE)
-                    .build();
+                let attrs = readonly_data_attrs().with_binding_scope(goff::ESD_BSC_MODULE);
                 self.write_ed(
                     &section.name,
                     self.cu_esdid,
@@ -559,9 +539,7 @@ impl<'a> Writer<'a> {
 
     /// Write a compilation unit SD.
     fn write_compilation_unit(&mut self, cu_name: &[u8]) -> u32 {
-        let attrs = BehavioralAttributesBuilder::new()
-            .with_binding_scope(goff::GOFF_SCOPE_SECTION)
-            .build();
+        let attrs = default_attrs().with_binding_scope(goff::ESD_BSC_SECTION);
 
         let sd_esdid = self.write_sd(cu_name, attrs);
 
@@ -596,7 +574,7 @@ impl<'a> Writer<'a> {
             ada_esdid: U32::new(BE, 0),
             priority: U32::new(BE, 0),
             reserved5: [0u8; 8],
-            behavioral_attributes: [0u8; 10],
+            behavioral_attributes: Default::default(),
             name_length: U16::new(BE, 0),
             name: [0u8; goff::SIZEOF_ESD_DATA],
         }
@@ -677,7 +655,7 @@ impl<'a> Writer<'a> {
 
             let mut record = goff::TextRecord64 {
                 ptv,
-                record_style: goff::TxtRecordStyle(record_style),
+                record_style: goff::TextRecordStyle(record_style),
                 element_esdid: U32::new(BE, esdid),
                 reserved1: U32::new(BE, 0),
                 offset: U32::new(BE, offset as u32),
@@ -715,11 +693,11 @@ impl<'a> Writer<'a> {
     ) -> Result<u32> {
         // Determine binding scope based on symbol properties
         let scope = if symbol.is_local() {
-            goff::GOFF_SCOPE_SECTION
+            goff::ESD_BSC_SECTION
         } else if symbol.scope == SymbolScope::Dynamic {
-            goff::GOFF_SCOPE_IMPORT_EXPORT
+            goff::ESD_BSC_IMPORT_EXPORT
         } else {
-            goff::GOFF_SCOPE_MODULE
+            goff::ESD_BSC_MODULE
         };
 
         // Write LD (Label Definition) for the symbol
@@ -983,162 +961,44 @@ impl<'a> Writer<'a> {
     }
 }
 
-/// Builder for constructing GOFF behavioral attributes systematically.
-///
-/// The behavioral attributes are a 10-byte structure that controls various
-/// properties of GOFF symbols including addressing mode, execution properties,
-/// binding behavior, and alignment.
-#[derive(Debug, Clone)]
-pub struct BehavioralAttributesBuilder {
-    // Byte 0: AMODE (Addressing Mode)
-    amode: goff::AmodeFlags,
-    // Byte 1: RMODE (Residence Mode)
-    rmode: goff::RmodeFlags,
-    // Byte 2: Text record style (bits 0-3) and binding algorithm (bits 4-7)
-    text_style: u8,
-    binding_algorithm: goff::BindingAlgorithm,
-    // Byte 3: Tasking (bits 0-2), movable (bit 3), read-only (bit 4), executable (bits 5-7)
-    tasking: goff::TaskingBehavior,
-    movable: bool,
-    read_only: bool,
-    executable: goff::ExecutableFlags,
-    // Byte 4: No prime (bit 3), binding strength (bits 4-7)
-    no_prime: bool,
-    binding_strength: goff::BindingStrength,
-    // Byte 5: Loading (bits 0-1), common (bit 2), indirect (bit 3), binding scope (bits 4-7)
-    loading: goff::LoadingBehavior,
-    common: bool,
-    indirect: bool,
-    binding_scope: goff::BindingScope,
-    // Byte 6: Linkage (bit 2), alignment (bits 3-7)
-    linkage_xplink: bool,
-    alignment: goff::AlignmentFlags,
+/// Get default attributes suitable for 64-bit z/Architecture.
+fn default_attrs() -> goff::BehavioralAttributes {
+    goff::BehavioralAttributes::default()
+        .with_amode(goff::AMODE_64)
+        .with_rmode(goff::RMODE_64)
+        .with_text_record_style(goff::TXT_RS_BYTE)
+        .with_binding_algorithm(goff::ESD_BA_CONCATENATE)
+        .with_tasking_behavior(goff::TASK_UNSPEC)
+        .with_read_only(false)
+        .with_executable(goff::EXEC_UNSPEC)
+        .with_binding_strength(goff::ESD_BST_STRONG)
+        .with_loading_behavior(goff::LOAD_INITIAL)
+        .with_common(false)
+        .with_indirect(false)
+        .with_binding_scope(goff::ESD_BSC_UNSPEC)
+        .with_xplink(false)
+        .with_alignment(goff::ALIGN_BYTE)
 }
 
-impl BehavioralAttributesBuilder {
-    /// Create a new builder with default values suitable for 64-bit z/Architecture.
-    pub fn new() -> Self {
-        Self {
-            amode: goff::GOFF_AMODE_64,
-            rmode: goff::GOFF_RMODE_64,
-            text_style: 0,
-            binding_algorithm: goff::GOFF_BIND_CONCATENATE,
-            tasking: goff::GOFF_TASK_UNSPEC,
-            movable: false,
-            read_only: false,
-            executable: goff::GOFF_EXEC_UNSPEC,
-            no_prime: false,
-            binding_strength: goff::GOFF_BIND_STRONG,
-            loading: goff::GOFF_LOAD,
-            common: false,
-            indirect: false,
-            binding_scope: goff::GOFF_SCOPE_UNSPEC,
-            linkage_xplink: false,
-            alignment: goff::GOFF_ALIGN_BYTE,
-        }
-    }
-
-    /// Create a builder with attributes suitable for code sections.
-    pub fn for_code_section() -> Self {
-        let mut builder = Self::new();
-        builder.read_only = true;
-        builder.executable = goff::GOFF_EXEC_CODE;
-        builder.alignment = goff::GOFF_ALIGN_DOUBLEWORD;
-        builder
-    }
-
-    /// Create a builder with attributes suitable for data sections.
-    pub fn for_data_section() -> Self {
-        let mut builder = Self::new();
-        builder.executable = goff::GOFF_EXEC_DATA;
-        builder.alignment = goff::GOFF_ALIGN_DOUBLEWORD;
-        builder
-    }
-
-    /// Create a builder with attributes suitable for read-only data sections.
-    pub fn for_readonly_data() -> Self {
-        let mut builder = Self::new();
-        builder.read_only = true;
-        builder.executable = goff::GOFF_EXEC_DATA;
-        builder.alignment = goff::GOFF_ALIGN_DOUBLEWORD;
-        builder
-    }
-
-    /// Set the binding algorithm.
-    pub fn with_binding_algorithm(mut self, algorithm: goff::BindingAlgorithm) -> Self {
-        self.binding_algorithm = algorithm;
-        self
-    }
-
-    /// Set the executable flags.
-    pub fn with_executable(mut self, executable: goff::ExecutableFlags) -> Self {
-        self.executable = executable;
-        self
-    }
-
-    /// Set the binding strength.
-    pub fn with_binding_strength(mut self, strength: goff::BindingStrength) -> Self {
-        self.binding_strength = strength;
-        self
-    }
-
-    /// Set the loading behavior.
-    pub fn with_loading(mut self, loading: goff::LoadingBehavior) -> Self {
-        self.loading = loading;
-        self
-    }
-
-    /// Set the binding scope.
-    pub fn with_binding_scope(mut self, scope: goff::BindingScope) -> Self {
-        self.binding_scope = scope;
-        self
-    }
-
-    /// Set the alignment.
-    pub fn with_alignment(mut self, alignment: goff::AlignmentFlags) -> Self {
-        self.alignment = alignment;
-        self
-    }
-
-    /// Build the final 10-byte behavioral attributes array.
-    pub fn build(&self) -> [u8; 10] {
-        let mut attrs = [0u8; 10];
-
-        // Byte 0: AMODE
-        attrs[0] = self.amode.0;
-
-        // Byte 1: RMODE
-        attrs[1] = self.rmode.0;
-
-        // Byte 2: Text style (bits 0-3) and binding algorithm (bits 4-7)
-        attrs[2] = self.text_style | self.binding_algorithm.0;
-
-        // Byte 3: Tasking (bits 0-2), movable (bit 3), read-only (bit 4), executable (bits 5-7)
-        attrs[3] = self.tasking.0
-            | (if self.movable { 0x08 } else { 0 })
-            | (if self.read_only { 0x10 } else { 0 })
-            | self.executable.0;
-
-        // Byte 4: No prime (bit 3), binding strength (bits 4-7)
-        attrs[4] = (if self.no_prime { 0x08 } else { 0 }) | self.binding_strength.0;
-
-        // Byte 5: Loading (bits 0-1), common (bit 2), indirect (bit 3), binding scope (bits 4-7)
-        attrs[5] = self.loading.0
-            | (if self.common { 0x04 } else { 0 })
-            | (if self.indirect { 0x08 } else { 0 })
-            | self.binding_scope.0;
-
-        // Byte 6: Linkage (bit 2), alignment (bits 3-7)
-        attrs[6] = (if self.linkage_xplink { 0x04 } else { 0 }) | self.alignment.0;
-
-        // Bytes 7-9: Reserved (remain 0)
-
-        attrs
-    }
+/// Create attributes suitable for code sections.
+fn code_attrs() -> goff::BehavioralAttributes {
+    default_attrs()
+        .with_read_only(true)
+        .with_executable(goff::EXEC_CODE)
+        .with_alignment(goff::ALIGN_DOUBLEWORD)
 }
 
-impl Default for BehavioralAttributesBuilder {
-    fn default() -> Self {
-        Self::new()
-    }
+/// Create attributes suitable for data sections.
+fn data_attrs() -> goff::BehavioralAttributes {
+    default_attrs()
+        .with_executable(goff::EXEC_DATA)
+        .with_alignment(goff::ALIGN_DOUBLEWORD)
+}
+
+/// Create attributes suitable for read-only data sections.
+fn readonly_data_attrs() -> goff::BehavioralAttributes {
+    default_attrs()
+        .with_read_only(true)
+        .with_executable(goff::EXEC_DATA)
+        .with_alignment(goff::ALIGN_DOUBLEWORD)
 }
