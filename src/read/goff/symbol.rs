@@ -14,9 +14,6 @@ use crate::read::{
 
 use super::GoffFile;
 
-/// A symbol in an [`GoffFile64`](super::GoffFile64).
-pub type GoffSymbol64 = GoffSymbol;
-
 /// A symbol in an [`GoffFile`].
 ///
 /// Most functionality is provided by the [`ObjectSymbol`] trait implementation.
@@ -41,7 +38,7 @@ pub struct GoffSymbol {
     /// Extended Attribute Data Offset
     pub(super) ea_data_offset: u32,
     /// Name Space ID
-    pub(super) namespace_id: EsdNameSpace,
+    pub(super) namespace_id: SymbolNamespace,
     /// Symbol Flags.
     pub(super) sym_flags: u8,
     /// Fill Byte Value (the specific 1-byte value used to pad memory)
@@ -358,9 +355,6 @@ impl<'data, 'file, R: ReadRef<'data>> Iterator for GoffSymbolIterator<'data, 'fi
         Some(symbol)
     }
 }
-
-/// A symbol table in an [`GoffFile64`](super::GoffFile64).
-pub type GoffSymbolTable64<'data, 'file, R = &'data [u8]> = GoffSymbolTable<'data, 'file, R>;
 
 impl<'data, 'file, R: ReadRef<'data>> read::private::Sealed for GoffSymbolTable<'data, 'file, R> {}
 

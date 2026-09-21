@@ -113,7 +113,7 @@ fn goff_basic_structure() {
     let sections: Vec<_> = object.sections().collect();
     assert!(!sections.is_empty(), "Should have at least one section");
 
-    let goff_sections: Vec<read::goff::GoffSection64<'_, '_>> = goff.sections().collect();
+    let goff_sections: Vec<read::goff::GoffSection<'_, '_>> = goff.sections().collect();
     assert!(
         !goff_sections.is_empty(),
         "Concrete GOFF parser should expose at least one section"
@@ -187,7 +187,7 @@ fn goff_multiple_debug_sections() {
     assert_eq!(sections.len(), 2, "Should have 2 debug sections");
 
     let goff = read::goff::GoffFile::parse(&*bytes).unwrap();
-    let goff_sections: Vec<read::goff::GoffSection64<'_, '_>> = goff.sections().collect();
+    let goff_sections: Vec<read::goff::GoffSection<'_, '_>> = goff.sections().collect();
     assert_eq!(
         goff_sections.len(),
         2,

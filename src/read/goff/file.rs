@@ -25,11 +25,6 @@ use super::{
     GoffTextReference,
 };
 
-///
-/// This is a file that starts with [`goff::HeaderRecord64`], and corresponds
-/// to [`crate::FileKind::Goff64`].
-pub type GoffFile64<'data, R = &'data [u8]> = GoffFile<'data, R>;
-
 /// A parsed GOFF file.
 ///
 /// Most functionality is provided by the [`Object`] trait implementation.
@@ -39,7 +34,7 @@ where
     R: ReadRef<'data>,
 {
     pub(super) data: R,
-    pub(super) header: &'data goff::HeaderRecord64,
+    pub(super) header: &'data goff::HeaderRecord,
     pub(super) sections: Vec<SymbolIndex>,
     pub(super) segments: HashMap<SymbolIndex, GoffSegment<'data>>,
     pub(super) symbols: Vec<GoffSymbol>,
@@ -65,7 +60,7 @@ where
         }
 
         let mut offset = 0;
-        let header = goff::HeaderRecord64::parse(data, &mut offset)?;
+        let header = goff::HeaderRecord::parse(data, &mut offset)?;
         let mut file = GoffFile {
             data,
             header,
@@ -117,7 +112,7 @@ where
     pub fn parse_esd(&mut self, offset: &mut u64, is_continued: bool) -> Result<()> {
         let esd_record = self
             .data
-            .read::<SymbolRecord64>(offset)
+            .read::<SymbolRecord>(offset)
             .map_err(|_| Error("failed to read esd record"))?;
 
         // grab element symbol ID and parent
@@ -181,7 +176,7 @@ where
     pub fn parse_txt(&mut self, offset: &mut u64, is_continued: bool) -> Result<()> {
         let txt_record = self
             .data
-            .read::<TextRecord64>(offset)
+            .read::<TextRecord>(offset)
             .map_err(|_| Error("failed to read txt record"))?;
         let esdid = txt_record.element_esdid.get(BE);
 
@@ -252,11 +247,11 @@ where
     pub fn parse_end(&mut self, offset: &mut u64, is_continued: bool) -> Result<()> {
         let end_record = self
             .data
-            .read::<EndRecord64>(offset)
+            .read::<EndRecord>(offset)
             .map_err(|_| Error("failed to read end record"))?;
 
         // Parse record count and entry flags first
-        self.record_count = Some(end_record.record_cnt.get(BE)).filter(|&cnt| cnt != 0);
+        self.record_count = Some(end_record.record_count.get(BE)).filter(|&cnt| cnt != 0);
         self.entry_flags = Some(end_record.flags).filter(|&flags| flags != 0);
 
         // If entry flags are empty (i.e, 0) no entry point specified and no need to continue
@@ -293,7 +288,7 @@ where
         let mut cont_data: Vec<&[u8]> = Vec::new();
         loop {
             let record_prefix = self.data.read_at::<goff::RecordPrefix>(*offset).unwrap();
-            let cont_record = self.data.read::<ContinuationRecord64>(offset).unwrap();
+            let cont_record = self.data.read::<ContinuationRecord>(offset).unwrap();
             cont_data.push(&cont_record.data[..]);
 
             if !record_prefix.is_continued() {
@@ -368,12 +363,12 @@ where
         Ok(relocations)
     }
 
-    /// Parses a RelocationRecord64 and its continuations, extracting individual relocation items
+    /// Parses a RelocationRecord and its continuations, extracting individual relocation items
     pub fn parse_relocations(&mut self, offset: &mut u64, is_continued: bool) -> Result<()> {
         // Read the main RLD record
         let rel_record = self
             .data
-            .read::<RelocationRecord64>(offset)
+            .read::<RelocationRecord>(offset)
             .map_err(|_| Error("failed to read relocation record"))?;
 
         // Get the length field which indicates how much relocation data is present
@@ -399,13 +394,13 @@ where
         Ok(())
     }
 
-    /// Parses a LenRecord64 and its continuations, extracting deferred element-length data items
+    /// Parses a LengthRecord and its continuations, extracting deferred element-length data items
     /// and updating the corresponding symbols with their lengths
     pub fn parse_len_record(&mut self, offset: &mut u64, is_continued: bool) -> Result<()> {
         // Read the main LEN record
         let len_record = self
             .data
-            .read::<LenRecord64>(offset)
+            .read::<LengthRecord>(offset)
             .map_err(|_| Error("failed to read len record"))?;
 
         // Get the length field which indicates how much length data is present
@@ -663,7 +658,7 @@ where
     }
 }
 
-impl goff::HeaderRecord64 {
+impl goff::HeaderRecord {
     /// Prefix (first 3 bytes) in module header record serves as magic number
     fn magic(&self) -> [u8; 3] {
         self.ptv
@@ -692,6 +687,3 @@ impl goff::HeaderRecord64 {
         Ok(header)
     }
 }
-
-/// An iterator for the symbols in an [`GoffFile64`](super::GoffFile64).
-pub type GoffSymbolIterator64<'data, 'file, R = &'data [u8]> = GoffSymbolIterator<'data, 'file, R>;

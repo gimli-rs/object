@@ -6,9 +6,6 @@ use crate::read::{self, ComdatKind, ObjectComdat, ReadRef, Result, SectionIndex,
 
 use super::GoffFile;
 
-/// An iterator for the COMDAT section groups in a [`GoffFile64`](super::GoffFile64).
-pub type GoffComdatIterator64<'data, 'file, R = &'data [u8]> = GoffComdatIterator<'data, 'file, R>;
-
 /// An iterator for the COMDAT section groups in a [`GoffFile`].
 ///
 /// This is a stub that doesn't implement any functionality.
@@ -32,9 +29,6 @@ where
         None
     }
 }
-
-/// A COMDAT section group in a [`GoffFile64`](super::GoffFile64).
-pub type GoffComdat64<'data, 'file, R = &'data [u8]> = GoffComdat<'data, 'file, R>;
 
 /// A COMDAT section group in a [`GoffFile`].
 ///
@@ -81,10 +75,6 @@ where
         unreachable!();
     }
 }
-
-/// An iterator for the sections in a COMDAT section group in a [`GoffFile64`](super::GoffFile64).
-pub type GoffComdatSectionIterator64<'data, 'file, R = &'data [u8]> =
-    GoffComdatSectionIterator<'data, 'file, R>;
 
 /// An iterator for the sections in a COMDAT section group in a [`GoffFile`].
 ///
