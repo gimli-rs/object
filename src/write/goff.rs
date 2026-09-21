@@ -212,7 +212,7 @@ impl<'a> Writer<'a> {
 
     // Write module header ("HDR") record.
     pub fn write_hdr(&mut self) {
-        let header = goff::HeaderRecord64 {
+        let header = goff::HeaderRecord {
             ptv: goff::GOFF_HDR_BYTES,
             reserved1: [0u8; 45],
             archlvl: U32::new(BE, 1),
@@ -225,12 +225,12 @@ impl<'a> Writer<'a> {
     // Write module end ("END") record.
     pub fn write_end(&mut self) {
         self.logical_record_count += 1;
-        let fileend = goff::EndRecord64 {
+        let fileend = goff::EndRecord {
             ptv: goff::GOFF_END_BYTES,
             flags: 0,
             amode: 0,
             reserved1: [0u8; 3],
-            record_cnt: U32::new(BE, self.logical_record_count), // count includes this END record.
+            record_count: U32::new(BE, self.logical_record_count), // count includes this END record.
             esdid: U32::new(BE, 0),
             reserved2: [0u8; 4],
             offset: U32::new(BE, 0),
@@ -476,10 +476,10 @@ impl<'a> Writer<'a> {
     pub fn get_esd_record(
         &self,
         symbol_type: goff::SymbolType,
-        namespace_id: goff::EsdNameSpace,
+        namespace_id: goff::SymbolNamespace,
         parent_esdid: u32,
-    ) -> goff::SymbolRecord64 {
-        goff::SymbolRecord64 {
+    ) -> goff::SymbolRecord {
+        goff::SymbolRecord {
             ptv: goff::GOFF_ESD_BYTES,
             symbol_type,
             esdid: U32::new(BE, self.next_esdid),
@@ -504,7 +504,7 @@ impl<'a> Writer<'a> {
         }
     }
 
-    pub fn write_esd_record(&mut self, record: &goff::SymbolRecord64, name: &[u8]) -> u32 {
+    pub fn write_esd_record(&mut self, record: &goff::SymbolRecord, name: &[u8]) -> u32 {
         let mut esd_record = *record;
         let mut record_name_len = name.len();
         let mut ptv = goff::GOFF_ESD_BYTES;
@@ -542,7 +542,7 @@ impl<'a> Writer<'a> {
                 end = start + goff::SIZEOF_CONTINUATION_RECORD_DATA;
             }
 
-            let mut cont_record = goff::ContinuationRecord64 {
+            let mut cont_record = goff::ContinuationRecord {
                 ptv,
                 data: [0u8; goff::SIZEOF_CONTINUATION_RECORD_DATA],
             };
@@ -577,7 +577,7 @@ impl<'a> Writer<'a> {
                 ptv[1] |= 0x1;
             }
 
-            let mut record = goff::TextRecord64 {
+            let mut record = goff::TextRecord {
                 ptv,
                 record_style: goff::TextRecordStyle(record_style),
                 element_esdid: U32::new(BE, esdid),
@@ -790,10 +790,10 @@ impl<'a> Writer<'a> {
 
         let mut ptv = goff::GOFF_RLD_BYTES;
         if !remainder.is_empty() {
-            ptv[1] |= 0x01; // Set "is_continued" flag — overflow goes into ContinuationRecord64s
+            ptv[1] |= 0x01; // Set "is_continued" flag — overflow goes into ContinuationRecords
         }
 
-        let mut record = goff::RelocationRecord64 {
+        let mut record = goff::RelocationRecord {
             ptv,
             reserved: 0,
             // Length covers the total data across this record and all its continuations.
