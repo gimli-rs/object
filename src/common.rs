@@ -821,7 +821,7 @@ pub enum RelocationFlags {
     #[cfg(feature = "goff")]
     Goff {
         /// The 6-byte GOFF relocation flags structure
-        flags: crate::read::goff::RelocationFlags,
+        flags: crate::goff::RelocationFlags,
     },
 }
 

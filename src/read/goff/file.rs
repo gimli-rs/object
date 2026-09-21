@@ -9,8 +9,8 @@ use crate::read::{
 };
 
 use crate::{
-    Architecture, BigEndian as BE, FileFlags, ObjectKind, ObjectSymbolTable, SectionIndex,
-    SymbolIndex, goff,
+    Architecture, BigEndian as BE, Bytes, FileFlags, ObjectKind, ObjectSymbolTable, SectionIndex,
+    SymbolIndex, U32, goff,
 };
 
 use crate::goff::*;
@@ -307,7 +307,6 @@ where
     /// Items are variable size (8-28 bytes) depending on compression flags
     fn parse_relocation_items(&self, data: &[u8], data_length: u16) -> Result<Vec<GoffRelocation>> {
         let mut relocations = Vec::new();
-        let mut cursor = 0;
         let mut prev_r_pointer: Option<u32> = None;
         let mut prev_p_pointer: Option<u32> = None;
         let mut prev_offset: Option<u32> = None;
@@ -316,65 +315,40 @@ where
         let rld_end = (data_length as usize).min(data.len());
 
         // Parse items until we've consumed all the relocation data
-        while cursor < rld_end {
-            // Need at least 8 bytes for flags (6) + reserved (2)
-            if cursor + 8 > rld_end {
-                break;
-            }
-
-            // Peek at flags to calculate item size
-            let flags_bytes: [u8; 6] = data[cursor..cursor + 6]
-                .try_into()
-                .map_err(|_| Error("failed to read relocation flags"))?;
-            let flags = super::RelocationFlags::from_bytes(flags_bytes);
-
-            // Calculate expected item size based on flags
-            let mut item_size = 8; // flags (6) + reserved (2)
-            if !flags.same_r_id() {
-                item_size += 4; // R-pointer
-            }
-            if !flags.same_p_id() {
-                item_size += 4; // P-pointer
-            }
-            if !flags.same_offset() {
-                item_size += 4; // Offset
-            }
-
-            // Check if complete item fits within valid data
-            if cursor + item_size > rld_end {
-                // Incomplete item at end - stop parsing
-                break;
-            }
-
-            // Now parse the item
-            cursor += 6; // Skip flags
-            cursor += 2; // Skip reserved
+        let mut data = Bytes(&data[..rld_end]);
+        while !data.is_empty() {
+            let item = data
+                .read::<goff::RelocationDataItem>()
+                .read_error("Invalid GOFF relocation data item")?;
+            let flags = item.flags;
 
             // Parse R-pointer (conditionally)
-            let r_pointer = if !flags.same_r_id() {
-                let val = u32::from_be_bytes(data[cursor..cursor + 4].try_into().unwrap());
-                cursor += 4;
-                val
+            let r_pointer = if flags.is_same_r_id() {
+                prev_r_pointer.read_error("GOFF R-pointer compression without previous value")?
             } else {
-                prev_r_pointer.ok_or(Error("R-pointer compression without previous value"))?
+                data.read::<U32<_>>()
+                    .read_error("Invalid GOFF relocation R-pointer")?
+                    .get(BE)
             };
 
             // Parse P-pointer (conditionally)
-            let p_pointer = if !flags.same_p_id() {
-                let val = u32::from_be_bytes(data[cursor..cursor + 4].try_into().unwrap());
-                cursor += 4;
-                val
+            let p_pointer = if flags.is_same_p_id() {
+                prev_p_pointer.read_error("GOFF P-pointer compression without previous value")?
             } else {
-                prev_p_pointer.ok_or(Error("P-pointer compression without previous value"))?
+                data.read::<U32<_>>()
+                    .read_error("Invalid GOFF relocation P-pointer")?
+                    .get(BE)
             };
 
             // Parse Offset (conditionally)
-            let offset = if !flags.same_offset() {
-                let val = u32::from_be_bytes(data[cursor..cursor + 4].try_into().unwrap());
-                cursor += 4;
-                val
+            let offset = if flags.is_same_offset() {
+                prev_offset.read_error("GOFF offset compression without previous value")?
+            } else if flags.is_offset64() {
+                return Err(Error("Unsupported GOFF 8 byte relocation offset"));
             } else {
-                prev_offset.ok_or(Error("Offset compression without previous value"))?
+                data.read::<U32<_>>()
+                    .read_error("Invalid GOFF relocation offset")?
+                    .get(BE)
             };
 
             // Create and store relocation
