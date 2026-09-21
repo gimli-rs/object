@@ -16,10 +16,6 @@ use crate::{ebcdic, goff};
 
 use super::{GoffFile, GoffRelocationIterator};
 
-/// An iterator for the sections in an [`GoffFile64`](super::GoffFile64).
-pub type GoffSectionIterator64<'data, 'file, R = &'data [u8]> =
-    GoffSectionIterator<'data, 'file, R>;
-
 /// An iterator for the sections in an [`GoffFile`].
 #[derive(Debug)]
 pub struct GoffSectionIterator<'data, 'file, R = &'data [u8]>
@@ -48,9 +44,6 @@ where
         })
     }
 }
-
-/// A section in an [`GoffFile64`](super::GoffFile64).
-pub type GoffSection64<'data, 'file, R = &'data [u8]> = GoffSection<'data, 'file, R>;
 
 /// A section in an [`GoffFile`].
 ///

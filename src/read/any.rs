@@ -42,7 +42,7 @@ macro_rules! with_inner {
             #[cfg(feature = "elf")]
             $enum::Elf64($var) => $body,
             #[cfg(feature = "goff")]
-            $enum::Goff64($var) => $body,
+            $enum::Goff($var) => $body,
             #[cfg(feature = "macho")]
             $enum::MachO32($var) => $body,
             #[cfg(feature = "macho")]
@@ -73,7 +73,7 @@ macro_rules! with_inner_mut {
             #[cfg(feature = "elf")]
             $enum::Elf64($var) => $body,
             #[cfg(feature = "goff")]
-            $enum::Goff64($var) => $body,
+            $enum::Goff($var) => $body,
             #[cfg(feature = "macho")]
             $enum::MachO32($var) => $body,
             #[cfg(feature = "macho")]
@@ -105,7 +105,7 @@ macro_rules! map_inner {
             #[cfg(feature = "elf")]
             $from::Elf64($var) => $to::Elf64($body),
             #[cfg(feature = "goff")]
-            $from::Goff64($var) => $to::Goff64($body),
+            $from::Goff($var) => $to::Goff($body),
             #[cfg(feature = "macho")]
             $from::MachO32($var) => $to::MachO32($body),
             #[cfg(feature = "macho")]
@@ -137,7 +137,7 @@ macro_rules! map_inner_option {
             #[cfg(feature = "elf")]
             $from::Elf64($var) => $body.map($to::Elf64),
             #[cfg(feature = "goff")]
-            $from::Goff64($var) => $body.map($to::Goff64),
+            $from::Goff($var) => $body.map($to::Goff),
             #[cfg(feature = "macho")]
             $from::MachO32($var) => $body.map($to::MachO32),
             #[cfg(feature = "macho")]
@@ -168,7 +168,7 @@ macro_rules! map_inner_option_mut {
             #[cfg(feature = "elf")]
             $from::Elf64($var) => $body.map($to::Elf64),
             #[cfg(feature = "goff")]
-            $from::Goff64($var) => $body.map($to::Goff64),
+            $from::Goff($var) => $body.map($to::Goff),
             #[cfg(feature = "macho")]
             $from::MachO32($var) => $body.map($to::MachO32),
             #[cfg(feature = "macho")]
@@ -200,7 +200,7 @@ macro_rules! next_inner {
             #[cfg(feature = "elf")]
             $from::Elf64(iter) => iter.next().map($to::Elf64),
             #[cfg(feature = "goff")]
-            $from::Goff64(iter) => iter.next().map($to::Goff64),
+            $from::Goff(iter) => iter.next().map($to::Goff),
             #[cfg(feature = "macho")]
             $from::MachO32(iter) => iter.next().map($to::MachO32),
             #[cfg(feature = "macho")]
@@ -235,7 +235,7 @@ pub enum File<'data, R: ReadRef<'data> = &'data [u8]> {
     #[cfg(feature = "elf")]
     Elf64(elf::ElfFile64<'data, Endianness, R>),
     #[cfg(feature = "goff")]
-    Goff64(goff::GoffFile64<'data, R>),
+    Goff(goff::GoffFile<'data, R>),
     #[cfg(feature = "macho")]
     MachO32(macho::MachOFile32<'data, Endianness, R>),
     #[cfg(feature = "macho")]
@@ -261,7 +261,7 @@ impl<'data, R: ReadRef<'data>> File<'data, R> {
             #[cfg(feature = "elf")]
             FileKind::Elf64 => File::Elf64(elf::ElfFile64::parse(data)?),
             #[cfg(feature = "goff")]
-            FileKind::Goff64 => File::Goff64(goff::GoffFile64::parse(data)?),
+            FileKind::Goff => File::Goff(goff::GoffFile::parse(data)?),
             #[cfg(feature = "macho")]
             FileKind::MachO32 => File::MachO32(macho::MachOFile32::parse(data)?),
             #[cfg(feature = "macho")]
@@ -309,7 +309,7 @@ impl<'data, R: ReadRef<'data>> File<'data, R> {
             #[cfg(feature = "elf")]
             File::Elf32(_) | File::Elf64(_) => BinaryFormat::Elf,
             #[cfg(feature = "goff")]
-            File::Goff64(_) => BinaryFormat::Goff,
+            File::Goff(_) => BinaryFormat::Goff,
             #[cfg(feature = "macho")]
             File::MachO32(_) | File::MachO64(_) => BinaryFormat::MachO,
             #[cfg(feature = "pe")]
@@ -588,7 +588,7 @@ enum SegmentIteratorInternal<'data, 'file, R: ReadRef<'data>> {
     #[cfg(feature = "elf")]
     Elf64(elf::ElfSegmentIterator64<'data, 'file, Endianness, R>),
     #[cfg(feature = "goff")]
-    Goff64(goff::GoffSegmentIterator<'data, 'file, R>),
+    Goff(goff::GoffSegmentIterator<'data, 'file, R>),
     #[cfg(feature = "macho")]
     MachO32(macho::MachOSegmentIterator32<'data, 'file, Endianness, R>),
     #[cfg(feature = "macho")]
@@ -632,7 +632,7 @@ enum SegmentInternal<'data, 'file, R: ReadRef<'data>> {
     #[cfg(feature = "elf")]
     Elf64(elf::ElfSegment64<'data, 'file, Endianness, R>),
     #[cfg(feature = "goff")]
-    Goff64(goff::GoffSegmentRef<'data, 'file, R>),
+    Goff(goff::GoffSegmentRef<'data, 'file, R>),
     #[cfg(feature = "macho")]
     MachO32(macho::MachOSegment32<'data, 'file, Endianness, R>),
     #[cfg(feature = "macho")]
@@ -731,7 +731,7 @@ enum SectionIteratorInternal<'data, 'file, R: ReadRef<'data>> {
     #[cfg(feature = "elf")]
     Elf64(elf::ElfSectionIterator64<'data, 'file, Endianness, R>),
     #[cfg(feature = "goff")]
-    Goff64(goff::GoffSectionIterator64<'data, 'file, R>),
+    Goff(goff::GoffSectionIterator<'data, 'file, R>),
     #[cfg(feature = "macho")]
     MachO32(macho::MachOSectionIterator32<'data, 'file, Endianness, R>),
     #[cfg(feature = "macho")]
@@ -774,7 +774,7 @@ enum SectionInternal<'data, 'file, R: ReadRef<'data>> {
     #[cfg(feature = "elf")]
     Elf64(elf::ElfSection64<'data, 'file, Endianness, R>),
     #[cfg(feature = "goff")]
-    Goff64(goff::GoffSection64<'data, 'file, R>),
+    Goff(goff::GoffSection<'data, 'file, R>),
     #[cfg(feature = "macho")]
     MachO32(macho::MachOSection32<'data, 'file, Endianness, R>),
     #[cfg(feature = "macho")]
@@ -916,7 +916,7 @@ enum ComdatIteratorInternal<'data, 'file, R: ReadRef<'data>> {
     #[cfg(feature = "elf")]
     Elf64(elf::ElfComdatIterator64<'data, 'file, Endianness, R>),
     #[cfg(feature = "goff")]
-    Goff64(goff::GoffComdatIterator64<'data, 'file, R>),
+    Goff(goff::GoffComdatIterator<'data, 'file, R>),
     #[cfg(feature = "macho")]
     MachO32(macho::MachOComdatIterator32<'data, 'file, Endianness, R>),
     #[cfg(feature = "macho")]
@@ -959,7 +959,7 @@ enum ComdatInternal<'data, 'file, R: ReadRef<'data>> {
     #[cfg(feature = "elf")]
     Elf64(elf::ElfComdat64<'data, 'file, Endianness, R>),
     #[cfg(feature = "goff")]
-    Goff64(goff::GoffComdat64<'data, 'file, R>),
+    Goff(goff::GoffComdat<'data, 'file, R>),
     #[cfg(feature = "macho")]
     MachO32(macho::MachOComdat32<'data, 'file, Endianness, R>),
     #[cfg(feature = "macho")]
@@ -1036,7 +1036,7 @@ enum ComdatSectionIteratorInternal<'data, 'file, R: ReadRef<'data>> {
     #[cfg(feature = "elf")]
     Elf64(elf::ElfComdatSectionIterator64<'data, 'file, Endianness, R>),
     #[cfg(feature = "goff")]
-    Goff64(goff::GoffComdatSectionIterator64<'data, 'file, R>),
+    Goff(goff::GoffComdatSectionIterator<'data, 'file, R>),
     #[cfg(feature = "macho")]
     MachO32(macho::MachOComdatSectionIterator32<'data, 'file, Endianness, R>),
     #[cfg(feature = "macho")]
@@ -1096,7 +1096,7 @@ where
         ),
     ),
     #[cfg(feature = "goff")]
-    Goff64((goff::GoffSymbolTable64<'data, 'file, R>, PhantomData<R>)),
+    Goff((goff::GoffSymbolTable<'data, 'file, R>, PhantomData<R>)),
     #[cfg(feature = "macho")]
     MachO32(
         (
@@ -1182,7 +1182,7 @@ where
         ),
     ),
     #[cfg(feature = "goff")]
-    Goff64((goff::GoffSymbolIterator64<'data, 'file, R>, PhantomData<R>)),
+    Goff((goff::GoffSymbolIterator<'data, 'file, R>, PhantomData<R>)),
     #[cfg(feature = "macho")]
     MachO32(
         (
@@ -1263,7 +1263,7 @@ where
         ),
     ),
     #[cfg(feature = "goff")]
-    Goff64((goff::GoffSymbol64, PhantomData<(&'data (), &'file (), R)>)),
+    Goff((goff::GoffSymbol, PhantomData<(&'data (), &'file (), R)>)),
     #[cfg(feature = "macho")]
     MachO32(
         (
@@ -1434,7 +1434,7 @@ enum SectionRelocationIteratorInternal<'data, 'file, R: ReadRef<'data>> {
     #[cfg(feature = "elf")]
     Elf64(elf::ElfSectionRelocationIterator64<'data, 'file, Endianness, R>),
     #[cfg(feature = "goff")]
-    Goff64(goff::GoffRelocationIterator64<'data, 'file, R>),
+    Goff(goff::GoffRelocationIterator<'data, 'file, R>),
     #[cfg(feature = "macho")]
     MachO32(macho::MachORelocationIterator32<'data, 'file, Endianness, R>),
     #[cfg(feature = "macho")]
@@ -1476,7 +1476,7 @@ enum ImportLibraryIteratorInternal<'data, 'file, R: ReadRef<'data>> {
     #[cfg(feature = "elf")]
     Elf64(elf::ElfImportLibraryIterator64<'data, 'file, Endianness, R>),
     #[cfg(feature = "goff")]
-    Goff64(read::NoImportLibraryIterator<'data, 'file, R>),
+    Goff(read::NoImportLibraryIterator<'data, 'file, R>),
     #[cfg(feature = "macho")]
     MachO32(macho::MachOImportLibraryIterator32<'data, 'file, Endianness, R>),
     #[cfg(feature = "macho")]
@@ -1518,7 +1518,7 @@ enum ImportIteratorInternal<'data, 'file, R: ReadRef<'data>> {
     #[cfg(feature = "elf")]
     Elf64(elf::ElfImportIterator64<'data, 'file, Endianness, R>),
     #[cfg(feature = "goff")]
-    Goff64(read::NoImportIterator<'data, 'file, R>),
+    Goff(read::NoImportIterator<'data, 'file, R>),
     #[cfg(feature = "macho")]
     MachO32(macho::MachOImportIterator32<'data, 'file, Endianness, R>),
     #[cfg(feature = "macho")]
@@ -1560,7 +1560,7 @@ enum ExportIteratorInternal<'data, 'file, R: ReadRef<'data>> {
     #[cfg(feature = "elf")]
     Elf64(elf::ElfExportIterator64<'data, 'file, Endianness, R>),
     #[cfg(feature = "goff")]
-    Goff64(read::NoExportIterator<'data, 'file, R>),
+    Goff(read::NoExportIterator<'data, 'file, R>),
     #[cfg(feature = "macho")]
     MachO32(macho::MachOExportIterator32<'data, 'file, Endianness, R>),
     #[cfg(feature = "macho")]

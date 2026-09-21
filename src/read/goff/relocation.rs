@@ -26,11 +26,7 @@ pub struct GoffRelocation {
     pub offset: u32,
 }
 
-/// An iterator for the relocations in an [`GoffSection64`](super::GoffSection64).
-pub type GoffRelocationIterator64<'data, 'file, R = &'data [u8]> =
-    GoffRelocationIterator<'data, 'file, R>;
-
-/// An iterator for the relocations in a `GoffSection`.
+/// An iterator for the relocations in a [`GoffSection`](super::GoffSection).
 pub struct GoffRelocationIterator<'data, 'file, R = &'data [u8]>
 where
     R: ReadRef<'data>,
