@@ -213,7 +213,7 @@ impl<'a> Writer<'a> {
     // Write module header ("HDR") record.
     pub fn write_hdr(&mut self) {
         let header = goff::HeaderRecord {
-            ptv: goff::GOFF_HDR_BYTES,
+            ptv: goff::HDR_PREFIX,
             reserved1: [0u8; 45],
             archlvl: U32::new(BE, 1),
             reserved2: [0u8; 28],
@@ -226,7 +226,7 @@ impl<'a> Writer<'a> {
     pub fn write_end(&mut self) {
         self.logical_record_count += 1;
         let fileend = goff::EndRecord {
-            ptv: goff::GOFF_END_BYTES,
+            ptv: goff::END_PREFIX,
             flags: 0,
             amode: 0,
             reserved1: [0u8; 3],
@@ -480,7 +480,7 @@ impl<'a> Writer<'a> {
         parent_esdid: u32,
     ) -> goff::SymbolRecord {
         goff::SymbolRecord {
-            ptv: goff::GOFF_ESD_BYTES,
+            ptv: goff::ESD_PREFIX,
             symbol_type,
             esdid: U32::new(BE, self.next_esdid),
             parent_esdid: U32::new(BE, parent_esdid),
@@ -506,13 +506,8 @@ impl<'a> Writer<'a> {
 
     pub fn write_esd_record(&mut self, record: &goff::SymbolRecord, name: &[u8]) -> u32 {
         let mut esd_record = *record;
-        let mut record_name_len = name.len();
-        let mut ptv = goff::GOFF_ESD_BYTES;
-        if record_name_len > goff::SIZEOF_ESD_DATA {
-            record_name_len = goff::SIZEOF_ESD_DATA;
-            ptv[1] |= 0x1;
-        }
-        esd_record.ptv = ptv;
+        let record_name_len = name.len().min(goff::SIZEOF_ESD_DATA);
+        esd_record.ptv = goff::ESD_PREFIX.with_continued(name.len() > record_name_len);
         esd_record.name_length = U16::new(BE, name.len() as u16);
         esd_record.name[..record_name_len].copy_from_slice(&name[..record_name_len]);
 
@@ -520,25 +515,24 @@ impl<'a> Writer<'a> {
 
         self.logical_record_count += 1;
         self.buffer.write_pod(&esd_record);
-        self.write_continuation_records(goff::GOFF_ESD_BYTES, name, name.len() - record_name_len);
+        self.write_continuation_records(goff::RT_ESD, name, name.len() - record_name_len);
 
         self.next_esdid - 1
     }
 
     pub fn write_continuation_records(
         &mut self,
-        record_type: [u8; 3],
+        record_type: goff::RecordType,
         data: &[u8],
         mut data_remaining_amount: usize,
     ) {
         while data_remaining_amount > 0 {
-            let mut ptv = record_type;
-            ptv[1] |= 0x2;
+            let mut ptv = goff::RecordPrefix::new(record_type).with_continuation();
 
             let start = data.len() - data_remaining_amount;
             let mut end = data.len();
             if data_remaining_amount > goff::SIZEOF_CONTINUATION_RECORD_DATA {
-                ptv[1] |= 0x1;
+                ptv = ptv.with_continued(true);
                 end = start + goff::SIZEOF_CONTINUATION_RECORD_DATA;
             }
 
@@ -570,11 +564,11 @@ impl<'a> Writer<'a> {
             } else {
                 data_remaining_amount
             };
-            let mut ptv = goff::GOFF_TXT_BYTES;
+            let mut ptv = goff::TXT_PREFIX;
             let mut record_data_len = logical_write_len;
             if record_data_len > goff::SIZEOF_TXT_DATA {
                 record_data_len = goff::SIZEOF_TXT_DATA;
-                ptv[1] |= 0x1;
+                ptv = ptv.with_continued(true);
             }
 
             let mut record = goff::TextRecord {
@@ -592,7 +586,7 @@ impl<'a> Writer<'a> {
             self.logical_record_count += 1;
             self.buffer.write_pod(&record);
             self.write_continuation_records(
-                goff::GOFF_TXT_BYTES,
+                goff::RT_TXT,
                 &data[offset..offset + logical_write_len],
                 logical_write_len - record_data_len,
             );
@@ -788,10 +782,7 @@ impl<'a> Writer<'a> {
         let first_chunk = data.len().min(goff::SIZEOF_RELOCATION_DATA);
         let remainder = &data[first_chunk..];
 
-        let mut ptv = goff::GOFF_RLD_BYTES;
-        if !remainder.is_empty() {
-            ptv[1] |= 0x01; // Set "is_continued" flag — overflow goes into ContinuationRecords
-        }
+        let ptv = goff::RLD_PREFIX.with_continued(!remainder.is_empty());
 
         let mut record = goff::RelocationRecord {
             ptv,
@@ -806,7 +797,7 @@ impl<'a> Writer<'a> {
         self.buffer.write_pod(&record);
 
         if !remainder.is_empty() {
-            self.write_continuation_records(goff::GOFF_RLD_BYTES, data, remainder.len());
+            self.write_continuation_records(goff::RT_RLD, data, remainder.len());
         }
 
         Ok(())
