@@ -165,90 +165,14 @@ struct SymbolHierarchy {
 /// A pending relocation to be written to RLD records.
 #[derive(Debug, Clone)]
 struct PendingRelocation {
-    /// Flags for this relocation (6 bytes)
-    flags: [u8; 6],
+    /// Flags for this relocation
+    flags: goff::RelocationFlags,
     /// R-pointer (reference ESDID)
     r_pointer: u32,
     /// P-pointer (location ESDID)
     p_pointer: u32,
     /// Offset within P-pointer element
     offset: u32,
-}
-
-/// Builder for constructing GOFF relocation flags.
-#[derive(Debug, Clone)]
-pub struct RelocationFlagsBuilder {
-    /// Byte 0: Compression and mode flags
-    compression_and_mode: u8,
-    /// Byte 1: R-Pointer indicators (reference type and referent type)
-    r_pointer_indicators: u8,
-    /// Byte 2: Action/operation flags
-    action_flags: u8,
-    /// Byte 3: Reserved
-    reserved: u8,
-    /// Byte 4: Target field byte length
-    target_field_length: u8,
-    /// Byte 5: Bit-level field specifications
-    bit_field_specs: u8,
-}
-
-impl RelocationFlagsBuilder {
-    /// Create a new builder with default values.
-    pub fn new() -> Self {
-        Self {
-            compression_and_mode: 0,
-            r_pointer_indicators: 0,
-            action_flags: 0,
-            reserved: 0,
-            target_field_length: 0,
-            bit_field_specs: 0,
-        }
-    }
-
-    /// Set the reference type (upper 4 bits of byte 1).
-    /// 0=R-address, 1=R-Offset, 2=R-Length, 6=R-Relative-Immediate
-    pub fn with_reference_type(mut self, ref_type: u8) -> Self {
-        self.r_pointer_indicators = (self.r_pointer_indicators & 0x0F) | ((ref_type & 0x0F) << 4);
-        self
-    }
-
-    /// Set the referent type (lower 4 bits of byte 1).
-    /// 0=Label, 1=Element, 2=Class, 3=Part
-    pub fn with_referent_type(mut self, ref_type: u8) -> Self {
-        self.r_pointer_indicators = (self.r_pointer_indicators & 0xF0) | (ref_type & 0x0F);
-        self
-    }
-
-    /// Set the action/operation (upper 7 bits of byte 2).
-    /// 0=add, 1=subtract
-    pub fn with_action(mut self, action: u8) -> Self {
-        self.action_flags = (self.action_flags & 0x01) | ((action & 0x7F) << 1);
-        self
-    }
-
-    /// Set the target field byte length (byte 4).
-    pub fn with_target_length(mut self, length: u8) -> Self {
-        self.target_field_length = length;
-        self
-    }
-
-    /// Build the final 6-byte flags array.
-    pub fn build(self) -> [u8; 6] {
-        [
-            self.compression_and_mode,
-            self.r_pointer_indicators,
-            self.action_flags,
-            self.reserved,
-            self.target_field_length,
-            self.bit_field_specs,
-        ]
-    }
-}
-
-impl Default for RelocationFlagsBuilder {
-    fn default() -> Self {
-        Self::new()
-    }
 }
 
 /// A helper for writing GOFF files.
@@ -754,64 +678,43 @@ impl<'a> Writer<'a> {
     }
 
     /// Build relocation flags based on relocation properties.
-    fn build_relocation_flags(&self, flags: &RelocationFlags, size: u8) -> Result<[u8; 6]> {
-        let mut builder = RelocationFlagsBuilder::new();
-
-        // Map relocation flags to GOFF reference type and action
-        match flags {
+    fn build_relocation_flags(
+        &self,
+        flags: &RelocationFlags,
+        size: u8,
+    ) -> Result<goff::RelocationFlags> {
+        // Map relocation flags to GOFF reference type and operation
+        let (reference_type, operation) = match flags {
             RelocationFlags::Generic {
                 kind,
                 encoding: _,
                 size: _,
-            } => {
-                match kind {
-                    RelocationKind::Absolute => {
-                        builder = builder
-                            .with_reference_type(0) // R-address
-                            .with_action(0); // Add
-                    }
-                    RelocationKind::Relative => {
-                        builder = builder
-                            .with_reference_type(6) // R-Relative-Immediate
-                            .with_action(1); // Subtract
-                    }
-                    RelocationKind::Got => {
-                        builder = builder
-                            .with_reference_type(0) // R-address
-                            .with_action(0); // Add
-                    }
-                    RelocationKind::PltRelative => {
-                        builder = builder
-                            .with_reference_type(6) // R-Relative-Immediate
-                            .with_action(1); // Subtract
-                    }
-                    RelocationKind::GotRelative => {
-                        builder = builder
-                            .with_reference_type(6) // R-Relative-Immediate
-                            .with_action(1); // Subtract
-                    }
-                    RelocationKind::SectionOffset => {
-                        builder = builder
-                            .with_reference_type(1) // R-Offset
-                            .with_action(0); // Add
-                    }
-                    _ => {
-                        return Err(Error(format!("Unsupported relocation kind: {:?}", kind)));
-                    }
+            } => match kind {
+                RelocationKind::Absolute | RelocationKind::Got => {
+                    (goff::RLD_RT_ADDRESS, goff::RLD_ACT_ADD)
                 }
-            }
+                RelocationKind::Relative
+                | RelocationKind::PltRelative
+                | RelocationKind::GotRelative => {
+                    (goff::RLD_RT_RELATIVE_IMMEDIATE, goff::RLD_ACT_SUBTRACT)
+                }
+                RelocationKind::SectionOffset => (goff::RLD_RT_OFFSET, goff::RLD_ACT_ADD),
+                _ => {
+                    return Err(Error(format!("Unsupported relocation kind: {:?}", kind)));
+                }
+            },
             _ => {
                 return Err(Error("Unsupported relocation flags type for GOFF".into()));
             }
-        }
+        };
 
-        // Set target field length (convert bits to bytes)
-        builder = builder.with_target_length(size / 8);
-
-        // Set referent type to Label (0) - most common case
-        builder = builder.with_referent_type(0);
-
-        Ok(builder.build())
+        Ok(goff::RelocationFlags::default()
+            .with_reference_type(reference_type)
+            // Referent type Label is the most common case.
+            .with_referent_type(goff::RLD_RO_LABEL)
+            // Convert the target field length from bits to bytes.
+            .with_byte_length(size / 8)
+            .with_action(operation))
     }
 
     /// Add a relocation to the pending list.
@@ -848,27 +751,28 @@ impl<'a> Writer<'a> {
     fn write_relocation_item(
         &self,
         buffer: &mut Vec<u8>,
-        flags: &[u8; 6],
+        flags: goff::RelocationFlags,
         reloc: &PendingRelocation,
     ) -> Result<()> {
-        // Write flags (6 bytes)
-        buffer.extend_from_slice(flags);
-
-        // Write reserved (2 bytes)
-        buffer.extend_from_slice(&[0u8; 2]);
+        // Write fixed header
+        let item = goff::RelocationDataItem {
+            flags,
+            reserved: [0u8; 2],
+        };
+        buffer.write_pod(&item);
 
         // Write R-pointer if not compressed
-        if (flags[0] & 0x80) == 0 {
+        if !flags.is_same_r_id() {
             buffer.extend_from_slice(&reloc.r_pointer.to_be_bytes());
         }
 
         // Write P-pointer if not compressed
-        if (flags[0] & 0x40) == 0 {
+        if !flags.is_same_p_id() {
             buffer.extend_from_slice(&reloc.p_pointer.to_be_bytes());
         }
 
         // Write offset if not compressed
-        if (flags[0] & 0x20) == 0 {
+        if !flags.is_same_offset() {
             buffer.extend_from_slice(&reloc.offset.to_be_bytes());
         }
 
@@ -924,29 +828,14 @@ impl<'a> Writer<'a> {
 
         for reloc in &self.relocations {
             // Apply compression flags
-            let mut flags = reloc.flags;
-
-            // Only compress if we have previous values (not the first relocation)
-            if let Some(prev) = prev_r_pointer {
-                if reloc.r_pointer == prev {
-                    flags[0] |= 0x80; // Same R-ID
-                }
-            }
-
-            if let Some(prev) = prev_p_pointer {
-                if reloc.p_pointer == prev {
-                    flags[0] |= 0x40; // Same P-ID
-                }
-            }
-
-            if let Some(prev) = prev_offset {
-                if reloc.offset == prev {
-                    flags[0] |= 0x20; // Same Offset
-                }
-            }
+            let flags = reloc
+                .flags
+                .with_same_r_id(prev_r_pointer == Some(reloc.r_pointer))
+                .with_same_p_id(prev_p_pointer == Some(reloc.p_pointer))
+                .with_same_offset(prev_offset == Some(reloc.offset));
 
             // Write relocation item
-            self.write_relocation_item(&mut rld_data, &flags, reloc)?;
+            self.write_relocation_item(&mut rld_data, flags, reloc)?;
 
             // Update previous values for next iteration
             prev_r_pointer = Some(reloc.r_pointer);
