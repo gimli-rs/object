@@ -60,7 +60,13 @@ where
         }
 
         let mut offset = 0;
-        let header = goff::HeaderRecord::parse(data, &mut offset)?;
+        let header = data
+            .read::<goff::HeaderRecord>(&mut offset)
+            .read_error("Invalid GOFF header size or alignment")?;
+        if header.ptv != goff::HDR_PREFIX {
+            return Err(Error("Unsupported GOFF header"));
+        }
+
         let mut file = GoffFile {
             data,
             header,
@@ -651,39 +657,9 @@ where
 
     fn flags(&self) -> FileFlags {
         FileFlags::Goff {
-            archlvl: self.header.archlvl(),
+            archlvl: self.header.archlvl.get(BE),
             flags: self.entry_flags.map(goff::FileFlags),
             amode: self.entry_amode,
         }
-    }
-}
-
-impl goff::HeaderRecord {
-    /// Prefix (first 3 bytes) in module header record serves as magic number
-    fn magic(&self) -> [u8; 3] {
-        self.ptv
-    }
-
-    /// Returns architecture level
-    fn archlvl(&self) -> u32 {
-        self.archlvl.get(BE)
-    }
-
-    /// Verifies header prefix contains proper magic
-    fn is_supported(&self) -> bool {
-        self.magic() == goff::GOFF_HDR_BYTES
-    }
-
-    /// Read the file header.
-    ///
-    /// Also checks that the magic field in the file header is a supported format.
-    fn parse<'data, R: ReadRef<'data>>(data: R, offset: &mut u64) -> Result<&'data Self> {
-        let header: &Self = data
-            .read::<Self>(offset)
-            .read_error("Invalid GOFF header size or alignment")?;
-        if !header.is_supported() {
-            return Err(Error("Unsupported GOFF header"));
-        }
-        Ok(header)
     }
 }

@@ -106,7 +106,7 @@ impl<'a, 'b, T: Copy> DebugBitFields<'a, 'b, T> {
 #[repr(C)]
 pub struct HeaderRecord {
     /// Type of record. Must be 0x03F000.
-    pub ptv: [u8; 3],
+    pub ptv: RecordPrefix,
     /// Reserved. Must be 45 bytes of 0.
     pub reserved1: [u8; 45],
     /// Architecture Level. Must be 1.
@@ -124,7 +124,7 @@ pub const SIZEOF_ESD_DATA: usize = 8;
 #[repr(C)]
 pub struct SymbolRecord {
     /// Type of record. Must be 0x030000 or 0x030100.
-    pub ptv: [u8; 3],
+    pub ptv: RecordPrefix,
     /// Symbol Type.
     pub symbol_type: SymbolType,
     /// ESD Identifier (ESDID).
@@ -176,7 +176,7 @@ pub const SIZEOF_TXT_DATA: usize = 56;
 #[repr(C)]
 pub struct TextRecord {
     /// Type of record. Must be 0x031000 or 0x031100.
-    pub ptv: [u8; 3],
+    pub ptv: RecordPrefix,
     /// Text Record Style
     pub record_style: TextRecordStyle,
     /// Element ESDID
@@ -203,7 +203,7 @@ pub const SIZEOF_RELOCATION_DATA: usize = 74;
 #[repr(C)]
 pub struct RelocationRecord {
     /// Type of record. Must be 0x032000 or 0x032100.
-    pub ptv: [u8; 3],
+    pub ptv: RecordPrefix,
     /// Reserved. Must be 1 byte of 0.
     pub reserved: u8,
     /// Length.
@@ -232,7 +232,7 @@ pub const SIZEOF_CONTINUATION_RECORD_DATA: usize = 77;
 #[repr(C)]
 pub struct ContinuationRecord {
     /// Type of record.
-    pub ptv: [u8; 3],
+    pub ptv: RecordPrefix,
     /// Payload.
     pub data: [u8; SIZEOF_CONTINUATION_RECORD_DATA],
 }
@@ -245,7 +245,7 @@ pub const SIZEOF_DEFERRED_LEN_DATA: usize = 72;
 #[repr(C)]
 pub struct LengthRecord {
     /// Type of record.
-    pub ptv: [u8; 3],
+    pub ptv: RecordPrefix,
     /// Reserved data.
     pub reserved: [u8; 3],
     /// Length of data (i.e. total bytes of data items in data)
@@ -274,7 +274,7 @@ pub const SIZEOF_ENTRY_POINT_NAME: usize = 54;
 #[repr(C)]
 pub struct EndRecord {
     /// Type of record. Must be 0x034000.
-    pub ptv: [u8; 3],
+    pub ptv: RecordPrefix,
     /// Flags.  Upper 6 bits are reserved to 0
     pub flags: u8,
     /// AMODE.
@@ -329,44 +329,42 @@ pub const F_ENTRY_MASK: u8 = 0x03;
 newtype!(
     /// GOFF record type values.
     ///
-    /// These appear in the second byte of the `ptv` field (bits masked with 0xFC).
+    /// These are stored in the first 4 bits of the second byte of the `ptv` field.
     #[repr(transparent)]
     struct RecordType(u8);
 );
 
 newtype_constant_names!(NAMES_RT: RecordType(u8) = {
     /// External Symbol Dictionary record.
-    RT_ESD = 0x00,
+    RT_ESD = 0,
     /// Text (code/data) record.
-    RT_TXT = 0x10,
+    RT_TXT = 1,
     /// Relocation Dictionary record.
-    RT_RLD = 0x20,
-    /// Length record (continuation).
-    RT_LEN = 0x30,
+    RT_RLD = 2,
+    /// Deferred-length record.
+    RT_LEN = 3,
     /// End of module record.
-    RT_END = 0x40,
+    RT_END = 4,
     /// Module header record.
-    RT_HDR = 0xF0,
+    RT_HDR = 15,
 });
 
-// Values for `ptv`, the GOFF Record prefix
-//
-/// GOFF Record Prefix (every GOFF file begins with this)
+/// GOFF record prefix (every GOFF record begins with this).
 pub const GOFF_PREFIX: u8 = 0x03;
-/// GOFF Version (only supported version)
+/// GOFF version (only supported version).
 pub const GOFF_VERSION: u8 = 0x00;
-/// The GOFF HDR Record Magic Number
-pub const GOFF_HDR_BYTES: [u8; 3] = [GOFF_PREFIX, RT_HDR.0, GOFF_VERSION];
-/// The GOFF ESD Record Magic Number
-pub const GOFF_ESD_BYTES: [u8; 3] = [GOFF_PREFIX, RT_ESD.0, GOFF_VERSION];
-/// The GOFF TXT Record Magic Number
-pub const GOFF_TXT_BYTES: [u8; 3] = [GOFF_PREFIX, RT_TXT.0, GOFF_VERSION];
-/// The GOFF RLD Record Magic Number
-pub const GOFF_RLD_BYTES: [u8; 3] = [GOFF_PREFIX, RT_RLD.0, GOFF_VERSION];
-/// The GOFF LEN Record Magic Number
-pub const GOFF_LEN_BYTES: [u8; 3] = [GOFF_PREFIX, RT_LEN.0, GOFF_VERSION];
-/// The GOFF END Record Magic Number
-pub const GOFF_END_BYTES: [u8; 3] = [GOFF_PREFIX, RT_END.0, GOFF_VERSION];
+/// The GOFF HDR record prefix.
+pub const HDR_PREFIX: RecordPrefix = RecordPrefix::new(RT_HDR);
+/// The GOFF ESD record prefix.
+pub const ESD_PREFIX: RecordPrefix = RecordPrefix::new(RT_ESD);
+/// The GOFF TXT record prefix.
+pub const TXT_PREFIX: RecordPrefix = RecordPrefix::new(RT_TXT);
+/// The GOFF RLD record prefix.
+pub const RLD_PREFIX: RecordPrefix = RecordPrefix::new(RT_RLD);
+/// The GOFF LEN record prefix.
+pub const LEN_PREFIX: RecordPrefix = RecordPrefix::new(RT_LEN);
+/// The GOFF END record prefix.
+pub const END_PREFIX: RecordPrefix = RecordPrefix::new(RT_END);
 
 newtype!(
     /// GOFF symbol type values from ESD records.
@@ -413,7 +411,7 @@ newtype_constant_names!(NAMES_TXT_RS: TextRecordStyle(u8) = {
 });
 
 /// All GOFF records have a 3-byte identifying prefix of the following form.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(C)]
 pub struct RecordPrefix {
     /// Magic Number Prefix, always 0x03 (distinguishes GOFF records from OBJ records)
@@ -425,21 +423,45 @@ pub struct RecordPrefix {
 }
 
 impl RecordPrefix {
+    /// Construct a prefix with no continuation flags set.
+    pub const fn new(record_type: RecordType) -> Self {
+        let mut type_and_cont = 0;
+        set_bits(&mut type_and_cont, 0, 4, record_type.0);
+        RecordPrefix {
+            prefix: GOFF_PREFIX,
+            type_and_cont,
+            version: GOFF_VERSION,
+        }
+    }
     /// Determines if the GOFF record prefix is valid
     pub fn is_valid(self) -> bool {
-        self.prefix == GOFF_PREFIX && self.version == GOFF_VERSION
+        self.prefix == GOFF_PREFIX
+            && self.version == GOFF_VERSION
+            && get_bits(self.type_and_cont, 4, 2) == 0
     }
     /// Returns the record type of a GOFF record
     pub fn record_type(self) -> RecordType {
-        RecordType(self.type_and_cont & 0xFC)
+        RecordType(get_bits(self.type_and_cont, 0, 4))
     }
     /// Determines if the record is a continuation of the previous record
     pub fn is_continuation(self) -> bool {
-        (self.type_and_cont & 0x02) == 0x02
+        get_bits(self.type_and_cont, 6, 1) != 0
+    }
+    /// Set that the record is a continuation of the previous record.
+    #[must_use]
+    pub const fn with_continuation(mut self) -> Self {
+        set_bits(&mut self.type_and_cont, 6, 1, 1);
+        self
     }
     /// Determines if the record will be continued on the succeeding record
     pub fn is_continued(self) -> bool {
-        (self.type_and_cont & 0x01) == 0x01
+        get_bits(self.type_and_cont, 7, 1) != 0
+    }
+    /// Set whether the record will be continued on the succeeding record.
+    #[must_use]
+    pub const fn with_continued(mut self, continued: bool) -> Self {
+        set_bits(&mut self.type_and_cont, 7, 1, continued as u8);
+        self
     }
 }
 
