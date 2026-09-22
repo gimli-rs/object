@@ -508,7 +508,7 @@ pub enum FileFlags {
         /// `flags` field in the GOFF END record.
         flags: Option<crate::goff::FileFlags>,
         /// `amode` field in the GOFF END record.
-        amode: Option<u8>,
+        amode: Option<crate::goff::Amode>,
     },
 }
 
@@ -729,11 +729,11 @@ pub enum SymbolFlags<Section, Symbol> {
     #[cfg(feature = "goff")]
     Goff {
         /// `symbol_type` field in the GOFF ESD record.
-        symboltype: crate::goff::SymbolType,
-        /// `sym_flags` field in the GOFF ESD record.
-        symflags: u8,
-        /// `namespace_id` field in the GOFF ESD record.
-        namespaceid: u8,
+        symbol_type: crate::goff::SymbolType,
+        /// `flags` field in the GOFF ESD record.
+        flags: crate::goff::SymbolFlags,
+        /// `namespace` field in the GOFF ESD record.
+        namespace: crate::goff::SymbolNamespace,
         /// `behavioral_attributes` field in the GOFF ESD record.
         behavioral_attributes: crate::goff::BehavioralAttributes,
     },

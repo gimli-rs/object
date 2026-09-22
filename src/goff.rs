@@ -146,9 +146,9 @@ pub struct SymbolRecord {
     /// Reserved. Must be 4 bytes of 0.
     pub reserved3: U32<BE>,
     /// Name Space ID
-    pub namespace_id: SymbolNamespace,
+    pub namespace: SymbolNamespace,
     /// Symbol Flags.
-    pub sym_flags: u8,
+    pub flags: SymbolFlags,
     /// Fill Byte Value (the specific 1-byte value used to pad memory)
     pub fill_byte_value: u8,
     /// Reserved. Must be 1 bytes of 0.
@@ -266,7 +266,8 @@ pub struct LengthDataItem {
     pub length: U32<BE>,
 }
 
-/// Each entry point name will have a size of 54 bytes
+/// Entry point name data has 54 bytes till the end of the record,
+/// can be finished in a continuation record
 pub const SIZEOF_ENTRY_POINT_NAME: usize = 54;
 
 /// The module end ("END") record at the end of every GOFF file.
@@ -276,14 +277,14 @@ pub struct EndRecord {
     /// Type of record. Must be 0x034000.
     pub ptv: RecordPrefix,
     /// Flags.  Upper 6 bits are reserved to 0
-    pub flags: u8,
-    /// AMODE.
-    pub amode: u8,
+    pub flags: FileFlags,
+    /// Addressing mode of entry point.
+    pub amode: Amode,
     /// Reserved. Must be 3 bytes of 0.
     pub reserved1: [u8; 3],
     /// Record Count.
     pub record_count: U32<BE>,
-    /// ESDID
+    /// ESDID of the element containing the entry point.
     pub esdid: U32<BE>,
     /// Reserved. Must be 4 bytes of 0.
     pub reserved2: [u8; 4],
@@ -309,22 +310,47 @@ newtype!(
     struct FileFlags(u8);
 );
 
-newtype_constant_names!(NAMES_F_FLAGS: FileFlags(u8) = {
-    /// No entry point is suggested or requested.
-    /// No subsequent fields (other than Record Count) are valid.
-    F_NO_ENTRY_POINT = 0x00,
-    /// Entry point requested by internal offset and ESDID.
-    /// ESDID can be EDID (within module) or ERID (external reference).
-    F_ENTRY_BY_OFFSET = 0x01,
-    /// Entry point requested by external name.
-    /// ESDID and Offset fields must be zero.
-    F_ENTRY_BY_NAME = 0x02,
-    /// Reserved value.
-    F_ENTRY_RESERVED = 0x03,
+impl FileFlags {
+    /// Get the entry point indicator.
+    pub fn entry(self) -> FileEntry {
+        FileEntry(self.0 & ENTRY_MASK)
+    }
+
+    /// Set the entry point indicator.
+    pub fn with_entry(self, entry: FileEntry) -> Self {
+        FileFlags(self.0 & !ENTRY_MASK | entry.0 & ENTRY_MASK)
+    }
+}
+
+newtype_flag_names!(NAMES_FILE_FLAGS: FileFlags(u8) = {
+    ENTRY_MASK = 0x03 => NAMES_ENTRY,
 });
 
-/// Mask for the entry point indicator bits (lower 2 bits)
-pub const F_ENTRY_MASK: u8 = 0x03;
+newtype!(
+    /// Entry point indicator in [`FileFlags`].
+    #[repr(transparent)]
+    struct FileEntry(u8);
+);
+
+newtype_constant_names!(NAMES_ENTRY: FileEntry(u8) = {
+    /// No entry point is suggested or requested.
+    /// No subsequent fields (other than Record Count) are valid.
+    ENTRY_NONE = 0x00,
+    /// Entry point requested by internal offset and ESDID.
+    /// ESDID can be EDID (within module) or ERID (external reference).
+    ENTRY_BY_OFFSET = 0x01,
+    /// Entry point requested by external name.
+    /// ESDID and Offset fields must be zero.
+    ENTRY_BY_NAME = 0x02,
+    /// Reserved value.
+    ENTRY_RESERVED = 0x03,
+});
+
+impl From<FileFlags> for FileEntry {
+    fn from(value: FileFlags) -> Self {
+        value.entry()
+    }
+}
 
 newtype!(
     /// GOFF record type values.
@@ -409,6 +435,60 @@ newtype_constant_names!(NAMES_TXT_RS: TextRecordStyle(u8) = {
     TXT_RS_STRUCTURED = 1,
     TXT_RS_UNSTRUCTURED = 2,
 });
+
+newtype!(
+    /// ESD flags
+    #[repr(transparent)]
+    struct SymbolFlags(u8);
+);
+
+impl SymbolFlags {
+    /// Get the number of reserved quadwords.
+    pub fn reserve_qwords(self) -> SymbolReserveQwords {
+        SymbolReserveQwords(self.0 & ESD_SF_RESERVE_QWORDS_MASK)
+    }
+
+    /// Set the number of reserved quadwords.
+    pub fn with_reserve_qwords(self, reserve_qwords: SymbolReserveQwords) -> Self {
+        SymbolFlags(
+            self.0 & !ESD_SF_RESERVE_QWORDS_MASK | reserve_qwords.0 & ESD_SF_RESERVE_QWORDS_MASK,
+        )
+    }
+}
+
+newtype_flag_names!(NAMES_ESD_SF: SymbolFlags(u8) = {
+    ESD_SF_FILL_BYTE_PRESENCE = 0x80,
+    ESD_SF_MANGLED = 0x40,
+    ESD_SF_RENAMEABLE = 0x20,
+    ESD_SF_REMOVABLE_CLASS = 0x10,
+    ESD_SF_RESERVE_QWORDS_MASK = 0x07 => NAMES_ESD_RQ,
+});
+
+newtype!(
+    /// Number of reserved quadwords in [`SymbolFlags`].
+    #[repr(transparent)]
+    struct SymbolReserveQwords(u8);
+);
+
+newtype_consts!(SymbolReserveQwords = {
+    /// No reserved quadwords.
+    ESD_RQ_0 = 0,
+});
+
+newtype_constant_names!(NAMES_ESD_RQ: SymbolReserveQwords(u8) = {
+    /// One reserved quadword.
+    ESD_RQ_1 = 1,
+    /// Two reserved quadwords.
+    ESD_RQ_2 = 2,
+    /// Three reserved quadwords.
+    ESD_RQ_3 = 3,
+});
+
+impl From<SymbolFlags> for SymbolReserveQwords {
+    fn from(value: SymbolFlags) -> Self {
+        value.reserve_qwords()
+    }
+}
 
 /// All GOFF records have a 3-byte identifying prefix of the following form.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

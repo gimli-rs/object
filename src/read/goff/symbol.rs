@@ -38,9 +38,9 @@ pub struct GoffSymbol {
     /// Extended Attribute Data Offset
     pub(super) ea_data_offset: u32,
     /// Name Space ID
-    pub(super) namespace_id: SymbolNamespace,
+    pub(super) namespace: goff::SymbolNamespace,
     /// Symbol Flags.
-    pub(super) sym_flags: u8,
+    pub(super) flags: goff::SymbolFlags,
     /// Fill Byte Value (the specific 1-byte value used to pad memory)
     pub(super) fill_byte_value: u8,
     /// Associated data ID
@@ -206,7 +206,7 @@ impl<'data> ObjectSymbol<'data> for GoffSymbol {
             // - PR is a weak reference variant
             goff::ESD_ST_PR => {
                 self.length == 0
-                    && (self.namespace_id == ESD_NS_PSEUDO_REGISTER
+                    && (self.namespace == ESD_NS_PSEUDO_REGISTER
                         || self.behavioral_attributes.binding_strength() == goff::ESD_BST_WEAK
                         || self.behavioral_attributes.binding_scope()
                             == goff::ESD_BSC_IMPORT_EXPORT)
@@ -265,9 +265,9 @@ impl<'data> ObjectSymbol<'data> for GoffSymbol {
     #[inline]
     fn flags(&self) -> SymbolFlags<SectionIndex, SymbolIndex> {
         SymbolFlags::Goff {
-            symboltype: self.symbol_type,
-            symflags: self.sym_flags,
-            namespaceid: self.namespace_id.0,
+            symbol_type: self.symbol_type,
+            flags: self.flags,
+            namespace: self.namespace,
             behavioral_attributes: self.behavioral_attributes,
         }
     }
