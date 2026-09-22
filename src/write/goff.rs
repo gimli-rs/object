@@ -227,8 +227,8 @@ impl<'a> Writer<'a> {
         self.logical_record_count += 1;
         let fileend = goff::EndRecord {
             ptv: goff::END_PREFIX,
-            flags: 0,
-            amode: 0,
+            flags: goff::FileFlags(0),
+            amode: goff::AMODE_UNSPEC,
             reserved1: [0u8; 3],
             record_count: U32::new(BE, self.logical_record_count), // count includes this END record.
             esdid: U32::new(BE, 0),
@@ -260,7 +260,7 @@ impl<'a> Writer<'a> {
     pub fn write_wsa_symbol(&mut self, symbol_name: &[u8], symbol_length: u32) -> u32 {
         // Emit parent C_WSA64 ED symbol (data section).
         let mut ed = self.get_esd_record(goff::ESD_ST_ED, goff::ESD_NS_PARTS, self.cu_esdid);
-        ed.sym_flags = 0x80; // Fill byte present
+        ed.flags = goff::ESD_SF_FILL_BYTE_PRESENCE;
 
         let ed_attrs = data_attrs()
             .with_binding_algorithm(goff::ESD_BA_MERGE)
@@ -283,7 +283,7 @@ impl<'a> Writer<'a> {
     pub fn write_debug_section_symbol(&mut self, section_name: &[u8], section_length: u32) -> u32 {
         // Emit ED symbol for debug section.
         let mut ed = self.get_esd_record(goff::ESD_ST_ED, goff::ESD_NS_PARTS, self.cu_esdid);
-        ed.sym_flags = 0x80; // Fill byte present
+        ed.flags = goff::ESD_SF_FILL_BYTE_PRESENCE;
         ed.length = U32::new(BE, section_length);
 
         // Debug sections are read-only data that must be loaded
@@ -322,7 +322,7 @@ impl<'a> Writer<'a> {
     ) -> u32 {
         let mut ed = self.get_esd_record(goff::ESD_ST_ED, goff::ESD_NS_NORMAL_NAME, parent_esdid);
         ed.length = U32::new(BE, length);
-        ed.sym_flags = 0x80; // Fill byte present
+        ed.flags = goff::ESD_SF_FILL_BYTE_PRESENCE;
         ed.behavioral_attributes = attributes;
         self.write_esd_record(&ed, name)
     }
@@ -476,7 +476,7 @@ impl<'a> Writer<'a> {
     pub fn get_esd_record(
         &self,
         symbol_type: goff::SymbolType,
-        namespace_id: goff::SymbolNamespace,
+        namespace: goff::SymbolNamespace,
         parent_esdid: u32,
     ) -> goff::SymbolRecord {
         goff::SymbolRecord {
@@ -491,8 +491,8 @@ impl<'a> Writer<'a> {
             ea_esdid: U32::new(BE, 0),
             ea_data_offset: U32::new(BE, 0),
             reserved3: U32::new(BE, 0),
-            namespace_id,
-            sym_flags: 0,
+            namespace,
+            flags: goff::SymbolFlags(0),
             fill_byte_value: 0,
             reserved4: 0,
             ada_esdid: U32::new(BE, 0),
