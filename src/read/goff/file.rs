@@ -41,8 +41,8 @@ where
     pub(super) relocations: Vec<GoffRelocation>,
     pub(super) record_count: Option<u32>,
     pub(super) entry_name: Vec<&'data [u8]>,
-    pub(super) entry_flags: Option<u8>,
-    pub(super) entry_amode: Option<u8>,
+    pub(super) entry_flags: Option<goff::FileFlags>,
+    pub(super) entry_amode: Option<goff::Amode>,
     pub(super) entry_esdid: Option<u32>,
     pub(super) entry_offset: Option<u32>,
 }
@@ -158,8 +158,8 @@ where
             length: esd_record.length.get(BE),
             ea_esdid: esd_record.ea_esdid.get(BE),
             ea_data_offset: esd_record.ea_data_offset.get(BE),
-            namespace_id: esd_record.namespace_id,
-            sym_flags: esd_record.sym_flags,
+            namespace: esd_record.namespace,
+            flags: esd_record.flags,
             fill_byte_value: esd_record.fill_byte_value,
             ada_esdid: esd_record.ada_esdid.get(BE),
             priority: esd_record.priority.get(BE),
@@ -258,7 +258,7 @@ where
 
         // Parse record count and entry flags first
         self.record_count = Some(end_record.record_count.get(BE)).filter(|&cnt| cnt != 0);
-        self.entry_flags = Some(end_record.flags).filter(|&flags| flags != 0);
+        self.entry_flags = Some(end_record.flags).filter(|f| f.entry() != goff::ENTRY_NONE);
 
         // If entry flags are empty (i.e, 0) no entry point specified and no need to continue
         if self.entry_flags.is_none() {
@@ -658,7 +658,7 @@ where
     fn flags(&self) -> FileFlags {
         FileFlags::Goff {
             archlvl: self.header.archlvl.get(BE),
-            flags: self.entry_flags.map(goff::FileFlags),
+            flags: self.entry_flags,
             amode: self.entry_amode,
         }
     }
