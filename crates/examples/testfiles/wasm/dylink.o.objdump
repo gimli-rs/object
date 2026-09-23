@@ -25,15 +25,15 @@ Entry Address: 0
 21: Section { name: ".bss.tbss_int", address: 20, size: 4, align: 4, kind: UninitializedData, flags: Wasm { flags: 0 } }
 
 Symbols
-0: Symbol { name: "get", address: 2, size: 45, kind: Text, section: Section(SectionIndex(a)), scope: Dynamic, weak: false, flags: None }
-1: Symbol { name: "data_int", address: 0, size: 4, kind: Data, section: Section(SectionIndex(e)), scope: Dynamic, weak: false, flags: None }
-2: Symbol { name: "bss_int", address: 1c, size: 4, kind: Data, section: Section(SectionIndex(14)), scope: Dynamic, weak: false, flags: None }
-3: Symbol { name: "tls_int", address: 4, size: 4, kind: Data, section: Section(SectionIndex(f)), scope: Dynamic, weak: false, flags: None }
-4: Symbol { name: "tbss_int", address: 20, size: 4, kind: Data, section: Section(SectionIndex(15)), scope: Dynamic, weak: false, flags: None }
-5: Symbol { name: "rodata_bytes", address: 8, size: 3, kind: Data, section: Section(SectionIndex(10)), scope: Dynamic, weak: false, flags: None }
-6: Symbol { name: "rodata_str", address: 14, size: 4, kind: Data, section: Section(SectionIndex(12)), scope: Dynamic, weak: false, flags: None }
-7: Symbol { name: "retained_int", address: 18, size: 4, kind: Data, section: Section(SectionIndex(13)), scope: Dynamic, weak: false, flags: None }
-8: Symbol { name: ".L.str", address: b, size: 6, kind: Data, section: Section(SectionIndex(11)), scope: Compilation, weak: false, flags: None }
+0: Symbol { name: "get", address: 2, size: 45, kind: Text, section: Section(SectionIndex(a)), scope: Dynamic, weak: false, flags: Wasm { flags: SYM_BINDING_GLOBAL | SYM_VISIBILITY_DEFAULT, kind: SYM_TYPE_FUNCTION, index: 0 } }
+1: Symbol { name: "data_int", address: 0, size: 4, kind: Data, section: Section(SectionIndex(e)), scope: Dynamic, weak: false, flags: Wasm { flags: SYM_BINDING_GLOBAL | SYM_VISIBILITY_DEFAULT, kind: SYM_TYPE_DATA, index: 0 } }
+2: Symbol { name: "bss_int", address: 1c, size: 4, kind: Data, section: Section(SectionIndex(14)), scope: Dynamic, weak: false, flags: Wasm { flags: SYM_BINDING_GLOBAL | SYM_VISIBILITY_DEFAULT, kind: SYM_TYPE_DATA, index: 6 } }
+3: Symbol { name: "tls_int", address: 4, size: 4, kind: Data, section: Section(SectionIndex(f)), scope: Dynamic, weak: false, flags: Wasm { flags: SYM_BINDING_GLOBAL | SYM_VISIBILITY_DEFAULT, kind: SYM_TYPE_DATA, index: 1 } }
+4: Symbol { name: "tbss_int", address: 20, size: 4, kind: Data, section: Section(SectionIndex(15)), scope: Dynamic, weak: false, flags: Wasm { flags: SYM_BINDING_GLOBAL | SYM_VISIBILITY_DEFAULT, kind: SYM_TYPE_DATA, index: 7 } }
+5: Symbol { name: "rodata_bytes", address: 8, size: 3, kind: Data, section: Section(SectionIndex(10)), scope: Dynamic, weak: false, flags: Wasm { flags: SYM_BINDING_GLOBAL | SYM_VISIBILITY_DEFAULT, kind: SYM_TYPE_DATA, index: 2 } }
+6: Symbol { name: "rodata_str", address: 14, size: 4, kind: Data, section: Section(SectionIndex(12)), scope: Dynamic, weak: false, flags: Wasm { flags: SYM_BINDING_GLOBAL | SYM_VISIBILITY_DEFAULT, kind: SYM_TYPE_DATA, index: 4 } }
+7: Symbol { name: "retained_int", address: 18, size: 4, kind: Data, section: Section(SectionIndex(13)), scope: Dynamic, weak: false, flags: Wasm { flags: SYM_BINDING_GLOBAL | SYM_VISIBILITY_DEFAULT | SYM_NO_STRIP, kind: SYM_TYPE_DATA, index: 5 } }
+8: Symbol { name: ".L.str", address: b, size: 6, kind: Data, section: Section(SectionIndex(11)), scope: Compilation, weak: false, flags: Wasm { flags: SYM_BINDING_LOCAL | SYM_VISIBILITY_DEFAULT, kind: SYM_TYPE_DATA, index: 3 } }
 
 <code> relocations
 (4, Relocation { kind: Unknown, encoding: Generic, size: 28, target: Symbol(SymbolIndex(1)), addend: 0, implicit_addend: false, flags: Wasm { r_type: 7 } })

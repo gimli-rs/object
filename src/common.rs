@@ -737,6 +737,18 @@ pub enum SymbolFlags<Section, Symbol> {
         /// `behavioral_attributes` field in the GOFF ESD record.
         behavioral_attributes: [u8; 10],
     },
+    /// Wasm symbol flags.
+    #[cfg(feature = "wasm")]
+    Wasm {
+        /// Flags from the `linking` symbol table.
+        flags: crate::wasm::SymbolFlags,
+        /// Kind of the symbol in the `linking` symbol table.
+        kind: crate::wasm::SymbolKind,
+        /// Index in the corresponding Wasm index space.
+        ///
+        /// For data symbols this is the data segment index, if defined.
+        index: u32,
+    },
     #[doc(hidden)]
     #[cfg(not(all(feature = "coff", feature = "xcoff")))]
     _Phantom(core::marker::PhantomData<(Section, Symbol)>),

@@ -207,15 +207,15 @@ impl<'data, R: ReadRef<'data>> WasmFile<'data, R> {
             marker: PhantomData,
         };
 
-        let mut main_file_symbol = Some(WasmSymbolInternal {
-            name: "",
-            address: 0,
-            size: 0,
-            kind: SymbolKind::File,
-            section: SymbolSection::None,
-            scope: SymbolScope::Compilation,
-            weak: false,
-        });
+        let mut main_file_symbol = Some(WasmSymbolInternal::synthetic(
+            "",
+            0,
+            0,
+            SymbolKind::File,
+            SymbolSection::None,
+            SymbolScope::Compilation,
+            false,
+        ));
 
         let mut entry_func_id = None;
         let mut code_range_start = 0;
@@ -512,28 +512,28 @@ impl<'data, R: ReadRef<'data>> WasmFile<'data, R> {
                     };
 
                     if last_module_name != Some(module) {
-                        file.symbols.push(WasmSymbolInternal {
-                            name: module,
-                            address: 0,
-                            size: 0,
-                            kind: SymbolKind::File,
-                            section: SymbolSection::None,
-                            scope: SymbolScope::Dynamic,
-                            weak: false,
-                        });
+                        file.symbols.push(WasmSymbolInternal::synthetic(
+                            module,
+                            0,
+                            0,
+                            SymbolKind::File,
+                            SymbolSection::None,
+                            SymbolScope::Dynamic,
+                            false,
+                        ));
                         last_module_name = Some(module);
                     }
 
                     // TODO: never add symbols for imports?
-                    file.symbols.push(WasmSymbolInternal {
+                    file.symbols.push(WasmSymbolInternal::synthetic(
                         name,
-                        address: 0,
-                        size: 0,
-                        kind: symbol_kind,
-                        section: SymbolSection::Undefined,
-                        scope: SymbolScope::Dynamic,
-                        weak: false,
-                    });
+                        0,
+                        0,
+                        symbol_kind,
+                        SymbolSection::Undefined,
+                        SymbolScope::Dynamic,
+                        false,
+                    ));
                 };
                 match imports {
                     wp::Imports::Single(_, import) => {
@@ -587,20 +587,34 @@ impl<'data, R: ReadRef<'data>> WasmFile<'data, R> {
                     wp::SymbolInfo::Event { flags, .. } => flags,
                     wp::SymbolInfo::Table { flags, .. } => flags,
                 };
+                let wasm_flags = wasm::SymbolFlags(flags.bits());
+                let (wasm_kind, index) = match symbol {
+                    wp::SymbolInfo::Func { index, .. } => (wasm::SYM_TYPE_FUNCTION, index),
+                    wp::SymbolInfo::Data { symbol, .. } => (
+                        wasm::SYM_TYPE_DATA,
+                        symbol.map(|data| data.index).unwrap_or(0),
+                    ),
+                    wp::SymbolInfo::Global { index, .. } => (wasm::SYM_TYPE_GLOBAL, index),
+                    wp::SymbolInfo::Section { section, .. } => (wasm::SYM_TYPE_SECTION, section),
+                    wp::SymbolInfo::Event { index, .. } => (wasm::SYM_TYPE_EVENT, index),
+                    wp::SymbolInfo::Table { index, .. } => (wasm::SYM_TYPE_TABLE, index),
+                };
                 let kind = if flags.contains(wp::SymbolFlags::TLS) {
                     SymbolKind::Tls
                 } else {
-                    match symbol {
-                        wp::SymbolInfo::Func { .. } => SymbolKind::Text,
-                        wp::SymbolInfo::Data { .. } => SymbolKind::Data,
-                        wp::SymbolInfo::Global { .. } => SymbolKind::Data,
-                        wp::SymbolInfo::Section { .. } => SymbolKind::Section,
-                        wp::SymbolInfo::Event { .. } => SymbolKind::Unknown,
-                        wp::SymbolInfo::Table { .. } => SymbolKind::Data,
+                    match wasm_kind {
+                        wasm::SYM_TYPE_FUNCTION => SymbolKind::Text,
+                        wasm::SYM_TYPE_DATA | wasm::SYM_TYPE_GLOBAL | wasm::SYM_TYPE_TABLE => {
+                            SymbolKind::Data
+                        }
+                        wasm::SYM_TYPE_SECTION => SymbolKind::Section,
+                        _ => SymbolKind::Unknown,
                     }
                 };
                 let section = if flags.contains(wp::SymbolFlags::UNDEFINED) {
                     SymbolSection::Undefined
+                } else if wasm_flags.binding() == wasm::SYM_BINDING_COMMON {
+                    SymbolSection::Common
                 } else if flags.contains(wp::SymbolFlags::ABSOLUTE) {
                     SymbolSection::Absolute
                 } else {
@@ -620,14 +634,14 @@ impl<'data, R: ReadRef<'data>> WasmFile<'data, R> {
                         }
                     }
                 };
-                let scope = if flags.contains(wp::SymbolFlags::BINDING_LOCAL) {
+                let scope = if wasm_flags.binding() == wasm::SYM_BINDING_LOCAL {
                     SymbolScope::Compilation
                 } else if flags.contains(wp::SymbolFlags::VISIBILITY_HIDDEN) {
                     SymbolScope::Linkage
                 } else {
                     SymbolScope::Dynamic
                 };
-                let weak = flags.contains(wp::SymbolFlags::BINDING_WEAK);
+                let weak = wasm_flags.binding() == wasm::SYM_BINDING_WEAK;
 
                 let mut address = 0;
                 let mut size = 0;
@@ -703,7 +717,6 @@ impl<'data, R: ReadRef<'data>> WasmFile<'data, R> {
                     }
                 };
 
-                // TODO: flags, export_name
                 file.symbols.push(WasmSymbolInternal {
                     name: name.unwrap_or(""),
                     address,
@@ -712,19 +725,56 @@ impl<'data, R: ReadRef<'data>> WasmFile<'data, R> {
                     section,
                     scope,
                     weak,
+                    flags: Some(wasm_flags),
+                    wasm_kind,
+                    index,
+                    export_name: None,
                 });
             }
         }
 
-        // Exports in relocatable objects are only used for the export_name attribute.
-        if let Some(exports) = exports.filter(|_| !file.has_linking) {
+        let mut parsed_exports = Vec::new();
+        if let Some(exports) = exports {
+            for export in exports {
+                parsed_exports.push(export.read_error("Couldn't read an export item")?);
+            }
+        }
+        if file.has_linking {
+            for symbol in &mut file.symbols {
+                if symbol.flags.is_none() {
+                    continue;
+                }
+                let want = match symbol.wasm_kind {
+                    wasm::SYM_TYPE_FUNCTION => wp::ExternalKind::Func,
+                    wasm::SYM_TYPE_GLOBAL => wp::ExternalKind::Global,
+                    wasm::SYM_TYPE_TABLE => wp::ExternalKind::Table,
+                    wasm::SYM_TYPE_EVENT => wp::ExternalKind::Tag,
+                    _ => continue,
+                };
+                if let Some(export) = parsed_exports
+                    .iter()
+                    .find(|export| export.kind == want && export.index == symbol.index)
+                    .or_else(|| {
+                        if want == wp::ExternalKind::Func {
+                            parsed_exports.iter().find(|export| {
+                                export.kind == wp::ExternalKind::FuncExact
+                                    && export.index == symbol.index
+                            })
+                        } else {
+                            None
+                        }
+                    })
+                {
+                    symbol.export_name = Some(export.name);
+                }
+            }
+        }
+        if !file.has_linking {
             if let Some(main_file_symbol) = main_file_symbol.take() {
                 file.symbols.push(main_file_symbol);
             }
 
-            for export in exports {
-                let export = export.read_error("Couldn't read an export item")?;
-
+            for export in parsed_exports {
                 let kind = match export.kind {
                     wp::ExternalKind::Func => wasm::EXTERNAL_FUNCTION,
                     wp::ExternalKind::Table => wasm::EXTERNAL_TABLE,
@@ -812,15 +862,15 @@ impl<'data, R: ReadRef<'data>> WasmFile<'data, R> {
                 }
 
                 // TODO: never add symbols for exports?
-                file.symbols.push(WasmSymbolInternal {
-                    name: export.name,
+                file.symbols.push(WasmSymbolInternal::synthetic(
+                    export.name,
                     address,
                     size,
-                    kind: symbol_kind,
-                    section: SymbolSection::Section(SectionIndex(section_idx.0 as usize)),
-                    scope: SymbolScope::Dynamic,
-                    weak: false,
-                });
+                    symbol_kind,
+                    SymbolSection::Section(SectionIndex(section_idx.0 as usize)),
+                    SymbolScope::Dynamic,
+                    false,
+                ));
             }
         }
 
@@ -849,15 +899,15 @@ impl<'data, R: ReadRef<'data>> WasmFile<'data, R> {
                     else {
                         continue;
                     };
-                    file.symbols.push(WasmSymbolInternal {
-                        name: naming.name,
+                    file.symbols.push(WasmSymbolInternal::synthetic(
+                        naming.name,
                         address,
                         size,
-                        kind: SymbolKind::Text,
-                        section: SymbolSection::Section(SectionIndex(wasm::SEC_CODE.0 as usize)),
-                        scope: SymbolScope::Compilation,
-                        weak: false,
-                    });
+                        SymbolKind::Text,
+                        SymbolSection::Section(SectionIndex(wasm::SEC_CODE.0 as usize)),
+                        SymbolScope::Compilation,
+                        false,
+                    ));
                 }
             }
         }
@@ -1610,6 +1660,37 @@ struct WasmSymbolInternal<'data> {
     section: SymbolSection,
     scope: SymbolScope,
     weak: bool,
+    /// Flags from the `linking` symbol table, if this is a linking symbol.
+    flags: Option<wasm::SymbolFlags>,
+    wasm_kind: wasm::SymbolKind,
+    index: u32,
+    export_name: Option<&'data str>,
+}
+
+impl<'data> WasmSymbolInternal<'data> {
+    fn synthetic(
+        name: &'data str,
+        address: u64,
+        size: u64,
+        kind: SymbolKind,
+        section: SymbolSection,
+        scope: SymbolScope,
+        weak: bool,
+    ) -> Self {
+        Self {
+            name,
+            address,
+            size,
+            kind,
+            section,
+            scope,
+            weak,
+            flags: None,
+            wasm_kind: wasm::SYM_TYPE_FUNCTION,
+            index: 0,
+            export_name: None,
+        }
+    }
 }
 
 impl<'data, 'file> read::private::Sealed for WasmSymbol<'data, 'file> {}
@@ -1688,7 +1769,18 @@ impl<'data, 'file> ObjectSymbol<'data> for WasmSymbol<'data, 'file> {
 
     #[inline]
     fn flags(&self) -> SymbolFlags<SectionIndex, SymbolIndex> {
-        SymbolFlags::None
+        match self.symbol.flags {
+            Some(flags) => SymbolFlags::Wasm {
+                flags,
+                kind: self.symbol.wasm_kind,
+                index: self.symbol.index,
+            },
+            None => SymbolFlags::None,
+        }
+    }
+
+    fn export_name(&self) -> Option<&'data str> {
+        self.symbol.export_name
     }
 }
 

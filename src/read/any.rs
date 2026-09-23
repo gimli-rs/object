@@ -1287,16 +1287,19 @@ where
 
 impl<'data, 'file, R: ReadRef<'data>> fmt::Debug for Symbol<'data, 'file, R> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("Symbol")
-            .field("name", &self.name().unwrap_or("<invalid>"))
+        let mut s = f.debug_struct("Symbol");
+        s.field("name", &self.name().unwrap_or("<invalid>"))
             .field("address", &self.address())
             .field("size", &self.size())
             .field("kind", &self.kind())
             .field("section", &self.section())
             .field("scope", &self.scope())
             .field("weak", &self.is_weak())
-            .field("flags", &self.flags())
-            .finish()
+            .field("flags", &self.flags());
+        if let Some(export_name) = self.export_name() {
+            s.field("export_name", &export_name);
+        }
+        s.finish()
     }
 }
 
@@ -1361,6 +1364,10 @@ impl<'data, 'file, R: ReadRef<'data>> ObjectSymbol<'data> for Symbol<'data, 'fil
 
     fn flags(&self) -> SymbolFlags<SectionIndex, SymbolIndex> {
         with_inner!(self.inner, SymbolInternal, |x| x.0.flags())
+    }
+
+    fn export_name(&self) -> Option<&'data str> {
+        with_inner!(self.inner, SymbolInternal, |x| x.0.export_name())
     }
 }
 

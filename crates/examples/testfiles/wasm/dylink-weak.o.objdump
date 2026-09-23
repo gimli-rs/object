@@ -18,13 +18,13 @@ Entry Address: 0
 15: Section { name: ".tdata.weak_tls", address: 4, size: 4, align: 4, kind: Tls, flags: Wasm { flags: SEG_FLAG_TLS } }
 
 Symbols
-0: Symbol { name: "weak_func", address: 2, size: 5, kind: Text, section: Section(SectionIndex(a)), scope: Dynamic, weak: true, flags: None }
-1: Symbol { name: "get", address: 8, size: 4c, kind: Text, section: Section(SectionIndex(a)), scope: Dynamic, weak: false, flags: None }
-2: Symbol { name: "weak_undef", address: 0, size: 0, kind: Text, section: Undefined, scope: Dynamic, weak: true, flags: None }
-3: Symbol { name: "weak_data", address: 0, size: 4, kind: Data, section: Section(SectionIndex(e)), scope: Dynamic, weak: true, flags: None }
-4: Symbol { name: "weak_tls", address: 4, size: 4, kind: Tls, section: Section(SectionIndex(f)), scope: Dynamic, weak: true, flags: None }
-5: Symbol { name: "__tls_base", address: 0, size: 0, kind: Data, section: Undefined, scope: Dynamic, weak: false, flags: None }
-6: Symbol { name: "__indirect_function_table", address: 0, size: 0, kind: Data, section: Undefined, scope: Dynamic, weak: false, flags: None }
+0: Symbol { name: "weak_func", address: 2, size: 5, kind: Text, section: Section(SectionIndex(a)), scope: Dynamic, weak: true, flags: Wasm { flags: SYM_BINDING_WEAK | SYM_VISIBILITY_DEFAULT, kind: SYM_TYPE_FUNCTION, index: 1 } }
+1: Symbol { name: "get", address: 8, size: 4c, kind: Text, section: Section(SectionIndex(a)), scope: Dynamic, weak: false, flags: Wasm { flags: SYM_BINDING_GLOBAL | SYM_VISIBILITY_DEFAULT, kind: SYM_TYPE_FUNCTION, index: 2 } }
+2: Symbol { name: "weak_undef", address: 0, size: 0, kind: Text, section: Undefined, scope: Dynamic, weak: true, flags: Wasm { flags: SYM_BINDING_WEAK | SYM_VISIBILITY_DEFAULT | SYM_UNDEFINED, kind: SYM_TYPE_FUNCTION, index: 0 } }
+3: Symbol { name: "weak_data", address: 0, size: 4, kind: Data, section: Section(SectionIndex(e)), scope: Dynamic, weak: true, flags: Wasm { flags: SYM_BINDING_WEAK | SYM_VISIBILITY_DEFAULT, kind: SYM_TYPE_DATA, index: 0 } }
+4: Symbol { name: "weak_tls", address: 4, size: 4, kind: Tls, section: Section(SectionIndex(f)), scope: Dynamic, weak: true, flags: Wasm { flags: SYM_BINDING_WEAK | SYM_VISIBILITY_DEFAULT | SYM_TLS, kind: SYM_TYPE_DATA, index: 1 } }
+5: Symbol { name: "__tls_base", address: 0, size: 0, kind: Data, section: Undefined, scope: Dynamic, weak: false, flags: Wasm { flags: SYM_BINDING_GLOBAL | SYM_VISIBILITY_DEFAULT | SYM_UNDEFINED, kind: SYM_TYPE_GLOBAL, index: 0 } }
+6: Symbol { name: "__indirect_function_table", address: 0, size: 0, kind: Data, section: Undefined, scope: Dynamic, weak: false, flags: Wasm { flags: SYM_BINDING_GLOBAL | SYM_VISIBILITY_DEFAULT | SYM_UNDEFINED | SYM_NO_STRIP, kind: SYM_TYPE_TABLE, index: 0 } }
 
 <code> relocations
 (10, Relocation { kind: Unknown, encoding: Generic, size: 28, target: Symbol(SymbolIndex(2)), addend: 0, implicit_addend: false, flags: Wasm { r_type: 7 } })

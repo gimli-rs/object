@@ -111,6 +111,8 @@ pub fn copy(in_data: &[u8]) -> Vec<u8> {
                     containing_csect,
                 }
             }
+            #[cfg(feature = "wasm")]
+            SymbolFlags::Wasm { flags, kind, index } => SymbolFlags::Wasm { flags, kind, index },
             _ => panic!("unknown symbol flags for {:?}", in_symbol),
         };
         let out_symbol = write::Symbol {
