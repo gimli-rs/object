@@ -568,6 +568,27 @@ impl<'data, R: ReadRef<'data>> WasmFile<'data, R> {
             }
         }
 
+        let mut parsed_exports = Vec::new();
+        if let Some(exports) = exports {
+            for export in exports {
+                parsed_exports.push(export.read_error("Couldn't read an export item")?);
+            }
+        }
+        let mut export_names = Vec::new();
+        if file.has_linking {
+            for export in &parsed_exports {
+                let kind = match export.kind {
+                    wp::ExternalKind::Func | wp::ExternalKind::FuncExact => wasm::SYM_TYPE_FUNCTION,
+                    wp::ExternalKind::Global => wasm::SYM_TYPE_GLOBAL,
+                    wp::ExternalKind::Table => wasm::SYM_TYPE_TABLE,
+                    wp::ExternalKind::Tag => wasm::SYM_TYPE_EVENT,
+                    wp::ExternalKind::Memory => continue,
+                };
+                export_names.push((kind, export.index, export.name));
+            }
+            export_names.sort_by_key(|&(kind, index, _)| (kind, index));
+        }
+
         if let Some(symbols) = symbols {
             for symbol in symbols {
                 let symbol = symbol.read_error("Invalid Wasm linking symbol")?;
@@ -717,6 +738,11 @@ impl<'data, R: ReadRef<'data>> WasmFile<'data, R> {
                     }
                 };
 
+                let export_name = export_names
+                    .binary_search_by_key(&(wasm_kind, index), |&(kind, idx, _)| (kind, idx))
+                    .ok()
+                    .map(|i| export_names[i].2);
+
                 file.symbols.push(WasmSymbolInternal {
                     name: name.unwrap_or(""),
                     address,
@@ -725,50 +751,16 @@ impl<'data, R: ReadRef<'data>> WasmFile<'data, R> {
                     section,
                     scope,
                     weak,
-                    flags: Some(wasm_flags),
-                    wasm_kind,
-                    index,
-                    export_name: None,
+                    flags: SymbolFlags::Wasm {
+                        flags: wasm_flags,
+                        kind: wasm_kind,
+                        index,
+                    },
+                    export_name,
                 });
             }
         }
 
-        let mut parsed_exports = Vec::new();
-        if let Some(exports) = exports {
-            for export in exports {
-                parsed_exports.push(export.read_error("Couldn't read an export item")?);
-            }
-        }
-        if file.has_linking {
-            for symbol in &mut file.symbols {
-                if symbol.flags.is_none() {
-                    continue;
-                }
-                let want = match symbol.wasm_kind {
-                    wasm::SYM_TYPE_FUNCTION => wp::ExternalKind::Func,
-                    wasm::SYM_TYPE_GLOBAL => wp::ExternalKind::Global,
-                    wasm::SYM_TYPE_TABLE => wp::ExternalKind::Table,
-                    wasm::SYM_TYPE_EVENT => wp::ExternalKind::Tag,
-                    _ => continue,
-                };
-                if let Some(export) = parsed_exports
-                    .iter()
-                    .find(|export| export.kind == want && export.index == symbol.index)
-                    .or_else(|| {
-                        if want == wp::ExternalKind::Func {
-                            parsed_exports.iter().find(|export| {
-                                export.kind == wp::ExternalKind::FuncExact
-                                    && export.index == symbol.index
-                            })
-                        } else {
-                            None
-                        }
-                    })
-                {
-                    symbol.export_name = Some(export.name);
-                }
-            }
-        }
         if !file.has_linking {
             if let Some(main_file_symbol) = main_file_symbol.take() {
                 file.symbols.push(main_file_symbol);
@@ -1660,10 +1652,7 @@ struct WasmSymbolInternal<'data> {
     section: SymbolSection,
     scope: SymbolScope,
     weak: bool,
-    /// Flags from the `linking` symbol table, if this is a linking symbol.
-    flags: Option<wasm::SymbolFlags>,
-    wasm_kind: wasm::SymbolKind,
-    index: u32,
+    flags: SymbolFlags<SectionIndex, SymbolIndex>,
     export_name: Option<&'data str>,
 }
 
@@ -1685,9 +1674,7 @@ impl<'data> WasmSymbolInternal<'data> {
             section,
             scope,
             weak,
-            flags: None,
-            wasm_kind: wasm::SYM_TYPE_FUNCTION,
-            index: 0,
+            flags: SymbolFlags::None,
             export_name: None,
         }
     }
@@ -1769,14 +1756,7 @@ impl<'data, 'file> ObjectSymbol<'data> for WasmSymbol<'data, 'file> {
 
     #[inline]
     fn flags(&self) -> SymbolFlags<SectionIndex, SymbolIndex> {
-        match self.symbol.flags {
-            Some(flags) => SymbolFlags::Wasm {
-                flags,
-                kind: self.symbol.wasm_kind,
-                index: self.symbol.index,
-            },
-            None => SymbolFlags::None,
-        }
+        self.symbol.flags
     }
 
     fn export_name(&self) -> Option<&'data str> {
