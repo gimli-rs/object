@@ -568,6 +568,13 @@ pub trait ObjectSymbol<'data>: read::private::Sealed {
 
     /// Symbol flags that are specific to each file format.
     fn flags(&self) -> SymbolFlags<SectionIndex, SymbolIndex>;
+
+    /// The name from the Wasm export section, if this linking symbol is exported.
+    ///
+    /// Currently only used for Wasm linking symbols that appear in the export section.
+    fn export_name(&self) -> Option<&'data str> {
+        None
+    }
 }
 
 /// An iterator for files that don't have dynamic relocations.

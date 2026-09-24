@@ -16,12 +16,12 @@ Entry Address: 0
 14: Section { name: ".rodata..L.str", address: 0, size: d, align: 1, kind: ReadOnlyData, flags: Wasm { flags: 0 } }
 
 Symbols
-0: Symbol { name: "__original_main", address: 2, size: 5b, kind: Text, section: Section(SectionIndex(a)), scope: Linkage, weak: false, flags: None }
-1: Symbol { name: "__stack_pointer", address: 0, size: 0, kind: Data, section: Undefined, scope: Dynamic, weak: false, flags: None }
-2: Symbol { name: ".L.str", address: 0, size: d, kind: Data, section: Section(SectionIndex(e)), scope: Compilation, weak: false, flags: None }
-3: Symbol { name: "printf", address: 0, size: 0, kind: Text, section: Undefined, scope: Dynamic, weak: false, flags: None }
-4: Symbol { name: "main", address: 5e, size: f, kind: Text, section: Section(SectionIndex(a)), scope: Linkage, weak: false, flags: None }
-5: Symbol { name: "__main_void", address: 2, size: 5b, kind: Text, section: Section(SectionIndex(a)), scope: Dynamic, weak: false, flags: None }
+0: Symbol { name: "__original_main", address: 2, size: 5b, kind: Text, section: Section(SectionIndex(a)), scope: Linkage, weak: false, flags: Wasm { flags: SYM_BINDING_GLOBAL | SYM_VISIBILITY_HIDDEN, kind: SYM_TYPE_FUNCTION, index: 1 } }
+1: Symbol { name: "__stack_pointer", address: 0, size: 0, kind: Data, section: Undefined, scope: Dynamic, weak: false, flags: Wasm { flags: SYM_BINDING_GLOBAL | SYM_VISIBILITY_DEFAULT | SYM_UNDEFINED, kind: SYM_TYPE_GLOBAL, index: 0 } }
+2: Symbol { name: ".L.str", address: 0, size: d, kind: Data, section: Section(SectionIndex(e)), scope: Compilation, weak: false, flags: Wasm { flags: SYM_BINDING_LOCAL | SYM_VISIBILITY_DEFAULT, kind: SYM_TYPE_DATA, index: 0 } }
+3: Symbol { name: "printf", address: 0, size: 0, kind: Text, section: Undefined, scope: Dynamic, weak: false, flags: Wasm { flags: SYM_BINDING_GLOBAL | SYM_VISIBILITY_DEFAULT | SYM_UNDEFINED, kind: SYM_TYPE_FUNCTION, index: 0 } }
+4: Symbol { name: "main", address: 5e, size: f, kind: Text, section: Section(SectionIndex(a)), scope: Linkage, weak: false, flags: Wasm { flags: SYM_BINDING_GLOBAL | SYM_VISIBILITY_HIDDEN, kind: SYM_TYPE_FUNCTION, index: 2 } }
+5: Symbol { name: "__main_void", address: 2, size: 5b, kind: Text, section: Section(SectionIndex(a)), scope: Dynamic, weak: false, flags: Wasm { flags: SYM_BINDING_GLOBAL | SYM_VISIBILITY_DEFAULT | SYM_NO_STRIP, kind: SYM_TYPE_FUNCTION, index: 1 } }
 
 <code> relocations
 (6, Relocation { kind: Unknown, encoding: Generic, size: 28, target: Symbol(SymbolIndex(1)), addend: 0, implicit_addend: false, flags: Wasm { r_type: 7 } })
