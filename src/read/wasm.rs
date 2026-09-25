@@ -23,26 +23,6 @@ use crate::{RelocationEncoding, RelocationFlags, RelocationKind, RelocationTarge
 // Update this constant when adding new section id:
 const MAX_SECTION_ID: usize = wasm::SEC_TAG.0 as usize;
 
-/// The index of a section in the Wasm binary.
-///
-/// This is assigned in the order sections appear in the file, including custom
-/// sections. It is the numbering used by `reloc.*` custom sections, and matches
-/// `SectionIndex` for those sections in the unified API.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct WasmSectionIndex(pub u32);
-
-impl core::fmt::Display for WasmSectionIndex {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        self.0.fmt(f)
-    }
-}
-
-impl From<WasmSectionIndex> for SectionIndex {
-    fn from(index: WasmSectionIndex) -> Self {
-        SectionIndex(index.0 as usize)
-    }
-}
-
 /// The index of a segment in the data section.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct WasmDataSegmentIndex(u32);
@@ -52,10 +32,10 @@ struct WasmDataSegmentIndex(u32);
 pub struct WasmFile<'data, R = &'data [u8]> {
     data: SkipDebugList<&'data [u8]>,
     has_memory64: bool,
-    // All sections, including custom sections, indexed by `WasmSectionIndex`.
+    // All sections, including custom sections, in file order.
     sections: Vec<SectionHeader<'data>>,
-    // Map from `SectionId` to `WasmSectionIndex`.
-    id_sections: Box<[Option<WasmSectionIndex>; MAX_SECTION_ID + 1]>,
+    // Map from `SectionId` to file-order `SectionIndex`.
+    id_sections: Box<[Option<SectionIndex>; MAX_SECTION_ID + 1]>,
     // Parsed `reloc.*` custom sections, keyed by the binary index of the target section.
     relocations: Vec<RelocSection>,
     // Data segments parsed from the `data` section.
@@ -81,7 +61,7 @@ pub struct WasmFile<'data, R = &'data [u8]> {
 
 #[derive(Debug)]
 struct RelocSection {
-    target: WasmSectionIndex,
+    target: SectionIndex,
     entries: Vec<wp::RelocationEntry>,
 }
 
@@ -402,7 +382,7 @@ impl<'data, R: ReadRef<'data>> WasmFile<'data, R> {
                         let reader = wp::BinaryReader::new(section.data(), section.data_offset());
                         let reloc = wp::RelocSectionReader::new(reader)
                             .read_error("Invalid Wasm reloc section")?;
-                        let target = WasmSectionIndex(reloc.section_index());
+                        let target = SectionIndex(reloc.section_index() as usize);
                         let mut entries = Vec::new();
                         for entry in reloc.entries() {
                             let entry = entry.read_error("Invalid Wasm reloc entry")?;
@@ -644,6 +624,14 @@ impl<'data, R: ReadRef<'data>> WasmFile<'data, R> {
                         } => SymbolSection::Section(
                             file.data_segment_section_index(WasmDataSegmentIndex(data.index)),
                         ),
+                        wp::SymbolInfo::Section { section, .. } => {
+                            let index = SectionIndex(section as usize);
+                            if index.0 < file.sections.len() {
+                                SymbolSection::Section(index)
+                            } else {
+                                SymbolSection::Unknown
+                            }
+                        }
                         _ => {
                             // TODO: anything that is defined should have a known section.
                             // Additionally, address and size should be within this section.
@@ -689,10 +677,11 @@ impl<'data, R: ReadRef<'data>> WasmFile<'data, R> {
                         }
                         Some(name)
                     }
-                    wp::SymbolInfo::Section { .. } => {
-                        // TODO: find the section name
-                        None
-                    }
+                    wp::SymbolInfo::Section { section, .. } => file
+                        .sections
+                        .get(section as usize)
+                        .map(|header| header.name)
+                        .filter(|name| !name.is_empty()),
                     wp::SymbolInfo::Global {
                         index, mut name, ..
                     } => {
@@ -912,17 +901,13 @@ impl<'data, R: ReadRef<'data>> WasmFile<'data, R> {
     fn add_section(&mut self, id: wasm::SectionId, range: Range<usize>, name: &'data str) {
         let section = SectionHeader { id, range, name };
         if id != wasm::SEC_CUSTOM && id.0 as usize <= MAX_SECTION_ID {
-            self.id_sections[id.0 as usize] = Some(WasmSectionIndex(self.sections.len() as u32));
+            self.id_sections[id.0 as usize] = Some(SectionIndex(self.sections.len()));
         }
         self.sections.push(section);
     }
 
     fn section_index_for_id(&self, id: wasm::SectionId) -> Option<SectionIndex> {
-        self.id_sections
-            .get(id.0 as usize)
-            .copied()
-            .flatten()
-            .map(SectionIndex::from)
+        self.id_sections.get(id.0 as usize).copied().flatten()
     }
 
     fn data_segment_section_index(&self, index: WasmDataSegmentIndex) -> SectionIndex {
@@ -944,16 +929,15 @@ impl<'data, R: ReadRef<'data>> WasmFile<'data, R> {
     }
 
     /// Return the Wasm section at the given file-order index.
-    pub fn wasm_section_by_index(
-        &self,
-        index: WasmSectionIndex,
-    ) -> Result<WasmSection<'data, '_, R>>
+    ///
+    /// This does not include synthesized data-segment sections.
+    pub fn wasm_section_by_index(&self, index: SectionIndex) -> Result<WasmSection<'data, '_, R>>
     where
         R: ReadRef<'data>,
     {
         let section = self
             .sections
-            .get(index.0 as usize)
+            .get(index.0)
             .read_error("Invalid Wasm file section index")?;
         Ok(WasmSection {
             file: self,
@@ -964,20 +948,9 @@ impl<'data, R: ReadRef<'data>> WasmFile<'data, R> {
         })
     }
 
-    /// Wasm sections in file order, including custom sections.
-    pub fn wasm_sections(&self) -> WasmFileSectionIterator<'data, '_, R>
-    where
-        R: ReadRef<'data>,
-    {
-        WasmFileSectionIterator {
-            file: self,
-            sections: self.sections.iter().enumerate(),
-        }
-    }
-
     /// `reloc.*` custom sections.
     ///
-    /// Targets are file-order [`WasmSectionIndex`] values.
+    /// Targets are file-order [`SectionIndex`] values.
     pub fn wasm_reloc_sections(&self) -> WasmRelocSectionIterator<'_, R> {
         WasmRelocSectionIterator {
             sections: self.relocations.iter(),
@@ -1119,12 +1092,7 @@ impl<'data, R: ReadRef<'data>> Object<'data> for WasmFile<'data, R> {
                 },
             });
         }
-        self.wasm_section_by_index(WasmSectionIndex(
-            index
-                .0
-                .try_into()
-                .map_err(|_| Error("Invalid Wasm section index"))?,
-        ))
+        self.wasm_section_by_index(index)
     }
 
     fn sections(&self) -> Self::SectionIterator<'_> {
@@ -1335,7 +1303,7 @@ impl<'data, 'file, R> Iterator for WasmSectionIterator<'data, 'file, R> {
             return Some(WasmSection {
                 file: self.file,
                 inner: WasmSectionInner::Header {
-                    section_index: WasmSectionIndex(index as u32),
+                    section_index: SectionIndex(index),
                     section,
                 },
             });
@@ -1363,7 +1331,7 @@ pub struct WasmSection<'data, 'file, R = &'data [u8]> {
 #[derive(Debug, Clone, Copy)]
 enum WasmSectionInner<'data, 'file> {
     Header {
-        section_index: WasmSectionIndex,
+        section_index: SectionIndex,
         section: &'file SectionHeader<'data>,
     },
     DataSegment {
@@ -1376,7 +1344,7 @@ impl<'data, 'file, R> WasmSection<'data, 'file, R> {
     /// File-order index of this section.
     ///
     /// Returns `None` for synthesized data-segment sections, which are not present in the Wasm binary.
-    pub fn wasm_index(&self) -> Option<WasmSectionIndex> {
+    pub fn wasm_index(&self) -> Option<SectionIndex> {
         match self.inner {
             WasmSectionInner::Header { section_index, .. } => Some(section_index),
             WasmSectionInner::DataSegment { .. } => None,
@@ -1394,38 +1362,16 @@ impl<'data, 'file, R> WasmSection<'data, 'file, R> {
     }
 }
 
-/// An iterator for Wasm sections in file order.
-#[derive(Debug)]
-pub struct WasmFileSectionIterator<'data, 'file, R = &'data [u8]> {
-    file: &'file WasmFile<'data, R>,
-    sections: core::iter::Enumerate<slice::Iter<'file, SectionHeader<'data>>>,
-}
-
-impl<'data, 'file, R: ReadRef<'data>> Iterator for WasmFileSectionIterator<'data, 'file, R> {
-    type Item = WasmSection<'data, 'file, R>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        let (index, section) = self.sections.next()?;
-        Some(WasmSection {
-            file: self.file,
-            inner: WasmSectionInner::Header {
-                section_index: WasmSectionIndex(index as u32),
-                section,
-            },
-        })
-    }
-}
-
 /// A `reloc.*` custom section.
 #[derive(Debug, Clone, Copy)]
 pub struct WasmRelocSection<'file> {
-    target: WasmSectionIndex,
+    target: SectionIndex,
     entries: &'file [wp::RelocationEntry],
 }
 
 impl<'file> WasmRelocSection<'file> {
     /// File-order index of the section these relocations apply to.
-    pub fn target(&self) -> WasmSectionIndex {
+    pub fn target(&self) -> SectionIndex {
         self.target
     }
 
@@ -1502,7 +1448,7 @@ impl<'data, 'file, R: ReadRef<'data>> ObjectSection<'data> for WasmSection<'data
     #[inline]
     fn index(&self) -> SectionIndex {
         match self.inner {
-            WasmSectionInner::Header { section_index, .. } => SectionIndex::from(section_index),
+            WasmSectionInner::Header { section_index, .. } => section_index,
             WasmSectionInner::DataSegment { segment_index, .. } => {
                 self.file.data_segment_section_index(segment_index)
             }
@@ -1948,7 +1894,7 @@ impl<'data, 'file> ObjectSymbol<'data> for WasmSymbol<'data, 'file> {
 #[derive(Debug)]
 pub struct WasmRelocationIterator<'data, 'file, R = &'data [u8]> {
     /// Binary index of the wasm section we are iterating relocations for.
-    target: Option<WasmSectionIndex>,
+    target: Option<SectionIndex>,
     type_section_index: Option<SectionIndex>,
     /// The offset range if this is a data segment, otherwise `0..u64::MAX`.
     offset_range: Range<u64>,
@@ -1977,7 +1923,9 @@ impl<'data, 'file, R> Iterator for WasmRelocationIterator<'data, 'file, R> {
         // For `R_WASM_TYPE_INDEX_LEB`, the `index` field refers to the type section, not the symbol table.
         let (target, addend) = if entry.ty == wp::RelocationType::TypeIndexLeb {
             (
-                RelocationTarget::Section(self.type_section_index.unwrap_or(SectionIndex(0))),
+                RelocationTarget::Section(
+                    self.type_section_index.unwrap_or(SectionIndex(usize::MAX)),
+                ),
                 entry.index as i64,
             )
         } else {

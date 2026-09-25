@@ -40,12 +40,12 @@ Symbols
 6: Symbol { name: "rodata_str", address: 14, size: 4, kind: Data, section: Section(SectionIndex(15)), scope: Dynamic, weak: false, flags: Wasm { flags: SYM_BINDING_GLOBAL | SYM_VISIBILITY_DEFAULT, kind: SYM_TYPE_DATA, index: 4 } }
 7: Symbol { name: "retained_int", address: 18, size: 4, kind: Data, section: Section(SectionIndex(16)), scope: Dynamic, weak: false, flags: Wasm { flags: SYM_BINDING_GLOBAL | SYM_VISIBILITY_DEFAULT | SYM_NO_STRIP, kind: SYM_TYPE_DATA, index: 5 } }
 8: Symbol { name: ".L.str", address: b, size: 6, kind: Data, section: Section(SectionIndex(14)), scope: Compilation, weak: false, flags: Wasm { flags: SYM_BINDING_LOCAL | SYM_VISIBILITY_DEFAULT, kind: SYM_TYPE_DATA, index: 3 } }
-9: Symbol { name: "", address: 0, size: 0, kind: Section, section: Unknown, scope: Compilation, weak: false, flags: Wasm { flags: SYM_BINDING_LOCAL | SYM_VISIBILITY_DEFAULT, kind: SYM_TYPE_SECTION, index: 6 } }
+9: Symbol { name: ".debug_abbrev", address: 0, size: 0, kind: Section, section: Section(SectionIndex(6)), scope: Compilation, weak: false, flags: Wasm { flags: SYM_BINDING_LOCAL | SYM_VISIBILITY_DEFAULT, kind: SYM_TYPE_SECTION, index: 6 } }
 10: Symbol { name: "__memory_base", address: 0, size: 0, kind: Data, section: Undefined, scope: Dynamic, weak: false, flags: Wasm { flags: SYM_BINDING_GLOBAL | SYM_VISIBILITY_DEFAULT | SYM_UNDEFINED, kind: SYM_TYPE_GLOBAL, index: 0 } }
 11: Symbol { name: "__tls_base", address: 0, size: 0, kind: Data, section: Undefined, scope: Dynamic, weak: false, flags: Wasm { flags: SYM_BINDING_GLOBAL | SYM_VISIBILITY_DEFAULT | SYM_UNDEFINED, kind: SYM_TYPE_GLOBAL, index: 1 } }
 12: Symbol { name: "__stack_pointer", address: 0, size: 0, kind: Data, section: Undefined, scope: Dynamic, weak: false, flags: Wasm { flags: SYM_BINDING_GLOBAL | SYM_VISIBILITY_DEFAULT | SYM_UNDEFINED, kind: SYM_TYPE_GLOBAL, index: 2 } }
-13: Symbol { name: "", address: 0, size: 0, kind: Section, section: Unknown, scope: Compilation, weak: false, flags: Wasm { flags: SYM_BINDING_LOCAL | SYM_VISIBILITY_DEFAULT, kind: SYM_TYPE_SECTION, index: 8 } }
-14: Symbol { name: "", address: 0, size: 0, kind: Section, section: Unknown, scope: Compilation, weak: false, flags: Wasm { flags: SYM_BINDING_LOCAL | SYM_VISIBILITY_DEFAULT, kind: SYM_TYPE_SECTION, index: 9 } }
+13: Symbol { name: ".debug_str", address: 0, size: 0, kind: Section, section: Section(SectionIndex(8)), scope: Compilation, weak: false, flags: Wasm { flags: SYM_BINDING_LOCAL | SYM_VISIBILITY_DEFAULT, kind: SYM_TYPE_SECTION, index: 8 } }
+14: Symbol { name: ".debug_line", address: 0, size: 0, kind: Section, section: Section(SectionIndex(9)), scope: Compilation, weak: false, flags: Wasm { flags: SYM_BINDING_LOCAL | SYM_VISIBILITY_DEFAULT, kind: SYM_TYPE_SECTION, index: 9 } }
 
 <code> relocations
 (4, Relocation { kind: Unknown, encoding: Generic, size: 28, target: Symbol(SymbolIndex(1)), addend: 0, implicit_addend: false, flags: Wasm { r_type: 7 } })

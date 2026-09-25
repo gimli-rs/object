@@ -50,10 +50,10 @@ Symbols
 13: Symbol { name: "data_ptr_to_global", address: 10, size: 4, kind: Data, section: Section(SectionIndex(19)), scope: Linkage, weak: false, flags: Wasm { flags: SYM_BINDING_GLOBAL | SYM_VISIBILITY_HIDDEN, kind: SYM_TYPE_DATA, index: 3 } }
 14: Symbol { name: "data_ptr_with_addend", address: 14, size: 4, kind: Data, section: Section(SectionIndex(1a)), scope: Linkage, weak: false, flags: Wasm { flags: SYM_BINDING_GLOBAL | SYM_VISIBILITY_HIDDEN, kind: SYM_TYPE_DATA, index: 4 } }
 15: Symbol { name: "data_func_ptr", address: 18, size: 4, kind: Data, section: Section(SectionIndex(1b)), scope: Linkage, weak: false, flags: Wasm { flags: SYM_BINDING_GLOBAL | SYM_VISIBILITY_HIDDEN, kind: SYM_TYPE_DATA, index: 5 } }
-16: Symbol { name: "", address: 0, size: 0, kind: Section, section: Unknown, scope: Compilation, weak: false, flags: Wasm { flags: SYM_BINDING_LOCAL | SYM_VISIBILITY_DEFAULT, kind: SYM_TYPE_SECTION, index: 7 } }
-17: Symbol { name: "", address: 0, size: 0, kind: Section, section: Unknown, scope: Compilation, weak: false, flags: Wasm { flags: SYM_BINDING_LOCAL | SYM_VISIBILITY_DEFAULT, kind: SYM_TYPE_SECTION, index: 9 } }
-18: Symbol { name: "", address: 0, size: 0, kind: Section, section: Unknown, scope: Compilation, weak: false, flags: Wasm { flags: SYM_BINDING_LOCAL | SYM_VISIBILITY_DEFAULT, kind: SYM_TYPE_SECTION, index: a } }
-19: Symbol { name: "", address: 0, size: 0, kind: Section, section: Unknown, scope: Compilation, weak: false, flags: Wasm { flags: SYM_BINDING_LOCAL | SYM_VISIBILITY_DEFAULT, kind: SYM_TYPE_SECTION, index: c } }
+16: Symbol { name: ".debug_abbrev", address: 0, size: 0, kind: Section, section: Section(SectionIndex(7)), scope: Compilation, weak: false, flags: Wasm { flags: SYM_BINDING_LOCAL | SYM_VISIBILITY_DEFAULT, kind: SYM_TYPE_SECTION, index: 7 } }
+17: Symbol { name: ".debug_ranges", address: 0, size: 0, kind: Section, section: Section(SectionIndex(9)), scope: Compilation, weak: false, flags: Wasm { flags: SYM_BINDING_LOCAL | SYM_VISIBILITY_DEFAULT, kind: SYM_TYPE_SECTION, index: 9 } }
+18: Symbol { name: ".debug_str", address: 0, size: 0, kind: Section, section: Section(SectionIndex(a)), scope: Compilation, weak: false, flags: Wasm { flags: SYM_BINDING_LOCAL | SYM_VISIBILITY_DEFAULT, kind: SYM_TYPE_SECTION, index: a } }
+19: Symbol { name: ".debug_line", address: 0, size: 0, kind: Section, section: Section(SectionIndex(c)), scope: Compilation, weak: false, flags: Wasm { flags: SYM_BINDING_LOCAL | SYM_VISIBILITY_DEFAULT, kind: SYM_TYPE_SECTION, index: c } }
 
 <code> relocations
 (7, Relocation { kind: Unknown, encoding: Generic, size: 28, target: Symbol(SymbolIndex(1)), addend: 0, implicit_addend: false, flags: Wasm { r_type: 7 } })
