@@ -947,16 +947,6 @@ impl<'data, R: ReadRef<'data>> WasmFile<'data, R> {
             },
         })
     }
-
-    /// `reloc.*` custom sections.
-    ///
-    /// Targets are file-order [`SectionIndex`] values.
-    pub fn wasm_reloc_sections(&self) -> WasmRelocSectionIterator<'_, R> {
-        WasmRelocSectionIterator {
-            sections: self.relocations.iter(),
-            marker: PhantomData,
-        }
-    }
 }
 
 impl<'data, R> read::private::Sealed for WasmFile<'data, R> {}
@@ -1359,84 +1349,6 @@ impl<'data, 'file, R> WasmSection<'data, 'file, R> {
             WasmSectionInner::Header { section, .. } => Some(section.id),
             WasmSectionInner::DataSegment { .. } => None,
         }
-    }
-}
-
-/// A `reloc.*` custom section.
-#[derive(Debug, Clone, Copy)]
-pub struct WasmRelocSection<'file> {
-    target: SectionIndex,
-    entries: &'file [wp::RelocationEntry],
-}
-
-impl<'file> WasmRelocSection<'file> {
-    /// File-order index of the section these relocations apply to.
-    pub fn target(&self) -> SectionIndex {
-        self.target
-    }
-
-    /// Relocation entries in this `reloc.*` section.
-    pub fn relocations(&self) -> impl Iterator<Item = WasmReloc> + 'file {
-        self.entries.iter().copied().map(WasmReloc::from_parser)
-    }
-}
-
-/// A relocation entry from a `reloc.*` custom section.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct WasmReloc {
-    offset: u32,
-    ty: wasm::RelocationType,
-    index: u32,
-    addend: i64,
-}
-
-impl WasmReloc {
-    fn from_parser(entry: wp::RelocationEntry) -> Self {
-        Self {
-            offset: entry.offset,
-            ty: wasm::RelocationType(entry.ty as u8),
-            index: entry.index,
-            addend: entry.addend,
-        }
-    }
-
-    /// Offset from the start of the target section's payload.
-    pub fn offset(&self) -> u32 {
-        self.offset
-    }
-
-    /// Relocation type (`R_WASM_*`).
-    pub fn ty(&self) -> wasm::RelocationType {
-        self.ty
-    }
-
-    /// Symbol table index, or type index for `R_WASM_TYPE_INDEX_LEB`.
-    pub fn index(&self) -> u32 {
-        self.index
-    }
-
-    /// Addend, or 0 if the type has no addend.
-    pub fn addend(&self) -> i64 {
-        self.addend
-    }
-}
-
-/// An iterator for `reloc.*` custom sections.
-#[derive(Debug)]
-pub struct WasmRelocSectionIterator<'file, R> {
-    sections: slice::Iter<'file, RelocSection>,
-    marker: PhantomData<R>,
-}
-
-impl<'file, R> Iterator for WasmRelocSectionIterator<'file, R> {
-    type Item = WasmRelocSection<'file>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        let section = self.sections.next()?;
-        Some(WasmRelocSection {
-            target: section.target,
-            entries: &section.entries,
-        })
     }
 }
 
