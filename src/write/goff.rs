@@ -165,90 +165,14 @@ struct SymbolHierarchy {
 /// A pending relocation to be written to RLD records.
 #[derive(Debug, Clone)]
 struct PendingRelocation {
-    /// Flags for this relocation (6 bytes)
-    flags: [u8; 6],
+    /// Flags for this relocation
+    flags: goff::RelocationFlags,
     /// R-pointer (reference ESDID)
     r_pointer: u32,
     /// P-pointer (location ESDID)
     p_pointer: u32,
     /// Offset within P-pointer element
     offset: u32,
-}
-
-/// Builder for constructing GOFF relocation flags.
-#[derive(Debug, Clone)]
-pub struct RelocationFlagsBuilder {
-    /// Byte 0: Compression and mode flags
-    compression_and_mode: u8,
-    /// Byte 1: R-Pointer indicators (reference type and referent type)
-    r_pointer_indicators: u8,
-    /// Byte 2: Action/operation flags
-    action_flags: u8,
-    /// Byte 3: Reserved
-    reserved: u8,
-    /// Byte 4: Target field byte length
-    target_field_length: u8,
-    /// Byte 5: Bit-level field specifications
-    bit_field_specs: u8,
-}
-
-impl RelocationFlagsBuilder {
-    /// Create a new builder with default values.
-    pub fn new() -> Self {
-        Self {
-            compression_and_mode: 0,
-            r_pointer_indicators: 0,
-            action_flags: 0,
-            reserved: 0,
-            target_field_length: 0,
-            bit_field_specs: 0,
-        }
-    }
-
-    /// Set the reference type (upper 4 bits of byte 1).
-    /// 0=R-address, 1=R-Offset, 2=R-Length, 6=R-Relative-Immediate
-    pub fn with_reference_type(mut self, ref_type: u8) -> Self {
-        self.r_pointer_indicators = (self.r_pointer_indicators & 0x0F) | ((ref_type & 0x0F) << 4);
-        self
-    }
-
-    /// Set the referent type (lower 4 bits of byte 1).
-    /// 0=Label, 1=Element, 2=Class, 3=Part
-    pub fn with_referent_type(mut self, ref_type: u8) -> Self {
-        self.r_pointer_indicators = (self.r_pointer_indicators & 0xF0) | (ref_type & 0x0F);
-        self
-    }
-
-    /// Set the action/operation (upper 7 bits of byte 2).
-    /// 0=add, 1=subtract
-    pub fn with_action(mut self, action: u8) -> Self {
-        self.action_flags = (self.action_flags & 0x01) | ((action & 0x7F) << 1);
-        self
-    }
-
-    /// Set the target field byte length (byte 4).
-    pub fn with_target_length(mut self, length: u8) -> Self {
-        self.target_field_length = length;
-        self
-    }
-
-    /// Build the final 6-byte flags array.
-    pub fn build(self) -> [u8; 6] {
-        [
-            self.compression_and_mode,
-            self.r_pointer_indicators,
-            self.action_flags,
-            self.reserved,
-            self.target_field_length,
-            self.bit_field_specs,
-        ]
-    }
-}
-
-impl Default for RelocationFlagsBuilder {
-    fn default() -> Self {
-        Self::new()
-    }
 }
 
 /// A helper for writing GOFF files.
@@ -288,8 +212,8 @@ impl<'a> Writer<'a> {
 
     // Write module header ("HDR") record.
     pub fn write_hdr(&mut self) {
-        let header = goff::HeaderRecord64 {
-            ptv: goff::GOFF_HDR_BYTES,
+        let header = goff::HeaderRecord {
+            ptv: goff::HDR_PREFIX,
             reserved1: [0u8; 45],
             archlvl: U32::new(BE, 1),
             reserved2: [0u8; 28],
@@ -301,12 +225,12 @@ impl<'a> Writer<'a> {
     // Write module end ("END") record.
     pub fn write_end(&mut self) {
         self.logical_record_count += 1;
-        let fileend = goff::EndRecord64 {
-            ptv: goff::GOFF_END_BYTES,
-            flags: 0,
-            amode: 0,
+        let fileend = goff::EndRecord {
+            ptv: goff::END_PREFIX,
+            flags: goff::FileFlags(0),
+            amode: goff::AMODE_UNSPEC,
             reserved1: [0u8; 3],
-            record_cnt: U32::new(BE, self.logical_record_count), // count includes this END record.
+            record_count: U32::new(BE, self.logical_record_count), // count includes this END record.
             esdid: U32::new(BE, 0),
             reserved2: [0u8; 4],
             offset: U32::new(BE, 0),
@@ -317,18 +241,13 @@ impl<'a> Writer<'a> {
     }
 
     pub fn write_er_to_text(&mut self, symbol_name: &[u8]) -> u32 {
-        let mut er = self.get_esd_record(
-            goff::ESD_SYMTYPE_ER,
-            goff::ESD_NS_NORMAL_NAME,
-            self.cu_esdid,
-        );
+        let mut er = self.get_esd_record(goff::ESD_ST_ER, goff::ESD_NS_NORMAL_NAME, self.cu_esdid);
 
         // External reference to code: executable, export scope
-        let attrs = BehavioralAttributesBuilder::new()
-            .with_executable(goff::GOFF_EXEC_CODE)
-            .with_binding_scope(goff::GOFF_SCOPE_IMPORT_EXPORT)
-            .with_alignment(goff::GOFF_ALIGN_32BYTE)
-            .build();
+        let attrs = default_attrs()
+            .with_executable(goff::EXEC_CODE)
+            .with_binding_scope(goff::ESD_BSC_IMPORT_EXPORT)
+            .with_alignment(goff::ALIGN_32BYTE);
         er.behavioral_attributes = attrs;
 
         self.write_esd_record(&er, symbol_name)
@@ -340,42 +259,39 @@ impl<'a> Writer<'a> {
 
     pub fn write_wsa_symbol(&mut self, symbol_name: &[u8], symbol_length: u32) -> u32 {
         // Emit parent C_WSA64 ED symbol (data section).
-        let mut ed = self.get_esd_record(goff::ESD_SYMTYPE_ED, goff::ESD_NS_PARTS, self.cu_esdid);
-        ed.sym_flags = 0x80; // Fill byte present
+        let mut ed = self.get_esd_record(goff::ESD_ST_ED, goff::ESD_NS_PARTS, self.cu_esdid);
+        ed.flags = goff::ESD_SF_FILL_BYTE_PRESENCE;
 
-        let ed_attrs = BehavioralAttributesBuilder::for_data_section()
-            .with_binding_algorithm(goff::GOFF_BIND_MERGE)
-            .with_executable(goff::GOFF_EXEC_DATA)
-            .with_binding_scope(goff::GOFF_SCOPE_IMPORT_EXPORT)
-            .with_alignment(goff::GOFF_ALIGN_HALFWORD)
-            .build();
+        let ed_attrs = data_attrs()
+            .with_binding_algorithm(goff::ESD_BA_MERGE)
+            .with_executable(goff::EXEC_DATA)
+            .with_binding_scope(goff::ESD_BSC_IMPORT_EXPORT)
+            .with_alignment(goff::ALIGN_HALFWORD);
         ed.behavioral_attributes = ed_attrs;
         let ed_esdid = self.write_esd_record(&ed, EBCDIC_C_WSA64);
 
         // Emit PR child symbol using write_pr method.
-        let pr_attrs = BehavioralAttributesBuilder::new()
-            .with_executable(goff::GOFF_EXEC_DATA)
-            .with_binding_strength(goff::GOFF_BIND_WEAK)
-            .with_binding_scope(goff::GOFF_SCOPE_IMPORT_EXPORT)
-            .with_alignment(goff::GOFF_ALIGN_HALFWORD)
-            .build();
+        let pr_attrs = default_attrs()
+            .with_executable(goff::EXEC_DATA)
+            .with_binding_strength(goff::ESD_BST_WEAK)
+            .with_binding_scope(goff::ESD_BSC_IMPORT_EXPORT)
+            .with_alignment(goff::ALIGN_HALFWORD);
 
         self.write_pr(symbol_name, ed_esdid, symbol_length, pr_attrs)
     }
 
     pub fn write_debug_section_symbol(&mut self, section_name: &[u8], section_length: u32) -> u32 {
         // Emit ED symbol for debug section.
-        let mut ed = self.get_esd_record(goff::ESD_SYMTYPE_ED, goff::ESD_NS_PARTS, self.cu_esdid);
-        ed.sym_flags = 0x80; // Fill byte present
+        let mut ed = self.get_esd_record(goff::ESD_ST_ED, goff::ESD_NS_PARTS, self.cu_esdid);
+        ed.flags = goff::ESD_SF_FILL_BYTE_PRESENCE;
         ed.length = U32::new(BE, section_length);
 
         // Debug sections are read-only data that must be loaded
-        let attrs = BehavioralAttributesBuilder::for_readonly_data()
-            .with_binding_algorithm(goff::GOFF_BIND_MERGE)
-            .with_executable(goff::GOFF_EXEC_DATA)
-            .with_loading(goff::GOFF_LOAD)
-            .with_alignment(goff::GOFF_ALIGN_BYTE)
-            .build();
+        let attrs = readonly_data_attrs()
+            .with_binding_algorithm(goff::ESD_BA_MERGE)
+            .with_executable(goff::EXEC_DATA)
+            .with_loading_behavior(goff::LOAD_INITIAL)
+            .with_alignment(goff::ALIGN_BYTE);
         ed.behavioral_attributes = attrs;
 
         self.write_esd_record(&ed, section_name)
@@ -384,9 +300,9 @@ impl<'a> Writer<'a> {
     /// Write an SD (Section Definition) record.
     ///
     /// SD records define control sections (compilation units).
-    pub fn write_sd(&mut self, name: &[u8], attributes: [u8; 10]) -> u32 {
+    pub fn write_sd(&mut self, name: &[u8], attributes: goff::BehavioralAttributes) -> u32 {
         let mut sd = self.get_esd_record(
-            goff::ESD_SYMTYPE_SD,
+            goff::ESD_ST_SD,
             goff::ESD_NS_PROGRAM_MANAGEMENT_BINDER,
             0, // No parent for SD
         );
@@ -402,12 +318,11 @@ impl<'a> Writer<'a> {
         name: &[u8],
         parent_esdid: u32,
         length: u32,
-        attributes: [u8; 10],
+        attributes: goff::BehavioralAttributes,
     ) -> u32 {
-        let mut ed =
-            self.get_esd_record(goff::ESD_SYMTYPE_ED, goff::ESD_NS_NORMAL_NAME, parent_esdid);
+        let mut ed = self.get_esd_record(goff::ESD_ST_ED, goff::ESD_NS_NORMAL_NAME, parent_esdid);
         ed.length = U32::new(BE, length);
-        ed.sym_flags = 0x80; // Fill byte present
+        ed.flags = goff::ESD_SF_FILL_BYTE_PRESENCE;
         ed.behavioral_attributes = attributes;
         self.write_esd_record(&ed, name)
     }
@@ -422,13 +337,10 @@ impl<'a> Writer<'a> {
         offset: u32,
         scope: goff::BindingScope,
     ) -> u32 {
-        let mut ld =
-            self.get_esd_record(goff::ESD_SYMTYPE_LD, goff::ESD_NS_NORMAL_NAME, parent_esdid);
+        let mut ld = self.get_esd_record(goff::ESD_ST_LD, goff::ESD_NS_NORMAL_NAME, parent_esdid);
         ld.offset = U32::new(BE, offset);
 
-        let attrs = BehavioralAttributesBuilder::new()
-            .with_binding_scope(scope)
-            .build();
+        let attrs = default_attrs().with_binding_scope(scope);
         ld.behavioral_attributes = attrs;
 
         self.write_esd_record(&ld, name)
@@ -442,9 +354,9 @@ impl<'a> Writer<'a> {
         name: &[u8],
         parent_esdid: u32,
         length: u32,
-        attributes: [u8; 10],
+        attributes: goff::BehavioralAttributes,
     ) -> u32 {
-        let mut pr = self.get_esd_record(goff::ESD_SYMTYPE_PR, goff::ESD_NS_PARTS, parent_esdid);
+        let mut pr = self.get_esd_record(goff::ESD_ST_PR, goff::ESD_NS_PARTS, parent_esdid);
         pr.length = U32::new(BE, length);
         pr.behavioral_attributes = attributes;
         self.write_esd_record(&pr, name)
@@ -452,18 +364,16 @@ impl<'a> Writer<'a> {
 
     /// Write an ER (External Reference) record with weak binding.
     pub fn write_er_weak(&mut self, name: &[u8], parent_esdid: u32, is_code: bool) -> u32 {
-        let mut er =
-            self.get_esd_record(goff::ESD_SYMTYPE_ER, goff::ESD_NS_NORMAL_NAME, parent_esdid);
+        let mut er = self.get_esd_record(goff::ESD_ST_ER, goff::ESD_NS_NORMAL_NAME, parent_esdid);
 
-        let attrs = BehavioralAttributesBuilder::new()
+        let attrs = default_attrs()
             .with_executable(if is_code {
-                goff::GOFF_EXEC_CODE
+                goff::EXEC_CODE
             } else {
-                goff::GOFF_EXEC_DATA
+                goff::EXEC_DATA
             })
-            .with_binding_strength(goff::GOFF_BIND_WEAK)
-            .with_binding_scope(goff::GOFF_SCOPE_IMPORT_EXPORT)
-            .build();
+            .with_binding_strength(goff::ESD_BST_WEAK)
+            .with_binding_scope(goff::ESD_BSC_IMPORT_EXPORT);
         er.behavioral_attributes = attrs;
 
         self.write_esd_record(&er, name)
@@ -505,9 +415,7 @@ impl<'a> Writer<'a> {
         // Determine section attributes and create ED based on kind
         let ed_esdid = match section.kind {
             SectionKind::Text => {
-                let attrs = BehavioralAttributesBuilder::for_code_section()
-                    .with_binding_scope(goff::GOFF_SCOPE_MODULE)
-                    .build();
+                let attrs = code_attrs().with_binding_scope(goff::ESD_BSC_MODULE);
                 self.write_ed(
                     &section.name,
                     self.cu_esdid,
@@ -516,9 +424,7 @@ impl<'a> Writer<'a> {
                 )
             }
             SectionKind::Data => {
-                let attrs = BehavioralAttributesBuilder::for_data_section()
-                    .with_binding_scope(goff::GOFF_SCOPE_MODULE)
-                    .build();
+                let attrs = data_attrs().with_binding_scope(goff::ESD_BSC_MODULE);
                 self.write_ed(
                     &section.name,
                     self.cu_esdid,
@@ -527,9 +433,7 @@ impl<'a> Writer<'a> {
                 )
             }
             SectionKind::ReadOnlyData => {
-                let attrs = BehavioralAttributesBuilder::for_readonly_data()
-                    .with_binding_scope(goff::GOFF_SCOPE_MODULE)
-                    .build();
+                let attrs = readonly_data_attrs().with_binding_scope(goff::ESD_BSC_MODULE);
                 self.write_ed(
                     &section.name,
                     self.cu_esdid,
@@ -559,9 +463,7 @@ impl<'a> Writer<'a> {
 
     /// Write a compilation unit SD.
     fn write_compilation_unit(&mut self, cu_name: &[u8]) -> u32 {
-        let attrs = BehavioralAttributesBuilder::new()
-            .with_binding_scope(goff::GOFF_SCOPE_SECTION)
-            .build();
+        let attrs = default_attrs().with_binding_scope(goff::ESD_BSC_SECTION);
 
         let sd_esdid = self.write_sd(cu_name, attrs);
 
@@ -574,11 +476,11 @@ impl<'a> Writer<'a> {
     pub fn get_esd_record(
         &self,
         symbol_type: goff::SymbolType,
-        namespace_id: goff::EsdNameSpace,
+        namespace: goff::SymbolNamespace,
         parent_esdid: u32,
-    ) -> goff::SymbolRecord64 {
-        goff::SymbolRecord64 {
-            ptv: goff::GOFF_ESD_BYTES,
+    ) -> goff::SymbolRecord {
+        goff::SymbolRecord {
+            ptv: goff::ESD_PREFIX,
             symbol_type,
             esdid: U32::new(BE, self.next_esdid),
             parent_esdid: U32::new(BE, parent_esdid),
@@ -589,28 +491,23 @@ impl<'a> Writer<'a> {
             ea_esdid: U32::new(BE, 0),
             ea_data_offset: U32::new(BE, 0),
             reserved3: U32::new(BE, 0),
-            namespace_id,
-            sym_flags: 0,
+            namespace,
+            flags: goff::SymbolFlags(0),
             fill_byte_value: 0,
             reserved4: 0,
             ada_esdid: U32::new(BE, 0),
             priority: U32::new(BE, 0),
             reserved5: [0u8; 8],
-            behavioral_attributes: [0u8; 10],
+            behavioral_attributes: Default::default(),
             name_length: U16::new(BE, 0),
             name: [0u8; goff::SIZEOF_ESD_DATA],
         }
     }
 
-    pub fn write_esd_record(&mut self, record: &goff::SymbolRecord64, name: &[u8]) -> u32 {
+    pub fn write_esd_record(&mut self, record: &goff::SymbolRecord, name: &[u8]) -> u32 {
         let mut esd_record = *record;
-        let mut record_name_len = name.len();
-        let mut ptv = goff::GOFF_ESD_BYTES;
-        if record_name_len > goff::SIZEOF_ESD_DATA {
-            record_name_len = goff::SIZEOF_ESD_DATA;
-            ptv[1] |= 0x1;
-        }
-        esd_record.ptv = ptv;
+        let record_name_len = name.len().min(goff::SIZEOF_ESD_DATA);
+        esd_record.ptv = goff::ESD_PREFIX.with_continued(name.len() > record_name_len);
         esd_record.name_length = U16::new(BE, name.len() as u16);
         esd_record.name[..record_name_len].copy_from_slice(&name[..record_name_len]);
 
@@ -618,29 +515,28 @@ impl<'a> Writer<'a> {
 
         self.logical_record_count += 1;
         self.buffer.write_pod(&esd_record);
-        self.write_continuation_records(goff::GOFF_ESD_BYTES, name, name.len() - record_name_len);
+        self.write_continuation_records(goff::RT_ESD, name, name.len() - record_name_len);
 
         self.next_esdid - 1
     }
 
     pub fn write_continuation_records(
         &mut self,
-        record_type: [u8; 3],
+        record_type: goff::RecordType,
         data: &[u8],
         mut data_remaining_amount: usize,
     ) {
         while data_remaining_amount > 0 {
-            let mut ptv = record_type;
-            ptv[1] |= 0x2;
+            let mut ptv = goff::RecordPrefix::new(record_type).with_continuation();
 
             let start = data.len() - data_remaining_amount;
             let mut end = data.len();
             if data_remaining_amount > goff::SIZEOF_CONTINUATION_RECORD_DATA {
-                ptv[1] |= 0x1;
+                ptv = ptv.with_continued(true);
                 end = start + goff::SIZEOF_CONTINUATION_RECORD_DATA;
             }
 
-            let mut cont_record = goff::ContinuationRecord64 {
+            let mut cont_record = goff::ContinuationRecord {
                 ptv,
                 data: [0u8; goff::SIZEOF_CONTINUATION_RECORD_DATA],
             };
@@ -668,16 +564,16 @@ impl<'a> Writer<'a> {
             } else {
                 data_remaining_amount
             };
-            let mut ptv = goff::GOFF_TXT_BYTES;
+            let mut ptv = goff::TXT_PREFIX;
             let mut record_data_len = logical_write_len;
             if record_data_len > goff::SIZEOF_TXT_DATA {
                 record_data_len = goff::SIZEOF_TXT_DATA;
-                ptv[1] |= 0x1;
+                ptv = ptv.with_continued(true);
             }
 
-            let mut record = goff::TextRecord64 {
+            let mut record = goff::TextRecord {
                 ptv,
-                record_style: goff::TxtRecordStyle(record_style),
+                record_style: goff::TextRecordStyle(record_style),
                 element_esdid: U32::new(BE, esdid),
                 reserved1: U32::new(BE, 0),
                 offset: U32::new(BE, offset as u32),
@@ -690,7 +586,7 @@ impl<'a> Writer<'a> {
             self.logical_record_count += 1;
             self.buffer.write_pod(&record);
             self.write_continuation_records(
-                goff::GOFF_TXT_BYTES,
+                goff::RT_TXT,
                 &data[offset..offset + logical_write_len],
                 logical_write_len - record_data_len,
             );
@@ -715,11 +611,11 @@ impl<'a> Writer<'a> {
     ) -> Result<u32> {
         // Determine binding scope based on symbol properties
         let scope = if symbol.is_local() {
-            goff::GOFF_SCOPE_SECTION
+            goff::ESD_BSC_SECTION
         } else if symbol.scope == SymbolScope::Dynamic {
-            goff::GOFF_SCOPE_IMPORT_EXPORT
+            goff::ESD_BSC_IMPORT_EXPORT
         } else {
-            goff::GOFF_SCOPE_MODULE
+            goff::ESD_BSC_MODULE
         };
 
         // Write LD (Label Definition) for the symbol
@@ -776,64 +672,43 @@ impl<'a> Writer<'a> {
     }
 
     /// Build relocation flags based on relocation properties.
-    fn build_relocation_flags(&self, flags: &RelocationFlags, size: u8) -> Result<[u8; 6]> {
-        let mut builder = RelocationFlagsBuilder::new();
-
-        // Map relocation flags to GOFF reference type and action
-        match flags {
+    fn build_relocation_flags(
+        &self,
+        flags: &RelocationFlags,
+        size: u8,
+    ) -> Result<goff::RelocationFlags> {
+        // Map relocation flags to GOFF reference type and operation
+        let (reference_type, operation) = match flags {
             RelocationFlags::Generic {
                 kind,
                 encoding: _,
                 size: _,
-            } => {
-                match kind {
-                    RelocationKind::Absolute => {
-                        builder = builder
-                            .with_reference_type(0) // R-address
-                            .with_action(0); // Add
-                    }
-                    RelocationKind::Relative => {
-                        builder = builder
-                            .with_reference_type(6) // R-Relative-Immediate
-                            .with_action(1); // Subtract
-                    }
-                    RelocationKind::Got => {
-                        builder = builder
-                            .with_reference_type(0) // R-address
-                            .with_action(0); // Add
-                    }
-                    RelocationKind::PltRelative => {
-                        builder = builder
-                            .with_reference_type(6) // R-Relative-Immediate
-                            .with_action(1); // Subtract
-                    }
-                    RelocationKind::GotRelative => {
-                        builder = builder
-                            .with_reference_type(6) // R-Relative-Immediate
-                            .with_action(1); // Subtract
-                    }
-                    RelocationKind::SectionOffset => {
-                        builder = builder
-                            .with_reference_type(1) // R-Offset
-                            .with_action(0); // Add
-                    }
-                    _ => {
-                        return Err(Error(format!("Unsupported relocation kind: {:?}", kind)));
-                    }
+            } => match kind {
+                RelocationKind::Absolute | RelocationKind::Got => {
+                    (goff::RLD_RT_ADDRESS, goff::RLD_ACT_ADD)
                 }
-            }
+                RelocationKind::Relative
+                | RelocationKind::PltRelative
+                | RelocationKind::GotRelative => {
+                    (goff::RLD_RT_RELATIVE_IMMEDIATE, goff::RLD_ACT_SUBTRACT)
+                }
+                RelocationKind::SectionOffset => (goff::RLD_RT_OFFSET, goff::RLD_ACT_ADD),
+                _ => {
+                    return Err(Error(format!("Unsupported relocation kind: {:?}", kind)));
+                }
+            },
             _ => {
                 return Err(Error("Unsupported relocation flags type for GOFF".into()));
             }
-        }
+        };
 
-        // Set target field length (convert bits to bytes)
-        builder = builder.with_target_length(size / 8);
-
-        // Set referent type to Label (0) - most common case
-        builder = builder.with_referent_type(0);
-
-        Ok(builder.build())
+        Ok(goff::RelocationFlags::default()
+            .with_reference_type(reference_type)
+            // Referent type Label is the most common case.
+            .with_referent_type(goff::RLD_RO_LABEL)
+            // Convert the target field length from bits to bytes.
+            .with_byte_length(size / 8)
+            .with_action(operation))
     }
 
     /// Add a relocation to the pending list.
@@ -870,27 +745,28 @@ impl<'a> Writer<'a> {
     fn write_relocation_item(
         &self,
         buffer: &mut Vec<u8>,
-        flags: &[u8; 6],
+        flags: goff::RelocationFlags,
         reloc: &PendingRelocation,
     ) -> Result<()> {
-        // Write flags (6 bytes)
-        buffer.extend_from_slice(flags);
-
-        // Write reserved (2 bytes)
-        buffer.extend_from_slice(&[0u8; 2]);
+        // Write fixed header
+        let item = goff::RelocationDataItem {
+            flags,
+            reserved: [0u8; 2],
+        };
+        buffer.write_pod(&item);
 
         // Write R-pointer if not compressed
-        if (flags[0] & 0x80) == 0 {
+        if !flags.is_same_r_id() {
             buffer.extend_from_slice(&reloc.r_pointer.to_be_bytes());
         }
 
         // Write P-pointer if not compressed
-        if (flags[0] & 0x40) == 0 {
+        if !flags.is_same_p_id() {
             buffer.extend_from_slice(&reloc.p_pointer.to_be_bytes());
         }
 
         // Write offset if not compressed
-        if (flags[0] & 0x20) == 0 {
+        if !flags.is_same_offset() {
             buffer.extend_from_slice(&reloc.offset.to_be_bytes());
         }
 
@@ -906,12 +782,9 @@ impl<'a> Writer<'a> {
         let first_chunk = data.len().min(goff::SIZEOF_RELOCATION_DATA);
         let remainder = &data[first_chunk..];
 
-        let mut ptv = goff::GOFF_RLD_BYTES;
-        if !remainder.is_empty() {
-            ptv[1] |= 0x01; // Set "is_continued" flag — overflow goes into ContinuationRecord64s
-        }
+        let ptv = goff::RLD_PREFIX.with_continued(!remainder.is_empty());
 
-        let mut record = goff::RelocationRecord64 {
+        let mut record = goff::RelocationRecord {
             ptv,
             reserved: 0,
             // Length covers the total data across this record and all its continuations.
@@ -924,7 +797,7 @@ impl<'a> Writer<'a> {
         self.buffer.write_pod(&record);
 
         if !remainder.is_empty() {
-            self.write_continuation_records(goff::GOFF_RLD_BYTES, data, remainder.len());
+            self.write_continuation_records(goff::RT_RLD, data, remainder.len());
         }
 
         Ok(())
@@ -946,29 +819,14 @@ impl<'a> Writer<'a> {
 
         for reloc in &self.relocations {
             // Apply compression flags
-            let mut flags = reloc.flags;
-
-            // Only compress if we have previous values (not the first relocation)
-            if let Some(prev) = prev_r_pointer {
-                if reloc.r_pointer == prev {
-                    flags[0] |= 0x80; // Same R-ID
-                }
-            }
-
-            if let Some(prev) = prev_p_pointer {
-                if reloc.p_pointer == prev {
-                    flags[0] |= 0x40; // Same P-ID
-                }
-            }
-
-            if let Some(prev) = prev_offset {
-                if reloc.offset == prev {
-                    flags[0] |= 0x20; // Same Offset
-                }
-            }
+            let flags = reloc
+                .flags
+                .with_same_r_id(prev_r_pointer == Some(reloc.r_pointer))
+                .with_same_p_id(prev_p_pointer == Some(reloc.p_pointer))
+                .with_same_offset(prev_offset == Some(reloc.offset));
 
             // Write relocation item
-            self.write_relocation_item(&mut rld_data, &flags, reloc)?;
+            self.write_relocation_item(&mut rld_data, flags, reloc)?;
 
             // Update previous values for next iteration
             prev_r_pointer = Some(reloc.r_pointer);
@@ -983,162 +841,44 @@ impl<'a> Writer<'a> {
     }
 }
 
-/// Builder for constructing GOFF behavioral attributes systematically.
-///
-/// The behavioral attributes are a 10-byte structure that controls various
-/// properties of GOFF symbols including addressing mode, execution properties,
-/// binding behavior, and alignment.
-#[derive(Debug, Clone)]
-pub struct BehavioralAttributesBuilder {
-    // Byte 0: AMODE (Addressing Mode)
-    amode: goff::AmodeFlags,
-    // Byte 1: RMODE (Residence Mode)
-    rmode: goff::RmodeFlags,
-    // Byte 2: Text record style (bits 0-3) and binding algorithm (bits 4-7)
-    text_style: u8,
-    binding_algorithm: goff::BindingAlgorithm,
-    // Byte 3: Tasking (bits 0-2), movable (bit 3), read-only (bit 4), executable (bits 5-7)
-    tasking: goff::TaskingBehavior,
-    movable: bool,
-    read_only: bool,
-    executable: goff::ExecutableFlags,
-    // Byte 4: No prime (bit 3), binding strength (bits 4-7)
-    no_prime: bool,
-    binding_strength: goff::BindingStrength,
-    // Byte 5: Loading (bits 0-1), common (bit 2), indirect (bit 3), binding scope (bits 4-7)
-    loading: goff::LoadingBehavior,
-    common: bool,
-    indirect: bool,
-    binding_scope: goff::BindingScope,
-    // Byte 6: Linkage (bit 2), alignment (bits 3-7)
-    linkage_xplink: bool,
-    alignment: goff::AlignmentFlags,
+/// Get default attributes suitable for 64-bit z/Architecture.
+fn default_attrs() -> goff::BehavioralAttributes {
+    goff::BehavioralAttributes::default()
+        .with_amode(goff::AMODE_64)
+        .with_rmode(goff::RMODE_64)
+        .with_text_record_style(goff::TXT_RS_BYTE)
+        .with_binding_algorithm(goff::ESD_BA_CONCATENATE)
+        .with_tasking_behavior(goff::TASK_UNSPEC)
+        .with_read_only(false)
+        .with_executable(goff::EXEC_UNSPEC)
+        .with_binding_strength(goff::ESD_BST_STRONG)
+        .with_loading_behavior(goff::LOAD_INITIAL)
+        .with_common(false)
+        .with_indirect(false)
+        .with_binding_scope(goff::ESD_BSC_UNSPEC)
+        .with_xplink(false)
+        .with_alignment(goff::ALIGN_BYTE)
 }
 
-impl BehavioralAttributesBuilder {
-    /// Create a new builder with default values suitable for 64-bit z/Architecture.
-    pub fn new() -> Self {
-        Self {
-            amode: goff::GOFF_AMODE_64,
-            rmode: goff::GOFF_RMODE_64,
-            text_style: 0,
-            binding_algorithm: goff::GOFF_BIND_CONCATENATE,
-            tasking: goff::GOFF_TASK_UNSPEC,
-            movable: false,
-            read_only: false,
-            executable: goff::GOFF_EXEC_UNSPEC,
-            no_prime: false,
-            binding_strength: goff::GOFF_BIND_STRONG,
-            loading: goff::GOFF_LOAD,
-            common: false,
-            indirect: false,
-            binding_scope: goff::GOFF_SCOPE_UNSPEC,
-            linkage_xplink: false,
-            alignment: goff::GOFF_ALIGN_BYTE,
-        }
-    }
-
-    /// Create a builder with attributes suitable for code sections.
-    pub fn for_code_section() -> Self {
-        let mut builder = Self::new();
-        builder.read_only = true;
-        builder.executable = goff::GOFF_EXEC_CODE;
-        builder.alignment = goff::GOFF_ALIGN_DOUBLEWORD;
-        builder
-    }
-
-    /// Create a builder with attributes suitable for data sections.
-    pub fn for_data_section() -> Self {
-        let mut builder = Self::new();
-        builder.executable = goff::GOFF_EXEC_DATA;
-        builder.alignment = goff::GOFF_ALIGN_DOUBLEWORD;
-        builder
-    }
-
-    /// Create a builder with attributes suitable for read-only data sections.
-    pub fn for_readonly_data() -> Self {
-        let mut builder = Self::new();
-        builder.read_only = true;
-        builder.executable = goff::GOFF_EXEC_DATA;
-        builder.alignment = goff::GOFF_ALIGN_DOUBLEWORD;
-        builder
-    }
-
-    /// Set the binding algorithm.
-    pub fn with_binding_algorithm(mut self, algorithm: goff::BindingAlgorithm) -> Self {
-        self.binding_algorithm = algorithm;
-        self
-    }
-
-    /// Set the executable flags.
-    pub fn with_executable(mut self, executable: goff::ExecutableFlags) -> Self {
-        self.executable = executable;
-        self
-    }
-
-    /// Set the binding strength.
-    pub fn with_binding_strength(mut self, strength: goff::BindingStrength) -> Self {
-        self.binding_strength = strength;
-        self
-    }
-
-    /// Set the loading behavior.
-    pub fn with_loading(mut self, loading: goff::LoadingBehavior) -> Self {
-        self.loading = loading;
-        self
-    }
-
-    /// Set the binding scope.
-    pub fn with_binding_scope(mut self, scope: goff::BindingScope) -> Self {
-        self.binding_scope = scope;
-        self
-    }
-
-    /// Set the alignment.
-    pub fn with_alignment(mut self, alignment: goff::AlignmentFlags) -> Self {
-        self.alignment = alignment;
-        self
-    }
-
-    /// Build the final 10-byte behavioral attributes array.
-    pub fn build(&self) -> [u8; 10] {
-        let mut attrs = [0u8; 10];
-
-        // Byte 0: AMODE
-        attrs[0] = self.amode.0;
-
-        // Byte 1: RMODE
-        attrs[1] = self.rmode.0;
-
-        // Byte 2: Text style (bits 0-3) and binding algorithm (bits 4-7)
-        attrs[2] = self.text_style | self.binding_algorithm.0;
-
-        // Byte 3: Tasking (bits 0-2), movable (bit 3), read-only (bit 4), executable (bits 5-7)
-        attrs[3] = self.tasking.0
-            | (if self.movable { 0x08 } else { 0 })
-            | (if self.read_only { 0x10 } else { 0 })
-            | self.executable.0;
-
-        // Byte 4: No prime (bit 3), binding strength (bits 4-7)
-        attrs[4] = (if self.no_prime { 0x08 } else { 0 }) | self.binding_strength.0;
-
-        // Byte 5: Loading (bits 0-1), common (bit 2), indirect (bit 3), binding scope (bits 4-7)
-        attrs[5] = self.loading.0
-            | (if self.common { 0x04 } else { 0 })
-            | (if self.indirect { 0x08 } else { 0 })
-            | self.binding_scope.0;
-
-        // Byte 6: Linkage (bit 2), alignment (bits 3-7)
-        attrs[6] = (if self.linkage_xplink { 0x04 } else { 0 }) | self.alignment.0;
-
-        // Bytes 7-9: Reserved (remain 0)
-
-        attrs
-    }
+/// Create attributes suitable for code sections.
+fn code_attrs() -> goff::BehavioralAttributes {
+    default_attrs()
+        .with_read_only(true)
+        .with_executable(goff::EXEC_CODE)
+        .with_alignment(goff::ALIGN_DOUBLEWORD)
 }
 
-impl Default for BehavioralAttributesBuilder {
-    fn default() -> Self {
-        Self::new()
-    }
+/// Create attributes suitable for data sections.
+fn data_attrs() -> goff::BehavioralAttributes {
+    default_attrs()
+        .with_executable(goff::EXEC_DATA)
+        .with_alignment(goff::ALIGN_DOUBLEWORD)
+}
+
+/// Create attributes suitable for read-only data sections.
+fn readonly_data_attrs() -> goff::BehavioralAttributes {
+    default_attrs()
+        .with_read_only(true)
+        .with_executable(goff::EXEC_DATA)
+        .with_alignment(goff::ALIGN_DOUBLEWORD)
 }

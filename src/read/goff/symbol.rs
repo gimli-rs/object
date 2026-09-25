@@ -1,9 +1,11 @@
+use alloc::borrow::Cow;
 use alloc::vec::Vec;
 use core::fmt::Debug;
 use core::str;
 
+use crate::ebcdic;
+use crate::goff;
 use crate::goff::*;
-use crate::goff::{ESD_SYMTYPE_ED, ESD_SYMTYPE_SD};
 
 use crate::read::{
     self, Error, ObjectSymbol, ObjectSymbolTable, ReadRef, Result, SectionIndex, SymbolFlags,
@@ -11,9 +13,6 @@ use crate::read::{
 };
 
 use super::GoffFile;
-
-/// A symbol in an [`GoffFile64`](super::GoffFile64).
-pub type GoffSymbol64 = GoffSymbol;
 
 /// A symbol in an [`GoffFile`].
 ///
@@ -39,9 +38,9 @@ pub struct GoffSymbol {
     /// Extended Attribute Data Offset
     pub(super) ea_data_offset: u32,
     /// Name Space ID
-    pub(super) namespace_id: EsdNameSpace,
+    pub(super) namespace: goff::SymbolNamespace,
     /// Symbol Flags.
-    pub(super) sym_flags: u8,
+    pub(super) flags: goff::SymbolFlags,
     /// Fill Byte Value (the specific 1-byte value used to pad memory)
     pub(super) fill_byte_value: u8,
     /// Associated data ID
@@ -49,7 +48,7 @@ pub struct GoffSymbol {
     /// Priority
     pub(super) priority: u32,
     /// Behavioral Attributes
-    pub(super) behavioral_attributes: [u8; 10],
+    pub(super) behavioral_attributes: BehavioralAttributes,
     /// Name Length
     pub(super) name_length: u16,
 }
@@ -124,29 +123,16 @@ impl GoffSymbol {
     /// Get the raw EBCDIC-encoded name bytes of this symbol.
     ///
     /// The name is stored as a flat byte vector in EBCDIC encoding.
-    /// Use `ebcdic::ebcdic::Ebcdic::ebcdic_to_ascii` to convert to ASCII.
+    /// Use [`ObjectSymbol::name_utf8`] to convert to UTF-8.
     #[inline]
     pub fn name_bytes_owned(&self) -> &[u8] {
         &self.name
     }
 
-    /// Convert the behavioral attributes byte array to a structured SectionFlags
+    /// `behavioral_attributes` field in the ESD record.
     #[inline]
-    pub fn behavioral_flags(&self) -> SectionFlags {
-        SectionFlags {
-            amode: AmodeFlags(self.behavioral_attributes[0]),
-            rmode: RmodeFlags(self.behavioral_attributes[1]),
-            text_and_binding: self.behavioral_attributes[2],
-            tasking_and_exec: self.behavioral_attributes[3],
-            dup_and_strength: self.behavioral_attributes[4],
-            loading_and_scope: self.behavioral_attributes[5],
-            linkage_and_align: self.behavioral_attributes[6],
-            reserved: [
-                self.behavioral_attributes[7],
-                self.behavioral_attributes[8],
-                self.behavioral_attributes[9],
-            ],
-        }
+    pub fn behavioral_attributes(&self) -> BehavioralAttributes {
+        self.behavioral_attributes
     }
 }
 
@@ -159,17 +145,19 @@ impl<'data> ObjectSymbol<'data> for GoffSymbol {
     }
 
     fn name_bytes(&self) -> Result<&'data [u8]> {
-        // GOFF symbol names are EBCDIC-encoded; use name_bytes_owned() to access the owned bytes.
         Err(Error(
-            "GOFF symbol names use non-continguent EBCDIC encoded bytes, not UTF-8 byte slices. Use name_bytes_owned()",
+            "GOFF symbol names are non-contiguous EBCDIC. Use name_utf8() instead",
         ))
     }
 
     fn name(&self) -> Result<&'data str> {
-        // GOFF symbol names are always stored as ebcidic, not utf-8
         Err(Error(
-            "GOFF symbol names use non-continguent EBCDIC encoded bytes, not UTF-8 byte slices. Use name_bytes_owned()",
+            "GOFF symbol names use non-contiguous EBCDIC. Use name_utf8() instead",
         ))
+    }
+
+    fn name_utf8(&self) -> Result<Cow<'data, str>> {
+        Ok(Cow::Owned(ebcdic::to_string(&self.name)))
     }
 
     #[inline]
@@ -185,15 +173,15 @@ impl<'data> ObjectSymbol<'data> for GoffSymbol {
     fn kind(&self) -> SymbolKind {
         match self.symbol_type() {
             // Section Definition (SD) - defines a control section.
-            ESD_SYMTYPE_SD => SymbolKind::Section,
+            goff::ESD_ST_SD => SymbolKind::Section,
             // Element Definition (ED) - defines an element (part/class).
-            ESD_SYMTYPE_ED => SymbolKind::Section,
+            goff::ESD_ST_ED => SymbolKind::Section,
             // Label Definition (LD) - defines a label within a section.
-            ESD_SYMTYPE_LD => SymbolKind::Label,
+            goff::ESD_ST_LD => SymbolKind::Label,
             // Part Reference (PR) - references a part of an element.
-            ESD_SYMTYPE_PR => SymbolKind::Section,
+            goff::ESD_ST_PR => SymbolKind::Section,
             // External Reference (ER) - references an external symbol.
-            ESD_SYMTYPE_ER => SymbolKind::Unknown,
+            goff::ESD_ST_ER => SymbolKind::Unknown,
             _ => SymbolKind::Unknown,
         }
     }
@@ -206,36 +194,25 @@ impl<'data> ObjectSymbol<'data> for GoffSymbol {
     fn is_undefined(&self) -> bool {
         match self.symbol_type() {
             // Section Definition (SD) - defines a control section.
-            ESD_SYMTYPE_SD => false,
+            goff::ESD_ST_SD => false,
             // Element Definition (ED) - defines an element (part/class).
-            ESD_SYMTYPE_ED => false,
+            goff::ESD_ST_ED => false,
             // Label Definition (LD) - defines a label within a section.
-            ESD_SYMTYPE_LD => false,
+            goff::ESD_ST_LD => false,
             // Part Reference (PR) - references a part of an element.
             // A PR is undefined if length is 0 AND one of:
-            // - namespace is a pseudo-register (ESD_NS_PSEUDO_REGISTER = 2)
-            // - part reference represents a symbol in a dynamic library (bit 0x20 in behavioral_attributes[6])
-            // - PR is a weak reference variant (bit 0x10 in behavioral_attributes[4])
-            ESD_SYMTYPE_PR => {
-                if self.length != 0 {
-                    return false;
-                }
-                // Check if namespace is pseudo-register
-                if self.namespace_id.0 == ESD_NS_PSEUDO_REGISTER.0 {
-                    return true;
-                }
-                // Check if weak reference (bit 0x10 in behavioral attributes byte 4)
-                if (self.behavioral_attributes[4] & 0x10) != 0 {
-                    return true;
-                }
-                // Check if dynamic library reference (bit 0x20 in behavioral attributes byte 6)
-                if (self.behavioral_attributes[5] & 0x40) != 0 {
-                    return true;
-                }
-                false
+            // - namespace is a pseudo-register
+            // - part reference represents a symbol in a dynamic library
+            // - PR is a weak reference variant
+            goff::ESD_ST_PR => {
+                self.length == 0
+                    && (self.namespace == ESD_NS_PSEUDO_REGISTER
+                        || self.behavioral_attributes.binding_strength() == goff::ESD_BST_WEAK
+                        || self.behavioral_attributes.binding_scope()
+                            == goff::ESD_BSC_IMPORT_EXPORT)
             }
             // External Reference (ER) - references an external symbol.
-            ESD_SYMTYPE_ER => true,
+            goff::ESD_ST_ER => true,
             _ => true,
         }
     }
@@ -250,46 +227,34 @@ impl<'data> ObjectSymbol<'data> for GoffSymbol {
     fn is_common(&self) -> bool {
         match self.symbol_type() {
             // A PR is common if the binding algorithm is MERGE
-            ESD_SYMTYPE_PR => (self.behavioral_attributes[2] & 0x10) != 0,
+            goff::ESD_ST_PR => self.behavioral_attributes.binding_algorithm() == goff::ESD_BA_MERGE,
             _ => false,
         }
     }
 
     #[inline]
     fn is_weak(&self) -> bool {
-        // Binding Strength attribute = b'0001'
-        (self.behavioral_attributes[4] & 0x10) != 0
+        self.behavioral_attributes.binding_strength() == goff::ESD_BST_WEAK
     }
 
     fn scope(&self) -> SymbolScope {
-        // Binding scope is at offset 5.4 in behavioral_attributes (byte 5, bits 4-7)
-        // Extract the 4-bit scope value
-        let scope_bits = (self.behavioral_attributes[5] >> 4) & 0x0F;
-
-        match scope_bits {
-            0x01 => SymbolScope::Compilation, // Section scope ("local")
-            0x02 => SymbolScope::Linkage,     // Module scope ("global")
-            0x03 => SymbolScope::Linkage,     // Library scope (treat as linkage)
-            0x04 => SymbolScope::Dynamic,     // Import-Export scope
-            _ => SymbolScope::Unknown,        // Unspecified or unknown
+        match self.behavioral_attributes.binding_scope() {
+            goff::ESD_BSC_SECTION => SymbolScope::Compilation,
+            goff::ESD_BSC_MODULE => SymbolScope::Linkage,
+            goff::ESD_BSC_LIBRARY => SymbolScope::Linkage,
+            goff::ESD_BSC_IMPORT_EXPORT => SymbolScope::Dynamic,
+            _ => SymbolScope::Unknown,
         }
     }
 
     #[inline]
     fn is_global(&self) -> bool {
         // Section definitions and Element definitions are local by default
-        let is_section =
-            self.symbol_type() == ESD_SYMTYPE_SD || self.symbol_type() == ESD_SYMTYPE_ED;
+        self.symbol_type() != goff::ESD_ST_SD && self.symbol_type() != goff::ESD_ST_ED
         // Symbol identifiers that are a single EBCDIC encoded space are local
-        let is_local_name = self.name_bytes_owned() == [0x40u8];
-        // If binding scope is section or module symbol is local
-        let scope = self.behavioral_flags().binding_scope();
-        if is_section || is_local_name || scope == GOFF_SCOPE_SECTION || scope == GOFF_SCOPE_MODULE
-        {
-            return false;
-        }
-        // otherwise global
-        true
+        && self.name_bytes_owned() != [0x40u8]
+        // If binding scope is section then the symbol is local.
+        && self.behavioral_attributes.binding_scope() != goff::ESD_BSC_SECTION
     }
 
     #[inline]
@@ -300,9 +265,9 @@ impl<'data> ObjectSymbol<'data> for GoffSymbol {
     #[inline]
     fn flags(&self) -> SymbolFlags<SectionIndex, SymbolIndex> {
         SymbolFlags::Goff {
-            symboltype: self.symbol_type,
-            symflags: self.sym_flags,
-            namespaceid: self.namespace_id.0,
+            symbol_type: self.symbol_type,
+            flags: self.flags,
+            namespace: self.namespace,
             behavioral_attributes: self.behavioral_attributes,
         }
     }
@@ -310,15 +275,15 @@ impl<'data> ObjectSymbol<'data> for GoffSymbol {
 
 /// A table of symbol entries in a GOFF file.
 ///
-/// Note: This table filters out `ESD_SYMTYPE_ED` (Element Definition) and
-/// `ESD_SYMTYPE_SD` (Section Definition) symbols from the public API, as these
+/// Note: This table filters out [`goff::ESD_ST_ED`] (Element Definition) and
+/// [`goff::ESD_ST_SD`] (Section Definition) symbols from the public API, as these
 /// represent structural metadata rather than user-visible symbols. Internal
 /// code can access all symbols via `symbol_records()`.
 ///
 /// The public API exposes:
-/// - `ESD_SYMTYPE_LD` (Label Definition) - labels within sections
-/// - `ESD_SYMTYPE_PR` (Part Reference) - part references
-/// - `ESD_SYMTYPE_ER` (External Reference) - external symbols
+/// - [`goff::ESD_ST_LD`] (Label Definition) - labels within sections
+/// - [`goff::ESD_ST_PR`] (Part Reference) - part references
+/// - [`goff::ESD_ST_ER`] (External Reference) - external symbols
 ///
 /// Also includes the string table used for the symbol names.
 #[derive(Debug)]
@@ -390,9 +355,6 @@ impl<'data, 'file, R: ReadRef<'data>> Iterator for GoffSymbolIterator<'data, 'fi
         Some(symbol)
     }
 }
-
-/// A symbol table in an [`GoffFile64`](super::GoffFile64).
-pub type GoffSymbolTable64<'data, 'file, R = &'data [u8]> = GoffSymbolTable<'data, 'file, R>;
 
 impl<'data, 'file, R: ReadRef<'data>> read::private::Sealed for GoffSymbolTable<'data, 'file, R> {}
 

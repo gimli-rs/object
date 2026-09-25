@@ -1,44 +1,9 @@
 #![cfg(feature = "goff")]
 
 use object::read;
+use object::read::ObjectSymbol;
 use std::fs;
 use std::path::PathBuf;
-
-/// Convert IBM-1047 EBCDIC bytes to an ASCII `String`.
-///
-/// The table is the inverse of the ISO-8859-1 → IBM-1047 table: for every
-/// `(ascii, ebcdic)` pair in the forward table, this table stores `ascii` at
-/// index `ebcdic`.  Bytes that have no printable ASCII counterpart map to 0x00.
-fn ebcdic_to_ascii(bytes: &[u8]) -> String {
-    let ibm1047_to_iso88591_table: [u8; 256] = [
-        0x00, 0x01, 0x02, 0x03, 0x9c, 0x09, 0x86, 0x7f, 0x97, 0x8d, 0x8e, 0x0b, 0x0c, 0x0d, 0x0e,
-        0x0f, 0x10, 0x11, 0x12, 0x13, 0x9d, 0x0a, 0x08, 0x87, 0x18, 0x19, 0x92, 0x8f, 0x1c, 0x1d,
-        0x1e, 0x1f, 0x80, 0x81, 0x82, 0x83, 0x84, 0x85, 0x17, 0x1b, 0x88, 0x89, 0x8a, 0x8b, 0x8c,
-        0x05, 0x06, 0x07, 0x90, 0x91, 0x16, 0x93, 0x94, 0x95, 0x96, 0x04, 0x98, 0x99, 0x9a, 0x9b,
-        0x14, 0x15, 0x9e, 0x1a, 0x20, 0xa0, 0xe2, 0xe4, 0xe0, 0xe1, 0xe3, 0xe5, 0xe7, 0xf1, 0xa2,
-        0x2e, 0x3c, 0x28, 0x2b, 0x7c, 0x26, 0xe9, 0xea, 0xeb, 0xe8, 0xed, 0xee, 0xef, 0xec, 0xdf,
-        0x21, 0x24, 0x2a, 0x29, 0x3b, 0x5e, 0x2d, 0x2f, 0xc2, 0xc4, 0xc0, 0xc1, 0xc3, 0xc5, 0xc7,
-        0xd1, 0xa6, 0x2c, 0x25, 0x5f, 0x3e, 0x3f, 0xf8, 0xc9, 0xca, 0xcb, 0xc8, 0xcd, 0xce, 0xcf,
-        0xcc, 0x60, 0x3a, 0x23, 0x40, 0x27, 0x3d, 0x22, 0xd8, 0x61, 0x62, 0x63, 0x64, 0x65, 0x66,
-        0x67, 0x68, 0x69, 0xab, 0xbb, 0xf0, 0xfd, 0xfe, 0xb1, 0xb0, 0x6a, 0x6b, 0x6c, 0x6d, 0x6e,
-        0x6f, 0x70, 0x71, 0x72, 0xaa, 0xba, 0xe6, 0xb8, 0xc6, 0xa4, 0xb5, 0x7e, 0x73, 0x74, 0x75,
-        0x76, 0x77, 0x78, 0x79, 0x7a, 0xa1, 0xbf, 0xd0, 0x5b, 0xde, 0xae, 0xac, 0xa3, 0xa5, 0xb7,
-        0xa9, 0xa7, 0xb6, 0xbc, 0xbd, 0xbe, 0xdd, 0xa8, 0xaf, 0x5d, 0xb4, 0xd7, 0x7b, 0x41, 0x42,
-        0x43, 0x44, 0x45, 0x46, 0x47, 0x48, 0x49, 0xad, 0xf4, 0xf6, 0xf2, 0xf3, 0xf5, 0x7d, 0x4a,
-        0x4b, 0x4c, 0x4d, 0x4e, 0x4f, 0x50, 0x51, 0x52, 0xb9, 0xfb, 0xfc, 0xf9, 0xfa, 0xff, 0x5c,
-        0xf7, 0x53, 0x54, 0x55, 0x56, 0x57, 0x58, 0x59, 0x5a, 0xb2, 0xd4, 0xd6, 0xd2, 0xd3, 0xd5,
-        0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39, 0xb3, 0xdb, 0xdc, 0xd9, 0xda,
-        0x9f,
-    ];
-
-    let ascii: Vec<u8> = bytes
-        .iter()
-        .map(|&b| ibm1047_to_iso88591_table[b as usize])
-        .collect();
-    String::from_utf8_lossy(&ascii)
-        .trim_end_matches('\0')
-        .to_string()
-}
 
 #[test]
 fn goff_base_symbols() {
@@ -183,7 +148,7 @@ fn goff_base_symbols() {
 
         // Check name by converting EBCDIC to ASCII
         assert_eq!(
-            ebcdic_to_ascii(symbol.name_bytes_owned()),
+            symbol.name_utf8().unwrap(),
             *expected_name,
             "Name mismatch for ESDID 0x{:08X}",
             expected_esdid
@@ -307,7 +272,7 @@ fn goff_foo_symbols() {
 
         // Check name by converting EBCDIC to ASCII
         assert_eq!(
-            ebcdic_to_ascii(symbol.name_bytes_owned()),
+            symbol.name_utf8().unwrap(),
             *expected_name,
             "Name mismatch for ESDID 0x{:08X}",
             expected_esdid
@@ -333,26 +298,26 @@ fn goff_foo_behavioral_attributes() {
     let symbol1 = symbol_records
         .get(0x00000001_usize - 1)
         .expect("Failed to find symbol with ESDID 0x00000001");
-    let flags1 = symbol1.behavioral_flags();
+    let flags1 = symbol1.behavioral_attributes();
     assert_eq!(
         flags1.amode(),
-        GOFF_AMODE_UNSPEC,
+        AMODE_UNSPEC,
         "ESDID 1: AMODE should be Unspec"
     );
     assert_eq!(
         flags1.rmode(),
-        GOFF_RMODE_UNSPEC,
+        RMODE_UNSPEC,
         "ESDID 1: RMODE should be Unspec"
     );
     // BA30: byte[3] bits 5-7 = 3 (RENT)
     assert_eq!(
-        (flags1.tasking_and_exec >> 5) & 0x07,
+        (flags1.0[3] >> 5) & 0x07,
         3,
         "ESDID 1: Tasking bits should be 3 (RENT)"
     );
     // BA54: byte[5] bits 0-3 = 1 (Section scope)
     assert_eq!(
-        flags1.loading_and_scope & 0x0F,
+        flags1.0[5] & 0x0F,
         1,
         "ESDID 1: Binding scope bits should be 1 (Section)"
     );
@@ -363,20 +328,20 @@ fn goff_foo_behavioral_attributes() {
     let symbol2 = symbol_records
         .get(0x00000002_usize - 1)
         .expect("Failed to find symbol with ESDID 0x00000002");
-    let flags2 = symbol2.behavioral_flags();
+    let flags2 = symbol2.behavioral_attributes();
     assert_eq!(
         flags2.amode(),
-        GOFF_AMODE_UNSPEC,
+        AMODE_UNSPEC,
         "ESDID 2: AMODE should be Unspec"
     );
-    assert_eq!(flags2.rmode(), GOFF_RMODE_64, "ESDID 2: RMODE should be 64");
+    assert_eq!(flags2.rmode(), RMODE_64, "ESDID 2: RMODE should be 64");
     assert_eq!(
-        flags2.text_and_binding & 0x0F,
+        flags2.0[2] & 0x0F,
         1,
         "ESDID 2: BA24 (Binding) should be 1 (Merge)"
     );
     assert_eq!(
-        (flags2.loading_and_scope >> 6) & 0x03,
+        (flags2.0[5] >> 6) & 0x03,
         1,
         "ESDID 2: BA50 (Loading) should be 1 (Deferred)"
     );
@@ -385,7 +350,7 @@ fn goff_foo_behavioral_attributes() {
         "ESDID 2: BA62 should indicate OS linkage (not XPLINK)"
     );
     assert_eq!(
-        flags2.linkage_and_align & 0x1F,
+        flags2.0[6] & 0x1F,
         4,
         "ESDID 2: BA63 (Alignment) should be 4 (Quadword)"
     );
@@ -396,13 +361,13 @@ fn goff_foo_behavioral_attributes() {
     let symbol3 = symbol_records
         .get(0x00000003_usize - 1)
         .expect("Failed to find symbol with ESDID 0x00000003");
-    let flags3 = symbol3.behavioral_flags();
+    let flags3 = symbol3.behavioral_attributes();
     assert!(
         flags3.is_xplink(),
         "ESDID 3: BA62 should indicate XPLINK linkage"
     );
     assert_eq!(
-        flags3.linkage_and_align & 0x1F,
+        flags3.0[6] & 0x1F,
         4,
         "ESDID 3: BA63 (Alignment) should be 4 (Quadword)"
     );
@@ -413,8 +378,8 @@ fn goff_foo_behavioral_attributes() {
     let symbol4 = symbol_records
         .get(0x00000004_usize - 1)
         .expect("Failed to find symbol with ESDID 0x00000004");
-    let flags4 = symbol4.behavioral_flags();
-    assert_eq!(flags4.rmode(), GOFF_RMODE_64, "ESDID 4: RMODE should be 64");
+    let flags4 = symbol4.behavioral_attributes();
+    assert_eq!(flags4.rmode(), RMODE_64, "ESDID 4: RMODE should be 64");
     assert!(
         !flags4.is_xplink(),
         "ESDID 4: BA62 should indicate OS linkage (not XPLINK)"
@@ -426,20 +391,20 @@ fn goff_foo_behavioral_attributes() {
     let symbol5 = symbol_records
         .get(0x00000005_usize - 1)
         .expect("Failed to find symbol with ESDID 0x00000005");
-    let flags5 = symbol5.behavioral_flags();
-    assert_eq!(flags5.amode(), GOFF_AMODE_64, "ESDID 5: AMODE should be 64");
+    let flags5 = symbol5.behavioral_attributes();
+    assert_eq!(flags5.amode(), AMODE_64, "ESDID 5: AMODE should be 64");
     assert_eq!(
         flags5.rmode(),
-        GOFF_RMODE_UNSPEC,
+        RMODE_UNSPEC,
         "ESDID 5: RMODE should be Unspec"
     );
     assert_eq!(
-        flags5.tasking_and_exec & 0x07,
+        flags5.0[3] & 0x07,
         2,
         "ESDID 5: BA35 (Executable) should be 2 (Code)"
     );
     assert_eq!(
-        flags5.loading_and_scope & 0x0F,
+        flags5.0[5] & 0x0F,
         1,
         "ESDID 5: BA54 (Scope) should be 1 (Section)"
     );
@@ -448,7 +413,7 @@ fn goff_foo_behavioral_attributes() {
         "ESDID 5: BA62 should indicate XPLINK linkage"
     );
     assert_eq!(
-        flags5.linkage_and_align & 0x1F,
+        flags5.0[6] & 0x1F,
         0,
         "ESDID 5: BA63 (Alignment) should be 0 (Byte)"
     );
@@ -459,16 +424,16 @@ fn goff_foo_behavioral_attributes() {
     let symbol9 = symbol_records
         .get(0x00000009_usize - 1)
         .expect("Failed to find symbol with ESDID 0x00000009");
-    let flags9 = symbol9.behavioral_flags();
-    assert_eq!(flags9.amode(), GOFF_AMODE_64, "ESDID 9: AMODE should be 64");
-    assert_eq!(flags9.rmode(), GOFF_RMODE_64, "ESDID 9: RMODE should be 64");
+    let flags9 = symbol9.behavioral_attributes();
+    assert_eq!(flags9.amode(), AMODE_64, "ESDID 9: AMODE should be 64");
+    assert_eq!(flags9.rmode(), RMODE_64, "ESDID 9: RMODE should be 64");
     assert_eq!(
-        flags9.tasking_and_exec & 0x07,
+        flags9.0[3] & 0x07,
         2,
         "ESDID 9: BA35 (Executable) should be 2 (Code)"
     );
     assert_eq!(
-        flags9.loading_and_scope & 0x0F,
+        flags9.0[5] & 0x0F,
         4,
         "ESDID 9: BA54 (Scope) should be 4 (Import-Export)"
     );
@@ -491,8 +456,8 @@ fn goff_foo_section_flags() {
 
         // Only print for SD (0x00) and ED (0x01) types which represent sections
         if symbol_type.0 == 0x00 || symbol_type.0 == 0x01 {
-            let flags = symbol.behavioral_flags();
-            let name = ebcdic_to_ascii(symbol.name_bytes_owned());
+            let flags = symbol.behavioral_attributes();
+            let name = symbol.name_utf8().unwrap();
 
             println!(
                 "ESDID: 0x{:08X} | Type: 0x{:02X} | Name: {}",
@@ -502,40 +467,40 @@ fn goff_foo_section_flags() {
             );
             println!(
                 "  AMODE: 0x{:02X} ({})",
-                flags.amode.0,
+                flags.0[0],
                 match flags.amode() {
-                    object::goff::GOFF_AMODE_24 => "24-bit",
-                    object::goff::GOFF_AMODE_31 => "31-bit",
-                    object::goff::GOFF_AMODE_64 => "64-bit",
-                    object::goff::GOFF_AMODE_ANY => "Any",
+                    object::goff::AMODE_24 => "24-bit",
+                    object::goff::AMODE_31 => "31-bit",
+                    object::goff::AMODE_64 => "64-bit",
+                    object::goff::AMODE_ANY => "Any",
                     _ => "Unspecified",
                 }
             );
             println!(
                 "  RMODE: 0x{:02X} ({})",
-                flags.rmode.0,
+                flags.0[1],
                 match flags.rmode() {
-                    object::goff::GOFF_RMODE_24 => "24-bit",
-                    object::goff::GOFF_RMODE_31 => "31-bit",
-                    object::goff::GOFF_RMODE_64 => "64-bit",
+                    object::goff::RMODE_24 => "24-bit",
+                    object::goff::RMODE_31 => "31-bit",
+                    object::goff::RMODE_64 => "64-bit",
                     _ => "Unspecified",
                 }
             );
-            println!("  Text/Binding: 0x{:02X}", flags.text_and_binding);
-            println!("  Tasking/Exec: 0x{:02X}", flags.tasking_and_exec);
-            println!("  Dup/Strength: 0x{:02X}", flags.dup_and_strength);
-            println!("  Loading/Scope: 0x{:02X}", flags.loading_and_scope);
-            println!("  Linkage/Align: 0x{:02X}", flags.linkage_and_align);
+            println!("  Text/Binding: 0x{:02X}", flags.0[2]);
+            println!("  Tasking/Exec: 0x{:02X}", flags.0[3]);
+            println!("  Dup/Strength: 0x{:02X}", flags.0[4]);
+            println!("  Loading/Scope: 0x{:02X}", flags.0[5]);
+            println!("  Linkage/Align: 0x{:02X}", flags.0[6]);
             println!("  XPLINK: {}", flags.is_xplink());
             println!(
                 "  Binding Scope: 0x{:02X} ({})",
                 flags.binding_scope(),
                 match flags.binding_scope() {
-                    object::goff::GOFF_SCOPE_UNSPEC => "Unspecified",
-                    object::goff::GOFF_SCOPE_SECTION => "Section",
-                    object::goff::GOFF_SCOPE_MODULE => "Module",
-                    object::goff::GOFF_SCOPE_LIBRARY => "Library",
-                    object::goff::GOFF_SCOPE_IMPORT_EXPORT => "Import/Export",
+                    object::goff::ESD_BSC_UNSPEC => "Unspecified",
+                    object::goff::ESD_BSC_SECTION => "Section",
+                    object::goff::ESD_BSC_MODULE => "Module",
+                    object::goff::ESD_BSC_LIBRARY => "Library",
+                    object::goff::ESD_BSC_IMPORT_EXPORT => "Import/Export",
                     _ => "Unknown",
                 }
             );
@@ -564,26 +529,23 @@ fn goff_foo_binding_scope() {
     // Check specific symbols
     for esdid in [1, 2, 3, 4, 5, 9] {
         if let Some(symbol) = symbol_records.get(esdid - 1) {
-            let flags = symbol.behavioral_flags();
-            let name = ebcdic_to_ascii(symbol.name_bytes_owned());
-            let scope_raw = flags.loading_and_scope & 0xF0;
+            let flags = symbol.behavioral_attributes();
+            let name = symbol.name_utf8().unwrap();
+            let scope_raw = flags.0[5] & 0x0F;
             let scope_value = flags.binding_scope();
 
             println!("ESDID: 0x{:08X} | Name: {}", esdid, name);
-            println!(
-                "  Byte 5 (loading_and_scope): 0x{:02X}",
-                flags.loading_and_scope
-            );
-            println!("  Binding Scope (bits 4-7, mask 0xF0): 0x{:02X}", scope_raw);
+            println!("  Byte 5 (loading_and_scope): 0x{:02X}", flags.0[5]);
+            println!("  Binding Scope (bits 4-7, mask 0x0F): 0x{:02X}", scope_raw);
             println!("  binding_scope() returns: 0x{:02X}", scope_value.0);
             println!(
                 "  Matches constant: {}",
                 match scope_value {
-                    object::goff::GOFF_SCOPE_UNSPEC => "UNSPEC (0x00)",
-                    object::goff::GOFF_SCOPE_SECTION => "SECTION (0x10)",
-                    object::goff::GOFF_SCOPE_MODULE => "MODULE (0x20)",
-                    object::goff::GOFF_SCOPE_LIBRARY => "LIBRARY (0x30)",
-                    object::goff::GOFF_SCOPE_IMPORT_EXPORT => "IMPORT_EXPORT (0x40)",
+                    object::goff::ESD_BSC_UNSPEC => "UNSPEC (0x00)",
+                    object::goff::ESD_BSC_SECTION => "SECTION (0x01)",
+                    object::goff::ESD_BSC_MODULE => "MODULE (0x02)",
+                    object::goff::ESD_BSC_LIBRARY => "LIBRARY (0x03)",
+                    object::goff::ESD_BSC_IMPORT_EXPORT => "IMPORT_EXPORT (0x04)",
                     _ => "UNKNOWN",
                 }
             );
