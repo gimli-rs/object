@@ -77,6 +77,11 @@ Symbols
 (f1, Relocation { kind: Unknown, encoding: Generic, size: 50, target: Symbol(SymbolIndex(7)), addend: 0, implicit_addend: false, flags: Wasm { r_type: 19 } })
 (fc, Relocation { kind: Unknown, encoding: Generic, size: 28, target: Symbol(SymbolIndex(8)), addend: 0, implicit_addend: false, flags: Wasm { r_type: 7 } })
 
+<data> relocations
+(25, Relocation { kind: Unknown, encoding: Generic, size: 40, target: Symbol(SymbolIndex(5)), addend: 0, implicit_addend: false, flags: Wasm { r_type: 10 } })
+(32, Relocation { kind: Unknown, encoding: Generic, size: 40, target: Symbol(SymbolIndex(5)), addend: 4, implicit_addend: false, flags: Wasm { r_type: 10 } })
+(3f, Relocation { kind: Unknown, encoding: Generic, size: 40, target: Symbol(SymbolIndex(2)), addend: 0, implicit_addend: false, flags: Wasm { r_type: 13 } })
+
 .debug_info relocations
 (6, Relocation { kind: Unknown, encoding: Generic, size: 20, target: Symbol(SymbolIndex(10)), addend: 0, implicit_addend: false, flags: Wasm { r_type: 9 } })
 (c, Relocation { kind: Unknown, encoding: Generic, size: 20, target: Symbol(SymbolIndex(12)), addend: 0, implicit_addend: false, flags: Wasm { r_type: 9 } })

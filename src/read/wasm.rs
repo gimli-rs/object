@@ -63,8 +63,8 @@ pub struct WasmFile<'data, R = &'data [u8]> {
     sections: Vec<SectionHeader<'data>>,
     // Map from `SectionId` to `WasmSectionIndex`.
     id_sections: Box<[Option<WasmSectionIndex>; MAX_SECTION_ID + 1]>,
-    // Parsed `reloc.*` custom sections, keyed by the binary index of the target section.
-    relocations: Vec<RelocSection>,
+    // Parsed `reloc.*` custom sections, indexed by the `WasmSectionIndex` of the target section.
+    relocations: Vec<Vec<wp::RelocationEntry>>,
     // Data segments parsed from the `data` section.
     data_segments: Vec<WasmDataSegmentInternal<'data>>,
     // Whether the file has a `dylink` or `dylink.0` custom section.
@@ -84,30 +84,6 @@ pub struct WasmFile<'data, R = &'data [u8]> {
     // Address of the function body for the entry point.
     entry: u64,
     marker: PhantomData<R>,
-}
-
-#[derive(Debug)]
-struct RelocSection {
-    target: WasmSectionIndex,
-    entries: Vec<wp::RelocationEntry>,
-}
-
-impl RelocSection {
-    /// Return the entries in the given offset range.
-    ///
-    /// `range` must be `0..u64::MAX` unless the target is the Wasm data section.
-    fn entries_in_range(&self, range: &Range<u64>) -> &[wp::RelocationEntry] {
-        if *range == (0..u64::MAX) {
-            return &self.entries[..];
-        }
-        let start = self
-            .entries
-            .partition_point(|entry| u64::from(entry.offset) < range.start);
-        let end = self
-            .entries
-            .partition_point(|entry| u64::from(entry.offset) < range.end);
-        &self.entries[start..end]
-    }
 }
 
 #[derive(Debug)]
@@ -409,19 +385,21 @@ impl<'data, R: ReadRef<'data>> WasmFile<'data, R> {
                         let reader = wp::BinaryReader::new(section.data(), section.data_offset());
                         let reloc = wp::RelocSectionReader::new(reader)
                             .read_error("Invalid Wasm reloc section")?;
-                        let target = WasmSectionIndex(reloc.section_index());
-                        let mut entries = Vec::new();
+                        let target = reloc.section_index() as usize;
+                        let entries = file
+                            .relocations
+                            .get_mut(target)
+                            .read_error("Invalid Wasm reloc section target")?;
                         for entry in reloc.entries() {
                             let entry = entry.read_error("Invalid Wasm reloc entry")?;
                             entries.push(entry);
                         }
-                        if let Some(section) = file.sections.get(target.0 as usize) {
+                        if let Some(section) = file.sections.get(target) {
                             if section.id == wasm::SEC_DATA {
                                 // Sort so that we can binary search for data segments.
                                 entries.sort_by_key(|entry| entry.offset);
                             }
                         }
-                        file.relocations.push(RelocSection { target, entries });
                     } else if name.starts_with(".debug_") {
                         file.has_debug_symbols = true;
                     }
@@ -913,6 +891,7 @@ impl<'data, R: ReadRef<'data>> WasmFile<'data, R> {
             self.id_sections[id.0 as usize] = Some(WasmSectionIndex(self.sections.len() as u32));
         }
         self.sections.push(section);
+        self.relocations.push(Vec::new());
     }
 }
 
@@ -1472,27 +1451,24 @@ impl<'data, 'file, R: ReadRef<'data>> ObjectSection<'data> for WasmSection<'data
 
     #[inline]
     fn relocations(&self) -> WasmRelocationIterator<'data, 'file, R> {
-        let (target, offset_range) = match self.inner {
-            WasmSectionInner::Header {
-                section_index,
-                section,
-            } => {
-                if section.id == wasm::SEC_DATA {
-                    (None, 0..u64::MAX)
-                } else {
-                    (Some(section_index), 0..u64::MAX)
-                }
+        let (start_offset, entries) = match self.inner {
+            WasmSectionInner::Header { section_index, .. } => {
+                (0u64, &self.file.relocations[section_index.0 as usize][..])
             }
-            WasmSectionInner::DataSegment { segment, .. } => (
-                self.file.id_sections[wasm::SEC_DATA.0 as usize],
-                segment.section_offset..segment.section_offset + segment.data.len() as u64,
-            ),
+            WasmSectionInner::DataSegment { segment, .. } => {
+                let section_index = self.file.id_sections[wasm::SEC_DATA.0 as usize];
+                let entries =
+                    section_index.map_or(&[][..], |index| &self.file.relocations[index.0 as usize]);
+                let start_offset = segment.section_offset;
+                let end_offset = segment.section_offset + segment.data.len() as u64;
+                let start = entries.partition_point(|entry| u64::from(entry.offset) < start_offset);
+                let end = entries.partition_point(|entry| u64::from(entry.offset) < end_offset);
+                (start_offset, &entries[start..end])
+            }
         };
         WasmRelocationIterator {
-            target,
-            offset_range,
-            sections: self.file.relocations.iter(),
-            entries: [].iter(),
+            start_offset,
+            entries: entries.iter(),
             marker: PhantomData,
         }
     }
@@ -1767,13 +1743,7 @@ impl<'data, 'file> ObjectSymbol<'data> for WasmSymbol<'data, 'file> {
 /// An iterator for the relocations for a [`WasmSection`].
 #[derive(Debug)]
 pub struct WasmRelocationIterator<'data, 'file, R = &'data [u8]> {
-    /// Binary index of the wasm section we are iterating relocations for.
-    target: Option<WasmSectionIndex>,
-    /// The offset range if this is a data segment, otherwise `0..u64::MAX`.
-    offset_range: Range<u64>,
-    /// Remaining `reloc.*` sections that may target this section.
-    sections: slice::Iter<'file, RelocSection>,
-    /// Remaining entries from the current matching `reloc.*` section.
+    start_offset: u64,
     entries: slice::Iter<'file, wp::RelocationEntry>,
     marker: PhantomData<(&'data (), R)>,
 }
@@ -1782,14 +1752,7 @@ impl<'data, 'file, R> Iterator for WasmRelocationIterator<'data, 'file, R> {
     type Item = (u64, Relocation);
 
     fn next(&mut self) -> Option<Self::Item> {
-        let entry = loop {
-            if let Some(entry) = self.entries.next() {
-                break *entry;
-            }
-            let target = self.target?;
-            let next = self.sections.find(|r| r.target == target)?;
-            self.entries = next.entries_in_range(&self.offset_range).iter();
-        };
+        let entry = self.entries.next()?;
         let r_type = entry.ty as u8;
         // Number of bits the relocation patches in the target section.
         let size = (entry.ty.extent() * 8) as u8;
@@ -1816,7 +1779,7 @@ impl<'data, 'file, R> Iterator for WasmRelocationIterator<'data, 'file, R> {
             addend,
             flags: RelocationFlags::Wasm { r_type },
         };
-        let offset = u64::from(entry.offset) - self.offset_range.start;
+        let offset = u64::from(entry.offset) - self.start_offset;
         Some((offset, relocation))
     }
 }
