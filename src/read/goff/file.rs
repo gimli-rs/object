@@ -1,7 +1,7 @@
-use core::fmt::Debug;
-use core::mem;
-
+use alloc::borrow::Cow;
 use alloc::vec::Vec;
+use core::fmt::Debug;
+use core::marker::PhantomData;
 
 use crate::read::{
     self, Error, NoDynamicRelocationIterator, NoExportIterator, NoImportIterator,
@@ -9,8 +9,8 @@ use crate::read::{
 };
 
 use crate::{
-    Architecture, BigEndian as BE, Bytes, FileFlags, ObjectKind, ObjectSymbolTable, SectionIndex,
-    SymbolIndex, U32, goff,
+    Architecture, BigEndian as BE, FileFlags, ObjectKind, ObjectSymbolTable, SectionIndex,
+    SymbolIndex, goff,
 };
 
 use crate::goff::*;
@@ -20,9 +20,9 @@ use alloc::collections::BTreeMap as HashMap;
 use std::collections::HashMap;
 
 use super::{
-    GoffComdat, GoffComdatIterator, GoffRelocation, GoffSection, GoffSectionIterator, GoffSegment,
+    GoffComdat, GoffComdatIterator, GoffSection, GoffSectionIterator, GoffSegment,
     GoffSegmentIterator, GoffSegmentRef, GoffSymbol, GoffSymbolIterator, GoffSymbolTable,
-    GoffTextReference,
+    GoffTextReference, LogicalRecord,
 };
 
 /// A parsed GOFF file.
@@ -33,18 +33,18 @@ pub struct GoffFile<'data, R = &'data [u8]>
 where
     R: ReadRef<'data>,
 {
-    pub(super) data: R,
     pub(super) header: &'data goff::HeaderRecord,
     pub(super) sections: Vec<SymbolIndex>,
     pub(super) segments: HashMap<SymbolIndex, GoffSegment<'data>>,
     pub(super) symbols: Vec<GoffSymbol>,
-    pub(super) relocations: Vec<GoffRelocation>,
+    pub(super) relocations: Vec<goff::Relocation>,
     pub(super) record_count: Option<u32>,
-    pub(super) entry_name: Vec<&'data [u8]>,
+    pub(super) entry_name: Cow<'data, [u8]>,
     pub(super) entry_flags: Option<goff::FileFlags>,
     pub(super) entry_amode: Option<goff::Amode>,
     pub(super) entry_esdid: Option<u32>,
     pub(super) entry_offset: Option<u32>,
+    marker: PhantomData<R>,
 }
 
 impl<'data, R> GoffFile<'data, R>
@@ -53,59 +53,42 @@ where
 {
     /// Parse raw GOFF file data. Only fixed length records are supported
     pub fn parse(data: R) -> Result<Self> {
-        if (data.len().unwrap() % goff::RECORD_LEN) != 0 {
-            return Err(Error(
-                "Bad GOFF file length, only fixed length GOFF records are supported",
-            ));
-        }
-
-        let mut offset = 0;
-        let header = data
-            .read::<goff::HeaderRecord>(&mut offset)
-            .read_error("Invalid GOFF header size or alignment")?;
-        if header.ptv != goff::HDR_PREFIX {
-            return Err(Error("Unsupported GOFF header"));
-        }
+        let header = goff::HeaderRecord::parse(data)?;
+        let records = header.records(data)?;
 
         let mut file = GoffFile {
-            data,
             header,
             sections: Vec::new(),
             segments: HashMap::new(),
             symbols: Vec::new(),
             relocations: Vec::new(),
             record_count: None,
-            entry_name: Vec::new(),
+            entry_name: Cow::Borrowed(&[]),
             entry_flags: None,
             entry_amode: None,
             entry_esdid: None,
             entry_offset: None,
+            marker: PhantomData,
         };
 
-        file.parse_records(&mut offset)?;
+        file.parse_records(records)?;
         Ok(file)
     }
 
     /// Parses the body of a GOFF file (each record after the module header record)
-    pub fn parse_records(&mut self, offset: &mut u64) -> Result<()> {
-        while let Ok(record_prefix) = self.data.read_at::<goff::RecordPrefix>(*offset) {
-            if !record_prefix.is_valid() {
-                return Err(Error(
-                    "Invalid GOFF prefix or version encountered while parsing",
-                ));
-            }
-
-            match record_prefix.record_type() {
-                RT_ESD => self.parse_esd(offset, record_prefix.is_continued())?,
-                RT_TXT => self.parse_txt(offset, record_prefix.is_continued())?,
+    fn parse_records(&mut self, mut records: &'data [goff::Record]) -> Result<()> {
+        while let Some(record) = LogicalRecord::parse(&mut records)? {
+            match record.initial.ptv.record_type() {
+                RT_ESD => self.parse_esd(record.cast())?,
+                RT_TXT => self.parse_txt(record.cast())?,
                 RT_RLD => {
-                    self.parse_relocations(offset, record_prefix.is_continued())?;
+                    self.parse_relocations(record.cast())?;
                 }
                 RT_LEN => {
-                    self.parse_len_record(offset, record_prefix.is_continued())?;
+                    self.parse_len_record(record.cast())?;
                 }
                 RT_END => {
-                    self.parse_end(offset, record_prefix.is_continued())?;
+                    self.parse_end(record.cast())?;
                     break;
                 }
                 _ => return Err(Error("Invalid GOFF record type encountered while parsing")),
@@ -114,12 +97,8 @@ where
         Ok(())
     }
 
-    /// Parses ESD records and their continuations, incrementing offset
-    pub fn parse_esd(&mut self, offset: &mut u64, is_continued: bool) -> Result<()> {
-        let esd_record = self
-            .data
-            .read::<SymbolRecord>(offset)
-            .map_err(|_| Error("failed to read esd record"))?;
+    fn parse_esd(&mut self, record: LogicalRecord<'data, goff::SymbolRecord>) -> Result<()> {
+        let esd_record = record.initial;
 
         // grab element symbol ID and parent
         let esdid = esd_record.esdid.get(BE);
@@ -131,27 +110,13 @@ where
             usize::try_from(parent_esdid).expect("Target architecture pointer size is too small"),
         );
 
-        // parse continuations if any (provides name data)
-        let cont_data: Vec<&'data [u8]> = if is_continued {
-            self.parse_continuations(offset)?
-        } else {
-            Vec::new()
-        };
-
         // Flatten name from the ESD record and any continuation records into a single Vec<u8>
-        let name_length: usize = esd_record.name_length.get(BE).into();
-        let capped_length = name_length.clamp(0, SIZEOF_ESD_DATA);
-        let mut esd_name_data: Vec<u8> = esd_record.name[0..capped_length].to_vec();
-        for part in cont_data {
-            esd_name_data.extend_from_slice(part);
-        }
-        // Trim to declared name_length (continuation payloads are zero-padded to 77 bytes)
-        esd_name_data.truncate(name_length);
+        let name = record.esd_name()?.into_owned();
 
         let goffsymbol = GoffSymbol {
             symbol_index: symbolindex,
             esdid,
-            name: esd_name_data,
+            name,
             symbol_type: esd_record.symbol_type,
             parent_esdid: parent_symbolindex,
             offset: esd_record.offset.get(BE),
@@ -178,12 +143,8 @@ where
         Ok(())
     }
 
-    /// Parses TXT records and their continuations, incrementing offset
-    pub fn parse_txt(&mut self, offset: &mut u64, is_continued: bool) -> Result<()> {
-        let txt_record = self
-            .data
-            .read::<TextRecord>(offset)
-            .map_err(|_| Error("failed to read txt record"))?;
+    fn parse_txt(&mut self, record: LogicalRecord<'data, goff::TextRecord>) -> Result<()> {
+        let txt_record = record.initial;
         let esdid = txt_record.element_esdid.get(BE);
 
         let symbolindex = SymbolIndex(
@@ -200,34 +161,16 @@ where
             _ => symbol.parent_esdid(),
         };
 
-        // Parse continuations if any
-        let cont_data: Vec<&'data [u8]> = if is_continued {
-            self.parse_continuations(offset)?
-        } else {
-            Vec::new()
-        };
-
         // Create text reference
-        let data_length = usize::from(txt_record.data_length.get(BE));
-        // Only slice up to the size of the data field in this record (56 bytes max)
-        let initial_data_len = data_length.min(goff::SIZEOF_TXT_DATA);
-        let mut text_ref = GoffTextReference {
+        let text_ref = GoffTextReference {
             esdid: symbolindex,
             record_style: txt_record.record_style,
             offset: txt_record.offset.get(BE),
             true_length: txt_record.true_length.get(BE),
             text_encoding: txt_record.text_encoding.get(BE),
             data_length: txt_record.data_length.get(BE),
-            text_data: vec![&txt_record.data[..initial_data_len]],
+            text_data: record.txt_data_parts()?.collect(),
         };
-        // Trim each continuation slice so we don't append zero-padding.
-        // Continuation payloads are 77 bytes but only `remaining` of them hold real data.
-        let mut remaining = data_length - initial_data_len;
-        for part in cont_data {
-            let take = remaining.min(part.len());
-            text_ref.text_data.push(&part[..take]);
-            remaining -= take;
-        }
 
         // Update segments map with new text data if ED ESDID already exists
         if let Some(segment) = self.segments.get_mut(&ed_symbolindex) {
@@ -250,11 +193,8 @@ where
     }
 
     /// Parses the END record (if an entry point is specified, will be parsed here)
-    pub fn parse_end(&mut self, offset: &mut u64, is_continued: bool) -> Result<()> {
-        let end_record = self
-            .data
-            .read::<EndRecord>(offset)
-            .map_err(|_| Error("failed to read end record"))?;
+    fn parse_end(&mut self, record: LogicalRecord<'data, goff::EndRecord>) -> Result<()> {
+        let end_record = record.initial;
 
         // Parse record count and entry flags first
         self.record_count = Some(end_record.record_count.get(BE)).filter(|&cnt| cnt != 0);
@@ -270,176 +210,25 @@ where
         // Parse entry point data
         self.entry_amode = Some(end_record.amode);
         self.entry_esdid = Some(end_record.esdid.get(BE));
-        let name_length: usize = end_record.name_length.get(BE).into();
-        let capped_length = name_length.clamp(0, SIZEOF_ENTRY_POINT_NAME);
-        self.entry_name
-            .push(&end_record.entry_name[0..capped_length]);
-
-        // If entry name is too large, need to parse the rest from continuation records
-        if is_continued {
-            let name_data = self.parse_continuations(offset)?;
-            // Trim continuation slices to avoid appending zero-padding.
-            let mut remaining = name_length - capped_length;
-            for part in name_data {
-                let take = remaining.min(part.len());
-                self.entry_name.push(&part[..take]);
-                remaining -= take;
-            }
-        }
+        self.entry_name = record.entry_name()?;
         Ok(())
     }
 
-    /// Parses continuation records until none are left (incrementing offset)
-    pub fn parse_continuations(&self, offset: &mut u64) -> Result<Vec<&'data [u8]>> {
-        let mut cont_data: Vec<&[u8]> = Vec::new();
-        loop {
-            let record_prefix = self.data.read_at::<goff::RecordPrefix>(*offset).unwrap();
-            let cont_record = self.data.read::<ContinuationRecord>(offset).unwrap();
-            cont_data.push(&cont_record.data[..]);
-
-            if !record_prefix.is_continued() {
-                break;
-            }
-        }
-        Ok(cont_data)
-    }
-
-    /// Parses individual relocation items from a byte buffer
-    /// Items are variable size (8-28 bytes) depending on compression flags
-    fn parse_relocation_items(&self, data: &[u8], data_length: u16) -> Result<Vec<GoffRelocation>> {
-        let mut relocations = Vec::new();
-        let mut prev_r_pointer: Option<u32> = None;
-        let mut prev_p_pointer: Option<u32> = None;
-        let mut prev_offset: Option<u32> = None;
-
-        // The length field indicates total bytes of relocation data to parse
-        let rld_end = (data_length as usize).min(data.len());
-
-        // Parse items until we've consumed all the relocation data
-        let mut data = Bytes(&data[..rld_end]);
-        while !data.is_empty() {
-            let item = data
-                .read::<goff::RelocationDataItem>()
-                .read_error("Invalid GOFF relocation data item")?;
-            let flags = item.flags;
-
-            // Parse R-pointer (conditionally)
-            let r_pointer = if flags.is_same_r_id() {
-                prev_r_pointer.read_error("GOFF R-pointer compression without previous value")?
-            } else {
-                data.read::<U32<_>>()
-                    .read_error("Invalid GOFF relocation R-pointer")?
-                    .get(BE)
-            };
-
-            // Parse P-pointer (conditionally)
-            let p_pointer = if flags.is_same_p_id() {
-                prev_p_pointer.read_error("GOFF P-pointer compression without previous value")?
-            } else {
-                data.read::<U32<_>>()
-                    .read_error("Invalid GOFF relocation P-pointer")?
-                    .get(BE)
-            };
-
-            // Parse Offset (conditionally)
-            let offset = if flags.is_same_offset() {
-                prev_offset.read_error("GOFF offset compression without previous value")?
-            } else if flags.is_offset64() {
-                return Err(Error("Unsupported GOFF 8 byte relocation offset"));
-            } else {
-                data.read::<U32<_>>()
-                    .read_error("Invalid GOFF relocation offset")?
-                    .get(BE)
-            };
-
-            // Create and store relocation
-            relocations.push(GoffRelocation {
-                flags,
-                r_pointer,
-                p_pointer,
-                offset,
-            });
-
-            // Update previous values for next iteration
-            prev_r_pointer = Some(r_pointer);
-            prev_p_pointer = Some(p_pointer);
-            prev_offset = Some(offset);
-        }
-
-        Ok(relocations)
-    }
-
     /// Parses a RelocationRecord and its continuations, extracting individual relocation items
-    pub fn parse_relocations(&mut self, offset: &mut u64, is_continued: bool) -> Result<()> {
-        // Read the main RLD record
-        let rel_record = self
-            .data
-            .read::<RelocationRecord>(offset)
-            .map_err(|_| Error("failed to read relocation record"))?;
-
-        // Get the length field which indicates how much relocation data is present
-        let data_length = rel_record.length.get(BE);
-
-        // Start with main record data (74 bytes)
-        let mut all_data: Vec<u8> = rel_record.data.to_vec();
-
-        // Append continuation data if present (77 bytes per continuation)
-        if is_continued {
-            let cont_data = self.parse_continuations(offset)?;
-            for chunk in cont_data {
-                all_data.extend_from_slice(chunk);
-            }
+    fn parse_relocations(
+        &mut self,
+        record: LogicalRecord<'data, goff::RelocationRecord>,
+    ) -> Result<()> {
+        for relocation in record.rld_items()? {
+            self.relocations.push(relocation?);
         }
-
-        // Parse individual items from concatenated buffer using the length field
-        let relocations = self.parse_relocation_items(&all_data, data_length)?;
-
-        // Store each relocation in file.relocations
-        self.relocations.extend(relocations);
-
         Ok(())
     }
 
     /// Parses a LengthRecord and its continuations, extracting deferred element-length data items
     /// and updating the corresponding symbols with their lengths
-    pub fn parse_len_record(&mut self, offset: &mut u64, is_continued: bool) -> Result<()> {
-        // Read the main LEN record
-        let len_record = self
-            .data
-            .read::<LengthRecord>(offset)
-            .map_err(|_| Error("failed to read len record"))?;
-
-        // Get the length field which indicates how much length data is present
-        let data_length = len_record.length.get(BE);
-
-        // Start with main record data (72 bytes)
-        let mut all_data: Vec<u8> = len_record.data.to_vec();
-
-        // Append continuation data if present (77 bytes per continuation)
-        if is_continued {
-            let cont_data = self.parse_continuations(offset)?;
-            for chunk in cont_data {
-                all_data.extend_from_slice(chunk);
-            }
-        }
-
-        // Calculate number of data items (each LengthDataItem is 12 bytes)
-        const ITEM_SIZE: usize = mem::size_of::<LengthDataItem>();
-        let num_items = (data_length as usize) / ITEM_SIZE;
-
-        // Parse each LengthDataItem from the buffer
-        let mut cursor: u64 = 0;
-        for _ in 0..num_items {
-            if cursor + ITEM_SIZE as u64 > all_data.len() as u64 {
-                break; // Incomplete item at end
-            }
-
-            // Parse the item from the buffer using read
-            let item = all_data
-                .as_slice()
-                .read::<LengthDataItem>(&mut cursor)
-                .map_err(|_| Error("failed to read length data item"))?;
-
+    fn parse_len_record(&mut self, record: LogicalRecord<'data, goff::LengthRecord>) -> Result<()> {
+        for item in record.len_items()? {
             let esdid = item.esdid.get(BE);
             let length = item.length.get(BE);
 
@@ -661,5 +450,36 @@ where
             flags: self.entry_flags,
             amode: self.entry_amode,
         }
+    }
+}
+
+impl goff::HeaderRecord {
+    /// Read the header record.
+    ///
+    /// Also checks that the prefix is valid.
+    pub fn parse<'data, R: ReadRef<'data>>(data: R) -> Result<&'data Self> {
+        let header = data
+            .read_at::<goff::HeaderRecord>(0)
+            .read_error("Invalid GOFF header size or alignment")?;
+        if header.ptv != goff::HDR_PREFIX {
+            return Err(Error("Unsupported GOFF header"));
+        }
+        Ok(header)
+    }
+
+    /// Read the records following the header record.
+    ///
+    /// `data` must be the entire file data.
+    /// Only fixed length records are supported.
+    pub fn records<'data, R: ReadRef<'data>>(&self, data: R) -> Result<&'data [goff::Record]> {
+        let len = data.len().read_error("Unknown GOFF file size")?;
+        if len % goff::RECORD_LEN != 0 {
+            return Err(Error(
+                "Bad GOFF file length, only fixed length GOFF records are supported",
+            ));
+        }
+        let count = len / goff::RECORD_LEN - 1;
+        data.read_slice_at(goff::RECORD_LEN, count as usize)
+            .read_error("GOFF read failed")
     }
 }

@@ -90,7 +90,7 @@ impl<'a, 'b, T: Copy> DebugBitFields<'a, 'b, T> {
         self.result?;
         for (i, &val) in bytes(self.unused).iter().enumerate() {
             if val != 0 {
-                write!(self.f, "{}B{}(0x{:02x})", self.sep, i, val)?;
+                write!(self.f, "{}{}:{:02x}", self.sep, i, val)?;
                 self.sep = " | ";
             }
         }
@@ -99,6 +99,24 @@ impl<'a, 'b, T: Copy> DebugBitFields<'a, 'b, T> {
         }
         Ok(())
     }
+}
+
+/// Only fixed length records are supported (UNIX compatible file
+/// systems only support fixed length records). Each record is exactly
+/// 80 bytes, unused space must be padded
+pub const RECORD_LEN: u64 = 80;
+
+/// Each record will have a payload of 77 bytes
+pub const SIZEOF_RECORD_DATA: usize = 77;
+
+/// A fixed length record.
+#[derive(Debug, Clone, Copy)]
+#[repr(C)]
+pub struct Record {
+    /// Type of record.
+    pub ptv: RecordPrefix,
+    /// Payload.
+    pub data: [u8; SIZEOF_RECORD_DATA],
 }
 
 /// The module header ("HDR") record at the start of every GOFF file.
@@ -216,25 +234,20 @@ pub struct RelocationRecord {
 ///
 /// Size is variable depending on which fields are present as determined by the flags field.
 #[derive(Debug, Clone, Copy)]
-#[repr(C)]
-pub struct RelocationDataItem {
+pub struct Relocation {
     /// Relocation flags
     pub flags: RelocationFlags,
-    /// Reserved. Must be 2 bytes of 0.
-    pub reserved: [u8; 2],
-}
-
-/// Each continuation record will have a payload of 77 bytes
-pub const SIZEOF_CONTINUATION_RECORD_DATA: usize = 77;
-
-/// The generic continuation record.
-#[derive(Debug, Clone, Copy)]
-#[repr(C)]
-pub struct ContinuationRecord {
-    /// Type of record.
-    pub ptv: RecordPrefix,
-    /// Payload.
-    pub data: [u8; SIZEOF_CONTINUATION_RECORD_DATA],
+    /// ESDID of the ESD entry (ED or ER) which will be used as the basis for relocation.
+    ///
+    /// For internal references: ED ESDID defining the referenced element.
+    /// For external references: ER or PR ESDID describing the referenced symbol.
+    pub r_pointer: u32,
+    /// ESDID of the element within which this address constant resides.
+    pub p_pointer: u32,
+    /// Offset within the element described by the P pointer where the adcon is located.
+    ///
+    /// This is the fixup target, relocation target, or target field to be updated.
+    pub offset: u64,
 }
 
 /// Size of element length data is max 72 bytes
@@ -295,11 +308,6 @@ pub struct EndRecord {
     /// Entry point name (first 54 bytes)
     pub entry_name: [u8; SIZEOF_ENTRY_POINT_NAME],
 }
-
-/// Only fixed length records are supported (UNIX compatible file
-/// systems only support fixed length records). Each record is exactly
-/// 80 bytes, unused space must be padded
-pub const RECORD_LEN: u64 = 80;
 
 newtype!(
     /// Values for `EndRecord::flags`.
@@ -1167,12 +1175,11 @@ impl RelocationFlags {
 }
 
 unsafe_impl_pod!(
+    Record,
     HeaderRecord,
     SymbolRecord,
     TextRecord,
     RelocationRecord,
-    RelocationDataItem,
-    ContinuationRecord,
     LengthRecord,
     LengthDataItem,
     EndRecord,
