@@ -240,24 +240,29 @@ impl<'a> Writer<'a> {
         self.buffer.write_pod(&fileend);
     }
 
-    pub fn write_er_to_text(&mut self, symbol_name: &[u8]) -> u32 {
+    pub fn write_er_to_text(&mut self, symbol_name: &[u8], scope: goff::BindingScope) -> u32 {
         let mut er = self.get_esd_record(goff::ESD_ST_ER, goff::ESD_NS_NORMAL_NAME, self.cu_esdid);
 
         // External reference to code: executable, export scope
         let attrs = default_attrs()
             .with_executable(goff::EXEC_CODE)
-            .with_binding_scope(goff::ESD_BSC_IMPORT_EXPORT)
+            .with_binding_scope(scope)
             .with_alignment(goff::ALIGN_32BYTE);
         er.behavioral_attributes = attrs;
 
         self.write_esd_record(&er, symbol_name)
     }
 
-    pub fn write_er_to_data(&mut self, symbol_name: &[u8]) -> u32 {
-        self.write_wsa_symbol(symbol_name, 0)
+    pub fn write_er_to_data(&mut self, symbol_name: &[u8], scope: goff::BindingScope) -> u32 {
+        self.write_wsa_symbol(symbol_name, 0, scope)
     }
 
-    pub fn write_wsa_symbol(&mut self, symbol_name: &[u8], symbol_length: u32) -> u32 {
+    pub fn write_wsa_symbol(
+        &mut self,
+        symbol_name: &[u8],
+        symbol_length: u32,
+        scope: goff::BindingScope,
+    ) -> u32 {
         // Emit parent C_WSA64 ED symbol (data section).
         let mut ed = self.get_esd_record(goff::ESD_ST_ED, goff::ESD_NS_PARTS, self.cu_esdid);
         ed.flags = goff::ESD_SF_FILL_BYTE_PRESENCE;
@@ -265,7 +270,6 @@ impl<'a> Writer<'a> {
         let ed_attrs = data_attrs()
             .with_binding_algorithm(goff::ESD_BA_MERGE)
             .with_executable(goff::EXEC_DATA)
-            .with_binding_scope(goff::ESD_BSC_IMPORT_EXPORT)
             .with_alignment(goff::ALIGN_HALFWORD);
         ed.behavioral_attributes = ed_attrs;
         let ed_esdid = self.write_esd_record(&ed, EBCDIC_C_WSA64);
@@ -274,7 +278,7 @@ impl<'a> Writer<'a> {
         let pr_attrs = default_attrs()
             .with_executable(goff::EXEC_DATA)
             .with_binding_strength(goff::ESD_BST_WEAK)
-            .with_binding_scope(goff::ESD_BSC_IMPORT_EXPORT)
+            .with_binding_scope(scope)
             .with_alignment(goff::ALIGN_HALFWORD);
 
         self.write_pr(symbol_name, ed_esdid, symbol_length, pr_attrs)
@@ -363,7 +367,13 @@ impl<'a> Writer<'a> {
     }
 
     /// Write an ER (External Reference) record with weak binding.
-    pub fn write_er_weak(&mut self, name: &[u8], parent_esdid: u32, is_code: bool) -> u32 {
+    pub fn write_er_weak(
+        &mut self,
+        name: &[u8],
+        parent_esdid: u32,
+        is_code: bool,
+        scope: goff::BindingScope,
+    ) -> u32 {
         let mut er = self.get_esd_record(goff::ESD_ST_ER, goff::ESD_NS_NORMAL_NAME, parent_esdid);
 
         let attrs = default_attrs()
@@ -373,7 +383,7 @@ impl<'a> Writer<'a> {
                 goff::EXEC_DATA
             })
             .with_binding_strength(goff::ESD_BST_WEAK)
-            .with_binding_scope(goff::ESD_BSC_IMPORT_EXPORT);
+            .with_binding_scope(scope);
         er.behavioral_attributes = attrs;
 
         self.write_esd_record(&er, name)
@@ -414,33 +424,24 @@ impl<'a> Writer<'a> {
 
         // Determine section attributes and create ED based on kind
         let ed_esdid = match section.kind {
-            SectionKind::Text => {
-                let attrs = code_attrs().with_binding_scope(goff::ESD_BSC_MODULE);
-                self.write_ed(
-                    &section.name,
-                    self.cu_esdid,
-                    section.data.len() as u32,
-                    attrs,
-                )
-            }
-            SectionKind::Data => {
-                let attrs = data_attrs().with_binding_scope(goff::ESD_BSC_MODULE);
-                self.write_ed(
-                    &section.name,
-                    self.cu_esdid,
-                    section.data.len() as u32,
-                    attrs,
-                )
-            }
-            SectionKind::ReadOnlyData => {
-                let attrs = readonly_data_attrs().with_binding_scope(goff::ESD_BSC_MODULE);
-                self.write_ed(
-                    &section.name,
-                    self.cu_esdid,
-                    section.data.len() as u32,
-                    attrs,
-                )
-            }
+            SectionKind::Text => self.write_ed(
+                &section.name,
+                self.cu_esdid,
+                section.data.len() as u32,
+                code_attrs(),
+            ),
+            SectionKind::Data => self.write_ed(
+                &section.name,
+                self.cu_esdid,
+                section.data.len() as u32,
+                data_attrs(),
+            ),
+            SectionKind::ReadOnlyData => self.write_ed(
+                &section.name,
+                self.cu_esdid,
+                section.data.len() as u32,
+                readonly_data_attrs(),
+            ),
             SectionKind::Debug => {
                 // Debug sections need special handling with ESD_NS_PARTS namespace
                 self.write_debug_section_symbol(&section.name, section.data.len() as u32)
@@ -610,12 +611,13 @@ impl<'a> Writer<'a> {
         parent_ed_esdid: u32,
     ) -> Result<u32> {
         // Determine binding scope based on symbol properties
-        let scope = if symbol.is_local() {
-            goff::ESD_BSC_SECTION
-        } else if symbol.scope == SymbolScope::Dynamic {
-            goff::ESD_BSC_IMPORT_EXPORT
-        } else {
-            goff::ESD_BSC_MODULE
+        let scope = match symbol.scope {
+            SymbolScope::Compilation => goff::ESD_BSC_SECTION,
+            SymbolScope::Linkage => goff::ESD_BSC_LIBRARY,
+            SymbolScope::Dynamic => goff::ESD_BSC_IMPORT_EXPORT,
+            SymbolScope::Unknown => {
+                return Err(Error(format!("Unsupported symbol scope: {:?}", symbol)));
+            }
         };
 
         // Write LD (Label Definition) for the symbol
@@ -638,15 +640,21 @@ impl<'a> Writer<'a> {
             }
         };
 
+        let scope = if symbol.scope == SymbolScope::Dynamic {
+            goff::ESD_BSC_IMPORT_EXPORT
+        } else {
+            goff::ESD_BSC_LIBRARY
+        };
+
         // Check if it's a weak reference
         let esdid = if symbol.weak {
-            self.write_er_weak(&symbol.name, self.cu_esdid, is_code)
+            self.write_er_weak(&symbol.name, self.cu_esdid, is_code, scope)
         } else {
             // Use existing methods for compatibility
             if is_code {
-                self.write_er_to_text(&symbol.name)
+                self.write_er_to_text(&symbol.name, scope)
             } else {
-                self.write_er_to_data(&symbol.name)
+                self.write_er_to_data(&symbol.name, scope)
             }
         };
 
