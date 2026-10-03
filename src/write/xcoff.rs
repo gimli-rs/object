@@ -249,6 +249,7 @@ impl<'a> Object<'a> {
         // Calculate size of section data.
         let mut section_offsets = vec![SectionOffsets::default(); self.sections.len()];
         for (index, section) in self.sections.iter().enumerate() {
+            // The file data, which is empty for bss sections.
             let len = section.data.len() as u64;
             let sectype = section.kind;
             // Section address should be 0 for all sections except the .text, .data, and .bss sections.
@@ -257,7 +258,7 @@ impl<'a> Object<'a> {
                 || sectype == SectionKind::UninitializedData
             {
                 section_offsets[index].address = address;
-                address += len;
+                address += section.size;
                 address = align(address, 4);
             } else {
                 section_offsets[index].address = 0;
@@ -407,7 +408,7 @@ impl<'a> Object<'a> {
                     s_paddr: section_offsets[index].address.into(),
                     // This field has the same value as the s_paddr field.
                     s_vaddr: section_offsets[index].address.into(),
-                    s_size: (section.data.len() as u64).into(),
+                    s_size: section.size.into(),
                     s_scnptr: (section_offsets[index].data_offset as u64).into(),
                     s_relptr: (section_offsets[index].reloc_offset as u64).into(),
                     s_lnnoptr: 0.into(),
@@ -423,7 +424,7 @@ impl<'a> Object<'a> {
                     s_paddr: (section_offsets[index].address as u32).into(),
                     // This field has the same value as the s_paddr field.
                     s_vaddr: (section_offsets[index].address as u32).into(),
-                    s_size: (section.data.len() as u32).into(),
+                    s_size: (section.size as u32).into(),
                     s_scnptr: (section_offsets[index].data_offset as u32).into(),
                     s_relptr: (section_offsets[index].reloc_offset as u32).into(),
                     s_lnnoptr: 0.into(),

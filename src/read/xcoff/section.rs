@@ -313,7 +313,16 @@ pub trait SectionHeader: Debug + Pod + read::private::Sealed {
     }
 
     /// Return the offset and size of the section in the file.
+    ///
+    /// Returns `None` for sections that have no data in the file (`STYP_BSS`, `STYP_TBSS`).
     fn file_range(&self) -> Option<(u64, u64)> {
+        if self
+            .s_flags()
+            .typ()
+            .intersects(xcoff::STYP_BSS | xcoff::STYP_TBSS)
+        {
+            return None;
+        }
         Some((self.s_scnptr().into(), self.s_size().into()))
     }
 
