@@ -763,10 +763,33 @@ impl<'data> Builder<'data> {
         struct Offset(u64);
         impl Offset {
             fn reserve(&mut self, size: u64, align: u64) -> (u64, u64) {
-                self.0 = write::align(self.0, align);
+                // An alignment of 0 means no alignment.
+                self.0 = write::align(self.0, align.max(1));
                 let offset = self.0;
                 self.0 += size;
                 (offset, size)
+            }
+        }
+
+        // `Offset::reserve` requires a power of two alignment, and the file offset
+        // calculations must not overflow.
+        for section in &self.sections {
+            if section.sh_addralign > 1 && !section.sh_addralign.is_power_of_two() {
+                return Err(Error(format!(
+                    "Unsupported sh_addralign value 0x{:x} for section '{}'",
+                    section.sh_addralign, section.name,
+                )));
+            }
+            if section
+                .sh_offset
+                .checked_add(section.sh_size)
+                .and_then(|end| end.checked_add(section.sh_addralign))
+                .is_none()
+            {
+                return Err(Error(format!(
+                    "Unsupported sh_offset value 0x{:x} for section '{}'",
+                    section.sh_offset, section.name,
+                )));
             }
         }
 
@@ -949,6 +972,20 @@ impl<'data> Builder<'data> {
         } else {
             if self.gnu_hash_bucket_count == 0 {
                 return Err(Error::new(".gnu.hash bucket count is zero"));
+            }
+            // The bloom filter index is masked with `bloom_count - 1`.
+            if !self.gnu_hash_bloom_count.is_power_of_two() {
+                return Err(Error(format!(
+                    "Unsupported .gnu.hash bloom count {}",
+                    self.gnu_hash_bloom_count
+                )));
+            }
+            // The bloom filter shifts the 32-bit hash by `bloom_shift`.
+            if self.gnu_hash_bloom_shift >= 32 {
+                return Err(Error(format!(
+                    "Unsupported .gnu.hash bloom shift {}",
+                    self.gnu_hash_bloom_shift
+                )));
             }
             // TODO: recalculate bucket_count?
             out_dynsyms[num_local_dynamic..].sort_by_key(|sym| match sym.gnu_hash {

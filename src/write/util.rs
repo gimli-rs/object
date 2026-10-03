@@ -182,8 +182,8 @@ impl WritableBuffer for Vec<u8> {
     fn reserve(&mut self, size: u64) -> Result<(), ()> {
         debug_assert!(self.is_empty());
         let size = usize::try_from(size).map_err(|_| ())?;
-        self.reserve(size);
-        Ok(())
+        // `Vec::reserve` panics if the capacity exceeds `isize::MAX`.
+        self.try_reserve(size).map_err(|_| ())
     }
 
     #[inline]
