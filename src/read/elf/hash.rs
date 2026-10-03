@@ -211,7 +211,7 @@ impl<'data, Elf: FileHeader> GnuHashTable<'data, Elf> {
         if filter & (1 << (hash % word_bits)) == 0 {
             return None;
         }
-        if filter & (1 << ((hash >> self.bloom_shift) % word_bits)) == 0 {
+        if filter & (1 << (hash.checked_shr(self.bloom_shift)? % word_bits)) == 0 {
             return None;
         }
 
@@ -320,6 +320,28 @@ mod tests {
         let symbols = SymbolTable::<FileHeader, &[u8]>::default();
         let versions = VersionTable::default();
         // The bloom filter passes so that the empty bucket lookup is reached.
+        assert!(
+            table
+                .find(LittleEndian, b"foo", 0, None, &symbols, &versions)
+                .is_none()
+        );
+    }
+
+    #[test]
+    fn gnu_hash_table_large_bloom_shift() {
+        let data = [
+            1, 0, 0, 0, // bucket_count = 1
+            1, 0, 0, 0, // symbol_base = 1
+            1, 0, 0, 0, // bloom_count = 1
+            32, 0, 0, 0, // bloom_shift = 32 (invalid)
+            0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // bloom_filters[0]
+            1, 0, 0, 0, // buckets[0] = 1
+            1, 0, 0, 0, // values[0] (chain end bit set)
+        ];
+        let table = GnuHashTable::<FileHeader>::parse(LittleEndian, &data).unwrap();
+        let symbols = SymbolTable::<FileHeader, &[u8]>::default();
+        let versions = VersionTable::default();
+        // The first bloom bit passes so that the shifted hash is computed.
         assert!(
             table
                 .find(LittleEndian, b"foo", 0, None, &symbols, &versions)
