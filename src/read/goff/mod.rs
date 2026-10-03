@@ -2,7 +2,9 @@
 //!
 //! Provides `GoffFile` and related types which implement the `Object` trait.
 
-//FIXME_GOFF: need to update the following based on that's used
+mod record;
+pub use record::*;
+
 mod file;
 pub use file::*;
 

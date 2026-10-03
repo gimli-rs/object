@@ -421,7 +421,7 @@ fn goff_relocation_compression() {
 // SIZEOF_RELOCATION_DATA (74) and forces write_rld_records to emit the first RLD record
 // with the "is_continued" bit set (ptv byte 1 = RT_RLD | 0x01 = 0x21), followed by a
 // continuation record carrying the remaining 10 bytes. The reader's parse_relocations
-// then calls parse_continuations to reassemble the full item stream.
+// then reassembles the full item stream.
 #[test]
 fn goff_relocation_rld_continuation() {
     let mut object = write::Object::new(BinaryFormat::Goff, Architecture::S390x, Endianness::Big);

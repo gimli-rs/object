@@ -1,0 +1,625 @@
+Format: GOFF
+HdrRecord {
+    ArchitectureLevel: 1
+}
+EsdRecord {
+    SymbolType: ESD_ST_SD (0x0)
+    Esdid: 1 ("base#C")
+    ParentEsdid: 0
+    Offset: 0x0
+    Length: 0x0
+    ExtendedAttributeEsdid: 0
+    ExtendedAttributeDataOffset: 0x0
+    Namespace: ESD_NS_PROGRAM_MANAGEMENT_BINDER (0x0)
+    Flags: 0x0
+    FillByteValue: 0x0
+    AssociatedDataEsdid: 0
+    Priority: 0
+    BehavioralAttributes: 0:00 1:00 2:00 3:60 4:00 5:01 6:00 7:00 8:00 9:00
+        TASK_RENT (3:60)
+        ESD_BSC_SECTION (5:01)
+    NameLength: 6
+}
+EsdRecord {
+    SymbolType: ESD_ST_ED (0x1)
+    Esdid: 2 ("C_CODE")
+    ParentEsdid: 1 ("base#C")
+    Offset: 0x0
+    Length: 0xFC
+    ExtendedAttributeEsdid: 0
+    ExtendedAttributeDataOffset: 0x0
+    Namespace: ESD_NS_NORMAL_NAME (0x1)
+    Flags: ESD_SF_FILL_BYTE_PRESENCE (0x80)
+    FillByteValue: 0x0
+    AssociatedDataEsdid: 0
+    Priority: 0
+    BehavioralAttributes: 0:03 1:03 2:00 3:0A 4:00 5:00 6:03 7:00 8:00 9:00
+        AMODE_ANY (0:03)
+        RMODE_31 (1:03)
+        TXT_RS_BYTE (2:00)
+        ESD_BA_CONCATENATE (2:00)
+        READ_ONLY (3:08)
+        EXEC_CODE (3:02)
+        LOAD_INITIAL (5:00)
+        ALIGN_DOUBLEWORD (6:03)
+    NameLength: 6
+}
+EsdRecord {
+    SymbolType: ESD_ST_LD (0x2)
+    Esdid: 3 ("base#C")
+    ParentEsdid: 2 ("C_CODE")
+    Offset: 0x0
+    Length: 0x0
+    ExtendedAttributeEsdid: 0
+    ExtendedAttributeDataOffset: 0x0
+    Namespace: ESD_NS_NORMAL_NAME (0x1)
+    Flags: 0x0
+    FillByteValue: 0x0
+    AssociatedDataEsdid: 0
+    Priority: 0
+    BehavioralAttributes: 0:03 1:00 2:00 3:02 4:00 5:01 6:00 7:00 8:00 9:00
+        AMODE_ANY (0:03)
+        EXEC_CODE (3:02)
+        ESD_BST_STRONG (4:00)
+        ESD_BSC_SECTION (5:01)
+    NameLength: 6
+}
+EsdRecord {
+    SymbolType: ESD_ST_ED (0x1)
+    Esdid: 4 ("C_@@PPA2")
+    ParentEsdid: 1 ("base#C")
+    Offset: 0x0
+    Length: 0x0
+    ExtendedAttributeEsdid: 0
+    ExtendedAttributeDataOffset: 0x0
+    Namespace: ESD_NS_PARTS (0x3)
+    Flags: ESD_SF_FILL_BYTE_PRESENCE (0x80)
+    FillByteValue: 0x0
+    AssociatedDataEsdid: 0
+    Priority: 0
+    BehavioralAttributes: 0:03 1:03 2:01 3:09 4:00 5:00 6:03 7:00 8:00 9:00
+        AMODE_ANY (0:03)
+        RMODE_31 (1:03)
+        TXT_RS_BYTE (2:00)
+        ESD_BA_MERGE (2:01)
+        READ_ONLY (3:08)
+        EXEC_DATA (3:01)
+        LOAD_INITIAL (5:00)
+        ALIGN_DOUBLEWORD (6:03)
+    NameLength: 8
+}
+EsdRecord {
+    SymbolType: ESD_ST_PR (0x3)
+    Esdid: 5 (".&ppa2")
+    ParentEsdid: 4 ("C_@@PPA2")
+    Offset: 0x0
+    Length: 0x8
+    ExtendedAttributeEsdid: 0
+    ExtendedAttributeDataOffset: 0x0
+    Namespace: ESD_NS_PARTS (0x3)
+    Flags: ESD_SF_RENAMEABLE (0x20)
+    FillByteValue: 0x0
+    AssociatedDataEsdid: 0
+    Priority: 0
+    BehavioralAttributes: 0:03 1:00 2:00 3:01 4:10 5:01 6:03 7:00 8:00 9:00
+        AMODE_ANY (0:03)
+        EXEC_DATA (3:01)
+        ESD_DSS_WARNING (4:10)
+        ESD_BSC_SECTION (5:01)
+        ALIGN_DOUBLEWORD (6:03)
+    NameLength: 6
+}
+EsdRecord {
+    SymbolType: ESD_ST_ED (0x1)
+    Esdid: 6 ("B_IDRL")
+    ParentEsdid: 1 ("base#C")
+    Offset: 0x0
+    Length: 0x22
+    ExtendedAttributeEsdid: 0
+    ExtendedAttributeDataOffset: 0x0
+    Namespace: ESD_NS_NORMAL_NAME (0x1)
+    Flags: ESD_SF_FILL_BYTE_PRESENCE (0x80)
+    FillByteValue: 0x0
+    AssociatedDataEsdid: 0
+    Priority: 0
+    BehavioralAttributes: 0:03 1:03 2:10 3:08 4:00 5:80 6:03 7:00 8:00 9:00
+        AMODE_ANY (0:03)
+        RMODE_31 (1:03)
+        TXT_RS_STRUCTURED (2:10)
+        ESD_BA_CONCATENATE (2:00)
+        READ_ONLY (3:08)
+        EXEC_UNSPEC (3:00)
+        LOAD_NONE (5:80)
+        ALIGN_DOUBLEWORD (6:03)
+    NameLength: 6
+}
+EsdRecord {
+    SymbolType: ESD_ST_SD (0x0)
+    Esdid: 7 ("CEEMAIN")
+    ParentEsdid: 0
+    Offset: 0x0
+    Length: 0x0
+    ExtendedAttributeEsdid: 0
+    ExtendedAttributeDataOffset: 0x0
+    Namespace: ESD_NS_PROGRAM_MANAGEMENT_BINDER (0x0)
+    Flags: 0x0
+    FillByteValue: 0x0
+    AssociatedDataEsdid: 0
+    Priority: 0
+    BehavioralAttributes: 0:00 1:00 2:00 3:00 4:00 5:00 6:00 7:00 8:00 9:00
+        TASK_UNSPEC (3:00)
+        ESD_BSC_UNSPEC (5:00)
+    NameLength: 7
+}
+EsdRecord {
+    SymbolType: ESD_ST_ED (0x1)
+    Esdid: 8 ("C_DATA")
+    ParentEsdid: 7 ("CEEMAIN")
+    Offset: 0x0
+    Length: 0xC
+    ExtendedAttributeEsdid: 0
+    ExtendedAttributeDataOffset: 0x0
+    Namespace: ESD_NS_NORMAL_NAME (0x1)
+    Flags: ESD_SF_FILL_BYTE_PRESENCE (0x80)
+    FillByteValue: 0x0
+    AssociatedDataEsdid: 0
+    Priority: 0
+    BehavioralAttributes: 0:03 1:03 2:00 3:09 4:00 5:00 6:03 7:00 8:00 9:00
+        AMODE_ANY (0:03)
+        RMODE_31 (1:03)
+        TXT_RS_BYTE (2:00)
+        ESD_BA_CONCATENATE (2:00)
+        READ_ONLY (3:08)
+        EXEC_DATA (3:01)
+        LOAD_INITIAL (5:00)
+        ALIGN_DOUBLEWORD (6:03)
+    NameLength: 6
+}
+EsdRecord {
+    SymbolType: ESD_ST_LD (0x2)
+    Esdid: 9 ("CEEMAIN")
+    ParentEsdid: 8 ("C_DATA")
+    Offset: 0x0
+    Length: 0x0
+    ExtendedAttributeEsdid: 0
+    ExtendedAttributeDataOffset: 0x0
+    Namespace: ESD_NS_NORMAL_NAME (0x1)
+    Flags: 0x0
+    FillByteValue: 0x0
+    AssociatedDataEsdid: 0
+    Priority: 0
+    BehavioralAttributes: 0:03 1:00 2:00 3:01 4:00 5:03 6:00 7:00 8:00 9:00
+        AMODE_ANY (0:03)
+        EXEC_DATA (3:01)
+        ESD_BST_STRONG (4:00)
+        ESD_BSC_LIBRARY (5:03)
+    NameLength: 7
+}
+EsdRecord {
+    SymbolType: ESD_ST_ER (0x4)
+    Esdid: 10 ("CEESTART")
+    ParentEsdid: 1 ("base#C")
+    Offset: 0x0
+    Length: 0x0
+    ExtendedAttributeEsdid: 0
+    ExtendedAttributeDataOffset: 0x0
+    Namespace: ESD_NS_NORMAL_NAME (0x1)
+    Flags: 0x0
+    FillByteValue: 0x0
+    AssociatedDataEsdid: 0
+    Priority: 0
+    BehavioralAttributes: 0:00 1:00 2:00 3:02 4:00 5:04 6:00 7:00 8:00 9:00
+        AMODE_UNSPEC (0:00)
+        EXEC_CODE (3:02)
+        ESD_BST_STRONG (4:00)
+        ESD_BSC_IMPORT_EXPORT (5:04)
+    NameLength: 8
+}
+EsdRecord {
+    SymbolType: ESD_ST_LD (0x2)
+    Esdid: 11 ("main")
+    ParentEsdid: 2 ("C_CODE")
+    Offset: 0x0
+    Length: 0x0
+    ExtendedAttributeEsdid: 0
+    ExtendedAttributeDataOffset: 0x0
+    Namespace: ESD_NS_NORMAL_NAME (0x1)
+    Flags: ESD_SF_RENAMEABLE (0x20)
+    FillByteValue: 0x0
+    AssociatedDataEsdid: 0
+    Priority: 0
+    BehavioralAttributes: 0:03 1:00 2:00 3:02 4:00 5:03 6:00 7:00 8:00 9:00
+        AMODE_ANY (0:03)
+        EXEC_CODE (3:02)
+        ESD_BST_STRONG (4:00)
+        ESD_BSC_LIBRARY (5:03)
+    NameLength: 4
+}
+EsdRecord {
+    SymbolType: ESD_ST_ER (0x4)
+    Esdid: 12 ("printf")
+    ParentEsdid: 1 ("base#C")
+    Offset: 0x0
+    Length: 0x0
+    ExtendedAttributeEsdid: 0
+    ExtendedAttributeDataOffset: 0x0
+    Namespace: ESD_NS_NORMAL_NAME (0x1)
+    Flags: 0x0
+    FillByteValue: 0x0
+    AssociatedDataEsdid: 0
+    Priority: 0
+    BehavioralAttributes: 0:00 1:00 2:00 3:01 4:00 5:04 6:00 7:00 8:00 9:00
+        AMODE_UNSPEC (0:00)
+        EXEC_DATA (3:01)
+        ESD_BST_STRONG (4:00)
+        ESD_BSC_IMPORT_EXPORT (5:04)
+    NameLength: 6
+}
+EsdRecord {
+    SymbolType: ESD_ST_ER (0x4)
+    Esdid: 13 ("EDCINPL")
+    ParentEsdid: 1 ("base#C")
+    Offset: 0x0
+    Length: 0x0
+    ExtendedAttributeEsdid: 0
+    ExtendedAttributeDataOffset: 0x0
+    Namespace: ESD_NS_NORMAL_NAME (0x1)
+    Flags: 0x0
+    FillByteValue: 0x0
+    AssociatedDataEsdid: 0
+    Priority: 0
+    BehavioralAttributes: 0:00 1:00 2:00 3:02 4:00 5:03 6:00 7:00 8:00 9:00
+        AMODE_UNSPEC (0:00)
+        EXEC_CODE (3:02)
+        ESD_BST_STRONG (4:00)
+        ESD_BSC_LIBRARY (5:03)
+    NameLength: 7
+}
+EsdRecord {
+    SymbolType: ESD_ST_SD (0x0)
+    Esdid: 14 ("CEESTART")
+    ParentEsdid: 0
+    Offset: 0x0
+    Length: 0x0
+    ExtendedAttributeEsdid: 0
+    ExtendedAttributeDataOffset: 0x0
+    Namespace: ESD_NS_PROGRAM_MANAGEMENT_BINDER (0x0)
+    Flags: 0x0
+    FillByteValue: 0x0
+    AssociatedDataEsdid: 0
+    Priority: 0
+    BehavioralAttributes: 0:00 1:00 2:00 3:60 4:00 5:00 6:00 7:00 8:00 9:00
+        TASK_RENT (3:60)
+        ESD_BSC_UNSPEC (5:00)
+    NameLength: 8
+}
+EsdRecord {
+    SymbolType: ESD_ST_ED (0x1)
+    Esdid: 15 ("C_CODE")
+    ParentEsdid: 14 ("CEESTART")
+    Offset: 0x0
+    Length: 0x7C
+    ExtendedAttributeEsdid: 0
+    ExtendedAttributeDataOffset: 0x0
+    Namespace: ESD_NS_NORMAL_NAME (0x1)
+    Flags: ESD_SF_FILL_BYTE_PRESENCE (0x80)
+    FillByteValue: 0x0
+    AssociatedDataEsdid: 0
+    Priority: 0
+    BehavioralAttributes: 0:03 1:03 2:00 3:0A 4:00 5:00 6:03 7:00 8:00 9:00
+        AMODE_ANY (0:03)
+        RMODE_31 (1:03)
+        TXT_RS_BYTE (2:00)
+        ESD_BA_CONCATENATE (2:00)
+        READ_ONLY (3:08)
+        EXEC_CODE (3:02)
+        LOAD_INITIAL (5:00)
+        ALIGN_DOUBLEWORD (6:03)
+    NameLength: 6
+}
+EsdRecord {
+    SymbolType: ESD_ST_LD (0x2)
+    Esdid: 16 ("CEESTART")
+    ParentEsdid: 15 ("C_CODE")
+    Offset: 0x0
+    Length: 0x0
+    ExtendedAttributeEsdid: 0
+    ExtendedAttributeDataOffset: 0x0
+    Namespace: ESD_NS_NORMAL_NAME (0x1)
+    Flags: 0x0
+    FillByteValue: 0x0
+    AssociatedDataEsdid: 0
+    Priority: 0
+    BehavioralAttributes: 0:03 1:00 2:00 3:02 4:00 5:03 6:00 7:00 8:00 9:00
+        AMODE_ANY (0:03)
+        EXEC_CODE (3:02)
+        ESD_BST_STRONG (4:00)
+        ESD_BSC_LIBRARY (5:03)
+    NameLength: 8
+}
+EsdRecord {
+    SymbolType: ESD_ST_ER (0x4)
+    Esdid: 17 ("CEEMAIN")
+    ParentEsdid: 14 ("CEESTART")
+    Offset: 0x0
+    Length: 0x0
+    ExtendedAttributeEsdid: 0
+    ExtendedAttributeDataOffset: 0x0
+    Namespace: ESD_NS_NORMAL_NAME (0x1)
+    Flags: 0x0
+    FillByteValue: 0x0
+    AssociatedDataEsdid: 0
+    Priority: 0
+    BehavioralAttributes: 0:00 1:00 2:00 3:01 4:01 5:02 6:00 7:00 8:00 9:00
+        AMODE_UNSPEC (0:00)
+        EXEC_DATA (3:01)
+        ESD_BST_WEAK (4:01)
+        ESD_BSC_MODULE (5:02)
+    NameLength: 7
+}
+EsdRecord {
+    SymbolType: ESD_ST_ER (0x4)
+    Esdid: 18 ("CEEFMAIN")
+    ParentEsdid: 14 ("CEESTART")
+    Offset: 0x0
+    Length: 0x0
+    ExtendedAttributeEsdid: 0
+    ExtendedAttributeDataOffset: 0x0
+    Namespace: ESD_NS_NORMAL_NAME (0x1)
+    Flags: 0x0
+    FillByteValue: 0x0
+    AssociatedDataEsdid: 0
+    Priority: 0
+    BehavioralAttributes: 0:00 1:00 2:00 3:01 4:01 5:02 6:00 7:00 8:00 9:00
+        AMODE_UNSPEC (0:00)
+        EXEC_DATA (3:01)
+        ESD_BST_WEAK (4:01)
+        ESD_BSC_MODULE (5:02)
+    NameLength: 8
+}
+EsdRecord {
+    SymbolType: ESD_ST_ER (0x4)
+    Esdid: 19 ("CEEBETBL")
+    ParentEsdid: 14 ("CEESTART")
+    Offset: 0x0
+    Length: 0x0
+    ExtendedAttributeEsdid: 0
+    ExtendedAttributeDataOffset: 0x0
+    Namespace: ESD_NS_NORMAL_NAME (0x1)
+    Flags: 0x0
+    FillByteValue: 0x0
+    AssociatedDataEsdid: 0
+    Priority: 0
+    BehavioralAttributes: 0:00 1:00 2:00 3:01 4:00 5:03 6:00 7:00 8:00 9:00
+        AMODE_UNSPEC (0:00)
+        EXEC_DATA (3:01)
+        ESD_BST_STRONG (4:00)
+        ESD_BSC_LIBRARY (5:03)
+    NameLength: 8
+}
+EsdRecord {
+    SymbolType: ESD_ST_ER (0x4)
+    Esdid: 20 ("CEEROOTA")
+    ParentEsdid: 14 ("CEESTART")
+    Offset: 0x0
+    Length: 0x0
+    ExtendedAttributeEsdid: 0
+    ExtendedAttributeDataOffset: 0x0
+    Namespace: ESD_NS_NORMAL_NAME (0x1)
+    Flags: 0x0
+    FillByteValue: 0x0
+    AssociatedDataEsdid: 0
+    Priority: 0
+    BehavioralAttributes: 0:00 1:00 2:00 3:02 4:00 5:03 6:00 7:00 8:00 9:00
+        AMODE_UNSPEC (0:00)
+        EXEC_CODE (3:02)
+        ESD_BST_STRONG (4:00)
+        ESD_BSC_LIBRARY (5:03)
+    NameLength: 8
+}
+EsdRecord {
+    SymbolType: ESD_ST_ER (0x4)
+    Esdid: 21 ("CEESG003")
+    ParentEsdid: 1 ("base#C")
+    Offset: 0x0
+    Length: 0x0
+    ExtendedAttributeEsdid: 0
+    ExtendedAttributeDataOffset: 0x0
+    Namespace: ESD_NS_NORMAL_NAME (0x1)
+    Flags: 0x0
+    FillByteValue: 0x0
+    AssociatedDataEsdid: 0
+    Priority: 0
+    BehavioralAttributes: 0:00 1:00 2:00 3:01 4:00 5:03 6:00 7:00 8:00 9:00
+        AMODE_UNSPEC (0:00)
+        EXEC_DATA (3:01)
+        ESD_BST_STRONG (4:00)
+        ESD_BSC_LIBRARY (5:03)
+    NameLength: 8
+}
+TxtRecord {
+    RecordStyle: TXT_RS_BYTE (0x0)
+    ElementEsdid: 2 ("C_CODE")
+    Offset: 0x0
+    TrueLength: 0x0
+    TextEncoding: 0x0
+    DataLength: 0xFC
+    Continuations: 3
+}
+TxtRecord {
+    RecordStyle: TXT_RS_BYTE (0x0)
+    ElementEsdid: 5 (".&ppa2")
+    Offset: 0x0
+    TrueLength: 0x0
+    TextEncoding: 0x0
+    DataLength: 0x8
+}
+TxtRecord {
+    RecordStyle: TXT_RS_STRUCTURED (0x1)
+    ElementEsdid: 6 ("B_IDRL")
+    Offset: 0x0
+    TrueLength: 0x0
+    TextEncoding: 0x0
+    DataLength: 0x22
+}
+TxtRecord {
+    RecordStyle: TXT_RS_BYTE (0x0)
+    ElementEsdid: 8 ("C_DATA")
+    Offset: 0x0
+    TrueLength: 0x0
+    TextEncoding: 0x0
+    DataLength: 0xC
+}
+TxtRecord {
+    RecordStyle: TXT_RS_BYTE (0x0)
+    ElementEsdid: 15 ("C_CODE")
+    Offset: 0x0
+    TrueLength: 0x0
+    TextEncoding: 0x0
+    DataLength: 0x7C
+    Continuations: 1
+}
+RldRecord {
+    Length: 0xC4
+    Continuations: 2
+    Relocation {
+        Flags: 0:00 1:00 2:02 3:00 4:04 5:00
+            RLD_RT_ADDRESS (1:00)
+            RLD_RO_LABEL (1:00)
+            RLD_ACT_SUBTRACT (2:02)
+            RLD_FS_FETCH (2:00)
+            ByteLength(4) (4:04)
+        RPointer: 3 ("base#C")
+        PPointer: 2 ("C_CODE")
+        Offset: 0xCC
+    }
+    Relocation {
+        Flags: 0:60 1:00 2:00 3:00 4:04 5:00
+            SAME_P_ID (0:40)
+            SAME_OFFSET (0:20)
+            RLD_RT_ADDRESS (1:00)
+            RLD_RO_LABEL (1:00)
+            RLD_ACT_ADD (2:00)
+            RLD_FS_FETCH (2:00)
+            ByteLength(4) (4:04)
+        RPointer: 10 ("CEESTART")
+    }
+    Relocation {
+        Flags: 0:40 1:00 2:00 3:00 4:04 5:00
+            SAME_P_ID (0:40)
+            RLD_RT_ADDRESS (1:00)
+            RLD_RO_LABEL (1:00)
+            RLD_ACT_ADD (2:00)
+            RLD_FS_FETCH (2:00)
+            ByteLength(4) (4:04)
+        RPointer: 12 ("printf")
+        Offset: 0xF8
+    }
+    Relocation {
+        Flags: 0:00 1:00 2:00 3:00 4:04 5:00
+            RLD_RT_ADDRESS (1:00)
+            RLD_RO_LABEL (1:00)
+            RLD_ACT_ADD (2:00)
+            RLD_FS_FETCH (2:00)
+            ByteLength(4) (4:04)
+        RPointer: 3 ("base#C")
+        PPointer: 5 (".&ppa2")
+        Offset: 0x4
+    }
+    Relocation {
+        Flags: 0:20 1:00 2:00 3:00 4:04 5:00
+            SAME_OFFSET (0:20)
+            RLD_RT_ADDRESS (1:00)
+            RLD_RO_LABEL (1:00)
+            RLD_ACT_ADD (2:00)
+            RLD_FS_FETCH (2:00)
+            ByteLength(4) (4:04)
+        RPointer: 11 ("main")
+        PPointer: 8 ("C_DATA")
+    }
+    Relocation {
+        Flags: 0:40 1:00 2:00 3:00 4:04 5:00
+            SAME_P_ID (0:40)
+            RLD_RT_ADDRESS (1:00)
+            RLD_RO_LABEL (1:00)
+            RLD_ACT_ADD (2:00)
+            RLD_FS_FETCH (2:00)
+            ByteLength(4) (4:04)
+        RPointer: 13 ("EDCINPL")
+        Offset: 0x8
+    }
+    Relocation {
+        Flags: 0:00 1:00 2:00 3:00 4:04 5:00
+            RLD_RT_ADDRESS (1:00)
+            RLD_RO_LABEL (1:00)
+            RLD_ACT_ADD (2:00)
+            RLD_FS_FETCH (2:00)
+            ByteLength(4) (4:04)
+        RPointer: 16 ("CEESTART")
+        PPointer: 15 ("C_CODE")
+        Offset: 0x18
+    }
+    Relocation {
+        Flags: 0:C0 1:00 2:00 3:00 4:04 5:00
+            SAME_R_ID (0:80)
+            SAME_P_ID (0:40)
+            RLD_RT_ADDRESS (1:00)
+            RLD_RO_LABEL (1:00)
+            RLD_ACT_ADD (2:00)
+            RLD_FS_FETCH (2:00)
+            ByteLength(4) (4:04)
+        Offset: 0x60
+    }
+    Relocation {
+        Flags: 0:40 1:00 2:01 3:00 4:04 5:00
+            SAME_P_ID (0:40)
+            RLD_RT_ADDRESS (1:00)
+            RLD_RO_LABEL (1:00)
+            RLD_ACT_ADD (2:00)
+            RLD_FS_STORE (2:01)
+            ByteLength(4) (4:04)
+        RPointer: 17 ("CEEMAIN")
+        Offset: 0x2C
+    }
+    Relocation {
+        Flags: 0:40 1:00 2:01 3:00 4:04 5:00
+            SAME_P_ID (0:40)
+            RLD_RT_ADDRESS (1:00)
+            RLD_RO_LABEL (1:00)
+            RLD_ACT_ADD (2:00)
+            RLD_FS_STORE (2:01)
+            ByteLength(4) (4:04)
+        RPointer: 18 ("CEEFMAIN")
+        Offset: 0x68
+    }
+    Relocation {
+        Flags: 0:40 1:00 2:01 3:00 4:04 5:00
+            SAME_P_ID (0:40)
+            RLD_RT_ADDRESS (1:00)
+            RLD_RO_LABEL (1:00)
+            RLD_ACT_ADD (2:00)
+            RLD_FS_STORE (2:01)
+            ByteLength(4) (4:04)
+        RPointer: 19 ("CEEBETBL")
+        Offset: 0x74
+    }
+    Relocation {
+        Flags: 0:40 1:00 2:01 3:00 4:04 5:00
+            SAME_P_ID (0:40)
+            RLD_RT_ADDRESS (1:00)
+            RLD_RO_LABEL (1:00)
+            RLD_ACT_ADD (2:00)
+            RLD_FS_STORE (2:01)
+            ByteLength(4) (4:04)
+        RPointer: 20 ("CEEROOTA")
+        Offset: 0x78
+    }
+}
+EndRecord {
+    Flags: ENTRY_BY_OFFSET (0x1)
+    EntryAmode: AMODE_ANY (0x3)
+    RecordCount: 29
+    EntryEsdid: 15 ("C_CODE")
+    EntryOffset: 0x0
+    EntryNameLength: 0
+}

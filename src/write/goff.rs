@@ -532,14 +532,14 @@ impl<'a> Writer<'a> {
 
             let start = data.len() - data_remaining_amount;
             let mut end = data.len();
-            if data_remaining_amount > goff::SIZEOF_CONTINUATION_RECORD_DATA {
+            if data_remaining_amount > goff::SIZEOF_RECORD_DATA {
                 ptv = ptv.with_continued(true);
-                end = start + goff::SIZEOF_CONTINUATION_RECORD_DATA;
+                end = start + goff::SIZEOF_RECORD_DATA;
             }
 
-            let mut cont_record = goff::ContinuationRecord {
+            let mut cont_record = goff::Record {
                 ptv,
-                data: [0u8; goff::SIZEOF_CONTINUATION_RECORD_DATA],
+                data: [0u8; goff::SIZEOF_RECORD_DATA],
             };
             let record_data_amount = end - start;
             cont_record.data[..record_data_amount].copy_from_slice(&data[start..end]);
@@ -757,11 +757,8 @@ impl<'a> Writer<'a> {
         reloc: &PendingRelocation,
     ) -> Result<()> {
         // Write fixed header
-        let item = goff::RelocationDataItem {
-            flags,
-            reserved: [0u8; 2],
-        };
-        buffer.write_pod(&item);
+        buffer.write_pod(&flags);
+        buffer.write_zeros(2);
 
         // Write R-pointer if not compressed
         if !flags.is_same_r_id() {
