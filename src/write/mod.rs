@@ -661,10 +661,22 @@ impl<'a> Object<'a> {
             BinaryFormat::MachO => symbol_id = self.macho_add_thread_var(symbol_id),
             _ => {}
         }
+        self.set_symbol_section(symbol_id, section, offset, size);
+    }
+
+    pub(crate) fn set_symbol_section(
+        &mut self,
+        symbol_id: SymbolId,
+        section: SectionId,
+        offset: u64,
+        size: u64,
+    ) {
         let symbol = self.symbol_mut(symbol_id);
         symbol.value = offset;
         symbol.size = size;
         symbol.section = SymbolSection::Section(section);
+        #[cfg(feature = "macho")]
+        Self::macho_set_symbol_section(symbol);
     }
 
     /// Convert a symbol to a section symbol and offset.

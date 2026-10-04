@@ -202,6 +202,22 @@ impl<'a> Object<'a> {
         SymbolFlags::MachO { n_type, n_desc }
     }
 
+    // Workaround for flags being set when the section is undefined.
+    pub(crate) fn macho_set_symbol_section(symbol: &mut Symbol) {
+        let SymbolFlags::MachO { n_type, n_desc } = &mut symbol.flags else {
+            // Flags haven't been set yet, nothing to do.
+            return;
+        };
+        // Update only the fields affected by section.
+        *n_type = n_type.with_type(macho::N_SECT);
+        if symbol.scope == SymbolScope::Unknown || symbol.scope == SymbolScope::Compilation {
+            *n_type = n_type.without(macho::N_EXT);
+        }
+        if symbol.weak {
+            *n_desc = n_desc.without(macho::N_WEAK_REF).with(macho::N_WEAK_DEF);
+        }
+    }
+
     fn macho_tlv_bootstrap(&mut self) -> SymbolId {
         match self.tlv_bootstrap {
             Some(id) => id,
@@ -292,10 +308,7 @@ impl<'a> Object<'a> {
         .unwrap();
 
         // Update the symbol to point to the tlv.
-        let symbol = self.symbol_mut(symbol_id);
-        symbol.value = offset;
-        symbol.size = size;
-        symbol.section = SymbolSection::Section(section);
+        self.set_symbol_section(symbol_id, section, offset, size);
 
         init_symbol_id
     }

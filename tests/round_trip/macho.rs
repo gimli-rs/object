@@ -1,7 +1,7 @@
 use object::read::macho::MachHeader;
-use object::read::{Object, ObjectSection};
+use object::read::{Object, ObjectSection, ObjectSymbol};
 use object::write::WritableBuffer;
-use object::{Architecture, BigEndian, BinaryFormat, Endianness, macho, read, write};
+use object::{Architecture, BigEndian, BinaryFormat, Endianness, SymbolScope, macho, read, write};
 
 // Test that segment size is valid when the first section needs alignment.
 #[test]
@@ -62,6 +62,56 @@ fn issue_552_section_file_alignment() {
     assert_eq!(section.file_range(), Some((offset + 32, 1)));
     assert_eq!(section.address(), 32);
     assert_eq!(section.size(), 1);
+}
+
+#[test]
+fn issue_1002_symbol_flags_order() {
+    let mut object = write::Object::new(
+        BinaryFormat::MachO,
+        Architecture::X86_64,
+        Endianness::Little,
+    );
+    let section = object.section_id(write::StandardSection::ReadOnlyData);
+    object.set_mangling(object::write::Mangling::None);
+    object.append_section_data(section, &[0; 8], 1);
+
+    let mut add_symbol = |name: &[u8], scope, weak, swap: bool| {
+        let symbol = object.add_symbol(write::Symbol {
+            name: name.to_vec(),
+            value: 0,
+            size: 0,
+            kind: object::SymbolKind::Data,
+            scope,
+            weak,
+            section: write::SymbolSection::Undefined,
+            flags: object::SymbolFlags::None,
+        });
+        if !swap {
+            object.add_symbol_data(symbol, section, &[1; 8], 8);
+        }
+        match object.symbol_flags_mut(symbol) {
+            object::SymbolFlags::MachO { n_desc, .. } => *n_desc |= macho::N_NO_DEAD_STRIP,
+            _ => unreachable!(),
+        }
+        if swap {
+            object.add_symbol_data(symbol, section, &[1; 8], 8);
+        }
+    };
+    add_symbol(b"link1", SymbolScope::Linkage, true, false);
+    add_symbol(b"link2", SymbolScope::Linkage, true, true);
+    add_symbol(b"comp1", SymbolScope::Compilation, false, false);
+    add_symbol(b"comp2", SymbolScope::Compilation, false, true);
+
+    let bytes = &*object.write().unwrap();
+    let object = read::File::parse(bytes).unwrap();
+
+    let symbol1 = object.symbol_by_name("link1").unwrap();
+    let symbol2 = object.symbol_by_name("link2").unwrap();
+    assert_eq!(symbol1.flags(), symbol2.flags());
+
+    let symbol1 = object.symbol_by_name("comp1").unwrap();
+    let symbol2 = object.symbol_by_name("comp2").unwrap();
+    assert_eq!(symbol1.flags(), symbol2.flags());
 }
 
 #[test]
