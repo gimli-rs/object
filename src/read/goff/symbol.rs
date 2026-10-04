@@ -3,6 +3,7 @@ use alloc::vec::Vec;
 use core::fmt::Debug;
 use core::str;
 
+use crate::BigEndian as BE;
 use crate::ebcdic;
 use crate::goff;
 use crate::goff::*;
@@ -12,112 +13,39 @@ use crate::read::{
     SymbolIndex, SymbolKind, SymbolScope, SymbolSection,
 };
 
-use super::GoffFile;
+use super::{GoffFile, LogicalRecord};
 
 /// A symbol in an [`GoffFile`].
 ///
 /// Most functionality is provided by the [`ObjectSymbol`] trait implementation.
 #[derive(Debug, Clone)]
-pub struct GoffSymbol {
-    /// Symbol table index (same as the ESD Identifier)
-    pub(super) symbol_index: SymbolIndex,
-    /// ESD Identifier (ESDID).
-    pub(super) esdid: u32,
+pub struct GoffSymbol<'data> {
+    /// ESD record.
+    pub(super) record: LogicalRecord<'data, goff::SymbolRecord>,
     /// Symbol name (EBCDIC-encoded, flattened from ESD record and any continuation records)
     pub(super) name: Vec<u8>,
-    /// Symbol Type
-    pub(super) symbol_type: SymbolType,
-    /// Parent of Owning ESDID
-    pub(super) parent_esdid: SymbolIndex,
-    /// Offset.
-    pub(super) offset: u32,
     /// Length (size of allocated memory of program element or section)
+    ///
+    /// May be from a LEN record.
     pub(super) length: u32,
-    /// Extended Attribute ESDID
-    pub(super) ea_esdid: u32,
-    /// Extended Attribute Data Offset
-    pub(super) ea_data_offset: u32,
-    /// Name Space ID
-    pub(super) namespace: goff::SymbolNamespace,
-    /// Symbol Flags.
-    pub(super) flags: goff::SymbolFlags,
-    /// Fill Byte Value (the specific 1-byte value used to pad memory)
-    pub(super) fill_byte_value: u8,
-    /// Associated data ID
-    pub(super) ada_esdid: u32,
-    /// Priority
-    pub(super) priority: u32,
-    /// Behavioral Attributes
-    pub(super) behavioral_attributes: BehavioralAttributes,
-    /// Name Length
-    pub(super) name_length: u16,
 }
 
-impl GoffSymbol {
-    /// Get the ESDID (ESD Identifier) of this symbol.
-    #[inline]
-    pub fn esdid(&self) -> u32 {
-        self.esdid
+impl<'data> GoffSymbol<'data> {
+    /// Get the raw GOFF ESD record.
+    pub fn goff_record(&self) -> &'data goff::SymbolRecord {
+        self.record.initial
     }
 
-    /// Get the symbol type.
+    /// Get the ESDID (ESD Identifier) of this symbol.
     #[inline]
-    pub fn symbol_type(&self) -> SymbolType {
-        self.symbol_type
+    pub fn esdid(&self) -> SymbolIndex {
+        SymbolIndex(self.record.initial.esdid.get(BE) as usize)
     }
 
     /// Get the parent ESDID as a SymbolIndex.
     #[inline]
     pub fn parent_esdid(&self) -> SymbolIndex {
-        self.parent_esdid
-    }
-
-    /// Get the offset of this symbol.
-    #[inline]
-    pub fn offset(&self) -> u32 {
-        self.offset
-    }
-
-    /// Get the length (size) of this symbol.
-    #[inline]
-    pub fn length(&self) -> u32 {
-        self.length
-    }
-
-    /// Get the extended attribute ESDID.
-    #[inline]
-    pub fn ea_esdid(&self) -> u32 {
-        self.ea_esdid
-    }
-
-    /// Get the extended attribute data offset.
-    #[inline]
-    pub fn ea_data_offset(&self) -> u32 {
-        self.ea_data_offset
-    }
-
-    /// Get the fill byte value used to pad memory.
-    #[inline]
-    pub fn fill_byte_value(&self) -> u8 {
-        self.fill_byte_value
-    }
-
-    /// Get the associated data ESDID.
-    #[inline]
-    pub fn ada_esdid(&self) -> u32 {
-        self.ada_esdid
-    }
-
-    /// Get the priority value.
-    #[inline]
-    pub fn priority(&self) -> u32 {
-        self.priority
-    }
-
-    /// Get the name length.
-    #[inline]
-    pub fn name_length(&self) -> u16 {
-        self.name_length
+        SymbolIndex(self.record.initial.parent_esdid.get(BE) as usize)
     }
 
     /// Get the raw EBCDIC-encoded name bytes of this symbol.
@@ -129,19 +57,19 @@ impl GoffSymbol {
         &self.name
     }
 
-    /// `behavioral_attributes` field in the ESD record.
+    /// Get the length (size) of this symbol.
     #[inline]
-    pub fn behavioral_attributes(&self) -> BehavioralAttributes {
-        self.behavioral_attributes
+    pub fn length(&self) -> u32 {
+        self.length
     }
 }
 
-impl read::private::Sealed for GoffSymbol {}
+impl<'data> read::private::Sealed for GoffSymbol<'data> {}
 
-impl<'data> ObjectSymbol<'data> for GoffSymbol {
+impl<'data> ObjectSymbol<'data> for GoffSymbol<'data> {
     #[inline]
     fn index(&self) -> SymbolIndex {
-        self.symbol_index
+        self.esdid()
     }
 
     fn name_bytes(&self) -> Result<&'data [u8]> {
@@ -171,7 +99,7 @@ impl<'data> ObjectSymbol<'data> for GoffSymbol {
     }
 
     fn kind(&self) -> SymbolKind {
-        match self.symbol_type() {
+        match self.goff_record().symbol_type {
             // Section Definition (SD) - defines a control section.
             goff::ESD_ST_SD => SymbolKind::Section,
             // Element Definition (ED) - defines an element (part/class).
@@ -192,7 +120,8 @@ impl<'data> ObjectSymbol<'data> for GoffSymbol {
 
     #[inline]
     fn is_undefined(&self) -> bool {
-        match self.symbol_type() {
+        let esd = self.goff_record();
+        match esd.symbol_type {
             // Section Definition (SD) - defines a control section.
             goff::ESD_ST_SD => false,
             // Element Definition (ED) - defines an element (part/class).
@@ -206,10 +135,9 @@ impl<'data> ObjectSymbol<'data> for GoffSymbol {
             // - PR is a weak reference variant
             goff::ESD_ST_PR => {
                 self.length == 0
-                    && (self.namespace == ESD_NS_PSEUDO_REGISTER
-                        || self.behavioral_attributes.binding_strength() == goff::ESD_BST_WEAK
-                        || self.behavioral_attributes.binding_scope()
-                            == goff::ESD_BSC_IMPORT_EXPORT)
+                    && (esd.namespace == ESD_NS_PSEUDO_REGISTER
+                        || esd.behavioral_attributes.binding_strength() == goff::ESD_BST_WEAK
+                        || esd.behavioral_attributes.binding_scope() == goff::ESD_BSC_IMPORT_EXPORT)
             }
             // External Reference (ER) - references an external symbol.
             goff::ESD_ST_ER => true,
@@ -225,20 +153,21 @@ impl<'data> ObjectSymbol<'data> for GoffSymbol {
 
     #[inline]
     fn is_common(&self) -> bool {
-        match self.symbol_type() {
+        let esd = self.goff_record();
+        match esd.symbol_type {
             // A PR is common if the binding algorithm is MERGE
-            goff::ESD_ST_PR => self.behavioral_attributes.binding_algorithm() == goff::ESD_BA_MERGE,
+            goff::ESD_ST_PR => esd.behavioral_attributes.binding_algorithm() == goff::ESD_BA_MERGE,
             _ => false,
         }
     }
 
     #[inline]
     fn is_weak(&self) -> bool {
-        self.behavioral_attributes.binding_strength() == goff::ESD_BST_WEAK
+        self.goff_record().behavioral_attributes.binding_strength() == goff::ESD_BST_WEAK
     }
 
     fn scope(&self) -> SymbolScope {
-        match self.behavioral_attributes.binding_scope() {
+        match self.goff_record().behavioral_attributes.binding_scope() {
             goff::ESD_BSC_SECTION => SymbolScope::Compilation,
             goff::ESD_BSC_MODULE => SymbolScope::Linkage,
             goff::ESD_BSC_LIBRARY => SymbolScope::Linkage,
@@ -249,13 +178,14 @@ impl<'data> ObjectSymbol<'data> for GoffSymbol {
 
     #[inline]
     fn is_global(&self) -> bool {
+        let esd = self.goff_record();
         // Section definitions and Element definitions are local by default
-        !matches!(self.symbol_type(), goff::ESD_ST_SD | goff::ESD_ST_ED)
+        !matches!(esd.symbol_type, goff::ESD_ST_SD | goff::ESD_ST_ED)
         // Symbol identifiers that are a single EBCDIC encoded space are local
         && self.name_bytes_owned() != [0x40u8]
         // If binding scope is section or module symbol is local
         && !matches!(
-            self.behavioral_attributes.binding_scope(),
+            esd.behavioral_attributes.binding_scope(),
             goff::ESD_BSC_SECTION | goff::ESD_BSC_MODULE
         )
     }
@@ -267,11 +197,12 @@ impl<'data> ObjectSymbol<'data> for GoffSymbol {
 
     #[inline]
     fn flags(&self) -> SymbolFlags<SectionIndex, SymbolIndex> {
+        let esd = self.goff_record();
         SymbolFlags::Goff {
-            symbol_type: self.symbol_type,
-            flags: self.flags,
-            namespace: self.namespace,
-            behavioral_attributes: self.behavioral_attributes,
+            symbol_type: esd.symbol_type,
+            flags: esd.flags,
+            namespace: esd.namespace,
+            behavioral_attributes: esd.behavioral_attributes,
         }
     }
 }
@@ -348,7 +279,7 @@ where
 }
 
 impl<'data, 'file, R: ReadRef<'data>> Iterator for GoffSymbolIterator<'data, 'file, R> {
-    type Item = GoffSymbol;
+    type Item = GoffSymbol<'data>;
 
     fn next(&mut self) -> Option<Self::Item> {
         let SymbolIndex(index) = self.index;
@@ -364,7 +295,7 @@ impl<'data, 'file, R: ReadRef<'data>> read::private::Sealed for GoffSymbolTable<
 impl<'data, 'file, R: ReadRef<'data>> ObjectSymbolTable<'data>
     for GoffSymbolTable<'data, 'file, R>
 {
-    type Symbol = GoffSymbol;
+    type Symbol = GoffSymbol<'data>;
     type SymbolIterator = GoffSymbolIterator<'data, 'file, R>;
 
     fn symbols(&self) -> Self::SymbolIterator {

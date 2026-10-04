@@ -25,18 +25,18 @@ where
     R: ReadRef<'data>,
 {
     /// Check if an ESDID is a descendant (child, grandchild, etc.) of a parent ESDID
-    fn is_descendant_of(&self, esdid: &SymbolIndex, parent_esdid: &SymbolIndex) -> bool {
+    fn is_descendant_of(&self, esdid: SymbolIndex, parent_esdid: SymbolIndex) -> bool {
         // ESDID 0 means "no parent"; guard against underflow and false positives
         if esdid.0 == 0 {
             return false;
         }
         if let Some(symbol) = self.file.symbols.get(esdid.0 - 1) {
-            if symbol.parent_esdid == *parent_esdid {
+            if symbol.parent_esdid() == parent_esdid {
                 return true;
             }
             // Recursively check if this symbol's parent is a descendant
-            if symbol.parent_esdid != *esdid {
-                return self.is_descendant_of(&symbol.parent_esdid, parent_esdid);
+            if symbol.parent_esdid() != esdid {
+                return self.is_descendant_of(symbol.parent_esdid(), parent_esdid);
             }
         }
         false
@@ -48,7 +48,7 @@ where
         self.file
             .symbols
             .get(esdid as usize - 1)
-            .map(|s| s.symbol_type)
+            .map(|s| s.record.initial.symbol_type)
     }
 
     /// Find the section index for a given ESDID
@@ -107,7 +107,7 @@ where
 
             // Check if this relocation belongs to our section or descendants
             if p_pointer_index != self.section_esdid
-                && !self.is_descendant_of(&p_pointer_index, &self.section_esdid)
+                && !self.is_descendant_of(p_pointer_index, self.section_esdid)
             {
                 // Not our section, skip
                 continue;

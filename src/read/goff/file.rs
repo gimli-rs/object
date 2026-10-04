@@ -36,7 +36,7 @@ where
     pub(super) header: &'data goff::HeaderRecord,
     pub(super) sections: Vec<SymbolIndex>,
     pub(super) segments: HashMap<SymbolIndex, GoffSegment<'data>>,
-    pub(super) symbols: Vec<GoffSymbol>,
+    pub(super) symbols: Vec<GoffSymbol<'data>>,
     pub(super) relocations: Vec<goff::Relocation>,
     pub(super) record_count: Option<u32>,
     pub(super) entry_name: Cow<'data, [u8]>,
@@ -98,46 +98,23 @@ where
     }
 
     fn parse_esd(&mut self, record: LogicalRecord<'data, goff::SymbolRecord>) -> Result<()> {
-        let esd_record = record.initial;
-
-        // grab element symbol ID and parent
-        let esdid = esd_record.esdid.get(BE);
-        let symbolindex = SymbolIndex(
-            usize::try_from(esdid).expect("Target architecture pointer size is too small"),
-        );
-        let parent_esdid = esd_record.parent_esdid.get(BE);
-        let parent_symbolindex = SymbolIndex(
-            usize::try_from(parent_esdid).expect("Target architecture pointer size is too small"),
-        );
-
         // Flatten name from the ESD record and any continuation records into a single Vec<u8>
         let name = record.esd_name()?.into_owned();
 
-        let goffsymbol = GoffSymbol {
-            symbol_index: symbolindex,
-            esdid,
+        let symbol = GoffSymbol {
+            record,
             name,
-            symbol_type: esd_record.symbol_type,
-            parent_esdid: parent_symbolindex,
-            offset: esd_record.offset.get(BE),
-            length: esd_record.length.get(BE),
-            ea_esdid: esd_record.ea_esdid.get(BE),
-            ea_data_offset: esd_record.ea_data_offset.get(BE),
-            namespace: esd_record.namespace,
-            flags: esd_record.flags,
-            fill_byte_value: esd_record.fill_byte_value,
-            ada_esdid: esd_record.ada_esdid.get(BE),
-            priority: esd_record.priority.get(BE),
-            behavioral_attributes: esd_record.behavioral_attributes,
-            name_length: esd_record.name_length.get(BE),
+            length: record.initial.length.get(BE),
         };
+        let symbol_index = symbol.esdid();
+
         // insert into symbol table (and section table if appropriate)
         // ESDIDs are 1-based and sequential; push ensures index == esdid - 1
-        self.symbols.push(goffsymbol);
+        self.symbols.push(symbol);
         // Only ED (Element Definition) represents user sections
         // SD (Section Definition) is the compile unit, not a user section
-        if esd_record.symbol_type == ESD_ST_ED {
-            self.sections.push(symbolindex);
+        if record.initial.symbol_type == ESD_ST_ED {
+            self.sections.push(symbol_index);
         }
 
         Ok(())
@@ -156,7 +133,7 @@ where
             .symbols
             .get(esdid as usize - 1)
             .ok_or(Error("txt record references undefined symbol"))?;
-        let ed_symbolindex: SymbolIndex = match symbol.symbol_type() {
+        let ed_symbolindex: SymbolIndex = match symbol.record.initial.symbol_type {
             ESD_ST_ED => symbolindex,
             _ => symbol.parent_esdid(),
         };
@@ -255,7 +232,7 @@ where
     ///
     /// **Note:** This is primarily for internal use and testing. For the public API,
     /// use `symbol_table()` which filters out ED/SD symbols.
-    pub fn symbol_records(&self) -> &Vec<GoffSymbol> {
+    pub fn symbol_records(&self) -> &Vec<GoffSymbol<'data>> {
         &self.symbols
     }
 }
@@ -298,7 +275,7 @@ where
         Self: 'file,
         'data: 'file;
     type Symbol<'file>
-        = GoffSymbol
+        = GoffSymbol<'data>
     where
         Self: 'file,
         'data: 'file;
@@ -389,7 +366,7 @@ where
         Some(GoffSymbolTable { file: self })
     }
 
-    fn symbol_by_index(&self, index: SymbolIndex) -> Result<GoffSymbol> {
+    fn symbol_by_index(&self, index: SymbolIndex) -> Result<GoffSymbol<'data>> {
         let symbol_table = self.symbol_table().ok_or(Error("missing symbol table"))?;
         symbol_table.symbol_by_index(index)
     }

@@ -1,5 +1,6 @@
 #![cfg(feature = "goff")]
 
+use object::BigEndian as BE;
 use object::read;
 use object::read::ObjectSymbol;
 use std::fs;
@@ -101,43 +102,39 @@ fn goff_base_symbols() {
         let symbol = symbol_records
             .get(*expected_esdid as usize - 1)
             .unwrap_or_else(|| panic!("Failed to find symbol with ESDID 0x{:08X}", expected_esdid));
+        let esd = symbol.goff_record();
 
-        // Check ESDID using public getter
         assert_eq!(
-            symbol.esdid(),
+            esd.esdid.get(BE),
             *expected_esdid,
             "ESDID mismatch for symbol '{}'",
             expected_name
         );
 
-        // Check symbol type using public getter
         assert_eq!(
-            symbol.symbol_type(),
+            esd.symbol_type,
             object::goff::SymbolType(*expected_type),
             "Symbol type mismatch for ESDID 0x{:08X} ({})",
             expected_esdid,
             expected_name
         );
 
-        // Check parent ESDID using public getter
         assert_eq!(
-            symbol.parent_esdid().0,
-            *expected_parent as usize,
+            esd.parent_esdid.get(BE),
+            *expected_parent,
             "Parent ESDID mismatch for ESDID 0x{:08X} ({})",
             expected_esdid,
             expected_name
         );
 
-        // Check offset using public getter
         assert_eq!(
-            symbol.offset(),
+            esd.offset.get(BE),
             *expected_offset,
             "Offset mismatch for ESDID 0x{:08X} ({})",
             expected_esdid,
             expected_name
         );
 
-        // Check length using public getter
         assert_eq!(
             symbol.length(),
             *expected_length,
@@ -225,36 +222,33 @@ fn goff_foo_symbols() {
         let symbol = symbol_records
             .get(*expected_esdid as usize - 1)
             .unwrap_or_else(|| panic!("Failed to find symbol with ESDID 0x{:08X}", expected_esdid));
+        let esd = symbol.goff_record();
 
-        // Check ESDID using public getter
         assert_eq!(
-            symbol.esdid(),
+            esd.esdid.get(BE),
             *expected_esdid,
             "ESDID mismatch for symbol '{}'",
             expected_name
         );
 
-        // Check symbol type using public getter
         assert_eq!(
-            symbol.symbol_type(),
+            esd.symbol_type,
             object::goff::SymbolType(*expected_type),
             "Symbol type mismatch for ESDID 0x{:08X} ({})",
             expected_esdid,
             expected_name
         );
 
-        // Check parent ESDID using public getter
         assert_eq!(
-            symbol.parent_esdid().0,
-            *expected_parent as usize,
+            esd.parent_esdid.get(BE),
+            *expected_parent,
             "Parent ESDID mismatch for ESDID 0x{:08X} ({})",
             expected_esdid,
             expected_name
         );
 
-        // Check offset using public getter
         assert_eq!(
-            symbol.offset(),
+            esd.offset.get(BE),
             *expected_offset,
             "Offset mismatch for ESDID 0x{:08X} ({})",
             expected_esdid,
@@ -298,7 +292,7 @@ fn goff_foo_behavioral_attributes() {
     let symbol1 = symbol_records
         .get(0x00000001_usize - 1)
         .expect("Failed to find symbol with ESDID 0x00000001");
-    let flags1 = symbol1.behavioral_attributes();
+    let flags1 = symbol1.goff_record().behavioral_attributes;
     assert_eq!(
         flags1.amode(),
         AMODE_UNSPEC,
@@ -328,7 +322,7 @@ fn goff_foo_behavioral_attributes() {
     let symbol2 = symbol_records
         .get(0x00000002_usize - 1)
         .expect("Failed to find symbol with ESDID 0x00000002");
-    let flags2 = symbol2.behavioral_attributes();
+    let flags2 = symbol2.goff_record().behavioral_attributes;
     assert_eq!(
         flags2.amode(),
         AMODE_UNSPEC,
@@ -361,7 +355,7 @@ fn goff_foo_behavioral_attributes() {
     let symbol3 = symbol_records
         .get(0x00000003_usize - 1)
         .expect("Failed to find symbol with ESDID 0x00000003");
-    let flags3 = symbol3.behavioral_attributes();
+    let flags3 = symbol3.goff_record().behavioral_attributes;
     assert!(
         flags3.is_xplink(),
         "ESDID 3: BA62 should indicate XPLINK linkage"
@@ -378,7 +372,7 @@ fn goff_foo_behavioral_attributes() {
     let symbol4 = symbol_records
         .get(0x00000004_usize - 1)
         .expect("Failed to find symbol with ESDID 0x00000004");
-    let flags4 = symbol4.behavioral_attributes();
+    let flags4 = symbol4.goff_record().behavioral_attributes;
     assert_eq!(flags4.rmode(), RMODE_64, "ESDID 4: RMODE should be 64");
     assert!(
         !flags4.is_xplink(),
@@ -391,7 +385,7 @@ fn goff_foo_behavioral_attributes() {
     let symbol5 = symbol_records
         .get(0x00000005_usize - 1)
         .expect("Failed to find symbol with ESDID 0x00000005");
-    let flags5 = symbol5.behavioral_attributes();
+    let flags5 = symbol5.goff_record().behavioral_attributes;
     assert_eq!(flags5.amode(), AMODE_64, "ESDID 5: AMODE should be 64");
     assert_eq!(
         flags5.rmode(),
@@ -424,7 +418,7 @@ fn goff_foo_behavioral_attributes() {
     let symbol9 = symbol_records
         .get(0x00000009_usize - 1)
         .expect("Failed to find symbol with ESDID 0x00000009");
-    let flags9 = symbol9.behavioral_attributes();
+    let flags9 = symbol9.goff_record().behavioral_attributes;
     assert_eq!(flags9.amode(), AMODE_64, "ESDID 9: AMODE should be 64");
     assert_eq!(flags9.rmode(), RMODE_64, "ESDID 9: RMODE should be 64");
     assert_eq!(
@@ -452,16 +446,17 @@ fn goff_foo_section_flags() {
 
     // Iterate through all symbols and print flags for section-type symbols
     for symbol in symbol_records.iter() {
-        let symbol_type = symbol.symbol_type();
+        let esd = symbol.goff_record();
+        let symbol_type = esd.symbol_type;
 
         // Only print for SD (0x00) and ED (0x01) types which represent sections
         if symbol_type.0 == 0x00 || symbol_type.0 == 0x01 {
-            let flags = symbol.behavioral_attributes();
+            let flags = esd.behavioral_attributes;
             let name = symbol.name_utf8().unwrap();
 
             println!(
                 "ESDID: 0x{:08X} | Type: 0x{:02X} | Name: {}",
-                symbol.esdid(),
+                symbol.esdid().0,
                 symbol_type.0,
                 name
             );
@@ -529,7 +524,7 @@ fn goff_foo_binding_scope() {
     // Check specific symbols
     for esdid in [1, 2, 3, 4, 5, 9] {
         if let Some(symbol) = symbol_records.get(esdid - 1) {
-            let flags = symbol.behavioral_attributes();
+            let flags = symbol.goff_record().behavioral_attributes;
             let name = symbol.name_utf8().unwrap();
             let scope_raw = flags.0[5] & 0x0F;
             let scope_value = flags.binding_scope();
