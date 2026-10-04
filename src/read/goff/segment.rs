@@ -92,14 +92,14 @@ impl<'data> GoffTextReference<'data> {
 #[derive(Debug, Clone)]
 pub struct GoffSegment<'data> {
     /// The symbol corresponding to this segment's ESDID
-    pub(super) symbol: GoffSymbol,
+    pub(super) symbol: GoffSymbol<'data>,
     /// Data Payload
     pub(super) text_refs: Vec<GoffTextReference<'data>>,
 }
 
 impl<'data> GoffSegment<'data> {
     /// Returns a reference to the symbol corresponding to this segment's ESDID.
-    pub fn symbol(&self) -> &GoffSymbol {
+    pub fn symbol(&self) -> &GoffSymbol<'data> {
         &self.symbol
     }
 

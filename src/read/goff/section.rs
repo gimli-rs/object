@@ -71,18 +71,18 @@ where
 
 impl<'data, 'file, R: ReadRef<'data>> GoffSection<'data, 'file, R> {
     /// Check if an ESDID is a descendant (child, grandchild, etc.) of a parent ESDID
-    fn is_descendant_of(&self, esdid: &SymbolIndex, parent_esdid: &SymbolIndex) -> bool {
+    fn is_descendant_of(&self, esdid: SymbolIndex, parent_esdid: SymbolIndex) -> bool {
         // ESDID 0 means "no parent"; guard against underflow and false positives
         if esdid.0 == 0 {
             return false;
         }
         if let Some(symbol) = self.file.symbols.get(esdid.0 - 1) {
-            if symbol.parent_esdid == *parent_esdid {
+            if symbol.parent_esdid() == parent_esdid {
                 return true;
             }
             // Recursively check if this symbol's parent is a descendant
-            if symbol.parent_esdid != *esdid {
-                return self.is_descendant_of(&symbol.parent_esdid, parent_esdid);
+            if symbol.parent_esdid() != esdid {
+                return self.is_descendant_of(symbol.parent_esdid(), parent_esdid);
             }
         }
         false
@@ -92,8 +92,8 @@ impl<'data, 'file, R: ReadRef<'data>> GoffSection<'data, 'file, R> {
     /// and any descendant elements.
     pub fn data_parts(&self) -> alloc::vec::Vec<u8> {
         let mut data = alloc::vec::Vec::new();
-        for (segment_esdid, segment) in &self.file.segments {
-            if *segment_esdid == self.esdid || self.is_descendant_of(segment_esdid, &self.esdid) {
+        for (&segment_esdid, segment) in &self.file.segments {
+            if segment_esdid == self.esdid || self.is_descendant_of(segment_esdid, self.esdid) {
                 for txt in &segment.text_refs {
                     for part in &txt.text_data {
                         data.extend_from_slice(part);
@@ -151,7 +151,7 @@ where
             .symbols
             .get(self.esdid.0 - 1)
             .map(|symbol| {
-                match symbol.behavioral_attributes.alignment() {
+                match symbol.record.initial.behavioral_attributes.alignment() {
                     goff::ALIGN_BYTE => 1,
                     goff::ALIGN_HALFWORD => 2,
                     goff::ALIGN_FULLWORD => 4,
@@ -268,7 +268,7 @@ where
             .symbols
             .get(self.esdid.0 - 1)
             .map(|symbol| SectionFlags::Goff {
-                flags: symbol.behavioral_attributes,
+                flags: symbol.record.initial.behavioral_attributes,
             })
             .unwrap_or(SectionFlags::None)
     }

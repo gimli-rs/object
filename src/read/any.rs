@@ -1263,7 +1263,7 @@ where
         ),
     ),
     #[cfg(feature = "goff")]
-    Goff((goff::GoffSymbol, PhantomData<(&'data (), &'file (), R)>)),
+    Goff((goff::GoffSymbol<'data>, PhantomData<(&'file (), R)>)),
     #[cfg(feature = "macho")]
     MachO32(
         (
