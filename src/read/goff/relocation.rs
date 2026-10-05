@@ -1,5 +1,6 @@
 use alloc::borrow::Cow;
 use alloc::fmt;
+use core::slice;
 
 use crate::goff;
 use crate::read::{
@@ -16,32 +17,13 @@ where
     R: ReadRef<'data>,
 {
     pub(super) file: &'file GoffFile<'data, R>,
-    pub(super) section_esdid: SymbolIndex,
-    pub(super) index: usize,
+    pub(super) relocations: slice::Iter<'file, goff::Relocation>,
 }
 
 impl<'data, 'file, R> GoffRelocationIterator<'data, 'file, R>
 where
     R: ReadRef<'data>,
 {
-    /// Check if an ESDID is a descendant (child, grandchild, etc.) of a parent ESDID
-    fn is_descendant_of(&self, esdid: SymbolIndex, parent_esdid: SymbolIndex) -> bool {
-        // ESDID 0 means "no parent"; guard against underflow and false positives
-        if esdid.0 == 0 {
-            return false;
-        }
-        if let Some(symbol) = self.file.symbols.get(esdid) {
-            if symbol.parent_esdid() == parent_esdid {
-                return true;
-            }
-            // Recursively check if this symbol's parent is a descendant
-            if symbol.parent_esdid() != esdid {
-                return self.is_descendant_of(symbol.parent_esdid(), parent_esdid);
-            }
-        }
-        false
-    }
-
     /// Get the symbol type for a given ESDID
     fn get_symbol_type(&self, esdid: SymbolIndex) -> Option<goff::SymbolType> {
         self.file.symbols.get(esdid).map(|s| s.record().symbol_type)
@@ -92,24 +74,10 @@ where
     type Item = (u64, Relocation);
 
     fn next(&mut self) -> Option<Self::Item> {
-        // Find next relocation for this section
-        while self.index < self.file.relocations.len() {
-            let goff_reloc = &self.file.relocations[self.index];
-            self.index += 1;
-
-            let p_pointer_index = SymbolIndex(goff_reloc.p_pointer as usize);
-            let r_pointer_index = SymbolIndex(goff_reloc.r_pointer as usize);
-
-            // Check if this relocation belongs to our section or descendants
-            if p_pointer_index != self.section_esdid
-                && !self.is_descendant_of(p_pointer_index, self.section_esdid)
-            {
-                // Not our section, skip
-                continue;
-            }
-
+        while let Some(goff_reloc) = self.relocations.next() {
             // Map to common Relocation format
             let offset = goff_reloc.offset;
+            let r_pointer_index = SymbolIndex(goff_reloc.r_pointer as usize);
             let target = match self.map_target(r_pointer_index) {
                 Some(t) => t,
                 None => continue, // Skip invalid relocations
@@ -144,9 +112,7 @@ where
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("GoffRelocationIterator")
-            .field("section_esdid", &self.section_esdid)
-            .field("index", &self.index)
-            .field("total_relocations", &self.file.relocations.len())
+            .field("len", &self.relocations.len())
             .finish()
     }
 }
