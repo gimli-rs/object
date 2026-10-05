@@ -91,12 +91,12 @@ fn goff_basic_structure() {
         "Should have at least 2 external symbols"
     );
 
-    // Find our external symbols using name_bytes_owned() for direct EBCDIC comparison
+    // Find our external symbols using goff_name_bytes() for direct EBCDIC comparison
     let mut found_ceestart = false;
     let mut found_printf = false;
 
     for symbol in &symbols {
-        let name_bytes = symbol.name_bytes_owned();
+        let name_bytes = symbol.goff_name_bytes();
         if name_bytes == CEESTART_EBCDIC {
             found_ceestart = true;
             assert!(symbol.is_undefined());
@@ -123,7 +123,7 @@ fn goff_basic_structure() {
     let debug_section = goff_sections
         .iter()
         .find(|s| {
-            if let Ok(name_bytes) = s.name_bytes_parts() {
+            if let Ok(name_bytes) = s.goff_name_bytes() {
                 // Compare the actual bytes, handling potential padding
                 name_bytes.starts_with(DOTDEBUG_INFO_EBCDIC)
             } else {

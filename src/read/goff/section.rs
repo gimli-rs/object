@@ -76,7 +76,7 @@ impl<'data, 'file, R: ReadRef<'data>> GoffSection<'data, 'file, R> {
         if esdid.0 == 0 {
             return false;
         }
-        if let Some(symbol) = self.file.symbols.get(esdid.0 - 1) {
+        if let Some(symbol) = self.file.symbols.get(esdid) {
             if symbol.parent_esdid() == parent_esdid {
                 return true;
             }
@@ -105,18 +105,18 @@ impl<'data, 'file, R: ReadRef<'data>> GoffSection<'data, 'file, R> {
     }
 
     /// Returns GOFF section name bytes from the flattened symbol name.
-    pub fn name_bytes_parts(&self) -> Result<Cow<'data, [u8]>> {
+    pub fn goff_name_bytes(&self) -> Result<&'file [u8]> {
         let symbol = self
             .file
             .symbols
-            .get(self.esdid.0 - 1)
+            .get(self.esdid)
             .ok_or(Error("Invalid GOFF section ESDID"))?;
 
-        let name = symbol.name_bytes_owned();
+        let name = symbol.name_bytes();
         if name.is_empty() {
             Err(Error("Invalid GOFF section, empty section name"))
         } else {
-            Ok(Cow::Owned(name.to_vec()))
+            Ok(name)
         }
     }
 }
@@ -141,17 +141,17 @@ where
     fn size(&self) -> u64 {
         self.file
             .symbols
-            .get(self.esdid.0 - 1)
-            .map(|symbol| symbol.length as u64)
+            .get(self.esdid)
+            .map(|symbol| symbol.length() as u64)
             .unwrap_or(0)
     }
 
     fn align(&self) -> u64 {
         self.file
             .symbols
-            .get(self.esdid.0 - 1)
+            .get(self.esdid)
             .map(|symbol| {
-                match symbol.record.initial.behavioral_attributes.alignment() {
+                match symbol.record().behavioral_attributes.alignment() {
                     goff::ALIGN_BYTE => 1,
                     goff::ALIGN_HALFWORD => 2,
                     goff::ALIGN_FULLWORD => 4,
@@ -225,8 +225,8 @@ where
     }
 
     fn name_utf8(&self) -> read::Result<Cow<'data, str>> {
-        let name = self.name_bytes_parts()?;
-        Ok(Cow::Owned(ebcdic::to_string(&name)))
+        let name = self.goff_name_bytes()?;
+        Ok(Cow::Owned(ebcdic::to_string(name)))
     }
 
     fn segment_name_bytes(&self) -> Result<Option<&[u8]>> {
@@ -266,9 +266,9 @@ where
     fn flags(&self) -> SectionFlags {
         self.file
             .symbols
-            .get(self.esdid.0 - 1)
+            .get(self.esdid)
             .map(|symbol| SectionFlags::Goff {
-                flags: symbol.record.initial.behavioral_attributes,
+                flags: symbol.record().behavioral_attributes,
             })
             .unwrap_or(SectionFlags::None)
     }

@@ -1,6 +1,8 @@
 use alloc::borrow::Cow;
+use alloc::string::String;
 use alloc::vec::Vec;
-use core::fmt::Debug;
+use core::fmt;
+use core::slice;
 use core::str;
 
 use crate::BigEndian as BE;
@@ -9,42 +11,118 @@ use crate::goff;
 use crate::goff::*;
 
 use crate::read::{
-    self, Error, ObjectSymbol, ObjectSymbolTable, ReadRef, Result, SectionIndex, SymbolFlags,
+    self, Error, ObjectSymbol, ObjectSymbolTable, ReadError, Result, SectionIndex, SymbolFlags,
     SymbolIndex, SymbolKind, SymbolScope, SymbolSection,
 };
 
-use super::{GoffFile, LogicalRecord};
+use super::LogicalRecord;
 
-/// A symbol in an [`GoffFile`].
-///
-/// Most functionality is provided by the [`ObjectSymbol`] trait implementation.
-#[derive(Debug, Clone)]
-pub struct GoffSymbol<'data> {
+/// A table of ESD records in a GOFF file.
+#[derive(Debug)]
+pub(super) struct GoffSymbolTableInternal<'data> {
+    symbols: Vec<GoffSymbolInternal<'data>>,
+}
+
+impl<'data> GoffSymbolTableInternal<'data> {
+    pub(super) fn new() -> Self {
+        GoffSymbolTableInternal {
+            symbols: Vec::new(),
+        }
+    }
+
+    pub(super) fn add(
+        &mut self,
+        record: LogicalRecord<'data, goff::SymbolRecord>,
+    ) -> Result<SymbolIndex> {
+        let symbol = GoffSymbolInternal {
+            record,
+            name: record.esd_name()?,
+            length: record.initial.length.get(BE),
+        };
+        // Ensure esdid matches the position we will push to.
+        let symbol_index = symbol.esdid();
+        if symbol_index.0 != self.symbols.len() + 1 {
+            return Err(Error("Invalid ESDID in GOFF ESD record"));
+        }
+        // Ensure parent is valid to prevent cycles. Note that this accepts 0.
+        let parent_index = symbol.parent_esdid();
+        if parent_index.0 >= symbol_index.0 {
+            return Err(Error("Invalid parent ESDID in GOFF ESD record"));
+        }
+
+        self.symbols.push(symbol);
+        Ok(symbol_index)
+    }
+
+    /// Parses a LengthRecord and its continuations, extracting deferred element-length data items
+    /// and updating the corresponding symbols with their lengths
+    pub(super) fn add_len(
+        &mut self,
+        record: LogicalRecord<'data, goff::LengthRecord>,
+    ) -> Result<()> {
+        for item in record.len_items()? {
+            let esdid = item.esdid.get(BE);
+            let length = item.length.get(BE);
+            let symbol = self
+                .get_mut(SymbolIndex(esdid as usize))
+                .ok_or(Error("LEN record references undefined symbol"))?;
+            symbol.length = length;
+        }
+        Ok(())
+    }
+
+    /// Get the symbol at the given index.
+    ///
+    /// Returns an `None` for index 0 or an invalid index.
+    pub(super) fn get(&self, index: SymbolIndex) -> Option<&GoffSymbolInternal<'data>> {
+        self.symbols.get(index.0.wrapping_sub(1))
+    }
+
+    pub(super) fn get_mut(&mut self, index: SymbolIndex) -> Option<&mut GoffSymbolInternal<'data>> {
+        self.symbols.get_mut(index.0.wrapping_sub(1))
+    }
+
+    /// Iterate over the symbols.
+    pub(super) fn iter(&self) -> slice::Iter<'_, GoffSymbolInternal<'data>> {
+        self.symbols.iter()
+    }
+}
+
+/// A symbol in a GOFF [`SymbolTable`].
+#[derive(Debug)]
+pub(super) struct GoffSymbolInternal<'data> {
     /// ESD record.
-    pub(super) record: LogicalRecord<'data, goff::SymbolRecord>,
+    record: LogicalRecord<'data, goff::SymbolRecord>,
     /// Symbol name (EBCDIC-encoded, flattened from ESD record and any continuation records)
-    pub(super) name: Vec<u8>,
+    name: Cow<'data, [u8]>,
     /// Length (size of allocated memory of program element or section)
     ///
     /// May be from a LEN record.
-    pub(super) length: u32,
+    length: u32,
 }
 
-impl<'data> GoffSymbol<'data> {
+impl<'data> GoffSymbolInternal<'data> {
     /// Get the raw GOFF ESD record.
-    pub fn goff_record(&self) -> &'data goff::SymbolRecord {
+    pub(super) fn record(&self) -> &'data goff::SymbolRecord {
         self.record.initial
     }
 
     /// Get the ESDID (ESD Identifier) of this symbol.
+    ///
+    /// This index is validated during parsing.
     #[inline]
-    pub fn esdid(&self) -> SymbolIndex {
+    pub(super) fn esdid(&self) -> SymbolIndex {
         SymbolIndex(self.record.initial.esdid.get(BE) as usize)
     }
 
     /// Get the parent ESDID as a SymbolIndex.
+    ///
+    /// This index is validated during parsing.
+    ///
+    /// Returns `SymbolIndex(0)` if there is no parent, but does not
+    /// validate whether the record type allows no parent.
     #[inline]
-    pub fn parent_esdid(&self) -> SymbolIndex {
+    pub(super) fn parent_esdid(&self) -> SymbolIndex {
         SymbolIndex(self.record.initial.parent_esdid.get(BE) as usize)
     }
 
@@ -53,23 +131,71 @@ impl<'data> GoffSymbol<'data> {
     /// The name is stored as a flat byte vector in EBCDIC encoding.
     /// Use [`ObjectSymbol::name_utf8`] to convert to UTF-8.
     #[inline]
-    pub fn name_bytes_owned(&self) -> &[u8] {
+    pub(super) fn name_bytes(&self) -> &[u8] {
         &self.name
     }
 
-    /// Get the length (size) of this symbol.
-    #[inline]
-    pub fn length(&self) -> u32 {
+    /// Get the name converted to UTF-8.
+    pub(super) fn name_utf8(&self) -> String {
+        ebcdic::to_string(&self.name)
+    }
+
+    /// Get the length from the ESD or LEN record.
+    pub(super) fn length(&self) -> u32 {
         self.length
     }
 }
 
-impl<'data> read::private::Sealed for GoffSymbol<'data> {}
+/// A reference to a symbol in an [`GoffFile`].
+///
+/// Most functionality is provided by the [`ObjectSymbol`] trait implementation.
+#[derive(Clone, Copy)]
+pub struct GoffSymbol<'data, 'file> {
+    symbol: &'file GoffSymbolInternal<'data>,
+}
 
-impl<'data> ObjectSymbol<'data> for GoffSymbol<'data> {
+impl<'data, 'file> fmt::Debug for GoffSymbol<'data, 'file> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("GoffSymbol")
+            .field("esdid", &self.symbol.esdid())
+            .field("name", &self.symbol.name_utf8())
+            .field("symbol_type", &self.symbol.record().symbol_type)
+            .finish_non_exhaustive()
+    }
+}
+
+impl<'data, 'file> GoffSymbol<'data, 'file> {
+    /// Get the raw GOFF ESD record.
+    pub fn goff_record(&self) -> &'data goff::SymbolRecord {
+        self.symbol.record()
+    }
+
+    /// Get the parent ESDID as a SymbolIndex.
+    ///
+    /// This index is validated during parsing.
+    ///
+    /// Returns `SymbolIndex(0)` if there is no parent, but does not
+    /// validate whether the record type allows no parent.
+    #[inline]
+    pub fn goff_parent_esdid(&self) -> SymbolIndex {
+        self.symbol.parent_esdid()
+    }
+
+    /// Get the raw EBCDIC-encoded name bytes of this symbol.
+    ///
+    /// The name is stored as a flat byte vector in EBCDIC encoding.
+    /// Use [`ObjectSymbol::name_utf8`] to convert to UTF-8.
+    pub fn goff_name_bytes(&self) -> &'file [u8] {
+        self.symbol.name_bytes()
+    }
+}
+
+impl<'data, 'file> read::private::Sealed for GoffSymbol<'data, 'file> {}
+
+impl<'data, 'file> ObjectSymbol<'data> for GoffSymbol<'data, 'file> {
     #[inline]
     fn index(&self) -> SymbolIndex {
-        self.esdid()
+        self.symbol.esdid()
     }
 
     fn name_bytes(&self) -> Result<&'data [u8]> {
@@ -85,7 +211,7 @@ impl<'data> ObjectSymbol<'data> for GoffSymbol<'data> {
     }
 
     fn name_utf8(&self) -> Result<Cow<'data, str>> {
-        Ok(Cow::Owned(ebcdic::to_string(&self.name)))
+        Ok(Cow::Owned(self.symbol.name_utf8()))
     }
 
     #[inline]
@@ -95,7 +221,7 @@ impl<'data> ObjectSymbol<'data> for GoffSymbol<'data> {
 
     #[inline]
     fn size(&self) -> u64 {
-        self.length().into()
+        self.symbol.length.into()
     }
 
     fn kind(&self) -> SymbolKind {
@@ -134,7 +260,7 @@ impl<'data> ObjectSymbol<'data> for GoffSymbol<'data> {
             // - part reference represents a symbol in a dynamic library
             // - PR is a weak reference variant
             goff::ESD_ST_PR => {
-                self.length == 0
+                self.symbol.length == 0
                     && (esd.namespace == ESD_NS_PSEUDO_REGISTER
                         || esd.behavioral_attributes.binding_strength() == goff::ESD_BST_WEAK
                         || esd.behavioral_attributes.binding_scope() == goff::ESD_BSC_IMPORT_EXPORT)
@@ -182,7 +308,7 @@ impl<'data> ObjectSymbol<'data> for GoffSymbol<'data> {
         // Section definitions and Element definitions are local by default
         !matches!(esd.symbol_type, goff::ESD_ST_SD | goff::ESD_ST_ED)
         // Symbol identifiers that are a single EBCDIC encoded space are local
-        && self.name_bytes_owned() != [0x40u8]
+        && *self.symbol.name != [0x40u8]
         // If binding scope is section or module symbol is local
         && !matches!(
             esd.behavioral_attributes.binding_scope(),
@@ -207,62 +333,15 @@ impl<'data> ObjectSymbol<'data> for GoffSymbol<'data> {
     }
 }
 
-/// A table of symbol entries in a GOFF file.
-///
-/// Note: This table filters out [`goff::ESD_ST_ED`] (Element Definition) and
-/// [`goff::ESD_ST_SD`] (Section Definition) symbols from the public API, as these
-/// represent structural metadata rather than user-visible symbols. Internal
-/// code can access all symbols via `symbol_records()`.
-///
-/// The public API exposes:
-/// - [`goff::ESD_ST_LD`] (Label Definition) - labels within sections
-/// - [`goff::ESD_ST_PR`] (Part Reference) - part references
-/// - [`goff::ESD_ST_ER`] (External Reference) - external symbols
-///
-/// Also includes the string table used for the symbol names.
-#[derive(Debug)]
-pub struct GoffSymbolTable<'data, 'file, R = &'data [u8]>
-where
-    R: ReadRef<'data>,
-{
-    pub(super) file: &'file GoffFile<'data, R>,
+/// A reference to a symbol table in a [`GoffFile`].
+#[derive(Debug, Clone, Copy)]
+pub struct GoffSymbolTable<'data, 'file> {
+    symbols: &'file GoffSymbolTableInternal<'data>,
 }
 
-impl<'data, 'file, R> GoffSymbolTable<'data, 'file, R>
-where
-    R: ReadRef<'data>,
-{
-    /// Iterate over the symbols.
-    #[inline]
-    pub fn iter(&self) -> GoffSymbolIterator<'data, 'file, R> {
-        GoffSymbolIterator {
-            file: self.file,
-            index: SymbolIndex(1),
-        }
-    }
-
-    /// Empty symbol iterator
-    #[inline]
-    pub(super) fn iter_none(&self) -> GoffSymbolIterator<'data, 'file, R> {
-        GoffSymbolIterator {
-            file: self.file,
-            // ESDIDs are 1-based; index past the last valid ESDID to produce an empty iterator
-            index: SymbolIndex(self.file.symbols.len() + 1),
-        }
-    }
-
-    /// Return true if the symbol table is empty.
-    #[inline]
-    pub fn is_empty(&self) -> bool {
-        self.file.symbols.is_empty()
-    }
-
-    /// The number of symbol table entries.
-    ///
-    /// This includes auxiliary symbol table entries.
-    #[inline]
-    pub fn len(&self) -> usize {
-        self.file.symbols.len()
+impl<'data, 'file> GoffSymbolTable<'data, 'file> {
+    pub(super) fn new(symbols: &'file GoffSymbolTableInternal<'data>) -> Self {
+        Self { symbols }
     }
 }
 
@@ -270,49 +349,45 @@ where
 ///
 /// Yields the index and symbol structure for each symbol.
 #[derive(Debug)]
-pub struct GoffSymbolIterator<'data, 'file, R = &'data [u8]>
-where
-    R: ReadRef<'data>,
-{
-    pub(super) file: &'file GoffFile<'data, R>,
-    pub(super) index: SymbolIndex,
+pub struct GoffSymbolIterator<'data, 'file> {
+    iter: slice::Iter<'file, GoffSymbolInternal<'data>>,
 }
 
-impl<'data, 'file, R: ReadRef<'data>> Iterator for GoffSymbolIterator<'data, 'file, R> {
-    type Item = GoffSymbol<'data>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        let SymbolIndex(index) = self.index;
-        // ESDIDs are 1-based; Vec index is esdid - 1
-        let symbol = self.file.symbols.get(index - 1)?.clone();
-        self.index = SymbolIndex(index + 1);
-        Some(symbol)
-    }
-}
-
-impl<'data, 'file, R: ReadRef<'data>> read::private::Sealed for GoffSymbolTable<'data, 'file, R> {}
-
-impl<'data, 'file, R: ReadRef<'data>> ObjectSymbolTable<'data>
-    for GoffSymbolTable<'data, 'file, R>
-{
-    type Symbol = GoffSymbol<'data>;
-    type SymbolIterator = GoffSymbolIterator<'data, 'file, R>;
-
-    fn symbols(&self) -> Self::SymbolIterator {
+impl<'data, 'file> GoffSymbolIterator<'data, 'file> {
+    pub(super) fn new(symbols: &'file GoffSymbolTableInternal<'data>) -> Self {
         GoffSymbolIterator {
-            file: self.file,
-            index: SymbolIndex(1),
+            iter: symbols.iter(),
         }
     }
 
-    fn symbol_by_index(&self, index: SymbolIndex) -> Result<Self::Symbol> {
-        // ESDIDs are 1-based; Vec index is esdid - 1
-        let symbol = self
-            .file
-            .symbols
-            .get(index.0 - 1)
-            .ok_or(Error("Symbol index out of bounds"))?;
+    pub(super) fn empty() -> Self {
+        GoffSymbolIterator { iter: [].iter() }
+    }
+}
 
-        Ok(symbol.clone())
+impl<'data, 'file> Iterator for GoffSymbolIterator<'data, 'file> {
+    type Item = GoffSymbol<'data, 'file>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.iter.next().map(|symbol| GoffSymbol { symbol })
+    }
+}
+
+impl<'data, 'file> read::private::Sealed for GoffSymbolTable<'data, 'file> {}
+
+impl<'data, 'file> ObjectSymbolTable<'data> for GoffSymbolTable<'data, 'file> {
+    type Symbol = GoffSymbol<'data, 'file>;
+    type SymbolIterator = GoffSymbolIterator<'data, 'file>;
+
+    fn symbols(&self) -> Self::SymbolIterator {
+        GoffSymbolIterator::new(self.symbols)
+    }
+
+    fn symbol_by_index(&self, index: SymbolIndex) -> Result<Self::Symbol> {
+        let symbol = self
+            .symbols
+            .get(index)
+            .read_error("Invalid GOFF symbol index")?;
+        Ok(GoffSymbol { symbol })
     }
 }

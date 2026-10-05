@@ -30,7 +30,7 @@ where
         if esdid.0 == 0 {
             return false;
         }
-        if let Some(symbol) = self.file.symbols.get(esdid.0 - 1) {
+        if let Some(symbol) = self.file.symbols.get(esdid) {
             if symbol.parent_esdid() == parent_esdid {
                 return true;
             }
@@ -43,28 +43,22 @@ where
     }
 
     /// Get the symbol type for a given ESDID
-    fn get_symbol_type(&self, esdid: u32) -> Option<goff::SymbolType> {
-        // ESDIDs are 1-based; Vec index is esdid - 1
-        self.file
-            .symbols
-            .get(esdid as usize - 1)
-            .map(|s| s.record.initial.symbol_type)
+    fn get_symbol_type(&self, esdid: SymbolIndex) -> Option<goff::SymbolType> {
+        self.file.symbols.get(esdid).map(|s| s.record().symbol_type)
     }
 
     /// Find the section index for a given ESDID
-    fn find_section_index(&self, esdid: u32) -> Option<crate::read::SectionIndex> {
-        let symbol_index = SymbolIndex(esdid as usize);
+    fn find_section_index(&self, esdid: SymbolIndex) -> Option<crate::read::SectionIndex> {
         self.file
             .sections
             .iter()
-            .position(|&si| si == symbol_index)
+            .position(|&si| si == esdid)
             .map(crate::read::SectionIndex)
     }
 
     /// Map R-pointer to RelocationTarget
-    fn map_target(&self, r_pointer: u32) -> Option<RelocationTarget> {
+    fn map_target(&self, r_pointer: SymbolIndex) -> Option<RelocationTarget> {
         let symbol_type = self.get_symbol_type(r_pointer)?;
-        let symbol_index = SymbolIndex(r_pointer as usize);
 
         if symbol_type == goff::ESD_ST_ED {
             // Element Definition - map to section
@@ -72,10 +66,10 @@ where
                 .map(RelocationTarget::Section)
         } else if symbol_type == goff::ESD_ST_ER || symbol_type == goff::ESD_ST_PR {
             // External/Part Reference - map to symbol
-            Some(RelocationTarget::Symbol(symbol_index))
+            Some(RelocationTarget::Symbol(r_pointer))
         } else {
             // Other types - treat as symbol
-            Some(RelocationTarget::Symbol(symbol_index))
+            Some(RelocationTarget::Symbol(r_pointer))
         }
     }
 
@@ -104,6 +98,7 @@ where
             self.index += 1;
 
             let p_pointer_index = SymbolIndex(goff_reloc.p_pointer as usize);
+            let r_pointer_index = SymbolIndex(goff_reloc.r_pointer as usize);
 
             // Check if this relocation belongs to our section or descendants
             if p_pointer_index != self.section_esdid
@@ -115,7 +110,7 @@ where
 
             // Map to common Relocation format
             let offset = goff_reloc.offset;
-            let target = match self.map_target(goff_reloc.r_pointer) {
+            let target = match self.map_target(r_pointer_index) {
                 Some(t) => t,
                 None => continue, // Skip invalid relocations
             };
