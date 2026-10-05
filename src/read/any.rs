@@ -1096,7 +1096,7 @@ where
         ),
     ),
     #[cfg(feature = "goff")]
-    Goff((goff::GoffSymbolTable<'data, 'file, R>, PhantomData<R>)),
+    Goff((goff::GoffSymbolTable<'data, 'file>, PhantomData<R>)),
     #[cfg(feature = "macho")]
     MachO32(
         (
@@ -1182,7 +1182,7 @@ where
         ),
     ),
     #[cfg(feature = "goff")]
-    Goff((goff::GoffSymbolIterator<'data, 'file, R>, PhantomData<R>)),
+    Goff((goff::GoffSymbolIterator<'data, 'file>, PhantomData<R>)),
     #[cfg(feature = "macho")]
     MachO32(
         (
@@ -1263,7 +1263,7 @@ where
         ),
     ),
     #[cfg(feature = "goff")]
-    Goff((goff::GoffSymbol<'data>, PhantomData<(&'file (), R)>)),
+    Goff((goff::GoffSymbol<'data, 'file>, PhantomData<R>)),
     #[cfg(feature = "macho")]
     MachO32(
         (

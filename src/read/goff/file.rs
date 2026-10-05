@@ -22,7 +22,7 @@ use std::collections::HashMap;
 use super::{
     GoffComdat, GoffComdatIterator, GoffSection, GoffSectionIterator, GoffSegment,
     GoffSegmentIterator, GoffSegmentRef, GoffSymbol, GoffSymbolIterator, GoffSymbolTable,
-    GoffTextReference, LogicalRecord,
+    GoffSymbolTableInternal, GoffTextReference, LogicalRecord,
 };
 
 /// A parsed GOFF file.
@@ -36,7 +36,7 @@ where
     pub(super) header: &'data goff::HeaderRecord,
     pub(super) sections: Vec<SymbolIndex>,
     pub(super) segments: HashMap<SymbolIndex, GoffSegment<'data>>,
-    pub(super) symbols: Vec<GoffSymbol<'data>>,
+    pub(super) symbols: GoffSymbolTableInternal<'data>,
     pub(super) relocations: Vec<goff::Relocation>,
     pub(super) record_count: Option<u32>,
     pub(super) entry_name: Cow<'data, [u8]>,
@@ -60,7 +60,7 @@ where
             header,
             sections: Vec::new(),
             segments: HashMap::new(),
-            symbols: Vec::new(),
+            symbols: GoffSymbolTableInternal::new(),
             relocations: Vec::new(),
             record_count: None,
             entry_name: Cow::Borrowed(&[]),
@@ -84,9 +84,7 @@ where
                 RT_RLD => {
                     self.parse_relocations(record.cast())?;
                 }
-                RT_LEN => {
-                    self.parse_len_record(record.cast())?;
-                }
+                RT_LEN => self.symbols.add_len(record.cast())?,
                 RT_END => {
                     self.parse_end(record.cast())?;
                     break;
@@ -98,19 +96,7 @@ where
     }
 
     fn parse_esd(&mut self, record: LogicalRecord<'data, goff::SymbolRecord>) -> Result<()> {
-        // Flatten name from the ESD record and any continuation records into a single Vec<u8>
-        let name = record.esd_name()?.into_owned();
-
-        let symbol = GoffSymbol {
-            record,
-            name,
-            length: record.initial.length.get(BE),
-        };
-        let symbol_index = symbol.esdid();
-
-        // insert into symbol table (and section table if appropriate)
-        // ESDIDs are 1-based and sequential; push ensures index == esdid - 1
-        self.symbols.push(symbol);
+        let symbol_index = self.symbols.add(record)?;
         // Only ED (Element Definition) represents user sections
         // SD (Section Definition) is the compile unit, not a user section
         if record.initial.symbol_type == ESD_ST_ED {
@@ -122,25 +108,21 @@ where
 
     fn parse_txt(&mut self, record: LogicalRecord<'data, goff::TextRecord>) -> Result<()> {
         let txt_record = record.initial;
-        let esdid = txt_record.element_esdid.get(BE);
-
-        let symbolindex = SymbolIndex(
-            usize::try_from(esdid).expect("Target architecture pointer size is too small"),
-        );
+        let esdid = SymbolIndex(txt_record.element_esdid.get(BE) as usize);
 
         // if esdid is a PR, get the parent ED
         let symbol = self
             .symbols
-            .get(esdid as usize - 1)
+            .get(esdid)
             .ok_or(Error("txt record references undefined symbol"))?;
-        let ed_symbolindex: SymbolIndex = match symbol.record.initial.symbol_type {
-            ESD_ST_ED => symbolindex,
+        let ed_symbolindex: SymbolIndex = match symbol.record().symbol_type {
+            ESD_ST_ED => esdid,
             _ => symbol.parent_esdid(),
         };
 
         // Create text reference
         let text_ref = GoffTextReference {
-            esdid: symbolindex,
+            esdid,
             record_style: txt_record.record_style,
             offset: txt_record.offset.get(BE),
             true_length: txt_record.true_length.get(BE),
@@ -154,13 +136,10 @@ where
             segment.text_refs.push(text_ref);
         } else {
             // insert new segment into segments map
-            let ed_symbol = self
-                .symbols
-                .get(ed_symbolindex.0 - 1)
-                .ok_or(Error("ED symbol not found for segment"))?
-                .clone();
+            self.symbols
+                .get(ed_symbolindex)
+                .ok_or(Error("ED symbol not found for segment"))?;
             let segment = GoffSegment {
-                symbol: ed_symbol,
                 text_refs: vec![text_ref],
             };
             self.segments.insert(ed_symbolindex, segment);
@@ -200,40 +179,6 @@ where
             self.relocations.push(relocation?);
         }
         Ok(())
-    }
-
-    /// Parses a LengthRecord and its continuations, extracting deferred element-length data items
-    /// and updating the corresponding symbols with their lengths
-    fn parse_len_record(&mut self, record: LogicalRecord<'data, goff::LengthRecord>) -> Result<()> {
-        for item in record.len_items()? {
-            let esdid = item.esdid.get(BE);
-            let length = item.length.get(BE);
-
-            // Update symbol in Vec (ESDIDs are 1-based)
-            let idx =
-                usize::try_from(esdid).expect("Target architecture pointer size is too small");
-
-            let symbol = self
-                .symbols
-                .get_mut(idx - 1)
-                .ok_or(Error("LEN record references undefined symbol"))?;
-
-            symbol.length = length;
-        }
-
-        Ok(())
-    }
-
-    /// Access all symbols including ED and SD.
-    ///
-    /// This method provides access to the complete symbol table for internal
-    /// operations and testing that need to traverse parent relationships or access
-    /// structural metadata symbols (ED/SD).
-    ///
-    /// **Note:** This is primarily for internal use and testing. For the public API,
-    /// use `symbol_table()` which filters out ED/SD symbols.
-    pub fn symbol_records(&self) -> &Vec<GoffSymbol<'data>> {
-        &self.symbols
     }
 }
 
@@ -275,17 +220,17 @@ where
         Self: 'file,
         'data: 'file;
     type Symbol<'file>
-        = GoffSymbol<'data>
+        = GoffSymbol<'data, 'file>
     where
         Self: 'file,
         'data: 'file;
     type SymbolIterator<'file>
-        = GoffSymbolIterator<'data, 'file, R>
+        = GoffSymbolIterator<'data, 'file>
     where
         Self: 'file,
         'data: 'file;
     type SymbolTable<'file>
-        = GoffSymbolTable<'data, 'file, R>
+        = GoffSymbolTable<'data, 'file>
     where
         Self: 'file,
         'data: 'file;
@@ -362,28 +307,26 @@ where
         GoffComdatIterator { file: self }
     }
 
-    fn symbol_table(&self) -> Option<GoffSymbolTable<'data, '_, R>> {
-        Some(GoffSymbolTable { file: self })
+    fn symbol_table(&self) -> Option<GoffSymbolTable<'data, '_>> {
+        Some(GoffSymbolTable::new(&self.symbols))
     }
 
-    fn symbol_by_index(&self, index: SymbolIndex) -> Result<GoffSymbol<'data>> {
+    fn symbol_by_index(&self, index: SymbolIndex) -> Result<GoffSymbol<'data, '_>> {
         let symbol_table = self.symbol_table().ok_or(Error("missing symbol table"))?;
         symbol_table.symbol_by_index(index)
     }
 
-    fn symbols(&self) -> GoffSymbolIterator<'data, '_, R> {
-        let symbol_table = self.symbol_table().unwrap();
-        symbol_table.symbols()
+    fn symbols(&self) -> GoffSymbolIterator<'data, '_> {
+        GoffSymbolIterator::new(&self.symbols)
     }
 
-    fn dynamic_symbol_table(&self) -> Option<GoffSymbolTable<'data, '_, R>> {
+    fn dynamic_symbol_table(&self) -> Option<GoffSymbolTable<'data, '_>> {
         // Access dynamic symbols through dynamic_symbols() method
         None
     }
 
-    fn dynamic_symbols(&self) -> GoffSymbolIterator<'data, '_, R> {
-        let symbol_table = GoffSymbolTable { file: self };
-        symbol_table.iter_none()
+    fn dynamic_symbols(&self) -> GoffSymbolIterator<'data, '_> {
+        GoffSymbolIterator::empty()
     }
 
     fn dynamic_relocations(&self) -> Option<Self::DynamicRelocationIterator<'_>> {
@@ -405,7 +348,7 @@ where
     fn has_debug_symbols(&self) -> bool {
         // Check if any symbol name begins with the debug symbol prefix [0xC4, 0x6D] (i.e., the prefix D_ in EBCDIC)
         self.symbols.iter().any(|symbol| {
-            let name = symbol.name_bytes_owned();
+            let name = symbol.name_bytes();
             name.len() >= 2 && name[0] == 0xC4 && name[1] == 0x6D
         })
     }

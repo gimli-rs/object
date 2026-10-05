@@ -6,7 +6,7 @@ use crate::goff::TextRecordStyle;
 use crate::read::{self, ObjectSegment, ReadRef, Result};
 use crate::{Permissions, SegmentFlags, SymbolIndex};
 
-use super::{GoffFile, GoffSymbol};
+use super::GoffFile;
 
 /// An iterator for the segments in a [`GoffFile`].
 #[derive(Debug)]
@@ -91,18 +91,11 @@ impl<'data> GoffTextReference<'data> {
 /// This is either a segment or metadata
 #[derive(Debug, Clone)]
 pub struct GoffSegment<'data> {
-    /// The symbol corresponding to this segment's ESDID
-    pub(super) symbol: GoffSymbol<'data>,
     /// Data Payload
     pub(super) text_refs: Vec<GoffTextReference<'data>>,
 }
 
 impl<'data> GoffSegment<'data> {
-    /// Returns a reference to the symbol corresponding to this segment's ESDID.
-    pub fn symbol(&self) -> &GoffSymbol<'data> {
-        &self.symbol
-    }
-
     /// Returns a reference to the text references in this segment.
     pub fn text_refs(&self) -> &[GoffTextReference<'data>] {
         &self.text_refs
