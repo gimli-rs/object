@@ -14,15 +14,11 @@ use crate::{
 };
 
 use crate::goff::*;
-#[cfg(not(feature = "std"))]
-use alloc::collections::BTreeMap as HashMap;
-#[cfg(feature = "std")]
-use std::collections::HashMap;
 
 use super::{
     GoffComdat, GoffComdatIterator, GoffSection, GoffSectionIterator, GoffSegment,
-    GoffSegmentIterator, GoffSegmentRef, GoffSymbol, GoffSymbolIterator, GoffSymbolTable,
-    GoffSymbolTableInternal, GoffTextReference, LogicalRecord,
+    GoffSegmentIterator, GoffSymbol, GoffSymbolIterator, GoffSymbolTable, GoffSymbolTableInternal,
+    LogicalRecord,
 };
 
 /// A parsed GOFF file.
@@ -35,7 +31,6 @@ where
 {
     pub(super) header: &'data goff::HeaderRecord,
     pub(super) sections: Vec<SymbolIndex>,
-    pub(super) segments: HashMap<SymbolIndex, GoffSegment<'data>>,
     pub(super) symbols: GoffSymbolTableInternal<'data>,
     pub(super) relocations: Vec<goff::Relocation>,
     pub(super) record_count: Option<u32>,
@@ -59,7 +54,6 @@ where
         let mut file = GoffFile {
             header,
             sections: Vec::new(),
-            segments: HashMap::new(),
             symbols: GoffSymbolTableInternal::new(),
             relocations: Vec::new(),
             record_count: None,
@@ -80,7 +74,7 @@ where
         while let Some(record) = LogicalRecord::parse(&mut records)? {
             match record.initial.ptv.record_type() {
                 RT_ESD => self.parse_esd(record.cast())?,
-                RT_TXT => self.parse_txt(record.cast())?,
+                RT_TXT => self.symbols.add_txt(record.cast())?,
                 RT_RLD => {
                     self.parse_relocations(record.cast())?;
                 }
@@ -101,48 +95,6 @@ where
         // SD (Section Definition) is the compile unit, not a user section
         if record.initial.symbol_type == ESD_ST_ED {
             self.sections.push(symbol_index);
-        }
-
-        Ok(())
-    }
-
-    fn parse_txt(&mut self, record: LogicalRecord<'data, goff::TextRecord>) -> Result<()> {
-        let txt_record = record.initial;
-        let esdid = SymbolIndex(txt_record.element_esdid.get(BE) as usize);
-
-        // if esdid is a PR, get the parent ED
-        let symbol = self
-            .symbols
-            .get(esdid)
-            .ok_or(Error("txt record references undefined symbol"))?;
-        let ed_symbolindex: SymbolIndex = match symbol.record().symbol_type {
-            ESD_ST_ED => esdid,
-            _ => symbol.parent_esdid(),
-        };
-
-        // Create text reference
-        let text_ref = GoffTextReference {
-            esdid,
-            record_style: txt_record.record_style,
-            offset: txt_record.offset.get(BE),
-            true_length: txt_record.true_length.get(BE),
-            text_encoding: txt_record.text_encoding.get(BE),
-            data_length: txt_record.data_length.get(BE),
-            text_data: record.txt_data_parts()?.collect(),
-        };
-
-        // Update segments map with new text data if ED ESDID already exists
-        if let Some(segment) = self.segments.get_mut(&ed_symbolindex) {
-            segment.text_refs.push(text_ref);
-        } else {
-            // insert new segment into segments map
-            self.symbols
-                .get(ed_symbolindex)
-                .ok_or(Error("ED symbol not found for segment"))?;
-            let segment = GoffSegment {
-                text_refs: vec![text_ref],
-            };
-            self.segments.insert(ed_symbolindex, segment);
         }
 
         Ok(())
@@ -190,7 +142,7 @@ where
     R: ReadRef<'data>,
 {
     type Segment<'file>
-        = GoffSegmentRef<'data, 'file, R>
+        = GoffSegment<'data, 'file, R>
     where
         Self: 'file,
         'data: 'file;

@@ -38,6 +38,7 @@ impl<'data> GoffSymbolTableInternal<'data> {
             record,
             name: record.esd_name()?,
             length: record.initial.length.get(BE),
+            text: Vec::new(),
         };
         // Ensure esdid matches the position we will push to.
         let symbol_index = symbol.esdid();
@@ -71,6 +72,16 @@ impl<'data> GoffSymbolTableInternal<'data> {
         Ok(())
     }
 
+    pub(super) fn add_txt(&mut self, record: LogicalRecord<'data, goff::TextRecord>) -> Result<()> {
+        let txt_record = record.initial;
+        let esdid = SymbolIndex(txt_record.element_esdid.get(BE) as usize);
+        let symbol = self
+            .element_mut(esdid)
+            .ok_or(Error("Invalid element ESDID in GOFF TXT record"))?;
+        symbol.text.push(record);
+        Ok(())
+    }
+
     /// Get the symbol at the given index.
     ///
     /// Returns an `None` for index 0 or an invalid index.
@@ -80,6 +91,25 @@ impl<'data> GoffSymbolTableInternal<'data> {
 
     pub(super) fn get_mut(&mut self, index: SymbolIndex) -> Option<&mut GoffSymbolInternal<'data>> {
         self.symbols.get_mut(index.0.wrapping_sub(1))
+    }
+
+    /// Get the ED symbol that owns the data for the given ED or PR symbol index.
+    ///
+    /// Returns `None` for an invalid index, or if the symbol is not an ED or PR.
+    pub(super) fn element_mut(
+        &mut self,
+        index: SymbolIndex,
+    ) -> Option<&mut GoffSymbolInternal<'data>> {
+        let mut index = index;
+        let symbol = self.get(index)?;
+        if symbol.record().symbol_type == goff::ESD_ST_PR {
+            index = symbol.parent_esdid();
+        }
+        let symbol = self.get_mut(index)?;
+        if symbol.record().symbol_type != goff::ESD_ST_ED {
+            return None;
+        }
+        Some(symbol)
     }
 
     /// Iterate over the symbols.
@@ -99,6 +129,8 @@ pub(super) struct GoffSymbolInternal<'data> {
     ///
     /// May be from a LEN record.
     length: u32,
+    /// TXT records which reference this ESD.
+    text: Vec<LogicalRecord<'data, goff::TextRecord>>,
 }
 
 impl<'data> GoffSymbolInternal<'data> {
@@ -143,6 +175,11 @@ impl<'data> GoffSymbolInternal<'data> {
     /// Get the length from the ESD or LEN record.
     pub(super) fn length(&self) -> u32 {
         self.length
+    }
+
+    /// Get the TXT records that reference this symbol.
+    pub(super) fn text(&self) -> &[LogicalRecord<'data, goff::TextRecord>] {
+        &self.text
     }
 }
 
