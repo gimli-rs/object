@@ -39,6 +39,7 @@ impl<'data> GoffSymbolTableInternal<'data> {
             name: record.esd_name()?,
             length: record.initial.length.get(BE),
             text: Vec::new(),
+            relocations: Vec::new(),
         };
         // Ensure esdid matches the position we will push to.
         let symbol_index = symbol.esdid();
@@ -79,6 +80,21 @@ impl<'data> GoffSymbolTableInternal<'data> {
             .element_mut(esdid)
             .ok_or(Error("Invalid element ESDID in GOFF TXT record"))?;
         symbol.text.push(record);
+        Ok(())
+    }
+
+    /// Parses a RelocationRecord and its continuations, extracting individual relocation items
+    pub(super) fn add_rld(
+        &mut self,
+        record: LogicalRecord<'data, goff::RelocationRecord>,
+    ) -> Result<()> {
+        let mut relocations = record.rld_items()?;
+        while let Some(relocation) = relocations.next()? {
+            let symbol = self
+                .element_mut(SymbolIndex(relocation.p_pointer as usize))
+                .ok_or(Error("Invalid P pointer in GOFF RLD entry"))?;
+            symbol.relocations.push(relocation);
+        }
         Ok(())
     }
 
@@ -131,6 +147,8 @@ pub(super) struct GoffSymbolInternal<'data> {
     length: u32,
     /// TXT records which reference this ESD.
     text: Vec<LogicalRecord<'data, goff::TextRecord>>,
+    /// Relocation data items which reference this ESD.
+    relocations: Vec<goff::Relocation>,
 }
 
 impl<'data> GoffSymbolInternal<'data> {
@@ -180,6 +198,10 @@ impl<'data> GoffSymbolInternal<'data> {
     /// Get the TXT records that reference this symbol.
     pub(super) fn text(&self) -> &[LogicalRecord<'data, goff::TextRecord>] {
         &self.text
+    }
+
+    pub(super) fn relocations(&self) -> &[goff::Relocation] {
+        &self.relocations
     }
 }
 

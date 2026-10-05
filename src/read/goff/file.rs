@@ -32,7 +32,6 @@ where
     pub(super) header: &'data goff::HeaderRecord,
     pub(super) sections: Vec<SymbolIndex>,
     pub(super) symbols: GoffSymbolTableInternal<'data>,
-    pub(super) relocations: Vec<goff::Relocation>,
     pub(super) record_count: Option<u32>,
     pub(super) entry_name: Cow<'data, [u8]>,
     pub(super) entry_flags: Option<goff::FileFlags>,
@@ -55,7 +54,6 @@ where
             header,
             sections: Vec::new(),
             symbols: GoffSymbolTableInternal::new(),
-            relocations: Vec::new(),
             record_count: None,
             entry_name: Cow::Borrowed(&[]),
             entry_flags: None,
@@ -75,9 +73,7 @@ where
             match record.initial.ptv.record_type() {
                 RT_ESD => self.parse_esd(record.cast())?,
                 RT_TXT => self.symbols.add_txt(record.cast())?,
-                RT_RLD => {
-                    self.parse_relocations(record.cast())?;
-                }
+                RT_RLD => self.symbols.add_rld(record.cast())?,
                 RT_LEN => self.symbols.add_len(record.cast())?,
                 RT_END => {
                     self.parse_end(record.cast())?;
@@ -119,17 +115,6 @@ where
         self.entry_amode = Some(end_record.amode);
         self.entry_esdid = Some(end_record.esdid.get(BE));
         self.entry_name = record.entry_name()?;
-        Ok(())
-    }
-
-    /// Parses a RelocationRecord and its continuations, extracting individual relocation items
-    fn parse_relocations(
-        &mut self,
-        record: LogicalRecord<'data, goff::RelocationRecord>,
-    ) -> Result<()> {
-        for relocation in record.rld_items()? {
-            self.relocations.push(relocation?);
-        }
         Ok(())
     }
 }

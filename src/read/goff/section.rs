@@ -232,10 +232,15 @@ where
     }
 
     fn relocations(&self) -> Self::RelocationIterator {
+        let relocations = self
+            .file
+            .symbols
+            .get(self.esdid)
+            .map_or(&[][..], |symbol| symbol.relocations())
+            .iter();
         GoffRelocationIterator {
             file: self.file,
-            section_esdid: self.esdid,
-            index: 0,
+            relocations,
         }
     }
 
