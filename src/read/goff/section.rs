@@ -70,38 +70,18 @@ where
 }
 
 impl<'data, 'file, R: ReadRef<'data>> GoffSection<'data, 'file, R> {
-    /// Check if an ESDID is a descendant (child, grandchild, etc.) of a parent ESDID
-    fn is_descendant_of(&self, esdid: SymbolIndex, parent_esdid: SymbolIndex) -> bool {
-        // ESDID 0 means "no parent"; guard against underflow and false positives
-        if esdid.0 == 0 {
-            return false;
-        }
-        if let Some(symbol) = self.file.symbols.get(esdid) {
-            if symbol.parent_esdid() == parent_esdid {
-                return true;
-            }
-            // Recursively check if this symbol's parent is a descendant
-            if symbol.parent_esdid() != esdid {
-                return self.is_descendant_of(symbol.parent_esdid(), parent_esdid);
-            }
-        }
-        false
-    }
-
     /// Returns GOFF section data by collecting TXT record payloads for this section
     /// and any descendant elements.
-    pub fn data_parts(&self) -> alloc::vec::Vec<u8> {
+    pub fn data_parts(&self) -> Result<alloc::vec::Vec<u8>> {
         let mut data = alloc::vec::Vec::new();
-        for (&segment_esdid, segment) in &self.file.segments {
-            if segment_esdid == self.esdid || self.is_descendant_of(segment_esdid, self.esdid) {
-                for txt in &segment.text_refs {
-                    for part in &txt.text_data {
-                        data.extend_from_slice(part);
-                    }
+        if let Some(symbol) = self.file.symbols.get(self.esdid) {
+            for txt in symbol.text() {
+                for part in txt.txt_data_parts()? {
+                    data.extend_from_slice(part);
                 }
             }
         }
-        data
+        Ok(data)
     }
 
     /// Returns GOFF section name bytes from the flattened symbol name.
@@ -203,7 +183,7 @@ where
     // Override the default uncompressed_data() implementation
     // This is the correct way to get GOFF section data
     fn uncompressed_data(&self) -> Result<Cow<'data, [u8]>> {
-        let data = self.data_parts();
+        let data = self.data_parts()?;
 
         if data.is_empty() {
             Ok(alloc::borrow::Cow::Borrowed(&[]))
