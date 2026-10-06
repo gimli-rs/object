@@ -17,8 +17,8 @@ use crate::goff::*;
 
 use super::{
     GoffComdat, GoffComdatIterator, GoffSection, GoffSectionIterator, GoffSegment,
-    GoffSegmentIterator, GoffSymbol, GoffSymbolIterator, GoffSymbolTable, GoffSymbolTableInternal,
-    LogicalRecord,
+    GoffSegmentIterator, GoffSymbol, GoffSymbolIndex, GoffSymbolIterator, GoffSymbolTable,
+    GoffSymbolTableInternal, LogicalRecord,
 };
 
 /// A parsed GOFF file.
@@ -30,7 +30,7 @@ where
     R: ReadRef<'data>,
 {
     pub(super) header: &'data goff::HeaderRecord,
-    pub(super) sections: Vec<SymbolIndex>,
+    pub(super) sections: Vec<GoffSymbolIndex>,
     pub(super) symbols: GoffSymbolTableInternal<'data>,
     pub(super) record_count: Option<u32>,
     pub(super) entry_name: Cow<'data, [u8]>,
@@ -64,6 +64,7 @@ where
         };
 
         file.parse_records(records)?;
+        file.sections = file.symbols.set_sections();
         Ok(file)
     }
 
@@ -71,7 +72,7 @@ where
     fn parse_records(&mut self, mut records: &'data [goff::Record]) -> Result<()> {
         while let Some(record) = LogicalRecord::parse(&mut records)? {
             match record.initial.ptv.record_type() {
-                RT_ESD => self.parse_esd(record.cast())?,
+                RT_ESD => self.symbols.add_esd(record.cast())?,
                 RT_TXT => self.symbols.add_txt(record.cast())?,
                 RT_RLD => self.symbols.add_rld(record.cast())?,
                 RT_LEN => self.symbols.add_len(record.cast())?,
@@ -82,17 +83,6 @@ where
                 _ => return Err(Error("Invalid GOFF record type encountered while parsing")),
             }
         }
-        Ok(())
-    }
-
-    fn parse_esd(&mut self, record: LogicalRecord<'data, goff::SymbolRecord>) -> Result<()> {
-        let symbol_index = self.symbols.add(record)?;
-        // Only ED (Element Definition) represents user sections
-        // SD (Section Definition) is the compile unit, not a user section
-        if record.initial.symbol_type == ESD_ST_ED {
-            self.sections.push(symbol_index);
-        }
-
         Ok(())
     }
 
@@ -221,11 +211,11 @@ where
     }
 
     fn section_by_index(&self, index: SectionIndex) -> Result<GoffSection<'data, '_, R>> {
-        let esdid = self
+        let symbol_index = self
             .sections
             .get(index.0)
-            .ok_or(Error("Invalid GOFF section index"))?;
-        Ok(GoffSection::new(self, index, *esdid))
+            .read_error("Invalid GOFF section index")?;
+        Ok(GoffSection::new(self, index, *symbol_index))
     }
 
     fn sections(&self) -> GoffSectionIterator<'data, '_, R> {

@@ -24,33 +24,12 @@ impl<'data, 'file, R> GoffRelocationIterator<'data, 'file, R>
 where
     R: ReadRef<'data>,
 {
-    /// Get the symbol type for a given ESDID
-    fn get_symbol_type(&self, esdid: SymbolIndex) -> Option<goff::SymbolType> {
-        self.file.symbols.get(esdid).map(|s| s.record().symbol_type)
-    }
-
-    /// Find the section index for a given ESDID
-    fn find_section_index(&self, esdid: SymbolIndex) -> Option<crate::read::SectionIndex> {
-        self.file
-            .sections
-            .iter()
-            .position(|&si| si == esdid)
-            .map(crate::read::SectionIndex)
-    }
-
     /// Map R-pointer to RelocationTarget
     fn map_target(&self, r_pointer: SymbolIndex) -> Option<RelocationTarget> {
-        let symbol_type = self.get_symbol_type(r_pointer)?;
-
-        if symbol_type == goff::ESD_ST_ED {
-            // Element Definition - map to section
-            self.find_section_index(r_pointer)
-                .map(RelocationTarget::Section)
-        } else if symbol_type == goff::ESD_ST_ER || symbol_type == goff::ESD_ST_PR {
-            // External/Part Reference - map to symbol
-            Some(RelocationTarget::Symbol(r_pointer))
+        let symbol = self.file.symbols.get(r_pointer)?;
+        if symbol.record().symbol_type == goff::ESD_ST_ED {
+            symbol.section().map(RelocationTarget::Section)
         } else {
-            // Other types - treat as symbol
             Some(RelocationTarget::Symbol(r_pointer))
         }
     }
