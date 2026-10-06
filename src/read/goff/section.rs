@@ -1,13 +1,11 @@
 use alloc::borrow::Cow;
 use core::{fmt, iter, slice, str};
 
-use crate::read::{
-    self, Error, ObjectSection, ReadRef, RelocationMap, Result, SectionIndex, SymbolIndex,
-};
+use crate::read::{self, Error, ObjectSection, ReadRef, RelocationMap, Result, SectionIndex};
 use crate::{CompressedData, CompressedFileRange, SectionFlags, SectionKind};
 use crate::{ebcdic, goff};
 
-use super::{GoffFile, GoffRelocationIterator, GoffSymbolInternal};
+use super::{GoffFile, GoffRelocationIterator, GoffSymbolIndex, GoffSymbolInternal};
 
 /// An iterator for the sections in an [`GoffFile`].
 #[derive(Debug)]
@@ -16,7 +14,7 @@ where
     R: ReadRef<'data>,
 {
     pub(super) file: &'file GoffFile<'data, R>,
-    pub(super) iter: iter::Enumerate<slice::Iter<'file, SymbolIndex>>,
+    pub(super) iter: iter::Enumerate<slice::Iter<'file, GoffSymbolIndex>>,
 }
 
 impl<'data, 'file, R> Iterator for GoffSectionIterator<'data, 'file, R>
@@ -26,8 +24,12 @@ where
     type Item = GoffSection<'data, 'file, R>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let (index, esdid) = self.iter.next()?;
-        Some(GoffSection::new(self.file, SectionIndex(index), *esdid))
+        let (index, symbol_index) = self.iter.next()?;
+        Some(GoffSection::new(
+            self.file,
+            SectionIndex(index),
+            *symbol_index,
+        ))
     }
 }
 
@@ -59,12 +61,12 @@ impl<'data, 'file, R: ReadRef<'data>> GoffSection<'data, 'file, R> {
     pub(super) fn new(
         file: &'file GoffFile<'data, R>,
         index: SectionIndex,
-        esdid: SymbolIndex,
+        symbol_index: GoffSymbolIndex,
     ) -> Self {
         GoffSection {
             file,
             index,
-            symbol: file.symbols.get(esdid).unwrap(),
+            symbol: file.symbols.get_by_index(symbol_index),
         }
     }
 

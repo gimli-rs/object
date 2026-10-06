@@ -8,14 +8,16 @@ use core::str;
 use crate::BigEndian as BE;
 use crate::ebcdic;
 use crate::goff;
-use crate::goff::*;
-
 use crate::read::{
     self, Error, ObjectSymbol, ObjectSymbolTable, ReadError, Result, SectionIndex, SymbolFlags,
     SymbolIndex, SymbolKind, SymbolScope, SymbolSection,
 };
 
 use super::LogicalRecord;
+
+/// 0-based index into GoffSymbolTableInternal::symbols that is always valid.
+#[derive(Debug, Clone, Copy)]
+pub(super) struct GoffSymbolIndex(usize);
 
 /// A table of ESD records in a GOFF file.
 #[derive(Debug)]
@@ -30,14 +32,15 @@ impl<'data> GoffSymbolTableInternal<'data> {
         }
     }
 
-    pub(super) fn add(
+    pub(super) fn add_esd(
         &mut self,
         record: LogicalRecord<'data, goff::SymbolRecord>,
-    ) -> Result<SymbolIndex> {
+    ) -> Result<()> {
         let symbol = GoffSymbolInternal {
             record,
             name: record.esd_name()?,
             length: record.initial.length.get(BE),
+            section: None,
             text: Vec::new(),
             relocations: Vec::new(),
         };
@@ -53,7 +56,7 @@ impl<'data> GoffSymbolTableInternal<'data> {
         }
 
         self.symbols.push(symbol);
-        Ok(symbol_index)
+        Ok(())
     }
 
     /// Parses a LengthRecord and its continuations, extracting deferred element-length data items
@@ -99,8 +102,14 @@ impl<'data> GoffSymbolTableInternal<'data> {
     }
 
     /// Get the symbol at the given index.
+    pub(super) fn get_by_index(&self, index: GoffSymbolIndex) -> &GoffSymbolInternal<'data> {
+        // GoffSymbolIndex is always valid.
+        &self.symbols[index.0]
+    }
+
+    /// Get the symbol with the given ESDID.
     ///
-    /// Returns an `None` for index 0 or an invalid index.
+    /// Returns an `None` for ESDID 0 or an invalid ESDID.
     pub(super) fn get(&self, index: SymbolIndex) -> Option<&GoffSymbolInternal<'data>> {
         self.symbols.get(index.0.wrapping_sub(1))
     }
@@ -132,6 +141,30 @@ impl<'data> GoffSymbolTableInternal<'data> {
     pub(super) fn iter(&self) -> slice::Iter<'_, GoffSymbolInternal<'data>> {
         self.symbols.iter()
     }
+
+    /// Assign section indices.
+    pub(super) fn set_sections(&mut self) -> Vec<GoffSymbolIndex> {
+        let mut sections = Vec::new();
+        for i in 0..self.symbols.len() {
+            let symbol = &self.symbols[i];
+            let section = match symbol.record().symbol_type {
+                // Only ED (Element Definition) represents user sections.
+                // SD (Section Definition) is the compile unit, not a user section.
+                goff::ESD_ST_ED => {
+                    let section_index = SectionIndex(sections.len());
+                    sections.push(GoffSymbolIndex(i));
+                    Some(section_index)
+                }
+                goff::ESD_ST_LD | goff::ESD_ST_PR => self
+                    .get(symbol.parent_esdid())
+                    .filter(|parent| parent.record().symbol_type == goff::ESD_ST_ED)
+                    .and_then(|parent| parent.section),
+                _ => None,
+            };
+            self.symbols[i].section = section;
+        }
+        sections
+    }
 }
 
 /// A symbol in a GOFF [`SymbolTable`].
@@ -145,6 +178,10 @@ pub(super) struct GoffSymbolInternal<'data> {
     ///
     /// May be from a LEN record.
     length: u32,
+    /// The section this symbol belongs to.
+    ///
+    /// Set for ED symbols, or LD/PR symbols with an ED parent.
+    section: Option<SectionIndex>,
     /// TXT records which reference this ESD.
     text: Vec<LogicalRecord<'data, goff::TextRecord>>,
     /// Relocation data items which reference this ESD.
@@ -193,6 +230,13 @@ impl<'data> GoffSymbolInternal<'data> {
     /// Get the length from the ESD or LEN record.
     pub(super) fn length(&self) -> u32 {
         self.length
+    }
+
+    /// Get the section this symbol belongs to.
+    ///
+    /// Set for ED symbols, or LD/PR symbols with an ED parent.
+    pub(super) fn section(&self) -> Option<SectionIndex> {
+        self.section
     }
 
     /// Get the TXT records that reference this symbol.
@@ -320,7 +364,7 @@ impl<'data, 'file> ObjectSymbol<'data> for GoffSymbol<'data, 'file> {
             // - PR is a weak reference variant
             goff::ESD_ST_PR => {
                 self.symbol.length == 0
-                    && (esd.namespace == ESD_NS_PSEUDO_REGISTER
+                    && (esd.namespace == goff::ESD_NS_PSEUDO_REGISTER
                         || esd.behavioral_attributes.binding_strength() == goff::ESD_BST_WEAK
                         || esd.behavioral_attributes.binding_scope() == goff::ESD_BSC_IMPORT_EXPORT)
             }
