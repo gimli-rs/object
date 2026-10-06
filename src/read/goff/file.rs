@@ -1,4 +1,3 @@
-use alloc::borrow::Cow;
 use alloc::vec::Vec;
 use core::fmt::Debug;
 use core::marker::PhantomData;
@@ -32,12 +31,7 @@ where
     pub(super) header: &'data goff::HeaderRecord,
     pub(super) sections: Vec<GoffSymbolIndex>,
     pub(super) symbols: GoffSymbolTableInternal<'data>,
-    pub(super) record_count: Option<u32>,
-    pub(super) entry_name: Cow<'data, [u8]>,
-    pub(super) entry_flags: Option<goff::FileFlags>,
-    pub(super) entry_amode: Option<goff::Amode>,
-    pub(super) entry_esdid: Option<u32>,
-    pub(super) entry_offset: Option<u32>,
+    pub(super) end: LogicalRecord<'data, goff::EndRecord>,
     marker: PhantomData<R>,
 }
 
@@ -48,64 +42,36 @@ where
     /// Parse raw GOFF file data. Only fixed length records are supported
     pub fn parse(data: R) -> Result<Self> {
         let header = goff::HeaderRecord::parse(data)?;
-        let records = header.records(data)?;
 
-        let mut file = GoffFile {
-            header,
-            sections: Vec::new(),
-            symbols: GoffSymbolTableInternal::new(),
-            record_count: None,
-            entry_name: Cow::Borrowed(&[]),
-            entry_flags: None,
-            entry_amode: None,
-            entry_esdid: None,
-            entry_offset: None,
-            marker: PhantomData,
-        };
+        let mut symbols = GoffSymbolTableInternal::new();
+        let end;
 
-        file.parse_records(records)?;
-        file.sections = file.symbols.set_sections();
-        Ok(file)
-    }
-
-    /// Parses the body of a GOFF file (each record after the module header record)
-    fn parse_records(&mut self, mut records: &'data [goff::Record]) -> Result<()> {
-        while let Some(record) = LogicalRecord::parse(&mut records)? {
+        let mut records = header.records(data)?;
+        loop {
+            let Some(record) = LogicalRecord::parse(&mut records)? else {
+                return Err(Error("Missing GOFF END record"));
+            };
             match record.initial.ptv.record_type() {
-                RT_ESD => self.symbols.add_esd(record.cast())?,
-                RT_TXT => self.symbols.add_txt(record.cast())?,
-                RT_RLD => self.symbols.add_rld(record.cast())?,
-                RT_LEN => self.symbols.add_len(record.cast())?,
+                RT_ESD => symbols.add_esd(record.cast())?,
+                RT_TXT => symbols.add_txt(record.cast())?,
+                RT_RLD => symbols.add_rld(record.cast())?,
+                RT_LEN => symbols.add_len(record.cast())?,
                 RT_END => {
-                    self.parse_end(record.cast())?;
+                    end = record.cast();
                     break;
                 }
                 _ => return Err(Error("Invalid GOFF record type encountered while parsing")),
             }
         }
-        Ok(())
-    }
 
-    /// Parses the END record (if an entry point is specified, will be parsed here)
-    fn parse_end(&mut self, record: LogicalRecord<'data, goff::EndRecord>) -> Result<()> {
-        let end_record = record.initial;
-
-        // Parse record count and entry flags first
-        self.record_count = Some(end_record.record_count.get(BE)).filter(|&cnt| cnt != 0);
-        self.entry_flags = Some(end_record.flags).filter(|f| f.entry() != goff::ENTRY_NONE);
-
-        // If entry flags are empty (i.e, 0) no entry point specified and no need to continue
-        if self.entry_flags.is_none() {
-            self.entry_amode = None;
-            self.entry_esdid = None;
-            return Ok(());
-        }
-
-        // Parse entry point data
-        self.entry_amode = Some(end_record.amode);
-        self.entry_esdid = Some(end_record.esdid.get(BE));
-        self.entry_name = record.entry_name()?;
-        Ok(())
+        let sections = symbols.set_sections();
+        Ok(GoffFile {
+            header,
+            sections,
+            symbols,
+            end,
+            marker: PhantomData,
+        })
     }
 }
 
@@ -280,17 +246,20 @@ where
     }
 
     fn entry(&self) -> u64 {
-        match self.entry_offset {
-            Some(offset) => offset.into(),
-            None => 0,
-        }
+        0
     }
 
     fn flags(&self) -> FileFlags {
+        let end = self.end.initial;
+        let (flags, amode) = if end.flags.entry() != goff::ENTRY_NONE {
+            (Some(end.flags), Some(end.amode))
+        } else {
+            (None, None)
+        };
         FileFlags::Goff {
             archlvl: self.header.archlvl.get(BE),
-            flags: self.entry_flags,
-            amode: self.entry_amode,
+            flags,
+            amode,
         }
     }
 }
