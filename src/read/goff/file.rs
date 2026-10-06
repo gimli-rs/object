@@ -221,22 +221,17 @@ where
     }
 
     fn section_by_index(&self, index: SectionIndex) -> Result<GoffSection<'data, '_, R>> {
-        let esdid = *self
+        let esdid = self
             .sections
             .get(index.0)
             .ok_or(Error("Invalid GOFF section index"))?;
-        Ok(GoffSection {
-            file: self,
-            esdid,
-            index,
-        })
+        Ok(GoffSection::new(self, index, *esdid))
     }
 
     fn sections(&self) -> GoffSectionIterator<'data, '_, R> {
         GoffSectionIterator {
             file: self,
-            iter: self.sections.iter(),
-            index: 0,
+            iter: self.sections.iter().enumerate(),
         }
     }
 

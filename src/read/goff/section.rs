@@ -1,12 +1,5 @@
 use alloc::borrow::Cow;
-#[cfg(not(feature = "std"))]
-#[allow(unused_imports)]
-use alloc::collections::btree_map as hash_map;
-use core::fmt::Debug;
-use core::str;
-#[cfg(feature = "std")]
-#[allow(unused_imports)]
-use std::collections::hash_map;
+use core::{fmt, iter, slice, str};
 
 use crate::read::{
     self, Error, ObjectSection, ReadRef, RelocationMap, Result, SectionIndex, SymbolIndex,
@@ -14,7 +7,7 @@ use crate::read::{
 use crate::{CompressedData, CompressedFileRange, SectionFlags, SectionKind};
 use crate::{ebcdic, goff};
 
-use super::{GoffFile, GoffRelocationIterator};
+use super::{GoffFile, GoffRelocationIterator, GoffSymbolInternal};
 
 /// An iterator for the sections in an [`GoffFile`].
 #[derive(Debug)]
@@ -23,8 +16,7 @@ where
     R: ReadRef<'data>,
 {
     pub(super) file: &'file GoffFile<'data, R>,
-    pub(super) iter: core::slice::Iter<'file, SymbolIndex>,
-    pub(super) index: usize,
+    pub(super) iter: iter::Enumerate<slice::Iter<'file, SymbolIndex>>,
 }
 
 impl<'data, 'file, R> Iterator for GoffSectionIterator<'data, 'file, R>
@@ -34,14 +26,8 @@ where
     type Item = GoffSection<'data, 'file, R>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let next_item = self.iter.next()?;
-        let current_index = self.index;
-        self.index += 1;
-        Some(GoffSection {
-            esdid: *next_item,
-            file: self.file,
-            index: SectionIndex(current_index),
-        })
+        let (index, esdid) = self.iter.next()?;
+        Some(GoffSection::new(self.file, SectionIndex(index), *esdid))
     }
 }
 
@@ -52,33 +38,43 @@ pub struct GoffSection<'data, 'file, R = &'data [u8]>
 where
     R: ReadRef<'data>,
 {
-    pub(super) file: &'file GoffFile<'data, R>,
-    pub(super) esdid: SymbolIndex,
-    pub(super) index: SectionIndex,
+    file: &'file GoffFile<'data, R>,
+    symbol: &'file GoffSymbolInternal<'data>,
+    index: SectionIndex,
 }
 
-impl<'data, 'file, R> core::fmt::Debug for GoffSection<'data, 'file, R>
+impl<'data, 'file, R> fmt::Debug for GoffSection<'data, 'file, R>
 where
     R: ReadRef<'data>,
 {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("GoffSection")
-            .field("esdid", &self.esdid)
+            .field("esdid", &self.symbol.esdid())
             .field("index", &self.index)
             .finish_non_exhaustive()
     }
 }
 
 impl<'data, 'file, R: ReadRef<'data>> GoffSection<'data, 'file, R> {
+    pub(super) fn new(
+        file: &'file GoffFile<'data, R>,
+        index: SectionIndex,
+        esdid: SymbolIndex,
+    ) -> Self {
+        GoffSection {
+            file,
+            index,
+            symbol: file.symbols.get(esdid).unwrap(),
+        }
+    }
+
     /// Returns GOFF section data by collecting TXT record payloads for this section
     /// and any descendant elements.
     pub fn data_parts(&self) -> Result<alloc::vec::Vec<u8>> {
         let mut data = alloc::vec::Vec::new();
-        if let Some(symbol) = self.file.symbols.get(self.esdid) {
-            for txt in symbol.text() {
-                for part in txt.txt_data_parts()? {
-                    data.extend_from_slice(part);
-                }
+        for txt in self.symbol.text() {
+            for part in txt.txt_data_parts()? {
+                data.extend_from_slice(part);
             }
         }
         Ok(data)
@@ -86,13 +82,7 @@ impl<'data, 'file, R: ReadRef<'data>> GoffSection<'data, 'file, R> {
 
     /// Returns GOFF section name bytes from the flattened symbol name.
     pub fn goff_name_bytes(&self) -> Result<&'file [u8]> {
-        let symbol = self
-            .file
-            .symbols
-            .get(self.esdid)
-            .ok_or(Error("Invalid GOFF section ESDID"))?;
-
-        let name = symbol.name_bytes();
+        let name = self.symbol.name_bytes();
         if name.is_empty() {
             Err(Error("Invalid GOFF section, empty section name"))
         } else {
@@ -119,36 +109,26 @@ where
     }
 
     fn size(&self) -> u64 {
-        self.file
-            .symbols
-            .get(self.esdid)
-            .map(|symbol| symbol.length() as u64)
-            .unwrap_or(0)
+        u64::from(self.symbol.length())
     }
 
     fn align(&self) -> u64 {
-        self.file
-            .symbols
-            .get(self.esdid)
-            .map(|symbol| {
-                match symbol.record().behavioral_attributes.alignment() {
-                    goff::ALIGN_BYTE => 1,
-                    goff::ALIGN_HALFWORD => 2,
-                    goff::ALIGN_FULLWORD => 4,
-                    goff::ALIGN_DOUBLEWORD => 8,
-                    goff::ALIGN_QUADWORD => 16,
-                    goff::ALIGN_32BYTE => 32,
-                    goff::ALIGN_64BYTE => 64,
-                    goff::ALIGN_128BYTE => 128,
-                    goff::ALIGN_256BYTE => 256,
-                    goff::ALIGN_512BYTE => 512,
-                    goff::ALIGN_1024BYTE => 1024,
-                    goff::ALIGN_2KB => 2048,
-                    goff::ALIGN_4KB => 4096,
-                    _ => 1, // Default to byte alignment
-                }
-            })
-            .unwrap_or(1)
+        match self.symbol.record().behavioral_attributes.alignment() {
+            goff::ALIGN_BYTE => 1,
+            goff::ALIGN_HALFWORD => 2,
+            goff::ALIGN_FULLWORD => 4,
+            goff::ALIGN_DOUBLEWORD => 8,
+            goff::ALIGN_QUADWORD => 16,
+            goff::ALIGN_32BYTE => 32,
+            goff::ALIGN_64BYTE => 64,
+            goff::ALIGN_128BYTE => 128,
+            goff::ALIGN_256BYTE => 256,
+            goff::ALIGN_512BYTE => 512,
+            goff::ALIGN_1024BYTE => 1024,
+            goff::ALIGN_2KB => 2048,
+            goff::ALIGN_4KB => 4096,
+            _ => 1, // Default to byte alignment
+        }
     }
 
     fn file_range(&self) -> Option<(u64, u64)> {
@@ -218,10 +198,7 @@ where
     }
 
     fn kind(&self) -> SectionKind {
-        let SectionFlags::Goff { flags } = self.flags() else {
-            return SectionKind::Unknown;
-        };
-
+        let flags = self.symbol.record().behavioral_attributes;
         if flags.executable() == goff::EXEC_CODE {
             SectionKind::Text
         } else if flags.is_read_only() {
@@ -232,15 +209,9 @@ where
     }
 
     fn relocations(&self) -> Self::RelocationIterator {
-        let relocations = self
-            .file
-            .symbols
-            .get(self.esdid)
-            .map_or(&[][..], |symbol| symbol.relocations())
-            .iter();
         GoffRelocationIterator {
             file: self.file,
-            relocations,
+            relocations: self.symbol.relocations().iter(),
         }
     }
 
@@ -249,12 +220,8 @@ where
     }
 
     fn flags(&self) -> SectionFlags {
-        self.file
-            .symbols
-            .get(self.esdid)
-            .map(|symbol| SectionFlags::Goff {
-                flags: symbol.record().behavioral_attributes,
-            })
-            .unwrap_or(SectionFlags::None)
+        SectionFlags::Goff {
+            flags: self.symbol.record().behavioral_attributes,
+        }
     }
 }
