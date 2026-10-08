@@ -254,3 +254,50 @@ fn macho_x86_64_bss() {
     let symbol = symbols.next();
     assert!(symbol.is_none(), "unexpected symbol {:?}", symbol);
 }
+
+#[cfg(feature = "xcoff")]
+#[test]
+fn xcoff_powerpc_bss() {
+    for arch in [Architecture::PowerPc, Architecture::PowerPc64] {
+        let mut object = write::Object::new(BinaryFormat::Xcoff, arch, Endianness::Big);
+
+        let section = object.section_id(write::StandardSection::UninitializedData);
+
+        let symbol = object.add_symbol(write::Symbol {
+            name: b"v1".to_vec(),
+            value: 0,
+            size: 0,
+            kind: SymbolKind::Data,
+            scope: SymbolScope::Linkage,
+            weak: false,
+            section: write::SymbolSection::Undefined,
+            flags: SymbolFlags::None,
+        });
+        object.add_symbol_bss(symbol, section, 18, 4);
+
+        let symbol = object.add_symbol(write::Symbol {
+            name: b"v2".to_vec(),
+            value: 0,
+            size: 0,
+            kind: SymbolKind::Data,
+            scope: SymbolScope::Linkage,
+            weak: false,
+            section: write::SymbolSection::Undefined,
+            flags: SymbolFlags::None,
+        });
+        object.add_symbol_bss(symbol, section, 34, 8);
+
+        let bytes = object.write().unwrap();
+        let object = read::File::parse(&*bytes).unwrap();
+        assert_eq!(object.format(), BinaryFormat::Xcoff);
+
+        let bss = object.section_by_name(".bss").unwrap();
+        assert_eq!(bss.kind(), SectionKind::UninitializedData);
+        assert_eq!(bss.size(), 58);
+        assert_eq!(bss.data(), Ok(&[][..]));
+
+        let v2 = object.symbol_by_name("v2").unwrap();
+        assert_eq!(v2.section_index(), Some(bss.index()));
+        assert_eq!(v2.address(), bss.address() + 24);
+    }
+}
