@@ -234,6 +234,11 @@ impl<'a> Object<'a> {
     /// Add a new section and return its `SectionId`.
     ///
     /// This also creates a section symbol.
+    ///
+    /// `name` and `segment` must not contain null bytes.
+    ///
+    /// For GOFF, `name` must be UTF-8 containing only characters in the range
+    /// U+0001 to U+00FF, and will be encoded as EBCDIC when writing.
     pub fn add_section(&mut self, segment: Vec<u8>, name: Vec<u8>, kind: SectionKind) -> SectionId {
         let id = SectionId(self.sections.len());
         self.sections.push(Section {
@@ -1062,6 +1067,11 @@ pub struct SymbolId(usize);
 #[derive(Debug)]
 pub struct Symbol {
     /// The name of the symbol.
+    ///
+    /// This must not contain null bytes.
+    ///
+    /// For GOFF, this must be UTF-8 containing only characters in the range
+    /// U+0001 to U+00FF, and will be encoded as EBCDIC when writing.
     pub name: Vec<u8>,
     /// The value of the symbol.
     ///

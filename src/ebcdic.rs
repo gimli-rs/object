@@ -116,7 +116,6 @@ impl EbcdicString {
         EbcdicString(bytes)
     }
 
-    #[cfg(test)]
     pub fn from_utf8(bytes: &[u8]) -> Option<Self> {
         let s = core::str::from_utf8(bytes).ok()?;
         let out: Option<Vec<u8>> = s
