@@ -4,16 +4,16 @@ use alloc::vec::Vec;
 #[cfg(feature = "std")]
 use std::collections::hash_map::HashMap;
 
-use crate::ebcdic::{EbcdicArray, EbcdicStr};
+use crate::ebcdic::{EbcdicArray, EbcdicStr, EbcdicString};
 use crate::endian::{BigEndian as BE, U16, U32};
 use crate::goff;
 use crate::write::util::*;
 use crate::write::*;
 
-// EBCDIC-encoded constant strings
+const C_WSA64: [u8; 7] = *b"C_WSA64";
+const C_CODE64: [u8; 8] = *b"C_CODE64";
 const EBCDIC_RUSTCU: EbcdicArray<6> = EbcdicArray::from_ascii(*b"rustcu");
-const EBCDIC_C_WSA64: EbcdicArray<7> = EbcdicArray::from_ascii(*b"C_WSA64");
-const EBCDIC_C_CODE64: EbcdicArray<8> = EbcdicArray::from_ascii(*b"C_CODE64");
+const EBCDIC_C_WSA64: EbcdicArray<7> = EbcdicArray::from_ascii(C_WSA64);
 
 impl<'a> Object<'a> {
     /// Get symbols that belong to a specific section.
@@ -93,35 +93,24 @@ impl<'a> Object<'a> {
         &self,
         section: StandardSection,
     ) -> (&'static [u8], &'static [u8], SectionKind, SectionFlags) {
-        // TODO: return UTF-8 for section names
         match section {
-            StandardSection::Text => (
-                &[],
-                EBCDIC_C_CODE64.as_bytes(),
-                SectionKind::Text,
-                SectionFlags::None,
-            ),
-            StandardSection::Data => (
-                &[],
-                EBCDIC_C_WSA64.as_bytes(),
-                SectionKind::Data,
-                SectionFlags::None,
-            ),
+            StandardSection::Text => (&[], &C_CODE64, SectionKind::Text, SectionFlags::None),
+            StandardSection::Data => (&[], &C_WSA64, SectionKind::Data, SectionFlags::None),
             StandardSection::ReadOnlyData | StandardSection::ReadOnlyString => (
                 &[],
-                EBCDIC_C_CODE64.as_bytes(),
+                &C_CODE64,
                 SectionKind::ReadOnlyData,
                 SectionFlags::None,
             ),
             StandardSection::ReadOnlyDataWithRel => (
                 &[],
-                EBCDIC_C_WSA64.as_bytes(),
+                &C_WSA64,
                 SectionKind::ReadOnlyDataWithRel,
                 SectionFlags::None,
             ),
             StandardSection::UninitializedData => (
                 &[],
-                EBCDIC_C_WSA64.as_bytes(),
+                &C_WSA64,
                 SectionKind::UninitializedData,
                 SectionFlags::None,
             ),
@@ -438,8 +427,7 @@ impl<'a> Writer<'a> {
             return Ok(ed_esdid);
         }
 
-        // TODO: convert from UTF-8
-        let name = EbcdicStr::from_bytes(&section.name);
+        let name = &encode_name(&section.name)?;
 
         // Determine section attributes and create ED based on kind
         let ed_esdid = match section.kind {
@@ -634,8 +622,7 @@ impl<'a> Writer<'a> {
             }
         };
 
-        // TODO: convert from UTF-8
-        let name = EbcdicStr::from_bytes(&symbol.name);
+        let name = &encode_name(&symbol.name)?;
 
         // Write LD (Label Definition) for the symbol
         let ld_esdid = self.write_ld(name, parent_ed_esdid, symbol.value as u32, scope);
@@ -663,8 +650,7 @@ impl<'a> Writer<'a> {
             goff::ESD_BSC_LIBRARY
         };
 
-        // TODO: convert from UTF-8
-        let name = EbcdicStr::from_bytes(&symbol.name);
+        let name = &encode_name(&symbol.name)?;
 
         // Check if it's a weak reference
         let esdid = if symbol.weak {
@@ -906,4 +892,19 @@ fn readonly_data_attrs() -> goff::BehavioralAttributes {
         .with_read_only(true)
         .with_executable(goff::EXEC_DATA)
         .with_alignment(goff::ALIGN_DOUBLEWORD)
+}
+
+fn encode_name(name: &[u8]) -> Result<EbcdicString> {
+    if name.contains(&0) {
+        return Err(Error(format!(
+            "GOFF name `{}` contains a null byte",
+            String::from_utf8_lossy(name)
+        )));
+    }
+    EbcdicString::from_utf8(name).ok_or_else(|| {
+        Error(format!(
+            "GOFF name `{}` is not convertible to EBCDIC",
+            String::from_utf8_lossy(name)
+        ))
+    })
 }
