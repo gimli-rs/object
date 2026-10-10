@@ -4,7 +4,7 @@ use alloc::vec::Vec;
 use core::{iter, mem};
 
 use crate::BigEndian as BE;
-use crate::ebcdic;
+use crate::ebcdic::EbcdicStr;
 use crate::goff;
 use crate::pod::{self, Pod};
 use crate::read::{Error, ReadError, Result};
@@ -134,7 +134,8 @@ impl<'data> LogicalRecord<'data, goff::SymbolRecord> {
     /// and converted to UTF-8.
     pub fn esd_name_utf8(&self) -> Result<String> {
         // TODO: avoid intermediate Vec
-        self.esd_name().map(|data| ebcdic::to_string(&data))
+        self.esd_name()
+            .map(|data| EbcdicStr::from_bytes(&data).to_utf8())
     }
 }
 
@@ -181,7 +182,8 @@ impl<'data> LogicalRecord<'data, goff::EndRecord> {
     /// and converted to UTF-8.
     pub fn entry_name_utf8(&self) -> Result<String> {
         // TODO: avoid intermediate Vec
-        self.entry_name().map(|data| ebcdic::to_string(&data))
+        self.entry_name()
+            .map(|data| EbcdicStr::from_bytes(&data).to_utf8())
     }
 }
 

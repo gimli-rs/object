@@ -70,7 +70,7 @@ pub use common::*;
 mod constants;
 pub use constants::*;
 
-#[cfg(all(feature = "read_core", any(feature = "archive", feature = "goff")))]
+#[cfg(any(feature = "archive", feature = "goff"))]
 mod ebcdic;
 
 #[macro_use]

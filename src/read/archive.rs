@@ -25,7 +25,7 @@ use core::convert::TryInto;
 use core::slice;
 use core::str;
 
-use crate::ebcdic;
+use crate::ebcdic::{EbcdicArray, EbcdicStr};
 use crate::endian::{BigEndian as BE, LittleEndian as LE, U16, U32, U64};
 use crate::read::{self, Bytes, Error, ReadError, ReadRef};
 use crate::{SkipDebugList, archive};
@@ -306,9 +306,9 @@ impl<'data, R: ReadRef<'data>> ArchiveFile<'data, R> {
         let members_end_offset = len;
 
         if tail < len {
+            const ZOS_SYMDEF: [u8; 9] = EbcdicArray::from_ascii(*b"__.SYMDEF").into_bytes();
             let member = ArchiveMember::parse_zos(data, &mut tail)?;
-            // __.SYMDEF
-            if member.name() == [0x6D, 0x6D, 0x4B, 0xE2, 0xE8, 0xD4, 0xC4, 0xC5, 0xC6] {
+            if member.name() == ZOS_SYMDEF {
                 // Symbol table member.
                 file.symbols = member.file_range();
                 members_offset = tail;
@@ -538,8 +538,8 @@ impl<'data> ArchiveMember<'data> {
         let mut file_offset = *offset;
         let mut file_size = header_file_size;
 
-        // Check for "#1/" in EBCDIC followed by EBCDIC length.
-        let name = if header.name[..3] == [0x7B, 0xF1, 0x61] && is_ebcdic_digit(header.name[3]) {
+        const ZOS_EXTENDED: [u8; 3] = EbcdicArray::from_ascii(*b"#1/").into_bytes();
+        let name = if header.name[..3] == ZOS_EXTENDED && is_ebcdic_digit(header.name[3]) {
             // BSD-style extended name at start of file data.
             // Note: This is unlikely for z/OS archives, but we handle it for completeness
             zos_parse_bsd_extended_name(&header.name[3..], data, &mut file_offset, &mut file_size)
@@ -656,7 +656,7 @@ impl<'data> ArchiveMember<'data> {
     #[cfg_attr(not(feature = "unstable"), doc(hidden))]
     pub fn decoded_name_bytes(&self) -> Cow<'data, [u8]> {
         match self.header {
-            MemberHeader::Zos(_) => Cow::Owned(ebcdic::to_string(self.name).into_bytes()),
+            MemberHeader::Zos(_) => Cow::Owned(EbcdicStr::from_bytes(self.name).to_utf8_bytes()),
             _ => Cow::Borrowed(self.name),
         }
     }
@@ -670,7 +670,7 @@ impl<'data> ArchiveMember<'data> {
     #[cfg_attr(not(feature = "unstable"), doc(hidden))]
     pub fn decoded_name(&self) -> read::Result<Cow<'data, str>> {
         match self.header {
-            MemberHeader::Zos(_) => Ok(Cow::Owned(ebcdic::to_string(self.name))),
+            MemberHeader::Zos(_) => Ok(Cow::Owned(EbcdicStr::from_bytes(self.name).to_utf8())),
             _ => str::from_utf8(self.name)
                 .ok()
                 .map(Cow::Borrowed)

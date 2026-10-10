@@ -2,6 +2,7 @@ use alloc::vec::Vec;
 use core::fmt::Debug;
 use core::marker::PhantomData;
 
+use crate::ebcdic::EbcdicArray;
 use crate::read::{
     self, Error, NoDynamicRelocationIterator, NoExportIterator, NoImportIterator,
     NoImportLibraryIterator, Object, ReadError, ReadRef, Result,
@@ -234,11 +235,11 @@ where
     }
 
     fn has_debug_symbols(&self) -> bool {
-        // Check if any symbol name begins with the debug symbol prefix [0xC4, 0x6D] (i.e., the prefix D_ in EBCDIC)
-        self.symbols.iter().any(|symbol| {
-            let name = symbol.name();
-            name.len() >= 2 && name[0] == 0xC4 && name[1] == 0x6D
-        })
+        // DWARF sections have a "D_" prefix.
+        const EBCDIC_D: EbcdicArray<2> = EbcdicArray::from_ascii(*b"D_");
+        self.symbols
+            .iter()
+            .any(|symbol| symbol.name().starts_with(&EBCDIC_D))
     }
 
     fn relative_address_base(&self) -> u64 {
