@@ -86,7 +86,7 @@ impl<'data, 'file, R: ReadRef<'data>> GoffSection<'data, 'file, R> {
     ///
     /// Use [`ObjectSection::decoded_name_bytes`] to convert to UTF-8 bytes.
     pub fn goff_name_bytes(&self) -> &'file [u8] {
-        self.symbol.name()
+        self.symbol.name().as_bytes()
     }
 }
 

@@ -1,12 +1,13 @@
-use alloc::string::String;
+#![cfg_attr(not(feature = "unstable-all"), allow(dead_code))]
 
-/// Convert EBCDIC (IBM-1047) bytes to a UTF-8 string.
-pub(crate) fn to_string(bs: &[u8]) -> String {
-    bs.iter()
-        // char::from maps ISO-8859-1 to Unicode.
-        .map(|b| char::from(IBM1047_TO_ISO88591[usize::from(*b)]))
-        .collect()
-}
+#[cfg(any(feature = "read_core", feature = "write_core"))]
+use alloc::borrow::{Borrow, ToOwned};
+#[cfg(any(feature = "read_core", feature = "write_core"))]
+use alloc::string::String;
+#[cfg(any(feature = "read_core", feature = "write_core"))]
+use alloc::vec::Vec;
+use core::fmt::{self, Write};
+use core::ops::Deref;
 
 /// Mapping from IBM-1047 to ISO-8859-1.
 ///
@@ -32,3 +33,184 @@ static IBM1047_TO_ISO88591: [u8; 256] = [
     0x5c, 0xf7, 0x53, 0x54, 0x55, 0x56, 0x57, 0x58, 0x59, 0x5a, 0xb2, 0xd4, 0xd6, 0xd2, 0xd3, 0xd5,
     0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39, 0xb3, 0xdb, 0xdc, 0xd9, 0xda, 0x9f,
 ];
+
+/// Mapping from ISO-8859-1 to IBM-1047.
+static ISO88591_TO_IBM1047: [u8; 256] = {
+    let mut table = [0; 256];
+    let mut i = 0;
+    while i < 256 {
+        table[IBM1047_TO_ISO88591[i] as usize] = i as u8;
+        i += 1;
+    }
+    table
+};
+
+/// A borrowed view of IBM-1047 EBCDIC-encoded bytes.
+#[derive(PartialEq, Eq)]
+#[repr(transparent)]
+pub struct EbcdicStr([u8]);
+
+impl EbcdicStr {
+    pub const fn from_bytes(slice: &[u8]) -> &Self {
+        // SAFETY: `EbcdicStr` is a `#[repr(transparent)]` wrapper around `[u8]`.
+        unsafe { &*(slice as *const [u8] as *const Self) }
+    }
+
+    pub fn as_bytes(&self) -> &[u8] {
+        &self.0
+    }
+
+    pub fn chars(&self) -> impl Iterator<Item = char> {
+        self.0
+            .iter()
+            // char::from maps ISO-8859-1 to Unicode.
+            .map(|b| char::from(IBM1047_TO_ISO88591[usize::from(*b)]))
+    }
+
+    #[cfg(any(feature = "read_core", feature = "write_core"))]
+    pub fn to_utf8(&self) -> String {
+        self.chars().collect()
+    }
+
+    #[cfg(any(feature = "read_core", feature = "write_core"))]
+    pub fn to_utf8_bytes(&self) -> Vec<u8> {
+        self.to_utf8().into_bytes()
+    }
+
+    pub fn starts_with(&self, prefix: &EbcdicStr) -> bool {
+        self.0.starts_with(&prefix.0)
+    }
+}
+
+impl fmt::Debug for EbcdicStr {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("Ebcdic(\"")?;
+        for c in self.chars() {
+            // Match the `Debug` output of the equivalent `str`.
+            if c == '\'' {
+                f.write_char(c)?;
+            } else {
+                write!(f, "{}", c.escape_debug())?;
+            }
+        }
+        f.write_str("\")")
+    }
+}
+
+#[cfg(any(feature = "read_core", feature = "write_core"))]
+impl ToOwned for EbcdicStr {
+    type Owned = EbcdicString;
+    fn to_owned(&self) -> Self::Owned {
+        EbcdicString(self.0.to_owned())
+    }
+}
+
+/// An owned, growable buffer of IBM-1047 EBCDIC-encoded bytes.
+#[cfg(any(feature = "read_core", feature = "write_core"))]
+#[derive(Clone, Default)]
+pub struct EbcdicString(Vec<u8>);
+
+#[cfg(any(feature = "read_core", feature = "write_core"))]
+impl EbcdicString {
+    pub fn from_bytes(bytes: Vec<u8>) -> Self {
+        EbcdicString(bytes)
+    }
+
+    #[cfg(test)]
+    pub fn from_utf8(bytes: &[u8]) -> Option<Self> {
+        let s = core::str::from_utf8(bytes).ok()?;
+        let out: Option<Vec<u8>> = s
+            .chars()
+            // u8::try_from maps Unicode to ISO-8859-1.
+            .map(|c| Some(ISO88591_TO_IBM1047[usize::from(u8::try_from(c).ok()?)]))
+            .collect();
+        out.map(EbcdicString)
+    }
+}
+
+#[cfg(any(feature = "read_core", feature = "write_core"))]
+impl fmt::Debug for EbcdicString {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::Debug::fmt(&**self, f)
+    }
+}
+
+#[cfg(any(feature = "read_core", feature = "write_core"))]
+impl Deref for EbcdicString {
+    type Target = EbcdicStr;
+    fn deref(&self) -> &EbcdicStr {
+        EbcdicStr::from_bytes(&self.0)
+    }
+}
+
+#[cfg(any(feature = "read_core", feature = "write_core"))]
+impl Borrow<EbcdicStr> for EbcdicString {
+    fn borrow(&self) -> &EbcdicStr {
+        self
+    }
+}
+
+/// A fixed-width buffer of `N` IBM-1047 EBCDIC-encoded bytes.
+#[derive(Clone, Copy)]
+pub struct EbcdicArray<const N: usize>([u8; N]);
+
+impl<const N: usize> EbcdicArray<N> {
+    #[cfg(test)]
+    pub const fn from_bytes(bytes: [u8; N]) -> Self {
+        EbcdicArray(bytes)
+    }
+
+    pub const fn into_bytes(self) -> [u8; N] {
+        self.0
+    }
+
+    /// Encodes an ASCII string literal at compile time.
+    ///
+    /// Panics if bytes contains non-ASCII.
+    pub const fn from_ascii(bytes: [u8; N]) -> Self {
+        let mut out = [0; N];
+        let mut i = 0;
+        while i < bytes.len() {
+            let b = bytes[i];
+            if b >= 0x80 {
+                panic!("EbcdicArray::from_ascii: input must be ASCII (bytes < 0x80)");
+            }
+            out[i] = ISO88591_TO_IBM1047[b as usize];
+            i += 1;
+        }
+        EbcdicArray(out)
+    }
+}
+
+impl<const N: usize> Deref for EbcdicArray<N> {
+    type Target = EbcdicStr;
+    fn deref(&self) -> &EbcdicStr {
+        EbcdicStr::from_bytes(&self.0)
+    }
+}
+
+#[cfg(test)]
+#[cfg(any(feature = "read_core", feature = "write_core"))]
+mod test {
+    use super::{EbcdicArray, EbcdicString};
+    use alloc::format;
+
+    #[test]
+    fn round_trip() {
+        for b in 0..=255 {
+            let a = EbcdicArray::from_bytes([b]);
+            let u = a.to_utf8();
+            let s = EbcdicString::from_utf8(u.as_bytes()).unwrap();
+            assert_eq!(*a, *s);
+        }
+    }
+
+    #[test]
+    fn fmt() {
+        for b in 0..=255 {
+            let a = EbcdicArray::from_bytes([b]);
+            let u = a.to_utf8();
+            assert_eq!(format!("{:?}", &*a), format!("Ebcdic({:?})", u));
+        }
+    }
+}

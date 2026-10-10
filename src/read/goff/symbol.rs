@@ -6,7 +6,7 @@ use core::slice;
 use core::str;
 
 use crate::BigEndian as BE;
-use crate::ebcdic;
+use crate::ebcdic::{EbcdicArray, EbcdicStr, EbcdicString};
 use crate::goff;
 use crate::read::{
     self, Error, ObjectSymbol, ObjectSymbolTable, ReadError, Result, SectionIndex, SymbolFlags,
@@ -36,9 +36,13 @@ impl<'data> GoffSymbolTableInternal<'data> {
         &mut self,
         record: LogicalRecord<'data, goff::SymbolRecord>,
     ) -> Result<()> {
+        let name = match record.esd_name()? {
+            Cow::Borrowed(name) => Cow::Borrowed(EbcdicStr::from_bytes(name)),
+            Cow::Owned(name) => Cow::Owned(EbcdicString::from_bytes(name)),
+        };
         let symbol = GoffSymbolInternal {
             record,
-            name: record.esd_name()?,
+            name,
             length: record.initial.length.get(BE),
             section: None,
             text: Vec::new(),
@@ -172,8 +176,8 @@ impl<'data> GoffSymbolTableInternal<'data> {
 pub(super) struct GoffSymbolInternal<'data> {
     /// ESD record.
     record: LogicalRecord<'data, goff::SymbolRecord>,
-    /// Symbol name (EBCDIC-encoded, flattened from ESD record and any continuation records)
-    name: Cow<'data, [u8]>,
+    /// Symbol name (flattened from ESD record and any continuation records)
+    name: Cow<'data, EbcdicStr>,
     /// Length (size of allocated memory of program element or section)
     ///
     /// May be from a LEN record.
@@ -215,16 +219,15 @@ impl<'data> GoffSymbolInternal<'data> {
 
     /// Get the raw EBCDIC-encoded name bytes of this symbol.
     ///
-    /// The name is stored as a flat byte vector in EBCDIC encoding.
     /// Use [`ObjectSymbol::decoded_name`] to convert to UTF-8.
     #[inline]
-    pub(super) fn name(&self) -> &[u8] {
+    pub(super) fn name(&self) -> &EbcdicStr {
         &self.name
     }
 
     /// Get the name converted to UTF-8.
     pub(super) fn decoded_name(&self) -> String {
-        ebcdic::to_string(&self.name)
+        self.name.to_utf8()
     }
 
     /// Get the length from the ESD or LEN record.
@@ -288,7 +291,7 @@ impl<'data, 'file> GoffSymbol<'data, 'file> {
     ///
     /// Use [`ObjectSymbol::decoded_name_bytes`] to convert to UTF-8 bytes.
     pub fn goff_name_bytes(&self) -> &'file [u8] {
-        self.symbol.name()
+        self.symbol.name().as_bytes()
     }
 }
 
@@ -410,11 +413,12 @@ impl<'data, 'file> ObjectSymbol<'data> for GoffSymbol<'data, 'file> {
 
     #[inline]
     fn is_global(&self) -> bool {
+        const EBCDIC_SPACE: EbcdicArray<1> = EbcdicArray::from_ascii(*b" ");
         let esd = self.goff_record();
         // Section definitions and Element definitions are local by default
         !matches!(esd.symbol_type, goff::ESD_ST_SD | goff::ESD_ST_ED)
         // Symbol identifiers that are a single EBCDIC encoded space are local
-        && *self.symbol.name != [0x40u8]
+        && *self.symbol.name != *EBCDIC_SPACE
         // If binding scope is section or module symbol is local
         && !matches!(
             esd.behavioral_attributes.binding_scope(),
