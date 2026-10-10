@@ -123,12 +123,8 @@ fn goff_basic_structure() {
     let debug_section = goff_sections
         .iter()
         .find(|s| {
-            if let Ok(name_bytes) = s.goff_name_bytes() {
-                // Compare the actual bytes, handling potential padding
-                name_bytes.starts_with(DOTDEBUG_INFO_EBCDIC)
-            } else {
-                false
-            }
+            // Compare the actual bytes, handling potential padding
+            s.goff_name_bytes().starts_with(DOTDEBUG_INFO_EBCDIC)
         })
         .expect("Should find .debug_info section");
 

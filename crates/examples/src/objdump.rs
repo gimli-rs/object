@@ -205,7 +205,7 @@ fn dump_parsed_object<W: Write, E: Write>(w: &mut W, e: &mut E, file: &object::F
     for section in file.sections() {
         if section.relocations().next().is_some() {
             let name = section
-                .name_utf8()
+                .decoded_name()
                 .unwrap_or(Cow::Borrowed("<invalid name>"));
             writeln!(w, "\n{} relocations", name)?;
             for relocation in section.relocations() {

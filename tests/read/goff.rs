@@ -137,7 +137,7 @@ fn goff_base_symbols() {
 
         // Check name by converting EBCDIC to ASCII
         assert_eq!(
-            symbol.name_utf8().unwrap(),
+            symbol.decoded_name().unwrap(),
             *expected_name,
             "Name mismatch for ESDID 0x{:08X}",
             expected_esdid
@@ -249,7 +249,7 @@ fn goff_foo_symbols() {
 
         // Check name by converting EBCDIC to ASCII
         assert_eq!(
-            symbol.name_utf8().unwrap(),
+            symbol.decoded_name().unwrap(),
             *expected_name,
             "Name mismatch for ESDID 0x{:08X}",
             expected_esdid
@@ -429,7 +429,7 @@ fn goff_foo_section_flags() {
         // Only print for SD (0x00) and ED (0x01) types which represent sections
         if symbol_type.0 == 0x00 || symbol_type.0 == 0x01 {
             let flags = esd.behavioral_attributes;
-            let name = symbol.name_utf8().unwrap();
+            let name = symbol.decoded_name().unwrap();
 
             println!(
                 "ESDID: 0x{:08X} | Type: 0x{:02X} | Name: {}",
@@ -500,7 +500,7 @@ fn goff_foo_binding_scope() {
     for esdid in [1, 2, 3, 4, 5, 9] {
         if let Ok(symbol) = file.symbol_by_index(SymbolIndex(esdid)) {
             let flags = symbol.goff_record().behavioral_attributes;
-            let name = symbol.name_utf8().unwrap();
+            let name = symbol.decoded_name().unwrap();
             let scope_raw = flags.0[5] & 0x0F;
             let scope_value = flags.binding_scope();
 

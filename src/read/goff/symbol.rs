@@ -216,14 +216,14 @@ impl<'data> GoffSymbolInternal<'data> {
     /// Get the raw EBCDIC-encoded name bytes of this symbol.
     ///
     /// The name is stored as a flat byte vector in EBCDIC encoding.
-    /// Use [`ObjectSymbol::name_utf8`] to convert to UTF-8.
+    /// Use [`ObjectSymbol::decoded_name`] to convert to UTF-8.
     #[inline]
-    pub(super) fn name_bytes(&self) -> &[u8] {
+    pub(super) fn name(&self) -> &[u8] {
         &self.name
     }
 
     /// Get the name converted to UTF-8.
-    pub(super) fn name_utf8(&self) -> String {
+    pub(super) fn decoded_name(&self) -> String {
         ebcdic::to_string(&self.name)
     }
 
@@ -261,7 +261,7 @@ impl<'data, 'file> fmt::Debug for GoffSymbol<'data, 'file> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("GoffSymbol")
             .field("esdid", &self.symbol.esdid())
-            .field("name", &self.symbol.name_utf8())
+            .field("name", &self.symbol.decoded_name())
             .field("symbol_type", &self.symbol.record().symbol_type)
             .finish_non_exhaustive()
     }
@@ -286,10 +286,9 @@ impl<'data, 'file> GoffSymbol<'data, 'file> {
 
     /// Get the raw EBCDIC-encoded name bytes of this symbol.
     ///
-    /// The name is stored as a flat byte vector in EBCDIC encoding.
-    /// Use [`ObjectSymbol::name_utf8`] to convert to UTF-8.
+    /// Use [`ObjectSymbol::decoded_name_bytes`] to convert to UTF-8 bytes.
     pub fn goff_name_bytes(&self) -> &'file [u8] {
-        self.symbol.name_bytes()
+        self.symbol.name()
     }
 }
 
@@ -303,18 +302,22 @@ impl<'data, 'file> ObjectSymbol<'data> for GoffSymbol<'data, 'file> {
 
     fn name_bytes(&self) -> Result<&'data [u8]> {
         Err(Error(
-            "GOFF symbol names are non-contiguous EBCDIC. Use name_utf8() instead",
+            "GOFF symbol names are non-contiguous EBCDIC. Use decoded_name_bytes() instead",
         ))
     }
 
     fn name(&self) -> Result<&'data str> {
         Err(Error(
-            "GOFF symbol names use non-contiguous EBCDIC. Use name_utf8() instead",
+            "GOFF symbol names are non-contiguous EBCDIC. Use decoded_name() instead",
         ))
     }
 
-    fn name_utf8(&self) -> Result<Cow<'data, str>> {
-        Ok(Cow::Owned(self.symbol.name_utf8()))
+    fn decoded_name_bytes(&self) -> Result<Cow<'data, [u8]>> {
+        Ok(Cow::Owned(self.symbol.decoded_name().into_bytes()))
+    }
+
+    fn decoded_name(&self) -> Result<Cow<'data, str>> {
+        Ok(Cow::Owned(self.symbol.decoded_name()))
     }
 
     #[inline]

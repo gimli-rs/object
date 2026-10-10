@@ -236,7 +236,7 @@ where
     fn has_debug_symbols(&self) -> bool {
         // Check if any symbol name begins with the debug symbol prefix [0xC4, 0x6D] (i.e., the prefix D_ in EBCDIC)
         self.symbols.iter().any(|symbol| {
-            let name = symbol.name_bytes();
+            let name = symbol.name();
             name.len() >= 2 && name[0] == 0xC4 && name[1] == 0x6D
         })
     }
