@@ -293,6 +293,10 @@ impl<'data, 'file> GoffSymbol<'data, 'file> {
     pub fn goff_name_bytes(&self) -> &'file [u8] {
         self.symbol.name().as_bytes()
     }
+
+    pub(super) fn goff_name(&self) -> &'file EbcdicStr {
+        self.symbol.name()
+    }
 }
 
 impl<'data, 'file> read::private::Sealed for GoffSymbol<'data, 'file> {}

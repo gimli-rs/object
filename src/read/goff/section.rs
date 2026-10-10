@@ -1,6 +1,7 @@
 use alloc::borrow::Cow;
 use core::{fmt, iter, slice, str};
 
+use crate::ebcdic::EbcdicStr;
 use crate::goff;
 use crate::read::{self, Error, ObjectSection, ReadRef, RelocationMap, Result, SectionIndex};
 use crate::{CompressedData, CompressedFileRange, SectionFlags, SectionKind};
@@ -87,6 +88,10 @@ impl<'data, 'file, R: ReadRef<'data>> GoffSection<'data, 'file, R> {
     /// Use [`ObjectSection::decoded_name_bytes`] to convert to UTF-8 bytes.
     pub fn goff_name_bytes(&self) -> &'file [u8] {
         self.symbol.name().as_bytes()
+    }
+
+    pub(super) fn goff_name(&self) -> &'file EbcdicStr {
+        self.symbol.name()
     }
 }
 
