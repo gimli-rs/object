@@ -436,14 +436,25 @@ pub trait ObjectSection<'data>: read::private::Sealed {
     /// Returns an error if the name is not UTF-8.
     fn name(&self) -> Result<&'data str>;
 
-    /// Returns the name of the section, converted to UTF-8.
+    /// The decoded name of the section.
     ///
-    /// This allocates if the file format requires a conversion, such as for GOFF names.
-    ///
-    /// Returns an error if the name cannot be converted to UTF-8.
+    /// For most file formats, this is the same as [`Self::name_bytes`].
+    /// For GOFF, the EBCDIC is converted to UTF-8 bytes, which requires an allocation.
     // TODO: stabilize
     #[cfg_attr(not(feature = "unstable"), doc(hidden))]
-    fn name_utf8(&self) -> Result<Cow<'data, str>> {
+    fn decoded_name_bytes(&self) -> Result<Cow<'data, [u8]>> {
+        self.name_bytes().map(Cow::Borrowed)
+    }
+
+    /// Returns the decoded name of the section, validated as UTF-8.
+    ///
+    /// For most file formats, this is the same as [`Self::name`].
+    /// For GOFF, the EBCDIC is converted to UTF-8, which requires an allocation.
+    ///
+    /// Returns an error if the name is not UTF-8.
+    // TODO: stabilize
+    #[cfg_attr(not(feature = "unstable"), doc(hidden))]
+    fn decoded_name(&self) -> Result<Cow<'data, str>> {
         self.name().map(Cow::Borrowed)
     }
 
@@ -533,14 +544,25 @@ pub trait ObjectSymbol<'data>: read::private::Sealed {
     /// Returns an error if the name is not UTF-8.
     fn name(&self) -> Result<&'data str>;
 
-    /// The name of the symbol, converted to UTF-8.
+    /// The decoded name of the symbol.
     ///
-    /// This allocates if the file format requires a conversion, such as for GOFF names.
-    ///
-    /// Returns an error if the name cannot be converted to UTF-8.
+    /// For most file formats, this is the same as [`Self::name_bytes`].
+    /// For GOFF, the EBCDIC is converted to UTF-8 bytes, which requires an allocation.
     // TODO: stabilize
     #[cfg_attr(not(feature = "unstable"), doc(hidden))]
-    fn name_utf8(&self) -> Result<Cow<'data, str>> {
+    fn decoded_name_bytes(&self) -> Result<Cow<'data, [u8]>> {
+        self.name_bytes().map(Cow::Borrowed)
+    }
+
+    /// The decoded name of the symbol, validated as UTF-8.
+    ///
+    /// For most file formats, this is the same as [`Self::name`].
+    /// For GOFF, the EBCDIC is converted to UTF-8, which requires an allocation.
+    ///
+    /// Returns an error if the name is not UTF-8.
+    // TODO: stabilize
+    #[cfg_attr(not(feature = "unstable"), doc(hidden))]
+    fn decoded_name(&self) -> Result<Cow<'data, str>> {
         self.name().map(Cow::Borrowed)
     }
 

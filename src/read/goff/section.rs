@@ -1,9 +1,9 @@
 use alloc::borrow::Cow;
 use core::{fmt, iter, slice, str};
 
+use crate::goff;
 use crate::read::{self, Error, ObjectSection, ReadRef, RelocationMap, Result, SectionIndex};
 use crate::{CompressedData, CompressedFileRange, SectionFlags, SectionKind};
-use crate::{ebcdic, goff};
 
 use super::{GoffFile, GoffRelocationIterator, GoffSymbolIndex, GoffSymbolInternal};
 
@@ -82,14 +82,11 @@ impl<'data, 'file, R: ReadRef<'data>> GoffSection<'data, 'file, R> {
         Ok(data)
     }
 
-    /// Returns GOFF section name bytes from the flattened symbol name.
-    pub fn goff_name_bytes(&self) -> Result<&'file [u8]> {
-        let name = self.symbol.name_bytes();
-        if name.is_empty() {
-            Err(Error("Invalid GOFF section, empty section name"))
-        } else {
-            Ok(name)
-        }
+    /// Get the raw EBCDIC-encoded name bytes of this section.
+    ///
+    /// Use [`ObjectSection::decoded_name_bytes`] to convert to UTF-8 bytes.
+    pub fn goff_name_bytes(&self) -> &'file [u8] {
+        self.symbol.name()
     }
 }
 
@@ -176,19 +173,22 @@ where
 
     fn name_bytes(&self) -> read::Result<&'data [u8]> {
         Err(Error(
-            "GOFF section names are non-contiguous EBCDIC. Use name_utf8() instead",
+            "GOFF section names are non-contiguous EBCDIC. Use decoded_name_bytes() instead",
         ))
     }
 
     fn name(&self) -> read::Result<&'data str> {
         Err(Error(
-            "GOFF section names are non-contiguous EBCDIC. Use name_utf8() instead",
+            "GOFF section names are non-contiguous EBCDIC. Use decoded_name() instead",
         ))
     }
 
-    fn name_utf8(&self) -> read::Result<Cow<'data, str>> {
-        let name = self.goff_name_bytes()?;
-        Ok(Cow::Owned(ebcdic::to_string(name)))
+    fn decoded_name_bytes(&self) -> read::Result<Cow<'data, [u8]>> {
+        Ok(Cow::Owned(self.symbol.decoded_name().into_bytes()))
+    }
+
+    fn decoded_name(&self) -> read::Result<Cow<'data, str>> {
+        Ok(Cow::Owned(self.symbol.decoded_name()))
     }
 
     fn segment_name_bytes(&self) -> Result<Option<&[u8]>> {

@@ -118,7 +118,9 @@ impl<'data> LogicalRecord<'data, goff::Record> {
 }
 
 impl<'data> LogicalRecord<'data, goff::SymbolRecord> {
-    /// Return the concatenated name data in the initial record and the continuation records.
+    /// Return the EBCDIC-encoded name.
+    ///
+    /// This is concatenated from the data in the initial record and the continuation records.
     pub fn esd_name(&self) -> Result<Cow<'data, [u8]>> {
         self.data_join(
             &self.initial.name,
@@ -126,8 +128,10 @@ impl<'data> LogicalRecord<'data, goff::SymbolRecord> {
         )
     }
 
-    /// Return the concatenated name data in the initial record and the continuation records,
-    /// converted to UTF-8.
+    /// Return the UTF-8 name.
+    ///
+    /// This is concatenated from the data in the initial record and the continuation records,
+    /// and converted to UTF-8.
     pub fn esd_name_utf8(&self) -> Result<String> {
         // TODO: avoid intermediate Vec
         self.esd_name().map(|data| ebcdic::to_string(&data))
@@ -161,7 +165,9 @@ impl<'data> LogicalRecord<'data, goff::RelocationRecord> {
 }
 
 impl<'data> LogicalRecord<'data, goff::EndRecord> {
-    /// Return the concatenated entry name data in the initial record and the continuation records.
+    /// Return the EBCDIC-encoded entry name.
+    ///
+    /// This is concatenated from the data in the initial record and the continuation records.
     pub fn entry_name(&self) -> Result<Cow<'data, [u8]>> {
         self.data_join(
             &self.initial.entry_name,
@@ -169,8 +175,10 @@ impl<'data> LogicalRecord<'data, goff::EndRecord> {
         )
     }
 
-    /// Return the concatenated entry name data in the initial record and the continuation records,
-    /// converted to UTF-8.
+    /// Return the UTF-8 entry name.
+    ///
+    /// This is concatenated from the data in the initial record and the continuation records,
+    /// and converted to UTF-8.
     pub fn entry_name_utf8(&self) -> Result<String> {
         // TODO: avoid intermediate Vec
         self.entry_name().map(|data| ebcdic::to_string(&data))
