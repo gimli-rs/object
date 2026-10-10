@@ -2,7 +2,7 @@ use alloc::vec::Vec;
 use core::fmt::Debug;
 use core::marker::PhantomData;
 
-use crate::ebcdic::EbcdicArray;
+use crate::ebcdic::{EbcdicArray, EbcdicString};
 use crate::read::{
     self, Error, NoDynamicRelocationIterator, NoExportIterator, NoImportIterator,
     NoImportLibraryIterator, Object, ReadError, ReadRef, Result,
@@ -171,10 +171,11 @@ where
 
     fn section_by_name_bytes<'file>(
         &'file self,
-        _section_name: &[u8],
+        section_name: &[u8],
     ) -> Option<GoffSection<'data, 'file, R>> {
-        // GOFF does not have unique section names or continguent section name bytes
-        None
+        let section_name = EbcdicString::from_utf8(section_name)?;
+        self.sections()
+            .find(|section| *section.goff_name() == *section_name)
     }
 
     fn section_by_index(&self, index: SectionIndex) -> Result<GoffSection<'data, '_, R>> {
@@ -198,6 +199,15 @@ where
 
     fn symbol_table(&self) -> Option<GoffSymbolTable<'data, '_>> {
         Some(GoffSymbolTable::new(&self.symbols))
+    }
+
+    fn symbol_by_name_bytes<'file>(
+        &'file self,
+        symbol_name: &[u8],
+    ) -> Option<GoffSymbol<'data, 'file>> {
+        let symbol_name = EbcdicString::from_utf8(symbol_name)?;
+        self.symbols()
+            .find(|symbol| *symbol.goff_name() == *symbol_name)
     }
 
     fn symbol_by_index(&self, index: SymbolIndex) -> Result<GoffSymbol<'data, '_>> {

@@ -150,8 +150,12 @@ pub trait Object<'data>: read::private::Sealed {
     ///   sections). Similarly, if ".debug_info" is requested for a Mach-O
     ///   object file, then "__zdebug_info" may be returned.
     ///
-    /// For some object files, multiple segments may contain sections with the
-    /// same name. In this case, the first matching section will be used.
+    /// No DWARF section name mapping is performed for XCOFF and GOFF.
+    ///
+    /// For GOFF, `section_name` is encoded as EBCDIC before comparison.
+    ///
+    /// Some object files may contain multiple sections with the same name.
+    /// In this case, the first matching section will be returned.
     ///
     /// This method skips over sections with invalid names.
     fn section_by_name(&self, section_name: &str) -> Option<Self::Section<'_>> {
@@ -159,6 +163,8 @@ pub trait Object<'data>: read::private::Sealed {
     }
 
     /// Like [`Self::section_by_name`], but allows names that are not UTF-8.
+    ///
+    /// For GOFF, `section_name` must be UTF-8 bytes.
     fn section_by_name_bytes<'file>(
         &'file self,
         section_name: &[u8],
@@ -197,11 +203,18 @@ pub trait Object<'data>: read::private::Sealed {
     fn symbols(&self) -> Self::SymbolIterator<'_>;
 
     /// Get the symbol named `symbol_name`, if the symbol exists.
+    ///
+    /// Some object files may contain multiple symbols with the same name. In this case,
+    /// the first matching symbol will be returned.
+    ///
+    /// For GOFF, `symbol_name` is encoded as EBCDIC before comparison.
     fn symbol_by_name<'file>(&'file self, symbol_name: &str) -> Option<Self::Symbol<'file>> {
         self.symbol_by_name_bytes(symbol_name.as_bytes())
     }
 
     /// Like [`Self::symbol_by_name`], but allows names that are not UTF-8.
+    ///
+    /// For GOFF, `symbol_name` must be UTF-8 bytes.
     fn symbol_by_name_bytes<'file>(&'file self, symbol_name: &[u8]) -> Option<Self::Symbol<'file>> {
         self.symbols()
             .find(|sym| sym.name_bytes() == Ok(symbol_name))

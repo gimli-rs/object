@@ -102,6 +102,11 @@ fn goff_basic_structure() {
     assert!(found_ceestart, "Should find CEESTART symbol");
     assert!(found_printf, "Should find printf symbol");
 
+    let printf = object
+        .symbol_by_name_bytes(PRINTF)
+        .expect("Should find printf");
+    assert_eq!(printf.decoded_name().as_deref(), Ok("printf"));
+
     // Verify section data
     let sections: Vec<_> = object.sections().collect();
     assert!(!sections.is_empty(), "Should have at least one section");
@@ -113,13 +118,12 @@ fn goff_basic_structure() {
     );
 
     // Find the debug section
-    let debug_section = goff_sections
-        .iter()
-        .find(|s| s.decoded_name_bytes().unwrap() == DOTDEBUG_INFO)
+    let debug_section = goff
+        .section_by_name_bytes(DOTDEBUG_INFO)
         .expect("Should find .debug_info section");
 
     // Check section data using the concrete GOFF section type.
-    let data = ObjectSection::uncompressed_data(debug_section).unwrap();
+    let data = debug_section.uncompressed_data().unwrap();
     assert_eq!(
         &data[..],
         &[
@@ -177,9 +181,9 @@ fn goff_multiple_debug_sections() {
     );
 
     // Verify section data using the concrete GOFF section type.
-    let data0 = ObjectSection::uncompressed_data(&goff_sections[0]).unwrap();
+    let data0 = goff_sections[0].uncompressed_data().unwrap();
     assert_eq!(&data0[..], &[0xDE, 0xAD]);
-    let data1 = ObjectSection::uncompressed_data(&goff_sections[1]).unwrap();
+    let data1 = goff_sections[1].uncompressed_data().unwrap();
     assert_eq!(&data1[..], &[0xBE, 0xEF]);
 }
 

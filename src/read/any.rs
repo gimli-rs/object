@@ -453,6 +453,16 @@ where
         .map(|inner| Symbol { inner })
     }
 
+    fn symbol_by_name_bytes<'file>(
+        &'file self,
+        symbol_name: &[u8],
+    ) -> Option<Symbol<'data, 'file, R>> {
+        map_inner_option!(self, File, SymbolInternal, |x| x
+            .symbol_by_name_bytes(symbol_name)
+            .map(|x| (x, PhantomData)))
+        .map(|inner| Symbol { inner })
+    }
+
     fn symbols(&self) -> SymbolIterator<'data, '_, R> {
         SymbolIterator {
             inner: map_inner!(self, File, SymbolIteratorInternal, |x| (
