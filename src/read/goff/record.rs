@@ -63,6 +63,21 @@ impl<'data, T> LogicalRecord<'data, T> {
         }
         Ok(Cow::Owned(data))
     }
+
+    /// Return the variable length data in the initial record and the continuation
+    /// records, limited to a total of `len` bytes, converted from EBCDIC to UTF-8.
+    ///
+    /// Returns an error if there are less than `len` bytes in the records.
+    fn data_utf8(&self, initial_data: &'data [u8], len: usize) -> Result<String> {
+        let (head, parts) = self.data_iter(initial_data, len)?;
+        // Doesn't matter if this underestimates.
+        let mut s = String::with_capacity(len);
+        s.extend(EbcdicStr::from_bytes(head).chars());
+        for part in parts {
+            s.extend(EbcdicStr::from_bytes(part).chars());
+        }
+        Ok(s)
+    }
 }
 
 impl<'data> LogicalRecord<'data, goff::Record> {
@@ -133,9 +148,10 @@ impl<'data> LogicalRecord<'data, goff::SymbolRecord> {
     /// This is concatenated from the data in the initial record and the continuation records,
     /// and converted to UTF-8.
     pub fn esd_name_utf8(&self) -> Result<String> {
-        // TODO: avoid intermediate Vec
-        self.esd_name()
-            .map(|data| EbcdicStr::from_bytes(&data).to_utf8())
+        self.data_utf8(
+            &self.initial.name,
+            usize::from(self.initial.name_length.get(BE)),
+        )
     }
 }
 
@@ -181,9 +197,10 @@ impl<'data> LogicalRecord<'data, goff::EndRecord> {
     /// This is concatenated from the data in the initial record and the continuation records,
     /// and converted to UTF-8.
     pub fn entry_name_utf8(&self) -> Result<String> {
-        // TODO: avoid intermediate Vec
-        self.entry_name()
-            .map(|data| EbcdicStr::from_bytes(&data).to_utf8())
+        self.data_utf8(
+            &self.initial.entry_name,
+            usize::from(self.initial.name_length.get(BE)),
+        )
     }
 }
 
