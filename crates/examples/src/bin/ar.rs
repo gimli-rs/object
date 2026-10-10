@@ -38,7 +38,7 @@ fn main() {
         't' => {
             for member in archive.members() {
                 let member = member.unwrap();
-                println!("{}", String::from_utf8_lossy(member.name()));
+                println!("{}", String::from_utf8_lossy(&member.decoded_name_bytes()));
             }
         }
         op => println!("Invalid operation: {}", op),

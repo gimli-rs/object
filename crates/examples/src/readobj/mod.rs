@@ -391,7 +391,7 @@ fn print_archive(p: &mut Printer<'_>, data: &[u8]) {
         for member in archive.members() {
             if let Some(member) = member.print_err(p) {
                 p.blank();
-                p.field_inline_string("Member", member.name());
+                p.field_inline_string("Member", &member.decoded_name_bytes());
                 if member.is_thin() {
                     p.field("Size", member.size());
                 } else if let Some(data) = member.data(data).print_err(p) {
@@ -407,7 +407,7 @@ fn print_archive(p: &mut Printer<'_>, data: &[u8]) {
                         p.field_inline_string("Name", symbol.name());
                         let offset = symbol.offset();
                         if let Some(member) = archive.member(offset).print_err(p) {
-                            p.field_inline_string("Member", member.name());
+                            p.field_inline_string("Member", &member.decoded_name_bytes());
                         }
                     });
                 }

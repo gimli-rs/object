@@ -636,22 +636,39 @@ impl<'data> ArchiveMember<'data> {
         }
     }
 
-    /// Return the parsed file name.
+    /// Return the parsed file name in the archive's character encoding.
     ///
     /// This may be an extended file name.
+    ///
+    /// This is the raw bytes from the archive. For z/OS archives, the
+    /// character encoding is EBCDIC.
     #[inline]
     pub fn name(&self) -> &'data [u8] {
         self.name
     }
 
-    /// The parsed file name, converted to UTF-8.
+    /// The parsed file name, decoded from the archive's character encoding.
     ///
-    /// This allocates if the file format requires a conversion, such as for z/OS archives.
-    ///
-    /// Returns an error if the name cannot be converted to UTF-8.
+    /// For most archive formats, this is the same as [`Self::name`].
+    /// For z/OS archives, the name is converted from EBCDIC to UTF-8,
+    /// which requires an allocation.
     // TODO: stabilize
     #[cfg_attr(not(feature = "unstable"), doc(hidden))]
-    pub fn name_utf8(&self) -> read::Result<Cow<'data, str>> {
+    pub fn decoded_name_bytes(&self) -> Cow<'data, [u8]> {
+        match self.header {
+            MemberHeader::Zos(_) => Cow::Owned(ebcdic::to_string(self.name).into_bytes()),
+            _ => Cow::Borrowed(self.name),
+        }
+    }
+
+    /// The parsed file name, decoded from the archive's character encoding,
+    /// and validated as UTF-8.
+    ///
+    /// For z/OS archives, the name is converted from EBCDIC to UTF-8,
+    /// which requires an allocation.
+    // TODO: stabilize
+    #[cfg_attr(not(feature = "unstable"), doc(hidden))]
+    pub fn decoded_name(&self) -> read::Result<Cow<'data, str>> {
         match self.header {
             MemberHeader::Zos(_) => Ok(Cow::Owned(ebcdic::to_string(self.name))),
             _ => str::from_utf8(self.name)
@@ -1420,11 +1437,13 @@ mod tests {
         let mut members = archive.members();
 
         let member = members.next().unwrap().unwrap();
-        assert_eq!(member.name_utf8().unwrap(), "test1.o");
+        assert_eq!(&*member.decoded_name_bytes(), b"test1.o");
+        assert_eq!(member.decoded_name().unwrap(), "test1.o");
         assert_eq!(member.data(data).unwrap(), &b"first\0"[..]);
 
         let member = members.next().unwrap().unwrap();
-        assert_eq!(member.name_utf8().unwrap(), "test2.o");
+        assert_eq!(&*member.decoded_name_bytes(), b"test2.o");
+        assert_eq!(member.decoded_name().unwrap(), "test2.o");
         assert_eq!(member.data(data).unwrap(), &b"second\0"[..]);
 
         assert!(members.next().is_none());

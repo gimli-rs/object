@@ -19,9 +19,8 @@ pub fn print<W: Write, E: Write>(
         for member in archive.members() {
             match member {
                 Ok(member) => {
-                    let name = member
-                        .name_utf8()
-                        .unwrap_or_else(|_| String::from_utf8_lossy(member.name()));
+                    let name = member.decoded_name_bytes();
+                    let name = String::from_utf8_lossy(&name);
                     if find_member(&mut member_names, &name) {
                         writeln!(w, "\n{}:", name)?;
                         if let Ok(data) = member.data(file) {
