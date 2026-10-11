@@ -7523,6 +7523,10 @@ names! {
     /// `Rel*::r_type` values for `EM_XTENSA`.
     consts r = pub NAMES_R_XTENSA: RelocationType(u32) = {
         R_XTENSA_NONE = 0,
+        /// 32-bit absolute address.
+        ///
+        /// Although Xtensa uses `SHT_RELA`, this relocation is partial in-place:
+        /// the addend is the sum of `r_addend` and the value stored at the place.
         R_XTENSA_32 = 1,
         R_XTENSA_RTLD = 2,
         R_XTENSA_GLOB_DAT = 3,
@@ -7583,6 +7587,12 @@ names! {
         R_XTENSA_NDIFF8 = 60,
         R_XTENSA_NDIFF16 = 61,
         R_XTENSA_NDIFF32 = 62,
+        /// Positive same-section difference encoded as ULEB128.
+        R_XTENSA_PDIFF_ULEB128 = 63,
+        /// 32-bit absolute address.
+        ///
+        /// Unlike `R_XTENSA_32`, the addend is taken only from `r_addend`.
+        R_XTENSA_32_ABS = 64,
     };
 }
 

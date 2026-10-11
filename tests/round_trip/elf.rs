@@ -1,8 +1,9 @@
 use object::read::elf::{FileHeader, SectionHeader};
 use object::read::{Object, ObjectSection, ObjectSymbol};
 use object::{
-    Architecture, BinaryFormat, Endianness, LittleEndian, SectionIndex, SectionKind, SymbolFlags,
-    SymbolKind, SymbolScope, SymbolSection, U32, elf, read, write,
+    Architecture, BinaryFormat, Endianness, LittleEndian, RelocationFlags, RelocationKind,
+    SectionIndex, SectionKind, SymbolFlags, SymbolKind, SymbolScope, SymbolSection, U32, elf, read,
+    write,
 };
 use std::io::Write;
 
@@ -429,4 +430,83 @@ fn long_symbol_name() {
     let object = read::File::parse(&cache).unwrap();
     let symbol = object.symbol_by_name_bytes(&name).unwrap();
     assert_eq!(symbol.name_bytes().unwrap(), &name[..]);
+}
+
+#[test]
+fn xtensa_debug_relocations() {
+    let mut object =
+        write::Object::new(BinaryFormat::Elf, Architecture::Xtensa, Endianness::Little);
+
+    let text = object.section_id(write::StandardSection::Text);
+    object.append_section_data(text, &[0; 0x40], 4);
+    let func = object.add_symbol(write::Symbol {
+        name: b"func".to_vec(),
+        value: 0x20,
+        size: 0x20,
+        kind: SymbolKind::Text,
+        scope: SymbolScope::Linkage,
+        weak: false,
+        section: write::SymbolSection::Section(text),
+        flags: SymbolFlags::None,
+    });
+
+    let debug_str = object.add_section(Vec::new(), b".debug_str".to_vec(), SectionKind::Debug);
+    object.append_section_data(debug_str, &[0; 0x20], 1);
+    let debug_str_symbol = object.section_symbol(debug_str);
+
+    let debug_info = object.add_section(Vec::new(), b".debug_info".to_vec(), SectionKind::Debug);
+    let mut data = Vec::new();
+    // R_XTENSA_32 against `.debug_str`, with the offset stored in place.
+    data.extend_from_slice(&0x10u32.to_le_bytes());
+    // R_XTENSA_32 with both a stored and an explicit addend.
+    data.extend_from_slice(&0x2u32.to_le_bytes());
+    // R_XTENSA_32_ABS ignores the stored value.
+    data.extend_from_slice(&0xffff_ffffu32.to_le_bytes());
+    // R_XTENSA_PDIFF16 leaves the stored difference unchanged.
+    data.extend_from_slice(&0x1234u16.to_le_bytes());
+    object.append_section_data(debug_info, &data, 1);
+    for (offset, symbol, addend, r_type) in [
+        (0, debug_str_symbol, 0, elf::R_XTENSA_32),
+        (4, func, 4, elf::R_XTENSA_32),
+        (8, func, 4, elf::R_XTENSA_32_ABS),
+        (12, func, 0, elf::R_XTENSA_PDIFF16),
+    ] {
+        object
+            .add_relocation(
+                debug_info,
+                write::Relocation {
+                    offset,
+                    symbol,
+                    addend,
+                    flags: RelocationFlags::Elf { r_type },
+                },
+            )
+            .unwrap();
+    }
+
+    let bytes = object.write().unwrap();
+    let object = read::File::parse(&*bytes).unwrap();
+    let section = object.section_by_name(".debug_info").unwrap();
+
+    let relocations = section.relocations().collect::<Vec<_>>();
+    assert_eq!(relocations.len(), 4);
+    let (_, relocation) = &relocations[0];
+    assert_eq!(relocation.kind(), RelocationKind::Absolute);
+    assert!(relocation.has_implicit_addend());
+    let (_, relocation) = &relocations[1];
+    assert_eq!(relocation.kind(), RelocationKind::Absolute);
+    assert!(relocation.has_implicit_addend());
+    assert_eq!(relocation.addend(), 4);
+    let (_, relocation) = &relocations[2];
+    assert_eq!(relocation.kind(), RelocationKind::Absolute);
+    assert!(!relocation.has_implicit_addend());
+    assert_eq!(relocation.addend(), 4);
+    let (_, relocation) = &relocations[3];
+    assert_eq!(relocation.kind(), RelocationKind::None);
+
+    let map = section.relocation_map().unwrap();
+    assert_eq!(map.relocate(0, 0x10), 0x10);
+    assert_eq!(map.relocate(4, 0x2), 0x26);
+    assert_eq!(map.relocate(8, 0xffff_ffff), 0x24);
+    assert_eq!(map.relocate(12, 0x1234), 0x1234);
 }
