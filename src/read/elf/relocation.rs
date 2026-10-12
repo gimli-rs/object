@@ -277,7 +277,7 @@ fn parse_relocation<Elf: FileHeader>(
     header: &Elf,
     endian: Elf::Endian,
     reloc: Crel,
-    implicit_addend: bool,
+    mut implicit_addend: bool,
 ) -> Relocation {
     use RelocationEncoding as E;
     use RelocationKind as K;
@@ -532,8 +532,25 @@ fn parse_relocation<Elf: FileHeader>(
         },
         elf::EM_XTENSA => match r_type {
             elf::R_XTENSA_NONE => (K::None, g, 0),
-            elf::R_XTENSA_32 => (K::Absolute, g, 32),
+            elf::R_XTENSA_32 => {
+                // Partial in-place: binutils adds the value stored at the place too.
+                implicit_addend = true;
+                (K::Absolute, g, 32)
+            }
+            elf::R_XTENSA_32_ABS => (K::Absolute, g, 32),
             elf::R_XTENSA_32_PCREL => (K::Relative, g, 32),
+            // The assembler stores the difference at the place. These relocations
+            // only allow a relaxing linker to adjust it.
+            elf::R_XTENSA_DIFF8
+            | elf::R_XTENSA_DIFF16
+            | elf::R_XTENSA_DIFF32
+            | elf::R_XTENSA_PDIFF8
+            | elf::R_XTENSA_PDIFF16
+            | elf::R_XTENSA_PDIFF32
+            | elf::R_XTENSA_NDIFF8
+            | elf::R_XTENSA_NDIFF16
+            | elf::R_XTENSA_NDIFF32
+            | elf::R_XTENSA_PDIFF_ULEB128 => (K::None, g, 0),
             _ => unknown,
         },
         _ => unknown,
