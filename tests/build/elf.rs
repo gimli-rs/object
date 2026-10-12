@@ -1,5 +1,39 @@
 use object::{build, elf};
 
+// Test that invalid sh_addralign and sh_offset values return an error, and that
+// sh_addralign 0 means no alignment.
+#[test]
+fn test_section_align() {
+    fn write(sh_offset: u64, sh_addralign: u64) -> Result<(), build::Error> {
+        let mut builder = build::elf::Builder::new(object::Endianness::Little, true);
+        builder.header.e_type = elf::ET_REL;
+
+        let section = builder.sections.add();
+        section.name = b".shstrtab"[..].into();
+        section.sh_type = elf::SHT_STRTAB;
+        section.data = build::elf::SectionData::SectionString;
+
+        let section = builder.sections.add();
+        section.name = b".data"[..].into();
+        section.sh_type = elf::SHT_PROGBITS;
+        section.sh_offset = sh_offset;
+        section.sh_size = 3;
+        section.sh_addralign = sh_addralign;
+        section.data = build::elf::SectionData::Data(b"abc"[..].into());
+
+        let mut buf = Vec::new();
+        builder.write(&mut buf)
+    }
+
+    write(0, 0).unwrap();
+    write(0, 1).unwrap();
+    write(0, 16).unwrap();
+    assert!(write(0, 3).is_err());
+    assert!(write(0, (1 << 63) + 1).is_err());
+    assert!(write(u64::MAX - 1, 1).is_err());
+    assert!(write(0, 1 << 63).is_err());
+}
+
 // Test that offset 0 is supported for SHT_NOBITS sections.
 #[test]
 fn test_nobits_offset() {
@@ -251,4 +285,17 @@ fn test_dynsym() {
             assert_eq!(section.sh_info, 2);
         }
     }
+
+    // Invalid .gnu.hash bloom parameters from a read file return an error.
+    let write = |bloom_count, bloom_shift| {
+        let mut builder = build::elf::Builder::read(&*buf).unwrap();
+        builder.gnu_hash_bloom_count = bloom_count;
+        builder.gnu_hash_bloom_shift = bloom_shift;
+        builder.write(&mut Vec::new())
+    };
+    write(1, 1).unwrap();
+    write(2, 31).unwrap();
+    assert!(write(0, 1).is_err());
+    assert!(write(3, 1).is_err());
+    assert!(write(1, 32).is_err());
 }
