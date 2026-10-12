@@ -137,6 +137,8 @@ impl<'data> Builder<'data> {
             indirect_symbols: &[][..],
         };
         let mut page_size_bits = builder.page_size.trailing_zeros();
+        let mut has_symtab = false;
+        let mut has_code_signature = false;
         let mut commands = header.load_commands(endian, data, 0)?;
         while let Some(command) = commands.next()? {
             use read::macho::LoadCommandVariant;
@@ -152,6 +154,12 @@ impl<'data> Builder<'data> {
                     page_size_bits = page_size_bits.min(fileoff.trailing_zeros());
                 }
                 LoadCommandVariant::Symtab(symtab) => {
+                    // Symbol indices (in relocations and LC_DYSYMTAB) refer to a single
+                    // symbol table.
+                    if has_symtab {
+                        return Err(Error::new("Multiple LC_SYMTAB commands"));
+                    }
+                    has_symtab = true;
                     state.symbols_len = symtab.nsyms.get(endian) as usize;
                 }
                 LoadCommandVariant::Dysymtab(dysymtab) => {
@@ -205,6 +213,13 @@ impl<'data> Builder<'data> {
                     builder.commands.push(LoadCommand::Dysymtab);
                 }
                 LoadCommandVariant::LinkeditData(val) => {
+                    // `write` places the code signature last, at a single offset.
+                    if val.cmd.get(endian) == macho::LC_CODE_SIGNATURE {
+                        if has_code_signature {
+                            return Err(Error::new("Multiple LC_CODE_SIGNATURE commands"));
+                        }
+                        has_code_signature = true;
+                    }
                     builder.commands.push(LoadCommand::LinkeditData {
                         cmd: val.cmd.get(endian),
                         data: val.data(endian, data)?.into(),
@@ -596,7 +611,12 @@ impl<'data> Builder<'data> {
         let mut dylib_referenced = vec![false; self.dylibs.len()];
         for command in &self.commands {
             match command {
-                LoadCommand::Symtab => have_symtab = true,
+                LoadCommand::Symtab => {
+                    if have_symtab {
+                        return Err(Error::new("Multiple LC_SYMTAB commands"));
+                    }
+                    have_symtab = true;
+                }
                 LoadCommand::Dylib(id) => dylib_referenced[id.index()] = true,
                 _ => {}
             }
@@ -657,8 +677,7 @@ impl<'data> Builder<'data> {
             for out_section in &mut out_sections {
                 let section = self.sections.get(out_section.id);
                 if let SectionData::Data(data) = &section.data {
-                    let align = 1 << section.align;
-                    address = write::align(address, align);
+                    address = align_section_address(address, section)?;
                     out_section.address = address;
                     out_section.offset = segment_file_offset + address;
                     address += data.len() as u64;
@@ -668,8 +687,7 @@ impl<'data> Builder<'data> {
             for out_section in &mut out_sections {
                 let section = self.sections.get(out_section.id);
                 if let SectionData::UninitializedData(size) = &section.data {
-                    let align = 1 << section.align;
-                    address = write::align(address, align);
+                    address = align_section_address(address, section)?;
                     out_section.address = address;
                     address += u64::from(*size);
                 }
@@ -690,6 +708,9 @@ impl<'data> Builder<'data> {
             // Other segments can start at any page aligned offset.
             let mut segment_offset = 0;
             let mut address = 0;
+            // Section data is written in order, so each section must start after the load
+            // commands and after the previous section's data.
+            let mut file_end = offset.0;
             for out_segment in &mut out_segments {
                 let segment = self.segments.get(out_segment.id);
                 if segment.vmaddr < address {
@@ -714,11 +735,21 @@ impl<'data> Builder<'data> {
                             section.addr, address
                         )));
                     }
-                    address = section.addr + section.data.size() as u64;
+                    address = section
+                        .addr
+                        .checked_add(section.data.size() as u64)
+                        .ok_or_else(|| Error::new("Section address overflow"))?;
                     match &section.data {
                         SectionData::Data(data) => {
                             out_section.offset = (section.addr - segment.vmaddr) + segment_offset;
                             out_segment.size = (section.addr - segment.vmaddr) + data.len() as u64;
+                            if out_section.offset < file_end {
+                                return Err(Error::new(format!(
+                                    "Section data overlaps preceding data: {:#x} < {:#x}",
+                                    out_section.offset, file_end
+                                )));
+                            }
+                            file_end = out_section.offset + data.len() as u64;
                         }
                         SectionData::UninitializedData(_) => {
                             out_section.offset = 0;
@@ -730,7 +761,10 @@ impl<'data> Builder<'data> {
                     }
                 }
 
-                let segment_end = segment.vmaddr + segment.vmsize;
+                let segment_end = segment
+                    .vmaddr
+                    .checked_add(segment.vmsize)
+                    .ok_or_else(|| Error::new("Segment address overflow"))?;
                 if segment_end < address {
                     return Err(Error::new(format!(
                         "Segment address range must contain sections: {segment_end:#x} < {address:#x}"
@@ -796,6 +830,9 @@ impl<'data> Builder<'data> {
         for command in &self.commands {
             if let LoadCommand::LinkeditData { cmd, data } = command {
                 if *cmd == macho::LC_CODE_SIGNATURE {
+                    if code_signature_offset != 0 {
+                        return Err(Error::new("Multiple LC_CODE_SIGNATURE commands"));
+                    }
                     code_signature_offset = offset.reserve(data.len() as u64, 16).0;
                 }
             }
@@ -1183,6 +1220,17 @@ impl<'data> Builder<'data> {
     pub fn encoder(&self) -> write::macho::Encoder<Endianness> {
         write::macho::Encoder::new(self.endian, self.is_64)
     }
+}
+
+/// Align `address` for a section. `Section::align` is a power of 2 exponent.
+///
+/// The section addresses in an object file are offsets from the start of its single
+/// segment, which also determine the file offsets, so they must fit in 32 bits.
+fn align_section_address(address: u64, section: &Section<'_>) -> Result<u64> {
+    1u64.checked_shl(section.align)
+        .and_then(|align| address.checked_add(align - 1).map(|end| end & !(align - 1)))
+        .filter(|&address| address <= u64::from(u32::MAX))
+        .ok_or_else(|| Error::new(format!("Invalid section alignment 2^{}", section.align)))
 }
 
 /// Mach-O file header.
