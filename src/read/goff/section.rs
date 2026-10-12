@@ -1,21 +1,126 @@
 use alloc::borrow::Cow;
+use alloc::vec::Vec;
 use core::{fmt, iter, slice, str};
 
 use crate::ebcdic::EbcdicStr;
 use crate::goff;
-use crate::read::{self, Error, ObjectSection, ReadRef, RelocationMap, Result, SectionIndex};
-use crate::{CompressedData, CompressedFileRange, SectionFlags, SectionKind};
+use crate::read::{
+    self, Error, ObjectSection, ReadError, ReadRef, RelocationMap, Result, SectionIndex,
+    SymbolIndex,
+};
+use crate::{BigEndian as BE, CompressedData, CompressedFileRange, SectionFlags, SectionKind};
 
-use super::{GoffFile, GoffRelocationIterator, GoffSymbolIndex, GoffSymbolInternal};
+use super::{
+    GoffFile, GoffRelocationIterator, GoffSymbolIndex, GoffSymbolInternal, GoffSymbolTableInternal,
+    LogicalRecord,
+};
 
-/// An iterator for the sections in an [`GoffFile`].
+/// A table of sections in a GOFF file.
+#[derive(Debug)]
+pub(super) struct GoffSectionTableInternal<'data> {
+    sections: Vec<GoffSectionInternal<'data>>,
+}
+
+impl<'data> GoffSectionTableInternal<'data> {
+    pub(super) fn new() -> Self {
+        GoffSectionTableInternal {
+            sections: Vec::new(),
+        }
+    }
+
+    pub(super) fn add_esd(
+        &mut self,
+        symbols: &GoffSymbolTableInternal<'data>,
+        symbol: &GoffSymbolInternal<'data>,
+        symbol_index: GoffSymbolIndex,
+    ) -> Option<SectionIndex> {
+        match symbol.record().symbol_type {
+            // Only ED (Element Definition) represents user sections.
+            // SD (Section Definition) is the compile unit, not a user section.
+            goff::ESD_ST_ED => {
+                let section_index = SectionIndex(self.sections.len());
+                self.sections.push(GoffSectionInternal {
+                    symbol: symbol_index,
+                    text: Vec::new(),
+                    relocations: Vec::new(),
+                });
+                Some(section_index)
+            }
+            goff::ESD_ST_LD | goff::ESD_ST_PR => symbols
+                .get(symbol.parent_esdid())
+                .filter(|parent| parent.record().symbol_type == goff::ESD_ST_ED)
+                .and_then(|parent| parent.section()),
+            _ => None,
+        }
+    }
+
+    pub(super) fn add_txt(
+        &mut self,
+        symbols: &GoffSymbolTableInternal<'data>,
+        record: LogicalRecord<'data, goff::TextRecord>,
+    ) -> Result<()> {
+        let txt_record = record.initial;
+        let esdid = SymbolIndex(txt_record.element_esdid.get(BE) as usize);
+        let section_index = Self::element_section(symbols, esdid)
+            .read_error("Invalid element ESDID in GOFF TXT record")?;
+        self.sections[section_index.0].text.push(record);
+        Ok(())
+    }
+
+    pub(super) fn add_rld(
+        &mut self,
+        symbols: &GoffSymbolTableInternal<'data>,
+        record: LogicalRecord<'data, goff::RelocationRecord>,
+    ) -> Result<()> {
+        let mut relocations = record.rld_items()?;
+        while let Some(relocation) = relocations.next()? {
+            let p_pointer = SymbolIndex(relocation.p_pointer as usize);
+            let section_index = Self::element_section(symbols, p_pointer)
+                .read_error("Invalid P pointer in GOFF RLD entry")?;
+            self.sections[section_index.0].relocations.push(relocation);
+        }
+        Ok(())
+    }
+
+    /// Get the section that owns the data for the given ED or PR symbol index.
+    ///
+    /// Returns `None` for an invalid index, or if the symbol is not an ED or PR.
+    fn element_section(
+        symbols: &GoffSymbolTableInternal<'data>,
+        index: SymbolIndex,
+    ) -> Option<SectionIndex> {
+        let symbol = symbols.get(index)?;
+        match symbol.record().symbol_type {
+            goff::ESD_ST_ED | goff::ESD_ST_PR => symbol.section(),
+            _ => None,
+        }
+    }
+
+    pub(super) fn get(&self, index: SectionIndex) -> Option<&GoffSectionInternal<'data>> {
+        self.sections.get(index.0)
+    }
+
+    pub(super) fn iter(&self) -> slice::Iter<'_, GoffSectionInternal<'data>> {
+        self.sections.iter()
+    }
+}
+
+/// A section in a [`GoffFile`].
+#[derive(Debug)]
+pub(super) struct GoffSectionInternal<'data> {
+    symbol: GoffSymbolIndex,
+    text: Vec<LogicalRecord<'data, goff::TextRecord>>,
+    relocations: Vec<goff::Relocation>,
+}
+
+/// An iterator for the sections in a [`GoffFile`].
 #[derive(Debug)]
 pub struct GoffSectionIterator<'data, 'file, R = &'data [u8]>
 where
     R: ReadRef<'data>,
 {
     pub(super) file: &'file GoffFile<'data, R>,
-    pub(super) iter: iter::Enumerate<slice::Iter<'file, GoffSymbolIndex>>,
+    pub(super) iter: iter::Enumerate<slice::Iter<'file, GoffSectionInternal<'data>>>,
 }
 
 impl<'data, 'file, R> Iterator for GoffSectionIterator<'data, 'file, R>
@@ -25,25 +130,22 @@ where
     type Item = GoffSection<'data, 'file, R>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let (index, symbol_index) = self.iter.next()?;
-        Some(GoffSection::new(
-            self.file,
-            SectionIndex(index),
-            *symbol_index,
-        ))
+        let (index, section) = self.iter.next()?;
+        Some(GoffSection::new(self.file, SectionIndex(index), section))
     }
 }
 
-/// A section in an [`GoffFile`].
+/// A reference to a section in a [`GoffFile`].
 ///
 /// Most functionality is provided by the [`ObjectSection`] trait implementation.
 pub struct GoffSection<'data, 'file, R = &'data [u8]>
 where
     R: ReadRef<'data>,
 {
-    file: &'file GoffFile<'data, R>,
-    symbol: &'file GoffSymbolInternal<'data>,
     index: SectionIndex,
+    file: &'file GoffFile<'data, R>,
+    section: &'file GoffSectionInternal<'data>,
+    symbol: &'file GoffSymbolInternal<'data>,
 }
 
 impl<'data, 'file, R> fmt::Debug for GoffSection<'data, 'file, R>
@@ -62,12 +164,13 @@ impl<'data, 'file, R: ReadRef<'data>> GoffSection<'data, 'file, R> {
     pub(super) fn new(
         file: &'file GoffFile<'data, R>,
         index: SectionIndex,
-        symbol_index: GoffSymbolIndex,
+        section: &'file GoffSectionInternal<'data>,
     ) -> Self {
         GoffSection {
-            file,
             index,
-            symbol: file.symbols.get_by_index(symbol_index),
+            file,
+            section,
+            symbol: file.symbols.get_by_index(section.symbol),
         }
     }
 
@@ -75,7 +178,7 @@ impl<'data, 'file, R: ReadRef<'data>> GoffSection<'data, 'file, R> {
     /// and any descendant elements.
     pub fn data_parts(&self) -> Result<alloc::vec::Vec<u8>> {
         let mut data = alloc::vec::Vec::new();
-        for txt in self.symbol.text() {
+        for txt in &self.section.text {
             for part in txt.txt_data_parts()? {
                 data.extend_from_slice(part);
             }
@@ -218,7 +321,7 @@ where
     fn relocations(&self) -> Self::RelocationIterator {
         GoffRelocationIterator {
             file: self.file,
-            relocations: self.symbol.relocations().iter(),
+            relocations: self.section.relocations.iter(),
         }
     }
 

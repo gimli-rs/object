@@ -13,7 +13,7 @@ use crate::read::{
     SymbolIndex, SymbolKind, SymbolScope, SymbolSection,
 };
 
-use super::LogicalRecord;
+use super::{GoffSectionTableInternal, LogicalRecord};
 
 /// 0-based index into GoffSymbolTableInternal::symbols that is always valid.
 #[derive(Debug, Clone, Copy)]
@@ -35,18 +35,17 @@ impl<'data> GoffSymbolTableInternal<'data> {
     pub(super) fn add_esd(
         &mut self,
         record: LogicalRecord<'data, goff::SymbolRecord>,
+        sections: &mut GoffSectionTableInternal<'data>,
     ) -> Result<()> {
         let name = match record.esd_name()? {
             Cow::Borrowed(name) => Cow::Borrowed(EbcdicStr::from_bytes(name)),
             Cow::Owned(name) => Cow::Owned(EbcdicString::from_bytes(name)),
         };
-        let symbol = GoffSymbolInternal {
+        let mut symbol = GoffSymbolInternal {
             record,
             name,
             length: record.initial.length.get(BE),
             section: None,
-            text: Vec::new(),
-            relocations: Vec::new(),
         };
         // Ensure esdid matches the position we will push to.
         let symbol_index = symbol.esdid();
@@ -59,6 +58,8 @@ impl<'data> GoffSymbolTableInternal<'data> {
             return Err(Error("Invalid parent ESDID in GOFF ESD record"));
         }
 
+        let index = GoffSymbolIndex(self.symbols.len());
+        symbol.section = sections.add_esd(self, &symbol, index);
         self.symbols.push(symbol);
         Ok(())
     }
@@ -80,37 +81,6 @@ impl<'data> GoffSymbolTableInternal<'data> {
         Ok(())
     }
 
-    pub(super) fn add_txt(&mut self, record: LogicalRecord<'data, goff::TextRecord>) -> Result<()> {
-        let txt_record = record.initial;
-        let esdid = SymbolIndex(txt_record.element_esdid.get(BE) as usize);
-        let symbol = self
-            .element_mut(esdid)
-            .ok_or(Error("Invalid element ESDID in GOFF TXT record"))?;
-        symbol.text.push(record);
-        Ok(())
-    }
-
-    /// Parses a RelocationRecord and its continuations, extracting individual relocation items
-    pub(super) fn add_rld(
-        &mut self,
-        record: LogicalRecord<'data, goff::RelocationRecord>,
-    ) -> Result<()> {
-        let mut relocations = record.rld_items()?;
-        while let Some(relocation) = relocations.next()? {
-            let symbol = self
-                .element_mut(SymbolIndex(relocation.p_pointer as usize))
-                .ok_or(Error("Invalid P pointer in GOFF RLD entry"))?;
-            symbol.relocations.push(relocation);
-        }
-        Ok(())
-    }
-
-    /// Get the symbol at the given index.
-    pub(super) fn get_by_index(&self, index: GoffSymbolIndex) -> &GoffSymbolInternal<'data> {
-        // GoffSymbolIndex is always valid.
-        &self.symbols[index.0]
-    }
-
     /// Get the symbol with the given ESDID.
     ///
     /// Returns an `None` for ESDID 0 or an invalid ESDID.
@@ -122,52 +92,15 @@ impl<'data> GoffSymbolTableInternal<'data> {
         self.symbols.get_mut(index.0.wrapping_sub(1))
     }
 
-    /// Get the ED symbol that owns the data for the given ED or PR symbol index.
-    ///
-    /// Returns `None` for an invalid index, or if the symbol is not an ED or PR.
-    pub(super) fn element_mut(
-        &mut self,
-        index: SymbolIndex,
-    ) -> Option<&mut GoffSymbolInternal<'data>> {
-        let mut index = index;
-        let symbol = self.get(index)?;
-        if symbol.record().symbol_type == goff::ESD_ST_PR {
-            index = symbol.parent_esdid();
-        }
-        let symbol = self.get_mut(index)?;
-        if symbol.record().symbol_type != goff::ESD_ST_ED {
-            return None;
-        }
-        Some(symbol)
-    }
-
     /// Iterate over the symbols.
     pub(super) fn iter(&self) -> slice::Iter<'_, GoffSymbolInternal<'data>> {
         self.symbols.iter()
     }
 
-    /// Assign section indices.
-    pub(super) fn set_sections(&mut self) -> Vec<GoffSymbolIndex> {
-        let mut sections = Vec::new();
-        for i in 0..self.symbols.len() {
-            let symbol = &self.symbols[i];
-            let section = match symbol.record().symbol_type {
-                // Only ED (Element Definition) represents user sections.
-                // SD (Section Definition) is the compile unit, not a user section.
-                goff::ESD_ST_ED => {
-                    let section_index = SectionIndex(sections.len());
-                    sections.push(GoffSymbolIndex(i));
-                    Some(section_index)
-                }
-                goff::ESD_ST_LD | goff::ESD_ST_PR => self
-                    .get(symbol.parent_esdid())
-                    .filter(|parent| parent.record().symbol_type == goff::ESD_ST_ED)
-                    .and_then(|parent| parent.section),
-                _ => None,
-            };
-            self.symbols[i].section = section;
-        }
-        sections
+    /// Get the symbol at the given index.
+    pub(super) fn get_by_index(&self, index: GoffSymbolIndex) -> &GoffSymbolInternal<'data> {
+        // GoffSymbolIndex is always valid.
+        &self.symbols[index.0]
     }
 }
 
@@ -186,10 +119,6 @@ pub(super) struct GoffSymbolInternal<'data> {
     ///
     /// Set for ED symbols, or LD/PR symbols with an ED parent.
     section: Option<SectionIndex>,
-    /// TXT records which reference this ESD.
-    text: Vec<LogicalRecord<'data, goff::TextRecord>>,
-    /// Relocation data items which reference this ESD.
-    relocations: Vec<goff::Relocation>,
 }
 
 impl<'data> GoffSymbolInternal<'data> {
@@ -240,15 +169,6 @@ impl<'data> GoffSymbolInternal<'data> {
     /// Set for ED symbols, or LD/PR symbols with an ED parent.
     pub(super) fn section(&self) -> Option<SectionIndex> {
         self.section
-    }
-
-    /// Get the TXT records that reference this symbol.
-    pub(super) fn text(&self) -> &[LogicalRecord<'data, goff::TextRecord>] {
-        &self.text
-    }
-
-    pub(super) fn relocations(&self) -> &[goff::Relocation] {
-        &self.relocations
     }
 }
 
