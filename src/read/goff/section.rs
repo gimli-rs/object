@@ -194,6 +194,14 @@ impl<'data, 'file, R: ReadRef<'data>> GoffSection<'data, 'file, R> {
     pub fn goff_text(&self) -> &'file [LogicalRecord<'data, goff::TextRecord>] {
         &self.section.text
     }
+
+    fn is_bss(&self) -> bool {
+        let ed = self.symbol.record();
+        self.section.text.is_empty()
+            && self.symbol.length() != 0
+            && ed.behavioral_attributes.text_record_style() == goff::TXT_RS_BYTE
+            && ed.fill_byte() == Some(0)
+    }
 }
 
 impl<'data, 'file, R> read::private::Sealed for GoffSection<'data, 'file, R> where R: ReadRef<'data> {}
@@ -262,15 +270,55 @@ where
     }
 
     fn uncompressed_data(&self) -> Result<Cow<'data, [u8]>> {
-        if self.section.text.is_empty() {
+        if self.is_bss() {
             return Ok(Cow::Borrowed(&[]));
         }
 
+        let ed = self.symbol.record();
+        let record_style = ed.behavioral_attributes.text_record_style();
+        let fill = ed.fill_byte().unwrap_or(0);
+        let length = self.symbol.length() as usize;
         let mut data = Vec::new();
+        // On success, `data` always has the section length. It is the caller's
+        // responsibility to limit that for untrusted input.
+        data.try_reserve_exact(length)
+            .map_err(|_| Error("GOFF section data allocation failed"))?;
         for txt in &self.section.text {
-            for part in txt.txt_data_parts()? {
-                data.extend_from_slice(part);
+            if txt.initial.element_esdid != ed.esdid {
+                return Err(Error("Unsupported GOFF TXT record for PR"));
             }
+            if txt.initial.text_encoding.get(BE) != 0 {
+                return Err(Error("Unsupported GOFF TXT encoding"));
+            }
+            if txt.initial.record_style != record_style {
+                return Err(Error("Invalid GOFF TXT record style or reserved bits"));
+            }
+            let mut offset = match record_style {
+                // Records may be in any order, and later records overwrite
+                // earlier ones.
+                goff::TXT_RS_BYTE => txt.initial.offset.get(BE) as usize,
+                // These have no offset, so simply extend in order.
+                goff::TXT_RS_STRUCTURED | goff::TXT_RS_UNSTRUCTURED => data.len(),
+                _ => return Err(Error("Unsupported GOFF TXT record style")),
+            };
+            for part in txt.txt_data_parts()? {
+                let end = offset.saturating_add(part.len());
+                if end > length {
+                    return Err(Error("GOFF TXT data exceeds ED length"));
+                }
+                if end <= data.len() {
+                    data[offset..end].copy_from_slice(part);
+                } else {
+                    data.resize(offset, fill);
+                    data.extend_from_slice(part);
+                }
+                offset = end;
+            }
+        }
+        if record_style == goff::TXT_RS_BYTE {
+            data.resize(length, fill);
+        } else if data.len() != length {
+            return Err(Error("Incomplete GOFF TXT data"));
         }
         Ok(Cow::Owned(data))
     }
@@ -304,12 +352,8 @@ where
     }
 
     fn kind(&self) -> SectionKind {
-        let ed = self.symbol.record();
-        let flags = ed.behavioral_attributes;
-        if self.section.text.is_empty()
-            && self.symbol.length() != 0
-            && ed.fill_byte().unwrap_or(0) == 0
-        {
+        let flags = self.symbol.record().behavioral_attributes;
+        if self.is_bss() {
             SectionKind::UninitializedData
         } else if flags.executable() == goff::EXEC_CODE {
             SectionKind::Text

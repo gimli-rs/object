@@ -428,13 +428,16 @@ pub trait ObjectSection<'data>: read::private::Sealed {
     /// The length of this data may be different from the size of the
     /// section in memory.
     ///
-    /// This may allocate the uncompressed size that is recorded in the file, which
-    /// is not bounded. Use [`Self::compressed_data`] and check
-    /// [`CompressedData::uncompressed_size`] first if you need to bound this for
-    /// untrusted files.
-    ///
     /// If no compression is detected, then returns the data unchanged.
     /// Returns `Err` if decompression fails.
+    ///
+    /// This may allocate a size that is recorded in the file, which is not
+    /// bounded by the file size. If you need to limit this for untrusted
+    /// files, check the size before calling this method:
+    /// - For compressed sections, use [`Self::compressed_data`] and check
+    ///   [`CompressedData::uncompressed_size`].
+    /// - For GOFF files, [`Self::compressed_data`] is not supported, so
+    ///   check [`Self::size`].
     fn uncompressed_data(&self) -> Result<Cow<'data, [u8]>> {
         self.compressed_data()?.decompress()
     }
