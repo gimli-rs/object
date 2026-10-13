@@ -174,16 +174,9 @@ impl<'data, 'file, R: ReadRef<'data>> GoffSection<'data, 'file, R> {
         }
     }
 
-    /// Returns GOFF section data by collecting TXT record payloads for this section
-    /// and any descendant elements.
-    pub fn data_parts(&self) -> Result<alloc::vec::Vec<u8>> {
-        let mut data = alloc::vec::Vec::new();
-        for txt in &self.section.text {
-            for part in txt.txt_data_parts()? {
-                data.extend_from_slice(part);
-            }
-        }
-        Ok(data)
+    /// Get the raw GOFF ESD record.
+    pub fn goff_record(&self) -> &'data goff::SymbolRecord {
+        self.symbol.record()
     }
 
     /// Get the raw EBCDIC-encoded name bytes of this section.
@@ -195,6 +188,11 @@ impl<'data, 'file, R: ReadRef<'data>> GoffSection<'data, 'file, R> {
 
     pub(super) fn goff_name(&self) -> &'file EbcdicStr {
         self.symbol.name()
+    }
+
+    /// Returns raw GOFF TXT records that reference this section.
+    pub fn goff_text(&self) -> &'file [LogicalRecord<'data, goff::TextRecord>] {
+        &self.section.text
     }
 }
 
@@ -258,25 +256,23 @@ where
     }
 
     fn compressed_data(&self) -> Result<CompressedData<'data>> {
-        // GOFF doesn't support compression
-        // Return a special marker that will cause decompress() to fail with a helpful message
-        // This ensures that if someone calls the default uncompressed_data() implementation,
-        // they get a clear error message
         Err(Error(
             "GOFF section data is non-contiguous, use uncompressed_data() instead",
         ))
     }
 
-    // Override the default uncompressed_data() implementation
-    // This is the correct way to get GOFF section data
     fn uncompressed_data(&self) -> Result<Cow<'data, [u8]>> {
-        let data = self.data_parts()?;
-
-        if data.is_empty() {
-            Ok(alloc::borrow::Cow::Borrowed(&[]))
-        } else {
-            Ok(alloc::borrow::Cow::Owned(data))
+        if self.section.text.is_empty() {
+            return Ok(Cow::Borrowed(&[]));
         }
+
+        let mut data = Vec::new();
+        for txt in &self.section.text {
+            for part in txt.txt_data_parts()? {
+                data.extend_from_slice(part);
+            }
+        }
+        Ok(Cow::Owned(data))
     }
 
     fn name_bytes(&self) -> read::Result<&'data [u8]> {
