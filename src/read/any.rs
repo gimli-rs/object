@@ -865,6 +865,10 @@ impl<'data, 'file, R: ReadRef<'data>> ObjectSection<'data> for Section<'data, 'f
         with_inner!(self.inner, SectionInternal, |x| x.compressed_data())
     }
 
+    fn uncompressed_data(&self) -> Result<Cow<'data, [u8]>> {
+        with_inner!(self.inner, SectionInternal, |x| x.uncompressed_data())
+    }
+
     fn name_bytes(&self) -> Result<&'data [u8]> {
         with_inner!(self.inner, SectionInternal, |x| x.name_bytes())
     }

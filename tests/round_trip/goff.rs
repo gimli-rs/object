@@ -118,11 +118,11 @@ fn goff_basic_structure() {
     );
 
     // Find the debug section
-    let debug_section = goff
+    let debug_section = object
         .section_by_name_bytes(DOTDEBUG_INFO)
         .expect("Should find .debug_info section");
 
-    // Check section data using the concrete GOFF section type.
+    // Check section data
     let data = debug_section.uncompressed_data().unwrap();
     assert_eq!(
         &data[..],
