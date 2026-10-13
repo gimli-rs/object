@@ -304,8 +304,14 @@ where
     }
 
     fn kind(&self) -> SectionKind {
-        let flags = self.symbol.record().behavioral_attributes;
-        if flags.executable() == goff::EXEC_CODE {
+        let ed = self.symbol.record();
+        let flags = ed.behavioral_attributes;
+        if self.section.text.is_empty()
+            && self.symbol.length() != 0
+            && ed.fill_byte().unwrap_or(0) == 0
+        {
+            SectionKind::UninitializedData
+        } else if flags.executable() == goff::EXEC_CODE {
             SectionKind::Text
         } else if flags.is_read_only() {
             SectionKind::ReadOnlyData

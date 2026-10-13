@@ -185,6 +185,17 @@ pub struct SymbolRecord {
     pub name: [u8; SIZEOF_ESD_DATA],
 }
 
+impl SymbolRecord {
+    /// Return the fill byte, if [`ESD_SF_FILL_BYTE_PRESENCE`] is set.
+    ///
+    /// The fill byte is only valid for ED records.
+    pub fn fill_byte(&self) -> Option<u8> {
+        self.flags
+            .contains(ESD_SF_FILL_BYTE_PRESENCE)
+            .then_some(self.fill_byte_value)
+    }
+}
+
 /// TXT data has 56 bytes till the end of the record,
 /// can be finished in a continuation record
 pub const SIZEOF_TXT_DATA: usize = 56;
