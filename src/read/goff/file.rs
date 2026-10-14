@@ -65,6 +65,8 @@ where
             }
         }
 
+        sections.finalize(&mut symbols)?;
+
         Ok(GoffFile {
             header,
             sections,

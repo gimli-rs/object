@@ -13,7 +13,7 @@ use crate::read::{
     SymbolIndex, SymbolKind, SymbolScope, SymbolSection,
 };
 
-use super::{GoffSectionTableInternal, LogicalRecord};
+use super::{GoffSectionTableInternal, GoffSubsectionIndex, LogicalRecord};
 
 /// 0-based index into GoffSymbolTableInternal::symbols that is always valid.
 #[derive(Debug, Clone, Copy)]
@@ -44,8 +44,15 @@ impl<'data> GoffSymbolTableInternal<'data> {
         let mut symbol = GoffSymbolInternal {
             record,
             name,
-            length: record.initial.length.get(BE),
             section: None,
+            // The ESD offset is only valid for LD records.
+            // We give PR records an artificial offset later.
+            offset: if record.initial.symbol_type == goff::ESD_ST_LD {
+                record.initial.offset.get(BE)
+            } else {
+                0
+            },
+            length: record.initial.length.get(BE),
         };
         // Ensure esdid matches the position we will push to.
         let symbol_index = symbol.esdid();
@@ -102,6 +109,17 @@ impl<'data> GoffSymbolTableInternal<'data> {
         // GoffSymbolIndex is always valid.
         &self.symbols[index.0]
     }
+
+    pub(super) fn set_offset(&mut self, index: GoffSymbolIndex, offset: u32) {
+        self.symbols[index.0].offset = offset;
+    }
+}
+
+/// The section and subsection containing a GOFF symbol.
+#[derive(Debug, Clone, Copy)]
+pub(super) struct GoffSymbolSection {
+    pub(super) section: SectionIndex,
+    pub(super) subsection: GoffSubsectionIndex,
 }
 
 /// A symbol in a GOFF [`SymbolTable`].
@@ -111,14 +129,18 @@ pub(super) struct GoffSymbolInternal<'data> {
     record: LogicalRecord<'data, goff::SymbolRecord>,
     /// Symbol name (flattened from ESD record and any continuation records)
     name: Cow<'data, EbcdicStr>,
+    /// The section and subsection this symbol belongs to.
+    ///
+    /// Set for ED symbols, or LD/PR symbols with an ED parent.
+    section: Option<GoffSymbolSection>,
+    /// The offset of the symbol within the section.
+    ///
+    /// Set for LD/PR symbols.
+    offset: u32,
     /// Length (size of allocated memory of program element or section)
     ///
     /// May be from a LEN record.
     length: u32,
-    /// The section this symbol belongs to.
-    ///
-    /// Set for ED symbols, or LD/PR symbols with an ED parent.
-    section: Option<SectionIndex>,
 }
 
 impl<'data> GoffSymbolInternal<'data> {
@@ -167,7 +189,7 @@ impl<'data> GoffSymbolInternal<'data> {
     /// Get the section this symbol belongs to.
     ///
     /// Set for ED symbols, or LD/PR symbols with an ED parent.
-    pub(super) fn section(&self) -> Option<SectionIndex> {
+    pub(super) fn section(&self) -> Option<GoffSymbolSection> {
         self.section
     }
 }

@@ -11,21 +11,46 @@ use crate::read::{
 use crate::{BigEndian as BE, CompressedData, CompressedFileRange, SectionFlags, SectionKind};
 
 use super::{
-    GoffFile, GoffRelocationIterator, GoffSymbolIndex, GoffSymbolInternal, GoffSymbolTableInternal,
-    LogicalRecord,
+    GoffFile, GoffRelocationIterator, GoffSymbolIndex, GoffSymbolInternal, GoffSymbolSection,
+    GoffSymbolTableInternal, LogicalRecord,
 };
 
 /// A table of sections in a GOFF file.
 #[derive(Debug)]
 pub(super) struct GoffSectionTableInternal<'data> {
-    sections: Vec<GoffSectionInternal<'data>>,
+    sections: Vec<GoffSectionInternal>,
+    subsections: Vec<GoffSubsection<'data>>,
 }
 
 impl<'data> GoffSectionTableInternal<'data> {
     pub(super) fn new() -> Self {
         GoffSectionTableInternal {
             sections: Vec::new(),
+            subsections: Vec::new(),
         }
+    }
+
+    /// Finalize our representation of PR symbols within ED sections.
+    ///
+    /// `GoffSection::uncompressed_data` concatenates PR data without padding.
+    /// Calculate the total length and assign offsets to subsections to match,
+    /// so that symbols and relocations can be adjusted.
+    pub(super) fn finalize(&mut self, symbols: &mut GoffSymbolTableInternal<'data>) -> Result<()> {
+        for section in &mut self.sections {
+            let mut offset = symbols
+                .get_by_index(self.subsections[section.ed.0].symbol)
+                .length();
+            for pr in &section.prs {
+                let pr = &mut self.subsections[pr.0];
+                pr.offset = offset;
+                symbols.set_offset(pr.symbol, offset);
+                offset = offset
+                    .checked_add(symbols.get_by_index(pr.symbol).length())
+                    .read_error("Invalid GOFF PR length")?;
+            }
+            section.length = offset;
+        }
+        Ok(())
     }
 
     pub(super) fn add_esd(
@@ -33,25 +58,48 @@ impl<'data> GoffSectionTableInternal<'data> {
         symbols: &GoffSymbolTableInternal<'data>,
         symbol: &GoffSymbolInternal<'data>,
         symbol_index: GoffSymbolIndex,
-    ) -> Option<SectionIndex> {
+    ) -> Option<GoffSymbolSection> {
         match symbol.record().symbol_type {
             // Only ED (Element Definition) represents user sections.
             // SD (Section Definition) is the compile unit, not a user section.
-            goff::ESD_ST_ED => {
-                let section_index = SectionIndex(self.sections.len());
-                self.sections.push(GoffSectionInternal {
-                    symbol: symbol_index,
-                    text: Vec::new(),
-                    relocations: Vec::new(),
-                });
-                Some(section_index)
+            goff::ESD_ST_ED => Some(self.add_section(symbol_index)),
+            goff::ESD_ST_PR => {
+                let ed_section = Self::ed_section(symbols, symbol)?;
+                let subsection = self.add_subsection(symbol_index);
+                self.sections[ed_section.section.0].prs.push(subsection);
+                Some(GoffSymbolSection {
+                    section: ed_section.section,
+                    subsection,
+                })
             }
-            goff::ESD_ST_LD | goff::ESD_ST_PR => symbols
-                .get(symbol.parent_esdid())
-                .filter(|parent| parent.record().symbol_type == goff::ESD_ST_ED)
-                .and_then(|parent| parent.section()),
+            goff::ESD_ST_LD => Self::ed_section(symbols, symbol),
             _ => None,
         }
+    }
+
+    fn add_section(&mut self, symbol: GoffSymbolIndex) -> GoffSymbolSection {
+        let section = SectionIndex(self.sections.len());
+        let subsection = self.add_subsection(symbol);
+        self.sections.push(GoffSectionInternal {
+            length: 0,
+            ed: subsection,
+            prs: Vec::new(),
+        });
+        GoffSymbolSection {
+            section,
+            subsection,
+        }
+    }
+
+    fn add_subsection(&mut self, symbol: GoffSymbolIndex) -> GoffSubsectionIndex {
+        let subsection = GoffSubsectionIndex(self.subsections.len());
+        self.subsections.push(GoffSubsection {
+            symbol,
+            offset: 0,
+            text: Vec::new(),
+            relocations: Vec::new(),
+        });
+        subsection
     }
 
     pub(super) fn add_txt(
@@ -61,9 +109,9 @@ impl<'data> GoffSectionTableInternal<'data> {
     ) -> Result<()> {
         let txt_record = record.initial;
         let esdid = SymbolIndex(txt_record.element_esdid.get(BE) as usize);
-        let section_index = Self::element_section(symbols, esdid)
+        let subsection = Self::element_subsection(symbols, esdid)
             .read_error("Invalid element ESDID in GOFF TXT record")?;
-        self.sections[section_index.0].text.push(record);
+        self.subsections[subsection.0].text.push(record);
         Ok(())
     }
 
@@ -75,42 +123,78 @@ impl<'data> GoffSectionTableInternal<'data> {
         let mut relocations = record.rld_items()?;
         while let Some(relocation) = relocations.next()? {
             let p_pointer = SymbolIndex(relocation.p_pointer as usize);
-            let section_index = Self::element_section(symbols, p_pointer)
+            let subsection = Self::element_subsection(symbols, p_pointer)
                 .read_error("Invalid P pointer in GOFF RLD entry")?;
-            self.sections[section_index.0].relocations.push(relocation);
+            self.subsections[subsection.0].relocations.push(relocation);
         }
         Ok(())
     }
 
-    /// Get the section that owns the data for the given ED or PR symbol index.
+    /// Get the section for the ED parent of the given child symbol.
     ///
-    /// Returns `None` for an invalid index, or if the symbol is not an ED or PR.
-    fn element_section(
+    /// Returns `None` for an invalid index, or if the parent is not an ED.
+    fn ed_section(
         symbols: &GoffSymbolTableInternal<'data>,
-        index: SymbolIndex,
-    ) -> Option<SectionIndex> {
-        let symbol = symbols.get(index)?;
+        child: &GoffSymbolInternal<'data>,
+    ) -> Option<GoffSymbolSection> {
+        let symbol = symbols.get(child.parent_esdid())?;
         match symbol.record().symbol_type {
-            goff::ESD_ST_ED | goff::ESD_ST_PR => symbol.section(),
+            goff::ESD_ST_ED => symbol.section(),
             _ => None,
         }
     }
 
-    pub(super) fn get(&self, index: SectionIndex) -> Option<&GoffSectionInternal<'data>> {
+    /// Get the subsection that owns the data for the given ED or PR symbol index.
+    ///
+    /// Returns `None` for an invalid index, or if the symbol is not an ED or PR.
+    fn element_subsection(
+        symbols: &GoffSymbolTableInternal<'data>,
+        index: SymbolIndex,
+    ) -> Option<GoffSubsectionIndex> {
+        let symbol = symbols.get(index)?;
+        match symbol.record().symbol_type {
+            goff::ESD_ST_ED | goff::ESD_ST_PR => symbol.section().map(|x| x.subsection),
+            _ => None,
+        }
+    }
+
+    pub(super) fn get(&self, index: SectionIndex) -> Option<&GoffSectionInternal> {
         self.sections.get(index.0)
     }
 
-    pub(super) fn iter(&self) -> slice::Iter<'_, GoffSectionInternal<'data>> {
+    pub(super) fn iter(&self) -> slice::Iter<'_, GoffSectionInternal> {
         self.sections.iter()
     }
+
+    fn subsection(&self, index: GoffSubsectionIndex) -> &GoffSubsection<'data> {
+        // GoffSubsectionIndex is always valid.
+        &self.subsections[index.0]
+    }
+
+    pub(super) fn relocations(&self, index: GoffSubsectionIndex) -> (u32, &[goff::Relocation]) {
+        let subsection = self.subsection(index);
+        (subsection.offset, &subsection.relocations)
+    }
+}
+
+/// 0-based index into GoffSectionTableInternal::subsections that is always valid.
+#[derive(Debug, Clone, Copy)]
+pub(super) struct GoffSubsectionIndex(usize);
+
+#[derive(Debug)]
+struct GoffSubsection<'data> {
+    symbol: GoffSymbolIndex,
+    offset: u32,
+    text: Vec<LogicalRecord<'data, goff::TextRecord>>,
+    relocations: Vec<goff::Relocation>,
 }
 
 /// A section in a [`GoffFile`].
 #[derive(Debug)]
-pub(super) struct GoffSectionInternal<'data> {
-    symbol: GoffSymbolIndex,
-    text: Vec<LogicalRecord<'data, goff::TextRecord>>,
-    relocations: Vec<goff::Relocation>,
+pub(super) struct GoffSectionInternal {
+    length: u32,
+    ed: GoffSubsectionIndex,
+    prs: Vec<GoffSubsectionIndex>,
 }
 
 /// An iterator for the sections in a [`GoffFile`].
@@ -120,7 +204,7 @@ where
     R: ReadRef<'data>,
 {
     pub(super) file: &'file GoffFile<'data, R>,
-    pub(super) iter: iter::Enumerate<slice::Iter<'file, GoffSectionInternal<'data>>>,
+    pub(super) iter: iter::Enumerate<slice::Iter<'file, GoffSectionInternal>>,
 }
 
 impl<'data, 'file, R> Iterator for GoffSectionIterator<'data, 'file, R>
@@ -144,7 +228,7 @@ where
 {
     index: SectionIndex,
     file: &'file GoffFile<'data, R>,
-    section: &'file GoffSectionInternal<'data>,
+    section: &'file GoffSectionInternal,
     symbol: &'file GoffSymbolInternal<'data>,
 }
 
@@ -164,13 +248,14 @@ impl<'data, 'file, R: ReadRef<'data>> GoffSection<'data, 'file, R> {
     pub(super) fn new(
         file: &'file GoffFile<'data, R>,
         index: SectionIndex,
-        section: &'file GoffSectionInternal<'data>,
+        section: &'file GoffSectionInternal,
     ) -> Self {
+        let ed = file.sections.subsection(section.ed);
         GoffSection {
             index,
             file,
             section,
-            symbol: file.symbols.get_by_index(section.symbol),
+            symbol: file.symbols.get_by_index(ed.symbol),
         }
     }
 
@@ -190,17 +275,21 @@ impl<'data, 'file, R: ReadRef<'data>> GoffSection<'data, 'file, R> {
         self.symbol.name()
     }
 
-    /// Returns raw GOFF TXT records that reference this section.
+    /// Returns raw GOFF TXT records that reference the ED of this section.
+    ///
+    /// This does not include TXT records that reference PRs within the ED.
     pub fn goff_text(&self) -> &'file [LogicalRecord<'data, goff::TextRecord>] {
-        &self.section.text
+        &self.file.sections.subsection(self.section.ed).text
     }
 
     fn is_bss(&self) -> bool {
+        let is_empty = |index| self.file.sections.subsection(index).text.is_empty();
         let ed = self.symbol.record();
-        self.section.text.is_empty()
-            && self.symbol.length() != 0
+        self.section.length != 0
             && ed.behavioral_attributes.text_record_style() == goff::TXT_RS_BYTE
             && ed.fill_byte() == Some(0)
+            && is_empty(self.section.ed)
+            && self.section.prs.iter().copied().all(is_empty)
     }
 }
 
@@ -222,7 +311,7 @@ where
     }
 
     fn size(&self) -> u64 {
-        u64::from(self.symbol.length())
+        u64::from(self.section.length)
     }
 
     fn align(&self) -> u64 {
@@ -277,48 +366,57 @@ where
         let ed = self.symbol.record();
         let record_style = ed.behavioral_attributes.text_record_style();
         let fill = ed.fill_byte().unwrap_or(0);
-        let length = self.symbol.length() as usize;
         let mut data = Vec::new();
         // On success, `data` always has the section length. It is the caller's
         // responsibility to limit that for untrusted input.
-        data.try_reserve_exact(length)
+        data.try_reserve_exact(self.section.length as usize)
             .map_err(|_| Error("GOFF section data allocation failed"))?;
-        for txt in &self.section.text {
-            if txt.initial.element_esdid != ed.esdid {
-                return Err(Error("Unsupported GOFF TXT record for PR"));
-            }
-            if txt.initial.text_encoding.get(BE) != 0 {
-                return Err(Error("Unsupported GOFF TXT encoding"));
-            }
-            if txt.initial.record_style != record_style {
-                return Err(Error("Invalid GOFF TXT record style or reserved bits"));
-            }
-            let mut offset = match record_style {
-                // Records may be in any order, and later records overwrite
-                // earlier ones.
-                goff::TXT_RS_BYTE => txt.initial.offset.get(BE) as usize,
-                // These have no offset, so simply extend in order.
-                goff::TXT_RS_STRUCTURED | goff::TXT_RS_UNSTRUCTURED => data.len(),
-                _ => return Err(Error("Unsupported GOFF TXT record style")),
-            };
-            for part in txt.txt_data_parts()? {
-                let end = offset.saturating_add(part.len());
-                if end > length {
-                    return Err(Error("GOFF TXT data exceeds ED length"));
+        let mut add_subsection = |subsection: &GoffSubsection<'data>| {
+            let symbol = self.file.symbols.get_by_index(subsection.symbol);
+            let start = data.len();
+            debug_assert_eq!(start, subsection.offset as usize);
+            let end = start
+                .checked_add(symbol.length() as usize)
+                .read_error("GOFF section length too large")?;
+            for txt in &subsection.text {
+                if txt.initial.text_encoding.get(BE) != 0 {
+                    return Err(Error("Unsupported GOFF TXT encoding"));
                 }
-                if end <= data.len() {
-                    data[offset..end].copy_from_slice(part);
-                } else {
-                    data.resize(offset, fill);
-                    data.extend_from_slice(part);
+                if txt.initial.record_style != record_style {
+                    return Err(Error("Invalid GOFF TXT record style or reserved bits"));
                 }
-                offset = end;
+                let mut offset = match record_style {
+                    // Records may be in any order, and later records overwrite
+                    // earlier ones.
+                    goff::TXT_RS_BYTE => start.saturating_add(txt.initial.offset.get(BE) as usize),
+                    // These have no offset, so simply extend in order.
+                    goff::TXT_RS_STRUCTURED | goff::TXT_RS_UNSTRUCTURED => data.len(),
+                    _ => return Err(Error("Unsupported GOFF TXT record style")),
+                };
+                for part in txt.txt_data_parts()? {
+                    let part_end = offset.saturating_add(part.len());
+                    if part_end > end {
+                        return Err(Error("GOFF TXT data exceeds ESD length"));
+                    }
+                    if part_end <= data.len() {
+                        data[offset..part_end].copy_from_slice(part);
+                    } else {
+                        data.resize(offset, fill);
+                        data.extend_from_slice(part);
+                    }
+                    offset = part_end;
+                }
             }
-        }
-        if record_style == goff::TXT_RS_BYTE {
-            data.resize(length, fill);
-        } else if data.len() != length {
-            return Err(Error("Incomplete GOFF TXT data"));
+            if record_style == goff::TXT_RS_BYTE {
+                data.resize(end, fill);
+            } else if data.len() != end {
+                return Err(Error("Incomplete GOFF TXT data"));
+            }
+            Ok(())
+        };
+        add_subsection(self.file.sections.subsection(self.section.ed))?;
+        for pr in &self.section.prs {
+            add_subsection(self.file.sections.subsection(*pr))?;
         }
         Ok(Cow::Owned(data))
     }
@@ -365,10 +463,7 @@ where
     }
 
     fn relocations(&self) -> Self::RelocationIterator {
-        GoffRelocationIterator {
-            file: self.file,
-            relocations: self.section.relocations.iter(),
-        }
+        GoffRelocationIterator::new(self.file, self.section.ed, &self.section.prs)
     }
 
     fn relocation_map(&self) -> read::Result<RelocationMap> {

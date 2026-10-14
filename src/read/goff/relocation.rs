@@ -9,26 +9,51 @@ use crate::read::{
 };
 use crate::{BigEndian as BE, U32, U64};
 
-use super::{GoffFile, LogicalRecord};
+use super::{GoffFile, GoffSubsectionIndex, LogicalRecord};
 
 /// An iterator for the relocations in a [`GoffSection`](super::GoffSection).
 pub struct GoffRelocationIterator<'data, 'file, R = &'data [u8]>
 where
     R: ReadRef<'data>,
 {
-    pub(super) file: &'file GoffFile<'data, R>,
-    pub(super) relocations: slice::Iter<'file, goff::Relocation>,
+    file: &'file GoffFile<'data, R>,
+    offset: u32,
+    relocations: slice::Iter<'file, goff::Relocation>,
+    prs: slice::Iter<'file, GoffSubsectionIndex>,
 }
 
 impl<'data, 'file, R> GoffRelocationIterator<'data, 'file, R>
 where
     R: ReadRef<'data>,
 {
+    pub(super) fn new(
+        file: &'file GoffFile<'data, R>,
+        ed: GoffSubsectionIndex,
+        prs: &'file [GoffSubsectionIndex],
+    ) -> Self {
+        let mut iter = GoffRelocationIterator {
+            file,
+            offset: 0,
+            relocations: [].iter(),
+            prs: prs.iter(),
+        };
+        iter.set_subsection(ed);
+        iter
+    }
+
+    fn set_subsection(&mut self, index: GoffSubsectionIndex) {
+        let (offset, relocations) = self.file.sections.relocations(index);
+        self.offset = offset;
+        self.relocations = relocations.iter();
+    }
+
     /// Map R-pointer to RelocationTarget
     fn map_target(&self, r_pointer: SymbolIndex) -> Option<RelocationTarget> {
         let symbol = self.file.symbols.get(r_pointer)?;
         if symbol.record().symbol_type == goff::ESD_ST_ED {
-            symbol.section().map(RelocationTarget::Section)
+            symbol
+                .section()
+                .map(|section| RelocationTarget::Section(section.section))
         } else {
             Some(RelocationTarget::Symbol(r_pointer))
         }
@@ -53,9 +78,14 @@ where
     type Item = (u64, Relocation);
 
     fn next(&mut self) -> Option<Self::Item> {
-        while let Some(goff_reloc) = self.relocations.next() {
-            // Map to common Relocation format
-            let offset = goff_reloc.offset;
+        loop {
+            let Some(goff_reloc) = self.relocations.next() else {
+                let pr = self.prs.next()?;
+                self.set_subsection(*pr);
+                continue;
+            };
+
+            let offset = u64::from(self.offset).wrapping_add(goff_reloc.offset);
             let r_pointer_index = SymbolIndex(goff_reloc.r_pointer as usize);
             let target = match self.map_target(r_pointer_index) {
                 Some(t) => t,
@@ -80,8 +110,6 @@ where
 
             return Some((offset, relocation));
         }
-
-        None
     }
 }
 
@@ -91,8 +119,7 @@ where
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("GoffRelocationIterator")
-            .field("len", &self.relocations.len())
-            .finish()
+            .finish_non_exhaustive()
     }
 }
 
