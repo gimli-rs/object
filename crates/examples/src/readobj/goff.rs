@@ -114,7 +114,9 @@ fn print_ba(p: &mut Printer<'_>, st: SymbolType, ba: BehavioralAttributes) {
             );
         }
         b.flag("READ_ONLY", BA::is_read_only, BA::with_read_only);
-        if ba.executable() != EXEC_UNSPEC || matches!(st, ESD_ST_ED | ESD_ST_LD | ESD_ST_ER) {
+        if ba.executable() != EXEC_UNSPEC
+            || matches!(st, ESD_ST_ED | ESD_ST_LD | ESD_ST_PR | ESD_ST_ER)
+        {
             b.field(
                 "Executable",
                 BA::executable,

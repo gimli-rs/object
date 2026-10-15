@@ -192,6 +192,20 @@ impl<'data> GoffSymbolInternal<'data> {
     pub(super) fn section(&self) -> Option<GoffSymbolSection> {
         self.section
     }
+
+    pub(super) fn is_undefined_pr(&self) -> bool {
+        // A PR is undefined if length is 0 AND one of:
+        // - namespace is a pseudo-register
+        // - part reference represents a symbol in a library
+        // - PR is a weak reference variant
+        let esd = self.record();
+        esd.symbol_type == goff::ESD_ST_PR
+            && self.length == 0
+            && (esd.namespace == goff::ESD_NS_PSEUDO_REGISTER
+                || esd.behavioral_attributes.binding_strength() == goff::ESD_BST_WEAK
+                || esd.behavioral_attributes.binding_scope() == goff::ESD_BSC_LIBRARY
+                || esd.behavioral_attributes.binding_scope() == goff::ESD_BSC_IMPORT_EXPORT)
+    }
 }
 
 /// A reference to a symbol in an [`GoffFile`].
@@ -271,7 +285,7 @@ impl<'data, 'file> ObjectSymbol<'data> for GoffSymbol<'data, 'file> {
 
     #[inline]
     fn address(&self) -> u64 {
-        0
+        u64::from(self.symbol.offset)
     }
 
     #[inline]
@@ -280,28 +294,45 @@ impl<'data, 'file> ObjectSymbol<'data> for GoffSymbol<'data, 'file> {
     }
 
     fn kind(&self) -> SymbolKind {
-        match self.goff_record().symbol_type {
-            // Section Definition (SD) - defines a control section.
-            goff::ESD_ST_SD => SymbolKind::Section,
-            // Element Definition (ED) - defines an element (part/class).
+        let esd = self.goff_record();
+        match esd.symbol_type {
             goff::ESD_ST_ED => SymbolKind::Section,
-            // Label Definition (LD) - defines a label within a section.
-            goff::ESD_ST_LD => SymbolKind::Label,
-            // Part Reference (PR) - references a part of an element.
-            goff::ESD_ST_PR => SymbolKind::Section,
-            // External Reference (ER) - references an external symbol.
-            goff::ESD_ST_ER => SymbolKind::Unknown,
+            goff::ESD_ST_LD | goff::ESD_ST_PR | goff::ESD_ST_ER => {
+                match (esd.behavioral_attributes.executable(), esd.symbol_type) {
+                    (goff::EXEC_DATA, _) => SymbolKind::Data,
+                    (goff::EXEC_CODE, _) => SymbolKind::Text,
+                    // TODO: inherit from ED
+                    (_, goff::ESD_ST_LD) => SymbolKind::Label,
+                    (_, goff::ESD_ST_PR) => SymbolKind::Data,
+                    _ => SymbolKind::Unknown,
+                }
+            }
             _ => SymbolKind::Unknown,
         }
     }
 
     fn section(&self) -> SymbolSection {
-        SymbolSection::Unknown
+        if let Some(section) = self.symbol.section {
+            return SymbolSection::Section(section.section);
+        }
+        let esd = self.symbol.record();
+        match esd.symbol_type {
+            goff::ESD_ST_SD => SymbolSection::None,
+            goff::ESD_ST_PR => {
+                if self.symbol.is_undefined_pr() {
+                    SymbolSection::Undefined
+                } else {
+                    SymbolSection::Unknown
+                }
+            }
+            goff::ESD_ST_ER => SymbolSection::Undefined,
+            _ => SymbolSection::Unknown,
+        }
     }
 
     #[inline]
     fn is_undefined(&self) -> bool {
-        let esd = self.goff_record();
+        let esd = self.symbol.record();
         match esd.symbol_type {
             // Section Definition (SD) - defines a control section.
             goff::ESD_ST_SD => false,
@@ -310,36 +341,28 @@ impl<'data, 'file> ObjectSymbol<'data> for GoffSymbol<'data, 'file> {
             // Label Definition (LD) - defines a label within a section.
             goff::ESD_ST_LD => false,
             // Part Reference (PR) - references a part of an element.
-            // A PR is undefined if length is 0 AND one of:
-            // - namespace is a pseudo-register
-            // - part reference represents a symbol in a dynamic library
-            // - PR is a weak reference variant
-            goff::ESD_ST_PR => {
-                self.symbol.length == 0
-                    && (esd.namespace == goff::ESD_NS_PSEUDO_REGISTER
-                        || esd.behavioral_attributes.binding_strength() == goff::ESD_BST_WEAK
-                        || esd.behavioral_attributes.binding_scope() == goff::ESD_BSC_IMPORT_EXPORT)
-            }
+            goff::ESD_ST_PR => self.symbol.is_undefined_pr(),
             // External Reference (ER) - references an external symbol.
             goff::ESD_ST_ER => true,
-            _ => true,
+            _ => false,
         }
     }
 
     /// Return true if the symbol is a definition of a function or data object.
     #[inline]
     fn is_definition(&self) -> bool {
-        !self.is_undefined()
+        match self.goff_record().symbol_type {
+            goff::ESD_ST_LD => true,
+            goff::ESD_ST_PR => self.symbol.section.is_some(),
+            _ => false,
+        }
     }
 
     #[inline]
     fn is_common(&self) -> bool {
-        let esd = self.goff_record();
-        match esd.symbol_type {
-            // A PR is common if the binding algorithm is MERGE
-            goff::ESD_ST_PR => esd.behavioral_attributes.binding_algorithm() == goff::ESD_BA_MERGE,
-            _ => false,
-        }
+        // TODO: need a reliable way to distinguish common symbols.
+        // LLVM uses ESD_BA_MERGE on the ED parent for most data, not just common
+        false
     }
 
     #[inline]
