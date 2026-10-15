@@ -64,13 +64,17 @@ impl<'data> GoffSectionTableInternal<'data> {
             // SD (Section Definition) is the compile unit, not a user section.
             goff::ESD_ST_ED => Some(self.add_section(symbol_index)),
             goff::ESD_ST_PR => {
-                let ed_section = Self::ed_section(symbols, symbol)?;
-                let subsection = self.add_subsection(symbol_index);
-                self.sections[ed_section.section.0].prs.push(subsection);
-                Some(GoffSymbolSection {
-                    section: ed_section.section,
-                    subsection,
-                })
+                if symbol.is_undefined_pr() {
+                    None
+                } else {
+                    let ed_section = Self::ed_section(symbols, symbol)?;
+                    let subsection = self.add_subsection(symbol_index);
+                    self.sections[ed_section.section.0].prs.push(subsection);
+                    Some(GoffSymbolSection {
+                        section: ed_section.section,
+                        subsection,
+                    })
+                }
             }
             goff::ESD_ST_LD => Self::ed_section(symbols, symbol),
             _ => None,
@@ -454,6 +458,7 @@ where
         if self.is_bss() {
             SectionKind::UninitializedData
         } else if flags.executable() == goff::EXEC_CODE {
+            // TODO: check for any LD children with goff::EXEC_CODE
             SectionKind::Text
         } else if flags.is_read_only() {
             SectionKind::ReadOnlyData
