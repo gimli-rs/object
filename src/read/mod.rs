@@ -1218,6 +1218,9 @@ impl RelocationMap {
     where
         T: Object<'data>,
     {
+        if relocation.subtractor().is_some() {
+            return Err(Error("Unsupported relocation subtractor"));
+        }
         let mut entry = RelocationMapEntry {
             implicit_addend: relocation.has_implicit_addend(),
             addend: relocation.addend() as u64,

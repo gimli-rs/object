@@ -1,4 +1,3 @@
-use alloc::vec::Vec;
 use core::fmt::Debug;
 use core::marker::PhantomData;
 
@@ -16,8 +15,8 @@ use crate::{
 use crate::goff::*;
 
 use super::{
-    GoffComdat, GoffComdatIterator, GoffSection, GoffSectionIterator, GoffSegment,
-    GoffSegmentIterator, GoffSymbol, GoffSymbolIndex, GoffSymbolIterator, GoffSymbolTable,
+    GoffComdat, GoffComdatIterator, GoffSection, GoffSectionIterator, GoffSectionTableInternal,
+    GoffSegment, GoffSegmentIterator, GoffSymbol, GoffSymbolIterator, GoffSymbolTable,
     GoffSymbolTableInternal, LogicalRecord,
 };
 
@@ -30,7 +29,7 @@ where
     R: ReadRef<'data>,
 {
     pub(super) header: &'data goff::HeaderRecord,
-    pub(super) sections: Vec<GoffSymbolIndex>,
+    pub(super) sections: GoffSectionTableInternal<'data>,
     pub(super) symbols: GoffSymbolTableInternal<'data>,
     pub(super) end: LogicalRecord<'data, goff::EndRecord>,
     marker: PhantomData<R>,
@@ -45,6 +44,7 @@ where
         let header = goff::HeaderRecord::parse(data)?;
 
         let mut symbols = GoffSymbolTableInternal::new();
+        let mut sections = GoffSectionTableInternal::new();
         let end;
 
         let mut records = header.records(data)?;
@@ -53,9 +53,9 @@ where
                 return Err(Error("Missing GOFF END record"));
             };
             match record.initial.ptv.record_type() {
-                RT_ESD => symbols.add_esd(record.cast())?,
-                RT_TXT => symbols.add_txt(record.cast())?,
-                RT_RLD => symbols.add_rld(record.cast())?,
+                RT_ESD => symbols.add_esd(record.cast(), &mut sections)?,
+                RT_TXT => sections.add_txt(&symbols, record.cast())?,
+                RT_RLD => sections.add_rld(&symbols, record.cast())?,
                 RT_LEN => symbols.add_len(record.cast())?,
                 RT_END => {
                     end = record.cast();
@@ -65,7 +65,8 @@ where
             }
         }
 
-        let sections = symbols.set_sections();
+        sections.finalize(&mut symbols)?;
+
         Ok(GoffFile {
             header,
             sections,
@@ -179,11 +180,11 @@ where
     }
 
     fn section_by_index(&self, index: SectionIndex) -> Result<GoffSection<'data, '_, R>> {
-        let symbol_index = self
+        let section = self
             .sections
-            .get(index.0)
+            .get(index)
             .read_error("Invalid GOFF section index")?;
-        Ok(GoffSection::new(self, index, *symbol_index))
+        Ok(GoffSection::new(self, index, section))
     }
 
     fn sections(&self) -> GoffSectionIterator<'data, '_, R> {
@@ -211,8 +212,7 @@ where
     }
 
     fn symbol_by_index(&self, index: SymbolIndex) -> Result<GoffSymbol<'data, '_>> {
-        let symbol_table = self.symbol_table().ok_or(Error("missing symbol table"))?;
-        symbol_table.symbol_by_index(index)
+        GoffSymbolTable::new(&self.symbols).symbol_by_index(index)
     }
 
     fn symbols(&self) -> GoffSymbolIterator<'data, '_> {

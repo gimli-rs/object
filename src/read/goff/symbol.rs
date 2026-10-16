@@ -13,7 +13,7 @@ use crate::read::{
     SymbolIndex, SymbolKind, SymbolScope, SymbolSection,
 };
 
-use super::LogicalRecord;
+use super::{GoffSectionTableInternal, GoffSubsectionIndex, LogicalRecord};
 
 /// 0-based index into GoffSymbolTableInternal::symbols that is always valid.
 #[derive(Debug, Clone, Copy)]
@@ -35,18 +35,24 @@ impl<'data> GoffSymbolTableInternal<'data> {
     pub(super) fn add_esd(
         &mut self,
         record: LogicalRecord<'data, goff::SymbolRecord>,
+        sections: &mut GoffSectionTableInternal<'data>,
     ) -> Result<()> {
         let name = match record.esd_name()? {
             Cow::Borrowed(name) => Cow::Borrowed(EbcdicStr::from_bytes(name)),
             Cow::Owned(name) => Cow::Owned(EbcdicString::from_bytes(name)),
         };
-        let symbol = GoffSymbolInternal {
+        let mut symbol = GoffSymbolInternal {
             record,
             name,
-            length: record.initial.length.get(BE),
             section: None,
-            text: Vec::new(),
-            relocations: Vec::new(),
+            // The ESD offset is only valid for LD records.
+            // We give PR records an artificial offset later.
+            offset: if record.initial.symbol_type == goff::ESD_ST_LD {
+                record.initial.offset.get(BE)
+            } else {
+                0
+            },
+            length: record.initial.length.get(BE),
         };
         // Ensure esdid matches the position we will push to.
         let symbol_index = symbol.esdid();
@@ -59,6 +65,8 @@ impl<'data> GoffSymbolTableInternal<'data> {
             return Err(Error("Invalid parent ESDID in GOFF ESD record"));
         }
 
+        let index = GoffSymbolIndex(self.symbols.len());
+        symbol.section = sections.add_esd(self, &symbol, index);
         self.symbols.push(symbol);
         Ok(())
     }
@@ -80,37 +88,6 @@ impl<'data> GoffSymbolTableInternal<'data> {
         Ok(())
     }
 
-    pub(super) fn add_txt(&mut self, record: LogicalRecord<'data, goff::TextRecord>) -> Result<()> {
-        let txt_record = record.initial;
-        let esdid = SymbolIndex(txt_record.element_esdid.get(BE) as usize);
-        let symbol = self
-            .element_mut(esdid)
-            .ok_or(Error("Invalid element ESDID in GOFF TXT record"))?;
-        symbol.text.push(record);
-        Ok(())
-    }
-
-    /// Parses a RelocationRecord and its continuations, extracting individual relocation items
-    pub(super) fn add_rld(
-        &mut self,
-        record: LogicalRecord<'data, goff::RelocationRecord>,
-    ) -> Result<()> {
-        let mut relocations = record.rld_items()?;
-        while let Some(relocation) = relocations.next()? {
-            let symbol = self
-                .element_mut(SymbolIndex(relocation.p_pointer as usize))
-                .ok_or(Error("Invalid P pointer in GOFF RLD entry"))?;
-            symbol.relocations.push(relocation);
-        }
-        Ok(())
-    }
-
-    /// Get the symbol at the given index.
-    pub(super) fn get_by_index(&self, index: GoffSymbolIndex) -> &GoffSymbolInternal<'data> {
-        // GoffSymbolIndex is always valid.
-        &self.symbols[index.0]
-    }
-
     /// Get the symbol with the given ESDID.
     ///
     /// Returns an `None` for ESDID 0 or an invalid ESDID.
@@ -122,53 +99,27 @@ impl<'data> GoffSymbolTableInternal<'data> {
         self.symbols.get_mut(index.0.wrapping_sub(1))
     }
 
-    /// Get the ED symbol that owns the data for the given ED or PR symbol index.
-    ///
-    /// Returns `None` for an invalid index, or if the symbol is not an ED or PR.
-    pub(super) fn element_mut(
-        &mut self,
-        index: SymbolIndex,
-    ) -> Option<&mut GoffSymbolInternal<'data>> {
-        let mut index = index;
-        let symbol = self.get(index)?;
-        if symbol.record().symbol_type == goff::ESD_ST_PR {
-            index = symbol.parent_esdid();
-        }
-        let symbol = self.get_mut(index)?;
-        if symbol.record().symbol_type != goff::ESD_ST_ED {
-            return None;
-        }
-        Some(symbol)
-    }
-
     /// Iterate over the symbols.
     pub(super) fn iter(&self) -> slice::Iter<'_, GoffSymbolInternal<'data>> {
         self.symbols.iter()
     }
 
-    /// Assign section indices.
-    pub(super) fn set_sections(&mut self) -> Vec<GoffSymbolIndex> {
-        let mut sections = Vec::new();
-        for i in 0..self.symbols.len() {
-            let symbol = &self.symbols[i];
-            let section = match symbol.record().symbol_type {
-                // Only ED (Element Definition) represents user sections.
-                // SD (Section Definition) is the compile unit, not a user section.
-                goff::ESD_ST_ED => {
-                    let section_index = SectionIndex(sections.len());
-                    sections.push(GoffSymbolIndex(i));
-                    Some(section_index)
-                }
-                goff::ESD_ST_LD | goff::ESD_ST_PR => self
-                    .get(symbol.parent_esdid())
-                    .filter(|parent| parent.record().symbol_type == goff::ESD_ST_ED)
-                    .and_then(|parent| parent.section),
-                _ => None,
-            };
-            self.symbols[i].section = section;
-        }
-        sections
+    /// Get the symbol at the given index.
+    pub(super) fn get_by_index(&self, index: GoffSymbolIndex) -> &GoffSymbolInternal<'data> {
+        // GoffSymbolIndex is always valid.
+        &self.symbols[index.0]
     }
+
+    pub(super) fn set_offset(&mut self, index: GoffSymbolIndex, offset: u32) {
+        self.symbols[index.0].offset = offset;
+    }
+}
+
+/// The section and subsection containing a GOFF symbol.
+#[derive(Debug, Clone, Copy)]
+pub(super) struct GoffSymbolSection {
+    pub(super) section: SectionIndex,
+    pub(super) subsection: GoffSubsectionIndex,
 }
 
 /// A symbol in a GOFF [`SymbolTable`].
@@ -178,18 +129,18 @@ pub(super) struct GoffSymbolInternal<'data> {
     record: LogicalRecord<'data, goff::SymbolRecord>,
     /// Symbol name (flattened from ESD record and any continuation records)
     name: Cow<'data, EbcdicStr>,
+    /// The section and subsection this symbol belongs to.
+    ///
+    /// Set for ED symbols, or LD/PR symbols with an ED parent.
+    section: Option<GoffSymbolSection>,
+    /// The offset of the symbol within the section.
+    ///
+    /// Set for LD/PR symbols.
+    offset: u32,
     /// Length (size of allocated memory of program element or section)
     ///
     /// May be from a LEN record.
     length: u32,
-    /// The section this symbol belongs to.
-    ///
-    /// Set for ED symbols, or LD/PR symbols with an ED parent.
-    section: Option<SectionIndex>,
-    /// TXT records which reference this ESD.
-    text: Vec<LogicalRecord<'data, goff::TextRecord>>,
-    /// Relocation data items which reference this ESD.
-    relocations: Vec<goff::Relocation>,
 }
 
 impl<'data> GoffSymbolInternal<'data> {
@@ -238,17 +189,22 @@ impl<'data> GoffSymbolInternal<'data> {
     /// Get the section this symbol belongs to.
     ///
     /// Set for ED symbols, or LD/PR symbols with an ED parent.
-    pub(super) fn section(&self) -> Option<SectionIndex> {
+    pub(super) fn section(&self) -> Option<GoffSymbolSection> {
         self.section
     }
 
-    /// Get the TXT records that reference this symbol.
-    pub(super) fn text(&self) -> &[LogicalRecord<'data, goff::TextRecord>] {
-        &self.text
-    }
-
-    pub(super) fn relocations(&self) -> &[goff::Relocation] {
-        &self.relocations
+    pub(super) fn is_undefined_pr(&self) -> bool {
+        // A PR is undefined if length is 0 AND one of:
+        // - namespace is a pseudo-register
+        // - part reference represents a symbol in a library
+        // - PR is a weak reference variant
+        let esd = self.record();
+        esd.symbol_type == goff::ESD_ST_PR
+            && self.length == 0
+            && (esd.namespace == goff::ESD_NS_PSEUDO_REGISTER
+                || esd.behavioral_attributes.binding_strength() == goff::ESD_BST_WEAK
+                || esd.behavioral_attributes.binding_scope() == goff::ESD_BSC_LIBRARY
+                || esd.behavioral_attributes.binding_scope() == goff::ESD_BSC_IMPORT_EXPORT)
     }
 }
 
@@ -329,7 +285,7 @@ impl<'data, 'file> ObjectSymbol<'data> for GoffSymbol<'data, 'file> {
 
     #[inline]
     fn address(&self) -> u64 {
-        0
+        u64::from(self.symbol.offset)
     }
 
     #[inline]
@@ -338,28 +294,45 @@ impl<'data, 'file> ObjectSymbol<'data> for GoffSymbol<'data, 'file> {
     }
 
     fn kind(&self) -> SymbolKind {
-        match self.goff_record().symbol_type {
-            // Section Definition (SD) - defines a control section.
-            goff::ESD_ST_SD => SymbolKind::Section,
-            // Element Definition (ED) - defines an element (part/class).
+        let esd = self.goff_record();
+        match esd.symbol_type {
             goff::ESD_ST_ED => SymbolKind::Section,
-            // Label Definition (LD) - defines a label within a section.
-            goff::ESD_ST_LD => SymbolKind::Label,
-            // Part Reference (PR) - references a part of an element.
-            goff::ESD_ST_PR => SymbolKind::Section,
-            // External Reference (ER) - references an external symbol.
-            goff::ESD_ST_ER => SymbolKind::Unknown,
+            goff::ESD_ST_LD | goff::ESD_ST_PR | goff::ESD_ST_ER => {
+                match (esd.behavioral_attributes.executable(), esd.symbol_type) {
+                    (goff::EXEC_DATA, _) => SymbolKind::Data,
+                    (goff::EXEC_CODE, _) => SymbolKind::Text,
+                    // TODO: inherit from ED
+                    (_, goff::ESD_ST_LD) => SymbolKind::Label,
+                    (_, goff::ESD_ST_PR) => SymbolKind::Data,
+                    _ => SymbolKind::Unknown,
+                }
+            }
             _ => SymbolKind::Unknown,
         }
     }
 
     fn section(&self) -> SymbolSection {
-        SymbolSection::Unknown
+        if let Some(section) = self.symbol.section {
+            return SymbolSection::Section(section.section);
+        }
+        let esd = self.symbol.record();
+        match esd.symbol_type {
+            goff::ESD_ST_SD => SymbolSection::None,
+            goff::ESD_ST_PR => {
+                if self.symbol.is_undefined_pr() {
+                    SymbolSection::Undefined
+                } else {
+                    SymbolSection::Unknown
+                }
+            }
+            goff::ESD_ST_ER => SymbolSection::Undefined,
+            _ => SymbolSection::Unknown,
+        }
     }
 
     #[inline]
     fn is_undefined(&self) -> bool {
-        let esd = self.goff_record();
+        let esd = self.symbol.record();
         match esd.symbol_type {
             // Section Definition (SD) - defines a control section.
             goff::ESD_ST_SD => false,
@@ -368,36 +341,28 @@ impl<'data, 'file> ObjectSymbol<'data> for GoffSymbol<'data, 'file> {
             // Label Definition (LD) - defines a label within a section.
             goff::ESD_ST_LD => false,
             // Part Reference (PR) - references a part of an element.
-            // A PR is undefined if length is 0 AND one of:
-            // - namespace is a pseudo-register
-            // - part reference represents a symbol in a dynamic library
-            // - PR is a weak reference variant
-            goff::ESD_ST_PR => {
-                self.symbol.length == 0
-                    && (esd.namespace == goff::ESD_NS_PSEUDO_REGISTER
-                        || esd.behavioral_attributes.binding_strength() == goff::ESD_BST_WEAK
-                        || esd.behavioral_attributes.binding_scope() == goff::ESD_BSC_IMPORT_EXPORT)
-            }
+            goff::ESD_ST_PR => self.symbol.is_undefined_pr(),
             // External Reference (ER) - references an external symbol.
             goff::ESD_ST_ER => true,
-            _ => true,
+            _ => false,
         }
     }
 
     /// Return true if the symbol is a definition of a function or data object.
     #[inline]
     fn is_definition(&self) -> bool {
-        !self.is_undefined()
+        match self.goff_record().symbol_type {
+            goff::ESD_ST_LD => true,
+            goff::ESD_ST_PR => self.symbol.section.is_some(),
+            _ => false,
+        }
     }
 
     #[inline]
     fn is_common(&self) -> bool {
-        let esd = self.goff_record();
-        match esd.symbol_type {
-            // A PR is common if the binding algorithm is MERGE
-            goff::ESD_ST_PR => esd.behavioral_attributes.binding_algorithm() == goff::ESD_BA_MERGE,
-            _ => false,
-        }
+        // TODO: need a reliable way to distinguish common symbols.
+        // LLVM uses ESD_BA_MERGE on the ED parent for most data, not just common
+        false
     }
 
     #[inline]
@@ -406,9 +371,18 @@ impl<'data, 'file> ObjectSymbol<'data> for GoffSymbol<'data, 'file> {
     }
 
     fn scope(&self) -> SymbolScope {
-        match self.goff_record().behavioral_attributes.binding_scope() {
-            goff::ESD_BSC_SECTION => SymbolScope::Compilation,
-            goff::ESD_BSC_MODULE => SymbolScope::Linkage,
+        let esd = self.goff_record();
+        // Section definitions and Element definitions are not referenced as symbols.
+        if matches!(esd.symbol_type, goff::ESD_ST_SD | goff::ESD_ST_ED) {
+            return SymbolScope::Compilation;
+        }
+        // Symbol identifiers that are a single EBCDIC encoded space are local.
+        const EBCDIC_SPACE: EbcdicArray<1> = EbcdicArray::from_ascii(*b" ");
+        if *self.symbol.name == *EBCDIC_SPACE {
+            return SymbolScope::Compilation;
+        }
+        match esd.behavioral_attributes.binding_scope() {
+            goff::ESD_BSC_SECTION | goff::ESD_BSC_MODULE => SymbolScope::Compilation,
             goff::ESD_BSC_LIBRARY => SymbolScope::Linkage,
             goff::ESD_BSC_IMPORT_EXPORT => SymbolScope::Dynamic,
             _ => SymbolScope::Unknown,
@@ -417,17 +391,7 @@ impl<'data, 'file> ObjectSymbol<'data> for GoffSymbol<'data, 'file> {
 
     #[inline]
     fn is_global(&self) -> bool {
-        const EBCDIC_SPACE: EbcdicArray<1> = EbcdicArray::from_ascii(*b" ");
-        let esd = self.goff_record();
-        // Section definitions and Element definitions are local by default
-        !matches!(esd.symbol_type, goff::ESD_ST_SD | goff::ESD_ST_ED)
-        // Symbol identifiers that are a single EBCDIC encoded space are local
-        && *self.symbol.name != *EBCDIC_SPACE
-        // If binding scope is section or module symbol is local
-        && !matches!(
-            esd.behavioral_attributes.binding_scope(),
-            goff::ESD_BSC_SECTION | goff::ESD_BSC_MODULE
-        )
+        self.scope() != SymbolScope::Compilation
     }
 
     #[inline]
