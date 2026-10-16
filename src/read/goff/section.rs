@@ -472,7 +472,7 @@ where
     }
 
     fn relocation_map(&self) -> read::Result<RelocationMap> {
-        unimplemented!(); // GOFF: not needed
+        RelocationMap::new(self.file, self)
     }
 
     fn flags(&self) -> SectionFlags {
