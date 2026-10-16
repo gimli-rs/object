@@ -427,6 +427,9 @@ impl<'a> Object<'a> {
     }
 
     pub(crate) fn coff_write(&self, buffer: &mut dyn WritableBuffer) -> Result<()> {
+        if self.sections.len() > usize::from(coff::IMAGE_SYM_SECTION_MAX) {
+            return Err(Error("too many sections for COFF".into()));
+        }
         let mut writer = writer::Writer::new(buffer);
 
         // Add section strings to strtab.
@@ -570,6 +573,9 @@ impl<'a> Object<'a> {
                 }
                 SymbolKind::File => {
                     // Name goes in auxiliary symbol records.
+                    if symbol.name.len() > usize::from(u8::MAX) * coff::IMAGE_SIZEOF_SYMBOL {
+                        return Err(Error("file name is too long for COFF".into()));
+                    }
                     symbol_offsets[index].aux_count = writer.reserve_aux_file_name(&symbol.name);
                     name = b".file";
                 }
@@ -623,6 +629,12 @@ impl<'a> Object<'a> {
 
         // Write section headers.
         for (index, section) in self.sections.iter().enumerate() {
+            if section.size > u64::from(u32::MAX) {
+                return Err(Error(format!(
+                    "section `{}` is too large for COFF",
+                    section.name().unwrap_or("")
+                )));
+            }
             let SectionFlags::Coff {
                 mut characteristics,
                 ..
@@ -718,14 +730,18 @@ impl<'a> Object<'a> {
                 SymbolSection::Section(id) => coff::SymbolSection(id.0 as i32 + 1),
             };
             let number_of_aux_symbols = symbol_offsets[index].aux_count;
-            let value = if symbol.weak {
-                // weak symbols should have a value of 0
-                0
-            } else if symbol.section == SymbolSection::Common {
-                symbol.size as u32
+            let value = if !symbol.weak && symbol.section == SymbolSection::Common {
+                symbol.size
             } else {
-                symbol.value as u32
+                symbol.value
             };
+            if value > u64::from(u32::MAX) {
+                return Err(Error(format!(
+                    "symbol `{}` value is too large for COFF",
+                    symbol.name().unwrap_or("")
+                )));
+            }
+            let value = value as u32;
 
             // write the weak default symbol before the weak symbol
             if symbol.weak {
@@ -735,7 +751,7 @@ impl<'a> Object<'a> {
 
                 writer.write_symbol(writer::Symbol {
                     name: weak_default_symbol.name,
-                    value: symbol.value as u32,
+                    value,
                     section_number: match symbol.section {
                         SymbolSection::Section(id) => coff::SymbolSection(id.0 as i32 + 1),
                         SymbolSection::Undefined => coff::IMAGE_SYM_ABSOLUTE,
@@ -754,7 +770,8 @@ impl<'a> Object<'a> {
 
             writer.write_symbol(writer::Symbol {
                 name: symbol_offsets[index].name,
-                value,
+                // Weak symbols have a value of 0; their value is in the default symbol.
+                value: if symbol.weak { 0 } else { value },
                 section_number,
                 typ,
                 storage_class,
