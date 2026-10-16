@@ -47,15 +47,40 @@ where
         self.relocations = relocations.iter();
     }
 
-    /// Map GOFF relocation flags to RelocationKind
-    fn map_kind(&self, flags: &goff::RelocationFlags) -> RelocationKind {
-        match (flags.reference_type(), flags.action()) {
-            (goff::RLD_RT_ADDRESS, goff::RLD_ACT_ADD) => RelocationKind::Absolute,
-            (goff::RLD_RT_ADDRESS, goff::RLD_ACT_SUBTRACT) => RelocationKind::Relative,
-            (goff::RLD_RT_OFFSET, _) => RelocationKind::SectionOffset,
-            (goff::RLD_RT_RELATIVE_IMMEDIATE, _) => RelocationKind::Relative,
-            _ => RelocationKind::Unknown,
+    fn map_kind(
+        &self,
+        flags: &goff::RelocationFlags,
+        subtractor: bool,
+    ) -> (RelocationKind, RelocationEncoding) {
+        use RelocationEncoding as E;
+        use RelocationKind as K;
+
+        let unknown = (K::Unknown, E::Unknown);
+        // Can only represent addition or subtraction pairs and
+        // fields that start on a byte boundary.
+        if flags.action() != goff::RLD_ACT_ADD && !subtractor || flags.bit_offset() != 0 {
+            return unknown;
         }
+        match flags.reference_type() {
+            goff::RLD_RT_ADDRESS => (K::Absolute, E::Generic),
+            goff::RLD_RT_OFFSET => (K::SectionOffset, E::Generic),
+            // The value is a halfword count.
+            // TODO: does addend need adjusting for instructions size?
+            goff::RLD_RT_RELATIVE_IMMEDIATE => (K::Relative, E::S390xDbl),
+            _ => unknown,
+        }
+    }
+
+    fn is_subtractor_pair(a: &goff::Relocation, b: &goff::Relocation) -> bool {
+        let actions = (a.flags.action(), b.flags.action());
+        (actions == (goff::RLD_ACT_ADD, goff::RLD_ACT_SUBTRACT)
+            || actions == (goff::RLD_ACT_SUBTRACT, goff::RLD_ACT_ADD))
+            && b.flags.fetch_store() == goff::RLD_FS_FETCH
+            && a.offset == b.offset
+            && a.flags.reference_type() == b.flags.reference_type()
+            && a.flags.byte_length() == b.flags.byte_length()
+            && a.flags.bit_length() == b.flags.bit_length()
+            && a.flags.bit_offset() == b.flags.bit_offset()
     }
 }
 
@@ -73,19 +98,33 @@ where
                 continue;
             };
 
+            let mut target = SymbolIndex(goff_reloc.r_pointer as usize);
+            let mut subtractor = None;
+            if let Some(next) = self.relocations.as_slice().first() {
+                if Self::is_subtractor_pair(goff_reloc, next) {
+                    self.relocations.next();
+                    if goff_reloc.flags.action() == goff::RLD_ACT_SUBTRACT {
+                        subtractor = Some(target);
+                        target = SymbolIndex(next.r_pointer as usize);
+                    } else {
+                        subtractor = Some(SymbolIndex(next.r_pointer as usize));
+                    }
+                }
+            }
+
             let offset = u64::from(self.offset).wrapping_add(goff_reloc.offset);
-            let target = RelocationTarget::Symbol(SymbolIndex(goff_reloc.r_pointer as usize));
-            let kind = self.map_kind(&goff_reloc.flags);
+            let (kind, encoding) = self.map_kind(&goff_reloc.flags, subtractor.is_some());
             let size = goff_reloc.flags.total_bit_width() as u8;
+            let implicit_addend = goff_reloc.flags.fetch_store() == goff::RLD_FS_FETCH;
 
             let relocation = Relocation {
                 kind,
-                encoding: RelocationEncoding::Generic,
+                encoding,
                 size,
-                target,
-                subtractor: None, // TODO: Handle subtract operations
+                target: RelocationTarget::Symbol(target),
+                subtractor,
                 addend: 0,
-                implicit_addend: true,
+                implicit_addend,
                 flags: crate::read::RelocationFlags::Goff {
                     flags: goff_reloc.flags,
                 },
