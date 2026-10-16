@@ -455,7 +455,9 @@ where
 
     fn kind(&self) -> SectionKind {
         let flags = self.symbol.record().behavioral_attributes;
-        if self.is_bss() {
+        if flags.loading_behavior() == goff::LOAD_NONE {
+            SectionKind::Other
+        } else if self.is_bss() {
             SectionKind::UninitializedData
         } else if flags.executable() == goff::EXEC_CODE {
             // TODO: check for any LD children with goff::EXEC_CODE
