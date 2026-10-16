@@ -371,9 +371,18 @@ impl<'data, 'file> ObjectSymbol<'data> for GoffSymbol<'data, 'file> {
     }
 
     fn scope(&self) -> SymbolScope {
-        match self.goff_record().behavioral_attributes.binding_scope() {
-            goff::ESD_BSC_SECTION => SymbolScope::Compilation,
-            goff::ESD_BSC_MODULE => SymbolScope::Linkage,
+        let esd = self.goff_record();
+        // Section definitions and Element definitions are not referenced as symbols.
+        if matches!(esd.symbol_type, goff::ESD_ST_SD | goff::ESD_ST_ED) {
+            return SymbolScope::Compilation;
+        }
+        // Symbol identifiers that are a single EBCDIC encoded space are local.
+        const EBCDIC_SPACE: EbcdicArray<1> = EbcdicArray::from_ascii(*b" ");
+        if *self.symbol.name == *EBCDIC_SPACE {
+            return SymbolScope::Compilation;
+        }
+        match esd.behavioral_attributes.binding_scope() {
+            goff::ESD_BSC_SECTION | goff::ESD_BSC_MODULE => SymbolScope::Compilation,
             goff::ESD_BSC_LIBRARY => SymbolScope::Linkage,
             goff::ESD_BSC_IMPORT_EXPORT => SymbolScope::Dynamic,
             _ => SymbolScope::Unknown,
@@ -382,17 +391,7 @@ impl<'data, 'file> ObjectSymbol<'data> for GoffSymbol<'data, 'file> {
 
     #[inline]
     fn is_global(&self) -> bool {
-        const EBCDIC_SPACE: EbcdicArray<1> = EbcdicArray::from_ascii(*b" ");
-        let esd = self.goff_record();
-        // Section definitions and Element definitions are local by default
-        !matches!(esd.symbol_type, goff::ESD_ST_SD | goff::ESD_ST_ED)
-        // Symbol identifiers that are a single EBCDIC encoded space are local
-        && *self.symbol.name != *EBCDIC_SPACE
-        // If binding scope is section or module symbol is local
-        && !matches!(
-            esd.behavioral_attributes.binding_scope(),
-            goff::ESD_BSC_SECTION | goff::ESD_BSC_MODULE
-        )
+        self.scope() != SymbolScope::Compilation
     }
 
     #[inline]
