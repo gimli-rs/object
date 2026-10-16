@@ -47,18 +47,6 @@ where
         self.relocations = relocations.iter();
     }
 
-    /// Map R-pointer to RelocationTarget
-    fn map_target(&self, r_pointer: SymbolIndex) -> Option<RelocationTarget> {
-        let symbol = self.file.symbols.get(r_pointer)?;
-        if symbol.record().symbol_type == goff::ESD_ST_ED {
-            symbol
-                .section()
-                .map(|section| RelocationTarget::Section(section.section))
-        } else {
-            Some(RelocationTarget::Symbol(r_pointer))
-        }
-    }
-
     /// Map GOFF relocation flags to RelocationKind
     fn map_kind(&self, flags: &goff::RelocationFlags) -> RelocationKind {
         match (flags.reference_type(), flags.action()) {
@@ -86,12 +74,7 @@ where
             };
 
             let offset = u64::from(self.offset).wrapping_add(goff_reloc.offset);
-            let r_pointer_index = SymbolIndex(goff_reloc.r_pointer as usize);
-            let target = match self.map_target(r_pointer_index) {
-                Some(t) => t,
-                None => continue, // Skip invalid relocations
-            };
-
+            let target = RelocationTarget::Symbol(SymbolIndex(goff_reloc.r_pointer as usize));
             let kind = self.map_kind(&goff_reloc.flags);
             let size = goff_reloc.flags.total_bit_width() as u8;
 
