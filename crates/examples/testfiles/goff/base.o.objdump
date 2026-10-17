@@ -1,5 +1,5 @@
 Format: Goff Big-endian 64-bit
-Kind: Unknown
+Kind: Relocatable
 Architecture: S390x
 Flags: Goff { archlvl: 1, flags: Some(ENTRY_BY_OFFSET), amode: Some(AMODE_ANY) }
 Relative Address Base: 0

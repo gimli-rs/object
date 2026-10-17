@@ -163,7 +163,7 @@ where
     }
 
     fn kind(&self) -> ObjectKind {
-        ObjectKind::Unknown
+        ObjectKind::Relocatable
     }
 
     fn segments(&self) -> GoffSegmentIterator<'data, '_, R> {
