@@ -247,9 +247,8 @@ where
     fn has_debug_symbols(&self) -> bool {
         // DWARF sections have a "D_" prefix.
         const EBCDIC_D: EbcdicArray<2> = EbcdicArray::from_ascii(*b"D_");
-        self.symbols
-            .iter()
-            .any(|symbol| symbol.name().starts_with(&EBCDIC_D))
+        self.sections()
+            .any(|section| section.goff_name().starts_with(&EBCDIC_D))
     }
 
     fn relative_address_base(&self) -> u64 {
