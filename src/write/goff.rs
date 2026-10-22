@@ -74,8 +74,12 @@ impl<'a> Object<'a> {
                 let record_style = writer.select_txt_record_style(section);
                 writer.write_text(ed_esdid, &section.data, record_style);
             }
+        }
 
-            // Collect relocations for this section
+        // Collect relocations for all sections after all symbols are written.
+        for (section_index, section) in self.sections.iter().enumerate() {
+            let section_id = SectionId(section_index);
+            let ed_esdid = writer.section_to_ed[&section_id];
             for reloc in &section.relocations {
                 writer.add_relocation(reloc, section_id, ed_esdid)?;
             }
