@@ -38,7 +38,7 @@ impl<'a> Object<'a> {
 
     /// Write goff file
     pub(crate) fn goff_write(&self, buffer: &mut dyn WritableBuffer) -> Result<()> {
-        let mut writer = Writer::new(buffer);
+        let mut writer = Writer::new(buffer, self.symbols.len());
         writer.write_hdr();
 
         // Write compilation unit SD
@@ -160,13 +160,6 @@ impl<'a> Object<'a> {
     }
 }
 
-/// Tracks symbol hierarchy and relationships in GOFF.
-#[derive(Debug, Clone, Default)]
-struct SymbolHierarchy {
-    children: Vec<u32>,
-    symbol_id: Option<SymbolId>,
-}
-
 /// A pending relocation to be written to RLD records.
 #[derive(Debug, Clone)]
 struct PendingRelocation {
@@ -190,8 +183,8 @@ struct Writer<'a> {
     logical_record_count: u32,
     continuation_record_count: u32,
 
-    // Symbol hierarchy tracking
-    symbol_hierarchy: HashMap<u32, SymbolHierarchy>,
+    // Map symbol ID to ESDID
+    symbol_esdid: Vec<u32>,
     // Map section ID to ED ESDID
     section_to_ed: HashMap<SectionId, u32>,
 
@@ -201,7 +194,7 @@ struct Writer<'a> {
 
 impl<'a> Writer<'a> {
     /// Create a new `Writer`.
-    fn new(buffer: &'a mut dyn WritableBuffer) -> Self {
+    fn new(buffer: &'a mut dyn WritableBuffer, symbol_count: usize) -> Self {
         Writer {
             buffer,
 
@@ -209,7 +202,7 @@ impl<'a> Writer<'a> {
             cu_esdid: 0,
             logical_record_count: 0,
             continuation_record_count: 0,
-            symbol_hierarchy: HashMap::new(),
+            symbol_esdid: vec![0; symbol_count],
             section_to_ed: HashMap::new(),
             relocations: Vec::new(),
         }
@@ -394,28 +387,6 @@ impl<'a> Writer<'a> {
         self.write_esd_record(&er, name)
     }
 
-    /// Add a symbol to the hierarchy tracking system.
-    fn add_symbol_to_hierarchy(
-        &mut self,
-        esdid: u32,
-        parent_esdid: u32,
-        symbol_id: Option<SymbolId>,
-    ) {
-        let hierarchy = SymbolHierarchy {
-            children: Vec::new(),
-            symbol_id,
-        };
-
-        // Add to parent's children list
-        if parent_esdid != 0 {
-            if let Some(parent) = self.symbol_hierarchy.get_mut(&parent_esdid) {
-                parent.children.push(esdid);
-            }
-        }
-
-        self.symbol_hierarchy.insert(esdid, hierarchy);
-    }
-
     /// Get or create an ED for a section.
     fn get_or_create_section_ed(
         &mut self,
@@ -455,9 +426,6 @@ impl<'a> Writer<'a> {
             }
         };
 
-        // Track the ED
-        self.add_symbol_to_hierarchy(ed_esdid, self.cu_esdid, None);
-
         self.section_to_ed.insert(section_id, ed_esdid);
 
         Ok(ed_esdid)
@@ -466,13 +434,7 @@ impl<'a> Writer<'a> {
     /// Write a compilation unit SD.
     fn write_compilation_unit(&mut self, cu_name: &EbcdicStr) -> u32 {
         let attrs = default_attrs().with_binding_scope(goff::ESD_BSC_SECTION);
-
-        let sd_esdid = self.write_sd(cu_name, attrs);
-
-        // Track the SD
-        self.add_symbol_to_hierarchy(sd_esdid, 0, None);
-
-        sd_esdid
+        self.write_sd(cu_name, attrs)
     }
 
     fn get_esd_record(
@@ -628,7 +590,7 @@ impl<'a> Writer<'a> {
         let ld_esdid = self.write_ld(name, parent_ed_esdid, symbol.value as u32, scope);
 
         // Track the LD
-        self.add_symbol_to_hierarchy(ld_esdid, parent_ed_esdid, Some(symbol_id));
+        self.symbol_esdid[symbol_id.0] = ld_esdid;
 
         Ok(ld_esdid)
     }
@@ -665,24 +627,9 @@ impl<'a> Writer<'a> {
         };
 
         // Track the ER
-        self.add_symbol_to_hierarchy(esdid, self.cu_esdid, Some(symbol_id));
+        self.symbol_esdid[symbol_id.0] = esdid;
 
         Ok(esdid)
-    }
-
-    /// Find the ESDID for a given symbol ID.
-    fn find_symbol_esdid(&self, symbol_id: SymbolId) -> Result<u32> {
-        for (esdid, hierarchy) in &self.symbol_hierarchy {
-            if hierarchy.symbol_id == Some(symbol_id) {
-                return Ok(*esdid);
-            }
-        }
-        Err(Error(format!("Symbol ESDID not found for {:?}", symbol_id)))
-    }
-
-    /// Map a symbol ID to an ESDID (R-pointer).
-    fn map_symbol_to_esdid(&self, symbol_id: SymbolId) -> Result<u32> {
-        self.find_symbol_esdid(symbol_id)
     }
 
     /// Build relocation flags based on relocation properties.
@@ -733,7 +680,10 @@ impl<'a> Writer<'a> {
         p_pointer: u32,
     ) -> Result<()> {
         // Map symbol to R-pointer
-        let r_pointer = self.map_symbol_to_esdid(reloc.symbol)?;
+        let r_pointer = self.symbol_esdid[reloc.symbol.0];
+        if r_pointer == 0 {
+            return Err(Error("Unsupported relocation symbol for GOFF".into()));
+        }
 
         // Extract size from flags
         let size = match &reloc.flags {
