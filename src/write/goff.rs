@@ -121,19 +121,6 @@ impl<'a> Object<'a> {
     }
 }
 
-/// A pending relocation to be written to RLD records.
-#[derive(Debug, Clone)]
-struct PendingRelocation {
-    /// Flags for this relocation
-    flags: goff::RelocationFlags,
-    /// R-pointer (reference ESDID)
-    r_pointer: u32,
-    /// P-pointer (location ESDID)
-    p_pointer: u32,
-    /// Offset within P-pointer element
-    offset: u32,
-}
-
 /// A helper for writing GOFF files.
 struct Writer<'a> {
     buffer: &'a mut dyn WritableBuffer,
@@ -149,7 +136,7 @@ struct Writer<'a> {
     section_esdid: Vec<u32>,
 
     // Relocation tracking
-    relocations: Vec<PendingRelocation>,
+    relocations: Vec<goff::Relocation>,
 }
 
 impl<'a> Writer<'a> {
@@ -628,11 +615,11 @@ impl<'a> Writer<'a> {
         let flags = self.build_relocation_flags(&reloc.flags, size)?;
 
         // Add to pending relocations
-        self.relocations.push(PendingRelocation {
+        self.relocations.push(goff::Relocation {
             flags,
             r_pointer,
             p_pointer,
-            offset: reloc.offset as u32,
+            offset: reloc.offset,
         });
 
         Ok(())
@@ -643,7 +630,7 @@ impl<'a> Writer<'a> {
         &self,
         buffer: &mut Vec<u8>,
         flags: goff::RelocationFlags,
-        reloc: &PendingRelocation,
+        reloc: &goff::Relocation,
     ) -> Result<()> {
         // Write fixed header
         buffer.write_pod(&flags);
@@ -651,17 +638,17 @@ impl<'a> Writer<'a> {
 
         // Write R-pointer if not compressed
         if !flags.is_same_r_id() {
-            buffer.extend_from_slice(&reloc.r_pointer.to_be_bytes());
+            buffer.write_pod(&U32::new(BE, reloc.r_pointer));
         }
 
         // Write P-pointer if not compressed
         if !flags.is_same_p_id() {
-            buffer.extend_from_slice(&reloc.p_pointer.to_be_bytes());
+            buffer.write_pod(&U32::new(BE, reloc.p_pointer));
         }
 
         // Write offset if not compressed
         if !flags.is_same_offset() {
-            buffer.extend_from_slice(&reloc.offset.to_be_bytes());
+            buffer.write_pod(&U32::new(BE, reloc.offset as u32));
         }
 
         Ok(())
@@ -704,7 +691,7 @@ impl<'a> Writer<'a> {
         let mut rld_data = Vec::new();
         let mut prev_r_pointer: Option<u32> = None;
         let mut prev_p_pointer: Option<u32> = None;
-        let mut prev_offset: Option<u32> = None;
+        let mut prev_offset: Option<u64> = None;
 
         for reloc in &self.relocations {
             // Apply compression flags
