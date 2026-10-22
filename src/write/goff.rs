@@ -12,26 +12,6 @@ const EBCDIC_RUSTCU: EbcdicArray<6> = EbcdicArray::from_ascii(*b"rustcu");
 const EBCDIC_C_WSA64: EbcdicArray<7> = EbcdicArray::from_ascii(C_WSA64);
 
 impl<'a> Object<'a> {
-    /// Get symbols that belong to a specific section.
-    fn symbols_in_section(&self, section_id: SectionId) -> Vec<(SymbolId, &Symbol)> {
-        self.symbols
-            .iter()
-            .enumerate()
-            .filter(|(_, s)| s.section == SymbolSection::Section(section_id))
-            .map(|(i, s)| (SymbolId(i), s))
-            .collect()
-    }
-
-    /// Get all undefined symbols.
-    fn undefined_symbols(&self) -> Vec<(SymbolId, &Symbol)> {
-        self.symbols
-            .iter()
-            .enumerate()
-            .filter(|(_, s)| s.is_undefined())
-            .map(|(i, s)| (SymbolId(i), s))
-            .collect()
-    }
-
     /// Write goff file
     pub(crate) fn goff_write(&self, buffer: &mut dyn WritableBuffer) -> Result<()> {
         let mut writer = Writer::new(buffer, self.symbols.len(), self.sections.len());
@@ -40,36 +20,22 @@ impl<'a> Object<'a> {
         // Write compilation unit SD
         writer.cu_esdid = writer.write_compilation_unit(&EBCDIC_RUSTCU);
 
-        // Write undefined symbols (external references) FIRST
-        // This ensures their ESDIDs are available when processing relocations
-        for (symbol_id, symbol) in self.undefined_symbols() {
-            writer.write_undefined_symbol(symbol, symbol_id)?;
-        }
-
-        // Process sections with their symbols
+        // Process sections
         for (section_index, section) in self.sections.iter().enumerate() {
             let section_id = SectionId(section_index);
 
-            // Skip empty sections
-            if section.data.is_empty() && self.symbols_in_section(section_id).is_empty() {
-                continue;
-            }
-
             // Write ED for section
             let ed_esdid = writer.write_section(section, section_id)?;
-
-            // Write defined symbols in this section
-            for (symbol_id, symbol) in self.symbols_in_section(section_id) {
-                if !symbol.is_undefined() {
-                    writer.write_defined_symbol(symbol, symbol_id, ed_esdid)?;
-                }
-            }
 
             // Write section data if present
             if !section.data.is_empty() {
                 let record_style = writer.select_txt_record_style(section);
                 writer.write_text(ed_esdid, &section.data, record_style);
             }
+        }
+
+        for (symbol_index, symbol) in self.symbols.iter().enumerate() {
+            writer.write_symbol(symbol, SymbolId(symbol_index))?;
         }
 
         // Collect relocations for all sections after all symbols are written.
@@ -552,13 +518,21 @@ impl<'a> Writer<'a> {
         goff::TXT_RS_BYTE.0
     }
 
+    fn write_symbol(&mut self, symbol: &Symbol, symbol_id: SymbolId) -> Result<()> {
+        let esdid = match symbol.section {
+            SymbolSection::Undefined => self.write_undefined_symbol(symbol)?,
+            SymbolSection::Section(section_id) => {
+                let ed_esdid = self.section_esdid[section_id.0];
+                self.write_defined_symbol(symbol, ed_esdid)?
+            }
+            _ => return Err(Error(format!("Unsupported symbol section: {:?}", symbol))),
+        };
+        self.symbol_esdid[symbol_id.0] = esdid;
+        Ok(())
+    }
+
     /// Write a defined symbol with proper hierarchy (LD or PR).
-    fn write_defined_symbol(
-        &mut self,
-        symbol: &Symbol,
-        symbol_id: SymbolId,
-        parent_ed_esdid: u32,
-    ) -> Result<u32> {
+    fn write_defined_symbol(&mut self, symbol: &Symbol, parent_ed_esdid: u32) -> Result<u32> {
         // Determine binding scope based on symbol properties
         let scope = match symbol.scope {
             SymbolScope::Compilation => goff::ESD_BSC_SECTION,
@@ -574,14 +548,11 @@ impl<'a> Writer<'a> {
         // Write LD (Label Definition) for the symbol
         let ld_esdid = self.write_ld(name, parent_ed_esdid, symbol.value as u32, scope);
 
-        // Track the LD
-        self.symbol_esdid[symbol_id.0] = ld_esdid;
-
         Ok(ld_esdid)
     }
 
     /// Write an undefined symbol (external reference).
-    fn write_undefined_symbol(&mut self, symbol: &Symbol, symbol_id: SymbolId) -> Result<u32> {
+    fn write_undefined_symbol(&mut self, symbol: &Symbol) -> Result<u32> {
         let is_code = match symbol.kind {
             SymbolKind::Text => true,
             SymbolKind::Data => false,
@@ -610,9 +581,6 @@ impl<'a> Writer<'a> {
                 self.write_er_to_data(name, scope)
             }
         };
-
-        // Track the ER
-        self.symbol_esdid[symbol_id.0] = esdid;
 
         Ok(esdid)
     }
