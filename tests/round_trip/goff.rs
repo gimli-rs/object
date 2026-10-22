@@ -5,7 +5,7 @@ use object::{
     Architecture, BinaryFormat, Endianness, Object, RelocationEncoding, RelocationFlags,
     RelocationKind, SectionKind, SymbolFlags, SymbolKind, SymbolScope,
 };
-use object::{read, write};
+use object::{goff, pod, read, write};
 
 // string constants
 //
@@ -18,9 +18,6 @@ const C_CODE: &[u8] = b"C_CODE";
 const EXTERNAL_FUNC: &[u8] = b"external_func";
 const FUNC1: &[u8] = b"func1";
 const FUNC2: &[u8] = b"func2_ext"; // 9 bytes, requires continuation record
-const FUNC3: &[u8] = b"func3";
-const FUNC4: &[u8] = b"func4";
-const FUNC5: &[u8] = b"func5";
 const EXTERNAL: &[u8] = b"external";
 
 /// Test basic GOFF file structure with external references
@@ -403,46 +400,37 @@ fn goff_relocation_compression() {
     }
 }
 
-// 5 uncompressed-R relocations produce rld_data = 20 + 4×16 = 84 bytes, which exceeds
-// SIZEOF_RELOCATION_DATA (74) and forces write_rld_records to emit the first RLD record
-// with the "is_continued" bit set (ptv byte 1 = RT_RLD | 0x01 = 0x21), followed by a
-// continuation record carrying the remaining 10 bytes. The reader's parse_relocations
-// then reassembles the full item stream.
 #[test]
 fn goff_relocation_rld_continuation() {
+    // Each relocation is at least 12 bytes; 3000 * 12 > 32767 (max logical record size).
+    const NUM_RELOCATIONS: usize = 3000;
+
     let mut object = write::Object::new(BinaryFormat::Goff, Architecture::S390x, Endianness::Big);
 
-    // Section large enough for all five 8-byte-spaced relocation targets
     let code_section = object.add_section(vec![], C_CODE.to_vec(), SectionKind::Text);
-    object.section_mut(code_section).set_data(vec![0x00; 64], 8);
+    object
+        .section_mut(code_section)
+        .set_data(vec![0x00; NUM_RELOCATIONS * 4], 8);
 
-    // Five distinct symbols → five distinct R-pointers → no R-pointer compression.
-    // Each relocation item is fully uncompressed except for the P-pointer (same section
-    // throughout), so sizes are: item 1 = 20 bytes, items 2-5 = 16 bytes each → 84 total.
-    let sym_names: &[&[u8]] = &[FUNC1, FUNC2, FUNC3, FUNC4, FUNC5];
-    let syms: Vec<_> = sym_names
-        .iter()
-        .map(|name| {
-            object.add_symbol(write::Symbol {
-                name: name.to_vec(),
-                value: 0,
-                size: 0,
-                kind: SymbolKind::Text,
-                scope: SymbolScope::Dynamic,
-                weak: false,
-                section: write::SymbolSection::Undefined,
-                flags: SymbolFlags::None,
-            })
-        })
-        .collect();
+    let symbol = object.add_symbol(write::Symbol {
+        name: EXTERNAL.to_vec(),
+        value: 0,
+        size: 0,
+        kind: SymbolKind::Text,
+        scope: SymbolScope::Dynamic,
+        weak: false,
+        section: write::SymbolSection::Undefined,
+        flags: SymbolFlags::None,
+    });
 
-    for (i, sym) in syms.iter().enumerate() {
+    for i in 0..NUM_RELOCATIONS {
+        // Each relocation differs in offset.
         object
             .add_relocation(
                 code_section,
                 write::Relocation {
-                    offset: (i * 8) as u64,
-                    symbol: *sym,
+                    offset: (i as u64) * 4,
+                    symbol,
                     addend: 0,
                     flags: RelocationFlags::Generic {
                         kind: RelocationKind::Absolute,
@@ -457,27 +445,23 @@ fn goff_relocation_rld_continuation() {
     let mut buffer = Vec::new();
     object.write_stream(&mut buffer).unwrap();
 
-    // The first RLD record must carry the "is_continued" bit:
-    //   byte 0: 0x03 (GOFF prefix)
-    //   byte 1: 0x21 (RT_RLD=0x20 | continued=0x01)
-    //   byte 2: 0x00 (version)
-    assert!(
-        buffer.windows(3).any(|w| w == [0x03, 0x21, 0x00]),
-        "Expected an RLD record with the continuation bit set (0x03 0x21 0x00)"
+    let prefix = goff::RecordPrefix::new(goff::RT_RLD).with_continued(true);
+    assert_eq!(buffer.len() % 80, 0);
+    assert_eq!(
+        buffer
+            .chunks_exact(80)
+            .filter(|w| w.starts_with(pod::bytes_of(&prefix)))
+            .count(),
+        2
     );
 
-    // Round-trip: all five relocations must survive the continuation read path.
     let parsed = object::File::parse(&*buffer).unwrap();
     let section = parsed.sections().next().unwrap();
-    let mut relocations: Vec<_> = section.relocations().collect();
-    relocations.sort_by_key(|(offset, _)| *offset);
+    let mut relocations: Vec<_> = section.relocations().map(|(offset, _)| offset).collect();
+    relocations.sort();
 
-    assert_eq!(
-        relocations.len(),
-        5,
-        "Expected 5 relocations across continuation records"
-    );
-    for (i, (offset, _)) in relocations.iter().enumerate() {
-        assert_eq!(*offset, (i * 8) as u64, "Relocation {} offset mismatch", i);
+    assert_eq!(relocations.len(), NUM_RELOCATIONS);
+    for (i, offset) in relocations.iter().enumerate() {
+        assert_eq!(*offset, (i * 4) as u64);
     }
 }

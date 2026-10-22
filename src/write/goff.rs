@@ -1,4 +1,5 @@
 use alloc::vec::Vec;
+use core::mem;
 
 use crate::ebcdic::{EbcdicArray, EbcdicStr, EbcdicString};
 use crate::endian::{BigEndian as BE, U16, U32};
@@ -10,6 +11,13 @@ const C_WSA64: [u8; 7] = *b"C_WSA64";
 const C_CODE64: [u8; 8] = *b"C_CODE64";
 const EBCDIC_RUSTCU: EbcdicArray<6> = EbcdicArray::from_ascii(*b"rustcu");
 const EBCDIC_C_WSA64: EbcdicArray<7> = EbcdicArray::from_ascii(C_WSA64);
+
+/// The maximum number of bytes that can be included in a TXT or RLD record and its
+/// continuations.
+///
+/// This is a SIGNED 16 bit int despite what the spec says, so the number of bytes we
+/// allow ourselves to attach to a record is limited to 32K-1 bytes.
+const MAX_LOGICAL_LENGTH: usize = 32 * 1024 - 1;
 
 impl<'a> Object<'a> {
     /// Write goff file
@@ -46,9 +54,7 @@ impl<'a> Object<'a> {
             }
         }
 
-        // Write all collected relocations
-        writer.write_relocations()?;
-
+        writer.write_relocations();
         writer.write_end();
         Ok(())
     }
@@ -440,15 +446,9 @@ impl<'a> Writer<'a> {
     }
 
     fn write_text(&mut self, esdid: u32, mut data: &[u8], record_style: u8) {
-        // The maximum number of bytes that can be included in a RLD or TXT record and
-        // their continuations is a SIGNED 16 bit int despite what the spec says. The
-        // number of bytes we allow ourselves to attach to a card is thus limited to
-        // 32K-1 bytes.
-        let max_logical_length = 32 * 1024 - 1;
-
         let mut offset = 0_usize;
         while !data.is_empty() {
-            let logical_write_len = data.len().min(max_logical_length);
+            let logical_write_len = data.len().min(MAX_LOGICAL_LENGTH);
             let record_data_len = logical_write_len.min(goff::SIZEOF_TXT_DATA);
             let ptv = goff::TXT_PREFIX.with_continued(logical_write_len > record_data_len);
 
@@ -631,7 +631,7 @@ impl<'a> Writer<'a> {
         buffer: &mut Vec<u8>,
         flags: goff::RelocationFlags,
         reloc: &goff::Relocation,
-    ) -> Result<()> {
+    ) {
         // Write fixed header
         buffer.write_pod(&flags);
         buffer.write_zeros(2);
@@ -650,18 +650,14 @@ impl<'a> Writer<'a> {
         if !flags.is_same_offset() {
             buffer.write_pod(&U32::new(BE, reloc.offset as u32));
         }
-
-        Ok(())
     }
 
-    /// Write RLD records from a data buffer.
-    fn write_rld_records(&mut self, data: &[u8]) -> Result<()> {
-        if data.is_empty() {
-            return Ok(());
-        }
-
-        let first_chunk = data.len().min(goff::SIZEOF_RELOCATION_DATA);
-        let ptv = goff::RLD_PREFIX.with_continued(data.len() > first_chunk);
+    /// Write one logical RLD record and its continuations from a data buffer.
+    ///
+    /// The caller must limit `data` to `MAX_LOGICAL_LENGTH` bytes.
+    fn write_rld_record(&mut self, data: &[u8]) {
+        let record_data_len = data.len().min(goff::SIZEOF_RELOCATION_DATA);
+        let ptv = goff::RLD_PREFIX.with_continued(data.len() > record_data_len);
 
         let mut record = goff::RelocationRecord {
             ptv,
@@ -670,30 +666,32 @@ impl<'a> Writer<'a> {
             length: U16::new(BE, data.len() as u16),
             data: [0u8; goff::SIZEOF_RELOCATION_DATA],
         };
-        record.data[..first_chunk].copy_from_slice(&data[..first_chunk]);
+        record.data[..record_data_len].copy_from_slice(&data[..record_data_len]);
 
         self.logical_record_count += 1;
         self.buffer.write_pod(&record);
-        self.write_continuation_records(goff::RT_RLD, &data[first_chunk..]);
-
-        Ok(())
+        self.write_continuation_records(goff::RT_RLD, &data[record_data_len..]);
     }
 
     /// Write all pending relocations as RLD records.
-    fn write_relocations(&mut self) -> Result<()> {
-        if self.relocations.is_empty() {
-            return Ok(());
+    fn write_relocations(&mut self) {
+        let mut relocations = mem::take(&mut self.relocations);
+        if relocations.is_empty() {
+            return;
         }
 
         // Sort relocations by P-pointer, then offset for better compression
-        self.relocations.sort_by_key(|r| (r.p_pointer, r.offset));
+        relocations.sort_by_key(|r| (r.p_pointer, r.offset));
 
         let mut rld_data = Vec::new();
         let mut prev_r_pointer: Option<u32> = None;
         let mut prev_p_pointer: Option<u32> = None;
         let mut prev_offset: Option<u64> = None;
 
-        for reloc in &self.relocations {
+        for reloc in &relocations {
+            // Record current length in case it overflows.
+            let len = rld_data.len();
+
             // Apply compression flags
             let flags = reloc
                 .flags
@@ -702,7 +700,19 @@ impl<'a> Writer<'a> {
                 .with_same_offset(prev_offset == Some(reloc.offset));
 
             // Write relocation item
-            self.write_relocation_item(&mut rld_data, flags, reloc)?;
+            self.write_relocation_item(&mut rld_data, flags, reloc);
+
+            // Start a new logical record if this item doesn't fit in the current one.
+            if rld_data.len() > MAX_LOGICAL_LENGTH {
+                self.write_rld_record(&rld_data[..len]);
+                rld_data.clear();
+
+                let flags = flags
+                    .with_same_r_id(false)
+                    .with_same_p_id(false)
+                    .with_same_offset(false);
+                self.write_relocation_item(&mut rld_data, flags, reloc);
+            }
 
             // Update previous values for next iteration
             prev_r_pointer = Some(reloc.r_pointer);
@@ -710,10 +720,7 @@ impl<'a> Writer<'a> {
             prev_offset = Some(reloc.offset);
         }
 
-        // Write RLD records (max 74 bytes per record)
-        self.write_rld_records(&rld_data)?;
-
-        Ok(())
+        self.write_rld_record(&rld_data);
     }
 }
 
