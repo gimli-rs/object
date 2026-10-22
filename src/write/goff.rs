@@ -1,8 +1,4 @@
-#[cfg(not(feature = "std"))]
-use alloc::collections::btree_map::BTreeMap as HashMap;
 use alloc::vec::Vec;
-#[cfg(feature = "std")]
-use std::collections::hash_map::HashMap;
 
 use crate::ebcdic::{EbcdicArray, EbcdicStr, EbcdicString};
 use crate::endian::{BigEndian as BE, U16, U32};
@@ -38,7 +34,7 @@ impl<'a> Object<'a> {
 
     /// Write goff file
     pub(crate) fn goff_write(&self, buffer: &mut dyn WritableBuffer) -> Result<()> {
-        let mut writer = Writer::new(buffer, self.symbols.len());
+        let mut writer = Writer::new(buffer, self.symbols.len(), self.sections.len());
         writer.write_hdr();
 
         // Write compilation unit SD
@@ -60,7 +56,7 @@ impl<'a> Object<'a> {
             }
 
             // Write ED for section
-            let ed_esdid = writer.get_or_create_section_ed(section, section_id)?;
+            let ed_esdid = writer.write_section(section, section_id)?;
 
             // Write defined symbols in this section
             for (symbol_id, symbol) in self.symbols_in_section(section_id) {
@@ -78,10 +74,9 @@ impl<'a> Object<'a> {
 
         // Collect relocations for all sections after all symbols are written.
         for (section_index, section) in self.sections.iter().enumerate() {
-            let section_id = SectionId(section_index);
-            let ed_esdid = writer.section_to_ed[&section_id];
+            let ed_esdid = writer.section_esdid[section_index];
             for reloc in &section.relocations {
-                writer.add_relocation(reloc, section_id, ed_esdid)?;
+                writer.add_relocation(reloc, ed_esdid)?;
             }
         }
 
@@ -186,7 +181,7 @@ struct Writer<'a> {
     // Map symbol ID to ESDID
     symbol_esdid: Vec<u32>,
     // Map section ID to ED ESDID
-    section_to_ed: HashMap<SectionId, u32>,
+    section_esdid: Vec<u32>,
 
     // Relocation tracking
     relocations: Vec<PendingRelocation>,
@@ -194,7 +189,7 @@ struct Writer<'a> {
 
 impl<'a> Writer<'a> {
     /// Create a new `Writer`.
-    fn new(buffer: &'a mut dyn WritableBuffer, symbol_count: usize) -> Self {
+    fn new(buffer: &'a mut dyn WritableBuffer, symbol_count: usize, section_count: usize) -> Self {
         Writer {
             buffer,
 
@@ -203,7 +198,7 @@ impl<'a> Writer<'a> {
             logical_record_count: 0,
             continuation_record_count: 0,
             symbol_esdid: vec![0; symbol_count],
-            section_to_ed: HashMap::new(),
+            section_esdid: vec![0; section_count],
             relocations: Vec::new(),
         }
     }
@@ -387,17 +382,7 @@ impl<'a> Writer<'a> {
         self.write_esd_record(&er, name)
     }
 
-    /// Get or create an ED for a section.
-    fn get_or_create_section_ed(
-        &mut self,
-        section: &Section<'_>,
-        section_id: SectionId,
-    ) -> Result<u32> {
-        // Check if ED already exists for this section
-        if let Some(&ed_esdid) = self.section_to_ed.get(&section_id) {
-            return Ok(ed_esdid);
-        }
-
+    fn write_section(&mut self, section: &Section<'_>, section_id: SectionId) -> Result<u32> {
         let name = &encode_name(&section.name)?;
 
         // Determine section attributes and create ED based on kind
@@ -426,7 +411,7 @@ impl<'a> Writer<'a> {
             }
         };
 
-        self.section_to_ed.insert(section_id, ed_esdid);
+        self.section_esdid[section_id.0] = ed_esdid;
 
         Ok(ed_esdid)
     }
@@ -673,12 +658,7 @@ impl<'a> Writer<'a> {
     }
 
     /// Add a relocation to the pending list.
-    fn add_relocation(
-        &mut self,
-        reloc: &RelocationInternal,
-        _section_id: SectionId,
-        p_pointer: u32,
-    ) -> Result<()> {
+    fn add_relocation(&mut self, reloc: &RelocationInternal, p_pointer: u32) -> Result<()> {
         // Map symbol to R-pointer
         let r_pointer = self.symbol_esdid[reloc.symbol.0];
         if r_pointer == 0 {
