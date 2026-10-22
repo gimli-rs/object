@@ -177,7 +177,7 @@ struct PendingRelocation {
 }
 
 /// A helper for writing GOFF files.
-pub struct Writer<'a> {
+struct Writer<'a> {
     buffer: &'a mut dyn WritableBuffer,
 
     next_esdid: u32,
@@ -197,7 +197,7 @@ pub struct Writer<'a> {
 
 impl<'a> Writer<'a> {
     /// Create a new `Writer`.
-    pub fn new(buffer: &'a mut dyn WritableBuffer) -> Self {
+    fn new(buffer: &'a mut dyn WritableBuffer) -> Self {
         Writer {
             buffer,
 
@@ -212,7 +212,7 @@ impl<'a> Writer<'a> {
     }
 
     // Write module header ("HDR") record.
-    pub fn write_hdr(&mut self) {
+    fn write_hdr(&mut self) {
         let header = goff::HeaderRecord {
             ptv: goff::HDR_PREFIX,
             reserved1: [0u8; 45],
@@ -224,7 +224,7 @@ impl<'a> Writer<'a> {
     }
 
     // Write module end ("END") record.
-    pub fn write_end(&mut self) {
+    fn write_end(&mut self) {
         self.logical_record_count += 1;
         let fileend = goff::EndRecord {
             ptv: goff::END_PREFIX,
@@ -241,7 +241,7 @@ impl<'a> Writer<'a> {
         self.buffer.write_pod(&fileend);
     }
 
-    pub fn write_er_to_text(&mut self, symbol_name: &EbcdicStr, scope: goff::BindingScope) -> u32 {
+    fn write_er_to_text(&mut self, symbol_name: &EbcdicStr, scope: goff::BindingScope) -> u32 {
         let mut er = self.get_esd_record(goff::ESD_ST_ER, goff::ESD_NS_NORMAL_NAME, self.cu_esdid);
 
         // External reference to code: executable, export scope
@@ -254,11 +254,11 @@ impl<'a> Writer<'a> {
         self.write_esd_record(&er, symbol_name)
     }
 
-    pub fn write_er_to_data(&mut self, symbol_name: &EbcdicStr, scope: goff::BindingScope) -> u32 {
+    fn write_er_to_data(&mut self, symbol_name: &EbcdicStr, scope: goff::BindingScope) -> u32 {
         self.write_wsa_symbol(symbol_name, 0, scope)
     }
 
-    pub fn write_wsa_symbol(
+    fn write_wsa_symbol(
         &mut self,
         symbol_name: &EbcdicStr,
         symbol_length: u32,
@@ -285,11 +285,7 @@ impl<'a> Writer<'a> {
         self.write_pr(symbol_name, ed_esdid, symbol_length, pr_attrs)
     }
 
-    pub fn write_debug_section_symbol(
-        &mut self,
-        section_name: &EbcdicStr,
-        section_length: u32,
-    ) -> u32 {
+    fn write_debug_section_symbol(&mut self, section_name: &EbcdicStr, section_length: u32) -> u32 {
         // Emit ED symbol for debug section.
         let mut ed = self.get_esd_record(goff::ESD_ST_ED, goff::ESD_NS_PARTS, self.cu_esdid);
         ed.flags = goff::ESD_SF_FILL_BYTE_PRESENCE;
@@ -309,7 +305,7 @@ impl<'a> Writer<'a> {
     /// Write an SD (Section Definition) record.
     ///
     /// SD records define control sections (compilation units).
-    pub fn write_sd(&mut self, name: &EbcdicStr, attributes: goff::BehavioralAttributes) -> u32 {
+    fn write_sd(&mut self, name: &EbcdicStr, attributes: goff::BehavioralAttributes) -> u32 {
         let mut sd = self.get_esd_record(
             goff::ESD_ST_SD,
             goff::ESD_NS_PROGRAM_MANAGEMENT_BINDER,
@@ -322,7 +318,7 @@ impl<'a> Writer<'a> {
     /// Write an ED (Element Definition) record.
     ///
     /// ED records define elements (code/data sections).
-    pub fn write_ed(
+    fn write_ed(
         &mut self,
         name: &EbcdicStr,
         parent_esdid: u32,
@@ -339,7 +335,7 @@ impl<'a> Writer<'a> {
     /// Write an LD (Label Definition) record.
     ///
     /// LD records define labels within sections (function/variable names).
-    pub fn write_ld(
+    fn write_ld(
         &mut self,
         name: &EbcdicStr,
         parent_esdid: u32,
@@ -358,7 +354,7 @@ impl<'a> Writer<'a> {
     /// Write a PR (Part Reference) record.
     ///
     /// PR records reference parts of elements (data within sections).
-    pub fn write_pr(
+    fn write_pr(
         &mut self,
         name: &EbcdicStr,
         parent_esdid: u32,
@@ -372,7 +368,7 @@ impl<'a> Writer<'a> {
     }
 
     /// Write an ER (External Reference) record with weak binding.
-    pub fn write_er_weak(
+    fn write_er_weak(
         &mut self,
         name: &EbcdicStr,
         parent_esdid: u32,
@@ -475,7 +471,7 @@ impl<'a> Writer<'a> {
         sd_esdid
     }
 
-    pub fn get_esd_record(
+    fn get_esd_record(
         &self,
         symbol_type: goff::SymbolType,
         namespace: goff::SymbolNamespace,
@@ -506,7 +502,7 @@ impl<'a> Writer<'a> {
         }
     }
 
-    pub fn write_esd_record(&mut self, record: &goff::SymbolRecord, name: &EbcdicStr) -> u32 {
+    fn write_esd_record(&mut self, record: &goff::SymbolRecord, name: &EbcdicStr) -> u32 {
         let mut esd_record = *record;
         let name = name.as_bytes();
         let record_name_len = name.len().min(goff::SIZEOF_ESD_DATA);
@@ -523,7 +519,7 @@ impl<'a> Writer<'a> {
         self.next_esdid - 1
     }
 
-    pub fn write_continuation_records(
+    fn write_continuation_records(
         &mut self,
         record_type: goff::RecordType,
         data: &[u8],
@@ -552,7 +548,7 @@ impl<'a> Writer<'a> {
         }
     }
 
-    pub fn write_text(&mut self, esdid: u32, data: &[u8], record_style: u8) {
+    fn write_text(&mut self, esdid: u32, data: &[u8], record_style: u8) {
         // The maximum number of bytes that can be included in a RLD or TXT record and
         // their continuations is a SIGNED 16 bit int despite what the spec says. The
         // number of bytes we allow ourselves to attach to a card is thus limited to
@@ -726,7 +722,7 @@ impl<'a> Writer<'a> {
     }
 
     /// Add a relocation to the pending list.
-    pub fn add_relocation(
+    fn add_relocation(
         &mut self,
         reloc: &RelocationInternal,
         _section_id: SectionId,
@@ -815,7 +811,7 @@ impl<'a> Writer<'a> {
     }
 
     /// Write all pending relocations as RLD records.
-    pub fn write_relocations(&mut self) -> Result<()> {
+    fn write_relocations(&mut self) -> Result<()> {
         if self.relocations.is_empty() {
             return Ok(());
         }
