@@ -1,8 +1,5 @@
-#[cfg(not(feature = "std"))]
-use alloc::collections::btree_map::BTreeMap as HashMap;
 use alloc::vec::Vec;
-#[cfg(feature = "std")]
-use std::collections::hash_map::HashMap;
+use core::mem;
 
 use crate::ebcdic::{EbcdicArray, EbcdicStr, EbcdicString};
 use crate::endian::{BigEndian as BE, U16, U32};
@@ -15,75 +12,49 @@ const C_CODE64: [u8; 8] = *b"C_CODE64";
 const EBCDIC_RUSTCU: EbcdicArray<6> = EbcdicArray::from_ascii(*b"rustcu");
 const EBCDIC_C_WSA64: EbcdicArray<7> = EbcdicArray::from_ascii(C_WSA64);
 
+/// The maximum number of bytes that can be included in a TXT or RLD record and its
+/// continuations.
+///
+/// This is a SIGNED 16 bit int despite what the spec says, so the number of bytes we
+/// allow ourselves to attach to a record is limited to 32K-1 bytes.
+const MAX_LOGICAL_LENGTH: usize = 32 * 1024 - 1;
+
 impl<'a> Object<'a> {
-    /// Get symbols that belong to a specific section.
-    fn symbols_in_section(&self, section_id: SectionId) -> Vec<(SymbolId, &Symbol)> {
-        self.symbols
-            .iter()
-            .enumerate()
-            .filter(|(_, s)| s.section == SymbolSection::Section(section_id))
-            .map(|(i, s)| (SymbolId(i), s))
-            .collect()
-    }
-
-    /// Get all undefined symbols.
-    fn undefined_symbols(&self) -> Vec<(SymbolId, &Symbol)> {
-        self.symbols
-            .iter()
-            .enumerate()
-            .filter(|(_, s)| s.is_undefined())
-            .map(|(i, s)| (SymbolId(i), s))
-            .collect()
-    }
-
     /// Write goff file
     pub(crate) fn goff_write(&self, buffer: &mut dyn WritableBuffer) -> Result<()> {
-        let mut writer = Writer::new(buffer);
+        let mut writer = Writer::new(buffer, self.symbols.len(), self.sections.len());
         writer.write_hdr();
 
         // Write compilation unit SD
         writer.cu_esdid = writer.write_compilation_unit(&EBCDIC_RUSTCU);
 
-        // Write undefined symbols (external references) FIRST
-        // This ensures their ESDIDs are available when processing relocations
-        for (symbol_id, symbol) in self.undefined_symbols() {
-            writer.write_undefined_symbol(symbol, symbol_id)?;
-        }
-
-        // Process sections with their symbols
+        // Process sections
         for (section_index, section) in self.sections.iter().enumerate() {
             let section_id = SectionId(section_index);
 
-            // Skip empty sections
-            if section.data.is_empty() && self.symbols_in_section(section_id).is_empty() {
-                continue;
-            }
-
             // Write ED for section
-            let ed_esdid = writer.get_or_create_section_ed(section, section_id)?;
-
-            // Write defined symbols in this section
-            for (symbol_id, symbol) in self.symbols_in_section(section_id) {
-                if !symbol.is_undefined() {
-                    writer.write_defined_symbol(symbol, symbol_id, ed_esdid)?;
-                }
-            }
+            let ed_esdid = writer.write_section(section, section_id)?;
 
             // Write section data if present
             if !section.data.is_empty() {
                 let record_style = writer.select_txt_record_style(section);
                 writer.write_text(ed_esdid, &section.data, record_style);
             }
+        }
 
-            // Collect relocations for this section
+        for (symbol_index, symbol) in self.symbols.iter().enumerate() {
+            writer.write_symbol(symbol, SymbolId(symbol_index))?;
+        }
+
+        // Collect relocations for all sections after all symbols are written.
+        for (section_index, section) in self.sections.iter().enumerate() {
+            let ed_esdid = writer.section_esdid[section_index];
             for reloc in &section.relocations {
-                writer.add_relocation(reloc, section_id, ed_esdid)?;
+                writer.add_relocation(reloc, ed_esdid)?;
             }
         }
 
-        // Write all collected relocations
-        writer.write_relocations()?;
-
+        writer.write_relocations();
         writer.write_end();
         Ok(())
     }
@@ -139,80 +110,104 @@ impl<'a> Object<'a> {
 
     pub(crate) fn goff_translate_relocation(
         &mut self,
-        _relocation: &mut RelocationInternal,
+        reloc: &mut RelocationInternal,
     ) -> Result<()> {
-        // GOFF relocations are handled during write by the GOFF writer
-        // No translation needed here as flags are already in generic format
+        use RelocationEncoding as E;
+        use RelocationKind as K;
+
+        let (kind, encoding, size) = if let RelocationFlags::Generic {
+            kind,
+            encoding,
+            size,
+        } = reloc.flags
+        {
+            (kind, encoding, size)
+        } else {
+            return Ok(());
+        };
+
+        let reference_type = match (kind, encoding) {
+            (K::Absolute | K::Got, E::Generic) => goff::RLD_RT_ADDRESS,
+            (K::Relative | K::PltRelative | K::GotRelative, E::S390xDbl) => {
+                goff::RLD_RT_RELATIVE_IMMEDIATE
+            }
+            (K::SectionOffset, E::Generic) => goff::RLD_RT_OFFSET,
+            _ => {
+                return Err(Error(format!("unimplemented relocation {:?}", reloc)));
+            }
+        };
+
+        let flags = goff::RelocationFlags::default()
+            .with_reference_type(reference_type)
+            .with_byte_length(size / 8)
+            .with_bit_length(size & 7)
+            .with_action(goff::RLD_ACT_ADD);
+        reloc.flags = RelocationFlags::Goff { flags };
         Ok(())
     }
 
-    pub(crate) fn goff_adjust_addend(
-        &mut self,
-        _relocation: &mut RelocationInternal,
-    ) -> Result<bool> {
-        // GOFF uses explicit addends in RLD records
-        // Return false to indicate addends are explicit, not implicit
-        Ok(false)
+    pub(crate) fn goff_adjust_addend(&mut self, reloc: &mut RelocationInternal) -> Result<bool> {
+        let RelocationFlags::Goff { flags, .. } = reloc.flags else {
+            return Err(Error(format!("unexpected relocation {:?}", reloc)));
+        };
+        match flags.fetch_store() {
+            goff::RLD_FS_FETCH => Ok(true),
+            goff::RLD_FS_STORE if reloc.addend == 0 => Ok(false),
+            _ => Err(Error(format!("invalid relocation fetch/store {:?}", reloc))),
+        }
+    }
+
+    pub(crate) fn goff_relocation_size(&self, reloc: &RelocationInternal) -> Result<u8> {
+        let RelocationFlags::Goff { flags, .. } = reloc.flags else {
+            return Err(Error(format!("unexpected relocation {:?}", reloc)));
+        };
+        flags
+            .total_bit_width()
+            .ok_or_else(|| Error(format!("unsupported relocation size {:?}", reloc)))
     }
 }
 
-/// Tracks symbol hierarchy and relationships in GOFF.
-#[derive(Debug, Clone, Default)]
-struct SymbolHierarchy {
-    children: Vec<u32>,
-    symbol_id: Option<SymbolId>,
-}
-
-/// A pending relocation to be written to RLD records.
-#[derive(Debug, Clone)]
-struct PendingRelocation {
-    /// Flags for this relocation
-    flags: goff::RelocationFlags,
-    /// R-pointer (reference ESDID)
-    r_pointer: u32,
-    /// P-pointer (location ESDID)
-    p_pointer: u32,
-    /// Offset within P-pointer element
-    offset: u32,
-}
-
 /// A helper for writing GOFF files.
-pub struct Writer<'a> {
+struct Writer<'a> {
     buffer: &'a mut dyn WritableBuffer,
 
     next_esdid: u32,
-    cu_esdid: u32, // ESD id for compile unit
+    // ESD id for compile unit
+    cu_esdid: u32,
+    // ESD id for C_WSA64
+    wsa_esdid: Option<u32>,
 
     logical_record_count: u32,
-    continuation_record_count: u32,
 
-    // Symbol hierarchy tracking
-    symbol_hierarchy: HashMap<u32, SymbolHierarchy>,
+    // Map symbol ID to ESDID
+    symbol_esdid: Vec<u32>,
+    symbol_referent: Vec<goff::RelocationReferentType>,
     // Map section ID to ED ESDID
-    section_to_ed: HashMap<SectionId, u32>,
+    section_esdid: Vec<u32>,
 
     // Relocation tracking
-    relocations: Vec<PendingRelocation>,
+    relocations: Vec<goff::Relocation>,
 }
 
 impl<'a> Writer<'a> {
     /// Create a new `Writer`.
-    pub fn new(buffer: &'a mut dyn WritableBuffer) -> Self {
+    fn new(buffer: &'a mut dyn WritableBuffer, symbol_count: usize, section_count: usize) -> Self {
         Writer {
             buffer,
 
             next_esdid: 1,
             cu_esdid: 0,
+            wsa_esdid: None,
             logical_record_count: 0,
-            continuation_record_count: 0,
-            symbol_hierarchy: HashMap::new(),
-            section_to_ed: HashMap::new(),
+            symbol_esdid: vec![0; symbol_count],
+            symbol_referent: vec![goff::RLD_RO_LABEL; symbol_count],
+            section_esdid: vec![0; section_count],
             relocations: Vec::new(),
         }
     }
 
     // Write module header ("HDR") record.
-    pub fn write_hdr(&mut self) {
+    fn write_hdr(&mut self) {
         let header = goff::HeaderRecord {
             ptv: goff::HDR_PREFIX,
             reserved1: [0u8; 45],
@@ -224,7 +219,7 @@ impl<'a> Writer<'a> {
     }
 
     // Write module end ("END") record.
-    pub fn write_end(&mut self) {
+    fn write_end(&mut self) {
         self.logical_record_count += 1;
         let fileend = goff::EndRecord {
             ptv: goff::END_PREFIX,
@@ -241,29 +236,46 @@ impl<'a> Writer<'a> {
         self.buffer.write_pod(&fileend);
     }
 
-    pub fn write_er_to_text(&mut self, symbol_name: &EbcdicStr, scope: goff::BindingScope) -> u32 {
+    fn write_er_to_text(
+        &mut self,
+        symbol_name: &EbcdicStr,
+        scope: goff::BindingScope,
+        strength: goff::BindingStrength,
+    ) -> u32 {
         let mut er = self.get_esd_record(goff::ESD_ST_ER, goff::ESD_NS_NORMAL_NAME, self.cu_esdid);
 
         // External reference to code: executable, export scope
         let attrs = default_attrs()
             .with_executable(goff::EXEC_CODE)
             .with_binding_scope(scope)
-            .with_alignment(goff::ALIGN_32BYTE);
+            .with_binding_strength(strength);
         er.behavioral_attributes = attrs;
 
         self.write_esd_record(&er, symbol_name)
     }
 
-    pub fn write_er_to_data(&mut self, symbol_name: &EbcdicStr, scope: goff::BindingScope) -> u32 {
-        self.write_wsa_symbol(symbol_name, 0, scope)
-    }
-
-    pub fn write_wsa_symbol(
+    fn write_er_to_data(
         &mut self,
         symbol_name: &EbcdicStr,
-        symbol_length: u32,
         scope: goff::BindingScope,
+        strength: goff::BindingStrength,
     ) -> u32 {
+        let ed_esdid = self.write_wsa_symbol();
+
+        // Emit PR child symbol using write_pr method.
+        let pr_attrs = default_attrs()
+            .with_executable(goff::EXEC_DATA)
+            .with_binding_scope(scope)
+            .with_binding_strength(strength)
+            .with_alignment(goff::ALIGN_HALFWORD);
+
+        self.write_pr(symbol_name, ed_esdid, 0, pr_attrs)
+    }
+
+    fn write_wsa_symbol(&mut self) -> u32 {
+        if let Some(wsa_esdid) = self.wsa_esdid {
+            return wsa_esdid;
+        }
         // Emit parent C_WSA64 ED symbol (data section).
         let mut ed = self.get_esd_record(goff::ESD_ST_ED, goff::ESD_NS_PARTS, self.cu_esdid);
         ed.flags = goff::ESD_SF_FILL_BYTE_PRESENCE;
@@ -274,22 +286,11 @@ impl<'a> Writer<'a> {
             .with_alignment(goff::ALIGN_HALFWORD);
         ed.behavioral_attributes = ed_attrs;
         let ed_esdid = self.write_esd_record(&ed, &EBCDIC_C_WSA64);
-
-        // Emit PR child symbol using write_pr method.
-        let pr_attrs = default_attrs()
-            .with_executable(goff::EXEC_DATA)
-            .with_binding_strength(goff::ESD_BST_WEAK)
-            .with_binding_scope(scope)
-            .with_alignment(goff::ALIGN_HALFWORD);
-
-        self.write_pr(symbol_name, ed_esdid, symbol_length, pr_attrs)
+        self.wsa_esdid = Some(ed_esdid);
+        ed_esdid
     }
 
-    pub fn write_debug_section_symbol(
-        &mut self,
-        section_name: &EbcdicStr,
-        section_length: u32,
-    ) -> u32 {
+    fn write_debug_section_symbol(&mut self, section_name: &EbcdicStr, section_length: u32) -> u32 {
         // Emit ED symbol for debug section.
         let mut ed = self.get_esd_record(goff::ESD_ST_ED, goff::ESD_NS_PARTS, self.cu_esdid);
         ed.flags = goff::ESD_SF_FILL_BYTE_PRESENCE;
@@ -309,7 +310,7 @@ impl<'a> Writer<'a> {
     /// Write an SD (Section Definition) record.
     ///
     /// SD records define control sections (compilation units).
-    pub fn write_sd(&mut self, name: &EbcdicStr, attributes: goff::BehavioralAttributes) -> u32 {
+    fn write_sd(&mut self, name: &EbcdicStr, attributes: goff::BehavioralAttributes) -> u32 {
         let mut sd = self.get_esd_record(
             goff::ESD_ST_SD,
             goff::ESD_NS_PROGRAM_MANAGEMENT_BINDER,
@@ -322,7 +323,7 @@ impl<'a> Writer<'a> {
     /// Write an ED (Element Definition) record.
     ///
     /// ED records define elements (code/data sections).
-    pub fn write_ed(
+    fn write_ed(
         &mut self,
         name: &EbcdicStr,
         parent_esdid: u32,
@@ -339,7 +340,7 @@ impl<'a> Writer<'a> {
     /// Write an LD (Label Definition) record.
     ///
     /// LD records define labels within sections (function/variable names).
-    pub fn write_ld(
+    fn write_ld(
         &mut self,
         name: &EbcdicStr,
         parent_esdid: u32,
@@ -358,7 +359,7 @@ impl<'a> Writer<'a> {
     /// Write a PR (Part Reference) record.
     ///
     /// PR records reference parts of elements (data within sections).
-    pub fn write_pr(
+    fn write_pr(
         &mut self,
         name: &EbcdicStr,
         parent_esdid: u32,
@@ -371,62 +372,7 @@ impl<'a> Writer<'a> {
         self.write_esd_record(&pr, name)
     }
 
-    /// Write an ER (External Reference) record with weak binding.
-    pub fn write_er_weak(
-        &mut self,
-        name: &EbcdicStr,
-        parent_esdid: u32,
-        is_code: bool,
-        scope: goff::BindingScope,
-    ) -> u32 {
-        let mut er = self.get_esd_record(goff::ESD_ST_ER, goff::ESD_NS_NORMAL_NAME, parent_esdid);
-
-        let attrs = default_attrs()
-            .with_executable(if is_code {
-                goff::EXEC_CODE
-            } else {
-                goff::EXEC_DATA
-            })
-            .with_binding_strength(goff::ESD_BST_WEAK)
-            .with_binding_scope(scope);
-        er.behavioral_attributes = attrs;
-
-        self.write_esd_record(&er, name)
-    }
-
-    /// Add a symbol to the hierarchy tracking system.
-    fn add_symbol_to_hierarchy(
-        &mut self,
-        esdid: u32,
-        parent_esdid: u32,
-        symbol_id: Option<SymbolId>,
-    ) {
-        let hierarchy = SymbolHierarchy {
-            children: Vec::new(),
-            symbol_id,
-        };
-
-        // Add to parent's children list
-        if parent_esdid != 0 {
-            if let Some(parent) = self.symbol_hierarchy.get_mut(&parent_esdid) {
-                parent.children.push(esdid);
-            }
-        }
-
-        self.symbol_hierarchy.insert(esdid, hierarchy);
-    }
-
-    /// Get or create an ED for a section.
-    fn get_or_create_section_ed(
-        &mut self,
-        section: &Section<'_>,
-        section_id: SectionId,
-    ) -> Result<u32> {
-        // Check if ED already exists for this section
-        if let Some(&ed_esdid) = self.section_to_ed.get(&section_id) {
-            return Ok(ed_esdid);
-        }
-
+    fn write_section(&mut self, section: &Section<'_>, section_id: SectionId) -> Result<u32> {
         let name = &encode_name(&section.name)?;
 
         // Determine section attributes and create ED based on kind
@@ -455,10 +401,7 @@ impl<'a> Writer<'a> {
             }
         };
 
-        // Track the ED
-        self.add_symbol_to_hierarchy(ed_esdid, self.cu_esdid, None);
-
-        self.section_to_ed.insert(section_id, ed_esdid);
+        self.section_esdid[section_id.0] = ed_esdid;
 
         Ok(ed_esdid)
     }
@@ -466,16 +409,10 @@ impl<'a> Writer<'a> {
     /// Write a compilation unit SD.
     fn write_compilation_unit(&mut self, cu_name: &EbcdicStr) -> u32 {
         let attrs = default_attrs().with_binding_scope(goff::ESD_BSC_SECTION);
-
-        let sd_esdid = self.write_sd(cu_name, attrs);
-
-        // Track the SD
-        self.add_symbol_to_hierarchy(sd_esdid, 0, None);
-
-        sd_esdid
+        self.write_sd(cu_name, attrs)
     }
 
-    pub fn get_esd_record(
+    fn get_esd_record(
         &self,
         symbol_type: goff::SymbolType,
         namespace: goff::SymbolNamespace,
@@ -506,7 +443,7 @@ impl<'a> Writer<'a> {
         }
     }
 
-    pub fn write_esd_record(&mut self, record: &goff::SymbolRecord, name: &EbcdicStr) -> u32 {
+    fn write_esd_record(&mut self, record: &goff::SymbolRecord, name: &EbcdicStr) -> u32 {
         let mut esd_record = *record;
         let name = name.as_bytes();
         let record_name_len = name.len().min(goff::SIZEOF_ESD_DATA);
@@ -518,61 +455,35 @@ impl<'a> Writer<'a> {
 
         self.logical_record_count += 1;
         self.buffer.write_pod(&esd_record);
-        self.write_continuation_records(goff::RT_ESD, name, name.len() - record_name_len);
+        self.write_continuation_records(goff::RT_ESD, &name[record_name_len..]);
 
         self.next_esdid - 1
     }
 
-    pub fn write_continuation_records(
-        &mut self,
-        record_type: goff::RecordType,
-        data: &[u8],
-        mut data_remaining_amount: usize,
-    ) {
-        while data_remaining_amount > 0 {
-            let mut ptv = goff::RecordPrefix::new(record_type).with_continuation();
-
-            let start = data.len() - data_remaining_amount;
-            let mut end = data.len();
-            if data_remaining_amount > goff::SIZEOF_RECORD_DATA {
-                ptv = ptv.with_continued(true);
-                end = start + goff::SIZEOF_RECORD_DATA;
-            }
+    fn write_continuation_records(&mut self, record_type: goff::RecordType, mut data: &[u8]) {
+        while !data.is_empty() {
+            let end = data.len().min(goff::SIZEOF_RECORD_DATA);
+            let ptv = goff::RecordPrefix::new(record_type)
+                .with_continuation()
+                .with_continued(data.len() > end);
 
             let mut cont_record = goff::Record {
                 ptv,
                 data: [0u8; goff::SIZEOF_RECORD_DATA],
             };
-            let record_data_amount = end - start;
-            cont_record.data[..record_data_amount].copy_from_slice(&data[start..end]);
-            data_remaining_amount -= record_data_amount;
+            cont_record.data[..end].copy_from_slice(&data[..end]);
+            data = &data[end..];
 
-            self.continuation_record_count += 1;
             self.buffer.write_pod(&cont_record);
         }
     }
 
-    pub fn write_text(&mut self, esdid: u32, data: &[u8], record_style: u8) {
-        // The maximum number of bytes that can be included in a RLD or TXT record and
-        // their continuations is a SIGNED 16 bit int despite what the spec says. The
-        // number of bytes we allow ourselves to attach to a card is thus limited to
-        // 32K-1 bytes.
-        let max_logical_length = 32 * 1024 - 1;
-
-        let mut data_remaining_amount = data.len();
+    fn write_text(&mut self, esdid: u32, mut data: &[u8], record_style: u8) {
         let mut offset = 0_usize;
-        while data_remaining_amount > 0 {
-            let logical_write_len = if data_remaining_amount > max_logical_length {
-                max_logical_length
-            } else {
-                data_remaining_amount
-            };
-            let mut ptv = goff::TXT_PREFIX;
-            let mut record_data_len = logical_write_len;
-            if record_data_len > goff::SIZEOF_TXT_DATA {
-                record_data_len = goff::SIZEOF_TXT_DATA;
-                ptv = ptv.with_continued(true);
-            }
+        while !data.is_empty() {
+            let logical_write_len = data.len().min(MAX_LOGICAL_LENGTH);
+            let record_data_len = logical_write_len.min(goff::SIZEOF_TXT_DATA);
+            let ptv = goff::TXT_PREFIX.with_continued(logical_write_len > record_data_len);
 
             let mut record = goff::TextRecord {
                 ptv,
@@ -585,17 +496,16 @@ impl<'a> Writer<'a> {
                 data_length: U16::new(BE, logical_write_len as u16),
                 data: [0u8; goff::SIZEOF_TXT_DATA],
             };
-            record.data[..record_data_len].copy_from_slice(&data[offset..offset + record_data_len]);
+            record.data[..record_data_len].copy_from_slice(&data[..record_data_len]);
             self.logical_record_count += 1;
             self.buffer.write_pod(&record);
             self.write_continuation_records(
                 goff::RT_TXT,
-                &data[offset..offset + logical_write_len],
-                logical_write_len - record_data_len,
+                &data[record_data_len..logical_write_len],
             );
 
             offset += logical_write_len;
-            data_remaining_amount -= logical_write_len;
+            data = &data[logical_write_len..];
         }
     }
 
@@ -605,13 +515,44 @@ impl<'a> Writer<'a> {
         goff::TXT_RS_BYTE.0
     }
 
+    fn write_symbol(&mut self, symbol: &Symbol, symbol_id: SymbolId) -> Result<()> {
+        let (esdid, referent) = match (symbol.kind, symbol.section) {
+            (SymbolKind::File, _) => return Ok(()),
+            (SymbolKind::Section, SymbolSection::Section(section_id)) => {
+                (self.section_esdid[section_id.0], goff::RLD_RO_ELEMENT)
+            }
+            (
+                SymbolKind::Text | SymbolKind::Data | SymbolKind::Label,
+                SymbolSection::Section(section_id),
+            ) => {
+                let ed_esdid = self.section_esdid[section_id.0];
+                (
+                    self.write_defined_symbol(symbol, ed_esdid)?,
+                    goff::RLD_RO_LABEL,
+                )
+            }
+            (SymbolKind::Text, SymbolSection::Undefined) => (
+                self.write_undefined_symbol(symbol, true)?,
+                goff::RLD_RO_LABEL,
+            ),
+            (SymbolKind::Data | SymbolKind::Unknown, SymbolSection::Undefined) => (
+                self.write_undefined_symbol(symbol, false)?,
+                goff::RLD_RO_PART,
+            ),
+            _ => {
+                return Err(Error(format!(
+                    "Unsupported symbol kind/section: {:?}",
+                    symbol
+                )));
+            }
+        };
+        self.symbol_esdid[symbol_id.0] = esdid;
+        self.symbol_referent[symbol_id.0] = referent;
+        Ok(())
+    }
+
     /// Write a defined symbol with proper hierarchy (LD or PR).
-    fn write_defined_symbol(
-        &mut self,
-        symbol: &Symbol,
-        symbol_id: SymbolId,
-        parent_ed_esdid: u32,
-    ) -> Result<u32> {
+    fn write_defined_symbol(&mut self, symbol: &Symbol, parent_ed_esdid: u32) -> Result<u32> {
         // Determine binding scope based on symbol properties
         let scope = match symbol.scope {
             SymbolScope::Compilation => goff::ESD_BSC_SECTION,
@@ -627,129 +568,53 @@ impl<'a> Writer<'a> {
         // Write LD (Label Definition) for the symbol
         let ld_esdid = self.write_ld(name, parent_ed_esdid, symbol.value as u32, scope);
 
-        // Track the LD
-        self.add_symbol_to_hierarchy(ld_esdid, parent_ed_esdid, Some(symbol_id));
-
         Ok(ld_esdid)
     }
 
     /// Write an undefined symbol (external reference).
-    fn write_undefined_symbol(&mut self, symbol: &Symbol, symbol_id: SymbolId) -> Result<u32> {
-        let is_code = match symbol.kind {
-            SymbolKind::Text => true,
-            SymbolKind::Data => false,
-            _ => {
-                // Default to data for unknown kinds
-                false
-            }
-        };
-
+    fn write_undefined_symbol(&mut self, symbol: &Symbol, is_code: bool) -> Result<u32> {
         let scope = if symbol.scope == SymbolScope::Dynamic {
             goff::ESD_BSC_IMPORT_EXPORT
         } else {
             goff::ESD_BSC_LIBRARY
         };
+        let strength = if symbol.weak {
+            goff::ESD_BST_WEAK
+        } else {
+            goff::ESD_BST_STRONG
+        };
 
         let name = &encode_name(&symbol.name)?;
 
-        // Check if it's a weak reference
-        let esdid = if symbol.weak {
-            self.write_er_weak(name, self.cu_esdid, is_code, scope)
+        let esdid = if is_code {
+            self.write_er_to_text(name, scope, strength)
         } else {
-            // Use existing methods for compatibility
-            if is_code {
-                self.write_er_to_text(name, scope)
-            } else {
-                self.write_er_to_data(name, scope)
-            }
+            self.write_er_to_data(name, scope, strength)
         };
-
-        // Track the ER
-        self.add_symbol_to_hierarchy(esdid, self.cu_esdid, Some(symbol_id));
 
         Ok(esdid)
     }
 
-    /// Find the ESDID for a given symbol ID.
-    fn find_symbol_esdid(&self, symbol_id: SymbolId) -> Result<u32> {
-        for (esdid, hierarchy) in &self.symbol_hierarchy {
-            if hierarchy.symbol_id == Some(symbol_id) {
-                return Ok(*esdid);
-            }
-        }
-        Err(Error(format!("Symbol ESDID not found for {:?}", symbol_id)))
-    }
-
-    /// Map a symbol ID to an ESDID (R-pointer).
-    fn map_symbol_to_esdid(&self, symbol_id: SymbolId) -> Result<u32> {
-        self.find_symbol_esdid(symbol_id)
-    }
-
-    /// Build relocation flags based on relocation properties.
-    fn build_relocation_flags(
-        &self,
-        flags: &RelocationFlags,
-        size: u8,
-    ) -> Result<goff::RelocationFlags> {
-        // Map relocation flags to GOFF reference type and operation
-        let (reference_type, operation) = match flags {
-            RelocationFlags::Generic {
-                kind,
-                encoding: _,
-                size: _,
-            } => match kind {
-                RelocationKind::Absolute | RelocationKind::Got => {
-                    (goff::RLD_RT_ADDRESS, goff::RLD_ACT_ADD)
-                }
-                RelocationKind::Relative
-                | RelocationKind::PltRelative
-                | RelocationKind::GotRelative => {
-                    (goff::RLD_RT_RELATIVE_IMMEDIATE, goff::RLD_ACT_SUBTRACT)
-                }
-                RelocationKind::SectionOffset => (goff::RLD_RT_OFFSET, goff::RLD_ACT_ADD),
-                _ => {
-                    return Err(Error(format!("Unsupported relocation kind: {:?}", kind)));
-                }
-            },
-            _ => {
-                return Err(Error("Unsupported relocation flags type for GOFF".into()));
-            }
-        };
-
-        Ok(goff::RelocationFlags::default()
-            .with_reference_type(reference_type)
-            // Referent type Label is the most common case.
-            .with_referent_type(goff::RLD_RO_LABEL)
-            // Convert the target field length from bits to bytes.
-            .with_byte_length(size / 8)
-            .with_action(operation))
-    }
-
     /// Add a relocation to the pending list.
-    pub fn add_relocation(
-        &mut self,
-        reloc: &RelocationInternal,
-        _section_id: SectionId,
-        p_pointer: u32,
-    ) -> Result<()> {
-        // Map symbol to R-pointer
-        let r_pointer = self.map_symbol_to_esdid(reloc.symbol)?;
-
-        // Extract size from flags
-        let size = match &reloc.flags {
-            RelocationFlags::Generic { size, .. } => *size,
-            _ => 32, // Default to 32-bit
+    fn add_relocation(&mut self, reloc: &RelocationInternal, p_pointer: u32) -> Result<()> {
+        let RelocationFlags::Goff { flags } = reloc.flags else {
+            return Err(Error("invalid relocation flags".into()));
         };
 
-        // Build relocation flags
-        let flags = self.build_relocation_flags(&reloc.flags, size)?;
+        // Map symbol to R-pointer
+        let r_pointer = self.symbol_esdid[reloc.symbol.0];
+        if r_pointer == 0 {
+            return Err(Error("Unsupported relocation symbol for GOFF".into()));
+        }
+        let referent_type = self.symbol_referent[reloc.symbol.0];
+        let flags = flags.with_referent_type(referent_type);
 
         // Add to pending relocations
-        self.relocations.push(PendingRelocation {
+        self.relocations.push(goff::Relocation {
             flags,
             r_pointer,
             p_pointer,
-            offset: reloc.offset as u32,
+            offset: reloc.offset,
         });
 
         Ok(())
@@ -760,40 +625,34 @@ impl<'a> Writer<'a> {
         &self,
         buffer: &mut Vec<u8>,
         flags: goff::RelocationFlags,
-        reloc: &PendingRelocation,
-    ) -> Result<()> {
+        reloc: &goff::Relocation,
+    ) {
         // Write fixed header
         buffer.write_pod(&flags);
         buffer.write_zeros(2);
 
         // Write R-pointer if not compressed
         if !flags.is_same_r_id() {
-            buffer.extend_from_slice(&reloc.r_pointer.to_be_bytes());
+            buffer.write_pod(&U32::new(BE, reloc.r_pointer));
         }
 
         // Write P-pointer if not compressed
         if !flags.is_same_p_id() {
-            buffer.extend_from_slice(&reloc.p_pointer.to_be_bytes());
+            buffer.write_pod(&U32::new(BE, reloc.p_pointer));
         }
 
         // Write offset if not compressed
         if !flags.is_same_offset() {
-            buffer.extend_from_slice(&reloc.offset.to_be_bytes());
+            buffer.write_pod(&U32::new(BE, reloc.offset as u32));
         }
-
-        Ok(())
     }
 
-    /// Write RLD records from a data buffer.
-    fn write_rld_records(&mut self, data: &[u8]) -> Result<()> {
-        if data.is_empty() {
-            return Ok(());
-        }
-
-        let first_chunk = data.len().min(goff::SIZEOF_RELOCATION_DATA);
-        let remainder = &data[first_chunk..];
-
-        let ptv = goff::RLD_PREFIX.with_continued(!remainder.is_empty());
+    /// Write one logical RLD record and its continuations from a data buffer.
+    ///
+    /// The caller must limit `data` to `MAX_LOGICAL_LENGTH` bytes.
+    fn write_rld_record(&mut self, data: &[u8]) {
+        let record_data_len = data.len().min(goff::SIZEOF_RELOCATION_DATA);
+        let ptv = goff::RLD_PREFIX.with_continued(data.len() > record_data_len);
 
         let mut record = goff::RelocationRecord {
             ptv,
@@ -802,33 +661,32 @@ impl<'a> Writer<'a> {
             length: U16::new(BE, data.len() as u16),
             data: [0u8; goff::SIZEOF_RELOCATION_DATA],
         };
-        record.data[..first_chunk].copy_from_slice(&data[..first_chunk]);
+        record.data[..record_data_len].copy_from_slice(&data[..record_data_len]);
 
         self.logical_record_count += 1;
         self.buffer.write_pod(&record);
-
-        if !remainder.is_empty() {
-            self.write_continuation_records(goff::RT_RLD, data, remainder.len());
-        }
-
-        Ok(())
+        self.write_continuation_records(goff::RT_RLD, &data[record_data_len..]);
     }
 
     /// Write all pending relocations as RLD records.
-    pub fn write_relocations(&mut self) -> Result<()> {
-        if self.relocations.is_empty() {
-            return Ok(());
+    fn write_relocations(&mut self) {
+        let mut relocations = mem::take(&mut self.relocations);
+        if relocations.is_empty() {
+            return;
         }
 
         // Sort relocations by P-pointer, then offset for better compression
-        self.relocations.sort_by_key(|r| (r.p_pointer, r.offset));
+        relocations.sort_by_key(|r| (r.p_pointer, r.offset));
 
         let mut rld_data = Vec::new();
         let mut prev_r_pointer: Option<u32> = None;
         let mut prev_p_pointer: Option<u32> = None;
-        let mut prev_offset: Option<u32> = None;
+        let mut prev_offset: Option<u64> = None;
 
-        for reloc in &self.relocations {
+        for reloc in &relocations {
+            // Record current length in case it overflows.
+            let len = rld_data.len();
+
             // Apply compression flags
             let flags = reloc
                 .flags
@@ -837,7 +695,19 @@ impl<'a> Writer<'a> {
                 .with_same_offset(prev_offset == Some(reloc.offset));
 
             // Write relocation item
-            self.write_relocation_item(&mut rld_data, flags, reloc)?;
+            self.write_relocation_item(&mut rld_data, flags, reloc);
+
+            // Start a new logical record if this item doesn't fit in the current one.
+            if rld_data.len() > MAX_LOGICAL_LENGTH {
+                self.write_rld_record(&rld_data[..len]);
+                rld_data.clear();
+
+                let flags = flags
+                    .with_same_r_id(false)
+                    .with_same_p_id(false)
+                    .with_same_offset(false);
+                self.write_relocation_item(&mut rld_data, flags, reloc);
+            }
 
             // Update previous values for next iteration
             prev_r_pointer = Some(reloc.r_pointer);
@@ -845,10 +715,7 @@ impl<'a> Writer<'a> {
             prev_offset = Some(reloc.offset);
         }
 
-        // Write RLD records (max 74 bytes per record)
-        self.write_rld_records(&rld_data)?;
-
-        Ok(())
+        self.write_rld_record(&rld_data);
     }
 }
 

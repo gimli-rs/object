@@ -114,7 +114,7 @@ where
 
             let offset = u64::from(self.offset).wrapping_add(goff_reloc.offset);
             let (kind, encoding) = self.map_kind(&goff_reloc.flags, subtractor.is_some());
-            let size = goff_reloc.flags.total_bit_width() as u8;
+            let size = goff_reloc.flags.total_bit_width().unwrap_or(0);
             let implicit_addend = goff_reloc.flags.fetch_store() == goff::RLD_FS_FETCH;
 
             let relocation = Relocation {
