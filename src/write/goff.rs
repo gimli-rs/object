@@ -138,6 +138,7 @@ struct Writer<'a> {
 
     // Map symbol ID to ESDID
     symbol_esdid: Vec<u32>,
+    symbol_referent: Vec<goff::RelocationReferentType>,
     // Map section ID to ED ESDID
     section_esdid: Vec<u32>,
 
@@ -155,6 +156,7 @@ impl<'a> Writer<'a> {
             cu_esdid: 0,
             logical_record_count: 0,
             symbol_esdid: vec![0; symbol_count],
+            symbol_referent: vec![goff::RLD_RO_LABEL; symbol_count],
             section_esdid: vec![0; section_count],
             relocations: Vec::new(),
         }
@@ -483,24 +485,29 @@ impl<'a> Writer<'a> {
     }
 
     fn write_symbol(&mut self, symbol: &Symbol, symbol_id: SymbolId) -> Result<()> {
-        let esdid = match (symbol.kind, symbol.section) {
+        let (esdid, referent) = match (symbol.kind, symbol.section) {
             (SymbolKind::File, _) => return Ok(()),
             (SymbolKind::Section, SymbolSection::Section(section_id)) => {
-                self.section_esdid[section_id.0]
+                (self.section_esdid[section_id.0], goff::RLD_RO_ELEMENT)
             }
             (
                 SymbolKind::Text | SymbolKind::Data | SymbolKind::Label,
                 SymbolSection::Section(section_id),
             ) => {
                 let ed_esdid = self.section_esdid[section_id.0];
-                self.write_defined_symbol(symbol, ed_esdid)?
+                (
+                    self.write_defined_symbol(symbol, ed_esdid)?,
+                    goff::RLD_RO_LABEL,
+                )
             }
-            (SymbolKind::Text, SymbolSection::Undefined) => {
-                self.write_undefined_symbol(symbol, true)?
-            }
-            (SymbolKind::Data | SymbolKind::Unknown, SymbolSection::Undefined) => {
-                self.write_undefined_symbol(symbol, false)?
-            }
+            (SymbolKind::Text, SymbolSection::Undefined) => (
+                self.write_undefined_symbol(symbol, true)?,
+                goff::RLD_RO_LABEL,
+            ),
+            (SymbolKind::Data | SymbolKind::Unknown, SymbolSection::Undefined) => (
+                self.write_undefined_symbol(symbol, false)?,
+                goff::RLD_RO_PART,
+            ),
             _ => {
                 return Err(Error(format!(
                     "Unsupported symbol kind/section: {:?}",
@@ -509,6 +516,7 @@ impl<'a> Writer<'a> {
             }
         };
         self.symbol_esdid[symbol_id.0] = esdid;
+        self.symbol_referent[symbol_id.0] = referent;
         Ok(())
     }
 
@@ -590,8 +598,6 @@ impl<'a> Writer<'a> {
 
         Ok(goff::RelocationFlags::default()
             .with_reference_type(reference_type)
-            // Referent type Label is the most common case.
-            .with_referent_type(goff::RLD_RO_LABEL)
             // Convert the target field length from bits to bytes.
             .with_byte_length(size / 8)
             .with_action(operation))
@@ -604,6 +610,7 @@ impl<'a> Writer<'a> {
         if r_pointer == 0 {
             return Err(Error("Unsupported relocation symbol for GOFF".into()));
         }
+        let referent_type = self.symbol_referent[reloc.symbol.0];
 
         // Extract size from flags
         let size = match &reloc.flags {
@@ -612,7 +619,9 @@ impl<'a> Writer<'a> {
         };
 
         // Build relocation flags
-        let flags = self.build_relocation_flags(&reloc.flags, size)?;
+        let flags = self
+            .build_relocation_flags(&reloc.flags, size)?
+            .with_referent_type(referent_type);
 
         // Add to pending relocations
         self.relocations.push(goff::Relocation {
