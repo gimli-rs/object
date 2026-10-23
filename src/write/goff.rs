@@ -181,7 +181,10 @@ struct Writer<'a> {
     buffer: &'a mut dyn WritableBuffer,
 
     next_esdid: u32,
-    cu_esdid: u32, // ESD id for compile unit
+    // ESD id for compile unit
+    cu_esdid: u32,
+    // ESD id for C_WSA64
+    wsa_esdid: Option<u32>,
 
     logical_record_count: u32,
 
@@ -203,6 +206,7 @@ impl<'a> Writer<'a> {
 
             next_esdid: 1,
             cu_esdid: 0,
+            wsa_esdid: None,
             logical_record_count: 0,
             symbol_esdid: vec![0; symbol_count],
             symbol_referent: vec![goff::RLD_RO_LABEL; symbol_count],
@@ -241,29 +245,46 @@ impl<'a> Writer<'a> {
         self.buffer.write_pod(&fileend);
     }
 
-    fn write_er_to_text(&mut self, symbol_name: &EbcdicStr, scope: goff::BindingScope) -> u32 {
+    fn write_er_to_text(
+        &mut self,
+        symbol_name: &EbcdicStr,
+        scope: goff::BindingScope,
+        strength: goff::BindingStrength,
+    ) -> u32 {
         let mut er = self.get_esd_record(goff::ESD_ST_ER, goff::ESD_NS_NORMAL_NAME, self.cu_esdid);
 
         // External reference to code: executable, export scope
         let attrs = default_attrs()
             .with_executable(goff::EXEC_CODE)
             .with_binding_scope(scope)
-            .with_alignment(goff::ALIGN_32BYTE);
+            .with_binding_strength(strength);
         er.behavioral_attributes = attrs;
 
         self.write_esd_record(&er, symbol_name)
     }
 
-    fn write_er_to_data(&mut self, symbol_name: &EbcdicStr, scope: goff::BindingScope) -> u32 {
-        self.write_wsa_symbol(symbol_name, 0, scope)
-    }
-
-    fn write_wsa_symbol(
+    fn write_er_to_data(
         &mut self,
         symbol_name: &EbcdicStr,
-        symbol_length: u32,
         scope: goff::BindingScope,
+        strength: goff::BindingStrength,
     ) -> u32 {
+        let ed_esdid = self.write_wsa_symbol();
+
+        // Emit PR child symbol using write_pr method.
+        let pr_attrs = default_attrs()
+            .with_executable(goff::EXEC_DATA)
+            .with_binding_scope(scope)
+            .with_binding_strength(strength)
+            .with_alignment(goff::ALIGN_HALFWORD);
+
+        self.write_pr(symbol_name, ed_esdid, 0, pr_attrs)
+    }
+
+    fn write_wsa_symbol(&mut self) -> u32 {
+        if let Some(wsa_esdid) = self.wsa_esdid {
+            return wsa_esdid;
+        }
         // Emit parent C_WSA64 ED symbol (data section).
         let mut ed = self.get_esd_record(goff::ESD_ST_ED, goff::ESD_NS_PARTS, self.cu_esdid);
         ed.flags = goff::ESD_SF_FILL_BYTE_PRESENCE;
@@ -274,15 +295,8 @@ impl<'a> Writer<'a> {
             .with_alignment(goff::ALIGN_HALFWORD);
         ed.behavioral_attributes = ed_attrs;
         let ed_esdid = self.write_esd_record(&ed, &EBCDIC_C_WSA64);
-
-        // Emit PR child symbol using write_pr method.
-        let pr_attrs = default_attrs()
-            .with_executable(goff::EXEC_DATA)
-            .with_binding_strength(goff::ESD_BST_WEAK)
-            .with_binding_scope(scope)
-            .with_alignment(goff::ALIGN_HALFWORD);
-
-        self.write_pr(symbol_name, ed_esdid, symbol_length, pr_attrs)
+        self.wsa_esdid = Some(ed_esdid);
+        ed_esdid
     }
 
     fn write_debug_section_symbol(&mut self, section_name: &EbcdicStr, section_length: u32) -> u32 {
@@ -365,29 +379,6 @@ impl<'a> Writer<'a> {
         pr.length = U32::new(BE, length);
         pr.behavioral_attributes = attributes;
         self.write_esd_record(&pr, name)
-    }
-
-    /// Write an ER (External Reference) record with weak binding.
-    fn write_er_weak(
-        &mut self,
-        name: &EbcdicStr,
-        parent_esdid: u32,
-        is_code: bool,
-        scope: goff::BindingScope,
-    ) -> u32 {
-        let mut er = self.get_esd_record(goff::ESD_ST_ER, goff::ESD_NS_NORMAL_NAME, parent_esdid);
-
-        let attrs = default_attrs()
-            .with_executable(if is_code {
-                goff::EXEC_CODE
-            } else {
-                goff::EXEC_DATA
-            })
-            .with_binding_strength(goff::ESD_BST_WEAK)
-            .with_binding_scope(scope);
-        er.behavioral_attributes = attrs;
-
-        self.write_esd_record(&er, name)
     }
 
     fn write_section(&mut self, section: &Section<'_>, section_id: SectionId) -> Result<u32> {
@@ -596,19 +587,18 @@ impl<'a> Writer<'a> {
         } else {
             goff::ESD_BSC_LIBRARY
         };
+        let strength = if symbol.weak {
+            goff::ESD_BST_WEAK
+        } else {
+            goff::ESD_BST_STRONG
+        };
 
         let name = &encode_name(&symbol.name)?;
 
-        // Check if it's a weak reference
-        let esdid = if symbol.weak {
-            self.write_er_weak(name, self.cu_esdid, is_code, scope)
+        let esdid = if is_code {
+            self.write_er_to_text(name, scope, strength)
         } else {
-            // Use existing methods for compatibility
-            if is_code {
-                self.write_er_to_text(name, scope)
-            } else {
-                self.write_er_to_data(name, scope)
-            }
+            self.write_er_to_data(name, scope, strength)
         };
 
         Ok(esdid)
