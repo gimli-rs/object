@@ -519,13 +519,30 @@ impl<'a> Writer<'a> {
     }
 
     fn write_symbol(&mut self, symbol: &Symbol, symbol_id: SymbolId) -> Result<()> {
-        let esdid = match symbol.section {
-            SymbolSection::Undefined => self.write_undefined_symbol(symbol)?,
-            SymbolSection::Section(section_id) => {
+        let esdid = match (symbol.kind, symbol.section) {
+            (SymbolKind::File, _) => return Ok(()),
+            (SymbolKind::Section, SymbolSection::Section(section_id)) => {
+                self.section_esdid[section_id.0]
+            }
+            (
+                SymbolKind::Text | SymbolKind::Data | SymbolKind::Label,
+                SymbolSection::Section(section_id),
+            ) => {
                 let ed_esdid = self.section_esdid[section_id.0];
                 self.write_defined_symbol(symbol, ed_esdid)?
             }
-            _ => return Err(Error(format!("Unsupported symbol section: {:?}", symbol))),
+            (SymbolKind::Text, SymbolSection::Undefined) => {
+                self.write_undefined_symbol(symbol, true)?
+            }
+            (SymbolKind::Data | SymbolKind::Unknown, SymbolSection::Undefined) => {
+                self.write_undefined_symbol(symbol, false)?
+            }
+            _ => {
+                return Err(Error(format!(
+                    "Unsupported symbol kind/section: {:?}",
+                    symbol
+                )));
+            }
         };
         self.symbol_esdid[symbol_id.0] = esdid;
         Ok(())
@@ -552,16 +569,7 @@ impl<'a> Writer<'a> {
     }
 
     /// Write an undefined symbol (external reference).
-    fn write_undefined_symbol(&mut self, symbol: &Symbol) -> Result<u32> {
-        let is_code = match symbol.kind {
-            SymbolKind::Text => true,
-            SymbolKind::Data => false,
-            _ => {
-                // Default to data for unknown kinds
-                false
-            }
-        };
-
+    fn write_undefined_symbol(&mut self, symbol: &Symbol, is_code: bool) -> Result<u32> {
         let scope = if symbol.scope == SymbolScope::Dynamic {
             goff::ESD_BSC_IMPORT_EXPORT
         } else {
