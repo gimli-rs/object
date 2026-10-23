@@ -110,20 +110,69 @@ impl<'a> Object<'a> {
 
     pub(crate) fn goff_translate_relocation(
         &mut self,
-        _relocation: &mut RelocationInternal,
+        reloc: &mut RelocationInternal,
     ) -> Result<()> {
-        // GOFF relocations are handled during write by the GOFF writer
-        // No translation needed here as flags are already in generic format
+        let (kind, _encoding, size) = if let RelocationFlags::Generic {
+            kind,
+            encoding,
+            size,
+        } = reloc.flags
+        {
+            (kind, encoding, size)
+        } else {
+            return Ok(());
+        };
+
+        let (reference_type, operation) = match kind {
+            RelocationKind::Absolute | RelocationKind::Got => {
+                (goff::RLD_RT_ADDRESS, goff::RLD_ACT_ADD)
+            }
+            RelocationKind::Relative
+            | RelocationKind::PltRelative
+            | RelocationKind::GotRelative => {
+                (goff::RLD_RT_RELATIVE_IMMEDIATE, goff::RLD_ACT_SUBTRACT)
+            }
+            RelocationKind::SectionOffset => (goff::RLD_RT_OFFSET, goff::RLD_ACT_ADD),
+            _ => {
+                return Err(Error(format!("unimplemented relocation {:?}", reloc)));
+            }
+        };
+
+        let flags = goff::RelocationFlags::default()
+            .with_reference_type(reference_type)
+            .with_byte_length(size / 8)
+            .with_bit_length(size & 7)
+            .with_action(operation);
+        reloc.flags = RelocationFlags::Goff { flags };
         Ok(())
     }
 
-    pub(crate) fn goff_adjust_addend(
-        &mut self,
-        _relocation: &mut RelocationInternal,
-    ) -> Result<bool> {
-        // GOFF uses explicit addends in RLD records
-        // Return false to indicate addends are explicit, not implicit
-        Ok(false)
+    pub(crate) fn goff_adjust_addend(&mut self, reloc: &mut RelocationInternal) -> Result<bool> {
+        let RelocationFlags::Goff { flags, .. } = reloc.flags else {
+            return Err(Error(format!("unexpected relocation {:?}", reloc)));
+        };
+        match flags.fetch_store() {
+            goff::RLD_FS_FETCH => {
+                if flags.reference_type() == goff::RLD_RT_RELATIVE_IMMEDIATE {
+                    // The field is a halfword count.
+                    // TODO: this needs adjusting if the offset is from the start of the instruction
+                    if reloc.addend % 2 != 0 {
+                        return Err(Error(format!("invalid relocation addend {:?}", reloc)));
+                    }
+                    reloc.addend /= 2;
+                }
+                Ok(true)
+            }
+            goff::RLD_FS_STORE if reloc.addend == 0 => Ok(false),
+            _ => Err(Error(format!("invalid relocation fetch/store {:?}", reloc))),
+        }
+    }
+
+    pub(crate) fn goff_relocation_size(&self, reloc: &RelocationInternal) -> Result<u8> {
+        let RelocationFlags::Goff { flags, .. } = reloc.flags else {
+            return Err(Error(format!("unexpected relocation {:?}", reloc)));
+        };
+        Ok(flags.total_bit_width() as u8)
     }
 }
 
@@ -565,63 +614,19 @@ impl<'a> Writer<'a> {
         Ok(esdid)
     }
 
-    /// Build relocation flags based on relocation properties.
-    fn build_relocation_flags(
-        &self,
-        flags: &RelocationFlags,
-        size: u8,
-    ) -> Result<goff::RelocationFlags> {
-        // Map relocation flags to GOFF reference type and operation
-        let (reference_type, operation) = match flags {
-            RelocationFlags::Generic {
-                kind,
-                encoding: _,
-                size: _,
-            } => match kind {
-                RelocationKind::Absolute | RelocationKind::Got => {
-                    (goff::RLD_RT_ADDRESS, goff::RLD_ACT_ADD)
-                }
-                RelocationKind::Relative
-                | RelocationKind::PltRelative
-                | RelocationKind::GotRelative => {
-                    (goff::RLD_RT_RELATIVE_IMMEDIATE, goff::RLD_ACT_SUBTRACT)
-                }
-                RelocationKind::SectionOffset => (goff::RLD_RT_OFFSET, goff::RLD_ACT_ADD),
-                _ => {
-                    return Err(Error(format!("Unsupported relocation kind: {:?}", kind)));
-                }
-            },
-            _ => {
-                return Err(Error("Unsupported relocation flags type for GOFF".into()));
-            }
-        };
-
-        Ok(goff::RelocationFlags::default()
-            .with_reference_type(reference_type)
-            // Convert the target field length from bits to bytes.
-            .with_byte_length(size / 8)
-            .with_action(operation))
-    }
-
     /// Add a relocation to the pending list.
     fn add_relocation(&mut self, reloc: &RelocationInternal, p_pointer: u32) -> Result<()> {
+        let RelocationFlags::Goff { flags } = reloc.flags else {
+            return Err(Error("invalid relocation flags".into()));
+        };
+
         // Map symbol to R-pointer
         let r_pointer = self.symbol_esdid[reloc.symbol.0];
         if r_pointer == 0 {
             return Err(Error("Unsupported relocation symbol for GOFF".into()));
         }
         let referent_type = self.symbol_referent[reloc.symbol.0];
-
-        // Extract size from flags
-        let size = match &reloc.flags {
-            RelocationFlags::Generic { size, .. } => *size,
-            _ => 32, // Default to 32-bit
-        };
-
-        // Build relocation flags
-        let flags = self
-            .build_relocation_flags(&reloc.flags, size)?
-            .with_referent_type(referent_type);
+        let flags = flags.with_referent_type(referent_type);
 
         // Add to pending relocations
         self.relocations.push(goff::Relocation {

@@ -778,6 +778,8 @@ impl<'a> Object<'a> {
             BinaryFormat::MachO => self.macho_relocation_size(relocation)?,
             #[cfg(feature = "xcoff")]
             BinaryFormat::Xcoff => self.xcoff_relocation_size(relocation)?,
+            #[cfg(feature = "goff")]
+            BinaryFormat::Goff => self.goff_relocation_size(relocation)?,
             _ => unimplemented!(),
         };
         let data = self.sections[section.0].data_mut();
