@@ -162,7 +162,9 @@ impl<'a> Object<'a> {
         let RelocationFlags::Goff { flags, .. } = reloc.flags else {
             return Err(Error(format!("unexpected relocation {:?}", reloc)));
         };
-        Ok(flags.total_bit_width() as u8)
+        flags
+            .total_bit_width()
+            .ok_or_else(|| Error(format!("unsupported relocation size {:?}", reloc)))
     }
 }
 

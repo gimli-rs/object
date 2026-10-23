@@ -1180,8 +1180,12 @@ impl RelocationFlags {
     }
 
     /// Calculate total field width in bits.
-    pub fn total_bit_width(self) -> u16 {
-        (self.byte_length() as u16) * 8 + (self.bit_length() as u16)
+    ///
+    /// Returns `None` if the width does not fit in a `u8`.
+    pub fn total_bit_width(self) -> Option<u8> {
+        self.byte_length()
+            .checked_mul(8)?
+            .checked_add(self.bit_length())
     }
 }
 
