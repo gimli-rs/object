@@ -112,7 +112,10 @@ impl<'a> Object<'a> {
         &mut self,
         reloc: &mut RelocationInternal,
     ) -> Result<()> {
-        let (kind, _encoding, size) = if let RelocationFlags::Generic {
+        use RelocationEncoding as E;
+        use RelocationKind as K;
+
+        let (kind, encoding, size) = if let RelocationFlags::Generic {
             kind,
             encoding,
             size,
@@ -123,16 +126,12 @@ impl<'a> Object<'a> {
             return Ok(());
         };
 
-        let (reference_type, operation) = match kind {
-            RelocationKind::Absolute | RelocationKind::Got => {
-                (goff::RLD_RT_ADDRESS, goff::RLD_ACT_ADD)
+        let reference_type = match (kind, encoding) {
+            (K::Absolute | K::Got, E::Generic) => goff::RLD_RT_ADDRESS,
+            (K::Relative | K::PltRelative | K::GotRelative, E::S390xDbl) => {
+                goff::RLD_RT_RELATIVE_IMMEDIATE
             }
-            RelocationKind::Relative
-            | RelocationKind::PltRelative
-            | RelocationKind::GotRelative => {
-                (goff::RLD_RT_RELATIVE_IMMEDIATE, goff::RLD_ACT_SUBTRACT)
-            }
-            RelocationKind::SectionOffset => (goff::RLD_RT_OFFSET, goff::RLD_ACT_ADD),
+            (K::SectionOffset, E::Generic) => goff::RLD_RT_OFFSET,
             _ => {
                 return Err(Error(format!("unimplemented relocation {:?}", reloc)));
             }
@@ -142,7 +141,7 @@ impl<'a> Object<'a> {
             .with_reference_type(reference_type)
             .with_byte_length(size / 8)
             .with_bit_length(size & 7)
-            .with_action(operation);
+            .with_action(goff::RLD_ACT_ADD);
         reloc.flags = RelocationFlags::Goff { flags };
         Ok(())
     }
