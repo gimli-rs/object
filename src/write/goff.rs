@@ -33,7 +33,8 @@ impl<'a> Object<'a> {
             let section_id = SectionId(section_index);
 
             // Write ED for section
-            let ed_esdid = writer.write_section(section, section_id)?;
+            let flags = self.section_flags(section);
+            let ed_esdid = writer.write_section(section, section_id, flags)?;
 
             // Write section data if present
             if !section.data.is_empty() {
@@ -105,6 +106,23 @@ impl<'a> Object<'a> {
                 // Unsupported section
                 (&[], &[], SectionKind::Unknown, SectionFlags::None)
             }
+        }
+    }
+
+    pub(crate) fn goff_section_flags(&self, section: &Section<'_>) -> SectionFlags {
+        let (namespace, behavioral_attributes) = match section.kind {
+            SectionKind::Text => (goff::ESD_NS_NORMAL_NAME, code_attrs()),
+            SectionKind::Data => (goff::ESD_NS_NORMAL_NAME, data_attrs()),
+            SectionKind::ReadOnlyData => (goff::ESD_NS_NORMAL_NAME, readonly_data_attrs()),
+            SectionKind::Debug => (goff::ESD_NS_PARTS, debug_attrs()),
+            _ => return SectionFlags::None,
+        };
+
+        SectionFlags::Goff {
+            flags: goff::ESD_SF_FILL_BYTE_PRESENCE,
+            fill_byte_value: 0,
+            namespace,
+            behavioral_attributes,
         }
     }
 
@@ -345,26 +363,32 @@ impl<'a> Writer<'a> {
         self.write_esd_record(&pr, name)
     }
 
-    fn write_section(&mut self, section: &Section<'_>, section_id: SectionId) -> Result<u32> {
-        let name = &encode_name(&section.name)?;
-
-        let (namespace, attrs) = match section.kind {
-            SectionKind::Text => (goff::ESD_NS_NORMAL_NAME, code_attrs()),
-            SectionKind::Data => (goff::ESD_NS_NORMAL_NAME, data_attrs()),
-            SectionKind::ReadOnlyData => (goff::ESD_NS_NORMAL_NAME, readonly_data_attrs()),
-            SectionKind::Debug => (goff::ESD_NS_PARTS, debug_attrs()),
-            _ => {
-                return Err(Error(format!(
-                    "Unsupported section kind {:?}",
-                    section.kind
-                )));
-            }
+    fn write_section(
+        &mut self,
+        section: &Section<'_>,
+        section_id: SectionId,
+        flags: SectionFlags,
+    ) -> Result<u32> {
+        let SectionFlags::Goff {
+            flags,
+            fill_byte_value,
+            namespace,
+            behavioral_attributes,
+        } = flags
+        else {
+            return Err(Error(format!(
+                "unimplemented section `{}` kind {:?}",
+                section.name().unwrap_or(""),
+                section.kind,
+            )));
         };
 
+        let name = &encode_name(&section.name)?;
         let mut ed = self.get_esd_record(goff::ESD_ST_ED, namespace, self.cu_esdid);
         ed.length = U32::new(BE, section.data.len() as u32);
-        ed.flags = goff::ESD_SF_FILL_BYTE_PRESENCE;
-        ed.behavioral_attributes = attrs;
+        ed.flags = flags;
+        ed.fill_byte_value = fill_byte_value;
+        ed.behavioral_attributes = behavioral_attributes;
         let ed_esdid = self.write_esd_record(&ed, name);
         self.section_esdid[section_id.0] = ed_esdid;
 

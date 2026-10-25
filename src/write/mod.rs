@@ -360,6 +360,8 @@ impl<'a> Object<'a> {
             BinaryFormat::MachO => self.macho_section_flags(section),
             #[cfg(feature = "xcoff")]
             BinaryFormat::Xcoff => self.xcoff_section_flags(section),
+            #[cfg(feature = "goff")]
+            BinaryFormat::Goff => self.goff_section_flags(section),
             _ => SectionFlags::None,
         }
     }
