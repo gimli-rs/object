@@ -610,21 +610,44 @@ impl<'a> Writer<'a> {
             return Err(Error("invalid relocation flags".into()));
         };
 
-        // Map symbol to R-pointer
+        if reloc.subtractor.is_some() && flags.reference_type() == goff::RLD_RT_RELATIVE_IMMEDIATE {
+            // Binder only supports RI instructions with one external symbol in their operands.
+            return Err(Error(format!(
+                "unsupported relocation subtractor {:?}",
+                reloc
+            )));
+        }
+
         let r_pointer = self.symbol_esdid[reloc.symbol.0];
         if r_pointer == 0 {
             return Err(Error("Unsupported relocation symbol for GOFF".into()));
         }
-        let referent_type = self.symbol_referent[reloc.symbol.0];
-        let flags = flags.with_referent_type(referent_type);
-
-        // Add to pending relocations
+        let flags = flags.with_referent_type(self.symbol_referent[reloc.symbol.0]);
         self.relocations.push(goff::Relocation {
             flags,
             r_pointer,
             p_pointer,
             offset: reloc.offset,
         });
+
+        if let Some(subtractor) = reloc.subtractor {
+            let r_pointer = self.symbol_esdid[subtractor.0];
+            if r_pointer == 0 {
+                return Err(Error(
+                    "Unsupported relocation subtractor symbol for GOFF".into(),
+                ));
+            }
+            let flags = flags
+                .with_referent_type(self.symbol_referent[subtractor.0])
+                .with_action(goff::RLD_ACT_SUBTRACT)
+                .with_fetch_store(goff::RLD_FS_FETCH);
+            self.relocations.push(goff::Relocation {
+                flags,
+                r_pointer,
+                p_pointer,
+                offset: reloc.offset,
+            });
+        }
 
         Ok(())
     }
@@ -684,7 +707,8 @@ impl<'a> Writer<'a> {
             return;
         }
 
-        // Sort relocations by P-pointer, then offset for better compression
+        // Sort relocations by P-pointer, then offset for better compression.
+        // This must be a stable sort to keep subtractor items after their primary item.
         relocations.sort_by_key(|r| (r.p_pointer, r.offset));
 
         let mut rld_data = Vec::new();

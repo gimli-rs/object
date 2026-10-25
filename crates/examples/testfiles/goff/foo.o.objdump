@@ -23,7 +23,7 @@ Symbols
 11: Symbol { name: "bar", address: 60, size: 0, kind: Text, section: Section(SectionIndex(1)), scope: Linkage, weak: false, flags: Goff { symbol_type: ESD_ST_LD, flags: 0, namespace: ESD_NS_NORMAL_NAME, behavioral_attributes: AMODE_64 | RMODE_UNSPEC | TXT_RS_BYTE | ESD_BA_CONCATENATE | TASK_UNSPEC | EXEC_CODE | ESD_DSS_NO_WARNING | ESD_BST_STRONG | LOAD_INITIAL | ESD_BSC_LIBRARY | XPLINK | ALIGN_BYTE } }
 
 C_CODE64 relocations
-(4, Relocation { kind: Absolute, encoding: Generic, size: 20, target: Symbol(SymbolIndex(9)), subtractor: SymbolIndex(5), addend: 0, implicit_addend: true, flags: Goff { flags: RLD_RT_ADDRESS | RLD_RO_LABEL | RLD_ACT_SUBTRACT | RLD_FS_FETCH | BYTE_LENGTH(4) } })
+(4, Relocation { kind: Absolute, encoding: Generic, size: 20, target: Symbol(SymbolIndex(9)), subtractor: SymbolIndex(5), addend: 0, implicit_addend: true, flags: Goff { flags: SAME_P_ID | SAME_OFFSET | RLD_RT_ADDRESS | RLD_RO_LABEL | RLD_ACT_ADD | RLD_FS_FETCH | BYTE_LENGTH(4) } })
 
 C_@@QPPA2 relocations
 (0, Relocation { kind: Absolute, encoding: Generic, size: 40, target: Symbol(SymbolIndex(5)), subtractor: SymbolIndex(9), addend: 0, implicit_addend: true, flags: Goff { flags: RLD_RT_ADDRESS | RLD_RO_LABEL | RLD_ACT_ADD | RLD_FS_FETCH | BYTE_LENGTH(8) } })

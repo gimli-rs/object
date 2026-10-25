@@ -47,18 +47,14 @@ where
         self.relocations = relocations.iter();
     }
 
-    fn map_kind(
-        &self,
-        flags: &goff::RelocationFlags,
-        subtractor: bool,
-    ) -> (RelocationKind, RelocationEncoding) {
+    fn map_kind(&self, flags: &goff::RelocationFlags) -> (RelocationKind, RelocationEncoding) {
         use RelocationEncoding as E;
         use RelocationKind as K;
 
         let unknown = (K::Unknown, E::Unknown);
         // Can only represent addition or subtraction pairs and
         // fields that start on a byte boundary.
-        if flags.action() != goff::RLD_ACT_ADD && !subtractor || flags.bit_offset() != 0 {
+        if flags.action() != goff::RLD_ACT_ADD || flags.bit_offset() != 0 {
             return unknown;
         }
         match flags.reference_type() {
@@ -71,9 +67,12 @@ where
         }
     }
 
-    fn is_subtractor_pair(a: &goff::Relocation, b: &goff::Relocation) -> bool {
+    fn subtractor_pair(
+        a: &'file goff::Relocation,
+        b: &'file goff::Relocation,
+    ) -> Option<(&'file goff::Relocation, &'file goff::Relocation)> {
         let actions = (a.flags.action(), b.flags.action());
-        (actions == (goff::RLD_ACT_ADD, goff::RLD_ACT_SUBTRACT)
+        if (actions == (goff::RLD_ACT_ADD, goff::RLD_ACT_SUBTRACT)
             || actions == (goff::RLD_ACT_SUBTRACT, goff::RLD_ACT_ADD))
             && b.flags.fetch_store() == goff::RLD_FS_FETCH
             && a.offset == b.offset
@@ -81,6 +80,15 @@ where
             && a.flags.byte_length() == b.flags.byte_length()
             && a.flags.bit_length() == b.flags.bit_length()
             && a.flags.bit_offset() == b.flags.bit_offset()
+        {
+            if actions.0 == goff::RLD_ACT_ADD {
+                Some((a, b))
+            } else {
+                Some((b, a))
+            }
+        } else {
+            None
+        }
     }
 }
 
@@ -100,22 +108,21 @@ where
 
             let mut target = SymbolIndex(goff_reloc.r_pointer as usize);
             let mut subtractor = None;
+            let mut flags = goff_reloc.flags;
             if let Some(next) = self.relocations.as_slice().first() {
-                if Self::is_subtractor_pair(goff_reloc, next) {
+                if let Some((add, sub)) = Self::subtractor_pair(goff_reloc, next) {
                     self.relocations.next();
-                    if goff_reloc.flags.action() == goff::RLD_ACT_SUBTRACT {
-                        subtractor = Some(target);
-                        target = SymbolIndex(next.r_pointer as usize);
-                    } else {
-                        subtractor = Some(SymbolIndex(next.r_pointer as usize));
-                    }
+                    target = SymbolIndex(add.r_pointer as usize);
+                    subtractor = Some(SymbolIndex(sub.r_pointer as usize));
+                    // Use fetch/store of the relocation that appeared first.
+                    flags = add.flags.with_fetch_store(goff_reloc.flags.fetch_store());
                 }
             }
 
             let offset = u64::from(self.offset).wrapping_add(goff_reloc.offset);
-            let (kind, encoding) = self.map_kind(&goff_reloc.flags, subtractor.is_some());
+            let (kind, encoding) = self.map_kind(&flags);
             let size = u8::try_from(goff_reloc.flags.total_bit_width()).unwrap_or(0);
-            let implicit_addend = goff_reloc.flags.fetch_store() == goff::RLD_FS_FETCH;
+            let implicit_addend = flags.fetch_store() == goff::RLD_FS_FETCH;
 
             let relocation = Relocation {
                 kind,
@@ -125,9 +132,7 @@ where
                 subtractor,
                 addend: 0,
                 implicit_addend,
-                flags: crate::read::RelocationFlags::Goff {
-                    flags: goff_reloc.flags,
-                },
+                flags: crate::read::RelocationFlags::Goff { flags },
             };
 
             return Some((offset, relocation));

@@ -700,8 +700,8 @@ impl<'a> Object<'a> {
     /// and defined (if applicable).
     ///
     /// This is like [`Self::add_relocation`], but the relocation operation
-    /// calculates the difference of two symbols. Currently, only some Mach-O
-    /// targets support this.
+    /// calculates the difference of two symbols. Currently, only GOFF and some
+    /// Mach-O targets support this.
     pub fn add_relocation_with_subtractor(
         &mut self,
         section: SectionId,
@@ -709,7 +709,7 @@ impl<'a> Object<'a> {
         subtractor: Option<SymbolId>,
     ) -> Result<()> {
         if let Some(subtractor) = subtractor {
-            if self.format != BinaryFormat::MachO {
+            if !matches!(self.format, BinaryFormat::Goff | BinaryFormat::MachO) {
                 return Err(Error(format!(
                     "unsupported relocation subtractor {:?} for {:?}",
                     subtractor, relocation,
