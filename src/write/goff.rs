@@ -30,17 +30,8 @@ impl<'a> Object<'a> {
 
         // Process sections
         for (section_index, section) in self.sections.iter().enumerate() {
-            let section_id = SectionId(section_index);
-
-            // Write ED for section
             let flags = self.section_flags(section);
-            let ed_esdid = writer.write_section(section, section_id, flags)?;
-
-            // Write section data if present
-            if !section.data.is_empty() {
-                let record_style = writer.select_txt_record_style(section);
-                writer.write_text(ed_esdid, &section.data, record_style);
-            }
+            writer.write_section(section, SectionId(section_index), flags)?;
         }
 
         for (symbol_index, symbol) in self.symbols.iter().enumerate() {
@@ -368,7 +359,7 @@ impl<'a> Writer<'a> {
         section: &Section<'_>,
         section_id: SectionId,
         flags: SectionFlags,
-    ) -> Result<u32> {
+    ) -> Result<()> {
         let SectionFlags::Goff {
             flags,
             fill_byte_value,
@@ -392,7 +383,11 @@ impl<'a> Writer<'a> {
         let ed_esdid = self.write_esd_record(&ed, name);
         self.section_esdid[section_id.0] = ed_esdid;
 
-        Ok(ed_esdid)
+        if !section.data.is_empty() {
+            let record_style = behavioral_attributes.text_record_style();
+            self.write_text(ed_esdid, &section.data, record_style);
+        }
+        Ok(())
     }
 
     /// Write a compilation unit SD.
@@ -467,7 +462,7 @@ impl<'a> Writer<'a> {
         }
     }
 
-    fn write_text(&mut self, esdid: u32, mut data: &[u8], record_style: u8) {
+    fn write_text(&mut self, esdid: u32, mut data: &[u8], record_style: goff::TextRecordStyle) {
         let mut offset = 0_usize;
         while !data.is_empty() {
             let logical_write_len = data.len().min(MAX_LOGICAL_LENGTH);
@@ -476,7 +471,7 @@ impl<'a> Writer<'a> {
 
             let mut record = goff::TextRecord {
                 ptv,
-                record_style: goff::TextRecordStyle(record_style),
+                record_style,
                 element_esdid: U32::new(BE, esdid),
                 reserved1: U32::new(BE, 0),
                 offset: U32::new(BE, offset as u32),
@@ -496,12 +491,6 @@ impl<'a> Writer<'a> {
             offset += logical_write_len;
             data = &data[logical_write_len..];
         }
-    }
-
-    /// Select the appropriate TXT record style based on section properties.
-    fn select_txt_record_style(&self, _section: &Section<'_>) -> u8 {
-        // Default to byte-style for all sections
-        goff::TXT_RS_BYTE.0
     }
 
     fn write_symbol(&mut self, symbol: &Symbol, symbol_id: SymbolId) -> Result<()> {
