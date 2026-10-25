@@ -374,12 +374,21 @@ impl<'a> Writer<'a> {
             )));
         };
 
+        let alignment = goff::Alignment(section.align.trailing_zeros() as u8);
+        if !section.align.is_power_of_two() || alignment > goff::ALIGN_4KB {
+            return Err(Error(format!(
+                "invalid section `{}` align {}",
+                section.name().unwrap_or(""),
+                section.align
+            )));
+        }
+
         let name = &encode_name(&section.name)?;
         let mut ed = self.get_esd_record(goff::ESD_ST_ED, namespace, self.cu_esdid);
-        ed.length = U32::new(BE, section.data.len() as u32);
+        ed.length = U32::new(BE, section.size as u32);
         ed.flags = flags;
         ed.fill_byte_value = fill_byte_value;
-        ed.behavioral_attributes = behavioral_attributes;
+        ed.behavioral_attributes = behavioral_attributes.with_alignment(alignment);
         let ed_esdid = self.write_esd_record(&ed, name);
         self.section_esdid[section_id.0] = ed_esdid;
 
@@ -745,14 +754,11 @@ fn code_attrs() -> goff::BehavioralAttributes {
     default_attrs()
         .with_read_only(true)
         .with_executable(goff::EXEC_CODE)
-        .with_alignment(goff::ALIGN_DOUBLEWORD)
 }
 
 /// Create attributes suitable for data sections.
 fn data_attrs() -> goff::BehavioralAttributes {
-    default_attrs()
-        .with_executable(goff::EXEC_DATA)
-        .with_alignment(goff::ALIGN_DOUBLEWORD)
+    default_attrs().with_executable(goff::EXEC_DATA)
 }
 
 /// Create attributes suitable for read-only data sections.
@@ -760,7 +766,6 @@ fn readonly_data_attrs() -> goff::BehavioralAttributes {
     default_attrs()
         .with_read_only(true)
         .with_executable(goff::EXEC_DATA)
-        .with_alignment(goff::ALIGN_DOUBLEWORD)
 }
 
 /// Create attributes suitable for debug sections.

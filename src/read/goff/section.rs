@@ -319,22 +319,11 @@ where
     }
 
     fn align(&self) -> u64 {
-        match self.symbol.record().behavioral_attributes.alignment() {
-            goff::ALIGN_BYTE => 1,
-            goff::ALIGN_HALFWORD => 2,
-            goff::ALIGN_FULLWORD => 4,
-            goff::ALIGN_DOUBLEWORD => 8,
-            goff::ALIGN_QUADWORD => 16,
-            goff::ALIGN_32BYTE => 32,
-            goff::ALIGN_64BYTE => 64,
-            goff::ALIGN_128BYTE => 128,
-            goff::ALIGN_256BYTE => 256,
-            goff::ALIGN_512BYTE => 512,
-            goff::ALIGN_1024BYTE => 1024,
-            goff::ALIGN_2KB => 2048,
-            goff::ALIGN_4KB => 4096,
-            _ => 1, // Default to byte alignment
+        let alignment = self.symbol.record().behavioral_attributes.alignment();
+        if alignment > goff::ALIGN_4KB {
+            return 1; // Default to byte alignment
         }
+        1 << alignment.0
     }
 
     fn file_range(&self) -> Option<(u64, u64)> {
