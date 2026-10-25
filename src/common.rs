@@ -658,8 +658,14 @@ pub enum SectionFlags {
     /// GOFF section flags.
     #[cfg(feature = "goff")]
     Goff {
-        /// Behavioral attributes of the element definition.
-        flags: crate::goff::BehavioralAttributes,
+        /// `flags` field in the GOFF ESD record.
+        flags: crate::goff::SymbolFlags,
+        /// `fill_byte_value` field in the GOFF ESD record.
+        fill_byte_value: u8,
+        /// `namespace` field in the GOFF ESD record.
+        namespace: crate::goff::SymbolNamespace,
+        /// `behavioral_attributes` field in the GOFF ESD record.
+        behavioral_attributes: crate::goff::BehavioralAttributes,
     },
 }
 

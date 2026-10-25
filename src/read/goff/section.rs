@@ -478,8 +478,12 @@ where
     }
 
     fn flags(&self) -> SectionFlags {
+        let record = self.symbol.record();
         SectionFlags::Goff {
-            flags: self.symbol.record().behavioral_attributes,
+            flags: record.flags,
+            fill_byte_value: record.fill_byte_value,
+            namespace: record.namespace,
+            behavioral_attributes: record.behavioral_attributes,
         }
     }
 }
