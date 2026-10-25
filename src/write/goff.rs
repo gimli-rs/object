@@ -288,32 +288,13 @@ impl<'a> Writer<'a> {
         // Emit parent C_WSA64 ED symbol (data section).
         let mut ed = self.get_esd_record(goff::ESD_ST_ED, goff::ESD_NS_PARTS, self.cu_esdid);
         ed.flags = goff::ESD_SF_FILL_BYTE_PRESENCE;
-
-        let ed_attrs = data_attrs()
+        ed.behavioral_attributes = default_attrs()
             .with_binding_algorithm(goff::ESD_BA_MERGE)
             .with_executable(goff::EXEC_DATA)
             .with_alignment(goff::ALIGN_HALFWORD);
-        ed.behavioral_attributes = ed_attrs;
         let ed_esdid = self.write_esd_record(&ed, &EBCDIC_C_WSA64);
         self.wsa_esdid = Some(ed_esdid);
         ed_esdid
-    }
-
-    fn write_debug_section_symbol(&mut self, section_name: &EbcdicStr, section_length: u32) -> u32 {
-        // Emit ED symbol for debug section.
-        let mut ed = self.get_esd_record(goff::ESD_ST_ED, goff::ESD_NS_PARTS, self.cu_esdid);
-        ed.flags = goff::ESD_SF_FILL_BYTE_PRESENCE;
-        ed.length = U32::new(BE, section_length);
-
-        // Debug sections are read-only data that must be loaded
-        let attrs = readonly_data_attrs()
-            .with_binding_algorithm(goff::ESD_BA_MERGE)
-            .with_executable(goff::EXEC_DATA)
-            .with_loading_behavior(goff::LOAD_INITIAL)
-            .with_alignment(goff::ALIGN_BYTE);
-        ed.behavioral_attributes = attrs;
-
-        self.write_esd_record(&ed, section_name)
     }
 
     /// Write an SD (Section Definition) record.
@@ -327,23 +308,6 @@ impl<'a> Writer<'a> {
         );
         sd.behavioral_attributes = attributes;
         self.write_esd_record(&sd, name)
-    }
-
-    /// Write an ED (Element Definition) record.
-    ///
-    /// ED records define elements (code/data sections).
-    fn write_ed(
-        &mut self,
-        name: &EbcdicStr,
-        parent_esdid: u32,
-        length: u32,
-        attributes: goff::BehavioralAttributes,
-    ) -> u32 {
-        let mut ed = self.get_esd_record(goff::ESD_ST_ED, goff::ESD_NS_NORMAL_NAME, parent_esdid);
-        ed.length = U32::new(BE, length);
-        ed.flags = goff::ESD_SF_FILL_BYTE_PRESENCE;
-        ed.behavioral_attributes = attributes;
-        self.write_esd_record(&ed, name)
     }
 
     /// Write an LD (Label Definition) record.
@@ -384,24 +348,11 @@ impl<'a> Writer<'a> {
     fn write_section(&mut self, section: &Section<'_>, section_id: SectionId) -> Result<u32> {
         let name = &encode_name(&section.name)?;
 
-        // Determine section attributes and create ED based on kind
-        let ed_esdid = match section.kind {
-            SectionKind::Text => {
-                self.write_ed(name, self.cu_esdid, section.data.len() as u32, code_attrs())
-            }
-            SectionKind::Data => {
-                self.write_ed(name, self.cu_esdid, section.data.len() as u32, data_attrs())
-            }
-            SectionKind::ReadOnlyData => self.write_ed(
-                name,
-                self.cu_esdid,
-                section.data.len() as u32,
-                readonly_data_attrs(),
-            ),
-            SectionKind::Debug => {
-                // Debug sections need special handling with ESD_NS_PARTS namespace
-                self.write_debug_section_symbol(name, section.data.len() as u32)
-            }
+        let (namespace, attrs) = match section.kind {
+            SectionKind::Text => (goff::ESD_NS_NORMAL_NAME, code_attrs()),
+            SectionKind::Data => (goff::ESD_NS_NORMAL_NAME, data_attrs()),
+            SectionKind::ReadOnlyData => (goff::ESD_NS_NORMAL_NAME, readonly_data_attrs()),
+            SectionKind::Debug => (goff::ESD_NS_PARTS, debug_attrs()),
             _ => {
                 return Err(Error(format!(
                     "Unsupported section kind {:?}",
@@ -410,6 +361,11 @@ impl<'a> Writer<'a> {
             }
         };
 
+        let mut ed = self.get_esd_record(goff::ESD_ST_ED, namespace, self.cu_esdid);
+        ed.length = U32::new(BE, section.data.len() as u32);
+        ed.flags = goff::ESD_SF_FILL_BYTE_PRESENCE;
+        ed.behavioral_attributes = attrs;
+        let ed_esdid = self.write_esd_record(&ed, name);
         self.section_esdid[section_id.0] = ed_esdid;
 
         Ok(ed_esdid)
@@ -792,6 +748,15 @@ fn readonly_data_attrs() -> goff::BehavioralAttributes {
         .with_read_only(true)
         .with_executable(goff::EXEC_DATA)
         .with_alignment(goff::ALIGN_DOUBLEWORD)
+}
+
+/// Create attributes suitable for debug sections.
+fn debug_attrs() -> goff::BehavioralAttributes {
+    default_attrs()
+        .with_read_only(true)
+        .with_executable(goff::EXEC_DATA)
+        .with_binding_algorithm(goff::ESD_BA_MERGE)
+        .with_loading_behavior(goff::LOAD_INITIAL)
 }
 
 fn encode_name(name: &[u8]) -> Result<EbcdicString> {
