@@ -771,10 +771,8 @@ fn readonly_data_attrs() -> goff::BehavioralAttributes {
 /// Create attributes suitable for debug sections.
 fn debug_attrs() -> goff::BehavioralAttributes {
     default_attrs()
-        .with_read_only(true)
-        .with_executable(goff::EXEC_DATA)
-        .with_binding_algorithm(goff::ESD_BA_MERGE)
-        .with_loading_behavior(goff::LOAD_INITIAL)
+        .with_binding_algorithm(goff::ESD_BA_CONCATENATE)
+        .with_loading_behavior(goff::LOAD_NONE)
 }
 
 fn encode_name(name: &[u8]) -> Result<EbcdicString> {
