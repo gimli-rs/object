@@ -307,10 +307,14 @@ impl<'a> Writer<'a> {
 
     // Write module header ("HDR") record.
     fn write_hdr(&mut self) {
+        let archlvl = match self.object.flags {
+            FileFlags::Goff { archlvl, .. } => archlvl,
+            _ => 1,
+        };
         let header = goff::HeaderRecord {
             ptv: goff::HDR_PREFIX,
             reserved1: [0u8; 45],
-            archlvl: U32::new(BE, 1),
+            archlvl: U32::new(BE, archlvl),
             reserved2: [0u8; 28],
         };
         self.logical_record_count += 1;
