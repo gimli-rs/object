@@ -421,29 +421,76 @@ impl<'a> Writer<'a> {
     }
 
     fn write_symbol(&mut self, symbol: &Symbol, symbol_id: SymbolId) -> Result<()> {
-        let (esdid, referent) = match (symbol.kind, symbol.section) {
+        let (symbol_type, namespace, parent, offset, attrs, referent);
+        match (symbol.kind, symbol.section) {
             (SymbolKind::File, _) => return Ok(()),
             (SymbolKind::Section, SymbolSection::Section(section_id)) => {
-                (self.section_esdid[section_id.0], goff::RLD_RO_ELEMENT)
+                self.symbol_esdid[symbol_id.0] = self.section_esdid[section_id.0];
+                self.symbol_referent[symbol_id.0] = goff::RLD_RO_ELEMENT;
+                return Ok(());
             }
             (
                 SymbolKind::Text | SymbolKind::Data | SymbolKind::Label,
                 SymbolSection::Section(section_id),
             ) => {
-                let ed_esdid = self.section_esdid[section_id.0];
-                (
-                    self.write_defined_symbol(symbol, ed_esdid)?,
-                    goff::RLD_RO_LABEL,
-                )
+                let scope = match symbol.scope {
+                    SymbolScope::Compilation => goff::ESD_BSC_SECTION,
+                    SymbolScope::Linkage => goff::ESD_BSC_LIBRARY,
+                    SymbolScope::Dynamic => goff::ESD_BSC_IMPORT_EXPORT,
+                    SymbolScope::Unknown => {
+                        return Err(Error(format!("Unsupported symbol scope: {:?}", symbol)));
+                    }
+                };
+                symbol_type = goff::ESD_ST_LD;
+                namespace = goff::ESD_NS_NORMAL_NAME;
+                parent = self.section_esdid[section_id.0];
+                offset = symbol.value as u32;
+                attrs = default_attrs().with_binding_scope(scope);
+                referent = goff::RLD_RO_LABEL;
             }
-            (SymbolKind::Text, SymbolSection::Undefined) => (
-                self.write_undefined_symbol(symbol, true)?,
-                goff::RLD_RO_LABEL,
-            ),
-            (SymbolKind::Data | SymbolKind::Unknown, SymbolSection::Undefined) => (
-                self.write_undefined_symbol(symbol, false)?,
-                goff::RLD_RO_PART,
-            ),
+            (SymbolKind::Text, SymbolSection::Undefined) => {
+                let scope = if symbol.scope == SymbolScope::Dynamic {
+                    goff::ESD_BSC_IMPORT_EXPORT
+                } else {
+                    goff::ESD_BSC_LIBRARY
+                };
+                let strength = if symbol.weak {
+                    goff::ESD_BST_WEAK
+                } else {
+                    goff::ESD_BST_STRONG
+                };
+                symbol_type = goff::ESD_ST_ER;
+                namespace = goff::ESD_NS_NORMAL_NAME;
+                parent = self.cu_esdid;
+                offset = 0;
+                attrs = default_attrs()
+                    .with_binding_scope(scope)
+                    .with_binding_strength(strength)
+                    .with_executable(goff::EXEC_CODE);
+                referent = goff::RLD_RO_LABEL;
+            }
+            (SymbolKind::Data | SymbolKind::Unknown, SymbolSection::Undefined) => {
+                let scope = if symbol.scope == SymbolScope::Dynamic {
+                    goff::ESD_BSC_IMPORT_EXPORT
+                } else {
+                    goff::ESD_BSC_LIBRARY
+                };
+                let strength = if symbol.weak {
+                    goff::ESD_BST_WEAK
+                } else {
+                    goff::ESD_BST_STRONG
+                };
+                symbol_type = goff::ESD_ST_PR;
+                namespace = goff::ESD_NS_PARTS;
+                parent = self.write_wsa_symbol();
+                offset = 0;
+                attrs = default_attrs()
+                    .with_binding_scope(scope)
+                    .with_binding_strength(strength)
+                    .with_executable(goff::EXEC_DATA)
+                    .with_alignment(goff::ALIGN_HALFWORD);
+                referent = goff::RLD_RO_PART;
+            }
             _ => {
                 return Err(Error(format!(
                     "Unsupported symbol kind/section: {:?}",
@@ -451,68 +498,17 @@ impl<'a> Writer<'a> {
                 )));
             }
         };
+
+        let name = &encode_name(&symbol.name)?;
+
+        let mut esd = self.get_esd_record(symbol_type, namespace, parent);
+        esd.offset = U32::new(BE, offset);
+        esd.behavioral_attributes = attrs;
+        let esdid = self.write_esd_record(&esd, name);
+
         self.symbol_esdid[symbol_id.0] = esdid;
         self.symbol_referent[symbol_id.0] = referent;
         Ok(())
-    }
-
-    /// Write a defined symbol with proper hierarchy (LD or PR).
-    fn write_defined_symbol(&mut self, symbol: &Symbol, ed_esdid: u32) -> Result<u32> {
-        // Determine binding scope based on symbol properties
-        let scope = match symbol.scope {
-            SymbolScope::Compilation => goff::ESD_BSC_SECTION,
-            SymbolScope::Linkage => goff::ESD_BSC_LIBRARY,
-            SymbolScope::Dynamic => goff::ESD_BSC_IMPORT_EXPORT,
-            SymbolScope::Unknown => {
-                return Err(Error(format!("Unsupported symbol scope: {:?}", symbol)));
-            }
-        };
-
-        let name = &encode_name(&symbol.name)?;
-
-        // Write LD (Label Definition) for the symbol
-        let mut ld = self.get_esd_record(goff::ESD_ST_LD, goff::ESD_NS_NORMAL_NAME, ed_esdid);
-        ld.offset = U32::new(BE, symbol.value as u32);
-        ld.behavioral_attributes = default_attrs().with_binding_scope(scope);
-        let ld_esdid = self.write_esd_record(&ld, name);
-
-        Ok(ld_esdid)
-    }
-
-    /// Write an undefined symbol (external reference).
-    fn write_undefined_symbol(&mut self, symbol: &Symbol, is_code: bool) -> Result<u32> {
-        let scope = if symbol.scope == SymbolScope::Dynamic {
-            goff::ESD_BSC_IMPORT_EXPORT
-        } else {
-            goff::ESD_BSC_LIBRARY
-        };
-        let strength = if symbol.weak {
-            goff::ESD_BST_WEAK
-        } else {
-            goff::ESD_BST_STRONG
-        };
-        let attrs = default_attrs()
-            .with_binding_scope(scope)
-            .with_binding_strength(strength);
-
-        let name = &encode_name(&symbol.name)?;
-
-        let esdid = if is_code {
-            let mut er =
-                self.get_esd_record(goff::ESD_ST_ER, goff::ESD_NS_NORMAL_NAME, self.cu_esdid);
-            er.behavioral_attributes = attrs.with_executable(goff::EXEC_CODE);
-            self.write_esd_record(&er, name)
-        } else {
-            let ed_esdid = self.write_wsa_symbol();
-
-            let mut pr = self.get_esd_record(goff::ESD_ST_PR, goff::ESD_NS_PARTS, ed_esdid);
-            pr.behavioral_attributes = attrs
-                .with_executable(goff::EXEC_DATA)
-                .with_alignment(goff::ALIGN_HALFWORD);
-            self.write_esd_record(&pr, name)
-        };
-
-        Ok(esdid)
     }
 
     /// Add a relocation to the pending list.
