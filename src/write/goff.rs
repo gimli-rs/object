@@ -35,7 +35,8 @@ impl<'a> Object<'a> {
         }
 
         for (symbol_index, symbol) in self.symbols.iter().enumerate() {
-            writer.write_symbol(symbol, SymbolId(symbol_index))?;
+            let flags = self.symbol_flags(symbol);
+            writer.write_symbol(symbol, SymbolId(symbol_index), flags)?;
         }
 
         // Collect relocations for all sections after all symbols are written.
@@ -114,6 +115,70 @@ impl<'a> Object<'a> {
             fill_byte_value: 0,
             namespace,
             behavioral_attributes,
+        }
+    }
+
+    pub(crate) fn goff_symbol_flags(&self, symbol: &Symbol) -> SymbolFlags<SectionId, SymbolId> {
+        let (symbol_type, namespace, attrs);
+        match (symbol.kind, symbol.section) {
+            (
+                SymbolKind::Text | SymbolKind::Data | SymbolKind::Label,
+                SymbolSection::Section(_),
+            ) => {
+                let scope = match symbol.scope {
+                    SymbolScope::Compilation => goff::ESD_BSC_SECTION,
+                    SymbolScope::Linkage => goff::ESD_BSC_LIBRARY,
+                    SymbolScope::Dynamic => goff::ESD_BSC_IMPORT_EXPORT,
+                    SymbolScope::Unknown => return SymbolFlags::None,
+                };
+                symbol_type = goff::ESD_ST_LD;
+                namespace = goff::ESD_NS_NORMAL_NAME;
+                attrs = default_attrs().with_binding_scope(scope);
+            }
+            (SymbolKind::Text, SymbolSection::Undefined) => {
+                let scope = if symbol.scope == SymbolScope::Dynamic {
+                    goff::ESD_BSC_IMPORT_EXPORT
+                } else {
+                    goff::ESD_BSC_LIBRARY
+                };
+                let strength = if symbol.weak {
+                    goff::ESD_BST_WEAK
+                } else {
+                    goff::ESD_BST_STRONG
+                };
+                symbol_type = goff::ESD_ST_ER;
+                namespace = goff::ESD_NS_NORMAL_NAME;
+                attrs = default_attrs()
+                    .with_binding_scope(scope)
+                    .with_binding_strength(strength)
+                    .with_executable(goff::EXEC_CODE);
+            }
+            (SymbolKind::Data | SymbolKind::Unknown, SymbolSection::Undefined) => {
+                let scope = if symbol.scope == SymbolScope::Dynamic {
+                    goff::ESD_BSC_IMPORT_EXPORT
+                } else {
+                    goff::ESD_BSC_LIBRARY
+                };
+                let strength = if symbol.weak {
+                    goff::ESD_BST_WEAK
+                } else {
+                    goff::ESD_BST_STRONG
+                };
+                symbol_type = goff::ESD_ST_PR;
+                namespace = goff::ESD_NS_PARTS;
+                attrs = default_attrs()
+                    .with_binding_scope(scope)
+                    .with_binding_strength(strength)
+                    .with_executable(goff::EXEC_DATA)
+                    .with_alignment(goff::ALIGN_HALFWORD);
+            }
+            _ => return SymbolFlags::None,
+        };
+        SymbolFlags::Goff {
+            symbol_type,
+            flags: goff::SymbolFlags(0),
+            namespace,
+            behavioral_attributes: attrs,
         }
     }
 
@@ -420,8 +485,12 @@ impl<'a> Writer<'a> {
         }
     }
 
-    fn write_symbol(&mut self, symbol: &Symbol, symbol_id: SymbolId) -> Result<()> {
-        let (symbol_type, namespace, parent, offset, attrs, referent);
+    fn write_symbol(
+        &mut self,
+        symbol: &Symbol,
+        symbol_id: SymbolId,
+        symbol_flags: SymbolFlags<SectionId, SymbolId>,
+    ) -> Result<()> {
         match (symbol.kind, symbol.section) {
             (SymbolKind::File, _) => return Ok(()),
             (SymbolKind::Section, SymbolSection::Section(section_id)) => {
@@ -429,81 +498,56 @@ impl<'a> Writer<'a> {
                 self.symbol_referent[symbol_id.0] = goff::RLD_RO_ELEMENT;
                 return Ok(());
             }
-            (
-                SymbolKind::Text | SymbolKind::Data | SymbolKind::Label,
-                SymbolSection::Section(section_id),
-            ) => {
-                let scope = match symbol.scope {
-                    SymbolScope::Compilation => goff::ESD_BSC_SECTION,
-                    SymbolScope::Linkage => goff::ESD_BSC_LIBRARY,
-                    SymbolScope::Dynamic => goff::ESD_BSC_IMPORT_EXPORT,
-                    SymbolScope::Unknown => {
-                        return Err(Error(format!("Unsupported symbol scope: {:?}", symbol)));
-                    }
-                };
-                symbol_type = goff::ESD_ST_LD;
-                namespace = goff::ESD_NS_NORMAL_NAME;
+            _ => {}
+        }
+
+        let SymbolFlags::Goff {
+            symbol_type,
+            flags,
+            namespace,
+            behavioral_attributes,
+        } = symbol_flags
+        else {
+            return Err(Error(format!(
+                "unimplemented symbol `{}` kind {:?} scope {:?}",
+                symbol.name().unwrap_or(""),
+                symbol.kind,
+                symbol.scope,
+            )));
+        };
+
+        let (parent, offset, referent);
+        match (symbol_type, symbol.section) {
+            (goff::ESD_ST_LD, SymbolSection::Section(section_id)) => {
                 parent = self.section_esdid[section_id.0];
                 offset = symbol.value as u32;
-                attrs = default_attrs().with_binding_scope(scope);
                 referent = goff::RLD_RO_LABEL;
             }
-            (SymbolKind::Text, SymbolSection::Undefined) => {
-                let scope = if symbol.scope == SymbolScope::Dynamic {
-                    goff::ESD_BSC_IMPORT_EXPORT
-                } else {
-                    goff::ESD_BSC_LIBRARY
-                };
-                let strength = if symbol.weak {
-                    goff::ESD_BST_WEAK
-                } else {
-                    goff::ESD_BST_STRONG
-                };
-                symbol_type = goff::ESD_ST_ER;
-                namespace = goff::ESD_NS_NORMAL_NAME;
+            (goff::ESD_ST_ER, SymbolSection::Undefined) => {
                 parent = self.cu_esdid;
                 offset = 0;
-                attrs = default_attrs()
-                    .with_binding_scope(scope)
-                    .with_binding_strength(strength)
-                    .with_executable(goff::EXEC_CODE);
                 referent = goff::RLD_RO_LABEL;
             }
-            (SymbolKind::Data | SymbolKind::Unknown, SymbolSection::Undefined) => {
-                let scope = if symbol.scope == SymbolScope::Dynamic {
-                    goff::ESD_BSC_IMPORT_EXPORT
-                } else {
-                    goff::ESD_BSC_LIBRARY
-                };
-                let strength = if symbol.weak {
-                    goff::ESD_BST_WEAK
-                } else {
-                    goff::ESD_BST_STRONG
-                };
-                symbol_type = goff::ESD_ST_PR;
-                namespace = goff::ESD_NS_PARTS;
+            (goff::ESD_ST_PR, SymbolSection::Undefined) => {
                 parent = self.write_wsa_symbol();
                 offset = 0;
-                attrs = default_attrs()
-                    .with_binding_scope(scope)
-                    .with_binding_strength(strength)
-                    .with_executable(goff::EXEC_DATA)
-                    .with_alignment(goff::ALIGN_HALFWORD);
                 referent = goff::RLD_RO_PART;
             }
             _ => {
                 return Err(Error(format!(
-                    "Unsupported symbol kind/section: {:?}",
-                    symbol
+                    "unimplemented symbol `{}` type {:?}",
+                    symbol.name().unwrap_or(""),
+                    symbol_type,
                 )));
             }
-        };
+        }
 
         let name = &encode_name(&symbol.name)?;
 
         let mut esd = self.get_esd_record(symbol_type, namespace, parent);
         esd.offset = U32::new(BE, offset);
-        esd.behavioral_attributes = attrs;
+        esd.flags = flags;
+        esd.behavioral_attributes = behavioral_attributes;
         let esdid = self.write_esd_record(&esd, name);
 
         self.symbol_esdid[symbol_id.0] = esdid;

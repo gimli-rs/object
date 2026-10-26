@@ -494,6 +494,8 @@ impl<'a> Object<'a> {
             BinaryFormat::MachO => self.macho_symbol_flags(symbol),
             #[cfg(feature = "xcoff")]
             BinaryFormat::Xcoff => self.xcoff_symbol_flags(symbol),
+            #[cfg(feature = "goff")]
+            BinaryFormat::Goff => self.goff_symbol_flags(symbol),
             _ => SymbolFlags::None,
         }
     }
