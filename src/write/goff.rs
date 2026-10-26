@@ -509,6 +509,11 @@ impl<'a> Writer<'a> {
 
         let (parent, offset, referent);
         match (symbol_type, symbol.section) {
+            (goff::ESD_ST_SD, SymbolSection::None) => {
+                parent = 0;
+                offset = 0;
+                referent = goff::RLD_RO_LABEL;
+            }
             (goff::ESD_ST_LD, SymbolSection::Section(section_id)) => {
                 parent = self.section_esdid[section_id.0];
                 offset = symbol.value as u32;
