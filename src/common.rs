@@ -505,10 +505,6 @@ pub enum FileFlags {
     Goff {
         /// `archlvl` field in the GOFF file header.
         archlvl: u32,
-        /// `flags` field in the GOFF END record.
-        flags: Option<crate::goff::FileFlags>,
-        /// `amode` field in the GOFF END record.
-        amode: Option<crate::goff::Amode>,
     },
 }
 

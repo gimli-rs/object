@@ -75,6 +75,16 @@ where
             marker: PhantomData,
         })
     }
+
+    /// Get the raw GOFF HDR record.
+    pub fn goff_header(&self) -> &'data goff::HeaderRecord {
+        self.header
+    }
+
+    /// Get the raw GOFF END record and its continuation records.
+    pub fn goff_end(&self) -> LogicalRecord<'data, goff::EndRecord> {
+        self.end
+    }
 }
 
 impl<'data, R> read::private::Sealed for GoffFile<'data, R> where R: ReadRef<'data> {}
@@ -260,16 +270,8 @@ where
     }
 
     fn flags(&self) -> FileFlags {
-        let end = self.end.initial;
-        let (flags, amode) = if end.flags.entry() != goff::ENTRY_NONE {
-            (Some(end.flags), Some(end.amode))
-        } else {
-            (None, None)
-        };
         FileFlags::Goff {
             archlvl: self.header.archlvl.get(BE),
-            flags,
-            amode,
         }
     }
 }

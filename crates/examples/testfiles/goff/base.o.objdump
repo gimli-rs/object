@@ -1,7 +1,7 @@
 Format: Goff Big-endian 64-bit
 Kind: Relocatable
 Architecture: S390x
-Flags: Goff { archlvl: 1, flags: Some(ENTRY_BY_OFFSET), amode: Some(AMODE_ANY) }
+Flags: Goff { archlvl: 1 }
 Relative Address Base: 0
 Entry Address: 0
 0: Section { name: "C_CODE", address: 0, size: fc, align: 8, kind: Text, flags: Goff { flags: ESD_SF_FILL_BYTE_PRESENCE, fill_byte_value: 0, namespace: ESD_NS_NORMAL_NAME, behavioral_attributes: AMODE_ANY | RMODE_31 | TXT_RS_BYTE | ESD_BA_CONCATENATE | TASK_UNSPEC | READ_ONLY | EXEC_CODE | ESD_DSS_NO_WARNING | ESD_BST_STRONG | LOAD_INITIAL | ESD_BSC_UNSPEC | ALIGN_DOUBLEWORD } }
