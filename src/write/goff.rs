@@ -25,13 +25,15 @@ impl<'a> Object<'a> {
         let mut writer = Writer::new(buffer, self.symbols.len(), self.sections.len());
         writer.write_hdr();
 
-        // Write compilation unit SD
-        writer.cu_esdid = writer.write_compilation_unit(&EBCDIC_RUSTCU);
-
-        // Process sections
         for (section_index, section) in self.sections.iter().enumerate() {
+            let parent = self.goff_section_parent(section);
+            if let Some(parent) = parent {
+                let symbol = &self.symbols[parent.0];
+                let flags = self.symbol_flags(symbol);
+                writer.write_symbol(symbol, parent, flags)?;
+            }
             let flags = self.section_flags(section);
-            writer.write_section(section, SectionId(section_index), flags)?;
+            writer.write_section(section, SectionId(section_index), flags, parent)?;
         }
 
         for (symbol_index, symbol) in self.symbols.iter().enumerate() {
@@ -54,6 +56,14 @@ impl<'a> Object<'a> {
         writer.write_relocations();
         writer.write_end();
         Ok(())
+    }
+
+    fn goff_section_parent(&self, section: &Section<'_>) -> Option<SymbolId> {
+        let symbol = &self.symbols[section.symbol?.0];
+        let SymbolFlags::Goff { parent, .. } = symbol.flags else {
+            return None;
+        };
+        parent
     }
 
     /// Returns GOFF section info
@@ -174,6 +184,9 @@ impl<'a> Object<'a> {
             behavioral_attributes: attrs
                 .with_binding_scope(scope)
                 .with_binding_strength(strength),
+            // Parent is automatically set if needed.
+            parent: None,
+            ada: None,
         }
     }
 
@@ -251,7 +264,7 @@ struct Writer<'a> {
 
     next_esdid: u32,
     // ESD id for compile unit
-    cu_esdid: u32,
+    cu_esdid: Option<u32>,
     // ESD id for C_WSA64
     wsa_esdid: Option<u32>,
 
@@ -275,7 +288,7 @@ impl<'a> Writer<'a> {
             buffer,
 
             next_esdid: 1,
-            cu_esdid: 0,
+            cu_esdid: None,
             wsa_esdid: None,
             logical_record_count: 0,
             symbol_esdid: vec![0; symbol_count],
@@ -320,8 +333,9 @@ impl<'a> Writer<'a> {
         if let Some(wsa_esdid) = self.wsa_esdid {
             return wsa_esdid;
         }
+        let cu_esdid = self.write_compilation_unit();
         // Emit parent C_WSA64 ED symbol (data section).
-        let mut ed = self.get_esd_record(goff::ESD_ST_ED, goff::ESD_NS_PARTS, self.cu_esdid);
+        let mut ed = self.get_esd_record(goff::ESD_ST_ED, goff::ESD_NS_PARTS, cu_esdid);
         ed.flags = goff::ESD_SF_FILL_BYTE_PRESENCE;
         ed.behavioral_attributes = default_attrs()
             .with_binding_algorithm(goff::ESD_BA_MERGE)
@@ -337,6 +351,7 @@ impl<'a> Writer<'a> {
         section: &Section<'_>,
         section_id: SectionId,
         flags: SectionFlags,
+        parent_id: Option<SymbolId>,
     ) -> Result<()> {
         let SectionFlags::Goff {
             flags,
@@ -361,8 +376,13 @@ impl<'a> Writer<'a> {
             )));
         }
 
+        let parent = match parent_id {
+            Some(parent_id) => self.symbol_esdid[parent_id.0],
+            None => self.write_compilation_unit(),
+        };
+
         let name = &encode_name(&section.name)?;
-        let mut ed = self.get_esd_record(goff::ESD_ST_ED, namespace, self.cu_esdid);
+        let mut ed = self.get_esd_record(goff::ESD_ST_ED, namespace, parent);
         ed.length = U32::new(BE, section.size as u32);
         ed.flags = flags;
         ed.fill_byte_value = fill_byte_value;
@@ -374,11 +394,16 @@ impl<'a> Writer<'a> {
     }
 
     /// Write a compilation unit SD.
-    fn write_compilation_unit(&mut self, cu_name: &EbcdicStr) -> u32 {
+    fn write_compilation_unit(&mut self) -> u32 {
+        if let Some(cu_esdid) = self.cu_esdid {
+            return cu_esdid;
+        }
         let mut sd =
             self.get_esd_record(goff::ESD_ST_SD, goff::ESD_NS_PROGRAM_MANAGEMENT_BINDER, 0);
         sd.behavioral_attributes = default_attrs().with_binding_scope(goff::ESD_BSC_SECTION);
-        self.write_esd_record(&sd, cu_name)
+        let cu_esdid = self.write_esd_record(&sd, &EBCDIC_RUSTCU);
+        self.cu_esdid = Some(cu_esdid);
+        cu_esdid
     }
 
     fn get_esd_record(
@@ -492,6 +517,10 @@ impl<'a> Writer<'a> {
         symbol_id: SymbolId,
         symbol_flags: SymbolFlags<SectionId, SymbolId>,
     ) -> Result<()> {
+        if self.symbol_esdid[symbol_id.0] != 0 {
+            return Ok(());
+        }
+
         match (symbol.kind, symbol.section) {
             (SymbolKind::File, _) => return Ok(()),
             (SymbolKind::Section, SymbolSection::Section(section_id)) => {
@@ -507,6 +536,8 @@ impl<'a> Writer<'a> {
             flags,
             namespace,
             behavioral_attributes,
+            parent: parent_id,
+            ada,
         } = symbol_flags
         else {
             return Err(Error(format!(
@@ -539,13 +570,19 @@ impl<'a> Writer<'a> {
                 // TODO: record in section PRs for writing text
             }
             (goff::ESD_ST_ER, SymbolSection::Undefined) => {
-                parent = self.cu_esdid;
+                parent = match parent_id {
+                    Some(parent_id) => self.symbol_esdid[parent_id.0],
+                    None => self.write_compilation_unit(),
+                };
                 offset = 0;
                 length = 0;
                 referent = goff::RLD_RO_LABEL;
             }
             (goff::ESD_ST_PR, SymbolSection::Undefined) => {
-                parent = self.write_wsa_symbol();
+                parent = match parent_id {
+                    Some(parent_id) => self.symbol_esdid[parent_id.0],
+                    None => self.write_wsa_symbol(),
+                };
                 offset = 0;
                 length = 0;
                 referent = goff::RLD_RO_PART;
@@ -559,11 +596,17 @@ impl<'a> Writer<'a> {
             }
         }
 
+        let ada_esdid = match ada {
+            Some(ada) => self.symbol_esdid[ada.0],
+            None => 0,
+        };
+
         let name = &encode_name(&symbol.name)?;
 
         let mut esd = self.get_esd_record(symbol_type, namespace, parent);
         esd.offset = U32::new(BE, offset);
         esd.length = U32::new(BE, length);
+        esd.ada_esdid = U32::new(BE, ada_esdid);
         esd.flags = flags;
         esd.behavioral_attributes = behavioral_attributes;
         let esdid = self.write_esd_record(&esd, name);

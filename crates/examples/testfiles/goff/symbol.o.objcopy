@@ -4,7 +4,7 @@ HdrRecord {
 }
 EsdRecord {
     SymbolType: ESD_ST_SD (0x0)
-    Esdid: 1 ("rustcu")
+    Esdid: 1 ("symbol#C")
     ParentEsdid: 0
     Offset: 0x0
     Length: 0x0
@@ -15,17 +15,15 @@ EsdRecord {
     FillByteValue: 0x0
     AssociatedDataEsdid: 0
     Priority: 0
-    BehavioralAttributes: 0:04 1:04 2:00 3:00 4:00 5:01 6:00 7:00 8:00 9:00
-        AMODE_64 (0:04)
-        RMODE_64 (1:04)
-        TASK_UNSPEC (3:00)
+    BehavioralAttributes: 0:00 1:00 2:00 3:60 4:00 5:01 6:00 7:00 8:00 9:00
+        TASK_RENT (3:60)
         ESD_BSC_SECTION (5:01)
-    NameLength: 6
+    NameLength: 8
 }
 EsdRecord {
     SymbolType: ESD_ST_ED (0x1)
     Esdid: 2 ("C_CODE64")
-    ParentEsdid: 1 ("rustcu")
+    ParentEsdid: 1 ("symbol#C")
     Offset: 0x0
     Length: 0x3A4
     ExtendedAttributeEsdid: 0
@@ -48,7 +46,7 @@ EsdRecord {
 EsdRecord {
     SymbolType: ESD_ST_ED (0x1)
     Esdid: 3 ("C_@@QPPA2")
-    ParentEsdid: 1 ("rustcu")
+    ParentEsdid: 1 ("symbol#C")
     Offset: 0x0
     Length: 0x8
     ExtendedAttributeEsdid: 0
@@ -70,31 +68,28 @@ EsdRecord {
     Continuations: 1
 }
 EsdRecord {
-    SymbolType: ESD_ST_ED (0x1)
-    Esdid: 4 ("C_WSA64")
-    ParentEsdid: 1 ("rustcu")
+    SymbolType: ESD_ST_SD (0x0)
+    Esdid: 4 ("initialized_data")
+    ParentEsdid: 0
     Offset: 0x0
-    Length: 0x4
+    Length: 0x0
     ExtendedAttributeEsdid: 0
     ExtendedAttributeDataOffset: 0x0
-    Namespace: ESD_NS_PARTS (0x3)
-    Flags: ESD_SF_FILL_BYTE_PRESENCE (0x80)
+    Namespace: ESD_NS_PROGRAM_MANAGEMENT_BINDER (0x0)
+    Flags: 0x0
     FillByteValue: 0x0
     AssociatedDataEsdid: 0
     Priority: 0
-    BehavioralAttributes: 0:00 1:04 2:01 3:00 4:00 5:40 6:02 7:00 8:00 9:00
-        RMODE_64 (1:04)
-        TXT_RS_BYTE (2:00)
-        ESD_BA_MERGE (2:01)
-        EXEC_UNSPEC (3:00)
-        LOAD_DEFERRED (5:40)
-        ALIGN_FULLWORD (6:02)
-    NameLength: 7
+    BehavioralAttributes: 0:00 1:00 2:00 3:00 4:00 5:00 6:00 7:00 8:00 9:00
+        TASK_UNSPEC (3:00)
+        ESD_BSC_UNSPEC (5:00)
+    NameLength: 16
+    Continuations: 1
 }
 EsdRecord {
     SymbolType: ESD_ST_ED (0x1)
     Esdid: 5 ("C_WSA64")
-    ParentEsdid: 1 ("rustcu")
+    ParentEsdid: 4 ("initialized_data")
     Offset: 0x0
     Length: 0x4
     ExtendedAttributeEsdid: 0
@@ -114,31 +109,110 @@ EsdRecord {
     NameLength: 7
 }
 EsdRecord {
-    SymbolType: ESD_ST_ED (0x1)
-    Esdid: 6 ("C_WSA64")
-    ParentEsdid: 1 ("rustcu")
+    SymbolType: ESD_ST_SD (0x0)
+    Esdid: 6 ("weak_initialized_data")
+    ParentEsdid: 0
     Offset: 0x0
-    Length: 0x4
+    Length: 0x0
     ExtendedAttributeEsdid: 0
     ExtendedAttributeDataOffset: 0x0
-    Namespace: ESD_NS_PARTS (0x3)
-    Flags: ESD_SF_FILL_BYTE_PRESENCE (0x80)
+    Namespace: ESD_NS_PROGRAM_MANAGEMENT_BINDER (0x0)
+    Flags: 0x0
     FillByteValue: 0x0
     AssociatedDataEsdid: 0
     Priority: 0
-    BehavioralAttributes: 0:00 1:04 2:01 3:00 4:00 5:40 6:02 7:00 8:00 9:00
-        RMODE_64 (1:04)
-        TXT_RS_BYTE (2:00)
-        ESD_BA_MERGE (2:01)
-        EXEC_UNSPEC (3:00)
-        LOAD_DEFERRED (5:40)
-        ALIGN_FULLWORD (6:02)
-    NameLength: 7
+    BehavioralAttributes: 0:00 1:00 2:00 3:00 4:00 5:01 6:00 7:00 8:00 9:00
+        TASK_UNSPEC (3:00)
+        ESD_BSC_SECTION (5:01)
+    NameLength: 21
+    Continuations: 1
 }
 EsdRecord {
     SymbolType: ESD_ST_ED (0x1)
     Esdid: 7 ("C_WSA64")
-    ParentEsdid: 1 ("rustcu")
+    ParentEsdid: 6 ("weak_initialized_data")
+    Offset: 0x0
+    Length: 0x4
+    ExtendedAttributeEsdid: 0
+    ExtendedAttributeDataOffset: 0x0
+    Namespace: ESD_NS_PARTS (0x3)
+    Flags: ESD_SF_FILL_BYTE_PRESENCE (0x80)
+    FillByteValue: 0x0
+    AssociatedDataEsdid: 0
+    Priority: 0
+    BehavioralAttributes: 0:00 1:04 2:01 3:00 4:00 5:40 6:02 7:00 8:00 9:00
+        RMODE_64 (1:04)
+        TXT_RS_BYTE (2:00)
+        ESD_BA_MERGE (2:01)
+        EXEC_UNSPEC (3:00)
+        LOAD_DEFERRED (5:40)
+        ALIGN_FULLWORD (6:02)
+    NameLength: 7
+}
+EsdRecord {
+    SymbolType: ESD_ST_SD (0x0)
+    Esdid: 8 ("exported_initialized_data")
+    ParentEsdid: 0
+    Offset: 0x0
+    Length: 0x0
+    ExtendedAttributeEsdid: 0
+    ExtendedAttributeDataOffset: 0x0
+    Namespace: ESD_NS_PROGRAM_MANAGEMENT_BINDER (0x0)
+    Flags: 0x0
+    FillByteValue: 0x0
+    AssociatedDataEsdid: 0
+    Priority: 0
+    BehavioralAttributes: 0:00 1:00 2:00 3:00 4:00 5:00 6:00 7:00 8:00 9:00
+        TASK_UNSPEC (3:00)
+        ESD_BSC_UNSPEC (5:00)
+    NameLength: 25
+    Continuations: 1
+}
+EsdRecord {
+    SymbolType: ESD_ST_ED (0x1)
+    Esdid: 9 ("C_WSA64")
+    ParentEsdid: 8 ("exported_initialized_data")
+    Offset: 0x0
+    Length: 0x4
+    ExtendedAttributeEsdid: 0
+    ExtendedAttributeDataOffset: 0x0
+    Namespace: ESD_NS_PARTS (0x3)
+    Flags: ESD_SF_FILL_BYTE_PRESENCE (0x80)
+    FillByteValue: 0x0
+    AssociatedDataEsdid: 0
+    Priority: 0
+    BehavioralAttributes: 0:00 1:04 2:01 3:00 4:00 5:40 6:02 7:00 8:00 9:00
+        RMODE_64 (1:04)
+        TXT_RS_BYTE (2:00)
+        ESD_BA_MERGE (2:01)
+        EXEC_UNSPEC (3:00)
+        LOAD_DEFERRED (5:40)
+        ALIGN_FULLWORD (6:02)
+    NameLength: 7
+}
+EsdRecord {
+    SymbolType: ESD_ST_SD (0x0)
+    Esdid: 10 ("global_read_only_table")
+    ParentEsdid: 0
+    Offset: 0x0
+    Length: 0x0
+    ExtendedAttributeEsdid: 0
+    ExtendedAttributeDataOffset: 0x0
+    Namespace: ESD_NS_PROGRAM_MANAGEMENT_BINDER (0x0)
+    Flags: 0x0
+    FillByteValue: 0x0
+    AssociatedDataEsdid: 0
+    Priority: 0
+    BehavioralAttributes: 0:00 1:00 2:00 3:00 4:00 5:00 6:00 7:00 8:00 9:00
+        TASK_UNSPEC (3:00)
+        ESD_BSC_UNSPEC (5:00)
+    NameLength: 22
+    Continuations: 1
+}
+EsdRecord {
+    SymbolType: ESD_ST_ED (0x1)
+    Esdid: 11 ("C_WSA64")
+    ParentEsdid: 10 ("global_read_only_table")
     Offset: 0x0
     Length: 0x100
     ExtendedAttributeEsdid: 0
@@ -158,119 +232,110 @@ EsdRecord {
     NameLength: 7
 }
 EsdRecord {
-    SymbolType: ESD_ST_ED (0x1)
-    Esdid: 8 ("C_WSA64")
-    ParentEsdid: 1 ("rustcu")
+    SymbolType: ESD_ST_SD (0x0)
+    Esdid: 12 ("data_pointer")
+    ParentEsdid: 0
     Offset: 0x0
-    Length: 0x8
+    Length: 0x0
     ExtendedAttributeEsdid: 0
     ExtendedAttributeDataOffset: 0x0
-    Namespace: ESD_NS_PARTS (0x3)
-    Flags: ESD_SF_FILL_BYTE_PRESENCE (0x80)
+    Namespace: ESD_NS_PROGRAM_MANAGEMENT_BINDER (0x0)
+    Flags: 0x0
     FillByteValue: 0x0
     AssociatedDataEsdid: 0
     Priority: 0
-    BehavioralAttributes: 0:00 1:04 2:01 3:00 4:00 5:40 6:03 7:00 8:00 9:00
-        RMODE_64 (1:04)
-        TXT_RS_BYTE (2:00)
-        ESD_BA_MERGE (2:01)
-        EXEC_UNSPEC (3:00)
-        LOAD_DEFERRED (5:40)
-        ALIGN_DOUBLEWORD (6:03)
-    NameLength: 7
-}
-EsdRecord {
-    SymbolType: ESD_ST_ED (0x1)
-    Esdid: 9 ("C_WSA64")
-    ParentEsdid: 1 ("rustcu")
-    Offset: 0x0
-    Length: 0x8
-    ExtendedAttributeEsdid: 0
-    ExtendedAttributeDataOffset: 0x0
-    Namespace: ESD_NS_PARTS (0x3)
-    Flags: ESD_SF_FILL_BYTE_PRESENCE (0x80)
-    FillByteValue: 0x0
-    AssociatedDataEsdid: 0
-    Priority: 0
-    BehavioralAttributes: 0:00 1:04 2:01 3:00 4:00 5:40 6:03 7:00 8:00 9:00
-        RMODE_64 (1:04)
-        TXT_RS_BYTE (2:00)
-        ESD_BA_MERGE (2:01)
-        EXEC_UNSPEC (3:00)
-        LOAD_DEFERRED (5:40)
-        ALIGN_DOUBLEWORD (6:03)
-    NameLength: 7
-}
-EsdRecord {
-    SymbolType: ESD_ST_ED (0x1)
-    Esdid: 10 ("C_WSA64")
-    ParentEsdid: 1 ("rustcu")
-    Offset: 0x0
-    Length: 0x4
-    ExtendedAttributeEsdid: 0
-    ExtendedAttributeDataOffset: 0x0
-    Namespace: ESD_NS_PARTS (0x3)
-    Flags: ESD_SF_FILL_BYTE_PRESENCE (0x80)
-    FillByteValue: 0x0
-    AssociatedDataEsdid: 0
-    Priority: 0
-    BehavioralAttributes: 0:00 1:04 2:01 3:00 4:00 5:40 6:02 7:00 8:00 9:00
-        RMODE_64 (1:04)
-        TXT_RS_BYTE (2:00)
-        ESD_BA_MERGE (2:01)
-        EXEC_UNSPEC (3:00)
-        LOAD_DEFERRED (5:40)
-        ALIGN_FULLWORD (6:02)
-    NameLength: 7
-}
-EsdRecord {
-    SymbolType: ESD_ST_ED (0x1)
-    Esdid: 11 ("C_WSA64")
-    ParentEsdid: 1 ("rustcu")
-    Offset: 0x0
-    Length: 0x4
-    ExtendedAttributeEsdid: 0
-    ExtendedAttributeDataOffset: 0x0
-    Namespace: ESD_NS_PARTS (0x3)
-    Flags: ESD_SF_FILL_BYTE_PRESENCE (0x80)
-    FillByteValue: 0x0
-    AssociatedDataEsdid: 0
-    Priority: 0
-    BehavioralAttributes: 0:00 1:04 2:01 3:00 4:00 5:40 6:02 7:00 8:00 9:00
-        RMODE_64 (1:04)
-        TXT_RS_BYTE (2:00)
-        ESD_BA_MERGE (2:01)
-        EXEC_UNSPEC (3:00)
-        LOAD_DEFERRED (5:40)
-        ALIGN_FULLWORD (6:02)
-    NameLength: 7
-}
-EsdRecord {
-    SymbolType: ESD_ST_ED (0x1)
-    Esdid: 12 ("C_WSA64")
-    ParentEsdid: 1 ("rustcu")
-    Offset: 0x0
-    Length: 0x4
-    ExtendedAttributeEsdid: 0
-    ExtendedAttributeDataOffset: 0x0
-    Namespace: ESD_NS_PARTS (0x3)
-    Flags: ESD_SF_FILL_BYTE_PRESENCE (0x80)
-    FillByteValue: 0x0
-    AssociatedDataEsdid: 0
-    Priority: 0
-    BehavioralAttributes: 0:00 1:04 2:01 3:00 4:00 5:40 6:02 7:00 8:00 9:00
-        RMODE_64 (1:04)
-        TXT_RS_BYTE (2:00)
-        ESD_BA_MERGE (2:01)
-        EXEC_UNSPEC (3:00)
-        LOAD_DEFERRED (5:40)
-        ALIGN_FULLWORD (6:02)
-    NameLength: 7
+    BehavioralAttributes: 0:00 1:00 2:00 3:00 4:00 5:00 6:00 7:00 8:00 9:00
+        TASK_UNSPEC (3:00)
+        ESD_BSC_UNSPEC (5:00)
+    NameLength: 12
+    Continuations: 1
 }
 EsdRecord {
     SymbolType: ESD_ST_ED (0x1)
     Esdid: 13 ("C_WSA64")
-    ParentEsdid: 1 ("rustcu")
+    ParentEsdid: 12 ("data_pointer")
+    Offset: 0x0
+    Length: 0x8
+    ExtendedAttributeEsdid: 0
+    ExtendedAttributeDataOffset: 0x0
+    Namespace: ESD_NS_PARTS (0x3)
+    Flags: ESD_SF_FILL_BYTE_PRESENCE (0x80)
+    FillByteValue: 0x0
+    AssociatedDataEsdid: 0
+    Priority: 0
+    BehavioralAttributes: 0:00 1:04 2:01 3:00 4:00 5:40 6:03 7:00 8:00 9:00
+        RMODE_64 (1:04)
+        TXT_RS_BYTE (2:00)
+        ESD_BA_MERGE (2:01)
+        EXEC_UNSPEC (3:00)
+        LOAD_DEFERRED (5:40)
+        ALIGN_DOUBLEWORD (6:03)
+    NameLength: 7
+}
+EsdRecord {
+    SymbolType: ESD_ST_SD (0x0)
+    Esdid: 14 ("function_pointer")
+    ParentEsdid: 0
+    Offset: 0x0
+    Length: 0x0
+    ExtendedAttributeEsdid: 0
+    ExtendedAttributeDataOffset: 0x0
+    Namespace: ESD_NS_PROGRAM_MANAGEMENT_BINDER (0x0)
+    Flags: 0x0
+    FillByteValue: 0x0
+    AssociatedDataEsdid: 0
+    Priority: 0
+    BehavioralAttributes: 0:00 1:00 2:00 3:00 4:00 5:00 6:00 7:00 8:00 9:00
+        TASK_UNSPEC (3:00)
+        ESD_BSC_UNSPEC (5:00)
+    NameLength: 16
+    Continuations: 1
+}
+EsdRecord {
+    SymbolType: ESD_ST_ED (0x1)
+    Esdid: 15 ("C_WSA64")
+    ParentEsdid: 14 ("function_pointer")
+    Offset: 0x0
+    Length: 0x8
+    ExtendedAttributeEsdid: 0
+    ExtendedAttributeDataOffset: 0x0
+    Namespace: ESD_NS_PARTS (0x3)
+    Flags: ESD_SF_FILL_BYTE_PRESENCE (0x80)
+    FillByteValue: 0x0
+    AssociatedDataEsdid: 0
+    Priority: 0
+    BehavioralAttributes: 0:00 1:04 2:01 3:00 4:00 5:40 6:03 7:00 8:00 9:00
+        RMODE_64 (1:04)
+        TXT_RS_BYTE (2:00)
+        ESD_BA_MERGE (2:01)
+        EXEC_UNSPEC (3:00)
+        LOAD_DEFERRED (5:40)
+        ALIGN_DOUBLEWORD (6:03)
+    NameLength: 7
+}
+EsdRecord {
+    SymbolType: ESD_ST_SD (0x0)
+    Esdid: 16 ("uninitialized_data")
+    ParentEsdid: 0
+    Offset: 0x0
+    Length: 0x0
+    ExtendedAttributeEsdid: 0
+    ExtendedAttributeDataOffset: 0x0
+    Namespace: ESD_NS_PROGRAM_MANAGEMENT_BINDER (0x0)
+    Flags: 0x0
+    FillByteValue: 0x0
+    AssociatedDataEsdid: 0
+    Priority: 0
+    BehavioralAttributes: 0:00 1:00 2:00 3:00 4:00 5:00 6:00 7:00 8:00 9:00
+        TASK_UNSPEC (3:00)
+        ESD_BSC_UNSPEC (5:00)
+    NameLength: 18
+    Continuations: 1
+}
+EsdRecord {
+    SymbolType: ESD_ST_ED (0x1)
+    Esdid: 17 ("C_WSA64")
+    ParentEsdid: 16 ("uninitialized_data")
     Offset: 0x0
     Length: 0x4
     ExtendedAttributeEsdid: 0
@@ -290,9 +355,233 @@ EsdRecord {
     NameLength: 7
 }
 EsdRecord {
+    SymbolType: ESD_ST_SD (0x0)
+    Esdid: 18 ("weak_uninitialized_data")
+    ParentEsdid: 0
+    Offset: 0x0
+    Length: 0x0
+    ExtendedAttributeEsdid: 0
+    ExtendedAttributeDataOffset: 0x0
+    Namespace: ESD_NS_PROGRAM_MANAGEMENT_BINDER (0x0)
+    Flags: 0x0
+    FillByteValue: 0x0
+    AssociatedDataEsdid: 0
+    Priority: 0
+    BehavioralAttributes: 0:00 1:00 2:00 3:00 4:00 5:01 6:00 7:00 8:00 9:00
+        TASK_UNSPEC (3:00)
+        ESD_BSC_SECTION (5:01)
+    NameLength: 23
+    Continuations: 1
+}
+EsdRecord {
     SymbolType: ESD_ST_ED (0x1)
-    Esdid: 14 ("C_WSA64")
-    ParentEsdid: 1 ("rustcu")
+    Esdid: 19 ("C_WSA64")
+    ParentEsdid: 18 ("weak_uninitialized_data")
+    Offset: 0x0
+    Length: 0x4
+    ExtendedAttributeEsdid: 0
+    ExtendedAttributeDataOffset: 0x0
+    Namespace: ESD_NS_PARTS (0x3)
+    Flags: ESD_SF_FILL_BYTE_PRESENCE (0x80)
+    FillByteValue: 0x0
+    AssociatedDataEsdid: 0
+    Priority: 0
+    BehavioralAttributes: 0:00 1:04 2:01 3:00 4:00 5:40 6:02 7:00 8:00 9:00
+        RMODE_64 (1:04)
+        TXT_RS_BYTE (2:00)
+        ESD_BA_MERGE (2:01)
+        EXEC_UNSPEC (3:00)
+        LOAD_DEFERRED (5:40)
+        ALIGN_FULLWORD (6:02)
+    NameLength: 7
+}
+EsdRecord {
+    SymbolType: ESD_ST_SD (0x0)
+    Esdid: 20 ("static_initialized_data")
+    ParentEsdid: 0
+    Offset: 0x0
+    Length: 0x0
+    ExtendedAttributeEsdid: 0
+    ExtendedAttributeDataOffset: 0x0
+    Namespace: ESD_NS_PROGRAM_MANAGEMENT_BINDER (0x0)
+    Flags: 0x0
+    FillByteValue: 0x0
+    AssociatedDataEsdid: 0
+    Priority: 0
+    BehavioralAttributes: 0:00 1:00 2:00 3:00 4:00 5:01 6:00 7:00 8:00 9:00
+        TASK_UNSPEC (3:00)
+        ESD_BSC_SECTION (5:01)
+    NameLength: 23
+    Continuations: 1
+}
+EsdRecord {
+    SymbolType: ESD_ST_ED (0x1)
+    Esdid: 21 ("C_WSA64")
+    ParentEsdid: 20 ("static_initialized_data")
+    Offset: 0x0
+    Length: 0x4
+    ExtendedAttributeEsdid: 0
+    ExtendedAttributeDataOffset: 0x0
+    Namespace: ESD_NS_PARTS (0x3)
+    Flags: ESD_SF_FILL_BYTE_PRESENCE (0x80)
+    FillByteValue: 0x0
+    AssociatedDataEsdid: 0
+    Priority: 0
+    BehavioralAttributes: 0:00 1:04 2:01 3:00 4:00 5:40 6:02 7:00 8:00 9:00
+        RMODE_64 (1:04)
+        TXT_RS_BYTE (2:00)
+        ESD_BA_MERGE (2:01)
+        EXEC_UNSPEC (3:00)
+        LOAD_DEFERRED (5:40)
+        ALIGN_FULLWORD (6:02)
+    NameLength: 7
+}
+EsdRecord {
+    SymbolType: ESD_ST_SD (0x0)
+    Esdid: 22 ("static_uninitialized_data")
+    ParentEsdid: 0
+    Offset: 0x0
+    Length: 0x0
+    ExtendedAttributeEsdid: 0
+    ExtendedAttributeDataOffset: 0x0
+    Namespace: ESD_NS_PROGRAM_MANAGEMENT_BINDER (0x0)
+    Flags: 0x0
+    FillByteValue: 0x0
+    AssociatedDataEsdid: 0
+    Priority: 0
+    BehavioralAttributes: 0:00 1:00 2:00 3:00 4:00 5:01 6:00 7:00 8:00 9:00
+        TASK_UNSPEC (3:00)
+        ESD_BSC_SECTION (5:01)
+    NameLength: 25
+    Continuations: 1
+}
+EsdRecord {
+    SymbolType: ESD_ST_ED (0x1)
+    Esdid: 23 ("C_WSA64")
+    ParentEsdid: 22 ("static_uninitialized_data")
+    Offset: 0x0
+    Length: 0x4
+    ExtendedAttributeEsdid: 0
+    ExtendedAttributeDataOffset: 0x0
+    Namespace: ESD_NS_PARTS (0x3)
+    Flags: ESD_SF_FILL_BYTE_PRESENCE (0x80)
+    FillByteValue: 0x0
+    AssociatedDataEsdid: 0
+    Priority: 0
+    BehavioralAttributes: 0:00 1:04 2:01 3:00 4:00 5:40 6:02 7:00 8:00 9:00
+        RMODE_64 (1:04)
+        TXT_RS_BYTE (2:00)
+        ESD_BA_MERGE (2:01)
+        EXEC_UNSPEC (3:00)
+        LOAD_DEFERRED (5:40)
+        ALIGN_FULLWORD (6:02)
+    NameLength: 7
+}
+EsdRecord {
+    SymbolType: ESD_ST_SD (0x0)
+    Esdid: 24 ("default_empty_data")
+    ParentEsdid: 0
+    Offset: 0x0
+    Length: 0x0
+    ExtendedAttributeEsdid: 0
+    ExtendedAttributeDataOffset: 0x0
+    Namespace: ESD_NS_PROGRAM_MANAGEMENT_BINDER (0x0)
+    Flags: 0x0
+    FillByteValue: 0x0
+    AssociatedDataEsdid: 0
+    Priority: 0
+    BehavioralAttributes: 0:00 1:00 2:00 3:00 4:00 5:00 6:00 7:00 8:00 9:00
+        TASK_UNSPEC (3:00)
+        ESD_BSC_UNSPEC (5:00)
+    NameLength: 18
+    Continuations: 1
+}
+EsdRecord {
+    SymbolType: ESD_ST_ED (0x1)
+    Esdid: 25 ("C_WSA64")
+    ParentEsdid: 24 ("default_empty_data")
+    Offset: 0x0
+    Length: 0x2
+    ExtendedAttributeEsdid: 0
+    ExtendedAttributeDataOffset: 0x0
+    Namespace: ESD_NS_PARTS (0x3)
+    Flags: ESD_SF_FILL_BYTE_PRESENCE (0x80)
+    FillByteValue: 0x0
+    AssociatedDataEsdid: 0
+    Priority: 0
+    BehavioralAttributes: 0:00 1:04 2:01 3:00 4:00 5:40 6:01 7:00 8:00 9:00
+        RMODE_64 (1:04)
+        TXT_RS_BYTE (2:00)
+        ESD_BA_MERGE (2:01)
+        EXEC_UNSPEC (3:00)
+        LOAD_DEFERRED (5:40)
+        ALIGN_HALFWORD (6:01)
+    NameLength: 7
+}
+EsdRecord {
+    SymbolType: ESD_ST_SD (0x0)
+    Esdid: 26 ("hidden_empty_data")
+    ParentEsdid: 0
+    Offset: 0x0
+    Length: 0x0
+    ExtendedAttributeEsdid: 0
+    ExtendedAttributeDataOffset: 0x0
+    Namespace: ESD_NS_PROGRAM_MANAGEMENT_BINDER (0x0)
+    Flags: 0x0
+    FillByteValue: 0x0
+    AssociatedDataEsdid: 0
+    Priority: 0
+    BehavioralAttributes: 0:00 1:00 2:00 3:00 4:00 5:00 6:00 7:00 8:00 9:00
+        TASK_UNSPEC (3:00)
+        ESD_BSC_UNSPEC (5:00)
+    NameLength: 17
+    Continuations: 1
+}
+EsdRecord {
+    SymbolType: ESD_ST_ED (0x1)
+    Esdid: 27 ("C_WSA64")
+    ParentEsdid: 26 ("hidden_empty_data")
+    Offset: 0x0
+    Length: 0x2
+    ExtendedAttributeEsdid: 0
+    ExtendedAttributeDataOffset: 0x0
+    Namespace: ESD_NS_PARTS (0x3)
+    Flags: ESD_SF_FILL_BYTE_PRESENCE (0x80)
+    FillByteValue: 0x0
+    AssociatedDataEsdid: 0
+    Priority: 0
+    BehavioralAttributes: 0:00 1:04 2:01 3:00 4:00 5:40 6:01 7:00 8:00 9:00
+        RMODE_64 (1:04)
+        TXT_RS_BYTE (2:00)
+        ESD_BA_MERGE (2:01)
+        EXEC_UNSPEC (3:00)
+        LOAD_DEFERRED (5:40)
+        ALIGN_HALFWORD (6:01)
+    NameLength: 7
+}
+EsdRecord {
+    SymbolType: ESD_ST_SD (0x0)
+    Esdid: 28 ("static_empty_data")
+    ParentEsdid: 0
+    Offset: 0x0
+    Length: 0x0
+    ExtendedAttributeEsdid: 0
+    ExtendedAttributeDataOffset: 0x0
+    Namespace: ESD_NS_PROGRAM_MANAGEMENT_BINDER (0x0)
+    Flags: 0x0
+    FillByteValue: 0x0
+    AssociatedDataEsdid: 0
+    Priority: 0
+    BehavioralAttributes: 0:00 1:00 2:00 3:00 4:00 5:01 6:00 7:00 8:00 9:00
+        TASK_UNSPEC (3:00)
+        ESD_BSC_SECTION (5:01)
+    NameLength: 17
+    Continuations: 1
+}
+EsdRecord {
+    SymbolType: ESD_ST_ED (0x1)
+    Esdid: 29 ("C_WSA64")
+    ParentEsdid: 28 ("static_empty_data")
     Offset: 0x0
     Length: 0x2
     ExtendedAttributeEsdid: 0
@@ -313,52 +602,8 @@ EsdRecord {
 }
 EsdRecord {
     SymbolType: ESD_ST_ED (0x1)
-    Esdid: 15 ("C_WSA64")
-    ParentEsdid: 1 ("rustcu")
-    Offset: 0x0
-    Length: 0x2
-    ExtendedAttributeEsdid: 0
-    ExtendedAttributeDataOffset: 0x0
-    Namespace: ESD_NS_PARTS (0x3)
-    Flags: ESD_SF_FILL_BYTE_PRESENCE (0x80)
-    FillByteValue: 0x0
-    AssociatedDataEsdid: 0
-    Priority: 0
-    BehavioralAttributes: 0:00 1:04 2:01 3:00 4:00 5:40 6:01 7:00 8:00 9:00
-        RMODE_64 (1:04)
-        TXT_RS_BYTE (2:00)
-        ESD_BA_MERGE (2:01)
-        EXEC_UNSPEC (3:00)
-        LOAD_DEFERRED (5:40)
-        ALIGN_HALFWORD (6:01)
-    NameLength: 7
-}
-EsdRecord {
-    SymbolType: ESD_ST_ED (0x1)
-    Esdid: 16 ("C_WSA64")
-    ParentEsdid: 1 ("rustcu")
-    Offset: 0x0
-    Length: 0x2
-    ExtendedAttributeEsdid: 0
-    ExtendedAttributeDataOffset: 0x0
-    Namespace: ESD_NS_PARTS (0x3)
-    Flags: ESD_SF_FILL_BYTE_PRESENCE (0x80)
-    FillByteValue: 0x0
-    AssociatedDataEsdid: 0
-    Priority: 0
-    BehavioralAttributes: 0:00 1:04 2:01 3:00 4:00 5:40 6:01 7:00 8:00 9:00
-        RMODE_64 (1:04)
-        TXT_RS_BYTE (2:00)
-        ESD_BA_MERGE (2:01)
-        EXEC_UNSPEC (3:00)
-        LOAD_DEFERRED (5:40)
-        ALIGN_HALFWORD (6:01)
-    NameLength: 7
-}
-EsdRecord {
-    SymbolType: ESD_ST_ED (0x1)
-    Esdid: 17 ("D_ABREV")
-    ParentEsdid: 1 ("rustcu")
+    Esdid: 30 ("D_ABREV")
+    ParentEsdid: 1 ("symbol#C")
     Offset: 0x0
     Length: 0xD7
     ExtendedAttributeEsdid: 0
@@ -379,8 +624,8 @@ EsdRecord {
 }
 EsdRecord {
     SymbolType: ESD_ST_ED (0x1)
-    Esdid: 18 ("D_INFO")
-    ParentEsdid: 1 ("rustcu")
+    Esdid: 31 ("D_INFO")
+    ParentEsdid: 1 ("symbol#C")
     Offset: 0x0
     Length: 0x237
     ExtendedAttributeEsdid: 0
@@ -401,8 +646,8 @@ EsdRecord {
 }
 EsdRecord {
     SymbolType: ESD_ST_ED (0x1)
-    Esdid: 19 ("D_STR")
-    ParentEsdid: 1 ("rustcu")
+    Esdid: 32 ("D_STR")
+    ParentEsdid: 1 ("symbol#C")
     Offset: 0x0
     Length: 0x221
     ExtendedAttributeEsdid: 0
@@ -423,8 +668,8 @@ EsdRecord {
 }
 EsdRecord {
     SymbolType: ESD_ST_ED (0x1)
-    Esdid: 20 ("C_WSA64")
-    ParentEsdid: 1 ("rustcu")
+    Esdid: 33 ("C_WSA64")
+    ParentEsdid: 1 ("symbol#C")
     Offset: 0x0
     Length: 0xC8
     ExtendedAttributeEsdid: 0
@@ -447,8 +692,8 @@ EsdRecord {
 }
 EsdRecord {
     SymbolType: ESD_ST_ED (0x1)
-    Esdid: 21 ("B_IDRL")
-    ParentEsdid: 1 ("rustcu")
+    Esdid: 34 ("B_IDRL")
+    ParentEsdid: 1 ("symbol#C")
     Offset: 0x0
     Length: 0x22
     ExtendedAttributeEsdid: 0
@@ -470,8 +715,8 @@ EsdRecord {
 }
 EsdRecord {
     SymbolType: ESD_ST_ED (0x1)
-    Esdid: 22 ("D_LINE")
-    ParentEsdid: 1 ("rustcu")
+    Esdid: 35 ("D_LINE")
+    ParentEsdid: 1 ("symbol#C")
     Offset: 0x0
     Length: 0x10E
     ExtendedAttributeEsdid: 0
@@ -491,26 +736,8 @@ EsdRecord {
     NameLength: 6
 }
 EsdRecord {
-    SymbolType: ESD_ST_SD (0x0)
-    Esdid: 23 ("symbol#C")
-    ParentEsdid: 0
-    Offset: 0x0
-    Length: 0x0
-    ExtendedAttributeEsdid: 0
-    ExtendedAttributeDataOffset: 0x0
-    Namespace: ESD_NS_PROGRAM_MANAGEMENT_BINDER (0x0)
-    Flags: 0x0
-    FillByteValue: 0x0
-    AssociatedDataEsdid: 0
-    Priority: 0
-    BehavioralAttributes: 0:00 1:00 2:00 3:60 4:00 5:01 6:00 7:00 8:00 9:00
-        TASK_RENT (3:60)
-        ESD_BSC_SECTION (5:01)
-    NameLength: 8
-}
-EsdRecord {
     SymbolType: ESD_ST_PR (0x3)
-    Esdid: 24 (".&ppa2")
+    Esdid: 36 (".&ppa2")
     ParentEsdid: 3 ("C_@@QPPA2")
     Offset: 0x0
     Length: 0x8
@@ -529,28 +756,9 @@ EsdRecord {
     NameLength: 6
 }
 EsdRecord {
-    SymbolType: ESD_ST_SD (0x0)
-    Esdid: 25 ("initialized_data")
-    ParentEsdid: 0
-    Offset: 0x0
-    Length: 0x0
-    ExtendedAttributeEsdid: 0
-    ExtendedAttributeDataOffset: 0x0
-    Namespace: ESD_NS_PROGRAM_MANAGEMENT_BINDER (0x0)
-    Flags: 0x0
-    FillByteValue: 0x0
-    AssociatedDataEsdid: 0
-    Priority: 0
-    BehavioralAttributes: 0:00 1:00 2:00 3:00 4:00 5:00 6:00 7:00 8:00 9:00
-        TASK_UNSPEC (3:00)
-        ESD_BSC_UNSPEC (5:00)
-    NameLength: 16
-    Continuations: 1
-}
-EsdRecord {
     SymbolType: ESD_ST_PR (0x3)
-    Esdid: 26 ("initialized_data")
-    ParentEsdid: 4 ("C_WSA64")
+    Esdid: 37 ("initialized_data")
+    ParentEsdid: 5 ("C_WSA64")
     Offset: 0x0
     Length: 0x4
     ExtendedAttributeEsdid: 0
@@ -570,28 +778,9 @@ EsdRecord {
     Continuations: 1
 }
 EsdRecord {
-    SymbolType: ESD_ST_SD (0x0)
-    Esdid: 27 ("weak_initialized_data")
-    ParentEsdid: 0
-    Offset: 0x0
-    Length: 0x0
-    ExtendedAttributeEsdid: 0
-    ExtendedAttributeDataOffset: 0x0
-    Namespace: ESD_NS_PROGRAM_MANAGEMENT_BINDER (0x0)
-    Flags: 0x0
-    FillByteValue: 0x0
-    AssociatedDataEsdid: 0
-    Priority: 0
-    BehavioralAttributes: 0:00 1:00 2:00 3:00 4:00 5:01 6:00 7:00 8:00 9:00
-        TASK_UNSPEC (3:00)
-        ESD_BSC_SECTION (5:01)
-    NameLength: 21
-    Continuations: 1
-}
-EsdRecord {
     SymbolType: ESD_ST_PR (0x3)
-    Esdid: 28 ("weak_initialized_data")
-    ParentEsdid: 5 ("C_WSA64")
+    Esdid: 38 ("weak_initialized_data")
+    ParentEsdid: 7 ("C_WSA64")
     Offset: 0x0
     Length: 0x4
     ExtendedAttributeEsdid: 0
@@ -611,28 +800,9 @@ EsdRecord {
     Continuations: 1
 }
 EsdRecord {
-    SymbolType: ESD_ST_SD (0x0)
-    Esdid: 29 ("exported_initialized_data")
-    ParentEsdid: 0
-    Offset: 0x0
-    Length: 0x0
-    ExtendedAttributeEsdid: 0
-    ExtendedAttributeDataOffset: 0x0
-    Namespace: ESD_NS_PROGRAM_MANAGEMENT_BINDER (0x0)
-    Flags: 0x0
-    FillByteValue: 0x0
-    AssociatedDataEsdid: 0
-    Priority: 0
-    BehavioralAttributes: 0:00 1:00 2:00 3:00 4:00 5:00 6:00 7:00 8:00 9:00
-        TASK_UNSPEC (3:00)
-        ESD_BSC_UNSPEC (5:00)
-    NameLength: 25
-    Continuations: 1
-}
-EsdRecord {
     SymbolType: ESD_ST_PR (0x3)
-    Esdid: 30 ("exported_initialized_data")
-    ParentEsdid: 6 ("C_WSA64")
+    Esdid: 39 ("exported_initialized_data")
+    ParentEsdid: 9 ("C_WSA64")
     Offset: 0x0
     Length: 0x4
     ExtendedAttributeEsdid: 0
@@ -652,28 +822,9 @@ EsdRecord {
     Continuations: 1
 }
 EsdRecord {
-    SymbolType: ESD_ST_SD (0x0)
-    Esdid: 31 ("global_read_only_table")
-    ParentEsdid: 0
-    Offset: 0x0
-    Length: 0x0
-    ExtendedAttributeEsdid: 0
-    ExtendedAttributeDataOffset: 0x0
-    Namespace: ESD_NS_PROGRAM_MANAGEMENT_BINDER (0x0)
-    Flags: 0x0
-    FillByteValue: 0x0
-    AssociatedDataEsdid: 0
-    Priority: 0
-    BehavioralAttributes: 0:00 1:00 2:00 3:00 4:00 5:00 6:00 7:00 8:00 9:00
-        TASK_UNSPEC (3:00)
-        ESD_BSC_UNSPEC (5:00)
-    NameLength: 22
-    Continuations: 1
-}
-EsdRecord {
     SymbolType: ESD_ST_PR (0x3)
-    Esdid: 32 ("global_read_only_table")
-    ParentEsdid: 7 ("C_WSA64")
+    Esdid: 40 ("global_read_only_table")
+    ParentEsdid: 11 ("C_WSA64")
     Offset: 0x0
     Length: 0x100
     ExtendedAttributeEsdid: 0
@@ -693,28 +844,9 @@ EsdRecord {
     Continuations: 1
 }
 EsdRecord {
-    SymbolType: ESD_ST_SD (0x0)
-    Esdid: 33 ("data_pointer")
-    ParentEsdid: 0
-    Offset: 0x0
-    Length: 0x0
-    ExtendedAttributeEsdid: 0
-    ExtendedAttributeDataOffset: 0x0
-    Namespace: ESD_NS_PROGRAM_MANAGEMENT_BINDER (0x0)
-    Flags: 0x0
-    FillByteValue: 0x0
-    AssociatedDataEsdid: 0
-    Priority: 0
-    BehavioralAttributes: 0:00 1:00 2:00 3:00 4:00 5:00 6:00 7:00 8:00 9:00
-        TASK_UNSPEC (3:00)
-        ESD_BSC_UNSPEC (5:00)
-    NameLength: 12
-    Continuations: 1
-}
-EsdRecord {
     SymbolType: ESD_ST_PR (0x3)
-    Esdid: 34 ("data_pointer")
-    ParentEsdid: 8 ("C_WSA64")
+    Esdid: 41 ("data_pointer")
+    ParentEsdid: 13 ("C_WSA64")
     Offset: 0x0
     Length: 0x8
     ExtendedAttributeEsdid: 0
@@ -734,28 +866,9 @@ EsdRecord {
     Continuations: 1
 }
 EsdRecord {
-    SymbolType: ESD_ST_SD (0x0)
-    Esdid: 35 ("function_pointer")
-    ParentEsdid: 0
-    Offset: 0x0
-    Length: 0x0
-    ExtendedAttributeEsdid: 0
-    ExtendedAttributeDataOffset: 0x0
-    Namespace: ESD_NS_PROGRAM_MANAGEMENT_BINDER (0x0)
-    Flags: 0x0
-    FillByteValue: 0x0
-    AssociatedDataEsdid: 0
-    Priority: 0
-    BehavioralAttributes: 0:00 1:00 2:00 3:00 4:00 5:00 6:00 7:00 8:00 9:00
-        TASK_UNSPEC (3:00)
-        ESD_BSC_UNSPEC (5:00)
-    NameLength: 16
-    Continuations: 1
-}
-EsdRecord {
     SymbolType: ESD_ST_PR (0x3)
-    Esdid: 36 ("function_pointer")
-    ParentEsdid: 9 ("C_WSA64")
+    Esdid: 42 ("function_pointer")
+    ParentEsdid: 15 ("C_WSA64")
     Offset: 0x0
     Length: 0x8
     ExtendedAttributeEsdid: 0
@@ -775,28 +888,9 @@ EsdRecord {
     Continuations: 1
 }
 EsdRecord {
-    SymbolType: ESD_ST_SD (0x0)
-    Esdid: 37 ("uninitialized_data")
-    ParentEsdid: 0
-    Offset: 0x0
-    Length: 0x0
-    ExtendedAttributeEsdid: 0
-    ExtendedAttributeDataOffset: 0x0
-    Namespace: ESD_NS_PROGRAM_MANAGEMENT_BINDER (0x0)
-    Flags: 0x0
-    FillByteValue: 0x0
-    AssociatedDataEsdid: 0
-    Priority: 0
-    BehavioralAttributes: 0:00 1:00 2:00 3:00 4:00 5:00 6:00 7:00 8:00 9:00
-        TASK_UNSPEC (3:00)
-        ESD_BSC_UNSPEC (5:00)
-    NameLength: 18
-    Continuations: 1
-}
-EsdRecord {
     SymbolType: ESD_ST_PR (0x3)
-    Esdid: 38 ("uninitialized_data")
-    ParentEsdid: 10 ("C_WSA64")
+    Esdid: 43 ("uninitialized_data")
+    ParentEsdid: 17 ("C_WSA64")
     Offset: 0x0
     Length: 0x4
     ExtendedAttributeEsdid: 0
@@ -816,28 +910,9 @@ EsdRecord {
     Continuations: 1
 }
 EsdRecord {
-    SymbolType: ESD_ST_SD (0x0)
-    Esdid: 39 ("weak_uninitialized_data")
-    ParentEsdid: 0
-    Offset: 0x0
-    Length: 0x0
-    ExtendedAttributeEsdid: 0
-    ExtendedAttributeDataOffset: 0x0
-    Namespace: ESD_NS_PROGRAM_MANAGEMENT_BINDER (0x0)
-    Flags: 0x0
-    FillByteValue: 0x0
-    AssociatedDataEsdid: 0
-    Priority: 0
-    BehavioralAttributes: 0:00 1:00 2:00 3:00 4:00 5:01 6:00 7:00 8:00 9:00
-        TASK_UNSPEC (3:00)
-        ESD_BSC_SECTION (5:01)
-    NameLength: 23
-    Continuations: 1
-}
-EsdRecord {
     SymbolType: ESD_ST_PR (0x3)
-    Esdid: 40 ("weak_uninitialized_data")
-    ParentEsdid: 11 ("C_WSA64")
+    Esdid: 44 ("weak_uninitialized_data")
+    ParentEsdid: 19 ("C_WSA64")
     Offset: 0x0
     Length: 0x4
     ExtendedAttributeEsdid: 0
@@ -857,28 +932,9 @@ EsdRecord {
     Continuations: 1
 }
 EsdRecord {
-    SymbolType: ESD_ST_SD (0x0)
-    Esdid: 41 ("static_initialized_data")
-    ParentEsdid: 0
-    Offset: 0x0
-    Length: 0x0
-    ExtendedAttributeEsdid: 0
-    ExtendedAttributeDataOffset: 0x0
-    Namespace: ESD_NS_PROGRAM_MANAGEMENT_BINDER (0x0)
-    Flags: 0x0
-    FillByteValue: 0x0
-    AssociatedDataEsdid: 0
-    Priority: 0
-    BehavioralAttributes: 0:00 1:00 2:00 3:00 4:00 5:01 6:00 7:00 8:00 9:00
-        TASK_UNSPEC (3:00)
-        ESD_BSC_SECTION (5:01)
-    NameLength: 23
-    Continuations: 1
-}
-EsdRecord {
     SymbolType: ESD_ST_PR (0x3)
-    Esdid: 42 ("static_initialized_data")
-    ParentEsdid: 12 ("C_WSA64")
+    Esdid: 45 ("static_initialized_data")
+    ParentEsdid: 21 ("C_WSA64")
     Offset: 0x0
     Length: 0x4
     ExtendedAttributeEsdid: 0
@@ -898,28 +954,9 @@ EsdRecord {
     Continuations: 1
 }
 EsdRecord {
-    SymbolType: ESD_ST_SD (0x0)
-    Esdid: 43 ("static_uninitialized_data")
-    ParentEsdid: 0
-    Offset: 0x0
-    Length: 0x0
-    ExtendedAttributeEsdid: 0
-    ExtendedAttributeDataOffset: 0x0
-    Namespace: ESD_NS_PROGRAM_MANAGEMENT_BINDER (0x0)
-    Flags: 0x0
-    FillByteValue: 0x0
-    AssociatedDataEsdid: 0
-    Priority: 0
-    BehavioralAttributes: 0:00 1:00 2:00 3:00 4:00 5:01 6:00 7:00 8:00 9:00
-        TASK_UNSPEC (3:00)
-        ESD_BSC_SECTION (5:01)
-    NameLength: 25
-    Continuations: 1
-}
-EsdRecord {
     SymbolType: ESD_ST_PR (0x3)
-    Esdid: 44 ("static_uninitialized_data")
-    ParentEsdid: 13 ("C_WSA64")
+    Esdid: 46 ("static_uninitialized_data")
+    ParentEsdid: 23 ("C_WSA64")
     Offset: 0x0
     Length: 0x4
     ExtendedAttributeEsdid: 0
@@ -939,28 +976,9 @@ EsdRecord {
     Continuations: 1
 }
 EsdRecord {
-    SymbolType: ESD_ST_SD (0x0)
-    Esdid: 45 ("default_empty_data")
-    ParentEsdid: 0
-    Offset: 0x0
-    Length: 0x0
-    ExtendedAttributeEsdid: 0
-    ExtendedAttributeDataOffset: 0x0
-    Namespace: ESD_NS_PROGRAM_MANAGEMENT_BINDER (0x0)
-    Flags: 0x0
-    FillByteValue: 0x0
-    AssociatedDataEsdid: 0
-    Priority: 0
-    BehavioralAttributes: 0:00 1:00 2:00 3:00 4:00 5:00 6:00 7:00 8:00 9:00
-        TASK_UNSPEC (3:00)
-        ESD_BSC_UNSPEC (5:00)
-    NameLength: 18
-    Continuations: 1
-}
-EsdRecord {
     SymbolType: ESD_ST_PR (0x3)
-    Esdid: 46 ("default_empty_data")
-    ParentEsdid: 14 ("C_WSA64")
+    Esdid: 47 ("default_empty_data")
+    ParentEsdid: 25 ("C_WSA64")
     Offset: 0x0
     Length: 0x2
     ExtendedAttributeEsdid: 0
@@ -980,28 +998,9 @@ EsdRecord {
     Continuations: 1
 }
 EsdRecord {
-    SymbolType: ESD_ST_SD (0x0)
-    Esdid: 47 ("hidden_empty_data")
-    ParentEsdid: 0
-    Offset: 0x0
-    Length: 0x0
-    ExtendedAttributeEsdid: 0
-    ExtendedAttributeDataOffset: 0x0
-    Namespace: ESD_NS_PROGRAM_MANAGEMENT_BINDER (0x0)
-    Flags: 0x0
-    FillByteValue: 0x0
-    AssociatedDataEsdid: 0
-    Priority: 0
-    BehavioralAttributes: 0:00 1:00 2:00 3:00 4:00 5:00 6:00 7:00 8:00 9:00
-        TASK_UNSPEC (3:00)
-        ESD_BSC_UNSPEC (5:00)
-    NameLength: 17
-    Continuations: 1
-}
-EsdRecord {
     SymbolType: ESD_ST_PR (0x3)
     Esdid: 48 ("hidden_empty_data")
-    ParentEsdid: 15 ("C_WSA64")
+    ParentEsdid: 27 ("C_WSA64")
     Offset: 0x0
     Length: 0x2
     ExtendedAttributeEsdid: 0
@@ -1021,28 +1020,9 @@ EsdRecord {
     Continuations: 1
 }
 EsdRecord {
-    SymbolType: ESD_ST_SD (0x0)
-    Esdid: 49 ("static_empty_data")
-    ParentEsdid: 0
-    Offset: 0x0
-    Length: 0x0
-    ExtendedAttributeEsdid: 0
-    ExtendedAttributeDataOffset: 0x0
-    Namespace: ESD_NS_PROGRAM_MANAGEMENT_BINDER (0x0)
-    Flags: 0x0
-    FillByteValue: 0x0
-    AssociatedDataEsdid: 0
-    Priority: 0
-    BehavioralAttributes: 0:00 1:00 2:00 3:00 4:00 5:01 6:00 7:00 8:00 9:00
-        TASK_UNSPEC (3:00)
-        ESD_BSC_SECTION (5:01)
-    NameLength: 17
-    Continuations: 1
-}
-EsdRecord {
     SymbolType: ESD_ST_PR (0x3)
-    Esdid: 50 ("static_empty_data")
-    ParentEsdid: 16 ("C_WSA64")
+    Esdid: 49 ("static_empty_data")
+    ParentEsdid: 29 ("C_WSA64")
     Offset: 0x0
     Length: 0x2
     ExtendedAttributeEsdid: 0
@@ -1063,8 +1043,8 @@ EsdRecord {
 }
 EsdRecord {
     SymbolType: ESD_ST_PR (0x3)
-    Esdid: 51 ("symbol#S")
-    ParentEsdid: 20 ("C_WSA64")
+    Esdid: 50 ("symbol#S")
+    ParentEsdid: 33 ("C_WSA64")
     Offset: 0x0
     Length: 0xC8
     ExtendedAttributeEsdid: 0
@@ -1084,7 +1064,7 @@ EsdRecord {
 }
 EsdRecord {
     SymbolType: ESD_ST_LD (0x2)
-    Esdid: 52 ("symbol#C")
+    Esdid: 51 ("symbol#C")
     ParentEsdid: 2 ("C_CODE64")
     Offset: 0x0
     Length: 0x0
@@ -1093,7 +1073,7 @@ EsdRecord {
     Namespace: ESD_NS_NORMAL_NAME (0x1)
     Flags: 0x0
     FillByteValue: 0x0
-    AssociatedDataEsdid: 0
+    AssociatedDataEsdid: 50 ("symbol#S")
     Priority: 0
     BehavioralAttributes: 0:04 1:00 2:00 3:02 4:00 5:01 6:20 7:00 8:00 9:00
         AMODE_64 (0:04)
@@ -1105,8 +1085,8 @@ EsdRecord {
 }
 EsdRecord {
     SymbolType: ESD_ST_ER (0x4)
-    Esdid: 53 ("CELQSTRT")
-    ParentEsdid: 1 ("rustcu")
+    Esdid: 52 ("CELQSTRT")
+    ParentEsdid: 1 ("symbol#C")
     Offset: 0x0
     Length: 0x0
     ExtendedAttributeEsdid: 0
@@ -1125,7 +1105,7 @@ EsdRecord {
 }
 EsdRecord {
     SymbolType: ESD_ST_LD (0x2)
-    Esdid: 54 ("weak_function")
+    Esdid: 53 ("weak_function")
     ParentEsdid: 2 ("C_CODE64")
     Offset: 0x40
     Length: 0x0
@@ -1134,7 +1114,7 @@ EsdRecord {
     Namespace: ESD_NS_NORMAL_NAME (0x1)
     Flags: 0x0
     FillByteValue: 0x0
-    AssociatedDataEsdid: 0
+    AssociatedDataEsdid: 50 ("symbol#S")
     Priority: 0
     BehavioralAttributes: 0:04 1:00 2:00 3:02 4:01 5:03 6:20 7:00 8:00 9:00
         AMODE_64 (0:04)
@@ -1147,7 +1127,7 @@ EsdRecord {
 }
 EsdRecord {
     SymbolType: ESD_ST_LD (0x2)
-    Esdid: 55 ("default_function")
+    Esdid: 54 ("default_function")
     ParentEsdid: 2 ("C_CODE64")
     Offset: 0x60
     Length: 0x0
@@ -1156,7 +1136,7 @@ EsdRecord {
     Namespace: ESD_NS_NORMAL_NAME (0x1)
     Flags: 0x0
     FillByteValue: 0x0
-    AssociatedDataEsdid: 0
+    AssociatedDataEsdid: 50 ("symbol#S")
     Priority: 0
     BehavioralAttributes: 0:04 1:00 2:00 3:02 4:00 5:04 6:20 7:00 8:00 9:00
         AMODE_64 (0:04)
@@ -1169,7 +1149,7 @@ EsdRecord {
 }
 EsdRecord {
     SymbolType: ESD_ST_LD (0x2)
-    Esdid: 56 ("hidden_function")
+    Esdid: 55 ("hidden_function")
     ParentEsdid: 2 ("C_CODE64")
     Offset: 0xA0
     Length: 0x0
@@ -1178,7 +1158,7 @@ EsdRecord {
     Namespace: ESD_NS_NORMAL_NAME (0x1)
     Flags: 0x0
     FillByteValue: 0x0
-    AssociatedDataEsdid: 0
+    AssociatedDataEsdid: 50 ("symbol#S")
     Priority: 0
     BehavioralAttributes: 0:04 1:00 2:00 3:02 4:00 5:03 6:20 7:00 8:00 9:00
         AMODE_64 (0:04)
@@ -1191,7 +1171,7 @@ EsdRecord {
 }
 EsdRecord {
     SymbolType: ESD_ST_LD (0x2)
-    Esdid: 57 ("static_function")
+    Esdid: 56 ("static_function")
     ParentEsdid: 2 ("C_CODE64")
     Offset: 0x2D0
     Length: 0x0
@@ -1200,7 +1180,7 @@ EsdRecord {
     Namespace: ESD_NS_NORMAL_NAME (0x1)
     Flags: 0x0
     FillByteValue: 0x0
-    AssociatedDataEsdid: 0
+    AssociatedDataEsdid: 50 ("symbol#S")
     Priority: 0
     BehavioralAttributes: 0:04 1:00 2:00 3:02 4:00 5:01 6:20 7:00 8:00 9:00
         AMODE_64 (0:04)
@@ -1213,7 +1193,7 @@ EsdRecord {
 }
 EsdRecord {
     SymbolType: ESD_ST_LD (0x2)
-    Esdid: 58 ("static_read_only_table")
+    Esdid: 57 ("static_read_only_table")
     ParentEsdid: 2 ("C_CODE64")
     Offset: 0x2F4
     Length: 0x0
@@ -1235,8 +1215,8 @@ EsdRecord {
 }
 EsdRecord {
     SymbolType: ESD_ST_ER (0x4)
-    Esdid: 59 ("extern_function")
-    ParentEsdid: 1 ("rustcu")
+    Esdid: 58 ("extern_function")
+    ParentEsdid: 1 ("symbol#C")
     Offset: 0x0
     Length: 0x0
     ExtendedAttributeEsdid: 0
@@ -1258,8 +1238,8 @@ EsdRecord {
 }
 EsdRecord {
     SymbolType: ESD_ST_LD (0x2)
-    Esdid: 60 (".debug_abbrev")
-    ParentEsdid: 17 ("D_ABREV")
+    Esdid: 59 (".debug_abbrev")
+    ParentEsdid: 30 ("D_ABREV")
     Offset: 0x0
     Length: 0x0
     ExtendedAttributeEsdid: 0
@@ -1280,8 +1260,8 @@ EsdRecord {
 }
 EsdRecord {
     SymbolType: ESD_ST_LD (0x2)
-    Esdid: 61 (".debug_info")
-    ParentEsdid: 18 ("D_INFO")
+    Esdid: 60 (".debug_info")
+    ParentEsdid: 31 ("D_INFO")
     Offset: 0x0
     Length: 0x0
     ExtendedAttributeEsdid: 0
@@ -1302,8 +1282,8 @@ EsdRecord {
 }
 EsdRecord {
     SymbolType: ESD_ST_LD (0x2)
-    Esdid: 62 (".debug_str")
-    ParentEsdid: 19 ("D_STR")
+    Esdid: 61 (".debug_str")
+    ParentEsdid: 32 ("D_STR")
     Offset: 0x0
     Length: 0x0
     ExtendedAttributeEsdid: 0
@@ -1324,8 +1304,8 @@ EsdRecord {
 }
 EsdRecord {
     SymbolType: ESD_ST_ER (0x4)
-    Esdid: 63 ("extern_function")
-    ParentEsdid: 1 ("rustcu")
+    Esdid: 62 ("extern_function")
+    ParentEsdid: 1 ("symbol#C")
     Offset: 0x0
     Length: 0x0
     ExtendedAttributeEsdid: 0
@@ -1346,8 +1326,8 @@ EsdRecord {
 }
 EsdRecord {
     SymbolType: ESD_ST_ER (0x4)
-    Esdid: 64 ("weak_extern_function")
-    ParentEsdid: 1 ("rustcu")
+    Esdid: 63 ("weak_extern_function")
+    ParentEsdid: 1 ("symbol#C")
     Offset: 0x0
     Length: 0x0
     ExtendedAttributeEsdid: 0
@@ -1369,8 +1349,8 @@ EsdRecord {
 }
 EsdRecord {
     SymbolType: ESD_ST_ER (0x4)
-    Esdid: 65 ("weak_extern_function")
-    ParentEsdid: 1 ("rustcu")
+    Esdid: 64 ("weak_extern_function")
+    ParentEsdid: 1 ("symbol#C")
     Offset: 0x0
     Length: 0x0
     ExtendedAttributeEsdid: 0
@@ -1390,32 +1370,9 @@ EsdRecord {
     Continuations: 1
 }
 EsdRecord {
-    SymbolType: ESD_ST_ED (0x1)
-    Esdid: 66 ("C_WSA64")
-    ParentEsdid: 1 ("rustcu")
-    Offset: 0x0
-    Length: 0x0
-    ExtendedAttributeEsdid: 0
-    ExtendedAttributeDataOffset: 0x0
-    Namespace: ESD_NS_PARTS (0x3)
-    Flags: ESD_SF_FILL_BYTE_PRESENCE (0x80)
-    FillByteValue: 0x0
-    AssociatedDataEsdid: 0
-    Priority: 0
-    BehavioralAttributes: 0:04 1:04 2:01 3:01 4:00 5:00 6:01 7:00 8:00 9:00
-        AMODE_64 (0:04)
-        RMODE_64 (1:04)
-        TXT_RS_BYTE (2:00)
-        ESD_BA_MERGE (2:01)
-        EXEC_DATA (3:01)
-        LOAD_INITIAL (5:00)
-        ALIGN_HALFWORD (6:01)
-    NameLength: 7
-}
-EsdRecord {
     SymbolType: ESD_ST_PR (0x3)
-    Esdid: 67 ("extern_default_data")
-    ParentEsdid: 66 ("C_WSA64")
+    Esdid: 65 ("extern_default_data")
+    ParentEsdid: 33 ("C_WSA64")
     Offset: 0x0
     Length: 0x0
     ExtendedAttributeEsdid: 0
@@ -1436,8 +1393,8 @@ EsdRecord {
 }
 EsdRecord {
     SymbolType: ESD_ST_PR (0x3)
-    Esdid: 68 ("extern_hidden_data")
-    ParentEsdid: 66 ("C_WSA64")
+    Esdid: 66 ("extern_hidden_data")
+    ParentEsdid: 33 ("C_WSA64")
     Offset: 0x0
     Length: 0x0
     ExtendedAttributeEsdid: 0
@@ -1458,8 +1415,8 @@ EsdRecord {
 }
 EsdRecord {
     SymbolType: ESD_ST_PR (0x3)
-    Esdid: 69 ("extern_data")
-    ParentEsdid: 66 ("C_WSA64")
+    Esdid: 67 ("extern_data")
+    ParentEsdid: 33 ("C_WSA64")
     Offset: 0x0
     Length: 0x0
     ExtendedAttributeEsdid: 0
@@ -1480,8 +1437,8 @@ EsdRecord {
 }
 EsdRecord {
     SymbolType: ESD_ST_LD (0x2)
-    Esdid: 70 (".debug_line")
-    ParentEsdid: 22 ("D_LINE")
+    Esdid: 68 (".debug_line")
+    ParentEsdid: 35 ("D_LINE")
     Offset: 0x0
     Length: 0x0
     ExtendedAttributeEsdid: 0
@@ -1519,23 +1476,7 @@ TxtRecord {
 }
 TxtRecord {
     RecordStyle: TXT_RS_BYTE (0x0)
-    ElementEsdid: 4 ("C_WSA64")
-    Offset: 0x0
-    TrueLength: 0x0
-    TextEncoding: 0x0
-    DataLength: 0x4
-}
-TxtRecord {
-    RecordStyle: TXT_RS_BYTE (0x0)
     ElementEsdid: 5 ("C_WSA64")
-    Offset: 0x0
-    TrueLength: 0x0
-    TextEncoding: 0x0
-    DataLength: 0x4
-}
-TxtRecord {
-    RecordStyle: TXT_RS_BYTE (0x0)
-    ElementEsdid: 6 ("C_WSA64")
     Offset: 0x0
     TrueLength: 0x0
     TextEncoding: 0x0
@@ -1547,16 +1488,7 @@ TxtRecord {
     Offset: 0x0
     TrueLength: 0x0
     TextEncoding: 0x0
-    DataLength: 0x100
-    Continuations: 3
-}
-TxtRecord {
-    RecordStyle: TXT_RS_BYTE (0x0)
-    ElementEsdid: 8 ("C_WSA64")
-    Offset: 0x0
-    TrueLength: 0x0
-    TextEncoding: 0x0
-    DataLength: 0x8
+    DataLength: 0x4
 }
 TxtRecord {
     RecordStyle: TXT_RS_BYTE (0x0)
@@ -1564,11 +1496,36 @@ TxtRecord {
     Offset: 0x0
     TrueLength: 0x0
     TextEncoding: 0x0
+    DataLength: 0x4
+}
+TxtRecord {
+    RecordStyle: TXT_RS_BYTE (0x0)
+    ElementEsdid: 11 ("C_WSA64")
+    Offset: 0x0
+    TrueLength: 0x0
+    TextEncoding: 0x0
+    DataLength: 0x100
+    Continuations: 3
+}
+TxtRecord {
+    RecordStyle: TXT_RS_BYTE (0x0)
+    ElementEsdid: 13 ("C_WSA64")
+    Offset: 0x0
+    TrueLength: 0x0
+    TextEncoding: 0x0
     DataLength: 0x8
 }
 TxtRecord {
     RecordStyle: TXT_RS_BYTE (0x0)
-    ElementEsdid: 12 ("C_WSA64")
+    ElementEsdid: 15 ("C_WSA64")
+    Offset: 0x0
+    TrueLength: 0x0
+    TextEncoding: 0x0
+    DataLength: 0x8
+}
+TxtRecord {
+    RecordStyle: TXT_RS_BYTE (0x0)
+    ElementEsdid: 21 ("C_WSA64")
     Offset: 0x0
     TrueLength: 0x0
     TextEncoding: 0x0
@@ -1576,7 +1533,7 @@ TxtRecord {
 }
 TxtRecord {
     RecordStyle: TXT_RS_BYTE (0x0)
-    ElementEsdid: 17 ("D_ABREV")
+    ElementEsdid: 30 ("D_ABREV")
     Offset: 0x0
     TrueLength: 0x0
     TextEncoding: 0x0
@@ -1585,7 +1542,7 @@ TxtRecord {
 }
 TxtRecord {
     RecordStyle: TXT_RS_BYTE (0x0)
-    ElementEsdid: 18 ("D_INFO")
+    ElementEsdid: 31 ("D_INFO")
     Offset: 0x0
     TrueLength: 0x0
     TextEncoding: 0x0
@@ -1594,7 +1551,7 @@ TxtRecord {
 }
 TxtRecord {
     RecordStyle: TXT_RS_BYTE (0x0)
-    ElementEsdid: 19 ("D_STR")
+    ElementEsdid: 32 ("D_STR")
     Offset: 0x0
     TrueLength: 0x0
     TextEncoding: 0x0
@@ -1603,7 +1560,7 @@ TxtRecord {
 }
 TxtRecord {
     RecordStyle: TXT_RS_BYTE (0x0)
-    ElementEsdid: 20 ("C_WSA64")
+    ElementEsdid: 33 ("C_WSA64")
     Offset: 0x0
     TrueLength: 0x0
     TextEncoding: 0x0
@@ -1612,7 +1569,7 @@ TxtRecord {
 }
 TxtRecord {
     RecordStyle: TXT_RS_STRUCTURED (0x1)
-    ElementEsdid: 21 ("B_IDRL")
+    ElementEsdid: 34 ("B_IDRL")
     Offset: 0x0
     TrueLength: 0x0
     TextEncoding: 0x0
@@ -1620,7 +1577,7 @@ TxtRecord {
 }
 TxtRecord {
     RecordStyle: TXT_RS_BYTE (0x0)
-    ElementEsdid: 22 ("D_LINE")
+    ElementEsdid: 35 ("D_LINE")
     Offset: 0x0
     TrueLength: 0x0
     TextEncoding: 0x0
@@ -1637,7 +1594,7 @@ RldRecord {
             RLD_ACT_ADD (2:00)
             RLD_FS_FETCH (2:00)
             ByteLength(4) (4:04)
-        RPointer: 53 ("CELQSTRT")
+        RPointer: 52 ("CELQSTRT")
         PPointer: 2 ("C_CODE64")
         Offset: 0x4
     }
@@ -1672,7 +1629,7 @@ RldRecord {
             RLD_ACT_SUBTRACT (2:02)
             RLD_FS_FETCH (2:00)
             ByteLength(8) (4:08)
-        RPointer: 53 ("CELQSTRT")
+        RPointer: 52 ("CELQSTRT")
     }
     Relocation {
         Flags: 0:20 1:03 2:00 3:00 4:08 5:00
@@ -1682,8 +1639,8 @@ RldRecord {
             RLD_ACT_ADD (2:00)
             RLD_FS_FETCH (2:00)
             ByteLength(8) (4:08)
-        RPointer: 26 ("initialized_data")
-        PPointer: 8 ("C_WSA64")
+        RPointer: 37 ("initialized_data")
+        PPointer: 13 ("C_WSA64")
     }
     Relocation {
         Flags: 0:20 1:00 2:01 3:00 4:08 5:00
@@ -1693,8 +1650,8 @@ RldRecord {
             RLD_ACT_ADD (2:00)
             RLD_FS_STORE (2:01)
             ByteLength(8) (4:08)
-        RPointer: 59 ("extern_function")
-        PPointer: 9 ("C_WSA64")
+        RPointer: 58 ("extern_function")
+        PPointer: 15 ("C_WSA64")
     }
     Relocation {
         Flags: 0:00 1:00 2:00 3:00 4:04 5:00
@@ -1703,8 +1660,8 @@ RldRecord {
             RLD_ACT_ADD (2:00)
             RLD_FS_FETCH (2:00)
             ByteLength(4) (4:04)
-        RPointer: 60 (".debug_abbrev")
-        PPointer: 18 ("D_INFO")
+        RPointer: 59 (".debug_abbrev")
+        PPointer: 31 ("D_INFO")
         Offset: 0x6
     }
     Relocation {
@@ -1715,7 +1672,7 @@ RldRecord {
             RLD_ACT_ADD (2:00)
             RLD_FS_FETCH (2:00)
             ByteLength(4) (4:04)
-        RPointer: 19 ("D_STR")
+        RPointer: 32 ("D_STR")
         Offset: 0xC
     }
     Relocation {
@@ -1737,7 +1694,7 @@ RldRecord {
             RLD_ACT_ADD (2:00)
             RLD_FS_FETCH (2:00)
             ByteLength(4) (4:04)
-        RPointer: 22 ("D_LINE")
+        RPointer: 35 ("D_LINE")
         Offset: 0x16
     }
     Relocation {
@@ -1748,7 +1705,7 @@ RldRecord {
             RLD_ACT_ADD (2:00)
             RLD_FS_FETCH (2:00)
             ByteLength(4) (4:04)
-        RPointer: 19 ("D_STR")
+        RPointer: 32 ("D_STR")
         Offset: 0x1A
     }
     Relocation {
@@ -1781,7 +1738,7 @@ RldRecord {
             RLD_ACT_ADD (2:00)
             RLD_FS_FETCH (2:00)
             ByteLength(4) (4:04)
-        RPointer: 19 ("D_STR")
+        RPointer: 32 ("D_STR")
         Offset: 0x39
     }
     Relocation {
@@ -1803,7 +1760,7 @@ RldRecord {
             RLD_ACT_ADD (2:00)
             RLD_FS_FETCH (2:00)
             ByteLength(4) (4:04)
-        RPointer: 19 ("D_STR")
+        RPointer: 32 ("D_STR")
         Offset: 0x52
     }
     Relocation {
@@ -1836,7 +1793,7 @@ RldRecord {
             RLD_ACT_ADD (2:00)
             RLD_FS_FETCH (2:00)
             ByteLength(4) (4:04)
-        RPointer: 19 ("D_STR")
+        RPointer: 32 ("D_STR")
         Offset: 0x7B
     }
     Relocation {
@@ -1869,7 +1826,7 @@ RldRecord {
             RLD_ACT_ADD (2:00)
             RLD_FS_FETCH (2:00)
             ByteLength(4) (4:04)
-        RPointer: 19 ("D_STR")
+        RPointer: 32 ("D_STR")
         Offset: 0xA4
     }
     Relocation {
@@ -1902,7 +1859,7 @@ RldRecord {
             RLD_ACT_ADD (2:00)
             RLD_FS_FETCH (2:00)
             ByteLength(8) (4:08)
-        RPointer: 26 ("initialized_data")
+        RPointer: 37 ("initialized_data")
         Offset: 0xCB
     }
     Relocation {
@@ -1913,7 +1870,7 @@ RldRecord {
             RLD_ACT_ADD (2:00)
             RLD_FS_FETCH (2:00)
             ByteLength(4) (4:04)
-        RPointer: 19 ("D_STR")
+        RPointer: 32 ("D_STR")
         Offset: 0xD4
     }
     Relocation {
@@ -1935,7 +1892,7 @@ RldRecord {
             RLD_ACT_ADD (2:00)
             RLD_FS_FETCH (2:00)
             ByteLength(8) (4:08)
-        RPointer: 28 ("weak_initialized_data")
+        RPointer: 38 ("weak_initialized_data")
         Offset: 0xE7
     }
     Relocation {
@@ -1946,7 +1903,7 @@ RldRecord {
             RLD_ACT_ADD (2:00)
             RLD_FS_FETCH (2:00)
             ByteLength(4) (4:04)
-        RPointer: 19 ("D_STR")
+        RPointer: 32 ("D_STR")
         Offset: 0xF0
     }
     Relocation {
@@ -1957,7 +1914,7 @@ RldRecord {
             RLD_ACT_ADD (2:00)
             RLD_FS_FETCH (2:00)
             ByteLength(8) (4:08)
-        RPointer: 30 ("exported_initialized_data")
+        RPointer: 39 ("exported_initialized_data")
         Offset: 0xFC
     }
     Relocation {
@@ -1968,7 +1925,7 @@ RldRecord {
             RLD_ACT_ADD (2:00)
             RLD_FS_FETCH (2:00)
             ByteLength(4) (4:04)
-        RPointer: 19 ("D_STR")
+        RPointer: 32 ("D_STR")
         Offset: 0x105
     }
     Relocation {
@@ -1979,7 +1936,7 @@ RldRecord {
             RLD_ACT_ADD (2:00)
             RLD_FS_FETCH (2:00)
             ByteLength(8) (4:08)
-        RPointer: 32 ("global_read_only_table")
+        RPointer: 40 ("global_read_only_table")
         Offset: 0x111
     }
     Relocation {
@@ -1990,7 +1947,7 @@ RldRecord {
             RLD_ACT_ADD (2:00)
             RLD_FS_FETCH (2:00)
             ByteLength(4) (4:04)
-        RPointer: 19 ("D_STR")
+        RPointer: 32 ("D_STR")
         Offset: 0x12C
     }
     Relocation {
@@ -2023,7 +1980,7 @@ RldRecord {
             RLD_ACT_ADD (2:00)
             RLD_FS_FETCH (2:00)
             ByteLength(8) (4:08)
-        RPointer: 34 ("data_pointer")
+        RPointer: 41 ("data_pointer")
         Offset: 0x146
     }
     Relocation {
@@ -2034,7 +1991,7 @@ RldRecord {
             RLD_ACT_ADD (2:00)
             RLD_FS_FETCH (2:00)
             ByteLength(4) (4:04)
-        RPointer: 19 ("D_STR")
+        RPointer: 32 ("D_STR")
         Offset: 0x154
     }
     Relocation {
@@ -2045,7 +2002,7 @@ RldRecord {
             RLD_ACT_ADD (2:00)
             RLD_FS_FETCH (2:00)
             ByteLength(8) (4:08)
-        RPointer: 36 ("function_pointer")
+        RPointer: 42 ("function_pointer")
         Offset: 0x160
     }
     Relocation {
@@ -2056,7 +2013,7 @@ RldRecord {
             RLD_ACT_ADD (2:00)
             RLD_FS_FETCH (2:00)
             ByteLength(4) (4:04)
-        RPointer: 19 ("D_STR")
+        RPointer: 32 ("D_STR")
         Offset: 0x16F
     }
     Relocation {
@@ -2067,7 +2024,7 @@ RldRecord {
             RLD_ACT_ADD (2:00)
             RLD_FS_FETCH (2:00)
             ByteLength(8) (4:08)
-        RPointer: 38 ("uninitialized_data")
+        RPointer: 43 ("uninitialized_data")
         Offset: 0x17B
     }
     Relocation {
@@ -2078,7 +2035,7 @@ RldRecord {
             RLD_ACT_ADD (2:00)
             RLD_FS_FETCH (2:00)
             ByteLength(4) (4:04)
-        RPointer: 19 ("D_STR")
+        RPointer: 32 ("D_STR")
         Offset: 0x184
     }
     Relocation {
@@ -2089,7 +2046,7 @@ RldRecord {
             RLD_ACT_ADD (2:00)
             RLD_FS_FETCH (2:00)
             ByteLength(8) (4:08)
-        RPointer: 40 ("weak_uninitialized_data")
+        RPointer: 44 ("weak_uninitialized_data")
         Offset: 0x190
     }
     Relocation {
@@ -2100,7 +2057,7 @@ RldRecord {
             RLD_ACT_ADD (2:00)
             RLD_FS_FETCH (2:00)
             ByteLength(4) (4:04)
-        RPointer: 19 ("D_STR")
+        RPointer: 32 ("D_STR")
         Offset: 0x199
     }
     Relocation {
@@ -2111,7 +2068,7 @@ RldRecord {
             RLD_ACT_ADD (2:00)
             RLD_FS_FETCH (2:00)
             ByteLength(8) (4:08)
-        RPointer: 44 ("static_uninitialized_data")
+        RPointer: 46 ("static_uninitialized_data")
         Offset: 0x1A5
     }
     Relocation {
@@ -2122,7 +2079,7 @@ RldRecord {
             RLD_ACT_ADD (2:00)
             RLD_FS_FETCH (2:00)
             ByteLength(4) (4:04)
-        RPointer: 19 ("D_STR")
+        RPointer: 32 ("D_STR")
         Offset: 0x1AE
     }
     Relocation {
@@ -2133,7 +2090,7 @@ RldRecord {
             RLD_ACT_ADD (2:00)
             RLD_FS_FETCH (2:00)
             ByteLength(8) (4:08)
-        RPointer: 46 ("default_empty_data")
+        RPointer: 47 ("default_empty_data")
         Offset: 0x1BA
     }
     Relocation {
@@ -2144,7 +2101,7 @@ RldRecord {
             RLD_ACT_ADD (2:00)
             RLD_FS_FETCH (2:00)
             ByteLength(4) (4:04)
-        RPointer: 19 ("D_STR")
+        RPointer: 32 ("D_STR")
         Offset: 0x1C3
     }
     Relocation {
@@ -2177,7 +2134,7 @@ RldRecord {
             RLD_ACT_ADD (2:00)
             RLD_FS_FETCH (2:00)
             ByteLength(4) (4:04)
-        RPointer: 19 ("D_STR")
+        RPointer: 32 ("D_STR")
         Offset: 0x1E0
     }
     Relocation {
@@ -2188,7 +2145,7 @@ RldRecord {
             RLD_ACT_ADD (2:00)
             RLD_FS_FETCH (2:00)
             ByteLength(8) (4:08)
-        RPointer: 50 ("static_empty_data")
+        RPointer: 49 ("static_empty_data")
         Offset: 0x1EC
     }
     Relocation {
@@ -2199,7 +2156,7 @@ RldRecord {
             RLD_ACT_ADD (2:00)
             RLD_FS_FETCH (2:00)
             ByteLength(4) (4:04)
-        RPointer: 19 ("D_STR")
+        RPointer: 32 ("D_STR")
         Offset: 0x1F5
     }
     Relocation {
@@ -2210,7 +2167,7 @@ RldRecord {
             RLD_ACT_ADD (2:00)
             RLD_FS_FETCH (2:00)
             ByteLength(8) (4:08)
-        RPointer: 42 ("static_initialized_data")
+        RPointer: 45 ("static_initialized_data")
         Offset: 0x201
     }
     Relocation {
@@ -2221,7 +2178,7 @@ RldRecord {
             RLD_ACT_ADD (2:00)
             RLD_FS_FETCH (2:00)
             ByteLength(4) (4:04)
-        RPointer: 19 ("D_STR")
+        RPointer: 32 ("D_STR")
         Offset: 0x20A
     }
     Relocation {
@@ -2232,7 +2189,7 @@ RldRecord {
             RLD_ACT_ADD (2:00)
             RLD_FS_FETCH (2:00)
             ByteLength(8) (4:08)
-        RPointer: 58 ("static_read_only_table")
+        RPointer: 57 ("static_read_only_table")
         Offset: 0x216
     }
     Relocation {
@@ -2243,7 +2200,7 @@ RldRecord {
             RLD_ACT_ADD (2:00)
             RLD_FS_FETCH (2:00)
             ByteLength(4) (4:04)
-        RPointer: 19 ("D_STR")
+        RPointer: 32 ("D_STR")
         Offset: 0x22B
     }
     Relocation {
@@ -2253,8 +2210,8 @@ RldRecord {
             RLD_ACT_ADD (2:00)
             RLD_FS_STORE (2:01)
             ByteLength(8) (4:08)
-        RPointer: 63 ("extern_function")
-        PPointer: 20 ("C_WSA64")
+        RPointer: 62 ("extern_function")
+        PPointer: 33 ("C_WSA64")
         Offset: 0x0
     }
     Relocation {
@@ -2276,7 +2233,7 @@ RldRecord {
             RLD_ACT_ADD (2:00)
             RLD_FS_STORE (2:01)
             ByteLength(8) (4:08)
-        RPointer: 64 ("weak_extern_function")
+        RPointer: 63 ("weak_extern_function")
         Offset: 0x10
     }
     Relocation {
@@ -2287,7 +2244,7 @@ RldRecord {
             RLD_ACT_ADD (2:00)
             RLD_FS_STORE (2:01)
             ByteLength(8) (4:08)
-        RPointer: 65 ("weak_extern_function")
+        RPointer: 64 ("weak_extern_function")
         Offset: 0x18
     }
     Relocation {
@@ -2309,7 +2266,7 @@ RldRecord {
             RLD_ACT_ADD (2:00)
             RLD_FS_STORE (2:01)
             ByteLength(8) (4:08)
-        RPointer: 54 ("weak_function")
+        RPointer: 53 ("weak_function")
         Offset: 0x28
     }
     Relocation {
@@ -2331,7 +2288,7 @@ RldRecord {
             RLD_ACT_ADD (2:00)
             RLD_FS_FETCH (2:00)
             ByteLength(8) (4:08)
-        RPointer: 67 ("extern_default_data")
+        RPointer: 65 ("extern_default_data")
         Offset: 0x38
     }
     Relocation {
@@ -2342,7 +2299,7 @@ RldRecord {
             RLD_ACT_ADD (2:00)
             RLD_FS_FETCH (2:00)
             ByteLength(8) (4:08)
-        RPointer: 68 ("extern_hidden_data")
+        RPointer: 66 ("extern_hidden_data")
         Offset: 0x40
     }
     Relocation {
@@ -2353,7 +2310,7 @@ RldRecord {
             RLD_ACT_ADD (2:00)
             RLD_FS_FETCH (2:00)
             ByteLength(8) (4:08)
-        RPointer: 26 ("initialized_data")
+        RPointer: 37 ("initialized_data")
         Offset: 0x48
     }
     Relocation {
@@ -2364,7 +2321,7 @@ RldRecord {
             RLD_ACT_ADD (2:00)
             RLD_FS_FETCH (2:00)
             ByteLength(8) (4:08)
-        RPointer: 38 ("uninitialized_data")
+        RPointer: 43 ("uninitialized_data")
         Offset: 0x50
     }
     Relocation {
@@ -2375,7 +2332,7 @@ RldRecord {
             RLD_ACT_ADD (2:00)
             RLD_FS_FETCH (2:00)
             ByteLength(8) (4:08)
-        RPointer: 28 ("weak_initialized_data")
+        RPointer: 38 ("weak_initialized_data")
         Offset: 0x58
     }
     Relocation {
@@ -2386,7 +2343,7 @@ RldRecord {
             RLD_ACT_ADD (2:00)
             RLD_FS_FETCH (2:00)
             ByteLength(8) (4:08)
-        RPointer: 40 ("weak_uninitialized_data")
+        RPointer: 44 ("weak_uninitialized_data")
         Offset: 0x60
     }
     Relocation {
@@ -2397,7 +2354,7 @@ RldRecord {
             RLD_ACT_ADD (2:00)
             RLD_FS_FETCH (2:00)
             ByteLength(8) (4:08)
-        RPointer: 30 ("exported_initialized_data")
+        RPointer: 39 ("exported_initialized_data")
         Offset: 0x68
     }
     Relocation {
@@ -2408,7 +2365,7 @@ RldRecord {
             RLD_ACT_ADD (2:00)
             RLD_FS_FETCH (2:00)
             ByteLength(8) (4:08)
-        RPointer: 42 ("static_initialized_data")
+        RPointer: 45 ("static_initialized_data")
         Offset: 0x70
     }
     Relocation {
@@ -2419,7 +2376,7 @@ RldRecord {
             RLD_ACT_ADD (2:00)
             RLD_FS_FETCH (2:00)
             ByteLength(8) (4:08)
-        RPointer: 44 ("static_uninitialized_data")
+        RPointer: 46 ("static_uninitialized_data")
         Offset: 0x78
     }
     Relocation {
@@ -2430,7 +2387,7 @@ RldRecord {
             RLD_ACT_ADD (2:00)
             RLD_FS_STORE (2:01)
             ByteLength(8) (4:08)
-        RPointer: 55 ("default_function")
+        RPointer: 54 ("default_function")
         Offset: 0x80
     }
     Relocation {
@@ -2452,7 +2409,7 @@ RldRecord {
             RLD_ACT_ADD (2:00)
             RLD_FS_FETCH (2:00)
             ByteLength(8) (4:08)
-        RPointer: 46 ("default_empty_data")
+        RPointer: 47 ("default_empty_data")
         Offset: 0x90
     }
     Relocation {
@@ -2474,7 +2431,7 @@ RldRecord {
             RLD_ACT_ADD (2:00)
             RLD_FS_FETCH (2:00)
             ByteLength(8) (4:08)
-        RPointer: 50 ("static_empty_data")
+        RPointer: 49 ("static_empty_data")
         Offset: 0xA0
     }
     Relocation {
@@ -2485,7 +2442,7 @@ RldRecord {
             RLD_ACT_ADD (2:00)
             RLD_FS_FETCH (2:00)
             ByteLength(8) (4:08)
-        RPointer: 69 ("extern_data")
+        RPointer: 67 ("extern_data")
         Offset: 0xA8
     }
     Relocation {
@@ -2496,7 +2453,7 @@ RldRecord {
             RLD_ACT_ADD (2:00)
             RLD_FS_FETCH (2:00)
             ByteLength(8) (4:08)
-        RPointer: 32 ("global_read_only_table")
+        RPointer: 40 ("global_read_only_table")
         Offset: 0xB0
     }
     Relocation {
@@ -2507,7 +2464,7 @@ RldRecord {
             RLD_ACT_ADD (2:00)
             RLD_FS_FETCH (2:00)
             ByteLength(8) (4:08)
-        RPointer: 34 ("data_pointer")
+        RPointer: 41 ("data_pointer")
         Offset: 0xB8
     }
     Relocation {
@@ -2518,7 +2475,7 @@ RldRecord {
             RLD_ACT_ADD (2:00)
             RLD_FS_STORE (2:01)
             ByteLength(8) (4:08)
-        RPointer: 59 ("extern_function")
+        RPointer: 58 ("extern_function")
         Offset: 0xC0
     }
     Relocation {
@@ -2529,11 +2486,11 @@ RldRecord {
             RLD_FS_FETCH (2:00)
             ByteLength(8) (4:08)
         RPointer: 2 ("C_CODE64")
-        PPointer: 22 ("D_LINE")
+        PPointer: 35 ("D_LINE")
         Offset: 0x30
     }
 }
 EndRecord {
     Flags: ENTRY_NONE (0x0)
-    RecordCount: 88
+    RecordCount: 86
 }

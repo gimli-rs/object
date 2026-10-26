@@ -742,6 +742,12 @@ pub enum SymbolFlags<Section, Symbol> {
         namespace: crate::goff::SymbolNamespace,
         /// `behavioral_attributes` field in the GOFF ESD record.
         behavioral_attributes: crate::goff::BehavioralAttributes,
+        /// The parent symbol, if any.
+        parent: Option<Symbol>,
+        /// The associated data area, if any.
+        ///
+        /// Only valid if `symbol_type` is `ESD_ST_LD`.
+        ada: Option<Symbol>,
     },
     /// Wasm symbol flags.
     #[cfg(feature = "wasm")]

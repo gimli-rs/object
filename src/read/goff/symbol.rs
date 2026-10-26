@@ -243,6 +243,16 @@ impl<'data, 'file> GoffSymbol<'data, 'file> {
         self.symbol.parent_esdid()
     }
 
+    /// Get the associated data ESDID as a SymbolIndex.
+    ///
+    /// Does not validate the index.
+    ///
+    /// Returns `SymbolIndex(0)` if there is no associated data ESDID.
+    #[inline]
+    pub fn goff_ada_esdid(&self) -> SymbolIndex {
+        SymbolIndex(self.symbol.record().ada_esdid.get(BE) as usize)
+    }
+
     /// Get the raw EBCDIC-encoded name bytes of this symbol.
     ///
     /// Use [`ObjectSymbol::decoded_name_bytes`] to convert to UTF-8 bytes.
@@ -407,6 +417,8 @@ impl<'data, 'file> ObjectSymbol<'data> for GoffSymbol<'data, 'file> {
             flags: esd.flags,
             namespace: esd.namespace,
             behavioral_attributes: esd.behavioral_attributes,
+            parent: Some(self.goff_parent_esdid()).filter(|id| id.0 != 0),
+            ada: Some(self.goff_ada_esdid()).filter(|id| id.0 != 0),
         }
     }
 }

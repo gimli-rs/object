@@ -119,11 +119,15 @@ pub fn copy(in_data: &[u8]) -> Vec<u8> {
                 flags,
                 namespace,
                 behavioral_attributes,
+                parent,
+                ada,
             } => SymbolFlags::Goff {
                 symbol_type,
                 flags,
                 namespace,
                 behavioral_attributes,
+                parent: parent.map(|index| *out_symbols.get(&index).unwrap()),
+                ada: ada.map(|index| *out_symbols.get(&index).unwrap()),
             },
             _ => panic!("unknown symbol flags for {:?}", in_symbol),
         };
