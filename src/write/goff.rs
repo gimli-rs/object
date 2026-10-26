@@ -39,6 +39,10 @@ impl<'a> Object<'a> {
             writer.write_symbol(symbol, SymbolId(symbol_index), flags)?;
         }
 
+        for (section_index, section) in self.sections.iter().enumerate() {
+            writer.write_text(section, SectionId(section_index));
+        }
+
         // Collect relocations for all sections after all symbols are written.
         for (section_index, section) in self.sections.iter().enumerate() {
             let ed_esdid = writer.section_esdid[section_index];
@@ -258,6 +262,7 @@ struct Writer<'a> {
     symbol_referent: Vec<goff::RelocationReferentType>,
     // Map section ID to ED ESDID
     section_esdid: Vec<u32>,
+    section_record_style: Vec<goff::TextRecordStyle>,
 
     // Relocation tracking
     relocations: Vec<goff::Relocation>,
@@ -276,6 +281,7 @@ impl<'a> Writer<'a> {
             symbol_esdid: vec![0; symbol_count],
             symbol_referent: vec![goff::RLD_RO_LABEL; symbol_count],
             section_esdid: vec![0; section_count],
+            section_record_style: vec![goff::TXT_RS_BYTE; section_count],
             relocations: Vec::new(),
         }
     }
@@ -363,11 +369,7 @@ impl<'a> Writer<'a> {
         ed.behavioral_attributes = behavioral_attributes.with_alignment(alignment);
         let ed_esdid = self.write_esd_record(&ed, name);
         self.section_esdid[section_id.0] = ed_esdid;
-
-        if !section.data.is_empty() {
-            let record_style = behavioral_attributes.text_record_style();
-            self.write_text(ed_esdid, &section.data, record_style);
-        }
+        self.section_record_style[section_id.0] = ed.behavioral_attributes.text_record_style();
         Ok(())
     }
 
@@ -445,8 +447,16 @@ impl<'a> Writer<'a> {
         }
     }
 
-    fn write_text(&mut self, esdid: u32, mut data: &[u8], record_style: goff::TextRecordStyle) {
+    fn write_text(&mut self, section: &Section<'_>, section_id: SectionId) {
+        if section.data.is_empty() {
+            return;
+        }
+
+        let esdid = self.section_esdid[section_id.0];
+        let record_style = self.section_record_style[section_id.0];
+
         let mut offset = 0_usize;
+        let mut data = &*section.data;
         while !data.is_empty() {
             let logical_write_len = data.len().min(MAX_LOGICAL_LENGTH);
             let record_data_len = logical_write_len.min(goff::SIZEOF_TXT_DATA);
