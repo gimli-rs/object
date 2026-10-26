@@ -254,42 +254,6 @@ impl<'a> Writer<'a> {
         self.buffer.write_pod(&fileend);
     }
 
-    fn write_er_to_text(
-        &mut self,
-        symbol_name: &EbcdicStr,
-        scope: goff::BindingScope,
-        strength: goff::BindingStrength,
-    ) -> u32 {
-        let mut er = self.get_esd_record(goff::ESD_ST_ER, goff::ESD_NS_NORMAL_NAME, self.cu_esdid);
-
-        // External reference to code: executable, export scope
-        let attrs = default_attrs()
-            .with_executable(goff::EXEC_CODE)
-            .with_binding_scope(scope)
-            .with_binding_strength(strength);
-        er.behavioral_attributes = attrs;
-
-        self.write_esd_record(&er, symbol_name)
-    }
-
-    fn write_er_to_data(
-        &mut self,
-        symbol_name: &EbcdicStr,
-        scope: goff::BindingScope,
-        strength: goff::BindingStrength,
-    ) -> u32 {
-        let ed_esdid = self.write_wsa_symbol();
-
-        // Emit PR child symbol using write_pr method.
-        let pr_attrs = default_attrs()
-            .with_executable(goff::EXEC_DATA)
-            .with_binding_scope(scope)
-            .with_binding_strength(strength)
-            .with_alignment(goff::ALIGN_HALFWORD);
-
-        self.write_pr(symbol_name, ed_esdid, 0, pr_attrs)
-    }
-
     fn write_wsa_symbol(&mut self) -> u32 {
         if let Some(wsa_esdid) = self.wsa_esdid {
             return wsa_esdid;
@@ -304,54 +268,6 @@ impl<'a> Writer<'a> {
         let ed_esdid = self.write_esd_record(&ed, &EBCDIC_C_WSA64);
         self.wsa_esdid = Some(ed_esdid);
         ed_esdid
-    }
-
-    /// Write an SD (Section Definition) record.
-    ///
-    /// SD records define control sections (compilation units).
-    fn write_sd(&mut self, name: &EbcdicStr, attributes: goff::BehavioralAttributes) -> u32 {
-        let mut sd = self.get_esd_record(
-            goff::ESD_ST_SD,
-            goff::ESD_NS_PROGRAM_MANAGEMENT_BINDER,
-            0, // No parent for SD
-        );
-        sd.behavioral_attributes = attributes;
-        self.write_esd_record(&sd, name)
-    }
-
-    /// Write an LD (Label Definition) record.
-    ///
-    /// LD records define labels within sections (function/variable names).
-    fn write_ld(
-        &mut self,
-        name: &EbcdicStr,
-        parent_esdid: u32,
-        offset: u32,
-        scope: goff::BindingScope,
-    ) -> u32 {
-        let mut ld = self.get_esd_record(goff::ESD_ST_LD, goff::ESD_NS_NORMAL_NAME, parent_esdid);
-        ld.offset = U32::new(BE, offset);
-
-        let attrs = default_attrs().with_binding_scope(scope);
-        ld.behavioral_attributes = attrs;
-
-        self.write_esd_record(&ld, name)
-    }
-
-    /// Write a PR (Part Reference) record.
-    ///
-    /// PR records reference parts of elements (data within sections).
-    fn write_pr(
-        &mut self,
-        name: &EbcdicStr,
-        parent_esdid: u32,
-        length: u32,
-        attributes: goff::BehavioralAttributes,
-    ) -> u32 {
-        let mut pr = self.get_esd_record(goff::ESD_ST_PR, goff::ESD_NS_PARTS, parent_esdid);
-        pr.length = U32::new(BE, length);
-        pr.behavioral_attributes = attributes;
-        self.write_esd_record(&pr, name)
     }
 
     fn write_section(
@@ -401,8 +317,10 @@ impl<'a> Writer<'a> {
 
     /// Write a compilation unit SD.
     fn write_compilation_unit(&mut self, cu_name: &EbcdicStr) -> u32 {
-        let attrs = default_attrs().with_binding_scope(goff::ESD_BSC_SECTION);
-        self.write_sd(cu_name, attrs)
+        let mut sd =
+            self.get_esd_record(goff::ESD_ST_SD, goff::ESD_NS_PROGRAM_MANAGEMENT_BINDER, 0);
+        sd.behavioral_attributes = default_attrs().with_binding_scope(goff::ESD_BSC_SECTION);
+        self.write_esd_record(&sd, cu_name)
     }
 
     fn get_esd_record(
@@ -539,7 +457,7 @@ impl<'a> Writer<'a> {
     }
 
     /// Write a defined symbol with proper hierarchy (LD or PR).
-    fn write_defined_symbol(&mut self, symbol: &Symbol, parent_ed_esdid: u32) -> Result<u32> {
+    fn write_defined_symbol(&mut self, symbol: &Symbol, ed_esdid: u32) -> Result<u32> {
         // Determine binding scope based on symbol properties
         let scope = match symbol.scope {
             SymbolScope::Compilation => goff::ESD_BSC_SECTION,
@@ -553,7 +471,10 @@ impl<'a> Writer<'a> {
         let name = &encode_name(&symbol.name)?;
 
         // Write LD (Label Definition) for the symbol
-        let ld_esdid = self.write_ld(name, parent_ed_esdid, symbol.value as u32, scope);
+        let mut ld = self.get_esd_record(goff::ESD_ST_LD, goff::ESD_NS_NORMAL_NAME, ed_esdid);
+        ld.offset = U32::new(BE, symbol.value as u32);
+        ld.behavioral_attributes = default_attrs().with_binding_scope(scope);
+        let ld_esdid = self.write_esd_record(&ld, name);
 
         Ok(ld_esdid)
     }
@@ -570,13 +491,25 @@ impl<'a> Writer<'a> {
         } else {
             goff::ESD_BST_STRONG
         };
+        let attrs = default_attrs()
+            .with_binding_scope(scope)
+            .with_binding_strength(strength);
 
         let name = &encode_name(&symbol.name)?;
 
         let esdid = if is_code {
-            self.write_er_to_text(name, scope, strength)
+            let mut er =
+                self.get_esd_record(goff::ESD_ST_ER, goff::ESD_NS_NORMAL_NAME, self.cu_esdid);
+            er.behavioral_attributes = attrs.with_executable(goff::EXEC_CODE);
+            self.write_esd_record(&er, name)
         } else {
-            self.write_er_to_data(name, scope, strength)
+            let ed_esdid = self.write_wsa_symbol();
+
+            let mut pr = self.get_esd_record(goff::ESD_ST_PR, goff::ESD_NS_PARTS, ed_esdid);
+            pr.behavioral_attributes = attrs
+                .with_executable(goff::EXEC_DATA)
+                .with_alignment(goff::ALIGN_HALFWORD);
+            self.write_esd_record(&pr, name)
         };
 
         Ok(esdid)
