@@ -125,60 +125,44 @@ impl<'a> Object<'a> {
                 SymbolKind::Text | SymbolKind::Data | SymbolKind::Label,
                 SymbolSection::Section(_),
             ) => {
-                let scope = match symbol.scope {
-                    SymbolScope::Compilation => goff::ESD_BSC_SECTION,
-                    SymbolScope::Linkage => goff::ESD_BSC_LIBRARY,
-                    SymbolScope::Dynamic => goff::ESD_BSC_IMPORT_EXPORT,
-                    SymbolScope::Unknown => return SymbolFlags::None,
-                };
                 symbol_type = goff::ESD_ST_LD;
                 namespace = goff::ESD_NS_NORMAL_NAME;
-                attrs = default_attrs().with_binding_scope(scope);
+                attrs = default_attrs();
             }
             (SymbolKind::Text, SymbolSection::Undefined) => {
-                let scope = if symbol.scope == SymbolScope::Dynamic {
-                    goff::ESD_BSC_IMPORT_EXPORT
-                } else {
-                    goff::ESD_BSC_LIBRARY
-                };
-                let strength = if symbol.weak {
-                    goff::ESD_BST_WEAK
-                } else {
-                    goff::ESD_BST_STRONG
-                };
                 symbol_type = goff::ESD_ST_ER;
                 namespace = goff::ESD_NS_NORMAL_NAME;
-                attrs = default_attrs()
-                    .with_binding_scope(scope)
-                    .with_binding_strength(strength)
-                    .with_executable(goff::EXEC_CODE);
+                attrs = default_attrs().with_executable(goff::EXEC_CODE);
             }
             (SymbolKind::Data | SymbolKind::Unknown, SymbolSection::Undefined) => {
-                let scope = if symbol.scope == SymbolScope::Dynamic {
-                    goff::ESD_BSC_IMPORT_EXPORT
-                } else {
-                    goff::ESD_BSC_LIBRARY
-                };
-                let strength = if symbol.weak {
-                    goff::ESD_BST_WEAK
-                } else {
-                    goff::ESD_BST_STRONG
-                };
                 symbol_type = goff::ESD_ST_PR;
                 namespace = goff::ESD_NS_PARTS;
                 attrs = default_attrs()
-                    .with_binding_scope(scope)
-                    .with_binding_strength(strength)
                     .with_executable(goff::EXEC_DATA)
                     .with_alignment(goff::ALIGN_HALFWORD);
             }
             _ => return SymbolFlags::None,
         };
+        let scope = match (symbol.scope, symbol.section) {
+            (SymbolScope::Compilation, SymbolSection::Undefined) => return SymbolFlags::None,
+            (SymbolScope::Compilation, _) => goff::ESD_BSC_SECTION,
+            (SymbolScope::Linkage, _) => goff::ESD_BSC_LIBRARY,
+            (SymbolScope::Dynamic, _) => goff::ESD_BSC_IMPORT_EXPORT,
+            (SymbolScope::Unknown, SymbolSection::Undefined) => goff::ESD_BSC_LIBRARY,
+            (SymbolScope::Unknown, _) => return SymbolFlags::None,
+        };
+        let strength = if symbol.weak {
+            goff::ESD_BST_WEAK
+        } else {
+            goff::ESD_BST_STRONG
+        };
         SymbolFlags::Goff {
             symbol_type,
             flags: goff::SymbolFlags(0),
             namespace,
-            behavioral_attributes: attrs,
+            behavioral_attributes: attrs
+                .with_binding_scope(scope)
+                .with_binding_strength(strength),
         }
     }
 
