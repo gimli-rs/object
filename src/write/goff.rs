@@ -507,26 +507,37 @@ impl<'a> Writer<'a> {
             )));
         };
 
-        let (parent, offset, referent);
+        let (parent, offset, length, referent);
         match (symbol_type, symbol.section) {
             (goff::ESD_ST_SD, SymbolSection::None) => {
                 parent = 0;
                 offset = 0;
+                length = 0;
                 referent = goff::RLD_RO_LABEL;
             }
             (goff::ESD_ST_LD, SymbolSection::Section(section_id)) => {
                 parent = self.section_esdid[section_id.0];
                 offset = symbol.value as u32;
+                length = 0;
                 referent = goff::RLD_RO_LABEL;
+            }
+            (goff::ESD_ST_PR, SymbolSection::Section(section_id)) => {
+                parent = self.section_esdid[section_id.0];
+                offset = 0;
+                length = symbol.size as u32;
+                referent = goff::RLD_RO_PART;
+                // TODO: record in section PRs for writing text
             }
             (goff::ESD_ST_ER, SymbolSection::Undefined) => {
                 parent = self.cu_esdid;
                 offset = 0;
+                length = 0;
                 referent = goff::RLD_RO_LABEL;
             }
             (goff::ESD_ST_PR, SymbolSection::Undefined) => {
                 parent = self.write_wsa_symbol();
                 offset = 0;
+                length = 0;
                 referent = goff::RLD_RO_PART;
             }
             _ => {
@@ -542,6 +553,7 @@ impl<'a> Writer<'a> {
 
         let mut esd = self.get_esd_record(symbol_type, namespace, parent);
         esd.offset = U32::new(BE, offset);
+        esd.length = U32::new(BE, length);
         esd.flags = flags;
         esd.behavioral_attributes = behavioral_attributes;
         let esdid = self.write_esd_record(&esd, name);
