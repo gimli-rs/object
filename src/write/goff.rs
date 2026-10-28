@@ -121,10 +121,17 @@ impl<'a> Object<'a> {
     pub(crate) fn goff_symbol_flags(&self, symbol: &Symbol) -> SymbolFlags<SectionId, SymbolId> {
         let (symbol_type, namespace, attrs);
         match (symbol.kind, symbol.section) {
-            (
-                SymbolKind::Text | SymbolKind::Data | SymbolKind::Label,
-                SymbolSection::Section(_),
-            ) => {
+            (SymbolKind::Text, SymbolSection::Section(_)) => {
+                symbol_type = goff::ESD_ST_LD;
+                namespace = goff::ESD_NS_NORMAL_NAME;
+                attrs = default_attrs().with_executable(goff::EXEC_CODE);
+            }
+            (SymbolKind::Data, SymbolSection::Section(_)) => {
+                symbol_type = goff::ESD_ST_LD;
+                namespace = goff::ESD_NS_NORMAL_NAME;
+                attrs = default_attrs().with_executable(goff::EXEC_DATA);
+            }
+            (SymbolKind::Label, SymbolSection::Section(_)) => {
                 symbol_type = goff::ESD_ST_LD;
                 namespace = goff::ESD_NS_NORMAL_NAME;
                 attrs = default_attrs();
