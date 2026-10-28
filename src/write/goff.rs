@@ -22,23 +22,15 @@ const MAX_LOGICAL_LENGTH: usize = 32 * 1024 - 1;
 impl<'a> Object<'a> {
     /// Write goff file
     pub(crate) fn goff_write(&self, buffer: &mut dyn WritableBuffer) -> Result<()> {
-        let mut writer = Writer::new(buffer, self.symbols.len(), self.sections.len());
+        let mut writer = Writer::new(self, buffer);
         writer.write_hdr();
 
         for (section_index, section) in self.sections.iter().enumerate() {
-            let parent = self.goff_section_parent(section);
-            if let Some(parent) = parent {
-                let symbol = &self.symbols[parent.0];
-                let flags = self.symbol_flags(symbol);
-                writer.write_symbol(symbol, parent, flags)?;
-            }
-            let flags = self.section_flags(section);
-            writer.write_section(section, SectionId(section_index), flags, parent)?;
+            writer.write_section(section, SectionId(section_index))?;
         }
 
         for (symbol_index, symbol) in self.symbols.iter().enumerate() {
-            let flags = self.symbol_flags(symbol);
-            writer.write_symbol(symbol, SymbolId(symbol_index), flags)?;
+            writer.write_symbol(symbol, SymbolId(symbol_index))?;
         }
 
         for (section_index, section) in self.sections.iter().enumerate() {
@@ -47,7 +39,7 @@ impl<'a> Object<'a> {
 
         // Collect relocations for all sections after all symbols are written.
         for (section_index, section) in self.sections.iter().enumerate() {
-            let ed_esdid = writer.section_esdid[section_index];
+            let ed_esdid = writer.sections[section_index].esdid;
             for reloc in &section.relocations {
                 writer.add_relocation(reloc, ed_esdid)?;
             }
@@ -56,14 +48,6 @@ impl<'a> Object<'a> {
         writer.write_relocations();
         writer.write_end();
         Ok(())
-    }
-
-    fn goff_section_parent(&self, section: &Section<'_>) -> Option<SymbolId> {
-        let symbol = &self.symbols[section.symbol?.0];
-        let SymbolFlags::Goff { parent, .. } = symbol.flags else {
-            return None;
-        };
-        parent
     }
 
     /// Returns GOFF section info
@@ -258,8 +242,31 @@ impl<'a> Object<'a> {
     }
 }
 
+#[derive(Clone, Copy)]
+struct SymbolInfo {
+    esdid: u32,
+    symbol_type: goff::SymbolType,
+    referent: goff::RelocationReferentType,
+}
+
+#[derive(Clone, Copy)]
+struct SectionInfo {
+    esdid: u32,
+    record_style: goff::TextRecordStyle,
+}
+
+impl Default for SectionInfo {
+    fn default() -> Self {
+        Self {
+            esdid: 0,
+            record_style: goff::TXT_RS_BYTE,
+        }
+    }
+}
+
 /// A helper for writing GOFF files.
 struct Writer<'a> {
+    object: &'a Object<'a>,
     buffer: &'a mut dyn WritableBuffer,
 
     next_esdid: u32,
@@ -270,12 +277,10 @@ struct Writer<'a> {
 
     logical_record_count: u32,
 
-    // Map symbol ID to ESDID
-    symbol_esdid: Vec<u32>,
-    symbol_referent: Vec<goff::RelocationReferentType>,
-    // Map section ID to ED ESDID
-    section_esdid: Vec<u32>,
-    section_record_style: Vec<goff::TextRecordStyle>,
+    // Indexed by SymbolId
+    symbols: Vec<Option<SymbolInfo>>,
+    // Indexed by SectionId
+    sections: Vec<SectionInfo>,
 
     // Relocation tracking
     relocations: Vec<goff::Relocation>,
@@ -283,18 +288,19 @@ struct Writer<'a> {
 
 impl<'a> Writer<'a> {
     /// Create a new `Writer`.
-    fn new(buffer: &'a mut dyn WritableBuffer, symbol_count: usize, section_count: usize) -> Self {
+    fn new(object: &'a Object<'a>, buffer: &'a mut dyn WritableBuffer) -> Self {
+        let symbol_count = object.symbols.len();
+        let section_count = object.sections.len();
         Writer {
+            object,
             buffer,
 
             next_esdid: 1,
             cu_esdid: None,
             wsa_esdid: None,
             logical_record_count: 0,
-            symbol_esdid: vec![0; symbol_count],
-            symbol_referent: vec![goff::RLD_RO_LABEL; symbol_count],
-            section_esdid: vec![0; section_count],
-            section_record_style: vec![goff::TXT_RS_BYTE; section_count],
+            symbols: vec![None; symbol_count],
+            sections: vec![SectionInfo::default(); section_count],
             relocations: Vec::new(),
         }
     }
@@ -346,19 +352,13 @@ impl<'a> Writer<'a> {
         ed_esdid
     }
 
-    fn write_section(
-        &mut self,
-        section: &Section<'_>,
-        section_id: SectionId,
-        flags: SectionFlags,
-        parent_id: Option<SymbolId>,
-    ) -> Result<()> {
+    fn write_section(&mut self, section: &Section<'_>, section_id: SectionId) -> Result<()> {
         let SectionFlags::Goff {
             flags,
             fill_byte_value,
             namespace,
             behavioral_attributes,
-        } = flags
+        } = self.object.section_flags(section)
         else {
             return Err(Error(format!(
                 "unimplemented section `{}` kind {:?}",
@@ -376,8 +376,8 @@ impl<'a> Writer<'a> {
             )));
         }
 
-        let parent = match parent_id {
-            Some(parent_id) => self.symbol_esdid[parent_id.0],
+        let parent = match self.section_parent(section) {
+            Some(parent_id) => self.write_symbol_type(parent_id, Some(goff::ESD_ST_SD))?,
             None => self.write_compilation_unit(),
         };
 
@@ -388,9 +388,26 @@ impl<'a> Writer<'a> {
         ed.fill_byte_value = fill_byte_value;
         ed.behavioral_attributes = behavioral_attributes.with_alignment(alignment);
         let ed_esdid = self.write_esd_record(&ed, name);
-        self.section_esdid[section_id.0] = ed_esdid;
-        self.section_record_style[section_id.0] = ed.behavioral_attributes.text_record_style();
+        self.sections[section_id.0] = SectionInfo {
+            esdid: ed_esdid,
+            record_style: ed.behavioral_attributes.text_record_style(),
+        };
+        if let Some(symbol_id) = section.symbol {
+            self.symbols[symbol_id.0] = Some(SymbolInfo {
+                esdid: ed_esdid,
+                symbol_type: goff::ESD_ST_ED,
+                referent: goff::RLD_RO_ELEMENT,
+            });
+        }
         Ok(())
+    }
+
+    fn section_parent(&self, section: &Section<'_>) -> Option<SymbolId> {
+        let symbol = &self.object.symbols[section.symbol?.0];
+        let SymbolFlags::Goff { parent, .. } = symbol.flags else {
+            return None;
+        };
+        parent
     }
 
     /// Write a compilation unit SD.
@@ -477,8 +494,8 @@ impl<'a> Writer<'a> {
             return;
         }
 
-        let esdid = self.section_esdid[section_id.0];
-        let record_style = self.section_record_style[section_id.0];
+        let esdid = self.sections[section_id.0].esdid;
+        let record_style = self.sections[section_id.0].record_style;
 
         let mut offset = 0_usize;
         let mut data = &*section.data;
@@ -511,24 +528,42 @@ impl<'a> Writer<'a> {
         }
     }
 
-    fn write_symbol(
-        &mut self,
-        symbol: &Symbol,
-        symbol_id: SymbolId,
-        symbol_flags: SymbolFlags<SectionId, SymbolId>,
-    ) -> Result<()> {
-        if self.symbol_esdid[symbol_id.0] != 0 {
-            return Ok(());
-        }
-
+    fn write_symbol(&mut self, symbol: &Symbol, symbol_id: SymbolId) -> Result<()> {
         match (symbol.kind, symbol.section) {
-            (SymbolKind::File, _) => return Ok(()),
-            (SymbolKind::Section, SymbolSection::Section(section_id)) => {
-                self.symbol_esdid[symbol_id.0] = self.section_esdid[section_id.0];
-                self.symbol_referent[symbol_id.0] = goff::RLD_RO_ELEMENT;
-                return Ok(());
+            // Ignored.
+            (SymbolKind::File, _) => {}
+            // Already written.
+            (SymbolKind::Section, SymbolSection::Section(_)) => {}
+            _ => {
+                self.write_symbol_type(symbol_id, None)?;
             }
-            _ => {}
+        }
+        Ok(())
+    }
+
+    /// Recursive calls must specify a required_type to avoid cycles.
+    fn write_symbol_type(
+        &mut self,
+        symbol_id: SymbolId,
+        required_type: Option<goff::SymbolType>,
+    ) -> Result<u32> {
+        let symbol = &self.object.symbols[symbol_id.0];
+        let check_type = |symbol_type| {
+            if let Some(required_type) = required_type {
+                if required_type != symbol_type {
+                    return Err(Error(format!(
+                        "reference to symbol `{}` type {:?} but required type {:?}",
+                        symbol.name().unwrap_or(""),
+                        symbol_type,
+                        required_type,
+                    )));
+                }
+            }
+            Ok(())
+        };
+        if let Some(info) = self.symbols[symbol_id.0] {
+            check_type(info.symbol_type)?;
+            return Ok(info.esdid);
         }
 
         let SymbolFlags::Goff {
@@ -538,7 +573,7 @@ impl<'a> Writer<'a> {
             behavioral_attributes,
             parent: parent_id,
             ada,
-        } = symbol_flags
+        } = self.object.symbol_flags(symbol)
         else {
             return Err(Error(format!(
                 "unimplemented symbol `{}` kind {:?} scope {:?}",
@@ -547,6 +582,8 @@ impl<'a> Writer<'a> {
                 symbol.scope,
             )));
         };
+
+        check_type(symbol_type)?;
 
         let (parent, offset, length, referent);
         match (symbol_type, symbol.section) {
@@ -557,13 +594,13 @@ impl<'a> Writer<'a> {
                 referent = goff::RLD_RO_LABEL;
             }
             (goff::ESD_ST_LD, SymbolSection::Section(section_id)) => {
-                parent = self.section_esdid[section_id.0];
+                parent = self.sections[section_id.0].esdid;
                 offset = symbol.value as u32;
                 length = 0;
                 referent = goff::RLD_RO_LABEL;
             }
             (goff::ESD_ST_PR, SymbolSection::Section(section_id)) => {
-                parent = self.section_esdid[section_id.0];
+                parent = self.sections[section_id.0].esdid;
                 offset = 0;
                 length = symbol.size as u32;
                 referent = goff::RLD_RO_PART;
@@ -571,7 +608,7 @@ impl<'a> Writer<'a> {
             }
             (goff::ESD_ST_ER, SymbolSection::Undefined) => {
                 parent = match parent_id {
-                    Some(parent_id) => self.symbol_esdid[parent_id.0],
+                    Some(parent_id) => self.write_symbol_type(parent_id, Some(goff::ESD_ST_SD))?,
                     None => self.write_compilation_unit(),
                 };
                 offset = 0;
@@ -580,7 +617,7 @@ impl<'a> Writer<'a> {
             }
             (goff::ESD_ST_PR, SymbolSection::Undefined) => {
                 parent = match parent_id {
-                    Some(parent_id) => self.symbol_esdid[parent_id.0],
+                    Some(parent_id) => self.write_symbol_type(parent_id, Some(goff::ESD_ST_ED))?,
                     None => self.write_wsa_symbol(),
                 };
                 offset = 0;
@@ -597,7 +634,16 @@ impl<'a> Writer<'a> {
         }
 
         let ada_esdid = match ada {
-            Some(ada) => self.symbol_esdid[ada.0],
+            Some(ada) => {
+                if symbol_type != goff::ESD_ST_LD {
+                    return Err(Error(format!(
+                        "invalid ada for symbol `{}` type {:?}",
+                        symbol.name().unwrap_or(""),
+                        symbol_type,
+                    )));
+                }
+                self.write_symbol_type(ada, Some(goff::ESD_ST_PR))?
+            }
             None => 0,
         };
 
@@ -611,9 +657,12 @@ impl<'a> Writer<'a> {
         esd.behavioral_attributes = behavioral_attributes;
         let esdid = self.write_esd_record(&esd, name);
 
-        self.symbol_esdid[symbol_id.0] = esdid;
-        self.symbol_referent[symbol_id.0] = referent;
-        Ok(())
+        self.symbols[symbol_id.0] = Some(SymbolInfo {
+            esdid,
+            symbol_type,
+            referent,
+        });
+        Ok(esdid)
     }
 
     /// Add a relocation to the pending list.
@@ -630,32 +679,30 @@ impl<'a> Writer<'a> {
             )));
         }
 
-        let r_pointer = self.symbol_esdid[reloc.symbol.0];
-        if r_pointer == 0 {
+        let Some(symbol) = self.symbols[reloc.symbol.0] else {
             return Err(Error("Unsupported relocation symbol for GOFF".into()));
-        }
-        let flags = flags.with_referent_type(self.symbol_referent[reloc.symbol.0]);
+        };
+        let flags = flags.with_referent_type(symbol.referent);
         self.relocations.push(goff::Relocation {
             flags,
-            r_pointer,
+            r_pointer: symbol.esdid,
             p_pointer,
             offset: reloc.offset,
         });
 
         if let Some(subtractor) = reloc.subtractor {
-            let r_pointer = self.symbol_esdid[subtractor.0];
-            if r_pointer == 0 {
+            let Some(symbol) = self.symbols[subtractor.0] else {
                 return Err(Error(
                     "Unsupported relocation subtractor symbol for GOFF".into(),
                 ));
-            }
+            };
             let flags = flags
-                .with_referent_type(self.symbol_referent[subtractor.0])
+                .with_referent_type(symbol.referent)
                 .with_action(goff::RLD_ACT_SUBTRACT)
                 .with_fetch_store(goff::RLD_FS_FETCH);
             self.relocations.push(goff::Relocation {
                 flags,
-                r_pointer,
+                r_pointer: symbol.esdid,
                 p_pointer,
                 offset: reloc.offset,
             });
