@@ -857,6 +857,10 @@ impl<'data, 'file, R: ReadRef<'data>> ObjectSection<'data> for Section<'data, 'f
         with_inner!(self.inner, SectionInternal, |x| x.data_range(address, size))
     }
 
+    fn collected_data(&self) -> Result<Cow<'data, [u8]>> {
+        with_inner!(self.inner, SectionInternal, |x| x.collected_data())
+    }
+
     fn compressed_file_range(&self) -> Result<CompressedFileRange> {
         with_inner!(self.inner, SectionInternal, |x| x.compressed_file_range())
     }

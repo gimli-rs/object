@@ -120,7 +120,7 @@ fn goff_basic_structure() {
         .expect("Should find .debug_info section");
 
     // Check section data
-    let data = debug_section.uncompressed_data().unwrap();
+    let data = debug_section.collected_data().unwrap();
     assert_eq!(
         &data[..],
         &[
@@ -178,9 +178,9 @@ fn goff_multiple_debug_sections() {
     );
 
     // Verify section data using the concrete GOFF section type.
-    let data0 = goff_sections[0].uncompressed_data().unwrap();
+    let data0 = goff_sections[0].collected_data().unwrap();
     assert_eq!(&data0[..], &[0xDE, 0xAD]);
-    let data1 = goff_sections[1].uncompressed_data().unwrap();
+    let data1 = goff_sections[1].collected_data().unwrap();
     assert_eq!(&data1[..], &[0xBE, 0xEF]);
 }
 

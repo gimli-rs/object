@@ -32,7 +32,7 @@ impl<'data> GoffSectionTableInternal<'data> {
 
     /// Finalize our representation of PR symbols within ED sections.
     ///
-    /// `GoffSection::uncompressed_data` concatenates PR data without padding.
+    /// `GoffSection::collected_data` concatenates PR data without padding.
     /// Calculate the total length and assign offsets to subsections to match,
     /// so that symbols and relocations can be adjusted.
     pub(super) fn finalize(&mut self, symbols: &mut GoffSymbolTableInternal<'data>) -> Result<()> {
@@ -332,7 +332,7 @@ where
 
     fn data(&self) -> Result<&'data [u8]> {
         Err(Error(
-            "GOFF section data is non-contiguous, use uncompressed_data() instead",
+            "GOFF section data is non-contiguous, use collected_data() instead",
         ))
     }
 
@@ -341,17 +341,7 @@ where
         Ok(None)
     }
 
-    fn compressed_file_range(&self) -> Result<CompressedFileRange> {
-        Ok(CompressedFileRange::none(self.file_range()))
-    }
-
-    fn compressed_data(&self) -> Result<CompressedData<'data>> {
-        Err(Error(
-            "GOFF section data is non-contiguous, use uncompressed_data() instead",
-        ))
-    }
-
-    fn uncompressed_data(&self) -> Result<Cow<'data, [u8]>> {
+    fn collected_data(&self) -> Result<Cow<'data, [u8]>> {
         if self.is_bss() {
             return Ok(Cow::Borrowed(&[]));
         }
@@ -412,6 +402,20 @@ where
             add_subsection(self.file.sections.subsection(*pr))?;
         }
         Ok(Cow::Owned(data))
+    }
+
+    fn compressed_file_range(&self) -> Result<CompressedFileRange> {
+        Ok(CompressedFileRange::none(self.file_range()))
+    }
+
+    fn compressed_data(&self) -> Result<CompressedData<'data>> {
+        Err(Error(
+            "GOFF section data is non-contiguous, use collected_data() instead",
+        ))
+    }
+
+    fn uncompressed_data(&self) -> Result<Cow<'data, [u8]>> {
+        self.collected_data()
     }
 
     fn name_bytes(&self) -> read::Result<&'data [u8]> {

@@ -415,6 +415,19 @@ pub trait ObjectSection<'data>: read::private::Sealed {
     /// Returns `Ok(None)` if the section does not contain the given range.
     fn data_range(&self, address: u64, size: u64) -> Result<Option<&'data [u8]>>;
 
+    /// Returns the contents of the section as a single byte array.
+    ///
+    /// For most file formats, this is the same as [`Self::data`].
+    /// For GOFF, the section data is copied from non-contiguous text records,
+    /// which requires an allocation.
+    ///
+    /// This does not do any decompression.
+    // TODO: stabilize
+    #[cfg_attr(not(feature = "unstable"), doc(hidden))]
+    fn collected_data(&self) -> Result<Cow<'data, [u8]>> {
+        self.data().map(Cow::Borrowed)
+    }
+
     /// Returns the potentially compressed file range of the section,
     /// along with information about the compression.
     fn compressed_file_range(&self) -> Result<CompressedFileRange>;
