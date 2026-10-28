@@ -48,14 +48,14 @@ pub fn copy(in_data: &[u8]) -> Vec<u8> {
                 .unwrap_or("")
                 .as_bytes()
                 .to_vec(),
-            in_section.name().unwrap().as_bytes().to_vec(),
+            in_section.decoded_name().unwrap().as_bytes().to_vec(),
             in_section.kind(),
         );
         let out_section = out_object.section_mut(section_id);
         if out_section.is_bss() {
             out_section.append_bss(in_section.size(), in_section.align());
         } else {
-            out_section.set_data(in_section.data().unwrap(), in_section.align());
+            out_section.set_data(in_section.collected_data().unwrap(), in_section.align());
         }
         out_section.flags = in_section.flags();
         out_sections.insert(in_section.index(), section_id);
@@ -113,10 +113,26 @@ pub fn copy(in_data: &[u8]) -> Vec<u8> {
             }
             #[cfg(feature = "wasm")]
             SymbolFlags::Wasm { flags, kind, index } => SymbolFlags::Wasm { flags, kind, index },
+            #[cfg(feature = "goff")]
+            SymbolFlags::Goff {
+                symbol_type,
+                flags,
+                namespace,
+                behavioral_attributes,
+            } => SymbolFlags::Goff {
+                symbol_type,
+                flags,
+                namespace,
+                behavioral_attributes,
+            },
             _ => panic!("unknown symbol flags for {:?}", in_symbol),
         };
         let out_symbol = write::Symbol {
-            name: in_symbol.name().unwrap_or("").as_bytes().to_vec(),
+            name: in_symbol
+                .decoded_name()
+                .unwrap_or_default()
+                .as_bytes()
+                .to_vec(),
             value,
             size: in_symbol.size(),
             kind: in_symbol.kind(),
