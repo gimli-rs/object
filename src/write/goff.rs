@@ -252,6 +252,7 @@ struct SymbolInfo {
 #[derive(Clone, Copy)]
 struct SectionInfo {
     esdid: u32,
+    namespace: goff::SymbolNamespace,
     record_style: goff::TextRecordStyle,
 }
 
@@ -259,6 +260,7 @@ impl Default for SectionInfo {
     fn default() -> Self {
         Self {
             esdid: 0,
+            namespace: goff::ESD_NS_NORMAL_NAME,
             record_style: goff::TXT_RS_BYTE,
         }
     }
@@ -394,6 +396,7 @@ impl<'a> Writer<'a> {
         let ed_esdid = self.write_esd_record(&ed, name);
         self.sections[section_id.0] = SectionInfo {
             esdid: ed_esdid,
+            namespace,
             record_style: ed.behavioral_attributes.text_record_style(),
         };
         if let Some(symbol_id) = section.symbol {
@@ -573,7 +576,7 @@ impl<'a> Writer<'a> {
         let SymbolFlags::Goff {
             symbol_type,
             flags,
-            namespace,
+            mut namespace,
             behavioral_attributes,
             parent: parent_id,
             ada,
@@ -599,12 +602,14 @@ impl<'a> Writer<'a> {
             }
             (goff::ESD_ST_LD, SymbolSection::Section(section_id)) => {
                 parent = self.sections[section_id.0].esdid;
+                namespace = self.sections[section_id.0].namespace;
                 offset = symbol.value as u32;
                 length = 0;
                 referent = goff::RLD_RO_LABEL;
             }
             (goff::ESD_ST_PR, SymbolSection::Section(section_id)) => {
                 parent = self.sections[section_id.0].esdid;
+                namespace = self.sections[section_id.0].namespace;
                 offset = 0;
                 length = symbol.size as u32;
                 referent = goff::RLD_RO_PART;
@@ -620,9 +625,24 @@ impl<'a> Writer<'a> {
                 referent = goff::RLD_RO_LABEL;
             }
             (goff::ESD_ST_PR, SymbolSection::Undefined) => {
-                parent = match parent_id {
-                    Some(parent_id) => self.write_symbol_type(parent_id, Some(goff::ESD_ST_ED))?,
-                    None => self.write_wsa_symbol(),
+                match parent_id {
+                    Some(parent_id) => {
+                        let parent_symbol = &self.object.symbols[parent_id.0];
+                        let (SymbolKind::Section, SymbolSection::Section(section_id)) =
+                            (parent_symbol.kind, parent_symbol.section)
+                        else {
+                            return Err(Error(format!(
+                                "invalid symbol `{}` parent",
+                                symbol.name().unwrap_or(""),
+                            )));
+                        };
+                        parent = self.sections[section_id.0].esdid;
+                        namespace = self.sections[section_id.0].namespace;
+                    }
+                    None => {
+                        parent = self.write_wsa_symbol();
+                        namespace = goff::ESD_NS_PARTS;
+                    }
                 };
                 offset = 0;
                 length = 0;
