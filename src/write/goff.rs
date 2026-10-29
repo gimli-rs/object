@@ -1,5 +1,5 @@
 use alloc::vec::Vec;
-use core::mem;
+use core::{cmp, mem};
 
 use crate::ebcdic::{EbcdicArray, EbcdicStr, EbcdicString};
 use crate::endian::{BigEndian as BE, U16, U32};
@@ -34,14 +34,14 @@ impl<'a> Object<'a> {
         }
 
         for (section_index, section) in self.sections.iter().enumerate() {
-            writer.write_text(section, SectionId(section_index));
+            // This also sorts the PRs, which is required by `add_relocation`.
+            writer.write_text(section, SectionId(section_index))?;
         }
 
         // Collect relocations for all sections after all symbols are written.
         for (section_index, section) in self.sections.iter().enumerate() {
-            let ed_esdid = writer.sections[section_index].esdid;
             for reloc in &section.relocations {
-                writer.add_relocation(reloc, ed_esdid)?;
+                writer.add_relocation(reloc, SectionId(section_index))?;
             }
         }
 
@@ -242,18 +242,20 @@ impl<'a> Object<'a> {
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone)]
 struct SymbolInfo {
     esdid: u32,
     symbol_type: goff::SymbolType,
     referent: goff::RelocationReferentType,
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone)]
 struct SectionInfo {
     esdid: u32,
     namespace: goff::SymbolNamespace,
     record_style: goff::TextRecordStyle,
+    merge: bool,
+    parts: Vec<PartInfo>,
 }
 
 impl Default for SectionInfo {
@@ -262,8 +264,17 @@ impl Default for SectionInfo {
             esdid: 0,
             namespace: goff::ESD_NS_NORMAL_NAME,
             record_style: goff::TXT_RS_BYTE,
+            merge: false,
+            parts: Vec::new(),
         }
     }
+}
+
+#[derive(Clone)]
+struct PartInfo {
+    esdid: u32,
+    offset: u64,
+    size: u64,
 }
 
 /// A helper for writing GOFF files.
@@ -389,7 +400,9 @@ impl<'a> Writer<'a> {
 
         let name = &encode_name(&section.name)?;
         let mut ed = self.get_esd_record(goff::ESD_ST_ED, namespace, parent);
-        ed.length = U32::new(BE, section.size as u32);
+        let merge = behavioral_attributes.binding_algorithm() == goff::ESD_BA_MERGE;
+        let length = if merge { 0 } else { section.size };
+        ed.length = U32::new(BE, length as u32);
         ed.flags = flags;
         ed.fill_byte_value = fill_byte_value;
         ed.behavioral_attributes = behavioral_attributes.with_alignment(alignment);
@@ -398,6 +411,8 @@ impl<'a> Writer<'a> {
             esdid: ed_esdid,
             namespace,
             record_style: ed.behavioral_attributes.text_record_style(),
+            merge,
+            parts: Vec::new(),
         };
         if let Some(symbol_id) = section.symbol {
             self.symbols[symbol_id.0] = Some(SymbolInfo {
@@ -496,16 +511,64 @@ impl<'a> Writer<'a> {
         }
     }
 
-    fn write_text(&mut self, section: &Section<'_>, section_id: SectionId) {
-        if section.data.is_empty() {
-            return;
+    fn write_text(&mut self, section: &Section<'_>, section_id: SectionId) -> Result<()> {
+        let info = &self.sections[section_id.0];
+        let esdid = info.esdid;
+        let record_style = info.record_style;
+        if !info.merge {
+            self.write_text_part(esdid, record_style, &section.data);
+            return Ok(());
         }
 
-        let esdid = self.sections[section_id.0].esdid;
-        let record_style = self.sections[section_id.0].record_style;
+        // Need ordered disjoint parts to assign data and relocations to.
+        // Do this for parts with no data too, but not sure if relocations are valid for them.
+        self.sections[section_id.0]
+            .parts
+            .sort_by_key(|part| (part.offset, part.size));
+        let mut next_offset = 0;
+        for part in &self.sections[section_id.0].parts {
+            if part.offset < next_offset {
+                return Err(Error(format!(
+                    "section `{}` has overlapping parts at offset {:#x}",
+                    section.name().unwrap_or(""),
+                    part.offset,
+                )));
+            }
+            next_offset = part.offset + part.size;
+        }
 
+        let check_zero = |data: &[u8]| -> Result<()> {
+            if data.iter().any(|&b| b != 0) {
+                return Err(Error(format!(
+                    "section `{}` has non-zero data outside of a part",
+                    section.name().unwrap_or(""),
+                )));
+            }
+            Ok(())
+        };
+
+        let mut next_offset = 0;
+        for i in 0..self.sections[section_id.0].parts.len() {
+            let part = &self.sections[section_id.0].parts[i];
+            if part.offset >= section.data.len() as u64 {
+                break;
+            }
+            check_zero(&section.data[next_offset as usize..part.offset as usize])?;
+            next_offset = cmp::min(part.offset + part.size, section.data.len() as u64);
+            let data = &section.data[part.offset as usize..next_offset as usize];
+            self.write_text_part(part.esdid, record_style, data);
+        }
+        check_zero(&section.data[next_offset as usize..])?;
+        Ok(())
+    }
+
+    fn write_text_part(
+        &mut self,
+        esdid: u32,
+        record_style: goff::TextRecordStyle,
+        mut data: &[u8],
+    ) {
         let mut offset = 0_usize;
-        let mut data = &*section.data;
         while !data.is_empty() {
             let logical_write_len = data.len().min(MAX_LOGICAL_LENGTH);
             let record_data_len = logical_write_len.min(goff::SIZEOF_TXT_DATA);
@@ -568,7 +631,7 @@ impl<'a> Writer<'a> {
             }
             Ok(())
         };
-        if let Some(info) = self.symbols[symbol_id.0] {
+        if let Some(info) = &self.symbols[symbol_id.0] {
             check_type(info.symbol_type)?;
             return Ok(info.esdid);
         }
@@ -593,6 +656,7 @@ impl<'a> Writer<'a> {
         check_type(symbol_type)?;
 
         let (parent, offset, length, referent);
+        let mut part_section = None;
         match (symbol_type, symbol.section) {
             (goff::ESD_ST_SD, SymbolSection::None) => {
                 parent = 0;
@@ -613,7 +677,7 @@ impl<'a> Writer<'a> {
                 offset = 0;
                 length = symbol.size as u32;
                 referent = goff::RLD_RO_PART;
-                // TODO: record in section PRs for writing text
+                part_section = Some(section_id);
             }
             (goff::ESD_ST_ER, SymbolSection::Undefined) => {
                 parent = match parent_id {
@@ -686,11 +750,18 @@ impl<'a> Writer<'a> {
             symbol_type,
             referent,
         });
+        if let Some(section_id) = part_section {
+            self.sections[section_id.0].parts.push(PartInfo {
+                esdid,
+                offset: symbol.value,
+                size: symbol.size,
+            });
+        }
         Ok(esdid)
     }
 
     /// Add a relocation to the pending list.
-    fn add_relocation(&mut self, reloc: &RelocationInternal, p_pointer: u32) -> Result<()> {
+    fn add_relocation(&mut self, reloc: &RelocationInternal, section_id: SectionId) -> Result<()> {
         let RelocationFlags::Goff { flags } = reloc.flags else {
             return Err(Error("invalid relocation flags".into()));
         };
@@ -703,7 +774,28 @@ impl<'a> Writer<'a> {
             )));
         }
 
-        let Some(symbol) = self.symbols[reloc.symbol.0] else {
+        // The P pointer is the ED or PR that owns the data at the relocation offset.
+        let info = &self.sections[section_id.0];
+        let (p_pointer, offset) = if info.merge {
+            let size = (u64::from(flags.bit_offset()) + u64::from(flags.total_bit_width())).div_ceil(8);
+            let Some(part) = info
+                .parts
+                .partition_point(|part| part.offset <= reloc.offset)
+                .checked_sub(1)
+                .map(|index| &info.parts[index])
+                .filter(|part| (reloc.offset - part.offset) + size <= part.size)
+            else {
+                return Err(Error(format!(
+                    "relocation at offset {:#x} is outside of a part",
+                    reloc.offset
+                )));
+            };
+            (part.esdid, reloc.offset - part.offset)
+        } else {
+            (info.esdid, reloc.offset)
+        };
+
+        let Some(symbol) = &self.symbols[reloc.symbol.0] else {
             return Err(Error("Unsupported relocation symbol for GOFF".into()));
         };
         let flags = flags.with_referent_type(symbol.referent);
@@ -711,11 +803,11 @@ impl<'a> Writer<'a> {
             flags,
             r_pointer: symbol.esdid,
             p_pointer,
-            offset: reloc.offset,
+            offset,
         });
 
         if let Some(subtractor) = reloc.subtractor {
-            let Some(symbol) = self.symbols[subtractor.0] else {
+            let Some(symbol) = &self.symbols[subtractor.0] else {
                 return Err(Error(
                     "Unsupported relocation subtractor symbol for GOFF".into(),
                 ));
@@ -728,7 +820,7 @@ impl<'a> Writer<'a> {
                 flags,
                 r_pointer: symbol.esdid,
                 p_pointer,
-                offset: reloc.offset,
+                offset,
             });
         }
 

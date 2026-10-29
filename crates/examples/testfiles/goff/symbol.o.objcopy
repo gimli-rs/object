@@ -48,7 +48,7 @@ EsdRecord {
     Esdid: 3 ("C_@@QPPA2")
     ParentEsdid: 1 ("symbol#C")
     Offset: 0x0
-    Length: 0x8
+    Length: 0x0
     ExtendedAttributeEsdid: 0
     ExtendedAttributeDataOffset: 0x0
     Namespace: ESD_NS_PARTS (0x3)
@@ -91,7 +91,7 @@ EsdRecord {
     Esdid: 5 ("C_WSA64")
     ParentEsdid: 4 ("initialized_data")
     Offset: 0x0
-    Length: 0x4
+    Length: 0x0
     ExtendedAttributeEsdid: 0
     ExtendedAttributeDataOffset: 0x0
     Namespace: ESD_NS_PARTS (0x3)
@@ -132,7 +132,7 @@ EsdRecord {
     Esdid: 7 ("C_WSA64")
     ParentEsdid: 6 ("weak_initialized_data")
     Offset: 0x0
-    Length: 0x4
+    Length: 0x0
     ExtendedAttributeEsdid: 0
     ExtendedAttributeDataOffset: 0x0
     Namespace: ESD_NS_PARTS (0x3)
@@ -173,7 +173,7 @@ EsdRecord {
     Esdid: 9 ("C_WSA64")
     ParentEsdid: 8 ("exported_initialized_data")
     Offset: 0x0
-    Length: 0x4
+    Length: 0x0
     ExtendedAttributeEsdid: 0
     ExtendedAttributeDataOffset: 0x0
     Namespace: ESD_NS_PARTS (0x3)
@@ -214,7 +214,7 @@ EsdRecord {
     Esdid: 11 ("C_WSA64")
     ParentEsdid: 10 ("global_read_only_table")
     Offset: 0x0
-    Length: 0x100
+    Length: 0x0
     ExtendedAttributeEsdid: 0
     ExtendedAttributeDataOffset: 0x0
     Namespace: ESD_NS_PARTS (0x3)
@@ -255,7 +255,7 @@ EsdRecord {
     Esdid: 13 ("C_WSA64")
     ParentEsdid: 12 ("data_pointer")
     Offset: 0x0
-    Length: 0x8
+    Length: 0x0
     ExtendedAttributeEsdid: 0
     ExtendedAttributeDataOffset: 0x0
     Namespace: ESD_NS_PARTS (0x3)
@@ -296,7 +296,7 @@ EsdRecord {
     Esdid: 15 ("C_WSA64")
     ParentEsdid: 14 ("function_pointer")
     Offset: 0x0
-    Length: 0x8
+    Length: 0x0
     ExtendedAttributeEsdid: 0
     ExtendedAttributeDataOffset: 0x0
     Namespace: ESD_NS_PARTS (0x3)
@@ -337,7 +337,7 @@ EsdRecord {
     Esdid: 17 ("C_WSA64")
     ParentEsdid: 16 ("uninitialized_data")
     Offset: 0x0
-    Length: 0x4
+    Length: 0x0
     ExtendedAttributeEsdid: 0
     ExtendedAttributeDataOffset: 0x0
     Namespace: ESD_NS_PARTS (0x3)
@@ -378,7 +378,7 @@ EsdRecord {
     Esdid: 19 ("C_WSA64")
     ParentEsdid: 18 ("weak_uninitialized_data")
     Offset: 0x0
-    Length: 0x4
+    Length: 0x0
     ExtendedAttributeEsdid: 0
     ExtendedAttributeDataOffset: 0x0
     Namespace: ESD_NS_PARTS (0x3)
@@ -419,7 +419,7 @@ EsdRecord {
     Esdid: 21 ("C_WSA64")
     ParentEsdid: 20 ("static_initialized_data")
     Offset: 0x0
-    Length: 0x4
+    Length: 0x0
     ExtendedAttributeEsdid: 0
     ExtendedAttributeDataOffset: 0x0
     Namespace: ESD_NS_PARTS (0x3)
@@ -460,7 +460,7 @@ EsdRecord {
     Esdid: 23 ("C_WSA64")
     ParentEsdid: 22 ("static_uninitialized_data")
     Offset: 0x0
-    Length: 0x4
+    Length: 0x0
     ExtendedAttributeEsdid: 0
     ExtendedAttributeDataOffset: 0x0
     Namespace: ESD_NS_PARTS (0x3)
@@ -501,7 +501,7 @@ EsdRecord {
     Esdid: 25 ("C_WSA64")
     ParentEsdid: 24 ("default_empty_data")
     Offset: 0x0
-    Length: 0x2
+    Length: 0x0
     ExtendedAttributeEsdid: 0
     ExtendedAttributeDataOffset: 0x0
     Namespace: ESD_NS_PARTS (0x3)
@@ -542,7 +542,7 @@ EsdRecord {
     Esdid: 27 ("C_WSA64")
     ParentEsdid: 26 ("hidden_empty_data")
     Offset: 0x0
-    Length: 0x2
+    Length: 0x0
     ExtendedAttributeEsdid: 0
     ExtendedAttributeDataOffset: 0x0
     Namespace: ESD_NS_PARTS (0x3)
@@ -583,7 +583,7 @@ EsdRecord {
     Esdid: 29 ("C_WSA64")
     ParentEsdid: 28 ("static_empty_data")
     Offset: 0x0
-    Length: 0x2
+    Length: 0x0
     ExtendedAttributeEsdid: 0
     ExtendedAttributeDataOffset: 0x0
     Namespace: ESD_NS_PARTS (0x3)
@@ -671,7 +671,7 @@ EsdRecord {
     Esdid: 33 ("C_WSA64")
     ParentEsdid: 1 ("symbol#C")
     Offset: 0x0
-    Length: 0xC8
+    Length: 0x0
     ExtendedAttributeEsdid: 0
     ExtendedAttributeDataOffset: 0x0
     Namespace: ESD_NS_PARTS (0x3)
@@ -1468,7 +1468,7 @@ TxtRecord {
 }
 TxtRecord {
     RecordStyle: TXT_RS_BYTE (0x0)
-    ElementEsdid: 3 ("C_@@QPPA2")
+    ElementEsdid: 36 (".&ppa2")
     Offset: 0x0
     TrueLength: 0x0
     TextEncoding: 0x0
@@ -1476,7 +1476,7 @@ TxtRecord {
 }
 TxtRecord {
     RecordStyle: TXT_RS_BYTE (0x0)
-    ElementEsdid: 5 ("C_WSA64")
+    ElementEsdid: 37 ("initialized_data")
     Offset: 0x0
     TrueLength: 0x0
     TextEncoding: 0x0
@@ -1484,7 +1484,7 @@ TxtRecord {
 }
 TxtRecord {
     RecordStyle: TXT_RS_BYTE (0x0)
-    ElementEsdid: 7 ("C_WSA64")
+    ElementEsdid: 38 ("weak_initialized_data")
     Offset: 0x0
     TrueLength: 0x0
     TextEncoding: 0x0
@@ -1492,7 +1492,7 @@ TxtRecord {
 }
 TxtRecord {
     RecordStyle: TXT_RS_BYTE (0x0)
-    ElementEsdid: 9 ("C_WSA64")
+    ElementEsdid: 39 ("exported_initialized_data")
     Offset: 0x0
     TrueLength: 0x0
     TextEncoding: 0x0
@@ -1500,7 +1500,7 @@ TxtRecord {
 }
 TxtRecord {
     RecordStyle: TXT_RS_BYTE (0x0)
-    ElementEsdid: 11 ("C_WSA64")
+    ElementEsdid: 40 ("global_read_only_table")
     Offset: 0x0
     TrueLength: 0x0
     TextEncoding: 0x0
@@ -1509,7 +1509,7 @@ TxtRecord {
 }
 TxtRecord {
     RecordStyle: TXT_RS_BYTE (0x0)
-    ElementEsdid: 13 ("C_WSA64")
+    ElementEsdid: 41 ("data_pointer")
     Offset: 0x0
     TrueLength: 0x0
     TextEncoding: 0x0
@@ -1517,7 +1517,7 @@ TxtRecord {
 }
 TxtRecord {
     RecordStyle: TXT_RS_BYTE (0x0)
-    ElementEsdid: 15 ("C_WSA64")
+    ElementEsdid: 42 ("function_pointer")
     Offset: 0x0
     TrueLength: 0x0
     TextEncoding: 0x0
@@ -1525,7 +1525,7 @@ TxtRecord {
 }
 TxtRecord {
     RecordStyle: TXT_RS_BYTE (0x0)
-    ElementEsdid: 21 ("C_WSA64")
+    ElementEsdid: 45 ("static_initialized_data")
     Offset: 0x0
     TrueLength: 0x0
     TextEncoding: 0x0
@@ -1560,7 +1560,7 @@ TxtRecord {
 }
 TxtRecord {
     RecordStyle: TXT_RS_BYTE (0x0)
-    ElementEsdid: 33 ("C_WSA64")
+    ElementEsdid: 50 ("symbol#S")
     Offset: 0x0
     TrueLength: 0x0
     TextEncoding: 0x0
@@ -1585,7 +1585,7 @@ TxtRecord {
     Continuations: 3
 }
 RldRecord {
-    Length: 0x4F0
+    Length: 0x4EC
     Continuations: 16
     Relocation {
         Flags: 0:00 1:00 2:00 3:00 4:04 5:00
@@ -1608,50 +1608,6 @@ RldRecord {
             RLD_FS_FETCH (2:00)
             ByteLength(4) (4:04)
         RPointer: 2 ("C_CODE64")
-    }
-    Relocation {
-        Flags: 0:80 1:01 2:00 3:00 4:08 5:00
-            SAME_R_ID (0:80)
-            RLD_RT_ADDRESS (1:00)
-            RLD_RO_ELEMENT (1:01)
-            RLD_ACT_ADD (2:00)
-            RLD_FS_FETCH (2:00)
-            ByteLength(8) (4:08)
-        PPointer: 3 ("C_@@QPPA2")
-        Offset: 0x0
-    }
-    Relocation {
-        Flags: 0:60 1:00 2:02 3:00 4:08 5:00
-            SAME_P_ID (0:40)
-            SAME_OFFSET (0:20)
-            RLD_RT_ADDRESS (1:00)
-            RLD_RO_LABEL (1:00)
-            RLD_ACT_SUBTRACT (2:02)
-            RLD_FS_FETCH (2:00)
-            ByteLength(8) (4:08)
-        RPointer: 52 ("CELQSTRT")
-    }
-    Relocation {
-        Flags: 0:20 1:03 2:00 3:00 4:08 5:00
-            SAME_OFFSET (0:20)
-            RLD_RT_ADDRESS (1:00)
-            RLD_RO_PART (1:03)
-            RLD_ACT_ADD (2:00)
-            RLD_FS_FETCH (2:00)
-            ByteLength(8) (4:08)
-        RPointer: 37 ("initialized_data")
-        PPointer: 13 ("C_WSA64")
-    }
-    Relocation {
-        Flags: 0:20 1:00 2:01 3:00 4:08 5:00
-            SAME_OFFSET (0:20)
-            RLD_RT_ADDRESS (1:00)
-            RLD_RO_LABEL (1:00)
-            RLD_ACT_ADD (2:00)
-            RLD_FS_STORE (2:01)
-            ByteLength(8) (4:08)
-        RPointer: 58 ("extern_function")
-        PPointer: 15 ("C_WSA64")
     }
     Relocation {
         Flags: 0:00 1:00 2:00 3:00 4:04 5:00
@@ -2204,15 +2160,70 @@ RldRecord {
         Offset: 0x22B
     }
     Relocation {
-        Flags: 0:00 1:70 2:01 3:00 4:08 5:00
+        Flags: 0:00 1:01 2:00 3:00 4:08 5:00
+            RLD_RT_ADDRESS (1:00)
+            RLD_RO_ELEMENT (1:01)
+            RLD_ACT_ADD (2:00)
+            RLD_FS_FETCH (2:00)
+            ByteLength(8) (4:08)
+        RPointer: 2 ("C_CODE64")
+        PPointer: 35 ("D_LINE")
+        Offset: 0x30
+    }
+    Relocation {
+        Flags: 0:80 1:01 2:00 3:00 4:08 5:00
+            SAME_R_ID (0:80)
+            RLD_RT_ADDRESS (1:00)
+            RLD_RO_ELEMENT (1:01)
+            RLD_ACT_ADD (2:00)
+            RLD_FS_FETCH (2:00)
+            ByteLength(8) (4:08)
+        PPointer: 36 (".&ppa2")
+        Offset: 0x0
+    }
+    Relocation {
+        Flags: 0:60 1:00 2:02 3:00 4:08 5:00
+            SAME_P_ID (0:40)
+            SAME_OFFSET (0:20)
+            RLD_RT_ADDRESS (1:00)
+            RLD_RO_LABEL (1:00)
+            RLD_ACT_SUBTRACT (2:02)
+            RLD_FS_FETCH (2:00)
+            ByteLength(8) (4:08)
+        RPointer: 52 ("CELQSTRT")
+    }
+    Relocation {
+        Flags: 0:20 1:03 2:00 3:00 4:08 5:00
+            SAME_OFFSET (0:20)
+            RLD_RT_ADDRESS (1:00)
+            RLD_RO_PART (1:03)
+            RLD_ACT_ADD (2:00)
+            RLD_FS_FETCH (2:00)
+            ByteLength(8) (4:08)
+        RPointer: 37 ("initialized_data")
+        PPointer: 41 ("data_pointer")
+    }
+    Relocation {
+        Flags: 0:20 1:00 2:01 3:00 4:08 5:00
+            SAME_OFFSET (0:20)
+            RLD_RT_ADDRESS (1:00)
+            RLD_RO_LABEL (1:00)
+            RLD_ACT_ADD (2:00)
+            RLD_FS_STORE (2:01)
+            ByteLength(8) (4:08)
+        RPointer: 58 ("extern_function")
+        PPointer: 42 ("function_pointer")
+    }
+    Relocation {
+        Flags: 0:20 1:70 2:01 3:00 4:08 5:00
+            SAME_OFFSET (0:20)
             RLD_RT_TYPE_CONSTANT (1:70)
             RLD_RO_LABEL (1:00)
             RLD_ACT_ADD (2:00)
             RLD_FS_STORE (2:01)
             ByteLength(8) (4:08)
         RPointer: 62 ("extern_function")
-        PPointer: 33 ("C_WSA64")
-        Offset: 0x0
+        PPointer: 50 ("symbol#S")
     }
     Relocation {
         Flags: 0:C0 1:00 2:01 3:00 4:08 5:00
@@ -2477,17 +2488,6 @@ RldRecord {
             ByteLength(8) (4:08)
         RPointer: 58 ("extern_function")
         Offset: 0xC0
-    }
-    Relocation {
-        Flags: 0:00 1:01 2:00 3:00 4:08 5:00
-            RLD_RT_ADDRESS (1:00)
-            RLD_RO_ELEMENT (1:01)
-            RLD_ACT_ADD (2:00)
-            RLD_FS_FETCH (2:00)
-            ByteLength(8) (4:08)
-        RPointer: 2 ("C_CODE64")
-        PPointer: 35 ("D_LINE")
-        Offset: 0x30
     }
 }
 EndRecord {

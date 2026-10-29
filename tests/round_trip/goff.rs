@@ -3,7 +3,7 @@
 use object::read::{ObjectSection, ObjectSymbol};
 use object::{
     Architecture, BinaryFormat, Endianness, Object, RelocationEncoding, RelocationFlags,
-    RelocationKind, SectionKind, SymbolFlags, SymbolKind, SymbolScope,
+    RelocationKind, SectionFlags, SectionKind, SymbolFlags, SymbolKind, SymbolScope,
 };
 use object::{goff, pod, read, write};
 
@@ -464,4 +464,130 @@ fn goff_relocation_rld_continuation() {
     for (i, offset) in relocations.iter().enumerate() {
         assert_eq!(*offset, (i * 4) as u64);
     }
+}
+
+/// Test that PR data is written separately from its parent merge ED.
+#[test]
+fn goff_parts() {
+    let mut object = write::Object::new(BinaryFormat::Goff, Architecture::S390x, Endianness::Big);
+
+    let section = object.add_section(Vec::new(), b"C_PARTS".to_vec(), SectionKind::Data);
+    object.section_mut(section).flags = SectionFlags::Goff {
+        flags: goff::ESD_SF_FILL_BYTE_PRESENCE,
+        fill_byte_value: 0,
+        namespace: goff::ESD_NS_PARTS,
+        behavioral_attributes: goff::BehavioralAttributes::default()
+            .with_binding_algorithm(goff::ESD_BA_MERGE)
+            .with_executable(goff::EXEC_DATA),
+    };
+
+    let symbol_flags = SymbolFlags::Goff {
+        symbol_type: goff::ESD_ST_PR,
+        flags: goff::SymbolFlags(0),
+        namespace: goff::ESD_NS_PARTS,
+        behavioral_attributes: Default::default(),
+        parent: None,
+        ada: None,
+    };
+    let part1 = object.add_symbol(write::Symbol {
+        name: b"part1".to_vec(),
+        value: 0,
+        size: 0,
+        kind: SymbolKind::Data,
+        scope: SymbolScope::Compilation,
+        weak: false,
+        section: write::SymbolSection::Section(section),
+        flags: symbol_flags,
+    });
+    let part2 = object.add_symbol(write::Symbol {
+        name: b"part2".to_vec(),
+        value: 0,
+        size: 0,
+        kind: SymbolKind::Data,
+        scope: SymbolScope::Compilation,
+        weak: false,
+        section: write::SymbolSection::Section(section),
+        flags: symbol_flags,
+    });
+    let ext_symbol = object.add_symbol(write::Symbol {
+        name: EXTERNAL_FUNC.to_vec(),
+        value: 0,
+        size: 0,
+        kind: SymbolKind::Text,
+        scope: SymbolScope::Dynamic,
+        weak: false,
+        section: write::SymbolSection::Undefined,
+        flags: SymbolFlags::None,
+    });
+    let data2 = [5, 6, 7, 8, 9, 10, 11, 12];
+    let offset2 = object.add_symbol_data(part2, section, &data2, 0x10);
+    let data1 = [1, 2, 3, 4];
+    let offset1 = object.add_symbol_data(part1, section, &data1, 1);
+    for offset in [offset1, offset2, offset2 + 4] {
+        object
+            .add_relocation(
+                section,
+                write::Relocation {
+                    offset,
+                    symbol: ext_symbol,
+                    addend: 0,
+                    flags: RelocationFlags::Generic {
+                        kind: RelocationKind::Absolute,
+                        encoding: RelocationEncoding::Generic,
+                        size: 32,
+                    },
+                },
+            )
+            .unwrap();
+    }
+
+    let bytes = object.write().unwrap();
+    let object = read::File::parse(&*bytes).unwrap();
+
+    let section = object.section_by_name_bytes(b"C_PARTS").unwrap();
+    assert_eq!(section.size(), 12);
+    let section_data = section.collected_data().unwrap();
+
+    let ed = object.symbol_by_name_bytes(b"C_PARTS").unwrap();
+    assert_eq!(ed.size(), 0);
+
+    let symbol = object.symbol_by_name_bytes(b"part1").unwrap();
+    let address1 = symbol.address();
+    assert_eq!(symbol.section_index(), Some(section.index()));
+    assert_eq!(symbol.size(), 4);
+    assert_eq!(&section_data[address1 as usize..][..4], &data1);
+
+    let symbol = object.symbol_by_name_bytes(b"part2").unwrap();
+    let address2 = symbol.address();
+    assert_eq!(symbol.section_index(), Some(section.index()));
+    assert_eq!(symbol.size(), 8);
+    assert_eq!(&section_data[address2 as usize..][..8], &data2);
+
+    let mut offsets: Vec<_> = section.relocations().map(|(offset, _)| offset).collect();
+    let mut expected = vec![address1, address2, address2 + 4];
+    offsets.sort();
+    expected.sort();
+    assert_eq!(offsets, expected);
+}
+
+/// Test that non-zero data outside of a part in a merge section is an error.
+#[test]
+fn goff_parts_padding() {
+    let mut object = write::Object::new(BinaryFormat::Goff, Architecture::S390x, Endianness::Big);
+
+    let data = object.section_id(write::StandardSection::Data);
+    object.section_mut(data).flags = SectionFlags::Goff {
+        flags: goff::ESD_SF_FILL_BYTE_PRESENCE,
+        fill_byte_value: 0,
+        namespace: goff::ESD_NS_PARTS,
+        behavioral_attributes: goff::BehavioralAttributes::default()
+            .with_binding_algorithm(goff::ESD_BA_MERGE)
+            .with_executable(goff::EXEC_DATA),
+    };
+
+    object.append_section_data(data, &[0, 0, 0, 0], 4);
+    assert!(object.write().is_ok());
+
+    object.append_section_data(data, &[1, 2, 3, 4], 4);
+    assert!(object.write().is_err());
 }
