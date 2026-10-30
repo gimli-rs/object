@@ -715,6 +715,20 @@ newtype!(
     struct Alignment(u8);
 );
 
+impl Alignment {
+    /// Construct from an alignment in bytes.
+    pub fn from_bytes(align: u64) -> Option<Self> {
+        if !align.is_power_of_two() {
+            return None;
+        }
+        let alignment = Alignment(align.trailing_zeros() as u8);
+        if alignment > ALIGN_4KB {
+            return None;
+        }
+        Some(alignment)
+    }
+}
+
 newtype_constant_names!(NAMES_ALIGN: Alignment(u8) = {
     /// Byte alignment
     ALIGN_BYTE = 0,

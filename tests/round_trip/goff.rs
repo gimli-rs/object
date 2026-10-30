@@ -591,3 +591,79 @@ fn goff_parts_padding() {
     object.append_section_data(data, &[1, 2, 3, 4], 4);
     assert!(object.write().is_err());
 }
+
+/// Test that merge sections with the same name share an ED.
+#[test]
+fn goff_element_shared() {
+    let add_symbol = |object: &mut write::Object<'_>, name: &[u8]| {
+        object.add_symbol(write::Symbol {
+            name: name.to_vec(),
+            value: 0,
+            size: 0,
+            kind: SymbolKind::Data,
+            scope: SymbolScope::Linkage,
+            weak: false,
+            section: write::SymbolSection::Undefined,
+            flags: SymbolFlags::None,
+        })
+    };
+
+    let mut object = write::Object::new(BinaryFormat::Goff, Architecture::S390x, Endianness::Big);
+
+    let data = object.section_id(write::StandardSection::Data);
+    let data_symbol = add_symbol(&mut object, b"data");
+    object.add_symbol_data(data_symbol, data, &[1, 2, 3, 4], 4);
+
+    let other = object.add_section(
+        vec![],
+        b"C_WSA64".to_vec(),
+        SectionKind::ReadOnlyDataWithRel,
+    );
+    let other_symbol = add_symbol(&mut object, b"other");
+    object.add_symbol_data(other_symbol, other, &[5, 6, 7, 8], 4);
+
+    let bss = object.section_id(write::StandardSection::UninitializedData);
+    let bss_symbol = add_symbol(&mut object, b"bss");
+    object.add_symbol_bss(bss_symbol, bss, 4, 4);
+
+    add_symbol(&mut object, b"undef");
+
+    let bytes = object.write().unwrap();
+
+    let goff = read::goff::GoffFile::parse(&*bytes).unwrap();
+    let sections: Vec<_> = goff
+        .sections()
+        .filter(|section| *section.decoded_name_bytes().unwrap() == *b"C_WSA64")
+        .collect();
+    assert_eq!(sections.len(), 1);
+    let parent = goff
+        .symbol_by_name_bytes(b"data")
+        .unwrap()
+        .goff_parent_esdid();
+    for name in [&b"other"[..], b"bss", b"undef"] {
+        let symbol = goff.symbol_by_name_bytes(name).unwrap();
+        assert_eq!(
+            symbol.goff_parent_esdid(),
+            parent,
+            "{}",
+            String::from_utf8_lossy(name)
+        );
+    }
+}
+
+#[test]
+fn goff_element_duplicate() {
+    // Same name, different flags.
+    let mut object = write::Object::new(BinaryFormat::Goff, Architecture::S390x, Endianness::Big);
+    object.add_section(vec![], b"C_WSA64".to_vec(), SectionKind::Data);
+    object.add_section(vec![], b"C_WSA64".to_vec(), SectionKind::ReadOnlyData);
+    let err = object.write().unwrap_err().to_string();
+    assert!(err.contains("duplicate section"), "{err}");
+
+    // Same name and flags, but concatenate.
+    let mut object = write::Object::new(BinaryFormat::Goff, Architecture::S390x, Endianness::Big);
+    object.add_section(vec![], b"C_CODE".to_vec(), SectionKind::Text);
+    object.add_section(vec![], b"C_CODE".to_vec(), SectionKind::Text);
+    let err = object.write().unwrap_err().to_string();
+    assert!(err.contains("duplicate section"), "{err}");
+}

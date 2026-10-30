@@ -102,8 +102,12 @@ impl<'a> Object<'a> {
     pub(crate) fn goff_section_flags(&self, section: &Section<'_>) -> SectionFlags {
         let (namespace, behavioral_attributes) = match section.kind {
             SectionKind::Text => (goff::ESD_NS_NORMAL_NAME, code_attrs()),
-            SectionKind::Data => (goff::ESD_NS_NORMAL_NAME, data_attrs()),
-            SectionKind::ReadOnlyData => (goff::ESD_NS_NORMAL_NAME, readonly_data_attrs()),
+            SectionKind::Data
+            | SectionKind::ReadOnlyDataWithRel
+            | SectionKind::UninitializedData => (goff::ESD_NS_PARTS, data_attrs()),
+            SectionKind::ReadOnlyData | SectionKind::ReadOnlyString => {
+                (goff::ESD_NS_NORMAL_NAME, readonly_data_attrs())
+            }
             SectionKind::Debug => (goff::ESD_NS_PARTS, debug_attrs()),
             _ => return SectionFlags::None,
         };
@@ -124,10 +128,31 @@ impl<'a> Object<'a> {
                 namespace = goff::ESD_NS_NORMAL_NAME;
                 attrs = default_attrs().with_executable(goff::EXEC_CODE);
             }
-            (SymbolKind::Data, SymbolSection::Section(_)) => {
-                symbol_type = goff::ESD_ST_LD;
-                namespace = goff::ESD_NS_NORMAL_NAME;
-                attrs = default_attrs().with_executable(goff::EXEC_DATA);
+            (SymbolKind::Data, SymbolSection::Section(section_id)) => {
+                let section = self.section(section_id);
+                let merge = match self.section_flags(section) {
+                    SectionFlags::Goff {
+                        behavioral_attributes,
+                        ..
+                    } => behavioral_attributes.binding_algorithm() == goff::ESD_BA_MERGE,
+                    _ => false,
+                };
+                if merge {
+                    // TODO: we don't record the alignment of the symbol data, so
+                    // this is conservative
+                    let Some(alignment) = goff::Alignment::from_bytes(section.align) else {
+                        return SymbolFlags::None;
+                    };
+                    symbol_type = goff::ESD_ST_PR;
+                    namespace = goff::ESD_NS_PARTS;
+                    attrs = default_attrs()
+                        .with_executable(goff::EXEC_DATA)
+                        .with_alignment(alignment);
+                } else {
+                    symbol_type = goff::ESD_ST_LD;
+                    namespace = goff::ESD_NS_NORMAL_NAME;
+                    attrs = default_attrs().with_executable(goff::EXEC_DATA);
+                }
             }
             (SymbolKind::Label, SymbolSection::Section(_)) => {
                 symbol_type = goff::ESD_ST_LD;
@@ -277,6 +302,18 @@ struct PartInfo {
     size: u64,
 }
 
+#[derive(Clone)]
+struct ElementInfo {
+    ed_esdid: u32,
+    merge: bool,
+}
+
+#[derive(Clone, PartialEq, Eq, Hash)]
+struct ElementKey<'a> {
+    sd_esdid: u32,
+    ed_name: &'a [u8],
+}
+
 /// A helper for writing GOFF files.
 struct Writer<'a> {
     object: &'a Object<'a>,
@@ -285,8 +322,6 @@ struct Writer<'a> {
     next_esdid: u32,
     // ESD id for compile unit
     cu_esdid: Option<u32>,
-    // ESD id for C_WSA64
-    wsa_esdid: Option<u32>,
 
     logical_record_count: u32,
 
@@ -294,6 +329,7 @@ struct Writer<'a> {
     symbols: Vec<Option<SymbolInfo>>,
     // Indexed by SectionId
     sections: Vec<SectionInfo>,
+    elements: HashMap<ElementKey<'a>, ElementInfo>,
 
     // Relocation tracking
     relocations: Vec<goff::Relocation>,
@@ -310,10 +346,10 @@ impl<'a> Writer<'a> {
 
             next_esdid: 1,
             cu_esdid: None,
-            wsa_esdid: None,
             logical_record_count: 0,
             symbols: vec![None; symbol_count],
             sections: vec![SectionInfo::default(); section_count],
+            elements: HashMap::new(),
             relocations: Vec::new(),
         }
     }
@@ -352,24 +388,37 @@ impl<'a> Writer<'a> {
         self.buffer.write_pod(&fileend);
     }
 
-    fn write_wsa_symbol(&mut self) -> u32 {
-        if let Some(wsa_esdid) = self.wsa_esdid {
-            return wsa_esdid;
+    fn write_wsa_symbol(&mut self) -> Result<u32> {
+        let sd_esdid = self.write_compilation_unit();
+        let key = ElementKey {
+            sd_esdid,
+            ed_name: &C_WSA64,
+        };
+        if let Some(element) = self.elements.get(&key) {
+            if !element.merge {
+                return Err(Error(
+                    "invalid section `C_WSA64` without merge binding".into(),
+                ));
+            }
+            return Ok(element.ed_esdid);
         }
-        let cu_esdid = self.write_compilation_unit();
-        // Emit parent C_WSA64 ED symbol (data section).
-        let mut ed = self.get_esd_record(goff::ESD_ST_ED, goff::ESD_NS_PARTS, cu_esdid);
+
+        let mut ed = self.get_esd_record(goff::ESD_ST_ED, goff::ESD_NS_PARTS, sd_esdid);
         ed.flags = goff::ESD_SF_FILL_BYTE_PRESENCE;
         ed.behavioral_attributes = default_attrs()
             .with_binding_algorithm(goff::ESD_BA_MERGE)
             .with_executable(goff::EXEC_DATA)
             .with_alignment(goff::ALIGN_HALFWORD);
         let ed_esdid = self.write_esd_record(&ed, &EBCDIC_C_WSA64);
-        self.wsa_esdid = Some(ed_esdid);
-        ed_esdid
+        let info = ElementInfo {
+            ed_esdid,
+            merge: true,
+        };
+        self.elements.insert(key, info);
+        Ok(ed_esdid)
     }
 
-    fn write_section(&mut self, section: &Section<'_>, section_id: SectionId) -> Result<()> {
+    fn write_section(&mut self, section: &'a Section<'a>, section_id: SectionId) -> Result<()> {
         let SectionFlags::Goff {
             flags,
             fill_byte_value,
@@ -383,34 +432,51 @@ impl<'a> Writer<'a> {
                 section.kind,
             )));
         };
+        let merge = behavioral_attributes.binding_algorithm() == goff::ESD_BA_MERGE;
 
-        let alignment = goff::Alignment(section.align.trailing_zeros() as u8);
-        if !section.align.is_power_of_two() || alignment > goff::ALIGN_4KB {
+        let Some(alignment) = goff::Alignment::from_bytes(section.align) else {
             return Err(Error(format!(
                 "invalid section `{}` align {}",
                 section.name().unwrap_or(""),
                 section.align
             )));
-        }
+        };
 
-        let parent = match self.section_parent(section) {
+        let sd_esdid = match self.section_parent(section) {
             Some(parent_id) => self.write_symbol_type(parent_id, Some(goff::ESD_ST_SD))?,
             None => self.write_compilation_unit(),
         };
 
-        let name = &encode_name(&section.name)?;
-        let mut ed = self.get_esd_record(goff::ESD_ST_ED, namespace, parent);
-        let merge = behavioral_attributes.binding_algorithm() == goff::ESD_BA_MERGE;
-        let length = if merge { 0 } else { section.size };
-        ed.length = U32::new(BE, length as u32);
-        ed.flags = flags;
-        ed.fill_byte_value = fill_byte_value;
-        ed.behavioral_attributes = behavioral_attributes.with_alignment(alignment);
-        let ed_esdid = self.write_esd_record(&ed, name);
+        let key = ElementKey {
+            sd_esdid,
+            ed_name: &section.name,
+        };
+        let ed_esdid = if let Some(element) = self.elements.get(&key) {
+            if !merge || !element.merge {
+                return Err(Error(format!(
+                    "duplicate section `{}`",
+                    section.name().unwrap_or(""),
+                )));
+            }
+            element.ed_esdid
+        } else {
+            let name = &encode_name(&section.name)?;
+            let mut ed = self.get_esd_record(goff::ESD_ST_ED, namespace, sd_esdid);
+            let length = if merge { 0 } else { section.size };
+            ed.length = U32::new(BE, length as u32);
+            ed.flags = flags;
+            ed.fill_byte_value = fill_byte_value;
+            ed.behavioral_attributes = behavioral_attributes.with_alignment(alignment);
+            let ed_esdid = self.write_esd_record(&ed, name);
+            let info = ElementInfo { ed_esdid, merge };
+            self.elements.insert(key, info);
+            ed_esdid
+        };
+
         self.sections[section_id.0] = SectionInfo {
             esdid: ed_esdid,
             namespace,
-            record_style: ed.behavioral_attributes.text_record_style(),
+            record_style: behavioral_attributes.text_record_style(),
             merge,
             parts: Vec::new(),
         };
@@ -665,6 +731,12 @@ impl<'a> Writer<'a> {
                 referent = goff::RLD_RO_LABEL;
             }
             (goff::ESD_ST_LD, SymbolSection::Section(section_id)) => {
+                if self.sections[section_id.0].merge {
+                    return Err(Error(format!(
+                        "invalid LD symbol `{}` in section with merge binding",
+                        symbol.name().unwrap_or(""),
+                    )));
+                }
                 parent = self.sections[section_id.0].esdid;
                 namespace = self.sections[section_id.0].namespace;
                 offset = symbol.value as u32;
@@ -672,10 +744,21 @@ impl<'a> Writer<'a> {
                 referent = goff::RLD_RO_LABEL;
             }
             (goff::ESD_ST_PR, SymbolSection::Section(section_id)) => {
+                if !self.sections[section_id.0].merge {
+                    return Err(Error(format!(
+                        "invalid PR symbol `{}` in section without merge binding",
+                        symbol.name().unwrap_or(""),
+                    )));
+                }
                 parent = self.sections[section_id.0].esdid;
                 namespace = self.sections[section_id.0].namespace;
                 offset = 0;
-                length = symbol.size as u32;
+                // Defined PRs can't be zero length.
+                length = if symbol.size == 0 {
+                    2
+                } else {
+                    symbol.size as u32
+                };
                 referent = goff::RLD_RO_PART;
                 part_section = Some(section_id);
             }
@@ -700,11 +783,17 @@ impl<'a> Writer<'a> {
                                 symbol.name().unwrap_or(""),
                             )));
                         };
+                        if !self.sections[section_id.0].merge {
+                            return Err(Error(format!(
+                                "invalid PR symbol `{}` in section without merge binding",
+                                symbol.name().unwrap_or(""),
+                            )));
+                        }
                         parent = self.sections[section_id.0].esdid;
                         namespace = self.sections[section_id.0].namespace;
                     }
                     None => {
-                        parent = self.write_wsa_symbol();
+                        parent = self.write_wsa_symbol()?;
                         namespace = goff::ESD_NS_PARTS;
                     }
                 };
@@ -777,7 +866,8 @@ impl<'a> Writer<'a> {
         // The P pointer is the ED or PR that owns the data at the relocation offset.
         let info = &self.sections[section_id.0];
         let (p_pointer, offset) = if info.merge {
-            let size = (u64::from(flags.bit_offset()) + u64::from(flags.total_bit_width())).div_ceil(8);
+            let size =
+                (u64::from(flags.bit_offset()) + u64::from(flags.total_bit_width())).div_ceil(8);
             let Some(part) = info
                 .parts
                 .partition_point(|part| part.offset <= reloc.offset)
@@ -955,7 +1045,9 @@ fn code_attrs() -> goff::BehavioralAttributes {
 
 /// Create attributes suitable for data sections.
 fn data_attrs() -> goff::BehavioralAttributes {
-    default_attrs().with_executable(goff::EXEC_DATA)
+    default_attrs()
+        .with_executable(goff::EXEC_DATA)
+        .with_binding_algorithm(goff::ESD_BA_MERGE)
 }
 
 /// Create attributes suitable for read-only data sections.
