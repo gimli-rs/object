@@ -667,3 +667,86 @@ fn goff_element_duplicate() {
     let err = object.write().unwrap_err().to_string();
     assert!(err.contains("duplicate section"), "{err}");
 }
+
+/// Test that all supported standard sections can be used together.
+#[test]
+fn goff_standard_sections() {
+    let add_symbol = |object: &mut write::Object<'_>, name: &[u8], kind: SymbolKind| {
+        object.add_symbol(write::Symbol {
+            name: name.to_vec(),
+            value: 0,
+            size: 0,
+            kind,
+            scope: SymbolScope::Linkage,
+            weak: false,
+            section: write::SymbolSection::Undefined,
+            flags: SymbolFlags::None,
+        })
+    };
+
+    let mut object = write::Object::new(BinaryFormat::Goff, Architecture::S390x, Endianness::Big);
+
+    let text = object.section_id(write::StandardSection::Text);
+    let text_symbol = add_symbol(&mut object, b"text", SymbolKind::Text);
+    object.add_symbol_data(text_symbol, text, &[0x07, 0xfe], 2);
+
+    let rodata = object.section_id(write::StandardSection::ReadOnlyData);
+    let rodata_symbol = add_symbol(&mut object, b"rodata", SymbolKind::Data);
+    object.add_symbol_data(rodata_symbol, rodata, &[1, 2, 3, 4], 4);
+
+    let rostr = object.section_id(write::StandardSection::ReadOnlyString);
+    let rostr_symbol = add_symbol(&mut object, b"rostr", SymbolKind::Data);
+    object.add_symbol_data(rostr_symbol, rostr, b"abc\0", 1);
+
+    let data = object.section_id(write::StandardSection::Data);
+    let data_symbol = add_symbol(&mut object, b"data", SymbolKind::Data);
+    object.add_symbol_data(data_symbol, data, &[5, 6, 7, 8], 4);
+
+    let data_rel = object.section_id(write::StandardSection::ReadOnlyDataWithRel);
+    let data_rel_symbol = add_symbol(&mut object, b"data_rel", SymbolKind::Data);
+    object.add_symbol_data(data_rel_symbol, data_rel, &[9, 10, 11, 12], 4);
+
+    let bss = object.section_id(write::StandardSection::UninitializedData);
+    let bss_symbol = add_symbol(&mut object, b"bss", SymbolKind::Data);
+    object.add_symbol_bss(bss_symbol, bss, 4, 4);
+
+    // Sections with the same name and kind are shared.
+    assert_eq!(rodata, text);
+    assert_eq!(rostr, text);
+    assert_eq!(data_rel, data);
+
+    let bytes = object.write().unwrap();
+
+    let goff = read::goff::GoffFile::parse(&*bytes).unwrap();
+    let section_by_name = |name: &[u8]| {
+        let sections: Vec<_> = goff
+            .sections()
+            .filter(|section| *section.decoded_name_bytes().unwrap() == *name)
+            .collect();
+        assert_eq!(sections.len(), 1, "{}", String::from_utf8_lossy(name));
+        sections.into_iter().next().unwrap()
+    };
+
+    let code = section_by_name(b"C_CODE64");
+    assert_eq!(code.kind(), SectionKind::Text);
+    assert_eq!(
+        &*code.collected_data().unwrap(),
+        &[0x07, 0xfe, 0, 0, 1, 2, 3, 4, b'a', b'b', b'c', 0]
+    );
+
+    let wsa = section_by_name(b"C_WSA64");
+    assert_eq!(wsa.kind(), SectionKind::Data);
+    assert_eq!(
+        &*wsa.collected_data().unwrap(),
+        &[5, 6, 7, 8, 9, 10, 11, 12, 0, 0, 0, 0]
+    );
+
+    for name in [&b"text"[..], b"rodata", b"rostr"] {
+        let symbol = goff.symbol_by_name_bytes(name).unwrap();
+        assert_eq!(symbol.section_index(), Some(code.index()));
+    }
+    for name in [&b"data"[..], b"data_rel", b"bss"] {
+        let symbol = goff.symbol_by_name_bytes(name).unwrap();
+        assert_eq!(symbol.section_index(), Some(wsa.index()));
+    }
+}

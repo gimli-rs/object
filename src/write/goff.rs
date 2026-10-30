@@ -56,20 +56,14 @@ impl<'a> Object<'a> {
         section: StandardSection,
     ) -> (&'static [u8], &'static [u8], SectionKind, SectionFlags) {
         match section {
-            StandardSection::Text => (&[], &C_CODE64, SectionKind::Text, SectionFlags::None),
-            StandardSection::Data => (&[], &C_WSA64, SectionKind::Data, SectionFlags::None),
-            StandardSection::ReadOnlyData | StandardSection::ReadOnlyString => (
-                &[],
-                &C_CODE64,
-                SectionKind::ReadOnlyData,
-                SectionFlags::None,
-            ),
-            StandardSection::ReadOnlyDataWithRel => (
-                &[],
-                &C_WSA64,
-                SectionKind::ReadOnlyDataWithRel,
-                SectionFlags::None,
-            ),
+            StandardSection::Text
+            | StandardSection::ReadOnlyData
+            | StandardSection::ReadOnlyString => {
+                (&[], &C_CODE64, SectionKind::Text, SectionFlags::None)
+            }
+            StandardSection::Data | StandardSection::ReadOnlyDataWithRel => {
+                (&[], &C_WSA64, SectionKind::Data, SectionFlags::None)
+            }
             StandardSection::UninitializedData => (
                 &[],
                 &C_WSA64,
