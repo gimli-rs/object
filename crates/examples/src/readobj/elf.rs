@@ -587,6 +587,8 @@ fn print_dynamic<Elf: FileHeader>(
                     p.field_flags("Value", DynamicFlags(val), DynamicFlags::NAMES);
                 } else if tag == DT_FLAGS_1 {
                     p.field_flags("Value", DynamicFlags1(val), DynamicFlags1::NAMES);
+                } else if tag == DT_GNU_FLAGS_1 {
+                    p.field_flags("Value", DynamicGnuFlags1(val), DynamicGnuFlags1::NAMES);
                 } else {
                     p.field_hex("Value", val);
                 }

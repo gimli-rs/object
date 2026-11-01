@@ -2246,6 +2246,8 @@ newtype_constant_names!(NAMES_DT: DynamicTag(i64) = {
     /// Size of one Android-specific Relr reloc
     DT_ANDROID_RELRENT = 0x6fff_e003,
 
+    /// Special GNU flags, see DF_GNU_1_* below.
+    DT_GNU_FLAGS_1 = 0x6fff_fdf4,
     /// Prelinking timestamp
     DT_GNU_PRELINKED = 0x6fff_fdf5,
     /// Size of conflict section
@@ -2402,6 +2404,16 @@ newtype_flag_names!(NAMES_DF_1: DynamicFlags1(u64) = {
     DF_1_SINGLETON = 0x0200_0000,
     DF_1_STUB = 0x0400_0000,
     DF_1_PIE = 0x0800_0000,
+});
+
+newtype!(
+    /// Values of `Dyn*::d_val` in the `DT_GNU_FLAGS_1` entry.
+    struct DynamicGnuFlags1(u64);
+);
+
+newtype_flag_names!(NAMES_DF_GNU_1: DynamicGnuFlags1(u64) = {
+    /// Object can be loaded at most once.
+    DF_GNU_1_UNIQUE = 0x0000_0001,
 });
 
 /// Version symbol information
