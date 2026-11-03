@@ -110,6 +110,7 @@ pub const fn machine_names(machine: Machine) -> &'static Names {
         EM_SPARCV9 => SparcV9::names(),
         EM_TILEGX => Tilegx::names(),
         EM_TILEPRO => Tilepro::names(),
+        EM_TRICORE => Tricore::names(),
         EM_X86_64 => X86_64::names(),
         EM_XTENSA => Xtensa::names(),
         _ => Base::names(),
@@ -837,6 +838,21 @@ impl FileFlags {
     /// One of the `EF_AVR_ARCH_*` values.
     pub fn with_avr_arch(self, arch: FileFlags) -> FileFlags {
         FileFlags(self.0 & !EF_AVR_ARCH | arch.0 & EF_AVR_ARCH)
+    }
+
+    /// Get the TriCore core architecture field.
+    ///
+    /// A combination of the `EF_TRICORE_V*` values. Usually only a single
+    /// bit is set, corresponding to the highest version present.
+    pub fn tricore_arch(self) -> FileFlags {
+        FileFlags(self.0 & EF_TRICORE_CORE_MASK)
+    }
+
+    /// Set the TriCore core architecture field.
+    ///
+    /// A combination of the `EF_TRICORE_V*` values.
+    pub fn with_tricore_arch(self, arch: FileFlags) -> FileFlags {
+        FileFlags(self.0 & !EF_TRICORE_CORE_MASK | arch.0 & EF_TRICORE_CORE_MASK)
     }
 
     /// Get the SH machine field.
@@ -7776,6 +7792,32 @@ names! {
 }
 
 pub const DT_E2K_NUM: i64 = 0x1021;
+
+// Infineon TriCore specific definitions.
+//
+// See the "TriCore Embedded Applications Binary Interface (EABI)" user manual.
+names! {
+    struct Tricore(Base);
+    flags ef: FileFlags(u32) = {
+        // TriCore ISA version flags. Only a single one of those should be set
+        EF_TRICORE_V1_1 = 0x8000_0000,
+        EF_TRICORE_V1_2 = 0x4000_0000,
+        EF_TRICORE_V1_3 = 0x2000_0000,
+        EF_TRICORE_V1_3_1 = 0x0080_0000,
+        EF_TRICORE_V1_6 = 0x0040_0000,
+        EF_TRICORE_V1_6_1 = 0x0020_0000,
+        EF_TRICORE_V1_6_2 = 0x0010_0000,
+
+        // Note: This is not defined in the public reference manual, but the GNU toolchain uses this
+        EF_TRICORE_V1_8 = 0x0008_0000,
+
+        // These flags indicate that code for the Peripheral Coprocessor (PCP) is present
+        EF_TRICORE_PCP = 0x0100_0000,
+        EF_TRICORE_PCP2 = 0x0200_0000,
+    };
+}
+
+pub const EF_TRICORE_CORE_MASK: u32 = 0xf0f8_0000;
 
 newtype!(
     /// Value for the subsubsection tag in an attributes section.
