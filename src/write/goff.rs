@@ -186,7 +186,8 @@ impl<'a> Object<'a> {
             namespace,
             behavioral_attributes: attrs
                 .with_binding_scope(scope)
-                .with_binding_strength(strength),
+                .with_binding_strength(strength)
+                .with_xplink(true),
             // Parent is automatically set if needed.
             parent: None,
             ada: None,
