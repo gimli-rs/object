@@ -7,7 +7,7 @@
 //! ## Raw struct definitions
 //!
 //! Raw structs are defined for: [ELF](elf), [Mach-O](macho), [PE/COFF](pe),
-//! [XCOFF](xcoff), [archive].
+//! [XCOFF](xcoff), [GOFF](goff), [archive].
 //! Types and traits for zerocopy support are defined in the [`pod`] and [`endian`] modules.
 //!
 //! ## Unified read API
@@ -50,9 +50,6 @@
 
 #[cfg(feature = "cargo-all")]
 compile_error!("'--all-features' is not supported; use '--features all' instead");
-
-#[cfg(all(feature = "goff", not(feature = "unstable")))]
-compile_error!("'goff' is an unstable feature; enable 'unstable' as well");
 
 #[cfg(any(feature = "read_core", feature = "write_core"))]
 #[allow(unused_imports)]

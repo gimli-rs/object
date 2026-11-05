@@ -1,4 +1,4 @@
-#![cfg_attr(not(feature = "unstable-all"), allow(dead_code))]
+#![cfg_attr(not(feature = "all"), allow(dead_code))]
 
 #[cfg(any(feature = "read_core", feature = "write_core"))]
 use alloc::borrow::{Borrow, ToOwned};

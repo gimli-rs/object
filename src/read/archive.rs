@@ -652,8 +652,6 @@ impl<'data> ArchiveMember<'data> {
     /// For most archive formats, this is the same as [`Self::name`].
     /// For z/OS archives, the name is converted from EBCDIC to UTF-8,
     /// which requires an allocation.
-    // TODO: stabilize
-    #[cfg_attr(not(feature = "unstable"), doc(hidden))]
     pub fn decoded_name_bytes(&self) -> Cow<'data, [u8]> {
         match self.header {
             MemberHeader::Zos(_) => Cow::Owned(EbcdicStr::from_bytes(self.name).to_utf8_bytes()),
@@ -666,8 +664,6 @@ impl<'data> ArchiveMember<'data> {
     ///
     /// For z/OS archives, the name is converted from EBCDIC to UTF-8,
     /// which requires an allocation.
-    // TODO: stabilize
-    #[cfg_attr(not(feature = "unstable"), doc(hidden))]
     pub fn decoded_name(&self) -> read::Result<Cow<'data, str>> {
         match self.header {
             MemberHeader::Zos(_) => Ok(Cow::Owned(EbcdicStr::from_bytes(self.name).to_utf8())),

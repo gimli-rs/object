@@ -189,7 +189,6 @@ impl<'a> Printer<'a> {
         writeln!(self.w, "{:X?}", value).unwrap();
     }
 
-    #[cfg(feature = "goff")]
     fn field_reserved(&mut self, name: &str, value: &[u8]) {
         if value.iter().any(|&b| b != 0) {
             self.field_bytes(name, value);
@@ -366,7 +365,6 @@ fn print_object(p: &mut Printer<'_>, data: &[u8], extra_files: &[&[u8]]) {
         object::FileKind::DyldCache => macho::print_dyld_cache(p, data, extra_files),
         object::FileKind::Elf32 => elf::print_elf32(p, data),
         object::FileKind::Elf64 => elf::print_elf64(p, data),
-        #[cfg(feature = "goff")]
         object::FileKind::Goff => goff::print_goff(p, data),
         object::FileKind::MachO32 => macho::print_macho32(p, data, 0, None),
         object::FileKind::MachO64 => macho::print_macho64(p, data, 0, None),
@@ -433,7 +431,6 @@ impl<T, E: fmt::Display> PrintErr<T> for Result<T, E> {
 }
 
 mod elf;
-#[cfg(feature = "goff")]
 mod goff;
 mod macho;
 mod pe;
