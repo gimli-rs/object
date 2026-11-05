@@ -4,58 +4,58 @@ Architecture: Wasm32
 Flags: None
 Relative Address Base: 0
 Entry Address: 0
-1: Section { name: "<type>", address: 0, size: 11, align: 1, kind: Metadata, flags: None }
-2: Section { name: "<import>", address: 0, size: 109, align: 1, kind: Linker, flags: None }
-3: Section { name: "<function>", address: 0, size: 4, align: 1, kind: Metadata, flags: None }
-9: Section { name: "<element>", address: 0, size: 8, align: 1, kind: Metadata, flags: None }
-12: Section { name: "<data_count>", address: 0, size: 1, align: 1, kind: Metadata, flags: None }
-10: Section { name: "<code>", address: 0, size: ee, align: 1, kind: Text, flags: None }
-11: Section { name: "<data>", address: 0, size: 3b, align: 1, kind: Metadata, flags: None }
-0: Section { name: ".debug_abbrev", address: 0, size: 91, align: 1, kind: Other, flags: None }
-0: Section { name: ".debug_info", address: 0, size: 149, align: 1, kind: Other, flags: None }
-0: Section { name: ".debug_ranges", address: 0, size: 18, align: 1, kind: Other, flags: None }
-0: Section { name: ".debug_str", address: 0, size: 130, align: 1, kind: Other, flags: None }
-0: Section { name: "llvm.func_attr.annotate.my_annotation", address: 0, size: 4, align: 1, kind: Other, flags: None }
-0: Section { name: ".debug_line", address: 0, size: 81, align: 1, kind: Other, flags: None }
-0: Section { name: "linking", address: 0, size: 18f, align: 1, kind: Linker, flags: None }
-0: Section { name: "reloc.CODE", address: 0, size: 4f, align: 1, kind: Linker, flags: None }
-0: Section { name: "reloc.DATA", address: 0, size: d, align: 1, kind: Linker, flags: None }
-0: Section { name: "reloc..debug_info", address: 0, size: bc, align: 1, kind: Linker, flags: None }
-0: Section { name: "reloc..debug_ranges", address: 0, size: 13, align: 1, kind: Linker, flags: None }
-0: Section { name: "reloc.llvm.func_attr.annotate.my_annotation", address: 0, size: 5, align: 1, kind: Linker, flags: None }
-0: Section { name: "reloc..debug_line", address: 0, size: a, align: 1, kind: Linker, flags: None }
-0: Section { name: "producers", address: 0, size: 8f, align: 1, kind: Other, flags: None }
-0: Section { name: "target_features", address: 0, size: a1, align: 1, kind: Other, flags: None }
-14: Section { name: ".data.global_int", address: 0, size: 4, align: 4, kind: Data, flags: Wasm { flags: 0 } }
-15: Section { name: ".data.global_point", address: 4, size: 8, align: 4, kind: Data, flags: Wasm { flags: 0 } }
-16: Section { name: ".tbss.tls_counter", address: c, size: 4, align: 4, kind: UninitializedTls, flags: Wasm { flags: SEG_FLAG_TLS } }
-17: Section { name: ".data.data_ptr_to_global", address: 10, size: 4, align: 4, kind: Data, flags: Wasm { flags: 0 } }
-18: Section { name: ".data.data_ptr_with_addend", address: 14, size: 4, align: 4, kind: Data, flags: Wasm { flags: 0 } }
-19: Section { name: ".data.data_func_ptr", address: 18, size: 4, align: 4, kind: Data, flags: Wasm { flags: 0 } }
+0: Section { name: "<type>", address: 0, size: 11, align: 1, kind: Metadata, flags: None }
+1: Section { name: "<import>", address: 0, size: 109, align: 1, kind: Linker, flags: None }
+2: Section { name: "<function>", address: 0, size: 4, align: 1, kind: Metadata, flags: None }
+3: Section { name: "<element>", address: 0, size: 8, align: 1, kind: Metadata, flags: None }
+4: Section { name: "<data_count>", address: 0, size: 1, align: 1, kind: Metadata, flags: None }
+5: Section { name: "<code>", address: 0, size: ee, align: 1, kind: Text, flags: None }
+6: Section { name: "<data>", address: 0, size: 3b, align: 1, kind: Metadata, flags: None }
+7: Section { name: ".debug_abbrev", address: 0, size: 91, align: 1, kind: Other, flags: None }
+8: Section { name: ".debug_info", address: 0, size: 149, align: 1, kind: Other, flags: None }
+9: Section { name: ".debug_ranges", address: 0, size: 18, align: 1, kind: Other, flags: None }
+10: Section { name: ".debug_str", address: 0, size: 130, align: 1, kind: Other, flags: None }
+11: Section { name: "llvm.func_attr.annotate.my_annotation", address: 0, size: 4, align: 1, kind: Other, flags: None }
+12: Section { name: ".debug_line", address: 0, size: 81, align: 1, kind: Other, flags: None }
+13: Section { name: "linking", address: 0, size: 18f, align: 1, kind: Linker, flags: None }
+14: Section { name: "reloc.CODE", address: 0, size: 4f, align: 1, kind: Linker, flags: None }
+15: Section { name: "reloc.DATA", address: 0, size: d, align: 1, kind: Linker, flags: None }
+16: Section { name: "reloc..debug_info", address: 0, size: bc, align: 1, kind: Linker, flags: None }
+17: Section { name: "reloc..debug_ranges", address: 0, size: 13, align: 1, kind: Linker, flags: None }
+18: Section { name: "reloc.llvm.func_attr.annotate.my_annotation", address: 0, size: 5, align: 1, kind: Linker, flags: None }
+19: Section { name: "reloc..debug_line", address: 0, size: a, align: 1, kind: Linker, flags: None }
+20: Section { name: "producers", address: 0, size: 8f, align: 1, kind: Other, flags: None }
+21: Section { name: "target_features", address: 0, size: a1, align: 1, kind: Other, flags: None }
+22: Section { name: ".data.global_int", address: 0, size: 4, align: 4, kind: Data, flags: Wasm { flags: 0 } }
+23: Section { name: ".data.global_point", address: 4, size: 8, align: 4, kind: Data, flags: Wasm { flags: 0 } }
+24: Section { name: ".tbss.tls_counter", address: c, size: 4, align: 4, kind: UninitializedTls, flags: Wasm { flags: SEG_FLAG_TLS } }
+25: Section { name: ".data.data_ptr_to_global", address: 10, size: 4, align: 4, kind: Data, flags: Wasm { flags: 0 } }
+26: Section { name: ".data.data_ptr_with_addend", address: 14, size: 4, align: 4, kind: Data, flags: Wasm { flags: 0 } }
+27: Section { name: ".data.data_func_ptr", address: 18, size: 4, align: 4, kind: Data, flags: Wasm { flags: 0 } }
 
 Symbols
-0: Symbol { name: "_Z6relocsv", address: 3, size: d6, kind: Text, section: Section(SectionIndex(a)), scope: Linkage, weak: false, flags: Wasm { flags: SYM_BINDING_GLOBAL | SYM_VISIBILITY_HIDDEN, kind: SYM_TYPE_FUNCTION, index: 3 } }
+0: Symbol { name: "_Z6relocsv", address: 3, size: d6, kind: Text, section: Section(SectionIndex(5)), scope: Linkage, weak: false, flags: Wasm { flags: SYM_BINDING_GLOBAL | SYM_VISIBILITY_HIDDEN, kind: SYM_TYPE_FUNCTION, index: 3 } }
 1: Symbol { name: "__stack_pointer", address: 0, size: 0, kind: Data, section: Undefined, scope: Dynamic, weak: false, flags: Wasm { flags: SYM_BINDING_GLOBAL | SYM_VISIBILITY_DEFAULT | SYM_UNDEFINED, kind: SYM_TYPE_GLOBAL, index: 0 } }
 2: Symbol { name: "_Z13external_funcv", address: 0, size: 0, kind: Text, section: Undefined, scope: Dynamic, weak: false, flags: Wasm { flags: SYM_BINDING_GLOBAL | SYM_VISIBILITY_DEFAULT | SYM_UNDEFINED, kind: SYM_TYPE_FUNCTION, index: 0 } }
-3: Symbol { name: "_ZL11static_funcv", address: da, size: 3, kind: Text, section: Section(SectionIndex(a)), scope: Compilation, weak: false, flags: Wasm { flags: SYM_BINDING_LOCAL | SYM_VISIBILITY_DEFAULT, kind: SYM_TYPE_FUNCTION, index: 4 } }
+3: Symbol { name: "_ZL11static_funcv", address: da, size: 3, kind: Text, section: Section(SectionIndex(5)), scope: Compilation, weak: false, flags: Wasm { flags: SYM_BINDING_LOCAL | SYM_VISIBILITY_DEFAULT, kind: SYM_TYPE_FUNCTION, index: 4 } }
 4: Symbol { name: "__table_base", address: 0, size: 0, kind: Data, section: Undefined, scope: Dynamic, weak: false, flags: Wasm { flags: SYM_BINDING_GLOBAL | SYM_VISIBILITY_DEFAULT | SYM_UNDEFINED, kind: SYM_TYPE_GLOBAL, index: 1 } }
 5: Symbol { name: "__indirect_function_table", address: 0, size: 0, kind: Data, section: Undefined, scope: Dynamic, weak: false, flags: Wasm { flags: SYM_BINDING_GLOBAL | SYM_VISIBILITY_DEFAULT | SYM_UNDEFINED | SYM_NO_STRIP, kind: SYM_TYPE_TABLE, index: 0 } }
-6: Symbol { name: "global_int", address: 0, size: 4, kind: Data, section: Section(SectionIndex(e)), scope: Linkage, weak: false, flags: Wasm { flags: SYM_BINDING_GLOBAL | SYM_VISIBILITY_HIDDEN, kind: SYM_TYPE_DATA, index: 0 } }
+6: Symbol { name: "global_int", address: 0, size: 4, kind: Data, section: Section(SectionIndex(16)), scope: Linkage, weak: false, flags: Wasm { flags: SYM_BINDING_GLOBAL | SYM_VISIBILITY_HIDDEN, kind: SYM_TYPE_DATA, index: 0 } }
 7: Symbol { name: "__memory_base", address: 0, size: 0, kind: Data, section: Undefined, scope: Dynamic, weak: false, flags: Wasm { flags: SYM_BINDING_GLOBAL | SYM_VISIBILITY_DEFAULT | SYM_UNDEFINED, kind: SYM_TYPE_GLOBAL, index: 2 } }
-8: Symbol { name: "global_point", address: 4, size: 8, kind: Data, section: Section(SectionIndex(f)), scope: Linkage, weak: false, flags: Wasm { flags: SYM_BINDING_GLOBAL | SYM_VISIBILITY_HIDDEN, kind: SYM_TYPE_DATA, index: 1 } }
-9: Symbol { name: "tls_counter", address: c, size: 4, kind: Tls, section: Section(SectionIndex(10)), scope: Linkage, weak: false, flags: Wasm { flags: SYM_BINDING_GLOBAL | SYM_VISIBILITY_HIDDEN | SYM_TLS, kind: SYM_TYPE_DATA, index: 2 } }
+8: Symbol { name: "global_point", address: 4, size: 8, kind: Data, section: Section(SectionIndex(17)), scope: Linkage, weak: false, flags: Wasm { flags: SYM_BINDING_GLOBAL | SYM_VISIBILITY_HIDDEN, kind: SYM_TYPE_DATA, index: 1 } }
+9: Symbol { name: "tls_counter", address: c, size: 4, kind: Tls, section: Section(SectionIndex(18)), scope: Linkage, weak: false, flags: Wasm { flags: SYM_BINDING_GLOBAL | SYM_VISIBILITY_HIDDEN | SYM_TLS, kind: SYM_TYPE_DATA, index: 2 } }
 10: Symbol { name: "__tls_base", address: 0, size: 0, kind: Data, section: Undefined, scope: Dynamic, weak: false, flags: Wasm { flags: SYM_BINDING_GLOBAL | SYM_VISIBILITY_DEFAULT | SYM_UNDEFINED, kind: SYM_TYPE_GLOBAL, index: 3 } }
 11: Symbol { name: "__cpp_exception", address: 0, size: 0, kind: Unknown, section: Undefined, scope: Dynamic, weak: false, flags: Wasm { flags: SYM_BINDING_GLOBAL | SYM_VISIBILITY_DEFAULT | SYM_UNDEFINED, kind: SYM_TYPE_EVENT, index: 0 } }
 12: Symbol { name: "__cxa_begin_catch", address: 0, size: 0, kind: Text, section: Undefined, scope: Dynamic, weak: false, flags: Wasm { flags: SYM_BINDING_GLOBAL | SYM_VISIBILITY_DEFAULT | SYM_UNDEFINED, kind: SYM_TYPE_FUNCTION, index: 1 } }
 13: Symbol { name: "__cxa_end_catch", address: 0, size: 0, kind: Text, section: Undefined, scope: Dynamic, weak: false, flags: Wasm { flags: SYM_BINDING_GLOBAL | SYM_VISIBILITY_DEFAULT | SYM_UNDEFINED, kind: SYM_TYPE_FUNCTION, index: 2 } }
-14: Symbol { name: "_ZTW11tls_counter", address: de, size: 10, kind: Text, section: Section(SectionIndex(a)), scope: Linkage, weak: true, flags: Wasm { flags: SYM_BINDING_WEAK | SYM_VISIBILITY_HIDDEN, kind: SYM_TYPE_FUNCTION, index: 5 } }
-15: Symbol { name: "data_ptr_to_global", address: 10, size: 4, kind: Data, section: Section(SectionIndex(11)), scope: Linkage, weak: false, flags: Wasm { flags: SYM_BINDING_GLOBAL | SYM_VISIBILITY_HIDDEN, kind: SYM_TYPE_DATA, index: 3 } }
-16: Symbol { name: "data_ptr_with_addend", address: 14, size: 4, kind: Data, section: Section(SectionIndex(12)), scope: Linkage, weak: false, flags: Wasm { flags: SYM_BINDING_GLOBAL | SYM_VISIBILITY_HIDDEN, kind: SYM_TYPE_DATA, index: 4 } }
-17: Symbol { name: "data_func_ptr", address: 18, size: 4, kind: Data, section: Section(SectionIndex(13)), scope: Linkage, weak: false, flags: Wasm { flags: SYM_BINDING_GLOBAL | SYM_VISIBILITY_HIDDEN, kind: SYM_TYPE_DATA, index: 5 } }
-18: Symbol { name: "", address: 0, size: 0, kind: Section, section: Unknown, scope: Compilation, weak: false, flags: Wasm { flags: SYM_BINDING_LOCAL | SYM_VISIBILITY_DEFAULT, kind: SYM_TYPE_SECTION, index: 7 } }
-19: Symbol { name: "", address: 0, size: 0, kind: Section, section: Unknown, scope: Compilation, weak: false, flags: Wasm { flags: SYM_BINDING_LOCAL | SYM_VISIBILITY_DEFAULT, kind: SYM_TYPE_SECTION, index: 9 } }
-20: Symbol { name: "", address: 0, size: 0, kind: Section, section: Unknown, scope: Compilation, weak: false, flags: Wasm { flags: SYM_BINDING_LOCAL | SYM_VISIBILITY_DEFAULT, kind: SYM_TYPE_SECTION, index: a } }
-21: Symbol { name: "", address: 0, size: 0, kind: Section, section: Unknown, scope: Compilation, weak: false, flags: Wasm { flags: SYM_BINDING_LOCAL | SYM_VISIBILITY_DEFAULT, kind: SYM_TYPE_SECTION, index: c } }
+14: Symbol { name: "_ZTW11tls_counter", address: de, size: 10, kind: Text, section: Section(SectionIndex(5)), scope: Linkage, weak: true, flags: Wasm { flags: SYM_BINDING_WEAK | SYM_VISIBILITY_HIDDEN, kind: SYM_TYPE_FUNCTION, index: 5 } }
+15: Symbol { name: "data_ptr_to_global", address: 10, size: 4, kind: Data, section: Section(SectionIndex(19)), scope: Linkage, weak: false, flags: Wasm { flags: SYM_BINDING_GLOBAL | SYM_VISIBILITY_HIDDEN, kind: SYM_TYPE_DATA, index: 3 } }
+16: Symbol { name: "data_ptr_with_addend", address: 14, size: 4, kind: Data, section: Section(SectionIndex(1a)), scope: Linkage, weak: false, flags: Wasm { flags: SYM_BINDING_GLOBAL | SYM_VISIBILITY_HIDDEN, kind: SYM_TYPE_DATA, index: 4 } }
+17: Symbol { name: "data_func_ptr", address: 18, size: 4, kind: Data, section: Section(SectionIndex(1b)), scope: Linkage, weak: false, flags: Wasm { flags: SYM_BINDING_GLOBAL | SYM_VISIBILITY_HIDDEN, kind: SYM_TYPE_DATA, index: 5 } }
+18: Symbol { name: ".debug_abbrev", address: 0, size: 0, kind: Section, section: Section(SectionIndex(7)), scope: Compilation, weak: false, flags: Wasm { flags: SYM_BINDING_LOCAL | SYM_VISIBILITY_DEFAULT, kind: SYM_TYPE_SECTION, index: 7 } }
+19: Symbol { name: ".debug_ranges", address: 0, size: 0, kind: Section, section: Section(SectionIndex(9)), scope: Compilation, weak: false, flags: Wasm { flags: SYM_BINDING_LOCAL | SYM_VISIBILITY_DEFAULT, kind: SYM_TYPE_SECTION, index: 9 } }
+20: Symbol { name: ".debug_str", address: 0, size: 0, kind: Section, section: Section(SectionIndex(a)), scope: Compilation, weak: false, flags: Wasm { flags: SYM_BINDING_LOCAL | SYM_VISIBILITY_DEFAULT, kind: SYM_TYPE_SECTION, index: a } }
+21: Symbol { name: ".debug_line", address: 0, size: 0, kind: Section, section: Section(SectionIndex(c)), scope: Compilation, weak: false, flags: Wasm { flags: SYM_BINDING_LOCAL | SYM_VISIBILITY_DEFAULT, kind: SYM_TYPE_SECTION, index: c } }
 
 <code> relocations
 (7, Relocation { kind: Unknown, encoding: Generic, size: 28, target: Symbol(SymbolIndex(1)), addend: 0, implicit_addend: false, flags: Wasm { r_type: 7 } })
@@ -64,7 +64,7 @@ Symbols
 (22, Relocation { kind: Unknown, encoding: Generic, size: 28, target: Symbol(SymbolIndex(2)), addend: 0, implicit_addend: false, flags: Wasm { r_type: 7 } })
 (2d, Relocation { kind: Unknown, encoding: Generic, size: 28, target: Symbol(SymbolIndex(3)), addend: 0, implicit_addend: false, flags: Wasm { r_type: c } })
 (33, Relocation { kind: Unknown, encoding: Generic, size: 28, target: Symbol(SymbolIndex(4)), addend: 0, implicit_addend: false, flags: Wasm { r_type: 7 } })
-(42, Relocation { kind: Unknown, encoding: Generic, size: 28, target: Section(SectionIndex(1)), addend: 0, implicit_addend: false, flags: Wasm { r_type: 6 } })
+(42, Relocation { kind: Unknown, encoding: Generic, size: 28, target: Section(SectionIndex(0)), addend: 0, implicit_addend: false, flags: Wasm { r_type: 6 } })
 (47, Relocation { kind: Unknown, encoding: Generic, size: 28, target: Symbol(SymbolIndex(5)), addend: 0, implicit_addend: false, flags: Wasm { r_type: 14 } })
 (4d, Relocation { kind: Unknown, encoding: Generic, size: 28, target: Symbol(SymbolIndex(6)), addend: 0, implicit_addend: false, flags: Wasm { r_type: b } })
 (55, Relocation { kind: Unknown, encoding: Generic, size: 28, target: Symbol(SymbolIndex(7)), addend: 0, implicit_addend: false, flags: Wasm { r_type: 7 } })
