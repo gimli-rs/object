@@ -1862,7 +1862,7 @@ impl<'data, 'file, R> Iterator for WasmRelocationIterator<'data, 'file, R> {
             implicit_addend: false,
             addend,
             flags: RelocationFlags::Wasm {
-                r_type: entry.r_type.0,
+                r_type: entry.r_type,
             },
         };
         let offset = u64::from(entry.r_offset) - self.start_offset;

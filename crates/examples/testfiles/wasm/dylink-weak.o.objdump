@@ -27,12 +27,12 @@ Symbols
 6: Symbol { name: "__indirect_function_table", address: 0, size: 0, kind: Data, section: Undefined, scope: Dynamic, weak: false, flags: Wasm { flags: SYM_BINDING_GLOBAL | SYM_VISIBILITY_DEFAULT | SYM_UNDEFINED | SYM_NO_STRIP, kind: SYM_TYPE_TABLE, index: 0 } }
 
 <code> relocations
-(10, Relocation { kind: Unknown, encoding: Generic, size: 28, target: Symbol(SymbolIndex(2)), addend: 0, implicit_addend: false, flags: Wasm { r_type: 7 } })
-(1f, Relocation { kind: Unknown, encoding: Generic, size: 28, target: Symbol(SymbolIndex(2)), addend: 0, implicit_addend: false, flags: Wasm { r_type: 0 } })
-(31, Relocation { kind: Unknown, encoding: Generic, size: 28, target: Symbol(SymbolIndex(3)), addend: 0, implicit_addend: false, flags: Wasm { r_type: 7 } })
-(3b, Relocation { kind: Unknown, encoding: Generic, size: 28, target: Symbol(SymbolIndex(4)), addend: 0, implicit_addend: false, flags: Wasm { r_type: 15 } })
-(41, Relocation { kind: Unknown, encoding: Generic, size: 28, target: Symbol(SymbolIndex(5)), addend: 0, implicit_addend: false, flags: Wasm { r_type: 7 } })
-(4c, Relocation { kind: Unknown, encoding: Generic, size: 28, target: Symbol(SymbolIndex(0)), addend: 0, implicit_addend: false, flags: Wasm { r_type: 0 } })
+(10, Relocation { kind: Unknown, encoding: Generic, size: 28, target: Symbol(SymbolIndex(2)), addend: 0, implicit_addend: false, flags: Wasm { r_type: R_WASM_GLOBAL_INDEX_LEB } })
+(1f, Relocation { kind: Unknown, encoding: Generic, size: 28, target: Symbol(SymbolIndex(2)), addend: 0, implicit_addend: false, flags: Wasm { r_type: R_WASM_FUNCTION_INDEX_LEB } })
+(31, Relocation { kind: Unknown, encoding: Generic, size: 28, target: Symbol(SymbolIndex(3)), addend: 0, implicit_addend: false, flags: Wasm { r_type: R_WASM_GLOBAL_INDEX_LEB } })
+(3b, Relocation { kind: Unknown, encoding: Generic, size: 28, target: Symbol(SymbolIndex(4)), addend: 0, implicit_addend: false, flags: Wasm { r_type: R_WASM_MEMORY_ADDR_TLS_SLEB } })
+(41, Relocation { kind: Unknown, encoding: Generic, size: 28, target: Symbol(SymbolIndex(5)), addend: 0, implicit_addend: false, flags: Wasm { r_type: R_WASM_GLOBAL_INDEX_LEB } })
+(4c, Relocation { kind: Unknown, encoding: Generic, size: 28, target: Symbol(SymbolIndex(0)), addend: 0, implicit_addend: false, flags: Wasm { r_type: R_WASM_FUNCTION_INDEX_LEB } })
 
 Dynamic symbols
 
