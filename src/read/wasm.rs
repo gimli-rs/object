@@ -46,6 +46,8 @@ pub struct WasmFile<'data, R = &'data [u8]> {
     has_debug_symbols: bool,
     // Symbols collected from `linking` and `name` custom sections.
     symbols: Vec<WasmSymbolInternal<'data>>,
+    // Entries in the `linking` `InitFuncs` subsection.
+    init_funcs: Vec<wasm::InitFunc>,
     // Entries in `WASM_DYLINK_NEEDED` sub-section.
     needed: Vec<&'data str>,
     // Entries in the imports section.
@@ -147,6 +149,7 @@ impl<'data, R: ReadRef<'data>> WasmFile<'data, R> {
             has_linking: false,
             has_debug_symbols: false,
             symbols: Vec::new(),
+            init_funcs: Vec::new(),
             needed: Vec::new(),
             imports: Vec::new(),
             exports: Vec::new(),
@@ -346,6 +349,16 @@ impl<'data, R: ReadRef<'data>> WasmFile<'data, R> {
                                         let segment = segment
                                             .read_error("Invalid Wasm linking SegmentInfo entry")?;
                                         segment_infos.push(segment);
+                                    }
+                                }
+                                wp::Linking::InitFuncs(map) => {
+                                    for init in map {
+                                        let init = init
+                                            .read_error("Invalid Wasm linking InitFuncs entry")?;
+                                        file.init_funcs.push(wasm::InitFunc {
+                                            priority: init.priority,
+                                            symbol_index: init.symbol_index,
+                                        });
                                     }
                                 }
                                 _ => {}
@@ -936,6 +949,11 @@ impl<'data, R: ReadRef<'data>> WasmFile<'data, R> {
 }
 
 impl<'data, R> WasmFile<'data, R> {
+    /// Return the entries of the `InitFuncs` subsection of the `linking` section.
+    pub fn wasm_init_funcs(&self) -> &[wasm::InitFunc] {
+        &self.init_funcs
+    }
+
     /// Return the entries of the data section's relocations that apply to `segment`.
     fn data_segment_relocations(
         &self,

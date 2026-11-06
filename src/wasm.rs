@@ -329,6 +329,15 @@ pub struct Relocation {
     pub r_addend: i64,
 }
 
+/// An entry in the `linking` `InitFuncs` subsection.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct InitFunc {
+    /// Priority of the init function. Lower values run first.
+    pub priority: u32,
+    /// Index of the function symbol in the `linking` symbol table.
+    pub symbol_index: u32,
+}
+
 impl RelocationType {
     /// Number of bytes this relocation overwrites.
     pub const fn extent(self) -> Option<u8> {
