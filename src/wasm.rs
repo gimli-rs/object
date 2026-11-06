@@ -312,6 +312,23 @@ newtype_constant_names!(NAMES_R: RelocationType(u8) = {
     R_WASM_FUNCTION_INDEX_I32 = 26,
 });
 
+/// An entry in a `reloc.*` custom section.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Relocation {
+    /// The relocation type.
+    pub r_type: RelocationType,
+    /// Offset of the value to rewrite, relative to the start of the target section's payload.
+    ///
+    /// For custom sections, the payload starts after the section name.
+    pub r_offset: u32,
+    /// Index of the symbol in the `linking` symbol table.
+    ///
+    /// For `R_WASM_TYPE_INDEX_LEB`, this is an index into the type section instead.
+    pub r_index: u32,
+    /// Addend to add to the symbol value.
+    pub r_addend: i64,
+}
+
 impl RelocationType {
     /// Number of bytes this relocation overwrites.
     pub const fn extent(self) -> Option<u8> {

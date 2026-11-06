@@ -115,7 +115,7 @@ struct WasmSectionInternal<'data> {
     id: wasm::SectionId,
     range: Range<usize>,
     name: &'data str,
-    relocations: Vec<wp::RelocationEntry>,
+    relocations: Vec<wasm::Relocation>,
 }
 
 #[derive(Clone)]
@@ -362,7 +362,12 @@ impl<'data, R: ReadRef<'data>> WasmFile<'data, R> {
                             .read_error("Invalid Wasm reloc section target")?;
                         for entry in reloc.entries() {
                             let entry = entry.read_error("Invalid Wasm reloc entry")?;
-                            target.relocations.push(entry);
+                            target.relocations.push(wasm::Relocation {
+                                r_type: wasm::RelocationType(entry.ty as u8),
+                                r_offset: entry.offset,
+                                r_index: entry.index,
+                                r_addend: entry.addend,
+                            });
                         }
                     } else if name.starts_with(".debug_") {
                         file.has_debug_symbols = true;
@@ -376,7 +381,7 @@ impl<'data, R: ReadRef<'data>> WasmFile<'data, R> {
             // Sort so that we can binary search for data segments.
             file.sections[index.0]
                 .relocations
-                .sort_by_key(|entry| entry.offset);
+                .sort_by_key(|entry| entry.r_offset);
         }
 
         // Apply any `SegmentInfo` entries collected from the `linking` section to the already-parsed data segments.
@@ -930,6 +935,25 @@ impl<'data, R: ReadRef<'data>> WasmFile<'data, R> {
     }
 }
 
+impl<'data, R> WasmFile<'data, R> {
+    /// Return the entries of the data section's relocations that apply to `segment`.
+    fn data_segment_relocations(
+        &self,
+        segment: &WasmDataSegmentInternal<'data>,
+    ) -> &[wasm::Relocation] {
+        let Some(index) = self.id_sections[wasm::SEC_DATA.0 as usize] else {
+            return &[];
+        };
+        // These are sorted by offset.
+        let entries = &self.sections[index.0].relocations[..];
+        let start_offset = segment.section_offset;
+        let end_offset = segment.section_offset + segment.data.len() as u64;
+        let start = entries.partition_point(|entry| u64::from(entry.r_offset) < start_offset);
+        let end = entries.partition_point(|entry| u64::from(entry.r_offset) < end_offset);
+        &entries[start..end]
+    }
+}
+
 impl<'data, R> read::private::Sealed for WasmFile<'data, R> {}
 
 impl<'data, R: ReadRef<'data>> Object<'data> for WasmFile<'data, R> {
@@ -1331,6 +1355,16 @@ impl<'data, 'file, R> WasmSection<'data, 'file, R> {
             WasmSectionInner::DataSegment { .. } => None,
         }
     }
+
+    /// Return the raw entries of the `reloc.*` section that applies to this section.
+    pub fn wasm_relocations(&self) -> &'file [wasm::Relocation] {
+        match self.inner {
+            WasmSectionInner::Section { section, .. } => &section.relocations,
+            WasmSectionInner::DataSegment { segment, .. } => {
+                self.file.data_segment_relocations(segment)
+            }
+        }
+    }
 }
 
 impl<'data, 'file, R> read::private::Sealed for WasmSection<'data, 'file, R> {}
@@ -1490,23 +1524,14 @@ impl<'data, 'file, R: ReadRef<'data>> ObjectSection<'data> for WasmSection<'data
 
     #[inline]
     fn relocations(&self) -> WasmRelocationIterator<'data, 'file, R> {
-        let (start_offset, entries) = match self.inner {
-            WasmSectionInner::Section { section, .. } => (0u64, &section.relocations[..]),
-            WasmSectionInner::DataSegment { segment, .. } => {
-                let section_index = self.file.id_sections[wasm::SEC_DATA.0 as usize];
-                let entries =
-                    section_index.map_or(&[][..], |index| &self.file.sections[index.0].relocations);
-                let start_offset = segment.section_offset;
-                let end_offset = segment.section_offset + segment.data.len() as u64;
-                let start = entries.partition_point(|entry| u64::from(entry.offset) < start_offset);
-                let end = entries.partition_point(|entry| u64::from(entry.offset) < end_offset);
-                (start_offset, &entries[start..end])
-            }
+        let start_offset = match self.inner {
+            WasmSectionInner::Section { .. } => 0,
+            WasmSectionInner::DataSegment { segment, .. } => segment.section_offset,
         };
         WasmRelocationIterator {
             type_section_index: self.file.section_index_for_id(wasm::SEC_TYPE),
             start_offset,
-            entries: entries.iter(),
+            entries: self.wasm_relocations().iter(),
             marker: PhantomData,
         }
     }
@@ -1783,7 +1808,7 @@ impl<'data, 'file> ObjectSymbol<'data> for WasmSymbol<'data, 'file> {
 pub struct WasmRelocationIterator<'data, 'file, R = &'data [u8]> {
     type_section_index: Option<SectionIndex>,
     start_offset: u64,
-    entries: slice::Iter<'file, wp::RelocationEntry>,
+    entries: slice::Iter<'file, wasm::Relocation>,
     marker: PhantomData<(&'data (), R)>,
 }
 
@@ -1792,21 +1817,20 @@ impl<'data, 'file, R> Iterator for WasmRelocationIterator<'data, 'file, R> {
 
     fn next(&mut self) -> Option<Self::Item> {
         let entry = self.entries.next()?;
-        let r_type = entry.ty as u8;
         // Number of bits the relocation patches in the target section.
-        let size = (entry.ty.extent() * 8) as u8;
+        let size = entry.r_type.extent().unwrap_or(0) * 8;
         // For `R_WASM_TYPE_INDEX_LEB`, the `index` field refers to the type section, not the symbol table.
-        let (target, addend) = if entry.ty == wp::RelocationType::TypeIndexLeb {
+        let (target, addend) = if entry.r_type == wasm::R_WASM_TYPE_INDEX_LEB {
             (
                 RelocationTarget::Section(
                     self.type_section_index.unwrap_or(SectionIndex(usize::MAX)),
                 ),
-                entry.index as i64,
+                entry.r_index as i64,
             )
         } else {
             (
-                RelocationTarget::Symbol(SymbolIndex(entry.index as usize)),
-                entry.addend,
+                RelocationTarget::Symbol(SymbolIndex(entry.r_index as usize)),
+                entry.r_addend,
             )
         };
         let relocation = Relocation {
@@ -1818,9 +1842,11 @@ impl<'data, 'file, R> Iterator for WasmRelocationIterator<'data, 'file, R> {
             // Wasm relocation entries always carry an explicit addend.
             implicit_addend: false,
             addend,
-            flags: RelocationFlags::Wasm { r_type },
+            flags: RelocationFlags::Wasm {
+                r_type: entry.r_type.0,
+            },
         };
-        let offset = u64::from(entry.offset) - self.start_offset;
+        let offset = u64::from(entry.r_offset) - self.start_offset;
         Some((offset, relocation))
     }
 }
