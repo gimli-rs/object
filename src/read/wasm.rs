@@ -1360,9 +1360,7 @@ impl<'data, 'file, R> WasmSection<'data, 'file, R> {
     pub fn wasm_relocations(&self) -> &'file [wasm::Relocation] {
         match self.inner {
             WasmSectionInner::Section { section, .. } => &section.relocations,
-            WasmSectionInner::DataSegment { segment, .. } => {
-                self.file.data_segment_relocations(segment)
-            }
+            WasmSectionInner::DataSegment { .. } => &[],
         }
     }
 }
@@ -1524,14 +1522,17 @@ impl<'data, 'file, R: ReadRef<'data>> ObjectSection<'data> for WasmSection<'data
 
     #[inline]
     fn relocations(&self) -> WasmRelocationIterator<'data, 'file, R> {
-        let start_offset = match self.inner {
-            WasmSectionInner::Section { .. } => 0,
-            WasmSectionInner::DataSegment { segment, .. } => segment.section_offset,
+        let (start_offset, entries) = match self.inner {
+            WasmSectionInner::Section { section, .. } => (0, &section.relocations[..]),
+            WasmSectionInner::DataSegment { segment, .. } => (
+                segment.section_offset,
+                self.file.data_segment_relocations(segment),
+            ),
         };
         WasmRelocationIterator {
             type_section_index: self.file.section_index_for_id(wasm::SEC_TYPE),
             start_offset,
-            entries: self.wasm_relocations().iter(),
+            entries: entries.iter(),
             marker: PhantomData,
         }
     }

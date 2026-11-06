@@ -57,33 +57,15 @@ fn wasm_relocations_raw() {
         ]
     );
 
-    // Data segment sections return the subset of the data section relocations,
-    // without adjusting the offsets.
-    let (data_section_start, _) = data_section.file_range().unwrap();
-    let mut segment_relocs = Vec::new();
+    let mut segment_reloc_count = 0;
     for section in file.sections() {
         if section.wasm_index().is_some() {
             continue;
         }
-        let relocs = section.wasm_relocations();
-        let (segment_start, segment_size) = section.file_range().unwrap();
-        let segment_offset = segment_start - data_section_start;
-        for reloc in relocs {
-            let offset = u64::from(reloc.r_offset);
-            assert!(offset >= segment_offset && offset < segment_offset + segment_size);
-        }
-        let generic_offsets = section
-            .relocations()
-            .map(|(offset, _)| offset + segment_offset)
-            .collect::<Vec<_>>();
-        let raw_offsets = relocs
-            .iter()
-            .map(|r| u64::from(r.r_offset))
-            .collect::<Vec<_>>();
-        assert_eq!(generic_offsets, raw_offsets);
-        segment_relocs.extend_from_slice(relocs);
+        assert!(section.wasm_relocations().is_empty());
+        segment_reloc_count += section.relocations().count();
     }
-    assert_eq!(segment_relocs, data_relocs);
+    assert_eq!(segment_reloc_count, data_relocs.len());
 
     // Custom section relocations.
     let debug_info = file.section_by_name(".debug_info").unwrap();
