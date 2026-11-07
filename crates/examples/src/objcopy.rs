@@ -113,7 +113,6 @@ pub fn copy(in_data: &[u8]) -> Vec<u8> {
             }
             #[cfg(feature = "wasm")]
             SymbolFlags::Wasm { flags, kind, index } => SymbolFlags::Wasm { flags, kind, index },
-            #[cfg(feature = "goff")]
             SymbolFlags::Goff {
                 symbol_type,
                 flags,

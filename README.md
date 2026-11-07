@@ -2,7 +2,7 @@
 
 The `object` crate provides a unified interface to working with object files
 across platforms. It supports reading relocatable object files and executable
-files, and writing COFF/ELF/Mach-O/XCOFF relocatable object files and ELF/PE
+files, and writing COFF/ELF/Mach-O/XCOFF/GOFF relocatable object files and ELF/PE
 executable files.
 
 For reading files, it provides multiple levels of support:
@@ -13,15 +13,15 @@ For reading files, it provides multiple levels of support:
 * a higher level unified API for accessing common features of object files, such
   as sections and symbols ([example](crates/examples/src/objdump.rs))
 
-Supported file formats for reading: ELF, Mach-O, Windows PE/COFF, Wasm, XCOFF,
-and Unix archive.
+Supported file formats for reading: ELF, Mach-O, Windows PE/COFF, Wasm, GOFF,
+XCOFF, and Unix archive.
 
 For writing files, it provides:
 
 * low level writers for ELF, PE, and COFF
 * higher level builder for ELF ([example](crates/rewrite/src))
-* a unified API for writing relocatable object files (ELF, Mach-O, COFF, XCOFF)
-  ([example](crates/examples/src/bin/simple_write.rs))
+* a unified API for writing relocatable object files (ELF, Mach-O, COFF, XCOFF,
+  GOFF) ([example](crates/examples/src/bin/simple_write.rs))
 
 ## Example for unified read API
 

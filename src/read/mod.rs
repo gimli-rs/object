@@ -7,7 +7,8 @@
 //! trait for [`File`], which allows reading any file format, as well as implementations
 //! for each file format:
 //! [`ElfFile`](elf::ElfFile), [`MachOFile`](macho::MachOFile), [`CoffFile`](coff::CoffFile),
-//! [`PeFile`](pe::PeFile), [`WasmFile`](wasm::WasmFile), [`XcoffFile`](xcoff::XcoffFile).
+//! [`PeFile`](pe::PeFile), [`WasmFile`](wasm::WasmFile), [`XcoffFile`](xcoff::XcoffFile),
+//! [`GoffFile`](goff::GoffFile).
 //!
 //! ## Low level read API
 //!
@@ -300,7 +301,7 @@ impl FileKind {
             #[cfg(feature = "elf")]
             [0x7f, b'E', b'L', b'F', 2, ..] => FileKind::Elf64,
             #[cfg(feature = "goff")]
-            [0x03, 0xf0, 0x00, ..] => FileKind::Goff,
+            [0x03, 0xf0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00] => FileKind::Goff,
             #[cfg(feature = "macho")]
             [0xfe, 0xed, 0xfa, 0xce, ..]
             | [0xce, 0xfa, 0xed, 0xfe, ..] => FileKind::MachO32,

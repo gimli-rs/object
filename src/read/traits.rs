@@ -422,8 +422,6 @@ pub trait ObjectSection<'data>: read::private::Sealed {
     /// which requires an allocation.
     ///
     /// This does not do any decompression.
-    // TODO: stabilize
-    #[cfg_attr(not(feature = "unstable"), doc(hidden))]
     fn collected_data(&self) -> Result<Cow<'data, [u8]>> {
         self.data().map(Cow::Borrowed)
     }
@@ -469,8 +467,6 @@ pub trait ObjectSection<'data>: read::private::Sealed {
     ///
     /// For most file formats, this is the same as [`Self::name_bytes`].
     /// For GOFF, the EBCDIC is converted to UTF-8 bytes, which requires an allocation.
-    // TODO: stabilize
-    #[cfg_attr(not(feature = "unstable"), doc(hidden))]
     fn decoded_name_bytes(&self) -> Result<Cow<'data, [u8]>> {
         self.name_bytes().map(Cow::Borrowed)
     }
@@ -481,8 +477,6 @@ pub trait ObjectSection<'data>: read::private::Sealed {
     /// For GOFF, the EBCDIC is converted to UTF-8, which requires an allocation.
     ///
     /// Returns an error if the name is not UTF-8.
-    // TODO: stabilize
-    #[cfg_attr(not(feature = "unstable"), doc(hidden))]
     fn decoded_name(&self) -> Result<Cow<'data, str>> {
         self.name().map(Cow::Borrowed)
     }
@@ -577,8 +571,6 @@ pub trait ObjectSymbol<'data>: read::private::Sealed {
     ///
     /// For most file formats, this is the same as [`Self::name_bytes`].
     /// For GOFF, the EBCDIC is converted to UTF-8 bytes, which requires an allocation.
-    // TODO: stabilize
-    #[cfg_attr(not(feature = "unstable"), doc(hidden))]
     fn decoded_name_bytes(&self) -> Result<Cow<'data, [u8]>> {
         self.name_bytes().map(Cow::Borrowed)
     }
@@ -589,8 +581,6 @@ pub trait ObjectSymbol<'data>: read::private::Sealed {
     /// For GOFF, the EBCDIC is converted to UTF-8, which requires an allocation.
     ///
     /// Returns an error if the name is not UTF-8.
-    // TODO: stabilize
-    #[cfg_attr(not(feature = "unstable"), doc(hidden))]
     fn decoded_name(&self) -> Result<Cow<'data, str>> {
         self.name().map(Cow::Borrowed)
     }

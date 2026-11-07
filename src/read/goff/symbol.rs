@@ -208,7 +208,7 @@ impl<'data> GoffSymbolInternal<'data> {
     }
 }
 
-/// A reference to a symbol in an [`GoffFile`].
+/// A reference to a symbol in an [`GoffFile`](super::GoffFile).
 ///
 /// Most functionality is provided by the [`ObjectSymbol`] trait implementation.
 #[derive(Clone, Copy)]
@@ -423,7 +423,7 @@ impl<'data, 'file> ObjectSymbol<'data> for GoffSymbol<'data, 'file> {
     }
 }
 
-/// A reference to a symbol table in a [`GoffFile`].
+/// A reference to a symbol table in a [`GoffFile`](super::GoffFile).
 #[derive(Debug, Clone, Copy)]
 pub struct GoffSymbolTable<'data, 'file> {
     symbols: &'file GoffSymbolTableInternal<'data>,
