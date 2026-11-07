@@ -823,7 +823,7 @@ pub enum RelocationFlags {
     #[cfg(feature = "wasm")]
     Wasm {
         /// Relocation type (the `R_WASM_*` constant).
-        r_type: u8,
+        r_type: crate::wasm::RelocationType,
     },
     /// GOFF relocation fields.
     #[cfg(feature = "goff")]
