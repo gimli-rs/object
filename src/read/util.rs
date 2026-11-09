@@ -295,8 +295,8 @@ where
 
 impl<'data, R: ReadRef<'data>> StringTable<'data, R> {
     /// Interpret the given data as a string table.
-    // TODO: rename to `new` when doing breaking changes
-    pub fn from_bytes(data: &'data [u8]) -> Self {
+    // TODO: this doesn't need the generic R, but removing that is a big change
+    pub fn new(data: &'data [u8]) -> Self {
         StringTable {
             data: StringTableData::Bytes(Bytes(data)),
         }
@@ -306,8 +306,8 @@ impl<'data, R: ReadRef<'data>> StringTable<'data, R> {
     /// needed.
     ///
     /// This allows us to avoid loading the entire string table in the dyld shared
-    /// cache. Prefer [`Self::from_bytes`] for other uses.
-    pub fn new(data: R, start: u64, end: u64) -> Self {
+    /// cache. Prefer [`Self::new`] for other uses.
+    pub fn lazy(data: R, start: u64, end: u64) -> Self {
         StringTable {
             data: StringTableData::Lazy {
                 data: SkipDebugList(data),

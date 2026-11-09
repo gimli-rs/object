@@ -492,12 +492,12 @@ impl<E: Endian> macho::SymtabCommand<E> {
             let str_end = stroff
                 .checked_add(strsize)
                 .read_error("Invalid Mach-O string table offset or size")?;
-            StringTable::new(data, stroff, str_end)
+            StringTable::lazy(data, stroff, str_end)
         } else {
             let strings = data
                 .read_bytes_at(stroff, strsize)
                 .read_error("Invalid Mach-O string table offset or size")?;
-            StringTable::from_bytes(strings)
+            StringTable::new(strings)
         };
         Ok(SymbolTable::new(symbols, strings))
     }
