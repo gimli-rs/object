@@ -191,10 +191,10 @@ fn cmd_msrv() -> Result<(), DynError> {
         "cargo",
         &["+1.85.0", "test", "-p", "object", "--no-default-features", "--features", "read,write,std"],
     )?;
-    // ruzstd needs 1.87.0
+    // ruzstd needs 1.87.0, wasmparser needs 1.88.0
     cmd(
         "cargo",
-        &["+1.87.0", "test", "-p", "object", "--features", "unstable-all"],
+        &["+1.88.0", "test", "-p", "object", "--features", "unstable-all"],
     )?;
     Ok(())
 }
