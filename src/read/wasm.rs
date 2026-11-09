@@ -115,7 +115,7 @@ impl<'data> WasmDataSegmentInternal<'data> {
 #[derive(Debug)]
 struct WasmSectionInternal<'data> {
     id: wasm::SectionId,
-    range: Range<usize>,
+    range: Range<u64>,
     name: &'data str,
     relocations: Vec<wasm::Relocation>,
 }
@@ -243,14 +243,16 @@ impl<'data, R: ReadRef<'data>> WasmFile<'data, R> {
                 wp::Payload::ElementSection(section) => {
                     file.add_section(wasm::SEC_ELEMENT, section.range(), "");
                 }
-                wp::Payload::CodeSectionStart { range, .. } => {
-                    code_range_start = range.start;
-                    file.add_section(wasm::SEC_CODE, range, "");
+                wp::Payload::CodeSectionStart {
+                    unchecked_range, ..
+                } => {
+                    code_range_start = unchecked_range.start;
+                    file.add_section(wasm::SEC_CODE, unchecked_range, "");
                 }
                 wp::Payload::CodeSectionEntry(body) => {
                     let range = body.range();
-                    let address = range.start as u64 - code_range_start as u64;
-                    let size = (range.end - range.start) as u64;
+                    let address = range.start - code_range_start;
+                    let size = range.end - range.start;
                     code_ranges.push((address, size));
                 }
                 wp::Payload::DataSection(section) => {
@@ -275,8 +277,8 @@ impl<'data, R: ReadRef<'data>> WasmFile<'data, R> {
                                 is_passive = true;
                             }
                         }
-                        let file_offset = (segment.range.end - segment.data.len()) as u64;
-                        let section_offset = file_offset - section_range.start as u64;
+                        let file_offset = segment.range.end - segment.data.len() as u64;
+                        let section_offset = file_offset - section_range.start;
                         file.data_segments.push(WasmDataSegmentInternal {
                             info: None,
                             address,
@@ -298,10 +300,7 @@ impl<'data, R: ReadRef<'data>> WasmFile<'data, R> {
                 }
                 wp::Payload::CustomSection(section) => {
                     let name = section.name();
-                    let size = section.data().len();
-                    let mut range = section.range();
-                    range.start = range.end - size;
-                    file.add_section(wasm::SEC_CUSTOM, range, name);
+                    file.add_section(wasm::SEC_CUSTOM, section.data_range(), name);
                     if name == "name" {
                         let reader = wp::BinaryReader::new(section.data(), section.data_offset());
                         names = Some(wp::NameSectionReader::new(reader));
@@ -892,7 +891,7 @@ impl<'data, R: ReadRef<'data>> WasmFile<'data, R> {
         Ok(file)
     }
 
-    fn add_section(&mut self, id: wasm::SectionId, range: Range<usize>, name: &'data str) {
+    fn add_section(&mut self, id: wasm::SectionId, range: Range<u64>, name: &'data str) {
         let section = WasmSectionInternal {
             id,
             range,
@@ -1409,9 +1408,7 @@ impl<'data, 'file, R: ReadRef<'data>> ObjectSection<'data> for WasmSection<'data
     #[inline]
     fn size(&self) -> u64 {
         match self.inner {
-            WasmSectionInner::Section { section, .. } => {
-                (section.range.end - section.range.start) as u64
-            }
+            WasmSectionInner::Section { section, .. } => section.range.end - section.range.start,
             WasmSectionInner::DataSegment { segment, .. } => segment.data.len() as u64,
         }
     }
@@ -1427,10 +1424,9 @@ impl<'data, 'file, R: ReadRef<'data>> ObjectSection<'data> for WasmSection<'data
     #[inline]
     fn file_range(&self) -> Option<(u64, u64)> {
         match self.inner {
-            WasmSectionInner::Section { section, .. } => Some((
-                section.range.start as u64,
-                (section.range.end - section.range.start) as u64,
-            )),
+            WasmSectionInner::Section { section, .. } => {
+                Some((section.range.start, section.range.end - section.range.start))
+            }
             WasmSectionInner::DataSegment { segment, .. } => {
                 Some((segment.file_offset, segment.data.len() as u64))
             }
@@ -1443,10 +1439,7 @@ impl<'data, 'file, R: ReadRef<'data>> ObjectSection<'data> for WasmSection<'data
             WasmSectionInner::Section { section, .. } => self
                 .file
                 .data
-                .read_bytes_at(
-                    section.range.start as u64,
-                    section.range.end as u64 - section.range.start as u64,
-                )
+                .read_bytes_at(section.range.start, section.range.end - section.range.start)
                 .read_error("Invalid Wasm section size or offset"),
             WasmSectionInner::DataSegment { segment, .. } => Ok(segment.data),
         }
