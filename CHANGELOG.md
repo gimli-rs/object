@@ -2,6 +2,119 @@
 
 --------------------------------------------------------------------------------
 
+## 0.41.0
+
+Released 2026/11/10.
+
+### Breaking changes
+
+* Changed `read::StringTable::new` to use a byte slice, and added
+  `read::StringTable::lazy` for the previous behaviour. This fixes
+  reading long symbol names when using `ReadCache`. Invalid string table
+  file ranges are now returned as errors during initial file parse for
+  most file formats.
+  [#983](https://github.com/gimli-rs/object/pull/983)
+
+* Deleted `object::wasm` re-export of `object::read::wasm`.
+  [#992](https://github.com/gimli-rs/object/pull/992)
+
+* Changed Wasm section indices to be file section index, instead of section ID.
+  Added `read::WasmFile::wasm_section_by_id`, `read::WasmSection::wasm_id`,
+  `read::WasmFile::wasm_section_by_index` and `read::WasmSection::wasm_index`.
+  [#997](https://github.com/gimli-rs/object/pull/997)
+
+* Changed `RelocationFlags::Wasm` to use `wasm::RelocationType`.
+  [#1018](https://github.com/gimli-rs/object/pull/1018)
+
+### Changed
+
+* The minimum supported rust version (MSRV) with all features enabled has changed to 1.88.0.
+
+* Fixed `read::WasmSection::file_range`.
+  [#901](https://github.com/gimli-rs/object/pull/901)
+
+* Changed `read::WasmFile::sections` to include unknown sections.
+  [#977](https://github.com/gimli-rs/object/pull/977)
+
+* Fixed `read::WasmFile::entry` and `read::WasmSymbol::address` when imports
+  are present.
+  [#981](https://github.com/gimli-rs/object/pull/981)
+
+* Changed `read::macho::ExportsTrieIterator::next` and
+  `read::macho::DyldCacheRelocationIterator::next` to fuse after errors.
+  [#988](https://github.com/gimli-rs/object/pull/988)
+
+* Fixed parsing of Xtensa relocation types that are used in debug sections.
+  [#1010](https://github.com/gimli-rs/object/pull/1010)
+
+* Changed `read::RelocationMap::add` to reject relocations with subtractors.
+  [#1012](https://github.com/gimli-rs/object/pull/1012)
+
+* Updated `wasmparser` dependency.
+  [#1021](https://github.com/gimli-rs/object/pull/1021)
+
+### Added
+
+* Added read and write support for GOFF. The `goff` feature is now stable.
+  [#969](https://github.com/gimli-rs/object/pull/969)
+  [#1000](https://github.com/gimli-rs/object/pull/1000)
+  [#1001](https://github.com/gimli-rs/object/pull/1001)
+  [#1012](https://github.com/gimli-rs/object/pull/1012)
+  [#1014](https://github.com/gimli-rs/object/pull/1014)
+  [#1017](https://github.com/gimli-rs/object/pull/1017)
+
+* Added `read::ObjectSection::collected_data`. Added `decoded_name` and
+  `decoded_name_bytes` methods for `read::ObjectSection`, `read::ObjectSymbol`,
+  and `read::ArchiveMember`. These are needed for GOFF.
+  [#1017](https://github.com/gimli-rs/object/pull/1017)
+
+* Added newtypes for Wasm constants.
+  [#992](https://github.com/gimli-rs/object/pull/992)
+
+* Implemented `read::WasmFile::segments`. This only returns data segments.
+  [#901](https://github.com/gimli-rs/object/pull/901)
+
+* Added Wasm data segments to the end of the section table. These can be
+  referred to by symbols, and the section flags contain segment info from
+  the linking section.
+  [#901](https://github.com/gimli-rs/object/pull/901)
+  [#978](https://github.com/gimli-rs/object/pull/978)
+  [#985](https://github.com/gimli-rs/object/pull/985)
+  [#999](https://github.com/gimli-rs/object/pull/999)
+
+* Added `read::SymbolFlags::Wasm`.
+  [#995](https://github.com/gimli-rs/object/pull/995)
+
+* Added `read::ObjectSymbol::export_name`. This is needed for Wasm.
+  [#995](https://github.com/gimli-rs/object/pull/995)
+
+* Added `read::WasmSection::wasm_relocations`.
+  [#1019](https://github.com/gimli-rs/object/pull/1019)
+
+* Added `read::WasmFile::wasm_init_funcs`.
+  [#1020](https://github.com/gimli-rs/object/pull/1020)
+
+* Implemented `read::WasmFile::kind`.
+  [#979](https://github.com/gimli-rs/object/pull/979)
+
+* Implemented `read::WasmFile::import_libraries`, `imports` and `exports`,
+  and added `Wasm` variants to `ImportFlags`, `ExportFlags` and `ExportTarget`.
+  [#987](https://github.com/gimli-rs/object/pull/987)
+
+* Implemented `read::WasmSection::data_range`.
+  [#980](https://github.com/gimli-rs/object/pull/980)
+
+* Added `elf::SHT_LLVM_LTO`.
+  [#973](https://github.com/gimli-rs/object/pull/973)
+
+* Added more ELF Xtensa relocations.
+  [#1010](https://github.com/gimli-rs/object/pull/1010)
+
+* Added `elf::DT_GNU_FLAGS_1` and `DF_GNU_1_UNIQUE`.
+  [#1016](https://github.com/gimli-rs/object/pull/1016)
+
+--------------------------------------------------------------------------------
+
 ## 0.40.0
 
 Released 2026/08/01.
