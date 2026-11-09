@@ -74,7 +74,7 @@ where
 
         Ok(SymbolTable {
             symbols,
-            strings: StringTable::from_bytes(strings),
+            strings: StringTable::new(strings),
             header: PhantomData,
         })
     }

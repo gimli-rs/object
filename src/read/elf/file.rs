@@ -802,7 +802,7 @@ pub trait FileHeader: Debug + Pod + read::private::Sealed {
         let shstrtab_data = shstrtab
             .data(endian, data)
             .read_error("Invalid ELF shstrtab offset or size")?;
-        Ok(StringTable::from_bytes(shstrtab_data))
+        Ok(StringTable::new(shstrtab_data))
     }
 
     /// Return the section table.

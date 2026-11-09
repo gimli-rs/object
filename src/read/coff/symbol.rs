@@ -65,7 +65,7 @@ impl<'data, R: ReadRef<'data>, Coff: CoffHeader> SymbolTable<'data, R, Coff> {
 
         Ok(SymbolTable {
             symbols,
-            strings: StringTable::from_bytes(strings),
+            strings: StringTable::new(strings),
         })
     }
 
