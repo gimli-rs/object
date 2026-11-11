@@ -315,6 +315,7 @@ where
             (elf::EM_SPARCV9, true) => Architecture::Sparc64,
             (elf::EM_XTENSA, false) => Architecture::Xtensa,
             (elf::EM_SH, false) => Architecture::SuperH,
+            (elf::EM_TRICORE, false) => Architecture::TriCore,
             _ => Architecture::Unknown,
         }
     }
