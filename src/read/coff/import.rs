@@ -66,6 +66,11 @@ impl<'data> ImportFile<'data> {
         })
     }
 
+    /// Get the raw import file header.
+    pub fn import_header(&self) -> &'data pe::ImportObjectHeader {
+        self.header
+    }
+
     /// Get the machine type.
     pub fn architecture(&self) -> Architecture {
         match self.header.machine.get(LE) {
