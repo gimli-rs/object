@@ -61,6 +61,14 @@ extern crate alloc;
 #[macro_use]
 extern crate std;
 
+// Silence warnings for dependencies that are only used for some feature combinations.
+#[cfg(feature = "wasm")]
+use wasmparser as _;
+#[cfg(feature = "write_core")]
+use {crc32fast as _, hashbrown as _};
+#[cfg(feature = "compression")]
+use {flate2 as _, ruzstd as _};
+
 mod common;
 pub use common::*;
 
