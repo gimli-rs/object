@@ -418,8 +418,12 @@ pub trait ObjectSection<'data>: read::private::Sealed {
     /// Returns the contents of the section as a single byte array.
     ///
     /// For most file formats, this is the same as [`Self::data`].
-    /// For GOFF, the section data is copied from non-contiguous text records,
-    /// which requires an allocation.
+    ///
+    /// For GOFF files, the section data is copied from non-contiguous text
+    /// records, and possibly extended with the fill byte value. This may
+    /// require an allocation of [`Self::size`], which is derived from fields
+    /// in the file and not bounded by the file size. If you need to limit this
+    /// for untrusted files, check the size before calling this method.
     ///
     /// This does not do any decompression.
     fn collected_data(&self) -> Result<Cow<'data, [u8]>> {
