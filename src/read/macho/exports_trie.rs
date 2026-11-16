@@ -132,8 +132,9 @@ impl<'data> NodeIterator<'data> {
 
     fn push_node(&mut self, offset: u64) -> Result<Option<ExportSymbol<'data>>> {
         let mut data = Bytes(
-            self.data
-                .get(offset as usize..)
+            usize::try_from(offset)
+                .ok()
+                .and_then(|offset| self.data.get(offset..))
                 .read_error("Invalid exports trie offset")?,
         );
         let terminal_size = data
@@ -143,7 +144,9 @@ impl<'data> NodeIterator<'data> {
             None
         } else {
             let (flags, export_data) = ExportData::parse(
-                data.read_bytes(terminal_size as usize)
+                usize::try_from(terminal_size)
+                    .map_err(|_| ())
+                    .and_then(|size| data.read_bytes(size))
                     .read_error("Exports trie terminal size exceeds bounds")?,
             )?;
             Some(ExportSymbol {
@@ -340,6 +343,37 @@ mod tests {
         let mut exports = ExportsTrieIterator::new(&data);
         assert!(exports.next().is_err());
         assert!(exports.next().unwrap().is_none());
+    }
+
+    #[test]
+    fn terminal_size_overflow() {
+        let data = [
+            0x85, 0x80, 0x80, 0x80, 0x10, // terminal_size (2^32 + 5)
+            0x00, // flags
+            0x10, // address
+            0x00, 0x00, 0x00, // padding
+            0x00, // children_count
+        ];
+        let mut exports = ExportsTrieIterator::new(&data);
+        assert!(exports.next().is_err());
+    }
+
+    #[test]
+    fn child_offset_overflow() {
+        let data = [
+            // Root node at offset 0.
+            0x00, // terminal_size
+            0x01, // children_count
+            b'a', 0x00, // edge_str
+            0x89, 0x80, 0x80, 0x80, 0x10, // child_offset (2^32 + 9)
+            // Terminal node at offset 9.
+            0x02, // terminal_size
+            0x00, // flags
+            0x10, // address
+            0x00, // children_count
+        ];
+        let mut exports = ExportsTrieIterator::new(&data);
+        assert!(exports.next().is_err());
     }
 
     #[test]
