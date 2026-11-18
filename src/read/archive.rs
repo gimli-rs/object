@@ -271,7 +271,6 @@ impl<'data, R: ReadRef<'data>> ArchiveFile<'data, R> {
             .read_slice::<u8>(20)
             .read_error("Missing member count in AIX big archive")?;
         let members_count = parse_u64_digits(members_count_bytes, 10)
-            .and_then(|size| size.try_into().ok())
             .read_error("Invalid member count in AIX big archive")?;
         let index = member_data
             .read_slice::<archive::AixMemberOffset>(members_count)
@@ -827,7 +826,7 @@ impl<'data> ArchiveSymbolIterator<'data> {
             ArchiveKind::Unknown => Ok(ArchiveSymbolIterator(SymbolIteratorInternal::None)),
             ArchiveKind::Gnu => {
                 let offsets_count = data.read::<U32<BE>>()?.get(BE);
-                let offsets = data.read_slice::<U32<BE>>(offsets_count as usize)?;
+                let offsets = data.read_slice::<U32<BE>>(offsets_count.into())?;
                 Ok(ArchiveSymbolIterator(SymbolIteratorInternal::Gnu {
                     offsets: offsets.iter(),
                     names: data,
@@ -835,7 +834,7 @@ impl<'data> ArchiveSymbolIterator<'data> {
             }
             ArchiveKind::Gnu64 => {
                 let offsets_count = data.read::<U64<BE>>()?.get(BE);
-                let offsets = data.read_slice::<U64<BE>>(offsets_count as usize)?;
+                let offsets = data.read_slice::<U64<BE>>(offsets_count)?;
                 Ok(ArchiveSymbolIterator(SymbolIteratorInternal::Gnu64 {
                     offsets: offsets.iter(),
                     names: data,
@@ -843,9 +842,9 @@ impl<'data> ArchiveSymbolIterator<'data> {
             }
             ArchiveKind::Bsd => {
                 let offsets_size = data.read::<U32<LE>>()?.get(LE);
-                let offsets = data.read_slice::<[U32<LE>; 2]>(offsets_size as usize / 8)?;
+                let offsets = data.read_slice::<[U32<LE>; 2]>(u64::from(offsets_size) / 8)?;
                 let names_size = data.read::<U32<LE>>()?.get(LE);
-                let names = data.read_bytes(names_size as usize)?;
+                let names = data.read_bytes(names_size.into())?;
                 Ok(ArchiveSymbolIterator(SymbolIteratorInternal::Bsd {
                     offsets: offsets.iter(),
                     names,
@@ -853,9 +852,9 @@ impl<'data> ArchiveSymbolIterator<'data> {
             }
             ArchiveKind::Bsd64 => {
                 let offsets_size = data.read::<U64<LE>>()?.get(LE);
-                let offsets = data.read_slice::<[U64<LE>; 2]>(offsets_size as usize / 16)?;
+                let offsets = data.read_slice::<[U64<LE>; 2]>(offsets_size / 16)?;
                 let names_size = data.read::<U64<LE>>()?.get(LE);
-                let names = data.read_bytes(names_size as usize)?;
+                let names = data.read_bytes(names_size)?;
                 Ok(ArchiveSymbolIterator(SymbolIteratorInternal::Bsd64 {
                     offsets: offsets.iter(),
                     names,
@@ -863,9 +862,9 @@ impl<'data> ArchiveSymbolIterator<'data> {
             }
             ArchiveKind::Coff => {
                 let members_count = data.read::<U32<LE>>()?.get(LE);
-                let members = data.read_slice::<U32<LE>>(members_count as usize)?;
+                let members = data.read_slice::<U32<LE>>(members_count.into())?;
                 let indices_count = data.read::<U32<LE>>()?.get(LE);
-                let indices = data.read_slice::<U16<LE>>(indices_count as usize)?;
+                let indices = data.read_slice::<U16<LE>>(indices_count.into())?;
                 Ok(ArchiveSymbolIterator(SymbolIteratorInternal::Coff {
                     members,
                     indices: indices.iter(),
@@ -914,7 +913,7 @@ impl<'data> Iterator for ArchiveSymbolIterator<'data> {
                 let entry = offsets.next()?;
                 Some(
                     names
-                        .read_string_at(entry[0].get(LE) as usize)
+                        .read_string_at(entry[0].get(LE).into())
                         .read_error("Invalid archive symbol name offset")
                         .map(|name| ArchiveSymbol {
                             name,
@@ -926,7 +925,7 @@ impl<'data> Iterator for ArchiveSymbolIterator<'data> {
                 let entry = offsets.next()?;
                 Some(
                     names
-                        .read_string_at(entry[0].get(LE) as usize)
+                        .read_string_at(entry[0].get(LE))
                         .read_error("Invalid archive symbol name offset")
                         .map(|name| ArchiveSymbol {
                             name,

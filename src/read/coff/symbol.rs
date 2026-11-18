@@ -46,7 +46,7 @@ impl<'data, R: ReadRef<'data>, Coff: CoffHeader> SymbolTable<'data, R, Coff> {
         let mut offset = header.pointer_to_symbol_table().into();
         let (symbols, strings) = if offset != 0 {
             let symbols = data
-                .read_slice(&mut offset, header.number_of_symbols() as usize)
+                .read_slice(&mut offset, header.number_of_symbols().into())
                 .read_error("Invalid COFF symbol table offset or size")?;
 
             // Note: don't update data when reading length; the length includes itself.

@@ -88,7 +88,7 @@ impl<'data, Elf: FileHeader> AttributesSubsectionIterator<'data, Elf> {
         // Now read the entire subsection, updating self.data.
         let mut data = self
             .data
-            .read_bytes(length as usize)
+            .read_bytes(length.into())
             .read_error("Invalid ELF attributes subsection length")?;
         // Skip the subsection length field.
         data.skip(4)
@@ -189,7 +189,7 @@ impl<'data, Elf: FileHeader> AttributesSubsubsectionIterator<'data, Elf> {
         // Now read the entire sub-subsection, updating self.data.
         let mut data = self
             .data
-            .read_bytes(length as usize)
+            .read_bytes(length.into())
             .read_error("Invalid ELF attributes sub-subsection length")?;
         // Skip the tag and sub-subsection size field.
         data.skip(1 + 4)

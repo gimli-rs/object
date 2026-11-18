@@ -28,10 +28,10 @@ impl<'data, Elf: FileHeader> HashTable<'data, Elf> {
             .read::<elf::HashHeader<Elf::Endian>>(&mut offset)
             .read_error("Invalid hash header")?;
         let buckets = data
-            .read_slice(&mut offset, header.bucket_count.get(endian) as usize)
+            .read_slice(&mut offset, header.bucket_count.get(endian).into())
             .read_error("Invalid hash buckets")?;
         let chains = data
-            .read_slice(&mut offset, header.chain_count.get(endian) as usize)
+            .read_slice(&mut offset, header.chain_count.get(endian).into())
             .read_error("Invalid hash chains")?;
         Ok(HashTable { buckets, chains })
     }
@@ -120,9 +120,9 @@ impl<'data, Elf: FileHeader> GnuHashTable<'data, Elf> {
             .read_bytes(&mut offset, bloom_len)
             .read_error("Invalid GNU hash bloom filters")?;
         let buckets = data
-            .read_slice(&mut offset, header.bucket_count.get(endian) as usize)
+            .read_slice(&mut offset, header.bucket_count.get(endian).into())
             .read_error("Invalid GNU hash buckets")?;
-        let chain_count = (data.len() - offset as usize) / 4;
+        let chain_count = (data.len() as u64 - offset) / 4;
         let values = data
             .read_slice(&mut offset, chain_count)
             .read_error("Invalid GNU hash values")?;

@@ -42,7 +42,7 @@ impl<'data> CodeSignature<'data> {
             return Err(Error("Unsupported Mach-O code signature magic"));
         }
         let index = bytes
-            .read_slice::<macho::CsBlobIndex>(header.count.get(BigEndian) as usize)
+            .read_slice::<macho::CsBlobIndex>(header.count.get(BigEndian).into())
             .read_error("Invalid Mach-O code signature blob count")?;
         Ok(CodeSignature {
             data: Bytes(data),
@@ -89,11 +89,11 @@ impl<'data> CodeSignatureBlobIterator<'data> {
         let offset = index.offset.get(BigEndian);
         let header = self
             .data
-            .read_at::<macho::CsGenericBlob>(offset as usize)
+            .read_at::<macho::CsGenericBlob>(offset.into())
             .read_error("Invalid Mach-O code signature blob offset")?;
         let data = self
             .data
-            .read_bytes_at(offset as usize, header.length.get(BigEndian) as usize)
+            .read_bytes_at(offset.into(), header.length.get(BigEndian).into())
             .read_error("Invalid Mach-O code signature blob length")?;
         Ok(Some(CodeSignatureBlob {
             slot,
@@ -293,7 +293,7 @@ impl<'data> CodeDirectory<'data> {
     /// Return the identifier string.
     pub fn ident(&self) -> Result<&'data [u8]> {
         self.data
-            .read_string_at(self.header.ident_offset.get(BigEndian) as usize)
+            .read_string_at(self.header.ident_offset.get(BigEndian).into())
             .read_error("Invalid Mach-O code directory identifier offset")
     }
 
@@ -305,7 +305,7 @@ impl<'data> CodeDirectory<'data> {
         }
         let team_id = self
             .data
-            .read_string_at(team_offset as usize)
+            .read_string_at(team_offset.into())
             .read_error("Invalid Mach-O code directory team identifier offset")?;
         Ok(Some(team_id))
     }
@@ -327,7 +327,7 @@ impl<'data> CodeDirectory<'data> {
             .read_error("Invalid Mach-O code directory hash size")?;
         Ok(self
             .data
-            .read_bytes_at(offset as usize, self.header.hash_size as usize)
+            .read_bytes_at(offset.into(), self.header.hash_size.into())
             .read_error("Invalid Mach-O code directory hash offset")?
             .0)
     }
@@ -348,7 +348,7 @@ impl<'data> CodeDirectory<'data> {
             .read_error("Invalid Mach-O code directory hash size")?;
         Ok(self
             .data
-            .read_bytes_at(offset as usize, self.header.hash_size as usize)
+            .read_bytes_at(offset.into(), self.header.hash_size.into())
             .read_error("Invalid Mach-O code directory hash offset")?
             .0)
     }

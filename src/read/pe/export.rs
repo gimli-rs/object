@@ -147,17 +147,15 @@ impl<'data> ExportTable<'data> {
         let mut addresses = &[][..];
         let address_of_functions = directory.address_of_functions.get(LE);
         if address_of_functions != 0 {
-            let number = directory.number_of_functions.get(LE) as usize;
+            let number = directory.number_of_functions.get(LE);
             // Ordinals must fit in a u16, so this bounds every valid address index too.
-            let max_index = usize::from(u16::MAX - ordinal_base);
+            let max_index = u32::from(u16::MAX - ordinal_base);
             if number > max_index + 1 {
                 return Err(Error("Invalid PE export number of functions"));
             }
+            let offset = address_of_functions.wrapping_sub(virtual_address);
             addresses = data
-                .read_slice_at::<U32<_>>(
-                    address_of_functions.wrapping_sub(virtual_address) as usize,
-                    number,
-                )
+                .read_slice_at::<U32<_>>(offset.into(), number.into())
                 .read_error("Invalid PE export address table")?;
         }
 
@@ -170,18 +168,14 @@ impl<'data> ExportTable<'data> {
                 return Err(Error("Missing PE export ordinal table"));
             }
 
-            let number = directory.number_of_names.get(LE) as usize;
+            let number = directory.number_of_names.get(LE).into();
+            let names_offset = address_of_names.wrapping_sub(virtual_address);
+            let ordinals_offset = address_of_name_ordinals.wrapping_sub(virtual_address);
             names = data
-                .read_slice_at::<U32<_>>(
-                    address_of_names.wrapping_sub(virtual_address) as usize,
-                    number,
-                )
+                .read_slice_at::<U32<_>>(names_offset.into(), number)
                 .read_error("Invalid PE export name pointer table")?;
             name_ordinals = data
-                .read_slice_at::<U16<_, _>>(
-                    address_of_name_ordinals.wrapping_sub(virtual_address) as usize,
-                    number,
-                )
+                .read_slice_at::<U16<_, _>>(ordinals_offset.into(), number)
                 .read_error("Invalid PE export ordinal table")?;
         }
 
@@ -344,9 +338,9 @@ impl<'data> ExportTable<'data> {
         })
     }
 
-    fn forward_offset(&self, address: u32) -> Option<usize> {
-        let offset = address.wrapping_sub(self.virtual_address) as usize;
-        if offset < self.data.len() {
+    fn forward_offset(&self, address: u32) -> Option<u64> {
+        let offset = address.wrapping_sub(self.virtual_address).into();
+        if offset < self.data.len() as u64 {
             Some(offset)
         } else {
             None
@@ -374,7 +368,7 @@ impl<'data> ExportTable<'data> {
     pub fn name_from_pointer(&self, name_pointer: u32) -> Result<&'data [u8]> {
         let offset = name_pointer.wrapping_sub(self.virtual_address);
         self.data
-            .read_string_at(offset as usize)
+            .read_string_at(offset.into())
             .read_error("Invalid PE export name pointer")
     }
 

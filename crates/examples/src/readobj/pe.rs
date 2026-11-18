@@ -775,7 +775,7 @@ fn print_reloc_dir(
             p.group("ImageBaseRelocation", |p| {
                 p.field_hex("VirtualAddress", reloc.virtual_address);
                 p.field_consts("Type", reloc.typ, names.rel_based);
-                let offset = (reloc.virtual_address - block_address) as usize;
+                let offset = (reloc.virtual_address - block_address).into();
                 if let Some(addend) = match reloc.typ {
                     IMAGE_REL_BASED_HIGHLOW => block_data
                         .and_then(|data| data.read_at::<U32<LE>>(offset).ok())

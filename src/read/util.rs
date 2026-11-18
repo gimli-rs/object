@@ -40,7 +40,8 @@ impl<'data> Bytes<'data> {
     ///
     /// Returns an error if there are too few bytes.
     #[inline]
-    pub fn skip(&mut self, offset: usize) -> Result<(), ()> {
+    pub fn skip(&mut self, offset: u64) -> Result<(), ()> {
+        let offset = offset.try_into().map_err(|_| ())?;
         match self.0.get(offset..) {
             Some(tail) => {
                 self.0 = tail;
@@ -59,13 +60,14 @@ impl<'data> Bytes<'data> {
     ///
     /// Returns an error if there are too few bytes.
     #[inline]
-    pub fn read_bytes(&mut self, count: usize) -> Result<Bytes<'data>, ()> {
-        match (self.0.get(..count), self.0.get(count..)) {
-            (Some(head), Some(tail)) => {
+    pub fn read_bytes(&mut self, count: u64) -> Result<Bytes<'data>, ()> {
+        let count = count.try_into().map_err(|_| ())?;
+        match self.0.split_at_checked(count) {
+            Some((head, tail)) => {
                 self.0 = tail;
                 Ok(Bytes(head))
             }
-            _ => {
+            None => {
                 self.0 = &[];
                 Err(())
             }
@@ -76,7 +78,7 @@ impl<'data> Bytes<'data> {
     ///
     /// Returns an error if the offset is invalid or there are too few bytes.
     #[inline]
-    pub fn read_bytes_at(mut self, offset: usize, count: usize) -> Result<Bytes<'data>, ()> {
+    pub fn read_bytes_at(mut self, offset: u64, count: u64) -> Result<Bytes<'data>, ()> {
         self.skip(offset)?;
         self.read_bytes(count)
     }
@@ -104,7 +106,7 @@ impl<'data> Bytes<'data> {
     ///
     /// Returns an error if there are too few bytes or the offset is incorrectly aligned.
     #[inline]
-    pub fn read_at<T: Pod>(mut self, offset: usize) -> Result<&'data T, ()> {
+    pub fn read_at<T: Pod>(mut self, offset: u64) -> Result<&'data T, ()> {
         self.skip(offset)?;
         self.read()
     }
@@ -115,7 +117,8 @@ impl<'data> Bytes<'data> {
     ///
     /// Returns an error if there are too few bytes or the offset is incorrectly aligned.
     #[inline]
-    pub fn read_slice<T: Pod>(&mut self, count: usize) -> Result<&'data [T], ()> {
+    pub fn read_slice<T: Pod>(&mut self, count: u64) -> Result<&'data [T], ()> {
+        let count = count.try_into().map_err(|_| ())?;
         match slice_from_bytes(self.0, count) {
             Ok((value, tail)) => {
                 self.0 = tail;
@@ -132,7 +135,7 @@ impl<'data> Bytes<'data> {
     ///
     /// Returns an error if there are too few bytes or the offset is incorrectly aligned.
     #[inline]
-    pub fn read_slice_at<T: Pod>(mut self, offset: usize, count: usize) -> Result<&'data [T], ()> {
+    pub fn read_slice_at<T: Pod>(mut self, offset: u64, count: u64) -> Result<&'data [T], ()> {
         self.skip(offset)?;
         self.read_slice(count)
     }
@@ -146,7 +149,7 @@ impl<'data> Bytes<'data> {
         match memchr::memchr(b'\0', self.0) {
             Some(null) => {
                 // These will never fail.
-                let bytes = self.read_bytes(null)?;
+                let bytes = self.read_bytes(null as u64)?;
                 self.skip(1)?;
                 Ok(bytes.0)
             }
@@ -161,7 +164,7 @@ impl<'data> Bytes<'data> {
     ///
     /// Does not assume any encoding. Does not return the null byte.
     #[inline]
-    pub fn read_string_at(mut self, offset: usize) -> Result<&'data [u8], ()> {
+    pub fn read_string_at(mut self, offset: u64) -> Result<&'data [u8], ()> {
         self.skip(offset)?;
         self.read_string()
     }
@@ -251,7 +254,7 @@ impl<'data> fmt::Debug for ByteString<'data> {
 
 #[allow(dead_code)]
 #[inline]
-pub(crate) fn align(offset: usize, size: usize) -> usize {
+pub(crate) fn align(offset: u64, size: u64) -> u64 {
     (offset + (size - 1)) & !(size - 1)
 }
 
@@ -320,7 +323,7 @@ impl<'data, R: ReadRef<'data>> StringTable<'data, R> {
     /// Return the string at the given offset.
     pub fn get(&self, offset: u32) -> Result<&'data [u8], ()> {
         match self.data {
-            StringTableData::Bytes(data) => data.read_string_at(offset as usize),
+            StringTableData::Bytes(data) => data.read_string_at(offset.into()),
             StringTableData::Lazy { data, start, end } => {
                 let r_start = start.checked_add(offset.into()).ok_or(())?;
                 data.read_bytes_at_until(r_start..end, 0)

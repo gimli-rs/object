@@ -89,7 +89,7 @@ impl<'data> ImportTable<'data> {
             .import_address
             .wrapping_sub(self.import_section_address);
         let mut data = self.import_section_data;
-        data.skip(offset as usize)
+        data.skip(offset.into())
             .read_error("Invalid PE import descriptor address")?;
         Ok(ImportDescriptorIterator { data, null: false })
     }
@@ -99,7 +99,7 @@ impl<'data> ImportTable<'data> {
     /// This address may be from [`pe::ImageImportDescriptor::name`].
     pub fn name(&self, address: u32) -> Result<&'data [u8]> {
         self.name_section_data
-            .read_string_at(address.wrapping_sub(self.name_section_address) as usize)
+            .read_string_at(address.wrapping_sub(self.name_section_address).into())
             .read_error("Invalid PE import descriptor name")
     }
 
@@ -110,7 +110,7 @@ impl<'data> ImportTable<'data> {
     pub fn thunks(&self, address: u32) -> Result<ImportThunkList<'data>> {
         let offset = address.wrapping_sub(self.import_section_address);
         let mut data = self.import_section_data;
-        data.skip(offset as usize)
+        data.skip(offset.into())
             .read_error("Invalid PE import thunk table address")?;
         Ok(ImportThunkList { data, null: false })
     }
@@ -133,7 +133,7 @@ impl<'data> ImportTable<'data> {
     pub fn hint_name(&self, address: u32) -> Result<(u16, &'data [u8])> {
         let offset = address.wrapping_sub(self.name_section_address);
         let mut data = self.name_section_data;
-        data.skip(offset as usize)
+        data.skip(offset.into())
             .read_error("Invalid PE import thunk address")?;
         let hint = data
             .read::<U16<LE>>()
@@ -200,7 +200,7 @@ impl<'data> ImportThunkList<'data> {
     pub fn get<Pe: ImageNtHeaders>(&self, index: usize) -> Result<Pe::ImageThunkData> {
         let thunk = index
             .checked_mul(mem::size_of::<Pe::ImageThunkData>())
-            .and_then(|offset| self.data.read_at(offset).ok())
+            .and_then(|offset| self.data.read_at(offset as u64).ok())
             .read_error("Invalid PE import thunk index")?;
         Ok(*thunk)
     }
@@ -331,7 +331,7 @@ impl<'data> DelayLoadImportTable<'data> {
     pub fn descriptors(&self) -> Result<DelayLoadDescriptorIterator<'data>> {
         let offset = self.import_address.wrapping_sub(self.section_address);
         let mut data = self.section_data;
-        data.skip(offset as usize)
+        data.skip(offset.into())
             .read_error("Invalid PE delay-load import descriptor address")?;
         Ok(DelayLoadDescriptorIterator { data, null: false })
     }
@@ -341,7 +341,7 @@ impl<'data> DelayLoadImportTable<'data> {
     /// This address may be from [`pe::ImageDelayloadDescriptor::dll_name_rva`].
     pub fn name(&self, address: u32) -> Result<&'data [u8]> {
         self.section_data
-            .read_string_at(address.wrapping_sub(self.section_address) as usize)
+            .read_string_at(address.wrapping_sub(self.section_address).into())
             .read_error("Invalid PE import descriptor name")
     }
 
@@ -356,7 +356,7 @@ impl<'data> DelayLoadImportTable<'data> {
     pub fn thunks(&self, address: u32) -> Result<ImportThunkList<'data>> {
         let offset = address.wrapping_sub(self.section_address);
         let mut data = self.section_data;
-        data.skip(offset as usize)
+        data.skip(offset.into())
             .read_error("Invalid PE delay load import thunk table address")?;
         Ok(ImportThunkList { data, null: false })
     }
@@ -379,7 +379,7 @@ impl<'data> DelayLoadImportTable<'data> {
     pub fn hint_name(&self, address: u32) -> Result<(u16, &'data [u8])> {
         let offset = address.wrapping_sub(self.section_address);
         let mut data = self.section_data;
-        data.skip(offset as usize)
+        data.skip(offset.into())
             .read_error("Invalid PE delay load import thunk address")?;
         let hint = data
             .read::<U16<LE>>()

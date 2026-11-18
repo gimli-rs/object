@@ -19,7 +19,7 @@ where
     Elf: FileHeader,
 {
     endian: Elf::Endian,
-    align: usize,
+    align: u64,
     data: Bytes<'data>,
 }
 
@@ -69,8 +69,8 @@ where
             .read_error("ELF note is too short")?;
 
         // The name has no alignment requirement.
-        let offset = mem::size_of::<Elf::NoteHeader>();
-        let namesz = header.n_namesz(self.endian) as usize;
+        let offset = mem::size_of::<Elf::NoteHeader>() as u64;
+        let namesz = header.n_namesz(self.endian).into();
         let name = self
             .data
             .read_bytes_at(offset, namesz)
@@ -79,7 +79,7 @@ where
 
         // The descriptor must be aligned.
         let offset = util::align(offset + namesz, self.align);
-        let descsz = header.n_descsz(self.endian) as usize;
+        let descsz = header.n_descsz(self.endian).into();
         let desc = self
             .data
             .read_bytes_at(offset, descsz)
@@ -238,7 +238,7 @@ impl<Endian: endian::Endian> NoteHeader for elf::NoteHeader64<Endian> {
 #[derive(Debug)]
 pub struct GnuPropertyIterator<'data, Endian: endian::Endian> {
     endian: Endian,
-    align: usize,
+    align: u64,
     data: Bytes<'data>,
 }
 
@@ -259,7 +259,7 @@ impl<'data, Endian: endian::Endian> GnuPropertyIterator<'data, Endian> {
     fn parse(&mut self) -> read::Result<GnuProperty<'data>> {
         (|| -> Result<_, ()> {
             let pr_type = self.data.read_at::<U32<Endian, _>>(0)?.get(self.endian);
-            let pr_datasz = self.data.read_at::<U32<Endian>>(4)?.get(self.endian) as usize;
+            let pr_datasz = self.data.read_at::<U32<Endian>>(4)?.get(self.endian).into();
             let pr_data = self.data.read_bytes_at(8, pr_datasz)?.0;
             self.data.skip(util::align(8 + pr_datasz, self.align))?;
             Ok(GnuProperty { pr_type, pr_data })

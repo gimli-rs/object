@@ -241,7 +241,7 @@ impl<'data, Elf: FileHeader> VerdefIterator<'data, Elf> {
 
         let mut verdaux_data = self.data;
         verdaux_data
-            .skip(verdef.vd_aux.get(self.endian) as usize)
+            .skip(verdef.vd_aux.get(self.endian).into())
             .read_error("Invalid ELF vd_aux")?;
         let verdaux =
             VerdauxIterator::new(self.endian, verdaux_data.0, verdef.vd_cnt.get(self.endian));
@@ -249,7 +249,7 @@ impl<'data, Elf: FileHeader> VerdefIterator<'data, Elf> {
         let next = verdef.vd_next.get(self.endian);
         if next != 0 {
             self.data
-                .skip(next as usize)
+                .skip(next.into())
                 .read_error("Invalid ELF vd_next")?;
         } else {
             self.data = Bytes(&[]);
@@ -305,7 +305,7 @@ impl<'data, Elf: FileHeader> VerdauxIterator<'data, Elf> {
             .read_error("ELF verdaux is too short")?;
 
         self.data
-            .skip(verdaux.vda_next.get(self.endian) as usize)
+            .skip(verdaux.vda_next.get(self.endian).into())
             .read_error("Invalid ELF vda_next")?;
         Ok(verdaux)
     }
@@ -367,7 +367,7 @@ impl<'data, Elf: FileHeader> VerneedIterator<'data, Elf> {
 
         let mut vernaux_data = self.data;
         vernaux_data
-            .skip(verneed.vn_aux.get(self.endian) as usize)
+            .skip(verneed.vn_aux.get(self.endian).into())
             .read_error("Invalid ELF vn_aux")?;
         let vernaux =
             VernauxIterator::new(self.endian, vernaux_data.0, verneed.vn_cnt.get(self.endian));
@@ -375,7 +375,7 @@ impl<'data, Elf: FileHeader> VerneedIterator<'data, Elf> {
         let next = verneed.vn_next.get(self.endian);
         if next != 0 {
             self.data
-                .skip(next as usize)
+                .skip(next.into())
                 .read_error("Invalid ELF vn_next")?;
         } else {
             self.data = Bytes(&[]);
@@ -433,7 +433,7 @@ impl<'data, Elf: FileHeader> VernauxIterator<'data, Elf> {
             .read_at::<elf::Vernaux<_>>(0)
             .read_error("ELF vernaux is too short")?;
         self.data
-            .skip(vernaux.vna_next.get(self.endian) as usize)
+            .skip(vernaux.vna_next.get(self.endian).into())
             .read_error("Invalid ELF vna_next")?;
         Ok(vernaux)
     }

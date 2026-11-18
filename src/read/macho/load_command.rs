@@ -47,8 +47,8 @@ impl<'data, E: Endian> LoadCommandIterator<'data, E> {
             .read_at::<macho::LoadCommand<E>>(0)
             .read_error("Invalid Mach-O load command header")?;
         let cmd = header.cmd.get(self.endian);
-        let cmdsize = header.cmdsize.get(self.endian) as usize;
-        if cmdsize < mem::size_of::<macho::LoadCommand<E>>() {
+        let cmdsize = header.cmdsize.get(self.endian).into();
+        if cmdsize < mem::size_of::<macho::LoadCommand<E>>() as u64 {
             return Err(Error("Invalid Mach-O load command size"));
         }
         let data = self
@@ -56,7 +56,7 @@ impl<'data, E: Endian> LoadCommandIterator<'data, E> {
             .read_bytes(cmdsize)
             .read_error("Invalid Mach-O load command size")?;
         let offset = self.offset;
-        self.offset += cmdsize as u64;
+        self.offset += cmdsize;
         Ok(LoadCommandData {
             cmd,
             offset,
@@ -121,7 +121,7 @@ impl<'data, E: Endian> LoadCommandData<'data, E> {
     /// relative to the load command header.
     pub fn string(&self, endian: E, s: macho::LcStr<E>) -> Result<&'data [u8]> {
         self.data
-            .read_string_at(s.offset.get(endian) as usize)
+            .read_string_at(s.offset.get(endian).into())
             .read_error("Invalid load command string offset")
     }
 
@@ -483,7 +483,7 @@ impl<E: Endian> macho::SymtabCommand<E> {
         let symbols = data
             .read_slice_at(
                 self.symoff.get(endian).into(),
-                self.nsyms.get(endian) as usize,
+                self.nsyms.get(endian).into(),
             )
             .read_error("Invalid Mach-O symbol table offset or size")?;
         let stroff: u64 = self.stroff.get(endian).into();
@@ -517,7 +517,7 @@ impl<E: Endian> macho::DysymtabCommand<E> {
     ) -> Result<&'data [U32<E, macho::IndirectSymbol>]> {
         data.read_slice_at(
             self.indirectsymoff.get(endian).into(),
-            self.nindirectsyms.get(endian) as usize,
+            self.nindirectsyms.get(endian).into(),
         )
         .read_error("Invalid Mach-O indirect symbol offset or count")
     }
@@ -578,7 +578,7 @@ impl<E: Endian> macho::BuildVersionCommand<E> {
         version_data: &'data [u8],
     ) -> Result<&'data [macho::BuildToolVersion<E>]> {
         version_data
-            .read_slice_at(0, self.ntools.get(endian) as usize)
+            .read_slice_at(0, self.ntools.get(endian).into())
             .read_error("Invalid Mach-O number of tools")
     }
 }

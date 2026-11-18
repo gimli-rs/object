@@ -1,5 +1,4 @@
 use alloc::string::String;
-use core::char;
 
 use crate::endian::{LittleEndian as LE, U16};
 use crate::pe;
@@ -40,8 +39,8 @@ impl<'data> ResourceDirectoryTable<'data> {
         let header = data
             .read::<pe::ImageResourceDirectory>(&mut offset)
             .read_error("Invalid resource table header")?;
-        let entries_count = header.number_of_id_entries.get(LE) as usize
-            + header.number_of_named_entries.get(LE) as usize;
+        let entries_count = u64::from(header.number_of_id_entries.get(LE))
+            + u64::from(header.number_of_named_entries.get(LE));
         let entries = data
             .read_slice::<pe::ImageResourceDirectoryEntry>(&mut offset, entries_count)
             .read_error("Invalid resource table entries")?;

@@ -32,7 +32,7 @@ impl<'data> SectionTable<'data> {
         offset: u64,
     ) -> Result<Self> {
         let sections = data
-            .read_slice_at(offset, header.number_of_sections() as usize)
+            .read_slice_at(offset, header.number_of_sections().into())
             .read_error("Invalid COFF/PE section headers")?;
         Ok(SectionTable { sections })
     }
@@ -589,7 +589,7 @@ impl pe::ImageSectionHeader {
         data: R,
     ) -> read::Result<&'data [pe::ImageRelocation]> {
         let mut pointer = self.pointer_to_relocations.get(LE).into();
-        let mut number: usize = self.number_of_relocations.get(LE).into();
+        let mut number: u64 = self.number_of_relocations.get(LE).into();
         if number == u16::MAX.into()
             && self
                 .characteristics
@@ -601,7 +601,7 @@ impl pe::ImageSectionHeader {
             let extended_relocation_info = data
                 .read_at::<pe::ImageRelocation>(pointer)
                 .read_error("Invalid COFF relocation offset or number")?;
-            number = extended_relocation_info.virtual_address.get(LE) as usize;
+            number = extended_relocation_info.virtual_address.get(LE).into();
             if number == 0 {
                 return Err(Error("Invalid COFF relocation number"));
             }
