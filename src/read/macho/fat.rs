@@ -38,7 +38,7 @@ impl<'data, Fat: FatArch> MachOFatFile<'data, Fat> {
             return Err(Error("Invalid fat magic"));
         }
         let arches = data
-            .read_slice::<Fat>(&mut offset, header.nfat_arch.get(BigEndian) as usize)
+            .read_slice::<Fat>(&mut offset, header.nfat_arch.get(BigEndian).into())
             .read_error("Invalid nfat_arch")?;
         Ok(MachOFatFile { header, arches })
     }

@@ -251,7 +251,7 @@ where
             return Ok(SectionTable::default());
         }
         let sections = data
-            .read_slice(offset, section_num as usize)
+            .read_slice(offset, section_num.into())
             .read_error("Invalid XCOFF section headers")?;
         Ok(SectionTable { sections })
     }
@@ -385,14 +385,14 @@ impl SectionHeader for xcoff::SectionHeader32 {
     ///
     /// `data` must be the entire file data.
     fn relocations<'data, R: ReadRef<'data>>(&self, data: R) -> read::Result<&'data [Self::Rel]> {
-        let reloc_num = self.s_nreloc() as usize;
+        let reloc_num = self.s_nreloc();
         // TODO: If more than 65,534 relocation entries are required, the field value will be 65535,
         // and an STYP_OVRFLO section header will contain the actual count of relocation entries in
         // the s_paddr field.
         if reloc_num == 65535 {
             return Err(Error("Overflow section is not supported yet."));
         }
-        data.read_slice_at(self.s_relptr().into(), reloc_num)
+        data.read_slice_at(self.s_relptr().into(), reloc_num.into())
             .read_error("Invalid XCOFF relocation offset or number")
     }
 }
@@ -449,7 +449,7 @@ impl SectionHeader for xcoff::SectionHeader64 {
     ///
     /// `data` must be the entire file data.
     fn relocations<'data, R: ReadRef<'data>>(&self, data: R) -> read::Result<&'data [Self::Rel]> {
-        data.read_slice_at(self.s_relptr(), self.s_nreloc() as usize)
+        data.read_slice_at(self.s_relptr(), self.s_nreloc().into())
             .read_error("Invalid XCOFF relocation offset or number")
     }
 }

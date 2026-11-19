@@ -364,8 +364,8 @@ where
             let info = self
                 .data
                 .read_slice_at::<u8>(
-                    debug_dir.pointer_to_raw_data.get(LE) as u64,
-                    debug_dir.size_of_data.get(LE) as usize,
+                    debug_dir.pointer_to_raw_data.get(LE).into(),
+                    debug_dir.size_of_data.get(LE).into(),
                 )
                 .read_error("Invalid CodeView Info address")?;
 

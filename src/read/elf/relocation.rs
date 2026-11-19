@@ -932,7 +932,9 @@ impl<'data> CrelIterator<'data> {
 
         let mut data = Bytes(data);
         let header = data.read_uleb128().read_error("Invalid ELF CREL header")?;
-        let count = header >> 3;
+        let count = usize::try_from(header >> 3)
+            .ok()
+            .read_error("Invalid ELF CREL relocation count")?;
         let flag_bits = if header & HEADER_ADDEND_BIT_MASK != 0 {
             3
         } else {
@@ -944,7 +946,7 @@ impl<'data> CrelIterator<'data> {
         Ok(CrelIterator {
             data,
             header: CrelIteratorHeader {
-                count: count as usize,
+                count,
                 flag_bits,
                 shift,
                 is_rela,

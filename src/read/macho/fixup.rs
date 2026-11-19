@@ -63,17 +63,18 @@ impl<'data, E: Endian> DyldChainedFixups<'data, E> {
         }
         // The imports table and the symbol string pool each extend to the end of the
         // chain data.
-        let data = self.data.0;
-        let imports = data
-            .get(self.header.imports_offset.get(endian) as usize..)
+        let mut imports = self.data;
+        imports
+            .skip(self.header.imports_offset.get(endian).into())
             .read_error("Invalid Mach-O chained fixups imports offset")?;
-        let symbols = data
-            .get(self.header.symbols_offset.get(endian) as usize..)
+        let mut symbols = self.data;
+        symbols
+            .skip(self.header.symbols_offset.get(endian).into())
             .read_error("Invalid Mach-O chained fixups symbols offset")?;
         Ok(DyldChainedImportIterator {
             endian,
-            imports: Bytes(imports),
-            symbols: Bytes(symbols),
+            imports,
+            symbols,
             count: self.header.imports_count.get(endian),
             format: self.header.imports_format.get(endian),
         })
@@ -83,7 +84,7 @@ impl<'data, E: Endian> DyldChainedFixups<'data, E> {
     pub fn segments(&self, endian: E) -> Result<DyldChainedSegmentIterator<'data, E>> {
         let context = "Invalid Mach-O chained starts offset or count";
         let mut data = self.data;
-        data.skip(self.header.starts_offset.get(endian) as usize)
+        data.skip(self.header.starts_offset.get(endian).into())
             .read_error(context)?;
 
         let mut header_data = data;
@@ -92,7 +93,7 @@ impl<'data, E: Endian> DyldChainedFixups<'data, E> {
             .read_error(context)?;
         let seg_count = starts_in_image.seg_count.get(endian);
         let seg_info_offsets = header_data
-            .read_slice::<U32<E>>(seg_count as usize)
+            .read_slice::<U32<E>>(seg_count.into())
             .read_error(context)?;
 
         Ok(DyldChainedSegmentIterator {
@@ -199,7 +200,7 @@ impl<'data> DyldChainedImport<'data> {
             _ => return Err(Error("Unsupported Mach-O chained fixups import format")),
         };
         let name = symbols
-            .read_string_at(name_offset as usize)
+            .read_string_at(name_offset.into())
             .read_error("Invalid Mach-O chained fixups import name offset")?;
         Ok(DyldChainedImport {
             dylib,
@@ -234,7 +235,7 @@ impl<'data, E: Endian> DyldChainedSegmentIterator<'data, E> {
                 continue;
             }
             let mut data = self.data;
-            data.skip(seg_info_offset as usize).read_error(context)?;
+            data.skip(seg_info_offset.into()).read_error(context)?;
             let header = data
                 .read::<macho::DyldChainedStartsInSegment<E>>()
                 .read_error(context)?;
@@ -244,7 +245,7 @@ impl<'data, E: Endian> DyldChainedSegmentIterator<'data, E> {
                 .checked_sub(mem::size_of_val(header) as u32)
                 .read_error(context)?;
             let starts = data
-                .read_slice::<U16<E>>(starts_size as usize / 2)
+                .read_slice::<U16<E>>(u64::from(starts_size) / 2)
                 .read_error(context)?;
             return Ok(Some(DyldChainedSegment {
                 index,
@@ -410,13 +411,13 @@ impl<'data, E: Endian> DyldChainedFixupIterator<'data, E> {
                         | macho::DYLD_CHAINED_PTR_32_CACHE
                         | macho::DYLD_CHAINED_PTR_32_FIRMWARE => u64::from(
                             self.segment_data
-                                .read_at::<U32<E>>(offset as usize)
+                                .read_at::<U32<E>>(offset)
                                 .read_error("Invalid Mach-O chained fixup offset")?
                                 .get(self.endian),
                         ),
                         _ => self
                             .segment_data
-                            .read_at::<U64<E>>(offset as usize)
+                            .read_at::<U64<E>>(offset)
                             .read_error("Invalid Mach-O chained fixup offset")?
                             .get(self.endian),
                     };

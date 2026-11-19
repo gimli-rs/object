@@ -44,7 +44,7 @@ impl<'data> RelocationBlockIterator<'data> {
         let count = (size - 8) / 2;
         let relocs = self
             .data
-            .read_slice::<U16<LE>>(count as usize)
+            .read_slice::<U16<LE>>(count.into())
             .read_error("Invalid PE reloc block size")?
             .iter();
         Ok(RelocationIterator {

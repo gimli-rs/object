@@ -131,11 +131,9 @@ impl<'data> NodeIterator<'data> {
     }
 
     fn push_node(&mut self, offset: u64) -> Result<Option<ExportSymbol<'data>>> {
-        let mut data = Bytes(
-            self.data
-                .get(offset as usize..)
-                .read_error("Invalid exports trie offset")?,
-        );
+        let mut data = Bytes(self.data);
+        data.skip(offset)
+            .read_error("Invalid exports trie offset")?;
         let terminal_size = data
             .read_uleb128()
             .read_error("Invalid exports trie terminal size")?;
@@ -143,7 +141,7 @@ impl<'data> NodeIterator<'data> {
             None
         } else {
             let (flags, export_data) = ExportData::parse(
-                data.read_bytes(terminal_size as usize)
+                data.read_bytes(terminal_size)
                     .read_error("Exports trie terminal size exceeds bounds")?,
             )?;
             Some(ExportSymbol {

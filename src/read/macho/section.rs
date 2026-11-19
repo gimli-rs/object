@@ -421,7 +421,7 @@ pub trait Section: Debug + Pod + read::private::Sealed {
         endian: Self::Endian,
         data: R,
     ) -> Result<&'data [macho::Relocation<Self::Endian>]> {
-        data.read_slice_at(self.reloff(endian).into(), self.nreloc(endian) as usize)
+        data.read_slice_at(self.reloff(endian).into(), self.nreloc(endian).into())
             .read_error("Invalid Mach-O relocations offset or number")
     }
 
@@ -458,12 +458,13 @@ pub trait Section: Debug + Pod + read::private::Sealed {
             }
             _ => return Ok(&[]),
         };
-        let start = self.reserved1(endian) as usize;
-        let count = self.size(endian).into() as usize / entry_size;
-        indirect_symbols
-            .get(start..)
-            .and_then(|symbols| symbols.get(..count))
-            .read_error("Invalid Mach-O indirect symbol index or count")
+        (|| {
+            let start = usize::try_from(self.reserved1(endian)).ok()?;
+            let size = usize::try_from(self.size(endian).into()).ok()?;
+            let count = size / entry_size;
+            indirect_symbols.get(start..)?.get(..count)
+        })()
+        .read_error("Invalid Mach-O indirect symbol index or count")
     }
 }
 

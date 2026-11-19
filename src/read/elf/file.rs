@@ -499,7 +499,7 @@ where
         let filename = data
             .read_string_at(0)
             .read_error("Missing ELF .gnu_debuglink filename")?;
-        let crc_offset = util::align(filename.len() + 1, 4);
+        let crc_offset = util::align(filename.len() as u64 + 1, 4);
         let crc = data
             .read_at::<U32<_>>(crc_offset)
             .read_error("Missing ELF .gnu_debuglink crc")?
@@ -744,7 +744,7 @@ pub trait FileHeader: Debug + Pod + read::private::Sealed {
             // Program header size must match.
             return Err(Error("Invalid ELF program header entry size"));
         }
-        data.read_slice_at(phoff, phnum as usize)
+        data.read_slice_at(phoff, phnum.into())
             .read_error("Invalid ELF program header size or alignment")
     }
 
@@ -772,7 +772,7 @@ pub trait FileHeader: Debug + Pod + read::private::Sealed {
             // Section header size must match.
             return Err(Error("Invalid ELF section header entry size"));
         }
-        data.read_slice_at(shoff, shnum as usize)
+        data.read_slice_at(shoff, shnum.into())
             .read_error("Invalid ELF section header offset/size/alignment")
     }
 

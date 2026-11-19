@@ -302,7 +302,7 @@ impl goff::HeaderRecord {
             ));
         }
         let count = len / goff::RECORD_LEN - 1;
-        data.read_slice_at(goff::RECORD_LEN, count as usize)
+        data.read_slice_at(goff::RECORD_LEN, count)
             .read_error("GOFF read failed")
     }
 }
