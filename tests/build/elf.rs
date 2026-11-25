@@ -155,6 +155,44 @@ fn test_attribute() {
     }
 }
 
+// Test that AArch64 build attributes, which use a different layout from other
+// attribute sections, are copied unchanged.
+#[test]
+fn test_aarch64_attributes() {
+    let mut builder = build::elf::Builder::new(object::Endianness::Little, true);
+    builder.header.e_type = elf::ET_EXEC;
+    builder.header.e_machine = elf::EM_AARCH64;
+    builder.header.e_phoff = 0x40;
+
+    let section = builder.sections.add();
+    section.name = b".shstrtab"[..].into();
+    section.sh_type = elf::SHT_STRTAB;
+    section.data = build::elf::SectionData::SectionString;
+
+    // Written by GNU ld 2.46.1 for a minimal executable.
+    let attributes: &[u8] = b"A\x23\0\0\0aeabi_feature_and_bits\0\x01\0\0\0\x01\0\x02\0";
+    let section = builder.sections.add();
+    section.name = b".ARM.attributes"[..].into();
+    section.sh_type = elf::SHT_AARCH64_ATTRIBUTES;
+    section.sh_addralign = 1;
+    section.data = build::elf::SectionData::Data(attributes.into());
+
+    let mut buf = Vec::new();
+    builder.write(&mut buf).unwrap();
+
+    let builder = build::elf::Builder::read(&*buf).unwrap();
+    assert_eq!(builder.sections.count(), 2);
+    let section = builder
+        .sections
+        .iter()
+        .find(|section| section.sh_type == elf::SHT_AARCH64_ATTRIBUTES)
+        .unwrap();
+    match &section.data {
+        build::elf::SectionData::Data(data) => assert_eq!(&**data, attributes),
+        _ => panic!("unexpected section data"),
+    }
+}
+
 #[test]
 fn test_dynsym() {
     let mut builder = build::elf::Builder::new(object::Endianness::Little, true);
