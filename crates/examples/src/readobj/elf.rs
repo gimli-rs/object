@@ -182,8 +182,10 @@ fn print_section_headers<Elf: FileHeader>(
     sections: &SectionTable<Elf>,
 ) {
     let names = names(endian, elf);
+    let e_machine = elf.e_machine(endian);
     for (index, section) in sections.enumerate() {
         let sh_type = section.sh_type(endian);
+        let is_attributes = is_attributes(e_machine, sh_type);
         if !p.options.sections
             && !(p.options.symbols && sh_type == SHT_SYMTAB)
             && !(p.options.relocations && sh_type == SHT_REL)
@@ -195,7 +197,7 @@ fn print_section_headers<Elf: FileHeader>(
             && !(p.options.elf_versions && sh_type == SHT_GNU_VERDEF)
             && !(p.options.elf_versions && sh_type == SHT_GNU_VERNEED)
             && !(p.options.elf_versions && sh_type == SHT_GNU_VERSYM)
-            && !(p.options.elf_attributes && sh_type == SHT_GNU_ATTRIBUTES)
+            && !(p.options.elf_attributes && is_attributes)
         {
             continue;
         }
@@ -249,30 +251,27 @@ fn print_section_headers<Elf: FileHeader>(
                 SHT_GNU_VERDEF => print_gnu_verdef(p, endian, data, elf, sections, section),
                 SHT_GNU_VERNEED => print_gnu_verneed(p, endian, data, elf, sections, section),
                 SHT_GNU_VERSYM => print_gnu_versym(p, endian, data, elf, sections, section),
-                // TODO: other sections that contain attributes
-                SHT_GNU_ATTRIBUTES => print_attributes(p, endian, data, elf, section),
                 // TODO:
                 //SHT_SHLIB =>
                 //SHT_INIT_ARRAY =>
                 //SHT_FINI_ARRAY =>
                 //SHT_PREINIT_ARRAY =>
-                _ => {}
-            }
-            match elf.e_machine(endian) {
-                EM_ARM => {
-                    if section.sh_type(endian) == SHT_ARM_ATTRIBUTES {
-                        print_attributes(p, endian, data, elf, section);
-                    }
-                }
-                EM_AARCH64 => {
-                    if section.sh_type(endian) == SHT_AARCH64_ATTRIBUTES {
-                        print_attributes(p, endian, data, elf, section);
-                    }
-                }
+                _ if is_attributes => print_attributes(p, endian, data, elf, section),
                 _ => {}
             }
         });
     }
+}
+
+fn is_attributes(e_machine: Machine, sh_type: SectionType) -> bool {
+    // `SHT_AARCH64_ATTRIBUTES` is a different format.
+    matches!(
+        (e_machine, sh_type),
+        (_, SHT_GNU_ATTRIBUTES)
+            | (EM_ARM, SHT_ARM_ATTRIBUTES)
+            | (EM_CSKY, SHT_CSKY_ATTRIBUTES)
+            | (EM_RISCV, SHT_RISCV_ATTRIBUTES)
+    )
 }
 
 fn print_section_symbols<Elf: FileHeader>(
