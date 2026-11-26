@@ -4788,6 +4788,49 @@ names! {
         R_PPC64_DTPREL16_HIGH = 114,
         R_PPC64_DTPREL16_HIGHA = 115,
 
+        R_PPC64_REL24_NOTOC = 116,
+        R_PPC64_ADDR64_LOCAL = 117,
+        R_PPC64_ENTRY = 118,
+        R_PPC64_PLTSEQ = 119,
+        R_PPC64_PLTCALL = 120,
+        R_PPC64_PLTSEQ_NOTOC = 121,
+        R_PPC64_PLTCALL_NOTOC = 122,
+        R_PPC64_PCREL_OPT = 123,
+        R_PPC64_REL24_P9NOTOC = 124,
+
+        R_PPC64_D34 = 128,
+        R_PPC64_D34_LO = 129,
+        R_PPC64_D34_HI30 = 130,
+        R_PPC64_D34_HA30 = 131,
+        R_PPC64_PCREL34 = 132,
+        R_PPC64_GOT_PCREL34 = 133,
+        R_PPC64_PLT_PCREL34 = 134,
+        R_PPC64_PLT_PCREL34_NOTOC = 135,
+        R_PPC64_ADDR16_HIGHER34 = 136,
+        R_PPC64_ADDR16_HIGHERA34 = 137,
+        R_PPC64_ADDR16_HIGHEST34 = 138,
+        R_PPC64_ADDR16_HIGHESTA34 = 139,
+        R_PPC64_REL16_HIGHER34 = 140,
+        R_PPC64_REL16_HIGHERA34 = 141,
+        R_PPC64_REL16_HIGHEST34 = 142,
+        R_PPC64_REL16_HIGHESTA34 = 143,
+        R_PPC64_D28 = 144,
+        R_PPC64_PCREL28 = 145,
+        R_PPC64_TPREL34 = 146,
+        R_PPC64_DTPREL34 = 147,
+        R_PPC64_GOT_TLSGD_PCREL34 = 148,
+        R_PPC64_GOT_TLSLD_PCREL34 = 149,
+        R_PPC64_GOT_TPREL_PCREL34 = 150,
+        R_PPC64_GOT_DTPREL_PCREL34 = 151,
+
+        R_PPC64_REL16_HIGH = 240,
+        R_PPC64_REL16_HIGHA = 241,
+        R_PPC64_REL16_HIGHER = 242,
+        R_PPC64_REL16_HIGHERA = 243,
+        R_PPC64_REL16_HIGHEST = 244,
+        R_PPC64_REL16_HIGHESTA = 245,
+        R_PPC64_REL16DX_HA = 246,
+
         /// GNU extension to support local ifunc.
         R_PPC64_JMP_IREL = 247,
         /// GNU extension to support local ifunc.
@@ -4800,6 +4843,10 @@ names! {
         R_PPC64_REL16_HI = 251,
         /// half16   (sym+add-.)@ha
         R_PPC64_REL16_HA = 252,
+        /// GNU extension to support C++ vtable hierarchy.
+        R_PPC64_GNU_VTINHERIT = 253,
+        /// GNU extension to support C++ vtable member usage.
+        R_PPC64_GNU_VTENTRY = 254,
     };
     consts dt: DynamicTag(i64) = {
         DT_PPC64_GLINK = DT_LOPROC + 0,
