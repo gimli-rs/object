@@ -295,7 +295,6 @@ impl<'data> Builder<'data> {
                 elf::SHT_GNU_VERNEED => SectionData::GnuVerneed,
                 other => match (builder.header.e_machine, other) {
                     (elf::EM_ARM, elf::SHT_ARM_ATTRIBUTES)
-                    | (elf::EM_AARCH64, elf::SHT_AARCH64_ATTRIBUTES)
                     | (elf::EM_CSKY, elf::SHT_CSKY_ATTRIBUTES)
                     | (elf::EM_RISCV, elf::SHT_RISCV_ATTRIBUTES) => {
                         let attributes = section.attributes(endian, data)?;
@@ -304,7 +303,11 @@ impl<'data> Builder<'data> {
                     // Some section types that we can't parse but that are safe to copy.
                     // Lots of types missing, add as needed. We can't default to copying
                     // everything because some types are not safe to copy.
-                    (elf::EM_ARM, elf::SHT_ARM_EXIDX)
+                    //
+                    // AArch64 build attributes use a different layout from the other
+                    // attribute sections, and contain no section or symbol indices.
+                    (elf::EM_AARCH64, elf::SHT_AARCH64_ATTRIBUTES)
+                    | (elf::EM_ARM, elf::SHT_ARM_EXIDX)
                     | (elf::EM_IA_64, elf::SHT_IA_64_UNWIND)
                     | (elf::EM_MIPS, elf::SHT_MIPS_REGINFO)
                     | (elf::EM_MIPS, elf::SHT_MIPS_DWARF)
