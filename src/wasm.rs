@@ -332,6 +332,15 @@ pub struct InitFunc {
     pub symbol_index: u32,
 }
 
+/// An entry in the `target_features` custom section.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct TargetFeature<'data> {
+    /// Prefix byte indicating how the feature is used (e.g. [`FEATURE_PREFIX_USED`] or [`FEATURE_PREFIX_DISALLOWED`]).
+    pub prefix: u8,
+    /// Name of the target feature.
+    pub name: &'data str,
+}
+
 impl RelocationType {
     /// Number of bytes this relocation overwrites.
     pub const fn extent(self) -> Option<u8> {

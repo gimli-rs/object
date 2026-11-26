@@ -48,6 +48,8 @@ pub struct WasmFile<'data, R = &'data [u8]> {
     symbols: Vec<WasmSymbolInternal<'data>>,
     // Entries in the `linking` `InitFuncs` subsection.
     init_funcs: Vec<wasm::InitFunc>,
+    // Entries in the `target_features` custom section.
+    target_features: Vec<wasm::TargetFeature<'data>>,
     // Entries in `WASM_DYLINK_NEEDED` sub-section.
     needed: Vec<&'data str>,
     // Entries in the imports section.
@@ -150,6 +152,7 @@ impl<'data, R: ReadRef<'data>> WasmFile<'data, R> {
             has_debug_symbols: false,
             symbols: Vec::new(),
             init_funcs: Vec::new(),
+            target_features: Vec::new(),
             needed: Vec::new(),
             imports: Vec::new(),
             exports: Vec::new(),
@@ -380,6 +383,26 @@ impl<'data, R: ReadRef<'data>> WasmFile<'data, R> {
                                 r_index: entry.index,
                                 r_addend: entry.addend,
                             });
+                        }
+                    } else if name == wasm::TARGET_FEATURES_SECTION_NAME {
+                        // https://github.com/WebAssembly/tool-conventions/blob/main/Linking.md#target-features-section
+                        let mut reader =
+                            wp::BinaryReader::new(section.data(), section.data_offset());
+                        let count = reader
+                            .read_var_u32()
+                            .read_error("Invalid Wasm target_features count")?;
+                        for _ in 0..count {
+                            let prefix = reader
+                                .read_u8()
+                                .read_error("Invalid Wasm target_features prefix")?;
+                            let name = reader
+                                .read_string()
+                                .read_error("Invalid Wasm target_features name")?;
+                            file.target_features
+                                .push(wasm::TargetFeature { prefix, name });
+                        }
+                        if !reader.eof() {
+                            return Err(Error("Trailing bytes in Wasm target_features section"));
                         }
                     } else if name.starts_with(".debug_") {
                         file.has_debug_symbols = true;
@@ -951,6 +974,11 @@ impl<'data, R> WasmFile<'data, R> {
     /// Return the entries of the `InitFuncs` subsection of the `linking` section.
     pub fn wasm_init_funcs(&self) -> &[wasm::InitFunc] {
         &self.init_funcs
+    }
+
+    /// Return the entries of the `target_features` custom section.
+    pub fn wasm_target_features(&self) -> &[wasm::TargetFeature<'data>] {
+        &self.target_features
     }
 
     /// Return the entries of the data section's relocations that apply to `segment`.
