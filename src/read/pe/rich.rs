@@ -44,7 +44,7 @@ impl<'data> RichHeaderInfo<'data> {
         // It ends with the "Rich" string and an XOR key, before the NT header.
         let data = data.read_bytes_at(0, nt_header_offset).map(Bytes).ok()?;
         let end_marker_offset = memmem(data.0, b"Rich", 4)?;
-        let xor_key = *data.read_at::<U32<LE>>(end_marker_offset + 4).ok()?;
+        let xor_key = *data.read_at::<U32<LE>>(end_marker_offset as u64 + 4).ok()?;
 
         // It starts at the masked "DanS" string and 3 masked zeroes.
         let masked_start_marker = U32::new(LE, 0x536e_6144 ^ xor_key.get(LE));
@@ -56,7 +56,9 @@ impl<'data> RichHeaderInfo<'data> {
         let items_offset = start_marker_offset + start_sequence.len();
         let items_len = end_marker_offset - items_offset;
         let item_count = items_len / mem::size_of::<pe::MaskedRichHeaderEntry>();
-        let items = data.read_slice_at(items_offset, item_count).ok()?;
+        let items = data
+            .read_slice_at(items_offset as u64, item_count as u64)
+            .ok()?;
         Some(RichHeaderInfo {
             offset: start_marker_offset,
             // Includes "Rich" marker and the XOR key.

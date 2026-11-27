@@ -26,7 +26,7 @@ impl<'data> DataDirectories<'data> {
     /// field of the optional header.
     pub fn parse(data: &'data [u8], number: u32) -> Result<Self> {
         let entries = data
-            .read_slice_at(0, number as usize)
+            .read_slice_at(0, number.into())
             .read_error("Invalid PE number of RVA and sizes")?;
         Ok(DataDirectories { entries })
     }

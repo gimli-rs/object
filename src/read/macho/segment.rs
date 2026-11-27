@@ -276,7 +276,7 @@ pub trait Segment: Debug + Pod + read::private::Sealed {
         section_data: R,
     ) -> Result<&'data [Self::Section]> {
         section_data
-            .read_slice_at(0, self.nsects(endian) as usize)
+            .read_slice_at(0, self.nsects(endian).into())
             .read_error("Invalid Mach-O number of sections")
     }
 

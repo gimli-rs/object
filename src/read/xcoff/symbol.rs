@@ -54,7 +54,7 @@ where
         let mut offset = header.f_symptr().into();
         let (symbols, strings) = if offset != 0 {
             let symbols = data
-                .read_slice(&mut offset, header.f_nsyms() as usize)
+                .read_slice(&mut offset, header.f_nsyms().into())
                 .read_error("Invalid XCOFF symbol table offset or size")?;
 
             // Parse the string table.

@@ -997,7 +997,7 @@ impl<E: Endian> macho::DyldCacheHeader<E> {
             let info = data
                 .read_slice_at::<macho::DyldCacheMappingAndSlideInfo<E>>(
                     self.mapping_with_slide_offset.get(endian).into(),
-                    self.mapping_with_slide_count.get(endian) as usize,
+                    self.mapping_with_slide_count.get(endian).into(),
                 )
                 .read_error("Invalid dyld cache mapping size or alignment")?;
             Ok(DyldCacheMappingSlice::V2(info))
@@ -1005,7 +1005,7 @@ impl<E: Endian> macho::DyldCacheHeader<E> {
             let info = data
                 .read_slice_at::<macho::DyldCacheMappingInfo<E>>(
                     self.mapping_offset.get(endian).into(),
-                    self.mapping_count.get(endian) as usize,
+                    self.mapping_count.get(endian).into(),
                 )
                 .read_error("Invalid dyld cache mapping size or alignment")?;
             Ok(DyldCacheMappingSlice::V1(info))
@@ -1025,7 +1025,7 @@ impl<E: Endian> macho::DyldCacheHeader<E> {
             let subcaches = data
                 .read_slice_at::<macho::DyldSubCacheEntryV2<E>>(
                     self.sub_cache_array_offset.get(endian).into(),
-                    self.sub_cache_array_count.get(endian) as usize,
+                    self.sub_cache_array_count.get(endian).into(),
                 )
                 .read_error("Invalid dyld subcaches size or alignment")?;
             Ok(Some(DyldSubCacheSlice::V2(subcaches)))
@@ -1033,7 +1033,7 @@ impl<E: Endian> macho::DyldCacheHeader<E> {
             let subcaches = data
                 .read_slice_at::<macho::DyldSubCacheEntryV1<E>>(
                     self.sub_cache_array_offset.get(endian).into(),
-                    self.sub_cache_array_count.get(endian) as usize,
+                    self.sub_cache_array_count.get(endian).into(),
                 )
                 .read_error("Invalid dyld subcaches size or alignment")?;
             Ok(Some(DyldSubCacheSlice::V1(subcaches)))
@@ -1062,13 +1062,13 @@ impl<E: Endian> macho::DyldCacheHeader<E> {
         if self.mapping_offset.get(endian) >= MIN_HEADER_SIZE_SUBCACHES_V1 {
             data.read_slice_at::<macho::DyldCacheImageInfo<E>>(
                 self.images_offset.get(endian).into(),
-                self.images_count.get(endian) as usize,
+                self.images_count.get(endian).into(),
             )
             .read_error("Invalid dyld cache image size or alignment")
         } else {
             data.read_slice_at::<macho::DyldCacheImageInfo<E>>(
                 self.images_offset_old.get(endian).into(),
-                self.images_count_old.get(endian) as usize,
+                self.images_count_old.get(endian).into(),
             )
             .read_error("Invalid dyld cache image size or alignment")
         }
@@ -1115,7 +1115,7 @@ impl<E: Endian> macho::DyldCacheMappingAndSlideInfo<E> {
                 let page_starts = data
                     .read_slice_at::<U16<E>>(
                         page_starts_offset,
-                        slide.page_starts_count.get(endian) as usize,
+                        slide.page_starts_count.get(endian).into(),
                     )
                     .read_error("Invalid dyld cache page starts size or alignment")?;
                 let page_extras_offset = slide_info_file_offset
@@ -1124,7 +1124,7 @@ impl<E: Endian> macho::DyldCacheMappingAndSlideInfo<E> {
                 let page_extras = data
                     .read_slice_at::<U16<E>>(
                         page_extras_offset,
-                        slide.page_extras_count.get(endian) as usize,
+                        slide.page_extras_count.get(endian).into(),
                     )
                     .read_error("Invalid dyld cache page extras size or alignment")?;
                 Ok(DyldCacheSlideInfo::V2 {
@@ -1143,7 +1143,7 @@ impl<E: Endian> macho::DyldCacheMappingAndSlideInfo<E> {
                 let page_starts = data
                     .read_slice_at::<U16<E>>(
                         page_starts_offset,
-                        slide.page_starts_count.get(endian) as usize,
+                        slide.page_starts_count.get(endian).into(),
                     )
                     .read_error("Invalid dyld cache page starts size or alignment")?;
                 Ok(DyldCacheSlideInfo::V3 { slide, page_starts })
@@ -1158,7 +1158,7 @@ impl<E: Endian> macho::DyldCacheMappingAndSlideInfo<E> {
                 let page_starts = data
                     .read_slice_at::<U16<E>>(
                         page_starts_offset,
-                        slide.page_starts_count.get(endian) as usize,
+                        slide.page_starts_count.get(endian).into(),
                     )
                     .read_error("Invalid dyld cache page starts size or alignment")?;
                 Ok(DyldCacheSlideInfo::V5 { slide, page_starts })

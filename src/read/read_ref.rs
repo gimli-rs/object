@@ -103,12 +103,9 @@ pub trait ReadRef<'a>: Clone + Copy {
     /// Returns an error if offset or size are out of bounds.
     ///
     /// Also see the `read` method for information regarding alignment of `T`.
-    fn read_slice<T: Pod>(self, offset: &mut u64, count: usize) -> Result<&'a [T]> {
-        let size = count
-            .checked_mul(mem::size_of::<T>())
-            .ok_or(())?
-            .try_into()
-            .map_err(|_| ())?;
+    fn read_slice<T: Pod>(self, offset: &mut u64, count: u64) -> Result<&'a [T]> {
+        let size = count.checked_mul(mem::size_of::<T>() as u64).ok_or(())?;
+        let count = count.try_into().map_err(|_| ())?;
         let bytes = self.read_bytes(offset, size)?;
         let (t, _) = slice_from_bytes(bytes, count)?;
         Ok(t)
@@ -119,7 +116,7 @@ pub trait ReadRef<'a>: Clone + Copy {
     /// Returns an error if offset or size are out of bounds.
     ///
     /// Also see the `read` method for information regarding alignment of `T`.
-    fn read_slice_at<T: Pod>(self, mut offset: u64, count: usize) -> Result<&'a [T]> {
+    fn read_slice_at<T: Pod>(self, mut offset: u64, count: u64) -> Result<&'a [T]> {
         self.read_slice(&mut offset, count)
     }
 }
